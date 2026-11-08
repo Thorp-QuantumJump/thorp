@@ -1,0 +1,725 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 956508,
+    "iid": 297,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름에서 경제환경 검색으로 넘어가는 길을 연다",
+    "description": "## 작업 내용 요약\n\n'비슷했던 때 보기'가 '준비 중'으로 막혀 있어 경제환경 검색은 주소를 직접 쳐야만 닿았다. 그 길을 열고, 사전 계산 자료가 없을 때 화면이 왜 비었는지 말하게 했다. 첫 화면의 행동 버튼 셋이 옛 데모 화면으로 보내던 것도 함께 고쳤다.\n\n## 관련 티켓\n\n* S15P21E205-410\n* https://ssafy.atlassian.net/browse/S15P21E205-410\n\n## 주요 변경 사항\n\n* 분야 상세의 '비슷했던 때 보기'가 그 분야와 기준월을 **주소에** 실어 경제환경 검색으로 보낸다. 상태로 넘기면 새로고침에 사라져 같은 화면을 다시 열 수 없다. 011이 `?case=`를 주소로 다니는 것과 같은 방식이고, 주소를 만드는 자리도 같은 handoff 한 곳이다.\n* 검색 화면이 주소의 분야·기준월을 초기 선택으로 세우고 한 번만 검색한다. 기준월 목록이 온 뒤에 열어, 넘어온 달이 그 분야 최신월보다 뒤면 최신월로 물러나고 한 문장으로 알린다(010 FR-031).\n* 기준월이 없는 분야에서는 여전히 눌리지 않고 사유를 보인다. 넘기는 값에 섹터 자리는 없다(FR-016).\n* 계산된 기준월이 하나도 없으면 빈 선택 상자 대신 그 사유를 보인다. 배포 서버가 실제로 그 상태였다.\n* 첫 화면 행동 버튼 셋을 헤더 메뉴와 맞춘다 — \"시장 분석 보러 가기\"→`/market-flow`, \"백테스트 시작하기\"·\"이 전략 백테스트하기\"→`/diagnosis/sectors`. 옛 경로 자체는 남긴다 (002 research 결정 5). **002 T024를 닫는다.**\n* 010 T150(임시 대역 폐기)을 예행이 아니라 본 폐기로 기록한다. \"픽스처를 쓰는 시험만 깨진다\"는 예상과 달리 둘이 더 깨졌고, 그것이 예행이 확인하려던 지점이라 그대로 남겼다.\n\n## 테스트\n\n- [x] `frontend`: `npm run lint` 오류 0건 / `npm run build` 성공\n- [x] `frontend`: `npm test` — vitest 1325 통과 / 141 파일, 건너뜀 0건 · legacy 13 통과\n- [x] 배포 자료로 진입 경로 확인: `/regime-search?field=production&month=2026-07`로 들어가면 분야·기준월이 세팅되고 검색이 열려 사례가 나온다\n- [x] 계산된 스타일로 확인: 열린 진입점의 커서 `pointer`, 밑줄 `none`\n- [ ] **클릭으로 넘어가는 전환은 확인하지 못했다** — 아래 리뷰 포인트\n\n## 리뷰 포인트\n\n* **머지 후 화면에서 한 번 눌러봐야 한다.** 주소로 직접 들어간 경로는 배포 자료로 확인했지만, 시장 흐름에서 클릭해 넘어가는 전환은 확인하지 못했다. 확인 환경의 브라우저 창이 `hidden`이라 전환 애니메이션이 진행되지 않았고, 헤더 메뉴 링크도 같아 이 변경과 무관한 제약이다.\n* **010 사전 계산이 운영에서 한 번도 돌지 않았다.** 그래서 검색 화면이 자료 없이 비어 있었다. 확인 중에 배치를 돌려 기준월 4,539개가 들어갔고 지금은 동작한다. `data/`가 배포되지 않는 구조라 008 적재와 010 배치를 사람이 돌려야 하고, 돌리지 않으면 화면이 조용히 빈다 — ADR-0007이 008만 다루고 있어 010도 같은 처지라는 것을 문서에 남길지는 따로 판단할 일이다.\n* 시험이 링크 **존재만** 보고 목적지를 보지 않아 첫 화면이 옛 화면을 가리키는 것을 놓쳤다. 같은 모양의 검사가 다른 화면에도 있는지 볼 값어치가 있다.\n* 티켓 하나에 002 작업이 섞였다. 같은 첫 화면 흐름이라 함께 처리했고, 규칙에서 벗어난 것을 알고 한 선택이다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건 — 사례는 가까운 순서이고 유사성 판정 문구를 쓰지 않는다\n- [x] 결제·포인트·상품 선택 단계 0건\n- [x] 전략 ID 상수·전략별 분기 0건 — 분야 식별자도 코드에 두지 않고 응답에서 읽는다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 기준월이 없으면 진입점이 열리지 않고 사유가 보이며, 계산된 기준월이 없으면 빈 화면 대신 그 사실을 말한다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 클릭 전환을 확인하지 못한 것을 테스트 항목에 미확인으로 남겼다",
+    "state": "merged",
+    "created_at": "2026-09-22T14:41:16.107+09:00",
+    "updated_at": "2026-09-22T14:47:47.096+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T14:47:46.670+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/410-regime-search-entry",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+    "merge_commit_sha": "0c46d6d94b7e1831858513f5589784ead1fd1356",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T14:41:18.136+09:00",
+    "reference": "!297",
+    "references": {
+      "short": "!297",
+      "relative": "!297",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!297"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/297",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 956508,
+    "iid": 297,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름에서 경제환경 검색으로 넘어가는 길을 연다",
+    "description": "## 작업 내용 요약\n\n'비슷했던 때 보기'가 '준비 중'으로 막혀 있어 경제환경 검색은 주소를 직접 쳐야만 닿았다. 그 길을 열고, 사전 계산 자료가 없을 때 화면이 왜 비었는지 말하게 했다. 첫 화면의 행동 버튼 셋이 옛 데모 화면으로 보내던 것도 함께 고쳤다.\n\n## 관련 티켓\n\n* S15P21E205-410\n* https://ssafy.atlassian.net/browse/S15P21E205-410\n\n## 주요 변경 사항\n\n* 분야 상세의 '비슷했던 때 보기'가 그 분야와 기준월을 **주소에** 실어 경제환경 검색으로 보낸다. 상태로 넘기면 새로고침에 사라져 같은 화면을 다시 열 수 없다. 011이 `?case=`를 주소로 다니는 것과 같은 방식이고, 주소를 만드는 자리도 같은 handoff 한 곳이다.\n* 검색 화면이 주소의 분야·기준월을 초기 선택으로 세우고 한 번만 검색한다. 기준월 목록이 온 뒤에 열어, 넘어온 달이 그 분야 최신월보다 뒤면 최신월로 물러나고 한 문장으로 알린다(010 FR-031).\n* 기준월이 없는 분야에서는 여전히 눌리지 않고 사유를 보인다. 넘기는 값에 섹터 자리는 없다(FR-016).\n* 계산된 기준월이 하나도 없으면 빈 선택 상자 대신 그 사유를 보인다. 배포 서버가 실제로 그 상태였다.\n* 첫 화면 행동 버튼 셋을 헤더 메뉴와 맞춘다 — \"시장 분석 보러 가기\"→`/market-flow`, \"백테스트 시작하기\"·\"이 전략 백테스트하기\"→`/diagnosis/sectors`. 옛 경로 자체는 남긴다 (002 research 결정 5). **002 T024를 닫는다.**\n* 010 T150(임시 대역 폐기)을 예행이 아니라 본 폐기로 기록한다. \"픽스처를 쓰는 시험만 깨진다\"는 예상과 달리 둘이 더 깨졌고, 그것이 예행이 확인하려던 지점이라 그대로 남겼다.\n\n## 테스트\n\n- [x] `frontend`: `npm run lint` 오류 0건 / `npm run build` 성공\n- [x] `frontend`: `npm test` — vitest 1325 통과 / 141 파일, 건너뜀 0건 · legacy 13 통과\n- [x] 배포 자료로 진입 경로 확인: `/regime-search?field=production&month=2026-07`로 들어가면 분야·기준월이 세팅되고 검색이 열려 사례가 나온다\n- [x] 계산된 스타일로 확인: 열린 진입점의 커서 `pointer`, 밑줄 `none`\n- [ ] **클릭으로 넘어가는 전환은 확인하지 못했다** — 아래 리뷰 포인트\n\n## 리뷰 포인트\n\n* **머지 후 화면에서 한 번 눌러봐야 한다.** 주소로 직접 들어간 경로는 배포 자료로 확인했지만, 시장 흐름에서 클릭해 넘어가는 전환은 확인하지 못했다. 확인 환경의 브라우저 창이 `hidden`이라 전환 애니메이션이 진행되지 않았고, 헤더 메뉴 링크도 같아 이 변경과 무관한 제약이다.\n* **010 사전 계산이 운영에서 한 번도 돌지 않았다.** 그래서 검색 화면이 자료 없이 비어 있었다. 확인 중에 배치를 돌려 기준월 4,539개가 들어갔고 지금은 동작한다. `data/`가 배포되지 않는 구조라 008 적재와 010 배치를 사람이 돌려야 하고, 돌리지 않으면 화면이 조용히 빈다 — ADR-0007이 008만 다루고 있어 010도 같은 처지라는 것을 문서에 남길지는 따로 판단할 일이다.\n* 시험이 링크 **존재만** 보고 목적지를 보지 않아 첫 화면이 옛 화면을 가리키는 것을 놓쳤다. 같은 모양의 검사가 다른 화면에도 있는지 볼 값어치가 있다.\n* 티켓 하나에 002 작업이 섞였다. 같은 첫 화면 흐름이라 함께 처리했고, 규칙에서 벗어난 것을 알고 한 선택이다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건 — 사례는 가까운 순서이고 유사성 판정 문구를 쓰지 않는다\n- [x] 결제·포인트·상품 선택 단계 0건\n- [x] 전략 ID 상수·전략별 분기 0건 — 분야 식별자도 코드에 두지 않고 응답에서 읽는다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 기준월이 없으면 진입점이 열리지 않고 사유가 보이며, 계산된 기준월이 없으면 빈 화면 대신 그 사실을 말한다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 클릭 전환을 확인하지 못한 것을 테스트 항목에 미확인으로 남겼다",
+    "state": "merged",
+    "created_at": "2026-09-22T14:41:16.107+09:00",
+    "updated_at": "2026-09-22T14:47:47.096+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T14:47:46.670+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/410-regime-search-entry",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+    "merge_commit_sha": "0c46d6d94b7e1831858513f5589784ead1fd1356",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T14:41:18.136+09:00",
+    "reference": "!297",
+    "references": {
+      "short": "!297",
+      "relative": "!297",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!297"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/297",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "14",
+    "latest_build_started_at": "2026-09-22T14:41:28.372+09:00",
+    "latest_build_finished_at": "2026-09-22T14:47:08.428+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 216072,
+      "iid": 306,
+      "project_id": 1444456,
+      "sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+      "ref": "feat(fe)/410-regime-search-entry",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T14:41:28.173+09:00",
+      "updated_at": "2026-09-22T14:47:08.435+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/216072"
+    },
+    "head_pipeline": {
+      "id": 216072,
+      "iid": 306,
+      "project_id": 1444456,
+      "sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+      "ref": "feat(fe)/410-regime-search-entry",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T14:41:28.173+09:00",
+      "updated_at": "2026-09-22T14:47:08.435+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/216072",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T14:41:28.372+09:00",
+      "finished_at": "2026-09-22T14:47:08.428+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/216072",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b53c0ffe7273efaf6c3a46445e6f259a47592ead",
+      "head_sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+      "start_sha": "1f0024b90a09c1f3b2ae76b30c37a0dd3bbddaf6"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "d13a063c5ce9ca7a1fd8dc256bd7f38548381c10",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855455,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T14:41:16.219+09:00",
+          "updated_at": "2026-09-22T14:41:16.226+09:00",
+          "system": true,
+          "noteable_id": 956508,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 297,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "18036c79d50b8b517941902e5fd7e0650abb84d6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855457,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 URL 상태 관리 (URL-Driven State):** 시장 흐름 화면에서 '비슷했던 때 보기'를 누를 때 상태 대신 주소 쿼리 파라미터(`?field=...&month=...`)를 활용하도록 변경하여, 새로고침 시에도 사용자의 검색 맥락이 유실되지 않도록 견고하게 설계되었습니다.\n- **안전한 방어 로직과 사용자 안내:** 사전 계산된 기준월 데이터가 없을 경우 빈 화면을 방치하는 대신, 사용자에게 명확한 사유(`baselinesNotReady`)를 안내하여 UX 단절을 훌륭히 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **기준월 초과 시나리오 테스트:** 시장 흐름에서 전달된 기준월이 해당 경제 분야의 최신 기준월보다 미래 시점일 때, 시스템이 최신월로 올바르게 물러나고 안내 문구가 정상 노출되는지 검증하세요.\n- **데이터 부재 시나리오 테스트:** 사전 계산된 기준월 데이터(`baselines.byField`)가 비어 있는 초기 상태에서, 빈 선택 상자 대신 `baselinesNotReady` 안내 문구가 출력되는지 확인하세요.\n- **주소 기반 진입 테스트:** `/regime-search?field=labor&month=2026-08` 경로로 직접 진입했을 때, 해당 분야와 기준월이 올바르게 초기 선택되어 검색이 한 번만 수행되는지 검증하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:cd557612c3692d775a026479b8b8fcff7610c3b1 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T14:41:26.252+09:00",
+          "updated_at": "2026-09-22T14:41:26.252+09:00",
+          "system": false,
+          "noteable_id": 956508,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 297,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c8a0e869a72877ff286296c4d5e086a04e1d0ed2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855510,
+          "type": null,
+          "body": "mentioned in commit 0c46d6d94b7e1831858513f5589784ead1fd1356",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T14:47:46.805+09:00",
+          "updated_at": "2026-09-22T14:47:46.810+09:00",
+          "system": true,
+          "noteable_id": 956508,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 297,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2239095,
+      "head_commit_sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+      "base_commit_sha": "b53c0ffe7273efaf6c3a46445e6f259a47592ead",
+      "start_commit_sha": "1f0024b90a09c1f3b2ae76b30c37a0dd3bbddaf6",
+      "created_at": "2026-09-22T14:41:16.469+09:00",
+      "merge_request_id": 956508,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "27c6b058c6ea8c0ff86f4ab91a30aac84bda115f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2239095,
+      "head_commit_sha": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+      "base_commit_sha": "b53c0ffe7273efaf6c3a46445e6f259a47592ead",
+      "start_commit_sha": "1f0024b90a09c1f3b2ae76b30c37a0dd3bbddaf6",
+      "created_at": "2026-09-22T14:41:16.469+09:00",
+      "merge_request_id": 956508,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "27c6b058c6ea8c0ff86f4ab91a30aac84bda115f",
+      "commits": [
+        {
+          "id": "cd557612c3692d775a026479b8b8fcff7610c3b1",
+          "short_id": "cd557612",
+          "created_at": "2026-09-22T14:27:43.000+09:00",
+          "parent_ids": [
+            "613682c62fb260280b5d243264e0617a8e8ef77a"
+          ],
+          "title": "fix(fe): 첫 화면 행동 버튼이 옛 데모 화면으로 보내지 않게 한다",
+          "message": "fix(fe): 첫 화면 행동 버튼이 옛 데모 화면으로 보내지 않게 한다\n\n첫 화면에서 \"시장 분석 보러 가기\"는 `/dashboard`, \"백테스트 시작하기\"와 전략 카드의 \"이 전략\n백테스트하기\"는 `/backtest` 로 가고 있었다. 헤더 메뉴는 이미 `/market-flow`·`/diagnosis/sectors`\n를 가리키는데 소개 섹션만 옛 자리에 남아, 사용자가 첫 화면에서 들어가면 지금 만들고 있는 화면이\n아니라 데모 화면에 떨어졌다.\n\n세 링크를 메뉴와 같은 곳으로 옮긴다. 백테스트를 진단 출발점으로 보내는 것은 백테스트가 섹터·\n전략을 고른 뒤에 돌리는 것이기 때문이다. `/dashboard`·`/backtest` 경로 자체는 그대로 둔다 —\n003·005 가 소유할 자리다(002 research 결정 5).\n\n**시험이 링크 존재만 보고 목적지를 보지 않았다.** 그래서 목적지가 옛 화면으로 남아 있어도\n통과했다. 목적지를 단언으로 바꾼다. 전략 카드의 링크는 전략을 골라야 나와 화면을 그려 보는\n검사로 닿지 않으므로, landing 소스를 훑어 옛 경로가 없는지 함께 본다 — 일부러 되돌려 이 검사가\n실패하는 것을 확인했다.\n\n002 T024 를 닫는다. 그 task 가 \"목적지를 옮길지 그대로 둘지\"를 열어 두고 닫는 조건을 003·005 가\n자리를 대신할 때로 적어 두었는데, 지금이 그때다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T14:27:43.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T14:27:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cd557612c3692d775a026479b8b8fcff7610c3b1"
+        },
+        {
+          "id": "613682c62fb260280b5d243264e0617a8e8ef77a",
+          "short_id": "613682c6",
+          "created_at": "2026-09-22T14:11:19.000+09:00",
+          "parent_ids": [
+            "5b07bfa033eb05e60fbbe374e61d008c93e8283f"
+          ],
+          "title": "feat(fe): 사전 계산 자료가 없으면 화면이 그 사실을 말한다",
+          "message": "feat(fe): 사전 계산 자료가 없으면 화면이 그 사실을 말한다\n\n배포 서버에서 010 사전 계산이 한 번도 돌지 않아 `baseline-months` 가 빈 분야 목록을\n돌려주고 있었다. 화면은 빈 선택 상자와 '과거 사례 찾기' 버튼만 보였다 — 시장 흐름에서\n'비슷했던 때 보기'로 넘어온 사용자는 고를 것이 없는 화면을 만나고, 자기가 잘못 눌렀다고\n읽는다.\n\n고를 분야가 하나도 없으면 왜 비었는지 알린다(원칙 VI). 배치를 어떻게 돌리는지는 운영의\n일이라 화면에 적지 않는다. 문구는 fixedCopy.ts 에만 둔다 — 010 FR-022 ②가 화면 코드에\n결과 문구를 두지 못하게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T14:11:19.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T14:11:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/613682c62fb260280b5d243264e0617a8e8ef77a"
+        },
+        {
+          "id": "5b07bfa033eb05e60fbbe374e61d008c93e8283f",
+          "short_id": "5b07bfa0",
+          "created_at": "2026-09-22T13:31:20.000+09:00",
+          "parent_ids": [
+            "e501679e15574f574c4675e23d869d13adfba960"
+          ],
+          "title": "fix(fe): 열린 진입점이 못 누른다고 말하지 않게 한다",
+          "message": "fix(fe): 열린 진입점이 못 누른다고 말하지 않게 한다\n\n`.similarButton` 은 '준비 중' 버튼을 위해 쓴 클래스라 `cursor: not-allowed` 를 들고 있었는데,\n진입점을 링크로 바꾸면서 그대로 뒀다. 실제로는 이동하는 자리 위에서 금지 커서가 뜬다 — 막혀\n있던 길을 여는 것이 그 변경의 전부인데 화면은 여전히 닫혔다고 말한다. 전역 앵커 재설정도 없어\n밑줄과 기본 링크 색까지 함께 들어왔다.\n\n못 누르는 상태는 `:disabled` 로 옮긴다. 기준월이 없는 분야에서는 여전히 금지 커서이고 글자가\n흐리다. 화살표 호버는 같은 화면의 분야 열기 버튼과 같은 방식으로 맞춘다.\n\n사라진 '준비 중' 배지를 그리던 규칙과, 두 줄을 전제한 높이를 걷는다.\n\n진입 효과에서 같은 상태를 두 번 세우던 것과 타입상 닿지 않는 기본값을 정리한다. 동작은 같다.\n\n**CSS 는 시험이 보지 못한다.** 두 상태가 같은 클래스를 쓴다는 것만 고정해, 한쪽만 고쳐 어긋나는\n이번 같은 일을 잡는다. 커서 자체는 사람이 화면에서 봐야 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T13:31:20.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T13:31:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5b07bfa033eb05e60fbbe374e61d008c93e8283f"
+        },
+        {
+          "id": "e501679e15574f574c4675e23d869d13adfba960",
+          "short_id": "e501679e",
+          "created_at": "2026-09-22T12:32:57.000+09:00",
+          "parent_ids": [
+            "64d7347bae68f864b6f1cf52c87913031b0723d5"
+          ],
+          "title": "docs(be): 임시 대역 폐기를 예행이 아니라 본 폐기로 기록한다",
+          "message": "docs(be): 임시 대역 폐기를 예행이 아니라 본 폐기로 기록한다\n\nT150 은 두 디렉터리를 지워 보고 되돌리는 예행연습이었는데, 그 조작이 M9 실행 환경에서 막혀\n미실행으로 남아 있었다. 008 구현체가 들어오면서 되돌릴 이유가 사라져 374 에서 그대로 폐기했고,\n예행이 확인하려던 답은 본 폐기에서 그대로 나왔다.\n\n**예상과 달랐던 것을 적는다.** \"픽스처를 쓰는 시험만 깨진다\"였는데 둘이 더 깨졌다 — 009 통합\n시험이 예시 JSON 만 읽어 008 과 이어 본 적이 없었고, 010 의 시험·저장 자료가 픽스처 시절의\n대문자 분야 표기를 쓰고 있었다. 대역이 가리고 있던 것은 연결이 시험된 적 없다는 사실이었고\n그것은 대역을 지워야 드러난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T12:32:57.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T12:32:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e501679e15574f574c4675e23d869d13adfba960"
+        },
+        {
+          "id": "64d7347bae68f864b6f1cf52c87913031b0723d5",
+          "short_id": "64d7347b",
+          "created_at": "2026-09-22T12:32:56.000+09:00",
+          "parent_ids": [
+            "b53c0ffe7273efaf6c3a46445e6f259a47592ead"
+          ],
+          "title": "feat(fe): 시장 흐름에서 경제환경 검색으로 넘어가는 길을 연다",
+          "message": "feat(fe): 시장 흐름에서 경제환경 검색으로 넘어가는 길을 연다\n\n'비슷했던 때 보기'가 눌리지 않는 '준비 중' 버튼이었다. 010 이 없던 때 009 가 \"넘기는 값이\n무엇인지까지만\" 만들고 멈춘 자리인데(009 T027), 010 이 들어온 뒤로도 잇는 일이 어느 작업\n목록에도 없어 검색 화면은 주소를 직접 쳐야만 닿았다. 분야를 보다 \"그때는 어땠나\"로 넘어가는\n것이 010 의 주된 진입 경로다.\n\n분야와 기준월을 **주소에** 싣는다. 상태로 넘기면 새로고침에 사라져 같은 화면을 다시 열 수 없고\n주소를 건네 같은 검색을 보여줄 수도 없다. 011 이 `?case=` 를 주소로 다니는 것과 같은 방식이며,\n주소를 만드는 자리도 011 과 같은 handoff 한 곳에 둔다 — 두 벌의 계약이 생기지 않게 한다.\n\n검색 화면은 기준월 목록이 온 뒤에 연다. 넘어온 달이 그 분야의 최신월보다 뒤면 결과가 없으므로\n최신월로 물러나고 그 사실을 한 문장으로 알린다(010 FR-031). 목록 없이 열면 그 판정을 못 해\n빈 화면이 된다. 그리고 한 번만 연다 — 사용자가 화면에서 분야를 바꾼 뒤에도 주소는 그대로라\n다시 열면 주소가 사용자의 선택을 덮는다.\n\n기준월이 없는 분야에서는 여전히 눌리지 않는 버튼이고 사유를 보인다. 찾을 대상이 정해지지 않은\n검색을 열면 화면은 무엇을 찾는지 말하지 못한다.\n\n넘기는 값에 섹터 자리는 여전히 없다(009 FR-016). 주소에도 실리지 않는 것을 시험이 본다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T12:32:56.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T12:32:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/64d7347bae68f864b6f1cf52c87913031b0723d5"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -200,7 +200,7 @@ export function AlgorithmOrbit() {\n                 <div><dt>SHARPE</dt><dd>{strategy.sharpe}</dd></div>\n               </dl>\n               {isSelected ? (\n-                <Link to=\"/backtest\" onClick={preventClickAfterDrag}>\n+                <Link to=\"/diagnosis/sectors\" onClick={preventClickAfterDrag}>\n                   이 전략 백테스트하기\n                   <ArrowUpRight aria-hidden=\"true\" size={18} />\n                 </Link>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/AlgorithmOrbit.tsx",
+          "old_path": "frontend/src/components/landing/AlgorithmOrbit.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -172,7 +172,9 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[]\n \n         <IndicatorConveyor indicators={indicators} />\n \n-        <Link className={styles.textCta} to=\"/dashboard\">\n+        {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). 같은 성격의 목적지가 두\n+            곳이면 첫 화면과 메뉴가 서로 다른 화면을 가리킨다. */}\n+        <Link className={styles.textCta} to=\"/market-flow\">\n           <span>시장 분석 보러 가기</span>\n           <ArrowUpRight aria-hidden=\"true\" size={21} />\n         </Link>\n@@ -252,7 +254,9 @@ export function BacktestIntroSection() {\n           </div>\n         </div>\n \n-        <Link className={styles.textCta} to=\"/backtest\">\n+        {/* 헤더 메뉴의 '전략 진단'과 같은 곳이다(002 T024). 백테스트는 섹터·전략을 고른\n+            뒤에 돌리는 것이라 그 출발점으로 보낸다. */}\n+        <Link className={styles.textCta} to=\"/diagnosis/sectors\">\n           <span>백테스트 시작하기</span>\n           <ArrowUpRight aria-hidden=\"true\" size={21} />\n         </Link>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,18 @@\n import { render, screen, within } from '@testing-library/react'\n+import { MemoryRouter } from 'react-router-dom'\n import { describe, expect, it } from 'vitest'\n import type { FieldDetailResult } from '@/types/marketFlow'\n import { FieldDetail } from './FieldDetail'\n \n+/** 진입점이 링크라 라우터 안에서 그린다. */\n+function renderDetail(detail: FieldDetailResult) {\n+  return render(\n+    <MemoryRouter>\n+      <FieldDetail detail={detail} />\n+    </MemoryRouter>,\n+  )\n+}\n+\n /** 기준월만 바꿔 가며 쓰기 위한 최소 상세다. */\n function detailOf(referenceMonth: string | null): FieldDetailResult {\n   return {\n@@ -15,35 +25,58 @@ function detailOf(referenceMonth: string | null): FieldDetailResult {\n \n describe('FieldDetail', () => {\n   it('기준월 뒤 발표 값은 3개월 경로 밖의 별도 안내로 보여 준다', () => {\n-    render(<FieldDetail detail={{ fieldId: 'labor', displayName: '노동', displayOrder: 4, status: 'READY', narrative: '변화', narrativeSubjects: [], referenceMonth: '2026-08', referenceMonthHeldBackBy: [], lastUpdatedAt: '2026-09-15T21:10:00Z', isExampleData: false, multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [{ indicatorId: 'unemployment', name: '실업률', unit: '%', value: 2.9, path: [{ month: '2026-06', value: 2.8 }, { month: '2026-07', value: 2.8 }, { month: '2026-08', value: 2.9 }], referenceMonth: '2026-08', releaseDate: '2026-09-10', source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: { referenceMonth: '2026-09', value: 3.1, unit: '%' } }] }} />)\n+    renderDetail({ fieldId: 'labor', displayName: '노동', displayOrder: 4, status: 'READY', narrative: '변화', narrativeSubjects: [], referenceMonth: '2026-08', referenceMonthHeldBackBy: [], lastUpdatedAt: '2026-09-15T21:10:00Z', isExampleData: false, multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [{ indicatorId: 'unemployment', name: '실업률', unit: '%', value: 2.9, path: [{ month: '2026-06', value: 2.8 }, { month: '2026-07', value: 2.8 }, { month: '2026-08', value: 2.9 }], referenceMonth: '2026-08', releaseDate: '2026-09-10', source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: { referenceMonth: '2026-09', value: 3.1, unit: '%' } }] })\n     const path = screen.getByRole('list', { name: '실업률 3개월 경로' })\n     expect(within(path).queryByText('3.1 %')).toBeNull()\n     expect(screen.getByText(/기준월 뒤 발표 · 2026-09 3.1 %/)).toBeTruthy()\n   })\n   describe(\"'비슷했던 때 보기'로 넘기는 값 (T027, FR-009)\", () => {\n     it('분야와 그 분야의 기준월을 실어 둔다', () => {\n-      render(<FieldDetail detail={detailOf('2026-08')} />)\n+      renderDetail(detailOf('2026-08'))\n \n-      const button = screen.getByRole('button', { name: /비슷했던 때 보기/ })\n-      expect(JSON.parse(button.getAttribute('data-handoff') ?? 'null')).toEqual({\n+      const link = screen.getByRole('link', { name: /비슷했던 때 보기/ })\n+      expect(JSON.parse(link.getAttribute('data-handoff') ?? 'null')).toEqual({\n         fieldId: 'labor',\n         referenceMonth: '2026-08',\n       })\n     })\n \n+    it('그 분야와 기준월을 주소에 실어 검색으로 간다', () => {\n+      renderDetail(detailOf('2026-08'))\n+\n+      // 주소로 넘기는 이유는 새로고침에도 남아야 해서다. 상태로 넘기면 같은 화면을 다시 열 수 없다.\n+      expect(screen.getByRole('link', { name: /비슷했던 때 보기/ }).getAttribute('href')).toBe(\n+        '/regime-search?field=labor&month=2026-08',\n+      )\n+    })\n+\n     it('기준월이 없으면 넘길 값을 만들지 않고 그 사유를 보인다', () => {\n-      render(<FieldDetail detail={detailOf(null)} />)\n+      renderDetail(detailOf(null))\n \n+      // 링크가 아니라 눌리지 않는 버튼이다. 기준월이 없으면 검색이 무엇을 찾을지 정해지지 않는다.\n+      expect(screen.queryByRole('link', { name: /비슷했던 때 보기/ })).toBeNull()\n       const button = screen.getByRole('button', { name: /비슷했던 때 보기/ })\n+      expect(button).toHaveProperty('disabled', true)\n       expect(button.getAttribute('data-handoff')).toBeNull()\n       expect(screen.getByText(/기준월이 아직 정해지지 않아/)).toBeTruthy()\n     })\n \n-    // 010이 아직 없다. 여기서 임의의 목적지를 만들면 나중에 계약이 두 벌이 된다.\n-    it('목적지가 없는 동안은 눌리지 않는다', () => {\n-      render(<FieldDetail detail={detailOf('2026-08')} />)\n+    it('열린 진입점과 막힌 진입점이 같은 모양을 쓴다', () => {\n+      // CSS 는 시험이 보지 못한다. 최소한 두 상태가 같은 클래스를 쓰는 것은 고정해 둔다 —\n+      // 한쪽만 바꾸면 눌리는 링크에 '못 누름' 표시가 남는 식으로 어긋난다.\n+      const open = renderDetail(detailOf('2026-08'))\n+      const openClass = screen.getByRole('link', { name: /비슷했던 때 보기/ }).className\n+      open.unmount()\n+\n+      renderDetail(detailOf(null))\n+\n+      expect(screen.getByRole('button', { name: /비슷했던 때 보기/ }).className).toBe(openClass)\n+    })\n+\n+    it(\"'준비 중' 표기가 남아 있지 않다\", () => {\n+      renderDetail(detailOf('2026-08'))\n \n-      expect(screen.getByRole('button', { name: /비슷했던 때 보기/ })).toHaveProperty('disabled', true)\n+      expect(screen.queryByText('준비 중')).toBeNull()\n     })\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.test.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import { ArrowUpRight, ScanLine } from 'lucide-react'\n import { motion, useReducedMotion } from 'motion/react'\n-import { buildSimilarPeriodHandoff } from '@/marketflow/handoff'\n+import { Link } from 'react-router-dom'\n+import { buildRegimeSearchPath, buildSimilarPeriodHandoff } from '@/marketflow/handoff'\n import type { FieldDetailResult } from '@/types/marketFlow'\n import { DataStateNotice } from './DataStateNotice'\n import { ThreeMonthChart } from './ThreeMonthChart'\n@@ -12,8 +13,8 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {\n   const reducedMotion = useReducedMotion()\n   const titleId = `field-${detail.fieldId}-title`\n   const similarNoteId = `similar-note-${detail.fieldId}`\n-  // 010이 붙으면 이 값을 그대로 들고 이동한다. 그때까지는 무엇을 넘길지만 정해 둔다.\n   const similarPeriod = buildSimilarPeriodHandoff(detail)\n+  const similarPath = buildRegimeSearchPath(similarPeriod)\n   return (\n     <motion.section\n       className={styles.detail}\n@@ -65,25 +66,30 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {\n           ))}\n         </div>\n       )}\n-      {/* spec 010의 검색 목적지/입력 계약이 연결되기 전에는 임의 검색 결과를 제공하지 않는다. */}\n+      {/* 넘기는 값은 분야와 그 분야의 기준월뿐이다. 섹터를 골랐어도 달라지지 않는다(FR-016). */}\n       <div className={styles.similarEntry}>\n         <div>\n           <span className={styles.detailEyebrow}>EXPLORE THE PAST</span>\n           <p id={similarNoteId}>\n             {similarPeriod === null\n               ? '이 분야는 기준월이 아직 정해지지 않아 비슷했던 시기를 찾을 수 없습니다.'\n-              : `${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾는 기능을 준비하고 있습니다.`}\n+              : `${detail.displayName} 분야의 ${similarPeriod.referenceMonth}과 비슷했던 시기를 찾습니다.`}\n           </p>\n         </div>\n-        <button\n-          type=\"button\"\n-          className={styles.similarButton}\n-          disabled\n-          aria-describedby={similarNoteId}\n-          data-handoff={similarPeriod === null ? undefined : JSON.stringify(similarPeriod)}\n-        >\n-          비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden=\"true\" /><small>준비 중</small>\n-        </button>\n+        {similarPath === null ? (\n+          <button type=\"button\" className={styles.similarButton} disabled aria-describedby={similarNoteId}>\n+            비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden=\"true\" />\n+          </button>\n+        ) : (\n+          <Link\n+            to={similarPath}\n+            className={styles.similarButton}\n+            aria-describedby={similarNoteId}\n+            data-handoff={JSON.stringify(similarPeriod)}\n+          >\n+            비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden=\"true\" />\n+          </Link>\n+        )}\n       </div>\n     </motion.section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -74,8 +74,14 @@\n .similarEntry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding: 22px 0; }\n .similarEntry > div { flex: 1 1 200px; }\n .similarEntry p { margin: 7px 0 0; font-size: .74rem; line-height: 1.6; color: var(--thorp-copy); }\n-.similarButton { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px; padding: 10px 14px; min-height: 58px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-copy); font: 500 .84rem/1.4 var(--thorp-font-body); text-align: left; cursor: not-allowed; }\n-.similarButton small { grid-column: 1 / -1; font-size: .64rem; font-weight: 400; }\n+/* 열린 진입점은 링크(<a>)이고, 기준월이 없는 분야에서는 눌리지 않는 버튼이다. 한 모양으로 둔다. */\n+.similarButton { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px; padding: 10px 14px; min-height: 44px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-copy); font: 500 .84rem/1.4 var(--thorp-font-body); text-align: left; text-decoration: none; cursor: pointer; }\n+.similarButton svg { color: var(--thorp-copy); transition: transform 180ms ease, color 180ms ease; }\n+.similarButton:hover svg, .similarButton:focus-visible svg { transform: translate(2px, -2px); color: var(--thorp-accent-soft); }\n+.similarButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+/* 찾을 기준월이 정해지지 않은 분야다. 못 누른다는 것이 커서에도 보여야 한다. */\n+.similarButton:disabled { color: var(--thorp-muted); cursor: not-allowed; }\n+.similarButton:disabled:hover svg { transform: none; color: var(--thorp-copy); }\n @media (max-width: 1100px) {\n   .summaryCard { padding-left: 12px; padding-right: 7px; }\n   .indicatorMeta { gap: 5px 10px; }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,6 +39,16 @@ export const loadingCases = '과거 사례를 불러오는 중입니다.'\n /** 사례 상세를 불러오는 동안 화면이 자기 상태를 말한다. */\n export const loadingCaseDetail = '사례 상세를 불러오는 중입니다.'\n \n+/**\n+ * 사전 계산 결과가 아직 없을 때(spec FR-030).\n+ *\n+ * <p>계산된 기준월이 하나도 없으면 고를 분야가 없다. 빈 선택 상자만 보이면 사용자는 자기가\n+ * 잘못 눌렀다고 읽는다 — 화면이 왜 비었는지 말해야 한다(원칙 VI). 배치를 어떻게 돌리는지는\n+ * 운영의 일이라 화면에 적지 않는다.\n+ */\n+export const baselinesNotReady =\n+    '아직 비교할 과거 자료가 준비되지 않았습니다. 자료가 들어오면 분야를 골라 검색할 수 있습니다.'\n+\n /** 조회 실패는 빈 결과가 아니다 — 빈 상태와 다른 화면으로 알린다(spec FR-034). */\n export const loadErrorTitle = '조회에 실패했습니다'\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/fixedCopy.ts",
+          "old_path": "frontend/src/components/regime/fixedCopy.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,9 +3,9 @@ import type { MarketFlowFieldId } from '@/types/marketFlow'\n /**\n  * 시장 흐름에서 바깥 화면으로 넘기는 값을 만든다.\n  *\n- * 010(경제환경 검색)으로 넘기는 값은 **무엇을 넘기는지까지만** 정하고 목적지는 010이 소유한다.\n- * 011(전략 비교)의 목적지 주소는 011 진입 계약(`contracts/entry-handoff.md` §2)이 정했으므로\n- * 여기서 그 주소를 만든다. 주소를 만드는 자리를 한 곳에 두어 두 벌의 계약이 생기지 않게 한다.\n+ * 010(경제환경 검색)·011(전략 비교)의 목적지 주소를 여기서 만든다. 주소를 만드는 자리를 한 곳에\n+ * 두어 두 벌의 계약이 생기지 않게 한다. 011은 진입 계약(`contracts/entry-handoff.md` §2)이 주소를\n+ * 정했고, 010은 화면이 분야·기준월을 주소에서 읽는다.\n  *\n  * 값을 만들 수 없으면 `null`이다. 빈 문자열이나 대체값으로 채우지 않는다(원칙 VI).\n  */\n@@ -36,6 +36,21 @@ export function buildSimilarPeriodHandoff(field: {\n   return { fieldId: field.fieldId, referenceMonth: field.referenceMonth }\n }\n \n+/**\n+ * 010 검색 화면의 주소다.\n+ *\n+ * 분야와 기준월을 **주소에** 싣는다. 상태로 넘기면 새로고침에 사라져 사용자가 같은 화면을 다시\n+ * 열 수 없고, 주소를 건네 같은 검색을 보여줄 수도 없다. 011이 `?case=`를 주소로 다니는 것과\n+ * 같은 방식이다.\n+ *\n+ * 값을 만들 수 없으면 `null`이라 부르는 쪽이 진입점을 열지 않는다.\n+ */\n+export function buildRegimeSearchPath(handoff: SimilarPeriodHandoff | null): string | null {\n+  if (handoff === null) return null\n+  const query = new URLSearchParams({ field: handoff.fieldId, month: handoff.referenceMonth })\n+  return `/regime-search?${query.toString()}`\n+}\n+\n /**\n  * 사례가 없으면 넘길 것이 없다.\n  *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/marketflow/handoff.ts",
+          "old_path": "frontend/src/marketflow/handoff.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,4 @@\n+import { readdirSync, readFileSync } from 'node:fs'\n import { screen, within } from '@testing-library/react'\n import { beforeAll, describe, expect, it, vi } from 'vitest'\n import { renderWithRouter } from '@/test/renderWithRouter'\n@@ -95,11 +96,37 @@ describe('LandingPage', () => {\n     expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()\n   })\n \n-  it('소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다', () => {\n+  it('소개 섹션의 링크가 헤더 메뉴와 같은 곳을 가리킨다', () => {\n+    // 002 T024. 존재만 보면 목적지가 옛 화면으로 남아 있어도 통과한다 — 실제로 그랬다.\n     renderWithRouter(<LandingPage />)\n \n-    expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ })).toBeDefined()\n-    expect(screen.getByRole('link', { name: /백테스트 시작하기/ })).toBeDefined()\n+    expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ }).getAttribute('href')).toBe('/market-flow')\n+    expect(screen.getByRole('link', { name: /백테스트 시작하기/ }).getAttribute('href')).toBe('/diagnosis/sectors')\n+  })\n+\n+  it('첫 화면 코드 어디에도 옛 경로로 보내는 링크가 없다', () => {\n+    // 전략을 골라야 나오는 링크가 하나 있어 화면을 그려 보는 검사로는 닿지 않는다. 실제로\n+    // 그 링크가 옛 경로로 남아 있었다. 소스를 직접 본다.\n+    const dir = 'src/components/landing'\n+    const stale = readdirSync(dir)\n+      .filter((name) => name.endsWith('.tsx'))\n+      .flatMap((name) => {\n+        const source = readFileSync(`${dir}/${name}`, 'utf8')\n+        return [...source.matchAll(/to=\"(\\/dashboard|\\/backtest)\"/g)].map((hit) => `${name}: ${hit[1]}`)\n+      })\n+    expect(stale).toEqual([])\n+  })\n+\n+  it('첫 화면에 옛 대시보드·백테스트 경로로 가는 링크가 없다', () => {\n+    // 경로 자체는 003·005가 소유하므로 지우지 않는다(002 research 결정 5). 첫 화면에서\n+    // 그곳으로 보내지 않는 것만 고정한다 — 하나가 남으면 사용자는 두 종류의 화면을 만난다.\n+    renderWithRouter(<LandingPage />)\n+\n+    const stale = screen\n+      .getAllByRole('link')\n+      .map((link) => link.getAttribute('href'))\n+      .filter((href) => href === '/dashboard' || href === '/backtest')\n+    expect(stale).toEqual([])\n   })\n \n   it('소개 섹션은 그대로 남는다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.test.tsx",
+          "old_path": "frontend/src/pages/LandingPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -190,17 +190,18 @@ describe('MarketFlowPage', () => {\n     it('섹터를 골라도 비슷했던 때 보기로 넘기는 값이 그대로다', async () => {\n       await renderWithSectors()\n       const handoffBefore = screen\n-        .getByRole('button', { name: /비슷했던 때 보기/ })\n+        .getByRole('link', { name: /비슷했던 때 보기/ })\n         .getAttribute('data-handoff')\n \n       fireEvent.click(screen.getByRole('button', { name: '반도체' }))\n       await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))\n \n-      const handoffAfter = screen\n-        .getByRole('button', { name: /비슷했던 때 보기/ })\n-        .getAttribute('data-handoff')\n+      const entry = screen.getByRole('link', { name: /비슷했던 때 보기/ })\n+      const handoffAfter = entry.getAttribute('data-handoff')\n       expect(handoffAfter).toBe(handoffBefore)\n       expect(JSON.parse(handoffAfter ?? 'null')).not.toHaveProperty('sectorCode')\n+      // 주소에도 섹터가 실리지 않는다 — 인자에 자리가 없어 실수로도 실을 수 없다(FR-016).\n+      expect(entry.getAttribute('href')).not.toContain('sector')\n     })\n \n     // 사례 없이 011을 열지 않는다(FR-018). 이 화면은 사례를 고르는 010으로만 안내한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -45,6 +45,60 @@ describe('경제환경 검색 화면', () => {\n     vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)\n   })\n \n+  it('계산된 기준월이 없으면 빈 선택 상자 대신 그 사유를 보인다', async () => {\n+    // 사전 계산이 돌지 않은 서버에서 실제로 이 상태가 났다. 빈 상자만 보이면 사용자는 자기가\n+    // 잘못 눌렀다고 읽는다(FR-030, 원칙 VI).\n+    vi.mocked(getRegimeBaselineMonths).mockResolvedValue({\n+      byField: [], composite: null, range: null, note: '전환 안내',\n+    } as never)\n+\n+    renderPage()\n+\n+    expect(await screen.findByText(/아직 비교할 과거 자료가 준비되지 않았습니다/)).toBeTruthy()\n+    expect(screen.queryByLabelText('경제 분야')).toBeNull()\n+    expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()\n+  })\n+\n+  describe('시장 흐름에서 넘어온 진입 (009 FR-009)', () => {\n+    it('주소의 분야·기준월로 바로 검색한다', async () => {\n+      vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({}))\n+\n+      renderPage({ entries: ['/regime-search?field=field-1&month=2026-07'] })\n+\n+      // 사용자가 분야를 다시 고르지 않아도 그 분야의 결과가 나온다. 다시 고르게 하면\n+      // 시장 흐름에서 보던 분야를 화면이 잊은 것처럼 보인다.\n+      await waitFor(() =>\n+        expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledWith(\n+          { mode: 'field', field: 'field-1', baselineMonth: '2026-07', limit: 3 },\n+          expect.any(AbortSignal),\n+        ),\n+      )\n+      expect(await screen.findByLabelText('경제 분야')).toHaveProperty('value', 'field-1')\n+    })\n+\n+    it('결과가 없는 달로 넘어오면 그 분야의 최신월로 물러나고 알린다', async () => {\n+      vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({}))\n+\n+      // 2026-08 은 이 분야의 기준월(2026-07)보다 뒤라 결과가 없다. 그대로 보내면 빈 화면이 된다.\n+      renderPage({ entries: ['/regime-search?field=field-1&month=2026-08'] })\n+\n+      await waitFor(() =>\n+        expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledWith(\n+          { mode: 'field', field: 'field-1', baselineMonth: undefined, limit: 3 },\n+          expect.any(AbortSignal),\n+        ),\n+      )\n+    })\n+\n+    it('모르는 분야로 넘어오면 검색하지 않고 화면을 그대로 연다', async () => {\n+      renderPage({ entries: ['/regime-search?field=없는-분야&month=2026-07'] })\n+\n+      // 오류 화면을 띄우지 않는다. 고를 수 있는 분야가 목록에 있으므로 사용자는 이어서 쓴다.\n+      await screen.findByLabelText('경제 분야')\n+      expect(vi.mocked(getRegimeSearch)).not.toHaveBeenCalled()\n+    })\n+  })\n+\n   it('API 분야 목록으로 검색하고 다섯 표시와 자료 기준 시점을 보인다', async () => {\n     vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({\n       comparisonMonths: [{ indicatorId: 'indicator-1', indicator: '시험 지표', months: ['2026-05'], omitted: ['2026-06'], note: '시험 지표는 2026년 6월 자료가 없어 그 달을 빼고 비교했습니다.' }],\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,6 +41,10 @@ export function RegimeSearchPage() {\n   // 내 기록의 '다시 보기'(006 R17). 식별자가 있으면 폼 질의 대신 저장된 판을 고정 조회한다.\n   const [params, setParams] = useSearchParams()\n   const savedSearchId = params.get('searchId')\n+  // 시장 흐름에서 넘어온 분야와 기준월(009 FR-009). 상태가 아니라 주소로 오므로 새로고침에도\n+  // 남고, 주소를 건네면 같은 검색을 볼 수 있다.\n+  const entryField = params.get('field')\n+  const entryMonth = params.get('month')\n   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query, savedSearchId)\n   const location = useLocation()\n   // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037).\n@@ -81,6 +85,30 @@ export function RegimeSearchPage() {\n     )\n   }, [savedSearchId, user, result, location.state])\n \n+  // 넘어온 분야·기준월로 검색을 한 번 연다.\n+  //\n+  // **기준월 목록이 온 뒤에 연다.** `openSearch` 가 그 분야의 최신월과 견줘 넘어온 달이 뒤면\n+  // 최신월로 물러나고 그 사실을 한 문장으로 알린다(FR-031). 목록 없이 열면 그 판정을 못 해\n+  // 결과가 없는 달로 검색이 나간다.\n+  //\n+  // **한 번만 연다.** 사용자가 화면에서 분야를 바꾼 뒤에도 주소는 그대로라, 다시 열면 사용자가\n+  // 고른 것을 주소가 덮는다.\n+  const entryOpened = useRef(false)\n+  useEffect(() => {\n+    if (entryOpened.current || savedSearchId || !baselines || !entryField) return\n+    const field = baselines.byField.find((candidate) => candidate.id === entryField)\n+    if (!field) return\n+    // 넘어온 달이 그 분야의 최신월보다 뒤면 결과가 없다. 최신월로 물러나고 그 사실을 알린다.\n+    const month = entryMonth !== null && entryMonth <= field.baselineMonth ? entryMonth : null\n+    entryOpened.current = true\n+    setFieldId(field.id)\n+    setSelectedMonth(month ?? '')\n+    setBaselineChangeNote(\n+      entryMonth !== null && month === null ? copy.baselineMonthChangedNote(field.baselineMonth) : null,\n+    )\n+    setQuery({ mode: 'field', field: field.id, baselineMonth: month ?? undefined })\n+  }, [baselines, entryField, entryMonth, savedSearchId])\n+\n   /**\n    * 기준월이나 검색 방식이 바뀌어 후보가 달라지면 한 문장으로 알린다(spec FR-031).\n    * 문장은 계약이 고정한 것만 쓰고 화면에서 조립하지 않는다(spec FR-022 ②).\n@@ -142,6 +170,10 @@ export function RegimeSearchPage() {\n           <LoadError error={baselineError} onRetry={() => setBaselineRetry((value) => value + 1)} />\n         ) : !baselines ? (\n           <p role=\"status\" className={styles.loading}>{copy.loadingFields}</p>\n+        ) : baselines.byField.length === 0 ? (\n+          // 사전 계산이 아직 돌지 않았다. 빈 선택 상자만 보이면 사용자는 자기가 잘못 눌렀다고\n+          // 읽으므로, 고를 것이 없는 이유를 말한다(FR-030, 원칙 VI).\n+          <p role=\"status\" className={styles.loading}>{copy.baselinesNotReady}</p>\n         ) : (\n           <form onSubmit={submit} className={styles.searchForm}>\n             <label htmlFor=\"regime-field\">경제 분야</label>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -413,7 +413,7 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5\n \n 검증 기준선(2026-09-16, 이 브랜치): `npm run lint` 오류 0(경고 19, 모두 기존 차트·UI 파일), `npm run build` 통과, `npm test` Vitest 29파일 189건 통과·`skipped` 0, `test:legacy` 13건 통과·`skipped` 0. `src/diagnosis/`의 테스트가 수집 목록에 있다(quickstart 시나리오 0 충족). 아래 두 항목을 마친 뒤에도 이 숫자가 줄지 않아야 한다.\n \n-- [ ] T024 [M6] [US4] [FE] 첫 화면 소개 섹션의 행동 유도 목적지를 헤더 메뉴와 맞춘다 (`frontend/src/components/landing/LandingSections.tsx`, `frontend/src/components/landing/AlgorithmOrbit.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · FR-001 / research.md 결정 5 (contradicts) · Jira 미발급\n+- [X] T024 [M6] [US4] [FE] 첫 화면 소개 섹션의 행동 유도 목적지를 헤더 메뉴와 맞춘다 (`frontend/src/components/landing/LandingSections.tsx`, `frontend/src/components/landing/AlgorithmOrbit.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · FR-001 / research.md 결정 5 (contradicts) · Jira 미발급\n   - **남은 일이라고 판단한 근거**: 이 브랜치의 커밋 `80e1900`이 `AppHeader`에서 '대시보드'와 '백테스트'를 뺐고 그 사유를 \"003·005가 완성되면 대체될 임시 화면\"이라고 적었다. 그런데 같은 첫 화면이 여전히 그 두 화면을 소개 경로로 안내한다. `LandingSections.tsx:171`이 `/dashboard`로(\"시장 분석 보러 가기\"), `LandingSections.tsx:256`과 `AlgorithmOrbit.tsx:203`이 `/backtest`로 보낸다. 메뉴에서 뺀 화면을 첫 화면이 계속 권하면 두 판단이 서로를 무효로 만든다\n   - 더 좁게 어긋난 자리가 하나 있다. 헤더의 '시장 흐름' 메뉴는 `/home`인데 첫 화면의 \"시장 분석 보러 가기\"는 `/dashboard`다. **같은 성격의 목적지가 둘로 갈렸다.** research.md 결정 5가 \"메뉴의 목적지는 이미 화면이 있으면 그 경로로 연결한다(시장 흐름은 `/home`)\"고 정한 자리다\n   - 세 링크를 지울지, 목적지를 메뉴와 같은 곳으로 옮길지, 그대로 둘지는 이 task가 미리 정하지 않는다. **다만 그대로 두기로 하면 왜 메뉴와 다른 곳을 가리켜도 되는지를 MR 본문에 남긴다.** 커밋 `398748f`이 \"머리 영역을 지나야 닿는 자리라 '비중 비교하기'와 자리를 다투지 않는다\"고 이미 판단한 것은 **링크를 남길지**에 대한 판단이고, 이 task가 묻는 것은 **어디를 가리킬지**다. 둘은 다른 질문이다\n@@ -421,6 +421,15 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5\n   - 테스트: `LandingPage.test.tsx`의 \"소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다\"가 지금 목적지를 고정하고 있다. 목적지를 옮기면 이 검사도 함께 옮긴다. 검사를 지우기만 하면 다음에 같은 어긋남이 조용히 돌아온다\n   - **2026-09-17 판단: 지금은 그대로 둔다. 다만 의문은 닫지 않았으므로 이 task를 열어 둔다.** 세 링크를 지우지도 옮기지도 않았다. 003·005가 `/dashboard`·`/backtest`를 실제로 대체하면 그 화면들이 어디로 가야 하는지가 그때 정해지므로, 지금 옮겨 두면 두 번 고치게 된다. **답하지 못한 물음은 이것이다 — 메뉴에서 뺀 화면을 첫 화면 본문이 계속 권해도 되는가.** 특히 헤더의 '시장 흐름'이 `/market-flow`인데 본문의 \"시장 분석 보러 가기\"는 `/dashboard`라, 같은 성격의 목적지가 둘로 갈린 상태가 그대로 남았다. 009가 들어오면서 헤더 쪽 경로가 `/home`에서 `/market-flow`로 바뀌어 간격이 처음 적었을 때보다 더 벌어졌다\n   - **이 task를 닫는 조건**: 003·005가 각자 화면을 내어 `/dashboard`·`/backtest`의 자리를 대신할 때, 또는 그 전에 첫 화면의 안내 구조를 다시 볼 때다. 둘 중 무엇이 먼저든 그 시점에 지울지 옮길지 정한다\n+  - **2026-09-22 판단: 목적지를 메뉴와 같은 곳으로 옮겼다.** 닫는 조건이 충족됐다 — 003·005가\n+    화면을 내어 `/diagnosis/sectors`·`/market-flow` 가 그 자리를 대신하고 있고, 사용자가 첫\n+    화면에서 옛 데모 화면으로 떨어지는 것이 실제로 보고됐다. 세 링크를 옮겼다: \"시장 분석 보러\n+    가기\"→`/market-flow`, \"백테스트 시작하기\"·\"이 전략 백테스트하기\"→`/diagnosis/sectors`.\n+    백테스트를 진단 출발점으로 보내는 것은 백테스트가 섹터·전략을 고른 뒤에 돌리는 것이기\n+    때문이다. `/dashboard`·`/backtest` 경로 자체는 그대로 둔다(research 결정 5).\n+  - 테스트가 목적지를 보지 않고 링크 존재만 보고 있었다. 목적지를 단언으로 바꾸고, 전략을 골라야\n+    나오는 링크는 화면으로 닿지 않으므로 `src/components/landing` 소스를 훑어 옛 경로가 없는지\n+    함께 본다.\n - [X] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급\n   - **남은 일이라고 판단한 근거**: 커밋 `1a5f483`이 오류 이름 목록을 인증 전용에서 서비스 공용으로 넓히면서 `ServiceApiErrorCode`·`ApiErrorCode`·`ApiEnvelope`·`ApiSuccessEnvelope`·`ApiErrorEnvelope`를 `src/types/auth.ts`에 그대로 두었다. 그 결과 **의존 방향이 꼬였다.** `types/auth.ts`가 `types/sector.ts`를 가져오고(`types/auth.ts:1`), 섹터 조회는 봉투를 얻으려고 `@/types/auth`를 가져온다(`api/sectors.ts:2`). 섹터 도메인이 인증 도메인 파일을 거쳐야 공용 봉투에 닿는다\n   - `frontend/CLAUDE.md`의 폴더 규칙은 `src/types/`를 \"백엔드 DTO와 1:1 대응 타입\"으로 정했고, 봉투는 특정 도메인의 DTO가 아니라 `common/web`의 `ApiResponse`다([001 contracts/sector-api.md](../001-etf-market-data/contracts/sector-api.md)의 「공통 규칙」). 지금 자리는 규칙이 가리키는 자리가 아니다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/tasks.md",
+          "old_path": "specs/002-sector-weight-selection/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -393,6 +393,7 @@ quickstart는 `grep -rn \"Fixture\" backend/…/regime | grep -v \"/macro/fixture/\"\n \n - **T150 폐기 예행연습 — 미실행.** 두 디렉터리를 지우거나 옮기는 조작이 이 실행 환경에서 차단됐다.\n   격리 여부는 위의 grep 결과로만 추정했을 뿐 **컴파일·테스트가 어디서 깨지는지는 확인하지 않았다.**\n+  (2026-09-22에 **예행이 아니라 본 폐기로** 답이 나왔다. 아래 기록을 본다.)\n - **화면 확인(S5의 문구·표시)** — 프론트를 띄워 눈으로 보지 않았다. 해당 문구·금지 표현·키보드 도달은\n   M7·M8의 프론트 테스트가 고정하고 있으나, **그것은 테스트가 통과했다는 뜻이지 화면을 봤다는 뜻이 아니다.**\n \n@@ -417,3 +418,33 @@ PD-08은 `기획서 확정`인데 이는 **기획 결정의 상태**이지 구\n 규칙에 맞춰 정합화해야 한다\"* 고 스스로 적어 두었다. **어느 쪽으로 맞출지는 정해지지 않았고, M9에서\n 정하지 않는다** — 008 구현이 시작될 때 두 spec이 함께 결정할 일이다. 여기서는 어긋나 있다는 사실만\n 남긴다. 정합화 전까지 010은 현재 프로토콜로 돌고, 008 완성 시 구현체 교체만으로 끝나지 않는다.\n+\n+### 2026-09-22 · T150 · 예행연습 대신 실제 폐기\n+\n+008 구현체가 들어와 임시 대역을 되돌릴 이유가 없어졌으므로, 지웠다 되돌리는 예행 대신 **그대로\n+폐기했다**(S15P21E205-374). 예행의 목적이 \"지우면 어디가 깨지는가\"를 아는 것이었고 그 답은 실제\n+폐기에서 그대로 나온다. 되돌릴 계획이 없는 것을 되돌려 보는 절차는 답을 더하지 않는다.\n+\n+**지운 것**\n+\n+| 자리 | 결과 |\n+|---|---|\n+| `data/src/data_pipeline/regime/macro/fixture/` | 삭제(4개 파일, 13,926줄) |\n+| `backend/…/regime/infrastructure/macro/fixture/` | 삭제 |\n+| `marketflow/infrastructure/example/` · 표본 JSON | 시험 범위로 옮겨 운영 산출물에서 제외 |\n+| 대역을 고르던 설정과 운영 가드 | 함께 삭제 — 막을 대상이 없는 가드는 무엇을 막는지 아무도 모르는 코드가 된다 |\n+\n+**깨진 것 — 픽스처를 쓰는 시험만 깨졌는가**\n+\n+대체로 그랬고, **예외가 둘 나왔다.** 이것이 예행연습이 확인하려던 바로 그 지점이다.\n+\n+1. `MarketFlowControllerIT` 가 500 으로 깨졌다. 이 시험은 예시 JSON 만 읽고 008 표를 한 번도\n+   건드리지 않아, 008과 009 사이를 실제로 이어 본 시험이 없었다는 뜻이다. 시험 대역으로 덮지 않고\n+   008 표를 채워 돌게 고쳤다.\n+2. 010 의 시험·저장 자료가 픽스처 시절의 **대문자 분야 표기**를 쓰고 있었다(`GLOBAL_ECONOMY` 등).\n+   지어낸 식별자 위에서 돌던 검사라 표기가 어긋나 있어도 통과했다. 008 표기로 옮겼다.\n+\n+둘 다 \"픽스처를 쓰는 시험만 깨진다\"는 예상과 달랐다. 대역이 가리고 있던 것은 **연결이 시험된 적\n+없다는 사실**이었고, 그것은 대역을 지워야만 드러난다.\n+\n+**되돌리지 않았다.** 되돌릴 대상이 없다 — 008 이 실제 자료를 내보내고 있다.\n\\ No newline at end of file\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/quickstart.md",
+          "old_path": "specs/010-economic-regime-search/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -360,7 +360,7 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n **묶음 M9** · `docs(be)/{티켓}-regime-verification`\n \n - [X] T149 [P] (DOCS) quickstart S1~S9를 실제로 실행하고 결과를 [quickstart.md](quickstart.md) 하단 \"실행 기록\"에 남긴다 — 통과·실패·미실행을 그대로 적는다\n-- [ ] T150 (DOCS) **폐기 예행연습**: 임시 대역 **두 디렉터리**(`data/…/macro/fixture/`, `backend/…/macro/fixture/`)를 지워 보고 어디가 깨지는지 확인한 뒤 되돌린다. 픽스처를 쓰는 테스트만 깨져야 한다(quickstart S9). 결과를 실행 기록에 남긴다\n+- [X] T150 (DOCS) **폐기 예행연습**: 임시 대역 **두 디렉터리**(`data/…/macro/fixture/`, `backend/…/macro/fixture/`)를 지워 보고 어디가 깨지는지 확인한 뒤 되돌린다. 픽스처를 쓰는 테스트만 깨져야 한다(quickstart S9). 결과를 실행 기록에 남긴다\n - [X] T151 [P] (DOCS) 사전 계산 배치 소요 시간·다시 계산한 기준월 수·새로 생긴 행 수를 실행 기록에 남긴다 — **목표로 제시하지 않고 측정값으로만 적는다**(spec FR-033, 원칙 IX)\n - [X] T152 [P] (DOCS) 조회 응답 시간·실패 건수를 실행 기록에 남긴다 — research R9의 p95 300ms는 **측정 목표이지 한도가 아니다**. 004 FR-007의 실행 유형 기록에 붙이는 일은 004 완성 후로 미루고 그 사실을 적는다\n - [X] T153 [P] (DOCS) 확인할 수 없었던 항목을 quickstart \"지금 확인할 수 없는 것\" 표와 대조해 갱신한다 — 008·011·PD-09·PD-10·FR-032(014 대기)·실제 과거 자료 범위·v2 비교 실험. **v2 검증 대기는 v1 구현 차단 조건이 아니다**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/tasks.md",
+          "old_path": "specs/010-economic-regime-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2855457": []
+  }
+}

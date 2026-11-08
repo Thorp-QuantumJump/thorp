@@ -1,0 +1,1118 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942245,
+    "iid": 68,
+    "project_id": 1444456,
+    "title": "feat(be): 대표 상품 정보 산출과 조회 API (S15P21E205-181)",
+    "description": "## 작업 내용 요약\n\nspec 001 사용자 스토리 3(대표 상품 정보)을 구현한다. 사용자가 결과의 근거와 한계를 확인하는 화면이 쓸 자료를 파이프라인이 산출하고, 백엔드가 `GET /sectors/{code}/instrument-profile`로 내보낸다. 이어서 `/speckit-converge`로 남은 일을 추려 `tasks.md`에 기록하고 그 가운데 지금 닫을 수 있는 둘을 닫았다.\n\n## 관련 이슈\n\n- `S15P21E205-181` [BE] 대표 상품 정보 산출과 조회 API (T012·T013)\n- 지라 과제는 이 MR이 병합되어도 자동으로 닫지 않는다\n\n## 주요 변경 사항\n\n**T012 산출 (DATA)** — `data/src/data_pipeline/instrument_profile.py`와 테스트를 더했다. 기준 지수·지수 방법론 요약·상장일·구성종목 중복·최근 3개월 일평균 거래대금·자료 출처·생존 상품 한계를 담는다. 유동성은 `daily_price.value`(거래대금)로 계산하며 거래량에 종가를 곱한 추정을 쓰지 않는다. 과거 구성 이력이 없으면 현재 구성 기준임을 표시한다. **추적 차이는 만들지 않는다**(Out of Scope).\n\n**적재 (DATA)** — 별도 진입점을 만들지 않고 `repository.py`에 적재 함수를 더해 `ingest_krx.py` 안에서 시계열 다음에 넣는다. 일평균 거래대금의 근거가 방금 만든 가격 행인데, 적재 계층에는 저장소에서 시계열을 되읽는 경로를 두지 않기로 문서로 정해 두었기 때문이다.\n\n**`instrument_profile` 표 신설 (BACK)** — `V20260913103000__instrument_profile.sql`. **이 표는 T003이 만든 11개에 빠져 있었고 어느 묶음도 맡고 있지 않았다.** data-model.md의 정의를 그대로 옮겼으며 열 구성을 새로 설계하지 않았다.\n\n**T013 조회 API (BACK)** — 도메인·매퍼·저장소·서비스·컨트롤러·응답과 통합 테스트. 금액 필드에 직렬화 도우미를 필드마다 붙였고 웹 ObjectMapper에 전역 등록하지 않았다. 자료가 없으면 `INSTRUMENT_PROFILE_NOT_READY`(409), 없는 섹터 코드는 `SECTOR_NOT_FOUND`(404)다.\n\n**Phase 8 (converge 산출)** — `T017`~`T028`을 `tasks.md`에 덧붙였다. 기존 항목은 고치지 않았다. 그중 둘을 닫았다.\n- `T024` 스키마 검사가 표를 11개만 세고 있어 앞으로 표가 또 빠져도 잡히지 않을 자리였다. 12개를 세게 했다\n- `T022` quickstart에 대표 상품 정보 시나리오를 더했다. 사용자 스토리 3만 실행 절차가 비어 있었다\n\n## 테스트 체크리스트\n\n- [x] `data`: `ruff check src scripts tests` 통과\n- [x] `data`: `ruff format --check src scripts tests` 통과 (25개 파일)\n- [x] `data`: `pytest` **437 passed** (기준선 392)\n- [x] `backend`: `./gradlew spotlessApply build` **BUILD SUCCESSFUL, 797 tests, 실패 0, 건너뜀 2**\n- [x] 건너뛴 2건은 외부 API 테스트와 도커 감시용 테스트뿐이다. `InstrumentProfileApiIT` 15건과 스키마 검사 49건이 실제 PostgreSQL에서 돌았다\n- [x] `infra/scripts/check-migration-version.sh` 통과 (버전 역전 없음)\n\n## 리뷰 포인트\n\n**1. 지수 방법론 요약과 구성종목 중복은 원천이 주지 않는다.** 인증키로 직접 확인했다. 관련 서비스 네 개가 없는 경로이고, 되는 서비스는 기초지수 이름까지만 준다. 그래서 상장 구간·기업행위·공시값과 같은 방식으로 파일 입력(`--instrument-profiles`)을 하나 더 두었다. 원천이 나중에 제공하면 열 구성은 그대로 두고 입력만 바꾸면 된다.\n\n**2. 어느 자료 버전의 행을 보여줄지 규칙을 정했다.** 열린 대응표 버전을 대상으로 수집된 자료 버전 중 `complete = true`이고 마감 시각이 가장 늦은 것이다. 물러난 대응표로 만든 값이 현재 섹터 목록 옆에 나오지 않게 하고(원칙 IV), 부분 갱신 자료를 완전한 자료로 표시하지 않기 위해서다(FR-014).\n\n**3. 일평균 거래대금의 저장과 응답이 다르다.** 저장은 문자열, 응답은 지수 표기 없는 문자열이며 도메인에서 BigDecimal을 거친다. data-model.md와 계약 어느 쪽도 이 변환을 말하지 않는다. 지수 표기를 막는 CHECK를 넣어 왕복이 깨지지 않게 했다.\n\n**4. 응답의 `isSample`을 자료 버전 기준으로 정했다.** 계약이 대응표의 것인지 자료 버전의 것인지 말하지 않는다. `datasetId`·`dataDeadline`과 한 덩어리라 그렇게 정했고, 그래서 `GET /sectors`의 같은 이름 필드와 값이 다를 수 있다.\n\n**5. converge가 남긴 열 개 과제는 손대지 않았다.** 실자료가 쌓여야 하거나(T014·T015·T016·T020), 003·004가 소유한 값이 있어야 하거나(T017·T019·T021), spec 문서를 고쳐야 풀리는 것(T023·T025~T028)이다.\n\n**6. ⚠️ 계약 충돌 하나를 발견했다 (T018).** `contracts/market-dataset.md`는 \"워밍업 자료는 요청 구간보다 앞에서 읽는다\"고 정했고 공급자에 거래일 기준 장치가 실제로 들어 있다. 그런데 `engine_runner.py:273`이 워밍업 일수를 넘기지 않아 기본값 0으로 읽고, 워밍업이 요청 구간 안에서 소비된다. **공급자의 워밍업 경로가 실제 Job 처리 경로에서 죽어 있다.** 선택지는 둘이며 001 혼자 정할 수 없다. (가) 004의 설계를 기준으로 삼고 001 계약의 그 문장을 걷어낸다. (나) 001 계약을 기준으로 삼고 엔진이 인자를 넘기게 한다. (나)는 모든 백테스트의 평가 시작일과 지표를 움직이고 004의 재현 픽스처를 함께 깨므로 004와 합의가 필요하다.\n\n**7. `plan.md`가 남의 파일을 가리킨다.** 마이그레이션을 `V3__etf_market_data.sql`로 적어 두었는데 타임스탬프 방식으로 바뀌어 실제 파일은 다르고, 게다가 `V3__param_search.sql`이 다른 기능의 마이그레이션으로 이미 존재한다. spec 문서라 이 MR에서 고치지 않았다.",
+    "state": "merged",
+    "created_at": "2026-09-13T23:02:33.392+09:00",
+    "updated_at": "2026-09-14T14:14:04.909+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-14T14:14:04.930+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/181-instrument-profile",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d7a0109606d81e0b86a145518c09045526ccc518",
+    "merge_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T23:02:35.816+09:00",
+    "reference": "!68",
+    "references": {
+      "short": "!68",
+      "relative": "!68",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!68"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/68",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942245,
+    "iid": 68,
+    "project_id": 1444456,
+    "title": "feat(be): 대표 상품 정보 산출과 조회 API (S15P21E205-181)",
+    "description": "## 작업 내용 요약\n\nspec 001 사용자 스토리 3(대표 상품 정보)을 구현한다. 사용자가 결과의 근거와 한계를 확인하는 화면이 쓸 자료를 파이프라인이 산출하고, 백엔드가 `GET /sectors/{code}/instrument-profile`로 내보낸다. 이어서 `/speckit-converge`로 남은 일을 추려 `tasks.md`에 기록하고 그 가운데 지금 닫을 수 있는 둘을 닫았다.\n\n## 관련 이슈\n\n- `S15P21E205-181` [BE] 대표 상품 정보 산출과 조회 API (T012·T013)\n- 지라 과제는 이 MR이 병합되어도 자동으로 닫지 않는다\n\n## 주요 변경 사항\n\n**T012 산출 (DATA)** — `data/src/data_pipeline/instrument_profile.py`와 테스트를 더했다. 기준 지수·지수 방법론 요약·상장일·구성종목 중복·최근 3개월 일평균 거래대금·자료 출처·생존 상품 한계를 담는다. 유동성은 `daily_price.value`(거래대금)로 계산하며 거래량에 종가를 곱한 추정을 쓰지 않는다. 과거 구성 이력이 없으면 현재 구성 기준임을 표시한다. **추적 차이는 만들지 않는다**(Out of Scope).\n\n**적재 (DATA)** — 별도 진입점을 만들지 않고 `repository.py`에 적재 함수를 더해 `ingest_krx.py` 안에서 시계열 다음에 넣는다. 일평균 거래대금의 근거가 방금 만든 가격 행인데, 적재 계층에는 저장소에서 시계열을 되읽는 경로를 두지 않기로 문서로 정해 두었기 때문이다.\n\n**`instrument_profile` 표 신설 (BACK)** — `V20260913103000__instrument_profile.sql`. **이 표는 T003이 만든 11개에 빠져 있었고 어느 묶음도 맡고 있지 않았다.** data-model.md의 정의를 그대로 옮겼으며 열 구성을 새로 설계하지 않았다.\n\n**T013 조회 API (BACK)** — 도메인·매퍼·저장소·서비스·컨트롤러·응답과 통합 테스트. 금액 필드에 직렬화 도우미를 필드마다 붙였고 웹 ObjectMapper에 전역 등록하지 않았다. 자료가 없으면 `INSTRUMENT_PROFILE_NOT_READY`(409), 없는 섹터 코드는 `SECTOR_NOT_FOUND`(404)다.\n\n**Phase 8 (converge 산출)** — `T017`~`T028`을 `tasks.md`에 덧붙였다. 기존 항목은 고치지 않았다. 그중 둘을 닫았다.\n- `T024` 스키마 검사가 표를 11개만 세고 있어 앞으로 표가 또 빠져도 잡히지 않을 자리였다. 12개를 세게 했다\n- `T022` quickstart에 대표 상품 정보 시나리오를 더했다. 사용자 스토리 3만 실행 절차가 비어 있었다\n\n## 테스트 체크리스트\n\n- [x] `data`: `ruff check src scripts tests` 통과\n- [x] `data`: `ruff format --check src scripts tests` 통과 (25개 파일)\n- [x] `data`: `pytest` **437 passed** (기준선 392)\n- [x] `backend`: `./gradlew spotlessApply build` **BUILD SUCCESSFUL, 797 tests, 실패 0, 건너뜀 2**\n- [x] 건너뛴 2건은 외부 API 테스트와 도커 감시용 테스트뿐이다. `InstrumentProfileApiIT` 15건과 스키마 검사 49건이 실제 PostgreSQL에서 돌았다\n- [x] `infra/scripts/check-migration-version.sh` 통과 (버전 역전 없음)\n\n## 리뷰 포인트\n\n**1. 지수 방법론 요약과 구성종목 중복은 원천이 주지 않는다.** 인증키로 직접 확인했다. 관련 서비스 네 개가 없는 경로이고, 되는 서비스는 기초지수 이름까지만 준다. 그래서 상장 구간·기업행위·공시값과 같은 방식으로 파일 입력(`--instrument-profiles`)을 하나 더 두었다. 원천이 나중에 제공하면 열 구성은 그대로 두고 입력만 바꾸면 된다.\n\n**2. 어느 자료 버전의 행을 보여줄지 규칙을 정했다.** 열린 대응표 버전을 대상으로 수집된 자료 버전 중 `complete = true`이고 마감 시각이 가장 늦은 것이다. 물러난 대응표로 만든 값이 현재 섹터 목록 옆에 나오지 않게 하고(원칙 IV), 부분 갱신 자료를 완전한 자료로 표시하지 않기 위해서다(FR-014).\n\n**3. 일평균 거래대금의 저장과 응답이 다르다.** 저장은 문자열, 응답은 지수 표기 없는 문자열이며 도메인에서 BigDecimal을 거친다. data-model.md와 계약 어느 쪽도 이 변환을 말하지 않는다. 지수 표기를 막는 CHECK를 넣어 왕복이 깨지지 않게 했다.\n\n**4. 응답의 `isSample`을 자료 버전 기준으로 정했다.** 계약이 대응표의 것인지 자료 버전의 것인지 말하지 않는다. `datasetId`·`dataDeadline`과 한 덩어리라 그렇게 정했고, 그래서 `GET /sectors`의 같은 이름 필드와 값이 다를 수 있다.\n\n**5. converge가 남긴 열 개 과제는 손대지 않았다.** 실자료가 쌓여야 하거나(T014·T015·T016·T020), 003·004가 소유한 값이 있어야 하거나(T017·T019·T021), spec 문서를 고쳐야 풀리는 것(T023·T025~T028)이다.\n\n**6. ⚠️ 계약 충돌 하나를 발견했다 (T018).** `contracts/market-dataset.md`는 \"워밍업 자료는 요청 구간보다 앞에서 읽는다\"고 정했고 공급자에 거래일 기준 장치가 실제로 들어 있다. 그런데 `engine_runner.py:273`이 워밍업 일수를 넘기지 않아 기본값 0으로 읽고, 워밍업이 요청 구간 안에서 소비된다. **공급자의 워밍업 경로가 실제 Job 처리 경로에서 죽어 있다.** 선택지는 둘이며 001 혼자 정할 수 없다. (가) 004의 설계를 기준으로 삼고 001 계약의 그 문장을 걷어낸다. (나) 001 계약을 기준으로 삼고 엔진이 인자를 넘기게 한다. (나)는 모든 백테스트의 평가 시작일과 지표를 움직이고 004의 재현 픽스처를 함께 깨므로 004와 합의가 필요하다.\n\n**7. `plan.md`가 남의 파일을 가리킨다.** 마이그레이션을 `V3__etf_market_data.sql`로 적어 두었는데 타임스탬프 방식으로 바뀌어 실제 파일은 다르고, 게다가 `V3__param_search.sql`이 다른 기능의 마이그레이션으로 이미 존재한다. spec 문서라 이 MR에서 고치지 않았다.",
+    "state": "merged",
+    "created_at": "2026-09-13T23:02:33.392+09:00",
+    "updated_at": "2026-09-14T14:14:04.909+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-14T14:14:04.930+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/181-instrument-profile",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d7a0109606d81e0b86a145518c09045526ccc518",
+    "merge_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T23:02:35.816+09:00",
+    "reference": "!68",
+    "references": {
+      "short": "!68",
+      "relative": "!68",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!68"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/68",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "25",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "head_sha": "d7a0109606d81e0b86a145518c09045526ccc518",
+      "start_sha": "b870684eba1fe7c34bf7e1c0dc9b6b3305053925"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "d7d557a3a38d42974e7f717218e4622f3becc93d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798381,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-13T23:02:33.534+09:00",
+          "updated_at": "2026-09-13T23:02:33.544+09:00",
+          "system": true,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "79fc0c007c821a264c03d2afd63c36562f84987a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798384,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 예외 처리와 명확한 HTTP 상태 코드 매핑**: `SectorService`와 `SectorExceptionHandler`를 통해 404(`SECTOR_NOT_FOUND`)와 409(`INSTRUMENT_PROFILE_NOT_READY`, `SectorMapNotReadyException`)를 철저히 구분하여 클라이언트가 비즈니스 상태를 명확히 인지할 수 있도록 설계되었습니다.\n- **데이터 정밀도 보존**: `BigDecimal` 직렬화 시 전역 ObjectMapper 등록 대신 필드 단위로 `PlainBigDecimalSerializer`를 적용하여 기존 API 계약과의 충돌을 방지하고 금액 표기의 정밀도를 안전하게 유지했습니다.\n\n### 발견 사항\n- [Low] `backend/src/test/java/com/ssafy/thorp/sector/InstrumentProfileApiIT.java` 파일명만 존재하고 내부 구현이나 테스트 케이스가 비어 있습니다. 통합 테스트 코드가 누락되었거나 작성 중 커밋된 것으로 보입니다.\n\n### 테스트 제안\n- **대표 상품 정보 조회 성공 시나리오**: `GET /sectors/{code}/instrument-profile` 호출 시, 유효한 섹터 코드와 준비된(complete=true) 최신 데이터셋 버전이 존재할 때 200 OK와 함께 `benchmarkIndex`, `indexMethodologySummary`, `holdingsOverlap`, `avgDailyValue3m` 등의 필수 필드가 정확한 포맷(지수 표기 없는 문자열)으로 반환되는지 검증합니다.\n- **예외 상황 처리 시나리오**: \n  - 존재하지 않는 섹터 코드로 요청 시 404 (`SECTOR_NOT_FOUND`) 응답 검증.\n  - 섹터는 존재하나 해당 버전의 대표 상품 정보가 아직 적재되지 않은 경우 409 (`INSTRUMENT_PROFILE_NOT_READY`) 응답 검증.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d7a0109606d81e0b86a145518c09045526ccc518 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-13T23:02:44.289+09:00",
+          "updated_at": "2026-09-14T14:13:19.921+09:00",
+          "system": false,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e3750c8a4b4923cdb242433081c7eb64f6a0712f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798690,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>52a6025f - fix(be): 출처 표시와 구성 기준 표시를 파일 입력이 흔들지 못하게 한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/68/diffs?diff_id=2191286&start_sha=70655c18032541f3795119de6db549719464dba9)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T01:00:51.093+09:00",
+          "updated_at": "2026-09-14T01:00:51.098+09:00",
+          "system": true,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "930f5db1ded029c58cdac510a041ee9d740a3b3e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801096,
+          "type": null,
+          "body": "## [High] 지적 확인 결과 — 오탐이다\n\n`InstrumentProfileJpaRepository`에서 `version.mapVersion`을 `join fetch`가 아니라 `join`으로 둔 것은 **의도된 것이며 결함이 아니다.** 호출 흐름을 세 갈래로 따라가 확인했다.\n\n**첫째, 매퍼가 `mapVersion`을 한 번도 읽지 않는다.** `InstrumentProfileMapper.java:36-38`이 `version`에서 꺼내는 것은 `getDatasetId()`·`getDataDeadline()`·`isSample()` 셋뿐이고, 이 셋은 `join fetch profile.datasetVersion version`으로 이미 초기화된 엔티티의 자기 컬럼이다. `getMapVersion()`을 부르는 코드는 `backend/src` 전체에 없다(선언 한 줄뿐임을 확인했다). `join version.mapVersion map`은 `where map.version = :mapVersion` 필터링만을 위한 것이라 `join fetch`가 필요 없고, 오히려 `join fetch`로 바꾸면 응답이 쓰지 않는 대응표 행을 매번 더 읽게 되는 손해다.\n\n**둘째, 지적이 전제한 fetch 기본값이 이 저장소와 다르다.** `DatasetVersionJpaEntity.java:50`이 `@ManyToOne(fetch = FetchType.LAZY, optional = false)`로 **LAZY를 명시**한다. \"`@ManyToOne` 기본값은 EAGER\"라는 전제가 성립하지 않는다.\n\n**셋째, 프록시가 트랜잭션 밖으로 새지 않는다.** `InstrumentProfileRepositoryImpl.findCurrentProfile`에 `@Transactional(readOnly = true)`가 붙어 있고 조회와 매핑이 둘 다 그 메서드 안에서 끝난다. 밖으로 나가는 것은 `InstrumentProfileResult` 값 객체뿐이라 엔티티도 프록시도 넘어가지 않는다. 보조 근거로 `application.yml:20`이 `open-in-view: false`이므로, 이 프로젝트에서 트랜잭션 밖 지연 로딩은 조용히 넘어가지 않고 즉시 예외로 터진다.\n\n**N+1도 성립하지 않는다.** `PageRequest.of(0, 1)`로 최대 한 행만 받고 `findFirst()`로 한 건만 쓴다. 반복 대상이 없어 N이 존재하지 않는다.\n\n따라서 **이 지적으로 고친 파일은 없다.**\n\n## 검증 결과\n\n```\n./gradlew cleanTest spotlessApply build\nBUILD SUCCESSFUL in 2m 6s\n\ntests=798  skipped=2  failures=0  errors=0\nInstrumentProfileApiIT: tests=16  skipped=0  failures=0  errors=0\n```\n\n`spotlessApply`가 고친 파일은 없었다.\n\n**처음 돌렸을 때는 Docker가 꺼져 있어 207건이 조용히 건너뛰어졌다.** 실패는 0건이라 겉보기에 통과였지만, 하필 이 판정의 핵심 증거인 `InstrumentProfileApiIT` 16건이 통째로 건너뛴 상태였다. Docker를 켜고 `cleanTest`를 붙여 다시 돌린 결과가 위의 숫자다.\n\n## [Low] 지적에 대해\n\n마이그레이션 버전 충돌은 없다. `V20260913103000__instrument_profile.sql`은 타임스탬프 방식이며, 이 방식을 쓰기로 한 까닭이 바로 여러 spec이 같은 연속 번호를 적어 충돌하던 문제를 없애기 위해서다. 이미 적용된 `V1`~`V4`는 건드리지 않았다.\n\n## 남은 것\n\n이 MR과 !69가 `data/scripts/ingest_krx.py`를 함께 고쳐 **충돌한다.** 가상 병합으로 확인한 결과 어느 쪽을 먼저 넣든 두 번째가 이 파일에서 충돌을 풀어야 한다. !69를 먼저 병합한 뒤 이 브랜치를 `dev`로 리베이스해 충돌을 풀고 세 파트를 다시 검증할 예정이다.",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T12:45:30.814+09:00",
+          "updated_at": "2026-09-14T12:45:30.814+09:00",
+          "system": false,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3680d09f74ed38509ca46328051f7b7c772fccbd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801112,
+          "type": null,
+          "body": "mentioned in merge request !69",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T12:47:16.751+09:00",
+          "updated_at": "2026-09-14T12:47:16.755+09:00",
+          "system": true,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e0238365d42ab109fbdd06c6d55371d85427636a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801939,
+          "type": null,
+          "body": "added 47 commits\n\n<ul><li>52a6025f...8b894d09 - 43 commits from branch <code>dev</code></li><li>3511b188 - feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)</li><li>7582fe55 - docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다</li><li>915b6d8d - fix(be): 출처 표시와 구성 기준 표시를 파일 입력이 흔들지 못하게 한다</li><li>d7a01096 - fix(de): 대표 상품 정보 입력 파일의 키 표기를 snake_case로 맞춘다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/68/diffs?diff_id=2193952&start_sha=52a6025f7ef04fc89265d575e8c80ab82b807be2)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T14:13:10.537+09:00",
+          "updated_at": "2026-09-14T14:13:10.542+09:00",
+          "system": true,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "868eb308c6274eda7095643a959b70de9dab5722",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801948,
+          "type": null,
+          "body": "## 최신 `dev`로 리베이스했고, 그 과정에서 결함 하나가 드러나 고쳤다\n\n`S15P21E205-189`(MR !69)를 먼저 병합한 뒤 이 브랜치를 `dev` 위로 옮겼다. 주말 동안 `dev`에 열 개 넘는 묶음이 들어와 있었다(161 후보 선정·164 탐색 한도·149 취소 제어 채널·183 Jenkins·190 FE 기록 보호 등).\n\n### 텍스트 충돌 — `data/scripts/ingest_krx.py` 한 구역\n\n양쪽이 **서로 다른 함수를 같은 자리에 더한** 것이라 둘 다 남겼다. `-189`가 더한 `resolve_actions_known_from`과 이 브랜치가 더한 `instrument_profiles`다. 어느 쪽 내용도 바꾸지 않았다.\n\n### 의미 충돌 — 이쪽이 진짜 문제였다\n\n텍스트 충돌을 풀고 나니 테스트가 하나 빨갛게 남았다.\n\n```\nFAILED tests/test_ingest_krx_inputs.py::TestInputFileKeys::test_the_help_text_shows_the_same_keys\nAssertionError: 인자 설명에 옛 표기가 남아 있다: instrumentId\n```\n\n`-189`가 `dev`에 넣은 이 검사는 파서 도움말 **전체**를 훑어 camelCase 토큰을 금지한다. 이 브랜치가 더한 `--instrument-profiles`의 도움말이 `instrumentId`를 담고 있어 걸렸다. **어느 쪽도 단독으로는 통과하던 것이 합쳐지며 깨졌다.**\n\n문제의 본질은 도움말 문구가 아니라 실제 파싱이었다.\n\n- 같은 스크립트가 받는 세 입력 중 `--instrument-profiles`만 camelCase를 읽고 있었다. `--listing`과 `--corporate-actions`는 `-189`가 이미 snake_case로 바꾼 뒤였다.\n- `_check_keys`가 **모르는 키를 오류로 거부**한다. 두 표기가 공존하는 관대한 상태가 아니라, **규약을 믿고 snake_case 파일을 만든 사용자가 수집 단계에서 거부당하는** 상태였다.\n- 입력 파일의 키 표기를 고정하는 계약 문서나 픽스처는 없었다. `contracts/sector-api.md`의 camelCase는 조회 API **응답**이라 별개 층이고, 그쪽은 루트 `CLAUDE.md` 규칙이 정상 적용되는 자리다.\n\n**도움말 문구만 고쳐 초록으로 만드는 선택은 하지 않았다.** 그러면 검사는 통과하지만 파싱은 camelCase로 남아, 위 상태가 조용히 유지된다. `-189`가 방금 없앤 불일치를 곧바로 되살리는 셈이다.\n\n### 고친 것 (커밋 `d7a0109`)\n\n입력 층만 바꿨다. `instrumentId` → `instrument_id`, `indexMethodologySummary` → `index_methodology_summary`, `holdingsOverlap` → `holdings_overlap`, `asOfCurrentComposition` → `as_of_current_composition`, `topHoldings` → `top_holdings`.\n\n- 허용 키 목록·필수 키 집합·키 접근을 바꿨다\n- **오류 문구와 독스트링에 박힌 이름도 함께 바꿨다.** 특히 `(camelCase 파일 형식)`이라고 적어 둔 주석은 그대로 두면 사실과 어긋난다\n- 도움말 예시를 바꾸고, 다른 두 인자와 같은 형태로 \"열 이름은 snake_case다\"를 적었다\n- **`TestInputFileKeys`에 대표 상품 정보 파일 짝이 없어 세 건을 넣었다.** 상장 구간 파일과 기업행위 파일에는 camelCase 거부 테스트가 있는데 이 파일만 비어 있었다. 대표 상품 정보는 **중첩 객체를 가진 유일한 입력**이라, 바깥은 맞고 안쪽만 옛 표기인 파일도 따로 본다\n- 도움말 검사가 금지 토큰만 보던 것을 **새 키가 도움말에 있는지도 단언**하게 했다. 문구만 지워 통과시키는 길을 막는다\n\n**새 테스트가 껍데기가 아님을 확인했다.** 파싱 자리만 camelCase로 되돌리고 도움말과 오류 문구는 새 표기로 남긴 채 돌려 **세 건 모두 실패**하는 것을 보았다. 문구가 아니라 실제 파싱 때문에 실패한다는 뜻이다. 그 뒤 되돌리고 두 파일이 바이트 단위로 같음을 해시로 확인했다.\n\n### 출력 층은 건드리지 않았다\n\n`HoldingsOverlap.to_json_value()`가 내놓는 `topHoldings`는 DB의 `holdings_overlap` JSONB에 담겨 API 응답으로 나가는 값이고, `InstrumentProfileJpaEntity`와 도메인 모델이 그 이름으로 읽는다. 이 자리를 함께 바꿨으면 계약이 조용히 깨졌다. `contracts/sector-api.md`도 읽기만 했다.\n\n## 검증 결과 (커밋 `d7a0109` 기준)\n\n```\nbackend  ./gradlew cleanTest spotlessApply build\n         BUILD SUCCESSFUL in 2m 27s\n         tests=900  skipped=2  failures=0  errors=0\n         InstrumentProfileApiIT: tests=16  skipped=0  failures=0  errors=0\n\ndata     ruff check          → All checks passed!\n         ruff format --check → 26 files already formatted\n         pytest -q           → 458 passed (실패 0건, 건너뜀 0건)\n```\n\n`cleanTest`를 붙였다. 붙이지 않으면 Gradle이 직전 결과를 UP-TO-DATE로 보고 테스트를 통째로 건너뛰면서도 `BUILD SUCCESSFUL`을 낸다. `spotlessApply`가 고친 파일은 없었다.\n\nbackend 총건수가 앞서 적은 798건에서 900건으로 늘어난 것은 **리베이스로 들어온 `dev`의 여러 묶음이 더한 테스트**이지 이 MR이 더한 것이 아니다.\n\n## 범위 밖에서 발견한 것 (이번에 고치지 않았다)\n\n**섹터 대응표 파일이 아직 camelCase 입력이다.** `data/src/data_pipeline/sector_map.py`가 `instrumentId`·`listedOn`·`delistedOn`·`benchmarkIndex`·`representativeEtf`·`isSample`을 받고, 표본이 `specs/001-etf-market-data/contracts/fixtures/sample-sector-map.json`에 고정되어 있다. 이것도 디스크에서 읽는 파이프라인 입력 파일이라 `-189` 결정과 어긋나 보인다. 표본이 `specs/` 아래라 이 브랜치 범위 밖으로 두었다. **별도 티켓 후보다.**\n\n`quickstart.md`와 `tasks.md`의 camelCase는 조회 API 응답 필드를 말하는 자리라 어긋남이 아니다. `contracts/fixtures/evaluation-window-cases.json`의 `instrumentId`는 응답 형식일 가능성이 높아 판단을 보류했다 — **확인 필요**.",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T14:13:57.876+09:00",
+          "updated_at": "2026-09-14T14:13:57.876+09:00",
+          "system": false,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "37ecb8e830809476ce45a9b8568cd76c6842c9b0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801950,
+          "type": null,
+          "body": "mentioned in commit e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T14:14:05.091+09:00",
+          "updated_at": "2026-09-14T14:14:05.104+09:00",
+          "system": true,
+          "noteable_id": 942245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 68,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2193952,
+      "head_commit_sha": "d7a0109606d81e0b86a145518c09045526ccc518",
+      "base_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "start_commit_sha": "b870684eba1fe7c34bf7e1c0dc9b6b3305053925",
+      "created_at": "2026-09-14T14:13:10.256+09:00",
+      "merge_request_id": 942245,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "9b7f8edfd25fb34c9bbf8deb3a5e8fc06827c47f"
+    },
+    {
+      "id": 2191286,
+      "head_commit_sha": "52a6025f7ef04fc89265d575e8c80ab82b807be2",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T01:00:50.815+09:00",
+      "merge_request_id": 942245,
+      "state": "without_files",
+      "real_size": "24",
+      "patch_id_sha": "bf542bc0858d02126e543e417f112af6482f8193"
+    },
+    {
+      "id": 2191055,
+      "head_commit_sha": "70655c18032541f3795119de6db549719464dba9",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-13T23:02:34.040+09:00",
+      "merge_request_id": 942245,
+      "state": "without_files",
+      "real_size": "24",
+      "patch_id_sha": "05c2eca06cefe765398913d114cfc40b729a93ec"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2193952,
+      "head_commit_sha": "d7a0109606d81e0b86a145518c09045526ccc518",
+      "base_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "start_commit_sha": "b870684eba1fe7c34bf7e1c0dc9b6b3305053925",
+      "created_at": "2026-09-14T14:13:10.256+09:00",
+      "merge_request_id": 942245,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "9b7f8edfd25fb34c9bbf8deb3a5e8fc06827c47f",
+      "commits": [
+        {
+          "id": "d7a0109606d81e0b86a145518c09045526ccc518",
+          "short_id": "d7a01096",
+          "created_at": "2026-09-14T14:13:01.000+09:00",
+          "parent_ids": [
+            "915b6d8dd5aabb7e8295b129b8f52dd151783ffa"
+          ],
+          "title": "fix(de): 대표 상품 정보 입력 파일의 키 표기를 snake_case로 맞춘다",
+          "message": "fix(de): 대표 상품 정보 입력 파일의 키 표기를 snake_case로 맞춘다\n\nS15P21E205-189가 확정한 「파이프라인 입력 파일의 키 표기는 snake_case 한 가지」를\n--instrument-profiles 입력 파일에도 적용한다. 같은 스크립트가 받는 다른 두 입력은\n이미 snake_case인데 이 파일만 camelCase를 읽고 있었다.\n\n_check_keys가 모르는 키를 거부하므로 두 표기가 공존하던 것이 아니라, 규약대로\nsnake_case 파일을 만든 사용자가 수집 단계에서 거부당하는 상태였다. 리베이스로\n두 브랜치가 합쳐지며 도움말 검사가 실패해 드러났다.\n\n- 허용 키 목록·필수 키 집합·키 접근을 snake_case로 바꾼다\n- 오류 문구와 독스트링에 박힌 이름도 함께 바꾼다. \"(camelCase 파일 형식)\"이라고\n  적어 둔 주석이 사실과 어긋나게 되므로 남겨 둘 수 없다\n- 도움말 예시를 바꾸고 다른 두 인자와 같은 형태로 \"열 이름은 snake_case다\"를 적는다\n- TestInputFileKeys에 대표 상품 정보 파일 짝이 없어 세 건을 넣는다. 대표 상품 정보는\n  중첩 객체를 가진 유일한 입력이라 바깥은 맞고 안쪽만 옛 표기인 파일도 따로 본다\n- 도움말 검사가 금지 토큰만 보던 것을 새 키가 있는지도 단언하게 한다. 문구만 지워\n  통과시키는 길을 막는다\n\n출력 층은 건드리지 않았다. to_json_value()가 내놓는 topHoldings는 DB JSONB를 거쳐\nAPI 응답으로 나가는 값이고 백엔드가 그 이름으로 읽는다. contracts/sector-api.md의\ncamelCase는 응답 계약이라 루트 CLAUDE.md 규칙이 정상 적용되는 자리다.\n\n검증: data 458건 통과(실패 0, 건너뜀 0), backend 900건(실패 0, 오류 0, 건너뜀 2)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-14T14:13:01.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-14T14:13:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d7a0109606d81e0b86a145518c09045526ccc518"
+        },
+        {
+          "id": "915b6d8dd5aabb7e8295b129b8f52dd151783ffa",
+          "short_id": "915b6d8d",
+          "created_at": "2026-09-14T12:49:14.000+09:00",
+          "parent_ids": [
+            "7582fe55f0d64ff964c952c8c235a1826a77aa52"
+          ],
+          "title": "fix(be): 출처 표시와 구성 기준 표시를 파일 입력이 흔들지 못하게 한다",
+          "message": "fix(be): 출처 표시와 구성 기준 표시를 파일 입력이 흔들지 못하게 한다\n\n기능 이해 브리프(specs/001-etf-market-data/briefs/181-instrument-profile.md)가 올린\n불일치 두 건을 닫는다.\n\n1. 출처 표시를 파일이 덮어쓸 수 있었다. sourceAttribution 키를 받아 빈 문자열만 아니면\n   무엇이든 통과했고 표에도 값 제약이 없었다. FR-011이 요구한 출처 표시가 파일을 쓰는 사람의\n   손에 달려 SC-005의 \"100%\"를 코드가 보장하지 못했다. 이 값은 종목마다 다른 자료가 아니라\n   원천이 정해 주는 한 문장이므로 파일 입력에서 아예 뺀다.\n\n2. 현재 구성 기준 표시를 거짓으로 줄 수 있었다. 과거 구성 이력을 주는 원천이 없으므로\n   (2026-09-13 확인) 거짓은 \"당시 구성을 재현했다\"는 뜻이 되어 FR-015가 금지한 표현이\n   화면에 실린다. 참이 아니면 거부한다. 나중에 과거 구성을 확보하면 그 검사를 푸는 자리를\n   주석으로 남겼다.\n\n아울러 물러난 대응표로 만든 자료 버전을 고르지 않는지 겨냥한 통합 테스트를 더했다. 그 조건은\n이번에 새로 정한 규칙인데 겨냥한 테스트가 없어 질의에서 지워도 통과했다. 마감 시각을 일부러\n더 늦게 둔 자료 버전을 함께 심어, 조건을 지우면 정렬이 그쪽을 골라 테스트가 깨지는 것을\n확인했다.\n\n검증: data pytest 440 passed(437 → 440), backend build 798 tests 실패 0 건너뜀 2(797 → 798).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-14T01:00:37.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-14T12:49:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/915b6d8dd5aabb7e8295b129b8f52dd151783ffa"
+        },
+        {
+          "id": "7582fe55f0d64ff964c952c8c235a1826a77aa52",
+          "short_id": "7582fe55",
+          "created_at": "2026-09-14T12:49:14.000+09:00",
+          "parent_ids": [
+            "3511b188fcc4a49db5cd2082656e7a28a20e82ec"
+          ],
+          "title": "docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다",
+          "message": "docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다\n\nspec 001을 코드와 대조해 tasks.md에 Phase 8(T017~T028) 12개를 덧붙였다.\nMUST 위반은 없고 유형은 missing 2·partial 9·contradicts 1이다.\n\n이번에 닫은 둘:\n- 스키마 검사가 표를 11개만 세고 instrument_profile을 빼놓았다. T003이\n  11개를 만들 때의 목록 그대로라, T013이 열두 번째 표를 뒤늦게 채웠는데도\n  \"빠진 표\"를 다시 놓칠 자리가 남아 있었다. data-model.md와 같은 12개를\n  세게 한다.\n- quickstart에 대표 상품 정보 시나리오(8)가 없어 사용자 스토리 3만 실행\n  가능한 검증 절차가 비어 있었다. 필수 항목·출처 표시·현재 구성 기준 표시·\n  추적 차이 필드 부재와 404/409 구분을 확인한다.\n\n나머지 열은 이번 범위가 아니라 근거만 적었다. T017(평가 기간 조회 표면)은\n003의 워밍업 값이 있어야 하고, T019(자료 묶음 식별자)는 004 연동에서 풀며,\nT020(가격·지수 대조)은 실자료가 쌓여야 뜻이 생긴다. T018(워밍업 읽기 구간)은\n001 계약과 004 engine_runner의 설계가 어긋나 팀이 기준을 정해야 한다.\nT023·T025~T028은 spec 문서를 고쳐야 풀려 건드리지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:54:14.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-14T12:49:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7582fe55f0d64ff964c952c8c235a1826a77aa52"
+        },
+        {
+          "id": "3511b188fcc4a49db5cd2082656e7a28a20e82ec",
+          "short_id": "3511b188",
+          "created_at": "2026-09-14T12:49:13.000+09:00",
+          "parent_ids": [
+            "8b894d09136c212242aa1665e3eaa0851d513939"
+          ],
+          "title": "feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)",
+          "message": "feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)\n\nspec 001 FR-011·FR-015, contracts/sector-api.md.\n\n- data: instrument_profile 모듈. 유동성은 daily_price.value(거래대금)로만 내고\n  거래량×종가 추정을 쓰지 않는다. 지수 방법론 요약·구성종목은 원천 API가 주지\n  않아(2026-09-13 확인) 상장일·기업행위와 같은 선례로 파일 입력이다.\n  추적 차이는 PD-21이라 만들지 않고 그런 키가 들어오면 거부한다.\n- data: 적재는 별도 진입점 대신 repository.load_instrument_profiles로 넣는다.\n  일평균 거래대금의 근거가 방금 만든 daily_price 행이고, 적재 계층에는 DB에서\n  시계열을 되읽는 경로가 없어 다른 자리에서는 그 값을 얻을 수 없다.\n- backend: instrument_profile 표를 만든다. T003이 data-model.md의 표 12개 중\n  이 하나를 빠뜨렸고 어느 묶음도 맡고 있지 않았다.\n- backend: GET /sectors/{code}/instrument-profile. 열린 대응표를 대상으로 수집된\n  완전한 자료 버전 중 마감이 가장 늦은 것을 보여준다. 없는 섹터는 404\n  SECTOR_NOT_FOUND, 자료 미적재는 409 INSTRUMENT_PROFILE_NOT_READY로 구분한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:41:07.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-14T12:49:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3511b188fcc4a49db5cd2082656e7a28a20e82ec"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.ssafy.thorp.sector.application.exception;\n+\n+/**\n+ * 대표 상품 정보가 아직 만들어지지 않았다 (contracts/sector-api.md: 409 {@code INSTRUMENT_PROFILE_NOT_READY}).\n+ *\n+ * <p><b>빈 값과 구분한다.</b> \"아직 만들지 않았다\"와 \"만들었는데 비어 있다\"는 다른 사실이고, 원칙 VI가 없는 결과를 만들어 내지 않기를 요구한다. 자료\n+ * 파이프라인이 그 자료 버전의 대표 상품 정보를 아직 적재하지 않았다면 재시도하면 달라질 수 있는 상태라 409다 — {@code SECTOR_MAP_NOT_READY}와 같은\n+ * 판단이다.\n+ *\n+ * <p>섹터 코드가 대응표에 없는 것과도 구분한다. 그쪽은 재시도해도 달라지지 않으므로 404 {@code SECTOR_NOT_FOUND}다({@link\n+ * SectorNotFoundException}).\n+ */\n+public class InstrumentProfileNotReadyException extends RuntimeException {\n+\n+    public InstrumentProfileNotReadyException(String sectorCode) {\n+        super(\"%s 섹터의 대표 상품 정보가 아직 준비되지 않았습니다. 잠시 후 다시 조회해 주세요.\".formatted(sectorCode));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/InstrumentProfileNotReadyException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/InstrumentProfileNotReadyException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.ssafy.thorp.sector.application.exception;\n+\n+/**\n+ * 열린 대응표에 그 섹터 코드가 없다 (contracts/sector-api.md: 404 {@code SECTOR_NOT_FOUND}).\n+ *\n+ * <p>코드 형식이 틀린 요청도 여기로 온다. 형식이 맞지 않는 코드는 대응표에 있을 수 없으므로 \"없는 섹터\"와 결과가 같고, 계약이 이 경로에 정의한 오류도 404\n+ * 하나뿐이다. 형식 검사를 따로 두어 400을 내면 클라이언트가 구분할 수 없는 두 가지 실패를 만들게 된다.\n+ *\n+ * <p>이 예외 덕분에 {@code SectorCode}를 경로 변수로 직접 만들지 않는다. 만들면 형식 위반이 {@code IllegalArgumentException}이\n+ * 되고, {@code SectorExceptionHandler}가 그것을 <b>저장된 자료의 결함</b>으로 보아 500으로 옮긴다 — 클라이언트 입력 때문에 5xx 경보가\n+ * 울린다.\n+ */\n+public class SectorNotFoundException extends RuntimeException {\n+\n+    public SectorNotFoundException(String sectorCode) {\n+        super(\"%s 섹터를 찾을 수 없습니다.\".formatted(sectorCode));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/SectorNotFoundException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/SectorNotFoundException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+package com.ssafy.thorp.sector.application.repository;\n+\n+import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;\n+import java.util.Optional;\n+\n+/**\n+ * 대표 상품 정보 조회. <b>읽기 전용이다.</b>\n+ *\n+ * <p>원본은 {@code data/} 파이프라인이 소유하고({@code data/src/data_pipeline/instrument_profile.py}) 백엔드에는 쓰기\n+ * 경로가 없다. 이유는 대응표와 같다 — 양방향을 허용하면 같은 값이 두 곳에서 갈라지고, 발행된 자료 버전을 고치지 않는다는 FR-017을 누가 책임지는지 흐려진다.\n+ */\n+public interface InstrumentProfileRepository {\n+\n+    /**\n+     * 지금 보여 줄 대표 상품 정보.\n+     *\n+     * <p><b>어느 행을 고르는가</b>는 문서가 정해 두지 않아 여기서 정한다. 조건은 셋이다.\n+     *\n+     * <ol>\n+     *   <li>{@code mapVersion}(지금 열린 대응표 버전)을 대상으로 수집된 자료 버전일 것. 물러난 대응표를 대상으로 만든 값을 현재 목록 옆에 두면 두\n+     *       응답이 다른 판을 가리킨다\n+     *   <li>그 자료 버전이 완전할 것({@code complete = true}). 이용 한도에 걸려 부분만 갱신된 자료를 완전한 자료로 표시하지 않는다(FR-014)\n+     *   <li>그중 {@code data_deadline}이 가장 늦은 것\n+     * </ol>\n+     *\n+     * @return 조건에 맞는 행이 없으면 {@link Optional#empty()}. 호출자는 이것을 빈 값이 아니라 \"아직 만들어지지 않음\"으로 다룬다\n+     */\n+    Optional<InstrumentProfileResult> findCurrentProfile(String mapVersion, String instrumentId);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/InstrumentProfileRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/InstrumentProfileRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,22 @@\n+package com.ssafy.thorp.sector.application.result;\n+\n+import com.ssafy.thorp.sector.domain.model.InstrumentProfile;\n+import com.ssafy.thorp.sector.domain.model.RepresentativeEtf;\n+import java.time.Instant;\n+\n+/**\n+ * {@code GET /sectors/{code}/instrument-profile}의 유스케이스 출력.\n+ *\n+ * <p>세 조각이 한 덩어리로만 뜻이 있다. 상품 자체의 값({@code etf}), 자료 버전마다 새로 만드는 설명 값({@code profile}), 그리고 그 값이 어느\n+ * 시점 자료인지({@code datasetId}·{@code dataDeadline}·{@code isSample})다. 따로 읽어 조립하면 서로 다른 자료 버전을 가리킬 수\n+ * 있으므로 저장소가 한 트랜잭션에서 이 덩어리를 만들어 돌려준다({@code SectorListResult}와 같은 판단이다).\n+ *\n+ * @param isSample 이 대표 상품 정보를 만든 <b>자료 버전</b>이 예시 자료인지다(FR-002, research.md 결정 5). 대응표의 {@code\n+ *     isSample}과 값이 같을 수도 다를 수도 있어 각자 자기 근거를 쓴다\n+ */\n+public record InstrumentProfileResult(\n+        RepresentativeEtf etf,\n+        InstrumentProfile profile,\n+        String datasetId,\n+        Instant dataDeadline,\n+        boolean isSample) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/InstrumentProfileResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/InstrumentProfileResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,17 @@\n package com.ssafy.thorp.sector.application.service;\n \n+import com.ssafy.thorp.sector.application.exception.InstrumentProfileNotReadyException;\n import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;\n+import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;\n+import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository;\n import com.ssafy.thorp.sector.application.repository.SectorRepository;\n+import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;\n import com.ssafy.thorp.sector.application.result.SectorListResult;\n+import com.ssafy.thorp.sector.domain.model.Sector;\n import org.springframework.stereotype.Service;\n \n /**\n- * 섹터 목록 조회 유스케이스 (User Story 1).\n+ * 섹터 목록·대표 상품 정보 조회 유스케이스 (User Story 1·3).\n  *\n  * <p>대응표를 고치는 메서드가 없다. 저장소가 읽기 전용이고 원본은 파이프라인이 소유한다(research.md 결정 7).\n  */\n@@ -14,9 +19,13 @@ import org.springframework.stereotype.Service;\n public class SectorService {\n \n     private final SectorRepository sectorRepository;\n+    private final InstrumentProfileRepository instrumentProfileRepository;\n \n-    public SectorService(SectorRepository sectorRepository) {\n+    public SectorService(\n+            SectorRepository sectorRepository,\n+            InstrumentProfileRepository instrumentProfileRepository) {\n         this.sectorRepository = sectorRepository;\n+        this.instrumentProfileRepository = instrumentProfileRepository;\n     }\n \n     /**\n@@ -27,4 +36,32 @@ public class SectorService {\n     public SectorListResult getSectors() {\n         return sectorRepository.findOpenSectorMap().orElseThrow(SectorMapNotReadyException::new);\n     }\n+\n+    /**\n+     * 한 섹터의 대표 상품 정보 (User Story 3).\n+     *\n+     * <p>세 실패를 구분한다. 대응표 미발행은 409 {@code SECTOR_MAP_NOT_READY}, 그 대응표에 없는 섹터는 404 {@code\n+     * SECTOR_NOT_FOUND}, 섹터는 있는데 대표 상품 정보가 아직 없으면 409 {@code INSTRUMENT_PROFILE_NOT_READY}다. 셋을 빈\n+     * 값으로 뭉개면 화면이 \"잠시 후 다시\"와 \"없는 섹터\"를 가릴 수 없다(원칙 VI).\n+     *\n+     * <p><b>열린 대응표에서 섹터를 찾은 다음 그 대표 ETF로 조회한다.</b> 목록과 같은 판을 보게 하려는 것이다. 섹터 코드로 곧장 대표 상품 정보를 찾으면\n+     * 물러난 대응표가 가리키던 ETF의 값이 현재 목록 옆에 나올 수 있다. 목록은 섹터 수십 행이라 한 번 더 읽는 값이 싸다.\n+     *\n+     * <p>경로 변수를 {@code SectorCode}로 만들지 않는 이유는 {@link SectorNotFoundException} 문서에 적었다.\n+     *\n+     * @throws SectorMapNotReadyException 대응표가 아직 발행되지 않았을 때\n+     * @throws SectorNotFoundException 열린 대응표에 그 코드가 없을 때(형식이 틀린 코드도 여기다)\n+     * @throws InstrumentProfileNotReadyException 대표 상품 정보가 아직 만들어지지 않았을 때\n+     */\n+    public InstrumentProfileResult getInstrumentProfile(String sectorCode) {\n+        SectorListResult map = getSectors();\n+        Sector sector =\n+                map.sectors().stream()\n+                        .filter(candidate -> candidate.code().value().equals(sectorCode))\n+                        .findFirst()\n+                        .orElseThrow(() -> new SectorNotFoundException(sectorCode));\n+        return instrumentProfileRepository\n+                .findCurrentProfile(map.mapVersion(), sector.representativeEtf().instrumentId())\n+                .orElseThrow(() -> new InstrumentProfileNotReadyException(sectorCode));\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/service/SectorService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/service/SectorService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,72 @@\n+package com.ssafy.thorp.sector.domain.model;\n+\n+import java.math.BigDecimal;\n+import java.util.List;\n+import java.util.Objects;\n+\n+/**\n+ * 대표 상품 정보 (FR-011·FR-015). 사용자가 결과의 근거와 한계를 확인하는 묶음이다.\n+ *\n+ * <p>기준 지수·상장일·운용사는 여기 없다. 그 셋은 상품 자체의 값이라 {@link RepresentativeEtf}가 갖고, 저장 스키마도 {@code\n+ * representative_etf}에 둔다(data-model.md). 이 모델은 \"자료 버전마다 새로 만드는 설명 값\"만 담는다.\n+ *\n+ * <p><b>추적 차이 필드를 두지 않는다.</b> 계산 정의가 여러 갈래(지수 대비인지 순자산가치 대비인지, 분배금 재투자를 넣는지, 어느 기간인지)라 확정 전에 표시하면\n+ * 검증할 수 없는 숫자를 보여주게 된다. 결정 항목 PD-21이며 이번 범위에서 뺐다(spec.md Out of Scope). 확정되면 필드를 더하는 방향으로 넓힌다.\n+ *\n+ * @param asOfCurrentComposition true면 화면은 \"당시 구성을 재현했다\"고 표현하지 않는다(FR-015). 과거 구성 이력 복원은 범위 밖이라 지금\n+ *     만드는 값은 모두 현재 구성 기준이다\n+ * @param avgDailyValue3m 최근 3개월 일평균 거래대금(원). 근거는 {@code daily_price.value}(거래대금)이며 거래량에 종가를 곱한 추정이\n+ *     아니다(research.md 결정 6)\n+ */\n+public record InstrumentProfile(\n+        String indexMethodologySummary,\n+        List<Holding> topHoldings,\n+        boolean asOfCurrentComposition,\n+        BigDecimal avgDailyValue3m,\n+        String sourceAttribution,\n+        String survivorshipNote) {\n+\n+    public InstrumentProfile {\n+        requireText(indexMethodologySummary, \"indexMethodologySummary\");\n+        Objects.requireNonNull(topHoldings, \"topHoldings must not be null\");\n+        topHoldings = List.copyOf(topHoldings);\n+        if (topHoldings.isEmpty()) {\n+            // 빈 목록은 \"중복이 없다\"로 읽힌다. 자료가 없으면 행 자체를 만들지 않는 것이 원칙 VI다.\n+            throw new IllegalArgumentException(\"topHoldings must not be empty\");\n+        }\n+        BigDecimal total =\n+                topHoldings.stream().map(Holding::weight).reduce(BigDecimal.ZERO, BigDecimal::add);\n+        if (total.compareTo(BigDecimal.ONE) > 0) {\n+            throw new IllegalArgumentException(\n+                    \"sum of holding weights must not exceed 1: \" + total);\n+        }\n+        Objects.requireNonNull(avgDailyValue3m, \"avgDailyValue3m must not be null\");\n+        if (avgDailyValue3m.signum() < 0) {\n+            throw new IllegalArgumentException(\"avgDailyValue3m must not be negative\");\n+        }\n+        requireText(sourceAttribution, \"sourceAttribution\");\n+        requireText(survivorshipNote, \"survivorshipNote\");\n+    }\n+\n+    /**\n+     * 구성종목 한 건. 비중은 1을 100%로 보는 비율이다.\n+     *\n+     * <p>중첩 record로 두는 이유는 이 값이 {@link InstrumentProfile} 밖에서 홀로 쓰이지 않기 때문이다.\n+     */\n+    public record Holding(String name, BigDecimal weight) {\n+\n+        public Holding {\n+            requireText(name, \"holding name\");\n+            Objects.requireNonNull(weight, \"weight must not be null\");\n+            if (weight.signum() <= 0 || weight.compareTo(BigDecimal.ONE) > 0) {\n+                throw new IllegalArgumentException(\"weight must be in (0, 1]: \" + weight);\n+            }\n+        }\n+    }\n+\n+    private static void requireText(String value, String field) {\n+        if (value == null || value.isBlank()) {\n+            throw new IllegalArgumentException(field + \" must not be blank: \" + value);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/domain/model/InstrumentProfile.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/domain/model/InstrumentProfile.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,79 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.FetchType;\n+import jakarta.persistence.GeneratedValue;\n+import jakarta.persistence.GenerationType;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.JoinColumn;\n+import jakarta.persistence.ManyToOne;\n+import jakarta.persistence.Table;\n+import java.time.Instant;\n+\n+/**\n+ * {@code dataset_version} 테이블 매핑 (FR-013·FR-014).\n+ *\n+ * <p>마이그레이션이 만든 컬럼 전부를 매핑하지 않는다. 대표 상품 정보 응답이 쓰는 것은 {@code datasetId}·{@code dataDeadline}·{@code\n+ * isSample}과 고르는 조건인 {@code complete}·{@code mapVersion}뿐이다. {@code collected_at}·{@code\n+ * last_success_at}·{@code failure_reason}·{@code source}는 읽는 곳이 생길 때 그 코드와 같은 MR에서 붙인다({@code\n+ * backend/CLAUDE.md}). {@code ddl-auto=validate}는 매핑된 컬럼만 보고, 미매핑 컬럼의 존재는 {@code\n+ * FlywayMigrationTest}가 지킨다.\n+ *\n+ * <p>시계열(가격·기업행위·지수)은 매핑하지 않는다. 그것을 읽는 것은 워커이고 Backend는 메타데이터만 본다(plan.md).\n+ */\n+@Entity\n+@Table(name = \"dataset_version\")\n+class DatasetVersionJpaEntity {\n+\n+    @Id\n+    @GeneratedValue(strategy = GenerationType.IDENTITY)\n+    @Column(name = \"id\")\n+    private Long id;\n+\n+    @Column(name = \"dataset_id\", nullable = false, unique = true, length = 64)\n+    private String datasetId;\n+\n+    /** 데이터 마감 시각. 화면이 \"어느 시점 자료인지\" 판단하는 근거다(FR-013). */\n+    @Column(name = \"data_deadline\", nullable = false)\n+    private Instant dataDeadline;\n+\n+    /** false면 이용 한도 등으로 부분만 갱신된 자료다. 완전한 자료로 표시하지 않는다(FR-014). */\n+    @Column(name = \"complete\", nullable = false)\n+    private boolean complete;\n+\n+    /** FR-002, research.md 결정 5. 예시 자료로 만든 자료 버전인지. */\n+    @Column(name = \"is_sample\", nullable = false)\n+    private boolean isSample;\n+\n+    /** 이 자료가 어느 대응표 버전을 대상으로 수집됐는지. */\n+    @ManyToOne(fetch = FetchType.LAZY, optional = false)\n+    @JoinColumn(name = \"map_version_id\", nullable = false)\n+    private SectorEtfMapJpaEntity mapVersion;\n+\n+    protected DatasetVersionJpaEntity() {}\n+\n+    Long getId() {\n+        return id;\n+    }\n+\n+    String getDatasetId() {\n+        return datasetId;\n+    }\n+\n+    Instant getDataDeadline() {\n+        return dataDeadline;\n+    }\n+\n+    boolean isComplete() {\n+        return complete;\n+    }\n+\n+    boolean isSample() {\n+        return isSample;\n+    }\n+\n+    SectorEtfMapJpaEntity getMapVersion() {\n+        return mapVersion;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/DatasetVersionJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/DatasetVersionJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,107 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.FetchType;\n+import jakarta.persistence.GeneratedValue;\n+import jakarta.persistence.GenerationType;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.JoinColumn;\n+import jakarta.persistence.ManyToOne;\n+import jakarta.persistence.Table;\n+import java.util.Map;\n+import org.hibernate.annotations.JdbcTypeCode;\n+import org.hibernate.type.SqlTypes;\n+\n+/**\n+ * {@code instrument_profile} 테이블 매핑 (FR-015).\n+ *\n+ * <p>자료 버전마다 대표 ETF 한 건이다. 시계열과 달리 문자열 {@code dataset_id}가 아니라 두 bigint 외래 키를 갖는다(data-model.md) —\n+ * 가격처럼 날짜별로 쌓이는 자료가 아니라 상품 하나에 딸린 표시용 묶음이기 때문이다.\n+ *\n+ * <p>{@code avg_daily_value_3m}이 {@code NUMERIC}이 아니라 {@code TEXT}인 이유: {@code NUMERIC} 컬럼은 scale을\n+ * 임의로 정해야 하고 넘는 값을 조용히 반올림한다({@code backend/CLAUDE.md}). 파이프라인이 지수 표기 없는 문자열로 넣고 저장 CHECK이 그 모양을\n+ * 강제하므로, {@link InstrumentProfileMapper}가 그대로 {@code BigDecimal}로 옮길 수 있다.\n+ *\n+ * <p>{@code holdings_overlap}은 {@code jsonb}다. {@code @JdbcTypeCode(SqlTypes.JSON)}의 직렬화는 {@code\n+ * MessageJsonPersistenceConfig}가 메시지 ObjectMapper에 맡겨 두었고, 그 매퍼는 decimal을 plain 문자열로 다룬다. 그래서 비중이\n+ * {@code String}으로 읽히며 저장된 자리수가 그대로 보존된다.\n+ *\n+ * <p><b>추적 차이 컬럼이 없다.</b> 계산 정의가 확정되지 않아 이번 범위에서 뺐다(PD-21).\n+ */\n+@Entity\n+@Table(name = \"instrument_profile\")\n+class InstrumentProfileJpaEntity {\n+\n+    @Id\n+    @GeneratedValue(strategy = GenerationType.IDENTITY)\n+    @Column(name = \"id\")\n+    private Long id;\n+\n+    @ManyToOne(fetch = FetchType.LAZY, optional = false)\n+    @JoinColumn(name = \"etf_id\", nullable = false)\n+    private RepresentativeEtfJpaEntity etf;\n+\n+    @ManyToOne(fetch = FetchType.LAZY, optional = false)\n+    @JoinColumn(name = \"dataset_version_id\", nullable = false)\n+    private DatasetVersionJpaEntity datasetVersion;\n+\n+    @Column(name = \"index_methodology_summary\", nullable = false, columnDefinition = \"text\")\n+    private String indexMethodologySummary;\n+\n+    /** {@code {\"topHoldings\": [{\"name\": ..., \"weight\": \"0.2431\"}]}} 모양이다. */\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    @Column(name = \"holdings_overlap\", nullable = false)\n+    private Map<String, Object> holdingsOverlap;\n+\n+    /** true면 화면은 \"당시 구성을 재현했다\"고 표현하지 않는다(FR-015). */\n+    @Column(name = \"holdings_as_of_current\", nullable = false)\n+    private boolean holdingsAsOfCurrent;\n+\n+    @Column(name = \"avg_daily_value_3m\", nullable = false, columnDefinition = \"text\")\n+    private String avgDailyValue3m;\n+\n+    @Column(name = \"source_attribution\", nullable = false, length = 200)\n+    private String sourceAttribution;\n+\n+    @Column(name = \"survivorship_note\", nullable = false, columnDefinition = \"text\")\n+    private String survivorshipNote;\n+\n+    protected InstrumentProfileJpaEntity() {}\n+\n+    Long getId() {\n+        return id;\n+    }\n+\n+    RepresentativeEtfJpaEntity getEtf() {\n+        return etf;\n+    }\n+\n+    DatasetVersionJpaEntity getDatasetVersion() {\n+        return datasetVersion;\n+    }\n+\n+    String getIndexMethodologySummary() {\n+        return indexMethodologySummary;\n+    }\n+\n+    Map<String, Object> getHoldingsOverlap() {\n+        return holdingsOverlap;\n+    }\n+\n+    boolean isHoldingsAsOfCurrent() {\n+        return holdingsAsOfCurrent;\n+    }\n+\n+    String getAvgDailyValue3m() {\n+        return avgDailyValue3m;\n+    }\n+\n+    String getSourceAttribution() {\n+        return sourceAttribution;\n+    }\n+\n+    String getSurvivorshipNote() {\n+        return survivorshipNote;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import java.util.List;\n+import org.springframework.data.domain.Pageable;\n+import org.springframework.data.jpa.repository.JpaRepository;\n+import org.springframework.data.jpa.repository.Query;\n+import org.springframework.data.repository.query.Param;\n+\n+/**\n+ * 대표 상품 정보 조회 전용 Spring Data 인터페이스.\n+ *\n+ * <p>{@code JpaRepository}가 저장·삭제 메서드를 함께 물려주지만 이 인터페이스가 infrastructure 안에 갇혀 있어 밖에서 볼 수 없다. 밖으로\n+ * 나가는 계약은 {@code application.repository.InstrumentProfileRepository}이고 거기에는 읽기 메서드뿐이다.\n+ */\n+interface InstrumentProfileJpaRepository extends JpaRepository<InstrumentProfileJpaEntity, Long> {\n+\n+    /**\n+     * 한 대응표 버전·한 종목의 대표 상품 정보를 자료 마감 시각 내림차순으로 읽는다. 호출자가 {@link Pageable}로 한 건만 가져간다.\n+     *\n+     * <p>{@code complete = true} 조건은 FR-014다. 이용 한도에 걸려 부분만 갱신된 자료로 만든 값을 완전한 자료처럼 내보내지 않는다.\n+     *\n+     * <p>마감 시각이 같은 행이 둘일 수 있으므로 {@code datasetId}로 한 번 더 가른다. 정렬이 흔들리면 같은 요청이 요청마다 다른 값을 돌려준다.\n+     */\n+    @Query(\n+            \"\"\"\n+            select profile\n+            from InstrumentProfileJpaEntity profile\n+            join fetch profile.etf etf\n+            join fetch profile.datasetVersion version\n+            join version.mapVersion map\n+            where map.version = :mapVersion\n+              and version.complete = true\n+              and etf.instrumentId = :instrumentId\n+            order by version.dataDeadline desc, version.datasetId desc\n+            \"\"\")\n+    List<InstrumentProfileJpaEntity> findCurrent(\n+            @Param(\"mapVersion\") String mapVersion,\n+            @Param(\"instrumentId\") String instrumentId,\n+            Pageable pageable);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,83 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;\n+import com.ssafy.thorp.sector.domain.model.InstrumentProfile;\n+import com.ssafy.thorp.sector.domain.model.InstrumentProfile.Holding;\n+import java.math.BigDecimal;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * JPA Entity → 도메인 모델 변환 (ADR-0001).\n+ *\n+ * <p><b>{@code toEntity}가 없다.</b> 이유는 {@link SectorMapper}와 같다 — 대표 상품 정보의 원본은 {@code data/}\n+ * 파이프라인이고 백엔드에 쓰기 경로가 없다. 부를 일 없는 {@code toEntity}를 두면 \"여기로 쓸 수 있다\"는 잘못된 신호가 된다.\n+ *\n+ * <p>JSON을 푸는 일이 여기 있는 까닭: 도메인 모델에는 Jackson·JPA import를 두지 않는다({@code backend/CLAUDE.md}). 그래서\n+ * {@code jsonb}에서 읽은 {@code Map}을 도메인의 {@link Holding} 목록으로 옮기는 일은 infrastructure의 몫이다.\n+ */\n+final class InstrumentProfileMapper {\n+\n+    /** {@code instrument_profile.holdings_overlap}이 담는 배열의 키. 파이프라인과 합의한 이름이다. */\n+    private static final String TOP_HOLDINGS = \"topHoldings\";\n+\n+    private static final String HOLDING_NAME = \"name\";\n+    private static final String HOLDING_WEIGHT = \"weight\";\n+\n+    private InstrumentProfileMapper() {}\n+\n+    /** 대표 상품 정보 한 행을 유스케이스 출력으로 옮긴다. 대표 ETF와 자료 버전 메타를 함께 싣는다. */\n+    static InstrumentProfileResult toResult(InstrumentProfileJpaEntity profile) {\n+        DatasetVersionJpaEntity version = profile.getDatasetVersion();\n+        return new InstrumentProfileResult(\n+                SectorMapper.toDomain(profile.getEtf()),\n+                toDomain(profile),\n+                version.getDatasetId(),\n+                version.getDataDeadline(),\n+                version.isSample());\n+    }\n+\n+    static InstrumentProfile toDomain(InstrumentProfileJpaEntity profile) {\n+        return new InstrumentProfile(\n+                profile.getIndexMethodologySummary(),\n+                toHoldings(profile.getHoldingsOverlap()),\n+                profile.isHoldingsAsOfCurrent(),\n+                // 저장된 문자열을 그대로 옮긴다. 자리수가 보존되므로 응답의 plain 표기와 저장값이 같다.\n+                new BigDecimal(profile.getAvgDailyValue3m()),\n+                profile.getSourceAttribution(),\n+                profile.getSurvivorshipNote());\n+    }\n+\n+    /**\n+     * {@code {\"topHoldings\": [...]}}를 도메인 목록으로 옮긴다.\n+     *\n+     * <p>모양이 어긋나면 값을 지어내지 않고 {@link IllegalArgumentException}이다. 이 자리의 인자 출처는 DB뿐이므로 {@code\n+     * SectorExceptionHandler}가 그 예외를 500으로 옮긴다 — 클라이언트가 고칠 것이 없는 실패다.\n+     */\n+    private static List<Holding> toHoldings(Map<String, Object> overlap) {\n+        if (overlap == null || !(overlap.get(TOP_HOLDINGS) instanceof List<?> raw)) {\n+            throw new IllegalArgumentException(\"holdings_overlap must carry a topHoldings array\");\n+        }\n+        List<Holding> holdings = new ArrayList<>(raw.size());\n+        for (Object item : raw) {\n+            if (!(item instanceof Map<?, ?> holding)) {\n+                throw new IllegalArgumentException(\"topHoldings entry must be an object: \" + item);\n+            }\n+            holdings.add(\n+                    new Holding(\n+                            text(holding.get(HOLDING_NAME), HOLDING_NAME),\n+                            // 비중도 문자열로 저장된다. jsonb는 숫자를 정규화해 자리수를 바꾼다.\n+                            new BigDecimal(text(holding.get(HOLDING_WEIGHT), HOLDING_WEIGHT))));\n+        }\n+        return holdings;\n+    }\n+\n+    private static String text(Object value, String field) {\n+        if (!(value instanceof String text)) {\n+            throw new IllegalArgumentException(\n+                    \"holdings_overlap.\" + field + \" must be a string: \" + value);\n+        }\n+        return text;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileMapper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileMapper.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository;\n+import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;\n+import java.util.List;\n+import java.util.Optional;\n+import org.springframework.data.domain.PageRequest;\n+import org.springframework.stereotype.Repository;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/** {@link InstrumentProfileRepository}의 JPA 구현. 읽기만 한다. */\n+@Repository\n+public class InstrumentProfileRepositoryImpl implements InstrumentProfileRepository {\n+\n+    /** 가장 최근 한 건만 쓴다. 나머지 자료 버전의 행은 재현을 위해 남아 있을 뿐 화면에 나가지 않는다. */\n+    private static final PageRequest LATEST = PageRequest.of(0, 1);\n+\n+    private final InstrumentProfileJpaRepository jpaRepository;\n+\n+    public InstrumentProfileRepositoryImpl(InstrumentProfileJpaRepository jpaRepository) {\n+        this.jpaRepository = jpaRepository;\n+    }\n+\n+    @Override\n+    @Transactional(readOnly = true)\n+    public Optional<InstrumentProfileResult> findCurrentProfile(\n+            String mapVersion, String instrumentId) {\n+        List<InstrumentProfileJpaEntity> found =\n+                jpaRepository.findCurrent(mapVersion, instrumentId, LATEST);\n+        return found.stream().findFirst().map(InstrumentProfileMapper::toResult);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/InstrumentProfileRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,14 +2,16 @@ package com.ssafy.thorp.sector.presentation.controller;\n \n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.sector.application.service.SectorService;\n+import com.ssafy.thorp.sector.presentation.response.InstrumentProfileResponse;\n import com.ssafy.thorp.sector.presentation.response.SectorListResponse;\n import org.springframework.http.ResponseEntity;\n import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PathVariable;\n import org.springframework.web.bind.annotation.RequestMapping;\n import org.springframework.web.bind.annotation.RestController;\n \n /**\n- * 섹터 목록·대표 ETF 조회 API (contracts/sector-api.md, User Story 1).\n+ * 섹터 목록·대표 상품 정보 조회 API (contracts/sector-api.md, User Story 1·3).\n  *\n  * <p>읽기만 있다. 대응표를 만들거나 고치는 엔드포인트는 두지 않는다 — 원본은 {@code data/} 파이프라인이 소유한다(research.md 결정 7).\n  *\n@@ -36,4 +38,18 @@ public class SectorController {\n         return ResponseEntity.ok(\n                 ApiResponse.ok(SectorListResponse.from(sectorService.getSectors())));\n     }\n+\n+    /**\n+     * 대표 상품 정보. User Story 3이 요구하는 펼쳐 보는 층이다.\n+     *\n+     * <p>없는 섹터 코드는 404 {@code SECTOR_NOT_FOUND}, 자료가 아직 만들어지지 않았으면 409 {@code\n+     * INSTRUMENT_PROFILE_NOT_READY}다({@link SectorExceptionHandler}). <b>빈 값을 만들어 내지 않는다.</b>\n+     */\n+    @GetMapping(\"/{code}/instrument-profile\")\n+    public ResponseEntity<ApiResponse<InstrumentProfileResponse>> getInstrumentProfile(\n+            @PathVariable String code) {\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(\n+                        InstrumentProfileResponse.from(sectorService.getInstrumentProfile(code))));\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,9 @@ package com.ssafy.thorp.sector.presentation.controller;\n \n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.common.web.response.ErrorResponse;\n+import com.ssafy.thorp.sector.application.exception.InstrumentProfileNotReadyException;\n import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;\n+import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n import org.springframework.core.Ordered;\n@@ -18,14 +20,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;\n  * <table>\n  *   <tr><th>상황</th><th>상태</th><th>코드</th></tr>\n  *   <tr><td>대응표가 발행되지 않음</td><td>409</td><td>{@code SECTOR_MAP_NOT_READY}</td></tr>\n+ *   <tr><td>없는 섹터 코드</td><td>404</td><td>{@code SECTOR_NOT_FOUND}</td></tr>\n+ *   <tr><td>대표 상품 정보가 아직 없음</td><td>409</td><td>{@code INSTRUMENT_PROFILE_NOT_READY}</td></tr>\n  * </table>\n  *\n- * <p>계약의 {@code SECTOR_NOT_FOUND}(404)와 {@code INSTRUMENT_PROFILE_NOT_READY}(409)는 여기에 두지 않았다. 두\n- * 코드를 쓰는 엔드포인트가 {@code GET /sectors/{code}/instrument-profile} 하나뿐이고 그것은 T013의 일이다. 던지는 곳이 없는 처리기를\n- * 미리 두면 닿지 않는 코드가 된다.\n- *\n- * <p>이 하나만 처리한다. 나머지(코드 형식 오류 → 400, 예상 못한 예외 → 500)는 {@code GlobalExceptionHandler}로 그대로 흘려보낸다 —\n- * catch-all을 여기에 두면 전역 처리기의 로깅·메시지 정책이 이 도메인에서만 달라진다.\n+ * <p>이 셋만 처리한다. 나머지(예상 못한 예외 → 500)는 {@code GlobalExceptionHandler}로 그대로 흘려보낸다 — catch-all을 여기에 두면\n+ * 전역 처리기의 로깅·메시지 정책이 이 도메인에서만 달라진다.\n  *\n  * <p>코드 문자열을 {@code common.exception.ErrorCode} enum에 더하지 않고 {@link ErrorResponse}의 문자열 생성자로 만든다.\n  * {@code common}은 어떤 도메인 패키지도 참조하지 않는 공용 계층이고({@code ArchitectureTest} 규칙 4), 도메인별 세부 코드를 공용 enum에\n@@ -37,6 +37,8 @@ public class SectorExceptionHandler {\n \n     static final String SECTOR_MAP_NOT_READY = \"SECTOR_MAP_NOT_READY\";\n     static final String SECTOR_MAP_UNUSABLE = \"SECTOR_MAP_UNUSABLE\";\n+    static final String SECTOR_NOT_FOUND = \"SECTOR_NOT_FOUND\";\n+    static final String INSTRUMENT_PROFILE_NOT_READY = \"INSTRUMENT_PROFILE_NOT_READY\";\n \n     /** 저장된 자료의 결함을 그대로 내보내지 않는다. 클라이언트가 할 수 있는 일이 없고 원문은 로그에 남는다. */\n     private static final String MAP_UNUSABLE_MESSAGE = \"대응표를 읽을 수 없다. 서버 자료를 확인해야 한다\";\n@@ -53,12 +55,40 @@ public class SectorExceptionHandler {\n                 .body(ApiResponse.fail(new ErrorResponse(SECTOR_MAP_NOT_READY, e.getMessage())));\n     }\n \n+    /**\n+     * 열린 대응표에 없는 섹터 코드. 재시도해도 달라지지 않으므로 404다.\n+     *\n+     * <p>형식이 틀린 코드도 여기로 온다 — 서비스가 경로 변수로 {@code SectorCode}를 만들지 않고 목록에서 찾기만 하므로, 형식 위반은 \"찾지 못함\"과\n+     * 같은 길을 탄다. 계약이 이 경로에 정의한 오류도 404 하나뿐이다.\n+     */\n+    @ExceptionHandler(SectorNotFoundException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleSectorNotFound(SectorNotFoundException e) {\n+        return ResponseEntity.status(HttpStatus.NOT_FOUND)\n+                .body(ApiResponse.fail(new ErrorResponse(SECTOR_NOT_FOUND, e.getMessage())));\n+    }\n+\n+    /**\n+     * 대표 상품 정보 미적재. 섹터는 있으므로 404가 아니고, 파이프라인이 적재하면 달라지므로 409다.\n+     *\n+     * <p><b>빈 값을 만들어 내지 않는다.</b> 유동성 0원이나 빈 구성종목 목록으로 내보내면 \"거래가 없었다\"·\"중복이 없다\"로 읽힌다(원칙 VI).\n+     */\n+    @ExceptionHandler(InstrumentProfileNotReadyException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleProfileNotReady(\n+            InstrumentProfileNotReadyException e) {\n+        return ResponseEntity.status(HttpStatus.CONFLICT)\n+                .body(\n+                        ApiResponse.fail(\n+                                new ErrorResponse(INSTRUMENT_PROFILE_NOT_READY, e.getMessage())));\n+    }\n+\n     /**\n      * 저장된 대응표가 도메인 불변식을 어길 때. <b>400이 아니라 500이다.</b>\n      *\n      * <p>{@code SectorMapper.toDomain}이 만드는 {@code SectorCode}·{@code Sector}·{@code\n-     * RepresentativeEtf}는 값이 규칙에 안 맞으면 {@link IllegalArgumentException}을 던진다. 그런데 {@code GET\n-     * /sectors}는 클라이언트에게서 받는 입력이 하나도 없다. 여기서 그 예외가 나왔다면 인자의 출처는 DB뿐이다.\n+     * RepresentativeEtf}와 {@code InstrumentProfileMapper}가 만드는 {@code InstrumentProfile}은 값이 규칙에 안\n+     * 맞으면 {@link IllegalArgumentException}을 던진다. 그런데 이 도메인의 두 엔드포인트가 클라이언트에게서 받는 입력은 {@code\n+     * /sectors/{code}}의 코드 하나뿐이고, 그 값은 도메인 객체를 만드는 데 쓰이지 않는다 — 목록에서 같은 문자열을 찾을 뿐이고 못 찾으면 {@link\n+     * SectorNotFoundException}이다. 그러니 여기서 그 예외가 나왔다면 인자의 출처는 DB뿐이다.\n      *\n      * <p>그대로 흘려보내면 {@code GlobalExceptionHandler}가 400 {@code INVALID_INPUT}으로 옮긴다. 그러면 두 가지가 잘못된다.\n      * 고칠 것이 없는 클라이언트에게 \"네 입력이 틀렸다\"고 말하게 되고, 서버 쪽 자료 결함이 4xx로 분류되어 5xx 경보에 잡히지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorExceptionHandler.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+package com.ssafy.thorp.sector.presentation.response;\n+\n+import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n+import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;\n+import com.ssafy.thorp.sector.domain.model.InstrumentProfile;\n+import com.ssafy.thorp.sector.domain.model.RepresentativeEtf;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /sectors/{code}/instrument-profile} 응답 본문. 계약은 contracts/sector-api.md다.\n+ *\n+ * <p>금액·비율에는 {@code @JsonSerialize(using = PlainBigDecimalSerializer.class)}를 <b>필드마다</b> 붙인다. 웹\n+ * ObjectMapper에 전역 등록하면 다른 도메인의 {@code MarketResponse.value}가 숫자에서 문자열로 바뀌어 그 API 계약이 깨진다({@code\n+ * backend/CLAUDE.md}).\n+ *\n+ * <p><b>추적 차이 필드가 없다.</b> 계산 정의가 확정되지 않아 이번 범위에서 뺐다(PD-21, spec.md Out of Scope). 나중에 정의가 확정되면 필드를\n+ * 추가하는 방향으로 넓힌다(contracts/sector-api.md).\n+ */\n+public record InstrumentProfileResponse(\n+        String instrumentId,\n+        String name,\n+        String benchmarkIndex,\n+        String indexMethodologySummary,\n+        LocalDate listedOn,\n+        String manager,\n+        HoldingsOverlap holdingsOverlap,\n+        @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal avgDailyValue3m,\n+        String sourceAttribution,\n+        String survivorshipNote,\n+        String datasetId,\n+        Instant dataDeadline,\n+        boolean isSample) {\n+\n+    public static InstrumentProfileResponse from(InstrumentProfileResult result) {\n+        RepresentativeEtf etf = result.etf();\n+        InstrumentProfile profile = result.profile();\n+        return new InstrumentProfileResponse(\n+                etf.instrumentId(),\n+                etf.name(),\n+                etf.benchmarkIndex(),\n+                profile.indexMethodologySummary(),\n+                etf.listedOn(),\n+                etf.manager(),\n+                HoldingsOverlap.from(profile),\n+                profile.avgDailyValue3m(),\n+                profile.sourceAttribution(),\n+                profile.survivorshipNote(),\n+                result.datasetId(),\n+                result.dataDeadline(),\n+                result.isSample());\n+    }\n+\n+    /**\n+     * 구성종목 중복.\n+     *\n+     * <p>{@code asOfCurrentComposition}이 true면 화면은 당시 구성을 재현했다고 표현하지 않는다(FR-015). 저장 스키마에서는 이 값이\n+     * {@code holdings_overlap} 밖의 별도 컬럼이지만, 계약이 한 객체로 묶어 내보내기로 정해 여기서 합친다 — 표시와 단서를 떼어 놓으면 화면이 단서를\n+     * 빠뜨리기 쉽다.\n+     */\n+    public record HoldingsOverlap(boolean asOfCurrentComposition, List<HoldingItem> topHoldings) {\n+\n+        static HoldingsOverlap from(InstrumentProfile profile) {\n+            return new HoldingsOverlap(\n+                    profile.asOfCurrentComposition(),\n+                    profile.topHoldings().stream().map(HoldingItem::from).toList());\n+        }\n+    }\n+\n+    /** 구성종목 한 건. 비중은 1을 100%로 보는 비율이며 문자열로 나간다. */\n+    public record HoldingItem(\n+            String name,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal weight) {\n+\n+        static HoldingItem from(InstrumentProfile.Holding holding) {\n+            return new HoldingItem(holding.name(), holding.weight());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/response/InstrumentProfileResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/response/InstrumentProfileResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,58 @@\n+-- 001 대표 상품 정보. 근거: specs/001-etf-market-data/data-model.md 「instrument_profile」,\n+-- spec.md FR-011·FR-015, contracts/sector-api.md 「GET /sectors/{code}/instrument-profile」.\n+--\n+-- 이 표가 왜 여기 있나\n+--  T003(V20260911114500__etf_market_data.sql)이 data-model.md의 표 12개 중 11개를 만들면서 이 표를\n+--  빠뜨렸고 어느 작업도 맡고 있지 않았다. 2026-09-13에 T012·T013 묶음에서 만들기로 확정했다\n+--  (tasks.md T013). 열 구성은 data-model.md 그대로이며 새로 설계하지 않았다.\n+--\n+-- 이 표의 성격\n+--  시계열이 아니라 대표 ETF 하나에 딸린 화면 표시용 묶음이다. 그래서 시계열 5개처럼 문자열\n+--  dataset_id를 갖지 않고 reconciliation_record와 같이 bigint 외래 키 두 개(etf_id,\n+--  dataset_version_id)를 갖는다(data-model.md).\n+--\n+-- UPDATE·DELETE 거부 트리거를 걸지 않는 이유\n+--  FR-017이 불변으로 못 박은 대상은 \"발행된 자료 버전과 딸린 시계열\"이고, T003이 트리거를 건 표도\n+--  dataset_version과 시계열 5개다. 대조 기록(reconciliation_record)도 같은 이유로 트리거 없이 두었다.\n+--  재현(SC-004)은 자료 버전마다 한 벌씩 새로 쌓는 아래 UNIQUE가 지킨다 — 같은 (etf_id,\n+--  dataset_version_id)에 두 번째 행이 들어오지 못하므로, 값을 바꾸려면 새 자료 버전이 필요하다.\n+--\n+-- 추적 차이 필드를 두지 않는다\n+--  기획서 §3.3이 항목으로 들었으나 계산 정의가 확정되지 않아 이번 범위에서 뺐다(PD-21,\n+--  spec.md Out of Scope). 정의가 확정되면 컬럼을 더하는 방향으로 넓힌다.\n+\n+CREATE TABLE instrument_profile (\n+    id                        BIGINT       GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,\n+    etf_id                    BIGINT       NOT NULL REFERENCES representative_etf (id),\n+    dataset_version_id        BIGINT       NOT NULL REFERENCES dataset_version (id),\n+    index_methodology_summary TEXT         NOT NULL,\n+    -- 상위 종목과 비중. {\"topHoldings\": [{\"name\": ..., \"weight\": \"0.2431\"}]} 모양이며 비중은\n+    -- 문자열이다. jsonb는 숫자를 정규화해 지수 표기·자리수가 바뀔 수 있다(backend/CLAUDE.md).\n+    holdings_overlap          JSONB        NOT NULL,\n+    -- true면 화면은 \"당시 구성을 재현했다\"고 표현하지 않는다 (FR-015).\n+    holdings_as_of_current    BOOLEAN      NOT NULL,\n+    -- 최근 3개월 일평균 거래대금(원). 금액이라 TEXT다 — NUMERIC은 scale을 임의로 정해야 하고\n+    -- 넘는 값을 조용히 반올림한다(data-model.md 불변식, backend/CLAUDE.md).\n+    avg_daily_value_3m        TEXT         NOT NULL,\n+    source_attribution        VARCHAR(200) NOT NULL,\n+    survivorship_note         TEXT         NOT NULL,\n+    -- 자료 버전마다 대표 ETF 한 건이다 (data-model.md 불변식).\n+    CONSTRAINT uk_instrument_profile_etf_dataset UNIQUE (etf_id, dataset_version_id),\n+    -- 지수 표기·부호·빈 문자열을 막는다. 계약이 금액을 plain 문자열로 규정하므로\n+    -- (contracts/sector-api.md 「공통 규칙」) 읽는 쪽이 그대로 BigDecimal로 옮길 수 있어야 한다.\n+    CONSTRAINT ck_instrument_profile_avg_daily_value_plain\n+        CHECK (avg_daily_value_3m ~ '^[0-9]+(\\.[0-9]+)?$'),\n+    -- 상위 종목 목록이 비어 있으면 \"중복이 없다\"로 읽힌다. 자료가 없으면 행을 만들지 않는다\n+    -- (원칙 VI). 개별 비중의 범위와 합은 파이프라인이 본다.\n+    CONSTRAINT ck_instrument_profile_top_holdings CHECK (\n+        jsonb_typeof(holdings_overlap -> 'topHoldings') = 'array'\n+        AND jsonb_array_length(holdings_overlap -> 'topHoldings') > 0\n+    )\n+);\n+\n+-- 조회는 \"대표 ETF 하나의 가장 최근 자료 버전\"이다. 선두를 etf_id로 두어 그 종목의 행만 훑는다.\n+CREATE INDEX idx_instrument_profile_etf_dataset\n+    ON instrument_profile (etf_id, dataset_version_id);\n+\n+COMMENT ON TABLE instrument_profile IS\n+    '대표 상품 정보. 자료 버전마다 대표 ETF 한 건이다 (spec 001 FR-015).';\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260913103000__instrument_profile.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260913103000__instrument_profile.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -189,8 +189,12 @@ class EtfMarketDataSchemaIT {\n     class Shape {\n \n         @Test\n-        @DisplayName(\"관계형 6개와 시계열 5개, 모두 11개 표를 만든다\")\n-        void createsElevenTables() {\n+        @DisplayName(\"관계형 7개와 시계열 5개, 모두 12개 표를 만든다\")\n+        void createsTwelveTables() {\n+            // data-model.md가 정의한 표는 12개다. T003이 11개를 만들면서 instrument_profile을\n+            // 빠뜨렸고 T013이 V20260913103000__instrument_profile.sql로 뒤늦게 채웠는데, 이 검사가\n+            // 함께 넓어지지 않아 \"빠진 표\"를 다시 놓쳐도 여기서 잡히지 않았다. 열두 번째를 넣어\n+            // 목록이 data-model.md와 같은 수를 세게 한다.\n             assertThat(\n                             jdbcTemplate.queryForList(\n                                     \"SELECT LOWER(table_name) FROM information_schema.tables\"\n@@ -198,9 +202,9 @@ class EtfMarketDataSchemaIT {\n                                             + \" AND LOWER(table_name) IN ('sector',\"\n                                             + \" 'representative_etf', 'sector_etf_map_version',\"\n                                             + \" 'sector_etf_map_entry', 'dataset_version',\"\n-                                            + \" 'reconciliation_record', 'daily_price',\"\n-                                            + \" 'corporate_action', 'daily_index', 'data_gap',\"\n-                                            + \" 'suspension_period')\",\n+                                            + \" 'reconciliation_record', 'instrument_profile',\"\n+                                            + \" 'daily_price', 'corporate_action', 'daily_index',\"\n+                                            + \" 'data_gap', 'suspension_period')\",\n                                     String.class))\n                     .containsExactlyInAnyOrder(\n                             \"sector\",\n@@ -209,6 +213,7 @@ class EtfMarketDataSchemaIT {\n                             \"sector_etf_map_entry\",\n                             \"dataset_version\",\n                             \"reconciliation_record\",\n+                            \"instrument_profile\",\n                             \"daily_price\",\n                             \"corporate_action\",\n                             \"daily_index\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/EtfMarketDataSchemaIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/EtfMarketDataSchemaIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,537 @@\n+package com.ssafy.thorp.sector;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.nio.charset.StandardCharsets;\n+import java.util.ArrayList;\n+import java.util.List;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.dao.DataIntegrityViolationException;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * {@code GET /sectors/{code}/instrument-profile} 계약 검증 (spec 001 T013, contracts/sector-api.md).\n+ *\n+ * <p>확인하는 것은 다섯 가지다 — 응답이 계약 예시와 같은지, 필수 항목이 모두 있는지(FR-015), <b>추적 차이 필드가 없는지</b>(PD-21), 과거 구성 이력이\n+ * 없을 때 현재 구성 기준 표시가 붙는지, 그리고 없는 섹터(404)와 자료 미적재(409)가 구분되는지다.\n+ *\n+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성과 {@code @AutoConfigureMockMvc}를\n+ * {@code SectorApiIT}와 글자 그대로 같게 맞춰 두었다. 속성 하나라도 바꾸면 컨텍스트가 갈라지고, 이 저장소의 DB 테스트 묶음은 이미 공용 컨테이너의\n+ * {@code max_connections}를 거의 다 쓰고 있어 나중에 뜨는 다른 DB 테스트가 접속을 얻지 못한다. <b>이 애노테이션 묶음은 건드리지 않는다.</b>\n+ *\n+ * <p>자료를 넣는 경로가 JDBC인 이유: 대응표도 대표 상품 정보도 원본은 파이썬 파이프라인이고 백엔드에는 쓰기 경로가 아예 없다(research.md 결정 7). 저장소\n+ * 인터페이스로 픽스처를 만들 수 없는 것이 정상이다.\n+ *\n+ * <p>Docker가 없으면 통째로 skip된다({@code PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.\n+ */\n+@SpringBootTest(\n+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class InstrumentProfileApiIT extends PostgresTestSupport {\n+\n+    private static final String MAP_VERSION = \"SEM-2026-09-13-001\";\n+    private static final String SEMICONDUCTOR = \"SEMICONDUCTOR\";\n+    private static final String BANK = \"BANK\";\n+    private static final String SEMICONDUCTOR_ETF = \"091160.XKRX\";\n+    private static final String BANK_ETF = \"091170.XKRX\";\n+    private static final String DATASET_ID = \"KRX_DAILY_20260907\";\n+    private static final String OLD_DATASET_ID = \"KRX_DAILY_20260801\";\n+    private static final String PARTIAL_DATASET_ID = \"KRX_DAILY_20260908\";\n+    private static final String RETIRED_MAP_VERSION = \"SEM-2026-08-01-001\";\n+    private static final String RETIRED_DATASET_ID = \"KRX_DAILY_20260930\";\n+\n+    private static final String METHODOLOGY = \"KRX 반도체 지수를 추종하며 유동시가총액 가중으로 구성종목을 담는다.\";\n+    private static final String SOURCE_ATTRIBUTION = \"한국거래소 통계정보\";\n+    private static final String SURVIVORSHIP_NOTE = \"현재 상장되어 있는 상품만 다루므로 중간에 상장폐지된 상품은 포함되지 않습니다.\";\n+\n+    /** contracts/sector-api.md 예시의 {@code holdingsOverlap} 그대로다. */\n+    private static final String CONTRACT_EXAMPLE_OVERLAP =\n+            \"\"\"\n+            {\n+              \"asOfCurrentComposition\": true,\n+              \"topHoldings\": [\n+                { \"name\": \"삼성전자\", \"weight\": \"0.2431\" },\n+                { \"name\": \"SK하이닉스\", \"weight\": \"0.2107\" }\n+              ]\n+            }\n+            \"\"\";\n+\n+    private static final String HOLDINGS_JSON =\n+            \"\"\"\n+            {\"topHoldings\":[{\"name\":\"삼성전자\",\"weight\":\"0.2431\"},\n+                            {\"name\":\"SK하이닉스\",\"weight\":\"0.2107\"}]}\n+            \"\"\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private ObjectMapper objectMapper;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @BeforeEach\n+    void clean() {\n+        deleteFixtures();\n+    }\n+\n+    @AfterEach\n+    void restore() {\n+        deleteFixtures();\n+    }\n+\n+    /**\n+     * 픽스처를 FK 역순으로 지운다.\n+     *\n+     * <p>{@code dataset_version}에는 UPDATE·DELETE를 거부하는 불변 트리거가 걸려 있다(FR-017). 그래서 그 표는 지우지 못하고, 대신\n+     * 테스트마다 새로 쓰지 않도록 {@code dataset_id}를 이 클래스 전용 값으로 두고 이미 있으면 다시 넣지 않는다. {@code\n+     * instrument_profile}에는 트리거가 없어 지울 수 있다 — 대조 기록과 같은 판단이며 근거는 마이그레이션 머리말에 적었다.\n+     *\n+     * <p>대응표는 반드시 비운다. {@code effective_to IS NULL}인 행을 남기면 부분 UNIQUE 인덱스 때문에 다음 테스트의 INSERT가 실패한다.\n+     */\n+    private void deleteFixtures() {\n+        jdbcTemplate.update(\n+                \"DELETE FROM instrument_profile WHERE etf_id IN\"\n+                        + \" (SELECT id FROM representative_etf WHERE instrument_id IN (?, ?))\",\n+                SEMICONDUCTOR_ETF,\n+                BANK_ETF);\n+        jdbcTemplate.update(\n+                \"DELETE FROM sector_etf_map_entry WHERE map_version_id IN\"\n+                        + \" (SELECT id FROM sector_etf_map_version WHERE version = ?)\",\n+                MAP_VERSION);\n+        // 자료 버전은 대응표 버전을 참조하므로 대응표 버전 행은 지우지 않고 닫아 둔다. 트리거가\n+        // dataset_version의 DELETE를 막아 FK 때문에 지울 수 없기 때문이다.\n+        jdbcTemplate.update(\n+                \"UPDATE sector_etf_map_version SET effective_to = TIMESTAMPTZ '2026-09-30 00:00:00+09'\"\n+                        + \" WHERE version = ? AND effective_to IS NULL\",\n+                MAP_VERSION);\n+        jdbcTemplate.update(\"DELETE FROM sector WHERE code IN (?, ?)\", SEMICONDUCTOR, BANK);\n+    }\n+\n+    /** 열린 대응표 하나와 섹터 둘. 반환값은 대응표 버전의 PK다. */\n+    private long publishMap() {\n+        Long mapVersionId =\n+                jdbcTemplate.queryForObject(\n+                        \"\"\"\n+                        INSERT INTO sector_etf_map_version\n+                            (version, effective_from, effective_to, is_sample, published_at)\n+                        VALUES (?, TIMESTAMPTZ '2026-09-13 00:00:00+09', NULL, TRUE,\n+                                TIMESTAMPTZ '2026-09-13 00:00:00+09')\n+                        ON CONFLICT (version) DO UPDATE SET effective_to = NULL\n+                        RETURNING id\n+                        \"\"\",\n+                        Long.class,\n+                        MAP_VERSION);\n+        insertEntry(mapVersionId, insertSector(SEMICONDUCTOR, \"반도체\"), etfId(SEMICONDUCTOR_ETF));\n+        insertEntry(mapVersionId, insertSector(BANK, \"은행\"), etfId(BANK_ETF));\n+        return mapVersionId;\n+    }\n+\n+    private long insertSector(String code, String name) {\n+        return jdbcTemplate.queryForObject(\n+                \"INSERT INTO sector (code, name, classification) VALUES (?, ?, 'INDUSTRY')\"\n+                        + \" RETURNING id\",\n+                Long.class,\n+                code,\n+                name);\n+    }\n+\n+    /** 대표 ETF는 자료 버전처럼 지울 수 없는 표가 아니지만 여러 테스트가 공유하므로 있으면 그대로 쓴다. */\n+    private long etfId(String instrumentId) {\n+        String name = SEMICONDUCTOR_ETF.equals(instrumentId) ? \"KODEX 반도체\" : \"KODEX 은행\";\n+        String index = SEMICONDUCTOR_ETF.equals(instrumentId) ? \"KRX 반도체\" : \"KRX 은행\";\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO representative_etf\n+                    (instrument_id, name, listed_on, benchmark_index, manager)\n+                VALUES (?, ?, DATE '2006-06-27', ?, '삼성자산운용')\n+                ON CONFLICT (instrument_id) DO UPDATE SET name = EXCLUDED.name\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                instrumentId,\n+                name,\n+                index);\n+    }\n+\n+    private void insertEntry(long mapVersionId, long sectorId, long etfId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO sector_etf_map_entry (map_version_id, sector_id, etf_id)\"\n+                        + \" VALUES (?, ?, ?)\",\n+                mapVersionId,\n+                sectorId,\n+                etfId);\n+    }\n+\n+    /**\n+     * 자료 버전을 만든다. 이미 있으면 그 행의 PK를 돌려준다.\n+     *\n+     * <p>{@code ON CONFLICT DO NOTHING}이 아니라 {@code DO UPDATE ... failure_reason} 같은 갱신을 쓰지 않는 이유는\n+     * 불변 트리거가 UPDATE를 거부하기 때문이다. 발행된 자료 버전은 고치지 않는다(FR-017).\n+     */\n+    private long publishDataset(\n+            long mapVersionId, String datasetId, String deadline, boolean done) {\n+        Long found =\n+                jdbcTemplate\n+                        .query(\n+                                \"SELECT id FROM dataset_version WHERE dataset_id = ?\",\n+                                (rs, row) -> rs.getLong(\"id\"),\n+                                datasetId)\n+                        .stream()\n+                        .findFirst()\n+                        .orElse(null);\n+        if (found != null) {\n+            return found;\n+        }\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO dataset_version\n+                    (dataset_id, data_deadline, collected_at, last_success_at, complete,\n+                     failure_reason, is_sample, source, map_version_id)\n+                VALUES (?, CAST(? AS TIMESTAMPTZ), CAST(? AS TIMESTAMPTZ), CAST(? AS TIMESTAMPTZ),\n+                        ?, ?, TRUE, 'FIXED_TEST_DATA', ?)\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                datasetId,\n+                deadline,\n+                deadline,\n+                deadline,\n+                done,\n+                done ? null : \"이용 한도 도달\",\n+                mapVersionId);\n+    }\n+\n+    /**\n+     * 이미 물러난 대응표 버전 하나. {@code effective_to}가 차 있어 열린 버전이 아니다.\n+     *\n+     * <p>열린 버전은 최대 하나라는 불변식이 있으므로 이 행은 그 제약에 걸리지 않는다. 섹터 연결을 만들지 않는 이유는 대표 상품 정보 조회가 대응표 항목이 아니라 자료\n+     * 버전이 가리키는 대응표 버전만 보기 때문이다.\n+     */\n+    private long publishRetiredMap() {\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO sector_etf_map_version\n+                    (version, effective_from, effective_to, is_sample, published_at)\n+                VALUES (?, TIMESTAMPTZ '2026-08-01 00:00:00+09', TIMESTAMPTZ '2026-09-13 00:00:00+09',\n+                        TRUE, TIMESTAMPTZ '2026-08-01 00:00:00+09')\n+                ON CONFLICT (version) DO UPDATE\n+                    SET effective_to = TIMESTAMPTZ '2026-09-13 00:00:00+09'\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                RETIRED_MAP_VERSION);\n+    }\n+\n+    private void insertProfile(long etfId, long datasetVersionId, String value, boolean current) {\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO instrument_profile\n+                    (etf_id, dataset_version_id, index_methodology_summary, holdings_overlap,\n+                     holdings_as_of_current, avg_daily_value_3m, source_attribution,\n+                     survivorship_note)\n+                VALUES (?, ?, ?, CAST(? AS JSONB), ?, ?, ?, ?)\n+                \"\"\",\n+                etfId,\n+                datasetVersionId,\n+                METHODOLOGY,\n+                HOLDINGS_JSON,\n+                current,\n+                value,\n+                SOURCE_ATTRIBUTION,\n+                SURVIVORSHIP_NOTE);\n+    }\n+\n+    /** 계약 예시와 같은 상태를 만든다. 반도체 섹터에만 대표 상품 정보가 있다. */\n+    private void publishEverything() {\n+        long mapVersionId = publishMap();\n+        long datasetVersionId =\n+                publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        insertProfile(etfId(SEMICONDUCTOR_ETF), datasetVersionId, \"1240000000\", true);\n+    }\n+\n+    private JsonNode getJson(String url, int expectedStatus) throws Exception {\n+        String body =\n+                mockMvc.perform(get(url))\n+                        .andExpect(status().is(expectedStatus))\n+                        .andReturn()\n+                        .getResponse()\n+                        .getContentAsString(StandardCharsets.UTF_8);\n+        return objectMapper.readTree(body);\n+    }\n+\n+    private JsonNode profileOf(String code) throws Exception {\n+        return getJson(\"/sectors/\" + code + \"/instrument-profile\", 200).get(\"data\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"응답이 계약 예시와 같다 — 필수 항목이 전부 있다 (FR-015)\")\n+    void responseMatchesTheContractExample() throws Exception {\n+        publishEverything();\n+\n+        JsonNode data = profileOf(SEMICONDUCTOR);\n+\n+        assertThat(data.get(\"instrumentId\").asText()).isEqualTo(SEMICONDUCTOR_ETF);\n+        assertThat(data.get(\"name\").asText()).isEqualTo(\"KODEX 반도체\");\n+        assertThat(data.get(\"benchmarkIndex\").asText()).isEqualTo(\"KRX 반도체\");\n+        assertThat(data.get(\"indexMethodologySummary\").asText()).isEqualTo(METHODOLOGY);\n+        assertThat(data.get(\"listedOn\").asText()).isEqualTo(\"2006-06-27\");\n+        assertThat(data.get(\"manager\").asText()).isEqualTo(\"삼성자산운용\");\n+        assertThat(data.get(\"holdingsOverlap\"))\n+                .isEqualTo(objectMapper.readTree(CONTRACT_EXAMPLE_OVERLAP));\n+        assertThat(data.get(\"sourceAttribution\").asText()).isEqualTo(SOURCE_ATTRIBUTION);\n+        assertThat(data.get(\"survivorshipNote\").asText()).isEqualTo(SURVIVORSHIP_NOTE);\n+        assertThat(data.get(\"datasetId\").asText()).isEqualTo(DATASET_ID);\n+        assertThat(data.get(\"dataDeadline\").asText()).isEqualTo(\"2026-09-07T09:00:00Z\");\n+        assertThat(data.get(\"isSample\").asBoolean()).isTrue();\n+    }\n+\n+    @Test\n+    @DisplayName(\"필수 항목이 하나도 빠지지 않는다 — 계약이 정한 키 집합과 정확히 같다\")\n+    void carriesExactlyTheContractFields() throws Exception {\n+        publishEverything();\n+\n+        JsonNode data = profileOf(SEMICONDUCTOR);\n+\n+        List<String> actual = new ArrayList<>();\n+        data.fieldNames().forEachRemaining(actual::add);\n+        assertThat(actual)\n+                .containsExactlyInAnyOrder(\n+                        \"instrumentId\",\n+                        \"name\",\n+                        \"benchmarkIndex\",\n+                        \"indexMethodologySummary\",\n+                        \"listedOn\",\n+                        \"manager\",\n+                        \"holdingsOverlap\",\n+                        \"avgDailyValue3m\",\n+                        \"sourceAttribution\",\n+                        \"survivorshipNote\",\n+                        \"datasetId\",\n+                        \"dataDeadline\",\n+                        \"isSample\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"추적 차이 필드가 없다 — 계산 정의가 확정되지 않아 범위에서 뺐다 (PD-21)\")\n+    void hasNoTrackingDifferenceField() throws Exception {\n+        publishEverything();\n+\n+        JsonNode data = profileOf(SEMICONDUCTOR);\n+\n+        data.fieldNames()\n+                .forEachRemaining(\n+                        field ->\n+                                assertThat(field.toLowerCase())\n+                                        .as(\"추적 차이 필드를 내보내면 검증할 수 없는 숫자를 보여주게 된다\")\n+                                        .doesNotContain(\"tracking\")\n+                                        .doesNotContain(\"difference\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"금액과 비중은 지수 표기 없는 문자열이다 — 전역 등록이 아니라 필드마다 붙인다\")\n+    void amountsAreSerializedAsPlainStrings() throws Exception {\n+        long mapVersionId = publishMap();\n+        long datasetVersionId =\n+                publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        insertProfile(etfId(SEMICONDUCTOR_ETF), datasetVersionId, \"1240000000\", true);\n+\n+        JsonNode data = profileOf(SEMICONDUCTOR);\n+\n+        assertThat(data.get(\"avgDailyValue3m\").isTextual()).isTrue();\n+        assertThat(data.get(\"avgDailyValue3m\").asText()).isEqualTo(\"1240000000\");\n+        JsonNode weight = data.get(\"holdingsOverlap\").get(\"topHoldings\").get(0).get(\"weight\");\n+        assertThat(weight.isTextual()).isTrue();\n+        assertThat(weight.asText()).isEqualTo(\"0.2431\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"다른 도메인의 숫자 계약은 그대로다 — 웹 ObjectMapper에 전역 등록하지 않았다\")\n+    void doesNotBreakOtherDomainsNumberContract() throws Exception {\n+        // MarketResponse.value가 문자열로 바뀌면 그 API 계약이 깨진다(backend/CLAUDE.md).\n+        // 전역 등록 여부는 ObjectMapper에게 직접 물어본다 — 다른 도메인의 자료를 만들지 않아도 된다.\n+        String rendered = objectMapper.writeValueAsString(new BigDecimal(\"1.50\"));\n+\n+        assertThat(rendered).isEqualTo(\"1.50\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"과거 구성 이력이 없으면 현재 구성 기준임이 표시된다 (FR-015)\")\n+    void marksCompositionAsOfCurrent() throws Exception {\n+        publishEverything();\n+\n+        JsonNode overlap = profileOf(SEMICONDUCTOR).get(\"holdingsOverlap\");\n+\n+        assertThat(overlap.get(\"asOfCurrentComposition\").asBoolean()).isTrue();\n+        assertThat(overlap.get(\"topHoldings\")).hasSize(2);\n+    }\n+\n+    @Test\n+    @DisplayName(\"가장 최근 자료 버전의 값을 보여준다 — 옛 버전의 행은 재현용으로 남을 뿐이다\")\n+    void showsTheNewestDatasetVersion() throws Exception {\n+        long mapVersionId = publishMap();\n+        long oldVersionId =\n+                publishDataset(mapVersionId, OLD_DATASET_ID, \"2026-08-01T18:00:00+09\", true);\n+        long newVersionId =\n+                publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        long etfId = etfId(SEMICONDUCTOR_ETF);\n+        insertProfile(etfId, oldVersionId, \"900000000\", true);\n+        insertProfile(etfId, newVersionId, \"1240000000\", true);\n+\n+        JsonNode data = profileOf(SEMICONDUCTOR);\n+\n+        assertThat(data.get(\"datasetId\").asText()).isEqualTo(DATASET_ID);\n+        assertThat(data.get(\"avgDailyValue3m\").asText()).isEqualTo(\"1240000000\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"부분만 갱신된 자료 버전은 쓰지 않는다 (FR-014)\")\n+    void ignoresIncompleteDatasetVersions() throws Exception {\n+        long mapVersionId = publishMap();\n+        long completeId = publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        long partialId =\n+                publishDataset(mapVersionId, PARTIAL_DATASET_ID, \"2026-09-08T18:00:00+09\", false);\n+        long etfId = etfId(SEMICONDUCTOR_ETF);\n+        insertProfile(etfId, completeId, \"1240000000\", true);\n+        // 마감 시각은 이쪽이 더 늦지만 부분 갱신이라 고르지 않는다.\n+        insertProfile(etfId, partialId, \"999999999\", true);\n+\n+        assertThat(profileOf(SEMICONDUCTOR).get(\"datasetId\").asText()).isEqualTo(DATASET_ID);\n+    }\n+\n+    @Test\n+    @DisplayName(\"물러난 대응표로 만든 자료 버전은 고르지 않는다\")\n+    void ignoresProfilesFromARetiredMapVersion() throws Exception {\n+        long openMapId = publishMap();\n+        long openVersionId = publishDataset(openMapId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        long retiredMapId = publishRetiredMap();\n+        // 마감 시각을 일부러 더 늦게 둔다. 대응표 조건을 지우면 정렬이 이쪽을 고르므로 이 테스트가\n+        // 깨진다. 조건이 있는지를 값으로 확인하려는 것이다.\n+        long retiredVersionId =\n+                publishDataset(retiredMapId, RETIRED_DATASET_ID, \"2026-09-30T18:00:00+09\", true);\n+        long etfId = etfId(SEMICONDUCTOR_ETF);\n+        insertProfile(etfId, openVersionId, \"1240000000\", true);\n+        insertProfile(etfId, retiredVersionId, \"999999999\", true);\n+\n+        JsonNode data = profileOf(SEMICONDUCTOR);\n+\n+        assertThat(data.get(\"datasetId\").asText()).isEqualTo(DATASET_ID);\n+        assertThat(data.get(\"avgDailyValue3m\").asText()).isEqualTo(\"1240000000\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 섹터 코드는 404 SECTOR_NOT_FOUND다\")\n+    void unknownSectorIsNotFound() throws Exception {\n+        publishEverything();\n+\n+        mockMvc.perform(get(\"/sectors/NO_SUCH_SECTOR/instrument-profile\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").doesNotExist())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"SECTOR_NOT_FOUND\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"형식이 틀린 코드도 404다 — 500이 되면 클라이언트 입력으로 5xx 경보가 울린다\")\n+    void malformedSectorCodeIsNotFound() throws Exception {\n+        publishEverything();\n+\n+        mockMvc.perform(get(\"/sectors/not-a-code/instrument-profile\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"SECTOR_NOT_FOUND\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"자료가 아직 없으면 빈 값이 아니라 409 INSTRUMENT_PROFILE_NOT_READY다 (원칙 VI)\")\n+    void missingProfileIsConflictNotEmpty() throws Exception {\n+        publishEverything();\n+\n+        mockMvc.perform(get(\"/sectors/\" + BANK + \"/instrument-profile\"))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").doesNotExist())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INSTRUMENT_PROFILE_NOT_READY\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"대응표가 발행되지 않았으면 409 SECTOR_MAP_NOT_READY다 — 섹터 없음과 구분한다\")\n+    void missingMapIsReportedSeparately() throws Exception {\n+        mockMvc.perform(get(\"/sectors/\" + SEMICONDUCTOR + \"/instrument-profile\"))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"SECTOR_MAP_NOT_READY\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"자료 버전마다 대표 ETF 한 건이다 — 두 번째 행은 저장이 거부된다\")\n+    void oneProfilePerEtfAndDatasetVersion() {\n+        long mapVersionId = publishMap();\n+        long datasetVersionId =\n+                publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        long etfId = etfId(SEMICONDUCTOR_ETF);\n+        insertProfile(etfId, datasetVersionId, \"1240000000\", true);\n+\n+        // 같은 (etf_id, dataset_version_id)를 한 번 더 넣으면 UNIQUE 위반이다. 이 제약이\n+        // \"값을 고치려면 새 자료 버전\"을 강제하므로 불변 트리거를 따로 걸지 않는다(SC-004).\n+        assertThatThrownBy(() -> insertProfile(etfId, datasetVersionId, \"999\", true))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"금액은 지수 표기로 저장할 수 없다 — 읽는 쪽이 그대로 BigDecimal로 옮긴다\")\n+    void rejectsAmountsInExponentNotation() {\n+        long mapVersionId = publishMap();\n+        long datasetVersionId =\n+                publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        long etfId = etfId(SEMICONDUCTOR_ETF);\n+\n+        assertThatThrownBy(() -> insertProfile(etfId, datasetVersionId, \"1.24E+9\", true))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"상위 종목이 빈 목록이면 저장이 거부된다 — 빈 목록은 '중복이 없다'로 읽힌다 (원칙 VI)\")\n+    void rejectsEmptyTopHoldings() {\n+        long mapVersionId = publishMap();\n+        long datasetVersionId =\n+                publishDataset(mapVersionId, DATASET_ID, \"2026-09-07T18:00:00+09\", true);\n+        long etfId = etfId(SEMICONDUCTOR_ETF);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                jdbcTemplate.update(\n+                                        \"\"\"\n+                                        INSERT INTO instrument_profile\n+                                            (etf_id, dataset_version_id,\n+                                             index_methodology_summary, holdings_overlap,\n+                                             holdings_as_of_current, avg_daily_value_3m,\n+                                             source_attribution, survivorship_note)\n+                                        VALUES (?, ?, ?, CAST('{\"topHoldings\":[]}' AS JSONB),\n+                                                TRUE, '1', ?, ?)\n+                                        \"\"\",\n+                                        etfId,\n+                                        datasetVersionId,\n+                                        METHODOLOGY,\n+                                        SOURCE_ATTRIBUTION,\n+                                        SURVIVORSHIP_NOTE))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/InstrumentProfileApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/InstrumentProfileApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -60,6 +60,11 @@ from data_pipeline.dataset_version import (  # noqa: E402\n     DatasetVersionError,\n     build_dataset_id,\n )\n+from data_pipeline.instrument_profile import (  # noqa: E402\n+    InstrumentProfile,\n+    InstrumentProfileError,\n+    profiles_from_records,\n+)\n \n _RAW_ROOT = _DATA_ROOT / \"raw\"\n _PROCESSED_ROOT = _DATA_ROOT / \"processed\"\n@@ -171,6 +176,21 @@ def build_parser() -> argparse.ArgumentParser:\n             \"전 구간을 자료 부족 구간으로 기록한다. 전 구간을 담았다면 수집 시작일을 적는다\"\n         ),\n     )\n+    parser.add_argument(\n+        \"--instrument-profiles\",\n+        type=Path,\n+        default=None,\n+        help=(\n+            \"대표 상품 정보 JSON 파일(선택). \"\n+            '[{\"instrument_id\": \"069500.XKRX\", \"index_methodology_summary\": \"...\", '\n+            '\"holdings_overlap\": {\"as_of_current_composition\": true, '\n+            '\"top_holdings\": [{\"name\": \"삼성전자\", \"weight\": \"0.2431\"}]}}] 모양이며 '\n+            \"열 이름은 snake_case다. \"\n+            \"지수 방법론 요약과 구성종목은 원천 API가 주지 않아(2026-09-13 확인) 상장일·기업행위와 \"\n+            \"같이 파일로 받는다. 일평균 거래대금은 이 파일이 아니라 방금 만든 daily_price의 \"\n+            \"거래대금에서 계산한다 (FR-015)\"\n+        ),\n+    )\n     parser.add_argument(\n         \"--simulate-quota-exhausted\",\n         action=\"store_true\",\n@@ -319,6 +339,46 @@ def resolve_actions_known_from(path: Path | None, declared: date | None) -> date\n     return declared\n \n \n+def instrument_profiles(\n+    path: Path | None,\n+    price_rows: Sequence[dict[str, Any]],\n+    instrument_ids: Sequence[str],\n+    deadline: date,\n+) -> list[InstrumentProfile]:\n+    \"\"\"대표 상품 정보 JSON과 방금 만든 가격 행으로 대표 상품 정보를 만든다 (FR-015).\n+\n+    **열 이름은 snake_case다.** ``--listing``·``--corporate-actions``와 같은 규약이며, 중첩된\n+    ``holdings_overlap`` 안의 이름도 마찬가지다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을\n+    대상으로 한 것이라 파이프라인 입력 파일에는 해당하지 않는다.\n+\n+    파일이 없으면 빈 목록이고, 그러면 ``instrument_profile``에 아무것도 넣지 않는다. 조회 API는\n+    그 상태를 빈 값이 아니라 ``INSTRUMENT_PROFILE_NOT_READY``(409)로 구분한다\n+    (contracts/sector-api.md) — \"아직 만들지 않았다\"와 \"만들었는데 비었다\"는 다른 사실이다.\n+\n+    **여기서 만드는 이유**: 일평균 거래대금의 근거가 ``daily_price.value``인데, 적재 계층은\n+    DB에서 시계열을 읽어 되돌리는 경로를 두지 않는다(:mod:`data_pipeline.repository` 문서).\n+    그래서 별도 진입점을 만들면 그 값을 얻을 방법이 없고, 방금 가격 행을 만든 이 자리가\n+    유일하게 근거를 들고 있는 지점이다.\n+    \"\"\"\n+    if path is None:\n+        return []\n+    known = set(instrument_ids)\n+    records = _records_from_json(path, \"대표 상품 정보\")\n+    unknown = sorted(\n+        {\n+            str(record.get(\"instrument_id\"))\n+            for record in records\n+            if str(record.get(\"instrument_id\")) not in known\n+        }\n+    )\n+    if unknown:\n+        raise IngestError(\n+            f\"이번 수집에 없는 종목의 대표 상품 정보다: {unknown}. 그 종목의 거래대금이 없어 \"\n+            \"일평균을 낼 수 없다\"\n+        )\n+    return profiles_from_records(records, price_rows, data_deadline=deadline)\n+\n+\n def resolve_instrument_ids(values: Sequence[str]) -> list[str]:\n     \"\"\"6자리 코드와 ``{6자리}.XKRX``를 모두 받아 식별자로 맞춘다.\n \n@@ -566,6 +626,7 @@ def _report(\n     known_from: date | None,\n     written: list[Path],\n     loaded: dict[str, int] | None,\n+    profiles: Sequence[InstrumentProfile],\n ) -> None:\n     print(f\"자료 버전: {dataset_id}\")\n     print(f\"데이터 마감일: {deadline} (요청 종료일 {args.until})\")\n@@ -580,6 +641,12 @@ def _report(\n         print(f\"ETF 미수집 거래일: {len(etf.missed_dates)}일\")\n     for name in _TIMESERIES:\n         print(f\"  {name}: {len(tables[name])}행\")\n+    if profiles:\n+        print(f\"  instrument_profile: {len(profiles)}행 (최근 3개월 일평균 거래대금)\")\n+        for profile in profiles:\n+            print(f\"    {profile.instrument_id}: {profile.avg_daily_value_3m}원\")\n+    else:\n+        print(\"  instrument_profile: 없음. --instrument-profiles로 지수 방법론·구성종목을 준다\")\n     if etf.unsupported_codes:\n         # 저장 스키마가 담을 수 없는 종목코드다(6자리 숫자가 아닌 표기). 모아 두기만 하고\n         # 알리지 않으면 버린 것과 같으므로 요약에 반드시 낸다\n@@ -621,6 +688,9 @@ def run(args: argparse.Namespace) -> int:\n         deadline,\n         known_from,\n     )\n+    profiles = instrument_profiles(\n+        args.instrument_profiles, tables[\"daily_price\"], instrument_ids, deadline\n+    )\n \n     written: list[Path] = []\n     for instrument_id, built in series.items():\n@@ -652,6 +722,12 @@ def run(args: argparse.Namespace) -> int:\n         # 자료 버전 → 시계열. 이 순서를 뒤집으면 저장소가 거부한다 (FR-017).\n         store.publish_dataset_version(version)\n         loaded = _load_all(store, dataset_id, tables)\n+        if profiles:\n+            # 시계열 다음이다. 이 표는 대표 ETF와 자료 버전을 bigint 외래 키로 가리키므로\n+            # 예행(SQLite)에는 대응표 행이 없어 미리 넣어 볼 수 없다. 값 검사는\n+            # instrument_profiles()가 이미 끝냈고 남은 것은 식별자 조회뿐이며, 조회가\n+            # 실패하면 한 건도 넣지 않고 무엇이 없는지 말하는 오류가 난다.\n+            loaded[\"instrument_profile\"] = store.load_instrument_profiles(dataset_id, profiles)\n \n     _report(\n         dataset_id=dataset_id,\n@@ -665,6 +741,7 @@ def run(args: argparse.Namespace) -> int:\n         known_from=known_from,\n         written=written,\n         loaded=loaded,\n+        profiles=profiles,\n     )\n     return 0\n \n@@ -678,6 +755,7 @@ def main(argv: Sequence[str] | None = None) -> int:\n         krx.KrxError,\n         gaps.GapError,\n         CorporateActionError,\n+        InstrumentProfileError,\n         DatasetVersionError,\n         repository.RepositoryError,\n     ) as error:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_krx.py",
+          "old_path": "data/scripts/ingest_krx.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,439 @@\n+\"\"\"대표 상품 정보 산출 (spec 001 FR-011·FR-015, T012).\n+\n+사용자가 결과의 근거와 한계를 확인하는 묶음이며, 화면에 그대로 보이는 값이다\n+(contracts/sector-api.md ``GET /sectors/{code}/instrument-profile``). 저장 대상은\n+``instrument_profile`` 표이고 열 구성은 data-model.md 「instrument_profile」이 원본이다.\n+\n+## 값이 어디서 오는가\n+\n+| 값 | 출처 |\n+|---|---|\n+| ``avg_daily_value_3m`` | ``daily_price.value`` (거래대금). **이 모듈이 계산한다** |\n+| ``index_methodology_summary`` | 파일 입력 |\n+| ``holdings_overlap``·``holdings_as_of_current`` | 파일 입력 |\n+| ``source_attribution``·``survivorship_note`` | 상수 (FR-011·FR-015) |\n+| 기준 지수·상장일·운용사 | 이 표에 없다. ``representative_etf``가 갖고 조회 API가 함께 읽는다 |\n+\n+**지수 방법론 요약과 구성종목 중복을 파일로 받는 이유**: KRX OPEN API에 그 둘을 주는\n+서비스가 없다. 2026-09-13에 인증키로 직접 확인했다 — ``etp/etf_bydd_trd``는 200이지만 기초지수\n+이름(``IDX_IND_NM``)과 순자산총액까지이고 구성종목이 없으며, 구성종목·지수 산출 방법을 줄 만한\n+경로(``etp/etf_pdf``·``etp/etf_comp_isu``·``idx/idx_comp_isu``·``idx/idx_base_info``)는 모두\n+``404 API referenced by the path does not exist``다. 상장일·기업행위를 파일로 받는 것과 같은\n+사정이며(:mod:`data_pipeline.krx` 문서 5번, ``scripts/ingest_krx.py``의 ``--listing``·\n+``--corporate-actions``), 같은 선례를 따른다. 원천이 나중에 제공하면 파일 입력을 수집으로\n+바꾸되 열 구성은 그대로다.\n+\n+## 유동성은 거래대금이지 거래량이 아니다\n+\n+FR-015의 유동성은 **최근 3개월 일평균 거래대금(원)**이고 근거 열은 ``daily_price.value``다.\n+거래량(``volume``)에 종가를 곱해 추정하지 않는다 — 그날의 가격이 오르내린 만큼 실제\n+거래대금과 어긋난다(research.md 결정 6). 그래서 이 모듈은 ``close``를 인자로도 받지 않는다.\n+\n+**\"최근 3개월\"의 범위**: 자료 마감일을 포함하는 직전 3개월이다. 마감일에서 달을 셋 뺀 날의\n+**다음 날**부터 마감일까지이며, 그 사이에 있는 ``daily_price`` 행만 쓴다. 달 단위로 빼는 값이\n+없는 날짜(5월 31일의 석 달 전)는 그 달의 마지막 날로 맞춘다. 거래일 수로 세지 않는 이유는\n+FR-015가 기간을 달로 말하고, 거래일 환산값은 해마다 달라져 같은 말이 다른 구간을 가리키기\n+때문이다.\n+\n+**거래정지일도 분모에 넣는다.** 그날은 장이 열렸는데 이 종목이 거래되지 않은 날이라\n+거래대금 0원이 사실이고, 빼면 유동성이 실제보다 좋아 보인다. 결측(행 자체가 없는 날)은\n+애초에 세지 않는다.\n+\n+## 추적 차이를 만들지 않는다\n+\n+기획서 §3.3이 항목으로 들었으나 계산 정의가 확정되지 않아 이번 범위에서 뺐다(PD-21,\n+spec.md Out of Scope). 그래서 이 모듈에는 추적 차이 필드가 없고, 파일 입력에 그런 키가 들어오면\n+조용히 버리지 않고 거부한다. 정의가 확정되면 필드를 더하는 방향으로 넓힌다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import calendar as _calendar\n+import re\n+from collections.abc import Iterable, Mapping, Sequence\n+from dataclasses import dataclass\n+from datetime import date, datetime\n+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation\n+from typing import Any, Final\n+\n+#: FR-011이 요구하는 출처 표시. 한국거래소 자료를 쓰는 화면에 그대로 실린다.\n+SOURCE_ATTRIBUTION_KRX: Final[str] = \"한국거래소 통계정보\"\n+\n+#: FR-015가 요구하는 생존 편향 한계 한 문장. contracts/sector-api.md의 예시와 같은 값이다.\n+SURVIVORSHIP_NOTE: Final[str] = (\n+    \"현재 상장되어 있는 상품만 다루므로 중간에 상장폐지된 상품은 포함되지 않습니다.\"\n+)\n+\n+#: 유동성 집계 구간의 길이(달). FR-015 \"최근 3개월\".\n+LIQUIDITY_WINDOW_MONTHS: Final[int] = 3\n+\n+#: 저장 자리수. ``avg_daily_value_3m``은 원 단위 금액이라 정수로 반올림해 담는다. 원보다 작은\n+#: 자리는 거래대금에 뜻이 없고, 계약이 금액을 plain 문자열로 규정하므로 지수 표기도 쓰지 않는다.\n+_WON: Final[Decimal] = Decimal(1)\n+\n+#: 비중 자리수. 계약 예시(``\"0.2431\"``)와 같은 소수 넷째 자리다.\n+_WEIGHT_EXPONENT: Final[Decimal] = Decimal(\"0.0001\")\n+\n+INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r\"\\A[0-9]{6}\\.XKRX\\Z\")\n+\n+#: 파일 입력이 받는 키. 여기 없는 키는 거부한다 — 특히 추적 차이(PD-21)가 조용히 섞이지 않게 한다.\n+#: ``source_attribution``을 받지 않는 이유는 그 값이 종목마다 다른 자료가 아니라 원천이 정해 주는\n+#: 한 문장이기 때문이다. 파일이 덮어쓸 수 있으면 FR-011이 요구한 출처 표시가 파일을 쓰는 사람의\n+#: 손에 달리고, SC-005의 \"100%\"를 코드가 보장하지 못한다.\n+_PROFILE_KEYS: Final[frozenset[str]] = frozenset(\n+    {\"instrument_id\", \"index_methodology_summary\", \"holdings_overlap\"}\n+)\n+_OVERLAP_KEYS: Final[frozenset[str]] = frozenset({\"as_of_current_composition\", \"top_holdings\"})\n+_HOLDING_KEYS: Final[frozenset[str]] = frozenset({\"name\", \"weight\"})\n+\n+#: 상위 종목 개수 상한. 화면이 펼쳐 보는 층에 싣는 목록이고, 전체 구성종목을 옮겨 담는 표가\n+#: 아니다(data-model.md는 \"상위 종목과 비중\"이라고 적었다).\n+MAX_TOP_HOLDINGS: Final[int] = 20\n+\n+\n+class InstrumentProfileError(ValueError):\n+    \"\"\"대표 상품 정보의 값 규칙 위반. 값을 지어내지 않고 알린다.\"\"\"\n+\n+\n+def plain(value: Decimal) -> str:\n+    \"\"\"지수 표기 없는 문자열. ``str(Decimal(\"1E+9\"))``은 ``\"1E+9\"``라 그대로 쓸 수 없다.\n+\n+    계약이 금액·비율을 plain 문자열로 규정하고(contracts/sector-api.md 「공통 규칙」), 저장\n+    스키마의 ``ck_instrument_profile_avg_daily_value_plain``도 그 모양만 받는다. 백엔드가\n+    같은 일을 ``PlainBigDecimalSerializer``로 하고 있으므로 양쪽 표기가 같아진다.\n+    \"\"\"\n+    return format(value, \"f\")\n+\n+\n+# ---------------------------------------------------------------------------\n+# 유동성\n+# ---------------------------------------------------------------------------\n+\n+\n+def months_before(day: date, months: int) -> date:\n+    \"\"\"``day``에서 달을 ``months``만큼 뺀 날. 그 달에 없는 일자는 말일로 맞춘다.\"\"\"\n+    if months < 0:\n+        raise InstrumentProfileError(f\"months는 0 이상이어야 한다: {months}\")\n+    total = day.year * 12 + (day.month - 1) - months\n+    year, month = divmod(total, 12)\n+    last_day = _calendar.monthrange(year, month + 1)[1]\n+    return date(year, month + 1, min(day.day, last_day))\n+\n+\n+def liquidity_window(\n+    data_deadline: date, *, months: int = LIQUIDITY_WINDOW_MONTHS\n+) -> tuple[date, date]:\n+    \"\"\"유동성 집계 구간 ``(시작일, 종료일)``. 양끝을 모두 포함한다.\"\"\"\n+    if months < 1:\n+        raise InstrumentProfileError(f\"집계 구간은 한 달 이상이어야 한다: {months}\")\n+    start = months_before(data_deadline, months)\n+    return (date.fromordinal(start.toordinal() + 1), data_deadline)\n+\n+\n+def _as_date(value: object, field: str) -> date:\n+    if isinstance(value, datetime):\n+        return value.date()\n+    if isinstance(value, date):\n+        return value\n+    raise InstrumentProfileError(f\"{field}은(는) 날짜여야 한다: {value!r}\")\n+\n+\n+def average_daily_trading_value(\n+    price_rows: Iterable[Mapping[str, Any]],\n+    instrument_id: str,\n+    *,\n+    data_deadline: date,\n+    months: int = LIQUIDITY_WINDOW_MONTHS,\n+) -> Decimal:\n+    \"\"\"최근 ``months``개월 일평균 거래대금(원)을 낸다 (FR-015).\n+\n+    ``price_rows``는 ``daily_price``에 적재할 행이며 ``value``(거래대금)를 그대로 쓴다.\n+    한 행도 없으면 값을 지어내지 않고 :class:`InstrumentProfileError` 다 — 0원으로 내보내면\n+    \"거래가 없었다\"와 \"자료가 없다\"가 같은 숫자가 된다(원칙 VI).\n+    \"\"\"\n+    require_instrument_id(instrument_id)\n+    start, end = liquidity_window(data_deadline, months=months)\n+    total = Decimal(0)\n+    days = 0\n+    for position, row in enumerate(price_rows):\n+        if not isinstance(row, Mapping):\n+            raise InstrumentProfileError(\n+                f\"{position}번째 가격 행이 매핑이 아니다: {type(row).__name__}\"\n+            )\n+        if row.get(\"instrument_id\") != instrument_id:\n+            continue\n+        day = _as_date(row.get(\"date\"), \"date\")\n+        if not (start <= day <= end):\n+            continue\n+        if \"value\" not in row:\n+            raise InstrumentProfileError(\n+                f\"{instrument_id} {day} 행에 value(거래대금)가 없다. 유동성은 거래대금 열로만 낸다 \"\n+                \"— 거래량과 종가를 곱한 추정은 그날의 가격 변동만큼 실제와 어긋난다\"\n+            )\n+        total += _require_nonnegative_integer(row[\"value\"], f\"{instrument_id} {day}의 value\")\n+        days += 1\n+    if days == 0:\n+        raise InstrumentProfileError(\n+            f\"{instrument_id}의 {start}~{end} 구간에 가격 행이 없다. 일평균 거래대금을 낼 근거가 \"\n+            \"없으므로 0원으로 만들어 내지 않는다 (원칙 VI)\"\n+        )\n+    return (total / Decimal(days)).quantize(_WON, rounding=ROUND_HALF_UP)\n+\n+\n+def _require_nonnegative_integer(value: object, field: str) -> Decimal:\n+    if isinstance(value, bool) or not isinstance(value, int):\n+        raise InstrumentProfileError(f\"{field}은(는) 정수여야 한다: {value!r}\")\n+    if value < 0:\n+        raise InstrumentProfileError(f\"{field}은(는) 0 이상이어야 한다: {value!r}\")\n+    return Decimal(value)\n+\n+\n+# ---------------------------------------------------------------------------\n+# 값\n+# ---------------------------------------------------------------------------\n+\n+\n+def require_instrument_id(value: object) -> str:\n+    if not isinstance(value, str) or not INSTRUMENT_ID_PATTERN.match(value):\n+        raise InstrumentProfileError(f\"instrument_id는 {{6자리}}.XKRX 형식이어야 한다: {value!r}\")\n+    return value\n+\n+\n+def _require_text(value: object, field: str) -> str:\n+    if not isinstance(value, str) or not value.strip():\n+        raise InstrumentProfileError(f\"{field}이(가) 비어 있다: {value!r}\")\n+    return value.strip()\n+\n+\n+def _check_keys(payload: Mapping[str, Any], allowed: frozenset[str], where: str) -> None:\n+    \"\"\"모르는 키를 거부한다. 추적 차이(PD-21)가 조용히 흘러드는 것을 여기서 막는다.\"\"\"\n+    unknown = sorted(key for key in payload if key not in allowed)\n+    if unknown:\n+        raise InstrumentProfileError(\n+            f\"{where}에 모르는 키가 있다: {unknown}. 받는 키는 {sorted(allowed)}뿐이다. \"\n+            \"추적 차이는 계산 정의가 확정되지 않아 이번 범위에서 뺐다 (PD-21)\"\n+        )\n+\n+\n+@dataclass(frozen=True)\n+class Holding:\n+    \"\"\"구성종목 한 건. 비중은 1을 100%로 보는 비율이다.\"\"\"\n+\n+    name: str\n+    weight: Decimal\n+\n+    def __post_init__(self) -> None:\n+        object.__setattr__(self, \"name\", _require_text(self.name, \"구성종목 name\"))\n+        weight = self.weight\n+        if isinstance(weight, str | int):\n+            try:\n+                weight = Decimal(weight)\n+            except InvalidOperation as error:\n+                raise InstrumentProfileError(f\"weight가 숫자가 아니다: {self.weight!r}\") from error\n+        if not isinstance(weight, Decimal):\n+            raise InstrumentProfileError(f\"weight는 Decimal이어야 한다: {self.weight!r}\")\n+        if not weight.is_finite() or weight <= 0 or weight > 1:\n+            raise InstrumentProfileError(f\"weight는 0 초과 1 이하여야 한다: {weight}\")\n+        object.__setattr__(self, \"weight\", weight)\n+\n+    def to_json_value(self) -> dict[str, str]:\n+        \"\"\"JSONB에 담을 모양. 비중은 문자열이다 — jsonb가 숫자를 정규화해 자리수를 바꾼다.\"\"\"\n+        return {\"name\": self.name, \"weight\": plain(self.weight)}\n+\n+\n+@dataclass(frozen=True)\n+class HoldingsOverlap:\n+    \"\"\"구성종목 중복 표시 (FR-015).\n+\n+    ``as_of_current``가 true면 화면은 \"당시 구성을 재현했다\"고 표현하지 않는다. 과거 구성\n+    이력을 복원하는 일은 범위 밖이므로(spec.md Out of Scope) 이번 범위에서 만드는 값은 모두\n+    현재 구성 기준이다. 그래도 열을 두는 까닭은, 나중에 과거 이력이 생겼을 때 어느 행이 현재\n+    구성으로 만든 값인지 사후에 가릴 수 있어야 하기 때문이다.\n+    \"\"\"\n+\n+    holdings: tuple[Holding, ...]\n+    as_of_current: bool\n+\n+    def __post_init__(self) -> None:\n+        if not isinstance(self.as_of_current, bool):\n+            raise InstrumentProfileError(\n+                f\"as_of_current_composition은 참·거짓이어야 한다: {self.as_of_current!r}\"\n+            )\n+        holdings = tuple(self.holdings)\n+        if not holdings:\n+            raise InstrumentProfileError(\n+                \"구성종목이 비어 있다. 빈 목록을 내보내면 '중복이 없다'로 읽히므로, \"\n+                \"자료가 없으면 대표 상품 정보를 만들지 않는다 (원칙 VI)\"\n+            )\n+        if len(holdings) > MAX_TOP_HOLDINGS:\n+            raise InstrumentProfileError(\n+                f\"상위 종목은 {MAX_TOP_HOLDINGS}개까지다: {len(holdings)}개. \"\n+                \"전체 구성종목을 옮겨 담는 표가 아니다\"\n+            )\n+        names = [holding.name for holding in holdings]\n+        duplicated = sorted({name for name in names if names.count(name) > 1})\n+        if duplicated:\n+            raise InstrumentProfileError(f\"같은 종목이 두 번 들어 있다: {duplicated}\")\n+        total = sum((holding.weight for holding in holdings), Decimal(0))\n+        if total > 1:\n+            raise InstrumentProfileError(f\"비중의 합이 1을 넘는다: {total}\")\n+        # 큰 비중부터 보여야 \"상위 종목\"이라는 말과 화면이 맞는다. 파일이 어떤 차례로 적어 왔든\n+        # 여기서 한 번 세워 두면 읽는 쪽이 다시 정렬하지 않는다.\n+        object.__setattr__(\n+            self, \"holdings\", tuple(sorted(holdings, key=lambda item: (-item.weight, item.name)))\n+        )\n+\n+    def to_json_value(self) -> dict[str, Any]:\n+        \"\"\"``instrument_profile.holdings_overlap``에 담을 JSONB 값.\"\"\"\n+        return {\"topHoldings\": [holding.to_json_value() for holding in self.holdings]}\n+\n+\n+@dataclass(frozen=True)\n+class InstrumentProfile:\n+    \"\"\"``instrument_profile`` 한 행. ``etf_id``·``dataset_version_id``는 적재가 찾아 넣는다.\"\"\"\n+\n+    instrument_id: str\n+    index_methodology_summary: str\n+    holdings: HoldingsOverlap\n+    avg_daily_value_3m: Decimal\n+    source_attribution: str = SOURCE_ATTRIBUTION_KRX\n+    survivorship_note: str = SURVIVORSHIP_NOTE\n+\n+    def __post_init__(self) -> None:\n+        object.__setattr__(self, \"instrument_id\", require_instrument_id(self.instrument_id))\n+        object.__setattr__(\n+            self,\n+            \"index_methodology_summary\",\n+            _require_text(self.index_methodology_summary, \"index_methodology_summary\"),\n+        )\n+        if not isinstance(self.holdings, HoldingsOverlap):\n+            raise InstrumentProfileError(\n+                f\"holdings는 HoldingsOverlap이어야 한다: {type(self.holdings).__name__}\"\n+            )\n+        value = self.avg_daily_value_3m\n+        if not isinstance(value, Decimal):\n+            raise InstrumentProfileError(f\"avg_daily_value_3m은 Decimal이어야 한다: {value!r}\")\n+        if not value.is_finite() or value < 0:\n+            raise InstrumentProfileError(f\"avg_daily_value_3m은 0 이상이어야 한다: {value}\")\n+        object.__setattr__(\n+            self, \"source_attribution\", _require_text(self.source_attribution, \"source_attribution\")\n+        )\n+        object.__setattr__(\n+            self, \"survivorship_note\", _require_text(self.survivorship_note, \"survivorship_note\")\n+        )\n+\n+    def to_row(self) -> dict[str, Any]:\n+        \"\"\"적재용 행. ``instrument_id``는 적재가 ``etf_id``로 바꿔 넣고 행에서 뺀다.\"\"\"\n+        return {\n+            \"instrument_id\": self.instrument_id,\n+            \"index_methodology_summary\": self.index_methodology_summary,\n+            \"holdings_overlap\": self.holdings.to_json_value(),\n+            \"holdings_as_of_current\": self.holdings.as_of_current,\n+            # 금액은 문자열로 담는다. NUMERIC은 scale을 임의로 정해야 하고 넘는 값을 조용히\n+            # 반올림한다(backend/CLAUDE.md, data-model.md instrument_profile 불변식).\n+            \"avg_daily_value_3m\": plain(self.avg_daily_value_3m),\n+            \"source_attribution\": self.source_attribution,\n+            \"survivorship_note\": self.survivorship_note,\n+        }\n+\n+\n+# ---------------------------------------------------------------------------\n+# 파일 입력\n+# ---------------------------------------------------------------------------\n+\n+\n+def holdings_overlap_from_payload(payload: object, where: str) -> HoldingsOverlap:\n+    \"\"\"``holdings_overlap`` 객체를 :class:`HoldingsOverlap` 으로 바꾼다 (snake_case 파일 형식).\"\"\"\n+    if not isinstance(payload, Mapping):\n+        raise InstrumentProfileError(f\"{where}의 holdings_overlap이 객체가 아니다: {payload!r}\")\n+    _check_keys(payload, _OVERLAP_KEYS, f\"{where}의 holdings_overlap\")\n+    missing = sorted(_OVERLAP_KEYS - set(payload))\n+    if missing:\n+        raise InstrumentProfileError(f\"{where}의 holdings_overlap에 없는 키: {missing}\")\n+    raw_holdings = payload[\"top_holdings\"]\n+    if not isinstance(raw_holdings, Sequence) or isinstance(raw_holdings, str | bytes):\n+        raise InstrumentProfileError(f\"{where}의 top_holdings가 배열이 아니다: {raw_holdings!r}\")\n+    holdings: list[Holding] = []\n+    for position, item in enumerate(raw_holdings):\n+        spot = f\"{where}의 top_holdings {position}번째 항목\"\n+        if not isinstance(item, Mapping):\n+            raise InstrumentProfileError(f\"{spot}이 객체가 아니다: {item!r}\")\n+        _check_keys(item, _HOLDING_KEYS, spot)\n+        missing_keys = sorted(_HOLDING_KEYS - set(item))\n+        if missing_keys:\n+            raise InstrumentProfileError(f\"{spot}에 없는 키: {missing_keys}\")\n+        weight = item[\"weight\"]\n+        if not isinstance(weight, str):\n+            # 소수를 JSON 숫자로 받으면 부동소수로 풀려 자리수가 흔들린다. 계약도 비중을\n+            # 문자열로 규정한다(contracts/sector-api.md 예시).\n+            raise InstrumentProfileError(f\"{spot}의 weight는 문자열이어야 한다: {weight!r}\")\n+        holdings.append(Holding(name=item[\"name\"], weight=_parse_weight(weight, spot)))\n+    as_of_current = _require_bool(payload[\"as_of_current_composition\"])\n+    if not as_of_current:\n+        # 과거 구성 이력을 주는 원천이 없다(2026-09-13 확인). 거짓으로 두면 \"당시 구성을\n+        # 재현했다\"는 뜻이 되어 FR-015가 금지한 표현이 화면에 실린다. 나중에 과거 구성을\n+        # 확보하면 이 검사를 푸는 자리가 여기다.\n+        raise InstrumentProfileError(\n+            f\"{where}의 as_of_current_composition은 참이어야 한다. 과거 구성 이력을 주는 \"\n+            \"원천이 없어 당시 구성을 재현했다고 표현할 수 없다 (FR-015)\"\n+        )\n+    return HoldingsOverlap(holdings=tuple(holdings), as_of_current=as_of_current)\n+\n+\n+def _parse_weight(value: str, where: str) -> Decimal:\n+    try:\n+        weight = Decimal(value)\n+    except InvalidOperation as error:\n+        raise InstrumentProfileError(f\"{where}의 weight가 숫자가 아니다: {value!r}\") from error\n+    return weight.quantize(_WEIGHT_EXPONENT, rounding=ROUND_HALF_UP)\n+\n+\n+def _require_bool(value: object) -> bool:\n+    if not isinstance(value, bool):\n+        raise InstrumentProfileError(f\"as_of_current_composition은 참·거짓이어야 한다: {value!r}\")\n+    return value\n+\n+\n+def profiles_from_records(\n+    records: Iterable[Mapping[str, Any]],\n+    price_rows: Sequence[Mapping[str, Any]],\n+    *,\n+    data_deadline: date,\n+    months: int = LIQUIDITY_WINDOW_MONTHS,\n+) -> list[InstrumentProfile]:\n+    \"\"\"파일에서 읽은 항목과 가격 행으로 대표 상품 정보를 만든다.\n+\n+    ``avg_daily_value_3m``만 이 자리에서 계산하고 나머지는 파일이 준 값이다. 파일이 계산값을\n+    함께 들고 오지 못하게 막는 이유는, 두 곳에서 만든 숫자가 갈라져도 아무도 알아채지 못하기\n+    때문이다 — 받는 키 목록(:data:`_PROFILE_KEYS`)에 ``avg_daily_value_3m``이 없다.\n+    \"\"\"\n+    profiles: list[InstrumentProfile] = []\n+    seen: dict[str, int] = {}\n+    for position, record in enumerate(records):\n+        where = f\"대표 상품 정보 {position}번째 항목\"\n+        if not isinstance(record, Mapping):\n+            raise InstrumentProfileError(f\"{where}이 객체가 아니다: {type(record).__name__}\")\n+        _check_keys(record, _PROFILE_KEYS, where)\n+        required = {\"instrument_id\", \"index_methodology_summary\", \"holdings_overlap\"}\n+        missing = sorted(required - set(record))\n+        if missing:\n+            raise InstrumentProfileError(f\"{where}에 없는 키: {missing}\")\n+        instrument_id = require_instrument_id(record[\"instrument_id\"])\n+        if instrument_id in seen:\n+            raise InstrumentProfileError(\n+                f\"{instrument_id}의 대표 상품 정보가 두 번 들어 있다 \"\n+                f\"({seen[instrument_id]}번째와 {position}번째)\"\n+            )\n+        seen[instrument_id] = position\n+        profiles.append(\n+            InstrumentProfile(\n+                instrument_id=instrument_id,\n+                index_methodology_summary=record[\"index_methodology_summary\"],\n+                holdings=holdings_overlap_from_payload(record[\"holdings_overlap\"], where),\n+                avg_daily_value_3m=average_daily_trading_value(\n+                    price_rows, instrument_id, data_deadline=data_deadline, months=months\n+                ),\n+                source_attribution=SOURCE_ATTRIBUTION_KRX,\n+            )\n+        )\n+    return profiles\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/instrument_profile.py",
+          "old_path": "data/src/data_pipeline/instrument_profile.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,7 +22,8 @@ COMMITTED에서 두 실행이 같은 ``dataset_id``를 동시에 다루면 확\n 바꿔 돌려준다. 즉 **잘못된 자료가 들어가지는 않지만 어느 쪽이 이길지는 정해져 있지 않다.**\n 수집을 병렬로 돌릴 계획이 생기면 ``dataset_id``에 advisory lock을 걸어야 한다.\n \n-대조 기록(``reconciliation_record``)은 시계열 5개와 적재 경로가 다르다. 시계열 표는\n+대조 기록(``reconciliation_record``)과 대표 상품 정보(``instrument_profile``)는 시계열 5개와\n+적재 경로가 다르다. 시계열 표는\n ``dataset_id`` **문자열**을 갖고 그 값으로 ``dataset_version``을 참조하지만, 이 표는\n ``dataset_version_id``·``etf_id`` **bigint 외래 키**를 갖는다(data-model.md). 파이프라인이 다루는\n 값은 문자열 ``dataset_id``와 ``{6자리}.XKRX`` 종목 식별자뿐이므로, 적재 전에 두 식별자를 찾아\n@@ -57,6 +58,7 @@ from typing import Any, Final\n import numpy as np\n from dotenv import load_dotenv\n from sqlalchemy import (\n+    JSON,\n     BigInteger,\n     Boolean,\n     Column,\n@@ -72,6 +74,7 @@ from sqlalchemy import (\n     create_engine,\n     select,\n )\n+from sqlalchemy.dialects.postgresql import JSONB\n from sqlalchemy.engine import Connection, Engine\n from sqlalchemy.exc import IntegrityError\n \n@@ -84,9 +87,11 @@ from data_pipeline.dataset_version import (\n     validate_dataset_id,\n )\n \n-# 대조 기록은 cause↔resolution 조합 검사를 거친 값만 적재한다. 그 지식은 FR-017의 규칙이므로\n-# reconciliation 한 곳에만 두고 여기서는 형을 요구해 검사를 거쳤음을 보장한다. reconciliation은\n-# 이 모듈을 부르지 않으므로(적재 배선은 scripts/reconcile.py가 한다) 순환 import가 생기지 않는다.\n+# 아래 두 개체는 값 규칙 검사를 거친 형으로만 받는다. 대조 기록의 cause↔resolution 조합(FR-017)과\n+# 대표 상품 정보의 비중 합·상위 종목 개수·추적 차이 금지(FR-015)는 각 모듈 한 곳에만 두고, 여기서는\n+# 형을 요구해 검사를 거쳤음을 보장한다. 두 모듈 모두 이 모듈을 부르지 않으므로(적재 배선은\n+# scripts/ 진입점이 한다) 순환 import가 생기지 않는다.\n+from data_pipeline.instrument_profile import InstrumentProfile\n from data_pipeline.reconciliation import ReconciliationRecord\n \n # 끝을 ``$``가 아니라 ``\\Z``로 닫는다. 파이썬의 ``$``는 끝에 붙은 줄바꿈 앞에서도 맞아\n@@ -207,6 +212,35 @@ reconciliation_record_table: Final[Table] = Table(\n     Column(\"checked_at\", DateTime(timezone=True), nullable=False),\n )\n \n+instrument_profile_table: Final[Table] = Table(\n+    \"instrument_profile\",\n+    METADATA,\n+    # 대조 기록과 같은 모양이다 — 문자열 dataset_id가 아니라 bigint 외래 키 두 개를 갖는다\n+    # (data-model.md). 시계열이 아니라 대표 ETF 하나에 딸린 표시용 묶음이기 때문이다.\n+    Column(\n+        \"id\",\n+        BigInteger().with_variant(Integer, \"sqlite\"),\n+        primary_key=True,\n+        autoincrement=True,\n+    ),\n+    Column(\"etf_id\", BigInteger, ForeignKey(\"representative_etf.id\"), nullable=False),\n+    Column(\n+        \"dataset_version_id\",\n+        BigInteger,\n+        ForeignKey(\"dataset_version.id\"),\n+        nullable=False,\n+    ),\n+    Column(\"index_methodology_summary\", Text, nullable=False),\n+    # PostgreSQL은 jsonb다. 예행용 SQLite에는 그 형이 없어 표를 만들 수 없으므로 변형을 둔다.\n+    Column(\"holdings_overlap\", JSONB().with_variant(JSON, \"sqlite\"), nullable=False),\n+    Column(\"holdings_as_of_current\", Boolean, nullable=False),\n+    # 금액이지만 TEXT다. NUMERIC은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다\n+    # (data-model.md instrument_profile 불변식, backend/CLAUDE.md).\n+    Column(\"avg_daily_value_3m\", Text, nullable=False),\n+    Column(\"source_attribution\", String(200), nullable=False),\n+    Column(\"survivorship_note\", Text, nullable=False),\n+)\n+\n daily_price_table: Final[Table] = Table(\n     \"daily_price\",\n     METADATA,\n@@ -818,6 +852,74 @@ class MarketDataRepository:\n             raise\n         return len(prepared)\n \n+    # -- 대표 상품 정보 -----------------------------------------------------\n+\n+    def load_instrument_profiles(\n+        self,\n+        dataset_id: str,\n+        profiles: Iterable[InstrumentProfile],\n+        *,\n+        chunk_size: int = DEFAULT_CHUNK_SIZE,\n+    ) -> int:\n+        \"\"\"대표 상품 정보를 적재한다 (FR-015, T012·T013).\n+\n+        **여기에 두는 이유**: 이 표는 시계열과 달리 ``dataset_version_id``·``etf_id`` 두 bigint\n+        외래 키를 갖고(data-model.md), 그 변환은 이미 :meth:`load_reconciliation_records` 가\n+        하고 있다. 같은 변환을 별도 모듈에 다시 쓰면 적재 순서 강제와 재적재 거부라는 이 모듈의\n+        규칙이 두 곳으로 갈라진다. 일평균 거래대금을 **다시 계산하지 않고** 받는 것도 같은\n+        까닭이다 — 산출은 :mod:`data_pipeline.instrument_profile` 한 곳의 일이다.\n+\n+        시계열과 같은 순서로 검사한다. DB를 건드리기 전에 값을 모두 갖추고, 자료 버전이\n+        발행되지 않았으면 :class:`DatasetNotPublishedError`, 이미 그 자료 버전의 대표 상품\n+        정보가 있으면 :class:`DatasetAlreadyLoadedError` 다. 자료 버전마다 한 벌이며 고쳐\n+        쓰지 않는다(FR-017).\n+        \"\"\"\n+        if chunk_size < 1:\n+            raise RepositoryError(f\"chunk_size는 1 이상이어야 한다: {chunk_size}\")\n+        validate_dataset_id(dataset_id)\n+        prepared = list(profiles)\n+        seen: dict[str, int] = {}\n+        for position, profile in enumerate(prepared):\n+            if not isinstance(profile, InstrumentProfile):\n+                raise RowValidationError(\n+                    f\"instrument_profile {position}번째가 InstrumentProfile이 아니다: \"\n+                    f\"{type(profile).__name__}. FR-015의 값 규칙을 거친 값만 적재한다\"\n+                )\n+            if profile.instrument_id in seen:\n+                # 저장 스키마의 UNIQUE (etf_id, dataset_version_id)가 최종 방어선이지만,\n+                # 여기서 막아야 어느 항목이 겹쳤는지 알려 줄 수 있다.\n+                raise RowValidationError(\n+                    f\"{profile.instrument_id}의 대표 상품 정보가 두 번 들어 있다 \"\n+                    f\"({seen[profile.instrument_id]}번째와 {position}번째)\"\n+                )\n+            seen[profile.instrument_id] = position\n+\n+        already = DatasetAlreadyLoadedError(\n+            f\"instrument_profile에 이미 {dataset_id} 자료의 대표 상품 정보가 있다. \"\n+            \"발행된 자료는 덧붙이거나 고치지 않고 새 dataset_id로 다시 만든다 (FR-017)\"\n+        )\n+        try:\n+            with self._engine.begin() as conn:\n+                version_id = self._dataset_version_id(conn, dataset_id)\n+                if self._has_instrument_profiles(conn, version_id):\n+                    raise already\n+                rows: list[dict[str, Any]] = []\n+                for profile in prepared:\n+                    row = profile.to_row()\n+                    instrument_id = row.pop(\"instrument_id\")\n+                    row[\"dataset_version_id\"] = version_id\n+                    row[\"etf_id\"] = self._representative_etf_id(conn, instrument_id)\n+                    rows.append(row)\n+                for start in range(0, len(rows), chunk_size):\n+                    chunk: Sequence[dict[str, Any]] = rows[start : start + chunk_size]\n+                    if chunk:\n+                        conn.execute(instrument_profile_table.insert(), list(chunk))\n+        except IntegrityError as error:\n+            if self._is_unique_violation(error):\n+                raise already from error\n+            raise\n+        return len(prepared)\n+\n     # -- 내부 --------------------------------------------------------------\n \n     def _load(\n@@ -917,6 +1019,15 @@ class MarketDataRepository:\n             )\n         return int(found)\n \n+    @staticmethod\n+    def _has_instrument_profiles(conn: Connection, dataset_version_id: int) -> bool:\n+        statement = (\n+            select(instrument_profile_table.c.id)\n+            .where(instrument_profile_table.c.dataset_version_id == dataset_version_id)\n+            .limit(1)\n+        )\n+        return conn.execute(statement).first() is not None\n+\n     @staticmethod\n     def _has_reconciliation_records(conn: Connection, dataset_version_id: int) -> bool:\n         statement = (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/repository.py",
+          "old_path": "data/src/data_pipeline/repository.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,6 +28,7 @@ from data_pipeline.corporate_actions import (\n     corporate_actions_from_records,\n )\n from data_pipeline.gaps import REASON_MISSING_CORPORATE_ACTION, build_instrument_series\n+from data_pipeline.instrument_profile import InstrumentProfileError\n from data_pipeline.krx import DailyQuote, ListingWindow\n from data_pipeline.reconciliation import listing_windows_from_records\n \n@@ -63,6 +64,56 @@ CAMEL_ACTION_RECORDS = [\n ]\n \n \n+SUMMARY = \"KRX 반도체 지수를 추종하며 유동시가총액 가중으로 구성종목을 담는다.\"\n+PROFILE_RECORDS = [\n+    {\n+        \"instrument_id\": INSTRUMENT_ID,\n+        \"index_methodology_summary\": SUMMARY,\n+        \"holdings_overlap\": {\n+            \"as_of_current_composition\": True,\n+            \"top_holdings\": [{\"name\": \"삼성전자\", \"weight\": \"0.2431\"}],\n+        },\n+    },\n+]\n+CAMEL_PROFILE_RECORDS = [\n+    {\n+        \"instrumentId\": INSTRUMENT_ID,\n+        \"indexMethodologySummary\": SUMMARY,\n+        \"holdingsOverlap\": {\n+            \"asOfCurrentComposition\": True,\n+            \"topHoldings\": [{\"name\": \"삼성전자\", \"weight\": \"0.2431\"}],\n+        },\n+    },\n+]\n+#: 바깥은 맞게 적고 안쪽만 옛 표기로 적은 파일. 중첩된 객체를 가진 유일한 입력이라 따로 본다.\n+CAMEL_OVERLAP_PROFILE_RECORDS = [\n+    {\n+        \"instrument_id\": INSTRUMENT_ID,\n+        \"index_methodology_summary\": SUMMARY,\n+        \"holdings_overlap\": {\n+            \"asOfCurrentComposition\": True,\n+            \"topHoldings\": [{\"name\": \"삼성전자\", \"weight\": \"0.2431\"}],\n+        },\n+    },\n+]\n+#: 일평균 거래대금의 근거. 대표 상품 정보는 파일이 아니라 이 행에서 그 값을 만든다 (FR-015).\n+PROFILE_PRICE_ROWS: list[dict[str, object]] = [\n+    {\n+        \"instrument_id\": INSTRUMENT_ID,\n+        \"date\": day,\n+        \"open\": Decimal(close),\n+        \"high\": Decimal(close),\n+        \"low\": Decimal(close),\n+        \"close\": Decimal(close),\n+        \"volume\": 1000,\n+        \"value\": 1000 * int(close),\n+        \"adjusted_close\": Decimal(close),\n+        \"adjustment_factor\": Decimal(1),\n+    }\n+    for day, close in zip(DAYS, CLOSES, strict=True)\n+]\n+\n+\n def write_json(path: Path, records: list[dict[str, object]]) -> Path:\n     path.write_text(json.dumps(records, ensure_ascii=False), encoding=\"utf-8\")\n     return path\n@@ -133,14 +184,51 @@ class TestInputFileKeys:\n         with pytest.raises(ingest_krx.IngestError, match=\"ex_date\"):\n             ingest_krx.corporate_actions(path)\n \n+    def test_instrument_profile_file_uses_snake_case(self, tmp_path: Path) -> None:\n+        path = write_json(tmp_path / \"profiles.json\", PROFILE_RECORDS)\n+        (profile,) = ingest_krx.instrument_profiles(\n+            path, PROFILE_PRICE_ROWS, [INSTRUMENT_ID], DAYS[-1]\n+        )\n+        assert profile.instrument_id == INSTRUMENT_ID\n+        assert profile.index_methodology_summary == SUMMARY\n+        assert profile.holdings.as_of_current is True\n+        assert [holding.name for holding in profile.holdings.holdings] == [\"삼성전자\"]\n+\n+    def test_a_camel_case_profile_file_is_refused(self, tmp_path: Path) -> None:\n+        # 옛 표기의 파일은 종목을 가리킬 instrument_id가 비어 있는 것으로 읽힌다. 조용히 받아\n+        # 주면 규약을 믿고 snake_case로 적은 사용자가 거부당하는 상태가 남는다.\n+        path = write_json(tmp_path / \"profiles.json\", CAMEL_PROFILE_RECORDS)\n+        with pytest.raises(ingest_krx.IngestError, match=\"대표 상품 정보\"):\n+            ingest_krx.instrument_profiles(path, PROFILE_PRICE_ROWS, [INSTRUMENT_ID], DAYS[-1])\n+\n+    def test_camel_case_keys_inside_the_profile_payload_are_refused(self, tmp_path: Path) -> None:\n+        # 중첩된 객체를 가진 유일한 입력 파일이라 안쪽 이름도 함께 굳힌다. 모르는 키는 버려지지\n+        # 않고 거부되므로, 표기가 갈라지면 파일을 쓰는 사람이 바로 알게 된다.\n+        path = write_json(tmp_path / \"profiles.json\", CAMEL_OVERLAP_PROFILE_RECORDS)\n+        with pytest.raises(InstrumentProfileError, match=\"모르는 키\"):\n+            ingest_krx.instrument_profiles(path, PROFILE_PRICE_ROWS, [INSTRUMENT_ID], DAYS[-1])\n+\n     def test_the_help_text_shows_the_same_keys(self) -> None:\n         # 인자 설명이 사용자가 파일을 만들 때 보는 유일한 안내다. 여기에 옛 표기가 남으면\n         # 코드가 받지 않는 파일을 만들게 된다.\n         help_text = ingest_krx.build_parser().format_help()\n-        for camel in (\"instrumentId\", \"listedOn\", \"delistedOn\", \"exDate\", \"payDate\", \"eventType\"):\n+        for camel in (\n+            \"instrumentId\",\n+            \"listedOn\",\n+            \"delistedOn\",\n+            \"exDate\",\n+            \"payDate\",\n+            \"eventType\",\n+            \"indexMethodologySummary\",\n+            \"holdingsOverlap\",\n+            \"asOfCurrentComposition\",\n+            \"topHoldings\",\n+        ):\n             assert camel not in help_text, f\"인자 설명에 옛 표기가 남아 있다: {camel}\"\n         assert '\"instrument_id\"' in help_text\n         assert '\"ex_date\"' in help_text\n+        assert '\"holdings_overlap\"' in help_text\n+        assert '\"top_holdings\"' in help_text\n \n \n class TestMissingCorporateActionFile:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_ingest_krx_inputs.py",
+          "old_path": "data/tests/test_ingest_krx_inputs.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,556 @@\n+\"\"\"대표 상품 정보 산출 (spec 001 FR-011·FR-015, T012).\n+\n+확인하는 것은 네 가지다. 유동성이 **거래대금 열**에서 나오는지(거래량×종가 추정이 아니다),\n+과거 구성 이력이 없을 때 현재 구성 기준 표시가 붙는지, **추적 차이 필드가 생기지 않는지**,\n+그리고 근거가 없을 때 0을 만들어 내지 않는지다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Iterator\n+from datetime import UTC, date, datetime\n+from decimal import Decimal\n+from typing import Any\n+\n+import pytest\n+from sqlalchemy import create_engine, func, select\n+\n+from data_pipeline.dataset_version import (\n+    SOURCE_KRX_OPEN_API,\n+    DatasetAlreadyLoadedError,\n+    DatasetNotPublishedError,\n+    DatasetVersion,\n+)\n+from data_pipeline.instrument_profile import (\n+    MAX_TOP_HOLDINGS,\n+    SOURCE_ATTRIBUTION_KRX,\n+    SURVIVORSHIP_NOTE,\n+    Holding,\n+    HoldingsOverlap,\n+    InstrumentProfile,\n+    InstrumentProfileError,\n+    average_daily_trading_value,\n+    holdings_overlap_from_payload,\n+    liquidity_window,\n+    months_before,\n+    profiles_from_records,\n+)\n+from data_pipeline.repository import (\n+    METADATA,\n+    MarketDataRepository,\n+    RepresentativeEtfNotFoundError,\n+    RowValidationError,\n+    instrument_profile_table,\n+    representative_etf_table,\n+)\n+\n+INSTRUMENT_ID = \"091160.XKRX\"\n+OTHER_ID = \"305720.XKRX\"\n+DEADLINE = date(2026, 9, 10)\n+DATASET_ID = \"KRX_DAILY_20260910\"\n+\n+SUMMARY = \"KRX 반도체 지수를 추종하며 유동시가총액 가중으로 구성종목을 담는다.\"\n+\n+\n+def price_row(day: date, *, value: int, instrument_id: str = INSTRUMENT_ID, **overrides: Any):\n+    row: dict[str, Any] = {\n+        \"instrument_id\": instrument_id,\n+        \"date\": day,\n+        \"open\": Decimal(\"35000\"),\n+        \"high\": Decimal(\"35500\"),\n+        \"low\": Decimal(\"34800\"),\n+        \"close\": Decimal(\"35200\"),\n+        \"volume\": 1_000_000,\n+        \"value\": value,\n+        \"adjusted_close\": Decimal(\"35200\"),\n+        \"adjustment_factor\": Decimal(\"1\"),\n+    }\n+    row.update(overrides)\n+    return row\n+\n+\n+def overlap(as_of_current: bool = True) -> HoldingsOverlap:\n+    return HoldingsOverlap(\n+        holdings=(\n+            Holding(name=\"삼성전자\", weight=Decimal(\"0.2431\")),\n+            Holding(name=\"SK하이닉스\", weight=Decimal(\"0.2107\")),\n+        ),\n+        as_of_current=as_of_current,\n+    )\n+\n+\n+def record(**overrides: Any) -> dict[str, Any]:\n+    payload: dict[str, Any] = {\n+        \"instrument_id\": INSTRUMENT_ID,\n+        \"index_methodology_summary\": SUMMARY,\n+        \"holdings_overlap\": {\n+            \"as_of_current_composition\": True,\n+            \"top_holdings\": [\n+                {\"name\": \"삼성전자\", \"weight\": \"0.2431\"},\n+                {\"name\": \"SK하이닉스\", \"weight\": \"0.2107\"},\n+            ],\n+        },\n+    }\n+    payload.update(overrides)\n+    return payload\n+\n+\n+class TestLiquidityWindow:\n+    def test_window_is_the_three_months_ending_at_the_deadline(self) -> None:\n+        assert liquidity_window(date(2026, 9, 10)) == (date(2026, 6, 11), date(2026, 9, 10))\n+\n+    def test_month_without_the_same_day_falls_back_to_its_last_day(self) -> None:\n+        # 5월 31일의 석 달 전은 2월 31일이 아니라 2월 말일이다.\n+        assert months_before(date(2026, 5, 31), 3) == date(2026, 2, 28)\n+\n+    def test_leap_day_is_handled(self) -> None:\n+        assert months_before(date(2024, 5, 31), 3) == date(2024, 2, 29)\n+\n+    def test_window_length_can_be_changed(self) -> None:\n+        assert liquidity_window(date(2026, 9, 10), months=1) == (\n+            date(2026, 8, 11),\n+            date(2026, 9, 10),\n+        )\n+\n+    def test_zero_month_window_is_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError):\n+            liquidity_window(DEADLINE, months=0)\n+\n+\n+class TestAverageDailyTradingValue:\n+    def test_average_comes_from_the_trading_value_column(self) -> None:\n+        rows = [\n+            price_row(date(2026, 9, 8), value=10_000_000_000),\n+            price_row(date(2026, 9, 9), value=20_000_000_000),\n+            price_row(date(2026, 9, 10), value=30_000_000_000),\n+        ]\n+\n+        assert average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE) == Decimal(\n+            20_000_000_000\n+        )\n+\n+    def test_volume_times_close_is_not_used(self) -> None:\n+        \"\"\"거래량×종가 추정과 다른 값이 나온다. 그날의 가격 변동만큼 어긋나기 때문이다.\"\"\"\n+        rows = [price_row(date(2026, 9, 10), value=42_000_000_000, volume=1_000_000)]\n+        estimated = Decimal(1_000_000) * Decimal(\"35200\")  # 35,200,000,000\n+\n+        actual = average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE)\n+\n+        assert actual == Decimal(42_000_000_000)\n+        assert actual != estimated\n+\n+    def test_row_without_the_value_column_is_rejected(self) -> None:\n+        row = price_row(date(2026, 9, 10), value=1)\n+        del row[\"value\"]\n+\n+        with pytest.raises(InstrumentProfileError, match=\"거래대금\"):\n+            average_daily_trading_value([row], INSTRUMENT_ID, data_deadline=DEADLINE)\n+\n+    def test_rows_outside_the_window_are_ignored(self) -> None:\n+        rows = [\n+            price_row(date(2026, 1, 5), value=99_000_000_000),  # 구간 밖\n+            price_row(date(2026, 9, 10), value=10_000_000_000),\n+        ]\n+\n+        assert average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE) == Decimal(\n+            10_000_000_000\n+        )\n+\n+    def test_other_instruments_are_ignored(self) -> None:\n+        rows = [\n+            price_row(date(2026, 9, 10), value=10_000_000_000),\n+            price_row(date(2026, 9, 10), value=99_000_000_000, instrument_id=OTHER_ID),\n+        ]\n+\n+        assert average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE) == Decimal(\n+            10_000_000_000\n+        )\n+\n+    def test_suspended_day_counts_as_zero(self) -> None:\n+        \"\"\"정지일은 장이 열렸는데 거래되지 않은 날이라 0원이 사실이다. 빼면 유동성이 좋아 보인다.\"\"\"\n+        rows = [\n+            price_row(date(2026, 9, 9), value=10_000_000_000),\n+            price_row(date(2026, 9, 10), value=0, volume=0, trading_suspended=True),\n+        ]\n+\n+        assert average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE) == Decimal(\n+            5_000_000_000\n+        )\n+\n+    def test_average_is_rounded_to_won(self) -> None:\n+        rows = [\n+            price_row(date(2026, 9, 9), value=1),\n+            price_row(date(2026, 9, 10), value=2),\n+        ]\n+\n+        # 1.5원은 원 단위로 반올림해 2원이다. 원보다 작은 자리는 거래대금에 뜻이 없다.\n+        average = average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE)\n+        assert average == Decimal(2)\n+\n+    def test_no_rows_is_an_error_not_zero(self) -> None:\n+        \"\"\"근거가 없으면 0원을 만들어 내지 않는다 (원칙 VI).\"\"\"\n+        with pytest.raises(InstrumentProfileError, match=\"만들어 내지 않는다\"):\n+            average_daily_trading_value([], INSTRUMENT_ID, data_deadline=DEADLINE)\n+\n+    def test_negative_value_is_rejected(self) -> None:\n+        rows = [price_row(date(2026, 9, 10), value=-1)]\n+\n+        with pytest.raises(InstrumentProfileError):\n+            average_daily_trading_value(rows, INSTRUMENT_ID, data_deadline=DEADLINE)\n+\n+\n+class TestHoldingsOverlap:\n+    def test_holdings_are_sorted_by_weight(self) -> None:\n+        built = HoldingsOverlap(\n+            holdings=(\n+                Holding(name=\"SK하이닉스\", weight=Decimal(\"0.2107\")),\n+                Holding(name=\"삼성전자\", weight=Decimal(\"0.2431\")),\n+            ),\n+            as_of_current=True,\n+        )\n+\n+        assert [holding.name for holding in built.holdings] == [\"삼성전자\", \"SK하이닉스\"]\n+\n+    def test_json_value_keeps_weights_as_strings(self) -> None:\n+        assert overlap().to_json_value() == {\n+            \"topHoldings\": [\n+                {\"name\": \"삼성전자\", \"weight\": \"0.2431\"},\n+                {\"name\": \"SK하이닉스\", \"weight\": \"0.2107\"},\n+            ]\n+        }\n+\n+    def test_empty_holdings_are_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError, match=\"원칙 VI\"):\n+            HoldingsOverlap(holdings=(), as_of_current=True)\n+\n+    def test_duplicated_name_is_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError, match=\"두 번\"):\n+            HoldingsOverlap(\n+                holdings=(\n+                    Holding(name=\"삼성전자\", weight=Decimal(\"0.2\")),\n+                    Holding(name=\"삼성전자\", weight=Decimal(\"0.1\")),\n+                ),\n+                as_of_current=True,\n+            )\n+\n+    def test_weights_over_one_are_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError, match=\"합\"):\n+            HoldingsOverlap(\n+                holdings=(\n+                    Holding(name=\"가\", weight=Decimal(\"0.7\")),\n+                    Holding(name=\"나\", weight=Decimal(\"0.5\")),\n+                ),\n+                as_of_current=True,\n+            )\n+\n+    @pytest.mark.parametrize(\"weight\", [\"0\", \"-0.1\", \"1.0001\"])\n+    def test_weight_outside_zero_to_one_is_rejected(self, weight: str) -> None:\n+        with pytest.raises(InstrumentProfileError):\n+            Holding(name=\"가\", weight=Decimal(weight))\n+\n+    def test_too_many_holdings_are_rejected(self) -> None:\n+        holdings = tuple(\n+            Holding(name=f\"종목{index}\", weight=Decimal(\"0.001\"))\n+            for index in range(MAX_TOP_HOLDINGS + 1)\n+        )\n+\n+        with pytest.raises(InstrumentProfileError, match=str(MAX_TOP_HOLDINGS)):\n+            HoldingsOverlap(holdings=holdings, as_of_current=True)\n+\n+\n+class TestFileInput:\n+    def test_payload_is_parsed(self) -> None:\n+        built = holdings_overlap_from_payload(record()[\"holdings_overlap\"], \"항목\")\n+\n+        assert built.as_of_current is True\n+        assert built.holdings[0].name == \"삼성전자\"\n+\n+    def test_numeric_weight_is_rejected(self) -> None:\n+        payload = {\n+            \"as_of_current_composition\": True,\n+            \"top_holdings\": [{\"name\": \"가\", \"weight\": 0.2431}],\n+        }\n+\n+        with pytest.raises(InstrumentProfileError, match=\"문자열\"):\n+            holdings_overlap_from_payload(payload, \"항목\")\n+\n+    def test_missing_as_of_flag_is_rejected(self) -> None:\n+        \"\"\"현재 구성 기준인지 말하지 않은 채로는 만들 수 없다 (FR-015).\"\"\"\n+        payload = {\"top_holdings\": [{\"name\": \"가\", \"weight\": \"0.2\"}]}\n+\n+        with pytest.raises(InstrumentProfileError, match=\"as_of_current_composition\"):\n+            holdings_overlap_from_payload(payload, \"항목\")\n+\n+    def test_a_false_as_of_flag_is_rejected(self) -> None:\n+        \"\"\"과거 구성 이력을 주는 원천이 없으므로 당시 구성을 재현했다고 표현할 수 없다 (FR-015).\"\"\"\n+        payload = {\n+            \"as_of_current_composition\": False,\n+            \"top_holdings\": [{\"name\": \"가\", \"weight\": \"0.2\"}],\n+        }\n+\n+        with pytest.raises(InstrumentProfileError, match=\"참이어야 한다\"):\n+            holdings_overlap_from_payload(payload, \"항목\")\n+\n+    def test_source_attribution_cannot_be_supplied(self) -> None:\n+        \"\"\"출처 표시는 원천이 정하는 한 문장이라 파일이 덮어쓸 수 없다 (FR-011, SC-005).\n+\n+        받아 주면 SC-005의 \"100%\"를 코드가 아니라 파일을 쓰는 사람이 보장하게 된다.\n+        \"\"\"\n+        with pytest.raises(InstrumentProfileError, match=\"모르는 키\"):\n+            profiles_from_records(\n+                [record(sourceAttribution=\"아무 출처\")],\n+                [price_row(DEADLINE, value=1_000)],\n+                data_deadline=DEADLINE,\n+            )\n+\n+    def test_source_attribution_is_always_the_exchange(self) -> None:\n+        built = profiles_from_records(\n+            [record()], [price_row(DEADLINE, value=1_000)], data_deadline=DEADLINE\n+        )\n+\n+        assert built[0].source_attribution == SOURCE_ATTRIBUTION_KRX\n+\n+    def test_unknown_key_is_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError, match=\"모르는 키\"):\n+            profiles_from_records(\n+                [record(note=\"메모\")],\n+                [price_row(DEADLINE, value=1_000)],\n+                data_deadline=DEADLINE,\n+            )\n+\n+    def test_tracking_difference_is_refused(self) -> None:\n+        \"\"\"추적 차이는 계산 정의가 PD-21로 남아 이번 범위에서 뺐다. 조용히 버리지 않고 거부한다.\"\"\"\n+        with pytest.raises(InstrumentProfileError, match=\"PD-21\"):\n+            profiles_from_records(\n+                [record(tracking_difference=\"0.0021\")],\n+                [price_row(DEADLINE, value=1_000)],\n+                data_deadline=DEADLINE,\n+            )\n+\n+    def test_precomputed_liquidity_is_refused(self) -> None:\n+        \"\"\"일평균 거래대금은 파일이 들고 올 수 없다. 두 곳에서 만든 숫자는 갈라져도 모른다.\"\"\"\n+        with pytest.raises(InstrumentProfileError, match=\"모르는 키\"):\n+            profiles_from_records(\n+                [record(avg_daily_value_3m=\"1240000000\")],\n+                [price_row(DEADLINE, value=1_000)],\n+                data_deadline=DEADLINE,\n+            )\n+\n+    def test_duplicated_instrument_is_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError, match=\"두 번\"):\n+            profiles_from_records(\n+                [record(), record()],\n+                [price_row(DEADLINE, value=1_000)],\n+                data_deadline=DEADLINE,\n+            )\n+\n+    def test_bad_instrument_id_is_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError, match=\"XKRX\"):\n+            profiles_from_records(\n+                [record(instrument_id=\"091160\")],\n+                [price_row(DEADLINE, value=1_000)],\n+                data_deadline=DEADLINE,\n+            )\n+\n+\n+class TestInstrumentProfile:\n+    def test_row_carries_every_column_of_the_table(self) -> None:\n+        profile = InstrumentProfile(\n+            instrument_id=INSTRUMENT_ID,\n+            index_methodology_summary=SUMMARY,\n+            holdings=overlap(),\n+            avg_daily_value_3m=Decimal(1_240_000_000),\n+        )\n+\n+        assert profile.to_row() == {\n+            \"instrument_id\": INSTRUMENT_ID,\n+            \"index_methodology_summary\": SUMMARY,\n+            \"holdings_overlap\": {\n+                \"topHoldings\": [\n+                    {\"name\": \"삼성전자\", \"weight\": \"0.2431\"},\n+                    {\"name\": \"SK하이닉스\", \"weight\": \"0.2107\"},\n+                ]\n+            },\n+            \"holdings_as_of_current\": True,\n+            \"avg_daily_value_3m\": \"1240000000\",\n+            \"source_attribution\": SOURCE_ATTRIBUTION_KRX,\n+            \"survivorship_note\": SURVIVORSHIP_NOTE,\n+        }\n+\n+    def test_row_has_no_tracking_difference_column(self) -> None:\n+        profile = InstrumentProfile(\n+            instrument_id=INSTRUMENT_ID,\n+            index_methodology_summary=SUMMARY,\n+            holdings=overlap(),\n+            avg_daily_value_3m=Decimal(1),\n+        )\n+\n+        assert not [key for key in profile.to_row() if \"tracking\" in key.lower()]\n+\n+    def test_amount_is_stored_in_plain_notation(self) -> None:\n+        \"\"\"계약이 금액을 plain 문자열로 규정한다. 지수 표기가 나오면 저장 CHECK에 걸린다.\"\"\"\n+        profile = InstrumentProfile(\n+            instrument_id=INSTRUMENT_ID,\n+            index_methodology_summary=SUMMARY,\n+            holdings=overlap(),\n+            avg_daily_value_3m=Decimal(\"1E+9\"),\n+        )\n+\n+        assert profile.to_row()[\"avg_daily_value_3m\"] == \"1000000000\"\n+\n+    def test_source_and_note_default_to_the_required_wording(self) -> None:\n+        profiles = profiles_from_records(\n+            [record()], [price_row(DEADLINE, value=1_000)], data_deadline=DEADLINE\n+        )\n+\n+        assert profiles[0].source_attribution == \"한국거래소 통계정보\"  # FR-011\n+        assert \"상장폐지\" in profiles[0].survivorship_note  # FR-015\n+\n+    def test_as_of_current_flag_survives_to_the_row(self) -> None:\n+        profile = InstrumentProfile(\n+            instrument_id=INSTRUMENT_ID,\n+            index_methodology_summary=SUMMARY,\n+            holdings=overlap(as_of_current=False),\n+            avg_daily_value_3m=Decimal(1),\n+        )\n+\n+        assert profile.to_row()[\"holdings_as_of_current\"] is False\n+\n+    def test_blank_methodology_summary_is_rejected(self) -> None:\n+        with pytest.raises(InstrumentProfileError):\n+            InstrumentProfile(\n+                instrument_id=INSTRUMENT_ID,\n+                index_methodology_summary=\"   \",\n+                holdings=overlap(),\n+                avg_daily_value_3m=Decimal(1),\n+            )\n+\n+\n+# ---------------------------------------------------------------------------\n+# 적재 (T012의 산출값이 저장소에 닿는 경로)\n+# ---------------------------------------------------------------------------\n+\n+\n+class TestLoad:\n+    \"\"\"``MarketDataRepository.load_instrument_profiles``.\n+\n+    별도 진입점을 만들지 않고 기존 적재 계층을 늘린 까닭은 이 표가 대조 기록과 같은 모양이기\n+    때문이다 — 문자열 ``dataset_id``가 아니라 ``dataset_version_id``·``etf_id`` 두 bigint 외래\n+    키를 갖고, 그 변환·적재 순서 강제·재적재 거부가 이미 그 모듈에 있다.\n+    \"\"\"\n+\n+    @pytest.fixture\n+    def repository(self) -> Iterator[MarketDataRepository]:\n+        engine = create_engine(\"sqlite://\")\n+        METADATA.create_all(engine)\n+        try:\n+            yield MarketDataRepository(engine)\n+        finally:\n+            engine.dispose()\n+\n+    @pytest.fixture\n+    def published(self, repository: MarketDataRepository) -> MarketDataRepository:\n+        repository.publish_dataset_version(\n+            DatasetVersion(\n+                dataset_id=DATASET_ID,\n+                data_deadline=datetime(2026, 9, 10, 18, 0, tzinfo=UTC),\n+                collected_at=datetime(2026, 9, 10, 18, 0, tzinfo=UTC),\n+                last_success_at=datetime(2026, 9, 10, 18, 0, tzinfo=UTC),\n+                complete=True,\n+                is_sample=False,\n+                source=SOURCE_KRX_OPEN_API,\n+                map_version_id=1,\n+            )\n+        )\n+        with repository.engine.begin() as conn:\n+            conn.execute(\n+                representative_etf_table.insert().values(\n+                    instrument_id=INSTRUMENT_ID,\n+                    name=\"KODEX 반도체\",\n+                    listed_on=date(2006, 6, 27),\n+                    benchmark_index=\"KRX 반도체\",\n+                    manager=\"삼성자산운용\",\n+                    leveraged=False,\n+                    inverse=False,\n+                )\n+            )\n+        return repository\n+\n+    @staticmethod\n+    def make_profile(**overrides: Any) -> InstrumentProfile:\n+        values: dict[str, Any] = {\n+            \"instrument_id\": INSTRUMENT_ID,\n+            \"index_methodology_summary\": SUMMARY,\n+            \"holdings\": overlap(),\n+            \"avg_daily_value_3m\": Decimal(1_240_000_000),\n+        }\n+        values.update(overrides)\n+        return InstrumentProfile(**values)\n+\n+    @staticmethod\n+    def count(repository: MarketDataRepository) -> int:\n+        with repository.engine.connect() as conn:\n+            return int(\n+                conn.execute(\n+                    select(func.count()).select_from(instrument_profile_table)\n+                ).scalar_one()\n+            )\n+\n+    def test_profile_is_written_with_resolved_identifiers(\n+        self, published: MarketDataRepository\n+    ) -> None:\n+        assert published.load_instrument_profiles(DATASET_ID, [self.make_profile()]) == 1\n+\n+        with published.engine.connect() as conn:\n+            row = conn.execute(select(instrument_profile_table)).one()\n+        assert row.dataset_version_id == 1\n+        assert row.etf_id == 1\n+        assert row.avg_daily_value_3m == \"1240000000\"\n+        assert row.holdings_as_of_current is True\n+        assert row.source_attribution == SOURCE_ATTRIBUTION_KRX\n+\n+    def test_unpublished_dataset_is_rejected(self, repository: MarketDataRepository) -> None:\n+        with pytest.raises(DatasetNotPublishedError):\n+            repository.load_instrument_profiles(DATASET_ID, [self.make_profile()])\n+        assert self.count(repository) == 0\n+\n+    def test_reloading_the_same_dataset_is_rejected(self, published: MarketDataRepository) -> None:\n+        \"\"\"자료 버전마다 한 벌이다. 고쳐 쓰지 않고 새 dataset_id로 만든다 (FR-017).\"\"\"\n+        published.load_instrument_profiles(DATASET_ID, [self.make_profile()])\n+        with pytest.raises(DatasetAlreadyLoadedError):\n+            published.load_instrument_profiles(DATASET_ID, [self.make_profile()])\n+        assert self.count(published) == 1\n+\n+    def test_missing_representative_etf_is_reported(self, repository: MarketDataRepository) -> None:\n+        repository.publish_dataset_version(\n+            DatasetVersion(\n+                dataset_id=DATASET_ID,\n+                data_deadline=datetime(2026, 9, 10, 18, 0, tzinfo=UTC),\n+                collected_at=datetime(2026, 9, 10, 18, 0, tzinfo=UTC),\n+                last_success_at=datetime(2026, 9, 10, 18, 0, tzinfo=UTC),\n+                complete=True,\n+                is_sample=False,\n+                source=SOURCE_KRX_OPEN_API,\n+                map_version_id=1,\n+            )\n+        )\n+        with pytest.raises(RepresentativeEtfNotFoundError, match=INSTRUMENT_ID):\n+            repository.load_instrument_profiles(DATASET_ID, [self.make_profile()])\n+        assert self.count(repository) == 0\n+\n+    def test_plain_mapping_is_rejected(self, published: MarketDataRepository) -> None:\n+        \"\"\"FR-015의 값 규칙을 거친 값만 적재한다.\"\"\"\n+        with pytest.raises(RowValidationError, match=\"InstrumentProfile\"):\n+            published.load_instrument_profiles(DATASET_ID, [self.make_profile().to_row()])\n+        assert self.count(published) == 0\n+\n+    def test_duplicate_instrument_is_rejected(self, published: MarketDataRepository) -> None:\n+        with pytest.raises(RowValidationError, match=\"두 번\"):\n+            published.load_instrument_profiles(\n+                DATASET_ID, [self.make_profile(), self.make_profile()]\n+            )\n+        assert self.count(published) == 0\n+\n+    def test_empty_load_writes_nothing(self, published: MarketDataRepository) -> None:\n+        assert published.load_instrument_profiles(DATASET_ID, []) == 0\n+        assert self.count(published) == 0\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_instrument_profile.py",
+          "old_path": "data/tests/test_instrument_profile.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,10 +48,17 @@ MOMENT = datetime(2026, 9, 11, 18, 0, tzinfo=UTC)\n REPO_ROOT = Path(__file__).resolve().parents[2]\n # 파일명을 고정하지 않고 찾는다. 마이그레이션 버전이 타임스탬프라 파일명이 바뀔 수 있는데,\n # 고정해 두면 이름이 달라진 순간 아래 대조가 조용히 건너뛰어져 표류를 놓친다.\n-_MIGRATIONS = sorted(\n-    (REPO_ROOT / \"backend/src/main/resources/db/migration\").glob(\"V*__etf_market_data.sql\")\n+#\n+# 001의 표는 마이그레이션 두 개에 나뉘어 있다. 관계형·시계열 11개는 T003이 만들었고,\n+# instrument_profile은 data-model.md에 있는데도 빠져 있어 T013이 따로 만들었다. 그래서 파일\n+# 하나가 아니라 001이 만든 파일 전부에서 표 정의를 찾는다.\n+_MIGRATION_DIR = REPO_ROOT / \"backend/src/main/resources/db/migration\"\n+MIGRATIONS = sorted(\n+    [\n+        *_MIGRATION_DIR.glob(\"V*__etf_market_data.sql\"),\n+        *_MIGRATION_DIR.glob(\"V*__instrument_profile.sql\"),\n+    ]\n )\n-MIGRATION = _MIGRATIONS[-1] if _MIGRATIONS else None\n \n \n def deadline_for(dataset_id: str) -> datetime:\n@@ -505,12 +512,16 @@ _NOT_A_COLUMN = (\"CONSTRAINT\", \"CHECK\", \"PRIMARY\", \"UNIQUE\", \"FOREIGN\")\n \n def parse_migration_columns(table_name: str) -> list[str]:\n     \"\"\"마이그레이션에서 한 표의 열 이름을 읽는다. 코드와 스키마의 표류를 잡는다.\"\"\"\n-    assert MIGRATION is not None, (\n-        \"V*__etf_market_data.sql을 찾지 못했다. 마이그레이션이 사라졌거나 이름 규칙이 바뀌었다면\"\n+    assert MIGRATIONS, (\n+        \"001의 마이그레이션을 찾지 못했다. 마이그레이션이 사라졌거나 이름 규칙이 바뀌었다면\"\n         \" 이 대조를 건너뛰지 말고 여기를 고쳐야 한다\"\n     )\n-    sql = MIGRATION.read_text(encoding=\"utf-8\")\n-    match = re.search(rf\"CREATE TABLE {table_name} \\((.*?)\\n\\);\", sql, flags=re.DOTALL)\n+    match = None\n+    for migration in MIGRATIONS:\n+        sql = migration.read_text(encoding=\"utf-8\")\n+        match = re.search(rf\"CREATE TABLE {table_name} \\((.*?)\\n\\);\", sql, flags=re.DOTALL)\n+        if match is not None:\n+            break\n     assert match is not None, f\"{table_name} 정의를 찾지 못했다\"\n     body = \"\\n\".join(line.split(\"--\")[0] for line in match.group(1).splitlines())\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_repository.py",
+          "old_path": "data/tests/test_repository.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -146,6 +146,40 @@ uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --simulate-quota-e\n - `failure_reason`과 `last_success_at`이 채워져 있다\n - 조회 응답의 `dataDeadline`이 실제로 수집한 마지막 날짜다. 요청한 날짜가 아니다\n \n+## 시나리오 8 — 대표 상품 정보에서 근거와 한계를 확인한다\n+\n+**검증 대상**: FR-011, FR-015, SC-005, User Story 3\n+\n+지수 방법론 요약과 구성종목은 원천 API가 주지 않아(2026-09-13 확인) 상장일·기업행위와 같이 파일로 받는다. 일평균 거래대금만 방금 적재한 `daily_price`의 거래대금에서 계산한다.\n+\n+```bash\n+cd data\n+uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --until 2026-09-07 \\\n+    --instrument-profiles raw/instrument-profiles.json\n+```\n+\n+```bash\n+curl -s localhost:8080/sectors/SEMICONDUCTOR/instrument-profile | jq\n+```\n+\n+**기대 결과**\n+\n+- 필수 항목이 모두 있다: `benchmarkIndex`·`indexMethodologySummary`·`listedOn`·`holdingsOverlap`·`avgDailyValue3m`·`sourceAttribution`·`survivorshipNote` (FR-015)\n+- `sourceAttribution`이 `한국거래소 통계정보`다 (FR-011, SC-005)\n+- 과거 구성 이력이 없으므로 `holdingsOverlap.asOfCurrentComposition`이 `true`다. 화면은 당시 구성을 재현했다고 표현하지 않는다\n+- `survivorshipNote`에 현재 생존 상품만 고른 한계가 한 문장으로 있다\n+- **추적 차이 필드가 없다.** 계산 정의가 PD-21로 남아 이번 범위에서 뺐다\n+- `avgDailyValue3m`이 지수 표기 없는 문자열이다. 거래량과 종가를 곱한 추정이 아니라 `daily_price.value` 기준이다\n+- `datasetId`·`dataDeadline`이 어느 자료 버전 기준인지 알려 준다. `isSample`은 **그 자료 버전**의 값이며 `GET /sectors`의 `isSample`(대응표 기준)과 근거가 다르다\n+\n+이어서 없는 상태와 빈 값을 구분하는지 확인한다.\n+\n+```bash\n+curl -s -o /dev/null -w '%{http_code}\\n' localhost:8080/sectors/NO_SUCH_SECTOR/instrument-profile\n+```\n+\n+**기대 결과**: 없는 섹터 코드는 `404 SECTOR_NOT_FOUND`, 대표 상품 정보가 아직 적재되지 않았으면 빈 값이 아니라 `409 INSTRUMENT_PROFILE_NOT_READY`다. 원칙 VI가 \"없는 결과를 만들어내지 않는다\"를 요구하므로 준비 안 됨과 없음을 구분한다.\n+\n ## 전체 검증 명령\n \n 파트별 검증 명령은 각 CLAUDE.md가 정한 것을 그대로 쓴다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/quickstart.md",
+          "old_path": "specs/001-etf-market-data/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -90,20 +90,20 @@\n \n **Independent Test**: 대표 ETF 하나를 골라 상장 전 날짜·분배금 지급일·분할일 전후의 원시 가격과 조정 자료를 조회해 운용사 공시와 대조한다.\n \n-- [ ] T007 [US2] [DE] 일봉·지수 수집과 이용 한도 처리 (`data/src/data_pipeline/{krx,index}.py`, `data/scripts/{ingest_krx,ingest_index,verify_listing_boundary}.py`, `data/tests/{test_krx_ingest,test_index}.py`) — S15P21E205-179\n+- [x] T007 [US2] [DE] 일봉·지수 수집과 이용 한도 처리 (`data/src/data_pipeline/{krx,index}.py`, `data/scripts/{ingest_krx,ingest_index,verify_listing_boundary}.py`, `data/tests/{test_krx_ingest,test_index}.py`) — S15P21E205-179\n   - KRX OPEN API 연동으로 `fetch_ohlcv` 스캐폴딩을 완성한다. 컬럼을 `date, open, high, low, close, volume, value`로 표준화한다\n   - 상장 전 합성 이력이나 미래 자료로 빈 값을 채우지 않는다. 상장일·상장폐지일을 함께 확보한다 (FR-005)\n   - 이용 한도에 걸려 그날 수집을 끝내지 못하면 중단하고 `complete = false`와 `failure_reason`을 남긴다 (FR-014). `--simulate-quota-exhausted`로 재현한다\n   - KOSPI 시리즈 일별 자료의 확보 기간이 비교 대상 대표 ETF의 상장 이후 전체를 포함하는지 검사한다 (FR-009)\n   - `verify_listing_boundary.py`는 상장 전 가격 행을 센다. quickstart 시나리오 2가 쓴다\n   - 테스트: 컬럼 표준 변환, 상장 전 행 부재(SC-003), 재실행 멱등성\n-- [ ] T008 [US2] [DE] 기업행위 반영 조정 가격과 자료 부족·정지 구간 (`data/src/data_pipeline/{corporate_actions,gaps}.py`, `data/tests/{test_corporate_actions,test_gaps}.py`) — S15P21E205-179\n+- [x] T008 [US2] [DE] 기업행위 반영 조정 가격과 자료 부족·정지 구간 (`data/src/data_pipeline/{corporate_actions,gaps}.py`, `data/tests/{test_corporate_actions,test_gaps}.py`) — S15P21E205-179\n   - 분배금·분할 수집과 소급 조정 계수 산출. `adjusted_close`와 `adjustment_factor`를 함께 저장한다 (research.md 결정 2)\n   - 운용보수를 다시 차감하지 않는다. 이미 가격에 반영되어 있다 (FR-004)\n   - 자료 부족 구간의 `reason`은 `AMBIGUOUS_PRICE`·`MISSING_CORPORATE_ACTION`·`RECONCILIATION_UNKNOWN`·`INDEX_HISTORY_SHORT`다. **`SUSPENDED_TOO_LONG`은 PD-19·PD-20 확정 전까지 쓰지 않는다** (FR-006)\n   - 거래정지는 길이와 무관하게 직전 종가를 평가에만 쓰고 표시를 남기며, 정지 구간을 `suspension_period`에 시작일·종료일·거래일 수로 기록한다. 이 기록이 T015의 입력이 된다\n   - 테스트: 계수 계산, 과거 두 시점의 비율이 이후 계수에 영향받지 않음, 보수 중복 차감 없음\n-- [ ] T009 [US2] [DE] 공시 대조와 원인별 처리 (`data/src/data_pipeline/reconciliation.py`, `data/scripts/reconcile.py`, `data/tests/test_reconciliation.py`) — S15P21E205-179\n+- [x] T009 [US2] [DE] 공시 대조와 원인별 처리 (`data/src/data_pipeline/reconciliation.py`, `data/scripts/reconcile.py`, `data/tests/test_reconciliation.py`) — S15P21E205-179\n   - 표본은 상장 첫날·모든 분배금 지급일·모든 분할일이다. 평범한 거래일은 넣지 않는다 (FR-016)\n   - 불일치가 나도 개별 값을 수정하지 않는다. 수집·가공 오류는 새 버전 재발행, 정의 차이는 기록만, 원인 불명은 구간 제외 (FR-017)\n   - 테스트: 표본 구성 검증, `cause`↔`resolution` 조합 제한, SC-002 판정\n@@ -137,16 +137,22 @@\n \n **Independent Test**: 대표 ETF 하나의 대표 상품 정보를 열어 필수 항목이 모두 보이고, 과거 구성 이력이 없는 상품에 현재 구성 기준 표시가 붙는지 확인한다.\n \n-- [ ] T012 [US3] [DE] 대표 상품 정보 산출 (`data/src/data_pipeline/instrument_profile.py`, `data/tests/test_instrument_profile.py`) — S15P21E205-181\n+- [x] T012 [US3] [DE] 대표 상품 정보 산출 (`data/src/data_pipeline/instrument_profile.py`, `data/tests/test_instrument_profile.py`) — S15P21E205-181\n   - 기준 지수·지수 방법론 요약·상장일·구성종목 중복·최근 3개월 일평균 거래대금·자료 출처·생존 상품 한계를 담는다 (FR-015)\n   - 유동성은 `daily_price.value` 기준이다. 거래량과 종가를 곱한 추정을 쓰지 않는다\n   - 과거 구성 이력이 없으면 `holdings_as_of_current`를 true로 표시하고, 당시 중복·집중도를 재현했다고 표현하지 않는다\n   - **추적 차이는 만들지 않는다.** 계산 정의가 PD-21로 남아 있다 (Out of Scope)\n-- [ ] T013 [US3] [BE] 대표 상품 정보 조회 API (`sector/infrastructure/persistence/{InstrumentProfileJpaEntity,InstrumentProfileMapper}.java`, `sector/application/service/SectorService.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/InstrumentProfileResponse}.java`, `backend/src/test/java/.../sector/InstrumentProfileApiIT.java`) — S15P21E205-181\n+  - **2026-09-13 확인**: 지수 방법론 요약과 구성종목을 주는 원천 서비스가 없다. 인증키로 직접 조회해 `etp/etf_pdf`·`etp/etf_comp_isu`·`idx/idx_comp_isu`·`idx/idx_base_info`가 모두 404임을 봤고, 되는 `etp/etf_bydd_trd`는 기초지수 이름과 순자산총액까지다. 그래서 상장일·기업행위와 같은 선례를 따라 파일 입력으로 받는다(`ingest_krx.py --instrument-profiles`). 원천이 나중에 제공하면 열 구성은 그대로 두고 입력만 수집으로 바꾼다\n+  - **적재 경로 (2026-09-13 결정)**: 별도 진입점을 만들지 않고 `repository.py`에 `load_instrument_profiles`를 더했다. 이 표는 대조 기록과 같은 bigint 외래 키 두 개 구조라 식별자 변환·적재 순서 강제·재적재 거부가 이미 그 모듈에 있고, 무엇보다 일평균 거래대금의 근거가 `daily_price.value`인데 적재 계층은 DB에서 시계열을 읽어 되돌리는 경로를 두지 않는다. 별도 스크립트로는 그 값을 얻을 방법이 없다\n+- [x] T013 [US3] [BE] 대표 상품 정보 조회 API (`backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__instrument_profile.sql`, `sector/infrastructure/persistence/{InstrumentProfileJpaEntity,InstrumentProfileMapper}.java`, `sector/application/service/SectorService.java`, `sector/presentation/{controller/SectorController,controller/SectorExceptionHandler,response/InstrumentProfileResponse}.java`, `backend/src/test/java/.../sector/InstrumentProfileApiIT.java`) — S15P21E205-181\n+  - **`instrument_profile` 표를 이 묶음에서 만든다 (2026-09-13 확정).** T003이 만든 표 11개에 이 표가 빠져 있었고 어느 묶음도 맡고 있지 않았다. 열 구성은 data-model.md 「instrument_profile」 그대로이며 새로 설계하지 않는다. 파일명은 타임스탬프 방식을 따른다\n   - `GET /sectors/{code}/instrument-profile` (contracts/sector-api.md)\n   - `avgDailyValue3m`에 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`를 **필드마다** 붙인다. 웹 ObjectMapper에 전역 등록하면 기존 `MarketResponse.value` 계약이 깨진다 (`backend/CLAUDE.md`)\n   - `INSTRUMENT_PROFILE_NOT_READY`(409)를 추가한다\n   - 테스트: 필수 항목 전부 존재, `asOfCurrentComposition` 표시, `sourceAttribution` 존재, **추적 차이 필드 부재**\n+  - **어느 행을 보여줄지 (2026-09-13 결정)**: 문서가 정해 두지 않아 여기서 정했다. 열린 대응표 버전을 대상으로 수집된 자료 버전 중 `complete = true`이고 `data_deadline`이 가장 늦은 것이다. 물러난 대응표를 대상으로 만든 값이 현재 목록 옆에 나오지 않게 하고(원칙 IV), 부분 갱신 자료를 완전한 자료로 표시하지 않기 위함이다(FR-014). 응답의 `isSample`은 그 **자료 버전**의 값이며 대응표의 `isSample`과 근거가 다르다\n+  - **없는 섹터 코드 판정**: 경로 변수로 `SectorCode`를 만들지 않는다. 만들면 형식 위반이 `IllegalArgumentException`이 되고 기존 처리기가 그것을 저장 자료 결함으로 보아 500으로 옮긴다. 열린 대응표 목록에서 같은 문자열을 찾기만 하므로 형식 위반도 `SECTOR_NOT_FOUND`(404)다\n+  - `instrument_profile`에 UPDATE·DELETE 거부 트리거를 걸지 않았다. FR-017이 불변으로 못 박은 대상은 자료 버전과 시계열이고 `reconciliation_record`도 같은 이유로 트리거가 없다. 재현은 `(etf_id, dataset_version_id)` UNIQUE가 지킨다\n \n **Checkpoint**: 세 사용자 스토리가 모두 독립적으로 동작한다.\n \n@@ -244,3 +250,47 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한\n - **마이그레이션 번호 V3을 네 spec(001·004·007·014)이 함께 적어 두었다.** 001은 V7을 쓰되 나머지 재배정 결론은 T002에서 남긴다\n - **T015 확정 전 임시 동작을 함부로 바꾸지 않는다.** `suspension_period` 기록이 결정의 입력이므로, 정지를 제외하도록 미리 바꾸면 근거가 사라진다\n - 각 묶음의 MR 본문 \"주요 변경 사항\"에 그 묶음이 담은 구현 메모 항목을 나열해 추적한다 (constitution v3.0.0)\n+\n+---\n+\n+## Phase 8: Convergence\n+\n+**2026-09-13 `/speckit-converge` 산출.** 현재 코드를 spec.md·plan.md·contracts·data-model.md와 대조해 남은 일을 덧붙였다. 기존 항목은 하나도 고치지 않았다. T014~T016은 이미 열려 있으므로 다시 만들지 않는다. 판정: FR 17개·SC 7개·사용자 스토리 3개·plan 결정 10개·constitution 원칙 10개를 확인했고 MUST 위반은 없다. 유형은 missing 2·partial 9·contradicts 1이며 unrequested는 없다.\n+\n+- [ ] T017 [BE] `GET /sectors/evaluation-window`를 붙인다 per contracts/sector-api.md·FR-007 (missing)\n+  - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있다\n+  - **001이 지금 만들 수 없다.** 산식 입력 다섯 중 `warmupTradingDays`를 `evaluation-window.md` 입력표가 \"전략 등록표(003 소유)에서 온다. 001은 이 값을 정하지 않고 받는다\"로 못 박았고, `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. T010의 2026-09-11 보류 판단이 그대로 유효하다\n+  - 붙일 때 필요한 것은 T010이 적어 둔 다섯 가지다. `EvaluationWindowService`는 입력을 전부 인자로 받으므로 고치지 않고 호출부만 더하면 된다\n+- [ ] T018 [BE] 워밍업 자료를 요청 구간 앞에서 읽을지 확정한다 per contracts/market-dataset.md 「읽기 규칙」·SC-004 (partial)\n+  - 계약은 \"워밍업 자료는 요청 구간보다 앞에서 읽는다. 달력 일수로 잡으면 연휴가 긴 해에 워밍업이 모자란다\"고 정했고 T011도 같은 문장을 담았다. `PostgresMarketDataProvider.load`에 `warmup_trading_days` 인자와 거래일 기준 `_warmup_start` 기계가 실제로 들어 있다\n+  - 그런데 `engine_runner.py:273`이 그 인자를 넘기지 않아 기본값 0으로 읽고, `evaluation_start`(engine_runner.py:47)가 워밍업을 **요청 구간 안에서** 소비한다. 즉 공급자의 워밍업 경로가 Job 처리 경로에서 죽어 있다\n+  - **001 혼자 못 고친다.** `evaluation_start`는 004가 `run.effectiveStart`·`evaluation.warmupTradingDays` 우선순위로 설계한 것이라, 호출을 바꾸면 모든 백테스트의 `evaluationStart`와 지표가 움직이고 004의 재현 픽스처가 함께 깨진다. 두 계약 중 어느 쪽을 기준으로 삼을지 팀이 정해야 한다\n+- [ ] T019 [BE] `datasetId` 값 규칙을 저장된 자료 버전에서 읽는다 per research.md 결정 4 (contradicts)\n+  - `ExecutionPolicy.java:43`과 `docs/specs/backtest-messaging/`의 픽스처가 아직 `KRX_DAILY_V1`이다. 규칙은 `KRX_DAILY_{YYYYMMDD}`다\n+  - T011이 적어 둔 대로 **004 연동에서 푼다.** 상수에 날짜를 박으면 내일부터 거짓말이 되고, 올바른 해결은 백엔드가 `dataset_version`에서 현재 유효한 묶음을 읽는 것이다. 값 규칙 자체는 `dataset_version.build_dataset_id`가 이미 세우고 검증한다\n+- [ ] T020 [DE] 대조 표본에 가격과 지수를 더한다 per FR-016·SC-002 (partial)\n+  - FR-016은 \"대표 ETF**와 지수**의 조회값\"을, SC-002는 \"**가격**·분배금·분할·상장일\"을 공시와 대조하라고 한다. 지금 `build_queried_values`는 `listed_on`·`amount`·`pay_date`·`ex_date`만 채우고, 자기 docstring이 \"여기서는 가격을 채우지 않고, 가격까지 대조하려면 부르는 쪽이 그 항목을 더한다\"고 적어 두었는데 `reconcile.py`가 더하지 않는다\n+  - 지수 표본은 아예 없다. `build_samples`는 `ListingWindow`와 `CorporateAction`만 받는다\n+  - **실자료가 있어야 뜻이 생긴다.** 공시값은 사람이 옮긴 `--disclosure` 파일이고, 대조할 가격·지수 원본은 T014가 대표 ETF를 확정한 뒤에야 쌓인다. 배관(가격 입력 인자 추가)만 먼저 놓을지, T014·T016과 함께 닫을지 정해야 한다\n+- [ ] T021 [BE] 공급자가 만든 자료 메타데이터를 결과까지 전달한다 per FR-006·FR-013·FR-014 (partial)\n+  - `PostgresMarketDataProvider.load`가 `carriedForwardDates`·`dataGaps`·`dataDeadline`·`mapVersion`·`provisionalSuspensionHandling`·`notRealMarketData`를 빠짐없이 채운다. 그런데 `engine_runner`와 `artifacts`가 `market.metadata`를 읽지 않아 `datasetId` 말고는 `EngineOutput`에 닿지 않는다\n+  - FR-006의 \"결과에 정지 일수와 임시 처리 중임을 함께 표시한다\"와 FR-014의 \"내보내는 모든 자료에 데이터 마감 시각을 붙인다\"가 공급자 경계에서 멈춘다\n+  - **결과 표면은 004·005 소유다.** 001의 자체 검증(quickstart 시나리오 6)은 공급자 수준에서 확인하도록 쓰여 있어 통과한다. 어느 spec이 이 전달을 맡을지 정해야 한다\n+- [X] T022 [DOCS] quickstart에 대표 상품 정보 시나리오를 더한다 per US3/AC1~AC4·FR-015 (missing)\n+  - 시나리오 1~7 어디에도 `GET /sectors/{code}/instrument-profile`을 실행해 보는 절차가 없다. 사용자 스토리 3만 실행 가능한 검증 절차가 비어 있다\n+  - 필수 항목 존재, `asOfCurrentComposition` 표시, `sourceAttribution`, 추적 차이 필드 부재, 409 구분을 확인한다\n+  - **딸린 어긋남**: 이 문서 맨 위 Input 줄과 T016이 quickstart를 \"시나리오 1~7\"로 센다. converge는 기존 항목을 고치지 않으므로 그대로 두었다. T016을 착수할 때 「시나리오 1~8」로 고쳐 새 시나리오가 검증 기록에서 빠지지 않게 한다\n+- [ ] T023 [DOCS] plan.md의 마이그레이션 파일명을 실제와 맞춘다 per plan.md Storage·Project Structure (partial)\n+  - plan.md 19행·113행이 `V3__etf_market_data.sql`을 가리키는데 실제 파일은 `V20260911114500__etf_market_data.sql`이고, `V3__param_search.sql`은 **다른** 마이그레이션으로 이미 존재한다. 지금 문서대로 읽으면 남의 파일을 가리킨다\n+  - T013이 만든 `V20260913103000__instrument_profile.sql`도 plan.md에 없다\n+- [X] T024 [BE] 스키마 검사에 12번째 표를 넣는다 per data-model.md (partial)\n+  - `EtfMarketDataSchemaIT`의 표 검사가 11개만 세고 `instrument_profile`을 빼놓았다. 표시 문구도 \"관계형 6개와 시계열 5개, 모두 11개 표\"로 남아 있는데 data-model.md가 정의한 표는 12개다\n+  - T013이 그 표를 만들면서 검사를 함께 넓히지 않았다\n+- [ ] T025 [DOCS] 일평균 거래대금의 저장 타입과 응답 타입 변환을 문서에 적는다 per data-model.md·contracts/sector-api.md (partial)\n+  - data-model.md는 `avg_daily_value_3m`을 \"금액이므로 문자열로 둔다\"고 하고, 계약은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`를 요구한다. 구현은 TEXT 열 → `BigDecimal` 도메인 → 지수 표기 없는 문자열 응답으로 양립시켰는데 **어느 문서도 그 변환을 말하지 않는다**\n+- [ ] T026 [DOCS] 대표 상품 정보의 `isSample`이 무엇의 값인지 계약에 적는다 per contracts/sector-api.md (partial)\n+  - 계약의 응답 예시에 `isSample`이 있는데 대응표의 것인지 자료 버전의 것인지 말하지 않는다. 구현은 research.md 결정 5(\"자료 버전 레코드에도 같은 뜻의 표시를 둔다\")를 따라 **자료 버전** 기준으로 정했고, `GET /sectors`의 `isSample`은 대응표 기준이라 두 값이 다를 수 있다\n+- [ ] T027 [DOCS] 대표 상품 정보 표에 불변성 적용 여부를 적는다 per data-model.md·FR-017 (partial)\n+  - data-model.md 「instrument_profile」 불변식이 `(etf_id, dataset_version_id)` UNIQUE만 말하고 UPDATE·DELETE 거부를 적용하는지 침묵한다. 구현은 트리거를 걸지 않기로 정하고 그 근거를 마이그레이션 주석에만 남겼다(FR-017이 못 박은 대상은 자료 버전과 시계열이며 `reconciliation_record`도 같다)\n+- [ ] T028 [DOCS] plan.md의 워커 공급자 이름을 실제와 맞춘다 per plan.md (partial)\n+  - plan.md가 `RepositoryDataProvider`를 더하고 `engine_runner.py:68`의 기본값을 바꾸라고 적었는데, 실제로는 004가 만든 `PostgresMarketDataProvider`가 그 자리를 맡고 `PortfolioBacktestEngine`은 공급자에 **기본값을 두지 않아** 주입을 잊은 경로 자체가 없다. `YFinanceDataProvider`는 코드에서 사라졌다(남은 것은 세 CLAUDE.md의 서술뿐)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/tasks.md",
+          "old_path": "specs/001-etf-market-data/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2191286,
+      "head_commit_sha": "52a6025f7ef04fc89265d575e8c80ab82b807be2",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T01:00:50.815+09:00",
+      "merge_request_id": 942245,
+      "state": "without_files",
+      "real_size": "24",
+      "patch_id_sha": "bf542bc0858d02126e543e417f112af6482f8193",
+      "commits": [
+        {
+          "id": "52a6025f7ef04fc89265d575e8c80ab82b807be2",
+          "short_id": "52a6025f",
+          "created_at": "2026-09-14T01:00:37.000+09:00",
+          "parent_ids": [
+            "70655c18032541f3795119de6db549719464dba9"
+          ],
+          "title": "fix(be): 출처 표시와 구성 기준 표시를 파일 입력이 흔들지 못하게 한다",
+          "message": "fix(be): 출처 표시와 구성 기준 표시를 파일 입력이 흔들지 못하게 한다\n\n기능 이해 브리프(specs/001-etf-market-data/briefs/181-instrument-profile.md)가 올린\n불일치 두 건을 닫는다.\n\n1. 출처 표시를 파일이 덮어쓸 수 있었다. sourceAttribution 키를 받아 빈 문자열만 아니면\n   무엇이든 통과했고 표에도 값 제약이 없었다. FR-011이 요구한 출처 표시가 파일을 쓰는 사람의\n   손에 달려 SC-005의 \"100%\"를 코드가 보장하지 못했다. 이 값은 종목마다 다른 자료가 아니라\n   원천이 정해 주는 한 문장이므로 파일 입력에서 아예 뺀다.\n\n2. 현재 구성 기준 표시를 거짓으로 줄 수 있었다. 과거 구성 이력을 주는 원천이 없으므로\n   (2026-09-13 확인) 거짓은 \"당시 구성을 재현했다\"는 뜻이 되어 FR-015가 금지한 표현이\n   화면에 실린다. 참이 아니면 거부한다. 나중에 과거 구성을 확보하면 그 검사를 푸는 자리를\n   주석으로 남겼다.\n\n아울러 물러난 대응표로 만든 자료 버전을 고르지 않는지 겨냥한 통합 테스트를 더했다. 그 조건은\n이번에 새로 정한 규칙인데 겨냥한 테스트가 없어 질의에서 지워도 통과했다. 마감 시각을 일부러\n더 늦게 둔 자료 버전을 함께 심어, 조건을 지우면 정렬이 그쪽을 골라 테스트가 깨지는 것을\n확인했다.\n\n검증: data pytest 440 passed(437 → 440), backend build 798 tests 실패 0 건너뜀 2(797 → 798).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-14T01:00:37.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-14T01:00:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52a6025f7ef04fc89265d575e8c80ab82b807be2"
+        },
+        {
+          "id": "70655c18032541f3795119de6db549719464dba9",
+          "short_id": "70655c18",
+          "created_at": "2026-09-13T22:54:14.000+09:00",
+          "parent_ids": [
+            "97f982a89ef19bad161e275b502fa7692393896b"
+          ],
+          "title": "docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다",
+          "message": "docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다\n\nspec 001을 코드와 대조해 tasks.md에 Phase 8(T017~T028) 12개를 덧붙였다.\nMUST 위반은 없고 유형은 missing 2·partial 9·contradicts 1이다.\n\n이번에 닫은 둘:\n- 스키마 검사가 표를 11개만 세고 instrument_profile을 빼놓았다. T003이\n  11개를 만들 때의 목록 그대로라, T013이 열두 번째 표를 뒤늦게 채웠는데도\n  \"빠진 표\"를 다시 놓칠 자리가 남아 있었다. data-model.md와 같은 12개를\n  세게 한다.\n- quickstart에 대표 상품 정보 시나리오(8)가 없어 사용자 스토리 3만 실행\n  가능한 검증 절차가 비어 있었다. 필수 항목·출처 표시·현재 구성 기준 표시·\n  추적 차이 필드 부재와 404/409 구분을 확인한다.\n\n나머지 열은 이번 범위가 아니라 근거만 적었다. T017(평가 기간 조회 표면)은\n003의 워밍업 값이 있어야 하고, T019(자료 묶음 식별자)는 004 연동에서 풀며,\nT020(가격·지수 대조)은 실자료가 쌓여야 뜻이 생긴다. T018(워밍업 읽기 구간)은\n001 계약과 004 engine_runner의 설계가 어긋나 팀이 기준을 정해야 한다.\nT023·T025~T028은 spec 문서를 고쳐야 풀려 건드리지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:54:14.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-13T22:54:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/70655c18032541f3795119de6db549719464dba9"
+        },
+        {
+          "id": "97f982a89ef19bad161e275b502fa7692393896b",
+          "short_id": "97f982a8",
+          "created_at": "2026-09-13T22:41:07.000+09:00",
+          "parent_ids": [
+            "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+          ],
+          "title": "feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)",
+          "message": "feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)\n\nspec 001 FR-011·FR-015, contracts/sector-api.md.\n\n- data: instrument_profile 모듈. 유동성은 daily_price.value(거래대금)로만 내고\n  거래량×종가 추정을 쓰지 않는다. 지수 방법론 요약·구성종목은 원천 API가 주지\n  않아(2026-09-13 확인) 상장일·기업행위와 같은 선례로 파일 입력이다.\n  추적 차이는 PD-21이라 만들지 않고 그런 키가 들어오면 거부한다.\n- data: 적재는 별도 진입점 대신 repository.load_instrument_profiles로 넣는다.\n  일평균 거래대금의 근거가 방금 만든 daily_price 행이고, 적재 계층에는 DB에서\n  시계열을 되읽는 경로가 없어 다른 자리에서는 그 값을 얻을 수 없다.\n- backend: instrument_profile 표를 만든다. T003이 data-model.md의 표 12개 중\n  이 하나를 빠뜨렸고 어느 묶음도 맡고 있지 않았다.\n- backend: GET /sectors/{code}/instrument-profile. 열린 대응표를 대상으로 수집된\n  완전한 자료 버전 중 마감이 가장 늦은 것을 보여준다. 없는 섹터는 404\n  SECTOR_NOT_FOUND, 자료 미적재는 409 INSTRUMENT_PROFILE_NOT_READY로 구분한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:41:07.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-13T22:41:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/97f982a89ef19bad161e275b502fa7692393896b"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2191055,
+      "head_commit_sha": "70655c18032541f3795119de6db549719464dba9",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-13T23:02:34.040+09:00",
+      "merge_request_id": 942245,
+      "state": "without_files",
+      "real_size": "24",
+      "patch_id_sha": "05c2eca06cefe765398913d114cfc40b729a93ec",
+      "commits": [
+        {
+          "id": "70655c18032541f3795119de6db549719464dba9",
+          "short_id": "70655c18",
+          "created_at": "2026-09-13T22:54:14.000+09:00",
+          "parent_ids": [
+            "97f982a89ef19bad161e275b502fa7692393896b"
+          ],
+          "title": "docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다",
+          "message": "docs(be): converge로 남은 일을 추리고 T022·T024를 닫는다\n\nspec 001을 코드와 대조해 tasks.md에 Phase 8(T017~T028) 12개를 덧붙였다.\nMUST 위반은 없고 유형은 missing 2·partial 9·contradicts 1이다.\n\n이번에 닫은 둘:\n- 스키마 검사가 표를 11개만 세고 instrument_profile을 빼놓았다. T003이\n  11개를 만들 때의 목록 그대로라, T013이 열두 번째 표를 뒤늦게 채웠는데도\n  \"빠진 표\"를 다시 놓칠 자리가 남아 있었다. data-model.md와 같은 12개를\n  세게 한다.\n- quickstart에 대표 상품 정보 시나리오(8)가 없어 사용자 스토리 3만 실행\n  가능한 검증 절차가 비어 있었다. 필수 항목·출처 표시·현재 구성 기준 표시·\n  추적 차이 필드 부재와 404/409 구분을 확인한다.\n\n나머지 열은 이번 범위가 아니라 근거만 적었다. T017(평가 기간 조회 표면)은\n003의 워밍업 값이 있어야 하고, T019(자료 묶음 식별자)는 004 연동에서 풀며,\nT020(가격·지수 대조)은 실자료가 쌓여야 뜻이 생긴다. T018(워밍업 읽기 구간)은\n001 계약과 004 engine_runner의 설계가 어긋나 팀이 기준을 정해야 한다.\nT023·T025~T028은 spec 문서를 고쳐야 풀려 건드리지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:54:14.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-13T22:54:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/70655c18032541f3795119de6db549719464dba9"
+        },
+        {
+          "id": "97f982a89ef19bad161e275b502fa7692393896b",
+          "short_id": "97f982a8",
+          "created_at": "2026-09-13T22:41:07.000+09:00",
+          "parent_ids": [
+            "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+          ],
+          "title": "feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)",
+          "message": "feat(be): 대표 상품 정보 산출과 조회 API (T012·T013)\n\nspec 001 FR-011·FR-015, contracts/sector-api.md.\n\n- data: instrument_profile 모듈. 유동성은 daily_price.value(거래대금)로만 내고\n  거래량×종가 추정을 쓰지 않는다. 지수 방법론 요약·구성종목은 원천 API가 주지\n  않아(2026-09-13 확인) 상장일·기업행위와 같은 선례로 파일 입력이다.\n  추적 차이는 PD-21이라 만들지 않고 그런 키가 들어오면 거부한다.\n- data: 적재는 별도 진입점 대신 repository.load_instrument_profiles로 넣는다.\n  일평균 거래대금의 근거가 방금 만든 daily_price 행이고, 적재 계층에는 DB에서\n  시계열을 되읽는 경로가 없어 다른 자리에서는 그 값을 얻을 수 없다.\n- backend: instrument_profile 표를 만든다. T003이 data-model.md의 표 12개 중\n  이 하나를 빠뜨렸고 어느 묶음도 맡고 있지 않았다.\n- backend: GET /sectors/{code}/instrument-profile. 열린 대응표를 대상으로 수집된\n  완전한 자료 버전 중 마감이 가장 늦은 것을 보여준다. 없는 섹터는 404\n  SECTOR_NOT_FOUND, 자료 미적재는 409 INSTRUMENT_PROFILE_NOT_READY로 구분한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:41:07.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-13T22:41:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/97f982a89ef19bad161e275b502fa7692393896b"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2798384": [],
+    "2801096": [],
+    "2801948": []
+  }
+}

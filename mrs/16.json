@@ -1,0 +1,2487 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 936188,
+    "iid": 16,
+    "project_id": 1444456,
+    "title": "feat(be): 이메일 인증 기반 회원가입 기능 구현",
+    "description": "## 관련 이슈\n\n* Closes #97\n\n## 작업 개요\n\n이메일 인증을 완료한 사용자만 회원가입할 수 있도록 계정 생성 흐름을 구현했습니다.\n\n인증번호 발송·확인부터 사용자 저장까지 연결했으며, 비밀번호 암호화와 인증 기록 재사용 방지를 적용했습니다.\n\n## 주요 변경 사항\n\n### 이메일 인증\n\n* Gmail SMTP 기반 인증번호 발송\n* 6자리 인증번호 생성\n* 인증번호 BCrypt 해시 저장\n* 인증번호 유효시간 3분 적용\n* 재발송 시 기존 인증 기록 제거\n* 인증번호 일치 및 만료 여부 검증\n* 인증 완료 시 `verifiedAt` 기록\n* 이미 완료된 인증의 재확인 요청을 안전하게 처리\n\n### 회원가입\n\n* 이메일 인증 완료 여부 검사\n* 미인증 이메일의 회원가입 차단\n* 이메일 중복 검사\n* 전화번호 중복 검사\n* 비밀번호 BCrypt 암호화\n* 신규 사용자 상태를 `ACTIVE`로 저장\n* 회원가입 성공 후 이메일 인증 기록 삭제\n* 공통 `ApiResponse` 형식 적용\n\n### 구조 개선\n\n* application 계층의 infrastructure 직접 의존 제거\n* 이메일 인증 저장소 인터페이스와 JPA 구현 분리\n* 이메일 인증 도메인 모델과 JPA Entity 분리\n* presentation DTO와 application command/result 분리\n* 계층별 Mapper 및 Repository 구현 추가\n\n## API\n\n### 인증번호 발송\n\n`POST /api/accounts/email-verifications`\n\n`{\n  \"email\": \"user@example.com\"\n}`\n\n성공 응답: `204 No Content`\n\n### 인증번호 확인\n\n`POST /api/accounts/email-verifications/confirm`\n\n`{\n  \"email\": \"user@example.com\",\n  \"verificationCode\": \"123456\"\n}`\n\n성공 응답: `204 No Content`\n\n### 회원가입\n\n`POST /api/accounts`\n\n`{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test1234!\",\n  \"nickname\": \"테스트유저\",\n  \"phoneNumber\": \"01012345678\"\n}`\n\n성공 응답: `201 Created`\n\n## 확인 사항\n\n* Postman 인증번호 발송 성공\n* Postman 인증번호 확인 성공\n* 인증 완료 이메일의 회원가입 성공\n* 사용자 상태 `ACTIVE` 저장 확인\n* 비밀번호 BCrypt 해시 저장 확인\n* 회원가입 완료 후 이메일 인증 기록 삭제 확인\n\n## 환경변수\n\n`MAIL_USERNAME=\nMAIL_PASSWORD=`\n\n실제 메일 계정과 앱 비밀번호는 저장소에 포함하지 않고 실행 환경에서 주입합니다.",
+    "state": "merged",
+    "created_at": "2026-09-08T12:03:40.378+09:00",
+    "updated_at": "2026-09-08T17:46:59.186+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-08T17:46:58.590+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/97-signup",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f47faccd341fa922de35836cf6059156d6c0da2c",
+    "merge_commit_sha": "3282276c1d5a172fd19247d40ffe5113badeac2d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T12:03:41.613+09:00",
+    "reference": "!16",
+    "references": {
+      "short": "!16",
+      "relative": "!16",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!16"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 936188,
+    "iid": 16,
+    "project_id": 1444456,
+    "title": "feat(be): 이메일 인증 기반 회원가입 기능 구현",
+    "description": "## 관련 이슈\n\n* Closes #97\n\n## 작업 개요\n\n이메일 인증을 완료한 사용자만 회원가입할 수 있도록 계정 생성 흐름을 구현했습니다.\n\n인증번호 발송·확인부터 사용자 저장까지 연결했으며, 비밀번호 암호화와 인증 기록 재사용 방지를 적용했습니다.\n\n## 주요 변경 사항\n\n### 이메일 인증\n\n* Gmail SMTP 기반 인증번호 발송\n* 6자리 인증번호 생성\n* 인증번호 BCrypt 해시 저장\n* 인증번호 유효시간 3분 적용\n* 재발송 시 기존 인증 기록 제거\n* 인증번호 일치 및 만료 여부 검증\n* 인증 완료 시 `verifiedAt` 기록\n* 이미 완료된 인증의 재확인 요청을 안전하게 처리\n\n### 회원가입\n\n* 이메일 인증 완료 여부 검사\n* 미인증 이메일의 회원가입 차단\n* 이메일 중복 검사\n* 전화번호 중복 검사\n* 비밀번호 BCrypt 암호화\n* 신규 사용자 상태를 `ACTIVE`로 저장\n* 회원가입 성공 후 이메일 인증 기록 삭제\n* 공통 `ApiResponse` 형식 적용\n\n### 구조 개선\n\n* application 계층의 infrastructure 직접 의존 제거\n* 이메일 인증 저장소 인터페이스와 JPA 구현 분리\n* 이메일 인증 도메인 모델과 JPA Entity 분리\n* presentation DTO와 application command/result 분리\n* 계층별 Mapper 및 Repository 구현 추가\n\n## API\n\n### 인증번호 발송\n\n`POST /api/accounts/email-verifications`\n\n`{\n  \"email\": \"user@example.com\"\n}`\n\n성공 응답: `204 No Content`\n\n### 인증번호 확인\n\n`POST /api/accounts/email-verifications/confirm`\n\n`{\n  \"email\": \"user@example.com\",\n  \"verificationCode\": \"123456\"\n}`\n\n성공 응답: `204 No Content`\n\n### 회원가입\n\n`POST /api/accounts`\n\n`{\n  \"email\": \"user@example.com\",\n  \"password\": \"Test1234!\",\n  \"nickname\": \"테스트유저\",\n  \"phoneNumber\": \"01012345678\"\n}`\n\n성공 응답: `201 Created`\n\n## 확인 사항\n\n* Postman 인증번호 발송 성공\n* Postman 인증번호 확인 성공\n* 인증 완료 이메일의 회원가입 성공\n* 사용자 상태 `ACTIVE` 저장 확인\n* 비밀번호 BCrypt 해시 저장 확인\n* 회원가입 완료 후 이메일 인증 기록 삭제 확인\n\n## 환경변수\n\n`MAIL_USERNAME=\nMAIL_PASSWORD=`\n\n실제 메일 계정과 앱 비밀번호는 저장소에 포함하지 않고 실행 환경에서 주입합니다.",
+    "state": "merged",
+    "created_at": "2026-09-08T12:03:40.378+09:00",
+    "updated_at": "2026-09-08T17:46:59.186+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-08T17:46:58.590+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/97-signup",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f47faccd341fa922de35836cf6059156d6c0da2c",
+    "merge_commit_sha": "3282276c1d5a172fd19247d40ffe5113badeac2d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T12:03:41.613+09:00",
+    "reference": "!16",
+    "references": {
+      "short": "!16",
+      "relative": "!16",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!16"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "29",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "head_sha": "f47faccd341fa922de35836cf6059156d6c0da2c",
+      "start_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb"
+    },
+    "merge_error": null,
+    "first_contribution": true,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "92fe353c0290335da595998b5bde1588acc70a99",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2773030,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n* **관심사 분리 및 클린 아키텍처 적용**: Presentation, Application, Domain, Infrastructure 계층 간의 의존성 방향을 잘 설계하였으며, DTO, Command, Result, Entity, Domain 모델을 명확히 분리하여 유지보수성을 높였습니다.\n* **성능 및 자원 고갈 방지 고려**: `EmailVerificationService.createVerificationCode` 메서드에서 DB 트랜잭션과 외부 네트워크 I/O(SMTP 메일 발송)를 분리(`TransactionTemplate` 활용)하여 DB 커넥션 풀 고갈 문제를 예방한 점이 돋보입니다.\n\n### 발견 사항\n* [Medium] `backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java`: `verifyCode` 메서드에서 이메일 인증 성공 시 `verifiedAt`을 기록하고 저장(`emailVerificationRepository.save(verification)`)하지만, 회원이 실제로 가입(`SignupService`)할 때까지 이 인증 상태가 DB에 유지됩니다. 만약 사용자가 인증만 하고 회원가입을 완료하지 않는 경우, 동일한 이메일로 불필요한 데이터가 누적되거나 추후 정책에 따라 보안상 이슈가 될 수 있으므로 주기적인 정리(Cleanup) 정책이나 가입 완료 시점에 확실한 처리가 필요합니다. (현재는 가입 시 `deleteByEmail`로 삭제하고 있어 정상 흐름에서는 처리됩니다.)\n* [Low] `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationRepositoryImpl.java`: `deleteByEmail` 메서드에 `@Transactional`을 선언하여 트랜잭션 경계를 보장한 점은 좋으나, JPA의 기본 `deleteByQuery` (`@Modifying`)를 사용할 때 영속성 컨텍스트와의 동기화 문제가 발생할 수 있습니다. `EmailVerificationJpaRepository`의 `deleteByEmail` 구현체 내부(또는 JPQL 쿼리)에 `@Modifying(clearAutomatically = true, flushAutomatically = true)` 설정이 누락되어 있는지 확인이 필요합니다.\n\n### 테스트 제안\n* **이메일 인증번호 발송 및 중복 요청 테스트**: \n  * 동일한 이메일로 인증번호 발송을 연속 요청(`POST /api/accounts/email-verifications`)했을 때, 기존 인증 기록이 정상적으로 삭제되고 새로운 인증번호만 유효하게 유지되는지 확인합니다.\n  * 이미 가입된 이메일로 인증번호 발송 요청 시 적절한 예외 응답(`BusinessException`)이 발생하는지 검증합니다.\n* **이메일 인증 검증 및 만료 테스트**:\n  * 만료된 인증번호(`expiresAt`이 지난 경우)로 확인 요청(`POST /api/accounts/email-verifications/confirm`) 시 실패하는지 확인합니다.\n  * 올바르지 않은 6자리 인증번호를 입력했을 때 예외가 발생하는지 검증합니다.\n* **회원가입 통합 테스트**:\n  * 이메일 인증을 거치지 않은 상태로 회원가입 요청(`POST /api/accounts`) 시 차단되는지 확인합니다.\n  * 인증 완료 후 회원가입 성공 시, DB에 사용자가 `ACTIVE` 상태로 저장되고 해당 이메일의 인증 기록이 삭제되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f47faccd341fa922de35836cf6059156d6c0da2c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-08T12:03:47.416+09:00",
+          "updated_at": "2026-09-08T17:46:56.785+09:00",
+          "system": false,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "410a109334b26865d507b09afd06efdd9069c6e4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2773067,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>b918d9c9 - ㄹãfeat(be): ì 피드백 반영 S15P21E205-97</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2171237&start_sha=6132a4df04e41bcef6e99cb15d948b8d0112489b)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T12:13:24.958+09:00",
+          "updated_at": "2026-09-08T12:13:24.961+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "be2573712511296fbb2c4eb257bae2e2ccf38c6a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2773076,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>9489bba7 - feat(be): 빼먹었어요</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2171250&start_sha=b918d9c9458f4dfa500c3e1688bcec87f673a759)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T12:16:00.213+09:00",
+          "updated_at": "2026-09-08T12:16:00.216+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6ea918c0749ee735d19024cf1ae2c08e1e84418d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2773187,
+          "type": null,
+          "body": "added 20 commits\n\n<ul><li>9489bba7...e1b9cffb - 19 commits from branch <code>dev</code></li><li>b4cfb77b - Merge branch &#39;dev&#39; into &#39;feat(be)/97-signup&#39;</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2171343&start_sha=9489bba7887e517eac9b1485a0be5ceaf84280b9)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T12:32:22.511+09:00",
+          "updated_at": "2026-09-08T12:32:22.514+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0a560c8fd1cc330ea421718b05804a1f55cf9ca7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2773856,
+          "type": null,
+          "body": "LGTM!",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-08T14:03:08.132+09:00",
+          "updated_at": "2026-09-08T14:03:08.132+09:00",
+          "system": false,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "df936eebc42491f0356c30efbe3cd37215fa60b5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2773947,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>b488bba5 - ãfix(be):ã 피드백 반영</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2172037&start_sha=b4cfb77bd66dbafe5633176073e008c4b1c0d252)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T14:14:05.002+09:00",
+          "updated_at": "2026-09-08T14:14:05.005+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5c25a2e4bdcdb9609b26bf5fd638574b05ab4f03",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2774007,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>c78a3a29 - feat(be): 피드백 1번 반영</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2172089&start_sha=b488bba50277d4a30ea5976f0502f9712a1b361d)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T14:17:59.855+09:00",
+          "updated_at": "2026-09-08T14:17:59.867+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "549a4345d0c472455173ffb5df72ab6fccd0a6f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2774090,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>6fd1dd97 - feat(be): 피드백 1, 2번 반영</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2172167&start_sha=c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T14:23:06.794+09:00",
+          "updated_at": "2026-09-08T14:23:06.799+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6b85e8fbec5b0e72beee96c4b0138732a76343ed",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2774156,
+          "type": null,
+          "body": "현재 구조는 JPA Entity와 도메인 모델을 분리하고 있어 Dirty Checking 대신 명시적인 `save()`를 사용하고 있습니다.\n\n`verify(now)` 호출 후 `EmailVerificationMapper.toEntity()`가 기존 `id`와 변경된 `verifiedAt`을 모두 JPA Entity에 매핑하며, 식별자가 존재하므로 `JpaRepository.save()`는 기존 엔티티를 `merge`하여 변경사항을 반영합니다. 또한 `verifyCode()`에 `@Transactional`이 적용되어 있어 트랜잭션 종료 시 DB에 반영됩니다.\n\n실제 인증 완료 후 DB의 `verified_at` 갱신도 확인했습니다. 상태 매핑 누락이나 영속화 문제는 없어 현재 구현을 유지하겠습니다.\n\n참고: https://docs.spring.io/spring-data/jpa/reference/3.5/jpa/entity-persistence.html",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T14:30:06.393+09:00",
+          "updated_at": "2026-09-08T14:30:06.393+09:00",
+          "system": false,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f0f2fc0d33c98044d2d316fd69ab4a5702441096",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2776121,
+          "type": null,
+          "body": "added 45 commits\n\n<ul><li>6fd1dd97...ba30d4dc - 44 commits from branch <code>dev</code></li><li>f47faccd - Merge branch &#39;dev&#39; into &#39;feat(be)/97-signup&#39;</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/16/diffs?diff_id=2173888&start_sha=6fd1dd97888a7d4976efaef6317873cc0b987ecf)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T17:46:49.745+09:00",
+          "updated_at": "2026-09-08T17:46:49.751+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8c23b9844935926e677aaf1605754a92473035ab",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2776129,
+          "type": null,
+          "body": "mentioned in commit 3282276c1d5a172fd19247d40ffe5113badeac2d",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T17:46:58.823+09:00",
+          "updated_at": "2026-09-08T17:46:58.832+09:00",
+          "system": true,
+          "noteable_id": 936188,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 16,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2173888,
+      "head_commit_sha": "f47faccd341fa922de35836cf6059156d6c0da2c",
+      "base_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "start_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "created_at": "2026-09-08T17:46:49.142+09:00",
+      "merge_request_id": 936188,
+      "state": "collected",
+      "real_size": "29",
+      "patch_id_sha": "769d5d2b25716bafa4fbcb8f89160264d87252b2"
+    },
+    {
+      "id": 2172167,
+      "head_commit_sha": "6fd1dd97888a7d4976efaef6317873cc0b987ecf",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T14:23:06.278+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "4afce30d3f24a28b807fc50972674cddab05763b"
+    },
+    {
+      "id": 2172089,
+      "head_commit_sha": "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T14:17:57.546+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "067b85bbe8a9333cfb851f1051fada126b55aa6e"
+    },
+    {
+      "id": 2172037,
+      "head_commit_sha": "b488bba50277d4a30ea5976f0502f9712a1b361d",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T14:14:04.448+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "67e79ffa00700988d0cd15062d32c2d9369dc120"
+    },
+    {
+      "id": 2171343,
+      "head_commit_sha": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:32:22.245+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "f089d547e2880b3883b9f6078eb016c7969289d0"
+    },
+    {
+      "id": 2171250,
+      "head_commit_sha": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+      "base_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:15:59.952+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "22ae05b1bbbeaaa3737320c408d4f2febb78dba7"
+    },
+    {
+      "id": 2171237,
+      "head_commit_sha": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+      "base_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:13:24.662+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "28",
+      "patch_id_sha": "2e23066c0fcbe07d0587f294e3f7efb69cb32513"
+    },
+    {
+      "id": 2171188,
+      "head_commit_sha": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+      "base_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:03:40.847+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "28",
+      "patch_id_sha": "f5c0a477633edf53b43e580f23081de9e4093012"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2173888,
+      "head_commit_sha": "f47faccd341fa922de35836cf6059156d6c0da2c",
+      "base_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "start_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "created_at": "2026-09-08T17:46:49.142+09:00",
+      "merge_request_id": 936188,
+      "state": "collected",
+      "real_size": "29",
+      "patch_id_sha": "769d5d2b25716bafa4fbcb8f89160264d87252b2",
+      "commits": [
+        {
+          "id": "f47faccd341fa922de35836cf6059156d6c0da2c",
+          "short_id": "f47faccd",
+          "created_at": "2026-09-08T17:46:48.000+09:00",
+          "parent_ids": [
+            "6fd1dd97888a7d4976efaef6317873cc0b987ecf",
+            "ba30d4dc5cf0567d09e335dbce212f1f821d0beb"
+          ],
+          "title": "Merge branch 'dev' into 'feat(be)/97-signup'",
+          "message": "Merge branch 'dev' into 'feat(be)/97-signup'\n\n# Conflicts:\n#   backend/src/main/resources/application.yml",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-08T17:46:48.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-08T17:46:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f47faccd341fa922de35836cf6059156d6c0da2c"
+        },
+        {
+          "id": "6fd1dd97888a7d4976efaef6317873cc0b987ecf",
+          "short_id": "6fd1dd97",
+          "created_at": "2026-09-08T14:22:57.000+09:00",
+          "parent_ids": [
+            "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2"
+          ],
+          "title": "feat(be): 피드백 1, 2번 반영",
+          "message": "feat(be): 피드백 1, 2번 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:22:57.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:22:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6fd1dd97888a7d4976efaef6317873cc0b987ecf"
+        },
+        {
+          "id": "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2",
+          "short_id": "c78a3a29",
+          "created_at": "2026-09-08T14:17:49.000+09:00",
+          "parent_ids": [
+            "b488bba50277d4a30ea5976f0502f9712a1b361d"
+          ],
+          "title": "feat(be): 피드백 1번 반영",
+          "message": "feat(be): 피드백 1번 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:17:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:17:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2"
+        },
+        {
+          "id": "b488bba50277d4a30ea5976f0502f9712a1b361d",
+          "short_id": "b488bba5",
+          "created_at": "2026-09-08T14:13:52.000+09:00",
+          "parent_ids": [
+            "b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+          ],
+          "title": "ãfix(be):ã 피드백 반영",
+          "message": "ãfix(be):ã 피드백 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:13:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:13:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b488bba50277d4a30ea5976f0502f9712a1b361d"
+        },
+        {
+          "id": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+          "short_id": "b4cfb77b",
+          "created_at": "2026-09-08T12:32:21.000+09:00",
+          "parent_ids": [
+            "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+            "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3"
+          ],
+          "title": "Merge branch 'dev' into 'feat(be)/97-signup'",
+          "message": "Merge branch 'dev' into 'feat(be)/97-signup'\n\n# Conflicts:\n#   .env.example\n#   backend/build.gradle",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-08T12:32:21.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-08T12:32:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+        },
+        {
+          "id": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+          "short_id": "9489bba7",
+          "created_at": "2026-09-08T12:15:38.000+09:00",
+          "parent_ids": [
+            "b918d9c9458f4dfa500c3e1688bcec87f673a759"
+          ],
+          "title": "feat(be): 빼먹었어요",
+          "message": "feat(be): 빼먹었어요\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:15:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:15:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9489bba7887e517eac9b1485a0be5ceaf84280b9"
+        },
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+package com.ssafy.thorp.account.application.command;\n+\n+/** 회원가입 입력값. 컨트롤러가 요청 DTO에서 만들어 넘긴다. */\n+public record SignupCommand(String email, String password, String nickname, String phoneNumber) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/command/SignupCommand.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/command/SignupCommand.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,6 @@\n+package com.ssafy.thorp.account.application.port;\n+\n+public interface VerificationMailSender {\n+\n+    void sendVerificationCode(String email, String verificationCode);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/port/VerificationMailSender.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/port/VerificationMailSender.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.account.application.repository;\n+\n+import com.ssafy.thorp.account.domain.model.EmailVerification;\n+import java.util.Optional;\n+\n+public interface EmailVerificationRepository {\n+\n+    EmailVerification save(EmailVerification emailVerification);\n+\n+    /** 해당 이메일의 가장 최근 인증 요청. */\n+    Optional<EmailVerification> findLatestByEmail(String email);\n+\n+    void deleteByEmail(String email);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/repository/EmailVerificationRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/repository/EmailVerificationRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.account.application.repository;\n+\n+import com.ssafy.thorp.account.domain.model.User;\n+import java.util.Optional;\n+\n+public interface UserRepository {\n+    User save(User user);\n+\n+    Optional<User> findByEmail(String email);\n+\n+    boolean existsByEmail(String email);\n+\n+    boolean existsByPhoneNumber(String phoneNumber);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+package com.ssafy.thorp.account.application.result;\n+\n+/** 회원가입 결과. 컨트롤러가 응답 DTO로 변환한다. */\n+public record SignupResult(Long userId, String email, String nickname, String status) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/result/SignupResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/result/SignupResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+package com.ssafy.thorp.account.application.service;\n+\n+import com.ssafy.thorp.account.application.port.VerificationMailSender;\n+import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.domain.model.EmailVerification;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.security.SecureRandom;\n+import java.time.Duration;\n+import java.time.Instant;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+@Service\n+public class EmailVerificationService {\n+\n+    /** 인증번호는 6자리. */\n+    private static final int CODE_BOUND = 1_000_000;\n+\n+    private static final String CODE_FORMAT = \"%06d\";\n+\n+    /** 인증번호 유효시간. */\n+    private static final Duration CODE_TTL = Duration.ofMinutes(3);\n+\n+    private final EmailVerificationRepository emailVerificationRepository;\n+    private final UserRepository userRepository;\n+    private final PasswordEncoder passwordEncoder;\n+    private final VerificationMailSender verificationMailSender;\n+    private final TransactionTemplate transactionTemplate;\n+\n+    private final SecureRandom secureRandom = new SecureRandom();\n+\n+    public EmailVerificationService(\n+            EmailVerificationRepository emailVerificationRepository,\n+            UserRepository userRepository,\n+            PasswordEncoder passwordEncoder,\n+            VerificationMailSender verificationMailSender,\n+            TransactionTemplate transactionTemplate) {\n+        this.emailVerificationRepository = emailVerificationRepository;\n+        this.userRepository = userRepository;\n+        this.passwordEncoder = passwordEncoder;\n+        this.verificationMailSender = verificationMailSender;\n+        this.transactionTemplate = transactionTemplate;\n+    }\n+\n+    /**\n+     * 인증번호를 새로 발급해 메일로 보낸다. 재발송이면 기존 인증 기록을 지운다.\n+     *\n+     * <p>이미 가입된 이메일이면 기존 인증 기록에 손대지 않고 바로 거절한다.\n+     *\n+     * <p>이 메서드에는 {@code @Transactional}을 붙이지 않는다. SMTP 통신은 수 초가 걸리고 메일 서버가 응답하지 않으면 더 길어지는데, 그 시간\n+     * 동안 DB 커넥션을 잡고 있으면 커넥션 풀이 마른다. 그래서 DB 작업만 트랜잭션으로 묶어 먼저 커밋하고, 메일 발송은 트랜잭션 밖에서 한다.\n+     */\n+    public void createVerificationCode(String email) {\n+        String verificationCode = transactionTemplate.execute(status -> issueCode(email));\n+\n+        verificationMailSender.sendVerificationCode(email, verificationCode);\n+    }\n+\n+    /** 인증번호를 만들어 해시로 저장하고 원문을 돌려준다. DB 작업만 하는 트랜잭션 단위. */\n+    private String issueCode(String email) {\n+        if (userRepository.existsByEmail(email)) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이미 가입된 이메일입니다.\");\n+        }\n+\n+        emailVerificationRepository.deleteByEmail(email);\n+\n+        String verificationCode = String.format(CODE_FORMAT, secureRandom.nextInt(CODE_BOUND));\n+\n+        String verificationCodeHash = passwordEncoder.encode(verificationCode);\n+\n+        EmailVerification verification =\n+                EmailVerification.issue(email, verificationCodeHash, Instant.now().plus(CODE_TTL));\n+\n+        emailVerificationRepository.save(verification);\n+\n+        return verificationCode;\n+    }\n+\n+    /** 인증번호가 일치하고 만료되지 않았을 때만 인증 완료로 기록한다. */\n+    @Transactional\n+    public void verifyCode(String email, String verificationCode) {\n+        EmailVerification verification =\n+                emailVerificationRepository\n+                        .findLatestByEmail(email)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.INVALID_INPUT, \"이메일 인증 요청을 찾을 수 없습니다.\"));\n+\n+        // 이미 인증을 마친 요청을 다시 확인해도 실패시키지 않는다.\n+        if (verification.isVerified()) {\n+            return;\n+        }\n+\n+        Instant now = Instant.now();\n+\n+        if (verification.isExpired(now)) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, \"인증번호가 만료되었습니다.\");\n+        }\n+\n+        if (!passwordEncoder.matches(verificationCode, verification.getVerificationCodeHash())) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, \"인증번호가 올바르지 않습니다.\");\n+        }\n+\n+        verification.verify(now);\n+\n+        emailVerificationRepository.save(verification);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+package com.ssafy.thorp.account.application.service;\n+\n+import com.ssafy.thorp.account.application.command.SignupCommand;\n+import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.application.result.SignupResult;\n+import com.ssafy.thorp.account.domain.model.EmailVerification;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+@Service\n+public class SignupService {\n+\n+    private final UserRepository userRepository;\n+    private final EmailVerificationRepository emailVerificationRepository;\n+    private final PasswordEncoder passwordEncoder;\n+\n+    public SignupService(\n+            UserRepository userRepository,\n+            EmailVerificationRepository emailVerificationRepository,\n+            PasswordEncoder passwordEncoder) {\n+        this.userRepository = userRepository;\n+        this.emailVerificationRepository = emailVerificationRepository;\n+        this.passwordEncoder = passwordEncoder;\n+    }\n+\n+    /** 이메일 인증을 마친 사용자만 가입시킨다. 가입에 쓴 인증 기록은 재사용하지 못하도록 지운다. */\n+    @Transactional\n+    public SignupResult signup(SignupCommand command) {\n+        if (userRepository.existsByEmail(command.email())) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이미 가입된 이메일입니다.\");\n+        }\n+\n+        if (userRepository.existsByPhoneNumber(command.phoneNumber())) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이미 가입된 전화번호입니다.\");\n+        }\n+\n+        EmailVerification verification =\n+                emailVerificationRepository\n+                        .findLatestByEmail(command.email())\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.INVALID_INPUT, \"이메일 인증이 필요합니다.\"));\n+\n+        if (!verification.isVerified()) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이메일 인증이 완료되지 않았습니다.\");\n+        }\n+\n+        String passwordHash = passwordEncoder.encode(command.password());\n+\n+        User user =\n+                User.register(\n+                        command.email(), passwordHash, command.nickname(), command.phoneNumber());\n+\n+        User savedUser = userRepository.save(user);\n+\n+        emailVerificationRepository.deleteByEmail(command.email());\n+\n+        return new SignupResult(\n+                savedUser.getId(),\n+                savedUser.getEmail(),\n+                savedUser.getNickname(),\n+                savedUser.getStatus().name());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,81 @@\n+package com.ssafy.thorp.account.domain.model;\n+\n+import java.time.Instant;\n+\n+/**\n+ * 이메일 인증 요청 한 건.\n+ *\n+ * <p>인증번호 원문은 보관하지 않고 해시만 들고 있다. 해시 비교는 인코더가 필요해 application 계층에서 하고, 여기서는 만료·인증 완료 여부만 판단한다.\n+ */\n+public class EmailVerification {\n+\n+    private final Long id;\n+    private final String email;\n+    private final String verificationCodeHash;\n+    private final Instant expiresAt;\n+    private final Instant createdAt;\n+\n+    private Instant verifiedAt;\n+\n+    public EmailVerification(\n+            Long id,\n+            String email,\n+            String verificationCodeHash,\n+            Instant expiresAt,\n+            Instant verifiedAt,\n+            Instant createdAt) {\n+        this.id = id;\n+        this.email = email;\n+        this.verificationCodeHash = verificationCodeHash;\n+        this.expiresAt = expiresAt;\n+        this.verifiedAt = verifiedAt;\n+        this.createdAt = createdAt;\n+    }\n+\n+    /** 새로 발급한 인증 요청. 아직 인증되지 않은 상태로 만든다. */\n+    public static EmailVerification issue(\n+            String email, String verificationCodeHash, Instant expiresAt) {\n+        return new EmailVerification(null, email, verificationCodeHash, expiresAt, null, null);\n+    }\n+\n+    public boolean isVerified() {\n+        return verifiedAt != null;\n+    }\n+\n+    /** 유효시간이 지났는지. 만료 시각과 같은 순간도 만료로 본다. */\n+    public boolean isExpired(Instant now) {\n+        return !now.isBefore(expiresAt);\n+    }\n+\n+    /** 인증 완료 시각을 기록한다. 이미 인증된 요청은 최초 시각을 유지한다. */\n+    public void verify(Instant verifiedAt) {\n+        if (isVerified()) {\n+            return;\n+        }\n+        this.verifiedAt = verifiedAt;\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getVerificationCodeHash() {\n+        return verificationCodeHash;\n+    }\n+\n+    public Instant getExpiresAt() {\n+        return expiresAt;\n+    }\n+\n+    public Instant getVerifiedAt() {\n+        return verifiedAt;\n+    }\n+\n+    public Instant getCreatedAt() {\n+        return createdAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/domain/model/EmailVerification.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/domain/model/EmailVerification.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,133 @@\n+package com.ssafy.thorp.account.domain.model;\n+\n+import java.time.Instant;\n+\n+public class User {\n+\n+    private final Long id;\n+    private final String email;\n+\n+    private String passwordHash;\n+\n+    private String nickname;\n+\n+    private String phoneNumber;\n+    private String profileImageUrl;\n+    private UserStatus status;\n+\n+    private boolean paperRankingEnabled;\n+    private boolean liveRankingEnabled;\n+    private boolean rankingDisplayNickname;\n+\n+    private Instant lastLoginAt;\n+    private Instant createdAt;\n+    private Instant updatedAt;\n+    private Instant withdrawnAt;\n+\n+    public User(\n+            Long id,\n+            String email,\n+            String passwordHash,\n+            String nickname,\n+            String phoneNumber,\n+            String profileImageUrl,\n+            UserStatus status,\n+            boolean paperRankingEnabled,\n+            boolean liveRankingEnabled,\n+            boolean rankingDisplayNickname,\n+            Instant lastLoginAt,\n+            Instant createdAt,\n+            Instant updatedAt,\n+            Instant withdrawnAt) {\n+        this.id = id;\n+        this.email = email;\n+        this.passwordHash = passwordHash;\n+        this.nickname = nickname;\n+        this.phoneNumber = phoneNumber;\n+        this.profileImageUrl = profileImageUrl;\n+        this.status = status;\n+        this.paperRankingEnabled = paperRankingEnabled;\n+        this.liveRankingEnabled = liveRankingEnabled;\n+        this.rankingDisplayNickname = rankingDisplayNickname;\n+        this.lastLoginAt = lastLoginAt;\n+        this.createdAt = createdAt;\n+        this.updatedAt = updatedAt;\n+        this.withdrawnAt = withdrawnAt;\n+    }\n+\n+    /** 가입 시점에 이미 이메일 인증을 마쳤으므로 바로 활성 상태로 만든다. */\n+    public static User register(\n+            String email, String passwordHash, String nickname, String phoneNumber) {\n+        return new User(\n+                null,\n+                email,\n+                passwordHash,\n+                nickname,\n+                phoneNumber,\n+                null,\n+                UserStatus.ACTIVE,\n+                false,\n+                false,\n+                false,\n+                null,\n+                null,\n+                null,\n+                null);\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getPasswordHash() {\n+        return passwordHash;\n+    }\n+\n+    public String getNickname() {\n+        return nickname;\n+    }\n+\n+    public String getPhoneNumber() {\n+        return phoneNumber;\n+    }\n+\n+    public String getProfileImageUrl() {\n+        return profileImageUrl;\n+    }\n+\n+    public UserStatus getStatus() {\n+        return status;\n+    }\n+\n+    public boolean isPaperRankingEnabled() {\n+        return paperRankingEnabled;\n+    }\n+\n+    public boolean isLiveRankingEnabled() {\n+        return liveRankingEnabled;\n+    }\n+\n+    public boolean isRankingDisplayNickname() {\n+        return rankingDisplayNickname;\n+    }\n+\n+    public Instant getLastLoginAt() {\n+        return lastLoginAt;\n+    }\n+\n+    public Instant getCreatedAt() {\n+        return createdAt;\n+    }\n+\n+    public Instant getUpdatedAt() {\n+        return updatedAt;\n+    }\n+\n+    public Instant getWithdrawnAt() {\n+        return withdrawnAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/domain/model/User.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/domain/model/User.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,8 @@\n+package com.ssafy.thorp.account.domain.model;\n+\n+public enum UserStatus {\n+    PENDING_VERIFICATION, // 미 인증상태\n+    ACTIVE,\n+    SUSPENDED, // 정지계정\n+    WITHDRAWN\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/domain/model/UserStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/domain/model/UserStatus.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.ssafy.thorp.account.infrastructure.client;\n+\n+import com.ssafy.thorp.account.application.port.VerificationMailSender;\n+import org.springframework.beans.factory.annotation.Value;\n+import org.springframework.mail.SimpleMailMessage;\n+import org.springframework.mail.javamail.JavaMailSender;\n+import org.springframework.stereotype.Component;\n+\n+@Component\n+public class EmailVerificationMailSender implements VerificationMailSender {\n+\n+    private final JavaMailSender javaMailSender;\n+    private final String from;\n+\n+    public EmailVerificationMailSender(\n+            JavaMailSender javaMailSender, @Value(\"${spring.mail.username}\") String from) {\n+        this.javaMailSender = javaMailSender;\n+        this.from = from;\n+    }\n+\n+    @Override\n+    public void sendVerificationCode(String email, String verificationCode) {\n+        SimpleMailMessage message = new SimpleMailMessage();\n+        message.setFrom(from);\n+        message.setTo(email);\n+        message.setSubject(\"THORP 이메일 인증번호\");\n+        message.setText(\"이메일 인증번호는 \" + verificationCode + \" 입니다.\\n\" + \"인증번호는 3분 동안 유효합니다.\");\n+\n+        javaMailSender.send(message);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/client/EmailVerificationMailSender.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/client/EmailVerificationMailSender.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+package com.ssafy.thorp.account.infrastructure.config;\n+\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+\n+@Configuration\n+public class PasswordConfig {\n+\n+    @Bean\n+    public PasswordEncoder passwordEncoder() {\n+        return new BCryptPasswordEncoder();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/config/PasswordConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/config/PasswordConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import jakarta.persistence.*;\n+import java.time.Instant;\n+\n+@Entity\n+@Table(name = \"email_verifications\")\n+public class EmailVerificationEntity {\n+\n+    @Id\n+    @GeneratedValue(strategy = GenerationType.IDENTITY)\n+    private Long id;\n+\n+    @Column(name = \"email\", nullable = false, length = 255)\n+    private String email;\n+\n+    @Column(name = \"verification_code_hash\", nullable = false, length = 255)\n+    private String verificationCodeHash;\n+\n+    @Column(name = \"expires_at\", nullable = false)\n+    private Instant expiresAt;\n+\n+    @Column(name = \"verified_at\")\n+    private Instant verifiedAt;\n+\n+    @Column(name = \"created_at\", nullable = false)\n+    private Instant createdAt;\n+\n+    protected EmailVerificationEntity() {}\n+\n+    EmailVerificationEntity(\n+            Long id,\n+            String email,\n+            String verificationCodeHash,\n+            Instant expiresAt,\n+            Instant verifiedAt,\n+            Instant createdAt) {\n+        this.id = id;\n+        this.email = email;\n+        this.verificationCodeHash = verificationCodeHash;\n+        this.expiresAt = expiresAt;\n+        this.verifiedAt = verifiedAt;\n+        this.createdAt = createdAt;\n+    }\n+\n+    @PrePersist\n+    private void onCreate() {\n+        if (createdAt == null) {\n+            createdAt = Instant.now();\n+        }\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getVerificationCodeHash() {\n+        return verificationCodeHash;\n+    }\n+\n+    public Instant getExpiresAt() {\n+        return expiresAt;\n+    }\n+\n+    public Instant getVerifiedAt() {\n+        return verifiedAt;\n+    }\n+\n+    public Instant getCreatedAt() {\n+        return createdAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import java.util.Optional;\n+import org.springframework.data.jpa.repository.JpaRepository;\n+\n+public interface EmailVerificationJpaRepository\n+        extends JpaRepository<EmailVerificationEntity, Long> {\n+\n+    Optional<EmailVerificationEntity> findTopByEmailOrderByCreatedAtDesc(String email);\n+\n+    void deleteByEmail(String email);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,28 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import com.ssafy.thorp.account.domain.model.EmailVerification;\n+\n+public class EmailVerificationMapper {\n+\n+    private EmailVerificationMapper() {}\n+\n+    public static EmailVerificationEntity toEntity(EmailVerification emailVerification) {\n+        return new EmailVerificationEntity(\n+                emailVerification.getId(),\n+                emailVerification.getEmail(),\n+                emailVerification.getVerificationCodeHash(),\n+                emailVerification.getExpiresAt(),\n+                emailVerification.getVerifiedAt(),\n+                emailVerification.getCreatedAt());\n+    }\n+\n+    public static EmailVerification toDomain(EmailVerificationEntity entity) {\n+        return new EmailVerification(\n+                entity.getId(),\n+                entity.getEmail(),\n+                entity.getVerificationCodeHash(),\n+                entity.getExpiresAt(),\n+                entity.getVerifiedAt(),\n+                entity.getCreatedAt());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationMapper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationMapper.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;\n+import com.ssafy.thorp.account.domain.model.EmailVerification;\n+import java.util.Optional;\n+import org.springframework.stereotype.Repository;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+@Repository\n+public class EmailVerificationRepositoryImpl implements EmailVerificationRepository {\n+\n+    private final EmailVerificationJpaRepository emailVerificationJpaRepository;\n+\n+    public EmailVerificationRepositoryImpl(\n+            EmailVerificationJpaRepository emailVerificationJpaRepository) {\n+        this.emailVerificationJpaRepository = emailVerificationJpaRepository;\n+    }\n+\n+    @Override\n+    public EmailVerification save(EmailVerification emailVerification) {\n+        EmailVerificationEntity entity = EmailVerificationMapper.toEntity(emailVerification);\n+\n+        EmailVerificationEntity savedEntity = emailVerificationJpaRepository.save(entity);\n+\n+        return EmailVerificationMapper.toDomain(savedEntity);\n+    }\n+\n+    @Override\n+    public Optional<EmailVerification> findLatestByEmail(String email) {\n+        return emailVerificationJpaRepository\n+                .findTopByEmailOrderByCreatedAtDesc(email)\n+                .map(EmailVerificationMapper::toDomain);\n+    }\n+\n+    /** 서비스 트랜잭션 밖에서 직접 호출돼도 동작하도록 이 메서드에도 트랜잭션 경계를 둔다. */\n+    @Override\n+    @Transactional\n+    public void deleteByEmail(String email) {\n+        emailVerificationJpaRepository.deleteByEmail(email);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/EmailVerificationRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,156 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import jakarta.persistence.*;\n+import java.time.Instant;\n+\n+@Entity\n+@Table(name = \"users\")\n+public class UserEntity {\n+\n+    @Id\n+    @GeneratedValue(strategy = GenerationType.IDENTITY)\n+    private Long id;\n+\n+    @Column(name = \"email\", nullable = false, unique = true, length = 255)\n+    private String email;\n+\n+    @Column(name = \"password_hash\", nullable = false, unique = false, length = 255)\n+    private String passwordHash;\n+\n+    @Column(name = \"nickname\", nullable = false, length = 100)\n+    private String nickname;\n+\n+    @Column(name = \"phone_number\", nullable = false, unique = true, length = 20)\n+    private String phoneNumber;\n+\n+    @Column(name = \"profile_image_url\", columnDefinition = \"TEXT\")\n+    private String profileImageUrl;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(name = \"status\", nullable = false, length = 30)\n+    private UserStatus status;\n+\n+    @Column(name = \"paper_ranking_enabled\", nullable = false)\n+    private boolean paperRankingEnabled;\n+\n+    @Column(name = \"live_ranking_enabled\", nullable = false)\n+    private boolean liveRankingEnabled;\n+\n+    @Column(name = \"ranking_display_nickname\", nullable = false)\n+    private boolean rankingDisplayNickname;\n+\n+    @Column(name = \"last_login_at\")\n+    private Instant lastLoginAt;\n+\n+    @Column(name = \"created_at\", nullable = false)\n+    private Instant createdAt;\n+\n+    @Column(name = \"updated_at\", nullable = false)\n+    private Instant updatedAt;\n+\n+    @Column(name = \"withdrawn_at\")\n+    private Instant withdrawnAt;\n+\n+    protected UserEntity() { // jpa용 기본 생성자\n+    }\n+\n+    UserEntity(\n+            Long id,\n+            String email,\n+            String passwordHash,\n+            String nickname,\n+            String phoneNumber,\n+            String profileImageUrl,\n+            UserStatus status,\n+            boolean paperRankingEnabled,\n+            boolean liveRankingEnabled,\n+            boolean rankingDisplayNickname,\n+            Instant lastLoginAt,\n+            Instant createdAt,\n+            Instant updatedAt,\n+            Instant withdrawnAt) {\n+        this.id = id;\n+        this.email = email;\n+        this.passwordHash = passwordHash;\n+        this.nickname = nickname;\n+        this.phoneNumber = phoneNumber;\n+        this.profileImageUrl = profileImageUrl;\n+        this.status = status;\n+        this.paperRankingEnabled = paperRankingEnabled;\n+        this.liveRankingEnabled = liveRankingEnabled;\n+        this.rankingDisplayNickname = rankingDisplayNickname;\n+        this.lastLoginAt = lastLoginAt;\n+        this.createdAt = createdAt;\n+        this.updatedAt = updatedAt;\n+        this.withdrawnAt = withdrawnAt;\n+    }\n+\n+    @PrePersist\n+    private void onCreate() {\n+        Instant now = Instant.now();\n+        createdAt = now;\n+        updatedAt = now;\n+    }\n+\n+    @PreUpdate\n+    private void onUpdate() {\n+        updatedAt = Instant.now();\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getPasswordHash() {\n+        return passwordHash;\n+    }\n+\n+    public String getNickname() {\n+        return nickname;\n+    }\n+\n+    public String getPhoneNumber() {\n+        return phoneNumber;\n+    }\n+\n+    public String getProfileImageUrl() {\n+        return profileImageUrl;\n+    }\n+\n+    public UserStatus getStatus() {\n+        return status;\n+    }\n+\n+    public boolean isPaperRankingEnabled() {\n+        return paperRankingEnabled;\n+    }\n+\n+    public boolean isLiveRankingEnabled() {\n+        return liveRankingEnabled;\n+    }\n+\n+    public boolean isRankingDisplayNickname() {\n+        return rankingDisplayNickname;\n+    }\n+\n+    public Instant getLastLoginAt() {\n+        return lastLoginAt;\n+    }\n+\n+    public Instant getCreatedAt() {\n+        return createdAt;\n+    }\n+\n+    public Instant getUpdatedAt() {\n+        return updatedAt;\n+    }\n+\n+    public Instant getWithdrawnAt() {\n+        return withdrawnAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import java.util.Optional;\n+import org.springframework.data.jpa.repository.JpaRepository;\n+\n+public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {\n+\n+    Optional<UserEntity> findByEmail(String email);\n+\n+    boolean existsByEmail(String email);\n+\n+    Optional<UserEntity> findByPhoneNumber(String phoneNumber);\n+\n+    boolean existsByPhoneNumber(String phoneNumber);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,44 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import com.ssafy.thorp.account.domain.model.User;\n+\n+public class UserMapper {\n+\n+    private UserMapper() {}\n+\n+    public static UserEntity toEntity(User user) {\n+        return new UserEntity(\n+                user.getId(),\n+                user.getEmail(),\n+                user.getPasswordHash(),\n+                user.getNickname(),\n+                user.getPhoneNumber(),\n+                user.getProfileImageUrl(),\n+                user.getStatus(),\n+                user.isPaperRankingEnabled(),\n+                user.isLiveRankingEnabled(),\n+                user.isRankingDisplayNickname(),\n+                user.getLastLoginAt(),\n+                user.getCreatedAt(),\n+                user.getUpdatedAt(),\n+                user.getWithdrawnAt());\n+    }\n+\n+    public static User toDomain(UserEntity entity) {\n+        return new User(\n+                entity.getId(),\n+                entity.getEmail(),\n+                entity.getPasswordHash(),\n+                entity.getNickname(),\n+                entity.getPhoneNumber(),\n+                entity.getProfileImageUrl(),\n+                entity.getStatus(),\n+                entity.isPaperRankingEnabled(),\n+                entity.isLiveRankingEnabled(),\n+                entity.isRankingDisplayNickname(),\n+                entity.getLastLoginAt(),\n+                entity.getCreatedAt(),\n+                entity.getUpdatedAt(),\n+                entity.getWithdrawnAt());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserMapper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserMapper.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,53 @@\n+package com.ssafy.thorp.account.infrastructure.persistence;\n+\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.util.Optional;\n+import org.springframework.dao.DataIntegrityViolationException;\n+import org.springframework.stereotype.Repository;\n+\n+@Repository\n+public class UserRepositoryImpl implements UserRepository {\n+\n+    private final UserJpaRepository userJpaRepository;\n+\n+    public UserRepositoryImpl(UserJpaRepository userJpaRepository) {\n+        this.userJpaRepository = userJpaRepository;\n+    }\n+\n+    /**\n+     * 사용자를 저장한다.\n+     *\n+     * <p>사전 중복 검사를 통과한 동시 요청 둘이 같은 이메일·전화번호로 들어올 수 있어, 최종 방어는 DB 유니크 제약이 한다. 제약 위반이 이 메서드 안에서\n+     * 드러나도록 {@code saveAndFlush}로 즉시 flush하고, 어느 컬럼이 걸렸는지는 구분하지 않고 클라이언트 오류로 바꾼다.\n+     */\n+    @Override\n+    public User save(User user) {\n+        UserEntity entity = UserMapper.toEntity(user);\n+\n+        try {\n+            UserEntity savedEntity = userJpaRepository.saveAndFlush(entity);\n+            return UserMapper.toDomain(savedEntity);\n+        } catch (DataIntegrityViolationException e) {\n+            throw new BusinessException(\n+                    ErrorCode.INVALID_INPUT, \"이미 사용 중인 이메일 또는 전화번호입니다.\");\n+        }\n+    }\n+\n+    @Override\n+    public Optional<User> findByEmail(String email) {\n+        return userJpaRepository.findByEmail(email).map(UserMapper::toDomain);\n+    }\n+\n+    @Override\n+    public boolean existsByEmail(String email) {\n+        return userJpaRepository.existsByEmail(email);\n+    }\n+\n+    @Override\n+    public boolean existsByPhoneNumber(String phoneNumber) {\n+        return userJpaRepository.existsByPhoneNumber(phoneNumber);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+package com.ssafy.thorp.account.presentation.controller;\n+\n+import com.ssafy.thorp.account.application.service.EmailVerificationService;\n+import com.ssafy.thorp.account.presentation.request.EmailVerificationConfirmRequest;\n+import com.ssafy.thorp.account.presentation.request.EmailVerificationRequest;\n+import jakarta.validation.Valid;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RequestBody;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+@RestController\n+@RequestMapping(\"/api/accounts/email-verifications\")\n+public class EmailVerificationController {\n+    private final EmailVerificationService emailVerificationService;\n+\n+    public EmailVerificationController(EmailVerificationService emailVerificationService) {\n+        this.emailVerificationService = emailVerificationService;\n+    }\n+\n+    @PostMapping\n+    public ResponseEntity<Void> sendVerificationCode(\n+            @Valid @RequestBody EmailVerificationRequest request) {\n+        emailVerificationService.createVerificationCode(request.getEmail());\n+        return ResponseEntity.noContent().build();\n+    }\n+\n+    @PostMapping(\"/confirm\")\n+    public ResponseEntity<Void> confirmVerificationCode(\n+            @Valid @RequestBody EmailVerificationConfirmRequest request) {\n+\n+        emailVerificationService.verifyCode(request.getEmail(), request.getVerificationCode());\n+\n+        return ResponseEntity.noContent().build();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,46 @@\n+package com.ssafy.thorp.account.presentation.controller;\n+\n+import com.ssafy.thorp.account.application.command.SignupCommand;\n+import com.ssafy.thorp.account.application.result.SignupResult;\n+import com.ssafy.thorp.account.application.service.SignupService;\n+import com.ssafy.thorp.account.presentation.request.SignupRequest;\n+import com.ssafy.thorp.account.presentation.response.SignupResponse;\n+import com.ssafy.thorp.common.web.response.ApiResponse;\n+import jakarta.validation.Valid;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RequestBody;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+@RestController\n+@RequestMapping(\"/api/accounts\")\n+public class SignupController {\n+\n+    private final SignupService signupService;\n+\n+    public SignupController(SignupService signupService) {\n+        this.signupService = signupService;\n+    }\n+\n+    @PostMapping\n+    public ResponseEntity<ApiResponse<SignupResponse>> signup(\n+            @Valid @RequestBody SignupRequest request) {\n+\n+        SignupCommand command =\n+                new SignupCommand(\n+                        request.getEmail(),\n+                        request.getPassword(),\n+                        request.getNickname(),\n+                        request.getPhoneNumber());\n+\n+        SignupResult result = signupService.signup(command);\n+\n+        SignupResponse response =\n+                new SignupResponse(\n+                        result.userId(), result.email(), result.nickname(), result.status());\n+\n+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(response));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,22 @@\n+package com.ssafy.thorp.account.presentation.request;\n+\n+import jakarta.validation.constraints.Email;\n+import jakarta.validation.constraints.NotBlank;\n+import jakarta.validation.constraints.Pattern;\n+\n+public class EmailVerificationConfirmRequest {\n+\n+    @NotBlank @Email private String email;\n+\n+    @NotBlank\n+    @Pattern(regexp = \"\\\\d{6}\")\n+    private String verificationCode;\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getVerificationCode() {\n+        return verificationCode;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationConfirmRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationConfirmRequest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+package com.ssafy.thorp.account.presentation.request;\n+\n+import jakarta.validation.constraints.Email;\n+import jakarta.validation.constraints.NotBlank;\n+\n+public class EmailVerificationRequest {\n+\n+    @NotBlank @Email private String email;\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationRequest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+package com.ssafy.thorp.account.presentation.request;\n+\n+import jakarta.validation.constraints.Email;\n+import jakarta.validation.constraints.NotBlank;\n+import jakarta.validation.constraints.Pattern;\n+import jakarta.validation.constraints.Size;\n+\n+public class SignupRequest {\n+\n+    @NotBlank @Email private String email;\n+\n+    @NotBlank\n+    @Size(min = 8, max = 25)\n+    private String password;\n+\n+    @NotBlank\n+    @Size(min = 2, max = 20)\n+    private String nickname;\n+\n+    /**\n+     * 국내 휴대폰 번호. 하이픈 없는 숫자만 받는다.\n+     *\n+     * <p>국제 표기(+82…)는 받지 않는다. 같은 번호가 두 표기로 각각 저장돼 UNIQUE 제약과 중복 검사를 우회하는 것을 막기 위해서다. 해외 번호가 필요해지면\n+     * 저장 전 정규화를 함께 도입한다.\n+     */\n+    @NotBlank\n+    @Pattern(\n+            regexp = \"^01[016789]\\\\d{7,8}$\",\n+            message = \"국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678\")\n+    private String phoneNumber;\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getPassword() {\n+        return password;\n+    }\n+\n+    public String getNickname() {\n+        return nickname;\n+    }\n+\n+    public String getPhoneNumber() {\n+        return phoneNumber;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/SignupRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/SignupRequest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.account.presentation.response;\n+\n+public class SignupResponse {\n+\n+    private final Long userId;\n+    private final String email;\n+    private final String nickname;\n+    private final String status;\n+\n+    public SignupResponse(Long userId, String email, String nickname, String status) {\n+        this.userId = userId;\n+        this.email = email;\n+        this.nickname = nickname;\n+        this.status = status;\n+    }\n+\n+    public Long getUserId() {\n+        return userId;\n+    }\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    public String getNickname() {\n+        return nickname;\n+    }\n+\n+    public String getStatus() {\n+        return status;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/response/SignupResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/response/SignupResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,13 @@ spring:\n   application:\n     name: thorp-backend\n \n+  config:\n+    import: optional:file:./.env[.properties]\n+\n+  datasource:\n+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}\n+    username: ${SPRING_DATASOURCE_USERNAME:thorp}\n+    password: ${SPRING_DATASOURCE_PASSWORD:thorp}\n   profiles:\n     default: local\n \n@@ -34,6 +41,18 @@ spring:\n       key-serializer: org.apache.kafka.common.serialization.StringSerializer\n       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer\n \n+  mail:\n+    host: smtp.gmail.com\n+    port: 587\n+    username: ${MAIL_USERNAME}\n+    password: ${MAIL_PASSWORD}\n+    properties:\n+      mail:\n+        smtp:\n+          auth: true\n+          starttls:\n+            enable: true\n+\n app:\n   kafka:  # 미사용 (위 주석 참조). 큐 이름은 BacktestRabbitConfig 상수.\n     backtest-job-topic: ${BACKTEST_JOB_TOPIC:backtest.jobs}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,6 +29,8 @@ dependencies {\n     implementation 'org.springframework.boot:spring-boot-starter-validation'\n     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'\n     implementation 'org.springframework.boot:spring-boot-starter-actuator'\n+    implementation 'org.springframework.security:spring-security-crypto'\n+    implementation 'org.springframework.boot:spring-boot-starter-mail'\n     implementation 'org.springframework.kafka:spring-kafka' // 설치만. Job 전달은 RabbitMQ(starter-amqp)\n     implementation 'org.springframework.boot:spring-boot-starter-amqp'\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/build.gradle",
+          "old_path": "backend/build.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,6 +22,10 @@ BACKTEST_JOB_TOPIC=backtest.jobs\n # 백엔드 market API에서 사용. KRX는 인증키 및 서비스별 활용 승인이 필요하다.\n KRX_API_KEY=\n \n+# --- email / 구글 이메일\n+MAIL_USERNAME=구글 계정@gmail.com\n+MAIL_PASSWORD=앱 비밀번호\n+\n ECOS_API_KEY=\n # 끝의 =를 포함한 발급 키 전체를 입력한다. 임의로 URL 인코딩하지 않는다.\n KOSIS_API_KEY=\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".env.example",
+          "old_path": ".env.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2172167,
+      "head_commit_sha": "6fd1dd97888a7d4976efaef6317873cc0b987ecf",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T14:23:06.278+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "4afce30d3f24a28b807fc50972674cddab05763b",
+      "commits": [
+        {
+          "id": "6fd1dd97888a7d4976efaef6317873cc0b987ecf",
+          "short_id": "6fd1dd97",
+          "created_at": "2026-09-08T14:22:57.000+09:00",
+          "parent_ids": [
+            "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2"
+          ],
+          "title": "feat(be): 피드백 1, 2번 반영",
+          "message": "feat(be): 피드백 1, 2번 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:22:57.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:22:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6fd1dd97888a7d4976efaef6317873cc0b987ecf"
+        },
+        {
+          "id": "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2",
+          "short_id": "c78a3a29",
+          "created_at": "2026-09-08T14:17:49.000+09:00",
+          "parent_ids": [
+            "b488bba50277d4a30ea5976f0502f9712a1b361d"
+          ],
+          "title": "feat(be): 피드백 1번 반영",
+          "message": "feat(be): 피드백 1번 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:17:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:17:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2"
+        },
+        {
+          "id": "b488bba50277d4a30ea5976f0502f9712a1b361d",
+          "short_id": "b488bba5",
+          "created_at": "2026-09-08T14:13:52.000+09:00",
+          "parent_ids": [
+            "b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+          ],
+          "title": "ãfix(be):ã 피드백 반영",
+          "message": "ãfix(be):ã 피드백 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:13:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:13:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b488bba50277d4a30ea5976f0502f9712a1b361d"
+        },
+        {
+          "id": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+          "short_id": "b4cfb77b",
+          "created_at": "2026-09-08T12:32:21.000+09:00",
+          "parent_ids": [
+            "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+            "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3"
+          ],
+          "title": "Merge branch 'dev' into 'feat(be)/97-signup'",
+          "message": "Merge branch 'dev' into 'feat(be)/97-signup'\n\n# Conflicts:\n#   .env.example\n#   backend/build.gradle",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-08T12:32:21.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-08T12:32:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+        },
+        {
+          "id": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+          "short_id": "9489bba7",
+          "created_at": "2026-09-08T12:15:38.000+09:00",
+          "parent_ids": [
+            "b918d9c9458f4dfa500c3e1688bcec87f673a759"
+          ],
+          "title": "feat(be): 빼먹었어요",
+          "message": "feat(be): 빼먹었어요\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:15:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:15:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9489bba7887e517eac9b1485a0be5ceaf84280b9"
+        },
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2172089,
+      "head_commit_sha": "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T14:17:57.546+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "067b85bbe8a9333cfb851f1051fada126b55aa6e",
+      "commits": [
+        {
+          "id": "c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2",
+          "short_id": "c78a3a29",
+          "created_at": "2026-09-08T14:17:49.000+09:00",
+          "parent_ids": [
+            "b488bba50277d4a30ea5976f0502f9712a1b361d"
+          ],
+          "title": "feat(be): 피드백 1번 반영",
+          "message": "feat(be): 피드백 1번 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:17:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:17:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c78a3a298225d005d6e8a2a2e94e3e9a35f0cec2"
+        },
+        {
+          "id": "b488bba50277d4a30ea5976f0502f9712a1b361d",
+          "short_id": "b488bba5",
+          "created_at": "2026-09-08T14:13:52.000+09:00",
+          "parent_ids": [
+            "b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+          ],
+          "title": "ãfix(be):ã 피드백 반영",
+          "message": "ãfix(be):ã 피드백 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:13:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:13:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b488bba50277d4a30ea5976f0502f9712a1b361d"
+        },
+        {
+          "id": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+          "short_id": "b4cfb77b",
+          "created_at": "2026-09-08T12:32:21.000+09:00",
+          "parent_ids": [
+            "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+            "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3"
+          ],
+          "title": "Merge branch 'dev' into 'feat(be)/97-signup'",
+          "message": "Merge branch 'dev' into 'feat(be)/97-signup'\n\n# Conflicts:\n#   .env.example\n#   backend/build.gradle",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-08T12:32:21.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-08T12:32:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+        },
+        {
+          "id": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+          "short_id": "9489bba7",
+          "created_at": "2026-09-08T12:15:38.000+09:00",
+          "parent_ids": [
+            "b918d9c9458f4dfa500c3e1688bcec87f673a759"
+          ],
+          "title": "feat(be): 빼먹었어요",
+          "message": "feat(be): 빼먹었어요\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:15:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:15:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9489bba7887e517eac9b1485a0be5ceaf84280b9"
+        },
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2172037,
+      "head_commit_sha": "b488bba50277d4a30ea5976f0502f9712a1b361d",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T14:14:04.448+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "67e79ffa00700988d0cd15062d32c2d9369dc120",
+      "commits": [
+        {
+          "id": "b488bba50277d4a30ea5976f0502f9712a1b361d",
+          "short_id": "b488bba5",
+          "created_at": "2026-09-08T14:13:52.000+09:00",
+          "parent_ids": [
+            "b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+          ],
+          "title": "ãfix(be):ã 피드백 반영",
+          "message": "ãfix(be):ã 피드백 반영\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T14:13:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T14:13:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b488bba50277d4a30ea5976f0502f9712a1b361d"
+        },
+        {
+          "id": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+          "short_id": "b4cfb77b",
+          "created_at": "2026-09-08T12:32:21.000+09:00",
+          "parent_ids": [
+            "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+            "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3"
+          ],
+          "title": "Merge branch 'dev' into 'feat(be)/97-signup'",
+          "message": "Merge branch 'dev' into 'feat(be)/97-signup'\n\n# Conflicts:\n#   .env.example\n#   backend/build.gradle",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-08T12:32:21.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-08T12:32:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+        },
+        {
+          "id": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+          "short_id": "9489bba7",
+          "created_at": "2026-09-08T12:15:38.000+09:00",
+          "parent_ids": [
+            "b918d9c9458f4dfa500c3e1688bcec87f673a759"
+          ],
+          "title": "feat(be): 빼먹었어요",
+          "message": "feat(be): 빼먹었어요\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:15:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:15:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9489bba7887e517eac9b1485a0be5ceaf84280b9"
+        },
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2171343,
+      "head_commit_sha": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:32:22.245+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "f089d547e2880b3883b9f6078eb016c7969289d0",
+      "commits": [
+        {
+          "id": "b4cfb77bd66dbafe5633176073e008c4b1c0d252",
+          "short_id": "b4cfb77b",
+          "created_at": "2026-09-08T12:32:21.000+09:00",
+          "parent_ids": [
+            "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+            "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3"
+          ],
+          "title": "Merge branch 'dev' into 'feat(be)/97-signup'",
+          "message": "Merge branch 'dev' into 'feat(be)/97-signup'\n\n# Conflicts:\n#   .env.example\n#   backend/build.gradle",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-08T12:32:21.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-08T12:32:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4cfb77bd66dbafe5633176073e008c4b1c0d252"
+        },
+        {
+          "id": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+          "short_id": "9489bba7",
+          "created_at": "2026-09-08T12:15:38.000+09:00",
+          "parent_ids": [
+            "b918d9c9458f4dfa500c3e1688bcec87f673a759"
+          ],
+          "title": "feat(be): 빼먹었어요",
+          "message": "feat(be): 빼먹었어요\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:15:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:15:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9489bba7887e517eac9b1485a0be5ceaf84280b9"
+        },
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2171250,
+      "head_commit_sha": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+      "base_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:15:59.952+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "29",
+      "patch_id_sha": "22ae05b1bbbeaaa3737320c408d4f2febb78dba7",
+      "commits": [
+        {
+          "id": "9489bba7887e517eac9b1485a0be5ceaf84280b9",
+          "short_id": "9489bba7",
+          "created_at": "2026-09-08T12:15:38.000+09:00",
+          "parent_ids": [
+            "b918d9c9458f4dfa500c3e1688bcec87f673a759"
+          ],
+          "title": "feat(be): 빼먹었어요",
+          "message": "feat(be): 빼먹었어요\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:15:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:15:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9489bba7887e517eac9b1485a0be5ceaf84280b9"
+        },
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2171237,
+      "head_commit_sha": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+      "base_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:13:24.662+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "28",
+      "patch_id_sha": "2e23066c0fcbe07d0587f294e3f7efb69cb32513",
+      "commits": [
+        {
+          "id": "b918d9c9458f4dfa500c3e1688bcec87f673a759",
+          "short_id": "b918d9c9",
+          "created_at": "2026-09-08T12:13:17.000+09:00",
+          "parent_ids": [
+            "6132a4df04e41bcef6e99cb15d948b8d0112489b"
+          ],
+          "title": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97",
+          "message": "ㄹãfeat(be): ì 피드백 반영 S15P21E205-97\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:13:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b918d9c9458f4dfa500c3e1688bcec87f673a759"
+        },
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2171188,
+      "head_commit_sha": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+      "base_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+      "start_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "created_at": "2026-09-08T12:03:40.847+09:00",
+      "merge_request_id": 936188,
+      "state": "without_files",
+      "real_size": "28",
+      "patch_id_sha": "f5c0a477633edf53b43e580f23081de9e4093012",
+      "commits": [
+        {
+          "id": "6132a4df04e41bcef6e99cb15d948b8d0112489b",
+          "short_id": "6132a4df",
+          "created_at": "2026-09-08T12:00:42.000+09:00",
+          "parent_ids": [
+            "2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+          ],
+          "title": "feat(be): 회원회원가입",
+          "message": "feat(be): 회원회원가입\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T12:00:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T12:00:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6132a4df04e41bcef6e99cb15d948b8d0112489b"
+        },
+        {
+          "id": "2ceb591e5f7dc8a7c361f16da231b1e102b82248",
+          "short_id": "2ceb591e",
+          "created_at": "2026-09-08T11:44:32.000+09:00",
+          "parent_ids": [
+            "d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+          ],
+          "title": "feat(be): 이메일인증",
+          "message": "feat(be): 이메일인증\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-08T11:44:32.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-08T11:44:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ceb591e5f7dc8a7c361f16da231b1e102b82248"
+        },
+        {
+          "id": "d4362051b4e1f7f914e4af5f7eef0b99d69ab542",
+          "short_id": "d4362051",
+          "created_at": "2026-09-07T23:50:01.000+09:00",
+          "parent_ids": [
+            "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+          ],
+          "title": "feat(be): 이메일 인증 구현",
+          "message": "feat(be): 이메일 인증 구현\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T23:50:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T23:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d4362051b4e1f7f914e4af5f7eef0b99d69ab542"
+        },
+        {
+          "id": "b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e",
+          "short_id": "b08335b1",
+          "created_at": "2026-09-07T17:59:49.000+09:00",
+          "parent_ids": [
+            "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+          ],
+          "title": "mapper",
+          "message": "mapper\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:59:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:59:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b08335b1dd45cd9bdca03fa3059fe4d2b8dedc6e"
+        },
+        {
+          "id": "c950ed9ca559dd4e01c0b536bb3c436e911b0ec5",
+          "short_id": "c950ed9c",
+          "created_at": "2026-09-07T17:06:03.000+09:00",
+          "parent_ids": [
+            "9ae7148d608730358413ce202222b0c840a275e1"
+          ],
+          "title": "ㄹãfeat(be): ìãDB 생성",
+          "message": "ㄹãfeat(be): ìãDB 생성\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-07T17:06:03.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-07T17:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c950ed9ca559dd4e01c0b536bb3c436e911b0ec5"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2773030": [],
+    "2773856": [],
+    "2774156": []
+  }
+}

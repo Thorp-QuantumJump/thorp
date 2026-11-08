@@ -1,0 +1,609 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 962420,
+    "iid": 345,
+    "project_id": 1444456,
+    "title": "docs(infra): Jira 티켓 운영을 중단하고 constitution과 협업 문서에서 Jira 규칙을 삭제한다",
+    "description": "# 작업 내용 요약\n\n팀이 Jira 티켓을 더 이상 쓰지 않으므로 constitution(6.0.0)·AGENTS.md·MR 템플릿에서 Jira를 전제한 규칙을 지운다. 작업은 tasks.md 체크와 브랜치·MR로 추적하고, 작업 묶음 = 1 브랜치 = 1 MR 규칙은 유지한다.\n\n# 주요 변경 사항\n\n* constitution: \"Jira 연계\" 절 삭제, 작업 묶음 규칙은 \"작업 묶음\" 절로 이동, 완료 조건 5개는 작업 묶음 단위로 유지\n* 브랜치 이름: `{type}({position})/{description}` (이슈 번호 제거)\n* MR 본문: \"관련 티켓\" 절 삭제로 네 절 구성, 요약에 \"왜\"를 함께 쓴다\n* AGENTS.md \"Jira 운영 규칙\"·Atlassian MCP 필드 삭제\n\n# 테스트\n\n* [x] 문서 변경만 있음. 규칙 본문에 남은 Jira 언급은 \"티켓을 만들지 않는다\" 한 문장뿐인 것을 확인했다(이전 이력 기록은 유지)\n\n# 리뷰 포인트\n\n* 승인 표기를 \"팀 결정, 2026-09-29\"로 적었다. 전체 회의 승인 전이면 초안으로 바꾼다\n* 5.0.0 초안과 겹치지 않게 6.0.0을 부여했다\n* Notion Git Convention의 브랜치 형식도 같이 고쳐야 한다",
+    "state": "merged",
+    "created_at": "2026-09-29T13:27:58.582+09:00",
+    "updated_at": "2026-09-29T15:33:30.123+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T13:28:02.368+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/remove-jira-rules",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+    "merge_commit_sha": "c3498aec309eee673c423daed57be7babc496eb9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-29T13:27:59.717+09:00",
+    "reference": "!345",
+    "references": {
+      "short": "!345",
+      "relative": "!345",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!345"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/345",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 962420,
+    "iid": 345,
+    "project_id": 1444456,
+    "title": "docs(infra): Jira 티켓 운영을 중단하고 constitution과 협업 문서에서 Jira 규칙을 삭제한다",
+    "description": "# 작업 내용 요약\n\n팀이 Jira 티켓을 더 이상 쓰지 않으므로 constitution(6.0.0)·AGENTS.md·MR 템플릿에서 Jira를 전제한 규칙을 지운다. 작업은 tasks.md 체크와 브랜치·MR로 추적하고, 작업 묶음 = 1 브랜치 = 1 MR 규칙은 유지한다.\n\n# 주요 변경 사항\n\n* constitution: \"Jira 연계\" 절 삭제, 작업 묶음 규칙은 \"작업 묶음\" 절로 이동, 완료 조건 5개는 작업 묶음 단위로 유지\n* 브랜치 이름: `{type}({position})/{description}` (이슈 번호 제거)\n* MR 본문: \"관련 티켓\" 절 삭제로 네 절 구성, 요약에 \"왜\"를 함께 쓴다\n* AGENTS.md \"Jira 운영 규칙\"·Atlassian MCP 필드 삭제\n\n# 테스트\n\n* [x] 문서 변경만 있음. 규칙 본문에 남은 Jira 언급은 \"티켓을 만들지 않는다\" 한 문장뿐인 것을 확인했다(이전 이력 기록은 유지)\n\n# 리뷰 포인트\n\n* 승인 표기를 \"팀 결정, 2026-09-29\"로 적었다. 전체 회의 승인 전이면 초안으로 바꾼다\n* 5.0.0 초안과 겹치지 않게 6.0.0을 부여했다\n* Notion Git Convention의 브랜치 형식도 같이 고쳐야 한다",
+    "state": "merged",
+    "created_at": "2026-09-29T13:27:58.582+09:00",
+    "updated_at": "2026-09-29T15:33:30.123+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T13:28:02.368+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/remove-jira-rules",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+    "merge_commit_sha": "c3498aec309eee673c423daed57be7babc496eb9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-29T13:27:59.717+09:00",
+    "reference": "!345",
+    "references": {
+      "short": "!345",
+      "relative": "!345",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!345"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/345",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "4",
+    "latest_build_started_at": "2026-09-29T11:25:52.999+09:00",
+    "latest_build_finished_at": "2026-09-29T13:58:29.009+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 226825,
+      "iid": 374,
+      "project_id": 1444456,
+      "sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+      "ref": "docs(infra)/remove-jira-rules",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T11:25:52.850+09:00",
+      "updated_at": "2026-09-29T13:58:29.017+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226825"
+    },
+    "head_pipeline": {
+      "id": 226825,
+      "iid": 374,
+      "project_id": 1444456,
+      "sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+      "ref": "docs(infra)/remove-jira-rules",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T11:25:52.850+09:00",
+      "updated_at": "2026-09-29T13:58:29.017+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226825",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-29T11:25:52.999+09:00",
+      "finished_at": "2026-09-29T13:58:29.009+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226825",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "head_sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+      "start_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ae2dc49c1c4de702e02ed3f3fec8eca1ddc8055f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877814,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T13:27:58.726+09:00",
+          "updated_at": "2026-09-29T13:27:58.740+09:00",
+          "system": true,
+          "noteable_id": 962420,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 345,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b915fdc71f50489b7a3a5cb5290bde9d53d51d50",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877815,
+          "type": null,
+          "body": "mentioned in commit c3498aec309eee673c423daed57be7babc496eb9",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T13:28:02.419+09:00",
+          "updated_at": "2026-09-29T13:28:02.426+09:00",
+          "system": true,
+          "noteable_id": 962420,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 345,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "94340a70b74146707a0e5c729a5d9b5a86c25ba4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877816,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **일관된 문서 개정**: Jira 운영 중단이라는 조직적/프로세스적 결정을 프로젝트 핵심 문서(constitution, AGENTS.md, MR 템플릿, README) 전반에 걸쳐 누락 없이 정합성 있게 잘 반영했습니다. 특히 constitution에서 관련 절을 제거하면서 버전을 6.0.0으로 올리고 동기화 사유(Sync Impact Report)를 상세히 남긴 점이 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **문서 정합성 검증 시나리오**: \n  1. `.gitlab/merge_request_templates/Default.md` 파일에서 \"관련 티켓\" 섹션이 실제로 제거되었는지 확인합니다.\n  2. `AGENTS.md`에서 Atlassian MCP 필드 및 Jira 관련 규칙(`Jira 운영 규칙`)이 완전히 삭제되었고 예시 브랜치 형식에 이슈 번호가 포함되지 않는지(`feat(be)/kakao-oauth`) 확인합니다.\n  3. `constitution.md` 내부에 남아있는 Git 브랜치 규칙(`.specify/memory/constitution.md` 내 `{type}({position})/{description}`)이 올바르게 수정되었는지 검토합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-29T13:28:07.369+09:00",
+          "updated_at": "2026-09-29T13:28:07.369+09:00",
+          "system": false,
+          "noteable_id": 962420,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 345,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9576067d0cf72ad4177dd2d6b270f8aca3b9e596",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877979,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:33:30.075+09:00",
+          "updated_at": "2026-09-29T15:33:30.078+09:00",
+          "system": true,
+          "noteable_id": 962420,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 345,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "86c4f405ce4b76684a5f9c66c8e6a88884702b02",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885069,
+          "type": null,
+          "body": "mentioned in commit fcae2d8f7bd288aba789de52117fc28427410664",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:13.369+09:00",
+          "updated_at": "2026-10-13T15:16:13.375+09:00",
+          "system": true,
+          "noteable_id": 962420,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 345,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2259391,
+      "head_commit_sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+      "base_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "start_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "created_at": "2026-09-29T13:27:58.914+09:00",
+      "merge_request_id": 962420,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "ac1c1ab5f29f9f04eb6365ad60e6b7740ac4f2aa"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2259391,
+      "head_commit_sha": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+      "base_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "start_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "created_at": "2026-09-29T13:27:58.914+09:00",
+      "merge_request_id": 962420,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "ac1c1ab5f29f9f04eb6365ad60e6b7740ac4f2aa",
+      "commits": [
+        {
+          "id": "c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0",
+          "short_id": "c8a8ed2a",
+          "created_at": "2026-09-29T11:23:51.000+09:00",
+          "parent_ids": [
+            "077cb0c4850b9d62c6b01b52d640221c7ef588e2"
+          ],
+          "title": "docs(infra): Jira 티켓 운영을 중단하고 constitution과 협업 문서에서 Jira 규칙을 삭제한다",
+          "message": "docs(infra): Jira 티켓 운영을 중단하고 constitution과 협업 문서에서 Jira 규칙을 삭제한다\n\nconstitution 6.0.0: \"Jira 연계\" 절을 삭제하고 작업 묶음 규칙만 남긴다.\n브랜치 이름에서 이슈 번호를 빼고, MR 템플릿의 관련 티켓 절을 없앤다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T11:23:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T11:23:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c8a8ed2a0d8a473b9659eeddfc8bf25bad3900e0"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,20 +1,15 @@\n <!--\n-티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n-다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n-읽으면 맥락이 이어지도록 한다.\n+무엇을 왜 바꾸는지, 어떻게 했는지, 왜 그렇게 판단했는지, 다른 선택지를 왜 버렸는지,\n+리뷰어가 주의할 점을 여기에 쓴다.\n \n-MR 제목은 커밋과 같은 `feat(be): 작업 내역 요약` 형식이다(Jira의 `[BE]` 표기가 아니다).\n+MR 제목은 커밋과 같은 `feat(be): 작업 내역 요약` 형식이다.\n \n-핵심부터 짧게 쓴다. 요약은 세 문장 이내로 병합되면 무엇이 달라지는지. 변경은 동작·계약·스키마\n+핵심부터 짧게 쓴다. 요약은 세 문장 이내로 병합되면 무엇이 왜 달라지는지. 변경은 동작·계약·스키마\n 단위로(파일 목록 금지). 테스트는 명령·결과와 자동 테스트 밖의 확인만(테스트 이름 나열 금지).\n 리뷰 포인트는 판단거리만. 작업 과정(재시도, 검사 횟수, 정정 이력)은 쓰지 않는다.\n -->\n # 작업 내용 요약\n \n-# 관련 티켓\n-- ticket #\n-- link\n-\n # 주요 변경 사항\n -\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".gitlab/merge_request_templates/Default.md",
+          "old_path": ".gitlab/merge_request_templates/Default.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,18 @@\n <!--\n Sync Impact Report\n+- Version change: 4.1.0 → 6.0.0 (팀 결정, 2026-09-29). 팀이 Jira 티켓을 더 이상 쓰지 않기로 하면서\n+  \"Git·Jira 규칙\"을 \"Git 규칙\"으로 줄이고 \"Jira 연계\" 절을 삭제했다. 브랜치 이름에서 이슈 번호를 빼\n+  `{type}({position})/{description}`으로 바꾸고, 커밋으로 Jira 상태를 바꾸는 규칙, MR 본문의 \"관련 티켓\"\n+  절, 티켓과 MR의 역할 분리 규칙(3.3.0 초안), MR 제목의 `[BE]` 표기 금지 문장을 지웠다. \"1 Plan = 1 Spec\"과\n+  \"작업 묶음 = 1 Branch = 1 MR\"은 Jira와 무관한 추적 규칙이라 \"작업 묶음\" 절로 옮겨 남겼다. 완료의 정의\n+  다섯 조건은 작업 묶음의 완료 조건으로 유지했다. 절 삭제이므로 MAJOR다. 5.0.0은 원칙 IX 초안이 이미\n+  쓰고 있어 6.0.0을 부여했고, 5.0.0 초안의 미승인 상태는 바꾸지 않는다.\n+- 6.0.0의 근거: 티켓을 만들고 전이하는 일이 브랜치·MR과 같은 내용을 한 번 더 적는 비용이 되었다.\n+  작업의 추적은 spec·tasks.md의 체크와 브랜치·MR로 충분하다. 아래 이전 이력의 Jira 언급은 당시 기록이라\n+  고치지 않는다.\n+- Modified principles: 없음. Modified sections: 완료의 정의, Git 규칙, 문서 역할, AI 작업 방식,\n+  넣지 않은 영역, Governance. Removed sections: \"Jira 연계\". Follow-up TODOs: Notion Git Convention의\n+  브랜치 형식을 같은 모양으로 고친다.\n - Version change: 4.0.0 → 4.1.0 (승인 완료, 2026-09-25 팀 결정). \"경제환경 검색\" 절과 용어 정의, spec 위임\n   목록에서 Thorp 종합 비교의 정의를 바꿨다. \"7개 분야 거리를 같은 비중으로 결합\"을 \"경제 블록(실물 경기·\n   대외 거래·물가·금융 여건) 점수의 국면 거리. 블록 안 지표와 블록 사이는 같은 비중\"으로 고치고, 분야\n@@ -134,7 +147,7 @@ Sync Impact Report\n Team Quantum Jump의 퀀트 전략 분석 플랫폼 **Thorp**가 프로젝트 내내 지키는 원칙이다. 사람과\n AI(Claude 등) 모두에게 적용된다.\n \n-- 근거는 기획서(Notion)의 \"확정한 방향\"과 본문 실행 기준, 동결된 Git Convention·Jira Convention,\n+- 근거는 기획서(Notion)의 \"확정한 방향\"과 본문 실행 기준, 동결된 Git Convention,\n   그리고 Constitution 작성 가이드만이다. 기획서 결정은 D01~D27, 미확인 검증 항목은 U01~U06 번호로\n   인용한다.\n - 규칙은 **위반 여부를 판정할 수 있는 문장**으로만 쓴다. \"~한다\", \"~하지 않는다\", \"~금지\"는 모두\n@@ -637,10 +650,9 @@ AI(Claude 등) 모두에게 적용된다.\n   미확인을 실패로 취급하거나 관측하지 않은 효과를 확정하지 않는다.\n - 제공받은 외부 PoC 기록은 스크립트를 재실행해 재검증하기 전에는 독립 검증 결과로 승격하지 않는다.\n \n-### 완료의 정의 (§2, §9, D01, D17, Jira Convention §5)\n+### 완료의 정의 (§2, §9, D01, D17)\n \n-**작업(Task) 단위**의 완료는 Jira Convention이 정한 아래 다섯 조건을 모두 충족할 때다. 하나라도 빠지면\n-완료로 바꾸지 않는다.\n+**작업 묶음 단위**의 완료는 아래 다섯 조건을 모두 충족할 때다. 하나라도 빠지면 완료로 보고하지 않는다.\n \n 1. 기능 구현 완료\n 2. 테스트 또는 동작 확인 완료\n@@ -660,22 +672,21 @@ AI(Claude 등) 모두에게 적용된다.\n - 조건 2의 \"테스트\"가 어떤 명령·범위를 뜻하는지(lint·build·테스트 스위트)는 아직 합의되지 않았다.\n   아래 \"넣지 않은 영역\"을 본다.\n \n-## Git·Jira 규칙\n+## Git 규칙\n \n ### Git (Git Convention, 문서상태 동결)\n \n - 매주 금요일 버전 릴리즈를 진행한다.\n-- 브랜치 이름은 `{type}({position})/{JIRA_NUMBER}-{description}`이다. type은 `feat` `fix` `refactor`\n-  `chore` `docs` 중 하나, position은 `fe` `be` `infra` `ai` `de` 중 하나다. 예: `feat(be)/12-kakao-oauth`.\n-  JIRA_NUMBER는 팀 이름을 제외한 이슈 번호만 쓴다. 여기서 `de` 는 데이터엔지니어링이다.\n-- 커밋 메시지는 `feat(be): 작업 내역 요약` 형식이며 커밋 설명은 선택이다. 커밋으로 Jira 상태를 바꾸려면\n-  공백 등 사소한 변경을 한 뒤 `feat(be): 작업 내역 요약/ {지라티켓}` 형식으로 한 번 더 커밋한다.\n+- 브랜치 이름은 `{type}({position})/{description}`이다. type은 `feat` `fix` `refactor` `chore` `docs`\n+  중 하나, position은 `fe` `be` `infra` `ai` `de` 중 하나다. 예: `feat(be)/kakao-oauth`.\n+  여기서 `de` 는 데이터엔지니어링이다.\n+- 커밋 메시지는 `feat(be): 작업 내역 요약` 형식이며 커밋 설명은 선택이다.\n - MR 제목은 커밋 메시지와 같은 `type(position): 작업 내역 요약` 형식이다. 예: `feat(be): 배우기 글과 용어\n-  설명을 보관하고 공개 조회한다`. Jira Task 요약의 `[BE]` 같은 분야 표기를 MR 제목에 쓰지 않는다. (초안, 3.5.0)\n-- MR 본문은 아래 다섯 절을 이 순서로 채운다: **작업 내용 요약 / 관련 티켓(`ticket #`, `link`) /\n-  주요 변경 사항 / 테스트(체크박스) / 리뷰 포인트**.\n+  설명을 보관하고 공개 조회한다`. (초안, 3.5.0)\n+- MR 본문은 아래 네 절을 이 순서로 채운다: **작업 내용 요약 / 주요 변경 사항 / 테스트(체크박스) /\n+  리뷰 포인트**.\n - **MR 본문은 핵심부터 짧게 쓴다.** (초안, 3.5.0)\n-  - 작업 내용 요약은 세 문장 이내로 이 MR이 병합되면 무엇이 달라지는지를 쓴다.\n+  - 작업 내용 요약은 세 문장 이내로 이 MR이 병합되면 무엇이 달라지는지와 왜 바꾸는지를 쓴다.\n   - 주요 변경 사항은 동작·계약·스키마 단위로 쓴다. 파일·클래스 목록은 옮기지 않는다(diff가 보여준다).\n   - 테스트는 실행한 명령과 결과(실패·건너뛴 수), 그리고 자동 테스트로 확인되지 않는 확인만 쓴다.\n     테스트 이름과 건수를 나열하지 않는다.\n@@ -683,32 +694,13 @@ AI(Claude 등) 모두에게 적용된다.\n   - 작업 과정(다시 한 시도, 검사를 돌린 횟수, 바로잡은 이력)은 쓰지 않는다. 필요하면 커밋 메시지에 남긴다.\n \n   왜: 본문이 길면 판단할 거리가 나열에 묻혀 리뷰가 형식으로 끝난다.\n-- **티켓과 MR은 담는 것이 다르다.** 티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지,\n-  왜 그렇게 판단했는지, 다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 MR 본문에 쓴다.\n-  티켓 하나를 읽고 그 MR을 읽으면 맥락이 이어져야 한다.\n \n-왜: 사람과 AI가 만든 브랜치·커밋·MR이 같은 모양이어야 이슈 추적과 리뷰가 끊기지 않는다.\n+왜: 사람과 AI가 만든 브랜치·커밋·MR이 같은 모양이어야 변경 이력을 추적하고 리뷰하는 일이 끊기지 않는다.\n \n-### Jira 연계 (Jira Convention, 문서상태 동결)\n+### 작업 묶음\n \n-이 문서에는 작업의 정의·연결·완료에 직접 영향을 주는 규칙만 담는다. 스토리 포인트 산정, 스프린트\n-배치, 담당자 지정 세부는 Jira Convention 문서를 따른다.\n-\n-이슈 추적은 Jira에서만 한다. GitLab 이슈는 쓰지 않으므로 MR 본문의 `ticket #`은 Jira Task 번호다.\n-\n-- 이슈 구조는 Epic → Story → Task의 3단계다. Sub-task는 사용하지 않는다. Task는 Epic에 연결하고\n-  구현 대상 Story와 `relates to`로 연결한다.\n-- Story 요약은 `[대상]은 (목적)하기 위하여 (활동/작업/기능)할 수 있다` 형식이며 구현 방법이나 기술\n-  내용은 쓰지 않는다. 하나의 Story에는 가능한 한 하나의 유스케이스만 담는다.\n-- Task 요약은 `[분야] 작업 내용` 형식이며 분야 표기는 BE / FE / AI / DE / INFRA / DOCS 중 하나를 대괄호로\n-  감싼다. 범위가 불명확하거나 큰 제목(예: \"화면 개발\")은 쓰지 않고 여러 Task로 나눈다.\n-\n-  ```plain text\n-  [BE] 백테스트 요청 API 구현\n-  ```\n-\n-- **1 Plan = 1 Spec**이다. plan은 spec 하나를 구현하는 전체 범위를 다루며, 그 안에 여러 Jira Task·\n-  Branch·MR이 포함될 수 있다.\n+- **1 Plan = 1 Spec**이다. plan은 spec 하나를 구현하는 전체 범위를 다루며, 그 안에 여러 Branch·MR이\n+  포함될 수 있다.\n - **작업 묶음(work batch) = 1 Branch = 1 MR**이다. plan 하나에서 생성된 tasks가 많을 때, 개발자는\n   서로 연관된 여러 task를 하나의 묶음으로 모아 브랜치 하나와 MR 하나로 처리한다. task 하나를 반드시\n   브랜치 하나로 나눌 필요는 없고, 반대로 서로 무관한 task를 편의로 한 묶음에 넣지도 않는다.\n@@ -716,16 +708,13 @@ AI(Claude 등) 모두에게 적용된다.\n   1. 묶음 안의 task들이 하나의 목적(같은 계층·같은 기능 흐름·같은 배포 단위)을 공유한다.\n   2. 묶음 전체를 독립적으로 구현·검증·리뷰할 수 있고, 되돌릴 때 다른 묶음을 건드리지 않는다.\n   3. 리뷰어가 한 번에 읽을 수 있는 변경 범위이며, 묶음 안에 미완성 상태로 남는 task가 없다.\n-- 각 묶음은 Jira Task 하나에 대응시킨다. 묶음에 연결할 Jira Task가 없으면 **그 묶음의 Branch·MR을\n-  만들기 전에** Jira Convention의 제목·연결 규칙을 따른 Task를 먼저 생성하고, 그 Ticket 번호로\n-  브랜치를 만든다. tasks.md의 개별 task 번호는 MR 본문의 \"주요 변경 사항\"에 나열해 추적한다.\n+- tasks.md의 개별 task 번호는 MR 본문의 \"주요 변경 사항\"에 나열해 추적한다.\n - 묶음 구성은 plan을 시작할 때 정하고, 구현 도중 범위가 달라지면 그 사유와 새 묶음 구성을 plan 또는\n   MR 본문에 남긴다.\n-- Task를 진행 중으로 바꾸기 전에 담당자·스프린트·Epic 연결·Story 연결·스토리 포인트·브랜치를\n-  확인한다. Task의 완료 조건은 위 \"완료의 정의\"의 다섯 조건이다.\n+- 묶음의 완료 조건은 위 \"완료의 정의\"의 다섯 조건이다.\n \n 왜: spec은 사용자 가치와 범위를 정하고, plan은 그 spec을 구현하는 전체 계획을 정한다. speckit이 만드는\n-task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR로 나누면 리뷰가 잘게 부서지고 이슈 관리\n+task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR로 나누면 리뷰가 잘게 부서지고 관리\n 비용만 늘어난다. 그래서 추적 단위는 task가 아니라 독립적으로 검증·롤백할 수 있는 작업 묶음으로 둔다.\n \n ## 스키마 변경 규칙\n@@ -752,7 +741,7 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n   통과하므로 자동 검증만으로는 걸러지지 않는다.\n \n - **적용 기록을 사람이 직접 고치는 복구 수단은 원인을 확인한 뒤에만 쓴다.** 쓸 수 있는 사람을 미리 정해\n-  두고, 사용한 경우 원인과 조치를 MR 또는 이슈에 남긴다.\n+  두고, 사용한 경우 원인과 조치를 MR에 남긴다.\n \n   왜: 기록만 맞춰 증상을 없애면, 스키마와 기록이 어긋난 상태 그대로 다음 배포가 진행된다.\n \n@@ -768,15 +757,15 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n \n - **기획서(Notion)**: 제품 방향, 결정 D01~D27, 검증 항목 U01~U06, 실행 전 결정 항목의 근거 문서다.\n   개발 명세이지 구현 완료나 효과 입증 보고가 아니다.\n-- **Git Convention·Jira Convention(Notion, 동결)**: 브랜치·커밋·MR·이슈 규칙의 원본이다. 이 문서는 그중\n-  작업 정의·완료에 필요한 부분만 옮겨 적었다.\n+- **Git Convention(Notion, 동결)**: 브랜치·커밋·MR 규칙의 원본이다. 이 문서는 그중 작업 정의·완료에\n+  필요한 부분만 옮겨 적었다.\n - **constitution(이 문서)**: 프로젝트 내내 유지되는 원칙. `.specify/memory/constitution.md`에 둔다.\n-- **spec**: 이번 범위·우선순위와 \"실행 전 결정 항목\"의 확정값. 사용자 스토리는 Jira Story 문장 형식으로\n-  쓰고, 기획 근거를 인용할 때 D번호·U번호를 쓴다.\n+- **spec**: 이번 범위·우선순위와 \"실행 전 결정 항목\"의 확정값. 사용자 스토리는 `[대상]은 (목적)하기 위하여\n+  (활동/작업/기능)할 수 있다` 문장 형식으로 쓰고, 기획 근거를 인용할 때 D번호·U번호를 쓴다.\n - **plan / tasks**: plan은 **spec 하나의 구현 계획**이고, tasks는 개발자가 그 plan 안에서 적절한 크기로\n   나눈 실행 단위다. 작업 단위는 독립 구현·검증·리뷰가 가능하고 변경 범위·의존성·롤백 위험이 관리되는\n-  크기여야 한다. 여러 task는 위 \"작업 묶음\" 규칙에 따라 묶음으로 모으고, 묶음마다 Jira Task 제목\n-  형식을 지킨 Task 하나와 브랜치 하나, MR 하나를 대응시킨다. plan의 Constitution Check는 이 문서를\n+  크기여야 한다. 여러 task는 위 \"작업 묶음\" 규칙에 따라 묶음으로 모으고, 묶음마다 브랜치 하나와\n+  MR 하나를 대응시킨다. plan의 Constitution Check는 이 문서를\n   기준으로 판정한다.\n \n ### AI 작업 방식 (§6.3, §6.4.2, §7.4, §9, §10.1에서 도출)\n@@ -788,13 +777,13 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - 확인할 수 없는 사실(데이터 포괄성, 경쟁 우위, 성과 향상률, 미확인 API 응답)을 확인된 것처럼\n   문서·화면에 쓰지 않는다. 확인한 범위와 확인하지 못한 범위를 함께 적는다.\n - 구현 완료를 효과 입증으로, 명세 완료를 구현 완료로 보고하지 않는다.\n-- 브랜치·커밋·MR·Task·plan을 만들 때 위 Git·Jira 규칙의 형식을 따른다. plan은 시작 전에 대상 spec과\n-  구현 범위를 정하고, 개발자는 plan 안의 task들을 작업 묶음으로 모은다. 각 묶음의 Ticket이 없으면\n-  Task를 먼저 만들고, 그 Ticket·브랜치·MR로 해당 묶음을 추적한다.\n+- 브랜치·커밋·MR·plan을 만들 때 위 Git 규칙의 형식을 따른다. plan은 시작 전에 대상 spec과\n+  구현 범위를 정하고, 개발자는 plan 안의 task들을 작업 묶음으로 모은다. 각 묶음은 브랜치·MR로\n+  추적한다. 작업 추적용 Jira 티켓을 만들지 않는다.\n \n ### 합의되지 않아 이 판에 넣지 않은 영역 (가이드 2·4)\n \n-아래 영역은 기획서·Git Convention·Jira Convention에 합의 내용이 없어 규칙을 두지 않았다. \"규칙이\n+아래 영역은 기획서·Git Convention에 합의 내용이 없어 규칙을 두지 않았다. \"규칙이\n 없다\"는 뜻이지 \"무엇이든 된다\"는 뜻이 아니다. 이 영역에서 내린 선택은 plan·MR에 근거를 남기고,\n 반복되는 선택은 팀 합의를 거쳐 MINOR 개정으로 이 문서에 추가한다.\n \n@@ -805,7 +794,7 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - DB 명명·PK/FK·nullable, 적용된 스키마 변경을 되돌리는 절차, 배포 중 이전 버전 코드와 새 스키마가\n   함께 도는 구간의 호환 규칙 (스키마 변경 자체의 협업 규칙은 \"스키마 변경 규칙\" 절로 옮겼다)\n - 입력 검증 방식, 인증/인가, 시크릿 관리 도구\n-- 테스트 범위, lint/build 통과 기준 (Task 완료 조건 2 \"테스트 또는 동작 확인\"의 구체 명령)\n+- 테스트 범위, lint/build 통과 기준 (완료 조건 2 \"테스트 또는 동작 확인\"의 구체 명령)\n - MR merge 방식(squash 여부)과 승인 인원\n - AI가 수정할 수 있는 파일과 금지 영역, plan 승인 게이트, clarify 사용 규칙\n - ADR·README·API 문서 갱신 기준\n@@ -826,7 +815,7 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n   비현실적이거나 합의되지 않은 규칙은 두지 않는다. (가이드 4)\n - **우선순위**: 이 문서와 spec·plan·코드가 충돌하면 이 문서를 따르거나, 이 문서를 먼저 개정한다.\n   모든 MR 리뷰와 plan의 Constitution Check에서 이 문서 위반을 점검한다.\n-- **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n+- **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 4.1.0 (종합 비교 정의를 v3-eq 국면 모델로 개정; 3.3.0·3.5.0·5.0.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-25\n+**Version**: 6.0.0 (Jira 연계 규칙 삭제; 3.5.0·5.0.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-29\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,24 +47,25 @@ AI(Claude·Codex 등)와 협업할 때 이 문서를 기준으로 한다. 코드\n \n ## Git Convention (동결)\n \n-브랜치: `{type}({position})/{JIRA_NUMBER}-{description}`\n+브랜치: `{type}({position})/{description}`\n \n - type: `feat` `fix` `refactor` `chore` `docs`\n - position: `fe` `be` `infra` `ai` `de`\n-- 예: `feat(be)/12-kakao-oauth`\n+- 예: `feat(be)/kakao-oauth`\n \n 커밋: `feat(be): 작업 내역 요약` + 본문(선택)\n \n-MR 제목: 커밋과 같은 `feat(be): 작업 내역 요약` 형식. Jira Task 요약의 `[BE]` 표기를 쓰지 않는다.\n+MR 제목: 커밋과 같은 `feat(be): 작업 내역 요약` 형식.\n \n-MR 템플릿: 작업 내용 요약 / 관련 티켓 / 주요 변경 사항 / 테스트 / 리뷰 포인트\n+MR 템플릿: 작업 내용 요약 / 주요 변경 사항 / 테스트 / 리뷰 포인트\n \n-**MR 본문은 핵심부터 짧게 쓴다**(constitution \"Git\" 절). 요약은 세 문장 이내로 무엇이 달라지는지,\n+**MR 본문은 핵심부터 짧게 쓴다**(constitution \"Git\" 절). 요약은 세 문장 이내로 무엇이 왜 달라지는지,\n 변경은 동작·계약·스키마 단위로, 테스트는 명령·결과와 자동 테스트 밖의 확인만, 리뷰 포인트는 판단거리만\n 쓴다. 파일·테스트 이름 나열과 작업 과정 기록(재시도, 검사 횟수, 정정 이력)은 넣지 않는다.\n \n-**티켓에는 무엇을 왜 하는지와 완료 기준만 둔다.** 어떻게 했는지와 판단 근거, 버린 선택지,\n-리뷰어가 주의할 점은 MR 본문에 쓴다. 이슈 추적은 Jira에서만 하며 GitLab 이슈는 쓰지 않는다.\n+**Jira 티켓은 쓰지 않는다.** 작업은 spec·tasks.md의 체크와 브랜치·MR로 추적한다. 한 브랜치·MR에는\n+작업 묶음 하나만 담고(constitution \"작업 묶음\" 절), 작업하다 눈에 띈 곁가지는 지금 손대지 않을 거면\n+말이나 문서로 알린다. GitLab 이슈도 쓰지 않는다.\n \n 릴리즈: 매주 금요일.\n \n@@ -82,36 +83,3 @@ MR 템플릿: 작업 내용 요약 / 관련 티켓 / 주요 변경 사항 / 테\n - MR 올리기 전 AI 코드리뷰를 수행하고, 발견된 문제를 해결한 뒤 Merge한다.\n - AI가 생성한 코드도 동일한 컨벤션/테스트 기준을 통과해야 한다.\n - 스펙이 애매하면 코드를 만들기 전에 `docs/specs/`의 문서를 먼저 확인/갱신한다. (SDD)\n-\n-## Jira 운영 규칙\n-\n-최상위 규칙은 [`.specify/memory/constitution.md`](.specify/memory/constitution.md)의 \"Git·Jira 규칙\"이다.\n-아래는 AI가 티켓을 다룰 때의 실행 규칙이다.\n-\n-- **1 티켓 = 1 브랜치 = 1 MR.** 티켓 안에서 작업을 어떻게 나누든 자유지만, 티켓 하나를 여러 브랜치로\n-  쪼개거나 서로 다른 티켓의 작업을 한 MR에 담지 않는다.\n-- **티켓은 브랜치를 만들 때 만든다.** 곧 브랜치를 딸 작업 묶음이 아니면 티켓을 세우지 않는다.\n-  제목 `[BE|FE|AI|DE|INFRA|DOCS] 작업 내용`, 담당자=작업할 사람, 스토리 포인트 필수(1·2·3·5·8·13),\n-  스프린트=현재 활성 스프린트, Epic 연결, 구현 대상 Story와 `relates to` 연결. 확인 후 진행 중으로\n-  전이한다.\n-  - 담당자는 티켓을 만들기 전에 `atlassianUserInfo`로 현재 계정을 확인하고 이 사람이 맞는지 물어본다.\n-    대화 중 한 번 확인했으면 다시 묻지 않는다. git config로 추측하지 않는다.\n-- **하위 티켓(Sub-task) 유형은 만들지 않는다.** 머지·리뷰 같은 진행 사실도 티켓으로 만들지 않는다.\n-- **작업하다 눈에 띈 곁가지는 티켓으로 만들지 않는다.** 지금 손대지 않을 일은 말이나 문서로 알리고,\n-  티켓으로 세울지는 사람이 정한다. 발견할 때마다 티켓을 세우면 스프린트 범위만 넓어지고 하던 일이\n-  끝나지 않는다. 원인을 막 고친 직후에는 특히 조심한다. 방금 겪은 일이 강렬해서 남은 위험을 실제보다\n-  크게 보기 쉽다.\n-- **MR이 dev에 머지되면 즉시 완료로 전이한다.** 필요한 문서 수정은 머지 전에 끝내고, 남길 거면\n-  별도 티켓으로 뺀다.\n-- **스토리 포인트는 작업 전 추정값이다.** 머지 후 스스로 조정하지 않는다.\n-\n-### Atlassian MCP 필드\n-\n-- cloudId `ssafy.atlassian.net`, 프로젝트 키 `S15P21E205`\n-- 스토리 포인트 `customfield_10031`, 스프린트 `customfield_10020`\n-- 활성 스프린트 id는 적어두지 말고 `project = S15P21E205 AND sprint in openSprints()` 결과 이슈의\n-  스프린트 필드에서 읽는다.\n-- 상태 전이 id: 11 해야 할 일 / 21 진행 중 / 31 완료. 다르면 `getTransitionsForJiraIssue`로 확인한다.\n-- 이슈 유형 id: 10002 작업 / 10001 스토리 / 10000 에픽 — JQL에서 한글 이름은 안 먹으니 id를 쓴다.\n-- 완료 조회는 `statusCategory = Done`을 쓴다. 완료 status id가 10001이라 스토리 이슈 유형 id와\n-  숫자가 겹친다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "AGENTS.md",
+          "old_path": "AGENTS.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -220,7 +220,7 @@ cd worker && uv run ruff check src tests scripts && uv run ruff format --check s\n cd data && uv run ruff check src scripts tests && uv run pytest\n ```\n \n-브랜치·커밋·Jira·AI 협업 규칙은 [`AGENTS.md`](AGENTS.md), 최상위 제품 원칙과 완료 기준은\n+브랜치·커밋·MR·AI 협업 규칙은 [`AGENTS.md`](AGENTS.md), 최상위 제품 원칙과 완료 기준은\n [`constitution`](.specify/memory/constitution.md)을 따릅니다.\n \n ## 주의\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "README.md",
+          "old_path": "README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2877816": []
+  }
+}

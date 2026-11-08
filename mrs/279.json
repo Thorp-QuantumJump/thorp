@@ -1,0 +1,622 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954981,
+    "iid": 279,
+    "project_id": 1444456,
+    "title": "feat(fe): nav,회원가입로그인,랜딩페이지수정",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.\n\nMR 제목은 커밋과 같은 `feat(be): 작업 내역 요약` 형식이다(Jira의 `[BE]` 표기가 아니다).\n\n핵심부터 짧게 쓴다. 요약은 세 문장 이내로 병합되면 무엇이 달라지는지. 변경은 동작·계약·스키마\n단위로(파일 목록 금지). 테스트는 명령·결과와 자동 테스트 밖의 확인만(테스트 이름 나열 금지).\n리뷰 포인트는 판단거리만. 작업 과정(재시도, 검사 횟수, 정정 이력)은 쓰지 않는다.-->\n\n# 작업 내용 요약\n\n랜딩페이지 편의성 수정했습니다.\n\n로그인 및 회원가입 시  다른 탭으로 이동했을때 입력했던 정보들이 소실되는 현상을 수정했습니다.\n\nnav바가 화면위로 띄워지는 연출을 삭제했습니다.\n\n![image.png](/uploads/915afc0c6c711e3ce8e3a2b31a6b9806/image.png){width=900 height=465}\n\n# 관련 티켓\n\n- ticket #395\n- link\n\n# 주요 변경 사항\n\n- 랜딩페이지\n- nav바\n- 로그인 및 회원가입\n\n# 테스트\n\n- [ ]\n\n# 리뷰 포인트\n\n- \n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-21T17:09:45.584+09:00",
+    "updated_at": "2026-09-21T17:09:53.997+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-21T17:09:53.803+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/395-nav-auth-strategy",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "38a11f7883d755041ec22225b53c7903431b2ff4",
+    "merge_commit_sha": "757d3ad120097a8572a90b85ebb63ce39d922351",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T17:09:48.539+09:00",
+    "reference": "!279",
+    "references": {
+      "short": "!279",
+      "relative": "!279",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!279"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/279",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954981,
+    "iid": 279,
+    "project_id": 1444456,
+    "title": "feat(fe): nav,회원가입로그인,랜딩페이지수정",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.\n\nMR 제목은 커밋과 같은 `feat(be): 작업 내역 요약` 형식이다(Jira의 `[BE]` 표기가 아니다).\n\n핵심부터 짧게 쓴다. 요약은 세 문장 이내로 병합되면 무엇이 달라지는지. 변경은 동작·계약·스키마\n단위로(파일 목록 금지). 테스트는 명령·결과와 자동 테스트 밖의 확인만(테스트 이름 나열 금지).\n리뷰 포인트는 판단거리만. 작업 과정(재시도, 검사 횟수, 정정 이력)은 쓰지 않는다.-->\n\n# 작업 내용 요약\n\n랜딩페이지 편의성 수정했습니다.\n\n로그인 및 회원가입 시  다른 탭으로 이동했을때 입력했던 정보들이 소실되는 현상을 수정했습니다.\n\nnav바가 화면위로 띄워지는 연출을 삭제했습니다.\n\n![image.png](/uploads/915afc0c6c711e3ce8e3a2b31a6b9806/image.png){width=900 height=465}\n\n# 관련 티켓\n\n- ticket #395\n- link\n\n# 주요 변경 사항\n\n- 랜딩페이지\n- nav바\n- 로그인 및 회원가입\n\n# 테스트\n\n- [ ]\n\n# 리뷰 포인트\n\n- \n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-21T17:09:45.584+09:00",
+    "updated_at": "2026-09-21T17:09:53.997+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-21T17:09:53.803+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/395-nav-auth-strategy",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "38a11f7883d755041ec22225b53c7903431b2ff4",
+    "merge_commit_sha": "757d3ad120097a8572a90b85ebb63ce39d922351",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T17:09:48.539+09:00",
+    "reference": "!279",
+    "references": {
+      "short": "!279",
+      "relative": "!279",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!279"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/279",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "16",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "1026639f27cd7c81a22d49951f1059a2c6b1f5e1",
+      "head_sha": "38a11f7883d755041ec22225b53c7903431b2ff4",
+      "start_sha": "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f23b7ddfa1b8cd3bc5aa10bc5a19c5ee5eb861a9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849145,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-21T17:09:45.781+09:00",
+          "updated_at": "2026-09-21T17:09:45.789+09:00",
+          "system": true,
+          "noteable_id": 954981,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 279,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7e19db7a2671e5e4c3b630369fba839fc3f7d7bf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849150,
+          "type": null,
+          "body": "mentioned in commit 757d3ad120097a8572a90b85ebb63ce39d922351",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-21T17:09:53.918+09:00",
+          "updated_at": "2026-09-21T17:09:53.926+09:00",
+          "system": true,
+          "noteable_id": 954981,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 279,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "26046eb8210b7b09bb6d5a98dcfa68aed70e377e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849151,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **세션 스토리지 기반 임시 데이터 관리**: 민감한 정보(비밀번호, 인증번호)를 제외하고 사용자가 입력 중이던 이메일이나 회원가입 진행 상태만 `sessionStorage`에 안전하게 분리 저장하도록 설계되었습니다. 예외 처리(Storage API 차단 환경)와 성공 시 데이터 정리 로직이 꼼꼼하게 구현되어 있습니다.\n- **UI 일관성 및 접근성 고려**: `AuthField` 컴포넌트에 `action` 슬롯을 도입하여 입력 필드와 버튼 레이아웃이 에러 메시지나 힌트 문구에 의해 깨지지 않도록 견고하게 구조화하였으며, 스크롤 인터랙션과 반응형 디자인 처리(랜딩페이지, 헤더)가 깔끔합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **회원가입 세션 유지 테스트**: \n  1. 회원가입 페이지에서 이메일을 입력하고 '인증번호 받기'를 클릭하여 인증 단계로 진입합니다.\n  2. 닉네임과 전화번호를 일부 입력한 뒤 브라우저를 새로고침하거나 다른 페이지로 이동했다가 돌아옵니다.\n  3. 이전에 입력했던 이메일, 닉네임, 전화번호 및 인증 상태(입력칸 유지)가 그대로 복원되는지 확인합니다.\n  4. 가입을 완료한 후 `sessionStorage`에 `thorp.auth.signupProgress` 키가 깨끗하게 삭제되었는지 검증합니다.\n- **로그인 이메일 복원 테스트**:\n  1. 로그인 페이지에서 이메일과 비밀번호를 입력합니다.\n  2. 새로고침 후 이메일은 유지되고 비밀번호는 빈 칸으로 초기화되는지 확인합니다.\n  3. 로그인 성공 후 `sessionStorage`에서 `thorp.auth.loginEmail`이 삭제되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:38a11f7883d755041ec22225b53c7903431b2ff4 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T17:09:56.929+09:00",
+          "updated_at": "2026-09-21T17:09:56.929+09:00",
+          "system": false,
+          "noteable_id": 954981,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 279,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2233903,
+      "head_commit_sha": "38a11f7883d755041ec22225b53c7903431b2ff4",
+      "base_commit_sha": "1026639f27cd7c81a22d49951f1059a2c6b1f5e1",
+      "start_commit_sha": "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3",
+      "created_at": "2026-09-21T17:09:46.481+09:00",
+      "merge_request_id": 954981,
+      "state": "collected",
+      "real_size": "16",
+      "patch_id_sha": "4d1274734e9c3ee8301ab414687cf3a1f0439b3a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2233903,
+      "head_commit_sha": "38a11f7883d755041ec22225b53c7903431b2ff4",
+      "base_commit_sha": "1026639f27cd7c81a22d49951f1059a2c6b1f5e1",
+      "start_commit_sha": "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3",
+      "created_at": "2026-09-21T17:09:46.481+09:00",
+      "merge_request_id": 954981,
+      "state": "collected",
+      "real_size": "16",
+      "patch_id_sha": "4d1274734e9c3ee8301ab414687cf3a1f0439b3a",
+      "commits": [
+        {
+          "id": "38a11f7883d755041ec22225b53c7903431b2ff4",
+          "short_id": "38a11f78",
+          "created_at": "2026-09-21T17:08:12.000+09:00",
+          "parent_ids": [
+            "1026639f27cd7c81a22d49951f1059a2c6b1f5e1"
+          ],
+          "title": "feat(fe): nav,회원가입로그인,랜딩페이지수정",
+          "message": "feat(fe): nav,회원가입로그인,랜딩페이지수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-21T17:08:12.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-21T17:08:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/38a11f7883d755041ec22225b53c7903431b2ff4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,46 @@\n+/**\n+ * 로그인 화면에 쳐 둔 이메일을 화면을 떠나도 잃지 않게 해 주는 자리다.\n+ *\n+ * <p><b>가입 화면과 같은 이유로 사라졌다.</b> 이메일은 컴포넌트 안에만 있어서, 비밀번호가\n+ * 기억나지 않아 확인하러 나갔다 오거나 새로고침 한 번이면 빈칸으로 돌아왔다. 가입을 막 마치고\n+ * 온 경우에는 특히 나쁘다 — 채워 준 주소가 `location.state`에 실려 오는데 그 값은 화면을\n+ * 한 번 벗어나면 사라지므로, 방금 만든 계정 주소를 사용자가 다시 쳐야 했다.\n+ *\n+ * <p><b>비밀번호는 적지 않는다.</b> 여기서 되살릴 값은 '누구로 들어가려던 참이었나'뿐이다.\n+ *\n+ * <p>탭 수명({@link window.sessionStorage})으로 두고 로그인에 성공하면 지운다 — 공용 PC에서\n+ * 다음 사람의 로그인 화면에 앞사람 주소가 남아 있으면 안 된다.\n+ */\n+\n+const LOGIN_EMAIL_KEY = 'thorp.auth.loginEmail'\n+\n+/** 쳐 둔 이메일을 적어 둔다. 빈 값이면 적지 않고 지운다. */\n+export function saveLoginEmail(email: string): void {\n+  try {\n+    if (!email) {\n+      window.sessionStorage.removeItem(LOGIN_EMAIL_KEY)\n+      return\n+    }\n+    window.sessionStorage.setItem(LOGIN_EMAIL_KEY, email)\n+  } catch {\n+    // 저장소가 막힌 환경에서는 예전처럼 빈칸으로 시작한다. 로그인 자체는 그대로 된다.\n+  }\n+}\n+\n+/** 적어 둔 이메일을 읽는다. 없으면 빈 문자열이다. */\n+export function readLoginEmail(): string {\n+  try {\n+    return window.sessionStorage.getItem(LOGIN_EMAIL_KEY) ?? ''\n+  } catch {\n+    return ''\n+  }\n+}\n+\n+/** 로그인에 성공했을 때 지운다. */\n+export function clearLoginEmail(): void {\n+  try {\n+    window.sessionStorage.removeItem(LOGIN_EMAIL_KEY)\n+  } catch {\n+    // 지우지 못해도 다음 저장이 덮어쓴다.\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/loginEmail.ts",
+          "old_path": "frontend/src/auth/loginEmail.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,84 @@\n+/**\n+ * 회원가입 도중 화면을 떠났다 돌아와도 인증을 다시 받지 않게 해 주는 자리다.\n+ *\n+ * <p><b>인증번호는 이미 사용자 메일함에 가 있다.</b> 화면 상태만 컴포넌트 안에 있어서, 약관을\n+ * 보러 나갔다 오거나 새로고침 한 번에 전부 사라지고 멀쩡히 살아 있는 번호를 두고 다시 받아야\n+ * 했다. 서버가 보낸 번호의 수명과 화면이 기억하는 기간이 어긋나 있던 것이라, 화면 쪽을 번호\n+ * 쪽에 맞춘다.\n+ *\n+ * <p><b>비밀번호와 인증번호 자체는 적지 않는다.</b> 다시 받게 만드는 원인은 '어느 주소로 보냈고\n+ * 어디까지 끝났는가'이지 자격 증명이 아니다. 적어 둘 이유가 없는 것을 적으면 저장소를 읽을 수\n+ * 있는 다른 코드에 그만큼을 내주게 된다.\n+ *\n+ * <p>탭 수명({@link window.sessionStorage})으로 둔다 — 공용 PC에서 창을 닫은 뒤에도 남의 가입\n+ * 정보가 입력칸에 떠 있으면 안 된다.\n+ */\n+\n+const SIGNUP_PROGRESS_KEY = 'thorp.auth.signupProgress'\n+\n+/** 화면을 떠났다 돌아왔을 때 되살릴 값. 자격 증명은 여기 넣지 않는다. */\n+export type SignupProgress = {\n+  /** 사용자가 친 그대로의 이메일. 정규화한 값만 두면 입력칸 내용이 바뀌어 보인다. */\n+  email: string\n+  /** 인증번호를 실제로 보낸 주소. `null`이면 아직 받은 적이 없다. */\n+  requestedEmail: string | null\n+  /** 확인까지 끝난 주소. `null`이면 아직 확인 전이다. */\n+  verifiedEmail: string | null\n+  /** 1 계정 정보, 2 프로필 정보. */\n+  step: 1 | 2\n+  nickname: string\n+  phoneNumber: string\n+}\n+\n+function isString(value: unknown): value is string {\n+  return typeof value === 'string'\n+}\n+\n+/** 저장해 둔 값이 지금 쓸 수 있는 모양인지 본다. 손상됐거나 판이 다르면 없는 것으로 친다. */\n+function parse(raw: string | null): SignupProgress | null {\n+  if (raw === null) return null\n+\n+  try {\n+    const value: unknown = JSON.parse(raw)\n+    if (typeof value !== 'object' || value === null) return null\n+\n+    const candidate = value as Record<string, unknown>\n+    const { email, requestedEmail, verifiedEmail, step, nickname, phoneNumber } = candidate\n+\n+    if (!isString(email) || !isString(nickname) || !isString(phoneNumber)) return null\n+    if (requestedEmail !== null && !isString(requestedEmail)) return null\n+    if (verifiedEmail !== null && !isString(verifiedEmail)) return null\n+    if (step !== 1 && step !== 2) return null\n+\n+    return { email, requestedEmail, verifiedEmail, step, nickname, phoneNumber }\n+  } catch {\n+    return null\n+  }\n+}\n+\n+/** 지금까지의 진행을 적어 둔다. */\n+export function saveSignupProgress(progress: SignupProgress): void {\n+  try {\n+    window.sessionStorage.setItem(SIGNUP_PROGRESS_KEY, JSON.stringify(progress))\n+  } catch {\n+    // 저장소가 막힌 환경에서는 예전처럼 매번 새로 시작한다. 가입 자체는 그대로 된다.\n+  }\n+}\n+\n+/** 적어 둔 진행을 읽는다. 없거나 못 믿을 값이면 `null`이다. */\n+export function readSignupProgress(): SignupProgress | null {\n+  try {\n+    return parse(window.sessionStorage.getItem(SIGNUP_PROGRESS_KEY))\n+  } catch {\n+    return null\n+  }\n+}\n+\n+/** 가입이 끝났거나 처음부터 다시 할 때 지운다. */\n+export function clearSignupProgress(): void {\n+  try {\n+    window.sessionStorage.removeItem(SIGNUP_PROGRESS_KEY)\n+  } catch {\n+    // 지우지 못해도 다음 저장이 덮어쓴다.\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/signupProgress.ts",
+          "old_path": "frontend/src/auth/signupProgress.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,11 +5,19 @@ type AuthFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'aria-invalid'\n   label: string\n   hint?: ReactNode\n   error?: string\n+  /**\n+   * 입력칸 오른쪽에 붙는 버튼('인증번호 받기'처럼 그 칸의 값으로 무언가를 하는 것).\n+   *\n+   * <p><b>필드 바깥에 형제로 두면 오류가 뜰 때 어긋난다.</b> 도움말·오류 문구는 입력칸 아래\n+   * 같은 상자 안에 쌓이므로, 바깥에서 아래쪽을 맞춰 둔 버튼은 문구가 생긴 만큼 밀려 내려가\n+   * 입력칸과 줄이 틀어진다. 입력칸과 한 줄에 묶어 두면 문구가 늘든 줄든 흔들리지 않는다.\n+   */\n+  action?: ReactNode\n }\n \n /** 인증 화면에서 공통으로 쓰는 label·hint·error가 연결된 입력 필드다. */\n export const AuthField = forwardRef<HTMLInputElement, AuthFieldProps>(function AuthField(\n-  { label, hint, error, id: providedId, className, ...inputProps },\n+  { label, hint, error, action, id: providedId, className, ...inputProps },\n   ref,\n ) {\n   const generatedId = useId()\n@@ -21,13 +29,16 @@ export const AuthField = forwardRef<HTMLInputElement, AuthFieldProps>(function A\n   return (\n     <div className={`${styles.field} ${className ?? ''}`.trim()}>\n       <label htmlFor={id}>{label}</label>\n-      <input\n-        {...inputProps}\n-        ref={ref}\n-        id={id}\n-        aria-invalid={Boolean(error)}\n-        aria-describedby={describedBy}\n-      />\n+      <div className={action ? styles.controlRow : undefined}>\n+        <input\n+          {...inputProps}\n+          ref={ref}\n+          id={id}\n+          aria-invalid={Boolean(error)}\n+          aria-describedby={describedBy}\n+        />\n+        {action}\n+      </div>\n       {hint ? (\n         <small id={hintId} className={styles.hint}>\n           {hint}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/auth/AuthField.tsx",
+          "old_path": "frontend/src/components/auth/AuthField.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,6 +47,23 @@\n   opacity: 0.62;\n }\n \n+/*\n+  입력칸과 그 칸에 딸린 버튼이 함께 서는 줄. 도움말·오류 문구는 이 줄 바깥(아래)에 쌓이므로\n+  문구가 생기고 사라져도 버튼이 입력칸과 어긋나지 않는다.\n+*/\n+.controlRow {\n+  display: grid;\n+  grid-template-columns: minmax(0, 1fr) 142px;\n+  gap: 10px;\n+  align-items: stretch;\n+}\n+\n+@media (max-width: 560px) {\n+  .controlRow {\n+    grid-template-columns: 1fr;\n+  }\n+}\n+\n .hint,\n .fieldError {\n   font-size: 0.68rem;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/auth/AuthForm.module.css",
+          "old_path": "frontend/src/components/auth/AuthForm.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,6 +6,7 @@ import { backtestChartData, type BacktestPoint } from '@/data/backtestMock'\n import type { Indicator } from '@/types/market'\n import { IndicatorConveyor } from './IndicatorConveyor'\n import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'\n+import { NextSectionButton } from './NextSectionButton'\n import styles from '@/pages/LandingPage.module.css'\n \n const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }\n@@ -151,8 +152,11 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[]\n       transition={revealTransition}\n       aria-labelledby=\"market-analysis-title\"\n     >\n-      <div className={styles.sectionNumber} aria-hidden=\"true\">\n-        01 / MARKET PULSE\n+      <div className={styles.sectionAside}>\n+        <span className={styles.sectionNumber} aria-hidden=\"true\">\n+          01 / MARKET PULSE\n+        </span>\n+        <NextSectionButton targetId=\"backtest-service\" label=\"백테스트 소개로 이동\" />\n       </div>\n       <div className={styles.marketContent}>\n         <div className={styles.sectionHeading}>\n@@ -193,12 +197,7 @@ export function BacktestIntroSection() {\n         <div className={styles.sectionHeading}>\n           <FlaskConical aria-hidden=\"true\" size={22} strokeWidth={1.6} />\n           <p>BACKTEST STUDIO</p>\n-          <h2 id=\"backtest-intro-title\">\n-            나의 전략을\n-            <br />\n-            과거에서 실험해보세요.\n-          </h2>\n-          <span>같은 시장과 기간에서 전략을 비교하고 수익과 위험을 직접 검증해보세요.</span>\n+          <h2 id=\"backtest-intro-title\">나의 전략을 실험해보세요.</h2>\n         </div>\n \n         <div className={styles.backtestVisual}>\n@@ -258,8 +257,11 @@ export function BacktestIntroSection() {\n           <ArrowUpRight aria-hidden=\"true\" size={21} />\n         </Link>\n       </div>\n-      <div className={styles.sectionNumber} aria-hidden=\"true\">\n-        02 / TEST THE PAST\n+      <div className={styles.sectionAside}>\n+        <span className={styles.sectionNumber} aria-hidden=\"true\">\n+          02 / TEST THE PAST\n+        </span>\n+        <NextSectionButton targetId=\"algorithms\" label=\"알고리즘 소개로 이동\" />\n       </div>\n     </motion.section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,33 @@\n+import { ArrowDown } from 'lucide-react'\n+import { useReducedMotion } from 'motion/react'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+/**\n+ * 다음 이야기로 내려가는 화살표. 섹션 번호가 서 있는 옆 여백의 맨 아래에 둔다.\n+ *\n+ * <p><b>내려갈 수 있다는 것을 알려 주는 장치가 첫 화면에만 있었다.</b> 첫 화면에는 '시장 흐름\n+ * 보기' 버튼이 있어 다음으로 이어지지만, 그 뒤 섹션들은 스크롤 말고는 다음이 있다는 신호가\n+ * 없었다. 한 섹션이 화면을 가득 채우는 구성이라 끝인지 더 있는지가 화면만 보고는 구분되지\n+ * 않는다.\n+ *\n+ * <p>옆 여백에 두는 이유는 본문을 밀지 않기 위해서다. 아래에 쌓으면 그만큼 섹션이 길어져\n+ * 한 화면에 담으려던 것이 다시 깨진다.\n+ *\n+ * <p>마지막 섹션에는 붙이지 않는다 — 갈 곳이 없는 화살표는 눌러도 아무 일이 없다.\n+ */\n+export function NextSectionButton({ targetId, label }: { targetId: string; label: string }) {\n+  const reducedMotion = useReducedMotion()\n+\n+  const moveToNext = () => {\n+    document.querySelector(`#${targetId}`)?.scrollIntoView({\n+      behavior: reducedMotion ? 'auto' : 'smooth',\n+      block: 'start',\n+    })\n+  }\n+\n+  return (\n+    <button type=\"button\" className={styles.nextSection} onClick={moveToNext} aria-label={label}>\n+      <ArrowDown aria-hidden=\"true\" size={18} strokeWidth={1.7} />\n+    </button>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/NextSectionButton.tsx",
+          "old_path": "frontend/src/components/landing/NextSectionButton.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,16 @@\n+/*\n+  화면 위에 얹힌 띠가 아니라 맨 위에 붙은 한 줄이다. 배경과 아래 경계선을 폭이 제한된\n+  `.inner`가 아니라 여기에 두는 것이 핵심 — `.inner`에 두면 1440px짜리 판이 화면 가운데\n+  떠 있는 모양이 되고, 넓은 화면에서 양옆이 비어 띄워진 카드처럼 읽힌다.\n+*/\n .header {\n   position: sticky;\n   z-index: 30;\n   top: 0;\n   box-sizing: border-box;\n   min-height: 82px;\n-  background: transparent;\n+  border-bottom: 1px solid var(--thorp-line);\n+  background: var(--thorp-background);\n }\n \n .inner,\n@@ -75,23 +81,7 @@\n   min-height: 82px;\n   margin: 0 auto;\n   padding: 0;\n-  border: 1px solid transparent;\n   background: transparent;\n-  transition:\n-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),\n-    border-color 220ms ease,\n-    border-radius 280ms cubic-bezier(0.22, 1, 0.36, 1),\n-    background 220ms ease,\n-    box-shadow 220ms ease;\n-}\n-\n-.inner[data-scrolled='true'] {\n-  border-color: var(--thorp-line-strong);\n-  border-radius: 10px;\n-  background: rgb(7 17 11 / 94%);\n-  box-shadow: 0 14px 34px rgb(0 0 0 / 28%);\n-  transform: translateY(10px);\n-  backdrop-filter: blur(18px);\n }\n \n .brandGroup {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,7 +79,6 @@ export function AppHeader() {\n   const { status: authStatus, user, logout, recheck } = useAuth()\n   const rememberReturn = useLoginReturn()\n   const [isMenuOpen, setIsMenuOpen] = useState(false)\n-  const [isScrolled, setIsScrolled] = useState(false)\n   const [pendingAuthAction, setPendingAuthAction] = useState<'logout' | 'recheck' | null>(null)\n   const menuButtonRef = useRef<HTMLButtonElement>(null)\n   const firstMenuLinkRef = useRef<HTMLAnchorElement>(null)\n@@ -105,24 +104,6 @@ export function AppHeader() {\n     menuButtonRef.current?.focus()\n   }, [])\n \n-  // 페이지 상단을 벗어나면 투명 탐색을 플로팅 바 형태로 전환한다.\n-  useEffect(() => {\n-    let frameId = 0\n-\n-    const updateHeaderState = () => {\n-      window.cancelAnimationFrame(frameId)\n-      frameId = window.requestAnimationFrame(() => setIsScrolled(window.scrollY > 56))\n-    }\n-\n-    updateHeaderState()\n-    window.addEventListener('scroll', updateHeaderState, { passive: true })\n-\n-    return () => {\n-      window.removeEventListener('scroll', updateHeaderState)\n-      window.cancelAnimationFrame(frameId)\n-    }\n-  }, [])\n-\n   // 메뉴가 열리면 배경 스크롤을 막고 첫 번째 탐색 항목으로 초점을 이동한다.\n   useEffect(() => {\n     if (!isMenuOpen) return\n@@ -270,8 +251,8 @@ export function AppHeader() {\n \n   return (\n     <>\n-      <header className={styles.header} data-scrolled={isScrolled}>\n-        <div className={styles.inner} data-scrolled={isScrolled}>\n+      <header className={styles.header}>\n+        <div className={styles.inner}>\n           <div className={styles.brandGroup}>\n             <button\n               ref={menuButtonRef}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -438,36 +438,107 @@\n   left: 33.5%;\n }\n \n+/*\n+  **이 섹션은 한 칸을 넘지 않는다고 못 박는다.** `min-height`로 두면 안의 것이 커질 때 섹션이\n+  따라 늘어나 스크롤이 한 번 더 생기는데, 스냅으로 넘기는 구성에서는 그 한 번이 '끝인 줄 알았는데\n+  더 있는' 어긋남으로 겪힌다. 키를 고정하고, 모자랄 때 줄어들 몫은 차트에만 준다.\n+*/\n+.backtestSection .sectionHeading h2 {\n+  font-size: clamp(2.2rem, 3.6vw, 4rem);\n+}\n+\n .backtestSection {\n   grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);\n+  height: 100svh;\n+  padding-top: clamp(64px, 8vh, 104px);\n+  padding-bottom: clamp(64px, 8vh, 104px);\n }\n \n .backtestSection::before {\n   right: 31%;\n }\n \n+/*\n+  섹션 번호와 '다음으로' 화살표가 함께 서는 옆 여백. 번호는 가운데, 화살표는 맨 아래다 —\n+  다음이 있다는 신호는 내려갈 방향인 아래쪽에 있어야 읽힌다.\n+*/\n+.sectionAside {\n+  display: grid;\n+  grid-template-rows: minmax(0, 1fr) auto;\n+  align-items: center;\n+  justify-items: center;\n+  align-self: stretch;\n+  gap: 18px;\n+}\n+\n+.marketSection .sectionAside {\n+  justify-self: start;\n+}\n+\n+.backtestSection .sectionAside {\n+  justify-self: end;\n+}\n+\n .sectionNumber {\n-  align-self: center;\n   color: #536158;\n   font-size: 0.62rem;\n   letter-spacing: 0.2em;\n   writing-mode: vertical-rl;\n }\n \n-.marketSection .sectionNumber {\n-  justify-self: start;\n+.nextSection {\n+  display: flex;\n+  align-items: center;\n+  justify-content: center;\n+  width: 44px;\n+  height: 44px;\n+  border: 1px solid rgb(3 199 90 / 55%);\n+  border-radius: 50%;\n+  background: rgb(3 199 90 / 12%);\n+  box-shadow: 0 0 0 6px rgb(3 199 90 / 6%);\n+  color: var(--landing-accent-soft);\n+  cursor: pointer;\n+  transition: border-color 180ms ease, color 180ms ease, background 180ms ease,\n+    box-shadow 180ms ease;\n }\n \n-.backtestSection .sectionNumber {\n-  justify-self: end;\n+.nextSection:hover {\n+  border-color: var(--landing-accent);\n+  background: rgb(3 199 90 / 22%);\n+  box-shadow: 0 0 0 9px rgb(3 199 90 / 10%);\n+  color: var(--landing-accent);\n }\n \n-.marketContent,\n-.backtestContent {\n+.nextSection:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: 3px;\n+}\n+\n+.marketContent {\n   align-self: center;\n   min-width: 0;\n }\n \n+/*\n+  **차트가 남는 높이를 받아 가게 둔다.** 차트에 높이 하한을 박아 두었더니 제목·지표·버튼을 더한\n+  키가 화면보다 커져서, 한 칸으로 붙어야 할 섹션이 두 번 굴러야 끝났다. 고정 높이를 정해 두면\n+  화면 높이가 조금만 달라져도 다시 어긋나므로, 정해진 것들을 먼저 놓고 나머지를 차트에 준다.\n+*/\n+.backtestContent {\n+  display: flex;\n+  flex-direction: column;\n+  justify-content: center;\n+  align-self: stretch;\n+  min-width: 0;\n+  min-height: 0;\n+}\n+\n+/* 글과 버튼은 줄이지 않는다 — 줄이면 글자가 서로 겹치거나 잘린다. */\n+.backtestContent > .sectionHeading,\n+.backtestContent > .textCta {\n+  flex: 0 0 auto;\n+}\n+\n .marketContent {\n   padding-left: clamp(38px, 5vw, 88px);\n }\n@@ -650,7 +721,11 @@\n \n .backtestVisual {\n   position: relative;\n-  margin: clamp(44px, 6vh, 68px) 0 34px;\n+  display: flex;\n+  flex: 1 1 auto;\n+  flex-direction: column;\n+  min-height: 0;\n+  margin: clamp(22px, 3vh, 40px) 0 clamp(18px, 2.5vh, 28px);\n   border-top: 1px solid var(--landing-line);\n   border-bottom: 1px solid var(--landing-line);\n   background:\n@@ -681,10 +756,18 @@\n   font-weight: 630;\n }\n \n+/*\n+  **차트 키는 화면 높이가 정한다.** viewBox 비율(1000×390)대로 두면 폭의 39%가 키가 되어,\n+  넓은 화면일수록 차트가 커지면서 제목·지표·버튼을 더한 섹션이 한 칸을 넘어 한 번 더 굴러야\n+  했다. 가로로는 늘어나되 세로로는 화면에 맞추도록 키를 따로 정한다.\n+*/\n .backtestVisual > svg {\n   display: block;\n+  flex: 1 1 auto;\n   width: 100%;\n-  min-height: 270px;\n+  height: auto;\n+  min-height: 120px;\n+  max-height: 340px;\n }\n \n .chartGrid {\n@@ -1130,7 +1213,7 @@\n   }\n \n   .heroFootnote::before,\n-  .sectionNumber,\n+  .sectionAside,\n   .storySection::before {\n     display: none;\n   }\n@@ -1146,6 +1229,21 @@\n     padding: 0;\n   }\n \n+  .backtestSection {\n+    height: auto;\n+  }\n+\n+  .backtestContent,\n+  .backtestVisual {\n+    display: block;\n+    min-height: auto;\n+  }\n+\n+  .backtestVisual > svg {\n+    height: auto;\n+    min-height: 240px;\n+  }\n+\n   .sectionHeading {\n     padding-left: 0;\n   }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -106,6 +106,6 @@ describe('LandingPage', () => {\n     renderWithRouter(<LandingPage />)\n \n     expect(screen.getByRole('heading', { name: /시장을 분석합니다/ })).toBeDefined()\n-    expect(screen.getByRole('heading', { name: /과거에서 실험해보세요/ })).toBeDefined()\n+    expect(screen.getByRole('heading', { name: /전략을 실험해보세요/ })).toBeDefined()\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.test.tsx",
+          "old_path": "frontend/src/pages/LandingPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -82,6 +82,36 @@ describe('LoginPage', () => {\n     expect(await screen.findByRole('heading', { name: '기본 도착 화면' })).toBeTruthy()\n   })\n \n+  it('쳐 둔 이메일은 화면을 떠났다 돌아와도 남고 비밀번호는 남지 않는다', async () => {\n+    const user = userEvent.setup()\n+    const first = renderLogin()\n+\n+    await user.type(await screen.findByLabelText('이메일'), 'new.user@example.com')\n+    await user.type(screen.getByLabelText('비밀번호'), 'password1234')\n+\n+    // 다른 화면에 갔다 오는 것과 같다.\n+    first.unmount()\n+    renderLogin()\n+\n+    expect(await screen.findByLabelText('이메일')).toHaveProperty(\n+      'value',\n+      'new.user@example.com',\n+    )\n+    expect(screen.getByLabelText('비밀번호')).toHaveProperty('value', '')\n+  })\n+\n+  it('로그인에 성공하면 적어 둔 이메일을 지운다', async () => {\n+    const user = userEvent.setup()\n+    renderLogin()\n+\n+    await user.type(await screen.findByLabelText('이메일'), 'new.user@example.com')\n+    await user.type(screen.getByLabelText('비밀번호'), 'password1234')\n+    await user.click(screen.getByRole('button', { name: '로그인' }))\n+\n+    await screen.findByRole('heading', { name: '기본 도착 화면' })\n+    expect(window.sessionStorage.getItem('thorp.auth.loginEmail')).toBeNull()\n+  })\n+\n   it('로그인 실패는 계정 존재 여부를 드러내지 않는 공통 안내를 표시한다', async () => {\n     apiMocks.login.mockRejectedValue(\n       new ApiClientError('api', '존재하지 않는 이메일입니다.', {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LoginPage.test.tsx",
+          "old_path": "frontend/src/pages/LoginPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom'\n import { normalizeEmail } from '@/api/auth'\n import { ApiClientError } from '@/api/client'\n import { useAuth } from '@/auth/auth-context'\n+import { clearLoginEmail, readLoginEmail, saveLoginEmail } from '@/auth/loginEmail'\n import { AuthField } from '@/components/auth/AuthField'\n import { AuthStatus } from '@/components/auth/AuthStatus'\n import formStyles from '@/components/auth/AuthForm.module.css'\n@@ -27,12 +28,19 @@ export function LoginPage() {\n   const emailRef = useRef<HTMLInputElement>(null)\n   const passwordRef = useRef<HTMLInputElement>(null)\n   const requestRef = useRef<AbortController | null>(null)\n-  const [email, setEmail] = useState(() => readSignupEmail(location.state))\n+  const [email, setEmail] = useState(\n+    () => readSignupEmail(location.state) || readLoginEmail(),\n+  )\n   const [password, setPassword] = useState('')\n   const [errors, setErrors] = useState<LoginErrors>({})\n   const [isSubmitting, setIsSubmitting] = useState(false)\n   const [statusMessage, setStatusMessage] = useState('')\n \n+  // 쳐 둔 주소를 적어 둔다. 비밀번호는 넣지 않는다(`loginEmail` 참고).\n+  useEffect(() => {\n+    saveLoginEmail(email)\n+  }, [email])\n+\n   useEffect(() => {\n     headingRef.current?.focus()\n     return () => {\n@@ -77,6 +85,7 @@ export function LoginPage() {\n \n     try {\n       await login({ email: normalizeEmail(email), password }, controller.signal)\n+      clearLoginEmail()\n     } catch (error) {\n       if (controller.signal.aborted) return\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LoginPage.tsx",
+          "old_path": "frontend/src/pages/LoginPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -215,13 +215,6 @@\n   font-size: 0.66rem;\n }\n \n-.verificationSection {\n-  display: grid;\n-  grid-template-columns: minmax(0, 1fr) 142px;\n-  gap: 10px;\n-  align-items: end;\n-}\n-\n .fieldGrid {\n   display: grid;\n   grid-template-columns: repeat(2, minmax(0, 1fr));\n@@ -336,7 +329,6 @@\n     padding: 22px 18px;\n   }\n \n-  .verificationSection,\n   .fieldGrid,\n   .formActions {\n     grid-template-columns: 1fr;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SignupPage.module.css",
+          "old_path": "frontend/src/pages/SignupPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -55,6 +55,8 @@ async function completeAccountStep(user: ReturnType<typeof userEvent.setup>) {\n \n describe('SignupPage', () => {\n   beforeEach(() => {\n+    // 진행 상태가 탭 저장소에 남으므로, 앞 테스트의 가입이 다음 테스트로 새지 않게 비운다.\n+    window.sessionStorage.clear()\n     vi.clearAllMocks()\n     apiMocks.requestEmailVerification.mockResolvedValue(undefined)\n     apiMocks.confirmEmailVerification.mockResolvedValue(undefined)\n@@ -66,6 +68,40 @@ describe('SignupPage', () => {\n     })\n   })\n \n+  it('인증번호를 받은 뒤 화면을 떠났다 돌아와도 다시 받지 않는다', async () => {\n+    const user = userEvent.setup()\n+    const first = renderSignup()\n+\n+    await user.type(screen.getByLabelText('이메일'), 'new.user@example.com')\n+    await user.click(screen.getByRole('button', { name: '인증번호 받기' }))\n+    await screen.findByLabelText('인증번호')\n+\n+    // 다른 화면에 갔다 오는 것과 같다 — 컴포넌트가 사라졌다 다시 선다.\n+    first.unmount()\n+    renderSignup()\n+\n+    expect(await screen.findByLabelText('인증번호')).toBeTruthy()\n+    expect(screen.getByLabelText('이메일')).toHaveProperty('value', 'new.user@example.com')\n+    expect(screen.getByRole('button', { name: '다시 받기' })).toBeTruthy()\n+    expect(apiMocks.requestEmailVerification).toHaveBeenCalledOnce()\n+  })\n+\n+  it('비밀번호는 화면을 떠나면 남기지 않는다', async () => {\n+    const user = userEvent.setup()\n+    const first = renderSignup()\n+\n+    await completeEmailVerification(user)\n+    await user.type(screen.getByLabelText('비밀번호'), 'safe-password')\n+\n+    first.unmount()\n+    renderSignup()\n+\n+    expect(await screen.findByLabelText('비밀번호')).toHaveProperty('value', '')\n+    expect(window.sessionStorage.getItem('thorp.auth.signupProgress')).not.toContain(\n+      'safe-password',\n+    )\n+  })\n+\n   it('잘못된 입력을 요청 전에 표시하고 첫 오류 입력으로 초점을 이동한다', async () => {\n     const user = userEvent.setup()\n     renderSignup()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SignupPage.test.tsx",
+          "old_path": "frontend/src/pages/SignupPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,11 @@ import {\n import { ApiClientError, normalizeApiError } from '@/api/client'\n import { AuthField } from '@/components/auth/AuthField'\n import { AuthStatus } from '@/components/auth/AuthStatus'\n+import {\n+  clearSignupProgress,\n+  readSignupProgress,\n+  saveSignupProgress,\n+} from '@/auth/signupProgress'\n import formStyles from '@/components/auth/AuthForm.module.css'\n import type { AuthFieldName, RequestStatus } from '@/types/auth'\n import styles from './SignupPage.module.css'\n@@ -74,16 +79,23 @@ export function SignupPage() {\n   const requestIdRef = useRef<Record<ActionName, number>>({ send: 0, confirm: 0, signup: 0 })\n   const controllerRef = useRef<Partial<Record<ActionName, AbortController>>>({})\n \n-  const [email, setEmail] = useState('')\n+  // 떠나기 전에 적어 둔 진행. 한 번만 읽어 아래 초깃값들이 나눠 쓴다.\n+  const [restored] = useState(readSignupProgress)\n+\n+  const [email, setEmail] = useState(() => restored?.email ?? '')\n   const [verificationCode, setVerificationCode] = useState('')\n   const [password, setPassword] = useState('')\n   const [passwordConfirm, setPasswordConfirm] = useState('')\n-  const [nickname, setNickname] = useState('')\n-  const [phoneNumber, setPhoneNumber] = useState('')\n-  const [step, setStep] = useState<SignupStep>(1)\n+  const [nickname, setNickname] = useState(() => restored?.nickname ?? '')\n+  const [phoneNumber, setPhoneNumber] = useState(() => restored?.phoneNumber ?? '')\n+  const [step, setStep] = useState<SignupStep>(() => restored?.step ?? 1)\n   const [isPreviewMode, setIsPreviewMode] = useState(false)\n-  const [requestedEmail, setRequestedEmail] = useState<string | null>(null)\n-  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null)\n+  const [requestedEmail, setRequestedEmail] = useState<string | null>(\n+    () => restored?.requestedEmail ?? null,\n+  )\n+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(\n+    () => restored?.verifiedEmail ?? null,\n+  )\n   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})\n   const [status, setStatus] = useState<StatusMessage | null>(null)\n   const [sendStatus, setSendStatus] = useState<RequestStatus>('idle')\n@@ -102,6 +114,18 @@ export function SignupPage() {\n     }\n   }, [])\n \n+  /*\n+    진행을 적어 둔다. 비밀번호와 인증번호는 넣지 않는다(`signupProgress` 참고).\n+    아무것도 없으면 지운다 — 입력을 지운 사람에게 다음 방문에 옛 값을 되살려 주지 않는다.\n+  */\n+  useEffect(() => {\n+    if (!email && !nickname && !phoneNumber && requestedEmail === null) {\n+      clearSignupProgress()\n+      return\n+    }\n+    saveSignupProgress({ email, requestedEmail, verifiedEmail, step, nickname, phoneNumber })\n+  }, [email, requestedEmail, verifiedEmail, step, nickname, phoneNumber])\n+\n   const focusField = (field: AuthFieldName | 'passwordConfirm') => {\n     const refs = {\n       email: emailRef,\n@@ -395,6 +419,7 @@ export function SignupPage() {\n       setPassword('')\n       setPasswordConfirm('')\n       setVerificationCode('')\n+      clearSignupProgress()\n       finishRequest('signup', request.id)\n       navigate('/login', {\n         replace: true,\n@@ -419,6 +444,7 @@ export function SignupPage() {\n       setPassword('')\n       setPasswordConfirm('')\n       setVerificationCode('')\n+      clearSignupProgress()\n       navigate('/login', {\n         replace: true,\n         state: { signupEmail: normalizeEmail(result.email) },\n@@ -431,8 +457,13 @@ export function SignupPage() {\n   }\n \n   const canonicalEmail = normalizeEmail(email)\n-  const canConfirm = requestedEmail === canonicalEmail && sendStatus === 'success'\n-  const isVerified = verifiedEmail === canonicalEmail && confirmStatus === 'success'\n+  /*\n+    되살린 화면에는 이번 방문의 요청 상태가 없다. `requestedEmail`·`verifiedEmail`은 각각\n+    발송·확인에 성공했을 때만 채워지고 이메일이 바뀌면 지워지므로, 그것만으로 충분하다.\n+    여기에 `sendStatus === 'success'`를 함께 걸면 돌아온 사용자에게 입력칸이 닫힌 채로 보인다.\n+  */\n+  const canConfirm = requestedEmail === canonicalEmail\n+  const isVerified = verifiedEmail === canonicalEmail\n   const isAnyPending =\n     sendStatus === 'pending' || confirmStatus === 'pending' || signupStatus === 'pending'\n \n@@ -504,65 +535,65 @@ export function SignupPage() {\n \n             {step === 1 ? (\n               <>\n-                <div className={styles.verificationSection}>\n-                  <AuthField\n-                    ref={emailRef}\n-                    label=\"이메일\"\n-                    type=\"email\"\n-                    name=\"email\"\n-                    autoComplete=\"email\"\n-                    inputMode=\"email\"\n-                    placeholder=\"name@example.com\"\n-                    value={email}\n-                    error={fieldErrors.email}\n-                    disabled={isAnyPending}\n-                    onChange={(event) => handleEmailChange(event.target.value)}\n-                  />\n-                  <button\n-                    type=\"button\"\n-                    className={formStyles.secondaryButton}\n-                    disabled={isAnyPending}\n-                    onClick={handleSendVerification}\n-                  >\n-                    {sendStatus === 'pending'\n-                      ? '발송 중…'\n-                      : requestedEmail === canonicalEmail\n-                        ? '다시 받기'\n-                        : '인증번호 받기'}\n-                  </button>\n-                </div>\n-\n-                {canConfirm && !isVerified ? (\n-                  <div className={styles.verificationSection}>\n-                    <AuthField\n-                      ref={verificationCodeRef}\n-                      label=\"인증번호\"\n-                      type=\"text\"\n-                      name=\"verificationCode\"\n-                      autoComplete=\"one-time-code\"\n-                      inputMode=\"numeric\"\n-                      maxLength={6}\n-                      placeholder=\"6자리 숫자\"\n-                      value={verificationCode}\n-                      error={fieldErrors.verificationCode}\n-                      disabled={isAnyPending}\n-                      onChange={(event) => {\n-                        setVerificationCode(event.target.value.replace(/\\D/g, '').slice(0, 6))\n-                        setFieldErrors((current) => ({\n-                          ...current,\n-                          verificationCode: undefined,\n-                        }))\n-                      }}\n-                    />\n+                <AuthField\n+                  ref={emailRef}\n+                  label=\"이메일\"\n+                  type=\"email\"\n+                  name=\"email\"\n+                  autoComplete=\"email\"\n+                  inputMode=\"email\"\n+                  placeholder=\"name@example.com\"\n+                  value={email}\n+                  error={fieldErrors.email}\n+                  disabled={isAnyPending}\n+                  onChange={(event) => handleEmailChange(event.target.value)}\n+                  action={\n                     <button\n                       type=\"button\"\n                       className={formStyles.secondaryButton}\n                       disabled={isAnyPending}\n-                      onClick={handleConfirmVerification}\n+                      onClick={handleSendVerification}\n                     >\n-                      {confirmStatus === 'pending' ? '확인 중…' : '인증 확인'}\n+                      {sendStatus === 'pending'\n+                        ? '발송 중…'\n+                        : requestedEmail === canonicalEmail\n+                          ? '다시 받기'\n+                          : '인증번호 받기'}\n                     </button>\n-                  </div>\n+                  }\n+                />\n+\n+                {canConfirm && !isVerified ? (\n+                  <AuthField\n+                    ref={verificationCodeRef}\n+                    label=\"인증번호\"\n+                    type=\"text\"\n+                    name=\"verificationCode\"\n+                    autoComplete=\"one-time-code\"\n+                    inputMode=\"numeric\"\n+                    maxLength={6}\n+                    placeholder=\"6자리 숫자\"\n+                    value={verificationCode}\n+                    error={fieldErrors.verificationCode}\n+                    disabled={isAnyPending}\n+                    onChange={(event) => {\n+                      setVerificationCode(event.target.value.replace(/\\D/g, '').slice(0, 6))\n+                      setFieldErrors((current) => ({\n+                        ...current,\n+                        verificationCode: undefined,\n+                      }))\n+                    }}\n+                    action={\n+                      <button\n+                        type=\"button\"\n+                        className={formStyles.secondaryButton}\n+                        disabled={isAnyPending}\n+                        onClick={handleConfirmVerification}\n+                      >\n+                        {confirmStatus === 'pending' ? '확인 중…' : '인증 확인'}\n+                      </button>\n+                    }\n+                  />\n                 ) : null}\n \n                 {isVerified ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SignupPage.tsx",
+          "old_path": "frontend/src/pages/SignupPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,4 +29,9 @@ npm run lint && npm run build && npm test\n - 환경변수는 `VITE_` 접두사만 클라이언트에 노출됨\n - 백테스트는 비동기: 생성 후 `QUEUED → RUNNING → COMPLETED` 폴링 UI를 전제로 설계\n - 전략 이름·축·기본값·허용 범위는 `GET /strategies/registry` 응답에서만 읽고 코드에 상수로 두지 않는다(spec 003 FR-005).\n+- `sessionStorage` 키 `thorp.auth.signupProgress`는 회원가입 진행(이메일·발송/확인 완료 주소·단계·닉네임·전화번호)을\n+  보관해 화면을 떠났다 돌아와도 인증번호를 다시 받지 않게 한다. **비밀번호와 인증번호는 넣지 않는다.**\n+  가입 성공 시 지운다.\n+- `sessionStorage` 키 `thorp.auth.loginEmail`은 로그인 화면에 쳐 둔 이메일을 보관한다.\n+  **비밀번호는 넣지 않는다.** 로그인 성공 시 지운다.\n - `sessionStorage` 키: `thorp.strategySettings`(003 설정값), `thorp.diagnosis.sectorSelection`(002 인계 계약). 둘 다 탭 수명이며, 003은 002의 `diagnosis/selectionStorage`를 통해 섹터 선택을 읽는다. 이전 대역 키 `thorp.sectorSelection`은 사용하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/CLAUDE.md",
+          "old_path": "frontend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2849151": []
+  }
+}

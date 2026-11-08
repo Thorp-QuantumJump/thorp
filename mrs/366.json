@@ -1,0 +1,598 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963239,
+    "iid": 366,
+    "project_id": 1444456,
+    "title": "docs(fe): constitution 6.1.0 초안으로 비로그인 브라우저 정보는 탭을 닫으면 지운다는 원칙을 더하고 spec 015 버튼 위치를 맞춘다",
+    "description": "# 작업 내용 요약\n\n비로그인 사용자의 입력·기록·화면 상태처럼 브라우저에 두는 정보는 탭 단위 세션 저장소에 두고, 탭을 닫으면 모두 지운다는 원칙을 constitution 6.1.0 초안으로 더한다. 002·003·009가 이미 따르던 규칙을 모든 spec의 원칙으로 올리고, 따르지 않던 015의 버튼 위치 규칙을 맞춘다. 미승인 초안이라 전체 회의 승인이 필요하다.\n\n# 주요 변경 사항\n\n- constitution '기록·개인정보·보관'에 원칙 추가(6.1.0 초안): 쿠키와 탭을 닫아도 남는 저장소는 쓰지 않고, 새로고침·같은 탭 안 이동·로그인 왕복은 버틴다. 인증·보안 쿠키는 원칙 밖이다.\n- spec 015 US3 시나리오 2·FR-014: 도우미 버튼 위치는 탭이 열려 있는 동안만 기억한다.\n- spec 015 plan Storage: 버튼 위치 저장소를 sessionStorage로 바꾼다.\n\n# 테스트\n\n- [x] 문서 변경만 있다. `git diff --check` 통과\n\n# 리뷰 포인트\n\n- 인증·보안 쿠키를 원칙 밖으로 둔 구분이 맞는지\n- 015 코드(fabPosition.ts의 localStorage)는 이 MR에 넣지 않았다. 별도 작업이 필요하다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**: 해당 없음(원칙 문서 변경)\n- [x] **결제·포인트·상품 선택 단계 0건**: 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건**: 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다**: 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다**: 해당 없음\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-02T14:30:20.177+09:00",
+    "updated_at": "2026-10-02T14:30:51.112+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T14:30:51.147+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/anonymous-tab-session",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4a5633723f771da0153c3332f82b41f431098c42",
+    "merge_commit_sha": "9987ff6be283c38a619a517dc3a95abccabae2de",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T14:30:21.240+09:00",
+    "reference": "!366",
+    "references": {
+      "short": "!366",
+      "relative": "!366",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!366"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/366",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963239,
+    "iid": 366,
+    "project_id": 1444456,
+    "title": "docs(fe): constitution 6.1.0 초안으로 비로그인 브라우저 정보는 탭을 닫으면 지운다는 원칙을 더하고 spec 015 버튼 위치를 맞춘다",
+    "description": "# 작업 내용 요약\n\n비로그인 사용자의 입력·기록·화면 상태처럼 브라우저에 두는 정보는 탭 단위 세션 저장소에 두고, 탭을 닫으면 모두 지운다는 원칙을 constitution 6.1.0 초안으로 더한다. 002·003·009가 이미 따르던 규칙을 모든 spec의 원칙으로 올리고, 따르지 않던 015의 버튼 위치 규칙을 맞춘다. 미승인 초안이라 전체 회의 승인이 필요하다.\n\n# 주요 변경 사항\n\n- constitution '기록·개인정보·보관'에 원칙 추가(6.1.0 초안): 쿠키와 탭을 닫아도 남는 저장소는 쓰지 않고, 새로고침·같은 탭 안 이동·로그인 왕복은 버틴다. 인증·보안 쿠키는 원칙 밖이다.\n- spec 015 US3 시나리오 2·FR-014: 도우미 버튼 위치는 탭이 열려 있는 동안만 기억한다.\n- spec 015 plan Storage: 버튼 위치 저장소를 sessionStorage로 바꾼다.\n\n# 테스트\n\n- [x] 문서 변경만 있다. `git diff --check` 통과\n\n# 리뷰 포인트\n\n- 인증·보안 쿠키를 원칙 밖으로 둔 구분이 맞는지\n- 015 코드(fabPosition.ts의 localStorage)는 이 MR에 넣지 않았다. 별도 작업이 필요하다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**: 해당 없음(원칙 문서 변경)\n- [x] **결제·포인트·상품 선택 단계 0건**: 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건**: 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다**: 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다**: 해당 없음\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-02T14:30:20.177+09:00",
+    "updated_at": "2026-10-02T14:30:51.112+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T14:30:51.147+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/anonymous-tab-session",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4a5633723f771da0153c3332f82b41f431098c42",
+    "merge_commit_sha": "9987ff6be283c38a619a517dc3a95abccabae2de",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T14:30:21.240+09:00",
+    "reference": "!366",
+    "references": {
+      "short": "!366",
+      "relative": "!366",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!366"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/366",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": "2026-10-02T14:30:32.402+09:00",
+    "latest_build_finished_at": "2026-10-02T14:30:40.746+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 228401,
+      "iid": 394,
+      "project_id": 1444456,
+      "sha": "4a5633723f771da0153c3332f82b41f431098c42",
+      "ref": "docs(fe)/anonymous-tab-session",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-02T14:30:32.232+09:00",
+      "updated_at": "2026-10-02T14:30:40.763+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/228401"
+    },
+    "head_pipeline": {
+      "id": 228401,
+      "iid": 394,
+      "project_id": 1444456,
+      "sha": "4a5633723f771da0153c3332f82b41f431098c42",
+      "ref": "docs(fe)/anonymous-tab-session",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-02T14:30:32.232+09:00",
+      "updated_at": "2026-10-02T14:30:40.763+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/228401",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-10-02T14:30:32.402+09:00",
+      "finished_at": "2026-10-02T14:30:40.746+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/228401",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "ddc9d9e7c70005223176ad2c1c5f503e38428327",
+      "head_sha": "4a5633723f771da0153c3332f82b41f431098c42",
+      "start_sha": "3a1bea53477ad9e97b99d6c5ac815dc8a2d7aa94"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "d8dcdc134130363b06f538efadfec3bad62a5640",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880697,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T14:30:20.287+09:00",
+          "updated_at": "2026-10-02T14:30:20.292+09:00",
+          "system": true,
+          "noteable_id": 963239,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 366,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ac14d473ede80dd0e7c747ff4785e475bc638453",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880698,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T14:30:20.306+09:00",
+          "updated_at": "2026-10-02T14:30:20.314+09:00",
+          "system": true,
+          "noteable_id": 963239,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 366,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8aa4b34b7d634b6a6051fb8b7941683ea316382e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880699,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (문서 및 스펙 명세 변경 사항만 포함되어 있으며, 코드 로직 변경은 수반되지 않았습니다.)\n\n### 테스트 제안\n- **문서 및 스펙 일관성 검증 시나리오**:\n  1. `git diff --check` 명령어를 통해 마크다운 파일 내 공백이나 개행 오류가 없는지 확인합니다.\n  2. 추후 실제 구현(코드 변경) 시 `localStorage` 대신 `sessionStorage`를 사용하도록 변경되었는지, 그리고 탭을 닫았을 때 버튼 위치가 초기화되는지 프론트엔드 유닛/통합 테스트를 통해 검증할 시나리오를 준비합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:4a5633723f771da0153c3332f82b41f431098c42 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-02T14:30:34.561+09:00",
+          "updated_at": "2026-10-02T14:30:34.561+09:00",
+          "system": false,
+          "noteable_id": 963239,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 366,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "35e2d5a4c7833b5e0337ce74e9bf6d765c5c983f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880700,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 4a5633723f771da0153c3332f82b41f431098c42 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T14:30:35.492+09:00",
+          "updated_at": "2026-10-02T14:30:35.495+09:00",
+          "system": true,
+          "noteable_id": 963239,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 366,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b07218fe7713ce036187bbb4ca28ff7c5cac02bb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880701,
+          "type": null,
+          "body": "mentioned in commit 9987ff6be283c38a619a517dc3a95abccabae2de",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T14:30:50.025+09:00",
+          "updated_at": "2026-10-02T14:30:50.089+09:00",
+          "system": true,
+          "noteable_id": 963239,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 366,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261724,
+      "head_commit_sha": "4a5633723f771da0153c3332f82b41f431098c42",
+      "base_commit_sha": "ddc9d9e7c70005223176ad2c1c5f503e38428327",
+      "start_commit_sha": "3a1bea53477ad9e97b99d6c5ac815dc8a2d7aa94",
+      "created_at": "2026-10-02T14:30:20.610+09:00",
+      "merge_request_id": 963239,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "a6f1423291912fd3bf3202181801b5a6e37cdc73"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261724,
+      "head_commit_sha": "4a5633723f771da0153c3332f82b41f431098c42",
+      "base_commit_sha": "ddc9d9e7c70005223176ad2c1c5f503e38428327",
+      "start_commit_sha": "3a1bea53477ad9e97b99d6c5ac815dc8a2d7aa94",
+      "created_at": "2026-10-02T14:30:20.610+09:00",
+      "merge_request_id": 963239,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "a6f1423291912fd3bf3202181801b5a6e37cdc73",
+      "commits": [
+        {
+          "id": "4a5633723f771da0153c3332f82b41f431098c42",
+          "short_id": "4a563372",
+          "created_at": "2026-10-02T14:22:26.000+09:00",
+          "parent_ids": [
+            "ddc9d9e7c70005223176ad2c1c5f503e38428327"
+          ],
+          "title": "docs(fe): constitution 6.1.0 초안으로 비로그인 브라우저 정보는 탭을 닫으면 지운다는 원칙을 더하고 spec 015 버튼 위치를 맞춘다",
+          "message": "docs(fe): constitution 6.1.0 초안으로 비로그인 브라우저 정보는 탭을 닫으면 지운다는 원칙을 더하고 spec 015 버튼 위치를 맞춘다\n\n'기록·개인정보·보관' 절에 규칙을 더했다. 비로그인 사용자의 입력·기록·화면 상태처럼 브라우저에 두는\n사용자 정보는 탭 단위 세션 저장소에 두고, 탭을 닫으면 모두 지운다. 쿠키나 탭을 닫아도 남는 저장소는\n쓰지 않는다. 인증·보안 쿠키는 사용자 기록이 아니므로 규칙 밖이다. 미승인 초안이며 전체 회의 승인이 남았다.\n\nspec 002·003·009는 이미 이 규칙을 따른다. 따르지 않던 spec 015는 도우미 버튼 위치를 탭 단위로\n기억하도록 spec과 plan을 고쳤다. 코드(fabPosition.ts의 localStorage)는 별도 작업으로 고친다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T14:22:26.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T14:22:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4a5633723f771da0153c3332f82b41f431098c42"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,19 @@\n <!--\n Sync Impact Report\n+- **(초안, 미승인) Version change: 6.0.1 → 6.1.0.** '기록·개인정보·보관' 절에 비로그인 사용자의 브라우저\n+  쪽 정보 규칙을 더했다. 비로그인 사용자의 입력·기록·화면 상태처럼 브라우저에 두는 사용자 정보는 탭 단위\n+  세션 저장소에 두고 그 탭을 닫으면 모두 지워진다. 쿠키나 탭을 닫아도 남는 브라우저 저장소에 두지 않으며,\n+  새로고침·같은 탭 안의 이동·로그인 왕복은 버틴다. 인증·보안 쿠키는 사용자 기록이 아니므로 규칙 밖이다.\n+  새 규칙 추가이므로 MINOR다. 6.0.1 초안 다음 번호를 썼고, 6.0.1 초안의 미승인 상태는 바꾸지 않는다.\n+- 6.1.0 초안의 근거: spec 013 담당자 지시(2026-10-02, \"비로그인 관련은 constitution부터 모든 spec에 대해\n+  브라우저 탭이 닫히면 다 지워지는 것을 원칙으로 한다\"). spec 002 FR-014, 003 FR-017, 009가 이미 '탭을\n+  닫으면 사라진다'를 따르고 있어 이를 모든 spec의 원칙으로 올린다. 저장 수단으로 쿠키도 검토했으나,\n+  쿠키는 같은 브라우저의 모든 탭이 함께 쓰고 브라우저를 모두 닫아야 지워지며(세션 복원이 켜져 있으면\n+  남는다) 요청마다 서버로 전송되어 이 규칙을 지킬 수 없어 기각했다.\n+- Modified principles: 없음. Modified sections: 기록·개인정보·보관(초안). Follow-up TODOs: 전체 회의 승인\n+  또는 반려. 이 규칙을 따르지 않던 spec 015(도우미 버튼 위치를 탭을 닫아도 남는 저장소에 둔다)는 같은\n+  MR에서 spec·plan을 고치고 코드는 별도 작업으로 고친다. spec 013은 `docs(fe)/spec-013-clarify`에서\n+  반영했다.\n - **(초안, 미승인) Version change: 6.0.0 → 6.0.1.** 원칙 II의 \"자료 부족·근거 부족·미판정\n   상태\" 문장에 표시의 **형태**는 화면의 쓰임에 따라 달리할 수 있다는 단서를 붙였다. 검색 화면처럼 그 결과가 주인공인 자리는 이름표가\n   있는 안내 상자로 두고, 투자 대상 고르기의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약\n@@ -617,6 +631,12 @@ AI(Claude 등) 모두에게 적용된다.\n \n - 개인 식별정보는 계산 기록과 분리한다.\n - 보관 기간·삭제·연결 해제·공유 후 회수 정책은 spec으로 남기고, 무기한 보관을 전제하지 않는다.\n+- 비로그인 사용자의 입력·기록·화면 상태처럼 브라우저에 두는 사용자 정보는 탭 단위 세션 저장소에 두고,\n+  그 탭을 닫으면 모두 지워진다. 쿠키나 탭을 닫아도 남는 브라우저 저장소에 두지 않는다. 새로고침, 같은\n+  탭 안의 화면 이동, 로그인 왕복은 버틴다. 서비스 동작에 필요한 인증·보안 쿠키는 사용자 기록이 아니므로\n+  이 규칙 밖이다. 오래 남겨야 하는 기록은 로그인 사용자의 계정에 두고 위 보관 정책을 따른다. 비로그인\n+  사용자는 식별되지 않아 서비스가 그 기록을 지켜 주거나 지워 달라는 요청을 받을 수 없고, 공용 컴퓨터에서\n+  다음 사람이 앞 사람의 기록을 보지 않게 하려는 것이다. (초안, 6.1.0)\n - CSV/JSON 내보내기를 제공한다. 원천 시세·기사의 내보내기는 자료별 이용 범위 안에서만 제공한다.\n - 내 기록의 기본 동작은 '다시 보기 / 설정 바꿔 비교'이며, 상세 설정·거래 내역·내보내기는 추가\n   메뉴에서 접근한다.\n@@ -828,4 +848,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 6.0.0 (Jira 연계 규칙 삭제; 3.5.0·5.0.0·6.0.1 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-29\n+**Version**: 6.0.0 (Jira 연계 규칙 삭제; 3.5.0·5.0.0·6.0.1·6.1.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-29\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@\n \n **Primary Dependencies**: 기존만 쓴다 — Frontend `radix-ui` Popover·`lucide-react`·Axios; Backend Spring MVC·Validation, Java `HttpClient`(`market/infrastructure/client/MarketHttpClient` 관례), Jackson. 새 SDK·벡터 DB·채팅 저장소는 없다.\n \n-**Storage**: 없다. 질문·답변 원문을 저장하지 않는다. 한도 카운터는 인스턴스 메모리다(다중 인스턴스 전까지). 버튼 위치만 브라우저 `localStorage` `thorp.assistant.fabPosition`.\n+**Storage**: 없다. 질문·답변 원문을 저장하지 않는다. 한도 카운터는 인스턴스 메모리다(다중 인스턴스 전까지). 버튼 위치만 브라우저 `sessionStorage` `thorp.assistant.fabPosition`(탭을 닫으면 지워진다, constitution 6.1.0 초안). 2026-10-02 전 구현은 `localStorage`를 썼고, 코드 변경은 별도 작업이다.\n \n **Testing**: Backend JUnit 5·MockMvc·`PortMockedIntegrationTestSupport`(PostgreSQL Testcontainers), 모델은 가짜 포트와 로컬 가짜 HTTP 서버. Frontend Vitest·React Testing Library. 실제 모델 호출은 Task 6 평가 문서에만.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/plan.md",
+          "old_path": "specs/015-context-assistant/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,6 +18,10 @@\n \n ## Clarifications\n \n+### Session 2026-10-02\n+\n+- 결정(constitution 6.1.0 초안 반영): 브라우저에 두는 사용자 정보는 탭을 닫으면 모두 지운다는 원칙에 따라, 도우미 버튼 위치도 그 탭이 열려 있는 동안만 기억하고 탭을 닫으면 처음 자리로 돌아간다. 버튼 위치는 로그인 여부와 관계없이 탭 단위로 기억한다. 종전에는 탭을 닫아도 남는 브라우저 저장소에 두었다. (US3 시나리오 2, FR-014)\n+\n ### Session 2026-09-24\n \n - Q: 배우기·시장 흐름까지 한 번에 하나? → A: 아니다. 결과 화면 1차만 확정한다. 나머지는 1차를 내보낸 뒤 spec 개정으로 정한다. 기능이 얼마나 쓸모 있는지의 기준도 그때 정한다 — 지금은 만드는 데 집중한다.\n@@ -79,7 +83,7 @@\n **Acceptance Scenarios**:\n \n 1. **Given** 기능이 켜진 결과 화면, **When** 화면이 열리면, **Then** 여백에 `질문하기` 접근 이름의 로봇 아이콘 버튼이 닫힌 채 보이고, 결과 화면의 주 행동 버튼은 여전히 '비교 대상 고르기' 하나다.\n-2. **Given** 넓은 화면, **When** 버튼을 콘텐츠 위로 끌어 놓으면, **Then** 가까운 쪽 여백으로 붙고 위치가 브라우저에 기억된다.\n+2. **Given** 넓은 화면, **When** 버튼을 콘텐츠 위로 끌어 놓으면, **Then** 가까운 쪽 여백으로 붙고 위치가 그 탭이 열려 있는 동안 기억된다. 탭을 닫았다 새로 열면 처음 자리에서 시작한다.\n 3. **Given** 말풍선이 열린 상태, **When** Escape를 누르면, **Then** 말풍선이 닫히고 초점이 버튼으로 돌아간다.\n 4. **Given** 첫 질문을 보내기 전, **When** 말풍선을 열면, **Then** \"백테스트 결과에 대해서 질문해보세요.\" 안내와 예시 질문이 보이고, 전송은 사용자가 제출할 때만 일어난다. 화면 자료가 외부 AI 처리 서비스로 전달된다는 사실은 말풍선이 아니라 서비스 안내(이용 약관·도움말)가 맡는다.\n 5. **Given** 기능이 꺼진 환경(`capabilities.enabled=false`), **When** 어느 화면을 열어도, **Then** 버튼이 보이지 않고 기존 화면은 그대로다.\n@@ -134,7 +138,7 @@\n - **FR-011**: 추천·종목 매수·미래 성과·확률 표현·원인 단정을 답에 넣지 않는다(원칙 III). 시장 결과의 원인 질문에는 관측된 사실만 제시한다. 설정값·비용 규칙에서 바로 따라오는 값(세금 0원 등)은 근거에 실린 규칙 설명을 인용해 설명할 수 있다. 질문이 결과의 값을 묻지 않으면(인사·잡담) 근거를 나열하지 않고 `GREETING`이다. 비교 대상·KOSPI 참고선·다른 결과는 범위 밖으로 안내한다.\n - **FR-012**: 요청은 서버에서 2분(근거 팩 만들기·도구 라운드 포함) 안에 끝내고 자동 재시도하지 않는다. 모델 장애·시간 초과는 503 `ASSISTANT_UNAVAILABLE`, 한도 초과는 429 `ASSISTANT_LIMIT`, 기능 비활성이면 질문 경로는 404다(`capabilities`는 항상 200). 어느 오류에서도 다른 자료로 대체 답변하지 않고 기존 결과 화면은 영향받지 않는다.\n - **FR-013**: 한도는 설정값이다 — IP별 분당 요청 수, 결과 토큰별 분당 요청 수, 하루 전체 요청 수(초안 8·5·1000). 넘으면 429다. 질문 길이 상한(300자)은 한도가 아니라 입력 검증이라 400이다. 금액 상한은 두지 않는다.\n-- **FR-014**: 서버는 질문·답변 원문을 영속 저장하지 않는다. 운영 로그에는 페이지 종류·상태·라운드 수·지연·토큰 사용량만 남기고 토큰·식별자·원문을 남기지 않는다. 대화는 새로고침하면 사라진다(버튼 위치만 남는다).\n+- **FR-014**: 서버는 질문·답변 원문을 영속 저장하지 않는다. 운영 로그에는 페이지 종류·상태·라운드 수·지연·토큰 사용량만 남기고 토큰·식별자·원문을 남기지 않는다. 대화는 새로고침하면 사라진다(버튼 위치만 남는다). 버튼 위치도 탭을 닫으면 지워진다(constitution 6.1.0 초안).\n - **FR-015**: 화면이 바뀌면 진행 중 요청을 취소하고 말풍선을 닫고 이력을 비운다. 늦게 끝난 이전 화면의 응답을 새 화면의 답으로 보이지 않는다. 같은 화면에서 말풍선을 닫았다 열면 이력과 진행 중 요청이 남는다(저장하지 않으므로 새로 고치면 사라진다).\n - **FR-016**: 기능은 플래그로 켜고 끈다. 꺼져 있거나 모델 키·주소·모델명 중 하나라도 비어 있으면 `capabilities.enabled=false`이고 버튼이 없다. 이 값들이 비어 있어도 서버 기동은 정상이다(설정에 빈 기본값을 둔다). 켜는 것은 품질 관문(SC-001~SC-004)을 넘긴 뒤다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/spec.md",
+          "old_path": "specs/015-context-assistant/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2880699": []
+  }
+}

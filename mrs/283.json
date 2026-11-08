@@ -1,0 +1,711 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 955320,
+    "iid": 283,
+    "project_id": 1444456,
+    "title": "refactor(fe): 규정 근거 없는 안내 문구를 화면에서 제거한다",
+    "description": "# 작업 내용 요약\n\n결과 화면과 전략 탐색 화면에서 FR이나 constitution이 요구하지 않는 안내 문장 다섯 개를 지운다. 화면에 보이는 글자가 191자 줄어들며, 지운 문장이 말하던 사실은 모두 화면에 다른 형태로 이미 남아 있다.\n\n# 관련 티켓\n- ticket # S15P21E205-402\n- link https://ssafy.atlassian.net/browse/S15P21E205-402\n\n# 주요 변경 사항\n\n| 화면 | 자리 | 지운 문구 | 그 자리에 남는 것 |\n|---|---|---|---|\n| `/param-search` | '비교에 담은 설정 N개' 트레이 맨 아래 | \"비교 화면이 아직 없어 넘기지 못합니다. 담은 설정은 이 화면에서 그대로 유지됩니다.\" | 문단째 사라지고 빈 자리가 된다. 넘길 화면이 생기면 그 자리에 진입 버튼이 들어선다 |\n| `/param-search` | 부분 결과 안내 상자, 개수 목록 아래 | \"미실행 후보는 계산하지 않았을 뿐 성과가 나쁜 것이 아닙니다.\" | 완료·실패·미실행 개수 목록과 \"남은 범위는 새 탐색으로 이어서 볼 수 있습니다.\" |\n| `/param-search` | 후보 카드와 후보 상세의 사유 줄 (제외·실패·미실행 후보마다 하나씩) | \"계산하지 않았다는 뜻이며 수익이 낮았다는 뜻이 아닙니다.\" | 상태 이름('미실행' 등), 서버가 준 사유 문장, `data-unmeasured` 표시 |\n| `/results/:token` | 자세히 보기 → 상관관계·위험 기여·손실 기여 묶음 아래 | \"세 항목은 아직 결과 조회로 받을 수 없어 값을 보이지 않습니다. 0이나 임의 값으로 채우지 않습니다.\" | 세 칸 각각의 '제공되지 않음' 표시 |\n| `/results/:token` | 지수와 비교하기 → 환산 값 표 아래 | \"참고:\" 와 \"비교 기준을 바꾸지 않습니다.\" | \"지수를 시작 금액으로 환산했습니다.\" |\n\n세 번째 항목이 체감이 가장 크다. 제외·실패·미실행 후보가 20개면 같은 문장이 화면에 20번 있었다.\n\n# 테스트\n- [x] `npx tsc --noEmit` 통과, `npm run lint` 오류 0(경고 20은 기존), `npx vitest run` 1311개 통과\n- [x] 로컬에 백엔드·워커·DB를 띄우고 KRX 일봉 2년치를 적재한 뒤 백테스트를 실행해 결과 화면에서 눈으로 확인\n\n# 리뷰 포인트\n- 부분 결과와 후보 사유의 문장은 원칙 VI(\"제약 위반·자료 부족·계산 실패를 낮은 수익과 구분해 기록하고 표시한다\")에 걸릴 수 있어 판단이 필요했다. 구분은 개수를 따로 세는 목록과 상태 이름·`data-unmeasured`가 이미 지고 있다고 보고 부연 문장만 지웠다. 이 해석에 이견이 있으면 되돌린다.\n- 사전 조사가 제거 대상으로 꼽았던 `NextStepLinks`와 `StrategySettingsPage` 문구는 현재 코드에 없어 손대지 않았다. `BacktestPage`·`DashboardPage`의 예시 데이터 고지는 문구가 아니라 화면 자체의 존치를 정해야 하는 문제라 범위 밖으로 두었다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 문장을 지우기만 했고 순위·추천 표현을 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 관련 코드를 건드리지 않았다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 후보 사유의 상태 이름과 사유 문장, 부분 결과의 미실행 개수를 그대로 두었다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — ValidationNote·ValidationBadge를 건드리지 않았다",
+    "state": "merged",
+    "created_at": "2026-09-21T21:37:20.482+09:00",
+    "updated_at": "2026-09-21T21:52:06.311+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T21:52:05.998+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/402-remove-unneeded-notices",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+    "merge_commit_sha": "0914981b0af4baab6938c4bd19d47211c0073ae9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T21:37:22.784+09:00",
+    "reference": "!283",
+    "references": {
+      "short": "!283",
+      "relative": "!283",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!283"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/283",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 955320,
+    "iid": 283,
+    "project_id": 1444456,
+    "title": "refactor(fe): 규정 근거 없는 안내 문구를 화면에서 제거한다",
+    "description": "# 작업 내용 요약\n\n결과 화면과 전략 탐색 화면에서 FR이나 constitution이 요구하지 않는 안내 문장 다섯 개를 지운다. 화면에 보이는 글자가 191자 줄어들며, 지운 문장이 말하던 사실은 모두 화면에 다른 형태로 이미 남아 있다.\n\n# 관련 티켓\n- ticket # S15P21E205-402\n- link https://ssafy.atlassian.net/browse/S15P21E205-402\n\n# 주요 변경 사항\n\n| 화면 | 자리 | 지운 문구 | 그 자리에 남는 것 |\n|---|---|---|---|\n| `/param-search` | '비교에 담은 설정 N개' 트레이 맨 아래 | \"비교 화면이 아직 없어 넘기지 못합니다. 담은 설정은 이 화면에서 그대로 유지됩니다.\" | 문단째 사라지고 빈 자리가 된다. 넘길 화면이 생기면 그 자리에 진입 버튼이 들어선다 |\n| `/param-search` | 부분 결과 안내 상자, 개수 목록 아래 | \"미실행 후보는 계산하지 않았을 뿐 성과가 나쁜 것이 아닙니다.\" | 완료·실패·미실행 개수 목록과 \"남은 범위는 새 탐색으로 이어서 볼 수 있습니다.\" |\n| `/param-search` | 후보 카드와 후보 상세의 사유 줄 (제외·실패·미실행 후보마다 하나씩) | \"계산하지 않았다는 뜻이며 수익이 낮았다는 뜻이 아닙니다.\" | 상태 이름('미실행' 등), 서버가 준 사유 문장, `data-unmeasured` 표시 |\n| `/results/:token` | 자세히 보기 → 상관관계·위험 기여·손실 기여 묶음 아래 | \"세 항목은 아직 결과 조회로 받을 수 없어 값을 보이지 않습니다. 0이나 임의 값으로 채우지 않습니다.\" | 세 칸 각각의 '제공되지 않음' 표시 |\n| `/results/:token` | 지수와 비교하기 → 환산 값 표 아래 | \"참고:\" 와 \"비교 기준을 바꾸지 않습니다.\" | \"지수를 시작 금액으로 환산했습니다.\" |\n\n세 번째 항목이 체감이 가장 크다. 제외·실패·미실행 후보가 20개면 같은 문장이 화면에 20번 있었다.\n\n# 테스트\n- [x] `npx tsc --noEmit` 통과, `npm run lint` 오류 0(경고 20은 기존), `npx vitest run` 1311개 통과\n- [x] 로컬에 백엔드·워커·DB를 띄우고 KRX 일봉 2년치를 적재한 뒤 백테스트를 실행해 결과 화면에서 눈으로 확인\n\n# 리뷰 포인트\n- 부분 결과와 후보 사유의 문장은 원칙 VI(\"제약 위반·자료 부족·계산 실패를 낮은 수익과 구분해 기록하고 표시한다\")에 걸릴 수 있어 판단이 필요했다. 구분은 개수를 따로 세는 목록과 상태 이름·`data-unmeasured`가 이미 지고 있다고 보고 부연 문장만 지웠다. 이 해석에 이견이 있으면 되돌린다.\n- 사전 조사가 제거 대상으로 꼽았던 `NextStepLinks`와 `StrategySettingsPage` 문구는 현재 코드에 없어 손대지 않았다. `BacktestPage`·`DashboardPage`의 예시 데이터 고지는 문구가 아니라 화면 자체의 존치를 정해야 하는 문제라 범위 밖으로 두었다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 문장을 지우기만 했고 순위·추천 표현을 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 관련 코드를 건드리지 않았다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 후보 사유의 상태 이름과 사유 문장, 부분 결과의 미실행 개수를 그대로 두었다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — ValidationNote·ValidationBadge를 건드리지 않았다",
+    "state": "merged",
+    "created_at": "2026-09-21T21:37:20.482+09:00",
+    "updated_at": "2026-09-21T21:52:06.311+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T21:52:05.998+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/402-remove-unneeded-notices",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+    "merge_commit_sha": "0914981b0af4baab6938c4bd19d47211c0073ae9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T21:37:22.784+09:00",
+    "reference": "!283",
+    "references": {
+      "short": "!283",
+      "relative": "!283",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!283"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/283",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-21T21:37:33.616+09:00",
+    "latest_build_finished_at": "2026-09-21T21:44:29.904+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 213902,
+      "iid": 288,
+      "project_id": 1444456,
+      "sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+      "ref": "refactor(fe)/402-remove-unneeded-notices",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T21:37:33.507+09:00",
+      "updated_at": "2026-09-21T21:44:29.911+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213902"
+    },
+    "head_pipeline": {
+      "id": 213902,
+      "iid": 288,
+      "project_id": 1444456,
+      "sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+      "ref": "refactor(fe)/402-remove-unneeded-notices",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T21:37:33.507+09:00",
+      "updated_at": "2026-09-21T21:44:29.911+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213902",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T21:37:33.616+09:00",
+      "finished_at": "2026-09-21T21:44:29.904+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213902",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "e44c3c45b753f699dd9dc268c98d98988f4dbfa6",
+      "head_sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+      "start_sha": "2fdeae60031c9b47b04ba328ee07ab5d21399487"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "490216db8686114a80062b7343c29c6dafbf696c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850661,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T21:37:20.623+09:00",
+          "updated_at": "2026-09-21T21:37:20.632+09:00",
+          "system": true,
+          "noteable_id": 955320,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 283,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7a1db0d840abaa615e2f188a965cc677c42990dd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850662,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **UI 노이즈 감소 및 명확성 제고**: 사용자의 인지 부하를 높이던 불필요한 설명성 문구들을 깔끔하게 제거하여 화면의 가독성을 높였습니다. \n- **컴포넌트 책임 분리**: `CompareHandoff`에서 미구현 상태를 장황한 설명 문구 대신 조건부 렌더링(`null`)으로 처리하여 UI 컴포넌트의 목적에 맞게 간결하게 잘 다듬었습니다.\n- **테스트 코드 동기화**: 변경된 문구에 맞춰 관련 테스트 케이스(`ResultPage.auxiliary.test.tsx`)를 함께 수정하여 테스트 안정성을 유지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **지수 환산 문구 검증**: `ResultPage` 내 `IndexComparisonView` 컴포넌트에서 환산된 지수 데이터와 함께 변경된 단축 문구(\"지수를 시작 금액으로 환산했습니다.\")가 화면에 올바르게 노출되는지 스냅샷 또는 텍스트 단언(Assertion) 테스트로 확인합니다.\n- **비교 화면 진입 버튼 비활성화 상태 검증**: `CompareHandoff` 컴포넌트에서 `onOpenCompare` prop이 전달되지 않았을 때, 기존의 차단 안내 문구(`.blocked`) 대신 진입 버튼 자리가 완전히 비워져(렌더링되지 않고) 있는지 확인합니다.\n- **후보 사유 및 부분 결과 안내 확인**: `CandidateReason`과 `PartialResultNotice` 컴포넌트에서 불필요한 부연 설명이 제거된 상태에서도 미실행/실패 상태(`data-unmeasured`)와 남은 범위 안내 메시지가 의도대로 간결하게 표시되는지 시각적 또는 단위 테스트로 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:2706dd23db9920bf64ca352258bcd48fcbe1ae6c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T21:37:31.288+09:00",
+          "updated_at": "2026-09-21T21:37:31.288+09:00",
+          "system": false,
+          "noteable_id": 955320,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 283,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "01e75e60c877a52559b79fba36b23183bc41fca1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850666,
+          "type": null,
+          "body": "mentioned in merge request !284",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T21:38:05.686+09:00",
+          "updated_at": "2026-09-21T21:38:05.692+09:00",
+          "system": true,
+          "noteable_id": 955320,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 283,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6eb441708d46e00e438a4c4e95e366b9ae3b31bc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850708,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T21:50:39.406+09:00",
+          "updated_at": "2026-09-21T21:50:39.410+09:00",
+          "system": true,
+          "noteable_id": 955320,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 283,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f6ccd69fe3892c03155669939790dec07a7b3fdd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850711,
+          "type": null,
+          "body": "mentioned in commit 0914981b0af4baab6938c4bd19d47211c0073ae9",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T21:52:06.072+09:00",
+          "updated_at": "2026-09-21T21:52:06.076+09:00",
+          "system": true,
+          "noteable_id": 955320,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 283,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2235154,
+      "head_commit_sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+      "base_commit_sha": "e44c3c45b753f699dd9dc268c98d98988f4dbfa6",
+      "start_commit_sha": "2fdeae60031c9b47b04ba328ee07ab5d21399487",
+      "created_at": "2026-09-21T21:37:21.892+09:00",
+      "merge_request_id": 955320,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "bf4b8bc079c0e6d4c5852621f9861b36fe45fe99"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2235154,
+      "head_commit_sha": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+      "base_commit_sha": "e44c3c45b753f699dd9dc268c98d98988f4dbfa6",
+      "start_commit_sha": "2fdeae60031c9b47b04ba328ee07ab5d21399487",
+      "created_at": "2026-09-21T21:37:21.892+09:00",
+      "merge_request_id": 955320,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "bf4b8bc079c0e6d4c5852621f9861b36fe45fe99",
+      "commits": [
+        {
+          "id": "2706dd23db9920bf64ca352258bcd48fcbe1ae6c",
+          "short_id": "2706dd23",
+          "created_at": "2026-09-21T20:44:11.000+09:00",
+          "parent_ids": [
+            "f6c9055693b7d68762e3db85dfc34f70b4d378df"
+          ],
+          "title": "refactor(fe): 후보 사유에서 중복 설명을 뺀다",
+          "message": "refactor(fe): 후보 사유에서 중복 설명을 뺀다\n\n상태 이름과 사유 문장이 이미 계산하지 않은 후보임을 알린다. 그 뒤에\n수익이 낮은 것이 아니라고 덧붙이는 문장은 같은 말의 반복이라 지운다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T20:44:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T20:44:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2706dd23db9920bf64ca352258bcd48fcbe1ae6c"
+        },
+        {
+          "id": "f6c9055693b7d68762e3db85dfc34f70b4d378df",
+          "short_id": "f6c90556",
+          "created_at": "2026-09-21T20:44:11.000+09:00",
+          "parent_ids": [
+            "d234638873c2bcdb66b09dfe4a8d2d9689b8d9bd"
+          ],
+          "title": "refactor(fe): 부분 결과 안내에서 중복 설명을 뺀다",
+          "message": "refactor(fe): 부분 결과 안내에서 중복 설명을 뺀다\n\n바로 위 목록이 완료·실패·미실행을 따로 세고 있고, 그 구분 자체가 원칙 VI가\n요구하는 표시다. 같은 사실을 문장으로 다시 말하지 않고, 다음에 할 수 있는\n행동만 남긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T20:44:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T20:44:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f6c9055693b7d68762e3db85dfc34f70b4d378df"
+        },
+        {
+          "id": "d234638873c2bcdb66b09dfe4a8d2d9689b8d9bd",
+          "short_id": "d2346388",
+          "created_at": "2026-09-21T20:44:11.000+09:00",
+          "parent_ids": [
+            "7733c88c6bbb89fd1e69828a9ef7d270e2934496"
+          ],
+          "title": "refactor(fe): 지수 비교 안내에서 방어 문장을 뺀다",
+          "message": "refactor(fe): 지수 비교 안내에서 방어 문장을 뺀다\n\n'비교 기준을 바꾸지 않습니다'는 일어나지도 않는 일을 미리 부정하는 문장이라\n지운다. 표가 무엇을 보이는지 알려 주는 앞 문장만 남긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T20:44:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T20:44:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d234638873c2bcdb66b09dfe4a8d2d9689b8d9bd"
+        },
+        {
+          "id": "7733c88c6bbb89fd1e69828a9ef7d270e2934496",
+          "short_id": "7733c88c",
+          "created_at": "2026-09-21T20:44:11.000+09:00",
+          "parent_ids": [
+            "840d53e723c1b8f56e987a0feb8d54ed085876c6"
+          ],
+          "title": "refactor(fe): 자세히 보기에서 구현 원칙 설명을 뺀다",
+          "message": "refactor(fe): 자세히 보기에서 구현 원칙 설명을 뺀다\n\n상관관계·위험 기여·손실 기여는 이미 항목마다 '제공되지 않음'으로 보인다.\n그 아래에서 0이나 임의 값으로 채우지 않는다고 다시 말하는 것은 팀의 구현\n원칙을 사용자에게 설명한 것이라 지운다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T20:44:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T20:44:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7733c88c6bbb89fd1e69828a9ef7d270e2934496"
+        },
+        {
+          "id": "840d53e723c1b8f56e987a0feb8d54ed085876c6",
+          "short_id": "840d53e7",
+          "created_at": "2026-09-21T20:44:11.000+09:00",
+          "parent_ids": [
+            "e44c3c45b753f699dd9dc268c98d98988f4dbfa6"
+          ],
+          "title": "refactor(fe): 비교 인계에서 미구현 고지를 뺀다",
+          "message": "refactor(fe): 비교 인계에서 미구현 고지를 뺀다\n\n넘길 비교 화면이 없을 때 그 사실을 문장으로 알리는 대신 진입 버튼 자리를\n비운다. 개발 진행 상황은 사용자가 판단에 쓸 정보가 아니다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T20:44:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T20:44:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/840d53e723c1b8f56e987a0feb8d54ed085876c6"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -20,8 +20,3 @@\n .reason[data-unmeasured='false'] strong {\n   color: var(--thorp-muted);\n }\n-\n-.distinction {\n-  color: var(--thorp-muted);\n-  font-size: 0.69rem;\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateReason.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateReason.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,8 @@ const unmeasured = ['EXCLUDED', 'FAILED', 'SKIPPED']\n  *\n  * <p><b>낮은 수익과 구분하는 것이 이 컴포넌트의 전부다.</b> 숫자 자리를 비워 두기만 하면 사용자는\n  * \"왜 비었지\"를 각자 상상하고, 0으로 채우면 \"수익이 없었다\"로 읽는다. 둘 다 사실이 아니다 —\n- * 이 후보들은 <b>계산을 하지 않았다</b>.\n+ * 이 후보들은 <b>계산을 하지 않았다</b>. 그 구분은 상태 이름과 사유 문장, 그리고\n+ * `data-unmeasured`가 지고 있다. 같은 말을 덧붙이는 문장은 두지 않는다.\n  *\n  * <p>사유 문장은 서버가 준 것을 먼저 쓴다. 유효성 규칙이 돌려준 문장이 화면이 지어낸 문장보다\n  * 정확하고, 규칙이 늘어도 화면을 고치지 않아도 된다.\n@@ -26,11 +27,6 @@ export function CandidateReason({ candidate }: CandidateReasonProps) {\n     <p className={styles.reason} data-unmeasured={notMeasured}>\n       <strong>{candidateStatusText(candidate.status)}</strong>\n       <span>{missingPerformanceReason(candidate)}</span>\n-      {notMeasured && (\n-        <span className={styles.distinction}>\n-          계산하지 않았다는 뜻이며 수익이 낮았다는 뜻이 아닙니다.\n-        </span>\n-      )}\n     </p>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateReason.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateReason.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -109,20 +109,13 @@\n   outline-offset: var(--thorp-focus-offset-compact);\n }\n \n-.note,\n-.blocked {\n+.note {\n   margin: 0;\n   color: var(--thorp-muted);\n   font-size: 0.72rem;\n   line-height: 1.55;\n }\n \n-.blocked {\n-  padding: 9px 11px;\n-  border: 1px dashed var(--thorp-line-strong);\n-  border-radius: 5px;\n-}\n-\n .open {\n   display: inline-flex;\n   min-height: 40px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CompareHandoff.module.css",
+          "old_path": "frontend/src/components/paramsearch/CompareHandoff.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@ interface CompareHandoffProps {\n   onRemove: (candidateId: string) => void\n   onClear: () => void\n   /**\n-   * 005 비교 화면으로 넘기는 동작. **없으면 진입 지점만 보이고 눌리지 않는다** —\n+   * 005 비교 화면으로 넘기는 동작. **없으면 진입 버튼을 아예 그리지 않는다** —\n    * 005가 아직 없으므로 지금이 그 상태다.\n    */\n   onOpenCompare?: (candidateIds: string[]) => void\n@@ -32,8 +32,8 @@ interface CompareHandoffProps {\n  * <p><b>기준 이름은 응답에서만 온다</b>(FR-025). 한때 대체 문구에 전략명을 적어 두었는데,\n  * 등록표가 기준 전략을 바꾸면 화면만 옛 이름을 말하게 된다.\n  *\n- * <p>005가 붙기 전까지는 <b>진입 지점과 표시만</b> 만든다. 눌리지 않는 버튼을 이유 없이 두지 않고\n- * 무엇이 없어서 막혔는지 적는다.\n+ * <p>005가 붙기 전까지는 <b>담은 목록과 기준 표시만</b> 만든다. 넘길 곳이 없으면 진입 버튼 자리를\n+ * 비운다 — 무엇이 아직 안 만들어졌는지는 사용자가 알 바가 아니다.\n  */\n export function CompareHandoff({\n   picks,\n@@ -97,11 +97,7 @@ export function CompareHandoff({\n           비교 화면에서 보기\n           <ArrowUpRight size={15} aria-hidden=\"true\" />\n         </button>\n-      ) : (\n-        <p className={styles.blocked}>\n-          비교 화면이 아직 없어 넘기지 못합니다. 담은 설정은 이 화면에서 그대로 유지됩니다.\n-        </p>\n-      )}\n+      ) : null}\n     </aside>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CompareHandoff.tsx",
+          "old_path": "frontend/src/components/paramsearch/CompareHandoff.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,7 +19,8 @@ interface PartialResultNoticeProps {\n  * 않으면, 사용자는 지금 보는 결과가 전체의 얼마인지 모른 채 비교하게 된다.\n  *\n  * <p>미실행은 <b>실패가 아니다</b>. 취소·한도로 발행하지 않은 것이라 \"안 좋아서 빠진 것\"이 아니고,\n- * 그래서 실패 수와 따로 센다.\n+ * 그래서 실패 수와 따로 센다 — 둘을 나눠 센 것 자체가 원칙 VI가 요구하는 구분이므로, 그 사실을\n+ * 문장으로 한 번 더 설명하지 않는다.\n  *\n  * <p>멈추는 중일 때도 그 사실을 적는다 — 이미 큐에 든 후보는 완주하므로 취소를 누른 뒤에도 숫자가\n  * 잠시 더 움직인다. 모르면 취소가 안 먹은 것처럼 보인다.\n@@ -65,7 +66,7 @@ export function PartialResultNotice({\n         <p className={styles.text}>\n           {stopping\n             ? '이미 실행에 들어간 후보는 끝까지 계산합니다. 그것이 끝나면 부분 결과로 마무리됩니다.'\n-            : '미실행 후보는 계산하지 않았을 뿐 성과가 나쁜 것이 아닙니다. 남은 범위는 새 탐색으로 이어서 볼 수 있습니다.'}\n+            : '남은 범위는 새 탐색으로 이어서 볼 수 있습니다.'}\n         </p>\n       </div>\n     </section>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PartialResultNotice.tsx",
+          "old_path": "frontend/src/components/paramsearch/PartialResultNotice.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -118,9 +118,6 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta\n             <p className={styles.limited}>{NOT_PROVIDED}</p>\n           </Item>\n         </div>\n-        <p className={styles.muted}>\n-          세 항목은 아직 결과 조회로 받을 수 없어 값을 보이지 않습니다. 0이나 임의 값으로 채우지 않습니다.\n-        </p>\n       </div>\n \n       <div className={styles.grid}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -106,9 +106,7 @@ export function IndexComparisonView({\n                   </tbody>\n                 </table>\n               </div>\n-              <p className={styles.note}>\n-                참고: 지수를 시작 금액으로 환산했습니다. 비교 기준을 바꾸지 않습니다.\n-              </p>\n+              <p className={styles.note}>지수를 시작 금액으로 환산했습니다.</p>\n             </>\n           ) : null}\n         </div>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/IndexComparisonView.tsx",
+          "old_path": "frontend/src/components/result/IndexComparisonView.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -142,7 +142,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n \n     const panel = await screen.findByRole('region', { name: '지수와 비교하기' })\n     expect(within(panel).getByText('10012345.67')).toBeTruthy()\n-    expect(within(panel).getByText('참고: 지수를 시작 금액으로 환산했습니다. 비교 기준을 바꾸지 않습니다.')).toBeTruthy()\n+    expect(within(panel).getByText('지수를 시작 금액으로 환산했습니다.')).toBeTruthy()\n     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2850662": []
+  }
+}

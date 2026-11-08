@@ -1,0 +1,584 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948085,
+    "iid": 172,
+    "project_id": 1444456,
+    "title": "fix(be): 자동 탐색도 평가 시작일을 늦추지 않는다 (S15P21E205-316)",
+    "description": "# 작업 내용 요약\n\n같은 조건으로 분석을 요청해도 **어느 화면에서 왔느냐에 따라 결과 구간이 달랐다.** 단건 백테스트로\n2023-01-02 부터 요청하면 그날부터 평가하는데, 같은 조건을 자동 탐색에 넣으면 2023-09-28 부터\n평가했다. 사용자는 그 차이의 까닭을 알 수 없고, 두 화면의 숫자를 나란히 놓을 수도 없다.\n\n앞선 작업이 단건 접수에서 시작일을 뒤로 늦추던 계산을 걷어냈는데, 자동 탐색 쪽이 옛 규칙으로 남아\n있었다. 워밍업(전략이 첫 신호를 내려면 미리 읽어야 하는 과거 구간)은 요청 기간보다 앞에서 읽으면\n되고, 앞이 모자랄 때 집계 시작일을 늦추는 판단은 워커가 맡는다.\n\n이 MR 이후로 두 화면이 같은 규칙을 쓴다.\n\n# 관련 티켓 번호 & 링크\n\n- `S15P21E205-316` [BE] 자동 탐색도 평가 시작일을 워밍업만큼 늦추지 않는다\n- https://ssafy.atlassian.net/browse/S15P21E205-316\n- 선행 작업 `S15P21E205-205`. 그 작업이 남긴 `001 tasks.md` T037 을 이 MR 이 닫는다.\n\n# 무엇이 달라지나\n\n**자동 탐색의 결과 숫자가 바뀐다.** 탐색 구간이 길어지므로 후보들의 수익률과 최대 하락 폭이 모두\n움직인다. 단건 백테스트 쪽은 앞선 작업에서 이미 바뀌었고 이번에 더 바뀌지 않는다.\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 2023-07-03 상장 종목을 섞어 2023-01-02 부터 탐색 요청 | 2023-09-28 부터 탐색 | **2023-01-02 부터 탐색** |\n| 같은 조건을 단건과 탐색에 각각 넣음 | 두 구간이 다름 | **같음** |\n| 시작일을 아예 주지 않음 | 상장일 기준값을 서버가 제시 | 같다 |\n| 시작일로 토요일을 고름 | 다음 거래일부터 | 같다 |\n| 구간 안에 평가할 수 있는 날이 하루도 없음 | 422 로 거절 | 같다. 안내 문구만 바뀐다 |\n\n# 주요 변경 사항\n\n## 탐색 구간의 시작일을 무엇으로 정하는가\n\n사용자가 고른 시작일을 그대로 쓴다. 휴장일이면 다음 거래일로만 맞춘다. 주말을 시작일로 삼으면 단건\n접수가 고르는 날과 값이 갈리기 때문이다. 워밍업만큼 뒤로 늦추는 계산은 없앴다. 근거는 001 명세의\n`contracts/market-dataset.md` 「읽기 규칙」이며, 그 문서가 늦추는 판단을 워커 한 곳으로 정해 두었다.\n\n**시작일을 주지 않은 경우는 그대로 두었다.** 그때는 후보 집합을 평가할 수 있는 가장 이른 날이 곧\n서버의 제안값이고, 제시할 다른 값이 없다.\n\n## 거절해야 하는 두 경우를 나눈다\n\n늦추는 계산을 없애면 그 계산에 얹혀 있던 검사 하나가 빠져나간다. 단건 접수와 같은 모양으로 갈랐다.\n\n- 구간 안에 이 후보 집합으로 평가할 수 있는 날이 하루도 없는 경우. 탐색을 시작해 보아야 후보가 전부\n  실패하므로 접수에서 사유를 알려 준다\n- 요청한 시작일 이후 첫 거래일이 끝일을 넘는 경우. 상장 시점 때문이 아니므로 안내 문구를 달리한다\n\n## 비교가 깨지지 않는지 확인했다\n\n관측 기간이 서로 다른 후보를 한 묶음으로 비교하는 것이 자동 탐색이다. 앞이 얇은 구간에서는 후보마다\n평가 시작일이 갈릴 수 있다는 걱정이 있었다. 확인 결과 그렇지 않다. 묶음 전체에 공통 워밍업 하나를\n똑같이 적용하고 종목 집합도 고정이라, 워커가 늦추더라도 후보 전부가 같은 날부터 시작한다(원칙 IV).\n\n# 테스트\n\n기준선은 2026-09-17 `dev` `7818ed1` 기준 backend 1,403건(건너뜀 4)·worker 361건·data 583건이다.\n아래는 같은 날 측정이다.\n\n- [x] `backend`: `./gradlew cleanTest spotlessApply build` — 1,405건, 실패 0·오류 0·건너뜀 4\n- [x] `worker`: `ruff check && ruff format --check && pytest -q` — 361건, 건너뜀 0\n- [x] `data`: `ruff check && ruff format --check && pytest -q` — 583건, 건너뜀 0\n\n늘어난 2건은 이번에 더한 검사다. 하나는 같은 조건을 단건 접수와 탐색에 각각 넣어 같은 시작일이\n나오는지 보고, 다른 하나는 평가할 수 있는 날이 없는 구간을 거절하는지 본다. 앞엣것은 두 경로가 또\n갈라지면 빨개진다.\n\n건너뛰는 4건은 의도된 것이다(외부 실시간 시세 API 1, 뉴스 성능 측정 2,\n`THORP_REQUIRE_DOCKER=true` 일 때만 도는 Docker 확인 1). `cleanTest` 를 빼면 Gradle 이 테스트를\n건너뛰면서도 성공을 알리므로 반드시 붙여서 돌린다.\n\n**확인 필요**: backend 기준선 1,403건은 직접 측정한 값이 아니라 계산한 값이다. 이번에 고친 검사\n파일의 검사 수가 5개에서 7개로 늘었고 다른 검사 파일은 건드리지 않았다. 빌드가 통과해서 기준선을\n따로 재지 않았다.\n\n# 리뷰 포인트\n\n**1. 결정이 갈렸던 지점을 봐 달라.** 이 항목을 열어 둘 때의 걱정은 \"앞부분을 평가할 수 없는 구간을\n사용자에게 탐색 가능 구간으로 제안해도 되는가\" 였다. 맞추기로 정한 근거는 그 걱정보다 **같은 요청이\n화면에 따라 다른 구간을 낸다는 사실**이 무겁다고 본 것이다. 앞의 걱정은 남지만 새로 생긴 것이 아니다.\n단건 접수가 앞선 작업 이후 이미 같은 한계를 안고 있고, 두 경로가 같은 한계를 같은 모양으로 지는 편이\n한쪽만 다른 규칙을 쓰는 것보다 낫다고 보았다. 반대 의견이 있으면 알려 달라.\n\n**2. 남은 한계와 후속 조건.** 접수 단계는 자료가 실제로 언제 시작하는지 모른다. 상장일만 알 수 있고\n적재된 자료의 첫 거래일을 묻는 길이 없다. 그래서 화면에 보여 준 구간의 앞부분을 실제로는 평가하지\n못할 수 있고, 그때는 워커가 뒤로 늦춘다. **001 의 자료 계층이 실행 경로에 이어지고 자료 시작일을\n조회할 수 있게 되면**, 상장일과 자료 첫 거래일 중 늦은 쪽에서 세도록 옮긴다. 그 후속 조건은\n`001 tasks.md` T029 가 적어 둔 것과 같고, 같은 시점에 T030 도 함께 풀려야 한다.\n\n**3. 화면 문구는 이 MR 범위 밖이다.** 탐색 가능 구간의 앞부분을 평가하지 못할 수 있다는 사실을\n사용자에게 어떻게 보일지는 정하지 않았다. 구간은 요청한 대로 두고 실제 평가가 시작되는 날을 함께\n보이는 방식이 후보인데, 프론트와 합의가 필요해 손대지 않았다. 필요하면 별도 티켓으로 세운다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음. 구간을 정하는 계산이며 표시 후보를 다루지 않는다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 관측 길이는 등록표가 준 축의 단위를 보고 고른다. 축 이름에서\n      \"lookback\" 을 찾거나 전략 식별자로 분기하지 않는다. 그 규칙은 이번에 건드리지 않았다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 평가할 수 있는 날이 없으면 구간을 지어내지 않고\n      422 로 거절한다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음. 탐색 구간과 검증용 잠금 구간을\n      가르는 일 자체는 이 MR 이 건드리지 않았다",
+    "state": "merged",
+    "created_at": "2026-09-17T10:34:06.124+09:00",
+    "updated_at": "2026-09-17T10:45:05.523+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T10:45:05.284+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/316-search-window-start",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+    "merge_commit_sha": "ea3030d78e3b35e00c36e3c11e18c1e4059a2d13",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T10:34:07.165+09:00",
+    "reference": "!172",
+    "references": {
+      "short": "!172",
+      "relative": "!172",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!172"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/172",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948085,
+    "iid": 172,
+    "project_id": 1444456,
+    "title": "fix(be): 자동 탐색도 평가 시작일을 늦추지 않는다 (S15P21E205-316)",
+    "description": "# 작업 내용 요약\n\n같은 조건으로 분석을 요청해도 **어느 화면에서 왔느냐에 따라 결과 구간이 달랐다.** 단건 백테스트로\n2023-01-02 부터 요청하면 그날부터 평가하는데, 같은 조건을 자동 탐색에 넣으면 2023-09-28 부터\n평가했다. 사용자는 그 차이의 까닭을 알 수 없고, 두 화면의 숫자를 나란히 놓을 수도 없다.\n\n앞선 작업이 단건 접수에서 시작일을 뒤로 늦추던 계산을 걷어냈는데, 자동 탐색 쪽이 옛 규칙으로 남아\n있었다. 워밍업(전략이 첫 신호를 내려면 미리 읽어야 하는 과거 구간)은 요청 기간보다 앞에서 읽으면\n되고, 앞이 모자랄 때 집계 시작일을 늦추는 판단은 워커가 맡는다.\n\n이 MR 이후로 두 화면이 같은 규칙을 쓴다.\n\n# 관련 티켓 번호 & 링크\n\n- `S15P21E205-316` [BE] 자동 탐색도 평가 시작일을 워밍업만큼 늦추지 않는다\n- https://ssafy.atlassian.net/browse/S15P21E205-316\n- 선행 작업 `S15P21E205-205`. 그 작업이 남긴 `001 tasks.md` T037 을 이 MR 이 닫는다.\n\n# 무엇이 달라지나\n\n**자동 탐색의 결과 숫자가 바뀐다.** 탐색 구간이 길어지므로 후보들의 수익률과 최대 하락 폭이 모두\n움직인다. 단건 백테스트 쪽은 앞선 작업에서 이미 바뀌었고 이번에 더 바뀌지 않는다.\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 2023-07-03 상장 종목을 섞어 2023-01-02 부터 탐색 요청 | 2023-09-28 부터 탐색 | **2023-01-02 부터 탐색** |\n| 같은 조건을 단건과 탐색에 각각 넣음 | 두 구간이 다름 | **같음** |\n| 시작일을 아예 주지 않음 | 상장일 기준값을 서버가 제시 | 같다 |\n| 시작일로 토요일을 고름 | 다음 거래일부터 | 같다 |\n| 구간 안에 평가할 수 있는 날이 하루도 없음 | 422 로 거절 | 같다. 안내 문구만 바뀐다 |\n\n# 주요 변경 사항\n\n## 탐색 구간의 시작일을 무엇으로 정하는가\n\n사용자가 고른 시작일을 그대로 쓴다. 휴장일이면 다음 거래일로만 맞춘다. 주말을 시작일로 삼으면 단건\n접수가 고르는 날과 값이 갈리기 때문이다. 워밍업만큼 뒤로 늦추는 계산은 없앴다. 근거는 001 명세의\n`contracts/market-dataset.md` 「읽기 규칙」이며, 그 문서가 늦추는 판단을 워커 한 곳으로 정해 두었다.\n\n**시작일을 주지 않은 경우는 그대로 두었다.** 그때는 후보 집합을 평가할 수 있는 가장 이른 날이 곧\n서버의 제안값이고, 제시할 다른 값이 없다.\n\n## 거절해야 하는 두 경우를 나눈다\n\n늦추는 계산을 없애면 그 계산에 얹혀 있던 검사 하나가 빠져나간다. 단건 접수와 같은 모양으로 갈랐다.\n\n- 구간 안에 이 후보 집합으로 평가할 수 있는 날이 하루도 없는 경우. 탐색을 시작해 보아야 후보가 전부\n  실패하므로 접수에서 사유를 알려 준다\n- 요청한 시작일 이후 첫 거래일이 끝일을 넘는 경우. 상장 시점 때문이 아니므로 안내 문구를 달리한다\n\n## 비교가 깨지지 않는지 확인했다\n\n관측 기간이 서로 다른 후보를 한 묶음으로 비교하는 것이 자동 탐색이다. 앞이 얇은 구간에서는 후보마다\n평가 시작일이 갈릴 수 있다는 걱정이 있었다. 확인 결과 그렇지 않다. 묶음 전체에 공통 워밍업 하나를\n똑같이 적용하고 종목 집합도 고정이라, 워커가 늦추더라도 후보 전부가 같은 날부터 시작한다(원칙 IV).\n\n# 테스트\n\n기준선은 2026-09-17 `dev` `7818ed1` 기준 backend 1,403건(건너뜀 4)·worker 361건·data 583건이다.\n아래는 같은 날 측정이다.\n\n- [x] `backend`: `./gradlew cleanTest spotlessApply build` — 1,405건, 실패 0·오류 0·건너뜀 4\n- [x] `worker`: `ruff check && ruff format --check && pytest -q` — 361건, 건너뜀 0\n- [x] `data`: `ruff check && ruff format --check && pytest -q` — 583건, 건너뜀 0\n\n늘어난 2건은 이번에 더한 검사다. 하나는 같은 조건을 단건 접수와 탐색에 각각 넣어 같은 시작일이\n나오는지 보고, 다른 하나는 평가할 수 있는 날이 없는 구간을 거절하는지 본다. 앞엣것은 두 경로가 또\n갈라지면 빨개진다.\n\n건너뛰는 4건은 의도된 것이다(외부 실시간 시세 API 1, 뉴스 성능 측정 2,\n`THORP_REQUIRE_DOCKER=true` 일 때만 도는 Docker 확인 1). `cleanTest` 를 빼면 Gradle 이 테스트를\n건너뛰면서도 성공을 알리므로 반드시 붙여서 돌린다.\n\n**확인 필요**: backend 기준선 1,403건은 직접 측정한 값이 아니라 계산한 값이다. 이번에 고친 검사\n파일의 검사 수가 5개에서 7개로 늘었고 다른 검사 파일은 건드리지 않았다. 빌드가 통과해서 기준선을\n따로 재지 않았다.\n\n# 리뷰 포인트\n\n**1. 결정이 갈렸던 지점을 봐 달라.** 이 항목을 열어 둘 때의 걱정은 \"앞부분을 평가할 수 없는 구간을\n사용자에게 탐색 가능 구간으로 제안해도 되는가\" 였다. 맞추기로 정한 근거는 그 걱정보다 **같은 요청이\n화면에 따라 다른 구간을 낸다는 사실**이 무겁다고 본 것이다. 앞의 걱정은 남지만 새로 생긴 것이 아니다.\n단건 접수가 앞선 작업 이후 이미 같은 한계를 안고 있고, 두 경로가 같은 한계를 같은 모양으로 지는 편이\n한쪽만 다른 규칙을 쓰는 것보다 낫다고 보았다. 반대 의견이 있으면 알려 달라.\n\n**2. 남은 한계와 후속 조건.** 접수 단계는 자료가 실제로 언제 시작하는지 모른다. 상장일만 알 수 있고\n적재된 자료의 첫 거래일을 묻는 길이 없다. 그래서 화면에 보여 준 구간의 앞부분을 실제로는 평가하지\n못할 수 있고, 그때는 워커가 뒤로 늦춘다. **001 의 자료 계층이 실행 경로에 이어지고 자료 시작일을\n조회할 수 있게 되면**, 상장일과 자료 첫 거래일 중 늦은 쪽에서 세도록 옮긴다. 그 후속 조건은\n`001 tasks.md` T029 가 적어 둔 것과 같고, 같은 시점에 T030 도 함께 풀려야 한다.\n\n**3. 화면 문구는 이 MR 범위 밖이다.** 탐색 가능 구간의 앞부분을 평가하지 못할 수 있다는 사실을\n사용자에게 어떻게 보일지는 정하지 않았다. 구간은 요청한 대로 두고 실제 평가가 시작되는 날을 함께\n보이는 방식이 후보인데, 프론트와 합의가 필요해 손대지 않았다. 필요하면 별도 티켓으로 세운다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음. 구간을 정하는 계산이며 표시 후보를 다루지 않는다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 관측 길이는 등록표가 준 축의 단위를 보고 고른다. 축 이름에서\n      \"lookback\" 을 찾거나 전략 식별자로 분기하지 않는다. 그 규칙은 이번에 건드리지 않았다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 평가할 수 있는 날이 없으면 구간을 지어내지 않고\n      422 로 거절한다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음. 탐색 구간과 검증용 잠금 구간을\n      가르는 일 자체는 이 MR 이 건드리지 않았다",
+    "state": "merged",
+    "created_at": "2026-09-17T10:34:06.124+09:00",
+    "updated_at": "2026-09-17T10:45:05.523+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T10:45:05.284+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/316-search-window-start",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+    "merge_commit_sha": "ea3030d78e3b35e00c36e3c11e18c1e4059a2d13",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T10:34:07.165+09:00",
+    "reference": "!172",
+    "references": {
+      "short": "!172",
+      "relative": "!172",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!172"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/172",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "3",
+    "latest_build_started_at": "2026-09-17T10:34:18.583+09:00",
+    "latest_build_finished_at": "2026-09-17T10:41:30.825+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 201204,
+      "iid": 96,
+      "project_id": 1444456,
+      "sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+      "ref": "fix(be)/316-search-window-start",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T10:34:17.513+09:00",
+      "updated_at": "2026-09-17T10:41:30.832+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201204"
+    },
+    "head_pipeline": {
+      "id": 201204,
+      "iid": 96,
+      "project_id": 1444456,
+      "sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+      "ref": "fix(be)/316-search-window-start",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T10:34:17.513+09:00",
+      "updated_at": "2026-09-17T10:41:30.832+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201204",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T10:34:18.583+09:00",
+      "finished_at": "2026-09-17T10:41:30.825+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": 1,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201204",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "head_sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+      "start_sha": "5e35716f4ec1771a5ff1df8b30cb818ba8f00c51"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7856159fc1bcaebeb97034046210583fa0f87ec4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821918,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T10:34:06.276+09:00",
+          "updated_at": "2026-09-17T10:34:06.281+09:00",
+          "system": true,
+          "noteable_id": 948085,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 172,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4b90fab06ae599846e5b0af725ab8a17b72dcd8d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821919,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T10:34:06.295+09:00",
+          "updated_at": "2026-09-17T10:34:06.301+09:00",
+          "system": true,
+          "noteable_id": 948085,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 172,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "84502751660f6174a958f2b7a27d8488d3fa374c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821921,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **일관성 확보 및 사용자 경험 개선**: 단건 백테스트와 자동 탐색 화면에서 동일한 조건임에도 평가 시작일이 달라지던 불일치 문제를 해결하여 도메인 로직의 예측 가능성을 높였습니다.\n- **철저한 문서화와 테스트 보강**: 기존 주석의 모순을 바로잡고, 단건 접수(`EffectivePeriodCalculator`)와 탐색(`CommonPeriodResolver`) 간의 시작일 일치 여부를 검증하는 테스트(`theSearchWindowAgreesWithTheSingleRunIntake`)를 추가하여 회귀를 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **조기 종료/거절 조건 테스트**: `aWindowWithNoEvaluableDayIsRejected` 테스트 외에, 요청한 시작일 이후 첫 거래일이 끝일보다 뒤에 있는 경우(`start > end`) `BusinessException(ErrorCode.INSUFFICIENT_HISTORY)` 예외가 올바르게 발생하는지 검증하는 테스트 케이스를 추가할 것을 제안합니다.\n- **시작일 생략 시나리오 테스트**: `requestedStart`가 `null`인 경우, 상장일 기준으로 서버가 적절한 제안값(`commonStart`)을 정상적으로 산출하는지 확인하는 테스트를 수행하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ebddbd7e345faebc23bfabedeb8ee53ce584dfa8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T10:34:10.411+09:00",
+          "updated_at": "2026-09-17T10:34:10.411+09:00",
+          "system": false,
+          "noteable_id": 948085,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 172,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e912ebc26aa0d8c5443f72afc17850e5f881bcf5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822120,
+          "type": null,
+          "body": "mentioned in commit ea3030d78e3b35e00c36e3c11e18c1e4059a2d13",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T10:45:05.728+09:00",
+          "updated_at": "2026-09-17T10:45:05.765+09:00",
+          "system": true,
+          "noteable_id": 948085,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 172,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2210625,
+      "head_commit_sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "5e35716f4ec1771a5ff1df8b30cb818ba8f00c51",
+      "created_at": "2026-09-17T10:34:06.600+09:00",
+      "merge_request_id": 948085,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "393013da69bcc33f7a7c1670a0c3a26f6b98eead"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2210625,
+      "head_commit_sha": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "5e35716f4ec1771a5ff1df8b30cb818ba8f00c51",
+      "created_at": "2026-09-17T10:34:06.600+09:00",
+      "merge_request_id": 948085,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "393013da69bcc33f7a7c1670a0c3a26f6b98eead",
+      "commits": [
+        {
+          "id": "ebddbd7e345faebc23bfabedeb8ee53ce584dfa8",
+          "short_id": "ebddbd7e",
+          "created_at": "2026-09-17T10:31:08.000+09:00",
+          "parent_ids": [
+            "c5c3cf63537eadca4d518be4cccda30a7516fa56"
+          ],
+          "title": "docs(de): 001 tasks.md 의 T037 을 닫는다",
+          "message": "docs(de): 001 tasks.md 의 T037 을 닫는다\n\nT037 은 \"자동 탐색도 요청 시작일을 늦추지 말지\"를 열어 둔 항목이었다. 맞추기로 정했고\n`S15P21E205-316` 에서 구현했다.\n\n결정의 근거를 함께 남긴다. 항목을 열 때 걱정했던 것은 \"앞부분을 평가할 수 없는 구간을\n제안값으로 내놓아도 되는가\" 였는데, 실제로 무게가 실린 것은 **같은 요청이 화면에 따라 다른\n구간을 낸다는 사실** 이었다.\n\n앞의 걱정은 남지만 새로 생긴 것이 아니다. 004 가 T029 이후 이미 안고 있는 한계와 같고,\n두 경로가 같은 한계를 같은 모양으로 지는 편이 한쪽만 다른 규칙을 쓰는 것보다 낫다고 보았다.\n근본 해결은 접수가 자료 시작일을 알게 되는 것이며 T029 가 적어 둔 후속 조건과 같다.\n\n비교가 깨질까 하는 걱정은 확인 결과 문제가 되지 않는다. 묶음 전체에 공통 워밍업 하나를\n똑같이 적용하고 종목 집합도 고정이라 후보 전부가 같은 날부터 시작한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T10:31:08.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T10:31:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ebddbd7e345faebc23bfabedeb8ee53ce584dfa8"
+        },
+        {
+          "id": "c5c3cf63537eadca4d518be4cccda30a7516fa56",
+          "short_id": "c5c3cf63",
+          "created_at": "2026-09-17T10:30:54.000+09:00",
+          "parent_ids": [
+            "7818ed1359fde428f95ee043ee9a8133857ac3fa"
+          ],
+          "title": "fix(be): 자동 탐색도 평가 시작일을 늦추지 않는다",
+          "message": "fix(be): 자동 탐색도 평가 시작일을 늦추지 않는다\n\n같은 조건인데 사용자가 어느 화면에서 왔느냐에 따라 결과 구간이 달랐다. 단건 접수로\n2023-01-02 부터 요청하면 그날부터 평가하는데, 같은 조건을 자동 탐색에 넣으면 상장일 기준으로\n늦춰진 2023-09-28 부터 평가했다. 사용자는 그 차이의 까닭을 알 수 없다.\n\n`S15P21E205-205` 가 단건 접수에서 걷어낸 규칙을 탐색 구간 산출에도 적용한다. 요청 시작일을\n그대로 쓰되 휴장일이면 다음 거래일로만 맞춘다. 워밍업 자료는 요청 구간보다 앞에서 읽고, 앞이\n모자랄 때 집계 시작일을 늦추는 판정은 워커가 단독으로 맡는다(001 `contracts/market-dataset.md`\n「읽기 규칙」).\n\n**요청 시작일이 없는 갈래는 그대로 둔다.** 그때는 상장일 기준값이 곧 서버의 제안값이고 제시할\n다른 값이 없다.\n\n**비교는 그대로 성립한다.** 묶음 전체에 공통 워밍업 하나를 똑같이 적용하고 종목 집합도\n고정이라, 워커가 늦추더라도 후보 전부가 같은 날부터 시작한다(원칙 IV).\n\n거절 경계는 단건 접수와 같은 모양으로 나눴다. 구간 안에 평가할 수 있는 날이 하루도 없으면\n탐색을 시작해 봐야 후보가 전부 실패하므로 접수에서 사유를 알려 준다. 요청 시작일 이후 첫\n거래일이 끝일을 넘는 경우는 상장 시점 탓이 아니므로 따로 가른다.\n\n두 경로가 또 갈라지면 드러나도록, 같은 조건을 단건 접수와 탐색에 각각 넣어 같은 시작일이\n나오는지 보는 검사를 더했다.\n\nbackend 1,405건 통과(실패 0·오류 0·건너뜀 4), worker 361건, data 583건 통과.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T10:30:54.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T10:30:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c5c3cf63537eadca4d518be4cccda30a7516fa56"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -18,19 +18,20 @@ import org.springframework.stereotype.Service;\n  * <p><b>후보마다 구간이 다르면 비교가 성립하지 않는다.</b> 관측 기간이 긴 후보는 더 늦게 시작하는데, 그 후보만 짧은 구간으로 평가하면 수익률이 다른 기간의 값이\n  * 되어 나란히 놓을 수 없다(원칙 IV). 그래서 <b>묶음 안에서 가장 긴 관측 기간</b>을 모든 후보에 똑같이 적용한다.\n  *\n- * <p><b>탐색 구간 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일)</b>. 워밍업 기준점은 상장일 하나이고 요청\n- * 시작일은 마지막에 max 로만 합쳐진다. 요청 시작일이 없을 수도 있는데, 그때는 뒤쪽 항(001 {@code contracts/evaluation-window.md}의\n- * {@code commonStart})이 곧 서버가 제시하는 값이다.\n+ * <p><b>탐색 구간 시작일 = 요청 시작일 당일 또는 그 뒤 첫 거래일.</b> 워밍업만큼 뒤로 늦추지 않는다. 워밍업 자료는 요청 구간보다 <b>앞에서</b> 읽고, 앞이\n+ * 모자랄 때 집계 시작일을 늦추는 판정은 워커 {@code engine_runner.evaluation_start()}가 단독으로 맡는다(001 {@code\n+ * contracts/market-dataset.md} 「읽기 규칙」). 004 {@code EffectivePeriodCalculator}와 같은 규칙이며, 두 곳이 갈라져\n+ * 있던 것을 {@code S15P21E205-205}·T037에서 맞췄다.\n  *\n- * <p><b>004 {@code EffectivePeriodCalculator}와 같은 규칙이 아니다</b>(2026-09-16, {@code S15P21E205-205}).\n- * 004의 {@code effectiveStart}는 이제 요청 시작일을 거래일에 맞춘 값일 뿐이고 {@code commonStart}로 밀지 않는다 — 워밍업 자료는 요청\n- * 구간보다 앞에서 읽고, 앞이 모자랄 때 집계 시작일을 미루는 판정은 워커 {@code engine_runner.evaluation_start()}가 단독으로 맡는다(001\n- * {@code contracts/market-dataset.md} 「읽기 규칙」).\n+ * <p><b>맞춰야 하는 까닭은 같은 요청이 화면에 따라 다른 구간을 내는 것이었다.</b> 단건 접수로 2023-01-02부터 요청하면 그날부터 평가하는데, 같은 조건을 자동\n+ * 탐색으로 넣으면 상장일 기준으로 늦춰진 날부터 평가했다. 사용자는 그 차이의 까닭을 알 수 없다.\n  *\n- * <p><b>007도 같이 걷어내야 하는지는 아직 정하지 않았다</b>(001 {@code tasks.md} T037). 여기 값은 004의 {@code\n- * effectiveStart}로 바로 나가지 않고 후보마다 <b>접수의 요청 시작일</b>로 들어가며, 같은 값이 {@code\n- * ParamSearchPreviewResult.CommonPeriod}로 사용자에게 \"이 구간을 탐색할 수 있다\"고 제안되고 FR-008의 탐색·잠금 구간을 가르는 기준이\n- * 된다. 앞부분을 평가할 수 없는 구간을 제안값으로 내놓아도 되는지가 그 결정의 핵심이라, 모양이 같다는 이유만으로 따라 바꾸지 않았다.\n+ * <p><b>요청 시작일이 없으면 {@code commonStart}가 곧 서버의 제안값이다.</b> 제시할 다른 값이 없다. 001 {@code\n+ * contracts/evaluation-window.md}가 정한 \"후보 집합을 평가할 수 있는 가장 이른 날\"이며, 요청 시작일이 있을 때는 그 값을 요청 구간 안에 평가할\n+ * 수 있는 날이 하루도 없는지 가리는 데만 쓴다.\n+ *\n+ * <p><b>비교는 그대로 성립한다.</b> 후보마다 관측 길이가 달라도 묶음 전체에 공통 워밍업 하나를 똑같이 적용하고 종목 집합도 고정이라, 워커가 늦추더라도 후보 전부가\n+ * 같은 날부터 시작한다(원칙 IV).\n  *\n  * <p>공통 워밍업이 004 접수의 {@code warmupTradingDays}로 그대로 나간다. 004는 이 값이 전략 요구값보다 작으면 422로 거부하므로(R-15)\n  * 계산이 틀리면 묶음이 시작 단계에서 드러난다.\n@@ -54,8 +55,8 @@ public class CommonPeriodResolver {\n      *\n      * @param instrumentIds 고정한 섹터 후보 집합. 가장 늦게 상장한 종목이 시작일을 정한다\n      * @param space 탐색 공간. 워밍업은 여기 담긴 후보값에서 나온다 — 범위를 좁히면 워밍업도 줄어든다\n-     * @param requestedStart 사용자가 고른 시작일. 없으면 상장일 기준으로 서버가 제시한다. 있으면 <b>상장일 기준값과 늦은 쪽</b>이다 — 워밍업을\n-     *     여기서 또 소진하지 않는다\n+     * @param requestedStart 사용자가 고른 시작일. 있으면 <b>그날 또는 그 뒤 첫 거래일</b>이고 워밍업만큼 늦추지 않는다. 없으면 상장일 기준으로\n+     *     서버가 제시한다\n      * @param requestedEnd 사용자가 고른 끝일. 없으면 오늘\n      */\n     public CommonPeriod resolve(\n@@ -81,22 +82,33 @@ public class CommonPeriodResolver {\n                                                 \"공통 평가 구간을 만들 수 있는 과거 자료가 부족합니다: 워밍업 \"\n                                                         + warmup.tradingDays()\n                                                         + \"거래일\"));\n-        // 요청 시작일이 없으면 서버가 제시하는 값이 곧 commonStart 다. 있으면 늦은 쪽을 쓰되\n-        // 거래일로 맞춘다 — 주말을 시작일로 삼으면 004 접수가 고르는 날과 값이 갈린다.\n+        // 요청 시작일이 없으면 서버가 제시하는 값이 곧 commonStart 다. 있으면 그것을 거래일에\n+        // 맞추기만 한다 — commonStart 와 max 하지 않는다(클래스 주석). 거래일 스냅을 남기는 것은\n+        // 주말을 시작일로 삼으면 004 접수가 고르는 날과 값이 갈리기 때문이다.\n         LocalDate start =\n-                requestedStart == null || !requestedStart.isAfter(commonStart)\n+                requestedStart == null\n                         ? commonStart\n                         : marketMetadata\n-                                .evaluationStart(requestedStart, 0)\n+                                .firstTradingDayOnOrAfter(requestedStart)\n                                 .orElseThrow(\n                                         () ->\n                                                 new BusinessException(\n                                                         ErrorCode.INSUFFICIENT_HISTORY,\n                                                         \"요청 시작일 이후에 거래일이 없습니다: \" + requestedStart));\n+        // 늦추지 않게 됐어도 거절해야 하는 경계는 남는다. 구간 안에 이 후보 집합으로 평가할 수 있는\n+        // 날이 하루도 없으면 탐색을 시작해 봐야 후보가 전부 실패한다. 004 접수와 같은 판정이다.\n+        if (!commonStart.isBefore(end)) {\n+            throw new BusinessException(\n+                    ErrorCode.INSUFFICIENT_HISTORY,\n+                    \"상장일 이후 워밍업을 채우고 나면 평가할 구간이 남지 않습니다: commonStart=\"\n+                            + commonStart\n+                            + \", end=\"\n+                            + end);\n+        }\n         if (!start.isBefore(end)) {\n             throw new BusinessException(\n                     ErrorCode.INSUFFICIENT_HISTORY,\n-                    \"상장일 이후 워밍업을 채우고 나면 평가할 구간이 남지 않습니다: start=\" + start + \", end=\" + end);\n+                    \"요청 시작일 이후 첫 거래일이 끝일 이후입니다: start=\" + start + \", end=\" + end);\n         }\n         return new CommonPeriod(start, end, warmup.tradingDays(), warmup.shortenedBy());\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolver.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolver.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,14 @@\n package com.ssafy.thorp.paramsearch.application.service;\n \n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n+import com.ssafy.thorp.backtest.application.service.EffectivePeriodCalculator;\n+import com.ssafy.thorp.backtest.domain.model.RulesStatus;\n+import com.ssafy.thorp.backtest.domain.model.StrategyRules;\n import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n import com.ssafy.thorp.strategy.application.port.AllowedRange;\n import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n@@ -19,12 +25,9 @@ import org.junit.jupiter.api.Test;\n /**\n  * 007이 모든 후보에 똑같이 적용할 탐색 구간을 어떻게 정하는지 본다.\n  *\n- * <p><b>탐색 구간 시작일 = max(요청 시작일, 가장 늦은 상장일 이후 워밍업 {@code warmup}번째 거래일).</b> 워밍업 기준점은 상장일 하나이고 요청\n- * 시작일은 마지막에 max 로만 합쳐진다(001 {@code contracts/evaluation-window.md}). 이 두 항의 경계를 각각 덮는다 — 여기가 어긋나면\n- * 묶음 안 후보들이 서로 다른 구간으로 평가되어 나란히 놓은 숫자가 비교가 되지 않는다.\n- *\n- * <p><b>004 {@code EffectivePeriodCalculator}와 같은 규칙이 아니다</b> — 004는 {@code S15P21E205-205}에서 미는 일을\n- * 걷어냈고 007이 따라갈지는 아직 열려 있다(001 {@code tasks.md} T037). 까닭은 {@link CommonPeriodResolver} 주석에 있다.\n+ * <p><b>탐색 구간 시작일 = 요청 시작일 당일 또는 그 뒤 첫 거래일.</b> 워밍업만큼 뒤로 늦추지 않는다(001 {@code\n+ * contracts/market-dataset.md} 「읽기 규칙」). 004 {@code EffectivePeriodCalculator}와 같은 규칙이며, <b>같은 요청이\n+ * 화면에 따라 다른 구간을 내지 않는지</b>가 여기서 지켜야 할 것이다. 요청 시작일이 없을 때만 상장일 기준값이 제안값으로 나간다.\n  */\n class CommonPeriodResolverTest {\n \n@@ -95,16 +98,42 @@ class CommonPeriodResolverTest {\n     }\n \n     @Test\n-    @DisplayName(\"요청 시작일이 상장일보다 앞이면 상장일 이후 워밍업 번째 거래일부터다\")\n-    void warmupAfterALateListingPushesTheStart() {\n-        // BIO 는 2023-07-03 상장이라 그 앞에는 읽을 자료가 없다. 밀리는 양은 계약 commonStart 와 같다.\n+    @DisplayName(\"요청 시작일이 상장일보다 앞이어도 늦추지 않는다 — 004 접수와 같은 날이 나와야 한다\")\n+    void aLateListingNoLongerPushesTheStart() {\n+        // BIO 는 2023-07-03 상장이라 요청 앞부분에 읽을 자료가 없다. 그래도 여기서 늦추지 않는다.\n+        // 늦추면 같은 조건을 단건으로 넣었을 때와 탐색으로 넣었을 때의 구간이 갈리고, 사용자는 그\n+        // 차이의 까닭을 알 수 없다. 앞이 모자란 만큼 뒤로 미루는 일은 워커가 단독으로 맡는다.\n         CommonPeriodResolver.CommonPeriod period =\n                 resolve(\n                         List.of(SEMICONDUCTOR, BIO),\n                         LocalDate.of(2023, 1, 2),\n                         LocalDate.of(2024, 12, 31));\n \n-        assertThat(period.start()).isEqualTo(BIO_COMMON_START);\n+        assertThat(period.start()).isEqualTo(LocalDate.of(2023, 1, 2));\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 조건이면 004 접수와 탐색이 같은 시작일을 낸다\")\n+    void theSearchWindowAgreesWithTheSingleRunIntake() {\n+        EffectivePeriodCalculator intake =\n+                new EffectivePeriodCalculator(\n+                        new FixtureMarketMetadataAdapter(LocalDate.of(2026, 12, 31)));\n+        StrategyRules rules =\n+                new StrategyRules(\n+                        STRATEGY,\n+                        \"1\",\n+                        RulesStatus.REGISTERED,\n+                        true,\n+                        Map.of(\"lookbackDays\", 63),\n+                        null);\n+        LocalDate start = LocalDate.of(2023, 1, 2);\n+        LocalDate end = LocalDate.of(2024, 12, 31);\n+\n+        LocalDate searchStart = resolve(List.of(SEMICONDUCTOR, BIO), start, end).start();\n+        LocalDate intakeStart =\n+                intake.resolve(rules, List.of(SEMICONDUCTOR, BIO), start, end, 63).effectiveStart();\n+\n+        assertThat(searchStart).isEqualTo(intakeStart);\n     }\n \n     @Test\n@@ -138,4 +167,20 @@ class CommonPeriodResolverTest {\n \n         assertThat(period.start()).isEqualTo(LocalDate.of(2024, 6, 3));\n     }\n+\n+    @Test\n+    @DisplayName(\"구간 안에 평가할 수 있는 날이 하루도 없으면 거절한다 — 늦추지 않게 됐어도 이 경계는 남는다\")\n+    void aWindowWithNoEvaluableDayIsRejected() {\n+        // BIO(2023-07-03 상장) + 관측 63거래일이면 평가할 수 있는 첫날이 2023-09-28 인데 끝일이 8월이다.\n+        // 탐색을 시작해 봐야 후보가 전부 실패하므로 여기서 사유를 알려 준다.\n+        assertThatThrownBy(\n+                        () ->\n+                                resolve(\n+                                        List.of(SEMICONDUCTOR, BIO),\n+                                        LocalDate.of(2023, 1, 2),\n+                                        LocalDate.of(2023, 8, 31)))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.INSUFFICIENT_HISTORY);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolverTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolverTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -387,10 +387,16 @@ missing과 unrequested는 없다.\n 없어서, 판정하는 곳을 하나로 줄였다. `commonStart`는 그대로 계산해 싣되(003 안내·007 탐색 구간이 쓴다)\n `effectiveStart`를 정하는 데는 쓰지 않는다. converge는 기존 항목을 고치지 않으므로 T029의 본문은 그대로 두었다.\n \n-- [ ] T037 [BE] `CommonPeriodResolver`가 요청 시작일을 밀지 말지 정한다 per contracts/market-dataset.md 「읽기 규칙」·contracts/evaluation-window.md (contradicts)\n+- [X] T037 [BE] `CommonPeriodResolver`가 요청 시작일을 밀지 말지 정한다 per contracts/market-dataset.md 「읽기 규칙」·contracts/evaluation-window.md (contradicts)\n   - 007 경로는 아직 `requestedStart == null || !requestedStart.isAfter(commonStart)` 일 때 `commonStart`를 쓴다. 205가 004에서 걷어낸 것과 **같은 모양**이다\n   - **그러나 같은 문제라고 단정하지 못했다.** 세 가지가 다르다. ⑴ 007은 요청 시작일이 **없을 수도 있고** 그때 `commonStart`가 곧 서버의 제안값이라 그 갈래는 옳다. ⑵ 이 값은 004의 `effectiveStart`로 바로 나가지 않고 후보마다 **접수의 요청 시작일**(`command.start()`)로 들어간다. ⑶ 같은 값이 `ParamSearchPreviewResult.CommonPeriod`로 **사용자에게 \"이 구간을 탐색할 수 있다\"고 제안**되고 FR-008의 탐색·잠금 구간을 가르는 기준이 된다. 앞부분을 평가할 수 없는 구간을 제안값으로 내놓아도 되는지가 이 결정의 핵심이다\n   - 205는 **주석의 거짓말만 걷어냈다.** `CommonPeriodResolver`와 그 테스트가 \"004 `EffectivePeriodCalculator`와 같은 규칙이다\"라고 적고 있었는데 이제 아니므로, 두 곳이 어떻게 다른지와 이 결정이 열려 있다는 사실을 적었다. **동작은 손대지 않았다**\n+  - **2026-09-17 결정: 맞춘다**(`S15P21E205-316`). 007도 요청 시작일을 늦추지 않는다. 결정의 근거는 위 ⑶이 아니라 **같은 요청이 화면에 따라 다른 구간을 낸다는 사실**이었다. 단건으로 2023-01-02부터 요청하면 그날부터 평가하는데 같은 조건을 자동 탐색에 넣으면 2023-09-28부터 평가했고, 사용자는 그 차이의 까닭을 알 수 없다\n+  - **위 ⑶의 걱정은 남지만 새로 생긴 것이 아니다.** 제안 구간의 앞부분을 평가하지 못할 수 있다는 것은 004가 T029 이후 이미 안고 있는 한계와 같다(화면에 보이는 기간과 실제 평가 기간이 갈릴 수 있다). 두 경로가 같은 한계를 같은 모양으로 지는 편이, 한쪽만 다른 규칙을 쓰는 것보다 낫다고 보았다. 근본 해결은 접수가 자료 시작일을 알게 되는 것이며 T029가 적어 둔 후속 조건과 같다\n+  - **⑵의 비교 성립 걱정은 확인 결과 문제가 되지 않는다.** 묶음 전체에 공통 워밍업 하나를 똑같이 적용하고 종목 집합도 고정이라, 워커가 늦추더라도 후보 전부가 같은 날부터 시작한다(원칙 IV)\n+  - **요청 시작일이 없는 갈래는 그대로 두었다.** 그때는 상장일 기준값이 곧 서버의 제안값이고 제시할 다른 값이 없다\n+  - 구간 안에 평가할 수 있는 날이 하루도 없을 때의 거절은 004 접수와 같은 모양으로 남겼다. 탐색을 시작해 봐야 후보가 전부 실패한다\n+  - 두 경로가 또 갈라지면 드러나도록, 같은 조건을 양쪽에 넣어 같은 시작일이 나오는지 보는 검사를 더했다\n - [X] T038 [BE] `effectiveStart`를 \"워밍업 이후\"로 적은 주석을 실제와 맞춘다 per 004 research R-15·contracts/rest-api.md (contradicts)\n   - `BacktestJobResult`가 \"요청 시작일보다 뒤다\", `RunPlan`이 \"워밍업을 소진한 뒤 실제 평가가 시작되는 거래일\", `EngineInput`·`EngineOutput`이 \"워밍업 이후 실제 평가 시작일\"이라 적었다. 205 뒤로는 넷 다 거짓이다\n   - **틀린 설명은 없는 설명보다 나쁘다.** 값이 바뀌는 변경과 같은 MR에서 닫는다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/tasks.md",
+          "old_path": "specs/001-etf-market-data/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2821921": []
+  }
+}

@@ -1,0 +1,683 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 946823,
+    "iid": 152,
+    "project_id": 1444456,
+    "title": "docs: spec 005 checklist",
+    "description": "## **작업 내용 요약**\n\nspec 005(결과 이해·비교)의 spec·plan·설계 산출물을 대상으로 요구사항 품질 체크리스트 32개를 만들고(`checklists/review.md`), 작성자가 전부 점검해 결정과 고친 위치를 항목마다 남겼다. 점검에서 드러난 문서 사이의 어긋남 3건과 빈 곳 24건을 spec·research·contracts·data-model·plan·README에 반영했다. tasks에 들어가기 전 마지막 문서 단계다.\n\n## **관련 티켓**\n\nS15P21E205-269\n\n## **주요 변경 사항**\n\n**checklists/review.md (신규)** — 완전성 10 · 명확성 6 · 일관성 6 · 측정 가능성 4 · 시나리오·엣지 4 · 비기능·보안·가정 2. 32/32 점검 완료.\n\n**어긋남 3건의 결정**\n\n| **CHK** | **어긋남** | **결정** |\n|---------|---------|--------|\n| 017 | FR-021 만료 삭제 ↔ 004 FR-003 결과 공유 | 요청 행·토큰만 지우고, 계산은 참조하는 요청이 없을 때만 지운다. 참조 없는 계산 정리를 004 요청 변경 5번째로 |\n| 018 | 비교 요청의 준비 기간(워밍업) 책임 공백 | 화면이 003 등록표를 읽어 **고르기 전에** 비교 기간이 짧아진다고 알린다. 004의 422는 안전장치. research R-13 신설 |\n| 022 | 표본 축소 ↔ 원칙 VI | 점 수를 줄이지 않고 받은 그대로 그린다. research R-08 정정 |\n\n**spec.md** — FR 22개(FR-022 접근성 최소 요건 신설), SC 11개(SC-011 자동 탐색 후보 비교 구분 판정 신설)\n\n* FR-002 음영 구간은 고점→저점 / FR-003 조건 한 줄은 생략 없이 줄바꿈 / FR-004 진행 상태 구성·429 표시·준비 기간 사전 알림 / FR-005 재계산 후 원본 보존과 새 비교 이동 / FR-006 문장 틀 세 축과 차이 없음 전용 틀 / FR-007 펼치는 섹터는 후보 집합 전체 / FR-009 계산 제한 판정은 004 / FR-010 최대 하락 구간 하나 / FR-011 007 진입 소유 / FR-012 미검증 문구 / FR-013 의미 변경 상태 네 갈래 / FR-018 011 전달 값 / FR-019 128비트·비교 토큰 단독 열람 수용 / FR-021 삭제 범위\n* Assumptions 4→8줄: 계산 예외 하나(최대 하락 구간)와 종료 조건, 004 요청 변경 의존, 응답 목표·거래 내역 건수 유보와 임시 상한, 개인 식별 근거와 006 조건, 좁은 화면 360px\n* Out of Scope: 비로그인 결과의 로그인 후 귀속(006 PD-13 소유)\n\n**research.md** — R-03 만료 기준은 PD-23 소유(임시 생성 시각), R-08 표본 축소 철회, R-13 신설 **contracts/result-api.md** — 410·404 구분 근거, 공개 응답에서 버리는 필드 5개, 004 요청 변경 5번째 **data-model.md** — 비교 뷰에 `candidateWarmupHint` **plan.md** — 004 요청 변경 5번째 **specs/README.md** — PD-14 행에 005 SC-010 회색조 관찰 과제\n\n## **테스트**\n\n문서 변경이라 실행 테스트는 없다. 다음을 확인했다.\n\n* FR-001~~FR-022, SC-001~~SC-011 번호 연속성\n* 체크리스트 32개 항목 전부 `[x]`이고 각 항목에 근거 글머리가 있음\n* 007 FR-019·시나리오 5(후보 비교 진입), 004 FR-030(계산 제한 판정), 003 FR-014·004 R-15(공통 워밍업) 교차 참조\n\n## **리뷰 포인트**\n\n1. **CHK018의 결정이 화면에 003 의존을 하나 더 만듭니다.** 비교 대상 목록이 003 등록표의 전략별 준비 기간을 읽습니다. 처음 권한 안은 \"서버가 거부한 뒤 알린다\"(의존 없음)였는데, 사용자가 고르기 전에 선택의 비용을 알아야 한다는 관점에서 바꿨습니다. 읽기만 하고 계산하지 않으며 004의 422가 안전장치로 남는다는 조건이 붙어 있습니다. 이 절충이 적절한지 봐 주십시오.\n2. **\"계산하지 않는다\"의 예외가 명문화됐습니다.** 004가 `maxDrawdownWindow`를 주기 전까지 화면이 하락 폭 계열에서 저점을 읽어 음영을 그립니다. 유일한 예외이고 종료 조건이 있습니다. 예외를 두는 대신 음영을 004 변경 뒤로 미루는 선택지도 있었는데, SC-002(상세 없이 고점 대비 하락 구분)가 004 일정에 묶이는 것을 피했습니다.\n3. **004에 요청하는 변경이 5건입니다.** requester_id 완화, 접수 응답 publicToken, maxDrawdownWindow, 상세 지표 3종 노출, 참조 없는 계산 정리. tasks에서 004 티켓으로 뺄지 005 안에서 고칠지 정해야 합니다.\n4. **checklist를 tasks 워크트리(266) 안에서 만들었다가 이 티켓으로 옮겼습니다.** 266은 해야 할 일로 되돌렸고 그 워크트리는 깨끗합니다. 브랜치 이름은 요청에 따라 `docs/269-spec-005-checklist`로 두었습니다.",
+    "state": "merged",
+    "created_at": "2026-09-16T15:19:20.872+09:00",
+    "updated_at": "2026-09-16T15:31:06.330+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T15:31:05.711+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/269-spec-005-checklist",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+    "merge_commit_sha": "1165598effcf05ee80997bbe97ad347d1472e5fb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T15:19:21.850+09:00",
+    "reference": "!152",
+    "references": {
+      "short": "!152",
+      "relative": "!152",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!152"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/152",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 946823,
+    "iid": 152,
+    "project_id": 1444456,
+    "title": "docs: spec 005 checklist",
+    "description": "## **작업 내용 요약**\n\nspec 005(결과 이해·비교)의 spec·plan·설계 산출물을 대상으로 요구사항 품질 체크리스트 32개를 만들고(`checklists/review.md`), 작성자가 전부 점검해 결정과 고친 위치를 항목마다 남겼다. 점검에서 드러난 문서 사이의 어긋남 3건과 빈 곳 24건을 spec·research·contracts·data-model·plan·README에 반영했다. tasks에 들어가기 전 마지막 문서 단계다.\n\n## **관련 티켓**\n\nS15P21E205-269\n\n## **주요 변경 사항**\n\n**checklists/review.md (신규)** — 완전성 10 · 명확성 6 · 일관성 6 · 측정 가능성 4 · 시나리오·엣지 4 · 비기능·보안·가정 2. 32/32 점검 완료.\n\n**어긋남 3건의 결정**\n\n| **CHK** | **어긋남** | **결정** |\n|---------|---------|--------|\n| 017 | FR-021 만료 삭제 ↔ 004 FR-003 결과 공유 | 요청 행·토큰만 지우고, 계산은 참조하는 요청이 없을 때만 지운다. 참조 없는 계산 정리를 004 요청 변경 5번째로 |\n| 018 | 비교 요청의 준비 기간(워밍업) 책임 공백 | 화면이 003 등록표를 읽어 **고르기 전에** 비교 기간이 짧아진다고 알린다. 004의 422는 안전장치. research R-13 신설 |\n| 022 | 표본 축소 ↔ 원칙 VI | 점 수를 줄이지 않고 받은 그대로 그린다. research R-08 정정 |\n\n**spec.md** — FR 22개(FR-022 접근성 최소 요건 신설), SC 11개(SC-011 자동 탐색 후보 비교 구분 판정 신설)\n\n* FR-002 음영 구간은 고점→저점 / FR-003 조건 한 줄은 생략 없이 줄바꿈 / FR-004 진행 상태 구성·429 표시·준비 기간 사전 알림 / FR-005 재계산 후 원본 보존과 새 비교 이동 / FR-006 문장 틀 세 축과 차이 없음 전용 틀 / FR-007 펼치는 섹터는 후보 집합 전체 / FR-009 계산 제한 판정은 004 / FR-010 최대 하락 구간 하나 / FR-011 007 진입 소유 / FR-012 미검증 문구 / FR-013 의미 변경 상태 네 갈래 / FR-018 011 전달 값 / FR-019 128비트·비교 토큰 단독 열람 수용 / FR-021 삭제 범위\n* Assumptions 4→8줄: 계산 예외 하나(최대 하락 구간)와 종료 조건, 004 요청 변경 의존, 응답 목표·거래 내역 건수 유보와 임시 상한, 개인 식별 근거와 006 조건, 좁은 화면 360px\n* Out of Scope: 비로그인 결과의 로그인 후 귀속(006 PD-13 소유)\n\n**research.md** — R-03 만료 기준은 PD-23 소유(임시 생성 시각), R-08 표본 축소 철회, R-13 신설 **contracts/result-api.md** — 410·404 구분 근거, 공개 응답에서 버리는 필드 5개, 004 요청 변경 5번째 **data-model.md** — 비교 뷰에 `candidateWarmupHint` **plan.md** — 004 요청 변경 5번째 **specs/README.md** — PD-14 행에 005 SC-010 회색조 관찰 과제\n\n## **테스트**\n\n문서 변경이라 실행 테스트는 없다. 다음을 확인했다.\n\n* FR-001~~FR-022, SC-001~~SC-011 번호 연속성\n* 체크리스트 32개 항목 전부 `[x]`이고 각 항목에 근거 글머리가 있음\n* 007 FR-019·시나리오 5(후보 비교 진입), 004 FR-030(계산 제한 판정), 003 FR-014·004 R-15(공통 워밍업) 교차 참조\n\n## **리뷰 포인트**\n\n1. **CHK018의 결정이 화면에 003 의존을 하나 더 만듭니다.** 비교 대상 목록이 003 등록표의 전략별 준비 기간을 읽습니다. 처음 권한 안은 \"서버가 거부한 뒤 알린다\"(의존 없음)였는데, 사용자가 고르기 전에 선택의 비용을 알아야 한다는 관점에서 바꿨습니다. 읽기만 하고 계산하지 않으며 004의 422가 안전장치로 남는다는 조건이 붙어 있습니다. 이 절충이 적절한지 봐 주십시오.\n2. **\"계산하지 않는다\"의 예외가 명문화됐습니다.** 004가 `maxDrawdownWindow`를 주기 전까지 화면이 하락 폭 계열에서 저점을 읽어 음영을 그립니다. 유일한 예외이고 종료 조건이 있습니다. 예외를 두는 대신 음영을 004 변경 뒤로 미루는 선택지도 있었는데, SC-002(상세 없이 고점 대비 하락 구분)가 004 일정에 묶이는 것을 피했습니다.\n3. **004에 요청하는 변경이 5건입니다.** requester_id 완화, 접수 응답 publicToken, maxDrawdownWindow, 상세 지표 3종 노출, 참조 없는 계산 정리. tasks에서 004 티켓으로 뺄지 005 안에서 고칠지 정해야 합니다.\n4. **checklist를 tasks 워크트리(266) 안에서 만들었다가 이 티켓으로 옮겼습니다.** 266은 해야 할 일로 되돌렸고 그 워크트리는 깨끗합니다. 브랜치 이름은 요청에 따라 `docs/269-spec-005-checklist`로 두었습니다.",
+    "state": "merged",
+    "created_at": "2026-09-16T15:19:20.872+09:00",
+    "updated_at": "2026-09-16T15:31:06.330+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T15:31:05.711+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/269-spec-005-checklist",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+    "merge_commit_sha": "1165598effcf05ee80997bbe97ad347d1472e5fb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T15:19:21.850+09:00",
+    "reference": "!152",
+    "references": {
+      "short": "!152",
+      "relative": "!152",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!152"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/152",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "7",
+    "latest_build_started_at": "2026-09-16T15:30:27.898+09:00",
+    "latest_build_finished_at": "2026-09-16T15:30:31.740+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 199145,
+      "iid": 70,
+      "project_id": 1444456,
+      "sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+      "ref": "docs/269-spec-005-checklist",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T15:30:27.752+09:00",
+      "updated_at": "2026-09-16T15:30:31.757+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199145"
+    },
+    "head_pipeline": {
+      "id": 199145,
+      "iid": 70,
+      "project_id": 1444456,
+      "sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+      "ref": "docs/269-spec-005-checklist",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T15:30:27.752+09:00",
+      "updated_at": "2026-09-16T15:30:31.757+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199145",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T15:30:27.898+09:00",
+      "finished_at": "2026-09-16T15:30:31.740+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199145",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "9a27aa2af92f07296be6808ce80065d37a931692",
+      "head_sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+      "start_sha": "4b89c731a759d4db09b28fd4406124407bc9a9ad"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "efa61e4418918b9dd0d3f799db16b63be3b2e95e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817043,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:19:20.985+09:00",
+          "updated_at": "2026-09-16T15:19:20.991+09:00",
+          "system": true,
+          "noteable_id": 946823,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 152,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "15ec7c08c77389b12790c3ecf8d526c620f63fb4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817048,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 요구사항 품질 점검과 문서화**: 구현 전 32개 항목의 요구사항 품질 체크리스트(`review.md`)를 작성하고, 컴포넌트 간 경계(004, 005, 006 등)와 잠재적 충돌(CHK017, CHK018, CHK022)을 사전에 식별하여 설계 산출물(`contracts/result-api.md`, `research.md`, `plan.md`)에 명확히 반영한 점이 매우 훌륭합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (문서 및 설계 스펙 변경 작업으로, 런타임 코드나 보안 결함 등을 유발할 만한 실행 가능한 지적 사항은 없습니다.)\n\n### 테스트 제안\n- **요구사항 체크리스트 검증 시나리오**:\n  1. **만료된 비로그인 결과 삭제 테스트 (`CHK017`)**: 비로그인 상태에서 생성된 공개 토큰의 TTL 만료 시, 해당 요청 행은 삭제되되 동일한 계산 결과를 다른 로그인/비로그인 사용자가 참조 중일 때 공용 `backtest_run` 데이터가 올바르게 유지되는지 확인합니다.\n  2. **비교 대상 준비 기간 안내 테스트 (`CHK018`)**: 기준 결과보다 준비 기간(`warmupTradingDays`)이 더 긴 전략을 선택하기 전, UI에 \"비교 기간이 짧아진다\"는 안내 문구가 노출되는지 수동 또는 사용성 관측으로 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fca2df7d94f127421314afa22c98094cebdb56d8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T15:19:30.052+09:00",
+          "updated_at": "2026-09-16T15:19:30.052+09:00",
+          "system": false,
+          "noteable_id": 946823,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 152,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e6e4e90af20fca0ccd8d7b86cfaec5733ef9132b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817060,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">docs: spec 005 <span class=\"idiff left right deletion\">요구사항 품질 점검 체크리스트를 만들고 어긋남을 고친다</span></code> to <code class=\"idiff\">docs: spec 005 <span class=\"idiff left right addition\">checklist</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:20:14.124+09:00",
+          "updated_at": "2026-09-16T15:20:14.127+09:00",
+          "system": true,
+          "noteable_id": 946823,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 152,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "55a4723eef15208af315290ba1802ff52988dd73",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817061,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:20:14.155+09:00",
+          "updated_at": "2026-09-16T15:20:14.159+09:00",
+          "system": true,
+          "noteable_id": 946823,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 152,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "511d58df5a4a89ddb8cf775b4f656dff52868a51",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817062,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:20:14.189+09:00",
+          "updated_at": "2026-09-16T15:20:14.193+09:00",
+          "system": true,
+          "noteable_id": 946823,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 152,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "af34b92fdd8670d0eec1863915df3954fa2277f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817213,
+          "type": null,
+          "body": "mentioned in commit 1165598effcf05ee80997bbe97ad347d1472e5fb",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:31:05.645+09:00",
+          "updated_at": "2026-09-16T15:31:05.657+09:00",
+          "system": true,
+          "noteable_id": 946823,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 152,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2206494,
+      "head_commit_sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+      "base_commit_sha": "9a27aa2af92f07296be6808ce80065d37a931692",
+      "start_commit_sha": "4b89c731a759d4db09b28fd4406124407bc9a9ad",
+      "created_at": "2026-09-16T15:19:21.210+09:00",
+      "merge_request_id": 946823,
+      "state": "collected",
+      "real_size": "7",
+      "patch_id_sha": "bb08ae411fba49ee4160106086d133b29bf58eee"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2206494,
+      "head_commit_sha": "fca2df7d94f127421314afa22c98094cebdb56d8",
+      "base_commit_sha": "9a27aa2af92f07296be6808ce80065d37a931692",
+      "start_commit_sha": "4b89c731a759d4db09b28fd4406124407bc9a9ad",
+      "created_at": "2026-09-16T15:19:21.210+09:00",
+      "merge_request_id": 946823,
+      "state": "collected",
+      "real_size": "7",
+      "patch_id_sha": "bb08ae411fba49ee4160106086d133b29bf58eee",
+      "commits": [
+        {
+          "id": "fca2df7d94f127421314afa22c98094cebdb56d8",
+          "short_id": "fca2df7d",
+          "created_at": "2026-09-16T15:19:17.000+09:00",
+          "parent_ids": [
+            "9a27aa2af92f07296be6808ce80065d37a931692"
+          ],
+          "title": "docs: spec 005 요구사항 품질 점검 체크리스트를 만들고 어긋남을 고친다",
+          "message": "docs: spec 005 요구사항 품질 점검 체크리스트를 만들고 어긋남을 고친다\n\n`/speckit-checklist`로 spec·plan·설계 산출물의 요구사항이 빈 곳 없이, 한 가지로 읽히게,\n서로 어긋나지 않게 쓰였는지 묻는 항목 32개를 만들어 checklists/review.md에 두고, 작성자가\n전부 점검했다. 각 항목 아래에 결정과 고친 위치가 있다.\n\n문서 사이의 실제 어긋남 3건은 선택지를 놓고 정했다.\n- 비로그인 결과 만료 삭제(FR-021)가 004의 결과 공유(FR-003)와 부딪혔다. 요청 행과 토큰만\n  지우고 계산은 참조하는 요청이 없을 때만 지운다. 참조 없는 계산의 정리를 004 요청 변경\n  다섯 번째로 올렸다.\n- 비교 대상 전략의 준비 기간이 기준보다 길면 004가 요청을 거부하는데 그 뒤를 정한 곳이\n  없었다. 화면이 003 등록표의 준비 기간을 읽어 고르기 전에 비교 기간이 짧아진다고 알린다.\n  사용자가 선택의 비용을 먼저 안다는 관점에서 정했다(research R-13).\n- 시계열 표본 축소가 최대 하락 저점을 빠뜨려 숫자와 그림이 어긋날 수 있었다. 점 수를\n  줄이지 않고 받은 그대로 그린다(원칙 VI).\n\n빈 곳 24건은 권고안을 확인받아 채웠다. FR-022(접근성 최소 요건)와 SC-011(자동 탐색\n후보 비교 구분 판정)을 신설했고, Assumptions에 계산 예외 하나·004 의존·유보 항목·개인\n식별 근거를 명시했다. 음영 구간(고점→저점), 결과 의미를 바꾸는 상태 네 갈래, 미검증\n문구, 공개 응답에서 버리는 필드, 410·404 구분 근거를 각각 spec·contracts에 적었다.\n\n체크리스트를 tasks 워크트리 안에서 만들었다가 이 티켓과 브랜치로 옮겼다. speckit 단계는\n각자 티켓과 브랜치를 가진다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T15:19:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T15:19:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fca2df7d94f127421314afa22c98094cebdb56d8"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,104 @@\n+# Requirements Quality Checklist: 결과 이해·비교\n+\n+**Purpose**: tasks를 나누기 전에 spec·plan·설계 산출물의 요구사항이 빈 곳 없이, 한 가지로 읽히게, 서로 어긋나지 않게, 확인할 수 있게 쓰였는지 점검한다. 구현이 동작하는지가 아니라 **요구사항이 제대로 쓰였는지**를 묻는다.\n+**Created**: 2026-09-16\n+**Feature**: [spec.md](../spec.md) · [plan.md](../plan.md) · [research.md](../research.md) · [data-model.md](../data-model.md) · [contracts/result-api.md](../contracts/result-api.md)\n+\n+**Note**: This custom checklist is generated by the `/speckit-checklist` command based on feature context and requirements.\n+**Review Ownership**: This checklist is a reviewer-owned requirements-quality review artifact. Mark an item `[x]` only when the reviewer determines the requirements-quality criterion is satisfied.\n+**Marker Semantics**: `[x]` means the criterion has been reviewed and satisfied for requirements quality. It does not mean implementation work is complete.\n+\n+**범위**: 화면 구성·비교 UX / 결과 주소·보안·만료 / 004·001 경계와 계약 / 접근성·비기능. 깊이는 표준이며 사용자는 작성자, 시점은 tasks 작성 전이다. 각 항목의 꼬리표는 `[Spec FR-…]`가 기존 요구사항을, `[Gap]`이 빠진 요구사항을, `[Conflict]`가 문서 사이의 어긋남을, `[Assumption]`이 검증되지 않은 전제를 가리킨다.\n+\n+**점검 기록**: 2026-09-16 작성자가 32개 항목을 모두 점검했다(S15P21E205-269). 어긋남 3건(CHK017·018·022)은 각각 선택지를 놓고 정했고, 나머지는 권고안을 네 개씩 묶어 확인받았다. 각 항목 아래 들여쓴 글머리가 결정과 고친 위치다.\n+\n+## 요구사항 완전성\n+\n+- [x] CHK001 비교 대상으로 \"자동 탐색에서 고른 후보\"를 고르는 진입 경로와 007에서 넘어오는 정보(후보 식별자, 묶음 식별자)가 요구사항으로 정의되어 있는가? [Completeness, Spec FR-004·FR-011, Gap]\n+  - 007 FR-019와 시나리오 5가 진입을 이미 소유한다. FR-011에 그 소유와 넘어오는 값(후보 결과의 공개 토큰)을 적었다.\n+- [x] CHK002 해석 요약 문장 틀을 고르는 조건 분기(비교 유무, 차이 방향, 부분 결과)가 spec 본문에 있는가, 아니면 research R-07에만 있는가? spec이 그 기준을 소유해야 하는지 판단이 적혀 있는가? [Completeness, Spec FR-006, research R-07]\n+  - 세 축은 FR-006에 올리고 틀 목록은 설계 산출물에 두기로 했다.\n+- [x] CHK003 비교 대상이 계산 중일 때 보이는 \"진행 상태\"가 004 `progress`의 어느 값(단계, 처리 비율, 대기 시간)으로 구성되는지 정의되어 있는가? [Completeness, Spec Edge Cases, Gap]\n+  - 단계·진행 비율, 대기 중이면 기다린 시간으로 정해 FR-004에 적었다.\n+- [x] CHK004 비교 대상 실행 요청이 004의 대기열 상한(`429 EXECUTION_LIMIT`)에 걸렸을 때 화면이 보여야 할 것이 spec 요구사항으로 있는가? plan \"원칙 IX에 관한 주의\"에만 있고 FR·Edge Cases에는 없다. [Completeness, Spec FR-004, plan 원칙 IX 주의, Gap]\n+  - 한도에 걸린 사실과 다시 시도 가능 시각을 보이고 사용자가 누를 때만 재요청하기로 FR-004에 적었다.\n+- [x] CHK005 로그인하지 않고 만든 결과를 나중에 로그인한 사용자가 자기 '내 기록'으로 귀속시킬 수 있는지, 없는지가 정의되어 있는가? [Completeness, Spec FR-019·FR-021, 006·014 경계, Gap]\n+  - 006(PD-13) 소유로 넘기고 Out of Scope에 적었다. 005는 로그인 전 주소가 로그인 후에도 열린다는 것만 보장한다.\n+- [x] CHK006 plan·contracts가 004에 요청하는 변경이 spec 어디에도 의존 항목으로 적혀 있지 않은데, tasks·analyze가 이 의존을 추적할 수 있도록 spec의 Assumptions 또는 Pre-Implementation Decisions에 올려야 하는지 판단이 적혀 있는가? [Completeness, Traceability, plan \"004에 필요한 변경\", Gap]\n+  - Assumptions에 한 줄로 올렸다. 목록 자체는 plan·contracts가 소유한다.\n+- [x] CHK007 공개 열람 경로가 004 하위 자원을 \"그대로 통과\"시킬 때, 공개하면 안 되는 필드(요청자, 내부 run 식별자, 워커 자기 보고 `worker`, `retryOf`)가 열거되어 있는가? [Completeness, contracts \"경로 대응\", Gap]\n+  - contracts에 \"공개 응답에서 버리는 필드\" 절을 두어 다섯 가지를 열거했다.\n+- [x] CHK008 '경제환경이 비슷했던 과거 보기'가 011로 넘기는 \"기존 섹터·전략·설정\"의 전달 형식과 011이 되돌아올 때의 복귀 지점이 정의되어 있는가? [Completeness, Spec FR-018, Gap]\n+  - 넘기는 값만 FR-018에 적고 형식은 011의 진입 계약이 소유한다고 밝혔다. 복귀는 브라우저 뒤로 가기다.\n+- [x] CHK009 그래프와 상세 패널의 키보드 조작, 스크린 리더용 대안 텍스트(핵심 숫자 3개와 곡선의 문장 표현)에 대한 요구가 있는가? Assumptions는 데스크톱·좁은 화면만 다룬다. [Completeness, Accessibility, Gap]\n+  - FR-022를 신설해 최소 요건 셋(텍스트 존재, 그래프 대안 텍스트, 키보드 조작)을 적었다.\n+- [x] CHK010 응답 목표와 거래 내역 페이지 크기를 \"정하지 않는다\"고 한 결정이 spec 본문(Assumptions 또는 PD)에 표시되어, analyze가 이를 누락이 아니라 유보로 읽을 수 있게 되어 있는가? [Completeness, Traceability, research R-11, Gap]\n+  - Assumptions에 유보 사실과 함께 거래 내역 조회의 임시 상한을 설정으로 둔다고 적었다(CHK021과 함께 처리).\n+\n+## 요구사항 명확성\n+\n+- [x] CHK011 음영으로 표시할 \"최대 하락이 일어난 구간\"이 고점에서 저점까지인지, 회복 시점까지 포함하는지 정의되어 있는가? research R-05의 `maxDrawdownWindow`는 `recoveredDate`를 포함하는데 spec FR-001·FR-002는 구간의 끝을 말하지 않는다. [Clarity, Spec FR-001·FR-002, research R-05, Ambiguity]\n+  - 고점에서 저점까지로 정해 FR-002에 적었다. 회복 시점은 구간에 넣지 않는다.\n+- [x] CHK012 상세 패널 항목마다 \"자료가 짧거나 불안정해 계산이 제한된\" 상태를 판정하는 기준(어느 길이 이하, 어느 조건)이 누구 소유(004인지 005인지)인지 명시되어 있는가? [Clarity, Spec FR-007·FR-009, Ambiguity]\n+  - 004가 판정해 결과에 담고(004 FR-030) 005는 표시만 한다고 FR-009에 적었다.\n+- [x] CHK013 '손실이 커진 때 보기'가 강조하는 \"손실이 커진 구간\"이 최대 하락 구간 하나인지, 임계값을 넘는 여러 구간인지, 임계값이 있다면 누가 정하는지 정의되어 있는가? [Clarity, Spec FR-010, Ambiguity]\n+  - FR-001 음영과 같은 최대 하락 구간 하나로 정하고 임계값을 두지 않는다고 FR-010에 적었다.\n+- [x] CHK014 PD-12 확정 전 모든 결과가 '미검증'으로 표시될 때, 그것이 \"검증에 실패했다\"가 아니라 \"말할 수 없다\"는 뜻임을 사용자 문구 수준에서 어떻게 표현할지 정의되어 있는가? [Clarity, Spec FR-012, contracts `validationTier`]\n+  - 상태와 이유를 한 문장에 함께 적는 문구로 FR-012에 정했다.\n+- [x] CHK015 FR-013이 \"결과 의미를 바꾸는\" 상태와 \"바꾸지 않는\" 상태를 나누는데, 그 판정 기준이 열거되어 있는가? research R-12가 네 갈래로 정리했지만 spec 본문은 예시만 든다. [Clarity, Spec FR-013, research R-12, Ambiguity]\n+  - 네 갈래(부분 완료·지표 없음·자료 부족과 계산 제한·실행 실패)를 FR-013에 열거하고 그 외는 상세에 둔다고 적었다.\n+- [x] CHK016 상세 패널에서 001 대표 상품 정보를 \"섹터가 여럿이면 ETF별로 접어 둔다\"고 할 때, 그 섹터가 결과의 섹터 후보 집합인지 실제 보유했던 섹터인지 정의되어 있는가? [Clarity, Spec FR-007, Ambiguity]\n+  - 섹터 후보 집합 전체(실제 보유 여부와 무관)로 정해 FR-007에 적었다.\n+\n+## 요구사항 일관성\n+\n+- [x] CHK017 만료된 비로그인 결과를 \"삭제한다\"(FR-021)는 요구가 004 FR-003의 \"완료된 동일 버전 결과를 요청자와 무관하게 서비스 전체에서 재사용한다\"와 어긋나지 않는가? 비로그인 요청이 만료될 때 그 요청이 참조하는 공용 `backtest_run`·결과까지 지우면 같은 결과를 재사용 중인 다른 요청이 깨진다. 삭제 범위가 요청 행인지 결과까지인지 정의되어 있는가? [Consistency, Spec FR-021, 004 FR-003, Conflict]\n+  - 어긋남 확인. 삭제 범위를 \"요청 행과 토큰은 지우고, 계산·결과는 그것을 가리키는 요청이 하나도 남지 않았을 때만 지운다\"로 정했다. spec FR-021, research R-03을 고쳤고 참조 없는 계산의 정리를 004에 요청하는 변경(다섯 번째)으로 contracts·plan에 올렸다.\n+- [x] CHK018 005가 비교 대상 실행을 `POST /backtests`로 직접 요청할 때, 003 FR-014가 요구하는 \"비교 후보 중 가장 긴 관측 기간을 공통 워밍업으로 넘긴다\"는 책임을 005도 지는지 정의되어 있는가? 기준 결과의 `warmupTradingDays`를 그대로 옮기면 관측 기간이 더 긴 전략을 고른 순간 004가 `422 INSUFFICIENT_HISTORY`로 거부한다. [Consistency, Spec FR-004, 003 FR-014, 004 R-15, Conflict]\n+  - 어긋남 확인. 화면이 003 등록표의 전략별 준비 기간을 읽어 **고르기 전에** 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 확인으로 이어가기로 정했다. 004의 422는 안전장치로 남긴다. 사용자 관점(고르기 전에 선택의 비용을 안다)에서 결정했다. spec FR-004, research R-13(신설), contracts \"비교 요청\"을 고쳤다.\n+- [x] CHK019 research R-05가 임시로 시계열의 `drawdown` 계열에서 구간을 찾기로 한 것이 spec Assumptions \"이 spec은 값을 계산하지 않는다\"와 어긋나지 않는가? 어긋난다면 Assumptions에 예외와 그 종료 조건(004가 `maxDrawdownWindow`를 주면 제거)이 적혀 있는가? [Consistency, Spec Assumptions, research R-05, Conflict]\n+  - 유일한 예외로 Assumptions에 적고, 004가 구간을 주면 제거한다는 종료 조건을 붙였다.\n+- [x] CHK020 만료 판단 기준을 spec FR-021은 PD-23으로 미뤘는데 research R-03은 \"생성 시각 기준\"으로 정했다. 둘의 관계(R-03이 임시 기본값이라는 점)가 두 문서에 같은 말로 적혀 있는가? [Consistency, Spec FR-021, research R-03]\n+  - R-03을 \"기준은 PD-23이 정하고, 확정 전 임시 기본은 생성 시각\"으로 고쳐 spec PD-23 표와 같은 말이 되게 했다.\n+- [x] CHK021 거래 내역 페이지 크기를 유보한 것(R-11)이 원칙 IX \"상한을 정하기 전에 무제한 실행을 허용하지 않는다\"와 어긋나지 않는가? 유보하더라도 임시 상한이 있어야 한다는 요구가 적혀 있는가? [Consistency, research R-11, constitution 원칙 IX, Conflict]\n+  - 임시 상한을 설정으로 두어 무제한 조회를 허용하지 않는다고 Assumptions에 적었다(CHK010과 함께 처리).\n+- [x] CHK022 시계열 표본 축소(R-08의 `decimate-time-series`)가 최대 하락의 저점을 표본에서 빠뜨려 음영 구간이나 곡선이 실제 값과 다르게 보일 수 있다. 이것이 원칙 VI \"없는 결과를 만들어내지 않는다\"와 어긋나지 않도록 축소 시 보존해야 할 점(고점·저점·시작·끝)이 요구되어 있는가? [Consistency, research R-08, constitution 원칙 VI, Conflict]\n+  - 어긋남 확인. 점 수를 줄이지 않고 시계열을 받은 그대로 그리기로 정해 보존 규칙 자체가 필요 없어졌다. research R-08을 고쳤고 spec FR-001에 \"받은 시계열을 줄이지 않고 그린다\"를 더했다. 훗날 축소가 필요해지면 보존 규칙과 함께 들인다는 조건을 R-08에 남겼다.\n+\n+## 수용 기준의 측정 가능성\n+\n+- [x] CHK023 기본 설정 비교와 자동 탐색 후보 비교를 \"구분해 표시한다\"(FR-011)는 요구를 어떤 화면 요소로 확인할지 정해져 있어 시험자가 통과·실패를 판정할 수 있는가? [Measurability, Spec FR-011, SC 없음]\n+  - SC-011을 신설했다. '자동 탐색 후보' 표지와 묶음 연결의 유무로 판정한다.\n+- [x] CHK024 SC-009 \"식별자를 바꿔 도달 0건\"이 성립하려면 식별자의 무작위성 요건(비트 수 또는 추측 시도당 성공 확률 상한)이 있어야 하는데, 그 값이 spec 또는 contracts에 있는가? research R-01의 128비트가 요구사항으로 승격되어 있는가? [Measurability, Spec SC-009, research R-01]\n+  - \"안전한 난수에서 얻은 최소 128비트\"를 FR-019에 올렸다.\n+- [x] CHK025 좁은 화면에서 \"핵심 숫자·그래프·요약을 읽을 수 있다\"(Assumptions)가 최소 폭이나 글자 크기 같은 기준으로 확인 가능한가? [Measurability, Spec Assumptions]\n+  - \"폭 360px에서 가로 스크롤 없이\"로 Assumptions에 적었다. 글자 크기는 기존 디자인 토큰을 따른다.\n+- [x] CHK026 SC-010 \"회색조로 보아도 구분할 수 있다\"를 자동 시험이 아니라 사용성 관찰로 확인하기로 했는데(research R-09), 그 관찰 항목이 PD-14의 과제 목록에 추가되어야 한다는 사실이 spec 또는 README에 적혀 있는가? [Measurability, Traceability, Spec SC-010, PD-14]\n+  - SC-010에 \"PD-14 관찰 과제로 확인한다\"를 더하고 specs/README.md의 PD-14 행에 이 과제를 적었다.\n+\n+## 시나리오·엣지 케이스 커버리지\n+\n+- [x] CHK027 기간 불일치로 \"공통 구간을 쓰는 실행 두 건\"을 다시 요청하면 원래 기준 결과의 주소와 그 결과를 가리키던 '내 기록' 항목이 어떻게 되는지(새 결과로 바뀌는지, 둘 다 남는지) 정의되어 있는가? [Coverage, Spec FR-005, Recovery Flow, Gap]\n+  - 원본과 그 주소·기록은 그대로 남기고, 새 두 건은 새 비교 주소를 가지며 화면은 새 비교로 이동하되 돌아가는 연결을 둔다고 FR-005에 적었다.\n+- [x] CHK028 해석 요약 1문장이 \"계산으로 확인된 차이\"를 말할 때, 두 결과의 차이가 0이거나 거래비용 차이만 있을 때 문장이 무엇을 말하는지 정의되어 있는가? [Coverage, Spec FR-006, Edge Case, Gap]\n+  - 차이 없음 전용 틀과 거래비용만 다를 때의 전용 틀을 따로 둔다고 FR-006에 적었다.\n+- [x] CHK029 조건 한 줄(FR-003)에 담을 항목이 좁은 화면에서 한 줄에 들어가지 않을 때 무엇을 먼저 생략하거나 줄바꿈하는지 정의되어 있는가? [Coverage, Spec FR-001·FR-003, Edge Case, Gap]\n+  - 세 항목을 생략하지 않고 좁은 화면에서는 줄바꿈을 허용한다고 FR-003에 적었다.\n+- [x] CHK030 비교 주소를 받은 사람이 비교 대상 토큰만 떼어 그 결과를 단독으로 열 수 있다는 점(research R-04 주의)이 의도된 동작으로 요구사항에 수용되어 있는가, 아니면 막아야 하는가? [Coverage, Spec FR-019, research R-04, Gap]\n+  - 의도된 동작으로 수용해 FR-019에 한 문장으로 적었다.\n+\n+## 비기능·보안·가정\n+\n+- [x] CHK031 FR-019 \"결과에는 개인을 식별할 정보를 담지 않는다\"가 성립한다고 보는 근거(사용자가 입력한 금액·섹터·기간은 식별 정보가 아니라는 판단)가 Assumptions에 적혀 있고, 그 판단이 006이 결과에 이름이나 메모를 붙일 수 있게 될 때도 유지되는지 검토되어 있는가? [Assumption, Spec FR-019, 006 경계]\n+  - 근거와 함께 \"006이 이름·메모·사용자 필드를 붙이면 공개 응답에서 제외한다\"는 조건을 Assumptions에 적었다.\n+- [x] CHK032 만료된 주소(410)와 없는 주소(404)를 사용자에게 다르게 보이기로 한 것이, 토큰의 과거 존재 여부를 밖에서 알아낼 수 있는 통로가 되지 않는지 검토되어 있는가? 검토했다면 수용 근거가 적혀 있는가? [Security, contracts \"오류\", data-model §2]\n+  - 구분을 유지하고 수용 근거(128비트 토큰이라 존재 여부를 훑을 수 없고, 사용자에게는 다른 안내가 필요함)를 contracts에 적었다.\n+\n+## Notes\n+\n+- Mark items `[x]` only after review confirms the requirement-quality criterion is satisfied\n+- Leave items unchecked when they still require clarification, correction, or reviewer evaluation\n+- `/speckit-implement` reads checklist checkbox state as a gate and must not modify markers\n+- `checklists/requirements.md` has a separate built-in lifecycle maintained by `/speckit-specify` and `/speckit-clarify`\n+- 항목을 점검하며 발견한 사실은 그 항목 아래에 들여쓴 글머리로 적는다. spec·plan을 고쳐 해소한 항목은 어느 문서의 어느 절을 고쳤는지 함께 남긴다\n+- CHK017·CHK018·CHK022는 문서 사이의 실제 어긋남이었고 tasks를 나누기 전에 먼저 정했다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/checklists/review.md",
+          "old_path": "specs/005-result-comparison/checklists/review.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -61,13 +61,28 @@\n \n 004의 코드를 그대로 통과시키고 `RESULT_EXPIRED`만 새로 더한다.\n \n+**410과 404를 나누는 근거**: 만료(410)와 없음(404)을 다르게 답하면 \"이 토큰이 한 번 존재했다\"는 사실이 밖으로 드러난다. 그러나 토큰이 안전한 난수 최소 128비트라 이웃 값을 맞출 가능성이 사실상 0이어서 존재 여부를 훑어 알아내는 것 자체가 불가능하고, 알아낸다 해도 내용은 얻을 수 없다. 반면 사용자에게는 \"사라졌다\"와 \"잘못된 주소\"가 다른 안내여야 한다(SC-008, Edge Cases). 그래서 구분을 유지한다.\n+\n+## 공개 응답에서 버리는 필드\n+\n+공개 경로는 004 응답을 통과시키되 다음 필드는 버린다. 이 목록에 없는 필드는 통과시키고, 004가 필드를 더할 때 버릴 것만 여기에 추가한다.\n+\n+| 버리는 필드 | 이유 |\n+|---|---|\n+| 요청자 식별자(`requesterId` 등) | 개인 식별 정보 (FR-019) |\n+| `backtestId` | 004의 순번 식별자. 노출되면 SC-009 위반 |\n+| run 식별자(`runId`, `RUN-…`) | 내부 계산 단위. 여러 요청이 공유한다 |\n+| `worker`(워커 자기 보고) | 운영 정보. 사용자 화면에 노출하지 않는다 |\n+| `retryOf`의 내부 식별자 | 원 요청의 `backtestId`. 필요하면 원 요청의 공개 토큰으로 바꿔 담는다 |\n+\n ## 비교 요청\n \n 비교 대상 결과가 없을 때 화면이 새 실행을 요청하는 경로는 004의 `POST /backtests`를 그대로 쓴다. 005가 새 접수 경로를 만들지 않는다. 요청 본문은 기준 결과의 `config`에서 전략만 바꾸고 나머지(섹터 후보·기간·금액·비용·`warmupTradingDays`)를 그대로 옮긴다.\n \n - 접수 응답의 `backtestId`는 화면이 보관하지 않는다. 접수 응답에 `publicToken`을 함께 실어 화면이 그것만 들고 다닌다. **004의 접수 응답에 `publicToken`을 더하는 변경이 필요하다.**\n - `429 EXECUTION_LIMIT`을 받으면 한도에 걸렸다는 사실과 `retryAfterSeconds`를 보인다. 조용히 재시도하지 않는다(원칙 IX, plan \"원칙 IX에 관한 주의\").\n-- `422 INSUFFICIENT_HISTORY`는 공통 워밍업이 어긋났다는 신호다. 기간 불일치 안내로 이어 붙인다.\n+- 비교 대상을 고르기 전에 화면은 003 등록표의 전략별 준비 기간을 읽어 기준 결과의 `warmupTradingDays`와 비교하고, 더 길면 목록에서 \"비교 기간이 짧아진다\"를 표시한다([research.md](../research.md) R-13). 고르면 FR-005의 기간 불일치 확인을 거친 뒤 두 건을 공통 준비 기간으로 요청한다.\n+- `422 INSUFFICIENT_HISTORY`는 화면의 사전 판단이 어긋났을 때의 안전장치다. 본문의 필요 값을 공통 준비 기간으로 삼아 같은 기간 불일치 확인으로 이어 붙인다. 조용히 값을 올려 재요청하지 않는다.\n \n ## 004에 요청하는 변경\n \n@@ -79,6 +94,7 @@\n | 접수 응답에 `publicToken` 추가 | 화면이 내부 식별자를 들고 다니지 않게 한다 (SC-009) |\n | `summary.maxDrawdownWindow{peakDate, troughDate, recoveredDate}` 추가 | 최대 하락 구간 음영 (FR-001). 구간을 화면이 계산하면 \"005는 계산하지 않는다\"가 깨진다 |\n | `analytics`의 `correlationMatrix`·`riskContribution`·`lossContribution` 노출 | FR-007이 상세 패널에 요구하는 항목인데 계산·저장만 되고 API로 나오지 않는다. `BacktestDetailResponse.Analytics`가 `recoveryDays`·`turnover` 둘만 담는다 |\n+| 참조하는 요청이 없는 `backtest_run`·결과의 정리 | FR-021이 만료된 비로그인 요청을 지울 때, 그 요청이 가리키던 계산은 다른 요청이 참조하지 않을 때만 지워야 한다(004 FR-003 공유). 계산 기록의 참조 판정과 삭제는 004 소유다. 005는 요청 행과 토큰만 지운다 |\n \n 세 번째가 들어오기 전까지는 `/timeseries`의 `drawdown` 계열에서 구간을 찾아 쓰되 `summary.maxDrawdown`과 어긋나면 음영을 생략한다. 네 번째가 들어오기 전까지는 해당 세 항목을 제공되지 않음으로 두고 값을 지어내지 않는다(원칙 VI).\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/contracts/result-api.md",
+          "old_path": "specs/005-result-comparison/contracts/result-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -70,6 +70,7 @@\n | comparisonKind | `BASIC`(기본 설정) 또는 `AUTO_SEARCH`(자동 탐색 후보) — 화면에서 구분 표시 (FR-011) |\n | commonConditions | 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준 |\n | periodMismatch | 두 결과의 평가 기간이 다를 때 공통 구간과 재계산 대상 두 건 |\n+| candidateWarmupHint | 비교 대상 목록의 전략마다, 003 등록표에서 읽은 준비 기간이 기준 결과보다 길면 \"비교 기간이 N일 짧아진다\"는 표시. 화면은 값을 읽기만 하고 계산하지 않는다 (R-13) |\n \n `targetState`가 `READY`가 아니면 그래프에 기준만 그린다. `FAILED`는 사유 한 문장과 다시 시도 선택을 함께 둔다(Edge Cases).\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/data-model.md",
+          "old_path": "specs/005-result-comparison/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -87,6 +87,7 @@\n | 접수 응답에 `publicToken` 추가 | 화면이 004의 내부 식별자를 들고 다니게 되어 SC-009를 지킬 수 없다 |\n | `summary.maxDrawdownWindow` 추가 | 최대 하락 구간 음영을 화면이 계산해야 한다. 임시로 시계열에서 찾되 값이 어긋나면 음영을 생략한다 |\n | `analytics`의 상관관계·위험 기여·손실 기여 노출 | FR-007이 상세 패널에 요구하는데 계산·저장만 되고 API 밖으로 나오지 않는다. 그때까지 해당 항목은 제공되지 않음으로 둔다 |\n+| 참조하는 요청이 없는 계산·결과의 정리 | FR-021 만료 삭제가 004 FR-003의 결과 공유와 부딪히지 않으려면, 만료된 요청이 가리키던 계산은 다른 요청이 참조하지 않을 때만 지워야 한다. 그 판정은 계산 기록을 소유한 004의 일이다. 없으면 005는 요청 행과 토큰만 지우고 계산은 남긴다 |\n \n ## 미해결 위반\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/plan.md",
+          "old_path": "specs/005-result-comparison/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,8 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n ## R-03 비로그인 결과의 만료\n \n-- **Decision**: `backtest_request`에 `public_token_expires_at`을 두고, `requester_id`가 없는 요청에만 값을 채운다. 만료 판단은 생성 시각 기준이며 값은 설정(`thorp.result.public-token-ttl`)으로 뺀다. 만료된 토큰 조회는 `410 RESULT_EXPIRED`로 답하고, 정리 작업이 만료된 비로그인 요청과 그 결과를 지운다. 기본값은 PD-23이 확정되기 전까지 설정 파일에만 두고 문서에 수치를 적지 않는다.\n+- **Decision**: `backtest_request`에 `public_token_expires_at`을 두고, `requester_id`가 없는 요청에만 값을 채운다. 만료 판단 기준(생성 시각인지 마지막 열람 시각인지)은 PD-23이 정한다. 확정 전까지는 생성 시각 기준을 임시 기본으로 두고, 값은 설정(`thorp.result.public-token-ttl`)으로 뺀다. 만료된 토큰 조회는 `410 RESULT_EXPIRED`로 답한다. 정리 작업은 만료된 비로그인 **요청 행과 토큰**을 지우고, 그 요청이 가리키던 공용 `backtest_run`·결과는 **그것을 가리키는 요청이 하나도 남지 않았을 때만** 지운다(2026-09-16 checklist CHK017에서 확정). 기본값은 PD-23이 확정되기 전까지 설정 파일에만 두고 문서에 수치를 적지 않는다.\n+- **삭제 범위를 이렇게 나눈 이유**: 004 FR-003이 완료된 동일 버전 결과를 요청자와 무관하게 서비스 전체에서 재사용한다. 비로그인 요청 하나가 만료될 때 공용 계산까지 지우면 같은 계산을 '내 기록'에서 참조하는 로그인 사용자의 결과가 깨진다. 반대로 계산을 아예 건드리지 않으면 clarify에서 정한 \"결과도 삭제한다\"가 되돌아간다. 참조가 없는 계산만 지우는 것이 둘을 함께 지키는 방법이며, 그 판정과 삭제는 계산 기록을 소유한 004의 일이라 004에 요청하는 변경에 넣는다([contracts/result-api.md](contracts/result-api.md)).\n - **Rationale**: spec FR-021이 \"값과 분리해 만료 장치를 먼저 만든다\"를 명시했고, PD-06이 같은 방식(값은 미확정, 한도 장치는 먼저)으로 처리된 선례가 있다. 404가 아니라 410을 쓰는 이유는 Edge Case가 \"결과가 더 이상 남아 있지 않다는 안내\"와 \"존재한 적 없음\"을 다르게 보이도록 요구하기 때문이다.\n - **Alternatives**: 마지막 열람 시각 기준 갱신 — 자주 보는 결과가 무기한 남아 만료의 목적이 흐려진다. 다만 PD-23이 이 기준을 정하므로 선택지로 남긴다.\n \n@@ -64,8 +65,8 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n ## R-08 그래프 구현 수단\n \n-- **Decision**: 저장소에 이미 있는 `frontend/src/components/charts/` 시스템(@visx + d3-shape/array)을 그대로 쓴다. 새 차트 라이브러리를 들이지 않는다. 시계열이 길면 기존 `decimate-time-series.ts`로 표본을 줄인다.\n-- **Rationale**: `@visx/shape`·`@visx/scale`·`@visx/grid`·`d3-array`·`d3-shape`가 이미 의존성에 있고 축·툴팁·범례·애니메이션 구성 요소가 갖춰져 있다. 7년 일봉이면 한 계열이 약 1,900점이고 두 계열이면 3,800점이라, 표본 축소 없이도 SVG로 그릴 수 있는 규모지만 기존 유틸을 쓰면 좁은 화면에서 이득이 있다.\n+- **Decision**: 저장소에 이미 있는 `frontend/src/components/charts/` 시스템(@visx + d3-shape/array)을 그대로 쓴다. 새 차트 라이브러리를 들이지 않는다. **시계열은 받은 그대로 그리고 점 수를 줄이지 않는다.** 기존 `decimate-time-series.ts`는 이 화면에 쓰지 않는다(2026-09-16 checklist CHK022에서 확정).\n+- **Rationale**: `@visx/shape`·`@visx/scale`·`@visx/grid`·`d3-array`·`d3-shape`가 이미 의존성에 있고 축·툴팁·범례·애니메이션 구성 요소가 갖춰져 있다. 7년 일봉이면 한 계열이 약 1,900점이고 두 계열이면 3,800점이라 표본 축소 없이도 SVG로 그릴 수 있는 규모다. 점을 줄이면 가장 낮았던 날의 점이 빠져 곡선은 `summary.maxDrawdown`보다 얕게 보이고 음영 경계도 어긋날 수 있다. 숫자와 그림이 다른 말을 하는 것은 원칙 VI(\"없는 결과를 만들어내지 않는다\")가 막는 상황이므로, 줄이지 않는 편이 \"무엇을 보존해야 하는가\"라는 규칙 자체를 없앤다. 훗날 자료가 훨씬 길어져 축소가 필요해지면 그때 시작·끝·최고점·최저점·최대 하락 구간 경계를 반드시 남긴다는 규칙과 함께 들인다.\n - **Alternatives**: Recharts·Chart.js 도입 — 같은 일을 하는 도구를 하나 더 들이는 비용이 크고, 음영·이름표처럼 손대야 하는 표현이 많아 저수준 도구가 오히려 낫다.\n \n ## R-09 색에 기대지 않는 구분\n@@ -98,3 +99,12 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n - **Rationale**: spec FR-013이 004 R-04와 `summaryUnavailable`을 직접 인용하고, 004가 `/exceptions`를 \"005가 '결과 옆 한 문장'에 쓰는 원천\"이라고 계약에 적어 두었다. 어느 상태가 어느 필드에서 오는지 고정해 두지 않으면 화면이 임의로 문구를 만든다.\n - **주의**: 내부 검증 미완료처럼 결과 의미를 바꾸지 않는 항목은 이 네 갈래에 넣지 않는다(FR-013 후단).\n+\n+## R-13 비교 대상의 준비 기간(워밍업) 차이를 누가 언제 알리는가\n+\n+- **Decision**: 화면이 003 등록표(`GET /strategies` 계열, 003 contracts)에 적힌 전략별 준비 기간을 읽어, 비교 대상 목록에서 **고르기 전에** \"이 전략을 고르면 비교 기간이 N일 짧아진다\"를 보인다. 고르면 FR-005의 기간 불일치 확인(공통 구간과 재계산 두 건)으로 이어간다. 004의 `422 INSUFFICIENT_HISTORY`는 화면이 놓친 경우를 잡는 안전장치로 그대로 두고, 422가 오면 그 본문의 필요 값으로 같은 확인 흐름에 들어간다. 2026-09-16 checklist CHK018에서 확정.\n+- **Rationale**: 사용자가 원하는 것은 세 가지다. 두 곡선이 빨리 나오는 것, 보고 있던 숫자가 몰래 바뀌지 않는 것, 그리고 고르기 전에 그 선택이 무엇을 바꾸는지 아는 것. 셋째를 채우는 선택지는 이것뿐이다. 준비 기간이 길어지면 기준 결과의 시작일이 뒤로 밀려 수익률·최대 하락 폭이 달라지므로, 누른 뒤에 알리는 것보다 누르기 전에 알리는 편이 원칙 IV(\"공통 평가 구간이 줄면 실행 전에 알린다\")에 더 가깝다.\n+- **규칙 중복을 피하는 방법**: 화면은 등록표의 값을 읽기만 한다. \"관측 길이 + 최근 제외 구간\"으로 요구값을 정하는 규칙(004 R-15)은 004에만 있고, 화면은 그 결과값을 비교할 뿐이다. 그래도 어긋나면 004의 422가 잡는다.\n+- **Alternatives**:\n+  - 서버 거부 뒤에 알리기(화면은 기준 그대로 요청하고 422를 받아 안내): 규칙이 한 곳에만 있지만 사용자가 누른 뒤에야 알게 된다. 처음 권한 안이었으나 사용자 관점 검토에서 물렸다.\n+  - 묻지 않고 항상 두 건을 다시 계산: 기준 결과의 시작일과 숫자가 조용히 바뀐다. 원칙 VI(\"사용자 입력을 몰래 바꾸지 않는다\")와 clarify에서 정한 \"확인 뒤 재계산\"에 어긋난다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/research.md",
+          "old_path": "specs/005-result-comparison/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -140,27 +140,28 @@\n \n ### Functional Requirements\n \n-- **FR-001**: 결과 첫 화면은 핵심 숫자 3개(비용 차감 후 전체 수익률·가장 크게 줄었던 폭·거래비용), 비교 그래프 1개, 해석 요약 1문장으로 구성한다. 비교 그래프의 세로축은 사용자가 입력한 금액에서 출발하는 비용 차감 후 원화 자산가치이며, 최대 하락이 일어난 구간은 같은 곡선 위에 음영으로 겹쳐 표시한다. 음영은 곡선에 겹치는 표시이므로 첫 화면의 그래프 수는 하나를 유지한다. 한 그래프에 두 결과가 그려질 때 둘을 구분하는 수단은 색에만 기대지 않는다. 선 모양이나 곡선에 직접 붙인 이름표를 함께 써서 색을 구별하지 못하는 사용자도 어느 곡선이 자기 설정인지 알 수 있게 하고, 하락 구간 음영에도 같은 규칙을 적용한다. (§4.1, §4.2.3, 원칙 II)\n-- **FR-002**: '가장 크게 줄었던 폭'은 운용 중 고점 대비 최대 하락으로 정의하고, 시작 금액 대비 손실과 혼동하지 않게 설명을 붙인다. FR-001의 음영 구간은 이 고점 대비 최대 하락이 일어난 구간이며, 같은 그래프에서 시작 금액 수준을 함께 알아볼 수 있게 한다. (§4.2.3)\n-- **FR-003**: 분석 기간·비교 대상·비용 적용 여부를 요약 한 줄에 항상 표시한다. (§4.1)\n-- **FR-004**: 비교 그래프는 최대 두 결과를 동시에 그린다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이며, 비교 대상은 다섯 전략 중 다른 결과나 자동 탐색에서 고른 후보로 바꿀 수 있다. 비교 대상으로 고른 전략의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. (§4.2.3, D10)\n-- **FR-005**: 비교하는 두 결과는 같은 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준을 쓴다. 후보마다 유리한 과거 기간을 달리 쓰지 않으며, 기간이 다르면 겹쳐 그리지 않는다. 기간이 다를 때 화면은 공통 구간과 두 결과를 모두 다시 계산해야 한다는 사실을 보이고, 사용자가 확인하면 공통 구간을 쓰는 실행 두 건을 [004](../004-backtest-execution/spec.md)에 요청한다. 확인하기 전까지는 기준 결과만 그린다. (§4.2.3, §6.4.1, 원칙 IV)\n-- **FR-006**: 해석 요약 1문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n-- **FR-007**: '자세히 보기'는 결과 근처에 두고 설정 화면으로 되돌리지 않는다. 상세 패널에는 회복 기간·회전율·상관관계·위험 기여(추정 기간·공분산 산정법 포함)·구성종목 중복·전체 거래 내역·비용 가정·비교 규칙·대표 ETF 구성·출처를 둔다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 상세 패널의 항목과 전체 거래 내역은 첫 화면과 함께 받지 않고 사용자가 열 때 받는다. (§4.1, §4.2.3)\n+- **FR-001**: 결과 첫 화면은 핵심 숫자 3개(비용 차감 후 전체 수익률·가장 크게 줄었던 폭·거래비용), 비교 그래프 1개, 해석 요약 1문장으로 구성한다. 비교 그래프의 세로축은 사용자가 입력한 금액에서 출발하는 비용 차감 후 원화 자산가치이며, 최대 하락이 일어난 구간은 같은 곡선 위에 음영으로 겹쳐 표시한다. 음영은 곡선에 겹치는 표시이므로 첫 화면의 그래프 수는 하나를 유지한다. 곡선은 004가 산출한 시계열을 받은 그대로 그리고 점 수를 줄이지 않는다. 점을 줄이면 가장 낮았던 날이 빠져 곡선과 '가장 크게 줄었던 폭' 숫자가 다른 말을 할 수 있기 때문이다(원칙 VI). 한 그래프에 두 결과가 그려질 때 둘을 구분하는 수단은 색에만 기대지 않는다. 선 모양이나 곡선에 직접 붙인 이름표를 함께 써서 색을 구별하지 못하는 사용자도 어느 곡선이 자기 설정인지 알 수 있게 하고, 하락 구간 음영에도 같은 규칙을 적용한다. (§4.1, §4.2.3, 원칙 II)\n+- **FR-002**: '가장 크게 줄었던 폭'은 운용 중 고점 대비 최대 하락으로 정의하고, 시작 금액 대비 손실과 혼동하지 않게 설명을 붙인다. FR-001의 음영 구간은 이 고점 대비 최대 하락이 일어난 구간이며, 같은 그래프에서 시작 금액 수준을 함께 알아볼 수 있게 한다. 음영의 시작은 운용 중 가장 높았던 날이고 끝은 그 뒤 가장 낮았던 날이다. 회복 시점은 구간에 넣지 않으며 회복 기간은 상세의 숫자로 본다. (§4.2.3)\n+- **FR-003**: 분석 기간·비교 대상·비용 적용 여부를 요약 한 줄에 항상 표시한다. 세 항목은 어느 화면 폭에서도 생략하지 않으며, 좁은 화면에서는 줄바꿈을 허용한다. '한 줄'은 하나의 묶음이라는 뜻이다. (§4.1)\n+- **FR-004**: 비교 그래프는 최대 두 결과를 동시에 그린다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이며, 비교 대상은 다섯 전략 중 다른 결과나 자동 탐색에서 고른 후보로 바꿀 수 있다. 비교 대상으로 고른 전략의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 진행 상태는 004가 주는 단계(자료 준비·계산·저장)와 진행 비율을 보이고, 아직 대기 중이면 지금까지 기다린 시간을 보인다. 요청이 004의 대기열 상한에 걸리면(`429 EXECUTION_LIMIT`) 비교 대상 자리에 한도에 걸렸다는 사실과 004가 알려 준 다시 시도 가능 시각을 보이고, 사용자가 누를 때만 다시 요청한다. 화면이 조용히 재시도하지 않는다(원칙 IX). 비교 대상 전략의 준비 기간(워밍업)이 기준 결과보다 길면 시작일이 뒤로 밀려 같은 그래프에 겹칠 수 없으므로, 화면은 [003](../003-strategy-settings/spec.md) 등록표에 적힌 각 전략의 준비 기간을 읽어 **고르기 전에** 그 전략을 고르면 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 기간 불일치 확인으로 이어간다. 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않으며, 004의 `INSUFFICIENT_HISTORY` 거부는 화면의 판단이 어긋났을 때 잘못된 비교를 막는 안전장치로 그대로 둔다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. (§4.2.3, D10)\n+- **FR-005**: 비교하는 두 결과는 같은 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준을 쓴다. 후보마다 유리한 과거 기간을 달리 쓰지 않으며, 기간이 다르면 겹쳐 그리지 않는다. 기간이 다를 때 화면은 공통 구간과 두 결과를 모두 다시 계산해야 한다는 사실을 보이고, 사용자가 확인하면 공통 구간을 쓰는 실행 두 건을 [004](../004-backtest-execution/spec.md)에 요청한다. 확인하기 전까지는 기준 결과만 그린다. 다시 계산한 두 건은 새 결과로 저장되어 새 비교 주소를 가지며, 원래 기준 결과와 그 주소, '내 기록' 항목은 그대로 남는다. 화면은 새 비교로 이동하고 원래 결과로 돌아가는 연결을 둔다(원칙 VI, 006의 \"설정 변경은 새 버전으로 보존하고 덮어쓰지 않는다\"와 같은 방식). (§4.2.3, §6.4.1, 원칙 IV)\n+- **FR-006**: 해석 요약 1문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다. 두 결과의 수익률과 최대 하락 폭이 같을 때 그 사실만 말하는 틀과, 거래비용만 다를 때 그 차이만 말하는 틀을 따로 둔다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n+- **FR-007**: '자세히 보기'는 결과 근처에 두고 설정 화면으로 되돌리지 않는다. 상세 패널에는 회복 기간·회전율·상관관계·위험 기여(추정 기간·공분산 산정법 포함)·구성종목 중복·전체 거래 내역·비용 가정·비교 규칙·대표 ETF 구성·출처를 둔다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 상세 패널의 항목과 전체 거래 내역은 첫 화면과 함께 받지 않고 사용자가 열 때 받는다. (§4.1, §4.2.3)\n - **FR-008**: 비교 대상의 실제 보유 섹터가 기준과 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n-- **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. (§4.2.3, 원칙 VI)\n-- **FR-010**: '손실이 커진 때 보기'는 손실이 커진 구간을 강조하고 그 구간의 보유·거래·비용을 보인다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n-- **FR-011**: 기본 설정 비교와 자동 탐색에서 선택한 후보 비교를 구분해 표시한다. 자동 탐색 후보의 안정성·선정 이유·탈락 사유·전체 후보는 [007](../007-auto-parameter-search/spec.md)의 상세에서 본다. (§4.2.3)\n-- **FR-012**: 결과 옆에 '탐색 결과 / 미사용 검증 결과 / 미검증'을 구분 표시한다. 탐색에 사용한 성과와 미사용 기간 성과를 섞지 않는다. (§4.2.3, §7.3, D11)\n-- **FR-013**: 결과 의미를 바꾸는 자료 부족·근거 부족·계산 제한·부분 완료는 해당 결과 옆에 한 문장으로 표시하고 상세 안에만 숨기지 않는다. 합류한 실행을 먼저 취소한 요청(004 R-04, `summaryUnavailable`)은 핵심 숫자 3개가 계산되지 않은 상태이므로 FR-001의 숫자 자리에 0이나 대체값을 넣지 않고 \"취소 시점까지의 지표는 계산되지 않았다\" 한 문장과 완료 범위를 표시한다. 결과 의미를 바꾸지 않는 내부 검증 미완료는 경고 목록으로 늘리지 않는다. (§4.1, §7.2, §7.4)\n+- **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. 계산이 제한되었는지의 판정과 그 사유는 [004](../004-backtest-execution/spec.md) FR-030에 따라 004가 결과에 담아 준다. 005는 그것을 표시할 뿐 자료 길이로 스스로 판정하지 않는다. (§4.2.3, 원칙 VI)\n+- **FR-010**: '손실이 커진 때 보기'는 FR-001의 음영과 같은 최대 하락 구간 하나를 강조하고 그 구간의 보유·거래·비용을 보인다. 여러 구간을 고르는 임계값은 두지 않는다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n+- **FR-011**: 기본 설정 비교와 자동 탐색에서 선택한 후보 비교를 구분해 표시한다. 자동 탐색 후보의 안정성·선정 이유·탈락 사유·전체 후보는 [007](../007-auto-parameter-search/spec.md)의 상세에서 본다. 후보를 비교 대상으로 놓는 진입은 007 FR-019가 소유한다. 005는 비교 주소의 비교 대상 식별자로 후보 결과의 공개 토큰을 받아 '자동 탐색 후보 비교'로 표시한다. (§4.2.3)\n+- **FR-012**: 결과 옆에 '탐색 결과 / 미사용 검증 결과 / 미검증'을 구분 표시한다. 탐색에 사용한 성과와 미사용 기간 성과를 섞지 않는다. PD-12 확정 전의 '미검증'은 검증에 실패했다는 뜻이 아니므로, \"검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다\"처럼 상태와 이유를 한 문장에 함께 적는다. (§4.2.3, §7.3, D11)\n+- **FR-013**: 결과 의미를 바꾸는 상태는 네 갈래로 한정한다. 부분 완료(취소나 한도로 일부 기간만 계산됨), 지표 없음(핵심 숫자가 계산되지 않음), 자료 부족·계산 제한(004가 결과에 담은 예외 기록), 실행 실패다. 이 넷은 해당 결과 옆에 한 문장으로 표시하고 상세 안에만 숨기지 않으며, 이 밖의 상태는 상세에 둔다. 합류한 실행을 먼저 취소한 요청(004 R-04, `summaryUnavailable`)은 핵심 숫자 3개가 계산되지 않은 상태이므로 FR-001의 숫자 자리에 0이나 대체값을 넣지 않고 \"취소 시점까지의 지표는 계산되지 않았다\" 한 문장과 완료 범위를 표시한다. 결과 의미를 바꾸지 않는 내부 검증 미완료는 경고 목록으로 늘리지 않는다. (§4.1, §7.2, §7.4)\n - **FR-014**: 자동 배분 전략의 출력 비중은 선택한 규칙의 계산 결과로 표시하고 사용자 입력 비중과 구분한다. (§4.2.1, D13)\n - **FR-015**: 종료 시 시가평가 결과와 청산 비용 포함 결과를 구분해 표시한다. (§6.4.1)\n - **FR-016**: '추천 비중', 주문 버튼, 자동 단일 승자, 일·주·월간 우승 전략, 사용자 간 성과 랭킹, 확률로 읽힐 표현('87% 유사', '지금도 잘될 전략' 등)을 만들지 않는다. 한 항목 기준 정렬은 제공할 수 있다. (§4.2.3, D13, D16, 원칙 III)\n - **FR-017**: 광범위 국내 주가지수와의 비교와 목표 위험을 맞춘 분석은 보조 보기로 제공한다. 지수 비교는 참고 정보이며 기본 비교 기준을 바꾸지 않고, 목표 위험 맞춤은 별도 시나리오로 표시한다. (§4.2.3, §6.4.1)\n-- **FR-018**: '경제환경이 비슷했던 과거 보기' 진입점을 제공한다. 진입 시 기존 섹터·전략·설정을 유지해 [011](../011-regime-strategy-link/spec.md)로 넘긴다. (§4.3, D25)\n-- **FR-019**: 결과는 완료 시 [006 내 기록](../006-my-records/spec.md)에 보존되고, 결과 화면에서 '설정 바꿔 비교'와 내보내기 진입점을 제공한다. 결과마다 고유 주소를 두어 로그인하지 않은 사용자도 그 주소로 결과를 다시 연다. 이 주소에 쓰는 식별자는 다른 사람이 추측할 수 없는 값이어야 하며, [004](../004-backtest-execution/spec.md)가 발급하는 순번 형식의 실행 식별자(`BT-20260910-000123` 꼴)를 그대로 노출하지 않는다. 화면 주소용 공개 식별자와 내부 실행 식별자는 분리해 관리한다. '내 기록' 목록에 쌓이는 것은 로그인한 사용자의 결과뿐이며, 공개 흐름인 이 화면은 [014](../014-user-auth/spec.md)의 로그인을 요구하지 않는다. 주소를 아는 사람이면 누구나 열 수 있으므로 결과에는 개인을 식별할 정보를 담지 않는다. 비교 상태도 같은 주소 체계에 담는다. 기준 결과 주소에 비교 대상 식별자를 덧붙여, 새로고침하거나 그 주소를 다시 열면 두 결과가 그대로 복원된다. 비교를 위한 별도 자원을 서버에 만들지 않는다. (§5)\n+- **FR-018**: '경제환경이 비슷했던 과거 보기' 진입점을 제공한다. 진입 시 기존 섹터·전략·설정을 유지해 [011](../011-regime-strategy-link/spec.md)로 넘긴다. 넘기는 값은 섹터 후보 집합·전략·설정값·분석 기간·금액이며, 전달 형식은 011의 진입 계약이 소유한다. 011에서 돌아오는 길은 브라우저의 뒤로 가기로 원래 결과 주소에 오는 것이다. (§4.3, D25)\n+- **FR-019**: 결과는 완료 시 [006 내 기록](../006-my-records/spec.md)에 보존되고, 결과 화면에서 '설정 바꿔 비교'와 내보내기 진입점을 제공한다. 결과마다 고유 주소를 두어 로그인하지 않은 사용자도 그 주소로 결과를 다시 연다. 이 주소에 쓰는 식별자는 안전한 난수에서 얻은 최소 128비트의 추측할 수 없는 값이어야 하며, [004](../004-backtest-execution/spec.md)가 발급하는 순번 형식의 실행 식별자(`BT-20260910-000123` 꼴)를 그대로 노출하지 않는다. 화면 주소용 공개 식별자와 내부 실행 식별자는 분리해 관리한다. '내 기록' 목록에 쌓이는 것은 로그인한 사용자의 결과뿐이며, 공개 흐름인 이 화면은 [014](../014-user-auth/spec.md)의 로그인을 요구하지 않는다. 주소를 아는 사람이면 누구나 열 수 있으므로 결과에는 개인을 식별할 정보를 담지 않는다. 비교 상태도 같은 주소 체계에 담는다. 기준 결과 주소에 비교 대상 식별자를 덧붙여, 새로고침하거나 그 주소를 다시 열면 두 결과가 그대로 복원된다. 비교를 위한 별도 자원을 서버에 만들지 않는다. 비교 주소를 받은 사람이 비교 대상 식별자만 떼어 그 결과를 단독으로 여는 것은 의도된 동작이다. 결과마다 독립된 주소가 있고 주소를 아는 사람은 열 수 있다는 전제와 같다. (§5)\n - **FR-020**: KRX 자료를 쓰는 결과 화면에 '한국거래소 통계정보' 출처를 표시한다. 정보는 세 층(바로 보이는 정보 / 요청하면 펼치는 정보 / 시스템이 처리하는 정보)으로 배치하고 내부 계산 항목을 동시에 나열하지 않는다. (§4.1, §6.2)\n-- **FR-021**: 로그인하지 않은 사용자의 결과 주소는 한시적이다. 정해진 유효 시간이 지나면 그 주소는 더 이상 열리지 않고 해당 결과도 삭제한다. 유효 시간과 삭제 시점의 값은 PD-23이며, 값이 확정되기 전에도 설정으로 뺀 만료 장치를 먼저 만들어 주소가 무기한 남지 않게 한다. 로그인한 사용자의 결과는 이 만료 대상이 아니며 [006](../006-my-records/spec.md)의 기록 정책(PD-13)을 따른다. (§5)\n+- **FR-021**: 로그인하지 않은 사용자의 결과 주소는 한시적이다. 정해진 유효 시간이 지나면 그 주소는 더 이상 열리지 않고 그 요청과 공개 토큰을 지운다. 요청이 가리키던 계산 결과는 [004](../004-backtest-execution/spec.md) FR-003에 따라 다른 요청과 공유될 수 있으므로, 그 결과를 가리키는 요청이 하나도 남지 않았을 때만 함께 지우고 공유 중이면 남긴다. 유효 시간과 삭제 시점의 값은 PD-23이며, 값이 확정되기 전에도 설정으로 뺀 만료 장치를 먼저 만들어 주소가 무기한 남지 않게 한다. 로그인한 사용자의 결과는 이 만료 대상이 아니며 [006](../006-my-records/spec.md)의 기록 정책(PD-13)을 따른다. (§5)\n+- **FR-022**: 핵심 숫자 3개와 조건 한 줄은 텍스트로 존재해 스크린 리더가 읽을 수 있고, 비교 그래프에는 세 숫자와 비교 대상 유무를 문장으로 요약한 대안 텍스트를 둔다. 상세 패널 열기, 비교 대상 선택, 다시 시도는 키보드만으로 조작할 수 있다. 이번 범위에서 확인할 수 있는 최소 요건이며, 색에 기대지 않는 구분(FR-001, SC-010)과 같은 취지다. (원칙 II)\n \n ### Key Entities *(include if feature involves data)*\n \n@@ -184,14 +185,18 @@\n - **SC-007**: 참여자가 진행자의 도움 없이 상세 근거(손실이 커진 때, 거래 내역, 비용 가정)를 찾는지 기록한다.\n - **SC-008**: 유효 시간이 지난 비로그인 결과 주소가 결과를 그대로 여는 사례가 0건이고, 만료된 주소에 빈 값이나 0으로 채운 결과 화면이 뜨는 사례도 0건이다.\n - **SC-009**: 결과 주소의 식별자를 바꿔 다른 사람의 결과에 도달한 사례가 0건이고, 결과 화면 주소에 004의 내부 실행 식별자가 드러난 사례도 0건이다.\n-- **SC-010**: 비교 그래프를 색 없이(회색조로) 보아도 기준 결과와 비교 대상을 구분할 수 있다.\n+- **SC-010**: 비교 그래프를 색 없이(회색조로) 보아도 기준 결과와 비교 대상을 구분할 수 있다. 자동 시험이 아니라 PD-14 사용성 관찰의 과제로 확인한다.\n+- **SC-011**: 자동 탐색 후보 비교 화면에는 '자동 탐색 후보' 표지와 그 후보의 탐색 묶음으로 가는 연결이 있고, 기본 설정 비교 화면에는 둘 다 없다. 시험 100%에서 성립한다.\n \n ## Assumptions\n \n-- 결과 값과 상세 지표는 [004](../004-backtest-execution/spec.md)가 산출한 것을 그대로 표시한다. 이 spec은 값을 계산하지 않는다.\n+- 결과 값과 상세 지표는 [004](../004-backtest-execution/spec.md)가 산출한 것을 그대로 표시한다. 이 spec은 값을 계산하지 않는다. 유일한 예외는 최대 하락 구간이다. 004가 `summary.maxDrawdownWindow`를 주기 전까지 화면은 004가 이미 계산해 준 일자별 하락 폭 계열에서 가장 낮은 지점과 그 직전 고점을 읽어 음영 구간으로 쓰되, 그 값이 `summary.maxDrawdown`과 어긋나면 음영을 그리지 않는다. 004가 구간을 주면 이 예외는 제거한다.\n+- 004에 요청한 변경(요청자 완화, 접수 응답의 공개 토큰, 최대 하락 구간, 상세 지표 3종 노출, 참조 없는 계산의 정리)은 [plan.md](plan.md)와 [contracts/result-api.md](contracts/result-api.md)가 목록을 소유한다. 들어오기 전까지 해당 항목은 값을 지어내지 않고 제공되지 않음으로 둔다.\n+- 첫 화면 응답 시간 목표와 거래 내역을 한 번에 받는 건수는 004의 실행 측정(PD-06)이 나온 뒤 같은 기준으로 정한다. 그때까지 거래 내역 조회에는 설정으로 뺀 임시 상한을 두어 무제한 조회를 허용하지 않는다(원칙 IX).\n+- 사용자가 입력한 금액·섹터·기간·전략 설정은 그 자체로 개인을 가리키지 않으므로 결과에는 개인 식별 정보가 없다(FR-019). [006](../006-my-records/spec.md)이 결과에 이름·메모·사용자 필드를 붙이게 되면 그 필드는 공개 응답에서 제외한다.\n - 광범위 국내 주가지수 자료는 [001](../001-etf-market-data/spec.md)이 확보한 KOSPI 시리즈다.\n - 검증 구분(탐색/미사용 검증/미검증) 판정 기준은 PD-12에서 정하며, 확정 전 모든 결과는 '미검증'으로 표시한다.\n-- 한국어 웹 화면이며 데스크톱 브라우저를 우선한다. 좁은 화면에서는 요소가 세로로 쌓여 핵심 숫자 3개·그래프·요약 1문장·조건 한 줄을 읽을 수 있어야 하며, 모바일 전용 화면은 이번 범위에서 만들지 않는다. 결과 주소를 받은 사람이 휴대폰에서 열 수 있어야 하므로(FR-019) 좁은 화면에 안내문만 보이는 처리는 하지 않는다.\n+- 한국어 웹 화면이며 데스크톱 브라우저를 우선한다. 폭 360px 화면에서 가로 스크롤 없이 요소가 세로로 쌓여 핵심 숫자 3개·그래프·요약 1문장·조건 한 줄을 읽을 수 있어야 하며, 모바일 전용 화면은 이번 범위에서 만들지 않는다. 결과 주소를 받은 사람이 휴대폰에서 열 수 있어야 하므로(FR-019) 좁은 화면에 안내문만 보이는 처리는 하지 않는다.\n \n ## Pre-Implementation Decisions *(팀 확정 필요)*\n \n@@ -211,3 +216,4 @@ PD-22를 등록한 경위는 이렇다. 결과 옆에 작은 'AI 분석' 버튼\n - 경제환경 사례 화면 ([010](../010-economic-regime-search/spec.md), [011](../011-regime-strategy-link/spec.md))\n - 사용자 간 성과 랭킹, 추천 비중, 주문 (D13, D16)\n - 생성 모델이 쓰는 결과 해설과 그 진입 버튼·모달 (PD-22 확정 전까지)\n+- 로그인하지 않고 만든 결과를 로그인 후 '내 기록'에 귀속시키는 기능 ([006](../006-my-records/spec.md) 기록 정책 PD-13이 정한다). 005는 로그인 전 결과 주소가 로그인 후에도 그대로 열린다는 것만 보장한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -74,7 +74,7 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n | PD-11 | 지표 등록표 실제 값: 통계표 코드·항목 코드·단위·개편 연결·과거 범위·작성기관별 이용 조건 | 미확정 (인증키 발급 후) | [008](008-macro-indicator-registry/spec.md) | §6.2, §10.1 |\n | PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 (출발안: 마지막 12개월 잠금). 2026-09-14 현재 007 구현은 분할을 등록하지 않아 전 후보가 `UNVALIDATED` 이며, 이는 검증 통과가 아니라 '말할 수 없음'이다 | [007](007-auto-parameter-search/spec.md) (허용 오차는 004·010의 계산 대조에도 적용) | §7.3, D11 |\n | PD-13 | 기록 정책: 보관 기간·삭제·연결 해제·공유 후 회수·탐색 묶음 저장 상한 | 미확정 | [006](006-my-records/spec.md) | §5, D14 |\n-| PD-14 | 사용성 관찰: 참여자·과제·일정·관찰 기준 | 미확정 (출발안: 전략을 검증하려는 개인 6~8명, 경제환경 과제 포함) | 이 문서 \"공통 검증·완료 규칙\" | §7.2, D20 |\n+| PD-14 | 사용성 관찰: 참여자·과제·일정·관찰 기준 | 미확정 (출발안: 전략을 검증하려는 개인 6~8명, 경제환경 과제 포함. 2026-09-16 추가: [005](005-result-comparison/spec.md) SC-010 회색조에서 두 결과 구분 확인 과제 포함) | 이 문서 \"공통 검증·완료 규칙\" | §7.2, D20 |\n | PD-15 | 뉴스 표시 허가: 제목·매체·발행 시각·원문 링크 표시 방식의 매체 허가 여부 | 미확인 (매체 회신 대기) | [012](012-market-news-digest/spec.md) | §6.3, §10.1 |\n | PD-16 | 배우기 최종 주제 목록 | 미확정 (출발안: 기획서 예시 5개 주제) | [013](013-learning-pages/spec.md) | §4.5 |\n | PD-17 | 담당·일정·자원 | 미확정 | 이 문서 (plan·Jira에서 관리) | §8.1, D17 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2817048": []
+  }
+}

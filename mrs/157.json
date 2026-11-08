@@ -1,0 +1,762 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947277,
+    "iid": 157,
+    "project_id": 1444456,
+    "title": "fix(fe): 전략 화면이 보관값과 대응표 버전을 잘못 싣지 않게 한다",
+    "description": "# 작업 내용 요약\n\nspec 003 전략 선택 화면(MR !155) 머지 뒤 AI 코드리뷰에서 찾은 결함 네 건을 고칩니다. 네 건 모두 사용자가 보지 못한 값이나 허용 범위 밖 값으로 분석이 접수되거나, 실패가 아무 안내 없이 묻히는 문제입니다.\n\n# 관련 티켓\n- ticket # S15P21E205-274 `[FE] 전략 화면이 보관값과 대응표 버전을 잘못 싣지 않게 한다`\n- link https://ssafy.atlassian.net/browse/S15P21E205-274\n\n# 주요 변경 사항\n- **보관된 시작 금액을 다시 판정합니다** (`hooks/useStrategySettings.ts`). 재검증이 분석 조건을 통째로 옮겨 시작 금액이 판정 없이 살아남았습니다. 이제 입력형 축과 같은 `checkNumberInRange`로 보고, 어긋나면 비운 뒤 복원 가능한 안내를 남깁니다. 입력 경로(`setAnalysisCondition`)도 같은 잣대를 씁니다. 복원은 새 `resetAnalysisCondition`이 합니다.\n- **요청 조립 실패를 알립니다** (`pages/StrategySettingsPage.tsx`). 조립이 `try` 밖이라 예외가 거부된 프로미스로 버려졌습니다. 이제 \"분석 요청을 만들지 못했습니다\"를 보이고 원인은 콘솔에 남깁니다.\n- **대응표가 바뀐 선택을 요청에 섞지 않습니다** (`hooks/useSectorSelection.ts`). 버전은 002 보관값, 종목은 지금 목록에서 와서 서로 다른 대응표가 한 요청에 섞였습니다. 두 버전이 다르면 `mapVersionChanged`로 앞 단계를 안내합니다. 훅이 목록과 버전을 한 덩이로 받게 바꿨습니다.\n- **버전 조회가 지금 넘겨받은 통로를 따릅니다** (`pages/StrategySettingsPage.tsx`). T094에서 화면이 열릴 때 한 번만 조회하게 했더니, 통로를 바꿔도 버전만 옛 결과에 멈춰 '분석하기'가 계속 막혔습니다. 조회를 `fetchAnalysisVersions` 함수 참조에 맞춰 다시 하고, 다시 조회하는 동안 받은 버전을 거두지 않습니다.\n- `components/strategy/analysisSupport.ts`의 안정 참조 계약 주석과 tasks.md의 T094 기록을 바뀐 방식에 맞췄습니다. 기존 기록은 고치지 않고 후속 기록을 덧붙였습니다.\n\n# 테스트\n- [x] `npm run lint`: 오류 0건. 경고 19건은 모두 이번 변경과 무관한 기존 파일입니다.\n- [x] `npm run build`: 통과\n- [x] `npm test`: Vitest 392개, node --test 13개 통과, 건너뜀 0건\n- [x] 고친 부분을 하나씩 되돌리면 그 결함의 검사가 실패하는지 확인했습니다. 시작 금액(훅 2·화면 1), 조립 실패(1), 대응표 버전(훅 1·화면 1), 통로 교체(1), 깜빡임(1) 모두 실패합니다.\n- [ ] 실제 서버와 붙인 수동 확인은 B06 뒤에 가능합니다.\n\n# 리뷰 포인트\n- **AI 코드리뷰는 이 MR의 변경에 대해 아직 돌리지 않았습니다.** 이 네 결함은 MR !155를 리뷰해서 찾은 것이고, 고친 코드 자체는 리뷰 전입니다. 머지 전에 리뷰를 돌리겠습니다.\n- **버전 조회에 남긴 비용이 있습니다.** 호출자가 조회 함수 자체를 렌더마다 새로 만들면, 부모가 다시 그릴 때마다 요청이 한 번씩 더 나갑니다. 화면은 깜빡이지 않아 사용자에게 드러나지 않습니다. 이 몫은 `AnalysisSupport`의 안정 참조 계약이 맡습니다. T094 검사는 요청 횟수가 아니라 \"깜빡이지 않는다\"를 지키도록 둘로 갈랐습니다.\n- **비운 시작 금액을 기본값으로 대신 쓰지 않습니다.** 시작 금액이 없으면 등록표 기본값이 쓰이므로, 비우기만 하면 사용자가 정한 적 없는 금액으로 조용히 바뀐 것과 같습니다. 그래서 복원 안내가 남아 있는 동안은 금액을 모르는 것으로 다루고 '분석하기'를 막습니다.\n- **002 쪽에 남는 한계가 있습니다.** 002는 사용자가 무언가를 바꿔야만 보관된 대응표 버전을 새로 씁니다. 대응표 변경으로 앞 단계에 돌아간 사용자가 아무것도 바꾸지 않고 돌아오면 같은 안내를 다시 봅니다. 002의 다음 단계 인계(002 T019)가 넘어갈 때 현재 버전을 쓰도록 해야 풀립니다. 002 작업의 몫이라 티켓은 만들지 않았습니다.\n- 분석 기간 보관값은 001의 평가 가능 범위가 있어야 판정할 수 있어 이번에 다루지 않았습니다. B10이 기간 입력을 만들 때 함께 판정합니다.\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n      → 이번 변경은 새 표시 문구에 순위·추천 표현을 더하지 않습니다.\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n      → 시작 금액의 범위·간격·단위는 등록표 `analysisConditions.initialAmount`에서 읽습니다.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n      → 복원을 기다리는 시작 금액은 기본값으로 채우지 않고 \"확인할 수 없음\"으로 보입니다.\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n      → 해당 없음. 이 화면은 결과를 보이지 않습니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-16T17:25:38.228+09:00",
+    "updated_at": "2026-09-16T17:30:11.350+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T17:30:11.375+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/274-strategy-request-integrity",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "67570d561039b13593eff7eaa789fb2338354668",
+    "merge_commit_sha": "ae12ac48973a37272dc07d20f539885e82dc6185",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T17:25:40.696+09:00",
+    "reference": "!157",
+    "references": {
+      "short": "!157",
+      "relative": "!157",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!157"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/157",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947277,
+    "iid": 157,
+    "project_id": 1444456,
+    "title": "fix(fe): 전략 화면이 보관값과 대응표 버전을 잘못 싣지 않게 한다",
+    "description": "# 작업 내용 요약\n\nspec 003 전략 선택 화면(MR !155) 머지 뒤 AI 코드리뷰에서 찾은 결함 네 건을 고칩니다. 네 건 모두 사용자가 보지 못한 값이나 허용 범위 밖 값으로 분석이 접수되거나, 실패가 아무 안내 없이 묻히는 문제입니다.\n\n# 관련 티켓\n- ticket # S15P21E205-274 `[FE] 전략 화면이 보관값과 대응표 버전을 잘못 싣지 않게 한다`\n- link https://ssafy.atlassian.net/browse/S15P21E205-274\n\n# 주요 변경 사항\n- **보관된 시작 금액을 다시 판정합니다** (`hooks/useStrategySettings.ts`). 재검증이 분석 조건을 통째로 옮겨 시작 금액이 판정 없이 살아남았습니다. 이제 입력형 축과 같은 `checkNumberInRange`로 보고, 어긋나면 비운 뒤 복원 가능한 안내를 남깁니다. 입력 경로(`setAnalysisCondition`)도 같은 잣대를 씁니다. 복원은 새 `resetAnalysisCondition`이 합니다.\n- **요청 조립 실패를 알립니다** (`pages/StrategySettingsPage.tsx`). 조립이 `try` 밖이라 예외가 거부된 프로미스로 버려졌습니다. 이제 \"분석 요청을 만들지 못했습니다\"를 보이고 원인은 콘솔에 남깁니다.\n- **대응표가 바뀐 선택을 요청에 섞지 않습니다** (`hooks/useSectorSelection.ts`). 버전은 002 보관값, 종목은 지금 목록에서 와서 서로 다른 대응표가 한 요청에 섞였습니다. 두 버전이 다르면 `mapVersionChanged`로 앞 단계를 안내합니다. 훅이 목록과 버전을 한 덩이로 받게 바꿨습니다.\n- **버전 조회가 지금 넘겨받은 통로를 따릅니다** (`pages/StrategySettingsPage.tsx`). T094에서 화면이 열릴 때 한 번만 조회하게 했더니, 통로를 바꿔도 버전만 옛 결과에 멈춰 '분석하기'가 계속 막혔습니다. 조회를 `fetchAnalysisVersions` 함수 참조에 맞춰 다시 하고, 다시 조회하는 동안 받은 버전을 거두지 않습니다.\n- `components/strategy/analysisSupport.ts`의 안정 참조 계약 주석과 tasks.md의 T094 기록을 바뀐 방식에 맞췄습니다. 기존 기록은 고치지 않고 후속 기록을 덧붙였습니다.\n\n# 테스트\n- [x] `npm run lint`: 오류 0건. 경고 19건은 모두 이번 변경과 무관한 기존 파일입니다.\n- [x] `npm run build`: 통과\n- [x] `npm test`: Vitest 392개, node --test 13개 통과, 건너뜀 0건\n- [x] 고친 부분을 하나씩 되돌리면 그 결함의 검사가 실패하는지 확인했습니다. 시작 금액(훅 2·화면 1), 조립 실패(1), 대응표 버전(훅 1·화면 1), 통로 교체(1), 깜빡임(1) 모두 실패합니다.\n- [ ] 실제 서버와 붙인 수동 확인은 B06 뒤에 가능합니다.\n\n# 리뷰 포인트\n- **AI 코드리뷰는 이 MR의 변경에 대해 아직 돌리지 않았습니다.** 이 네 결함은 MR !155를 리뷰해서 찾은 것이고, 고친 코드 자체는 리뷰 전입니다. 머지 전에 리뷰를 돌리겠습니다.\n- **버전 조회에 남긴 비용이 있습니다.** 호출자가 조회 함수 자체를 렌더마다 새로 만들면, 부모가 다시 그릴 때마다 요청이 한 번씩 더 나갑니다. 화면은 깜빡이지 않아 사용자에게 드러나지 않습니다. 이 몫은 `AnalysisSupport`의 안정 참조 계약이 맡습니다. T094 검사는 요청 횟수가 아니라 \"깜빡이지 않는다\"를 지키도록 둘로 갈랐습니다.\n- **비운 시작 금액을 기본값으로 대신 쓰지 않습니다.** 시작 금액이 없으면 등록표 기본값이 쓰이므로, 비우기만 하면 사용자가 정한 적 없는 금액으로 조용히 바뀐 것과 같습니다. 그래서 복원 안내가 남아 있는 동안은 금액을 모르는 것으로 다루고 '분석하기'를 막습니다.\n- **002 쪽에 남는 한계가 있습니다.** 002는 사용자가 무언가를 바꿔야만 보관된 대응표 버전을 새로 씁니다. 대응표 변경으로 앞 단계에 돌아간 사용자가 아무것도 바꾸지 않고 돌아오면 같은 안내를 다시 봅니다. 002의 다음 단계 인계(002 T019)가 넘어갈 때 현재 버전을 쓰도록 해야 풀립니다. 002 작업의 몫이라 티켓은 만들지 않았습니다.\n- 분석 기간 보관값은 001의 평가 가능 범위가 있어야 판정할 수 있어 이번에 다루지 않았습니다. B10이 기간 입력을 만들 때 함께 판정합니다.\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n      → 이번 변경은 새 표시 문구에 순위·추천 표현을 더하지 않습니다.\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n      → 시작 금액의 범위·간격·단위는 등록표 `analysisConditions.initialAmount`에서 읽습니다.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n      → 복원을 기다리는 시작 금액은 기본값으로 채우지 않고 \"확인할 수 없음\"으로 보입니다.\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n      → 해당 없음. 이 화면은 결과를 보이지 않습니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-16T17:25:38.228+09:00",
+    "updated_at": "2026-09-16T17:30:11.350+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T17:30:11.375+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/274-strategy-request-integrity",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "67570d561039b13593eff7eaa789fb2338354668",
+    "merge_commit_sha": "ae12ac48973a37272dc07d20f539885e82dc6185",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T17:25:40.696+09:00",
+    "reference": "!157",
+    "references": {
+      "short": "!157",
+      "relative": "!157",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!157"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/157",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-16T17:25:53.085+09:00",
+    "latest_build_finished_at": "2026-09-16T17:30:10.304+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 199789,
+      "iid": 77,
+      "project_id": 1444456,
+      "sha": "67570d561039b13593eff7eaa789fb2338354668",
+      "ref": "fix(fe)/274-strategy-request-integrity",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T17:25:52.939+09:00",
+      "updated_at": "2026-09-16T17:30:10.311+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199789"
+    },
+    "head_pipeline": {
+      "id": 199789,
+      "iid": 77,
+      "project_id": 1444456,
+      "sha": "67570d561039b13593eff7eaa789fb2338354668",
+      "ref": "fix(fe)/274-strategy-request-integrity",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T17:25:52.939+09:00",
+      "updated_at": "2026-09-16T17:30:10.311+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199789",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T17:25:53.085+09:00",
+      "finished_at": "2026-09-16T17:30:10.304+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199789",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "head_sha": "67570d561039b13593eff7eaa789fb2338354668",
+      "start_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ff500325a73092b9fca1dc2a90f0a39c50c7089c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818821,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T17:25:38.338+09:00",
+          "updated_at": "2026-09-16T17:25:38.349+09:00",
+          "system": true,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "512d787abba1ca95d59f1d03914b14669f7e8b84",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818827,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n이번 변경은 전략 설정 화면에서 보관된 설정값(시작 금액 등)의 범위 검증 누락, 섹터 대응표 버전 불일치로 인한 데이터 혼입, 그리고 렌더링 사이클에서 분석 조건 버전 조회 함수의 참조 안정성 문제를 견고하게 해결하고 있습니다. 컴포넌트와 훅 레벨에서 단위 테스트와 통합 테스트가 충실히 작성되어 변경 사항의 안전성을 잘 뒷받침하고 있습니다.\n\n### 테스트 제안\n- **대응표 버전 불일치 시나리오**: 로컬 스토리지에 이전 버전(`mapVersion: 'SEM-TEST-0'`)의 섹터 선택 정보를 저장한 상태로 전략 화면에 진입할 때, 경고 메시지가 올바르게 노출되고 백테스트 요청이 차단되는지 확인합니다.\n- **범위 밖 시작 금액 복원 시나리오**: 허용 범위를 벗어난 `initialAmount`가 포함된 설정으로 페이지를 로드할 때, 기본값이 조용히 채워지지 않고 '기본값 복원' UI가 노출되며 사용자가 복원하기 전까지 백테스트 실행이 비활성화되는지 검증합니다.\n- **분석 버전 조회 함수 변경 시나리오**: 부모 컴포넌트로부터 전달되는 `fetchAnalysisVersions` 함수 레퍼런스가 동적으로 변경될 때, 버전 조회가 새로운 함수 레퍼런스를 올바르게 추적하여 재호출하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:67570d561039b13593eff7eaa789fb2338354668 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T17:25:49.055+09:00",
+          "updated_at": "2026-09-16T17:25:49.055+09:00",
+          "system": false,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0ccb797d33fae6c60f73e5961df3a00b9dc332dd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818836,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T17:26:32.474+09:00",
+          "updated_at": "2026-09-16T17:26:32.479+09:00",
+          "system": true,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "20f6b670d8eafe517093d86d80885213f9f23b4d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818843,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 67570d561039b13593eff7eaa789fb2338354668 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T17:27:05.478+09:00",
+          "updated_at": "2026-09-16T17:27:05.481+09:00",
+          "system": true,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2764ab4085fd1763e5391700ff7410bcbd828e3b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818853,
+          "type": null,
+          "body": "unapproved this merge request",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T17:27:38.747+09:00",
+          "updated_at": "2026-09-16T17:27:38.751+09:00",
+          "system": true,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0abc2bc6ddc5bfb0312bb17936f8c4b3355ca5ae",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818855,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T17:27:40.930+09:00",
+          "updated_at": "2026-09-16T17:27:40.978+09:00",
+          "system": true,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "54efce7be9ca17f9ac42f53e1ccc3fb8f25e7926",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818900,
+          "type": null,
+          "body": "mentioned in commit ae12ac48973a37272dc07d20f539885e82dc6185",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T17:30:11.861+09:00",
+          "updated_at": "2026-09-16T17:30:11.894+09:00",
+          "system": true,
+          "noteable_id": 947277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 157,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2207997,
+      "head_commit_sha": "67570d561039b13593eff7eaa789fb2338354668",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "created_at": "2026-09-16T17:25:38.610+09:00",
+      "merge_request_id": 947277,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "b7951e8fe1fff7430614f6d583ac912b8366ea3b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2207997,
+      "head_commit_sha": "67570d561039b13593eff7eaa789fb2338354668",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "created_at": "2026-09-16T17:25:38.610+09:00",
+      "merge_request_id": 947277,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "b7951e8fe1fff7430614f6d583ac912b8366ea3b",
+      "commits": [
+        {
+          "id": "67570d561039b13593eff7eaa789fb2338354668",
+          "short_id": "67570d56",
+          "created_at": "2026-09-16T17:24:10.000+09:00",
+          "parent_ids": [
+            "2c8c9a09ac7a5ec6c78a577a493890963aed74ed"
+          ],
+          "title": "docs(fe): T094 고친 방법이 만든 결함과 바꾼 방식을 기록한다",
+          "message": "docs(fe): T094 고친 방법이 만든 결함과 바꾼 방식을 기록한다\n\n앞서 \"그대로 유효하다\"고 적은 T094의 방법이 통로를 바꿔도 버전 조회가 멈추는 결함을 만들었다.\n기존 기록은 고치지 않고 Phase 13 아래에 후속 기록을 덧붙였다.\n\nS15P21E205-274\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T17:24:10.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T17:24:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/67570d561039b13593eff7eaa789fb2338354668"
+        },
+        {
+          "id": "2c8c9a09ac7a5ec6c78a577a493890963aed74ed",
+          "short_id": "2c8c9a09",
+          "created_at": "2026-09-16T17:24:10.000+09:00",
+          "parent_ids": [
+            "3eb8b84b22df3123d8c491a58bcca436adbff046"
+          ],
+          "title": "fix(fe): 요청 조립 실패를 알리고 버전 조회가 지금 통로를 따르게 한다",
+          "message": "fix(fe): 요청 조립 실패를 알리고 버전 조회가 지금 통로를 따르게 한다\n\n**조립 실패를 알린다.** 요청 조립이 `try` 밖이라, 금액·비중이 계약 모양으로 옮겨지지 않아\n예외가 나면 거부된 프로미스로 버려졌다. 버튼을 눌러도 진행 표시도 실패 안내도 없었다. 조립을\n실패 경로 안에 두고, 서버가 한 말이 아니므로 예외 문장 대신 사용자가 할 수 있는 일을 말한다.\n원인은 개발 도구에 남긴다.\n\n**버전 조회가 지금 넘겨받은 통로를 따른다.** T094에서 조회를 화면이 열릴 때 한 번으로 묶었더니,\n호출자가 통로를 실제로 바꿔도 버전만 옛 통로의 결과에 멈춰 '분석하기'가 계속 막혔다. 조회를\n객체가 아니라 `fetchAnalysisVersions` 함수 참조에 맞춰 다시 하고, 다시 조회하는 동안 받은 버전을\n거두지 않아 버튼이 깜빡이지 않게 했다. 대신 조회 함수 자체를 렌더마다 새로 만드는 호출자에게서는\n요청이 헛돈다. 그 몫은 `AnalysisSupport`의 안정 참조 계약에 적었다. T094 검사는 요청 횟수가 아니라\n깜빡이지 않는다는 사용자 쪽 성질을 지키도록 둘로 갈랐다.\n\n**화면이 두 결함의 판정을 쓴다.** 복원을 기다리는 시작 금액은 요약 줄과 요청에 기본값으로 대신\n나가지 않고, 분석 조건 안내의 복원 버튼이 그것을 되돌린다. 대응표가 바뀐 선택은 까닭이 다른\n문장으로 앞 단계를 안내한다.\n\nS15P21E205-274\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T17:24:10.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T17:24:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2c8c9a09ac7a5ec6c78a577a493890963aed74ed"
+        },
+        {
+          "id": "3eb8b84b22df3123d8c491a58bcca436adbff046",
+          "short_id": "3eb8b84b",
+          "created_at": "2026-09-16T17:24:09.000+09:00",
+          "parent_ids": [
+            "8a517383384fc6a1aa6ea5866fffbf5600d27fc0"
+          ],
+          "title": "fix(fe): 보관된 시작 금액을 등록표 범위로 다시 판정한다",
+          "message": "fix(fe): 보관된 시작 금액을 등록표 범위로 다시 판정한다\n\n재검증이 축 값과 최소 평가 기간만 다시 판정하고 분석 조건은 통째로 옮겨, 시작 금액이 판정\n없이 살아남았다. 등록표 범위가 좁아졌거나 저장소가 편집되면 범위 밖 금액이 화면에 보이고\n요청으로 나갔다(SC-002, FR-017).\n\n시작 금액을 입력형 축과 같은 `checkNumberInRange`로 판정한다. 어긋나면 비우고 복원 가능한\n안내를 남긴다. 비우기만 하면 화면이 등록표 기본값을 쓰므로 사용자가 정한 적 없는 금액으로\n조용히 바뀐 것과 같다 — 그래서 안내가 남아 있는 동안은 금액을 모르는 것으로 다루고, 새로\n고쳐도 복원 전까지 안내를 옮긴다. `resetAnalysisCondition`으로 사용자가 복원해야 기본값이\n쓰인다.\n\n입력 경로(`setAnalysisCondition`)도 같은 잣대로 본다. 복원 경로와 입력 경로가 다른 잣대를\n쓰면 한쪽으로 범위 밖 값이 들어온다. 분석 기간은 001의 평가 가능 범위가 있어야 판정할 수 있어\n이 재검증이 다루지 않으며, B10이 기간 입력을 만들 때 함께 판정한다.\n\nS15P21E205-274\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T17:24:09.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T17:24:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3eb8b84b22df3123d8c491a58bcca436adbff046"
+        },
+        {
+          "id": "8a517383384fc6a1aa6ea5866fffbf5600d27fc0",
+          "short_id": "8a517383",
+          "created_at": "2026-09-16T17:24:09.000+09:00",
+          "parent_ids": [
+            "738a9f02ffd12718d641d4811fb952fa15dd356d"
+          ],
+          "title": "fix(fe): 섹터 대응표가 바뀐 선택을 요청에 섞지 않는다",
+          "message": "fix(fe): 섹터 대응표가 바뀐 선택을 요청에 섞지 않는다\n\n분석 요청의 대응표 버전은 002가 선택을 만들 당시의 보관값인데, 종목은 지금 받은 섹터\n목록에서 찾았다. 그사이 대응표가 재발행되면 서로 다른 대응표에서 온 값이 한 요청에 섞인다.\n서버는 요청의 버전으로 (섹터, 종목) 쌍을 검증하므로 대표 ETF가 바뀐 섹터가 있으면 400이고,\n바뀌지 않았더라도 결과 기록의 대응표 버전이 실제로 쓴 종목을 말하지 않는다(원칙 VIII).\n\n두 버전이 다르면 `incomplete`와 새 까닭 `mapVersionChanged`를 돌려준다. 보관된 버전을 지금\n버전으로 덮어쓰지도, 종목을 옛 버전으로 추측하지도 않는다 — 어느 쪽으로 맞출지는 사용자가 앞\n단계에서 다시 확인할 일이다.\n\n훅이 섹터 목록과 대응표 버전을 한 덩이로 받게 바꿨다. 따로 받으면 호출자가 서로 다른 조회의\n결과를 짝지어 넘겨도 훅이 알아챌 수 없다.\n\nS15P21E205-274\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T17:24:09.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T17:24:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8a517383384fc6a1aa6ea5866fffbf5600d27fc0"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -50,12 +50,18 @@ export type WarmupJudgement = {\n /**\n  * 화면에 넘기는 통로 한 벌.\n  *\n- * <p><b>렌더 사이에 안정된 참조로 넘긴다.</b> 모듈 상수이거나 `useMemo`로 감싼 값이어야 한다.\n- * 렌더마다 새 객체를 만들면 화면이 이 객체를 의존성으로 삼는 자리마다 일이 되풀이된다.\n+ * <p><b>각 함수를 렌더 사이에 안정된 참조로 넘긴다.</b> 모듈 함수이거나 `useCallback`·`useMemo`로\n+ * 감싼 값이어야 한다.\n  *\n- * <p>다만 <b>화면은 이 계약을 지키지 않아도 조회를 되풀이하지 않도록 스스로 막는다</b> — 버전\n- * 조회 효과는 참조가 아니라 ref로 최신 통로를 읽는다. 계약만 두면 어겼다는 사실이 드러나지 않고,\n- * 부모가 다시 그려질 때마다 조회가 한 번씩 더 나가며 그동안 '분석하기'가 잠깐씩 막힌다.\n+ * <p>화면은 버전 조회를 **객체가 아니라 `fetchAnalysisVersions` 함수의 참조**에 맞춰 다시 한다. 그래서\n+ * 객체를 매번 `{ ...base }`로 새로 펼쳐도 담긴 함수가 같으면 요청은 한 번이고, 통로를 실제로 다른\n+ * 함수로 바꾸면 버전 조회도 새 통로를 따른다. 다시 조회하는 동안에는 받은 버전을 거두지 않아\n+ * '분석하기'가 깜빡이지 않는다.\n+ *\n+ * <p><b>이 계약을 어기면 생기는 일</b>: 조회 함수 자체를 렌더마다 새로 만들면 부모가 다시 그릴 때마다\n+ * 요청이 한 번씩 더 나간다. 화면은 깜빡이지 않으므로 사용자에게는 드러나지 않고, 헛도는 요청만\n+ * 남는다. 한때 화면이 열릴 때 한 번만 조회해 이 비용을 없앴으나, 그러면 통로를 바꿔도 버전 조회만\n+ * 옛 통로에 멈춰 '분석하기'가 계속 막혔다(S15P21E205-274).\n  */\n export type AnalysisSupport = {\n   fetchAnalysisVersions: (signal?: AbortSignal) => Promise<AnalysisVersions | null>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/analysisSupport.ts",
+          "old_path": "frontend/src/components/strategy/analysisSupport.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,8 +37,16 @@ const catalog: SectorSummary[] = [\n   sector('GAMMA', '다섹터'),\n ]\n \n-function renderSelection(sectors: readonly SectorSummary[] | null = catalog) {\n-  return renderHook(() => useSectorSelection(sectors)).result\n+/** 검사가 보관하는 선택과 같은 대응표 버전. 목록도 이 버전에 속한다고 본다. */\n+const CATALOG_MAP_VERSION = 'SEM-TEST-1'\n+\n+function renderSelection(\n+  sectors: readonly SectorSummary[] | null = catalog,\n+  mapVersion: string = CATALOG_MAP_VERSION,\n+) {\n+  return renderHook(() =>\n+    useSectorSelection(sectors === null ? null : { mapVersion, sectors }),\n+  ).result\n }\n \n afterEach(() => {\n@@ -131,6 +139,23 @@ describe('useSectorSelection', () => {\n     expect(result.current.selection.items[0].instrumentId).toBe('ALPHA.XKRX')\n   })\n \n+  it('선택을 만든 대응표와 지금 목록의 대응표가 다르면 종목을 섞지 않고 앞 단계로 되돌린다', () => {\n+    // S15P21E205-274. 종목은 지금 목록에서 찾는데 버전은 보관값이라, 그대로 실으면 서로 다른\n+    // 대응표에서 온 값이 한 요청에 섞인다. 서버는 요청의 버전으로 (섹터, 종목) 쌍을 검증한다.\n+    writeStoredSelection({\n+      mapVersion: 'SEM-TEST-1',\n+      selectedCodes: ['ALPHA', 'BETA'],\n+      weightTenths: { ALPHA: 500, BETA: 500 },\n+      weightsTouched: true,\n+    })\n+\n+    const result = renderSelection(catalog, 'SEM-TEST-2')\n+\n+    expect(result.current.status).toBe('incomplete')\n+    if (result.current.status !== 'incomplete') return\n+    expect(result.current.problem).toBe('mapVersionChanged')\n+  })\n+\n   it('섹터 목록을 받기 전에는 마치지 않았다고 말하지 않는다', () => {\n     const result = renderSelection(null)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useSectorSelection.test.tsx",
+          "old_path": "frontend/src/hooks/useSectorSelection.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,6 +50,26 @@ export type SectorSelection = {\n   items: SectorSelectionItem[]\n }\n \n+/**\n+ * 앞 단계의 선택을 쓸 수 없는 까닭.\n+ *\n+ * 002가 정한 둘(`unreadable`·`newerFormat`)에 003이 하나를 더한다.\n+ *\n+ * - `mapVersionChanged`: 선택을 만든 대응표 버전과 지금 받은 섹터 목록의 대응표 버전이 다르다.\n+ *   **종목은 지금 목록에서 찾으므로 둘을 한 요청에 실으면 서로 다른 대응표에서 온 값이 섞인다.**\n+ *   서버는 요청의 대응표 버전으로 (섹터, 종목) 쌍을 검증하므로 대표 ETF가 바뀐 섹터가 있으면\n+ *   400으로 거절하고, 바뀌지 않았더라도 결과 기록의 대응표 버전이 실제로 쓴 종목을 말하지 않게\n+ *   된다(원칙 VIII). 어느 쪽 버전으로 맞출지는 사용자가 앞 단계에서 다시 확인할 일이지 이 화면이\n+ *   조용히 고를 일이 아니다.\n+ */\n+export type SectorSelectionProblem = SelectionRestoreProblem | 'mapVersionChanged'\n+\n+/** 섹터 목록 한 벌과 그 대응표 버전. 둘은 늘 함께 다닌다 — 따로 받으면 서로 다른 벌이 섞인다. */\n+export type SectorCatalogForSelection = {\n+  mapVersion: string\n+  sectors: readonly SectorSummary[]\n+}\n+\n /**\n  * 앞 단계의 상태.\n  *\n@@ -67,7 +87,7 @@ export type SectorSelectionState =\n   | {\n       status: 'incomplete'\n       /** 읽지 못한 까닭. 없으면 그냥 고른 것이 모자란 것이다. */\n-      problem: SelectionRestoreProblem | null\n+      problem: SectorSelectionProblem | null\n       dropped: DroppedSelection[]\n     }\n   | {\n@@ -98,17 +118,21 @@ export type SectorSelectionState =\n /**\n  * 앞 단계에서 정한 섹터·비중.\n  *\n- * `sectors`는 `GET /sectors`로 받은 목록이며, 아직 받지 못했으면 `null`을 넘긴다. 돌려주는\n- * `items`의 길이가 곧 등록표 조회의 `universeSize`다 — 화면이 그 수를 따로 세지 않는다.\n+ * `catalog`는 `GET /sectors`로 받은 목록과 그 대응표 버전이며, 아직 받지 못했으면 `null`을 넘긴다.\n+ * 돌려주는 `items`의 길이가 곧 등록표 조회의 `universeSize`다 — 화면이 그 수를 따로 세지 않는다.\n+ *\n+ * <p><b>목록과 버전을 한 덩이로 받는다.</b> 종목을 찾는 목록과 그 목록이 속한 대응표 버전이 따로\n+ * 들어오면, 호출자가 서로 다른 조회의 결과를 짝지어 넘겨도 이 훅이 알아챌 수 없다.\n  *\n- * <p>계산은 `sectors`가 바뀔 때만 다시 한다. 호출자는 조회 결과를 그대로 넘겨 같은 목록이 매\n- * 렌더 새 배열이 되지 않게 한다.\n+ * <p>계산은 `catalog`가 바뀔 때만 다시 한다. 호출자는 조회 결과를 그대로 넘겨 같은 목록이 매\n+ * 렌더 새 객체가 되지 않게 한다.\n  */\n export function useSectorSelection(\n-  sectors: readonly SectorSummary[] | null,\n+  catalog: SectorCatalogForSelection | null,\n ): SectorSelectionState {\n   return useMemo(() => {\n-    if (sectors === null) return { status: 'pending' }\n+    if (catalog === null) return { status: 'pending' }\n+    const { sectors } = catalog\n \n     const restored = readStoredSelection(sectors)\n     const snapshot = restored.snapshot\n@@ -117,6 +141,13 @@ export function useSectorSelection(\n       return { status: 'incomplete', problem: restored.problem, dropped: restored.dropped }\n     }\n \n+    // 종목은 아래에서 지금 목록으로 찾는다. 선택이 다른 대응표에서 만들어졌다면 그 둘을 한 요청에\n+    // 섞지 않는다 — 002가 보관한 버전을 지금 버전으로 덮어쓰지도, 종목을 옛 버전으로 추측하지도\n+    // 않고 앞 단계에서 다시 확인하게 한다.\n+    if (snapshot.mapVersion !== catalog.mapVersion) {\n+      return { status: 'incomplete', problem: 'mapVersionChanged', dropped: restored.dropped }\n+    }\n+\n     const instrumentBySector = new Map(\n       sectors.map((sector) => [sector.code, sector.representativeEtf.instrumentId] as const),\n     )\n@@ -148,5 +179,5 @@ export function useSectorSelection(\n       weights: { totalTenths, isBalanced },\n       dropped: restored.dropped,\n     }\n-  }, [sectors])\n+  }, [catalog])\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useSectorSelection.ts",
+          "old_path": "frontend/src/hooks/useSectorSelection.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -329,6 +329,95 @@ describe('useStrategySettings', () => {\n     ).toBe(true)\n   })\n \n+  it('보관된 시작 금액이 등록표 범위 밖이면 비우고 복원을 기다린다', () => {\n+    // S15P21E205-274, SC-002·FR-017. 축 값과 같은 잣대로 다시 판정한다.\n+    const range = registryFixture.analysisConditions.initialAmount\n+    store({\n+      registryVersion: registryFixture.registryVersion,\n+      universeSize: UNIVERSE_SIZE,\n+      selectedStrategyId: null,\n+      valuesByStrategy: {},\n+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.max + range.step },\n+      invalidValues: [],\n+    })\n+\n+    const { result } = renderSettings()\n+\n+    // 범위 밖 값이 상태에도 저장소에도 남지 않는다.\n+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()\n+    expect((readStored().analysisCondition as Record<string, unknown>).initialAmount).toBeUndefined()\n+\n+    const entry = result.current.invalidValues.find((item) => item.axisName === 'initialAmount')\n+    expect(entry).toMatchObject({ strategyId: null, reason: 'OUT_OF_RANGE', restorable: true })\n+  })\n+\n+  it('간격에 맞지 않는 보관 금액도 비운다', () => {\n+    const range = registryFixture.analysisConditions.initialAmount\n+    store({\n+      registryVersion: registryFixture.registryVersion,\n+      universeSize: UNIVERSE_SIZE,\n+      selectedStrategyId: null,\n+      valuesByStrategy: {},\n+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.min + 1 },\n+      invalidValues: [],\n+    })\n+\n+    const { result } = renderSettings()\n+\n+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()\n+    expect(result.current.invalidValues.find((item) => item.axisName === 'initialAmount')?.reason).toBe(\n+      'OFF_STEP',\n+    )\n+  })\n+\n+  it('비워 둔 시작 금액의 안내는 새로 고쳐도 복원 전까지 남는다', () => {\n+    // 옮기지 않으면 새로 고치는 순간 안내가 사라지고 기본값이 조용히 쓰인다.\n+    const range = registryFixture.analysisConditions.initialAmount\n+    store({\n+      registryVersion: registryFixture.registryVersion,\n+      universeSize: UNIVERSE_SIZE,\n+      selectedStrategyId: null,\n+      valuesByStrategy: {},\n+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.max + range.step },\n+      invalidValues: [],\n+    })\n+\n+    renderSettings().unmount()\n+    const { result } = renderSettings()\n+\n+    expect(result.current.invalidValues.some((item) => item.axisName === 'initialAmount')).toBe(true)\n+  })\n+\n+  it('시작 금액 복원은 안내를 지우고 기본값을 쓰게 한다', () => {\n+    const range = registryFixture.analysisConditions.initialAmount\n+    store({\n+      registryVersion: registryFixture.registryVersion,\n+      universeSize: UNIVERSE_SIZE,\n+      selectedStrategyId: null,\n+      valuesByStrategy: {},\n+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD', initialAmount: range.max + range.step },\n+      invalidValues: [],\n+    })\n+\n+    const { result } = renderSettings()\n+    act(() => result.current.resetAnalysisCondition('initialAmount'))\n+\n+    expect(result.current.invalidValues.some((item) => item.axisName === 'initialAmount')).toBe(false)\n+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()\n+  })\n+\n+  it('범위 밖 시작 금액은 입력으로도 반영하지 않는다', () => {\n+    // 복원 경로와 입력 경로가 다른 잣대를 쓰면 한쪽으로 범위 밖 값이 들어온다(SC-002).\n+    const range = registryFixture.analysisConditions.initialAmount\n+    const { result } = renderSettings()\n+\n+    act(() => result.current.setAnalysisCondition({ initialAmount: range.min - range.step }))\n+    expect(result.current.analysisCondition.initialAmount).toBeUndefined()\n+\n+    act(() => result.current.setAnalysisCondition({ initialAmount: range.min }))\n+    expect(result.current.analysisCondition.initialAmount).toBe(range.min)\n+  })\n+\n   it('선택 전략의 워밍업을 현재 설정으로 계산한다', () => {\n     const { result } = renderSettings()\n     act(() => result.current.select(unselectableStrategy.strategyId))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.test.tsx",
+          "old_path": "frontend/src/hooks/useStrategySettings.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -171,13 +171,37 @@ export function checkAxisValue(\n     return choice.selectable ? null : 'CHOICE_UNSELECTABLE'\n   }\n \n-  const range = axis.range\n-  if (!range) return 'OUT_OF_RANGE'\n+  if (!axis.range) return 'OUT_OF_RANGE'\n+  return checkNumberInRange(value, axis.range)\n+}\n+\n+/**\n+ * 입력형 값 하나가 최소·최대 안이고 간격에 맞는가.\n+ *\n+ * 전략의 입력형 축과 분석 조건의 입력형 값(시작 금액)이 **같은 규칙**을 쓴다. 따로 두면 한쪽만\n+ * 간격 판정을 빠뜨리는 일이 생긴다. 최솟값·최댓값과 정확히 같은 값은 허용한다(spec Edge Cases).\n+ */\n+export function checkNumberInRange(\n+  value: unknown,\n+  range: { min: number; max: number; step: number },\n+): 'OUT_OF_RANGE' | 'OFF_STEP' | null {\n   if (typeof value !== 'number' || !Number.isFinite(value)) return 'OUT_OF_RANGE'\n   if (value < range.min || value > range.max) return 'OUT_OF_RANGE'\n   return isOnStep(value, range.min, range.step) ? null : 'OFF_STEP'\n }\n \n+/**\n+ * 사용자가 기본값 복원으로 되돌릴 수 있는 분석 조건.\n+ *\n+ * 지금은 시작 금액 하나다. 최소 평가 기간은 목록형이라 후보에 없으면 기본값으로 시작하고 알리기만\n+ * 하며(되돌릴 값이 이미 기본값이다), 분석 기간은 001의 평가 가능 범위가 있어야 판정할 수 있어\n+ * 이 재검증이 다루지 않는다 — B10이 기간 입력을 만들 때 함께 판정한다.\n+ */\n+export type RestorableCondition = 'initialAmount'\n+\n+/** 시작 금액을 가리키는 표시 이름. 요약 줄의 항목 이름과 같게 둔다. */\n+const INITIAL_AMOUNT_LABEL = '시작 금액'\n+\n function displayValue(value: unknown): string {\n   if (isScalar(value)) return String(value)\n   try {\n@@ -466,21 +490,75 @@ export function reconcileStoredSettings(\n     minEvaluationYears = fallback\n   }\n \n+  // --- 시작 금액 ---------------------------------------------------------------------------\n+  //\n+  // **축 값과 같은 잣대로 다시 판정한다.** 앞서는 분석 조건을 통째로 옮겨 시작 금액이 판정 없이\n+  // 살아남았고, 등록표 범위가 좁아졌거나 저장소가 편집된 경우 범위 밖 금액이 화면에 보이고 요청으로\n+  // 나갔다(SC-002, FR-017).\n+  //\n+  // **비우되, 비운 것이 곧 기본값이 되지 않게 한다.** 시작 금액이 없으면 화면은 등록표 기본값을\n+  // 쓰므로, 비우기만 하면 사용자가 정한 적 없는 기본값으로 조용히 바뀐 것과 같다. 그래서 복원\n+  // 가능한 안내를 남기고, 화면은 그 안내가 남아 있는 동안 금액을 모르는 것으로 다룬다. 사용자가\n+  // 복원을 눌러야 안내가 사라지고 기본값이 쓰인다.\n+  const { initialAmount: storedAmount, ...otherConditions } = stored.analysisCondition\n+  let initialAmount: number | undefined = storedAmount\n+  if (storedAmount !== undefined) {\n+    const range = registry.analysisConditions.initialAmount\n+    const reason = checkNumberInRange(storedAmount, range)\n+    if (reason !== null) {\n+      const unit = range.unit ?? ''\n+      invalidValues.push({\n+        strategyId: null,\n+        axisName: 'initialAmount',\n+        storedValue: storedAmount,\n+        reason,\n+        message:\n+          reason === 'OUT_OF_RANGE'\n+            ? `'${INITIAL_AMOUNT_LABEL}'의 저장값 ${displayValue(storedAmount)}${unit}은(는) 허용 범위(${range.min}~${range.max}${unit}) 밖입니다.`\n+            : `'${INITIAL_AMOUNT_LABEL}'의 저장값 ${displayValue(storedAmount)}${unit}은(는) 등록된 간격(${range.step}${unit})에 맞지 않습니다.`,\n+        restorable: true,\n+      })\n+      initialAmount = undefined\n+    }\n+  } else {\n+    // 앞선 판정에서 비워 두고 아직 복원하지 않았으면 그 안내를 그대로 옮긴다. 옮기지 않으면\n+    // 새로 고치는 순간 안내가 사라지고 기본값이 조용히 쓰인다.\n+    const pendingAmount = stored.invalidValues.find(\n+      (entry) => entry.strategyId === null && entry.axisName === 'initialAmount' && entry.restorable,\n+    )\n+    if (pendingAmount) invalidValues.push(pendingAmount)\n+  }\n+\n   const selectedStrategyId =\n     stored.selectedStrategyId !== null && strategies.has(stored.selectedStrategyId)\n       ? stored.selectedStrategyId\n       : null\n \n+  const analysisCondition: AnalysisCondition = {\n+    ...otherConditions,\n+    minEvaluationYears,\n+    scenario: 'FULL_PERIOD',\n+  }\n+  if (initialAmount !== undefined) analysisCondition.initialAmount = initialAmount\n+\n   return {\n     registryVersion: registry.registryVersion,\n     universeSize,\n     selectedStrategyId,\n     valuesByStrategy,\n-    analysisCondition: { ...stored.analysisCondition, minEvaluationYears, scenario: 'FULL_PERIOD' },\n+    analysisCondition,\n     invalidValues,\n   }\n }\n \n+/** 전략과 무관한 분석 조건 하나의 무효 안내를 뺀다. */\n+function withoutCondition(\n+  entries: InvalidStoredValue[],\n+  name: RestorableCondition,\n+): InvalidStoredValue[] {\n+  return entries.filter((entry) => !(entry.strategyId === null && entry.axisName === name))\n+}\n+\n // ---------------------------------------------------------------------------\n // 훅\n // ---------------------------------------------------------------------------\n@@ -508,6 +586,8 @@ export type StrategySettings = {\n   resetAxis: (strategyId: string, axisName: string) => void\n   resetAll: (strategyId: string) => void\n   setAnalysisCondition: (patch: Partial<Omit<AnalysisCondition, 'scenario'>>) => void\n+  /** 재검증이 비워 둔 분석 조건을 등록표 기본값으로 되돌리고 그 안내를 지운다 */\n+  resetAnalysisCondition: (name: RestorableCondition) => void\n }\n \n /**\n@@ -678,6 +758,7 @@ export function useStrategySettings(\n       setState((current) => {\n         if (current === null) return current\n         const next: AnalysisCondition = { ...current.analysisCondition, ...patch, scenario: 'FULL_PERIOD' }\n+        let invalidValues = current.invalidValues\n         // 등록표 후보에 없는 최소 평가 기간은 반영하지 않는다(FR-006과 같은 규약).\n         if (\n           patch.minEvaluationYears !== undefined &&\n@@ -685,12 +766,40 @@ export function useStrategySettings(\n         ) {\n           next.minEvaluationYears = current.analysisCondition.minEvaluationYears\n         }\n-        return { ...current, analysisCondition: next }\n+        // 시작 금액도 보관값 재검증과 같은 잣대로 본다. 입력 경로와 복원 경로가 다른 잣대를 쓰면\n+        // 한쪽으로 범위 밖 값이 들어온다(SC-002). 받아들인 값은 그 항목의 무효 안내를 지운다.\n+        if ('initialAmount' in patch) {\n+          if (\n+            patch.initialAmount !== undefined &&\n+            checkNumberInRange(patch.initialAmount, registry.analysisConditions.initialAmount) !== null\n+          ) {\n+            if (current.analysisCondition.initialAmount === undefined) delete next.initialAmount\n+            else next.initialAmount = current.analysisCondition.initialAmount\n+          } else if (patch.initialAmount !== undefined) {\n+            invalidValues = withoutCondition(invalidValues, 'initialAmount')\n+          }\n+        }\n+        return { ...current, analysisCondition: next, invalidValues }\n       })\n     },\n     [registry],\n   )\n \n+  const resetAnalysisCondition = useCallback((name: RestorableCondition) => {\n+    setState((current) => {\n+      if (current === null) return current\n+      // 값을 지워 등록표 기본값이 쓰이게 한다. 사용자가 복원을 눌렀으므로 이제 기본값은 사용자가\n+      // 고른 값이다 — 재검증이 비워 둔 상태와 달리 안내도 함께 지운다.\n+      const analysisCondition = { ...current.analysisCondition }\n+      delete analysisCondition[name]\n+      return {\n+        ...current,\n+        analysisCondition,\n+        invalidValues: withoutCondition(current.invalidValues, name),\n+      }\n+    })\n+  }, [])\n+\n   return {\n     ready,\n     registryVersion: ready ? state.registryVersion : null,\n@@ -710,5 +819,6 @@ export function useStrategySettings(\n     resetAxis,\n     resetAll,\n     setAnalysisCondition,\n+    resetAnalysisCondition,\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.ts",
+          "old_path": "frontend/src/hooks/useStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -177,6 +177,44 @@ function renderPageWithSectorRoute(support: AnalysisSupport) {\n   )\n }\n \n+/**\n+ * 부모를 다시 그릴 수 있는 호스트로 화면을 띄운다.\n+ *\n+ * `makeSupportFor`는 부모가 그릴 때마다 불리며 몇 번째로 다시 그렸는지(`generation`)를 받는다.\n+ * 통로를 렌더마다 새로 만드는 호출자를 흉내 내려는 것이다 — 이 화면의 상태 변화는 부모를 다시\n+ * 그리지 않으므로, 부모 쪽 사정으로 다시 그리는 경우는 이렇게 따로 만들어야 검사가 닿는다.\n+ */\n+function renderHost(makeSupportFor: (generation: number) => AnalysisSupport) {\n+  function Host() {\n+    const [generation, bump] = useState(0)\n+    const support = makeSupportFor(generation)\n+    return (\n+      <>\n+        <button type=\"button\" onClick={() => bump((count) => count + 1)}>\n+          부모 다시 그리기\n+        </button>\n+        <StrategySettingsPage support={support} />\n+      </>\n+    )\n+  }\n+\n+  const authValue: AuthContextValue = {\n+    status: 'anonymous',\n+    user: null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+\n+  return render(\n+    <MemoryRouter initialEntries={['/strategy']}>\n+      <AuthContext.Provider value={authValue}>\n+        <Host />\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n /**\n  * 카드와 행동 버튼의 접근 가능 이름은 이름·설명·사유를 이어 붙인 글이라 전체 일치로는 찾을 수 없다.\n  * 정규식이 아니라 함수로 견주는 까닭은 전략 이름에 괄호 같은 정규식 기호가 들어 있을 수 있기\n@@ -584,62 +622,189 @@ describe('StrategySettingsPage', () => {\n     expect(screen.queryByRole('status', { name: '다시 확인할 설정값' })).toBeNull()\n   })\n \n-  it('부모가 다시 그리며 통로 객체를 새로 넘겨도 버전을 다시 조회하지 않는다', async () => {\n-    // T094. 이 화면의 상태 변화만으로는 부모가 다시 그려지지 않아 조회가 스스로를 다시 부르지는\n-    // 못한다. **되풀이는 부모가 제 사정으로 다시 그릴 때 생긴다** — 그때마다 화면이 '확인하는 중'\n-    // 으로 돌아가 '분석하기'가 잠깐씩 막힌다. 그래서 검사도 부모를 실제로 다시 그린다.\n+  it('부모가 같은 조회 함수를 담아 통로를 새로 펼쳐도 버전을 다시 조회하지 않는다', async () => {\n+    // T094. 통로 객체의 참조가 아니라 조회 함수의 참조를 따른다. 호출자가 렌더마다 `{ ...base }`로\n+    // 새 객체를 만들어도 담긴 함수가 같으면 요청은 한 번이다.\n     let fetchCount = 0\n     const { support: base } = makeSupport()\n-\n-    function UnstableHost() {\n-      const [, bump] = useState(0)\n-      // 일부러 매 렌더 새 객체를 만든다. `useMemo`를 쓰지 않은 것이 이 검사의 요지다.\n-      const support: AnalysisSupport = {\n-        ...base,\n-        fetchAnalysisVersions: async () => {\n-          fetchCount += 1\n-          return versionsFixture\n-        },\n-      }\n-      return (\n-        <>\n-          <button type=\"button\" onClick={() => bump((count) => count + 1)}>\n-            부모 다시 그리기\n-          </button>\n-          <StrategySettingsPage support={support} />\n-        </>\n-      )\n+    const stableFetch: AnalysisSupport['fetchAnalysisVersions'] = async () => {\n+      fetchCount += 1\n+      return versionsFixture\n     }\n \n-    const authValue: AuthContextValue = {\n-      status: 'anonymous',\n-      user: null,\n-      login: vi.fn(),\n-      logout: vi.fn(),\n-      recheck: vi.fn(),\n-    }\n-\n-    render(\n-      <MemoryRouter initialEntries={['/strategy']}>\n-        <AuthContext.Provider value={authValue}>\n-          <UnstableHost />\n-        </AuthContext.Provider>\n-      </MemoryRouter>,\n-    )\n+    renderHost(() => ({ ...base, fetchAnalysisVersions: stableFetch }))\n \n     const user = userEvent.setup()\n     await user.click(await findCardNamed(selectableStrategy.name))\n     await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n-    expect(fetchCount).toBe(1)\n \n     await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))\n     await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))\n \n-    // 다시 조회하지 않았으므로 '분석하기'가 '확인하는 중'으로 되돌아가 막히는 일도 없다.\n     expect(fetchCount).toBe(1)\n     expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')\n   })\n \n+  it('다시 조회하는 동안 받은 버전을 거두지 않아 분석하기가 깜빡이지 않는다', async () => {\n+    // T094가 막으려던 사용자 쪽 결함은 요청 횟수가 아니라, 다시 조회하는 동안 '확인하는 중'으로\n+    // 돌아가 '분석하기'가 잠깐씩 막히는 것이다. **두 번째 조회를 끝나지 않게 붙들어** 그 틈을 검사가\n+    // 반드시 보게 한다. 되돌아간다면 이 틈에서 버튼이 막혀 있다.\n+    let fetchCount = 0\n+    const { support: base } = makeSupport()\n+\n+    renderHost(() => ({\n+      ...base,\n+      // 일부러 렌더마다 새 함수를 만든다. 첫 조회만 끝나고 뒤의 조회는 끝나지 않는다.\n+      fetchAnalysisVersions: () => {\n+        fetchCount += 1\n+        return fetchCount === 1 ? Promise.resolve(versionsFixture) : new Promise<never>(() => {})\n+      },\n+    }))\n+\n+    const user = userEvent.setup()\n+    await user.click(await findCardNamed(selectableStrategy.name))\n+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+\n+    await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))\n+\n+    // 조회는 다시 나갔고(함수가 바뀌었으므로) 아직 끝나지 않았다. 그래도 버튼은 막히지 않는다.\n+    expect(fetchCount).toBeGreaterThan(1)\n+    expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')\n+  })\n+\n+  it('통로를 실제로 바꾸면 버전 조회도 새 통로를 따른다', async () => {\n+    // S15P21E205-274. 화면이 열릴 때 한 번만 조회하던 때는 연결 전 통로의 `null`에 머물러, 새 통로로\n+    // 바꿔도 '분석하기'가 \"분석 조건 버전을 확인할 수 없습니다\"로 계속 막혔다.\n+    const { support: connected } = makeSupport()\n+    const disconnected: AnalysisSupport = { ...connected, fetchAnalysisVersions: async () => null }\n+\n+    renderHost((generation) => (generation === 0 ? disconnected : connected))\n+\n+    const user = userEvent.setup()\n+    await user.click(await findCardNamed(selectableStrategy.name))\n+    await waitFor(() => {\n+      const reasonId = actionButton('분석하기').getAttribute('aria-describedby')\n+      expect(document.getElementById(reasonId!)?.textContent).toContain('분석 조건 버전')\n+    })\n+\n+    // 부모가 연결된 통로로 바꾼다.\n+    await user.click(screen.getByRole('button', { name: '부모 다시 그리기' }))\n+\n+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+  })\n+\n+  it('보관된 시작 금액이 등록표 범위 밖이면 그 금액을 보이지도 보내지도 않고 복원을 기다린다', async () => {\n+    // S15P21E205-274, SC-002·FR-017. 재검증이 분석 조건을 통째로 옮겨 범위 밖 금액이 살아남던 결함이다.\n+    // 비운 금액이 곧 기본값이 되면 조용히 바뀐 것과 같으므로, 복원을 누르기 전까지 금액을 모른다.\n+    const amount = registryFixture.analysisConditions.initialAmount\n+    const outOfRange = amount.min - amount.step\n+    window.sessionStorage.setItem(\n+      STRATEGY_SETTINGS_STORAGE_KEY,\n+      JSON.stringify({\n+        version: 1,\n+        registryVersion: registryFixture.registryVersion,\n+        universeSize: catalogSectors.length,\n+        selectedStrategyId: null,\n+        valuesByStrategy: {},\n+        analysisCondition: {\n+          minEvaluationYears: registryFixture.analysisConditions.minEvaluationYears.default,\n+          scenario: 'FULL_PERIOD',\n+          initialAmount: outOfRange,\n+        },\n+        invalidValues: [],\n+      }),\n+    )\n+\n+    const user = userEvent.setup()\n+    const { support, requests } = makeSupport()\n+    renderPage(support)\n+\n+    // 전략을 고르기 전에도 안내가 보인다(T093과 같은 자리).\n+    const notice = await screen.findByRole('status', { name: '다시 확인할 분석 조건' })\n+    expect(notice.textContent).toContain(String(outOfRange))\n+\n+    await user.click(await findCardNamed(selectableStrategy.name))\n+\n+    // 기본값으로 대신 보이지 않는다.\n+    const summary = screen.getByLabelText('분석 조건 요약')\n+    expect(summary.textContent).not.toContain(amount.default.toLocaleString('ko-KR'))\n+    expect(summary.textContent).toContain('확인할 수 없음')\n+\n+    const analyze = actionButton('분석하기')\n+    await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('true'))\n+    await user.click(analyze)\n+    expect(requests).toHaveLength(0)\n+\n+    // 사용자가 복원을 누르면 그제야 기본값이 쓰인다.\n+    await user.click(within(notice).getByRole('button', { name: '기본값 복원' }))\n+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+    await user.click(actionButton('분석하기'))\n+    await waitFor(() => expect(requests).toHaveLength(1))\n+    expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2))\n+  })\n+\n+  it('요청을 조립하다 실패하면 실패 안내를 보인다', async () => {\n+    // S15P21E205-274. 조립 예외가 `try` 밖이라 거부된 프로미스로 버려져, 버튼을 눌러도 아무 일도\n+    // 일어나지 않았다. 계약을 어긴 등록표(기본 시작 금액 0)로 조립이 반드시 실패하게 만든다.\n+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})\n+    apiMocks.fetchStrategyRegistry.mockResolvedValue({\n+      ...registryFixture,\n+      analysisConditions: {\n+        ...registryFixture.analysisConditions,\n+        initialAmount: { ...registryFixture.analysisConditions.initialAmount, default: 0 },\n+      },\n+    })\n+\n+    const user = userEvent.setup()\n+    const { support, requests } = makeSupport()\n+    renderPage(support)\n+\n+    await user.click(await findCardNamed(selectableStrategy.name))\n+    await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+    await user.click(actionButton('분석하기'))\n+\n+    const alert = await screen.findByRole('alert')\n+    expect(alert.textContent).toContain('분석 요청을 만들지 못했습니다')\n+    // 내부 예외 문장을 사용자에게 그대로 보이지 않는다.\n+    expect(alert.textContent).not.toContain('RangeError')\n+    expect(requests).toHaveLength(0)\n+    // 원인은 개발 도구에 남긴다.\n+    expect(consoleError).toHaveBeenCalled()\n+    // 이 파일의 afterEach는 모의를 지우기만 하고 되돌리지 않는다. 되돌리지 않으면 뒤의 검사에서\n+    // 오류가 조용히 삼켜진다.\n+    consoleError.mockRestore()\n+  })\n+\n+  it('선택을 만든 뒤 섹터 대응표가 바뀌었으면 요청을 만들지 않고 앞 단계로 안내한다', async () => {\n+    // S15P21E205-274, 원칙 VIII. 종목은 지금 목록에서, 버전은 보관값에서 오면 서로 다른 대응표가\n+    // 한 요청에 섞인다. 서버는 요청의 버전으로 (섹터, 종목) 쌍을 검증한다.\n+    window.sessionStorage.setItem(\n+      SECTOR_SELECTION_STORAGE_KEY,\n+      JSON.stringify({\n+        version: SECTOR_SELECTION_PAYLOAD_VERSION,\n+        mapVersion: 'SEM-TEST-0',\n+        selected: [\n+          { code: 'ALPHA', weightTenths: 500 },\n+          { code: 'BETA', weightTenths: 500 },\n+        ],\n+        weightsTouched: true,\n+      }),\n+    )\n+\n+    const { support } = makeSupport()\n+    renderPage(support)\n+\n+    expect(await screen.findByText(/섹터 대응표가 바뀌었습니다/)).toBeTruthy()\n+    expect(screen.getByRole('button', { name: '섹터·비중 단계로 이동' })).toBeTruthy()\n+    // 앞 단계를 확인하기 전에는 카드도 등록표 조회도 없다.\n+    expect(\n+      screen.queryByRole('button', {\n+        name: (accessibleName) => accessibleName.includes(selectableStrategy.name),\n+      }),\n+    ).toBeNull()\n+    expect(apiMocks.fetchStrategyRegistry).not.toHaveBeenCalled()\n+  })\n+\n   it('축이 빠진 설정으로는 요청을 보내지 않는다', async () => {\n     // T095. 차단 판정을 \"복원 안내가 있는가\"가 아니라 \"축이 다 찼는가\"로 묻는다. 축이 빠진 요청은\n     // 서버가 400으로 거절한다(T048).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'\n+import { useCallback, useEffect, useMemo, useState } from 'react'\n import { useNavigate } from 'react-router-dom'\n import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'\n import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'\n@@ -52,6 +52,8 @@ const WARMUP_UNCOMPUTABLE = '현재 설정으로 워밍업을 계산할 수 없\n const VERSIONS_LOADING = '분석 조건 버전을 확인하는 중입니다.'\n const AUTO_COMPARE_NOT_READY = '설정 조합 자동 비교는 아직 준비 중입니다.'\n const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'\n+const REQUEST_BUILD_FAILED =\n+  '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'\n \n /**\n  * 비중 합계가 어긋났다는 한 문장. 지금 합계를 함께 적어 얼마나 어긋났는지 보이게 한다.\n@@ -72,7 +74,8 @@ interface InvalidValueListProps {\n   /** 이 목록이 무엇에 대한 것인가. 보조기술이 두 목록을 구분할 이름이다 */\n   label: string\n   entries: InvalidStoredValue[]\n-  onRestore: (strategyId: string, axisName: string) => void\n+  /** 복원할 수 있는 항목 하나. 전략 축인지 분석 조건인지는 받는 쪽이 가른다 */\n+  onRestore: (entry: InvalidStoredValue) => void\n }\n \n /**\n@@ -88,12 +91,8 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps)\n       {entries.map((entry) => (\n         <li key={`${entry.strategyId ?? '-'}:${entry.axisName ?? '-'}`}>\n           <span>{entry.message}</span>\n-          {entry.restorable && entry.strategyId !== null && entry.axisName !== null ? (\n-            <button\n-              type=\"button\"\n-              className={styles.restoreButton}\n-              onClick={() => onRestore(entry.strategyId as string, entry.axisName as string)}\n-            >\n+          {entry.restorable && entry.axisName !== null ? (\n+            <button type=\"button\" className={styles.restoreButton} onClick={() => onRestore(entry)}>\n               기본값 복원\n             </button>\n           ) : null}\n@@ -144,8 +143,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n \n   const reloadCatalog = useCallback(() => setCatalogReload((count) => count + 1), [])\n \n-  const sectors = catalog?.status === 'loaded' ? catalog.catalog.sectors : null\n-  const selection = useSectorSelection(sectors)\n+  // 목록과 그 대응표 버전을 한 덩이로 넘긴다. 따로 넘기면 서로 다른 조회의 결과가 짝지어질 수 있다.\n+  const selection = useSectorSelection(catalog?.status === 'loaded' ? catalog.catalog : null)\n   const universeSize = selection.status === 'ready' ? selection.selection.items.length : null\n \n   // --- 등록표 조회. 섹터 수를 알아야 유효성 제약을 미리 적용한 응답을 받는다 ----------------\n@@ -194,29 +193,31 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n   const [versions, setVersions] = useState<AnalysisVersions | null | 'loading'>('loading')\n \n   /**\n-   * 통로 객체의 **최신 값**을 효과가 참조 변화 없이 읽는 자리다.\n+   * 버전 조회는 **지금 넘겨받은 조회 함수**를 따른다.\n    *\n-   * <p>효과가 `support` 객체의 참조에 의존하면, 호출자가 렌더마다 새 객체를 만들어 넘길 때\n-   * <b>부모가 다시 그려질 때마다 버전을 다시 조회한다.</b> 그때마다 화면이 '확인하는 중'으로\n-   * 돌아가 '분석하기'가 잠깐씩 막히고, 사용자가 누르려던 순간에 버튼이 비활성으로 바뀐다.\n+   * <p>한때 화면이 열릴 때 한 번만 조회했다(T094). 부모가 다시 그릴 때마다 조회가 되풀이되며\n+   * '분석하기'가 잠깐씩 막히는 것을 없애려던 것인데, 그렇게 하면 호출자가 통로를 실제로 바꿨을 때도\n+   * 버전 조회만 옛 통로에 멈춘다. 평가 기간 판정과 요청 전송은 새 통로를 쓰는데 버전은 옛 통로의\n+   * 결과(예: 연결 전의 `null`)에 머물러 '분석하기'가 계속 막혔다.\n    *\n-   * <p><b>무한히 도는 것은 아니다.</b> 조회가 바꾸는 것은 이 화면의 상태뿐이라 부모는 다시 그려지지\n-   * 않고, 그래서 조회가 스스로를 다시 부르지는 못한다. 되풀이는 부모가 제 사정으로 다시 그릴 때만\n-   * 생긴다 — 드물지만 원인을 짐작하기 어려운 종류다.\n+   * <p>그래서 두 가지를 갈라 푼다.\n+   * <ul>\n+   *   <li><b>무엇을 따를지는 조회 함수로 가른다.</b> 객체 참조가 아니라 함수 참조를 의존성으로 둔다.\n+   *       통로 객체를 매번 새로 펼쳐 만들어도 같은 함수를 담고 있으면 다시 조회하지 않는다.</li>\n+   *   <li><b>다시 조회하는 동안 받은 값을 거두지 않는다.</b> '확인하는 중'으로 되돌리지 않아 버튼이\n+   *       깜빡이지 않는다. 새 결과가 오면 그 값으로 바뀌고, 조회가 실패하면 그때 막힌다.</li>\n+   * </ul>\n    *\n-   * <p>통로를 `useMemo`로 감싸 달라는 계약을 아래 타입에 적어 두었으나, 계약만으로는 어겼다는\n-   * 사실이 드러나지 않는다. 그래서 효과는 참조를 보지 않고 이 ref로 최신 통로를 읽는다. 조회는\n-   * 화면이 열릴 때 한 번 돈다. 다시 조회할 수단은 B06이 등록표 조회처럼 재시도 토큰으로 더한다.\n+   * <p><b>남는 비용</b>: 호출자가 렌더마다 조회 함수 자체를 새로 만들면 부모가 다시 그릴 때마다\n+   * 요청이 한 번씩 더 나간다. 화면은 깜빡이지 않지만 요청은 헛돈다. 통로를 안정된 참조로 넘기라는\n+   * 계약(`AnalysisSupport`)이 그 몫을 맡는다.\n    */\n-  const supportRef = useRef(support)\n-  supportRef.current = support\n+  const fetchAnalysisVersions = support.fetchAnalysisVersions\n \n   useEffect(() => {\n     const controller = new AbortController()\n     let active = true\n-    setVersions('loading')\n-    supportRef.current\n-      .fetchAnalysisVersions(controller.signal)\n+    fetchAnalysisVersions(controller.signal)\n       .then((next) => {\n         if (active) setVersions(next)\n       })\n@@ -227,7 +228,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n       active = false\n       controller.abort()\n     }\n-  }, [])\n+  }, [fetchAnalysisVersions])\n \n   // --- 워밍업 판정(①). 카드 목록은 기본 설정 기준, 선택 전략은 현재 설정 기준 -----------------\n   const minEvaluationYears = settings.ready\n@@ -261,6 +262,23 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n   // 되돌아간 사실을 전략을 고른 뒤에야 알게 되고, 그것은 사용자 입장에서 조용히 바꾼 것과\n   // 같다(FR-017).\n   const globalInvalid = settings.invalidValues.filter((entry) => entry.strategyId === null)\n+\n+  /**\n+   * 재검증이 비워 둔 시작 금액이 복원을 기다린다.\n+   *\n+   * 이 동안은 금액을 **모르는 것**으로 다룬다. 시작 금액이 비면 등록표 기본값이 쓰이므로, 여기서\n+   * 기본값을 보이거나 보내면 사용자가 정한 적 없는 금액으로 조용히 바뀐 것과 같다(FR-017).\n+   */\n+  const amountAwaitsRestore = globalInvalid.some(\n+    (entry) => entry.axisName === 'initialAmount' && entry.restorable,\n+  )\n+\n+  /** 복원 버튼 하나가 전략 축과 분석 조건을 모두 받는다. 되돌릴 자리가 어디인지 항목이 말한다. */\n+  const restoreInvalidValue = (entry: InvalidStoredValue) => {\n+    if (entry.axisName === null) return\n+    if (entry.strategyId !== null) settings.resetAxis(entry.strategyId, entry.axisName)\n+    else if (entry.axisName === 'initialAmount') settings.resetAnalysisCondition('initialAmount')\n+  }\n   const strategyInvalid = settings.invalidValues.filter(\n     (entry) => entry.strategyId !== null && entry.strategyId === settings.selectedStrategyId,\n   )\n@@ -295,7 +313,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n    * 채우면 그 값이 여기로 온다.\n    */\n   const initialAmount =\n-    registry === null\n+    registry === null || amountAwaitsRestore\n       ? null\n       : (settings.analysisCondition.initialAmount ?? registry.analysisConditions.initialAmount.default)\n \n@@ -334,7 +352,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n     const strategy = settings.selectedStrategy\n     if (!strategy) return SELECT_STRATEGY_FIRST\n     if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING\n-    if (settingsIncomplete) return INVALID_STORED_VALUES\n+    if (settingsIncomplete || amountAwaitsRestore) return INVALID_STORED_VALUES\n     if (unbalancedUserWeights && selection.status === 'ready') {\n       return weightsUnbalancedMessage(selection.weights.totalTenths)\n     }\n@@ -371,20 +389,34 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n     if (analyzeBlocker !== null || prepared === null || submission.status === 'sending') return\n \n     // 값을 만들지 않는다. 시작 금액은 요약 줄에 보인 값을 그대로 싣는다.\n-    const request = buildBacktestRequest({\n-      selection: prepared.selection,\n-      strategy: prepared.strategy,\n-      parameters: prepared.parameters,\n-      registryVersion: prepared.registryVersion,\n-      warmupTradingDays: prepared.warmupTradingDays,\n-      versions: {\n-        rulesVersion: prepared.versions.rulesVersion,\n-        costProfileVersion: prepared.versions.costProfileVersion,\n-      },\n-      period: prepared.period,\n-      initialAmount: prepared.initialAmount,\n-      scenario: settings.analysisCondition.scenario,\n-    })\n+    //\n+    // **조립도 실패를 알리는 길 안에 둔다.** 조립은 금액·비중이 계약 모양으로 옮겨지지 않으면 예외를\n+    // 던지는데, 앞서는 이것이 `try` 밖이라 거부된 프로미스로 버려졌다. 버튼을 눌러도 진행 표시도\n+    // 실패 안내도 없이 아무 일도 일어나지 않았다.\n+    //\n+    // 조립 실패는 서버가 한 말이 아니라 이 화면의 값이 계약에 맞지 않는다는 뜻이라, 예외 문장을\n+    // 그대로 보이지 않고 사용자가 할 수 있는 일을 말한다. 원인은 개발 도구에서 볼 수 있게 남긴다.\n+    let request\n+    try {\n+      request = buildBacktestRequest({\n+        selection: prepared.selection,\n+        strategy: prepared.strategy,\n+        parameters: prepared.parameters,\n+        registryVersion: prepared.registryVersion,\n+        warmupTradingDays: prepared.warmupTradingDays,\n+        versions: {\n+          rulesVersion: prepared.versions.rulesVersion,\n+          costProfileVersion: prepared.versions.costProfileVersion,\n+        },\n+        period: prepared.period,\n+        initialAmount: prepared.initialAmount,\n+        scenario: settings.analysisCondition.scenario,\n+      })\n+    } catch (error) {\n+      console.error('분석 요청을 조립하지 못했습니다.', error)\n+      setSubmission({ status: 'failed', message: REQUEST_BUILD_FAILED })\n+      return\n+    }\n \n     setSubmission({ status: 'sending' })\n     try {\n@@ -441,7 +473,13 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n         {selection.status === 'incomplete' ? (\n           <NotReadyNotice\n             className={styles.notice}\n-            message=\"섹터·비중 단계를 먼저 마쳐 주세요. 비교하려면 섹터를 두 개 이상 골라야 합니다.\"\n+            message={\n+              // 대응표가 바뀐 경우는 \"마치지 않았다\"와 까닭이 달라, 같은 문장으로 알리면 사용자가\n+              // 이미 고른 섹터를 왜 다시 골라야 하는지 모른다.\n+              selection.problem === 'mapVersionChanged'\n+                ? '섹터를 고른 뒤 섹터 대응표가 바뀌었습니다. 섹터·비중 단계에서 선택을 다시 확인해 주세요.'\n+                : '섹터·비중 단계를 먼저 마쳐 주세요. 비교하려면 섹터를 두 개 이상 골라야 합니다.'\n+            }\n             action={{ label: '섹터·비중 단계로 이동', onAction: () => navigate('/diagnosis/sectors') }}\n           />\n         ) : null}\n@@ -474,7 +512,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n               <InvalidValueList\n                 label=\"다시 확인할 분석 조건\"\n                 entries={globalInvalid}\n-                onRestore={settings.resetAxis}\n+                onRestore={restoreInvalidValue}\n               />\n             ) : null}\n \n@@ -527,7 +565,7 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n                   <InvalidValueList\n                     label=\"다시 확인할 설정값\"\n                     entries={strategyInvalid}\n-                    onRestore={settings.resetAxis}\n+                    onRestore={restoreInvalidValue}\n                   />\n                 ) : null}\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -548,6 +548,14 @@ SC-008과 quickstart 9를 만족한다. 남은 간극은 아래 다섯이며, \n 세 번 나가 실패한다. 고친 방법(ref로 최신 통로를 읽는다)은 그대로 유효하다. 심각도는 MEDIUM보다\n 낮게 보는 것이 맞다.\n \n+**T094 후속 (S15P21E205-274)**: 위에서 \"그대로 유효하다\"고 적은 고친 방법(화면이 열릴 때 한 번만\n+조회하고 ref로 최신 통로를 읽는다)은 **새 결함을 만들었다.** 호출자가 통로를 실제로 바꿔도 버전 조회만\n+옛 통로의 결과에 머물러, 연결 전의 `null`에 멈춘 '분석하기'가 계속 막혔다. 머지 뒤 AI 코드리뷰에서\n+찾았다. 지금은 조회를 `fetchAnalysisVersions` **함수 참조**에 맞춰 다시 하고, 다시 조회하는 동안\n+받은 버전을 거두지 않는다. 그래서 통로를 바꾸면 따라가고 버튼은 깜빡이지 않는다. 대신 조회 함수 자체를\n+렌더마다 새로 만드는 호출자에게서는 요청이 헛도는데, 그 몫은 `AnalysisSupport`의 안정 참조 계약이\n+맡는다. T094 검사는 요청 횟수가 아니라 사용자 쪽 성질(깜빡이지 않는다)을 지키도록 둘로 갈랐다.\n+\n **T095 검사의 한계**: 새로 둔 \"축이 빠진 설정으로는 요청을 보내지 않는다\" 검사는 옛 판정(`hasEmptiedAxis`)\n 으로 되돌려도 통과한다. 두 판정이 지금은 같은 답을 내기 때문이다 — 재검증이 비운 축마다 복원 가능한\n 안내를 남기는 한 둘은 갈라지지 않는다. 이 검사가 지키는 것은 **동작**(축이 빠지면 보내지 않는다)이지\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2818827": []
+  }
+}

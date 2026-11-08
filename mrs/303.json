@@ -1,0 +1,1025 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958082,
+    "iid": 303,
+    "project_id": 1444456,
+    "title": "fix(be): 자동 탐색이 끝까지 돌고 결과가 실시간으로 쌓이게 한다",
+    "description": "# 작업 내용 요약\n\n같은 설정 조합을 두 번째로 실행하면 묶음이 후보 9개쯤에서 멈춘 채 영영 `RUNNING` 이던 것을 고쳤다. 접수는 이제 202 로 바로 끝나고, 화면은 누르는 즉시 진행 화면으로 넘어가 후보가 끝날 때마다 한 줄씩 받는다. 묶음 실행시간 상한은 없앴다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-417\n- link https://ssafy.atlassian.net/browse/S15P21E205-417\n\n# 주요 변경 사항\n\n- 후보 완료 처리가 겹치지 않는다. 처리 중에 도착한 완료는 줄을 세우고 앞의 처리가 끝난 뒤 이어 간다 — 겹쳐 처리하면 후보마다 트랜잭션이 쌓여 묶음 하나가 커넥션 풀을 말리고, 그때 마지막 후보가 `DISPATCHED` 로 남아 깨울 이벤트가 다시 오지 않았다\n- 응답을 기다리는 요청 스레드에서는 묶음을 돌리지 않고 진행 실행기(스레드 1개)에 넘긴다. 워커 결과는 컨슈머 스레드에서 그대로 처리한다 — 처리가 끝나야 ACK 가 나간다\n- 계약 변경: `limits.timeLimitSec 상한을 두지 않는다는 뜻이고, 그때 `provisional\\` 목록에서도 빠진다. 화면은 '제한 없음' 으로 읽는다\n- 설정 `thorp.param-search.time-limit-seconds` 를 비웠다. 묶음이 끝나는 길은 후보 소진· 연속 실패 한도·취소 셋이고, 묶 )가 막는다\n- 한도 스냅샷이 `null` 값을 담는다. `Map.copyOf` 가 null 에서 NPE 를 던져 접수가 죽었다\n- 실행을 누르면 접수 응답을 기다리지 않고 진행 화면으로 간다. 실패하면 확인 화면으로 돌아와 그 자리에서 사유를 본다\n\n# 테스트\n\n- [x] \\`./gradlew spotlessApply bu skip(live API·성능·Docker 게이트)\n- [x] `npm run lint && npm run build && npm test` — 1364/1365. 실패 1건(`InlineHelp`)은 dev 에서도 같은 자리에서 깨지는 기존\n- [x] 로컬에서 같은 조합을 두 번째로 실행 — 고치기 전에는 9/12 에서 멈췄고, 지금은 12/12·36/54 로 10초 안에 끝난다\n\n# 리뷰 포인트\n\n- \\*\\*constitution 원칙 IX 를 고쳤 한 탐색을 열지 않는다\" 를 \"상한 장치 없이 열지 않는다\" 로 바꾸고 상한이 벽시계 시간일 필요는 없다고 적었다. Governance 가 전체 회의 승인을 요구하므로 `(초안, 5.0.0)` 표기만 달았다 — **이 항목은 승인 대상이다.** 반려되면 설정값을\n- 실행시간 상한을 뺀 뒤 묶음 크기를 막는 것은 `max-candidates` 하나다. 100 이 지금 서버 (벌크 워커 1개)에 맞는 값인지 봐 달라\n- \"응답을 기다리는 스레드인가\" 를 `RequestContextHolder` 로 판정한다. 요청 속성이 자식 스레드에 안 넘어가는 성질에 기대는 판정이라, 더 명시적인 방법을 원하면 바꾼다\n- 워커 결과를 일부러 동기로 남겼다. 비동기로 넘기면 ACK 가 먼저 나가서 그 사이에 죽었을 때 재전달로도 복구되지 않는다(004 를 다시 처리하지 않는다)\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] \\*\\*전략 ID 상수·전략별 분기\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 상한이 없으면 `timeLimitSeconds` 는 `null` 이고 화면은 '제한 없음' 이다. `0초` 로 접지 않는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 이번 변경이 건드리지 않는다\n\n브랜치·티켓 \\[FE\\] 표기 건은 아직 그대로다. 티켓 제목을 고칠지 말씀해 주시면 정리하겠다.",
+    "state": "merged",
+    "created_at": "2026-09-23T11:31:36.303+09:00",
+    "updated_at": "2026-09-23T11:42:09.087+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-23T11:42:08.237+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/417-param-search-page",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🖥️ Frontend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+    "merge_commit_sha": "bc77d138c8ce11a1fab9ca78ac0f072a91384118",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T11:31:39.441+09:00",
+    "reference": "!303",
+    "references": {
+      "short": "!303",
+      "relative": "!303",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!303"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/303",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958082,
+    "iid": 303,
+    "project_id": 1444456,
+    "title": "fix(be): 자동 탐색이 끝까지 돌고 결과가 실시간으로 쌓이게 한다",
+    "description": "# 작업 내용 요약\n\n같은 설정 조합을 두 번째로 실행하면 묶음이 후보 9개쯤에서 멈춘 채 영영 `RUNNING` 이던 것을 고쳤다. 접수는 이제 202 로 바로 끝나고, 화면은 누르는 즉시 진행 화면으로 넘어가 후보가 끝날 때마다 한 줄씩 받는다. 묶음 실행시간 상한은 없앴다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-417\n- link https://ssafy.atlassian.net/browse/S15P21E205-417\n\n# 주요 변경 사항\n\n- 후보 완료 처리가 겹치지 않는다. 처리 중에 도착한 완료는 줄을 세우고 앞의 처리가 끝난 뒤 이어 간다 — 겹쳐 처리하면 후보마다 트랜잭션이 쌓여 묶음 하나가 커넥션 풀을 말리고, 그때 마지막 후보가 `DISPATCHED` 로 남아 깨울 이벤트가 다시 오지 않았다\n- 응답을 기다리는 요청 스레드에서는 묶음을 돌리지 않고 진행 실행기(스레드 1개)에 넘긴다. 워커 결과는 컨슈머 스레드에서 그대로 처리한다 — 처리가 끝나야 ACK 가 나간다\n- 계약 변경: `limits.timeLimitSec 상한을 두지 않는다는 뜻이고, 그때 `provisional\\` 목록에서도 빠진다. 화면은 '제한 없음' 으로 읽는다\n- 설정 `thorp.param-search.time-limit-seconds` 를 비웠다. 묶음이 끝나는 길은 후보 소진· 연속 실패 한도·취소 셋이고, 묶 )가 막는다\n- 한도 스냅샷이 `null` 값을 담는다. `Map.copyOf` 가 null 에서 NPE 를 던져 접수가 죽었다\n- 실행을 누르면 접수 응답을 기다리지 않고 진행 화면으로 간다. 실패하면 확인 화면으로 돌아와 그 자리에서 사유를 본다\n\n# 테스트\n\n- [x] \\`./gradlew spotlessApply bu skip(live API·성능·Docker 게이트)\n- [x] `npm run lint && npm run build && npm test` — 1364/1365. 실패 1건(`InlineHelp`)은 dev 에서도 같은 자리에서 깨지는 기존\n- [x] 로컬에서 같은 조합을 두 번째로 실행 — 고치기 전에는 9/12 에서 멈췄고, 지금은 12/12·36/54 로 10초 안에 끝난다\n\n# 리뷰 포인트\n\n- \\*\\*constitution 원칙 IX 를 고쳤 한 탐색을 열지 않는다\" 를 \"상한 장치 없이 열지 않는다\" 로 바꾸고 상한이 벽시계 시간일 필요는 없다고 적었다. Governance 가 전체 회의 승인을 요구하므로 `(초안, 5.0.0)` 표기만 달았다 — **이 항목은 승인 대상이다.** 반려되면 설정값을\n- 실행시간 상한을 뺀 뒤 묶음 크기를 막는 것은 `max-candidates` 하나다. 100 이 지금 서버 (벌크 워커 1개)에 맞는 값인지 봐 달라\n- \"응답을 기다리는 스레드인가\" 를 `RequestContextHolder` 로 판정한다. 요청 속성이 자식 스레드에 안 넘어가는 성질에 기대는 판정이라, 더 명시적인 방법을 원하면 바꾼다\n- 워커 결과를 일부러 동기로 남겼다. 비동기로 넘기면 ACK 가 먼저 나가서 그 사이에 죽었을 때 재전달로도 복구되지 않는다(004 를 다시 처리하지 않는다)\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] \\*\\*전략 ID 상수·전략별 분기\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 상한이 없으면 `timeLimitSeconds` 는 `null` 이고 화면은 '제한 없음' 이다. `0초` 로 접지 않는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 이번 변경이 건드리지 않는다\n\n브랜치·티켓 \\[FE\\] 표기 건은 아직 그대로다. 티켓 제목을 고칠지 말씀해 주시면 정리하겠다.",
+    "state": "merged",
+    "created_at": "2026-09-23T11:31:36.303+09:00",
+    "updated_at": "2026-09-23T11:42:09.087+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-23T11:42:08.237+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/417-param-search-page",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🖥️ Frontend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+    "merge_commit_sha": "bc77d138c8ce11a1fab9ca78ac0f072a91384118",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T11:31:39.441+09:00",
+    "reference": "!303",
+    "references": {
+      "short": "!303",
+      "relative": "!303",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!303"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/303",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "29",
+    "latest_build_started_at": "2026-09-23T11:31:49.246+09:00",
+    "latest_build_finished_at": "2026-09-23T11:58:47.580+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 218887,
+      "iid": 320,
+      "project_id": 1444456,
+      "sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+      "ref": "fix(fe)/417-param-search-page",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T11:31:49.133+09:00",
+      "updated_at": "2026-09-23T11:58:47.586+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/218887"
+    },
+    "head_pipeline": {
+      "id": 218887,
+      "iid": 320,
+      "project_id": 1444456,
+      "sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+      "ref": "fix(fe)/417-param-search-page",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T11:31:49.133+09:00",
+      "updated_at": "2026-09-23T11:58:47.586+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/218887",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T11:31:49.246+09:00",
+      "finished_at": "2026-09-23T11:58:47.580+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/218887",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "head_sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+      "start_sha": "95738b1a92241a70b7c7b030073d9bdd6f9c3270"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "fbcfd1f49746fab38bf5689944a5929c1d9ee1f4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861553,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-23T11:31:36.424+09:00",
+          "updated_at": "2026-09-23T11:31:36.428+09:00",
+          "system": true,
+          "noteable_id": 958082,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 303,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1df0ee11d5ca2ec0387c479bd43b2230548bc1d9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861554,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-23T11:31:36.443+09:00",
+          "updated_at": "2026-09-23T11:31:36.449+09:00",
+          "system": true,
+          "noteable_id": 958082,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 303,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6fde97f622b4c5b5b991f0f852beabc0a4686d7d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861560,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **재사용 연쇄 동시성 제어 및 커넥션 풀 보호**: 재사용된 백테스트 완료 이벤트가 연속으로 발생할 때 트랜잭션이 겹겹이 쌓여 커넥션 풀을 고갈시키던 문제를 `ThreadLocal` 기반의 큐(`PENDING`)와 단일 스레드 진행 실행기(`paramSearchProgressExecutor`)를 통해 안전하게 직렬화(`drain`)하도록 잘 설계했습니다.\n- **`null` 상한 유연성 및 방어적 복사**: `timeLimitSeconds`를 선택적으로(`null`) 허용하면서, `Map.copyOf`가 `null` 값에서 `NPE`를 발생시키는 문제를 `LinkedHashMap`과 `Collections.unmodifiableMap` 조합으로 안전하게 회피하고 명확한 문서를 남겼습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **재사용 연쇄 스트레스 시나리오**: 동일한 파라미터 조합으로 대량(예: 100개 후보)의 백테스트가 모두 '재사용(COMPLETED)' 상태로 즉시 반환될 때, `param-search-progress-` 스레드가 큐에 쌓인 이벤트를 데드락이나 커넥션 고갈 없이 끝까지 처리하여 묶음 상태가 최종(`COMPLETED` 또는 정해진 종료 상태)으로 정상 전이되는지 통합 테스트(`ParamSearchReuseChainIT`)를 통해 검증합니다.\n- **타임아웃 미적용(제한 없음) 시나리오**: `timeLimitSeconds`가 `null`인 상태에서 설정된 최대 후보 수(`maxCandidates`)까지 시간 제한 없이 모든 후보가 순차적으로 완주하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T11:31:48.828+09:00",
+          "updated_at": "2026-09-23T11:31:48.828+09:00",
+          "system": false,
+          "noteable_id": 958082,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 303,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ccd0518fb0ffb2318f8a9773a67cfe65b82f7f14",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861654,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-23T11:42:06.646+09:00",
+          "updated_at": "2026-09-23T11:42:06.654+09:00",
+          "system": true,
+          "noteable_id": 958082,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 303,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "db9373d0504e1a6677fe65d17189dc9769cd364b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861655,
+          "type": null,
+          "body": "mentioned in commit bc77d138c8ce11a1fab9ca78ac0f072a91384118",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-23T11:42:08.370+09:00",
+          "updated_at": "2026-09-23T11:42:08.382+09:00",
+          "system": true,
+          "noteable_id": 958082,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 303,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de87a010a80fa70a70158f61579ac50d01026f86",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885055,
+          "type": null,
+          "body": "mentioned in commit dde3d1d91ab39b2b618597b92caa2dd7ab72e47f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.883+09:00",
+          "updated_at": "2026-10-13T15:16:11.892+09:00",
+          "system": true,
+          "noteable_id": 958082,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 303,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2244402,
+      "head_commit_sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "95738b1a92241a70b7c7b030073d9bdd6f9c3270",
+      "created_at": "2026-09-23T11:31:36.822+09:00",
+      "merge_request_id": 958082,
+      "state": "collected",
+      "real_size": "29",
+      "patch_id_sha": "a33d426b966ff44a2b524cc6d8b3d3626cda01e5"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2244402,
+      "head_commit_sha": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "95738b1a92241a70b7c7b030073d9bdd6f9c3270",
+      "created_at": "2026-09-23T11:31:36.822+09:00",
+      "merge_request_id": 958082,
+      "state": "collected",
+      "real_size": "29",
+      "patch_id_sha": "a33d426b966ff44a2b524cc6d8b3d3626cda01e5",
+      "commits": [
+        {
+          "id": "1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12",
+          "short_id": "1253d3e4",
+          "created_at": "2026-09-23T11:28:52.000+09:00",
+          "parent_ids": [
+            "19b0aef682d4531daff47e9d67b5978af5dc0571"
+          ],
+          "title": "fix(fe): 실행을 누르면 접수를 기다리지 않고 진행 화면으로 간다",
+          "message": "fix(fe): 실행을 누르면 접수를 기다리지 않고 진행 화면으로 간다\n\n접수 응답을 기다렸다 넘어가면 그동안 화면이 멈춘 것처럼 보이고, 서버가 이미 계산해 둔\n조합이면 다 끝난 뒤에 넘어가 결과가 한꺼번에 나타난다. 계약은 접수가 202 로 바로 끝나고\n진행은 3초 폴링으로 보이는 것이다(FR-008).\n\n- 누르는 즉시 진행 화면으로 바꾸고 searchId 는 202 가 오면 붙인다\n- 접수가 실패하면 확인 화면으로 돌아와 그 자리에서 사유를 본다 — 넘어간 화면에 갇히지 않는다\n\n후보 목록은 이미 counts.completed 가 오를 때마다 다시 읽으므로 한 줄씩 쌓인다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-23T11:28:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-23T11:28:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1253d3e4127bb9f05e96bf9afaefb0e3ef3a8c12"
+        },
+        {
+          "id": "19b0aef682d4531daff47e9d67b5978af5dc0571",
+          "short_id": "19b0aef6",
+          "created_at": "2026-09-23T11:28:42.000+09:00",
+          "parent_ids": [
+            "31af64e7aec0257896cc4d53977fdb5a05b1b157"
+          ],
+          "title": "chore(be): 자동 탐색 묶음의 실행시간 상한을 없앤다",
+          "message": "chore(be): 자동 탐색 묶음의 실행시간 상한을 없앤다\n\n시간으로 끊으면 후보를 순서대로 도는 구성에서 뒤쪽 후보가 늘 '미실행'으로 잘려 나가고,\n같은 묶음을 다시 돌려도 어디까지 계산될지가 그때그때 달라져 비교가 재현되지 않았다.\n사용자가 고른 조합은 다 돌리고 비교는 완주한 결과로만 한다.\n\n- time-limit-seconds 를 비우면 상한을 두지 않는다. 0 이하는 설정 실수로 보고 기동을 막는다\n- 상한이 없으면 limits.timeLimitSeconds 는 null 이고 provisional 목록에서도 빠진다.\n  화면은 '제한 없음'으로 읽는다\n- 한도 스냅샷이 null 값을 담을 수 있게 했다 — Map.copyOf 가 null 값에서 NPE 를 던져\n  접수가 죽었다. 같은 파일의 executionPlan·selection 이 이미 같은 이유로 피하고 있다\n\n묶음이 끝나는 길은 후보 소진·연속 실패 한도·취소 셋이고, 묶음 크기는 max-candidates 가\n막는다. constitution 원칙 IX 는 \"상한 장치 없이 열지 않는다\"로 고쳤으나 Governance 의\n개정 절차(팀 MR → 전체 회의 승인)를 거쳐야 하므로 (초안, 5.0.0) 표기로만 넣었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-23T11:28:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-23T11:28:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/19b0aef682d4531daff47e9d67b5978af5dc0571"
+        },
+        {
+          "id": "31af64e7aec0257896cc4d53977fdb5a05b1b157",
+          "short_id": "31af64e7",
+          "created_at": "2026-09-23T11:28:24.000+09:00",
+          "parent_ids": [
+            "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+          ],
+          "title": "fix(be): 재사용으로 이어지는 완료가 묶음을 멈추거나 접수를 붙잡지 않게 한다",
+          "message": "fix(be): 재사용으로 이어지는 완료가 묶음을 멈추거나 접수를 붙잡지 않게 한다\n\n후보를 하나 발행하면 그 조합이 이미 계산돼 있을 때 004가 그 자리에서 완료를 알린다\n(재사용, spec 004 R-02). 그 완료를 곧바로 처리하면 후보마다 트랜잭션이 겹겹이 열리고,\n커밋된 바깥 트랜잭션도 콜백이 끝날 때까지 커넥션을 쥐고 있어 묶음 하나가 커넥션 풀을\n말린다. 풀이 마르는 순간 마지막 후보가 DISPATCHED 로 남고 깨울 이벤트가 다시 오지 않아\n묶음이 영영 RUNNING 이었다 — 같은 설정 조합을 두 번째로 돌리면 바로 걸린다.\n\n- 처리 중에 도착한 완료는 같은 스레드의 줄에 세우고 앞의 처리가 끝난 뒤 이어 간다\n- 응답을 기다리는 요청 스레드면 진행 실행기(스레드 1개)에 넘기고 즉시 돌아온다.\n  그대로 두면 묶음 전체가 POST 응답 안에서 돌아 202 가 늦는다(FR-008)\n- 워커 결과(RabbitMQ 컨슈머)는 그 자리에서 처리한다 — 처리가 끝나야 ACK 가 나가고,\n  넘기면 그 사이에 죽었을 때 재전달로도 복구되지 않는다\n\nParamSearchReuseChainIT 가 이 경로를 고정한다. 고치기 전에는 커넥션 풀 크기만큼\n완료한 뒤 멈춘다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-23T11:28:24.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-23T11:28:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/31af64e7aec0257896cc4d53977fdb5a05b1b157"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,18 @@\n <!--\n Sync Impact Report\n+- **(초안, 미승인) Version change: 4.0.0 → 5.0.0.** 원칙 IX에서 \"상한을 정하기 전에 무제한 탐색을\n+  열지 않는다\"를 \"상한 장치 없이 열지 않는다\"로 고쳤다. 상한을 **벽시계 시간**으로만 걸 수 있다는\n+  읽기를 버리고, 탐색이 하는 **일의 양**(후보 수)과 망가진 묶음을 멈추는 장치(연속 실패 한도)로도\n+  상한을 세울 수 있다고 적는다. 원칙의 재정의이므로 MAJOR다.\n+- 5.0.0 초안의 근거: 자동 탐색 묶음에 걸어 둔 실행시간 상한 1800초가, 후보를 발행 창 1로 순서대로\n+  도는 구성에서 뒤쪽 후보를 늘 '미실행'으로 잘라 냈다. 같은 묶음을 다시 돌려도 어디까지 계산될지가\n+  그때그때 달라져 비교가 재현되지 않았다. 사용자가 고른 조합은 다 돌리고 비교는 완주한 결과로만\n+  한다(원칙 VI \"계산하지 않은 값을 채우지 않는다\"와 같은 방향이다). 묶음 크기는 후보 수 상한이,\n+  망가진 묶음은 연속 실패 한도가 계속 막으므로 '무제한 탐색'을 여는 것이 아니다.\n+  **승인 전까지 원칙 IX의 승인된 문장은 아래 4.0.0 판이다** — spec 007과 설정은 이 초안을 앞서\n+  적용했고(2026-09-23, S15P21E205-417), 승인되지 않으면 설정값을 되살려 되돌린다.\n+- Modified principles: IX(초안). Added sections: 없음. Removed sections: 없음.\n+  Follow-up TODOs: 전체 회의 승인 또는 반려.\n - Version change: 3.6.0 → 4.0.0. \"AI 작업 방식\"에서 Graphify 산출물을 현재 구조의 근거로 쓰지 않고\n   `graphify-out/`을 코드 탐색·검색에서 제외하라는 조항을 삭제했다. 원칙 삭제이므로 MAJOR다.\n - 4.0.0의 근거: 구조도를 Archify로 산출하기로 하면서 `graphify-out/`과 Graphify 스킬을 저장소에서\n@@ -322,8 +335,11 @@ AI(Claude 등) 모두에게 적용된다.\n   않는다. (§6.5, D18)\n - 전략 단일 실행·자동 탐색 묶음·분야별 및 종합 경제환경 검색을 구분해 대기 포함 p50/p95 지연·\n   동시성·메모리·실패·건당 비용을 측정한다. (§6.5)\n-- 후보 수·실행시간·대기열·메모리 상한은 실측 후 고정한다. 상한을 정하기 전에 무제한 탐색을 열지\n-  않는다. (§6.4.3, §6.5, D18)\n+- 후보 수·실행시간·대기열·메모리 상한은 실측 후 고정한다. **상한 장치 없이 탐색을 열지 않는다.**\n+  상한은 벽시계 시간이어야 하는 것이 아니다 — 탐색이 하는 일의 양(후보 수)과 망가진 실행을 멈추는\n+  장치(연속 실패 한도)로 걸 수 있고, 어느 쪽이든 무엇이 막는지를 spec에 적는다. **시간으로 끊는\n+  상한은 결과의 재현을 깨뜨리는지 먼저 본다** — 같은 묶음을 다시 돌렸을 때 어디까지 계산될지가\n+  달라지면 비교가 성립하지 않는다. (§6.4.3, §6.5, D18) (초안, 5.0.0)\n - 경제환경 검색은 기준월·자료 버전·모델·분야별로 사전 집계하고 전략과 독립된 검색 캐시를 둔다.\n   검색 결과와 전략 실행은 사례 식별자·평가 날짜로 연결하며 ETF 가용성 필터는 별도 키로 보존한다.\n   (§6.5)\n@@ -799,4 +815,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 4.0.0 (Graphify 조항 삭제; 3.3.0·3.5.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-21\n+**Version**: 4.0.0 (Graphify 조항 삭제; 3.3.0·3.5.0·5.0.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-21\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,18 +9,19 @@ import java.util.List;\n  * infrastructure.config}에 있고 application은 infrastructure를 참조할 수 없다({@code ArchitectureTest} 계층 규칙).\n  * 설정 형식이 바뀌어도 유스케이스가 흔들리지 않게 하는 경계이기도 하다.\n  *\n- * <p>네 값 모두 <b>팀 확정 전 임시값</b>이다(PD-05·PD-06). {@code provisional}이 그 사실을 응답까지 나른다(FR-005a).\n+ * <p>나머지 값은 <b>팀 확정 전 임시값</b>이다(PD-05·PD-06). {@code provisional}이 그 사실을 응답까지 나른다(FR-005a).\n  *\n  * @param maxCandidates 유효 후보 수 상한. 넘으면 접수를 거부하고 표본 추출·간격 확대를 하지 않는다(FR-005b)\n  * @param dispatchWindow 한 묶음이 동시에 큐에 올려두는 미완료 후보 수(research R2)\n- * @param timeLimitSeconds 묶음 시작 시각 기준 경과 시간 상한\n+ * @param timeLimitSeconds 묶음 시작 시각 기준 경과 시간 상한. <b>{@code null}이면 상한을 두지 않는다</b> — 묶음은 후보를 다 돌거나 연속\n+ *     실패 한도·취소로만 끝난다. 후보 수 상한({@code maxCandidates})이 묶음 크기를 여전히 막는다\n  * @param consecutiveFailureLimit 연속 실패 허용 횟수\n  * @param provisional 임시값인 항목 이름\n  */\n public record SearchLimits(\n         int maxCandidates,\n         int dispatchWindow,\n-        long timeLimitSeconds,\n+        Long timeLimitSeconds,\n         int consecutiveFailureLimit,\n         List<String> provisional) {\n \n@@ -28,9 +29,15 @@ public record SearchLimits(\n         if (maxCandidates < 1 || dispatchWindow < 1 || consecutiveFailureLimit < 1) {\n             throw new IllegalArgumentException(\"limits must be positive\");\n         }\n-        if (timeLimitSeconds < 1) {\n-            throw new IllegalArgumentException(\"timeLimitSeconds must be positive\");\n+        // null 은 \"상한 없음\"이고 0 이하는 설정 실수다 — 둘을 같은 값으로 뭉개면 실수가 조용히 무제한이 된다.\n+        if (timeLimitSeconds != null && timeLimitSeconds < 1) {\n+            throw new IllegalArgumentException(\"timeLimitSeconds must be positive or absent\");\n         }\n         provisional = List.copyOf(provisional);\n     }\n+\n+    /** 실행시간 상한을 두는가. 두지 않으면 {@code TimeLimitGuard}가 아무것도 막지 않는다. */\n+    public boolean hasTimeLimit() {\n+        return timeLimitSeconds != null;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/port/SearchLimits.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/port/SearchLimits.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.paramsearch.application.result;\n \n import java.time.LocalDate;\n+import java.util.LinkedHashMap;\n import java.util.List;\n import java.util.Map;\n \n@@ -69,24 +70,27 @@ public record ParamSearchPreviewResult(\n     public record ExclusionReason(String code, String message, long count) {}\n \n     /**\n+     * @param timeLimitSeconds 묶음 실행시간 상한. {@code null}이면 상한을 두지 않는다\n      * @param provisional 임시값인 한도 항목 이름. 화면이 임시값 표시를 붙인다(FR-005a)\n      * @param exceeded 유효 후보 수가 상한을 넘었는가. true면 실행은 거부된다(FR-005b)\n      */\n     public record Limits(\n             int maxCandidates,\n-            long timeLimitSeconds,\n+            Long timeLimitSeconds,\n             int dispatchWindow,\n             int consecutiveFailureLimit,\n             List<String> provisional,\n             boolean exceeded) {\n \n+        /** {@code Map.of}를 쓰지 않는다 — 상한을 두지 않으면 {@code timeLimitSeconds}가 null 이라 NPE 가 난다. */\n         public Map<String, Object> toSnapshot() {\n-            return Map.of(\n-                    \"maxCandidates\", maxCandidates,\n-                    \"timeLimitSeconds\", timeLimitSeconds,\n-                    \"dispatchWindow\", dispatchWindow,\n-                    \"consecutiveFailureLimit\", consecutiveFailureLimit,\n-                    \"provisional\", provisional);\n+            Map<String, Object> snapshot = new LinkedHashMap<>();\n+            snapshot.put(\"maxCandidates\", maxCandidates);\n+            snapshot.put(\"timeLimitSeconds\", timeLimitSeconds);\n+            snapshot.put(\"dispatchWindow\", dispatchWindow);\n+            snapshot.put(\"consecutiveFailureLimit\", consecutiveFailureLimit);\n+            snapshot.put(\"provisional\", provisional);\n+            return snapshot;\n         }\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchPreviewResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchPreviewResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,8 +18,11 @@ import org.springframework.stereotype.Component;\n  * 없고(research R2), 계산이 끝나가는 후보를 버리면 그만큼의 계산이 통째로 사라진다. 그래서 한도는 \"여기까지만\"이고 그 결과가 {@code\n  * PARTIAL}이다(FR-009).\n  *\n- * <p>{@code timeLimitSeconds}는 <b>임시값</b>이다. 실측 전이라 팀이 정하지 않았고(PD-05·PD-06), 응답의 {@code\n- * limits.provisional}이 그 사실을 화면에 나른다(FR-005a).\n+ * <p><b>상한을 두지 않을 수 있다</b>({@code thorp.param-search.time-limit-seconds} 미설정). 그때 이 감시는 아무것도 막지 않고,\n+ * 묶음은 후보를 다 돌거나 연속 실패 한도·취소로만 끝난다. 묶음 크기는 후보 수 상한이 계속 막는다.\n+ *\n+ * <p>상한을 둔 경우 그 값은 <b>임시값</b>이다. 실측 전이라 팀이 정하지 않았고(PD-05·PD-06), 응답의 {@code limits.provisional}이 그\n+ * 사실을 화면에 나른다(FR-005a).\n  */\n @Component\n @ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n@@ -39,6 +42,9 @@ public class TimeLimitGuard {\n      * <p>시작 시각이 없으면(아직 {@code QUEUED}) 잴 기준이 없으므로 닿지 않은 것으로 본다 — 발행이 시작되지 않았다는 뜻이라 막을 것도 없다.\n      */\n     public boolean isReached(ParamSearch search) {\n+        if (!limits.hasTimeLimit()) {\n+            return false;\n+        }\n         Instant startedAt = search.getStartedAt();\n         if (startedAt == null) {\n             return false;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/limit/TimeLimitGuard.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/limit/TimeLimitGuard.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -66,10 +66,13 @@ public class ParamSearch {\n         this.selectionRule = builder.selectionRule;\n         this.evaluationSplit =\n                 builder.evaluationSplit == null ? null : Map.copyOf(builder.evaluationSplit);\n-        this.limits = Map.copyOf(builder.limits);\n+        // Map.copyOf를 쓰지 않는다 — 한도에도 값이 null인 항목(실행시간 상한을 두지 않은 묶음의\n+        // timeLimitSeconds)이 있고 Map.copyOf는 null 값에서 NPE를 던진다. 키를 빼서 null을 말하면\n+        // 읽는 쪽이 \"상한 없음\"과 \"옛 묶음이라 항목 자체가 없음\"을 구분하지 못한다.\n+        this.limits = Collections.unmodifiableMap(new LinkedHashMap<>(builder.limits));\n         this.referenceVersions = Map.copyOf(builder.referenceVersions);\n-        // Map.copyOf를 쓰지 않는다 — 실행 조건에는 값이 null인 항목(평가 분할 버전, 기준 전략 미지정)이\n-        // 있고 Map.copyOf는 null 값에서 NPE를 던진다. 순서도 함께 지킨다(사람이 읽는 기록이다).\n+        // 같은 이유다 — 실행 조건에는 값이 null인 항목(평가 분할 버전, 기준 전략 미지정)이 있다.\n+        // 순서도 함께 지킨다(사람이 읽는 기록이다).\n         this.executionPlan =\n                 Collections.unmodifiableMap(new LinkedHashMap<>(builder.executionPlan));\n         this.baselineJobId = builder.baselineJobId;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearch.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearch.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,13 +1,16 @@\n package com.ssafy.thorp.paramsearch.infrastructure.config;\n \n import com.ssafy.thorp.paramsearch.application.port.SearchLimits;\n+import java.util.concurrent.ThreadPoolExecutor;\n import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n import org.springframework.boot.context.properties.EnableConfigurationProperties;\n import org.springframework.context.annotation.Bean;\n import org.springframework.context.annotation.Configuration;\n+import org.springframework.core.task.TaskExecutor;\n+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;\n \n /**\n- * 자동 탐색 모듈 설정. 지금은 {@link ParamSearchProperties} 등록만 한다.\n+ * 자동 탐색 모듈 설정. {@link ParamSearchProperties} 등록과 진행 전진용 실행기를 둔다.\n  *\n  * <p>애플리케이션 전역에 {@code @ConfigurationPropertiesScan}을 걸지 않고 모듈 안에서 등록한다. 전역 스캔은 다른 파트가 만든 설정 클래스까지\n  * 함께 켜서 이 모듈의 변경이 바깥에 영향을 준다.\n@@ -44,4 +47,32 @@ public class ParamSearchConfig {\n                 properties.getConsecutiveFailureLimit(),\n                 properties.provisionalNames());\n     }\n+\n+    /**\n+     * 후보 결과를 묶음에 반영하는 일을 <b>사용자가 기다리는 스레드 밖에서</b> 하기 위한 실행기.\n+     *\n+     * <p>필요한 이유: 접수가 후보를 발행할 때 그 조합이 이미 계산돼 있으면 004가 그 자리에서 완료를 알린다(재사용, spec 004 R-02). 그 완료를 접수\n+     * 스레드에서 처리하면 다음 후보가 발행되고 그것도 즉시 끝나 <b>묶음 전체가 POST 응답 안에서 돌아간다</b>. 계약은 접수가 202로 바로 끝나고 진행은 폴링으로\n+     * 보이는 것이다(FR-008) — 화면은 3초마다 조회하며 완료된 후보를 받아 가야 한다.\n+     *\n+     * <p><b>스레드가 하나다.</b> 한 묶음의 후보는 어차피 묶음 행을 잠그고 차례로 처리되므로 늘려도 빨라지지 않고, 늘리면 그만큼 DB 커넥션을 동시에 쥔다.\n+     *\n+     * <p><b>큐가 차면 부른 쪽이 직접 돌린다</b>({@code CallerRunsPolicy}). 버리면 그 후보는 결과를 반영받지 못한 채 {@code\n+     * DISPATCHED}로 남고 깨울 이벤트가 다시 오지 않아 묶음이 영영 끝나지 않는다 — 느려지는 편이 낫다.\n+     *\n+     * <p>종료할 때는 넣어 둔 일을 마치고 내려간다. 같은 이유다.\n+     */\n+    @Bean(destroyMethod = \"shutdown\")\n+    TaskExecutor paramSearchProgressExecutor() {\n+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();\n+        executor.setCorePoolSize(1);\n+        executor.setMaxPoolSize(1);\n+        executor.setQueueCapacity(1_000);\n+        executor.setThreadNamePrefix(\"param-search-progress-\");\n+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());\n+        executor.setWaitForTasksToCompleteOnShutdown(true);\n+        executor.setAwaitTerminationSeconds(30);\n+        executor.initialize();\n+        return executor;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchConfig.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,9 +11,13 @@ import org.springframework.validation.annotation.Validated;\n /**\n  * 자동 탐색 실행 한도. 접두는 {@code thorp.param-search}다.\n  *\n- * <p><b>네 값 모두 코드 기본값이 없고 {@code @NotNull}이다.</b> 후보 수 상한은 PD-06 실측 대기, 발행 창·실행시간 상한·연속 실패 한도는\n- * PD-05 잔여로 팀 확정 대기다. constitution \"AI 작업 방식\"이 \"기획서가 실행 전 결정으로 남긴 수치를 임의로 확정하지 않는다\"를 요구하므로 코드가 값을\n- * 정하지 않는다. 미설정이면 기동이 실패해 설정으로 드러난다 — 조용히 임의값으로 도는 것보다 낫다.\n+ * <p><b>세 값은 코드 기본값이 없고 {@code @NotNull}이다.</b> 후보 수 상한은 PD-06 실측 대기, 발행 창·연속 실패 한도는 PD-05 잔여로 팀 확정\n+ * 대기다. constitution \"AI 작업 방식\"이 \"기획서가 실행 전 결정으로 남긴 수치를 임의로 확정하지 않는다\"를 요구하므로 코드가 값을 정하지 않는다. 미설정이면\n+ * 기동이 실패해 설정으로 드러난다 — 조용히 임의값으로 도는 것보다 낫다.\n+ *\n+ * <p><b>{@code timeLimitSeconds}만 비울 수 있다</b> — 비우면 묶음 실행시간 상한을 두지 않는다. 묶음은 후보를 다 돌거나 연속 실패 한도·취소로만\n+ * 끝나고, 묶음 크기는 {@code maxCandidates}가 계속 막는다. 여기만 {@code @NotNull}이 아닌 이유는 \"값이 빠졌다\"와 \"상한을 두지 않기로\n+ * 했다\"를 구분해야 해서다 — 나머지 셋은 빠지면 기동이 실패하는 쪽이 맞다.\n  *\n  * <p>확정 전까지 이 값들은 {@link #provisionalNames()}를 통해 API 응답의 {@code limits.provisional}에 실리고, 화면이 임시값\n  * 표시를 붙인다(FR-005a).\n@@ -38,7 +42,7 @@ public class ParamSearchProperties {\n             List.of(\n                     \"maxCandidates\", // PD-06 실측 후 고정\n                     \"dispatchWindow\", // PD-05 잔여\n-                    \"timeLimitSeconds\", // PD-05 잔여\n+                    \"timeLimitSeconds\", // PD-05 잔여. 상한을 두지 않으면 목록에서 빠진다\n                     \"consecutiveFailureLimit\"); // PD-05 잔여\n \n     /** 묶음 하나가 만들 수 있는 유효 후보 수의 상한. 초과하면 접수를 거부하고 표본 추출·간격 확대를 하지 않는다(FR-005b). */\n@@ -51,8 +55,11 @@ public class ParamSearchProperties {\n     @Min(1)\n     private Integer dispatchWindow;\n \n-    /** 묶음 시작 시각 기준 경과 시간 상한(초). 도달하면 발행을 멈추고 실행 중 후보는 완주시킨다. */\n-    @NotNull\n+    /**\n+     * 묶음 시작 시각 기준 경과 시간 상한(초). 도달하면 발행을 멈추고 실행 중 후보는 완주시킨다.\n+     *\n+     * <p><b>비우면 상한을 두지 않는다.</b> 0 이하는 설정 실수로 보고 기동을 막는다 — \"상한 없음\"은 값을 비워서 말한다.\n+     */\n     @Min(1)\n     private Long timeLimitSeconds;\n \n@@ -61,8 +68,15 @@ public class ParamSearchProperties {\n     @Min(1)\n     private Integer consecutiveFailureLimit;\n \n-    /** 확정되지 않은 한도 항목의 이름. */\n+    /**\n+     * 확정되지 않은 한도 항목의 이름.\n+     *\n+     * <p>실행시간 상한을 두지 않으면 그 이름은 빼고 준다 — 없는 한도에 \"임시값\"을 붙이면 화면이 있지도 않은 제한을 말하게 된다.\n+     */\n     public List<String> provisionalNames() {\n-        return PROVISIONAL_NAMES;\n+        if (timeLimitSeconds != null) {\n+            return PROVISIONAL_NAMES;\n+        }\n+        return PROVISIONAL_NAMES.stream().filter(name -> !\"timeLimitSeconds\".equals(name)).toList();\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchProperties.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchProperties.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,12 +3,17 @@ package com.ssafy.thorp.paramsearch.infrastructure.listener;\n import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.paramsearch.application.service.ParamSearchProgressService;\n+import java.util.ArrayDeque;\n+import java.util.Deque;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n+import org.springframework.beans.factory.annotation.Qualifier;\n import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.core.task.TaskExecutor;\n import org.springframework.stereotype.Component;\n import org.springframework.transaction.event.TransactionPhase;\n import org.springframework.transaction.event.TransactionalEventListener;\n+import org.springframework.web.context.request.RequestContextHolder;\n \n /**\n  * 004의 실행 완료를 받아 묶음 진행을 전진시킨다(contracts/param-search-internal.md §3, research R6).\n@@ -27,10 +32,23 @@ public class BacktestFinishedListener {\n \n     private static final Logger log = LoggerFactory.getLogger(BacktestFinishedListener.class);\n \n+    /**\n+     * 처리 중에 새로 도착한 완료 이벤트를 모아 두는 자리. <b>이 스레드가 이미 이벤트를 처리하고 있는가</b>의 표시도 겸한다(비어 있지 않음이 아니라 존재 자체가\n+     * 표시다).\n+     *\n+     * <p>스레드마다 따로 두는 이유: 이벤트는 요청 스레드(재사용 접수)와 RabbitMQ 컨슈머 스레드(워커 결과) 양쪽에서 오고, 서로의 처리 순서를 알 필요가 없다.\n+     */\n+    private static final ThreadLocal<Deque<BacktestFinished>> PENDING = new ThreadLocal<>();\n+\n     private final ParamSearchProgressService progressService;\n+    private final TaskExecutor progressExecutor;\n \n-    public BacktestFinishedListener(ParamSearchProgressService progressService) {\n+    public BacktestFinishedListener(\n+            ParamSearchProgressService progressService,\n+            // 이름으로 고른다 — 스프링 부트가 기본으로 두는 applicationTaskExecutor 와 섞이지 않게 한다.\n+            @Qualifier(\"paramSearchProgressExecutor\") TaskExecutor progressExecutor) {\n         this.progressService = progressService;\n+        this.progressExecutor = progressExecutor;\n     }\n \n     /**\n@@ -40,9 +58,65 @@ public class BacktestFinishedListener {\n      *\n      * <p>사유가 없는 CANCELLED 는 사용자가 스스로 멈춘 것이라 엔진 오류가 아니다 — {@code ENGINE_ERROR} 로 뭉개지 않도록 여기서 번역한다.\n      * 모듈 경계를 넘는 번역은 이 리스너의 몫이고, {@code paramsearch} 는 {@code RunStatus} 를 알 필요가 없다.\n+     *\n+     * <p><b>이어지는 완료는 겹쳐 처리하지 않고 줄을 세운다.</b> 후보를 하나 전진시키면 다음 후보가 발행되는데, 그 조합이 이미 계산돼 있으면 004가 <b>그\n+     * 자리에서</b> 완료를 다시 알린다(재사용, spec 004 R-02). 그 알림을 곧바로 처리하면 후보 하나당 트랜잭션이 하나씩 <b>겹겹이</b> 열린다 — 바깥\n+     * 트랜잭션은 커밋됐어도 이 콜백이 끝날 때까지 커넥션을 쥐고 있으므로, 묶음 하나가 커넥션 풀을 통째로 말린다. 풀이 마르는 순간 마지막 후보는 결과를 반영받지 못한 채\n+     * {@code DISPATCHED} 로 남고, 그 후보를 깨울 이벤트는 다시 오지 않아 <b>묶음이 영영 끝나지 않는다</b>. 같은 설정 조합을 두 번째로\n+     * 실행하면(전부 재사용) 바로 걸린다.\n+     *\n+     * <p><b>사용자가 기다리는 스레드에서는 묶음을 돌리지 않는다.</b> 재사용 연쇄는 접수 요청 스레드에서 시작되므로 그대로 두면 묶음 전체가 {@code POST\n+     * /param-searches} 응답 안에서 끝난다 — 계약은 접수가 202로 바로 끝나고 진행은 화면의 3초 폴링으로 보이는 것이다(FR-008). 요청 스레드면\n+     * 일감을 진행 실행기에 넘기고 즉시 돌아온다.\n+     *\n+     * <p><b>워커 결과(RabbitMQ 컨슈머 스레드)는 그 자리에서 처리한다.</b> 기다리는 사람이 없고, 무엇보다 처리가 끝나야 메시지가 ACK 된다 — 넘기면\n+     * ACK 가 먼저 나가서 그 사이에 죽으면 재전달로도 복구되지 않는다(004 는 이미 끝난 실행의 FINISHED 를 다시 처리하지 않는다).\n      */\n     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)\n     public void onBacktestFinished(BacktestFinished event) {\n+        Deque<BacktestFinished> queue = PENDING.get();\n+        if (queue != null) {\n+            // 이 스레드가 이미 처리 중이다 — 바깥 고리가 자기 트랜잭션을 정리한 뒤 이어서 집어 간다.\n+            queue.addLast(event);\n+            return;\n+        }\n+        if (someoneIsWaiting()) {\n+            progressExecutor.execute(() -> drain(event));\n+            return;\n+        }\n+        drain(event);\n+    }\n+\n+    /**\n+     * 응답을 기다리는 요청 스레드인가.\n+     *\n+     * <p>요청 속성은 기본적으로 자식 스레드에 물려주지 않으므로({@code threadContextInheritable} 기본값 false) 진행 실행기 스레드와\n+     * RabbitMQ 컨슈머 스레드에서는 비어 있다 — 그래서 이 판정이 곧 \"누가 응답을 기다리는가\"다.\n+     */\n+    private static boolean someoneIsWaiting() {\n+        return RequestContextHolder.getRequestAttributes() != null;\n+    }\n+\n+    /** 이 완료와, 처리하는 동안 이어서 도착한 완료를 차례로 반영한다. */\n+    private void drain(BacktestFinished first) {\n+        PENDING.set(new ArrayDeque<>());\n+        try {\n+            BacktestFinished next = first;\n+            do {\n+                apply(next);\n+                next = PENDING.get().pollFirst();\n+            } while (next != null);\n+        } catch (RuntimeException e) {\n+            // 실행기에 넘긴 일감이면 아무도 이 예외를 보지 않는다. 남기지 않으면 묶음이 멈춘 이유가 어디에도 남지 않는다.\n+            log.error(\"param search progress failed: backtestJobId={}\", first.backtestJobId(), e);\n+            throw e;\n+        } finally {\n+            // 중간에 실패해 남은 것이 있어도 다음 이벤트가 그것을 물려받지 않게 비우고 나간다.\n+            PENDING.remove();\n+        }\n+    }\n+\n+    private void apply(BacktestFinished event) {\n         boolean belongsToSearch =\n                 progressService.candidateFinished(\n                         event.backtestJobId(),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/listener/BacktestFinishedListener.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/listener/BacktestFinishedListener.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,9 +49,10 @@ public record ParamSearchPreviewResponse(\n \n     public record ExclusionReason(String code, String message, long count) {}\n \n+    /** {@code timeLimitSeconds}는 상한을 두지 않으면 null 이다. 키는 그대로 두어 화면이 \"제한 없음\"을 말할 수 있게 한다. */\n     public record Limits(\n             int maxCandidates,\n-            long timeLimitSeconds,\n+            Long timeLimitSeconds,\n             int dispatchWindow,\n             int consecutiveFailureLimit,\n             List<String> provisional,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchPreviewResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchPreviewResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,15 +48,15 @@ thorp:\n     # 개발용 운영자 토큰. quickstart S10 이 X-Ops-Token 에 이 값을 보낸다. 운영 값은 .env.prod 의 THORP_OPS_TOKEN.\n     token: dev-ops-token\n   param-search:\n-    # 로컬은 네 값이 모두 채워져 있어 켠다. 개발 중 자동 탐색을 쓰는 곳이 여기다.\n+    # 로컬은 필수 세 값이 채워져 있어 켠다. 개발 중 자동 탐색을 쓰는 곳이 여기다.\n     enabled: true\n     # 로컬에서도 등록된 설정 조합을 최대 100개까지 한 묶음으로 실행한다.\n     # 상한 초과 거부 경로는 ParamSearchRejectionIT 가 max-candidates=2 로 낮춘 프로파일에서 검증한다.\n     max-candidates: 100\n     # 현재 서버의 자동 탐색 벌크 워커 1개와 맞춘다. prefetch 1이라 후보 1개가 실제 실행된다.\n     dispatch-window: 1\n-    # 후보 최대 100개를 순서대로 처리할 수 있도록 묶음 실행시간을 30분으로 둔다.\n-    time-limit-seconds: 1800\n+    # 공통 설정과 같이 실행시간 상한을 두지 않는다. 비운 채로 두면 묶음이 후보를 다 돌고 끝난다.\n+    time-limit-seconds:\n     consecutive-failure-limit: 3\n   result:\n     # 결과 공개 열람(spec 005) 로컬 개발값. 만료 화면(410)을 손으로 확인하기 쉽게 유효 시간을 짧게 둔다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-local.yml",
+          "old_path": "backend/src/main/resources/application-local.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -174,8 +174,9 @@ thorp:\n     # false로 두는 이유는 007이 아직 엔드포인트를 노출하지 않기 때문이다(M1 단계) —\n     # HTTP API가 붙는 M3에서 켰다(2026-09-11). 접수·상태 조회 엔드포인트가 생겼으므로 더 이상\n     # \"노출하지 않는 모듈\"이 아니다.\n-    # 한도가 @NotNull이므로 이 플래그를 켠 채 값을 비우면 애플리케이션 전체가 기동에\n-    # 실패한다 — 값을 지울 때는 플래그도 함께 끈다.\n+    # 한도 셋(max-candidates·dispatch-window·consecutive-failure-limit)이 @NotNull이므로 이 플래그를\n+    # 켠 채 그 값을 비우면 애플리케이션 전체가 기동에 실패한다 — 값을 지울 때는 플래그도 함께 끈다.\n+    # time-limit-seconds 만은 비울 수 있고, 비우면 묶음 실행시간 상한을 두지 않는다.\n     # 스키마(V3)는 플래그와 무관하게 Flyway가 적용하므로 나중에 켜도 마이그레이션을 다시 할 일이 없다.\n     enabled: true\n     # 종목 금액을 요청이 생략했을 때 쓰는 값. 004 단일 실행 예시(docs/specs/backtest-api/examples)와\n@@ -184,7 +185,7 @@ thorp:\n     default-initial-cash: \"10000000.00\"\n     # 유효 후보 수 상한. 등록된 설정 조합을 최대 100개까지 한 묶음으로 실행한다.\n     # 아직 실측으로 확정한 값은 아니므로 API의 limits.provisional 에 계속 표시한다.\n-    # 이 값을 바꾸면 time-limit-seconds도 함께 검토한다.\n+    # **실행시간 상한을 두지 않으므로 묶음 크기를 막는 것은 지금 이 값 하나다.**\n     max-candidates: 100\n     # 현재 서버의 자동 탐색 벌크 워커 1개와 같은 크기다. prefetch 1이라 후보 1개가 실제 실행된다.\n     dispatch-window: 1\n@@ -192,11 +193,12 @@ thorp:\n     # 묶음이 멈추면 산발적 실패에 과민 반응한다. 4를 넘는 5로 두어 한 창이 전멸해도 한 번 더 시도하고,\n     # 그래도 실패하면 수백 건을 헛돌리기 전에 멈춘다.\n     consecutive-failure-limit: 5\n-    # 후보 최대 100개를 순서대로 처리하기 위한 묶음 실행시간 상한(30분). 도달하면 발행을 멈추고 실행 중 후보는\n-    # 완주시킨 뒤 PARTIAL로 끝낸다 — 완료된 후보는 그대로 비교할 수 있다(FR-009).\n-    # 007은 접수 즉시 QUEUED를 반환하고 진행 상태를 폴링하는 비동기 설계라 요청이 막히지는 않는다.\n-    # 이 값은 \"언제 남은 후보를 포기할지\"를 정하는 자원 한도다.\n-    time-limit-seconds: 1800\n+    # 묶음 실행시간 상한. **값을 비워 두어 상한을 두지 않는다**(2026-09-23, S15P21E205-417).\n+    # 시간으로 끊으면 후보를 순서대로 도는 구성에서 뒤쪽 후보가 늘 PARTIAL 로 잘려 나가고, 같은 묶음을\n+    # 다시 돌려도 어디까지 나올지가 그때그때 달라진다 — 사용자가 고른 조합은 다 돌려 주고 비교는\n+    # 완주한 결과로만 한다. 묶음 크기는 max-candidates 가, 망가진 묶음은 consecutive-failure-limit 가 막는다.\n+    # 값을 되살리려면 초 단위 정수를 적으면 된다(예: 1800). 0 이하는 설정 실수로 보고 기동을 막는다.\n+    time-limit-seconds:\n   result:\n     # 결과 공개 열람(spec 005 T004). **네 값 모두 임시값이다** — 유효 시간은 PD-23, 거래 내역 페이지 크기는\n     # R-11 이 정한다. 확정 전까지 수치는 이 파일에만 두고 spec 문서에 적지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,88 @@\n+package com.ssafy.thorp.paramsearch.application.service.limit;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.paramsearch.application.port.SearchLimits;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;\n+import com.ssafy.thorp.paramsearch.domain.model.SelectionRule;\n+import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.time.ZoneOffset;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 실행시간 상한 판정(FR-005).\n+ *\n+ * <p>상한을 두지 않는 것이 지금의 설정이므로(S15P21E205-417) <b>없을 때 아무것도 막지 않는다</b>를 먼저 고정한다. 이 판정이 무너지면 사용자가 고른 조합\n+ * 가운데 뒤쪽이 조용히 '미실행'으로 잘리고, 화면에는 그것이 정상 완료처럼 보인다.\n+ */\n+class TimeLimitGuardTest {\n+\n+    private static final Instant STARTED = Instant.parse(\"2026-09-23T00:00:00Z\");\n+\n+    @Test\n+    @DisplayName(\"상한을 두지 않으면 아무리 오래 돌아도 닿지 않는다\")\n+    void withoutALimitNothingIsReached() {\n+        assertThat(guard(null, STARTED.plusSeconds(86_400)).isReached(running())).isFalse();\n+    }\n+\n+    @Test\n+    @DisplayName(\"상한을 두면 경과 시간으로 판정한다\")\n+    void withALimitElapsedTimeDecides() {\n+        assertThat(guard(600L, STARTED.plusSeconds(599)).isReached(running())).isFalse();\n+        assertThat(guard(600L, STARTED.plusSeconds(600)).isReached(running())).isTrue();\n+    }\n+\n+    @Test\n+    @DisplayName(\"아직 시작하지 않은 묶음은 잴 기준이 없어 닿지 않은 것으로 본다\")\n+    void notStartedIsNeverReached() {\n+        assertThat(guard(1L, STARTED.plusSeconds(86_400)).isReached(queued())).isFalse();\n+    }\n+\n+    private static TimeLimitGuard guard(Long timeLimitSeconds, Instant now) {\n+        return new TimeLimitGuard(\n+                new SearchLimits(100, 1, timeLimitSeconds, 5, List.of()),\n+                Clock.fixed(now, ZoneOffset.UTC));\n+    }\n+\n+    private static ParamSearch running() {\n+        return queued().markRunning(STARTED);\n+    }\n+\n+    private static ParamSearch queued() {\n+        return ParamSearch.create(\n+                null,\n+                List.of(\"SECTOR_MOMENTUM\"),\n+                List.of(\"091160.XKRX\"),\n+                \"PROVISIONAL-20260910\",\n+                SearchSpace.of(\n+                        Map.of(\n+                                \"SECTOR_MOMENTUM\",\n+                                SearchSpace.StrategySpace.of(\n+                                        \"섹터 모멘텀\",\n+                                        List.of(SearchSpace.Axis.of(\"topN\", List.of(2, 3)))))),\n+                selectionRule(),\n+                null,\n+                Map.of(\"maxCandidates\", 100),\n+                Map.of(\"engineVersion\", \"0.1.0\"),\n+                Map.of(\"initialCash\", \"10000000.00\"),\n+                SearchCounts.initial(2, 2, 0));\n+    }\n+\n+    private static SelectionRule selectionRule() {\n+        return new SelectionRule(\n+                new SelectionRule.DrawdownFilter(\"NOT_WORSE_THAN_BASELINE\", \"EQUAL_WEIGHT\"),\n+                new SelectionRule.StabilityFilter(\"BATCH_PERCENTILE\", 50),\n+                \"NET_RETURN\",\n+                5,\n+                \"SHOW_ALL_TIED\",\n+                new SelectionRule.StabilityFormula(\n+                        \"SINGLE_AXIS_ONE_STEP\", \"MEAN_ABS_NET_RETURN_DIFF\"),\n+                List.of(\"displayCount\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/limit/TimeLimitGuardTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/limit/TimeLimitGuardTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -61,9 +61,9 @@ class ParamSearchConfigTest {\n                                             context.getEnvironment()\n                                                     .getProperty(\"thorp.param-search.enabled\"))\n                                     .isEqualTo(\"true\");\n-                            // 켜 둔 이상 네 값이 반드시 있어야 한다. 하나라도 비면 기동이 실패한다.\n-                            // 후보 수 상한과 실행시간 상한은 함께 정한 값이라 같이 단언한다 —\n-                            // 한쪽만 바뀌면 예산(상한 x 건당시간 <= 실행시간)이 깨진다.\n+                            // 켜 둔 이상 필수 세 값이 반드시 있어야 한다. 하나라도 비면 기동이 실패한다.\n+                            // 실행시간 상한은 비워 두는 것이 지금의 설정이다 — 묶음 크기를 막는 것은\n+                            // 후보 수 상한 하나뿐이므로 그 값이 사라지면 여기서 걸린다.\n                             assertThat(\n                                             context.getEnvironment()\n                                                     .getProperty(\n@@ -73,7 +73,7 @@ class ParamSearchConfigTest {\n                                             context.getEnvironment()\n                                                     .getProperty(\n                                                             \"thorp.param-search.time-limit-seconds\"))\n-                                    .isEqualTo(\"1800\");\n+                                    .isNullOrEmpty();\n                             // 발행 창은 서버의 벌크 워커 수와 같다. 워커를 늘리면 이 값도 같이 올린다.\n                             assertThat(\n                                             context.getEnvironment()\n@@ -89,17 +89,21 @@ class ParamSearchConfigTest {\n                             assertThat(context).hasSingleBean(ParamSearchProperties.class);\n                             // 유스케이스가 쓰는 모양으로도 옮겨진다(application 계층은 설정 클래스를 모른다).\n                             assertThat(context).hasSingleBean(SearchLimits.class);\n-                            assertThat(context.getBean(SearchLimits.class).provisional())\n+                            SearchLimits limits = context.getBean(SearchLimits.class);\n+                            assertThat(limits.hasTimeLimit())\n+                                    .as(\"실행시간 상한은 두지 않는다 — 묶음은 후보를 다 돌고 끝난다\")\n+                                    .isFalse();\n+                            // 없는 한도는 임시값 목록에도 없다. 있으면 화면이 없는 제한을 말한다.\n+                            assertThat(limits.provisional())\n                                     .containsExactlyInAnyOrder(\n                                             \"maxCandidates\",\n                                             \"dispatchWindow\",\n-                                            \"timeLimitSeconds\",\n                                             \"consecutiveFailureLimit\");\n                         });\n     }\n \n     @Test\n-    @DisplayName(\"local 프로필은 네 값이 모두 있어 플래그가 켜지고 바인딩된다\")\n+    @DisplayName(\"local 프로필은 필수 세 값이 있어 플래그가 켜지고 바인딩된다\")\n     void localProfileEnablesWithAllLimits() {\n         contextRunner\n                 .withPropertyValues(\"spring.profiles.active=local\")\n@@ -109,25 +113,28 @@ class ParamSearchConfigTest {\n                             assertThat(context).hasSingleBean(ParamSearchProperties.class);\n                             ParamSearchProperties properties =\n                                     context.getBean(ParamSearchProperties.class);\n-                            // 로컬도 공통 설정과 같은 후보 수·실행시간·발행 창으로 돈다. 상한 초과\n+                            // 로컬도 공통 설정과 같은 후보 수·발행 창으로 돈다. 상한 초과\n                             // 거부(FR-005b)는 max-candidates 를 낮춘 ParamSearchRejectionIT 가 맡는다.\n                             assertThat(properties.getMaxCandidates()).isEqualTo(100);\n                             assertThat(properties.getDispatchWindow()).isEqualTo(1);\n-                            assertThat(properties.getTimeLimitSeconds()).isEqualTo(1800L);\n+                            assertThat(properties.getTimeLimitSeconds())\n+                                    .as(\"로컬도 실행시간 상한을 두지 않는다\")\n+                                    .isNull();\n                             // 연속 실패 한도만 로컬이 낮다 — 실패를 빨리 눈으로 보려는 개발 편의값이다.\n                             assertThat(properties.getConsecutiveFailureLimit()).isEqualTo(3);\n                         });\n     }\n \n     @Test\n-    @DisplayName(\"켠 채로 실행시간 상한이 비어 있으면 기동을 실패시킨다 — 값을 추측하지 않는다\")\n+    @DisplayName(\"켠 채로 후보 수 상한이 비어 있으면 기동을 실패시킨다 — 값을 추측하지 않는다\")\n     void enabledWithoutLimitsFailsFast() {\n         contextRunner\n                 .withPropertyValues(\n                         \"spring.profiles.active=none\",\n                         \"thorp.param-search.enabled=true\",\n-                        // 공통 설정에는 이제 빈 값이 없다. 값을 지운 채 플래그를 켜는 실수를 재현한다.\n-                        \"thorp.param-search.time-limit-seconds=\")\n+                        // 값을 지운 채 플래그를 켜는 실수를 재현한다. 실행시간 상한은 비워도 되는 값이라\n+                        // 이 검사의 대상이 아니다 — 묶음 크기를 막는 후보 수 상한으로 본다.\n+                        \"thorp.param-search.max-candidates=\")\n                 .run(\n                         context -> {\n                             assertThat(context).hasFailed();\n@@ -140,14 +147,13 @@ class ParamSearchConfigTest {\n                                                     .getSimpleName());\n                             // 어느 값이 빠졌는지가 오류에 드러나야 설정으로 고칠 수 있다.\n                             // 필드 이름은 최상위 메시지가 아니라 원인(BindValidationException)에 담긴다.\n-                            // 공통 설정에서 아직 비어 있는 값은 실행시간 상한 하나다(PD-05 잔여).\n                             assertThat(context.getStartupFailure())\n-                                    .hasStackTraceContaining(\"timeLimitSeconds\");\n+                                    .hasStackTraceContaining(\"maxCandidates\");\n                         });\n     }\n \n     @Test\n-    @DisplayName(\"네 값을 직접 주면 켠 상태로 바인딩된다 — 확정 후 prod 설정이 이 모양이다\")\n+    @DisplayName(\"실행시간 상한을 직접 주면 그 값으로 바인딩되고 임시값 목록에 다시 들어간다\")\n     void enabledWithExplicitLimitsBinds() {\n         contextRunner\n                 .withPropertyValues(\n@@ -163,7 +169,8 @@ class ParamSearchConfigTest {\n                             ParamSearchProperties properties =\n                                     context.getBean(ParamSearchProperties.class);\n                             assertThat(properties.getDispatchWindow()).isEqualTo(8);\n-                            // 확정 전까지 네 항목 모두 임시값으로 표시된다(FR-005a).\n+                            assertThat(properties.getTimeLimitSeconds()).isEqualTo(1800L);\n+                            // 상한을 되살리면 그것도 확정 전 임시값이다(FR-005a).\n                             assertThat(properties.provisionalNames())\n                                     .containsExactly(\n                                             \"maxCandidates\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchConfigTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,16 +1,28 @@\n package com.ssafy.thorp.paramsearch.infrastructure.listener;\n \n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.anyBoolean;\n+import static org.mockito.ArgumentMatchers.anyLong;\n+import static org.mockito.BDDMockito.given;\n import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.verifyNoInteractions;\n \n import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.paramsearch.application.service.ParamSearchProgressService;\n+import java.util.ArrayList;\n+import java.util.List;\n+import org.junit.jupiter.api.AfterEach;\n import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n import org.junit.jupiter.api.extension.ExtendWith;\n-import org.mockito.InjectMocks;\n import org.mockito.Mock;\n import org.mockito.junit.jupiter.MockitoExtension;\n+import org.springframework.core.task.TaskExecutor;\n+import org.springframework.mock.web.MockHttpServletRequest;\n+import org.springframework.web.context.request.RequestContextHolder;\n+import org.springframework.web.context.request.ServletRequestAttributes;\n \n /**\n  * 004 의 실행 종결을 007 의 후보 결과로 번역하는 경계를 고정한다.\n@@ -26,7 +38,22 @@ class BacktestFinishedListenerTest {\n \n     @Mock private ParamSearchProgressService progressService;\n \n-    @InjectMocks private BacktestFinishedListener listener;\n+    /** 넘긴 일감을 붙잡아 둔다 — 넘겼는지와 무엇을 넘겼는지를 따로 본다. */\n+    private final List<Runnable> handedOff = new ArrayList<>();\n+\n+    private final TaskExecutor executor = handedOff::add;\n+\n+    private BacktestFinishedListener listener;\n+\n+    @org.junit.jupiter.api.BeforeEach\n+    void setUp() {\n+        listener = new BacktestFinishedListener(progressService, executor);\n+    }\n+\n+    @AfterEach\n+    void clearRequestContext() {\n+        RequestContextHolder.resetRequestAttributes();\n+    }\n \n     @Test\n     @DisplayName(\"COMPLETED 만 정상 완료로 넘긴다\")\n@@ -60,6 +87,53 @@ class BacktestFinishedListenerTest {\n         verify(progressService).candidateFinished(JOB_ID, true, \"CANCELLED\");\n     }\n \n+    @Test\n+    @DisplayName(\"처리 중에 도착한 완료는 겹쳐 처리하지 않고 앞의 처리가 끝난 뒤에 이어 간다\")\n+    void chainedResultsAreQueuedInsteadOfNested() {\n+        // 후보를 전진시키면 다음 후보가 발행되고, 그 조합이 이미 계산돼 있으면 004 가 그 자리에서\n+        // 완료를 다시 알린다(재사용). 그 알림을 곧바로 처리하면 후보마다 트랜잭션이 겹겹이 열려\n+        // 커넥션 풀이 마르고 마지막 후보가 DISPATCHED 로 남는다(S15P21E205-417).\n+        List<Long> order = new ArrayList<>();\n+        int[] depth = {0};\n+        given(progressService.candidateFinished(anyLong(), anyBoolean(), any()))\n+                .willAnswer(\n+                        invocation -> {\n+                            long jobId = invocation.getArgument(0);\n+                            depth[0]++;\n+                            assertThat(depth[0]).as(\"겹쳐 처리하면 깊이가 쌓인다\").isEqualTo(1);\n+                            order.add(jobId);\n+                            if (jobId == JOB_ID) {\n+                                listener.onBacktestFinished(\n+                                        new BacktestFinished(\n+                                                JOB_ID + 1, \"bt_0002\", RunStatus.COMPLETED, null));\n+                            }\n+                            depth[0]--;\n+                            return true;\n+                        });\n+\n+        listener.onBacktestFinished(finished(RunStatus.COMPLETED, null));\n+\n+        assertThat(order).as(\"이어진 완료도 빠짐없이 처리한다\").containsExactly(JOB_ID, JOB_ID + 1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"응답을 기다리는 요청 스레드에서는 그 자리에서 돌리지 않고 진행 실행기에 넘긴다\")\n+    void resultsOnARequestThreadAreHandedOff() {\n+        // 접수 요청 스레드에서 묶음을 끝까지 돌리면 POST 응답이 그만큼 늦는다. 계약은 202 로 바로\n+        // 끝나고 진행은 화면의 3초 폴링으로 보이는 것이다(FR-008).\n+        RequestContextHolder.setRequestAttributes(\n+                new ServletRequestAttributes(new MockHttpServletRequest()));\n+\n+        listener.onBacktestFinished(finished(RunStatus.COMPLETED, null));\n+\n+        verifyNoInteractions(progressService);\n+        assertThat(handedOff).hasSize(1);\n+\n+        // 넘긴 일감은 실행기 스레드에서 같은 일을 한다.\n+        handedOff.get(0).run();\n+        verify(progressService).candidateFinished(JOB_ID, false, null);\n+    }\n+\n     private static BacktestFinished finished(RunStatus status, String errorCode) {\n         return new BacktestFinished(JOB_ID, BACKTEST_ID, status, errorCode);\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/listener/BacktestFinishedListenerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/listener/BacktestFinishedListenerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,8 +37,9 @@ import org.springframework.transaction.support.TransactionTemplate;\n  * <p>한도가 하는 일은 <b>더 발행하지 않는 것</b>뿐이다. 이미 큐에 든 후보는 끊지 않는다 — 계산이 끝나가는 후보를 버리면 그만큼이 통째로 사라진다. 그래서 결과는\n  * \"중단\"이 아니라 {@code PARTIAL}이고, 남은 대기 후보는 '미실행'으로 남아 완료 범위를 밝힌다.\n  *\n- * <p>연속 실패 한도를 1로 좁혀 둔다. 여기서 볼 것은 한도 값이 아니라 <b>닿았을 때의 동작</b>이다. 실행시간 한도는 같은 자리에서 같은 방식으로 판정하므로\n- * ({@code applyLimits}) 사유 이름만 다르다.\n+ * <p>연속 실패 한도를 1로 좁혀 둔다. 여기서 볼 것은 한도 값이 아니라 <b>닿았을 때의 동작</b>이다. 실행시간 한도도 같은 자리에서({@code\n+ * applyLimits}) 같은 방식으로 판정하지만 지금은 상한을 두지 않아 켜지지 않는다(2026-09-23) — 그래서 <b>이 한도가 망가진 묶음을 멈추는 유일한\n+ * 장치</b>다.\n  */\n // 연속 실패 한도 1은 실패 후보가 있는 다른 자동 탐색 테스트의 묶음을 닫아 버리므로 이 테스트만 쓴다(컨텍스트를 따로 만든다).\n @TestPropertySource(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,143 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assumptions.assumeThat;\n+\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.context.ApplicationEventPublisher;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 같은 설정 조합을 두 번째로 실행하는 경로를 본다 — 후보 전부가 <b>이미 끝난 실행을 재사용</b>한다(spec 004 R-02).\n+ *\n+ * <p>여기서 잡는 것은 셈이 아니라 <b>묶음이 끝까지 가는가</b>다. 재사용은 후보를 발행하는 그 자리에서 완료를 다시 알리므로, 후보를 하나 전진시키면 곧바로 다음\n+ * 완료가 도착한다. 그 연쇄를 겹쳐 처리하면 후보마다 트랜잭션이 하나씩 쌓여 커넥션 풀이 마르고, 마지막 후보가 {@code DISPATCHED} 로 남은 채 묶음이 영영\n+ * {@code RUNNING} 이 된다(S15P21E205-417). 사용자에게는 \"어제 되던 자동 탐색이 오늘 멈춰 있다\"로 보인다.\n+ *\n+ * <p>풀 크기에 기대지 않는 검사다 — 연쇄가 겹치면 후보 수와 무관하게 언젠가 걸리고, 겹치지 않으면 걸리지 않는다.\n+ */\n+class ParamSearchReuseChainIT extends PortMockedIntegrationTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ApplicationEventPublisher events;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    private long requesterId;\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).\n+        jdbcTemplate.update(\"DELETE FROM my_record\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        requesterId = newUser();\n+    }\n+\n+    @Test\n+    @DisplayName(\"후보 전부가 끝난 실행을 재사용해도 묶음이 끝까지 간다\")\n+    void reusedBundleDrainsToAFinalStatus() {\n+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);\n+        assumeThat(targets).as(\"축이 있고 기준이 아닌 실행 가능 전략이 있어야 이 경로를 시험할 수 있다\").isNotEmpty();\n+\n+        // 첫 묶음을 손으로 밀어 실행을 전부 COMPLETED 로 만든다 — 두 번째 묶음의 재사용 대상이다.\n+        ParamSearchResult first = paramSearchService.create(command(targets));\n+        drive(first.searchId());\n+\n+        // 두 번째 접수. 발행할 후보마다 완료가 그 자리에서 돌아오므로 이 호출 안에서 묶음이 끝난다.\n+        ParamSearchResult second = paramSearchService.create(command(targets));\n+\n+        ParamSearch reloaded =\n+                paramSearchRepository.findBySearchId(second.searchId()).orElseThrow();\n+        assertThat(candidateRepository.findByParamSearchId(reloaded.getId()))\n+                .as(\"재사용 묶음은 대기도 실행 중도 남지 않는다 — 남으면 깨울 이벤트가 다시 오지 않는다\")\n+                .noneMatch(\n+                        candidate ->\n+                                candidate.getStatus() == CandidateStatus.PENDING\n+                                        || candidate.getStatus() == CandidateStatus.DISPATCHED);\n+        assertThat(reloaded.getStatus().isFinal())\n+                .as(\"끝난 묶음은 최종 상태여야 한다: %s\", reloaded.getStatus())\n+                .isTrue();\n+        assertThat(reloaded.getCounts().completed())\n+                .as(\"두 묶음이 같은 조합을 보므로 완료 수도 같다\")\n+                .isEqualTo(\n+                        paramSearchRepository\n+                                .findBySearchId(first.searchId())\n+                                .orElseThrow()\n+                                .getCounts()\n+                                .completed());\n+    }\n+\n+    /** 발행된 후보의 실행을 COMPLETED 로 바꾸고 결과 이벤트를 흘려 묶음을 끝까지 민다. */\n+    private void drive(String searchId) {\n+        for (int round = 0; round < 500; round++) {\n+            ParamSearch search = paramSearchRepository.findBySearchId(searchId).orElseThrow();\n+            List<SearchCandidate> dispatched =\n+                    candidateRepository.findByParamSearchIdAndStatus(\n+                            search.getId(), CandidateStatus.DISPATCHED);\n+            if (dispatched.isEmpty()) {\n+                return;\n+            }\n+            for (SearchCandidate candidate : dispatched) {\n+                long runId = candidate.getBacktestJobId();\n+                // 재사용 대상이 되려면 실행 행이 COMPLETED 여야 한다(spec 004 R-02).\n+                jdbcTemplate.update(\n+                        \"UPDATE backtest_run SET status = 'COMPLETED', updated_at = NOW()\"\n+                                + \" WHERE id = ?\",\n+                        runId);\n+                transactionTemplate.executeWithoutResult(\n+                        status ->\n+                                events.publishEvent(\n+                                        new BacktestFinished(\n+                                                runId,\n+                                                \"BT-STUB-\" + runId,\n+                                                RunStatus.COMPLETED,\n+                                                null)));\n+            }\n+        }\n+        throw new IllegalStateException(\"첫 묶음이 끝나지 않는다 — 두 번째 묶음을 볼 수 없다\");\n+    }\n+\n+    private CreateParamSearchCommand command(List<String> strategyIds) {\n+        return new CreateParamSearchCommand(\n+                requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());\n+    }\n+\n+    private long newUser() {\n+        String suffix = String.valueOf(System.nanoTime());\n+        String email = \"reuse-\" + suffix + \"@example.com\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"u\" + suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchReuseChainIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchReuseChainIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -58,7 +58,7 @@\n \n ## 결과\n \n-- 취소·실행시간 한도·연속 실패 한도가 모두 \"발행을 멈춘다\" 하나로 구현된다\n+- 취소·실행시간 한도·연속 실패 한도가 모두 \"발행을 멈춘다\" 하나로 구현된다(실행시간 한도는 2026-09-23 이후 기본으로 꺼져 있다 — 판정 자리는 그대로 두고 설정값만 비웠다)\n   (`ParamSearch.requestStop` → `CandidateDispatcher.advance`가 막음).\n - 묶음이 끝나는 조건은 \"대기 0 && 발행 0\"으로 유지한다. 선정은 후보 완료마다 잠정 갱신하고 그\n   지점에서 최종 확정한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/0005-param-search-dispatch-window.md",
+          "old_path": "docs/adr/0005-param-search-dispatch-window.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,9 +84,9 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰\n       \"exclusionReasons\": []\n     },\n     \"limits\": {\n-      \"maxCandidates\": 100, \"timeLimitSeconds\": 1800,\n+      \"maxCandidates\": 100, \"timeLimitSeconds\": null,\n       \"dispatchWindow\": 1, \"consecutiveFailureLimit\": 5,\n-      \"provisional\": [\"maxCandidates\", \"dispatchWindow\", \"timeLimitSeconds\", \"consecutiveFailureLimit\"],\n+      \"provisional\": [\"maxCandidates\", \"dispatchWindow\", \"consecutiveFailureLimit\"],\n       \"exceeded\": false\n     },\n     \"commonPeriod\": { \"start\": \"2015-12-22\", \"end\": \"2026-09-14\", \"shortenedBy\": \"lookbackDays\" },\n@@ -101,7 +101,11 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰\n   후보값·허용 범위를 자체적으로 갖지 않는다(FR-025·FR-027). `executable`은 004의 실행 지원 여부다.\n - `axes` 순서가 그리드 좌표 축 순서이고, `values` 순서가 인접 판정의 근거다(FR-029).\n - `defaultValue`는 등록된 기본 시작값이며 **추천값이나 최적값이 아니다.** '추천'·'최적' 문구를 붙이지 않는다.\n-- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 현재 네 개 전부다.\n+- **`limits.timeLimitSeconds`는 `null`이면 실행시간 상한을 두지 않는다는 뜻이다**(2026-09-23). 묶음은\n+  후보를 다 돌거나 연속 실패 한도·취소로만 끝난다. 0으로 접지 말 것 — 화면이 없는 마감을 말하게 된다.\n+  묶음 크기를 막는 것은 `maxCandidates` 하나다.\n+- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 상한을 두지 않은 `timeLimitSeconds`는 이 목록에\n+  실리지 않는다 — 없는 한도에 임시값 표시를 붙일 수 없다.\n - `limits.exceeded`가 `true`면 실행은 거부된다. 화면은 범위를 좁히라고 안내한다.\n - `validationLabel`을 **실행 전에도** 준다 — 결과를 본 뒤에야 미검증을 알면 이미 오해가 생긴 뒤다(FR-015).\n \n@@ -191,7 +195,7 @@ spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰\n         \"stabilityFormula\": { \"neighbor\": \"SINGLE_AXIS_ONE_STEP\", \"value\": \"MEAN_ABS_NET_RETURN_DIFF\" },\n         \"provisional\": [\"displayCount\"]\n       },\n-      \"limits\": { \"maxCandidates\": 100, \"timeLimitSeconds\": 1800, \"dispatchWindow\": 1, \"consecutiveFailureLimit\": 5, \"provisional\": [\"...\"] },\n+      \"limits\": { \"maxCandidates\": 100, \"timeLimitSeconds\": null, \"dispatchWindow\": 1, \"consecutiveFailureLimit\": 5, \"provisional\": [\"...\"] },\n       \"referenceVersions\": { \"marketData\": \"FIXTURE-three_etf_24m\", \"registry\": \"PROVISIONAL-20260911\", \"cost\": \"KR-ETF-2026-09\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.0.0\" },\n       \"dataVersionChanged\": false\n     },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/param-search-api/README.md",
+          "old_path": "docs/specs/param-search-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -68,13 +68,24 @@ describe('PreflightPanel', () => {\n     expect(text).toContain('전체 조합 8개')\n     expect(text).toContain('관측 창이 자료 구간보다 깁니다.')\n \n-    // 적용 한도 네 줄.\n+    // 적용 한도 네 줄. 실행 시간은 상한을 두지 않으므로 '제한 없음'이다 —\n+    // 없는 제한을 '0초'로 적으면 사용자가 없는 마감을 읽는다.\n     expect(text).toContain('후보 수 상한')\n     expect(text).toContain('실행 시간 한도')\n-    expect(text).toContain('30분')\n+    expect(text).toContain('제한 없음')\n     expect(text).toContain('연속 실패 한도')\n   })\n \n+  it('실행 시간 상한이 있으면 그 값을 읽는다', () => {\n+    const limited = {\n+      ...previewFixture,\n+      limits: { ...previewFixture.limits, timeLimitSeconds: 1800 },\n+    }\n+    render(<PreflightPanel preview={limited} onRun={vi.fn()} running={false} />)\n+\n+    expect(document.body.textContent).toContain('30분')\n+  })\n+\n   it('적용 한도에는 임시값 표시를 붙이지 않는다', () => {\n     render(<PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PreflightPanel.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/PreflightPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -162,6 +162,44 @@ describe('ParamSearchPage', () => {\n     expect(screen.queryByText(acceptedFixture.searchId)).toBeNull()\n   })\n \n+  it('실행을 누르면 접수 응답을 기다리지 않고 진행 화면으로 간다', async () => {\n+    const user = userEvent.setup()\n+    // 접수가 끝나기를 기다렸다 넘어가면 그동안 화면이 멈춘 것처럼 보이고, 서버가 이미 계산해 둔\n+    // 조합이면 다 끝난 뒤에 넘어가 한꺼번에 나타난다(FR-008).\n+    let accept: (detail: typeof acceptedFixture) => void = () => {}\n+    apiMocks.createParamSearch.mockReturnValue(\n+      new Promise((resolve) => {\n+        accept = resolve\n+      }),\n+    )\n+    renderPage()\n+\n+    await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))\n+\n+    // 아직 searchId 가 없는데도 진행 화면이다. 확인 화면은 물러나 있다.\n+    expect(await screen.findByRole('heading', { name: '진행 상태' })).toBeTruthy()\n+    expect(screen.queryByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeNull()\n+\n+    accept(acceptedFixture)\n+    await waitFor(() =>\n+      expect(apiMocks.getParamSearch).toHaveBeenCalledWith(acceptedFixture.searchId),\n+    )\n+  })\n+\n+  it('접수가 실패하면 확인 화면으로 돌아와 사유를 보인다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.createParamSearch.mockRejectedValue(\n+      new ParamSearchError('요청을 처리하지 못했습니다.', { status: 500 }),\n+    )\n+    renderPage()\n+\n+    await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))\n+\n+    // 미리 넘어간 화면에 갇히지 않는다 — 실행 버튼이 돌아오고 그 자리에서 사유를 읽는다.\n+    expect((await screen.findByRole('alert')).textContent).toContain('요청을 처리하지 못했습니다')\n+    expect(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeTruthy()\n+  })\n+\n   it('로그인 전에는 실행을 막고 이유를 적는다', async () => {\n     authMocks.getCurrentUser.mockRejectedValue(new Error('anonymous'))\n     renderPage()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/ParamSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -259,6 +259,15 @@ export function ParamSearchPage() {\n   }\n \n   const detail = status.detail\n+  /**\n+   * 실행을 누른 뒤인가. **접수 응답을 기다리는 동안에도 진행 화면을 보인다** — 버튼을 누르면 바로\n+   * 이 화면으로 오고, 결과는 3초 폴링이 하나씩 채운다(FR-008). 접수가 끝나기를 기다렸다 넘어가면\n+   * 그동안 화면이 멈춘 것처럼 보이고, 서버가 이미 계산해 둔 조합이면 다 끝난 뒤에 넘어가서\n+   * 한꺼번에 나타난다.\n+   *\n+   * 접수가 실패하면 `creating`이 풀려 확인 화면으로 돌아오고 그 자리에서 사유를 본다.\n+   */\n+  const started = searchId !== null || creating\n   const selection = detail?.selection ?? null\n   const searchInProgress = detail?.status === 'QUEUED' || detail?.status === 'RUNNING'\n   const selectionIsProvisional = selection !== null && searchInProgress\n@@ -387,7 +396,7 @@ export function ParamSearchPage() {\n               </div>\n             </section>\n \n-            {searchId ? (\n+            {started ? (\n               <section className={styles.progress} aria-labelledby=\"progress-title\">\n                 <header>\n                   <h2 id=\"progress-title\">진행 상태</h2>\n@@ -396,7 +405,13 @@ export function ParamSearchPage() {\n                   </button>\n                 </header>\n \n-                {status.isLoading && !detail && (\n+                {!searchId && (\n+                  <p className={styles.note} role=\"status\">\n+                    탐색을 접수하는 중입니다.\n+                  </p>\n+                )}\n+\n+                {searchId && status.isLoading && !detail && (\n                   <p className={styles.note} role=\"status\">\n                     진행 상태를 불러오는 중입니다.\n                   </p>\n@@ -408,7 +423,8 @@ export function ParamSearchPage() {\n                   </p>\n                 )}\n \n-                {detail && (\n+                {/* searchId 를 함께 본다 — 접수 전에는 detail 이 없고, 아래 버튼들이 식별자를 받는다. */}\n+                {searchId && detail && (\n                   <>\n                     <p className={styles.statusLine} aria-live=\"polite\">\n                       <strong>{statusText[detail.status] ?? detail.status}</strong>\n@@ -510,7 +526,7 @@ export function ParamSearchPage() {\n               />\n             )}\n \n-            {searchId ? null : (\n+            {started ? null : (\n               <>\n                 {previewLoading && !preview && (\n                   <p className={styles.note} role=\"status\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "old_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,7 +71,8 @@ export const previewFixture: ParamSearchPreview = {\n   },\n   limits: {\n     maxCandidates: 100,\n-    timeLimitSeconds: 1800,\n+    // 서버는 실행시간 상한을 두지 않는다 — 계약상 null 이 그 뜻이다.\n+    timeLimitSeconds: null,\n     dispatchWindow: 4,\n     consecutiveFailureLimit: 5,\n     provisional: ['maxCandidates', 'dispatchWindow'],\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/paramSearchFixtures.ts",
+          "old_path": "frontend/src/test/paramSearchFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -174,11 +174,15 @@ export type PreviewWorkload = {\n \n /**\n  * 묶음에 걸린 한도. `provisional`에 든 항목은 **실측 전 임시값**이라 화면이 그 사실을 표시한다\n- * (FR-005a, 원칙 IX).\n+ * (FR-005a).\n+ *\n+ * `timeLimitSeconds`는 **`null`이면 실행시간 상한을 두지 않는다는 뜻이다** — 묶음은 후보를 다 돌거나\n+ * 연속 실패 한도·취소로만 끝난다. 0으로 접거나 없는 값으로 다루지 않는다. 상한이 없으면 서버가\n+ * `provisional`에서도 그 이름을 빼므로 화면이 없는 제한에 '임시값'을 붙이지 않는다.\n  */\n export type AppliedLimits = {\n   maxCandidates: number\n-  timeLimitSeconds: number\n+  timeLimitSeconds: number | null\n   dispatchWindow: number\n   consecutiveFailureLimit: number\n   provisional: string[]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/paramSearch.ts",
+          "old_path": "frontend/src/types/paramSearch.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,8 +28,14 @@ export function formatCount(value: number): string {\n   return value.toLocaleString('ko-KR')\n }\n \n-/** 초 단위 한도를 분·초로 읽는다. 60초 미만은 초로 둔다. */\n-export function formatSeconds(seconds: number): string {\n+/**\n+ * 초 단위 한도를 분·초로 읽는다. 60초 미만은 초로 둔다.\n+ *\n+ * **`null`은 상한을 두지 않았다는 뜻이다**(계약의 `timeLimitSeconds`). 0초로 접으면 화면이 \"0초 안에\n+ * 끝내야 한다\"는 없는 제한을 말하게 된다.\n+ */\n+export function formatSeconds(seconds: number | null): string {\n+  if (seconds === null) return '제한 없음'\n   if (seconds < 60) return `${formatCount(seconds)}초`\n \n   const minutes = Math.floor(seconds / 60)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/paramSearchLabels.ts",
+          "old_path": "frontend/src/utils/paramSearchLabels.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -90,7 +90,8 @@\n     },\n     \"limits\": {\n       \"maxCandidates\": 100,\n-      \"provisional\": [\"maxCandidates\", \"timeLimitSeconds\", \"dispatchWindow\", \"consecutiveFailureLimit\"],\n+      \"timeLimitSeconds\": null,\n+      \"provisional\": [\"maxCandidates\", \"dispatchWindow\", \"consecutiveFailureLimit\"],\n       \"exceeded\": false\n     },\n     \"commonPeriod\": { \"start\": \"2015-01-02\", \"end\": \"2026-08-31\", \"shortenedBy\": null },\n@@ -187,8 +188,8 @@\n         \"tieHandling\": \"SHOW_ALL_TIED\"\n       },\n       \"limits\": {\n-        \"maxCandidates\": 100, \"timeLimitSeconds\": 1800, \"dispatchWindow\": 1, \"consecutiveFailureLimit\": 5,\n-        \"provisional\": [\"maxCandidates\", \"timeLimitSeconds\", \"dispatchWindow\", \"consecutiveFailureLimit\"]\n+        \"maxCandidates\": 100, \"timeLimitSeconds\": null, \"dispatchWindow\": 1, \"consecutiveFailureLimit\": 5,\n+        \"provisional\": [\"maxCandidates\", \"dispatchWindow\", \"consecutiveFailureLimit\"]\n       },\n       \"referenceVersions\": { \"marketData\": \"2026-08-31\", \"cost\": \"v1\", \"engine\": \"nautilus-0.1\" },\n       \"dataVersionChanged\": false\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -202,6 +202,10 @@ public record BacktestFinished(\n   경고 없이 무시한다** — 묶음에 속하지 않은 Job이 대부분이다.\n - 리스너는 후보 상태를 갱신하고 `CandidateDispatcher`에 다음 후보 발행을 요청한다. 이것이 발행 창의\n   전진 지점이다.\n+- **처리 중에 도착한 완료는 겹쳐 처리하지 않고 같은 스레드의 줄에 세운다.** 다음 후보의 조합이 이미\n+  계산돼 있으면 004가 발행하는 그 자리에서 완료를 다시 알리므로(재사용, spec 004 R-02), 곧바로\n+  처리하면 후보마다 트랜잭션이 겹겹이 열린다. 바깥 트랜잭션은 커밋 후에도 콜백이 끝날 때까지\n+  커넥션을 쥐고 있어, 묶음 하나가 커넥션 풀을 말리고 마지막 후보가 `DISPATCHED`로 남는다.\n \n ## 4. 발행 창(dispatch window) 규약 (research R2)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-internal.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-internal.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -38,7 +38,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원\n | `random_seed` | INTEGER NULL | 현재 항상 NULL. 무작위 표본 도입 시 채운다(FR-020) |\n | `selection_rule` | JSONB NOT NULL | 접수 시점 스냅샷. 아래 §5 |\n | `evaluation_split` | JSONB NULL | 미등록이면 NULL → 전 후보 '미검증' (R5) |\n-| `limits` | JSONB NOT NULL | 적용 한도 스냅샷(후보 수 상한·발행 창·실행시간 상한)과 임시값 표시 |\n+| `limits` | JSONB NOT NULL | 적용 한도 스냅샷(후보 수 상한·발행 창·실행시간 상한)과 임시값 표시. `timeLimitSeconds`가 `null`이면 실행시간 상한을 두지 않은 묶음이다 |\n | `reference_versions` | JSONB NOT NULL | 시작 시점의 자료·등록표·비용·엔진 버전 (FR-012) |\n | `execution_plan` | JSONB NOT NULL | 접수 시점에 고정한 실행 조건. 아래 §2.2 (2026-09-11 추가, FR-007·FR-012) |\n | `baseline_job_id` | BIGINT NULL FK → `backtest_job(id)` | 동일 비중 기준 (FR-013d) |\n@@ -47,7 +47,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원\n | `counts` | JSONB NOT NULL | 예상·유효·완료·실패·제외·미실행 (FR-008) |\n | `selection` | JSONB NULL | 선정 결과 스냅샷. 후보 완료마다 갱신하고 묶음 종료 시 확정 |\n | `data_version_changed` | BOOLEAN NOT NULL | 계산 중 자료 갱신 발생 표시 (FR-012) |\n-| `started_at` / `finished_at` | TIMESTAMP WITH TIME ZONE NULL | 실행시간 상한 판정과 실행 측정(FR-023) |\n+| `started_at` / `finished_at` | TIMESTAMP WITH TIME ZONE NULL | 실행 측정(FR-023). 실행시간 상한을 둔 묶음에서는 그 판정 기준이기도 하다 |\n | `created_at` / `updated_at` | TIMESTAMP NOT NULL | `BaseEntity` 규약 |\n \n 인덱스: `search_id` UNIQUE, `(owner_user_id, created_at DESC)` — 006 목록 조회 대비.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/data-model.md",
+          "old_path": "specs/007-auto-parameter-search/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -34,7 +34,7 @@\n \n **Performance Goals**: 목표 수치를 제시하지 않는다. 처리량·지연은 미측정이며 원칙 IX가 미측정 처리량 제시를 금지한다. FR-023에 따라 실행 유형 '자동 탐색 묶음'으로 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·건당 원가를 **측정해 기록하는 것**이 이번 범위다\n \n-**Constraints**: 후보 수 상한 100·실행시간 상한 1800초·서버 벌크 워커 동시 실행 1개 / 한 묶음이\n+**Constraints**: 후보 수 상한 100·실행시간 상한 없음(2026-09-23)·서버 벌크 워커 동시 실행 1개 / 한 묶음이\n `backtest.jobs`를 독점하지 않을 것 / 취소가 즉시 효과를 낼 것 / 절대 문턱 숫자를 새로 만들지 않을 것(FR-013) / 결제·포인트 단계 없음(FR-010)\n \n **Scale/Scope**: 묶음당 유효 후보 최대 120건 + 동일 비중 기준 1건. Backend 신규 패키지 1개(`paramsearch`), 테이블 2개, HTTP 엔드포인트 6개, Frontend 화면 2개(실행 전 확인, 결과)\n@@ -67,7 +67,7 @@ Phase 0에서 5건을 해소했다. 상세 근거는 [research.md](research.md).\n | VI. 없는 결과를 만들지 않는다 | PASS | 제외/실패/미실행/계산 불가를 낮은 수익과 구분해 상태로 저장한다. 안정성 계산 불가를 0으로 채우지 않는다(FR-013b) |\n | VII. 탐색과 검증 구분, 기준은 결과 전 고정 | PASS | 선정 규칙을 묶음 접수 시점에 스냅샷으로 저장하고 이후 변경은 새 묶음이다(FR-013c). 잠금 구간 미등록이라 선정에 쓰일 수 없다 |\n | VIII. 재현 기록 | PASS | 탐색 공간·방법·전체/미실행 후보·제외 사유·선정 규칙·기준 결과·참조 버전을 저장한다(FR-020). 사용자에게 버전·실험 ID 입력을 요구하지 않는다 |\n-| IX. 실행 한도는 실측으로, 과금과 구분 | PASS | 후보 수 상한 100·실행시간 상한 1800초·벌크 워커 1개로 무제한 탐색을 열지 않는다. 발행 창으로 큐 독점을 막는다. Spark를 도입하지 않는다. 결제·포인트 단계 없음 |\n+| IX. 실행 한도는 실측으로, 과금과 구분 | PASS | 후보 수 상한 100·벌크 워커 1개로 묶음 크기를 막는다. **실행시간 상한은 2026-09-23 뺐다** — 원칙 IX가 요구하는 것은 상한 장치이고, 묶음 크기는 후보 수 상한이, 망가진 묶음은 연속 실패 한도가 막는다(constitution 원칙 IX 2026-09-23 개정). 발행 창으로 큐 독점을 막는다. Spark를 도입하지 않는다. 결제·포인트 단계 없음 |\n | X. 자료는 이용 조건 안에서만 | N/A | 자료 확보는 001·008 소유. 007은 새 원천을 추가하지 않는다 |\n | \"하지 않는 것\" 목록 | PASS | 추천 비중·주문·랭킹·상시 알림·자유 코드 입력·결제 단계 없음 |\n | AI 작업 방식 | PASS | PD-05 잔여 4개와 PD-12를 임의 확정하지 않고 팀 확정 대기로 남겼다 (R2·R3·R5) |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/plan.md",
+          "old_path": "specs/007-auto-parameter-search/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,7 @@\n ### Session 2026-09-10\n \n - Q: 등록된 파라미터 조합을 전부 계산할 것인가, 아니면 일부만 골라 계산할 것인가? (FR-005, PD-05) → A: 전체 그리드(전수 계산). 후보 수가 상한을 넘으면 실행하지 않고 범위 축소를 안내한다. 난수를 쓰지 않으므로 시드가 필요 없다. 계산량은 워커 수평 확장으로 흡수하되 상한 자체는 유지한다(constitution 원칙 IX).\n-- Q: 한 탐색 묶음의 후보 수와 실행시간 상한을 몇 개로 둘까? (FR-005a, FR-005b, PD-05) → A: 후보 최대 100개, 실행시간 최대 1800초다. 현재 서버의 자동 탐색 벌크 워커 1개가 후보를 순서대로 처리한다. **(2026-09-22 개정.)**\n+- Q: 한 탐색 묶음의 후보 수와 실행시간 상한을 몇 개로 둘까? (FR-005a, FR-005b, PD-05) → A: 후보 최대 100개, **실행시간 상한은 두지 않는다**. 현재 서버의 자동 탐색 벌크 워커 1개가 후보를 순서대로 처리한다. **(2026-09-23 개정 — 시간으로 끊으면 뒤쪽 후보가 늘 잘려 나가고 같은 묶음을 다시 돌려도 어디까지 나올지가 달라져, 사용자가 고른 조합은 다 돌리기로 했다. 묶음 크기는 후보 수 상한이 막는다.)**\n - Q: 세 가지 기준(비용 차감 성과·손실 제약·인접 설정 안정성)으로 어떻게 소수 후보를 뽑고, 몇 개를 보여줄까? (FR-013, FR-018, PD-05) → A: 세 축 모두 필터로 쓴다. 손실 제약과 인접 안정성 문턱을 넘지 못한 후보를 탈락시키고, 남은 후보를 비용 차감 후 수익으로 정렬해 상위 5개를 표시한다. 두 문턱 값은 같은 세션의 마지막 질문에서 확정했다.\n - Q: \"인접 설정 안정성\"을 무엇으로 계산할까 — 어떤 조합을 '이웃'으로 보고, 이웃과 비교해 무슨 값을 낼까? (FR-013, PD-05) → A: 이웃은 파라미터 축 하나만 한 칸 다른 조합이다. 값은 이웃들과의 비용 차감 후 수익 차 절댓값 평균이며 작을수록 안정이다. 이웃이 없어 '계산 불가'인 후보는 안정성 필터를 통과 처리한다.\n - Q: 두 필터의 문턱을 어떻게 정할까 — 고정된 숫자로 걸까, 아니면 묶음 안에서 상대적으로 걸까? (FR-013, PD-05) → A: 절대 숫자를 만들지 않는다. 하락 폭은 동일 비중 기준보다 크지 않은 후보만 통과시키고, 안정성은 묶음 내 상위 50%만 통과시킨다. 이를 위해 묶음마다 동일 비중 기준 백테스트 1건을 같은 조건으로 함께 실행한다.\n@@ -158,13 +158,13 @@\n - **FR-003**: 실행 전에 대상 전략·탐색 범위 요약·예상 작업량·적용 한도를 간단히 확인한다. 모든 후보 숫자를 직접 입력하게 하지 않으며 상세 변경은 선택 사항이다. (§6.4.3)\n - **FR-004**: 수수료·세금·평가 기간은 탐색 변수로 제공하지 않는다. (§6.4.3, 원칙 IV)\n - **FR-005**: 탐색 방법은 전체 그리드다. 등록표에서 선택한 후보 값의 모든 조합을 계산하고 일부만 표본으로 뽑지 않는다. 이는 후보 수 상한 안에서의 전수 계산이며, 범위 요약이 배제한 '무제한 전수 탐색'이 아니다. 난수를 쓰지 않으므로 같은 등록표·같은 선택 범위는 항상 같은 후보 집합을 만든다. 후속 버전에서 무작위 표본을 도입하면 시드를 저장한다. (§6.4.3, D18)\n-- **FR-005a**: 실행 한도 네 값은 2026-09-10 임시값으로 확정했다. 확정 전까지 네 항목 모두 확인 화면과 결과에 임시값임을 표시하고, 실측 후 [004](../004-backtest-execution/spec.md)의 PD-06에서 고정한다. (§6.4.3, §6.5, D18)\n-  - **실행시간 상한 = 1800초.** 도달하면 발행을 멈추고 실행 중 후보는 완주시킨 뒤 부분 결과로 끝낸다(FR-009). 접수 즉시 상태를 반환하는 비동기 설계라 HTTP 요청은 기다리지 않는다.\n-  - **후보 수 상한 = 100개.** 현재 서버의 자동 탐색 벌크 워커 1개와 발행 창 1을 맞춰 후보를 순서대로 처리하며, 결과는 후보가 끝날 때마다 전달한다.\n+- **FR-005a**: 실행 한도는 2026-09-10 임시값으로 확정했고 2026-09-23 실행시간 상한을 뺐다. 확정 전까지 남은 항목은 확인 화면과 결과에 임시값임을 표시하고, 실측 후 [004](../004-backtest-execution/spec.md)의 PD-06에서 고정한다. (§6.4.3, §6.5, D18)\n+  - **실행시간 상한 = 없음(2026-09-23).** 시간으로 끊으면 후보를 순서대로 도는 구성에서 뒤쪽 후보가 늘 부분 결과로 잘려 나가고, 같은 묶음을 다시 돌려도 어디까지 계산될지가 그때그때 달라진다 — 사용자가 고른 조합은 다 돌려 주고 비교는 완주한 결과로만 한다. 묶음이 끝나는 길은 후보 소진·연속 실패 한도·취소 셋이다. 상한이 없으므로 확인 화면·결과의 `timeLimitSeconds`는 `null`이고 임시값 표시도 붙지 않는다. 되살리려면 설정값 하나(`thorp.param-search.time-limit-seconds`)를 채운다.\n+  - **후보 수 상한 = 100개.** 현재 서버의 자동 탐색 벌크 워커 1개와 발행 창 1을 맞춰 후보를 순서대로 처리하며, 결과는 후보가 끝날 때마다 전달한다. **실행시간 상한이 없는 지금, 한 묶음의 크기를 막는 것은 이 값 하나다.**\n   - **동시성 상한(발행 창) = 4.** prod 워커 수(2)의 2배다. 각 워커가 1건을 처리하는 동안 1건이 앞에 대기해 큐가 비지 않고, 더 키우면 한 묶음이 작업 큐를 오래 점유해 다른 사용자의 단일 실행이 뒤로 밀린다.\n-  - **중단 규칙(연속 실패 한도) = 5회.** 발행 창(4)보다 크게 둔다 — 창에 든 4건이 한꺼번에 실패하는 일만으로 묶음이 멈추면 산발적 실패에 과민 반응한다.\n+  - **중단 규칙(연속 실패 한도) = 5회.** 발행 창(4)보다 크게 둔다 — 창에 든 4건이 한꺼번에 실패하는 일만으로 묶음이 멈추면 산발적 실패에 과민 반응한다. **실행시간 상한이 없으므로 망가진 묶음을 멈추는 것은 이 값이다.**\n   - 남은 결정 항목은 동률 처리 하나다(PD-05).\n-- **FR-005b**: 유효 후보 수가 후보 수 상한(임시 120개)을 넘으면 실행하지 않는다. 초과 사실과 상한, 탐색 범위를 좁히는 방법을 한 문장으로 알린다. 표본을 자동으로 뽑거나 파라미터 간격을 임의로 넓혀 실행하지 않는다. (§6.5, D18, 원칙 IX)\n+- **FR-005b**: 유효 후보 수가 후보 수 상한(임시 100개)을 넘으면 실행하지 않는다. 초과 사실과 상한, 탐색 범위를 좁히는 방법을 한 문장으로 알린다. 표본을 자동으로 뽑거나 파라미터 간격을 임의로 넓혀 실행하지 않는다. (§6.5, D18, 원칙 IX)\n \n #### 등록표 계약과 전략 비의존성 (§6.4.2, §6.4.3, 원칙 IV)\n \n@@ -208,7 +208,7 @@\n \n ### Key Entities *(include if feature involves data)*\n \n-- **탐색 묶음**: 고정한 전략군·섹터 후보 집합, 탐색 공간(등록표 버전, 선택 범위, 전략별로 실제 사용한 탐색 후보값), 탐색 방법(전체 그리드), 동일 비중 기준 백테스트 결과, 선정 기준·동률 규칙, 평가 분할, 적용 한도, 시작 시점 참조 버전, 상태(대기/실행/완료/부분 완료/실패/거부), 중단 사유(취소·후보 수 한도·실행시간 한도·연속 실패 한도), 후보 수 집계(예상·유효·완료·실패·제외·미실행)다.\n+- **탐색 묶음**: 고정한 전략군·섹터 후보 집합, 탐색 공간(등록표 버전, 선택 범위, 전략별로 실제 사용한 탐색 후보값), 탐색 방법(전체 그리드), 동일 비중 기준 백테스트 결과, 선정 기준·동률 규칙, 평가 분할, 적용 한도, 시작 시점 참조 버전, 상태(대기/실행/완료/부분 완료/실패/거부), 중단 사유(취소·후보 수 한도·실행시간 한도·연속 실패 한도 — 실행시간 한도는 상한을 둔 묶음에만 생긴다), 후보 수 집계(예상·유효·완료·실패·제외·미실행)다.\n - **탐색 후보**: 파라미터 조합 하나와 그 실행 상태(대기/발행/완료/실패/제외/미실행), 제외 또는 실패 사유, 재시도 횟수, 결과([004](../004-backtest-execution/spec.md)의 백테스트 결과 참조), 구간별 성과(내부 개발/외부 평가/잠금), 인접 설정 안정성, 선정 여부와 선정·탈락 이유다.\n - **선정 규칙(버전)**: 손실 제약 필터(등록표가 '기준 전략' 역할로 지정한 전략 대비. 현재 동일 비중), 안정성 필터(묶음 내 상위 50%), 정렬 지표(비용 차감 후 수익), 표시 후보 수(5), 동률 처리다. 결과 확인 뒤 변경은 새 버전이다.\n - **평가 분할(버전)**: 내부 개발 구간·외부 평가 구간·잠금 구간의 날짜 경계와 중첩 처리다.\n@@ -246,7 +246,7 @@\n \n | 번호 | 결정 항목 | 상태 | 출발안 | 근거 |\n |---|---|---|---|---|\n-| PD-05 | 자동 탐색 잔여 항목: 동률 처리 (방법·선정 구조·표시 후보 수·안정성 산식·두 필터 문턱은 2026-09-10 확정, 실행 한도 네 값은 2026-09-22 임시값 개정) | 일부 확정 — **구현은 Edge Case의 대체 규칙을 적용 중**(2026-09-14): 동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다. 묶음 스냅샷에 `tieHandling: SHOW_ALL_TIED` 로 남으므로 규칙이 확정돼도 끝난 묶음의 처리는 바뀌지 않는다 | 방법=전체 그리드, 실행시간 상한=1800초(임시), 후보 수 상한=100(임시), 발행 창=1(임시, 서버 벌크 워커 1개), 연속 실패 한도=5(임시), 선정=세 축 필터 후 비용 차감 수익 정렬, 표시 후보 수=5, 안정성=1축 이웃 성과차 절댓값 평균, 문턱=동일 비중 기준 대비+상위 50% | §6.4.3, D10, D18 |\n+| PD-05 | 자동 탐색 잔여 항목: 동률 처리 (방법·선정 구조·표시 후보 수·안정성 산식·두 필터 문턱은 2026-09-10 확정, 실행 한도는 2026-09-22 임시값 개정 후 2026-09-23 실행시간 상한 제거) | 일부 확정 — **구현은 Edge Case의 대체 규칙을 적용 중**(2026-09-14): 동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다. 묶음 스냅샷에 `tieHandling: SHOW_ALL_TIED` 로 남으므로 규칙이 확정돼도 끝난 묶음의 처리는 바뀌지 않는다 | 방법=전체 그리드, 실행시간 상한=없음(2026-09-23), 후보 수 상한=100(임시), 발행 창=1(임시, 서버 벌크 워커 1개), 연속 실패 한도=5(임시), 선정=세 축 필터 후 비용 차감 수익 정렬, 표시 후보 수=5, 안정성=1축 이웃 성과차 절댓값 평균, 문턱=동일 비중 기준 대비+상위 50% | §6.4.3, D10, D18 |\n | PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 — **구현은 평가 분할을 등록하지 않아 전 후보가 `UNVALIDATED`**(2026-09-14). 이는 '검증 통과'가 아니라 '검증 여부를 말할 수 없음'이다. 값은 응답에 항상 싣되, 모든 후보가 같은 값이라 결과 사이를 가르지 못하므로 화면에는 이 표시를 만들지 않는다([005](../005-result-comparison/spec.md) FR-012). 분할이 등록되면 후보마다 탐색 구간과 잠금 구간 라벨이 갈리고, 그때 화면 표시를 다시 만든다 | 마지막 12개월 잠금 | §7.3, D11 |\n | PD-06 | 실행 한도 (소유: [004](../004-backtest-execution/spec.md)) | 실측 후 고정 — **측정 입력이 아직 없다**(2026-09-14). 004에 실행 측정 저장소가 없어 007의 `AUTO_SEARCH_BATCH` 기록(FR-023, T117)을 남길 곳이 없다. 004 T012 뒤에 착수한다 | 실측 전 임시 상한 | §6.5, D18 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/spec.md",
+          "old_path": "specs/007-auto-parameter-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-23T11:42:06.594+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2861560": []
+  }
+}

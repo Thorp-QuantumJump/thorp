@@ -1,0 +1,876 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945993,
+    "iid": 137,
+    "project_id": 1444456,
+    "title": "fix(be): 자동 탐색이 실행할 수 없는 전략을 고르지 않도록 했습니다.",
+    "description": "작업 내용 요약\n\n자동 탐색이 실행 입력을 다 만들 수 없는 전략을 접수 시점에 가려냅니다. 지금은 `FIXED_WEIGHT`가 탐색 대상에 들어와 실행 단계에서 `targetWeight` 누락으로 거절됩니다.\n\n## 관련 티켓\n\n[S15P21E205-259](https://ssafy.atlassian.net/browse/S15P21E205-259) (선행: 234 머지 완료)\n\n## 주요 변경 사항\n\n- `SearchTargetResolver`가 `targetWeightSource = USER`인 전략을 세 번째 거부 사유로 가릅니다. `StopReason.STRATEGY_NOT_SEARCHABLE` · `ErrorCode` 422 · `StrategyNotSearchableException`\n- 같은 선별을 복사해 갖고 있던 테스트 열 곳을 `SearchableStrategies` 한 곳으로 모았습니다\n- 007 계약 `param-search-api.md` §2·§6 오류 코드 표에 새 코드를 더했습니다\n\n## 테스트\n\n- `./gradlew spotlessApply build` 통과했습니다 (6분 11초)\n- `SearchTargetResolverTest`에 셋을 더했습니다 — 사용자 비중 전략이 `notSearchable`로 갈리는지, 축이 없어도 계산형이면 대상이 되는지, 미등록이 탐색 불가보다 먼저 알려지는지 확인합니다\n\n## 리뷰 포인트\n\n**① 004 실행 미지원과 뭉치지 않았습니다.** 004는 `FIXED_WEIGHT`를 실행할 수 있고 단건 분석은 그대로 됩니다. 탐색이 못 하는 것은 목표 비중을 만드는 일입니다. 사용자가 할 일도 다릅니다 — 기다리는 것이 아니라 분석하기로 실행하면 됩니다.\n\n**② 기준을 \"축이 있는가\"에서 `targetWeightSource`로 바꿨습니다.** 옛 기준이 맞아 보였던 것은 우연이고, 003이 모든 전략에 축을 주자 곧바로 깨졌습니다. 새 판정에도 전략 ID는 나타나지 않습니다(FR-025). 쓰는 것은 등록표의 어휘입니다.\n\n**③ `StopReason`에 값을 더했지만 마이그레이션은 없습니다.** `stop_reason`이 제약 없는 `VARCHAR(32)`이고 새 값은 23자입니다.\n\n**④ 헬퍼 이름이 둘로 갈려 있었습니다**(`searchableStrategyIds`, `supportedStrategyIds`). 그래서 234에서 여덟 곳만 고치고 둘을 놓쳤고, 그 둘이 이번 빌드에서 드러났습니다.",
+    "state": "merged",
+    "created_at": "2026-09-16T10:36:42.916+09:00",
+    "updated_at": "2026-09-16T10:43:42.343+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T10:43:42.386+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/259-searchable-strategy-selection",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+    "merge_commit_sha": "a44fc2bf826853e015fffe43fa9e989747d29155",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T10:36:44.802+09:00",
+    "reference": "!137",
+    "references": {
+      "short": "!137",
+      "relative": "!137",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!137"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/137",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945993,
+    "iid": 137,
+    "project_id": 1444456,
+    "title": "fix(be): 자동 탐색이 실행할 수 없는 전략을 고르지 않도록 했습니다.",
+    "description": "작업 내용 요약\n\n자동 탐색이 실행 입력을 다 만들 수 없는 전략을 접수 시점에 가려냅니다. 지금은 `FIXED_WEIGHT`가 탐색 대상에 들어와 실행 단계에서 `targetWeight` 누락으로 거절됩니다.\n\n## 관련 티켓\n\n[S15P21E205-259](https://ssafy.atlassian.net/browse/S15P21E205-259) (선행: 234 머지 완료)\n\n## 주요 변경 사항\n\n- `SearchTargetResolver`가 `targetWeightSource = USER`인 전략을 세 번째 거부 사유로 가릅니다. `StopReason.STRATEGY_NOT_SEARCHABLE` · `ErrorCode` 422 · `StrategyNotSearchableException`\n- 같은 선별을 복사해 갖고 있던 테스트 열 곳을 `SearchableStrategies` 한 곳으로 모았습니다\n- 007 계약 `param-search-api.md` §2·§6 오류 코드 표에 새 코드를 더했습니다\n\n## 테스트\n\n- `./gradlew spotlessApply build` 통과했습니다 (6분 11초)\n- `SearchTargetResolverTest`에 셋을 더했습니다 — 사용자 비중 전략이 `notSearchable`로 갈리는지, 축이 없어도 계산형이면 대상이 되는지, 미등록이 탐색 불가보다 먼저 알려지는지 확인합니다\n\n## 리뷰 포인트\n\n**① 004 실행 미지원과 뭉치지 않았습니다.** 004는 `FIXED_WEIGHT`를 실행할 수 있고 단건 분석은 그대로 됩니다. 탐색이 못 하는 것은 목표 비중을 만드는 일입니다. 사용자가 할 일도 다릅니다 — 기다리는 것이 아니라 분석하기로 실행하면 됩니다.\n\n**② 기준을 \"축이 있는가\"에서 `targetWeightSource`로 바꿨습니다.** 옛 기준이 맞아 보였던 것은 우연이고, 003이 모든 전략에 축을 주자 곧바로 깨졌습니다. 새 판정에도 전략 ID는 나타나지 않습니다(FR-025). 쓰는 것은 등록표의 어휘입니다.\n\n**③ `StopReason`에 값을 더했지만 마이그레이션은 없습니다.** `stop_reason`이 제약 없는 `VARCHAR(32)`이고 새 값은 23자입니다.\n\n**④ 헬퍼 이름이 둘로 갈려 있었습니다**(`searchableStrategyIds`, `supportedStrategyIds`). 그래서 234에서 여덟 곳만 고치고 둘을 놓쳤고, 그 둘이 이번 빌드에서 드러났습니다.",
+    "state": "merged",
+    "created_at": "2026-09-16T10:36:42.916+09:00",
+    "updated_at": "2026-09-16T10:43:42.343+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T10:43:42.386+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/259-searchable-strategy-selection",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+    "merge_commit_sha": "a44fc2bf826853e015fffe43fa9e989747d29155",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T10:36:44.802+09:00",
+    "reference": "!137",
+    "references": {
+      "short": "!137",
+      "relative": "!137",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!137"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/137",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "19",
+    "latest_build_started_at": "2026-09-16T10:36:57.954+09:00",
+    "latest_build_finished_at": "2026-09-16T10:43:41.567+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197798,
+      "iid": 55,
+      "project_id": 1444456,
+      "sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+      "ref": "fix(be)/259-searchable-strategy-selection",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T10:36:57.850+09:00",
+      "updated_at": "2026-09-16T10:43:41.574+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197798"
+    },
+    "head_pipeline": {
+      "id": 197798,
+      "iid": 55,
+      "project_id": 1444456,
+      "sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+      "ref": "fix(be)/259-searchable-strategy-selection",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T10:36:57.850+09:00",
+      "updated_at": "2026-09-16T10:43:41.574+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197798",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T10:36:57.954+09:00",
+      "finished_at": "2026-09-16T10:43:41.567+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197798",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "head_sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+      "start_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "037edbc8f3218d239108db49e6cef1923b2f3194",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813594,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:36:43.004+09:00",
+          "updated_at": "2026-09-16T10:36:43.012+09:00",
+          "system": true,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1758d4ae48cd30d4f1b53c3770010bd1ede83253",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813599,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **관심사 분리 및 도메인 규칙 명확화**: `SearchTargetResolver`에서 사용자 지정 목표 비중(`USER`)을 갖는 전략을 자동 탐색 대상에서 제외하기 위해 `STRATEGY_NOT_SEARCHABLE` 예외를 명확히 분리하고, 단순 실행 불가(`STRATEGY_NOT_EXECUTABLE`)와 구분한 점이 훌륭합니다.\n- **테스트 중복 제거**: 여러 통합 테스트 파일에 산재해 있던 `searchableStrategyIds()` 중복 로직을 `SearchableStrategies` 유틸리티 클래스로 깔끔하게 추출하여 유지보수성과 가독성을 크게 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **자동 탐색 접수 거부 시나리오 테스트**: `targetWeightSource`가 `\"USER\"`로 설정된 전략을 포함하여 자동 탐색(Preview 또는 Create)을 요청했을 때, HTTP 422 상태 코드와 `STRATEGY_NOT_SEARCHABLE` 에러 코드가 올바르게 반환되는지 확인하는 테스트를 작성합니다.\n- **우선순위 검증 테스트**: 미등록 전략(`STRATEGY_NOT_REGISTERED`)과 탐색 불가 전략(`STRATEGY_NOT_SEARCHABLE`)이 동시에 요청되었을 때, 기대하는 순서대로(등록되지 않은 전략이 먼저) 예외 처리 혹은 거부 사유가 반환되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:da86fa6ad899de97000e9c2cee2773db6acf5e06 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T10:36:51.691+09:00",
+          "updated_at": "2026-09-16T10:36:51.691+09:00",
+          "system": false,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "669709f9898b0f63a469c2aae0855da5002d6e2a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813618,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">fix(be): 자동 탐색이 실행할 수 없는 전략을 고르지 않<span class=\"idiff left right deletion\">게 한다</span></code> to <code class=\"idiff\">fix(be): 자동 탐색이 실행할 수 없는 전략을 고르지 않<span class=\"idiff left right addition\">도록 했습니다.</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:38:34.918+09:00",
+          "updated_at": "2026-09-16T10:38:34.921+09:00",
+          "system": true,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0894765f3e1060556d59ec205dc65c9e86d9e74e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813619,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:38:34.953+09:00",
+          "updated_at": "2026-09-16T10:38:34.957+09:00",
+          "system": true,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8197be381765e400e162fd18fdc7b9b27243a80b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813620,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:38:34.989+09:00",
+          "updated_at": "2026-09-16T10:38:34.992+09:00",
+          "system": true,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dd1b98e277cd948cbdfccd85465b78e9176a7b23",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813683,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for da86fa6ad899de97000e9c2cee2773db6acf5e06 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:42:06.528+09:00",
+          "updated_at": "2026-09-16T10:42:06.532+09:00",
+          "system": true,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b827c51e544ba700b3dcaa8f44dc11e120fe4858",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813704,
+          "type": null,
+          "body": "mentioned in commit a44fc2bf826853e015fffe43fa9e989747d29155",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:43:42.361+09:00",
+          "updated_at": "2026-09-16T10:43:42.365+09:00",
+          "system": true,
+          "noteable_id": 945993,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 137,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2203602,
+      "head_commit_sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+      "base_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "start_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "created_at": "2026-09-16T10:36:43.292+09:00",
+      "merge_request_id": 945993,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "85226e3b0cb26474019f552024905de74d5837fb"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2203602,
+      "head_commit_sha": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+      "base_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "start_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "created_at": "2026-09-16T10:36:43.292+09:00",
+      "merge_request_id": 945993,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "85226e3b0cb26474019f552024905de74d5837fb",
+      "commits": [
+        {
+          "id": "da86fa6ad899de97000e9c2cee2773db6acf5e06",
+          "short_id": "da86fa6a",
+          "created_at": "2026-09-16T10:36:39.000+09:00",
+          "parent_ids": [
+            "bcf6585181485b8c449e03b8ad8f0b9750732f5e"
+          ],
+          "title": "fix(be): 자동 탐색이 실행할 수 없는 전략을 고르지 않게 한다",
+          "message": "fix(be): 자동 탐색이 실행할 수 없는 전략을 고르지 않게 한다\n\n003이 등록표를 넓히면서 FIXED_WEIGHT에도 축이 생겼다. 그 전까지 007은 \"축이 있는\n전략\"을 탐색 대상으로 골랐고 FIXED_WEIGHT는 축이 없어 저절로 빠져 있었다. 이제\n대상에 들어오는데 실행에는 항목마다 targetWeight가 필요하고 자동 탐색은 그 값을\n만들지 않아 접수가 거절한다.\n\n\"축이 있는가\"는 애초에 실행 가능 여부를 말해 주는 기준이 아니었다. 등록표가\ntargetWeightSource로 그 구분을 이미 제공한다.\n\n- SearchTargetResolver가 targetWeightSource = USER인 전략을 세 번째 거부 사유로\n  가른다. StopReason.STRATEGY_NOT_SEARCHABLE·ErrorCode 422·전용 예외\n- 004 실행 미지원과 뭉치지 않는다 — 004는 이 전략을 실행할 수 있고 단건 분석은\n  그대로 된다. 사용자가 할 일도 다르다: 기다리는 것이 아니라 분석하기로 실행한다\n- 같은 선별을 복사해 갖고 있던 테스트 열 곳을 SearchableStrategies 한 곳으로 모은다.\n  기준이 바뀔 때마다 열 곳을 함께 고쳐야 했고 이번에 실제로 그랬다\n- 007 계약 §2·§6의 오류 코드 표에 새 코드를 더한다\n\n판정에 전략 ID를 쓰지 않는다(007 FR-025). 기준은 등록표가 준 값이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T10:36:39.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T10:36:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da86fa6ad899de97000e9c2cee2773db6acf5e06"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -43,6 +43,9 @@ public enum ErrorCode {\n     UNREGISTERED_PARAMETER_VALUE(HttpStatus.BAD_REQUEST, \"등록되지 않은 파라미터 값입니다.\"),\n     STRATEGY_NOT_REGISTERED(HttpStatus.UNPROCESSABLE_ENTITY, \"등록되지 않은 전략입니다.\"),\n     STRATEGY_NOT_EXECUTABLE(HttpStatus.UNPROCESSABLE_ENTITY, \"아직 실행을 지원하지 않는 전략입니다.\"),\n+    STRATEGY_NOT_SEARCHABLE(\n+            HttpStatus.UNPROCESSABLE_ENTITY,\n+            \"목표 비중을 직접 정하는 전략은 자동 탐색으로 비교할 수 없습니다. 분석하기에서 실행해 주세요.\"),\n     REGISTRY_VERSION_CHANGED(HttpStatus.CONFLICT, \"확인하신 사이에 전략 등록표가 바뀌었습니다. 바뀐 내용을 다시 확인해 주세요.\"),\n     REGISTRY_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, \"전략 등록 정보를 읽을 수 없습니다. 잠시 후 다시 시도해 주세요.\"),\n     ALREADY_FINISHED(HttpStatus.CONFLICT, \"이미 끝난 탐색입니다.\"),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -34,6 +34,7 @@ public class ParamSearchRejectedException extends BusinessException {\n             case NO_VALID_CANDIDATE -> ErrorCode.NO_VALID_COMBINATION;\n             case STRATEGY_NOT_REGISTERED -> ErrorCode.STRATEGY_NOT_REGISTERED;\n             case STRATEGY_NOT_EXECUTABLE -> ErrorCode.STRATEGY_NOT_EXECUTABLE;\n+            case STRATEGY_NOT_SEARCHABLE -> ErrorCode.STRATEGY_NOT_SEARCHABLE;\n             // 취소·시간·실패 한도는 접수 거부가 아니라 실행 중 중단이다. 여기로 오면 호출 지점이 틀렸다.\n             case CANCELLED, TIME_LIMIT, FAILURE_LIMIT ->\n                     throw new IllegalArgumentException(\"not an intake rejection: \" + stopReason);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/exception/ParamSearchRejectedException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/exception/ParamSearchRejectedException.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,23 @@\n+package com.ssafy.thorp.paramsearch.application.exception;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.util.List;\n+\n+/**\n+ * 목표 비중이 사용자에게서 오는 전략이라 자동 탐색이 실행할 수 없다. 422다.\n+ *\n+ * <p><b>{@link StrategyNotExecutableException}과 다르다.</b> 004는 이 전략을 실행할 수 있고 단건 분석은 그대로 된다. 자동 탐색이\n+ * 못 하는 것은 목표 비중을 만들어 내는 일이다 — 그 값은 사용자가 정하고 탐색 요청에는 담기지 않는다. 두 사유를 하나로 뭉치면 사용자가 \"기다리면 되는 일\"로 잘못\n+ * 읽는다.\n+ *\n+ * <p>조합 생성 전에 던진다. 그대로 발행하면 후보 전량이 접수에서 목표 비중 누락으로 거절돼 실행 자원을 버린다(원칙 VI).\n+ */\n+public class StrategyNotSearchableException extends BusinessException {\n+\n+    public StrategyNotSearchableException(List<String> strategyIds) {\n+        super(\n+                ErrorCode.STRATEGY_NOT_SEARCHABLE,\n+                \"목표 비중을 직접 정하는 전략은 자동 탐색으로 비교할 수 없습니다: \" + String.join(\", \", strategyIds));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/exception/StrategyNotSearchableException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/exception/StrategyNotSearchableException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.paramsearch.application.service;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.paramsearch.application.exception.StrategyNotExecutableException;\n import com.ssafy.thorp.paramsearch.application.exception.StrategyNotRegisteredException;\n+import com.ssafy.thorp.paramsearch.application.exception.StrategyNotSearchableException;\n import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;\n import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n@@ -19,11 +20,12 @@ import org.springframework.stereotype.Service;\n /**\n  * 요청 전략을 탐색 대상으로 바꾼다 — <b>조합을 만들기 전에</b> 거부할 것을 거부한다(FR-026, research R8).\n  *\n- * <p>탐색 대상은 '003 등록표의 활성 전략' ∩ '004가 실행을 지원하는 전략'이다. 앞에 없으면 {@link\n- * StopReason#STRATEGY_NOT_REGISTERED}, 뒤에 없으면 {@link StopReason#STRATEGY_NOT_EXECUTABLE}이며 두 사유를\n- * 구분해 남긴다. 사용자가 할 수 있는 일이 다르기 때문이다.\n+ * <p>탐색 대상은 '003 등록표의 활성 전략' ∩ '004가 실행을 지원하는 전략' ∩ '자동 탐색이 값을 다 만들 수 있는 전략'이다. 차례로 {@link\n+ * StopReason#STRATEGY_NOT_REGISTERED}·{@link StopReason#STRATEGY_NOT_EXECUTABLE}·{@link\n+ * StopReason#STRATEGY_NOT_SEARCHABLE}이며 세 사유를 구분해 남긴다. 사용자가 할 수 있는 일이 다르기 때문이다 — 순서대로 등록을 기다리고, 실행\n+ * 지원을 기다리고, 자동 탐색 대신 분석하기로 실행한다.\n  *\n- * <p><b>007 내부 전략 목록과 비교하지 않는다.</b> 판정에 쓰는 두 집합은 모두 포트가 준 값이고, 이 클래스에는 전략 ID가 한 번도 나타나지\n+ * <p><b>007 내부 전략 목록과 비교하지 않는다.</b> 판정에 쓰는 세 집합은 모두 포트가 준 값이고, 이 클래스에는 전략 ID가 한 번도 나타나지\n  * 않는다(FR-025).\n  *\n  * <p>거부를 조합 생성 앞에 두는 이유: 미지원 전략을 그대로 발행하면 후보 전량이 실패로 끝나 \"실행 불가\"와 \"낮은 수익\"의 구분이 흐려지고 실행 자원도 버린다(원칙\n@@ -32,6 +34,13 @@ import org.springframework.stereotype.Service;\n @Service\n public class SearchTargetResolver {\n \n+    /**\n+     * 등록표가 \"목표 비중이 사용자에게서 온다\"를 나타내는 값(003 계약 §1의 {@code targetWeightSource}).\n+     *\n+     * <p>전략 ID가 아니라 등록표의 어휘다 — 전략이 늘어도 이 상수는 바뀌지 않는다.\n+     */\n+    private static final String USER_SUPPLIED_TARGET_WEIGHT = \"USER\";\n+\n     private final ParameterRegistryPort registry;\n     private final StrategyExecutionSupportPort executionSupport;\n \n@@ -56,6 +65,7 @@ public class SearchTargetResolver {\n         List<StrategyRegistration> targets = new ArrayList<>();\n         List<String> notRegistered = new ArrayList<>();\n         List<String> notExecutable = new ArrayList<>();\n+        List<String> notSearchable = new ArrayList<>();\n \n         for (String strategyId : requestedStrategyIds) {\n             Optional<StrategyRegistration> registration = readRegistration(strategyId);\n@@ -63,6 +73,8 @@ public class SearchTargetResolver {\n                 notRegistered.add(strategyId);\n             } else if (!supported.containsKey(strategyId)) {\n                 notExecutable.add(strategyId);\n+            } else if (!isSearchable(registration.get())) {\n+                notSearchable.add(strategyId);\n             } else {\n                 targets.add(registration.get());\n             }\n@@ -73,7 +85,23 @@ public class SearchTargetResolver {\n                 List.copyOf(targets),\n                 Map.copyOf(supported),\n                 List.copyOf(notRegistered),\n-                List.copyOf(notExecutable));\n+                List.copyOf(notExecutable),\n+                List.copyOf(notSearchable));\n+    }\n+\n+    /**\n+     * 자동 탐색이 이 전략의 실행 입력을 전부 만들 수 있는가.\n+     *\n+     * <p>목표 비중이 사용자에게서 오는 전략({@code targetWeightSource = USER})은 만들 수 없다 — 그 값은 002가 확정해 분석 요청에 담기고\n+     * 탐색 요청에는 없다. 그대로 발행하면 후보 전량이 접수에서 목표 비중 누락으로 거절된다.\n+     *\n+     * <p><b>축이 있는지로 판정하지 않는다.</b> 예전에는 그렇게 갈렸지만 그것은 우연이었다 — 003이 등록표를 넓혀 모든 전략에 축이 생기자 곧바로 깨졌다. 축의\n+     * 유무는 설정할 항목이 있는지를 말할 뿐 실행 입력을 누가 대는지를 말하지 않는다.\n+     *\n+     * <p>판정 기준은 등록표가 준 값이고 이 메서드에 전략 ID는 나타나지 않는다(FR-025).\n+     */\n+    private static boolean isSearchable(StrategyRegistration registration) {\n+        return !USER_SUPPLIED_TARGET_WEIGHT.equals(registration.targetWeightSource());\n     }\n \n     private Map<String, String> readSupported() {\n@@ -126,6 +154,7 @@ public class SearchTargetResolver {\n      * @param rulesVersionByStrategy 004가 준 전략별 규칙 버전. 묶음이 접수 시점 값으로 고정한다\n      * @param notRegistered 등록표에 없는 전략\n      * @param notExecutable 등록됐으나 004가 실행을 지원하지 않는 전략\n+     * @param notSearchable 실행은 되지만 자동 탐색이 값을 다 만들 수 없는 전략\n      */\n     public record SearchTargets(\n             String registryVersion,\n@@ -133,10 +162,11 @@ public class SearchTargetResolver {\n             List<StrategyRegistration> targets,\n             Map<String, String> rulesVersionByStrategy,\n             List<String> notRegistered,\n-            List<String> notExecutable) {\n+            List<String> notExecutable,\n+            List<String> notSearchable) {\n \n         public boolean isRejected() {\n-            return !notRegistered.isEmpty() || !notExecutable.isEmpty();\n+            return !notRegistered.isEmpty() || !notExecutable.isEmpty() || !notSearchable.isEmpty();\n         }\n \n         /**\n@@ -177,6 +207,9 @@ public class SearchTargetResolver {\n             if (!notExecutable.isEmpty()) {\n                 return StopReason.STRATEGY_NOT_EXECUTABLE;\n             }\n+            if (!notSearchable.isEmpty()) {\n+                return StopReason.STRATEGY_NOT_SEARCHABLE;\n+            }\n             throw new IllegalStateException(\"no rejection to report\");\n         }\n \n@@ -188,6 +221,9 @@ public class SearchTargetResolver {\n             if (!notExecutable.isEmpty()) {\n                 return new StrategyNotExecutableException(notExecutable);\n             }\n+            if (!notSearchable.isEmpty()) {\n+                return new StrategyNotSearchableException(notSearchable);\n+            }\n             throw new IllegalStateException(\"no rejection to report\");\n         }\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/SearchTargetResolver.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/SearchTargetResolver.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,5 +21,12 @@ public enum StopReason {\n     /** 003 등록표의 활성 전략이 아니어서 조합 생성 전에 거부했다(FR-026). */\n     STRATEGY_NOT_REGISTERED,\n     /** 004가 실행을 지원하지 않는 전략이어서 조합 생성 전에 거부했다(FR-026). */\n-    STRATEGY_NOT_EXECUTABLE\n+    STRATEGY_NOT_EXECUTABLE,\n+    /**\n+     * 자동 탐색이 실행할 수 없는 전략이어서 조합 생성 전에 거부했다.\n+     *\n+     * <p>{@link #STRATEGY_NOT_EXECUTABLE}과 다르다 — 004는 이 전략을 실행할 수 있고 단건 분석은 그대로 된다. 자동 탐색이 못 하는 것은\n+     * 목표 비중을 만들어 내는 일이다. 사용자가 할 일도 다르다: 기다리는 것이 아니라 분석하기로 실행하면 된다.\n+     */\n+    STRATEGY_NOT_SEARCHABLE\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/StopReason.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/StopReason.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -56,6 +56,65 @@ class SearchTargetResolverTest {\n                 .isEqualTo(ErrorCode.STRATEGY_NOT_EXECUTABLE);\n     }\n \n+    @Test\n+    @DisplayName(\"목표 비중이 사용자에게서 오는 전략은 탐색 대상에서 빠진다\")\n+    void strategyNeedingUserWeightsIsRejected() {\n+        // 자동 탐색은 목표 비중을 만들지 않는다. 그대로 발행하면 후보 전량이 접수에서 거절돼 실행 자원을 버린다.\n+        ParameterRegistryPort withUserWeights =\n+                RegistryFixtures.registry(\"FIXTURE-1\")\n+                        .strategy(\"STRATEGY_A\", RegistryFixtures.axisOfSize(\"x\", 3))\n+                        .strategy(\"STRATEGY_B\", RegistryFixtures.axisOfSize(\"y\", 2))\n+                        .targetWeightSource(\"STRATEGY_B\", \"USER\")\n+                        .build();\n+\n+        SearchTargets targets =\n+                resolver(withUserWeights, \"STRATEGY_A\", \"STRATEGY_B\")\n+                        .resolve(List.of(\"STRATEGY_A\", \"STRATEGY_B\"));\n+\n+        assertThat(targets.isRejected()).isTrue();\n+        assertThat(targets.notSearchable()).containsExactly(\"STRATEGY_B\");\n+        assertThat(targets.notExecutable())\n+                .as(\"004는 이 전략을 실행할 수 있다 — 두 사유를 뭉치면 사용자가 '기다리면 되는 일'로 읽는다\")\n+                .isEmpty();\n+        assertThat(targets.stopReason()).isEqualTo(StopReason.STRATEGY_NOT_SEARCHABLE);\n+        assertThat(targets.toException().getErrorCode())\n+                .isEqualTo(ErrorCode.STRATEGY_NOT_SEARCHABLE);\n+    }\n+\n+    @Test\n+    @DisplayName(\"축이 없어도 목표 비중을 계산하는 전략이면 탐색 대상이다\")\n+    void axisCountDoesNotDecideSearchability() {\n+        // 예전 판정이던 \"축이 있는가\"로 갈랐다면 여기서 빠졌을 전략이다. 축의 유무는 설정할 항목이 있는지를\n+        // 말할 뿐 실행 입력을 누가 대는지를 말하지 않는다.\n+        ParameterRegistryPort noAxis =\n+                RegistryFixtures.registry(\"FIXTURE-1\").strategy(\"STRATEGY_C\").build();\n+\n+        SearchTargets targets = resolver(noAxis, \"STRATEGY_C\").resolve(List.of(\"STRATEGY_C\"));\n+\n+        assertThat(targets.isRejected()).isFalse();\n+        assertThat(targets.targets())\n+                .extracting(StrategyRegistration::strategyId)\n+                .containsExactly(\"STRATEGY_C\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"미등록이 탐색 불가보다 먼저 알려진다 — 사용자가 할 일의 순서와 같다\")\n+    void unregisteredIsReportedBeforeNotSearchable() {\n+        ParameterRegistryPort withUserWeights =\n+                RegistryFixtures.registry(\"FIXTURE-1\")\n+                        .strategy(\"STRATEGY_B\", RegistryFixtures.axisOfSize(\"y\", 2))\n+                        .targetWeightSource(\"STRATEGY_B\", \"USER\")\n+                        .build();\n+\n+        SearchTargets targets =\n+                resolver(withUserWeights, \"STRATEGY_B\")\n+                        .resolve(List.of(\"STRATEGY_MISSING\", \"STRATEGY_B\"));\n+\n+        assertThat(targets.notRegistered()).containsExactly(\"STRATEGY_MISSING\");\n+        assertThat(targets.notSearchable()).containsExactly(\"STRATEGY_B\");\n+        assertThat(targets.stopReason()).isEqualTo(StopReason.STRATEGY_NOT_REGISTERED);\n+    }\n+\n     @Test\n     @DisplayName(\"지원 목록에 전략을 더하면 007 코드 변경 없이 대상이 된다\")\n     void addingSupportMakesItATargetWithoutCodeChange() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/SearchTargetResolverTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/SearchTargetResolverTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,11 +9,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.\n import com.fasterxml.jackson.databind.JsonNode;\n import com.fasterxml.jackson.databind.ObjectMapper;\n import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n+import com.ssafy.thorp.paramsearch.SearchableStrategies;\n import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n-import java.util.List;\n import java.util.concurrent.atomic.AtomicLong;\n import org.hamcrest.Matchers;\n import org.junit.jupiter.api.BeforeEach;\n@@ -274,14 +273,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n      * STRATEGY_NOT_REGISTERED}로 거부되어 이 테스트가 계약이 아니라 그 거부를 확인하게 된다.\n      */\n     private String supportedStrategyIdsJson() {\n-        List<String> registeredIn004 =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registeredIn004::contains)\n+        return SearchableStrategies.of(registry, jdbcTemplate).stream()\n                 .map(id -> \"\\\"\" + id + \"\\\"\")\n                 .reduce((left, right) -> left + \", \" + right)\n                 .map(joined -> \"[\" + joined + \"]\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/presentation/ParamSearchApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/presentation/ParamSearchApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -209,7 +209,7 @@ class ParamSearchCancelIT extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -260,25 +260,10 @@ class ParamSearchCancelIT extends PostgresTestSupport {\n                 registry.activeStrategies().stream()\n                         .filter(\n                                 registration ->\n-                                        searchableStrategyIds().contains(registration.strategyId()))\n+                                        SearchableStrategies.of(registry, jdbcTemplate)\n+                                                .contains(registration.strategyId()))\n                         .mapToLong(StrategyRegistration::combinationCount)\n                         .sum();\n         return (int) (total - 1);\n     }\n-\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchCancelIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchCancelIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -350,14 +350,20 @@ class ParamSearchIntakeIT extends PostgresTestSupport {\n \n     private PreviewParamSearchCommand previewCommand() {\n         return new PreviewParamSearchCommand(\n-                null, UNIVERSE, supportedStrategyIds(), null, null, null, Map.of());\n+                null,\n+                UNIVERSE,\n+                SearchableStrategies.of(registry, jdbcTemplate),\n+                null,\n+                null,\n+                null,\n+                Map.of());\n     }\n \n     private CreateParamSearchCommand createCommand(String registryVersion) {\n         return new CreateParamSearchCommand(\n                 null,\n                 UNIVERSE,\n-                supportedStrategyIds(),\n+                SearchableStrategies.of(registry, jdbcTemplate),\n                 null,\n                 null,\n                 null,\n@@ -365,19 +371,6 @@ class ParamSearchIntakeIT extends PostgresTestSupport {\n                 registryVersion);\n     }\n \n-    /** 등록표와 004 지원 목록의 교집합. 전략 이름을 테스트에 적지 않는다(FR-025). */\n-    private List<String> supportedStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n-\n     private int countSearches() {\n         return jdbcTemplate.queryForObject(\"SELECT COUNT(*) FROM param_search\", Integer.class);\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchIntakeIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchIntakeIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,7 +15,6 @@ import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.util.List;\n import java.util.Map;\n@@ -86,7 +85,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n     @Test\n     @DisplayName(\"요청 전략에 기준이 없어도 접수가 기준과 후보를 실제로 발행한다\")\n     void acceptsAndLaunchesWithRealLauncher() {\n-        List<String> targets = searchableStrategyIdsExcludingBaseline();\n+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);\n         assumeThat(targets).as(\"축이 있고 기준이 아닌 실행 가능 전략이 있어야 이 경로를 시험할 수 있다\").isNotEmpty();\n \n         ParamSearchResult accepted = paramSearchService.create(createCommand(targets));\n@@ -123,7 +122,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n     @Test\n     @DisplayName(\"같은 조건을 두 번 접수해도 둘 다 받고, 두 묶음의 후보가 같은 실행을 나눠 쓴다\")\n     void sameConditionTwiceSharesRuns() {\n-        List<String> targets = searchableStrategyIdsExcludingBaseline();\n+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);\n         assumeThat(targets).isNotEmpty();\n \n         ParamSearchResult first = paramSearchService.create(createCommand(targets));\n@@ -154,7 +153,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n     @Test\n     @DisplayName(\"공유한 실행이 끝나면 걸려 있던 두 묶음의 후보가 함께 끝난다\")\n     void sharedRunFinishesEveryCandidateOnIt() {\n-        List<String> targets = searchableStrategyIdsExcludingBaseline();\n+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);\n         assumeThat(targets).isNotEmpty();\n \n         ParamSearchResult first = paramSearchService.create(createCommand(targets));\n@@ -186,7 +185,7 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n     @Test\n     @DisplayName(\"기준 전략의 규칙 버전이 실행 조건 스냅샷에 들어 있다\")\n     void executionPlanCarriesBaselineRulesVersion() {\n-        List<String> targets = searchableStrategyIdsExcludingBaseline();\n+        List<String> targets = SearchableStrategies.excludingBaseline(registry, jdbcTemplate);\n         assumeThat(targets).isNotEmpty();\n         String baselineStrategyId = registry.baselineStrategyId().orElse(null);\n         assumeThat(baselineStrategyId).as(\"등록표가 기준 전략을 지정했을 때만 성립한다\").isNotNull();\n@@ -204,24 +203,6 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유 ∩ 기준 아님. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIdsExcludingBaseline() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        String baselineStrategyId = registry.baselineStrategyId().orElse(null);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .filter(strategyId -> !strategyId.equals(baselineStrategyId))\n-                .toList();\n-    }\n-\n     private CreateParamSearchCommand createCommand(List<String> strategyIds) {\n         return new CreateParamSearchCommand(\n                 requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLaunchIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLaunchIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,7 +16,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.util.List;\n import java.util.Map;\n@@ -182,7 +181,7 @@ class ParamSearchLimitReachedTest extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -222,19 +221,4 @@ class ParamSearchLimitReachedTest extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,7 +17,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.util.List;\n import java.util.Map;\n@@ -205,7 +204,7 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -245,19 +244,4 @@ class ParamSearchRecordCompletenessTest extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.util.List;\n import java.util.Map;\n@@ -232,7 +231,7 @@ class ParamSearchRetryTest extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -276,19 +275,4 @@ class ParamSearchRetryTest extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,7 +17,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.util.List;\n import java.util.Map;\n@@ -145,7 +144,7 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -228,19 +227,4 @@ class ParamSearchSelectionOnceTest extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,7 +17,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.paramsearch.domain.model.ValidationLabel;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n-import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.util.List;\n import java.util.Map;\n@@ -152,7 +151,7 @@ class ParamSearchValidationLabelTest extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -163,7 +162,13 @@ class ParamSearchValidationLabelTest extends PostgresTestSupport {\n \n     private PreviewParamSearchCommand previewCommand() {\n         return new PreviewParamSearchCommand(\n-                null, UNIVERSE, searchableStrategyIds(), null, null, null, Map.of());\n+                null,\n+                UNIVERSE,\n+                SearchableStrategies.of(registry, jdbcTemplate),\n+                null,\n+                null,\n+                null,\n+                Map.of());\n     }\n \n     private long insertRun() {\n@@ -181,19 +186,4 @@ class ParamSearchValidationLabelTest extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchValidationLabelTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchValidationLabelTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,7 +105,10 @@ class ParamSearchWiringIT extends PostgresTestSupport {\n         assertThat(targets.notExecutable())\n                 .allSatisfy(strategyId -> assertThat(supported).doesNotContain(strategyId));\n         // 요청한 전략은 대상이거나 거부다. 조용히 사라지는 전략이 없어야 한다.\n-        assertThat(targets.targets().size() + targets.notExecutable().size())\n+        assertThat(\n+                        targets.targets().size()\n+                                + targets.notExecutable().size()\n+                                + targets.notSearchable().size())\n                 .isEqualTo(active.size());\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchWiringIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchWiringIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,55 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import java.util.List;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/**\n+ * 탐색을 접수할 수 있는 전략을 고른다. 통합 테스트가 실제 등록표와 실제 {@code strategy_rules}를 쓰므로 값을 적어 두지 않는다.\n+ *\n+ * <p><b>여덟 테스트가 같은 판정을 각자 복사해 갖고 있었다.</b> 기준이 바뀌자 여덟 곳을 함께 고쳐야 했고, 그중 하나라도 빠뜨리면 그 테스트만 조용히 달라진다.\n+ * 그래서 한 곳으로 모은다.\n+ *\n+ * <p><b>판정은 {@link com.ssafy.thorp.paramsearch.application.service.SearchTargetResolver}와 같은\n+ * 기준이다</b> — 등록표에 있고, 004가 실행을 지원하고, 자동 탐색이 실행 입력을 다 만들 수 있는 전략. 여기서만 달리 고르면 테스트가 접수되지 않을 조합을 만들어\n+ * 내거나, 반대로 접수 거부를 검증하지 못한다.\n+ *\n+ * <p>예전 판정이던 \"축이 있는가\"는 쓰지 않는다. 그것은 실행 입력을 누가 대는지를 말해 주지 않으며, 003이 등록표를 넓혀 모든 전략에 축이 생기자 곧바로 깨졌다.\n+ */\n+public final class SearchableStrategies {\n+\n+    /** 등록표가 \"목표 비중이 사용자에게서 온다\"를 나타내는 값. 운영 코드와 같은 어휘다(003 계약 §1). */\n+    private static final String USER_SUPPLIED_TARGET_WEIGHT = \"USER\";\n+\n+    private static final String REGISTERED_RULES =\n+            \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status = 'REGISTERED'\";\n+\n+    private SearchableStrategies() {}\n+\n+    /** 탐색을 접수할 수 있는 전략 전체. 등록표의 순서를 보존한다. */\n+    public static List<String> of(ParameterRegistryPort registry, JdbcTemplate jdbcTemplate) {\n+        List<String> executable = jdbcTemplate.queryForList(REGISTERED_RULES, String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> executable.contains(registration.strategyId()))\n+                .filter(\n+                        registration ->\n+                                !USER_SUPPLIED_TARGET_WEIGHT.equals(\n+                                        registration.targetWeightSource()))\n+                .map(StrategyRegistration::strategyId)\n+                .toList();\n+    }\n+\n+    /**\n+     * 기준 전략을 뺀 목록.\n+     *\n+     * <p>기준 전략은 손실 제약의 잣대로 따로 발행되므로(007 FR-013d), 그것까지 탐색 대상에 넣으면 발행 수를 세는 테스트가 기준 실행까지 함께 세게 된다.\n+     */\n+    public static List<String> excludingBaseline(\n+            ParameterRegistryPort registry, JdbcTemplate jdbcTemplate) {\n+        String baselineStrategyId = registry.baselineStrategyId().orElse(null);\n+        return of(registry, jdbcTemplate).stream()\n+                .filter(strategyId -> !strategyId.equals(baselineStrategyId))\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SearchableStrategies.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SearchableStrategies.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -158,7 +158,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {\n     /** 등록된 후보값 중 앞의 둘만 남겨 범위를 좁힌다. 등록표 밖 값은 400이므로 안에서만 고른다(FR-002). */\n     private Map<String, Map<String, List<Object>>> narrowedSpace() {\n         Map<String, Map<String, List<Object>>> space = new java.util.LinkedHashMap<>();\n-        for (String strategyId : searchableStrategyIds()) {\n+        for (String strategyId : SearchableStrategies.of(registry, jdbcTemplate)) {\n             StrategyRegistration registration = registry.find(strategyId).orElseThrow();\n             Map<String, List<Object>> axes = new java.util.LinkedHashMap<>();\n             for (ParameterAxis axis : registration.axes()) {\n@@ -181,7 +181,7 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {\n                         new CreateParamSearchCommand(\n                                 null,\n                                 UNIVERSE,\n-                                searchableStrategyIds(),\n+                                SearchableStrategies.of(registry, jdbcTemplate),\n                                 null,\n                                 null,\n                                 null,\n@@ -205,19 +205,4 @@ class SelectionRuleImmutabilityTest extends PostgresTestSupport {\n     }\n \n     /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n-    private List<String> searchableStrategyIds() {\n-        List<String> registered =\n-                jdbcTemplate.queryForList(\n-                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n-                                + \" 'REGISTERED'\",\n-                        String.class);\n-        return registry.activeStrategies().stream()\n-                .filter(registration -> !registration.axes().isEmpty())\n-                // 목표 비중이 사용자에게서 오는 전략은 007이 실행할 수 없다 — 자동 탐색은 비중을 만들지\n-                // 않으므로 접수에서 targetWeight 누락으로 거절된다. 운영 코드로 옮기는 일은 S15P21E205-259.\n-                .filter(registration -> !\"USER\".equals(registration.targetWeightSource()))\n-                .map(StrategyRegistration::strategyId)\n-                .filter(registered::contains)\n-                .toList();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SelectionRuleImmutabilityTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SelectionRuleImmutabilityTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -121,6 +121,7 @@\n | 422 | `NO_VALID_COMBINATION` | 등록된 조합이 모두 유효성 제약 위반. `message`에 어느 제약인지 한 문장 (Edge Case) |\n | 422 | `STRATEGY_NOT_REGISTERED` | 요청 전략이 등록표의 활성 전략에 없음. `message`에 어느 전략인지 (FR-026) |\n | 422 | `STRATEGY_NOT_EXECUTABLE` | 등록돼 있으나 004가 실행을 지원하지 않음 (FR-026) |\n+| 422 | `STRATEGY_NOT_SEARCHABLE` | 실행은 되지만 자동 탐색이 실행 입력을 다 만들 수 없음 — 목표 비중이 사용자에게서 오는 전략(`targetWeightSource: USER`)이다. 단건 분석으로는 실행된다 |\n | 409 | `REGISTRY_VERSION_CHANGED` | 요청의 `registryVersion`이 접수 시점 등록표 버전과 다름 (FR-028) |\n | 503 | `REGISTRY_UNAVAILABLE` | 등록 정보 또는 실행 지원 목록 조회 실패 (FR-028) |\n \n@@ -302,6 +303,7 @@\n | 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |\n | 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없는 전략 | 등록 후 |\n | 422 | `STRATEGY_NOT_EXECUTABLE` | 004가 실행을 지원하지 않는 전략 | 004 지원 후 |\n+| 422 | `STRATEGY_NOT_SEARCHABLE` | 목표 비중을 사용자가 정하는 전략 | 자동 탐색 대신 분석하기로 |\n | 409 | `REGISTRY_VERSION_CHANGED` | 미리보기와 접수 시점의 등록표 버전이 다름 | 미리보기를 다시 본 뒤 |\n | 503 | `REGISTRY_UNAVAILABLE` | 등록 정보·지원 목록 조회 실패 | 잠시 후 |\n | 409 | `ALREADY_FINISHED` | 끝난 묶음 취소 | 무의미 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2813599": []
+  }
+}

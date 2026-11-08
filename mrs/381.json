@@ -1,0 +1,808 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963471,
+    "iid": 381,
+    "project_id": 1444456,
+    "title": "refactor(fe): 테스트 정리 - HomePage 삭제 후 남은 홈 대시보드 orphan 코드삭제",
+    "description": "## 작업 내용 요약\n\n2026-09-17 HomePage를 지울 때 함께 지우지 않아, 테스트 정리 뒤 운영도 테스트도 부르지 않게 된 홈 대시보드 코드(약 2,000줄)를 지운다. 첫 화면이 쓰는 지표 데이터는 남기며, 첫 화면에 보이는 값은 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- 홈 지표 카드·스냅샷·추세선(`components/market/*`), 자료 출처 패널, 지표 Escape 훅, 지표 기간·포맷·비교 유틸을 지운다. 그것만 쓰던 60개월 모의 이력, `marketMock`의 국면·안정성·유사 시기·자료 신선도 데이터와 타입, `MarketLayout` 공통 스타일도 지운다.\n- `marketflow/DataStateNotice.tsx`에서는 아무도 부르지 않던 `DataStateNotice`와 그 props·CSS만 지우고, 운영에서 쓰는 `DataStateFacts`·`DataStateLine`은 남긴다.\n- 지운 화면만 설명하던 `frontend/docs/home-dashboard.md`·`indicator-history.md`를 지우고, 남긴 `marketMock` 주석을 지금 쓰임(첫 화면 시세 창의 출발값)에 맞게 고친다.\n\n## 테스트\n\n- `npm run lint`: 오류 0(경고 25건은 기존)\n- `npm run build`: 통과\n- `npm test`: Vitest 160파일 1,569건, node 4건 통과(변경 전과 같다)\n- 변경 전후 개발 서버에서 첫 화면이 읽는 `marketIndicators`·`macroIndicators`를 비교했다. 달라진 것은 지운 이력 카드용으로 `series` 앞에 붙이던 54개월 예시뿐이고, 남은 운영 코드는 `series`를 읽지 않는다.\n\n## 리뷰 포인트\n\n- `home-dashboard.md`에는 지금도 맞는 문장 두 개(예시 데이터라는 점, `MarketData`는 API 계약이 아닌 화면 모델이라는 점)가 있었지만, 같은 내용을 `marketMock.ts` 주석이 담고 있어 문서째 지웠다.\n- `types/market.ts`의 `Indicator`에는 이제 읽는 곳이 없는 필드와 유니언 값(`series`·`tone`·`interpretation`, `'stability'`·`'quarterly'` 등)이 남는다. 지표 모델을 줄이려면 `marketMock.ts` 리터럴을 함께 고쳐야 해서 별도 작업으로 둔다.",
+    "state": "merged",
+    "created_at": "2026-10-04T21:31:21.112+09:00",
+    "updated_at": "2026-10-04T21:31:26.210+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T21:31:25.966+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f00ab38058631e3e0af814b625396ecb33a9c98d",
+    "merge_commit_sha": "41d78a922d7d5339191a83f10a1cc4dbc02fe6b2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T21:31:23.383+09:00",
+    "reference": "!381",
+    "references": {
+      "short": "!381",
+      "relative": "!381",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!381"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/381",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963471,
+    "iid": 381,
+    "project_id": 1444456,
+    "title": "refactor(fe): 테스트 정리 - HomePage 삭제 후 남은 홈 대시보드 orphan 코드삭제",
+    "description": "## 작업 내용 요약\n\n2026-09-17 HomePage를 지울 때 함께 지우지 않아, 테스트 정리 뒤 운영도 테스트도 부르지 않게 된 홈 대시보드 코드(약 2,000줄)를 지운다. 첫 화면이 쓰는 지표 데이터는 남기며, 첫 화면에 보이는 값은 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- 홈 지표 카드·스냅샷·추세선(`components/market/*`), 자료 출처 패널, 지표 Escape 훅, 지표 기간·포맷·비교 유틸을 지운다. 그것만 쓰던 60개월 모의 이력, `marketMock`의 국면·안정성·유사 시기·자료 신선도 데이터와 타입, `MarketLayout` 공통 스타일도 지운다.\n- `marketflow/DataStateNotice.tsx`에서는 아무도 부르지 않던 `DataStateNotice`와 그 props·CSS만 지우고, 운영에서 쓰는 `DataStateFacts`·`DataStateLine`은 남긴다.\n- 지운 화면만 설명하던 `frontend/docs/home-dashboard.md`·`indicator-history.md`를 지우고, 남긴 `marketMock` 주석을 지금 쓰임(첫 화면 시세 창의 출발값)에 맞게 고친다.\n\n## 테스트\n\n- `npm run lint`: 오류 0(경고 25건은 기존)\n- `npm run build`: 통과\n- `npm test`: Vitest 160파일 1,569건, node 4건 통과(변경 전과 같다)\n- 변경 전후 개발 서버에서 첫 화면이 읽는 `marketIndicators`·`macroIndicators`를 비교했다. 달라진 것은 지운 이력 카드용으로 `series` 앞에 붙이던 54개월 예시뿐이고, 남은 운영 코드는 `series`를 읽지 않는다.\n\n## 리뷰 포인트\n\n- `home-dashboard.md`에는 지금도 맞는 문장 두 개(예시 데이터라는 점, `MarketData`는 API 계약이 아닌 화면 모델이라는 점)가 있었지만, 같은 내용을 `marketMock.ts` 주석이 담고 있어 문서째 지웠다.\n- `types/market.ts`의 `Indicator`에는 이제 읽는 곳이 없는 필드와 유니언 값(`series`·`tone`·`interpretation`, `'stability'`·`'quarterly'` 등)이 남는다. 지표 모델을 줄이려면 `marketMock.ts` 리터럴을 함께 고쳐야 해서 별도 작업으로 둔다.",
+    "state": "merged",
+    "created_at": "2026-10-04T21:31:21.112+09:00",
+    "updated_at": "2026-10-04T21:31:26.210+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T21:31:25.966+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f00ab38058631e3e0af814b625396ecb33a9c98d",
+    "merge_commit_sha": "41d78a922d7d5339191a83f10a1cc4dbc02fe6b2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T21:31:23.383+09:00",
+    "reference": "!381",
+    "references": {
+      "short": "!381",
+      "relative": "!381",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!381"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/381",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "23",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "head_sha": "f00ab38058631e3e0af814b625396ecb33a9c98d",
+      "start_sha": "2405cbdf410524a1db4267598dc5122e981bbfdd"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "01fc202fe4f8bd637cb7f490c06aee5a263bc5fe",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881391,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:31:21.215+09:00",
+          "updated_at": "2026-10-04T21:31:21.219+09:00",
+          "system": true,
+          "noteable_id": 963471,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 381,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "155bf230e3c97b2531fe38f014daafc3650c4f37",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881392,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:31:21.252+09:00",
+          "updated_at": "2026-10-04T21:31:21.291+09:00",
+          "system": true,
+          "noteable_id": 963471,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 381,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "afc8aa5f0df3a5ba3c8754a1c464afdb510cf763",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881393,
+          "type": null,
+          "body": "mentioned in commit 41d78a922d7d5339191a83f10a1cc4dbc02fe6b2",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:31:26.113+09:00",
+          "updated_at": "2026-10-04T21:31:26.132+09:00",
+          "system": true,
+          "noteable_id": 963471,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 381,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2abc7eee3bdd72844e9786232e1123e3a9d33504",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881394,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 불필요해진 홈 대시보드 관련 orphan 코드와 컴포넌트, 유틸리티, 문서들이 깔끔하게 제거되었습니다.\n\n### 테스트 제안\n- 빌드 및 린트 검증: `npm run build`와 `npm run lint`를 실행하여 삭제된 파일들로 인한 누락된 임포트나 타입 에러가 발생하지 않는지 확인합니다.\n- 홈 화면 회귀 테스트: 애플리케이션 실행 후 랜딩 화면 및 첫 화면 시세 창(`marketIndicators`, `macroIndicators`)이 기존과 동일하게 정상적으로 렌더링되는지 수동으로 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f00ab38058631e3e0af814b625396ecb33a9c98d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T21:31:31.690+09:00",
+          "updated_at": "2026-10-04T21:31:31.690+09:00",
+          "system": false,
+          "noteable_id": 963471,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 381,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262331,
+      "head_commit_sha": "f00ab38058631e3e0af814b625396ecb33a9c98d",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "2405cbdf410524a1db4267598dc5122e981bbfdd",
+      "created_at": "2026-10-04T21:31:21.731+09:00",
+      "merge_request_id": 963471,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "4b33c0e48c3dc1a2f3a06c92b6d7e20513643d7a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262331,
+      "head_commit_sha": "f00ab38058631e3e0af814b625396ecb33a9c98d",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "2405cbdf410524a1db4267598dc5122e981bbfdd",
+      "created_at": "2026-10-04T21:31:21.731+09:00",
+      "merge_request_id": 963471,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "4b33c0e48c3dc1a2f3a06c92b6d7e20513643d7a",
+      "commits": [
+        {
+          "id": "f00ab38058631e3e0af814b625396ecb33a9c98d",
+          "short_id": "f00ab380",
+          "created_at": "2026-10-04T21:24:39.000+09:00",
+          "parent_ids": [
+            "8082a5f01550da91dcb700bd7ad5898c3b2116e3"
+          ],
+          "title": "refactor(fe): 지운 화면만 설명하는 홈 대시보드 문서를 다시 지운다",
+          "message": "refactor(fe): 지운 화면만 설명하는 홈 대시보드 문서를 다시 지운다\n\n리뷰 반영 커밋이 되살린 home-dashboard.md는 31줄 가운데 29줄이 이미 없는 HomePage·DashboardPage와\n이번에 지운 컴포넌트를 설명한다. 지금도 맞는 두 문장(예시 데이터라는 점, MarketData는 API 계약이 아닌\n화면 모델이라는 점)은 marketMock.ts 주석이 이미 담고 있으므로 문서는 남기지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T21:24:39.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T21:24:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f00ab38058631e3e0af814b625396ecb33a9c98d"
+        },
+        {
+          "id": "8082a5f01550da91dcb700bd7ad5898c3b2116e3",
+          "short_id": "8082a5f0",
+          "created_at": "2026-10-04T20:23:48.000+09:00",
+          "parent_ids": [
+            "cb89b2ef3ff256d4fa5d94daf755080e4f9b6287"
+          ],
+          "title": "refactor(fe): 시장 예시 지표 주석을 고치고 홈 대시보드 문서를 되살린다",
+          "message": "refactor(fe): 시장 예시 지표 주석을 고치고 홈 대시보드 문서를 되살린다\n\nmarketMock의 marketIndicators 주석이 지운 시장 스냅샷 화면을 가리켜, 지금 쓰임인 첫 화면 시세 창의\n출발값으로 고친다. 후보 목록이 지금도 맞는 내용이 있는 문서는 지우지 말고 보고하라고 정했으므로,\n유효한 문장 두 개(예시 데이터, MarketData는 화면 모델)가 남은 home-dashboard.md를 되살린다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T20:23:48.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T20:23:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8082a5f01550da91dcb700bd7ad5898c3b2116e3"
+        },
+        {
+          "id": "cb89b2ef3ff256d4fa5d94daf755080e4f9b6287",
+          "short_id": "cb89b2ef",
+          "created_at": "2026-10-04T18:58:09.000+09:00",
+          "parent_ids": [
+            "e88aedab374ff7590d552cdc9c0f9a65072d0818"
+          ],
+          "title": "refactor(fe): HomePage 삭제 후 남은 홈 대시보드 고아 코드를 지운다",
+          "message": "refactor(fe): HomePage 삭제 후 남은 홈 대시보드 고아 코드를 지운다\n\n2026-09-17 HomePage를 지울 때 함께 지우지 않아 운영도 테스트도 부르지 않던 홈 지표 카드·자료 출처\n패널·지표 Escape 훅·지표 기간·포맷·비교 유틸과 그 CSS를 지운다. 이 코드만 쓰던 60개월 모의 이력,\nmarketMock의 regime·stabilityIndicators·similarPeriod·dataFreshness와 그 타입, MarketLayout 공통\n스타일도 함께 지운다. 첫 화면이 쓰는 marketIndicators·macroIndicators는 남긴다.\n\nmarketflow/DataStateNotice.tsx에서는 아무도 부르지 않던 DataStateNotice와 그 props, 그것만 쓰던\nCSS 규칙만 지우고, 운영에서 쓰는 DataStateFacts·DataStateLine은 남긴다. 지운 화면만 설명하던\nfrontend/docs의 home-dashboard.md·indicator-history.md도 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:58:09.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:58:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cb89b2ef3ff256d4fa5d94daf755080e4f9b6287"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,31 +0,0 @@\n-# 홈과 대시보드 화면 분리\n-\n-## 화면과 경로\n-- `/` → `LandingPage`: 기존 서비스 소개. 시작하기는 `/home`으로 이동한다.\n-- `/home` → `HomePage`: 기존 대시보드 전체. 장기 차트 캐러셀, 시장·거시지표, 유사 시장 비교, 추천 전략, 데이터 출처를 유지한다.\n-- `/dashboard` → `DashboardPage`: 한 화면에서 시장 상황 → 가로 지표 요약 → 추천 전략을 확인하는 요약 화면.\n-- `/backtest` → 기존 백테스트 화면.\n-- 공통 헤더와 서랍 메뉴에서 홈·대시보드·백테스트로 이동한다. 로고는 홈, 처음으로는 랜딩으로 이동한다.\n-\n-## 구성과 재사용\n-- `components/home/`: 홈 전용 히어로·캐러셀·장기 차트·유사 시장·출처.\n-- `components/market/`: 두 화면이 공유하는 지표 카드·확대 차트·스파크라인·추천 전략.\n-- `components/dashboard/`: 간결한 시장 상황 요약.\n-- `styles/MarketLayout.module.css`: 공통 시장 테마·푸터·간결한 섹션 간격. 기존 CSS Module과 차트 애니메이션을 재사용한다.\n-- 대시보드는 별도의 가로 지표 스트립을 사용하고 시장/거시 토글만 제공한다. 상세 해석과 5년 확대는 홈에 유지한다.\n-- 추천 전략은 기존 컴포넌트의 `compact` 옵션으로 근거와 실행 동선만 남긴다. 홈의 상세 카드와 간격은 유지한다.\n-- 화면 이름에 종속되었던 데이터·타입·포맷 파일을 `marketMock.ts`, `market.ts`, `marketFormat.ts`로 변경한다.\n-\n-## 데이터와 상호작용\n-- 두 화면은 동일한 `marketMock`을 사용한다. 날짜·수치·추천 근거를 화면 안에 복제하지 않는다.\n-- 상단은 경기·물가·시장 위험 상태와 짧은 설명만 표시한다.\n-- 지표 요약은 작은 시장/거시 버튼으로 전환하며 값·변화량·최근 3개월 추세만 표시한다.\n-- 기존 최근 3개월 미리보기·5년 확대·Escape 닫기·모션 감소 설정을 유지한다.\n-- 추천 전략은 기존 백테스트 진입 동선을 사용한다. 특정 전략 자동 선택은 현재 지원하지 않는다.\n-- 데이터는 실제 현재 시장이 아닌 UI 예시다. 분석 기준일·예시 표시를 유지한다.\n-- `MarketData`는 화면 모델이며 확정된 API 계약이 아니다. 실제 연동 시 `api/`에서 DTO를 받고 화면 모델로 변환하며 로딩·빈 결과·오류 상태를 연결한다.\n-\n-## 검증\n-- lint, build, 날짜 유틸리티 회귀 테스트, diff 공백 검사.\n-- 랜딩 → 홈 → 대시보드 → 백테스트와 URL 직접 접근.\n-- 데스크톱·모바일 배치, 지표 분류 전환, 확대 패널과 키보드 닫기, 메뉴 이동.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/docs/home-dashboard.md",
+          "old_path": "frontend/docs/home-dashboard.md",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,19 +0,0 @@\n-# 홈 지표 카드 기간 전환\n-\n-- 대상: 홈의 주식시장 핵심 지표 5개, 경기·물가·심리 핵심 지표 6개.\n-- 기본 카드는 각 지표의 관측 기준월을 포함한 최근 3개월을 표시한다.\n-- 마우스를 올리거나 `5년 보기` 버튼을 누르면 해당 카드만 확대된다. 연도·값 눈금이 있는 최근 60개월 차트를 그리며 다른 카드의 위치는 유지한다.\n-- 작은 카드와 확대 패널을 Motion의 동일한 `layoutId`로 연결한다. 약 0.48초 동안 크기·위치가 이어지고, 내용과 차트 선이 순서대로 나타난다. 닫을 때도 원래 카드로 복귀하며 퇴장 중 패널은 입력·초점을 받지 않는다.\n-- 커서 이탈, 닫기 버튼, Escape, 카드 밖으로 키보드 초점 이동 시 닫힌다. 모바일은 버튼으로 열고 닫는다. 동시에 열리는 카드는 하나다.\n-- 마우스로만 열어 초점이 카드 밖에 있어도 Escape로 닫고 원래 카드 버튼으로 초점을 돌린다. 전역 키 이벤트는 열린 동안에만 등록하고 닫힘·페이지 이탈 시 해제한다.\n-- 사용자의 모션 감소 설정에서는 확대·선 그리기 애니메이션을 생략한다.\n-\n-## 데이터 연결\n-\n-현재 장기 이력은 `indicatorHistoryMock.ts`에서 생성하는 고정 모의 데이터다. 실제 과거 통계로 사용하면 안 된다. 기존 최근 6개월 값과 최종 값은 유지하며, 원본 `marketMock.ts`와 분리한다.\n-\n-추후 API 연결 시 `Indicator.series`에 날짜순 `{ date, value }` 목록을 공급한다. 월간은 `YYYY-MM`, 일간은 `YYYY-MM-DD`를 사용하며 프런트엔드에서 실제 데이터의 빈 날짜를 임의로 보간하지 않는다. 3개월/60개월은 데이터 개수가 아닌 관측 기준월로 자른다. 표시 범위는 차트의 실제 시작·종료 날짜를 따른다.\n-\n-현재 화면의 5년 표시는 60개월 mock을 전제로 한다. 실제 API 이력이 짧거나 부족하면 기간 안내 및 로딩·실패 처리는 API 연동 작업에서 실제 제공 범위에 맞게 연결한다.\n-\n-날짜는 형식뿐 아니라 월별 일수·윤년도 검사한다. 잘못된 기준일은 빈 배열을 반환하고, 잘못된 개별 관측일·유한하지 않은 값은 제외한다. 월 단위 기준일은 해당 월말까지, 일 단위 기준일은 그 날짜까지만 포함한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/docs/indicator-history.md",
+          "old_path": "frontend/docs/indicator-history.md",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,188 +0,0 @@\n-.details {\n-  overflow: hidden;\n-  border: 1px solid var(--market-line);\n-  border-radius: var(--thorp-radius-card, 10px);\n-  background: var(--market-surface);\n-  box-shadow: var(--market-shadow-soft);\n-}\n-\n-.details summary,\n-.details summary > span,\n-.sourceCard > div,\n-.stabilityCard > div,\n-.fciNote {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.details summary {\n-  justify-content: space-between;\n-  gap: 18px;\n-  min-height: 64px;\n-  padding: 0 20px;\n-  cursor: pointer;\n-  list-style-position: inside;\n-}\n-\n-.details summary:focus-visible {\n-  outline: var(--thorp-focus-outline);\n-  outline-offset: -3px;\n-}\n-\n-.details summary > span {\n-  gap: 8px;\n-  color: var(--market-ink);\n-  font-size: 0.8rem;\n-  font-weight: 680;\n-}\n-\n-.details summary > span svg {\n-  color: var(--thorp-ornament, var(--market-brand));\n-}\n-\n-.details summary > small {\n-  color: var(--market-muted);\n-  font-size: 0.68rem;\n-}\n-\n-.content {\n-  padding: 20px;\n-  border-top: 1px solid var(--market-line-soft);\n-}\n-\n-.sourceGrid {\n-  display: grid;\n-  grid-template-columns: repeat(4, minmax(0, 1fr));\n-  gap: 9px;\n-}\n-\n-.sourceCard,\n-.stabilityCard,\n-.fciNote {\n-  min-width: 0;\n-  padding: var(--thorp-pad-inset, 15px);\n-  border-radius: var(--thorp-radius-inset, 6px);\n-  background: var(--thorp-surface-muted);\n-}\n-\n-.sourceCard > div,\n-.stabilityCard > div {\n-  justify-content: space-between;\n-  gap: 10px;\n-}\n-\n-.sourceCard strong,\n-.stabilityCard > div > span {\n-  color: var(--market-ink);\n-  font-size: 0.73rem;\n-  font-weight: 680;\n-}\n-\n-.sourceCard > div > span {\n-  padding: 3px 6px;\n-  border-radius: 999px;\n-  background: var(--thorp-accent-muted);\n-  color: var(--thorp-eyebrow, var(--market-brand));\n-  font-size: 0.6rem;\n-  white-space: nowrap;\n-}\n-\n-.sourceCard > div > span[data-status='review-needed'] {\n-  background: rgb(232 189 114 / 12%);\n-  color: var(--market-warning);\n-}\n-\n-.sourceCard p {\n-  margin: 13px 0 6px;\n-  color: var(--market-copy);\n-  font-size: 0.69rem;\n-}\n-\n-.sourceCard > small,\n-.stabilityCard > small {\n-  color: var(--market-muted);\n-  font-size: 0.62rem;\n-  line-height: 1.45;\n-}\n-\n-.stabilityGrid {\n-  display: grid;\n-  grid-template-columns: repeat(2, minmax(0, 0.65fr)) minmax(280px, 1fr);\n-  gap: 9px;\n-  margin-top: 9px;\n-}\n-\n-.stabilityCard > div small {\n-  color: var(--market-muted);\n-  font-size: 0.6rem;\n-}\n-\n-.stabilityCard > strong {\n-  display: block;\n-  margin-top: 12px;\n-  color: var(--market-ink);\n-  font-size: 1.08rem;\n-}\n-\n-.stabilityCard > p {\n-  margin: 2px 0 8px;\n-  color: var(--market-neutral);\n-  font-size: 0.66rem;\n-  font-weight: 680;\n-}\n-\n-.stabilityCard > p[data-tone='warning'] {\n-  color: var(--market-warning);\n-}\n-\n-.fciNote {\n-  align-items: flex-start;\n-  gap: 10px;\n-  border: 1px solid var(--market-line-strong, var(--market-line));\n-  background: var(--thorp-accent-muted);\n-  color: var(--market-ink);\n-}\n-\n-.fciNote svg {\n-  flex: 0 0 auto;\n-  color: var(--thorp-ornament, var(--market-brand));\n-}\n-\n-.fciNote p {\n-  margin: 0;\n-  color: var(--market-copy);\n-  font-size: 0.68rem;\n-  line-height: 1.6;\n-}\n-\n-@media (max-width: 1024px) {\n-  .sourceGrid {\n-    grid-template-columns: repeat(2, minmax(0, 1fr));\n-  }\n-\n-  .stabilityGrid {\n-    grid-template-columns: repeat(2, minmax(0, 1fr));\n-  }\n-\n-  .fciNote {\n-    grid-column: 1 / -1;\n-  }\n-}\n-\n-@media (max-width: 600px) {\n-  .details summary {\n-    align-items: flex-start;\n-    flex-direction: column;\n-    justify-content: center;\n-    padding: 14px 18px;\n-  }\n-\n-  .sourceGrid,\n-  .stabilityGrid {\n-    grid-template-columns: 1fr;\n-  }\n-\n-  .fciNote {\n-    grid-column: auto;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/DataFreshnessPanel.module.css",
+          "old_path": "frontend/src/components/home/DataFreshnessPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,76 +0,0 @@\n-import { Database, Info } from 'lucide-react'\n-import type { DataFreshnessItem, Indicator } from '@/types/market'\n-import {\n-  formatDataDate,\n-  formatFrequency,\n-  formatIndicatorChange,\n-  formatIndicatorValue,\n-} from '@/utils/marketFormat'\n-import styles from './DataFreshnessPanel.module.css'\n-\n-interface DataFreshnessPanelProps {\n-  sources: DataFreshnessItem[]\n-  stabilityIndicators: Indicator[]\n-}\n-\n-const statusLabels: Record<DataFreshnessItem['status'], string> = {\n-  example: '예시 데이터',\n-  'api-ready': 'API 후보 확인',\n-  'review-needed': '연동 검토 필요',\n-}\n-\n-/** 저빈도 금융안정 지표와 향후 데이터 공급처를 핵심 화면에서 분리해 제공한다. */\n-export function DataFreshnessPanel({\n-  sources,\n-  stabilityIndicators,\n-}: DataFreshnessPanelProps) {\n-  return (\n-    <details className={styles.details}>\n-      <summary>\n-        <span>\n-          <Database size={15} aria-hidden=\"true\" />\n-          데이터 출처와 금융안정 참고지표\n-        </span>\n-        <small>지표별 발표 주기와 연동 준비 상태 보기</small>\n-      </summary>\n-\n-      <div className={styles.content}>\n-        <div className={styles.sourceGrid}>\n-          {sources.map((source) => (\n-            <article className={styles.sourceCard} key={source.id}>\n-              <div>\n-                <strong>{source.provider}</strong>\n-                <span data-status={source.status}>{statusLabels[source.status]}</span>\n-              </div>\n-              <p>{source.coverage}</p>\n-              <small>\n-                {formatFrequency(source.frequency)} · {source.note}\n-              </small>\n-            </article>\n-          ))}\n-        </div>\n-\n-        <div className={styles.stabilityGrid}>\n-          {stabilityIndicators.map((indicator) => (\n-            <article className={styles.stabilityCard} key={indicator.id}>\n-              <div>\n-                <span>{indicator.name}</span>\n-                <small>{formatDataDate(indicator.observationDate)} 기준</small>\n-              </div>\n-              <strong>{formatIndicatorValue(indicator)}</strong>\n-              <p data-tone={indicator.tone}>{formatIndicatorChange(indicator)}</p>\n-              <small>{indicator.interpretation}</small>\n-            </article>\n-          ))}\n-          <div className={styles.fciNote}>\n-            <Info size={16} aria-hidden=\"true\" />\n-            <p>\n-              FCI는 공식 정기 API가 확정되기 전까지 표시하지 않습니다. 자체 계산 시에는\n-              금리·신용스프레드·환율·변동성을 사용한 내부 추정 지표임을 명시합니다.\n-            </p>\n-          </div>\n-        </div>\n-      </div>\n-    </details>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/DataFreshnessPanel.tsx",
+          "old_path": "frontend/src/components/home/DataFreshnessPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,231 +0,0 @@\n-.slot {\n-  position: relative;\n-  min-width: 0;\n-  --panel-left: 0;\n-  --panel-right: auto;\n-}\n-\n-.slot:has(.panel) {\n-  z-index: 9;\n-}\n-\n-.slot[data-expanded='true'] {\n-  z-index: 10;\n-}\n-\n-.preview {\n-  height: 100%;\n-}\n-\n-.expandButton,\n-.panelHeader,\n-.panelValue,\n-.panelFooter {\n-  display: flex;\n-  align-items: center;\n-  justify-content: space-between;\n-  gap: 10px;\n-}\n-\n-.expandButton {\n-  width: 100%;\n-  min-height: 36px;\n-  margin-top: 8px;\n-  padding: 4px 0;\n-  border: 0;\n-  background: transparent;\n-  color: var(--market-copy);\n-  font-size: 0.68rem;\n-  cursor: pointer;\n-}\n-\n-.expandButton span {\n-  display: inline-flex;\n-  align-items: center;\n-  gap: 3px;\n-  color: var(--market-brand);\n-}\n-\n-.expandButton:focus-visible,\n-.closeButton:focus-visible {\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset-wide);\n-}\n-\n-.slot:focus-within .panel {\n-  border-color: var(--market-brand);\n-}\n-\n-.panel {\n-  position: absolute;\n-  top: -10px;\n-  right: var(--panel-right);\n-  left: var(--panel-left);\n-  width: max(100%, min(440px, calc(100vw - 48px)));\n-  padding: var(--thorp-pad-card, 20px);\n-  border: 1px solid var(--market-line);\n-  border-radius: var(--thorp-radius-card, 10px);\n-  background: var(--market-surface);\n-  box-shadow: var(--market-shadow);\n-  overflow: hidden;\n-}\n-\n-.panel[data-present='false'] {\n-  pointer-events: none;\n-}\n-\n-.panelHeader,\n-.panelValue > span,\n-.panelFooter {\n-  color: var(--market-copy);\n-  font-size: 0.68rem;\n-}\n-\n-.panelHeader > span {\n-  color: var(--thorp-eyebrow, var(--market-brand));\n-  font-weight: 650;\n-}\n-\n-.closeButton {\n-  display: grid;\n-  width: 36px;\n-  height: 36px;\n-  padding: 0;\n-  place-items: center;\n-  border: 1px solid var(--market-line-soft);\n-  border-radius: var(--thorp-radius-control, 8px);\n-  background: var(--market-surface);\n-  color: var(--market-copy);\n-  cursor: pointer;\n-}\n-\n-.panel h3 {\n-  margin: 4px 0 12px;\n-  color: var(--market-ink);\n-  font-size: 0.95rem;\n-}\n-\n-.panelValue {\n-  flex-wrap: wrap;\n-}\n-\n-.panelValue strong {\n-  color: var(--market-ink);\n-  font-size: 1.5rem;\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-.historyChart {\n-  display: block;\n-  width: 100%;\n-  height: auto;\n-  margin-top: 12px;\n-  overflow: visible;\n-}\n-\n-.historyChart text {\n-  fill: var(--market-copy);\n-  font-size: 14px;\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-.gridLine {\n-  stroke: var(--market-line-soft);\n-  stroke-width: 1;\n-}\n-\n-.historyLine {\n-  stroke: var(--market-brand);\n-  stroke-width: 2.3;\n-  stroke-linecap: round;\n-  stroke-linejoin: round;\n-  vector-effect: non-scaling-stroke;\n-}\n-\n-.latestPoint {\n-  fill: var(--market-brand);\n-  stroke: var(--market-surface);\n-  stroke-width: 2;\n-}\n-\n-.interpretation,\n-.empty {\n-  margin: 12px 0;\n-  color: var(--market-copy);\n-  font-size: 0.74rem;\n-  line-height: 1.6;\n-}\n-\n-.panelFooter {\n-  padding-top: 12px;\n-  border-top: 1px solid var(--market-line-soft);\n-  flex-wrap: wrap;\n-}\n-\n-/* 각 반응형 그리드의 마지막 열은 안쪽으로 확장해 화면 밖으로 넘치지 않는다. */\n-.slot[data-variant='market']:nth-child(5n),\n-.slot[data-variant='macro']:nth-child(3n) {\n-  --panel-left: auto;\n-  --panel-right: 0;\n-}\n-\n-@media (max-width: 1180px) {\n-  .slot[data-variant='market']:nth-child(n) {\n-    --panel-left: 0;\n-    --panel-right: auto;\n-  }\n-\n-  .slot[data-variant='market']:nth-child(3n) {\n-    --panel-left: auto;\n-    --panel-right: 0;\n-  }\n-}\n-\n-@media (max-width: 900px) {\n-  .slot[data-variant='macro']:nth-child(n) {\n-    --panel-left: 0;\n-    --panel-right: auto;\n-  }\n-\n-  .slot[data-variant='macro']:nth-child(2n) {\n-    --panel-left: auto;\n-    --panel-right: 0;\n-  }\n-}\n-\n-@media (max-width: 720px) {\n-  .slot[data-variant='market']:nth-child(n) {\n-    --panel-left: 0;\n-    --panel-right: auto;\n-  }\n-\n-  .slot[data-variant='market']:nth-child(2n) {\n-    --panel-left: auto;\n-    --panel-right: 0;\n-  }\n-\n-  .panel {\n-    padding: var(--thorp-pad-card, 16px);\n-  }\n-\n-  .closeButton {\n-    width: 44px;\n-    height: 44px;\n-  }\n-}\n-\n-@media (max-width: 560px) {\n-  .slot[data-variant='macro'] .panel {\n-    width: 100%;\n-  }\n-}\n-\n-@media (max-width: 500px) {\n-  .slot[data-variant='market'] .panel {\n-    width: 100%;\n-  }\n-\n-  .historyChart text {\n-    font-size: 17px;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/IndicatorHistoryCard.module.css",
+          "old_path": "frontend/src/components/market/IndicatorHistoryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,161 +0,0 @@\n-import { ArrowUpRight, X } from 'lucide-react'\n-import { AnimatePresence, motion, useIsPresent, useReducedMotion, type Transition } from 'motion/react'\n-import { useCallback, useRef, type ReactNode } from 'react'\n-import { useIndicatorEscape } from '@/hooks/useIndicatorEscape'\n-import type { Indicator } from '@/types/market'\n-import { formatDataDate, formatIndicatorValue } from '@/utils/marketFormat'\n-import { IndicatorHistoryChart } from './IndicatorHistoryChart'\n-import styles from './IndicatorHistoryCard.module.css'\n-\n-interface IndicatorHistoryCardProps {\n-  indicator: Indicator\n-  index: number\n-  variant: 'market' | 'macro'\n-  className: string\n-  expanded: boolean\n-  onActiveChange: (id: string | null) => void\n-  children: ReactNode\n-}\n-\n-const cardLayoutTransition: Transition = {\n-  duration: 0.48,\n-  ease: [0.22, 1, 0.36, 1],\n-}\n-\n-interface ExpandedIndicatorPanelProps {\n-  indicator: Indicator\n-  panelId: string\n-  layoutId: string\n-  onClose: () => void\n-}\n-\n-/** 닫기 중에도 패널을 유지해 원래 카드 크기로 돌아가며, 퇴장 중 입력은 막는다. */\n-function ExpandedIndicatorPanel({ indicator, panelId, layoutId, onClose }: ExpandedIndicatorPanelProps) {\n-  const reducedMotion = useReducedMotion()\n-  const isPresent = useIsPresent()\n-\n-  return (\n-    <motion.div\n-      id={panelId}\n-      layoutId={layoutId}\n-      className={styles.panel}\n-      role=\"region\"\n-      aria-label={`${indicator.name} 확대 차트`}\n-      aria-hidden={!isPresent}\n-      inert={!isPresent}\n-      data-present={isPresent}\n-      initial={{ opacity: 0 }}\n-      animate={{ opacity: 1 }}\n-      exit={{ opacity: 0 }}\n-      transition={{\n-        layout: reducedMotion ? { duration: 0 } : cardLayoutTransition,\n-        opacity: { duration: reducedMotion ? 0 : 0.38 },\n-      }}\n-    >\n-      <motion.div\n-        initial={reducedMotion ? false : { opacity: 0, y: 8 }}\n-        animate={{ opacity: 1, y: 0 }}\n-        exit={{ opacity: 0, transition: { duration: reducedMotion ? 0 : 0.12 } }}\n-        transition={{ delay: reducedMotion ? 0 : 0.18, duration: reducedMotion ? 0 : 0.24 }}\n-      >\n-        <div className={styles.panelHeader}>\n-          <span>최근 5년 · 예시 데이터</span>\n-          <button\n-            type=\"button\"\n-            className={styles.closeButton}\n-            onClick={onClose}\n-            aria-label={`${indicator.name} 확대 차트 닫기`}\n-          >\n-            <X size={17} aria-hidden=\"true\" />\n-          </button>\n-        </div>\n-        <h3>{indicator.name}</h3>\n-        <div className={styles.panelValue}>\n-          <strong>{formatIndicatorValue(indicator)}</strong>\n-          <span>{formatDataDate(indicator.observationDate)} 기준</span>\n-        </div>\n-        <IndicatorHistoryChart indicator={indicator} />\n-        <p className={styles.interpretation}>{indicator.interpretation}</p>\n-        <div className={styles.panelFooter}>\n-          <span>{indicator.source.provider}</span>\n-          <span>장기 이력은 모의 데이터</span>\n-        </div>\n-      </motion.div>\n-    </motion.div>\n-  )\n-}\n-\n-/** 원래 카드 자리를 유지하면서 선택한 카드만 확대하며 hover·키보드·터치를 지원한다. */\n-export function IndicatorHistoryCard({\n-  indicator,\n-  index,\n-  variant,\n-  className,\n-  expanded,\n-  onActiveChange,\n-  children,\n-}: IndicatorHistoryCardProps) {\n-  const triggerRef = useRef<HTMLButtonElement>(null)\n-  const reducedMotion = useReducedMotion()\n-  const panelId = `indicator-history-${indicator.id}`\n-  const layoutId = `indicator-card-${indicator.id}`\n-\n-  /** 명시적으로 닫으면 원래 버튼으로 초점을 돌려 키보드 탐색을 이어간다. */\n-  const closePanel = useCallback(() => {\n-    onActiveChange(null)\n-    triggerRef.current?.focus({ preventScroll: true })\n-  }, [onActiveChange])\n-\n-  useIndicatorEscape(expanded, closePanel)\n-\n-  return (\n-    <motion.article\n-      className={styles.slot}\n-      data-variant={variant}\n-      data-expanded={expanded}\n-      initial={reducedMotion ? false : { opacity: 0, y: 28 }}\n-      whileInView={{ opacity: 1, y: 0 }}\n-      viewport={{ once: false, amount: 0.2 }}\n-      transition={{ delay: reducedMotion ? 0 : index * 0.07, duration: reducedMotion ? 0 : 0.55 }}\n-      onPointerEnter={(event) => {\n-        if (event.pointerType === 'mouse') onActiveChange(indicator.id)\n-      }}\n-      onPointerLeave={(event) => {\n-        if (event.pointerType === 'mouse' && expanded) onActiveChange(null)\n-      }}\n-      onBlur={(event) => {\n-        if (expanded && !event.currentTarget.contains(event.relatedTarget)) onActiveChange(null)\n-      }}\n-    >\n-      <motion.div\n-        layoutId={layoutId}\n-        className={`${className} ${styles.preview}`}\n-        transition={{ layout: reducedMotion ? { duration: 0 } : cardLayoutTransition }}\n-      >\n-        <div aria-hidden={expanded}>{children}</div>\n-        <button\n-          ref={triggerRef}\n-          className={styles.expandButton}\n-          type=\"button\"\n-          aria-label={`${indicator.name} 5년 차트 ${expanded ? '닫기' : '보기'}`}\n-          aria-expanded={expanded}\n-          aria-controls={panelId}\n-          onClick={() => onActiveChange(expanded ? null : indicator.id)}\n-        >\n-          최근 3개월 · 예시 <span>5년 보기 <ArrowUpRight size={13} aria-hidden=\"true\" /></span>\n-        </button>\n-      </motion.div>\n-      <AnimatePresence initial={false}>\n-        {expanded && (\n-          <ExpandedIndicatorPanel\n-            key={indicator.id}\n-            indicator={indicator}\n-            panelId={panelId}\n-            layoutId={layoutId}\n-            onClose={closePanel}\n-          />\n-        )}\n-      </AnimatePresence>\n-    </motion.article>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/IndicatorHistoryCard.tsx",
+          "old_path": "frontend/src/components/market/IndicatorHistoryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,105 +0,0 @@\n-import { scaleLinear } from '@visx/scale'\n-import { curveMonotoneX, line } from 'd3-shape'\n-import { motion, useReducedMotion } from 'motion/react'\n-import type { Indicator, IndicatorSeriesPoint } from '@/types/market'\n-import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n-import styles from './IndicatorHistoryCard.module.css'\n-\n-const width = 440\n-const height = 230\n-const margin = { left: 58, right: 18, top: 22, bottom: 32 }\n-\n-/** 일간·월간 날짜를 같은 UTC 시간축에 배치한다. */\n-function timestamp(date: string) {\n-  return Date.parse(`${date.length === 7 ? `${date}-01` : date}T00:00:00Z`)\n-}\n-\n-/** 확대 카드의 5년 이력을 실제 날짜 간격과 지표 고유 단위로 그린다. */\n-export function IndicatorHistoryChart({ indicator }: { indicator: Indicator }) {\n-  const reducedMotion = useReducedMotion()\n-  const series = selectIndicatorPeriod(indicator.series, indicator.observationDate, 60)\n-  const first = series[0]\n-  const last = series.at(-1)\n-  if (!first || !last || series.length < 2) {\n-    return <p className={styles.empty}>장기 추이를 표시할 데이터가 부족합니다.</p>\n-  }\n-\n-  const values = series.map((point) => point.value)\n-  const min = Math.min(...values)\n-  const max = Math.max(...values)\n-  const padding = (max - min) * 0.15 || Math.max(Math.abs(max) * 0.05, 1)\n-  const xScale = scaleLinear({\n-    domain: [timestamp(first.date), timestamp(last.date)],\n-    range: [margin.left, width - margin.right],\n-  })\n-  const yScale = scaleLinear({\n-    domain: [min - padding, max + padding],\n-    range: [height - margin.bottom, margin.top],\n-    nice: true,\n-  })\n-  const path = line<IndicatorSeriesPoint>()\n-    .x((point) => xScale(timestamp(point.date)))\n-    .y((point) => yScale(point.value))\n-    .curve(curveMonotoneX)(series)\n-  const ticks = [first, series[Math.floor((series.length - 1) / 2)], last]\n-    .filter((point, index, points) => points.findIndex((item) => item.date === point.date) === index)\n-  const formatValue = (value: number) => value.toLocaleString('ko-KR', {\n-    maximumFractionDigits: indicator.decimals,\n-  })\n-\n-  return (\n-    <svg\n-      className={styles.historyChart}\n-      viewBox={`0 0 ${width} ${height}`}\n-      role=\"img\"\n-      aria-label={`${indicator.name} 장기 추이, ${first.date}부터 ${last.date}까지, 최근 값 ${formatValue(last.value)} ${indicator.unit}`}\n-    >\n-      {yScale.ticks(4).map((value) => (\n-        <g key={value}>\n-          <line\n-            className={styles.gridLine}\n-            x1={margin.left}\n-            x2={width - margin.right}\n-            y1={yScale(value)}\n-            y2={yScale(value)}\n-          />\n-          <text x={margin.left - 9} y={yScale(value) + 4} textAnchor=\"end\">{formatValue(value)}</text>\n-        </g>\n-      ))}\n-      <text x={margin.left} y={13}>{indicator.unit}</text>\n-      {ticks.map((point, index) => (\n-        <text\n-          key={point.date}\n-          x={xScale(timestamp(point.date))}\n-          y={height - 8}\n-          textAnchor={index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'}\n-        >\n-          {point.date.slice(0, 7).replace('-', '.')}\n-        </text>\n-      ))}\n-      {path && (\n-        <motion.path\n-          className={styles.historyLine}\n-          d={path}\n-          fill=\"none\"\n-          initial={reducedMotion ? false : { pathLength: 0 }}\n-          animate={{ pathLength: 1 }}\n-          transition={{\n-            delay: reducedMotion ? 0 : 0.3,\n-            duration: reducedMotion ? 0 : 0.95,\n-            ease: [0.22, 1, 0.36, 1],\n-          }}\n-        />\n-      )}\n-      <motion.circle\n-        className={styles.latestPoint}\n-        cx={xScale(timestamp(last.date))}\n-        cy={yScale(last.value)}\n-        r={4}\n-        initial={reducedMotion ? false : { opacity: 0 }}\n-        animate={{ opacity: 1 }}\n-        transition={{ delay: reducedMotion ? 0 : 1.2, duration: reducedMotion ? 0 : 0.18 }}\n-      />\n-    </svg>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/IndicatorHistoryChart.tsx",
+          "old_path": "frontend/src/components/market/IndicatorHistoryChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,173 +0,0 @@\n-.section {\n-  display: flex;\n-  min-width: 0;\n-  min-height: clamp(480px, 58svh, 600px);\n-  flex-direction: column;\n-  justify-content: center;\n-}\n-\n-.sectionHeader,\n-.sectionHeader > span,\n-.cardHeader,\n-.valueRow,\n-.meta {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.sectionHeader {\n-  align-items: flex-end;\n-  justify-content: space-between;\n-  gap: 20px;\n-  margin-bottom: 26px;\n-}\n-\n-.sectionHeader p {\n-  margin: 0 0 4px;\n-  color: var(--thorp-eyebrow, var(--market-brand));\n-  font-size: 0.78rem;\n-  font-weight: 720;\n-  letter-spacing: 0.12em;\n-}\n-\n-.sectionHeader h2 {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: clamp(1.75rem, 3vw, 2.8rem);\n-  font-weight: 620;\n-  letter-spacing: -0.035em;\n-  line-height: 1.06;\n-}\n-\n-.sectionHeader > span {\n-  gap: 6px;\n-  color: var(--market-muted);\n-  font-size: 0.7rem;\n-}\n-\n-.grid {\n-  display: grid;\n-  grid-template-columns: repeat(3, minmax(0, 1fr));\n-  gap: 11px;\n-}\n-\n-.card {\n-  min-width: 0;\n-  padding: var(--thorp-pad-card, 19px);\n-  border: 1px solid var(--market-line);\n-  border-radius: var(--thorp-radius-card, 8px);\n-  background: var(--market-surface);\n-  box-shadow: var(--market-shadow-soft);\n-}\n-\n-.cardHeader,\n-.valueRow,\n-.meta {\n-  justify-content: space-between;\n-  gap: 14px;\n-}\n-\n-.cardHeader > div {\n-  min-width: 0;\n-}\n-\n-.cardHeader span {\n-  color: var(--thorp-eyebrow, var(--market-brand));\n-  font-size: 0.62rem;\n-  font-weight: 740;\n-  letter-spacing: 0.08em;\n-}\n-\n-.cardHeader h3 {\n-  margin: 3px 0 0;\n-  color: var(--market-copy);\n-  font-size: 0.82rem;\n-}\n-\n-.cardHeader small {\n-  color: var(--market-muted);\n-  font-size: 0.62rem;\n-  white-space: nowrap;\n-}\n-\n-.valueRow {\n-  margin-top: 18px;\n-}\n-\n-.valueRow strong {\n-  color: var(--market-ink);\n-  font-size: 1.5rem;\n-  font-variant-numeric: tabular-nums;\n-  letter-spacing: -0.04em;\n-}\n-\n-.valueRow span {\n-  color: var(--market-neutral);\n-  font-size: 0.68rem;\n-  font-weight: 680;\n-}\n-\n-.valueRow span[data-tone='positive'] {\n-  color: var(--market-positive);\n-}\n-\n-.valueRow span[data-tone='negative'] {\n-  color: var(--market-negative);\n-}\n-\n-.valueRow span[data-tone='warning'] {\n-  color: var(--market-warning);\n-}\n-\n-.valueRow span[data-status='loading'],\n-.valueRow span[data-status='live'],\n-.valueRow span[data-status='stale'],\n-.valueRow span[data-status='error'] {\n-  color: var(--market-muted);\n-}\n-\n-.chartWrap {\n-  margin-top: 6px;\n-}\n-\n-.interpretation {\n-  min-height: 39px;\n-  margin: 9px 0 15px;\n-  color: var(--market-copy);\n-  font-size: 0.72rem;\n-  line-height: 1.55;\n-}\n-\n-.meta {\n-  padding-top: 12px;\n-  border-top: 1px solid var(--market-line-soft);\n-  color: var(--market-muted);\n-  font-size: 0.62rem;\n-}\n-\n-@media (max-width: 900px) {\n-  .grid {\n-    grid-template-columns: repeat(2, minmax(0, 1fr));\n-  }\n-}\n-\n-@media (max-width: 560px) {\n-  .section {\n-    min-height: auto;\n-  }\n-\n-  .sectionHeader {\n-    align-items: flex-start;\n-    flex-direction: column;\n-  }\n-\n-  .grid {\n-    grid-template-columns: 1fr;\n-  }\n-}\n-\n-@media (max-height: 720px) {\n-  .section {\n-    min-height: auto;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MacroIndicatorGrid.module.css",
+          "old_path": "frontend/src/components/market/MacroIndicatorGrid.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,81 +0,0 @@\n-import { Database } from 'lucide-react'\n-import type { Indicator } from '@/types/market'\n-import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n-import {\n-  formatDataDate,\n-  formatFrequency,\n-  formatIndicatorContext,\n-  formatIndicatorValue,\n-} from '@/utils/marketFormat'\n-import { TrendSparkline } from './TrendSparkline'\n-import { IndicatorHistoryCard } from './IndicatorHistoryCard'\n-import layout from '@/styles/MarketLayout.module.css'\n-import styles from './MacroIndicatorGrid.module.css'\n-\n-interface MacroIndicatorGridProps {\n-  compact?: boolean\n-  indicators: Indicator[]\n-  activeIndicatorId: string | null\n-  onActiveChange: (id: string | null) => void\n-}\n-\n-/** 시장 국면을 설명하는 월간 거시지표를 역할 중심으로 표시한다. */\n-export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChange, compact = false }: MacroIndicatorGridProps) {\n-  return (\n-    <section className={`${styles.section} ${compact ? layout.compactSection : ''}`} data-density={compact ? 'compact' : undefined} aria-labelledby=\"macro-indicator-title\">\n-      <div className={`${styles.sectionHeader} ${compact ? layout.compactHeader : ''}`}>\n-        <div>\n-          <h2 id=\"macro-indicator-title\">경기·물가·심리 핵심 지표</h2>\n-        </div>\n-        <span>\n-          <Database size={13} aria-hidden=\"true\" />\n-          최신 관측값과 출처를 함께 표시해요\n-        </span>\n-      </div>\n-\n-      <div className={styles.grid}>\n-        {indicators.map((indicator, index) => (\n-          <IndicatorHistoryCard\n-            className={styles.card}\n-            key={indicator.id}\n-            indicator={indicator}\n-            index={index}\n-            variant=\"macro\"\n-            expanded={activeIndicatorId === indicator.id}\n-            onActiveChange={onActiveChange}\n-          >\n-            <div className={styles.cardHeader}>\n-              <div>\n-                <span>{indicator.code}</span>\n-                <h3>{indicator.name}</h3>\n-              </div>\n-              <small>{formatDataDate(indicator.observationDate)} 기준</small>\n-            </div>\n-            <div className={styles.valueRow}>\n-              <strong>{formatIndicatorValue(indicator)}</strong>\n-              <span\n-                data-tone={indicator.tone}\n-                data-status={indicator.dataStatus}\n-                title={indicator.statusMessage ?? undefined}\n-              >\n-                {formatIndicatorContext(indicator)}\n-              </span>\n-            </div>\n-            <div className={styles.chartWrap}>\n-              <TrendSparkline\n-                series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}\n-                tone={indicator.tone}\n-                delay={index * 0.06}\n-              />\n-            </div>\n-            <p className={styles.interpretation}>{indicator.interpretation}</p>\n-            <div className={styles.meta}>\n-              <span>{indicator.source.provider}</span>\n-              <span>{formatFrequency(indicator.source.frequency)}</span>\n-            </div>\n-          </IndicatorHistoryCard>\n-        ))}\n-      </div>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MacroIndicatorGrid.tsx",
+          "old_path": "frontend/src/components/market/MacroIndicatorGrid.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,165 +0,0 @@\n-.section {\n-  display: flex;\n-  min-width: 0;\n-  min-height: clamp(480px, 58svh, 600px);\n-  flex-direction: column;\n-  justify-content: center;\n-}\n-\n-.sectionHeader,\n-.sectionHeader > span,\n-.cardTop,\n-.source {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.sectionHeader {\n-  align-items: flex-end;\n-  justify-content: space-between;\n-  gap: 20px;\n-  margin-bottom: 26px;\n-}\n-\n-.sectionHeader p {\n-  margin: 0 0 4px;\n-  color: var(--thorp-eyebrow, var(--market-brand));\n-  font-size: 0.78rem;\n-  font-weight: 720;\n-  letter-spacing: 0.12em;\n-}\n-\n-.sectionHeader h2 {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: clamp(1.75rem, 3vw, 2.8rem);\n-  font-weight: 620;\n-  letter-spacing: -0.035em;\n-  line-height: 1.06;\n-}\n-\n-.sectionHeader > span {\n-  gap: 6px;\n-  color: var(--market-muted);\n-  font-size: 0.7rem;\n-}\n-\n-.grid {\n-  display: grid;\n-  grid-template-columns: repeat(5, minmax(0, 1fr));\n-  gap: 11px;\n-}\n-\n-.card {\n-  min-width: 0;\n-  padding: var(--thorp-pad-card, 17px);\n-  border: 1px solid var(--market-line);\n-  border-radius: var(--thorp-radius-card, 8px);\n-  background: var(--market-surface);\n-  box-shadow: var(--market-shadow-soft);\n-}\n-\n-.cardTop,\n-.source {\n-  justify-content: space-between;\n-  gap: 10px;\n-}\n-\n-.cardTop > span {\n-  color: var(--market-copy);\n-  font-size: 0.78rem;\n-  font-weight: 680;\n-}\n-\n-.cardTop small {\n-  color: var(--market-muted);\n-  font-size: 0.64rem;\n-  white-space: nowrap;\n-}\n-\n-.card strong {\n-  display: block;\n-  margin-top: 13px;\n-  color: var(--market-ink);\n-  font-size: 1.3rem;\n-  font-variant-numeric: tabular-nums;\n-  letter-spacing: -0.035em;\n-}\n-\n-.change {\n-  margin: 3px 0 7px;\n-  color: var(--market-neutral);\n-  font-size: 0.7rem;\n-  font-weight: 680;\n-}\n-\n-.change[data-tone='positive'] {\n-  color: var(--market-positive);\n-}\n-\n-.change[data-tone='negative'] {\n-  color: var(--market-negative);\n-}\n-\n-.change[data-tone='warning'] {\n-  color: var(--market-warning);\n-}\n-\n-.change[data-status='loading'],\n-.change[data-status='live'],\n-.change[data-status='stale'],\n-.change[data-status='error'] {\n-  color: var(--market-muted);\n-}\n-\n-.interpretation {\n-  min-height: 42px;\n-  margin: 9px 0 13px;\n-  color: var(--market-copy);\n-  font-size: 0.72rem;\n-  line-height: 1.55;\n-}\n-\n-.source {\n-  padding-top: 11px;\n-  border-top: 1px solid var(--market-line-soft);\n-  color: var(--market-muted);\n-  font-size: 0.62rem;\n-}\n-\n-.source span:last-child {\n-  text-align: right;\n-}\n-\n-@media (max-width: 1180px) {\n-  .grid {\n-    grid-template-columns: repeat(3, minmax(0, 1fr));\n-  }\n-}\n-\n-@media (max-width: 720px) {\n-  .section {\n-    min-height: auto;\n-  }\n-\n-  .grid {\n-    grid-template-columns: repeat(2, minmax(0, 1fr));\n-  }\n-}\n-\n-@media (max-height: 720px) {\n-  .section {\n-    min-height: auto;\n-  }\n-}\n-\n-@media (max-width: 500px) {\n-  .sectionHeader {\n-    align-items: flex-start;\n-    flex-direction: column;\n-  }\n-\n-  .grid {\n-    grid-template-columns: 1fr;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketSnapshot.module.css",
+          "old_path": "frontend/src/components/market/MarketSnapshot.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,75 +0,0 @@\n-import { Clock } from 'lucide-react'\n-import type { Indicator } from '@/types/market'\n-import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n-import {\n-  formatDataDate,\n-  formatFrequency,\n-  formatIndicatorContext,\n-  formatIndicatorValue,\n-} from '@/utils/marketFormat'\n-import { TrendSparkline } from './TrendSparkline'\n-import { IndicatorHistoryCard } from './IndicatorHistoryCard'\n-import layout from '@/styles/MarketLayout.module.css'\n-import styles from './MarketSnapshot.module.css'\n-\n-interface MarketSnapshotProps {\n-  compact?: boolean\n-  indicators: Indicator[]\n-  activeIndicatorId: string | null\n-  onActiveChange: (id: string | null) => void\n-}\n-\n-/** 거래일 기준 시장지표와 각 데이터의 지연 정보를 카드로 요약한다. */\n-export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange, compact = false }: MarketSnapshotProps) {\n-  return (\n-    <section className={`${styles.section} ${compact ? layout.compactSection : ''}`} data-density={compact ? 'compact' : undefined} aria-labelledby=\"market-snapshot-title\">\n-      <div className={`${styles.sectionHeader} ${compact ? layout.compactHeader : ''}`}>\n-        <div>\n-          <h2 id=\"market-snapshot-title\">주식시장 핵심 지표</h2>\n-        </div>\n-        <span>\n-          <Clock size={13} aria-hidden=\"true\" />\n-          지표마다 발표일이 달라요\n-        </span>\n-      </div>\n-\n-      <div className={styles.grid}>\n-        {indicators.map((indicator, index) => (\n-          <IndicatorHistoryCard\n-            className={styles.card}\n-            key={indicator.id}\n-            indicator={indicator}\n-            index={index}\n-            variant=\"market\"\n-            expanded={activeIndicatorId === indicator.id}\n-            onActiveChange={onActiveChange}\n-          >\n-            <div className={styles.cardTop}>\n-              <span>{indicator.name}</span>\n-              <small>{formatDataDate(indicator.observationDate)}</small>\n-            </div>\n-            <strong>{formatIndicatorValue(indicator)}</strong>\n-            <p\n-              className={styles.change}\n-              data-tone={indicator.tone}\n-              data-status={indicator.dataStatus}\n-              title={indicator.statusMessage ?? undefined}\n-            >\n-              {formatIndicatorContext(indicator)}\n-            </p>\n-            <TrendSparkline\n-              series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}\n-              tone={indicator.tone}\n-              delay={index * 0.06}\n-            />\n-            <p className={styles.interpretation}>{indicator.interpretation}</p>\n-            <div className={styles.source}>\n-              <span>{indicator.source.provider}</span>\n-              <span>{indicator.source.delayDescription ?? formatFrequency(indicator.source.frequency)}</span>\n-            </div>\n-          </IndicatorHistoryCard>\n-        ))}\n-      </div>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketSnapshot.tsx",
+          "old_path": "frontend/src/components/market/MarketSnapshot.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,30 +0,0 @@\n-.sparkline {\n-  width: 100%;\n-  height: 48px;\n-  overflow: visible;\n-  color: var(--market-neutral);\n-}\n-\n-.sparkline[data-tone='positive'] {\n-  color: var(--market-positive);\n-}\n-\n-.sparkline[data-tone='negative'] {\n-  color: var(--market-negative);\n-}\n-\n-.sparkline[data-tone='warning'] {\n-  color: var(--market-warning);\n-}\n-\n-.line {\n-  stroke: currentcolor;\n-  stroke-linecap: round;\n-  stroke-linejoin: round;\n-  stroke-width: 2.2;\n-}\n-\n-.baseline {\n-  stroke: var(--market-line-soft);\n-  stroke-width: 1;\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/TrendSparkline.module.css",
+          "old_path": "frontend/src/components/market/TrendSparkline.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,89 +0,0 @@\n-import { motion, useReducedMotion } from 'motion/react'\n-import type { IndicatorSeriesPoint, IndicatorTone } from '@/types/market'\n-import styles from './TrendSparkline.module.css'\n-\n-interface TrendSparklineProps {\n-  series: IndicatorSeriesPoint[]\n-  tone: IndicatorTone\n-  delay?: number\n-  addDetail?: boolean\n-}\n-\n-const width = 160\n-const height = 48\n-const padding = 3\n-\n-/** 짧은 월간 시계열에만 미세한 중간 굴곡을 더해 추세 방향을 읽기 쉽게 만든다. */\n-function addDisplayDetail(values: number[]) {\n-  if (values.length < 2 || values.length > 4) return values\n-\n-  const range = Math.max(...values) - Math.min(...values)\n-  const fallbackRange = Math.max(Math.abs(values[0]) * 0.015, 0.1)\n-  const detailRange = Math.max(range, fallbackRange)\n-\n-  return values.flatMap((value, index) => {\n-    const nextValue = values[index + 1]\n-    if (nextValue === undefined) return [value]\n-\n-    const direction = index % 2 === 0 ? 1 : -1\n-    const midpoint = value + (nextValue - value) * 0.48\n-\n-    return [value, midpoint + direction * detailRange * 0.12]\n-  })\n-}\n-\n-/** 작은 시계열을 카드 폭에 맞는 SVG 경로로 정규화한다. */\n-function buildSparklinePath(series: IndicatorSeriesPoint[], addDetail: boolean) {\n-  if (series.length === 0) return ''\n-\n-  const rawValues = series.map((point) => point.value)\n-  const values = addDetail ? addDisplayDetail(rawValues) : rawValues\n-  const min = Math.min(...values)\n-  const max = Math.max(...values)\n-  const range = max - min || 1\n-  const xStep = (width - padding * 2) / Math.max(values.length - 1, 1)\n-\n-  return values\n-    .map((value, index) => {\n-      const x = padding + index * xStep\n-      const y = height - padding - ((value - min) / range) * (height - padding * 2)\n-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`\n-    })\n-    .join(' ')\n-}\n-\n-/** 색상에 의존하지 않는 텍스트 정보 옆에 보조 추세선을 표시한다. */\n-export function TrendSparkline({\n-  series,\n-  tone,\n-  delay = 0,\n-  addDetail = false,\n-}: TrendSparklineProps) {\n-  const reducedMotion = useReducedMotion()\n-  const path = buildSparklinePath(series, addDetail)\n-\n-  return (\n-    <svg\n-      className={styles.sparkline}\n-      data-tone={tone}\n-      viewBox={`0 0 ${width} ${height}`}\n-      preserveAspectRatio=\"none\"\n-      aria-hidden=\"true\"\n-    >\n-      <path className={styles.baseline} d={`M 0 ${height - 1} L ${width} ${height - 1}`} />\n-      <motion.path\n-        className={styles.line}\n-        d={path}\n-        fill=\"none\"\n-        initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }}\n-        whileInView={{ pathLength: 1, opacity: 1 }}\n-        viewport={{ once: false, amount: 0.65 }}\n-        transition={{\n-          delay: reducedMotion ? 0 : 0.16 + delay,\n-          duration: reducedMotion ? 0 : 1.05,\n-          ease: [0.22, 1, 0.36, 1],\n-        }}\n-      />\n-    </svg>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/TrendSparkline.tsx",
+          "old_path": "frontend/src/components/market/TrendSparkline.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,15 +2,6 @@ import type { FieldStatus } from '@/types/marketFlow'\n import { fieldStateLabels as stateLabels, formatUpdatedAt, stateLineLabels } from './marketFlowFormat'\n import styles from './MarketFlow.module.css'\n \n-\n-interface DataStateNoticeProps {\n-  status: FieldStatus\n-  referenceMonth: string | null\n-  lastUpdatedAt: string | null\n-  isExampleData?: boolean\n-  historicalComparisonNotice?: string\n-}\n-\n /**\n  * 목록 한 줄용 짧은 표시(009 FR-011). 대상월은 늘 보이고, 마지막 갱신은 목록 머리에 한 번 적으므로 그와 다를\n  * 때만 적는다. 상태 표는 정상 공급('자료 확인')이면 달지 않는다 — 일곱 줄이 모두 같은 표를 달면 읽을 것이\n@@ -60,23 +51,3 @@ export function DataStateFacts({ status, isExampleData = false }: { status: Fiel\n     </div>\n   )\n }\n-\n-/** 공급 상태는 경제 판단과 구분하며 예시 여부와 기준 시점을 숨기지 않는다. */\n-export function DataStateNotice({\n-  status, referenceMonth, lastUpdatedAt, isExampleData = false,\n-  historicalComparisonNotice,\n-}: DataStateNoticeProps) {\n-  return (\n-    <div className={styles.dataState} data-status={status}>\n-      <div className={styles.stateLabels}>\n-        <span className={styles.stateLabel}>{stateLabels[status]}</span>\n-        {isExampleData && status !== 'EXAMPLE' ? <span className={styles.stateLabel}>예시 자료</span> : null}\n-      </div>\n-      <dl className={styles.stateMeta}>\n-        <div><dt>대상월</dt><dd>{referenceMonth ?? '확인할 수 없음'}</dd></div>\n-        <div><dt>마지막 갱신</dt><dd>{formatUpdatedAt(lastUpdatedAt)}{lastUpdatedAt ? ' KST' : ''}</dd></div>\n-      </dl>\n-      {historicalComparisonNotice ? <p className={styles.historyNotice}>{historicalComparisonNotice}</p> : null}\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,14 +18,7 @@\n .fieldTip .narrative { margin: 0 0 6px; color: var(--thorp-foreground); }\n .narrative { margin: 2px 0 7px; color: var(--thorp-copy); font-size: var(--thorp-text-caption, .76rem); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }\n .stateLine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.45; font-variant-numeric: tabular-nums; }\n-.dataState { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--thorp-copy); }\n-.stateLabels { display: flex; flex-wrap: wrap; gap: 4px; }\n .stateLabel { display: inline-block; padding: 2px 5px; border: 1px solid var(--thorp-line-strong); font-size: var(--thorp-text-label, .65rem); line-height: 1.3; white-space: nowrap; }\n-.stateMeta { display: flex; flex-wrap: wrap; gap: 5px 12px; margin: 0; font-size: var(--thorp-text-label, .67rem); line-height: 1.45; font-variant-numeric: tabular-nums; }\n-.stateMeta div { display: flex; flex-wrap: wrap; gap: 5px; }\n-.stateMeta dt { color: var(--thorp-copy); }\n-.stateMeta dd { margin: 0; color: var(--thorp-foreground); }\n-.historyNotice { width: 100%; margin: 0; font-size: var(--thorp-text-caption, .75rem); line-height: 1.5; }\n .detail { min-width: 0; }\n .detailHeader { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name meta' 'narrative narrative'; align-items: center; gap: 14px 24px; padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }\n .detailName { grid-area: name; }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -1,45 +0,0 @@\n-import type { Indicator, IndicatorSeriesPoint } from '@/types/market'\n-\n-// 실제 과거 시세가 아닌 UI 검증용 연간 기준값이다. 마지막 6개월은 기존 mock을 유지한다.\n-const historyAnchors: Record<string, number[]> = {\n-  kospi: [3120, 2380, 2510, 2650, 2580],\n-  kosdaq: [1020, 760, 880, 820, 790],\n-  'usd-krw': [1160, 1390, 1280, 1370, 1410],\n-  'v-kospi-200': [18, 30, 21, 16, 24],\n-  'ktb-3y': [1.4, 4.2, 3.6, 3.2, 2.8],\n-  'coincident-cycle': [101.2, 102.1, 100.8, 99.2, 100.3],\n-  'leading-cycle': [102.7, 100.8, 98.2, 99.4, 100.1],\n-  'esi-cycle': [108, 94, 87, 101, 92],\n-  'core-cpi': [1.2, 3.6, 4.1, 3.1, 2.7],\n-  'exports-usd': [\n-    64_000_000_000,\n-    58_000_000_000,\n-    52_000_000_000,\n-    57_000_000_000,\n-    59_000_000_000,\n-  ],\n-  m2: [3_450_000, 3_620_000, 3_780_000, 3_930_000, 4_020_000],\n-}\n-\n-/** 고정된 기준값 사이를 보간해 60개월 예시 이력을 만들며 실제 관측값을 생성하지 않는다. */\n-export function withIndicatorHistoryMock(indicator: Indicator): Indicator {\n-  const anchors = historyAnchors[indicator.id]\n-  const firstRecent = indicator.series[0]\n-  if (!anchors || !firstRecent) return indicator\n-\n-  const [year, month] = indicator.observationDate.split('-').map(Number)\n-  const historicalMonths = 60 - indicator.series.length\n-  const values = [...anchors, firstRecent.value]\n-  const amplitude = (Math.max(...values) - Math.min(...values)) * 0.055\n-  const history: IndicatorSeriesPoint[] = Array.from({ length: historicalMonths }, (_, index) => {\n-    const position = index / historicalMonths * (values.length - 1)\n-    const segment = Math.floor(position)\n-    const fraction = position - segment\n-    const value = values[segment] + (values[segment + 1] - values[segment]) * fraction\n-      + Math.sin(fraction * Math.PI) * Math.sin(index * 1.7) * amplitude\n-    const date = new Date(Date.UTC(year, month - 60 + index, 1)).toISOString().slice(0, 7)\n-    return { date, value: Number(value.toFixed(indicator.decimals)) }\n-  })\n-\n-  return { ...indicator, series: [...history, ...indicator.series] }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/indicatorHistoryMock.ts",
+          "old_path": "frontend/src/data/indicatorHistoryMock.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,8 @@\n import type { MarketData, Indicator } from '@/types/market'\n-import { withIndicatorHistoryMock } from './indicatorHistoryMock'\n \n const retrievedAt = '2026-08-31T09:00:00+09:00'\n \n-// 시장 스냅샷에서 거래일 기준 변화와 데이터 지연 상태를 확인하는 예시 지표다.\n+// 첫 화면 시세 창이 최신값을 받기 전에 출발점으로 쓰는 시장 예시 지표다.\n const marketIndicators: Indicator[] = [\n   {\n     id: 'kospi',\n@@ -355,276 +354,8 @@ const macroIndicators: Indicator[] = [\n   },\n ]\n \n-// 장단기 금융안정 상태는 핵심 국면과 분리된 참고 예시 데이터로 제공한다.\n-const stabilityIndicators: Indicator[] = [\n-  {\n-    id: 'fsi',\n-    code: 'FSI',\n-    name: '금융불안지수 FSI',\n-    category: 'stability',\n-    value: 14.8,\n-    unit: 'pt',\n-    decimals: 1,\n-    change: 1.1,\n-    changeUnit: 'p · 전월',\n-    direction: 'up',\n-    tone: 'warning',\n-    interpretation: '월 단위 단기 금융불안 참고지표이며 공식 임계값은 하드코딩하지 않음',\n-    observationDate: '2026-06',\n-    releaseDate: '2026-07-15',\n-    retrievedAt,\n-    revisionStatus: 'revised',\n-    source: {\n-      provider: '한국은행 금융안정보고서',\n-      datasetName: '금융불안지수',\n-      frequency: 'monthly',\n-    },\n-    series: [\n-      { date: '2026-01', value: 11.2 },\n-      { date: '2026-02', value: 10.9 },\n-      { date: '2026-03', value: 12.1 },\n-      { date: '2026-04', value: 12.8 },\n-      { date: '2026-05', value: 13.7 },\n-      { date: '2026-06', value: 14.8 },\n-    ],\n-  },\n-  {\n-    id: 'fvi',\n-    code: 'FVI',\n-    name: '금융취약성지수 FVI',\n-    category: 'stability',\n-    value: 51.3,\n-    unit: 'pt',\n-    decimals: 1,\n-    change: -0.6,\n-    changeUnit: 'p · 전분기',\n-    direction: 'down',\n-    tone: 'neutral',\n-    interpretation: '분기 단위 중장기 금융취약성 참고지표로 단기 매매 신호와 분리',\n-    observationDate: '2026-Q2',\n-    releaseDate: '2026-07-15',\n-    retrievedAt,\n-    revisionStatus: 'revised',\n-    source: {\n-      provider: '한국은행 금융안정보고서',\n-      datasetName: '금융취약성지수',\n-      frequency: 'quarterly',\n-    },\n-    series: [\n-      { date: '2025-Q1', value: 54.2 },\n-      { date: '2025-Q2', value: 53.8 },\n-      { date: '2025-Q3', value: 52.9 },\n-      { date: '2025-Q4', value: 52.4 },\n-      { date: '2026-Q1', value: 51.9 },\n-      { date: '2026-Q2', value: 51.3 },\n-    ],\n-  },\n-]\n-\n-// 홈과 대시보드가 공유하는 화면 모델이다. 실제 API DTO는 연동 시 별도로 매핑한다.\n+// 첫 화면이 최신값을 받기 전에 바탕으로 쓰는 화면 모델이다. 실제 API DTO는 연동 시 별도로 매핑한다.\n export const marketMock: MarketData = {\n-  regime: {\n-    cycle: 'slowdown',\n-    inflation: 'easing',\n-    risk: 'riskOff',\n-    headline: '지금은 조심하되, 완전히 나쁜 시장은 아닙니다.',\n-    summary:\n-      '현재 경기는 조금씩 느려지고 있습니다. 다만 물가 부담은 줄고, 수출과 앞으로의 경기 신호는 좋아지고 있습니다. 환율과 시장 변동성이 높아 단기적으로는 방어적인 접근이 필요합니다.',\n-    drivers: [\n-      '현재 경기는 최근 3개월 동안 조금씩 약해졌습니다.',\n-      '물가 상승 속도가 느려져 금리 부담이 줄 가능성이 있습니다.',\n-      '환율과 시장 변동성이 올라 단기 위험은 아직 높습니다.',\n-    ],\n-    overviewCharts: [\n-      {\n-        id: 'kospi-history',\n-        code: 'KOSPI',\n-        tabLabel: 'KOSPI',\n-        name: 'KOSPI 지수',\n-        insight: '장기 흐름 안에서 완만한 반등을 이어가고 있습니다.',\n-        axisLabel: 'POINT',\n-        valueDecimals: 2,\n-        valueUnit: 'pt',\n-        sourceLabel: 'KRX 연계 공공데이터',\n-        yDomain: [1500, 3500],\n-        yTicks: [1500, 2000, 2500, 3000, 3500],\n-        series: [\n-          { date: '2016-06', value: 1970.35 },\n-          { date: '2017-06', value: 2391.79 },\n-          { date: '2018-06', value: 2326.13 },\n-          { date: '2019-06', value: 2130.62 },\n-          { date: '2020-03', value: 1754.64 },\n-          { date: '2020-10', value: 2267.15 },\n-          { date: '2021-05', value: 3203.92 },\n-          { date: '2021-09', value: 3068.82 },\n-          { date: '2022-04', value: 2695.05 },\n-          { date: '2022-10', value: 2293.61 },\n-          { date: '2023-03', value: 2476.86 },\n-          { date: '2023-09', value: 2465.07 },\n-          { date: '2024-04', value: 2692.06 },\n-          { date: '2024-10', value: 2556.15 },\n-          { date: '2025-05', value: 2636.52 },\n-          { date: '2025-11', value: 2680.42 },\n-          { date: '2026-04', value: 2658.72 },\n-          { date: '2026-08', value: 2715.32 },\n-        ],\n-      },\n-      {\n-        id: 'leading-cycle-history',\n-        code: 'LEADING CYCLE',\n-        tabLabel: '경기선행',\n-        name: '경기선행지수 순환변동치',\n-        insight: '기준선 100 위로 회복하고 있습니다.',\n-        axisLabel: 'INDEX',\n-        valueDecimals: 1,\n-        valueUnit: '',\n-        sourceLabel: 'KOSIS',\n-        yDomain: [96, 104],\n-        yTicks: [96, 98, 100, 102, 104],\n-        referenceValue: 100,\n-        referenceLabel: '기준선 100',\n-        series: [\n-          { date: '2016-06', value: 100.5 },\n-          { date: '2017-06', value: 101.4 },\n-          { date: '2018-06', value: 100.2 },\n-          { date: '2019-06', value: 99.3 },\n-          { date: '2020-03', value: 98.7 },\n-          { date: '2020-10', value: 99.4 },\n-          { date: '2021-05', value: 102.2 },\n-          { date: '2021-09', value: 102.7 },\n-          { date: '2022-04', value: 100.8 },\n-          { date: '2022-10', value: 99.7 },\n-          { date: '2023-03', value: 97.6 },\n-          { date: '2023-09', value: 98.3 },\n-          { date: '2024-04', value: 99.4 },\n-          { date: '2024-10', value: 99.2 },\n-          { date: '2025-05', value: 99.6 },\n-          { date: '2025-11', value: 100.0 },\n-          { date: '2026-04', value: 100.2 },\n-          { date: '2026-08', value: 100.4 },\n-        ],\n-      },\n-      {\n-        id: 'usd-krw-history',\n-        code: 'USD / KRW',\n-        tabLabel: '환율',\n-        name: '원/달러 환율',\n-        insight: '원화 약세 부담이 높은 구간에 머물고 있습니다.',\n-        axisLabel: 'KRW',\n-        valueDecimals: 1,\n-        valueUnit: '원',\n-        sourceLabel: '한국은행 ECOS',\n-        yDomain: [1000, 1500],\n-        yTicks: [1000, 1100, 1200, 1300, 1400, 1500],\n-        series: [\n-          { date: '2016-06', value: 1160.4 },\n-          { date: '2017-06', value: 1144.1 },\n-          { date: '2018-06', value: 1115.2 },\n-          { date: '2019-06', value: 1156.8 },\n-          { date: '2020-03', value: 1222.6 },\n-          { date: '2020-10', value: 1135.1 },\n-          { date: '2021-05', value: 1112.3 },\n-          { date: '2021-09', value: 1184.5 },\n-          { date: '2022-04', value: 1265.7 },\n-          { date: '2022-10', value: 1424.2 },\n-          { date: '2023-03', value: 1302.4 },\n-          { date: '2023-09', value: 1349.6 },\n-          { date: '2024-04', value: 1370.8 },\n-          { date: '2024-10', value: 1384.2 },\n-          { date: '2025-05', value: 1362.5 },\n-          { date: '2025-11', value: 1395.4 },\n-          { date: '2026-04', value: 1360.2 },\n-          { date: '2026-08', value: 1378.5 },\n-        ],\n-      },\n-    ],\n-    asOf: '2026-08-31',\n-    isMock: true,\n-  },\n-  marketIndicators: marketIndicators.map(withIndicatorHistoryMock),\n-  macroIndicators: macroIndicators.map(withIndicatorHistoryMock),\n-  stabilityIndicators,\n-  similarPeriod: {\n-    periodStart: '2018-09',\n-    periodEnd: '2019-02',\n-    comparisonWindowMonths: 6,\n-    similarityScore: 82.4,\n-    events: ['미·중 무역 갈등', '수출 둔화', '금리 인상 속도 조절'],\n-    similarities: [\n-      '당시에도 현재 경기는 약했지만 앞으로의 경기 신호는 좋아졌습니다.',\n-      '환율과 주가 변동성이 함께 올라 시장이 불안했습니다.',\n-    ],\n-    differences: [\n-      '현재 물가 상승률은 당시보다 높습니다.',\n-      '현재 수출은 당시보다 빠르게 회복하고 있습니다.',\n-    ],\n-    futureReturn3m: 4.2,\n-    futureReturn6m: 7.8,\n-    comparisons: [\n-      {\n-        indicatorId: 'coincident-cycle',\n-        currentValue: 99.6,\n-        historicalValue: 99.7,\n-        unit: 'pt',\n-      },\n-      {\n-        indicatorId: 'leading-cycle',\n-        currentValue: 100.4,\n-        historicalValue: 100.2,\n-        unit: 'pt',\n-      },\n-      {\n-        indicatorId: 'esi-cycle',\n-        currentValue: 96.8,\n-        historicalValue: 95.9,\n-        unit: 'pt',\n-      },\n-      {\n-        indicatorId: 'core-cpi',\n-        currentValue: 2.2,\n-        historicalValue: 1.1,\n-        unit: '%',\n-      },\n-      {\n-        indicatorId: 'usd-krw',\n-        currentValue: 1378.5,\n-        historicalValue: 1125.4,\n-        unit: '원',\n-      },\n-    ],\n-  },\n-  dataFreshness: [\n-    {\n-      id: 'krx',\n-      provider: 'KRX · 금융위원회',\n-      coverage: 'KOSPI, KOSDAQ, 시장 변동성',\n-      frequency: 'daily',\n-      status: 'api-ready',\n-      note: '공공데이터는 영업일 T+1 지연을 표시해야 함',\n-    },\n-    {\n-      id: 'ecos',\n-      provider: '한국은행 ECOS',\n-      coverage: '금리, 환율, M2, PPI, ESI, CBSI',\n-      frequency: 'monthly',\n-      status: 'api-ready',\n-      note: '발표일과 수정 여부를 함께 저장',\n-    },\n-    {\n-      id: 'kosis',\n-      provider: 'KOSIS',\n-      coverage: '경기종합지수, CPI, 광공업생산',\n-      frequency: 'monthly',\n-      status: 'api-ready',\n-      note: '공식 메타데이터에서 통계표 ID를 확정',\n-    },\n-    {\n-      id: 'customs',\n-      provider: '관세청 무역통계',\n-      coverage: '수출입, 무역수지, 품목별 수출',\n-      frequency: 'monthly',\n-      status: 'review-needed',\n-      note: '잠정치와 확정치의 사용 가능 시점을 분리',\n-    },\n-  ],\n+  marketIndicators,\n+  macroIndicators,\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/marketMock.ts",
+          "old_path": "frontend/src/data/marketMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,17 +0,0 @@\n-import { useEffect } from 'react'\n-\n-/** 열린 지표 카드만 전역 Escape를 받고, 닫히거나 화면을 떠나면 이벤트를 해제한다. */\n-export function useIndicatorEscape(expanded: boolean, onClose: () => void) {\n-  useEffect(() => {\n-    if (!expanded) return\n-\n-    const handleEscape = (event: KeyboardEvent) => {\n-      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return\n-      event.preventDefault()\n-      onClose()\n-    }\n-\n-    document.addEventListener('keydown', handleEscape)\n-    return () => document.removeEventListener('keydown', handleEscape)\n-  }, [expanded, onClose])\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useIndicatorEscape.ts",
+          "old_path": "frontend/src/hooks/useIndicatorEscape.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,49 +0,0 @@\n-.page {\n-  position: relative;\n-  min-width: 0;\n-  min-height: 100svh;\n-  overflow-x: clip;\n-  background: var(--thorp-background);\n-  color: var(--thorp-foreground);\n-  --market-surface: var(--thorp-surface-raised);\n-  --market-ink: var(--thorp-foreground);\n-  --market-copy: var(--thorp-copy);\n-  --market-muted: var(--thorp-muted);\n-  --market-line: var(--thorp-line-strong);\n-  --market-line-soft: var(--thorp-line);\n-  --market-line-strong: var(--thorp-line-strong);\n-  --market-brand: var(--thorp-accent);\n-  --market-positive: var(--thorp-positive);\n-  --market-negative: var(--thorp-negative);\n-  --market-warning: var(--thorp-warning);\n-  --market-neutral: var(--thorp-neutral);\n-  --market-shadow: 0 16px 42px rgb(0 0 0 / 24%);\n-  --market-shadow-soft: none;\n-}\n-\n-.footer {\n-  margin-top: 25px;\n-  padding-top: 20px;\n-  border-top: 1px solid var(--market-line);\n-  color: var(--market-muted);\n-  font-size: 0.65rem;\n-  text-align: center;\n-}\n-\n-/* 같은 지표·전략 섹션을 대시보드에서는 간결한 간격으로 표시한다. */\n-.compactSection[data-density='compact'] {\n-  min-height: 0;\n-}\n-\n-.compactSection > .compactHeader {\n-  margin-bottom: 16px;\n-}\n-\n-.compactSection > .compactHeader h2 {\n-  font-size: 1.2rem;\n-  line-height: 1.4;\n-}\n-\n-.compactSection > .compactHeader p {\n-  display: none;\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/styles/MarketLayout.module.css",
+          "old_path": "frontend/src/styles/MarketLayout.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,74 +49,7 @@ export interface Indicator {\n   statusMessage?: string | null\n }\n \n-export interface MarketCyclePoint {\n-  date: string\n-  value: number\n-}\n-\n-export interface MarketOverviewChart {\n-  id: string\n-  code: string\n-  tabLabel: string\n-  name: string\n-  insight: string\n-  axisLabel: string\n-  valueDecimals: number\n-  valueUnit: string\n-  sourceLabel: string\n-  yDomain: [number, number]\n-  yTicks: number[]\n-  referenceValue?: number\n-  referenceLabel?: string\n-  series: MarketCyclePoint[]\n-}\n-\n-export interface MarketRegime {\n-  cycle: 'recovery' | 'expansion' | 'slowdown' | 'contraction'\n-  inflation: 'easing' | 'neutral' | 'pressure'\n-  risk: 'riskOn' | 'neutral' | 'riskOff'\n-  headline: string\n-  summary: string\n-  drivers: string[]\n-  overviewCharts: MarketOverviewChart[]\n-  asOf: string\n-  isMock: boolean\n-}\n-\n-export interface SimilarMarketComparison {\n-  indicatorId: string\n-  currentValue: number\n-  historicalValue: number\n-  unit: string\n-}\n-\n-export interface SimilarMarketPeriod {\n-  periodStart: string\n-  periodEnd: string\n-  comparisonWindowMonths: number\n-  similarityScore: number\n-  events: string[]\n-  similarities: string[]\n-  differences: string[]\n-  futureReturn3m: number\n-  futureReturn6m: number\n-  comparisons: SimilarMarketComparison[]\n-}\n-\n-export interface DataFreshnessItem {\n-  id: string\n-  provider: string\n-  coverage: string\n-  frequency: DataFrequency\n-  status: 'example' | 'api-ready' | 'review-needed'\n-  note: string\n-}\n-\n export interface MarketData {\n-  regime: MarketRegime\n   marketIndicators: Indicator[]\n   macroIndicators: Indicator[]\n-  stabilityIndicators: Indicator[]\n-  similarPeriod: SimilarMarketPeriod\n-  dataFreshness: DataFreshnessItem[]\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/market.ts",
+          "old_path": "frontend/src/types/market.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,41 +0,0 @@\n-import type { IndicatorSeriesPoint } from '@/types/market'\n-\n-/** ISO 월·일 형식과 윤년을 검사하고, 존재하는 날짜만 월 인덱스로 변환한다. */\n-function parseIndicatorDate(value: string) {\n-  if (typeof value !== 'string') return null\n-  const match = /^(\\d{4})-(\\d{2})(?:-(\\d{2}))?$/.exec(value)\n-  if (!match) return null\n-\n-  const year = Number(match[1])\n-  const month = Number(match[2])\n-  const day = match[3] === undefined ? null : Number(match[3])\n-  if (year < 1 || month < 1 || month > 12) return null\n-\n-  const leapYear = year % 400 === 0 || (year % 4 === 0 && year % 100 !== 0)\n-  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]\n-  if (day !== null && (day < 1 || day > daysInMonth)) return null\n-\n-  return { monthIndex: year * 12 + month - 1, day, daysInMonth }\n-}\n-\n-/** 월간·일간 관측값을 기준월 포함 최근 N개월로 자르고 시간순으로 정렬한다. */\n-export function selectIndicatorPeriod(\n-  series: IndicatorSeriesPoint[],\n-  observationDate: string,\n-  months: number,\n-) {\n-  const observation = parseIndicatorDate(observationDate)\n-  if (!observation || !Number.isInteger(months) || months < 1) return []\n-\n-  return series\n-    .filter((point) => {\n-      const date = parseIndicatorDate(point.date)\n-      if (!date || !Number.isFinite(point.value)) return false\n-\n-      return date.monthIndex > observation.monthIndex - months\n-        && date.monthIndex <= observation.monthIndex\n-        && (date.monthIndex < observation.monthIndex\n-          || (date.day ?? 1) <= (observation.day ?? observation.daysInMonth))\n-    })\n-    .sort((left, right) => left.date.localeCompare(right.date))\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/indicatorHistory.ts",
+          "old_path": "frontend/src/utils/indicatorHistory.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,25 +0,0 @@\n-import type { Indicator, SimilarMarketPeriod } from '@/types/market'\n-\n-/** API로 확인된 최신값만 비교 패널의 현재값에 반영하고 과거 예시값은 유지한다. */\n-export function withCurrentIndicatorValues(\n-  period: SimilarMarketPeriod,\n-  indicators: Indicator[],\n-): SimilarMarketPeriod {\n-  const indicatorsById = new Map(indicators.map((indicator) => [indicator.id, indicator]))\n-\n-  return {\n-    ...period,\n-    comparisons: period.comparisons.map((comparison) => {\n-      const indicator = indicatorsById.get(comparison.indicatorId)\n-      if (!indicator || (indicator.dataStatus !== 'live' && indicator.dataStatus !== 'stale')) {\n-        return comparison\n-      }\n-\n-      return {\n-        ...comparison,\n-        currentValue: indicator.value,\n-        unit: indicator.unit,\n-      }\n-    }),\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketComparison.ts",
+          "old_path": "frontend/src/utils/marketComparison.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,97 +0,0 @@\n-import type { DataFrequency, Indicator, MarketRegime } from '@/types/market'\n-\n-const frequencyLabels: Record<DataFrequency, string> = {\n-  daily: '거래일',\n-  monthly: '월간',\n-  quarterly: '분기',\n-  event: '이벤트',\n-}\n-\n-/** 지표의 원시 숫자를 소수점과 단위 규칙에 맞춰 표시한다. */\n-export function formatIndicatorValue(indicator: Indicator) {\n-  if (indicator.unit === 'USD' && Math.abs(indicator.value) >= 1_000_000_000) {\n-    const value = (indicator.value / 1_000_000_000).toLocaleString('ko-KR', {\n-      minimumFractionDigits: 1,\n-      maximumFractionDigits: 1,\n-    })\n-    return `${value}B USD`\n-  }\n-\n-  if (indicator.unit === '십억원' && Math.abs(indicator.value) >= 1_000) {\n-    const value = (indicator.value / 1_000).toLocaleString('ko-KR', {\n-      minimumFractionDigits: 1,\n-      maximumFractionDigits: 1,\n-    })\n-    return `${value} 조원`\n-  }\n-\n-  const value = indicator.value.toLocaleString('ko-KR', {\n-    minimumFractionDigits: indicator.decimals,\n-    maximumFractionDigits: indicator.decimals,\n-  })\n-\n-  return `${value}${indicator.unit === '원' ? '' : ' '}${indicator.unit}`\n-}\n-\n-/** 변화량에 방향 기호와 비교 기준 단위를 더한다. */\n-export function formatIndicatorChange(indicator: Indicator) {\n-  if (indicator.change === null) return '비교값 없음'\n-\n-  const prefix = indicator.change > 0 ? '+' : ''\n-  return `${prefix}${indicator.change.toLocaleString('ko-KR')}${indicator.changeUnit ? ` ${indicator.changeUnit}` : ''}`\n-}\n-\n-/** 최신값 API와 예시 변화량·차트를 혼동하지 않도록 데이터 상태를 우선 표시한다. */\n-export function formatIndicatorContext(indicator: Indicator) {\n-  switch (indicator.dataStatus) {\n-    case 'loading':\n-      return '최신값 불러오는 중'\n-    case 'live':\n-      return '최신 관측값 · 차트 예시'\n-    case 'stale':\n-      return '이전 수집값 · 차트 예시'\n-    case 'error':\n-      return '연결 실패 · 예시값'\n-    default:\n-      return formatIndicatorChange(indicator)\n-  }\n-}\n-\n-/** ISO 형태의 기준일을 짧은 한국어 화면 표기로 변환한다. */\n-export function formatDataDate(value: string) {\n-  return value.replaceAll('-', '.')\n-}\n-\n-/** 데이터 수집 주기의 영문 코드를 화면용 한국어로 변환한다. */\n-export function formatFrequency(frequency: DataFrequency) {\n-  return frequencyLabels[frequency]\n-}\n-\n-/** 비교 패널의 숫자를 부호와 단위가 포함된 문자열로 변환한다. */\n-export function formatComparisonValue(value: number, unit: string) {\n-  const formatted = value.toLocaleString('ko-KR', {\n-    minimumFractionDigits: 1,\n-    maximumFractionDigits: 1,\n-  })\n-\n-  return `${formatted}${unit === '원' ? '' : ' '}${unit}`\n-}\n-\n-export const cycleLabels: Record<MarketRegime['cycle'], string> = {\n-  recovery: '회복 중',\n-  expansion: '확장',\n-  slowdown: '경기 둔화',\n-  contraction: '경기 위축',\n-}\n-\n-export const inflationLabels: Record<MarketRegime['inflation'], string> = {\n-  easing: '물가 부담 완화',\n-  neutral: '물가 안정',\n-  pressure: '물가 부담 증가',\n-}\n-\n-export const riskLabels: Record<MarketRegime['risk'], string> = {\n-  riskOn: '긍정적',\n-  neutral: '중립',\n-  riskOff: '주의 필요',\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketFormat.ts",
+          "old_path": "frontend/src/utils/marketFormat.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881394": []
+  }
+}

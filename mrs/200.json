@@ -1,0 +1,802 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949485,
+    "iid": 200,
+    "project_id": 1444456,
+    "title": "feat(be): 화면이 요청에 실을 규칙 버전과 기본 비용 조건을 읽는 조회를 연다",
+    "description": "# 작업 내용 요약\n\n003 전략 설정 화면이 `POST /backtests`에 실을 `strategy.rulesVersion`(필수)과 비용 조건을 읽을 HTTP 경로가 없어 '분석하기'가 막혀 있었습니다. `GET /backtests/registry`를 엽니다.\n\n기존 `StrategyRulesService.findAll()`·`CostProfileService.resolve(null)`를 붙이는 조회라 새 서비스·저장소·쿼리가 없습니다. 로그인을 요구하지 않습니다.\n\nspec 004 T025(Phase 9). T021(비용 프로필 확정 행)보다 먼저 머지해야 합니다. 기본 비용이 바뀌기 전에 화면이 받은 버전을 명시해 보내고 있어야 합니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-326 `[BE] 003 화면이 규칙 버전과 기본 비용 버전을 읽는 GET /backtests/registry를 연다`\n- 관련: -324(PD-03·04·07 확정 문서화, 이 Task를 만든 결정)\n\n# 주요 변경 사항\n\n- **`GET /backtests/registry`** — `{ strategyRules: [{ strategyId, rulesVersion, status, provisional }], defaultCostProfile: { version, provisional, commissionBps, spreadBps, slippageBps, taxBps } }`. 비용 수치는 다른 응답과 같이 문자열 decimal(bps).\n- **비용 수치 자리수를 바로잡았습니다.** 컬럼이 `NUMERIC(8,4)`라 실제 값은 `\"5.0000\"`인데 계약 예시가 `\"5\"`로 적혀 있었습니다. `contracts/rest-api.md`(이미 dev에 있던 것)와 README §1.11을 실제 값으로 고치고, 화면이 문자열을 그대로 보여 주지 말고 수치로 파싱하라는 한 줄을 더했습니다. 리뷰에서 \"테스트가 값을 단언하지 않는다\"는 지적을 받아 단언을 좁혔더니 나온 오류입니다.\n- **003 tasks.md의 차단 표시를 해소로 바꿨습니다.** \"004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단\"이 이 MR로 사실이 아니게 됩니다. 003의 관례(취소선 + 티켓 링크)를 따랐고, 남은 003 작업 둘(registry 소비와 비용 버전 명시 전송, 등록표 `allocationMethod` 교체)을 그 자리에 적었습니다.\n- **규칙 명세(`spec`)는 싣지 않습니다.** 화면이 쓰는 것은 버전 문자열과 고를 수 있는지 여부뿐이고, 명세는 접수 때 워커로 복사되는 실행 입력입니다. 조회 응답에 두면 같은 값이 두 계약에 살게 됩니다.\n- **`PENDING_DECISION` 행을 거르지 않습니다.** 그 상태가 화면이 '분석하기'를 막는 근거입니다. 걸러내면 \"없는 전략\"과 \"아직 못 고르는 전략\"이 화면에서 같아집니다.\n- 로그인 불필요. 등록표는 사용자 데이터가 아니고 003 등록표 조회와 같은 성격입니다.\n- `docs/specs/backtest-api/README.md` §1.11 추가. **`costProfileVersion`을 비우지 말고 받은 버전을 명시해 보내라**는 요청을 계약에 적었습니다.\n- 004 tasks.md: T025 `[x]`와 구현 시 결정. **T024·T026을 「다른 spec에 넘긴 것」 절로 옮겼습니다**(아래 리뷰 포인트).\n\n# 테스트\n\n- [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` — **1587건, 실패 12, skip 3**\n  - **실패 12건은 이 MR과 무관합니다.** 같은 명령을 dev(`5c25d67`)에서 그대로 돌려 기준선을 떴고 `LearningPublicApiIT` 9 · `ResultApiIT` 3으로 동일합니다. 여러 IT가 각각 \"열린\" 대응표 버전을 넣는데 `uk_sector_etf_map_version_open`이 하나만 허용하고 Testcontainers 컨테이너를 스위트가 공유해서 생기는 순서 의존 실패입니다. 이 MR의 IT는 그 표를 건드리지 않습니다.\n  - skip 3은 늘 그 3건(시장 실API 1, 뉴스 성능 2)입니다.\n- [x] `BacktestRegistryApiIT` 신설 — 로그인 없이 200, 시드 여섯 식별자, 전략당 한 행, `REGISTERED` 정확히 4행, 역변동성 `provisional=true`, 섹터 모멘텀 `PENDING_DECISION`, 기본 비용 버전과 bps 네 값.\n- [x] `BacktestControllerTest`에 `@MockitoBean` 둘 추가 — 컨트롤러 생성자에 서비스가 늘어 `@WebMvcTest` 컨텍스트가 뜨지 않았습니다.\n- 별도 준비 없이 마이그레이션이 채운 행을 그대로 단언합니다. `hasSize(1)`로 \"전략당 한 행\"을 고정해 두어, 나중에 버전이 늘면(Phase 10) 이 테스트가 먼저 깨지고 화면 계약을 다시 보게 됩니다.\n\n# 리뷰 포인트\n\n- **경로가 `GET /backtests/{backtestId}`와 겹쳐 보입니다.** Spring이 리터럴 경로를 패턴 변수보다 먼저 고르므로 동작합니다. `registry`라는 `backtestId`는 형식상 만들어지지 않습니다.\n- **`TARGET_RISK_OVERLAY` 행이 함께 나갑니다.** 전략이 아니라 시나리오 오버레이 규칙이지만 같은 표에 있습니다. 화면이 `strategyId`로 조인하면 자연히 빠집니다. 거르는 코드를 두면 004가 003 화면의 조인 방식을 가정하게 되어 두지 않았습니다.\n- **T024·T026을 004 tasks.md의 번호 Task에서 빼고 003 문서에 적었습니다.** 둘 다 003 소유(등록표와 화면 코드)라 004가 번호와 티켓을 들고 있으면 같은 일이 두 곳에서 관리됩니다. AGENTS.md \"곁가지는 티켓으로 만들지 않는다. 티켓으로 세울지는 사람이 정한다\"를 따랐습니다. 004에는 순서(T021의 선행, Phase 9 순서 5단계 \"발표 전 필수\")만 남기고, 실제 할 일은 003 tasks.md의 차단 항목에 옮겼습니다. **003 담당자 확인 부탁드립니다** — 남은 둘의 범위가 맞는지, 티켓을 그쪽에서 만들어 주실 수 있는지.\n- 응답을 `strategy` 도메인이 아니라 `backtest`에서 여는 이유: `strategy_rules`·`cost_profile`은 backtest 도메인 소유이고, 003 등록표 응답에 실으면 backend/CLAUDE.md \"strategy는 backtest를 참조하지 않는다\"가 뒤집힙니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- 003 화면 연결(registry 소비, `costProfileVersion` 명시 전송)은 003 소유입니다. 머지 후 통보합니다.\n- 버전 교체(`/2`·`SUPERSEDED`)와 옛 버전 요청 처리는 Phase 10 T029입니다. 발표 전에는 규칙을 제자리에서 갱신해 버전이 늘지 않습니다.",
+    "state": "merged",
+    "created_at": "2026-09-17T17:30:35.161+09:00",
+    "updated_at": "2026-09-17T17:57:28.477+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-17T17:57:28.003+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/326-backtest-registry",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+    "merge_commit_sha": "fbec7b4c3c871383e99f6ba7fc26ec5f0aeafbb8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:30:38.672+09:00",
+    "reference": "!200",
+    "references": {
+      "short": "!200",
+      "relative": "!200",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!200"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/200",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949485,
+    "iid": 200,
+    "project_id": 1444456,
+    "title": "feat(be): 화면이 요청에 실을 규칙 버전과 기본 비용 조건을 읽는 조회를 연다",
+    "description": "# 작업 내용 요약\n\n003 전략 설정 화면이 `POST /backtests`에 실을 `strategy.rulesVersion`(필수)과 비용 조건을 읽을 HTTP 경로가 없어 '분석하기'가 막혀 있었습니다. `GET /backtests/registry`를 엽니다.\n\n기존 `StrategyRulesService.findAll()`·`CostProfileService.resolve(null)`를 붙이는 조회라 새 서비스·저장소·쿼리가 없습니다. 로그인을 요구하지 않습니다.\n\nspec 004 T025(Phase 9). T021(비용 프로필 확정 행)보다 먼저 머지해야 합니다. 기본 비용이 바뀌기 전에 화면이 받은 버전을 명시해 보내고 있어야 합니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-326 `[BE] 003 화면이 규칙 버전과 기본 비용 버전을 읽는 GET /backtests/registry를 연다`\n- 관련: -324(PD-03·04·07 확정 문서화, 이 Task를 만든 결정)\n\n# 주요 변경 사항\n\n- **`GET /backtests/registry`** — `{ strategyRules: [{ strategyId, rulesVersion, status, provisional }], defaultCostProfile: { version, provisional, commissionBps, spreadBps, slippageBps, taxBps } }`. 비용 수치는 다른 응답과 같이 문자열 decimal(bps).\n- **비용 수치 자리수를 바로잡았습니다.** 컬럼이 `NUMERIC(8,4)`라 실제 값은 `\"5.0000\"`인데 계약 예시가 `\"5\"`로 적혀 있었습니다. `contracts/rest-api.md`(이미 dev에 있던 것)와 README §1.11을 실제 값으로 고치고, 화면이 문자열을 그대로 보여 주지 말고 수치로 파싱하라는 한 줄을 더했습니다. 리뷰에서 \"테스트가 값을 단언하지 않는다\"는 지적을 받아 단언을 좁혔더니 나온 오류입니다.\n- **003 tasks.md의 차단 표시를 해소로 바꿨습니다.** \"004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단\"이 이 MR로 사실이 아니게 됩니다. 003의 관례(취소선 + 티켓 링크)를 따랐고, 남은 003 작업 둘(registry 소비와 비용 버전 명시 전송, 등록표 `allocationMethod` 교체)을 그 자리에 적었습니다.\n- **규칙 명세(`spec`)는 싣지 않습니다.** 화면이 쓰는 것은 버전 문자열과 고를 수 있는지 여부뿐이고, 명세는 접수 때 워커로 복사되는 실행 입력입니다. 조회 응답에 두면 같은 값이 두 계약에 살게 됩니다.\n- **`PENDING_DECISION` 행을 거르지 않습니다.** 그 상태가 화면이 '분석하기'를 막는 근거입니다. 걸러내면 \"없는 전략\"과 \"아직 못 고르는 전략\"이 화면에서 같아집니다.\n- 로그인 불필요. 등록표는 사용자 데이터가 아니고 003 등록표 조회와 같은 성격입니다.\n- `docs/specs/backtest-api/README.md` §1.11 추가. **`costProfileVersion`을 비우지 말고 받은 버전을 명시해 보내라**는 요청을 계약에 적었습니다.\n- 004 tasks.md: T025 `[x]`와 구현 시 결정. **T024·T026을 「다른 spec에 넘긴 것」 절로 옮겼습니다**(아래 리뷰 포인트).\n\n# 테스트\n\n- [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` — **1587건, 실패 12, skip 3**\n  - **실패 12건은 이 MR과 무관합니다.** 같은 명령을 dev(`5c25d67`)에서 그대로 돌려 기준선을 떴고 `LearningPublicApiIT` 9 · `ResultApiIT` 3으로 동일합니다. 여러 IT가 각각 \"열린\" 대응표 버전을 넣는데 `uk_sector_etf_map_version_open`이 하나만 허용하고 Testcontainers 컨테이너를 스위트가 공유해서 생기는 순서 의존 실패입니다. 이 MR의 IT는 그 표를 건드리지 않습니다.\n  - skip 3은 늘 그 3건(시장 실API 1, 뉴스 성능 2)입니다.\n- [x] `BacktestRegistryApiIT` 신설 — 로그인 없이 200, 시드 여섯 식별자, 전략당 한 행, `REGISTERED` 정확히 4행, 역변동성 `provisional=true`, 섹터 모멘텀 `PENDING_DECISION`, 기본 비용 버전과 bps 네 값.\n- [x] `BacktestControllerTest`에 `@MockitoBean` 둘 추가 — 컨트롤러 생성자에 서비스가 늘어 `@WebMvcTest` 컨텍스트가 뜨지 않았습니다.\n- 별도 준비 없이 마이그레이션이 채운 행을 그대로 단언합니다. `hasSize(1)`로 \"전략당 한 행\"을 고정해 두어, 나중에 버전이 늘면(Phase 10) 이 테스트가 먼저 깨지고 화면 계약을 다시 보게 됩니다.\n\n# 리뷰 포인트\n\n- **경로가 `GET /backtests/{backtestId}`와 겹쳐 보입니다.** Spring이 리터럴 경로를 패턴 변수보다 먼저 고르므로 동작합니다. `registry`라는 `backtestId`는 형식상 만들어지지 않습니다.\n- **`TARGET_RISK_OVERLAY` 행이 함께 나갑니다.** 전략이 아니라 시나리오 오버레이 규칙이지만 같은 표에 있습니다. 화면이 `strategyId`로 조인하면 자연히 빠집니다. 거르는 코드를 두면 004가 003 화면의 조인 방식을 가정하게 되어 두지 않았습니다.\n- **T024·T026을 004 tasks.md의 번호 Task에서 빼고 003 문서에 적었습니다.** 둘 다 003 소유(등록표와 화면 코드)라 004가 번호와 티켓을 들고 있으면 같은 일이 두 곳에서 관리됩니다. AGENTS.md \"곁가지는 티켓으로 만들지 않는다. 티켓으로 세울지는 사람이 정한다\"를 따랐습니다. 004에는 순서(T021의 선행, Phase 9 순서 5단계 \"발표 전 필수\")만 남기고, 실제 할 일은 003 tasks.md의 차단 항목에 옮겼습니다. **003 담당자 확인 부탁드립니다** — 남은 둘의 범위가 맞는지, 티켓을 그쪽에서 만들어 주실 수 있는지.\n- 응답을 `strategy` 도메인이 아니라 `backtest`에서 여는 이유: `strategy_rules`·`cost_profile`은 backtest 도메인 소유이고, 003 등록표 응답에 실으면 backend/CLAUDE.md \"strategy는 backtest를 참조하지 않는다\"가 뒤집힙니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- 003 화면 연결(registry 소비, `costProfileVersion` 명시 전송)은 003 소유입니다. 머지 후 통보합니다.\n- 버전 교체(`/2`·`SUPERSEDED`)와 옛 버전 요청 처리는 Phase 10 T029입니다. 발표 전에는 규칙을 제자리에서 갱신해 버전이 늘지 않습니다.",
+    "state": "merged",
+    "created_at": "2026-09-17T17:30:35.161+09:00",
+    "updated_at": "2026-09-17T17:57:28.477+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-17T17:57:28.003+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/326-backtest-registry",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+    "merge_commit_sha": "fbec7b4c3c871383e99f6ba7fc26ec5f0aeafbb8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:30:38.672+09:00",
+    "reference": "!200",
+    "references": {
+      "short": "!200",
+      "relative": "!200",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!200"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/200",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-17T17:33:47.527+09:00",
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 203386,
+      "iid": 126,
+      "project_id": 1444456,
+      "sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+      "ref": "feat(be)/326-backtest-registry",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T17:33:47.393+09:00",
+      "updated_at": "2026-09-17T17:51:26.815+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203386"
+    },
+    "head_pipeline": {
+      "id": 203386,
+      "iid": 126,
+      "project_id": 1444456,
+      "sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+      "ref": "feat(be)/326-backtest-registry",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T17:33:47.393+09:00",
+      "updated_at": "2026-09-17T17:51:26.815+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203386",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T17:33:47.527+09:00",
+      "finished_at": "2026-09-17T17:51:26.807+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203386",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "5c25d67afe8c3fe8199acf5e327044d3f4c1025e",
+      "head_sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+      "start_sha": "e44299091945d12e29d9e279f9463ff5adbd261c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "d397a0421509498cf44b023988087a56a46a630e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827485,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T17:30:35.307+09:00",
+          "updated_at": "2026-09-17T17:30:35.311+09:00",
+          "system": true,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bc04a65f0fe91391f2f65be410b12417adcfec19",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827486,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T17:30:35.403+09:00",
+          "updated_at": "2026-09-17T17:30:35.422+09:00",
+          "system": true,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "88eda302170a214a02e3a554b3ebbf771fbffdd3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827491,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 테스트 및 문서화**: 새로운 엔드포인트(`GET /backtests/registry`) 추가에 맞춰 `BacktestRegistryApiIT` 통합 테스트를 신설하고, API 문서(`README.md`)와 계약 명세(`rest-api.md`)를 누락 없이 정확하게 갱신했습니다.\n- **예외 상황 고려**: 로그인 불필요 사유, `PENDING_DECISION` 상태 필터링 제외 이유, 그리고 `TARGET_RISK_OVERLAY` 행 처리 방식 등을 상세히 문서화하고 PR 설명에 명확히 밝혀 협업 시 오해의 소지를 잘 차단했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **인증 무관 접근 테스트**: 인증 토큰이 없는 상태에서 `GET /backtests/registry` 요청 시 200 OK와 함께 정상적인 JSON 응답이 반환되는지 확인하는 시나리오 (`BacktestRegistryApiIT`에서 이미 커버 중)\n- **응답 데이터 구조 검증 시나리오**: 응답 내 `strategyRules` 목록에 필수 필드(`strategyId`, `rulesVersion`, `status`, `provisional`)가 모두 포함되어 있으며, `defaultCostProfile`의 비용 수치들이 문자열 형식의 decimal 소수점(`NUMERIC(8,4)` 포맷)으로 올바르게 직렬화되는지 검증\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:45842bbc58bd3796e1043f1deb9b9e5f2611c6e7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T17:30:42.833+09:00",
+          "updated_at": "2026-09-17T17:30:42.833+09:00",
+          "system": false,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "82763215cda5298b03050a4765e3a1c97ef8ceb5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827495,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T17:31:01.023+09:00",
+          "updated_at": "2026-09-17T17:31:01.032+09:00",
+          "system": true,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3b57371138e02e94ffd664d147e15782a847359b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827728,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 45842bbc58bd3796e1043f1deb9b9e5f2611c6e7 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T17:45:21.887+09:00",
+          "updated_at": "2026-09-17T17:45:21.891+09:00",
+          "system": true,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bda99decb9b296c2e642117c6e245c39e5c8f0be",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827842,
+          "type": null,
+          "body": "재은님 그사이에 dev가 업데이트돼서 git  이력 때문에 merge가 안됩니다 다시 push 해주세요",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:52:41.443+09:00",
+          "updated_at": "2026-09-17T17:52:41.443+09:00",
+          "system": false,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f6e00a633d74886f11a1aed8fd767a725ad69892",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827884,
+          "type": null,
+          "body": "canceled the automatic merge",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T17:54:51.001+09:00",
+          "updated_at": "2026-09-17T17:54:51.004+09:00",
+          "system": true,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e31b9dd13ea859ccf1ce0bb08caa85f396f12513",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827919,
+          "type": null,
+          "body": "mentioned in commit fbec7b4c3c871383e99f6ba7fc26ec5f0aeafbb8",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T17:57:28.013+09:00",
+          "updated_at": "2026-09-17T17:57:28.016+09:00",
+          "system": true,
+          "noteable_id": 949485,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 200,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2215556,
+      "head_commit_sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+      "base_commit_sha": "5c25d67afe8c3fe8199acf5e327044d3f4c1025e",
+      "start_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "created_at": "2026-09-17T17:30:36.040+09:00",
+      "merge_request_id": 949485,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "660df8ca7342348757c86c0135b1cc65297aad97"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2215556,
+      "head_commit_sha": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+      "base_commit_sha": "5c25d67afe8c3fe8199acf5e327044d3f4c1025e",
+      "start_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "created_at": "2026-09-17T17:30:36.040+09:00",
+      "merge_request_id": 949485,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "660df8ca7342348757c86c0135b1cc65297aad97",
+      "commits": [
+        {
+          "id": "45842bbc58bd3796e1043f1deb9b9e5f2611c6e7",
+          "short_id": "45842bbc",
+          "created_at": "2026-09-17T17:12:58.000+09:00",
+          "parent_ids": [
+            "bc3f6883d6844421ec73cedcdc226d78115aec2f"
+          ],
+          "title": "fix(be): 조회 응답의 비용 수치 자리수를 계약 예시와 맞추고 단언을 값으로 좁힌다",
+          "message": "fix(be): 조회 응답의 비용 수치 자리수를 계약 예시와 맞추고 단언을 값으로 좁힌다\n\ncost_profile 의 bps 컬럼이 NUMERIC(8,4) 라 직렬화가 \"5.0000\" 인데 계약 예시는 \"5\" 였다.\nREADME §1.11 과 contracts/rest-api.md 예시를 실제 값으로 고치고, 화면이 문자열을 그대로\n보여 주지 말고 수치로 파싱하라는 한 줄을 더한다.\n\nIT 는 문자열 여부 대신 네 값을 정확히 단언하고 REGISTERED 행이 넷인지 센다 — 이 단언이\n위 예시 오류를 잡았다. 003 tasks.md 의 \"004 조회 수단 미확정\" 차단은 해소로 표시하고\n남은 003 작업 둘(registry 소비·등록표 allocationMethod 교체)을 적는다.\n\nJira S15P21E205-326\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-17T17:12:58.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-17T17:12:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/45842bbc58bd3796e1043f1deb9b9e5f2611c6e7"
+        },
+        {
+          "id": "bc3f6883d6844421ec73cedcdc226d78115aec2f",
+          "short_id": "bc3f6883",
+          "created_at": "2026-09-17T16:42:39.000+09:00",
+          "parent_ids": [
+            "5c25d67afe8c3fe8199acf5e327044d3f4c1025e"
+          ],
+          "title": "feat(be): 화면이 요청에 실을 규칙 버전과 기본 비용 조건을 읽는 조회를 연다",
+          "message": "feat(be): 화면이 요청에 실을 규칙 버전과 기본 비용 조건을 읽는 조회를 연다\n\n003 화면이 POST /backtests 에 실을 strategy.rulesVersion 과 비용 조건을 읽을 경로가 없어\n'분석하기'가 막혀 있었다. GET /backtests/registry 를 열고 등록표 행을 그대로 내보낸다.\n기존 StrategyRulesService.findAll 과 CostProfileService.resolve(null) 을 붙이는 조회라\n새 서비스·저장소가 없고 로그인을 요구하지 않는다.\n\n규칙 명세(spec)는 싣지 않는다 — 화면이 쓰는 것은 버전과 고를 수 있는지 여부뿐이고 명세는\n접수 때 워커로 복사되는 실행 입력이다. PENDING_DECISION 행은 거르지 않는다 — 그 상태가\n화면이 '분석하기'를 막는 근거다.\n\n004 tasks.md 의 T024·T026 은 003 소유라 「다른 spec에 넘긴 것」으로 옮긴다.\n\nJira S15P21E205-326\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-17T16:42:39.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-17T16:42:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bc3f6883d6844421ec73cedcdc226d78115aec2f"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -15,6 +15,8 @@ import com.ssafy.thorp.backtest.application.service.BacktestCancelService;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n import com.ssafy.thorp.backtest.application.service.BacktestRetryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n+import com.ssafy.thorp.backtest.application.service.CostProfileService;\n+import com.ssafy.thorp.backtest.application.service.StrategyRulesService;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;\n import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;\n@@ -23,6 +25,7 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;\n+import com.ssafy.thorp.backtest.presentation.response.BacktestRegistryResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestRetryResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;\n@@ -60,18 +63,39 @@ public class BacktestController {\n     private final BacktestCancelService cancelService;\n     private final BacktestRetryService retryService;\n     private final CurrentRequester currentRequester;\n+    private final StrategyRulesService strategyRulesService;\n+    private final CostProfileService costProfileService;\n \n     public BacktestController(\n             BacktestService backtestService,\n             BacktestResultQueryService queryService,\n             BacktestCancelService cancelService,\n             BacktestRetryService retryService,\n-            CurrentRequester currentRequester) {\n+            CurrentRequester currentRequester,\n+            StrategyRulesService strategyRulesService,\n+            CostProfileService costProfileService) {\n         this.backtestService = backtestService;\n         this.queryService = queryService;\n         this.cancelService = cancelService;\n         this.retryService = retryService;\n         this.currentRequester = currentRequester;\n+        this.strategyRulesService = strategyRulesService;\n+        this.costProfileService = costProfileService;\n+    }\n+\n+    /**\n+     * 화면이 요청에 실을 규칙 버전과 기본 비용 조건(T025, README §1.11). 등록표 행을 그대로 내보낸다.\n+     *\n+     * <p>로그인을 요구하지 않는다 — 사용자 데이터가 아니라 등록표이고, 003 등록표 조회와 같은 성격이다.\n+     *\n+     * <p>{@code /{backtestId}}와 겹치지 않는다: Spring 은 리터럴 경로를 패턴 변수보다 먼저 고른다.\n+     */\n+    @GetMapping(\"/registry\")\n+    public ResponseEntity<ApiResponse<BacktestRegistryResponse>> registry() {\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(\n+                        BacktestRegistryResponse.of(\n+                                strategyRulesService.findAll(), costProfileService.resolve(null))));\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,64 @@\n+package com.ssafy.thorp.backtest.presentation.response;\n+\n+import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n+import com.ssafy.thorp.backtest.domain.model.CostProfile;\n+import com.ssafy.thorp.backtest.domain.model.RulesStatus;\n+import com.ssafy.thorp.backtest.domain.model.StrategyRules;\n+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n+import java.math.BigDecimal;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /backtests/registry} 응답(spec 004 T025). 계약은 {@code docs/specs/backtest-api/README.md}\n+ * §1.11과 {@code specs/004-backtest-execution/contracts/rest-api.md}.\n+ *\n+ * <p>003 화면이 요청에 실을 {@code strategy.rulesVersion}(필수)과, 비워 보내지 않고 명시할 기본 비용 버전을 여기서 읽는다(003\n+ * FR-010). 등록표 행을 그대로 내보낼 뿐 새 값을 만들지 않는다 — 워커가 신뢰하는 것은 접수 때 복사된 규칙 명세이고 이 응답은 그 명세의 이름표다.\n+ *\n+ * @param strategyRules 전략 규칙 행. 발표 전에는 규칙을 제자리에서 갱신하므로 전략당 한 행이다(버전 교체와 옛 버전 요청 처리는 Phase 10). 화면은\n+ *     {@link RulesStatus#REGISTERED} 행의 {@code rulesVersion}을 싣고 {@link\n+ *     RulesStatus#PENDING_DECISION}이면 '분석하기'를 막는다 — 그래서 상태를 걸러내지 않고 그대로 내보낸다\n+ * @param defaultCostProfile 요청이 {@code costProfileVersion}을 비웠을 때 서버가 쓰는 비용 조건. 화면은 이 {@code\n+ *     version}을 그대로 명시해 보낸다 — 기본값이 배포로 바뀌어도(T021) 사용자가 본 조건이 그대로 적용되게 한다\n+ */\n+public record BacktestRegistryResponse(\n+        List<StrategyRule> strategyRules, DefaultCostProfile defaultCostProfile) {\n+\n+    public static BacktestRegistryResponse of(List<StrategyRules> rules, CostProfile costProfile) {\n+        return new BacktestRegistryResponse(\n+                rules.stream().map(StrategyRule::of).toList(), DefaultCostProfile.of(costProfile));\n+    }\n+\n+    /**\n+     * 규칙 명세({@code spec})는 싣지 않는다. 화면이 쓰는 것은 버전 문자열과 고를 수 있는지 여부뿐이고, 명세는 접수 때 워커로 복사되는 실행 입력이라 조회\n+     * 응답에 둘 이유가 없다.\n+     */\n+    public record StrategyRule(\n+            String strategyId, String rulesVersion, RulesStatus status, boolean provisional) {\n+\n+        static StrategyRule of(StrategyRules rules) {\n+            return new StrategyRule(\n+                    rules.strategyId(), rules.rulesVersion(), rules.status(), rules.provisional());\n+        }\n+    }\n+\n+    /** 비용 수치는 다른 응답과 같이 문자열 decimal 이다(단위 bps). */\n+    public record DefaultCostProfile(\n+            String version,\n+            boolean provisional,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal commissionBps,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal spreadBps,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal slippageBps,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal taxBps) {\n+\n+        static DefaultCostProfile of(CostProfile profile) {\n+            return new DefaultCostProfile(\n+                    profile.version(),\n+                    profile.provisional(),\n+                    profile.commissionBps(),\n+                    profile.spreadBps(),\n+                    profile.slippageBps(),\n+                    profile.taxBps());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestRegistryResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestRegistryResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,6 +29,8 @@ import com.ssafy.thorp.backtest.application.service.BacktestCancelService;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n import com.ssafy.thorp.backtest.application.service.BacktestRetryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n+import com.ssafy.thorp.backtest.application.service.CostProfileService;\n+import com.ssafy.thorp.backtest.application.service.StrategyRulesService;\n import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;\n@@ -91,6 +93,8 @@ class BacktestControllerTest {\n     @MockitoBean private BacktestResultQueryService queryService;\n     @MockitoBean private BacktestCancelService cancelService;\n     @MockitoBean private BacktestRetryService retryService;\n+    @MockitoBean private StrategyRulesService strategyRulesService;\n+    @MockitoBean private CostProfileService costProfileService;\n \n     private static BacktestJobResult accepted() {\n         return new BacktestJobResult(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+package com.ssafy.thorp.backtest.presentation.controller;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.stream.Collectors;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * {@code GET /backtests/registry}(spec 004 T025, README §1.11).\n+ *\n+ * <p>003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 시드 등록표에서 그대로 읽는지 본다. 마이그레이션이 채운 행을 그대로 단언하므로 별도 준비가 없다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.backtest.liveness.interval=PT1H\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class BacktestRegistryApiIT extends PostgresTestSupport {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private ObjectMapper objectMapper;\n+\n+    @Test\n+    @DisplayName(\"로그인 없이 등록표 행과 서버 기본 비용 조건을 그대로 돌려준다\")\n+    void exposesSeededRulesAndDefaultCostProfile() throws Exception {\n+        String body =\n+                mockMvc.perform(get(\"/backtests/registry\"))\n+                        .andExpect(status().isOk())\n+                        .andExpect(jsonPath(\"$.success\").value(true))\n+                        .andExpect(\n+                                jsonPath(\"$.data.defaultCostProfile.version\")\n+                                        .value(\"PROVISIONAL-DEMO-1\"))\n+                        .andExpect(jsonPath(\"$.data.defaultCostProfile.provisional\").value(true))\n+                        // 비용 수치는 다른 응답과 같이 문자열 decimal 이고, 값은 시드 행 그대로다.\n+                        // 003 이 \"비용 조건을 읽기 전용으로 확인\"(FR-010)하는 값이라 정확히 고정한다.\n+                        // 소수 네 자리는 컬럼이 NUMERIC(8,4) 라서다 — 화면은 문자열을 그대로 믿지 말고\n+                        // 수치로 파싱해 표시한다.\n+                        .andExpect(\n+                                jsonPath(\"$.data.defaultCostProfile.commissionBps\").value(\"0.0000\"))\n+                        .andExpect(jsonPath(\"$.data.defaultCostProfile.spreadBps\").value(\"0.0000\"))\n+                        .andExpect(\n+                                jsonPath(\"$.data.defaultCostProfile.slippageBps\").value(\"5.0000\"))\n+                        .andExpect(jsonPath(\"$.data.defaultCostProfile.taxBps\").value(\"0.0000\"))\n+                        .andReturn()\n+                        .getResponse()\n+                        .getContentAsString();\n+\n+        Map<String, List<JsonNode>> byStrategy =\n+                nodes(objectMapper.readTree(body).at(\"/data/strategyRules\"))\n+                        .collect(Collectors.groupingBy(n -> n.get(\"strategyId\").asText()));\n+\n+        // 시드(V20260911110000): 다섯 전략 + TARGET_RISK_OVERLAY.\n+        // 오버레이는 전략이 아니지만 같은 표라 그대로 나가고, 화면은 strategyId 로 조인만 하므로 무해하다.\n+        assertThat(byStrategy.keySet())\n+                .containsExactlyInAnyOrder(\n+                        \"FIXED_WEIGHT\",\n+                        \"EQUAL_WEIGHT\",\n+                        \"INVERSE_VOLATILITY\",\n+                        \"SECTOR_MOMENTUM\",\n+                        \"MINIMUM_VARIANCE\",\n+                        \"TARGET_RISK_OVERLAY\");\n+\n+        // 시드의 REGISTERED 는 넷(고정 비중·동일 비중·역변동성·목표 위험 오버레이)이고\n+        // 나머지 둘(섹터 모멘텀·최소분산)은 PD-03·04 구현 전이라 PENDING_DECISION 이다.\n+        assertThat(\n+                        nodes(objectMapper.readTree(body).at(\"/data/strategyRules\"))\n+                                .filter(row -> \"REGISTERED\".equals(row.get(\"status\").asText()))\n+                                .count())\n+                .isEqualTo(4);\n+\n+        // 전략당 한 행 — 화면이 어느 버전을 실을지 고를 필요가 없다는 것이 이 API 의 계약이다.\n+        // 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다(버전 교체는 Phase 10).\n+        byStrategy.forEach((strategyId, rows) -> assertThat(rows).as(strategyId).hasSize(1));\n+\n+        JsonNode inverseVolatility = byStrategy.get(\"INVERSE_VOLATILITY\").get(0);\n+        assertThat(inverseVolatility.get(\"rulesVersion\").asText()).isEqualTo(\"1\");\n+        assertThat(inverseVolatility.get(\"status\").asText()).isEqualTo(\"REGISTERED\");\n+        // PD-02 미확정이라 임시 규칙이다. 화면은 이 값으로 \"임시\" 표시를 켠다.\n+        assertThat(inverseVolatility.get(\"provisional\").asBoolean()).isTrue();\n+\n+        // PENDING_DECISION 을 걸러내지 않는다 — 화면이 '분석하기'를 막을 근거가 이 상태다.\n+        JsonNode momentum = byStrategy.get(\"SECTOR_MOMENTUM\").get(0);\n+        assertThat(momentum.get(\"status\").asText()).isEqualTo(\"PENDING_DECISION\");\n+        assertThat(momentum.get(\"provisional\").asBoolean()).isFalse();\n+    }\n+\n+    private static java.util.stream.Stream<JsonNode> nodes(JsonNode array) {\n+        List<JsonNode> out = new ArrayList<>();\n+        array.forEach(out::add);\n+        return out.stream();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestRegistryApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestRegistryApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -215,6 +215,34 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 \n - `dataRowsP50`·`dataBytesP50`은 실행이 읽은 자료의 양(가격·지수·기업행위 행 수, 가격 프레임 바이트)의 중앙값 — 데이터 원가(FR-008·원칙 IX)다. 계산(`peakRssP95Mb`)·저장(`result_bytes`)과 함께 건당 원가의 세 갈래를 이룬다. 금액 단가는 없다(PD-06·D19).\n - 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 여기 없다 — RabbitMQ 관리 UI.\n \n+## 1.11 규칙·비용 버전 조회 — `GET /backtests/registry`\n+\n+화면이 `POST /backtests`에 실을 값을 읽는 곳이다(spec 004 T025, 003 FR-010). `strategy.rulesVersion`은 필수이고\n+결과 재현의 기준이라 화면이 지어낼 수 없으며, 비용 조건은 003이 \"현재 버전의 수치·버전·임시 여부를 읽기 전용으로\n+확인\"하도록 요구한다. **로그인이 필요 없다** — 사용자 데이터가 아니라 등록표다.\n+\n+```json\n+{ \"success\": true,\n+  \"data\": { \"strategyRules\": [ { \"strategyId\": \"FIXED_WEIGHT\",       \"rulesVersion\": \"1\", \"status\": \"REGISTERED\",       \"provisional\": false },\n+                              { \"strategyId\": \"INVERSE_VOLATILITY\", \"rulesVersion\": \"1\", \"status\": \"REGISTERED\",       \"provisional\": true  },\n+                              { \"strategyId\": \"SECTOR_MOMENTUM\",    \"rulesVersion\": \"1\", \"status\": \"PENDING_DECISION\", \"provisional\": false } ],\n+            \"defaultCostProfile\": { \"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true,\n+                                    \"commissionBps\": \"0.0000\", \"spreadBps\": \"0.0000\", \"slippageBps\": \"5.0000\", \"taxBps\": \"0.0000\" } },\n+  \"error\": null }\n+```\n+\n+- `strategyRules`는 **전략당 한 행**이다. 화면은 고른 `strategyId`로 조인해 `status`가 `REGISTERED`인 행의\n+  `rulesVersion`을 요청에 싣고, `PENDING_DECISION`이면 '분석하기'를 막는다. 상태를 걸러내지 않고 그대로 내보내는\n+  이유가 이것이다. `TARGET_RISK_OVERLAY` 행도 나가는데 전략이 아니라 시나리오 오버레이 규칙이므로 조인에서 자연히 빠진다.\n+- `provisional=true`는 팀 결정 전 임시 규칙이라는 뜻이다(역변동성은 PD-02 대기). 결과의\n+  `versions.rules.provisional`과 같은 값이다.\n+- **`conditions.costProfileVersion`은 비우지 말고 `defaultCostProfile.version`을 명시해 보낸다.** 비우면 서버\n+  기본값을 쓰는데, 그 기본값이 배포로 바뀌면 화면이 보여 준 비용 조건과 실제 적용된 조건이 갈린다. 재현 기준을 요청에\n+  다 싣는 `rulesVersion` 원칙과 같다. 화면의 \"임시 비용 조건\" 표시는 `defaultCostProfile.provisional`로 판단한다.\n+- 비용 수치는 다른 응답과 같이 **문자열 decimal**이고 단위는 bps다. 컬럼이 `NUMERIC(8,4)`라 소수 네 자리로 나간다(`\"5.0000\"`). 화면은 문자열을 그대로 보여 주지 말고 수치로 파싱해 표시한다.\n+- 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체(`/2`·`SUPERSEDED`)와 옛 버전 요청 처리는\n+  004 tasks Phase 10이다.\n+\n ## 2. 결과 조회\n \n 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec \"API 응답 분리\"). 필드 의미·타입·nullable 규칙은\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,7 +19,7 @@\n - ~~FR-002의 행동 버튼 두 개와 constitution 원칙 II의 충돌~~ — [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II 예외 조항이 2026-09-15 전체 회의 승인을 받아(3.4.0) 해제됐다. B05·B11 착수를 막지 않는다\n - ~~PD-02 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 2026-09-15 확정([data-model](data-model.md) §4-2). T017·B02 착수를 막지 않는다. 최소분산 `estimationMethod`만 004 PD-04 대기로 후보 하나로 시작한다(003 쪽 구조는 막히지 않는다)\n - ~~001 평가 기간 입력 계약과 최소 평가 길이 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 정정. 001이 이미 만든 `EvaluationWindowService`에 호출부만 붙이면 되고, 최소 평가 길이는 사용자가 고르는 항목(FR-011a)으로 확정했다. T042는 001이 호출부를 붙이는 대로 연결한다(001 작업 완료가 남은 선행 조건, 팀 결정 대기가 아니다)\n-- 004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단. PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음\n+- ~~004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단~~ — [S15P21E205-326](https://ssafy.atlassian.net/browse/S15P21E205-326)(004 T025)이 `GET /backtests/registry`를 열어 해소. 응답은 `{strategyRules[{strategyId, rulesVersion, status, provisional}], defaultCostProfile{version, provisional, commissionBps, spreadBps, slippageBps, taxBps}}`로 **버전과 수치가 한 덩이**라 `AnalysisVersions.costRates`가 기대한 모양 그대로다. 계약은 `docs/specs/backtest-api/README.md` §1.11. 남은 003 작업 둘: ① T039·T059가 이 응답을 소비하고 `costProfileVersion`을 **비우지 말고 받은 버전을 명시해** 보낸다(004 T021이 기본 비용을 바꾸면 화면이 본 조건과 갈린다) ② 등록표 `allocationMethod`를 `EQUAL`/`INVERSE_VOLATILITY`로 교체(004 PD-03 ⓪ 확정). PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음\n - 004 상한 재배분 규칙과 워커 메시지 계약 미확정: FR-006·FR-019의 종단 완료 판정 보류\n \n ## Format: `[ID] [P?] [Story] (파트) Description`\n@@ -244,8 +244,9 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n **B10 구현 메모 (S15P21E205-242, `feat(fe)/242-analysis-conditions`)**:\n \n-- **T065의 비용 표시는 통로만 넓혔고 실제 연결은 B06에 남는다(2026-09-17 사용자 선택).** 비용 조건을 조회하는\n-  백엔드 API가 아직 없다(data-model §7 \"확인된 빈 구멍\"). `AnalysisSupport`의 `AnalysisVersions`에 `costRates`(004\n+- **T065의 비용 표시는 통로만 넓혔고 실제 연결은 B06에 남는다(2026-09-17 사용자 선택).** ~~비용 조건을 조회하는\n+  백엔드 API가 아직 없다~~(data-model §7 \"확인된 빈 구멍\") — 2026-09-17 `GET /backtests/registry`(004 T025,\n+  `S15P21E205-326`)가 열렸다. `defaultCostProfile`이 버전과 bps 네 칸을 함께 주므로 `costRates`에 그대로 담긴다. `AnalysisSupport`의 `AnalysisVersions`에 `costRates`(004\n   `CostProfile`의 bps 네 칸)를 더해 **버전과 수치가 한 덩이로** 오게 했다 — 버전만 받는 모양을 두면 화면이 \"적용됨\"만\n   보이게 되고 그것은 FR-010을 충족하지 않는다. 지금 기본 통로는 연결되지 않은 상태라 패널은 \"비용 조건을 확인할 수\n   없습니다\"를 보이고 '분석하기'는 이미 있던 버전 차단으로 막힌다. 위 Quality Gate의 \"B06·B10 실제 연결 차단\"은 그대로다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -93,7 +93,7 @@\n { \"strategyRules\": [ { \"strategyId\": \"INVERSE_VOLATILITY\", \"rulesVersion\": \"1\", \"status\": \"REGISTERED\", \"provisional\": true },\n                      { \"strategyId\": \"SECTOR_MOMENTUM\",    \"rulesVersion\": \"1\", \"status\": \"PENDING_DECISION\", \"provisional\": false } ],\n   \"defaultCostProfile\": { \"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true,\n-                          \"commissionBps\": \"0\", \"spreadBps\": \"0\", \"slippageBps\": \"5\", \"taxBps\": \"0\" } }\n+                          \"commissionBps\": \"0.0000\", \"spreadBps\": \"0.0000\", \"slippageBps\": \"5.0000\", \"taxBps\": \"0.0000\" } }\n ```\n \n - `strategyRules`는 전략당 한 행(`REGISTERED` 또는 `PENDING_DECISION`). 화면은 `REGISTERED` 행의 `rulesVersion`을 싣고 `PENDING_DECISION`이면 '분석하기'를 막는다. `TARGET_RISK_OVERLAY` 행도 나가며 화면은 `strategyId`로 조인만 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/rest-api.md",
+          "old_path": "specs/004-backtest-execution/contracts/rest-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -304,21 +304,26 @@\n   - 결과 기록: 선정 유형, 시점별 선정 섹터·점수, 이력 부족으로 제외된 섹터와 첫 편입 시점, 상한 잔여 현금 비중과 사유(PD-03 ⑤·⑥ 안내 항목). 안내 문구는 \"계산에 필요한 과거 가격 이력이 충분하지 않았다\"\n   - 예외 `kind`(analyze U4): `NO_SELECTION`(조건 통과 섹터 없음 → 전액 현금), `INSUFFICIENT_HISTORY`, `CAP_OVERFLOW_CASH`, 선정 유형 기록(`RELATIVE`·`ABSOLUTE`·`NONE`). T022가 넓힌 계약 목록에 추가\n   - 완료 기준: 네 `selectionMode` × 두 배분 조합이 422 아닌 COMPLETED, `weightsSource=COMPUTED`(FR-026) 단언, 동점·`TOP_PERCENT` 올림·전액 현금·이력 부족 편입 각 단위 테스트, `parameters.maxWeight=40`·topN 2 접수 422, 같은 입력 결과 해시 동일, quickstart S7 개정 반영\n-- [ ] T024 [BE] [교차 spec: 003 소유] (발표 전 필수) 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수\n-  - `parameter-registry.yml`(현재 `1.2.0`) `choices`·라벨(\"변동성이 낮은 섹터에 더 나누기\") 교체, `version` 인상, 계약 §1 픽스처 `registry-response.json`·`contract-registry.yml`·`StrategyRegistryContractTest` 갱신, 003 data-model 표의 문구 수정. 화면 라벨은 등록표에서 오므로(003 T079) FE 코드 변경 없음\n-  - 저장된 설정에 `SCORE_WEIGHTED`가 있으면 접수 관문이 등록표 밖 값으로 거절한다 — 003의 설정 이력 규칙에 따라 옛 버전 설정 처리 확인\n-  - **화면 판정 규칙 추가(analyze I6)**: 003 등록표의 검증 규칙은 `SECTOR_MOMENTUM`에 `TOP_N_EXCEEDS_UNIVERSE`만 있고 다른 전략은 `maxWeight × UNIVERSE_SIZE < 100`을 쓴다. 그대로면 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다. `SECTOR_MOMENTUM`에 `maxWeight × topN < 100`(`appliesWhen selectionMode=TOP_N`)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent/100) < 100`(`TOP_PERCENT`) 규칙을 같은 버전 인상에 넣어 화면·접수·007 판정을 맞춘다\n-  - 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지, 자동 탐색 후보 `[EQUAL]` 유지, topN 2·상한 40이 화면에서 규칙 위반으로 표시, 계약 테스트 통과\n-\n-- [ ] T025 [BE] 003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 읽는 `GET /backtests/registry`를 연다 per 003 FR-010·004 FR-028·README §1 \"rulesVersion 필수\" — Jira `S15P21E205-326`\n+- [x] T025 [BE] 003 화면이 요청에 실을 규칙 버전과 기본 비용 버전을 읽는 `GET /backtests/registry`를 연다 per 003 FR-010·004 FR-028·README §1 \"rulesVersion 필수\" — Jira `S15P21E205-326`\n   - 배경(2026-09-17): 003 화면(T039 `fetchAnalysisVersions()`)이 `strategy.rulesVersion`(필수)을 읽을 HTTP 경로가 없다. 003 등록표 응답에 싣는 안은 backend/CLAUDE.md \"strategy는 backtest를 참조하지 않는다\"와 충돌하고, `rulesVersion`을 선택으로 바꾸는 안은 \"결과 재현의 기준\" 선언과 어긋나며 FR-010이 요구하는 비용 수치·임시 여부 표시도 못 채운다. 004가 조회 API를 여는 것이 유일하게 규칙을 안 깨는 길이다\n   - 응답: `{ strategyRules: [{ strategyId, rulesVersion, status, provisional }], defaultCostProfile: { version, provisional, commissionBps, spreadBps, slippageBps, taxBps } }`. `strategyRules`는 **전략당 한 행**(REGISTERED 또는 PENDING_DECISION — PENDING은 화면이 \"분석하기\"를 막을 수 있게 status 그대로 포함). 발표 전에는 규칙을 제자리에서 갱신하므로 버전이 늘지 않는다. 버전 교체와 옛 버전 요청 처리는 Phase 10. `TARGET_RISK_OVERLAY`는 시나리오 규칙이지만 같은 표라 그대로 나간다 — 화면은 strategyId로 조인만 한다. 비용 수치는 다른 응답과 같이 문자열 decimal\n   - 기존 것만 붙인다: `StrategyRulesService.findAll()`·`CostProfileService.resolve(null)`. 컨트롤러 메서드 하나·응답 record 하나·IT 하나. 로그인 불필요(등록표 조회는 사용자 데이터가 아니고 003 등록표 조회와 같은 성격). `GET /backtests/{backtestId}`와 겹치지 않는다(Spring은 리터럴 경로를 패턴보다 먼저 고른다)\n   - 003에 요청할 것: `costProfileVersion`을 비우지 말고 registry에서 받은 `defaultCostProfile.version`을 **명시해서** 보낸다. T021이 기본값을 바꾸면 화면이 본 조건과 적용 조건이 어긋나는 창이 생기기 때문이고, 재현 기준을 요청에 다 싣는 rulesVersion 원칙과 같다\n   - 완료 기준: IT가 시드 여섯 행 중 REGISTERED 넷과 `PROVISIONAL-DEMO-1` 기본 비용을 단언, API README §1.11과 `specs/004-backtest-execution/contracts/rest-api.md`에 `GET /backtests/registry` 절 추가(analyze I3), 003 담당자에게 경로·응답 확정 통보\n   - 순서: **T021보다 먼저** 머지한다. 기본 비용이 바뀌기 전에 화면이 명시 버전을 보내고 있어야 한다\n+  - 구현 시 결정(T025, 2026-09-17, Jira `S15P21E205-326`): ① **규칙 명세(`spec`)는 응답에 싣지 않는다.** 화면이 쓰는 것은 버전 문자열과 고를 수 있는지 여부뿐이고, 명세는 접수 때 워커로 복사되는 실행 입력이라 조회 응답에 두면 계약이 둘로 갈린다 ② **`PENDING_DECISION`을 걸러내지 않는다.** 걸러내면 화면이 '분석하기'를 막을 근거를 잃고 \"없는 전략\"과 \"아직 못 고르는 전략\"이 구분되지 않는다 ③ `TARGET_RISK_OVERLAY` 행도 그대로 나간다 — 전략이 아니라 시나리오 오버레이지만 같은 표이고, 화면은 `strategyId`로 조인하므로 자연히 빠진다. 거르는 코드를 두면 004가 003 화면의 조인 방식을 가정하게 된다 ④ IT는 시드 행을 그대로 단언한다(별도 준비 없음) — 전략당 한 행이라는 계약을 `hasSize(1)`로 고정해, 나중에 버전이 늘면(Phase 10) 이 테스트가 먼저 깨져 화면 계약을 다시 보게 한다 ⑤ 004 tasks.md의 T024·T026을 「다른 spec에 넘긴 것」으로 옮겼다 — 003 소유라 번호와 티켓을 004가 들고 있으면 003 tasks.md의 B06·B10 차단과 이중 관리가 된다(AGENTS.md \"곁가지는 티켓으로 만들지 않는다\")\n+\n+### 다른 spec에 넘긴 것 (004는 순서만 고정한다)\n+\n+아래 둘은 **003 소유**이고 티켓도 003 담당자가 만든다(AGENTS.md \"곁가지는 티켓으로 만들지 않는다. 지금 손대지 않을 일은 말이나 문서로 알리고, 티켓으로 세울지는 사람이 정한다\"). 003 tasks.md 머리에 \"004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단\"으로 이미 추적되고 있어, 004가 번호를 들고 있으면 같은 일이 두 곳에서 관리된다. **004는 통보만 하고 기다리지 않는다** — T022·T023은 둘과 무관하게 진행하고, 막히는 지점은 T023의 최종 확인(두 배분 조합)과 T021뿐이다.\n+\n+**[003] 등록표 배분 방식 교체** (발표 전 필수, 옛 T024) — 003 등록표의 섹터 모멘텀 `allocationMethod` 선택지를 `EQUAL`/`SCORE_WEIGHTED`에서 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 등록표 버전을 올린다 per PD-03 ⓪ — 003 담당자 조율 뒤 착수\n+  - `parameter-registry.yml`(현재 `1.2.0`) `choices`·라벨(\"변동성이 낮은 섹터에 더 나누기\") 교체, `version` 인상, 계약 §1 픽스처 `registry-response.json`·`contract-registry.yml`·`StrategyRegistryContractTest` 갱신, 003 data-model 표의 문구 수정. 화면 라벨은 등록표에서 오므로(003 T079) FE 코드 변경 없음\n+  - 저장된 설정에 `SCORE_WEIGHTED`가 있으면 접수 관문이 등록표 밖 값으로 거절한다 — 003의 설정 이력 규칙에 따라 옛 버전 설정 처리 확인\n+  - **화면 판정 규칙 추가(analyze I6)**: 003 등록표의 검증 규칙은 `SECTOR_MOMENTUM`에 `TOP_N_EXCEEDS_UNIVERSE`만 있고 다른 전략은 `maxWeight × UNIVERSE_SIZE < 100`을 쓴다. 그대로면 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다. `SECTOR_MOMENTUM`에 `maxWeight × topN < 100`(`appliesWhen selectionMode=TOP_N`)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent/100) < 100`(`TOP_PERCENT`) 규칙을 같은 버전 인상에 넣어 화면·접수·007 판정을 맞춘다\n+  - 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지, 자동 탐색 후보 `[EQUAL]` 유지, topN 2·상한 40이 화면에서 규칙 위반으로 표시, 계약 테스트 통과\n \n-- [ ] T026 [FE] [교차 spec: 003 소유] 003 화면이 `GET /backtests/registry`를 소비한다 per 003 FR-010·T039·T059 — 003 담당자 소유, 004는 T025 머지 뒤 통보하고 **T021의 선행 조건**으로 둔다\n+**[003] 화면이 registry를 소비** (옛 T026) — 003 화면이 `GET /backtests/registry`를 소비한다 per 003 FR-010·T039·T059 — 003 담당자 소유, 004는 T025 머지 뒤 통보하고 **T021의 선행 조건**으로 둔다\n   - 지금 003 쪽은 `AnalysisVersions.rulesVersion` 단일 값을 기대하고 `fetchAnalysisVersions()`는 아직 null이며, 409 처리(T059)는 003 파라미터 등록표만 다시 조회한다. registry는 전략별 배열을 주므로 연결 작업이 반드시 있다: ① 선택한 `strategyId`의 REGISTERED 행에서 `rulesVersion`을 고르고 PENDING이면 '분석하기'를 막는다 ② `costProfileVersion`을 비우지 않고 `defaultCostProfile.version`을 명시해 보낸다 ③ `409 REGISTRY_VERSION_CHANGED`(003 등록표가 바뀐 경우, 기존 의미 그대로)를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다 ④ 화면의 \"비용 조건이 임시값입니다\" 표시는 `defaultCostProfile.provisional`로 판단\n   - 003 T039·T059 본문에 위 네 가지를 반영하는 것은 003 담당자가 한다. 004는 이 항목으로 순서만 고정한다 — \"통보\"만으로는 배포 순서가 보장되지 않아 T021이 기본 비용을 바꾸는 순간 화면이 본 조건과 적용 조건이 어긋난다\n   - 완료 기준: 003 화면에서 '분석하기'가 registry의 버전을 실어 202를 받고, 임시 비용 문구가 registry 값으로 켜진다\n@@ -326,11 +331,11 @@\n ### Phase 9 순서 (발표 전)\n \n 1. T025 — 규칙·비용 조회 API\n-2. T026 — 003 화면 연결과 버전 명시 전송(다른 담당자)\n-3. T022 — 최소분산과 공통 현금 정책(lite)\n-4. T023 — 섹터 모멘텀\n-5. T024 — **발표 전 필수.** 결정은 끝났고 작업은 등록표 수정(선택지·라벨·버전·계약 픽스처·003 data-model 문구)이라 난도가 낮다. 화면은 등록표의 선택지와 라벨을 그대로 쓰므로 FE 분기 작업이 거의 없다. 미루면 등록표의 `SCORE_WEIGHTED`가 화면에 남아 T023이 지원하지 않는 요청을 만든다. 모멘텀 안 역변동성 계산은 T023이 독립 역변동성 계산과 T022 공통 상한 함수를 재사용한다\n-6. T021 — 시간이 남으면. 미루면 `PROVISIONAL-DEMO-1`을 그대로 쓰고 화면이 \"임시 비용 조건\"을 표시한다(registry의 `provisional`로 판단). T026이 dev에 있어야 한다 — 기본 비용을 바꾸기 전에 화면이 명시 버전을 보내고 있어야 한다\n+2. T022 — 최소분산과 공통 현금 정책(lite). **T025와 병렬 가능**(만지는 파일이 겹치지 않는다)\n+3. T023 — 섹터 모멘텀. 선행 T022(공통 함수)\n+4. T021 — 시간이 남으면. 선행은 아래 [003] 화면 연결\n+5. [003] 등록표 교체 — **발표 전 필수.** 결정은 끝났고 작업은 등록표 수정(선택지·라벨·버전·계약 픽스처·003 data-model 문구)이라 난도가 낮다. 화면은 등록표의 선택지와 라벨을 그대로 쓰므로 FE 분기 작업이 거의 없다. 미루면 등록표의 `SCORE_WEIGHTED`가 화면에 남아 T023이 지원하지 않는 요청을 만든다. 모멘텀 안 역변동성 계산은 T023이 독립 역변동성 계산과 T022 공통 상한 함수를 재사용한다\n+6. [003] 화면 연결 — T025 머지 뒤 착수 가능하고 T021의 선행이다. T021을 미루면 `PROVISIONAL-DEMO-1`을 그대로 쓰고 화면이 \"임시 비용 조건\"을 표시한다(registry의 `provisional`로 판단). T026이 dev에 있어야 한다 — 기본 비용을 바꾸기 전에 화면이 명시 버전을 보내고 있어야 한다\n \n 발표 전 목표: 다섯 전략이 화면에서 실행된다 · 모멘텀과 최소분산이 정상 결과를 낸다 · 이력 부족·상한 잔여 현금·잘못된 설정을 올바르게 처리한다 · 같은 개발 환경에서 같은 입력은 같은 결과가 나온다. T023의 `EQUAL` 배분은 T024 없이 동작하지만 사용자가 역변동성 배분을 고르려면 T024가 머지돼야 한다. T016은 여전히 001 T030(`-203`) 대기이고 이 Phase와 독립이다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-17T17:31:00.966+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2827491": [],
+    "2827842": []
+  }
+}

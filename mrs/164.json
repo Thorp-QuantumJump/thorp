@@ -1,0 +1,633 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947605,
+    "iid": 164,
+    "project_id": 1444456,
+    "title": "feat(fe): 고른 전략 하나로 설정 조합 자동 비교에 넘어간다",
+    "description": "## **작업 내용 요약**\n\n전략 선택 화면의 '설정 조합 자동 비교' 버튼을 연결했다. 고른 전략 하나와 섹터 후보 집합을 그대로 007 실행 전 확인 화면(`/param-search`)으로 넘긴다. spec 003 묶음 B11(T070·T071)이다.\n\n## **관련 티켓**\n\n* [S15P21E205-243](https://ssafy.atlassian.net/browse/S15P21E205-243) `[FE] 설정 조합 자동 비교로 넘어간다`\n\n## **주요 변경 사항**\n\n* `StrategySettingsPage.tsx`\n  * '준비 중'으로 늘 막혀 있던 버튼을 연결했다. 누르면 `/param-search?strategies={전략 하나}&instruments={섹터 ETF 전부}`로 이동한다. 007 `ParamSearchPage`가 이미 읽는 질의 문자열 형식이다.\n  * 막히는 조건은 세 가지다: 등록표를 받지 못함, 전략 미선택, 고른 전략이 `selectable: false`. 이유 문장은 기존 `ActionButtons`의 `aria-describedby`로 전달된다.\n* `StrategySettingsPage.test.tsx`: 자동 비교 검사 5개를 더했다(quickstart 11).\n* `specs/003-strategy-settings/tasks.md`: T070·T071 완료 표시.\n\n## **판단 근거**\n\n* **분석 조건 버전·평가 기간·설정값은 묻지 않는다.** 이 값들은 '분석하기'의 요청 조립에만 필요하고, 자동 비교의 대상 범위와 검증은 007 확인 화면이 등록표로 스스로 정한다. 여기서 막으면 007이 판정할 일을 003이 미리 막는 셈이 된다. 그래서 버전 조회가 연결되지 않은 지금(B06 대기)도 자동 비교로는 넘어갈 수 있다.\n* **전략은 하나만 싣는다**(FR-013, Clarifications). 007 spec은 여러 전략을 받을 수 있다고 적었지만 003은 하나로 정했다(tasks.md \"착수 전에 알아둘 것\" ⑥).\n* 섹터 선택이 끝났는지는 따로 검사하지 않았다. 버튼 자체가 `selection.status === 'ready'`일 때만 그려진다.\n* 버린 선택지: 지시문대로 값을 그대로 이어 붙이는 대신 각 ID를 `encodeURIComponent`로 감쌌다. 지금 ID 형식에서는 결과가 같고, 예상 밖 문자가 들어와도 주소가 깨지지 않는다.\n\n## **테스트**\n\n* `npm run lint`: 오류 0 (경고 19개는 기존)\n* `npm run build`: 통과\n* `StrategySettingsPage.test.tsx` 단독: 31/31 통과 (3회 반복)\n* `npm run test:legacy`: 13/13 통과\n* `npm run test:dom` 전체: 4개 실패. **이 브랜치와 무관한 기존 문제다.** `SignupPage` 시간 초과 3개와 기존 검사 '전략을 고르기 전에는 분석하기가 그 이유로 막힌다' 1개이며, origin/dev에서 같은 조건으로 돌려도 이들을 포함해 7개가 실패한다. 파일 단독 실행에서는 모두 통과해 부하에 따른 타이밍 문제로 보인다. 새 검사는 이유 문장이 자리 잡을 때까지 기다리게 해 같은 문제를 피했다.\n* AI 코드리뷰(diff 전체): 발견 사항 없음\n\n## **리뷰 포인트**\n\n* 고를 수 없는 전략(`selectable: false`)을 자동 비교에서도 막은 것이 맞는지. 기본 설정이 규칙을 어겨 막힌 전략이라도 007은 다른 조합을 탐색할 수 있다. 지금은 '고를 수 없는 카드는 선택이 아니다'로 보고 막았다.\n* 사용자 비중을 쓰는 전략(`targetWeightSource: USER`)도 비중 없이 섹터 집합만 넘어간다. 007 요청 계약(`universe.instrumentIds`)에 비중 자리가 없어서다. 007이 이 전략을 어떻게 다루는지는 007 소유다.",
+    "state": "merged",
+    "created_at": "2026-09-16T22:56:54.125+09:00",
+    "updated_at": "2026-09-16T23:21:25.581+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T23:21:25.183+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/243-autocompare-entry",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+    "merge_commit_sha": "c9ec101caa8bc21220ad53bc907fd894f968ea9d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T22:56:55.980+09:00",
+    "reference": "!164",
+    "references": {
+      "short": "!164",
+      "relative": "!164",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!164"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/164",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947605,
+    "iid": 164,
+    "project_id": 1444456,
+    "title": "feat(fe): 고른 전략 하나로 설정 조합 자동 비교에 넘어간다",
+    "description": "## **작업 내용 요약**\n\n전략 선택 화면의 '설정 조합 자동 비교' 버튼을 연결했다. 고른 전략 하나와 섹터 후보 집합을 그대로 007 실행 전 확인 화면(`/param-search`)으로 넘긴다. spec 003 묶음 B11(T070·T071)이다.\n\n## **관련 티켓**\n\n* [S15P21E205-243](https://ssafy.atlassian.net/browse/S15P21E205-243) `[FE] 설정 조합 자동 비교로 넘어간다`\n\n## **주요 변경 사항**\n\n* `StrategySettingsPage.tsx`\n  * '준비 중'으로 늘 막혀 있던 버튼을 연결했다. 누르면 `/param-search?strategies={전략 하나}&instruments={섹터 ETF 전부}`로 이동한다. 007 `ParamSearchPage`가 이미 읽는 질의 문자열 형식이다.\n  * 막히는 조건은 세 가지다: 등록표를 받지 못함, 전략 미선택, 고른 전략이 `selectable: false`. 이유 문장은 기존 `ActionButtons`의 `aria-describedby`로 전달된다.\n* `StrategySettingsPage.test.tsx`: 자동 비교 검사 5개를 더했다(quickstart 11).\n* `specs/003-strategy-settings/tasks.md`: T070·T071 완료 표시.\n\n## **판단 근거**\n\n* **분석 조건 버전·평가 기간·설정값은 묻지 않는다.** 이 값들은 '분석하기'의 요청 조립에만 필요하고, 자동 비교의 대상 범위와 검증은 007 확인 화면이 등록표로 스스로 정한다. 여기서 막으면 007이 판정할 일을 003이 미리 막는 셈이 된다. 그래서 버전 조회가 연결되지 않은 지금(B06 대기)도 자동 비교로는 넘어갈 수 있다.\n* **전략은 하나만 싣는다**(FR-013, Clarifications). 007 spec은 여러 전략을 받을 수 있다고 적었지만 003은 하나로 정했다(tasks.md \"착수 전에 알아둘 것\" ⑥).\n* 섹터 선택이 끝났는지는 따로 검사하지 않았다. 버튼 자체가 `selection.status === 'ready'`일 때만 그려진다.\n* 버린 선택지: 지시문대로 값을 그대로 이어 붙이는 대신 각 ID를 `encodeURIComponent`로 감쌌다. 지금 ID 형식에서는 결과가 같고, 예상 밖 문자가 들어와도 주소가 깨지지 않는다.\n\n## **테스트**\n\n* `npm run lint`: 오류 0 (경고 19개는 기존)\n* `npm run build`: 통과\n* `StrategySettingsPage.test.tsx` 단독: 31/31 통과 (3회 반복)\n* `npm run test:legacy`: 13/13 통과\n* `npm run test:dom` 전체: 4개 실패. **이 브랜치와 무관한 기존 문제다.** `SignupPage` 시간 초과 3개와 기존 검사 '전략을 고르기 전에는 분석하기가 그 이유로 막힌다' 1개이며, origin/dev에서 같은 조건으로 돌려도 이들을 포함해 7개가 실패한다. 파일 단독 실행에서는 모두 통과해 부하에 따른 타이밍 문제로 보인다. 새 검사는 이유 문장이 자리 잡을 때까지 기다리게 해 같은 문제를 피했다.\n* AI 코드리뷰(diff 전체): 발견 사항 없음\n\n## **리뷰 포인트**\n\n* 고를 수 없는 전략(`selectable: false`)을 자동 비교에서도 막은 것이 맞는지. 기본 설정이 규칙을 어겨 막힌 전략이라도 007은 다른 조합을 탐색할 수 있다. 지금은 '고를 수 없는 카드는 선택이 아니다'로 보고 막았다.\n* 사용자 비중을 쓰는 전략(`targetWeightSource: USER`)도 비중 없이 섹터 집합만 넘어간다. 007 요청 계약(`universe.instrumentIds`)에 비중 자리가 없어서다. 007이 이 전략을 어떻게 다루는지는 007 소유다.",
+    "state": "merged",
+    "created_at": "2026-09-16T22:56:54.125+09:00",
+    "updated_at": "2026-09-16T23:21:25.581+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T23:21:25.183+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/243-autocompare-entry",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+    "merge_commit_sha": "c9ec101caa8bc21220ad53bc907fd894f968ea9d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T22:56:55.980+09:00",
+    "reference": "!164",
+    "references": {
+      "short": "!164",
+      "relative": "!164",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!164"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/164",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": "2026-09-16T22:57:37.655+09:00",
+    "latest_build_finished_at": "2026-09-16T23:30:47.971+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 200348,
+      "iid": 87,
+      "project_id": 1444456,
+      "sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+      "ref": "feat(fe)/243-autocompare-entry",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T22:57:37.514+09:00",
+      "updated_at": "2026-09-16T23:30:47.978+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200348"
+    },
+    "head_pipeline": {
+      "id": 200348,
+      "iid": 87,
+      "project_id": 1444456,
+      "sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+      "ref": "feat(fe)/243-autocompare-entry",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T22:57:37.514+09:00",
+      "updated_at": "2026-09-16T23:30:47.978+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200348",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T22:57:37.655+09:00",
+      "finished_at": "2026-09-16T23:30:47.971+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200348",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "219bd9e934596217f2b24b712bbac701f15ba44f",
+      "head_sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+      "start_sha": "e23a533824df3411a9311379c9f5c8107fdcffe7"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "14f7841707cfda576a8a3d64b873820828322057",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820127,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T22:56:54.230+09:00",
+          "updated_at": "2026-09-16T22:56:54.234+09:00",
+          "system": true,
+          "noteable_id": 947605,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 164,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "820e89b0601040ff40d4aca2f8c51d52ccfd0f62",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820128,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T22:56:54.250+09:00",
+          "updated_at": "2026-09-16T22:56:54.257+09:00",
+          "system": true,
+          "noteable_id": 947605,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 164,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c6d89b2332353ffba2818c28774e3587aecee962",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820129,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `encodeURIComponent`를 사용하여 전략 ID와 인스트루먼트 ID를 올바르게 인코딩함으로써 잠재적인 URL 깨짐 문제를 방지하고 견고성을 높였습니다.\n- 단위 테스트(`StrategySettingsPage.test.tsx`)에서 007 화면을 직접 렌더링하는 대신 가벼운 `ParamSearchProbe` 대역 컴포넌트를 사용하여 라우팅 쿼리 파라미터 검증에 집중한 테스트 설계가 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **선택된 인스트루먼트(섹터 ETF)가 특수 문자나 공백을 포함하는 경우의 URL 인코딩 검증 시나리오**: `selection.selection.items`의 `instrumentId`에 URL에서 문제가 될 수 있는 특수 문자가 포함되어 있을 때 `encodeURIComponent`가 올바르게 동작하는지 확인합니다.\n- **다수 선택 후 단일 전략 유지 시나리오**: 여러 전략을 차례로 클릭한 뒤 최종적으로 선택된 단 하나의 전략 ID만 `strategies` 쿼리 파라미터에 포함되어 전달되는지 테스트합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:be9b3ee1a745b3c2b2e298aac2376c7bded902ab -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T22:57:03.572+09:00",
+          "updated_at": "2026-09-16T22:57:03.572+09:00",
+          "system": false,
+          "noteable_id": 947605,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 164,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b70c3633694e5c39fc9c5883ee515d8ba539744a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820201,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T23:21:20.685+09:00",
+          "updated_at": "2026-09-16T23:21:20.693+09:00",
+          "system": true,
+          "noteable_id": 947605,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 164,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0f5a8948f4800e790ce89a94950c27a8806fb1c8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820202,
+          "type": null,
+          "body": "unapproved this merge request",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T23:21:23.268+09:00",
+          "updated_at": "2026-09-16T23:21:23.272+09:00",
+          "system": true,
+          "noteable_id": 947605,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 164,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2f75b6cb1ee79421584a2a3eac083fc4ee0cde09",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820203,
+          "type": null,
+          "body": "mentioned in commit c9ec101caa8bc21220ad53bc907fd894f968ea9d",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T23:21:25.238+09:00",
+          "updated_at": "2026-09-16T23:21:25.244+09:00",
+          "system": true,
+          "noteable_id": 947605,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 164,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2209032,
+      "head_commit_sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+      "base_commit_sha": "219bd9e934596217f2b24b712bbac701f15ba44f",
+      "start_commit_sha": "e23a533824df3411a9311379c9f5c8107fdcffe7",
+      "created_at": "2026-09-16T22:56:54.564+09:00",
+      "merge_request_id": 947605,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "cb678241ab9d9f07dfcdeda902a4b9338bc1b2a0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2209032,
+      "head_commit_sha": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+      "base_commit_sha": "219bd9e934596217f2b24b712bbac701f15ba44f",
+      "start_commit_sha": "e23a533824df3411a9311379c9f5c8107fdcffe7",
+      "created_at": "2026-09-16T22:56:54.564+09:00",
+      "merge_request_id": 947605,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "cb678241ab9d9f07dfcdeda902a4b9338bc1b2a0",
+      "commits": [
+        {
+          "id": "be9b3ee1a745b3c2b2e298aac2376c7bded902ab",
+          "short_id": "be9b3ee1",
+          "created_at": "2026-09-16T21:54:33.000+09:00",
+          "parent_ids": [
+            "219bd9e934596217f2b24b712bbac701f15ba44f"
+          ],
+          "title": "feat(fe): 고른 전략 하나로 설정 조합 자동 비교에 넘어간다",
+          "message": "feat(fe): 고른 전략 하나로 설정 조합 자동 비교에 넘어간다\n\n- '설정 조합 자동 비교' 버튼이 선택한 전략 하나와 섹터 후보 집합을\n  007이 읽는 strategies·instruments 질의 문자열로 넘긴다(T070, FR-013)\n- 등록표 없음·전략 미선택·고를 수 없는 전략이면 이유와 함께 막는다\n- 분석 조건 버전·평가 기간은 묻지 않는다. 확인은 007 화면의 몫이다\n- 이동 경로·막힘 조건 테스트를 더한다(T071, quickstart 11)\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T21:54:33.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T21:54:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/be9b3ee1a745b3c2b2e298aac2376c7bded902ab"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,7 +1,7 @@\n import { render, screen, waitFor, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { useState } from 'react'\n-import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n import type { SectorCatalogResult } from '@/api/sectors'\n import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n@@ -15,7 +15,11 @@ import {\n   SECTOR_SELECTION_STORAGE_KEY,\n } from '@/diagnosis/selectionStorage'\n import { STRATEGY_SETTINGS_STORAGE_KEY } from '@/hooks/useStrategySettings'\n-import { registryFixture, selectableStrategy } from '@/test/strategyRegistryFixtures'\n+import {\n+  registryFixture,\n+  selectableStrategy,\n+  unselectableStrategy,\n+} from '@/test/strategyRegistryFixtures'\n import type { BacktestCreateRequest } from '@/types/backtestRequest'\n import type { SectorSummary } from '@/types/sector'\n import { StrategySettingsPage } from './StrategySettingsPage'\n@@ -177,6 +181,43 @@ function renderPageWithSectorRoute(support: AnalysisSupport) {\n   )\n }\n \n+/**\n+ * 자동 비교로 넘어간 주소를 읽으려고 007 화면 자리에 지금 위치를 그대로 보이는 대역을 둔다.\n+ * 007 화면 자체를 띄우지 않는 까닭은 이 검사가 **무엇을 넘기는가**만 보기 때문이다 — 넘긴 질의\n+ * 문자열을 007이 어떻게 읽는지는 `ParamSearchPage.test.tsx`가 고정한다.\n+ */\n+function ParamSearchProbe() {\n+  const location = useLocation()\n+  return <p data-testid=\"param-search-location\">{location.pathname + location.search}</p>\n+}\n+\n+function renderPageWithParamSearchRoute(support: AnalysisSupport) {\n+  const authValue: AuthContextValue = {\n+    status: 'anonymous',\n+    user: null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+\n+  return render(\n+    <MemoryRouter initialEntries={['/strategy']}>\n+      <AuthContext.Provider value={authValue}>\n+        <Routes>\n+          <Route path=\"/strategy\" element={<StrategySettingsPage support={support} />} />\n+          <Route path=\"/param-search\" element={<ParamSearchProbe />} />\n+        </Routes>\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+/** 행동 버튼에 이어진 이유 문장. 이유가 없으면 빈 문자열이다. */\n+function reasonOf(button: HTMLElement): string {\n+  const reasonId = button.getAttribute('aria-describedby')\n+  return reasonId ? (document.getElementById(reasonId)?.textContent ?? '') : ''\n+}\n+\n /**\n  * 부모를 다시 그릴 수 있는 호스트로 화면을 띄운다.\n  *\n@@ -867,4 +908,107 @@ describe('StrategySettingsPage', () => {\n     // 조용히 다시 보내지 않는다.\n     expect(calls).toHaveLength(1)\n   })\n+  describe('설정 조합 자동 비교로 넘어가기(FR-013, quickstart 11)', () => {\n+    it('고른 전략 하나와 섹터 후보 집합 전부를 007 화면으로 넘긴다', async () => {\n+      const user = userEvent.setup()\n+      const { support, requests } = makeSupport()\n+      renderPageWithParamSearchRoute(support)\n+\n+      // 다른 전략을 한 번 골랐다가 옮겨도 마지막에 고른 전략 하나만 넘어간다.\n+      const other = registryFixture.strategies.find(\n+        (strategy) => strategy.selectable && strategy.strategyId !== selectableStrategy.strategyId,\n+      )!\n+      await user.click(await findCardNamed(other.name))\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+\n+      await waitFor(() =>\n+        expect(actionButton('설정 조합 자동 비교').getAttribute('aria-disabled')).toBe('false'),\n+      )\n+      await user.click(actionButton('설정 조합 자동 비교'))\n+\n+      const location = await screen.findByTestId('param-search-location')\n+      const url = new URL(location.textContent!, 'http://localhost')\n+      expect(url.pathname).toBe('/param-search')\n+      expect(url.searchParams.get('strategies')).toBe(selectableStrategy.strategyId)\n+      expect(url.searchParams.get('instruments')?.split(',')).toEqual(\n+        catalogSectors.map((item) => item.representativeEtf.instrumentId),\n+      )\n+      // 질의 문자열은 둘뿐이다. 후보 숫자나 설정값을 싣지 않는다 — 탐색 범위는 007이 정한다.\n+      expect([...url.searchParams.keys()].sort()).toEqual(['instruments', 'strategies'])\n+      // 분석 요청을 대신 보내지 않는다.\n+      expect(requests).toHaveLength(0)\n+    })\n+\n+    it('분석 조건 버전이 없어 분석하기가 막혀도 자동 비교로는 넘어갈 수 있다', async () => {\n+      // 버전은 '분석하기'의 요청 조립에만 필요하다. 자동 비교의 조건 확인은 007 화면이 한다.\n+      const user = userEvent.setup()\n+      renderPageWithParamSearchRoute(makeSupport({ fetchAnalysisVersions: async () => null }).support)\n+\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+      await waitFor(() => expect(reasonOf(actionButton('분석하기'))).toContain('분석 조건 버전'))\n+      expect(actionButton('설정 조합 자동 비교').getAttribute('aria-disabled')).toBe('false')\n+\n+      await user.click(actionButton('설정 조합 자동 비교'))\n+      expect(await screen.findByTestId('param-search-location')).toBeTruthy()\n+    })\n+\n+    it('전략을 고르기 전에는 자동 비교가 그 이유로 막히고 이동하지 않는다', async () => {\n+      const user = userEvent.setup()\n+      renderPageWithParamSearchRoute(makeSupport().support)\n+\n+      await findCardNamed(selectableStrategy.name)\n+      // 카드가 먼저 그려지고 보관값 확인이 뒤따르므로 이유가 자리 잡기를 기다린다.\n+      await waitFor(() =>\n+        expect(reasonOf(actionButton('설정 조합 자동 비교'))).toContain('전략 카드를 먼저'),\n+      )\n+      const autoCompare = actionButton('설정 조합 자동 비교')\n+      expect(autoCompare.getAttribute('aria-disabled')).toBe('true')\n+\n+      await user.click(autoCompare)\n+      expect(screen.queryByTestId('param-search-location')).toBeNull()\n+    })\n+\n+    it('등록표를 받지 못했으면 자동 비교가 막히고 이동하지 않는다', async () => {\n+      apiMocks.fetchStrategyRegistry.mockRejectedValue(new Error('registry down'))\n+      const user = userEvent.setup()\n+      renderPageWithParamSearchRoute(makeSupport().support)\n+\n+      expect(await screen.findByRole('alert')).toBeTruthy()\n+      const autoCompare = actionButton('설정 조합 자동 비교')\n+      expect(autoCompare.getAttribute('aria-disabled')).toBe('true')\n+      expect(reasonOf(autoCompare)).toContain('불러오기 전에는')\n+\n+      await user.click(autoCompare)\n+      expect(screen.queryByTestId('param-search-location')).toBeNull()\n+    })\n+\n+    it('보관된 선택이 지금 고를 수 없는 전략이면 그 이유로 막힌다', async () => {\n+      window.sessionStorage.setItem(\n+        STRATEGY_SETTINGS_STORAGE_KEY,\n+        JSON.stringify({\n+          version: 1,\n+          registryVersion: registryFixture.registryVersion,\n+          universeSize: 3,\n+          selectedStrategyId: unselectableStrategy.strategyId,\n+          valuesByStrategy: {},\n+          analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },\n+          invalidValues: [],\n+        }),\n+      )\n+      const user = userEvent.setup()\n+      renderPageWithParamSearchRoute(makeSupport().support)\n+\n+      await findCardNamed(unselectableStrategy.name)\n+      await waitFor(() =>\n+        expect(reasonOf(actionButton('설정 조합 자동 비교'))).toContain(\n+          unselectableStrategy.unselectableReason!,\n+        ),\n+      )\n+      const autoCompare = actionButton('설정 조합 자동 비교')\n+      expect(autoCompare.getAttribute('aria-disabled')).toBe('true')\n+\n+      await user.click(autoCompare)\n+      expect(screen.queryByTestId('param-search-location')).toBeNull()\n+    })\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,7 +50,6 @@ const INVALID_STORED_VALUES =\n   '이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.'\n const WARMUP_UNCOMPUTABLE = '현재 설정으로 워밍업을 계산할 수 없습니다.'\n const VERSIONS_LOADING = '분석 조건 버전을 확인하는 중입니다.'\n-const AUTO_COMPARE_NOT_READY = '설정 조합 자동 비교는 아직 준비 중입니다.'\n const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'\n const REQUEST_BUILD_FAILED =\n   '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'\n@@ -366,13 +365,40 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n     return null\n   })()\n \n-  // 자동 비교 진입(FR-013)은 B11(T070)이 붙인다. 그 전까지는 이유와 함께 막힌다.\n-  const autoCompareBlocker =\n-    registry === null || !settings.ready\n-      ? REGISTRY_NOT_LOADED\n-      : !settings.selectedStrategy\n-        ? SELECT_STRATEGY_FIRST\n-        : AUTO_COMPARE_NOT_READY\n+  /**\n+   * 설정 조합 자동 비교로 넘어갈 수 있는가(FR-013).\n+   *\n+   * <p><b>'분석하기'보다 묻는 것이 적다.</b> 넘기는 것은 전략 하나와 섹터 후보 집합뿐이고, 설정값·\n+   * 평가 기간·분석 조건 버전은 007이 확인 화면에서 스스로 정하고 검증한다. 여기서 그것까지 물으면\n+   * 007이 판정할 일을 이 화면이 미리 막는 셈이 된다. 섹터 선택은 이 버튼이 그려지는 조건\n+   * (`selection.status === 'ready'`)이 이미 보장한다.\n+   */\n+  const autoCompareBlocker = ((): string | null => {\n+    if (registry === null || !settings.ready) return REGISTRY_NOT_LOADED\n+    const strategy = settings.selectedStrategy\n+    if (!strategy) return SELECT_STRATEGY_FIRST\n+    if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING\n+    return null\n+  })()\n+\n+  /**\n+   * 007 실행 전 확인 화면으로 넘어간다.\n+   *\n+   * <p><b>전략은 하나만 싣는다.</b> 007은 여러 전략을 받을 수 있지만 003은 방금 고른 전략 하나를\n+   * 넘기기로 정했다(FR-013, Clarifications). 질의 문자열 모양은 007 `ParamSearchPage`가 이미 읽는\n+   * `strategies`·`instruments` 그대로이며, 후보 숫자나 설정값은 싣지 않는다 — 탐색 범위는 007이\n+   * 등록표에서 정한다.\n+   */\n+  const handleAutoCompare = () => {\n+    if (autoCompareBlocker !== null || selection.status !== 'ready' || !settings.selectedStrategy) {\n+      return\n+    }\n+    const instrumentIds = selection.selection.items.map((item) => encodeURIComponent(item.instrumentId))\n+    navigate(\n+      `/param-search?strategies=${encodeURIComponent(settings.selectedStrategy.strategyId)}` +\n+        `&instruments=${instrumentIds.join(',')}`,\n+    )\n+  }\n \n   // --- 요청 조립과 전송 --------------------------------------------------------------------\n   const [submission, setSubmission] = useState<Submission>({ status: 'idle' })\n@@ -593,11 +619,14 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n                 reason: analyzeBlocker ?? undefined,\n                 busy: submission.status === 'sending',\n               }}\n-              autoCompare={{ disabled: true, reason: autoCompareBlocker }}\n+              autoCompare={{\n+                disabled: autoCompareBlocker !== null,\n+                reason: autoCompareBlocker ?? undefined,\n+              }}\n               onAnalyze={() => {\n                 void handleAnalyze()\n               }}\n-              onAutoCompare={() => {}}\n+              onAutoCompare={handleAutoCompare}\n             />\n \n             {submission.status === 'accepted' ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -249,8 +249,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n **Independent Test**: 전략 하나를 선택한 뒤 '설정 조합 자동 비교'를 눌러 그 전략과 섹터 집합이 유지된 채 `/param-search`가 열리는지, 다른 전략이 함께 넘어가지 않는지 확인한다(quickstart 11).\n \n-- [ ] T070 [US4] (FE) `ActionButtons`의 둘째 버튼 동작을 `StrategySettingsPage.tsx`에 연결 — `navigate('/param-search?strategies=' + selectedStrategyId + '&instruments=' + instrumentIds.join(','))`. 007 `ParamSearchPage`가 읽는 질의 문자열 그대로이며 **전략은 하나만** 싣는다(FR-013, Clarifications). 전략 미선택·등록표 없음이면 `disabled`. 후보 숫자를 사용자에게 입력받지 않는다 (T040 의존)\n-- [ ] T071 [US4] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 전략 하나 선택 후 자동 비교 클릭 → 이동 경로의 `strategies`에 그 전략 하나만, `instruments`에 섹터 집합 전부; 미선택이면 버튼 `disabled`; 등록표 실패 상태면 `disabled`(quickstart 11) (T070 의존)\n+- [X] T070 [US4] (FE) `ActionButtons`의 둘째 버튼 동작을 `StrategySettingsPage.tsx`에 연결 — `navigate('/param-search?strategies=' + selectedStrategyId + '&instruments=' + instrumentIds.join(','))`. 007 `ParamSearchPage`가 읽는 질의 문자열 그대로이며 **전략은 하나만** 싣는다(FR-013, Clarifications). 전략 미선택·등록표 없음이면 `disabled`. 후보 숫자를 사용자에게 입력받지 않는다 (T040 의존)\n+- [X] T071 [US4] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 전략 하나 선택 후 자동 비교 클릭 → 이동 경로의 `strategies`에 그 전략 하나만, `instruments`에 섹터 집합 전부; 미선택이면 버튼 `disabled`; 등록표 실패 상태면 `disabled`(quickstart 11) (T070 의존)\n \n **Checkpoint**: 네 스토리가 모두 독립적으로 동작한다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2820129": []
+  }
+}

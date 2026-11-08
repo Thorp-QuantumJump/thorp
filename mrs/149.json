@@ -1,0 +1,894 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 946796,
+    "iid": 149,
+    "project_id": 1444456,
+    "title": "feat(be): 시장 흐름 지표 스냅샷 기반 구축",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n시장 흐름 화면에서 사용할 경제지표 스냅샷 기반을 구축했습니다.\n\n**스냅샷(snapshot)**은 특정 시점과 데이터 버전을 기준으로 시장 지표를 한 번 묶어서 저장한 **고정된 기록본**\n\n# 관련 티켓\n\n* ticket # S15P21E205-268\n* link\n\n# 주요 변경 사항\n\n* 7개 분야·17개 지표 도메인 모델 및 조회 포트 추가\n* 버전 고정 예시 데이터와 어댑터 구현\n* 분야별 요약 저장 구조와 Flyway 마이그레이션 추가\n* WB01의 T001\\~T006 완료\n\n# 테스트\n\n* IntelliJ 단위·통합 테스트 통과\n* `.\\gradlew.bat spotlessApply build` 통과\n* 전체 1,357개 테스트 성공, 기존 환경 의존 테스트 4개 제외\n\n# 리뷰 포인트\n\n* 현재는 예시 데이터 어댑터를 사용하며, 008의 실제 지표 데이터가 준비되면 실제 어댑터로 교체해야 합니다.\n* 동일 버전의 분야별 요약은 최초 스냅샷을 유지하도록 구성했습니다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T15:13:30.555+09:00",
+    "updated_at": "2026-09-16T15:28:51.871+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T15:28:51.443+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/268-marketflow-snapshot-port",
+    "user_notes_count": 4,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+    "merge_commit_sha": "38c56c61434337dfd5aea5502042bdbf4af5bfdd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T15:13:31.951+09:00",
+    "reference": "!149",
+    "references": {
+      "short": "!149",
+      "relative": "!149",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!149"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/149",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 946796,
+    "iid": 149,
+    "project_id": 1444456,
+    "title": "feat(be): 시장 흐름 지표 스냅샷 기반 구축",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n시장 흐름 화면에서 사용할 경제지표 스냅샷 기반을 구축했습니다.\n\n**스냅샷(snapshot)**은 특정 시점과 데이터 버전을 기준으로 시장 지표를 한 번 묶어서 저장한 **고정된 기록본**\n\n# 관련 티켓\n\n* ticket # S15P21E205-268\n* link\n\n# 주요 변경 사항\n\n* 7개 분야·17개 지표 도메인 모델 및 조회 포트 추가\n* 버전 고정 예시 데이터와 어댑터 구현\n* 분야별 요약 저장 구조와 Flyway 마이그레이션 추가\n* WB01의 T001\\~T006 완료\n\n# 테스트\n\n* IntelliJ 단위·통합 테스트 통과\n* `.\\gradlew.bat spotlessApply build` 통과\n* 전체 1,357개 테스트 성공, 기존 환경 의존 테스트 4개 제외\n\n# 리뷰 포인트\n\n* 현재는 예시 데이터 어댑터를 사용하며, 008의 실제 지표 데이터가 준비되면 실제 어댑터로 교체해야 합니다.\n* 동일 버전의 분야별 요약은 최초 스냅샷을 유지하도록 구성했습니다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T15:13:30.555+09:00",
+    "updated_at": "2026-09-16T15:28:51.871+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T15:28:51.443+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/268-marketflow-snapshot-port",
+    "user_notes_count": 4,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+    "merge_commit_sha": "38c56c61434337dfd5aea5502042bdbf4af5bfdd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T15:13:31.951+09:00",
+    "reference": "!149",
+    "references": {
+      "short": "!149",
+      "relative": "!149",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!149"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/149",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "23",
+    "latest_build_started_at": "2026-09-16T15:13:43.454+09:00",
+    "latest_build_finished_at": "2026-09-16T15:22:31.094+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 199024,
+      "iid": 68,
+      "project_id": 1444456,
+      "sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+      "ref": "feat(be)/268-marketflow-snapshot-port",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T15:13:43.345+09:00",
+      "updated_at": "2026-09-16T15:22:31.101+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199024"
+    },
+    "head_pipeline": {
+      "id": 199024,
+      "iid": 68,
+      "project_id": 1444456,
+      "sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+      "ref": "feat(be)/268-marketflow-snapshot-port",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T15:13:43.345+09:00",
+      "updated_at": "2026-09-16T15:22:31.101+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199024",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T15:13:43.454+09:00",
+      "finished_at": "2026-09-16T15:22:31.094+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199024",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "7813cf2f91c545f40bc73804c4ec21ac41d2f4b6",
+      "head_sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+      "start_sha": "9a27aa2af92f07296be6808ce80065d37a931692"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2c27dc512f42adcac7db6529590ea97b19143ee3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2816936,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T15:13:30.674+09:00",
+          "updated_at": "2026-09-16T15:13:30.681+09:00",
+          "system": true,
+          "noteable_id": 946796,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 149,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "96b3530ea0f0d79f75b96d147fdaf9bb1dc7750e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2816937,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 도메인 불변식 검증**: `IndicatorDisplay`와 `MarketFlowField`의 compact constructor에서 필수 값, 경로 길이, 상태 값 정합성을 꼼꼼하게 검증하여 잘못된 상태의 도메인 객체가 생성되는 것을 원천 차단했습니다.\n- **클린 아키텍처 원칙 준수**: 도메인 모델(`backend/.../domain/...`)에 Spring, JPA, Jackson 등의 외부 기술 의존성을 배제하고, 포트와 어댑터를 명확히 분리하여 향후 실제 008 저장소 연동 시 확장성이 높습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **예시 데이터 어댑터 연동 테스트**: `ExampleMacroIndicatorSnapshotAdapter`가 `macro-indicators-example-v1.json`으로부터 7개 분야 및 17개 지표를 정확히 파싱하며, 결측값(`null`)과 기준월 이후 발표 데이터(`AfterReferenceMonthRelease`)를 유실 없이 매핑하는지 통합 검증합니다.\n- **읽기 모델 중복 적재 방지 테스트**: Testcontainers 환경에서 동일한 `registry_version`과 `dataset_version` 조합으로 `MarketFlowFieldSummaryRepository.saveIfAbsent()`를 여러 번 호출할 때, DB에 중복 행이 생성되지 않고 최초 적재된 불변 스냅샷이 유지되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:943bab1bcbd47a1165ec1718f9f36b4f522a077d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T15:13:36.261+09:00",
+          "updated_at": "2026-09-16T15:13:36.261+09:00",
+          "system": false,
+          "noteable_id": 946796,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 149,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8adb4e9b7dd5e0e879e50f1fa5e0d30131aee2da",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817072,
+          "type": null,
+          "body": "굿. 테스트제안도 이미 반영되어있습니다",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T15:21:08.509+09:00",
+          "updated_at": "2026-09-16T15:26:14.957+09:00",
+          "system": false,
+          "noteable_id": 946796,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 149,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d39f60741137e46f28f53416147d190eb98ad0f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817149,
+          "type": null,
+          "body": "굿",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:26:24.694+09:00",
+          "updated_at": "2026-09-16T15:26:24.694+09:00",
+          "system": false,
+          "noteable_id": 946796,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 149,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "544fd9776bfc81f616b691e04754eb247d15a7da",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817179,
+          "type": null,
+          "body": "머지 ㄱㄱ",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T15:28:39.841+09:00",
+          "updated_at": "2026-09-16T15:28:39.841+09:00",
+          "system": false,
+          "noteable_id": 946796,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 149,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cc6ee5ee343ee1cde0f8e98155fadee4f056a1e5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817185,
+          "type": null,
+          "body": "mentioned in commit 38c56c61434337dfd5aea5502042bdbf4af5bfdd",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T15:28:51.574+09:00",
+          "updated_at": "2026-09-16T15:28:51.583+09:00",
+          "system": true,
+          "noteable_id": 946796,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 149,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2206404,
+      "head_commit_sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+      "base_commit_sha": "7813cf2f91c545f40bc73804c4ec21ac41d2f4b6",
+      "start_commit_sha": "9a27aa2af92f07296be6808ce80065d37a931692",
+      "created_at": "2026-09-16T15:13:30.929+09:00",
+      "merge_request_id": 946796,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "98b973d6ca3eb40dfe9fb414217ccab56960134f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2206404,
+      "head_commit_sha": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+      "base_commit_sha": "7813cf2f91c545f40bc73804c4ec21ac41d2f4b6",
+      "start_commit_sha": "9a27aa2af92f07296be6808ce80065d37a931692",
+      "created_at": "2026-09-16T15:13:30.929+09:00",
+      "merge_request_id": 946796,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "98b973d6ca3eb40dfe9fb414217ccab56960134f",
+      "commits": [
+        {
+          "id": "943bab1bcbd47a1165ec1718f9f36b4f522a077d",
+          "short_id": "943bab1b",
+          "created_at": "2026-09-16T15:11:50.000+09:00",
+          "parent_ids": [
+            "7813cf2f91c545f40bc73804c4ec21ac41d2f4b6"
+          ],
+          "title": "feat(be): 시장 흐름 지표 스냅샷 기반을 구축",
+          "message": "feat(be): 시장 흐름 지표 스냅샷 기반을 구축\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-16T15:11:50.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-16T15:11:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/943bab1bcbd47a1165ec1718f9f36b4f522a077d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,21 @@\n+package com.ssafy.thorp.marketflow.application.port;\n+\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;\n+import java.time.YearMonth;\n+import java.util.List;\n+import java.util.Optional;\n+\n+/** 009가 008의 지표 관측값·등록표·기준월·수집 상태를 읽는 유일한 경계. */\n+public interface MacroIndicatorSnapshotPort {\n+\n+    FieldReferenceSnapshot loadFieldReferenceMonths();\n+\n+    Optional<IndicatorPathSnapshot> loadRecentPath(String indicatorId, YearMonth referenceMonth);\n+\n+    List<IndicatorMetadata> loadIndicatorMeta(String registryVersion);\n+\n+    List<IndicatorCollectionState> loadCollectionState();\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/port/MacroIndicatorSnapshotPort.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/port/MacroIndicatorSnapshotPort.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.ssafy.thorp.marketflow.application.repository;\n+\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import java.time.Instant;\n+import java.util.List;\n+\n+/** 버전별로 미리 만든 분야 요약 읽기 모델의 저장 경계. 같은 버전의 행은 덮어쓰지 않는다. */\n+public interface MarketFlowFieldSummaryRepository {\n+\n+    void saveIfAbsent(\n+            String registryVersion,\n+            String datasetVersion,\n+            List<MarketFlowField> fields,\n+            Instant builtAt);\n+\n+    List<MarketFlowField> findAll(String registryVersion, String datasetVersion);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/repository/MarketFlowFieldSummaryRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/repository/MarketFlowFieldSummaryRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,16 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import java.math.BigDecimal;\n+import java.time.YearMonth;\n+import java.util.Objects;\n+\n+/** 분야 기준월 뒤에 별도로 발표된 값. 기준월 경로와 변화 요약 입력에는 섞지 않는다. */\n+public record AfterReferenceMonthRelease(YearMonth referenceMonth, BigDecimal value, String unit) {\n+    public AfterReferenceMonthRelease {\n+        Objects.requireNonNull(referenceMonth, \"referenceMonth\");\n+        Objects.requireNonNull(value, \"value\");\n+        if (unit == null || unit.isBlank()) {\n+            throw new IllegalArgumentException(\"unit은 비어 있을 수 없습니다.\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/AfterReferenceMonthRelease.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/AfterReferenceMonthRelease.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import java.time.YearMonth;\n+import java.util.List;\n+import java.util.Map;\n+\n+/** 008이 산출한 분야별 기준월과 지표별 최신 확보월의 한 자료 버전 스냅샷. */\n+public record FieldReferenceSnapshot(\n+        String registryVersion, String datasetVersion, List<FieldReferenceMonth> fields) {\n+    public FieldReferenceSnapshot {\n+        fields = List.copyOf(fields);\n+    }\n+\n+    public record FieldReferenceMonth(\n+            FieldId fieldId,\n+            String displayName,\n+            int displayOrder,\n+            YearMonth referenceMonth,\n+            List<String> indicatorIds,\n+            Map<String, YearMonth> latestMonths,\n+            List<String> heldBackBy) {\n+        public FieldReferenceMonth {\n+            indicatorIds = List.copyOf(indicatorIds);\n+            latestMonths = Map.copyOf(latestMonths);\n+            heldBackBy = List.copyOf(heldBackBy);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/FieldReferenceSnapshot.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/FieldReferenceSnapshot.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,7 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import java.time.Instant;\n+\n+/** 지표 단위 수집 결과. 실패·예시 여부를 분야 전체로 뭉개지 않는다. */\n+public record IndicatorCollectionState(\n+        String indicatorId, Instant lastUpdatedAt, boolean successful, boolean exampleData) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorCollectionState.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorCollectionState.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,46 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.List;\n+\n+/** 화면에 표시하는 지표의 실제 값과 근거. 표준화 점수나 좋고 나쁨 판정을 담지 않는다. */\n+public record IndicatorDisplay(\n+        String indicatorId,\n+        String name,\n+        String unit,\n+        BigDecimal value,\n+        List<PathPoint> path,\n+        YearMonth referenceMonth,\n+        LocalDate releaseDate,\n+        String source,\n+        String agency,\n+        AfterReferenceMonthRelease afterReferenceMonthRelease) {\n+\n+    public IndicatorDisplay {\n+        requireText(indicatorId, \"indicatorId\");\n+        requireText(name, \"name\");\n+        requireText(unit, \"unit\");\n+        requireText(source, \"source\");\n+        requireText(agency, \"agency\");\n+        if (referenceMonth == null) {\n+            throw new IllegalArgumentException(\"referenceMonth는 필수입니다.\");\n+        }\n+        path = List.copyOf(path);\n+        if (path.size() != 3) {\n+            throw new IllegalArgumentException(\"최근 경로는 t-2·t-1·t 세 점이어야 합니다.\");\n+        }\n+        if (afterReferenceMonthRelease != null\n+                && !afterReferenceMonthRelease.referenceMonth().isAfter(referenceMonth)) {\n+            throw new IllegalArgumentException(\"기준월 이후 발표는 분야 기준월보다 뒤여야 합니다.\");\n+        }\n+    }\n+\n+    private static void requireText(String value, String name) {\n+        if (value == null || value.isBlank()) {\n+            throw new IllegalArgumentException(name + \"은 비어 있을 수 없습니다.\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorDisplay.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorDisplay.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+\n+/** 008 등록표에서 읽는 표시·출처 메타데이터. */\n+public record IndicatorMetadata(\n+        String indicatorId,\n+        FieldId fieldId,\n+        String name,\n+        String unit,\n+        String transformation,\n+        String source,\n+        String agency,\n+        String publicationPrecision,\n+        int displayOrder) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorMetadata.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorMetadata.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.List;\n+\n+/** 특정 기준월에서 고정한 지표의 최근 3개월 경로와 발표 정보. */\n+public record IndicatorPathSnapshot(\n+        String indicatorId,\n+        YearMonth referenceMonth,\n+        List<PathPoint> path,\n+        LocalDate releaseDate,\n+        AfterReferenceMonthRelease afterReferenceMonthRelease) {\n+    public IndicatorPathSnapshot {\n+        path = List.copyOf(path);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorPathSnapshot.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/IndicatorPathSnapshot.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,45 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import java.time.Instant;\n+import java.time.YearMonth;\n+import java.util.List;\n+\n+/** 한 시장 흐름 분야의 읽기 모델. 경제 전체 점수·등급·신호 필드는 의도적으로 없다. */\n+public record MarketFlowField(\n+        FieldId fieldId,\n+        String displayName,\n+        int displayOrder,\n+        FieldStatus status,\n+        String narrative,\n+        String narrativeRuleVersion,\n+        List<String> narrativeSubjects,\n+        YearMonth referenceMonth,\n+        List<String> referenceMonthHeldBackBy,\n+        Instant lastUpdatedAt,\n+        boolean exampleData,\n+        List<IndicatorDisplay> indicators) {\n+\n+    public MarketFlowField {\n+        if (fieldId == null || status == null) {\n+            throw new IllegalArgumentException(\"fieldId와 status는 필수입니다.\");\n+        }\n+        if (displayName == null || displayName.isBlank() || displayOrder < 1) {\n+            throw new IllegalArgumentException(\"표시 이름과 순서는 필수입니다.\");\n+        }\n+        narrativeSubjects = List.copyOf(narrativeSubjects);\n+        referenceMonthHeldBackBy = List.copyOf(referenceMonthHeldBackBy);\n+        indicators = List.copyOf(indicators);\n+        if ((status == FieldStatus.EMPTY || status == FieldStatus.COLLECTION_FAILED)\n+                && narrative != null) {\n+            throw new IllegalArgumentException(\"자료 없음·수집 실패 분야는 요약 문장을 만들지 않습니다.\");\n+        }\n+        if (exampleData && status != FieldStatus.EXAMPLE) {\n+            throw new IllegalArgumentException(\"예시 자료 상태는 EXAMPLE이어야 합니다.\");\n+        }\n+        if (status == FieldStatus.READY && (referenceMonth == null || lastUpdatedAt == null)) {\n+            throw new IllegalArgumentException(\"READY 분야에는 기준월과 갱신 시각이 필요합니다.\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/MarketFlowField.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/MarketFlowField.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.ssafy.thorp.marketflow.domain.vo;\n+\n+import java.util.Arrays;\n+\n+/** 008이 고정한 일곱 개 경제환경 화면 분야. 계산 가중이나 평가 등급을 담지 않는다. */\n+public enum FieldId {\n+    PRODUCTION(\"production\"),\n+    CONSUMPTION_INVESTMENT(\"consumption_investment\"),\n+    EXTERNAL_TRADE(\"external_trade\"),\n+    LABOR(\"labor\"),\n+    PRICES_COMMODITIES(\"prices_commodities\"),\n+    FINANCE_HOUSING(\"finance_housing\"),\n+    OVERSEAS(\"overseas\");\n+\n+    private final String value;\n+\n+    FieldId(String value) {\n+        this.value = value;\n+    }\n+\n+    public String value() {\n+        return value;\n+    }\n+\n+    public static FieldId from(String value) {\n+        return Arrays.stream(values())\n+                .filter(field -> field.value.equals(value))\n+                .findFirst()\n+                .orElseThrow(() -> new IllegalArgumentException(\"알 수 없는 시장 흐름 분야: \" + value));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/FieldId.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/FieldId.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+package com.ssafy.thorp.marketflow.domain.vo;\n+\n+/** 분야 자료 상태. 월간 거시지표를 시간 경과만으로 STALE·DELAYED라 판정하지 않는다. */\n+public enum FieldStatus {\n+    READY,\n+    EXAMPLE,\n+    EMPTY,\n+    COLLECTION_FAILED\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/FieldStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/FieldStatus.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+package com.ssafy.thorp.marketflow.domain.vo;\n+\n+import java.math.BigDecimal;\n+import java.time.YearMonth;\n+import java.util.Objects;\n+\n+/** 한 대상월의 실제 지표값. value가 null이면 결측이며 0이나 이전 값으로 채우지 않는다. */\n+public record PathPoint(YearMonth month, BigDecimal value) {\n+    public PathPoint {\n+        Objects.requireNonNull(month, \"month\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/PathPoint.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/PathPoint.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,183 @@\n+package com.ssafy.thorp.marketflow.infrastructure.example;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.domain.model.AfterReferenceMonthRelease;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot.FieldReferenceMonth;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.io.IOException;\n+import java.io.InputStream;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.core.io.ClassPathResource;\n+import org.springframework.core.io.Resource;\n+import org.springframework.stereotype.Component;\n+\n+/** 008 실제 저장소가 합류하기 전 사용하는 버전 고정 예시 자료 어댑터. */\n+@Component\n+public class ExampleMacroIndicatorSnapshotAdapter implements MacroIndicatorSnapshotPort {\n+\n+    static final String RESOURCE_PATH = \"marketflow/macro-indicators-example-v1.json\";\n+\n+    private final FieldReferenceSnapshot references;\n+    private final List<IndicatorMetadata> metadata;\n+    private final Map<String, IndicatorPathSnapshot> paths;\n+    private final List<IndicatorCollectionState> collectionStates;\n+\n+    @Autowired\n+    public ExampleMacroIndicatorSnapshotAdapter(ObjectMapper objectMapper) {\n+        this(new ClassPathResource(RESOURCE_PATH), objectMapper);\n+    }\n+\n+    ExampleMacroIndicatorSnapshotAdapter(Resource resource, ObjectMapper objectMapper) {\n+        Document document = read(resource, objectMapper);\n+        List<FieldReferenceMonth> fieldReferences = new ArrayList<>();\n+        List<IndicatorMetadata> allMetadata = new ArrayList<>();\n+        Map<String, IndicatorPathSnapshot> allPaths = new LinkedHashMap<>();\n+        List<IndicatorCollectionState> allStates = new ArrayList<>();\n+\n+        for (FieldDocument field : document.fields()) {\n+            FieldId fieldId = FieldId.from(field.fieldId());\n+            Map<String, YearMonth> latestMonths = new LinkedHashMap<>();\n+            List<String> indicatorIds = new ArrayList<>();\n+            for (IndicatorDocument indicator : field.indicators()) {\n+                indicatorIds.add(indicator.indicatorId());\n+                latestMonths.put(indicator.indicatorId(), YearMonth.parse(indicator.latestMonth()));\n+                allMetadata.add(toMetadata(fieldId, indicator));\n+                allPaths.put(indicator.indicatorId(), toPath(indicator));\n+                allStates.add(\n+                        new IndicatorCollectionState(\n+                                indicator.indicatorId(),\n+                                Instant.parse(indicator.lastUpdatedAt()),\n+                                true,\n+                                true));\n+            }\n+            fieldReferences.add(\n+                    new FieldReferenceMonth(\n+                            fieldId,\n+                            field.displayName(),\n+                            field.displayOrder(),\n+                            YearMonth.parse(field.referenceMonth()),\n+                            indicatorIds,\n+                            latestMonths,\n+                            field.heldBackBy()));\n+        }\n+        this.references =\n+                new FieldReferenceSnapshot(\n+                        document.registryVersion(), document.datasetVersion(), fieldReferences);\n+        this.metadata = List.copyOf(allMetadata);\n+        this.paths = Map.copyOf(allPaths);\n+        this.collectionStates = List.copyOf(allStates);\n+    }\n+\n+    @Override\n+    public FieldReferenceSnapshot loadFieldReferenceMonths() {\n+        return references;\n+    }\n+\n+    @Override\n+    public Optional<IndicatorPathSnapshot> loadRecentPath(\n+            String indicatorId, YearMonth referenceMonth) {\n+        IndicatorPathSnapshot path = paths.get(indicatorId);\n+        if (path == null || !path.referenceMonth().equals(referenceMonth)) {\n+            return Optional.empty();\n+        }\n+        return Optional.of(path);\n+    }\n+\n+    @Override\n+    public List<IndicatorMetadata> loadIndicatorMeta(String registryVersion) {\n+        return references.registryVersion().equals(registryVersion) ? metadata : List.of();\n+    }\n+\n+    @Override\n+    public List<IndicatorCollectionState> loadCollectionState() {\n+        return collectionStates;\n+    }\n+\n+    private static IndicatorMetadata toMetadata(FieldId fieldId, IndicatorDocument indicator) {\n+        return new IndicatorMetadata(\n+                indicator.indicatorId(),\n+                fieldId,\n+                indicator.name(),\n+                indicator.unit(),\n+                indicator.transformation(),\n+                indicator.source(),\n+                indicator.agency(),\n+                indicator.publicationPrecision(),\n+                indicator.displayOrder());\n+    }\n+\n+    private static IndicatorPathSnapshot toPath(IndicatorDocument indicator) {\n+        List<PathPoint> points =\n+                indicator.path().stream()\n+                        .map(point -> new PathPoint(YearMonth.parse(point.month()), point.value()))\n+                        .toList();\n+        AfterReferenceMonthRelease after = null;\n+        if (indicator.afterReferenceMonthRelease() != null) {\n+            ReleaseDocument release = indicator.afterReferenceMonthRelease();\n+            after =\n+                    new AfterReferenceMonthRelease(\n+                            YearMonth.parse(release.referenceMonth()),\n+                            release.value(),\n+                            release.unit());\n+        }\n+        return new IndicatorPathSnapshot(\n+                indicator.indicatorId(),\n+                points.getLast().month(),\n+                points,\n+                LocalDate.parse(indicator.releaseDate()),\n+                after);\n+    }\n+\n+    private static Document read(Resource resource, ObjectMapper objectMapper) {\n+        try (InputStream input = resource.getInputStream()) {\n+            return objectMapper.readValue(input, Document.class);\n+        } catch (IOException e) {\n+            throw new IllegalStateException(\"시장 흐름 예시 자료를 읽을 수 없습니다: \" + resource, e);\n+        }\n+    }\n+\n+    private record Document(\n+            String registryVersion, String datasetVersion, List<FieldDocument> fields) {}\n+\n+    private record FieldDocument(\n+            String fieldId,\n+            String displayName,\n+            int displayOrder,\n+            String referenceMonth,\n+            List<String> heldBackBy,\n+            List<IndicatorDocument> indicators) {}\n+\n+    private record IndicatorDocument(\n+            String indicatorId,\n+            String name,\n+            String unit,\n+            String transformation,\n+            String source,\n+            String agency,\n+            String publicationPrecision,\n+            int displayOrder,\n+            String latestMonth,\n+            String releaseDate,\n+            List<PointDocument> path,\n+            ReleaseDocument afterReferenceMonthRelease,\n+            String lastUpdatedAt) {}\n+\n+    private record PointDocument(String month, BigDecimal value) {}\n+\n+    private record ReleaseDocument(String referenceMonth, BigDecimal value, String unit) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,58 @@\n+package com.ssafy.thorp.marketflow.infrastructure.persistence;\n+\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Embeddable;\n+import java.io.Serializable;\n+import java.util.Objects;\n+\n+/** 분야·등록표 버전·자료 버전을 함께 고정하는 읽기 모델 식별자. */\n+@Embeddable\n+public class MarketFlowFieldSummaryId implements Serializable {\n+\n+    @Column(name = \"field_id\", length = 64, nullable = false)\n+    private String fieldId;\n+\n+    @Column(name = \"registry_version\", length = 128, nullable = false)\n+    private String registryVersion;\n+\n+    @Column(name = \"dataset_version\", length = 128, nullable = false)\n+    private String datasetVersion;\n+\n+    protected MarketFlowFieldSummaryId() {}\n+\n+    MarketFlowFieldSummaryId(String fieldId, String registryVersion, String datasetVersion) {\n+        this.fieldId = fieldId;\n+        this.registryVersion = registryVersion;\n+        this.datasetVersion = datasetVersion;\n+    }\n+\n+    String getFieldId() {\n+        return fieldId;\n+    }\n+\n+    String getRegistryVersion() {\n+        return registryVersion;\n+    }\n+\n+    String getDatasetVersion() {\n+        return datasetVersion;\n+    }\n+\n+    @Override\n+    public boolean equals(Object other) {\n+        if (this == other) {\n+            return true;\n+        }\n+        if (!(other instanceof MarketFlowFieldSummaryId that)) {\n+            return false;\n+        }\n+        return Objects.equals(fieldId, that.fieldId)\n+                && Objects.equals(registryVersion, that.registryVersion)\n+                && Objects.equals(datasetVersion, that.datasetVersion);\n+    }\n+\n+    @Override\n+    public int hashCode() {\n+        return Objects.hash(fieldId, registryVersion, datasetVersion);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryId.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryId.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,129 @@\n+package com.ssafy.thorp.marketflow.infrastructure.persistence;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import jakarta.persistence.Column;\n+import jakarta.persistence.EmbeddedId;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.EnumType;\n+import jakarta.persistence.Enumerated;\n+import jakarta.persistence.Table;\n+import java.time.Instant;\n+import java.util.List;\n+import org.hibernate.annotations.JdbcTypeCode;\n+import org.hibernate.type.SqlTypes;\n+\n+/** {@code market_flow_field_summary}의 JPA 매핑. 지표 개별 값은 008과 이중 저장하지 않는다. */\n+@Entity\n+@Table(name = \"market_flow_field_summary\")\n+public class MarketFlowFieldSummaryJpaEntity {\n+\n+    @EmbeddedId private MarketFlowFieldSummaryId id;\n+\n+    @Column(nullable = false, length = 64)\n+    private String displayName;\n+\n+    @Column(nullable = false)\n+    private int displayOrder;\n+\n+    @Column(columnDefinition = \"text\")\n+    private String narrative;\n+\n+    @Column(nullable = false, length = 128)\n+    private String narrativeRuleVersion;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    @Column(nullable = false, columnDefinition = \"jsonb\")\n+    private List<String> narrativeSubjects;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(nullable = false, length = 32)\n+    private FieldStatus status;\n+\n+    @Column(nullable = false)\n+    private boolean isExampleData;\n+\n+    @Column(length = 7)\n+    private String referenceMonth;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    @Column(nullable = false, columnDefinition = \"jsonb\")\n+    private List<String> referenceMonthHeldBackBy;\n+\n+    private Instant lastUpdatedAt;\n+\n+    @Column(nullable = false)\n+    private Instant builtAt;\n+\n+    protected MarketFlowFieldSummaryJpaEntity() {}\n+\n+    MarketFlowFieldSummaryJpaEntity(\n+            MarketFlowFieldSummaryId id,\n+            String displayName,\n+            int displayOrder,\n+            String narrative,\n+            String narrativeRuleVersion,\n+            List<String> narrativeSubjects,\n+            FieldStatus status,\n+            boolean isExampleData,\n+            String referenceMonth,\n+            List<String> referenceMonthHeldBackBy,\n+            Instant lastUpdatedAt,\n+            Instant builtAt) {\n+        this.id = id;\n+        this.displayName = displayName;\n+        this.displayOrder = displayOrder;\n+        this.narrative = narrative;\n+        this.narrativeRuleVersion = narrativeRuleVersion;\n+        this.narrativeSubjects = List.copyOf(narrativeSubjects);\n+        this.status = status;\n+        this.isExampleData = isExampleData;\n+        this.referenceMonth = referenceMonth;\n+        this.referenceMonthHeldBackBy = List.copyOf(referenceMonthHeldBackBy);\n+        this.lastUpdatedAt = lastUpdatedAt;\n+        this.builtAt = builtAt;\n+    }\n+\n+    MarketFlowFieldSummaryId getId() {\n+        return id;\n+    }\n+\n+    String getDisplayName() {\n+        return displayName;\n+    }\n+\n+    int getDisplayOrder() {\n+        return displayOrder;\n+    }\n+\n+    String getNarrative() {\n+        return narrative;\n+    }\n+\n+    String getNarrativeRuleVersion() {\n+        return narrativeRuleVersion;\n+    }\n+\n+    List<String> getNarrativeSubjects() {\n+        return narrativeSubjects;\n+    }\n+\n+    FieldStatus getStatus() {\n+        return status;\n+    }\n+\n+    boolean isExampleData() {\n+        return isExampleData;\n+    }\n+\n+    String getReferenceMonth() {\n+        return referenceMonth;\n+    }\n+\n+    List<String> getReferenceMonthHeldBackBy() {\n+        return referenceMonthHeldBackBy;\n+    }\n+\n+    Instant getLastUpdatedAt() {\n+        return lastUpdatedAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,21 @@\n+package com.ssafy.thorp.marketflow.infrastructure.persistence;\n+\n+import java.util.List;\n+import org.springframework.data.jpa.repository.JpaRepository;\n+import org.springframework.data.jpa.repository.Query;\n+import org.springframework.data.repository.query.Param;\n+\n+interface MarketFlowFieldSummaryJpaRepository\n+        extends JpaRepository<MarketFlowFieldSummaryJpaEntity, MarketFlowFieldSummaryId> {\n+\n+    @Query(\n+            \"\"\"\n+            select summary from MarketFlowFieldSummaryJpaEntity summary\n+            where summary.id.registryVersion = :registryVersion\n+              and summary.id.datasetVersion = :datasetVersion\n+            order by summary.displayOrder\n+            \"\"\")\n+    List<MarketFlowFieldSummaryJpaEntity> findVersion(\n+            @Param(\"registryVersion\") String registryVersion,\n+            @Param(\"datasetVersion\") String datasetVersion);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,48 @@\n+package com.ssafy.thorp.marketflow.infrastructure.persistence;\n+\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import java.time.Instant;\n+import java.time.YearMonth;\n+import java.util.List;\n+\n+final class MarketFlowFieldSummaryMapper {\n+\n+    private MarketFlowFieldSummaryMapper() {}\n+\n+    static MarketFlowFieldSummaryJpaEntity toEntity(\n+            String registryVersion, String datasetVersion, MarketFlowField field, Instant builtAt) {\n+        return new MarketFlowFieldSummaryJpaEntity(\n+                new MarketFlowFieldSummaryId(\n+                        field.fieldId().value(), registryVersion, datasetVersion),\n+                field.displayName(),\n+                field.displayOrder(),\n+                field.narrative(),\n+                field.narrativeRuleVersion(),\n+                field.narrativeSubjects(),\n+                field.status(),\n+                field.exampleData(),\n+                field.referenceMonth() == null ? null : field.referenceMonth().toString(),\n+                field.referenceMonthHeldBackBy(),\n+                field.lastUpdatedAt(),\n+                builtAt);\n+    }\n+\n+    static MarketFlowField toDomain(MarketFlowFieldSummaryJpaEntity entity) {\n+        return new MarketFlowField(\n+                FieldId.from(entity.getId().getFieldId()),\n+                entity.getDisplayName(),\n+                entity.getDisplayOrder(),\n+                entity.getStatus(),\n+                entity.getNarrative(),\n+                entity.getNarrativeRuleVersion(),\n+                entity.getNarrativeSubjects(),\n+                entity.getReferenceMonth() == null\n+                        ? null\n+                        : YearMonth.parse(entity.getReferenceMonth()),\n+                entity.getReferenceMonthHeldBackBy(),\n+                entity.getLastUpdatedAt(),\n+                entity.isExampleData(),\n+                List.of());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryMapper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryMapper.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,44 @@\n+package com.ssafy.thorp.marketflow.infrastructure.persistence;\n+\n+import com.ssafy.thorp.marketflow.application.repository.MarketFlowFieldSummaryRepository;\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import java.time.Instant;\n+import java.util.List;\n+import org.springframework.stereotype.Repository;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/** 같은 버전 조합을 불변 스냅샷으로 보관하는 분야 요약 저장소 구현. */\n+@Repository\n+public class MarketFlowFieldSummaryRepositoryImpl implements MarketFlowFieldSummaryRepository {\n+\n+    private final MarketFlowFieldSummaryJpaRepository repository;\n+\n+    public MarketFlowFieldSummaryRepositoryImpl(MarketFlowFieldSummaryJpaRepository repository) {\n+        this.repository = repository;\n+    }\n+\n+    @Override\n+    @Transactional\n+    public void saveIfAbsent(\n+            String registryVersion,\n+            String datasetVersion,\n+            List<MarketFlowField> fields,\n+            Instant builtAt) {\n+        for (MarketFlowField field : fields) {\n+            MarketFlowFieldSummaryJpaEntity entity =\n+                    MarketFlowFieldSummaryMapper.toEntity(\n+                            registryVersion, datasetVersion, field, builtAt);\n+            if (!repository.existsById(entity.getId())) {\n+                repository.save(entity);\n+            }\n+        }\n+    }\n+\n+    @Override\n+    @Transactional(readOnly = true)\n+    public List<MarketFlowField> findAll(String registryVersion, String datasetVersion) {\n+        return repository.findVersion(registryVersion, datasetVersion).stream()\n+                .map(MarketFlowFieldSummaryMapper::toDomain)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+CREATE TABLE market_flow_field_summary (\n+    field_id VARCHAR(64) NOT NULL,\n+    registry_version VARCHAR(128) NOT NULL,\n+    dataset_version VARCHAR(128) NOT NULL,\n+    display_name VARCHAR(64) NOT NULL,\n+    display_order INTEGER NOT NULL,\n+    narrative TEXT,\n+    narrative_rule_version VARCHAR(128) NOT NULL,\n+    narrative_subjects JSONB NOT NULL DEFAULT '[]'::jsonb,\n+    status VARCHAR(32) NOT NULL,\n+    is_example_data BOOLEAN NOT NULL,\n+    reference_month VARCHAR(7),\n+    reference_month_held_back_by JSONB NOT NULL DEFAULT '[]'::jsonb,\n+    last_updated_at TIMESTAMPTZ,\n+    built_at TIMESTAMPTZ NOT NULL,\n+    CONSTRAINT pk_market_flow_field_summary\n+        PRIMARY KEY (field_id, registry_version, dataset_version),\n+    CONSTRAINT ck_market_flow_field_summary_status\n+        CHECK (status IN ('READY', 'EXAMPLE', 'EMPTY', 'COLLECTION_FAILED')),\n+    CONSTRAINT ck_market_flow_field_summary_display_order\n+        CHECK (display_order BETWEEN 1 AND 7),\n+    CONSTRAINT ck_market_flow_field_summary_example\n+        CHECK (NOT is_example_data OR status = 'EXAMPLE')\n+);\n+\n+CREATE INDEX idx_market_flow_field_summary_versions\n+    ON market_flow_field_summary (registry_version, dataset_version, display_order);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260916143350__market_flow_field_summary.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260916143350__market_flow_field_summary.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,65 @@\n+{\n+  \"registryVersion\": \"macro-registry-example-v1\",\n+  \"datasetVersion\": \"macro-dataset-example-2026-09-16\",\n+  \"fields\": [\n+    {\n+      \"fieldId\": \"production\", \"displayName\": \"생산\", \"displayOrder\": 1,\n+      \"referenceMonth\": \"2026-07\", \"heldBackBy\": [\"service_production\"],\n+      \"indicators\": [\n+        {\"indicatorId\":\"all_industry_production\",\"name\":\"전산업생산\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 전산업생산지수\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":1,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-01\",\"path\":[{\"month\":\"2026-05\",\"value\":1.2},{\"month\":\"2026-06\",\"value\":1.0},{\"month\":\"2026-07\",\"value\":0.8}],\"afterReferenceMonthRelease\":{\"referenceMonth\":\"2026-08\",\"value\":0.9,\"unit\":\"%\"},\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"mining_manufacturing_production\",\"name\":\"광공업생산\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 광업제조업동향조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":2,\"latestMonth\":\"2026-07\",\"releaseDate\":\"2026-08-29\",\"path\":[{\"month\":\"2026-05\",\"value\":2.1},{\"month\":\"2026-06\",\"value\":1.5},{\"month\":\"2026-07\",\"value\":0.9}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"service_production\",\"name\":\"서비스업생산\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 서비스업동향조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":3,\"latestMonth\":\"2026-07\",\"releaseDate\":\"2026-08-29\",\"path\":[{\"month\":\"2026-05\",\"value\":1.7},{\"month\":\"2026-06\",\"value\":1.8},{\"month\":\"2026-07\",\"value\":1.6}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    },\n+    {\n+      \"fieldId\": \"consumption_investment\", \"displayName\": \"소비·투자\", \"displayOrder\": 2,\n+      \"referenceMonth\": \"2026-07\", \"heldBackBy\": [\"construction_completed\"],\n+      \"indicators\": [\n+        {\"indicatorId\":\"retail_sales_index\",\"name\":\"소매판매액지수\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 서비스업동향조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":1,\"latestMonth\":\"2026-07\",\"releaseDate\":\"2026-08-29\",\"path\":[{\"month\":\"2026-05\",\"value\":-0.4},{\"month\":\"2026-06\",\"value\":0.2},{\"month\":\"2026-07\",\"value\":0.5}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"equipment_investment_index\",\"name\":\"설비투자지수\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 설비투자지수\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":2,\"latestMonth\":\"2026-07\",\"releaseDate\":\"2026-08-29\",\"path\":[{\"month\":\"2026-05\",\"value\":1.1},{\"month\":\"2026-06\",\"value\":1.4},{\"month\":\"2026-07\",\"value\":2.0}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"construction_completed\",\"name\":\"건설기성액(불변)\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 건설경기동향조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":3,\"latestMonth\":\"2026-07\",\"releaseDate\":\"2026-08-29\",\"path\":[{\"month\":\"2026-05\",\"value\":-1.2},{\"month\":\"2026-06\",\"value\":null},{\"month\":\"2026-07\",\"value\":-0.8}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    },\n+    {\n+      \"fieldId\": \"external_trade\", \"displayName\": \"대외거래\", \"displayOrder\": 3,\n+      \"referenceMonth\": \"2026-08\", \"heldBackBy\": [],\n+      \"indicators\": [\n+        {\"indicatorId\":\"exports\",\"name\":\"수출\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"관세청 수출입무역통계\",\"agency\":\"관세청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":1,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-01\",\"path\":[{\"month\":\"2026-06\",\"value\":3.2},{\"month\":\"2026-07\",\"value\":4.0},{\"month\":\"2026-08\",\"value\":4.8}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"imports\",\"name\":\"수입\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"관세청 수출입무역통계\",\"agency\":\"관세청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":2,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-01\",\"path\":[{\"month\":\"2026-06\",\"value\":2.5},{\"month\":\"2026-07\",\"value\":2.8},{\"month\":\"2026-08\",\"value\":3.1}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"trade_balance\",\"name\":\"무역수지\",\"unit\":\"억달러\",\"transformation\":\"공식 금액\",\"source\":\"관세청 수출입무역통계\",\"agency\":\"관세청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":3,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-01\",\"path\":[{\"month\":\"2026-06\",\"value\":45.1},{\"month\":\"2026-07\",\"value\":51.3},{\"month\":\"2026-08\",\"value\":48.7}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    },\n+    {\n+      \"fieldId\": \"labor\", \"displayName\": \"노동\", \"displayOrder\": 4,\n+      \"referenceMonth\": \"2026-08\", \"heldBackBy\": [],\n+      \"indicators\": [\n+        {\"indicatorId\":\"employed_persons\",\"name\":\"취업자 수\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 경제활동인구조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":1,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-10\",\"path\":[{\"month\":\"2026-06\",\"value\":1.4},{\"month\":\"2026-07\",\"value\":1.0},{\"month\":\"2026-08\",\"value\":0.7}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"unemployment_rate\",\"name\":\"실업률\",\"unit\":\"%\",\"transformation\":\"계절조정 비율\",\"source\":\"KOSIS 경제활동인구조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":2,\"latestMonth\":\"2026-09\",\"releaseDate\":\"2026-09-10\",\"path\":[{\"month\":\"2026-06\",\"value\":2.8},{\"month\":\"2026-07\",\"value\":2.8},{\"month\":\"2026-08\",\"value\":2.9}],\"afterReferenceMonthRelease\":{\"referenceMonth\":\"2026-09\",\"value\":3.1,\"unit\":\"%\"},\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    },\n+    {\n+      \"fieldId\": \"prices_commodities\", \"displayName\": \"물가·원자재\", \"displayOrder\": 5,\n+      \"referenceMonth\": \"2026-08\", \"heldBackBy\": [],\n+      \"indicators\": [\n+        {\"indicatorId\":\"cpi\",\"name\":\"소비자물가\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"KOSIS 소비자물가조사\",\"agency\":\"통계청\",\"publicationPrecision\":\"0.1\",\"displayOrder\":1,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-03\",\"path\":[{\"month\":\"2026-06\",\"value\":2.6},{\"month\":\"2026-07\",\"value\":2.4},{\"month\":\"2026-08\",\"value\":2.2}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"dubai_oil\",\"name\":\"두바이유\",\"unit\":\"달러/배럴\",\"transformation\":\"월 평균\",\"source\":\"ECOS 국제원자재가격\",\"agency\":\"한국은행\",\"publicationPrecision\":\"0.01\",\"displayOrder\":2,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-05\",\"path\":[{\"month\":\"2026-06\",\"value\":78.2},{\"month\":\"2026-07\",\"value\":76.8},{\"month\":\"2026-08\",\"value\":75.4}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    },\n+    {\n+      \"fieldId\": \"finance_housing\", \"displayName\": \"금융·주택\", \"displayOrder\": 6,\n+      \"referenceMonth\": \"2026-08\", \"heldBackBy\": [],\n+      \"indicators\": [\n+        {\"indicatorId\":\"ktb_3y\",\"name\":\"국고채 3년\",\"unit\":\"%\",\"transformation\":\"월 기말\",\"source\":\"ECOS 시장금리\",\"agency\":\"한국은행\",\"publicationPrecision\":\"0.001\",\"displayOrder\":1,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-01\",\"path\":[{\"month\":\"2026-06\",\"value\":3.02},{\"month\":\"2026-07\",\"value\":3.11},{\"month\":\"2026-08\",\"value\":3.18}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"usd_krw\",\"name\":\"원/달러 환율\",\"unit\":\"원\",\"transformation\":\"월 기말\",\"source\":\"ECOS 원/미국달러 환율\",\"agency\":\"한국은행\",\"publicationPrecision\":\"0.1\",\"displayOrder\":2,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-01\",\"path\":[{\"month\":\"2026-06\",\"value\":1351.1},{\"month\":\"2026-07\",\"value\":1350.2},{\"month\":\"2026-08\",\"value\":1378.5}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"},\n+        {\"indicatorId\":\"housing_price\",\"name\":\"주택가격\",\"unit\":\"%\",\"transformation\":\"전월 대비 증가율\",\"source\":\"KOSIS 전국주택가격동향조사\",\"agency\":\"한국부동산원\",\"publicationPrecision\":\"0.01\",\"displayOrder\":3,\"latestMonth\":\"2026-08\",\"releaseDate\":\"2026-09-15\",\"path\":[{\"month\":\"2026-06\",\"value\":0.08},{\"month\":\"2026-07\",\"value\":0.07},{\"month\":\"2026-08\",\"value\":0.08}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    },\n+    {\n+      \"fieldId\": \"overseas\", \"displayName\": \"해외 경기\", \"displayOrder\": 7,\n+      \"referenceMonth\": \"2026-06\", \"heldBackBy\": [\"g20_cli\"],\n+      \"indicators\": [\n+        {\"indicatorId\":\"g20_cli\",\"name\":\"G20 경기선행지수\",\"unit\":\"%\",\"transformation\":\"전년동월 대비 증가율\",\"source\":\"OECD Composite Leading Indicators\",\"agency\":\"OECD\",\"publicationPrecision\":\"0.01\",\"displayOrder\":1,\"latestMonth\":\"2026-06\",\"releaseDate\":\"2026-08-10\",\"path\":[{\"month\":\"2026-04\",\"value\":0.1},{\"month\":\"2026-05\",\"value\":0.2},{\"month\":\"2026-06\",\"value\":0.4}],\"lastUpdatedAt\":\"2026-09-16T02:00:00Z\"}\n+      ]\n+    }\n+  ]\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/marketflow/macro-indicators-example-v1.json",
+          "old_path": "backend/src/main/resources/marketflow/macro-indicators-example-v1.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,68 @@\n+package com.ssafy.thorp.marketflow.infrastructure.example;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import java.time.YearMonth;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.core.io.ClassPathResource;\n+\n+class ExampleMacroIndicatorSnapshotAdapterTest {\n+\n+    private final ExampleMacroIndicatorSnapshotAdapter adapter =\n+            new ExampleMacroIndicatorSnapshotAdapter(\n+                    new ClassPathResource(ExampleMacroIndicatorSnapshotAdapter.RESOURCE_PATH),\n+                    new ObjectMapper());\n+\n+    @Test\n+    void returnsAllSevenFieldsAndSeventeenIndicators() {\n+        var references = adapter.loadFieldReferenceMonths();\n+\n+        assertThat(references.fields()).hasSize(7);\n+        assertThat(references.fields()).flatExtracting(field -> field.indicatorIds()).hasSize(17);\n+        assertThat(adapter.loadIndicatorMeta(references.registryVersion())).hasSize(17);\n+        assertThat(adapter.loadCollectionState())\n+                .hasSize(17)\n+                .allSatisfy(\n+                        state -> {\n+                            assertThat(state.successful()).isTrue();\n+                            assertThat(state.exampleData()).isTrue();\n+                        });\n+    }\n+\n+    @Test\n+    void keepsDifferentReferenceMonthsAndMissingValue() {\n+        var references = adapter.loadFieldReferenceMonths();\n+\n+        assertThat(references.fields())\n+                .filteredOn(field -> field.fieldId() == FieldId.PRODUCTION)\n+                .singleElement()\n+                .extracting(field -> field.referenceMonth())\n+                .isEqualTo(YearMonth.of(2026, 7));\n+        assertThat(references.fields())\n+                .filteredOn(field -> field.fieldId() == FieldId.OVERSEAS)\n+                .singleElement()\n+                .extracting(field -> field.referenceMonth())\n+                .isEqualTo(YearMonth.of(2026, 6));\n+\n+        var construction =\n+                adapter.loadRecentPath(\"construction_completed\", YearMonth.of(2026, 7))\n+                        .orElseThrow();\n+        assertThat(construction.path()).extracting(point -> point.value()).containsNull();\n+    }\n+\n+    @Test\n+    void separatesReleaseAfterFieldReferenceMonthFromThreeMonthPath() {\n+        var unemployment =\n+                adapter.loadRecentPath(\"unemployment_rate\", YearMonth.of(2026, 8)).orElseThrow();\n+\n+        assertThat(unemployment.path())\n+                .extracting(point -> point.month())\n+                .containsExactly(\n+                        YearMonth.of(2026, 6), YearMonth.of(2026, 7), YearMonth.of(2026, 8));\n+        assertThat(unemployment.afterReferenceMonthRelease()).isNotNull();\n+        assertThat(unemployment.afterReferenceMonthRelease().referenceMonth())\n+                .isEqualTo(YearMonth.of(2026, 9));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapterTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapterTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,72 @@\n+package com.ssafy.thorp.marketflow.infrastructure.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.time.Instant;\n+import java.time.YearMonth;\n+import java.util.List;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+@DataJpaTest\n+@Import(MarketFlowFieldSummaryRepositoryImpl.class)\n+class MarketFlowFieldSummaryRepositoryIT extends PostgresTestSupport {\n+\n+    private static final String REGISTRY_VERSION = \"macro-registry-example-v1\";\n+    private static final String DATASET_VERSION = \"macro-dataset-example-2026-09-16\";\n+\n+    @Autowired private MarketFlowFieldSummaryRepositoryImpl repository;\n+    @Autowired private JdbcTemplate jdbc;\n+\n+    @Test\n+    void repeatedSaveOfSameVersionKeepsOneImmutableRow() {\n+        MarketFlowField original = field(\"첫 번째 요약\");\n+        repository.saveIfAbsent(\n+                REGISTRY_VERSION,\n+                DATASET_VERSION,\n+                List.of(original),\n+                Instant.parse(\"2026-09-16T02:00:00Z\"));\n+        repository.saveIfAbsent(\n+                REGISTRY_VERSION,\n+                DATASET_VERSION,\n+                List.of(field(\"같은 버전에 뒤늦게 들어온 다른 요약\")),\n+                Instant.parse(\"2026-09-16T03:00:00Z\"));\n+\n+        Integer count =\n+                jdbc.queryForObject(\n+                        \"SELECT COUNT(*) FROM market_flow_field_summary\"\n+                                + \" WHERE field_id = ? AND registry_version = ? AND dataset_version = ?\",\n+                        Integer.class,\n+                        \"production\",\n+                        REGISTRY_VERSION,\n+                        DATASET_VERSION);\n+        assertThat(count).isOne();\n+        assertThat(repository.findAll(REGISTRY_VERSION, DATASET_VERSION))\n+                .singleElement()\n+                .extracting(MarketFlowField::narrative)\n+                .isEqualTo(\"첫 번째 요약\");\n+    }\n+\n+    private static MarketFlowField field(String narrative) {\n+        return new MarketFlowField(\n+                FieldId.PRODUCTION,\n+                \"생산\",\n+                1,\n+                FieldStatus.EXAMPLE,\n+                narrative,\n+                \"market-flow-narrative-v1\",\n+                List.of(\"mining_manufacturing_production\"),\n+                YearMonth.of(2026, 7),\n+                List.of(\"service_production\"),\n+                Instant.parse(\"2026-09-16T02:00:00Z\"),\n+                true,\n+                List.of());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryRepositoryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/persistence/MarketFlowFieldSummaryRepositoryIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,7 @@ T015가 이 문제를 먼저 막는다.\n \n | 묶음 | Jira Task 제목 | T항목 | 근거 요구사항 | Jira |\n |---|---|---|---|---|\n-| WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | 미발급 |\n+| WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |\n | WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | 미발급 |\n | WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | 미발급 |\n | WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |\n@@ -62,30 +62,30 @@ T015가 이 문제를 먼저 막는다.\n **Independent Test**: 예시 자료 fixture를 넣고 포트가 7개 분야의 T_g와 지표별 3개월 경로를 돌려주는지,\n 결측이 결측으로 남는지 확인한다. 화면과 API 없이 검증할 수 있다.\n \n-- [ ] T001 [WB01] [P] [US2] [BE] 지표 스냅샷 포트 정의 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/port/MacroIndicatorSnapshotPort.java`) · Jira 미발급\n+- [x] T001 [WB01] [P] [US2] [BE] 지표 스냅샷 포트 정의 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/port/MacroIndicatorSnapshotPort.java`) · Jira `S15P21E205-268`\n   - 조회 넷을 둔다: `loadFieldReferenceMonths()`, `loadRecentPath(indicatorId, t)`, `loadIndicatorMeta(registryVersion)`, `loadCollectionState()` ([data-model.md](data-model.md) \"읽기 포트\")\n   - **결측은 결측으로 돌려준다.** 포트가 빈 값을 채우면 008 FR-008과 원칙 VI를 009가 어기게 된다\n   - `application/port`에는 인터페이스만 둔다. 구현체는 `infrastructure`에 둔다 (backend/CLAUDE.md, ArchUnit 규칙)\n   - **시그니처를 확정하기 전에 008 담당자와 맞춘다.** 이 네 조회는 008 spec을 읽고 009가 혼자 정한 모양이라, 008이 다른 형태로 만들면 합류 시점에 어댑터 교체가 아니라 포트 재설계가 된다. 확인할 것은 ① T_g와 지표별 최신 확보월을 009가 계산하지 않고 받는가 ② 임의 기준월 t의 3개월 경로를 조회 단위로 주는가 ③ 수집 실패·예시 자료 여부를 **지표 단위로** 구분해 주는가 ([research.md](research.md) R2 합류 위험)\n-- [ ] T002 [WB01] [P] [US2] [BE] 도메인 모델과 VO (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/`, `backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/`) · Jira 미발급\n+- [x] T002 [WB01] [P] [US2] [BE] 도메인 모델과 VO (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/`, `backend/src/main/java/com/ssafy/thorp/marketflow/domain/vo/`) · Jira `S15P21E205-268`\n   - `MarketFlowField`, `IndicatorDisplay`, `AfterReferenceMonthRelease`, `PathPoint`, `FieldStatus`를 만든다 ([data-model.md](data-model.md))\n   - **분야 전체를 좋고 나쁨으로 요약하는 필드를 두지 않는다.** 점수·등급·신호등에 해당하는 값이 모델에 없어야 FR-003·SC-002를 구조로 막을 수 있다\n   - `FieldStatus`는 `READY`·`EXAMPLE`·`EMPTY`·`COLLECTION_FAILED` 넷뿐이다. `STALE`·`DELAYED`를 두지 않는다 ([research.md](research.md) R6)\n   - `domain`은 Spring·JPA·Jackson을 import하지 않는다 (backend/CLAUDE.md)\n-- [ ] T003 [WB01] [P] [US3] [BE] 예시 자료 fixture (`backend/src/main/resources/marketflow/macro-indicators-example-v1.json`) · Jira 미발급\n+- [x] T003 [WB01] [P] [US3] [BE] 예시 자료 fixture (`backend/src/main/resources/marketflow/macro-indicators-example-v1.json`) · Jira `S15P21E205-268`\n   - 008 FR-001의 7개 분야 17개 지표를 모두 담고, 지표마다 이름·단위·최근 3개월 값·대상월·발표일·출처·작성기관을 둔다\n   - 분야마다 T_g가 다른 경우와 T_g 이후 발표가 있는 지표를 최소 한 건씩 넣는다. FR-008을 테스트할 자료가 여기 없으면 T013이 검증할 대상을 못 만든다\n   - 파일 이름에 버전을 박는다. 008이 실제 등록표를 내면 이 파일은 지우지 않고 테스트 fixture로 남긴다\n-- [ ] T004 [WB01] [US3] [BE] 예시 자료 어댑터 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java`, 같은 경로의 테스트) · Jira 미발급\n+- [x] T004 [WB01] [US3] [BE] 예시 자료 어댑터 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java`, 같은 경로의 테스트) · Jira `S15P21E205-268`\n   - T001의 포트를 T003의 fixture로 구현한다\n   - 이 어댑터가 돌려주는 자료에는 예시 표시가 붙는다. 예시 자료를 `READY`로 표현하지 않는다 (FR-014, 008 FR-022)\n   - 008이 실제 저장소를 만들면 **이 클래스만 교체한다.** 포트 시그니처와 읽기 모델은 그대로 둔다\n   - 테스트: 7개 분야가 모두 오는지, 결측 지표의 값이 null로 남는지, 분야별 T_g가 서로 다를 수 있는지\n-- [ ] T005 [WB01] [US1] [BE] 읽기 모델 마이그레이션 (`backend/src/main/resources/db/migration/V20260916xxxxxx__market_flow_field_summary.sql`) · Jira 미발급\n+- [x] T005 [WB01] [US1] [BE] 읽기 모델 마이그레이션 (`backend/src/main/resources/db/migration/V20260916xxxxxx__market_flow_field_summary.sql`) · Jira `S15P21E205-268`\n   - 컬럼 구성은 [data-model.md](data-model.md) \"저장 — 읽기 모델 한 벌\"을 따른다\n   - PK에 `field_id`·`registry_version`·`dataset_version`을 넣는다. 버전이 PK에 없으면 같은 버전으로 다시 만들었을 때 같은 값이 나오는지 보장할 자리가 사라진다 (원칙 VIII)\n   - 파일명의 타임스탬프는 만들 때의 실제 시각으로 정한다. 기존 마이그레이션 명명 규칙(`V20260916104500__...`)을 따른다\n-- [ ] T006 [WB01] [US1] [BE] 읽기 모델 적재·조회 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/`, `backend/src/main/java/com/ssafy/thorp/marketflow/application/repository/`) · Jira 미발급\n+- [x] T006 [WB01] [US1] [BE] 읽기 모델 적재·조회 (`backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/persistence/`, `backend/src/main/java/com/ssafy/thorp/marketflow/application/repository/`) · Jira `S15P21E205-268`\n   - `application/repository`에 인터페이스, `infrastructure/persistence`에 `@Entity`와 구현을 둔다 (backend/CLAUDE.md)\n   - 갱신은 등록표 버전 또는 자료 버전이 바뀔 때만 한다. 사용자 요청이 재계산을 부르지 않는다 ([research.md](research.md) R7)\n   - 테스트: Testcontainers PostgreSQL 16에서 같은 `(registry_version, dataset_version)`으로 두 번 적재하면 행이 같은지\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/tasks.md",
+          "old_path": "specs/009-market-flow-overview/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2816937": [],
+    "2817072": [
+      {
+        "id": 66048,
+        "name": "grinning",
+        "user": {
+          "id": 30869,
+          "username": "wdg0434",
+          "public_email": "",
+          "name": "우동균",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+          "web_url": "https://lab.ssafy.com/wdg0434"
+        },
+        "created_at": "2026-09-16T15:26:14.950+09:00",
+        "updated_at": "2026-09-16T15:26:14.950+09:00",
+        "awardable_id": 2817072,
+        "awardable_type": "Note",
+        "url": null
+      }
+    ],
+    "2817149": [],
+    "2817179": []
+  }
+}

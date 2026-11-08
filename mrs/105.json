@@ -1,0 +1,712 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944363,
+    "iid": 105,
+    "project_id": 1444456,
+    "title": "fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다",
+    "description": "# 작업 내용 요약\n\n**백테스트를 요청했는데 화면이 영원히 \"대기 중\"에 머무는 경우가 있었다.**\n\n백테스트는 접수 단계와 계산 단계로 나뉘어 있다. 요청을 받으면 곧바로 접수증을 돌려주고, 작업 메시지를 만들어 브로커에 넣으면 워커가 그 메시지를 가져가서 계산한다. 이렇게 작업 메시지를 만드는 일을 조립이라고 부른다.\n\n메시지를 보내다가 실패하는 일은 늘 있다. 브로커가 잠시 불안정해질 수 있기 때문에, **보내지 못한 작업을 30초마다 다시 보내는 재시도 장치**를 두고 있다. 문제는 **조립 자체가 실패하는 경우**까지 그 장치에 맡겼다는 점이다.\n\n브로커 장애는 다시 보내면 해소된다. 그러나 조립 실패는 요청에 담긴 전략이나 비용 조건이 성립하지 않는다는 뜻이라서 **몇 번을 다시 시도해도 결과가 같다.** 게다가 메시지가 브로커에 나간 적이 없으니 \"이 작업은 실패했다\"고 판정할 근거도 쌓이지 않는다. 그래서 실행은 대기 상태에 머무른 채 재시도 횟수만 30초마다 올라갔고, 사용자는 접수증을 받은 화면에서 끝없이 기다려야 했다. 오래 대기한 작업을 정리하는 장치도 없다.\n\n**이 MR 이후로는 다시 시도해도 소용없는 실패를 그 자리에서 실패로 처리하고 사용자에게 알린다.**\n\n# 관련 티켓 번호 & 링크\n\n- ticket `S15P21E205-217` `[BE] 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다`\n- link https://ssafy.atlassian.net/browse/S15P21E205-217\n- converge T030에서 갈라져 나온 **부수 작업 두 가지**를 마무리한다. 본체 작업(작업 메시지에 실리는 자료 버전을 저장된 값에서 읽는 변경)은 `S15P21E205-203`에 남아 있고, 그 표에 자료가 적재되어야 옮길 수 있다\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 브로커가 잠시 죽었다 | 30초 뒤 다시 보낸다 | **같다** |\n| 데이터베이스가 잠시 흔들려 조립이 실패했다 | 30초 뒤 다시 보낸다 | **같다** |\n| 요청에 담긴 전략이 등록표에 없다 | **영원히 대기** | 실패로 닫고 사용자에게 알린다 |\n\n# 주요 변경 사항\n\n## 조립 실패와 발행 실패를 구분해서 처리한다\n\n한 덩어리로 묶여 있던 두 단계를 나누었다. 발행이 실패하면 예전대로 재시도 장치에 맡기고, 조립이 실패하면 아래 두 조건을 모두 만족할 때만 그 실행을 실패로 종료한다.\n\n## 조건 하나: 다시 시도해도 소용없는 실패인가\n\n**조립은 이름과 달리 데이터베이스를 읽는다.** 조립 과정에서 전략 등록표와 비용 조건을 조회하고, 목표 위험 시나리오라면 오버레이 규칙까지 읽는다.\n\n그래서 \"조립이 실패했다\"는 사실을 곧바로 \"다시 시도해도 소용없다\"로 해석하면 안 된다. 그렇게 해석하면 데이터베이스가 2초 동안 불안정한 사이에 접수된 실행이 **전부 사용자 실패로 처리된다.** 그 실행들은 예전 방식이라면 30초 뒤에 다시 보내져 모두 정상적으로 완료되었을 것이다.\n\n그래서 **다시 시도해도 소용없다고 확인할 수 있는 실패만** 실패로 종료한다. 전략이 등록표에 없거나, 비용 조건 버전이 잘못되었거나, 저장된 요청 사본의 형태가 계약과 다른 경우가 여기에 해당한다. 그 밖의 실패는 원인을 알 수 없다고 보고 재시도 장치에 맡긴다. **잘못 종료하면 사용자에게 실패가 그대로 보이지만 잘못 재시도하면 로그만 쌓이므로, 잘못 종료하는 쪽이 훨씬 나쁘기 때문이다.**\n\n## 조건 둘: 메시지가 나간 적이 없음이 확실한가\n\n**실행이 대기 상태라고 해서 워커가 아무 일도 하지 않는다는 뜻은 아니다.** 워커가 메시지를 가져가서 계산을 시작하더라도, \"시작했다\"는 신호가 처리되기 전까지 실행 상태는 대기로 남는다.\n\n메시지 발행에는 성공했으나 그 사실을 기록하다가 실패한 실행이 있으면, 그 실행도 다시 보내는 장치의 대상이 된다. 그때 조립이 실패했다고 해서 실행을 종료해 버리면 **워커가 성공적으로 끝낸 결과까지 \"늦게 도착한 것\"으로 버려진다.**\n\n그래서 메시지가 나간 적이 없음이 확실한 **첫 발행에서만** 실행을 종료한다. 재시도 대상이 되었다는 사실 자체가 이전에 메시지가 나갔을 수도 있다는 뜻이기 때문이다.\n\n## 상태를 덮어쓰지 않는다\n\n이 자리는 원래 실행 상태를 건드리지 않기로 되어 있었다. 발행 경로와 워커 결과 처리가 서로 다른 스레드에서 동작하기 때문에, 한쪽이 실행을 통째로 저장하면 나중에 저장한 쪽이 상대의 갱신을 되돌리기 때문이다.\n\n그래서 예외를 두되 **행을 잠그고 다시 읽어서** 아직 대기 상태일 때만 바꾸도록 했다. 그 예외와 조건은 클래스 설명에도 적었다.\n\n**재시도 횟수를 먼저 올리는 순서는 그대로 두었다.** 그 순서에는 근거가 있다. 메시지를 보낸 뒤에 횟수를 올리면, 그 사이에 서버가 종료되었을 때 브로커에는 메시지가 남아 있는데 횟수가 모자라고, 그러면 종료 판정이 아직 처리 중인 실행을 실패로 처리한다. 재시도 횟수가 의미 없이 올라가던 것은 순서 때문이 아니라 다시 시도해도 소용없는 작업을 계속 재시도했기 때문이므로, 그 원인을 없애자 함께 해결되었다.\n\n# 테스트\n\n- [x] `backend`: `./gradlew cleanTest spotlessApply build` 실행 결과 **962건, 실패 0·오류 0·건너뜀 2**\n- [x] `worker`: 돌리지 않았다. `worker/` 파일이 하나도 바뀌지 않았음을 확인했다\n- [x] 변경 파일은 발송 담당 1개와 그 테스트 1개뿐\n\n새로 추가한 검사가 확인하는 것은 다음과 같다.\n\n- **데이터베이스 자원 실패로 조립이 실패하면 실행을 종료하지 않는다.** 실행 상태를 읽지도, 쓰지도, 알리지도 않는다\n- **발행 실패는 여전히 대기 상태로 남는다.** 브로커가 잠깐 불안정했던 것이 사용자 실패가 되지 않도록 막는 안전장치다\n- **재시도 경로에서는 다시 시도해도 소용없는 실패라도 종료하지 않는다.** 첫 발행에서는 종료한다는 검사와 나란히 두고 확인한다\n- **이미 계산 중이면 상태를 바꾸지 않는다**\n- 종료해야 할 실패 6종이 각각 실패로 종료되고 종료 알림이 나가는지 확인한다\n\n기준선은 2026-09-15 `dev` 기준으로 backend 951건(건너뜀 2)이다.\n\n`cleanTest`를 붙였다. 붙이지 않으면 Gradle이 **테스트를 통째로 건너뛰면서도 성공했다고 알린다.**\n\n# 리뷰 포인트\n\n## 1. 대기 상태로 남는 경우가 하나 있다\n\n첫 발행에서 조립이 **일시적인 장애**로 실패해서 종료되지 않은 실행이 재시도 대상이 되고, 그 사이에 전략 등록표의 행이 사라지는 식으로 **영구 실패로 바뀌면**, 그 실행은 조건 둘에 걸려서 종료되지 않는다.\n\n**그 좁은 경우를 막으려고 재시도 경로에서도 실행을 종료하면, 위에 적은 회귀가 다시 발생한다.** 그래서 남겨 두는 쪽을 선택했고 클래스 설명에 적어 두었다. 이 판단을 검토해 주시면 좋겠다.\n\n## 2. 자료 버전 전환을 넣을 때 이 구분이 선행 조건이 된다\n\n작업 메시지에 실리는 자료 버전을 저장된 값에서 읽도록 바꾸면(`S15P21E205-203`) **조립이 데이터베이스를 한 번 더 조회한다.**\n\n그때 \"사용할 수 있는 자료 묶음이 없다\"는 실패가 어느 쪽에 해당하는지 정해서 이 판정에 반영해야 한다. 다시 시도해도 소용없다고 알리지 않으면 재시도 장치가 30초마다 성과 없이 같은 작업을 반복한다. 이 내용은 그 티켓에 적어 두었다.\n\n## 3. 범위 밖으로 남긴 것\n\n**실패 코드를 전부 \"시스템 장애\" 하나로 묶어서 내보낸다.** 그래서 전략이 등록표에 없는 것과 서버 내부 장애를 화면에서 구분할 수 없다. 그 코드는 상세 조회를 통해 사용자에게 그대로 전달되는 계약 값이고, 허용 목록이 계약 문서에 명시되어 있을 수 있어서 손대지 않았다.\n\n**파라미터 자동 탐색이 켜져 있으면 후보마다 호출이 한 겹씩 중첩되는 경로가 있다.** 조립 실패 → 종료 알림 → 다음 후보 접수 → 조립 실패로 이어지는 경로다. 접수 단계가 이미 같은 조회를 통과시킨 뒤라야 도달하므로 실제로 발생할 범위는 좁다. 이 경로를 근본적으로 없애려면 종료 알림을 발행 경로에서 바로 내보내지 않아야 한다.\n\n**이 자리에는 실제 데이터베이스를 사용하는 검사가 없다.** 지금 검사는 모두 의존을 대역으로 대체한 단위 검사라서, 행 잠금이 실제로 잠그는지와 새 트랜잭션 안에서 보낸 알림이 수신자까지 도달하는지를 확인하지 못한다. 조립이 실제 운영에서 실패할 수 있게 되는 시점, 즉 위 2번 항목과 함께 붙이는 편이 안전하다.",
+    "state": "merged",
+    "created_at": "2026-09-15T12:21:06.761+09:00",
+    "updated_at": "2026-09-15T14:58:33.819+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-15T14:58:33.385+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/217-assembly-failure-closes-run",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+    "merge_commit_sha": "a4ffd786c27be035ef0c7a42939862466f006b0f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T12:21:07.860+09:00",
+    "reference": "!105",
+    "references": {
+      "short": "!105",
+      "relative": "!105",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!105"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/105",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944363,
+    "iid": 105,
+    "project_id": 1444456,
+    "title": "fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다",
+    "description": "# 작업 내용 요약\n\n**백테스트를 요청했는데 화면이 영원히 \"대기 중\"에 머무는 경우가 있었다.**\n\n백테스트는 접수 단계와 계산 단계로 나뉘어 있다. 요청을 받으면 곧바로 접수증을 돌려주고, 작업 메시지를 만들어 브로커에 넣으면 워커가 그 메시지를 가져가서 계산한다. 이렇게 작업 메시지를 만드는 일을 조립이라고 부른다.\n\n메시지를 보내다가 실패하는 일은 늘 있다. 브로커가 잠시 불안정해질 수 있기 때문에, **보내지 못한 작업을 30초마다 다시 보내는 재시도 장치**를 두고 있다. 문제는 **조립 자체가 실패하는 경우**까지 그 장치에 맡겼다는 점이다.\n\n브로커 장애는 다시 보내면 해소된다. 그러나 조립 실패는 요청에 담긴 전략이나 비용 조건이 성립하지 않는다는 뜻이라서 **몇 번을 다시 시도해도 결과가 같다.** 게다가 메시지가 브로커에 나간 적이 없으니 \"이 작업은 실패했다\"고 판정할 근거도 쌓이지 않는다. 그래서 실행은 대기 상태에 머무른 채 재시도 횟수만 30초마다 올라갔고, 사용자는 접수증을 받은 화면에서 끝없이 기다려야 했다. 오래 대기한 작업을 정리하는 장치도 없다.\n\n**이 MR 이후로는 다시 시도해도 소용없는 실패를 그 자리에서 실패로 처리하고 사용자에게 알린다.**\n\n# 관련 티켓 번호 & 링크\n\n- ticket `S15P21E205-217` `[BE] 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다`\n- link https://ssafy.atlassian.net/browse/S15P21E205-217\n- converge T030에서 갈라져 나온 **부수 작업 두 가지**를 마무리한다. 본체 작업(작업 메시지에 실리는 자료 버전을 저장된 값에서 읽는 변경)은 `S15P21E205-203`에 남아 있고, 그 표에 자료가 적재되어야 옮길 수 있다\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 브로커가 잠시 죽었다 | 30초 뒤 다시 보낸다 | **같다** |\n| 데이터베이스가 잠시 흔들려 조립이 실패했다 | 30초 뒤 다시 보낸다 | **같다** |\n| 요청에 담긴 전략이 등록표에 없다 | **영원히 대기** | 실패로 닫고 사용자에게 알린다 |\n\n# 주요 변경 사항\n\n## 조립 실패와 발행 실패를 구분해서 처리한다\n\n한 덩어리로 묶여 있던 두 단계를 나누었다. 발행이 실패하면 예전대로 재시도 장치에 맡기고, 조립이 실패하면 아래 두 조건을 모두 만족할 때만 그 실행을 실패로 종료한다.\n\n## 조건 하나: 다시 시도해도 소용없는 실패인가\n\n**조립은 이름과 달리 데이터베이스를 읽는다.** 조립 과정에서 전략 등록표와 비용 조건을 조회하고, 목표 위험 시나리오라면 오버레이 규칙까지 읽는다.\n\n그래서 \"조립이 실패했다\"는 사실을 곧바로 \"다시 시도해도 소용없다\"로 해석하면 안 된다. 그렇게 해석하면 데이터베이스가 2초 동안 불안정한 사이에 접수된 실행이 **전부 사용자 실패로 처리된다.** 그 실행들은 예전 방식이라면 30초 뒤에 다시 보내져 모두 정상적으로 완료되었을 것이다.\n\n그래서 **다시 시도해도 소용없다고 확인할 수 있는 실패만** 실패로 종료한다. 전략이 등록표에 없거나, 비용 조건 버전이 잘못되었거나, 저장된 요청 사본의 형태가 계약과 다른 경우가 여기에 해당한다. 그 밖의 실패는 원인을 알 수 없다고 보고 재시도 장치에 맡긴다. **잘못 종료하면 사용자에게 실패가 그대로 보이지만 잘못 재시도하면 로그만 쌓이므로, 잘못 종료하는 쪽이 훨씬 나쁘기 때문이다.**\n\n## 조건 둘: 메시지가 나간 적이 없음이 확실한가\n\n**실행이 대기 상태라고 해서 워커가 아무 일도 하지 않는다는 뜻은 아니다.** 워커가 메시지를 가져가서 계산을 시작하더라도, \"시작했다\"는 신호가 처리되기 전까지 실행 상태는 대기로 남는다.\n\n메시지 발행에는 성공했으나 그 사실을 기록하다가 실패한 실행이 있으면, 그 실행도 다시 보내는 장치의 대상이 된다. 그때 조립이 실패했다고 해서 실행을 종료해 버리면 **워커가 성공적으로 끝낸 결과까지 \"늦게 도착한 것\"으로 버려진다.**\n\n그래서 메시지가 나간 적이 없음이 확실한 **첫 발행에서만** 실행을 종료한다. 재시도 대상이 되었다는 사실 자체가 이전에 메시지가 나갔을 수도 있다는 뜻이기 때문이다.\n\n## 상태를 덮어쓰지 않는다\n\n이 자리는 원래 실행 상태를 건드리지 않기로 되어 있었다. 발행 경로와 워커 결과 처리가 서로 다른 스레드에서 동작하기 때문에, 한쪽이 실행을 통째로 저장하면 나중에 저장한 쪽이 상대의 갱신을 되돌리기 때문이다.\n\n그래서 예외를 두되 **행을 잠그고 다시 읽어서** 아직 대기 상태일 때만 바꾸도록 했다. 그 예외와 조건은 클래스 설명에도 적었다.\n\n**재시도 횟수를 먼저 올리는 순서는 그대로 두었다.** 그 순서에는 근거가 있다. 메시지를 보낸 뒤에 횟수를 올리면, 그 사이에 서버가 종료되었을 때 브로커에는 메시지가 남아 있는데 횟수가 모자라고, 그러면 종료 판정이 아직 처리 중인 실행을 실패로 처리한다. 재시도 횟수가 의미 없이 올라가던 것은 순서 때문이 아니라 다시 시도해도 소용없는 작업을 계속 재시도했기 때문이므로, 그 원인을 없애자 함께 해결되었다.\n\n# 테스트\n\n- [x] `backend`: `./gradlew cleanTest spotlessApply build` 실행 결과 **962건, 실패 0·오류 0·건너뜀 2**\n- [x] `worker`: 돌리지 않았다. `worker/` 파일이 하나도 바뀌지 않았음을 확인했다\n- [x] 변경 파일은 발송 담당 1개와 그 테스트 1개뿐\n\n새로 추가한 검사가 확인하는 것은 다음과 같다.\n\n- **데이터베이스 자원 실패로 조립이 실패하면 실행을 종료하지 않는다.** 실행 상태를 읽지도, 쓰지도, 알리지도 않는다\n- **발행 실패는 여전히 대기 상태로 남는다.** 브로커가 잠깐 불안정했던 것이 사용자 실패가 되지 않도록 막는 안전장치다\n- **재시도 경로에서는 다시 시도해도 소용없는 실패라도 종료하지 않는다.** 첫 발행에서는 종료한다는 검사와 나란히 두고 확인한다\n- **이미 계산 중이면 상태를 바꾸지 않는다**\n- 종료해야 할 실패 6종이 각각 실패로 종료되고 종료 알림이 나가는지 확인한다\n\n기준선은 2026-09-15 `dev` 기준으로 backend 951건(건너뜀 2)이다.\n\n`cleanTest`를 붙였다. 붙이지 않으면 Gradle이 **테스트를 통째로 건너뛰면서도 성공했다고 알린다.**\n\n# 리뷰 포인트\n\n## 1. 대기 상태로 남는 경우가 하나 있다\n\n첫 발행에서 조립이 **일시적인 장애**로 실패해서 종료되지 않은 실행이 재시도 대상이 되고, 그 사이에 전략 등록표의 행이 사라지는 식으로 **영구 실패로 바뀌면**, 그 실행은 조건 둘에 걸려서 종료되지 않는다.\n\n**그 좁은 경우를 막으려고 재시도 경로에서도 실행을 종료하면, 위에 적은 회귀가 다시 발생한다.** 그래서 남겨 두는 쪽을 선택했고 클래스 설명에 적어 두었다. 이 판단을 검토해 주시면 좋겠다.\n\n## 2. 자료 버전 전환을 넣을 때 이 구분이 선행 조건이 된다\n\n작업 메시지에 실리는 자료 버전을 저장된 값에서 읽도록 바꾸면(`S15P21E205-203`) **조립이 데이터베이스를 한 번 더 조회한다.**\n\n그때 \"사용할 수 있는 자료 묶음이 없다\"는 실패가 어느 쪽에 해당하는지 정해서 이 판정에 반영해야 한다. 다시 시도해도 소용없다고 알리지 않으면 재시도 장치가 30초마다 성과 없이 같은 작업을 반복한다. 이 내용은 그 티켓에 적어 두었다.\n\n## 3. 범위 밖으로 남긴 것\n\n**실패 코드를 전부 \"시스템 장애\" 하나로 묶어서 내보낸다.** 그래서 전략이 등록표에 없는 것과 서버 내부 장애를 화면에서 구분할 수 없다. 그 코드는 상세 조회를 통해 사용자에게 그대로 전달되는 계약 값이고, 허용 목록이 계약 문서에 명시되어 있을 수 있어서 손대지 않았다.\n\n**파라미터 자동 탐색이 켜져 있으면 후보마다 호출이 한 겹씩 중첩되는 경로가 있다.** 조립 실패 → 종료 알림 → 다음 후보 접수 → 조립 실패로 이어지는 경로다. 접수 단계가 이미 같은 조회를 통과시킨 뒤라야 도달하므로 실제로 발생할 범위는 좁다. 이 경로를 근본적으로 없애려면 종료 알림을 발행 경로에서 바로 내보내지 않아야 한다.\n\n**이 자리에는 실제 데이터베이스를 사용하는 검사가 없다.** 지금 검사는 모두 의존을 대역으로 대체한 단위 검사라서, 행 잠금이 실제로 잠그는지와 새 트랜잭션 안에서 보낸 알림이 수신자까지 도달하는지를 확인하지 못한다. 조립이 실제 운영에서 실패할 수 있게 되는 시점, 즉 위 2번 항목과 함께 붙이는 편이 안전하다.",
+    "state": "merged",
+    "created_at": "2026-09-15T12:21:06.761+09:00",
+    "updated_at": "2026-09-15T14:58:33.819+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-15T14:58:33.385+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/217-assembly-failure-closes-run",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+    "merge_commit_sha": "a4ffd786c27be035ef0c7a42939862466f006b0f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T12:21:07.860+09:00",
+    "reference": "!105",
+    "references": {
+      "short": "!105",
+      "relative": "!105",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!105"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/105",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T15:01:11.541+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 195837,
+      "iid": 25,
+      "project_id": 1444456,
+      "sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+      "ref": "fix(be)/217-assembly-failure-closes-run",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T14:54:23.144+09:00",
+      "updated_at": "2026-09-15T15:01:11.542+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195837"
+    },
+    "head_pipeline": {
+      "id": 195837,
+      "iid": 25,
+      "project_id": 1444456,
+      "sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+      "ref": "fix(be)/217-assembly-failure-closes-run",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T14:54:23.144+09:00",
+      "updated_at": "2026-09-15T15:01:11.542+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195837",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T15:01:11.541+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": 408,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195837",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1adef092930d0836580206c4104e6e44ff35c62f",
+      "head_sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+      "start_sha": "9f96e850facffe76b213218e25b65c87b33e8733"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "04cfae96c88b5487036ba3d495b997be2101266e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807001,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T12:21:06.899+09:00",
+          "updated_at": "2026-09-15T12:21:06.902+09:00",
+          "system": true,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c2d8641251aa8ed3040fe2eab3e233061bdb1774",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807002,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T12:21:06.918+09:00",
+          "updated_at": "2026-09-15T12:21:06.926+09:00",
+          "system": true,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d852d0718b1a74dd23e3f62e9a5c0de17be41140",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807003,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **예외 원인에 따른 정교한 분기 처리**: 일시적 인프라 장애(`DataAccessException` 등)와 영구적 비즈니스 실패(`BusinessException`, `IllegalArgumentException` 등)를 명확히 구분하여, DB나 브로커의 일시적 흔들림으로 인한 사용자 요청 실패(회귀)를 방지한 설계가 매우 훌륭합니다.\n- **동시성 제어와 낙관적/비관적 보호**: 행을 잠그고(`findByIdForUpdate`) 상태(`QUEUED`)를 재확인한 뒤에만 상태를 변경하도록 구현하여, 스레드 경합이나 중복 상태 덮어쓰기 문제를 안전하게 차단했습니다.\n- **철저한 테스트 커버리지**: 최초 발행 경로와 재발행 경로, 일시적/영구적 실패 시나리오, 이미 실행 중인 상태에서의 방어 로직까지 다양한 엣지 케이스를 파라미터화 테스트(`@ParameterizedTest`) 등으로 촘촘하게 검증했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **동시 상태 전이 시나리오 테스트**: `onRunAccepted`가 실행되어 조립 실패로 행을 닫으려는 순간, 다른 스레드(또는 워커)에서 해당 백테스트 실행을 `RUNNING` 또는 `COMPLETED`로 먼저 전이시킨 뒤 `findByIdForUpdate`를 호출했을 때, 의도대로 상태 변경이 무시되고 경고 로그만 남는지 통합 테스트 수준에서 검증하는 것을 권장합니다.\n- **재발행 후 영구 실패 시뮬레이션**: 리뷰 포인트 1에서 언급된 \"첫 발행에서 일시 장애로 넘어갔으나 이후 등록표 행이 사라져 영구 실패가 된 경우\"에 대해, 재발행 경로에서 상태가 갇히는 현상이 시스템 전체에 미치는 영향(예: 모니터링이나 타임아웃 메커니즘 부재 여부)을 수동 또는 추가 통합 테스트로 확인해 보세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:6a3ea375891afedb555279d5be9dfb8cf38833b2 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T12:21:16.065+09:00",
+          "updated_at": "2026-09-15T14:46:54.766+09:00",
+          "system": false,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a93a9d2ee8a04569b5317f3853814599344dd739",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807056,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T12:25:55.677+09:00",
+          "updated_at": "2026-09-15T12:25:55.681+09:00",
+          "system": true,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "887df0c7113afde12c9bf46dd2312bbaea14bae4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807137,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T12:34:19.589+09:00",
+          "updated_at": "2026-09-15T12:34:19.592+09:00",
+          "system": true,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fc25271cd19d734f5b0a54b7a0a2b9590a068942",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808655,
+          "type": null,
+          "body": "added 74 commits\n\n<ul><li>400b35f9...1adef092 - 73 commits from branch <code>dev</code></li><li>6a3ea375 - fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/105/diffs?diff_id=2199522&start_sha=400b35f9dc6e99853b52cc5ad3e93483c311ca61)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T14:46:49.462+09:00",
+          "updated_at": "2026-09-15T14:46:49.469+09:00",
+          "system": true,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e4b752f410fd2425172151ffa4cccbc9007cd479",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808776,
+          "type": null,
+          "body": "mentioned in commit a4ffd786c27be035ef0c7a42939862466f006b0f",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T14:58:34.382+09:00",
+          "updated_at": "2026-09-15T14:58:34.396+09:00",
+          "system": true,
+          "noteable_id": 944363,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 105,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2199522,
+      "head_commit_sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+      "base_commit_sha": "1adef092930d0836580206c4104e6e44ff35c62f",
+      "start_commit_sha": "9f96e850facffe76b213218e25b65c87b33e8733",
+      "created_at": "2026-09-15T14:46:48.834+09:00",
+      "merge_request_id": 944363,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "2d7be82a5de4b8a18a68d5061478a52bfe140bc0"
+    },
+    {
+      "id": 2198103,
+      "head_commit_sha": "400b35f9dc6e99853b52cc5ad3e93483c311ca61",
+      "base_commit_sha": "ac065179bc8e0709b5ce9129856f54d8f3964bb2",
+      "start_commit_sha": "315456a11f9129f3e3f880443723a5f5731e4a48",
+      "created_at": "2026-09-15T12:21:07.251+09:00",
+      "merge_request_id": 944363,
+      "state": "without_files",
+      "real_size": "3",
+      "patch_id_sha": "711a965ec5f9fd09218ef59d3018a3c95d350b1b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2199522,
+      "head_commit_sha": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+      "base_commit_sha": "1adef092930d0836580206c4104e6e44ff35c62f",
+      "start_commit_sha": "9f96e850facffe76b213218e25b65c87b33e8733",
+      "created_at": "2026-09-15T14:46:48.834+09:00",
+      "merge_request_id": 944363,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "2d7be82a5de4b8a18a68d5061478a52bfe140bc0",
+      "commits": [
+        {
+          "id": "6a3ea375891afedb555279d5be9dfb8cf38833b2",
+          "short_id": "6a3ea375",
+          "created_at": "2026-09-15T14:46:08.000+09:00",
+          "parent_ids": [
+            "1adef092930d0836580206c4104e6e44ff35c62f"
+          ],
+          "title": "fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다",
+          "message": "fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다\n\n발송기가 한 try 로 조립과 발행을 함께 감싸, 성질이 정반대인 두 실패가 같은\n길로 흘렀다. 조립이 영구히 실패하면 메시지가 브로커에 나간 적이 없어\ndlq_count 가 오르지 않고, 종결 판정 dlqCount >= publishCount 가 영영 서지\n않는다. 실행은 QUEUED 에 갇힌 채 시도 횟수만 주기마다 오르고, 사용자는 202 를\n받은 화면에서 끝없이 기다린다.\n\n조립을 발행 바깥으로 꺼내 따로 잡고, 두 관문을 다 지날 때만 실행을 닫는다.\n\n첫째, 영구라고 아는 예외만 닫는다. EngineInputAssembler 는 순수 변환이 아니라\n등록표와 비용 프로필을 DB 에서 읽으므로, 모든 RuntimeException 을 영구로\n보면 DB 가 잠깐 흔들릴 때 접수된 실행이 전부 사용자 실패가 된다. 몇 줄 위\nfindById 가 같은 예외를 일시로 다루는 것과도 모순이다. 그래서 허용 목록으로\nBusinessException·IllegalArgumentException·ClassCastException 만 닫고 모르는\n예외는 재발행기에 맡긴다. 잘못 닫는 쪽이 잘못 재시도하는 쪽보다 훨씬 나쁘다.\n\n둘째, 메시지가 나간 적 없음이 확실한 첫 발행에서만 닫는다. 상태가 QUEUED 라고\n해서 워커가 없다는 뜻이 아니다 — STARTED 가 아직 처리되지 않았을 뿐일 수\n있고, 그때 닫으면 뒤늦게 올 성공 결과까지 버려진다. 재발행 대상이 되었다는\n것 자체가 이전에 나갔을 수 있다는 뜻이므로 그 경로에서는 닫지 않는다.\n\nrecordPublishAttempt 를 먼저 부르는 순서는 그대로 두었다. 근거가 있는\n설계이고, 시도 횟수가 헛되이 오르던 것은 순서가 아니라 영구 실패를 계속\n재시도한 탓이다.\n\nT030 의 곁가지 둘. 본체(자료 버전을 dataset_version 에서 읽기)는 자료 적재와\n함께 옮기며, 그때 조립이 DB 를 더 타므로 이 구분이 선행 조건이 된다.\n\nbackend 962건 통과(기준선 951, 건너뜀 2 그대로).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T11:14:07.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T14:46:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6a3ea375891afedb555279d5be9dfb8cf38833b2"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,12 +1,17 @@\n package com.ssafy.thorp.backtest.application.service;\n \n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;\n+import com.ssafy.thorp.backtest.application.port.message.EngineInput;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n import java.time.Clock;\n import java.util.Optional;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n+import org.springframework.context.ApplicationEventPublisher;\n import org.springframework.stereotype.Component;\n import org.springframework.transaction.PlatformTransactionManager;\n import org.springframework.transaction.TransactionDefinition;\n@@ -24,18 +29,48 @@ import org.springframework.transaction.support.TransactionTemplate;\n  * 상태에서 실행된다. 기본 전파(REQUIRED)로 열면 이미 끝난 그 트랜잭션에 참여해 변경이 다시 커밋되지 않는다 — 발행에 성공해도 {@code published_at}이\n  * NULL로 남아 재발행기가 멀쩡한 작업을 계속 다시 보낸다.\n  *\n- * <p><b>상태 컬럼은 건드리지 않는다.</b> 발행 경로는 {@code publish_count}·{@code published_at}만 쓰고, 이벤트 처리는\n+ * <p><b>상태 컬럼은 원칙적으로 건드리지 않는다.</b> 발행 경로는 {@code publish_count}·{@code published_at}만 쓰고, 이벤트 처리는\n  * 상태·진행·시각만 쓴다. 둘은 서로 다른 스레드(스케줄러와 리스너)에서 동시에 도는데, 한쪽이 실행 전체를 읽어 통째로 저장하면 늦게 저장한 쪽이 상대의 갱신을 되돌린다.\n  * 예를 들어 재발행기가 QUEUED를 읽은 뒤 리스너가 RUNNING으로 바꿨는데 재발행기가 나중에 저장하면 실행이 QUEUED로 되돌아간다.\n+ *\n+ * <p><b>예외는 하나뿐이다 — 첫 발행에서 입력 조립이 영구히 실패했을 때.</b> 그런 실행은 메시지가 브로커에 나간 적이 없어 {@code dlq_count}가 오르지\n+ * 않고, 그러면 DLQ 종결 판정({@code dlqCount >= publishCount})이 영영 서지 않아 실행이 {@code QUEUED}에 갇힌 채 시도 횟수만\n+ * 주기마다 오른다. 사용자는 202를 받고 화면은 끝없이 대기한다. 그래서 {@link #send}가 그 경우에만 실행을 {@code\n+ * FAILED(SYSTEM_FAILURE)}로 닫는다.\n+ *\n+ * <p><b>조립 실패가 전부 영구인 것은 아니다.</b> {@link EngineInputAssembler}는 전략 규칙·비용 등록표를 DB 에서 읽는다. 커넥션 풀 고갈이나\n+ * DB 재기동이면 거기서 {@code DataAccessException} 계열이 나오는데, 그것은 30초 뒤 재발행하면 그냥 성공한다. 그래서 {@link\n+ * #isPermanentAssemblyFailure}가 <b>영구라고 아는 예외만</b> 허용 목록으로 골라 낸다 — 모르는 예외는 일시로 보고 재발행기에 맡긴다. 잘못 닫으면\n+ * 멀쩡한 요청이 사용자 실패가 되고, 잘못 재시도하면 로그가 쌓일 뿐이다.\n+ *\n+ * <p><b>재발행 경로에서는 닫지 않는다.</b> 상태가 {@code QUEUED}라고 해서 워커가 없다는 뜻이 아니다 — STARTED 가 아직 처리되기 전이면 워커는 이미\n+ * 그 메시지를 들고 계산 중인데 상태는 {@code QUEUED}다. 재발행 대상이 되었다는 것 자체가 \"이전에 메시지가 나갔을 수도 있다\"는 뜻이므로(발행은 성공했는데\n+ * {@code published_at} 기록이 실패한 경우), 거기서 닫으면 뒤늦게 올 성공 결과까지 최종 상태 규칙에 걸려 버려진다. 메시지가 나간 적이 없음이 확실한 것은\n+ * <b>첫 발행({@link #publishAlreadyCounted})뿐</b>이다.\n+ *\n+ * <p>재발행에서 영구 실패가 반복돼 갇히는 일은 드물다. 영구 실패라면 첫 발행에서 이미 닫혀 재발행 대상이 되지 못하고, 남는 재발행 대상은 조립이 한 번 성공했던 실행이라\n+ * 다시 실패하는 이유도 대개 일시 장애다.\n+ *\n+ * <p><b>다만 갇히는 경우가 하나 남는다.</b> 첫 발행에서 조립이 일시 장애로 실패해 닫히지 않은 실행이 재발행 대상이 되고, 그 사이 등록표 행이 사라지는 식으로 영구\n+ * 실패로 바뀌면 경로 판정에 걸려 닫히지 않는다. 그 좁은 경우를 막자고 재발행에서도 닫으면 위 문단의 회귀가 되살아나므로, 남겨 두는 쪽을 골랐다.\n+ *\n+ * <p>닫을 때는 {@code status = QUEUED}인 행만 바꾼다. 행을 잠그고({@code findByIdForUpdate}) 다시 읽어 확인하므로, 읽고 판단하고\n+ * 쓰는 사이에 들어온 취소나 상태 전이를 덮어쓰지 않는다.\n  */\n @Component\n public class BacktestJobDispatcher {\n \n     private static final Logger log = LoggerFactory.getLogger(BacktestJobDispatcher.class);\n \n+    /** DLQ 종결과 같은 코드를 쓴다. 사용자가 고칠 수 없는 내부 장애라는 뜻이 같다. */\n+    private static final String ASSEMBLY_FAILURE_CODE = \"SYSTEM_FAILURE\";\n+\n+    private static final String ASSEMBLY_FAILURE_MESSAGE = \"작업 입력을 만들지 못했습니다. 다시 시도해도 같은 결과입니다.\";\n+\n     private final BacktestRunRepository repository;\n     private final BacktestJobPublisher publisher;\n     private final EngineInputAssembler assembler;\n+    private final ApplicationEventPublisher events;\n     private final TransactionTemplate newTransaction;\n     private final Clock clock;\n \n@@ -43,11 +78,13 @@ public class BacktestJobDispatcher {\n             BacktestRunRepository repository,\n             BacktestJobPublisher publisher,\n             EngineInputAssembler assembler,\n+            ApplicationEventPublisher events,\n             PlatformTransactionManager transactionManager,\n             Clock clock) {\n         this.repository = repository;\n         this.publisher = publisher;\n         this.assembler = assembler;\n+        this.events = events;\n         this.newTransaction = new TransactionTemplate(transactionManager);\n         this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);\n         this.clock = clock;\n@@ -92,7 +129,7 @@ public class BacktestJobDispatcher {\n         }\n         // 시도 번호는 접수가 확보한 값을 쓰고 방금 읽은 실행에서 다시 읽지 않는다 — 이 콜백이 늦어지면\n         // 그 사이 재발행기가 올린 번호를 보게 되고, 두 발행이 같은 번호를 달면 DLQ 집계가 한 건으로 접힌다.\n-        send(found.get(), publishAttempt);\n+        send(found.get(), publishAttempt, PublishPath.FIRST);\n     }\n \n     /**\n@@ -113,19 +150,44 @@ public class BacktestJobDispatcher {\n             return;\n         }\n         // 올리기와 읽기가 한 트랜잭션이고 UPDATE 가 행을 잠그므로, 여기 값은 이 재발행이 확보한 번호다.\n-        send(found.get(), found.get().getLifecycle().publishCount());\n+        send(found.get(), found.get().getLifecycle().publishCount(), PublishPath.REPUBLISH);\n     }\n \n     /**\n+     * 조립이 실패했을 때 실행을 닫아도 되는 경로인가.\n+     *\n+     * <p>{@link #FIRST}는 이 실행의 메시지가 브로커에 나간 적이 없음이 확실하다. {@link #REPUBLISH}는 그렇지 않다 — 재발행 대상이 되었다는\n+     * 것 자체가 \"발행에는 성공했는데 {@code published_at} 기록만 실패했을 수도 있다\"는 뜻이고, 그때 워커는 이미 계산 중인데 STARTED 가 아직\n+     * 처리되지 않아 상태는 {@code QUEUED}다. 거기서 닫으면 뒤늦게 올 성공 결과가 최종 상태 규칙에 걸려 버려진다.\n+     */\n+    private enum PublishPath {\n+        FIRST,\n+        REPUBLISH\n+    }\n+\n+    /**\n+     * <b>조립과 발행을 따로 잡는다.</b> 한 {@code try}로 묶으면 성질이 다른 두 실패가 같은 길로 흐른다. 다만 갈림은 \"조립이냐 발행이냐\"만으로 서지\n+     * 않는다 — 조립 실패에도 일시(등록표 조회가 DB 장애로 실패)와 영구(등록표에 그 행이 없다)가 섞여 있다. 그래서 <b>영구라고 아는 예외</b>가 <b>첫\n+     * 발행</b>에서 났을 때만 닫고, 나머지는 전부 재발행기에 맡긴다.\n+     *\n      * @param publishAttempt <b>호출자가 확보한</b> 시도 번호. 실행에서 다시 읽지 않는다 — 두 발행 경로가 같은 번호를 달면 DLQ 집계가 서로\n      *     다른 두 메시지를 한 건으로 접어 종결 판정이 서지 않는다(R-18 ③)\n+     * @param path 조립이 영구히 실패했을 때 실행을 닫아도 되는 경로인지\n      */\n-    private void send(BacktestRun run, int publishAttempt) {\n+    private void send(BacktestRun run, int publishAttempt, PublishPath path) {\n+        EngineInput input;\n+        try {\n+            input = assembler.assemble(run);\n+        } catch (RuntimeException exc) {\n+            onAssemblyFailure(run, exc, path);\n+            return;\n+        }\n         try {\n             // 최초 발행과 재발행이 모두 여기를 지나므로 큐 선택(R-20)은 이 한 줄이 전부다 — 재발행도 원래 큐로 간다.\n-            publisher.publish(\n-                    assembler.assemble(run), publishAttempt, run.getPlan().executionTypeOrSingle());\n+            publisher.publish(input, publishAttempt, run.getPlan().executionTypeOrSingle());\n         } catch (RuntimeException exc) {\n+            // 일시 장애다. 상태는 QUEUED 그대로 두고 재발행기에 맡긴다 — 여기서 함께 닫으면 브로커가\n+            // 잠깐 흔들린 것이 사용자 실패가 된다.\n             log.warn(\n                     \"작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}\",\n                     run.getId(),\n@@ -136,4 +198,114 @@ public class BacktestJobDispatcher {\n         newTransaction.executeWithoutResult(\n                 status -> repository.recordPublished(run.getId(), clock.instant()));\n     }\n+\n+    /**\n+     * 조립 실패를 닫을지 재발행기에 맡길지 가른다.\n+     *\n+     * <p>닫는 것은 <b>영구 실패 + 첫 발행</b>일 때뿐이다. 둘 중 하나라도 아니면 아무것도 쓰지 않고 WARN 만 남긴다 — 실행은 {@code QUEUED}로\n+     * 남아 다음 재발행 주기에 다시 시도된다.\n+     */\n+    private void onAssemblyFailure(BacktestRun run, RuntimeException cause, PublishPath path) {\n+        if (!isPermanentAssemblyFailure(cause)) {\n+            // 등록표 조회가 DB 장애로 실패한 경우다. 30초 뒤 재발행하면 그냥 성공한다.\n+            log.warn(\n+                    \"작업 입력 조립이 일시적으로 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}\",\n+                    run.getId(),\n+                    run.getBacktestId().value(),\n+                    cause.toString());\n+            return;\n+        }\n+        if (path != PublishPath.FIRST) {\n+            // 이 실행의 메시지가 이미 나갔을 수 있다. 워커가 계산 중인데 STARTED 가 아직 처리되지 않아\n+            // 상태만 QUEUED 일 수 있으므로, 여기서 닫으면 뒤늦게 올 성공 결과를 버리게 된다.\n+            log.warn(\n+                    \"재발행에서 조립이 영구히 실패했지만 메시지가 이미 나갔을 수 있어 닫지 않습니다: runId={}, backtestId={}, cause={}\",\n+                    run.getId(),\n+                    run.getBacktestId().value(),\n+                    cause.toString());\n+            return;\n+        }\n+        closeAsAssemblyFailure(run, cause);\n+    }\n+\n+    /**\n+     * 다시 보내도 같은 결과인 실패인가. <b>허용 목록으로 고른다</b> — 모르는 예외는 일시로 본다.\n+     *\n+     * <p>{@link EngineInputAssembler}는 전략 규칙·비용 등록표를 DB 에서 읽으므로({@code StrategyRulesService}·{@code\n+     * CostProfileService} 모두 {@code @Transactional}) 커넥션 풀 고갈·질의 타임아웃·DB 재기동이면 {@code\n+     * DataAccessException}·{@code TransactionException} 계열이 그대로 올라온다. 그것을 영구로 판정하면 DB 가 2초 흔들리는 동안\n+     * 접수된 실행이 전부 사용자 실패가 된다. 그 계열은 허용 목록에 없으므로 자연히 일시로 남는다 — 몇 줄 위 {@code findById}가 같은 예외를 일시로 다루는\n+     * 것과 어긋나지 않는다.\n+     *\n+     * <p>목록에 담은 것은 조립이 <b>스스로 판단해 거부한</b> 실패뿐이다.\n+     *\n+     * <ul>\n+     *   <li>{@code BusinessException} — 등록표에 규칙이 없거나(422 {@code RULES_NOT_REGISTERED}) 비용 버전이\n+     *       틀렸거나(400 {@code INVALID_INPUT}) 서버 기본 비용 행이 없다(500). 저장된 실행의 값은 바뀌지 않으므로 다시 읽어도 같다\n+     *   <li>{@code IllegalArgumentException}·{@code ClassCastException} — 저장된 요청 사본의 모양이 계약과 다르다\n+     *       ({@code Scenario.valueOf}, {@code new BigDecimal}, {@code (String) spec.get(...)}). 같은\n+     *       행을 다시 읽으면 같은 값이 나온다\n+     * </ul>\n+     *\n+     * <p>{@code IllegalStateException}·{@code NullPointerException}은 일부러 뺐다. 조립도 던지지만 Spring 기반 코드가\n+     * 자원 상태 때문에 던지기도 해서, 닫아도 되는지 여기서 가릴 수 없다. 잘못 닫는 쪽이 잘못 재시도하는 쪽보다 훨씬 나쁘다.\n+     */\n+    private static boolean isPermanentAssemblyFailure(RuntimeException cause) {\n+        return cause instanceof BusinessException\n+                || cause instanceof IllegalArgumentException\n+                || cause instanceof ClassCastException;\n+    }\n+\n+    /**\n+     * 조립이 영구히 실패한 실행을 {@code FAILED(SYSTEM_FAILURE)}로 닫는다.\n+     *\n+     * <p>{@code published_at}은 NULL로 남지만 상태가 {@code QUEUED}가 아니게 되므로 재발행 대상({@code status=QUEUED\n+     * AND published_at IS NULL})에서 빠진다.\n+     *\n+     * <p><b>상태를 덮어쓰지 않도록 잠그고 다시 읽는다.</b> 자세한 까닭은 클래스 주석에 적었다. 예외 메시지는 로그에만 남기고 사용자에게는 노출하지 않는다 — 내부\n+     * 구조가 그대로 드러난다.\n+     *\n+     * <p>여기서 나가는 예외도 삼킨다. 트랜잭션이 커밋되기 전에 터졌으면 실행은 {@code QUEUED}로 남아 다음 재발행 주기가 같은 판정을 다시 한다. 커밋된 뒤\n+     * 이벤트 수신자에서 터졌으면 실행은 이미 {@code FAILED}이고 수신자 쪽만 어긋난 것이다 — 그래서 로그가 둘을 단정하지 않는다.\n+     */\n+    private void closeAsAssemblyFailure(BacktestRun run, RuntimeException cause) {\n+        log.error(\n+                \"작업 입력 조립이 영구히 실패했습니다. 실행을 실패로 닫습니다: runId={}, backtestId={}\",\n+                run.getId(),\n+                run.getBacktestId().value(),\n+                cause);\n+        try {\n+            newTransaction.executeWithoutResult(status -> markAssemblyFailed(run.getId()));\n+        } catch (RuntimeException exc) {\n+            log.error(\"조립 실패를 닫는 도중 예외가 났습니다. 실행 상태를 다시 확인해야 합니다: runId={}\", run.getId(), exc);\n+        }\n+    }\n+\n+    /** 잠긴 행을 다시 읽어 아직 {@code QUEUED}일 때만 닫는다. 호출자가 새 트랜잭션을 연 뒤에 부른다. */\n+    private void markAssemblyFailed(Long runId) {\n+        BacktestRun locked = repository.findByIdForUpdate(runId).orElse(null);\n+        if (locked == null) {\n+            log.warn(\"실패로 닫을 실행을 찾지 못했습니다: runId={}\", runId);\n+            return;\n+        }\n+        if (locked.getStatus() != RunStatus.QUEUED) {\n+            // 읽고 판단하고 쓰는 사이에 취소가 커밋됐거나 다른 전이가 들어온 경우다. 잠그고 다시 읽는\n+            // 것은 그것을 보기 위해서다. \"워커가 없다\"는 보장은 여기서 얻지 않는다 — 그것은 첫 발행\n+            // 경로에서만 성립하고, 경로 판정이 이미 걸러 냈다.\n+            log.warn(\n+                    \"조립에 실패했지만 대기 상태가 아니어서 상태를 그대로 둡니다: runId={}, status={}\",\n+                    runId,\n+                    locked.getStatus());\n+            return;\n+        }\n+        BacktestRun failed = locked.markFailed(ASSEMBLY_FAILURE_CODE, ASSEMBLY_FAILURE_MESSAGE);\n+        repository.update(failed.withLifecycle(failed.getLifecycle().finished(clock.instant())));\n+        // 이벤트를 빠뜨리면 DB 는 실패인데 묶음 진행은 그 후보를 끝내지 못해 화면이 계속 돈다.\n+        events.publishEvent(\n+                new BacktestFinished(\n+                        locked.getId(),\n+                        locked.getBacktestId().value(),\n+                        RunStatus.FAILED,\n+                        ASSEMBLY_FAILURE_CODE));\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.backtest.application.service;\n \n+import static org.assertj.core.api.Assertions.assertThat;\n import static org.assertj.core.api.Assertions.assertThatCode;\n import static org.mockito.ArgumentMatchers.any;\n import static org.mockito.ArgumentMatchers.anyInt;\n@@ -10,6 +11,7 @@ import static org.mockito.Mockito.never;\n import static org.mockito.Mockito.verify;\n import static org.mockito.Mockito.when;\n \n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;\n import com.ssafy.thorp.backtest.application.port.message.EngineInput;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n@@ -20,6 +22,8 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n import java.math.BigDecimal;\n import java.time.Clock;\n import java.time.Instant;\n@@ -28,9 +32,14 @@ import java.time.ZoneOffset;\n import java.util.List;\n import java.util.Map;\n import java.util.Optional;\n+import java.util.stream.Stream;\n import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.MethodSource;\n+import org.mockito.ArgumentCaptor;\n import org.springframework.amqp.AmqpException;\n+import org.springframework.context.ApplicationEventPublisher;\n import org.springframework.dao.DataAccessResourceFailureException;\n import org.springframework.transaction.PlatformTransactionManager;\n import org.springframework.transaction.TransactionDefinition;\n@@ -40,6 +49,9 @@ import org.springframework.transaction.support.DefaultTransactionStatus;\n /**\n  * 커밋 뒤 발행이 접수를 실패로 만들지 않는지(spec 004 research R-18).\n  *\n+ * <p>그리고 <b>어떤 실패를 사용자 실패로 닫을지</b>. 조립이 영구히 실패한 실행은 메시지가 나간 적이 없어 DLQ 종결 판정이 서지 않으므로 닫아야 하지만, DB 나\n+ * 브로커가 잠깐 흔들린 것까지 닫으면 멀쩡한 요청이 실패로 끝난다. 닫는 것은 <b>영구라고 아는 예외 + 첫 발행</b>일 때뿐이고, 아래 검사들이 그 경계를 지킨다.\n+ *\n  * <p>{@code AFTER_COMMIT} 콜백에서 나간 예외는 삼켜지지 않고 커밋을 호출한 쪽으로 전파된다. 접수는 이미 커밋됐고 작업은 브로커에 들어갔는데 사용자만\n  * 500을 받는 상황이 되고, 그러면 사용자가 다시 눌러 같은 요청이 하나 더 생긴다. 발행 실패든 그 뒤 기록 실패든 이 경계를 넘으면 안 된다.\n  */\n@@ -69,15 +81,22 @@ class BacktestJobDispatcherTest {\n                 protected void doRollback(DefaultTransactionStatus status) {}\n             };\n \n+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);\n+\n     private final BacktestJobDispatcher dispatcher =\n             new BacktestJobDispatcher(\n                     repository,\n                     publisher,\n                     assembler,\n+                    events,\n                     transactionManager,\n                     Clock.fixed(NOW, ZoneOffset.UTC));\n \n     private static BacktestRun run() {\n+        return runWithStatus(RunStatus.QUEUED);\n+    }\n+\n+    private static BacktestRun runWithStatus(RunStatus status) {\n         return BacktestRun.restore(\n                 11L,\n                 BacktestId.from(\"BT-20260911-000011\"),\n@@ -91,7 +110,7 @@ class BacktestJobDispatcherTest {\n                 null,\n                 null,\n                 42,\n-                RunStatus.QUEUED);\n+                status);\n     }\n \n     /** 발행 시도 횟수를 지정한 실행. 재발행기가 올려 둔 상태를 흉내 낸다. */\n@@ -186,4 +205,149 @@ class BacktestJobDispatcherTest {\n                 .doesNotThrowAnyException();\n         verify(publisher, never()).publish(any(), anyInt(), any());\n     }\n+\n+    @Test\n+    @DisplayName(\"첫 발행에서 조립이 영구히 실패하면 FAILED 로 닫고 종료 이벤트를 낸다 — 재발행에 맡기면 QUEUED 에 갇힌다\")\n+    void assemblyFailureClosesTheRun() {\n+        // 조립 실패는 메시지가 브로커에 나간 적이 없으므로 dlq_count 가 오르지 않는다. 재발행기에\n+        // 맡기면 종결 판정(dlqCount >= publishCount)이 영영 서지 않고 시도 횟수만 무한히 오른다.\n+        when(repository.findById(11L)).thenReturn(Optional.of(run()));\n+        when(repository.findByIdForUpdate(11L)).thenReturn(Optional.of(run()));\n+        when(assembler.assemble(any())).thenThrow(rulesNotRegistered());\n+\n+        assertThatCode(\n+                        () ->\n+                                dispatcher.onRunAccepted(\n+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))\n+                .doesNotThrowAnyException();\n+\n+        verify(publisher, never()).publish(any(), anyInt(), any());\n+        // published_at 은 NULL 로 남는다. 상태가 QUEUED 가 아니게 되므로 재발행 대상에서 빠진다.\n+        verify(repository, never()).recordPublished(any(), any());\n+\n+        ArgumentCaptor<BacktestRun> saved = ArgumentCaptor.forClass(BacktestRun.class);\n+        verify(repository).update(saved.capture());\n+        assertThat(saved.getValue().getStatus()).isEqualTo(RunStatus.FAILED);\n+        assertThat(saved.getValue().getLifecycle().finishedAt()).isEqualTo(NOW);\n+\n+        ArgumentCaptor<BacktestFinished> finished = ArgumentCaptor.forClass(BacktestFinished.class);\n+        verify(events).publishEvent(finished.capture());\n+        assertThat(finished.getValue().backtestJobId()).isEqualTo(11L);\n+        assertThat(finished.getValue().backtestId()).isEqualTo(\"BT-20260911-000011\");\n+        assertThat(finished.getValue().status()).isEqualTo(RunStatus.FAILED);\n+        assertThat(finished.getValue().errorCode()).isEqualTo(\"SYSTEM_FAILURE\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"발행이 실패하면 상태는 QUEUED 그대로다 — 브로커 일시 장애를 사용자 실패로 만들지 않는다\")\n+    void publishFailureLeavesTheRunQueued() {\n+        // 이 검사가 이번 수정의 안전장치다. 조립 실패와 같은 길로 닫아 버리면 브로커가 잠깐 흔들린\n+        // 것만으로 멀쩡한 요청이 실패로 끝난다.\n+        when(repository.findById(11L)).thenReturn(Optional.of(run()));\n+        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));\n+        doThrow(new AmqpException(\"broker down\")).when(publisher).publish(any(), anyInt(), any());\n+\n+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));\n+\n+        verify(repository, never()).findByIdForUpdate(any());\n+        verify(repository, never()).update(any());\n+        verify(events, never()).publishEvent(any(BacktestFinished.class));\n+        verify(repository, never()).recordPublished(any(), any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"이미 RUNNING 인 실행은 조립이 실패해도 상태를 바꾸지 않는다\")\n+    void runningRunIsNotOverwritten() {\n+        // 읽고 판단하고 쓰는 사이에 상태가 바뀔 수 있다. 잠그고 다시 읽어 확인한다.\n+        when(repository.findById(11L)).thenReturn(Optional.of(run()));\n+        when(repository.findByIdForUpdate(11L))\n+                .thenReturn(Optional.of(runWithStatus(RunStatus.RUNNING)));\n+        when(assembler.assemble(any())).thenThrow(rulesNotRegistered());\n+\n+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));\n+\n+        verify(repository).findByIdForUpdate(11L);\n+        verify(repository, never()).update(any());\n+        verify(events, never()).publishEvent(any(BacktestFinished.class));\n+    }\n+\n+    @Test\n+    @DisplayName(\"조립이 DB 자원 접근 실패로 터지면 닫지 않는다 — DB 가 잠깐 흔들린 것이 사용자 실패가 되면 안 된다\")\n+    void transientAssemblyFailureLeavesTheRunQueued() {\n+        // EngineInputAssembler 는 전략 규칙·비용 등록표를 DB 에서 읽는다. 커넥션 풀 고갈이나 DB\n+        // 재기동이면 여기서 DataAccessException 이 나오는데, 30초 뒤 재발행하면 그냥 성공한다.\n+        // 몇 줄 위 findById 가 같은 예외를 일시로 다루는 것과도 어긋나면 안 된다.\n+        when(repository.findById(11L)).thenReturn(Optional.of(run()));\n+        when(assembler.assemble(any()))\n+                .thenThrow(new DataAccessResourceFailureException(\"pool exhausted\"));\n+\n+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));\n+\n+        verify(repository, never()).findByIdForUpdate(any());\n+        verify(repository, never()).update(any());\n+        verify(events, never()).publishEvent(any(BacktestFinished.class));\n+        verify(repository, never()).recordPublished(any(), any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"재발행에서는 조립이 영구히 실패해도 닫지 않는다 — 같은 실패를 첫 발행은 닫는다\")\n+    void republishDoesNotCloseOnAssemblyFailure() {\n+        // 재발행 대상이 되었다는 것은 발행에 성공하고 published_at 기록만 실패했을 수 있다는 뜻이다.\n+        // 그때 워커는 이미 계산 중인데 STARTED 가 아직 처리되기 전이라 상태는 QUEUED 다. 여기서\n+        // 닫으면 뒤늦게 올 COMPLETED 가 최종 상태 규칙에 걸려 버려진다.\n+        when(repository.findById(11L)).thenReturn(Optional.of(run()));\n+        when(repository.findByIdForUpdate(11L)).thenReturn(Optional.of(run()));\n+        when(assembler.assemble(any())).thenThrow(rulesNotRegistered());\n+\n+        dispatcher.republish(11L);\n+\n+        verify(repository, never()).findByIdForUpdate(any());\n+        verify(repository, never()).update(any());\n+        verify(events, never()).publishEvent(any(BacktestFinished.class));\n+\n+        // 같은 실패가 첫 발행 경로에서는 닫힌다. 두 경로를 나란히 둬야 갈림이 의도임이 드러난다.\n+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));\n+\n+        verify(repository).findByIdForUpdate(11L);\n+        verify(repository).update(any());\n+        verify(events).publishEvent(any(BacktestFinished.class));\n+    }\n+\n+    /** 조립이 스스로 판단해 거부한 실패들. 저장된 실행의 값은 바뀌지 않으므로 다시 읽어도 같은 결과다. */\n+    static Stream<RuntimeException> permanentAssemblyFailures() {\n+        return Stream.of(\n+                // 등록표에 규칙이 없다(422). StrategyRulesService.requireRegistered 가 던진다.\n+                rulesNotRegistered(),\n+                // 비용 버전이 등록표에 없다(400). CostProfileService.resolve 가 던진다.\n+                new BusinessException(ErrorCode.INVALID_INPUT, \"unknown cost profile version: X\"),\n+                // 서버 기본 비용 행이 없다(500). 설정과 마이그레이션이 어긋난 것이라 저절로 낫지 않는다.\n+                new BusinessException(ErrorCode.INTERNAL_ERROR, \"default cost profile missing\"),\n+                // 저장된 요청 사본의 scenario 문자열이 계약에 없다. Scenario.valueOf 가 던진다.\n+                new IllegalArgumentException(\"No enum constant Scenario.UNKNOWN\"),\n+                // targetWeight 가 숫자가 아니다. new BigDecimal(...) 이 던진다.\n+                new NumberFormatException(\"Character array is missing \\\"exponent\\\"\"),\n+                // 요청 사본의 필드 타입이 계약과 다르다. (String) spec.get(...) 이 던진다.\n+                new ClassCastException(\"Integer cannot be cast to String\"));\n+    }\n+\n+    @ParameterizedTest\n+    @MethodSource(\"permanentAssemblyFailures\")\n+    @DisplayName(\"영구 실패로 아는 예외는 첫 발행에서 실행을 닫는다\")\n+    void permanentAssemblyFailuresAreClosed(RuntimeException failure) {\n+        when(repository.findById(11L)).thenReturn(Optional.of(run()));\n+        when(repository.findByIdForUpdate(11L)).thenReturn(Optional.of(run()));\n+        when(assembler.assemble(any())).thenThrow(failure);\n+\n+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));\n+\n+        ArgumentCaptor<BacktestRun> saved = ArgumentCaptor.forClass(BacktestRun.class);\n+        verify(repository).update(saved.capture());\n+        assertThat(saved.getValue().getStatus()).isEqualTo(RunStatus.FAILED);\n+        verify(events).publishEvent(any(BacktestFinished.class));\n+    }\n+\n+    private static BusinessException rulesNotRegistered() {\n+        return new BusinessException(\n+                ErrorCode.RULES_NOT_REGISTERED, \"strategy rules not available: FIXED_WEIGHT/1\");\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcherTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcherTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -31,6 +31,7 @@ import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n import org.mockito.InOrder;\n import org.springframework.amqp.AmqpException;\n+import org.springframework.context.ApplicationEventPublisher;\n import org.springframework.transaction.PlatformTransactionManager;\n import org.springframework.transaction.TransactionDefinition;\n import org.springframework.transaction.support.AbstractPlatformTransactionManager;\n@@ -74,8 +75,11 @@ class JobRepublisherTest {\n                 protected void doRollback(DefaultTransactionStatus status) {}\n             };\n \n+    private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);\n+\n     private final BacktestJobDispatcher dispatcher =\n-            new BacktestJobDispatcher(repository, publisher, assembler, transactionManager, clock);\n+            new BacktestJobDispatcher(\n+                    repository, publisher, assembler, events, transactionManager, clock);\n \n     private final JobRepublisher republisher =\n             new JobRepublisher(repository, dispatcher, clock, Duration.ofMinutes(1), 50);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/JobRepublisherTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/JobRepublisherTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2198103,
+      "head_commit_sha": "400b35f9dc6e99853b52cc5ad3e93483c311ca61",
+      "base_commit_sha": "ac065179bc8e0709b5ce9129856f54d8f3964bb2",
+      "start_commit_sha": "315456a11f9129f3e3f880443723a5f5731e4a48",
+      "created_at": "2026-09-15T12:21:07.251+09:00",
+      "merge_request_id": 944363,
+      "state": "without_files",
+      "real_size": "3",
+      "patch_id_sha": "711a965ec5f9fd09218ef59d3018a3c95d350b1b",
+      "commits": [
+        {
+          "id": "400b35f9dc6e99853b52cc5ad3e93483c311ca61",
+          "short_id": "400b35f9",
+          "created_at": "2026-09-15T11:14:07.000+09:00",
+          "parent_ids": [
+            "ac065179bc8e0709b5ce9129856f54d8f3964bb2"
+          ],
+          "title": "fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다",
+          "message": "fix(be): 조립이 영구히 실패하는 실행을 대기 상태에 가두지 않는다\n\n발송기가 한 try 로 조립과 발행을 함께 감싸, 성질이 정반대인 두 실패가 같은\n길로 흘렀다. 조립이 영구히 실패하면 메시지가 브로커에 나간 적이 없어\ndlq_count 가 오르지 않고, 종결 판정 dlqCount >= publishCount 가 영영 서지\n않는다. 실행은 QUEUED 에 갇힌 채 시도 횟수만 주기마다 오르고, 사용자는 202 를\n받은 화면에서 끝없이 기다린다.\n\n조립을 발행 바깥으로 꺼내 따로 잡고, 두 관문을 다 지날 때만 실행을 닫는다.\n\n첫째, 영구라고 아는 예외만 닫는다. EngineInputAssembler 는 순수 변환이 아니라\n등록표와 비용 프로필을 DB 에서 읽으므로, 모든 RuntimeException 을 영구로\n보면 DB 가 잠깐 흔들릴 때 접수된 실행이 전부 사용자 실패가 된다. 몇 줄 위\nfindById 가 같은 예외를 일시로 다루는 것과도 모순이다. 그래서 허용 목록으로\nBusinessException·IllegalArgumentException·ClassCastException 만 닫고 모르는\n예외는 재발행기에 맡긴다. 잘못 닫는 쪽이 잘못 재시도하는 쪽보다 훨씬 나쁘다.\n\n둘째, 메시지가 나간 적 없음이 확실한 첫 발행에서만 닫는다. 상태가 QUEUED 라고\n해서 워커가 없다는 뜻이 아니다 — STARTED 가 아직 처리되지 않았을 뿐일 수\n있고, 그때 닫으면 뒤늦게 올 성공 결과까지 버려진다. 재발행 대상이 되었다는\n것 자체가 이전에 나갔을 수 있다는 뜻이므로 그 경로에서는 닫지 않는다.\n\nrecordPublishAttempt 를 먼저 부르는 순서는 그대로 두었다. 근거가 있는\n설계이고, 시도 횟수가 헛되이 오르던 것은 순서가 아니라 영구 실패를 계속\n재시도한 탓이다.\n\nT030 의 곁가지 둘. 본체(자료 버전을 dataset_version 에서 읽기)는 자료 적재와\n함께 옮기며, 그때 조립이 DB 를 더 타므로 이 구분이 선행 조건이 된다.\n\nbackend 962건 통과(기준선 951, 건너뜀 2 그대로).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T11:14:07.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T11:14:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/400b35f9dc6e99853b52cc5ad3e93483c311ca61"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2807003": []
+  }
+}

@@ -1,0 +1,529 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963472,
+    "iid": 382,
+    "project_id": 1444456,
+    "title": "refactor(de): 테스트 정리 - 운영과 테스트환경 모두에서 호출되지 않는 함수/상수 삭제",
+    "description": "## 작업 내용 요약\n\n테스트 정리 뒤 어디에서도 부르지 않게 된 경제환경 검색 함수와 상수 셋을 지운다. 계산 결과와 저장 본문은 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- `regime/era.py`의 `era_positions_for`, `regime/phase_snapshot.py`의 `format_phase_value`와 그것만 쓰던 `format_value` import, `regime/scale.py`의 `WINDOW_START_OFFSET`을 지운다.\n- 지운 코드에만 있던 설명(척도 구간의 시작점, \"만들지 못한 지표는 키가 없다\" 규칙)은 남은 상수 주석과 `EraPositionCache.positions_for` docstring으로 옮긴다.\n\n## 테스트\n\n- `ruff check src scripts tests`: 통과\n- `THORP_REQUIRE_DOCKER=true pytest`: 1,244건 통과, 건너뜀 0\n\n## 리뷰 포인트\n\n- `SnapshotBuilder.build`의 v1 종합 분기는 운영에서 타지 않지만, `test_precompute.py`의 분야 전용 테스트 14곳이 `phase_config` 없이 빌더를 만들어 남겼다. `phase_config`를 필수로 바꿀지는 따로 정한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T21:32:23.570+09:00",
+    "updated_at": "2026-10-04T21:34:22.678+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T21:34:22.438+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(de)/orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e4da301138b59a0d8bc38ab8749eb85c6af82c8c",
+    "merge_commit_sha": "05322c25a480a0be7c28479a92b654f69f3cdef4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T21:32:25.200+09:00",
+    "reference": "!382",
+    "references": {
+      "short": "!382",
+      "relative": "!382",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!382"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/382",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963472,
+    "iid": 382,
+    "project_id": 1444456,
+    "title": "refactor(de): 테스트 정리 - 운영과 테스트환경 모두에서 호출되지 않는 함수/상수 삭제",
+    "description": "## 작업 내용 요약\n\n테스트 정리 뒤 어디에서도 부르지 않게 된 경제환경 검색 함수와 상수 셋을 지운다. 계산 결과와 저장 본문은 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- `regime/era.py`의 `era_positions_for`, `regime/phase_snapshot.py`의 `format_phase_value`와 그것만 쓰던 `format_value` import, `regime/scale.py`의 `WINDOW_START_OFFSET`을 지운다.\n- 지운 코드에만 있던 설명(척도 구간의 시작점, \"만들지 못한 지표는 키가 없다\" 규칙)은 남은 상수 주석과 `EraPositionCache.positions_for` docstring으로 옮긴다.\n\n## 테스트\n\n- `ruff check src scripts tests`: 통과\n- `THORP_REQUIRE_DOCKER=true pytest`: 1,244건 통과, 건너뜀 0\n\n## 리뷰 포인트\n\n- `SnapshotBuilder.build`의 v1 종합 분기는 운영에서 타지 않지만, `test_precompute.py`의 분야 전용 테스트 14곳이 `phase_config` 없이 빌더를 만들어 남겼다. `phase_config`를 필수로 바꿀지는 따로 정한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T21:32:23.570+09:00",
+    "updated_at": "2026-10-04T21:34:22.678+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T21:34:22.438+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(de)/orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e4da301138b59a0d8bc38ab8749eb85c6af82c8c",
+    "merge_commit_sha": "05322c25a480a0be7c28479a92b654f69f3cdef4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T21:32:25.200+09:00",
+    "reference": "!382",
+    "references": {
+      "short": "!382",
+      "relative": "!382",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!382"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/382",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "head_sha": "e4da301138b59a0d8bc38ab8749eb85c6af82c8c",
+      "start_sha": "41d78a922d7d5339191a83f10a1cc4dbc02fe6b2"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "36e0a90d5dc0b4cfdd1f231da6ad766ac0cfb05d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881395,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:32:23.672+09:00",
+          "updated_at": "2026-10-04T21:32:23.676+09:00",
+          "system": true,
+          "noteable_id": 963472,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 382,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b5805b8b98f7a689f1c64079bef74a65f32bf2ed",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881396,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:32:23.703+09:00",
+          "updated_at": "2026-10-04T21:32:23.735+09:00",
+          "system": true,
+          "noteable_id": 963472,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 382,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c77232edfe51dfc967f592b0b7b881dced734cb7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881397,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- 운영 및 테스트 환경에서 더 이상 호출되지 않는 미사용 함수(`era_positions_for`, `format_phase_value`)와 상수(`WINDOW_START_OFFSET`)를 깔끔하게 제거하여 코드베이스의 유지보수성을 높였습니다.\n- 삭제되는 함수에 포함되어 있던 중요한 도메인 규칙 및 설명 주석을 남겨진 관련 코드(`EraPositionCache.positions_for`, `scale.py`)로 적절히 이전하여 문서화 유실을 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `regime/era.py`의 `EraPositionCache.positions_for` 메서드 변경 및 `era_positions_for` 제거 이후에도 캐시 기능 및 지표별 보조 위치 계산(`era_position_for`)이 기존과 동일하게 동작하는지 단위 테스트를 통해 검증합니다.\n- `regime/phase_snapshot.py` 및 `regime/scale.py` 수정 사항과 관련하여 기존 국면 스냅샷 생성 및 척도 계산 로직이 정상 작동하는지 통합 테스트(`THORP_REQUIRE_DOCKER=true pytest`)를 재확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e4da301138b59a0d8bc38ab8749eb85c6af82c8c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T21:32:31.895+09:00",
+          "updated_at": "2026-10-04T21:32:31.895+09:00",
+          "system": false,
+          "noteable_id": 963472,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 382,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0b8d432c136f022604550235f3d1c26b277187cb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881398,
+          "type": null,
+          "body": "mentioned in commit 05322c25a480a0be7c28479a92b654f69f3cdef4",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:34:22.504+09:00",
+          "updated_at": "2026-10-04T21:34:22.510+09:00",
+          "system": true,
+          "noteable_id": 963472,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 382,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262333,
+      "head_commit_sha": "e4da301138b59a0d8bc38ab8749eb85c6af82c8c",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "41d78a922d7d5339191a83f10a1cc4dbc02fe6b2",
+      "created_at": "2026-10-04T21:32:24.007+09:00",
+      "merge_request_id": 963472,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "431050fc98f5838f57c42d1d927d9a7af90a87be"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262333,
+      "head_commit_sha": "e4da301138b59a0d8bc38ab8749eb85c6af82c8c",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "41d78a922d7d5339191a83f10a1cc4dbc02fe6b2",
+      "created_at": "2026-10-04T21:32:24.007+09:00",
+      "merge_request_id": 963472,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "431050fc98f5838f57c42d1d927d9a7af90a87be",
+      "commits": [
+        {
+          "id": "e4da301138b59a0d8bc38ab8749eb85c6af82c8c",
+          "short_id": "e4da3011",
+          "created_at": "2026-10-04T21:24:42.000+09:00",
+          "parent_ids": [
+            "940ce6441238860de4c58d58a9552744b4f46a1a"
+          ],
+          "title": "refactor(de): 지운 상수·함수가 들고 있던 설명을 남은 코드로 옮긴다",
+          "message": "refactor(de): 지운 상수·함수가 들고 있던 설명을 남은 코드로 옮긴다\n\nWINDOW_START_OFFSET을 설명하던 `#:` 주석이 WINDOW_END_OFFSET에 붙으면서 구간 시작 122가 어디서\n나오는지 알 수 없게 됐으므로, 시작이 끝에서 WINDOW_MAX_MONTHS개월 앞이라는 설명을 덧붙인다.\nera_positions_for docstring에만 있던 \"만들지 못한 지표는 키가 없다\" 규칙과 그 이유를, 같은 규칙을\n구현하는 EraPositionCache.positions_for로 옮긴다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T21:24:42.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T21:24:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e4da301138b59a0d8bc38ab8749eb85c6af82c8c"
+        },
+        {
+          "id": "940ce6441238860de4c58d58a9552744b4f46a1a",
+          "short_id": "940ce644",
+          "created_at": "2026-10-04T19:00:26.000+09:00",
+          "parent_ids": [
+            "e88aedab374ff7590d552cdc9c0f9a65072d0818"
+          ],
+          "title": "refactor(de): 운영도 테스트도 부르지 않는 경제환경 검색 함수·상수를 지운다",
+          "message": "refactor(de): 운영도 테스트도 부르지 않는 경제환경 검색 함수·상수를 지운다\n\nera_positions_for, format_phase_value, WINDOW_START_OFFSET은 이를 보던 테스트가\n정리된 뒤 어디에서도 부르지 않는다. format_phase_value만 쓰던 format_value import도\n함께 걷어낸다. 계산 결과와 저장 본문은 달라지지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T19:00:26.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T19:00:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/940ce6441238860de4c58d58a9552744b4f46a1a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -115,22 +115,6 @@ def era_position_for(\n     )\n \n \n-def era_positions_for(\n-    indicators: Iterable[IndicatorEntry],\n-    end_month: date,\n-    series_by_indicator: Mapping[str, Mapping[date, MonthlyValue]],\n-) -> dict[str, EraPosition]:\n-    \"\"\"후보 하나의 지표별 보조 위치. **만들지 못한 지표는 키가 없다**(data-model §4).\n-\n-    키 없음이 \"이 지표는 말하지 않는다\"이다. 빈 값을 넣어 두면 화면이 그것을 무언가로 그린다.\n-    \"\"\"\n-    positions = (\n-        era_position_for(indicator, end_month, series_by_indicator[indicator.id])\n-        for indicator in indicators\n-    )\n-    return {position.indicator_id: position for position in positions if position is not None}\n-\n-\n class EraPositionCache:\n     \"\"\"후보월마다 한 번만 구해 여러 snapshot이 나눠 쓰는 자리 (spec FR-017, research R3).\n \n@@ -166,10 +150,12 @@ class EraPositionCache:\n     def positions_for(\n         self, indicators: Iterable[IndicatorEntry], end_month: date\n     ) -> dict[str, EraPosition]:\n-        \"\"\"그 후보월의 지표별 보조 위치. **매번 새 dict를 돌려준다.**\n+        \"\"\"그 후보월의 지표별 보조 위치. **만들지 못한 지표는 키가 없다**(data-model §4).\n+\n+        키 없음이 \"이 지표는 말하지 않는다\"이다. 빈 값을 넣어 두면 화면이 그것을 무언가로 그린다.\n \n-        안쪽 것을 그대로 주면 부르는 쪽이 걸러 내거나 지운 결과가 캐시에 남아, 다음 사례부터\n-        조용히 줄어든 설명을 받는다.\n+        **매번 새 dict를 돌려준다.** 안쪽 것을 그대로 주면 부르는 쪽이 걸러 내거나 지운 결과가\n+        캐시에 남아, 다음 사례부터 조용히 줄어든 설명을 받는다.\n         \"\"\"\n         found = ((indicator, self.position_for(indicator, end_month)) for indicator in indicators)\n         return {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/era.py",
+          "old_path": "data/src/data_pipeline/regime/era.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,7 +19,7 @@ from dataclasses import dataclass\n from datetime import date\n from typing import Any, Final\n \n-from data_pipeline.regime.explain import format_pair, format_value, topic_particle\n+from data_pipeline.regime.explain import format_pair, topic_particle\n from data_pipeline.regime.macro.types import IndicatorEntry, format_month\n from data_pipeline.regime.phase import Block, PhaseDistance, PhaseModel\n from data_pipeline.regime.rounding import round_for_storage, to_storage_text\n@@ -58,11 +58,6 @@ KIND_LABELS: Final[dict[str, str]] = {\n }\n \n \n-def format_phase_value(value: float) -> str:\n-    \"\"\"v3 문장 값 표기 — v1과 같은 규칙(`explain.format_value`, 소수 첫째 자리)이다.\"\"\"\n-    return format_value(value)\n-\n-\n def subject_of(name: str, label: str) -> str:\n     \"\"\"문장의 주어 — 지표 이름·국면 입력 이름표에 은/는을 붙인다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/phase_snapshot.py",
+          "old_path": "data/src/data_pipeline/regime/phase_snapshot.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,8 +32,8 @@ from scipy.stats import norm\n \n from data_pipeline.regime.macro.types import MonthlyValue, format_month, require_month\n \n-#: 척도 구간은 관측 종료월 기준 `[end-122, end-3]`이다 (spec FR-005).\n-WINDOW_START_OFFSET: Final[int] = 122\n+#: 척도 구간은 관측 종료월 기준 `[end-122, end-3]`이다 (spec FR-005). 이 값이 끝을 정하고,\n+#: 시작은 끝에서 `WINDOW_MAX_MONTHS`개월을 거슬러 올라간 자리다.\n WINDOW_END_OFFSET: Final[int] = 3\n \n #: 최대 120개월, 최소 60개월 연속 (spec FR-005).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/scale.py",
+          "old_path": "data/src/data_pipeline/regime/scale.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881397": []
+  }
+}

@@ -1,0 +1,1073 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959260,
+    "iid": 319,
+    "project_id": 1444456,
+    "title": "feat(fe): 변동성 제한을 분석 조건과 비교 대상 고르기로 옮긴다",
+    "description": "## 작업 내용 요약\n\n결과 화면 하단의 '목표 위험 맞춤' 탭을 없애고, 같은 기능을 **분석 조건의 '변동성 제한'**과 **비교 대상 고르기의 '변동성 제한' 한 줄**로 옮겼다. 탭은 매번 별도 실행을 요청하면서도 목표 변동성을 고를 수 없었고(늘 기본 10%), 원래 결과와 나란히 보이지 않았다. 이제 처음부터 켠 결과를 주 결과로 받을 수 있고, 결과 화면에서는 같은 전략에 제한만 걸거나 푼 결과를 그래프에 겹쳐 본다.\n\n## 관련 티켓\n\n- S15P21E205-430 (Story 300 relates, Epic 30)\n- spec 003 FR-010·Edge Cases·분석 조건, spec 005 FR-007·FR-017 (2026-09-24 세션)\n\n## 주요 변경 사항\n\n- **분석 조건 패널(003)**: '변동성 제한'(쓰지 않음·씀)과 목표 변동성(연) 선택. 후보는 등록표 `analysisConditions.targetVolatility` 범위·간격 그대로다. 켜면 요청이 `scenario: TARGET_RISK`와 `scenarioParams.targetVolatility`를 싣는다. 조건 요약 줄에 '변동성 제한 연 N%', 물음표 도움말로 규칙과 득실을 설명한다.\n  - 켠 값은 설정 보관값에 남고, 등록표 범위 밖이 된 보관값은 끈 채로 시작하며 그 사실을 알린다.\n  - **워밍업은 비워 보낸다**(`warmupTradingDays: null`). 서버가 전략과 오버레이(63거래일 추정) 요구값 중 큰 쪽을 쓴다. 화면이 63을 따로 적지 않기 위해서다. 요청 타입의 `warmupTradingDays`를 `number | null`로 넓혔다.\n- **비교 대상 고르기(005)**: '변동성 제한' 묶음에 한 줄. 기준 전략·설정·규칙 버전 그대로 목표 변동성만 골라 요청한다(`CompareChoice.volatilityLimit`). 기준이 이미 켠 결과면 '변동성 제한 없이'가 된다. 새 자금 투입 같은 다른 분석 방식에는 두지 않는다.\n  - 비교 판정(`comparisonMismatch`)은 변동성 제한의 켬·끔과 목표 차이를 조건 차이로 보지 않는다. 필요한 워밍업 차이는 서버의 `INSUFFICIENT_HISTORY` → 기존 '같은 조건으로 다시 비교' 확인으로 맞춘다.\n  - 켠 결과의 이름(`strategyLabel`)에 '변동성 제한 연 N%'를 붙여 곡선·범례·조건 줄에서 켬·끔이 갈린다.\n  - 등록표 버전 없이 접수된 기준(과도기 접수)에는 후보도 등록표 버전을 싣지 않는다. 지금 버전을 붙이면 옛 설정 모양이 등록표 검증에 걸려 거절됐다.\n  - 안내 문구를 '최대 3개까지 고를 수 있습니다(N개 선택됨)'으로 바꿨다. 남은 자리 수를 '최대 N개'로 보여 상한이 1인 것처럼 읽혔다.\n- **삭제**: '목표 위험 맞춤' 탭, `TargetRiskView.tsx`와 그 스타일, 탭 전용 테스트. 결과 탭은 여섯이다.\n- **다시 열기**: 변동성 제한 결과도 '다른 조건으로 비교'(`prefillStrategySettings`)와 내 기록 '설정 바꿔 비교'(BE `MyRecordQueryService`)로 조건을 넘긴다. 목표를 읽을 수 없으면 제한을 끈 채 넘기지 않고 멈춘다.\n- **spec**: 003·005에 2026-09-24 세션과 FR 개정.\n\n## 테스트\n\n- [x] `frontend`: `tsc -b`·`eslint` 통과, Vitest 148 files / 1418 tests 통과(마지막 안내 문구 커밋 뒤에는 비교 목록·결과 화면 테스트만 다시 돌림).\n- [x] `backend`: `gradlew.bat spotlessApply build` 통과 — 2028 tests, 실패 0. 건너뜀 4건은 `MarketLiveApiTest`·`NewsPerformanceIT`·`RequiredDockerTest`(수동 실행 전용)이고 DB IT는 모두 실행됐다(`MyRecordReopenIT` 5건 포함).\n- [x] 로컬 compose(백엔드·워커·새 DB에 09-22 데이터 덤프)에서 결과 화면 → 비교 대상 고르기 → 변동성 제한 16% → '같은 조건으로 다시 비교'(공통 준비 기간 63거래일) → 두 곡선 겹침까지 확인. 고정 비중 2020~2024 기준 36.12% / 제한 16% 4.35%.\n- [ ] 분석 조건 패널의 실제 화면은 브라우저로 보지 않았다(컴포넌트·페이지 테스트만).\n- [ ] 011 사례 경로에서 변동성 제한을 켠 채 진입하는 경우는 확인하지 않았다.\n\n## 리뷰 포인트\n\n- **결정 변경이다.** 003 Edge Cases(\"목표 변동성을 화면 상태에 만들지 않는다\")와 005 FR-017('목표 위험 맞춤' 탭)을 뒤집었다. 전략이 아니라 모든 전략 위에 씌우는 조건이라 전략 설정이 아닌 분석 조건 자리에 뒀다.\n- **워밍업을 서버에 맡긴 방식.** 켜면 `warmupTradingDays`를 비워 보낸다. 설정 화면의 평가 가능 범위는 오버레이의 63거래일을 모르고 계산되므로, 상장이 최근인 ETF면 서버가 시작일을 뒤로 밀 수 있다(결과의 `effectiveStart`로 보인다). 등록표가 오버레이 추정 기간을 내려주게 할지.\n- **켬·끔 비교를 조건 같음으로 본 판정.** 요약 문장이 여전히 \"같은 조건에서 …\"로 시작한다. 이름에 '변동성 제한 연 N%'가 붙어 구분되지만 문장을 따로 둘지.\n- **429(KOSPI 참고선)와 겹친다.** 429도 `ResultDetailTabs`(탭 줄)와 spec 005 FR-007·FR-017을 고친다. 먼저 머지되는 쪽 뒤에 탭 수(다섯)와 FR 문장을 맞춰야 한다.\n\n## 전달만 하는 것\n\n- 확인 창의 서버 문구가 \"요청한 공통 워밍업 0거래일이 FIXED_WEIGHT 전략이 필요로 하는 63거래일보다 짧습니다\"로 나온다. 63은 전략이 아니라 변동성 제한 오버레이의 요구값이라 004 `EffectivePeriodCalculator` 문구를 고치면 좋다.\n\n## 남은 것\n\n- 위 리뷰 포인트의 평가 가능 범위(오버레이 추정 기간) 반영.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T18:13:29.658+09:00",
+    "updated_at": "2026-09-24T18:24:27.800+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T18:24:27.452+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/430-target-risk-volatility",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+    "merge_commit_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T18:13:35.037+09:00",
+    "reference": "!319",
+    "references": {
+      "short": "!319",
+      "relative": "!319",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!319"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/319",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959260,
+    "iid": 319,
+    "project_id": 1444456,
+    "title": "feat(fe): 변동성 제한을 분석 조건과 비교 대상 고르기로 옮긴다",
+    "description": "## 작업 내용 요약\n\n결과 화면 하단의 '목표 위험 맞춤' 탭을 없애고, 같은 기능을 **분석 조건의 '변동성 제한'**과 **비교 대상 고르기의 '변동성 제한' 한 줄**로 옮겼다. 탭은 매번 별도 실행을 요청하면서도 목표 변동성을 고를 수 없었고(늘 기본 10%), 원래 결과와 나란히 보이지 않았다. 이제 처음부터 켠 결과를 주 결과로 받을 수 있고, 결과 화면에서는 같은 전략에 제한만 걸거나 푼 결과를 그래프에 겹쳐 본다.\n\n## 관련 티켓\n\n- S15P21E205-430 (Story 300 relates, Epic 30)\n- spec 003 FR-010·Edge Cases·분석 조건, spec 005 FR-007·FR-017 (2026-09-24 세션)\n\n## 주요 변경 사항\n\n- **분석 조건 패널(003)**: '변동성 제한'(쓰지 않음·씀)과 목표 변동성(연) 선택. 후보는 등록표 `analysisConditions.targetVolatility` 범위·간격 그대로다. 켜면 요청이 `scenario: TARGET_RISK`와 `scenarioParams.targetVolatility`를 싣는다. 조건 요약 줄에 '변동성 제한 연 N%', 물음표 도움말로 규칙과 득실을 설명한다.\n  - 켠 값은 설정 보관값에 남고, 등록표 범위 밖이 된 보관값은 끈 채로 시작하며 그 사실을 알린다.\n  - **워밍업은 비워 보낸다**(`warmupTradingDays: null`). 서버가 전략과 오버레이(63거래일 추정) 요구값 중 큰 쪽을 쓴다. 화면이 63을 따로 적지 않기 위해서다. 요청 타입의 `warmupTradingDays`를 `number | null`로 넓혔다.\n- **비교 대상 고르기(005)**: '변동성 제한' 묶음에 한 줄. 기준 전략·설정·규칙 버전 그대로 목표 변동성만 골라 요청한다(`CompareChoice.volatilityLimit`). 기준이 이미 켠 결과면 '변동성 제한 없이'가 된다. 새 자금 투입 같은 다른 분석 방식에는 두지 않는다.\n  - 비교 판정(`comparisonMismatch`)은 변동성 제한의 켬·끔과 목표 차이를 조건 차이로 보지 않는다. 필요한 워밍업 차이는 서버의 `INSUFFICIENT_HISTORY` → 기존 '같은 조건으로 다시 비교' 확인으로 맞춘다.\n  - 켠 결과의 이름(`strategyLabel`)에 '변동성 제한 연 N%'를 붙여 곡선·범례·조건 줄에서 켬·끔이 갈린다.\n  - 등록표 버전 없이 접수된 기준(과도기 접수)에는 후보도 등록표 버전을 싣지 않는다. 지금 버전을 붙이면 옛 설정 모양이 등록표 검증에 걸려 거절됐다.\n  - 안내 문구를 '최대 3개까지 고를 수 있습니다(N개 선택됨)'으로 바꿨다. 남은 자리 수를 '최대 N개'로 보여 상한이 1인 것처럼 읽혔다.\n- **삭제**: '목표 위험 맞춤' 탭, `TargetRiskView.tsx`와 그 스타일, 탭 전용 테스트. 결과 탭은 여섯이다.\n- **다시 열기**: 변동성 제한 결과도 '다른 조건으로 비교'(`prefillStrategySettings`)와 내 기록 '설정 바꿔 비교'(BE `MyRecordQueryService`)로 조건을 넘긴다. 목표를 읽을 수 없으면 제한을 끈 채 넘기지 않고 멈춘다.\n- **spec**: 003·005에 2026-09-24 세션과 FR 개정.\n\n## 테스트\n\n- [x] `frontend`: `tsc -b`·`eslint` 통과, Vitest 148 files / 1418 tests 통과(마지막 안내 문구 커밋 뒤에는 비교 목록·결과 화면 테스트만 다시 돌림).\n- [x] `backend`: `gradlew.bat spotlessApply build` 통과 — 2028 tests, 실패 0. 건너뜀 4건은 `MarketLiveApiTest`·`NewsPerformanceIT`·`RequiredDockerTest`(수동 실행 전용)이고 DB IT는 모두 실행됐다(`MyRecordReopenIT` 5건 포함).\n- [x] 로컬 compose(백엔드·워커·새 DB에 09-22 데이터 덤프)에서 결과 화면 → 비교 대상 고르기 → 변동성 제한 16% → '같은 조건으로 다시 비교'(공통 준비 기간 63거래일) → 두 곡선 겹침까지 확인. 고정 비중 2020~2024 기준 36.12% / 제한 16% 4.35%.\n- [ ] 분석 조건 패널의 실제 화면은 브라우저로 보지 않았다(컴포넌트·페이지 테스트만).\n- [ ] 011 사례 경로에서 변동성 제한을 켠 채 진입하는 경우는 확인하지 않았다.\n\n## 리뷰 포인트\n\n- **결정 변경이다.** 003 Edge Cases(\"목표 변동성을 화면 상태에 만들지 않는다\")와 005 FR-017('목표 위험 맞춤' 탭)을 뒤집었다. 전략이 아니라 모든 전략 위에 씌우는 조건이라 전략 설정이 아닌 분석 조건 자리에 뒀다.\n- **워밍업을 서버에 맡긴 방식.** 켜면 `warmupTradingDays`를 비워 보낸다. 설정 화면의 평가 가능 범위는 오버레이의 63거래일을 모르고 계산되므로, 상장이 최근인 ETF면 서버가 시작일을 뒤로 밀 수 있다(결과의 `effectiveStart`로 보인다). 등록표가 오버레이 추정 기간을 내려주게 할지.\n- **켬·끔 비교를 조건 같음으로 본 판정.** 요약 문장이 여전히 \"같은 조건에서 …\"로 시작한다. 이름에 '변동성 제한 연 N%'가 붙어 구분되지만 문장을 따로 둘지.\n- **429(KOSPI 참고선)와 겹친다.** 429도 `ResultDetailTabs`(탭 줄)와 spec 005 FR-007·FR-017을 고친다. 먼저 머지되는 쪽 뒤에 탭 수(다섯)와 FR 문장을 맞춰야 한다.\n\n## 전달만 하는 것\n\n- 확인 창의 서버 문구가 \"요청한 공통 워밍업 0거래일이 FIXED_WEIGHT 전략이 필요로 하는 63거래일보다 짧습니다\"로 나온다. 63은 전략이 아니라 변동성 제한 오버레이의 요구값이라 004 `EffectivePeriodCalculator` 문구를 고치면 좋다.\n\n## 남은 것\n\n- 위 리뷰 포인트의 평가 가능 범위(오버레이 추정 기간) 반영.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T18:13:29.658+09:00",
+    "updated_at": "2026-09-24T18:24:27.800+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T18:24:27.452+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/430-target-risk-volatility",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+    "merge_commit_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T18:13:35.037+09:00",
+    "reference": "!319",
+    "references": {
+      "short": "!319",
+      "relative": "!319",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!319"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/319",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "27",
+    "latest_build_started_at": "2026-09-24T18:13:45.132+09:00",
+    "latest_build_finished_at": "2026-09-24T18:22:15.701+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221056,
+      "iid": 345,
+      "project_id": 1444456,
+      "sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+      "ref": "feat(fe)/430-target-risk-volatility",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T18:13:45.014+09:00",
+      "updated_at": "2026-09-24T18:22:15.708+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221056"
+    },
+    "head_pipeline": {
+      "id": 221056,
+      "iid": 345,
+      "project_id": 1444456,
+      "sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+      "ref": "feat(fe)/430-target-risk-volatility",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T18:13:45.014+09:00",
+      "updated_at": "2026-09-24T18:22:15.708+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221056",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-24T18:13:45.132+09:00",
+      "finished_at": "2026-09-24T18:22:15.701+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221056",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "head_sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+      "start_sha": "5fb99267be2e4443cee710669186729024638450"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "30e71be41097786b6b6c0702c3723f55b8677350",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866117,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T18:13:29.776+09:00",
+          "updated_at": "2026-09-24T18:13:29.779+09:00",
+          "system": true,
+          "noteable_id": 959260,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 319,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "034d4d14b0dd11b6c9813885f97a5c701bc39652",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866118,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T18:13:29.797+09:00",
+          "updated_at": "2026-09-24T18:13:29.806+09:00",
+          "system": true,
+          "noteable_id": 959260,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 319,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "aad03a4b928c8379e1bbfcf4fe70ca24a0092565",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866119,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T18:13:39.292+09:00",
+          "updated_at": "2026-09-24T18:13:39.300+09:00",
+          "system": true,
+          "noteable_id": 959260,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 319,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dd4e5b30fc4d63ed0fe4678ea715e2e819cf180a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866120,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **일관된 UX 개편과 명확한 요구사항 분리**: 결과 화면 하단의 '목표 위험 맞춤' 탭을 제거하고, 이를 003(분석 조건)과 005(비교 대상 고르기)로 자연스럽게 분산 배치하여 사용자가 처음부터 켬/끔 결과를 주 결과로 비교할 수 있도록 UX를 개선했습니다.\n- **철저한 테스트 보완**: 변경된 기능(`CompareTargetPicker`, `prefillStrategySettings`, `AnalysisConditionsPanel` 등)에 대해 빠짐없이 유닛 테스트와 통합 테스트(`MyRecordReopenIT`)를 추가하고 갱신하여 회귀 버그를 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **변동성 제한 활성화 후 결과 재개봉 시나리오**: 변동성 제한(예: 연 12%)을 켠 상태로 백테스트를 실행하고 완료된 결과에서 '설정 바꿔 비교'를 눌렀을 때, 003 분석 조건 화면에 해당 목표 변동성과 시나리오(`TARGET_RISK`)가 정확히 프리필되는지 확인합니다.\n- **등록표 범위 밖의 보관값 처리 시나리오**: 로컬 스토리지에 등록표 범위를 벗어나는 목표 변동성 저장값이 있을 때, 설정 화면 진입 시 변동성이 꺼진 채 시작하며 안내 메시지가 올바르게 노출되는지 검증합니다.\n- **비교 대상 고르기 한도 및 중복 선택 시나리오**: 최대 3개의 비교 대상(기본 전략, 내 전략, 변동성 제한 조합 포함)을 고를 때, 선택 개수 카운팅(`N개 선택됨`)과 상한 도달 시 체크박스 비활성화 상태가 정확히 동기화되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:05f1b393c4a2332a6077185142c942e1c086da6c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-24T18:13:44.217+09:00",
+          "updated_at": "2026-09-24T18:13:44.217+09:00",
+          "system": false,
+          "noteable_id": 959260,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 319,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b48c02d4c7470105a32f2cce67f93a53d90572f4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866159,
+          "type": null,
+          "body": "mentioned in commit 4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T18:24:27.426+09:00",
+          "updated_at": "2026-09-24T18:24:27.430+09:00",
+          "system": true,
+          "noteable_id": 959260,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 319,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f693af3428113fb034643ef6919faeabe5f73846",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885019,
+          "type": null,
+          "body": "mentioned in commit 3ea4a441d7f7ed4f19aad64dbfdc4301d41712ec",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.497+09:00",
+          "updated_at": "2026-10-13T15:16:08.783+09:00",
+          "system": true,
+          "noteable_id": 959260,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 319,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248321,
+      "head_commit_sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+      "base_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "start_commit_sha": "5fb99267be2e4443cee710669186729024638450",
+      "created_at": "2026-09-24T18:13:30.178+09:00",
+      "merge_request_id": 959260,
+      "state": "collected",
+      "real_size": "27",
+      "patch_id_sha": "5d39c6c6f37276a4f22f85e95742231fd0715a47"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248321,
+      "head_commit_sha": "05f1b393c4a2332a6077185142c942e1c086da6c",
+      "base_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "start_commit_sha": "5fb99267be2e4443cee710669186729024638450",
+      "created_at": "2026-09-24T18:13:30.178+09:00",
+      "merge_request_id": 959260,
+      "state": "collected",
+      "real_size": "27",
+      "patch_id_sha": "5d39c6c6f37276a4f22f85e95742231fd0715a47",
+      "commits": [
+        {
+          "id": "05f1b393c4a2332a6077185142c942e1c086da6c",
+          "short_id": "05f1b393",
+          "created_at": "2026-09-24T18:07:10.000+09:00",
+          "parent_ids": [
+            "b45b728a07c35de37c10ad322ac701c995608eb4"
+          ],
+          "title": "fix(fe): 비교 대상 고르기 안내를 전체 상한과 선택 수로 보인다",
+          "message": "fix(fe): 비교 대상 고르기 안내를 전체 상한과 선택 수로 보인다\n\n- '최대 N개'에 남은 자리 수 대신 전체 상한(3)을 적고, 이미 붙은 대상과 목록에서 고른 것을 합친 수를 '(N개 선택됨)'으로 붙인다\n- 자리가 다 찼을 때도 같은 앞 문장 뒤에 해제 안내를 둔다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:07:10.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:07:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/05f1b393c4a2332a6077185142c942e1c086da6c"
+        },
+        {
+          "id": "b45b728a07c35de37c10ad322ac701c995608eb4",
+          "short_id": "b45b728a",
+          "created_at": "2026-09-24T18:02:56.000+09:00",
+          "parent_ids": [
+            "78fbbf6ad05916c7568e5b19b372bc5347e515da"
+          ],
+          "title": "docs(specs): 변동성 제한을 분석 조건과 비교 대상 고르기로 옮긴 결정을 적는다",
+          "message": "docs(specs): 변동성 제한을 분석 조건과 비교 대상 고르기로 옮긴 결정을 적는다\n\n- 003: 2026-09-24 세션, 분석 조건의 '변동성 제한'(쓰지 않음·씀)과 목표 변동성, 워밍업은 서버가 정한다는 결정\n- 005: 2026-09-24 세션, '목표 위험 맞춤' 탭 삭제(탭 여섯), 비교 대상 고르기의 변동성 제한 줄, 켬·끔 차이를 조건 차이로 보지 않는 비교 규칙\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:02:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:02:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b45b728a07c35de37c10ad322ac701c995608eb4"
+        },
+        {
+          "id": "78fbbf6ad05916c7568e5b19b372bc5347e515da",
+          "short_id": "78fbbf6a",
+          "created_at": "2026-09-24T18:02:55.000+09:00",
+          "parent_ids": [
+            "97681a8313e71011591ab02e775c99b4e12de7c4"
+          ],
+          "title": "feat(be): 변동성 제한 기록도 '설정 바꿔 비교'를 연다",
+          "message": "feat(be): 변동성 제한 기록도 '설정 바꿔 비교'를 연다\n\n- 다시 열 수 있는 시나리오에 TARGET_RISK를 더한다. 003 분석 조건이 변동성 제한을 다루게 되어 005 prefill이 더는 거절하지 않는다\n- 열 수 없는 시나리오 확인은 FRESH_CASH_FROM 기록으로 옮기고, 변동성 제한 기록이 열리는 경우를 더한다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:02:55.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:02:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/78fbbf6ad05916c7568e5b19b372bc5347e515da"
+        },
+        {
+          "id": "97681a8313e71011591ab02e775c99b4e12de7c4",
+          "short_id": "97681a83",
+          "created_at": "2026-09-24T18:02:55.000+09:00",
+          "parent_ids": [
+            "2a1614420997a6c09ef014debfebaa1c7aa8a920"
+          ],
+          "title": "fix(fe): 등록표 버전 없이 접수된 결과에도 변동성 제한 비교가 접수되게 한다",
+          "message": "fix(fe): 등록표 버전 없이 접수된 결과에도 변동성 제한 비교가 접수되게 한다\n\n- 변동성 제한 줄은 기준의 등록표 버전을 따르고, 기준에 버전이 없으면(과도기 접수) 요청에 싣지 않는다. 지금 버전을 붙이면 옛 설정 모양이 등록표 검증에 걸려 거절됐다\n- 후보가 버튼이던 때의 목록 안 버튼 규칙을 지운다. 묶음 제목의 물음표가 그 규칙에 늘어나 보였다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:02:55.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:02:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/97681a8313e71011591ab02e775c99b4e12de7c4"
+        },
+        {
+          "id": "2a1614420997a6c09ef014debfebaa1c7aa8a920",
+          "short_id": "2a161442",
+          "created_at": "2026-09-24T17:54:38.000+09:00",
+          "parent_ids": [
+            "644a5997737376bd01bc1273f2c4cfa3150353d9"
+          ],
+          "title": "feat(fe): 변동성 제한 결과도 '다른 조건으로 비교'로 설정 화면에 조건을 넘긴다",
+          "message": "feat(fe): 변동성 제한 결과도 '다른 조건으로 비교'로 설정 화면에 조건을 넘긴다\n\n- 설정 화면으로 넘길 수 있는 분석 방식에 TARGET_RISK를 더하고, 목표 변동성을 계약의 decimal에서 퍼센트 숫자로 옮겨 보관한다\n- 목표를 읽을 수 없는 변동성 제한 결과는 제한을 끈 채 넘기지 않고 멈춘다. 새 자금 투입 같은 다른 분석 방식은 지금처럼 넘기지 않는다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:54:38.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:54:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2a1614420997a6c09ef014debfebaa1c7aa8a920"
+        },
+        {
+          "id": "644a5997737376bd01bc1273f2c4cfa3150353d9",
+          "short_id": "644a5997",
+          "created_at": "2026-09-24T17:53:28.000+09:00",
+          "parent_ids": [
+            "f5723e213a977e2f5d7d28a8d1e107893e2cf882"
+          ],
+          "title": "feat(fe): 변동성 제한을 결과 탭에서 비교 대상 고르기로 옮긴다",
+          "message": "feat(fe): 변동성 제한을 결과 탭에서 비교 대상 고르기로 옮긴다\n\n- 비교 대상 고르기에 '변동성 제한' 묶음을 두고, 기준 전략·설정·규칙 버전 그대로 목표 변동성(연)만 골라 비교 대상으로 요청한다\n- 기준이 이미 변동성 제한을 켠 결과면 같은 자리를 '변동성 제한 없이' 한 줄로 보인다. 새 자금 투입 같은 다른 분석 방식에는 두지 않는다\n- 비교 판정은 변동성 제한의 켬·끔과 목표 차이를 조건 차이로 보지 않는다. 필요한 워밍업 차이는 기존 공통 기간 확인으로 맞춘다\n- 변동성 제한을 켠 결과의 이름에 '변동성 제한 연 N%'를 붙여 곡선·범례·조건 줄에서 켬·끔이 갈리게 한다\n- '목표 위험 맞춤' 탭과 그 보기를 지워 결과 탭을 여섯으로 줄인다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:53:28.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:53:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/644a5997737376bd01bc1273f2c4cfa3150353d9"
+        },
+        {
+          "id": "f5723e213a977e2f5d7d28a8d1e107893e2cf882",
+          "short_id": "f5723e21",
+          "created_at": "2026-09-24T17:43:52.000+09:00",
+          "parent_ids": [
+            "067f9feebfebe163e0816961bf3750eb419f1cfc"
+          ],
+          "title": "feat(fe): 분석 조건 패널에서 변동성 제한을 켜고 목표 변동성을 고른다",
+          "message": "feat(fe): 분석 조건 패널에서 변동성 제한을 켜고 목표 변동성을 고른다\n\n- 분석 조건에 '변동성 제한'(쓰지 않음·씀)과 목표 변동성(연) 선택을 둔다. 후보는 등록표 targetVolatility 범위·간격 그대로다\n- 켜면 요청이 scenario TARGET_RISK와 scenarioParams.targetVolatility를 싣고, 워밍업은 비워 서버가 전략·오버레이 중 큰 쪽으로 정하게 한다\n- 켠 값은 설정 보관값에 남고, 등록표 범위 밖이 된 보관값은 끈 채로 시작하며 그 사실을 알린다\n- 조건 요약 줄에 '변동성 제한 연 N%'를 보이고, 물음표 도움말로 규칙과 득실을 설명한다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:43:45.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:43:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f5723e213a977e2f5d7d28a8d1e107893e2cf882"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -22,6 +22,7 @@ import java.time.Instant;\n import java.util.LinkedHashMap;\n import java.util.List;\n import java.util.Map;\n+import java.util.Set;\n import org.springframework.stereotype.Service;\n import org.springframework.transaction.annotation.Transactional;\n \n@@ -35,12 +36,14 @@ import org.springframework.transaction.annotation.Transactional;\n public class MyRecordQueryService {\n \n     /**\n-     * 003이 다루는 시나리오. 다른 시나리오의 기록은 '설정 바꿔 비교'를 열지 않는다(research R4).\n+     * 003이 다루는 시나리오 — 연속 운용과, 003 분석 조건의 '변동성 제한'인 {@code TARGET_RISK}. 다른 시나리오의 기록은 '설정 바꿔 비교'를 열지\n+     * 않는다(research R4).\n      *\n      * <p>문자열을 적지 않고 {@link Scenario}에서 가져온다 — 적어 두면 그 상수가 이름을 바꾸거나 사라져도 여기는 조용히 지나가고, 모든 기록의 버튼이\n      * 사라진 뒤에야 드러난다. 이름이 바뀌면 빌드가 깨지는 쪽이 낫다.\n      */\n-    private static final String REOPENABLE_SCENARIO = Scenario.FULL_PERIOD.name();\n+    private static final Set<String> REOPENABLE_SCENARIOS =\n+            Set.of(Scenario.FULL_PERIOD.name(), Scenario.TARGET_RISK.name());\n \n     private final MyRecordRepository records;\n     private final MyRecordMappingDriftChecker driftChecker;\n@@ -137,8 +140,8 @@ public class MyRecordQueryService {\n     /**\n      * '설정 바꿔 비교'를 열 수 있는가.\n      *\n-     * <p>005의 {@code prefillStrategySettings}가 {@code FULL_PERIOD}가 아닌 시나리오를 거절한다 — 003 화면이 목표 위험\n-     * 맞춤 같은 시나리오를 다루지 않기 때문이다(research R4). 열 수 없는 것을 열어 두면 눌러 본 뒤에 실패한다.\n+     * <p>005의 {@code prefillStrategySettings}가 이 둘이 아닌 시나리오를 거절한다 — 003 화면이 새 자금 투입 같은 시나리오를 다루지 않기\n+     * 때문이다(research R4). 열 수 없는 것을 열어 두면 눌러 본 뒤에 실패한다.\n      *\n      * <p>시나리오가 <b>적혀 있지 않은</b> 사본은 주 분석으로 본다 — 접수가 생략을 {@code FULL_PERIOD}로 읽는 것과 같은 규칙이다.\n      */\n@@ -147,7 +150,7 @@ public class MyRecordQueryService {\n             return false;\n         }\n         Object scenario = config.get(\"scenario\");\n-        return scenario == null || REOPENABLE_SCENARIO.equals(String.valueOf(scenario));\n+        return scenario == null || REOPENABLE_SCENARIOS.contains(String.valueOf(scenario));\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -89,11 +89,23 @@ class MyRecordReopenIT extends IntegrationTestSupport {\n         assertThat(detail.registryDrift().fields()).isEmpty();\n     }\n \n+    @Test\n+    @DisplayName(\"변동성 제한(TARGET_RISK) 결과는 003 분석 조건이 다루므로 설정 바꿔 비교를 연다\")\n+    void 변동성_제한은_열_수_있다() {\n+        long owner = newUser(\"volatility\");\n+        backtestService.create(request(owner, \"MONTH_END\", Scenario.TARGET_RISK));\n+\n+        MyRecordDetail detail = queryService.detail(owner, recordIdOf(owner));\n+\n+        assertThat(detail.reopenSettings().available()).isTrue();\n+        assertThat(detail.reopenPayload()).containsEntry(\"scenario\", \"TARGET_RISK\");\n+    }\n+\n     @Test\n     @DisplayName(\"003이 다루지 않는 시나리오는 버튼만 닫고 조건은 그대로 담는다\")\n     void 다른_시나리오는_열_수_없다() {\n         long owner = newUser(\"scenario\");\n-        backtestService.create(request(owner, \"MONTH_END\", Scenario.TARGET_RISK));\n+        backtestService.create(request(owner, \"MONTH_END\", Scenario.FRESH_CASH_FROM));\n \n         MyRecordDetail detail = queryService.detail(owner, recordIdOf(owner));\n \n@@ -103,7 +115,7 @@ class MyRecordReopenIT extends IntegrationTestSupport {\n         // 열 수 없는 것과 없는 것은 다르다 — 조건은 그대로 있고 버튼만 닫힌다.\n         assertThat(detail.reopenPayload())\n                 .as(\"상세는 저장 당시 조건을 계속 보인다\")\n-                .containsEntry(\"scenario\", \"TARGET_RISK\");\n+                .containsEntry(\"scenario\", \"FRESH_CASH_FROM\");\n     }\n \n     private int recordCount(long owner) {\n@@ -169,13 +181,18 @@ class MyRecordReopenIT extends IntegrationTestSupport {\n         return request(requesterId, rebalance, Scenario.FULL_PERIOD);\n     }\n \n-    /** {@code TARGET_RISK} 는 목표 변동성을 요구한다 — 접수가 시나리오마다 필요한 입력을 검사한다. */\n+    /**\n+     * {@code TARGET_RISK} 는 목표 변동성을, {@code FRESH_CASH_FROM} 은 투입 시작일을 요구한다 — 접수가 시나리오마다 필요한 입력을\n+     * 검사한다.\n+     */\n     private static CreateBacktestCommand request(\n             Long requesterId, String rebalance, Scenario scenario) {\n         Map<String, Object> scenarioParams =\n-                scenario == Scenario.TARGET_RISK\n-                        ? Map.of(\"targetVolatility\", new BigDecimal(\"0.1000\"))\n-                        : null;\n+                switch (scenario) {\n+                    case TARGET_RISK -> Map.of(\"targetVolatility\", new BigDecimal(\"0.1000\"));\n+                    case FRESH_CASH_FROM -> Map.of(\"startDate\", PERIOD[0].toString());\n+                    default -> null;\n+                };\n         return new CreateBacktestCommand(\n                 requesterId,\n                 ExecutionType.SINGLE,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordReopenIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordReopenIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -134,8 +134,10 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {\n     // 보이는 줄은 기록 이름이고 그 아래에 바탕 전략 이름이 작게 붙는다.\n     expect(used.parentElement?.textContent).toBe('넓게 표류 9/23' + selectableStrategy.name)\n     expect(screen.getAllByRole('checkbox', { name: /표류 균형 맞추기/ })).toHaveLength(2)\n-    expect(screen.getByText(/최대 1개까지/)).toBeTruthy()\n+    // 남은 자리가 아니라 전체 상한과, 이미 붙은 대상을 포함한 선택 수를 말한다.\n+    expect(screen.getByText(/최대 3개까지 고를 수 있습니다\\(2개 선택됨\\)/)).toBeTruthy()\n     fireEvent.click(used)\n+    expect(screen.getByText(/\\(3개 선택됨\\)/)).toBeTruthy()\n     // 자리가 하나라 다른 줄은 더 고를 수 없다.\n     expect(\n       (screen.getByRole('checkbox', { name: DEFAULT_ROW }) as HTMLInputElement).disabled,\n@@ -197,6 +199,7 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {\n   it('자리가 없으면 고를 수 없다고 알리고 모든 줄을 막는다', async () => {\n     setup({ room: 0 })\n     expect(await screen.findByText(/더 고를 자리가 없습니다/)).toBeTruthy()\n+    expect(screen.getByText(/최대 3개까지 고를 수 있습니다\\(3개 선택됨\\)/)).toBeTruthy()\n     for (const box of screen.getAllByRole('checkbox'))\n       expect((box as HTMLInputElement).disabled).toBe(true)\n   })\n@@ -209,3 +212,58 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {\n     expect(await screen.findByText('등록표를 받을 수 없습니다.')).toBeTruthy()\n   })\n })\n+\n+describe('변동성 제한 줄', () => {\n+  const baseStrategy = { ...selectableStrategy, strategyId: base.config.strategyId, name: '파도 고르기' }\n+  const volatility = registryFixture.analysisConditions.targetVolatility\n+\n+  beforeEach(() => {\n+    api.registry.mockResolvedValue({ ...registryFixture, strategies: [baseStrategy] })\n+  })\n+\n+  it('기준 전략·설정·규칙 버전 그대로 고른 목표 변동성으로 변동성 제한만 걸어 넘긴다', async () => {\n+    const user = userEvent.setup()\n+    const select = setup()\n+    const row = await screen.findByRole('checkbox', { name: '변동성 제한 걸기 · 파도 고르기' })\n+    const values = screen\n+      .getAllByRole('option')\n+      .map((option) => Number((option as HTMLOptionElement).value))\n+    expect(values[0]).toBe(volatility.min)\n+    expect(values.at(-1)).toBe(volatility.max)\n+    expect((screen.getByRole('combobox', { name: '목표 변동성(연)' }) as HTMLSelectElement).value).toBe(\n+      String(volatility.default),\n+    )\n+\n+    await user.selectOptions(screen.getByRole('combobox', { name: '목표 변동성(연)' }), String(volatility.max))\n+    await user.click(row)\n+    await user.click(screen.getByRole('button', { name: '비교하기 (1)' }))\n+    expect(select.mock.calls[0][0]).toEqual([\n+      expect.objectContaining({\n+        strategy: baseStrategy,\n+        parameters: base.config.parameters,\n+        rulesVersion: base.config.rulesVersion,\n+        volatilityLimit: { scenario: 'TARGET_RISK', targetVolatility: volatility.max },\n+      }),\n+    ])\n+  })\n+\n+  it('기준이 이미 변동성 제한을 켰으면 제한 없이 다시 계산하는 줄이 되고 고를 값이 없다', async () => {\n+    const user = userEvent.setup()\n+    const select = setup({\n+      base: {\n+        ...base,\n+        config: { ...base.config, scenario: 'TARGET_RISK', scenarioParams: { targetVolatility: '0.1000' } },\n+      },\n+    })\n+    await user.click(await screen.findByRole('checkbox', { name: '변동성 제한 없이 · 파도 고르기' }))\n+    expect(screen.queryByRole('combobox', { name: '목표 변동성(연)' })).toBeNull()\n+    await user.click(screen.getByRole('button', { name: '비교하기 (1)' }))\n+    expect(select.mock.calls[0][0][0].volatilityLimit).toEqual({ scenario: 'FULL_PERIOD' })\n+  })\n+\n+  it('다른 분석 방식의 결과에는 변동성 제한 줄을 두지 않는다', async () => {\n+    setup({ base: { ...base, config: { ...base.config, scenario: 'FRESH_CASH_FROM' } } })\n+    await screen.findByText(/최대 3개까지 고를 수 있습니다/)\n+    expect(screen.queryByRole('checkbox', { name: /변동성 제한/ })).toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.test.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,18 +4,24 @@ import { fetchUsedStrategies } from '@/api/myRecords'\n import { fetchEvaluationWindow } from '@/api/sectors'\n import { fetchStrategyRegistry } from '@/api/strategyRegistry'\n import { useAuth } from '@/auth/auth-context'\n+import { InlineHelp } from '@/components/common/InlineHelp'\n+import { TARGET_RISK_HELP } from '@/components/strategy/AnalysisConditionsPanel'\n import { resolveRulesVersion } from '@/components/strategy/analysisSupport'\n import { Button } from '@/components/ui/button'\n+import type { AxisValues } from '@/hooks/useStrategySettings'\n import type { UsedStrategy } from '@/types/myRecords'\n import type { PublicResultDetail } from '@/types/result'\n+import type { NumericCondition } from '@/types/strategyRegistry'\n import { type CandidateSource, combinationsFor, describeParameters } from './compareCandidates'\n import type { CompareChoice } from './compareRequest'\n+import { MAX_COMPARE_TARGETS } from './compareQuery'\n import styles from './comparison.module.css'\n \n type Candidate = {\n   key: string\n   choice: CompareChoice\n-  source: CandidateSource\n+  /** `volatility`는 기준 전략 그대로 변동성 제한만 바꿔 보는 한 줄이다 */\n+  source: CandidateSource | 'volatility'\n   /** 내 전략의 이름표(내 기록 항목 이름). 없으면 `null` */\n   recordName: string | null\n   /** 설정값 한 줄. 축이 없는 전략은 빈 문자열 */\n@@ -30,6 +36,13 @@ const SOURCE_LABELS: Record<CandidateSource, string> = {\n   used: '내 전략',\n }\n const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']\n+const VOLATILITY_KEY = 'volatility'\n+\n+/** 등록표 범위(min~max, step 간격)의 후보 */\n+function rangeChoices({ min, max, step }: NumericCondition): number[] {\n+  const count = Math.round((max - min) / step)\n+  return Array.from({ length: count + 1 }, (_, i) => Number((min + i * step).toFixed(4)))\n+}\n \n /**\n  * 비교 대상 고르기(FR-004, `S15P21E205-419`).\n@@ -62,7 +75,10 @@ export function CompareTargetPicker({\n     candidates: Candidate[]\n     usedUnavailable: boolean\n     error: string | null\n+    /** 변동성 제한 줄의 목표 범위. 기준이 이미 제한을 켰으면 고를 값이 없어 `null`이다 */\n+    volatility: NumericCondition | null\n   } | null>(null)\n+  const [volatilityPick, setVolatilityPick] = useState<number | null>(null)\n   const [attempt, setAttempt] = useState(0)\n   const [picked, setPicked] = useState<string[]>([])\n   const listId = useId()\n@@ -144,13 +160,48 @@ export function CompareTargetPicker({\n             },\n           }))\n         })\n-        if (active) setState({ candidates, usedUnavailable: used.failed, error: null })\n+        // 변동성 제한 줄: 기준 전략·설정·규칙 버전 그대로, 제한만 켜거나 끈다. 다른 분석 방식(새 자금 투입 등)에는 두지 않는다.\n+        const baseStrategy = registry.strategies.find(\n+          (strategy) => strategy.strategyId === base.config.strategyId,\n+        )\n+        const limited = base.config.scenario === 'TARGET_RISK'\n+        const volatility = registry.analysisConditions.targetVolatility\n+        if (baseStrategy && (limited || base.config.scenario === 'FULL_PERIOD')) {\n+          candidates.push({\n+            key: VOLATILITY_KEY,\n+            source: 'volatility',\n+            recordName: null,\n+            settings: '',\n+            reason: base.versions.costProfile ? null : '기준 결과의 비용 기준을 확인할 수 없습니다.',\n+            shortenedDays: null,\n+            choice: {\n+              strategy: baseStrategy,\n+              parameters: { ...base.config.parameters } as AxisValues,\n+              // 기준과 같은 설정을 다시 싣는 줄이라 기준의 등록표 버전을 따른다. 없으면(과도기 접수) 싣지 않는다.\n+              registryVersion: base.config.registryVersion ?? '',\n+              rulesVersion: base.config.rulesVersion,\n+              volatilityLimit: limited\n+                ? { scenario: 'FULL_PERIOD' }\n+                : { scenario: 'TARGET_RISK', targetVolatility: volatility.default },\n+            },\n+          })\n+        }\n+        if (active) {\n+          setState({\n+            candidates,\n+            usedUnavailable: used.failed,\n+            error: null,\n+            volatility: limited ? null : volatility,\n+          })\n+          setVolatilityPick(limited ? null : volatility.default)\n+        }\n       } catch (error) {\n         if (active)\n           setState({\n             candidates: [],\n             usedUnavailable: false,\n             error: error instanceof Error ? error.message : '비교 전략을 불러오지 못했습니다.',\n+            volatility: null,\n           })\n       }\n     }\n@@ -171,7 +222,13 @@ export function CompareTargetPicker({\n   const submit = () => {\n     const chosen = (state?.candidates ?? []).filter((candidate) => picked.includes(candidate.key))\n     if (chosen.length === 0) return\n-    onSelect(chosen.map((candidate) => candidate.choice))\n+    onSelect(\n+      chosen.map(({ choice }) =>\n+        choice.volatilityLimit?.scenario === 'TARGET_RISK' && volatilityPick !== null\n+          ? { ...choice, volatilityLimit: { scenario: 'TARGET_RISK', targetVolatility: volatilityPick } }\n+          : choice,\n+      ),\n+    )\n   }\n \n   // 출처별로 묶어 보인다. 기본 전략 묶음에는 전략마다 한 줄, 내 전략 묶음에는 돌려 본 조합마다 한 줄이다.\n@@ -179,6 +236,8 @@ export function CompareTargetPicker({\n     source,\n     candidates: (state?.candidates ?? []).filter((candidate) => candidate.source === source),\n   })).filter((group) => group.candidates.length > 0)\n+  const volatilityRow = state?.candidates.find((candidate) => candidate.source === 'volatility')\n+  const volatilityName = state?.volatility ? '변동성 제한 걸기' : '변동성 제한 없이'\n \n   return (\n     <section className={styles.panel} aria-label=\"비교 전략 선택\">\n@@ -194,8 +253,12 @@ export function CompareTargetPicker({\n       ) : null}\n       {state && !state.error ? (\n         <p id={listId} className={styles.pickerNote}>\n+          {/* 상한은 전체 수로 말하고, 이미 붙은 대상과 이 목록에서 고른 것을 합쳐 센다 — 남은 자리 수만 말하면 상한이 1인 것처럼 읽힌다. */}\n+          {'최대 ' + MAX_COMPARE_TARGETS + '개까지 고를 수 있습니다(' +\n+            (MAX_COMPARE_TARGETS - room + picked.length) +\n+            '개 선택됨). '}\n           {room > 0\n-            ? '최대 ' + room + '개까지 고를 수 있습니다. 기본 전략은 등록표의 기본 설정이고, 내 전략은 이전에 돌려 본 설정입니다.'\n+            ? '기본 전략은 등록표의 기본 설정이고, 내 전략은 이전에 돌려 본 설정입니다.'\n             : '비교 대상을 더 고를 자리가 없습니다. 하나를 해제한 뒤 고르세요.'}\n           {state.usedUnavailable ? ' 내 전략 목록은 지금 불러오지 못했습니다.' : ''}\n         </p>\n@@ -256,6 +319,59 @@ export function CompareTargetPicker({\n             </ul>\n           </li>\n         ))}\n+        {volatilityRow ? (\n+          <li className={styles.group}>\n+            <p className={styles.groupTitle}>\n+              변동성 제한{' '}\n+              <InlineHelp label=\"변동성 제한\" side=\"bottom\">\n+                {TARGET_RISK_HELP}\n+              </InlineHelp>\n+            </p>\n+            <ul className={styles.combinations}>\n+              <li>\n+                <label className={styles.combination}>\n+                  <input\n+                    type=\"checkbox\"\n+                    checked={picked.includes(VOLATILITY_KEY)}\n+                    disabled={\n+                      !!volatilityRow.reason ||\n+                      room === 0 ||\n+                      (full && !picked.includes(VOLATILITY_KEY))\n+                    }\n+                    aria-label={volatilityName + ' · ' + volatilityRow.choice.strategy.name}\n+                    aria-describedby={VOLATILITY_KEY + '-hint'}\n+                    onChange={() => toggle(VOLATILITY_KEY)}\n+                  />\n+                  <span className={styles.rowText}>\n+                    <span className={styles.rowTitle}>{volatilityName}</span>\n+                    <span className={styles.rowBase}>{volatilityRow.choice.strategy.name}</span>\n+                  </span>\n+                </label>\n+                {state?.volatility && volatilityPick !== null ? (\n+                  <label className={styles.volatilityField}>\n+                    목표 변동성(연)\n+                    <select\n+                      value={volatilityPick}\n+                      onChange={(event) => setVolatilityPick(Number(event.target.value))}\n+                    >\n+                      {rangeChoices(state.volatility).map((value) => (\n+                        <option key={value} value={value}>\n+                          {value}%\n+                        </option>\n+                      ))}\n+                    </select>\n+                  </label>\n+                ) : null}\n+                <p id={VOLATILITY_KEY + '-hint'}>\n+                  {volatilityRow.reason ??\n+                    (state?.volatility\n+                      ? '같은 전략에 변동성 제한을 걸어 다시 계산합니다. 값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.'\n+                      : '같은 전략을 변동성 제한 없이 다시 계산합니다.')}\n+                </p>\n+              </li>\n+            </ul>\n+          </li>\n+        ) : null}\n       </ul>\n       <div className={styles.actions}>\n         {state && !state.error ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,10 +7,12 @@ import { isZeroValue } from './formatResult'\n import { IndexComparisonView } from './IndexComparisonView'\n import { LOSS_WINDOW_NONE, LOSS_WINDOW_UNAVAILABLE, LossWindowView } from './LossWindowView'\n import { ResultTabs } from './ResultTabs'\n-import { TargetRiskView } from './TargetRiskView'\n \n /**\n- * 결과 화면의 일곱 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교 | 목표 위험 맞춤.\n+ * 결과 화면의 여섯 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교.\n+ *\n+ * <p>변동성 제한(004 목표 위험 맞춤)은 탭이 아니라 분석 조건과 '비교 대상 고르기'의 한 줄로 옮겼다 — 같은 전략의 켬·끔을\n+ * 그래프에 겹쳐 보는 것이 이 보기의 목적이라서다.\n  *\n  * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘긴다 —\n  * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프는 탭 위에, 해석 문장은 요약 탭에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에\n@@ -75,7 +77,6 @@ export function ResultDetailTabs({\n           ) : null,\n         },\n         { id: 'index', label: 'KOSPI 비교', content: <IndexComparisonView token={token} /> },\n-        { id: 'targetRisk', label: '목표 위험 맞춤', content: <TargetRiskView base={detail} /> },\n       ]}\n     />\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,7 @@ import styles from './resultTabs.module.css'\n  * 바꾸지 않는다(SC-006).\n  *\n  * <p><b>탭의 내용은 처음 고를 때 그린다.</b> 그때 그 탭의 자료를 받고, 다른 탭으로 옮겨도 내리지 않고 숨긴다 —\n- * 돌아왔을 때 다시 받지 않고, 목표 위험 맞춤처럼 요청 상태를 가진 탭이 상태를 잃지 않는다.\n+ * 돌아왔을 때 다시 받지 않고, KOSPI 비교처럼 요청 상태를 가진 탭이 상태를 잃지 않는다.\n  *\n  * <p>키보드: 좌우 방향키·Home·End로 탭을 옮기고 옮긴 탭이 바로 열린다. 열 수 없는 탭은 `aria-disabled`이고\n  * 초점은 받되 열리지 않으며, 사유는 탭 줄 아래 문장으로 두고 `aria-describedby`로 잇는다(FR-022).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultTabs.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,244 +0,0 @@\n-import { useEffect, useRef, useState } from 'react'\n-import { BacktestRequestError, createBacktest } from '@/api/backtest'\n-import { fetchStrategyRegistry } from '@/api/strategyRegistry'\n-import { Button } from '@/components/ui/button'\n-import { useResult } from '@/hooks/useResult'\n-import type { BacktestCreateRequest } from '@/types/backtestRequest'\n-import type { PublicResultDetail } from '@/types/result'\n-import { buildCompareRequest } from './compareRequest'\n-import { formatMoney, formatRatio, ratioDirection } from './formatResult'\n-import styles from './auxiliaryViews.module.css'\n-\n-type RequestState =\n-  | { status: 'idle' }\n-  | { status: 'sending' }\n-  | { status: 'accepted'; token: string }\n-  | { status: 'error'; message: string; retryAfterSeconds: number | null }\n-  | {\n-      status: 'history'\n-      message: string\n-      requiredWarmupTradingDays: number | null\n-      requiredStartDate: string | null\n-    }\n-\n-function numberDetail(error: BacktestRequestError, key: string): number | null {\n-  const value = error.details?.[key]\n-  return typeof value === 'number' && Number.isFinite(value) ? value : null\n-}\n-\n-function stringDetail(error: BacktestRequestError, key: string): string | null {\n-  const value = error.details?.[key]\n-  return typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) ? value : null\n-}\n-\n-function publicTokenOf(value: { publicToken?: string }): string {\n-  if (value.publicToken && /^[0-9a-f]{32}$/.test(value.publicToken)) return value.publicToken\n-  throw new Error('접수된 목표 위험 결과의 공개 주소를 확인하지 못했습니다.')\n-}\n-\n-/** 등록표의 퍼센트 숫자(10)를 004 계약의 연환산 decimal 문자열(\"0.1000\")로 옮긴다. */\n-function targetVolatility(value: number): string {\n-  return (value / 100).toFixed(4)\n-}\n-\n-/**\n- * '목표 위험 맞춤' 탭(FR-017, T078·T098). 탭을 처음 고를 때 붙고 그때 별도 실행을 한 번 요청한다. 탭을 옮겨도\n- * 내려가지 않으므로 요청 상태가 남고, 다시 요청은 사용자가 눌러야 한다.\n- */\n-export function TargetRiskView({ base }: { base: PublicResultDetail }) {\n-  const started = useRef(false)\n-  const [requestState, setRequestState] = useState<RequestState>({ status: 'idle' })\n-  const requestRef = useRef<BacktestCreateRequest | null>(null)\n-  const active = useRef(true)\n-  const resultToken = requestState.status === 'accepted' ? requestState.token : null\n-  const result = useResult(resultToken, { loadTimeseries: false })\n-\n-  useEffect(() => {\n-    active.current = true\n-    // StrictMode는 마운트 효과를 두 번 돌린다. 요청은 한 번이어야 하므로 ref로 막는다.\n-    if (!started.current) {\n-      started.current = true\n-      void start()\n-    }\n-    return () => {\n-      active.current = false\n-    }\n-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 붙을 때 한 번만 요청한다\n-  }, [])\n-\n-  const send = async (request: BacktestCreateRequest) => {\n-    requestRef.current = request\n-    setRequestState({ status: 'sending' })\n-    try {\n-      const accepted = await createBacktest(request)\n-      if (active.current) {\n-        setRequestState({ status: 'accepted', token: publicTokenOf(accepted) })\n-      }\n-    } catch (error) {\n-      if (!active.current) return\n-      if (error instanceof BacktestRequestError && error.code === 'INSUFFICIENT_HISTORY') {\n-        setRequestState({\n-          status: 'history',\n-          message: error.message,\n-          requiredWarmupTradingDays: numberDetail(error, 'requiredWarmupTradingDays'),\n-          requiredStartDate: stringDetail(error, 'requiredStartDate'),\n-        })\n-        return\n-      }\n-      setRequestState({\n-        status: 'error',\n-        message:\n-          error instanceof Error ? error.message : '목표 위험 결과를 요청하지 못했습니다.',\n-        retryAfterSeconds:\n-          error instanceof BacktestRequestError && error.code === 'EXECUTION_LIMIT'\n-            ? numberDetail(error, 'retryAfterSeconds')\n-            : null,\n-      })\n-    }\n-  }\n-\n-  const start = async () => {\n-    setRequestState({ status: 'sending' })\n-    try {\n-      const registry = await fetchStrategyRegistry(base.config.items.length)\n-      if (!active.current) return\n-      const request = buildCompareRequest(base, null)\n-      request.conditions.scenario = 'TARGET_RISK'\n-      request.conditions.scenarioParams = {\n-        targetVolatility: targetVolatility(\n-          registry.analysisConditions.targetVolatility.default,\n-        ),\n-      }\n-      await send(request)\n-    } catch (error) {\n-      if (!active.current) return\n-      setRequestState({\n-        status: 'error',\n-        message:\n-          error instanceof Error ? error.message : '목표 위험 결과를 요청하지 못했습니다.',\n-        retryAfterSeconds: null,\n-      })\n-    }\n-  }\n-\n-  const retryRequest = () => {\n-    if (requestRef.current) {\n-      void send(requestRef.current)\n-      return\n-    }\n-    void start()\n-  }\n-\n-  const retryWithHistory = () => {\n-    if (requestState.status !== 'history' || !requestRef.current) return\n-    const request = structuredClone(requestRef.current)\n-    if (requestState.requiredWarmupTradingDays !== null) {\n-      request.conditions.warmupTradingDays = requestState.requiredWarmupTradingDays\n-    }\n-    void send(request)\n-  }\n-\n-  const detail = result.status === 'ready' ? result.detail : null\n-  const failure = detail?.failure ?? null\n-  const summaryUnavailable = detail?.summaryUnavailable ?? null\n-  const inFlight = detail?.status === 'QUEUED' || detail?.status === 'RUNNING'\n-  const limited =\n-    failure && ['ESTIMATION_FAILED', 'DATA_INSUFFICIENT'].includes(failure.code)\n-\n-  return (\n-    <section className={styles.view} role=\"region\" aria-label=\"목표 위험 맞춤\">\n-      <h2 className={styles.title}>목표 위험 맞춤 시나리오</h2>\n-      {requestState.status === 'sending' ||\n-      (resultToken !== null && result.status === 'loading') ||\n-      inFlight ? (\n-        <p className={styles.copy} role=\"status\">\n-          별도 시나리오 결과를 준비하고 있습니다.\n-        </p>\n-      ) : null}\n-      {requestState.status === 'error' ? (\n-        <>\n-          <p className={styles.reason} role=\"alert\">\n-            {requestState.message}\n-            {requestState.retryAfterSeconds !== null\n-              ? ` ${requestState.retryAfterSeconds}초 뒤 다시 요청할 수 있습니다.`\n-              : ''}\n-          </p>\n-          <Button\n-            type=\"button\"\n-            variant=\"outline\"\n-            onClick={retryRequest}\n-          >\n-            다시 요청하기\n-          </Button>\n-        </>\n-      ) : null}\n-      {requestState.status === 'history' ? (\n-        <>\n-          <p className={styles.reason} role=\"alert\">\n-            {requestState.message}\n-          </p>\n-          {requestState.requiredStartDate ? (\n-            <p className={styles.reason}>\n-              {requestState.requiredStartDate} 이후를 포함하도록 분석 기간을 다시 선택해야 합니다.\n-            </p>\n-          ) : null}\n-          {requestState.requiredWarmupTradingDays !== null &&\n-          requestState.requiredStartDate === null ? (\n-            <Button type=\"button\" variant=\"outline\" onClick={retryWithHistory}>\n-              필요 기간으로 다시 요청하기\n-            </Button>\n-          ) : null}\n-        </>\n-      ) : null}\n-      {result.status === 'expired' || result.status === 'notFound' ? (\n-        <p className={styles.reason}>별도 시나리오 결과를 더 이상 열 수 없습니다.</p>\n-      ) : null}\n-      {result.status === 'error' ? (\n-        <>\n-          <p className={styles.reason} role=\"alert\">\n-            {result.message}\n-          </p>\n-          <Button type=\"button\" variant=\"outline\" onClick={result.retry}>\n-            결과 다시 불러오기\n-          </Button>\n-        </>\n-      ) : null}\n-      {summaryUnavailable ? (\n-        <>\n-          <p className={styles.reason} role=\"alert\">\n-            별도 시나리오가 취소되어 핵심 결과를 계산하지 못했습니다.\n-          </p>\n-          <Button type=\"button\" variant=\"outline\" onClick={retryRequest}>\n-            다시 요청하기\n-          </Button>\n-        </>\n-      ) : null}\n-      {limited && failure ? (\n-        <p className={styles.reason}>\n-          자료가 충분하지 않아 목표 위험을 계산하지 못했습니다. {failure.message}\n-        </p>\n-      ) : null}\n-      {failure && !limited && !summaryUnavailable ? (\n-        <p className={styles.reason} role=\"alert\">\n-          목표 위험 시나리오를 완료하지 못했습니다. {failure.message}\n-        </p>\n-      ) : null}\n-      {detail?.summary ? (\n-        <dl className={styles.metrics} aria-label=\"목표 위험 맞춤 핵심 결과\">\n-          <div className={styles.metric}>\n-            <dt>비용 차감 후 전체 수익률</dt>\n-            <dd data-direction={ratioDirection(detail.summary.netTotalReturn)}>{formatRatio(detail.summary.netTotalReturn)}</dd>\n-          </div>\n-          <div className={styles.metric}>\n-            <dt>가장 크게 줄었던 폭</dt>\n-            <dd data-direction={ratioDirection(detail.summary.maxDrawdown)}>{formatRatio(detail.summary.maxDrawdown)}</dd>\n-          </div>\n-          <div className={styles.metric}>\n-            <dt>거래비용</dt>\n-            <dd>{formatMoney(detail.summary.totalTradingCost)}</dd>\n-          </div>\n-        </dl>\n-      ) : null}\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/TargetRiskView.tsx",
+          "old_path": "frontend/src/components/result/TargetRiskView.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -58,33 +58,3 @@\n   text-align: left;\n   white-space: nowrap;\n }\n-\n-.metrics {\n-  display: grid;\n-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));\n-  gap: 12px;\n-  margin: 0;\n-}\n-\n-.metric {\n-  display: flex;\n-  flex-direction: column;\n-  gap: 4px;\n-}\n-\n-.metric dt {\n-  color: var(--thorp-copy);\n-  font-size: var(--thorp-text-small, 0.78rem);\n-}\n-\n-.metric dd {\n-  margin: 0;\n-  font-family: var(--thorp-font-number, var(--thorp-font-mono));\n-  font-variant-numeric: tabular-nums;\n-  font-size: var(--thorp-text-heading, 1.05rem);\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-/* 디자인 개편(S15P21E205-425): 목표 위험 결과의 오르내림 색. classic은 예전처럼 한 색이다. */\n-:global(:root:not([data-design='classic'])) .metric dd[data-direction='up'] { color: var(--thorp-up); }\n-:global(:root:not([data-design='classic'])) .metric dd[data-direction='down'] { color: var(--thorp-down); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "old_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ import { resultDetailCompleted as base } from '@/test/resultFixtures'\n import { selectableStrategy } from '@/test/strategyRegistryFixtures'\n import { defaultValuesOf } from '@/hooks/useStrategySettings'\n import { buildCompareRequest, comparisonMismatch } from './compareRequest'\n+import { strategyLabel } from './conditionLine'\n \n const choice = {\n   strategy: selectableStrategy,\n@@ -89,3 +90,47 @@ describe('동일 조건 요청', () => {\n     ).toBe('conditions')\n   })\n })\n+\n+describe('변동성 제한 비교', () => {\n+  const limited = {\n+    ...base,\n+    config: { ...base.config, scenario: 'TARGET_RISK', scenarioParams: { targetVolatility: '0.1200' } },\n+  }\n+  it('후보가 든 변동성 제한을 기준의 시나리오 대신 싣는다', () => {\n+    const on = buildCompareRequest(base, {\n+      ...choice,\n+      volatilityLimit: { scenario: 'TARGET_RISK', targetVolatility: 15 },\n+    })\n+    expect(on.conditions).toMatchObject({\n+      scenario: 'TARGET_RISK',\n+      scenarioParams: { targetVolatility: '0.1500' },\n+    })\n+    const off = buildCompareRequest(limited, { ...choice, volatilityLimit: { scenario: 'FULL_PERIOD' } })\n+    expect(off.conditions.scenario).toBe('FULL_PERIOD')\n+    expect(off.conditions).not.toHaveProperty('scenarioParams')\n+    // 등록표 버전 없이 접수된 기준을 따라가는 후보는 없는 버전을 붙이지 않는다.\n+    expect(\n+      buildCompareRequest(base, { ...choice, registryVersion: '' }).strategy,\n+    ).not.toHaveProperty('registryVersion')\n+    // 후보가 제한을 말하지 않으면 기준의 제한을 따른다.\n+    expect(buildCompareRequest(limited, choice).conditions).toMatchObject({\n+      scenario: 'TARGET_RISK',\n+      scenarioParams: { targetVolatility: '0.1200' },\n+    })\n+  })\n+  it('변동성 제한의 켬·끔과 목표 차이는 조건 차이로 보지 않지만 다른 분석 방식은 조건 차이다', () => {\n+    expect(comparisonMismatch(base, limited)).toBeNull()\n+    expect(\n+      comparisonMismatch(limited, {\n+        ...limited,\n+        config: { ...limited.config, scenarioParams: { targetVolatility: '0.0500' } },\n+      }),\n+    ).toBeNull()\n+    expect(\n+      comparisonMismatch(base, { ...base, config: { ...base.config, scenario: 'FRESH_CASH_FROM' } }),\n+    ).toBe('conditions')\n+  })\n+  it('변동성 제한을 켠 결과의 이름에 목표를 붙여 같은 전략의 켬·끔이 갈리게 한다', () => {\n+    expect(strategyLabel(limited)).toBe(strategyLabel(base) + ' · 변동성 제한 연 12%')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareRequest.test.ts",
+          "old_path": "frontend/src/components/result/compareRequest.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,6 +6,7 @@ import type { AxisValue, StrategyView } from '@/types/strategyRegistry'\n export type CompareChoice = {\n   period?: { start: string; end: string }\n   strategy: StrategyView\n+  /** 빈 문자열이면 요청에 싣지 않는다 — 등록표 버전 없이 접수된 기준을 그대로 따라갈 때다 */\n   registryVersion: string\n   rulesVersion: string\n   /**\n@@ -13,6 +14,11 @@ export type CompareChoice = {\n    * 요청을 조립하는 이 파일은 어느 쪽인지 모른다.\n    */\n   parameters: AxisValues\n+  /**\n+   * 변동성 제한만 바꿔 보는 후보. 있으면 기준의 시나리오 대신 이것을 싣는다 — `TARGET_RISK`면 목표 변동성(연, 퍼센트\n+   * 숫자)을 함께, `FULL_PERIOD`면 제한 없이. 없으면 기준 결과의 시나리오를 그대로 따른다.\n+   */\n+  volatilityLimit?: { scenario: 'TARGET_RISK'; targetVolatility: number } | { scenario: 'FULL_PERIOD' }\n }\n \n /**\n@@ -28,10 +34,17 @@ export function buildCompareRequest(\n   const { config, versions } = base\n   if (!versions.costProfile)\n     throw new Error('기준 결과의 비용 기준을 확인할 수 없어 같은 조건으로 요청할 수 없습니다.')\n-  const scenario = config.scenario as BacktestScenario\n-  if (!['FULL_PERIOD', 'FRESH_CASH_FROM', 'COST_ESCALATION', 'TARGET_RISK'].includes(scenario)) {\n+  const baseScenario = config.scenario as BacktestScenario\n+  if (!['FULL_PERIOD', 'FRESH_CASH_FROM', 'COST_ESCALATION', 'TARGET_RISK'].includes(baseScenario)) {\n     throw new Error('기준 결과의 분석 시나리오를 확인할 수 없습니다.')\n   }\n+  const limit = choice?.volatilityLimit\n+  const scenario = limit?.scenario ?? baseScenario\n+  const scenarioParams = !limit\n+    ? config.scenarioParams\n+    : limit.scenario === 'TARGET_RISK'\n+      ? { targetVolatility: (limit.targetVolatility / 100).toFixed(4) }\n+      : undefined\n   const userWeights = choice\n     ? choice.strategy.targetWeightSource === 'USER'\n     : base.weightsSource === 'USER'\n@@ -55,8 +68,11 @@ export function buildCompareRequest(\n     strategy: {\n       strategyId: choice?.strategy.strategyId ?? config.strategyId,\n       rulesVersion: choice?.rulesVersion ?? config.rulesVersion,\n+      // 등록표 버전이 빈 후보는 등록표 없이 접수된 기준을 그대로 따라가는 것이다(변동성 제한 줄). 없는 버전을 붙이지 않는다.\n       ...(choice\n-        ? { registryVersion: choice.registryVersion }\n+        ? choice.registryVersion\n+          ? { registryVersion: choice.registryVersion }\n+          : {}\n         : config.registryVersion\n           ? { registryVersion: config.registryVersion }\n           : {}),\n@@ -72,7 +88,7 @@ export function buildCompareRequest(\n       warmupTradingDays,\n       scenario,\n       evaluationSplitVersion: config.evaluationSplitVersion,\n-      ...(config.scenarioParams ? { scenarioParams: { ...config.scenarioParams } } : {}),\n+      ...(scenarioParams ? { scenarioParams: { ...scenarioParams } } : {}),\n     },\n   }\n }\n@@ -104,8 +120,10 @@ export function comparisonMismatch(\n     mapping: result.config.mappingVersion,\n     cost: result.versions.costProfile?.version,\n     evaluationSplit: result.config.evaluationSplitVersion ?? null,\n-    scenario: result.config.scenario,\n-    scenarioParams: result.config.scenarioParams ?? {},\n+    // 변동성 제한은 비교 대상 고르기가 바꿔 보는 축이라 조건 차이로 보지 않는다. 다른 시나리오는 그대로 조건이다.\n+    scenario: result.config.scenario === 'TARGET_RISK' ? 'FULL_PERIOD' : result.config.scenario,\n+    scenarioParams:\n+      result.config.scenario === 'TARGET_RISK' ? {} : (result.config.scenarioParams ?? {}),\n   })\n   if (\n     !base.versions.costProfile ||\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareRequest.ts",
+          "old_path": "frontend/src/components/result/compareRequest.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,12 +19,6 @@\n   display: grid;\n   gap: 12px;\n }\n-.candidates button {\n-  white-space: normal;\n-  height: auto;\n-  min-height: 36px;\n-  text-align: left;\n-}\n .candidates p {\n   margin: 6px 0 0;\n   font-size: var(--thorp-text-body, 0.85rem);\n@@ -210,3 +204,20 @@ button.chipBody:focus-visible {\n   font-size: 0.78rem;\n   color: var(--thorp-muted);\n }\n+.volatilityField {\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+  margin: 6px 0 0 24px;\n+  font-size: 0.85rem;\n+  color: var(--thorp-copy);\n+}\n+.volatilityField select {\n+  min-height: 32px;\n+  padding: 4px 8px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 8px);\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n+  font: inherit;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/comparison.module.css",
+          "old_path": "frontend/src/components/result/comparison.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,10 +30,17 @@ export const COMPUTED_WEIGHTS_NOTE = '비중은 선택한 규칙의 계산 결\n \n /**\n  * 전략 이름. 등록표에서 찾지 못해 `strategyName`이 없으면 `strategyId`를 그대로 보인다.\n- * 이름을 지어내지 않는다.\n+ * 이름을 지어내지 않는다. 변동성 제한을 켠 결과는 그 목표를 붙여, 같은 전략의 켬·끔이 곡선과 문장에서 갈리게 한다.\n  */\n export function strategyLabel(detail: Pick<PublicResultDetail, 'config' | 'strategyName'>): string {\n-  return detail.strategyName ?? detail.config.strategyId\n+  return (detail.strategyName ?? detail.config.strategyId) + volatilityLimitSuffix(detail.config)\n+}\n+\n+/** 변동성 제한 표기. 켜지 않았거나 목표를 읽을 수 없으면 빈 문자열이다. */\n+export function volatilityLimitSuffix(config: Pick<PublicResultDetail['config'], 'scenario' | 'scenarioParams'>): string {\n+  if (config.scenario !== 'TARGET_RISK') return ''\n+  const value = Number(config.scenarioParams?.targetVolatility)\n+  return Number.isFinite(value) ? ' · 변동성 제한 연 ' + Number((value * 100).toFixed(2)) + '%' : ' · 변동성 제한'\n }\n \n /** 응답의 조건과 버전으로 조건 한 줄을 만든다. 값을 계산하지 않고 고르고 잇기만 한다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/conditionLine.ts",
+          "old_path": "frontend/src/components/result/conditionLine.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -342,11 +342,34 @@ describe('prefillStrategySettings', () => {\n     expect(toWeightTenths('')).toBeNaN()\n   })\n \n-  it('설정 화면이 다루지 않는 별도 시나리오 결과는 조건을 바꿔 넘기지 않는다', async () => {\n+  it('변동성 제한 결과는 켠 목표를 퍼센트 숫자로 옮겨 설정 화면에 넘긴다', async () => {\n+    const navigate = vi.fn()\n+\n+    const outcome = await prefillStrategySettings(\n+      { ...config, scenario: 'TARGET_RISK', scenarioParams: { targetVolatility: '0.1200' } },\n+      navigate,\n+    )\n+\n+    expect(outcome).toEqual({ status: 'moved' })\n+    expect(readStored(STRATEGY_SETTINGS_STORAGE_KEY)).toMatchObject({\n+      analysisCondition: { scenario: 'TARGET_RISK', targetVolatility: 12 },\n+    })\n+  })\n+\n+  it('목표를 읽을 수 없는 변동성 제한 결과는 제한을 끈 채로 넘기지 않고 멈춘다', async () => {\n     const navigate = vi.fn()\n \n     const outcome = await prefillStrategySettings({ ...config, scenario: 'TARGET_RISK' }, navigate)\n \n+    expect(outcome.status).toBe('failed')\n+    expect(navigate).not.toHaveBeenCalled()\n+  })\n+\n+  it('설정 화면이 다루지 않는 별도 시나리오 결과는 조건을 바꿔 넘기지 않는다', async () => {\n+    const navigate = vi.fn()\n+\n+    const outcome = await prefillStrategySettings({ ...config, scenario: 'FRESH_CASH_FROM' }, navigate)\n+\n     expect(outcome.status).toBe('failed')\n     expect(navigate).not.toHaveBeenCalled()\n     expect(registryMock.fetchStrategyRegistry).not.toHaveBeenCalled()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/prefillStrategySettings.test.ts",
+          "old_path": "frontend/src/components/result/prefillStrategySettings.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -62,8 +62,8 @@ export type PrefillOutcome =\n   /** 화면을 떠나 요청을 끊었다. 사용자에게 보일 실패가 아니다 */\n   | { status: 'canceled' }\n \n-/** 003 설정 화면이 다루는 분석 방식. 목표 위험 맞춤 같은 별도 시나리오는 그 화면의 상태에 없다 */\n-const MAIN_SCENARIO = 'FULL_PERIOD'\n+/** 003 설정 화면이 다루는 분석 방식. 연속 운용과 그 위에 변동성 제한을 건 것뿐이다 */\n+const SETTINGS_SCENARIOS: readonly string[] = ['FULL_PERIOD', 'TARGET_RISK']\n \n const REGISTRY_FAILED = '설정 화면에 넘길 전략 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'\n const CATALOG_FAILED = '설정 화면에 넘길 섹터 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'\n@@ -174,6 +174,15 @@ export function buildStrategySettings(\n   const initialAmount = Number(config.initialCash)\n   if (config.initialCash.trim() === '' || !Number.isFinite(initialAmount)) return null\n \n+  // 변동성 제한은 계약의 연환산 decimal(\"0.1200\")을 003의 퍼센트 숫자(12)로 옮긴다. 범위 판정은 003이 보관값을 읽을 때 한다.\n+  let targetVolatility: number | undefined\n+  if (config.scenario === 'TARGET_RISK') {\n+    const raw = config.scenarioParams?.targetVolatility\n+    const value = typeof raw === 'string' || typeof raw === 'number' ? Number(raw) : Number.NaN\n+    if (!Number.isFinite(value)) return null\n+    targetVolatility = Number((value * 100).toFixed(4))\n+  }\n+\n   // 보관값이 없을 때 003이 만드는 처음 상태다. 여기에 이 탭의 앞선 값과 결과의 조건을 얹는다.\n   const fresh = reconcileStoredSettings(null, registry, config.items.length)\n   const previous = readStoredStrategySettings()\n@@ -192,6 +201,9 @@ export function buildStrategySettings(\n       periodStart: config.start,\n       periodEnd: config.end,\n       initialAmount,\n+      ...(targetVolatility === undefined\n+        ? { scenario: 'FULL_PERIOD' as const }\n+        : { scenario: 'TARGET_RISK' as const, targetVolatility }),\n     },\n   }\n }\n@@ -226,7 +238,9 @@ export async function prefillStrategySettings(\n   navigate: (path: string) => void,\n   signal?: AbortSignal,\n ): Promise<PrefillOutcome> {\n-  if (config.scenario !== MAIN_SCENARIO) return { status: 'failed', message: SCENARIO_UNSUPPORTED }\n+  if (!SETTINGS_SCENARIOS.includes(config.scenario)) {\n+    return { status: 'failed', message: SCENARIO_UNSUPPORTED }\n+  }\n \n   let registry: RegistryResponse\n   let catalog: SectorCatalog\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/prefillStrategySettings.ts",
+          "old_path": "frontend/src/components/result/prefillStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -53,6 +53,7 @@ function Harness({\n         periodChosen={chosen !== null}\n         initialAmount={condition.initialAmount ?? amount.default}\n         minEvaluationYears={condition.minEvaluationYears}\n+        targetVolatility={condition.targetVolatility}\n         cost={costView}\n         onChange={(patch) => {\n           onChange(patch);\n@@ -258,7 +259,7 @@ describe(\"AnalysisConditionsPanel\", () => {\n   it(\"최소 평가 기간을 등록표의 라벨로 보이고 바꾸면 그 값으로 반영한다\", async () => {\n     const { onChange, user } = await renderOpen();\n \n-    const labels = screen\n+    const labels = within(screen.getByRole(\"group\", { name: \"최소 평가 기간\" }))\n       .getAllByRole(\"radio\")\n       .map((radio) => radio.closest(\"label\")?.textContent);\n     expect(labels).toEqual(\n@@ -328,10 +329,10 @@ describe(\"AnalysisConditionsPanel\", () => {\n     expect(group.textContent).not.toContain(COST_UNAVAILABLE);\n   });\n \n-  it(\"수수료·세금 편집, 최적화 선택지, 목표 변동성이 어디에도 없다\", async () => {\n+  it(\"수수료·세금 편집, 최적화 선택지가 없고 변동성 제한은 꺼진 채로 시작한다\", async () => {\n     const { panel } = await renderOpen();\n \n-    // 바꿀 수 있는 입력은 기간 둘, 금액 하나, 최소 평가 기간 후보뿐이다.\n+    // 바꿀 수 있는 입력은 기간 둘, 금액 하나, 최소 평가 기간 후보, 변동성 제한 켜고 끄기뿐이다.\n     const editable = [\n       ...within(panel).queryAllByRole(\"textbox\"),\n       ...within(panel).queryAllByRole(\"spinbutton\"),\n@@ -339,7 +340,7 @@ describe(\"AnalysisConditionsPanel\", () => {\n     ];\n     expect(editable).toHaveLength(3);\n     expect(within(panel).getAllByRole(\"radio\")).toHaveLength(\n-      registryFixture.analysisConditions.minEvaluationYears.choices.length,\n+      registryFixture.analysisConditions.minEvaluationYears.choices.length + 2,\n     );\n     expect(\n       within(panel).queryByLabelText(/수수료|세금|슬리피지|호가/),\n@@ -349,8 +350,41 @@ describe(\"AnalysisConditionsPanel\", () => {\n       within(panel).queryByRole(\"button\", { name: /최적|극대화|추천/ }),\n     ).toBeNull();\n \n+    expect(\n+      (within(panel).getByRole(\"radio\", { name: \"쓰지 않음\" }) as HTMLInputElement).checked,\n+    ).toBe(true);\n+    expect(within(panel).queryByRole(\"combobox\", { name: \"목표 변동성(연)\" })).toBeNull();\n+    expect(stateCondition()).toMatchObject({ scenario: \"FULL_PERIOD\" });\n+    expect(stateCondition().targetVolatility).toBeUndefined();\n+  });\n+\n+  it(\"변동성 제한을 켜면 등록표 기본값으로 시작하고 범위 안의 값만 고르게 하며 끄면 값을 지운다\", async () => {\n+    const { onChange, user, panel } = await renderOpen();\n     const volatility = registryFixture.analysisConditions.targetVolatility;\n-    expect(panel.textContent).not.toMatch(/목표 변동성/);\n-    expect(panel.textContent).not.toContain(volatility.unit ?? \"퍼센트(연)\");\n+\n+    await user.click(within(panel).getByRole(\"radio\", { name: \"씀\" }));\n+    expect(onChange).toHaveBeenLastCalledWith({ targetVolatility: volatility.default });\n+    expect(stateCondition()).toMatchObject({\n+      scenario: \"TARGET_RISK\",\n+      targetVolatility: volatility.default,\n+    });\n+\n+    const select = within(panel).getByRole(\"combobox\", { name: \"목표 변동성(연)\" });\n+    const values = within(select)\n+      .getAllByRole(\"option\")\n+      .map((option) => Number((option as HTMLOptionElement).value));\n+    expect(values[0]).toBe(volatility.min);\n+    expect(values[values.length - 1]).toBe(volatility.max);\n+    expect(values.every((value, i) => i === 0 || value - values[i - 1] === volatility.step)).toBe(true);\n+\n+    await user.selectOptions(select, String(volatility.max));\n+    expect(storedCondition()).toMatchObject({\n+      scenario: \"TARGET_RISK\",\n+      targetVolatility: volatility.max,\n+    });\n+\n+    await user.click(within(panel).getByRole(\"radio\", { name: \"쓰지 않음\" }));\n+    expect(stateCondition()).toMatchObject({ scenario: \"FULL_PERIOD\" });\n+    expect(storedCondition().targetVolatility).toBeUndefined();\n   });\n });\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -55,6 +55,8 @@ interface AnalysisConditionsPanelProps {\n   /** 평가할 수 있는 범위 옆에 붙는 도움말. 워밍업이 앞을 깎았을 때만 온다 */\n   rangeReason?: ReactNode;\n   minEvaluationYears: number;\n+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). 끈 상태면 `undefined`다 */\n+  targetVolatility?: number;\n   /**\n    * 비용 조건. 조회하는 중이면 `'loading'`, 확인하지 못했으면 `null`이다. 일반 문구로 대신하지 않고, 조회 중을\n    * 확인 불가로 접지 않는다\n@@ -71,6 +73,30 @@ export const COST_UNAVAILABLE =\n const COST_BASIS = \"2026년 한국 ETF 거래에 적용되는 기준과 같습니다.\";\n \n export const COST_LOADING = \"비용 조건을 확인하는 중입니다.\";\n+\n+export const TARGET_RISK_HELP = (\n+  <>\n+    <p>\n+      포트폴리오가 흔들리는 정도(변동성)가 정한 값보다 커지면, 투자 비중을 줄이고 줄인 만큼을\n+      현금으로 두는 규칙입니다.\n+    </p>\n+    <p>\n+      매달 말 최근 3개월(63거래일)의 흔들림을 보고 조절합니다. 예를 들어 목표가 연 10%인데 최근\n+      흔들림이 20%면 절반만 투자하고 절반은 현금으로 둡니다. 흔들림이 목표보다 작으면 그대로 두며,\n+      빚을 내서 더 사지는 않습니다.\n+    </p>\n+    <p>\n+      급락할 때 손실을 줄일 수 있지만, 현금으로 빼 둔 사이 시장이 반등하면 그만큼 수익을 놓칠 수\n+      있습니다.\n+    </p>\n+  </>\n+);\n+\n+/** 등록표 범위(min~max, step 간격)의 후보. 목록으로만 두어 범위 밖 값이 생기지 않는다. */\n+function rangeChoices({ min, max, step }: { min: number; max: number; step: number }): number[] {\n+  const count = Math.round((max - min) / step);\n+  return Array.from({ length: count + 1 }, (_, i) => Number((min + i * step).toFixed(4)));\n+}\n const RANGE_UNAVAILABLE =\n   \"평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.\";\n \n@@ -330,10 +356,10 @@ function PeriodField({\n  * 화면 세 곳(제목·요약·여는 버튼)에서 말해졌다 — 2026-09-22에 하나로 합쳤다(`S15P21E205-406`).\n  * 전략을 고르기 전에도 그린다 — 최소 평가 기간이 카드를 막을 수 있어서다(T102).\n  *\n- * <p><b>바꿀 수 있는 것은 셋뿐이다.</b> 분석 기간(평가 가능 범위 안), 시작 금액(등록표 범위 안), 최소 평가\n- * 기간(등록표 후보 가운데). 비용 가정은 004가 등록한 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고,\n+ * <p><b>바꿀 수 있는 것은 넷뿐이다.</b> 분석 기간(평가 가능 범위 안), 시작 금액(등록표 범위 안), 최소 평가\n+ * 기간(등록표 후보 가운데), 변동성 제한(끔 또는 등록표 범위 안의 목표 변동성). 비용 가정은 004가 등록한 수치·버전·임시 여부를 <b>읽기 전용</b>으로만 보이고,\n  * 운용 방식은 연속 운용으로 고정해 보인다. 수수료·세금을 고치거나 수익이 높아지는 쪽으로 조건을 골라 주는\n- * 선택지를 두지 않는다(FR-010, 원칙 IV). 목표 변동성은 '목표 위험 맞춤' 시나리오의 항목이라 여기 없다.\n+ * 선택지를 두지 않는다(FR-010, 원칙 IV). 변동성 제한은 004의 '목표 위험 맞춤'(`TARGET_RISK`) 시나리오다.\n  *\n  * <p><b>값을 모른다.</b> 범위·후보·라벨·단위는 모두 props로 받은 등록표와 판정에서 읽는다(FR-005).\n  */\n@@ -346,6 +372,7 @@ export function AnalysisConditionsPanel({\n   caseConstraint = null,\n   initialAmount,\n   minEvaluationYears,\n+  targetVolatility,\n   cost,\n   summary,\n   rangeReason,\n@@ -355,7 +382,10 @@ export function AnalysisConditionsPanel({\n   const [open, setOpen] = useState(false);\n   const bodyId = useId();\n   const yearsGroup = useId();\n+  const volatilityGroup = useId();\n+  const volatilityId = useId();\n   const amount = conditions.initialAmount;\n+  const volatility = conditions.targetVolatility;\n   const years = conditions.minEvaluationYears;\n \n   return (\n@@ -438,6 +468,63 @@ export function AnalysisConditionsPanel({\n             </div>\n           </fieldset>\n \n+          <fieldset className={fieldStyles.field}>\n+            <legend className={fieldStyles.header}>\n+              <span className={fieldStyles.label}>\n+                변동성 제한\n+                <InlineHelp label=\"변동성 제한\" on=\"hover\">\n+                  {TARGET_RISK_HELP}\n+                </InlineHelp>\n+              </span>\n+            </legend>\n+            <div className={fieldStyles.choices}>\n+              <label className={fieldStyles.choice}>\n+                <input\n+                  type=\"radio\"\n+                  name={volatilityGroup}\n+                  checked={targetVolatility === undefined}\n+                  onChange={() => onChange({ targetVolatility: undefined })}\n+                />\n+                쓰지 않음\n+              </label>\n+              <label className={fieldStyles.choice}>\n+                <input\n+                  type=\"radio\"\n+                  name={volatilityGroup}\n+                  checked={targetVolatility !== undefined}\n+                  onChange={() => onChange({ targetVolatility: volatility.default })}\n+                />\n+                씀\n+              </label>\n+            </div>\n+            {targetVolatility !== undefined ? (\n+              <div className={fieldStyles.inputRow}>\n+                <label htmlFor={volatilityId} className={styles.dateLabel}>\n+                  목표 변동성(연)\n+                </label>\n+                <select\n+                  id={volatilityId}\n+                  className={fieldStyles.input}\n+                  value={targetVolatility}\n+                  onChange={(event) =>\n+                    onChange({ targetVolatility: Number(event.target.value) })\n+                  }\n+                >\n+                  {rangeChoices(volatility).map((value) => (\n+                    <option key={value} value={value}>\n+                      {value}%\n+                    </option>\n+                  ))}\n+                </select>\n+              </div>\n+            ) : null}\n+            <p className={fieldStyles.hint}>\n+              {targetVolatility === undefined\n+                ? \"흔들림과 상관없이 전략의 비중대로 계속 투자합니다.\"\n+                : \"값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.\"}\n+            </p>\n+          </fieldset>\n+\n           <div className={fieldStyles.field}>\n             <span className={fieldStyles.label}>운용 방식</span>\n             <p className={styles.readOnly}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -34,6 +34,8 @@ interface ConditionSummaryLineProps {\n    * 두 상태를 한 값으로 접지 않는다 — 곧 끝날 조회를 \"확인할 수 없음\"으로 보이면 실패한 것처럼 읽힌다.\n    */\n   costProfile: SummaryCostProfile | 'loading' | null\n+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). 끈 상태면 항목을 두지 않는다 */\n+  targetVolatility?: number\n }\n \n const UNAVAILABLE = '확인할 수 없음'\n@@ -61,6 +63,7 @@ export function ConditionSummaryLine({\n   sectorCount,\n   initialAmount,\n   costProfile,\n+  targetVolatility,\n }: ConditionSummaryLineProps) {\n   return (\n     <p className={styles.line} aria-label=\"분석 조건 요약\">\n@@ -93,6 +96,12 @@ export function ConditionSummaryLine({\n           ) : null}\n         </span>\n       </span>\n+      {targetVolatility !== undefined ? (\n+        <span className={styles.item}>\n+          <span className={styles.label}>변동성 제한</span>\n+          <span className={styles.value}>연 {targetVolatility}%</span>\n+        </span>\n+      ) : null}\n     </p>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/ConditionSummaryLine.tsx",
+          "old_path": "frontend/src/components/strategy/ConditionSummaryLine.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -52,8 +52,13 @@ export type AxisValues = Record<string, AxisValue>;\n export type AnalysisCondition = {\n   /** 등록표 `analysisConditions.minEvaluationYears` 후보 중 하나. `0`은 제한 없음이다(FR-011a) */\n   minEvaluationYears: number;\n-  /** 주 분석은 연속 운용으로 고정한다. 목표 변동성은 이 화면 상태에 만들지 않는다(spec Edge Cases) */\n-  scenario: \"FULL_PERIOD\";\n+  /**\n+   * 연속 운용이 기본이다. `targetVolatility`가 있을 때만 변동성 제한(004 `TARGET_RISK`)이고, 이 값은 늘\n+   * 그것에서 정해진다 — 따로 바꾸지 않는다.\n+   */\n+  scenario: \"FULL_PERIOD\" | \"TARGET_RISK\";\n+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). 등록표 `analysisConditions.targetVolatility` 범위 안이다 */\n+  targetVolatility?: number;\n   periodStart?: string;\n   periodEnd?: string;\n   initialAmount?: number;\n@@ -336,6 +341,9 @@ export function readStoredStrategySettings(): StoredStrategySettings | null {\n   if (typeof condition.initialAmount === \"number\") {\n     analysisCondition.initialAmount = condition.initialAmount;\n   }\n+  if (typeof condition.targetVolatility === \"number\") {\n+    analysisCondition.targetVolatility = condition.targetVolatility;\n+  }\n \n   const invalidValues = Array.isArray(payload.invalidValues)\n     ? payload.invalidValues.filter(isInvalidStoredValue)\n@@ -665,8 +673,29 @@ export function reconcileStoredSettings(\n     initialAmount: storedAmount,\n     periodStart: storedStart,\n     periodEnd: storedEnd,\n+    targetVolatility: storedVolatility,\n     ...otherConditions\n   } = stored.analysisCondition;\n+  // 변동성 제한은 켜 둔 값이 지금 등록표 범위에 맞을 때만 이어 간다. 맞지 않으면 끈 채로 시작하고 알린다.\n+  let targetVolatility: number | undefined = storedVolatility;\n+  const volatilityReason =\n+    storedVolatility === undefined\n+      ? null\n+      : checkNumberInRange(\n+          storedVolatility,\n+          registry.analysisConditions.targetVolatility,\n+        );\n+  if (volatilityReason !== null) {\n+    invalidValues.push({\n+      strategyId: null,\n+      axisName: \"targetVolatility\",\n+      storedValue: storedVolatility,\n+      reason: volatilityReason,\n+      message: `변동성 제한의 저장값 연 ${displayValue(storedVolatility)}%는 현재 허용 범위 밖이라 끈 채로 시작합니다.`,\n+      restorable: false,\n+    });\n+    targetVolatility = undefined;\n+  }\n   let period: { periodStart: string; periodEnd: string } | null = null;\n   if (storedStart !== undefined || storedEnd !== undefined) {\n     if (\n@@ -728,8 +757,10 @@ export function reconcileStoredSettings(\n   const analysisCondition: AnalysisCondition = {\n     ...otherConditions,\n     minEvaluationYears,\n-    scenario: \"FULL_PERIOD\",\n+    scenario: targetVolatility === undefined ? \"FULL_PERIOD\" : \"TARGET_RISK\",\n   };\n+  if (targetVolatility !== undefined)\n+    analysisCondition.targetVolatility = targetVolatility;\n   if (initialAmount !== undefined)\n     analysisCondition.initialAmount = initialAmount;\n   if (period !== null) Object.assign(analysisCondition, period);\n@@ -1027,8 +1058,24 @@ export function useStrategySettings(\n         const next: AnalysisCondition = {\n           ...current.analysisCondition,\n           ...patch,\n-          scenario: \"FULL_PERIOD\",\n         };\n+        // 끄기는 `targetVolatility: undefined`로 온다. 범위 밖 값은 받지 않고 이전 값을 둔다.\n+        if (\"targetVolatility\" in patch) {\n+          if (patch.targetVolatility === undefined) delete next.targetVolatility;\n+          else if (\n+            checkNumberInRange(\n+              patch.targetVolatility,\n+              registry.analysisConditions.targetVolatility,\n+            ) !== null\n+          ) {\n+            if (current.analysisCondition.targetVolatility === undefined)\n+              delete next.targetVolatility;\n+            else\n+              next.targetVolatility = current.analysisCondition.targetVolatility;\n+          }\n+        }\n+        next.scenario =\n+          next.targetVolatility === undefined ? \"FULL_PERIOD\" : \"TARGET_RISK\";\n         let invalidValues = current.invalidValues;\n         // 등록표 후보에 없는 최소 평가 기간은 반영하지 않는다(FR-006과 같은 규약).\n         if (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.ts",
+          "old_path": "frontend/src/hooks/useStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,10 @@\n import { StrictMode } from 'react'\n-import { act, render, screen, waitFor, within } from '@testing-library/react'\n+import { render, screen, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n import { AuthContext } from '@/auth/auth-context'\n import { anonymousAuthContext } from '@/test/authFixtures'\n-import { BacktestRequestError } from '@/api/backtest'\n import {\n   resultDetailCompleted,\n   resultExceptions,\n@@ -105,7 +104,7 @@ describe('결과 보조 보기 (B08)', () => {\n     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n   })\n \n-  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {\n+  it('KOSPI 비교 탭을 고르기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {\n     renderResult()\n \n     await screen.findByText('자료 출처: 한국거래소 통계정보')\n@@ -166,233 +165,4 @@ describe('결과 보조 보기 (B08)', () => {\n     expect(api.index).toHaveBeenCalledTimes(1)\n     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n   })\n-\n-  it('목표 위험은 등록표 기본값을 decimal로 보내고 별도 표지와 세 숫자만 보인다', async () => {\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))\n-    expect(api.create.mock.calls[0][0].conditions).toMatchObject({\n-      scenario: 'TARGET_RISK',\n-      scenarioParams: {\n-        targetVolatility: (registryFixture.analysisConditions.targetVolatility.default / 100).toFixed(4),\n-      },\n-    })\n-    const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })\n-    expect(within(panel).getByRole('heading', { name: '목표 위험 맞춤 시나리오' })).toBeTruthy()\n-    expect(within(panel).getByText('12.35%')).toBeTruthy()\n-    expect(within(panel).getByText('-3.21%')).toBeTruthy()\n-    expect(within(panel).getByText('23,457원')).toBeTruthy()\n-    expect(api.series).toHaveBeenCalledTimes(1)\n-    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n-  })\n-\n-  it('StrictMode에서도 목표 위험 요청의 완료 응답을 반영한다', async () => {\n-    const user = userEvent.setup()\n-    renderResult({ strict: true })\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))\n-    const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })\n-    expect(await within(panel).findByText('12.35%')).toBeTruthy()\n-    expect(within(panel).queryByText('별도 시나리오 결과를 준비하고 있습니다.')).toBeNull()\n-  })\n-\n-  it.each(['QUEUED', 'RUNNING'] as const)(\n-    '목표 위험 결과가 %s이면 준비 상태를 계속 표시한다',\n-    async (status) => {\n-      let resolveTarget: ((detail: PublicResultDetail) => void) | null = null\n-      api.detail.mockImplementation((token: string) => {\n-        if (token === resultToken) return Promise.resolve(resultDetailCompleted)\n-        return new Promise<PublicResultDetail>((resolve) => {\n-          resolveTarget = resolve\n-        })\n-      })\n-      const user = userEvent.setup()\n-      renderResult()\n-\n-      await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-      const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })\n-      expect(\n-        within(panel).getByText('별도 시나리오 결과를 준비하고 있습니다.'),\n-      ).toBeTruthy()\n-\n-      await act(async () => {\n-        resolveTarget?.(targetResult({ status, summary: null }))\n-      })\n-\n-      expect(\n-        within(panel).getByText('별도 시나리오 결과를 준비하고 있습니다.'),\n-      ).toBeTruthy()\n-      expect(within(panel).queryByLabelText('목표 위험 맞춤 핵심 결과')).toBeNull()\n-    },\n-  )\n-\n-  it('목표 위험 계산 제한은 숫자를 만들지 않고 사유를 보인다', async () => {\n-    api.detail.mockImplementation(async (token: string) =>\n-      token === resultToken\n-        ? resultDetailCompleted\n-        : targetResult({\n-            status: 'FAILED',\n-            summary: null,\n-            failure: { code: 'ESTIMATION_FAILED', message: '추정할 관측치가 부족합니다.' },\n-          }),\n-    )\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    expect(await screen.findByText(/자료가 충분하지 않아 목표 위험을 계산하지 못했습니다/)).toBeTruthy()\n-    expect(screen.queryByLabelText('목표 위험 맞춤 핵심 결과')).toBeNull()\n-  })\n-\n-  it('등록표 조회가 실패하면 사용자가 다시 요청할 수 있다', async () => {\n-    api.registry.mockRejectedValueOnce(new Error('등록표를 불러오지 못했습니다.'))\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    expect(await screen.findByText('등록표를 불러오지 못했습니다.')).toBeTruthy()\n-    expect(api.create).not.toHaveBeenCalled()\n-\n-    api.registry.mockResolvedValueOnce(registryFixture)\n-    await user.click(screen.getByRole('button', { name: '다시 요청하기' }))\n-\n-    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))\n-    expect(await screen.findByText('12.35%')).toBeTruthy()\n-  })\n-\n-  it('일반 실행 실패도 빈 패널 대신 사유를 보인다', async () => {\n-    api.detail.mockImplementation(async (token: string) =>\n-      token === resultToken\n-        ? resultDetailCompleted\n-        : targetResult({\n-            status: 'FAILED',\n-            summary: null,\n-            failure: { code: 'SYSTEM_FAILURE', message: '작업 처리 중 오류가 발생했습니다.' },\n-          }),\n-    )\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    expect(await screen.findByText(/목표 위험 시나리오를 완료하지 못했습니다/)).toBeTruthy()\n-    expect(screen.getByText(/작업 처리 중 오류가 발생했습니다/)).toBeTruthy()\n-    expect(screen.queryByLabelText('목표 위험 맞춤 핵심 결과')).toBeNull()\n-  })\n-\n-  it('요약 없이 취소된 목표 위험 결과는 사유와 다시 요청하기를 보인다', async () => {\n-    api.detail.mockImplementation(async (token: string) =>\n-      token === resultToken\n-        ? resultDetailCompleted\n-        : targetResult({\n-            status: 'CANCELLED',\n-            partial: true,\n-            summary: null,\n-            summaryUnavailable: 'CANCELLED_BEFORE_START',\n-            failure: null,\n-          }),\n-    )\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    expect(\n-      await screen.findByText('별도 시나리오가 취소되어 핵심 결과를 계산하지 못했습니다.'),\n-    ).toBeTruthy()\n-    expect(screen.queryByLabelText('목표 위험 맞춤 핵심 결과')).toBeNull()\n-\n-    await user.click(screen.getByRole('button', { name: '다시 요청하기' }))\n-    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2))\n-  })\n-\n-  it('접수된 결과 조회가 실패하면 사용자 요청으로 다시 불러온다', async () => {\n-    let targetReads = 0\n-    api.detail.mockImplementation(async (token: string) => {\n-      if (token === resultToken) return resultDetailCompleted\n-      targetReads += 1\n-      if (targetReads === 1) throw new Error('일시적인 조회 실패')\n-      return targetResult()\n-    })\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    expect(await screen.findByText('결과를 불러오지 못했습니다.')).toBeTruthy()\n-    await user.click(screen.getByRole('button', { name: '결과 다시 불러오기' }))\n-\n-    expect(await screen.findByText('12.35%')).toBeTruthy()\n-    expect(targetReads).toBe(2)\n-  })\n-\n-  it('429는 자동 재요청하지 않고 대기 시간을 보인 뒤 사용자 요청으로만 다시 보낸다', async () => {\n-    api.create.mockRejectedValueOnce(\n-      new BacktestRequestError('api', '실행 한도에 도달했습니다.', {\n-        code: 'EXECUTION_LIMIT',\n-        status: 429,\n-        details: { retryAfterSeconds: 30 },\n-      }),\n-    )\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-    expect(await screen.findByText(/30초 뒤 다시 요청할 수 있습니다/)).toBeTruthy()\n-    expect(api.create).toHaveBeenCalledTimes(1)\n-\n-    api.create.mockResolvedValueOnce({ publicToken: targetToken, status: 'QUEUED' })\n-    await user.click(screen.getByRole('button', { name: '다시 요청하기' }))\n-    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2))\n-  })\n-\n-  it('422의 필요 워밍업은 사용자 확인 뒤에만 구조화된 값으로 다시 요청한다', async () => {\n-    api.create.mockRejectedValueOnce(\n-      new BacktestRequestError('api', '준비 기간이 부족합니다.', {\n-        code: 'INSUFFICIENT_HISTORY',\n-        status: 422,\n-        details: { requiredWarmupTradingDays: 63 },\n-      }),\n-    )\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-    expect(await screen.findByText('준비 기간이 부족합니다.')).toBeTruthy()\n-    expect(api.create).toHaveBeenCalledTimes(1)\n-\n-    api.create.mockResolvedValueOnce({ publicToken: targetToken, status: 'QUEUED' })\n-    await user.click(screen.getByRole('button', { name: '필요 기간으로 다시 요청하기' }))\n-    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2))\n-    expect(api.create.mock.calls[1][0].conditions).toMatchObject({\n-      warmupTradingDays: 63,\n-      start: resultDetailCompleted.config.start,\n-    })\n-  })\n-\n-  it('422의 필요 시작일이 종료일 뒤면 잘못된 기간으로 자동 재요청하지 않는다', async () => {\n-    api.create.mockRejectedValueOnce(\n-      new BacktestRequestError('api', '요청 기간 안에 평가할 수 있는 날이 없습니다.', {\n-        code: 'INSUFFICIENT_HISTORY',\n-        status: 422,\n-        details: { requiredWarmupTradingDays: 63, requiredStartDate: '2025-01-02' },\n-      }),\n-    )\n-    const user = userEvent.setup()\n-    renderResult()\n-\n-    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n-\n-    expect(await screen.findByText('요청 기간 안에 평가할 수 있는 날이 없습니다.')).toBeTruthy()\n-    expect(screen.getByText(/2025-01-02 이후를 포함하도록 분석 기간을 다시 선택해야 합니다/)).toBeTruthy()\n-    expect(screen.queryByRole('button', { name: '필요 기간으로 다시 요청하기' })).toBeNull()\n-    expect(api.create).toHaveBeenCalledTimes(1)\n-  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -517,10 +517,11 @@ describe('ResultPage', () => {\n         '전체 거래 내역',\n         '손실이 커진 때',\n         'KOSPI 비교',\n-        '목표 위험 맞춤',\n       ]) {\n         expect(screen.getByRole('tab', { name }), name).not.toBeNull()\n       }\n+      // 변동성 제한은 탭이 아니라 비교 대상 고르기의 한 줄이다.\n+      expect(screen.queryByRole('tab', { name: /목표 위험|변동성/ })).toBeNull()\n       expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()\n       expect(\n         document.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]'),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -416,7 +416,15 @@ function nameTargets(targets: readonly CompareTargetState[]): Map<string, string\n     let name = '비교 대상'\n     if (target.choice) {\n       const settings = describeParameters(target.choice.strategy, target.choice.parameters)\n-      name = target.choice.strategy.name + (settings ? ' · ' + settings : '')\n+      const limit = target.choice.volatilityLimit\n+      name =\n+        target.choice.strategy.name +\n+        (settings ? ' · ' + settings : '') +\n+        (!limit\n+          ? ''\n+          : limit.scenario === 'TARGET_RISK'\n+            ? ' · 변동성 제한 연 ' + limit.targetVolatility + '%'\n+            : ' · 변동성 제한 없이')\n     } else if (target.detail) name = strategyLabel(target.detail)\n     raw.set(target.key, name)\n     counts.set(name, (counts.get(name) ?? 0) + 1)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -647,6 +647,37 @@ describe(\"StrategySettingsPage\", () => {\n     expect(requests[0].conditions.initialCash).toBe(amount.default.toFixed(2));\n   });\n \n+  it(\"변동성 제한을 켜면 요약 줄에 보이고 요청에 목표 변동성을 싣고 워밍업은 서버에 맡긴다\", async () => {\n+    const user = userEvent.setup();\n+    const { support, requests } = makeSupport();\n+    renderPage(support);\n+\n+    await user.click(await findCardNamed(selectableStrategy.name));\n+    await user.click(screen.getByRole(\"button\", { name: \"분석 조건\" }));\n+    await user.click(screen.getByRole(\"radio\", { name: \"씀\" }));\n+    const volatility = registryFixture.analysisConditions.targetVolatility;\n+    await user.selectOptions(\n+      screen.getByRole(\"combobox\", { name: \"목표 변동성(연)\" }),\n+      String(volatility.max),\n+    );\n+    expect(screen.getByLabelText(\"분석 조건 요약\").textContent).toContain(\n+      `변동성 제한연 ${volatility.max}%`,\n+    );\n+\n+    await waitFor(() =>\n+      expect(actionButton(\"분석하기\").getAttribute(\"aria-disabled\")).toBe(\n+        \"false\",\n+      ),\n+    );\n+    await user.click(actionButton(\"분석하기\"));\n+    await waitFor(() => expect(requests).toHaveLength(1));\n+    expect(requests[0].conditions).toMatchObject({\n+      scenario: \"TARGET_RISK\",\n+      scenarioParams: { targetVolatility: (volatility.max / 100).toFixed(4) },\n+      warmupTradingDays: null,\n+    });\n+  });\n+\n   it(\"기본 화면의 입력은 전략 선택 하나다\", async () => {\n     // SC-005. 전략 설정과 분석 조건은 접혀 있고 입력 요소를 내놓지 않는다.\n     const user = userEvent.setup();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1049,6 +1049,7 @@ export function StrategySettingsPage({\n         period: prepared.period,\n         initialAmount: prepared.initialAmount,\n         scenario: settings.analysisCondition.scenario,\n+        targetVolatility: settings.analysisCondition.targetVolatility,\n       });\n     } catch (error) {\n       console.error(\"분석 요청을 조립하지 못했습니다.\", error);\n@@ -1474,6 +1475,9 @@ export function StrategySettingsPage({\n                                 }\n                           }\n                           costProfile={costProfile}\n+                          targetVolatility={\n+                            settings.analysisCondition.targetVolatility\n+                          }\n                         />\n                       }\n                       conditions={registry.analysisConditions}\n@@ -1488,6 +1492,9 @@ export function StrategySettingsPage({\n                       caseConstraint={activeCaseConstraint}\n                       initialAmount={initialAmount ?? undefined}\n                       minEvaluationYears={minEvaluationYears}\n+                      targetVolatility={\n+                        settings.analysisCondition.targetVolatility\n+                      }\n                       cost={costAssumption}\n                       onChange={(patch) => {\n                         // 금액이 등록표 기본값과 같아지면 값을 담지 않고 \"없음\"으로 둔다. 입력이 무효가 되어\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,8 +49,11 @@ export type BacktestCreateRequest = {\n     initialCash: string\n     /** `null`이면 서버 기본 비용 프로필 */\n     costProfileVersion: string | null\n-    /** 워밍업 규칙의 계산 결과. 선택 전략의 요구값보다 작으면 422 */\n-    warmupTradingDays: number\n+    /**\n+     * 워밍업 규칙의 계산 결과. 선택 전략의 요구값보다 작으면 422. `null`이면 서버가 전략과 시나리오 오버레이의\n+     * 요구값 중 큰 쪽으로 정한다 — 변동성 제한의 추정 기간은 화면이 모르는 값이라 그때 쓴다.\n+     */\n+    warmupTradingDays: number | null\n     scenario: BacktestScenario\n     evaluationSplitVersion?: string | null\n     scenarioParams?: Record<string, unknown>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/backtestRequest.ts",
+          "old_path": "frontend/src/types/backtestRequest.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,6 +28,8 @@ export type AnalysisRequestInput = {\n   /** 원 단위 금액 */\n   initialAmount: number\n   scenario: BacktestScenario\n+  /** 변동성 제한의 목표 변동성(연, 퍼센트 숫자). `scenario`가 `TARGET_RISK`일 때만 온다 */\n+  targetVolatility?: number\n }\n \n /**\n@@ -86,8 +88,13 @@ export function buildBacktestRequest(input: AnalysisRequestInput): BacktestCreat\n       end: input.period.end,\n       initialCash: formatInitialCash(input.initialAmount),\n       costProfileVersion: input.versions.costProfileVersion,\n-      warmupTradingDays: input.warmupTradingDays,\n+      // 변동성 제한은 추정 기간(오버레이 규칙)만큼 워밍업이 더 필요한데 그 길이는 004 규칙표가 가진다. 비워 보내\n+      // 서버가 전략·오버레이 중 큰 쪽으로 정하게 한다 — 화면이 63 같은 수를 따로 적지 않는다.\n+      warmupTradingDays: input.targetVolatility === undefined ? input.warmupTradingDays : null,\n       scenario: input.scenario,\n+      ...(input.targetVolatility === undefined\n+        ? {}\n+        : { scenarioParams: { targetVolatility: (input.targetVolatility / 100).toFixed(4) } }),\n     },\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/analysisRequest.ts",
+          "old_path": "frontend/src/utils/analysisRequest.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,6 +71,11 @@\n - Q: 워밍업을 뺀 뒤 남는 평가 구간이 얼마나 짧아도 분석을 허용하나요? → A: 팀이 값 하나로 고정하지 않고 사용자가 완화(제한 없음)·기본(1년)·엄격(3년) 중 고르게 한다(FR-011a).\n - Q: 전략별 파라미터 후보 값·범위·간격·기본값(PD-02)은 정해졌나요? → A: 확정했다. [data-model](data-model.md) §4·§7에 전략별 축과 시작 금액 범위를 담았다. 최소분산의 `estimationMethod`만 004 PD-04(공분산 추정 방법) 확정 전까지 후보 하나(표본공분산)로 시작한다.\n \n+### Session 2026-09-24\n+\n+- Q: 목표 변동성(004 '목표 위험 맞춤', `TARGET_RISK`)을 결과 화면의 별도 보기에서만 고르는가? → A: 아니다. 분석 조건에 **'변동성 제한'**(쓰지 않음·씀)으로 두고, 켜면 등록표 범위(기본 연 10%, 5~20%, 1% 간격) 안의 목표 변동성을 고른다. 결과 보기에서 매번 따로 실행하는 것보다 처음부터 켠 결과를 주 결과로 받는 편이 낫고, 전략과 무관하게 모든 전략 위에 씌우는 조건이라 전략 설정이 아니라 분석 조건 자리다. 켜지 않은 것이 기본이다.\n+- Q: 변동성 제한을 켜면 워밍업은 누가 정하는가? → A: 004 서버가 정한다. 요청의 `warmupTradingDays`를 비워 보내면 서버가 전략과 오버레이(63거래일 추정) 요구값 중 큰 쪽을 쓴다. 추정 기간은 004 규칙표 값이라 화면이 따로 적지 않는다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 전략 카드를 고르고 기본 설정으로 분석한다 (Priority: P1)\n@@ -159,7 +164,7 @@\n - 002에서 선택한 정보가 없거나 손상됐거나 선택 섹터가 두 개 미만이면 003은 기본값을 만들지 않고 이전 단계를 다시 완료하도록 안내한다.\n - 입력형 값이 비었거나 숫자가 아니거나 등록한 간격에 맞지 않으면 상태에 반영하지 않는다. 최솟값·최댓값과 정확히 같은 값은 허용하고, 숫자 정밀도는 등록표의 `step`을 소수 문자열로 판정해 부동소수점 반올림으로 다른 결과를 만들지 않는다.\n - 등록표 버전이나 섹터 수가 바뀌면 탭에 남은 전략별 값을 새 등록표·규칙으로 다시 판정한다. 유효한 값은 유지하고, 유효하지 않으면 자동으로 고치지 않고 이유와 기본값 복원 선택을 보인다.\n-- 주 분석은 `FULL_PERIOD` 시나리오로 고정하므로 목표 변동성 값을 화면 상태에 만들거나 보관하지 않는다. `TARGET_RISK`를 여는 별도 시나리오 화면이 값 생성·보관·제거 규칙을 소유한다.\n+- 분석은 `FULL_PERIOD`가 기본이고 '변동성 제한'을 켰을 때만 `TARGET_RISK`다. 목표 변동성은 켰을 때만 화면 상태·보관값에 있고 끄면 지운다. 보관된 목표가 지금 등록표 범위 밖이면 끈 채로 시작하고 그 사실을 알린다(2026-09-24).\n \n ## Requirements *(mandatory)*\n \n@@ -209,7 +214,7 @@\n - **FR-007**: 공통 출발 설정은 월말 리밸런싱과 역변동성 63거래일 관측이다. 이 값은 출발안이며 승인된 후보 범위 안에서 변경·탐색할 수 있다. 리밸런싱 주기의 후보 값은 달력 기준(월말·분기말 등)과 거래일 수 기준(21거래일·63거래일 등)을 함께 담으며, 사용자는 두 방식 가운데 하나를 골라 그 후보 값 중에서 고른다. 003은 사용자가 고른 주기를 분석 요청에 담아 넘기기만 하고, 그 주기에 언제 판단하고 언제 체결하는지는 [004](../004-backtest-execution/spec.md) FR-011이 정한다(월말 정보 확인 후 다음 거래일 체결). (§4.2.2, §6.4.2)\n - **FR-008**: 비중 상한은 선택한 모든 섹터에 똑같이 걸리는 값 하나이며 섹터마다 다른 상한을 두지 않는다. 유효성 제약(모멘텀 선정 수가 가용 섹터 수를 넘는 경우, 상한에 섹터 수를 곱한 값이 투자 비중에 못 미쳐 비중을 채울 수 없는 조합 등)을 위반하는 설정은 실행 전에 안내하고 분석을 시작하지 않는다. (§6.4.2, §6.4.3)\n - **FR-009**: 분석 기간은 비교 후보가 공통으로 평가 가능한 범위([001](../001-etf-market-data/spec.md)의 산출값)에서 자동 제시한다. 단일 전략 분석의 비교 후보는 선택한 섹터들이고, 여러 전략을 같은 조건으로 비교할 때는 해당 전략과 섹터 조합 모두가 공통으로 평가되는 범위를 쓴다. 사용자는 그 범위 안에서만 기간을 바꿀 수 있다. (§4.2.2, §6.4.1)\n-- **FR-010**: '기간·금액·조건'에서 분석 기간과 시작 금액은 변경하고, 비용 가정은 004가 등록한 현재 버전의 수치·버전·임시 여부를 **읽기 전용**으로 확인한다. 사용자가 이 화면에서 수수료·세금 수치를 임의로 바꾸지 않으며, 비용 상승은 004의 별도 시나리오가 소유한다. 시작 금액의 최소·최대·간격·기본값은 등록표가 담고 다른 설정 항목과 같은 방식으로 검증하며, 100만 원~10억 원, 100만 원 간격, 기본 1,000만 원이다(PD-02, 2026-09-15 확정). 004의 PD-18(확정)이 목표 변동성(기본 연 10%, 5~20%, 1% 간격)을 003 등록표 항목으로 지정했으므로 등록표에 자리를 두되, 주 분석(`FULL_PERIOD`)에는 보이지 않는다. PD-07 확정 전에는 004가 명시한 임시 비용 프로필을 그대로 표시하고 확정값처럼 보이지 않게 한다. 수수료·세금·평가 기간을 수익을 높이는 방향으로 자동 최적화하는 선택지는 제공하지 않는다. (§4.2.2, §6.4.3, 원칙 IV)\n+- **FR-010**: '기간·금액·조건'에서 분석 기간과 시작 금액은 변경하고, 비용 가정은 004가 등록한 현재 버전의 수치·버전·임시 여부를 **읽기 전용**으로 확인한다. 사용자가 이 화면에서 수수료·세금 수치를 임의로 바꾸지 않으며, 비용 상승은 004의 별도 시나리오가 소유한다. 시작 금액의 최소·최대·간격·기본값은 등록표가 담고 다른 설정 항목과 같은 방식으로 검증하며, 100만 원~10억 원, 100만 원 간격, 기본 1,000만 원이다(PD-02, 2026-09-15 확정). 004의 PD-18(확정)이 목표 변동성(기본 연 10%, 5~20%, 1% 간격)을 003 등록표 항목으로 지정했으므로 등록표에 자리를 두고, 분석 조건의 '변동성 제한'을 켰을 때 그 범위 안에서 고른다(2026-09-24). 끄면 주 분석(`FULL_PERIOD`)이다. PD-07 확정 전에는 004가 명시한 임시 비용 프로필을 그대로 표시하고 확정값처럼 보이지 않게 한다. 수수료·세금·평가 기간을 수익을 높이는 방향으로 자동 최적화하는 선택지는 제공하지 않는다. (§4.2.2, §6.4.3, 원칙 IV)\n - **FR-011**: 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄면 실행 전에 줄어든 구간과 원인을 알린다. 필요한 워밍업 기간은 등록표가 담은 전략별 산출 규칙에 현재 설정값을 넣어 계산하며, 설정값을 바꿀 때마다 다시 계산해 판정한다. 카드 목록에서는 각 전략의 기본 설정을 기준으로 판정한다. 공통 평가 가능 범위가 필요한 워밍업을 채우고도 FR-011a가 정한 최소 평가 기간만큼 남으면 그 전략을 고를 수 있고, 줄어든 기간을 카드와 실행 전 안내에 알린다. 워밍업조차 채우지 못하거나 남는 기간이 최소 평가 기간에 못 미치면 그 전략 카드를 고를 수 없는 상태로 두고 분석할 수 없는 이유를 한 문장으로 표시한다. (§6.4.1, 원칙 IV)\n - **FR-011a**: '기간·금액·조건'에서 최소 평가 기간을 사용자가 고른다 — 완화(제한 없음)·기본(1년)·엄격(3년) 세 후보 중 하나이며 등록표 항목이다(analysisConditions.minEvaluationYears). 팀이 값 하나로 고정하지 않는 이유는, 짧은 평가 구간에서 나온 수익률이 통계적으로 무의미한데도 화면이 이를 막지 않으면 오해를 부르지만, 신생 섹터를 다루고 싶은 사용자에게는 그 판단을 맡기는 편이 낫기 때문이다. 기본값은 1년(리밸런싱이 월말이면 최소 12회 판단)이다. 이 값은 워밍업과 별개로 적용되며, FR-011의 \"평가할 구간이 남으면\"의 기준이 된다. (§6.4.1, 원칙 IV, PD-02 2026-09-15 확정)\n - **FR-012**: 자동 배분 전략(역변동성·섹터 모멘텀·최소분산)을 선택하면 출력 비중이 선택한 규칙의 계산 결과이며 사용자 입력 비중과 구분된다는 설명을 보인다. (§4.2.1, D13)\n@@ -228,7 +233,7 @@\n - **전략 카드**: 화면 이름·전략 종류·한 줄 설명·선택 가능 여부와 안내 문장이다. 등록표가 활성으로 표시한 전략만 카드로 보인다.\n - **파라미터 등록표(버전)**: 전략별 설정 항목마다 의미·후보 값 또는 범위·간격·기본값·유효성 제약을 가진다. 항목마다 목록형인지 입력형인지도 함께 담으며, 전략 설정뿐 아니라 시작 금액과 목표 변동성의 최소·최대·간격·기본값도 여기에 둔다. 비중 상한은 섹터별 목록이 아니라 값 하나로 담고, 리밸런싱 주기 후보는 달력 기준과 거래일 수 기준을 구분해 담는다. 여기에 더해 전략별로 필요한 워밍업 기간을 설정값에서 산출하는 규칙과 활성 여부도 함께 가진다. 서버가 보관하며 버전 식별자를 가지고, 화면은 조회 기능으로 현재 버전을 받아 온다.\n - **전략 설정값**: 사용자가 확정한 전략 종류와 항목별 값, 기본값 사용 여부, 등록표 버전이다. 섹터별 목표 비중은 여기에 따로 두지 않고 [002](../002-sector-weight-selection/spec.md)가 확정한 값을 참조한다. 분석 요청으로 전달되기 전까지는 브라우저 탭 수명 동안만 보관한다.\n-- **분석 조건**: 분석 기간(자동 제시값과 사용자 변경값)·시작 금액·비용 가정(읽기 전용 버전과 임시 여부)·시나리오(연속 운용 기본)다. '목표 위험 맞춤' 시나리오를 고르면 목표 변동성이 더해진다(004 PD-18).\n+- **분석 조건**: 분석 기간(자동 제시값과 사용자 변경값)·시작 금액·비용 가정(읽기 전용 버전과 임시 여부)·시나리오(연속 운용 기본)다. '변동성 제한'(004 '목표 위험 맞춤')을 켜면 목표 변동성이 더해진다(004 PD-18, 2026-09-24).\n - **분석 요청**: 섹터·비중([002](../002-sector-weight-selection/spec.md)) + 전략 설정값 + 분석 조건 + 참조 버전(대응표·등록표·자료)이다.\n \n ## Success Criteria *(mandatory)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/spec.md",
+          "old_path": "specs/003-strategy-settings/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,6 +39,11 @@\n - Q: 버튼마다 따로 열리던 자세히 보기·손실이 커진 때·지수 비교·목표 위험 맞춤을 어떻게 둘 것인가? → A: 결과 아래 탭 하나로 묶고 '자세히 보기'는 결과 분석과 설정·근거로 나눈다. 상관관계·위험 기여·손실 기여 표가 들어가자(420) 한 패널이 화면 두세 장 길이가 됐고 계산 값과 입력 조건이 번갈아 나왔기 때문이다. 주 모양 버튼은 '비교 대상 고르기' 하나로 그대로다.\n - Q: 첫 화면의 핵심 숫자·그래프·요약 문장은 탭 밖에 두는가? → A: 그래프와 해석 요약 1문장은 제목 아래 그대로 두고, 핵심 숫자 3개와 상태 문장은 같은 탭 묶음의 '요약' 탭에 넣어 기본으로 연다. 전체 거래 내역도 결과 분석에서 빼서 제 탭으로 둔다. 화면이 제목·비교 대상 고르기·탭 하나로 정리되고, 결과가 아직 없는 실행은 탭 없이 요약 내용만 보인다.\n \n+### Session 2026-09-24\n+\n+- Q: '목표 위험 맞춤' 탭은 그대로 두는가? → A: 없앤다. 목표 변동성은 [003](../003-strategy-settings/spec.md) 분석 조건의 '변동성 제한'에서 처음부터 고르고, 결과 화면에서는 **비교 대상 고르기**의 '변동성 제한' 한 줄로 같은 전략·설정에 제한만 걸어(기준이 이미 켰으면 '변동성 제한 없이') 그래프에 겹쳐 본다. 탭은 매번 별도 실행을 요청하면서도 원래 결과와 나란히 보이지 않았다. 탭은 여섯이다.\n+- Q: 변동성 제한의 켬·끔이 다른 두 결과는 '조건이 다른' 비교인가? → A: 아니다. 비교 대상 고르기가 바꿔 보는 축이라 조건 차이로 보지 않는다. 새 자금 투입 같은 다른 분석 방식은 지금처럼 조건 차이다. 변동성 제한이 요구하는 워밍업 차이는 FR-005의 공통 기간 확인으로 맞춘다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 결과 첫 화면에서 핵심을 바로 이해한다 (Priority: P1)\n@@ -115,7 +120,7 @@\n \n ### User Story 5 - 보조 보기와 다음 탐색으로 이어간다 (Priority: P3)\n \n-[전략을 검증하려는 개인]은 결과를 다른 관점에서 확인하기 위하여 광범위 국내 주가지수와의 비교와 목표 위험을 맞춘 분석을 보조 보기로 열고, '경제환경이 비슷했던 과거 보기'로 같은 섹터·전략·설정을 유지한 채 이어갈 수 있다. (§4.2.3, §4.3, D10, D25)\n+[전략을 검증하려는 개인]은 결과를 다른 관점에서 확인하기 위하여 광범위 국내 주가지수와의 비교를 보조 보기로 열고, 같은 전략에 변동성 제한을 걸거나 푼 결과를 비교 대상으로 겹쳐 보며, '경제환경이 비슷했던 과거 보기'로 같은 섹터·전략·설정을 유지한 채 이어갈 수 있다. (§4.2.3, §4.3, D10, D25)\n \n **Why this priority**: 보조 보기와 경제환경 연결은 진단을 확장하는 기능이며 첫 화면의 필수 요소가 아니다.\n \n@@ -124,7 +129,7 @@\n **Acceptance Scenarios**:\n \n 1. **Given** 결과 화면에서, **When** 지수 비교 보조 보기를 열면, **Then** 광범위 국내 주가지수와의 비교가 참고 정보로 표시되고 기본 비교 기준을 바꾸지 않는다.\n-2. **Given** 결과 화면에서, **When** 목표 위험 맞춤 보기를 열면, **Then** 별도 시나리오임이 표시되고 자료가 불안정하면 계산 제한이 표시된다.\n+2. **Given** 결과 화면에서, **When** 비교 대상 고르기의 '변동성 제한' 줄에서 목표 변동성을 골라 비교하면, **Then** 같은 전략·설정에 제한만 건 결과가 '변동성 제한 연 N%'라는 이름으로 겹쳐 그려지고, 자료가 불안정하면 그 대상 자리에 계산 제한이 표시된다.\n 3. **Given** 결과 화면에서, **When** '경제환경이 비슷했던 과거 보기'를 누르면, **Then** 기존 섹터·전략·설정이 유지된 채 [011](../011-regime-strategy-link/spec.md)의 화면이 열린다.\n \n ---\n@@ -151,7 +156,7 @@\n - **FR-004**: 비교 그래프는 기준 하나와 비교 대상 최대 셋을 동시에 그린다(2026-09-23 `S15P21E205-419`, 그 전에는 두 결과). 넷을 넘으면 선 모양과 색으로 곡선이 갈리지 않는다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이다. **비교 대상 후보는 전략이 아니라 전략·설정값 조합이다.** 후보의 출처는 둘이다 — 003 등록표의 기본값 조합과, 로그인한 사용자가 단일 분석에서 써 본 조합(004 `GET /backtests/used-strategies`). 화면은 후보마다 쓰일 설정값을 등록표의 이름표로 적어 무엇과 비교하는지 보이게 하고, 기준 결과 자신과 같은 조합은 후보에서 뺀다. 같은 전략이라도 설정값이 다르면 다른 후보다. 써 본 조합의 설정값은 현재 등록표로 다시 판정해 맞지 않으면 후보에 올리지 않는다(원칙 VI). 비로그인 사용자에게는 기본값 조합만 보인다. 자동 탐색에서 고른 후보도 비교 대상이 될 수 있다. 사용자는 남은 자리만큼 후보를 여럿 골라 한 번에 요청하고, 대상마다 자리를 두어 진행·실패·해제를 따로 다룬다. 완료되는 대상부터 곡선이 늘어난다. 비교 대상으로 고른 조합의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 진행 상태는 004가 주는 단계(자료 준비·계산·저장)와 진행 비율을 보이고, 아직 대기 중이면 지금까지 기다린 시간을 보인다. 요청이 004의 대기열 상한에 걸리면(`429 EXECUTION_LIMIT`) 비교 대상 자리에 한도에 걸렸다는 사실과 004가 알려 준 다시 시도 가능 시각을 보이고, 사용자가 누를 때만 다시 요청한다. 화면이 조용히 재시도하지 않는다(원칙 IX). 비교 대상 전략의 준비 기간(워밍업)이 기준 결과보다 길면 시작일이 뒤로 밀려 같은 그래프에 겹칠 수 없으므로, 화면은 [003](../003-strategy-settings/spec.md) 등록표에 적힌 각 전략의 준비 기간을 읽어 **고르기 전에** 그 전략을 고르면 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 기간 불일치 확인으로 이어간다. 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않으며, 004의 `INSUFFICIENT_HISTORY` 거부는 화면의 판단이 어긋났을 때 잘못된 비교를 막는 안전장치로 그대로 둔다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. 결과 화면에서 가장 중요한 행동 버튼은 '비교 대상 고르기' 하나다. '자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'·보조 보기·다음 탐색 진입점은 그보다 눈에 덜 띄는 보조 모양으로 둔다(원칙 II). (§4.1, §4.2.3, D10)\n - **FR-005**: 비교하는 두 결과는 같은 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준을 쓴다. 후보마다 유리한 과거 기간을 달리 쓰지 않으며, 기간이 다르면 겹쳐 그리지 않는다. 기간이 다를 때 화면은 공통 구간과 두 결과를 모두 다시 계산해야 한다는 사실을 보이고, 사용자가 확인하면 공통 구간을 쓰는 실행 두 건을 [004](../004-backtest-execution/spec.md)에 요청한다. 확인하기 전까지는 기준 결과만 그린다. 다시 계산한 두 건은 새 결과로 저장되어 새 비교 주소를 가지며, 원래 기준 결과와 그 주소, '내 기록' 항목은 그대로 남는다. 화면은 새 비교로 이동하고 원래 결과로 돌아가는 연결을 둔다(원칙 VI, 006의 \"설정 변경은 새 버전으로 보존하고 덮어쓰지 않는다\"와 같은 방식). (§4.2.3, §6.4.1, 원칙 IV)\n - **FR-006**: 해석 요약은 비교 대상마다 1문장이다(대상이 없으면 기준의 세 숫자로 1문장). 각 문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다. 두 결과의 수익률과 최대 하락 폭이 같을 때 그 사실만 말하는 틀과, 거래비용만 다를 때 그 차이만 말하는 틀을 따로 둔다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n-- **FR-007**: 결과 화면은 제목·그래프 1개·해석 요약 1문장·비교 대상 고르기·탭 묶음 순이며 설정 화면으로 되돌리지 않는다. 탭은 요약·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교·목표 위험 맞춤 일곱이며 첫 화면에서 **요약**이 열려 있다. **요약**에는 FR-001의 핵심 숫자 3개·조건 한 줄과 결과 상태 문장(FR-013)을, **결과 분석**에는 회복 기간·회전율·상관관계·위험 기여·손실 기여(추정 기간·공분산 산정법 포함)·계산 제한 항목을, **설정·근거**에는 비교 규칙·비용 가정·목표·실제 비중·구성종목 중복·대표 ETF 구성·출처를, **전체 거래 내역**에는 거래 내역과 그 조건 질의를 둔다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보인다. 계산에서 나온 값과 사용자가 넣은 조건을 한 패널에 번갈아 두지 않는다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 요약 탭의 자료(상세·시계열)와 탭들이 함께 쓰는 섹터 목록은 첫 화면과 함께 받고, 다른 탭의 자료는 사용자가 그 탭을 처음 열 때 받는다. (§4.1, §4.2.3)\n+- **FR-007**: 결과 화면은 제목·그래프 1개·해석 요약 1문장·비교 대상 고르기·탭 묶음 순이며 설정 화면으로 되돌리지 않는다. 탭은 요약·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교 여섯이며(2026-09-24에 '목표 위험 맞춤' 탭을 비교 대상 고르기로 옮김) 첫 화면에서 **요약**이 열려 있다. **요약**에는 FR-001의 핵심 숫자 3개·조건 한 줄과 결과 상태 문장(FR-013)을, **결과 분석**에는 회복 기간·회전율·상관관계·위험 기여·손실 기여(추정 기간·공분산 산정법 포함)·계산 제한 항목을, **설정·근거**에는 비교 규칙·비용 가정·목표·실제 비중·구성종목 중복·대표 ETF 구성·출처를, **전체 거래 내역**에는 거래 내역과 그 조건 질의를 둔다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보인다. 계산에서 나온 값과 사용자가 넣은 조건을 한 패널에 번갈아 두지 않는다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 요약 탭의 자료(상세·시계열)와 탭들이 함께 쓰는 섹터 목록은 첫 화면과 함께 받고, 다른 탭의 자료는 사용자가 그 탭을 처음 열 때 받는다. (§4.1, §4.2.3)\n - **FR-008**: 비교 대상의 실제 보유 섹터가 기준과 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n - **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. 계산이 제한되었는지의 판정과 그 사유는 [004](../004-backtest-execution/spec.md) FR-030에 따라 004가 결과에 담아 준다. 005는 그것을 표시할 뿐 자료 길이로 스스로 판정하지 않는다. (§4.2.3, 원칙 VI)\n - **FR-010**: '손실이 커진 때' 탭은 FR-001의 음영과 같은 최대 하락 구간 하나를 강조하고 그 구간의 보유·거래·비용을 보인다. 여러 구간을 고르는 임계값은 두지 않는다. 구간이 없거나 확인할 수 없으면 탭을 비활성으로 두고 그 사유를 탭 옆에 적는다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n@@ -161,7 +166,7 @@\n - **FR-014**: 자동 배분 전략의 출력 비중은 선택한 규칙의 계산 결과로 표시하고 사용자 입력 비중과 구분한다. (§4.2.1, D13)\n - **FR-015**: 종료 시 시가평가 결과와 청산 비용 포함 결과를 구분해 표시한다. (§6.4.1)\n - **FR-016**: '추천 비중', 주문 버튼, 자동 단일 승자, 일·주·월간 우승 전략, 사용자 간 성과 랭킹, 확률로 읽힐 표현('87% 유사', '지금도 잘될 전략' 등)을 만들지 않는다. 한 항목 기준 정렬은 제공할 수 있다. (§4.2.3, D13, D16, 원칙 III)\n-- **FR-017**: 광범위 국내 주가지수와의 비교와 목표 위험을 맞춘 분석은 FR-007 탭 묶음의 'KOSPI 비교'·'목표 위험 맞춤' 탭으로 제공한다. 지수 비교는 참고 정보이며 기본 비교 기준을 바꾸지 않고, 목표 위험 맞춤은 별도 시나리오로 표시한다. 지수를 결과와 같은 기간·시작 금액으로 환산한 계열은 서버가 만들어 주고 화면은 받은 값을 그린다. 서버가 지수의 기간 자료를 얻지 못하면 그 탭은 값 대신 이유를 보인다. (§4.2.3, §6.4.1)\n+- **FR-017**: 광범위 국내 주가지수와의 비교는 FR-007 탭 묶음의 'KOSPI 비교' 탭으로 제공한다. 지수 비교는 참고 정보이며 기본 비교 기준을 바꾸지 않는다. 변동성 제한(004 '목표 위험 맞춤')은 탭이 아니라 FR-004 비교 대상 고르기의 '변동성 제한' 한 줄이다 — 기준 전략·설정·규칙 버전 그대로 목표 변동성(등록표 범위)만 골라 요청하고, 기준이 이미 켠 결과면 '변동성 제한 없이' 한 줄이 된다. 켠 결과의 이름에는 '변동성 제한 연 N%'를 붙인다(2026-09-24). 지수를 결과와 같은 기간·시작 금액으로 환산한 계열은 서버가 만들어 주고 화면은 받은 값을 그린다. 서버가 지수의 기간 자료를 얻지 못하면 그 탭은 값 대신 이유를 보인다. (§4.2.3, §6.4.1)\n - **FR-018**: '경제환경이 비슷했던 과거 보기' 진입점을 제공한다. 진입 시 기존 섹터·전략·설정을 유지해 [011](../011-regime-strategy-link/spec.md)로 넘긴다. 넘기는 값은 섹터 후보 집합·전략·설정값·분석 기간·금액이며, 전달 형식은 011의 진입 계약이 소유한다. 011에서 돌아오는 길은 브라우저의 뒤로 가기로 원래 결과 주소에 오는 것이다. (§4.3, D25)\n - **FR-019**: 결과는 완료 시 [006 내 기록](../006-my-records/spec.md)에 보존되고, 결과 화면에서 '설정 바꿔 비교'와 내보내기 진입점을 제공한다. 결과마다 고유 주소를 두어 로그인하지 않은 사용자도 그 주소로 결과를 다시 연다. 이 주소에 쓰는 식별자는 안전한 난수에서 얻은 최소 128비트의 추측할 수 없는 값이어야 하며, [004](../004-backtest-execution/spec.md)가 발급하는 순번 형식의 실행 식별자(`BT-20260910-000123` 꼴)를 그대로 노출하지 않는다. 화면 주소용 공개 식별자와 내부 실행 식별자는 분리해 관리한다. '내 기록' 목록에 쌓이는 것은 로그인한 사용자의 결과뿐이며, 공개 흐름인 이 화면은 [014](../014-user-auth/spec.md)의 로그인을 요구하지 않는다. 주소를 아는 사람이면 누구나 열 수 있으므로 결과에는 개인을 식별할 정보를 담지 않는다. 비교 상태도 같은 주소 체계에 담는다. 기준 결과 주소에 비교 대상 식별자를 덧붙여, 새로고침하거나 그 주소를 다시 열면 두 결과가 그대로 복원된다. 비교를 위한 별도 자원을 서버에 만들지 않는다. 비교 주소를 받은 사람이 비교 대상 식별자만 떼어 그 결과를 단독으로 여는 것은 의도된 동작이다. 결과마다 독립된 주소가 있고 주소를 아는 사람은 열 수 있다는 전제와 같다. (§5)\n - **FR-020**: KRX 자료를 쓰는 결과 화면에 '한국거래소 통계정보' 출처를 표시한다. 정보는 세 층(바로 보이는 정보 / 요청하면 펼치는 정보 / 시스템이 처리하는 정보)으로 배치하고 내부 계산 항목을 동시에 나열하지 않는다. (§4.1, §6.2)\n@@ -174,7 +179,7 @@\n - **비교 뷰**: 기준 결과·비교 대상 결과·그래프·공통 조건(섹터 후보·기간·금액·비용·정보 이용 기준)·비교 종류(기본 설정 / 자동 탐색 후보)다.\n - **상세 패널 항목**: FR-007의 항목과 각 항목의 계산 제한 상태다.\n - **결과 상태 표시**: 검증 구분(탐색/미사용 검증/미검증), 자료 부족·계산 제한·부분 완료 문장이다.\n-- **보조 보기**: 지수 비교, 목표 위험 맞춤과 그 시나리오 표시다.\n+- **보조 보기**: 지수 비교다. 변동성 제한은 비교 대상의 한 종류다(2026-09-24).\n - **결과 주소**: 결과를 다시 여는 추측 불가능한 공개 식별자와, 비로그인 결과에 붙는 유효 시간·만료 여부다. 004의 내부 실행 식별자와 구분한다.\n \n ## Success Criteria *(mandatory)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T18:13:39.232+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2866120": []
+  }
+}

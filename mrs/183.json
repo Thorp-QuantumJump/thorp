@@ -1,0 +1,1096 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948647,
+    "iid": 183,
+    "project_id": 1444456,
+    "title": "feat(be): 공통 평가 가능 기간 조회를 연다",
+    "description": "# 작업 내용 요약\n\n섹터를 여러 개 고르면 화면이 \"이 조합은 언제부터 비교할 수 있습니다\"를 안내해야 하는데, 그 시작일을 물어볼 통로가 없어 전략 카드가 막힌 채로 남아 있었다. 시작일은 후보 가운데 가장 늦게 상장한 상품의 상장일에, 전략이 지표를 만들려고 미리 읽어야 하는 구간(워밍업)을 더해 정해진다. 계산식 자체는 이미 만들어 두고 워커와 같은 기준 자료로 검증까지 마친 상태였고, 빠져 있던 것은 그것을 밖으로 내보내는 조회 하나였다.\n\n**이 MR은 백엔드만 바꿨다. 화면 코드는 건드리지 않았다.** 조회가 열렸으므로 전략 설정 화면은 이제 조합별 분석 가능 기간을 실제 자료로 판정할 수 있는 상태가 됐고, 그 판정을 화면에 실제로 연결하는 것은 003의 후속 작업이다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-325](https://ssafy.atlassian.net/browse/S15P21E205-325)\n- spec 001 `tasks.md` T017, `FR-007`\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 조합의 분석 가능 기간을 묻는다 | 통로가 없어 화면이 판정하지 못하고 카드를 막아 둔다 | 조회 한 번으로 시작일·종료일과 그 시작일을 정한 섹터를 받는다 |\n| 화면이 설정값을 바꿔 다시 판정해야 한다 | 다시 판정할 재료가 없고, 조회를 다시 부르는 것도 화면 완료 기준이 막는다 | 한 번 받은 응답만으로 다시 판정할 수 있는 재료가 응답에 실린다. **화면이 그것을 쓰는 일은 아직 안 됐다** |\n| 워밍업을 채울 거래일이 모자란 조합 | 계산식이 오류를 낸다 | 조회는 오류가 아니라 \"이 조합은 분석할 수 없습니다\"로 답한다 |\n| 자료가 아직 적재되지 않았다 | 해당 없음 | 빈 기간을 만들어 내지 않고 재시도할 수 있는 실패로 구분한다 |\n| 워커와 공유하는 계산식·기준 자료 | | 같다. 이번 변경이 건드리지 않았다 |\n\n# 주요 변경 사항\n\n## 화면이 값을 바꿀 때마다 서버를 부르지 않아도 되게 할 재료를 싣는다\n\n전략 설정 화면은 사용자가 값을 만지는 동안 서버로 요청을 내보내지 않기로 이미 정해 두었다. 그런데 워밍업이 달라지면 시작일도 달라지고, 그 시작일은 거래일 달력이 있어야 구해진다. 값을 바꿀 때마다 이 조회를 다시 부르는 방식은 그래서 쓸 수 없었다.\n\n세 갈래를 놓고 **응답에 달력 조각을 실어 보내는 쪽**으로 정했다(003 `T098`의 ①안). 워밍업이 0일 때의 기준일과 그 뒤 거래일 목록을 함께 내려 주면, 화면은 목록에서 워밍업 일수만큼 떨어진 날짜를 꺼내는 것으로 같은 답을 얻는다. 요청마다 워밍업을 붙여 늦게 온 응답을 버리는 방식은 003 조사에서 이미 한 번 기각한 안이고, 전략별 워밍업 후보를 미리 다 조회해 두는 방식은 001이 003의 파라미터 구성을 알아야 한다.\n\n**화면의 계산과 서버의 계산이 같은 날을 가리키는지**를 검사로 고정했다. 두 계산이 갈리면 화면은 실제로는 분석할 수 없는 기간을 안내하게 된다.\n\n## 화면이 자기가 필요한 만큼을 말한다\n\n거래일 목록의 길이는 요청이 정한다. 001이 003의 파라미터 축 구성을 읽어 상한을 유추하지 않게 하려는 것이다. 상한을 주지 않으면 그 세 값은 키 자체를 내보내지 않으므로, \"요청하지 않아 없음\"과 \"계산해 봤더니 없음\"이 구분된다.\n\n달력이 요청한 상한에 모자라면 오류를 내지 않고 있는 만큼만 내려 주면서 상한을 실제 길이에 맞춰 줄인다. 최근 상장한 상품에서 흔히 생기는 상황이고, 화면은 줄어든 상한을 넘는 워밍업을 분석 불가로 판정한다.\n\n## 이미 정해진 필드의 뜻을 바꾸지 않는다\n\n자료가 없어 평가에서 빠지는 구간은 지금까지 워밍업을 반영한 구간으로 잘려 나갔다. 화면이 더 짧은 워밍업으로 다시 계산하면 그 앞쪽 구간을 알 수 없다는 문제가 있었는데, 기존 필드의 기준을 바꾸는 대신 **기준일부터의 구간을 별도 필드로 더했다.** 기존 필드의 뜻은 백엔드와 워커가 함께 읽는 기준 자료가 고정하고 있어, 그것을 바꾸면 워커 쪽 검증이 함께 깨진다.\n\n## 어느 시점의 자료를 보는지 접수 경로와 맞춘다\n\n이 조회가 돌려준 기간은 곧바로 분석 요청의 시작일과 종료일이 되고, 그 요청은 다시 접수 단계에서 검증받는다. 두 곳이 서로 다른 자료 묶음을 보면 화면이 안내한 첫날이 접수에서 거절될 수 있다. 조회는 현재 열린 대응표를 대상으로 수집된 완전한 묶음 가운데 가장 최신을 고른다. 접수 단계는 대응표를 조건에 넣지 않으므로 대응표만 새로 열린 과도기에는 판단이 갈리는데, 그때 조회 쪽이 먼저 막히도록 두었다. 반대 방향으로 갈리면 사용자가 겪는 것은 \"안내받은 기간인데 분석이 거절된다\"가 된다.\n\n# 테스트\n\n- [x] `backend`: `./gradlew spotlessApply build` (2026-09-17) — 1586건, 실패 12·건너뜀 3\n- [x] 기준선 확인: 같은 날 `origin/dev`(`33fb854`)에서 `./gradlew build` — 1566건, 실패 12·건너뜀 3\n\n**실패 12건은 이 브랜치가 만든 것이 아니다.** 기준선과 실패한 검사의 이름과 건수가 같다. 이 브랜치는 검사 20건을 더했고 그 20건이 모두 통과한다.\n\n건너뜀 3건도 기준선과 같다. 이 작업이 더한 검사 가운데 DB를 쓰는 것은 Docker가 꺼져 있으면 조용히 건너뛰므로, 검증할 때 건너뜀 수를 함께 확인해야 한다.\n\n# 리뷰 포인트\n\n1. **전략을 인자로 주면 001이 003의 전략 등록표를 읽는다.** 계산식 계약은 \"001은 워밍업 값을 정하지 않고 받는다\"고 적어 두었고, 등록표에서 읽는 것은 정하는 것이 아니라 받는 것이라고 해석했다. 다만 화면이 실제로 쓸 경로는 전략을 생략하고 카드 여러 장을 한 번에 판정하는 쪽이라, 이 의존이 남을 값어치가 있는지 봐 달라.\n2. **워밍업을 채울 거래일이 모자란 경우를 오류가 아닌 정상 응답으로 옮겼다.** 계산식 자체는 여전히 오류를 낸다. 화면이 여러 워밍업을 훑는 용도로 부르는 조회라 값 하나 때문에 조회 전체가 실패하면 나머지 판정까지 잃는다는 판단인데, 없는 날짜를 지어내지 않는다는 원칙과 어긋나지 않는지 확인이 필요하다.\n3. **거래일 달력의 출처를 세 곳이 같은 값으로 들고 있다.** 수집 파이프라인, 접수 경로, 이번 조회다. 하나가 갈라지면 같은 날을 서로 다른 달력으로 세게 되는데 지금은 주석으로만 묶여 있다. 한곳으로 모으는 것은 이 티켓 범위 밖으로 두었다.\n4. **후속 조건**: 이 MR만으로는 사용자가 아무것도 달라진 것을 보지 못한다. 화면이 이 조회를 부르고 받은 재료로 재판정하는 일은 003 T042(`S15P21E205-238`)가 이어서 한다. 계약과 응답 예시는 `specs/001-etf-market-data/contracts/sector-api.md`의 「GET /sectors/evaluation-window」 절에 있고, 워커와 공유하는 기준 자료는 `specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json` 그대로다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T13:46:13.055+09:00",
+    "updated_at": "2026-09-17T14:48:21.706+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T14:48:21.031+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/325-evaluation-window-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+    "merge_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T13:46:14.714+09:00",
+    "reference": "!183",
+    "references": {
+      "short": "!183",
+      "relative": "!183",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!183"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/183",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948647,
+    "iid": 183,
+    "project_id": 1444456,
+    "title": "feat(be): 공통 평가 가능 기간 조회를 연다",
+    "description": "# 작업 내용 요약\n\n섹터를 여러 개 고르면 화면이 \"이 조합은 언제부터 비교할 수 있습니다\"를 안내해야 하는데, 그 시작일을 물어볼 통로가 없어 전략 카드가 막힌 채로 남아 있었다. 시작일은 후보 가운데 가장 늦게 상장한 상품의 상장일에, 전략이 지표를 만들려고 미리 읽어야 하는 구간(워밍업)을 더해 정해진다. 계산식 자체는 이미 만들어 두고 워커와 같은 기준 자료로 검증까지 마친 상태였고, 빠져 있던 것은 그것을 밖으로 내보내는 조회 하나였다.\n\n**이 MR은 백엔드만 바꿨다. 화면 코드는 건드리지 않았다.** 조회가 열렸으므로 전략 설정 화면은 이제 조합별 분석 가능 기간을 실제 자료로 판정할 수 있는 상태가 됐고, 그 판정을 화면에 실제로 연결하는 것은 003의 후속 작업이다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-325](https://ssafy.atlassian.net/browse/S15P21E205-325)\n- spec 001 `tasks.md` T017, `FR-007`\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 조합의 분석 가능 기간을 묻는다 | 통로가 없어 화면이 판정하지 못하고 카드를 막아 둔다 | 조회 한 번으로 시작일·종료일과 그 시작일을 정한 섹터를 받는다 |\n| 화면이 설정값을 바꿔 다시 판정해야 한다 | 다시 판정할 재료가 없고, 조회를 다시 부르는 것도 화면 완료 기준이 막는다 | 한 번 받은 응답만으로 다시 판정할 수 있는 재료가 응답에 실린다. **화면이 그것을 쓰는 일은 아직 안 됐다** |\n| 워밍업을 채울 거래일이 모자란 조합 | 계산식이 오류를 낸다 | 조회는 오류가 아니라 \"이 조합은 분석할 수 없습니다\"로 답한다 |\n| 자료가 아직 적재되지 않았다 | 해당 없음 | 빈 기간을 만들어 내지 않고 재시도할 수 있는 실패로 구분한다 |\n| 워커와 공유하는 계산식·기준 자료 | | 같다. 이번 변경이 건드리지 않았다 |\n\n# 주요 변경 사항\n\n## 화면이 값을 바꿀 때마다 서버를 부르지 않아도 되게 할 재료를 싣는다\n\n전략 설정 화면은 사용자가 값을 만지는 동안 서버로 요청을 내보내지 않기로 이미 정해 두었다. 그런데 워밍업이 달라지면 시작일도 달라지고, 그 시작일은 거래일 달력이 있어야 구해진다. 값을 바꿀 때마다 이 조회를 다시 부르는 방식은 그래서 쓸 수 없었다.\n\n세 갈래를 놓고 **응답에 달력 조각을 실어 보내는 쪽**으로 정했다(003 `T098`의 ①안). 워밍업이 0일 때의 기준일과 그 뒤 거래일 목록을 함께 내려 주면, 화면은 목록에서 워밍업 일수만큼 떨어진 날짜를 꺼내는 것으로 같은 답을 얻는다. 요청마다 워밍업을 붙여 늦게 온 응답을 버리는 방식은 003 조사에서 이미 한 번 기각한 안이고, 전략별 워밍업 후보를 미리 다 조회해 두는 방식은 001이 003의 파라미터 구성을 알아야 한다.\n\n**화면의 계산과 서버의 계산이 같은 날을 가리키는지**를 검사로 고정했다. 두 계산이 갈리면 화면은 실제로는 분석할 수 없는 기간을 안내하게 된다.\n\n## 화면이 자기가 필요한 만큼을 말한다\n\n거래일 목록의 길이는 요청이 정한다. 001이 003의 파라미터 축 구성을 읽어 상한을 유추하지 않게 하려는 것이다. 상한을 주지 않으면 그 세 값은 키 자체를 내보내지 않으므로, \"요청하지 않아 없음\"과 \"계산해 봤더니 없음\"이 구분된다.\n\n달력이 요청한 상한에 모자라면 오류를 내지 않고 있는 만큼만 내려 주면서 상한을 실제 길이에 맞춰 줄인다. 최근 상장한 상품에서 흔히 생기는 상황이고, 화면은 줄어든 상한을 넘는 워밍업을 분석 불가로 판정한다.\n\n## 이미 정해진 필드의 뜻을 바꾸지 않는다\n\n자료가 없어 평가에서 빠지는 구간은 지금까지 워밍업을 반영한 구간으로 잘려 나갔다. 화면이 더 짧은 워밍업으로 다시 계산하면 그 앞쪽 구간을 알 수 없다는 문제가 있었는데, 기존 필드의 기준을 바꾸는 대신 **기준일부터의 구간을 별도 필드로 더했다.** 기존 필드의 뜻은 백엔드와 워커가 함께 읽는 기준 자료가 고정하고 있어, 그것을 바꾸면 워커 쪽 검증이 함께 깨진다.\n\n## 어느 시점의 자료를 보는지 접수 경로와 맞춘다\n\n이 조회가 돌려준 기간은 곧바로 분석 요청의 시작일과 종료일이 되고, 그 요청은 다시 접수 단계에서 검증받는다. 두 곳이 서로 다른 자료 묶음을 보면 화면이 안내한 첫날이 접수에서 거절될 수 있다. 조회는 현재 열린 대응표를 대상으로 수집된 완전한 묶음 가운데 가장 최신을 고른다. 접수 단계는 대응표를 조건에 넣지 않으므로 대응표만 새로 열린 과도기에는 판단이 갈리는데, 그때 조회 쪽이 먼저 막히도록 두었다. 반대 방향으로 갈리면 사용자가 겪는 것은 \"안내받은 기간인데 분석이 거절된다\"가 된다.\n\n# 테스트\n\n- [x] `backend`: `./gradlew spotlessApply build` (2026-09-17) — 1586건, 실패 12·건너뜀 3\n- [x] 기준선 확인: 같은 날 `origin/dev`(`33fb854`)에서 `./gradlew build` — 1566건, 실패 12·건너뜀 3\n\n**실패 12건은 이 브랜치가 만든 것이 아니다.** 기준선과 실패한 검사의 이름과 건수가 같다. 이 브랜치는 검사 20건을 더했고 그 20건이 모두 통과한다.\n\n건너뜀 3건도 기준선과 같다. 이 작업이 더한 검사 가운데 DB를 쓰는 것은 Docker가 꺼져 있으면 조용히 건너뛰므로, 검증할 때 건너뜀 수를 함께 확인해야 한다.\n\n# 리뷰 포인트\n\n1. **전략을 인자로 주면 001이 003의 전략 등록표를 읽는다.** 계산식 계약은 \"001은 워밍업 값을 정하지 않고 받는다\"고 적어 두었고, 등록표에서 읽는 것은 정하는 것이 아니라 받는 것이라고 해석했다. 다만 화면이 실제로 쓸 경로는 전략을 생략하고 카드 여러 장을 한 번에 판정하는 쪽이라, 이 의존이 남을 값어치가 있는지 봐 달라.\n2. **워밍업을 채울 거래일이 모자란 경우를 오류가 아닌 정상 응답으로 옮겼다.** 계산식 자체는 여전히 오류를 낸다. 화면이 여러 워밍업을 훑는 용도로 부르는 조회라 값 하나 때문에 조회 전체가 실패하면 나머지 판정까지 잃는다는 판단인데, 없는 날짜를 지어내지 않는다는 원칙과 어긋나지 않는지 확인이 필요하다.\n3. **거래일 달력의 출처를 세 곳이 같은 값으로 들고 있다.** 수집 파이프라인, 접수 경로, 이번 조회다. 하나가 갈라지면 같은 날을 서로 다른 달력으로 세게 되는데 지금은 주석으로만 묶여 있다. 한곳으로 모으는 것은 이 티켓 범위 밖으로 두었다.\n4. **후속 조건**: 이 MR만으로는 사용자가 아무것도 달라진 것을 보지 못한다. 화면이 이 조회를 부르고 받은 재료로 재판정하는 일은 003 T042(`S15P21E205-238`)가 이어서 한다. 계약과 응답 예시는 `specs/001-etf-market-data/contracts/sector-api.md`의 「GET /sectors/evaluation-window」 절에 있고, 워커와 공유하는 기준 자료는 `specs/001-etf-market-data/contracts/fixtures/evaluation-window-cases.json` 그대로다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T13:46:13.055+09:00",
+    "updated_at": "2026-09-17T14:48:21.706+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T14:48:21.031+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/325-evaluation-window-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+    "merge_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T13:46:14.714+09:00",
+    "reference": "!183",
+    "references": {
+      "short": "!183",
+      "relative": "!183",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!183"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/183",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": "2026-09-17T14:24:26.175+09:00",
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 202307,
+      "iid": 111,
+      "project_id": 1444456,
+      "sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "ref": "feat(be)/325-evaluation-window-api",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T14:24:26.066+09:00",
+      "updated_at": "2026-09-17T14:43:52.505+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202307"
+    },
+    "head_pipeline": {
+      "id": 202307,
+      "iid": 111,
+      "project_id": 1444456,
+      "sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "ref": "feat(be)/325-evaluation-window-api",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T14:24:26.066+09:00",
+      "updated_at": "2026-09-17T14:43:52.505+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202307",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T14:24:26.175+09:00",
+      "finished_at": "2026-09-17T14:43:52.499+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202307",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "head_sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "start_sha": "de53fcf9c302bbc4a9d4b3e20f19771c0668de43"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2c0c1a3214404dc8adb292daf3a39ac181ad8cd9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824143,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T13:46:13.191+09:00",
+          "updated_at": "2026-09-17T13:46:13.195+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b16ac782eeb25e06ece33b1bb93f13b4597426aa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824144,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T13:46:13.206+09:00",
+          "updated_at": "2026-09-17T13:46:13.212+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fbda432af4af4d1f20df9d3e6f9ccafcfc7e255a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824148,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Medium] `backend/src/main/java/com/ssafy/thorp/sector/application/service/EvaluationWindowQueryService.java`: `tradingDaysFromBase` 메서드가 중간에 잘려 있어(`days.add(day`에서 끊김) 컴파일 오류가 발생합니다. 전체 MR 코드에 영향을 주어 빌드가 불가능할 것으로 보입니다.\n\n### 테스트 제안\n- `EvaluationWindowQueryServiceTest`와 `EvaluationWindowApiIT`를 통해 `maxWarmupTradingDays` 및 `strategy` 파라미터 조합에 따른 정상 응답(evaluable: true/false)과 400/409/422 예외 발생 시나리오가 올바르게 동작하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e6f73688aa88bb8e4c6bcddf6959c9106cac2448 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T13:46:19.983+09:00",
+          "updated_at": "2026-09-17T14:21:02.503+09:00",
+          "system": false,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "823cde9322de702d6e7940c4df6719ac5a22de7a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824716,
+          "type": null,
+          "body": "added 4 commits\n\n<ul><li>b41cc035 - feat(be): 평가 기간 산식의 재료를 저장소에서 읽는다</li><li>57e06b26 - feat(be): 조합의 평가 가능 기간을 판정하는 유스케이스를 만든다</li><li>ab9726c9 - feat(be): GET /sectors/evaluation-window를 연다</li><li>e6f73688 - docs(be): 평가 기간 조회 계약에 화면 재판정 재료를 적는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/183/diffs?diff_id=2213084&start_sha=5f2d3fb28195e9472486e3cba3f1db6645c00250)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T14:20:55.187+09:00",
+          "updated_at": "2026-09-17T14:20:55.192+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4f81bdd3b36ea5607daaed473d742c46c4eb7a99",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824719,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T14:21:04.281+09:00",
+          "updated_at": "2026-09-17T14:21:04.284+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4ba68d905686d199812be6ec6c9211e3de964705",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825016,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for e6f73688aa88bb8e4c6bcddf6959c9106cac2448 pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T14:39:24.853+09:00",
+          "updated_at": "2026-09-17T14:39:24.858+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d05698883f639064ba286618a4a039116cb29087",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825066,
+          "type": null,
+          "body": "mentioned in commit c9f5640913e1c85d5924546d8693736d8947c429",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T14:42:46.016+09:00",
+          "updated_at": "2026-09-17T14:42:46.064+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a55134b40dd419f4773b244c049806d88ae83ba1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825133,
+          "type": null,
+          "body": "aborted the automatic merge because merge request was closed",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T14:47:37.296+09:00",
+          "updated_at": "2026-09-17T14:47:37.299+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "737909d44325dd2f3ddbeb9143c092762aa2c49e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825148,
+          "type": null,
+          "body": "mentioned in commit 12fc23ce673167d1ceb99866eff0d527f15be544",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T14:48:21.126+09:00",
+          "updated_at": "2026-09-17T14:48:21.133+09:00",
+          "system": true,
+          "noteable_id": 948647,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 183,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2213477,
+      "head_commit_sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "base_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "start_commit_sha": "de53fcf9c302bbc4a9d4b3e20f19771c0668de43",
+      "created_at": "2026-09-17T14:47:38.594+09:00",
+      "merge_request_id": 948647,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "6ebd224e77cdf0961536ddc5ac94d26ab2f5447e"
+    },
+    {
+      "id": 2213084,
+      "head_commit_sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "base_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "start_commit_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c",
+      "created_at": "2026-09-17T14:20:54.923+09:00",
+      "merge_request_id": 948647,
+      "state": "without_files",
+      "real_size": "15",
+      "patch_id_sha": "6ebd224e77cdf0961536ddc5ac94d26ab2f5447e"
+    },
+    {
+      "id": 2212640,
+      "head_commit_sha": "5f2d3fb28195e9472486e3cba3f1db6645c00250",
+      "base_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "start_commit_sha": "1ad9f598e7bc17dc464c62205f10fa8001884b18",
+      "created_at": "2026-09-17T13:46:13.517+09:00",
+      "merge_request_id": 948647,
+      "state": "without_files",
+      "real_size": "15",
+      "patch_id_sha": "6ebd224e77cdf0961536ddc5ac94d26ab2f5447e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2213477,
+      "head_commit_sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "base_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "start_commit_sha": "de53fcf9c302bbc4a9d4b3e20f19771c0668de43",
+      "created_at": "2026-09-17T14:47:38.594+09:00",
+      "merge_request_id": 948647,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "6ebd224e77cdf0961536ddc5ac94d26ab2f5447e",
+      "commits": [
+        {
+          "id": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+          "short_id": "e6f73688",
+          "created_at": "2026-09-17T14:18:13.000+09:00",
+          "parent_ids": [
+            "ab9726c90a52846586dfcd691973b0becba8b9d5"
+          ],
+          "title": "docs(be): 평가 기간 조회 계약에 화면 재판정 재료를 적는다",
+          "message": "docs(be): 평가 기간 조회 계약에 화면 재판정 재료를 적는다\n\nsector-api.md의 엔드포인트 절을 요청 인자표·응답 필드표·경계 동작표로 넓혔다.\n자료 버전을 고르는 규칙과 거래일 달력의 출처도 함께 적었다. 접수 경로와 판단이\n갈릴 수 있는 지점, 그리고 갈릴 때 어느 쪽으로 막히는지가 여기 있다.\n\nevaluation-window.md에는 HTTP 표면 절을 더했다. 산식과 출력 여섯 칸은 바뀌지\n않았고 그 사실을 적었다. 달력 부족을 조회 계층이 평가 불가로 옮긴다는 것도\n같은 절에 적어, 산식과 조회의 동작이 다른 이유를 한곳에서 읽게 했다.\n\ntasks.md의 T017은 보류 사유가 풀린 경위와 구현에서 정한 것들을 남기고 닫았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:18:13.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:18:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6f73688aa88bb8e4c6bcddf6959c9106cac2448"
+        },
+        {
+          "id": "ab9726c90a52846586dfcd691973b0becba8b9d5",
+          "short_id": "ab9726c9",
+          "created_at": "2026-09-17T14:18:01.000+09:00",
+          "parent_ids": [
+            "57e06b267042bde49e1f8018e1a214325adc1c15"
+          ],
+          "title": "feat(be): GET /sectors/evaluation-window를 연다",
+          "message": "feat(be): GET /sectors/evaluation-window를 연다\n\n003의 \"이 조합은 언제부터 비교 가능합니다\" 안내가 부를 조회다.\n\n전략과 워밍업 상한은 둘 다 선택이지만 적어도 하나는 있어야 한다. 둘 다 없으면\n워밍업을 적용할 수도, 화면이 스스로 계산할 재료를 내릴 수도 없어 응답이 아무\n판정에도 쓰이지 않는다.\n\n상한을 주지 않으면 재판정 재료 세 칸은 키 자체를 내보내지 않는다. \"요청하지 않아\n없음\"과 \"계산해 봤더니 없음\"이 구분된다.\n\n질의 값이 규칙에 맞지 않을 때 IllegalArgumentException을 그대로 흘려보내지\n않는다. 섹터 조회의 오류 매핑이 그 예외를 저장된 자료의 결함으로 보아 500으로\n옮기기 때문에, 클라이언트가 잘못 보낸 질의로 5xx 경보가 울린다.\n\n평가 기간을 산출할 자료가 아직 없는 것은 409로 가른다. 평가 불가와 같은 실패로\n뭉개면 화면이 \"잠시 후 다시\"와 \"이 조합은 안 됩니다\"를 구분할 수 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:18:01.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:18:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab9726c90a52846586dfcd691973b0becba8b9d5"
+        },
+        {
+          "id": "57e06b267042bde49e1f8018e1a214325adc1c15",
+          "short_id": "57e06b26",
+          "created_at": "2026-09-17T14:17:47.000+09:00",
+          "parent_ids": [
+            "b41cc03532b5d25667273a3612958452cbb3d821"
+          ],
+          "title": "feat(be): 조합의 평가 가능 기간을 판정하는 유스케이스를 만든다",
+          "message": "feat(be): 조합의 평가 가능 기간을 판정하는 유스케이스를 만든다\n\n대응표에서 후보를 찾고, 저장소에서 재료를 읽고, 산식을 불러 판정한다. 산식\n자체는 워커와 같은 픽스처로 묶여 있어 고치지 않았다.\n\n워밍업은 003 전략 등록표에서 읽는다. 001은 이 값을 정하지 않는다. 요청이 전략을\n주지 않으면 워밍업 0으로 판정하며, 전략 카드 여러 장을 요청 한 번으로 판정하려는\n화면이 이 경로를 쓴다.\n\n응답에 화면이 다른 워밍업으로 스스로 다시 판정할 재료를 함께 담는다. 워밍업이\n0일 때의 기준일과 그 뒤 거래일 목록이며, 화면은 목록에서 워밍업 일수만큼 떨어진\n날짜를 꺼내 시작일을 구한다. 목록 길이의 상한은 요청이 정한다. 001이 003의\n파라미터 축 구성을 읽지 않게 하려는 것이다.\n\n달력이 워밍업에 모자라면 산식은 오류를 내지만 여기서는 평가 불가인 정상 결과로\n옮긴다. 화면이 여러 워밍업을 훑는 조회라 값 하나 때문에 조회 전체가 실패하면\n나머지 판정까지 잃는다. 날짜를 지어내지 않고 \"그 워밍업으로는 평가할 수 없다\"고\n말하는 것이라 원칙을 어기지 않는다.\n\n기존 필드의 뜻은 바꾸지 않았다. 기준일부터의 자료 부족 구간은 별도 필드로 낸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:17:47.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:17:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/57e06b267042bde49e1f8018e1a214325adc1c15"
+        },
+        {
+          "id": "b41cc03532b5d25667273a3612958452cbb3d821",
+          "short_id": "b41cc035",
+          "created_at": "2026-09-17T14:17:31.000+09:00",
+          "parent_ids": [
+            "33fb8547d755582e5a3e2ded5ce72dd846d446fc"
+          ],
+          "title": "feat(be): 평가 기간 산식의 재료를 저장소에서 읽는다",
+          "message": "feat(be): 평가 기간 산식의 재료를 저장소에서 읽는다\n\n공통 평가 가능 기간 산식은 후보의 상장일·상장폐지일, 자료 부족 구간, 자료 마감\n시각, 거래일 달력을 입력으로 받는다. 지금까지 백엔드에는 이 넷을 읽는 경로가\n없어 산식이 호출부 없이 놓여 있었다.\n\n넷을 한 덩어리로 읽는다. 자료 버전을 고르는 일과 그 버전의 달력을 읽는 일이\n따로 일어나면, 그 사이 새 자료 버전이 발행됐을 때 마감 시각과 달력이 서로 다른\n버전의 것인 응답이 나온다.\n\n자료 버전은 열린 대응표를 대상으로 수집된 완전한 묶음 가운데 마감이 가장 늦은\n것이다. 대표 상품 정보와 같은 세 조건이라 같은 화면의 두 응답이 같은 판을\n가리킨다.\n\n거래일 달력은 daily_index의 KOSPI 행이다. 수집 파이프라인과 접수 경로가 쓰는\n값과 같아야 하며, 갈라지면 같은 날을 두 달력으로 세게 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:17:31.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:17:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b41cc03532b5d25667273a3612958452cbb3d821"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+package com.ssafy.thorp.sector.application.command;\n+\n+import java.util.LinkedHashSet;\n+import java.util.List;\n+\n+/**\n+ * 공통 평가 가능 기간 조회의 입력 (contracts/sector-api.md).\n+ *\n+ * <p><b>{@code strategyId}와 {@code maxWarmupTradingDays}는 둘 다 선택이지만 적어도 하나는 있어야 한다.</b> 둘 다 없으면\n+ * 워밍업을 적용할 수도, 화면이 스스로 계산할 재료를 내릴 수도 없어 응답이 아무 판정에도 쓰이지 않는다.\n+ *\n+ * @param sectorCodes 후보 섹터 코드. 중복은 앞선 것만 남기고 순서를 보존한다 — 산식의 동점 규칙이 입력 순서를 쓴다\n+ * @param strategyId 워밍업을 정할 전략. 없으면 워밍업 0으로 판정하고 화면이 {@code tradingDaysFromBase}로 다시 계산한다. 카드 여러 장을\n+ *     요청 한 번으로 판정하려는 화면이 이 자리를 비운다\n+ * @param maxWarmupTradingDays 화면이 훑을 워밍업의 상한. 있으면 그만큼의 거래일 목록을 응답에 싣는다. <b>001이 003의 파라미터 조합을 몰라도\n+ *     되게 하려고 화면이 자기가 필요한 만큼을 말한다</b> — 없을 때 등록표의 최대값으로 채우지 않는다\n+ */\n+public record EvaluationWindowQuery(\n+        List<String> sectorCodes, String strategyId, Integer maxWarmupTradingDays) {\n+\n+    /** 한 요청이 내릴 수 있는 거래일 수의 상한. 25년치 거래일쯤이며 이보다 큰 요청은 거절한다. */\n+    public static final int MAX_WARMUP_LIMIT = 6000;\n+\n+    public EvaluationWindowQuery {\n+        if (sectorCodes == null || sectorCodes.isEmpty()) {\n+            throw new IllegalArgumentException(\"sectors must not be empty\");\n+        }\n+        sectorCodes = List.copyOf(new LinkedHashSet<>(sectorCodes));\n+        strategyId = blankToNull(strategyId);\n+        if (strategyId == null && maxWarmupTradingDays == null) {\n+            throw new IllegalArgumentException(\n+                    \"strategy or maxWarmupTradingDays must be given: 둘 다 없으면 판정할 수 있는 것이 없다\");\n+        }\n+        if (maxWarmupTradingDays != null\n+                && (maxWarmupTradingDays < 0 || maxWarmupTradingDays > MAX_WARMUP_LIMIT)) {\n+            throw new IllegalArgumentException(\n+                    \"maxWarmupTradingDays must be between 0 and \"\n+                            + MAX_WARMUP_LIMIT\n+                            + \": \"\n+                            + maxWarmupTradingDays);\n+        }\n+    }\n+\n+    private static String blankToNull(String value) {\n+        return value == null || value.isBlank() ? null : value;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/command/EvaluationWindowQuery.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/command/EvaluationWindowQuery.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+package com.ssafy.thorp.sector.application.exception;\n+\n+/**\n+ * 공통 평가 가능 기간을 산출할 재료가 아직 없다 (contracts/sector-api.md: 409 {@code EVALUATION_WINDOW_NOT_READY}).\n+ *\n+ * <p>세 가지가 여기로 온다. 열린 대응표를 대상으로 완전하게 수집된 자료 버전이 없을 때, 그 자료 버전에 거래일이 하나도 없을 때, 그리고 후보 가운데 상장일 이후의\n+ * 거래일이 달력에 아직 하나도 없는 종목이 있을 때다.\n+ *\n+ * <p><b>빈 기간이나 0을 만들어 내지 않는다</b>(원칙 VI). 셋 다 파이프라인이 자료를 적재하면 달라지는 상태라 재시도 가능한 409이며, 결과 조회가 {@code\n+ * RESULT_NOT_READY}에 409를 쓰는 것과 같은 판단이다.\n+ *\n+ * <p><b>평가 불가는 여기에 해당하지 않는다.</b> 후보를 워밍업만큼 밀 수 없거나 구간이 뒤집힌 것은 오류가 아니라 {@code evaluable = false}인 정상\n+ * 응답이고, 화면은 \"이 조합은 분석할 수 없습니다\" 한 문장을 보인다.\n+ */\n+public class EvaluationWindowNotReadyException extends RuntimeException {\n+\n+    public EvaluationWindowNotReadyException(String message) {\n+        super(message);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/EvaluationWindowNotReadyException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/EvaluationWindowNotReadyException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.sector.application.repository;\n+\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;\n+import java.util.List;\n+import java.util.Optional;\n+\n+/**\n+ * 공통 평가 가능 기간 산식의 재료 조회. <b>읽기 전용이다.</b>\n+ *\n+ * <p>대응표·자료 버전·시계열의 원본은 {@code data/} 파이프라인이 소유하고 백엔드에는 쓰기 경로가 없다(research.md 결정 7). 이유는 {@link\n+ * SectorRepository}·{@link InstrumentProfileRepository}와 같다.\n+ */\n+public interface EvaluationWindowRepository {\n+\n+    /**\n+     * 후보 집합의 산식 재료를 한 번에 읽는다.\n+     *\n+     * <p><b>어느 자료 버전을 고르는가</b>는 대표 상품 정보와 같은 규칙이다({@link\n+     * InstrumentProfileRepository#findCurrentProfile}). 지금 열린 대응표를 대상으로 수집됐고, 완전하며({@code complete\n+     * = true}), 그중 {@code data_deadline}이 가장 늦은 것이다. 세 조건을 대표 상품 정보와 다르게 두면 같은 화면의 두 응답이 다른 판을\n+     * 가리킨다.\n+     *\n+     * <p><b>거래일 달력은 후보의 가장 이른 상장일부터만 읽는다.</b> 산식이 쓰는 것은 상장일 이후 구간뿐이라 그 앞을 읽어도 결과가 달라지지 않고, 전체를 읽으면\n+     * 오래된 지수의 날짜 수천 건이 매 요청마다 딸려 온다.\n+     *\n+     * @param mapVersion 지금 열린 대응표 버전\n+     * @param instrumentIds 후보 종목. <b>돌려주는 목록은 이 순서를 보존한다</b> — 산식의 동점 규칙이 입력 순서를 쓴다\n+     * @return 쓸 수 있는 자료 버전이 없거나 그 버전에 거래일이 하나도 없으면 {@link Optional#empty()}. 호출자는 이것을 빈 값이 아니라 \"아직\n+     *     산출할 수 없음\"으로 다룬다\n+     */\n+    Optional<EvaluationWindowInputs> findInputs(String mapVersion, List<String> instrumentIds);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/EvaluationWindowRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/EvaluationWindowRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,50 @@\n+package com.ssafy.thorp.sector.application.result;\n+\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * 공통 평가 가능 기간 산식의 재료 (contracts/evaluation-window.md 「입력」).\n+ *\n+ * <p>계약이 입력으로 적은 다섯 가지 가운데 <b>001이 저장소에서 읽을 수 있는 넷</b>이다. 남은 하나인 {@code\n+ * strategies[].warmupTradingDays}는 전략 등록표(003 소유)에서 오므로 여기 없다 — 001은 그 값을 정하지 않고 받는다.\n+ *\n+ * <p><b>한 덩어리로 읽는 이유</b>: 자료 버전을 고르는 일과 그 버전의 달력·부족 구간을 읽는 일이 따로 일어나면, 그 사이 새 자료 버전이 발행됐을 때 마감 시각은\n+ * 옛 버전의 것이고 달력은 새 버전의 것인 응답이 나온다. 저장소가 한 트랜잭션에서 이 덩어리를 만들어 돌려준다({@link SectorListResult}와 같은 판단이다).\n+ *\n+ * @param datasetId 이 재료를 만든 자료 버전. 응답에 실어 화면이 어느 시점 자료인지 알게 한다(FR-013)\n+ * @param dataDeadline {@code dataset_version.data_deadline}을 거래소 현지 날짜로 자른 값\n+ * @param candidates 요청한 섹터의 대표 ETF. <b>요청 순서를 보존한다</b> — 산식의 {@code bindingCandidate} 동점 규칙이 입력 순서를\n+ *     쓰기 때문이다\n+ * @param tradingCalendar 거래일 달력. 확보한 지수 자료({@code daily_index})의 날짜 집합이다\n+ */\n+public record EvaluationWindowInputs(\n+        String datasetId,\n+        LocalDate dataDeadline,\n+        List<Candidate> candidates,\n+        List<LocalDate> tradingCalendar) {\n+\n+    public EvaluationWindowInputs {\n+        candidates = List.copyOf(candidates);\n+        tradingCalendar = List.copyOf(tradingCalendar);\n+    }\n+\n+    /**\n+     * 후보 대표 ETF 하나. 출처는 {@code representative_etf}와 {@code data_gap}이다.\n+     *\n+     * <p>섹터 코드를 담지 않는다. 종목과 섹터를 잇는 것은 대응표이고 그것은 호출자가 이미 읽은 값이라, 저장소가 같은 조인을 한 번 더 하면 두 곳이 서로 다른 대응표\n+     * 버전을 볼 여지가 생긴다.\n+     *\n+     * @param delistedOn 상장폐지일. 현재 상장 상품이면 null이다\n+     */\n+    public record Candidate(\n+            String instrumentId, LocalDate listedOn, LocalDate delistedOn, List<DataGap> dataGaps) {\n+\n+        public Candidate {\n+            dataGaps = dataGaps == null ? List.of() : List.copyOf(dataGaps);\n+        }\n+    }\n+\n+    /** 후보 하나의 자료 부족 구간. {@code reason}은 {@code data_gap.reason} 값이다(FR-006). */\n+    public record DataGap(LocalDate start, LocalDate end, String reason) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/EvaluationWindowInputs.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/EvaluationWindowInputs.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,55 @@\n+package com.ssafy.thorp.sector.application.result;\n+\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowResult.ExcludedRange;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /sectors/evaluation-window}의 유스케이스 출력 (contracts/sector-api.md).\n+ *\n+ * <p>{@link EvaluationWindowResult}(산식의 결과)에 <b>자료 버전</b>과 <b>화면이 스스로 재판정할 재료</b>를 더한 것이다.\n+ *\n+ * <p><b>왜 재료를 함께 내리는가</b>: 003 전략 설정 화면은 사용자가 관측 기간 같은 값을 바꿀 때마다 워밍업이 달라지고 그 자리에서 \"기간이 줄어듭니다/분석할 수\n+ * 없습니다\"를 다시 판정한다. 그런데 그 화면의 완료 기준이 \"값을 만지는 동안 서버로 요청이 나가지 않는다\"여서, 값이 바뀔 때마다 이 엔드포인트를 다시 부르는 방식은 쓸 수\n+ * 없다. 워밍업을 뺀 시작일은 거래일 달력이 있어야 구해지므로, 한 번의 응답에 달력 조각을 실어 보내고 화면이 {@code commonStart(N) =\n+ * tradingDaysFromBase.get(N)}으로 계산한다(003 T098, 2026-09-17 합의).\n+ *\n+ * @param commonStart 워밍업을 반영한 공통 평가 시작일. <b>워밍업을 채울 만큼 거래일이 없으면 null이다</b> — 없는 날짜를 지어내지 않는다(원칙\n+ *     VI). 그때 {@code evaluable}은 false다\n+ * @param commonEnd 공통 평가 종료일. {@code min(dataDeadline, 각 후보의 상장폐지일)}이다\n+ * @param warmupTradingDays 적용된 워밍업. 전략을 주지 않은 요청에서는 0이다\n+ * @param bindingCandidate {@code commonStart}를 결정한 후보. 화면이 \"이 섹터를 빼면 기간이 늘어납니다\"를 안내하는 근거다\n+ * @param bindingSector {@code bindingCandidate}가 대표하는 섹터 코드. 화면이 종목 코드를 섹터 이름으로 되짚지 않게 하는 자리다\n+ * @param excludedRanges {@code [commonStart, commonEnd]} 안의 자료 부족 구간. 평가할 수 없으면 빈 목록이다\n+ * @param evaluable 이 조합을 평가할 수 있는가. <b>false는 오류가 아니라 정상 결과다</b>\n+ * @param datasetId 이 응답을 만든 자료 버전(FR-013)\n+ * @param warmupBaseDate 워밍업이 0일 때의 공통 시작일. 기준 후보의 상장일을 거래일 달력에 맞춘 날이다\n+ * @param tradingDaysFromBase {@code warmupBaseDate}부터 {@code commonEnd}까지의 거래일 오름차순 목록. 요청이 상한을 주지\n+ *     않았으면 null이고, 주었으면 길이가 <b>상한 + 1</b>을 넘지 않는다\n+ * @param maxWarmupTradingDays 화면이 계산할 수 있는 워밍업의 상한. {@code tradingDaysFromBase.size() - 1}과 같다. 요청이\n+ *     상한을 주지 않았으면 null이다\n+ * @param excludedRangesFromBase {@code [warmupBaseDate, commonEnd]} 안의 자료 부족 구간. 화면이 더 짧은 워밍업으로 다시\n+ *     계산할 때 필요하다 — {@code excludedRanges}는 워밍업을 반영해 잘려 있어 그 앞의 부족 구간을 알 수 없다. 요청이 상한을 주지 않았으면\n+ *     null이다\n+ */\n+public record EvaluationWindowView(\n+        LocalDate commonStart,\n+        LocalDate commonEnd,\n+        int warmupTradingDays,\n+        String bindingCandidate,\n+        String bindingSector,\n+        List<ExcludedRange> excludedRanges,\n+        boolean evaluable,\n+        String datasetId,\n+        LocalDate warmupBaseDate,\n+        List<LocalDate> tradingDaysFromBase,\n+        Integer maxWarmupTradingDays,\n+        List<ExcludedRange> excludedRangesFromBase) {\n+\n+    public EvaluationWindowView {\n+        excludedRanges = List.copyOf(excludedRanges);\n+        tradingDaysFromBase = tradingDaysFromBase == null ? null : List.copyOf(tradingDaysFromBase);\n+        excludedRangesFromBase =\n+                excludedRangesFromBase == null ? null : List.copyOf(excludedRangesFromBase);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/EvaluationWindowView.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/EvaluationWindowView.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,257 @@\n+package com.ssafy.thorp.sector.application.service;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.sector.application.command.EvaluationWindowQuery;\n+import com.ssafy.thorp.sector.application.exception.EvaluationWindowNotReadyException;\n+import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;\n+import com.ssafy.thorp.sector.application.repository.EvaluationWindowRepository;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowResult;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowView;\n+import com.ssafy.thorp.sector.application.result.SectorListResult;\n+import com.ssafy.thorp.sector.application.service.EvaluationWindowService.EvaluationWindowException;\n+import com.ssafy.thorp.sector.domain.model.Sector;\n+import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import org.springframework.stereotype.Service;\n+\n+/**\n+ * 공통 평가 가능 기간 조회 유스케이스 (FR-007, contracts/sector-api.md).\n+ *\n+ * <p><b>산식은 {@link EvaluationWindowService}가 갖고 이 클래스는 재료를 모아 그것을 부른다.</b> 산식은 워커와 같은 픽스처로 묶여 있어\n+ * 한쪽만 고치면 다른 쪽 빌드가 깨지므로, 조회 경로의 사정 때문에 산식을 고치지 않는다. 여기서 하는 일은 셋이다 — 대응표에서 후보를 찾고, 저장소에서 달력과 마감 시각을\n+ * 읽고, 화면이 스스로 재판정할 달력 조각을 잘라 붙인다.\n+ *\n+ * <p><b>워밍업은 003 전략 등록표에서 온다.</b> 001은 이 값을 정하지 않는다(contracts/evaluation-window.md 「입력」). 요청이 전략을\n+ * 주면 {@link ParameterRegistryPort}로 그 전략의 <b>기본 설정</b> 워밍업을 읽고, 주지 않으면 0으로 판정한다 — 카드 여러 장을 요청 한 번으로\n+ * 판정하려는 화면은 전략을 비우고 {@code tradingDaysFromBase}로 직접 계산한다.\n+ *\n+ * <p><b>달력이 워밍업에 모자라도 오류가 아니다.</b> 산식은 그 경우 {@code CALENDAR_TOO_SHORT}로 실패하는데, 여기서는 그것을 {@code\n+ * evaluable = false}인 정상 응답으로 옮긴다. 화면이 여러 워밍업을 훑는 용도로 부르는 조회라, 훑는 도중 값 하나가 달력을 넘었다고 조회 전체가 실패하면 나머지\n+ * 판정까지 잃는다. <b>없는 날짜를 지어내는 것과는 다르다</b> — 날짜를 만들지 않고 \"그 워밍업으로는 평가할 수 없다\"고 말한다.\n+ */\n+@Service\n+public class EvaluationWindowQueryService {\n+\n+    /** 전략을 주지 않은 요청의 워밍업. 산식은 전략 목록이 비면 거부하므로 이 이름으로 0을 넣는다. */\n+    private static final String NO_STRATEGY = \"(none)\";\n+\n+    private final SectorService sectorService;\n+    private final EvaluationWindowRepository evaluationWindowRepository;\n+    private final EvaluationWindowService evaluationWindowService;\n+    private final ParameterRegistryPort parameterRegistry;\n+\n+    public EvaluationWindowQueryService(\n+            SectorService sectorService,\n+            EvaluationWindowRepository evaluationWindowRepository,\n+            EvaluationWindowService evaluationWindowService,\n+            ParameterRegistryPort parameterRegistry) {\n+        this.sectorService = sectorService;\n+        this.evaluationWindowRepository = evaluationWindowRepository;\n+        this.evaluationWindowService = evaluationWindowService;\n+        this.parameterRegistry = parameterRegistry;\n+    }\n+\n+    /**\n+     * 후보 집합의 공통 평가 가능 기간과, 화면이 다른 워밍업으로 다시 판정할 재료.\n+     *\n+     * @throws com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException 대응표 미발행(409)\n+     * @throws SectorNotFoundException 열린 대응표에 없는 섹터 코드(404)\n+     * @throws EvaluationWindowNotReadyException 자료 버전·거래일 달력이 아직 없을 때(409)\n+     * @throws BusinessException 등록되지 않은 전략일 때(422 {@code STRATEGY_NOT_REGISTERED})\n+     */\n+    public EvaluationWindowView getEvaluationWindow(EvaluationWindowQuery query) {\n+        SectorListResult map = sectorService.getSectors();\n+        List<Sector> candidateSectors = resolveSectors(map, query.sectorCodes());\n+        // 종목 → 섹터. 화면이 기준 후보를 섹터 이름으로 되짚지 않게 응답에 함께 싣는다. 같은 ETF가 여러\n+        // 섹터의 대표일 수 있어(data-model.md) 요청에 앞서 나온 섹터를 남긴다.\n+        Map<String, String> sectorByInstrument = new LinkedHashMap<>();\n+        for (Sector sector : candidateSectors) {\n+            sectorByInstrument.putIfAbsent(\n+                    sector.representativeEtf().instrumentId(), sector.code().value());\n+        }\n+        List<String> instrumentIds = List.copyOf(sectorByInstrument.keySet());\n+\n+        EvaluationWindowInputs inputs =\n+                evaluationWindowRepository\n+                        .findInputs(map.mapVersion(), instrumentIds)\n+                        .orElseThrow(\n+                                () ->\n+                                        new EvaluationWindowNotReadyException(\n+                                                \"공통 평가 기간을 산출할 자료가 아직 없습니다. 자료가 적재되면 다시 조회해\"\n+                                                        + \" 주세요.\"));\n+        List<EvaluationWindowService.Candidate> candidates = toCandidates(inputs);\n+\n+        // 워밍업 0 기준이 화면 재판정의 원점이다. 여기서 CALENDAR_TOO_SHORT가 나면 상장일 이후 거래일이\n+        // 아예 없다는 뜻이라 다른 워밍업으로도 판정할 수 없다 — 그때는 재료 부족(409)이다.\n+        EvaluationWindowResult base;\n+        try {\n+            base =\n+                    evaluationWindowService.compute(\n+                            candidates,\n+                            List.of(new EvaluationWindowService.Strategy(NO_STRATEGY, 0)),\n+                            inputs.dataDeadline(),\n+                            inputs.tradingCalendar());\n+        } catch (EvaluationWindowException e) {\n+            if (\"CALENDAR_TOO_SHORT\".equals(e.code())) {\n+                throw new EvaluationWindowNotReadyException(\n+                        \"후보 가운데 상장일 이후의 거래일이 아직 없는 종목이 있습니다. 자료가 적재되면 다시 조회해 주세요.\");\n+            }\n+            throw e;\n+        }\n+\n+        int warmup = resolveWarmup(query.strategyId());\n+        EvaluationWindowResult applied = applyWarmup(candidates, inputs, warmup, base);\n+\n+        List<LocalDate> fromBase =\n+                query.maxWarmupTradingDays() == null\n+                        ? null\n+                        : tradingDaysFromBase(\n+                                inputs.tradingCalendar(),\n+                                base.commonStart(),\n+                                base.commonEnd(),\n+                                query.maxWarmupTradingDays());\n+\n+        return new EvaluationWindowView(\n+                applied == null ? null : applied.commonStart(),\n+                base.commonEnd(),\n+                warmup,\n+                base.bindingCandidate(),\n+                sectorByInstrument.get(base.bindingCandidate()),\n+                applied == null ? List.of() : applied.excludedRanges(),\n+                applied != null && applied.evaluable(),\n+                inputs.datasetId(),\n+                base.commonStart(),\n+                fromBase,\n+                fromBase == null || fromBase.isEmpty() ? null : fromBase.size() - 1,\n+                fromBase == null ? null : base.excludedRanges());\n+    }\n+\n+    /** 요청한 순서를 그대로 지킨다. 산식의 {@code bindingCandidate} 동점 규칙이 입력 순서를 쓰기 때문이다. */\n+    private static List<Sector> resolveSectors(SectorListResult map, List<String> sectorCodes) {\n+        List<Sector> resolved = new ArrayList<>(sectorCodes.size());\n+        for (String code : sectorCodes) {\n+            resolved.add(\n+                    map.sectors().stream()\n+                            .filter(sector -> sector.code().value().equals(code))\n+                            .findFirst()\n+                            .orElseThrow(() -> new SectorNotFoundException(code)));\n+        }\n+        return resolved;\n+    }\n+\n+    private static List<EvaluationWindowService.Candidate> toCandidates(\n+            EvaluationWindowInputs inputs) {\n+        return inputs.candidates().stream()\n+                .map(\n+                        candidate ->\n+                                new EvaluationWindowService.Candidate(\n+                                        candidate.instrumentId(),\n+                                        candidate.listedOn(),\n+                                        candidate.delistedOn(),\n+                                        candidate.dataGaps().stream()\n+                                                .map(\n+                                                        gap ->\n+                                                                new EvaluationWindowService.DataGap(\n+                                                                        gap.start(),\n+                                                                        gap.end(),\n+                                                                        gap.reason()))\n+                                                .toList()))\n+                .toList();\n+    }\n+\n+    /**\n+     * 전략의 <b>기본 설정</b> 워밍업. 전략을 주지 않은 요청이면 0이다.\n+     *\n+     * <p>기본 설정을 쓰는 이유는 화면이 상세 설정을 연 상태를 001에 알리지 않기 때문이다. 사용자가 값을 바꾼 뒤의 판정은 화면이 {@code\n+     * tradingDaysFromBase}로 직접 한다 — 그것이 이 조회에 달력 조각을 실어 보내는 목적이다.\n+     */\n+    private int resolveWarmup(String strategyId) {\n+        if (strategyId == null) {\n+            return 0;\n+        }\n+        StrategyRegistration registration =\n+                parameterRegistry\n+                        .find(strategyId)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.STRATEGY_NOT_REGISTERED,\n+                                                \"등록되지 않은 전략입니다: \" + strategyId));\n+        if (registration.warmup() == null) {\n+            // 등록표가 규칙을 적지 않은 전략은 워밍업 0이다(003 data-model §6).\n+            return 0;\n+        }\n+        Map<String, Object> defaults = new LinkedHashMap<>();\n+        for (ParameterAxis axis : registration.axes()) {\n+            if (axis.defaultValue() != null) {\n+                defaults.put(axis.name(), axis.defaultValue());\n+            }\n+        }\n+        try {\n+            return registration.warmup().evaluate(defaults);\n+        } catch (IllegalArgumentException e) {\n+            // 등록표가 워밍업에 쓰는 축의 기본값을 비워 둔 상태다. 0으로 접으면 평가 구간이 실제보다 길게\n+            // 잡히므로(원칙 VI) 값을 지어내지 않고 조회를 실패시킨다.\n+            throw new BusinessException(\n+                    ErrorCode.REGISTRY_UNAVAILABLE, \"전략의 워밍업을 등록표에서 읽을 수 없습니다: \" + strategyId, e);\n+        }\n+    }\n+\n+    /**\n+     * 워밍업을 반영한 결과. 달력이 그만큼에 모자라면 {@code null}이고 호출자가 {@code evaluable = false}로 옮긴다.\n+     *\n+     * <p>워밍업이 0이면 이미 구해 둔 기준 결과를 그대로 쓴다 — 같은 입력으로 산식을 두 번 돌릴 이유가 없다.\n+     */\n+    private EvaluationWindowResult applyWarmup(\n+            List<EvaluationWindowService.Candidate> candidates,\n+            EvaluationWindowInputs inputs,\n+            int warmup,\n+            EvaluationWindowResult base) {\n+        if (warmup == 0) {\n+            return base;\n+        }\n+        try {\n+            return evaluationWindowService.compute(\n+                    candidates,\n+                    List.of(new EvaluationWindowService.Strategy(NO_STRATEGY, warmup)),\n+                    inputs.dataDeadline(),\n+                    inputs.tradingCalendar());\n+        } catch (EvaluationWindowException e) {\n+            if (\"CALENDAR_TOO_SHORT\".equals(e.code())) {\n+                return null;\n+            }\n+            throw e;\n+        }\n+    }\n+\n+    /**\n+     * {@code warmupBaseDate}부터 {@code commonEnd}까지의 거래일. 길이는 {@code maxWarmup + 1}을 넘지 않는다.\n+     *\n+     * <p>{@code commonEnd}에서 끊는 이유는 그 뒤의 날짜가 평가 구간이 될 수 없기 때문이다 — 자료 마감이나 상장폐지 뒤의 날짜를 목록에 넣으면 화면이\n+     * 그것을 시작일로 계산해 낼 수 있다.\n+     *\n+     * <p>빈 목록은 {@code warmupBaseDate}가 이미 {@code commonEnd}를 넘었다는 뜻이며, 그 조합은 어떤 워밍업으로도 평가할 수 없다.\n+     */\n+    private static List<LocalDate> tradingDaysFromBase(\n+            List<LocalDate> calendar, LocalDate base, LocalDate end, int maxWarmup) {\n+        List<LocalDate> days = new ArrayList<>(Math.min(maxWarmup + 1, calendar.size()));\n+        for (LocalDate day : calendar) {\n+            if (day.isBefore(base)) {\n+                continue;\n+            }\n+            if (day.isAfter(end) || days.size() > maxWarmup) {\n+                break;\n+            }\n+            days.add(day);\n+        }\n+        return List.copyOf(days);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/service/EvaluationWindowQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/service/EvaluationWindowQueryService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,240 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import com.ssafy.thorp.sector.application.repository.EvaluationWindowRepository;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;\n+import jakarta.persistence.EntityManager;\n+import jakarta.persistence.NoResultException;\n+import jakarta.persistence.PersistenceContext;\n+import jakarta.persistence.Query;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.springframework.stereotype.Repository;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * {@link EvaluationWindowRepository}의 구현. 읽기만 한다.\n+ *\n+ * <h2>조회를 SQL로 쓰는 까닭</h2>\n+ *\n+ * 읽는 표 넷 가운데 {@code daily_index}와 {@code data_gap}은 엔티티 매핑이 없고, {@code representative_etf}의 {@code\n+ * delisted_on}은 매핑에서 일부러 빠져 있다(이번 범위의 대응표가 현재 상장 상품만 다루기 때문이다). 여기서 필요한 것은 날짜와 문자열 몇 개뿐이라 그 셋을 위해\n+ * 엔티티를 만들 이유가 없다. 같은 판단을 {@code backtest.infrastructure.marketdata.DatabaseMarketMetadataAdapter}도\n+ * 한다.\n+ */\n+@Repository\n+public class EvaluationWindowRepositoryImpl implements EvaluationWindowRepository {\n+\n+    /**\n+     * 거래일 달력의 출처. ETF 일별매매정보는 휴장일에도 행을 주므로 거래일을 가릴 수 없고, 달력을 소유한 것은 지수 자료뿐이다(001 {@code\n+     * contracts/market-dataset.md} ※1).\n+     *\n+     * <p><b>{@code DatabaseMarketMetadataAdapter.CALENDAR_INDEX_CODE}·{@code\n+     * data_pipeline.index.CALENDAR_INDEX_CODE}와 같은 값이어야 한다.</b> 세 곳이 갈라지면 화면이 안내한 시작일을 접수가 거절한다 —\n+     * 같은 날을 두 달력으로 세기 때문이다.\n+     */\n+    private static final String CALENDAR_INDEX_CODE = \"KOSPI\";\n+\n+    /** 자료 마감 시각을 날짜로 자를 때 쓰는 기준. 거래소 현지 기준이며 UTC로 자르면 하루 밀린다. */\n+    private static final ZoneId EXCHANGE_ZONE = ZoneId.of(\"Asia/Seoul\");\n+\n+    /**\n+     * 지금 쓸 자료 버전. 지금 열린 대응표를 대상으로 수집됐고, <b>완전한 묶음</b> 가운데 마감 시각이 가장 늦은 것이며, 마감 시각이 같으면 식별자 내림차순으로\n+     * 가른다. 대표 상품 정보({@code InstrumentProfileJpaRepository#findCurrent})와 같은 세 조건이다 — 다르게 두면 같은 화면의\n+     * 두 응답이 다른 판을 가리킨다.\n+     *\n+     * <p><b>접수 경로와 같은 행을 고르는가.</b> {@code\n+     * backtest.infrastructure.marketdata.DatabaseMarketMetadataAdapter}는 대응표를 조건에 넣지 않고 나머지 둘로만\n+     * 고른다. 파이프라인이 자료를 현재 열린 대응표에 붙여 발행하는 한 두 규칙은 같은 행을 고른다. 갈리는 때는 대응표만 새로 열고 자료는 아직 옛 대응표를 가리키는\n+     * 과도기인데, 그때 이 조회는 \"자료 없음\"(409)이 되고 접수는 옛 자료로 계속 받는다. <b>막는 쪽으로 갈리는 것이 안전하다</b> — 반대로 갈리면 화면이\n+     * 안내한 첫날이 접수에서 거절된다.\n+     */\n+    private static final String CURRENT_DATASET_SQL =\n+            \"\"\"\n+            SELECT v.dataset_id, v.data_deadline\n+              FROM dataset_version v\n+              JOIN sector_etf_map_version m ON m.id = v.map_version_id\n+             WHERE m.version = :mapVersion\n+               AND v.complete = TRUE\n+             ORDER BY v.data_deadline DESC, v.dataset_id DESC\n+             LIMIT 1\n+            \"\"\";\n+\n+    /** 후보의 상장·폐지일. 순서는 호출자가 요청 순서로 다시 세우므로 여기서 정하지 않는다. */\n+    private static final String CANDIDATES_SQL =\n+            \"\"\"\n+            SELECT instrument_id, listed_on, delisted_on\n+              FROM representative_etf\n+             WHERE instrument_id IN (:instrumentIds)\n+            \"\"\";\n+\n+    /**\n+     * 후보의 자료 부족 구간. 정렬을 고정하는 이유는 산식이 사유가 같고 겹치는 구간을 합치기 전에 정렬을 다시 하더라도, 입력 순서가 흔들리면 같은 요청이 요청마다 다른\n+     * 로그를 남기기 때문이다.\n+     */\n+    private static final String DATA_GAPS_SQL =\n+            \"\"\"\n+            SELECT instrument_id, start_date, end_date, reason\n+              FROM data_gap\n+             WHERE dataset_id = :datasetId\n+               AND instrument_id IN (:instrumentIds)\n+             ORDER BY instrument_id, start_date, reason\n+            \"\"\";\n+\n+    /**\n+     * 거래일 달력. <b>후보의 가장 이른 상장일부터만 읽는다</b> — 산식이 쓰는 것은 상장일 이후 구간뿐이라 그 앞을 읽어도 결과가 같고, 전체를 읽으면 오래된 지수의\n+     * 날짜가 매 요청마다 딸려 온다.\n+     */\n+    private static final String TRADING_CALENDAR_SQL =\n+            \"\"\"\n+            SELECT date\n+              FROM daily_index\n+             WHERE dataset_id = :datasetId\n+               AND index_code = :indexCode\n+               AND date >= :notBefore\n+             ORDER BY date\n+            \"\"\";\n+\n+    @PersistenceContext private EntityManager entityManager;\n+\n+    @Override\n+    @Transactional(readOnly = true)\n+    public Optional<EvaluationWindowInputs> findInputs(\n+            String mapVersion, List<String> instrumentIds) {\n+        if (instrumentIds.isEmpty()) {\n+            return Optional.empty();\n+        }\n+        Optional<Dataset> dataset = currentDataset(mapVersion);\n+        if (dataset.isEmpty()) {\n+            return Optional.empty();\n+        }\n+        String datasetId = dataset.get().datasetId();\n+\n+        Map<String, Listing> listings = listings(instrumentIds);\n+        if (listings.size() < instrumentIds.size()) {\n+            // 대응표가 가리키는 대표 ETF 행이 없다는 뜻이다. 그 후보를 빼고 기간을 내면 화면은 요청한\n+            // 섹터 전부를 담은 값으로 읽는다 — 빠뜨린 채로 답하지 않는다(원칙 VI).\n+            return Optional.empty();\n+        }\n+\n+        LocalDate earliestListing =\n+                listings.values().stream()\n+                        .map(Listing::listedOn)\n+                        .min(LocalDate::compareTo)\n+                        .orElseThrow();\n+        List<LocalDate> calendar = tradingCalendar(datasetId, earliestListing);\n+        if (calendar.isEmpty()) {\n+            return Optional.empty();\n+        }\n+\n+        Map<String, List<EvaluationWindowInputs.DataGap>> gaps = dataGaps(datasetId, instrumentIds);\n+        List<EvaluationWindowInputs.Candidate> candidates = new ArrayList<>(instrumentIds.size());\n+        for (String instrumentId : instrumentIds) {\n+            Listing listing = listings.get(instrumentId);\n+            candidates.add(\n+                    new EvaluationWindowInputs.Candidate(\n+                            instrumentId,\n+                            listing.listedOn(),\n+                            listing.delistedOn(),\n+                            gaps.getOrDefault(instrumentId, List.of())));\n+        }\n+        return Optional.of(\n+                new EvaluationWindowInputs(\n+                        datasetId, dataset.get().dataDeadline(), candidates, calendar));\n+    }\n+\n+    private Optional<Dataset> currentDataset(String mapVersion) {\n+        try {\n+            Object[] row =\n+                    (Object[])\n+                            entityManager\n+                                    .createNativeQuery(CURRENT_DATASET_SQL)\n+                                    .setParameter(\"mapVersion\", mapVersion)\n+                                    .getSingleResult();\n+            return Optional.of(new Dataset((String) row[0], toLocalDate(row[1])));\n+        } catch (NoResultException absent) {\n+            return Optional.empty();\n+        }\n+    }\n+\n+    private Map<String, Listing> listings(List<String> instrumentIds) {\n+        Query query =\n+                entityManager\n+                        .createNativeQuery(CANDIDATES_SQL)\n+                        .setParameter(\"instrumentIds\", instrumentIds);\n+        Map<String, Listing> listings = new LinkedHashMap<>();\n+        for (Object row : query.getResultList()) {\n+            Object[] columns = (Object[]) row;\n+            listings.put(\n+                    (String) columns[0],\n+                    new Listing(toLocalDate(columns[1]), toLocalDate(columns[2])));\n+        }\n+        return listings;\n+    }\n+\n+    private Map<String, List<EvaluationWindowInputs.DataGap>> dataGaps(\n+            String datasetId, List<String> instrumentIds) {\n+        Query query =\n+                entityManager\n+                        .createNativeQuery(DATA_GAPS_SQL)\n+                        .setParameter(\"datasetId\", datasetId)\n+                        .setParameter(\"instrumentIds\", instrumentIds);\n+        Map<String, List<EvaluationWindowInputs.DataGap>> gaps = new LinkedHashMap<>();\n+        for (Object row : query.getResultList()) {\n+            Object[] columns = (Object[]) row;\n+            gaps.computeIfAbsent((String) columns[0], key -> new ArrayList<>())\n+                    .add(\n+                            new EvaluationWindowInputs.DataGap(\n+                                    toLocalDate(columns[1]),\n+                                    toLocalDate(columns[2]),\n+                                    (String) columns[3]));\n+        }\n+        return gaps;\n+    }\n+\n+    private List<LocalDate> tradingCalendar(String datasetId, LocalDate notBefore) {\n+        Query query =\n+                entityManager\n+                        .createNativeQuery(TRADING_CALENDAR_SQL)\n+                        .setParameter(\"datasetId\", datasetId)\n+                        .setParameter(\"indexCode\", CALENDAR_INDEX_CODE)\n+                        .setParameter(\"notBefore\", notBefore);\n+        return query.getResultList().stream()\n+                .map(EvaluationWindowRepositoryImpl::toLocalDate)\n+                .toList();\n+    }\n+\n+    /**\n+     * 질의가 돌려준 날짜/시각 값을 거래소 현지 날짜로 옮긴다.\n+     *\n+     * <p><b>타입을 하나로 가정하지 않는다.</b> 같은 {@code date} 열이라도 JDBC 드라이버와 Hibernate 설정에 따라 {@link\n+     * java.sql.Date}로 오기도 하고 {@link LocalDate}로 오기도 하며, {@code timestamptz}는 {@link Instant}로 온다.\n+     * 하나로 단정해 캐스팅하면 그 설정이 바뀌는 날 조회가 통째로 500이 된다.\n+     *\n+     * <p>시각을 날짜로 자를 때는 거래소 현지 기준을 쓴다. UTC로 자르면 마감 시각이 하루 밀린다.\n+     */\n+    private static LocalDate toLocalDate(Object value) {\n+        return switch (value) {\n+            case null -> null;\n+            case LocalDate date -> date;\n+            case java.sql.Date date -> date.toLocalDate();\n+            case java.sql.Timestamp timestamp ->\n+                    LocalDate.ofInstant(timestamp.toInstant(), EXCHANGE_ZONE);\n+            case Instant instant -> LocalDate.ofInstant(instant, EXCHANGE_ZONE);\n+            case java.time.OffsetDateTime offset ->\n+                    offset.atZoneSameInstant(EXCHANGE_ZONE).toLocalDate();\n+            default ->\n+                    throw new IllegalStateException(\n+                            \"날짜로 옮길 수 없는 값이다: \" + value.getClass().getName());\n+        };\n+    }\n+\n+    private record Dataset(String datasetId, LocalDate dataDeadline) {}\n+\n+    private record Listing(LocalDate listedOn, LocalDate delistedOn) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/EvaluationWindowRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/EvaluationWindowRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,13 +1,20 @@\n package com.ssafy.thorp.sector.presentation.controller;\n \n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n+import com.ssafy.thorp.sector.application.command.EvaluationWindowQuery;\n+import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;\n import com.ssafy.thorp.sector.application.service.SectorService;\n+import com.ssafy.thorp.sector.presentation.response.EvaluationWindowResponse;\n import com.ssafy.thorp.sector.presentation.response.InstrumentProfileResponse;\n import com.ssafy.thorp.sector.presentation.response.SectorListResponse;\n+import java.util.List;\n import org.springframework.http.ResponseEntity;\n import org.springframework.web.bind.annotation.GetMapping;\n import org.springframework.web.bind.annotation.PathVariable;\n import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RequestParam;\n import org.springframework.web.bind.annotation.RestController;\n \n /**\n@@ -22,9 +29,13 @@ import org.springframework.web.bind.annotation.RestController;\n public class SectorController {\n \n     private final SectorService sectorService;\n+    private final EvaluationWindowQueryService evaluationWindowQueryService;\n \n-    public SectorController(SectorService sectorService) {\n+    public SectorController(\n+            SectorService sectorService,\n+            EvaluationWindowQueryService evaluationWindowQueryService) {\n         this.sectorService = sectorService;\n+        this.evaluationWindowQueryService = evaluationWindowQueryService;\n     }\n \n     /**\n@@ -52,4 +63,43 @@ public class SectorController {\n                 ApiResponse.ok(\n                         InstrumentProfileResponse.from(sectorService.getInstrumentProfile(code))));\n     }\n+\n+    /**\n+     * 공통 평가 가능 기간. 003의 \"이 조합은 언제부터 비교 가능합니다\" 안내가 쓴다(FR-007).\n+     *\n+     * <p><b>{@code strategy}와 {@code maxWarmupTradingDays}는 둘 다 선택이지만 적어도 하나는 있어야 한다.</b> 전략을 주면 그\n+     * 전략의 기본 설정 워밍업으로 판정하고, 상한을 주면 화면이 다른 워밍업으로 스스로 다시 판정할 거래일 목록을 함께 내려 준다. 상한을 주지 않았을 때 등록표의\n+     * 최대값으로 채우지 않는 이유는 001이 003의 파라미터 조합을 알지 않게 하려는 것이다 — 화면이 자기가 필요한 만큼을 말한다.\n+     *\n+     * <p>없는 섹터 코드는 404 {@code SECTOR_NOT_FOUND}, 대응표 미발행은 409 {@code SECTOR_MAP_NOT_READY}, 자료\n+     * 버전·거래일 달력이 아직 없으면 409 {@code EVALUATION_WINDOW_NOT_READY}다({@link SectorExceptionHandler}).\n+     * <b>평가할 수 없는 조합은 오류가 아니라 {@code evaluable: false}인 200이다.</b>\n+     */\n+    @GetMapping(\"/evaluation-window\")\n+    public ResponseEntity<ApiResponse<EvaluationWindowResponse>> getEvaluationWindow(\n+            @RequestParam(name = \"sectors\", required = false) List<String> sectors,\n+            @RequestParam(name = \"strategy\", required = false) String strategy,\n+            @RequestParam(name = \"maxWarmupTradingDays\", required = false)\n+                    Integer maxWarmupTradingDays) {\n+        EvaluationWindowQuery query = toQuery(sectors, strategy, maxWarmupTradingDays);\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(\n+                        EvaluationWindowResponse.from(\n+                                evaluationWindowQueryService.getEvaluationWindow(query))));\n+    }\n+\n+    /**\n+     * 질의 문자열을 유스케이스 입력으로 옮긴다. 값이 규칙에 맞지 않으면 400이다.\n+     *\n+     * <p><b>{@link IllegalArgumentException}을 그대로 흘려보내지 않는다.</b> {@link SectorExceptionHandler}가 그\n+     * 예외를 <b>저장된 자료의 결함</b>으로 보아 500으로 옮기기 때문이다 — 클라이언트가 잘못 보낸 질의 때문에 5xx 경보가 울린다.\n+     */\n+    private static EvaluationWindowQuery toQuery(\n+            List<String> sectors, String strategy, Integer maxWarmupTradingDays) {\n+        try {\n+            return new EvaluationWindowQuery(sectors, strategy, maxWarmupTradingDays);\n+        } catch (IllegalArgumentException e) {\n+            throw new BusinessException(ErrorCode.INVALID_INPUT, e.getMessage());\n+        }\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ package com.ssafy.thorp.sector.presentation.controller;\n \n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.common.web.response.ErrorResponse;\n+import com.ssafy.thorp.sector.application.exception.EvaluationWindowNotReadyException;\n import com.ssafy.thorp.sector.application.exception.InstrumentProfileNotReadyException;\n import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;\n import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;\n@@ -22,9 +23,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;\n  *   <tr><td>대응표가 발행되지 않음</td><td>409</td><td>{@code SECTOR_MAP_NOT_READY}</td></tr>\n  *   <tr><td>없는 섹터 코드</td><td>404</td><td>{@code SECTOR_NOT_FOUND}</td></tr>\n  *   <tr><td>대표 상품 정보가 아직 없음</td><td>409</td><td>{@code INSTRUMENT_PROFILE_NOT_READY}</td></tr>\n+ *   <tr><td>평가 기간 산출 자료가 아직 없음</td><td>409</td><td>{@code EVALUATION_WINDOW_NOT_READY}</td></tr>\n  * </table>\n  *\n- * <p>이 셋만 처리한다. 나머지(예상 못한 예외 → 500)는 {@code GlobalExceptionHandler}로 그대로 흘려보낸다 — catch-all을 여기에 두면\n+ * <p>이 넷만 처리한다. 나머지(예상 못한 예외 → 500)는 {@code GlobalExceptionHandler}로 그대로 흘려보낸다 — catch-all을 여기에 두면\n  * 전역 처리기의 로깅·메시지 정책이 이 도메인에서만 달라진다.\n  *\n  * <p>코드 문자열을 {@code common.exception.ErrorCode} enum에 더하지 않고 {@link ErrorResponse}의 문자열 생성자로 만든다.\n@@ -39,6 +41,7 @@ public class SectorExceptionHandler {\n     static final String SECTOR_MAP_UNUSABLE = \"SECTOR_MAP_UNUSABLE\";\n     static final String SECTOR_NOT_FOUND = \"SECTOR_NOT_FOUND\";\n     static final String INSTRUMENT_PROFILE_NOT_READY = \"INSTRUMENT_PROFILE_NOT_READY\";\n+    static final String EVALUATION_WINDOW_NOT_READY = \"EVALUATION_WINDOW_NOT_READY\";\n \n     /** 저장된 자료의 결함을 그대로 내보내지 않는다. 클라이언트가 할 수 있는 일이 없고 원문은 로그에 남는다. */\n     private static final String MAP_UNUSABLE_MESSAGE = \"대응표를 읽을 수 없다. 서버 자료를 확인해야 한다\";\n@@ -81,6 +84,22 @@ public class SectorExceptionHandler {\n                                 new ErrorResponse(INSTRUMENT_PROFILE_NOT_READY, e.getMessage())));\n     }\n \n+    /**\n+     * 평가 기간 산출 자료 미적재. 섹터도 대응표도 있으므로 404가 아니고, 파이프라인이 적재하면 달라지므로 409다.\n+     *\n+     * <p><b>평가 불가는 여기로 오지 않는다.</b> 워밍업을 채울 거래일이 모자라거나 구간이 뒤집힌 것은 오류가 아니라 {@code evaluable = false}인\n+     * 200이며, 화면은 \"이 조합은 분석할 수 없습니다\" 한 문장을 보인다(원칙 VI). 둘을 같은 실패로 뭉개면 화면이 \"잠시 후 다시\"와 \"이 조합은 안 됩니다\"를\n+     * 가릴 수 없다.\n+     */\n+    @ExceptionHandler(EvaluationWindowNotReadyException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleEvaluationWindowNotReady(\n+            EvaluationWindowNotReadyException e) {\n+        return ResponseEntity.status(HttpStatus.CONFLICT)\n+                .body(\n+                        ApiResponse.fail(\n+                                new ErrorResponse(EVALUATION_WINDOW_NOT_READY, e.getMessage())));\n+    }\n+\n     /**\n      * 저장된 대응표가 도메인 불변식을 어길 때. <b>400이 아니라 500이다.</b>\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorExceptionHandler.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,64 @@\n+package com.ssafy.thorp.sector.presentation.response;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowResult;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowView;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /sectors/evaluation-window}의 응답 (contracts/sector-api.md·evaluation-window.md).\n+ *\n+ * <p>앞의 일곱 칸이 계약의 산식 출력이고, 뒤의 네 칸은 화면이 다른 워밍업으로 <b>스스로 다시 판정할 재료</b>다. 재료가 필요한 까닭은 003 화면이 값을 만지는\n+ * 동안 서버로 요청을 내보내지 않기로 했기 때문이며, 화면은 {@code commonStart(N) = tradingDaysFromBase.get(N)}으로 계산한다.\n+ *\n+ * <p><b>{@code NON_NULL}을 이 응답에만 건다.</b> 요청이 워밍업 상한을 주지 않으면 뒤의 네 칸은 계산하지 않으므로 키 자체를 빼서 \"요청하지 않아\n+ * 없음\"을 드러낸다. 웹 ObjectMapper에 전역으로 걸지 않는 이유는 backend/CLAUDE.md가 적어 둔 대로 명시적 null을 계약으로 삼는 응답(거래의\n+ * {@code exitDate})이 함께 깨지기 때문이다.\n+ *\n+ * <p>{@code commonStart}는 예외로 <b>null이어도 키가 남는다</b>. 워밍업을 채울 거래일이 모자라 시작일이 없다는 사실은 화면이 읽어야 하는 값이고,\n+ * 키가 사라지면 \"요청하지 않음\"과 구분되지 않는다.\n+ */\n+@JsonInclude(JsonInclude.Include.NON_NULL)\n+public record EvaluationWindowResponse(\n+        @JsonInclude(JsonInclude.Include.ALWAYS) LocalDate commonStart,\n+        LocalDate commonEnd,\n+        int warmupTradingDays,\n+        String bindingCandidate,\n+        String bindingSector,\n+        List<ExcludedRange> excludedRanges,\n+        boolean evaluable,\n+        String datasetId,\n+        LocalDate warmupBaseDate,\n+        List<LocalDate> tradingDaysFromBase,\n+        Integer maxWarmupTradingDays,\n+        List<ExcludedRange> excludedRangesFromBase) {\n+\n+    public static EvaluationWindowResponse from(EvaluationWindowView view) {\n+        return new EvaluationWindowResponse(\n+                view.commonStart(),\n+                view.commonEnd(),\n+                view.warmupTradingDays(),\n+                view.bindingCandidate(),\n+                view.bindingSector(),\n+                ExcludedRange.from(view.excludedRanges()),\n+                view.evaluable(),\n+                view.datasetId(),\n+                view.warmupBaseDate(),\n+                view.tradingDaysFromBase(),\n+                view.maxWarmupTradingDays(),\n+                view.excludedRangesFromBase() == null\n+                        ? null\n+                        : ExcludedRange.from(view.excludedRangesFromBase()));\n+    }\n+\n+    /** 자료가 모자라 평가에서 빠지는 구간. {@code reason}은 {@code data_gap.reason} 값이다. */\n+    public record ExcludedRange(LocalDate start, LocalDate end, String reason) {\n+\n+        static List<ExcludedRange> from(List<EvaluationWindowResult.ExcludedRange> ranges) {\n+            return ranges.stream()\n+                    .map(range -> new ExcludedRange(range.start(), range.end(), range.reason()))\n+                    .toList();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/response/EvaluationWindowResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/response/EvaluationWindowResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,432 @@\n+package com.ssafy.thorp.sector;\n+\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.time.LocalDate;\n+import java.util.Locale;\n+import org.hamcrest.Matchers;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * {@code GET /sectors/evaluation-window} 계약 검증 (spec 001 T017, contracts/sector-api.md).\n+ *\n+ * <p>여기서 확인하는 것은 <b>실제 자료 위에서의 계약</b>이다 — 질의 문자열이 어떻게 읽히는지, 거래일을 {@code daily_index}에서 실제로 세는지, 응답의\n+ * 키 모양이 계약과 같은지, 그리고 없는 섹터·자료 미적재·평가 불가 셋이 서로 다른 응답으로 갈리는지다. 조립 규칙 자체는 {@code\n+ * EvaluationWindowQueryServiceTest}가 DB 없이 검증한다.\n+ *\n+ * <p><b>거래일 달력은 공통 준비 단계가 심는다.</b> {@code MarketCatalogSeed}가 2014~2026년의 평일을 <b>모든 자료 버전에</b> 넣어\n+ * 두므로 이 검사는 달력을 따로 심지 않는다. 그래서 여기서 기간을 좁히는 손잡이는 달력 길이가 아니라 <b>자료 마감일과 상장일</b>이다. 그 달력에 공휴일이 없으므로\n+ * 날짜는 평일로만 골랐다.\n+ *\n+ * <p><b>Spring 컨텍스트를 새로 만들지 않는다.</b> {@code @SpringBootTest} 속성과 {@code @AutoConfigureMockMvc}를\n+ * {@code SectorApiIT}·{@code InstrumentProfileApiIT}와 글자 그대로 같게 맞춰 두었다. 속성 하나라도 바꾸면 컨텍스트가 갈라지고, 이\n+ * 저장소의 DB 테스트 묶음은 이미 공용 컨테이너의 {@code max_connections}를 거의 다 쓰고 있다. <b>이 애노테이션 묶음은 건드리지 않는다.</b>\n+ *\n+ * <p>자료를 넣는 경로가 JDBC인 이유는 대응표도 시계열도 원본이 파이썬 파이프라인이고 백엔드에 쓰기 경로가 없기 때문이다(research.md 결정 7).\n+ *\n+ * <p>Docker가 없으면 통째로 skip된다({@code PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.\n+ */\n+@SpringBootTest(\n+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class EvaluationWindowApiIT extends PostgresTestSupport {\n+\n+    /**\n+     * 실행마다 새로 짓는 꼬리표.\n+     *\n+     * <p><b>대응표 버전과 자료 버전을 고정 문자열로 둘 수 없다.</b> 두 표에는 UPDATE·DELETE를 막는 불변 트리거가 걸려 있어(FR-017) 한 번 넣은\n+     * 행을 지우지 못한다. 고정 이름을 쓰면 앞선 실행이 남긴 자료 버전이 같은 대응표에 그대로 붙어 있고, 조회는 그중 마감이 가장 늦은 것을 고르므로 <b>이번 실행이\n+     * 정한 마감일이 아니라 지난번 것을 보게 된다</b>. 실행마다 대응표를 새로 지으면 지난 행들은 다른 대응표에 붙은 채 조회 대상에서 빠진다.\n+     */\n+    private static final String RUN_ID =\n+            Long.toString(System.currentTimeMillis(), 36).toUpperCase(Locale.ROOT);\n+\n+    private static final String MAP_VERSION = \"SEM-EW-\" + RUN_ID;\n+    private static final String MAP_VERSION_WITHOUT_DATASET = \"SEM-EW-EMPTY-\" + RUN_ID;\n+    private static final String DATASET_ID = \"KRX_DAILY_EW_\" + RUN_ID;\n+\n+    private static final String SEMICONDUCTOR = \"SEMICONDUCTOR_EW\";\n+    private static final String BATTERY = \"BATTERY_EW\";\n+    private static final String SEMICONDUCTOR_ETF = \"990001.XKRX\";\n+    private static final String BATTERY_ETF = \"990002.XKRX\";\n+\n+    /** 마감일 코앞에 상장한 후보. 어떤 전략의 워밍업도 마감 안에서 채우지 못해 \"평가 불가\"를 만든다. */\n+    private static final String LATE = \"LATE_EW\";\n+\n+    private static final String LATE_ETF = \"990003.XKRX\";\n+\n+    /** 이 검사의 자료 마감일. 달력은 2026년까지 있으므로 공통 종료일을 정하는 것은 이 값이다. */\n+    private static final LocalDate DEADLINE = LocalDate.of(2024, 6, 28);\n+\n+    private static final LocalDate SEMICONDUCTOR_LISTED = LocalDate.of(2024, 1, 2);\n+    private static final LocalDate BATTERY_LISTED = LocalDate.of(2024, 2, 1);\n+\n+    /** 마감일까지 거래일이 다섯 개뿐이다(6/24~6/28). */\n+    private static final LocalDate LATE_LISTED = LocalDate.of(2024, 6, 24);\n+\n+    /** 워밍업 0일 때의 공통 시작일. 더 늦게 상장한 이차전지 후보가 정한다. */\n+    private static final LocalDate BASE = BATTERY_LISTED;\n+\n+    /** 이차전지 후보의 자료 부족 구간. 기준일 직후라 기준일 기준 목록에는 늘 남는다. */\n+    private static final LocalDate GAP_START = LocalDate.of(2024, 2, 5);\n+\n+    private static final LocalDate GAP_END = LocalDate.of(2024, 2, 7);\n+\n+    /** 등록표의 기본 설정 워밍업이 60거래일이다(관측 기간 60 + 최근 제외 0). */\n+    private static final String MOMENTUM = \"SECTOR_MOMENTUM\";\n+\n+    private static final int MOMENTUM_WARMUP = 60;\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @BeforeEach\n+    void setUp() {\n+        deleteFixtures();\n+        publishEverything();\n+    }\n+\n+    @AfterEach\n+    void tearDown() {\n+        deleteFixtures();\n+    }\n+\n+    @Test\n+    @DisplayName(\"전략 없이 상한만 주면 기준일과 그 뒤 거래일 목록을 준다\")\n+    void 상한만_주면_재판정_재료를_준다() throws Exception {\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", SEMICONDUCTOR + \",\" + BATTERY)\n+                                .param(\"maxWarmupTradingDays\", \"20\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.success\").value(true))\n+                .andExpect(jsonPath(\"$.data.evaluable\").value(true))\n+                .andExpect(jsonPath(\"$.data.warmupTradingDays\").value(0))\n+                .andExpect(jsonPath(\"$.data.warmupBaseDate\").value(BASE.toString()))\n+                .andExpect(jsonPath(\"$.data.commonStart\").value(BASE.toString()))\n+                .andExpect(jsonPath(\"$.data.commonEnd\").value(DEADLINE.toString()))\n+                .andExpect(jsonPath(\"$.data.bindingCandidate\").value(BATTERY_ETF))\n+                .andExpect(jsonPath(\"$.data.bindingSector\").value(BATTERY))\n+                .andExpect(jsonPath(\"$.data.datasetId\").value(DATASET_ID))\n+                .andExpect(jsonPath(\"$.data.maxWarmupTradingDays\").value(20))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase\", Matchers.hasSize(21)))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase[0]\").value(BASE.toString()))\n+                .andExpect(jsonPath(\"$.data.excludedRangesFromBase\", Matchers.hasSize(1)));\n+    }\n+\n+    @Test\n+    @DisplayName(\"상한을 주지 않으면 재판정 재료의 키 자체가 없다\")\n+    void 상한을_주지_않으면_키가_없다() throws Exception {\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", SEMICONDUCTOR)\n+                                .param(\"strategy\", MOMENTUM))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.evaluable\").value(true))\n+                // 워밍업을 반영해 시작일이 상장일보다 뒤로 밀린다(FR-011).\n+                .andExpect(jsonPath(\"$.data.warmupTradingDays\").value(MOMENTUM_WARMUP))\n+                .andExpect(\n+                        jsonPath(\"$.data.commonStart\")\n+                                .value(Matchers.greaterThan(SEMICONDUCTOR_LISTED.toString())))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase\").doesNotExist())\n+                .andExpect(jsonPath(\"$.data.maxWarmupTradingDays\").doesNotExist())\n+                .andExpect(jsonPath(\"$.data.excludedRangesFromBase\").doesNotExist())\n+                // 기준일은 상한과 무관하게 늘 있다. 화면이 \"워밍업 때문에 줄었다\"를 설명하는 값이다.\n+                .andExpect(\n+                        jsonPath(\"$.data.warmupBaseDate\").value(SEMICONDUCTOR_LISTED.toString()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"달력이 요청한 상한에 모자라면 오류가 아니라 있는 만큼만 주고 상한을 줄인다\")\n+    void 달력이_모자라면_상한을_줄인다() throws Exception {\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", LATE)\n+                                .param(\"maxWarmupTradingDays\", \"5000\"))\n+                .andExpect(status().isOk())\n+                // 상장일부터 마감일까지 거래일이 다섯 개라 상한은 넷이다.\n+                .andExpect(jsonPath(\"$.data.maxWarmupTradingDays\").value(4))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase\", Matchers.hasSize(5)))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase[0]\").value(LATE_LISTED.toString()))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase[4]\").value(DEADLINE.toString()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"자료 부족 구간은 워밍업 반영본과 기준일부터의 것을 함께 준다\")\n+    void 부족_구간을_두_기준으로_준다() throws Exception {\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", BATTERY)\n+                                .param(\"strategy\", MOMENTUM)\n+                                .param(\"maxWarmupTradingDays\", \"30\"))\n+                .andExpect(status().isOk())\n+                // 워밍업 60거래일을 반영한 시작일은 부족 구간보다 뒤라 잘려 나간다.\n+                .andExpect(jsonPath(\"$.data.excludedRanges\", Matchers.hasSize(0)))\n+                // 화면이 더 짧은 워밍업으로 다시 판정하려면 그 앞의 부족 구간을 알아야 한다.\n+                .andExpect(jsonPath(\"$.data.excludedRangesFromBase\", Matchers.hasSize(1)))\n+                .andExpect(\n+                        jsonPath(\"$.data.excludedRangesFromBase[0].start\")\n+                                .value(GAP_START.toString()))\n+                .andExpect(\n+                        jsonPath(\"$.data.excludedRangesFromBase[0].end\").value(GAP_END.toString()))\n+                .andExpect(\n+                        jsonPath(\"$.data.excludedRangesFromBase[0].reason\")\n+                                .value(\"AMBIGUOUS_PRICE\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"평가할 수 없는 조합은 오류가 아니라 evaluable=false인 200이다\")\n+    void 평가_불가는_오류가_아니다() throws Exception {\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", LATE)\n+                                .param(\"strategy\", MOMENTUM)\n+                                .param(\"maxWarmupTradingDays\", \"30\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.evaluable\").value(false))\n+                // 그래도 재판정 재료는 그대로 준다 — 화면이 더 짧은 워밍업으로 다시 판정할 수 있어야 한다.\n+                .andExpect(jsonPath(\"$.data.warmupBaseDate\").value(LATE_LISTED.toString()))\n+                .andExpect(jsonPath(\"$.data.tradingDaysFromBase\", Matchers.hasSize(5)));\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 섹터는 404, 전략도 상한도 없는 요청은 400\")\n+    void 잘못된_요청을_가른다() throws Exception {\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", \"NO_SUCH_SECTOR\")\n+                                .param(\"maxWarmupTradingDays\", \"10\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"SECTOR_NOT_FOUND\"));\n+\n+        mockMvc.perform(get(\"/sectors/evaluation-window\").param(\"sectors\", SEMICONDUCTOR))\n+                .andExpect(status().isBadRequest());\n+\n+        mockMvc.perform(get(\"/sectors/evaluation-window\").param(\"maxWarmupTradingDays\", \"10\"))\n+                .andExpect(status().isBadRequest());\n+    }\n+\n+    @Test\n+    @DisplayName(\"쓸 수 있는 자료가 아직 없으면 빈 기간이 아니라 재시도 가능한 409다\")\n+    void 자료가_없으면_빈_기간을_만들지_않는다() throws Exception {\n+        openMapWithoutDataset();\n+\n+        mockMvc.perform(\n+                        get(\"/sectors/evaluation-window\")\n+                                .param(\"sectors\", SEMICONDUCTOR)\n+                                .param(\"maxWarmupTradingDays\", \"10\"))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"EVALUATION_WINDOW_NOT_READY\"));\n+    }\n+\n+    // --- 픽스처 ------------------------------------------------------------\n+\n+    /**\n+     * FK 역순으로 지운다.\n+     *\n+     * <p>{@code dataset_version}과 시계열에는 UPDATE·DELETE를 막는 불변 트리거가 걸려 있어(FR-017) 지우지 못한다. 그래서 자료 버전과\n+     * 부족 구간은 지우는 대신 <b>실행마다 새 식별자로</b> 만들고, 지울 수 있는 대응표·섹터만 치운다.\n+     *\n+     * <p>대응표는 반드시 닫는다. {@code effective_to IS NULL}인 행을 남기면 부분 UNIQUE 인덱스 때문에 다음 검사의 INSERT가 실패한다.\n+     */\n+    private void deleteFixtures() {\n+        jdbcTemplate.update(\n+                \"UPDATE sector_etf_map_version\"\n+                        + \" SET effective_to = effective_from + INTERVAL '1 second'\"\n+                        + \" WHERE effective_to IS NULL\");\n+        jdbcTemplate.update(\n+                \"DELETE FROM sector_etf_map_entry WHERE sector_id IN\"\n+                        + \" (SELECT id FROM sector WHERE code IN (?, ?, ?))\",\n+                SEMICONDUCTOR,\n+                BATTERY,\n+                LATE);\n+        jdbcTemplate.update(\n+                \"DELETE FROM sector WHERE code IN (?, ?, ?)\", SEMICONDUCTOR, BATTERY, LATE);\n+    }\n+\n+    private void publishEverything() {\n+        long mapVersionId = publishMap();\n+        publishDataset(mapVersionId);\n+        publishCalendar();\n+        insertDataGap(BATTERY_ETF, GAP_START, GAP_END);\n+    }\n+\n+    private long publishMap() {\n+        Long mapVersionId =\n+                jdbcTemplate.queryForObject(\n+                        \"\"\"\n+                        INSERT INTO sector_etf_map_version\n+                            (version, effective_from, effective_to, is_sample, published_at)\n+                        VALUES (?, TIMESTAMPTZ '2026-09-17 00:00:00+09', NULL, TRUE,\n+                                TIMESTAMPTZ '2026-09-17 00:00:00+09')\n+                        ON CONFLICT (version) DO UPDATE SET effective_to = NULL\n+                        RETURNING id\n+                        \"\"\",\n+                        Long.class,\n+                        MAP_VERSION);\n+        insertEntry(\n+                mapVersionId,\n+                insertSector(SEMICONDUCTOR, \"반도체\"),\n+                etfId(SEMICONDUCTOR_ETF, \"반도체 ETF\", SEMICONDUCTOR_LISTED));\n+        insertEntry(\n+                mapVersionId,\n+                insertSector(BATTERY, \"이차전지\"),\n+                etfId(BATTERY_ETF, \"이차전지 ETF\", BATTERY_LISTED));\n+        insertEntry(\n+                mapVersionId,\n+                insertSector(LATE, \"늦게 상장한 섹터\"),\n+                etfId(LATE_ETF, \"늦게 상장한 ETF\", LATE_LISTED));\n+        return mapVersionId;\n+    }\n+\n+    private long insertSector(String code, String name) {\n+        return jdbcTemplate.queryForObject(\n+                \"INSERT INTO sector (code, name, classification) VALUES (?, ?, 'INDUSTRY')\"\n+                        + \" RETURNING id\",\n+                Long.class,\n+                code,\n+                name);\n+    }\n+\n+    private long etfId(String instrumentId, String name, LocalDate listedOn) {\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO representative_etf\n+                    (instrument_id, name, listed_on, benchmark_index, manager)\n+                VALUES (?, ?, ?, '기준 지수', '운용사')\n+                ON CONFLICT (instrument_id) DO UPDATE\n+                    SET name = EXCLUDED.name, listed_on = EXCLUDED.listed_on\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                instrumentId,\n+                name,\n+                listedOn);\n+    }\n+\n+    private void insertEntry(long mapVersionId, long sectorId, long etfId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO sector_etf_map_entry (map_version_id, sector_id, etf_id)\"\n+                        + \" VALUES (?, ?, ?)\",\n+                mapVersionId,\n+                sectorId,\n+                etfId);\n+    }\n+\n+    /** 자료 버전. 불변 트리거가 UPDATE를 막으므로 이미 있으면 그 행을 그대로 쓴다. */\n+    private void publishDataset(long mapVersionId) {\n+        Integer exists =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT COUNT(*) FROM dataset_version WHERE dataset_id = ?\",\n+                        Integer.class,\n+                        DATASET_ID);\n+        if (exists != null && exists > 0) {\n+            return;\n+        }\n+        String deadline = DEADLINE + \"T18:00:00+09\";\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO dataset_version\n+                    (dataset_id, data_deadline, collected_at, last_success_at, complete,\n+                     failure_reason, is_sample, source, map_version_id)\n+                VALUES (?, CAST(? AS TIMESTAMPTZ), CAST(? AS TIMESTAMPTZ), CAST(? AS TIMESTAMPTZ),\n+                        TRUE, NULL, TRUE, 'FIXED_TEST_DATA', ?)\n+                \"\"\",\n+                DATASET_ID,\n+                deadline,\n+                deadline,\n+                deadline,\n+                mapVersionId);\n+    }\n+\n+    /**\n+     * 이 검사의 자료 버전에 거래일 달력을 심는다. 범위와 값은 {@code MarketCatalogSeed}와 같다.\n+     *\n+     * <p><b>공통 준비 단계가 이미 모든 자료 버전에 달력을 심는데도 다시 심는 까닭</b>: 그 준비는 상위 클래스의 {@code @BeforeEach}라 여기서 자료\n+     * 버전을 만들기 <b>전에</b> 돌고, 그 시점에 이 검사의 자료 버전은 아직 없다. 그래서 첫 검사만 달력을 못 보고 409로 끝난다 — 실행 순서에 따라 결과가\n+     * 달라지는 것이 이 가지의 위험이다.\n+     */\n+    private void publishCalendar() {\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO daily_index\n+                    (dataset_id, index_code, date, open, high, low, close, volume, value)\n+                SELECT ?, 'KOSPI', day::date, 2500, 2500, 2500, 2500, 0, 0\n+                  FROM generate_series(DATE '2014-01-01', DATE '2026-12-31', INTERVAL '1 day')\n+                       AS day\n+                 WHERE EXTRACT(ISODOW FROM day) < 6\n+                ON CONFLICT (dataset_id, index_code, date) DO NOTHING\n+                \"\"\",\n+                DATASET_ID);\n+    }\n+\n+    private void insertDataGap(String instrumentId, LocalDate start, LocalDate end) {\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO data_gap (dataset_id, instrument_id, start_date, end_date, reason)\n+                VALUES (?, ?, ?, ?, 'AMBIGUOUS_PRICE')\n+                ON CONFLICT DO NOTHING\n+                \"\"\",\n+                DATASET_ID,\n+                instrumentId,\n+                start,\n+                end);\n+    }\n+\n+    /**\n+     * 자료 버전이 붙지 않은 대응표를 새로 연다. 섹터 연결은 지금 열린 대응표의 것을 그대로 옮긴다.\n+     *\n+     * <p>\"자료를 지운다\"로 같은 상태를 만들지 못한다 — 자료 버전에는 DELETE를 막는 불변 트리거가 걸려 있다(FR-017). 대응표를 갈아 끼우면 검사가 끝난 뒤\n+     * {@code deleteFixtures}가 열린 버전을 닫으면서 원래대로 돌아간다.\n+     */\n+    private void openMapWithoutDataset() {\n+        Long previousId =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT id FROM sector_etf_map_version WHERE version = ?\",\n+                        Long.class,\n+                        MAP_VERSION);\n+        jdbcTemplate.update(\n+                \"UPDATE sector_etf_map_version\"\n+                        + \" SET effective_to = effective_from + INTERVAL '1 second'\"\n+                        + \" WHERE effective_to IS NULL\");\n+        Long emptyMapId =\n+                jdbcTemplate.queryForObject(\n+                        \"\"\"\n+                        INSERT INTO sector_etf_map_version\n+                            (version, effective_from, effective_to, is_sample, published_at)\n+                        VALUES (?, TIMESTAMPTZ '2026-09-18 00:00:00+09', NULL, TRUE,\n+                                TIMESTAMPTZ '2026-09-18 00:00:00+09')\n+                        ON CONFLICT (version) DO UPDATE SET effective_to = NULL\n+                        RETURNING id\n+                        \"\"\",\n+                        Long.class,\n+                        MAP_VERSION_WITHOUT_DATASET);\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO sector_etf_map_entry (map_version_id, sector_id, etf_id)\n+                SELECT ?, sector_id, etf_id FROM sector_etf_map_entry WHERE map_version_id = ?\n+                ON CONFLICT DO NOTHING\n+                \"\"\",\n+                emptyMapId,\n+                previousId);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,423 @@\n+package com.ssafy.thorp.sector;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.sector.application.command.EvaluationWindowQuery;\n+import com.ssafy.thorp.sector.application.exception.EvaluationWindowNotReadyException;\n+import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;\n+import com.ssafy.thorp.sector.application.exception.SectorNotFoundException;\n+import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;\n+import com.ssafy.thorp.sector.application.result.EvaluationWindowView;\n+import com.ssafy.thorp.sector.application.result.SectorListResult;\n+import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;\n+import com.ssafy.thorp.sector.application.service.EvaluationWindowService;\n+import com.ssafy.thorp.sector.application.service.SectorService;\n+import com.ssafy.thorp.sector.domain.model.RepresentativeEtf;\n+import com.ssafy.thorp.sector.domain.model.Sector;\n+import com.ssafy.thorp.sector.domain.vo.SectorCode;\n+import com.ssafy.thorp.strategy.application.port.AnalysisConditionRegistry;\n+import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.strategy.application.port.SearchContext;\n+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import com.ssafy.thorp.strategy.application.port.ValidationRule;\n+import com.ssafy.thorp.strategy.application.port.ValidationVerdict;\n+import com.ssafy.thorp.strategy.application.port.WarmupRule;\n+import java.time.DayOfWeek;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 공통 평가 가능 기간 조회의 판정을 검증한다 (spec 001 T017, FR-007).\n+ *\n+ * <p>산식 자체는 {@link EvaluationWindowTest}가 워커와 공유하는 픽스처로 이미 검증한다. 여기서 확인하는 것은 <b>그 산식을 HTTP 표면으로\n+ * 내보내며 더한 것</b>이다 — 화면이 값을 바꿀 때마다 서버를 다시 부르지 않고 스스로 재판정할 수 있게 실어 보내는 달력 조각, 달력이 모자랄 때의 처리, 그리고 전략을\n+ * 주지 않은 요청이다.\n+ *\n+ * <p><b>가장 중요한 단언은 \"화면의 계산과 서버의 계산이 같은 날을 가리킨다\"이다.</b> 003 화면은 {@code commonStart(N) =\n+ * tradingDaysFromBase.get(N)}으로 계산하기로 했으므로, 그 식이 서버가 워밍업 N으로 직접 계산한 {@code commonStart}와 어긋나면 화면은\n+ * 실제로 분석할 수 없는 기간을 안내하게 된다.\n+ *\n+ * <p><b>순수 단위 테스트다.</b> DB도 스프링 컨텍스트도 쓰지 않는다 — 저장소는 손으로 만든 스텁이고, 확인하려는 것이 조립 규칙이지 SQL이 아니다. SQL과 계약\n+ * 모양은 {@code EvaluationWindowApiIT}가 실제 자료로 확인한다.\n+ */\n+class EvaluationWindowQueryServiceTest {\n+\n+    private static final String SEMICONDUCTOR = \"SEMICONDUCTOR\";\n+    private static final String BATTERY = \"BATTERY\";\n+    private static final String SEMICONDUCTOR_ETF = \"091160.XKRX\";\n+    private static final String BATTERY_ETF = \"305720.XKRX\";\n+    private static final String DATASET_ID = \"KRX_DAILY_20260915\";\n+    private static final String MAP_VERSION = \"SEM-2026-09-15-001\";\n+    private static final String MOMENTUM = \"SECTOR_MOMENTUM\";\n+\n+    /** 2024-01-01(월)부터의 평일. 공휴일을 지어내지 않고 주말만 뺀다 — 여기서 검증하는 것은 달력의 내용이 아니라 세는 방식이다. */\n+    private static final List<LocalDate> CALENDAR = weekdays(LocalDate.of(2024, 1, 1), 400);\n+\n+    private static final LocalDate DEADLINE = CALENDAR.get(CALENDAR.size() - 1);\n+\n+    @Test\n+    @DisplayName(\"전략 없이 상한만 주면 워밍업 0으로 판정하고 화면이 계산할 거래일 목록을 함께 준다\")\n+    void 전략_없는_요청은_워밍업_0으로_판정한다() {\n+        EvaluationWindowView view =\n+                service(inputs()).getEvaluationWindow(query(List.of(SEMICONDUCTOR), null, 100));\n+\n+        assertThat(view.warmupTradingDays()).isZero();\n+        assertThat(view.commonStart()).isEqualTo(view.warmupBaseDate());\n+        assertThat(view.evaluable()).isTrue();\n+        assertThat(view.tradingDaysFromBase()).hasSize(101).startsWith(view.warmupBaseDate());\n+        assertThat(view.maxWarmupTradingDays()).isEqualTo(100);\n+        assertThat(view.datasetId()).isEqualTo(DATASET_ID);\n+    }\n+\n+    @Test\n+    @DisplayName(\"화면이 목록으로 계산한 시작일은 서버가 그 워밍업으로 직접 계산한 시작일과 같다\")\n+    void 화면의_계산과_서버의_계산이_같은_날을_가리킨다() {\n+        EvaluationWindowQueryService service = service(inputs());\n+        EvaluationWindowView base =\n+                service.getEvaluationWindow(query(List.of(SEMICONDUCTOR, BATTERY), null, 200));\n+\n+        // 003 화면이 값을 바꿀 때마다 서버를 부르지 않고 하는 계산이 이 한 줄이다.\n+        for (int warmup : new int[] {0, 1, 63, 147, 200}) {\n+            LocalDate calculatedByScreen = base.tradingDaysFromBase().get(warmup);\n+            EvaluationWindowView server =\n+                    service.getEvaluationWindow(\n+                            query(List.of(SEMICONDUCTOR, BATTERY), strategyOf(warmup), 200));\n+            assertThat(server.commonStart()).as(\"워밍업 %d 거래일\", warmup).isEqualTo(calculatedByScreen);\n+        }\n+    }\n+\n+    @Test\n+    @DisplayName(\"기준일은 가장 늦게 상장한 후보가 정하고 그 후보를 함께 알려 준다\")\n+    void 기준_후보와_그_섹터를_알려_준다() {\n+        EvaluationWindowView view =\n+                service(inputs())\n+                        .getEvaluationWindow(query(List.of(SEMICONDUCTOR, BATTERY), null, 10));\n+\n+        // BATTERY가 더 늦게 상장했으므로 그 후보가 기준이다.\n+        assertThat(view.bindingCandidate()).isEqualTo(BATTERY_ETF);\n+        assertThat(view.bindingSector()).isEqualTo(BATTERY);\n+        assertThat(view.warmupBaseDate()).isEqualTo(LocalDate.of(2024, 3, 1));\n+    }\n+\n+    @Test\n+    @DisplayName(\"달력이 요청한 상한에 모자라면 오류가 아니라 있는 만큼만 주고 상한을 줄인다\")\n+    void 달력이_모자라면_있는_만큼만_준다() {\n+        EvaluationWindowView view =\n+                service(inputs()).getEvaluationWindow(query(List.of(BATTERY), null, 5000));\n+\n+        assertThat(view.tradingDaysFromBase()).isNotEmpty();\n+        assertThat(view.maxWarmupTradingDays()).isEqualTo(view.tradingDaysFromBase().size() - 1);\n+        assertThat(view.maxWarmupTradingDays()).isLessThan(5000);\n+    }\n+\n+    @Test\n+    @DisplayName(\"거래일 목록은 공통 종료일을 넘지 않는다\")\n+    void 목록은_공통_종료일을_넘지_않는다() {\n+        EvaluationWindowView view =\n+                service(inputs()).getEvaluationWindow(query(List.of(SEMICONDUCTOR), null, 5000));\n+\n+        assertThat(view.tradingDaysFromBase())\n+                .allSatisfy(day -> assertThat(day).isBeforeOrEqualTo(view.commonEnd()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"워밍업을 채울 거래일이 없으면 오류가 아니라 평가 불가로 답한다\")\n+    void 워밍업을_채우지_못하면_평가_불가다() {\n+        EvaluationWindowView view =\n+                service(inputs())\n+                        .getEvaluationWindow(query(List.of(BATTERY), strategyOf(9999), 100));\n+\n+        assertThat(view.evaluable()).isFalse();\n+        assertThat(view.commonStart()).isNull();\n+        assertThat(view.excludedRanges()).isEmpty();\n+        // 그래도 재판정 재료는 그대로 준다 — 화면이 더 짧은 워밍업으로 다시 판정할 수 있어야 한다.\n+        assertThat(view.warmupBaseDate()).isNotNull();\n+        assertThat(view.tradingDaysFromBase()).isNotEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"자료 부족 구간은 워밍업 반영본과 기준일부터의 것을 함께 준다\")\n+    void 부족_구간을_두_기준으로_준다() {\n+        // 기준일(2024-01-01) 직후의 부족 구간. 워밍업 63거래일을 반영하면 잘려 나간다.\n+        EvaluationWindowInputs withGap =\n+                inputsWith(\n+                        List.of(\n+                                new EvaluationWindowInputs.DataGap(\n+                                        LocalDate.of(2024, 1, 3),\n+                                        LocalDate.of(2024, 1, 10),\n+                                        \"AMBIGUOUS_PRICE\")));\n+\n+        EvaluationWindowView view =\n+                service(withGap)\n+                        .getEvaluationWindow(query(List.of(SEMICONDUCTOR), strategyOf(63), 100));\n+\n+        assertThat(view.excludedRanges()).isEmpty();\n+        assertThat(view.excludedRangesFromBase())\n+                .singleElement()\n+                .satisfies(\n+                        range -> {\n+                            assertThat(range.start()).isEqualTo(LocalDate.of(2024, 1, 3));\n+                            assertThat(range.reason()).isEqualTo(\"AMBIGUOUS_PRICE\");\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"상한을 주지 않으면 재판정 재료를 만들지 않는다\")\n+    void 상한을_주지_않으면_재료를_내리지_않는다() {\n+        EvaluationWindowView view =\n+                service(inputs())\n+                        .getEvaluationWindow(query(List.of(SEMICONDUCTOR), MOMENTUM, null));\n+\n+        assertThat(view.tradingDaysFromBase()).isNull();\n+        assertThat(view.maxWarmupTradingDays()).isNull();\n+        assertThat(view.excludedRangesFromBase()).isNull();\n+        // 기준일은 상한과 무관하게 늘 채운다. 화면이 \"워밍업 때문에 줄었다\"를 설명하는 값이다(FR-011).\n+        assertThat(view.warmupBaseDate()).isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"섹터도 전략도 값이 없으면 판정할 것이 없으므로 요청 자체를 거부한다\")\n+    void 전략과_상한이_모두_없으면_거부한다() {\n+        assertThatThrownBy(() -> query(List.of(SEMICONDUCTOR), null, null))\n+                .isInstanceOf(IllegalArgumentException.class);\n+        assertThatThrownBy(() -> query(List.of(), null, 10))\n+                .isInstanceOf(IllegalArgumentException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"열린 대응표에 없는 섹터는 404로 가른다\")\n+    void 없는_섹터는_따로_가른다() {\n+        assertThatThrownBy(\n+                        () ->\n+                                service(inputs())\n+                                        .getEvaluationWindow(query(List.of(\"NO_SUCH\"), null, 10)))\n+                .isInstanceOf(SectorNotFoundException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"자료 버전이나 달력이 아직 없으면 빈 기간이 아니라 재시도 가능한 실패다\")\n+    void 자료가_없으면_빈_기간을_만들지_않는다() {\n+        assertThatThrownBy(\n+                        () ->\n+                                service(null)\n+                                        .getEvaluationWindow(\n+                                                query(List.of(SEMICONDUCTOR), null, 10)))\n+                .isInstanceOf(EvaluationWindowNotReadyException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"대응표가 발행되지 않았으면 그 사실을 그대로 전한다\")\n+    void 대응표가_없으면_그_실패를_전한다() {\n+        EvaluationWindowQueryService service =\n+                new EvaluationWindowQueryService(\n+                        new SectorService(Optional::empty, stubProfileRepository()),\n+                        (mapVersion, instrumentIds) -> restrictTo(inputs(), instrumentIds),\n+                        new EvaluationWindowService(),\n+                        stubRegistry());\n+\n+        assertThatThrownBy(\n+                        () -> service.getEvaluationWindow(query(List.of(SEMICONDUCTOR), null, 10)))\n+                .isInstanceOf(SectorMapNotReadyException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록되지 않은 전략은 0으로 접지 않고 거부한다\")\n+    void 등록되지_않은_전략은_거부한다() {\n+        assertThatThrownBy(\n+                        () ->\n+                                service(inputs())\n+                                        .getEvaluationWindow(\n+                                                query(\n+                                                        List.of(SEMICONDUCTOR),\n+                                                        \"NOT_REGISTERED\",\n+                                                        10)))\n+                .hasMessageContaining(\"등록되지 않은 전략\");\n+    }\n+\n+    // --- 스텁 --------------------------------------------------------------\n+\n+    /** 워밍업 값을 바꿔 가며 부를 수 있게, 전략 이름에 워밍업 거래일 수를 실어 보낸다. */\n+    private static String strategyOf(int warmupTradingDays) {\n+        return \"WARMUP_\" + warmupTradingDays;\n+    }\n+\n+    private EvaluationWindowQueryService service(EvaluationWindowInputs inputs) {\n+        return new EvaluationWindowQueryService(\n+                new SectorService(\n+                        EvaluationWindowQueryServiceTest::sectorMap, stubProfileRepository()),\n+                (mapVersion, instrumentIds) -> restrictTo(inputs, instrumentIds),\n+                new EvaluationWindowService(),\n+                stubRegistry());\n+    }\n+\n+    /**\n+     * 요청한 종목만 남긴다. 실제 저장소가 하는 일과 같다 — 걸러 주지 않으면 요청하지 않은 후보가 기준일을 정해 버려, 검사가 확인하려던 것과 다른 상황을 보게 된다.\n+     */\n+    private static Optional<EvaluationWindowInputs> restrictTo(\n+            EvaluationWindowInputs inputs, List<String> instrumentIds) {\n+        if (inputs == null) {\n+            return Optional.empty();\n+        }\n+        return Optional.of(\n+                new EvaluationWindowInputs(\n+                        inputs.datasetId(),\n+                        inputs.dataDeadline(),\n+                        instrumentIds.stream()\n+                                .map(\n+                                        id ->\n+                                                inputs.candidates().stream()\n+                                                        .filter(c -> c.instrumentId().equals(id))\n+                                                        .findFirst()\n+                                                        .orElseThrow())\n+                                .toList(),\n+                        inputs.tradingCalendar()));\n+    }\n+\n+    private static EvaluationWindowQuery query(\n+            List<String> sectors, String strategy, Integer maxWarmup) {\n+        return new EvaluationWindowQuery(sectors, strategy, maxWarmup);\n+    }\n+\n+    private static Optional<SectorListResult> sectorMap() {\n+        return Optional.of(\n+                new SectorListResult(\n+                        MAP_VERSION,\n+                        false,\n+                        List.of(\n+                                sector(SEMICONDUCTOR, SEMICONDUCTOR_ETF, LocalDate.of(2024, 1, 1)),\n+                                sector(BATTERY, BATTERY_ETF, LocalDate.of(2024, 3, 1)))));\n+    }\n+\n+    private static Sector sector(String code, String instrumentId, LocalDate listedOn) {\n+        return new Sector(\n+                new SectorCode(code),\n+                code,\n+                Sector.Classification.INDUSTRY,\n+                new RepresentativeEtf(instrumentId, code + \" ETF\", listedOn, \"지수\", \"운용사\"));\n+    }\n+\n+    private static EvaluationWindowInputs inputs() {\n+        return inputsWith(List.of());\n+    }\n+\n+    private static EvaluationWindowInputs inputsWith(List<EvaluationWindowInputs.DataGap> gaps) {\n+        return new EvaluationWindowInputs(\n+                DATASET_ID,\n+                DEADLINE,\n+                List.of(\n+                        new EvaluationWindowInputs.Candidate(\n+                                SEMICONDUCTOR_ETF, LocalDate.of(2024, 1, 1), null, gaps),\n+                        new EvaluationWindowInputs.Candidate(\n+                                BATTERY_ETF, LocalDate.of(2024, 3, 1), null, List.of())),\n+                CALENDAR);\n+    }\n+\n+    /**\n+     * 요청한 전략 이름에서 워밍업을 읽어 주는 등록표. {@code WARMUP_147}이면 147이다.\n+     *\n+     * <p>실제 등록표 파일을 읽지 않는 이유는, 여기서 확인하려는 것이 \"등록표가 준 워밍업이 판정에 어떻게 반영되는가\"이지 등록표 파일의 내용이 아니기 때문이다. 파일의\n+     * 값이 바뀔 때마다 이 테스트가 깨지면 두 가지가 한 검사에 묶인다.\n+     */\n+    private static ParameterRegistryPort stubRegistry() {\n+        return new ParameterRegistryPort() {\n+\n+            @Override\n+            public String version() {\n+                return \"TEST-1\";\n+            }\n+\n+            @Override\n+            public boolean provisional() {\n+                return false;\n+            }\n+\n+            @Override\n+            public List<StrategyRegistration> activeStrategies() {\n+                return List.of();\n+            }\n+\n+            @Override\n+            public Optional<StrategyRegistration> find(String strategyId) {\n+                if (MOMENTUM.equals(strategyId)) {\n+                    return Optional.of(registration(strategyId, 63));\n+                }\n+                if (strategyId != null && strategyId.startsWith(\"WARMUP_\")) {\n+                    return Optional.of(\n+                            registration(\n+                                    strategyId,\n+                                    Integer.parseInt(strategyId.substring(\"WARMUP_\".length()))));\n+                }\n+                return Optional.empty();\n+            }\n+\n+            @Override\n+            public List<ValidationRule> rules(String strategyId) {\n+                return List.of();\n+            }\n+\n+            @Override\n+            public AnalysisConditionRegistry analysisConditions() {\n+                throw new UnsupportedOperationException(\"이 테스트가 쓰지 않는다\");\n+            }\n+\n+            @Override\n+            public ValidationVerdict validate(\n+                    String strategyId, Map<String, Object> parameters, SearchContext context) {\n+                throw new UnsupportedOperationException(\"이 테스트가 쓰지 않는다\");\n+            }\n+\n+            @Override\n+            public Optional<String> baselineStrategyId() {\n+                return Optional.empty();\n+            }\n+        };\n+    }\n+\n+    private static StrategyRegistration registration(String strategyId, int warmupTradingDays) {\n+        return new StrategyRegistration(\n+                strategyId,\n+                strategyId,\n+                null,\n+                List.of(\n+                        new ParameterAxis(\n+                                \"lookbackDays\",\n+                                \"관측 기간\",\n+                                null,\n+                                \"거래일\",\n+                                List.of(warmupTradingDays),\n+                                warmupTradingDays,\n+                                null)),\n+                true,\n+                new WarmupRule(List.of(\"lookbackDays\")),\n+                \"COMPUTED\");\n+    }\n+\n+    /** 이 테스트가 부르지 않는 통로. 부르면 그 자체가 결함이므로 조용한 기본값을 두지 않는다. */\n+    private static InstrumentProfileRepository stubProfileRepository() {\n+        return (mapVersion, instrumentId) -> {\n+            throw new UnsupportedOperationException(\"평가 기간 조회는 대표 상품 정보를 읽지 않는다\");\n+        };\n+    }\n+\n+    /** 주말만 뺀 평일 {@code count}개. */\n+    private static List<LocalDate> weekdays(LocalDate from, int count) {\n+        List<LocalDate> days = new ArrayList<>(count);\n+        LocalDate day = from;\n+        while (days.size() < count) {\n+            if (day.getDayOfWeek() != DayOfWeek.SATURDAY\n+                    && day.getDayOfWeek() != DayOfWeek.SUNDAY) {\n+                days.add(day);\n+            }\n+            day = day.plusDays(1);\n+        }\n+        return List.copyOf(days);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowQueryServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -68,6 +68,12 @@ excludedRanges = 모든 후보의 dataGaps를 합집합한 뒤 [commonStart, com\n | 상장폐지된 후보가 섞임 | `commonEnd`가 그 폐지일로 당겨진다 |\n | 자료 부족 구간이 `commonStart`를 포함 | 구간을 잘라내지 않고 `excludedRanges`로 알린다. 시작일을 조용히 밀지 않는다(원칙 VI) |\n \n+## HTTP 표면\n+\n+이 산식을 밖으로 내보내는 것은 `GET /sectors/evaluation-window`다([sector-api.md](./sector-api.md)). 그 엔드포인트는 여기 출력에 **화면이 다른 워밍업으로 스스로 다시 판정할 재료**를 더해 내려 준다. **이 문서의 산식과 출력 여섯 칸은 그 때문에 바뀌지 않았다** — 그 여섯은 아래 픽스처가 고정하고 워커와 백엔드가 함께 읽으므로, 조회 경로의 사정으로 고치지 않는다.\n+\n+다만 그 엔드포인트는 경계 동작 하나를 다르게 다룬다. **달력이 워밍업에 모자라 `CALENDAR_TOO_SHORT`가 나는 경우를 오류가 아니라 `evaluable: false`로 옮긴다.** 화면이 여러 워밍업을 훑는 용도로 부르는 조회라, 훑는 도중 값 하나가 달력을 넘었다고 조회 전체가 실패하면 나머지 판정까지 잃기 때문이다. 산식 자체는 그대로 오류를 낸다.\n+\n ## 픽스처\n \n `fixtures/evaluation-window-cases.json`에 위 경계 동작마다 입력과 기대 출력을 둔다. Worker의 pytest와 Backend의 JUnit이 같은 파일을 읽는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/contracts/evaluation-window.md",
+          "old_path": "specs/001-etf-market-data/contracts/evaluation-window.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -91,9 +91,71 @@ User Story 3의 펼쳐 보는 층이다.\n \n 003의 \"이 조합은 언제부터 비교 가능합니다\" 안내가 쓴다. 산식과 경계 동작은 [evaluation-window.md](./evaluation-window.md)가 기준이며, 이 엔드포인트는 그 산식의 HTTP 표면이다.\n \n-**요청**: `?sectors=SEMICONDUCTOR,BATTERY&strategy=SECTOR_MOMENTUM`\n+**요청**: `?sectors=SEMICONDUCTOR,BATTERY&strategy=SECTOR_MOMENTUM&maxWarmupTradingDays=200`\n \n-**응답**: `evaluation-window.md`의 출력 구조에 `datasetId`를 더한 것\n+| 인자 | 필수 | 뜻 |\n+|---|---|---|\n+| `sectors` | 예 | 후보 섹터 코드. 쉼표로 잇는다. 중복은 앞선 것만 남기고 **순서를 보존한다**(산식의 `bindingCandidate` 동점 규칙이 입력 순서를 쓴다) |\n+| `strategy` | 아니오 | 워밍업을 정할 전략. 001은 이 값을 정하지 않고 전략 등록표(003 소유)에서 **기본 설정** 워밍업을 읽는다 |\n+| `maxWarmupTradingDays` | 아니오 | 화면이 훑을 워밍업의 상한. 주면 아래 네 필드를 함께 내려 준다 |\n+\n+**둘 다 생략할 수는 없다.** `strategy`도 `maxWarmupTradingDays`도 없으면 워밍업을 적용할 수도, 화면이 스스로 계산할 재료를 내릴 수도 없어 400이다. `strategy`만 생략하면 워밍업 0으로 판정하며, 이것이 **전략 카드 여러 장을 요청 한 번으로 판정하는 경로**다.\n+\n+`maxWarmupTradingDays`를 두는 까닭은 **001이 003의 파라미터 조합을 몰라도 되게 하기 위함이다.** 화면이 자기가 필요한 만큼(등록표 축 상한으로 계산한 값)을 말하고 001은 그만큼만 내려 준다. 생략했을 때 등록표의 최대값으로 대신 채우지 않는다 — 그러면 001이 003 등록표의 축 구성을 읽어야 한다. 값의 허용 범위는 0 이상 6000 이하이며 넘으면 400이다.\n+\n+### 응답\n+\n+```json\n+{\n+  \"commonStart\": \"2019-04-18\",\n+  \"commonEnd\": \"2026-09-07\",\n+  \"warmupTradingDays\": 147,\n+  \"bindingCandidate\": \"305720.XKRX\",\n+  \"bindingSector\": \"BATTERY\",\n+  \"excludedRanges\": [],\n+  \"evaluable\": true,\n+  \"datasetId\": \"KRX_DAILY_20260915\",\n+\n+  \"warmupBaseDate\": \"2018-09-12\",\n+  \"tradingDaysFromBase\": [\"2018-09-12\", \"2018-09-13\", \"2018-09-14\", \"...\"],\n+  \"maxWarmupTradingDays\": 200,\n+  \"excludedRangesFromBase\": []\n+}\n+```\n+\n+앞의 여섯 칸은 `evaluation-window.md`의 출력이고, 나머지는 이 엔드포인트가 더한 것이다.\n+\n+| 필드 | 뜻 |\n+|---|---|\n+| `bindingSector` | `bindingCandidate`가 대표하는 섹터 코드. 화면이 종목 코드를 섹터 이름으로 되짚지 않게 하는 자리다 |\n+| `datasetId` | 이 응답을 만든 자료 버전(FR-013) |\n+| `warmupBaseDate` | 워밍업이 0일 때의 `commonStart`. 기준 후보의 상장일을 거래일 달력에 맞춘 날이다 |\n+| `tradingDaysFromBase` | `warmupBaseDate`부터 `commonEnd`까지의 거래일 오름차순 목록. 길이는 `maxWarmupTradingDays + 1`을 넘지 않는다 |\n+| `maxWarmupTradingDays` | 화면이 계산할 수 있는 워밍업의 상한. `tradingDaysFromBase.length - 1`과 같다 |\n+| `excludedRangesFromBase` | `[warmupBaseDate, commonEnd]` 안의 자료 부족 구간 |\n+\n+**왜 재료를 함께 내리는가.** 003 화면은 사용자가 관측 기간 같은 값을 바꿀 때마다 워밍업이 달라지고 그 자리에서 \"기간이 줄어듭니다 / 분석할 수 없습니다\"를 다시 판정한다. 그런데 그 화면의 완료 기준이 \"값을 만지는 동안 서버로 요청이 나가지 않는다\"여서 값이 바뀔 때마다 이 엔드포인트를 다시 부르는 방식은 쓸 수 없다. 워밍업을 뺀 시작일은 거래일 달력이 있어야 구해지므로, 한 번의 응답에 달력 조각을 실어 보내고 **화면이 `commonStart(N) = tradingDaysFromBase[N]`으로 계산한다**(0-기준, 003 T098의 2026-09-17 합의).\n+\n+`excludedRangesFromBase`를 따로 두는 까닭은 `excludedRanges`가 워밍업을 반영한 `[commonStart, commonEnd]`로 잘려 있어 **그 앞의 자료 부족 구간을 알 수 없기** 때문이다. 화면은 더 짧은 워밍업으로 다시 계산할 때 이 목록을 자기 시작일에 맞춰 다시 자른다. 기존 필드의 뜻은 바꾸지 않았다 — 그 뜻은 워커와 공유하는 픽스처 `fixtures/evaluation-window-cases.json`이 고정하고 있다.\n+\n+### 경계 동작\n+\n+`evaluation-window.md`의 경계 동작에 더해 이 엔드포인트가 정하는 것들이다.\n+\n+| 상황 | 결과 |\n+|---|---|\n+| `maxWarmupTradingDays`가 남은 거래일보다 큼 | **오류가 아니다.** 있는 만큼만 내려 주고 `maxWarmupTradingDays`를 실제 길이 − 1로 줄인다 |\n+| 워밍업을 채울 거래일이 모자람 | **오류가 아니다.** `evaluable: false`이고 `commonStart`는 `null`이다(키는 남는다). 재판정 재료 네 칸은 그대로 내려 준다 |\n+| `warmupBaseDate`가 이미 `commonEnd`를 넘음 | `tradingDaysFromBase`가 빈 배열이고 `maxWarmupTradingDays`는 없다. 어떤 워밍업으로도 평가할 수 없다는 뜻이다 |\n+| `maxWarmupTradingDays`를 주지 않음 | 재판정 재료 네 칸 가운데 `warmupBaseDate`만 내려 주고 나머지 셋은 **키 자체가 없다** |\n+\n+산식이 `CALENDAR_TOO_SHORT`로 실패하는 경우를 여기서 `evaluable: false`로 옮기는 이유는, 화면이 여러 워밍업을 훑는 용도로 부르는 조회라 값 하나가 달력을 넘었다고 조회 전체가 실패하면 나머지 판정까지 잃기 때문이다. **없는 날짜를 지어내는 것과는 다르다** — 날짜를 만들지 않고 \"그 워밍업으로는 평가할 수 없다\"고 말한다.\n+\n+### 자료 버전을 고르는 규칙\n+\n+지금 열린 대응표를 대상으로 수집됐고, 완전하며(`complete = true`), 그중 `data_deadline`이 가장 늦은 것이다. 대표 상품 정보와 같은 세 조건이라 같은 화면의 두 응답이 같은 판을 가리킨다. 접수 경로(`MarketMetadataPort`의 DB 구현)는 대응표를 조건에 넣지 않는데, 파이프라인이 자료를 현재 열린 대응표에 붙여 발행하는 한 두 규칙은 같은 행을 고른다. 갈리는 때는 대응표만 새로 열고 자료는 아직 옛 대응표를 가리키는 과도기이며, 그때 이 조회는 `EVALUATION_WINDOW_NOT_READY`가 되고 접수는 옛 자료로 계속 받는다. **막는 쪽으로 갈리는 것이 안전하다** — 반대로 갈리면 화면이 안내한 첫날이 접수에서 거절된다.\n+\n+거래일 달력은 `daily_index`의 `KOSPI` 행이다. `data_pipeline.index.CALENDAR_INDEX_CODE`·접수 경로와 같은 값이어야 하며, 세 곳이 갈라지면 같은 날을 두 달력으로 세게 된다.\n \n ## 오류\n \n@@ -105,5 +167,7 @@ User Story 3의 펼쳐 보는 층이다.\n | 대응표가 발행되지 않음 | 409 | `SECTOR_MAP_NOT_READY` |\n | 대표 상품 정보가 아직 만들어지지 않음 | 409 | `INSTRUMENT_PROFILE_NOT_READY` |\n | 후보 목록이 빈 요청 | 400 | 검증 실패 |\n+| 평가 기간 산출 자료가 아직 없음 | 409 | `EVALUATION_WINDOW_NOT_READY` |\n+| 등록되지 않은 전략 | 422 | `STRATEGY_NOT_REGISTERED` |\n \n 409를 쓰는 이유는 `backend/CLAUDE.md`가 결과 조회에 적용한 판단과 같다. 자료가 없는 상태를 빈 배열이나 0으로 내보내지 않고 재시도 가능한 상태로 구분한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/contracts/sector-api.md",
+          "old_path": "specs/001-etf-market-data/contracts/sector-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -264,10 +264,15 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한\n \n **2026-09-13 `/speckit-converge` 산출.** 현재 코드를 spec.md·plan.md·contracts·data-model.md와 대조해 남은 일을 덧붙였다. 기존 항목은 하나도 고치지 않았다. T014~T016은 이미 열려 있으므로 다시 만들지 않는다. 판정: FR 17개·SC 7개·사용자 스토리 3개·plan 결정 10개·constitution 원칙 10개를 확인했고 MUST 위반은 없다. 유형은 missing 2·partial 9·contradicts 1이며 unrequested는 없다.\n \n-- [ ] T017 [BE] `GET /sectors/evaluation-window`를 붙인다 per contracts/sector-api.md·FR-007 (missing)\n-  - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있다\n-  - **001이 지금 만들 수 없다.** 산식 입력 다섯 중 `warmupTradingDays`를 `evaluation-window.md` 입력표가 \"전략 등록표(003 소유)에서 온다. 001은 이 값을 정하지 않고 받는다\"로 못 박았고, `delistedOn`도 대응표가 현재 상장 상품만 다루기로 해 도메인 모델에 없다. T010의 2026-09-11 보류 판단이 그대로 유효하다\n-  - 붙일 때 필요한 것은 T010이 적어 둔 다섯 가지다. `EvaluationWindowService`는 입력을 전부 인자로 받으므로 고치지 않고 호출부만 더하면 된다\n+- [X] T017 [BE] `GET /sectors/evaluation-window`를 붙였다 per contracts/sector-api.md·FR-007 (missing) — `S15P21E205-325`\n+  - `EvaluationWindowService`는 공유 픽스처로 검증까지 끝났는데 HTTP 호출부가 없었다. `SectorController`에는 `GET /sectors`와 `/{code}/instrument-profile`만 있었다\n+  - **보류 사유가 풀렸다.** 산식 입력 다섯 중 `warmupTradingDays`는 전략 등록표(003 소유)에서 오는데, 003이 등록표를 열어 `ParameterRegistryPort`로 읽을 수 있게 됐다. 나머지 네은 001 자료가 적재되면서 `dataset_version`·`daily_index`·`data_gap`·`representative_etf`에서 읽힌다. `delisted_on`은 도메인 모델에 넣지 않고 조회 전용 저장소가 SQL로 읽는다\n+  - **구현 메모**: 003과 2026-09-17에 합의한 것은 ①안이다 — 응답에 워밍업 0일 때의 기준일(`warmupBaseDate`)과 그 뒤 거래일 목록(`tradingDaysFromBase`)을 실어 보내고 화면이 `commonStart(N) = tradingDaysFromBase[N]`으로 계산한다. 값을 만지는 동안 서버로 요청이 나가지 않아야 하는 003 B09의 완료 기준을 지키기 위함이다(003 T098)\n+  - **기존 산식과 픽스처는 고치지 않았다.** `excludedRanges`는 워밍업을 반영한 구간으로 잘린 그대로 두고, 기준일부터의 부족 구간은 `excludedRangesFromBase`로 따로 내린다 — 기존 필드의 뜻을 바꾸면 워커가 함께 읽는 `contracts/fixtures/evaluation-window-cases.json`이 깨진다\n+  - **달력이 워밍업에 모자라도 오류가 아니다.** 산식의 `CALENDAR_TOO_SHORT`를 조회 계층에서 `evaluable: false`로 옮겼다. 화면이 여러 워밍업을 훑는 조회라 값 하나 때문에 전체가 실패하면 나머지 판정까지 잃는다\n+  - **`strategy`를 생략할 수 있다.** 생략하면 워밍업 0으로 판정하고, 003은 그 한 번의 응답으로 카드 다섯 장을 판정한다. `maxWarmupTradingDays`를 안 보냈을 때 등록표 최대값으로 채우지 않는다 — 001이 003 등록표의 축 구성을 읽지 않게 하려는 것이 그 인자를 둔 까닭이다\n+  - **자료 버전은 열린 대응표 기준으로 고른다.** 대표 상품 정보와 같은 세 조건이다. 접수 경로(`DatabaseMarketMetadataAdapter`)는 대응표를 보지 않아 과도기에 갈릴 수 있는데, 그때 이 조회는 409가 되고 접수는 옥 자료로 받는다 — 막는 쪽으로 갈리는 편이 안전하다\n+  - **검증**: `EvaluationWindowQueryServiceTest` 13건(DB 없는 조립 규칙, 핵심은 \"화면의 계산과 서버의 계산이 같은 날을 가리킨다\")·`EvaluationWindowApiIT` 7건(실제 자료 위의 계약·오류 구분)\n - [X] T018 [BE] 워밍업 자료를 요청 구간 앞에서 읽을지 확정한다 per contracts/market-dataset.md 「읽기 규칙」·SC-004 (partial)\n   - 계약은 \"워밍업 자료는 요청 구간보다 앞에서 읽는다. 달력 일수로 잡으면 연휴가 긴 해에 워밍업이 모자란다\"고 정했고 T011도 같은 문장을 담았다. `PostgresMarketDataProvider.load`에 `warmup_trading_days` 인자와 거래일 기준 `_warmup_start` 기계가 실제로 들어 있다\n   - 그런데 `engine_runner.py:273`이 그 인자를 넘기지 않아 기본값 0으로 읽고, `evaluation_start`(engine_runner.py:47)가 워밍업을 **요청 구간 안에서** 소비한다. 즉 공급자의 워밍업 경로가 Job 처리 경로에서 죽어 있다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/tasks.md",
+          "old_path": "specs/001-etf-market-data/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2213084,
+      "head_commit_sha": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+      "base_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "start_commit_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c",
+      "created_at": "2026-09-17T14:20:54.923+09:00",
+      "merge_request_id": 948647,
+      "state": "without_files",
+      "real_size": "15",
+      "patch_id_sha": "6ebd224e77cdf0961536ddc5ac94d26ab2f5447e",
+      "commits": [
+        {
+          "id": "e6f73688aa88bb8e4c6bcddf6959c9106cac2448",
+          "short_id": "e6f73688",
+          "created_at": "2026-09-17T14:18:13.000+09:00",
+          "parent_ids": [
+            "ab9726c90a52846586dfcd691973b0becba8b9d5"
+          ],
+          "title": "docs(be): 평가 기간 조회 계약에 화면 재판정 재료를 적는다",
+          "message": "docs(be): 평가 기간 조회 계약에 화면 재판정 재료를 적는다\n\nsector-api.md의 엔드포인트 절을 요청 인자표·응답 필드표·경계 동작표로 넓혔다.\n자료 버전을 고르는 규칙과 거래일 달력의 출처도 함께 적었다. 접수 경로와 판단이\n갈릴 수 있는 지점, 그리고 갈릴 때 어느 쪽으로 막히는지가 여기 있다.\n\nevaluation-window.md에는 HTTP 표면 절을 더했다. 산식과 출력 여섯 칸은 바뀌지\n않았고 그 사실을 적었다. 달력 부족을 조회 계층이 평가 불가로 옮긴다는 것도\n같은 절에 적어, 산식과 조회의 동작이 다른 이유를 한곳에서 읽게 했다.\n\ntasks.md의 T017은 보류 사유가 풀린 경위와 구현에서 정한 것들을 남기고 닫았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:18:13.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:18:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6f73688aa88bb8e4c6bcddf6959c9106cac2448"
+        },
+        {
+          "id": "ab9726c90a52846586dfcd691973b0becba8b9d5",
+          "short_id": "ab9726c9",
+          "created_at": "2026-09-17T14:18:01.000+09:00",
+          "parent_ids": [
+            "57e06b267042bde49e1f8018e1a214325adc1c15"
+          ],
+          "title": "feat(be): GET /sectors/evaluation-window를 연다",
+          "message": "feat(be): GET /sectors/evaluation-window를 연다\n\n003의 \"이 조합은 언제부터 비교 가능합니다\" 안내가 부를 조회다.\n\n전략과 워밍업 상한은 둘 다 선택이지만 적어도 하나는 있어야 한다. 둘 다 없으면\n워밍업을 적용할 수도, 화면이 스스로 계산할 재료를 내릴 수도 없어 응답이 아무\n판정에도 쓰이지 않는다.\n\n상한을 주지 않으면 재판정 재료 세 칸은 키 자체를 내보내지 않는다. \"요청하지 않아\n없음\"과 \"계산해 봤더니 없음\"이 구분된다.\n\n질의 값이 규칙에 맞지 않을 때 IllegalArgumentException을 그대로 흘려보내지\n않는다. 섹터 조회의 오류 매핑이 그 예외를 저장된 자료의 결함으로 보아 500으로\n옮기기 때문에, 클라이언트가 잘못 보낸 질의로 5xx 경보가 울린다.\n\n평가 기간을 산출할 자료가 아직 없는 것은 409로 가른다. 평가 불가와 같은 실패로\n뭉개면 화면이 \"잠시 후 다시\"와 \"이 조합은 안 됩니다\"를 구분할 수 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:18:01.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:18:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab9726c90a52846586dfcd691973b0becba8b9d5"
+        },
+        {
+          "id": "57e06b267042bde49e1f8018e1a214325adc1c15",
+          "short_id": "57e06b26",
+          "created_at": "2026-09-17T14:17:47.000+09:00",
+          "parent_ids": [
+            "b41cc03532b5d25667273a3612958452cbb3d821"
+          ],
+          "title": "feat(be): 조합의 평가 가능 기간을 판정하는 유스케이스를 만든다",
+          "message": "feat(be): 조합의 평가 가능 기간을 판정하는 유스케이스를 만든다\n\n대응표에서 후보를 찾고, 저장소에서 재료를 읽고, 산식을 불러 판정한다. 산식\n자체는 워커와 같은 픽스처로 묶여 있어 고치지 않았다.\n\n워밍업은 003 전략 등록표에서 읽는다. 001은 이 값을 정하지 않는다. 요청이 전략을\n주지 않으면 워밍업 0으로 판정하며, 전략 카드 여러 장을 요청 한 번으로 판정하려는\n화면이 이 경로를 쓴다.\n\n응답에 화면이 다른 워밍업으로 스스로 다시 판정할 재료를 함께 담는다. 워밍업이\n0일 때의 기준일과 그 뒤 거래일 목록이며, 화면은 목록에서 워밍업 일수만큼 떨어진\n날짜를 꺼내 시작일을 구한다. 목록 길이의 상한은 요청이 정한다. 001이 003의\n파라미터 축 구성을 읽지 않게 하려는 것이다.\n\n달력이 워밍업에 모자라면 산식은 오류를 내지만 여기서는 평가 불가인 정상 결과로\n옮긴다. 화면이 여러 워밍업을 훑는 조회라 값 하나 때문에 조회 전체가 실패하면\n나머지 판정까지 잃는다. 날짜를 지어내지 않고 \"그 워밍업으로는 평가할 수 없다\"고\n말하는 것이라 원칙을 어기지 않는다.\n\n기존 필드의 뜻은 바꾸지 않았다. 기준일부터의 자료 부족 구간은 별도 필드로 낸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:17:47.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:17:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/57e06b267042bde49e1f8018e1a214325adc1c15"
+        },
+        {
+          "id": "b41cc03532b5d25667273a3612958452cbb3d821",
+          "short_id": "b41cc035",
+          "created_at": "2026-09-17T14:17:31.000+09:00",
+          "parent_ids": [
+            "33fb8547d755582e5a3e2ded5ce72dd846d446fc"
+          ],
+          "title": "feat(be): 평가 기간 산식의 재료를 저장소에서 읽는다",
+          "message": "feat(be): 평가 기간 산식의 재료를 저장소에서 읽는다\n\n공통 평가 가능 기간 산식은 후보의 상장일·상장폐지일, 자료 부족 구간, 자료 마감\n시각, 거래일 달력을 입력으로 받는다. 지금까지 백엔드에는 이 넷을 읽는 경로가\n없어 산식이 호출부 없이 놓여 있었다.\n\n넷을 한 덩어리로 읽는다. 자료 버전을 고르는 일과 그 버전의 달력을 읽는 일이\n따로 일어나면, 그 사이 새 자료 버전이 발행됐을 때 마감 시각과 달력이 서로 다른\n버전의 것인 응답이 나온다.\n\n자료 버전은 열린 대응표를 대상으로 수집된 완전한 묶음 가운데 마감이 가장 늦은\n것이다. 대표 상품 정보와 같은 세 조건이라 같은 화면의 두 응답이 같은 판을\n가리킨다.\n\n거래일 달력은 daily_index의 KOSPI 행이다. 수집 파이프라인과 접수 경로가 쓰는\n값과 같아야 하며, 갈라지면 같은 날을 두 달력으로 세게 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:17:31.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:17:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b41cc03532b5d25667273a3612958452cbb3d821"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2212640,
+      "head_commit_sha": "5f2d3fb28195e9472486e3cba3f1db6645c00250",
+      "base_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+      "start_commit_sha": "1ad9f598e7bc17dc464c62205f10fa8001884b18",
+      "created_at": "2026-09-17T13:46:13.517+09:00",
+      "merge_request_id": 948647,
+      "state": "without_files",
+      "real_size": "15",
+      "patch_id_sha": "6ebd224e77cdf0961536ddc5ac94d26ab2f5447e",
+      "commits": [
+        {
+          "id": "5f2d3fb28195e9472486e3cba3f1db6645c00250",
+          "short_id": "5f2d3fb2",
+          "created_at": "2026-09-17T13:44:24.000+09:00",
+          "parent_ids": [
+            "33fb8547d755582e5a3e2ded5ce72dd846d446fc"
+          ],
+          "title": "feat(be): 공통 평가 가능 기간 조회를 연다",
+          "message": "feat(be): 공통 평가 가능 기간 조회를 연다\n\n산식(EvaluationWindowService)은 워커와 공유하는 픽스처로 검증까지 끝났는데\nHTTP 호출부가 없어 003 전략 설정 화면이 \"이 조합은 언제부터 비교 가능합니다\"를\n판정하지 못했다. 보류 사유였던 warmupTradingDays는 003이 전략 등록표를 열면서\nParameterRegistryPort로 읽을 수 있게 됐고, 나머지 입력은 001 자료가 적재되면서\ndataset_version·daily_index·data_gap·representative_etf에서 읽힌다.\n\n003이 값을 바꾸는 동안 서버로 요청을 내보내지 않기로 했으므로(티켓 241) 응답에\n화면이 스스로 재판정할 재료를 함께 싣는다. 화면은 commonStart(N)을\ntradingDaysFromBase[N]으로 계산한다.\n\n기존 산식과 공유 픽스처는 고치지 않았다. excludedRanges의 뜻을 바꾸는 대신\n기준일부터의 부족 구간을 excludedRangesFromBase로 따로 내린다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T13:44:24.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T13:44:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5f2d3fb28195e9472486e3cba3f1db6645c00250"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2824148": []
+  }
+}

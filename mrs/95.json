@@ -1,0 +1,996 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943711,
+    "iid": 95,
+    "project_id": 1444456,
+    "title": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다",
+    "description": "## **작업 내용 요약**\n\n파트 스테이지가 **전부 건너뛰어지는데도 빌드가 `SUCCESS`로 끝납니다.** 검증이 하나도 돌지 않았는데 초록불이 뜹니다.\n\n`First time build. Skipping changelog.Warning, empty changelog. Have you run checkout?Stage \"Frontend\" skipped due to when conditionalStage \"Backend\" skipped due to when conditional`\n\nMR !88과 MR !94에서 실제로 재현됐습니다.\n\n## **관련 티켓 번호 & 링크**\n\nticket #210 (Jira S15P21E205-210 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-210\n\n## **주요 변경 사항**\n\n### **1. 파트 선별을 기준 브랜치 비교로 바꿈**\n\n`when { changeset }`은 Jenkins가 계산한 changelog를 봅니다. 이 Job은 MR마다 다른 브랜치를 체크아웃하므로 직전 빌드와 비교할 대상이 없을 때가 있고, 그러면 changelog가 빕니다. **어느 파트를 고쳤든 전부 건너뜁니다.**\n\n`origin/dev`와 직접 비교해 바뀐 파일을 구합니다.\n\n`CHANGED_FILES = sh(returnStdout: true, script: 'git diff --name-only origin/dev...HEAD || true').trim()`\n\n`def partChanged(String part) {    if (env.CI_RUN_ALL == 'true') { return true }\n    String changed = env.CHANGED_FILES    if (changed == null || changed.trim().isEmpty()) { return true }\n    return changed.split('\\n').any { it.startsWith(part + '/') }}`\n\n**비교 결과가 비면 전체를 돌립니다.** 무엇이 바뀌었는지 알아내지 못했을 때 건너뛰면 검증이 빈 채로 초록불이 뜹니다. 시간을 더 쓰더라도 도는 쪽으로 기울였습니다.\n\n세 점 표기(`origin/dev...HEAD`)는 갈라진 지점부터 이 브랜치가 바꾼 것만 고릅니다. 그 사이 dev에 들어온 남의 변경은 세지 않습니다.\n\n`[ci-all]` 경로는 그대로입니다.\n\n### **2. 티켓 209에서 잘못 쓴 주석을 고침**\n\n`options` 블록의 주석이 이렇게 적혀 있었습니다.\n\n> Declarative Pipeline은 options 블록을 만나면 Job의 속성 집합을 이 내용으로 덮어쓰므로, 화면으로 지정한 연결이 빌드가 돌면서 지워진다\n\n**사실이 아닙니다.** JENKINS-44621 수정 이후 Declarative는 화면에서만 설정한 속성을 보존하고, 이전 Jenkinsfile이 선언했던 속성만 지웁니다.\n\n실제 위험은 반대 방향이라 그 내용으로 바꿨습니다. **이 선언을 지우면 다음 빌드에서 Job의 연결 속성이 통째로 사라집니다.**\n\n## **테스트**\n\n* 완료중괄호 균형 확인 (120쌍)\n* 완료`changeset` 지시어 제거 확인, `partChanged` 호출 4개\n* 완료`updateGitlabCommitStatus` 18개 유지\n* 미완료**이 MR의 빌드에서 확인합니다**\n  * `Jenkinsfile`만 바뀌었으므로 네 파트는 모두 건너뛰어야 합니다\n  * GitLab 커밋 상태 두 줄(`Merge with dev`, `Migration version`)이 나타나야 합니다\n\n## **리뷰 포인트**\n\n1. **커밋 상태 표시 확인을 겸합니다.** 티켓 209의 원인은 Job 설정의 연결 값이 비어 있던 것이었고, 값을 채워 저장했습니다. 이 MR이 그 확인입니다. **확인 전까지 머지하지 말아 주세요.**\n2. **선별 실패 시 전체를 도는 방향이 맞는지 봐 주세요.** 빌드 시간이 늘 수 있습니다. 다만 지금까지의 사고가 전부 \"실행되지 않은 것이 통과로 세어진\" 경우라 이렇게 두었습니다.\n3. **`origin/dev`가 없으면 어떻게 되는지 봐 주세요.** `|| true`로 받아 빈 값이 되고 전체가 돕니다. Checkout SCM이 `refs/remotes/origin/*`을 통째로 가져오므로 실제로는 항상 있습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T20:06:14.605+09:00",
+    "updated_at": "2026-09-14T20:50:27.949+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T20:50:27.685+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/210-changed-parts-by-diff",
+    "user_notes_count": 4,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+    "merge_commit_sha": "2041d1a937c22e636166c7e1f269bdb237313bf8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T20:06:15.621+09:00",
+    "reference": "!95",
+    "references": {
+      "short": "!95",
+      "relative": "!95",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!95"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/95",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943711,
+    "iid": 95,
+    "project_id": 1444456,
+    "title": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다",
+    "description": "## **작업 내용 요약**\n\n파트 스테이지가 **전부 건너뛰어지는데도 빌드가 `SUCCESS`로 끝납니다.** 검증이 하나도 돌지 않았는데 초록불이 뜹니다.\n\n`First time build. Skipping changelog.Warning, empty changelog. Have you run checkout?Stage \"Frontend\" skipped due to when conditionalStage \"Backend\" skipped due to when conditional`\n\nMR !88과 MR !94에서 실제로 재현됐습니다.\n\n## **관련 티켓 번호 & 링크**\n\nticket #210 (Jira S15P21E205-210 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-210\n\n## **주요 변경 사항**\n\n### **1. 파트 선별을 기준 브랜치 비교로 바꿈**\n\n`when { changeset }`은 Jenkins가 계산한 changelog를 봅니다. 이 Job은 MR마다 다른 브랜치를 체크아웃하므로 직전 빌드와 비교할 대상이 없을 때가 있고, 그러면 changelog가 빕니다. **어느 파트를 고쳤든 전부 건너뜁니다.**\n\n`origin/dev`와 직접 비교해 바뀐 파일을 구합니다.\n\n`CHANGED_FILES = sh(returnStdout: true, script: 'git diff --name-only origin/dev...HEAD || true').trim()`\n\n`def partChanged(String part) {    if (env.CI_RUN_ALL == 'true') { return true }\n    String changed = env.CHANGED_FILES    if (changed == null || changed.trim().isEmpty()) { return true }\n    return changed.split('\\n').any { it.startsWith(part + '/') }}`\n\n**비교 결과가 비면 전체를 돌립니다.** 무엇이 바뀌었는지 알아내지 못했을 때 건너뛰면 검증이 빈 채로 초록불이 뜹니다. 시간을 더 쓰더라도 도는 쪽으로 기울였습니다.\n\n세 점 표기(`origin/dev...HEAD`)는 갈라진 지점부터 이 브랜치가 바꾼 것만 고릅니다. 그 사이 dev에 들어온 남의 변경은 세지 않습니다.\n\n`[ci-all]` 경로는 그대로입니다.\n\n### **2. 티켓 209에서 잘못 쓴 주석을 고침**\n\n`options` 블록의 주석이 이렇게 적혀 있었습니다.\n\n> Declarative Pipeline은 options 블록을 만나면 Job의 속성 집합을 이 내용으로 덮어쓰므로, 화면으로 지정한 연결이 빌드가 돌면서 지워진다\n\n**사실이 아닙니다.** JENKINS-44621 수정 이후 Declarative는 화면에서만 설정한 속성을 보존하고, 이전 Jenkinsfile이 선언했던 속성만 지웁니다.\n\n실제 위험은 반대 방향이라 그 내용으로 바꿨습니다. **이 선언을 지우면 다음 빌드에서 Job의 연결 속성이 통째로 사라집니다.**\n\n## **테스트**\n\n* 완료중괄호 균형 확인 (120쌍)\n* 완료`changeset` 지시어 제거 확인, `partChanged` 호출 4개\n* 완료`updateGitlabCommitStatus` 18개 유지\n* 미완료**이 MR의 빌드에서 확인합니다**\n  * `Jenkinsfile`만 바뀌었으므로 네 파트는 모두 건너뛰어야 합니다\n  * GitLab 커밋 상태 두 줄(`Merge with dev`, `Migration version`)이 나타나야 합니다\n\n## **리뷰 포인트**\n\n1. **커밋 상태 표시 확인을 겸합니다.** 티켓 209의 원인은 Job 설정의 연결 값이 비어 있던 것이었고, 값을 채워 저장했습니다. 이 MR이 그 확인입니다. **확인 전까지 머지하지 말아 주세요.**\n2. **선별 실패 시 전체를 도는 방향이 맞는지 봐 주세요.** 빌드 시간이 늘 수 있습니다. 다만 지금까지의 사고가 전부 \"실행되지 않은 것이 통과로 세어진\" 경우라 이렇게 두었습니다.\n3. **`origin/dev`가 없으면 어떻게 되는지 봐 주세요.** `|| true`로 받아 빈 값이 되고 전체가 돕니다. Checkout SCM이 `refs/remotes/origin/*`을 통째로 가져오므로 실제로는 항상 있습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T20:06:14.605+09:00",
+    "updated_at": "2026-09-14T20:50:27.949+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T20:50:27.685+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/210-changed-parts-by-diff",
+    "user_notes_count": 4,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+    "merge_commit_sha": "2041d1a937c22e636166c7e1f269bdb237313bf8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T20:06:15.621+09:00",
+    "reference": "!95",
+    "references": {
+      "short": "!95",
+      "relative": "!95",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!95"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/95",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-14T20:49:26.437+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 194059,
+      "iid": 3,
+      "project_id": 1444456,
+      "sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+      "ref": "fix(infra)/210-changed-parts-by-diff",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-14T20:49:25.655+09:00",
+      "updated_at": "2026-09-14T20:49:26.439+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/194059"
+    },
+    "head_pipeline": {
+      "id": 194059,
+      "iid": 3,
+      "project_id": 1444456,
+      "sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+      "ref": "fix(infra)/210-changed-parts-by-diff",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-14T20:49:25.655+09:00",
+      "updated_at": "2026-09-14T20:49:26.439+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/194059",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-14T20:49:26.437+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/194059",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "head_sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+      "start_sha": "3be30aedaedf05acc215216d1a432901ab459740"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "153e1e532f65a64eb4d2f07ac353cdf56d18cf55",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804360,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:06:14.735+09:00",
+          "updated_at": "2026-09-14T20:06:14.739+09:00",
+          "system": true,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dfe1f2b9c700292e565fad0de1d176754e016cfd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804361,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:06:14.794+09:00",
+          "updated_at": "2026-09-14T20:06:14.855+09:00",
+          "system": true,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fc25324930f9964c2dd1a220e3af77b503f84f81",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804364,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **안전성 중심 설계**: Git diff 비교 실패 시 혹은 예외 상황(따옴표 포함 경로 등)에서 빌드를 건너뛰는 대신 전체 파이프라인을 실행(`return true`)하도록 설계하여, 검증 누락(False Negative)을 방지한 점이 매우 훌륭합니다.\n- **Git 설정 및 엣지 케이스 대응**: `git -c core.quotePath=false` 및 `--no-renames` 옵션을 추가하여 한글 경로 처리 및 파일 이름 변경 시 발생할 수 있는 파싱 오류를 선제적으로 방어했습니다.\n\n### 발견 사항\n- [Low] `Jenkinsfile`: `CHANGED_FILES` 환경 변수가 파이프라인의 `environment` 블록에서 정의되고 있습니다. 만약 첫 번째 단계(Checkout)가 실행되기 전에 해당 `sh` 명령어가 평가된다면, 아직 체크아웃이 수행되지 않아 `origin/dev` 브랜치를 올바르게 참조하지 못하거나 빈 값으로 평가될 위험이 있습니다. \n  - *확인 필요*: 젠킨스 빌드 라이프사이클 상 `environment` 블록 내의 쉘 명령어 실행 시점과 Workspace 체크아웃 시점의 선후 관계를 확인해야 합니다. 만약 체크아웃 이전이라면 `CHANGED_FILES`가 빈 값으로 평가되어 항상 전체 빌드가 돌 수 있으나, 이는 안전한 방향(Fail-safe)이므로 치명적인 버그는 아닙니다.\n\n### 테스트 제안\n1. **CI 전체 실행 테스트**: 커밋 메시지에 `[ci-all]`을 포함하여 푸시했을 때, 변경된 파일과 무관하게 `Frontend`, `Backend`, `Worker`, `Data` 모든 파트가 정상적으로 실행되는지 확인합니다.\n2. **단일 파트 변경 테스트**: `frontend/` 하위 파일만 수정하여 커밋한 후, `Frontend` 스테이지는 실행되고 나머지 스테이지(`Backend`, `Worker`, `Data`)는 올바르게 건너뛰어지는지 확인합니다.\n3. **한글 경로 파일 테스트**: 한글 이름이 포함된 파일(예: `backend/테스트.java`)을 수정하여 푸시했을 때, `core.quotePath=false` 설정 덕분에 `Backend` 파트가 누락되지 않고 정상적으로 감지되어 실행되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:99d3f9081ee23ae4e943346e5c77955afd6ee68b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T20:06:23.560+09:00",
+          "updated_at": "2026-09-14T20:49:25.216+09:00",
+          "system": false,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e9058b48df733b06e79be9349eda01117e6bc1e7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804368,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>acb631c7 - fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/95/diffs?diff_id=2195941&start_sha=b93ae49c04d6827aa67861b4f3799b94ec370d42)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:08:10.502+09:00",
+          "updated_at": "2026-09-14T20:08:10.505+09:00",
+          "system": true,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "24193dc580e90eb26e60f7864885c354ecb77f76",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804396,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>dd59e1ee - fix(infra): 따옴표로 감싼 경로를 만나면 파트 선별을 포기하고 전체를 돌린다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/95/diffs?diff_id=2195970&start_sha=acb631c7af83a1c2ad93071b9abdd9b661c066d0)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:28:54.834+09:00",
+          "updated_at": "2026-09-14T20:28:54.838+09:00",
+          "system": true,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "59ec5b10da630d37e6d9c5c15f66081918e95537",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804410,
+          "type": null,
+          "body": "\\[Medium\\] Jenkinsfile: `partChanged` 함수의 `changed.split('\\n')` 처리 시, Git diff 결과에 빈 줄이 포함되거나 파일 경로에 공백이 있을 경우 예기치 않은 매칭 오류가 발생할 수 있습니다. `it.trim()`과 빈 문자열 필터링(`it?.trim()`)을 추가하는 것을 권장합니다.\n\n* 오탐. \n  * **빈 줄**은 이미 `CHANGED_FILES`는 `.trim()`으로 받습니다. 끝의 개행이 이미 제거되어 빈 요소가 생기지 않습니다. \n\n    또한,  `git diff --name-only`는 중간에 빈 줄을 내지 않습니다. 경로가 빈 문자열일 수 없기 때문입니다.\n  * **공백이 든 경로**에 대해서도, **공백은 줄을 나누지 않으므로**, `startsWith('data/')`가 정상 동작합니다.\n  * 즉 : `it.trim()`을 넣어도 동작은 같습니다. 오히려 코드를 읽는 사람에게 \"여기서 빈 줄이 나올 수 있구나\"라는 잘못된 인식을 줍니다.",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:35:54.208+09:00",
+          "updated_at": "2026-09-14T20:35:54.208+09:00",
+          "system": false,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9400d54ff8fb8aac72138e296e0db0f784b3cd70",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804415,
+          "type": null,
+          "body": "\\[Low\\] Jenkinsfile: `env.CHANGED_FILES`와 `env.CI_RUN_ALL`을 `stages` 블록 외부인 `environment` 블록에서 한 번만 평가하고 있습니다. 만약 파이프라인 내에서 추가적인 체크아웃이나 브랜치 전환이 발생한다면 해당 환경 변수가 최신 상태를 반영하지 못할 수 있습니다. 현재 구조에서는 큰 문제가 없으나 향후 파이프라인 확장 시 유의해야 합니다.\n\n* 옳은 관찰이지만 지금 고칠필요는 없습니다.\n  * 설명 주석에도 언급되어 있듯, 현재 구조에서는 최상단 agent any와 파이프라인 시작 전 체크아웃이 보장되므로 동작에 문제 없습니다.",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:38:35.110+09:00",
+          "updated_at": "2026-09-14T20:38:35.110+09:00",
+          "system": false,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5d0c497885b5a4f09bcc1bf345659b1cf92b105a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804419,
+          "type": null,
+          "body": "\\[Low\\] `Jenkinsfile`: `partChanged` 함수 내에서 `changed.split('\\n')`을 파트별 `when` 조건마다 매번 호출하고 있습니다. 파일 목록의 크기가 매우 크지 않다면 성능에 큰 영향은 없지만, 파이프라인이 커질 경우를 대비해 파싱 결과를 한 번만 캐싱하거나 처리하는 구조를 고려할 수 있습니다.\n\n* 오탐.\n  * `when` 조건은 파트마다 **한 번씩, 빌드당 총 네 번** 평가됩니다. 반복문 안이 아닙니다.\n  * 네 번의 `split`이 나누는 것은 길어야 수백 줄짜리 문자열이고, 빌드는 몇 분 걸리는 작업입니다. .\n  * 캐싱하려면, CPS 파이프라인에서 전역 가변 상태를 두거나 `@Field`를 써야 합니다. **마이크로초를 아끼려고 직렬화 문제를 안고 가야합니다.**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:39:53.287+09:00",
+          "updated_at": "2026-09-14T20:39:53.287+09:00",
+          "system": false,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b4d0f59c434444af1ebff3e68a334492bde66dbb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804436,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>99d3f908 - chore(infra): 열린 MR 재빌드 트리거가 도는지 확인한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/95/diffs?diff_id=2195996&start_sha=dd59e1ee6161b88c27808a9e160db8946aa583d4)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:49:16.967+09:00",
+          "updated_at": "2026-09-14T20:49:16.972+09:00",
+          "system": true,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3687ca379992c444dcf2851b02324fc667bad26d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804438,
+          "type": null,
+          "body": "mentioned in commit 2041d1a937c22e636166c7e1f269bdb237313bf8",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:50:27.948+09:00",
+          "updated_at": "2026-09-14T20:50:27.959+09:00",
+          "system": true,
+          "noteable_id": 943711,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 95,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2195996,
+      "head_commit_sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:49:16.719+09:00",
+      "merge_request_id": 943711,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "4cfe8a421d0c6910d13eb08cc44599f828f6c4ee"
+    },
+    {
+      "id": 2195970,
+      "head_commit_sha": "dd59e1ee6161b88c27808a9e160db8946aa583d4",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:28:54.595+09:00",
+      "merge_request_id": 943711,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "4cfe8a421d0c6910d13eb08cc44599f828f6c4ee"
+    },
+    {
+      "id": 2195941,
+      "head_commit_sha": "acb631c7af83a1c2ad93071b9abdd9b661c066d0",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:08:10.268+09:00",
+      "merge_request_id": 943711,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "1e967b5fd5b7b6af03a76f6d919df2cfe53b31d1"
+    },
+    {
+      "id": 2195939,
+      "head_commit_sha": "b93ae49c04d6827aa67861b4f3799b94ec370d42",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:06:15.012+09:00",
+      "merge_request_id": 943711,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "70eab2ceba0b021bd1b2f65806c91327ad2ce7b3"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2195996,
+      "head_commit_sha": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:49:16.719+09:00",
+      "merge_request_id": 943711,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "4cfe8a421d0c6910d13eb08cc44599f828f6c4ee",
+      "commits": [
+        {
+          "id": "99d3f9081ee23ae4e943346e5c77955afd6ee68b",
+          "short_id": "99d3f908",
+          "created_at": "2026-09-14T20:49:09.000+09:00",
+          "parent_ids": [
+            "dd59e1ee6161b88c27808a9e160db8946aa583d4"
+          ],
+          "title": "chore(infra): 열린 MR 재빌드 트리거가 도는지 확인한다",
+          "message": "chore(infra): 열린 MR 재빌드 트리거가 도는지 확인한다\n\nRebuild open Merge Requests 를 On push to source branch 로 바꾼 뒤,\n소스 브랜치 푸시가 실제로 빌드를 부르는지 보려고 남기는 빈 커밋이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:49:09.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:49:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/99d3f9081ee23ae4e943346e5c77955afd6ee68b"
+        },
+        {
+          "id": "dd59e1ee6161b88c27808a9e160db8946aa583d4",
+          "short_id": "dd59e1ee",
+          "created_at": "2026-09-14T20:28:51.000+09:00",
+          "parent_ids": [
+            "acb631c7af83a1c2ad93071b9abdd9b661c066d0"
+          ],
+          "title": "fix(infra): 따옴표로 감싼 경로를 만나면 파트 선별을 포기하고 전체를 돌린다",
+          "message": "fix(infra): 따옴표로 감싼 경로를 만나면 파트 선별을 포기하고 전체를 돌린다\n\ncore.quotePath=false 로 한글 경로는 그대로 나오지만, 따옴표·역슬래시·\n제어문자가 든 경로는 git 이 여전히 따옴표로 감싼다. 그러면 그 줄이\npart/ 로 시작하지 않아 바뀐 파트를 안 바뀐 것으로 읽는다. 틀리는 방향이\n건너뛰는 쪽이다.\n\n그런 줄이 하나라도 있으면 비교를 믿지 않고 전체를 돌린다.\n\n최상위 environment 블록이 한 번만 평가된다는 전제도 주석으로 남긴다.\n어느 스테이지에 전용 agent 나 전용 environment 를 붙이면 그 컨텍스트에서\n다시 평가되어 값이 달라질 수 있다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:28:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:28:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dd59e1ee6161b88c27808a9e160db8946aa583d4"
+        },
+        {
+          "id": "acb631c7af83a1c2ad93071b9abdd9b661c066d0",
+          "short_id": "acb631c7",
+          "created_at": "2026-09-14T20:08:07.000+09:00",
+          "parent_ids": [
+            "b93ae49c04d6827aa67861b4f3799b94ec370d42"
+          ],
+          "title": "fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다",
+          "message": "fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다\n\ngit 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고 8진수로\n이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가 data/ 로\n시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다. 틀리는 방향이\n건너뛰는 쪽이라 이 작업이 막으려는 것과 같은 사고가 된다.\n\ncore.quotePath=false 로 인용을 끈다.\n\n--no-renames 도 함께 둔다. 이름 변경 감지는 diff.renames 와 유사도,\nrenameLimit 에 좌우되는 추정이고 한계를 넘으면 git 이 말없이 포기한다.\n파트 선별은 경로 접두사만 보면 되므로 추정을 끄면 worker 에서 data 로\n옮긴 파일이 두 파트 모두에 잡힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:08:07.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:08:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/acb631c7af83a1c2ad93071b9abdd9b661c066d0"
+        },
+        {
+          "id": "b93ae49c04d6827aa67861b4f3799b94ec370d42",
+          "short_id": "b93ae49c",
+          "created_at": "2026-09-14T19:47:21.000+09:00",
+          "parent_ids": [
+            "3be30aedaedf05acc215216d1a432901ab459740"
+          ],
+          "title": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다",
+          "message": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다\n\nwhen 의 changeset 지시어는 Jenkins 가 계산한 changelog 를 본다. 이 Job 은\nMR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가\n있고, 그러면 changelog 가 빈다. 어느 파트를 고쳤든 네 파트가 모두\n건너뛰어지고 빌드는 SUCCESS 로 끝난다. 검증이 하나도 돌지 않았는데\n초록불이 뜬다.\n\nMR !88 과 MR !94 에서 실제로 재현됐다.\n\n    Warning, empty changelog. Have you run checkout?\n    Stage \"Frontend\" skipped due to when conditional\n\norigin/dev 와 직접 비교해 바뀐 파일 목록을 구하고, 그 목록으로 파트를\n고른다. 비교가 실패해 목록이 비면 건너뛰지 않고 전부 돌린다. 골라내지\n못했을 때는 시간을 더 쓰더라도 검증이 비는 쪽을 막는다.\n\n티켓 209 에서 options 주석에 적은 설명이 사실과 달라 함께 고친다.\nDeclarative 는 화면에서만 설정한 속성을 지우지 않는다. 실제 위험은 반대\n방향으로, 그 선언을 지우면 Job 의 연결 속성이 사라진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T19:47:21.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T19:47:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b93ae49c04d6827aa67861b4f3799b94ec370d42"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -14,6 +14,35 @@ def ciSubject() {\n     return env.JOB_NAME\n }\n \n+// 이 파트가 이번 변경에 포함되는지 판단한다.\n+//\n+// 예전에는 when 의 changeset 지시어를 썼는데, 그것은 Jenkins 가 계산한 changelog 를 본다.\n+// 이 Job 은 MR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가 있고,\n+// 그러면 로그에 \"Warning, empty changelog\" 가 남으면서 네 파트가 모두 건너뛰어진 채\n+// 빌드가 SUCCESS 로 끝난다. 실행되지 않은 검증이 통과로 세어진다.\n+//\n+// 비교 결과가 비면 참을 돌려준다. 무엇이 바뀌었는지 알아내지 못했을 때는 건너뛰는 쪽이\n+// 아니라 전부 도는 쪽으로 기운다. 시간은 더 들지만 검증이 빈 채로 초록불이 뜨지는 않는다.\n+def partChanged(String part) {\n+    if (env.CI_RUN_ALL == 'true') {\n+        return true\n+    }\n+\n+    String changed = env.CHANGED_FILES\n+    if (changed == null || changed.trim().isEmpty()) {\n+        return true\n+    }\n+\n+    // core.quotePath=false 로 한글 경로는 그대로 나오지만, 따옴표·역슬래시·제어문자가 든\n+    // 경로는 git 이 여전히 따옴표로 감싼다. 그러면 그 줄이 part/ 로 시작하지 않아 바뀐 파트를\n+    // 안 바뀐 것으로 읽는다. 그런 줄이 하나라도 있으면 비교를 믿지 않고 전체를 돌린다.\n+    if (changed.startsWith('\"') || changed.contains('\\n\"')) {\n+        return true\n+    }\n+\n+    return changed.split('\\n').any { it.startsWith(part + '/') }\n+}\n+\n pipeline {\n     agent any\n \n@@ -28,10 +57,12 @@ pipeline {\n         // updateGitlabCommitStatus 가 GitLab API 를 부를 때 쓰는 연결이다.\n         // Jenkins > Manage Jenkins > System 의 GitLab connections 에 있는 이름과 같아야 한다.\n         //\n-        // Job 설정 화면에도 같은 항목이 있지만 거기에만 두면 안 된다. Declarative Pipeline 은\n-        // options 블록을 만나면 Job 의 속성 집합을 이 내용으로 덮어쓰므로, 화면으로 지정한\n-        // 연결이 빌드가 돌면서 지워진다. 그러면 커밋 상태 보고가 오류 없이 조용히 멈추고\n-        // 로그에 \"No GitLab connection configured\" 만 남는다.\n+        // 이름이 한 글자라도 다르거나 값이 비면 보고가 오류 없이 조용히 멈추고, 로그에\n+        // \"No GitLab connection configured\" 한 줄만 남는다. 빌드는 초록색으로 끝난다.\n+        //\n+        // 이 선언은 Job 설정 화면의 GitLab Connection 보다 우선한다(선언을 넣은 첫 빌드만\n+        // 예외다). 그러므로 이 줄을 지우면 다음 빌드에서 Job 의 연결 속성이 통째로 사라진다.\n+        // Declarative 는 이전 Jenkinsfile 이 선언했던 속성을 지우기 때문이다 (JENKINS-44621).\n         gitLabConnection('ssafy-gitlab')\n     }\n \n@@ -45,11 +76,28 @@ pipeline {\n         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.\n         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'\n \n-        // 파트 스테이지는 평소 changeset 으로 걸러진다. 바뀌지 않은 파트를 매번 빌드하면\n+        // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면\n         // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.\n         // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.\n         //   git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n         CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n+\n+        // 어느 파트가 바뀌었는지는 기준 브랜치와 직접 비교해서 정한다. partChanged 가 이 값을\n+        // 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이 dev 에\n+        // 들어온 남의 변경은 세지 않는다.\n+        //\n+        // origin/dev 는 Checkout SCM 이 refs/remotes/origin/* 를 통째로 가져오므로 이 시점에\n+        // 이미 있다. 그래도 실패할 수 있으니 || true 로 받아, 실패하면 빈 값이 되어 전체가 돈다.\n+\n+        // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고\n+        // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가\n+        // data/ 로 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다.\n+        // 틀리는 방향이 건너뛰는 쪽이라 위험하므로 인용을 끈다.\n+        //\n+        // 이 값은 첫 스테이지 전에 한 번만 평가된다. 모든 스테이지가 최상위 agent 를 함께 쓰기\n+        // 때문이다. 어느 스테이지에 전용 agent 나 전용 environment 를 붙이면 그 컨텍스트에서\n+        // 다시 평가되고, 체크아웃 전 워크스페이스에서 값이 정해질 수 있다.\n+        CHANGED_FILES = sh(returnStdout: true, script: 'git -c core.quotePath=false diff --name-only --no-renames origin/dev...HEAD || true').trim()\n     }\n \n     stages {\n@@ -120,10 +168,7 @@ pipeline {\n \n         stage('Frontend') {\n             when {\n-                anyOf {\n-                    changeset \"frontend/**\"\n-                    environment name: 'CI_RUN_ALL', value: 'true'\n-                }\n+                expression { partChanged('frontend') }\n             }\n             stages {\n                 stage('FE Install') {\n@@ -183,10 +228,7 @@ pipeline {\n \n         stage('Backend') {\n             when {\n-                anyOf {\n-                    changeset \"backend/**\"\n-                    environment name: 'CI_RUN_ALL', value: 'true'\n-                }\n+                expression { partChanged('backend') }\n             }\n             stages {\n                 stage('BE Format') {\n@@ -239,10 +281,7 @@ pipeline {\n \n         stage('Worker') {\n             when {\n-                anyOf {\n-                    changeset \"worker/**\"\n-                    environment name: 'CI_RUN_ALL', value: 'true'\n-                }\n+                expression { partChanged('worker') }\n             }\n             stages {\n                 stage('Worker Setup') {\n@@ -291,10 +330,7 @@ pipeline {\n \n         stage('Data') {\n             when {\n-                anyOf {\n-                    changeset \"data/**\"\n-                    environment name: 'CI_RUN_ALL', value: 'true'\n-                }\n+                expression { partChanged('data') }\n             }\n             stages {\n                 stage('Data Setup') {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2195970,
+      "head_commit_sha": "dd59e1ee6161b88c27808a9e160db8946aa583d4",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:28:54.595+09:00",
+      "merge_request_id": 943711,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "4cfe8a421d0c6910d13eb08cc44599f828f6c4ee",
+      "commits": [
+        {
+          "id": "dd59e1ee6161b88c27808a9e160db8946aa583d4",
+          "short_id": "dd59e1ee",
+          "created_at": "2026-09-14T20:28:51.000+09:00",
+          "parent_ids": [
+            "acb631c7af83a1c2ad93071b9abdd9b661c066d0"
+          ],
+          "title": "fix(infra): 따옴표로 감싼 경로를 만나면 파트 선별을 포기하고 전체를 돌린다",
+          "message": "fix(infra): 따옴표로 감싼 경로를 만나면 파트 선별을 포기하고 전체를 돌린다\n\ncore.quotePath=false 로 한글 경로는 그대로 나오지만, 따옴표·역슬래시·\n제어문자가 든 경로는 git 이 여전히 따옴표로 감싼다. 그러면 그 줄이\npart/ 로 시작하지 않아 바뀐 파트를 안 바뀐 것으로 읽는다. 틀리는 방향이\n건너뛰는 쪽이다.\n\n그런 줄이 하나라도 있으면 비교를 믿지 않고 전체를 돌린다.\n\n최상위 environment 블록이 한 번만 평가된다는 전제도 주석으로 남긴다.\n어느 스테이지에 전용 agent 나 전용 environment 를 붙이면 그 컨텍스트에서\n다시 평가되어 값이 달라질 수 있다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:28:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:28:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dd59e1ee6161b88c27808a9e160db8946aa583d4"
+        },
+        {
+          "id": "acb631c7af83a1c2ad93071b9abdd9b661c066d0",
+          "short_id": "acb631c7",
+          "created_at": "2026-09-14T20:08:07.000+09:00",
+          "parent_ids": [
+            "b93ae49c04d6827aa67861b4f3799b94ec370d42"
+          ],
+          "title": "fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다",
+          "message": "fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다\n\ngit 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고 8진수로\n이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가 data/ 로\n시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다. 틀리는 방향이\n건너뛰는 쪽이라 이 작업이 막으려는 것과 같은 사고가 된다.\n\ncore.quotePath=false 로 인용을 끈다.\n\n--no-renames 도 함께 둔다. 이름 변경 감지는 diff.renames 와 유사도,\nrenameLimit 에 좌우되는 추정이고 한계를 넘으면 git 이 말없이 포기한다.\n파트 선별은 경로 접두사만 보면 되므로 추정을 끄면 worker 에서 data 로\n옮긴 파일이 두 파트 모두에 잡힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:08:07.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:08:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/acb631c7af83a1c2ad93071b9abdd9b661c066d0"
+        },
+        {
+          "id": "b93ae49c04d6827aa67861b4f3799b94ec370d42",
+          "short_id": "b93ae49c",
+          "created_at": "2026-09-14T19:47:21.000+09:00",
+          "parent_ids": [
+            "3be30aedaedf05acc215216d1a432901ab459740"
+          ],
+          "title": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다",
+          "message": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다\n\nwhen 의 changeset 지시어는 Jenkins 가 계산한 changelog 를 본다. 이 Job 은\nMR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가\n있고, 그러면 changelog 가 빈다. 어느 파트를 고쳤든 네 파트가 모두\n건너뛰어지고 빌드는 SUCCESS 로 끝난다. 검증이 하나도 돌지 않았는데\n초록불이 뜬다.\n\nMR !88 과 MR !94 에서 실제로 재현됐다.\n\n    Warning, empty changelog. Have you run checkout?\n    Stage \"Frontend\" skipped due to when conditional\n\norigin/dev 와 직접 비교해 바뀐 파일 목록을 구하고, 그 목록으로 파트를\n고른다. 비교가 실패해 목록이 비면 건너뛰지 않고 전부 돌린다. 골라내지\n못했을 때는 시간을 더 쓰더라도 검증이 비는 쪽을 막는다.\n\n티켓 209 에서 options 주석에 적은 설명이 사실과 달라 함께 고친다.\nDeclarative 는 화면에서만 설정한 속성을 지우지 않는다. 실제 위험은 반대\n방향으로, 그 선언을 지우면 Job 의 연결 속성이 사라진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T19:47:21.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T19:47:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b93ae49c04d6827aa67861b4f3799b94ec370d42"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2195941,
+      "head_commit_sha": "acb631c7af83a1c2ad93071b9abdd9b661c066d0",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:08:10.268+09:00",
+      "merge_request_id": 943711,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "1e967b5fd5b7b6af03a76f6d919df2cfe53b31d1",
+      "commits": [
+        {
+          "id": "acb631c7af83a1c2ad93071b9abdd9b661c066d0",
+          "short_id": "acb631c7",
+          "created_at": "2026-09-14T20:08:07.000+09:00",
+          "parent_ids": [
+            "b93ae49c04d6827aa67861b4f3799b94ec370d42"
+          ],
+          "title": "fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다",
+          "message": "fix(infra): 파트 선별이 한글 경로와 이름 변경에 흔들리지 않게 한다\n\ngit 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고 8진수로\n이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가 data/ 로\n시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다. 틀리는 방향이\n건너뛰는 쪽이라 이 작업이 막으려는 것과 같은 사고가 된다.\n\ncore.quotePath=false 로 인용을 끈다.\n\n--no-renames 도 함께 둔다. 이름 변경 감지는 diff.renames 와 유사도,\nrenameLimit 에 좌우되는 추정이고 한계를 넘으면 git 이 말없이 포기한다.\n파트 선별은 경로 접두사만 보면 되므로 추정을 끄면 worker 에서 data 로\n옮긴 파일이 두 파트 모두에 잡힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:08:07.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:08:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/acb631c7af83a1c2ad93071b9abdd9b661c066d0"
+        },
+        {
+          "id": "b93ae49c04d6827aa67861b4f3799b94ec370d42",
+          "short_id": "b93ae49c",
+          "created_at": "2026-09-14T19:47:21.000+09:00",
+          "parent_ids": [
+            "3be30aedaedf05acc215216d1a432901ab459740"
+          ],
+          "title": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다",
+          "message": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다\n\nwhen 의 changeset 지시어는 Jenkins 가 계산한 changelog 를 본다. 이 Job 은\nMR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가\n있고, 그러면 changelog 가 빈다. 어느 파트를 고쳤든 네 파트가 모두\n건너뛰어지고 빌드는 SUCCESS 로 끝난다. 검증이 하나도 돌지 않았는데\n초록불이 뜬다.\n\nMR !88 과 MR !94 에서 실제로 재현됐다.\n\n    Warning, empty changelog. Have you run checkout?\n    Stage \"Frontend\" skipped due to when conditional\n\norigin/dev 와 직접 비교해 바뀐 파일 목록을 구하고, 그 목록으로 파트를\n고른다. 비교가 실패해 목록이 비면 건너뛰지 않고 전부 돌린다. 골라내지\n못했을 때는 시간을 더 쓰더라도 검증이 비는 쪽을 막는다.\n\n티켓 209 에서 options 주석에 적은 설명이 사실과 달라 함께 고친다.\nDeclarative 는 화면에서만 설정한 속성을 지우지 않는다. 실제 위험은 반대\n방향으로, 그 선언을 지우면 Job 의 연결 속성이 사라진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T19:47:21.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T19:47:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b93ae49c04d6827aa67861b4f3799b94ec370d42"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2195939,
+      "head_commit_sha": "b93ae49c04d6827aa67861b4f3799b94ec370d42",
+      "base_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "start_commit_sha": "3be30aedaedf05acc215216d1a432901ab459740",
+      "created_at": "2026-09-14T20:06:15.012+09:00",
+      "merge_request_id": 943711,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "70eab2ceba0b021bd1b2f65806c91327ad2ce7b3",
+      "commits": [
+        {
+          "id": "b93ae49c04d6827aa67861b4f3799b94ec370d42",
+          "short_id": "b93ae49c",
+          "created_at": "2026-09-14T19:47:21.000+09:00",
+          "parent_ids": [
+            "3be30aedaedf05acc215216d1a432901ab459740"
+          ],
+          "title": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다",
+          "message": "fix(infra): 변경 파트를 changelog 가 아니라 기준 브랜치 비교로 고른다\n\nwhen 의 changeset 지시어는 Jenkins 가 계산한 changelog 를 본다. 이 Job 은\nMR 마다 다른 브랜치를 체크아웃해서 직전 빌드와 비교할 대상이 없을 때가\n있고, 그러면 changelog 가 빈다. 어느 파트를 고쳤든 네 파트가 모두\n건너뛰어지고 빌드는 SUCCESS 로 끝난다. 검증이 하나도 돌지 않았는데\n초록불이 뜬다.\n\nMR !88 과 MR !94 에서 실제로 재현됐다.\n\n    Warning, empty changelog. Have you run checkout?\n    Stage \"Frontend\" skipped due to when conditional\n\norigin/dev 와 직접 비교해 바뀐 파일 목록을 구하고, 그 목록으로 파트를\n고른다. 비교가 실패해 목록이 비면 건너뛰지 않고 전부 돌린다. 골라내지\n못했을 때는 시간을 더 쓰더라도 검증이 비는 쪽을 막는다.\n\n티켓 209 에서 options 주석에 적은 설명이 사실과 달라 함께 고친다.\nDeclarative 는 화면에서만 설정한 속성을 지우지 않는다. 실제 위험은 반대\n방향으로, 그 선언을 지우면 Job 의 연결 속성이 사라진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T19:47:21.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T19:47:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b93ae49c04d6827aa67861b4f3799b94ec370d42"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2804364": [],
+    "2804410": [],
+    "2804415": [],
+    "2804419": []
+  }
+}

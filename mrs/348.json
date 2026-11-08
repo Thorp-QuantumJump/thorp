@@ -1,0 +1,1100 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 962458,
+    "iid": 348,
+    "project_id": 1444456,
+    "title": "feat(fe): 첫 화면과 투자 대상 고르기 카드를 다듬고 뉴스 섹터를 분류로 묶는다",
+    "description": "# 작업 내용 요약\n첫 화면 제목을 판정하는 말 대신 서비스가 보여 주는 사실로 바꾸고, 좁은 화면에서 첫 화면 글이 잘리던 문제를 고친다. 투자 대상 고르기의 출처·과거 시장·뉴스 카드를 다듬고, 뉴스 섹터 칩 18개를 분류로 묶어 펼쳐 보게 한다. 앞선 화면 다듬기(!347) 리뷰에서 나온 문제도 함께 고친다.\n\n# 주요 변경 사항\n- 첫 화면 제목: \"내 전략이 얼마나 유효한지…\" → \"같은 산업이라도 / 나누는 방식에 따라 / 결과는 달라집니다.\" (원칙 III)\n- 첫 화면이 한 열로 접히는 폭(760px 이하)에서는 스크롤 연출의 좌우 이동을 뺀다. 칸의 글과 버튼이 옆으로 밀려 화면 밖으로 잘리던 문제다\n- 첫 화면에서만 html의 스크롤바 자리 예약을 풀어 스크롤바가 화면 오른쪽 끝에 붙게 한다\n- 첫 화면 미리보기 주소창에 계산 해시 결과 주소 예시(`/results/0bb8…`)를 넣는다\n- 투자 대상 고르기: 출처를 탐색 카드 안 오른쪽 아래로 옮긴다\n- 과거 시장 카드: 검색 상태·사례 구분을 i 표시 뒤로 내린다. 가리키거나 키보드 초점을 주면 펼쳐지고, 보조기기에는 늘 읽힌다. 비슷한 점·다른 점 설명 문장에 이름표 색(초록·노랑)을 입힌다\n- 뉴스 카드: 매체·날짜를 요약 마지막 줄 끝에 띄워 붙여 요약 폭을 되찾는다. 섹터 칩을 기술·제조·산업·금융·소비·헬스케어·시장·경제로 묶고, 분류를 누르면 그 분류의 칩이 펼쳐진다. 기본은 '전체'이고 분류만 눌러서는 뉴스가 좁혀지지 않는다. 배정표에 없는 새 섹터는 '기타'로 보인다\n- !347 리뷰 반영: 눌린 종합 비교 버튼의 호버 상태, 헤더 높이 토큰 폴백(82px, classic에서 비움), 새 창 뉴스 링크의 보조기기 안내\n- 문서: spec 002 FR-018·FR-019, 010 FR-037·SC-014, 012 FR-005에 i 표시 조건과 뉴스 분류 규칙을 적고, constitution 6.0.1 초안(원칙 II 표시 형태 단서)에 같은 조건을 반영한다\n\n# 테스트\n- [x] `npm run lint` 오류 0건, `npm run build` 성공, `npm test` 통과\n- [x] 375px·320px 폭에서 전 화면을 끝까지 스크롤하며 화면 밖으로 나간 글자 0건, 가로 스크롤 없음\n- [x] 1440px·375px에서 첫 화면 제목 세 줄 유지, 첫 화면 스크롤바가 오른쪽 끝에 붙음\n- [ ] 과거 시장·뉴스 카드는 운영 덤프를 복원한 로컬 백엔드에서 확인이 필요하다\n\n# 리뷰 포인트\n- 뉴스 분류 이름과 섹터 배정을 FE가 가진다(`src/diagnosis/newsSectorGroups.ts`). 섹터 목록과 이름은 계속 API가 준다. 분류를 API로 옮길지\n- 과거 시장 카드의 i 표시는 010 FR-037의 예외로 적었고 constitution 6.0.1은 아직 미승인 초안이다. 승인할지\n- 분류 배정(예: 2차전지를 기술로, 에너지·화학을 제조·산업으로)이 사용자가 기대하는 묶음과 맞는지\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-29T15:25:30.940+09:00",
+    "updated_at": "2026-09-29T15:32:54.561+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T15:32:17.353+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/landing-diagnosis-ui-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+    "merge_commit_sha": "0b69d616e20d86a4fcf77d8ea276f477a5037e8b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-29T15:25:35.060+09:00",
+    "reference": "!348",
+    "references": {
+      "short": "!348",
+      "relative": "!348",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!348"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/348",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 962458,
+    "iid": 348,
+    "project_id": 1444456,
+    "title": "feat(fe): 첫 화면과 투자 대상 고르기 카드를 다듬고 뉴스 섹터를 분류로 묶는다",
+    "description": "# 작업 내용 요약\n첫 화면 제목을 판정하는 말 대신 서비스가 보여 주는 사실로 바꾸고, 좁은 화면에서 첫 화면 글이 잘리던 문제를 고친다. 투자 대상 고르기의 출처·과거 시장·뉴스 카드를 다듬고, 뉴스 섹터 칩 18개를 분류로 묶어 펼쳐 보게 한다. 앞선 화면 다듬기(!347) 리뷰에서 나온 문제도 함께 고친다.\n\n# 주요 변경 사항\n- 첫 화면 제목: \"내 전략이 얼마나 유효한지…\" → \"같은 산업이라도 / 나누는 방식에 따라 / 결과는 달라집니다.\" (원칙 III)\n- 첫 화면이 한 열로 접히는 폭(760px 이하)에서는 스크롤 연출의 좌우 이동을 뺀다. 칸의 글과 버튼이 옆으로 밀려 화면 밖으로 잘리던 문제다\n- 첫 화면에서만 html의 스크롤바 자리 예약을 풀어 스크롤바가 화면 오른쪽 끝에 붙게 한다\n- 첫 화면 미리보기 주소창에 계산 해시 결과 주소 예시(`/results/0bb8…`)를 넣는다\n- 투자 대상 고르기: 출처를 탐색 카드 안 오른쪽 아래로 옮긴다\n- 과거 시장 카드: 검색 상태·사례 구분을 i 표시 뒤로 내린다. 가리키거나 키보드 초점을 주면 펼쳐지고, 보조기기에는 늘 읽힌다. 비슷한 점·다른 점 설명 문장에 이름표 색(초록·노랑)을 입힌다\n- 뉴스 카드: 매체·날짜를 요약 마지막 줄 끝에 띄워 붙여 요약 폭을 되찾는다. 섹터 칩을 기술·제조·산업·금융·소비·헬스케어·시장·경제로 묶고, 분류를 누르면 그 분류의 칩이 펼쳐진다. 기본은 '전체'이고 분류만 눌러서는 뉴스가 좁혀지지 않는다. 배정표에 없는 새 섹터는 '기타'로 보인다\n- !347 리뷰 반영: 눌린 종합 비교 버튼의 호버 상태, 헤더 높이 토큰 폴백(82px, classic에서 비움), 새 창 뉴스 링크의 보조기기 안내\n- 문서: spec 002 FR-018·FR-019, 010 FR-037·SC-014, 012 FR-005에 i 표시 조건과 뉴스 분류 규칙을 적고, constitution 6.0.1 초안(원칙 II 표시 형태 단서)에 같은 조건을 반영한다\n\n# 테스트\n- [x] `npm run lint` 오류 0건, `npm run build` 성공, `npm test` 통과\n- [x] 375px·320px 폭에서 전 화면을 끝까지 스크롤하며 화면 밖으로 나간 글자 0건, 가로 스크롤 없음\n- [x] 1440px·375px에서 첫 화면 제목 세 줄 유지, 첫 화면 스크롤바가 오른쪽 끝에 붙음\n- [ ] 과거 시장·뉴스 카드는 운영 덤프를 복원한 로컬 백엔드에서 확인이 필요하다\n\n# 리뷰 포인트\n- 뉴스 분류 이름과 섹터 배정을 FE가 가진다(`src/diagnosis/newsSectorGroups.ts`). 섹터 목록과 이름은 계속 API가 준다. 분류를 API로 옮길지\n- 과거 시장 카드의 i 표시는 010 FR-037의 예외로 적었고 constitution 6.0.1은 아직 미승인 초안이다. 승인할지\n- 분류 배정(예: 2차전지를 기술로, 에너지·화학을 제조·산업으로)이 사용자가 기대하는 묶음과 맞는지\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-29T15:25:30.940+09:00",
+    "updated_at": "2026-09-29T15:32:54.561+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T15:32:17.353+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/landing-diagnosis-ui-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+    "merge_commit_sha": "0b69d616e20d86a4fcf77d8ea276f477a5037e8b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-29T15:25:35.060+09:00",
+    "reference": "!348",
+    "references": {
+      "short": "!348",
+      "relative": "!348",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!348"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/348",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "26",
+    "latest_build_started_at": "2026-09-29T15:25:43.889+09:00",
+    "latest_build_finished_at": "2026-09-29T15:32:16.440+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 226936,
+      "iid": 376,
+      "project_id": 1444456,
+      "sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "ref": "feat(fe)/landing-diagnosis-ui-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T15:25:43.771+09:00",
+      "updated_at": "2026-09-29T15:32:16.453+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226936"
+    },
+    "head_pipeline": {
+      "id": 226936,
+      "iid": 376,
+      "project_id": 1444456,
+      "sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "ref": "feat(fe)/landing-diagnosis-ui-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T15:25:43.771+09:00",
+      "updated_at": "2026-09-29T15:32:16.453+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226936",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-29T15:25:43.889+09:00",
+      "finished_at": "2026-09-29T15:32:16.440+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226936",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "head_sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "start_sha": "6aed3682bd856950976070c06329a60f32be8cca"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b5001824a1128180c3bd475c418fd567fcba186a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877960,
+          "type": null,
+          "body": "mentioned in merge request !349",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:25:35.416+09:00",
+          "updated_at": "2026-09-29T15:25:35.430+09:00",
+          "system": true,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "81011a6d8e3819c02a1de37c9d78b23561c63025",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877961,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **UI 및 접근성 개선**: 좁은 화면(760px 이하)에서 `LandingScrollContext`를 통한 좌우 스크롤 연출을 조건부로 비활성화하여 레이아웃이 깨지는 문제를 깔끔하게 해결했습니다. 또한, `SimilarPastMarket` 컴포넌트에서 접근성을 고려하여 `i` 표시 뒤로 복잡한 상태 노트를 숨기되 보조기기용 `aria-live` 영역을 유지한 설계가 돋보입니다.\n- **관심사 분리**: 뉴스 섹터를 프론트엔드 유틸리티(`newsSectorGroups.ts`)를 통해 그룹화하여 18개에 달하는 칩을 직관적인 2단계 분류(기술, 제조·산업, 금융 등)로 묶으면서도 API 계약을 깨지 않도록 잘 설계했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (타입 안정성, 컴포넌트 분리, 테스트 코드 커버리지 모두 양호함)\n\n### 테스트 제안\n- **반응형 레이아웃 테스트**: \n  - 375px 및 320px 이하의 뷰포트에서 랜딩 페이지와 투자 대상 고르기 화면을 스크롤할 때 가로 스크롤바가 발생하지 않고 콘텐츠가 유실되지 않는지 수동/시각적 검증을 수행합니다.\n- **키보드 및 스크린 리더 접근성 테스트**: \n  - `SimilarPastMarket`의 `i` 아이콘 버튼에 Tab 키로 포커스를 이동했을 때 툴팁이 올바르게 열리며, 스크린 리더 환경에서 검색 상태와 사례 구분 정보가 누락 없이 읽히는지 확인합니다.\n- **뉴스 섹터 그룹화 로직 테스트**: \n  - `groupNewsSectors` 함수에 정의되지 않은 새로운 섹터 ID가 API로부터 전달되었을 때, 에러 없이 '기타' 분류로 정상적으로 묶여 렌더링되는지 유닛 테스트 시나리오로 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:cfae6787a8b96b52814b60eabc70d182ee458c78 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-29T15:25:44.192+09:00",
+          "updated_at": "2026-09-29T15:25:44.192+09:00",
+          "system": false,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d95ad2c87111499941b46152a2fb1aec79ffcc3a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877963,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for cfae6787a8b96b52814b60eabc70d182ee458c78 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:26:45.015+09:00",
+          "updated_at": "2026-09-29T15:26:45.018+09:00",
+          "system": true,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4e9c671a14fd8cca341b5d83b1be13d82c62ba06",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877969,
+          "type": null,
+          "body": "mentioned in commit 0b69d616e20d86a4fcf77d8ea276f477a5037e8b",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:32:17.477+09:00",
+          "updated_at": "2026-09-29T15:32:17.481+09:00",
+          "system": true,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "408c0f368a042836c62ad76786610c5f522bd368",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877973,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:32:54.621+09:00",
+          "updated_at": "2026-09-29T15:32:54.629+09:00",
+          "system": true,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "27b01e75a8df9d6a18aeac298aeb38200f06ff31",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877974,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:32:55.181+09:00",
+          "updated_at": "2026-09-29T15:32:55.184+09:00",
+          "system": true,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1afd6c350827c6e98225fc99262c5660d3b11463",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885079,
+          "type": null,
+          "body": "mentioned in commit 5009e319b6e92806dfb15174cce1c14ed56e3832",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.772+09:00",
+          "updated_at": "2026-10-13T15:16:16.785+09:00",
+          "system": true,
+          "noteable_id": 962458,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 348,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2259496,
+      "head_commit_sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "base_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "start_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "created_at": "2026-09-29T15:25:31.318+09:00",
+      "merge_request_id": 962458,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "bffadf9ed208ef0f603634b73beef9f42aadcb7b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2259496,
+      "head_commit_sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "base_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "start_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "created_at": "2026-09-29T15:25:31.318+09:00",
+      "merge_request_id": 962458,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "bffadf9ed208ef0f603634b73beef9f42aadcb7b",
+      "commits": [
+        {
+          "id": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+          "short_id": "cfae6787",
+          "created_at": "2026-09-29T14:13:24.000+09:00",
+          "parent_ids": [
+            "c661b8ec1c30c82657fe49208e4f67774bb87a7b"
+          ],
+          "title": "feat(fe): 첫 화면 제목을 판정하는 말 대신 같은 산업에서 나누는 방식에 따라 결과가 달라진다는 사실로 바꾼다",
+          "message": "feat(fe): 첫 화면 제목을 판정하는 말 대신 같은 산업에서 나누는 방식에 따라 결과가 달라진다는 사실로 바꾼다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:13:24.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:13:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cfae6787a8b96b52814b60eabc70d182ee458c78"
+        },
+        {
+          "id": "c661b8ec1c30c82657fe49208e4f67774bb87a7b",
+          "short_id": "c661b8ec",
+          "created_at": "2026-09-29T14:09:01.000+09:00",
+          "parent_ids": [
+            "d78a43ca3071605b9e1479e380fd6b68aea77009"
+          ],
+          "title": "fix(fe): 좁은 화면에서 첫 화면 칸의 글과 버튼이 옆으로 밀려 잘리지 않게 스크롤 연출의 좌우 이동을 뺀다",
+          "message": "fix(fe): 좁은 화면에서 첫 화면 칸의 글과 버튼이 옆으로 밀려 잘리지 않게 스크롤 연출의 좌우 이동을 뺀다\n\n한 열로 접히는 폭(760px 이하)에서는 칸이 화면을 채우지 않아 가운데 서는 순간이 거의 없고, 글이\n옆으로 밀린 채 멈춰 화면 밖으로 잘렸다. 미디어 쿼리 훅(useMediaQuery)을 hooks에 둔다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:09:01.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:09:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c661b8ec1c30c82657fe49208e4f67774bb87a7b"
+        },
+        {
+          "id": "d78a43ca3071605b9e1479e380fd6b68aea77009",
+          "short_id": "d78a43ca",
+          "created_at": "2026-09-29T14:05:03.000+09:00",
+          "parent_ids": [
+            "98194cf39db479cffec941142eb68ca652ed0c36"
+          ],
+          "title": "feat(fe): 첫 화면 스크롤바를 화면 오른쪽 끝에 붙이고 미리보기 주소창에 계산 해시 결과 주소 예시를 넣는다",
+          "message": "feat(fe): 첫 화면 스크롤바를 화면 오른쪽 끝에 붙이고 미리보기 주소창에 계산 해시 결과 주소 예시를 넣는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:05:03.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:05:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d78a43ca3071605b9e1479e380fd6b68aea77009"
+        },
+        {
+          "id": "98194cf39db479cffec941142eb68ca652ed0c36",
+          "short_id": "98194cf3",
+          "created_at": "2026-09-29T13:56:38.000+09:00",
+          "parent_ids": [
+            "525c31bbc474d105075f9448e32e05249d6dd711"
+          ],
+          "title": "feat(fe): 뉴스 섹터 칩을 기술·제조·산업·금융·소비·헬스케어·시장·경제 분류로 묶고 분류를 누를 때 펼친다",
+          "message": "feat(fe): 뉴스 섹터 칩을 기술·제조·산업·금융·소비·헬스케어·시장·경제 분류로 묶고 분류를 누를 때 펼친다\n\n분류 이름과 섹터 배정은 화면이 갖고 섹터 목록·이름은 계속 GET /market-news/sectors가 준다.\n배정에 없는 섹터는 '기타'로 보이고, 분류만 눌러서는 뉴스가 좁혀지지 않는다. spec 002 FR-019와\n012 FR-005에 이 규칙을 적는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:56:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:56:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/98194cf39db479cffec941142eb68ca652ed0c36"
+        },
+        {
+          "id": "525c31bbc474d105075f9448e32e05249d6dd711",
+          "short_id": "525c31bb",
+          "created_at": "2026-09-29T13:49:04.000+09:00",
+          "parent_ids": [
+            "a0549ae5af30c897d1333cdc956ced1f3662247e"
+          ],
+          "title": "refactor(fe): 뉴스의 매체·날짜를 요약 마지막 줄 끝에 띄워 붙여 요약 폭을 되찾는다",
+          "message": "refactor(fe): 뉴스의 매체·날짜를 요약 마지막 줄 끝에 띄워 붙여 요약 폭을 되찾는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:49:04.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:49:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/525c31bbc474d105075f9448e32e05249d6dd711"
+        },
+        {
+          "id": "a0549ae5af30c897d1333cdc956ced1f3662247e",
+          "short_id": "a0549ae5",
+          "created_at": "2026-09-29T13:47:04.000+09:00",
+          "parent_ids": [
+            "83ad99f172ac4371bb02452e001ce1a92f6f97a0"
+          ],
+          "title": "refactor(fe): 과거 시장 카드의 검색 상태를 i 표시 뒤로 내리고 비슷한 점·다른 점 설명에 이름표 색을 입힌다",
+          "message": "refactor(fe): 과거 시장 카드의 검색 상태를 i 표시 뒤로 내리고 비슷한 점·다른 점 설명에 이름표 색을 입힌다\n\n검색 상태와 사례 구분은 가리키거나 키보드 초점을 줄 때 그 자리에 펼쳐지고, 보조기기에는 펼치지\n않아도 알림으로 읽힌다. 도움말(InlineHelp)에 트리거 글자를 바꾸는 mark를 더했다. spec 002·010과\nconstitution 6.0.1 초안에 요약 카드에서는 이 형태를 쓸 수 있다는 조건을 적는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:47:04.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:47:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a0549ae5af30c897d1333cdc956ced1f3662247e"
+        },
+        {
+          "id": "83ad99f172ac4371bb02452e001ce1a92f6f97a0",
+          "short_id": "83ad99f1",
+          "created_at": "2026-09-29T13:44:05.000+09:00",
+          "parent_ids": [
+            "7a99d6d02d609a5a364f2706b34d407e67eb52bc"
+          ],
+          "title": "refactor(fe): 투자 대상 고르기의 출처를 탐색 카드 안 오른쪽 아래로 옮긴다",
+          "message": "refactor(fe): 투자 대상 고르기의 출처를 탐색 카드 안 오른쪽 아래로 옮긴다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:44:05.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:44:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/83ad99f172ac4371bb02452e001ce1a92f6f97a0"
+        },
+        {
+          "id": "7a99d6d02d609a5a364f2706b34d407e67eb52bc",
+          "short_id": "7a99d6d0",
+          "created_at": "2026-09-29T13:41:49.000+09:00",
+          "parent_ids": [
+            "6aed3682bd856950976070c06329a60f32be8cca"
+          ],
+          "title": "refactor(fe): 화면 다듬기 리뷰에서 나온 호버·좁은 폭·접근성·토큰 폴백 문제를 고친다",
+          "message": "refactor(fe): 화면 다듬기 리뷰에서 나온 호버·좁은 폭·접근성·토큰 폴백 문제를 고친다\n\n- 눌린 종합 비교 버튼이 가리킬 때 채움을 잃지 않게 한다\n- 뉴스 목록이 좁으면 매체·날짜를 요약 아래로 내리고, 아주 좁은 폭에서는 시장 흐름 제목 뒷부분도 낱말 사이에서 끊는다\n- 새 창으로 열리는 뉴스 링크에 보조기기용 안내를 붙이고, 과거 시장 상태 한 줄의 FR-037 테스트를 더한다\n- 헤더 높이 토큰의 폴백을 예전 값 82px로 두고 classic에서 비운다(frontend/CLAUDE.md 토큰 규칙)\n- 화면 읽기 전용 숨김은 공용 sr-only를 쓰고, 옛 카드 이름이 남은 주석을 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:41:49.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:41:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a99d6d02d609a5a364f2706b34d407e67eb52bc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -3,9 +3,9 @@ Sync Impact Report\n - **(초안, 미승인) Version change: 6.0.0 → 6.0.1.** 원칙 II의 \"자료 부족·근거 부족·미판정\n   상태\" 문장에 표시의 **형태**는 화면의 쓰임에 따라 달리할 수 있다는 단서를 붙였다. 검색 화면처럼 그 결과가 주인공인 자리는 이름표가\n   있는 안내 상자로 두고, 투자 대상 고르기의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약\n-  카드는 이름표를 보조기술에만 남기고 결과 위 한 줄로 줄일 수 있다. **문구가 늘 보인다는 요구는 그대로다**\n-  — 호버·접기로만 여는 것은 여전히 허용하지 않는다. 규칙의 뜻을 바꾸지 않고 적용 형태를 풀어 쓴 것이라\n-  PATCH다.\n+  카드는 그 안내를 i 표시 뒤로 내릴 수 있다. 대신 i 표시는 키보드 초점으로도 열리고, 보조기술에는\n+  펼치지 않아도 읽히며, 같은 결과의 전체 화면에서는 늘 펼쳐져 있어야 한다. 어떤 자리에서도 안내가 닿지\n+  않게 되는 것은 아니므로 규칙의 뜻을 바꾸지 않고 적용 형태를 상황에 맞게 풀어 쓴 것이라 PATCH다.\n   Modified principles: II(초안). Follow-up TODOs: 전체 회의 승인 또는 반려. 관련 spec 010 FR-037.\n - Version change: 4.1.0 → 6.0.0 (팀 결정, 2026-09-29). 팀이 Jira 티켓을 더 이상 쓰지 않기로 하면서\n   \"Git·Jira 규칙\"을 \"Git 규칙\"으로 줄이고 \"Jira 연계\" 절을 삭제했다. 브랜치 이름에서 이슈 번호를 빼\n@@ -197,9 +197,9 @@ AI(Claude 등) 모두에게 적용된다.\n - 분석 기간·비교 대상·비용 적용 여부는 요약 한 줄에 항상 보인다. 결과 의미를 바꾸는 자료 부족·근거\n   부족·미판정 상태는 해당 결과 옆에 한 문장으로 표시하고 상세 안에만 숨기지 않는다. 내부 검증 미완료를\n   모든 화면의 경고 목록으로 늘리지도 않는다. (§4.1, §7.2, §7.4) *(초안, 미승인)* 표시의 형태와 무게는\n-  상황에 따라 다르게 둘 수 있다 — 결과가 주인공인 화면은 이름표가 있는 안내로, 결과를 곁들여 보이는\n-  요약 카드는 결과 위 한 줄로 줄여도 된다. 어느 형태든 문구 자체는 늘 보이게 두고 호버나 접기 뒤에만\n-  두지 않는다.\n+  상황에 따라 다르게 둘 수 있다 — 결과가 주인공인 화면은 이름표가 있는 안내로 늘 펼쳐 두고, 결과를\n+  곁들여 보이는 요약 카드는 안내 표시(i) 뒤로 내려도 된다. 다만 그 표시는 키보드로도 열리고 보조기술에\n+  읽혀야 하며, 같은 결과의 전체 화면에서는 늘 보여야 한다.\n - '자세히 보기'는 결과 근처에 둔다. 상세 정보를 보기 위해 설정 화면으로 되돌려 보내지 않는다. (§4.1)\n - 정보는 세 층으로 배치한다: 처음에 바로 보이는 정보 / 요청하면 펼쳐 보는 정보 / 시스템이 처리하는\n   정보. 내부 계산 항목이 많아도 화면에 동시에 나열하지 않는다. (§4.1)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,6 +19,8 @@ interface InlineHelpProps {\n   on?: \"click\" | \"hover\";\n   /** 도움말을 펼칠 방향. 오른쪽 끝 칸처럼 위로 펼치면 화면을 벗어나는 자리에서 바꾼다(427) */\n   side?: \"top\" | \"bottom\" | \"right\";\n+  /** 트리거에 보일 글자. 기본은 물음표이고, 설명이 아니라 알림을 내린 자리는 `\"i\"`를 쓴다 */\n+  mark?: ReactNode;\n }\n \n /** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */\n@@ -47,7 +49,7 @@ const CLOSE_DELAY_MS = 80;\n  * 처리된다. 말풍선에는 초점을 옮기지 않는다 — 초점이 트리거에 남아야 Esc 를 누른 사람이 제자리에\n  * 있고(005 FR-022), 트리거를 떠날 때 닫는 판단도 그대로 산다.\n  */\n-export function InlineHelp({ label, children, on = \"hover\", side = \"top\" }: InlineHelpProps) {\n+export function InlineHelp({ label, children, on = \"hover\", side = \"top\", mark = \"?\" }: InlineHelpProps) {\n   const [open, setOpen] = useState(false);\n   const timerRef = useRef<number | undefined>(undefined);\n \n@@ -100,7 +102,7 @@ export function InlineHelp({ label, children, on = \"hover\", side = \"top\" }: Inli\n             onBlur={() => settle(false)}\n             onClick={() => settle(!open)}\n           >\n-            ?\n+            {mark}\n           </button>\n         </Popover.Anchor>\n         <Popover.Portal>\n@@ -135,7 +137,7 @@ export function InlineHelp({ label, children, on = \"hover\", side = \"top\" }: Inli\n         className={styles.trigger}\n         aria-label={`${label} 도움말`}\n       >\n-        ?\n+        {mark}\n       </Popover.Trigger>\n       <Popover.Portal>\n         <Popover.Content\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.tsx",
+          "old_path": "frontend/src/components/common/InlineHelp.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useEffect, useId, useRef } from 'react'\n+import { useEffect, useId, useRef, type ReactNode } from 'react'\n import { Check, Maximize2, Minimize2, Plus } from 'lucide-react'\n import { NotReadyNotice } from '@/components/common/NotReadyNotice'\n import { PriceTrend } from '@/components/diagnosis/PriceTrend'\n@@ -23,6 +23,8 @@ type InstrumentBrowserProps = {\n   onView: (code: string) => void\n   onToggleSelected: (code: string, selected: boolean) => void\n   onExpandedChange: (expanded: boolean) => void\n+  /** 카드 바닥 오른쪽에 붙는 한 줄. 목록 화면이 출처를 여기에 둔다. */\n+  footer?: ReactNode\n   className?: string\n }\n \n@@ -49,6 +51,7 @@ export function InstrumentBrowser({\n   onView,\n   onToggleSelected,\n   onExpandedChange,\n+  footer,\n   className,\n }: InstrumentBrowserProps) {\n   const headingId = useId()\n@@ -210,6 +213,7 @@ export function InstrumentBrowser({\n \n         {expanded ? <HoldingsColumn result={result} /> : null}\n       </div>\n+      {footer ? <div data-slot=\"footer\">{footer}</div> : null}\n     </section>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/InstrumentBrowser.tsx",
+          "old_path": "frontend/src/components/diagnosis/InstrumentBrowser.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,6 +24,55 @@\n   color: var(--thorp-accent-soft);\n }\n \n+/*\n+  분류 줄. 칩보다 한 단 위의 고르기라 테두리 칩이 아니라 밑줄 탭으로 둔다. 같은 모양이면 두 줄이 한 목록처럼\n+  읽힌다.\n+*/\n+.groups {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 4px 18px;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.group {\n+  position: relative;\n+  min-height: var(--thorp-control-sm, 32px);\n+  padding: 0 2px;\n+  border: 0;\n+  background: transparent;\n+  color: var(--thorp-copy);\n+  font: inherit;\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  font-weight: 600;\n+  cursor: pointer;\n+  transition: color 150ms ease;\n+}\n+\n+.group:hover {\n+  color: var(--thorp-foreground);\n+}\n+\n+.group[aria-pressed='true'] {\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.group[aria-pressed='true']::after {\n+  position: absolute;\n+  right: 0;\n+  bottom: -1px;\n+  left: 0;\n+  height: 2px;\n+  border-radius: 2px;\n+  background: var(--thorp-accent);\n+  content: '';\n+}\n+\n+.group:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n /* 섹터별로 보기. 옆 과거 시장 카드의 분야 칩과 같은 모양이다. */\n .filter {\n   display: flex;\n@@ -64,6 +113,7 @@\n }\n \n @media (prefers-reduced-motion: reduce) {\n+  .group,\n   .chip {\n     transition: none;\n   }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorNews.module.css",
+          "old_path": "frontend/src/components/diagnosis/SectorNews.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,13 +26,18 @@ describe('SectorNews (002 FR-019)', () => {\n     })\n   })\n \n-  it('기본은 전체로 최신 뉴스를 받고, 섹터를 고르면 그 섹터로 좁힌다', async () => {\n+  it('기본은 전체로 최신 뉴스를 받고, 분류를 펼쳐 섹터를 고르면 그 섹터로 좁힌다', async () => {\n     render(<SectorNews />)\n \n     await waitFor(() => expect(vi.mocked(fetchMarketNewsDigests).mock.calls[0][0]).toBeNull())\n     expect(screen.getByRole('button', { name: '전체' }).getAttribute('aria-pressed')).toBe('true')\n+    // 처음에는 분류만 보이고 섹터 칩은 펼쳐지지 않는다.\n+    expect(screen.queryByRole('button', { name: '반도체' })).toBeNull()\n \n-    fireEvent.click(await screen.findByRole('button', { name: '반도체' }))\n+    fireEvent.click(await screen.findByRole('button', { name: '기술' }))\n+    // 분류만 눌러서는 뉴스가 좁혀지지 않는다.\n+    expect(vi.mocked(fetchMarketNewsDigests).mock.calls.at(-1)?.[0]).toBeNull()\n+    fireEvent.click(screen.getByRole('button', { name: '반도체' }))\n     await waitFor(() => expect(vi.mocked(fetchMarketNewsDigests).mock.calls.at(-1)?.[0]).toBe('SEMICONDUCTOR'))\n     expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true')\n     expect(screen.getByRole('button', { name: '전체' }).getAttribute('aria-pressed')).toBe('false')\n@@ -41,10 +46,23 @@ describe('SectorNews (002 FR-019)', () => {\n   it('투자 대상이 아닌 뉴스 전용 섹터도 칩으로 고를 수 있다', async () => {\n     render(<SectorNews />)\n \n-    fireEvent.click(await screen.findByRole('button', { name: 'IT·AI' }))\n+    fireEvent.click(await screen.findByRole('button', { name: '기술' }))\n+    fireEvent.click(screen.getByRole('button', { name: 'IT·AI' }))\n     await waitFor(() => expect(vi.mocked(fetchMarketNewsDigests).mock.calls.at(-1)?.[0]).toBe('NEWS_IT'))\n   })\n \n+  it('전체를 누르면 펼친 분류를 접고 섹터 선택을 푼다', async () => {\n+    render(<SectorNews />)\n+\n+    fireEvent.click(await screen.findByRole('button', { name: '기술' }))\n+    fireEvent.click(screen.getByRole('button', { name: '반도체' }))\n+    await waitFor(() => expect(vi.mocked(fetchMarketNewsDigests).mock.calls.at(-1)?.[0]).toBe('SEMICONDUCTOR'))\n+\n+    fireEvent.click(screen.getByRole('button', { name: '전체' }))\n+    await waitFor(() => expect(vi.mocked(fetchMarketNewsDigests).mock.calls.at(-1)?.[0]).toBeNull())\n+    expect(screen.queryByRole('button', { name: '반도체' })).toBeNull()\n+  })\n+\n   it('섹터 목록을 받지 못해도 전체 뉴스는 보인다', async () => {\n     vi.mocked(fetchNewsSectors).mockRejectedValue(new Error('offline'))\n     render(<SectorNews />)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorNews.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorNews.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,16 +1,19 @@\n import { Newspaper } from 'lucide-react'\n-import { useEffect, useState } from 'react'\n+import { useEffect, useMemo, useState } from 'react'\n import { fetchNewsSectors } from '@/api/marketNews'\n import { NewsDigestSection } from '@/components/marketflow/NewsDigestSection'\n+import { groupNewsSectors } from '@/diagnosis/newsSectorGroups'\n import type { NewsSector } from '@/types/marketNews'\n import styles from './SectorNews.module.css'\n \n /*\n-  투자 대상 고르기의 시장 흐름 뉴스('지금과 비슷했던 과거 시장' 옆, 002 FR-019, 012 FR-001·FR-005). 기본은 '전체'로 최신 뉴스\n+  투자 대상 고르기의 뉴스 카드('지금과 비슷했던 과거 시장' 옆, 002 FR-019, 012 FR-001·FR-005). 기본은 '전체'로 최신 뉴스\n   묶음을 보이고, 섹터를 고르면 그 섹터와 연결된 뉴스로 좁힌다.\n \n   - 칩은 012의 섹터 목록(`GET /market-news/sectors`)으로 그린다. 투자 대상 섹터와 뉴스 전용 섹터가 함께 온다 — 뉴스는 투자 대상과\n     대응하지 않아도 보여야 하기 때문이다(012 Session 2026-09-25). 섹터 이름을 여기 상수로 두지 않는다.\n+  - 칩은 분류(기술·제조·산업·금융…) 아래에 한 번 더 묶는다. 첫 줄은 '전체'와 분류이고, 분류를 누르면 그 분류의\n+    섹터 칩이 아랫줄에 펼쳐진다. 분류만 눌러서는 뉴스가 좁혀지지 않는다(`newsSectorGroups` 참고).\n   - 목록을 받지 못하면 '전체'만 남긴다. 뉴스 자체는 막히지 않는다.\n   - 여기서 고른 섹터는 뉴스 범위만 정하며 투자 대상 선택이나 경제환경 검색에 영향을 주지 않는다(010 FR-004).\n */\n@@ -18,6 +21,9 @@ import styles from './SectorNews.module.css'\n export function SectorNews() {\n   const [sectors, setSectors] = useState<NewsSector[]>([])\n   const [sectorId, setSectorId] = useState<string | null>(null)\n+  const [groupId, setGroupId] = useState<string | null>(null)\n+  const groups = useMemo(() => groupNewsSectors(sectors), [sectors])\n+  const openGroup = groups.find((group) => group.id === groupId) ?? null\n \n   useEffect(() => {\n     const controller = new AbortController()\n@@ -29,27 +35,51 @@ export function SectorNews() {\n     return () => controller.abort()\n   }, [])\n \n-  const options = [{ sectorId: null, name: '전체' }, ...sectors]\n-\n   return (\n     <section className={styles.card} aria-labelledby=\"sector-news-title\">\n       <h2 id=\"sector-news-title\" className={styles.title}>\n         <Newspaper size={16} aria-hidden=\"true\" />\n         뉴스\n       </h2>\n-      <div className={styles.filter} role=\"group\" aria-label=\"섹터별로 보기\">\n-        {options.map((option) => (\n+      <div className={styles.groups} role=\"group\" aria-label=\"분류별로 보기\">\n+        <button\n+          type=\"button\"\n+          className={styles.group}\n+          aria-pressed={openGroup === null}\n+          onClick={() => {\n+            setGroupId(null)\n+            setSectorId(null)\n+          }}\n+        >\n+          전체\n+        </button>\n+        {groups.map((group) => (\n           <button\n-            key={option.sectorId ?? 'all'}\n+            key={group.id}\n             type=\"button\"\n-            className={styles.chip}\n-            aria-pressed={sectorId === option.sectorId}\n-            onClick={() => setSectorId(option.sectorId)}\n+            className={styles.group}\n+            aria-pressed={openGroup?.id === group.id}\n+            onClick={() => setGroupId(group.id)}\n           >\n-            {option.name}\n+            {group.name}\n           </button>\n         ))}\n       </div>\n+      {openGroup ? (\n+        <div className={styles.filter} role=\"group\" aria-label={`${openGroup.name} 섹터별로 보기`}>\n+          {openGroup.sectors.map((sector) => (\n+            <button\n+              key={sector.sectorId}\n+              type=\"button\"\n+              className={styles.chip}\n+              aria-pressed={sectorId === sector.sectorId}\n+              onClick={() => setSectorId(sector.sectorId)}\n+            >\n+              {sector.name}\n+            </button>\n+          ))}\n+        </div>\n+      ) : null}\n       <NewsDigestSection sectorCode={sectorId} />\n     </section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorNews.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorNews.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -142,7 +142,9 @@\n   color: var(--thorp-warning);\n }\n \n-.composite[aria-pressed='true'] {\n+/* 호버 규칙(:hover:not(:disabled))이 더 구체적이라, 눌린 채 가리켜도 채움이 풀리지 않게 같은 무게로 적는다. */\n+.composite[aria-pressed='true'],\n+.composite[aria-pressed='true']:hover:not(:disabled) {\n   border-color: var(--thorp-warning);\n   background: var(--thorp-warning);\n   color: var(--thorp-background);\n@@ -186,33 +188,9 @@\n   line-height: 1.5;\n }\n \n-.notesLine svg {\n-  flex-shrink: 0;\n-  color: var(--thorp-warning);\n-}\n-\n-.notesLine[data-tone='error'] svg {\n-  color: var(--thorp-negative);\n-}\n-\n-.notesLine:focus-visible {\n-  border-radius: 4px;\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset-compact);\n-}\n-\n-.notesDivider {\n-  color: var(--thorp-muted);\n-}\n-\n-.srOnly {\n-  position: absolute;\n-  width: 1px;\n-  height: 1px;\n-  padding: 0;\n-  overflow: hidden;\n-  clip-path: inset(50%);\n-  white-space: nowrap;\n+/* i 표시는 앞말이 없는 자리에 홀로 선다. 도움말 기본 여백(앞말과 떼는 틈)을 걷는다. */\n+.notesLine > button {\n+  margin-inline-start: 0;\n }\n \n .cases {\n@@ -293,6 +271,15 @@\n   color: var(--thorp-warning);\n }\n \n+/* 설명 문장도 이름표와 같은 색이다. 어느 줄이 비슷한 점이고 어느 줄이 다른 점인지 문장만 보고도 가른다. */\n+.similarText {\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.differentText {\n+  color: var(--thorp-warning);\n+}\n+\n .caseActions {\n   display: flex;\n   flex-wrap: wrap;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.module.css",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -57,6 +57,27 @@ describe('SimilarPastMarket (002 FR-018)', () => {\n     await waitFor(() => expect(vi.mocked(getRegimeSearch).mock.calls.at(-1)?.[0]).toEqual({ mode: 'composite', limit: 3 }))\n   })\n \n+  it('검색 상태와 사례 구분을 i 표시 뒤로 내리고, 초점으로도 펼치며 보조기기에는 늘 읽힌다 (010 FR-037)', async () => {\n+    vi.mocked(getRegimeSearch).mockResolvedValue(\n+      searchResult({ statusNote: '가까운 순서만 제공합니다.', caseLabel: '최근접 참고 사례' }),\n+    )\n+    renderWithRouter(<SimilarPastMarket caseId={null} />)\n+\n+    // 펼치지 않아도 보조기기는 어느 결과의 안내인지와 문장을 읽는다.\n+    const live = await screen.findByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태와 사례 구분' })\n+    expect(live.textContent).toContain('검색 상태: 가까운 순서만 제공합니다.')\n+    expect(live.textContent).toContain('사례 구분: 최근접 참고 사례')\n+\n+    // 화면에는 i 표시만 있고, 키보드 초점을 주면 그 자리에 펼쳐진다.\n+    const trigger = screen.getByRole('button', { name: '검색 상태와 사례 구분 도움말' })\n+    expect(trigger.textContent).toBe('i')\n+    expect(screen.queryByRole('tooltip')).toBeNull()\n+    fireEvent.focus(trigger)\n+    const tooltip = await screen.findByRole('tooltip')\n+    expect(tooltip.textContent).toContain('가까운 순서만 제공합니다.')\n+    expect(tooltip.textContent).toContain('최근접 참고 사례')\n+  })\n+\n   it('사례를 고르면 011 진입 계약으로 그 기간을 분석 기간으로 이어 간다', async () => {\n     renderWithRouter(<SimilarPastMarket caseId={null} />)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,8 @@\n-import { ArrowUpRight, Check, History, Info } from 'lucide-react'\n+import { ArrowUpRight, Check, History } from 'lucide-react'\n import { useCallback, useEffect, useState } from 'react'\n import { Link } from 'react-router-dom'\n import { getRegimeBaselineMonths, getRegimeSearch } from '@/api/regime'\n+import { InlineHelp } from '@/components/common/InlineHelp'\n import { Disclosure } from '@/components/regime/Disclosure'\n import { EmptyResult } from '@/components/regime/EmptyResult'\n import { buildCaseId, buildRegimeLinkStartPath, parseCaseId } from '@/marketflow/handoff'\n@@ -150,33 +151,25 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {\n         ) : result ? (\n           <div className={styles.result}>\n             {/*\n-              검색 상태와 사례 구분을 사례 목록 위 한 줄로 줄여 둔다. 호버로 숨기지 않는다 — 결과를 어디까지\n-              믿어도 되는지 말하는 문구라 늘 보이고, 키보드로 닿고, 보조기기가 어느 결과의 것인지 읽어야 한다\n-              (010 FR-037·SC-014). 이름표('검색 상태'·'사례 구분')는 화면에서 빼고 보조기기에만 남긴다.\n+              검색 상태와 사례 구분은 이 카드에서 i 표시 뒤로 내린다. 가리키거나 키보드 초점을 주면 그 자리에\n+              펼쳐진다. 결과를 곁들여 보이는 요약 카드라서이고, 같은 결과의 '비슷했던 때 보기' 화면에서는 늘\n+              펼쳐 둔다(010 FR-037). 보조기기에는 펼치지 않아도 읽히도록 같은 문장을 알림 영역에 남긴다.\n             */}\n-            <p\n-              className={styles.notesLine}\n-              data-tone={result.status === 'NOT_COMPUTABLE' ? 'error' : 'warning'}\n-              tabIndex={0}\n-              role=\"status\"\n-              aria-live=\"polite\"\n-              aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}\n-            >\n-              <Info size={14} aria-hidden=\"true\" />\n-              <span>\n-                <span className={styles.srOnly}>검색 상태: </span>\n-                {result.statusNote}\n-              </span>\n-              {result.caseLabel ? (\n-                <>\n-                  <span className={styles.notesDivider} aria-hidden=\"true\">·</span>\n-                  <span>\n-                    <span className={styles.srOnly}>사례 구분: </span>\n-                    {result.caseLabel}\n-                  </span>\n-                </>\n-              ) : null}\n-            </p>\n+            <div className={styles.notesLine}>\n+              <InlineHelp label={`검색 상태${result.caseLabel ? '와 사례 구분' : ''}`} mark=\"i\" side=\"bottom\">\n+                <p><b>검색 상태</b> {result.statusNote}</p>\n+                {result.caseLabel ? <p><b>사례 구분</b> {result.caseLabel}</p> : null}\n+              </InlineHelp>\n+              <p\n+                className=\"sr-only\"\n+                role=\"status\"\n+                aria-live=\"polite\"\n+                aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}\n+              >\n+                검색 상태: {result.statusNote}\n+                {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}\n+              </p>\n+            </div>\n             {result.status !== 'NOT_COMPUTABLE' && result.cases.length === 0 && result.thresholdNote ? (\n               // 교정된 기준을 넘는 사례가 없다(spec US3 시나리오 4). 참고 사례는 검색 화면에서 따로 연다.\n               <Disclosure label=\"유사성 기준\" context={context} tone=\"warning\">\n@@ -206,8 +199,18 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {\n                           <span>관측 구간</span>\n                           <strong>{observationRange(item.observationMonths) ?? item.endMonth}</strong>\n                         </p>\n-                        {item.similar[0] ? <p className={styles.reason}><b className={styles.similarLabel}>비슷한 점</b> {item.similar[0]}</p> : null}\n-                        {item.different[0] ? <p className={styles.reason}><b className={styles.differentLabel}>다른 점</b> {item.different[0]}</p> : null}\n+                        {item.similar[0] ? (\n+                          <p className={styles.reason}>\n+                            <b className={styles.similarLabel}>비슷한 점</b>\n+                            <span className={styles.similarText}>{item.similar[0]}</span>\n+                          </p>\n+                        ) : null}\n+                        {item.different[0] ? (\n+                          <p className={styles.reason}>\n+                            <b className={styles.differentLabel}>다른 점</b>\n+                            <span className={styles.differentText}>{item.different[0]}</span>\n+                          </p>\n+                        ) : null}\n                       </div>\n                       <div className={styles.caseActions}>\n                         {itemCaseId === null ? null : isChosen ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.tsx",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -126,9 +126,13 @@ export function HeroSection({ indicators }: { indicators: Indicator[] }) {\n             variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}\n             transition={revealTransition}\n           >\n-            <span>내 전략이 얼마나 유효한지,</span>\n-            <span><em>과거로 돌아가</em></span>\n-            <span>확인해 볼까요?</span>\n+            {/*\n+              좋고 나쁨을 판정하는 말(유효한지)을 쓰지 않는다. 같은 산업에서 나누는 방식만 바꾸면 결과가\n+              달라진다는 사실을 말한다(constitution 원칙 III).\n+            */}\n+            <span>같은 산업이라도</span>\n+            <span><em>나누는 방식에 따라</em></span>\n+            <span>결과는 달라집니다.</span>\n           </motion.h1>\n           <motion.p\n             className={styles.heroDescription}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -343,7 +343,13 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })\n     <div ref={windowRef} className={styles.previewWindow} role=\"group\" aria-label={activeReal ? '국내 시장 지표 최근 흐름' : '국내 시장 지표 움직임 예시'}>\n       <div className={styles.previewBar}>\n         <span className={styles.previewDots} aria-hidden=\"true\"><i /><i /><i /></span>\n-        <span className={styles.previewAddress} aria-hidden=\"true\">thorp · <b>시장 흐름</b></span>\n+        {/*\n+          결과마다 계산 해시로 된 주소가 붙는다는 것을 주소창 예시로 보인다. 실제 결과 주소와 같은 모양이다\n+          (`/results/:token`).\n+        */}\n+        <span className={styles.previewAddress} aria-hidden=\"true\">\n+          https://j15e205.p.ssafy.io/results/<b>0bb83b0a41fad4605d406389b66b98cf</b>\n+        </span>\n         {/* 실제 값이면 원천과 기준일을, 아니면 만든 흐름임을 밝힌다. */}\n         <span className={styles.previewExample}>\n           {activeReal ? `${activeReal.provider} · ${activeReal.lastDate} 기준${activeReal.stale ? ' · 갱신 지연' : ''}` : '움직임 예시'}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "old_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { useReducedMotion, useScroll, useSpring, useTransform, type MotionStyle } from 'motion/react'\n import { createContext, useContext, type RefObject } from 'react'\n+import { useMediaQuery } from '@/hooks/useMediaQuery'\n \n /**\n  * 첫 화면은 `main`이 스스로 스크롤한다(한 칸씩 넘기기). 칸들이 자기 움직임을 그 스크롤에 묶을 수\n@@ -9,6 +10,13 @@ export const LandingScrollContext = createContext<RefObject<HTMLElement | null>\n \n type Scene = { copy: MotionStyle; window: MotionStyle }\n \n+/**\n+ * 첫 화면이 한 열로 접히는 폭(LandingPage.module.css의 760px 분기)이다. 이 폭에서는 칸이 화면을 꽉 채우지\n+ * 않아 칸이 가운데 서는 순간이 거의 없고, 글이 옆으로 밀린 채 멈춰 화면 밖으로 잘린다. 그래서 옆으로\n+ * 미는 움직임만 뺀다.\n+ */\n+const SINGLE_COLUMN_QUERY = '(max-width: 760px)'\n+\n const still: Scene = { copy: {}, window: {} }\n \n /**\n@@ -21,6 +29,7 @@ const still: Scene = { copy: {}, window: {} }\n export function useScrollScene(target: RefObject<HTMLElement | null>, mode: 'leave' | 'pass', from: 'left' | 'right' = 'left'): Scene {\n   const container = useContext(LandingScrollContext)\n   const reducedMotion = useReducedMotion()\n+  const singleColumn = useMediaQuery(SINGLE_COLUMN_QUERY)\n   const { scrollYProgress } = useScroll({\n     container: container ?? undefined,\n     target,\n@@ -41,7 +50,7 @@ export function useScrollScene(target: RefObject<HTMLElement | null>, mode: 'lea\n \n   if (reducedMotion) return still\n   return {\n-    copy: { x: copyX, y: copyY, opacity: copyOpacity },\n+    copy: singleColumn ? { y: copyY, opacity: copyOpacity } : { x: copyX, y: copyY, opacity: copyOpacity },\n     window: { y: windowY, scale: windowScale, rotateX: windowRotate, opacity: windowOpacity, transformPerspective: 1400 },\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/scrollScene.ts",
+          "old_path": "frontend/src/components/landing/scrollScene.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -108,9 +108,9 @@\n .newsList a { display: inline-flex; align-items: center; gap: 4px; font-size: var(--thorp-text-body, .88rem); color: inherit; }\n .newsList p { margin: 4px 0 2px; font-size: var(--thorp-text-small, .78rem); line-height: 1.5; color: var(--thorp-copy); }\n .newsList a:hover { text-decoration: underline; text-underline-offset: 3px; }\n-.newsBody { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin: 4px 0 0; }\n-.newsBody p { flex: 1; min-width: 0; margin: 0; }\n-.newsMeta { flex-shrink: 0; font-size: var(--thorp-text-caption, .72rem); color: var(--thorp-copy); white-space: nowrap; }\n+.newsList p.newsBody { display: flow-root; margin: 4px 0 0; }\n+/* 띄운 상자의 높이는 글자 크기에 4px만 더한다. 요약 줄 높이(1.5)보다 낮아 마지막 줄 옆에 가지런히 붙는다. */\n+.newsMeta { float: right; margin: 2px 0 0 12px; font-size: var(--thorp-text-caption, .72rem); line-height: calc(1em + 4px); color: var(--thorp-copy); white-space: nowrap; }\n \n /*\n   디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 분야 목록을\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -69,10 +69,14 @@ export function NewsDigestSection({ sectorCode }: NewsDigestSectionProps) {\n             <li key={digest.digestId}>\n               <a href={digest.articles[0].originalUrl} target=\"_blank\" rel=\"noreferrer noopener\">\n                 {digest.representativeTitle}\n+                <span className=\"sr-only\"> (새 창에서 열림)</span>\n               </a>\n-              {/* 매체 수와 날짜는 요약 오른쪽에 붙인다. 요약 아래 줄로 내리면 요약의 한 줄처럼 읽힌다. */}\n-              <div className={styles.newsBody}>\n-                <p>{digest.factualSummary}</p>\n+              {/*\n+                매체 수와 날짜는 요약의 마지막 줄 끝에 오른쪽으로 띄워 붙인다. 옆 칸으로 세우면 요약의 폭이\n+                줄고, 아래 줄로 내리면 요약의 한 줄처럼 읽힌다. 마지막 줄에 자리가 없을 때만 한 줄 내려간다.\n+              */}\n+              <p className={styles.newsBody}>\n+                <span>{digest.factualSummary}</span>\n                 <span className={styles.newsMeta}>\n                   매체 {digest.publisherCount}곳\n                   {/* 확인하지 못한 발행 시각을 확인한 것처럼 쓰지 않는다(012 계약). */}\n@@ -80,7 +84,7 @@ export function NewsDigestSection({ sectorCode }: NewsDigestSectionProps) {\n                     ? ` · ${digest.firstPublishedAt.slice(0, 10).replaceAll('-', '.')}`\n                     : ' · 발행 시각 확인 안 됨'}\n                 </span>\n-              </div>\n+              </p>\n             </li>\n           ))}\n         </ul>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/NewsDigestSection.tsx",
+          "old_path": "frontend/src/components/marketflow/NewsDigestSection.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,7 @@\n   z-index: 30;\n   top: 0;\n   box-sizing: border-box;\n-  min-height: var(--thorp-header-height, 64px);\n+  min-height: var(--thorp-header-height, 82px);\n   border-bottom: 1px solid var(--thorp-line);\n   background: var(--thorp-background);\n }\n@@ -78,7 +78,7 @@\n   display: grid;\n   grid-template-columns: 1fr auto 1fr;\n   width: min(100% - 40px, 1440px);\n-  min-height: var(--thorp-header-height, 64px);\n+  min-height: var(--thorp-header-height, 82px);\n   margin: 0 auto;\n   padding: 0;\n   background: transparent;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,28 @@\n+import { describe, expect, it } from 'vitest'\n+import type { NewsSector } from '@/types/marketNews'\n+import { groupNewsSectors } from './newsSectorGroups'\n+\n+const sector = (sectorId: string, name: string, investable = false): NewsSector => ({ sectorId, name, investable })\n+\n+describe('groupNewsSectors', () => {\n+  it('섹터를 분류별로 나누고 분류 안에서는 받은 순서를 지킨다', () => {\n+    const groups = groupNewsSectors([\n+      sector('NEWS_IT', 'IT·AI'),\n+      sector('BANK', '은행', true),\n+      sector('SEMICONDUCTOR', '반도체', true),\n+    ])\n+\n+    expect(groups.map((group) => group.name)).toEqual(['기술', '금융'])\n+    expect(groups[0].sectors.map((item) => item.name)).toEqual(['IT·AI', '반도체'])\n+  })\n+\n+  it('배정표에 없는 새 섹터는 기타에 넣어 칩이 사라지지 않게 한다', () => {\n+    const groups = groupNewsSectors([sector('NEWS_NEW_THING', '새 섹터')])\n+\n+    expect(groups).toEqual([{ id: 'other', name: '기타', sectors: [sector('NEWS_NEW_THING', '새 섹터')] }])\n+  })\n+\n+  it('섹터가 없으면 분류도 없다', () => {\n+    expect(groupNewsSectors([])).toEqual([])\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/newsSectorGroups.test.ts",
+          "old_path": "frontend/src/diagnosis/newsSectorGroups.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+import type { NewsSector } from '@/types/marketNews'\n+\n+/*\n+  뉴스 칩을 한 번 더 묶는 화면 분류다(012 FR-005 보강). 섹터가 18개라 한 줄에 다 펼치면 칩 벽이 된다.\n+\n+  - **분류는 화면이 가진다.** 섹터 목록과 이름은 여전히 `GET /market-news/sectors`가 주고, 여기에는\n+    식별자를 어느 분류에 둘지만 적는다. 섹터 이름을 상수로 두지 않는다는 012의 규칙은 그대로다.\n+  - 배정표에 없는 섹터가 목록에 새로 오면 '기타'에 넣는다. 섹터가 늘었다고 칩이 사라지지 않는다.\n+  - 응답에 섹터가 하나도 없는 분류는 보이지 않는다. 누를 것이 없는 탭을 두지 않는다.\n+  - 분류는 칩을 펼치는 자리일 뿐 뉴스를 좁히지 않는다. 뉴스 조회는 섹터 하나로만 한다 — 여러 섹터를\n+    화면이 따로 불러 합치면 중복 제거와 상위 묶음 선정을 화면이 다시 하게 되어 012의 판정과 갈라진다.\n+*/\n+\n+export type NewsSectorGroup = {\n+  id: string\n+  name: string\n+  sectors: NewsSector[]\n+}\n+\n+const GROUP_ASSIGNMENT: ReadonlyArray<{ id: string; name: string; sectorIds: readonly string[] }> = [\n+  { id: 'tech', name: '기술', sectorIds: ['SEMICONDUCTOR', 'SECONDARY_BATTERY', 'NEWS_IT', 'NEWS_MEDIA'] },\n+  {\n+    id: 'industry',\n+    name: '제조·산업',\n+    sectorIds: ['CONSTRUCTION', 'AUTO', 'HEAVY_INDUSTRY', 'NEWS_MATERIALS', 'NEWS_ENERGY', 'NEWS_TRANSPORT'],\n+  },\n+  { id: 'finance', name: '금융', sectorIds: ['BANK', 'SECURITIES', 'NEWS_FINANCE'] },\n+  { id: 'consumer', name: '소비·헬스케어', sectorIds: ['COSMETICS', 'NEWS_CONSUMER', 'NEWS_HEALTHCARE'] },\n+  { id: 'market', name: '시장·경제', sectorIds: ['NEWS_MARKET', 'NEWS_MACRO'] },\n+]\n+\n+const OTHER_GROUP = { id: 'other', name: '기타' }\n+\n+/** 받은 섹터를 분류별로 나눈다. 분류 안의 순서는 받은 목록의 순서(012 등록표의 화면 순서)를 따른다. */\n+export function groupNewsSectors(sectors: readonly NewsSector[]): NewsSectorGroup[] {\n+  const groupOf = new Map<string, string>()\n+  for (const group of GROUP_ASSIGNMENT) {\n+    for (const sectorId of group.sectorIds) groupOf.set(sectorId, group.id)\n+  }\n+\n+  const groups = [...GROUP_ASSIGNMENT, OTHER_GROUP].map((group) => ({\n+    id: group.id,\n+    name: group.name,\n+    sectors: sectors.filter((sector) => (groupOf.get(sector.sectorId) ?? OTHER_GROUP.id) === group.id),\n+  }))\n+  return groups.filter((group) => group.sectors.length > 0)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/newsSectorGroups.ts",
+          "old_path": "frontend/src/diagnosis/newsSectorGroups.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+import { useEffect, useState } from 'react'\n+\n+/** 미디어 쿼리가 지금 맞는지 따라간다. jsdom 처럼 `matchMedia`가 없으면 맞지 않는 것으로 본다. */\n+export function useMediaQuery(query: string): boolean {\n+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false)\n+  useEffect(() => {\n+    const list = window.matchMedia?.(query)\n+    if (!list) return undefined\n+    const update = () => setMatches(list.matches)\n+    update()\n+    list.addEventListener('change', update)\n+    return () => list.removeEventListener('change', update)\n+  }, [query])\n+  return matches\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useMediaQuery.ts",
+          "old_path": "frontend/src/hooks/useMediaQuery.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n .page {\n   /* 상단 바(AppHeader .header의 min-height + 아래 선 1px) 높이. 한 칸씩 넘기는 섹션이 상단 바에 가리지 않게 뺀다. */\n-  --landing-header-height: calc(var(--thorp-header-height, 64px) + 1px);\n+  --landing-header-height: calc(var(--thorp-header-height, 82px) + 1px);\n   /*\n     초록 기운이 섞였던 무채색을 B안(그래파이트)으로 옮긴 값이다. 각 자리는 var(--lp-N, 예전 값)으로\n     쓰고, classic 디자인에서는 아래에서 이 토큰을 비워(initial) 예전 값으로 돌아간다. classic을\n@@ -50,6 +50,15 @@\n   font-family: var(--thorp-font-display);\n }\n \n+/*\n+  첫 화면은 문서가 아니라 이 칸이 스크롤된다. 문서 쪽 스크롤바 자리 예약(index.css의 html\n+  scrollbar-gutter)이 남으면 이 칸의 스크롤바 오른쪽에 빈 띠가 한 줄 더 생겨, 스크롤바가 화면 끝에\n+  붙지 않는다. 이 칸이 있는 동안만 예약을 푼다.\n+*/\n+:global(html):has(.page) {\n+  scrollbar-gutter: auto;\n+}\n+\n .page::before {\n   position: fixed;\n   z-index: 20;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,7 +28,7 @@\n .workspace { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.65fr); align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }\n .fieldRail { min-width: 0; }\n .fieldList { padding-right: 24px; }\n-.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: calc(var(--thorp-header-height, 64px) + 24px); }\n+.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }\n .detailPanel:focus-visible, .detailJump:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .detailJump { display: none; }\n .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }\n@@ -65,6 +65,10 @@\n   .workspaceHeading > span { font-size: var(--thorp-text-label, .64rem); }\n   .workspaceHeading i { margin: 0 4px; }\n }\n+/* 아주 좁은 폭에서는 뒷부분 덩어리도 한 줄에 다 들어가지 않는다. 그때만 낱말 사이에서 끊는다. */\n+@media (max-width: 360px) {\n+  .hero h1 span { white-space: normal; }\n+}\n @media (prefers-reduced-motion: reduce) {\n   .loadingTrack::after { animation: none; width: 100%; opacity: .5; }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "old_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1002,12 +1002,17 @@\n }\n \n .attribution {\n-  margin: 6px 4px 0 0;\n+  margin: 0;\n   color: var(--thorp-muted);\n   font-size: var(--thorp-text-caption, 0.72rem);\n   text-align: right;\n }\n \n+/* 탐색 카드 바닥의 출처 줄. 카드 안 오른쪽 아래에 붙는다. */\n+.browserCard [data-slot='footer'] {\n+  margin-top: 12px;\n+}\n+\n /* 폭이 줄면 선택 요약을 아래로 내린다. 셋을 한 줄에 억지로 욱여넣지 않는다. */\n @media (max-width: 1180px) {\n   /* 선택 요약을 아래로 내려 카드가 폭을 다 쓰게 한다. 셋을 한 줄에 억지로 넣지 않는다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -164,6 +164,13 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n     void navigate(appendCaseToPath(NEXT_STEP_PATH, caseId))\n   }, [caseId, navigate, selection])\n \n+  /*\n+    KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만 보는\n+    사용자에게 미표시와 같으므로 목록 화면에 둔다. 탐색 카드 안 오른쪽 아래에 두어 그 카드의 자료라는\n+    것이 읽히게 하고, 카드를 그리지 못할 때만 카드 자리에 홀로 둔다.\n+  */\n+  const attribution = <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>\n+\n   return (\n     <>\n       <div className={styles.board} data-detail-expanded={detailExpanded}>\n@@ -239,15 +246,11 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n               onView={setViewingCode}\n               onToggleSelected={selection.toggleSector}\n               onExpandedChange={setDetailExpanded}\n+              footer={attribution}\n             />\n-          ) : null}\n-\n-          {/*\n-            KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 상세를 펼쳐야만 보이는 구조는 목록만\n-            보는 사용자에게 미표시와 같으므로 목록 화면에 둔다. 탐색 카드의 오른쪽 아래 모서리에 붙여\n-            그 카드의 자료라는 것이 읽히게 한다.\n-          */}\n-          <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>\n+          ) : (\n+            attribution\n+          )}\n         </section>\n \n         <SelectedInstrumentsRail\n@@ -305,7 +308,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n \n       {/*\n         투자 대상 아래 한 줄에 둘을 나란히 둔다. 왼쪽은 Thorp의 핵심 흐름(002 FR-018) — 고른 섹터를 지금과\n-        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 시장 흐름 뉴스(FR-019)로 기본 '전체', 섹터별로\n+        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 뉴스(FR-019)로 기본 '전체', 섹터별로\n         좁혀 볼 수 있다. 둘 다 받지 못해도 투자 대상 고르기는 막히지 않는다.\n       */}\n       <div className={styles.context}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -264,6 +264,7 @@\n   --thorp-flow-gap: initial;\n   --thorp-reading-width: initial;\n   --thorp-records-top: initial;\n+  --thorp-header-height: initial;\n   --thorp-records-title-margin: initial;\n   --thorp-flow-side: initial;\n   --thorp-title-leading: initial;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/index.css",
+          "old_path": "frontend/src/index.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -146,8 +146,8 @@\n - **FR-015**: 섹터 목록이 아직 확정되지 않은 예시 대응표에서 온 것이면([001](../001-etf-market-data/spec.md) FR-002) 이 화면에 그 사실을 표시한다. 001 SC-006이 예시 자료를 쓰는 화면 전부에 예시 표시를 요구한다. 이 표시는 FR-005의 동일 비중 초깃값이 예시라는 표시와 가리키는 대상이 다르므로 따로 둔다.\n - **FR-016**: 고른 섹터의 비중으로 0%를 입력할 수 있다. 시스템은 0%를 거부하거나 다른 값으로 바꾸지 않으며, 0%인 섹터를 선택 목록에서 빼지도 않는다. 화면은 0%인 섹터가 '내가 정한 비중'에서는 담기지 않지만 자동 배분 전략에서는 여전히 투자 후보 집합에 남는다는 뜻을 한 문장으로 알린다. FR-009가 나눈 선택 섹터의 두 의미 중 비중이 0%라는 사실은 '내가 정한 비중' 쪽에만 적용되며, [003](../003-strategy-settings/spec.md)이 선택 섹터의 개수로 유효성 제약을 계산하므로 0%인 섹터도 그 개수에 그대로 들어간다. (§4.2.1, D04, 원칙 VI)\n - **FR-017**: 대표 ETF 대응표가 아직 발행되지 않아 [001](../001-etf-market-data/spec.md)에서 섹터 목록을 아직 받을 수 없는 상태이면, 빈 목록이나 오류 화면 대신 아직 준비 중이라는 한 문장을 보이는 정상 화면으로 처리한다. 이 상태가 [001의 섹터 조회 계약](../001-etf-market-data/contracts/sector-api.md)의 어느 응답에 해당하는지는 [plan.md](./plan.md)가 대응을 밝힌다. FR-001이 아직 만들지 않은 화면에 쓰는 처리와 같은 형태다. 이 상태에서는 섹터를 고를 수 없으므로 다음 단계로 넘어가지 않는다. (원칙 VI)\n-- **FR-018**: 투자 대상 고르기는 '지금과 비슷했던 과거 시장'을 함께 보인다(Session 2026-09-24). 국내 시장 참고 정보(KOSPI·VKOSPI, [009](../009-market-flow-overview/spec.md) FR-017)는 오른쪽 선택 요약의 '다음: 전략 고르기' 아래에 지수마다 카드 하나씩 둔다. '지금과 비슷했던 과거 시장'은 투자 대상 보드 아래 줄에 '뉴스'(FR-019)와 나란히 놓는다. 이 영역에는 [010](../010-economic-regime-search/spec.md) 분야 검색의 가까운 과거 사례 3개를 보인다. 처음에는 첫 분야(표시 순서)의 최신 기준월로 보이고, 분야를 바꿀 수 있으며 종합 비교는 누를 때만 연다. 사례의 순서·문구는 010이 내려 준 것만 쓰고 추천·순위 표현을 만들지 않는다(010 FR-022). 검색 상태와 사례 구분은 사례 목록 위 한 줄로 줄여 보인다 — 문구는 늘 보이고 호버로 숨기지 않는다(010 FR-037). 사례를 고르면 [011](../011-regime-strategy-link/spec.md) 진입 계약으로 그 기간을 분석 기간으로 이어 간다. 이 영역을 받지 못해도 투자 대상 고르기는 막히지 않는다.\n-- **FR-019**: '지금과 비슷했던 과거 시장'과 같은 줄 오른쪽에 '뉴스'를 별도 카드로 두고, 뉴스 묶음 3개가 스크롤 없이 모두 보이게 한다([012](../012-market-news-digest/spec.md) FR-001). 기본은 '전체'로 최신 뉴스 묶음을 보이고, '섹터별로 보기'에서 섹터를 고르면 그 섹터의 뉴스로 좁힌다. 섹터 칩은 012의 뉴스 섹터 목록이며 투자 대상 섹터와 투자 대상이 아닌 뉴스 전용 섹터(예: 헬스케어·바이오, IT·AI)를 함께 담는다([012](../012-market-news-digest/spec.md) FR-005, Session 2026-09-25). 여기서 고른 섹터는 뉴스 범위만 정하며 투자 대상 선택을 바꾸지 않는다. 뉴스가 없거나 받지 못해도 투자 대상 고르기는 막히지 않는다(Session 2026-09-24).\n+- **FR-018**: 투자 대상 고르기는 '지금과 비슷했던 과거 시장'을 함께 보인다(Session 2026-09-24). 국내 시장 참고 정보(KOSPI·VKOSPI, [009](../009-market-flow-overview/spec.md) FR-017)는 오른쪽 선택 요약의 '다음: 전략 고르기' 아래에 지수마다 카드 하나씩 둔다. '지금과 비슷했던 과거 시장'은 투자 대상 보드 아래 줄에 '뉴스'(FR-019)와 나란히 놓는다. 이 영역에는 [010](../010-economic-regime-search/spec.md) 분야 검색의 가까운 과거 사례 3개를 보인다. 처음에는 첫 분야(표시 순서)의 최신 기준월로 보이고, 분야를 바꿀 수 있으며 종합 비교는 누를 때만 연다. 사례의 순서·문구는 010이 내려 준 것만 쓰고 추천·순위 표현을 만들지 않는다(010 FR-022). 검색 상태와 사례 구분은 사례 목록 위 i 표시 뒤로 내린다 — 마우스를 얹거나 키보드 초점을 주면 그 자리에 펼쳐지고, 보조기술에는 늘 읽힌다(010 FR-037). 비슷한 점·다른 점은 이름표와 설명 문장을 같은 색(비슷한 점 초록, 다른 점 노랑)으로 보인다. 사례를 고르면 [011](../011-regime-strategy-link/spec.md) 진입 계약으로 그 기간을 분석 기간으로 이어 간다. 이 영역을 받지 못해도 투자 대상 고르기는 막히지 않는다.\n+- **FR-019**: '지금과 비슷했던 과거 시장'과 같은 줄 오른쪽에 '뉴스'를 별도 카드로 두고, 뉴스 묶음 3개가 스크롤 없이 모두 보이게 한다([012](../012-market-news-digest/spec.md) FR-001). 기본은 '전체'로 최신 뉴스 묶음을 보이고, 분류(기술·제조·산업·금융·소비·헬스케어·시장·경제)를 누르면 그 분류의 섹터 칩이 펼쳐지며, 섹터를 고르면 그 섹터의 뉴스로 좁힌다. 분류만 눌러서는 뉴스가 좁혀지지 않는다([012](../012-market-news-digest/spec.md) FR-005). 섹터 칩은 012의 뉴스 섹터 목록이며 투자 대상 섹터와 투자 대상이 아닌 뉴스 전용 섹터(예: 헬스케어·바이오, IT·AI)를 함께 담는다([012](../012-market-news-digest/spec.md) FR-005, Session 2026-09-25). 여기서 고른 섹터는 뉴스 범위만 정하며 투자 대상 선택을 바꾸지 않는다. 뉴스가 없거나 받지 못해도 투자 대상 고르기는 막히지 않는다(Session 2026-09-24).\n \n ### Key Entities *(include if feature involves data)*\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/spec.md",
+          "old_path": "specs/002-sector-weight-selection/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -200,7 +200,7 @@\n \n #### 검색 상태와 문턱 (§4.3, §7.3, §7.4, D24, U04)\n \n-- **FR-037**: **결과의 신뢰 범위를 말하는 표시는 전달 수단에 의존하지 않는다.** 대상은 다섯이다 — 검색 상태와 사유(FR-019), '최근접 참고 사례'(FR-020), 예시 자료 표시, 비교 시점에서 빠진 지표·월(FR-031), 역사 비교 표시(FR-027). 이 다섯은 ① **문구가 함께 보인다** — 색·아이콘·마우스 호버에만 의존하지 않는다, ② **키보드만으로** 검색·더 보기·모드 전환·상세 열기를 할 수 있고 그 과정에서 다섯이 모두 도달 가능하다, ③ **보조기술이 읽을 수 있다** — 각 표시가 어느 결과에 대한 것인지 프로그램적으로 연결되고, 상태가 바뀌면 그 사실이 전달된다, ④ 본문 대비 **명암비 4.5:1 이상**(굵은 큰 글자는 3:1 이상), ⑤ **좁은 폭에서도 잘리거나 접히지 않는다** — 화면이 좁다는 이유로 접어 두는 자리에 이 다섯을 넣지 않는다. **표시의 형태는 자리에 따라 다를 수 있다** — 검색 화면처럼 결과가 주인공인 자리는 이름표('검색 상태'·'사례 구분' 등)가 있는 안내 상자로 두고, [002](../002-sector-weight-selection/spec.md) 투자 대상 고르기의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약 카드는 이름표를 보조기술에만 남기고 검색 상태와 사례 구분 문구를 사례 목록 위 한 줄로 줄일 수 있다. 어느 형태든 ①~⑤를 모두 지킨다(constitution 원칙 II, 미승인 초안 단서). 010은 통계로만 분석하므로 *\"이 결과를 어디까지 믿어도 되는가\"* 가 결과 자체만큼 중요하고, 그 말이 전달 수단 때문에 약해지면 spec이 가장 경계하는 오독이 그대로 일어난다. (§4.3, §7.2, 원칙 VI)\n+- **FR-037**: **결과의 신뢰 범위를 말하는 표시는 전달 수단에 의존하지 않는다.** 대상은 다섯이다 — 검색 상태와 사유(FR-019), '최근접 참고 사례'(FR-020), 예시 자료 표시, 비교 시점에서 빠진 지표·월(FR-031), 역사 비교 표시(FR-027). 이 다섯은 ① **문구가 함께 보인다** — 색·아이콘·마우스 호버에만 의존하지 않는다, ② **키보드만으로** 검색·더 보기·모드 전환·상세 열기를 할 수 있고 그 과정에서 다섯이 모두 도달 가능하다, ③ **보조기술이 읽을 수 있다** — 각 표시가 어느 결과에 대한 것인지 프로그램적으로 연결되고, 상태가 바뀌면 그 사실이 전달된다, ④ 본문 대비 **명암비 4.5:1 이상**(굵은 큰 글자는 3:1 이상), ⑤ **좁은 폭에서도 잘리거나 접히지 않는다** — 화면이 좁다는 이유로 접어 두는 자리에 이 다섯을 넣지 않는다. **표시의 형태는 자리에 따라 다를 수 있다** — 검색 화면처럼 결과가 주인공인 자리는 이름표('검색 상태'·'사례 구분' 등)가 있는 안내 상자로 두고, [002](../002-sector-weight-selection/spec.md) 투자 대상 고르기의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약 카드는 검색 상태와 사례 구분을 사례 목록 위 i 표시 뒤로 내릴 수 있다. 이때 ① 대신 세 가지를 지킨다 — i 표시는 마우스를 얹을 때뿐 아니라 **키보드 초점으로도** 그 자리에 펼쳐지고, 보조기술에는 펼치지 않아도 같은 문장이 결과와 연결된 알림으로 읽히며, 같은 결과를 여는 '비슷했던 때 보기' 화면에서는 문구가 늘 펼쳐져 있다. ②~⑤는 어느 형태든 그대로 지킨다(constitution 원칙 II, 미승인 초안 단서). 010은 통계로만 분석하므로 *\"이 결과를 어디까지 믿어도 되는가\"* 가 결과 자체만큼 중요하고, 그 말이 전달 수단 때문에 약해지면 spec이 가장 경계하는 오독이 그대로 일어난다. (§4.3, §7.2, 원칙 VI)\n - **FR-019**: 검색 상태를 '계산 불가/후보 없음' / '가까운 순서만 제공·유사성 미판정' / '교정된 기준 충족 여부' 세 가지로 구분해 결과 옆에 표시한다. '계산 불가/후보 없음'일 때는 **사유 넷을 구분해** 표시한다 — 척도 구간 60개월 미만(FR-005·FR-008) / MAD·IQR 둘 다 0(FR-006) / 어느 지표의 비교 시점이 하나도 없음(FR-001·FR-007) / 유효 후보 0건(FR-012). 화면 문구는 [contracts/regime-search-api.md](contracts/regime-search-api.md) §1이 고정한다. (§4.3, D24)\n - **FR-020**: 유사성 문턱을 교정하기 전에는 사례를 '최근접 참고 사례'로 표시하고 '충분히 유사' 배지를 붙이지 않으며, 미교정이라는 이유로 '충분한 사례가 없다'고 단정하지 않는다. 임계값·분야별 큰 차이 문턱·최소 근거량·경제적 설명력 판정 기준은 결정 항목 PD-09(U04)다. (§4.3, D24, U04)\n - **FR-021**: 교정 뒤에는 **목록을 나눈다** — 기준을 충족한 사례만 기본 목록에 보이고, **미충족 참고 사례는 별도로 열 수 있게** 한다. 한 목록에 섞어 '기준 충족' 배지를 다는 방식을 쓰지 않는다: 배지를 다는 순간 나머지가 '덜 유사한 것'으로 읽혀 FR-018이 막으려던 등급 매기기가 그대로 생긴다. 충족 사례가 하나도 없으면 같은 모양으로 미충족 참고 사례만 별도로 열리고 분야별 탐색으로 연결한다. **문턱 값은 PD-09이며 값이 정해지기 전에는 이 상태에 도달하지 않는다**(FR-020) — 화면 모양은 값과 무관하므로 여기서 고정한다. (§4.3, D24, PD-09)\n@@ -278,7 +278,7 @@\n - **SC-008**: **010 구현이 끝난 뒤 6~8명**에게 경제환경 탐색 과제('현재와 고용환경이 가까운 과거를 찾고, 물가에서 다른 점을 설명하기')를 주어 관찰하고, 참여자별로 두 가지를 기록한다 — ① **종합 비교를 열지 않고** 분야 탐색만으로 과제를 끝냈는가, ② **분야 유사성을 경제 전체의 일치로 오해**했는가. 이 인원은 constitution §7.2가 정한 **오류 발견을 위한 규모**이며 수요를 입증하는 표본이 아니다. 관찰하지 않은 것을 수행한 것처럼 적은 사례가 0건이어야 한다. (§7.2, 원칙 VI)\n - **SC-009**: 검색 결과 화면의 100%에 '최신 개정자료를 이용한 역사 비교'라는 표시가 있고, 당시 발표·수정값으로 재현한 분석이라고 표현한 사례가 0건이다. (FR-027, 원칙 V)\n - **SC-010**: 배치 실패·조회 실패의 100%가 '계산 불가'와 구분된 안내로 표시되고, 실패 때문에 이전 결과가 지워지거나 빈 결과·'계산 불가'로 바뀐 사례가 0건이다. 중단된 배치가 남긴 부분 적재 항목이 조회된 사례도 0건이다. (FR-034, 원칙 VI)\n-- **SC-014**: FR-037의 다섯 표시 각각에 대해 — 문구 없이 색·아이콘·호버로만 구별되는 사례가 0건, 키보드만으로 도달할 수 없는 사례가 0건, 보조기술이 읽을 수 없는 사례가 0건, 명암비 기준 미달이 0건, 좁은 폭에서 잘리거나 접힌 사례가 0건이다. (FR-037)\n+- **SC-014**: FR-037의 다섯 표시 각각에 대해 — 문구 없이 색·아이콘·호버로만 구별되는 사례가 0건(FR-037이 정한 요약 카드의 i 표시는 초점으로도 펼쳐지고 보조기술에 늘 읽히는 한 예외로 센다), 키보드만으로 도달할 수 없는 사례가 0건, 보조기술이 읽을 수 없는 사례가 0건, 명암비 기준 미달이 0건, 좁은 폭에서 잘리거나 접힌 사례가 0건이다. (FR-037)\n - **SC-013**: 사전 계산 집합·사례에 사용자 식별자가 저장된 사례가 0건이고, 기록 삭제·탈퇴로 사전 계산 항목이 지워진 사례가 0건이다. (FR-036)\n - **SC-012**: 철회된 항목을 가리키는 기록의 100%가 '철회됨'으로 표시되고, 다른 결과가 대신 보이거나 빈 결과로 바뀐 사례가 0건이다. 철회 기록(식별 키·범위·사유·시각)이 남지 않은 철회가 0건이다. (FR-035)\n - **SC-011**: 시대별 보조 위치가 거리·순위에 반영된 사례가 0건이고, **시대별 보조 위치가** 화면에 z 값·분위수·백분율로 표시된 사례가 0건이다. 공통 척도로 계산한 검색 z의 상세 제공(FR-028)과 구분한다. 같은 자료·등록표·모델 버전과 후보월의 시대별 위치는 기준월이 달라도 100% 같다. 보조 척도가 부족하거나 0이라는 이유로 후보·순위·거리를 바꾼 사례가 0건이다. (FR-017, 원칙 IV)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/spec.md",
+          "old_path": "specs/010-economic-regime-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -165,7 +165,7 @@\n - **FR-002**: 기사 본문은 저장·표시·재배포하지 않는다. 원문은 원 매체 링크로만 연결한다. (§6.3, 원칙 X)\n - **FR-003**: 짧은 사실 요약과 제목은 확보한 정보(제목·메타데이터)에만 근거한다. 공개 환경에서는 허가된 매체의 기사 메타데이터만 요약과 대표 제목의 근거로 쓰며, 회신이 없거나 불허인 매체의 제목·매체명·주제가 요약 문장과 대표 제목에 직접적으로도 간접적으로도 반영되지 않는다. 전체 멤버 기준으로 저장한 요약은 내부 검증에서만 쓰고 공개 응답에 내보내지 않는다. 요약은 확인할 수 없는 내용을 생성하지 않고 확인할 수 없는 내용을 생성하지 않는다. 요약은 제목·매체명이 있고 등록된 섹터 또는 주제가 하나 이상인 경우에만 제목을 사실 문장의 핵심으로 사용해 결정론적으로 생성한다. 새로운 사실·인과·전망·판정·투자 시사점을 추가하지 않으며, 조건을 만족하지 않으면 해당 기사를 표시 대상에서 제외하고 묶음 수를 맞추려고 다른 기사나 생성한 내용으로 대체하지 않는다. (§6.3, 원칙 III·VI)\n - **FR-004**: 뉴스 묶음의 주요도 판정은 등록된 규칙(같은 사건을 다룬 보도 수·최근성)을 따른다. 최근성은 검증된 발행 시각을 우선하고, 발행 시각 미확인 기사는 검증 시각이 있는 기사보다 뒤에 두며 미확인 기사끼리는 수집 시각 최신순으로 정한다. GDELT Tone은 비중·순위·유사도 계산에 넣지 않고 규칙은 plan에서 정해 버전으로 기록한다. (§6.3)\n-- **FR-005**: 사용자가 섹터를 선택하면 그 섹터·기업·경제 주제와 연결된 뉴스로 좁힌다. 섹터는 두 종류다. **투자 대상 섹터**는 [001](../001-etf-market-data/spec.md)이 소유하며 012는 그 식별자를 참조만 하고 만들지 않는다. **뉴스 전용 섹터**는 투자 대상과 대응하지 않는 뉴스 분류로 012가 소유하며(Session 2026-09-25), 식별자가 `NEWS_`로 시작해 001 식별자와 겹치지 않는다. 두 목록은 연결 규칙 등록표에 화면 순서로 두고 `GET /market-news/sectors`로 내준다. 투자 대상 섹터는 001에 열려 있을 때만 목록에 나오고, 뉴스 전용 섹터는 001과 무관하게 늘 나온다. 두 목록 어디에도 없는 섹터 식별자 요청은 거부한다. 001의 대응표가 아직 비어 있으면 섹터 지정 조회는 빈 상태를 정상 화면으로 반환한다. 경제환경 분야 요약·지표·사례 순위는 바뀌지 않는다. 관련 뉴스가 없으면 빈 상태를 정상 화면으로 보인다. (§4.4, D07)\n+- **FR-005**: 사용자가 섹터를 선택하면 그 섹터·기업·경제 주제와 연결된 뉴스로 좁힌다. 섹터는 두 종류다. **투자 대상 섹터**는 [001](../001-etf-market-data/spec.md)이 소유하며 012는 그 식별자를 참조만 하고 만들지 않는다. **뉴스 전용 섹터**는 투자 대상과 대응하지 않는 뉴스 분류로 012가 소유하며(Session 2026-09-25), 식별자가 `NEWS_`로 시작해 001 식별자와 겹치지 않는다. 두 목록은 연결 규칙 등록표에 화면 순서로 두고 `GET /market-news/sectors`로 내준다. 화면은 이 섹터들을 분류(기술·제조·산업·금융·소비·헬스케어·시장·경제)로 한 번 더 묶어 보인다. 분류 이름과 섹터 배정은 화면이 소유하고 섹터 목록과 이름은 계속 이 API가 준다. 배정에 없는 섹터는 '기타'로 보이며, 분류는 섹터 칩을 펼칠 뿐 조회 범위를 바꾸지 않는다 — 조회는 여전히 섹터 하나 또는 전체다. 투자 대상 섹터는 001에 열려 있을 때만 목록에 나오고, 뉴스 전용 섹터는 001과 무관하게 늘 나온다. 두 목록 어디에도 없는 섹터 식별자 요청은 거부한다. 001의 대응표가 아직 비어 있으면 섹터 지정 조회는 빈 상태를 정상 화면으로 반환한다. 경제환경 분야 요약·지표·사례 순위는 바뀌지 않는다. 관련 뉴스가 없으면 빈 상태를 정상 화면으로 보인다. (§4.4, D07)\n - **FR-006**: 과거 경제환경 사례 화면에는 그 사례의 관측 구간에 발행된 뉴스만 연결하고 '당시 뉴스'로 표시해 현재 뉴스와 구분한다. 발행 시각을 확인할 수 없는 기사는 과거 사례에 연결하지 않는다. (§4.4, §6.3, 원칙 V)\n - **FR-007**: 뉴스가 특정 전략 수익의 원인이었다고 단정하는 문구를 만들지 않는다. (§4.4, 원칙 III)\n - **FR-008**: 사용자에게 뉴스원·API의 이름을 고르게 하지 않는다. (§4.4, 원칙 II)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/012-market-news-digest/spec.md",
+          "old_path": "specs/012-market-news-digest/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2877961": []
+  }
+}

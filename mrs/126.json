@@ -1,0 +1,1062 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945208,
+    "iid": 126,
+    "project_id": 1444456,
+    "title": "feat(fe): 첫 화면 메뉴와 준비 중 화면",
+    "description": "# 작업 내용 요약\n\n처음 방문한 사용자가 전략 진단을 시작할 길이 첫 화면에 없었다. 헤더의 메뉴는 같은 페이지 안에서\n섹션으로 스크롤하는 앵커 셋뿐이어서 제품이 무엇으로 이루어져 있는지 드러나지 않았고, 화면에\n들어서자마자 보이는 주 버튼은 대시보드 화면으로 가고 있었다. 아직 화면을 만들지 않은 메뉴는 아예\n보이지 않아, 그 기능이 있는지조차 알 수 없었다.\n\n이 MR 이후로 첫 화면은 제품의 네 메뉴를 모두 보이고, 머리 영역의 주 버튼은 '비중 비교하기'가\n된다. 아직 화면이 없는 메뉴도 숨기지 않고, 열면 준비 중이라는 한 문장이 있는 정상 화면이 뜬다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-251](https://ssafy.atlassian.net/browse/S15P21E205-251) `[FE] 첫 화면 메뉴와 준비 중 화면`\n- 근거: [spec 002](../../specs/002-sector-weight-selection/spec.md) `FR-001`·`FR-002`, `SC-001`(진입부), `SC-008`(메뉴 쪽)\n- 작업 묶음: `tasks.md`의 M1(T001~T004)\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 첫 화면에서 메뉴를 훑어본다 | 같은 페이지 안의 섹션으로 가는 앵커 셋 | 제품의 주요 메뉴 셋과 보조 메뉴 하나 |\n| 화면에 들어서자마자 보이는 주 버튼을 누른다 | 대시보드 화면으로 간다 | 섹터 선택 화면으로 간다 |\n| 아직 만들지 않은 화면의 메뉴를 찾는다 | 메뉴에 없다 | 메뉴에 있고, 열면 준비 중이라는 한 문장이 뜬다 |\n| 소개 섹션을 읽고 그 아래 링크를 누른다 | 시장 분석 화면과 백테스트 화면으로 간다 | 같다 |\n\n# 주요 변경 사항\n\n## 첫 화면의 메뉴를 제품 구조로 바꾼다\n\n헤더의 앵커 셋을 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와 보조 메뉴 '내 기록'으로 교체했다.\n`FR-001`이 이 넷을 모두 보이라고 정했고, 아직 만들지 않은 화면도 메뉴에서 빼지 못하게 했다.\n\n앵커와 새 메뉴를 나란히 두면 첫 화면의 메뉴가 일곱 개가 되어 `원칙 II`(첫 화면은 단순하게)를\n어긴다. 섹션 자체와 그 식별자는 그대로 남아 있어 스크롤로 도달한다. 앵커 내비게이션을 되살려야\n한다면 헤더가 아닌 별도 자리가 필요하다.\n\n메뉴의 목적지는 이미 화면이 있으면 그 경로로 이었다. 최종 목적지 확정은 각 메뉴를 소유한 spec의\n몫이라 여기서 정리하지 않았다.\n\n## 머리 영역의 주 버튼을 전략 진단으로 돌린다\n\n화면에 들어서자마자 보이는 주 버튼이 대시보드 화면으로 가고 있었다. 그 자리를 '비중 비교하기'가\n대신한다. `SC-001`이 세는 \"두 번의 행동으로 다음 단계 도달\"에서 첫 번째 행동이 이 버튼이다.\n\n**같은 자리의 보조 버튼과 소개 섹션 아래 링크 둘은 그대로 두었다.** 보조 버튼은 같은 페이지 안을\n내려갈 뿐이고, 소개 섹션의 링크 둘은 화면을 한참 내려가야 닿는 자리에 있다. 셋 다 처음 들어온\n사용자가 주 버튼과 견주어 고르게 되는 자리가 아니므로, `FR-001`이 제한한 \"시작 화면의 행동 버튼\"이\n세는 대상에서 뺐다.\n\n## 아직 줄 것이 없는 상태를 한 곳에서 표시한다\n\n한 문장과 선택적인 행동 하나만 받는 공용 표시를 만들었다. 지금은 아직 만들지 않은 메뉴가 쓰고,\n뒤 묶음에서 섹터 목록을 아직 받을 수 없는 상태와 연결 실패가 같은 표시를 쓴다. 표시를 한 곳에\n모으는 까닭은 `SC-008`이 그 경우들을 같은 기준으로 세기 때문이다. 표시가 갈라지면 한쪽만 고쳐질\n위험이 생긴다.\n\n이 표시는 예외를 던지지 않고 언제나 정상 화면을 그린다. 빈 화면이나 처리되지 않은 오류 화면으로\n떨어지지 않는 것이 `원칙 VI`의 요구다. 다시 눌러도 결과가 달라지지 않는 상태에는 행동을 주지\n않는다.\n\n문장을 보조 기술에 읽어 주는 표시는 **행동이 있을 때만** 붙인다. 화면이 열릴 때 문장이 함께\n만들어지는 자리는 그렇게 표시해도 대개 읽히지 않고, 다시 시도해 문장이 그 자리에서 바뀌는\n경우에만 뜻이 있기 때문이다. 표시를 문장에만 두어 버튼 이름이 문장과 함께 읽히지 않게 했다.\n\n## 두 경로를 라우트에 더한다\n\n'배우기'와 섹터 선택 경로를 더했다. 이 저장소에는 알 수 없는 경로를 첫 화면으로 되돌리는 규칙이\n있어서, 경로를 더하지 않으면 새 메뉴와 행동 버튼이 그 규칙에 걸려 아무 데도 가지 못한다.\n섹터 선택 경로는 그 화면이 붙기 전까지만 준비 중 화면이 받는다. 기존 경로는 하나도 지우지 않았다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npm test` — 화면 테스트 24개 파일 145건 통과, 건너뜀 0. 순수 로직 13건 통과, 실패 0, 건너뜀 0\n\n기준선은 2026-09-15 `dev`(c3a3a5e) 기준으로 화면 테스트 22개 파일 136건(건너뜀 0), 순수 로직 13건\n(건너뜀 0)이다. 이 MR이 테스트 파일 둘과 9건을 더했다.\n\n**테스트 파일 확장자에 함정이 있다.** Vitest가 수집하는 파일 목록은 `vite.config.ts`의 `test.include`가\n정하는 허용 목록이고, 확장 없이 반드시 걸리는 패턴은 `src/**/*.test.tsx` 하나뿐이다. 다른 형태로\n만든 테스트는 **실패하지 않고 조용히 수집되지 않는다.** 이 MR의 테스트 둘은 일부러 틀린 단언을\n넣어 실제로 실패가 나는지 확인한 뒤 되돌렸다.\n\n# 리뷰 포인트\n\n1. **\"시작 화면의 행동 버튼은 하나\"를 어디까지로 읽을지 봐 달라.** 이 MR은 머리 영역의 주 버튼\n   하나에만 그 제약을 적용했다. 같은 줄의 보조 버튼(같은 페이지 안 이동), 소개 섹션 아래 링크 둘,\n   헤더의 로그인 진입점, 알고리즘 소개에서 카드를 열어야 나오는 링크는 남겼다. 처음 들어온\n   사용자가 주 버튼과 견주어 고르게 되는 자리가 아니라고 보았다. 더 엄격히 읽으면 걷어낼 대상이\n   생긴다.\n2. **섹터 선택 경로는 아직 준비 중 화면이 받는다.** 다음 묶음(M2, 섹터 목록 조회와 표시)이 실제\n   화면으로 바꾼다. 그 묶음이 같은 라우트 파일을 고치므로 두 작업을 병렬로 두지 않는다. 한편 화면\n   문구는 모두 임시다. `tasks.md`가 \"문구는 이 tasks가 정하지 않고, 자리와 나타나는 조건까지만\n   만든다\"고 정해 두었으므로, UI 결정 항목이 정해질 때 문구만 바꾼다.\n3. **헤더가 둘로 갈라져 있고 메뉴 어휘가 서로 다르다.** 첫 화면은 전용 헤더를 쓰고 나머지 여섯\n   화면은 공통 헤더를 쓰는데, 공통 헤더의 메뉴는 아직 '홈 / 대시보드 / 백테스트'다. 첫 화면에서\n   '배우기'를 눌러 준비 중 화면에 닿으면 메뉴가 통째로 바뀐다. **다음 묶음에서 공통 헤더의 메뉴를\n   이 넷으로 맞춘다.** 공통 헤더를 쓰는 여섯 화면이 함께 영향을 받으므로 그 화면들의 검사를 같이\n   확인한다.\n4. **범위 밖에서 발견한 것 둘.** 첫째, 테스트 공통 설정에 브라우저 관측 기능의 대역이 없어,\n   애니메이션을 쓰는 화면을 렌더링하는 테스트마다 각자 채워야 한다. 화면 테스트가 늘면 같은 코드가\n   반복된다. 둘째, 화면을 바꿀 때 새 화면의 제목으로 초점을 옮기는 처리가 이 저장소에 없다. 보조\n   기술을 쓰는 사용자는 화면이 바뀐 것을 바로 알기 어렵다. 저장소 전체에 걸린 문제라 002에서\n   고치지 않았다.",
+    "state": "merged",
+    "created_at": "2026-09-15T17:08:01.787+09:00",
+    "updated_at": "2026-09-16T09:50:28.745+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-16T09:50:28.794+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/251-landing-menu-not-ready",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "398748ffad250ae9f525728fece506ce55199241",
+    "merge_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T17:08:04.269+09:00",
+    "reference": "!126",
+    "references": {
+      "short": "!126",
+      "relative": "!126",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!126"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/126",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945208,
+    "iid": 126,
+    "project_id": 1444456,
+    "title": "feat(fe): 첫 화면 메뉴와 준비 중 화면",
+    "description": "# 작업 내용 요약\n\n처음 방문한 사용자가 전략 진단을 시작할 길이 첫 화면에 없었다. 헤더의 메뉴는 같은 페이지 안에서\n섹션으로 스크롤하는 앵커 셋뿐이어서 제품이 무엇으로 이루어져 있는지 드러나지 않았고, 화면에\n들어서자마자 보이는 주 버튼은 대시보드 화면으로 가고 있었다. 아직 화면을 만들지 않은 메뉴는 아예\n보이지 않아, 그 기능이 있는지조차 알 수 없었다.\n\n이 MR 이후로 첫 화면은 제품의 네 메뉴를 모두 보이고, 머리 영역의 주 버튼은 '비중 비교하기'가\n된다. 아직 화면이 없는 메뉴도 숨기지 않고, 열면 준비 중이라는 한 문장이 있는 정상 화면이 뜬다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-251](https://ssafy.atlassian.net/browse/S15P21E205-251) `[FE] 첫 화면 메뉴와 준비 중 화면`\n- 근거: [spec 002](../../specs/002-sector-weight-selection/spec.md) `FR-001`·`FR-002`, `SC-001`(진입부), `SC-008`(메뉴 쪽)\n- 작업 묶음: `tasks.md`의 M1(T001~T004)\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 첫 화면에서 메뉴를 훑어본다 | 같은 페이지 안의 섹션으로 가는 앵커 셋 | 제품의 주요 메뉴 셋과 보조 메뉴 하나 |\n| 화면에 들어서자마자 보이는 주 버튼을 누른다 | 대시보드 화면으로 간다 | 섹터 선택 화면으로 간다 |\n| 아직 만들지 않은 화면의 메뉴를 찾는다 | 메뉴에 없다 | 메뉴에 있고, 열면 준비 중이라는 한 문장이 뜬다 |\n| 소개 섹션을 읽고 그 아래 링크를 누른다 | 시장 분석 화면과 백테스트 화면으로 간다 | 같다 |\n\n# 주요 변경 사항\n\n## 첫 화면의 메뉴를 제품 구조로 바꾼다\n\n헤더의 앵커 셋을 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와 보조 메뉴 '내 기록'으로 교체했다.\n`FR-001`이 이 넷을 모두 보이라고 정했고, 아직 만들지 않은 화면도 메뉴에서 빼지 못하게 했다.\n\n앵커와 새 메뉴를 나란히 두면 첫 화면의 메뉴가 일곱 개가 되어 `원칙 II`(첫 화면은 단순하게)를\n어긴다. 섹션 자체와 그 식별자는 그대로 남아 있어 스크롤로 도달한다. 앵커 내비게이션을 되살려야\n한다면 헤더가 아닌 별도 자리가 필요하다.\n\n메뉴의 목적지는 이미 화면이 있으면 그 경로로 이었다. 최종 목적지 확정은 각 메뉴를 소유한 spec의\n몫이라 여기서 정리하지 않았다.\n\n## 머리 영역의 주 버튼을 전략 진단으로 돌린다\n\n화면에 들어서자마자 보이는 주 버튼이 대시보드 화면으로 가고 있었다. 그 자리를 '비중 비교하기'가\n대신한다. `SC-001`이 세는 \"두 번의 행동으로 다음 단계 도달\"에서 첫 번째 행동이 이 버튼이다.\n\n**같은 자리의 보조 버튼과 소개 섹션 아래 링크 둘은 그대로 두었다.** 보조 버튼은 같은 페이지 안을\n내려갈 뿐이고, 소개 섹션의 링크 둘은 화면을 한참 내려가야 닿는 자리에 있다. 셋 다 처음 들어온\n사용자가 주 버튼과 견주어 고르게 되는 자리가 아니므로, `FR-001`이 제한한 \"시작 화면의 행동 버튼\"이\n세는 대상에서 뺐다.\n\n## 아직 줄 것이 없는 상태를 한 곳에서 표시한다\n\n한 문장과 선택적인 행동 하나만 받는 공용 표시를 만들었다. 지금은 아직 만들지 않은 메뉴가 쓰고,\n뒤 묶음에서 섹터 목록을 아직 받을 수 없는 상태와 연결 실패가 같은 표시를 쓴다. 표시를 한 곳에\n모으는 까닭은 `SC-008`이 그 경우들을 같은 기준으로 세기 때문이다. 표시가 갈라지면 한쪽만 고쳐질\n위험이 생긴다.\n\n이 표시는 예외를 던지지 않고 언제나 정상 화면을 그린다. 빈 화면이나 처리되지 않은 오류 화면으로\n떨어지지 않는 것이 `원칙 VI`의 요구다. 다시 눌러도 결과가 달라지지 않는 상태에는 행동을 주지\n않는다.\n\n문장을 보조 기술에 읽어 주는 표시는 **행동이 있을 때만** 붙인다. 화면이 열릴 때 문장이 함께\n만들어지는 자리는 그렇게 표시해도 대개 읽히지 않고, 다시 시도해 문장이 그 자리에서 바뀌는\n경우에만 뜻이 있기 때문이다. 표시를 문장에만 두어 버튼 이름이 문장과 함께 읽히지 않게 했다.\n\n## 두 경로를 라우트에 더한다\n\n'배우기'와 섹터 선택 경로를 더했다. 이 저장소에는 알 수 없는 경로를 첫 화면으로 되돌리는 규칙이\n있어서, 경로를 더하지 않으면 새 메뉴와 행동 버튼이 그 규칙에 걸려 아무 데도 가지 못한다.\n섹터 선택 경로는 그 화면이 붙기 전까지만 준비 중 화면이 받는다. 기존 경로는 하나도 지우지 않았다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npm test` — 화면 테스트 24개 파일 145건 통과, 건너뜀 0. 순수 로직 13건 통과, 실패 0, 건너뜀 0\n\n기준선은 2026-09-15 `dev`(c3a3a5e) 기준으로 화면 테스트 22개 파일 136건(건너뜀 0), 순수 로직 13건\n(건너뜀 0)이다. 이 MR이 테스트 파일 둘과 9건을 더했다.\n\n**테스트 파일 확장자에 함정이 있다.** Vitest가 수집하는 파일 목록은 `vite.config.ts`의 `test.include`가\n정하는 허용 목록이고, 확장 없이 반드시 걸리는 패턴은 `src/**/*.test.tsx` 하나뿐이다. 다른 형태로\n만든 테스트는 **실패하지 않고 조용히 수집되지 않는다.** 이 MR의 테스트 둘은 일부러 틀린 단언을\n넣어 실제로 실패가 나는지 확인한 뒤 되돌렸다.\n\n# 리뷰 포인트\n\n1. **\"시작 화면의 행동 버튼은 하나\"를 어디까지로 읽을지 봐 달라.** 이 MR은 머리 영역의 주 버튼\n   하나에만 그 제약을 적용했다. 같은 줄의 보조 버튼(같은 페이지 안 이동), 소개 섹션 아래 링크 둘,\n   헤더의 로그인 진입점, 알고리즘 소개에서 카드를 열어야 나오는 링크는 남겼다. 처음 들어온\n   사용자가 주 버튼과 견주어 고르게 되는 자리가 아니라고 보았다. 더 엄격히 읽으면 걷어낼 대상이\n   생긴다.\n2. **섹터 선택 경로는 아직 준비 중 화면이 받는다.** 다음 묶음(M2, 섹터 목록 조회와 표시)이 실제\n   화면으로 바꾼다. 그 묶음이 같은 라우트 파일을 고치므로 두 작업을 병렬로 두지 않는다. 한편 화면\n   문구는 모두 임시다. `tasks.md`가 \"문구는 이 tasks가 정하지 않고, 자리와 나타나는 조건까지만\n   만든다\"고 정해 두었으므로, UI 결정 항목이 정해질 때 문구만 바꾼다.\n3. **헤더가 둘로 갈라져 있고 메뉴 어휘가 서로 다르다.** 첫 화면은 전용 헤더를 쓰고 나머지 여섯\n   화면은 공통 헤더를 쓰는데, 공통 헤더의 메뉴는 아직 '홈 / 대시보드 / 백테스트'다. 첫 화면에서\n   '배우기'를 눌러 준비 중 화면에 닿으면 메뉴가 통째로 바뀐다. **다음 묶음에서 공통 헤더의 메뉴를\n   이 넷으로 맞춘다.** 공통 헤더를 쓰는 여섯 화면이 함께 영향을 받으므로 그 화면들의 검사를 같이\n   확인한다.\n4. **범위 밖에서 발견한 것 둘.** 첫째, 테스트 공통 설정에 브라우저 관측 기능의 대역이 없어,\n   애니메이션을 쓰는 화면을 렌더링하는 테스트마다 각자 채워야 한다. 화면 테스트가 늘면 같은 코드가\n   반복된다. 둘째, 화면을 바꿀 때 새 화면의 제목으로 초점을 옮기는 처리가 이 저장소에 없다. 보조\n   기술을 쓰는 사용자는 화면이 바뀐 것을 바로 알기 어렵다. 저장소 전체에 걸린 문제라 002에서\n   고치지 않았다.",
+    "state": "merged",
+    "created_at": "2026-09-15T17:08:01.787+09:00",
+    "updated_at": "2026-09-16T09:50:28.745+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-16T09:50:28.794+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/251-landing-menu-not-ready",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "398748ffad250ae9f525728fece506ce55199241",
+    "merge_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T17:08:04.269+09:00",
+    "reference": "!126",
+    "references": {
+      "short": "!126",
+      "relative": "!126",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!126"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/126",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-16T09:48:40.495+09:00",
+    "latest_build_finished_at": "2026-09-16T09:50:27.300+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197558,
+      "iid": 52,
+      "project_id": 1444456,
+      "sha": "398748ffad250ae9f525728fece506ce55199241",
+      "ref": "feat(fe)/251-landing-menu-not-ready",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T09:48:40.360+09:00",
+      "updated_at": "2026-09-16T09:50:27.307+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197558"
+    },
+    "head_pipeline": {
+      "id": 197558,
+      "iid": 52,
+      "project_id": 1444456,
+      "sha": "398748ffad250ae9f525728fece506ce55199241",
+      "ref": "feat(fe)/251-landing-menu-not-ready",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T09:48:40.360+09:00",
+      "updated_at": "2026-09-16T09:50:27.307+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197558",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T09:48:40.495+09:00",
+      "finished_at": "2026-09-16T09:50:27.300+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197558",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "head_sha": "398748ffad250ae9f525728fece506ce55199241",
+      "start_sha": "c175648335ea84acc829b185e7761c2b8c433ba5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "98e560f52b761fb507edc53c362e3a1da6dbce30",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810511,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T17:08:01.933+09:00",
+          "updated_at": "2026-09-15T17:08:01.939+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5208b2b214a40ba9bbf720fe578c52a538c74c37",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810512,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T17:08:02.016+09:00",
+          "updated_at": "2026-09-15T17:08:02.029+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "eab0dc9ccfbd9a6084066afee58f76fb04036dc6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810516,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **모바일 내비게이션 상태 초기화 테스트**\n   - 시나리오: 모바일 뷰포트에서 `LandingHeader`의 햄버거 메뉴를 열고, '배우기' 또는 '내 기록' 같은 메뉴 항목을 클릭하여 라우트가 이동할 때 모바일 메뉴 오버레이가 정상적으로 닫히는지 검증합니다.\n2. **준비 중 페이지(`NotReadyPage`) 라우팅 및 접근성 테스트**\n   - 시나리오: `/learn` 또는 `/diagnosis/sectors` 경로로 직접 접근하거나 랜딩 페이지에서 해당 링크를 통해 진입했을 때, `NotReadyPage`가 렌더링되고 `aria-labelledby`를 통해 `h1`(\"준비 중\")과 `NotReadyNotice` 간의 연결이 올바르게 이루어지는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:398748ffad250ae9f525728fece506ce55199241 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T17:08:11.261+09:00",
+          "updated_at": "2026-09-16T09:48:35.169+09:00",
+          "system": false,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cbf929093e83126bde203e2d5a49b00b2397ec43",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810627,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>ce8a1267 - fix(fe): 준비 중 표시의 읽어 주는 영역을 다시 시도할 수 있는 자리로 좁힌다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/126/diffs?diff_id=2201128&start_sha=a9518dd7a626dc1654e553e21cea3467004d9a67)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T17:15:32.916+09:00",
+          "updated_at": "2026-09-15T17:15:32.919+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5c2b3269fed0a1182a1285d05030fe5c881e7cf8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810628,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-15T17:15:33.208+09:00",
+          "updated_at": "2026-09-15T17:15:33.213+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d4c6459393145327e017800e600f9bf158c23ae4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812897,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T09:48:28.710+09:00",
+          "updated_at": "2026-09-16T09:48:28.714+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1f4a176b5a5edab181644e766d063fc5b1d7fbba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812898,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>398748ff - feat(fe): 화면을 떠나지 않는 행동 유도를 되살린다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/126/diffs?diff_id=2203027&start_sha=ce8a126767ade8224485b742bb2fa6660986d96a)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T09:48:28.852+09:00",
+          "updated_at": "2026-09-16T09:48:28.856+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "63785eb596b2330d672e21d118accdbefe0f6cc2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812949,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 398748ffad250ae9f525728fece506ce55199241 pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T09:50:13.993+09:00",
+          "updated_at": "2026-09-16T09:50:13.997+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "482907a7a4add55be7ec33207e6881dc0b5d7927",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812958,
+          "type": null,
+          "body": "mentioned in commit d2570c6a05f25bff626593c44102904f5cb8fbb1",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T09:50:28.405+09:00",
+          "updated_at": "2026-09-16T09:50:28.412+09:00",
+          "system": true,
+          "noteable_id": 945208,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 126,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2203027,
+      "head_commit_sha": "398748ffad250ae9f525728fece506ce55199241",
+      "base_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "start_commit_sha": "c175648335ea84acc829b185e7761c2b8c433ba5",
+      "created_at": "2026-09-16T09:48:28.537+09:00",
+      "merge_request_id": 945208,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "54168891b9c03327fdaec5e9383741c6a0745236"
+    },
+    {
+      "id": 2201128,
+      "head_commit_sha": "ce8a126767ade8224485b742bb2fa6660986d96a",
+      "base_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:15:32.673+09:00",
+      "merge_request_id": 945208,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "27bcce91b105faeba577bfbcae00ecca904ddfde"
+    },
+    {
+      "id": 2201034,
+      "head_commit_sha": "a9518dd7a626dc1654e553e21cea3467004d9a67",
+      "base_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:08:02.510+09:00",
+      "merge_request_id": 945208,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "8f3b8fd2fbf02a62d547bcd10940ff1f410c266d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2203027,
+      "head_commit_sha": "398748ffad250ae9f525728fece506ce55199241",
+      "base_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "start_commit_sha": "c175648335ea84acc829b185e7761c2b8c433ba5",
+      "created_at": "2026-09-16T09:48:28.537+09:00",
+      "merge_request_id": 945208,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "54168891b9c03327fdaec5e9383741c6a0745236",
+      "commits": [
+        {
+          "id": "398748ffad250ae9f525728fece506ce55199241",
+          "short_id": "398748ff",
+          "created_at": "2026-09-16T09:47:27.000+09:00",
+          "parent_ids": [
+            "ce8a126767ade8224485b742bb2fa6660986d96a"
+          ],
+          "title": "feat(fe): 화면을 떠나지 않는 행동 유도를 되살린다",
+          "message": "feat(fe): 화면을 떠나지 않는 행동 유도를 되살린다\n\n히어로의 '서비스 알아보기'와 소개 섹션 둘의 링크를 되돌린다. 셋 다\n첫 화면의 머리 영역을 지나야 닿는 자리이거나 같은 페이지 안을 내려갈\n뿐이어서, 가장 중요한 행동인 '비중 비교하기'와 자리를 다투지 않는다.\n\n머리 영역의 주 버튼만 '비중 비교하기'로 바뀐 상태를 유지한다. 그 자리에\n다른 화면으로 가는 버튼이 함께 있으면 처음 온 사용자가 무엇부터 눌러야\n하는지 알기 어렵다.\n\nspec 002 FR-001. T003.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T09:47:27.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T09:47:27.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/398748ffad250ae9f525728fece506ce55199241"
+        },
+        {
+          "id": "ce8a126767ade8224485b742bb2fa6660986d96a",
+          "short_id": "ce8a1267",
+          "created_at": "2026-09-15T17:14:43.000+09:00",
+          "parent_ids": [
+            "a9518dd7a626dc1654e553e21cea3467004d9a67"
+          ],
+          "title": "fix(fe): 준비 중 표시의 읽어 주는 영역을 다시 시도할 수 있는 자리로 좁힌다",
+          "message": "fix(fe): 준비 중 표시의 읽어 주는 영역을 다시 시도할 수 있는 자리로 좁힌다\n\n화면이 열릴 때 문장이 함께 만들어지는 자리는 읽어 주는 영역으로 두어도\n대개 읽히지 않는다. 다시 시도해 문장이 그 자리에서 바뀔 수 있는 경우에만\n표시하고, 표시를 문장에만 두어 버튼 이름이 함께 읽히지 않게 한다.\n\n첫 화면의 행동 검사 범위를 행동 줄로 좁힌다. 소개 영역 안 다른 자리에\n링크가 생겼다는 이유로 검사가 깨지면 실패가 실제 원인을 가리키지 못한다.\n\n준비 중 화면의 배경 크기 값에서 쓰이지 않는 항목 둘을 지운다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:14:43.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:14:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ce8a126767ade8224485b742bb2fa6660986d96a"
+        },
+        {
+          "id": "a9518dd7a626dc1654e553e21cea3467004d9a67",
+          "short_id": "a9518dd7",
+          "created_at": "2026-09-15T17:04:03.000+09:00",
+          "parent_ids": [
+            "20f09c1961832b435c1c6b3beb80e4726c751af3"
+          ],
+          "title": "feat(fe): 배우기와 섹터 선택 경로를 라우트에 더한다",
+          "message": "feat(fe): 배우기와 섹터 선택 경로를 라우트에 더한다\n\n두 경로가 없으면 메뉴와 행동 버튼이 알 수 없는 경로 규칙에 걸려 첫\n화면으로 되돌아온다. 섹터 선택 경로는 그 화면이 붙기 전까지만 준비 중\n화면이 받는다. 기존 경로는 지우지 않는다.\n\nspec 002 FR-001. T004.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:04:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:04:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a9518dd7a626dc1654e553e21cea3467004d9a67"
+        },
+        {
+          "id": "20f09c1961832b435c1c6b3beb80e4726c751af3",
+          "short_id": "20f09c19",
+          "created_at": "2026-09-15T17:04:03.000+09:00",
+          "parent_ids": [
+            "01f36278346c515f7319c568278056c7ba9bb385"
+          ],
+          "title": "feat(fe): 첫 화면에 네 메뉴를 보이고 행동 버튼을 하나로 줄인다",
+          "message": "feat(fe): 첫 화면에 네 메뉴를 보이고 행동 버튼을 하나로 줄인다\n\n헤더의 섹션 이동 앵커를 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와\n보조 메뉴 '내 기록'으로 바꾼다. 아직 화면이 없는 메뉴도 숨기지 않고\n목적지를 잇는다. 섹션 자체와 그 식별자는 그대로 두어 스크롤로 닿는다.\n\n가장 중요한 행동은 '비중 비교하기' 하나로 두고 나머지 행동 유도 셋을\n걷어낸다. 소개 섹션의 내용은 그대로 남긴다.\n\nspec 002 FR-001, FR-002, research.md 결정 5. T003.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:04:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:04:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20f09c1961832b435c1c6b3beb80e4726c751af3"
+        },
+        {
+          "id": "01f36278346c515f7319c568278056c7ba9bb385",
+          "short_id": "01f36278",
+          "created_at": "2026-09-15T17:03:51.000+09:00",
+          "parent_ids": [
+            "c3a3a5e7d95690590c04098abb1c5bf57f80b260"
+          ],
+          "title": "feat(fe): 아직 줄 것이 없는 상태를 정상 화면으로 처리한다",
+          "message": "feat(fe): 아직 줄 것이 없는 상태를 정상 화면으로 처리한다\n\n한 문장과 선택적인 행동 하나만 받는 공용 표시를 만들고, 아직 만들지\n않은 메뉴가 열리는 화면이 그것을 쓴다. 다시 눌러도 달라지지 않는\n상태이므로 행동 버튼은 두지 않는다.\n\n이 표시는 뒤에 섹터 목록을 아직 받을 수 없는 상태와 연결 실패도 함께\n쓴다. 세 경우를 한 곳에 모아야 같은 기준으로 셀 수 있다.\n\nspec 002 FR-001, research.md 결정 6. T001, T002.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:03:51.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:03:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/01f36278346c515f7319c568278056c7ba9bb385"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,48 @@\n+import { render, screen, within } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { describe, expect, it, vi } from 'vitest'\n+import { NotReadyNotice } from './NotReadyNotice'\n+\n+describe('NotReadyNotice', () => {\n+  it('행동을 주지 않으면 버튼을 그리지 않는다', () => {\n+    const { container } = render(<NotReadyNotice message=\"이 메뉴는 아직 준비 중입니다.\" />)\n+\n+    expect(screen.queryAllByRole('button')).toHaveLength(0)\n+    expect(container.querySelectorAll('p')).toHaveLength(1)\n+    expect(screen.getByText('이 메뉴는 아직 준비 중입니다.')).toBeDefined()\n+  })\n+\n+  it('행동을 주면 버튼이 하나 생기고 누르면 그 행동이 실행된다', async () => {\n+    const onAction = vi.fn()\n+    render(\n+      <NotReadyNotice\n+        message=\"섹터 목록을 아직 불러올 수 없습니다.\"\n+        action={{ label: '다시 불러오기', onAction }}\n+      />,\n+    )\n+\n+    const buttons = screen.getAllByRole('button')\n+    expect(buttons).toHaveLength(1)\n+\n+    await userEvent.click(buttons[0])\n+    expect(onAction).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('다시 시도할 수 있는 자리에서만 문장을 읽어 주고, 버튼 이름은 함께 읽지 않는다', () => {\n+    const { rerender } = render(<NotReadyNotice message=\"이 메뉴는 아직 준비 중입니다.\" />)\n+\n+    // 화면이 열릴 때 함께 만들어지고 그 자리에서 바뀌지 않는 문장이다.\n+    expect(screen.queryByRole('status')).toBeNull()\n+\n+    rerender(\n+      <NotReadyNotice\n+        message=\"섹터 목록을 아직 불러올 수 없습니다.\"\n+        action={{ label: '다시 불러오기', onAction: () => {} }}\n+      />,\n+    )\n+\n+    const liveRegion = screen.getByRole('status')\n+    expect(liveRegion.textContent).toBe('섹터 목록을 아직 불러올 수 없습니다.')\n+    expect(within(liveRegion).queryAllByRole('button')).toHaveLength(0)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/NotReadyNotice.test.tsx",
+          "old_path": "frontend/src/components/common/NotReadyNotice.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,43 @@\n+/** 아직 줄 것이 없는 상태에서 사용자가 누를 수 있는 행동 하나를 정의한다. */\n+export type NotReadyActionSpec = {\n+  /** 버튼에 보이는 이름이다. */\n+  label: string\n+  /** 버튼을 눌렀을 때 실행한다. */\n+  onAction: () => void\n+}\n+\n+type NotReadyNoticeProps = {\n+  /** 언제나 보이는 한 문장이다. */\n+  message: string\n+  /** 주지 않으면 버튼을 그리지 않는다. */\n+  action?: NotReadyActionSpec\n+  /** 놓이는 자리의 여백과 정렬은 쓰는 쪽이 정한다. */\n+  className?: string\n+}\n+\n+/**\n+ * 아직 줄 것이 없는 상태를 한 문장으로 알린다.\n+ *\n+ * 아직 만들지 않은 메뉴, 대응표 미발행(409 `SECTOR_MAP_NOT_READY`), 네트워크 실패가 모두 이\n+ * 컴포넌트 하나를 쓴다. 표시를 한 곳에 모아 두어야 세 경우를 같은 기준으로 셀 수 있다.\n+ * 다시 눌러도 달라지지 않는 상태에는 행동을 주지 않으며, 행동을 주지 않으면 버튼은 그려지지\n+ * 않는다. 이 컴포넌트는 예외를 던지지 않고 언제나 정상 화면을 그린다.\n+ */\n+export function NotReadyNotice({ message, action, className }: NotReadyNoticeProps) {\n+  // 행동을 받았다는 것은 사용자가 그 자리에서 다시 시도해 문장이 바뀔 수 있다는 뜻이므로,\n+  // 그때만 문장을 읽어 주는 영역으로 표시한다. 행동이 없는 자리는 화면이 열릴 때 문장이\n+  // 함께 만들어질 뿐 그 자리에서 바뀌지 않아, 읽어 주는 영역으로 두어도 대개 읽히지 않는다.\n+  // 표시를 문장에만 두어 버튼 이름이 문장과 함께 읽히지 않게 한다.\n+  return (\n+    <div className={className}>\n+      <p role={action ? 'status' : undefined} aria-live={action ? 'polite' : undefined}>\n+        {message}\n+      </p>\n+      {action ? (\n+        <button type=\"button\" onClick={action.onAction}>\n+          {action.label}\n+        </button>\n+      ) : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/NotReadyNotice.tsx",
+          "old_path": "frontend/src/components/common/NotReadyNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,15 +1,25 @@\n import { LogIn, Menu, X } from 'lucide-react'\n-import { useEffect, useRef, useState, type MouseEvent } from 'react'\n+import { useEffect, useRef, useState } from 'react'\n import { Link } from 'react-router-dom'\n import styles from '@/pages/LandingPage.module.css'\n \n-const navigationItems = [\n-  { href: '#market-analysis', label: '시장 분석' },\n-  { href: '#backtest-service', label: '백테스트' },\n-  { href: '#algorithms', label: '알고리즘' },\n+/**\n+ * 첫 화면이 보이는 주요 메뉴다. 아직 화면이 없는 메뉴도 숨기지 않는다.\n+ * 목적지는 이미 화면이 있으면 그 경로로 잇고, 배우기는 준비 중 화면이 받는다.\n+ * 최종 목적지 확정은 각 메뉴를 소유한 spec의 몫이다.\n+ */\n+const primaryMenuItems = [\n+  { to: '/diagnosis/sectors', label: '전략 진단' },\n+  { to: '/home', label: '시장 흐름' },\n+  { to: '/learn', label: '배우기' },\n ]\n \n-/** 랜딩 안에서만 사용하는 섹션 탐색 헤더다. */\n+/** 보조 메뉴도 첫 화면에서 함께 보인다. */\n+const secondaryMenuItem = { to: '/records', label: '내 기록' }\n+\n+const menuItems = [...primaryMenuItems, secondaryMenuItem]\n+\n+/** 첫 화면의 메뉴 탐색 헤더다. */\n export function LandingHeader() {\n   const [isMenuOpen, setIsMenuOpen] = useState(false)\n   const menuButtonRef = useRef<HTMLButtonElement>(null)\n@@ -28,28 +38,21 @@ export function LandingHeader() {\n     return () => document.removeEventListener('keydown', handleEscape)\n   }, [isMenuOpen])\n \n-  const moveToSection = (event: MouseEvent<HTMLAnchorElement>, href: string) => {\n-    const target = document.querySelector(href)\n-    if (!target) return\n-\n-    event.preventDefault()\n-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches\n-    target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' })\n-    setIsMenuOpen(false)\n-  }\n-\n   return (\n     <header className={styles.landingHeader}>\n       <Link className={styles.wordmark} to=\"/\" aria-label=\"Thorp 랜딩 홈\">\n         Thorp<span>.</span>\n       </Link>\n \n-      <nav className={styles.desktopNavigation} aria-label=\"랜딩 주요 메뉴\">\n-        {navigationItems.map((item) => (\n-          <a key={item.href} href={item.href} onClick={(event) => moveToSection(event, item.href)}>\n+      <nav className={styles.desktopNavigation} aria-label=\"주요 메뉴\">\n+        {primaryMenuItems.map((item) => (\n+          <Link key={item.to} to={item.to}>\n             {item.label}\n-          </a>\n+          </Link>\n         ))}\n+        <Link className={styles.secondaryMenuLink} to={secondaryMenuItem.to}>\n+          {secondaryMenuItem.label}\n+        </Link>\n       </nav>\n \n       <Link className={styles.headerCta} to=\"/login\">\n@@ -74,12 +77,12 @@ export function LandingHeader() {\n         <nav\n           id=\"landing-mobile-navigation\"\n           className={styles.mobileNavigation}\n-          aria-label=\"랜딩 모바일 메뉴\"\n+          aria-label=\"모바일 주요 메뉴\"\n         >\n-          {navigationItems.map((item) => (\n-            <a key={item.href} href={item.href} onClick={(event) => moveToSection(event, item.href)}>\n+          {menuItems.map((item) => (\n+            <Link key={item.to} to={item.to} onClick={() => setIsMenuOpen(false)}>\n               {item.label}\n-            </a>\n+            </Link>\n           ))}\n           <Link to=\"/login\" onClick={() => setIsMenuOpen(false)}>\n             로그인\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "old_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -118,8 +118,10 @@ export function HeroSection() {\n           variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n           transition={revealTransition}\n         >\n-          <Link className={styles.primaryCta} to=\"/dashboard\">\n-            시장 살펴보기\n+          {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라\n+              다른 화면으로 보내지 않는다. */}\n+          <Link className={styles.primaryCta} to=\"/diagnosis/sectors\">\n+            비중 비교하기\n             <ArrowUpRight aria-hidden=\"true\" size={18} />\n           </Link>\n           <button type=\"button\" className={styles.secondaryCta} onClick={moveToMarket}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,111 @@\n+import { screen, within } from '@testing-library/react'\n+import { beforeAll, describe, expect, it, vi } from 'vitest'\n+import { renderWithRouter } from '@/test/renderWithRouter'\n+import { LandingPage } from './LandingPage'\n+\n+// 첫 화면은 최신 지표를 불러온다. 이 파일이 확인하는 것은 메뉴와 행동 버튼이므로 응답은 비워 둔다.\n+vi.mock('@/api/market', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/market')>('@/api/market')\n+  return {\n+    ...actual,\n+    fetchLatestMarketIndicators: vi.fn(() => Promise.resolve({ data: {}, errors: {} })),\n+  }\n+})\n+\n+/** jsdom에 없는 브라우저 API를 채운다. 없으면 애니메이션 계층이 렌더링 도중 멈춘다. */\n+beforeAll(() => {\n+  if (!window.matchMedia) {\n+    Object.defineProperty(window, 'matchMedia', {\n+      configurable: true,\n+      value: (query: string) => ({\n+        matches: false,\n+        media: query,\n+        onchange: null,\n+        addListener: () => {},\n+        removeListener: () => {},\n+        addEventListener: () => {},\n+        removeEventListener: () => {},\n+        dispatchEvent: () => false,\n+      }),\n+    })\n+  }\n+\n+  class NoopObserver {\n+    observe() {}\n+    unobserve() {}\n+    disconnect() {}\n+    takeRecords() {\n+      return []\n+    }\n+  }\n+\n+  for (const name of ['IntersectionObserver', 'ResizeObserver'] as const) {\n+    if (!(name in window)) {\n+      Object.defineProperty(window, name, { configurable: true, value: NoopObserver })\n+      Object.defineProperty(globalThis, name, { configurable: true, value: NoopObserver })\n+    }\n+  }\n+})\n+\n+/** FR-001이 첫 화면에 요구하는 메뉴 넷과 각 목적지다. */\n+const expectedMenus = [\n+  { label: '전략 진단', href: '/diagnosis/sectors' },\n+  { label: '시장 흐름', href: '/home' },\n+  { label: '배우기', href: '/learn' },\n+  { label: '내 기록', href: '/records' },\n+]\n+\n+describe('LandingPage', () => {\n+  it('주요 메뉴 셋과 보조 메뉴 하나가 모두 보인다', () => {\n+    renderWithRouter(<LandingPage />)\n+\n+    for (const menu of expectedMenus) {\n+      const link = screen.getByRole('link', { name: menu.label })\n+      expect(link.getAttribute('href')).toBe(menu.href)\n+    }\n+  })\n+\n+  it(\"가장 중요한 행동 버튼은 '비중 비교하기' 하나이며 섹터 선택으로 간다\", () => {\n+    renderWithRouter(<LandingPage />)\n+\n+    const cta = screen.getByRole('link', { name: /비중 비교하기/ })\n+    expect(cta.getAttribute('href')).toBe('/diagnosis/sectors')\n+\n+    // 행동 줄에서 다른 화면으로 보내는 것은 이 버튼 하나뿐이다. 옆에 있는 '서비스 알아보기'는\n+    // 같은 페이지 안을 내려갈 뿐이라 이 제약이 세는 대상이 아니다.\n+    // 검사 범위를 행동 줄로 좁혀 둔다. 첫 화면의 다른 자리에 링크가 생겼다는 이유로 이 검사가\n+    // 깨지면 실패 메시지가 실제 원인을 가리키지 못한다.\n+    const actionRow = cta.parentElement\n+    expect(actionRow).not.toBeNull()\n+    expect(within(actionRow as HTMLElement).getAllByRole('link')).toHaveLength(1)\n+  })\n+\n+  it(\"보조 버튼 '서비스 알아보기'는 화면을 떠나지 않는다\", () => {\n+    renderWithRouter(<LandingPage />)\n+\n+    const secondary = screen.getByRole('button', { name: /서비스 알아보기/ })\n+    // 링크가 아니라 버튼이라는 사실 자체가 다른 화면으로 보내지 않는다는 뜻이다.\n+    expect(secondary.tagName).toBe('BUTTON')\n+  })\n+\n+  it('머리 영역의 주 버튼이 대시보드로 가지 않는다', () => {\n+    renderWithRouter(<LandingPage />)\n+\n+    // 이 자리를 '비중 비교하기'가 대신한다. 옛 버튼이 남으면 첫 화면의 주된 행동이 둘이 된다.\n+    expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()\n+  })\n+\n+  it('소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다', () => {\n+    renderWithRouter(<LandingPage />)\n+\n+    expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ })).toBeDefined()\n+    expect(screen.getByRole('link', { name: /백테스트 시작하기/ })).toBeDefined()\n+  })\n+\n+  it('소개 섹션은 그대로 남는다', () => {\n+    renderWithRouter(<LandingPage />)\n+\n+    expect(screen.getByRole('heading', { name: /시장을 분석합니다/ })).toBeDefined()\n+    expect(screen.getByRole('heading', { name: /과거에서 실험해보세요/ })).toBeDefined()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.test.tsx",
+          "old_path": "frontend/src/pages/LandingPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,39 @@\n+.page {\n+  min-height: 100svh;\n+  overflow-x: clip;\n+  background:\n+    linear-gradient(var(--thorp-line) 1px, transparent 1px),\n+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),\n+    var(--thorp-background);\n+  background-size: 72px 72px, 72px 72px, auto;\n+  color: var(--thorp-foreground);\n+}\n+\n+.main {\n+  width: min(100% - 40px, 720px);\n+  margin: 0 auto;\n+  padding: clamp(90px, 15vh, 160px) 0 80px;\n+}\n+\n+.title {\n+  margin: 0 0 18px;\n+  font-size: clamp(1.9rem, 5vw, 3.2rem);\n+  line-height: 1.05;\n+  letter-spacing: -0.05em;\n+}\n+\n+/* 문장 하나만 담는 자리다. 행동 버튼이 없으므로 버튼 여백을 잡지 않는다. */\n+.notice p {\n+  max-width: 560px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: clamp(0.95rem, 1.8vw, 1.05rem);\n+  line-height: 1.8;\n+}\n+\n+@media (max-width: 600px) {\n+  .main {\n+    width: min(100% - 28px, 720px);\n+    padding-top: 72px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/NotReadyPage.module.css",
+          "old_path": "frontend/src/pages/NotReadyPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,24 @@\n+import { NotReadyNotice } from '@/components/common/NotReadyNotice'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import styles from './NotReadyPage.module.css'\n+\n+/**\n+ * 아직 만들지 않은 메뉴를 정상 화면으로 연다.\n+ *\n+ * 메뉴를 숨기는 대신 이 화면을 열어 한 문장으로 상태를 알린다. 다시 눌러도 결과가 달라지지\n+ * 않는 상태이므로 행동 버튼을 두지 않고, 첫 화면으로 돌아가는 길은 기존 공통 내비게이션이\n+ * 준다. 문구는 임시이며 UI 결정 항목이 정해질 때 확정한다.\n+ */\n+export function NotReadyPage() {\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main} aria-labelledby=\"not-ready-title\">\n+        <h1 id=\"not-ready-title\" className={styles.title}>\n+          준비 중\n+        </h1>\n+        <NotReadyNotice className={styles.notice} message=\"이 메뉴는 아직 준비 중입니다.\" />\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/NotReadyPage.tsx",
+          "old_path": "frontend/src/pages/NotReadyPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,6 +50,13 @@ const MyRecordsEntryPage = lazy(() =>\n   })),\n )\n \n+// 아직 만들지 않은 메뉴를 정상 화면으로 받는다.\n+const NotReadyPage = lazy(() =>\n+  import('@/pages/NotReadyPage').then((module) => ({\n+    default: module.NotReadyPage,\n+  })),\n+)\n+\n /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */\n function AnimatedRoutes() {\n   const location = useLocation()\n@@ -75,6 +82,13 @@ function AnimatedRoutes() {\n             <Route path=\"/dashboard\" element={<DashboardPage />} />\n             <Route path=\"/backtest\" element={<BacktestPage />} />\n             <Route path=\"/param-search\" element={<ParamSearchPage />} />\n+            {/* 배우기는 아직 화면이 없다. 메뉴에서 빼지 않고 준비 중 화면으로 받는다. */}\n+            <Route path=\"/learn\" element={<NotReadyPage />} />\n+            {/*\n+              섹터·비중 선택 화면이 붙기 전까지만 준비 중 화면으로 받는다. 이 경로가 없으면\n+              '비중 비교하기'가 아래 path=\"*\" 규칙에 걸려 첫 화면으로 되돌아온다.\n+            */}\n+            <Route path=\"/diagnosis/sectors\" element={<NotReadyPage />} />\n             <Route\n               path=\"/records/*\"\n               element={\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2201128,
+      "head_commit_sha": "ce8a126767ade8224485b742bb2fa6660986d96a",
+      "base_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:15:32.673+09:00",
+      "merge_request_id": 945208,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "27bcce91b105faeba577bfbcae00ecca904ddfde",
+      "commits": [
+        {
+          "id": "ce8a126767ade8224485b742bb2fa6660986d96a",
+          "short_id": "ce8a1267",
+          "created_at": "2026-09-15T17:14:43.000+09:00",
+          "parent_ids": [
+            "a9518dd7a626dc1654e553e21cea3467004d9a67"
+          ],
+          "title": "fix(fe): 준비 중 표시의 읽어 주는 영역을 다시 시도할 수 있는 자리로 좁힌다",
+          "message": "fix(fe): 준비 중 표시의 읽어 주는 영역을 다시 시도할 수 있는 자리로 좁힌다\n\n화면이 열릴 때 문장이 함께 만들어지는 자리는 읽어 주는 영역으로 두어도\n대개 읽히지 않는다. 다시 시도해 문장이 그 자리에서 바뀔 수 있는 경우에만\n표시하고, 표시를 문장에만 두어 버튼 이름이 함께 읽히지 않게 한다.\n\n첫 화면의 행동 검사 범위를 행동 줄로 좁힌다. 소개 영역 안 다른 자리에\n링크가 생겼다는 이유로 검사가 깨지면 실패가 실제 원인을 가리키지 못한다.\n\n준비 중 화면의 배경 크기 값에서 쓰이지 않는 항목 둘을 지운다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:14:43.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:14:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ce8a126767ade8224485b742bb2fa6660986d96a"
+        },
+        {
+          "id": "a9518dd7a626dc1654e553e21cea3467004d9a67",
+          "short_id": "a9518dd7",
+          "created_at": "2026-09-15T17:04:03.000+09:00",
+          "parent_ids": [
+            "20f09c1961832b435c1c6b3beb80e4726c751af3"
+          ],
+          "title": "feat(fe): 배우기와 섹터 선택 경로를 라우트에 더한다",
+          "message": "feat(fe): 배우기와 섹터 선택 경로를 라우트에 더한다\n\n두 경로가 없으면 메뉴와 행동 버튼이 알 수 없는 경로 규칙에 걸려 첫\n화면으로 되돌아온다. 섹터 선택 경로는 그 화면이 붙기 전까지만 준비 중\n화면이 받는다. 기존 경로는 지우지 않는다.\n\nspec 002 FR-001. T004.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:04:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:04:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a9518dd7a626dc1654e553e21cea3467004d9a67"
+        },
+        {
+          "id": "20f09c1961832b435c1c6b3beb80e4726c751af3",
+          "short_id": "20f09c19",
+          "created_at": "2026-09-15T17:04:03.000+09:00",
+          "parent_ids": [
+            "01f36278346c515f7319c568278056c7ba9bb385"
+          ],
+          "title": "feat(fe): 첫 화면에 네 메뉴를 보이고 행동 버튼을 하나로 줄인다",
+          "message": "feat(fe): 첫 화면에 네 메뉴를 보이고 행동 버튼을 하나로 줄인다\n\n헤더의 섹션 이동 앵커를 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와\n보조 메뉴 '내 기록'으로 바꾼다. 아직 화면이 없는 메뉴도 숨기지 않고\n목적지를 잇는다. 섹션 자체와 그 식별자는 그대로 두어 스크롤로 닿는다.\n\n가장 중요한 행동은 '비중 비교하기' 하나로 두고 나머지 행동 유도 셋을\n걷어낸다. 소개 섹션의 내용은 그대로 남긴다.\n\nspec 002 FR-001, FR-002, research.md 결정 5. T003.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:04:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:04:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20f09c1961832b435c1c6b3beb80e4726c751af3"
+        },
+        {
+          "id": "01f36278346c515f7319c568278056c7ba9bb385",
+          "short_id": "01f36278",
+          "created_at": "2026-09-15T17:03:51.000+09:00",
+          "parent_ids": [
+            "c3a3a5e7d95690590c04098abb1c5bf57f80b260"
+          ],
+          "title": "feat(fe): 아직 줄 것이 없는 상태를 정상 화면으로 처리한다",
+          "message": "feat(fe): 아직 줄 것이 없는 상태를 정상 화면으로 처리한다\n\n한 문장과 선택적인 행동 하나만 받는 공용 표시를 만들고, 아직 만들지\n않은 메뉴가 열리는 화면이 그것을 쓴다. 다시 눌러도 달라지지 않는\n상태이므로 행동 버튼은 두지 않는다.\n\n이 표시는 뒤에 섹터 목록을 아직 받을 수 없는 상태와 연결 실패도 함께\n쓴다. 세 경우를 한 곳에 모아야 같은 기준으로 셀 수 있다.\n\nspec 002 FR-001, research.md 결정 6. T001, T002.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:03:51.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:03:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/01f36278346c515f7319c568278056c7ba9bb385"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2201034,
+      "head_commit_sha": "a9518dd7a626dc1654e553e21cea3467004d9a67",
+      "base_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:08:02.510+09:00",
+      "merge_request_id": 945208,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "8f3b8fd2fbf02a62d547bcd10940ff1f410c266d",
+      "commits": [
+        {
+          "id": "a9518dd7a626dc1654e553e21cea3467004d9a67",
+          "short_id": "a9518dd7",
+          "created_at": "2026-09-15T17:04:03.000+09:00",
+          "parent_ids": [
+            "20f09c1961832b435c1c6b3beb80e4726c751af3"
+          ],
+          "title": "feat(fe): 배우기와 섹터 선택 경로를 라우트에 더한다",
+          "message": "feat(fe): 배우기와 섹터 선택 경로를 라우트에 더한다\n\n두 경로가 없으면 메뉴와 행동 버튼이 알 수 없는 경로 규칙에 걸려 첫\n화면으로 되돌아온다. 섹터 선택 경로는 그 화면이 붙기 전까지만 준비 중\n화면이 받는다. 기존 경로는 지우지 않는다.\n\nspec 002 FR-001. T004.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:04:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:04:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a9518dd7a626dc1654e553e21cea3467004d9a67"
+        },
+        {
+          "id": "20f09c1961832b435c1c6b3beb80e4726c751af3",
+          "short_id": "20f09c19",
+          "created_at": "2026-09-15T17:04:03.000+09:00",
+          "parent_ids": [
+            "01f36278346c515f7319c568278056c7ba9bb385"
+          ],
+          "title": "feat(fe): 첫 화면에 네 메뉴를 보이고 행동 버튼을 하나로 줄인다",
+          "message": "feat(fe): 첫 화면에 네 메뉴를 보이고 행동 버튼을 하나로 줄인다\n\n헤더의 섹션 이동 앵커를 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와\n보조 메뉴 '내 기록'으로 바꾼다. 아직 화면이 없는 메뉴도 숨기지 않고\n목적지를 잇는다. 섹션 자체와 그 식별자는 그대로 두어 스크롤로 닿는다.\n\n가장 중요한 행동은 '비중 비교하기' 하나로 두고 나머지 행동 유도 셋을\n걷어낸다. 소개 섹션의 내용은 그대로 남긴다.\n\nspec 002 FR-001, FR-002, research.md 결정 5. T003.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:04:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:04:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20f09c1961832b435c1c6b3beb80e4726c751af3"
+        },
+        {
+          "id": "01f36278346c515f7319c568278056c7ba9bb385",
+          "short_id": "01f36278",
+          "created_at": "2026-09-15T17:03:51.000+09:00",
+          "parent_ids": [
+            "c3a3a5e7d95690590c04098abb1c5bf57f80b260"
+          ],
+          "title": "feat(fe): 아직 줄 것이 없는 상태를 정상 화면으로 처리한다",
+          "message": "feat(fe): 아직 줄 것이 없는 상태를 정상 화면으로 처리한다\n\n한 문장과 선택적인 행동 하나만 받는 공용 표시를 만들고, 아직 만들지\n않은 메뉴가 열리는 화면이 그것을 쓴다. 다시 눌러도 달라지지 않는\n상태이므로 행동 버튼은 두지 않는다.\n\n이 표시는 뒤에 섹터 목록을 아직 받을 수 없는 상태와 연결 실패도 함께\n쓴다. 세 경우를 한 곳에 모아야 같은 기준으로 셀 수 있다.\n\nspec 002 FR-001, research.md 결정 6. T001, T002.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-15T17:03:51.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-15T17:03:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/01f36278346c515f7319c568278056c7ba9bb385"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2810516": []
+  }
+}

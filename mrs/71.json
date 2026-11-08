@@ -1,0 +1,609 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942498,
+    "iid": 71,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록 접근 보호 및 로그인 후 복귀 흐름 구현",
+    "description": "# 작업 내용 요약\n\n인증이 필요한 ‘내 기록’ 접근과 로그인 후 원래 화면으로 돌아오는 흐름을 구현했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* FE-190\n* Jira 링크 추가 예정\n\n# 주요 변경 사항\n\n* ‘내 기록’ 보호 경로 및 진입 화면 구현\n* 비로그인 사용자 로그인 화면 이동\n* 로그인 완료 후 기존 접근 위치 복귀\n* 관련 인증 흐름 목업 테스트 추가\n\n# 테스트\n\n* 전체 테스트 56개 통과\n* lint 및 build 통과\n\n# 리뷰 포인트\n\n* 실제 인증 API 연결 전이므로 `contracts/auth-api.yaml` 기준으로 구현하고 목업으로 검증했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T09:48:27.812+09:00",
+    "updated_at": "2026-09-14T09:55:24.159+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-14T09:55:23.868+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/190-records-auth-return",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7169ceba0fe061126fd2c872f232dbdd5a25e4a6",
+    "merge_commit_sha": "bf3325551a2e893dfd5e3e4324866cc9f6cb5ef8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T09:48:29.111+09:00",
+    "reference": "!71",
+    "references": {
+      "short": "!71",
+      "relative": "!71",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!71"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/71",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942498,
+    "iid": 71,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록 접근 보호 및 로그인 후 복귀 흐름 구현",
+    "description": "# 작업 내용 요약\n\n인증이 필요한 ‘내 기록’ 접근과 로그인 후 원래 화면으로 돌아오는 흐름을 구현했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* FE-190\n* Jira 링크 추가 예정\n\n# 주요 변경 사항\n\n* ‘내 기록’ 보호 경로 및 진입 화면 구현\n* 비로그인 사용자 로그인 화면 이동\n* 로그인 완료 후 기존 접근 위치 복귀\n* 관련 인증 흐름 목업 테스트 추가\n\n# 테스트\n\n* 전체 테스트 56개 통과\n* lint 및 build 통과\n\n# 리뷰 포인트\n\n* 실제 인증 API 연결 전이므로 `contracts/auth-api.yaml` 기준으로 구현하고 목업으로 검증했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T09:48:27.812+09:00",
+    "updated_at": "2026-09-14T09:55:24.159+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-14T09:55:23.868+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/190-records-auth-return",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7169ceba0fe061126fd2c872f232dbdd5a25e4a6",
+    "merge_commit_sha": "bf3325551a2e893dfd5e3e4324866cc9f6cb5ef8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T09:48:29.111+09:00",
+    "reference": "!71",
+    "references": {
+      "short": "!71",
+      "relative": "!71",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!71"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/71",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "15",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "head_sha": "7169ceba0fe061126fd2c872f232dbdd5a25e4a6",
+      "start_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c2bc647406ed3bec82da4fe2c2f848746425709b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2799503,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T09:48:27.913+09:00",
+          "updated_at": "2026-09-14T09:48:27.937+09:00",
+          "system": true,
+          "noteable_id": 942498,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 71,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c929e4f8e45dc756f87e9da2797a8773ec5a39d1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2799504,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **오픈 리다이렉트(Open Redirect) 방어**: `frontend/src/auth/returnTarget.ts`에서 동일 출처(same-origin) 검증 및 인증 관련 경로(`/login`, `/signup`) 순환 방지 로직을 철저히 구현하여 보안성을 높였습니다.\n- **철저한 테스트 작성**: 유닛 테스트(`returnTarget.test.ts`), 라우터/컴포넌트 테스트(`ProtectedRoute.test.tsx`, `App.auth.test.tsx`)를 세분화하여 예외 케이스와 시나리오를 잘 커버했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- 비로그인 사용자가 `/records/analysis-42`로 접근 후 로그인 완료 시, 저장된 `returnTarget`이 정확히 소비되어 원래 페이지로 복귀하고 이후 세션 스토리지에서 즉시 삭제되는지 수동 E2E 시나리오로 검증하세요.\n- 브라우저 쿠키나 세션 스토리지 접근이 차단된 특수 환경(예: 인코그니토 모드 일부 제한)에서 `sessionStorage` 예외 발생 시 애플리케이션이 크래시되지 않고 기본 경로(`/home`)로 우회하는지 확인하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7169ceba0fe061126fd2c872f232dbdd5a25e4a6 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T09:48:35.385+09:00",
+          "updated_at": "2026-09-14T09:48:35.385+09:00",
+          "system": false,
+          "noteable_id": 942498,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 71,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b358dca6e5015b8217bf679506f3a21b0c42c396",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2799567,
+          "type": null,
+          "body": "mentioned in commit bf3325551a2e893dfd5e3e4324866cc9f6cb5ef8",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T09:55:23.924+09:00",
+          "updated_at": "2026-09-14T09:55:23.946+09:00",
+          "system": true,
+          "noteable_id": 942498,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 71,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2191867,
+      "head_commit_sha": "7169ceba0fe061126fd2c872f232dbdd5a25e4a6",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T09:48:28.162+09:00",
+      "merge_request_id": 942498,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "73d478b9c49c082b783cb42d17a5e2be74633381"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2191867,
+      "head_commit_sha": "7169ceba0fe061126fd2c872f232dbdd5a25e4a6",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T09:48:28.162+09:00",
+      "merge_request_id": 942498,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "73d478b9c49c082b783cb42d17a5e2be74633381",
+      "commits": [
+        {
+          "id": "7169ceba0fe061126fd2c872f232dbdd5a25e4a6",
+          "short_id": "7169ceba",
+          "created_at": "2026-09-14T09:46:54.000+09:00",
+          "parent_ids": [
+            "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+          ],
+          "title": "feat(fe): 내 기록 접근 보호 및 로그인 후 복귀 흐름 구현",
+          "message": "feat(fe): 내 기록 접근 보호 및 로그인 후 복귀 흐름 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-14T09:46:54.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-14T09:46:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7169ceba0fe061126fd2c872f232dbdd5a25e4a6"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,11 +1,38 @@\n-import type { ReactNode } from 'react'\n+import { useEffect, useRef, useState, type ReactNode } from 'react'\n import { Navigate } from 'react-router-dom'\n import { useAuth } from './auth-context'\n import styles from './AuthEntryGuard.module.css'\n+import { consumeReturnTarget, DEFAULT_RETURN_TARGET } from './returnTarget'\n+\n+function AuthenticatedEntryRedirect({ resume }: { resume: boolean }) {\n+  const handledRef = useRef(false)\n+  const [target, setTarget] = useState<string | null>(null)\n+\n+  useEffect(() => {\n+    if (handledRef.current) return\n+    handledRef.current = true\n+    const savedTarget = consumeReturnTarget()\n+    setTarget(resume ? savedTarget : DEFAULT_RETURN_TARGET)\n+  }, [resume])\n+\n+  if (!target) {\n+    return (\n+      <main className={styles.checking}>\n+        <span role=\"status\">로그인 완료 화면으로 이동하고 있습니다.</span>\n+      </main>\n+    )\n+  }\n+  return <Navigate to={target} replace />\n+}\n \n /** 인증 여부 확인 전에는 인증 폼을 숨기고, 로그인 사용자는 홈으로 돌려보낸다. */\n export function AuthEntryGuard({ children }: { children: ReactNode }) {\n   const { status } = useAuth()\n+  const previousStatusRef = useRef(status)\n+\n+  useEffect(() => {\n+    previousStatusRef.current = status\n+  }, [status])\n \n   if (status === 'checking') {\n     return (\n@@ -15,7 +42,13 @@ export function AuthEntryGuard({ children }: { children: ReactNode }) {\n     )\n   }\n   if (status === 'authenticated') {\n-    return <Navigate to=\"/home\" replace />\n+    const previousStatus = previousStatusRef.current\n+    const shouldResume =\n+      previousStatus === 'anonymous' ||\n+      previousStatus === 'expired' ||\n+      previousStatus === 'error' ||\n+      previousStatus === 'logoutUnconfirmed'\n+    return <AuthenticatedEntryRedirect resume={shouldResume} />\n   }\n   return children\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthEntryGuard.tsx",
+          "old_path": "frontend/src/auth/AuthEntryGuard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import type { AuthStateStatus } from '@/types/auth'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import { ProtectedRoute } from './ProtectedRoute'\n+\n+const authMock = vi.hoisted(() => ({\n+  status: 'anonymous' as AuthStateStatus,\n+}))\n+\n+vi.mock('./auth-context', () => ({\n+  useAuth: () => ({\n+    status: authMock.status,\n+    user: authMock.status === 'authenticated' ? authenticatedUser : null,\n+    login: vi.fn(),\n+    recheck: vi.fn(),\n+  }),\n+}))\n+\n+function renderProtected(initialEntry = '/records/analysis-42?view=trades#loss') {\n+  return render(\n+    <MemoryRouter initialEntries={[initialEntry]}>\n+      <Routes>\n+        <Route\n+          path=\"/records/*\"\n+          element={\n+            <ProtectedRoute>\n+              <h1>보호된 내 기록</h1>\n+            </ProtectedRoute>\n+          }\n+        />\n+        <Route path=\"/login\" element={<h1>로그인 화면</h1>} />\n+      </Routes>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('ProtectedRoute', () => {\n+  beforeEach(() => {\n+    authMock.status = 'anonymous'\n+    window.sessionStorage.clear()\n+  })\n+\n+  it('인증 확인 중에는 보호된 내용을 표시하지 않는다', () => {\n+    authMock.status = 'checking'\n+    renderProtected()\n+\n+    expect(screen.getByRole('status').textContent).toContain('로그인 상태를 확인')\n+    expect(screen.queryByText('보호된 내 기록')).toBeNull()\n+  })\n+\n+  it('로그인 사용자는 보호된 내 기록을 볼 수 있다', () => {\n+    authMock.status = 'authenticated'\n+    renderProtected()\n+\n+    expect(screen.getByRole('heading', { name: '보호된 내 기록' })).toBeTruthy()\n+  })\n+\n+  it.each(['anonymous', 'expired'] as const)(\n+    '%s 사용자는 보호 내용을 보지 않고 로그인으로 이동하며 원래 위치를 보존한다',\n+    async (status) => {\n+      authMock.status = status\n+      renderProtected()\n+\n+      expect(screen.queryByText('보호된 내 기록')).toBeNull()\n+      expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()\n+      expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBe(\n+        '/records/analysis-42?view=trades#loss',\n+      )\n+    },\n+  )\n+\n+  it('기존의 위험한 복귀 위치를 현재의 검증된 내 기록 위치로 교체한다', async () => {\n+    window.sessionStorage.setItem('thorp.auth.returnTarget', '//evil.example')\n+    renderProtected('/records/safe')\n+\n+    await waitFor(() => {\n+      expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBe('/records/safe')\n+    })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/ProtectedRoute.test.tsx",
+          "old_path": "frontend/src/auth/ProtectedRoute.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+import { useEffect, useState, type ReactNode } from 'react'\n+import { Navigate, useLocation } from 'react-router-dom'\n+import { useAuth } from './auth-context'\n+import styles from './AuthEntryGuard.module.css'\n+import { saveReturnTarget } from './returnTarget'\n+\n+function LoginRedirect({ target }: { target: string }) {\n+  const [isSaved, setIsSaved] = useState(false)\n+\n+  useEffect(() => {\n+    saveReturnTarget(target)\n+    setIsSaved(true)\n+  }, [target])\n+\n+  if (!isSaved) {\n+    return (\n+      <main className={styles.checking}>\n+        <span role=\"status\">로그인 화면으로 이동하고 있습니다.</span>\n+      </main>\n+    )\n+  }\n+  return <Navigate to=\"/login\" replace />\n+}\n+\n+/** 현재 사용자 확인이 끝난 경우에만 내 기록 화면을 노출한다. */\n+export function ProtectedRoute({ children }: { children: ReactNode }) {\n+  const { status } = useAuth()\n+  const location = useLocation()\n+\n+  if (status === 'checking') {\n+    return (\n+      <main className={styles.checking}>\n+        <span role=\"status\">로그인 상태를 확인하고 있습니다.</span>\n+      </main>\n+    )\n+  }\n+  if (status === 'authenticated') return children\n+\n+  const target = `${location.pathname}${location.search}${location.hash}`\n+  return <LoginRedirect target={target} />\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/ProtectedRoute.tsx",
+          "old_path": "frontend/src/auth/ProtectedRoute.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+import { beforeEach, describe, expect, it } from 'vitest'\n+import {\n+  DEFAULT_RETURN_TARGET,\n+  consumeReturnTarget,\n+  saveReturnTarget,\n+} from './returnTarget'\n+\n+describe('returnTarget', () => {\n+  beforeEach(() => {\n+    window.sessionStorage.clear()\n+  })\n+\n+  it('내 기록의 path, query, hash를 탭 새로고침 동안 보존하고 한 번만 소비한다', () => {\n+    saveReturnTarget('/records/analysis-42?view=trades#loss')\n+\n+    expect(consumeReturnTarget()).toBe('/records/analysis-42?view=trades#loss')\n+    expect(consumeReturnTarget()).toBe(DEFAULT_RETURN_TARGET)\n+  })\n+\n+  it.each([\n+    'https://evil.example/records',\n+    '//evil.example/records',\n+    'records/analysis-42',\n+    '/login',\n+    '/login?next=/records',\n+    '/signup',\n+    '/signup/complete',\n+  ])('외부·상대·인증 화면 복귀 위치 %s를 기본 화면으로 대체한다', (target) => {\n+    saveReturnTarget(target)\n+\n+    expect(consumeReturnTarget()).toBe(DEFAULT_RETURN_TARGET)\n+  })\n+\n+  it('저장소에 주입된 안전하지 않은 값도 소비 시 다시 검증하고 제거한다', () => {\n+    window.sessionStorage.setItem('thorp.auth.returnTarget', '//evil.example')\n+\n+    expect(consumeReturnTarget()).toBe(DEFAULT_RETURN_TARGET)\n+    expect(window.sessionStorage.length).toBe(0)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/returnTarget.test.ts",
+          "old_path": "frontend/src/auth/returnTarget.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,56 @@\n+export const DEFAULT_RETURN_TARGET = '/home'\n+\n+const RETURN_TARGET_KEY = 'thorp.auth.returnTarget'\n+const AUTH_PATHS = ['/login', '/signup']\n+\n+function isAuthPath(pathname: string): boolean {\n+  return AUTH_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))\n+}\n+\n+/** 외부 이동과 인증 화면 순환을 막고 앱 내부 상대 경로만 허용한다. */\n+export function normalizeReturnTarget(target: unknown): string {\n+  if (\n+    typeof target !== 'string' ||\n+    !target.startsWith('/') ||\n+    target.startsWith('//') ||\n+    target.includes('\\\\')\n+  ) {\n+    return DEFAULT_RETURN_TARGET\n+  }\n+\n+  try {\n+    const url = new URL(target, window.location.origin)\n+    if (url.origin !== window.location.origin || isAuthPath(url.pathname)) {\n+      return DEFAULT_RETURN_TARGET\n+    }\n+    return `${url.pathname}${url.search}${url.hash}`\n+  } catch {\n+    return DEFAULT_RETURN_TARGET\n+  }\n+}\n+\n+/** 현재 탭에서 로그인 뒤 돌아갈 위치를 저장한다. */\n+export function saveReturnTarget(target: unknown): void {\n+  const normalized = normalizeReturnTarget(target)\n+\n+  try {\n+    if (normalized === DEFAULT_RETURN_TARGET && target !== DEFAULT_RETURN_TARGET) {\n+      window.sessionStorage.removeItem(RETURN_TARGET_KEY)\n+      return\n+    }\n+    window.sessionStorage.setItem(RETURN_TARGET_KEY, normalized)\n+  } catch {\n+    // 저장소가 차단된 환경에서는 안전한 기본 화면 복귀로 자연스럽게 대체한다.\n+  }\n+}\n+\n+/** 저장된 위치를 다시 검증하고 한 번만 사용한 뒤 즉시 제거한다. */\n+export function consumeReturnTarget(): string {\n+  try {\n+    const target = window.sessionStorage.getItem(RETURN_TARGET_KEY)\n+    window.sessionStorage.removeItem(RETURN_TARGET_KEY)\n+    return normalizeReturnTarget(target)\n+  } catch {\n+    return DEFAULT_RETURN_TARGET\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/returnTarget.ts",
+          "old_path": "frontend/src/auth/returnTarget.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,8 @@\n .brand,\n .desktopNav,\n .desktopNav a,\n+.accountLinks,\n+.recordsLink,\n .authLink,\n .authState,\n .drawerHeader,\n@@ -117,16 +119,28 @@\n   color: var(--thorp-accent-soft);\n }\n \n+.accountLinks {\n+  gap: 14px;\n+  justify-self: end;\n+}\n+\n+.recordsLink,\n .authLink {\n   gap: 7px;\n-  justify-self: end;\n-  padding-right: 16px;\n   color: var(--thorp-copy);\n   font-size: 0.78rem;\n   font-weight: 630;\n   text-decoration: none;\n }\n \n+.authLink {\n+  padding-right: 16px;\n+}\n+\n+.recordsLink[aria-current='page'] {\n+  color: var(--thorp-accent-soft);\n+}\n+\n .authState {\n   justify-self: end;\n   padding-right: 16px;\n@@ -134,6 +148,7 @@\n   font-size: 0.76rem;\n }\n \n+.recordsLink:hover,\n .authLink:hover {\n   color: var(--thorp-accent-soft);\n }\n@@ -141,6 +156,7 @@\n .menuButton:focus-visible,\n .brand:focus-visible,\n .desktopNav a:focus-visible,\n+.recordsLink:focus-visible,\n .authLink:focus-visible,\n .drawer button:focus-visible,\n .drawer a:focus-visible {\n@@ -272,6 +288,11 @@\n   text-decoration: none;\n }\n \n+.drawerRecords {\n+  margin-top: 18px;\n+  border-top-color: var(--thorp-line);\n+}\n+\n @media (max-width: 720px) {\n   .inner {\n     grid-template-columns: 1fr auto;\n@@ -284,10 +305,16 @@\n }\n \n @media (max-width: 420px) {\n+  .accountLinks {\n+    gap: 10px;\n+  }\n+\n+  .recordsLink,\n   .authLink {\n     font-size: 0;\n   }\n \n+  .recordsLink svg,\n   .authLink svg {\n     width: 20px;\n     height: 20px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import {\n   ChartNoAxesCombined,\n+  FolderClock,\n   Home,\n   LogIn,\n   Menu,\n@@ -155,21 +156,31 @@ export function AppHeader() {\n             })}\n           </nav>\n \n-          {authStatus === 'checking' ? (\n-            <span className={styles.authState} role=\"status\">\n-              확인 중\n-            </span>\n-          ) : authStatus === 'authenticated' && user ? (\n-            <Link className={styles.authLink} to=\"/home\" aria-label={`${user.nickname} 로그인됨`}>\n-              <UserRound size={16} aria-hidden=\"true\" />\n-              {user.nickname}\n-            </Link>\n-          ) : (\n-            <Link className={styles.authLink} to=\"/login\">\n-              <LogIn size={16} aria-hidden=\"true\" />\n-              로그인\n+          <div className={styles.accountLinks}>\n+            <Link\n+              className={styles.recordsLink}\n+              to=\"/records\"\n+              aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}\n+            >\n+              <FolderClock size={16} aria-hidden=\"true\" />\n+              내 기록\n             </Link>\n-          )}\n+            {authStatus === 'checking' ? (\n+              <span className={styles.authState} role=\"status\">\n+                확인 중\n+              </span>\n+            ) : authStatus === 'authenticated' && user ? (\n+              <Link className={styles.authLink} to=\"/records\" aria-label={`${user.nickname} 로그인됨`}>\n+                <UserRound size={16} aria-hidden=\"true\" />\n+                {user.nickname}\n+              </Link>\n+            ) : (\n+              <Link className={styles.authLink} to=\"/login\">\n+                <LogIn size={16} aria-hidden=\"true\" />\n+                로그인\n+              </Link>\n+            )}\n+          </div>\n         </div>\n       </header>\n \n@@ -234,8 +245,23 @@ export function AppHeader() {\n                 })}\n               </div>\n \n+              <Link\n+                className={`${styles.drawerLink} ${styles.drawerRecords}`}\n+                to=\"/records\"\n+                aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}\n+                onClick={() => setIsMenuOpen(false)}\n+              >\n+                <span className={styles.drawerIcon}>\n+                  <FolderClock size={20} aria-hidden=\"true\" />\n+                </span>\n+                <span>\n+                  <strong>내 기록</strong>\n+                  <small>저장한 분석과 전략 검증 기록을 확인합니다.</small>\n+                </span>\n+              </Link>\n+\n               {authStatus === 'authenticated' && user ? (\n-                <Link className={styles.drawerAuth} to=\"/home\" onClick={() => setIsMenuOpen(false)}>\n+                <Link className={styles.drawerAuth} to=\"/records\" onClick={() => setIsMenuOpen(false)}>\n                   <UserRound size={18} aria-hidden=\"true\" />\n                   {user.nickname}\n                 </Link>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { ApiClientError } from '@/api/client'\n import { AuthEntryGuard } from '@/auth/AuthEntryGuard'\n import { AuthProvider } from '@/auth/AuthProvider'\n+import { saveReturnTarget } from '@/auth/returnTarget'\n import { authenticatedUser } from '@/test/authFixtures'\n import { render } from '@testing-library/react'\n import { LoginPage } from './LoginPage'\n@@ -37,6 +38,7 @@ function renderLogin(options?: { signupEmail?: string }) {\n             }\n           />\n           <Route path=\"/home\" element={<h1>홈 화면</h1>} />\n+          <Route path=\"/records/*\" element={<h1>내 기록 화면</h1>} />\n         </Routes>\n       </AuthProvider>\n     </MemoryRouter>,\n@@ -54,6 +56,7 @@ function deferred<T>() {\n describe('LoginPage', () => {\n   beforeEach(() => {\n     vi.clearAllMocks()\n+    window.sessionStorage.clear()\n     apiMocks.getCurrentUser.mockRejectedValue(\n       new ApiClientError('api', '로그인이 필요합니다.', {\n         code: 'AUTHENTICATION_REQUIRED',\n@@ -122,4 +125,17 @@ describe('LoginPage', () => {\n     expect(await screen.findByRole('heading', { name: '홈 화면' })).toBeTruthy()\n     expect(screen.queryByLabelText('비밀번호')).toBeNull()\n   })\n+\n+  it('내 기록에서 온 사용자는 로그인 성공 뒤 저장된 위치로 한 번만 복귀한다', async () => {\n+    saveReturnTarget('/records/run-17?tab=trades#cost')\n+    const user = userEvent.setup()\n+    renderLogin()\n+\n+    await user.type(await screen.findByLabelText('이메일'), 'user@example.com')\n+    await user.type(screen.getByLabelText('비밀번호'), 'password1234')\n+    await user.click(screen.getByRole('button', { name: '로그인' }))\n+\n+    expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()\n+    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBeNull()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LoginPage.test.tsx",
+          "old_path": "frontend/src/pages/LoginPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,108 @@\n+.page {\n+  min-height: 100svh;\n+  overflow-x: clip;\n+  background:\n+    linear-gradient(var(--thorp-line) 1px, transparent 1px),\n+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),\n+    radial-gradient(circle at 50% 28%, rgb(3 199 90 / 10%), transparent 34%),\n+    var(--thorp-background);\n+  background-size: 72px 72px, 72px 72px, auto, auto;\n+  color: var(--thorp-foreground);\n+}\n+\n+.main {\n+  width: min(100% - 40px, 960px);\n+  margin: 0 auto;\n+  padding: clamp(90px, 15vh, 160px) 0 80px;\n+}\n+\n+.eyebrow,\n+.actions {\n+  display: flex;\n+  align-items: center;\n+}\n+\n+.eyebrow {\n+  gap: 9px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.72rem;\n+  font-weight: 750;\n+  letter-spacing: 0.16em;\n+}\n+\n+.main h1 {\n+  max-width: 780px;\n+  margin: 22px 0 18px;\n+  font-size: clamp(2.5rem, 7vw, 5.8rem);\n+  line-height: 0.98;\n+  letter-spacing: -0.065em;\n+}\n+\n+.main > p:not(.scopeNote) {\n+  max-width: 620px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: clamp(0.95rem, 1.8vw, 1.08rem);\n+  line-height: 1.8;\n+}\n+\n+.actions {\n+  gap: 12px;\n+  margin-top: 38px;\n+  flex-wrap: wrap;\n+}\n+\n+.actions a {\n+  display: inline-flex;\n+  min-height: 46px;\n+  align-items: center;\n+  gap: 20px;\n+  padding: 0 18px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 4px;\n+  color: var(--thorp-foreground);\n+  font-size: 0.82rem;\n+  font-weight: 700;\n+  text-decoration: none;\n+}\n+\n+.actions a:first-child {\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent);\n+  color: #021108;\n+}\n+\n+.actions a:hover {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.actions a:focus-visible {\n+  outline: 3px solid rgb(3 199 90 / 30%);\n+  outline-offset: 3px;\n+}\n+\n+.scopeNote {\n+  max-width: 620px;\n+  margin-top: 70px;\n+  padding-top: 18px;\n+  border-top: 1px solid var(--thorp-line);\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+  line-height: 1.65;\n+}\n+\n+@media (max-width: 600px) {\n+  .main {\n+    width: min(100% - 28px, 960px);\n+    padding-top: 72px;\n+  }\n+\n+  .actions {\n+    align-items: stretch;\n+    flex-direction: column;\n+  }\n+\n+  .actions a {\n+    justify-content: space-between;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsEntryPage.module.css",
+          "old_path": "frontend/src/pages/MyRecordsEntryPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+import { ArrowRight, FolderClock } from 'lucide-react'\n+import { Link } from 'react-router-dom'\n+import { useAuth } from '@/auth/auth-context'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import styles from './MyRecordsEntryPage.module.css'\n+\n+/** spec 006의 기록 목록을 구현하지 않고 인증된 내 기록 진입 경계만 제공한다. */\n+export function MyRecordsEntryPage() {\n+  const { user } = useAuth()\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main} aria-labelledby=\"records-title\">\n+        <div className={styles.eyebrow}>\n+          <FolderClock size={17} aria-hidden=\"true\" />\n+          MY RECORDS\n+        </div>\n+        <h1 id=\"records-title\">{user?.nickname}님의 내 기록</h1>\n+        <p>\n+          로그인 상태가 확인되었습니다. 저장된 분석 기록과 다시보기 기능은 내 기록 기능에서\n+          이어집니다.\n+        </p>\n+        <div className={styles.actions}>\n+          <Link to=\"/backtest\">\n+            전략 검증하기\n+            <ArrowRight size={16} aria-hidden=\"true\" />\n+          </Link>\n+          <Link to=\"/home\">시장 흐름 보기</Link>\n+        </div>\n+        <p className={styles.scopeNote}>\n+          이 화면은 사용자별 기록을 보호하는 진입점이며, 기록 목록은 spec 006 범위입니다.\n+        </p>\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsEntryPage.tsx",
+          "old_path": "frontend/src/pages/MyRecordsEntryPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,10 @@\n import { cleanup } from '@testing-library/react'\n-import { afterEach } from 'vitest'\n+import { afterEach, vi } from 'vitest'\n+\n+Object.defineProperty(window, 'scrollTo', {\n+  configurable: true,\n+  value: vi.fn(),\n+})\n \n afterEach(() => {\n   cleanup()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/setup.ts",
+          "old_path": "frontend/src/test/setup.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+import { render, screen } from '@testing-library/react'\n+import { MemoryRouter } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import App from './App'\n+\n+vi.mock('@/pages/LandingPage', () => ({ LandingPage: () => <h1>랜딩 화면</h1> }))\n+vi.mock('@/pages/HomePage', () => ({ HomePage: () => <h1>홈 화면</h1> }))\n+vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드 화면</h1> }))\n+vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))\n+vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))\n+vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면</h1> }))\n+vi.mock('@/pages/MyRecordsEntryPage', () => ({\n+  MyRecordsEntryPage: () => <h1>내 기록 화면</h1>,\n+}))\n+\n+const anonymousAuth: AuthContextValue = {\n+  status: 'anonymous',\n+  user: null,\n+  login: vi.fn(),\n+  recheck: vi.fn(),\n+}\n+\n+const authenticatedAuth: AuthContextValue = {\n+  ...anonymousAuth,\n+  status: 'authenticated',\n+  user: authenticatedUser,\n+}\n+\n+function renderApp(path: string, auth = anonymousAuth) {\n+  return render(\n+    <MemoryRouter initialEntries={[path]}>\n+      <AuthContext.Provider value={auth}>\n+        <App />\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('App authentication routes', () => {\n+  beforeEach(() => {\n+    window.sessionStorage.clear()\n+  })\n+\n+  it.each([\n+    ['/home', '홈 화면'],\n+    ['/dashboard', '대시보드 화면'],\n+    ['/backtest', '백테스트 화면'],\n+  ])('비로그인 상태에서도 공개 경로 %s를 이용할 수 있다', async (path, heading) => {\n+    renderApp(path)\n+\n+    expect(await screen.findByRole('heading', { name: heading })).toBeTruthy()\n+  })\n+\n+  it('내 기록 경로만 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {\n+    renderApp('/records/run-17?tab=trades#cost')\n+\n+    expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()\n+    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBe(\n+      '/records/run-17?tab=trades#cost',\n+    )\n+  })\n+\n+  it('로그인 사용자는 내 기록 진입 화면을 바로 볼 수 있다', async () => {\n+    renderApp('/records', authenticatedAuth)\n+\n+    expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.auth.test.tsx",
+          "old_path": "frontend/src/App.auth.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ import { AnimatePresence, MotionConfig, motion } from 'motion/react'\n import { lazy, Suspense, useLayoutEffect } from 'react'\n import { Navigate, Route, Routes, useLocation } from 'react-router-dom'\n import { AuthEntryGuard } from '@/auth/AuthEntryGuard'\n+import { ProtectedRoute } from '@/auth/ProtectedRoute'\n import { LandingPage } from '@/pages/LandingPage'\n \n // 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.\n@@ -36,6 +37,12 @@ const LoginPage = lazy(() =>\n   })),\n )\n \n+const MyRecordsEntryPage = lazy(() =>\n+  import('@/pages/MyRecordsEntryPage').then((module) => ({\n+    default: module.MyRecordsEntryPage,\n+  })),\n+)\n+\n /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */\n function AnimatedRoutes() {\n   const location = useLocation()\n@@ -60,6 +67,14 @@ function AnimatedRoutes() {\n             <Route path=\"/home\" element={<HomePage />} />\n             <Route path=\"/dashboard\" element={<DashboardPage />} />\n             <Route path=\"/backtest\" element={<BacktestPage />} />\n+            <Route\n+              path=\"/records/*\"\n+              element={\n+                <ProtectedRoute>\n+                  <MyRecordsEntryPage />\n+                </ProtectedRoute>\n+              }\n+            />\n             <Route\n               path=\"/signup\"\n               element={\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@ export default defineConfig({\n   },\n   test: {\n     environment: 'jsdom',\n-    include: ['src/**/*.test.tsx', 'src/api/auth.test.ts'],\n+    include: ['src/**/*.test.tsx', 'src/api/auth.test.ts', 'src/auth/**/*.test.ts'],\n     setupFiles: ['./src/test/setup.ts'],\n   },\n   server: {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -110,17 +110,17 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n ### Tests for User Story 3\n \n-- [ ] T034 [P] [US3] Add failing unit tests for same-origin return-target validation, one-time consumption, reload persistence, and unsafe fallback in `frontend/src/auth/returnTarget.test.ts`\n-- [ ] T035 [P] [US3] Add failing router tests for checking, anonymous, authenticated, expired, and invalid-return-target access in `frontend/src/auth/ProtectedRoute.test.tsx`\n-- [ ] T036 [P] [US3] Add failing navigation tests proving public routes remain available and only the records entry is protected in `frontend/src/App.auth.test.tsx`\n+- [x] T034 [P] [US3] Add failing unit tests for same-origin return-target validation, one-time consumption, reload persistence, and unsafe fallback in `frontend/src/auth/returnTarget.test.ts`\n+- [x] T035 [P] [US3] Add failing router tests for checking, anonymous, authenticated, expired, and invalid-return-target access in `frontend/src/auth/ProtectedRoute.test.tsx`\n+- [x] T036 [P] [US3] Add failing navigation tests proving public routes remain available and only the records entry is protected in `frontend/src/App.auth.test.tsx`\n \n ### Implementation for User Story 3\n \n-- [ ] T037 [US3] Implement validated tab-scoped return-target storage and one-time consumption in `frontend/src/auth/returnTarget.ts` to satisfy T034\n-- [ ] T038 [US3] Implement the records-only authentication boundary and loading/login-required states in `frontend/src/auth/ProtectedRoute.tsx` to satisfy T035\n-- [ ] T039 [US3] Add an authentication-only `/records/*` entry boundary without implementing record content in `frontend/src/pages/MyRecordsEntryPage.tsx` and `frontend/src/pages/MyRecordsEntryPage.module.css`\n-- [ ] T040 [US3] Wire the protected records route, post-login return, and public route exemptions in `frontend/src/App.tsx` after T037–T039\n-- [ ] T041 [US3] Add the secondary “내 기록” navigation entry and authenticated/anonymous destination behavior in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n+- [x] T037 [US3] Implement validated tab-scoped return-target storage and one-time consumption in `frontend/src/auth/returnTarget.ts` to satisfy T034\n+- [x] T038 [US3] Implement the records-only authentication boundary and loading/login-required states in `frontend/src/auth/ProtectedRoute.tsx` to satisfy T035\n+- [x] T039 [US3] Add an authentication-only `/records/*` entry boundary without implementing record content in `frontend/src/pages/MyRecordsEntryPage.tsx` and `frontend/src/pages/MyRecordsEntryPage.module.css`\n+- [x] T040 [US3] Wire the protected records route, post-login return, and public route exemptions in `frontend/src/App.tsx` after T037–T039\n+- [x] T041 [US3] Add the secondary “내 기록” navigation entry and authenticated/anonymous destination behavior in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n \n **Checkpoint**: US3 protects only the records boundary and remains independent from the record list implementation in spec 006.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2799504": []
+  }
+}

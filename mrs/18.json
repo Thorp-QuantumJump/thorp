@@ -1,0 +1,520 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 936635,
+    "iid": 18,
+    "project_id": 1444456,
+    "title": "chore(infra): 서버 API 키·Spring 프로필 및 Jenkins 알림 구성/ #105",
+    "description": "# 작업 내용 요약\n\nSpring 설정을 local/dev 프로필로 분리하고, 배포 환경에서 외부 시장 API 키를 Backend 컨테이너에 주입하도록 구성했습니다. Jenkins 빌드 결과를 Mattermost로 알리는 후처리도 추가했습니다.\n\n# 관련 이슈\n\n- close #105\n\n# 주요 변경 사항\n\n- `application.yml`을 공통 설정으로 정리하고 기본 프로필을 `local`로 지정\n- `application-local.yml`, `application-dev.yml` 추가\n- 로컬 Docker 환경에서 `local` 프로필 활성화\n- CD 배포 환경에서 `dev` 프로필 활성화\n- KRX·ECOS·KOSIS·관세청 API 키를 환경변수로 Backend에 전달\n- 운영 환경변수 예시 파일에 API 키 항목 추가\n- Jenkins 빌드 성공·실패·불안정 결과의 Mattermost 알림 추가\n- local/dev 프로필 설정 로딩 테스트 추가\n\n# 테스트\n\n- [x] `gradlew spotlessApply build`\n- [x] local/dev 프로필 로딩 테스트 2건 통과\n- [x] `git diff --check`\n- [x] 실제 API 키 및 `.env` 파일이 커밋되지 않았는지 확인\n- [ ] 서버 `.env.prod` 실제 키 입력 및 CD 배포 검증\n- [ ] Jenkins Mattermost 플러그인과 채널 연결 검증\n\n# 리뷰 포인트\n\n- 공통 설정과 local/dev 환경별 설정의 분리 범위가 적절한지\n- 운영 API 키가 파일에 하드코딩되지 않고 환경변수로만 전달되는지\n- Jenkins에 `mattermostSend` 사용에 필요한 플러그인과 기본 채널 설정이 준비됐는지",
+    "state": "merged",
+    "created_at": "2026-09-08T15:23:15.201+09:00",
+    "updated_at": "2026-09-08T15:24:09.309+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-08T15:24:08.871+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)-105-server_api_inject-jenkins_mattermost_alert-spring_yml_local_dev",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0a74e7c6983c194400a6953e88c343dc0c35ea46",
+    "merge_commit_sha": "f1208b7dd973e066600760a4e844baad4a6caa4a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T15:23:16.760+09:00",
+    "reference": "!18",
+    "references": {
+      "short": "!18",
+      "relative": "!18",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!18"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/18",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 936635,
+    "iid": 18,
+    "project_id": 1444456,
+    "title": "chore(infra): 서버 API 키·Spring 프로필 및 Jenkins 알림 구성/ #105",
+    "description": "# 작업 내용 요약\n\nSpring 설정을 local/dev 프로필로 분리하고, 배포 환경에서 외부 시장 API 키를 Backend 컨테이너에 주입하도록 구성했습니다. Jenkins 빌드 결과를 Mattermost로 알리는 후처리도 추가했습니다.\n\n# 관련 이슈\n\n- close #105\n\n# 주요 변경 사항\n\n- `application.yml`을 공통 설정으로 정리하고 기본 프로필을 `local`로 지정\n- `application-local.yml`, `application-dev.yml` 추가\n- 로컬 Docker 환경에서 `local` 프로필 활성화\n- CD 배포 환경에서 `dev` 프로필 활성화\n- KRX·ECOS·KOSIS·관세청 API 키를 환경변수로 Backend에 전달\n- 운영 환경변수 예시 파일에 API 키 항목 추가\n- Jenkins 빌드 성공·실패·불안정 결과의 Mattermost 알림 추가\n- local/dev 프로필 설정 로딩 테스트 추가\n\n# 테스트\n\n- [x] `gradlew spotlessApply build`\n- [x] local/dev 프로필 로딩 테스트 2건 통과\n- [x] `git diff --check`\n- [x] 실제 API 키 및 `.env` 파일이 커밋되지 않았는지 확인\n- [ ] 서버 `.env.prod` 실제 키 입력 및 CD 배포 검증\n- [ ] Jenkins Mattermost 플러그인과 채널 연결 검증\n\n# 리뷰 포인트\n\n- 공통 설정과 local/dev 환경별 설정의 분리 범위가 적절한지\n- 운영 API 키가 파일에 하드코딩되지 않고 환경변수로만 전달되는지\n- Jenkins에 `mattermostSend` 사용에 필요한 플러그인과 기본 채널 설정이 준비됐는지",
+    "state": "merged",
+    "created_at": "2026-09-08T15:23:15.201+09:00",
+    "updated_at": "2026-09-08T15:24:09.309+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-08T15:24:08.871+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)-105-server_api_inject-jenkins_mattermost_alert-spring_yml_local_dev",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0a74e7c6983c194400a6953e88c343dc0c35ea46",
+    "merge_commit_sha": "f1208b7dd973e066600760a4e844baad4a6caa4a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T15:23:16.760+09:00",
+    "reference": "!18",
+    "references": {
+      "short": "!18",
+      "relative": "!18",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!18"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/18",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "head_sha": "0a74e7c6983c194400a6953e88c343dc0c35ea46",
+      "start_sha": "b9cb4e8d17e2eee814812a35fe321eac1ef72ffa"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0a8dce5e5c873935cd9b744cccfc51951e4e8d2c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2774714,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-08T15:23:15.376+09:00",
+          "updated_at": "2026-09-08T15:23:15.389+09:00",
+          "system": true,
+          "noteable_id": 936635,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 18,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c8660e1be2fd2faffebd425b1175631a05e31eda",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2774715,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- Spring 설정을 `local`과 `dev` 프로필로 깔끔하게 분리하고, 기본 프로필을 `local`로 지정하여 로컬 개발 환경의 편의성을 높였습니다.\n- `ApplicationProfileConfigTest`를 추가하여 각 프로필별 환경변수 및 설정 로딩 동작을 테스트 코드로 검증한 점이 매우 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 단, 다음 항목들을 실무 환경에서 한 번 더 확인하시길 권장합니다.\n- [Low] `Jenkinsfile`에 추가된 `mattermostSend` 단계는 Jenkins에 Mattermost 플러그인이 설치되어 있지 않거나 글로벌 설정(채널, 웹훅 URL 등)이 누락된 경우 빌드 실패 또는 무시(ignored) 처리될 수 있으므로, 실제 Jenkins 환경에서 플러그인 연동 여부를 재확인하는 것이 좋습니다.\n\n### 테스트 제안\n- **프로필별 컨텍스트 로딩 검증 테스트:** `dev` 프로필 활성화 시 필수 환경변수(`SPRING_DATASOURCE_URL` 등)가 누락되었을 때 스프링 부트 애플리케이션이 의도대로 기동에 실패하는지(Fail-fast) 검증하는 테스트 추가를 권장합니다.\n- **CI/CD 파이프라인 알림 테스트:** Jenkins 수동 트리거(Build Now)를 통해 빌드 성공/실패 시 Mattermost 채널로 메시지가 정상적으로 수신되는지 시나리오 테스트를 수행하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0a74e7c6983c194400a6953e88c343dc0c35ea46 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-08T15:23:25.241+09:00",
+          "updated_at": "2026-09-08T15:23:25.241+09:00",
+          "system": false,
+          "noteable_id": 936635,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 18,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2118ced58f6a8418f011e84c7187758fa93db980",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2774719,
+          "type": null,
+          "body": "mentioned in commit f1208b7dd973e066600760a4e844baad4a6caa4a",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-08T15:24:08.969+09:00",
+          "updated_at": "2026-09-08T15:24:08.995+09:00",
+          "system": true,
+          "noteable_id": 936635,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 18,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2172703,
+      "head_commit_sha": "0a74e7c6983c194400a6953e88c343dc0c35ea46",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "b9cb4e8d17e2eee814812a35fe321eac1ef72ffa",
+      "created_at": "2026-09-08T15:23:16.046+09:00",
+      "merge_request_id": 936635,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "c9d977aab0ad1bb9157e724bd6a5ec34776d1faa"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2172703,
+      "head_commit_sha": "0a74e7c6983c194400a6953e88c343dc0c35ea46",
+      "base_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+      "start_commit_sha": "b9cb4e8d17e2eee814812a35fe321eac1ef72ffa",
+      "created_at": "2026-09-08T15:23:16.046+09:00",
+      "merge_request_id": 936635,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "c9d977aab0ad1bb9157e724bd6a5ec34776d1faa",
+      "commits": [
+        {
+          "id": "0a74e7c6983c194400a6953e88c343dc0c35ea46",
+          "short_id": "0a74e7c6",
+          "created_at": "2026-09-08T15:17:02.000+09:00",
+          "parent_ids": [
+            "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3"
+          ],
+          "title": "chore(infra): 서버 API 키·Spring 프로필 및 Jenkins 알림 구성/ #105",
+          "message": "chore(infra): 서버 API 키·Spring 프로필 및 Jenkins 알림 구성/ #105\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-08T15:17:02.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-08T15:17:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0a74e7c6983c194400a6953e88c343dc0c35ea46"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+spring:\n+  config:\n+    activate:\n+      on-profile: dev\n+\n+  datasource:\n+    url: ${SPRING_DATASOURCE_URL}\n+    username: ${SPRING_DATASOURCE_USERNAME}\n+    password: ${SPRING_DATASOURCE_PASSWORD}\n+\n+  # 배포 환경의 연결 정보는 infra/.env.prod에서 Compose를 통해 주입한다.\n+  rabbitmq:\n+    host: ${SPRING_RABBITMQ_HOST}\n+    port: ${SPRING_RABBITMQ_PORT}\n+    username: ${SPRING_RABBITMQ_USERNAME}\n+    password: ${SPRING_RABBITMQ_PASSWORD}\n+    virtual-host: ${SPRING_RABBITMQ_VHOST:/}\n+\n+  kafka:\n+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-dev.yml",
+          "old_path": "backend/src/main/resources/application-dev.yml",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+spring:\n+  config:\n+    activate:\n+      on-profile: local\n+\n+  datasource:\n+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}\n+    username: ${SPRING_DATASOURCE_USERNAME:thorp}\n+    password: ${SPRING_DATASOURCE_PASSWORD:thorp}\n+\n+  # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.\n+  rabbitmq:\n+    host: ${SPRING_RABBITMQ_HOST:localhost}\n+    port: ${SPRING_RABBITMQ_PORT:5672}\n+    username: ${SPRING_RABBITMQ_USERNAME:thorp}\n+    password: ${SPRING_RABBITMQ_PASSWORD:thorp}\n+    virtual-host: ${SPRING_RABBITMQ_VHOST:/}\n+\n+  kafka:\n+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-local.yml",
+          "old_path": "backend/src/main/resources/application-local.yml",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,10 +2,8 @@ spring:\n   application:\n     name: thorp-backend\n \n-  datasource:\n-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}\n-    username: ${SPRING_DATASOURCE_USERNAME:thorp}\n-    password: ${SPRING_DATASOURCE_PASSWORD:thorp}\n+  profiles:\n+    default: local\n \n   jpa:\n     hibernate:\n@@ -15,19 +13,9 @@ spring:\n       hibernate:\n         format_sql: true\n \n-  # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.\n-  # confirm·returns·listener 설정은 발행·결과 Consumer 구현 시 추가.\n-  rabbitmq:\n-    host: ${SPRING_RABBITMQ_HOST:localhost}\n-    port: ${SPRING_RABBITMQ_PORT:5672}\n-    username: ${SPRING_RABBITMQ_USERNAME:thorp}\n-    password: ${SPRING_RABBITMQ_PASSWORD:thorp}\n-    virtual-host: ${SPRING_RABBITMQ_VHOST:/}\n-\n   # Job 전달에는 사용하지 않는다. 브로커는 RabbitMQ(spring.rabbitmq). Kafka는 설치만 해둔 상태이며\n   # 전환·병행은 실측 후 결정한다 (루트 CLAUDE.md). 브로커 없이도 지연 연결이라 기동에 영향 없음.\n   kafka:\n-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}\n     producer:\n       key-serializer: org.apache.kafka.common.serialization.StringSerializer\n       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,63 @@\n+package com.ssafy.thorp.common.config;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import org.junit.jupiter.api.Test;\n+import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;\n+import org.springframework.boot.test.context.runner.ApplicationContextRunner;\n+\n+class ApplicationProfileConfigTest {\n+\n+    private final ApplicationContextRunner contextRunner =\n+            new ApplicationContextRunner()\n+                    .withInitializer(new ConfigDataApplicationContextInitializer());\n+\n+    @Test\n+    void localProfileIsUsedByDefault() {\n+        contextRunner.run(\n+                context -> {\n+                    assertThat(context).hasNotFailed();\n+                    assertThat(context.getEnvironment().getDefaultProfiles())\n+                            .containsExactly(\"local\");\n+                    assertThat(context.getEnvironment().getProperty(\"spring.datasource.url\"))\n+                            .isEqualTo(\"jdbc:postgresql://localhost:5432/thorp\");\n+                    assertThat(context.getEnvironment().getProperty(\"spring.rabbitmq.host\"))\n+                            .isEqualTo(\"localhost\");\n+                    assertThat(\n+                                    context.getEnvironment()\n+                                            .getProperty(\"spring.kafka.bootstrap-servers\"))\n+                            .isEqualTo(\"localhost:9092\");\n+                });\n+    }\n+\n+    @Test\n+    void devProfileUsesDeploymentEnvironmentVariables() {\n+        contextRunner\n+                .withPropertyValues(\n+                        \"spring.profiles.active=dev\",\n+                        \"SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/deploy-db\",\n+                        \"SPRING_DATASOURCE_USERNAME=deploy-user\",\n+                        \"SPRING_DATASOURCE_PASSWORD=deploy-password\",\n+                        \"SPRING_RABBITMQ_HOST=rabbitmq\",\n+                        \"SPRING_RABBITMQ_PORT=5672\",\n+                        \"SPRING_RABBITMQ_USERNAME=deploy-user\",\n+                        \"SPRING_RABBITMQ_PASSWORD=deploy-password\",\n+                        \"SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092\")\n+                .run(\n+                        context -> {\n+                            assertThat(context).hasNotFailed();\n+                            assertThat(context.getEnvironment().getActiveProfiles())\n+                                    .containsExactly(\"dev\");\n+                            assertThat(\n+                                            context.getEnvironment()\n+                                                    .getProperty(\"spring.datasource.url\"))\n+                                    .isEqualTo(\"jdbc:postgresql://postgres:5432/deploy-db\");\n+                            assertThat(context.getEnvironment().getProperty(\"spring.rabbitmq.host\"))\n+                                    .isEqualTo(\"rabbitmq\");\n+                            assertThat(\n+                                            context.getEnvironment()\n+                                                    .getProperty(\"spring.kafka.bootstrap-servers\"))\n+                                    .isEqualTo(\"kafka:29092\");\n+                        });\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,6 +20,15 @@ BACKTEST_JOB_QUEUE=backtest.jobs\n # --- Kafka (설치만. 현재 사용하지 않음) ---\n BACKTEST_JOB_TOPIC=backtest.jobs\n \n+# --- 시장·거시 지표 외부 API ---\n+# 실제 키는 서버의 .env.prod에만 저장하고 Git에 커밋하지 않는다.\n+KRX_API_KEY=\n+ECOS_API_KEY=\n+# 발급 키 끝의 =를 포함한 전체 값을 입력한다.\n+KOSIS_API_KEY=\n+# 관세청 수출입총괄(GW)의 일반 인증키(Decoding)를 입력한다.\n+DATA_GO_KR_SERVICE_KEY=\n+\n # --- Worker ---\n # 4 vCPU 기준 2개가 상한선. 병목은 CPU다.\n WORKER_REPLICAS=2\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/.env.prod.example",
+          "old_path": "infra/.env.prod.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -103,7 +103,7 @@ services:\n     container_name: thorp-backend\n     restart: unless-stopped\n     environment:\n-      SPRING_PROFILES_ACTIVE: prod\n+      SPRING_PROFILES_ACTIVE: dev\n       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}\n       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}\n       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}\n@@ -114,6 +114,10 @@ services:\n       BACKTEST_JOB_QUEUE: ${BACKTEST_JOB_QUEUE}\n       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092\n       BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}\n+      KRX_API_KEY: ${KRX_API_KEY}\n+      ECOS_API_KEY: ${ECOS_API_KEY}\n+      KOSIS_API_KEY: ${KOSIS_API_KEY}\n+      DATA_GO_KR_SERVICE_KEY: ${DATA_GO_KR_SERVICE_KEY}\n       JAVA_TOOL_OPTIONS: \"-Xmx1536m\"\n       TZ: Asia/Seoul\n     expose:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker-compose.prod.yml",
+          "old_path": "infra/docker-compose.prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n-// Thorp CI 파이프라인 (초안)\n-// 변경된 파트만 빌드하도록 추후 개선 예정. Jenkins 서버 구성은 infra/jenkins/ 참고.\n+// Thorp CI 파이프라인\n+// Jenkins 서버 구성은 infra/jenkins/ 참고.\n pipeline {\n     agent any\n \n@@ -49,4 +49,27 @@ pipeline {\n             }\n         }\n     }\n+\n+    post {\n+        failure {\n+            mattermostSend(\n+                color: 'danger',\n+                message: \"❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+            )\n+        }\n+\n+        unstable {\n+            mattermostSend(\n+                color: 'warning',\n+                message: \"⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+            )\n+        }\n+\n+        success {\n+            mattermostSend(\n+                color: 'good',\n+                message: \"✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+            )\n+        }\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -68,6 +68,7 @@ services:\n     ports:\n       - \"8080:8080\"\n     environment:\n+      SPRING_PROFILES_ACTIVE: local\n       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-thorp}\n       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-thorp}\n       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-thorp}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docker-compose.dev.yml",
+          "old_path": "docker-compose.dev.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2774715": []
+  }
+}

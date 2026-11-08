@@ -1,0 +1,509 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949867,
+    "iid": 206,
+    "project_id": 1444456,
+    "title": "fix(be): 자료 버전을 더하는 검사를 롤백 경계 안에 둔다",
+    "description": "<!--\n티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.\n\nMR 제목은 커밋과 같은 `feat(be): 작업 내역 요약` 형식이다(Jira의 `[BE]` 표기가 아니다).\n\n핵심부터 짧게 쓴다. 요약은 세 문장 이내로 병합되면 무엇이 달라지는지. 변경은 동작·계약·스키마\n단위로(파일 목록 금지). 테스트는 명령·결과와 자동 테스트 밖의 확인만(테스트 이름 나열 금지).\n리뷰 포인트는 판단거리만. 작업 과정(재시도, 검사 횟수, 정정 이력)은 쓰지 않는다.\n-->\n# 작업 내용 요약\n\n# 관련 티켓\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-17T23:39:28.309+09:00",
+    "updated_at": "2026-09-17T23:50:36.949+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T23:50:36.977+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/dataset-version-test-isolation",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+    "merge_commit_sha": "ecc10e0f7fe87b88f0e3ef78466237714025dbe8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T23:39:28.964+09:00",
+    "reference": "!206",
+    "references": {
+      "short": "!206",
+      "relative": "!206",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!206"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/206",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949867,
+    "iid": 206,
+    "project_id": 1444456,
+    "title": "fix(be): 자료 버전을 더하는 검사를 롤백 경계 안에 둔다",
+    "description": "<!--\n티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.\n\nMR 제목은 커밋과 같은 `feat(be): 작업 내역 요약` 형식이다(Jira의 `[BE]` 표기가 아니다).\n\n핵심부터 짧게 쓴다. 요약은 세 문장 이내로 병합되면 무엇이 달라지는지. 변경은 동작·계약·스키마\n단위로(파일 목록 금지). 테스트는 명령·결과와 자동 테스트 밖의 확인만(테스트 이름 나열 금지).\n리뷰 포인트는 판단거리만. 작업 과정(재시도, 검사 횟수, 정정 이력)은 쓰지 않는다.\n-->\n# 작업 내용 요약\n\n# 관련 티켓\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-17T23:39:28.309+09:00",
+    "updated_at": "2026-09-17T23:50:36.949+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T23:50:36.977+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/dataset-version-test-isolation",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+    "merge_commit_sha": "ecc10e0f7fe87b88f0e3ef78466237714025dbe8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T23:39:28.964+09:00",
+    "reference": "!206",
+    "references": {
+      "short": "!206",
+      "relative": "!206",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!206"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/206",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-17T23:39:37.932+09:00",
+    "latest_build_finished_at": "2026-09-17T23:50:36.052+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 203948,
+      "iid": 135,
+      "project_id": 1444456,
+      "sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+      "ref": "fix(be)/dataset-version-test-isolation",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T23:39:37.822+09:00",
+      "updated_at": "2026-09-17T23:50:36.058+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203948"
+    },
+    "head_pipeline": {
+      "id": 203948,
+      "iid": 135,
+      "project_id": 1444456,
+      "sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+      "ref": "fix(be)/dataset-version-test-isolation",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T23:39:37.822+09:00",
+      "updated_at": "2026-09-17T23:50:36.058+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203948",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T23:39:37.932+09:00",
+      "finished_at": "2026-09-17T23:50:36.052+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203948",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "ce337aa54cd1063f39d47e219cdc55617982fb65",
+      "head_sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+      "start_sha": "3cb0fa40da6afae9efe7947fc3826dcbdaa7793d"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "4ff441776752bd714341a4f87c750f4cc0267fa1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828947,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T23:39:28.397+09:00",
+          "updated_at": "2026-09-17T23:39:28.404+09:00",
+          "system": true,
+          "noteable_id": 949867,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 206,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b41aea7c909bf3e01a23d4970055bd18e9fcb680",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828948,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **테스트 격리 개선**: `@Transactional` 어노테이션을 추가하여 불변 트리거가 걸린 `dataset_version` 테이블에 테스트용으로 삽입된 데이터가 커밋되지 않고 롤백되도록 설계한 점이 돋보입니다. 이를 통해 공용 데이터베이스의 상태 오염을 방지하고 테스트 간 간섭을 효과적으로 차단했습니다.\n- **엄격한 단언문(Assertion) 변경**: 접두사(`startsWith`) 검사에서 정확한 일치(`isEqualTo`) 검사로 변경하여, 격리 실패 시 오염된 상태를 조기에 감지하고 다른 스펙으로의 오염 전파를 막는 방어적 코드가 잘 구현되었습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **트랜잭션 롤백 검증 시나리오**: `@Transactional`이 적용된 `prefersTheLaterRevision` 및 `ignoresIncompleteDatasets` 테스트 실행 후, 데이터베이스에 테스트용으로 삽입된 `FIXTURE` 데이터가 실제로 남아있지 않고 롤백되는지 확인합니다.\n- **격리 실패 시나리오 시뮬레이션**: `@Transactional`을 임시로 제거한 상태에서 테스트를 연달아 실행했을 때, `readsSeededCatalog`가 오염된 `_R2` 판 번호에 의해 즉시 실패(`isEqualTo` 불일치)하는지 확인하여 격리 장치가 의도대로 동작하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:599ecab53ebbcf8218373a45061197430e2e867f -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T23:39:36.930+09:00",
+          "updated_at": "2026-09-17T23:39:36.930+09:00",
+          "system": false,
+          "noteable_id": 949867,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 206,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c367efce29687d7e06b7abba911195cd13addc7f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828958,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 599ecab53ebbcf8218373a45061197430e2e867f pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T23:41:24.069+09:00",
+          "updated_at": "2026-09-17T23:41:24.072+09:00",
+          "system": true,
+          "noteable_id": 949867,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 206,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fef0104167545710dae3e850ede613fd58524b96",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828990,
+          "type": null,
+          "body": "mentioned in commit ecc10e0f7fe87b88f0e3ef78466237714025dbe8",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T23:50:36.996+09:00",
+          "updated_at": "2026-09-17T23:50:37.002+09:00",
+          "system": true,
+          "noteable_id": 949867,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 206,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2216809,
+      "head_commit_sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+      "base_commit_sha": "ce337aa54cd1063f39d47e219cdc55617982fb65",
+      "start_commit_sha": "3cb0fa40da6afae9efe7947fc3826dcbdaa7793d",
+      "created_at": "2026-09-17T23:39:28.568+09:00",
+      "merge_request_id": 949867,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "809a0e0909dd28c8b9a8e86b1a66b65c8617cf89"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2216809,
+      "head_commit_sha": "599ecab53ebbcf8218373a45061197430e2e867f",
+      "base_commit_sha": "ce337aa54cd1063f39d47e219cdc55617982fb65",
+      "start_commit_sha": "3cb0fa40da6afae9efe7947fc3826dcbdaa7793d",
+      "created_at": "2026-09-17T23:39:28.568+09:00",
+      "merge_request_id": 949867,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "809a0e0909dd28c8b9a8e86b1a66b65c8617cf89",
+      "commits": [
+        {
+          "id": "599ecab53ebbcf8218373a45061197430e2e867f",
+          "short_id": "599ecab5",
+          "created_at": "2026-09-17T23:36:32.000+09:00",
+          "parent_ids": [
+            "ce337aa54cd1063f39d47e219cdc55617982fb65"
+          ],
+          "title": "fix(be): 자료 버전을 더하는 검사를 롤백 경계 안에 둔다",
+          "message": "fix(be): 자료 버전을 더하는 검사를 롤백 경계 안에 둔다\n\nDatabaseMarketMetadataAdapterIT.prefersTheLaterRevision() 이 넣은\nFIXTURE-three_etf_24m_R2 가 공유 테스트 DB 에 그대로 남아, 뒤따르는\nResultApiIT 의 계약 예시 비교 세 건이 깨졌다. 접수 경로가\nMarketMetadataPort.currentDataVersion() 을 읽어 versions.data 에 넣으므로,\n현재 자료 버전이 바뀌면 응답이 예시와 달라진다.\n\ndataset_version 의 불변 트리거는 BEFORE UPDATE OR DELETE 라 넣은 행을\nDELETE 로 치울 수 없다. 반면 트랜잭션 롤백은 트리거를 타지 않으므로,\n검사를 롤백 경계 안에 두는 것이 이 표를 되돌리는 유일한 길이다. 어댑터의\n조회는 readOnly 전파가 REQUIRED 라 같은 트랜잭션에 참여하고, 검사는 자기가\n넣은 행을 그대로 본다.\n\n씨앗 버전 단언을 접두사에서 정확한 일치로 바꿨다. 접두사로 걸었던 까닭이\n\"_R2 가 남는 상태를 되돌릴 수 없어서\"였는데 그 전제가 사라졌고, 정확한\n일치는 격리가 풀리는 날 여기서 먼저 걸려 다른 스펙의 검사까지 번지지 않게\n막는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T23:36:32.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T23:36:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/599ecab53ebbcf8218373a45061197430e2e867f"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;\n import org.springframework.beans.factory.annotation.Autowired;\n import org.springframework.boot.test.context.SpringBootTest;\n import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.transaction.annotation.Transactional;\n \n /**\n  * 적재된 자료를 읽는 {@link DatabaseMarketMetadataAdapter} 의 동작.\n@@ -42,15 +43,16 @@ class DatabaseMarketMetadataAdapterIT extends PostgresTestSupport {\n     @Autowired private JdbcTemplate jdbcTemplate;\n \n     /**\n-     * 씨앗의 자료 버전으로 <b>시작하는지</b>만 본다.\n+     * 씨앗의 자료 버전을 <b>정확히</b> 읽는지 본다.\n      *\n-     * <p>{@code dataset_version} 에는 불변 트리거가 걸려 있어(FR-017) 검사가 넣은 행을 지울 수 없다. 아래 판 번호 검사가 {@code\n-     * _R2} 를 넣고 나면 그쪽이 현재 판이 되며, 그 상태는 되돌릴 수 없다. 그래서 정확한 일치가 아니라 접두사로 건다 — 검사 순서에 기대지 않기 위함이다.\n+     * <p>자료 버전을 더하는 아래 두 검사가 트랜잭션 롤백으로 격리되므로, 이 검사가 돌 때 공용 DB 에는 씨앗의 자료 버전만 남아 있어야 한다. 접두사가 아니라 정확한\n+     * 일치로 거는 것이 그 격리를 지키는 장치다 — 격리가 풀려 {@code _R2} 가 남으면 여기서 먼저 걸리고, 같은 자료 버전을 기대하는 다른 스펙의 검사(005\n+     * {@code ResultApiIT} 의 계약 예시 비교)까지 번지지 않는다.\n      */\n     @Test\n     @DisplayName(\"씨앗이 심은 자료 버전과 대응표를 읽는다\")\n     void readsSeededCatalog() {\n-        assertThat(adapter.currentDataVersion()).startsWith(MarketCatalogSeed.DATA_VERSION);\n+        assertThat(adapter.currentDataVersion()).isEqualTo(MarketCatalogSeed.DATA_VERSION);\n         assertThat(adapter.currentMappingVersion()).isEqualTo(MarketCatalogSeed.MAP_VERSION);\n     }\n \n@@ -110,6 +112,7 @@ class DatabaseMarketMetadataAdapterIT extends PostgresTestSupport {\n     }\n \n     @Test\n+    @Transactional\n     @DisplayName(\"같은 마감일을 다시 발행하면 나중 판을 고른다\")\n     void prefersTheLaterRevision() {\n         // 판 번호가 붙은 식별자는 이름 정렬에서 뒤에 온다(research.md 결정 4의 2026-09-17 보완).\n@@ -121,17 +124,23 @@ class DatabaseMarketMetadataAdapterIT extends PostgresTestSupport {\n     }\n \n     @Test\n+    @Transactional\n     @DisplayName(\"부분 갱신된 묶음은 고르지 않는다\")\n     void ignoresIncompleteDatasets() {\n         // 이용 한도로 중간에 끊긴 자료다(FR-014). 그것으로 낸 결과는 다음 실행과 재현되지 않는다.\n         // 마감 시각을 어느 것보다도 늦게 두어도 뽑히면 안 된다.\n         insertDatasetVersion(\"FIXTURE-incomplete\", \"2027-01-31 15:30:00+09\", false);\n \n-        assertThat(adapter.currentDataVersion()).isNotEqualTo(\"FIXTURE-incomplete\");\n-        assertThat(adapter.currentDataVersion()).startsWith(MarketCatalogSeed.DATA_VERSION);\n+        assertThat(adapter.currentDataVersion()).isEqualTo(MarketCatalogSeed.DATA_VERSION);\n     }\n \n-    /** {@code dataset_version} 은 불변 트리거 때문에 지울 수 없으므로 검사마다 다른 식별자를 쓴다. */\n+    /**\n+     * 검사용 자료 버전을 하나 넣는다. <b>부르는 검사는 {@code @Transactional} 이어야 한다.</b>\n+     *\n+     * <p>{@code dataset_version} 에는 불변 트리거가 걸려 있어(FR-017) 한 번 커밋된 행은 DELETE 로 치울 수 없다. 반면 트랜잭션 롤백은\n+     * 트리거를 타지 않으므로, 검사를 롤백 경계 안에 두는 것이 이 표를 되돌리는 유일한 길이다. 롤백하지 않으면 여기서 넣은 행이 공용 DB 에 그대로 남아 뒤따르는\n+     * 검사의 현재 자료 버전을 바꿔 놓는다.\n+     */\n     private void insertDatasetVersion(String datasetId, String deadline, boolean complete) {\n         jdbcTemplate.update(\n                 \"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/marketdata/DatabaseMarketMetadataAdapterIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/marketdata/DatabaseMarketMetadataAdapterIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2828948": []
+  }
+}

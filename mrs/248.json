@@ -1,0 +1,1456 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952921,
+    "iid": 248,
+    "project_id": 1444456,
+    "title": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다",
+    "description": "## 작업 내용 요약\n\n004 저장 결과만으로 011 사후 구간 입력을 정확히 만들 수 있는지 독립 계산으로 대조해 통과했다. 이로써 M1b 계산 픽스처를 동결하고 M2에 착수할 수 있다. 작업 메시지 계약의 `inputs`를 확정 모양 하나로 합치고 수량 이월 규칙을 고정했다. 363의 나머지(픽스처 7개·양쪽 모델·토폴로지 상수)는 이 대조 위에서 이어간다.\n\n## 관련 티켓\n\nS15P21E205-363\n\n## 주요 변경 사항\n\n- `RegimeLinkJob.inputs`가 확정 모양이 됐다. `weightsSeries`를 빼고 `openingPositions`· `dailyPositions`·개별 체결 모양의 `trades`·`cashFlows`를 담으며, \"검증 전 동결 금지\" 표시를 걷었다.\n- 수량 이월을 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 덮어쓴다\"로 고정했다. 스냅샷은 그날 보유 전체이고 수량 0인 종목이 빠져 있어, 부분 갱신으로 구현하면 체결 없이 0이 된 보유가 남는다.\n- 대조 절차를 `worker/scripts/regime_link_input_check.py`에 남겼고 근거와 수치는 research R3에 있다.\n- 대조 결과 tasks에 후속 다섯 건(T095\\~T099)이 생겼고, 그중 계약·plan을 고치는 두 건은 이 MR에서 처리했다.\n\n## 테스트\n\n`cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` → 425개 통과.\n\n`uv run --no-sync python scripts/regime_link_input_check.py` → 22개 구간에서 시작 직전 평가액·일별 평가액·현금·자산·종목 구간 손익 합이 모두 차 0. 같은 스크립트를 `--ignore-split-snapshot`으로 돌리면 9개 구간이 어긋나, 기업행위일 스냅샷이 없으면 안 된다는 것이 대조군으로 남는다.\n\n## 리뷰 포인트\n\n- 이월을 덮어쓰기로 정한 것. 스냅샷에 없는 종목을 그날 보유 0으로 보는 해석이 맞는지.\n- 계약 예시의 비용 숫자를 `KR-ETF-2026-09`로 검산 가능하게 바꿨다. 011 계약 예시가 특정 비용 프로필 버전을 참조해도 되는지.\n- 백엔드 쪽 후속(T098·T099)을 363이 아니라 366·367에서 처리하는 것이 맞는지.",
+    "state": "merged",
+    "created_at": "2026-09-20T16:33:08.493+09:00",
+    "updated_at": "2026-09-20T23:17:45.961+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T23:17:45.609+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/363-regime-link-contract",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+    "merge_commit_sha": "10ee741a78ed675fd47ce699ca2d966e6a70a3aa",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T16:33:09.867+09:00",
+    "reference": "!248",
+    "references": {
+      "short": "!248",
+      "relative": "!248",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!248"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/248",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952921,
+    "iid": 248,
+    "project_id": 1444456,
+    "title": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다",
+    "description": "## 작업 내용 요약\n\n004 저장 결과만으로 011 사후 구간 입력을 정확히 만들 수 있는지 독립 계산으로 대조해 통과했다. 이로써 M1b 계산 픽스처를 동결하고 M2에 착수할 수 있다. 작업 메시지 계약의 `inputs`를 확정 모양 하나로 합치고 수량 이월 규칙을 고정했다. 363의 나머지(픽스처 7개·양쪽 모델·토폴로지 상수)는 이 대조 위에서 이어간다.\n\n## 관련 티켓\n\nS15P21E205-363\n\n## 주요 변경 사항\n\n- `RegimeLinkJob.inputs`가 확정 모양이 됐다. `weightsSeries`를 빼고 `openingPositions`· `dailyPositions`·개별 체결 모양의 `trades`·`cashFlows`를 담으며, \"검증 전 동결 금지\" 표시를 걷었다.\n- 수량 이월을 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 덮어쓴다\"로 고정했다. 스냅샷은 그날 보유 전체이고 수량 0인 종목이 빠져 있어, 부분 갱신으로 구현하면 체결 없이 0이 된 보유가 남는다.\n- 대조 절차를 `worker/scripts/regime_link_input_check.py`에 남겼고 근거와 수치는 research R3에 있다.\n- 대조 결과 tasks에 후속 다섯 건(T095\\~T099)이 생겼고, 그중 계약·plan을 고치는 두 건은 이 MR에서 처리했다.\n\n## 테스트\n\n`cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` → 425개 통과.\n\n`uv run --no-sync python scripts/regime_link_input_check.py` → 22개 구간에서 시작 직전 평가액·일별 평가액·현금·자산·종목 구간 손익 합이 모두 차 0. 같은 스크립트를 `--ignore-split-snapshot`으로 돌리면 9개 구간이 어긋나, 기업행위일 스냅샷이 없으면 안 된다는 것이 대조군으로 남는다.\n\n## 리뷰 포인트\n\n- 이월을 덮어쓰기로 정한 것. 스냅샷에 없는 종목을 그날 보유 0으로 보는 해석이 맞는지.\n- 계약 예시의 비용 숫자를 `KR-ETF-2026-09`로 검산 가능하게 바꿨다. 011 계약 예시가 특정 비용 프로필 버전을 참조해도 되는지.\n- 백엔드 쪽 후속(T098·T099)을 363이 아니라 366·367에서 처리하는 것이 맞는지.",
+    "state": "merged",
+    "created_at": "2026-09-20T16:33:08.493+09:00",
+    "updated_at": "2026-09-20T23:17:45.961+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T23:17:45.609+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/363-regime-link-contract",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+    "merge_commit_sha": "10ee741a78ed675fd47ce699ca2d966e6a70a3aa",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T16:33:09.867+09:00",
+    "reference": "!248",
+    "references": {
+      "short": "!248",
+      "relative": "!248",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!248"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/248",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "14",
+    "latest_build_started_at": "2026-09-20T23:08:03.805+09:00",
+    "latest_build_finished_at": "2026-09-20T23:09:17.011+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 210209,
+      "iid": 225,
+      "project_id": 1444456,
+      "sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "ref": "feat(be)/363-regime-link-contract",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T23:08:03.689+09:00",
+      "updated_at": "2026-09-20T23:09:17.018+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/210209"
+    },
+    "head_pipeline": {
+      "id": 210209,
+      "iid": 225,
+      "project_id": 1444456,
+      "sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "ref": "feat(be)/363-regime-link-contract",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T23:08:03.689+09:00",
+      "updated_at": "2026-09-20T23:09:17.018+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/210209",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-20T23:08:03.805+09:00",
+      "finished_at": "2026-09-20T23:09:17.011+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/210209",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "head_sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "start_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "6287ca54b8b23f51cb78544950b4a14fb49f1ba4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841377,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:33:08.595+09:00",
+          "updated_at": "2026-09-20T16:33:08.601+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2404060046460692cd537707c1bff827b60fe824",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841378,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:33:08.619+09:00",
+          "updated_at": "2026-09-20T16:33:08.628+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ec8b2042eaa3f502f1d551efa91c8624022088d2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841379,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 제공된 GitLab Merge Request 및 변경 사항은 004 저장 결과와 011 사후 구간 입력 간 독립 계산 대조(T000), 메시지 계약 픽스처 동결, 그리고 수량 이월 규칙(체결 누적 + 스냅샷 덮어쓰기)의 정합성을 명확히 검증하고 문서화하고 있습니다. Python 스타일 및 타입 체크(Ruff, Pytest 425개 통과)도 안정적으로 수행되었습니다.\n\n### 테스트 제안\n- **스냅샷 덮어쓰기 정합성 테스트**: `--ignore-split-snapshot` 옵션을 사용했을 때 기업행위(분할 등)가 포함된 구간에서 의도대로 9개 구간 이상이 어긋나는지 확인하는 회귀 테스트가 지속적으로 유지되는지 확인하세요.\n- **예외 케이스 입력 검증 테스트**: `inputs.portfolioSeries` 또는 필수 날짜 행이 누락되었을 때 워커가 0으로 채우지 않고 `INPUT_INCOMPLETE` 예외를 정확히 발생시키는지 검증하는 시나리오를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T16:33:17.722+09:00",
+          "updated_at": "2026-09-20T23:07:58.466+09:00",
+          "system": false,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5ac29b8c1acd2e5685c031254edaefcf8676a437",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841380,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 965a173b4b824e2333b69b3952f11c14b6650641 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:33:22.120+09:00",
+          "updated_at": "2026-09-20T16:33:22.123+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0df3ae8f33a0bfd77b09417a70b6d15f793dce97",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841381,
+          "type": null,
+          "body": "canceled the automatic merge",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:33:33.572+09:00",
+          "updated_at": "2026-09-20T16:33:33.575+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "aadf36a5ae5c7a00b5ffadbb2c47af1ff67e84dd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841383,
+          "type": null,
+          "body": "marked this merge request as **draft**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:34:47.696+09:00",
+          "updated_at": "2026-09-20T16:34:47.700+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9a6083ebd8242937252b263eeeb98b6daa62c862",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841414,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>14fb4af3 - docs(be): 011 메시지 계약 픽스처 일곱 개와 README를 만든다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/248/diffs?diff_id=2227236&start_sha=965a173b4b824e2333b69b3952f11c14b6650641)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:42:22.415+09:00",
+          "updated_at": "2026-09-20T16:42:22.418+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f71bcc7d58e684afd9e016e6796f959f580dd257",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842527,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 14fb4af3c72832eefd041d2db42a445ccedb0c12 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:30:23.387+09:00",
+          "updated_at": "2026-09-20T22:30:23.390+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "613d782a86f95e568357f53105194f43dbd96cae",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842528,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:30:37.973+09:00",
+          "updated_at": "2026-09-20T22:30:37.973+09:00",
+          "system": false,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7abf2d2511d6b14b6a3f9fe0d42b07b79c450eb1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842533,
+          "type": null,
+          "body": "marked this merge request as **ready**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:32:01.997+09:00",
+          "updated_at": "2026-09-20T22:32:02.000+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d42b4c4f3692772f11f0235a92136851bff351ae",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842631,
+          "type": null,
+          "body": "aborted the automatic merge because the source branch was updated. [Learn more](https://lab.ssafy.com/help/ci/pipelines/merge_trains.md#merge-request-dropped-from-the-merge-train).",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T23:07:49.815+09:00",
+          "updated_at": "2026-09-20T23:07:49.820+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6eedca51cfb3f23932dbae9f0c6a65372655f8b0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842632,
+          "type": null,
+          "body": "added 20 commits\n\n<ul><li>14fb4af3...aa48fd5f - 19 commits from branch <code>dev</code></li><li>d1654d8e - Merge branch &#39;dev&#39; into feat(be)/363-regime-link-contract</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/248/diffs?diff_id=2228264&start_sha=14fb4af3c72832eefd041d2db42a445ccedb0c12)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T23:07:49.896+09:00",
+          "updated_at": "2026-09-20T23:07:49.900+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d76b4411827658b0c01f0baa3666cf8157279eba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842677,
+          "type": null,
+          "body": "mentioned in commit 10ee741a78ed675fd47ce699ca2d966e6a70a3aa",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T23:17:45.587+09:00",
+          "updated_at": "2026-09-20T23:17:45.592+09:00",
+          "system": true,
+          "noteable_id": 952921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 248,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2228264,
+      "head_commit_sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "base_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "start_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "created_at": "2026-09-20T23:07:49.538+09:00",
+      "merge_request_id": 952921,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "70e4af63dcdddc38179a69bcf1846239fcdb5fdf"
+    },
+    {
+      "id": 2227236,
+      "head_commit_sha": "14fb4af3c72832eefd041d2db42a445ccedb0c12",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:42:22.135+09:00",
+      "merge_request_id": 952921,
+      "state": "without_files",
+      "real_size": "14",
+      "patch_id_sha": "6a1da445395d7af40347aa5e1f1c218d036aeeab"
+    },
+    {
+      "id": 2227208,
+      "head_commit_sha": "965a173b4b824e2333b69b3952f11c14b6650641",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:33:08.951+09:00",
+      "merge_request_id": 952921,
+      "state": "without_files",
+      "real_size": "5",
+      "patch_id_sha": "68d9e9737ef635a114eba5ad280023efc4a6f1c5"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2228264,
+      "head_commit_sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "base_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "start_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "created_at": "2026-09-20T23:07:49.538+09:00",
+      "merge_request_id": 952921,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "70e4af63dcdddc38179a69bcf1846239fcdb5fdf",
+      "commits": [
+        {
+          "id": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+          "short_id": "d1654d8e",
+          "created_at": "2026-09-20T23:07:37.000+09:00",
+          "parent_ids": [
+            "14fb4af3c72832eefd041d2db42a445ccedb0c12",
+            "aa48fd5f424d422e75e806d89f37b58bbfbe8557"
+          ],
+          "title": "Merge branch 'dev' into feat(be)/363-regime-link-contract",
+          "message": "Merge branch 'dev' into feat(be)/363-regime-link-contract\n\n362 가 dev 에 들어오며 같은 문서를 고쳐 충돌했다.\n\ntasks 는 363 이 끝낸 T000·T001 과 362 가 끝낸 T002~T004 를 모두 완료로 두었다.\nConvergence 번호는 dev 가 먼저 T095~T099 를 차지했으므로 363 이 붙인 다섯 건을\nT100~T104 로 옮기고 Phase 13·14 로 두었다.\n\n메시징 계약은 dev 가 더한 \"시계열과 목록은 구간 전체를 담는다\" 규칙이 이 브랜치에서\n없앤 weightsSeries 를 가리켜 그 참조를 걷었고, 같은 규칙대로 결과 픽스처의 holdings 를\n구간 전체(일별 평가액 ÷ 자산)로 다시 만들었다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T23:07:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T23:07:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785"
+        },
+        {
+          "id": "14fb4af3c72832eefd041d2db42a445ccedb0c12",
+          "short_id": "14fb4af3",
+          "created_at": "2026-09-20T16:42:13.000+09:00",
+          "parent_ids": [
+            "965a173b4b824e2333b69b3952f11c14b6650641"
+          ],
+          "title": "docs(be): 011 메시지 계약 픽스처 일곱 개와 README를 만든다",
+          "message": "docs(be): 011 메시지 계약 픽스처 일곱 개와 README를 만든다\n\n백엔드와 워커가 같은 파일로 round-trip 을 검증하도록 작업 셋(연속 운용·현금 시작·\n구간 안 상장폐지)과 이벤트 넷을 두었다. 수치는 생성기가 실제 현금 회계로 만들어\n행 범위·비용 관계·체결과 분배금만으로의 현금 재구성이 성립한다.\n\n결과 이벤트의 result 는 형식 예시다. 구간 산식의 기대값 대조는 T014 가 워커를\nimport 하지 않는 독립 계산으로 따로 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:42:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:42:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14fb4af3c72832eefd041d2db42a445ccedb0c12"
+        },
+        {
+          "id": "965a173b4b824e2333b69b3952f11c14b6650641",
+          "short_id": "965a173b",
+          "created_at": "2026-09-20T16:31:06.000+09:00",
+          "parent_ids": [
+            "e94955268acdec173c5bfe8145aafa0f38eee704",
+            "d718603dacb0aa87b1a5413a8799fc41654a71af"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/363-regime-link-contract",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/363-regime-link-contract\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:31:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:31:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/965a173b4b824e2333b69b3952f11c14b6650641"
+        },
+        {
+          "id": "e94955268acdec173c5bfe8145aafa0f38eee704",
+          "short_id": "e9495526",
+          "created_at": "2026-09-20T16:29:38.000+09:00",
+          "parent_ids": [
+            "e6dd93113499a9e919526325a4afd6466be7d886"
+          ],
+          "title": "fix(be): 코드리뷰에서 나온 여섯 건을 고친다",
+          "message": "fix(be): 코드리뷰에서 나온 여섯 건을 고친다\n\n- 이월이 덮어쓰기임을 계약에 적었다. 스냅샷은 그날 보유 전체이고 수량 0인 종목이\n  빠져 있어, 부분 갱신으로 읽으면 체결 없이 0이 된 보유가 계속 남는다\n- 부분 매도 판정을 매도 직전 수량이 아니라 잔량으로 바꿨다. 분할이 든 날의 직전\n  수량은 체결만으로 알 수 없어 절반으로 보고하고 있었다\n- 입력 trades와 결과 trades가 이름만 같고 모양이 다름을 명시했다\n- 예시 체결의 가격·비용을 costs.py 규칙으로 검산되게 맞추고 근거를 적었다\n- 종가 조회에 없는 종목·날짜를 알려주는 방어를 넣었다\n- 대조 규모 표현이 곱셈으로 읽히지 않게 고쳤다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:29:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:29:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e94955268acdec173c5bfe8145aafa0f38eee704"
+        },
+        {
+          "id": "e6dd93113499a9e919526325a4afd6466be7d886",
+          "short_id": "e6dd9311",
+          "created_at": "2026-09-20T14:32:06.000+09:00",
+          "parent_ids": [
+            "2273e901c89558761aee72dd791947b98d7b8882"
+          ],
+          "title": "docs(be): spec 011 tasks에 계약 정리로 드러난 남은 일 두 가지를 더한다",
+          "message": "docs(be): spec 011 tasks에 계약 정리로 드러난 남은 일 두 가지를 더한다\n\n워커 이월 규칙을 계약에 넣고 보니 그 입력을 만드는 쪽에 대응하는 의무가 없었다.\n- T098 백엔드가 구간 안 스냅샷을 빠짐없이 담는 것을 조립 의무로 고정한다\n- T099 T031의 크기 상한 기준이 계약과 어긋난다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:32:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:32:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6dd93113499a9e919526325a4afd6466be7d886"
+        },
+        {
+          "id": "2273e901c89558761aee72dd791947b98d7b8882",
+          "short_id": "2273e901",
+          "created_at": "2026-09-20T14:30:11.000+09:00",
+          "parent_ids": [
+            "cbf6ef9a103a1687c36294c49aa7af40565bc2a6"
+          ],
+          "title": "docs(be): 011 메시지 계약을 확정 입력 모양으로 정리하고 수량 이월 규칙을 넣는다",
+          "message": "docs(be): 011 메시지 계약을 확정 입력 모양으로 정리하고 수량 이월 규칙을 넣는다\n\nT000 대조가 끝나 계산 계약을 동결할 수 있으므로, 작업 메시지의 inputs를\n축약 예시가 아니라 확정 모양 하나로 합치고 게이트 문구를 통과 상태로 고쳤다.\n\n수량 이월은 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다\"로 고정했다.\n체결만 누적하면 분할 같은 기업행위가 든 날부터 수량이 틀리는데 종목 손익\n항등식으로는 잡히지 않는다. 같은 경우를 T014 대조 사례와 T015 검증에 더했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:30:11.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:30:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2273e901c89558761aee72dd791947b98d7b8882"
+        },
+        {
+          "id": "cbf6ef9a103a1687c36294c49aa7af40565bc2a6",
+          "short_id": "cbf6ef9a",
+          "created_at": "2026-09-20T14:25:26.000+09:00",
+          "parent_ids": [
+            "8d1b64290503ec73ff6a3f5d4d08caa9a0bac720"
+          ],
+          "title": "docs(be): spec 011 tasks에 G0 대조로 드러난 남은 일 세 가지를 더한다",
+          "message": "docs(be): spec 011 tasks에 G0 대조로 드러난 남은 일 세 가지를 더한다\n\n입력 확보 대조를 마치고 남은 것만 Convergence로 더했다.\n- T095 기업행위로 바뀐 수량은 스냅샷으로 맞춘다는 규칙이 계약·태스크에 없다\n- T096 게이트 통과 상태를 계약 제목과 plan 문장에 반영한다\n- T097 T000 검증 스크립트의 거처를 T014 뒤에 정한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:25:26.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:25:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cbf6ef9a103a1687c36294c49aa7af40565bc2a6"
+        },
+        {
+          "id": "8d1b64290503ec73ff6a3f5d4d08caa9a0bac720",
+          "short_id": "8d1b6429",
+          "created_at": "2026-09-20T14:25:17.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다",
+          "message": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다\n\n011이 받을 입력만으로 사후 구간을 다시 세어 004 회계와 맞는지 확인했다.\n전략 여섯 × 구간 22개에서 시작 직전 평가액·일별 평가액/현금/자산·종목\n구간 손익 합이 모두 차 0이라 입력 확보 게이트를 통과했다.\n\n분할은 체결로 이월되지 않아 004 보유 스냅샷이 필요하다는 것도 함께 확인해\nresearch R3에 남겼다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:25:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:25:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8d1b64290503ec73ff6a3f5d4d08caa9a0bac720"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,622 @@\n+{\n+  \"schemaVersion\": 1,\n+  \"eventId\": \"EVT-RL-000002\",\n+  \"linkId\": \"RL-20260918-000101\",\n+  \"attempt\": 1,\n+  \"type\": \"FINISHED\",\n+  \"occurredAt\": \"2026-09-18T02:00:03Z\",\n+  \"payload\": {\n+    \"status\": \"COMPLETED\",\n+    \"partial\": false,\n+    \"result\": {\n+      \"window63\": {\n+        \"tradingDays\": 63,\n+        \"return\": \"0.0276\",\n+        \"maxDrawdown\": \"-0.0074\",\n+        \"tradeCount\": 4,\n+        \"tradesPerMonth\": \"1.33\",\n+        \"turnover\": \"0.0645\",\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {\n+          \"commission\": \"54.11\",\n+          \"spread\": \"108.22\",\n+          \"slippage\": \"180.37\",\n+          \"tax\": \"0.00\",\n+          \"total\": \"342.70\"\n+        },\n+        \"lossContribution\": {\n+          \"SEMICONDUCTOR\": \"0.62000000\",\n+          \"BATTERY\": \"0.21000000\",\n+          \"BIO\": \"0.17000000\"\n+        },\n+        \"complete\": true\n+      },\n+      \"window21\": {\n+        \"tradingDays\": 21,\n+        \"return\": \"0.0044\",\n+        \"maxDrawdown\": \"-0.0066\",\n+        \"tradeCount\": 2,\n+        \"tradesPerMonth\": \"2.00\",\n+        \"turnover\": \"0.1162\",\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {\n+          \"commission\": \"32.26\",\n+          \"spread\": \"64.52\",\n+          \"slippage\": \"107.54\",\n+          \"tax\": \"0.00\",\n+          \"total\": \"204.32\"\n+        },\n+        \"lossContribution\": {\n+          \"SEMICONDUCTOR\": \"0.62000000\",\n+          \"BATTERY\": \"0.21000000\",\n+          \"BIO\": \"0.17000000\"\n+        },\n+        \"complete\": true\n+      },\n+      \"holdings\": [\n+        {\n+          \"date\": \"2012-04-02\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3760\",\n+            \"244580.XKRX\": \"0.2614\",\n+            \"305720.XKRX\": \"0.2542\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-03\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3771\",\n+            \"244580.XKRX\": \"0.2607\",\n+            \"305720.XKRX\": \"0.2539\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-04\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3785\",\n+            \"244580.XKRX\": \"0.2605\",\n+            \"305720.XKRX\": \"0.2527\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-05\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3775\",\n+            \"244580.XKRX\": \"0.2608\",\n+            \"305720.XKRX\": \"0.2535\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-06\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3759\",\n+            \"244580.XKRX\": \"0.2618\",\n+            \"305720.XKRX\": \"0.2543\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-09\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3772\",\n+            \"244580.XKRX\": \"0.2608\",\n+            \"305720.XKRX\": \"0.2538\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-10\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3768\",\n+            \"244580.XKRX\": \"0.2612\",\n+            \"305720.XKRX\": \"0.2540\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-11\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3774\",\n+            \"244580.XKRX\": \"0.2613\",\n+            \"305720.XKRX\": \"0.2531\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-12\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3776\",\n+            \"244580.XKRX\": \"0.2600\",\n+            \"305720.XKRX\": \"0.2541\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-13\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3772\",\n+            \"244580.XKRX\": \"0.2613\",\n+            \"305720.XKRX\": \"0.2533\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-16\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3766\",\n+            \"244580.XKRX\": \"0.2623\",\n+            \"305720.XKRX\": \"0.2532\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-17\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3757\",\n+            \"244580.XKRX\": \"0.2624\",\n+            \"305720.XKRX\": \"0.2538\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-18\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3753\",\n+            \"244580.XKRX\": \"0.2612\",\n+            \"305720.XKRX\": \"0.2553\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-19\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3759\",\n+            \"244580.XKRX\": \"0.2623\",\n+            \"305720.XKRX\": \"0.2537\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-20\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3760\",\n+            \"244580.XKRX\": \"0.2610\",\n+            \"305720.XKRX\": \"0.2548\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-23\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3754\",\n+            \"244580.XKRX\": \"0.2617\",\n+            \"305720.XKRX\": \"0.2550\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-24\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3756\",\n+            \"244580.XKRX\": \"0.2616\",\n+            \"305720.XKRX\": \"0.2551\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-25\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3747\",\n+            \"244580.XKRX\": \"0.2628\",\n+            \"305720.XKRX\": \"0.2551\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-26\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3746\",\n+            \"244580.XKRX\": \"0.2619\",\n+            \"305720.XKRX\": \"0.2558\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-27\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3745\",\n+            \"244580.XKRX\": \"0.2612\",\n+            \"305720.XKRX\": \"0.2563\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-30\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3618\",\n+            \"244580.XKRX\": \"0.2598\",\n+            \"305720.XKRX\": \"0.2645\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-01\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3609\",\n+            \"244580.XKRX\": \"0.2605\",\n+            \"305720.XKRX\": \"0.2649\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-02\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3618\",\n+            \"244580.XKRX\": \"0.2595\",\n+            \"305720.XKRX\": \"0.2648\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-03\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3607\",\n+            \"244580.XKRX\": \"0.2606\",\n+            \"305720.XKRX\": \"0.2650\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-04\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3605\",\n+            \"244580.XKRX\": \"0.2600\",\n+            \"305720.XKRX\": \"0.2660\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-07\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3615\",\n+            \"244580.XKRX\": \"0.2596\",\n+            \"305720.XKRX\": \"0.2652\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-08\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3619\",\n+            \"244580.XKRX\": \"0.2594\",\n+            \"305720.XKRX\": \"0.2650\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-09\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3620\",\n+            \"244580.XKRX\": \"0.2588\",\n+            \"305720.XKRX\": \"0.2658\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-10\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3620\",\n+            \"244580.XKRX\": \"0.2594\",\n+            \"305720.XKRX\": \"0.2650\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-11\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3627\",\n+            \"244580.XKRX\": \"0.2585\",\n+            \"305720.XKRX\": \"0.2649\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-14\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3636\",\n+            \"244580.XKRX\": \"0.2575\",\n+            \"305720.XKRX\": \"0.2651\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-15\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3650\",\n+            \"244580.XKRX\": \"0.2565\",\n+            \"305720.XKRX\": \"0.2646\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-16\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3641\",\n+            \"244580.XKRX\": \"0.2586\",\n+            \"305720.XKRX\": \"0.2640\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-17\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3654\",\n+            \"244580.XKRX\": \"0.2565\",\n+            \"305720.XKRX\": \"0.2644\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-18\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3643\",\n+            \"244580.XKRX\": \"0.2585\",\n+            \"305720.XKRX\": \"0.2639\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-21\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3647\",\n+            \"244580.XKRX\": \"0.2592\",\n+            \"305720.XKRX\": \"0.2629\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-22\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3638\",\n+            \"244580.XKRX\": \"0.2597\",\n+            \"305720.XKRX\": \"0.2635\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-23\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3634\",\n+            \"244580.XKRX\": \"0.2615\",\n+            \"305720.XKRX\": \"0.2624\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-24\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3646\",\n+            \"244580.XKRX\": \"0.2587\",\n+            \"305720.XKRX\": \"0.2636\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-25\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3667\",\n+            \"244580.XKRX\": \"0.2567\",\n+            \"305720.XKRX\": \"0.2633\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-28\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3658\",\n+            \"244580.XKRX\": \"0.2583\",\n+            \"305720.XKRX\": \"0.2627\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-29\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3698\",\n+            \"244580.XKRX\": \"0.2540\",\n+            \"305720.XKRX\": \"0.2630\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-30\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3688\",\n+            \"244580.XKRX\": \"0.2558\",\n+            \"305720.XKRX\": \"0.2621\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-31\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3696\",\n+            \"244580.XKRX\": \"0.2532\",\n+            \"305720.XKRX\": \"0.2637\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-01\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3686\",\n+            \"244580.XKRX\": \"0.2559\",\n+            \"305720.XKRX\": \"0.2625\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-04\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3682\",\n+            \"244580.XKRX\": \"0.2568\",\n+            \"305720.XKRX\": \"0.2607\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-05\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3696\",\n+            \"244580.XKRX\": \"0.2562\",\n+            \"305720.XKRX\": \"0.2599\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-06\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3688\",\n+            \"244580.XKRX\": \"0.2582\",\n+            \"305720.XKRX\": \"0.2591\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-07\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3696\",\n+            \"244580.XKRX\": \"0.2576\",\n+            \"305720.XKRX\": \"0.2590\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-08\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3680\",\n+            \"244580.XKRX\": \"0.2599\",\n+            \"305720.XKRX\": \"0.2585\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-11\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3674\",\n+            \"244580.XKRX\": \"0.2622\",\n+            \"305720.XKRX\": \"0.2574\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-12\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3666\",\n+            \"244580.XKRX\": \"0.2645\",\n+            \"305720.XKRX\": \"0.2561\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-13\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3668\",\n+            \"244580.XKRX\": \"0.2632\",\n+            \"305720.XKRX\": \"0.2570\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-14\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3662\",\n+            \"244580.XKRX\": \"0.2646\",\n+            \"305720.XKRX\": \"0.2561\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-15\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3666\",\n+            \"244580.XKRX\": \"0.2637\",\n+            \"305720.XKRX\": \"0.2563\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-18\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3648\",\n+            \"244580.XKRX\": \"0.2662\",\n+            \"305720.XKRX\": \"0.2561\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-19\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3653\",\n+            \"244580.XKRX\": \"0.2652\",\n+            \"305720.XKRX\": \"0.2564\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-20\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3646\",\n+            \"244580.XKRX\": \"0.2666\",\n+            \"305720.XKRX\": \"0.2556\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-21\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3643\",\n+            \"244580.XKRX\": \"0.2682\",\n+            \"305720.XKRX\": \"0.2549\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-22\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3633\",\n+            \"244580.XKRX\": \"0.2702\",\n+            \"305720.XKRX\": \"0.2541\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-25\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3636\",\n+            \"244580.XKRX\": \"0.2683\",\n+            \"305720.XKRX\": \"0.2552\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-26\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3636\",\n+            \"244580.XKRX\": \"0.2684\",\n+            \"305720.XKRX\": \"0.2549\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-27\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3652\",\n+            \"244580.XKRX\": \"0.2676\",\n+            \"305720.XKRX\": \"0.2540\"\n+          }\n+        }\n+      ],\n+      \"trades\": [\n+        {\n+          \"date\": \"2012-04-30\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 6,\n+          \"price\": \"23196.43\",\n+          \"cost\": \"132.33\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-04-30\",\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 4,\n+          \"price\": \"18958.15\",\n+          \"cost\": \"71.99\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-05-29\",\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 12,\n+          \"price\": \"6254.99\",\n+          \"cost\": \"71.37\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-05-29\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 3,\n+          \"price\": \"23528.81\",\n+          \"cost\": \"67.01\",\n+          \"reason\": \"REBALANCE\"\n+        }\n+      ],\n+      \"kospi\": {\n+        \"window63\": {\n+          \"return\": \"0.0180\",\n+          \"maxDrawdown\": \"-0.0420\"\n+        },\n+        \"window21\": {\n+          \"return\": \"0.0050\",\n+          \"maxDrawdown\": \"-0.0150\"\n+        }\n+      },\n+      \"basis\": {\n+        \"kind\": \"HISTORICAL_REVISION\",\n+        \"dataVersion\": \"KRX-2026-09-09\",\n+        \"datasetId\": \"KRX_DAILY_20260915\",\n+        \"analyticsMethod\": \"ANALYTICS-1\"\n+      },\n+      \"inputDigest\": \"6d09df2f307dabfcdf2e8523f988c3cadfe805ddf245f0bc2bde5214d4e54078\"\n+    },\n+    \"resource\": {\n+      \"wallSeconds\": \"3.41\"\n+    }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/event-finished-completed.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/event-finished-completed.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+{\n+  \"schemaVersion\": 1,\n+  \"eventId\": \"EVT-RL-000004\",\n+  \"linkId\": \"RL-20260918-000102\",\n+  \"attempt\": 1,\n+  \"type\": \"FINISHED\",\n+  \"occurredAt\": \"2026-09-18T02:02:11Z\",\n+  \"payload\": {\n+    \"status\": \"FAILED\",\n+    \"partial\": false,\n+    \"error\": {\n+      \"code\": \"INPUT_INCOMPLETE\",\n+      \"message\": \"portfolioSeries 에 baselineDate 행이 없다\"\n+    },\n+    \"resource\": {\n+      \"wallSeconds\": \"0.12\"\n+    }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/event-finished-failed.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/event-finished-failed.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,519 @@\n+{\n+  \"schemaVersion\": 1,\n+  \"eventId\": \"EVT-RL-000003\",\n+  \"linkId\": \"RL-20260918-000103\",\n+  \"attempt\": 1,\n+  \"type\": \"FINISHED\",\n+  \"occurredAt\": \"2026-09-18T02:01:07Z\",\n+  \"payload\": {\n+    \"status\": \"COMPLETED\",\n+    \"partial\": true,\n+    \"delistedOn\": \"2012-06-11\",\n+    \"result\": {\n+      \"window63\": {\n+        \"tradingDays\": 50,\n+        \"return\": \"0.0238\",\n+        \"maxDrawdown\": \"-0.0074\",\n+        \"tradeCount\": 4,\n+        \"tradesPerMonth\": \"1.68\",\n+        \"turnover\": \"0.0816\",\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {\n+          \"commission\": \"54.11\",\n+          \"spread\": \"108.22\",\n+          \"slippage\": \"180.37\",\n+          \"tax\": \"0.00\",\n+          \"total\": \"342.70\"\n+        },\n+        \"lossContribution\": {\n+          \"SEMICONDUCTOR\": \"0.62000000\",\n+          \"BATTERY\": \"0.21000000\",\n+          \"BIO\": \"0.17000000\"\n+        },\n+        \"complete\": false\n+      },\n+      \"window21\": {\n+        \"tradingDays\": 21,\n+        \"return\": \"0.0044\",\n+        \"maxDrawdown\": \"-0.0066\",\n+        \"tradeCount\": 2,\n+        \"tradesPerMonth\": \"2.00\",\n+        \"turnover\": \"0.1162\",\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {\n+          \"commission\": \"32.26\",\n+          \"spread\": \"64.52\",\n+          \"slippage\": \"107.54\",\n+          \"tax\": \"0.00\",\n+          \"total\": \"204.32\"\n+        },\n+        \"lossContribution\": {\n+          \"SEMICONDUCTOR\": \"0.62000000\",\n+          \"BATTERY\": \"0.21000000\",\n+          \"BIO\": \"0.17000000\"\n+        },\n+        \"complete\": true\n+      },\n+      \"holdings\": [\n+        {\n+          \"date\": \"2012-04-02\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3760\",\n+            \"244580.XKRX\": \"0.2614\",\n+            \"305720.XKRX\": \"0.2542\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-03\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3771\",\n+            \"244580.XKRX\": \"0.2607\",\n+            \"305720.XKRX\": \"0.2539\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-04\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3785\",\n+            \"244580.XKRX\": \"0.2605\",\n+            \"305720.XKRX\": \"0.2527\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-05\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3775\",\n+            \"244580.XKRX\": \"0.2608\",\n+            \"305720.XKRX\": \"0.2535\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-06\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3759\",\n+            \"244580.XKRX\": \"0.2618\",\n+            \"305720.XKRX\": \"0.2543\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-09\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3772\",\n+            \"244580.XKRX\": \"0.2608\",\n+            \"305720.XKRX\": \"0.2538\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-10\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3768\",\n+            \"244580.XKRX\": \"0.2612\",\n+            \"305720.XKRX\": \"0.2540\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-11\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3774\",\n+            \"244580.XKRX\": \"0.2613\",\n+            \"305720.XKRX\": \"0.2531\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-12\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3776\",\n+            \"244580.XKRX\": \"0.2600\",\n+            \"305720.XKRX\": \"0.2541\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-13\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3772\",\n+            \"244580.XKRX\": \"0.2613\",\n+            \"305720.XKRX\": \"0.2533\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-16\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3766\",\n+            \"244580.XKRX\": \"0.2623\",\n+            \"305720.XKRX\": \"0.2532\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-17\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3757\",\n+            \"244580.XKRX\": \"0.2624\",\n+            \"305720.XKRX\": \"0.2538\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-18\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3753\",\n+            \"244580.XKRX\": \"0.2612\",\n+            \"305720.XKRX\": \"0.2553\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-19\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3759\",\n+            \"244580.XKRX\": \"0.2623\",\n+            \"305720.XKRX\": \"0.2537\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-20\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3760\",\n+            \"244580.XKRX\": \"0.2610\",\n+            \"305720.XKRX\": \"0.2548\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-23\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3754\",\n+            \"244580.XKRX\": \"0.2617\",\n+            \"305720.XKRX\": \"0.2550\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-24\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3756\",\n+            \"244580.XKRX\": \"0.2616\",\n+            \"305720.XKRX\": \"0.2551\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-25\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3747\",\n+            \"244580.XKRX\": \"0.2628\",\n+            \"305720.XKRX\": \"0.2551\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-26\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3746\",\n+            \"244580.XKRX\": \"0.2619\",\n+            \"305720.XKRX\": \"0.2558\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-27\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3745\",\n+            \"244580.XKRX\": \"0.2612\",\n+            \"305720.XKRX\": \"0.2563\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-04-30\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3618\",\n+            \"244580.XKRX\": \"0.2598\",\n+            \"305720.XKRX\": \"0.2645\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-01\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3609\",\n+            \"244580.XKRX\": \"0.2605\",\n+            \"305720.XKRX\": \"0.2649\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-02\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3618\",\n+            \"244580.XKRX\": \"0.2595\",\n+            \"305720.XKRX\": \"0.2648\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-03\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3607\",\n+            \"244580.XKRX\": \"0.2606\",\n+            \"305720.XKRX\": \"0.2650\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-04\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3605\",\n+            \"244580.XKRX\": \"0.2600\",\n+            \"305720.XKRX\": \"0.2660\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-07\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3615\",\n+            \"244580.XKRX\": \"0.2596\",\n+            \"305720.XKRX\": \"0.2652\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-08\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3619\",\n+            \"244580.XKRX\": \"0.2594\",\n+            \"305720.XKRX\": \"0.2650\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-09\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3620\",\n+            \"244580.XKRX\": \"0.2588\",\n+            \"305720.XKRX\": \"0.2658\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-10\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3620\",\n+            \"244580.XKRX\": \"0.2594\",\n+            \"305720.XKRX\": \"0.2650\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-11\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3627\",\n+            \"244580.XKRX\": \"0.2585\",\n+            \"305720.XKRX\": \"0.2649\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-14\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3636\",\n+            \"244580.XKRX\": \"0.2575\",\n+            \"305720.XKRX\": \"0.2651\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-15\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3650\",\n+            \"244580.XKRX\": \"0.2565\",\n+            \"305720.XKRX\": \"0.2646\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-16\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3641\",\n+            \"244580.XKRX\": \"0.2586\",\n+            \"305720.XKRX\": \"0.2640\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-17\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3654\",\n+            \"244580.XKRX\": \"0.2565\",\n+            \"305720.XKRX\": \"0.2644\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-18\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3643\",\n+            \"244580.XKRX\": \"0.2585\",\n+            \"305720.XKRX\": \"0.2639\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-21\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3647\",\n+            \"244580.XKRX\": \"0.2592\",\n+            \"305720.XKRX\": \"0.2629\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-22\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3638\",\n+            \"244580.XKRX\": \"0.2597\",\n+            \"305720.XKRX\": \"0.2635\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-23\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3634\",\n+            \"244580.XKRX\": \"0.2615\",\n+            \"305720.XKRX\": \"0.2624\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-24\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3646\",\n+            \"244580.XKRX\": \"0.2587\",\n+            \"305720.XKRX\": \"0.2636\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-25\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3667\",\n+            \"244580.XKRX\": \"0.2567\",\n+            \"305720.XKRX\": \"0.2633\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-28\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3658\",\n+            \"244580.XKRX\": \"0.2583\",\n+            \"305720.XKRX\": \"0.2627\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-29\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3698\",\n+            \"244580.XKRX\": \"0.2540\",\n+            \"305720.XKRX\": \"0.2630\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-30\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3688\",\n+            \"244580.XKRX\": \"0.2558\",\n+            \"305720.XKRX\": \"0.2621\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-31\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3696\",\n+            \"244580.XKRX\": \"0.2532\",\n+            \"305720.XKRX\": \"0.2637\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-01\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3686\",\n+            \"244580.XKRX\": \"0.2559\",\n+            \"305720.XKRX\": \"0.2625\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-04\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3682\",\n+            \"244580.XKRX\": \"0.2568\",\n+            \"305720.XKRX\": \"0.2607\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-05\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3696\",\n+            \"244580.XKRX\": \"0.2562\",\n+            \"305720.XKRX\": \"0.2599\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-06\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3688\",\n+            \"244580.XKRX\": \"0.2582\",\n+            \"305720.XKRX\": \"0.2591\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-07\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3696\",\n+            \"244580.XKRX\": \"0.2576\",\n+            \"305720.XKRX\": \"0.2590\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-06-08\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3680\",\n+            \"244580.XKRX\": \"0.2599\",\n+            \"305720.XKRX\": \"0.2585\"\n+          }\n+        }\n+      ],\n+      \"trades\": [\n+        {\n+          \"date\": \"2012-04-30\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 6,\n+          \"price\": \"23196.43\",\n+          \"cost\": \"132.33\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-04-30\",\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 4,\n+          \"price\": \"18958.15\",\n+          \"cost\": \"71.99\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-05-29\",\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 12,\n+          \"price\": \"6254.99\",\n+          \"cost\": \"71.37\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-05-29\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 3,\n+          \"price\": \"23528.81\",\n+          \"cost\": \"67.01\",\n+          \"reason\": \"REBALANCE\"\n+        }\n+      ],\n+      \"kospi\": {\n+        \"window63\": {\n+          \"return\": \"0.0180\",\n+          \"maxDrawdown\": \"-0.0420\"\n+        },\n+        \"window21\": {\n+          \"return\": \"0.0050\",\n+          \"maxDrawdown\": \"-0.0150\"\n+        }\n+      },\n+      \"basis\": {\n+        \"kind\": \"HISTORICAL_REVISION\",\n+        \"dataVersion\": \"KRX-2026-09-09\",\n+        \"datasetId\": \"KRX_DAILY_20260915\",\n+        \"analyticsMethod\": \"ANALYTICS-1\"\n+      },\n+      \"inputDigest\": \"ba50136c9a2a8fdc8b66501a8e84e75f21423cf59c53a806125f6647ef69ec23\"\n+    },\n+    \"resource\": {\n+      \"wallSeconds\": \"2.86\"\n+    }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/event-finished-incomplete63.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/event-finished-incomplete63.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+{\n+  \"schemaVersion\": 1,\n+  \"eventId\": \"EVT-RL-000001\",\n+  \"linkId\": \"RL-20260918-000101\",\n+  \"attempt\": 1,\n+  \"type\": \"STARTED\",\n+  \"occurredAt\": \"2026-09-18T02:00:00Z\",\n+  \"payload\": {\n+    \"startedAt\": \"2026-09-18T02:00:00Z\",\n+    \"resource\": {\n+      \"pid\": 4242,\n+      \"hostname\": \"regime-link-1\"\n+    }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/event-started.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/event-started.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,513 @@\n+{\n+  \"job\": {\n+    \"linkId\": \"RL-20260918-000101\",\n+    \"attempt\": 1,\n+    \"scenario\": \"CONTINUOUS\"\n+  },\n+  \"window\": {\n+    \"d0\": \"2012-04-02\",\n+    \"d21\": \"2012-04-30\",\n+    \"d63\": \"2012-06-27\",\n+    \"lastAvailable\": \"2012-06-27\",\n+    \"completedTradingDays\": 63,\n+    \"baselineDate\": \"2012-03-30\"\n+  },\n+  \"run\": {\n+    \"runId\": \"RUN-000123\",\n+    \"effectiveStart\": \"2010-04-02\",\n+    \"initialCash\": \"10000000.00\",\n+    \"analyticsMethod\": \"ANALYTICS-1\"\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_20260915\",\n+    \"dataVersion\": \"KRX-2026-09-09\",\n+    \"benchmarkInstrumentId\": \"KOSPI\"\n+  },\n+  \"inputs\": {\n+    \"portfolioSeries\": [\n+      {\n+        \"date\": \"2012-03-30\",\n+        \"equity\": \"11050600.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-02\",\n+        \"equity\": \"11072726.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-03\",\n+        \"equity\": \"11075356.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-04\",\n+        \"equity\": \"11078016.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-05\",\n+        \"equity\": \"11095743.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-06\",\n+        \"equity\": \"11115274.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-09\",\n+        \"equity\": \"11091402.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-10\",\n+        \"equity\": \"11107417.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-11\",\n+        \"equity\": \"11091208.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-12\",\n+        \"equity\": \"11070729.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-13\",\n+        \"equity\": \"11091767.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-16\",\n+        \"equity\": \"11109958.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-17\",\n+        \"equity\": \"11096503.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-18\",\n+        \"equity\": \"11080795.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-19\",\n+        \"equity\": \"11106254.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-20\",\n+        \"equity\": \"11095303.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-23\",\n+        \"equity\": \"11132773.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-24\",\n+        \"equity\": \"11142781.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-25\",\n+        \"equity\": \"11173708.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-26\",\n+        \"equity\": \"11148045.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-27\",\n+        \"equity\": \"11116485.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-30\",\n+        \"equity\": \"11099747.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-01\",\n+        \"equity\": \"11115191.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-02\",\n+        \"equity\": \"11096511.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-03\",\n+        \"equity\": \"11109255.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-04\",\n+        \"equity\": \"11120437.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-07\",\n+        \"equity\": \"11107506.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-08\",\n+        \"equity\": \"11109629.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-09\",\n+        \"equity\": \"11132436.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-10\",\n+        \"equity\": \"11115631.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-11\",\n+        \"equity\": \"11090885.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-14\",\n+        \"equity\": \"11102508.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-15\",\n+        \"equity\": \"11097514.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-16\",\n+        \"equity\": \"11146570.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-17\",\n+        \"equity\": \"11121908.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-18\",\n+        \"equity\": \"11156713.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-21\",\n+        \"equity\": \"11157715.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-22\",\n+        \"equity\": \"11172816.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-23\",\n+        \"equity\": \"11208809.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-24\",\n+        \"equity\": \"11177410.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-25\",\n+        \"equity\": \"11146639.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-28\",\n+        \"equity\": \"11157988.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-29\",\n+        \"equity\": \"11190085.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-05-30\",\n+        \"equity\": \"11194035.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-05-31\",\n+        \"equity\": \"11169948.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-01\",\n+        \"equity\": \"11212387.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-04\",\n+        \"equity\": \"11248772.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-05\",\n+        \"equity\": \"11246196.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-06\",\n+        \"equity\": \"11291896.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-07\",\n+        \"equity\": \"11298177.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-08\",\n+        \"equity\": \"11313940.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-11\",\n+        \"equity\": \"11372930.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-12\",\n+        \"equity\": \"11390263.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-13\",\n+        \"equity\": \"11374442.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-14\",\n+        \"equity\": \"11371893.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-15\",\n+        \"equity\": \"11340483.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-18\",\n+        \"equity\": \"11380994.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-19\",\n+        \"equity\": \"11357249.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-20\",\n+        \"equity\": \"11357831.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-21\",\n+        \"equity\": \"11408425.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-22\",\n+        \"equity\": \"11427647.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-25\",\n+        \"equity\": \"11382527.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-26\",\n+        \"equity\": \"11366844.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-27\",\n+        \"equity\": \"11355283.32\",\n+        \"cash\": \"1285365.32\"\n+      }\n+    ],\n+    \"openingPositions\": [\n+      {\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"quantity\": 179\n+      },\n+      {\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"quantity\": 233\n+      },\n+      {\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"quantity\": 151\n+      }\n+    ],\n+    \"dailyPositions\": [\n+      {\n+        \"date\": \"2012-04-30\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 173\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 233\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-05-14\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 173\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 466\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-05-29\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 176\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 454\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      }\n+    ],\n+    \"trades\": [\n+      {\n+        \"fillId\": \"FL-000001\",\n+        \"time\": \"2012-04-30T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"SELL\",\n+        \"quantity\": 6,\n+        \"price\": \"23196.43\",\n+        \"referencePrice\": \"23215.00\",\n+        \"costs\": {\n+          \"commission\": \"20.89\",\n+          \"spread\": \"41.79\",\n+          \"slippage\": \"69.65\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"20.89\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000002\",\n+        \"time\": \"2012-04-30T00:00:00Z\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 4,\n+        \"price\": \"18958.15\",\n+        \"referencePrice\": \"18943.00\",\n+        \"costs\": {\n+          \"commission\": \"11.37\",\n+          \"spread\": \"22.73\",\n+          \"slippage\": \"37.89\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"11.37\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000003\",\n+        \"time\": \"2012-05-29T00:00:00Z\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"side\": \"SELL\",\n+        \"quantity\": 12,\n+        \"price\": \"6254.99\",\n+        \"referencePrice\": \"6260.00\",\n+        \"costs\": {\n+          \"commission\": \"11.27\",\n+          \"spread\": \"22.54\",\n+          \"slippage\": \"37.56\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"11.27\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000004\",\n+        \"time\": \"2012-05-29T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 3,\n+        \"price\": \"23528.81\",\n+        \"referencePrice\": \"23510.00\",\n+        \"costs\": {\n+          \"commission\": \"10.58\",\n+          \"spread\": \"21.16\",\n+          \"slippage\": \"35.27\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"10.58\",\n+        \"reason\": \"REBALANCE\"\n+      }\n+    ],\n+    \"cashFlows\": [\n+      {\n+        \"date\": \"2012-06-04\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"type\": \"DISTRIBUTION\",\n+        \"amount\": \"17600.00\"\n+      }\n+    ]\n+  },\n+  \"inputDigest\": \"6d09df2f307dabfcdf2e8523f988c3cadfe805ddf245f0bc2bde5214d4e54078\"\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/job-continuous.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/job-continuous.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,568 @@\n+{\n+  \"job\": {\n+    \"linkId\": \"RL-20260918-000102\",\n+    \"attempt\": 1,\n+    \"scenario\": \"FRESH_CASH\"\n+  },\n+  \"window\": {\n+    \"d0\": \"2012-04-02\",\n+    \"d21\": \"2012-04-30\",\n+    \"d63\": \"2012-06-27\",\n+    \"lastAvailable\": \"2012-06-27\",\n+    \"completedTradingDays\": 63,\n+    \"baselineDate\": \"2012-03-30\"\n+  },\n+  \"run\": {\n+    \"runId\": \"RUN-000123\",\n+    \"effectiveStart\": \"2010-04-02\",\n+    \"initialCash\": \"10000000.00\",\n+    \"analyticsMethod\": \"ANALYTICS-1\"\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_20260915\",\n+    \"dataVersion\": \"KRX-2026-09-09\",\n+    \"benchmarkInstrumentId\": \"KOSPI\"\n+  },\n+  \"inputs\": {\n+    \"portfolioSeries\": [\n+      {\n+        \"date\": \"2012-03-30\",\n+        \"equity\": \"10000000.00\",\n+        \"cash\": \"10000000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-02\",\n+        \"equity\": \"9990620.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-03\",\n+        \"equity\": \"9993250.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-04\",\n+        \"equity\": \"9995910.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-05\",\n+        \"equity\": \"10013637.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-06\",\n+        \"equity\": \"10033168.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-09\",\n+        \"equity\": \"10009296.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-10\",\n+        \"equity\": \"10025311.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-11\",\n+        \"equity\": \"10009102.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-12\",\n+        \"equity\": \"9988623.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-13\",\n+        \"equity\": \"10009661.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-16\",\n+        \"equity\": \"10027852.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-17\",\n+        \"equity\": \"10014397.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-18\",\n+        \"equity\": \"9998689.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-19\",\n+        \"equity\": \"10024148.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-20\",\n+        \"equity\": \"10013197.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-23\",\n+        \"equity\": \"10050667.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-24\",\n+        \"equity\": \"10060675.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-25\",\n+        \"equity\": \"10091602.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-26\",\n+        \"equity\": \"10065939.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-27\",\n+        \"equity\": \"10034379.48\",\n+        \"cash\": \"117894.48\"\n+      },\n+      {\n+        \"date\": \"2012-04-30\",\n+        \"equity\": \"10017642.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-01\",\n+        \"equity\": \"10033086.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-02\",\n+        \"equity\": \"10014406.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-03\",\n+        \"equity\": \"10027150.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-04\",\n+        \"equity\": \"10038332.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-07\",\n+        \"equity\": \"10025401.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-08\",\n+        \"equity\": \"10027524.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-09\",\n+        \"equity\": \"10050331.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-10\",\n+        \"equity\": \"10033526.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-11\",\n+        \"equity\": \"10008780.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-14\",\n+        \"equity\": \"10020403.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-15\",\n+        \"equity\": \"10015409.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-16\",\n+        \"equity\": \"10064465.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-17\",\n+        \"equity\": \"10039803.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-18\",\n+        \"equity\": \"10074608.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-21\",\n+        \"equity\": \"10075610.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-22\",\n+        \"equity\": \"10090711.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-23\",\n+        \"equity\": \"10126704.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-24\",\n+        \"equity\": \"10095305.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-25\",\n+        \"equity\": \"10064534.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-28\",\n+        \"equity\": \"10075883.20\",\n+        \"cash\": \"181208.20\"\n+      },\n+      {\n+        \"date\": \"2012-05-29\",\n+        \"equity\": \"10107979.80\",\n+        \"cash\": \"185659.80\"\n+      },\n+      {\n+        \"date\": \"2012-05-30\",\n+        \"equity\": \"10111929.80\",\n+        \"cash\": \"185659.80\"\n+      },\n+      {\n+        \"date\": \"2012-05-31\",\n+        \"equity\": \"10087842.80\",\n+        \"cash\": \"185659.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-01\",\n+        \"equity\": \"10130281.80\",\n+        \"cash\": \"185659.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-04\",\n+        \"equity\": \"10166666.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-05\",\n+        \"equity\": \"10164090.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-06\",\n+        \"equity\": \"10209790.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-07\",\n+        \"equity\": \"10216071.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-08\",\n+        \"equity\": \"10231834.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-11\",\n+        \"equity\": \"10290824.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-12\",\n+        \"equity\": \"10308157.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-13\",\n+        \"equity\": \"10292336.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-14\",\n+        \"equity\": \"10289787.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-15\",\n+        \"equity\": \"10258377.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-18\",\n+        \"equity\": \"10298888.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-19\",\n+        \"equity\": \"10275143.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-20\",\n+        \"equity\": \"10275725.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-21\",\n+        \"equity\": \"10326319.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-22\",\n+        \"equity\": \"10345541.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-25\",\n+        \"equity\": \"10300421.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-26\",\n+        \"equity\": \"10284738.80\",\n+        \"cash\": \"203259.80\"\n+      },\n+      {\n+        \"date\": \"2012-06-27\",\n+        \"equity\": \"10273177.80\",\n+        \"cash\": \"203259.80\"\n+      }\n+    ],\n+    \"openingPositions\": [],\n+    \"dailyPositions\": [\n+      {\n+        \"date\": \"2012-04-02\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 179\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 233\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 151\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-04-30\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 173\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 233\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-05-14\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 173\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 466\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-05-29\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 176\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 454\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      }\n+    ],\n+    \"trades\": [\n+      {\n+        \"fillId\": \"FL-000001\",\n+        \"time\": \"2012-04-02T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 179,\n+        \"price\": \"23278.61\",\n+        \"referencePrice\": \"23260.00\",\n+        \"costs\": {\n+          \"commission\": \"624.53\",\n+          \"spread\": \"1249.06\",\n+          \"slippage\": \"2081.77\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"624.53\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000002\",\n+        \"time\": \"2012-04-02T00:00:00Z\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 151,\n+        \"price\": \"18657.91\",\n+        \"referencePrice\": \"18643.00\",\n+        \"costs\": {\n+          \"commission\": \"422.26\",\n+          \"spread\": \"844.53\",\n+          \"slippage\": \"1407.55\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"422.26\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000003\",\n+        \"time\": \"2012-04-02T00:00:00Z\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 233,\n+        \"price\": \"12430.94\",\n+        \"referencePrice\": \"12421.00\",\n+        \"costs\": {\n+          \"commission\": \"434.11\",\n+          \"spread\": \"868.23\",\n+          \"slippage\": \"1447.05\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"434.11\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000004\",\n+        \"time\": \"2012-04-30T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"SELL\",\n+        \"quantity\": 6,\n+        \"price\": \"23196.43\",\n+        \"referencePrice\": \"23215.00\",\n+        \"costs\": {\n+          \"commission\": \"20.89\",\n+          \"spread\": \"41.79\",\n+          \"slippage\": \"69.65\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"20.89\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000005\",\n+        \"time\": \"2012-04-30T00:00:00Z\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 4,\n+        \"price\": \"18958.15\",\n+        \"referencePrice\": \"18943.00\",\n+        \"costs\": {\n+          \"commission\": \"11.37\",\n+          \"spread\": \"22.73\",\n+          \"slippage\": \"37.89\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"11.37\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000006\",\n+        \"time\": \"2012-05-29T00:00:00Z\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"side\": \"SELL\",\n+        \"quantity\": 12,\n+        \"price\": \"6254.99\",\n+        \"referencePrice\": \"6260.00\",\n+        \"costs\": {\n+          \"commission\": \"11.27\",\n+          \"spread\": \"22.54\",\n+          \"slippage\": \"37.56\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"11.27\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000007\",\n+        \"time\": \"2012-05-29T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 3,\n+        \"price\": \"23528.81\",\n+        \"referencePrice\": \"23510.00\",\n+        \"costs\": {\n+          \"commission\": \"10.58\",\n+          \"spread\": \"21.16\",\n+          \"slippage\": \"35.27\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"10.58\",\n+        \"reason\": \"REBALANCE\"\n+      }\n+    ],\n+    \"cashFlows\": [\n+      {\n+        \"date\": \"2012-06-04\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"type\": \"DISTRIBUTION\",\n+        \"amount\": \"17600.00\"\n+      }\n+    ]\n+  },\n+  \"inputDigest\": \"b46ee9860d9c6eb4f4ca31d4c25adcd8d56d608dea5778680bf198288088032e\"\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/job-fresh-cash.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/job-fresh-cash.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,449 @@\n+{\n+  \"job\": {\n+    \"linkId\": \"RL-20260918-000103\",\n+    \"attempt\": 1,\n+    \"scenario\": \"CONTINUOUS\"\n+  },\n+  \"window\": {\n+    \"d0\": \"2012-04-02\",\n+    \"d21\": \"2012-04-30\",\n+    \"d63\": \"2012-06-27\",\n+    \"lastAvailable\": \"2012-06-08\",\n+    \"completedTradingDays\": 50,\n+    \"baselineDate\": \"2012-03-30\"\n+  },\n+  \"run\": {\n+    \"runId\": \"RUN-000123\",\n+    \"effectiveStart\": \"2010-04-02\",\n+    \"initialCash\": \"10000000.00\",\n+    \"analyticsMethod\": \"ANALYTICS-1\"\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"delistedOn\": \"2012-06-11\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_20260915\",\n+    \"dataVersion\": \"KRX-2026-09-09\",\n+    \"benchmarkInstrumentId\": \"KOSPI\"\n+  },\n+  \"inputs\": {\n+    \"portfolioSeries\": [\n+      {\n+        \"date\": \"2012-03-30\",\n+        \"equity\": \"11050600.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-02\",\n+        \"equity\": \"11072726.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-03\",\n+        \"equity\": \"11075356.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-04\",\n+        \"equity\": \"11078016.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-05\",\n+        \"equity\": \"11095743.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-06\",\n+        \"equity\": \"11115274.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-09\",\n+        \"equity\": \"11091402.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-10\",\n+        \"equity\": \"11107417.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-11\",\n+        \"equity\": \"11091208.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-12\",\n+        \"equity\": \"11070729.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-13\",\n+        \"equity\": \"11091767.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-16\",\n+        \"equity\": \"11109958.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-17\",\n+        \"equity\": \"11096503.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-18\",\n+        \"equity\": \"11080795.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-19\",\n+        \"equity\": \"11106254.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-20\",\n+        \"equity\": \"11095303.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-23\",\n+        \"equity\": \"11132773.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-24\",\n+        \"equity\": \"11142781.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-25\",\n+        \"equity\": \"11173708.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-26\",\n+        \"equity\": \"11148045.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-27\",\n+        \"equity\": \"11116485.00\",\n+        \"cash\": \"1200000.00\"\n+      },\n+      {\n+        \"date\": \"2012-04-30\",\n+        \"equity\": \"11099747.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-01\",\n+        \"equity\": \"11115191.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-02\",\n+        \"equity\": \"11096511.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-03\",\n+        \"equity\": \"11109255.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-04\",\n+        \"equity\": \"11120437.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-07\",\n+        \"equity\": \"11107506.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-08\",\n+        \"equity\": \"11109629.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-09\",\n+        \"equity\": \"11132436.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-10\",\n+        \"equity\": \"11115631.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-11\",\n+        \"equity\": \"11090885.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-14\",\n+        \"equity\": \"11102508.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-15\",\n+        \"equity\": \"11097514.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-16\",\n+        \"equity\": \"11146570.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-17\",\n+        \"equity\": \"11121908.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-18\",\n+        \"equity\": \"11156713.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-21\",\n+        \"equity\": \"11157715.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-22\",\n+        \"equity\": \"11172816.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-23\",\n+        \"equity\": \"11208809.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-24\",\n+        \"equity\": \"11177410.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-25\",\n+        \"equity\": \"11146639.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-28\",\n+        \"equity\": \"11157988.72\",\n+        \"cash\": \"1263313.72\"\n+      },\n+      {\n+        \"date\": \"2012-05-29\",\n+        \"equity\": \"11190085.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-05-30\",\n+        \"equity\": \"11194035.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-05-31\",\n+        \"equity\": \"11169948.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-01\",\n+        \"equity\": \"11212387.32\",\n+        \"cash\": \"1267765.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-04\",\n+        \"equity\": \"11248772.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-05\",\n+        \"equity\": \"11246196.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-06\",\n+        \"equity\": \"11291896.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-07\",\n+        \"equity\": \"11298177.32\",\n+        \"cash\": \"1285365.32\"\n+      },\n+      {\n+        \"date\": \"2012-06-08\",\n+        \"equity\": \"11313940.32\",\n+        \"cash\": \"1285365.32\"\n+      }\n+    ],\n+    \"openingPositions\": [\n+      {\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"quantity\": 179\n+      },\n+      {\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"quantity\": 233\n+      },\n+      {\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"quantity\": 151\n+      }\n+    ],\n+    \"dailyPositions\": [\n+      {\n+        \"date\": \"2012-04-30\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 173\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 233\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-05-14\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 173\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 466\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      },\n+      {\n+        \"date\": \"2012-05-29\",\n+        \"positions\": [\n+          {\n+            \"instrumentId\": \"091160.XKRX\",\n+            \"quantity\": 176\n+          },\n+          {\n+            \"instrumentId\": \"244580.XKRX\",\n+            \"quantity\": 454\n+          },\n+          {\n+            \"instrumentId\": \"305720.XKRX\",\n+            \"quantity\": 155\n+          }\n+        ]\n+      }\n+    ],\n+    \"trades\": [\n+      {\n+        \"fillId\": \"FL-000001\",\n+        \"time\": \"2012-04-30T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"SELL\",\n+        \"quantity\": 6,\n+        \"price\": \"23196.43\",\n+        \"referencePrice\": \"23215.00\",\n+        \"costs\": {\n+          \"commission\": \"20.89\",\n+          \"spread\": \"41.79\",\n+          \"slippage\": \"69.65\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"20.89\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000002\",\n+        \"time\": \"2012-04-30T00:00:00Z\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 4,\n+        \"price\": \"18958.15\",\n+        \"referencePrice\": \"18943.00\",\n+        \"costs\": {\n+          \"commission\": \"11.37\",\n+          \"spread\": \"22.73\",\n+          \"slippage\": \"37.89\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"11.37\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000003\",\n+        \"time\": \"2012-05-29T00:00:00Z\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"side\": \"SELL\",\n+        \"quantity\": 12,\n+        \"price\": \"6254.99\",\n+        \"referencePrice\": \"6260.00\",\n+        \"costs\": {\n+          \"commission\": \"11.27\",\n+          \"spread\": \"22.54\",\n+          \"slippage\": \"37.56\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"11.27\",\n+        \"reason\": \"REBALANCE\"\n+      },\n+      {\n+        \"fillId\": \"FL-000004\",\n+        \"time\": \"2012-05-29T00:00:00Z\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"side\": \"BUY\",\n+        \"quantity\": 3,\n+        \"price\": \"23528.81\",\n+        \"referencePrice\": \"23510.00\",\n+        \"costs\": {\n+          \"commission\": \"10.58\",\n+          \"spread\": \"21.16\",\n+          \"slippage\": \"35.27\",\n+          \"tax\": \"0.00\"\n+        },\n+        \"cashCost\": \"10.58\",\n+        \"reason\": \"REBALANCE\"\n+      }\n+    ],\n+    \"cashFlows\": [\n+      {\n+        \"date\": \"2012-06-04\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"type\": \"DISTRIBUTION\",\n+        \"amount\": \"17600.00\"\n+      }\n+    ]\n+  },\n+  \"inputDigest\": \"ba50136c9a2a8fdc8b66501a8e84e75f21423cf59c53a806125f6647ef69ec23\"\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/examples/job-partial-delisted.json",
+          "old_path": "docs/specs/regime-link-messaging/examples/job-partial-delisted.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,78 @@\n+# 사례 연결 메시지 계약 (Backend ↔ Worker, RabbitMQ)\n+\n+- 상태: **schemaVersion 1** (2026-09-20, spec 011 T001). 설계 근거는\n+  [`specs/011-regime-strategy-link/contracts/regime-link-messaging.md`](../../../specs/011-regime-strategy-link/contracts/regime-link-messaging.md)와\n+  research R1~R15이다. 구간 산식은 research R3, 004 저장 결과와의 입력 대응은 R3의 DEP-004-011이다.\n+- 백테스트 메시징(`docs/specs/backtest-messaging/`)과 **분리된 경로**다(research R1). 표기 규칙은 같고\n+  exchange·큐·워커 엔트리포인트가 다르다.\n+- 이 폴더의 `examples/*.json`이 **양쪽 코드의 단일 기준**이다. 백엔드\n+  (`regimelink/application/port/message`)와 워커(`worker/src/worker/regime_link/contracts.py`)가 이\n+  파일을 테스트에서 직접 읽어 round-trip을 검증한다. 필드를 바꾸면 이 폴더 → 백엔드 record → 워커\n+  모델 순서로 같은 MR에서 함께 고친다.\n+\n+## 표기 규칙\n+\n+| 항목 | 규칙 |\n+|---|---|\n+| 소수 | plain string (`\"10412000.00\"`). 부동소수로 싣지 않는다 |\n+| 정수 | 숫자 (`63`, `179`). 수량·거래일 수가 여기 해당한다 |\n+| 날짜 | `YYYY-MM-DD` |\n+| 시각 | UTC ISO-8601 (`2026-09-18T02:00:00Z`) |\n+| null | **키를 생략한다.** 폐지되지 않은 종목에 `delistedOn`이 없는 것이 그 예다 |\n+| `schemaVersion` | 이벤트는 **본문 첫 필드**에 싣고, 작업은 본문에 두지 않고 AMQP 헤더로만 보낸다 |\n+\n+## 메시지 속성과 토폴로지\n+\n+- exchange `regime-link`(direct, durable), 큐 `regime-link.jobs`(quorum, `x-delivery-limit=1`,\n+  DLX `regime-link.dlx` → `regime-link.jobs.dlq`), `regime-link.events`.\n+- routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n+- 속성: `content_type=application/json`, `delivery_mode=2`, header `schemaVersion: 1`,\n+  작업 `message_id = \"RLJ-\" + linkId + \"-\" + attempt`, `correlation_id = linkId`.\n+- **토폴로지는 백엔드가 선언한다.** 워커는 선언하지 않고, 큐가 없으면 만들지 않고 종료한다.\n+\n+## 파일\n+\n+| 파일 | 무엇을 보이나 |\n+|---|---|\n+| `job-continuous.json` | 연속 운용. 시작 보유가 있고 구간 안에서 일부 매도·매수·분할·분배금이 난다 |\n+| `job-fresh-cash.json` | 현금 시작. `openingPositions`가 빈 목록이고 기준은 `run.initialCash`다. d0에 전량 매수한다 |\n+| `job-partial-delisted.json` | 구간 안 상장폐지. `lastAvailable`·`completedTradingDays`가 이미 폐지 전날 기준으로 줄어 있다 |\n+| `event-started.json` | 계산 시작 |\n+| `event-finished-completed.json` | 63거래일 완성. `window63.complete=true` |\n+| `event-finished-incomplete63.json` | 폐지로 63을 못 채운 경우. `partial=true`·`delistedOn`과 `window63.complete=false`가 함께 선다. `window21`은 언제나 완성이다 |\n+| `event-finished-failed.json` | 계산 실패. `result`가 없고 `error`가 있다 |\n+\n+## 픽스처가 보장하는 것\n+\n+작업 픽스처의 수치는 실제 현금 회계로 만들어 다음이 성립한다.\n+\n+- `portfolioSeries`가 `baselineDate`부터 `lastAvailable`까지 빠짐없이 있고 행 수가\n+  `completedTradingDays + 1`이다.\n+- 개별 체결과 `cashFlows`만으로 구간 현금이 되살아난다(`cash[마지막] = cash[baselineDate]` + 매도대금\n+  − 매수대금 − 직접 차감 비용 + 분배금).\n+- 비용은 `수량 × referencePrice`에 `KR-ETF-2026-09`(수수료 1.5 · 호가차 3 · 슬리피지 5 · 세금 0bps)를\n+  매긴 값이고, 가격 충격은 `(호가차 + 슬리피지) ÷ 수량`, `cashCost`는 수수료 + 세금이다.\n+- `dailyPositions`는 수량이 바뀐 날만 담으며 **기업행위로만 바뀐 날(분할)도 들어 있다.** 스냅샷 한 건은\n+  그날 보유 전체이고 수량 0인 종목은 빠져 있으므로, 워커의 이월은 덮어쓰기다.\n+- 결과 이벤트의 `holdings`는 구간의 **모든 거래일**을 담고 비중은 그날 평가액 ÷ 자산이며, `trades`의\n+  개수는 `window63.tradeCount`와 같다(계약 \"시계열과 목록은 구간 전체를 담는다\").\n+\n+## 픽스처가 보장하지 않는 것\n+\n+- **결과 이벤트의 `result` 수치는 형식과 작업 메시지와의 정합을 보이는 예시다.** 구간 산식(R3)의\n+  기대값 대조는 `examples/reconciliation/`(spec 011 T014)이 워커를 import하지 않는 독립 계산으로\n+  따로 만든다 — 기대값을 워커 출력으로 채우면 대조가 아니다. `lossContribution`·`kospi`는\n+  모양만 맞춘 값이다.\n+- 시장 자료(원시 종가)는 메시지에 없다. 워커가 `market_data.py`로 같은 구간을 따로 읽는다.\n+- 날짜는 주말만 제외한 픽스처 자체 달력이라 실제 KRX 휴장일과 다르다.\n+\n+## 다시 만드는 법\n+\n+손으로 고치지 말고 생성기를 고쳐 다시 만든다. 시드가 고정돼 있어 같은 값이 나온다.\n+\n+```bash\n+python docs/specs/regime-link-messaging/generate_fixtures.py\n+```\n+\n+값이 바뀌면 `inputDigest`도 함께 바뀐다. 이 해시는 `inputs`·`window`·`job.scenario`·`marketData`를\n+`sort_keys=True`, 구분자 `(\",\", \":\")`로 직렬화한 canonical JSON의 sha256이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/README.md",
+          "old_path": "docs/specs/regime-link-messaging/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,370 @@\n+\"\"\"사례 연결 메시지 계약 v1 픽스처 생성기(spec 011 T001).\n+\n+`examples/` 아래 JSON 7개를 만든다. 수치는 시드 고정 랜덤워크 + 실제 현금 회계로 만들어\n+`equity = cash + positionValue`, 수량 이월, 비용 관계(`가격 충격 = (호가차 + 슬리피지) ÷ 수량`,\n+`cashCost = 수수료 + 세금`)가 실제로 성립한다.\n+\n+- `job-continuous.json`: 연속 운용. 시작 보유가 있고 구간 안에서 일부 매도·매수·분할·분배금이 난다.\n+- `job-fresh-cash.json`: 현금 시작. `openingPositions`가 빈 목록이고 기준은 `run.initialCash`다.\n+- `job-partial-delisted.json`: 구간 안 상장폐지. 백엔드가 폐지 전날까지만 잘라 담은 모양이다.\n+- `event-*.json`: STARTED / FINISHED(COMPLETED · 미완성 63 · FAILED).\n+\n+결과 이벤트의 `result` 수치는 **형식과 job과의 정합을 보이는 예시**다. 구간 산식의 기대값 대조는\n+`examples/reconciliation/`(spec 011 T014)이 워커를 import하지 않는 독립 계산으로 따로 만든다 —\n+기대값을 워커 출력으로 채우면 대조가 아니다.\n+\n+    python docs/specs/regime-link-messaging/generate_fixtures.py\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import hashlib\n+import json\n+import random\n+from datetime import date, timedelta\n+from decimal import ROUND_HALF_UP, Decimal\n+from pathlib import Path\n+from typing import Any\n+\n+EXAMPLES = Path(__file__).resolve().parent / \"examples\"\n+SEED = 20260920\n+ZERO = Decimal(0)\n+BPS = Decimal(10_000)\n+\n+#: 비용 프로필 `KR-ETF-2026-09`(PD-07 확정값). 세금은 국내주식형 ETF라 0이다.\n+COMMISSION_BPS = Decimal(\"1.5\")\n+SPREAD_BPS = Decimal(3)\n+SLIPPAGE_BPS = Decimal(5)\n+TAX_BPS = ZERO\n+\n+BASELINE = date(2012, 3, 30)\n+WINDOW_LENGTH = 63\n+SEMICONDUCTOR = \"091160.XKRX\"\n+BATTERY = \"305720.XKRX\"\n+BIO = \"244580.XKRX\"\n+UNIVERSE = [\n+    (\"SEMICONDUCTOR\", SEMICONDUCTOR),\n+    (\"BATTERY\", BATTERY),\n+    (\"BIO\", BIO),\n+]\n+OPENING = {SEMICONDUCTOR: 179, BATTERY: 151, BIO: 233}\n+START_PRICE = {SEMICONDUCTOR: 23200, BATTERY: 18600, BIO: 12400}\n+#: 구간 안에서 수량이 바뀌는 날(거래일 번호, d0 = 0)과 그날 일어나는 일.\n+REBALANCE_DAYS = {20: [(SEMICONDUCTOR, \"SELL\", 6), (BATTERY, \"BUY\", 4)],\n+                  41: [(BIO, \"SELL\", 12), (SEMICONDUCTOR, \"BUY\", 3)]}\n+SPLIT_DAY = 30  # BIO 2:1 — 체결이 아니라 기업행위로 수량이 바뀐다\n+SPLIT_RATIO = 2\n+DISTRIBUTION_DAY = 45  # SEMICONDUCTOR 주당 100원\n+DISTRIBUTION_PER_SHARE = Decimal(100)\n+DELISTED_AT = 50  # partial 픽스처에서 BIO 가 폐지되는 거래일 번호\n+\n+\n+def money(value: Decimal) -> str:\n+    \"\"\"금액 표기. 계약의 '소수 plain string' 규칙을 따른다.\"\"\"\n+    return str(value.quantize(Decimal(\"0.01\"), rounding=ROUND_HALF_UP))\n+\n+\n+def ratio(value: Decimal, places: str = \"0.0001\") -> str:\n+    return str(value.quantize(Decimal(places), rounding=ROUND_HALF_UP))\n+\n+\n+def trading_days(start: date, count: int) -> list[date]:\n+    \"\"\"주말만 제외한 거래일. 픽스처 자체 달력이며 실제 KRX 휴장일과 다르다.\"\"\"\n+    days: list[date] = []\n+    day = start\n+    while len(days) < count:\n+        if day.weekday() < 5:\n+            days.append(day)\n+        day += timedelta(days=1)\n+    return days\n+\n+\n+def build_prices(days: list[date]) -> dict[str, dict[date, Decimal]]:\n+    \"\"\"시드 고정 랜덤워크로 만든 원시 종가(정수 원). 분할일에는 가격도 함께 나뉜다.\"\"\"\n+    rng = random.Random(SEED)\n+    prices: dict[str, dict[date, Decimal]] = {}\n+    for _, iid in UNIVERSE:\n+        level = Decimal(START_PRICE[iid])\n+        series: dict[date, Decimal] = {}\n+        for index, day in enumerate(days):\n+            if index:\n+                level += Decimal(rng.randint(-90, 95))\n+            if iid == BIO and index == SPLIT_DAY + 1:  # baseline 다음이 d0 이므로 +1\n+                level = (level / SPLIT_RATIO).quantize(Decimal(1), rounding=ROUND_HALF_UP)\n+            series[day] = level\n+        prices[iid] = series\n+    return prices\n+\n+\n+def fill_of(iid: str, day: date, side: str, quantity: int, reference: Decimal,\n+            index: int) -> dict[str, Any]:\n+    \"\"\"체결 한 건. 비용은 `수량 × referencePrice`에 매기고 가격 충격은 체결가에 반영한다.\"\"\"\n+    gross = reference * quantity\n+    commission = gross * COMMISSION_BPS / BPS\n+    spread = gross * SPREAD_BPS / BPS\n+    slippage = gross * SLIPPAGE_BPS / BPS\n+    tax = gross * TAX_BPS / BPS if side == \"SELL\" else ZERO\n+    impact = (spread + slippage) / quantity\n+    price = reference + impact if side == \"BUY\" else reference - impact\n+    return {\n+        \"fillId\": f\"FL-{index:06d}\",\n+        \"time\": f\"{day.isoformat()}T00:00:00Z\",\n+        \"instrumentId\": iid,\n+        \"side\": side,\n+        \"quantity\": quantity,\n+        \"price\": money(price),\n+        \"referencePrice\": money(reference),\n+        \"costs\": {\n+            \"commission\": money(commission),\n+            \"spread\": money(spread),\n+            \"slippage\": money(slippage),\n+            \"tax\": money(tax),\n+        },\n+        \"cashCost\": money(commission + tax),\n+        \"reason\": \"REBALANCE\",\n+    }\n+\n+\n+def cash_delta(fill: dict[str, Any]) -> Decimal:\n+    gross = Decimal(fill[\"price\"]) * fill[\"quantity\"]\n+    direct = Decimal(fill[\"cashCost\"])\n+    return gross - direct if fill[\"side\"] == \"SELL\" else -gross - direct\n+\n+\n+def simulate(days: list[date], prices: dict[str, dict[date, Decimal]],\n+             *, fresh_cash: bool, last_index: int) -> dict[str, Any]:\n+    \"\"\"구간을 실제로 굴려 입력 블록을 만든다. days[0] 은 baselineDate 다.\"\"\"\n+    held = {} if fresh_cash else dict(OPENING)\n+    cash = Decimal(1_200_000) if not fresh_cash else Decimal(0)\n+    series: list[dict[str, str]] = []\n+    holdings: list[dict[str, Any]] = []\n+    daily_positions: list[dict[str, Any]] = []\n+    fills: list[dict[str, Any]] = []\n+    cash_flows: list[dict[str, Any]] = []\n+\n+    def position_value(day: date) -> Decimal:\n+        return sum((Decimal(q) * prices[iid][day] for iid, q in held.items()), ZERO)\n+\n+    # baselineDate — 구간 시작 직전 상태\n+    baseline_day = days[0]\n+    if fresh_cash:\n+        cash = Decimal(10_000_000)\n+    series.append({\"date\": baseline_day.isoformat(), \"equity\": money(position_value(baseline_day) + cash),\n+                   \"cash\": money(cash)})\n+\n+    for index, day in enumerate(days[1:]):\n+        if index > last_index:\n+            break\n+        if fresh_cash and index == 0:  # 현금 시작은 d0 에 전량 매수한다\n+            for iid, quantity in OPENING.items():\n+                fill = fill_of(iid, day, \"BUY\", quantity, prices[iid][day], len(fills) + 1)\n+                fills.append(fill)\n+                cash += cash_delta(fill)\n+                held[iid] = held.get(iid, 0) + quantity\n+        for iid, side, quantity in REBALANCE_DAYS.get(index, []):\n+            fill = fill_of(iid, day, side, quantity, prices[iid][day], len(fills) + 1)\n+            fills.append(fill)\n+            cash += cash_delta(fill)\n+            held[iid] = held.get(iid, 0) + (quantity if side == \"BUY\" else -quantity)\n+        if index == SPLIT_DAY and BIO in held:\n+            held[BIO] *= SPLIT_RATIO\n+        if index == DISTRIBUTION_DAY and held.get(SEMICONDUCTOR):\n+            amount = DISTRIBUTION_PER_SHARE * held[SEMICONDUCTOR]\n+            cash += amount\n+            cash_flows.append({\"date\": day.isoformat(), \"instrumentId\": SEMICONDUCTOR,\n+                               \"type\": \"DISTRIBUTION\", \"amount\": money(amount)})\n+        if index in REBALANCE_DAYS or index == SPLIT_DAY or (fresh_cash and index == 0):\n+            daily_positions.append({\n+                \"date\": day.isoformat(),\n+                \"positions\": [{\"instrumentId\": iid, \"quantity\": quantity}\n+                              for iid, quantity in sorted(held.items()) if quantity],\n+            })\n+        equity = position_value(day) + cash\n+        series.append({\"date\": day.isoformat(), \"equity\": money(equity), \"cash\": money(cash)})\n+        holdings.append({\n+            \"date\": day.isoformat(),\n+            \"actual\": {iid: ratio(Decimal(quantity) * prices[iid][day] / equity)\n+                       for iid, quantity in sorted(held.items()) if quantity},\n+        })\n+\n+    opening = [] if fresh_cash else [{\"instrumentId\": iid, \"quantity\": quantity}\n+                                     for iid, quantity in sorted(OPENING.items())]\n+    return {\n+        \"inputs\": {\n+            \"portfolioSeries\": series,\n+            \"openingPositions\": opening,\n+            \"dailyPositions\": daily_positions,\n+            \"trades\": fills,\n+            \"cashFlows\": cash_flows,\n+        },\n+        \"holdings\": holdings,\n+    }\n+\n+\n+def input_digest(job: dict[str, Any]) -> str:\n+    \"\"\"`inputs·window·job.scenario·marketData` canonical JSON 의 sha256(계약 \"작업 메시지\").\"\"\"\n+    canonical = json.dumps(\n+        {\"inputs\": job[\"inputs\"], \"window\": job[\"window\"],\n+         \"scenario\": job[\"job\"][\"scenario\"], \"marketData\": job[\"marketData\"]},\n+        sort_keys=True, separators=(\",\", \":\"), ensure_ascii=False,\n+    )\n+    return hashlib.sha256(canonical.encode(\"utf-8\")).hexdigest()\n+\n+\n+def build_job(link_id: str, scenario: str, days: list[date],\n+              prices: dict[str, dict[date, Decimal]], *, last_index: int,\n+              delisted: bool = False) -> tuple[dict[str, Any], list[dict[str, Any]]]:\n+    window_days = days[1:]\n+    simulated = simulate(days, prices, fresh_cash=scenario == \"FRESH_CASH\", last_index=last_index)\n+    inputs = simulated[\"inputs\"]\n+    items: list[dict[str, Any]] = []\n+    for sector_id, iid in UNIVERSE:\n+        item: dict[str, Any] = {\"sectorId\": sector_id, \"instrumentId\": iid}\n+        if delisted and iid == BIO:  # null 은 키 생략이라 폐지된 종목에만 넣는다\n+            item[\"delistedOn\"] = window_days[DELISTED_AT].isoformat()\n+        items.append(item)\n+    job = {\n+        \"job\": {\"linkId\": link_id, \"attempt\": 1, \"scenario\": scenario},\n+        \"window\": {\n+            \"d0\": window_days[0].isoformat(),\n+            \"d21\": window_days[20].isoformat(),\n+            \"d63\": window_days[WINDOW_LENGTH - 1].isoformat(),\n+            \"lastAvailable\": window_days[last_index].isoformat(),\n+            \"completedTradingDays\": last_index + 1,\n+            \"baselineDate\": days[0].isoformat(),\n+        },\n+        \"run\": {\"runId\": \"RUN-000123\", \"effectiveStart\": \"2010-04-02\",\n+                \"initialCash\": \"10000000.00\", \"analyticsMethod\": \"ANALYTICS-1\"},\n+        \"universe\": {\"mappingVersion\": \"SECTOR-ETF-2026-09\", \"items\": items},\n+        \"marketData\": {\"datasetId\": \"KRX_DAILY_20260915\", \"dataVersion\": \"KRX-2026-09-09\",\n+                       \"benchmarkInstrumentId\": \"KOSPI\"},\n+        \"inputs\": inputs,\n+    }\n+    job[\"inputDigest\"] = input_digest(job)\n+    return job, simulated[\"holdings\"]\n+\n+\n+def window_summary(job: dict[str, Any], length: int, *, complete: bool) -> dict[str, Any]:\n+    \"\"\"구간 요약. R3 산식 중 입력만으로 닫히는 항(수익률·거래·비용·회전율)은 실제로 계산한다.\"\"\"\n+    series = job[\"inputs\"][\"portfolioSeries\"]\n+    rows = series[: length + 1]\n+    start_equity = Decimal(rows[0][\"equity\"])\n+    equities = [Decimal(row[\"equity\"]) for row in rows[1:]]\n+    end_equity = equities[-1]\n+    if job[\"job\"][\"scenario\"] == \"FRESH_CASH\":\n+        start_equity = Decimal(job[\"run\"][\"initialCash\"])\n+\n+    peak = start_equity\n+    drawdown = ZERO\n+    for equity in equities:\n+        peak = max(peak, equity)\n+        drawdown = min(drawdown, equity / peak - 1)\n+\n+    days = {row[\"date\"] for row in rows[1:]}\n+    fills = [f for f in job[\"inputs\"][\"trades\"] if f[\"time\"][:10] in days]\n+    costs = {key: sum((Decimal(f[\"costs\"][key]) for f in fills), ZERO)\n+             for key in (\"commission\", \"spread\", \"slippage\", \"tax\")}\n+    buy = sum((Decimal(f[\"price\"]) * f[\"quantity\"] for f in fills if f[\"side\"] == \"BUY\"), ZERO)\n+    sell = sum((Decimal(f[\"price\"]) * f[\"quantity\"] for f in fills if f[\"side\"] == \"SELL\"), ZERO)\n+    average_equity = sum(equities, ZERO) / len(equities)\n+    turnover = (buy + sell) / 2 / average_equity * Decimal(252) / Decimal(len(equities))\n+    return {\n+        \"tradingDays\": len(equities),\n+        \"return\": ratio(end_equity / start_equity - 1),\n+        \"maxDrawdown\": ratio(drawdown),\n+        \"tradeCount\": len(fills),\n+        \"tradesPerMonth\": ratio(\n+            Decimal(len(fills)) / (Decimal(len(equities)) / Decimal(21)), \"0.01\"\n+        ),\n+        \"turnover\": ratio(turnover),\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {**{k: money(v) for k, v in costs.items()},\n+                  \"total\": money(sum(costs.values(), ZERO))},\n+        \"lossContribution\": {\"SEMICONDUCTOR\": \"0.62000000\", \"BATTERY\": \"0.21000000\",\n+                             \"BIO\": \"0.17000000\"},\n+        \"complete\": complete,\n+    }\n+\n+\n+def build_result(job: dict[str, Any], holdings: list[dict[str, Any]], *,\n+                 complete63: bool) -> dict[str, Any]:\n+    length = WINDOW_LENGTH if complete63 else job[\"window\"][\"completedTradingDays\"]\n+    trades = [{\"date\": f[\"time\"][:10], \"instrumentId\": f[\"instrumentId\"], \"side\": f[\"side\"],\n+               \"quantity\": f[\"quantity\"], \"price\": f[\"price\"],\n+               \"cost\": money(sum((Decimal(v) for v in f[\"costs\"].values()), ZERO)),\n+               \"reason\": f[\"reason\"]}\n+              for f in job[\"inputs\"][\"trades\"]]\n+    return {\n+        \"window63\": window_summary(job, length, complete=complete63),\n+        \"window21\": window_summary(job, 21, complete=True),\n+        \"holdings\": holdings[:length],\n+        \"trades\": trades,\n+        \"kospi\": {\"window63\": {\"return\": \"0.0180\", \"maxDrawdown\": \"-0.0420\"},\n+                  \"window21\": {\"return\": \"0.0050\", \"maxDrawdown\": \"-0.0150\"}},\n+        \"basis\": {\"kind\": \"HISTORICAL_REVISION\", \"dataVersion\": job[\"marketData\"][\"dataVersion\"],\n+                  \"datasetId\": job[\"marketData\"][\"datasetId\"],\n+                  \"analyticsMethod\": job[\"run\"][\"analyticsMethod\"]},\n+        \"inputDigest\": job[\"inputDigest\"],\n+    }\n+\n+\n+def envelope(event_id: str, link_id: str, type_: str, occurred_at: str,\n+             payload: dict[str, Any]) -> dict[str, Any]:\n+    return {\"schemaVersion\": 1, \"eventId\": event_id, \"linkId\": link_id, \"attempt\": 1,\n+            \"type\": type_, \"occurredAt\": occurred_at, \"payload\": payload}\n+\n+\n+def write(name: str, document: dict[str, Any]) -> None:\n+    path = EXAMPLES / name\n+    path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + \"\\n\", encoding=\"utf-8\")\n+    print(f\"  {name}\")\n+\n+\n+def main() -> None:\n+    EXAMPLES.mkdir(parents=True, exist_ok=True)\n+    days = trading_days(BASELINE, WINDOW_LENGTH + 1)\n+    prices = build_prices(days)\n+    last = WINDOW_LENGTH - 1\n+\n+    continuous, continuous_holdings = build_job(\n+        \"RL-20260918-000101\", \"CONTINUOUS\", days, prices, last_index=last)\n+    fresh_cash, _ = build_job(\n+        \"RL-20260918-000102\", \"FRESH_CASH\", days, prices, last_index=last)\n+    partial, partial_holdings = build_job(\n+        \"RL-20260918-000103\", \"CONTINUOUS\", days, prices,\n+        last_index=DELISTED_AT - 1, delisted=True)\n+\n+    print(\"작업 메시지\")\n+    write(\"job-continuous.json\", continuous)\n+    write(\"job-fresh-cash.json\", fresh_cash)\n+    write(\"job-partial-delisted.json\", partial)\n+\n+    print(\"이벤트\")\n+    write(\"event-started.json\", envelope(\n+        \"EVT-RL-000001\", continuous[\"job\"][\"linkId\"], \"STARTED\", \"2026-09-18T02:00:00Z\",\n+        {\"startedAt\": \"2026-09-18T02:00:00Z\", \"resource\": {\"pid\": 4242, \"hostname\": \"regime-link-1\"}},\n+    ))\n+    write(\"event-finished-completed.json\", envelope(\n+        \"EVT-RL-000002\", continuous[\"job\"][\"linkId\"], \"FINISHED\", \"2026-09-18T02:00:03Z\",\n+        {\"status\": \"COMPLETED\", \"partial\": False,\n+         \"result\": build_result(continuous, continuous_holdings, complete63=True),\n+         \"resource\": {\"wallSeconds\": \"3.41\"}},\n+    ))\n+    write(\"event-finished-incomplete63.json\", envelope(\n+        \"EVT-RL-000003\", partial[\"job\"][\"linkId\"], \"FINISHED\", \"2026-09-18T02:01:07Z\",\n+        {\"status\": \"COMPLETED\", \"partial\": True,\n+         \"delistedOn\": partial[\"universe\"][\"items\"][2][\"delistedOn\"],\n+         \"result\": build_result(partial, partial_holdings, complete63=False),\n+         \"resource\": {\"wallSeconds\": \"2.86\"}},\n+    ))\n+    write(\"event-finished-failed.json\", envelope(\n+        \"EVT-RL-000004\", fresh_cash[\"job\"][\"linkId\"], \"FINISHED\", \"2026-09-18T02:02:11Z\",\n+        {\"status\": \"FAILED\", \"partial\": False,\n+         \"error\": {\"code\": \"INPUT_INCOMPLETE\",\n+                   \"message\": \"portfolioSeries 에 baselineDate 행이 없다\"},\n+         \"resource\": {\"wallSeconds\": \"0.12\"}},\n+    ))\n+\n+\n+if __name__ == \"__main__\":\n+    main()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/generate_fixtures.py",
+          "old_path": "docs/specs/regime-link-messaging/generate_fixtures.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,7 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n `RegimeLinkRabbitConfig`의 `public static final String`과 워커 `regime_link/messaging.py`가 같은 값을\n 가져야 하며 워커 테스트가 Java 파일을 읽어 대조한다(백테스트와 같은 방식).\n \n-## 작업 메시지: `RegimeLinkJob` v1 — 목표 계약, DEP-004-011 검증 전 동결 금지\n+## 작업 메시지: `RegimeLinkJob` v1\n \n ```json\n {\n@@ -39,20 +39,29 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n                  \"benchmarkInstrumentId\": \"KOSPI\"},\n   \"inputs\": {\n     \"portfolioSeries\": [{\"date\": \"2012-03-30\", \"equity\": \"10412000.00\", \"cash\": \"120000.00\"}],\n-    \"weightsSeries\": [{\"date\": \"2012-03-30\", \"actual\": {\"091160.XKRX\": \"0.3980\", \"305720.XKRX\": \"0.3010\", \"244580.XKRX\": \"0.3010\"}}],\n-    \"trades\": [{\"date\": \"2012-05-02\", \"instrumentId\": \"091160.XKRX\", \"side\": \"SELL\", \"quantity\": 12, \"price\": \"23150\",\n-                \"costs\": {\"commission\": \"0\", \"spread\": \"0\", \"slippage\": \"254.00\", \"tax\": \"0\"}, \"reason\": \"REBALANCE\"}]\n+    \"openingPositions\": [{\"instrumentId\": \"091160.XKRX\", \"quantity\": 179}],\n+    \"dailyPositions\": [{\"date\": \"2012-05-02\", \"positions\": [{\"instrumentId\": \"091160.XKRX\", \"quantity\": 167}]}],\n+    \"trades\": [{\"fillId\": \"FL-000022\", \"time\": \"2012-05-02T00:00:00Z\", \"instrumentId\": \"091160.XKRX\",\n+                \"side\": \"SELL\", \"quantity\": 12, \"price\": \"23181.44\", \"referencePrice\": \"23200\",\n+                \"costs\": {\"commission\": \"41.76\", \"spread\": \"83.52\", \"slippage\": \"139.20\", \"tax\": \"0\"},\n+                \"cashCost\": \"41.76\", \"reason\": \"REBALANCE\"}],\n+    \"cashFlows\": [{\"date\": \"2012-06-01\", \"instrumentId\": \"091160.XKRX\", \"type\": \"DISTRIBUTION\", \"amount\": \"16700\"}]\n   },\n   \"inputDigest\": \"e3b0…(64자)\"\n }\n ```\n \n+- 예시 체결의 숫자는 004 `costs.py` 규칙으로 검산된다 — 기준 금액은 `수량 × referencePrice`\n+  (12 × 23200 = 278,400)이고 비용 프로필 `KR-ETF-2026-09`(수수료 1.5 · 호가차 3 · 슬리피지 5 ·\n+  세금 0bps)를 적용하면 41.76 · 83.52 · 139.20 · 0이다. 호가차·슬리피지는 체결가를 불리하게\n+  움직이므로((83.52 + 139.20) ÷ 12 = 18.56) 매도 체결가는 23200 − 18.56 = 23181.44이고,\n+  현금으로 빠지는 `cashCost`는 수수료 + 세금이다. 픽스처도 이 관계를 만족해야 한다.\n - `window.baselineDate`는 d0 **직전 거래일**이다. 연속 운용의 구간 수익률 기준값\n   `equity[baselineDate]`가 여기서 나온다. `scenario=FRESH_CASH`면 기준은 `run.initialCash`이고\n   `baselineDate`는 참고용이다(research R3).\n-- `inputs.portfolioSeries`·`weightsSeries`(축약 예시의 옛 필드다. 확정 모양은 아래 \"구간 입력 확장\"의\n-  `openingPositions`·`dailyPositions`)는 `baselineDate`부터 `lastAvailable`까지, `trades`는\n-  `d0`~`lastAvailable` 안에 체결된 것만. **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,\n+- `inputs.portfolioSeries`는 `baselineDate`~`lastAvailable`의 매일, `dailyPositions`·`trades`·`cashFlows`는\n+  `d0`~`lastAvailable` 안의 것만, `openingPositions`는 `baselineDate` 이전 마지막 스냅샷 하나다.\n+  **백엔드가 잘라 담는다.** 워커는 이 범위 밖을 요청하지 않고,\n   범위가 모자라면(연속 운용의 `baselineDate` 행 없음 등; 현금 시작은 initialCash·빈 시작 보유) `INPUT_INCOMPLETE`로 실패한다 — 채우지 않는다. 자료 부족 판정은 발행 전 백엔드 몫이다(research R13).\n - `universe.items[].delistedOn`이 구간 안이면 그 전날까지만 계산하고 결과에 `partial=true`. 백엔드는 폐지\n   전날까지의 거래일 수가 21 이상일 때만 작업을 발행하고, `window.lastAvailable`·`completedTradingDays`는 이미\n@@ -60,7 +69,7 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n   이어지지만(폐지 종목을 마지막 종가로 평가) 백엔드는 그 구간을 담지 않는다(research R4).\n - `inputDigest` = 백엔드가 `inputs·window·job.scenario·marketData` canonical JSON에 sha256. 워커는 검증하지 않고 결과에 그대로\n   돌려준다(재현 대조는 백엔드 몫).\n-- 크기 상한: `dailyPositions`의 종목 수 ≤ 대응표 섹터 수, 날짜 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고\n+- 크기 상한: `openingPositions`·`dailyPositions`의 종목 수 ≤ 대응표 섹터 수, `portfolioSeries`의 날짜 행 수 ≤ 65. 넘으면 백엔드가 발행하지 않고\n   `FAILED(INPUT_TOO_LARGE)`.\n \n ## 이벤트 봉투\n@@ -92,10 +101,10 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n - `window21`은 `d0`~`d21`, `window63`은 `d0`~`min(d63, lastAvailable)`. `tradingDays`가 실제 길이고\n   `complete`가 63(또는 21)을 다 채웠는지다. 수익률·낙폭은 연환산하지 않으며 회전율은 ANNUALIZED_252다.\n - `tradesPerMonth = tradeCount ÷ (tradingDays ÷ 21)`, 소수 둘째 자리.\n-- 시계열과 목록은 **구간 전체**를 담는다 — 작업의 `inputs.portfolioSeries`·`weightsSeries`는 `baselineDate`\n-  부터 `lastAvailable`까지 모든 거래일을, 결과의 `holdings`는 구간의 모든 거래일을, 양쪽 `trades`는 구간의\n-  모든 거래를 담는다(결과 `trades`의 개수 = `window63.tradeCount`). **위 예시는 지면 때문에 한 행씩만\n-  싣는다** — 픽스처를 만들 때 예시의 길이를 그대로 옮기지 않는다.\n+- 시계열과 목록은 **구간 전체**를 담는다 — 작업의 `inputs.portfolioSeries`는 `baselineDate`부터\n+  `lastAvailable`까지 모든 거래일을(`dailyPositions`는 그중 수량이 바뀐 날만), 결과의 `holdings`는 구간의\n+  모든 거래일을, 양쪽 `trades`는 구간의 모든 거래를 담는다(결과 `trades`의 개수 = `window63.tradeCount`).\n+  **위 예시는 지면 때문에 한 행씩만 싣는다** — 픽스처를 만들 때 예시의 길이를 그대로 옮기지 않는다.\n - `turnover`·`lossContribution`은 research R3의 구간 전용 산식이다. 누적 손익 함수에 조각을 그대로 넣지 않는다. 회전율은 `turnoverBasis=ANNUALIZED_252`이며 수익률·최대 낙폭은 연환산하지 않는다. 전체 구간 손익이 0일 때만 `lossContribution`을 생략하고 이익 종목도 포함한다.\n - `kospi`는 `marketData.benchmarkInstrumentId`의 같은 날짜 종가로 두 값만. 전략과의 차이는 계산하지\n   않는다.\n@@ -135,20 +144,34 @@ reject → DLQ다.\n 두어 `window63`·`window21`·`kospi`를 대조한다(백테스트 픽스처와 같은 이유 — 기대값을 엔진 출력으로\n 채우면 대조가 아니다).\n \n-## 구간 입력 확장 — DEP-004-011\n+## 구간 입력의 출처와 제약 — DEP-004-011 (대조 통과 2026-09-20)\n \n-위 JSON은 기존 봉투를 설명하는 축약 예시이며 실행 가능한 확정 fixture가 아니다. M1 동결 전에\n-아래 항목을 포함한 완전한 fixture로 교체한다. 004 저장 결과와의 필드 대응·독립 대조를 먼저 통과해야 한다.\n+004 저장 결과로 위 `inputs`를 정확히 만들 수 있음을 독립 계산으로 확인했다(research R3 \"독립 계산 대조\n+결과\": 전략 입력 여섯을 돌려 얻은 22개 구간에서 시작 직전 평가액·일별 평가액·현금·자산·종목 구간\n+손익 합이 모두 차 0).\n+위 JSON이 확정 모양이고, 아래가 필드마다의 출처와 제약이다.\n \n+- `inputs.portfolioSeries`: baselineDate~lastAvailable의 일별 `equity`·`cash`. 연속 운용의 구간 기준값이\n+  `equity[baselineDate]`다. 004의 `portfolioSeries`에서 보유 수량은 아래 두 필드로 따로 뺀다.\n - `inputs.openingPositions`: baselineDate **이전 마지막** 보유 스냅샷의 종목별 수량(004는 수량이 바뀌는 날마다\n   스냅샷을 남기므로 그 수량이 baselineDate의 수량이다). FRESH_CASH는 빈 목록.\n - `inputs.dailyPositions`: d0~lastAvailable 안에서 004가 남긴 보유 스냅샷(수량이 바뀐 날)만 그대로 담는다.\n-  워커가 수량을 이월하고 그날 원시 종가를 곱해 일별 평가액을 만든다(004 엔진과 같은 식). 백엔드는 채우지 않는다.\n+  백엔드는 채우지 않는다. 스냅샷 한 건은 **그날 보유 전체**이며 수량 0인 종목은 빠져 있다(004\n+  `portfolio_execution.py`가 `quantity`가 0이 아닌 종목만 담는다) — 스냅샷에 없는 종목은 그날 보유가\n+  없다는 뜻이므로, 이월은 **덮어쓰기**이고 실린 종목만 고치는 부분 갱신이 아니다.\n+  **워커의 이월은 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다\"이다** —\n+  분할 같은 기업행위는 체결 밖에서 수량을 바꾸므로, 체결만 누적하면 그날부터 수량이 틀린다(대조에서 22개\n+  구간 중 9개의 평가액·자산이 어긋났고 한 구간에서 최대 59개 행이었다. 종목 손익 항등식은 그때도 0이라\n+  항등식만으로는 잡히지 않는다). 일별 평가액은 이월한 수량 × 그날 원시 종가다(004 엔진과 같은 식).\n - `inputs.trades`: round-trip 대신 004 `fills[]`(개별 체결) 그대로 — fillId·time·instrumentId·side·quantity·\n   price·referencePrice·costs(commission/spread/slippage/tax)·cashCost. `cashCost`가 직접 차감 비용이며 체결가에\n   반영된 호가차·슬리피지는 들어 있지 않다. 체결 기록이 없는 실행(`fills_recorded=false`)이면 발행하지 않는다.\n-- `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다.\n+  **`FINISHED.result.trades`와 이름만 같고 모양이 다르다** — 결과 쪽은 `date`와 비용 한 값(`cost`)을\n+  쓰는 표시용 목록이다. 두 곳의 모델을 하나로 합치지 않는다.\n+- `inputs.cashFlows`: 구간 날짜·instrumentId·type·amount로 분배금 등을 식별한다. 체결과 이 현금흐름만으로\n+  구간 현금이 되살아난다(대조에서 확인).\n - corporate action에 따른 수량·현금 변화와 가격 자료는 같은 버전으로 정합 검증한다. 확보되지 않은\n   항목을 0이나 비례배분 비용으로 만들어내지 않는다.\n-- holdings는 dailyPositions와 portfolioSeries에서 산출하며 weightsSeries가 일별이라고 가정하지 않는다.\n-  입력 해시 대상에는 위 필드와 window·scenario·marketData 버전 전체가 포함된다.\n+- holdings는 dailyPositions와 portfolioSeries에서 산출한다. 004의 `weightsSeries`는 리밸런싱 시점 비중이므로\n+  일별 비중으로 쓰지 않으며 이 메시지에 담지 않는다. 입력 해시 대상에는 위 필드와 window·scenario·\n+  marketData 버전 전체가 포함된다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/contracts/regime-link-messaging.md",
+          "old_path": "specs/011-regime-strategy-link/contracts/regime-link-messaging.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,7 @@\n `regime_link` 소비자 — 잘라내기·요약 계산), TypeScript 5 / React 19 (Frontend 화면 3개)\n \n **Primary Dependencies**: Spring Boot 3.5 (Web·Data JPA·Validation·AMQP), Flyway, PostgreSQL 드라이버 /\n-pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP-004-011 검증 선행) / 프론트는 기존 의존만\n+pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP-004-011 대조 통과) / 프론트는 기존 의존만\n (`@visx`·d3 차트 시스템 재사용 여부는 FE 묶음에서 결정, 표 위주 화면이라 필수는 아니다)\n \n **Storage**: PostgreSQL. Flyway 마이그레이션 신규 1개(`regime_link_filter`·`regime_link_search`·\n@@ -61,13 +61,13 @@ pandas·NumPy·pika, 기존 `worker.market_data`와 구간 전용 계산(R3, DEP\n \n ### 해소된 NEEDS CLARIFICATION\n \n-Phase 0 결정 15건(R1~R15)에 2026-09-20 수정을 반영했다. DEP-004-011은 필드 대응이 확정됐고(부족했던 개별 체결을 004에 추가, S15P21E205-359) 독립 대조가 남았다. 근거는 [research.md](research.md).\n+Phase 0 결정 15건(R1~R15)에 2026-09-20 수정을 반영했다. DEP-004-011은 필드 대응이 확정됐고(부족했던 개별 체결을 004에 추가, S15P21E205-359) 독립 대조도 통과했다(2026-09-20). 근거는 [research.md](research.md).\n \n | 항목 | 결론 |\n |---|---|\n | 계산 작업 전달 경로 | 별도 exchange/큐 `regime-link`, 워커 별도 엔트리포인트 (R1) |\n | 워커 입력 | Backend가 시계열·거래 사본을 메시지에 담고, 워커는 시장 자료만 추가 (R2) |\n-| 구간 요약 정의 | 구간 경계 손익·실제 체결대금으로 계산. 회전율만 연환산 단위 명시; DEP-004-011 선행 (R3) |\n+| 구간 요약 정의 | 구간 경계 손익·실제 체결대금으로 계산. 회전율만 연환산 단위 명시; DEP-004-011 대조 통과 (R3) |\n | 가용성 판정·필터 키 | Backend 메타데이터 조회 6단계, sha256 키, KOSPI 거래일 달력·`TradingCalendarPort` (R4) |\n | 현금 시작·전체 기간 재계산 | 004 접수 서비스 호출 → 완료 후 잘라내기 작업 연쇄 (R5) |\n | 진입 계약·사례 식별자 | `(snapshotKey, endMonth)`를 `~`로 이어 한 값, 주소 둘 (R6) |\n@@ -165,7 +165,7 @@ worker/src/worker/regime_link/                         # 신규. 백테스트 \n ├── __init__.py\n ├── contracts.py                                       # RegimeLinkJob·RegimeLinkEvent (pydantic, ContractModel)\n ├── messaging.py                                       # 계약 상수(exchange·queue·routing key) — 백엔드 상수와 대조 테스트\n-├── slicer.py                                          # 구간 잘라내기·요약 — R3 구간 산식, DEP-004-011 입력 검증 선행\n+├── slicer.py                                          # 구간 잘라내기·요약 — R3 구간 산식, 수량은 체결+스냅샷으로 이월\n ├── consumer.py                                        # 수신·검증·계산·FINISHED 발행·ACK\n └── rabbitmq.py                                        # pika 구현\n worker/src/worker/regime_link_main.py                  # 엔트리포인트 python -m worker.regime_link_main\n@@ -199,7 +199,7 @@ docs/specs/regime-link-api/README.md · docs/specs/regime-link-messaging/{README\n \n ## 구현 순서\n \n-**선행 게이트**: M1의 계산 픽스처 동결 및 M2 착수 전에 DEP-004-011의 입력 대응과 독립 대조를 완료한다. 현재는 미완료이며, 필요한 004 계약 확장은 별도 구현 범위로 합의한다.\n+**선행 게이트**: M1의 계산 픽스처 동결 및 M2 착수 전에 DEP-004-011의 입력 대응과 독립 대조를 완료한다. 2026-09-20에 통과했으므로(research R3, 004 체결 기록 추가는 S15P21E205-359) 계산 픽스처를 동결하고 M2에 착수할 수 있다.\n \n \n 묶음마다 끝에 검증 명령이 통과해야 다음으로 간다. 파트가 갈리므로 Jira 티켓도 묶음 단위다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/plan.md",
+          "old_path": "specs/011-regime-strategy-link/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -67,7 +67,7 @@ R3 입력 검증을 통과한 구간 자산·보유 평가·개별 체결·현\n 실제 수량·현금 변화를 반영하고 조정 가격과 분배금을 중복 합산하지 않는다. 종목 손익 합과\n 종료 자산−시작 기준 자산을 대조한다. 현금 시작의 시작 보유액은 0이다.\n \n-### DEP-004-011 — 입력 확보 검증 (필드 대응 확정 2026-09-20, 독립 대조는 T000·T014)\n+### DEP-004-011 — 입력 확보 검증 (필드 대응 확정·독립 대조 통과 2026-09-20, 회귀는 T014)\n \n **필드 대응 결론(S15P21E205-359, 코드 확인)**: 부족한 것은 **개별 체결 하나**였고 004에 추가했다.\n \n@@ -83,8 +83,49 @@ R3 입력 검증을 통과한 구간 자산·보유 평가·개별 체결·현\n `findFills`가 빈 Optional을 돌려준다. 011은 이것을 '분석 기간 밖'과 같은 확인 흐름으로 다룬다 — 사용자 확인 뒤\n 같은 조건으로 다시 계산하고, 값을 추정해 채우지 않는다. 확인 전에는 그 자리에 다시 계산이 필요함을 보인다.\n \n-아래는 이 결론에 이르기 전의 검증 계획이며, 독립 계산 대조(시작 전 매수·구간 내 일부 매도·분배금·미청산\n-잔고·청산 비용)는 그대로 T000·T014의 몫이다.\n+**독립 계산 대조 결과(T000, 2026-09-20)**: 통과했다. 011이 받을 입력(`openingPositions`·\n+`dailyPositions`·`fills`·`cashFlows`와 기준일 한 행의 `equity`·`cash`)만으로 구간을 다시 세어 004\n+회계가 낸 값과 맞췄다. 004의 지표 함수(`performance.py`)는 부르지 않았다 — 같은 경로로 두 번 세면\n+대조가 아니다. 절차는 `worker/scripts/regime_link_input_check.py`에 있고 `worker/`에서\n+`uv run --no-sync python scripts/regime_link_input_check.py`로 다시 돌린다.\n+\n+대조 범위는 합성 픽스처(`examples/three_etf_24m`)에 전략 입력 여섯(고정 비중·동일 비중·역변동성·\n+최소분산·섹터 모멘텀·목표 위험)을 돌려 얻은 실행이고, 실행마다 63거래일 구간을 거래일 번호\n+60·100·150·176에 잡아 봤다. 시계열이 짧은 목표 위험만 뒤 두 자리가 잡혀 모두 22개\n+구간(1,386개 거래일 행)이다.\n+\n+| 센 것 | 방법 | 결과 |\n+|---|---|---|\n+| 시작 직전 평가액 | 기준일 이전 마지막 스냅샷의 수량 × 기준일 원시 종가 | 22개 구간 모두 004 `positionValue`와 차 0 |\n+| 구간 일별 평가액·현금·자산 | 개별 체결(체결가·수량·`cashCost`)과 분배금만으로 이월해 재구성 | 1,386개 행 모두 차 0 |\n+| 종목 구간 손익 합 | 위 R3 산식(종료 평가액 − 시작 직전 평가액 + 매도대금 − 매수대금 + 분배금 − 직접 차감 비용) | 22개 구간 모두 `종료 자산 − 시작 직전 자산`과 차 0 |\n+\n+대조해야 할 다섯 경우는 한 구간(고정 비중, 기준일 2024-02-26, d0 2024-02-27, 종료 2024-05-23)\n+안에 모두 나타났다. 그 구간의 자산은 11,339,065.0608 → 10,728,671.22705(수익률 −0.0538)이고 종목\n+구간 손익 합 −610,393.83375가 자산 차와 정확히 같다.\n+\n+| 경우 | 구간에 나타난 자리 | 011 입력의 출처 |\n+|---|---|---|\n+| 시작 전 매수 | 기준일 보유 091160 137주·244580 233주·305720 181주 | `openingPositions` |\n+| 구간 내 일부 매도 | 2024-03-01 091160 6주 매도 뒤 131주 잔존, 2024-05-01 244580 42주 매도 뒤 490주 잔존 등 5건 | `fills[]`의 SELL |\n+| 분배금 | 2024-05-02 305720 14,705원 | `cashFlows` |\n+| 미청산 잔고 | 종료일 091160 134주·244580 490주·305720 179주 | `dailyPositions` 이월 |\n+| 청산(매도) 비용 | `FL-000028` 42주 매도에 수수료 42.21·세금 647.22·호가차 56.28·슬리피지 140.70, 직접 차감 689.43 | `fills[].costs`·`cashCost` |\n+\n+**체결만으로는 수량을 이월할 수 없다**(대조에서 드러난 것). 분할(2024-03-04, 244580 2:1)은 체결이\n+아니라 기업행위로 수량을 바꾸므로, 004가 그날 남기는 보유 스냅샷으로 덮어써야 한다. 스냅샷을 빼고\n+체결만 누적하면 22개 구간 중 9개에서 평가액·자산이 어긋난다(한 구간 최대 59개 행). 계약의\n+`dailyPositions`가 그 스냅샷이고, 워커의 이월은 \"체결로 더하되 스냅샷이 있는 날은 스냅샷으로 맞춘다\"\n+여야 한다. 이때도 종목 손익 항등식은 0이라 항등식만으로는 이 어긋남을 잡지 못한다 — 스냅샷 대조가\n+따로 필요하다.\n+\n+대조 밖으로 남긴 것: 구간에 걸친 상장폐지는 백엔드가 폐지 전날까지만 발행하므로 이 대조의 범위가\n+아니다(R4). 거래정지 이연 체결은 `fills[].plannedDate`로 구분되고 `worker/tests/test_fill_records.py`가\n+이미 대조한다. `fills_recorded=false` 실행은 계산하지 않는다(위 \"체결 기록이 없는 실행\"). 미완성 구간과\n+`FRESH_CASH`의 기준 자산은 잘라내기를 구현한 뒤 T014가 본다.\n+\n+아래는 이 결론에 이르기 전의 검증 계획이다. 위 대조로 T000은 끝났고, 구현된 잘라내기가 같은 기준을\n+계속 지키는지는 T014가 맡는다.\n \n 현재 `engine_output.py`의 `PortfolioSnapshot.positions`는 보유 변경일·시작·종료일에만 있고,\n `TradeResult`는 진입·청산을 묶으며 commission·slippage_cost는 진입 측 값이다. 따라서 기존 요약\n@@ -265,12 +306,12 @@ id가 되어 기록과 주소가 끊긴다. 내부 PK를 주소에 노출하지\n |---|---|\n | 계산 작업 전달 경로 | 별도 exchange/큐 `regime-link`, 별도 워커 엔트리포인트 (R1) |\n | 워커 입력 | Backend가 시계열·거래 사본을 메시지에 담음, 워커는 시장 자료만 추가 (R2) |\n-| 구간 요약 정의 | 구간 전용 산식·회전율 연환산 단위 명시. DEP-004-011 입력 확보 미완료 (R3) |\n+| 구간 요약 정의 | 구간 전용 산식·회전율 연환산 단위 명시. DEP-004-011 입력 확보 대조 통과 (R3) |\n | 가용성 판정·필터 키 | Backend 메타데이터 조회, sha256 키, KOSPI 달력 (R4) |\n | 현금 시작·전체 기간 재계산 | 004 접수 서비스 호출, 완료 후 잘라내기 작업 연쇄 (R5) |\n | 진입 계약·사례 식별자 | `(snapshotKey, endMonth)`, 주소 둘 (R6) |\n | 로그인 | 컨트롤러 요청자 확인, 기존 `401 AUTHENTICATION_REQUIRED` 재사용 (R7) |\n-| 010·005 의존 | 010 M6·M7과 005 공개 토큰은 dev에 병합됨. 010 리포지토리를 읽고 대역을 두지 않음. 계산은 DEP-004-011 검증 뒤 (R8) |\n+| 010·005 의존 | 010 M6·M7과 005 공개 토큰은 dev에 병합됨. 010 리포지토리를 읽고 대역을 두지 않음. 계산 입력은 DEP-004-011 대조로 확인됨 (R8) |\n | 성능 | 측정 목표만, 004 측정 체계 재사용 (R9) |\n | 006 경계 | 011 표에 기록, 006이 읽음 (R10) |\n | 문구 통제 | 금지 표현 정적 검사 + 타입으로 차이 값 배제 (R11) |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/research.md",
+          "old_path": "specs/011-regime-strategy-link/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -129,8 +129,8 @@ flowchart LR\n **묶음 경계**: 골격과 REST 예시(T002~T004)가 **M1a**, 구간 입력 대조와 메시지 계약(T000·T001·T005~T007)이\n **M1b**다. M4는 M1a만 있으면 시작한다 — 판정은 메시지 계약을 읽지 않는다.\n \n-- [ ] T000 (BE·WK 검증) research R3 DEP-004-011의 **필드 대응은 확정됐다**(부족했던 개별 체결을 004 `fills[]`·`backtest_fill`로 추가, S15P21E205-359). 남은 일은 독립 계산 대조다 — 시작 전 매수·구간 내 일부 매도·분배금·미청산 잔고·청산 비용을 004 픽스처에서 손으로 세어 R3 산식과 맞춘다. 대조가 끝나기 전 T001·T005·T006의 계산 픽스처와 M2는 동결하지 않는다. 값을 임의 복원하지 않고, 체결 기록이 없는 실행(`fills_recorded=false`)은 계산하지 않는다. 검증 근거를 research R3에 기록\n-- [ ] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 T000 통과 뒤 계약 \"구간 입력 확장\" 절의 모양(`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만들고, 본문 축약 예시의 모양으로 만들지 않는다\n+- [X] T000 (BE·WK 검증) research R3 DEP-004-011의 **필드 대응은 확정됐다**(부족했던 개별 체결을 004 `fills[]`·`backtest_fill`로 추가, S15P21E205-359). 남은 일은 독립 계산 대조다 — 시작 전 매수·구간 내 일부 매도·분배금·미청산 잔고·청산 비용을 004 픽스처에서 손으로 세어 R3 산식과 맞춘다. 대조가 끝나기 전 T001·T005·T006의 계산 픽스처와 M2는 동결하지 않는다. 값을 임의 복원하지 않고, 체결 기록이 없는 실행(`fills_recorded=false`)은 계산하지 않는다. 검증 근거를 research R3에 기록\n+- [X] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 계약의 확정 모양(`portfolioSeries`·`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만든다 — T000 대조를 통과해 동결할 수 있고, 필드마다의 출처와 제약은 계약 \"구간 입력의 출처와 제약\" 절에 있다\n - [X] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·\"내보내지 않는 것\")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다\n - [X] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)\n - [X] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다\n@@ -150,14 +150,14 @@ flowchart LR\n \n ## 워커 — 잘라내기·요약 (M2)\n \n-- [ ] T008 (WK) `slicer.py`에 구간 판정: `window`(백엔드가 상장폐지 전날까지로 이미 줄여 보낸 `lastAvailable`·`completedTradingDays`)로 계산 구간을 정하고 `universe.items[].delistedOn`이 구간 안이면 `partial=true`. 연속 운용은 baselineDate의 자산·시작 보유 필수, FRESH_CASH는 initialCash·빈 시작 보유를 사용한다. 누락 필드는 0으로 만들지 않고 `INPUT_INCOMPLETE` 실패, 시장 자료 정합 실패는 `MARKET_DATA_MISSING` 실패다 — 워커는 `DATA_INSUFFICIENT`를 내지 않는다(research R13). research R3·DEP-004-011 선행\n+- [ ] T008 (WK) `slicer.py`에 구간 판정: `window`(백엔드가 상장폐지 전날까지로 이미 줄여 보낸 `lastAvailable`·`completedTradingDays`)로 계산 구간을 정하고 `universe.items[].delistedOn`이 구간 안이면 `partial=true`. 연속 운용은 baselineDate의 자산·시작 보유 필수, FRESH_CASH는 initialCash·빈 시작 보유를 사용한다. 누락 필드는 0으로 만들지 않고 `INPUT_INCOMPLETE` 실패, 시장 자료 정합 실패는 `MARKET_DATA_MISSING` 실패다 — 워커는 `DATA_INSUFFICIENT`를 내지 않는다(research R13). research R3의 구간 정의를 따른다(DEP-004-011 대조 통과, T000)\n - [ ] T009 (WK) `slicer.py`에 구간 수익률·최대 하락 폭: 연속 운용은 `equity[baselineDate]` 기준, `FRESH_CASH`는 `run.initialCash` 기준(research R3). 63·21 두 구간을 같은 함수로. **연율화 없음**\n - [ ] T010 (WK) `slicer.py`에 구간 안 개별 체결 건수·비용 4종 합계·월당 거래횟수를 구현한다. round-trip의 진입과 청산을 구간 안 체결로 검증 없이 바꾸지 않는다. 거래 건수 / (구간 거래일 수 / 21), 소수 둘째 자리. 가격 반영 비용과 직접 차감 비용의 이중 차감 금지(R3)\n-- [ ] T011 (WK) `slicer.py`에 R3의 구간 회전율·손실 기여 계산: 실제 체결대금 기반 연환산 회전율(`turnoverBasis=ANNUALIZED_252`), 시작·종료 보유 평가액과 구간 매수·매도·분배금·직접 비용 기반 종목 손익. 이익 종목도 포함하고 전체 손익 0일 때만 lossContribution 생략. 종목 손익 합을 구간 자산 증감과 대조. 누적 `calculate_analytics`를 그대로 호출하지 않고 `performance.py`도 수정하지 않는다. DEP-004-011 검증 선행\n+- [ ] T011 (WK) `slicer.py`에 R3의 구간 회전율·손실 기여 계산: 실제 체결대금 기반 연환산 회전율(`turnoverBasis=ANNUALIZED_252`), 시작·종료 보유 평가액과 구간 매수·매도·분배금·직접 비용 기반 종목 손익. 이익 종목도 포함하고 전체 손익 0일 때만 lossContribution 생략. 종목 손익 합을 구간 자산 증감과 대조. 누적 `calculate_analytics`를 그대로 호출하지 않고 `performance.py`도 수정하지 않는다. DEP-004-011 대조 통과(T000)\n - [ ] T012 (WK) `slicer.py`에 KOSPI 참고: `marketData.benchmarkInstrumentId`의 같은 날짜 종가로 63·21 구간 수익률·최대 하락 폭 **두 값만**. 전략과의 차이를 계산하지 않는다\n - [ ] T013 (WK) `slicer.py`에 결과 조립: `window63`·`window21`(`tradingDays`·`complete`)·`holdings`·`trades`·`kospi`·`basis{kind: HISTORICAL_REVISION, dataVersion, datasetId, analyticsMethod}`·`inputDigest` 통과 → `RegimeLinkResultPayload`(holdings는 dailyPositions로 산출, turnoverBasis 포함)\n-- [ ] T014 [P] (WK 테스트) `worker/tests/regime_link/fixtures/`와 워커를 import하지 않는 독립 계산 `docs/specs/regime-link-messaging/examples/reconciliation/reconcile.py`·`manual_reconciliation.json`: 63 완성·34 미완성·현금 시작·상장폐지·구간 이전 매수 후 일부 매도·분배금·종료 보유·직접 청산 비용·전체 손익 0·이익/손실 종목 혼합 사례. 입력 값은 DEP-004-011 대응표와 대조\n-- [ ] T015 (WK 테스트) `test_slicer.py`: T014 독립 계산과 일치, 34거래일 미완성 표시, 현금 시작 baseline 행 없이 계산, 연속 운용 기준 행 누락 제한, 회전율 연환산 단위, 손익 합 대조, 손실 기여 합 1 또는 전체 손익 0일 때 생략, 구간 밖 손익·체결 제외, 가격 반영 비용 이중 차감 없음\n+- [ ] T014 [P] (WK 테스트) `worker/tests/regime_link/fixtures/`와 워커를 import하지 않는 독립 계산 `docs/specs/regime-link-messaging/examples/reconciliation/reconcile.py`·`manual_reconciliation.json`: 63 완성·34 미완성·현금 시작·상장폐지·구간 이전 매수 후 일부 매도·분배금·**구간 안 분할(수량이 체결 밖에서 바뀌는 날)**·종료 보유·직접 청산 비용·전체 손익 0·이익/손실 종목 혼합 사례. 입력 값은 DEP-004-011 대응표와 대조\n+- [ ] T015 (WK 테스트) `test_slicer.py`: T014 독립 계산과 일치, 34거래일 미완성 표시, 현금 시작 baseline 행 없이 계산, 연속 운용 기준 행 누락 제한, 회전율 연환산 단위, 손익 합 대조, 손실 기여 합 1 또는 전체 손익 0일 때 생략, 구간 밖 손익·체결 제외, 가격 반영 비용 이중 차감 없음, 구간 안 분할일에 `dailyPositions` 수량으로 맞춘 평가액(체결만 누적하면 그날부터 어긋난다), 스냅샷에 없는 종목은 그날 보유 0(부분 갱신이 아니라 덮어쓰기)\n \n ## 워커 — 소비자·엔트리포인트 (M3)\n \n@@ -394,3 +394,14 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두\n ## Phase 12: Convergence\n \n - [X] T099 `contracts/regime-link-api.md` §3 예시의 `window63.lossContribution`이 보유 섹터 셋 중 둘(`SEMICONDUCTOR`·`BIO`)만 담아 바로 아래에 적은 규칙(\"이익 종목도 뺀 것 없이 들어가고 전체 구간 손익이 0일 때만 생략\")과 어긋난다 — 같은 `result`의 `holdings`는 종목 셋을 보이고 `window21.lossContribution`도 섹터 셋을 담는다. `BATTERY`를 더해 두 구간이 같은 섹터 셋을 쓰고 합이 1이 되게 고친다. 값은 `docs/specs/regime-link-api/examples/link-completed.json`과 맞춘다 per contracts/regime-link-api.md §3·research R3 (contradicts)\n+\n+## Phase 13: Convergence\n+\n+- [X] T100 기업행위로 바뀐 수량의 이월 규칙을 고정한다 — 계약 \"구간 입력 확장\"의 `dailyPositions` 설명에 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다\"를 명시하고, T014 독립 계산 사례와 T015 검증에 분할이 든 구간(`three_etf_24m`의 2024-03-04 244580 2:1)을 더한다. T000 대조에서 체결만 누적하면 22개 구간 중 9개의 평가액·자산이 어긋났고(한 구간 최대 59개 행), 종목 손익 항등식은 그때도 0이라 항등식만으로는 잡히지 않는다 per research R3 대조 결과·contracts/regime-link-messaging §구간 입력 확장·T008·T013~T015 (missing)\n+- [X] T101 DEP-004-011 게이트가 통과된 상태를 계약과 plan에 반영한다 — `contracts/regime-link-messaging.md`의 \"목표 계약, DEP-004-011 검증 전 동결 금지\" 제목과 `inputs` 축약 예시(`portfolioSeries`·`weightsSeries`)를 \"구간 입력 확장\"의 확정 모양 하나로 합치고, plan \"선행 게이트\"의 \"현재는 미완료\" 문장을 통과 상태로 고친다. 계산 픽스처를 만드는 T001보다 먼저 끝낸다 per plan 선행 게이트·contracts/regime-link-messaging §작업 메시지·T001 (partial)\n+- [ ] T102 `worker/scripts/regime_link_input_check.py`의 거처를 정한다 — T000 근거를 다시 돌리려고 두었고 어느 태스크도 소유하지 않는다. T014의 독립 계산이 들어온 뒤 회귀 테스트로 옮길지, 근거 재현 수단으로 스크립트에 남길지, 지울지를 정하고 결정을 research R3에 한 줄로 남긴다 per tasks T000 (unrequested)\n+\n+## Phase 14: Convergence\n+\n+- [ ] T103 백엔드가 구간 안 보유 스냅샷을 빠짐없이 담는 것을 조립의 의무로 고정한다 — `BacktestRunReadPort`·`RegimeLinkJobAssembler`(T026·T031)가 004의 `portfolioSeries[].positions` 중 d0~lastAvailable 안에 있는 것을 **한 줄도 빼지 않고** `dailyPositions`에 담고(기업행위로만 수량이 바뀐 날 포함, 리밸런싱일로 걸러내지 않는다), `RegimeLinkJobAssemblerTest`(T035)와 M4·M5 체크포인트에 \"구간 안 004 스냅샷 수 = `dailyPositions` 행 수\"를 더한다. 스냅샷이 빠지면 워커는 체결 누적값을 그대로 쓰고 종목 손익 항등식도 0이라 어긋남이 드러나지 않는다 per contracts/regime-link-messaging §구간 입력의 출처와 제약·T026·T031·T035 (missing)\n+- [ ] T104 T031의 크기 상한 기준을 계약과 맞춘다 — \"`dailyPositions`의 날짜 행 ≤ 65\"를 \"`portfolioSeries`의 날짜 행 ≤ 65, `openingPositions`·`dailyPositions`의 종목 수 ≤ 대응표 섹터 수\"로 고친다. `dailyPositions`는 수량이 바뀐 날만 담아 65를 넘을 일이 거의 없어 그대로 두면 `INPUT_TOO_LARGE` 보호가 작동하지 않는다 per contracts/regime-link-messaging §작업 메시지 크기 상한·T031 (contradicts)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,297 @@\n+\"\"\"004 저장 결과로 011 사후 구간 입력을 만들 수 있는지 확인한다(spec 011 T000, DEP-004-011).\n+\n+011 워커가 받게 될 입력(``openingPositions``·``dailyPositions``·``fills``·``cashFlows`` 와\n+기준일 한 행의 ``equity``·``cash``)만 꺼내 구간을 다시 세고, 004 가 자기 회계로 낸 값과 맞는지 본다.\n+004 의 지표 함수(``performance.py``)는 부르지 않는다 — 같은 경로로 두 번 세면 대조가 아니다.\n+\n+세 가지를 센다.\n+\n+1. 시작 직전 평가액: 기준일 이전 마지막 스냅샷의 수량 × 기준일 원시 종가 = 004 의 ``positionValue``.\n+2. 구간 일별 평가액·현금·자산: 개별 체결(체결가·수량·직접 차감 비용)과 분배금만으로 이월해 재구성.\n+3. 종목 구간 손익 합(research R3 산식) = 종료 자산 − 시작 직전 자산.\n+\n+수량이 체결 밖에서 바뀌는 기업행위(분할)는 체결만으로 이월할 수 없다. 004 가 그날 남기는 보유\n+스냅샷으로 덮어써야 하며, ``--ignore-split-snapshot`` 은 그 스냅샷을 빼면 얼마나 어긋나는지를\n+대조군으로 보여준다.\n+\n+저장소 전체가 보이는 곳에서 ``worker/`` 를 작업 디렉터리로 두고 실행한다::\n+\n+    uv run --no-sync python scripts/regime_link_input_check.py --out check.json\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import argparse\n+import csv\n+import json\n+import sys\n+from collections import defaultdict\n+from datetime import date, timedelta\n+from decimal import Decimal\n+from pathlib import Path\n+from typing import Any\n+\n+WORKER_DIR = Path(__file__).resolve().parents[1]\n+# 픽스처 경로는 테스트가 정한 것 하나를 쓴다 — 여기서 다시 쓰면 둘이 어긋난다.\n+sys.path.insert(0, str(WORKER_DIR / \"tests\"))\n+\n+from fixture_paths import THREE_ETF_DIR  # noqa: E402\n+from golden_inputs import load_json  # noqa: E402\n+\n+from worker.contracts.engine_output import (  # noqa: E402\n+    EngineOutput,\n+    FillResult,\n+    FillSide,\n+    PortfolioSnapshot,\n+)\n+from worker.engine_runner import PortfolioBacktestEngine  # noqa: E402\n+from worker.market_data import CsvMarketDataProvider  # noqa: E402\n+\n+ZERO = Decimal(0)\n+#: 구간 길이(거래일). 011 의 기본 사후 구간이다.\n+LENGTH = 63\n+#: d0 을 잡는 거래일 번호. 픽스처 24개월 안에서 분배금·분할·월말 리밸런싱을 고루 덮는다.\n+D0_INDEXES = (60, 100, 150, 176)\n+\n+\n+def kst(when: Any) -> date:\n+    \"\"\"체결 시각(UTC)을 거래일로 바꾼다. 테스트가 쓰는 변환과 같다.\"\"\"\n+    return (when + timedelta(hours=9)).date()\n+\n+\n+def raw_closes() -> dict[tuple[str, date], Decimal]:\n+    \"\"\"원시 종가. 일별 평가액은 004 엔진과 같은 식(수량 × 그날 원시 종가)으로 만든다.\"\"\"\n+    closes: dict[tuple[str, date], Decimal] = {}\n+    with (THREE_ETF_DIR / \"prices_raw.csv\").open(encoding=\"utf-8\") as handle:\n+        for row in csv.DictReader(handle):\n+            closes[(row[\"instrument_id\"], date.fromisoformat(row[\"date\"]))] = Decimal(row[\"close\"])\n+    return closes\n+\n+\n+def close_of(closes: dict[tuple[str, date], Decimal], iid: str, day: date) -> Decimal:\n+    \"\"\"그날 원시 종가. 없으면 무엇이 없는지 말하고 멈춘다 — 0으로 메우면 대조가 아니다.\"\"\"\n+    try:\n+        return closes[(iid, day)]\n+    except KeyError:\n+        raise RuntimeError(f\"{iid} 의 {day.isoformat()} 원시 종가가 없다\") from None\n+\n+\n+def cash_delta(fill: FillResult) -> Decimal:\n+    \"\"\"체결 하나가 현금에 남기는 변화. 체결가에 이미 반영된 호가차·슬리피지는 다시 빼지 않는다.\"\"\"\n+    gross = fill.price * fill.quantity\n+    if fill.side is FillSide.BUY:\n+        return -gross - fill.cash_cost\n+    return gross - fill.cash_cost\n+\n+\n+def check_window(\n+    series: list[PortfolioSnapshot],\n+    fills: list[FillResult],\n+    closes: dict[tuple[str, date], Decimal],\n+    d0_index: int,\n+    *,\n+    ignore_split_snapshot: bool = False,\n+) -> dict[str, Any]:\n+    \"\"\"구간 하나를 011 입력만으로 다시 세고 004 의 값과 대조한다.\"\"\"\n+    baseline = series[d0_index - 1]\n+    window = series[d0_index : d0_index + LENGTH]\n+    d0, last = window[0].date, window[-1].date\n+\n+    opening: dict[str, Decimal] = {}\n+    for row in series[:d0_index]:\n+        if row.positions is not None:\n+            opening = {p.instrument_id: p.quantity for p in row.positions}\n+    daily_positions = {\n+        row.date: {p.instrument_id: p.quantity for p in row.positions}\n+        for row in window\n+        if row.positions is not None\n+    }\n+    window_fills = [f for f in fills if d0 <= kst(f.time) <= last]\n+    cash_flows = [(row.date, flow) for row in window for flow in (row.cash_flows or [])]\n+\n+    fills_by_day: dict[date, list[FillResult]] = defaultdict(list)\n+    for fill in window_fills:\n+        fills_by_day[kst(fill.time)].append(fill)\n+    flows_by_day: dict[date, Decimal] = defaultdict(lambda: ZERO)\n+    for day, flow in cash_flows:\n+        flows_by_day[day] += flow.amount\n+\n+    # ① 시작 직전 평가액\n+    baseline_value = sum(\n+        (quantity * close_of(closes, iid, baseline.date) for iid, quantity in opening.items()),\n+        ZERO,\n+    )\n+\n+    # ② 구간 일별 평가액·현금·자산\n+    held = dict(opening)\n+    cash = baseline.cash\n+    carried_apart_from_fills: list[str] = []\n+    mismatches = {\"positionValue\": 0, \"cash\": 0, \"equity\": 0}\n+    equity_by_day: dict[date, Decimal] = {}\n+    partial_sells: list[dict[str, str]] = []\n+    for row in window:\n+        day = row.date\n+        sold_today: dict[str, Decimal] = {}\n+        for fill in fills_by_day[day]:\n+            signed = fill.quantity if fill.side is FillSide.BUY else -fill.quantity\n+            held[fill.instrument_id] = held.get(fill.instrument_id, ZERO) + signed\n+            cash += cash_delta(fill)\n+            if fill.side is FillSide.SELL:\n+                sold_today[fill.instrument_id] = (\n+                    sold_today.get(fill.instrument_id, ZERO) + fill.quantity\n+                )\n+        cash += flows_by_day[day]\n+        if day in daily_positions:\n+            for iid, quantity in daily_positions[day].items():\n+                if held.get(iid, ZERO) != quantity:\n+                    carried_apart_from_fills.append(\n+                        f\"{day.isoformat()} {iid} 체결만={held.get(iid, ZERO)} 스냅샷={quantity}\"\n+                    )\n+            if not ignore_split_snapshot:\n+                held = dict(daily_positions[day])\n+        # 판 뒤에도 남았으면 일부 매도다. 매도 직전 수량이 아니라 잔량으로 보는 이유는, 기업행위가\n+        # 든 날의 직전 수량을 체결만으로는 알 수 없고 그날 스냅샷이 확정 수량이기 때문이다.\n+        for iid, quantity in sold_today.items():\n+            if held.get(iid, ZERO) > ZERO:\n+                partial_sells.append(\n+                    {\n+                        \"date\": day.isoformat(),\n+                        \"instrumentId\": iid,\n+                        \"sold\": str(quantity),\n+                        \"remaining\": str(held[iid]),\n+                    }\n+                )\n+        position_value = sum((held[iid] * close_of(closes, iid, day) for iid in held), ZERO)\n+        equity = position_value + cash\n+        equity_by_day[day] = equity\n+        mismatches[\"positionValue\"] += int(position_value != row.position_value)\n+        mismatches[\"cash\"] += int(cash != row.cash)\n+        mismatches[\"equity\"] += int(equity != row.equity)\n+\n+    # ③ 종목 구간 손익 합 = 종료 자산 − 시작 직전 자산\n+    instruments = set(opening) | set(held) | {f.instrument_id for f in window_fills}\n+    total_pnl = ZERO\n+    for iid in instruments:\n+        end_value = held.get(iid, ZERO) * close_of(closes, iid, last)\n+        start_value = opening.get(iid, ZERO) * close_of(closes, iid, baseline.date)\n+        sold = sum(\n+            (\n+                f.price * f.quantity\n+                for f in window_fills\n+                if f.instrument_id == iid and f.side is FillSide.SELL\n+            ),\n+            ZERO,\n+        )\n+        bought = sum(\n+            (\n+                f.price * f.quantity\n+                for f in window_fills\n+                if f.instrument_id == iid and f.side is FillSide.BUY\n+            ),\n+            ZERO,\n+        )\n+        distribution = sum(\n+            (flow.amount for _, flow in cash_flows if flow.instrument_id == iid), ZERO\n+        )\n+        direct_cost = sum((f.cash_cost for f in window_fills if f.instrument_id == iid), ZERO)\n+        total_pnl += end_value - start_value + sold - bought + distribution - direct_cost\n+\n+    return {\n+        \"baselineDate\": baseline.date.isoformat(),\n+        \"d0\": d0.isoformat(),\n+        \"lastAvailable\": last.isoformat(),\n+        \"tradingDays\": len(window),\n+        \"fillCount\": len(window_fills),\n+        \"baselineValueGap\": str(baseline_value - baseline.position_value),\n+        \"mismatches\": mismatches,\n+        \"identityGap\": str(total_pnl - (equity_by_day[last] - baseline.equity)),\n+        \"carriedApartFromFills\": carried_apart_from_fills,\n+        \"cases\": {\n+            \"openingPositions\": {iid: str(q) for iid, q in opening.items()},\n+            \"partialSells\": partial_sells,\n+            \"distributions\": [\n+                {\n+                    \"date\": day.isoformat(),\n+                    \"instrumentId\": flow.instrument_id,\n+                    \"amount\": str(flow.amount),\n+                }\n+                for day, flow in cash_flows\n+            ],\n+            \"openQuantityAtEnd\": {iid: str(q) for iid, q in held.items() if q != ZERO},\n+            \"sellFillsWithSeparatedCosts\": [\n+                {\n+                    \"fillId\": f.fill_id,\n+                    \"date\": kst(f.time).isoformat(),\n+                    \"instrumentId\": f.instrument_id,\n+                    \"quantity\": str(f.quantity),\n+                    \"commission\": str(f.costs.commission),\n+                    \"tax\": str(f.costs.tax),\n+                    \"spread\": str(f.costs.spread),\n+                    \"slippage\": str(f.costs.slippage),\n+                    \"cashCost\": str(f.cash_cost),\n+                }\n+                for f in window_fills\n+                if f.side is FillSide.SELL\n+            ],\n+        },\n+    }\n+\n+\n+def run_fixture(path: Path) -> EngineOutput:\n+    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(load_json(path))\n+    if output.fills is None:\n+        raise RuntimeError(f\"{path.name}: 체결 기록이 없다. 011 은 이런 실행을 계산하지 않는다\")\n+    return output\n+\n+\n+def main() -> int:\n+    parser = argparse.ArgumentParser(description=__doc__)\n+    parser.add_argument(\"--out\", type=Path, help=\"보고서를 쓸 파일(없으면 표준 출력)\")\n+    parser.add_argument(\n+        \"--ignore-split-snapshot\",\n+        action=\"store_true\",\n+        help=\"대조군: 기업행위일의 보유 스냅샷을 빼고 체결만으로 이월한다\",\n+    )\n+    args = parser.parse_args()\n+\n+    closes = raw_closes()\n+    windows: list[dict[str, Any]] = []\n+    for path in sorted((WORKER_DIR / \"tests\" / \"fixtures\").glob(\"engine-input-three-etf-*.json\")):\n+        output = run_fixture(path)\n+        series = output.portfolio_series\n+        for index in D0_INDEXES:\n+            if index + LENGTH > len(series):\n+                continue\n+            window = check_window(\n+                series,\n+                output.fills or [],\n+                closes,\n+                index,\n+                ignore_split_snapshot=args.ignore_split_snapshot,\n+            )\n+            window[\"fixture\"] = path.stem.removeprefix(\"engine-input-three-etf-\")\n+            windows.append(window)\n+\n+    failed = [\n+        w\n+        for w in windows\n+        if Decimal(w[\"baselineValueGap\"]) != ZERO\n+        or Decimal(w[\"identityGap\"]) != ZERO\n+        or any(w[\"mismatches\"].values())\n+    ]\n+    report = {\n+        \"windowCount\": len(windows),\n+        \"failedCount\": len(failed),\n+        \"windows\": windows,\n+    }\n+    text = json.dumps(report, ensure_ascii=False, indent=2)\n+    if args.out:\n+        args.out.write_text(text, encoding=\"utf-8\")\n+        print(f\"{len(windows)}개 구간 중 {len(failed)}개 불일치 → {args.out}\")\n+    else:\n+        print(text)\n+    return 1 if failed else 0\n+\n+\n+if __name__ == \"__main__\":\n+    raise SystemExit(main())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/scripts/regime_link_input_check.py",
+          "old_path": "worker/scripts/regime_link_input_check.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2227236,
+      "head_commit_sha": "14fb4af3c72832eefd041d2db42a445ccedb0c12",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:42:22.135+09:00",
+      "merge_request_id": 952921,
+      "state": "without_files",
+      "real_size": "14",
+      "patch_id_sha": "6a1da445395d7af40347aa5e1f1c218d036aeeab",
+      "commits": [
+        {
+          "id": "14fb4af3c72832eefd041d2db42a445ccedb0c12",
+          "short_id": "14fb4af3",
+          "created_at": "2026-09-20T16:42:13.000+09:00",
+          "parent_ids": [
+            "965a173b4b824e2333b69b3952f11c14b6650641"
+          ],
+          "title": "docs(be): 011 메시지 계약 픽스처 일곱 개와 README를 만든다",
+          "message": "docs(be): 011 메시지 계약 픽스처 일곱 개와 README를 만든다\n\n백엔드와 워커가 같은 파일로 round-trip 을 검증하도록 작업 셋(연속 운용·현금 시작·\n구간 안 상장폐지)과 이벤트 넷을 두었다. 수치는 생성기가 실제 현금 회계로 만들어\n행 범위·비용 관계·체결과 분배금만으로의 현금 재구성이 성립한다.\n\n결과 이벤트의 result 는 형식 예시다. 구간 산식의 기대값 대조는 T014 가 워커를\nimport 하지 않는 독립 계산으로 따로 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:42:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:42:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14fb4af3c72832eefd041d2db42a445ccedb0c12"
+        },
+        {
+          "id": "965a173b4b824e2333b69b3952f11c14b6650641",
+          "short_id": "965a173b",
+          "created_at": "2026-09-20T16:31:06.000+09:00",
+          "parent_ids": [
+            "e94955268acdec173c5bfe8145aafa0f38eee704",
+            "d718603dacb0aa87b1a5413a8799fc41654a71af"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/363-regime-link-contract",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/363-regime-link-contract\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:31:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:31:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/965a173b4b824e2333b69b3952f11c14b6650641"
+        },
+        {
+          "id": "e94955268acdec173c5bfe8145aafa0f38eee704",
+          "short_id": "e9495526",
+          "created_at": "2026-09-20T16:29:38.000+09:00",
+          "parent_ids": [
+            "e6dd93113499a9e919526325a4afd6466be7d886"
+          ],
+          "title": "fix(be): 코드리뷰에서 나온 여섯 건을 고친다",
+          "message": "fix(be): 코드리뷰에서 나온 여섯 건을 고친다\n\n- 이월이 덮어쓰기임을 계약에 적었다. 스냅샷은 그날 보유 전체이고 수량 0인 종목이\n  빠져 있어, 부분 갱신으로 읽으면 체결 없이 0이 된 보유가 계속 남는다\n- 부분 매도 판정을 매도 직전 수량이 아니라 잔량으로 바꿨다. 분할이 든 날의 직전\n  수량은 체결만으로 알 수 없어 절반으로 보고하고 있었다\n- 입력 trades와 결과 trades가 이름만 같고 모양이 다름을 명시했다\n- 예시 체결의 가격·비용을 costs.py 규칙으로 검산되게 맞추고 근거를 적었다\n- 종가 조회에 없는 종목·날짜를 알려주는 방어를 넣었다\n- 대조 규모 표현이 곱셈으로 읽히지 않게 고쳤다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:29:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:29:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e94955268acdec173c5bfe8145aafa0f38eee704"
+        },
+        {
+          "id": "e6dd93113499a9e919526325a4afd6466be7d886",
+          "short_id": "e6dd9311",
+          "created_at": "2026-09-20T14:32:06.000+09:00",
+          "parent_ids": [
+            "2273e901c89558761aee72dd791947b98d7b8882"
+          ],
+          "title": "docs(be): spec 011 tasks에 계약 정리로 드러난 남은 일 두 가지를 더한다",
+          "message": "docs(be): spec 011 tasks에 계약 정리로 드러난 남은 일 두 가지를 더한다\n\n워커 이월 규칙을 계약에 넣고 보니 그 입력을 만드는 쪽에 대응하는 의무가 없었다.\n- T098 백엔드가 구간 안 스냅샷을 빠짐없이 담는 것을 조립 의무로 고정한다\n- T099 T031의 크기 상한 기준이 계약과 어긋난다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:32:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:32:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6dd93113499a9e919526325a4afd6466be7d886"
+        },
+        {
+          "id": "2273e901c89558761aee72dd791947b98d7b8882",
+          "short_id": "2273e901",
+          "created_at": "2026-09-20T14:30:11.000+09:00",
+          "parent_ids": [
+            "cbf6ef9a103a1687c36294c49aa7af40565bc2a6"
+          ],
+          "title": "docs(be): 011 메시지 계약을 확정 입력 모양으로 정리하고 수량 이월 규칙을 넣는다",
+          "message": "docs(be): 011 메시지 계약을 확정 입력 모양으로 정리하고 수량 이월 규칙을 넣는다\n\nT000 대조가 끝나 계산 계약을 동결할 수 있으므로, 작업 메시지의 inputs를\n축약 예시가 아니라 확정 모양 하나로 합치고 게이트 문구를 통과 상태로 고쳤다.\n\n수량 이월은 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다\"로 고정했다.\n체결만 누적하면 분할 같은 기업행위가 든 날부터 수량이 틀리는데 종목 손익\n항등식으로는 잡히지 않는다. 같은 경우를 T014 대조 사례와 T015 검증에 더했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:30:11.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:30:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2273e901c89558761aee72dd791947b98d7b8882"
+        },
+        {
+          "id": "cbf6ef9a103a1687c36294c49aa7af40565bc2a6",
+          "short_id": "cbf6ef9a",
+          "created_at": "2026-09-20T14:25:26.000+09:00",
+          "parent_ids": [
+            "8d1b64290503ec73ff6a3f5d4d08caa9a0bac720"
+          ],
+          "title": "docs(be): spec 011 tasks에 G0 대조로 드러난 남은 일 세 가지를 더한다",
+          "message": "docs(be): spec 011 tasks에 G0 대조로 드러난 남은 일 세 가지를 더한다\n\n입력 확보 대조를 마치고 남은 것만 Convergence로 더했다.\n- T095 기업행위로 바뀐 수량은 스냅샷으로 맞춘다는 규칙이 계약·태스크에 없다\n- T096 게이트 통과 상태를 계약 제목과 plan 문장에 반영한다\n- T097 T000 검증 스크립트의 거처를 T014 뒤에 정한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:25:26.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:25:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cbf6ef9a103a1687c36294c49aa7af40565bc2a6"
+        },
+        {
+          "id": "8d1b64290503ec73ff6a3f5d4d08caa9a0bac720",
+          "short_id": "8d1b6429",
+          "created_at": "2026-09-20T14:25:17.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다",
+          "message": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다\n\n011이 받을 입력만으로 사후 구간을 다시 세어 004 회계와 맞는지 확인했다.\n전략 여섯 × 구간 22개에서 시작 직전 평가액·일별 평가액/현금/자산·종목\n구간 손익 합이 모두 차 0이라 입력 확보 게이트를 통과했다.\n\n분할은 체결로 이월되지 않아 004 보유 스냅샷이 필요하다는 것도 함께 확인해\nresearch R3에 남겼다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:25:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:25:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8d1b64290503ec73ff6a3f5d4d08caa9a0bac720"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2227208,
+      "head_commit_sha": "965a173b4b824e2333b69b3952f11c14b6650641",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:33:08.951+09:00",
+      "merge_request_id": 952921,
+      "state": "without_files",
+      "real_size": "5",
+      "patch_id_sha": "68d9e9737ef635a114eba5ad280023efc4a6f1c5",
+      "commits": [
+        {
+          "id": "965a173b4b824e2333b69b3952f11c14b6650641",
+          "short_id": "965a173b",
+          "created_at": "2026-09-20T16:31:06.000+09:00",
+          "parent_ids": [
+            "e94955268acdec173c5bfe8145aafa0f38eee704",
+            "d718603dacb0aa87b1a5413a8799fc41654a71af"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/363-regime-link-contract",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/363-regime-link-contract\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:31:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:31:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/965a173b4b824e2333b69b3952f11c14b6650641"
+        },
+        {
+          "id": "e94955268acdec173c5bfe8145aafa0f38eee704",
+          "short_id": "e9495526",
+          "created_at": "2026-09-20T16:29:38.000+09:00",
+          "parent_ids": [
+            "e6dd93113499a9e919526325a4afd6466be7d886"
+          ],
+          "title": "fix(be): 코드리뷰에서 나온 여섯 건을 고친다",
+          "message": "fix(be): 코드리뷰에서 나온 여섯 건을 고친다\n\n- 이월이 덮어쓰기임을 계약에 적었다. 스냅샷은 그날 보유 전체이고 수량 0인 종목이\n  빠져 있어, 부분 갱신으로 읽으면 체결 없이 0이 된 보유가 계속 남는다\n- 부분 매도 판정을 매도 직전 수량이 아니라 잔량으로 바꿨다. 분할이 든 날의 직전\n  수량은 체결만으로 알 수 없어 절반으로 보고하고 있었다\n- 입력 trades와 결과 trades가 이름만 같고 모양이 다름을 명시했다\n- 예시 체결의 가격·비용을 costs.py 규칙으로 검산되게 맞추고 근거를 적었다\n- 종가 조회에 없는 종목·날짜를 알려주는 방어를 넣었다\n- 대조 규모 표현이 곱셈으로 읽히지 않게 고쳤다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:29:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:29:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e94955268acdec173c5bfe8145aafa0f38eee704"
+        },
+        {
+          "id": "e6dd93113499a9e919526325a4afd6466be7d886",
+          "short_id": "e6dd9311",
+          "created_at": "2026-09-20T14:32:06.000+09:00",
+          "parent_ids": [
+            "2273e901c89558761aee72dd791947b98d7b8882"
+          ],
+          "title": "docs(be): spec 011 tasks에 계약 정리로 드러난 남은 일 두 가지를 더한다",
+          "message": "docs(be): spec 011 tasks에 계약 정리로 드러난 남은 일 두 가지를 더한다\n\n워커 이월 규칙을 계약에 넣고 보니 그 입력을 만드는 쪽에 대응하는 의무가 없었다.\n- T098 백엔드가 구간 안 스냅샷을 빠짐없이 담는 것을 조립 의무로 고정한다\n- T099 T031의 크기 상한 기준이 계약과 어긋난다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:32:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:32:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6dd93113499a9e919526325a4afd6466be7d886"
+        },
+        {
+          "id": "2273e901c89558761aee72dd791947b98d7b8882",
+          "short_id": "2273e901",
+          "created_at": "2026-09-20T14:30:11.000+09:00",
+          "parent_ids": [
+            "cbf6ef9a103a1687c36294c49aa7af40565bc2a6"
+          ],
+          "title": "docs(be): 011 메시지 계약을 확정 입력 모양으로 정리하고 수량 이월 규칙을 넣는다",
+          "message": "docs(be): 011 메시지 계약을 확정 입력 모양으로 정리하고 수량 이월 규칙을 넣는다\n\nT000 대조가 끝나 계산 계약을 동결할 수 있으므로, 작업 메시지의 inputs를\n축약 예시가 아니라 확정 모양 하나로 합치고 게이트 문구를 통과 상태로 고쳤다.\n\n수량 이월은 \"체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다\"로 고정했다.\n체결만 누적하면 분할 같은 기업행위가 든 날부터 수량이 틀리는데 종목 손익\n항등식으로는 잡히지 않는다. 같은 경우를 T014 대조 사례와 T015 검증에 더했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:30:11.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:30:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2273e901c89558761aee72dd791947b98d7b8882"
+        },
+        {
+          "id": "cbf6ef9a103a1687c36294c49aa7af40565bc2a6",
+          "short_id": "cbf6ef9a",
+          "created_at": "2026-09-20T14:25:26.000+09:00",
+          "parent_ids": [
+            "8d1b64290503ec73ff6a3f5d4d08caa9a0bac720"
+          ],
+          "title": "docs(be): spec 011 tasks에 G0 대조로 드러난 남은 일 세 가지를 더한다",
+          "message": "docs(be): spec 011 tasks에 G0 대조로 드러난 남은 일 세 가지를 더한다\n\n입력 확보 대조를 마치고 남은 것만 Convergence로 더했다.\n- T095 기업행위로 바뀐 수량은 스냅샷으로 맞춘다는 규칙이 계약·태스크에 없다\n- T096 게이트 통과 상태를 계약 제목과 plan 문장에 반영한다\n- T097 T000 검증 스크립트의 거처를 T014 뒤에 정한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:25:26.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:25:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cbf6ef9a103a1687c36294c49aa7af40565bc2a6"
+        },
+        {
+          "id": "8d1b64290503ec73ff6a3f5d4d08caa9a0bac720",
+          "short_id": "8d1b6429",
+          "created_at": "2026-09-20T14:25:17.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다",
+          "message": "feat(be): 004 저장 결과로 011 구간 입력을 만들 수 있는지 대조한다\n\n011이 받을 입력만으로 사후 구간을 다시 세어 004 회계와 맞는지 확인했다.\n전략 여섯 × 구간 22개에서 시작 직전 평가액·일별 평가액/현금/자산·종목\n구간 손익 합이 모두 차 0이라 입력 확보 게이트를 통과했다.\n\n분할은 체결로 이월되지 않아 004 보유 스냅샷이 필요하다는 것도 함께 확인해\nresearch R3에 남겼다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:25:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:25:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8d1b64290503ec73ff6a3f5d4d08caa9a0bac720"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2841379": [],
+    "2842528": []
+  }
+}

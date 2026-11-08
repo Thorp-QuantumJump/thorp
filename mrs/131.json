@@ -1,0 +1,602 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945536,
+    "iid": 131,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 003 PD-02를 확정하고 001·004 교차 결정을 반영",
+    "description": "## 작업 내용 요약\n\n245가 남긴 미결 항목 중 팀이 정할 수 있는 것들을 확정했다. PD-02(파라미터 값)를 확정하고, \"PD-02·PD-03·PD-04\"로 뭉뚱그려 적혀 있던 오표기를 정정했다.\n\n## 관련 티켓\n\nS15P21E205-254\n\n## 주요 변경 사항\n\n- PD-02 확정 — 전략별 파라미터 값·시작 금액 범위 (data-model §4-2)\n- PD-03·PD-04는 004 소관이지 003을 막지 않는다고 정정 (최소분산 추정 방법만 후보 1개로 시작)\n- 섹터 모멘텀 선정 방식 4종(선정 수·임계값·상위 비율·전부 편입) 모두 등록\n- 001이 평가 기간 API를 직접 붙이는 것으로 소유권 정정\n- 최소 평가 기간을 사용자가 고르는 기능 신설 (FR-011a)\n- T017 차단 표시 해제, 태스크 79→81개\n\n## 리뷰 포인트\n\n- data-model.md §4-2 확정값이 제품 감각에 맞는지\n- FR-011a 서버 재검증은 004 계약 확정 전까지 보류(⑧) — 지금은 화면만 막는다\n- 실제 backend YAML 교체는 이 MR 범위 아님 (T017 구현에서 진행)\n\n## 남은 팀 결정\n\n004 — 비용·규칙 버전 조회, 상한 재배분, `minEvaluationYears` 계약 추가, PD-04(공분산 추정 방법)",
+    "state": "merged",
+    "created_at": "2026-09-15T23:17:43.709+09:00",
+    "updated_at": "2026-09-15T23:18:04.423+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T23:18:04.184+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/254-spec-003-pd-decisions",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+    "merge_commit_sha": "169c2693850f9d3585d6ab26d20106a2e5863148",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T23:17:44.869+09:00",
+    "reference": "!131",
+    "references": {
+      "short": "!131",
+      "relative": "!131",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!131"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/131",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945536,
+    "iid": 131,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 003 PD-02를 확정하고 001·004 교차 결정을 반영",
+    "description": "## 작업 내용 요약\n\n245가 남긴 미결 항목 중 팀이 정할 수 있는 것들을 확정했다. PD-02(파라미터 값)를 확정하고, \"PD-02·PD-03·PD-04\"로 뭉뚱그려 적혀 있던 오표기를 정정했다.\n\n## 관련 티켓\n\nS15P21E205-254\n\n## 주요 변경 사항\n\n- PD-02 확정 — 전략별 파라미터 값·시작 금액 범위 (data-model §4-2)\n- PD-03·PD-04는 004 소관이지 003을 막지 않는다고 정정 (최소분산 추정 방법만 후보 1개로 시작)\n- 섹터 모멘텀 선정 방식 4종(선정 수·임계값·상위 비율·전부 편입) 모두 등록\n- 001이 평가 기간 API를 직접 붙이는 것으로 소유권 정정\n- 최소 평가 기간을 사용자가 고르는 기능 신설 (FR-011a)\n- T017 차단 표시 해제, 태스크 79→81개\n\n## 리뷰 포인트\n\n- data-model.md §4-2 확정값이 제품 감각에 맞는지\n- FR-011a 서버 재검증은 004 계약 확정 전까지 보류(⑧) — 지금은 화면만 막는다\n- 실제 backend YAML 교체는 이 MR 범위 아님 (T017 구현에서 진행)\n\n## 남은 팀 결정\n\n004 — 비용·규칙 버전 조회, 상한 재배분, `minEvaluationYears` 계약 추가, PD-04(공분산 추정 방법)",
+    "state": "merged",
+    "created_at": "2026-09-15T23:17:43.709+09:00",
+    "updated_at": "2026-09-15T23:18:04.423+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T23:18:04.184+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/254-spec-003-pd-decisions",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+    "merge_commit_sha": "169c2693850f9d3585d6ab26d20106a2e5863148",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T23:17:44.869+09:00",
+    "reference": "!131",
+    "references": {
+      "short": "!131",
+      "relative": "!131",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!131"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/131",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "6",
+    "latest_build_started_at": "2026-09-15T23:17:57.578+09:00",
+    "latest_build_finished_at": "2026-09-15T23:18:00.751+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197051,
+      "iid": 47,
+      "project_id": 1444456,
+      "sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+      "ref": "docs(fe)/254-spec-003-pd-decisions",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T23:17:57.276+09:00",
+      "updated_at": "2026-09-15T23:18:00.759+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197051"
+    },
+    "head_pipeline": {
+      "id": 197051,
+      "iid": 47,
+      "project_id": 1444456,
+      "sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+      "ref": "docs(fe)/254-spec-003-pd-decisions",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T23:17:57.276+09:00",
+      "updated_at": "2026-09-15T23:18:00.759+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197051",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-15T23:17:57.578+09:00",
+      "finished_at": "2026-09-15T23:18:00.751+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197051",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+      "head_sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+      "start_sha": "39b517bd7a8004936780766c4466acd190a8b9f7"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "dd87c6e06bfb61a709b585c475c8b8f2df0d6613",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811735,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T23:17:43.793+09:00",
+          "updated_at": "2026-09-15T23:17:43.797+09:00",
+          "system": true,
+          "noteable_id": 945536,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 131,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1c07b9bfea5a7fa4faaf93861ef5610588b38224",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811736,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T23:17:43.815+09:00",
+          "updated_at": "2026-09-15T23:17:43.823+09:00",
+          "system": true,
+          "noteable_id": 945536,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 131,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "223e317633554d3b595b9a791a7399bb781d36ef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811738,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (본 MR은 문서 및 스펙 확정 변경사항으로, 코드 로직 변경이나 실행 가능한 코드가 포함되어 있지 않습니다.)\n\n### 테스트 제안\n문서 변경사항이므로 코드 레벨의 테스트는 불필요하나, 반영된 스펙(`FR-011a` 최소 평가 기간 선택 기능, `PD-02` 파라미터 확정값 등)이 향후 구현 단계에서 올바르게 적용되는지 검증하기 위해 다음 시나리오로 인수 테스트를 수행할 것을 권장합니다.\n\n1. **최소 평가 기간 변경에 따른 전략 선택 판정 테스트 (FR-011a)**\n   - **시나리오**: 공통 평가 가능 범위가 워밍업 기간을 제외하고 1년~3년 사이인 자산 유니버스를 구성합니다.\n   - **확인 사항**: \n     - 최소 평가 기간이 기본값(1년)일 때 전략 카드가 선택 가능 상태인지 확인합니다.\n     - 최소 평가 기간을 엄격(3년)으로 변경했을 때, 해당 조건을 충족하지 못해 전략 카드가 선택 불가 상태로 변경되고 관련 안내 문구가 노출되는지 확인합니다.\n     - 최소 평가 기간을 완화(제한 없음, `0`)로 변경했을 때 다시 선택 가능 상태로 복원되는지 확인합니다.\n\n2. **섹터 모멘텀 선정 방식(`selectionMode`)별 상세 설정 분기 테스트**\n   - **시나리오**: 섹터 모멘텀 전략의 상세 설정 화면에 진입합니다.\n   - **확인 사항**: \n     - `selectionMode`를 `TOP_N`, `THRESHOLD`, `TOP_PERCENT`, `ALL` 각각으로 변경할 때, 기획서(spec) §4-2에 정의된 바에 따라 올바른 상세 입력 축(`topN`, `threshold`, `topPercent` 등)만 동적으로 노출되고 나머지는 숨겨지는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:9438c3a21eadfebfbf1e7d5a9470ec88e11a2588 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T23:17:53.274+09:00",
+          "updated_at": "2026-09-15T23:17:53.274+09:00",
+          "system": false,
+          "noteable_id": 945536,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 131,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ed7eb057ebd14040b2e54ccc14283cc4799bb3bf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811739,
+          "type": null,
+          "body": "mentioned in commit 169c2693850f9d3585d6ab26d20106a2e5863148",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T23:18:04.098+09:00",
+          "updated_at": "2026-09-15T23:18:04.106+09:00",
+          "system": true,
+          "noteable_id": 945536,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 131,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2202069,
+      "head_commit_sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+      "base_commit_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+      "start_commit_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+      "created_at": "2026-09-15T23:17:44.088+09:00",
+      "merge_request_id": 945536,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "7d43da573d5bfbb91b7efd48e7e51e9ad2428fb3"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2202069,
+      "head_commit_sha": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+      "base_commit_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+      "start_commit_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+      "created_at": "2026-09-15T23:17:44.088+09:00",
+      "merge_request_id": 945536,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "7d43da573d5bfbb91b7efd48e7e51e9ad2428fb3",
+      "commits": [
+        {
+          "id": "9438c3a21eadfebfbf1e7d5a9470ec88e11a2588",
+          "short_id": "9438c3a2",
+          "created_at": "2026-09-15T22:02:28.000+09:00",
+          "parent_ids": [
+            "39b517bd7a8004936780766c4466acd190a8b9f7"
+          ],
+          "title": "docs(fe): spec 003 PD-02를 확정하고 001·004 교차 결정을 반영한다",
+          "message": "docs(fe): spec 003 PD-02를 확정하고 001·004 교차 결정을 반영한다\n\n245의 요구사항 품질 점검이 남긴 미결 항목 중 팀이 이 자리에서 확정할 수 있는\n것들을 반영했다.\n\n- PD-02(전략별 파라미터 값·시작 금액 범위) 확정. 007의 기존 값(lookbackDays,\n  topN, maxWeight 일부)은 그대로 승격하고, 없던 축(rebalancePeriod, maxWeight\n  나머지, skipRecentDays, allocationMethod, estimationMethod)은 새로 정했다\n  (data-model.md §4-2)\n- PD 번호 오표기 정정: 245가 \"PD-02·PD-03·PD-04\"로 뭉뚱그렸던 것을 바로잡았다.\n  PD-03·PD-04는 specs/README.md 기준 004(백테스트 실행) 소유의 계산 내부 결정\n  이며 003의 등록표 축을 막지 않는다. 유일한 예외인 최소분산 estimationMethod는\n  후보 하나(표본공분산)로 시작해 004 PD-04 확정을 기다리는 것으로 좁혔다\n- 섹터 모멘텀 선정 방식을 선정 수 하나가 아니라 선정 수·임계값·상위 비율·전부\n  편입 네 가지 모두 등록해 사용자가 고르게 했다(selectionMode 축 신설)\n- 001 평가 기간 계약 소유권 정정: 001이 이미 완성한 EvaluationWindowService에\n  001 스스로 호출부를 붙이는 것으로 바로잡았다. 003이 등록표 응답에 계산을\n  옮겨 담지 않는다\n- 최소 평가 기간을 팀이 값 하나로 고정하지 않고 사용자가 완화/기본(1년)/엄격\n  (3년) 중 고르게 하는 FR-011a를 신설했다(analysisConditions.minEvaluationYears).\n  서버 재검증은 004의 백테스트 요청 계약에 자리가 생긴 뒤로 미루고(\"착수 전에\n  알아둘 것\" ⑧ 신설), 화면 판정만으로 우선 막는다\n- T017의 [BLOCKED: PD-02·PD-03·PD-04] 표시를 해제하고 확정 축 값을 반영했다.\n  태스크는 79개에서 81개로, 이번엔 새 태스크 추가 없이 기존 태스크(T032·T042·\n  T044·T065·T067·T068)를 확장해 새 항목을 흡수했다\n- plan.md B06 묶음의 선행 조건을 \"외부 결정 대기\"에서 \"001 구현 + 004 결정\n  대기\"로 구체화했다 — 전자는 더 이상 팀 결정이 필요 없는 다른 팀의 구현\n  작업이다\n\n실제 backend YAML(parameter-registry.yml) 교체와 004 계약 변경은 이 티켓\n범위가 아니다(T017·B02 구현, 004와의 별도 합의에서 한다).\n\n관련 티켓: S15P21E205-254\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T22:02:28.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T22:02:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9438c3a21eadfebfbf1e7d5a9470ec88e11a2588"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -90,27 +90,55 @@ spec의 Key Entities를 구현할 수 있는 형태로 옮긴다. 기존 `params\n | 역변동성 | 비중 상한 | 입력형 |\n | 섹터 모멘텀 | 관측 기간 | 목록형 |\n | 섹터 모멘텀 | 최근 구간 제외 기간 (`skipRecentDays`) | 목록형 |\n-| 섹터 모멘텀 | 선정 수 또는 임계값 | 목록형 |\n-| 섹터 모멘텀 | 배분 방식 | 목록형 |\n+| 섹터 모멘텀 | 선정 방식 (`selectionMode`) | 목록형 — `TOP_N`\\|`THRESHOLD`\\|`TOP_PERCENT`\\|`ALL` |\n+| 섹터 모멘텀 | 선정 수 (`topN`, `selectionMode=TOP_N`일 때만) | 목록형 |\n+| 섹터 모멘텀 | 임계값 (`threshold`, `selectionMode=THRESHOLD`일 때만) | 입력형 |\n+| 섹터 모멘텀 | 상위 비율 (`topPercent`, `selectionMode=TOP_PERCENT`일 때만) | 입력형 |\n+| 섹터 모멘텀 | 배분 방식 (`allocationMethod`) | 목록형 |\n+| 섹터 모멘텀 | 비중 상한 | 입력형 — spec FR-003 원표에 빠져 있었다. FR-019가 역변동성과 섹터 모멘텀 둘 다 상한 재배분 대상이라 명시해 이번에 추가했다 |\n | 섹터 모멘텀 | 리밸런싱 주기 | 목록형 |\n | 최소분산 | 공분산 관측 기간 | 목록형 |\n-| 최소분산 | 추정 방법 | 목록형 |\n+| 최소분산 | 추정 방법 (`estimationMethod`) | 목록형 — 현재 후보 하나(표본공분산). 004 PD-04 확정 시 축소추정을 추가한다 |\n | 최소분산 | 비중 상한 | 입력형 |\n | 최소분산 | 리밸런싱 주기 | 목록형 |\n \n-> 구체적 후보 값은 PD-02가 정한다.\n+`selectionMode`가 `ALL`이면 부속 값이 없다. 화면은 고른 `selectionMode`에 해당하는 값 하나만 상세 설정에 열고 나머지 값은 저장하지 않는다(spec FR-003).\n \n-**임시 등록표로는 채울 수 없는 축이 여덟이다.** 지금 `parameter-registry-provisional.yml`에는 관측 기간·선정 수·비중 상한(최소분산만) 셋뿐이고 나머지는 축 자체가 없다. 옮길 때 **새로 만들고 값도 지어내야 한다.**\n+## 4-2. 확정 후보 값 (PD-02, 2026-09-15, [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254))\n \n-| 전략 | 임시 등록표에 없는 축 |\n-|---|---|\n-| 고정 목표 비중 | 리밸런싱 주기, 비중 상한 (지금 축이 하나도 없다) |\n-| 동일 비중 | 리밸런싱 주기 (지금 축이 하나도 없다) |\n-| 역변동성 | 리밸런싱 주기, 비중 상한 |\n-| 섹터 모멘텀 | 최근 구간 제외 기간, 배분 방식, 리밸런싱 주기 |\n-| 최소분산 | 추정 방법, 리밸런싱 주기 |\n+**공통 `rebalancePeriod` 후보** (모든 전략 공통, §5 형태를 따른다):\n \n-PD-02·PD-03 확정 전에는 007의 기존 임시 등록표에 이미 있는 값만 출처와 `PROVISIONAL-` 버전을 유지한 채 이관할 수 있다. 위 여덟 축과 그 값은 새로 지어내지 않는다. 따라서 T017의 제품 등록표 완성과 이에 의존하는 로더·종단 연결은 팀이 값을 확정할 때까지 차단하되, 구조·계약과 명시적으로 합성인 테스트 픽스처는 먼저 만들 수 있다.\n+| 값 | 뜻 | 비고 |\n+|---|---|---|\n+| `{mode: CALENDAR, unit: MONTH_END}` | 월말 | 기본값 |\n+| `{mode: CALENDAR, unit: QUARTER_END}` | 분기말 | |\n+| `{mode: TRADING_DAYS, days: 21}` | 21거래일 | |\n+| `{mode: TRADING_DAYS, days: 63}` | 63거래일 | |\n+\n+**전략별 축**:\n+\n+| 전략 | 축 | 후보/범위 | 기본값 | 출처 |\n+|---|---|---|---|---|\n+| 고정 목표 비중 | `maxWeight` | 입력형 10~100, 5 간격, 단위 % | 40 | 신규 |\n+| 역변동성 | `lookbackDays` | 목록형 `[21, 63, 126, 252]`, 허용범위 10~504 간격 1 | 63 | 007 이관 |\n+| 역변동성 | `maxWeight` | 입력형 10~100, 5 간격, 단위 % | 40 | 신규 |\n+| 섹터 모멘텀 | `lookbackDays` | 목록형 `[20, 60, 120]`, 허용범위 10~252 간격 1 | 60 | 007 이관 |\n+| 섹터 모멘텀 | `skipRecentDays` | 목록형 `[0, 5, 10, 21]`, 허용범위 0~63 간격 1 | 0 | 신규 |\n+| 섹터 모멘텀 | `selectionMode` | 목록형 `[TOP_N, THRESHOLD, TOP_PERCENT, ALL]` | `TOP_N` | 신규 (2-2 결정) |\n+| 섹터 모멘텀 | `topN` | 목록형 `[2, 3, 4]`, 허용범위 1~20 간격 1 | 3 | 007 이관 |\n+| 섹터 모멘텀 | `threshold` | 입력형 -20~50, 1 간격, 단위 %(수익률) | 0 | 신규 |\n+| 섹터 모멘텀 | `topPercent` | 입력형 10~100, 10 간격, 단위 % | 50 | 신규 |\n+| 섹터 모멘텀 | `allocationMethod` | 목록형 `[EQUAL, SCORE_WEIGHTED]` | `EQUAL` | 신규 |\n+| 섹터 모멘텀 | `maxWeight` | 입력형 10~100, 5 간격, 단위 % | 40 | 신규 |\n+| 최소분산 | `lookbackDays` | 목록형 `[60, 120, 250]`, 허용범위 20~504 간격 1 | 120 | 007 이관 |\n+| 최소분산 | `estimationMethod` | 목록형 `[SAMPLE_COV]` (후보 하나) | `SAMPLE_COV` | 신규, 004 PD-04 대기 |\n+| 최소분산 | `maxWeight` | 목록형 `[30, 40, 50]`, 허용범위 10~100 간격 5 | 40 | 007 이관 |\n+\n+**시작 금액** (`analysisConditions.initialAmount`): 입력형, 최소 1,000,000원, 최대 1,000,000,000원, 간격 1,000,000원, 기본 10,000,000원, 단위 원.\n+\n+**\"007 이관\"** 값은 `parameter-registry-provisional.yml`에 이미 있던 수치를 그대로 확정값으로 승격한 것이다. **\"신규\"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.\n+\n+**`estimationMethod`가 후보 하나뿐인 이유**: PD-04(004 소유)가 \"공분산 관측 기간·추정 방법(표본/축소)·해법\"을 아직 확정하지 않았다. 004가 축소추정(shrinkage)을 실제로 구현·확정하기 전에 003이 후보로 얹으면 화면이 004가 계산할 수 없는 선택지를 제공하는 셈이라(원칙 VI), 표본공분산 하나로 시작한다. PD-04가 확정되면 등록표 버전을 올려 후보를 늘린다 — 기존 버전의 값은 고치지 않는다.\n \n ## 4-1. 유효성 규칙 (ValidationRule)\n \n@@ -170,11 +198,14 @@ PD-02·PD-03 확정 전에는 007의 기존 임시 등록표에 이미 있는 \n \n | 필드 | 형 | 비고 |\n |---|---|---|\n-| `initialAmount` | AllowedRange + 기본값 | 입력형. 최소·최대·간격과 기본 시작 금액 (R6) |\n+| `initialAmount` | AllowedRange + 기본값 | 입력형. 최소 100만·최대 10억·간격 100만·기본 1,000만 원 (PD-02, 2026-09-15 확정, R6) |\n | `targetVolatility` | AllowedRange + 기본값 | 입력형. 004 PD-18이 지정한 등록표 항목 (연 5~20%, 1% 간격, 기본 연 10%) |\n+| `minEvaluationYears` | AllowedRange + 기본값 | 목록형 `[0, 1, 3]`, 기본 1. 라벨 `0`=완화(제한 없음), `1`=기본(1년), `3`=엄격(3년) (spec FR-011a, PD-02 2026-09-15 확정) |\n \n 기본값을 별도 필드로 빼지 않고 범위와 한 덩이로 둔다. 조회 응답도 같은 모양이다([계약](contracts/strategy-registry-api.md) §1).\n \n+**최소 평가 기간(`minEvaluationYears`)**: 사용자가 '기간·금액·조건'에서 고르며, 워밍업과 별개로 FR-011의 \"평가할 구간이 남으면\" 판정에 쓰인다. 001의 `GET /sectors/evaluation-window`가 돌려준 공통 평가 가능 범위에서 워밍업을 뺀 뒤 남는 기간이 이 값(연 단위)보다 짧으면 그 전략을 고를 수 없다. 값을 바꾸면 카드 판정과 실행 전 안내가 다시 계산된다(§4.2.2, spec FR-011a).\n+\n **목표 변동성은 '목표 위험 맞춤' 시나리오에서만 쓴다.** 주 분석(연속 운용)에서는 화면에 보이지 않는다. 등록표에 자리를 두는 것은 004 PD-18이 그렇게 지정했기 때문이며, 화면에 언제 보일지는 그 시나리오를 만들 때 정한다.\n \n **비용 가정**: 기본 수치는 PD-07이고 소유가 [004](../004-backtest-execution/spec.md)다. 003은 004가 등록한 비용 조건(`cost_profile`)의 현재 버전·수치·`provisional` 여부를 읽기 전용으로 보이고, 파라미터 등록표에 따로 담지 않는다. PD-07 확정 전에는 004가 이미 등록한 `PROVISIONAL-DEMO-1`을 그대로 표시하므로 미확정 자체가 분석 차단 사유는 아니다.\n@@ -200,6 +231,7 @@ PD-02·PD-03 확정 전에는 007의 기존 임시 등록표에 이미 있는 \n |---|---|---|\n | `periodStart` / `periodEnd` | date | 001이 산출한 공통 평가 가능 범위 안에서만 (FR-009) |\n | `initialAmount` | number | 등록표의 허용 범위 안에서만 |\n+| `minEvaluationYears` | number | 등록표의 `[0, 1, 3]` 중 하나. 기본 1 (FR-011a) |\n | `costProfileVersion` | String | 004가 등록한 비용 조건의 버전. 수치·임시 여부와 함께 읽기 전용 |\n | `scenario` | String | 연속 운용 기본 |\n | `targetVolatility` | number? | '목표 위험 맞춤' 시나리오일 때만 |\n@@ -213,6 +245,9 @@ PD-02·PD-03 확정 전에는 007의 기존 임시 등록표에 이미 있는 \n | 분석 조건 | 9 | |\n | `registryVersion` | 8 | 다르면 서버가 409로 거절한다 (R9) |\n | `warmupTradingDays` | 6의 계산 결과 | 여러 전략을 비교할 때는 가장 긴 값을 공통으로 쓴다 (FR-014, 004 R-15) |\n+| `minEvaluationYears` | 9 | **004 계약에 자리 없음 (착수 전에 알아둘 것 ⑧)** — 합의되면 서버가 `periodEnd - periodStart`와 산술로 재확인한다. 그 전까지는 화면의 `useEvaluationWindow` 판정만으로 막는다 (FR-011a) |\n+\n+`minEvaluationYears`는 원칙 VI(화면이 이미 막았어도 서버가 같은 검증을 다시 한다)에 따라 이 요청에도 실어 서버가 `periodEnd - periodStart` 간격을 산술로 재확인하는 것이 목표 설계다(001을 다시 호출하지 않는다, `0`=완화는 검사 생략). **다만 004의 `POST /backtests` 계약(`conditions`)에 아직 이 필드 자리가 없어 004와 합의가 먼저다**(\"착수 전에 알아둘 것\" ⑧). 합의 전에는 화면의 `useEvaluationWindow` 판정(FR-011a)만으로 막고, 서버 재검증은 합의 뒤 더한다.\n \n ## 상태 전이\n \n@@ -224,6 +259,7 @@ PD-02·PD-03 확정 전에는 007의 기존 임시 등록표에 이미 있는 \n 등록표 조회 성공\n   ├ 비활성 전략        → 카드에 보이지 않음 (R5)\n   ├ 워밍업 미충족      → 카드 선택 불가 + 이유 한 문장 (FR-011)\n+  ├ 워밍업 충족·최소 평가 기간 미달 → 카드 선택 불가 + 이유 한 문장 (FR-011a)\n   ├ 워밍업 충족·기간 축소 → 선택 가능 + 줄어든 기간 안내 (FR-011)\n   └ 그 외              → 선택 가능\n ```\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/data-model.md",
+          "old_path": "specs/003-strategy-settings/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,11 @@\n branch `docs(fe)/245-spec-003-quality-review` · [checklists/review.md](checklists/review.md). 이 문서 작업은\n `docs(fe)/229-spec-003-tasks`의 최신 plan·tasks를 대상으로 하므로 229 병합이 선행한다.\n \n+**PD-02 확정과 교차 결정**: [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254) ·\n+branch `docs(fe)/254-spec-003-pd-decisions`. 245가 남긴 미결 항목 중 팀이 확정할 수 있는 것(PD-02,\n+섹터 모멘텀 선정 방식, 001 평가 기간 소유권, 최소 평가 기간 선택)을 반영했다. constitution 원칙 II\n+예외는 [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 별도로 승인받았다.\n+\n ## Summary\n \n 사용자가 다섯 전략 카드에서 하나를 고르고, 그 전략에 해당하는 상세 설정만 허용 범위 안에서 조정한 뒤 분석을 시작하는 화면이다. 설정의 후보 값·허용 범위·기본값·유효성 제약은 서버가 보관하는 **파라미터 등록표**가 소유하며, 화면은 조회해 쓰기만 하고 서버가 실행 직전에 같은 검증을 다시 수행한다.\n@@ -39,7 +44,7 @@ branch `docs(fe)/245-spec-003-quality-review` · [checklists/review.md](checklis\n \n **Performance Goals**: 정하지 않는다. 이 화면은 계산을 실행하지 않고 등록표를 한 번 조회할 뿐이라 지금 목표를 세울 근거가 없다. 필요해지면 그때 실측해 정한다.\n \n-**Constraints**: PD-02·PD-03·PD-04가 미확정이므로 기존 007 임시 등록표에 없는 제품 후보값·범위·전략 규칙을 만들지 않는다. 기존 값은 `PROVISIONAL-` 출처와 표시를 유지한 채 이관할 수 있고, 구조·계약과 합성 테스트 픽스처는 결정 전에 작업할 수 있다. 제품 등록표 완성은 결정 뒤에 한다. PD-07은 004가 `PROVISIONAL-DEMO-1` 사용을 이미 명시했으므로 단독 차단 사유가 아니며, 현재 비용·규칙 버전을 화면이 조회할 계약이 없는 점이 분석 연결을 막는다. 등록표 값이 바뀌면 기존 버전을 덮어쓰지 않고 버전을 올린다.\n+**Constraints**: PD-02는 2026-09-15 확정됐다([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254), [data-model](data-model.md) §4-2). 007 기존 값과 겹치는 축은 같은 수치를 승격했고, 없던 축(리밸런싱 주기·비중 상한·선정 방식 등)은 새로 정했다. 최소분산 `estimationMethod`만 004 PD-04 확정 전까지 후보 하나로 남긴다. PD-07은 004가 `PROVISIONAL-DEMO-1` 사용을 이미 명시했으므로 단독 차단 사유가 아니며, 현재 비용·규칙 버전을 화면이 조회할 계약이 없는 점이 분석 연결을 막는다. 등록표 값이 바뀌면 기존 버전을 덮어쓰지 않고 버전을 올린다.\n \n **Scale/Scope**: 전략 5개, 전략별 설정 항목 1~5개, 화면 1개(전략 선택·상세 설정·기간·금액·조건)\n \n@@ -72,7 +77,7 @@ constitution 원칙 II가 인용하는 기획서 §4.1은 화면의 행동 버\n \n ### 게이트 결과 (Phase 0 전)\n \n-현재 막는 항목은 네 갈래다. 첫째, FR-002와 constitution 원칙 II의 충돌을 해결해야 한다. 둘째, PD-02·PD-03·PD-04 확정 전에는 기존 007 임시 등록표에 없는 제품 축·값·규칙을 채울 수 없다. 셋째, 001의 평가 기간 입력 계약과 워밍업 뒤 최소 평가 길이가 정해져야 한다. 넷째, 004가 현재 규칙·비용 버전 조회와 상한 재배분·워커 메시지 계약을 제공해야 한다. PD-07 미확정 자체는 차단하지 않고 004의 명시된 임시 비용 프로필을 표시한다. 값과 무관한 구조·계약·합성 테스트 설계만 먼저 진행할 수 있다.\n+FR-002·PD-02·001 평가 기간·최소 평가 길이는 모두 해제됐다([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)·[254](https://ssafy.atlassian.net/browse/S15P21E205-254)). 남는 항목은 하나다 — 004가 현재 규칙·비용 버전 조회와 상한 재배분·워커 메시지 계약을 제공해야 한다. PD-07 미확정 자체는 차단하지 않고 004의 명시된 임시 비용 프로필을 표시한다.\n \n ### 004와 대조한 결과 spec을 고쳤다\n \n@@ -84,11 +89,11 @@ constitution 원칙 II가 인용하는 기획서 §4.1은 화면의 행동 버\n | FR-019에서 최소분산을 뺐다 | 004 FR-025가 상한을 최적화 제약으로 넣어 풀기 때문에 잘리는 몫이 생기지 않는다. 역변동성·섹터 모멘텀에만 해당한다 |\n | FR-010에 목표 변동성을 더했다 | 004의 PD-18(2026-09-10 확정)이 목표 변동성을 \"003 파라미터 등록표 항목\"으로 지정했는데 003이 받지 않고 있었다 |\n \n-**남은 빈자리**: 상한에 잘린 몫을 재배분하는 계산은 004가 해야 하나 004에 규칙이 없다. FR-020이 \"처리 규칙을 적용한다\"고만 두고 PD-02·PD-03 계열 미확정으로 남겼다. 004가 규칙을 등록하기 전까지 003은 상한 값 전달까지만 맡는다.\n+**남은 빈자리**: 상한에 잘린 몫을 재배분하는 계산은 004가 해야 하나 004에 규칙이 없다. 004 FR-020이 \"처리 규칙을 적용한다\"고만 두고 004 자신의 미확정 결정 항목으로 남겼다(003 PD-02와는 다른 항목). 004가 규칙을 등록하기 전까지 003은 상한 값 전달까지만 맡는다.\n \n ### 게이트 재확인 (Phase 1 설계 후)\n \n-설계를 마친 뒤 다시 확인했으며 새로 생긴 constitution 위반은 없다. 다만 Phase 0에서 확인한 원칙 II 충돌, PD-02·PD-03·PD-04, 001·004 교차 계약 게이트는 여전히 열려 있다. 아래 표는 이 게이트가 해결된 뒤 설계가 원칙을 지키는 방식이다.\n+설계를 마친 뒤 다시 확인했으며 새로 생긴 constitution 위반은 없다. Phase 0에서 확인한 원칙 II 충돌·PD-02·001 평가 기간 게이트는 해제됐고, 004 교차 계약(비용·규칙 버전 조회, 상한 재배분, 워커 메시지) 하나만 열려 있다. 아래 표는 그 게이트가 해결된 뒤 설계가 원칙을 지키는 방식이다.\n \n | 원칙 | 설계에서 지키는 방식 |\n |---|---|\n@@ -167,7 +172,7 @@ constitution \"Jira 연계\"가 **`작업 묶음 = 1 Branch = 1 MR`**이고 **\"묶\n | B03 · [S15P21E205-235](https://ssafy.atlassian.net/browse/S15P21E205-235) | `[BE] 전략·파라미터 등록표 조회 API` | `feat(be)/235-registry-api` | T003, T004, T023~T028 | 8 | B02 |\n | B04 · [S15P21E205-236](https://ssafy.atlassian.net/browse/S15P21E205-236) | `[FE] 전략 카드 다섯을 보인다` | `feat(fe)/236-strategy-cards` | T005, T006, T029, T030, T033~T035, T043 | 8 | B03의 계약 |\n | B05 · [S15P21E205-237](https://ssafy.atlassian.net/browse/S15P21E205-237) | `[FE] 카드를 골라 분석을 시작한다` | `feat(fe)/237-strategy-select-run` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | B04 |\n-| B06 · [S15P21E205-238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | `feat(fe)/238-analysis-wiring` | T039, T042 | 2 | B05 + 외부 결정 |\n+| B06 · [S15P21E205-238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | `feat(fe)/238-analysis-wiring` | T039, T042 | 2 | B05 + 001 구현 + 004 결정 |\n | B07 · [S15P21E205-239](https://ssafy.atlassian.net/browse/S15P21E205-239) | `[BE] 접수 시점에 설정을 다시 검증한다` | `feat(be)/239-settings-revalidation` | T002, T047~T051 | 6 | B02 |\n | B08 · [S15P21E205-240](https://ssafy.atlassian.net/browse/S15P21E205-240) | `[FE] 상세 설정을 열어 값을 바꾼다` | `feat(fe)/240-detail-settings` | T052~T057(T057a 포함), T060~T063 | 11 | B05 |\n | B09 · [S15P21E205-241](https://ssafy.atlassian.net/browse/S15P21E205-241) | `[FE] 바꾼 값을 그 자리에서 판정한다` | `feat(fe)/241-live-verdict` | T058, T059, T064 | 3 | B08 |\n@@ -182,7 +187,7 @@ constitution \"Jira 연계\"가 **`작업 묶음 = 1 Branch = 1 MR`**이고 **\"묶\n ```text\n B01 ─▶ B02 ─┬─▶ B03 ─▶ B04 ─▶ B05 ─┬─▶ B08 ─▶ B09 ─▶ B10 ─┐\n             │                       ├─▶ B11                 ├─▶ B12\n-            └─▶ B07                 └─▶ B06 (외부 결정 대기) ┘\n+            └─▶ B07                 └─▶ B06 (001 구현 + 004 결정 대기) ┘\n ```\n \n ### 묶음 이름을 목적으로 붙인 이유\n@@ -202,10 +207,11 @@ B02와 B08이 열하나·열이라 가장 크다. 둘 다 더 쪼개면 목적\n \n ### 묶음에 넣지 않은 것\n \n-없다. T001~T078과 T018a·T057a·T074a 전부가 어느 묶음엔가 속한다. 다만 **B06은 외부 결정을 기다린다** —\n-[004](../004-backtest-execution/spec.md)의 규칙·비용 버전 조회 수단과 [001](../001-etf-market-data/spec.md)의\n-평가 기간 엔드포인트가 정해지기 전에는 시작할 수 없다. 막히지 않은 열하나가 함께 서지 않도록\n-따로 뺀 것이다.\n+없다. T001~T078과 T018a·T057a·T074a 전부가 어느 묶음엔가 속한다. 다만 **B06은 두 선행을 기다린다** —\n+[001](../001-etf-market-data/spec.md)이 이미 있는 계산 로직에 `GET /sectors/evaluation-window` 호출부를\n+붙이는 구현 작업(결정 아님, [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)로 해소)과,\n+[004](../004-backtest-execution/spec.md)의 규칙·비용 버전 조회 수단(여전히 팀 결정 대기)이다. 막히지\n+않은 열하나가 함께 서지 않도록 따로 뺀 것이다.\n \n ## Complexity Tracking\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/plan.md",
+          "old_path": "specs/003-strategy-settings/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,7 +40,7 @@ cd backend && ./gradlew test --tests '*ArchitectureTest*'\n \n ## 2. 등록표를 조회할 수 있는가\n \n-이 수동 확인은 PD-02·PD-03·PD-04 확정값으로 제품 등록표가 완성된 뒤 수행한다. 결정 전에는 아래 200 응답을 제품 동작으로 기대하지 않고, 계약의 합성 픽스처만 T026에서 검증한다.\n+PD-02가 2026-09-15 확정([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254), [data-model](data-model.md) §4-2)됐으므로 T017로 실제 제품 등록표를 채운 뒤 이 수동 확인을 수행한다.\n \n 서버를 띄우고:\n \n@@ -62,7 +62,7 @@ curl -s 'http://localhost:8080/strategies/registry?universeSize=2' \\\n   | jq '.strategies[] | select(.strategyId==\"SECTOR_MOMENTUM\") | .axes[] | select(.name==\"topN\") | .choices'\n ```\n \n-기대: 섹터가 둘이므로 등록된 선정 수 후보 중 2를 넘는 값은 `selectable: false`로 실리고 목록에서 사라지지 않는다. 합성 계약 픽스처에서는 3·4로 이 규칙을 검증하되, 그 숫자를 제품 후보값으로 간주하지 않는다.\n+기대: 섹터가 둘이므로 등록된 선정 수 후보(`[2, 3, 4]`, PD-02 확정값) 중 2를 넘는 3·4가 `selectable: false`로 실리고 목록에서 사라지지 않는다. 단, `selectionMode`가 `TOP_N`일 때만 `topN` 축이 열린다 — 이 확인은 기본값(`selectionMode=TOP_N`) 기준이다.\n \n ```bash\n curl -s 'http://localhost:8080/strategies/registry?universeSize=3' \\\n@@ -157,6 +157,15 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.strategies[].strateg\n \n **늘어나지 않으면 `sum`의 둘째 항목을 읽지 않는 것이다.** 첫 설계(`{basis, plus}`)가 이 경우를 담지 못해 바꾼 것이므로([research](research.md) R4), 이 확인을 건너뛰면 같은 결함이 되살아나도 알 수 없다.\n \n+### 7-2. 최소 평가 기간을 사용자가 고르면 그 값으로 다시 판정하는가 (FR-011a)\n+\n+공통 평가 가능 범위가 워밍업을 뺀 뒤 1년보다 조금 더 남게 섹터를 섞은 뒤:\n+\n+1. '기간·금액·조건'에서 최소 평가 기간을 기본(1년)으로 둔 채 카드가 선택 가능한지 확인한다.\n+2. 최소 평가 기간을 엄격(3년)으로 바꾼다.\n+\n+기대: 같은 워밍업·같은 공통 평가 가능 범위인데도 카드가 선택 불가로 바뀌고 이유가 \"최소 평가 기간(3년)에 못 미칩니다\" 식으로 보인다. 완화(제한 없음)로 바꾸면 다시 선택 가능해진다.\n+\n ## 8. 설정값이 탭 수명만큼 남는가 (SC-007)\n \n 1. 전략과 상세 설정을 정한다.\n@@ -196,7 +205,7 @@ curl -s 'http://localhost:8080/strategies/registry' | jq '[.strategies[].strateg\n | 4 | SC-001, SC-005 |\n | 5 | SC-002 |\n | 5-1 | SC-003 |\n-| 7, 7-1 | SC-004 |\n+| 7, 7-1, 7-2 | SC-004 |\n | 8 | SC-007 |\n | 9 | SC-008 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/quickstart.md",
+          "old_path": "specs/003-strategy-settings/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -160,10 +160,12 @@ warmup:\n \n | 항목 | 상태 | 누가 정하나 |\n |---|---|---|\n-| PD-02 전략별 파라미터 값·시작 금액 범위 | 미확정 | 팀. 007의 기존 값은 `PROVISIONAL-` 버전으로 이관할 수 있으나 없는 축·값은 만들지 않음 |\n+| PD-02 전략별 파라미터 값·시작 금액 범위 | **확정 (2026-09-15, [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254))** | [data-model](data-model.md) §4-2. `estimationMethod`만 후보 하나로 시작 |\n | PD-07 비용 수치 | 미확정 (소유: 004) | 004의 `PROVISIONAL-DEMO-1` 사용·표시. 미확정 자체는 차단하지 않음 |\n-| 상한에 잘린 몫의 재배분 계산 | **004에 규칙이 없음** — FR-020이 '처리 규칙을 적용한다'고만 두고 PD-02·PD-03 계열 미확정 | [004](../004-backtest-execution/spec.md) |\n+| 상한에 잘린 몫의 재배분 계산 | **004에 규칙이 없음** — 004 FR-020이 '처리 규칙을 적용한다'고만 두고 004 자신의 미확정 결정 항목으로 남겼다(003 PD-02와는 다른 항목) | [004](../004-backtest-execution/spec.md) |\n+| 최소분산 `estimationMethod` 후보 확장 | 미확정 (소유: 004, PD-04) | 004가 축소추정(shrinkage) 등 방법을 확정하면 003 등록표 버전을 올려 후보를 늘린다 |\n | 목표 변동성을 화면 어디에 보일지 | 등록표에 자리는 두되 '목표 위험 맞춤' 시나리오가 화면에 생길 때 정한다 | 003 뒷 작업 |\n | 007 spec의 \"하나 또는 여러 전략\" 기술 | 정리됨 — 007 입력 범위 안에서 003 진입 경로는 하나만 전달 | 003 FR-013 |\n | 비용 가정을 화면에 보이는 수단 | 현재 수치·버전·임시 여부 조회 API가 없다 ([data-model](data-model.md) 7) | 004와 함께. B06·B10 실제 연결 차단 |\n+| 001 평가 기간 API 호출부 | **정리됨 (2026-09-15)** — `EvaluationWindowService`는 완성돼 있고 001이 호출부만 붙이면 된다. 003은 값을 만들지 않는다 | 001 |\n | 도메인 간 의존 방향을 강제하는 ArchUnit 규칙 | 지금 없다 | 구현 Task에 포함 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/research.md",
+          "old_path": "specs/003-strategy-settings/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,11 +26,13 @@\n | 항목 | 현재 판정 | 영향과 해제 조건 |\n |---|---|---|\n | FR-002 행동 버튼 두 개 | **해제 (constitution 3.4.0 승인 완료)** | [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II에 예외 조항을 추가하는 개정이 2026-09-15 전체 회의 승인을 받았다. FR-002의 버튼 두 개 구성은 이제 원칙과 충돌하지 않는다. B05·B11 착수를 막지 않는다. |\n-| PD-02·PD-03·PD-04 전략 값과 규칙 | **미확정** | T017과 이에 의존하는 B02 완료를 차단한다. 007의 기존 `PROVISIONAL-` 값은 출처와 임시 상태를 유지한 채 이관할 수 있지만, 빈 축·범위를 새로 지어내지 않는다. |\n-| 001 평가 기간 계약 | **교차 spec 미해결** | T042·B06 종단 연결을 차단한다. `warmupTradingDays`를 받는 방법과 워밍업 후 최소 평가 길이를 001·004에서 합의한다. |\n+| PD-02 전략별 파라미터 값·시작 금액 범위 | **해제 (2026-09-15 확정, [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254))** | T017·B02가 값 없이 막혀 있던 것이 해제됐다. 확정값은 [data-model](data-model.md) §4·§7에 있다. `estimationMethod`(최소분산)만 예외로 후보 하나(표본공분산)로 시작하며, 004 PD-04가 추가 방법을 확정하면 등록표 버전을 올려 늘린다. |\n+| 001 평가 기간 계약 | **해제 (2026-09-15 확정)** | 001이 이미 만들어 둔 `EvaluationWindowService`(계산 로직 완성)에 `GET /sectors/evaluation-window` 호출부만 붙이면 된다. 003은 `warmupTradingDays`·`minEvaluationYears`를 질의 값으로 넘기기만 하고 등록표 응답에 계산을 옮겨 담지 않는다. T042·B06은 001이 호출부를 붙이는 대로 연결한다. |\n | 004 규칙·비용 버전 조회 | **조회 계약 없음** | B06·B10의 실제 연결을 차단한다. 004가 현재 버전을 내려 주는 계약을 정한다. PD-07 미확정 자체는 차단 사유가 아니다. 004가 이미 명시한 `PROVISIONAL-DEMO-1`을 쓰되 화면에 임시값임을 표시한다. |\n | 004 상한 재배분·워커 메시지 | **교차 spec 미해결** | FR-006·FR-019의 종단 완료 판정을 보류한다. 004가 계산 규칙과 전략 축 전달 계약을 등록한다. |\n-| 모멘텀 `선정 수 또는 임계값` | **PD-02·PD-03 미확정** | 둘을 동시에 쓰지 않는다. 어느 배분 방식에 어느 축을 쓸지 팀이 확정할 때까지 T017의 해당 축을 채우지 않는다. |\n+| 섹터 모멘텀 선정 방식 | **해제 (2026-09-15 확정)** | 네 방식(선정 수·임계값·상위 비율·전부 편입)을 모두 등록표에 담고 사용자가 고른다(FR-003). PD-03(004, 모멘텀 점수 산식 자체)과는 별개이며 003 쪽은 더 이상 막히지 않는다. |\n+\n+[S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 PD-02를 확정하고, 245가 \"PD-02·PD-03·PD-04\"로 뭉뚱그려 적었던 표기를 정정했다. specs/README.md 기준 PD-03·PD-04는 004(백테스트 실행) 소유의 계산 내부 결정이며 003의 등록표 축을 막지 않는다 — 유일한 예외가 `estimationMethod`이고, 그 예외도 후보 하나로 시작해 해소했다. 같은 티켓에서 001 평가 기간 계약의 소유권을 정정하고 최소 평가 기간 선택 기능(FR-011a)을 추가했다.\n \n ## Clarifications\n \n@@ -49,7 +51,7 @@\n - Q: 어느 전략에 필요한 워밍업 기간을 자료가 채우지 못할 때, 그 전략을 고를 수는 있게 하되 분석 기간만 줄이나요, 아니면 아예 고를 수 없게 막나요? → A: 두 상황을 나눈다. 워밍업을 채우고 평가할 구간이 남으면 고를 수 있고 줄어든 기간을 알리며, 워밍업조차 채우지 못하면 그 카드를 고를 수 없게 막고 이유를 보인다.\n - Q: 상세 설정의 값은 등록된 후보 중에서 고르는 방식인가요, 아니면 사용자가 숫자를 직접 입력하는 방식인가요? → A: 항목마다 다르며, 등록표가 항목별로 목록형인지 입력형인지를 함께 담고 입력형 항목에서만 범위 밖 안내가 나온다.\n - Q: '설정 조합 자동 비교'는 화면에서 어떤 모습으로 제공되나요? → A: '분석하기' 옆에 같은 크기의 버튼을 하나 더 둔다. 이에 맞춰 행동 버튼이 두 개임을 명시한다.\n-- Q: '기간·금액·조건'의 시작 금액은 사용자가 어떤 범위 안에서 정할 수 있나요? → A: 등록표가 최소·최대·간격·기본값을 담고 다른 설정 항목과 같은 방식으로 검증하며, 구체적 수치는 PD-02에서 함께 정한다.\n+- Q: '기간·금액·조건'의 시작 금액은 사용자가 어떤 범위 안에서 정할 수 있나요? → A: 등록표가 최소·최대·간격·기본값을 담고 다른 설정 항목과 같은 방식으로 검증한다. 100만 원~10억 원, 100만 원 간격, 기본 1,000만 원이다(PD-02, 2026-09-15 확정).\n - Q: 자동 배분 전략이 계산한 비중이 공통 상한에 걸려 투자 비중을 다 채우지 못하면 남은 금액은 어떻게 되나요? → A: 잘린 몫을 아직 여유가 있는 섹터에 비율대로 다시 나눠 주고, 더 나눌 곳이 없을 때만 남긴다.\n - Q: 관측 기간은 등록된 후보 목록에서 고르는 항목인가요, 아니면 숫자를 직접 입력하는 항목인가요? → A: 후보 목록에서 고른다.\n \n@@ -62,6 +64,13 @@\n - 추가: 004의 PD-18(확정)이 목표 변동성을 003 등록표 항목으로 지정하고 있어 등록표에 자리를 만든다.\n - 정정: 섹터 모멘텀의 '최근 구간 제외 여부'를 '최근 구간 제외 기간'으로 고친다. 켜고 끄는 값으로 두면 몇 거래일을 제외하는지 알 수 없어 워밍업을 계산할 수 없다(004 FR-018은 최근 제외 구간을 워밍업에 넣으라고 요구한다). 제외하지 않으려면 0을 고른다.\n \n+### Session 2026-09-15 (3차 — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254) PD-02 확정과 교차 결정)\n+\n+- Q: 섹터 모멘텀의 '선정 수 또는 임계값' 중 하나만 등록표에 담나요? → A: 아니다. 선정 수·임계값·상위 비율·전부 편입 네 방식을 모두 등록하고 사용자가 고른다(FR-003).\n+- Q: 001의 공통 평가 가능 범위 조회는 누가 만드나요? → A: 001이 만든다. 001은 이미 계산 로직(`EvaluationWindowService`)을 완성해 뒀고 HTTP 호출부만 없었다. 003이 등록표 응답에 계산을 옮겨 담지 않는다(FR-009, FR-011a).\n+- Q: 워밍업을 뺀 뒤 남는 평가 구간이 얼마나 짧아도 분석을 허용하나요? → A: 팀이 값 하나로 고정하지 않고 사용자가 완화(제한 없음)·기본(1년)·엄격(3년) 중 고르게 한다(FR-011a).\n+- Q: 전략별 파라미터 후보 값·범위·간격·기본값(PD-02)은 정해졌나요? → A: 확정했다. [data-model](data-model.md) §4·§7에 전략별 축과 시작 금액 범위를 담았다. 최소분산의 `estimationMethod`만 004 PD-04(공분산 추정 방법) 확정 전까지 후보 하나(표본공분산)로 시작한다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 전략 카드를 고르고 기본 설정으로 분석한다 (Priority: P1)\n@@ -115,6 +124,7 @@\n 2. **Given** 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄어들면, **When** 분석을 시작하려 하면, **Then** 실행 전에 줄어든 구간과 원인을 알린다.\n 3. **Given** '기간·금액·조건'에서, **When** 분석 기간을 공통 평가 가능 범위 안에서 바꾸면, **Then** 반영되고 범위 밖 기간은 선택할 수 없다.\n 4. **Given** 어느 화면에서도, **Then** 수수료·세금·평가 기간을 수익이 높아지는 방향으로 자동 최적화하는 선택지는 없다.\n+5. **Given** '기간·금액·조건'에서, **When** 최소 평가 기간을 완화·기본·엄격 중 다른 값으로 바꾸면, **Then** 그 값과 워밍업을 함께 반영해 카드의 선택 가능 여부와 실행 전 안내가 다시 판정된다(FR-011a).\n \n ---\n \n@@ -173,17 +183,29 @@\n   | 고정 목표 비중 | 목표 비중(읽기 전용)·리밸런싱 주기·비중 상한 |\n   | 동일 비중 | 리밸런싱 주기 |\n   | 역변동성 | 변동성 관측 기간·리밸런싱 주기·비중 상한 |\n-  | 섹터 모멘텀 | 관측 기간·최근 구간 제외 기간·선정 수 또는 임계값·배분 방식·리밸런싱 주기. 선정 수와 임계값은 동시에 쓰지 않으며, 배분 방식별 적용 축은 PD-02·PD-03 확정 후 등록표에 담는다 |\n-  | 최소분산 | 공분산 관측 기간·추정 방법·비중 상한·리밸런싱 주기 |\n+  | 섹터 모멘텀 | 관측 기간·최근 구간 제외 기간·선정 방식(선정 수·임계값·상위 비율·전부 편입 중 하나)·배분 방식·비중 상한·리밸런싱 주기 |\n+  | 최소분산 | 공분산 관측 기간·추정 방법(현재는 표본공분산 하나)·비중 상한·리밸런싱 주기 |\n+\n+  섹터 모멘텀의 선정 방식은 사용자가 네 가지 중 하나를 고른다. (PD-02, 2026-09-15 확정)\n+\n+  | 선정 방식 | 뜻 | 사용자가 넣는 값 |\n+  |---|---|---|\n+  | 선정 수 | 점수 순으로 상위 N개만 편입 | 개수(예: 3) |\n+  | 임계값 | 점수가 기준을 넘는 섹터만 편입 | 수익률 기준(%) |\n+  | 상위 비율 | 후보 섹터 중 상위 몇 %만 편입 | 비율(%) |\n+  | 전부 편입 | 아무도 빼지 않고 순위대로 비중만 차등 | 없음 |\n+\n+  선택한 방식에 해당하는 값 하나만 상세 설정에 열리고, 나머지 세 방식의 값은 보이지도 저장되지도 않는다. 어떤 값을 계산에 어떻게 쓰는지(모멘텀 점수 산식 자체)는 [004](../004-backtest-execution/spec.md) PD-03이 정한다 — 003은 사용자가 고른 편입 조건을 그대로 전달할 뿐 점수를 계산하지 않는다.\n \n - **FR-004**: 기본값과 초깃값은 편의용 출발점으로 표기하고 최적값이나 투자 권고로 표기하지 않는다. (§4.2.2, 원칙 III)\n-- **FR-005**: 전략별로 의미가 있는 설정만 허용하고, 후보 값·범위·간격·유효성 제약·기본값을 실행 전에 파라미터 등록표로 등록한다. 등록표는 전략 카드의 이름·설명·순서·활성 여부, 축 도움말, 목표 비중 출처, 상한 처리 안내까지 소유하는 서버의 단일 원본이며 버전으로 관리한다. 화면은 조회한 현재 버전만으로 카드와 입력 항목을 구성하고, 전략 이름이나 축별 안내를 화면 코드에 따로 적어 두지 않는다. 값 자체는 결정 항목 PD-02다. (§6.4.2)\n+- **FR-005**: 전략별로 의미가 있는 설정만 허용하고, 후보 값·범위·간격·유효성 제약·기본값을 실행 전에 파라미터 등록표로 등록한다. 등록표는 전략 카드의 이름·설명·순서·활성 여부, 축 도움말, 목표 비중 출처, 상한 처리 안내까지 소유하는 서버의 단일 원본이며 버전으로 관리한다. 화면은 조회한 현재 버전만으로 카드와 입력 항목을 구성하고, 전략 이름이나 축별 안내를 화면 코드에 따로 적어 두지 않는다. 값 자체는 PD-02(2026-09-15 확정, [data-model](data-model.md) §4)다. (§6.4.2)\n - **FR-006**: 설정 항목은 등록표가 정한 방식에 따라 후보 목록에서 고르거나(목록형) 값을 직접 입력한다(입력형). 목록형 항목에는 등록된 후보만 보이므로 등록되지 않은 값을 고를 경로가 없다. 입력형 항목에서 허용 범위 밖이거나 등록된 간격에 맞지 않는 값을 입력하면 허용 범위를 안내하고 저장하지 않으며 몰래 잘라 넣지 않는다. 화면의 안내는 사용자를 돕기 위한 것이고, 분석 요청을 받는 서버는 화면 경유 여부와 무관하게 실행 직전에 등록표로 같은 검증을 다시 수행해 위반한 요청을 거절한다. 기존 요청 호환을 위해 검증을 우회하는 과도기 경로는 이 요구사항을 충족한 것으로 보지 않는다. (원칙 VI)\n - **FR-007**: 공통 출발 설정은 월말 리밸런싱과 역변동성 63거래일 관측이다. 이 값은 출발안이며 승인된 후보 범위 안에서 변경·탐색할 수 있다. 리밸런싱 주기의 후보 값은 달력 기준(월말·분기말 등)과 거래일 수 기준(21거래일·63거래일 등)을 함께 담으며, 사용자는 두 방식 가운데 하나를 골라 그 후보 값 중에서 고른다. 003은 사용자가 고른 주기를 분석 요청에 담아 넘기기만 하고, 그 주기에 언제 판단하고 언제 체결하는지는 [004](../004-backtest-execution/spec.md) FR-011이 정한다(월말 정보 확인 후 다음 거래일 체결). (§4.2.2, §6.4.2)\n - **FR-008**: 비중 상한은 선택한 모든 섹터에 똑같이 걸리는 값 하나이며 섹터마다 다른 상한을 두지 않는다. 유효성 제약(모멘텀 선정 수가 가용 섹터 수를 넘는 경우, 상한에 섹터 수를 곱한 값이 투자 비중에 못 미쳐 비중을 채울 수 없는 조합 등)을 위반하는 설정은 실행 전에 안내하고 분석을 시작하지 않는다. (§6.4.2, §6.4.3)\n - **FR-009**: 분석 기간은 비교 후보가 공통으로 평가 가능한 범위([001](../001-etf-market-data/spec.md)의 산출값)에서 자동 제시한다. 단일 전략 분석의 비교 후보는 선택한 섹터들이고, 여러 전략을 같은 조건으로 비교할 때는 해당 전략과 섹터 조합 모두가 공통으로 평가되는 범위를 쓴다. 사용자는 그 범위 안에서만 기간을 바꿀 수 있다. (§4.2.2, §6.4.1)\n-- **FR-010**: '기간·금액·조건'에서 분석 기간과 시작 금액은 변경하고, 비용 가정은 004가 등록한 현재 버전의 수치·버전·임시 여부를 **읽기 전용**으로 확인한다. 사용자가 이 화면에서 수수료·세금 수치를 임의로 바꾸지 않으며, 비용 상승은 004의 별도 시나리오가 소유한다. 시작 금액의 최소·최대·간격·기본값은 등록표가 담고 다른 설정 항목과 같은 방식으로 검증하며, 그 수치는 PD-02에서 정한다. 004의 PD-18(확정)이 목표 변동성(기본 연 10%, 5~20%, 1% 간격)을 003 등록표 항목으로 지정했으므로 등록표에 자리를 두되, 주 분석(`FULL_PERIOD`)에는 보이지 않는다. PD-07 확정 전에는 004가 명시한 임시 비용 프로필을 그대로 표시하고 확정값처럼 보이지 않게 한다. 수수료·세금·평가 기간을 수익을 높이는 방향으로 자동 최적화하는 선택지는 제공하지 않는다. (§4.2.2, §6.4.3, 원칙 IV)\n-- **FR-011**: 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄면 실행 전에 줄어든 구간과 원인을 알린다. 필요한 워밍업 기간은 등록표가 담은 전략별 산출 규칙에 현재 설정값을 넣어 계산하며, 설정값을 바꿀 때마다 다시 계산해 판정한다. 카드 목록에서는 각 전략의 기본 설정을 기준으로 판정한다. 공통 평가 가능 범위가 필요한 워밍업을 채우고도 평가할 구간이 남으면 그 전략을 고를 수 있고, 줄어든 기간을 카드와 실행 전 안내에 알린다. 워밍업조차 채우지 못하면 그 전략 카드를 고를 수 없는 상태로 두고 분석할 수 없는 이유를 한 문장으로 표시한다. (§6.4.1, 원칙 IV)\n+- **FR-010**: '기간·금액·조건'에서 분석 기간과 시작 금액은 변경하고, 비용 가정은 004가 등록한 현재 버전의 수치·버전·임시 여부를 **읽기 전용**으로 확인한다. 사용자가 이 화면에서 수수료·세금 수치를 임의로 바꾸지 않으며, 비용 상승은 004의 별도 시나리오가 소유한다. 시작 금액의 최소·최대·간격·기본값은 등록표가 담고 다른 설정 항목과 같은 방식으로 검증하며, 100만 원~10억 원, 100만 원 간격, 기본 1,000만 원이다(PD-02, 2026-09-15 확정). 004의 PD-18(확정)이 목표 변동성(기본 연 10%, 5~20%, 1% 간격)을 003 등록표 항목으로 지정했으므로 등록표에 자리를 두되, 주 분석(`FULL_PERIOD`)에는 보이지 않는다. PD-07 확정 전에는 004가 명시한 임시 비용 프로필을 그대로 표시하고 확정값처럼 보이지 않게 한다. 수수료·세금·평가 기간을 수익을 높이는 방향으로 자동 최적화하는 선택지는 제공하지 않는다. (§4.2.2, §6.4.3, 원칙 IV)\n+- **FR-011**: 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄면 실행 전에 줄어든 구간과 원인을 알린다. 필요한 워밍업 기간은 등록표가 담은 전략별 산출 규칙에 현재 설정값을 넣어 계산하며, 설정값을 바꿀 때마다 다시 계산해 판정한다. 카드 목록에서는 각 전략의 기본 설정을 기준으로 판정한다. 공통 평가 가능 범위가 필요한 워밍업을 채우고도 FR-011a가 정한 최소 평가 기간만큼 남으면 그 전략을 고를 수 있고, 줄어든 기간을 카드와 실행 전 안내에 알린다. 워밍업조차 채우지 못하거나 남는 기간이 최소 평가 기간에 못 미치면 그 전략 카드를 고를 수 없는 상태로 두고 분석할 수 없는 이유를 한 문장으로 표시한다. (§6.4.1, 원칙 IV)\n+- **FR-011a**: '기간·금액·조건'에서 최소 평가 기간을 사용자가 고른다 — 완화(제한 없음)·기본(1년)·엄격(3년) 세 후보 중 하나이며 등록표 항목이다(analysisConditions.minEvaluationYears). 팀이 값 하나로 고정하지 않는 이유는, 짧은 평가 구간에서 나온 수익률이 통계적으로 무의미한데도 화면이 이를 막지 않으면 오해를 부르지만, 신생 섹터를 다루고 싶은 사용자에게는 그 판단을 맡기는 편이 낫기 때문이다. 기본값은 1년(리밸런싱이 월말이면 최소 12회 판단)이다. 이 값은 워밍업과 별개로 적용되며, FR-011의 \"평가할 구간이 남으면\"의 기준이 된다. (§6.4.1, 원칙 IV, PD-02 2026-09-15 확정)\n - **FR-012**: 자동 배분 전략(역변동성·섹터 모멘텀·최소분산)을 선택하면 출력 비중이 선택한 규칙의 계산 결과이며 사용자 입력 비중과 구분된다는 설명을 보인다. (§4.2.1, D13)\n - **FR-013**: '설정 조합 자동 비교'를 '분석하기'와 같은 크기의 행동 버튼으로 제공한다. 진입 시 사용자가 방금 고른 전략 하나와 섹터 후보 집합을 고정해 [007](../007-auto-parameter-search/spec.md)의 실행 전 확인 화면으로 넘기며, 003은 여러 전략을 한 번에 넘기지 않는다. 전략 선택 없이 자동 비교로 들어갈 수는 없다. (§4.2.2)\n - **FR-014**: 선택 전략·설정값·분석 기간·금액·비용 가정·파라미터 등록표 버전은 분석 요청에 담겨 [004](../004-backtest-execution/spec.md)로 전달되고 [006 내 기록](../006-my-records/spec.md)에 보존된다. 여러 전략을 같은 조건으로 비교하는 요청(005 '다른 조건으로 비교', 006 '설정 바꿔 비교')은 비교 후보 전략 중 가장 긴 관측 기간을 공통 워밍업(`warmupTradingDays`)으로 함께 넘겨 모든 실행의 평가 시작일이 같게 한다(004 R-15). 사용자에게 버전이나 실험 식별자 입력을 요구하지 않는다. (§5, D14)\n@@ -191,7 +213,7 @@\n - **FR-016**: 진단 화면의 용어 도움말은 [013 배우기](../013-learning-pages/spec.md) FR-008~FR-010의 단일 원본을 재사용하고 해당 주제 글 연결을 제공한다. 대응하는 설명이 없으면 즉석 문장을 만들지 않고 '설명 준비 중'으로 표시한다. 도움말을 열거나 배우기로 이동해도 탭 수명의 설정 상태는 유지한다. (§4.5)\n - **FR-017**: 선택한 전략과 상세 설정값, 분석 조건은 브라우저 탭이 열려 있는 동안 유지한다. 화면을 새로 고치거나 섹터 선택 단계로 돌아갔다가 다시 와도 값이 남아 있고, 탭을 닫으면 사라져 다음 방문에는 등록표의 기본값에서 다시 시작한다. 로그인하지 않은 사용자에게도 같게 적용한다. 등록표 버전이나 섹터 수가 바뀌면 보관값을 새 범위·규칙으로 다시 검증해 유효한 값만 유지하고, 유효하지 않은 값은 자동 보정하지 않고 이유와 기본값 복원 선택을 보인다. (§4.2.2)\n - **FR-018**: 파라미터 등록표를 받아오지 못하면 전략 카드를 선택할 수 없는 상태로 두고, 설정을 불러오지 못했다는 안내와 다시 시도할 방법을 보인다. 이 상태에서는 '분석하기'와 '설정 조합 자동 비교' 어느 쪽도 누를 수 없으며, 화면이 임시 값이나 예비 등록표로 대신 동작하지 않는다. (§4.2.2, 원칙 IV)\n-- **FR-019**: 역변동성과 섹터 모멘텀은 비중을 먼저 계산한 뒤 상한에 맞추므로 상한에 걸려 잘리는 몫이 생긴다. 잘린 몫은 아직 상한에 여유가 있는 섹터에 그 섹터들의 비중 비율대로 다시 나누고, 더 나눠 줄 섹터가 없을 때만 투자하지 않은 상태로 둔다. 상세 설정에서 상한을 정할 때 이 처리 방식을 한 문장으로 알린다. 최소분산은 상한을 계산의 제약으로 넣어 풀기 때문에(004 FR-025) 잘리는 몫이 생기지 않으며 이 설명을 보이지 않는다. **재배분 계산 자체는 [004](../004-backtest-execution/spec.md)가 수행해야 하나 004에 아직 그 규칙이 없다**(FR-020이 '처리 규칙을 적용한다'고만 두고 PD-02·PD-03 계열 미확정으로 남겼다). 004가 규칙을 등록하기 전까지 003은 상한 값 전달까지만 맡는다. (§6.4.2, 원칙 IV)\n+- **FR-019**: 역변동성과 섹터 모멘텀은 비중을 먼저 계산한 뒤 상한에 맞추므로 상한에 걸려 잘리는 몫이 생긴다. 잘린 몫은 아직 상한에 여유가 있는 섹터에 그 섹터들의 비중 비율대로 다시 나누고, 더 나눠 줄 섹터가 없을 때만 투자하지 않은 상태로 둔다. 상세 설정에서 상한을 정할 때 이 처리 방식을 한 문장으로 알린다. 최소분산은 상한을 계산의 제약으로 넣어 풀기 때문에(004 FR-025) 잘리는 몫이 생기지 않으며 이 설명을 보이지 않는다. **재배분 계산 자체는 [004](../004-backtest-execution/spec.md)가 수행해야 하나 004에 아직 그 규칙이 없다**(004 FR-020이 '처리 규칙을 적용한다'고만 두고 004 자신의 결정 항목으로 미확정 남겼다 — 003의 PD-02와는 다른 항목이다). 004가 규칙을 등록하기 전까지 003은 상한 값 전달까지만 맡는다. (§6.4.2, 원칙 IV)\n \n ### Key Entities *(include if feature involves data)*\n \n@@ -223,7 +245,7 @@\n ## Assumptions\n \n - 다섯 전략의 계산 규칙(모멘텀 유형, 최소분산 추정 방법 등)과 상한에 걸린 몫을 다시 나누는 계산은 [004](../004-backtest-execution/spec.md)가 수행한다. 이 spec은 그 규칙에 딸린 설정 항목과 허용 범위를 사용자에게 보이는 방식만 정한다.\n-- 파라미터 등록표의 제품 후보값·범위·간격·기본값은 팀이 PD-02를 확정한 뒤 채운다. 확정 전에도 구조·계약과 합성 테스트 픽스처를 개발할 수 있고, 007에 이미 있는 임시 값은 출처·버전·임시 표시를 그대로 유지한 채 이관할 수 있다. 다만 기존 파일에 없는 축과 값을 새로 지어내지 않는다.\n+- 파라미터 등록표의 제품 후보값·범위·간격·기본값은 PD-02(2026-09-15 확정, [data-model](data-model.md) §4·§7)를 그대로 쓴다. 007에 이미 있던 임시 값은 이번 확정과 같은 수치라 출처·버전 표시를 유지한 채 이관한다. 최소분산의 `estimationMethod`는 004 PD-04 확정 전까지 후보 하나(표본공분산)로 시작하며 값을 지어내지 않는다.\n - 관측 기간은 거래일 단위이며 목록형 항목이라 등록된 후보 값 중에서 고른다. 리밸런싱 주기도 목록형이며 달력 기준과 거래일 수 기준을 모두 후보로 두므로 주기 값에는 어느 방식인지가 함께 담긴다. 비중 상한과 시작 금액은 입력형이다.\n - 비용 가정은 004의 등록표가 소유한다. PD-07 확정 전에는 004가 명시한 `PROVISIONAL-DEMO-1`을 읽기 전용으로 보이고 임시값임을 알린다. 현재 버전을 조회할 수 없으면 값을 지어내지 않고 분석을 막으며 이유를 알린다.\n \n@@ -231,7 +253,7 @@\n \n | 번호 | 결정 항목 | 상태 | 출발안 | 근거 |\n |---|---|---|---|---|\n-| PD-02 | 전략별 파라미터 기본값·후보 값·범위·간격·유효성 제약과 시작 금액의 최소·최대·간격·기본값 | 미확정 | 월말 리밸런싱, 역변동성 63거래일 | §4.2.2, §6.4.2, D04 |\n+| PD-02 | 전략별 파라미터 기본값·후보 값·범위·간격·유효성 제약과 시작 금액의 최소·최대·간격·기본값 | **확정 (2026-09-15, [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254))** | 전략별 축·값은 [data-model](data-model.md) §4, 시작 금액 100만~10억 원(100만 원 간격, 기본 1,000만 원)은 §7 | §4.2.2, §6.4.2, D04 |\n | PD-07 | 비용 수치: 수수료·호가 차이·슬리피지·세금·비용 상승 조건 | 미확정 (소유: [004](../004-backtest-execution/spec.md)) | 없음 | §6.4.2, D05 |\n | PD-18 | 목표 변동성(등록표 항목) | **확정 (2026-09-10, 소유: [004](../004-backtest-execution/spec.md))** | 기본 연 10%, 5~20%, 1% 간격 | 004 FR-016 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/spec.md",
+          "old_path": "specs/003-strategy-settings/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,11 +17,10 @@\n 아래 항목이 해결되기 전에는 적은 범위의 구현 묶음을 완료·병합하지 않는다. 값과 무관한 구조·계약·합성 테스트는 먼저 수행할 수 있다.\n \n - ~~FR-002의 행동 버튼 두 개와 constitution 원칙 II의 충돌~~ — [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II 예외 조항이 2026-09-15 전체 회의 승인을 받아(3.4.0) 해제됐다. B05·B11 착수를 막지 않는다\n-- PD-02·PD-03·PD-04 미확정: 기존 007 임시 등록표에 없는 제품 축·값·규칙을 만드는 T017과 B02 완료 차단\n-- 001 평가 기간 입력 계약과 워밍업 후 최소 평가 길이 미확정: T042·B06 종단 연결 차단\n+- ~~PD-02 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 2026-09-15 확정([data-model](data-model.md) §4-2). T017·B02 착수를 막지 않는다. 최소분산 `estimationMethod`만 004 PD-04 대기로 후보 하나로 시작한다(003 쪽 구조는 막히지 않는다)\n+- ~~001 평가 기간 입력 계약과 최소 평가 길이 미확정~~ — [S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)에서 정정. 001이 이미 만든 `EvaluationWindowService`에 호출부만 붙이면 되고, 최소 평가 길이는 사용자가 고르는 항목(FR-011a)으로 확정했다. T042는 001이 호출부를 붙이는 대로 연결한다(001 작업 완료가 남은 선행 조건, 팀 결정 대기가 아니다)\n - 004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단. PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음\n - 004 상한 재배분 규칙과 워커 메시지 계약 미확정: FR-006·FR-019의 종단 완료 판정 보류\n-- 모멘텀의 선정 수·임계값 적용 관계 미확정: PD-02·PD-03 결정 전 T017 해당 축 채우기 차단\n \n ## Format: `[ID] [P?] [Story] (파트) Description`\n \n@@ -87,19 +86,24 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### §4 3단계 — 로더를 옮기고 등록표를 승격한다\n \n-- [ ] T013 [P] (BE) 값 타입 확장 — `backend/src/main/java/com/ssafy/thorp/strategy/application/port/`에: `StrategyRegistration`에 `boolean active`(생략 시 true)·`WarmupRule warmup`(nullable)·`String targetWeightSource` 컴포넌트를 더한다. **record 컴포넌트를 더하면 정식 생성자가 바뀌므로 호출부를 함께 고친다 — 전수 조사 결과 두 곳뿐이다**(`ProvisionalFileParameterRegistry.toRegistration`과 `RegistryFixtures:104`. 후자는 T020이 맡는다). `ParameterAxis`도 같다(`ProvisionalFileParameterRegistry:116`·`RegistryFixtures:37`). 호환용 정적 팩터리를 남기지 않는다 — 두 곳을 고치는 편이 짧고, 팩터리를 남기면 새 필드를 빠뜨린 생성 경로가 계속 남는다. `ParameterAxis`에 `String description`(nullable); 새 record `WarmupRule(List<Object> sum)` + `int evaluate(Map<String, Object> values)`(문자열 항목은 축 이름 → 그 값, 숫자 항목은 상수, 모두 정수로 더한다. 축 값이 없으면 예외 — 값을 지어내지 않는다)([data-model](data-model.md) §6); `ValidationRule(String code, String detail, Operand left, Operator operator, Operand right)` 공개 record와 `Operand(String axis, String context, Object value, String multiplyByContext)`·`Operator` enum(여섯)([data-model](data-model.md) §4-1); `AnalysisCondition(AllowedRange range, Object defaultValue, String unit, String usedBy)`와 `AnalysisConditionRegistry(AnalysisCondition initialAmount, AnalysisCondition targetVolatility)`([data-model](data-model.md) §7)\n+- [ ] T013 [P] (BE) 값 타입 확장 — `backend/src/main/java/com/ssafy/thorp/strategy/application/port/`에: `StrategyRegistration`에 `boolean active`(생략 시 true)·`WarmupRule warmup`(nullable)·`String targetWeightSource` 컴포넌트를 더한다. **record 컴포넌트를 더하면 정식 생성자가 바뀌므로 호출부를 함께 고친다 — 전수 조사 결과 두 곳뿐이다**(`ProvisionalFileParameterRegistry.toRegistration`과 `RegistryFixtures:104`. 후자는 T020이 맡는다). `ParameterAxis`도 같다(`ProvisionalFileParameterRegistry:116`·`RegistryFixtures:37`). 호환용 정적 팩터리를 남기지 않는다 — 두 곳을 고치는 편이 짧고, 팩터리를 남기면 새 필드를 빠뜨린 생성 경로가 계속 남는다. `ParameterAxis`에 `String description`(nullable); 새 record `WarmupRule(List<Object> sum)` + `int evaluate(Map<String, Object> values)`(문자열 항목은 축 이름 → 그 값, 숫자 항목은 상수, 모두 정수로 더한다. 축 값이 없으면 예외 — 값을 지어내지 않는다)([data-model](data-model.md) §6); `ValidationRule(String code, String detail, Operand left, Operator operator, Operand right)` 공개 record와 `Operand(String axis, String context, Object value, String multiplyByContext)`·`Operator` enum(여섯)([data-model](data-model.md) §4-1); `AnalysisCondition(AllowedRange range, Object defaultValue, String unit, String usedBy)`와 `AnalysisConditionRegistry(AnalysisCondition initialAmount, AnalysisCondition targetVolatility, AnalysisCondition minEvaluationYears)`([data-model](data-model.md) §7, FR-011a)\n - [ ] T014 [P] (BE) `backend/src/main/java/com/ssafy/thorp/strategy/application/port/AllowedRange.java` 확장 — 생성자에서 `values`와 `min`/`max`/`step`을 동시에 채우면 `IllegalArgumentException`(목록형·입력형 배타); `boolean contains(Object value)` 추가 — 목록형은 `values.contains`(`equals`), 입력형은 `BigDecimal`로 `min ≤ v ≤ max`이고 `(v − min) mod step == 0`. `double`을 거치지 않는다(`RegistryRule.toNumber`와 같은 이유 — 등록표 값이 그대로 기록에 남는다)\n - [ ] T015 (BE) `backend/src/main/java/com/ssafy/thorp/strategy/application/port/ParameterRegistryPort.java` 확장(내부 계약 §3) — `List<ValidationRule> rules(String strategyId)`(등록되지 않은 전략은 빈 목록이 아니라 `Optional.empty()`와 같은 뜻이 되도록 `find`와 함께 쓰라고 주석), `AnalysisConditionRegistry analysisConditions()`, `boolean provisional()`(`version()`이 `PROVISIONAL-`로 시작하는가). `activeStrategies()` Javadoc을 \"활성만\"으로, `find()`를 \"비활성 포함\"으로 고친다(§2.3). `validate()`는 그대로 둔다(T013·T014 의존)\n-- [ ] T016 (BE) 로더를 **옮기고·이름을 바꾸고·읽는 항목을 늘린다**(내부 계약 §1의 셋) — `git mv backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/ProvisionalFileParameterRegistry.java backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistry.java`와 `RegistryRule.java`도 같은 패키지로. `RESOURCE_PATH`를 `registry/parameter-registry.yml`로. **기존 검사(전략 중복·축 이름 중복·빈 `searchValues`·`null` 값·`baselineStrategyId` 등록 여부)는 한 줄도 빼지 않는다.** 새로 읽는 것: 전략 `active`(생략=true)·`warmup.sum`·`targetWeightSource`, 축 `description`·`allowedRange.values`, 최상위 `analysisConditions.{initialAmount,targetVolatility}.{min,max,step,default,unit,usedBy}`. 새 검사 셋(기동 실패): 목록형 축 `searchValues ⊆ allowedRange.values`, `defaultValue`가 `allowedRange.contains`, 목록형·입력형 배타(T014 예외를 잡아 어느 축인지 붙여 다시 던진다). `analysisConditions`는 필수이고 `default`가 범위 안. `activeStrategies()`는 `active` 필터, `find()`는 전체 색인. `rules()`는 `RegistryRule` → `ValidationRule` 변환(또는 `RegistryRule`이 `ValidationRule`을 들고 평가만 맡는다). `requireProvisionalVersion`은 지우고 `provisional()`로 대체한다 — PD-02 확정 뒤 접두를 떼는 날 코드가 바뀌면 안 된다. **클래스 이름을 직접 단언하는 테스트를 함께 고친다**: `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchWiringIT.java:57`의 `isInstanceOf(ProvisionalFileParameterRegistry.class)`와 그 import(고치지 않으면 컴파일이 깨진다). 끝나면 `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/`는 비어 있어야 하며 디렉터리를 지운다(위임 계층을 남기지 않는다) (T013·T014·T015 의존)\n-- [ ] T017 (INFRA) **[BLOCKED: PD-02·PD-03·PD-04]** `git mv backend/src/main/resources/registry/parameter-registry-provisional.yml backend/src/main/resources/registry/parameter-registry.yml` 후 내용을 개정한다([data-model](data-model.md) §2~§7, spec FR-001·FR-003·FR-007). 순서·축이 바뀌므로 팀이 승인한 새 제품 버전을 부여하고 `provisional:false`로 둔다(내부 계약 §2.1). 결정 전에는 이름만 바꾼 불완전 제품 등록표를 병합하지 않는다.\n+- [ ] T016 (BE) 로더를 **옮기고·이름을 바꾸고·읽는 항목을 늘린다**(내부 계약 §1의 셋) — `git mv backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/ProvisionalFileParameterRegistry.java backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistry.java`와 `RegistryRule.java`도 같은 패키지로. `RESOURCE_PATH`를 `registry/parameter-registry.yml`로. **기존 검사(전략 중복·축 이름 중복·빈 `searchValues`·`null` 값·`baselineStrategyId` 등록 여부)는 한 줄도 빼지 않는다.** 새로 읽는 것: 전략 `active`(생략=true)·`warmup.sum`·`targetWeightSource`, 축 `description`·`allowedRange.values`, 최상위 `analysisConditions.{initialAmount,targetVolatility,minEvaluationYears}.{min,max,step,default,unit,usedBy}` — `minEvaluationYears`는 입력형이 아니라 목록형이므로 `values`(`[0, 1, 3]`)를 읽는다. 새 검사 셋(기동 실패): 목록형 축 `searchValues ⊆ allowedRange.values`, `defaultValue`가 `allowedRange.contains`, 목록형·입력형 배타(T014 예외를 잡아 어느 축인지 붙여 다시 던진다). `analysisConditions`는 필수이고 `default`가 범위 안. `activeStrategies()`는 `active` 필터, `find()`는 전체 색인. `rules()`는 `RegistryRule` → `ValidationRule` 변환(또는 `RegistryRule`이 `ValidationRule`을 들고 평가만 맡는다). `requireProvisionalVersion`은 지우고 `provisional()`로 대체한다 — PD-02 확정 뒤 접두를 떼는 날 코드가 바뀌면 안 된다. **클래스 이름을 직접 단언하는 테스트를 함께 고친다**: `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchWiringIT.java:57`의 `isInstanceOf(ProvisionalFileParameterRegistry.class)`와 그 import(고치지 않으면 컴파일이 깨진다). 끝나면 `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/registry/`는 비어 있어야 하며 디렉터리를 지운다(위임 계층을 남기지 않는다) (T013·T014·T015 의존)\n+- [ ] T017 (INFRA) `git mv backend/src/main/resources/registry/parameter-registry-provisional.yml backend/src/main/resources/registry/parameter-registry.yml` 후 내용을 개정한다([data-model](data-model.md) §2~§7·§4-2, spec FR-001·FR-003·FR-007·FR-011a). PD-02가 2026-09-15 확정됐으므로([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)) 팀이 승인한 새 제품 버전을 부여하고 `provisional:false`로 둔다(내부 계약 §2.1).\n   - `name`을 화면 이름으로, `description`을 FR-001 표의 한 줄 설명으로: `FIXED_WEIGHT` 내가 정한 비중 / `EQUAL_WEIGHT` 똑같이 나누기 / `INVERSE_VOLATILITY` 변동성에 따라 나누기 / `SECTOR_MOMENTUM` 흐름을 따라 배분하기 / `MINIMUM_VARIANCE` 전체 변동성을 줄이도록 배분하기. 전략 순서는 FR-001 표 순서\n   - `targetWeightSource`: `FIXED_WEIGHT` `USER`, `EQUAL_WEIGHT` `EQUAL`, 나머지 셋 `COMPUTED`. 모든 전략에 `active: true`를 명시한다\n-  - 축 구성([data-model](data-model.md) §4 표): `FIXED_WEIGHT` `rebalancePeriod`(목록형)·`maxWeight`(입력형); `EQUAL_WEIGHT` `rebalancePeriod`; `INVERSE_VOLATILITY` `lookbackDays`(목록형, 기존 임시 기본 63)·`rebalancePeriod`·`maxWeight`; `SECTOR_MOMENTUM` `lookbackDays`·`skipRecentDays`·PD-02·PD-03이 고른 `topN` 또는 임계값·`allocationMethod`(목록형)·`rebalancePeriod`; `MINIMUM_VARIANCE` `lookbackDays`·`estimationMethod`(목록형)·`maxWeight`·`rebalancePeriod`. 구체 후보값·범위·간격은 결정 뒤 채운다\n-  - `rebalancePeriod`는 달력 기준과 거래일 수 기준을 구분하는 객체로 설계하고 기본값은 월말(FR-007)로 둔다. 월말 외 구체 후보값은 PD-02 확정 뒤 등록하며, `searchValues`는 `allowedRange.values`의 부분집합으로 둔다\n+  - 축 구성과 확정 후보값은 [data-model](data-model.md) §4-2 표를 그대로 옮긴다:\n+    - `FIXED_WEIGHT`: `rebalancePeriod`(공통 후보, 기본 월말)·`maxWeight`(10~100, 5 간격, 기본 40)\n+    - `EQUAL_WEIGHT`: `rebalancePeriod`만\n+    - `INVERSE_VOLATILITY`: `lookbackDays`(`[21,63,126,252]`, 허용범위 10~504/1, 기본 63)·`rebalancePeriod`·`maxWeight`(10~100/5, 기본 40)\n+    - `SECTOR_MOMENTUM`: `lookbackDays`(`[20,60,120]`, 허용범위 10~252/1, 기본 60)·`skipRecentDays`(`[0,5,10,21]`, 허용범위 0~63/1, 기본 0)·`selectionMode`(`[TOP_N,THRESHOLD,TOP_PERCENT,ALL]`, 기본 `TOP_N`)·`topN`(`[2,3,4]`, 허용범위 1~20/1, 기본 3)·`threshold`(-20~50/1, 기본 0, 단위 %)·`topPercent`(10~100/10, 기본 50, 단위 %)·`allocationMethod`(`[EQUAL,SCORE_WEIGHTED]`, 기본 `EQUAL`)·`maxWeight`(10~100/5, 기본 40)·`rebalancePeriod`\n+    - `MINIMUM_VARIANCE`: `lookbackDays`(`[60,120,250]`, 허용범위 20~504/1, 기본 120)·`estimationMethod`(`[SAMPLE_COV]`, 기본 `SAMPLE_COV` — 004 PD-04 확정 전까지 후보 하나)·`maxWeight`(`[30,40,50]`, 허용범위 10~100/5, 기본 40)·`rebalancePeriod`\n+  - `rebalancePeriod` 공통 후보(달력·거래일 수 혼합, §5): `{CALENDAR, MONTH_END}`(기본)·`{CALENDAR, QUARTER_END}`·`{TRADING_DAYS, 21}`·`{TRADING_DAYS, 63}`. `searchValues`는 이 네 값의 부분집합으로 둔다\n   - `warmup.sum`: `INVERSE_VOLATILITY` `[lookbackDays]`, `SECTOR_MOMENTUM` `[lookbackDays, skipRecentDays]`, `MINIMUM_VARIANCE` `[lookbackDays]`. 고정·동일 비중은 `warmup` 없음([data-model](data-model.md) §6)\n   - 축 `description`: 항목마다 의미 한 문장. `INVERSE_VOLATILITY`·`SECTOR_MOMENTUM`의 `maxWeight`에는 FR-019 재배분 문장(\"잘린 몫은 여유가 있는 섹터에 비중 비율대로 다시 나누고, 더 나눌 곳이 없을 때만 남긴다\")을, `MINIMUM_VARIANCE`의 `maxWeight`에는 \"계산의 제약으로 들어가 잘리는 몫이 생기지 않는다\"를 적는다\n-  - `analysisConditions.initialAmount`의 범위·간격·기본값은 PD-02 확정 뒤 채운다. `targetVolatility`는 `min 5`·`max 20`·`step 1`·`default 10`·`unit 퍼센트(연)`·`usedBy TARGET_RISK`로 둔다(004 PD-18 확정값)\n-  - **결정 전에는 새 후보값·범위·간격·시작 금액을 지어내 제품 등록표에 넣지 않는다.** 007의 기존 임시 값은 출처와 `PROVISIONAL-` 표시를 유지한 채 이관·합성 테스트에 쓸 수 있지만, 없는 축을 채운 것으로 간주하지 않는다. T017의 제품 값 채우기와 이에 의존하는 T016·T018·T021은 결정을 기다린다. 파일 머리에는 소유자 003, 007은 포트로 읽음, `searchValues`를 늘리면 007 조합 수가 곱으로 는다(R3 경고), `allowedRange.values` 순서는 자유이고 `searchValues` 순서는 버전에 묶임(§2.1), 값이 바뀌면 기존 버전을 덮어쓰지 않음을 적는다\n+  - `analysisConditions.initialAmount`: 100만~10억, 100만 간격, 기본 1,000만, 단위 원. `targetVolatility`는 `min 5`·`max 20`·`step 1`·`default 10`·`unit 퍼센트(연)`·`usedBy TARGET_RISK`(004 PD-18 확정값). `minEvaluationYears`: 목록형 `[0, 1, 3]`, 기본 1, 라벨 완화/기본/엄격(FR-011a)\n+  - `estimationMethod`가 후보 하나뿐인 것은 오류가 아니다 — 004 PD-04(공분산 추정 방법)가 확정되기 전까지 003이 화면에 004가 계산할 수 없는 선택지를 얹지 않기 위함이다(원칙 VI). PD-04가 확정되면 등록표 버전을 올려 후보를 늘인다. 파일 머리에는 소유자 003, 007은 포트로 읽음, `searchValues`를 늘리면 007 조합 수가 곱으로 는다(R3 경고), `allowedRange.values` 순서는 자유이고 `searchValues` 순서는 버전에 묶임(§2.1), 값이 바뀌면 기존 버전을 덮어쓰지 않음을 적는다\n   - **파일 이름을 문자열로 들고 있는 테스트 둘을 함께 고친다.** `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/BaselineAbsenceTest.java:109`의 `Path.of(\"src/main/resources/registry/parameter-registry-provisional.yml\")`와 `backend/src/test/java/com/ssafy/thorp/paramsearch/StrategyIndependenceTest.java:38`의 `REGISTRY_RESOURCE` 상수다. **둘 다 컴파일은 통과하고 실행할 때 파일을 찾지 못해 실패한다** — 이름만 바꾸고 지나가면 T021에서야 드러난다\n   - **워커 정합 확인(고치지 않는다)**: 워커는 `allocation.parameters.rebalance == \"MONTH_END\"` 문자열(`worker/src/worker/engine_support.py:50`)과 `allocation.rules.lookbackDays`(`worker/src/worker/engine_runner.py:79`)만 읽는다. 등록표 축 이름·값 형태(`rebalancePeriod` 객체, `maxWeight`·`topN`·`skipRecentDays`·`allocationMethod`·`estimationMethod`)가 워커에 닿는 길은 004 소유다. 어긋난 곳을 표로 MR 본문에 적는다(\"착수 전에 알아둘 것\" ③)\n - [ ] T018 (BE 테스트) `git mv backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/registry/ProvisionalFileParameterRegistryTest.java backend/src/test/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistryTest.java`. 기존 단언(자원 파일을 따로 읽어 포트 결과와 대조하는 방식)은 유지하고 다음을 더한다: (a) 합성 YAML에서 `active: false` 전략이 `activeStrategies()`에 없고 `find()`에는 있다(quickstart 3-1의 로더 쪽); (b) 새 제약 셋을 각각 어긴 합성 YAML 3건이 기동 실패한다; (c) `analysisConditions`가 파일과 같다; (d) `rules(strategyId)` 개수가 파일의 `validationRules` 개수와 같다; (e) 합성 버전 `PROVISIONAL-FIXTURE`는 `provisional() == true`, 승인된 제품 버전은 `false`; (f) **합성 픽스처**의 `SECTOR_MOMENTUM` `warmup`에 `{lookbackDays: 60, skipRecentDays: 21}`을 넣으면 `WarmupRule.evaluate`가 **81**이다(quickstart 7-1), `warmup` 없는 전략은 0 (T016·T017 의존)\n@@ -136,7 +140,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [ ] T029 [P] [US1] (FE) `frontend/src/api/strategyRegistry.ts` — `fetchStrategyRegistry(universeSize?: number)` → `GET /strategies/registry`, `ApiResponse` 껍데기를 벗겨 `RegistryResponse` 반환. `StrategyRegistryError`(`code`·`status`, `REGISTRY_UNAVAILABLE`과 네트워크 실패를 구분)는 `frontend/src/api/paramSearch.ts`의 `ParamSearchError`와 같은 방식. `apiClient` 경유, URL 하드코딩 금지\n - [ ] T030 [P] [US1] (FE) `frontend/src/hooks/useSectorSelection.ts` — **002 경계.** 002가 확정한 섹터·비중(`mappingVersion`·`items[].{sectorId, instrumentId, targetWeight}`)을 읽는 유일한 통로다. 002 화면이 아직 없으므로 지금은 `sessionStorage` 키 `thorp.sectorSelection`과 질의 문자열 `?sectors=&instruments=`(007 `ParamSearchPage`와 같은 방식)에서 읽는 어댑터로 두고, **002가 구현되면 이 파일만 바꾼다**고 머리 주석에 적는다. 없으면 `null`을 돌려주고 화면이 \"섹터·비중 단계를 먼저 마쳐 주세요\" 안내를 보인다(\"착수 전에 알아둘 것\" ⑤)\n - [ ] T031 [P] [US1] (FE) `frontend/src/utils/warmupRule.ts` — `evaluateWarmup(rule: WarmupRule, values: Record<string, unknown>): number`. `sum` 항목이 문자열이면 축 값, 숫자면 상수, 정수로 더한다. 축 값이 없거나 정수가 아니면 예외(값을 지어내지 않는다). 서버 `WarmupRule.evaluate`와 같은 규약\n-- [ ] T032 [US1] (FE) `frontend/src/hooks/useStrategySettings.ts` — 화면 상태([data-model](data-model.md) §8·§9): `registryVersion`·`selectedStrategyId`·`valuesByStrategy`·`analysisCondition`. `sessionStorage` 키 `thorp.strategySettings`(research R8): 읽기·쓰기 모두 `try/catch`로 실패해도 되는 것으로 다룬다. 저장된 `registryVersion`이 조회한 버전과 다르거나 섹터 수가 바뀌면 각 보관값을 새 범위·규칙으로 재검증해 유효한 값은 유지하고, 유효하지 않은 값은 자동 보정하지 않은 채 이유와 기본값 복원 선택을 돌려준다. 이 로직을 T059의 409 처리도 재사용한다. 전략을 처음 고르면 그 전략 축의 `defaultValue`로 값을 채운다. `isDefault(strategyId)`는 저장하지 않고 매번 축 값 전부가 `defaultValue`와 같은지로 계산한다(FR-002). 제공 함수: `select`·`setValue`·`resetAxis`·`resetAll`·`setAnalysisCondition`. 현재 워밍업은 `evaluateWarmup`으로 파생한다 (T029·T031 의존)\n+- [ ] T032 [US1] (FE) `frontend/src/hooks/useStrategySettings.ts` — 화면 상태([data-model](data-model.md) §8·§9): `registryVersion`·`selectedStrategyId`·`valuesByStrategy`·`analysisCondition`. `sessionStorage` 키 `thorp.strategySettings`(research R8): 읽기·쓰기 모두 `try/catch`로 실패해도 되는 것으로 다룬다. 저장된 `registryVersion`이 조회한 버전과 다르거나 섹터 수가 바뀌면 각 보관값을 새 범위·규칙으로 재검증해 유효한 값은 유지하고, 유효하지 않은 값은 자동 보정하지 않은 채 이유와 기본값 복원 선택을 돌려준다. 이 로직을 T059의 409 처리도 재사용한다. 전략을 처음 고르면 그 전략 축의 `defaultValue`로 값을 채운다. `isDefault(strategyId)`는 저장하지 않고 매번 축 값 전부가 `defaultValue`와 같은지로 계산한다(FR-002). `analysisCondition.minEvaluationYears`는 등록표 `analysisConditions.minEvaluationYears.default`(1)로 시작한다(FR-011a). 제공 함수: `select`·`setValue`·`resetAxis`·`resetAll`·`setAnalysisCondition`. 현재 워밍업은 `evaluateWarmup`으로 파생한다 (T029·T031 의존)\n \n ### Frontend — 컴포넌트\n \n@@ -146,15 +150,15 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [ ] T036 [P] [US1] (FE) `frontend/src/components/strategy/SettingsStatusBadge.tsx` — `isDefault ? '기본 설정' : '설정을 바꿈'`. 누를 수 없는 상태 표시이며 토글이 아니다(FR-002). 옆에 \"기본값은 편의용 출발점이며 최적값이 아닙니다\"(FR-004, 원칙 III)\n - [ ] T037 [P] [US1] (FE) `frontend/src/components/strategy/ConditionSummaryLine.tsx` — 분석 기간·비교 대상(섹터 수)·비용 적용 여부 한 줄(FR-002). 값은 props로만 받는다\n - [ ] T038 [P] [US1] (FE) `frontend/src/components/strategy/ActionButtons.tsx` — constitution 3.4.0 승인([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253), 2026-09-15)으로 spec의 두 버튼 안이 확정됐다. '분석하기'·'설정 조합 자동 비교'를 같은 크기·같은 variant로 두고, 비활성 조건(등록표 없음·전략 미선택·규칙 위반·워밍업 미충족·분석 조건 버전 없음)을 의미 있는 `disabled` 상태와 사유로 전달한다(NFR-001)\n-- [ ] T039 [US1] (FE) `frontend/src/api/backtest.ts` — `createBacktest(request)` → `POST /backtests`(`docs/specs/backtest-api/README.md` §1). 003이 채우는 필드(계약 §2): `executionType: 'SINGLE'`, `sectorAllocation`(002 값; `targetWeight`는 `targetWeightSource === 'USER'`일 때만 실어 보낸다), `strategy.{strategyId, rulesVersion, registryVersion, parameters}`, `conditions.{start, end, initialCash(문자열), costProfileVersion, warmupTradingDays, scenario: 'FULL_PERIOD'}`. 거절 코드 400·409·422·503을 `BacktestRequestError`로 정규화. **`rulesVersion`(필수)과 `costProfileVersion`의 출처는 미결이다**(\"착수 전에 알아둘 것\" ②) — `frontend/src/api/analysisVersions.ts` 한 파일의 `fetchAnalysisVersions()`에서만 읽도록 격리하고, 결정 전에는 이 함수가 `null`을 돌려주며 화면은 '분석하기'를 \"분석 조건 버전을 확인할 수 없습니다\"로 막는다. 값을 지어내 보내지 않는다\n+- [ ] T039 [US1] (FE) `frontend/src/api/backtest.ts` — `createBacktest(request)` → `POST /backtests`(`docs/specs/backtest-api/README.md` §1). 003이 채우는 필드(계약 §2): `executionType: 'SINGLE'`, `sectorAllocation`(002 값; `targetWeight`는 `targetWeightSource === 'USER'`일 때만 실어 보낸다), `strategy.{strategyId, rulesVersion, registryVersion, parameters}`, `conditions.{start, end, initialCash(문자열), costProfileVersion, warmupTradingDays, scenario: 'FULL_PERIOD'}`. `minEvaluationYears`는 004 계약에 아직 자리가 없어 이 요청에 싣지 않는다(\"착수 전에 알아둘 것\" ⑧) — 그 값은 T042의 화면 판정에서만 쓰고 조용히 버린다. 거절 코드 400·409·422·503을 `BacktestRequestError`로 정규화. **`rulesVersion`(필수)과 `costProfileVersion`의 출처는 미결이다**(\"착수 전에 알아둘 것\" ②) — `frontend/src/api/analysisVersions.ts` 한 파일의 `fetchAnalysisVersions()`에서만 읽도록 격리하고, 결정 전에는 이 함수가 `null`을 돌려주며 화면은 '분석하기'를 \"분석 조건 버전을 확인할 수 없습니다\"로 막는다. 값을 지어내 보내지 않는다\n - [ ] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)\n - [ ] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 \"002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교\" 흐름을 적는다 (T040 의존)\n-- [ ] T042 [US1] (FE) 워밍업 판정 연결(FR-011) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. **이 엔드포인트는 아직 없다(001 `tasks.md` T017 보류 — 워밍업이 003에서 와야 해서 001이 만들 수 없었다)**. 404·미구현·실패면 카드에 \"공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다\"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI, \"착수 전에 알아둘 것\" ①) (T032·T034 의존)\n+- [ ] T042 [US1] (FE) 워밍업·최소 평가 기간 판정 연결(FR-011, FR-011a) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면, 워밍업을 뺀 뒤 남는 기간을 현재 `analysisCondition.minEvaluationYears`(기본 1, T032·T067)와 비교한다 — 못 미치면 `'blocked'` + \"최소 평가 기간(N년)에 못 미칩니다\" 한 문장, 충족하면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. `minEvaluationYears`가 바뀔 때마다 다시 판정한다(quickstart 7-2). **이 엔드포인트는 아직 없다** — 001 `tasks.md` T017이 \"워밍업이 003 등록표에서 와야 한다\"며 보류했었으나 003이 등록표를 연 지금은 001의 구현 작업만 남았다(\"착수 전에 알아둘 것\" ①). 404·미구현·실패면 카드에 \"공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다\"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI) (T032·T034 의존)\n \n ### Frontend 테스트\n \n - [ ] T043 [P] [US1] (FE 테스트) `frontend/src/components/strategy/StrategyCardList.test.tsx` — 픽스처 응답으로: 카드에 `name`·`description`만 있고 어떤 축 `label`도 보이지 않는다; 키보드로 카드를 고를 수 있고 `aria-pressed`가 바뀐다; `selectable:false` 카드는 눌러도 선택되지 않고 `aria-disabled`와 `unselectableReason`이 보인다; 조회 실패 상태면 카드 목록 대신 `RegistryUnavailableNotice`와 '다시 시도' 버튼이 보이며 재시도 성공·실패 뒤 초점이 NFR-001대로 이동한다(quickstart 9) (T034 의존)\n-- [ ] T044 [P] [US1] (FE 테스트) `frontend/src/hooks/useStrategySettings.test.tsx` — 전략을 고르면 축 `defaultValue`로 채워진다; 값 하나를 바꾸면 `isDefault=false`, 모두 되돌리면 `true`(quickstart 6); 다른 전략으로 옮겨도 이전 전략 값이 남고 새 전략에 적용되지 않는다(Edge case); `sessionStorage`의 `registryVersion` 또는 섹터 수가 다르면 새 규칙으로 재검증해 유효한 값은 유지하고 유효하지 않은 값은 이유·복원 선택으로 돌려주며 자동 보정하지 않는다; `sessionStorage` 접근이 예외를 던져도 훅이 동작한다(research R8) (T032 의존)\n+- [ ] T044 [P] [US1] (FE 테스트) `frontend/src/hooks/useStrategySettings.test.tsx` — 전략을 고르면 축 `defaultValue`로 채워진다; 값 하나를 바꾸면 `isDefault=false`, 모두 되돌리면 `true`(quickstart 6); 다른 전략으로 옮겨도 이전 전략 값이 남고 새 전략에 적용되지 않는다(Edge case); `sessionStorage`의 `registryVersion` 또는 섹터 수가 다르면 새 규칙으로 재검증해 유효한 값은 유지하고 유효하지 않은 값은 이유·복원 선택으로 돌려주며 자동 보정하지 않는다; `analysisCondition.minEvaluationYears`가 초기값 1로 시작하고 `setAnalysisCondition`으로 바꿀 수 있다(FR-011a); `sessionStorage` 접근이 예외를 던져도 훅이 동작한다(research R8) (T032 의존)\n - [ ] T045 [P] [US1] (FE 테스트) `frontend/src/utils/warmupRule.test.ts` — `{sum: ['lookbackDays', 'skipRecentDays']}`에 60·21을 넣으면 **81**(quickstart 7-1), 상수 항목 더하기, 축 값 없으면 예외. `frontend/vite.config.ts`의 `test.include`에 `'src/utils/warmupRule.test.ts'`를 더한다(지금 include는 `*.test.tsx`와 `src/api/auth.test.ts`·`src/auth/**`만이라 `.test.ts`가 잡히지 않는다) (T031 의존)\n - [ ] T046 [US1] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` — SC-001: 카드 한 번 + '분석하기' 한 번으로 `createBacktest`(mock)가 기본값 `parameters`·`registryVersion`·`warmupTradingDays`로 호출된다(quickstart 4); 상세 설정을 열지 않았다; 기본 화면의 입력은 전략 선택 하나다(SC-005); 등록표 조회가 실패하면 게이트에서 확정된 행동 버튼이 모두 의미 있는 `disabled` 상태다(SC-008, quickstart 9); 배지가 '기본 설정'; `provisional:true`면 문구가 있는 임시값 배지가 보이고 색상만으로 구분하지 않는다(NFR-002) (T040~T042 의존)\n \n@@ -213,13 +217,13 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Frontend\n \n-- [ ] T065 [US3] (FE) **[BLOCKED: 004 비용 버전 조회 계약]** `frontend/src/components/strategy/AnalysisConditionsPanel.tsx` — 접힌 상태가 기본. 열면: 분석 기간 시작·종료(`useEvaluationWindow`의 `commonStart`~`commonEnd`를 `min`/`max`로 두어 **범위 밖은 선택할 수 없다**, FR-009); 시작 금액(`AxisNumberField` 재사용, `analysisConditions.initialAmount`의 `range`·`default`·`unit`); 비용 가정은 004에서 조회한 수수료·호가 차이·슬리피지·세금 수치와 버전·`provisional` 여부를 한 줄의 읽기 전용 값으로 보인다. 조회 계약이 없을 때 일반 문구로 대체하지 않고 \"비용 조건을 확인할 수 없습니다\"로 분석을 막는다. 시나리오는 '연속 운용' 고정 표시하고 목표 변동성은 이 화면에 보이지 않는다. 수수료·세금·기간을 사용자가 바꾸거나 최적화하는 선택지는 두지 않는다(FR-010, 원칙 IV) (T032·T042·T054 의존)\n+- [ ] T065 [US3] (FE) **[BLOCKED: 004 비용 버전 조회 계약]** `frontend/src/components/strategy/AnalysisConditionsPanel.tsx` — 접힌 상태가 기본. 열면: 분석 기간 시작·종료(`useEvaluationWindow`의 `commonStart`~`commonEnd`를 `min`/`max`로 두어 **범위 밖은 선택할 수 없다**, FR-009); 시작 금액(`AxisNumberField` 재사용, `analysisConditions.initialAmount`의 `range`·`default`·`unit`); 비용 가정은 004에서 조회한 수수료·호가 차이·슬리피지·세금 수치와 버전·`provisional` 여부를 한 줄의 읽기 전용 값으로 보인다. 조회 계약이 없을 때 일반 문구로 대체하지 않고 \"비용 조건을 확인할 수 없습니다\"로 분석을 막는다. 최소 평가 기간은 등록표 `analysisConditions.minEvaluationYears`의 후보(`[0,1,3]`)를 완화·기본·엄격 라벨로 보이는 라디오/셀렉트이며, 바뀌면 `setAnalysisCondition`으로 반영해 T042의 카드 판정이 다시 돈다(FR-011a). 시나리오는 '연속 운용' 고정 표시하고 목표 변동성은 이 화면에 보이지 않는다. 수수료·세금·기간을 사용자가 바꾸거나 최적화하는 선택지는 두지 않는다(FR-010, 원칙 IV) (T032·T042·T054 의존)\n - [ ] T066 [US3] (FE) `frontend/src/components/strategy/ReducedPeriodNotice.tsx` — 실행 전 안내(FR-011, SC-004): 워밍업 때문에 `commonStart`가 밀렸으면 줄어든 구간과 원인(`bindingCandidate` 섹터, 현재 관측 기간·최근 제외 기간) 한 문장. '분석하기' 바로 위와 선택 카드에 함께 보인다. 줄지 않았으면 렌더하지 않는다 (T042 의존)\n-- [ ] T067 [US3] (FE) `frontend/src/hooks/useStrategySettings.ts`의 `analysisCondition` 기본값 채움과 연결 — 처음 `periodStart`/`periodEnd`는 evaluation window의 `commonStart`/`commonEnd`, `initialAmount`는 등록표 `default`, `scenario`는 `FULL_PERIOD`. `ConditionSummaryLine`(T037)이 이 값을 읽고, `createBacktest`(T039)가 `conditions`에 싣는다. 사용자가 바꾼 기간은 `sessionStorage`에 함께 남는다(FR-017) (T065 의존)\n+- [ ] T067 [US3] (FE) `frontend/src/hooks/useStrategySettings.ts`의 `analysisCondition` 기본값 채움과 연결 — 처음 `periodStart`/`periodEnd`는 evaluation window의 `commonStart`/`commonEnd`, `initialAmount`는 등록표 `default`, `minEvaluationYears`는 등록표 `default`(1), `scenario`는 `FULL_PERIOD`. `ConditionSummaryLine`(T037)이 이 값을 읽고, `createBacktest`(T039)가 `conditions`에 싣는다. 사용자가 바꾼 기간은 `sessionStorage`에 함께 남는다(FR-017) (T065 의존)\n \n ### Frontend 테스트\n \n-- [ ] T068 [P] [US3] (FE 테스트) `frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx` — 기간 입력의 `min`/`max`가 evaluation window와 같고 범위 밖 값은 반영되지 않는다; 시작 금액의 빈 값·비숫자·최소 미만·최대 초과·간격 불일치는 저장되지 않고 경계값은 허용된다(SC-002); 수수료·세금 편집과 \"최적화\"·\"수익 극대화\" 컨트롤이 없다(FR-010); 비용 수치·버전·임시 문구가 함께 보이며 조회 실패 때 분석 차단 사유가 보인다; 목표 변동성 컨트롤이 없다 (T065 의존)\n+- [ ] T068 [P] [US3] (FE 테스트) `frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx` — 기간 입력의 `min`/`max`가 evaluation window와 같고 범위 밖 값은 반영되지 않는다; 시작 금액의 빈 값·비숫자·최소 미만·최대 초과·간격 불일치는 저장되지 않고 경계값은 허용된다(SC-002); 수수료·세금 편집과 \"최적화\"·\"수익 극대화\" 컨트롤이 없다(FR-010); 비용 수치·버전·임시 문구가 함께 보이며 조회 실패 때 분석 차단 사유가 보인다; 최소 평가 기간을 완화·기본·엄격 중 바꾸면 `setAnalysisCondition`이 그 값으로 호출된다(FR-011a, quickstart 7-2); 목표 변동성 컨트롤이 없다 (T065 의존)\n - [ ] T069 [P] [US3] (FE 테스트) `frontend/src/components/strategy/ReducedPeriodNotice.test.tsx` — 줄어든 구간과 `bindingCandidate`가 문장에 있다; 줄지 않았으면 렌더되지 않는다 (T066 의존)\n \n **Checkpoint**: 기간·금액·비용이 요약 한 줄과 패널에 보이고, 기간은 공통 범위 안에서만, 금액은 등록표 범위 안에서만 바뀐다\n@@ -295,7 +299,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n | B03 · [235](https://ssafy.atlassian.net/browse/S15P21E205-235) | `[BE] 전략·파라미터 등록표 조회 API` | T003, T004, T023~T028 | 8 | `be` | B02 |\n | B04 · [236](https://ssafy.atlassian.net/browse/S15P21E205-236) | `[FE] 전략 카드 다섯을 보인다` | T005, T006, T029, T030, T033~T035, T043 | 8 | `fe` | B03의 계약(T003·T004) |\n | B05 · [237](https://ssafy.atlassian.net/browse/S15P21E205-237) | `[FE] 카드를 골라 분석을 시작한다` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | `fe` | B04 |\n-| B06 · [238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | T039, T042 | 2 | `fe` | B05 + **외부 결정** |\n+| B06 · [238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | T039, T042 | 2 | `fe` | B05 + 001 구현 + **004 결정** |\n | B07 · [239](https://ssafy.atlassian.net/browse/S15P21E205-239) | `[BE] 접수 시점에 설정을 다시 검증한다` | T002, T047~T051 | 6 | `be` | B02 |\n | B08 · [240](https://ssafy.atlassian.net/browse/S15P21E205-240) | `[FE] 상세 설정을 열어 값을 바꾼다` | T052~T057(T057a 포함), T060~T063 | 11 | `fe` | B05 |\n | B09 · [241](https://ssafy.atlassian.net/browse/S15P21E205-241) | `[FE] 바꾼 값을 그 자리에서 판정한다` | T058, T059, T064 | 3 | `fe` | B08 |\n@@ -306,7 +310,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n ```text\n B01 ─▶ B02 ─┬─▶ B03 ─▶ B04 ─▶ B05 ─┬─▶ B08 ─▶ B09 ─▶ B10 ─┐\n             │                       ├─▶ B11                 ├─▶ B12\n-            └─▶ B07                 └─▶ B06 (외부 결정 대기) ┘\n+            └─▶ B07                 └─▶ B06 (001 구현 + 004 결정 대기) ┘\n ```\n \n **각 묶음이 끝나면 무엇이 달라지나.** 이것이 묶음 조건 1(하나의 목적)을 만족하는지 보는 기준이다.\n@@ -336,7 +340,7 @@ B01 ─▶ B02 ─┬─▶ B03 ─▶ B04 ─▶ B05 ─┬─▶ B08 ─▶ B0\n   머지 전에도 프런트엔드가 출발할 수 있다. 실제 서버와 붙여 보는 것만 B03 머지 뒤다\n - **B07은 B03과 병렬이다** — 둘 다 B02의 포트만 쓰고 파일이 겹치지 않는다\n   (`strategy/application/service/` 안의 서로 다른 클래스, `backtest/application/service/BacktestService.java`는 B07만)\n-- **B06은 외부 결정을 기다린다.** 따로 뺀 이유는 막히지 않은 것이 막힌 것 때문에 함께 서지 않게 하려는 것이다\n+- **B06은 001의 엔드포인트 구현과 004의 조회 계약 결정을 기다린다.** 따로 뺀 이유는 막히지 않은 것이 막힌 것 때문에 함께 서지 않게 하려는 것이다\n - **묶음 안의 태스크를 절반만 올리지 않는다.** 특히 B01·B02는 §4의 2단계·4단계 확인(T011·T021)이\n   통과한 상태로만 MR을 올린다. 그 확인은 브랜치를 나누지 말고 커밋으로 나눈다\n - **묶음마다 Jira Task를 먼저 만들고 그 번호로 브랜치를 만든다**(constitution). 브랜치는\n@@ -406,7 +410,7 @@ Task: \"T043\" / \"T044\" / \"T045\" / \"T046\"               # 테스트 병렬\n 3. B07 → quickstart 5-1 뒷부분 → 화면을 우회한 요청도 서버가 막는다\n 4. B08·B09 → quickstart 5·6·7·10 → 범위·규칙·재판정\n 5. B10·B11 → quickstart 8·11 → 조건 확인과 007 진입\n-6. B06 → 외부 결정이 나면 분석 요청을 실제로 내보낸다\n+6. B06 → 001이 붙이고 004가 결정하면 분석 요청을 실제로 내보낸다\n 7. B12 → 문서·잔재·전체 검증\n \n 릴리즈는 매주 금요일이므로(constitution Git 규칙) 한 주에 닫을 묶음을 골라 쌓는다.\n@@ -415,7 +419,7 @@ Task: \"T043\" / \"T044\" / \"T045\" / \"T046\"               # 테스트 병렬\n \n 구현을 막거나 방향을 바꿀 수 있는 사실이다. 티켓으로 만들지 않고 여기와 MR 본문에 적는다(AGENTS.md \"곁가지는 티켓으로 만들지 않는다\").\n \n-① **001의 `GET /sectors/evaluation-window`가 아직 없다.** 001 `tasks.md` T017이 \"워밍업이 003 등록표에서 와야 하는데 003이 없어 만들 수 없다\"며 보류했다. 003이 등록표를 열면(B01~B03) 001이 붙일 수 있다. 다만 설정을 바꿀 때마다 다시 판정하려면(FR-011) 그 엔드포인트가 `strategy=` 대신(또는 더해) `warmupTradingDays=`를 받아야 한다 — 001 계약 `sector-api.md`의 변경이라 **001과 합의할 일이지 003이 정할 일이 아니다.** 그 전까지 T042는 카드를 막힌 상태로 두고 값을 지어내지 않는다.\n+① **001의 `GET /sectors/evaluation-window`가 아직 없다.** 001 `tasks.md` T017이 \"워밍업이 003 등록표에서 와야 하는데 003이 없어 만들 수 없다\"며 보류했었다. **003이 등록표를 열고([S15P21E205-254](https://ssafy.atlassian.net/browse/S15P21E205-254)) `warmupTradingDays` 산출 방식을 확정했으므로 이 보류 사유는 해소됐다** — 001은 자신의 T017에서 계산 로직(`EvaluationWindowService`)에 호출부만 붙이면 된다. 남은 것은 **001의 구현 작업**이지 팀 결정 대기가 아니다. 그 전까지 T042는 카드를 막힌 상태로 두고 값을 지어내지 않는다.\n \n ② **분석 요청의 `rulesVersion`(004 필수 필드)과 `costProfileVersion`을 화면이 알 길이 없다.** [data-model](data-model.md) §7 \"확인된 빈 구멍\"의 세 갈래(004가 조회 API를 연다 / 003 등록표 응답에 싣는다 / 화면은 적용 여부만 보인다) 중 어느 쪽인지 **004와 함께 정한다.** T039는 이 둘을 `analysisVersions.ts` 한 파일에 격리했으므로 결정 뒤 그 파일만 바뀐다. 결정 전에는 '분석하기'가 막힌다 — US1 종단 데모가 이 결정 뒤라는 뜻이다.\n \n@@ -429,6 +433,8 @@ Task: \"T043\" / \"T044\" / \"T045\" / \"T046\"               # 테스트 병렬\n \n ⑦ **계약에 필드 둘을 더했다**(T003): `axes[].description`과 `strategies[].targetWeightSource`. 화면이 전략 ID·축 이름으로 분기하지 않으려면(FR-005·research R7-1) FR-003의 '의미'·FR-012의 자동 배분 설명·FR-019의 재배분 안내가 등록표에서 와야 하기 때문이다. 리뷰에서 다른 방법이 나오면 T003·T005·T017·T055·T056이 함께 바뀐다.\n \n+⑧ **FR-011a(최소 평가 기간)를 서버가 다시 검증하려면 004의 백테스트 요청 계약에 필드가 하나 늘어야 한다.** 003은 `warmupTradingDays`처럼 `minEvaluationYears`도 요청에 실어 [StrategySettingsValidator](contracts/strategy-registry-internal.md)가 `periodEnd - periodStart` 간격을 산술로 재확인하게 했다([data-model](data-model.md) §10). 하지만 `docs/specs/backtest-api/README.md`의 `conditions` 스키마는 003이 단독으로 고칠 문서가 아니다 — **004와 합의해 그 계약에 `minEvaluationYears`(또는 같은 뜻의 필드)를 추가해야 한다.** 합의 전에는 T048의 이 검증 단계를 구현하지 않고 화면 쪽 차단(T042의 `useEvaluationWindow`)만으로 막는다 — 화면을 거치지 않은 직접 API 요청까지는 원칙 VI를 완전히 만족하지 못한다는 뜻이며, T049의 과도기 호환 경로(③)와 같은 성격의 빈틈이다.\n+\n ---\n \n ## Notes\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2811738": []
+  }
+}

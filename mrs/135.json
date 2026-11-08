@@ -1,0 +1,734 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945781,
+    "iid": 135,
+    "project_id": 1444456,
+    "title": "fix(be): 선정 결과가 저장되지 않아 테스트가 잡지 못하는 문제 해결 (무한 테스트)",
+    "description": "\n## 작업 내용 요약\n\n`note`가 빈 선정 결과를 저장하려 하면 `NullPointerException`이 나서 선정이 저장되지 않던 것을 고친다. 예외 지점이 `@TransactionalEventListener(AFTER_COMMIT)` 안이라 전파되지 않고 로그만 남았고, **테스트는 초록인 채로 기록이 비었다.**\n\n## 관련 티켓\n\n[S15P21E205-256](https://ssafy.atlassian.net/browse/S15P21E205-256)\n\n## 주요 변경 사항\n\n- `ParamSearch` 생성자가 `selection`을 바로 위 `executionPlan`과 같은 방식 (`Collections.unmodifiableMap(new LinkedHashMap<>(...))`)으로 복사한다. 키 순서도 계약 §3의 예시 순서로 지킨다\n- `ParamSearchNullableSelectionTest` 추가 — null인 `note`가 예외 없이 저장되는가, 키가 지워지지 않는가, 순서가 계약과 같은가, 방어 복사가 되는가\n\n**왜 통합 테스트가 아니라 도메인 단위 테스트인가**: `AFTER_COMMIT`을 지나는 경로에서는 실패가 조용하다. 조용해질 수 없는 자리에서 막아야 같은 결함이 다시 들어올 때 드러난다. 컨테이너를 쓰지 않아 빠르기도 하다.\n\n**원인**: 같은 결함을 후보 쪽(`SearchCandidate`)에서 한 번 고쳤을 때 묶음 쪽(`ParamSearch.selection`)이 함께 고쳐지지 않았다. `SearchCandidateNullableMapTest`의 Javadoc이 그때 일을 적고 있으며, 이제 그 짝을 둔다.\n\n## 테스트\n\n- 새 테스트 넷 통과. **고치기 전에는 넷 모두 `NullPointerException`으로 실패하는 것을 확인했다**\n- `ParamSearchRecordCompletenessTest`·`ParamSearchSelectionOnceTest`·`ParamSearchRetryTest`· `SelectionRuleImmutabilityTest` 통과\n- **부수 효과로 빌드가 빨라진다.** 후보마다 스택이 찍혀 `test-results/test/binary/output.bin`이 1.29GB까지 부풀던 것이 **0MB**가 되고, 위 다섯 테스트가 1분 13초에 끝난다\n\n## 리뷰 포인트\n\n**① 왜 지금까지 아무도 몰랐는가.** `ParamSearchRecordCompletenessTest`는 `getSelection()).isNotNull()`을 단언하지만, 그 메서드에서는 `shortOfDisplayCount`가 참이라 `note`가 채워져 통과한다. NPE는 `note`가 비는 다른 메서드에서 나고 그 메서드들은 selection을 단언하지 않는다.\n\n**② `note` 키를 지우지 않고 `null`로 남긴다.** 계약 §3 예시가 네 키를 모두 담고, `SearchCandidateNullableMapTest`가 \"키를 지우면 화면이 '없음'과 '필드가 아예 없음'을 구분할 수 없다\"는 같은 판단을 이미 하고 있다.\n\n**③ 발견 경위.** spec 003 B02([!134](https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/134)) 작업 중 full 빌드가 20분을 넘겨 원인을 찾다 드러났다. 003 변경과는 무관하다. 두 MR은 파일이 겹치지 않아 어느 쪽이 먼저 머지돼도 된다. 다만 이 MR이 먼저 들어가면 이후 모든 빌드가 빨라진다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-16T09:38:02.301+09:00",
+    "updated_at": "2026-09-16T09:48:37.486+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T09:45:30.545+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/256-selection-note-npe",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+    "merge_commit_sha": "c175648335ea84acc829b185e7761c2b8c433ba5",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T09:38:03.519+09:00",
+    "reference": "!135",
+    "references": {
+      "short": "!135",
+      "relative": "!135",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!135"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/135",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945781,
+    "iid": 135,
+    "project_id": 1444456,
+    "title": "fix(be): 선정 결과가 저장되지 않아 테스트가 잡지 못하는 문제 해결 (무한 테스트)",
+    "description": "\n## 작업 내용 요약\n\n`note`가 빈 선정 결과를 저장하려 하면 `NullPointerException`이 나서 선정이 저장되지 않던 것을 고친다. 예외 지점이 `@TransactionalEventListener(AFTER_COMMIT)` 안이라 전파되지 않고 로그만 남았고, **테스트는 초록인 채로 기록이 비었다.**\n\n## 관련 티켓\n\n[S15P21E205-256](https://ssafy.atlassian.net/browse/S15P21E205-256)\n\n## 주요 변경 사항\n\n- `ParamSearch` 생성자가 `selection`을 바로 위 `executionPlan`과 같은 방식 (`Collections.unmodifiableMap(new LinkedHashMap<>(...))`)으로 복사한다. 키 순서도 계약 §3의 예시 순서로 지킨다\n- `ParamSearchNullableSelectionTest` 추가 — null인 `note`가 예외 없이 저장되는가, 키가 지워지지 않는가, 순서가 계약과 같은가, 방어 복사가 되는가\n\n**왜 통합 테스트가 아니라 도메인 단위 테스트인가**: `AFTER_COMMIT`을 지나는 경로에서는 실패가 조용하다. 조용해질 수 없는 자리에서 막아야 같은 결함이 다시 들어올 때 드러난다. 컨테이너를 쓰지 않아 빠르기도 하다.\n\n**원인**: 같은 결함을 후보 쪽(`SearchCandidate`)에서 한 번 고쳤을 때 묶음 쪽(`ParamSearch.selection`)이 함께 고쳐지지 않았다. `SearchCandidateNullableMapTest`의 Javadoc이 그때 일을 적고 있으며, 이제 그 짝을 둔다.\n\n## 테스트\n\n- 새 테스트 넷 통과. **고치기 전에는 넷 모두 `NullPointerException`으로 실패하는 것을 확인했다**\n- `ParamSearchRecordCompletenessTest`·`ParamSearchSelectionOnceTest`·`ParamSearchRetryTest`· `SelectionRuleImmutabilityTest` 통과\n- **부수 효과로 빌드가 빨라진다.** 후보마다 스택이 찍혀 `test-results/test/binary/output.bin`이 1.29GB까지 부풀던 것이 **0MB**가 되고, 위 다섯 테스트가 1분 13초에 끝난다\n\n## 리뷰 포인트\n\n**① 왜 지금까지 아무도 몰랐는가.** `ParamSearchRecordCompletenessTest`는 `getSelection()).isNotNull()`을 단언하지만, 그 메서드에서는 `shortOfDisplayCount`가 참이라 `note`가 채워져 통과한다. NPE는 `note`가 비는 다른 메서드에서 나고 그 메서드들은 selection을 단언하지 않는다.\n\n**② `note` 키를 지우지 않고 `null`로 남긴다.** 계약 §3 예시가 네 키를 모두 담고, `SearchCandidateNullableMapTest`가 \"키를 지우면 화면이 '없음'과 '필드가 아예 없음'을 구분할 수 없다\"는 같은 판단을 이미 하고 있다.\n\n**③ 발견 경위.** spec 003 B02([!134](https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/134)) 작업 중 full 빌드가 20분을 넘겨 원인을 찾다 드러났다. 003 변경과는 무관하다. 두 MR은 파일이 겹치지 않아 어느 쪽이 먼저 머지돼도 된다. 다만 이 MR이 먼저 들어가면 이후 모든 빌드가 빨라진다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-16T09:38:02.301+09:00",
+    "updated_at": "2026-09-16T09:48:37.486+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T09:45:30.545+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/256-selection-note-npe",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+    "merge_commit_sha": "c175648335ea84acc829b185e7761c2b8c433ba5",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T09:38:03.519+09:00",
+    "reference": "!135",
+    "references": {
+      "short": "!135",
+      "relative": "!135",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!135"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/135",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": "2026-09-16T09:38:38.466+09:00",
+    "latest_build_finished_at": "2026-09-16T09:45:08.437+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197493,
+      "iid": 51,
+      "project_id": 1444456,
+      "sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "ref": "fix(be)/256-selection-note-npe",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T09:38:38.355+09:00",
+      "updated_at": "2026-09-16T09:45:08.443+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197493"
+    },
+    "head_pipeline": {
+      "id": 197493,
+      "iid": 51,
+      "project_id": 1444456,
+      "sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "ref": "fix(be)/256-selection-note-npe",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T09:38:38.355+09:00",
+      "updated_at": "2026-09-16T09:45:08.443+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197493",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T09:38:38.466+09:00",
+      "finished_at": "2026-09-16T09:45:08.437+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197493",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "head_sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "start_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f6744c9fc7aef53cb77eea3572b6dfbdee254a84",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812751,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:38:02.402+09:00",
+          "updated_at": "2026-09-16T09:38:02.409+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "70e1b8b1777949930428826f9d98250213dad186",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812752,
+          "type": null,
+          "body": "restored source branch `fix(be)/256-selection-note-npe`",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:38:03.054+09:00",
+          "updated_at": "2026-09-16T09:38:03.061+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a02db28b35b5ebfa50170eeb1e1bb56f2c24ba2d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812755,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **근본 원인 분석 및 방어적 설계**: `Map.copyOf`가 `null` 값을 허용하지 않아 발생하는 `NullPointerException` 문제를 정확히 파악하고, `Collections.unmodifiableMap(new LinkedHashMap<>(...))`을 통해 `null` 값을 안전하게 허용하면서도 불변성을 보장하도록 올바르게 수정했습니다.\n- **상세하고 교훈적인 테스트 작성**: `ParamSearchNullableSelectionTest`를 통해 `note`가 `null`인 경우의 방어 복사, 키 순서 유지, 불변성 보장을 철저히 검증했습니다. 특히 테스트 주석을 통해 비동기 이벤트 리스너(`AFTER_COMMIT`) 환경에서 예외가 삼켜지던 문제를 상세히 기록하여 향후 유사한 실수를 방지하도록 돕습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `ParamSearchNullableSelectionTest`를 통해 단일 도메인 관점의 검증은 이미 잘 작성되어 있으므로, 추가로 다음 시나리오를 검증하는 통합/이벤트 리스너 테스트가 있으면 더욱 안전합니다.\n  - **시나리오**: `BacktestFinishedListener`가 실행되는 `@TransactionalEventListener(AFTER_COMMIT)` 환경에서 `note`가 `null`인 `SelectionResult`를 가진 `ParamSearch` 객체가 정상적으로 영속화(저장)되는지 통합 테스트로 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:5f399c503a513c10bb17e6db65ce050d57fcbd9a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T09:38:09.634+09:00",
+          "updated_at": "2026-09-16T09:38:09.634+09:00",
+          "system": false,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1210dba5d284de67f6963d2081aba18a910e5979",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812768,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">fix(be): 선정 결과가 <span class=\"idiff left deletion\">조용히 </span>저장되지 않<span class=\"idiff right deletion\">는 문제를 고친다</span></code> to <code class=\"idiff\">fix(be): 선정 결과가 저장되지 않<span class=\"idiff left right addition\">아 테스트가 잡지 못하는 문제 해결</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:39:46.338+09:00",
+          "updated_at": "2026-09-16T09:39:46.341+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b8f106fc7d8f830978ddf38679d7fe7d1023a820",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812769,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:39:46.368+09:00",
+          "updated_at": "2026-09-16T09:39:46.372+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6d0507ed7310f3f7bdb6d3326539733b98f2b89c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812770,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:39:46.409+09:00",
+          "updated_at": "2026-09-16T09:39:46.414+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6e7131889eea88fc4ea94ccb41b190ded4452fb7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812853,
+          "type": null,
+          "body": "mentioned in commit c175648335ea84acc829b185e7761c2b8c433ba5",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:45:30.534+09:00",
+          "updated_at": "2026-09-16T09:45:30.537+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cbff3e7933caa07b256cb5701d8c301c91e5acdf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812904,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">fix(be): 선정 결과가 저장되지 않아 테스트가 잡지 못하는 문제 해결</code> to <code class=\"idiff\">fix(be): 선정 결과가 저장되지 않아 테스트가 잡지 못하는 문제 해결<span class=\"idiff left right addition\"> (무한 테스트)</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T09:48:37.584+09:00",
+          "updated_at": "2026-09-16T09:48:37.588+09:00",
+          "system": true,
+          "noteable_id": 945781,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 135,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2202876,
+      "head_commit_sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "base_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "start_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "created_at": "2026-09-16T09:38:02.673+09:00",
+      "merge_request_id": 945781,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "238a9e03c8cfc7858f198e8eb9ce75c9d673ff3e"
+    },
+    {
+      "id": 2202875,
+      "head_commit_sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "base_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "start_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "created_at": "2026-09-16T09:38:02.618+09:00",
+      "merge_request_id": 945781,
+      "state": "without_files",
+      "real_size": "2",
+      "patch_id_sha": "238a9e03c8cfc7858f198e8eb9ce75c9d673ff3e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2202876,
+      "head_commit_sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "base_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "start_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "created_at": "2026-09-16T09:38:02.673+09:00",
+      "merge_request_id": 945781,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "238a9e03c8cfc7858f198e8eb9ce75c9d673ff3e",
+      "commits": [
+        {
+          "id": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+          "short_id": "5f399c50",
+          "created_at": "2026-09-16T09:37:51.000+09:00",
+          "parent_ids": [
+            "532908d0868760ae4f9748f1b0b39f8f084f87eb"
+          ],
+          "title": "fix(be): 선정 결과가 조용히 저장되지 않는 문제를 고친다",
+          "message": "fix(be): 선정 결과가 조용히 저장되지 않는 문제를 고친다\n\nnote가 빈 선정 결과를 ParamSearch가 Map.copyOf로 복사하다 NullPointerException을\n던져 선정이 저장되지 않았다. 예외 지점이 @TransactionalEventListener(AFTER_COMMIT)\n안이라 전파되지 않고 로그만 남아, 테스트는 초록인 채로 기록이 비었다.\n\n- ParamSearch 생성자가 executionPlan과 같은 방식으로 selection을 복사한다.\n  키 순서도 계약 §3의 예시 순서로 지킨다\n- ParamSearchNullableSelectionTest 추가. AFTER_COMMIT을 지나는 경로에서는 실패가\n  조용하므로 조용해질 수 없는 도메인 단위 테스트로 막는다. 고치기 전 넷이 모두\n  NPE로 실패하는 것을 확인했다\n\nSearchCandidate 쪽의 같은 결함을 고쳤을 때 묶음 쪽이 함께 고쳐지지 않은 것이\n원인이다(SearchCandidateNullableMapTest의 짝을 이제 둔다).\n\n부수 효과로 빌드가 빨라진다. 후보마다 스택이 찍혀 테스트 출력 파일이 1.29GB까지\n부풀던 것이 0MB가 되고, 관련 테스트 다섯이 1분 13초에 끝난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T09:37:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T09:37:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5f399c503a513c10bb17e6db65ce050d57fcbd9a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -76,7 +76,12 @@ public class ParamSearch {\n         this.status = builder.status;\n         this.stopReason = builder.stopReason;\n         this.counts = builder.counts;\n-        this.selection = builder.selection == null ? null : Map.copyOf(builder.selection);\n+        // executionPlan과 같은 이유로 Map.copyOf를 쓰지 않는다 — 선정 결과에는 값이 null인 항목(채울 이유가\n+        // 없을 때의 note)이 있고 Map.copyOf는 null 값에서 NPE를 던진다. 키 순서는 계약 §3의 예시 순서다.\n+        this.selection =\n+                builder.selection == null\n+                        ? null\n+                        : Collections.unmodifiableMap(new LinkedHashMap<>(builder.selection));\n         this.dataVersionChanged = builder.dataVersionChanged;\n         this.startedAt = builder.startedAt;\n         this.finishedAt = builder.finishedAt;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearch.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearch.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,119 @@\n+package com.ssafy.thorp.paramsearch.domain.model;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatCode;\n+\n+import com.ssafy.thorp.paramsearch.application.result.SelectionResult;\n+import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n+import java.time.Instant;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 묶음이 들고 다니는 선정 결과도 <b>값이 없다는 사실 자체가 뜻</b>이다({@link SearchCandidateNullableMapTest}의 짝).\n+ *\n+ * <p>{@code SelectionResult.note}는 \"표시 수를 채우지 못한 이유\"라 채울 이유가 없으면 null이다. 그래서 방어 복사가 null 값을 담을 수\n+ * 있어야 한다 — {@code Map.copyOf}는 null 값을 거부한다.\n+ *\n+ * <p><b>이 테스트가 생긴 이유</b>: 같은 결함을 후보 쪽({@code SearchCandidate})에서 한 번 고쳤을 때 묶음 쪽({@code\n+ * ParamSearch.selection})이 함께 고쳐지지 않았다. 그 뒤로 {@code note}가 비는 묶음마다 선정 저장이 {@code\n+ * NullPointerException}으로 죽었는데, 예외가 나는 자리가 {@code BacktestFinishedListener}의\n+ * {@code @TransactionalEventListener(AFTER_COMMIT)} 안이라 전파되지 않고 로그만 남았다. <b>테스트는 초록인 채로 선정이 저장되지\n+ * 않았고</b> 후보마다 찍힌 스택이 테스트 출력 파일을 1.3GB까지 부풀렸다.\n+ *\n+ * <p>그래서 이 보장을 통합 테스트가 아니라 도메인 단위 테스트로 둔다. {@code AFTER_COMMIT}을 지나는 경로에서는 실패가 조용하므로, 조용해질 수 없는\n+ * 자리에서 막아야 같은 결함이 다시 들어올 때 드러난다.\n+ */\n+class ParamSearchNullableSelectionTest {\n+\n+    private static final Instant NOW = Instant.parse(\"2026-09-10T03:00:00Z\");\n+\n+    @Test\n+    @DisplayName(\"채울 이유가 없어 note가 비어도 선정 결과가 붙는다\")\n+    void selectionWithoutNoteIsStored() {\n+        ParamSearch completed = completedSearch();\n+        Map<String, Object> selection = selectionWithoutNote();\n+\n+        assertThatCode(() -> completed.withSelection(selection)).doesNotThrowAnyException();\n+    }\n+\n+    @Test\n+    @DisplayName(\"비어 있는 note의 키는 지우지 않고 그대로 남긴다\")\n+    void theEmptyNoteKeepsItsKey() {\n+        ParamSearch selected = completedSearch().withSelection(selectionWithoutNote());\n+\n+        assertThat(selected.getSelection())\n+                .as(\"키를 지우면 화면이 '사유 없음'과 '필드가 아예 없음'을 구분할 수 없다\")\n+                .containsKey(\"note\");\n+        assertThat(selected.getSelection().get(\"note\")).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"계약 §3의 키 순서를 지킨다\")\n+    void theKeyOrderFollowsTheContract() {\n+        ParamSearch selected = completedSearch().withSelection(selectionWithoutNote());\n+\n+        assertThat(selected.getSelection().keySet())\n+                .containsExactly(\n+                        \"displayed\", \"shortOfDisplayCount\", \"note\", \"drawdownFilterApplied\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"붙인 맵은 밖에서 바꿀 수 없다\")\n+    void theStoredMapIsNotWritable() {\n+        Map<String, Object> mutable = new LinkedHashMap<>(selectionWithoutNote());\n+        ParamSearch selected = completedSearch().withSelection(mutable);\n+\n+        mutable.put(\"note\", \"나중에 끼워 넣은 사유\");\n+\n+        assertThat(selected.getSelection().get(\"note\")).as(\"방어 복사가 없으면 저장된 뒤에도 값이 바뀐다\").isNull();\n+    }\n+\n+    /** 기준을 충족한 후보가 표시 수만큼 있어 따로 밝힐 이유가 없는 선정 결과. {@code note}가 null이다. */\n+    private static Map<String, Object> selectionWithoutNote() {\n+        return new SelectionResult(List.of(1, 2), false, null, true, Map.of())\n+                .toMap(List.of(\"PS-20260910-000001-C001\", \"PS-20260910-000001-C002\"));\n+    }\n+\n+    private static ParamSearch completedSearch() {\n+        return newSearch().markRunning(NOW).markCompleted(NOW.plusSeconds(60));\n+    }\n+\n+    private static ParamSearch newSearch() {\n+        return ParamSearch.create(\n+                null,\n+                List.of(\"SECTOR_MOMENTUM\"),\n+                List.of(\"091160.XKRX\", \"091170.XKRX\"),\n+                \"PROVISIONAL-20260910\",\n+                SearchSpace.of(\n+                        Map.of(\n+                                \"SECTOR_MOMENTUM\",\n+                                SearchSpace.StrategySpace.of(\n+                                        \"섹터 모멘텀\",\n+                                        List.of(\n+                                                SearchSpace.Axis.of(\n+                                                        \"lookbackDays\", List.of(20, 60, 120)),\n+                                                SearchSpace.Axis.of(\"topN\", List.of(2, 3)))))),\n+                newSelectionRule(),\n+                null,\n+                Map.of(\"maxCandidates\", 1000),\n+                Map.of(\"engineVersion\", \"0.1.0\"),\n+                Map.of(\"initialCash\", \"10000000.00\"),\n+                SearchCounts.initial(6, 6, 0));\n+    }\n+\n+    private static SelectionRule newSelectionRule() {\n+        return new SelectionRule(\n+                new SelectionRule.DrawdownFilter(\"NOT_WORSE_THAN_BASELINE\", \"EQUAL_WEIGHT\"),\n+                new SelectionRule.StabilityFilter(\"BATCH_PERCENTILE\", 50),\n+                \"NET_RETURN\",\n+                5,\n+                \"SHOW_ALL_TIED\",\n+                new SelectionRule.StabilityFormula(\n+                        \"SINGLE_AXIS_ONE_STEP\", \"MEAN_ABS_NET_RETURN_DIFF\"),\n+                List.of(\"displayCount\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearchNullableSelectionTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearchNullableSelectionTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2202875,
+      "head_commit_sha": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+      "base_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "start_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+      "created_at": "2026-09-16T09:38:02.618+09:00",
+      "merge_request_id": 945781,
+      "state": "without_files",
+      "real_size": "2",
+      "patch_id_sha": "238a9e03c8cfc7858f198e8eb9ce75c9d673ff3e",
+      "commits": [
+        {
+          "id": "5f399c503a513c10bb17e6db65ce050d57fcbd9a",
+          "short_id": "5f399c50",
+          "created_at": "2026-09-16T09:37:51.000+09:00",
+          "parent_ids": [
+            "532908d0868760ae4f9748f1b0b39f8f084f87eb"
+          ],
+          "title": "fix(be): 선정 결과가 조용히 저장되지 않는 문제를 고친다",
+          "message": "fix(be): 선정 결과가 조용히 저장되지 않는 문제를 고친다\n\nnote가 빈 선정 결과를 ParamSearch가 Map.copyOf로 복사하다 NullPointerException을\n던져 선정이 저장되지 않았다. 예외 지점이 @TransactionalEventListener(AFTER_COMMIT)\n안이라 전파되지 않고 로그만 남아, 테스트는 초록인 채로 기록이 비었다.\n\n- ParamSearch 생성자가 executionPlan과 같은 방식으로 selection을 복사한다.\n  키 순서도 계약 §3의 예시 순서로 지킨다\n- ParamSearchNullableSelectionTest 추가. AFTER_COMMIT을 지나는 경로에서는 실패가\n  조용하므로 조용해질 수 없는 도메인 단위 테스트로 막는다. 고치기 전 넷이 모두\n  NPE로 실패하는 것을 확인했다\n\nSearchCandidate 쪽의 같은 결함을 고쳤을 때 묶음 쪽이 함께 고쳐지지 않은 것이\n원인이다(SearchCandidateNullableMapTest의 짝을 이제 둔다).\n\n부수 효과로 빌드가 빨라진다. 후보마다 스택이 찍혀 테스트 출력 파일이 1.29GB까지\n부풀던 것이 0MB가 되고, 관련 테스트 다섯이 1분 13초에 끝난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T09:37:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T09:37:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5f399c503a513c10bb17e6db65ce050d57fcbd9a"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2812755": []
+  }
+}

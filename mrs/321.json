@@ -1,0 +1,847 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959344,
+    "iid": 321,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면 차트를 수정한다",
+    "description": "## 작업 내용 요약\n\n결과 화면 자산가치 차트에서 선을 구분하고 값을 읽기 쉽게 다듬었다. 선 구분표와 선 굵기·색을 정리하고, 호버 툴팁, 휠 확대·끌어서 이동, 구분표로 선 숨기기를 더했다.\n\n## 관련 티켓\n\n- S15P21E205-431 (Story 300 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **선 구분표**: 그래프 위에 기준·비교·참고(KOSPI) 선을 선 모양 견본·종류·이름으로 늘어놓는다. 항목을 누르면 그 선을 숨기고 다시 누르면 보인다. 숨긴 선은 곡선·끝 이름표·툴팁·음영에서 빠지고 세로축은 보이는 선 기준으로 다시 잡는다. 마지막 남은 선은 숨길 수 없다. 숨긴 항목은 흐리게 하고 이름에 줄을 긋는다(색에 기대지 않음).\n- **선 굵기·색**: 기준 3.2 / 비교 2 / 참고 1.4, 기준선을 맨 위에 그린다. 비교 대상 선은 결과 그래프 전용 색 토큰(`--result-line-*`, classic은 진한 색)으로 가른다. 앱 공용 `--chart-line-*`은 건드리지 않는다.\n- **호버 툴팁**: 크로스헤어와 선마다 점, 한 상자에 날짜(연도 포함, `2024년 3월 5일 (화)`)와 선별 자산가치·시작 금액 대비 변화. 로그 눈금이어도 좌표값이 아니라 받은 금액을 적는다. 라이브러리 기본 날짜 알약(영어)은 끈다.\n- **확대·이동**: 그래프 안의 휠은 커서 자리를 기준으로 확대·축소하고 페이지 스크롤을 막는다. 그래프 밖의 휠은 그대로 페이지를 굴린다. 확대한 동안에는 끌어서 좌우로 옮긴다. '전체 기간' 단추·두 번 누르기로 돌아온다. 보이는 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 그 구간을 따르고, 점은 줄이지 않는다(R-08). 최소 10거래일.\n- **좁은 화면(≤600px)**: 끝 이름표를 빼고(구분표가 대신) 좌우 여백을 줄인다. 그래프 높이는 340px, 넓은 화면은 `clamp(340px, 48svh, 420px)`.\n- spec 005 Assumptions: 툴팁의 시작 금액 대비 변화는 받은 금액의 단위 바꿈이지 화면 계산이 아니라고 적었다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm run test:dom` — lint 오류 0(경고 21은 기존), Vitest 148 files / 1426 tests 통과.\n- 로컬(`thorp_dev` + 20260922 덤프)에서 실제 결과(2016-01-04~2026-09-15, 비교 대상 1 + KOSPI)로 화면을 띄워 사람이 확인했다.\n\n## 리뷰 포인트\n\n- 그래프 안에서는 휠이 페이지를 굴리지 않는다. 그래프가 화면 대부분을 차지하는 좁은 화면에서 스크롤이 막힌다고 느낄 수 있다.\n- 툴팁은 차트 부품의 `ChartTooltip`을 쓰되 내용만 직접 그린다. 차트 부품(`components/charts/`)은 고치지 않았다.\n- 넓은 화면에서는 구분표와 끝 이름표에 이름이 두 번 나온다.\n\n## 전달만 하는 것\n\n- 트랙패드 가로 스와이프 이동과 휴대폰 핀치 확대는 연결하지 않았다.\n- 워크트리의 `compose.preview.override.yml`·`run-chart-preview-backtests.ps1`은 미리보기용 로컬 파일이라 커밋하지 않았다.\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T21:10:22.136+09:00",
+    "updated_at": "2026-09-24T21:14:04.128+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T21:14:04.174+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/431-result-chart",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+    "merge_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T21:10:23.805+09:00",
+    "reference": "!321",
+    "references": {
+      "short": "!321",
+      "relative": "!321",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!321"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/321",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959344,
+    "iid": 321,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면 차트를 수정한다",
+    "description": "## 작업 내용 요약\n\n결과 화면 자산가치 차트에서 선을 구분하고 값을 읽기 쉽게 다듬었다. 선 구분표와 선 굵기·색을 정리하고, 호버 툴팁, 휠 확대·끌어서 이동, 구분표로 선 숨기기를 더했다.\n\n## 관련 티켓\n\n- S15P21E205-431 (Story 300 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **선 구분표**: 그래프 위에 기준·비교·참고(KOSPI) 선을 선 모양 견본·종류·이름으로 늘어놓는다. 항목을 누르면 그 선을 숨기고 다시 누르면 보인다. 숨긴 선은 곡선·끝 이름표·툴팁·음영에서 빠지고 세로축은 보이는 선 기준으로 다시 잡는다. 마지막 남은 선은 숨길 수 없다. 숨긴 항목은 흐리게 하고 이름에 줄을 긋는다(색에 기대지 않음).\n- **선 굵기·색**: 기준 3.2 / 비교 2 / 참고 1.4, 기준선을 맨 위에 그린다. 비교 대상 선은 결과 그래프 전용 색 토큰(`--result-line-*`, classic은 진한 색)으로 가른다. 앱 공용 `--chart-line-*`은 건드리지 않는다.\n- **호버 툴팁**: 크로스헤어와 선마다 점, 한 상자에 날짜(연도 포함, `2024년 3월 5일 (화)`)와 선별 자산가치·시작 금액 대비 변화. 로그 눈금이어도 좌표값이 아니라 받은 금액을 적는다. 라이브러리 기본 날짜 알약(영어)은 끈다.\n- **확대·이동**: 그래프 안의 휠은 커서 자리를 기준으로 확대·축소하고 페이지 스크롤을 막는다. 그래프 밖의 휠은 그대로 페이지를 굴린다. 확대한 동안에는 끌어서 좌우로 옮긴다. '전체 기간' 단추·두 번 누르기로 돌아온다. 보이는 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 그 구간을 따르고, 점은 줄이지 않는다(R-08). 최소 10거래일.\n- **좁은 화면(≤600px)**: 끝 이름표를 빼고(구분표가 대신) 좌우 여백을 줄인다. 그래프 높이는 340px, 넓은 화면은 `clamp(340px, 48svh, 420px)`.\n- spec 005 Assumptions: 툴팁의 시작 금액 대비 변화는 받은 금액의 단위 바꿈이지 화면 계산이 아니라고 적었다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm run test:dom` — lint 오류 0(경고 21은 기존), Vitest 148 files / 1426 tests 통과.\n- 로컬(`thorp_dev` + 20260922 덤프)에서 실제 결과(2016-01-04~2026-09-15, 비교 대상 1 + KOSPI)로 화면을 띄워 사람이 확인했다.\n\n## 리뷰 포인트\n\n- 그래프 안에서는 휠이 페이지를 굴리지 않는다. 그래프가 화면 대부분을 차지하는 좁은 화면에서 스크롤이 막힌다고 느낄 수 있다.\n- 툴팁은 차트 부품의 `ChartTooltip`을 쓰되 내용만 직접 그린다. 차트 부품(`components/charts/`)은 고치지 않았다.\n- 넓은 화면에서는 구분표와 끝 이름표에 이름이 두 번 나온다.\n\n## 전달만 하는 것\n\n- 트랙패드 가로 스와이프 이동과 휴대폰 핀치 확대는 연결하지 않았다.\n- 워크트리의 `compose.preview.override.yml`·`run-chart-preview-backtests.ps1`은 미리보기용 로컬 파일이라 커밋하지 않았다.\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T21:10:22.136+09:00",
+    "updated_at": "2026-09-24T21:14:04.128+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T21:14:04.174+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/431-result-chart",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+    "merge_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T21:10:23.805+09:00",
+    "reference": "!321",
+    "references": {
+      "short": "!321",
+      "relative": "!321",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!321"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/321",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "4",
+    "latest_build_started_at": "2026-09-24T21:10:30.889+09:00",
+    "latest_build_finished_at": "2026-09-24T21:14:03.319+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221270,
+      "iid": 347,
+      "project_id": 1444456,
+      "sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+      "ref": "feat(fe)/431-result-chart",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T21:10:30.788+09:00",
+      "updated_at": "2026-09-24T21:14:03.325+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221270"
+    },
+    "head_pipeline": {
+      "id": 221270,
+      "iid": 347,
+      "project_id": 1444456,
+      "sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+      "ref": "feat(fe)/431-result-chart",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T21:10:30.788+09:00",
+      "updated_at": "2026-09-24T21:14:03.325+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221270",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-24T21:10:30.889+09:00",
+      "finished_at": "2026-09-24T21:14:03.319+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221270",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "2370e99f894296dffff7d26272a90ab573579352",
+      "head_sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+      "start_sha": "2370e99f894296dffff7d26272a90ab573579352"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e25341e137503f819770724e68f860f289e54030",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866478,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T21:10:22.248+09:00",
+          "updated_at": "2026-09-24T21:10:22.252+09:00",
+          "system": true,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ced64f4229ba9cec04c60ad5e86415ee3388ef7c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866479,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T21:10:22.272+09:00",
+          "updated_at": "2026-09-24T21:10:22.280+09:00",
+          "system": true,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "76cd0ebcd60826df39d9af32e620780edfbb959a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866480,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T21:10:25.544+09:00",
+          "updated_at": "2026-09-24T21:10:25.554+09:00",
+          "system": true,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3ecdd2f0ccf24acfb3e9d7bfb9be112f0cdc62ab",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866482,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 테스트 검증**: `EquityChart.test.tsx`에서 선 숨기기(`aria-pressed`), 휠 확대/축소, 드래그 앤 드롭 이동, 툴팁 표시 및 모바일 대응 여부 등 새롭게 추가된 복잡한 인터랙션과 반응형 레이아웃 시나리오를 꼼꼼하게 테스트로 커버했습니다.\n- **접근성 및 UX 고려**: 마지막 남은 선은 숨길 수 없도록 방어 로직(`disabled={visible && visibleCount === 1}`)을 두어 빈 그래프가 렌더링되는 상황을 우아하게 방지했고, 색상 외에 취소선(`text-decoration: line-through`)과 투명도를 함께 적용하여 색맹 사용자 등 다양한 사용자 경험을 세심하게 배려했습니다.\n\n### 발견 사항\n- [Low] `frontend/src/components/result/EquityChart.tsx`: `useEffect` 내부에서 `chartRef.current`를 구독할 때 패시브 리스너 옵션(`{ passive: false }`)을 사용하여 `event.preventDefault()`를 호출한 것은 의도된 휠 스크롤 방지를 위해 올바른 접근입니다. 다만, 컴포넌트 마운트 시점에 단 한 번만 부착되므로 최신 `live.current` ref를 통해 상태를 참조하는 패턴은 리액트의 일반적인 선언적 패러다임과 약간 거리가 있으나, 성능 최적화와 DOM 이벤트 제어 측면에서 허용 가능한 범위입니다. (중대한 버그나 보안 취약점은 발견되지 않았습니다.)\n\n### 테스트 제안\n변경 사항의 안정성을 보장하기 위해 다음 시나리오에 대한 테스트를 추가하거나 수동 검증을 권장합니다.\n\n1. **최소 거래일 제한 검증**: 사용자가 마우스 휠을 과도하게 연속으로 굴려 확대할 때, 요구사항에 명시된 최소 거래일(`MIN_VIEW_ROWS = 10`) 미만으로 구간이 좁혀지지 않고 정확히 10거래일에서 멈추는지 확인합니다.\n2. **리사이즈 동기화 검증**: 데스크톱 화면(>600px)에서 모바일 화면(<=600px)으로 브라우저 크기를 동적으로 조절할 때, `compact` 상태가 정상적으로 반응하여 끝 이름표(SeriesEndLabels)가 사라지고 상단 구분표(SeriesKey) 중심의 레이아웃으로 원활하게 전환되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0745675876c3cebe556d5ec9c6a4d1c2017920a7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-24T21:10:33.001+09:00",
+          "updated_at": "2026-09-24T21:10:33.001+09:00",
+          "system": false,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0fa04ccb524fe962315a6296b7c7a23a33c7af24",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866493,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 0745675876c3cebe556d5ec9c6a4d1c2017920a7 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T21:13:13.407+09:00",
+          "updated_at": "2026-09-24T21:13:13.411+09:00",
+          "system": true,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "277442a1da23856ddd05c8d8e1d640d21d99de53",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866496,
+          "type": null,
+          "body": "mentioned in commit 3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T21:14:04.147+09:00",
+          "updated_at": "2026-09-24T21:14:04.151+09:00",
+          "system": true,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b6da07ee6ff1236f1498530c858269dfebd9c2e8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885020,
+          "type": null,
+          "body": "mentioned in commit b536e832796892914a9a239ab413318860360da3",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.833+09:00",
+          "updated_at": "2026-10-13T15:16:08.848+09:00",
+          "system": true,
+          "noteable_id": 959344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 321,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248612,
+      "head_commit_sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+      "base_commit_sha": "2370e99f894296dffff7d26272a90ab573579352",
+      "start_commit_sha": "2370e99f894296dffff7d26272a90ab573579352",
+      "created_at": "2026-09-24T21:10:22.573+09:00",
+      "merge_request_id": 959344,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "94643b08ca77081c25d3077a1f3fbfc75b548f30"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248612,
+      "head_commit_sha": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+      "base_commit_sha": "2370e99f894296dffff7d26272a90ab573579352",
+      "start_commit_sha": "2370e99f894296dffff7d26272a90ab573579352",
+      "created_at": "2026-09-24T21:10:22.573+09:00",
+      "merge_request_id": 959344,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "94643b08ca77081c25d3077a1f3fbfc75b548f30",
+      "commits": [
+        {
+          "id": "0745675876c3cebe556d5ec9c6a4d1c2017920a7",
+          "short_id": "07456758",
+          "created_at": "2026-09-24T21:06:41.000+09:00",
+          "parent_ids": [
+            "30f91d28b92339710435bf4a9f932732d6224b98"
+          ],
+          "title": "feat(fe): 결과 그래프 구분표 항목을 눌러 선을 숨기고 다시 보인다",
+          "message": "feat(fe): 결과 그래프 구분표 항목을 눌러 선을 숨기고 다시 보인다\n\n숨긴 선은 곡선·끝 이름표·툴팁·음영에서 빠지고 세로축은 보이는 선 기준으로 다시 잡힌다.\n행은 그대로 두어 확대 구간이 흔들리지 않는다. 마지막 남은 선은 숨길 수 없다.\n숨긴 항목은 흐리게 하고 이름에 줄을 그어 색 없이도 구분된다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T21:06:41.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T21:06:41.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0745675876c3cebe556d5ec9c6a4d1c2017920a7"
+        },
+        {
+          "id": "30f91d28b92339710435bf4a9f932732d6224b98",
+          "short_id": "30f91d28",
+          "created_at": "2026-09-24T21:04:17.000+09:00",
+          "parent_ids": [
+            "465e3177d7e03668631242c994e05462a3455639"
+          ],
+          "title": "refactor(fe): 결과 그래프의 하락 폭 띠를 뺀다",
+          "message": "refactor(fe): 결과 그래프의 하락 폭 띠를 뺀다\n\n써 보고 빼기로 했다. 465e3177을 되돌린다(DrawdownStrip, 세로축 눈금 글자 형식 옵션 포함).\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T21:04:17.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T21:04:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/30f91d28b92339710435bf4a9f932732d6224b98"
+        },
+        {
+          "id": "465e3177d7e03668631242c994e05462a3455639",
+          "short_id": "465e3177",
+          "created_at": "2026-09-24T21:00:59.000+09:00",
+          "parent_ids": [
+            "2b92bbb86ba2d0aee1a564e759b742304aae4b64"
+          ],
+          "title": "feat(fe): 결과 그래프 아래에 하락 폭 띠를 켜서 볼 수 있게 한다",
+          "message": "feat(fe): 결과 그래프 아래에 하락 폭 띠를 켜서 볼 수 있게 한다\n\n'하락 폭' 단추로 켜면 본 그래프 아래 얇은 띠에 날마다 최고점 대비 하락 폭을 0% 선 아래로 그린다.\n값은 서버의 drawdown 그대로이고(KOSPI는 서버 값이 없어 뺀다), 본 그래프와 같은 좌우 여백·\n확대 구간을 따라 날짜 줄이 맞는다. 첫 화면 그래프는 하나라는 원칙(II)에 맞춰 처음엔 꺼 둔다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T21:00:59.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T21:00:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/465e3177d7e03668631242c994e05462a3455639"
+        },
+        {
+          "id": "2b92bbb86ba2d0aee1a564e759b742304aae4b64",
+          "short_id": "2b92bbb8",
+          "created_at": "2026-09-24T20:57:07.000+09:00",
+          "parent_ids": [
+            "5fbb2a3c0e8122214060dc82efdb4bb0988974d4"
+          ],
+          "title": "revert(fe): 결과 그래프의 금액·수익률 눈금 전환을 뺀다",
+          "message": "revert(fe): 결과 그래프의 금액·수익률 눈금 전환을 뺀다\n\n모든 선이 같은 시작 금액에서 출발해 곡선 모양이 같고 눈금 글자만 바뀐다. 시작 금액 대비\n변화는 툴팁이 이미 보인다. spec 005 Assumptions의 표기 문장은 툴팁에 대해서만 남긴다.\n\nThis reverts commit 5fbb2a3c.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T20:57:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T20:57:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2b92bbb86ba2d0aee1a564e759b742304aae4b64"
+        },
+        {
+          "id": "5fbb2a3c0e8122214060dc82efdb4bb0988974d4",
+          "short_id": "5fbb2a3c",
+          "created_at": "2026-09-24T20:53:49.000+09:00",
+          "parent_ids": [
+            "bbf1ee1f75382b7078eaf0c5c8166c1f148928b6"
+          ],
+          "title": "feat(fe): 결과 그래프 세로축을 금액과 시작 금액 대비 수익률로 바꿔 볼 수 있게 한다",
+          "message": "feat(fe): 결과 그래프 세로축을 금액과 시작 금액 대비 수익률로 바꿔 볼 수 있게 한다\n\n모든 선이 같은 시작 금액에서 출발하므로 곡선은 그대로 두고 눈금 글자와 자리만 바꾼다.\n둥근 수익률(+20% 등)을 먼저 골라 그 금액 자리에 놓으므로 선형·로그 눈금 어느 쪽에서도 맞는다.\nspec 005 Assumptions에 툴팁·수익률 눈금의 변화율은 받은 값의 단위 바꿈이라고 적는다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T20:53:49.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T20:53:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5fbb2a3c0e8122214060dc82efdb4bb0988974d4"
+        },
+        {
+          "id": "bbf1ee1f75382b7078eaf0c5c8166c1f148928b6",
+          "short_id": "bbf1ee1f",
+          "created_at": "2026-09-24T20:47:15.000+09:00",
+          "parent_ids": [
+            "3e5338fcda24d36590bd79798b20940755726c3f"
+          ],
+          "title": "feat(fe): 결과 그래프 확대를 휠 확대·끌어서 옮기기로 바꾼다",
+          "message": "feat(fe): 결과 그래프 확대를 휠 확대·끌어서 옮기기로 바꾼다\n\n구간을 끌어 고르는 방식은 호버 툴팁과 동작이 겹치고 알아채기 어려웠다. 그래프 안의 휠은\n커서 자리를 기준으로 확대·축소하고(페이지 스크롤을 막는다), 그래프 밖의 휠은 그대로 페이지를\n굴린다. 확대한 동안에는 끌어서 좌우로 옮긴다. '전체 기간'·두 번 누르기로 돌아온다.\n구간 선택을 칠하던 ZoomSelection은 지운다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T20:47:15.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T20:47:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bbf1ee1f75382b7078eaf0c5c8166c1f148928b6"
+        },
+        {
+          "id": "3e5338fcda24d36590bd79798b20940755726c3f",
+          "short_id": "3e5338fc",
+          "created_at": "2026-09-24T20:40:57.000+09:00",
+          "parent_ids": [
+            "d56bd1baa44a92f79e24575a7dcff3d40c948bbb"
+          ],
+          "title": "feat(fe): 결과 그래프를 끌어서 구간을 확대하고 전체 기간으로 되돌린다",
+          "message": "feat(fe): 결과 그래프를 끌어서 구간을 확대하고 전체 기간으로 되돌린다\n\n끄는 동안 고른 구간을 칠하고, 손을 떼면 그 구간의 행만 차트에 넘겨 세로축·끝 이름표·툴팁이\n그 구간 기준이 된다. '전체 기간' 단추나 두 번 누르기로 돌아온다. 점은 줄이지 않는다(R-08).\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T20:40:57.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T20:40:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3e5338fcda24d36590bd79798b20940755726c3f"
+        },
+        {
+          "id": "d56bd1baa44a92f79e24575a7dcff3d40c948bbb",
+          "short_id": "d56bd1ba",
+          "created_at": "2026-09-24T20:34:44.000+09:00",
+          "parent_ids": [
+            "94702f61bacbc0baba8c7fd5f3d129aa13cffee2"
+          ],
+          "title": "feat(fe): 결과 그래프에 마우스를 올리면 그날의 자산가치를 툴팁으로 보인다",
+          "message": "feat(fe): 결과 그래프에 마우스를 올리면 그날의 자산가치를 툴팁으로 보인다\n\n크로스헤어와 선마다 점을 찍고, 한 상자에 날짜(연도 포함)와 기준·비교 대상·KOSPI의\n자산가치, 시작 금액 대비 변화를 보인다. 로그 눈금이어도 좌표값이 아니라 받은 금액을 쓴다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T20:34:44.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T20:34:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d56bd1baa44a92f79e24575a7dcff3d40c948bbb"
+        },
+        {
+          "id": "94702f61bacbc0baba8c7fd5f3d129aa13cffee2",
+          "short_id": "94702f61",
+          "created_at": "2026-09-24T20:26:07.000+09:00",
+          "parent_ids": [
+            "2370e99f894296dffff7d26272a90ab573579352"
+          ],
+          "title": "feat(fe): 결과 그래프에 선 구분표를 두고 선 색·굵기와 좁은 화면 배치를 다듬는다",
+          "message": "feat(fe): 결과 그래프에 선 구분표를 두고 선 색·굵기와 좁은 화면 배치를 다듬는다\n\n- 그래프 위에 기준·비교·참고 선 구분표(선 모양 견본 + 이름)\n- 기준선을 가장 굵게(3.2) 맨 위에 그리고, 비교 대상 선은 결과 그래프 전용 색 토큰으로 가른다\n- 600px 이하에서는 끝 이름표를 빼고 좌우 여백을 줄여 그래프 폭을 넓힌다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T20:26:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T20:26:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/94702f61bacbc0baba8c7fd5f3d129aa13cffee2"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,10 +1,75 @@\n .figure {\n+  --result-line-secondary: #60bfe8;\n+  --result-line-tertiary: #c5a6ef;\n+  --result-line-quaternary: #e8b976;\n+\n   display: flex;\n   flex-direction: column;\n   gap: 10px;\n   min-width: 0;\n }\n \n+:global([data-design='classic']) .figure {\n+  --result-line-secondary: #0876a9;\n+  --result-line-tertiary: #7952ae;\n+  --result-line-quaternary: #a3681c;\n+}\n+\n+.seriesKey {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 8px 18px;\n+  padding: 2px 2px 4px;\n+}\n+\n+.seriesKeyItem {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 5px;\n+  padding: 2px 4px;\n+  border: 0;\n+  border-radius: 6px;\n+  background: transparent;\n+  color: var(--thorp-ink);\n+  font: inherit;\n+  font-size: 12px;\n+  white-space: nowrap;\n+  cursor: pointer;\n+}\n+\n+.seriesKeyItem:hover:not(:disabled) {\n+  background: var(--thorp-surface);\n+}\n+\n+.seriesKeyItem:disabled {\n+  cursor: default;\n+}\n+\n+.seriesKeyItem:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+/* 숨긴 선은 흐리게 하고 이름에 줄을 긋는다. 색만으로 알리지 않는다. */\n+.seriesKeyItem[aria-pressed='false'] {\n+  opacity: 0.45;\n+}\n+\n+.seriesKeyItem[aria-pressed='false'] .seriesName {\n+  text-decoration: line-through;\n+}\n+\n+.seriesKeySwatch {\n+  width: 30px;\n+  height: 12px;\n+  flex: none;\n+}\n+\n+.seriesKind {\n+  color: var(--thorp-copy);\n+  font-size: 11px;\n+}\n+\n .headingRow {\n   display: flex;\n   align-items: center;\n@@ -12,6 +77,39 @@\n   gap: 12px;\n }\n \n+.headingActions {\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+}\n+\n+/* 확대를 풀고 전체 기간으로 돌아가는 단추. 눈금 단추와 같은 높이·글자로 둔다. */\n+.zoomReset {\n+  min-height: var(--thorp-control-sm, auto);\n+  padding: var(--thorp-control-pad-block, 3px) 12px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-control, 999px);\n+  background: var(--thorp-surface);\n+  color: var(--thorp-foreground);\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  line-height: 1.6;\n+  cursor: pointer;\n+}\n+\n+/* 확대한 동안에는 끌어서 옮길 수 있음을 손 모양으로 알린다. 차트가 곡선 영역에 인라인으로 거는 십자선 커서를 이긴다. */\n+.chart[data-pan='ready'] :global(g) {\n+  cursor: grab !important;\n+}\n+\n+.chart[data-pan='dragging'] :global(g) {\n+  cursor: grabbing !important;\n+}\n+\n+.zoomReset:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n .heading {\n   margin: 0;\n   font-size: var(--thorp-text-heading, 1.1rem);\n@@ -75,7 +173,7 @@\n   background: var(--thorp-surface);\n \n   /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */\n-  height: clamp(250px, 44svh, 390px);\n+  height: clamp(340px, 48svh, 420px);\n }\n \n /*\n@@ -97,7 +195,6 @@\n \n @media (max-width: 600px) {\n   .chart {\n-    height: auto;\n-    aspect-ratio: 4 / 3;\n+    height: 340px;\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.module.css",
+          "old_path": "frontend/src/components/result/EquityChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { fireEvent, render, screen } from '@testing-library/react'\n+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'\n import type { ReactNode } from 'react'\n import { afterEach, describe, expect, it, vi } from 'vitest'\n import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'\n@@ -24,6 +24,7 @@ vi.mock('@visx/responsive', () => ({\n \n afterEach(() => {\n   Object.assign(chartSize, WIDE)\n+  window.innerWidth = 1024\n })\n \n const BASE_POINTS = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })\n@@ -50,9 +51,9 @@ const altNumbers = {\n /** 곡선의 경로. 기준과 비교 대상은 선 색으로 갈린다 */\n const STROKES: Record<string, string> = {\n   base: '--chart-line-primary',\n-  target0: '--chart-line-secondary',\n-  target1: '--chart-line-tertiary',\n-  target2: '--chart-line-quaternary',\n+  target0: '--result-line-secondary',\n+  target1: '--result-line-tertiary',\n+  target2: '--result-line-quaternary',\n }\n \n function seriesPath(container: HTMLElement, which: string): SVGPathElement {\n@@ -95,6 +96,141 @@ function pointCount(path: SVGPathElement): number {\n }\n \n describe('EquityChart', () => {\n+  it('구분표 항목을 누르면 그 선을 숨기고 다시 누르면 보이며, 마지막 남은 선은 숨길 수 없다', () => {\n+    const { container } = render(\n+      <EquityChart base={base} initialCash=\"10000000.00\" targets={[target]} />,\n+    )\n+    const key = within(screen.getByRole('group', { name: '그래프 선 구분' }))\n+    const targetButton = key.getByRole('button', { name: /모래 고르기/ })\n+    const baseButton = key.getByRole('button', { name: /물결 고르기/ })\n+    const targetPath = () => container.querySelector('path[stroke=\"var(--result-line-secondary)\"]')\n+\n+    expect(targetPath()).not.toBeNull()\n+    fireEvent.click(targetButton)\n+    expect(targetButton.getAttribute('aria-pressed')).toBe('false')\n+    expect(targetPath()).toBeNull()\n+    expect(container.querySelector('[data-testid=\"series-end-label-target0\"]')).toBeNull()\n+    // 기준만 남으면 기준은 숨길 수 없다.\n+    expect((baseButton as HTMLButtonElement).disabled).toBe(true)\n+\n+    fireEvent.click(targetButton)\n+    expect(targetPath()).not.toBeNull()\n+    expect((baseButton as HTMLButtonElement).disabled).toBe(false)\n+\n+    fireEvent.click(baseButton)\n+    expect(container.querySelector('path[stroke=\"var(--chart-line-primary)\"]')).toBeNull()\n+    expect(container.querySelector('[data-testid=\"drawdown-shade-base\"]')).toBeNull()\n+  })\n+\n+  it('그래프 위 휠로 확대·축소하고, 확대한 뒤에는 끌어서 옮기며, 전체 기간·두 번 누르기로 돌아온다', async () => {\n+    const { container } = render(<EquityChart base={base} initialCash=\"10000000.00\" />)\n+    const chart = screen.getByRole('img')\n+    // jsdom 은 크기를 0으로 잰다. 끌어 옮긴 거리를 거래일로 바꾸려면 그림 폭이 있어야 한다.\n+    chart.getBoundingClientRect = () => ({ left: 0, top: 0, width: 840, height: 380 }) as DOMRect\n+    const full = pointCount(seriesPath(container, 'base'))\n+    const firstX = () => seriesPath(container, 'base').getAttribute('d')\n+\n+    // 그래프 밖(페이지)의 휠은 막지 않는다 — 그래프 안의 휠만 기본 동작(스크롤)을 막는다.\n+    const outside = new WheelEvent('wheel', { deltaY: -100, cancelable: true })\n+    document.body.dispatchEvent(outside)\n+    expect(outside.defaultPrevented).toBe(false)\n+\n+    const inside = new WheelEvent('wheel', { deltaY: -300, cancelable: true, clientX: 0 })\n+    act(() => {\n+      chart.dispatchEvent(inside)\n+    })\n+    expect(inside.defaultPrevented).toBe(true)\n+    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())\n+    const zoomed = pointCount(seriesPath(container, 'base'))\n+    expect(zoomed).toBeLessThan(full)\n+    expect(zoomed).toBeGreaterThanOrEqual(10)\n+\n+    // 끌어서 옮기면 보이는 거래일 수는 그대로이고 구간만 바뀐다.\n+    const before = firstX()\n+    const beforePoints = pointCount(seriesPath(container, 'base'))\n+    fireEvent.pointerDown(chart, { button: 0, clientX: 300 })\n+    act(() => {\n+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100 }))\n+      window.dispatchEvent(new MouseEvent('pointerup'))\n+    })\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(beforePoints)\n+    expect(firstX()).not.toBe(before)\n+\n+    fireEvent.click(screen.getByRole('button', { name: '전체 기간' }))\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)\n+\n+    act(() => {\n+      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, cancelable: true }))\n+    })\n+    await waitFor(() => expect(screen.getByRole('button', { name: '전체 기간' })).toBeTruthy())\n+    fireEvent.doubleClick(chart)\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)\n+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()\n+  })\n+\n+  it('전체 기간에서 휠로 더 줄이거나 끌어도 바뀌지 않는다', () => {\n+    const { container } = render(<EquityChart base={base} initialCash=\"10000000.00\" />)\n+    const chart = screen.getByRole('img')\n+    const full = pointCount(seriesPath(container, 'base'))\n+    act(() => {\n+      chart.dispatchEvent(new WheelEvent('wheel', { deltaY: 300, cancelable: true }))\n+    })\n+    fireEvent.pointerDown(chart, { button: 0, clientX: 300 })\n+    act(() => {\n+      window.dispatchEvent(new MouseEvent('pointermove', { clientX: 100 }))\n+      window.dispatchEvent(new MouseEvent('pointerup'))\n+    })\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(full)\n+    expect(screen.queryByRole('button', { name: '전체 기간' })).toBeNull()\n+  })\n+\n+  it('마우스를 올린 날의 모든 선 자산가치와 시작 금액 대비 변화를 한국어 날짜와 함께 보인다', async () => {\n+    const { container } = render(\n+      <EquityChart\n+        base={base}\n+        initialCash=\"10000000.00\"\n+        targets={[target]}\n+        reference={{\n+          name: 'KOSPI(참고)',\n+          points: BASE_POINTS.map((point) => ({ date: point.date, value: '11000000.00' })),\n+        }}\n+      />,\n+    )\n+\n+    // 상호작용은 곡선 영역을 덮는 <g> 가 받는다. jsdom 은 크기를 0으로 재므로 clientX 가 곧 그림 안 좌표다.\n+    const area = [...container.querySelectorAll('g')].find((g) => g.querySelector(':scope > rect'))\n+    fireEvent.mouseMove(area!, { clientX: 58, clientY: 100 })\n+\n+    const first = BASE_POINTS[0]\n+    await waitFor(() => expect(screen.getByText(/년 .*월 .*일/)).toBeTruthy())\n+    expect(screen.getByText(/2\\d{3}년/).textContent).toContain(first.date.slice(0, 4) + '년')\n+    expect(screen.getByText('11,000,000원 (+10.00%)')).toBeTruthy()\n+  })\n+\n+  it('선택한 전략과 KOSPI를 선 모양 안내에 모두 표시하고 기준선을 더 강조한다', () => {\n+    const { container } = render(\n+      <EquityChart\n+        base={base}\n+        initialCash=\"10000000.00\"\n+        targets={[target, { ...target, name: '조약돌 고르기' }]}\n+        reference={{ name: 'KOSPI(참고)', points: [{ date: BASE_POINTS[0].date, value: '10000000' }] }}\n+      />,\n+    )\n+\n+    const key = container.querySelector('[aria-label=\"그래프 선 구분\"]')\n+    expect(key?.textContent).toContain('물결 고르기')\n+    expect(key?.textContent).toContain('모래 고르기')\n+    expect(key?.textContent).toContain('조약돌 고르기')\n+    expect(key?.textContent).toContain('KOSPI(참고)')\n+    expect(Number(seriesPath(container, 'base').getAttribute('stroke-width'))).toBeGreaterThan(\n+      Number(seriesPath(container, 'target0').getAttribute('stroke-width')),\n+    )\n+    const paths = [...container.querySelectorAll('path')]\n+    expect(paths.indexOf(seriesPath(container, 'base'))).toBeGreaterThan(\n+      paths.indexOf(seriesPath(container, 'target0')),\n+    )\n+  })\n+\n   it('비교 대상이 있으면 파선 곡선과 이름표 둘을 그린다', () => {\n     const { container } = render(\n       <EquityChart\n@@ -107,8 +243,8 @@ describe('EquityChart', () => {\n \n     expect(seriesPath(container, 'base').getAttribute('stroke-dasharray')).toBeNull()\n     expect(seriesPath(container, 'target0').getAttribute('stroke-dasharray')).toBe('7,5')\n-    expect(screen.getByText('물결 고르기')).toBeTruthy()\n-    expect(screen.getByText('모래 고르기')).toBeTruthy()\n+    expect(screen.getAllByText('물결 고르기').length).toBeGreaterThan(0)\n+    expect(screen.getAllByText('모래 고르기').length).toBeGreaterThan(0)\n   })\n \n   it('비교 대상이 셋이면 파선 모양과 색이 서로 다르고 이름표가 넷이며 비교 대상 음영은 없다', () => {\n@@ -130,7 +266,7 @@ describe('EquityChart', () => {\n     expect(new Set(dashes).size).toBe(3)\n     expect(new Set(strokes).size).toBe(3)\n     for (const name of ['물결 고르기', '모래 고르기', '조약돌 고르기', '해초 고르기'])\n-      expect(screen.getByText(name)).toBeTruthy()\n+      expect(screen.getAllByText(name).length).toBeGreaterThan(0)\n     expect(container.querySelector('[data-testid=\"drawdown-shade-target\"]')).toBeNull()\n     expect(container.querySelector('[data-testid=\"drawdown-shade-base\"]')).not.toBeNull()\n     expect(screen.getByRole('img').getAttribute('aria-label')).toContain(\n@@ -138,11 +274,7 @@ describe('EquityChart', () => {\n     )\n   })\n \n-  it.each([\n-    ['넓은 화면', WIDE],\n-    ['폭 360px 화면', { width: 326, height: 245 }],\n-  ])('%s에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', (_case, size) => {\n-    Object.assign(chartSize, size)\n+  it('넓은 화면에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', () => {\n     const { container } = render(\n       <EquityChart\n         altNumbers={altNumbers}\n@@ -173,6 +305,23 @@ describe('EquityChart', () => {\n     expect(container.textContent).not.toContain('…')\n   })\n \n+  it('모바일에서는 끝 이름표 대신 위쪽 선 목록을 쓰고 그래프 폭을 확보한다', () => {\n+    window.innerWidth = 390\n+    Object.assign(chartSize, { width: 350, height: 430 })\n+    const { container } = render(\n+      <EquityChart\n+        base={{ ...base, name: LONG_BASE_NAME }}\n+        initialCash=\"10000000.00\"\n+        targets={[{ ...target, name: LONG_TARGET_NAME }]}\n+      />,\n+    )\n+\n+    expect(container.querySelector('[aria-label=\"그래프 선 구분\"]')?.textContent).toContain(LONG_BASE_NAME)\n+    expect(container.querySelector('[aria-label=\"그래프 선 구분\"]')?.textContent).toContain(LONG_TARGET_NAME)\n+    expect(container.querySelector('[data-testid=\"series-end-labels\"]')).toBeNull()\n+    expect(plotArea(container).width).toBeGreaterThan(240)\n+  })\n+\n   it('기준만 있으면 파선 곡선이 없다', () => {\n     const { container } = render(\n       <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,9 @@\n import { curveLinear } from '@visx/curve'\n import { ticks } from 'd3-array'\n-import { useMemo, useState } from 'react'\n+import { useEffect, useMemo, useRef, useState } from 'react'\n import { Grid } from '@/components/charts/grid'\n import { Line, LineChart } from '@/components/charts/line-chart'\n+import { ChartTooltip, TooltipContent, type TooltipRow } from '@/components/charts/tooltip'\n import { XAxis } from '@/components/charts/x-axis'\n import { AmountAxis, type AmountTick } from '@/components/result/AmountAxis'\n import { DrawdownShade } from '@/components/result/DrawdownShade'\n@@ -10,6 +11,7 @@ import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/dra\n import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'\n import { formatMoney, formatRatio } from '@/components/result/formatResult'\n import { InitialCashLabel } from '@/components/result/InitialCashLabel'\n+import { InlineHelp } from '@/components/common/InlineHelp'\n import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'\n import type { ResultTimeseriesPoint } from '@/types/result'\n import styles from './EquityChart.module.css'\n@@ -87,9 +89,9 @@ const REFERENCE_STROKE = 'var(--muted-foreground)'\n  * 넷째 대상은 없다 — 상한이 셋이다.\n  */\n const TARGET_STYLES = [\n-  { stroke: 'var(--chart-line-secondary)', dash: '7,5' },\n-  { stroke: 'var(--chart-line-tertiary)', dash: '2,4' },\n-  { stroke: 'var(--chart-line-quaternary)', dash: '10,4,2,4' },\n+  { stroke: 'var(--result-line-secondary)', dash: '7,5' },\n+  { stroke: 'var(--result-line-tertiary)', dash: '2,4' },\n+  { stroke: 'var(--result-line-quaternary)', dash: '10,4,2,4' },\n ] as const\n /** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */\n const MAX_AMOUNT_TICKS = 4\n@@ -123,8 +125,59 @@ function toChartDate(date: string): Date {\n   return new Date(date.length === 10 ? date + 'T00:00:00Z' : date)\n }\n \n+/** 확대해도 이보다 적은 거래일은 보이지 않는다 */\n+const MIN_VIEW_ROWS = 10\n+\n+/** 보이는 구간. 전체 행 가운데 [처음, 끝] 번째(양끝 포함)다. `null`이면 전체 기간이다 */\n+type ViewRange = [number, number] | null\n+\n+/**\n+ * 휠 한 번의 확대·축소. `anchor`(0~1)는 커서가 그림 폭의 어디에 있는가이고, 그 자리의 날짜가 제자리에 남도록\n+ * 구간을 넓히거나 좁힌다. 전체보다 넓어지면 전체 기간(`null`)으로 돌아간다.\n+ */\n+function zoomView(view: ViewRange, total: number, anchor: number, factor: number): ViewRange {\n+  if (total <= MIN_VIEW_ROWS) return null\n+  const [start, end] = view ?? [0, total - 1]\n+  const span = end - start\n+  const nextSpan = Math.round(Math.max(MIN_VIEW_ROWS - 1, span * factor))\n+  if (nextSpan >= total - 1) return null\n+  const pivot = start + anchor * span\n+  const nextStart = Math.max(0, Math.min(total - 1 - nextSpan, Math.round(pivot - anchor * nextSpan)))\n+  return [nextStart, nextStart + nextSpan]\n+}\n+\n+/** 끌어서 옮기기. 구간 폭은 그대로 두고 양끝을 넘지 않는다 */\n+function panView(view: ViewRange, total: number, shift: number): ViewRange {\n+  if (!view) return null\n+  const span = view[1] - view[0]\n+  const start = Math.max(0, Math.min(total - 1 - span, view[0] + shift))\n+  return [start, start + span]\n+}\n+\n+/** 툴팁이 읽을 원래 금액의 열 이름. 곡선 열은 로그 눈금이면 금액이 아니라 좌표값이다 */\n+function amountKey(key: string): string {\n+  return key + ':amount'\n+}\n+\n+/** 툴팁 제목. 기간이 여러 해라 연도를 늘 적는다. 행의 날짜는 UTC 자정이다 */\n+const tooltipDateFormat = new Intl.DateTimeFormat('ko-KR', {\n+  year: 'numeric',\n+  month: 'long',\n+  day: 'numeric',\n+  weekday: 'short',\n+  timeZone: 'UTC',\n+})\n+\n+/** 시작 금액 대비 변화. 부호를 늘 붙인다 */\n+function changeFromInitial(amount: number, initial: number | null): string {\n+  if (initial == null || initial <= 0) return ''\n+  const text = formatRatio(String(amount / initial - 1))\n+  return text.startsWith('-') ? text : '+' + text\n+}\n+\n /**\n  * 계열들을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.\n+ * 툴팁을 위해 원래 금액도 `amountKey` 열에 함께 담는다.\n  *\n  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.\n  */\n@@ -139,6 +192,7 @@ function buildRows(\n       const equity = readEquity(point)\n       const axisValue = equity == null ? null : toAxisValue(equity, mode)\n       if (axisValue != null) row[key] = axisValue\n+      if (equity != null) row[amountKey(key)] = equity\n       byDate.set(point.date, row)\n     }\n   }\n@@ -292,6 +346,12 @@ export function EquityChart(props: EquityChartProps) {\n     [props.targets],\n   )\n   const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)\n+  const [compact, setCompact] = useState(() => window.innerWidth <= 600)\n+  useEffect(() => {\n+    const update = () => setCompact(window.innerWidth <= 600)\n+    window.addEventListener('resize', update)\n+    return () => window.removeEventListener('resize', update)\n+  }, [])\n \n   const keyed = useMemo(\n     () => [\n@@ -308,25 +368,83 @@ export function EquityChart(props: EquityChartProps) {\n     ],\n     [base.points, targets, reference],\n   )\n-  const keys = keyed.map((series) => series.key)\n-  const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])\n+  // 구분표에서 숨긴 선. 행에서는 빼지 않는다 — 빼면 날짜 집합이 바뀌어 확대 구간이 흔들린다.\n+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set())\n+  const shown = (key: string) => !hidden.has(key)\n+  const keys = keyed.map((series) => series.key).filter(shown)\n+  const allRows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])\n+  // 휠로 좁힌 구간. 그 구간의 행만 차트에 넘기므로 세로축·끝 이름표·툴팁이 모두 그 구간 기준이 된다.\n+  const [view, setView] = useState<ViewRange>(null)\n+  const zoomed = view !== null && view[1] < allRows.length\n+  const rows = useMemo(\n+    () => (zoomed ? allRows.slice(view[0], view[1] + 1) : allRows),\n+    [allRows, view, zoomed],\n+  )\n+  const margin = { top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }\n+  const chartRef = useRef<HTMLDivElement>(null)\n+  const [dragging, setDragging] = useState(false)\n+  // 휠·끌기 처리기는 한 번만 붙인다. 처리기가 읽는 값은 여기에 담아 늘 최신으로 둔다.\n+  const live = useRef({ view, total: allRows.length, margin })\n+  live.current = { view: zoomed ? view : null, total: allRows.length, margin }\n+\n+  // 그래프 안의 휠은 그래프가 쓰고 페이지를 굴리지 않는다. React 의 onWheel 은 passive 라 막을 수 없어 직접 붙인다.\n+  useEffect(() => {\n+    const node = chartRef.current\n+    if (!node) return\n+    const onWheel = (event: WheelEvent) => {\n+      if (event.deltaY === 0) return\n+      event.preventDefault()\n+      const { view: current, total, margin: m } = live.current\n+      const box = node.getBoundingClientRect()\n+      const plot = box.width - m.left - m.right\n+      const anchor = plot > 0 ? Math.min(1, Math.max(0, (event.clientX - box.left - m.left) / plot)) : 0.5\n+      setView(zoomView(current, total, anchor, Math.exp(event.deltaY * 0.002)))\n+    }\n+    node.addEventListener('wheel', onWheel, { passive: false })\n+    return () => node.removeEventListener('wheel', onWheel)\n+  }, [])\n+\n+  // 확대한 동안에만 끌어서 옮긴다. 옮긴 거리는 누른 자리 기준이라 조금씩 끌어도 쌓이는 오차가 없다.\n+  const startPan = (event: React.PointerEvent<HTMLDivElement>) => {\n+    const origin = live.current.view\n+    const node = chartRef.current\n+    if (!origin || !node || event.button !== 0) return\n+    const { total, margin: m } = live.current\n+    const plot = node.getBoundingClientRect().width - m.left - m.right\n+    const span = origin[1] - origin[0]\n+    const startX = event.clientX\n+    setDragging(true)\n+    const move = (moveEvent: PointerEvent) => {\n+      if (plot <= 0) return\n+      setView(panView(origin, total, Math.round(((startX - moveEvent.clientX) / plot) * span)))\n+    }\n+    const end = () => {\n+      setDragging(false)\n+      window.removeEventListener('pointermove', move)\n+      window.removeEventListener('pointerup', end)\n+    }\n+    window.addEventListener('pointermove', move)\n+    window.addEventListener('pointerup', end)\n+  }\n   const initial = toNumber(initialCash)\n   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)\n   const yDomain = useMemo(\n     () => resolveYDomain(rows, keys, initialAxisValue, scaleMode),\n-    // keys 는 keyed 에서 나오므로 keyed 로 갈음한다.\n+    // keys 는 keyed·hidden 에서 나오므로 그 둘로 갈음한다.\n     // eslint-disable-next-line react-hooks/exhaustive-deps\n-    [rows, keyed, initialAxisValue, scaleMode],\n+    [rows, keyed, hidden, initialAxisValue, scaleMode],\n   )\n   const amountTicks = useMemo(() => {\n     const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)\n     return toAmountTicks(amounts, scaleMode)\n   }, [yDomain, scaleMode])\n \n-  const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)\n+  const baseWindow = shown(BASE_KEY) ? findDrawdownWindow(base.points, base.maxDrawdown) : null\n   // 비교 대상의 음영은 하나일 때만. 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없다.\n   const targetWindow =\n-    targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null\n+    targets.length === 1 && shown(targetKey(0))\n+      ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown)\n+      : null\n \n   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 \"돌았고 비어 있었다\"는 거짓이므로 그리지\n   // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.\n@@ -341,30 +459,108 @@ export function EquityChart(props: EquityChartProps) {\n       stroke: TARGET_STYLES[index].stroke,\n     })),\n     ...(reference ? [{ dataKey: REFERENCE_KEY, name: reference.name, stroke: REFERENCE_STROKE }] : []),\n+  ].filter((label) => shown(label.dataKey))\n+  const seriesKey = [\n+    { dataKey: BASE_KEY, name: base.name, stroke: BASE_STROKE, dash: undefined, kind: '기준' },\n+    ...targets.map((target, index) => ({\n+      dataKey: targetKey(index),\n+      name: target.name,\n+      stroke: TARGET_STYLES[index].stroke,\n+      dash: TARGET_STYLES[index].dash as string | undefined,\n+      kind: '비교',\n+    })),\n+    ...(reference\n+      ? [\n+          {\n+            dataKey: REFERENCE_KEY,\n+            name: reference.name,\n+            stroke: REFERENCE_STROKE,\n+            dash: undefined,\n+            kind: '참고',\n+          },\n+        ]\n+      : []),\n   ]\n+  const visibleCount = seriesKey.filter((series) => shown(series.dataKey)).length\n+  const toggleSeries = (key: string) =>\n+    setHidden((known) => {\n+      const next = new Set(known)\n+      if (next.has(key)) next.delete(key)\n+      else next.add(key)\n+      return next\n+    })\n \n   return (\n     <div className={styles.figure}>\n       <div className={styles.headingRow}>\n-        <h2 className={styles.heading}>자산가치 추이</h2>\n-        <div aria-label=\"세로축 눈금\" className={styles.scaleToggle} role=\"group\">\n-          {(['linear', 'log'] as const).map((mode) => (\n+        <h2 className={styles.heading}>\n+          자산가치 추이\n+          <InlineHelp label=\"확대\" side=\"bottom\">\n+            그래프 위에서 휠을 굴리면 커서 자리를 기준으로 확대·축소하고, 확대한 뒤에는 끌어서 옮깁니다. 두 번\n+            누르거나 '전체 기간'을 누르면 돌아옵니다.\n+          </InlineHelp>\n+        </h2>\n+        <div className={styles.headingActions}>\n+          {zoomed ? (\n+            <button className={styles.zoomReset} onClick={() => setView(null)} type=\"button\">\n+              전체 기간\n+            </button>\n+          ) : null}\n+          <div aria-label=\"세로축 눈금\" className={styles.scaleToggle} role=\"group\">\n+            {(['linear', 'log'] as const).map((mode) => (\n+              <button\n+                aria-pressed={scaleMode === mode}\n+                className={styles.scaleButton}\n+                key={mode}\n+                onClick={() => setScaleMode(mode)}\n+                type=\"button\"\n+              >\n+                {scaleModeNoun(mode)}\n+              </button>\n+            ))}\n+          </div>\n+        </div>\n+      </div>\n+\n+      <div aria-label=\"그래프 선 구분\" className={styles.seriesKey} role=\"group\">\n+        {seriesKey.map((series) => {\n+          const visible = shown(series.dataKey)\n+          return (\n             <button\n-              aria-pressed={scaleMode === mode}\n-              className={styles.scaleButton}\n-              key={mode}\n-              onClick={() => setScaleMode(mode)}\n+              aria-pressed={visible}\n+              className={styles.seriesKeyItem}\n+              // 마지막 남은 선은 숨기지 않는다. 빈 그래프는 아무것도 말하지 않는다.\n+              disabled={visible && visibleCount === 1}\n+              key={series.dataKey}\n+              onClick={() => toggleSeries(series.dataKey)}\n+              title={visible ? '누르면 이 선을 숨깁니다' : '누르면 이 선을 다시 보입니다'}\n               type=\"button\"\n             >\n-              {scaleModeNoun(mode)}\n+              <svg aria-hidden=\"true\" className={styles.seriesKeySwatch} viewBox=\"0 0 30 12\">\n+                <line\n+                  stroke={series.stroke}\n+                  strokeDasharray={series.dash}\n+                  strokeWidth={series.kind === '기준' ? 3.2 : series.kind === '참고' ? 1.4 : 2}\n+                  x1=\"1\"\n+                  x2=\"29\"\n+                  y1=\"6\"\n+                  y2=\"6\"\n+                />\n+              </svg>\n+              <span className={styles.seriesKind}>{series.kind}</span>\n+              <span className={styles.seriesName}>{series.name}</span>\n             </button>\n-          ))}\n-        </div>\n+          )\n+        })}\n       </div>\n \n       <div\n         aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}\n         className={styles.chart}\n+        data-pan={zoomed ? (dragging ? 'dragging' : 'ready') : undefined}\n+        onDoubleClick={() => setView(null)}\n+        onPointerDown={startPan}\n+        ref={chartRef}\n         role=\"img\"\n       >\n         <LineChart\n@@ -373,7 +569,7 @@ export function EquityChart(props: EquityChartProps) {\n           className={styles.canvas}\n           data={rows as unknown as Record<string, unknown>[]}\n           decimate={false}\n-          margin={{ top: 18, right: 88, bottom: 44, left: 58 }}\n+          margin={margin}\n           xDataKey=\"date\"\n           yDomain={yDomain}\n           yDomainTween={false}\n@@ -412,18 +608,7 @@ export function EquityChart(props: EquityChartProps) {\n             />\n           ) : null}\n \n-          <Line\n-            animate={false}\n-            curve={curveLinear}\n-            dataKey={BASE_KEY}\n-            defined={(row) => typeof row[BASE_KEY] === 'number'}\n-            fadeEdges={false}\n-            showHighlight={false}\n-            stroke={BASE_STROKE}\n-            strokeWidth={2.4}\n-          />\n-\n-          {reference ? (\n+          {reference && shown(REFERENCE_KEY) ? (\n             <Line\n               animate={false}\n               curve={curveLinear}\n@@ -438,6 +623,7 @@ export function EquityChart(props: EquityChartProps) {\n \n           {targets.map((_, index) => {\n             const key = targetKey(index)\n+            if (!shown(key)) return null\n             return (\n               <Line\n                 animate={false}\n@@ -449,14 +635,49 @@ export function EquityChart(props: EquityChartProps) {\n                 showHighlight={false}\n                 stroke={TARGET_STYLES[index].stroke}\n                 strokeDasharray={TARGET_STYLES[index].dash}\n-                strokeWidth={2.4}\n+                strokeWidth={2}\n               />\n             )\n           })}\n \n-          <SeriesEndLabels series={endLabels} />\n+          {shown(BASE_KEY) ? (\n+            <Line\n+              animate={false}\n+              curve={curveLinear}\n+              dataKey={BASE_KEY}\n+              defined={(row) => typeof row[BASE_KEY] === 'number'}\n+              fadeEdges={false}\n+              showHighlight={false}\n+              stroke={BASE_STROKE}\n+              strokeWidth={3.2}\n+            />\n+          ) : null}\n+\n+          {compact ? null : <SeriesEndLabels series={endLabels} />}\n \n           <XAxis numTicks={4} stackYear tickMode=\"domain\" />\n+\n+          {/* 날짜 하나에 모든 선의 자산가치와 시작 금액 대비 변화를 한 상자에 보인다. 값은 받은 금액 그대로다. */}\n+          <ChartTooltip\n+            content={({ point }) => (\n+              <TooltipContent\n+                rows={endLabels.flatMap((series): TooltipRow[] => {\n+                  const amount = point[amountKey(series.dataKey)]\n+                  if (typeof amount !== 'number') return []\n+                  const change = changeFromInitial(amount, initial)\n+                  return [\n+                    {\n+                      color: series.stroke,\n+                      label: series.name,\n+                      value: formatMoney(String(amount)) + (change ? ' (' + change + ')' : ''),\n+                    },\n+                  ]\n+                })}\n+                title={tooltipDateFormat.format(point.date as Date)}\n+              />\n+            )}\n+            showDatePill={false}\n+          />\n         </LineChart>\n       </div>\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -205,7 +205,7 @@\n - 004에 요청한 변경(요청자 완화, 접수 응답의 공개 토큰, 최대 하락 구간, 상세 지표 3종 노출, 참조 없는 계산의 정리)은 [plan.md](plan.md)와 [contracts/result-api.md](contracts/result-api.md)가 목록을 소유한다. 들어오기 전까지 해당 항목은 값을 지어내지 않고 제공되지 않음으로 둔다.\n - 첫 화면 응답 시간 목표와 거래 내역을 한 번에 받는 건수는 004의 실행 측정(PD-06)이 나온 뒤 같은 기준으로 정한다. 그때까지 거래 내역 조회에는 설정으로 뺀 임시 상한을 두어 무제한 조회를 허용하지 않는다(원칙 IX).\n - 사용자가 입력한 금액·섹터·기간·전략 설정은 그 자체로 개인을 가리키지 않으므로 결과에는 개인 식별 정보가 없다(FR-019). [006](../006-my-records/spec.md)이 결과에 이름·메모·사용자 필드를 붙이게 되면 그 필드는 공개 응답에서 제외한다.\n-- 광범위 국내 주가지수 자료는 [001](../001-etf-market-data/spec.md)이 확보한 KOSPI 시리즈다. 이를 결과와 같은 기간·시작 금액으로 환산하는 일은 서버가 맡으며, 위 최대 하락 구간 외에 화면이 값을 계산하는 예외를 더 두지 않는다(FR-017).\n+- 광범위 국내 주가지수 자료는 [001](../001-etf-market-data/spec.md)이 확보한 KOSPI 시리즈다. 이를 결과와 같은 기간·시작 금액으로 환산하는 일은 서버가 맡으며, 위 최대 하락 구간 외에 화면이 값을 계산하는 예외를 더 두지 않는다(FR-017). 결과 그래프 호버 툴팁에 적는 시작 금액 대비 변화(받은 금액 ÷ 시작 금액 − 1)는 계산이 아니라 받은 값을 다른 단위로 옮겨 적는 표기로 본다 — 새 지표를 만들지 않고, 곡선과 핵심 숫자는 서버 값 그대로다(`S15P21E205-431`).\n - 검증 구분(탐색/미사용 검증/미검증) 판정 기준은 PD-12에서 정한다. 확정 전에는 모든 결과가 '미검증'이므로 화면에서 이 표시를 만들지 않는다(FR-012). 분할이 등록되면 결과마다 구분이 갈리고, 그때 표시를 다시 만든다.\n - 한국어 웹 화면이며 데스크톱 브라우저를 우선한다. 폭 360px 화면에서 가로 스크롤 없이 요소가 세로로 쌓여 핵심 숫자 3개·그래프·요약 1문장·조건 한 줄을 읽을 수 있어야 하며, 모바일 전용 화면은 이번 범위에서 만들지 않는다. 결과 주소를 받은 사람이 휴대폰에서 열 수 있어야 하므로(FR-019) 좁은 화면에 안내문만 보이는 처리는 하지 않는다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T21:10:25.450+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2866482": []
+  }
+}

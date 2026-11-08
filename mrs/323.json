@@ -1,0 +1,729 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959405,
+    "iid": 323,
+    "project_id": 1444456,
+    "title": "feat(be): 워커가 분기말·거래일 리밸런싱 주기를 계산한다",
+    "description": "## 작업 내용 요약\n\n등록표(003)는 리밸런싱 주기로 월말·분기말·21거래일·63거래일을 내놓는데 워커 엔진은 `MONTH_END`만 받았다. 월말 외를 고르면 워커 계약 검증에서 거절돼 DLQ → `FAILED(SYSTEM_FAILURE)`가 났다(배포 서버 최소분산 60/21거래일 요청으로 재현). 워커가 세 주기를 모두 계산하고, 백엔드 조립기가 거래일 주기를 엔진 철자로 옮긴다.\n\n## 관련 티켓\n\n- S15P21E205-435 (Epic 30, Story 125·37 relates)\n\n## 주요 변경 사항\n\n- **워커 계약** `contracts/strategy_params/rebalance.py`: `rebalance`를 `Literal[\"MONTH_END\"]`에서 `REBALANCE_PATTERN = MONTH_END|QUARTER_END|TRADING_DAYS_{n}`으로 넓혔다. 허용 철자는 이 상수 하나가 정하고 사전 검증(`engine_support`)과 `plan_days`가 같이 쓴다. `trading_day_period()`가 `TRADING_DAYS_21 → 21`을 푼다.\n- **워커 판단일** `portfolio_execution.plan_days`: `QUARTER_END`는 3·6·9·12월의 마지막 거래일, `TRADING_DAYS_n`은 평가 시작일부터 n거래일마다. 첫 판단은 평가 시작일, 마지막 평가일은 판단하지 않는다는 기존 규칙 그대로.\n- **백엔드 조립기** `EngineInputAssembler.engineParameters`: `{mode: TRADING_DAYS, days: n}` → `rebalance: \"TRADING_DAYS_n\"`. `CALENDAR`는 지금처럼 `unit`. 옮길 수 없는 모양(`WEEKLY` 등)은 여전히 그대로 둬 엔진이 거절한다. 저장되는 `backtest_run.parameters`는 003 이름 그대로다.\n- **문서** `specs/004-backtest-execution/contracts/messaging.md`: `rebalance` 옮기기 규칙 문장 갱신.\n- 등록표·FE는 손대지 않았다.\n\n## 테스트\n\n- 워커 `ruff check && ruff format --check && pytest`: 522 passed. 월말 골든(`test_rules_goldens`) 변화 없음.\n  - 새 테스트: 분기말 판단일, `TRADING_DAYS_3` 판단일, 거절 철자(`WEEKLY`·`TRADING_DAYS`·`TRADING_DAYS_0`·`TRADING_DAYS_21X`), 다섯 전략 계약이 네 선택지를 통과, `QUARTER_END`·`TRADING_DAYS_21`로 엔진을 끝까지 돌려 체결일이 `plan_days`와 일치.\n- 배포에서 실패한 입력(최소분산 `lookbackDays=60`, `TRADING_DAYS_21`)을 3종목 픽스처로 돌려 `COMPLETED`, 체결일이 21거래일 간격(2023-08-02, 08-31, 09-29, …).\n- 백엔드 `gradlew.bat spotlessApply build`: BUILD SUCCESSFUL. 테스트 2034, 실패 0, skipped 4(기존 조건부 skip, Docker 켜고 돌림).\n\n## 리뷰 포인트\n\n- `TRADING_DAYS_n`의 기준점은 **평가 시작일**이다(달력 월과 무관). 워밍업이 늘어 평가 시작일이 바뀌면 판단일도 함께 밀린다. 다른 기준(예: `run.start`)을 원하면 `plan_days` 한 곳만 바꾸면 된다.\n- 조립기는 `days`가 숫자일 때만 옮긴다. 문자열 `\"21\"`이 오면 그대로 둬 엔진이 거절한다. 접수 관문이 등록표로 걸러 주므로 실제로는 오지 않는다.\n\n## 전달만 하는 것\n\n- 배포된 워커 이미지를 다시 빌드해야 반영된다(`deploy.sh`가 `build backend worker`).\n- DLQ 실패 메시지 한글 깨짐, 비로그인 결과 요청 행이 하루 만에 사라진 건은 이 MR과 무관(핸드오프 §4).\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T22:55:44.526+09:00",
+    "updated_at": "2026-09-24T23:03:28.982+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T23:03:29.001+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/435-rebalance-cadence",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+    "merge_commit_sha": "12779bebb5a3ba006243dc8e53e341a5fb68e3c6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T22:55:46.558+09:00",
+    "reference": "!323",
+    "references": {
+      "short": "!323",
+      "relative": "!323",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!323"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/323",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959405,
+    "iid": 323,
+    "project_id": 1444456,
+    "title": "feat(be): 워커가 분기말·거래일 리밸런싱 주기를 계산한다",
+    "description": "## 작업 내용 요약\n\n등록표(003)는 리밸런싱 주기로 월말·분기말·21거래일·63거래일을 내놓는데 워커 엔진은 `MONTH_END`만 받았다. 월말 외를 고르면 워커 계약 검증에서 거절돼 DLQ → `FAILED(SYSTEM_FAILURE)`가 났다(배포 서버 최소분산 60/21거래일 요청으로 재현). 워커가 세 주기를 모두 계산하고, 백엔드 조립기가 거래일 주기를 엔진 철자로 옮긴다.\n\n## 관련 티켓\n\n- S15P21E205-435 (Epic 30, Story 125·37 relates)\n\n## 주요 변경 사항\n\n- **워커 계약** `contracts/strategy_params/rebalance.py`: `rebalance`를 `Literal[\"MONTH_END\"]`에서 `REBALANCE_PATTERN = MONTH_END|QUARTER_END|TRADING_DAYS_{n}`으로 넓혔다. 허용 철자는 이 상수 하나가 정하고 사전 검증(`engine_support`)과 `plan_days`가 같이 쓴다. `trading_day_period()`가 `TRADING_DAYS_21 → 21`을 푼다.\n- **워커 판단일** `portfolio_execution.plan_days`: `QUARTER_END`는 3·6·9·12월의 마지막 거래일, `TRADING_DAYS_n`은 평가 시작일부터 n거래일마다. 첫 판단은 평가 시작일, 마지막 평가일은 판단하지 않는다는 기존 규칙 그대로.\n- **백엔드 조립기** `EngineInputAssembler.engineParameters`: `{mode: TRADING_DAYS, days: n}` → `rebalance: \"TRADING_DAYS_n\"`. `CALENDAR`는 지금처럼 `unit`. 옮길 수 없는 모양(`WEEKLY` 등)은 여전히 그대로 둬 엔진이 거절한다. 저장되는 `backtest_run.parameters`는 003 이름 그대로다.\n- **문서** `specs/004-backtest-execution/contracts/messaging.md`: `rebalance` 옮기기 규칙 문장 갱신.\n- 등록표·FE는 손대지 않았다.\n\n## 테스트\n\n- 워커 `ruff check && ruff format --check && pytest`: 522 passed. 월말 골든(`test_rules_goldens`) 변화 없음.\n  - 새 테스트: 분기말 판단일, `TRADING_DAYS_3` 판단일, 거절 철자(`WEEKLY`·`TRADING_DAYS`·`TRADING_DAYS_0`·`TRADING_DAYS_21X`), 다섯 전략 계약이 네 선택지를 통과, `QUARTER_END`·`TRADING_DAYS_21`로 엔진을 끝까지 돌려 체결일이 `plan_days`와 일치.\n- 배포에서 실패한 입력(최소분산 `lookbackDays=60`, `TRADING_DAYS_21`)을 3종목 픽스처로 돌려 `COMPLETED`, 체결일이 21거래일 간격(2023-08-02, 08-31, 09-29, …).\n- 백엔드 `gradlew.bat spotlessApply build`: BUILD SUCCESSFUL. 테스트 2034, 실패 0, skipped 4(기존 조건부 skip, Docker 켜고 돌림).\n\n## 리뷰 포인트\n\n- `TRADING_DAYS_n`의 기준점은 **평가 시작일**이다(달력 월과 무관). 워밍업이 늘어 평가 시작일이 바뀌면 판단일도 함께 밀린다. 다른 기준(예: `run.start`)을 원하면 `plan_days` 한 곳만 바꾸면 된다.\n- 조립기는 `days`가 숫자일 때만 옮긴다. 문자열 `\"21\"`이 오면 그대로 둬 엔진이 거절한다. 접수 관문이 등록표로 걸러 주므로 실제로는 오지 않는다.\n\n## 전달만 하는 것\n\n- 배포된 워커 이미지를 다시 빌드해야 반영된다(`deploy.sh`가 `build backend worker`).\n- DLQ 실패 메시지 한글 깨짐, 비로그인 결과 요청 행이 하루 만에 사라진 건은 이 MR과 무관(핸드오프 §4).\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T22:55:44.526+09:00",
+    "updated_at": "2026-09-24T23:03:28.982+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T23:03:29.001+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/435-rebalance-cadence",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+    "merge_commit_sha": "12779bebb5a3ba006243dc8e53e341a5fb68e3c6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T22:55:46.558+09:00",
+    "reference": "!323",
+    "references": {
+      "short": "!323",
+      "relative": "!323",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!323"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/323",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-24T22:55:55.916+09:00",
+    "latest_build_finished_at": "2026-09-24T23:03:28.258+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221396,
+      "iid": 351,
+      "project_id": 1444456,
+      "sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+      "ref": "feat(be)/435-rebalance-cadence",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T22:55:55.805+09:00",
+      "updated_at": "2026-09-24T23:03:28.264+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221396"
+    },
+    "head_pipeline": {
+      "id": 221396,
+      "iid": 351,
+      "project_id": 1444456,
+      "sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+      "ref": "feat(be)/435-rebalance-cadence",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T22:55:55.805+09:00",
+      "updated_at": "2026-09-24T23:03:28.264+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221396",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-24T22:55:55.916+09:00",
+      "finished_at": "2026-09-24T23:03:28.258+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221396",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "head_sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+      "start_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b6983a57889b73f91b4f88aa46c9c57d88a8aaf1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866712,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T22:55:44.639+09:00",
+          "updated_at": "2026-09-24T22:55:44.643+09:00",
+          "system": true,
+          "noteable_id": 959405,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 323,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f232a685ade5fe97286f70b636f6ec7213eab34a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866713,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T22:55:44.659+09:00",
+          "updated_at": "2026-09-24T22:55:44.685+09:00",
+          "system": true,
+          "noteable_id": 959405,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 323,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b6ec1fc42ada0cfead40d39b4e5e0c36cf4b4d4a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866714,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T22:55:48.166+09:00",
+          "updated_at": "2026-09-24T22:55:48.180+09:00",
+          "system": true,
+          "noteable_id": 959405,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 323,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "365800488767c67b649e82ebf5534ed8c5d8b985",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866731,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for f728b38e6e32d20ef1d069724c4c813a9fe85a73 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T23:02:46.294+09:00",
+          "updated_at": "2026-09-24T23:02:46.298+09:00",
+          "system": true,
+          "noteable_id": 959405,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 323,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a01d5a20aed4cbec96cbdf6f34eddf5d39b140a1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866736,
+          "type": null,
+          "body": "mentioned in commit 12779bebb5a3ba006243dc8e53e341a5fb68e3c6",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T23:03:29.040+09:00",
+          "updated_at": "2026-09-24T23:03:29.044+09:00",
+          "system": true,
+          "noteable_id": 959405,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 323,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2d44eabe80415d9320ceaf4febbf32fb24a565b5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885012,
+          "type": null,
+          "body": "mentioned in commit cc012bd7e1b564fda06347730c9d02652a53d7cd",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.301+09:00",
+          "updated_at": "2026-10-13T15:16:08.310+09:00",
+          "system": true,
+          "noteable_id": 959405,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 323,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248815,
+      "head_commit_sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+      "base_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "start_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "created_at": "2026-09-24T22:55:44.963+09:00",
+      "merge_request_id": 959405,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "3fcbf264bd46e9258c03833318896a0b1ecfcc49"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248815,
+      "head_commit_sha": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+      "base_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "start_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "created_at": "2026-09-24T22:55:44.963+09:00",
+      "merge_request_id": 959405,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "3fcbf264bd46e9258c03833318896a0b1ecfcc49",
+      "commits": [
+        {
+          "id": "f728b38e6e32d20ef1d069724c4c813a9fe85a73",
+          "short_id": "f728b38e",
+          "created_at": "2026-09-24T22:48:38.000+09:00",
+          "parent_ids": [
+            "427898072d70000a8cfff19b1abf18bd03d8084e"
+          ],
+          "title": "feat(be): 조립기가 거래일 리밸런싱 주기를 엔진 철자로 옮긴다",
+          "message": "feat(be): 조립기가 거래일 리밸런싱 주기를 엔진 철자로 옮긴다\n\n003 등록표의 `{mode: TRADING_DAYS, days: n}`을 `rebalance: TRADING_DAYS_n`으로\n옮긴다. CALENDAR는 지금처럼 unit(MONTH_END·QUARTER_END) 그대로, 옮길 수 없는\n모양은 여전히 지어내지 않고 둔다. messaging.md의 옮기기 규칙 문장을 갱신했다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T22:48:38.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T22:48:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f728b38e6e32d20ef1d069724c4c813a9fe85a73"
+        },
+        {
+          "id": "427898072d70000a8cfff19b1abf18bd03d8084e",
+          "short_id": "42789807",
+          "created_at": "2026-09-24T22:45:49.000+09:00",
+          "parent_ids": [
+            "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe"
+          ],
+          "title": "feat(be): 워커가 분기말·거래일 리밸런싱 주기를 계산한다",
+          "message": "feat(be): 워커가 분기말·거래일 리밸런싱 주기를 계산한다\n\n등록표가 내놓는 월말·분기말·21거래일·63거래일 중 워커는 MONTH_END만 받아\n나머지를 고르면 계약 검증에서 거절돼 DLQ → FAILED(SYSTEM_FAILURE)가 났다.\n\n- 계약 `rebalance`를 `MONTH_END|QUARTER_END|TRADING_DAYS_{n}`으로 넓힌다.\n  허용 철자는 REBALANCE_PATTERN 하나가 정하고 사전 검증·plan_days가 같이 쓴다.\n- plan_days: 분기말은 3·6·9·12월 마지막 거래일, TRADING_DAYS_n은 평가\n  시작일부터 n거래일마다. 첫 판단일·마지막 평가일 규칙은 그대로다.\n- 월말 골든은 변하지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T22:45:49.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T22:45:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/427898072d70000a8cfff19b1abf18bd03d8084e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -119,10 +119,11 @@ public class EngineInputAssembler {\n     /**\n      * 003 축 이름을 엔진이 읽는 이름으로 옮긴다. <b>지금은 {@code rebalancePeriod} 하나다.</b>\n      *\n-     * <p>003 등록표는 리밸런싱 주기를 객체({@code {mode, unit}})로 두고 엔진은 문자열 하나({@code rebalance})를 읽는다. 화면은 축\n-     * 이름을 그대로 실어 보내므로(003 FR-005 — 화면에 전략 ID·축 이름을 두지 않는다) 누군가는 옮겨야 하고, 그 자리는 <b>발행 경로 하나뿐인 이\n-     * 조립기</b>다. 접수가 저장하는 {@code backtest_run.parameters}는 003 이름 그대로 남는다 — 사용자가 무엇을 골랐는지의 기록이고 재현\n-     * 기준이기 때문이다.\n+     * <p>003 등록표는 리밸런싱 주기를 객체({@code {mode, unit}} 또는 {@code {mode, days}})로 두고 엔진은 문자열 하나({@code\n+     * rebalance})를 읽는다. {@code CALENDAR}는 {@code unit}({@code MONTH_END}·{@code QUARTER_END}) 그대로,\n+     * {@code TRADING_DAYS}는 {@code TRADING_DAYS_{days}}다. 화면은 축 이름을 그대로 실어 보내므로(003 FR-005 — 화면에 전략\n+     * ID·축 이름을 두지 않는다) 누군가는 옮겨야 하고, 그 자리는 <b>발행 경로 하나뿐인 이 조립기</b>다. 접수가 저장하는 {@code\n+     * backtest_run.parameters}는 003 이름 그대로 남는다 — 사용자가 무엇을 골랐는지의 기록이고 재현 기준이기 때문이다.\n      *\n      * <p>이미 {@code rebalance}가 실려 온 요청(quickstart·워커 픽스처·기존 007 경로)은 건드리지 않는다. 옮길 수 없는 모양은 <b>지어내지\n      * 않고 그대로 둔다</b> — 엔진이 \"무엇을 받았고 무엇을 지원하는지\"를 그대로 말하게 하는 편이, 백엔드가 엔진의 지원 범위를 따로 들고 있다가 어긋나는 것보다\n@@ -136,17 +137,27 @@ public class EngineInputAssembler {\n                 || !(parameters.get(\"rebalancePeriod\") instanceof Map<?, ?> period)) {\n             return parameters;\n         }\n-        Object mode = period.get(\"mode\");\n-        Object unit = period.get(\"unit\");\n-        if (!\"CALENDAR\".equals(mode) || unit == null) {\n+        Object rebalance = engineRebalance(period.get(\"mode\"), period);\n+        if (rebalance == null) {\n             return parameters;\n         }\n         Map<String, Object> moved = new LinkedHashMap<>(parameters);\n         moved.remove(\"rebalancePeriod\");\n-        moved.put(\"rebalance\", unit);\n+        moved.put(\"rebalance\", rebalance);\n         return moved;\n     }\n \n+    /** 옮길 수 없는 모양이면 null. */\n+    private static Object engineRebalance(Object mode, Map<?, ?> period) {\n+        if (\"CALENDAR\".equals(mode)) {\n+            return period.get(\"unit\");\n+        }\n+        if (\"TRADING_DAYS\".equals(mode) && period.get(\"days\") instanceof Number days) {\n+            return \"TRADING_DAYS_\" + days.intValue();\n+        }\n+        return null;\n+    }\n+\n     /**\n      * 규칙 사본에 등록표의 {@code provisional} 을 함께 싣는다. 워커는 이 값을 결과 {@code versions.rules.provisional} 로\n      * 되돌려 주고, 그 값이 있어야 저장된 결과만 보고도 임시 규칙(PD-02)으로 계산했는지 알 수 있다(T008 결정 ③ 후속). 배분 모듈은 자기가 아는 키만 읽으므로\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/EngineInputAssembler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/EngineInputAssembler.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -203,15 +203,28 @@ class EngineInputAssemblerTest {\n     }\n \n     @Test\n-    @DisplayName(\"옮길 수 없는 주기는 지어내지 않고 그대로 둔다 — 엔진이 받은 값을 그대로 말하게 한다\")\n-    void leavesAnUnmappableCadenceUntouched() {\n+    @DisplayName(\"거래일 주기는 TRADING_DAYS_{days} 문자열로 옮긴다 — 엔진은 주기를 문자열 하나로 읽는다\")\n+    void movesATradingDayCadenceToTheEngineSpelling() {\n         registryAnswers();\n         Map<String, Object> tradingDays =\n                 Map.of(\"rebalancePeriod\", Map.of(\"mode\", \"TRADING_DAYS\", \"days\", 21));\n \n         EngineInput input = assembler.assemble(run(acceptedPlan(\"FULL_PERIOD\", null), tradingDays));\n \n-        assertThat(input.allocation().parameters()).isEqualTo(tradingDays);\n+        assertThat(input.allocation().parameters())\n+                .containsEntry(\"rebalance\", \"TRADING_DAYS_21\")\n+                .doesNotContainKey(\"rebalancePeriod\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"옮길 수 없는 주기는 지어내지 않고 그대로 둔다 — 엔진이 받은 값을 그대로 말하게 한다\")\n+    void leavesAnUnmappableCadenceUntouched() {\n+        registryAnswers();\n+        Map<String, Object> weekly = Map.of(\"rebalancePeriod\", Map.of(\"mode\", \"WEEKLY\"));\n+\n+        EngineInput input = assembler.assemble(run(acceptedPlan(\"FULL_PERIOD\", null), weekly));\n+\n+        assertThat(input.allocation().parameters()).isEqualTo(weekly);\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/EngineInputAssemblerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/EngineInputAssemblerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,7 +29,7 @@\n }\n ```\n \n-- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. 2026-09-17 PD-03·04 확정으로 세 배분 전략 공통 키가 둘 더 생긴다(T022): `capOverflow`(허용값 `CASH` 하나 — 상한 잔여를 현금으로 두고 정상 완료)·`weightUnit`(소수 문자열, `\"0.000001\"` — 고정 단위 출력). `allocation.parameters`에는 003 축이 **축 이름 그대로** 실린다 — `maxWeight`(정수 %)는 `rules.weightCap`보다, `lookbackDays`·`estimationMethod`는 같은 이름의 규칙 값보다 우선한다(T022). 다만 003이 객체로 두는 `rebalancePeriod`(`{mode, unit}`)만은 백엔드 `EngineInputAssembler`가 엔진이 읽는 `rebalance` 문자열로 옮겨 싣는다(`mode=CALENDAR`일 때 `unit`을 쓴다). 전략별로 어떤 축이 오는지는 `worker/src/worker/contracts/strategy_params/`가 선언하고 모르는 키는 거절한다. `exceptions[].kind`에 `CAP_OVERFLOW_CASH`·`EFFECTIVE_TARGET_REDUCED`·`SINGLE_ASSET_FALLBACK`·`NO_SELECTION`, FINISHED `failure.code`에 `ESTIMATION_FAILED`가 추가된다(T022·T023). `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.\n+- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. 2026-09-17 PD-03·04 확정으로 세 배분 전략 공통 키가 둘 더 생긴다(T022): `capOverflow`(허용값 `CASH` 하나 — 상한 잔여를 현금으로 두고 정상 완료)·`weightUnit`(소수 문자열, `\"0.000001\"` — 고정 단위 출력). `allocation.parameters`에는 003 축이 **축 이름 그대로** 실린다 — `maxWeight`(정수 %)는 `rules.weightCap`보다, `lookbackDays`·`estimationMethod`는 같은 이름의 규칙 값보다 우선한다(T022). 다만 003이 객체로 두는 `rebalancePeriod`만은 백엔드 `EngineInputAssembler`가 엔진이 읽는 `rebalance` 문자열로 옮겨 싣는다 — `{mode: CALENDAR, unit}`은 `unit` 그대로(`MONTH_END`·`QUARTER_END`), `{mode: TRADING_DAYS, days: n}`은 `TRADING_DAYS_n`(평가 시작일부터 n거래일마다). 허용 철자는 `worker/src/worker/contracts/strategy_params/rebalance.py`의 `REBALANCE_PATTERN` 하나가 정한다. 전략별로 어떤 축이 오는지는 `worker/src/worker/contracts/strategy_params/`가 선언하고 모르는 키는 거절한다. `exceptions[].kind`에 `CAP_OVERFLOW_CASH`·`EFFECTIVE_TARGET_REDUCED`·`SINGLE_ASSET_FALLBACK`·`NO_SELECTION`, FINISHED `failure.code`에 `ESTIMATION_FAILED`가 추가된다(T022·T023). `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.\n - `run.scenario=TARGET_RISK`면 `run.scenarioParams={\"targetVolatility\": \"0.1000\"}`와 `run.scenarioRules={\"version\": \"TARGET_RISK_OVERLAY/1\", \"lookbackDays\": 63, \"adjustAt\": \"REBALANCE\", \"scaleDownOnly\": true}`가 함께 온다(둘 다 백엔드가 채움). 워커는 리밸런싱 판단일마다 최근 `lookbackDays` 포트폴리오 일별 수익률 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱한다. `weightsSeries[]`에 `riskScale`·`estimatedVolatility`를 기록한다. `FRESH_CASH_FROM`이면 `run.scenarioParams={\"startDate\": \"…\"}`. 규칙이 빠진 `TARGET_RISK`는 `INVALID_REQUEST`.\n - `marketData.fillPrice=RAW`, `signalPrice=ADJUSTED`는 FR-013을 고정한 값이며 다른 값은 거부.\n - `benchmark` 블록은 v2에서 제거(005 보조 보기는 별도 spec).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/messaging.md",
+          "old_path": "specs/004-backtest-execution/contracts/messaging.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,12 +12,23 @@\n ``allocation.base.effective_cap`` 한 곳에서만 한다 — 두 곳에서 나누면 한 곳이 100배 어긋난다.\n \"\"\"\n \n+import re\n from typing import Literal\n \n from pydantic import ConfigDict, Field\n \n from worker.contracts.base import ContractModel\n \n+#: 계약이 허용하는 리밸런싱 주기(FR-011). 달력 주기 둘과 ``TRADING_DAYS_{n}``(평가 시작일부터\n+#: n거래일마다). 003 등록표의 ``{mode: TRADING_DAYS, days: n}`` 은 백엔드가 이 철자로 옮겨 싣는다.\n+REBALANCE_PATTERN = r\"^(MONTH_END|QUARTER_END|TRADING_DAYS_[1-9][0-9]*)$\"\n+\n+\n+def trading_day_period(rebalance: str) -> int | None:\n+    \"\"\"``TRADING_DAYS_21`` → 21. 달력 주기(월말·분기말)는 None.\"\"\"\n+    match = re.fullmatch(r\"TRADING_DAYS_([1-9][0-9]*)\", rebalance)\n+    return int(match.group(1)) if match else None\n+\n \n class RebalanceParameters(ContractModel):\n     \"\"\"동일 비중. 사용자가 고르는 것은 주기뿐이다.\n@@ -30,7 +41,7 @@ class RebalanceParameters(ContractModel):\n \n     model_config = ConfigDict(extra=\"forbid\", validate_by_name=False)\n \n-    rebalance: Literal[\"MONTH_END\"]\n+    rebalance: str = Field(pattern=REBALANCE_PATTERN)\n \n \n class CappedRebalanceParameters(RebalanceParameters):\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/contracts/strategy_params/rebalance.py",
+          "old_path": "worker/src/worker/contracts/strategy_params/rebalance.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,12 +9,13 @@\n 아래 항목은 실행 전에 전부 모아 ``INVALID_REQUEST`` 로 거절한다.\n \"\"\"\n \n+import re\n from datetime import date\n \n from worker.allocation import ALLOCATION_RULES\n from worker.allocation.base import AllocationError\n from worker.contracts.engine_input import EngineInput, PriceSource, Scenario\n-from worker.portfolio_execution import REBALANCE_MONTH_END\n+from worker.contracts.strategy_params.rebalance import REBALANCE_PATTERN\n from worker.rules_registry import rules_not_registered_message\n from worker.target_risk import target_risk_rules\n \n@@ -48,9 +49,9 @@ def unsupported_reasons(request: EngineInput) -> list[str]:\n             \"(spec 004 R-08)\"\n         )\n     rebalance = allocation.parameters.get(\"rebalance\")\n-    if rebalance != REBALANCE_MONTH_END:\n+    if not isinstance(rebalance, str) or not re.fullmatch(REBALANCE_PATTERN, rebalance):\n         reasons.append(\n-            f\"allocation.parameters.rebalance must be {REBALANCE_MONTH_END}; got {rebalance!r}\"\n+            f\"allocation.parameters.rebalance must match {REBALANCE_PATTERN}; got {rebalance!r}\"\n         )\n \n     run = request.run\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/engine_support.py",
+          "old_path": "worker/src/worker/engine_support.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,6 +32,7 @@ Nautilus 잔고와 장부 현금은 대조 대상이 아니다. 공매도 금지\n \n from __future__ import annotations\n \n+import re\n from collections.abc import Callable\n from dataclasses import dataclass\n from datetime import date, datetime\n@@ -71,6 +72,7 @@ from worker.contracts.engine_output import (\n )\n from worker.contracts.engine_output import Warning as ContractWarning\n from worker.contracts.events import ProgressPoint\n+from worker.contracts.strategy_params.rebalance import REBALANCE_PATTERN, trading_day_period\n from worker.corporate_actions import DistributionLedger, apply_split, splits_on\n from worker.costs import CostModel, FillCost, Side\n from worker.market_data import MarketData\n@@ -80,7 +82,7 @@ ZERO = Decimal(\"0\")\n PRICE_QUANTUM = Decimal(\"0.000001\")\n #: ``run.randomSeed`` 미지정(None) 시 쓰는 값. 재현성을 위해 시드 없이 실행하지 않는다.\n DEFAULT_RANDOM_SEED = 42\n-#: 계약이 허용하는 유일한 리밸런싱 주기(FR-011).\n+#: 리밸런싱 주기의 기본값. 허용 범위는 ``REBALANCE_PATTERN``(FR-011).\n REBALANCE_MONTH_END = \"MONTH_END\"\n #: 결과 계약 ``exceptions[].kind``.\n HALT_DEFERRED = \"HALT_DEFERRED\"\n@@ -179,21 +181,28 @@ def plan_days(calendar: list[date], evaluation_start: date, end: date, rebalance\n     \"\"\"평가일과 판단일을 정한다.\n \n     첫 판단은 **평가 시작일 종가**다 — 첫 월말까지 현금으로 앉아 있으면 전략이 아니라 대기 기간을\n-    평가하게 된다. 그 뒤로는 매월 마지막 거래일. 마지막 평가일에는 판단하지 않는다 — 체결할 다음\n-    거래일이 없다.\n+    평가하게 된다. 그 뒤로는 주기대로: ``MONTH_END`` 는 매월 마지막 거래일, ``QUARTER_END`` 는\n+    3·6·9·12월의 마지막 거래일, ``TRADING_DAYS_n`` 은 평가 시작일부터 n거래일마다. 마지막 평가일에는\n+    판단하지 않는다 — 체결할 다음 거래일이 없다.\n     \"\"\"\n-    if rebalance != REBALANCE_MONTH_END:\n+    if not re.fullmatch(REBALANCE_PATTERN, rebalance):\n         raise ValueError(\n             f\"allocation.parameters.rebalance={rebalance!r} is not supported;\"\n-            f\" only {REBALANCE_MONTH_END} is an approved cadence (FR-011)\"\n+            f\" approved cadences match {REBALANCE_PATTERN} (FR-011)\"\n         )\n     evaluation_days = [day for day in calendar if evaluation_start <= day <= end]\n     if not evaluation_days:\n         return DayPlan(calendar, [], frozenset())\n+    every = trading_day_period(rebalance)\n     decisions = {evaluation_days[0]}\n     for index, day in enumerate(evaluation_days[:-1]):\n-        if evaluation_days[index + 1].month != day.month:\n-            decisions.add(day)\n+        if every is not None:\n+            if index % every == 0:\n+                decisions.add(day)\n+        elif evaluation_days[index + 1].month != day.month:\n+            # 월말. 분기말은 그중 3·6·9·12월만.\n+            if rebalance == REBALANCE_MONTH_END or day.month % 3 == 0:\n+                decisions.add(day)\n     decisions.discard(evaluation_days[-1])\n     return DayPlan(calendar, evaluation_days, frozenset(decisions))\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/portfolio_execution.py",
+          "old_path": "worker/src/worker/portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -143,9 +143,48 @@ def test_last_evaluation_day_never_decides() -> None:\n     assert plan.decision_days == {date(2024, 1, 30)}\n \n \n+def test_quarter_end_decides_on_the_last_trading_day_of_march_june_september_december() -> None:\n+    \"\"\"분기말은 3·6·9·12월의 마지막 거래일이다. 다른 월말은 지나간다.\"\"\"\n+    calendar = [\n+        date(2024, 1, 2),\n+        date(2024, 1, 31),\n+        date(2024, 2, 29),\n+        date(2024, 3, 29),\n+        date(2024, 4, 1),\n+        date(2024, 6, 28),\n+        date(2024, 7, 1),\n+    ]\n+    plan = plan_days(calendar, date(2024, 1, 2), date(2024, 7, 1), \"QUARTER_END\")\n+    assert plan.decision_days == {date(2024, 1, 2), date(2024, 3, 29), date(2024, 6, 28)}\n+\n+\n+def test_trading_days_cadence_counts_from_the_evaluation_start() -> None:\n+    \"\"\"``TRADING_DAYS_n`` 은 평가 시작일부터 n거래일마다 판단한다. 달력 월은 보지 않는다.\"\"\"\n+    calendar = [date(2024, 1, 2) + timedelta(days=offset) for offset in range(8)]\n+    plan = plan_days(calendar, calendar[1], calendar[-1], \"TRADING_DAYS_3\")\n+    assert plan.decision_days == {calendar[1], calendar[4]}, \"마지막 날(index 6)은 판단하지 않는다\"\n+\n+\n+@pytest.mark.parametrize(\"rebalance\", [\"QUARTER_END\", \"TRADING_DAYS_21\"])\n+def test_engine_completes_and_decides_on_the_planned_days_for_every_cadence(\n+    rebalance: str,\n+) -> None:\n+    \"\"\"계약·사전 검증·엔진이 같은 주기 판정을 쓴다 — 어느 하나만 월말에 머물면 여기서 깨진다.\"\"\"\n+    output = completed(\n+        **three_etf(\"2024-01-02\", \"2024-06-28\", allocation={\"parameters\": {\"rebalance\": rebalance}})\n+    )\n+    calendar = sorted({snapshot.date for snapshot in output.portfolio_series})\n+    plan = plan_days(calendar, calendar[0], calendar[-1], rebalance)\n+    # 비중 기록은 판단일 다음 거래일(체결일)에 남는다.\n+    fill_days = {plan.next_trading_day(day) for day in plan.decision_days}\n+    assert {point.date for point in output.weights_series} == fill_days\n+    assert len(fill_days) > 1, \"6개월이면 첫날 외에도 판단일이 있어야 주기를 확인한 것이다\"\n+\n+\n def test_unapproved_rebalance_cadence_is_rejected() -> None:\n-    with pytest.raises(ValueError, match=\"WEEKLY\"):\n-        plan_days([date(2024, 1, 2)], date(2024, 1, 2), date(2024, 1, 2), \"WEEKLY\")\n+    for rejected in (\"WEEKLY\", \"TRADING_DAYS\", \"TRADING_DAYS_0\", \"TRADING_DAYS_21X\"):\n+        with pytest.raises(ValueError, match=rejected):\n+            plan_days([date(2024, 1, 2)], date(2024, 1, 2), date(2024, 1, 2), rejected)\n \n \n # --- 체결 규칙(SC-004) ----------------------------------------------------------------\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_portfolio_execution.py",
+          "old_path": "worker/tests/test_portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,11 +71,17 @@ def test_max_weight_is_an_integer_percent_and_optional() -> None:\n \n \n @pytest.mark.parametrize(\"strategy_id\", sorted(STRATEGY_PARAMETERS))\n-def test_month_end_rebalance_is_the_only_approved_cadence(strategy_id: str) -> None:\n-    typed = AllocationSpec.model_validate(spec(strategy_id, {\"rebalance\": \"MONTH_END\"}))\n-    assert isinstance(typed.typed_parameters, RebalanceParameters)\n-    with pytest.raises(ValidationError):\n-        AllocationSpec.model_validate(spec(strategy_id, {\"rebalance\": \"WEEKLY\"}))\n+def test_rebalance_cadence_is_month_end_quarter_end_or_every_n_trading_days(\n+    strategy_id: str,\n+) -> None:\n+    \"\"\"003 등록표의 네 선택지(월말·분기말·21·63거래일)가 모두 계약을 통과한다.\"\"\"\n+    for accepted in (\"MONTH_END\", \"QUARTER_END\", \"TRADING_DAYS_21\", \"TRADING_DAYS_63\"):\n+        typed = AllocationSpec.model_validate(spec(strategy_id, {\"rebalance\": accepted}))\n+        assert isinstance(typed.typed_parameters, RebalanceParameters)\n+        assert typed.typed_parameters.rebalance == accepted\n+    for rejected in (\"WEEKLY\", \"TRADING_DAYS\", \"TRADING_DAYS_0\", \"TRADING_DAYS_21X\", 21):\n+        with pytest.raises(ValidationError, match=\"rebalance\"):\n+            AllocationSpec.model_validate(spec(strategy_id, {\"rebalance\": rejected}))\n \n \n def test_minimum_variance_takes_the_003_axes_it_offers() -> None:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_strategy_params.py",
+          "old_path": "worker/tests/test_strategy_params.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T22:55:48.085+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

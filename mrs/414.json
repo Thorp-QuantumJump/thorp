@@ -1,0 +1,561 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 964112,
+    "iid": 414,
+    "project_id": 1444456,
+    "title": "feat(fe,be): spec013개선-b16",
+    "description": "## 작업 내용 요약\n\nspec 013 B16(T197)의 구현, converge, 코드 리뷰를 한 MR에 담는다. 화면이 커리큘럼 조회로 옮겨 가 쓰지 않는 9월 판 글 목록 경로 `GET /learning/articles`를 지우고, converge와 리뷰에서 찾은 테스트 빈틈과 문서 오류를 함께 고친다. 첫 단계 공개 전 글 목록은 커리큘럼의 `preReleaseArticles`가 같은 글과 같은 순서로 싣는다.\n\n## 주요 변경 사항\n\n### 1. implement (T197)\n\n- `GET /learning/articles`를 지운다. 요청하면 404이고, 글 하나·용어·커리큘럼 경로는 그대로다\n- 목록 응답 DTO와 예시 `articles-list.json`을 없애고, 계약 §2를 \"지운 경로\"로 바꾼다. quickstart 2-1·6-1은 커리큘럼 기준으로 고친다\n- 커리큘럼이 쓰고 017 글 열거가 쓸 공개 글 조회는 남긴다(tasks ⑧)\n- 옛 경로 테스트가 확인하던 정렬과 게시 목록 확인은 커리큘럼·관리 IT로 옮긴다\n\n### 2. converge\n\n- 빈 커리큘럼의 `preReleaseArticles`가 null이 아니라 빈 배열인지 확인한다(quickstart 2-1)\n- 공개 글 조회가 CURRENT 판도 싣는지 저장소 테스트로 확인한다(지운 IT만 확인하던 것)\n- 계약 README와 응답 주석이 지운 경로를 아직 있는 것처럼 적던 부분을 고친다\n\n### 3. review (규칙·spec 두 축 AI 리뷰)\n\n- 공개 글 조회를 남긴 이유를 사실대로 적는다(지금 부르는 곳은 없고 017이 쓸 조회)\n- 게시 취소 뒤 `preReleaseArticles`가 배열인지 확인한다\n- 지운 목록에서 온 픽스처 이름·값을 고친다\n- 지운 경로와 대조한다고 적힌 테스트 이름과, 계약 §1·§2가 서로를 가리키던 문장을 고친다\n- 공개 계약을 가리키는 옛 절 번호를 2판 번호(§1 커리큘럼, §3 글 하나, §4 용어)로 고친다\n\n### 브랜치\n\n- plan의 `refactor(be)/learning-articles-endpoint` 대신 `feat(be)/spec-013-b16`을 쓴다. 세 작업을 한 브랜치에 담았다\n\n## 테스트\n\n- [x] `./gradlew build`(Docker 사용): 실패 0, 건너뜀 4(외부 호출·성능 측정 테스트, 따로 켜야 돈다). 마지막 커밋은 주석 두 줄만 바꿔 컴파일과 해당 테스트로 확인했다\n- [x] 운영 배우기 목록이 B11 커리큘럼 화면으로 배포된 것을 운영 화면 파일에서 확인했다\n- [x] AI 코드 리뷰(규칙·spec 두 축)의 지적을 모두 반영했다. 브랜치 이름은 위 \"브랜치\" 항목대로 plan과 다르게 둔다\n\n## 리뷰 포인트\n\n- 병합 조건은 B11 운영 배포다. 위 확인으로 충분한지 판단해 주세요\n- 017 담당 확인: 공개 글 조회는 지우지 않았으므로 017 글 열거가 이 조회를 그대로 쓸 수 있다",
+    "state": "merged",
+    "created_at": "2026-10-12T13:32:05.150+09:00",
+    "updated_at": "2026-10-12T13:32:20.227+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-12T13:32:10.502+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/spec-013-b16",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa",
+    "merge_commit_sha": "e467aabcd77cec33e5007a46192c8ad659946b34",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-12T13:32:06.324+09:00",
+    "reference": "!414",
+    "references": {
+      "short": "!414",
+      "relative": "!414",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!414"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/414",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 964112,
+    "iid": 414,
+    "project_id": 1444456,
+    "title": "feat(fe,be): spec013개선-b16",
+    "description": "## 작업 내용 요약\n\nspec 013 B16(T197)의 구현, converge, 코드 리뷰를 한 MR에 담는다. 화면이 커리큘럼 조회로 옮겨 가 쓰지 않는 9월 판 글 목록 경로 `GET /learning/articles`를 지우고, converge와 리뷰에서 찾은 테스트 빈틈과 문서 오류를 함께 고친다. 첫 단계 공개 전 글 목록은 커리큘럼의 `preReleaseArticles`가 같은 글과 같은 순서로 싣는다.\n\n## 주요 변경 사항\n\n### 1. implement (T197)\n\n- `GET /learning/articles`를 지운다. 요청하면 404이고, 글 하나·용어·커리큘럼 경로는 그대로다\n- 목록 응답 DTO와 예시 `articles-list.json`을 없애고, 계약 §2를 \"지운 경로\"로 바꾼다. quickstart 2-1·6-1은 커리큘럼 기준으로 고친다\n- 커리큘럼이 쓰고 017 글 열거가 쓸 공개 글 조회는 남긴다(tasks ⑧)\n- 옛 경로 테스트가 확인하던 정렬과 게시 목록 확인은 커리큘럼·관리 IT로 옮긴다\n\n### 2. converge\n\n- 빈 커리큘럼의 `preReleaseArticles`가 null이 아니라 빈 배열인지 확인한다(quickstart 2-1)\n- 공개 글 조회가 CURRENT 판도 싣는지 저장소 테스트로 확인한다(지운 IT만 확인하던 것)\n- 계약 README와 응답 주석이 지운 경로를 아직 있는 것처럼 적던 부분을 고친다\n\n### 3. review (규칙·spec 두 축 AI 리뷰)\n\n- 공개 글 조회를 남긴 이유를 사실대로 적는다(지금 부르는 곳은 없고 017이 쓸 조회)\n- 게시 취소 뒤 `preReleaseArticles`가 배열인지 확인한다\n- 지운 목록에서 온 픽스처 이름·값을 고친다\n- 지운 경로와 대조한다고 적힌 테스트 이름과, 계약 §1·§2가 서로를 가리키던 문장을 고친다\n- 공개 계약을 가리키는 옛 절 번호를 2판 번호(§1 커리큘럼, §3 글 하나, §4 용어)로 고친다\n\n### 브랜치\n\n- plan의 `refactor(be)/learning-articles-endpoint` 대신 `feat(be)/spec-013-b16`을 쓴다. 세 작업을 한 브랜치에 담았다\n\n## 테스트\n\n- [x] `./gradlew build`(Docker 사용): 실패 0, 건너뜀 4(외부 호출·성능 측정 테스트, 따로 켜야 돈다). 마지막 커밋은 주석 두 줄만 바꿔 컴파일과 해당 테스트로 확인했다\n- [x] 운영 배우기 목록이 B11 커리큘럼 화면으로 배포된 것을 운영 화면 파일에서 확인했다\n- [x] AI 코드 리뷰(규칙·spec 두 축)의 지적을 모두 반영했다. 브랜치 이름은 위 \"브랜치\" 항목대로 plan과 다르게 둔다\n\n## 리뷰 포인트\n\n- 병합 조건은 B11 운영 배포다. 위 확인으로 충분한지 판단해 주세요\n- 017 담당 확인: 공개 글 조회는 지우지 않았으므로 017 글 열거가 이 조회를 그대로 쓸 수 있다",
+    "state": "merged",
+    "created_at": "2026-10-12T13:32:05.150+09:00",
+    "updated_at": "2026-10-12T13:32:20.227+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-12T13:32:10.502+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/spec-013-b16",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa",
+    "merge_commit_sha": "e467aabcd77cec33e5007a46192c8ad659946b34",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-12T13:32:06.324+09:00",
+    "reference": "!414",
+    "references": {
+      "short": "!414",
+      "relative": "!414",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!414"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/414",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "54390960a6afab697d4bbe634533f32d285e952f",
+      "head_sha": "b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa",
+      "start_sha": "627053dc3e75b783bc8f64ed77c954f10df5cded"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "455ff4a08a6a1aa3834350a3b6a04d40563f9091",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883883,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T13:32:05.245+09:00",
+          "updated_at": "2026-10-12T13:32:05.249+09:00",
+          "system": true,
+          "noteable_id": 964112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 414,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a853a206aee8a7a55d4b4eb8dfcada62bdd38758",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883884,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T13:32:05.267+09:00",
+          "updated_at": "2026-10-12T13:32:05.275+09:00",
+          "system": true,
+          "noteable_id": 964112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 414,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "05ded48003815c0df092ffd556198e78068e18da",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883885,
+          "type": null,
+          "body": "mentioned in commit e467aabcd77cec33e5007a46192c8ad659946b34",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T13:32:10.565+09:00",
+          "updated_at": "2026-10-12T13:32:10.579+09:00",
+          "system": true,
+          "noteable_id": 964112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 414,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7a38a9db122ea1fa70c87fe4c6b8679ee997a6e9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883886,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- Javadoc 내 API 문서 참조 번호(`learning-public-api §2` -> `§3`, `§1·§3·§4`)를 엔드포인트 삭제 및 계약 변경 사항에 맞춰 정확하게 동기화했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (제공된 diff는 문서 및 테스트 Javadoc의 참조 번호 수정 사항만 포함하고 있으며, 실행 코드나 보안에 영향을 미치는 변경은 없습니다.)\n\n### 테스트 제안\n- `GET /learning/articles` 엔드포인트 제거 후, 해당 경로로 요청 시 의도된 대로 `404 Not Found`가 반환되는지 통합 테스트(MockMvc 등)를 통해 확인합니다.\n- 빈 커리큘럼 조회 시 `preReleaseArticles` 필드가 `null`이 아니라 빈 배열(`[]`)로 반환되는지 확인하는 테스트를 수행합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-12T13:32:13.468+09:00",
+          "updated_at": "2026-10-12T13:32:13.468+09:00",
+          "system": false,
+          "noteable_id": 964112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 414,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9ee135d2b6a82d14ad3ad087b3535e2980cc2e10",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883887,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T13:32:20.327+09:00",
+          "updated_at": "2026-10-12T13:32:20.331+09:00",
+          "system": true,
+          "noteable_id": 964112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 414,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e62fec28865dabcb2a6dfe1997fa3b53c9ba44de",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884991,
+          "type": null,
+          "body": "mentioned in commit f598d630ac73ec0a2df7b4fb14904ccbbf87a9aa",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:06.141+09:00",
+          "updated_at": "2026-10-13T15:16:06.162+09:00",
+          "system": true,
+          "noteable_id": 964112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 414,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2264622,
+      "head_commit_sha": "b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa",
+      "base_commit_sha": "54390960a6afab697d4bbe634533f32d285e952f",
+      "start_commit_sha": "627053dc3e75b783bc8f64ed77c954f10df5cded",
+      "created_at": "2026-10-12T13:32:05.595+09:00",
+      "merge_request_id": 964112,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "58ab507aef6be329d6f81ccbacf58faf6f3a0875"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2264622,
+      "head_commit_sha": "b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa",
+      "base_commit_sha": "54390960a6afab697d4bbe634533f32d285e952f",
+      "start_commit_sha": "627053dc3e75b783bc8f64ed77c954f10df5cded",
+      "created_at": "2026-10-12T13:32:05.595+09:00",
+      "merge_request_id": 964112,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "58ab507aef6be329d6f81ccbacf58faf6f3a0875",
+      "commits": [
+        {
+          "id": "b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa",
+          "short_id": "b9b5eb4d",
+          "created_at": "2026-10-12T13:30:38.000+09:00",
+          "parent_ids": [
+            "54390960a6afab697d4bbe634533f32d285e952f"
+          ],
+          "title": "refactor(be): 배우기 공개 계약을 가리키는 옛 절 번호를 고친다",
+          "message": "refactor(be): 배우기 공개 계약을 가리키는 옛 절 번호를 고친다\n\n글 하나 조회는 learning-public-api §3이다. §2는 B16에서 지운 목록 경로다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-12T13:30:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-12T13:30:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9b5eb4d7a2ab6c9aecffecd3cc9393d8b3805fa"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -4,7 +4,7 @@ import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n \n /**\n- * 볼 수 없는 글(404 {@code LEARNING_ARTICLE_UNAVAILABLE}, learning-public-api §2).\n+ * 볼 수 없는 글(404 {@code LEARNING_ARTICLE_UNAVAILABLE}, learning-public-api §3).\n  *\n  * <p>없는 글, 초안인 글, 게시 취소된 글, 형식이 틀린 식별자를 <b>가르지 않는다</b>. 가르면 초안 글의 존재가 드러난다. 메시지에도 식별자를 넣지 않고 계약 문장을\n  * 그대로 쓴다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/exception/ArticleUnavailableException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/exception/ArticleUnavailableException.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -83,7 +83,7 @@ import org.springframework.transaction.annotation.AnnotationTransactionAttribute\n import org.springframework.transaction.interceptor.TransactionAttribute;\n \n /**\n- * 공개 조회 유스케이스의 판정(learning-public-api §2·§3). 저장소·단계·대응표 포트는 목이고 규칙 파일은 실제 파일이다.\n+ * 공개 조회 유스케이스의 판정(learning-public-api §1·§3·§4). 저장소·단계·대응표 포트는 목이고 규칙 파일은 실제 파일이다.\n  *\n  * <p>이 서비스는 초안 용어 저장소({@code LearningTermRepository})를 주입받지 않는다. 생성자에 그 타입이 없다는 것 자체가 \"공개 응답을 초안\n  * 용어로 만들지 않는다\"는 구조적 보장이고, 아래 {@link #termSentenceComesFromSnapshot}이 값으로 확인한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/application/service/LearningQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/application/service/LearningQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2883886": []
+  }
+}

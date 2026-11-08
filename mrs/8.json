@@ -1,0 +1,748 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 933559,
+    "iid": 8,
+    "project_id": 1444456,
+    "title": "feat(fe): 백테스트 및 대시보드 데이터 가시성 수정",
+    "description": "# 작업 내용 요약\n\n지표위에 커서를 올리면 5년치 데이터가 나오게 수정하였습니다. ( 가짜데이터 ) \n\n백테스트 지표 종류를 2개 추가하여 5종이 되었습니다.\n\n800줄중 8할은 또 css 입니다. \n\n![image.png](/uploads/357eb117407cc021a86aa40c0f4ce64f/image.png){width=900 height=387}\n\n![image.png](/uploads/f8c5971cdc2174ea819b59cbb499dd04/image.png){width=900 height=492}\n\n![image.png](/uploads/2cc45c7212c4eca062141e184d2c440f/image.png){width=900 height=570}\n\n# 주요 변경 사항\n\n* 대시보드 지표 가시성 수정 \n* 백테스트 지표 추가 \n\n# 리뷰 포인트",
+    "state": "merged",
+    "created_at": "2026-09-04T11:27:28.606+09:00",
+    "updated_at": "2026-09-04T11:56:32.164+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-04T11:56:31.699+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/92-backtest-dashboard-data",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f72237a28fa18c0e5f39067bda572c771bb7dc93",
+    "merge_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-04T11:27:30.749+09:00",
+    "reference": "!8",
+    "references": {
+      "short": "!8",
+      "relative": "!8",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!8"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/8",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 933559,
+    "iid": 8,
+    "project_id": 1444456,
+    "title": "feat(fe): 백테스트 및 대시보드 데이터 가시성 수정",
+    "description": "# 작업 내용 요약\n\n지표위에 커서를 올리면 5년치 데이터가 나오게 수정하였습니다. ( 가짜데이터 ) \n\n백테스트 지표 종류를 2개 추가하여 5종이 되었습니다.\n\n800줄중 8할은 또 css 입니다. \n\n![image.png](/uploads/357eb117407cc021a86aa40c0f4ce64f/image.png){width=900 height=387}\n\n![image.png](/uploads/f8c5971cdc2174ea819b59cbb499dd04/image.png){width=900 height=492}\n\n![image.png](/uploads/2cc45c7212c4eca062141e184d2c440f/image.png){width=900 height=570}\n\n# 주요 변경 사항\n\n* 대시보드 지표 가시성 수정 \n* 백테스트 지표 추가 \n\n# 리뷰 포인트",
+    "state": "merged",
+    "created_at": "2026-09-04T11:27:28.606+09:00",
+    "updated_at": "2026-09-04T11:56:32.164+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-04T11:56:31.699+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/92-backtest-dashboard-data",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f72237a28fa18c0e5f39067bda572c771bb7dc93",
+    "merge_commit_sha": "9ae7148d608730358413ce202222b0c840a275e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-04T11:27:30.749+09:00",
+    "reference": "!8",
+    "references": {
+      "short": "!8",
+      "relative": "!8",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!8"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/8",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "18",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "head_sha": "f72237a28fa18c0e5f39067bda572c771bb7dc93",
+      "start_sha": "545ce76997709ebabe30439867528f4cb3669ec1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e22c21d7a2b4c2b28180133b893a44405ddd5c41",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2763153,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-04T11:27:28.969+09:00",
+          "updated_at": "2026-09-04T11:27:28.988+09:00",
+          "system": true,
+          "noteable_id": 933559,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 8,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "753a1b584fa5a15e7966574069c70acee96f471a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2763154,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n변경 사항에 대해 다음 시나리오로 테스트를 수행할 것을 제안합니다.\n\n1. **대시보드 지표 5년 보기 및 접근성 테스트**\n   - **시나리오**: 대시보드 페이지(`DashboardPage`)의 시장 및 거시 지표 카드에서 `5년 보기` 버튼을 클릭하거나 마우스를 올렸을 때, `ExpandedIndicatorPanel`이 정상적으로 렌더링되고 5년치(60개월) 차트가 그려지는지 확인합니다.\n   - **키보드/접근성**: 확대된 패널이 열린 상태에서 `Escape` 키를 눌렀을 때 패널이 닫히고, 포커스가 원래 트리거 버튼으로 올바르게 복귀하는지 확인합니다.\n\n2. **백테스트 전략 추가 및 툴팁 검증**\n   - **시나리오**: `BacktestPage`에서 새로 추가된 '볼린저 밴드' 및 '저변동성' 전략을 포함하여 최대 5개의 전략을 활성화/비활성화하고 차트가 올바르게 렌더링되는지 확인합니다.\n   - **초기 투자금 변경**: 초기 투자금 셀렉트박스 값을 변경(`1,000,000원` ↔ `100,000,000원`)했을 때, 차트 툴팁(`BacktestTooltip`)에 표시되는 평가 금액이 선택한 자본금 기준으로 올바르게 재계산되는지 확인합니다.\n\n3. **유틸리티 단위 테스트 실행**\n   - **시나리오**: `frontend` 디렉토리에서 Node.js를 이용해 날짜 검증 및 기간 필터링 로직이 포함된 유닛 테스트를 실행하여 모든 케이스가 통과하는지 확인합니다.\n     ```bash\n     node --test src/utils/indicatorHistory.test.ts\n     ```\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f72237a28fa18c0e5f39067bda572c771bb7dc93 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-04T11:27:39.748+09:00",
+          "updated_at": "2026-09-04T11:49:14.128+09:00",
+          "system": false,
+          "noteable_id": 933559,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 8,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8128e67322f1ee5bc9d79c97e70dcafcb5152940",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2763170,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>f72237a2 - ai 리뷰 수정</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/8/diffs?diff_id=2162904&start_sha=f09acce2eb92312de73a232ca34b069a3b32e2da)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-04T11:49:04.933+09:00",
+          "updated_at": "2026-09-04T11:49:04.938+09:00",
+          "system": true,
+          "noteable_id": 933559,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 8,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "20415d1129c3d9be393182e637cc17d358fb21cc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2763189,
+          "type": null,
+          "body": "mentioned in commit 9ae7148d608730358413ce202222b0c840a275e1",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-04T11:56:31.809+09:00",
+          "updated_at": "2026-09-04T11:56:31.816+09:00",
+          "system": true,
+          "noteable_id": 933559,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 8,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2162904,
+      "head_commit_sha": "f72237a28fa18c0e5f39067bda572c771bb7dc93",
+      "base_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "start_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "created_at": "2026-09-04T11:49:04.671+09:00",
+      "merge_request_id": 933559,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "008f59f3182d06ee1ee0bda2cf6d03c43e417e9f"
+    },
+    {
+      "id": 2162885,
+      "head_commit_sha": "f09acce2eb92312de73a232ca34b069a3b32e2da",
+      "base_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "start_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "created_at": "2026-09-04T11:27:29.298+09:00",
+      "merge_request_id": 933559,
+      "state": "without_files",
+      "real_size": "16",
+      "patch_id_sha": "f2372a4ec0ec6d447ca5f114ee0029c339668e6b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2162904,
+      "head_commit_sha": "f72237a28fa18c0e5f39067bda572c771bb7dc93",
+      "base_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "start_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "created_at": "2026-09-04T11:49:04.671+09:00",
+      "merge_request_id": 933559,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "008f59f3182d06ee1ee0bda2cf6d03c43e417e9f",
+      "commits": [
+        {
+          "id": "f72237a28fa18c0e5f39067bda572c771bb7dc93",
+          "short_id": "f72237a2",
+          "created_at": "2026-09-04T11:48:55.000+09:00",
+          "parent_ids": [
+            "f09acce2eb92312de73a232ca34b069a3b32e2da"
+          ],
+          "title": "ai 리뷰 수정",
+          "message": "ai 리뷰 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-04T11:48:55.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-04T11:48:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f72237a28fa18c0e5f39067bda572c771bb7dc93"
+        },
+        {
+          "id": "f09acce2eb92312de73a232ca34b069a3b32e2da",
+          "short_id": "f09acce2",
+          "created_at": "2026-09-04T11:20:15.000+09:00",
+          "parent_ids": [
+            "545ce76997709ebabe30439867528f4cb3669ec1"
+          ],
+          "title": "feat(fe): 백테스트 및 대시보드 데이터 가시성 수정",
+          "message": "feat(fe): 백테스트 및 대시보드 데이터 가시성 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-04T11:20:15.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-04T11:20:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f09acce2eb92312de73a232ca34b069a3b32e2da"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,21 @@\n+# 대시보드 지표 카드 기간 전환\n+\n+- 대상: 주식시장 핵심 지표 5개, 경기·물가·심리 핵심 지표 6개.\n+- 기본 카드는 각 지표의 관측 기준월을 포함한 최근 3개월을 표시한다.\n+- 마우스를 올리거나 `5년 보기` 버튼을 누르면 해당 카드만 확대된다. 연도·값 눈금이 있는 최근 60개월 차트를 그리며 다른 카드의 위치는 유지한다.\n+- 작은 카드와 확대 패널을 Motion의 동일한 `layoutId`로 연결한다. 약 0.48초 동안 크기·위치가 이어지고, 내용과 차트 선이 순서대로 나타난다. 닫을 때도 원래 카드로 복귀하며 퇴장 중 패널은 입력·초점을 받지 않는다.\n+- 커서 이탈, 닫기 버튼, Escape, 카드 밖으로 키보드 초점 이동 시 닫힌다. 모바일은 버튼으로 열고 닫는다. 동시에 열리는 카드는 하나다.\n+- 마우스로만 열어 초점이 카드 밖에 있어도 Escape로 닫고 원래 카드 버튼으로 초점을 돌린다. 전역 키 이벤트는 열린 동안에만 등록하고 닫힘·페이지 이탈 시 해제한다.\n+- 사용자의 모션 감소 설정에서는 확대·선 그리기 애니메이션을 생략한다.\n+\n+## 데이터 연결\n+\n+현재 장기 이력은 `indicatorHistoryMock.ts`에서 생성하는 고정 모의 데이터다. 실제 과거 통계로 사용하면 안 된다. 기존 최근 6개월 값과 최종 값은 유지하며, 원본 `dashboardMock.ts`와 분리한다.\n+\n+추후 API 연결 시 `Indicator.series`에 날짜순 `{ date, value }` 목록을 공급한다. 월간은 `YYYY-MM`, 일간은 `YYYY-MM-DD`를 사용하며 프런트엔드에서 실제 데이터의 빈 날짜를 임의로 보간하지 않는다. 3개월/60개월은 데이터 개수가 아닌 관측 기준월로 자른다. 표시 범위는 차트의 실제 시작·종료 날짜를 따른다.\n+\n+현재 화면의 5년 표시는 60개월 mock을 전제로 한다. 실제 API 이력이 짧거나 부족하면 기간 안내 및 로딩·실패 처리는 API 연동 작업에서 실제 제공 범위에 맞게 연결한다.\n+\n+날짜는 형식뿐 아니라 월별 일수·윤년도 검사한다. 잘못된 기준일은 빈 배열을 반환하고, 잘못된 개별 관측일·유한하지 않은 값은 제외한다. 월 단위 기준일은 해당 월말까지, 일 단위 기준일은 그 날짜까지만 포함한다.\n+\n+날짜 회귀 테스트: `frontend`에서 Node.js 24 기준 `node --test src/utils/indicatorHistory.test.ts` 실행. 별도 테스트 패키지는 추가하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/docs/indicator-history.md",
+          "old_path": "frontend/docs/indicator-history.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,6 +14,56 @@\n   --chart-tooltip-muted: #bac3ca;\n }\n \n+.tooltip {\n+  width: min(284px, calc(100vw - 100px));\n+  padding: 12px;\n+  color: var(--chart-tooltip-foreground);\n+  font-size: 0.76rem;\n+}\n+\n+.tooltipHeading,\n+.tooltipRow,\n+.tooltipLabel {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 8px;\n+}\n+\n+.tooltipHeading > span,\n+.tooltipCaption,\n+.tooltipValues > span {\n+  color: var(--chart-tooltip-muted);\n+  font-size: 0.7rem;\n+}\n+\n+.tooltipCaption {\n+  margin: 4px 0 8px;\n+}\n+\n+.tooltipRow + .tooltipRow {\n+  margin-top: 6px;\n+}\n+\n+.tooltipLabel {\n+  justify-content: flex-start;\n+  min-width: 0;\n+}\n+\n+.tooltipLabel i {\n+  width: 8px;\n+  height: 8px;\n+  flex-shrink: 0;\n+  border-radius: 50%;\n+}\n+\n+.tooltipValues {\n+  display: grid;\n+  flex-shrink: 0;\n+  text-align: right;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n @media (max-width: 720px) {\n   .chart {\n     min-height: 250px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/BacktestChart.module.css",
+          "old_path": "frontend/src/components/backtest/BacktestChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,6 +14,57 @@ interface BacktestChartProps {\n   focusedStrategy: StrategyId | null\n   status: 'loading' | 'ready'\n   revealSignature: string\n+  initialCapital: number\n+}\n+\n+const tooltipDateFormatter = new Intl.DateTimeFormat('ko-KR', {\n+  year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC',\n+})\n+const capitalFormatter = new Intl.NumberFormat('ko-KR', {\n+  style: 'currency', currency: 'KRW', maximumFractionDigits: 0,\n+})\n+const returnFormatter = new Intl.NumberFormat('ko-KR', {\n+  style: 'percent', signDisplay: 'exceptZero', minimumFractionDigits: 1,\n+  maximumFractionDigits: 1,\n+})\n+\n+/** 차트의 초기값 100을 기준으로 해당 시점의 모의 수익률과 평가금액을 표시한다. */\n+function BacktestTooltip({ point, activeStrategies, initialCapital }: {\n+  point: Record<string, unknown>\n+  activeStrategies: StrategyId[]\n+  initialCapital: number\n+}) {\n+  const series = [\n+    ...strategyResults.filter((strategy) => activeStrategies.includes(strategy.id)),\n+    { id: 'benchmark', name: 'NASDAQ-100', color: 'var(--chart-foreground-muted)' },\n+  ]\n+\n+  return (\n+    <div className={styles.tooltip} role=\"tooltip\">\n+      <div className={styles.tooltipHeading}>\n+        <strong>{point.date instanceof Date ? tooltipDateFormatter.format(point.date) : '—'}</strong>\n+        <span>모의 데이터</span>\n+      </div>\n+      <p className={styles.tooltipCaption}>누적수익률 · 평가금액</p>\n+      {series.map((seriesItem) => {\n+        const value = point[seriesItem.id]\n+        const hasValue = typeof value === 'number' && Number.isFinite(value)\n+\n+        return (\n+          <div className={styles.tooltipRow} key={seriesItem.id}>\n+            <span className={styles.tooltipLabel}>\n+              <i style={{ backgroundColor: seriesItem.color }} aria-hidden=\"true\" />\n+              {seriesItem.name}\n+            </span>\n+            <div className={styles.tooltipValues}>\n+              <strong>{hasValue ? returnFormatter.format(value / 100 - 1) : '—'}</strong>\n+              <span>{hasValue ? capitalFormatter.format(initialCapital * value / 100) : '—'}</span>\n+            </div>\n+          </div>\n+        )\n+      })}\n+    </div>\n+  )\n }\n \n /** 활성 전략과 NASDAQ-100 벤치마크의 누적 성과를 선 차트로 비교한다. */\n@@ -22,6 +73,7 @@ export function BacktestChart({\n   focusedStrategy,\n   status,\n   revealSignature,\n+  initialCapital,\n }: BacktestChartProps) {\n   return (\n     <div className={styles.chart}>\n@@ -66,7 +118,15 @@ export function BacktestChart({\n         )}\n \n         <XAxis numTicks={5} tickMode=\"domain\" />\n-        <ChartTooltip />\n+        <ChartTooltip\n+          content={({ point }) => (\n+            <BacktestTooltip\n+              point={point}\n+              activeStrategies={activeStrategies}\n+              initialCapital={initialCapital}\n+            />\n+          )}\n+        />\n       </LineChart>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/BacktestChart.tsx",
+          "old_path": "frontend/src/components/backtest/BacktestChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,231 @@\n+.slot {\n+  position: relative;\n+  min-width: 0;\n+  --panel-left: 0;\n+  --panel-right: auto;\n+}\n+\n+.slot:has(.panel) {\n+  z-index: 9;\n+}\n+\n+.slot[data-expanded='true'] {\n+  z-index: 10;\n+}\n+\n+.preview {\n+  height: 100%;\n+}\n+\n+.expandButton,\n+.panelHeader,\n+.panelValue,\n+.panelFooter {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 10px;\n+}\n+\n+.expandButton {\n+  width: 100%;\n+  min-height: 36px;\n+  margin-top: 8px;\n+  padding: 4px 0;\n+  border: 0;\n+  background: transparent;\n+  color: var(--dashboard-copy);\n+  font-size: 0.68rem;\n+  cursor: pointer;\n+}\n+\n+.expandButton span {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 3px;\n+  color: var(--dashboard-brand);\n+}\n+\n+.expandButton:focus-visible,\n+.closeButton:focus-visible {\n+  outline: 2px solid var(--dashboard-brand);\n+  outline-offset: 4px;\n+}\n+\n+.slot:focus-within .panel {\n+  border-color: var(--dashboard-brand);\n+}\n+\n+.panel {\n+  position: absolute;\n+  top: -10px;\n+  right: var(--panel-right);\n+  left: var(--panel-left);\n+  width: max(100%, min(440px, calc(100vw - 48px)));\n+  padding: 20px;\n+  border: 1px solid var(--dashboard-line);\n+  border-radius: 17px;\n+  background: var(--dashboard-surface);\n+  box-shadow: var(--dashboard-shadow);\n+  overflow: hidden;\n+}\n+\n+.panel[data-present='false'] {\n+  pointer-events: none;\n+}\n+\n+.panelHeader,\n+.panelValue > span,\n+.panelFooter {\n+  color: var(--dashboard-copy);\n+  font-size: 0.68rem;\n+}\n+\n+.panelHeader > span {\n+  color: var(--dashboard-brand);\n+  font-weight: 650;\n+}\n+\n+.closeButton {\n+  display: grid;\n+  width: 36px;\n+  height: 36px;\n+  padding: 0;\n+  place-items: center;\n+  border: 1px solid var(--dashboard-line-soft);\n+  border-radius: 8px;\n+  background: var(--dashboard-surface);\n+  color: var(--dashboard-copy);\n+  cursor: pointer;\n+}\n+\n+.panel h3 {\n+  margin: 4px 0 12px;\n+  color: var(--dashboard-ink);\n+  font-size: 0.95rem;\n+}\n+\n+.panelValue {\n+  flex-wrap: wrap;\n+}\n+\n+.panelValue strong {\n+  color: var(--dashboard-ink);\n+  font-size: 1.5rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.historyChart {\n+  display: block;\n+  width: 100%;\n+  height: auto;\n+  margin-top: 12px;\n+  overflow: visible;\n+}\n+\n+.historyChart text {\n+  fill: var(--dashboard-copy);\n+  font-size: 14px;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.gridLine {\n+  stroke: var(--dashboard-line-soft);\n+  stroke-width: 1;\n+}\n+\n+.historyLine {\n+  stroke: var(--dashboard-brand);\n+  stroke-width: 2.3;\n+  stroke-linecap: round;\n+  stroke-linejoin: round;\n+  vector-effect: non-scaling-stroke;\n+}\n+\n+.latestPoint {\n+  fill: var(--dashboard-brand);\n+  stroke: var(--dashboard-surface);\n+  stroke-width: 2;\n+}\n+\n+.interpretation,\n+.empty {\n+  margin: 12px 0;\n+  color: var(--dashboard-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.6;\n+}\n+\n+.panelFooter {\n+  padding-top: 12px;\n+  border-top: 1px solid var(--dashboard-line-soft);\n+  flex-wrap: wrap;\n+}\n+\n+/* 각 반응형 그리드의 마지막 열은 안쪽으로 확장해 화면 밖으로 넘치지 않는다. */\n+.slot[data-variant='market']:nth-child(5n),\n+.slot[data-variant='macro']:nth-child(3n) {\n+  --panel-left: auto;\n+  --panel-right: 0;\n+}\n+\n+@media (max-width: 1180px) {\n+  .slot[data-variant='market']:nth-child(n) {\n+    --panel-left: 0;\n+    --panel-right: auto;\n+  }\n+\n+  .slot[data-variant='market']:nth-child(3n) {\n+    --panel-left: auto;\n+    --panel-right: 0;\n+  }\n+}\n+\n+@media (max-width: 900px) {\n+  .slot[data-variant='macro']:nth-child(n) {\n+    --panel-left: 0;\n+    --panel-right: auto;\n+  }\n+\n+  .slot[data-variant='macro']:nth-child(2n) {\n+    --panel-left: auto;\n+    --panel-right: 0;\n+  }\n+}\n+\n+@media (max-width: 720px) {\n+  .slot[data-variant='market']:nth-child(n) {\n+    --panel-left: 0;\n+    --panel-right: auto;\n+  }\n+\n+  .slot[data-variant='market']:nth-child(2n) {\n+    --panel-left: auto;\n+    --panel-right: 0;\n+  }\n+\n+  .panel {\n+    padding: 16px;\n+  }\n+\n+  .closeButton {\n+    width: 44px;\n+    height: 44px;\n+  }\n+}\n+\n+@media (max-width: 560px) {\n+  .slot[data-variant='macro'] .panel {\n+    width: 100%;\n+  }\n+}\n+\n+@media (max-width: 500px) {\n+  .slot[data-variant='market'] .panel {\n+    width: 100%;\n+  }\n+\n+  .historyChart text {\n+    font-size: 17px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/IndicatorHistoryCard.module.css",
+          "old_path": "frontend/src/components/dashboard/IndicatorHistoryCard.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,161 @@\n+import { ArrowUpRight, X } from 'lucide-react'\n+import { AnimatePresence, motion, useIsPresent, useReducedMotion, type Transition } from 'motion/react'\n+import { useCallback, useRef, type ReactNode } from 'react'\n+import { useIndicatorEscape } from '@/hooks/useIndicatorEscape'\n+import type { Indicator } from '@/types/dashboard'\n+import { formatDataDate, formatIndicatorValue } from '@/utils/dashboardFormat'\n+import { IndicatorHistoryChart } from './IndicatorHistoryChart'\n+import styles from './IndicatorHistoryCard.module.css'\n+\n+interface IndicatorHistoryCardProps {\n+  indicator: Indicator\n+  index: number\n+  variant: 'market' | 'macro'\n+  className: string\n+  expanded: boolean\n+  onActiveChange: (id: string | null) => void\n+  children: ReactNode\n+}\n+\n+const cardLayoutTransition: Transition = {\n+  duration: 0.48,\n+  ease: [0.22, 1, 0.36, 1],\n+}\n+\n+interface ExpandedIndicatorPanelProps {\n+  indicator: Indicator\n+  panelId: string\n+  layoutId: string\n+  onClose: () => void\n+}\n+\n+/** 닫기 중에도 패널을 유지해 원래 카드 크기로 돌아가며, 퇴장 중 입력은 막는다. */\n+function ExpandedIndicatorPanel({ indicator, panelId, layoutId, onClose }: ExpandedIndicatorPanelProps) {\n+  const reducedMotion = useReducedMotion()\n+  const isPresent = useIsPresent()\n+\n+  return (\n+    <motion.div\n+      id={panelId}\n+      layoutId={layoutId}\n+      className={styles.panel}\n+      role=\"region\"\n+      aria-label={`${indicator.name} 확대 차트`}\n+      aria-hidden={!isPresent}\n+      inert={!isPresent}\n+      data-present={isPresent}\n+      initial={{ opacity: 0 }}\n+      animate={{ opacity: 1 }}\n+      exit={{ opacity: 0 }}\n+      transition={{\n+        layout: reducedMotion ? { duration: 0 } : cardLayoutTransition,\n+        opacity: { duration: reducedMotion ? 0 : 0.38 },\n+      }}\n+    >\n+      <motion.div\n+        initial={reducedMotion ? false : { opacity: 0, y: 8 }}\n+        animate={{ opacity: 1, y: 0 }}\n+        exit={{ opacity: 0, transition: { duration: reducedMotion ? 0 : 0.12 } }}\n+        transition={{ delay: reducedMotion ? 0 : 0.18, duration: reducedMotion ? 0 : 0.24 }}\n+      >\n+        <div className={styles.panelHeader}>\n+          <span>최근 5년 · 예시 데이터</span>\n+          <button\n+            type=\"button\"\n+            className={styles.closeButton}\n+            onClick={onClose}\n+            aria-label={`${indicator.name} 확대 차트 닫기`}\n+          >\n+            <X size={17} aria-hidden=\"true\" />\n+          </button>\n+        </div>\n+        <h3>{indicator.name}</h3>\n+        <div className={styles.panelValue}>\n+          <strong>{formatIndicatorValue(indicator)}</strong>\n+          <span>{formatDataDate(indicator.observationDate)} 기준</span>\n+        </div>\n+        <IndicatorHistoryChart indicator={indicator} />\n+        <p className={styles.interpretation}>{indicator.interpretation}</p>\n+        <div className={styles.panelFooter}>\n+          <span>{indicator.source.provider}</span>\n+          <span>장기 이력은 모의 데이터</span>\n+        </div>\n+      </motion.div>\n+    </motion.div>\n+  )\n+}\n+\n+/** 원래 카드 자리를 유지하면서 선택한 카드만 확대하며 hover·키보드·터치를 지원한다. */\n+export function IndicatorHistoryCard({\n+  indicator,\n+  index,\n+  variant,\n+  className,\n+  expanded,\n+  onActiveChange,\n+  children,\n+}: IndicatorHistoryCardProps) {\n+  const triggerRef = useRef<HTMLButtonElement>(null)\n+  const reducedMotion = useReducedMotion()\n+  const panelId = `indicator-history-${indicator.id}`\n+  const layoutId = `indicator-card-${indicator.id}`\n+\n+  /** 명시적으로 닫으면 원래 버튼으로 초점을 돌려 키보드 탐색을 이어간다. */\n+  const closePanel = useCallback(() => {\n+    onActiveChange(null)\n+    triggerRef.current?.focus({ preventScroll: true })\n+  }, [onActiveChange])\n+\n+  useIndicatorEscape(expanded, closePanel)\n+\n+  return (\n+    <motion.article\n+      className={styles.slot}\n+      data-variant={variant}\n+      data-expanded={expanded}\n+      initial={reducedMotion ? false : { opacity: 0, y: 28 }}\n+      whileInView={{ opacity: 1, y: 0 }}\n+      viewport={{ once: false, amount: 0.2 }}\n+      transition={{ delay: reducedMotion ? 0 : index * 0.07, duration: reducedMotion ? 0 : 0.55 }}\n+      onPointerEnter={(event) => {\n+        if (event.pointerType === 'mouse') onActiveChange(indicator.id)\n+      }}\n+      onPointerLeave={(event) => {\n+        if (event.pointerType === 'mouse' && expanded) onActiveChange(null)\n+      }}\n+      onBlur={(event) => {\n+        if (expanded && !event.currentTarget.contains(event.relatedTarget)) onActiveChange(null)\n+      }}\n+    >\n+      <motion.div\n+        layoutId={layoutId}\n+        className={`${className} ${styles.preview}`}\n+        transition={{ layout: reducedMotion ? { duration: 0 } : cardLayoutTransition }}\n+      >\n+        <div aria-hidden={expanded}>{children}</div>\n+        <button\n+          ref={triggerRef}\n+          className={styles.expandButton}\n+          type=\"button\"\n+          aria-label={`${indicator.name} 5년 차트 ${expanded ? '닫기' : '보기'}`}\n+          aria-expanded={expanded}\n+          aria-controls={panelId}\n+          onClick={() => onActiveChange(expanded ? null : indicator.id)}\n+        >\n+          최근 3개월 <span>5년 보기 <ArrowUpRight size={13} aria-hidden=\"true\" /></span>\n+        </button>\n+      </motion.div>\n+      <AnimatePresence initial={false}>\n+        {expanded && (\n+          <ExpandedIndicatorPanel\n+            key={indicator.id}\n+            indicator={indicator}\n+            panelId={panelId}\n+            layoutId={layoutId}\n+            onClose={closePanel}\n+          />\n+        )}\n+      </AnimatePresence>\n+    </motion.article>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/IndicatorHistoryCard.tsx",
+          "old_path": "frontend/src/components/dashboard/IndicatorHistoryCard.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,105 @@\n+import { scaleLinear } from '@visx/scale'\n+import { curveMonotoneX, line } from 'd3-shape'\n+import { motion, useReducedMotion } from 'motion/react'\n+import type { Indicator, IndicatorSeriesPoint } from '@/types/dashboard'\n+import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n+import styles from './IndicatorHistoryCard.module.css'\n+\n+const width = 440\n+const height = 230\n+const margin = { left: 58, right: 18, top: 22, bottom: 32 }\n+\n+/** 일간·월간 날짜를 같은 UTC 시간축에 배치한다. */\n+function timestamp(date: string) {\n+  return Date.parse(`${date.length === 7 ? `${date}-01` : date}T00:00:00Z`)\n+}\n+\n+/** 확대 카드의 5년 이력을 실제 날짜 간격과 지표 고유 단위로 그린다. */\n+export function IndicatorHistoryChart({ indicator }: { indicator: Indicator }) {\n+  const reducedMotion = useReducedMotion()\n+  const series = selectIndicatorPeriod(indicator.series, indicator.observationDate, 60)\n+  const first = series[0]\n+  const last = series.at(-1)\n+  if (!first || !last || series.length < 2) {\n+    return <p className={styles.empty}>장기 추이를 표시할 데이터가 부족합니다.</p>\n+  }\n+\n+  const values = series.map((point) => point.value)\n+  const min = Math.min(...values)\n+  const max = Math.max(...values)\n+  const padding = (max - min) * 0.15 || Math.max(Math.abs(max) * 0.05, 1)\n+  const xScale = scaleLinear({\n+    domain: [timestamp(first.date), timestamp(last.date)],\n+    range: [margin.left, width - margin.right],\n+  })\n+  const yScale = scaleLinear({\n+    domain: [min - padding, max + padding],\n+    range: [height - margin.bottom, margin.top],\n+    nice: true,\n+  })\n+  const path = line<IndicatorSeriesPoint>()\n+    .x((point) => xScale(timestamp(point.date)))\n+    .y((point) => yScale(point.value))\n+    .curve(curveMonotoneX)(series)\n+  const ticks = [first, series[Math.floor((series.length - 1) / 2)], last]\n+    .filter((point, index, points) => points.findIndex((item) => item.date === point.date) === index)\n+  const formatValue = (value: number) => value.toLocaleString('ko-KR', {\n+    maximumFractionDigits: indicator.decimals,\n+  })\n+\n+  return (\n+    <svg\n+      className={styles.historyChart}\n+      viewBox={`0 0 ${width} ${height}`}\n+      role=\"img\"\n+      aria-label={`${indicator.name} 장기 추이, ${first.date}부터 ${last.date}까지, 최근 값 ${formatValue(last.value)} ${indicator.unit}`}\n+    >\n+      {yScale.ticks(4).map((value) => (\n+        <g key={value}>\n+          <line\n+            className={styles.gridLine}\n+            x1={margin.left}\n+            x2={width - margin.right}\n+            y1={yScale(value)}\n+            y2={yScale(value)}\n+          />\n+          <text x={margin.left - 9} y={yScale(value) + 4} textAnchor=\"end\">{formatValue(value)}</text>\n+        </g>\n+      ))}\n+      <text x={margin.left} y={13}>{indicator.unit}</text>\n+      {ticks.map((point, index) => (\n+        <text\n+          key={point.date}\n+          x={xScale(timestamp(point.date))}\n+          y={height - 8}\n+          textAnchor={index === 0 ? 'start' : index === ticks.length - 1 ? 'end' : 'middle'}\n+        >\n+          {point.date.slice(0, 7).replace('-', '.')}\n+        </text>\n+      ))}\n+      {path && (\n+        <motion.path\n+          className={styles.historyLine}\n+          d={path}\n+          fill=\"none\"\n+          initial={reducedMotion ? false : { pathLength: 0 }}\n+          animate={{ pathLength: 1 }}\n+          transition={{\n+            delay: reducedMotion ? 0 : 0.3,\n+            duration: reducedMotion ? 0 : 0.95,\n+            ease: [0.22, 1, 0.36, 1],\n+          }}\n+        />\n+      )}\n+      <motion.circle\n+        className={styles.latestPoint}\n+        cx={xScale(timestamp(last.date))}\n+        cy={yScale(last.value)}\n+        r={4}\n+        initial={reducedMotion ? false : { opacity: 0 }}\n+        animate={{ opacity: 1 }}\n+        transition={{ delay: reducedMotion ? 0 : 1.2, duration: reducedMotion ? 0 : 0.18 }}\n+      />\n+    </svg>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/IndicatorHistoryChart.tsx",
+          "old_path": "frontend/src/components/dashboard/IndicatorHistoryChart.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,25 +1,27 @@\n import { Database } from 'lucide-react'\n-import { motion } from 'motion/react'\n import type { Indicator } from '@/types/dashboard'\n+import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n import {\n   formatDataDate,\n   formatIndicatorChange,\n   formatIndicatorValue,\n } from '@/utils/dashboardFormat'\n import { TrendSparkline } from './TrendSparkline'\n+import { IndicatorHistoryCard } from './IndicatorHistoryCard'\n import styles from './MacroIndicatorGrid.module.css'\n \n interface MacroIndicatorGridProps {\n   indicators: Indicator[]\n+  activeIndicatorId: string | null\n+  onActiveChange: (id: string | null) => void\n }\n \n /** 시장 국면을 설명하는 월간 거시지표를 역할 중심으로 표시한다. */\n-export function MacroIndicatorGrid({ indicators }: MacroIndicatorGridProps) {\n+export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChange }: MacroIndicatorGridProps) {\n   return (\n     <section className={styles.section} aria-labelledby=\"macro-indicator-title\">\n       <div className={styles.sectionHeader}>\n         <div>\n-          <p>왜 이렇게 판단했나요?</p>\n           <h2 id=\"macro-indicator-title\">경기·물가·심리 핵심 지표</h2>\n         </div>\n         <span>\n@@ -30,17 +32,14 @@ export function MacroIndicatorGrid({ indicators }: MacroIndicatorGridProps) {\n \n       <div className={styles.grid}>\n         {indicators.map((indicator, index) => (\n-          <motion.article\n+          <IndicatorHistoryCard\n             className={styles.card}\n             key={indicator.id}\n-            initial={{ opacity: 0, y: 28, scale: 0.985 }}\n-            whileInView={{ opacity: 1, y: 0, scale: 1 }}\n-            viewport={{ once: false, amount: 0.2 }}\n-            transition={{\n-              delay: index * 0.07,\n-              duration: 0.55,\n-              ease: [0.22, 1, 0.36, 1],\n-            }}\n+            indicator={indicator}\n+            index={index}\n+            variant=\"macro\"\n+            expanded={activeIndicatorId === indicator.id}\n+            onActiveChange={onActiveChange}\n           >\n             <div className={styles.cardHeader}>\n               <div>\n@@ -55,7 +54,7 @@ export function MacroIndicatorGrid({ indicators }: MacroIndicatorGridProps) {\n             </div>\n             <div className={styles.chartWrap}>\n               <TrendSparkline\n-                series={indicator.series}\n+                series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}\n                 tone={indicator.tone}\n                 delay={index * 0.06}\n               />\n@@ -65,7 +64,7 @@ export function MacroIndicatorGrid({ indicators }: MacroIndicatorGridProps) {\n               <span>{indicator.source.provider}</span>\n               <span>{indicator.revisionStatus === 'revised' ? '수정 가능' : '초기 발표'}</span>\n             </div>\n-          </motion.article>\n+          </IndicatorHistoryCard>\n         ))}\n       </div>\n     </section>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MacroIndicatorGrid.tsx",
+          "old_path": "frontend/src/components/dashboard/MacroIndicatorGrid.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -77,7 +77,7 @@\n   white-space: nowrap;\n }\n \n-.card > strong {\n+.card strong {\n   display: block;\n   margin-top: 13px;\n   color: var(--dashboard-ink);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MarketSnapshot.module.css",
+          "old_path": "frontend/src/components/dashboard/MarketSnapshot.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import { Clock } from 'lucide-react'\n-import { motion } from 'motion/react'\n import type { Indicator } from '@/types/dashboard'\n+import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n import {\n   formatDataDate,\n   formatFrequency,\n@@ -8,19 +8,21 @@ import {\n   formatIndicatorValue,\n } from '@/utils/dashboardFormat'\n import { TrendSparkline } from './TrendSparkline'\n+import { IndicatorHistoryCard } from './IndicatorHistoryCard'\n import styles from './MarketSnapshot.module.css'\n \n interface MarketSnapshotProps {\n   indicators: Indicator[]\n+  activeIndicatorId: string | null\n+  onActiveChange: (id: string | null) => void\n }\n \n /** 거래일 기준 시장지표와 각 데이터의 지연 정보를 카드로 요약한다. */\n-export function MarketSnapshot({ indicators }: MarketSnapshotProps) {\n+export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange }: MarketSnapshotProps) {\n   return (\n     <section className={styles.section} aria-labelledby=\"market-snapshot-title\">\n       <div className={styles.sectionHeader}>\n         <div>\n-          <p>오늘의 시장 지표</p>\n           <h2 id=\"market-snapshot-title\">주식시장 핵심 지표</h2>\n         </div>\n         <span>\n@@ -31,17 +33,14 @@ export function MarketSnapshot({ indicators }: MarketSnapshotProps) {\n \n       <div className={styles.grid}>\n         {indicators.map((indicator, index) => (\n-          <motion.article\n+          <IndicatorHistoryCard\n             className={styles.card}\n             key={indicator.id}\n-            initial={{ opacity: 0, y: 28, scale: 0.985 }}\n-            whileInView={{ opacity: 1, y: 0, scale: 1 }}\n-            viewport={{ once: false, amount: 0.25 }}\n-            transition={{\n-              delay: index * 0.07,\n-              duration: 0.55,\n-              ease: [0.22, 1, 0.36, 1],\n-            }}\n+            indicator={indicator}\n+            index={index}\n+            variant=\"market\"\n+            expanded={activeIndicatorId === indicator.id}\n+            onActiveChange={onActiveChange}\n           >\n             <div className={styles.cardTop}>\n               <span>{indicator.name}</span>\n@@ -52,7 +51,7 @@ export function MarketSnapshot({ indicators }: MarketSnapshotProps) {\n               {formatIndicatorChange(indicator)}\n             </p>\n             <TrendSparkline\n-              series={indicator.series}\n+              series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}\n               tone={indicator.tone}\n               delay={index * 0.06}\n             />\n@@ -61,7 +60,7 @@ export function MarketSnapshot({ indicators }: MarketSnapshotProps) {\n               <span>{indicator.source.provider}</span>\n               <span>{indicator.source.delayDescription ?? formatFrequency(indicator.source.frequency)}</span>\n             </div>\n-          </motion.article>\n+          </IndicatorHistoryCard>\n         ))}\n       </div>\n     </section>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MarketSnapshot.tsx",
+          "old_path": "frontend/src/components/dashboard/MarketSnapshot.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { motion } from 'motion/react'\n+import { motion, useReducedMotion } from 'motion/react'\n import type { IndicatorSeriesPoint, IndicatorTone } from '@/types/dashboard'\n import styles from './TrendSparkline.module.css'\n \n@@ -33,6 +33,7 @@ function buildSparklinePath(series: IndicatorSeriesPoint[]) {\n \n /** 색상에 의존하지 않는 텍스트 정보 옆에 보조 추세선을 표시한다. */\n export function TrendSparkline({ series, tone, delay = 0 }: TrendSparklineProps) {\n+  const reducedMotion = useReducedMotion()\n   const path = buildSparklinePath(series)\n \n   return (\n@@ -48,12 +49,12 @@ export function TrendSparkline({ series, tone, delay = 0 }: TrendSparklineProps)\n         className={styles.line}\n         d={path}\n         fill=\"none\"\n-        initial={{ pathLength: 0, opacity: 0 }}\n+        initial={reducedMotion ? false : { pathLength: 0, opacity: 0 }}\n         whileInView={{ pathLength: 1, opacity: 1 }}\n         viewport={{ once: false, amount: 0.65 }}\n         transition={{\n-          delay: 0.16 + delay,\n-          duration: 1.05,\n+          delay: reducedMotion ? 0 : 0.16 + delay,\n+          duration: reducedMotion ? 0 : 1.05,\n           ease: [0.22, 1, 0.36, 1],\n         }}\n       />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/TrendSparkline.tsx",
+          "old_path": "frontend/src/components/dashboard/TrendSparkline.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,9 @@\n-export type StrategyId = 'trend' | 'dualMomentum' | 'rsiMeanReversion'\n+export type StrategyId =\n+  | 'trend'\n+  | 'dualMomentum'\n+  | 'rsiMeanReversion'\n+  | 'bollingerBands'\n+  | 'lowVolatility'\n \n export interface StrategyResult {\n   id: StrategyId\n@@ -20,6 +25,8 @@ export interface BacktestPoint extends Record<string, unknown> {\n   trend: number\n   dualMomentum: number\n   rsiMeanReversion: number\n+  bollingerBands: number\n+  lowVolatility: number\n   benchmark: number\n }\n \n@@ -67,39 +74,69 @@ export const strategyResults: StrategyResult[] = [\n     volatility: '18.1%',\n     trades: 234,\n   },\n+  {\n+    id: 'bollingerBands',\n+    name: '볼린저 밴드',\n+    description: '밴드 하단 이탈 후 복귀하는 가격 움직임을 살펴봅니다.',\n+    parameter: '기간 20 · 표준편차 2 · 중심선 청산',\n+    color: '#4779b5',\n+    mutedColor: 'rgb(71 121 181 / 18%)',\n+    totalReturn: '+73.2%',\n+    cagr: '11.6%',\n+    mdd: '-14.3%',\n+    sharpe: '0.91',\n+    volatility: '16.2%',\n+    trades: 182,\n+  },\n+  {\n+    id: 'lowVolatility',\n+    name: '저변동성',\n+    description: '최근 가격 변동이 작은 종목을 골라 분산 투자합니다.',\n+    parameter: '변동성 60일 · 하위 20% · 월 리밸런싱',\n+    color: '#a57561',\n+    mutedColor: 'rgb(165 117 97 / 18%)',\n+    totalReturn: '+48.6%',\n+    cagr: '8.2%',\n+    mdd: '-7.4%',\n+    sharpe: '1.12',\n+    volatility: '8.6%',\n+    trades: 64,\n+  },\n ]\n \n // 한 틱씩 그려지는 차트 연출을 확인하기 위한 시계열 원본 데이터다.\n const rawPoints = [\n-  ['2019-01-01', 100, 100, 100, 100],\n-  ['2019-04-01', 106, 102, 104, 105],\n-  ['2019-07-01', 112, 105, 110, 108],\n-  ['2019-10-01', 108, 103, 116, 111],\n-  ['2020-01-01', 119, 111, 111, 116],\n-  ['2020-04-01', 104, 98, 108, 94],\n-  ['2020-07-01', 126, 116, 122, 120],\n-  ['2020-10-01', 138, 124, 130, 132],\n-  ['2021-01-01', 149, 132, 137, 143],\n-  ['2021-04-01', 143, 127, 134, 147],\n-  ['2021-07-01', 164, 138, 145, 153],\n-  ['2021-10-01', 178, 145, 151, 160],\n-  ['2022-01-01', 169, 137, 145, 143],\n-  ['2022-04-01', 158, 129, 139, 127],\n-  ['2022-07-01', 176, 142, 151, 136],\n-  ['2022-10-01', 183, 148, 157, 142],\n-  ['2023-01-01', 196, 154, 162, 151],\n-  ['2023-04-01', 188, 149, 158, 158],\n-  ['2023-07-01', 210, 167, 169, 171],\n-  ['2023-10-01', 224.8, 184.6, 162.4, 180.2],\n+  ['2019-01-01', 100, 100, 100, 100, 100, 100],\n+  ['2019-04-01', 106, 102, 104, 105, 103, 102],\n+  ['2019-07-01', 112, 105, 110, 108, 109, 105],\n+  ['2019-10-01', 108, 103, 116, 111, 106, 107],\n+  ['2020-01-01', 119, 111, 111, 116, 114, 111],\n+  ['2020-04-01', 104, 98, 108, 94, 97.7, 103],\n+  ['2020-07-01', 126, 116, 122, 120, 118, 112],\n+  ['2020-10-01', 138, 124, 130, 132, 128, 117],\n+  ['2021-01-01', 149, 132, 137, 143, 135, 121],\n+  ['2021-04-01', 143, 127, 134, 147, 130, 123],\n+  ['2021-07-01', 164, 138, 145, 153, 142, 128],\n+  ['2021-10-01', 178, 145, 151, 160, 149, 132],\n+  ['2022-01-01', 169, 137, 145, 143, 138, 127],\n+  ['2022-04-01', 158, 129, 139, 127, 129, 122.2],\n+  ['2022-07-01', 176, 142, 151, 136, 144, 129],\n+  ['2022-10-01', 183, 148, 157, 142, 152, 133],\n+  ['2023-01-01', 196, 154, 162, 151, 158, 138],\n+  ['2023-04-01', 188, 149, 158, 158, 151, 140],\n+  ['2023-07-01', 210, 167, 169, 171, 165, 144],\n+  ['2023-10-01', 224.8, 184.6, 162.4, 180.2, 173.2, 148.6],\n ] as const\n \n // 문자열 날짜와 전략별 값을 Bklit 차트가 사용하는 데이터 형태로 변환한다.\n export const backtestChartData: BacktestPoint[] = rawPoints.map(\n-  ([date, trend, dualMomentum, rsiMeanReversion, benchmark]) => ({\n+  ([date, trend, dualMomentum, rsiMeanReversion, benchmark, bollingerBands, lowVolatility]) => ({\n     date: new Date(date),\n     trend,\n     dualMomentum,\n     rsiMeanReversion,\n     benchmark,\n+    bollingerBands,\n+    lowVolatility,\n   }),\n )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/backtestMock.ts",
+          "old_path": "frontend/src/data/backtestMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import type { DashboardData, Indicator } from '@/types/dashboard'\n+import { withIndicatorHistoryMock } from './indicatorHistoryMock'\n \n const retrievedAt = '2026-08-31T09:00:00+09:00'\n \n@@ -542,8 +543,8 @@ export const dashboardMock: DashboardData = {\n     asOf: '2026-08-31',\n     isMock: true,\n   },\n-  marketIndicators,\n-  macroIndicators,\n+  marketIndicators: marketIndicators.map(withIndicatorHistoryMock),\n+  macroIndicators: macroIndicators.map(withIndicatorHistoryMock),\n   stabilityIndicators,\n   similarPeriod: {\n     periodStart: '2018-09',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/dashboardMock.ts",
+          "old_path": "frontend/src/data/dashboardMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,39 @@\n+import type { Indicator, IndicatorSeriesPoint } from '@/types/dashboard'\n+\n+// 실제 과거 시세가 아닌 UI 검증용 연간 기준값이다. 마지막 6개월은 기존 mock을 유지한다.\n+const historyAnchors: Record<string, number[]> = {\n+  kospi: [3120, 2380, 2510, 2650, 2580],\n+  kosdaq: [1020, 760, 880, 820, 790],\n+  'usd-krw': [1160, 1390, 1280, 1370, 1410],\n+  'v-kospi-200': [18, 30, 21, 16, 24],\n+  'ktb-3y': [1.4, 4.2, 3.6, 3.2, 2.8],\n+  'coincident-cycle': [101.2, 102.1, 100.8, 99.2, 100.3],\n+  'leading-cycle': [102.7, 100.8, 98.2, 99.4, 100.1],\n+  'esi-cycle': [108, 94, 87, 101, 92],\n+  'core-cpi': [1.2, 3.6, 4.1, 3.1, 2.7],\n+  'exports-yoy': [18, 7, -12, 9, 2],\n+  'm2-yoy': [11, 8, 3, 5, 4],\n+}\n+\n+/** 고정된 기준값 사이를 보간해 60개월 예시 이력을 만들며 실제 관측값을 생성하지 않는다. */\n+export function withIndicatorHistoryMock(indicator: Indicator): Indicator {\n+  const anchors = historyAnchors[indicator.id]\n+  const firstRecent = indicator.series[0]\n+  if (!anchors || !firstRecent) return indicator\n+\n+  const [year, month] = indicator.observationDate.split('-').map(Number)\n+  const historicalMonths = 60 - indicator.series.length\n+  const values = [...anchors, firstRecent.value]\n+  const amplitude = (Math.max(...values) - Math.min(...values)) * 0.055\n+  const history: IndicatorSeriesPoint[] = Array.from({ length: historicalMonths }, (_, index) => {\n+    const position = index / historicalMonths * (values.length - 1)\n+    const segment = Math.floor(position)\n+    const fraction = position - segment\n+    const value = values[segment] + (values[segment + 1] - values[segment]) * fraction\n+      + Math.sin(fraction * Math.PI) * Math.sin(index * 1.7) * amplitude\n+    const date = new Date(Date.UTC(year, month - 60 + index, 1)).toISOString().slice(0, 7)\n+    return { date, value: Number(value.toFixed(indicator.decimals)) }\n+  })\n+\n+  return { ...indicator, series: [...history, ...indicator.series] }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/indicatorHistoryMock.ts",
+          "old_path": "frontend/src/data/indicatorHistoryMock.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+import { useEffect } from 'react'\n+\n+/** 열린 지표 카드만 전역 Escape를 받고, 닫히거나 화면을 떠나면 이벤트를 해제한다. */\n+export function useIndicatorEscape(expanded: boolean, onClose: () => void) {\n+  useEffect(() => {\n+    if (!expanded) return\n+\n+    const handleEscape = (event: KeyboardEvent) => {\n+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return\n+      event.preventDefault()\n+      onClose()\n+    }\n+\n+    document.addEventListener('keydown', handleEscape)\n+    return () => document.removeEventListener('keydown', handleEscape)\n+  }, [expanded, onClose])\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useIndicatorEscape.ts",
+          "old_path": "frontend/src/hooks/useIndicatorEscape.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -36,6 +36,7 @@ export function BacktestPage() {\n   const [status, setStatus] = useState<BacktestViewStatus>('ready')\n   const [progress, setProgress] = useState(100)\n   const [runIndex, setRunIndex] = useState(1)\n+  const [initialCapital, setInitialCapital] = useState(10_000_000)\n \n   // 프로토타입 실행 시간을 재현하고 완료 시 차트를 ready 상태로 전환한다.\n   useEffect(() => {\n@@ -148,6 +149,7 @@ export function BacktestPage() {\n                   focusedStrategy={focusedStrategy}\n                   status={status}\n                   revealSignature={`run-${runIndex}`}\n+                  initialCapital={initialCapital}\n                 />\n                 <AnimatePresence>\n                   {status === 'loading' && (\n@@ -248,7 +250,11 @@ export function BacktestPage() {\n               <label htmlFor=\"capital\">초기 투자금</label>\n               <div className={styles.inputIconWrap}>\n                 <CircleDollarSign size={16} aria-hidden=\"true\" />\n-                <select id=\"capital\" defaultValue=\"10000000\">\n+                <select\n+                  id=\"capital\"\n+                  value={initialCapital}\n+                  onChange={(event) => setInitialCapital(Number(event.target.value))}\n+                >\n                   <option value=\"1000000\">1,000,000원</option>\n                   <option value=\"10000000\">10,000,000원</option>\n                   <option value=\"100000000\">100,000,000원</option>\n@@ -261,9 +267,9 @@ export function BacktestPage() {\n             <div className={styles.strategyHeading}>\n               <div>\n                 <span>비교 전략</span>\n-                <small>최대 3개</small>\n+                <small>최대 {strategyResults.length}개</small>\n               </div>\n-              <strong>{activeStrategies.length}/3</strong>\n+              <strong>{activeStrategies.length}/{strategyResults.length}</strong>\n             </div>\n             <StrategySelector selected={activeStrategies} onToggle={toggleStrategy} />\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.tsx",
+          "old_path": "frontend/src/pages/BacktestPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,4 @@\n+import { useState } from 'react'\n import { DataFreshnessPanel } from '@/components/dashboard/DataFreshnessPanel'\n import { MacroIndicatorGrid } from '@/components/dashboard/MacroIndicatorGrid'\n import { MarketRegimeHero } from '@/components/dashboard/MarketRegimeHero'\n@@ -10,6 +11,7 @@ import styles from './DashboardPage.module.css'\n \n /** 한국 시장 국면, 유사 과거 구간과 전략 추천 컴포넌트를 하나의 화면으로 조합한다. */\n export function DashboardPage() {\n+  const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)\n   const allComparisonIndicators = [\n     ...dashboardMock.marketIndicators,\n     ...dashboardMock.macroIndicators,\n@@ -28,8 +30,16 @@ export function DashboardPage() {\n \n         <div className={styles.contentBoundary}>\n           <div className={styles.contentFlow}>\n-            <MarketSnapshot indicators={dashboardMock.marketIndicators} />\n-            <MacroIndicatorGrid indicators={dashboardMock.macroIndicators} />\n+            <MarketSnapshot\n+              indicators={dashboardMock.marketIndicators}\n+              activeIndicatorId={activeIndicatorId}\n+              onActiveChange={setActiveIndicatorId}\n+            />\n+            <MacroIndicatorGrid\n+              indicators={dashboardMock.macroIndicators}\n+              activeIndicatorId={activeIndicatorId}\n+              onActiveChange={setActiveIndicatorId}\n+            />\n             <SimilarMarketPanel\n               period={dashboardMock.similarPeriod}\n               indicators={allComparisonIndicators}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/DashboardPage.tsx",
+          "old_path": "frontend/src/pages/DashboardPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,79 @@\n+import assert from 'node:assert/strict'\n+import { test } from 'node:test'\n+import { selectIndicatorPeriod } from './indicatorHistory.ts'\n+\n+test('기준월 포함 3개월을 정렬하고 원본은 변경하지 않는다', () => {\n+  const series = [\n+    { date: '2026-02', value: 102 },\n+    { date: '2025-11', value: 99 },\n+    { date: '2026-01', value: 101 },\n+    { date: '2025-12', value: 100 },\n+  ]\n+  const original = structuredClone(series)\n+  assert.deepEqual(selectIndicatorPeriod(series, '2026-02', 3).map((point) => point.date),\n+    ['2025-12', '2026-01', '2026-02'])\n+  assert.deepEqual(series, original)\n+})\n+\n+test('잘못된 기준일은 빈 배열을 반환한다', () => {\n+  const series = [{ date: '2026-12', value: 100 }]\n+  for (const date of ['', 'broken', '2026', '2026-1', '2026-00', '2026-13',\n+    '0000-01', '2026-01-00', '2026-02-30', '2026-04-31', '2026-01-01T00:00:00Z', ' 2026-01']) {\n+    assert.deepEqual(selectIndicatorPeriod(series, date, 3), [], date)\n+  }\n+})\n+\n+test('윤년의 2월 29일은 허용하고 평년·세기 예외는 거부한다', () => {\n+  for (const [date, valid] of [\n+    ['2024-02-29', true], ['2000-02-29', true],\n+    ['2026-02-29', false], ['1900-02-29', false], ['2100-02-29', false],\n+  ] as const) {\n+    const series = [{ date, value: 100 }]\n+    assert.equal(selectIndicatorPeriod(series, date, 3).length, valid ? 1 : 0, date)\n+  }\n+})\n+\n+test('개별 날짜가 잘못되거나 값이 유한하지 않은 데이터는 제외한다', () => {\n+  const series = [\n+    { date: '2026-02-28', value: 100 },\n+    { date: '2026-02-30', value: 101 },\n+    { date: '2026-13', value: 102 },\n+    { date: 'bad', value: 103 },\n+    { date: '2026-02-26', value: NaN },\n+    { date: '2026-02-27', value: Infinity },\n+  ]\n+  assert.deepEqual(selectIndicatorPeriod(series, '2026-03-01', 3), [series[0]])\n+})\n+\n+test('일간 기준일 뒤의 값은 제외한다', () => {\n+  const series = [\n+    { date: '2026-02-01', value: 100 },\n+    { date: '2026-02-15', value: 101 },\n+    { date: '2026-02-16', value: 102 },\n+    { date: '2026-03-01', value: 103 },\n+  ]\n+  assert.deepEqual(selectIndicatorPeriod(series, '2026-02-15', 3), series.slice(0, 2))\n+})\n+\n+test('월간 기준일은 해당 월의 마지막 날까지 포함한다', () => {\n+  const series = [{ date: '2026-02-28', value: 100 }, { date: '2026-03-01', value: 101 }]\n+  assert.deepEqual(selectIndicatorPeriod(series, '2026-02', 3), [series[0]])\n+})\n+\n+test('빈 데이터와 잘못된 기간은 빈 배열을 반환한다', () => {\n+  assert.deepEqual(selectIndicatorPeriod([], '2026-02', 3), [])\n+  for (const months of [0, -1, 1.5, NaN, Infinity]) {\n+    assert.deepEqual(selectIndicatorPeriod([{ date: '2026-02', value: 100 }], '2026-02', months), [])\n+  }\n+})\n+\n+test('5년 조회는 기준월부터 60개월만 포함한다', () => {\n+  const series = Array.from({ length: 61 }, (_, index) => ({\n+    date: new Date(Date.UTC(2021, 7 + index, 1)).toISOString().slice(0, 7),\n+    value: index,\n+  }))\n+  const result = selectIndicatorPeriod(series, '2026-08', 60)\n+  assert.equal(result.length, 60)\n+  assert.equal(result[0].date, '2021-09')\n+  assert.equal(result.at(-1)?.date, '2026-08')\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/indicatorHistory.test.ts",
+          "old_path": "frontend/src/utils/indicatorHistory.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+import type { IndicatorSeriesPoint } from '@/types/dashboard'\n+\n+/** ISO 월·일 형식과 윤년을 검사하고, 존재하는 날짜만 월 인덱스로 변환한다. */\n+function parseIndicatorDate(value: string) {\n+  if (typeof value !== 'string') return null\n+  const match = /^(\\d{4})-(\\d{2})(?:-(\\d{2}))?$/.exec(value)\n+  if (!match) return null\n+\n+  const year = Number(match[1])\n+  const month = Number(match[2])\n+  const day = match[3] === undefined ? null : Number(match[3])\n+  if (year < 1 || month < 1 || month > 12) return null\n+\n+  const leapYear = year % 400 === 0 || (year % 4 === 0 && year % 100 !== 0)\n+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]\n+  if (day !== null && (day < 1 || day > daysInMonth)) return null\n+\n+  return { monthIndex: year * 12 + month - 1, day, daysInMonth }\n+}\n+\n+/** 월간·일간 관측값을 기준월 포함 최근 N개월로 자르고 시간순으로 정렬한다. */\n+export function selectIndicatorPeriod(\n+  series: IndicatorSeriesPoint[],\n+  observationDate: string,\n+  months: number,\n+) {\n+  const observation = parseIndicatorDate(observationDate)\n+  if (!observation || !Number.isInteger(months) || months < 1) return []\n+\n+  return series\n+    .filter((point) => {\n+      const date = parseIndicatorDate(point.date)\n+      if (!date || !Number.isFinite(point.value)) return false\n+\n+      return date.monthIndex > observation.monthIndex - months\n+        && date.monthIndex <= observation.monthIndex\n+        && (date.monthIndex < observation.monthIndex\n+          || (date.day ?? 1) <= (observation.day ?? observation.daysInMonth))\n+    })\n+    .sort((left, right) => left.date.localeCompare(right.date))\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/indicatorHistory.ts",
+          "old_path": "frontend/src/utils/indicatorHistory.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2162885,
+      "head_commit_sha": "f09acce2eb92312de73a232ca34b069a3b32e2da",
+      "base_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "start_commit_sha": "545ce76997709ebabe30439867528f4cb3669ec1",
+      "created_at": "2026-09-04T11:27:29.298+09:00",
+      "merge_request_id": 933559,
+      "state": "without_files",
+      "real_size": "16",
+      "patch_id_sha": "f2372a4ec0ec6d447ca5f114ee0029c339668e6b",
+      "commits": [
+        {
+          "id": "f09acce2eb92312de73a232ca34b069a3b32e2da",
+          "short_id": "f09acce2",
+          "created_at": "2026-09-04T11:20:15.000+09:00",
+          "parent_ids": [
+            "545ce76997709ebabe30439867528f4cb3669ec1"
+          ],
+          "title": "feat(fe): 백테스트 및 대시보드 데이터 가시성 수정",
+          "message": "feat(fe): 백테스트 및 대시보드 데이터 가시성 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-04T11:20:15.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-04T11:20:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f09acce2eb92312de73a232ca34b069a3b32e2da"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2763154": []
+  }
+}

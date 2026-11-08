@@ -1,0 +1,647 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 939562,
+    "iid": 34,
+    "project_id": 1444456,
+    "title": "docs: 007서류작업",
+    "description": "# 작업 내용 요약\n\n007 스펙 서류 생성\n\n# 관련 티켓 번호 & 링크\n\n- ticket # 122\n- link\n\n# 주요 변경 사항\n\n- 서류 생성\n\n# 테스트\n\n- [x] 없음\n\n# 리뷰 포인트\n\n- 할거면 하세ㅣ요",
+    "state": "merged",
+    "created_at": "2026-09-10T15:28:54.962+09:00",
+    "updated_at": "2026-09-14T14:26:42.158+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-10T15:30:08.206+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/122-document_create_007",
+    "user_notes_count": 5,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "59cc5a5eb1783427c4e757f7d9b2a5314579076e",
+    "merge_commit_sha": "fa966e5054ccc106c91e3de9427066ced163efa6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T15:28:56.008+09:00",
+    "reference": "!34",
+    "references": {
+      "short": "!34",
+      "relative": "!34",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!34"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/34",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 939562,
+    "iid": 34,
+    "project_id": 1444456,
+    "title": "docs: 007서류작업",
+    "description": "# 작업 내용 요약\n\n007 스펙 서류 생성\n\n# 관련 티켓 번호 & 링크\n\n- ticket # 122\n- link\n\n# 주요 변경 사항\n\n- 서류 생성\n\n# 테스트\n\n- [x] 없음\n\n# 리뷰 포인트\n\n- 할거면 하세ㅣ요",
+    "state": "merged",
+    "created_at": "2026-09-10T15:28:54.962+09:00",
+    "updated_at": "2026-09-14T14:26:42.158+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-10T15:30:08.206+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/122-document_create_007",
+    "user_notes_count": 5,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "59cc5a5eb1783427c4e757f7d9b2a5314579076e",
+    "merge_commit_sha": "fa966e5054ccc106c91e3de9427066ced163efa6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T15:28:56.008+09:00",
+    "reference": "!34",
+    "references": {
+      "short": "!34",
+      "relative": "!34",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!34"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/34",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "9",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "head_sha": "59cc5a5eb1783427c4e757f7d9b2a5314579076e",
+      "start_sha": "39f453a1dbd2edf9a6217bd227556391e814c36e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ac2e290a68e906f6677d4882956395f807a9fbf2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787022,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. \n이번 변경은 007 파라미터 자동 탐색 기능과 관련된 문서(API 계약, 내부 아키텍처, 데이터 모델, 퀵스타트, 리서치 등)를 추가하는 작업으로, 백엔드 소스 코드 변경 없이 설계 스펙과 계약 문서만 포함하고 있습니다. 문서 내 정의된 API 스펙, 내부 포트, 도메인 이벤트 설계가 상세하게 작성되어 있습니다.\n\n다만, 아래 파일들이 빈 파일로 제출되었으므로 향후 구현 단계에서 채워 넣어야 합니다.\n- `specs/007-auto-parameter-search/plan.md` [Low]\n- `specs/007-auto-parameter-search/spec.md` [Low]\n- `specs/007-auto-parameter-search/tasks.md` [Low]\n\n### 테스트 제안\n문서 변경 사항이므로 별도의 코드 테스트는 필요하지 않습니다. 추후 구현 단계에서 `quickstart.md`에 정의된 다음 시나리오들에 대한 자동화 테스트(Unit/Integration Test) 작성을 제안합니다.\n\n1. **시나리오 1 (실행 전 확인 및 접수)**: `POST /param-searches/preview` 및 `POST /param-searches` 요청 시 유효성 검증 및 `QUEUED` 상태 반환 확인\n2. **시나리오 2 (사전 제외)**: 유효성 제약 위반 조합이 `EXCLUDED` 상태로 처리되고 백테스트 잡이 생성되지 않는지 확인\n3. **시나리오 3 (상한 초과 거부)**: 후보 수 상한 초과 시 `422 CANDIDATE_LIMIT_EXCEEDED` 반환 및 `REJECTED` 저장 확인\n4. **시나리오 4 (취소 및 부분 결과)**: 실행 중 취소 시 `PARTIAL` 상태 전환 및 미실행 후보의 `SKIPPED` 처리 확인\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:59cc5a5eb1783427c4e757f7d9b2a5314579076e -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-10T15:29:04.175+09:00",
+          "updated_at": "2026-09-10T15:29:04.175+09:00",
+          "system": false,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "484c515683613c258e19ebcce5d529e70b24ddf4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787041,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-10T15:30:06.344+09:00",
+          "updated_at": "2026-09-10T15:30:06.353+09:00",
+          "system": true,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "280a499cd30d28203040e37e4b293993f656d5ef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787044,
+          "type": null,
+          "body": "mentioned in commit fa966e5054ccc106c91e3de9427066ced163efa6",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-10T15:30:08.323+09:00",
+          "updated_at": "2026-09-10T15:30:08.329+09:00",
+          "system": true,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "98849cf9a4114f5dfc3fc3a97c7912ee57098e55",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788003,
+          "type": null,
+          "body": "MR 템플릿에 내용 채워주세요",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T16:51:13.430+09:00",
+          "updated_at": "2026-09-10T16:51:13.430+09:00",
+          "system": false,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9dfb0c5e6fce6164741d83cc895af8ac2c0f2649",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788005,
+          "type": null,
+          "body": "MR제목 맞춰주세요",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T16:51:20.483+09:00",
+          "updated_at": "2026-09-10T16:51:20.483+09:00",
+          "system": false,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4cb0bc90812657104a4d6f46c8e5599a2b9289bd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788049,
+          "type": null,
+          "body": "머지했는데 수정되나요우..",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-10T16:57:12.407+09:00",
+          "updated_at": "2026-09-10T16:57:12.407+09:00",
+          "system": false,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "52ecd440c9e6932641e4a74a0be96299651b8c36",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788218,
+          "type": null,
+          "body": "될듯??? edit눌러보삼",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T17:10:50.261+09:00",
+          "updated_at": "2026-09-10T17:10:50.261+09:00",
+          "system": false,
+          "noteable_id": 939562,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 34,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2182338,
+      "head_commit_sha": "59cc5a5eb1783427c4e757f7d9b2a5314579076e",
+      "base_commit_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "start_commit_sha": "39f453a1dbd2edf9a6217bd227556391e814c36e",
+      "created_at": "2026-09-10T15:28:55.276+09:00",
+      "merge_request_id": 939562,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "bc291d4bc5dd4839950786e29bf4ca7476aa3359"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2182338,
+      "head_commit_sha": "59cc5a5eb1783427c4e757f7d9b2a5314579076e",
+      "base_commit_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "start_commit_sha": "39f453a1dbd2edf9a6217bd227556391e814c36e",
+      "created_at": "2026-09-10T15:28:55.276+09:00",
+      "merge_request_id": 939562,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "bc291d4bc5dd4839950786e29bf4ca7476aa3359",
+      "commits": [
+        {
+          "id": "59cc5a5eb1783427c4e757f7d9b2a5314579076e",
+          "short_id": "59cc5a5e",
+          "created_at": "2026-09-10T15:27:28.000+09:00",
+          "parent_ids": [
+            "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20"
+          ],
+          "title": "docs: 007서류작업",
+          "message": "docs: 007서류작업\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-10T15:27:28.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-10T15:27:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/59cc5a5eb1783427c4e757f7d9b2a5314579076e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,263 @@\n+# 설정 조합 자동 비교 HTTP 계약 (Backend ↔ Frontend)\n+\n+**Date**: 2026-09-10 | **Spec**: [../spec.md](../spec.md) | **Plan**: [../plan.md](../plan.md)\n+\n+`docs/specs/backtest-api/README.md`의 규약을 그대로 상속한다. 다시 정하지 않는 것:\n+\n+- 응답 껍데기 `{ \"success\": bool, \"data\": ..., \"error\": ... }`\n+- 오류 포맷 `error: { code, message }`와 공통 코드(`INVALID_INPUT` `RESOURCE_NOT_FOUND` `BROKER_UNAVAILABLE` `INTERNAL_ERROR`)\n+- **금액·비율은 요청·응답 모두 문자열**(부동소수 오차 방지)\n+- 식별자는 문자열이며 DB PK(숫자)를 노출하지 않는다. 길이를 가정하지 않는다\n+\n+`searchId`는 `PS-{yyyyMMdd}-{6자리 이상 순번}` 형식의 문자열이다(`BT-` 규약과 같은 방식).\n+\n+---\n+\n+## 1. 실행 전 확인 — `POST /param-searches/preview`\n+\n+저장하지 않고 계산만 한다. 확인 화면의 네 항목(대상 전략·탐색 범위 요약·예상 작업량·적용 한도)을\n+채우는 용도다(FR-003). **사용자에게 후보 숫자를 입력받지 않는다** — 요청은 이미 고른 전략과 섹터,\n+그리고 선택 사항인 범위 좁히기만 담는다(SC-001).\n+\n+### 요청 필드\n+\n+| 경로 | 타입 | 필수 | 규칙 |\n+|---|---|---|---|\n+| `universe.instrumentIds` | `string[]` | 필수 | 1~50개. `{6자리}.XKRX`. 중복 금지 |\n+| `strategy.strategyIds` | `string[]` | 필수 | 1개 이상. 각 64자 이하 |\n+| `run.start` / `run.end` | `date` | 선택 | 생략 시 공통 평가 구간을 서버가 제시한다 |\n+| `portfolio.initialCash` | `string` (decimal) | 선택 | 생략 시 서버 기본값 |\n+| `space` | `object` | 선택 | 축 이름 → 후보 값 배열. **생략하면 등록표 전체 범위**를 쓴다 |\n+\n+`space`에 등록표에 없는 값을 넣으면 `400 INVALID_INPUT`이다(FR-002, US1 시나리오 3). 범위를 좁히거나\n+넓히는 것은 등록표 안에서만 가능하다.\n+\n+### 200 응답\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"registryVersion\": \"PROVISIONAL-2026-09-10\",\n+    \"strategies\": [{ \"strategyId\": \"sector-momentum\", \"name\": \"섹터 모멘텀\" }],\n+    \"spaceSummary\": [\n+      { \"axis\": \"lookbackDays\", \"label\": \"관측 기간\", \"values\": [20, 60, 120], \"unit\": \"거래일\" },\n+      { \"axis\": \"topN\", \"label\": \"선정 섹터 수\", \"values\": [2, 3, 4] }\n+    ],\n+    \"workload\": {\n+      \"totalCombinations\": 9,\n+      \"validCombinations\": 7,\n+      \"excludedCombinations\": 2,\n+      \"exclusionReasons\": [\n+        { \"code\": \"TOP_N_EXCEEDS_UNIVERSE\", \"message\": \"선정 섹터 수가 고른 섹터 수보다 큽니다\", \"count\": 2 }\n+      ]\n+    },\n+    \"limits\": {\n+      \"maxCandidates\": 1000,\n+      \"provisional\": [\"maxCandidates\", \"timeLimitSeconds\", \"dispatchWindow\"],\n+      \"exceeded\": false\n+    },\n+    \"commonPeriod\": { \"start\": \"2015-01-02\", \"end\": \"2026-08-31\", \"shortenedBy\": null },\n+    \"validationLabel\": \"UNVALIDATED\",\n+    \"validationNote\": \"평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다\"\n+  },\n+  \"error\": null\n+}\n+```\n+\n+- `limits.provisional`은 임시값인 항목 이름이다. 화면은 이 항목에 임시값 표시를 붙인다(FR-005a).\n+- `limits.exceeded`가 `true`면 실행은 거부된다(§2). 화면은 범위를 좁히라고 안내한다(FR-005b).\n+- `commonPeriod.shortenedBy`는 긴 관측 기간을 요구하는 후보 때문에 공통 구간이 줄었을 때 그 축\n+  이름을 담는다(Edge Case). 모든 후보는 같은 공통 구간으로 평가한다.\n+- `validationLabel`은 실행 전에도 알려준다 — 결과를 본 뒤에야 '미검증'을 알게 되면 오해가 생긴다.\n+\n+## 2. 탐색 실행 — `POST /param-searches`\n+\n+요청 필드는 §1과 같다. 응답은 `202 Accepted`. 백엔드는 계산하지 않고 묶음과 후보를 저장한 뒤\n+발행 창만큼만 작업 큐에 넣는다.\n+\n+```json\n+{ \"success\": true, \"data\": { \"searchId\": \"PS-20260910-000001\", \"status\": \"QUEUED\" }, \"error\": null }\n+```\n+\n+### 거부 (실행하지 않음)\n+\n+| HTTP | `error.code` | 언제 |\n+|---|---|---|\n+| 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수 > 후보 수 상한. `message`에 유효 수·상한·좁히는 방법 (FR-005b) |\n+| 422 | `NO_VALID_COMBINATION` | 등록된 조합이 모두 유효성 제약 위반. `message`에 어느 제약인지 한 문장 (Edge Case) |\n+\n+둘 다 표본을 자동으로 뽑거나 간격을 넓혀 실행하지 않는다. **묶음은 `REJECTED` 상태로 저장되어\n+사유가 남는다**(FR-020) — 재현 기록이므로 조용히 버리지 않는다.\n+\n+## 3. 묶음 상태·결과 — `GET /param-searches/{searchId}`\n+\n+폴링 대상이다. 실패해도 200이며 `status`로 판단한다(`GET /backtests/{id}`와 같은 규약).\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"searchId\": \"PS-20260910-000001\",\n+    \"status\": \"PARTIAL\",\n+    \"stopReason\": \"CANCELLED\",\n+    \"counts\": { \"expected\": 9, \"valid\": 7, \"completed\": 5, \"failed\": 1, \"excluded\": 2, \"pending\": 1 },\n+    \"partial\": true,\n+    \"partialNote\": \"취소되어 7개 중 6개까지 계산했습니다. 1개는 실행되지 않았습니다\",\n+    \"config\": {\n+      \"strategyIds\": [\"sector-momentum\"],\n+      \"instrumentIds\": [\"069500.XKRX\", \"091170.XKRX\"],\n+      \"registryVersion\": \"PROVISIONAL-2026-09-10\",\n+      \"searchMethod\": \"FULL_GRID\",\n+      \"randomSeed\": null,\n+      \"space\": { \"lookbackDays\": [20, 60, 120], \"topN\": [2, 3, 4] },\n+      \"selectionRule\": {\n+        \"drawdownFilter\": \"NOT_WORSE_THAN_BASELINE\",\n+        \"stabilityFilter\": \"BATCH_PERCENTILE_TOP_50\",\n+        \"sortMetric\": \"NET_RETURN\",\n+        \"displayCount\": 5,\n+        \"tieHandling\": \"SHOW_ALL_TIED\"\n+      },\n+      \"limits\": { \"maxCandidates\": 1000, \"provisional\": [\"maxCandidates\"] },\n+      \"referenceVersions\": { \"marketData\": \"2026-08-31\", \"cost\": \"v1\", \"engine\": \"nautilus-0.1\" },\n+      \"dataVersionChanged\": false\n+    },\n+    \"baseline\": {\n+      \"kind\": \"EQUAL_WEIGHT\",\n+      \"backtestId\": \"BT-20260910-000042\",\n+      \"status\": \"COMPLETED\",\n+      \"netReturn\": \"0.1421\",\n+      \"maxDrawdown\": \"-0.2310\"\n+    },\n+    \"selection\": {\n+      \"displayed\": [\"PS-20260910-000001-C003\", \"PS-20260910-000001-C007\"],\n+      \"shortOfDisplayCount\": true,\n+      \"note\": \"기준을 충족한 후보가 2개입니다\",\n+      \"drawdownFilterApplied\": true\n+    },\n+    \"startedAt\": \"2026-09-10T02:11:04Z\",\n+    \"finishedAt\": \"2026-09-10T02:19:51Z\"\n+  },\n+  \"error\": null\n+}\n+```\n+\n+**`selection.displayed`는 순위가 아니다.** 정렬 지표(`sortMetric`)를 밝힌 집합이며 화면에 순위 번호를\n+붙이지 않는다(plan \"설계 제약\"). `drawdownFilterApplied`가 `false`면 기준 백테스트가 실패해 하락 폭\n+필터를 적용하지 못한 경우다(Edge Case) — 화면에 그 사실을 표시한다.\n+\n+`selection`은 `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다. 그 전에는 `null`이다.\n+\n+## 4. 후보 목록 — `GET /param-searches/{searchId}/candidates`\n+\n+전체 후보를 본다(FR-018 상세). 표시 후보만 보려면 `selected=true`.\n+\n+| 파라미터 | 기본값 | 규칙 |\n+|---|---|---|\n+| `page` / `size` | `0` / `50` | `size` 최대 200 |\n+| `status` | 없음(전체) | `COMPLETED` `FAILED` `EXCLUDED` `SKIPPED` `PENDING` `DISPATCHED` |\n+| `selected` | 없음(전체) | `true` / `false` |\n+| `sort` | `candidateNo,asc` | `netReturn` `maxDrawdown` `tradingCost` `stability` 허용 |\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"page\": 0, \"size\": 50, \"totalElements\": 9, \"totalPages\": 1,\n+    \"content\": [\n+      {\n+        \"candidateId\": \"PS-20260910-000001-C003\",\n+        \"candidateNo\": 3,\n+        \"strategyId\": \"sector-momentum\",\n+        \"parameters\": { \"lookbackDays\": 60, \"topN\": 3 },\n+        \"status\": \"COMPLETED\",\n+        \"backtestId\": \"BT-20260910-000045\",\n+        \"netReturn\": \"0.1873\",\n+        \"maxDrawdown\": \"-0.1902\",\n+        \"tradingCost\": \"0.0121\",\n+        \"stability\": { \"calculable\": true, \"value\": \"0.0204\", \"neighborCount\": 4 },\n+        \"retryCount\": 0,\n+        \"validationLabel\": \"UNVALIDATED\",\n+        \"selected\": true,\n+        \"selectionReason\": { \"outcome\": \"SELECTED\", \"tied\": false, \"passedFilters\": [\"DRAWDOWN\", \"STABILITY\"] }\n+      },\n+      {\n+        \"candidateId\": \"PS-20260910-000001-C005\",\n+        \"candidateNo\": 5,\n+        \"parameters\": { \"lookbackDays\": 120, \"topN\": 4 },\n+        \"status\": \"EXCLUDED\",\n+        \"backtestId\": null,\n+        \"netReturn\": null,\n+        \"maxDrawdown\": null,\n+        \"tradingCost\": null,\n+        \"stability\": null,\n+        \"validationLabel\": \"UNVALIDATED\",\n+        \"selected\": false,\n+        \"selectionReason\": {\n+          \"outcome\": \"EXCLUDED_BEFORE_RUN\",\n+          \"code\": \"TOP_N_EXCEEDS_UNIVERSE\",\n+          \"message\": \"선정 섹터 수 4가 고른 섹터 수 2보다 큽니다\"\n+        }\n+      }\n+    ]\n+  },\n+  \"error\": null\n+}\n+```\n+\n+**성과 필드가 `null`인 것과 0인 것은 다르다.** `EXCLUDED` `FAILED` `SKIPPED` `PENDING` 후보의\n+`netReturn`·`maxDrawdown`·`tradingCost`는 항상 `null`이고 0으로 채우지 않는다(FR-011, 원칙 VI).\n+`stability.calculable`이 `false`일 때도 `value`는 `null`이다(FR-013b). 화면은 이 값들을 \"0%\"가 아니라\n+사유와 함께 표시한다.\n+\n+## 5. 취소 — `POST /param-searches/{searchId}/cancel`\n+\n+`202 Accepted`. 발행하지 않은 후보를 `SKIPPED`로 바꾸고 더 발행하지 않는다. **이미 큐에 들어간 후보는\n+완주한다** — prefetch 1 + manual ACK 구조에서 발행된 메시지는 회수할 수 없다(research R2).\n+\n+```json\n+{ \"success\": true, \"data\": { \"searchId\": \"PS-20260910-000001\", \"status\": \"RUNNING\", \"skipped\": 4, \"inFlight\": 2 }, \"error\": null }\n+```\n+\n+응답 시점의 `status`는 아직 `RUNNING`일 수 있다. 실행 중 후보가 모두 끝나면 `PARTIAL`이 된다.\n+이미 끝난 묶음을 취소하면 `409 ALREADY_FINISHED`다.\n+\n+## 5.1 실패 후보 재시도 — `POST /param-searches/{searchId}/retry-failed`\n+\n+`202 Accepted`. `FAILED` 후보만 다시 발행한다. **묶음 시작 시점의 참조 버전·탐색 공간·선정 규칙을\n+그대로 쓰고 새 묶음을 만들지 않는다**(FR-024). `SKIPPED`('미실행') 후보는 대상이 아니다 — 취소·한도로\n+빠진 것을 재시도로 되살리면 그 묶음의 완료 범위 표시가 뜻을 잃는다.\n+\n+```json\n+{ \"success\": true, \"data\": { \"searchId\": \"PS-20260910-000001\", \"status\": \"RUNNING\", \"retried\": 1, \"remainingFailed\": 0 }, \"error\": null }\n+```\n+\n+재시도가 끝나 묶음이 다시 종료되면 **선정을 다시 계산한다.** 선정 규칙은 스냅샷을 그대로 쓰므로\n+기준이 바뀌지 않는다(FR-013c). 실패 후보가 없으면 `409 NOTHING_TO_RETRY`다.\n+\n+같은 사유로 또 실패하면 `retryCount`와 마지막 사유만 남고 자동으로 반복하지 않는다. 반복 재시도는\n+사용자가 다시 요청할 때만 일어난다.\n+\n+## 6. 오류 코드 (007 신규)\n+\n+| HTTP | `error.code` | 언제 | 재시도 |\n+|---|---|---|---|\n+| 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수가 상한 초과 | 범위를 좁힌 뒤 |\n+| 422 | `NO_VALID_COMBINATION` | 유효 조합 0건 | 섹터·범위를 바꾼 뒤 |\n+| 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |\n+| 409 | `ALREADY_FINISHED` | 끝난 묶음 취소 | 무의미 |\n+| 409 | `NOTHING_TO_RETRY` | 실패 후보가 없는 묶음에 재시도 요청 | 무의미 |\n+| 404 | `RESOURCE_NOT_FOUND` | 없는 `searchId` | 무의미 |\n+\n+## 7. 프론트가 알아야 할 것\n+\n+- `searchId`·`candidateId`는 문자열이다. 길이를 가정하지 않는다.\n+- 같은 조건으로 다시 요청하면 **항상 새 묶음**이다(FR-013c: 기준을 바꿔 다시 실행하면 새 실험).\n+  이전 묶음의 결과와 상태 표시는 바뀌지 않는다.\n+- 폴링은 §3으로 한다. `selection`이 `null`이면 아직 선정 전이다.\n+- **표시 후보에 순위 번호를 붙이지 않는다.** 정렬 지표 이름을 함께 보이고, 후보마다\n+  `validationLabel`을 항상 함께 보인다(현재 값은 전부 `UNVALIDATED`).\n+- `limits.provisional`에 든 항목은 임시값 표시를 붙인다.\n+- **현재 워커는 1종목만 계산한다.** `universe.instrumentIds`를 2개 이상 보내면 후보 Job은 접수되고\n+  실행 단계에서 `FAILED`가 된다(`backtest-api` §4와 같은 한계). 004의 배분 전략이 붙기 전까지 007의\n+  종단 확인은 1종목·momentum으로만 가능하다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,136 @@\n+# 내부 계약: 포트와 인메모리 이벤트\n+\n+**Date**: 2026-09-10 | **Spec**: [../spec.md](../spec.md) | **Plan**: [../plan.md](../plan.md)\n+\n+007이 다른 모듈·미완성 spec과 만나는 지점을 계약으로 고정한다. RabbitMQ 메시지 계약\n+(`docs/specs/backtest-messaging/README.md`)은 **변경하지 않는다** — 007은 워커를 바꾸지 않고 기존\n+작업 메시지를 그대로 쓴다.\n+\n+---\n+\n+## 1. `ParameterRegistryPort` — 003과의 경계 (research R1)\n+\n+003이 소유한 파라미터 등록표를 007이 읽는 유일한 통로다. 003 완성 시 구현체만 교체한다.\n+\n+```java\n+public interface ParameterRegistryPort {\n+\n+    /** 등록표 버전. 임시 구현은 \"PROVISIONAL-\" 로 시작한다. */\n+    String version();\n+\n+    /** 전략의 탐색 축 목록. 순서는 안정적이어야 한다 — 그리드 좌표의 축 순서가 된다. */\n+    List<ParameterAxis> axes(String strategyId);\n+\n+    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다. */\n+    ValidationVerdict validate(String strategyId, ParameterCombination combination, SearchContext context);\n+}\n+\n+public record ParameterAxis(\n+        String name,        // \"lookbackDays\"\n+        String label,       // \"관측 기간\"\n+        String unit,        // \"거래일\", null 허용\n+        List<Object> values // 등록된 후보 값. 인덱스가 그리드 좌표다\n+) {}\n+\n+public record ValidationVerdict(boolean valid, String reasonCode, String reasonDetail) {}\n+\n+/** 유효성 판정에 필요한 묶음 맥락 (섹터 수 등). */\n+public record SearchContext(int universeSize) {}\n+```\n+\n+**규약**\n+\n+- `axes()`의 반환 순서와 `values`의 인덱스는 같은 `version()` 안에서 안정적이어야 한다. 인덱스가\n+  흔들리면 `grid_coordinates`가 뜻을 잃고 재현이 깨진다(FR-020).\n+- `validate()`는 계산 없이 판정할 수 있는 것만 본다. 알려진 위반은 최소 두 가지다 — 모멘텀 선정 수가\n+  가용 섹터 수 초과, 비중 상한들의 합계로 투자 비중을 채울 수 없음(FR-006).\n+- 007은 등록표에 없는 값을 절대 만들지 않는다(FR-002). `space`에 등록표 밖 값이 오면 400이다.\n+\n+**임시 구현 `FixedParameterRegistry`**: `version()`이 `PROVISIONAL-{날짜}`를 돌려주고, 축과 값은\n+코드 상수로 둔다. PD-02가 확정되지 않았으므로 **이 값은 팀 확정값이 아니다** — API 응답의\n+`registryVersion`과 화면 표시로 임시임을 밝힌다.\n+\n+## 2. `CandidateJobLauncher` — 004와의 경계\n+\n+후보 1건과 동일 비중 기준을 기존 백테스트 실행 경로로 보낸다. 007은 `EngineInput`을 직접 만들지\n+않고 `backtest` 모듈의 접수 유스케이스를 호출한다.\n+\n+```java\n+public interface CandidateJobLauncher {\n+\n+    /** 후보 하나를 Job으로 접수하고 backtest_job.id를 돌려준다. */\n+    long launchCandidate(ParamSearchSnapshot snapshot, SearchCandidate candidate);\n+\n+    /** 동일 비중 기준 1건을 같은 조건으로 접수한다 (FR-013d). */\n+    long launchBaseline(ParamSearchSnapshot snapshot);\n+}\n+```\n+\n+**규약**\n+\n+- 두 메서드는 묶음 스냅샷(`ParamSearchSnapshot`)만 보고 조립한다. 현재 시각의 자료 버전·비용 설정을\n+  다시 읽지 않는다 — 묶음은 시작 시점 버전으로 끝까지 계산한다(FR-012).\n+- 후보와 기준은 같은 섹터 집합·공통 평가 구간·금액·비용·참조 버전을 쓴다(FR-007, 원칙 IV).\n+- 발행 실패(브로커 장애)는 후보를 `PENDING`으로 남기고 다음 시도에 다시 발행한다. `FAILED`로 바꾸지\n+  않는다 — 계산 실패와 발행 실패는 다르다(FR-011).\n+\n+## 3. 인메모리 도메인 이벤트 — `backtest` → `paramsearch` (research R6)\n+\n+`backtest.events` 큐를 다시 소비하지 않는다. 같은 큐에 컨슈머를 하나 더 붙이면 competing consumers라\n+메시지가 분배되어 두 리스너가 각자 일부만 받는다.\n+\n+```java\n+/** backtest 모듈이 결과 저장을 커밋한 뒤 발행한다. */\n+public record BacktestFinished(\n+        long backtestJobId,\n+        String backtestId,\n+        RunStatus status,       // COMPLETED | FAILED\n+        String errorCode        // status=FAILED일 때만, 아니면 null\n+) {}\n+```\n+\n+**규약**\n+\n+- 발행 지점: `BacktestEventService`가 FINISHED 이벤트를 저장하고 **트랜잭션 커밋 후**\n+  (`@TransactionalEventListener(phase = AFTER_COMMIT)`). 커밋 전에 발행하면 007이 아직 없는 결과를\n+  읽는다.\n+- `backtest` 모듈은 `paramsearch`를 알지 못한다. 이벤트 타입만 공개하고 수신자를 모른다.\n+- 수신자 `BacktestFinishedListener`는 `backtestJobId`로 후보를 찾는다. 못 찾으면 **단일 실행 Job이므로\n+  경고 없이 무시한다** — 묶음에 속하지 않은 Job이 대부분이다.\n+- 리스너는 후보 상태를 갱신하고 `CandidateDispatcher`에 다음 후보 발행을 요청한다. 이것이 발행 창의\n+  전진 지점이다.\n+\n+## 4. 발행 창(dispatch window) 규약 (research R2)\n+\n+```text\n+접수:      유효 후보 N개 생성 → 기준 1건 발행 → 앞의 min(W, N)개 발행 (W = 발행 창)\n+후보 종료:  BacktestFinished 수신 → 후보 상태 갱신 → PENDING 후보 1개 추가 발행\n+취소:      PENDING 후보 전부 SKIPPED → 추가 발행 중단 (발행된 후보는 완주)\n+한도 도달:  같은 처리 + stop_reason 기록\n+묶음 종료:  PENDING 0 && DISPATCHED 0 → 안정성 계산 → 선정 계산 → 상태 확정\n+```\n+\n+**불변식**\n+\n+1. 한 묶음의 `DISPATCHED` 후보 수는 항상 `W` 이하다. → 한 묶음이 `backtest.jobs`를 독점하지 않는다.\n+2. 취소·한도 도달 후에는 새 후보가 발행되지 않는다. → 취소가 즉시 효과를 낸다(FR-009).\n+3. 안정성·선정 계산은 묶음당 정확히 1회다. → 상대 분위(상위 50%)가 중간 상태에서 흔들리지 않는다.\n+4. `PENDING`에서 `SKIPPED`로 간 후보는 되돌아오지 않는다. → '미실행'이 확정 상태다.\n+\n+동시 수신 경쟁: 여러 `BacktestFinished`가 동시에 도착하면 묶음 행을 비관적 락으로 잡고 갱신한다.\n+락 없이 처리하면 `counts` 집계와 발행 창 계산이 서로를 덮어쓴다.\n+\n+## 5. 실행 측정 기록 (FR-023)\n+\n+004의 실행 측정 기록에 실행 유형 `AUTO_SEARCH_BATCH`로 남긴다. 007이 새 측정 저장소를 만들지 않는다.\n+\n+| 항목 | 단위 | 비고 |\n+|---|---|---|\n+| 대기 포함 소요 시간 | 후보별·묶음별 | 접수 시각 ~ 종료 시각 |\n+| 동시 처리 수 | 관측값 | 발행 창 크기가 상한 |\n+| 자원 사용 | 워커 측 | 워커 변경 없이 기존 기록 사용 |\n+| 실패 | 건수 | `FAILED` 후보 수. `EXCLUDED`와 구분한다 |\n+| 건당 원가 | 후보 1건 | 계산·데이터·저장 원가를 구분해 기록(원칙 IX) |\n+\n+**측정값을 목표로 제시하지 않는다.** 실측 전 처리량 수치를 문서·화면에 쓰지 않는다(원칙 IX).\n+이 기록이 PD-06의 입력이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-internal.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-internal.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,160 @@\n+# Phase 1 Data Model: 설정 조합 자동 비교\n+\n+**Date**: 2026-09-10 | **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)\n+\n+spec의 Key Entities를 저장 구조로 옮긴다. 저장 규칙은 `V2__backtest_result.sql`의 규약을 그대로\n+따른다 — 질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB, **decimal은 예외 없이 JSONB**\n+(NUMERIC은 scale을 임의로 정해야 하고 그 자릿수를 넘는 값을 조용히 반올림한다).\n+\n+## 1. 엔티티 관계\n+\n+```text\n+users (기존, 인증 도입 후 연결)\n+  └─ 0..N param_search            owner_user_id NULL 허용 (R4)\n+\n+param_search 1 ──── N search_candidate\n+     │                     └─ 0..1 backtest_job (기존)  후보 1건 = Job 1건 (R6)\n+     └─ 0..1 backtest_job (기존)  동일 비중 기준 (FR-013d)\n+\n+backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원본\n+```\n+\n+007은 성과 숫자를 자기 테이블에 복제하지 않는다. 후보의 수익·하락 폭·거래비용은 `backtest_result`\n+가 원본이고, 007이 저장하는 것은 **묶음 맥락에서만 의미가 있는 값**(그리드 좌표, 상태와 사유,\n+안정성, 선정 여부와 이유)이다. 복제하면 004가 결과를 재저장할 때 두 값이 갈린다.\n+\n+## 2. `param_search` (탐색 묶음)\n+\n+| 컬럼 | 타입 | 비고 |\n+|---|---|---|\n+| `id` | BIGINT PK | SEQUENCE. `backtest_job`과 같은 방식 |\n+| `search_id` | VARCHAR(32) UNIQUE | 외부 노출 식별자. 사용자에게 입력을 요구하지 않는다(원칙 VIII) |\n+| `owner_user_id` | BIGINT NULL | 인증 도입 전 NULL (R4) |\n+| `strategy_ids` | JSONB NOT NULL | 고정한 전략군 |\n+| `instrument_ids` | JSONB NOT NULL | 고정한 섹터 후보 집합 |\n+| `registry_version` | VARCHAR(64) NOT NULL | 등록표 버전. 임시 구현은 `PROVISIONAL-*` (R1) |\n+| `search_space` | JSONB NOT NULL | 축 이름 → 선택한 후보 값 목록. 탐색 공간 기록(FR-020) |\n+| `search_method` | VARCHAR(32) NOT NULL | 현재 `FULL_GRID` 고정 (FR-005) |\n+| `random_seed` | INTEGER NULL | 현재 항상 NULL. 무작위 표본 도입 시 채운다(FR-020) |\n+| `selection_rule` | JSONB NOT NULL | 접수 시점 스냅샷. 아래 §5 |\n+| `evaluation_split` | JSONB NULL | 미등록이면 NULL → 전 후보 '미검증' (R5) |\n+| `limits` | JSONB NOT NULL | 적용 한도 스냅샷(후보 수 상한·발행 창·실행시간 상한)과 임시값 표시 |\n+| `reference_versions` | JSONB NOT NULL | 시작 시점의 자료·등록표·비용·엔진 버전 (FR-012) |\n+| `baseline_job_id` | BIGINT NULL FK → `backtest_job(id)` | 동일 비중 기준 (FR-013d) |\n+| `status` | VARCHAR(20) NOT NULL | §3 상태 |\n+| `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` |\n+| `counts` | JSONB NOT NULL | 예상·유효·완료·실패·제외·미실행 (FR-008) |\n+| `selection` | JSONB NULL | 선정 결과 스냅샷. 완료 후 1회 계산해 저장 |\n+| `data_version_changed` | BOOLEAN NOT NULL | 계산 중 자료 갱신 발생 표시 (FR-012) |\n+| `started_at` / `finished_at` | TIMESTAMP WITH TIME ZONE NULL | 실행시간 상한 판정과 실행 측정(FR-023) |\n+| `created_at` / `updated_at` | TIMESTAMP NOT NULL | `BaseEntity` 규약 |\n+\n+인덱스: `search_id` UNIQUE, `(owner_user_id, created_at DESC)` — 006 목록 조회 대비.\n+\n+**`counts`를 컬럼이 아니라 JSONB로 두는 이유**: 6개 값이 함께 갱신되고 개별 필터·정렬 대상이 아니다.\n+표시용 묶음이므로 V2 규약의 \"표시용 값은 JSONB\"에 해당한다.\n+\n+## 3. `param_search.status` 상태 전이\n+\n+```text\n+QUEUED ──▶ RUNNING ──▶ COMPLETED          모든 유효 후보가 완료 또는 실패로 끝남\n+                   ├─▶ PARTIAL            취소·한도 도달로 미실행 후보가 남음\n+                   └─▶ FAILED             접수 후 실행 자체가 불가 (기준 발행 실패 등)\n+QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초과·유효 조합 0건)\n+```\n+\n+- `REJECTED`는 저장하되 후보를 만들지 않는다. 상한 초과(FR-005b)와 유효 조합 전무(Edge Case)가 여기\n+  들어가며 `stop_reason`에 사유가 남는다.\n+- `PARTIAL`은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009).\n+- `COMPLETED`와 `PARTIAL` 둘 다 선정 계산을 수행한다. 취소된 묶음도 완료된 후보로 비교할 수 있다.\n+\n+## 4. `search_candidate` (탐색 후보)\n+\n+| 컬럼 | 타입 | 비고 |\n+|---|---|---|\n+| `id` | BIGINT PK | SEQUENCE, `allocationSize` 50 (후보가 묶음당 수백~천 건) |\n+| `param_search_id` | BIGINT NOT NULL FK | |\n+| `candidate_no` | INTEGER NOT NULL | 묶음 내 순번. `(param_search_id, candidate_no)` UNIQUE |\n+| `strategy_id` | VARCHAR(64) NOT NULL | |\n+| `parameters` | JSONB NOT NULL | 파라미터 조합 하나 |\n+| `grid_coordinates` | JSONB NOT NULL | 축 이름 → 등록표 인덱스. 이웃 판정의 근거 (R7) |\n+| `backtest_job_id` | BIGINT NULL FK → `backtest_job(id)` | 발행 전·제외 후보는 NULL |\n+| `status` | VARCHAR(20) NOT NULL | §4.1 |\n+| `reason_code` | VARCHAR(64) NULL | 제외·실패 사유 코드 |\n+| `reason_detail` | TEXT NULL | 사람이 읽는 사유 |\n+| `stability` | JSONB NULL | 안정성 값·이웃 수·`calculable` 여부 (FR-013a·FR-013b) |\n+| `retry_count` | INTEGER NOT NULL | 재시도 횟수. 기본 0 (FR-024) |\n+| `period_performance` | JSONB NULL | 구간별(내부 개발·외부 평가·잠금) 성과 자리. 현재 NULL (R5) |\n+| `validation_label` | VARCHAR(24) NOT NULL | `SEARCH_RESULT` `HELD_OUT_RESULT` `UNVALIDATED`. 현재 전부 `UNVALIDATED` |\n+| `selected` | BOOLEAN NOT NULL | 표시 후보 여부 |\n+| `selection_reason` | JSONB NULL | 선정·탈락 사유(어느 필터에서 탈락했는지, 동률 여부) |\n+| `created_at` / `updated_at` | TIMESTAMP NOT NULL | |\n+\n+인덱스:\n+- `(param_search_id, candidate_no)` UNIQUE\n+- `(param_search_id, status)` — 집계와 다음 발행 대상 조회\n+- `(param_search_id, selected)` — 표시 후보 조회\n+- `backtest_job_id` UNIQUE (NULL 허용) — Job 하나가 두 후보에 붙지 않게\n+\n+### 4.1 `search_candidate.status` 상태 전이\n+\n+```text\n+PENDING ──▶ DISPATCHED ──▶ COMPLETED      결과 이벤트 status=COMPLETED\n+                       └─▶ FAILED         결과 이벤트 status=FAILED 또는 자료 부족\n+PENDING ──▶ SKIPPED                       취소·한도 도달로 발행되지 않음 ('미실행')\n+FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retry_count 증가 (FR-024)\n+(생성 시) ─▶ EXCLUDED                     유효성 위반으로 계산 전 제외 (FR-006)\n+```\n+\n+- `EXCLUDED`는 생성 시점에 확정되고 `backtest_job_id`가 없다. 계산하지 않은 후보도 사유를\n+  남긴다(FR-020).\n+- `FAILED`와 `EXCLUDED`는 낮은 수익으로 표시하지 않는다(FR-011). 성과 값 자리를 0으로 채우지 않는다.\n+- `SKIPPED`가 spec의 '미실행'이다. 취소 시 큐에 아직 넣지 않은 후보가 여기로 간다(R2).\n+- **재시도는 `FAILED`에서만 출발한다**(FR-024). `SKIPPED`는 재시도 대상이 아니다 — 취소·한도로 빠진 후보를 되살리면 그 묶음의 완료 범위 표시가 뜻을 잃는다. `retry_count`는 재현 기록의 일부다.\n+\n+## 5. `selection_rule` 스냅샷 (JSONB)\n+\n+접수 시점에 고정하고 이후 바꾸지 않는다(FR-013c, 원칙 VII). 결과를 본 뒤 바꾸면 새 묶음이다.\n+\n+```json\n+{\n+  \"drawdownFilter\": { \"type\": \"NOT_WORSE_THAN_BASELINE\", \"baseline\": \"EQUAL_WEIGHT\" },\n+  \"stabilityFilter\": { \"type\": \"BATCH_PERCENTILE\", \"keepTopPercent\": 50 },\n+  \"sortMetric\": \"NET_RETURN\",\n+  \"displayCount\": 5,\n+  \"tieHandling\": \"SHOW_ALL_TIED\",\n+  \"stabilityFormula\": {\n+    \"neighbor\": \"SINGLE_AXIS_ONE_STEP\",\n+    \"value\": \"MEAN_ABS_NET_RETURN_DIFF\"\n+  },\n+  \"provisional\": [\"displayCount\"]\n+}\n+```\n+\n+절대 문턱 숫자가 없다(FR-013). `provisional` 배열은 임시값인 항목을 밝혀 화면 표시에 쓴다.\n+\n+## 6. 검증 규칙 (요구사항에서 나온 것)\n+\n+| 규칙 | 근거 | 적용 지점 |\n+|---|---|---|\n+| 유효 후보 수 > 후보 수 상한이면 접수 거부, 표본 추출·간격 확대 금지 | FR-005b | `ParamSearchService.create` 전 `GridExpander` 결과 검사 |\n+| 유효성 위반 조합은 계산 전 `EXCLUDED` + 사유 | FR-006 | `CandidateValidator` |\n+| 유효 조합 0건이면 실행하지 않고 어느 제약 때문인지 한 문장 | Edge Case | 같은 지점, `status=REJECTED` |\n+| 모든 후보와 기준이 같은 섹터 집합·공통 구간·금액·비용·참조 버전 | FR-007, FR-013d | `CandidateJobLauncher`가 묶음 스냅샷만 보고 조립 |\n+| 묶음은 시작 시점 참조 버전으로 끝까지 계산 | FR-012 | `reference_versions` 스냅샷 + 갱신 시 `data_version_changed` |\n+| 이웃 없는 후보는 안정성 `calculable=false`, 0으로 채우지 않고 필터 통과 | FR-013b | `NeighborStabilityCalculator` |\n+| 문턱 통과 후보 < 5면 그 수만, 0이면 '기준 충족 후보 없음' | Edge Case | `CandidateSelector` |\n+| 동률은 전부 표시, 임의 순서 금지 | Edge Case, R3 | `CandidateSelector` |\n+| 기준 백테스트 실패 시 하락 폭 필터 미적용 + 사실 표시 | Edge Case | `CandidateSelector` |\n+| 평가 분할 미등록이면 전 후보 `UNVALIDATED` | FR-014, R5 | 후보 생성 시 기본값 |\n+| 재시도는 시작 시점 스냅샷을 재사용하고 새 묶음을 만들지 않는다 | FR-024 | `ParamSearchService.retryFailed` |\n+| 재시도 완료 후 선정을 다시 계산하되 선정 규칙은 바꾸지 않는다 | FR-024, FR-013c | `CandidateSelector` 재실행 |\n+\n+## 7. 기존 테이블 변경\n+\n+없음. `backtest_job`·`backtest_result`·`backtest_trade`는 그대로 쓴다.\n+\n+`search_candidate.backtest_job_id`가 `backtest_job(id)`를 참조하는 단방향이며, `backtest` 모듈은\n+`paramsearch`를 알지 못한다. 묶음에 속한 Job과 단일 실행 Job은 `backtest_job`에서 구분되지 않는데,\n+이는 의도한 것이다 — 004의 실행 경로가 묶음 개념을 알면 의존 방향이 섞인다. 묶음 소속 여부가\n+필요한 조회는 `search_candidate`에서 조인한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/data-model.md",
+          "old_path": "specs/007-auto-parameter-search/data-model.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,275 @@\n+# Implementation Plan: 설정 조합 자동 비교 (자동 파라미터 대량 탐색)\n+\n+**Branch**: `007-auto-parameter-search` (spec 디렉터리 식별자. 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}`로 따로 만든다.) | **Date**: 2026-09-10 | **Spec**: [spec.md](spec.md)\n+\n+**Input**: Feature specification from `specs/007-auto-parameter-search/spec.md`\n+\n+## Summary\n+\n+전략군과 섹터 후보 집합을 고정한 뒤, 등록표에서 만든 파라미터 조합 전체를 상한 안에서 계산하고\n+사전 기준으로 고른 5개 후보를 비교하게 한다.\n+\n+기술 접근은 **새 계산 경로를 만들지 않는 오케스트레이션**이다. 후보 1건 = 기존 `backtest_job` 1행 +\n+`backtest.jobs` 메시지 1건이고, Worker는 변경하지 않는다. 007이 새로 만드는 것은 그리드 전개와\n+유효성 사전 제외, 발행 창(window) 기반 실행 관리, 결과 집계, 완료 후 1회 선정 계산, 재현 기록이다.\n+004가 다섯 배분 전략을 워커에 추가하면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.\n+\n+## Technical Context\n+\n+**Language/Version**: Java 21 (Backend), Python 3.11 (Worker — 이번 범위에서 변경 없음), TypeScript 5 / React 19 (Frontend)\n+\n+**Primary Dependencies**: Spring Boot 3.5.4 (Web, Data JPA, AMQP, Validation), Flyway, PostgreSQL 드라이버, Jackson. 신규 라이브러리 도입 없음\n+\n+**Storage**: PostgreSQL. Flyway 마이그레이션 `V3__param_search.sql` 신규. 저장 규칙은 `V2__backtest_result.sql`의 규약을 따른다 — 질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB, decimal은 예외 없이 JSONB\n+\n+**Testing**: JUnit 5 + Testcontainers(PostgreSQL) + Spring Boot Test (Backend), Vitest (Frontend). 워커 변경이 없으므로 pytest 신규 없음\n+\n+**Target Platform**: Linux 서버(Docker), 데스크톱 브라우저 우선 한국어 웹\n+\n+**Project Type**: 모노레포 웹 서비스 (frontend + backend + worker). 이번 범위는 backend 신규 모듈 + frontend 화면 2개\n+\n+**Performance Goals**: 목표 수치를 제시하지 않는다. 처리량·지연은 미측정이며 원칙 IX가 미측정 처리량 제시를 금지한다. FR-023에 따라 실행 유형 '자동 탐색 묶음'으로 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·건당 원가를 **측정해 기록하는 것**이 이번 범위다\n+\n+**Constraints**: 후보 수 상한 1000(임시값, PD-06 실측 후 고정) / 한 묶음이 `backtest.jobs`를 독점하지 않을 것 / 취소가 즉시 효과를 낼 것 / 절대 문턱 숫자를 새로 만들지 않을 것(FR-013) / 결제·포인트 단계 없음(FR-010)\n+\n+**Scale/Scope**: 묶음당 유효 후보 최대 1000건 + 동일 비중 기준 1건. Backend 신규 패키지 1개(`paramsearch`), 테이블 2개, HTTP 엔드포인트 6개, Frontend 화면 2개(실행 전 확인, 결과)\n+\n+### 해소된 NEEDS CLARIFICATION\n+\n+Phase 0에서 5건을 해소했다. 상세 근거는 [research.md](research.md).\n+\n+| 항목 | 결론 |\n+|---|---|\n+| 파라미터 등록표 원천 (PD-02·003 미구현) | `ParameterRegistryPort` + 임시 구현체. 003 완성 시 구현체 교체 (R1) |\n+| 실행시간·동시성 상한·중단 규칙 (PD-05 잔여) | 값 미확정. 발행 창 구조로 값과 무관하게 동작 (R2) |\n+| 동률 처리 (PD-05 잔여) | spec의 대체 규칙 사용 — 전부 표시, 임의 순서 금지 (R3) |\n+| 묶음 소유자 (인증 미구현) | `owner_user_id` nullable, 현재 NULL (R4) |\n+| 평가 분할 (PD-12 미확정) | 미등록 상태로 구현, 전 후보 '미검증' (R5) |\n+\n+## Constitution Check\n+\n+*GATE: Phase 0 이전 통과 필수. Phase 1 이후 재확인.*\n+\n+| 원칙 | 판정 | 근거 |\n+|---|---|---|\n+| I. 중심 약속은 전략 진단 | PASS | 전략 진단 흐름의 확장이다. 검증 부족(PD-12 미확정)이 기능을 막지 않도록 '미검증' 표시로 처리한다 (R5) |\n+| II. 첫 화면 단순 | PASS | 확인 화면은 대상 전략·범위 요약·예상 작업량·한도 4항목, 행동 버튼 1개. 후보 숫자 입력 없음(SC-001). 계산식·엔진·서버 설정을 사용자에게 요구하지 않는다 |\n+| III. 진단이지 추천이 아니다 | **PASS (조건부)** | 자동 단일 승자·추천 비중·우승 배지를 만들지 않는다. 다만 선정이 성과순 상위 5개라 UI에서 순위로 읽힐 위험이 있어 아래 \"설계 제약\"에 리뷰 규칙을 고정한다 |\n+| IV. 비교는 같은 조건에서만 | PASS | 모든 후보와 동일 비중 기준을 같은 섹터 집합·공통 평가 구간·금액·비용·참조 버전으로 실행한다(FR-007, FR-013d) |\n+| V. 당시에 알 수 있던 정보만 | PASS | 004의 계산 규칙을 그대로 상속한다. 007은 계산하지 않는다 |\n+| VI. 없는 결과를 만들지 않는다 | PASS | 제외/실패/미실행/계산 불가를 낮은 수익과 구분해 상태로 저장한다. 안정성 계산 불가를 0으로 채우지 않는다(FR-013b) |\n+| VII. 탐색과 검증 구분, 기준은 결과 전 고정 | PASS | 선정 규칙을 묶음 접수 시점에 스냅샷으로 저장하고 이후 변경은 새 묶음이다(FR-013c). 잠금 구간 미등록이라 선정에 쓰일 수 없다 |\n+| VIII. 재현 기록 | PASS | 탐색 공간·방법·전체/미실행 후보·제외 사유·선정 규칙·기준 결과·참조 버전을 저장한다(FR-020). 사용자에게 버전·실험 ID 입력을 요구하지 않는다 |\n+| IX. 실행 한도는 실측으로, 과금과 구분 | PASS | 후보 수 상한 1000(임시)으로 무제한 탐색을 열지 않는다. 발행 창으로 큐 독점을 막는다. 분산 Worker·Spark를 도입하지 않는다. 결제·포인트 단계 없음 |\n+| X. 자료는 이용 조건 안에서만 | N/A | 자료 확보는 001·008 소유. 007은 새 원천을 추가하지 않는다 |\n+| \"하지 않는 것\" 목록 | PASS | 추천 비중·주문·랭킹·상시 알림·자유 코드 입력·결제 단계 없음 |\n+| AI 작업 방식 | PASS | PD-05 잔여 4개와 PD-12를 임의 확정하지 않고 팀 확정 대기로 남겼다 (R2·R3·R5) |\n+| 실행·캐시 (진행·취소·재시도) | PASS | 진행은 상태 조회, 취소는 FR-009, 재시도는 FR-024로 갖춘다. 동일 결과 재사용만 004 소유로 남았고 그 근거는 아래 \"Phase 1 이후 재확인\"에 있다 |\n+| Git·Jira 규칙 (v3.0.0) | PASS | `1 Plan = 1 Spec`을 지킨다 — 이 plan은 spec 007 하나를 다룬다. `작업 묶음 = 1 Branch = 1 MR`에 따라 아래 \"작업 묶음 구성\"에서 묶음을 정했다 |\n+\n+**Gate 결과**: 통과. 정당화가 필요한 위반 없음(Complexity Tracking 비움).\n+\n+**기준 판**: constitution **v3.0.0** (Ratified 2026-09-09, Last Amended 2026-09-10). v1.0.0 기준으로\n+쓴 초판을 v3.0.0으로 다시 판정했다. 원칙 I~X의 번호와 내용은 그대로이고, 이번 판이 바꾼 것은\n+\"Jira 연계\"의 추적 단위(`1 Task = 1 Branch = 1 MR` → `작업 묶음 = 1 Branch = 1 MR`), \"문서 역할\"의\n+plan / tasks 항목, \"AI 작업 방식\"의 브랜치·Task 생성 항목이다. 그래서 원칙 판정은 변동 없고\n+**작업 묶음 절이 새로 필요해졌다.**\n+\n+### 설계 제약 (원칙 III 조건부 통과에 딸린 것)\n+\n+선정이 \"필터 통과 후보를 비용 차감 후 수익으로 정렬한 상위 5개\"이므로 다음을 코드·리뷰에서 고정한다.\n+\n+1. 응답과 화면에 순위 번호(1위·2위)·추천 문구·우승 배지를 넣지 않는다. 표시 후보는 순서 있는\n+   목록이 아니라 **정렬 지표를 밝힌 집합**으로 렌더링한다.\n+2. 각 후보 옆에 `탐색 결과 / 미사용 검증 결과 / 미검증` 상태를 항상 함께 표시한다(FR-015).\n+   현재 구현에서는 전부 '미검증'이다.\n+3. 정렬 지표 이름(\"비용 차감 후 수익\")을 화면에 명시한다. 한 항목 기준 정렬은 FR-017이 허용한다.\n+4. MR 리뷰 체크리스트에 \"순위 배지·추천 표현 0건\"을 넣는다(공통 성공 기준).\n+\n+## Project Structure\n+\n+### Documentation (this feature)\n+\n+```text\n+specs/007-auto-parameter-search/\n+├── spec.md              # 입력\n+├── plan.md              # 이 파일\n+├── research.md          # Phase 0 산출물\n+├── data-model.md        # Phase 1 산출물\n+├── quickstart.md        # Phase 1 산출물\n+├── contracts/           # Phase 1 산출물\n+│   ├── param-search-api.md      # Backend ↔ Frontend HTTP 계약\n+│   └── param-search-internal.md # 모듈 간 포트·인메모리 이벤트 계약\n+├── checklists/\n+│   └── requirements.md\n+└── tasks.md             # /speckit-tasks 산출물 (이 명령이 만들지 않는다)\n+```\n+\n+### Source Code (repository root)\n+\n+```text\n+backend/src/main/java/com/ssafy/thorp/paramsearch/     # 신규 모듈\n+├── application/\n+│   ├── command/      CreateParamSearchCommand, PreviewParamSearchCommand\n+│   ├── port/         ParameterRegistryPort, CandidateJobLauncher\n+│   ├── repository/   ParamSearchRepository, SearchCandidateRepository\n+│   ├── result/       ParamSearchPreviewResult, ParamSearchResult,\n+│   │                 ParamSearchDetailResult, CandidatePageResult\n+│   ├── service/      ParamSearchService          # 접수·취소·재시도 유스케이스 (FR-024)\n+│   │                 GridExpander                # 조합 전개 + 그리드 좌표\n+│   │                 CandidateValidator          # 유효성 사전 제외 (FR-006)\n+│   │                 CandidateDispatcher         # 발행 창 관리 (R2)\n+│   │                 ParamSearchProgressService  # 결과 이벤트 집계\n+│   │                 NeighborStabilityCalculator # 인접 안정성 (FR-013a)\n+│   │                 CandidateSelector           # 두 필터 + 정렬 + 상위 5 (FR-013)\n+│   │                 CommonPeriodResolver        # 공통 평가 구간 산출\n+│   ├── service/selection/\n+│   │                 DrawdownFilter, StabilityFilter\n+│   └── service/limit/\n+│                     TimeLimitGuard, FailureLimitGuard\n+├── domain/\n+│   ├── model/        ParamSearch, ParamSearchStatus, SearchCandidate,\n+│   │                 CandidateStatus, SelectionRule, ValidationLabel\n+│   └── vo/           ParamSearchId, SearchSpace, ParameterCombination, GridCoordinates\n+├── infrastructure/\n+│   ├── persistence/  ParamSearchJpaEntity, SearchCandidateJpaEntity, *JpaRepository,\n+│   │                 *Mapper, *RepositoryImpl\n+│   ├── registry/     FixedParameterRegistry      # 003 완성 전 임시 구현 (R1)\n+│   ├── launcher/     CandidateJobLauncherImpl    # 004 접수 유스케이스 호출\n+│   ├── config/       ParamSearchProperties       # 한도·발행 창 설정\n+│   └── listener/     BacktestFinishedListener    # 인메모리 이벤트 수신 (R6)\n+└── presentation/\n+    ├── controller/   ParamSearchController\n+    ├── request/      ParamSearchPreviewRequest, ParamSearchCreateRequest\n+    └── response/     ParamSearchPreviewResponse, ParamSearchResponse,\n+                      ParamSearchDetailResponse, CandidatePageResponse\n+\n+backend/src/main/java/com/ssafy/thorp/backtest/         # 기존 모듈 최소 변경\n+└── application/service/BacktestEventService.java        # 결과 저장 후 도메인 이벤트 발행 추가\n+\n+backend/src/main/resources/db/migration/\n+└── V3__param_search.sql                                # 신규\n+\n+backend/src/test/java/com/ssafy/thorp/paramsearch/       # 단위 + 통합 테스트\n+\n+frontend/src/\n+├── api/paramSearch.ts                                  # 신규\n+├── components/paramsearch/                             # 확인 화면·결과 화면 구성요소\n+└── pages/ParamSearchPage.tsx                           # 신규\n+\n+worker/                                                 # 변경 없음\n+```\n+\n+**Structure Decision**: 기존 `backtest` 모듈과 같은 4계층(`presentation → application → domain →\n+infrastructure`)을 그대로 쓰고, 007을 **별도 최상위 도메인 패키지 `paramsearch`** 로 둔다.\n+\n+- `backtest` 안에 넣지 않는 이유: 007은 004의 실행을 소비하는 상위 유스케이스라 의존 방향이\n+  `paramsearch → backtest` 한쪽이어야 한다. 같은 패키지에 두면 004의 단일 실행 경로가 묶음 개념을\n+  알게 되어 방향이 섞인다.\n+- 이름을 `search`로 하지 않는 이유: 010 경제환경 검색이 같은 낱말을 쓴다. 충돌을 피한다.\n+- `backtest` 모듈 변경은 결과 저장 후 인메모리 이벤트 발행으로 제한한다. `backtest.events` 큐를\n+  다시 소비하지 않는다 — competing consumers라 메시지가 분배되어 두 리스너가 각자 일부만 받는다(R6).\n+\n+### Phase 1 이후 재확인\n+\n+설계가 새로 만든 것(발행 창, 인메모리 이벤트, 동일 비중 기준 1건, `REJECTED` 저장)을 다시 판정했다.\n+\n+| 원칙 | 판정 | 설계가 바꾼 점 |\n+|---|---|---|\n+| III | PASS (조건부 유지) | 응답에 순위 필드를 두지 않았다. `selection.displayed`는 정렬 지표를 밝힌 집합이다 |\n+| IV | PASS 강화 | `CandidateJobLauncher`가 묶음 스냅샷만 보고 조립해 후보·기준의 조건 동일성이 구조로 보장된다 |\n+| VI | PASS 강화 | 미완료·제외·실패 후보의 성과 필드를 `null`로 고정했다. 0으로 채울 경로가 없다 |\n+| VIII | PASS | `REJECTED` 묶음도 저장해 실행하지 않은 이유가 남는다. `random_seed`는 현재 NULL이고 그 사실을 기록한다 |\n+| IX | PASS 강화 | 발행 창 불변식(한 묶음의 `DISPATCHED` ≤ 창 크기)이 큐 독점을 구조로 막는다 |\n+\n+**`/speckit-analyze` 이후 해소한 사항** — constitution \"실행·캐시\"가 \"진행·취소·**재시도**와 동일 결과\n+재사용을 제공한다\"를 요구하는데 초판에는 재시도가 없었다. spec에 FR-024(실패 후보 재시도)와 SC-009를\n+추가하고 묶음 B17·B19에 구현·검증·화면 태스크를 넣어 해소했다. 재시도는 묶음 시작 시점 스냅샷을\n+그대로 써서 원칙 VII(기준은 결과 전 고정)·VIII(재현)과 충돌하지 않는다.\n+\n+**남은 사항 하나** — constitution \"실행·캐시\"는 동일 결과 재사용도 요구하는데, 현재 004는\n+\"같은 조건 재요청 시 항상 새 Job\"이다(`docs/specs/backtest-api/README.md` §4). 후보 1000건 중 이전\n+묶음과 겹치는 조합이 있어도 다시 계산한다. 이는 **004가 소유한 미구현 항목**이며 007이 대신 캐시를\n+넣지 않는다 — 후보 접수 경로가 004와 같으므로 004에 재사용이 붙는 순간 007이 자동으로 이득을 본다.\n+007에 별도 캐시를 만들면 같은 규칙이 두 곳에 생긴다. tasks 단계에서 004 쪽 항목으로 남긴다.\n+\n+## 작업 묶음 구성 (Branch·MR 단위)\n+\n+constitution v3.0.0 \"Jira 연계\"가 **`작업 묶음 = 1 Branch = 1 MR`** 이고 **\"묶음 구성은 plan을 시작할\n+때 정한다\"** 고 요구한다. [tasks.md](tasks.md)의 `T###`는 실행 지시의 최소 단위이며 브랜치 단위가\n+아니다. 브랜치·MR·Jira Task 단위는 아래 묶음(B##)이다.\n+\n+묶음마다 constitution이 정한 세 조건을 확인했다 — (1) 하나의 목적(같은 계층·기능 흐름·배포 단위)\n+공유, (2) 독립 구현·검증·리뷰와 다른 묶음을 건드리지 않는 롤백, (3) 리뷰어가 한 번에 읽을 수 있는\n+범위이며 미완성 task 없음.\n+\n+| 묶음 | Jira Task 요약 | 브랜치 | 포함 T### | 수 |\n+|---|---|---|---|---|\n+| B01 | `[BE] 자동 탐색 모듈 골격과 한도 설정` | `chore(be)/{N}-paramsearch-skeleton` | T001~T004, T007 | 5 |\n+| B02 | `[FE] 자동 탐색 API 타입과 모듈 골격` | `chore(fe)/{N}-paramsearch-api-skeleton` | T005, T006 | 2 |\n+| B03 | `[BE] 탐색 묶음 도메인 모델과 상태 전이` | `feat(be)/{N}-paramsearch-domain` | T011~T020, T020a | 11 |\n+| B04 | `[BE] 탐색 묶음 스키마와 영속화 계층` | `feat(be)/{N}-paramsearch-persistence` | T008~T010, T021~T026 | 9 |\n+| B05 | `[BE] 파라미터 등록표 포트와 임시 구현` | `feat(be)/{N}-parameter-registry-port` | T027~T029 | 3 |\n+| B06 | `[BE] 그리드 전개와 유효성 사전 판정` | `feat(be)/{N}-grid-expand-validate` | T030, T031, T039, T089, T090 | 5 |\n+| B07 | `[BE] 후보 실행 포트와 백테스트 완료 이벤트 연결` | `feat(be)/{N}-candidate-launcher-event` | T032~T036 | 5 |\n+| B08 | `[BE] 자동 탐색 오류 코드와 예외 매핑` | `feat(be)/{N}-paramsearch-error-codes` | T037, T038 | 2 |\n+| B09 | `[BE] 탐색 확인·접수 유스케이스와 발행 창` | `feat(be)/{N}-paramsearch-usecase` | T040~T052, T049a | 14 |\n+| B10 | `[BE] 자동 탐색 HTTP 엔드포인트` | `feat(be)/{N}-paramsearch-api` | T053~T057 | 5 |\n+| B11 | `[FE] 탐색 실행 전 확인 화면` | `feat(fe)/{N}-paramsearch-preflight` | T058~T060, T064 | 4 |\n+| B12 | `[FE] 탐색 상세 변경과 진행 상태` | `feat(fe)/{N}-paramsearch-space-progress` | T061~T063 | 3 |\n+| B13 | `[BE] 인접 안정성과 후보 선정 계산` | `feat(be)/{N}-candidate-selection` | T065~T078 | 14 |\n+| B14 | `[BE] 후보 목록·선정 결과 조회 API` | `feat(be)/{N}-candidate-query-api` | T079~T081 | 3 |\n+| B15 | `[FE] 탐색 결과 화면과 후보 상세` | `feat(fe)/{N}-paramsearch-result` | T082~T086, T088 | 6 |\n+| B16 | `[FE] 후보를 결과 비교로 넘기는 연결` | `feat(fe)/{N}-candidate-compare-handoff` | T087 | 1 |\n+| B17 | `[BE] 접수 거부와 취소·재시도·부분 결과` | `feat(be)/{N}-paramsearch-reject-cancel-retry` | T091~T098, T098a, T098b, T098c, T102, T103 | 13 |\n+| B18 | `[BE] 실행시간·연속 실패 한도` | `feat(be)/{N}-paramsearch-runtime-limits` | T099~T101, T101a | 4 |\n+| B19 | `[FE] 거부·부분 결과 표시와 취소·재시도 조작` | `feat(fe)/{N}-paramsearch-notices` | T104~T107, T107a | 5 |\n+| B20 | `[BE] 검증 상태 라벨과 선정 규칙 불변성` | `feat(be)/{N}-validation-label` | T108~T113 | 6 |\n+| B21 | `[FE] 검증 상태 배지와 미검증 안내` | `feat(fe)/{N}-validation-badge` | T114~T116 | 3 |\n+| B22 | `[BE] 자동 탐색 실행 측정과 재현 기록 검증` | `feat(be)/{N}-paramsearch-metrics` | T117, T117a | 2 |\n+| B23 | `[DOCS] 자동 탐색 계약 문서·ADR·결정 항목 동기화` | `docs(infra)/{N}-paramsearch-contract-adr` | T120~T123 | 4 |\n+| B24 | `[DOCS] quickstart 종단 확인과 한도 측정 인계` | `docs(infra)/{N}-paramsearch-quickstart-run` | T125, T126 | 2 |\n+\n+**묶음 24개 = 브랜치 24개 = MR 24개.** 131개 T###를 덮고, 아래 3개는 의도적으로 뺐다.\n+\n+각 묶음의 Jira Task가 없으면 **브랜치·MR을 만들기 전에** Task를 먼저 만들고 그 Ticket 번호로\n+브랜치를 만든다. `{N}`이 그 자리다. 개별 `T###` 번호는 MR 본문의 \"주요 변경 사항\"에 나열한다.\n+\n+### 묶음에 넣지 않은 task\n+\n+`T118`(`./gradlew spotlessApply` + `test`), `T119`(`npm run lint` + `test`), `T124`(`pytest` 회귀)는\n+묶음이 아니라 **모든 묶음의 완료 조건**이다(\"완료의 정의\" 조건 2). 각 MR의 테스트 체크박스에서\n+확인하고, tasks.md에 남긴 것은 마지막에 전체를 한 번 더 돌리라는 뜻이다.\n+\n+### 묶음 경계를 정한 근거\n+\n+- **테스트를 구현과 같은 묶음에 넣었다.** Task 완료 조건이 \"테스트 또는 동작 확인 완료\"라 검증이\n+  다른 브랜치에 있으면 그 묶음 스스로 완료 조건을 만족하지 못한다. 그래서 tasks.md에서 단계가 다르게\n+  적힌 테스트도 묶음에서는 구현과 합쳤다 — B06이 Foundational 구현(T030·T031)과 US1·US3 단계에 있는\n+  그 테스트(T039·T089·T090)를 함께 가져가는 것이 그 예다.\n+- **B09와 B10을 계층으로 갈랐다.** 둘을 합치면 18개 task라 조건 3(한 번에 읽을 수 있는 범위)을\n+  넘는다. 유스케이스(application)와 엔드포인트(presentation)는 \"같은 계층\" 기준으로 나뉜다.\n+- **B03과 B04를 갈랐다.** 도메인 모델과 스키마·영속화는 롤백 단위가 다르다. 마이그레이션을 되돌리는\n+  일과 모델을 되돌리는 일이 같은 MR에 묶이면 조건 2를 어긴다.\n+- **B22를 단독으로 뒀다.** 실행 측정은 네 스토리 전부에 걸쳐 있어 어느 스토리 묶음에도 붙지 않는다.\n+- 무관한 task를 편의로 합치지 않았다 — B16(비교 연결)과 B15(결과 화면)는 화면이 인접하지만 005\n+  의존과 롤백 범위가 달라 나눴다.\n+\n+## Complexity Tracking\n+\n+> Constitution Check에 정당화가 필요한 위반이 없어 비운다.\n+\n+| Violation | Why Needed | Simpler Alternative Rejected Because |\n+|-----------|------------|-------------------------------------|\n+| — | — | — |\n+\n+## 이 plan이 다루지 않는 것\n+\n+- 후보 하나의 계산 규칙과 다섯 배분 전략 구현 — [004](../004-backtest-execution/spec.md) 소유.\n+  **007의 종단 검증은 004 없이는 momentum 단일 전략으로만 가능하다.**\n+- 파라미터 등록표의 실제 값(PD-02) — [003](../003-strategy-settings/spec.md) 소유\n+- 비교 화면 구성 — [005](../005-result-comparison/spec.md) 소유. 007은 후보를 비교 대상으로 넘기는\n+  연결만 만든다(FR-019)\n+- 내 기록 목록·보관 정책(PD-13) — [006](../006-my-records/spec.md) 소유\n+- 인증·인가 도입 — 소유 spec 없음. 007은 nullable 소유자 컬럼만 준비한다(R4)\n+- 실행 한도의 확정값(PD-06)과 검증 설계(PD-12) — 실측·팀 확정 대기\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/plan.md",
+          "old_path": "specs/007-auto-parameter-search/plan.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,184 @@\n+# Quickstart: 설정 조합 자동 비교 검증 가이드\n+\n+**Date**: 2026-09-10 | **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)\n+\n+007이 동작하는지 종단으로 확인하는 절차다. 필드 의미와 응답 모양은\n+[contracts/param-search-api.md](contracts/param-search-api.md), 저장 구조는\n+[data-model.md](data-model.md)를 본다 — 여기서 다시 적지 않는다.\n+\n+## 사전 조건\n+\n+**004가 아직 없다는 것을 전제로 한 절차다.** 현재 워커는 단일 종목 momentum만 계산하므로 이 가이드는\n+섹터 1종목으로 확인한다. 다섯 배분 전략이 붙으면 `instrumentIds`를 늘려 같은 절차를 반복한다.\n+\n+```bash\n+# 1. 인프라\n+docker compose -f docker-compose.dev.yml up -d postgres rabbitmq\n+\n+# 2. 백엔드 (Flyway V3가 자동 적용된다)\n+cd backend && ./gradlew bootRun\n+\n+# 3. 워커 — 후보를 실제로 계산할 주체. 2개 이상 띄워 competing consumers를 확인한다\n+cd worker && python -m venv .venv && source .venv/bin/activate   # Windows: .venv\\Scripts\\activate\n+pip install -e .\n+python -m worker.main     # 다른 터미널에서 한 번 더 실행\n+\n+# 4. 프론트\n+cd frontend && npm install && npm run dev\n+```\n+\n+확인: `docker compose -f docker-compose.dev.yml logs rabbitmq | tail`에 오류가 없고,\n+`http://localhost:15672`(thorp/thorp)의 `backtest.jobs`에 소비자 2개가 붙어 있다.\n+\n+## 시나리오 1 — 확인 화면과 한 동작 실행 (US1, SC-001)\n+\n+```bash\n+# 실행 전 확인. 후보 숫자를 하나도 넣지 않는다\n+curl -s -X POST localhost:8080/param-searches/preview \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]}}' | jq\n+```\n+\n+**기대**: `data.strategies`·`spaceSummary`·`workload`·`limits` 네 덩어리가 채워진다.\n+`limits.provisional`에 `maxCandidates`가 들어 있고, `validationLabel`은 `UNVALIDATED`다.\n+\n+```bash\n+# 같은 본문으로 실행\n+curl -s -X POST localhost:8080/param-searches \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]}}' | jq\n+```\n+\n+**기대**: `202`, `{ \"searchId\": \"PS-...\", \"status\": \"QUEUED\" }`. `space`를 보내지 않았는데 접수됐다 —\n+이것이 SC-001이다.\n+\n+```sql\n+-- 발행 창이 지켜지는지: DISPATCHED가 창 크기를 넘지 않는다 (내부 계약 §4 불변식 1)\n+SELECT status, count(*) FROM search_candidate\n+WHERE param_search_id = (SELECT id FROM param_search ORDER BY id DESC LIMIT 1)\n+GROUP BY status;\n+```\n+\n+## 시나리오 2 — 유효성 위반 조합의 사전 제외 (US3, SC-002)\n+\n+섹터 2개를 고르고 `topN`에 섹터 수보다 큰 값이 든 축을 포함해 실행한다.\n+\n+```bash\n+curl -s -X POST localhost:8080/param-searches \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\",\"091170.XKRX\"]},\n+       \"strategy\":{\"strategyIds\":[\"sector-momentum\"]},\n+       \"space\":{\"topN\":[2,3,4]}}' | jq\n+```\n+\n+**기대**: 접수는 성공하고, `topN=3`·`topN=4` 후보가 `EXCLUDED` + `reason_code=TOP_N_EXCEEDS_UNIVERSE`로\n+남는다. `backtest_job` 행이 만들어지지 **않는다** — 계산 전 제외다.\n+\n+```bash\n+curl -s \"localhost:8080/param-searches/{searchId}/candidates?status=EXCLUDED\" | jq '.data.content'\n+```\n+\n+**기대**: 각 항목의 `netReturn`·`maxDrawdown`·`tradingCost`가 모두 `null`이다. **0이 아니다** —\n+0이면 SC-002·FR-011 위반이다.\n+\n+## 시나리오 3 — 상한 초과 거부 (FR-005b)\n+\n+임시 상한(1000)을 넘는 조합을 만든다. 축 값을 늘리거나 테스트 프로파일에서 상한을 낮춰 확인한다.\n+\n+**기대**: `422 CANDIDATE_LIMIT_EXCEEDED`. `message`에 유효 후보 수·상한·좁히는 방법이 있고,\n+`param_search` 행이 `status=REJECTED`로 남는다. 후보 행은 생기지 않고, **표본을 뽑아 실행하지 않는다.**\n+\n+## 시나리오 4 — 취소와 부분 결과 (US3, SC-003)\n+\n+후보가 여러 건인 묶음을 실행하고 진행 중에 취소한다.\n+\n+```bash\n+curl -s -X POST localhost:8080/param-searches/{searchId}/cancel | jq\n+curl -s localhost:8080/param-searches/{searchId} | jq '{status, stopReason, counts, partialNote}'\n+```\n+\n+**기대**: `skipped`·`inFlight`가 반환되고, 잠시 뒤 `status=PARTIAL`, `stopReason=CANCELLED`,\n+`counts.pending`이 `SKIPPED`로 옮겨져 있으며 `partialNote`에 완료·미실행 수가 문장으로 있다.\n+**취소 후 워커 로그에 새 후보 실행이 시작되지 않는다**(내부 계약 §4 불변식 2).\n+\n+## 시나리오 5 — 선정과 미검증 표시 (US2, US4, SC-006)\n+\n+완료된 묶음을 조회한다.\n+\n+```bash\n+curl -s localhost:8080/param-searches/{searchId} | jq '.data.selection, .data.baseline'\n+curl -s \"localhost:8080/param-searches/{searchId}/candidates?selected=true\" | jq '.data.content'\n+```\n+\n+**기대**\n+\n+- `baseline.kind = \"EQUAL_WEIGHT\"`이고 `backtestId`가 있다 — 기준 1건이 같은 조건으로 함께 돌았다(FR-013d).\n+- 표시 후보는 최대 5개. `selectionReason.passedFilters`에 `DRAWDOWN`·`STABILITY`가 있다.\n+- 탈락 후보의 `selectionReason.outcome`이 어느 필터에서 탈락했는지 담는다.\n+- 모든 후보의 `validationLabel`이 `UNVALIDATED`다 — 평가 분할 미등록이므로 정상이다(FR-014).\n+- 응답 어디에도 순위 번호·추천·우승 표현이 없다(SC-006). 화면에서도 없어야 한다.\n+- 이웃이 없는 후보는 `stability.calculable=false`, `value=null`이고 안정성 필터를 통과했다(FR-013b).\n+\n+## 시나리오 5.1 — 실패 후보 재시도 (FR-024, SC-009)\n+\n+실패 후보가 있는 묶음에서 재시도한다.\n+\n+```bash\n+curl -s -X POST localhost:8080/param-searches/{searchId}/retry-failed | jq\n+```\n+\n+**기대**: `retried`·`remainingFailed`가 반환되고 `searchId`가 **그대로**다(새 묶음이 생기지 않는다).\n+재시도가 끝나면 선정이 다시 계산되고 `selection_rule` 스냅샷은 변하지 않는다. `SKIPPED` 후보는\n+건드리지 않는다. 실패 후보가 없으면 `409 NOTHING_TO_RETRY`.\n+\n+```sql\n+SELECT candidate_no, status, retry_count FROM search_candidate\n+WHERE param_search_id = :id AND retry_count > 0;\n+```\n+\n+## 시나리오 6 — 재현 (SC-004)\n+\n+같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 다시 실행한다.\n+\n+```bash\n+# 두 묶음의 후보 파라미터 집합이 같은지\n+SELECT param_search_id, jsonb_agg(parameters ORDER BY candidate_no)\n+FROM search_candidate WHERE param_search_id IN (:a, :b) GROUP BY param_search_id;\n+```\n+\n+**기대**: 두 묶음의 후보 집합과 그리드 좌표가 완전히 같다. **시드를 입력하지 않았는데 같다** —\n+전체 그리드는 결정적이라 시드가 필요 없다(FR-005). `random_seed` 컬럼은 두 행 모두 NULL이다.\n+\n+`searchId`는 다르다. 같은 조건 재실행은 항상 새 묶음이다(FR-013c).\n+\n+## 자동 테스트\n+\n+```bash\n+cd backend && ./gradlew spotlessApply && ./gradlew test    # 커밋 전 필수\n+cd frontend && npm run lint && npm test\n+cd worker && pytest                                        # 변경 없음 — 회귀 확인용\n+```\n+\n+Backend 테스트가 덮어야 하는 것(구현 Task에서 작성):\n+\n+| 대상 | 확인할 것 |\n+|---|---|\n+| `GridExpander` | 조합 수 = 축 값 개수의 곱, 그리드 좌표가 등록표 인덱스와 일치 |\n+| `CandidateValidator` | 알려진 두 위반이 100% 제외되고 사유 코드가 남는다 (SC-002) |\n+| `CandidateDispatcher` | `DISPATCHED` 수가 창 크기를 넘지 않는다. 취소 후 발행 0건 |\n+| `NeighborStabilityCalculator` | 이웃 판정이 1축 ±1만 포함, 이웃 0개면 `calculable=false` |\n+| `CandidateSelector` | 두 필터 순서, 통과 0개·5개 미만 처리, 동률 전부 표시, 기준 실패 시 필터 미적용 |\n+| `ParamSearchService` | 상한 초과 시 `REJECTED` 저장 + 후보·Job 미생성 |\n+| `ParamSearchService.retryFailed` | 새 묶음 미생성, 스냅샷 재사용, `SKIPPED` 제외, 선정 재계산 (SC-009) |\n+| 재현 | 같은 등록표·범위·자료 버전 재실행 시 후보 집합·좌표 동일, 시드 NULL (SC-004) |\n+| 기록 완전성 | 완료 묶음이 FR-020 항목 전체를 갖는지 (SC-007) |\n+| 통합(Testcontainers) | 접수 → 이벤트 수신 → 집계 → 선정까지 상태 전이, 동시 이벤트에서 `counts` 정합 |\n+\n+## 아직 확인할 수 없는 것\n+\n+- **다섯 배분 전략의 탐색** — 004 미구현. 2종목 이상은 후보 Job이 `FAILED`가 된다.\n+- **파라미터 등록표의 실제 값** — PD-02 미확정. `registryVersion`이 `PROVISIONAL-*`인 동안의 결과는\n+  팀 확정 등록표의 결과가 아니다.\n+- **미사용 검증 결과 표시** — PD-12 미확정. 전 후보가 `UNVALIDATED`이므로 SC-005는 자동 만족이며\n+  이를 검증 통과로 보고하지 않는다(완료의 구분).\n+- **실행 한도의 적정성** — PD-06 실측 전. 이 가이드로 얻는 측정값이 PD-06의 입력이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/quickstart.md",
+          "old_path": "specs/007-auto-parameter-search/quickstart.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,132 @@\n+# Phase 0 Research: 설정 조합 자동 비교\n+\n+**Date**: 2026-09-10 | **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)\n+\n+Technical Context의 NEEDS CLARIFICATION 5건을 해소한다. 기획서가 \"실행 전 결정\"으로 남긴 수치는\n+여기서 확정하지 않는다(constitution \"AI 작업 방식\"). 확정이 필요한 항목은 팀 확정 대기로 남기고,\n+그 값 없이도 구현·검증이 진행되는 경로를 정한다.\n+\n+---\n+\n+## R1. 파라미터 등록표의 원천 (PD-02, spec 003 미구현)\n+\n+**Decision**: `ParameterRegistryPort`를 007 안에 정의하고, 003이 완성되기 전까지 임시 구현체\n+(`FixedParameterRegistry`)를 둔다. 등록표는 `축 이름 → 후보 값 목록 + 유효성 제약`이며 007은\n+포트만 의존한다. 임시 구현임은 API 응답(`registryVersion: \"PROVISIONAL-*\"`)과 화면에 표시한다.\n+\n+**Rationale**: 탐색 공간의 원천은 003이 소유한다(FR-002). 003을 기다리면 007의 오케스트레이션\n+전체가 멈추는데, 그 오케스트레이션(그리드 전개·유효성 제외·창 방식 발행·집계·선정·기록)은 등록표의\n+실제 값과 무관하다. 포트로 끊으면 003 완성 시 구현체 교체 한 번으로 붙는다. 임시값 표시는\n+FR-005a가 이미 요구한다.\n+\n+**Alternatives considered**:\n+- 003 완성까지 007 착수 보류 — 병렬 개발을 막는다(specs/README \"우선순위는 병렬 개발을 막지 않는다\").\n+- 등록표를 007이 소유 — spec 003과 소유권이 충돌하고 같은 규칙이 두 곳에 생긴다.\n+\n+---\n+\n+## R2. 실행시간 상한·동시성 상한·중단 규칙 (PD-05 잔여, 팀 확정 대기)\n+\n+**Decision**: 값을 확정하지 않는다. 대신 **값과 무관하게 동작하는 구조**를 만든다.\n+\n+- 동시성은 \"묶음이 한 번에 큐에 올려둔 미완료 후보 수\"(발행 창)로 구현한다. 창 크기를 설정값으로\n+  두고 기본값은 워커 수와 무관하게 동작한다.\n+- 실행시간 상한은 묶음 시작 시각 기준 경과 시간으로 판정하고, 값은 설정으로 뺀다.\n+- 중단 규칙은 \"한도 도달 시 발행을 멈추고 실행 중 후보는 완주시킨다\"로 고정한다. 이는 값이 아니라\n+  구조 선택이며, prefetch 1 + manual ACK 구조에서 이미 큐에 든 메시지를 회수할 수 없다는 제약에서\n+  나온다.\n+\n+**Rationale**: 원칙 IX는 \"상한을 정하기 전에 무제한 탐색을 열지 않는다\"를 요구하는데 후보 수 상한\n+(1000, 임시)이 이미 그 조건을 만족한다. 실행시간·동시성은 실측(PD-06) 전에는 근거 있는 값을 낼 수\n+없고, 구조가 설정값을 받게 만들면 실측 후 코드 변경 없이 고정할 수 있다.\n+\n+**발행 창이 핵심 설계 선택인 이유**: 접수 시점에 후보 1000건을 모두 큐에 넣으면 (1) 한 묶음이\n+`backtest.jobs`를 독점해 다른 사용자의 단일 실행이 뒤에 밀리고, (2) 취소가 의미를 잃는다 — 이미\n+큐에 든 메시지는 회수할 수 없어 취소 후에도 계속 계산된다. 창 방식은 두 문제를 동시에 없애고,\n+취소·한도 도달을 \"다음 후보를 발행하지 않는다\"는 단순한 동작으로 만든다(FR-009).\n+\n+**Alternatives considered**:\n+- 접수 시 전량 발행 + 워커가 취소 여부 조회 — 워커에 상태 조회 의존을 추가하고 계약을 바꾼다.\n+- 묶음 전용 큐 분리 — 큐 독점은 막지만 워커 설정이 큐마다 갈라지고 competing consumers의 이점이 준다.\n+\n+**팀 확정 필요**: 발행 창 크기, 실행시간 상한, 연속 실패 중단 임계값. 확정 전에는 설정 기본값을\n+쓰고 임시값임을 표시한다.\n+\n+---\n+\n+## R3. 동률 처리 (PD-05 잔여)\n+\n+**Decision**: spec이 이미 정한 대체 규칙을 그대로 구현한다 — 동률 후보를 모두 표시하고 순서를\n+임의로 정하지 않는다. 표시 후보 5개 경계에서 동률이면 5개를 넘겨 함께 보이고 동률임을 표시한다.\n+\n+**Rationale**: spec Edge Cases가 \"규칙이 없으면 동률 후보를 모두 표시하고 순서를 임의로 정하지\n+않는다\"고 명시한다. 임의 순서를 넣지 않는 것이 원칙 VI·VIII와 맞고, 추가 결정 없이 테스트 가능하다.\n+\n+---\n+\n+## R4. 묶음의 소유자와 사용자 식별 (인증 미구현)\n+\n+**Decision**: `search_batch.owner_user_id`를 nullable로 두고, 인증이 없는 현재는 NULL로 저장한다.\n+저장·재조회는 `searchId`로 하고 목록 조회는 인증 도입 후 소유자 필터를 켠다.\n+\n+**Rationale**: specs/README 공통 가정이 \"인증·인가 방식은 constitution 합의되지 않은 영역이므로\n+plan에서 근거를 남기고 정한다\"고 위임했다. 현재 backend에 `SecurityFilterChain`·JWT가 전혀 없고\n+(`account`는 signup·이메일 인증만) 007이 인증을 도입하면 006·전 파트에 걸친 결정을 007이 대신\n+내리는 셈이다. nullable 컬럼은 인증 도입 시 마이그레이션 없이 채워진다.\n+\n+**Alternatives considered**:\n+- 007에서 인증 도입 — 범위를 크게 벗어나고 소유 spec이 아니다.\n+- 소유자 컬럼 생략 — 006(내 기록)이 붙을 때 테이블 변경이 필요하다.\n+\n+---\n+\n+## R5. 평가 분할과 검증 상태 (PD-12 미확정)\n+\n+**Decision**: 평가 분할을 등록하지 않은 상태로 구현하고, 그 경우 모든 후보를 `UNVALIDATED`\n+('미검증')로 표시한다. 분할이 등록되면 후보별로 구간별 성과를 분리 저장할 자리(`period_performance`\n+JSONB)를 미리 둔다.\n+\n+**Rationale**: FR-014의 마지막 항목이 \"평가 분할이 등록되지 않았거나 잠금 구간이 확보되지 않은\n+탐색이면 모든 후보가 '미검증'으로 표시되고 '충분한 검증이 없다'는 이유로 기능이 막히지는 않는다\"고\n+직접 허용한다(원칙 I). PD-12는 시험 전에 고정하면 되고 구현 착수의 선행 조건이 아니다.\n+\n+**주의**: 이 경로에서 SC-005(\"잠금 구간 성과가 후보 선정에 쓰인 사례 0건\")는 자동으로 만족한다 —\n+잠금 구간이 없으므로 쓸 수 없다. 이를 검증 통과로 보고하지 않는다(완료의 구분).\n+\n+---\n+\n+## R6. 후보 1건의 계산 경로 (설계 확인)\n+\n+**Decision**: 후보 1건은 새 계산 경로를 만들지 않고 **기존 `backtest_job` 1행 + `backtest.jobs`\n+메시지 1건**으로 실행한다. `search_candidate`가 `backtest_job.id`를 FK로 참조한다. Worker는\n+변경하지 않는다.\n+\n+**Rationale**: FR-007이 \"후보 하나의 계산은 004의 공통 거래·평가 규칙을 따른다\"고 요구한다. 같은\n+규칙을 두 번 구현하면 004와 007의 결과가 갈릴 수 있고, CLAUDE.md 아키텍처 원칙 1(Backend는 계산하지\n+않는다)·2(같은 워커 코드 수평 확장)에 맞는다. 004가 5개 배분 전략을 워커에 추가하면 007은 코드 변경\n+없이 그 전략들을 탐색 대상으로 얻는다.\n+\n+**결과 이벤트 수신 경로**: `backtest.events` 큐에는 이미 `BacktestEventListener`가 붙어 있다. 같은\n+큐에 두 번째 컨슈머를 붙이면 competing consumers라 메시지가 분배되어 둘 다 일부만 받는다. 따라서\n+007은 큐를 다시 소비하지 않고, 결과 저장 후 Spring `ApplicationEventPublisher`로 발행되는 인메모리\n+이벤트를 듣는다. 이 방향이 모듈 간 결합도도 낮다.\n+\n+**Alternatives considered**:\n+- 007 전용 계산 경로 — 계산 규칙 이중화. 거부.\n+- `backtest.events`에 007 전용 큐를 추가 바인딩(fanout) — 계약(§2 토폴로지)을 바꿔야 하고 워커·인프라\n+  변경을 부른다. 인메모리 이벤트로 충분하다.\n+\n+---\n+\n+## R7. 인접 설정 안정성의 계산 자료 구조\n+\n+**Decision**: 후보마다 `grid_coordinates` JSONB(축 이름 → 후보 값 인덱스)를 저장한다. 이웃은 한 축의\n+인덱스만 ±1 다른 후보이며, 좌표 비교로 O(후보 수 × 축 수)에 찾는다. 계산 대상은 완료 후보뿐이고\n+제외·실패·미실행 후보는 이웃으로 세지 않는다.\n+\n+**Rationale**: FR-013a가 이웃을 \"파라미터 축 하나만 등록표에서 한 칸 다른 조합\"으로 정의했다. 값\n+자체(예: 관측 기간 60일)를 비교하면 간격이 불균등한 축에서 \"한 칸\"의 뜻이 흔들리는데, 등록표\n+인덱스는 그 뜻을 그대로 담는다. 좌표는 재현 기록(FR-020)에도 필요하다.\n+\n+**계산 시점**: 묶음이 끝난(완료·부분 완료) 뒤 1회. 안정성 필터가 묶음 내 상대 분위(상위 50%)라\n+전체 완료 후보가 모여야 판정할 수 있다(FR-013).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/research.md",
+          "old_path": "specs/007-auto-parameter-search/research.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,7 @@\n \n **Input**: User description: \"기획서에 맞게 스펙을 작성하자\" (2026-09-10). 같은 날 스펙 단위 재조정 요청에 따라 기획서 전체를 담았던 `001-thorp-platform`을 기능 단위로 분리한 spec 중 하나다.\n \n-**근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §4.2.2, §4.2.3, §5, §6.4.3, §6.5, §7.3과 결정 D04·D10·D11·D18·D19, constitution v1.0.0 원칙 III·IV·VII·VIII·IX와 \"파라미터 후보와 자동 탐색\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n+**근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §4.2.2, §4.2.3, §5, §6.4.3, §6.5, §7.3과 결정 D04·D10·D11·D18·D19, constitution v3.0.0 원칙 III·IV·VII·VIII·IX와 \"파라미터 후보와 자동 탐색\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n \n **관련 spec**: 진입점과 파라미터 등록표는 [003 전략 선택·상세 설정](../003-strategy-settings/spec.md)에 있다. 후보 하나의 계산은 [004 백테스트 실행](../004-backtest-execution/spec.md)의 실행 규칙을 따르고, 선택한 후보의 비교 표시는 [005 결과 이해·비교](../005-result-comparison/spec.md), 묶음 저장은 [006 내 기록](../006-my-records/spec.md)이 맡는다.\n \n@@ -16,6 +16,16 @@\n \n 사용자가 설정을 하나씩 바꿔 반복 계산하지 않도록, 전략군과 섹터 후보 집합을 고정한 뒤 사전 등록된 유효 파라미터 조합을 서버가 실행·비교하는 기능이다. 실행 전 확인, 유효성 위반 조합의 사전 제외, 실행 한도와 부분 완료 처리, 사전 기준에 따른 소수 후보 선정, 탐색 성과와 미사용 검증의 구분 표시, 재현 가능한 기록이 범위다. 무제한 전수 탐색이나 개인별 투자 추천으로 표현하지 않는다. (§4.2.2, §6.4.3)\n \n+## Clarifications\n+\n+### Session 2026-09-10\n+\n+- Q: 등록된 파라미터 조합을 전부 계산할 것인가, 아니면 일부만 골라 계산할 것인가? (FR-005, PD-05) → A: 전체 그리드(전수 계산). 후보 수가 상한을 넘으면 실행하지 않고 범위 축소를 안내한다. 난수를 쓰지 않으므로 시드가 필요 없다. 계산량은 워커 수평 확장으로 흡수하되 상한 자체는 유지한다(constitution 원칙 IX).\n+- Q: 한 탐색 묶음의 임시 후보 수 상한을 몇 개로 둘까? (FR-005a, FR-005b, PD-05) → A: 1000개. 실측 전 임시값이며 확인 화면에 임시값임을 표시한다. 실측 후 PD-06에서 고정한다.\n+- Q: 세 가지 기준(비용 차감 성과·손실 제약·인접 설정 안정성)으로 어떻게 소수 후보를 뽑고, 몇 개를 보여줄까? (FR-013, FR-018, PD-05) → A: 세 축 모두 필터로 쓴다. 손실 제약과 인접 안정성 문턱을 넘지 못한 후보를 탈락시키고, 남은 후보를 비용 차감 후 수익으로 정렬해 상위 5개를 표시한다. 두 문턱 값은 같은 세션의 마지막 질문에서 확정했다.\n+- Q: \"인접 설정 안정성\"을 무엇으로 계산할까 — 어떤 조합을 '이웃'으로 보고, 이웃과 비교해 무슨 값을 낼까? (FR-013, PD-05) → A: 이웃은 파라미터 축 하나만 한 칸 다른 조합이다. 값은 이웃들과의 비용 차감 후 수익 차 절댓값 평균이며 작을수록 안정이다. 이웃이 없어 '계산 불가'인 후보는 안정성 필터를 통과 처리한다.\n+- Q: 두 필터의 문턱을 어떻게 정할까 — 고정된 숫자로 걸까, 아니면 묶음 안에서 상대적으로 걸까? (FR-013, PD-05) → A: 절대 숫자를 만들지 않는다. 하락 폭은 동일 비중 기준보다 크지 않은 후보만 통과시키고, 안정성은 묶음 내 상위 50%만 통과시킨다. 이를 위해 묶음마다 동일 비중 기준 백테스트 1건을 같은 조건으로 함께 실행한다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 실행 전 확인만 하고 한 동작으로 탐색을 실행한다 (Priority: P1)\n@@ -94,11 +104,16 @@\n - 등록된 조합이 모두 유효성 제약을 위반하면 실행하지 않고 어느 제약 때문인지 한 문장으로 알린다.\n - 유효 조합이 하나뿐이면 비교 없이 그 결과 하나를 보이되 '탐색 결과'로 표시하고 단일 승자로 표현하지 않는다.\n - 후보 계산 도중 자료 버전이 갱신되어도 묶음은 시작 시점의 자료 버전으로 끝까지 계산한다. 갱신 사실은 결과에 표시한다.\n+- 동일 비중 기준 백테스트가 실패하거나 계산 불가면 손실 제약 필터를 적용하지 않고 안정성 필터만 적용한다. 기준 없이 선정했다는 사실을 결과에 표시하며 기준값을 추정해 채우지 않는다.\n+- 문턱을 통과한 후보가 5개보다 적으면 통과한 수만 표시하고 부족 사실을 알린다. 0개면 '기준을 충족한 후보 없음'으로 표시하고 전체 후보 목록과 탈락 사유를 제공한다. 결과를 본 뒤 문턱을 낮춰 화면을 채우지 않는다(원칙 VII).\n - 선정 기준의 동률은 등록된 동률 규칙(PD-05)으로 처리하고 처리 결과를 기록한다. 규칙이 없으면 동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다.\n-- 난수 기반 탐색은 시드를 저장한다. 같은 시드·같은 버전으로 재실행하면 같은 후보 집합과 결과가 나온다.\n+- 탐색은 결정적이다. 같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 재실행하면 시드 없이 같은 후보 집합과 결과가 나온다.\n+- 유효 후보 수가 상한을 넘으면 실행하지 않고 초과 사실·상한·범위를 좁히는 방법을 알린다. 자동으로 표본을 뽑지 않는다.\n - 후보 중 일부가 공통 평가 구간을 줄이는 긴 관측 기간을 요구하면 실행 전에 줄어든 구간을 알린다. 모든 후보는 같은 공통 구간으로 평가한다.\n-- 인접 설정 안정성을 계산할 인접 후보가 없으면(탐색 범위가 한 점) 안정성 항목을 '계산 불가'로 표시하고 0으로 채우지 않는다.\n+- 인접 설정 안정성을 계산할 인접 후보가 없으면(탐색 범위가 한 점) 안정성 항목을 '계산 불가'로 표시하고 0으로 채우지 않으며 안정성 문턱은 통과 처리한다(FR-013b).\n - 탐색 묶음 저장 상한(PD-13)에 도달하면 실행 전에 알린다.\n+- 재시도해도 같은 사유로 실패하면 재시도 횟수와 마지막 사유를 남기고 자동으로 반복하지 않는다. 재시도는 사용자가 요청할 때만 일어난다.\n+- 재시도로 후보가 완료되면 그 묶음의 선정을 다시 계산한다. 선정 규칙은 시작 시점 스냅샷을 그대로 쓰고 바꾸지 않는다(FR-013c).\n - 결과를 확인한 뒤 기준을 바꾸면 새 실험으로 기록한다. 이전 묶음의 결과와 상태 표시는 바꾸지 않는다.\n \n ## Requirements *(mandatory)*\n@@ -111,21 +126,28 @@\n - **FR-002**: 탐색 공간은 [003](../003-strategy-settings/spec.md)의 파라미터 등록표(후보 값·범위·간격·유효성 제약·기본값)에서만 만든다. 등록되지 않은 값은 탐색 대상이 되지 않는다. (§6.4.2)\n - **FR-003**: 실행 전에 대상 전략·탐색 범위 요약·예상 작업량·적용 한도를 간단히 확인한다. 모든 후보 숫자를 직접 입력하게 하지 않으며 상세 변경은 선택 사항이다. (§6.4.3)\n - **FR-004**: 수수료·세금·평가 기간은 탐색 변수로 제공하지 않는다. (§6.4.3, 원칙 IV)\n-- **FR-005**: 탐색 방법(그리드·무작위 등)·후보 수·실행시간·동시성 상한·중단 규칙·표시 후보 수는 결정 항목 PD-05다. 확정 전에는 명시된 임시값으로 개발하고 임시값임을 표시한다. 난수 기반 탐색은 시드를 저장한다. (§6.4.3, D18)\n+- **FR-005**: 탐색 방법은 전체 그리드다. 등록표에서 선택한 후보 값의 모든 조합을 계산하고 일부만 표본으로 뽑지 않는다. 이는 후보 수 상한 안에서의 전수 계산이며, 범위 요약이 배제한 '무제한 전수 탐색'이 아니다. 난수를 쓰지 않으므로 같은 등록표·같은 선택 범위는 항상 같은 후보 집합을 만든다. 후속 버전에서 무작위 표본을 도입하면 시드를 저장한다. (§6.4.3, D18)\n+- **FR-005a**: 후보 수 상한의 임시값은 한 묶음당 유효 후보 1000개다. 실행시간 상한·동시성 상한·중단 규칙은 결정 항목 PD-05로 남아 있다. 확정 전에는 명시된 임시값으로 개발하고 확인 화면과 결과에 임시값임을 표시한다. 실측 후 [004](../004-backtest-execution/spec.md)의 PD-06에서 고정한다. (§6.4.3, §6.5, D18)\n+- **FR-005b**: 유효 후보 수가 후보 수 상한(임시 1000개)을 넘으면 실행하지 않는다. 초과 사실과 상한, 탐색 범위를 좁히는 방법을 한 문장으로 알린다. 표본을 자동으로 뽑거나 파라미터 간격을 임의로 넓혀 실행하지 않는다. (§6.5, D18, 원칙 IX)\n \n #### 유효성과 실행 관리 (§6.4.3, §6.5, D18, D19)\n \n - **FR-006**: 유효성 제약을 위반하는 조합(모멘텀 선정 수가 가용 섹터 수를 넘는 경우, 비중 상한들의 합계로 투자 비중을 채울 수 없는 조합 등)은 계산 전에 제외하고 제외 사유를 기록한다. (§6.4.3)\n - **FR-007**: 후보 하나의 계산은 [004](../004-backtest-execution/spec.md)의 공통 거래·평가 규칙과 전략별 계산 규칙을 따른다. 모든 후보는 같은 섹터 후보 집합·같은 공통 평가 구간·같은 금액·같은 비용·같은 정보 이용 기준으로 평가한다. (§6.4.1, 원칙 IV)\n-- **FR-008**: 후보 실행끼리 병렬화하고, 탐색 묶음별로 예상·유효·완료·실패·제외·미실행 후보 수를 관리한다. 후보 실행 상태는 완료/실패/제외/취소/미실행 중 하나다. (§6.5, D14)\n+- **FR-008**: 후보 실행끼리 병렬화하고, 탐색 묶음별로 예상·유효·완료·실패·제외·미실행 후보 수를 관리한다. 후보 실행 상태는 대기/발행/완료/실패/제외/미실행 중 하나다. 취소된 후보는 별도 상태가 아니라 '미실행'으로 남는다 — 이미 발행된 후보는 회수할 수 없어 완주하고, 발행 전 후보만 미실행이 된다. 재시도는 '실패'에서 '발행'으로 되돌리는 전이다(FR-024). (§6.5, D14)\n - **FR-009**: 탐색 묶음은 취소할 수 있다. 취소·한도 도달 시 부분 결과임을 알리고 완료한 범위(완료·미실행 후보 수)를 명시한다. (§4.2.2, §6.5)\n+- **FR-024**: 실패한 후보는 다시 시도할 수 있다. 재시도는 묶음이 시작 시점에 고정한 참조 버전·탐색 공간·선정 규칙을 그대로 쓰고 새 묶음을 만들지 않으며, 후보별 재시도 횟수를 기록한다. 선정 기준이나 탐색 범위를 바꿔 다시 돌리는 것은 재시도가 아니라 새 실험이다(FR-013c). 취소·한도로 '미실행'이 된 후보는 재시도 대상이 아니다. (§6.5, constitution \"실행·캐시\")\n - **FR-010**: 자동 탐색에는 기술적 사용량 상한과 원가 기록을 적용한다. 상한은 실측 후 고정하며(PD-06) 상한을 정하기 전에 무제한 탐색을 열지 않는다. 이는 결제 도입이 아니며 진단 화면에 포인트·상품 선택·결제 단계를 넣지 않는다. (§6.5, D18, D19)\n - **FR-011**: 제약 위반·자료 부족·계산 실패는 낮은 수익과 구분해 기록·표시한다. (§6.4.3, 원칙 VI)\n - **FR-012**: 묶음은 시작 시점의 자료·등록표·비용·엔진 버전을 고정해 끝까지 계산한다. 계산 중 버전이 갱신되면 결과에 그 사실을 표시한다.\n \n #### 후보 선정과 검증 구분 (§4.2.3, §6.4.3, §7.3, D10, D11)\n \n-- **FR-013**: 후보 선정은 비용 차감 성과·손실 제약·인접 설정 안정성에 대한 사전 기준을 사용한다. 구체 기준·동률 처리·표시 후보 수는 결정 항목 PD-05이며, 결과를 확인한 뒤 기준을 바꾸면 새 실험으로 기록한다. (§6.4.3, §7.3)\n+- **FR-013**: 후보 선정은 세 단계로 한다. (1) 두 필터를 적용해 통과하지 못한 후보를 탈락시키고 후보별 탈락 사유를 남긴다 — 손실 제약은 가장 크게 줄었던 폭이 동일 비중 기준보다 크지 않을 것, 안정성은 인접 설정 안정성 값이 묶음 내 유효 후보의 상위 50% 안에 들 것(값이 작을수록 안정). (2) 남은 후보를 비용 차감 후 수익 기준으로 정렬한다. (3) 상위 5개를 표시 후보로 삼는다. 절대 문턱 숫자는 쓰지 않는다. 동률 처리는 결정 항목 PD-05로 남아 있다. (§6.4.3, §7.3)\n+- **FR-013d**: 손실 제약의 기준값을 얻기 위해 묶음마다 동일 비중 기준 백테스트 1건을 후보와 같은 섹터 후보 집합·같은 공통 평가 구간·같은 금액·같은 비용·같은 참조 버전으로 함께 실행하고 그 결과를 기록한다. 이 값은 [005](../005-result-comparison/spec.md)의 비교 기준과 같은 값을 재사용한다. (원칙 IV)\n+- **FR-013a**: 인접 설정 안정성은 다음과 같이 계산한다. 어떤 후보의 이웃은 파라미터 축 하나만 등록표에서 한 칸 다른 조합이며(여러 축이 동시에 다른 조합은 이웃이 아니다), 안정성 값은 그 이웃들과의 비용 차감 후 수익 차 절댓값 평균이다. 값이 작을수록 안정이다. 탐색 범위의 경계에 있어 이웃이 적은 후보는 존재하는 이웃만으로 계산한다. (§6.4.3)\n+- **FR-013b**: 이웃이 하나도 없는 후보(탐색 범위가 한 점이거나 이웃이 모두 제외·실패인 경우)는 안정성을 '계산 불가'로 표시하고 0으로 채우지 않으며, 안정성 문턱은 통과 처리한다. 자료 없음을 낮은 안정성으로 취급하지 않는다. (원칙 VI)\n+- **FR-013c**: 선정 기준·문턱·정렬 지표·표시 후보 수는 탐색을 실행하기 전에 고정한다. 결과를 확인한 뒤 문턱을 낮추거나 정렬 지표를 바꾸면 새 실험(새 묶음)으로 기록하고 이전 묶음의 표시를 바꾸지 않는다. (§7.3, 원칙 VII)\n - **FR-014**: 선정 절차의 검증은 '내부 개발 구간 → 시간 순서 외부 평가 → 최종 잠금 평가' 순으로 한다. 후보 탐색·선정 기준의 튜닝은 내부 개발 구간에서만 하고 외부 평가 구간에서는 절차를 고정한다. 마지막 12개월 잠금은 출발안이며 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식은 시험 전에 고정하는 결정 항목 PD-12다. (§7.3, D11)\n - **FR-015**: 잠금 구간을 보고 수정한 실험은 그 구간을 더 이상 미사용 검증이라 부르지 않는다. 결과 옆에 '탐색 결과 / 미사용 검증 결과 / 미검증'을 구분 표시하고, 탐색에 사용한 성과와 미사용 기간 성과를 섞지 않는다. (§7.3, D11)\n - **FR-016**: 미사용 검증이 없거나 기준보다 개선되지 않은 후보를 '자동 우월성'이나 개인별 투자 추천으로 제시하지 않는다. 기능을 되돌리지 않고 결과에 '미검증·개선 근거 없음·판단 보류'를 표시한다. (§7.3, 원칙 III)\n@@ -133,18 +155,18 @@\n \n #### 결과 표시와 기록 (§4.2.3, §5, D10, D14)\n \n-- **FR-018**: 결과 첫 화면은 사전 기준으로 고른 소수 후보의 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용을 먼저 보인다. 인접 설정 안정성·선정 이유·탈락 사유·전체 후보 목록은 상세에 둔다. (§4.2.3, §6.4.3)\n+- **FR-018**: 결과 첫 화면은 사전 기준으로 고른 표시 후보 5개(문턱 통과 후보가 5개보다 적으면 그 수만큼)의 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용을 먼저 보인다. 인접 설정 안정성·선정 이유·탈락 사유·전체 후보 목록은 상세에 둔다. (§4.2.3, §6.4.3)\n - **FR-019**: 후보를 골라 [005](../005-result-comparison/spec.md)의 비교 대상으로 놓을 수 있다. 비교 기준은 사용자 고정 비중·동일 비중을 유지하고 '자동 탐색 후보 비교'임을 기본 설정 비교와 구분해 표시한다. 실제 보유 섹터가 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n-- **FR-020**: 탐색 공간·실행한 전체 후보·미실행 후보 수·제외 사유·평가 분리·정렬 및 선정 규칙·시드·참조 버전을 기록한다. 유효하지 않아 계산하지 않은 후보도 제외 사유를 남긴다. (§5, D14)\n-- **FR-021**: 전략 파라미터·경제환경 검색 설정·평가 시나리오는 별도 축으로 기록한다. (§6.4.3)\n-- **FR-022**: 탐색 묶음은 [006 내 기록](../006-my-records/spec.md)에 한 묶음으로 저장되고 펼치면 후보별 결과·선정 이유·실패 또는 제외 사유가 보인다. (§5)\n+- **FR-020**: 탐색 공간·탐색 방법·실행한 전체 후보·미실행 후보 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전을 기록한다. 현재 방법은 난수를 쓰지 않아 시드가 없으며, 무작위 표본을 도입하면 시드도 기록한다. 유효하지 않아 계산하지 않은 후보도 제외 사유를 남긴다. (§5, D14)\n+- **FR-021**: 전략 파라미터·경제환경 검색 설정·평가 시나리오는 별도 축으로 기록한다. 007은 전략 파라미터 축과 평가 시나리오 축을 기록하고, 경제환경 검색 설정 축의 내용과 저장 형식은 [010](../010-economic-regime-search/spec.md)이 소유한다 — 007은 그 축을 덮어쓰지 않도록 자리만 비워 둔다. (§6.4.3)\n+- **FR-022**: 탐색 묶음은 [006 내 기록](../006-my-records/spec.md)에 한 묶음으로 저장되고 펼치면 후보별 결과·선정 이유·실패 또는 제외 사유가 보인다. 007의 책임은 그 조회가 가능한 형태로 **저장하는 것**까지이며(FR-020), 목록·펼침 화면 구성은 006이 소유한다. (§5)\n - **FR-023**: 탐색 묶음 실행은 [004](../004-backtest-execution/spec.md) FR-007의 실행 유형 '자동 탐색 묶음'으로 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·건당 원가를 기록한다. (§6.5)\n \n ### Key Entities *(include if feature involves data)*\n \n-- **탐색 묶음**: 고정한 전략군·섹터 후보 집합, 탐색 공간(등록표 버전과 선택 범위), 탐색 방법·시드, 선정 기준·동률 규칙, 평가 분할, 적용 한도, 시작 시점 참조 버전, 상태(대기/실행/완료/부분 완료/취소), 후보 수 집계(예상·유효·완료·실패·제외·미실행)다.\n-- **탐색 후보**: 파라미터 조합 하나와 그 실행 상태(완료/실패/제외/취소/미실행), 제외 또는 실패 사유, 결과([004](../004-backtest-execution/spec.md)의 백테스트 결과 참조), 구간별 성과(내부 개발/외부 평가/잠금), 인접 설정 안정성, 선정 여부와 선정·탈락 이유다.\n-- **선정 규칙(버전)**: 비용 차감 성과·손실 제약·인접 설정 안정성 기준, 동률 처리, 표시 후보 수다. 결과 확인 뒤 변경은 새 버전이다.\n+- **탐색 묶음**: 고정한 전략군·섹터 후보 집합, 탐색 공간(등록표 버전과 선택 범위), 탐색 방법(전체 그리드), 동일 비중 기준 백테스트 결과, 선정 기준·동률 규칙, 평가 분할, 적용 한도, 시작 시점 참조 버전, 상태(대기/실행/완료/부분 완료/실패/거부), 중단 사유(취소·후보 수 한도·실행시간 한도·연속 실패 한도), 후보 수 집계(예상·유효·완료·실패·제외·미실행)다.\n+- **탐색 후보**: 파라미터 조합 하나와 그 실행 상태(대기/발행/완료/실패/제외/미실행), 제외 또는 실패 사유, 재시도 횟수, 결과([004](../004-backtest-execution/spec.md)의 백테스트 결과 참조), 구간별 성과(내부 개발/외부 평가/잠금), 인접 설정 안정성, 선정 여부와 선정·탈락 이유다.\n+- **선정 규칙(버전)**: 손실 제약 필터(동일 비중 기준 대비), 안정성 필터(묶음 내 상위 50%), 정렬 지표(비용 차감 후 수익), 표시 후보 수(5), 동률 처리다. 결과 확인 뒤 변경은 새 버전이다.\n - **평가 분할(버전)**: 내부 개발 구간·외부 평가 구간·잠금 구간의 날짜 경계와 중첩 처리다.\n - **검증 상태 표시**: 후보별 '탐색 결과 / 미사용 검증 결과 / 미검증'과 그 근거다.\n \n@@ -155,25 +177,27 @@\n - **SC-001**: 사용자는 확인 화면에서 값을 하나도 입력하지 않고 한 번의 행동으로 탐색을 시작할 수 있다.\n - **SC-002**: 유효성 제약을 위반하는 조합의 100%가 계산 전에 제외되고 제외 사유가 기록된다.\n - **SC-003**: 취소·한도 도달의 100%에서 부분 결과임과 완료·미실행 후보 수가 표시된다.\n-- **SC-004**: 같은 시드·같은 버전으로 재실행한 탐색은 100% 같은 후보 집합과 결과를 낸다.\n+- **SC-004**: 같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 재실행한 탐색은 100% 같은 후보 집합과 결과를 낸다. 재현에 시드 입력을 요구하지 않는다.\n - **SC-005**: 잠금 구간 성과가 후보 선정에 쓰인 사례가 0건이고, 잠금 구간을 본 뒤 수정한 실험이 '미사용 검증 결과'로 표시된 사례가 0건이다.\n - **SC-006**: 탐색 결과 화면에 자동 단일 승자·추천 비중·우승 전략 표시가 0건이다.\n - **SC-007**: 완료한 탐색 묶음의 100%가 FR-020의 기록 항목을 갖고 내 기록에서 한 묶음으로 다시 열린다.\n+- **SC-009**: 재시도한 후보는 100% 묶음 시작 시점의 참조 버전·탐색 공간·선정 규칙으로 계산되고, 재시도 횟수가 기록된다. 재시도가 새 묶음을 만든 사례가 0건이다.\n - **SC-008**: 사용성 관찰에서 참여자가 탐색 성과와 미사용 검증의 차이를 구분하는지 기록하고, 두 명 이상이 오해하면 상태 표시를 수정한다. (§7.2)\n \n ## Assumptions\n \n - 탐색 대상 전략군은 [003](../003-strategy-settings/spec.md)에서 선택한 전략 하나 또는 여러 전략이며, 섹터 후보 집합은 [002](../002-sector-weight-selection/spec.md)에서 고정한 것이다.\n-- 인접 설정 안정성은 탐색 공간에서 서로 이웃한 파라미터 조합 사이의 성과 변화 크기로 정의한다. 구체 산식은 PD-05와 함께 정한다.\n+- 인접 설정 안정성의 산식은 FR-013a에서 확정했다. 남은 값은 그 문턱 하나다(PD-05).\n - 평가 분할이 등록되지 않은 탐색도 실행할 수 있으며 그 결과는 모두 '미검증'이다. 검증 부족이 기능을 막지 않는다(원칙 I).\n - 실행 한도(PD-06)와 원가 기록은 [004](../004-backtest-execution/spec.md)의 실행 측정 기록을 함께 쓴다.\n+- 계산량은 같은 워커 코드를 여러 개 실행하는 수평 확장(경쟁 소비자 구조)으로 흡수한다. 이는 분산 처리 도입 결정이 아니며 그 판단은 [004](../004-backtest-execution/spec.md)의 실측 뒤에 한다. 수평 확장이 있어도 후보 수·실행시간·동시성 상한은 유지한다(원칙 IX).\n - 한국어 웹 화면이며 데스크톱 브라우저를 우선한다.\n \n ## Pre-Implementation Decisions *(팀 확정 필요)*\n \n | 번호 | 결정 항목 | 상태 | 출발안 | 근거 |\n |---|---|---|---|---|\n-| PD-05 | 자동 탐색: 방법(그리드·무작위 등)·후보 수·실행시간·동시성 상한·중단 규칙·표시 후보 수·선정 기준·동률 처리·인접 설정 안정성 산식 | 미확정 | 없음 | §6.4.3, D10, D18 |\n+| PD-05 | 자동 탐색 잔여 항목: 동률 처리·실행시간 상한·동시성 상한·중단 규칙 (방법·후보 수 상한·선정 구조·표시 후보 수·안정성 산식·두 필터 문턱은 2026-09-10 확정) | 일부 확정 | 방법=전체 그리드, 후보 수 상한=1000(임시), 선정=세 축 필터 후 비용 차감 수익 정렬, 표시 후보 수=5, 안정성=1축 이웃 성과차 절댓값 평균, 문턱=동일 비중 기준 대비+상위 50% | §6.4.3, D10, D18 |\n | PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 | 마지막 12개월 잠금 | §7.3, D11 |\n | PD-06 | 실행 한도 (소유: [004](../004-backtest-execution/spec.md)) | 실측 후 고정 | 실측 전 임시 상한 | §6.5, D18 |\n \n@@ -183,4 +207,7 @@\n - 무제한 전수 탐색과 상한 미정 상태의 탐색 개방 (D18)\n - 결제·포인트·유료 제공량 (D19)\n - 후보 하나의 계산 규칙 ([004](../004-backtest-execution/spec.md))과 비교 화면 구성 ([005](../005-result-comparison/spec.md))\n+- 내 기록의 목록·펼침 화면 구성과 보관 정책 ([006](../006-my-records/spec.md)). 007은 저장까지만 책임진다\n+- 경제환경 검색 설정 축의 내용과 저장 형식 ([010](../010-economic-regime-search/spec.md))\n+- 동일 결과 재사용(캐시). 실행 경로가 004와 같아 004에 붙으면 007도 함께 이득을 본다 ([004](../004-backtest-execution/spec.md))\n - 별도 빠른 탐색 엔진·분산 처리 도입 결정 (실측 후 별도 판단, D18)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/spec.md",
+          "old_path": "specs/007-auto-parameter-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,456 @@\n+# Tasks: 설정 조합 자동 비교 (자동 파라미터 대량 탐색)\n+\n+**Input**: Design documents from `specs/007-auto-parameter-search/`\n+\n+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)\n+\n+**Tests**: 포함한다. constitution \"완료의 정의\" 조건 2가 \"테스트 또는 동작 확인 완료\"를 Task 완료 조건으로 못 박고 있어 선택 사항이 아니다. 각 테스트 태스크는 [quickstart.md](quickstart.md) \"자동 테스트\" 표의 대상과 1:1로 대응한다.\n+\n+**Organization**: 사용자 스토리별로 묶고, 각 단계 안에서 **파트별로 다시 나눈다.**\n+\n+## Format: `[ID] [P?] [Story] (파트) Description`\n+\n+- **[P]**: 다른 파일을 만지고 선행 태스크가 없어 병렬 실행 가능\n+- **문자 접미사 ID**(`T020a`·`T098a`): `/speckit-analyze`가 찾은 누락을 메우려고 나중에 끼운 태스크다. 실행 순서를 유지하려고 앞 번호를 다시 매기지 않고, spec의 `FR-005a`·`FR-013a`와 같은 표기 방식을 따랐다\n+- **[US1]~[US4]**: spec.md의 사용자 스토리. Setup·Foundational·Polish에는 붙지 않는다\n+- **(파트)**: 아래 표의 파트. 작업 종류 표시이며 브랜치 단위가 아니다\n+\n+| 파트 태그 | 대상 | 묶음의 브랜치 position |\n+|---|---|---|\n+| `(DB)` | Flyway 마이그레이션 | `be` |\n+| `(BE)` | 백엔드 Java 구현 | `be` |\n+| `(BE 테스트)` | 백엔드 JUnit·Testcontainers | `be` |\n+| `(FE)` | 프론트엔드 React·TS | `fe` |\n+| `(FE 테스트)` | 프론트엔드 Vitest | `fe` |\n+| `(INFRA)` | 설정·프로퍼티 | `infra` |\n+| `(DOCS)` | 문서·ADR·MR 템플릿·수동 종단 확인 기록 | `docs` |\n+\n+Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai` 파트 태스크도 없다.\n+\n+**`T###`는 브랜치 단위가 아니다.** constitution v3.0.0 \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로\n+정하고 있어, 브랜치·MR·Jira Task 단위는 [plan.md](plan.md) \"작업 묶음 구성\"의 묶음(B01~B24) 24개다.\n+아래 126개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.\n+\n+## Path Conventions\n+\n+- 백엔드: `backend/src/main/java/com/ssafy/thorp/paramsearch/...`, 테스트는 `backend/src/test/java/com/ssafy/thorp/paramsearch/...`\n+- 마이그레이션: `backend/src/main/resources/db/migration/V3__param_search.sql`\n+- 프론트엔드: `frontend/src/...`\n+- 커밋 전 `cd backend && ./gradlew spotlessApply` 필수 (CLAUDE.md 코드 컨벤션)\n+\n+---\n+\n+## Phase 1: Setup (Shared Infrastructure)\n+\n+**Purpose**: 패키지 골격과 설정값 자리 만들기\n+\n+### Backend\n+\n+- [ ] T001 (BE) `paramsearch` 최상위 패키지와 4계층 하위 패키지 골격을 만들고 계층 규약을 `backend/src/main/java/com/ssafy/thorp/paramsearch/package-info.java`에 명시 (ADR-0001 계층 구조를 따르고 `backtest` 모듈과 같은 배치)\n+- [ ] T002 [P] (BE) `ParamSearchProperties` 설정 클래스를 `backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/config/ParamSearchProperties.java`에 작성 — `maxCandidates`·`dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`와 임시값 이름 목록을 노출. **네 값 모두 `@NotNull`로 필수화하고 코드에 기본값을 박지 않는다** — PD-05가 미확정인 값을 코드가 임의로 정하면 constitution \"AI 작업 방식\"을 어기므로, 미설정이면 기동을 실패시켜 설정으로 드러낸다\n+\n+### Infra\n+\n+- [ ] T003 [P] (INFRA) `backend/src/main/resources/application.yml`에 `thorp.param-search` 블록 추가 — `maxCandidates: 1000`만 채운다(clarify 확정, PD-06 실측 후 고정). `dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`는 **키만 두고 값을 비운 채 PD-05 확정 대기임을 주석으로 남긴다**. 값을 추측해 채우지 않는다\n+- [ ] T004 [P] (INFRA) `backend/src/main/resources/application-local.yml`에 개발용 값 4개를 모두 채운다 — 낮은 `maxCandidates`(상한 초과 거부를 로컬에서 재현, quickstart 시나리오 3)와 `dispatchWindow`·`timeLimitSeconds`·`consecutiveFailureLimit`. **개발 편의값이며 팀 확정값이 아님을 주석에 명시**하고, API 응답의 `limits.provisional`에 실린다\n+\n+### Frontend\n+\n+- [ ] T005 [P] (FE) `frontend/src/types/paramSearch.ts`에 계약 응답 타입 정의 ([contracts/param-search-api.md](contracts/param-search-api.md)의 응답 모양과 1:1, 금액·비율은 `string`)\n+- [ ] T006 [P] (FE) `frontend/src/api/paramSearch.ts` 빈 모듈과 `frontend/src/components/paramsearch/` 디렉터리 생성 (`frontend/src/api/client.ts`의 기존 호출 규약 재사용)\n+\n+### Test 기반\n+\n+- [ ] T007 [P] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/` 테스트 패키지 골격 생성과 `backtest` 통합 테스트의 Testcontainers PostgreSQL 설정 재사용 확인\n+\n+---\n+\n+## Phase 2: Foundational (Blocking Prerequisites)\n+\n+**Purpose**: 모든 사용자 스토리가 공유하는 스키마·모델·포트\n+\n+**⚠️ CRITICAL**: 이 단계가 끝나기 전에는 어떤 사용자 스토리도 시작할 수 없다\n+\n+### DB 스키마 (같은 파일이라 순차)\n+\n+- [ ] T008 (DB) `backend/src/main/resources/db/migration/V3__param_search.sql`에 `param_search_seq` 시퀀스와 `param_search` 테이블 작성 ([data-model.md](data-model.md) §2). 전략 파라미터 축(`search_space`)과 평가 시나리오 축(`evaluation_split`)을 별도 컬럼으로 둔다 — 경제환경 검색 설정 축은 010 소유라 만들지 않는다 (FR-021). `V2__backtest_result.sql`의 저장 규칙 주석 규약을 따른다 — 질의에 쓰는 값만 컬럼, 표시용은 JSONB, decimal은 예외 없이 JSONB\n+- [ ] T009 (DB) 같은 파일에 `backtest_trade_seq`와 같은 방식의 `search_candidate_seq`(INCREMENT 50)와 `search_candidate` 테이블 작성 ([data-model.md](data-model.md) §4)\n+- [ ] T010 (DB) 같은 파일에 인덱스·제약 추가 — `param_search.search_id` UNIQUE, `(owner_user_id, created_at DESC)`, `(param_search_id, candidate_no)` UNIQUE, `(param_search_id, status)`, `(param_search_id, selected)`, `search_candidate.backtest_job_id` UNIQUE(NULL 허용)\n+\n+### 도메인 enum·VO (서로 독립)\n+\n+- [ ] T011 [P] (BE) `domain/model/ParamSearchStatus.java` — `QUEUED` `RUNNING` `COMPLETED` `PARTIAL` `FAILED` `REJECTED`와 전이 허용 규칙 ([data-model.md](data-model.md) §3)\n+- [ ] T012 [P] (BE) `domain/model/CandidateStatus.java` — `PENDING` `DISPATCHED` `COMPLETED` `FAILED` `EXCLUDED` `SKIPPED`와 전이 허용 규칙 (FR-008, §4.1). `SKIPPED`는 되돌아오지 않는 확정 상태다\n+- [ ] T013 [P] (BE) `domain/model/ValidationLabel.java` — `SEARCH_RESULT` `HELD_OUT_RESULT` `UNVALIDATED`\n+- [ ] T014 [P] (BE) `domain/vo/ParamSearchId.java` — `PS-{yyyyMMdd}-{6자리 이상 순번}` 형식 생성·검증 (`BacktestId`와 같은 규약, DB PK 비노출)\n+- [ ] T015 [P] (BE) `domain/vo/ParameterCombination.java` — 파라미터 조합 하나. 값에 `null` 금지\n+- [ ] T016 [P] (BE) `domain/vo/GridCoordinates.java` — 축 이름 → 등록표 인덱스. 이웃 판정의 근거 (research R7)\n+- [ ] T017 [P] (BE) `domain/vo/SearchSpace.java` — 축 이름 → 선택한 후보 값 목록\n+\n+### 도메인 모델\n+\n+- [ ] T018 (BE) `domain/model/SelectionRule.java` — 선정 규칙 스냅샷과 JSON 직렬화 ([data-model.md](data-model.md) §5). 절대 문턱 숫자를 담지 않는다\n+- [ ] T019 (BE) `domain/model/ParamSearch.java` — 묶음 애그리게이트와 상태 전이 (T011, T014, T017, T018 의존)\n+- [ ] T020 (BE) `domain/model/SearchCandidate.java` — 후보 모델과 상태 전이 (T012, T013, T015, T016 의존)\n+- [ ] T020a [P] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/StatusTransitionTest.java` — 허용된 전이만 통과하고 나머지는 거부하는지 검증. `SKIPPED`가 되돌아오지 않는지, `FAILED`→`DISPATCHED`(재시도, FR-024)만 허용되는지 포함. 이 묶음이 스스로 검증 가능해야 한다(묶음 조건 2)\n+\n+### 영속화\n+\n+- [ ] T021 [P] (BE) `infrastructure/persistence/ParamSearchJpaEntity.java` — T008 스키마와 1:1 (`ddl-auto=validate`)\n+- [ ] T022 [P] (BE) `infrastructure/persistence/SearchCandidateJpaEntity.java` — T009 스키마와 1:1, `allocationSize = 50`\n+- [ ] T023 [P] (BE) `infrastructure/persistence/ParamSearchJpaRepository.java`와 `SearchCandidateJpaRepository.java`\n+- [ ] T024 (BE) `infrastructure/persistence/ParamSearchMapper.java`와 `SearchCandidateMapper.java` — 도메인 ↔ 엔티티 (T019~T022 의존)\n+- [ ] T025 (BE) `application/repository/ParamSearchRepository.java`·`SearchCandidateRepository.java` 포트와 `infrastructure/persistence/*RepositoryImpl.java` 구현\n+- [ ] T026 (BE 테스트) 엔티티와 V3 스키마 일치 검증 테스트 — `ddl-auto=validate`로 기동되는지 Testcontainers로 확인\n+\n+### 등록표 포트 (003 경계)\n+\n+- [ ] T027 [P] (BE) `application/port/ParameterRegistryPort.java`와 `ParameterAxis`·`ValidationVerdict`·`SearchContext` record 정의 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1)\n+- [ ] T028 (BE) `infrastructure/registry/FixedParameterRegistry.java` 임시 구현 — `version()`은 `PROVISIONAL-{날짜}`, 축·값은 코드 상수. **PD-02 팀 확정값이 아님을 클래스 주석과 버전 문자열로 명시** (research R1)\n+- [ ] T029 (BE 테스트) 같은 `version()` 안에서 축 순서와 값 인덱스가 안정적인지 검증 — 흔들리면 그리드 좌표가 뜻을 잃는다\n+\n+### 공통 서비스\n+\n+- [ ] T030 (BE) `application/service/GridExpander.java` — 전체 그리드 전개와 그리드 좌표 부여 (T027 의존, FR-005)\n+- [ ] T031 (BE) `application/service/CandidateValidator.java` — 계산 전 유효성 판정. 최소 두 위반 코드 `TOP_N_EXCEEDS_UNIVERSE`·`WEIGHT_CAP_SUM_TOO_SMALL`과 사유 문장 (FR-006)\n+\n+### 004 경계\n+\n+- [ ] T032 [P] (BE) `application/port/CandidateJobLauncher.java` 포트 정의 — `launchCandidate()`와 **`launchBaseline()` 두 메서드**([contracts/param-search-internal.md](contracts/param-search-internal.md) §2). `launchBaseline`이 없으면 FR-013d의 하락 폭 필터 기준값이 만들어지지 않는다\n+- [ ] T033 (BE) `infrastructure/launcher/CandidateJobLauncherImpl.java` — `backtest` 모듈 접수 유스케이스 호출로 두 메서드 구현. `launchBaseline()`은 동일 비중 기준 1건을 후보와 같은 섹터 집합·공통 구간·금액·비용·참조 버전으로 접수한다(FR-013d). **묶음 스냅샷만 보고 조립하고 현재 시각의 자료·비용 버전을 다시 읽지 않는다** (FR-007, FR-012)\n+- [ ] T034 [P] (BE) `backtest/application/event/BacktestFinished.java` 이벤트 record 정의 — `backtest` 모듈은 `paramsearch`를 참조하지 않는다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §3)\n+- [ ] T035 (BE) `backtest/application/service/BacktestEventService.java`에 결과 저장 커밋 후 `BacktestFinished` 발행 추가 (`@TransactionalEventListener(phase = AFTER_COMMIT)`)\n+- [ ] T036 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceEventTest.java` — 커밋 전에는 이벤트가 발행되지 않는지 검증 — 커밋 전 발행이면 007이 없는 결과를 읽는다\n+\n+### 오류 처리\n+\n+- [ ] T037 [P] (BE) `common/exception/ErrorCode.java`에 `CANDIDATE_LIMIT_EXCEEDED`·`NO_VALID_COMBINATION`·`UNREGISTERED_PARAMETER_VALUE`·`ALREADY_FINISHED` 추가\n+- [ ] T038 (BE) `application/exception/` 예외 클래스 4개와 `common/web/advice/GlobalExceptionHandler.java` 매핑 추가 — HTTP 상태는 [contracts/param-search-api.md](contracts/param-search-api.md) §6과 일치\n+\n+**Checkpoint**: 스키마·모델·포트 준비 완료. 사용자 스토리를 병렬로 시작할 수 있다\n+\n+---\n+\n+## Phase 3: User Story 1 - 실행 전 확인만 하고 한 동작으로 탐색을 실행한다 (Priority: P1) 🎯 MVP\n+\n+**Goal**: 전략·섹터를 고정한 사용자가 값을 하나도 입력하지 않고 확인 화면을 보고 버튼 한 번으로 탐색을 접수하고 진행 상태를 본다\n+\n+**Independent Test**: 전략 하나와 섹터를 고정한 뒤 확인 화면의 네 항목이 보이는지, 아무 값도 입력하지 않고 접수되는지, `GET /param-searches/{id}`로 진행이 보이는지 확인한다 (quickstart 시나리오 1)\n+\n+### Tests for User Story 1\n+\n+- [ ] T039 [P] [US1] (BE 테스트) `GridExpander` 단위 테스트 — 조합 수 = 축 값 개수의 곱, 좌표가 등록표 인덱스와 일치\n+- [ ] T040 [P] [US1] (BE 테스트) preview 작업량 집계 단위 테스트 — `totalCombinations` = `valid` + `excluded`, 사유별 건수 합이 `excluded`와 일치\n+- [ ] T041 [P] [US1] (BE 테스트) `CandidateDispatcher` 단위 테스트 — `DISPATCHED` 후보 수가 발행 창을 넘지 않는다 (내부 계약 §4 불변식 1)\n+- [ ] T042 [P] [US1] (BE 테스트) preview 계약 테스트 — 네 덩어리 존재, `limits.provisional`에 `maxCandidates` 포함, `validationLabel = UNVALIDATED`\n+- [ ] T043 [P] [US1] (BE 테스트) 접수 → 발행 → `BacktestFinished` 수신 → `counts` 집계 통합 테스트 (Testcontainers)\n+- [ ] T044 [P] [US1] (BE 테스트) 동시 `BacktestFinished` 수신에서 `counts`가 서로를 덮어쓰지 않는지 검증 (내부 계약 §4 동시 수신 경쟁)\n+\n+### Implementation for User Story 1 — Backend 유스케이스\n+\n+- [ ] T045 [P] [US1] (BE) `application/command/PreviewParamSearchCommand.java`와 `CreateParamSearchCommand.java` (record 우선)\n+- [ ] T046 [P] [US1] (BE) `application/result/ParamSearchPreviewResult.java`와 `ParamSearchResult.java`\n+- [ ] T047 [US1] (BE) `application/service/CommonPeriodResolver.java` — 후보 공통 평가 구간 산출과 `shortenedBy` 계산. 모든 후보를 같은 구간으로 평가한다 (Edge Case)\n+- [ ] T048 [US1] (BE) `application/service/ParamSearchService.preview()` — 등록표 조회·그리드 전개·유효성 집계·한도·공통 구간·검증 라벨 반환. **저장하지 않는다** (FR-001, FR-003)\n+- [ ] T049 [US1] (BE) `ParamSearchService.create()` — 묶음·후보 저장 후 기준 1건과 발행 창만큼 발행. 저장과 발행을 한 트랜잭션으로 묶는다 (`BacktestService`와 같은 규약)\n+- [ ] T050 [US1] (BE) `application/service/CandidateDispatcher.java` — 발행 창 관리와 묶음 행 비관적 락. 후보 실행끼리 병렬화한다 (FR-008, research R2, 내부 계약 §4)\n+- [ ] T051 [US1] (BE) `application/service/ParamSearchProgressService.java` — 후보 상태 갱신과 예상·유효·완료·실패·제외·미실행 `counts` 집계 (FR-008)\n+- [ ] T049a [P] [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchReproducibilityTest.java` — 같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 두 번 접수하면 후보 집합과 그리드 좌표가 완전히 같은지, `random_seed`가 두 묶음 모두 NULL인지 검증 (SC-004, 원칙 VIII)\n+- [ ] T052 [US1] (BE) `infrastructure/listener/BacktestFinishedListener.java` — `backtestJobId`로 후보 조회, 못 찾으면 단일 실행 Job이므로 경고 없이 무시, 찾으면 다음 후보 발행 요청\n+\n+### Implementation for User Story 1 — Backend API\n+\n+- [ ] T053 [P] [US1] (BE) `presentation/request/ParamSearchPreviewRequest.java`·`ParamSearchCreateRequest.java`와 Bean Validation — 종목 1~50개·`{6자리}.XKRX`·중복 금지, `space` 생략 허용\n+- [ ] T054 [P] [US1] (BE) `presentation/response/ParamSearchPreviewResponse.java`·`ParamSearchResponse.java`\n+- [ ] T055 [US1] (BE) `presentation/controller/ParamSearchController.java`에 `POST /param-searches/preview`(200)와 `POST /param-searches`(202) 추가\n+- [ ] T056 [US1] (BE) 같은 컨트롤러에 `GET /param-searches/{searchId}` 추가 — `status`·`counts`·`config` 반환, `selection`은 아직 `null`. 실패해도 200이다\n+- [ ] T057 [US1] (BE) `space`에 등록표 밖 값이 오면 `400 UNREGISTERED_PARAMETER_VALUE` 처리 (FR-002)\n+\n+### Implementation for User Story 1 — Frontend\n+\n+- [ ] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현\n+- [ ] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)\n+- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음 (원칙 II, SC-001)\n+- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 등록표 범위 안에서만 좁히거나 넓히고 범위 밖 값은 입력할 수 없다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004)\n+- [ ] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)\n+- [ ] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결\n+- [ ] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)\n+\n+**Checkpoint**: 탐색을 접수해 진행 상태까지 볼 수 있다. 선정 결과는 아직 없다\n+\n+---\n+\n+## Phase 4: User Story 2 - 소수 후보의 수익·큰 손실·비용을 비교하고 근거를 본다 (Priority: P1)\n+\n+**Goal**: 완료된 묶음에서 사전 기준으로 고른 5개 후보의 세 숫자를 먼저 보고, 상세에서 안정성·선정 이유·탈락 사유·전체 후보를 본다\n+\n+**Independent Test**: 완료된 묶음을 열어 표시 후보의 세 숫자가 먼저 보이고, 상세에 안정성·선정/탈락 사유·전체 후보가 있고, '추천'·'1위' 배지가 없는지 확인한다 (quickstart 시나리오 5)\n+\n+**Depends on**: US1 (완료된 후보가 있어야 선정할 대상이 생긴다)\n+\n+### Tests for User Story 2\n+\n+- [ ] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`\n+- [ ] T066 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/DrawdownFilterTest.java` — 동일 비중 기준보다 큰 후보만 탈락\n+- [ ] T067 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/StabilityFilterTest.java` — 계산 불가 후보는 통과 처리 (FR-013b)\n+- [ ] T068 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorSortTest.java` — 동률은 5개를 넘겨 전부 표시, 임의 순서 없음 (research R3)\n+- [ ] T069 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorShortfallTest.java` — 문턱을 낮춰 채우지 않는다 (원칙 VII)\n+- [ ] T070 [P] [US2] (BE 테스트) 기준 백테스트 실패 시 하락 폭 필터 미적용 + `drawdownFilterApplied = false` 테스트\n+- [ ] T071 [P] [US2] (BE 테스트) 후보 목록 계약 테스트 — `EXCLUDED`·`FAILED`·`SKIPPED`·`PENDING` 후보의 성과 필드가 **`null`이고 0이 아니다** (FR-011)\n+- [ ] T072 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java` — 선정 계산이 묶음당 정확히 1회인지 검증 (내부 계약 §4 불변식 3)\n+\n+### Implementation for User Story 2 — Backend 계산\n+\n+- [ ] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상 (FR-013a)\n+- [ ] T074 [US2] (BE) `application/service/selection/DrawdownFilter.java` — 가장 크게 줄었던 폭이 동일 비중 기준보다 크지 않은 후보만 통과 (FR-013)\n+- [ ] T075 [US2] (BE) `application/service/selection/StabilityFilter.java` — 묶음 내 유효 후보의 상위 50%만 통과, 계산 불가는 통과\n+- [ ] T076 [US2] (BE) `application/service/CandidateSelector.java` — 두 필터 적용 → 비용 차감 후 수익 정렬 → 상위 5 → 동률 전부. 후보별 선정·탈락 사유 기록 (T073~T075 의존)\n+- [ ] T077 [US2] (BE) `ParamSearchProgressService`에 묶음 종료 감지 추가 — `PENDING` 0 && `DISPATCHED` 0이면 안정성 → 선정 순서로 1회 실행\n+- [ ] T078 [US2] (BE) 선정 결과를 `param_search.selection` 스냅샷으로 저장 ([data-model.md](data-model.md) §2)\n+\n+### Implementation for User Story 2 — Backend API\n+\n+- [ ] T079 [P] [US2] (BE) `application/result/CandidatePageResult.java`와 `presentation/response/CandidatePageResponse.java`\n+- [ ] T080 [US2] (BE) `GET /param-searches/{searchId}/candidates` — 페이징(`size` 최대 200), `status`·`selected` 필터, 허용 정렬 목록(`candidateNo`·`netReturn`·`maxDrawdown`·`tradingCost`·`stability`)만 수용\n+- [ ] T081 [US2] (BE) `GET /param-searches/{searchId}` 응답에 `selection`과 `baseline` 채우기 — `selection.displayed`는 **순위가 아니라 정렬 지표를 밝힌 집합**이다 (plan 설계 제약 1)\n+\n+### Implementation for User Story 2 — Frontend\n+\n+- [ ] T082 [P] [US2] (FE) `frontend/src/components/paramsearch/CandidateSummaryCard.tsx` — 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용 세 숫자 (FR-018)\n+- [ ] T083 [US2] (FE) `frontend/src/components/paramsearch/SelectionResult.tsx` — 표시 후보 집합. **순위 번호·추천 문구·우승 배지 금지**, 정렬 지표 이름(\"비용 차감 후 수익\") 명시 (plan 설계 제약 1·3)\n+- [ ] T084 [US2] (FE) `frontend/src/components/paramsearch/CandidateDetail.tsx` — 인접 설정 안정성·선정 이유·탈락 사유\n+- [ ] T085 [US2] (FE) `frontend/src/components/paramsearch/CandidateTable.tsx` — 전체 후보 목록과 한 항목 기준 정렬 (FR-017이 허용하는 범위)\n+- [ ] T086 [P] [US2] (FE) 계산 불가·미완료 후보 표시 — `null` 성과를 \"0%\"가 아니라 사유와 함께 보인다 (FR-011, 원칙 VI)\n+- [ ] T087 [US2] (FE) `frontend/src/components/paramsearch/CompareHandoff.tsx` — 후보를 005 비교 대상으로 넘기는 연결과 '자동 탐색 후보 비교' 표시 (FR-019). 005 미구현이면 진입 지점과 표시만 만든다\n+- [ ] T088 [P] [US2] (FE 테스트) `frontend/src/components/paramsearch/SelectionResult.test.tsx` — 순위 번호·추천·우승 표현이 0건인지 검증 (SC-006)\n+\n+**Checkpoint**: US1과 US2가 각각 독립적으로 동작한다\n+\n+---\n+\n+## Phase 5: User Story 3 - 유효하지 않은 조합은 계산 전에 걸러지고, 중단되면 부분 결과로 남는다 (Priority: P2)\n+\n+**Goal**: 제약 위반 조합이 계산 전에 사유와 함께 제외되고, 취소·한도 도달 시 부분 결과임과 완료 범위가 보인다\n+\n+**Independent Test**: 선정 수가 섹터 수보다 큰 조합을 포함해 실행해 그 조합이 `EXCLUDED` + 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다 (quickstart 시나리오 2·3·4)\n+\n+**Depends on**: Foundational의 `CandidateValidator`(T031). US1의 접수 경로에 거부·취소를 덧붙인다\n+\n+### Tests for User Story 3\n+\n+- [ ] T089 [P] [US3] (BE 테스트) `CandidateValidator` 단위 테스트 — 알려진 두 위반이 100% 제외되고 사유 코드가 남는다 (SC-002)\n+- [ ] T090 [P] [US3] (BE 테스트) `EXCLUDED` 후보에 `backtest_job` 행이 만들어지지 않는지 검증 — 계산 전 제외다\n+- [ ] T091 [P] [US3] (BE 테스트) 상한 초과 접수 통합 테스트 — `422 CANDIDATE_LIMIT_EXCEEDED`, 묶음은 `REJECTED`로 저장, 후보·Job 0건, **표본 추출 없음**\n+- [ ] T092 [P] [US3] (BE 테스트) 유효 조합 0건 통합 테스트 — `422 NO_VALID_COMBINATION`과 어느 제약인지 한 문장\n+- [ ] T093 [P] [US3] (BE 테스트) 취소 통합 테스트 — `PENDING` → `SKIPPED`, 취소 후 추가 발행 0건, `PARTIAL` 전이 (내부 계약 §4 불변식 2·4)\n+- [ ] T094 [P] [US3] (BE 테스트) 끝난 묶음 취소 시 `409 ALREADY_FINISHED`\n+\n+### Implementation for User Story 3 — Backend 거부\n+\n+- [ ] T095 [US3] (BE) `ParamSearchService.create()`에 상한 초과 거부 추가 — 묶음을 `REJECTED`로 저장하고 `stop_reason` 기록. 유효 후보 수·상한·좁히는 방법을 메시지에 담는다 (FR-005b)\n+- [ ] T096 [US3] (BE) 같은 지점에 유효 조합 0건 거부 추가 — `REJECTED` 저장과 제약 사유 한 문장 (Edge Case)\n+\n+### Implementation for User Story 3 — Backend 중단·취소\n+\n+- [ ] T097 [US3] (BE) `ParamSearchService.cancel()` — `PENDING` 후보 전부 `SKIPPED`, 추가 발행 중단. 발행된 후보는 완주한다 (research R2)\n+- [ ] T098 [US3] (BE) `POST /param-searches/{searchId}/cancel` 엔드포인트와 `skipped`·`inFlight` 응답, 끝난 묶음은 409\n+- [ ] T099 [P] [US3] (BE) `application/service/limit/TimeLimitGuard.java` — 묶음 시작 시각 기준 실행시간 한도 판정\n+- [ ] T100 [P] [US3] (BE) `application/service/limit/FailureLimitGuard.java` — 연속 실패 한도 판정\n+- [ ] T101 [US3] (BE) 한도 도달 시 `stop_reason`(`CANDIDATE_LIMIT`·`TIME_LIMIT`·`FAILURE_LIMIT`) 기록과 발행 중단 (T099, T100 의존)\n+- [ ] T098a [US3] (BE) `ParamSearchService.retryFailed()` — `FAILED` 후보만 `DISPATCHED`로 되돌려 재발행하고 `retry_count`를 올린다. 묶음 시작 시점 스냅샷(참조 버전·탐색 공간·선정 규칙)을 그대로 쓰고 새 묶음을 만들지 않는다. `SKIPPED` 후보는 대상이 아니다 (FR-024)\n+- [ ] T098b [US3] (BE) `POST /param-searches/{searchId}/retry-failed` 엔드포인트와 응답 DTO — 재시도 대상 수·재발행 수 반환, 실패 후보가 없으면 `409 NOTHING_TO_RETRY` ([contracts/param-search-api.md](contracts/param-search-api.md) §5.1)\n+- [ ] T098c [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java` — 재시도가 새 묶음을 만들지 않고 스냅샷을 재사용하는지, `SKIPPED`가 제외되는지, 재시도 완료 후 선정이 다시 계산되는지 검증 (SC-009)\n+- [ ] T101a [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java` — 실행시간·연속 실패 한도 도달 시 발행이 멈추고 `PARTIAL` + `stop_reason`이 남으며 부분 결과 문장이 나오는지 검증 (SC-003)\n+- [ ] T102 [US3] (BE) `GET /param-searches/{searchId}` 응답에 `partial`·`partialNote`·`stopReason` 채우기 — 완료·미실행 후보 수를 문장으로 (FR-009)\n+- [ ] T103 [US3] (BE) 후보 계산 실패·자료 부족을 `FAILED` + `reason_code`로 기록하고 성과 필드를 `null`로 유지 (FR-011)\n+\n+### Implementation for User Story 3 — Frontend\n+\n+- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내. 상한 초과·유효 조합 0건을 오류 화면 없이 한 문장으로 (공통 성공 기준)\n+- [ ] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수\n+- [ ] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)\n+- [ ] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영\n+- [ ] T107a [P] [US3] (FE) `frontend/src/components/paramsearch/RetryFailedButton.tsx` — 실패 후보가 있을 때만 보이는 재시도 버튼과 재시도 후 상태 반영 (FR-024)\n+\n+**Checkpoint**: 계산 낭비와 중단 처리가 모두 동작한다\n+\n+---\n+\n+## Phase 6: User Story 4 - 탐색 성과와 미사용 검증을 구분해서 본다 (Priority: P2)\n+\n+**Goal**: 후보마다 '탐색 결과 / 미사용 검증 결과 / 미검증'이 구분 표시되고, 기준을 바꿔 다시 실행하면 새 실험으로 기록된다\n+\n+**Independent Test**: 평가 분할이 등록되지 않은 탐색에서 모든 후보가 '미검증'으로 보이는지, 기준을 바꿔 재실행하면 새 묶음이 되고 이전 묶음 표시가 그대로인지 확인한다\n+\n+**Depends on**: US1(묶음 접수), US2(후보 표시)\n+\n+### Tests for User Story 4\n+\n+- [ ] T108 [P] [US4] (BE 테스트) 평가 분할 미등록이면 전 후보가 `UNVALIDATED`인지 검증하고, **이를 검증 통과로 보고하지 않는다는 주석**을 테스트에 남긴다 (research R5, 완료의 구분)\n+- [ ] T109 [P] [US4] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java` — 잠금 구간 성과가 선정 계산에 입력되지 않는지 검증 (SC-005)\n+- [ ] T110 [P] [US4] (BE 테스트) 선정 기준·범위를 바꿔 재실행하면 새 `searchId`가 생기고 이전 묶음의 `selection`·상태가 불변인지 통합 테스트 (FR-013c)\n+\n+### Implementation for User Story 4 — Backend\n+\n+- [ ] T111 [P] [US4] (BE) 후보 생성 시 `validation_label` 기본값 `UNVALIDATED` 적용과 `period_performance` JSONB 자리 예약 (FR-014, research R5)\n+- [ ] T112 [US4] (BE) preview·상태·후보 응답에 `validationLabel`과 `validationNote` 노출 — 실행 전에도 미검증임을 알린다. 탐색 성과와 미사용 구간 성과를 섞지 않는다 (FR-015)\n+- [ ] T113 [US4] (BE) 선정 규칙 스냅샷 불변성 보장 — 기존 묶음의 `selection_rule`을 수정하는 경로를 만들지 않고, 변경은 새 묶음으로만 (FR-013c, 원칙 VII)\n+\n+### Implementation for User Story 4 — Frontend\n+\n+- [ ] T114 [P] [US4] (FE) `frontend/src/components/paramsearch/ValidationBadge.tsx` — 후보마다 검증 상태 상시 표시 (plan 설계 제약 2)\n+- [ ] T115 [US4] (FE) `frontend/src/components/paramsearch/ValidationNote.tsx` — 미검증 안내 문구. '미검증·개선 근거 없음·판단 보류'를 결과에 표시하고 기능을 막지 않는다 (FR-016)\n+- [ ] T116 [P] [US4] (FE 테스트) `frontend/src/components/paramsearch/ValidationBadge.test.tsx` — 검증 상태 배지 누락이 0건인지 검증\n+\n+**Checkpoint**: 네 사용자 스토리가 모두 독립적으로 동작한다\n+\n+---\n+\n+## Phase 7: Polish & Cross-Cutting Concerns\n+\n+**Purpose**: 여러 스토리에 걸친 기록·문서·검증\n+\n+### Backend\n+\n+- [ ] T117 (BE) 실행 측정 기록 — 실행 유형 `AUTO_SEARCH_BATCH`로 대기 포함 소요 시간·동시 처리 수·실패·건당 원가 기록. 계산·데이터·저장 원가를 구분한다 (FR-010, FR-023, [contracts/param-search-internal.md](contracts/param-search-internal.md) §5). **측정값을 목표로 제시하지 않는다**\n+- [ ] T117a (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java` — 완료·부분 완료 묶음이 FR-020 기록 항목 전체(탐색 공간·탐색 방법·전체 후보·미실행 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전)를 갖는지, 제외 후보도 사유를 남기는지 검증. 이것이 FR-022가 요구하는 '한 묶음으로 다시 열리는' 저장 상태이며 006 화면 구성은 범위 밖이다 (SC-007, FR-022, 원칙 VIII)\n+- [ ] T118 (BE) `./gradlew spotlessApply` 적용과 `./gradlew test` 통과 확인\n+\n+### Frontend\n+\n+- [ ] T119 (FE) `npm run lint`와 `npm test` 통과 확인\n+\n+### 문서\n+\n+- [ ] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)\n+- [ ] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)\n+- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 \"순위 배지·추천 표현 0건\"과 \"결제·포인트·상품 선택 단계 0건\" 항목 추가 (plan 설계 제약 4, FR-010)\n+- [ ] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화\n+\n+### 검증\n+\n+- [ ] T124 (BE 테스트) `cd worker && pytest` 회귀 확인 — 워커를 바꾸지 않았음을 증명한다\n+- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 6개를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록\n+- [ ] T126 (DOCS) T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달\n+\n+---\n+\n+## Dependencies & Execution Order\n+\n+### Phase Dependencies\n+\n+- **Phase 1 Setup**: 선행 없음. 즉시 시작\n+- **Phase 2 Foundational**: Setup 완료 후. **모든 사용자 스토리를 막는다**\n+- **Phase 3~6 User Stories**: Foundational 완료 후\n+- **Phase 7 Polish**: 원하는 스토리들이 끝난 뒤\n+\n+### User Story Dependencies\n+\n+- **US1 (P1)**: Foundational 후 바로 시작. 다른 스토리에 의존하지 않는다 → **MVP**\n+- **US2 (P1)**: US1 필요. 선정할 완료 후보가 있어야 한다. 다만 `NeighborStabilityCalculator`·필터·`CandidateSelector`(T073~T076)는 US1과 **병렬로 개발**하고 고정 입력으로 단위 테스트할 수 있다\n+- **US3 (P2)**: Foundational의 T031 필요. 거부·취소는 US1의 접수 경로에 덧붙는다. `CandidateValidator` 테스트(T089·T090)는 US1 없이도 가능\n+- **US4 (P2)**: US1·US2 필요. 작업량이 가장 작다(라벨·표시 중심)\n+\n+### 묶음(브랜치·MR) 진행 순서\n+\n+브랜치·MR 단위는 [plan.md](plan.md) \"작업 묶음 구성\"의 B01~B24다. 아래는 그 묶음들의 선후 관계다.\n+\n+```text\n+B01 B02                    (Setup, 서로 병렬)\n+ └─▶ B03 ─▶ B04            도메인 → 스키마·영속화\n+     B05 B07 B08           (B03과 병렬 가능, 서로도 병렬)\n+     B05 ─▶ B06            등록표 포트 → 그리드·유효성\n+         └─▶ B09 ─▶ B10    유스케이스 → 엔드포인트\n+                  └─▶ B11 ─▶ B12        (FE, 계약 문서로 B09·B10과 병행 가능)\n+             B13 ─▶ B14 ─▶ B15 ─▶ B16   선정 계산 → 조회 API → 결과 화면 → 비교 연결\n+             B17 B18 ─▶ B19             거부·취소·한도 → FE 표시\n+             B20 ─▶ B21                 검증 라벨 → 배지\n+             B22 B23 B24                (Polish, 서로 병렬)\n+```\n+\n+- **B04는 B03 뒤다** — Mapper가 도메인 모델을 참조한다.\n+- **B06은 B05 뒤다** — 그리드 전개가 등록표 포트를 쓴다.\n+- **B13은 B09·B10과 병렬로 열 수 있다** — 선정 계산은 고정 입력으로 단위 검증되므로 접수 경로를 기다리지 않는다. 다만 종단 확인은 B09 이후다.\n+- **B17은 B09 뒤다** — 거부·취소가 접수 경로에 덧붙는다.\n+- 한 묶음이 곧 한 MR이므로 **묶음 안의 task를 절반만 올리지 않는다**(묶음 조건 3).\n+\n+### 파트 사이 순서\n+\n+- `(DB)` T008~T010 → `(BE)` 영속화 T021~T026: 스키마가 엔티티보다 먼저다 (`ddl-auto=validate`)\n+- `(BE)` 응답 DTO → `(FE)` 화면: 계약 문서가 이미 응답 모양을 고정했으므로 **프론트는 백엔드 구현을 기다리지 않고 `contracts/param-search-api.md`로 병행**할 수 있다\n+- `(DOCS)` T120~T123은 어느 단계에서든 병렬\n+\n+### Within Each User Story\n+\n+- 테스트를 먼저 쓰고 실패시킨 뒤 구현한다\n+- enum·VO → 도메인 모델 → 영속화 → 유스케이스 → 컨트롤러 → 화면\n+- 계산 서비스(T073~T076)는 API보다 먼저\n+\n+### Parallel Opportunities\n+\n+- Phase 1의 T002~T007 전부 병렬\n+- Phase 2의 enum·VO T011~T017 전부 병렬 (서로 다른 파일)\n+- Phase 2의 T021·T022·T023, T027, T032, T034, T037 병렬\n+- 각 스토리의 테스트 태스크는 전부 병렬\n+- **BE와 FE는 스토리 안에서 병렬** — 계약이 고정되어 있다\n+- Foundational 완료 후 US1·US3의 검증 부분을 다른 담당이 동시에 진행 가능\n+- **묶음 수준 병렬**: B03·B05·B07·B08은 서로 다른 브랜치로 동시에 열 수 있다. B11·B12(FE)는 계약 문서만 보고 B09·B10(BE)과 동시 진행한다\n+\n+---\n+\n+## Parallel Example: User Story 1\n+\n+```bash\n+# 테스트 먼저 (전부 병렬)\n+Task: \"T039 GridExpander 단위 테스트\"\n+Task: \"T040 preview 작업량 집계 단위 테스트\"\n+Task: \"T041 CandidateDispatcher 발행 창 불변식 테스트\"\n+Task: \"T042 preview 계약 테스트\"\n+Task: \"T043 접수→발행→이벤트→집계 통합 테스트\"\n+Task: \"T044 동시 이벤트 counts 정합 테스트\"\n+\n+# command·result·DTO (병렬)\n+Task: \"T045 PreviewParamSearchCommand / CreateParamSearchCommand\"\n+Task: \"T046 ParamSearchPreviewResult / ParamSearchResult\"\n+Task: \"T053 Request DTO + Bean Validation\"\n+Task: \"T054 Response DTO\"\n+\n+# BE 유스케이스와 FE 화면을 다른 담당이 동시에\n+Task: \"T048~T052 preview·create·dispatcher·listener\"      # BE 담당\n+Task: \"T058~T064 api 모듈·확인 화면·상세 변경·폴링\"          # FE 담당 (계약 문서 기준)\n+```\n+\n+---\n+\n+## Implementation Strategy\n+\n+### MVP First (User Story 1만)\n+\n+1. Phase 1 Setup (T001~T007) = 묶음 **B01·B02**\n+2. Phase 2 Foundational (T008~T038) = 묶음 **B03~B08** — **여기가 가장 크다. 스토리 전부를 막는다**\n+3. Phase 3 User Story 1 (T039~T064) = 묶음 **B09~B12**\n+4. **멈추고 검증**: quickstart 시나리오 1로 US1 단독 확인\n+5. 데모 가능 — 탐색을 접수해 진행 상태까지 보인다\n+\n+**MVP = 묶음 12개(B01~B12) = 브랜치·MR 12개.** T### 기준으로는 T001~T064에 T089·T090을 더한 것이다\n+(B06이 US3 단계의 유효성 테스트를 함께 가져간다).\n+\n+### Incremental Delivery\n+\n+1. Setup + Foundational (B01~B08) → 기반 완료\n+2. US1 (B09~B12) → 시나리오 1 → **MVP 데모**\n+3. US2 (B13~B16) → 시나리오 5 → 결과 비교 데모\n+4. US3 (B17~B19) → 시나리오 2·3·4 → 낭비 차단과 중단 처리\n+5. US4 (B20·B21) → 검증 상태 표시\n+6. Polish (B22~B24) → 측정·문서·회귀\n+\n+각 단계가 MR 몇 개인지는 위 묶음 개수와 같다. 릴리즈는 매주 금요일이므로(constitution Git 규칙)\n+한 주에 닫을 묶음을 골라 쌓는다.\n+\n+### 착수 전에 알아둘 것\n+\n+- **004 없이는 종단 확인이 momentum 단일 종목으로만 된다.** 섹터 2개 이상은 후보 Job이 `FAILED`가 된다. quickstart가 이 전제로 쓰여 있다\n+- `registryVersion`이 `PROVISIONAL-*`인 동안의 결과는 PD-02 확정 등록표의 결과가 아니다\n+- 전 후보 `UNVALIDATED`라 SC-005는 자동 만족이며 이를 검증 통과로 보고하지 않는다\n+- **동일 결과 재사용(캐시)은 004 소유 미구현 항목이다.** 007에 별도 캐시를 만들지 않는다 (plan Phase 1 이후 재확인). 진행·취소·재시도는 007이 갖췄다(FR-024)\n+- **SC-008(사용성 관찰)에는 구현 태스크가 없다.** PD-14의 관찰 항목이며 코드로 만들 수 있는 일이 아니다. specs/README \"공통 검증·완료 규칙\"의 관찰에 포함된다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -136,6 +136,6 @@ constitution \"하지 않는 것\"과 기획서 §8.2에 따라 아래 항목은 \n \n ## 다음 단계\n \n-- `.specify/feature.json`의 `feature_directory`는 한 번에 spec 하나를 가리킨다. `/speckit-clarify`·`/speckit-plan`·`/speckit-tasks`를 실행하기 전에 대상 spec 디렉터리로 바꾼다. 현재 값은 `specs/001-etf-market-data`다.\n+- `.specify/feature.json`의 `feature_directory`는 한 번에 spec 하나를 가리킨다. `/speckit-clarify`·`/speckit-plan`·`/speckit-tasks`를 실행하기 전에 대상 spec 디렉터리로 바꾼다.\n - plan은 spec 우선순위 순서(001 → 005 → 006·007 → 008~011 → 012·013)를 기본으로 하되, 팀 배치에 따라 병렬로 진행할 수 있다. plan의 Constitution Check는 constitution을 기준으로 판정한다.\n - PD 항목이 확정되면 소유 spec의 표를 갱신하고 이 문서의 상태 열도 같은 값으로 고친다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-10T15:30:06.288+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2787022": [],
+    "2788003": [],
+    "2788005": [],
+    "2788049": [],
+    "2788218": []
+  }
+}

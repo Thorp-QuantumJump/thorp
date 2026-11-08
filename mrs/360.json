@@ -1,0 +1,768 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963128,
+    "iid": 360,
+    "project_id": 1444456,
+    "title": "feat(be): 섹터 대표 ETF의 마지막 거래일 값과 직전 값을 한 번에 주는 최근 가격 조회를 둔다",
+    "description": "## 작업 내용 요약\n\n투자 대상 고르기의 '지금 국내 시장' 띠가 섹터마다 가격 흐름 전체를 받아 마지막 두 점만 쓰던 자리를, 요청 한 번으로 섹터 대표 ETF의 마지막 값과 직전 값을 주는 `GET /sectors/latest-prices`로 바꾼다. 프런트는 이미 dev에 병합되어 이 경로를 부르고 있어, 배포 전까지는 404가 나서 띠에 지수만 보인다.\n\n## 주요 변경 사항\n\n- `GET /sectors/latest-prices`: 열린 대응표의 섹터 순서대로 대표 ETF의 마지막 거래일 수정종가와 직전 거래일 값, 마지막 날의 거래정지·이월 표시를 준다\n- 직전 거래일이 없으면 `previousDate`·`previousAdjustedClose`가 함께 `null`이다. 등락률은 계산하지 않는다\n- 일부 섹터에 가격이 없으면 `missingSectorCodes`에 싣고 200, 어느 섹터에도 없거나 고를 자료 버전이 없으면 409 `PRICE_SERIES_NOT_READY`, 대응표 미발행은 409 `SECTOR_MAP_NOT_READY`\n- 자료 버전은 `price-series`와 같은 규칙으로 고르고, 종목마다 마지막 두 거래일을 쿼리 한 번(`ROW_NUMBER`)으로 읽는다. 그래서 마지막 값은 같은 섹터 `price-series`의 끝점과 같다\n- 계약 문서 `specs/001-etf-market-data/contracts/sector-api.md`에 엔드포인트와 오류 표를 더했다\n\n## 테스트\n\n- `./gradlew spotlessCheck build`: BUILD SUCCESSFUL. 2223 tests, 실패 0, skipped 5\n- `LatestPricesApiIT` 4건: 섹터마다 마지막 두 값, 가격 없는 섹터 보고, 미완성 자료 버전 무시, 어느 섹터에도 없으면 409\n\n## 리뷰 포인트\n\n- 일부 섹터만 비면 200, 모두 비면 409로 나눈 판단이 띠 용도에 맞는지",
+    "state": "merged",
+    "created_at": "2026-10-02T10:29:59.424+09:00",
+    "updated_at": "2026-10-02T10:40:53.478+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T10:40:53.105+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/sector-latest-prices",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3b064ebeb67bc6173cda61e8a31818b97db5438f",
+    "merge_commit_sha": "977ceff3f15445d219e6ba990fd7e84dcaa4ed9a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T10:30:01.031+09:00",
+    "reference": "!360",
+    "references": {
+      "short": "!360",
+      "relative": "!360",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!360"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/360",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963128,
+    "iid": 360,
+    "project_id": 1444456,
+    "title": "feat(be): 섹터 대표 ETF의 마지막 거래일 값과 직전 값을 한 번에 주는 최근 가격 조회를 둔다",
+    "description": "## 작업 내용 요약\n\n투자 대상 고르기의 '지금 국내 시장' 띠가 섹터마다 가격 흐름 전체를 받아 마지막 두 점만 쓰던 자리를, 요청 한 번으로 섹터 대표 ETF의 마지막 값과 직전 값을 주는 `GET /sectors/latest-prices`로 바꾼다. 프런트는 이미 dev에 병합되어 이 경로를 부르고 있어, 배포 전까지는 404가 나서 띠에 지수만 보인다.\n\n## 주요 변경 사항\n\n- `GET /sectors/latest-prices`: 열린 대응표의 섹터 순서대로 대표 ETF의 마지막 거래일 수정종가와 직전 거래일 값, 마지막 날의 거래정지·이월 표시를 준다\n- 직전 거래일이 없으면 `previousDate`·`previousAdjustedClose`가 함께 `null`이다. 등락률은 계산하지 않는다\n- 일부 섹터에 가격이 없으면 `missingSectorCodes`에 싣고 200, 어느 섹터에도 없거나 고를 자료 버전이 없으면 409 `PRICE_SERIES_NOT_READY`, 대응표 미발행은 409 `SECTOR_MAP_NOT_READY`\n- 자료 버전은 `price-series`와 같은 규칙으로 고르고, 종목마다 마지막 두 거래일을 쿼리 한 번(`ROW_NUMBER`)으로 읽는다. 그래서 마지막 값은 같은 섹터 `price-series`의 끝점과 같다\n- 계약 문서 `specs/001-etf-market-data/contracts/sector-api.md`에 엔드포인트와 오류 표를 더했다\n\n## 테스트\n\n- `./gradlew spotlessCheck build`: BUILD SUCCESSFUL. 2223 tests, 실패 0, skipped 5\n- `LatestPricesApiIT` 4건: 섹터마다 마지막 두 값, 가격 없는 섹터 보고, 미완성 자료 버전 무시, 어느 섹터에도 없으면 409\n\n## 리뷰 포인트\n\n- 일부 섹터만 비면 200, 모두 비면 409로 나눈 판단이 띠 용도에 맞는지",
+    "state": "merged",
+    "created_at": "2026-10-02T10:29:59.424+09:00",
+    "updated_at": "2026-10-02T10:40:53.478+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T10:40:53.105+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/sector-latest-prices",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3b064ebeb67bc6173cda61e8a31818b97db5438f",
+    "merge_commit_sha": "977ceff3f15445d219e6ba990fd7e84dcaa4ed9a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T10:30:01.031+09:00",
+    "reference": "!360",
+    "references": {
+      "short": "!360",
+      "relative": "!360",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!360"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/360",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "head_sha": "3b064ebeb67bc6173cda61e8a31818b97db5438f",
+      "start_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5068434e0c044de07f0866b3cfaffd620a776c2e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880334,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T10:29:59.482+09:00",
+          "updated_at": "2026-10-02T10:29:59.486+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e2b99c8474dc047a50dbe0e0de9622b3f78192c2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880335,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T10:29:59.503+09:00",
+          "updated_at": "2026-10-02T10:29:59.509+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1bcaa148c3f14474cc6d697f98995b7937bdc520",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880345,
+          "type": null,
+          "body": "added 4 commits\n\n<ul><li>f4aac8bb...e4d658b5 - 3 commits from branch <code>dev</code></li><li>3b064ebe - Merge remote-tracking branch &#39;origin/dev&#39; into HEAD</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/360/diffs?diff_id=2261409&start_sha=f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T10:40:02.438+09:00",
+          "updated_at": "2026-10-02T10:40:02.442+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "248a270dc7557e8f2e54ef1ee2b8734fd5adcb4e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880346,
+          "type": null,
+          "body": "marked this merge request as **ready**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T10:40:45.354+09:00",
+          "updated_at": "2026-10-02T10:40:45.357+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f99e1876749f8f0c27cc6a4414bdf637dbf47734",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880347,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T10:40:45.380+09:00",
+          "updated_at": "2026-10-02T10:40:45.383+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "13a1a53124646d5f147826ad2223eacdc7da4cb5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880352,
+          "type": null,
+          "body": "mentioned in commit 977ceff3f15445d219e6ba990fd7e84dcaa4ed9a",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T10:40:53.180+09:00",
+          "updated_at": "2026-10-02T10:40:53.195+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0cf4ec31be995f4cdb37ec8016e36fd3707175eb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885074,
+          "type": null,
+          "body": "mentioned in commit c273e8745a6d6154f33eb78bf391caaf4deddc6f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.584+09:00",
+          "updated_at": "2026-10-13T15:16:16.590+09:00",
+          "system": true,
+          "noteable_id": 963128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 360,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261409,
+      "head_commit_sha": "3b064ebeb67bc6173cda61e8a31818b97db5438f",
+      "base_commit_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "start_commit_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "created_at": "2026-10-02T10:40:02.189+09:00",
+      "merge_request_id": 963128,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "3740afb6db4afc20c9200efcfd30bfaa007daee0"
+    },
+    {
+      "id": 2261401,
+      "head_commit_sha": "f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132",
+      "base_commit_sha": "2a83cd62ad1fbc55096bb9277262530c18a03814",
+      "start_commit_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "created_at": "2026-10-02T10:29:59.851+09:00",
+      "merge_request_id": 963128,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "3740afb6db4afc20c9200efcfd30bfaa007daee0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261409,
+      "head_commit_sha": "3b064ebeb67bc6173cda61e8a31818b97db5438f",
+      "base_commit_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "start_commit_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "created_at": "2026-10-02T10:40:02.189+09:00",
+      "merge_request_id": 963128,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "3740afb6db4afc20c9200efcfd30bfaa007daee0",
+      "commits": [
+        {
+          "id": "3b064ebeb67bc6173cda61e8a31818b97db5438f",
+          "short_id": "3b064ebe",
+          "created_at": "2026-10-02T10:39:59.000+09:00",
+          "parent_ids": [
+            "f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132",
+            "e4d658b5dcad0bf58307c8deb930e343eb0598e3"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into HEAD",
+          "message": "Merge remote-tracking branch 'origin/dev' into HEAD\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T10:39:59.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T10:39:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3b064ebeb67bc6173cda61e8a31818b97db5438f"
+        },
+        {
+          "id": "f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132",
+          "short_id": "f4aac8bb",
+          "created_at": "2026-10-02T09:30:45.000+09:00",
+          "parent_ids": [
+            "2a83cd62ad1fbc55096bb9277262530c18a03814"
+          ],
+          "title": "feat(be): 섹터 대표 ETF의 마지막 거래일 값과 직전 값을 한 번에 주는 최근 가격 조회를 둔다",
+          "message": "feat(be): 섹터 대표 ETF의 마지막 거래일 값과 직전 값을 한 번에 주는 최근 가격 조회를 둔다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T09:30:45.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T09:30:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -11,4 +11,13 @@ public class PriceSeriesNotReadyException extends RuntimeException {\n     public PriceSeriesNotReadyException(String sectorCode) {\n         super(\"섹터 \" + sectorCode + \"의 가격 자료가 아직 준비되지 않았다\");\n     }\n+\n+    private PriceSeriesNotReadyException() {\n+        super(\"대표 ETF의 가격 자료가 아직 준비되지 않았다\");\n+    }\n+\n+    /** 최근 가격 묶음에서 어느 섹터에도 가격이 없을 때다. 빈 목록을 내보내지 않는다. */\n+    public static PriceSeriesNotReadyException forAllSectors() {\n+        return new PriceSeriesNotReadyException();\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/PriceSeriesNotReadyException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/exception/PriceSeriesNotReadyException.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,8 @@\n package com.ssafy.thorp.sector.application.repository;\n \n+import com.ssafy.thorp.sector.application.result.LatestPricesResult;\n import com.ssafy.thorp.sector.application.result.PriceSeriesResult;\n+import java.util.Collection;\n import java.util.Optional;\n \n /**\n@@ -25,4 +27,15 @@ public interface PriceSeriesRepository {\n      *     다룬다\n      */\n     Optional<PriceSeriesResult> findCurrentSeries(String mapVersion, String instrumentId);\n+\n+    /**\n+     * 여러 종목의 가장 늦은 거래일 값과 그 직전 거래일 값.\n+     *\n+     * <p>자료 버전은 {@link #findCurrentSeries}와 <b>같은 규칙</b>으로 고른다. 규칙이 다르면 띠의 마지막 값과 그 종목 그래프의 끝점이\n+     * 어긋난다.\n+     *\n+     * @return 고를 자료 버전이 없으면 {@link Optional#empty()}. 있으면 가격이 있는 종목만 담는다(빈 맵일 수 있다)\n+     */\n+    Optional<LatestPricesResult.Snapshot> findLatestPrices(\n+            String mapVersion, Collection<String> instrumentIds);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/PriceSeriesRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/PriceSeriesRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,68 @@\n+package com.ssafy.thorp.sector.application.result;\n+\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * {@code GET /sectors/latest-prices}의 유스케이스 출력.\n+ *\n+ * <p>섹터마다 대표 ETF의 가장 늦은 거래일 수정종가와 그 직전 거래일 값이다. 화면이 가격 흐름 전체를 섹터 수만큼 받아 마지막 두 점만 쓰던 자리를 요청 한 번으로\n+ * 줄인다. 값을 고르는 규칙은 {@link PriceSeriesResult}와 같아서, 이 응답의 마지막 값은 그 섹터의 가격 흐름 마지막 점과 늘 같다.\n+ *\n+ * <p><b>등락률을 계산하지 않는다.</b> 직전 값을 그대로 싣고 무엇과 견줄지는 보는 쪽이 정한다. 가격 흐름이 수익률 환산을 하지 않는 것과 같은 판단이다.\n+ *\n+ * @param prices 열린 대응표의 섹터 순서를 따른다\n+ * @param missingSectorCodes 그 자료 버전에 가격이 한 행도 없는 섹터. 조용히 빼면 화면이 \"없는 섹터\"와 \"아직 적재되지 않은 섹터\"를 가릴 수 없다\n+ */\n+public record LatestPricesResult(\n+        String mapVersion,\n+        String datasetId,\n+        Instant dataDeadline,\n+        boolean isSample,\n+        List<SectorLatestPrice> prices,\n+        List<String> missingSectorCodes) {\n+\n+    public LatestPricesResult {\n+        prices = List.copyOf(prices);\n+        missingSectorCodes = List.copyOf(missingSectorCodes);\n+    }\n+\n+    /** 한 섹터 대표 ETF의 마지막 값. 섹터와 상품 이름을 함께 실어 화면이 목록을 다시 읽지 않게 한다. */\n+    public record SectorLatestPrice(\n+            String sectorCode, String instrumentId, String name, LatestPrice price) {}\n+\n+    /**\n+     * 한 종목의 가장 늦은 거래일 값과 그 직전 거래일 값.\n+     *\n+     * <p><b>거래정지일과 이어 붙인 가격을 숨기지 않는다.</b> 마지막 날이 정지일이면 그 값은 직전 값을 옮겨 적은 것이다(원칙 V).\n+     *\n+     * @param previousDate 그 자료 버전에 거래일이 하루뿐이면 {@code null}. 0이나 같은 값으로 채우지 않는다 — 채우면 \"변화 없음\"으로 읽힌다\n+     * @param previousAdjustedClose {@code previousDate}와 함께 비거나 함께 찬다\n+     */\n+    public record LatestPrice(\n+            LocalDate date,\n+            BigDecimal adjustedClose,\n+            boolean tradingSuspended,\n+            boolean priceCarriedForward,\n+            LocalDate previousDate,\n+            BigDecimal previousAdjustedClose) {}\n+\n+    /**\n+     * 저장소가 한 트랜잭션에서 만들어 돌려주는 덩어리. 자료 버전과 그 버전의 값이 따로 읽히면 서로 다른 판이 한 응답에 섞일 수 있다.\n+     *\n+     * @param byInstrument 가격이 있는 종목만 담는다\n+     */\n+    public record Snapshot(\n+            String datasetId,\n+            Instant dataDeadline,\n+            boolean isSample,\n+            Map<String, LatestPrice> byInstrument) {\n+\n+        public Snapshot {\n+            byInstrument = Map.copyOf(byInstrument);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/LatestPricesResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/result/LatestPricesResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,9 +8,14 @@ import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository\n import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;\n import com.ssafy.thorp.sector.application.repository.SectorRepository;\n import com.ssafy.thorp.sector.application.result.InstrumentProfileResult;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult.LatestPrice;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult.SectorLatestPrice;\n import com.ssafy.thorp.sector.application.result.PriceSeriesResult;\n import com.ssafy.thorp.sector.application.result.SectorListResult;\n import com.ssafy.thorp.sector.domain.model.Sector;\n+import java.util.ArrayList;\n+import java.util.List;\n import org.springframework.stereotype.Service;\n \n /**\n@@ -95,4 +100,54 @@ public class SectorService {\n                 .findCurrentSeries(map.mapVersion(), sector.representativeEtf().instrumentId())\n                 .orElseThrow(() -> new PriceSeriesNotReadyException(sectorCode));\n     }\n+\n+    /**\n+     * 열린 대응표의 섹터마다 대표 ETF의 마지막 값과 그 직전 값.\n+     *\n+     * <p>투자 대상 고르기의 '지금 국내 시장' 띠가 쓴다. 가격 흐름 전체를 섹터 수만큼 받지 않게 하려는 자리다.\n+     *\n+     * <p><b>일부 섹터에 가격이 없으면 그 섹터만 {@code missingSectorCodes}로 밝히고 200이다.</b> 띠는 받은 것만 보이면 되고, 한 섹터의\n+     * 적재 지연이 나머지를 막을 까닭이 없다. 어느 섹터에도 가격이 없으면 빈 목록이 아니라 409 {@code PRICE_SERIES_NOT_READY}다(원칙 VI).\n+     *\n+     * @throws SectorMapNotReadyException 대응표가 아직 발행되지 않았을 때\n+     * @throws PriceSeriesNotReadyException 고를 자료 버전이 없거나 어느 섹터에도 가격이 없을 때\n+     */\n+    public LatestPricesResult getLatestPrices() {\n+        SectorListResult map = getSectors();\n+        List<String> instrumentIds =\n+                map.sectors().stream()\n+                        .map(sector -> sector.representativeEtf().instrumentId())\n+                        .distinct()\n+                        .toList();\n+        LatestPricesResult.Snapshot snapshot =\n+                priceSeriesRepository\n+                        .findLatestPrices(map.mapVersion(), instrumentIds)\n+                        .orElseThrow(PriceSeriesNotReadyException::forAllSectors);\n+\n+        List<SectorLatestPrice> prices = new ArrayList<>();\n+        List<String> missing = new ArrayList<>();\n+        for (Sector sector : map.sectors()) {\n+            String instrumentId = sector.representativeEtf().instrumentId();\n+            LatestPrice price = snapshot.byInstrument().get(instrumentId);\n+            if (price == null) {\n+                missing.add(sector.code().value());\n+                continue;\n+            }\n+            prices.add(\n+                    new SectorLatestPrice(\n+                            sector.code().value(),\n+                            instrumentId,\n+                            sector.representativeEtf().name(),\n+                            price));\n+        }\n+        if (prices.isEmpty()) throw PriceSeriesNotReadyException.forAllSectors();\n+\n+        return new LatestPricesResult(\n+                map.mapVersion(),\n+                snapshot.datasetId(),\n+                snapshot.dataDeadline(),\n+                snapshot.isSample(),\n+                prices,\n+                missing);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/service/SectorService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/service/SectorService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,8 @@\n package com.ssafy.thorp.sector.infrastructure.persistence;\n \n import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult.LatestPrice;\n import com.ssafy.thorp.sector.application.result.PriceSeriesResult;\n import com.ssafy.thorp.sector.application.result.PriceSeriesResult.PricePoint;\n import jakarta.persistence.EntityManager;\n@@ -10,7 +12,10 @@ import java.math.BigDecimal;\n import java.sql.Timestamp;\n import java.time.Instant;\n import java.time.LocalDate;\n+import java.util.Collection;\n+import java.util.HashMap;\n import java.util.List;\n+import java.util.Map;\n import java.util.Optional;\n import org.springframework.stereotype.Repository;\n import org.springframework.transaction.annotation.Transactional;\n@@ -58,6 +63,26 @@ public class PriceSeriesRepositoryImpl implements PriceSeriesRepository {\n              ORDER BY p.date ASC\n             \"\"\";\n \n+    /**\n+     * 종목마다 가장 늦은 두 거래일. 순번 1이 마지막 날, 2가 그 직전이다.\n+     *\n+     * <p>종목 수만큼 따로 부르지 않고 한 번에 읽는다. 순번은 날짜 내림차순으로 매겨 저장 순서에 기대지 않는다.\n+     */\n+    private static final String LATEST_TWO_SQL =\n+            \"\"\"\n+            SELECT t.instrument_id, t.date, t.adjusted_close,\n+                   t.trading_suspended, t.price_carried_forward, t.rn\n+              FROM (SELECT p.instrument_id, p.date, p.adjusted_close,\n+                           p.trading_suspended, p.price_carried_forward,\n+                           ROW_NUMBER() OVER (PARTITION BY p.instrument_id\n+                                              ORDER BY p.date DESC) AS rn\n+                      FROM daily_price p\n+                     WHERE p.dataset_id = :datasetId\n+                       AND p.instrument_id IN (:instrumentIds)) t\n+             WHERE t.rn <= 2\n+             ORDER BY t.instrument_id, t.rn\n+            \"\"\";\n+\n     @PersistenceContext private EntityManager entityManager;\n \n     @Override\n@@ -78,6 +103,64 @@ public class PriceSeriesRepositoryImpl implements PriceSeriesRepository {\n                 new PriceSeriesResult(instrumentId, datasetId, dataDeadline, isSample, points));\n     }\n \n+    @Override\n+    @Transactional(readOnly = true)\n+    public Optional<LatestPricesResult.Snapshot> findLatestPrices(\n+            String mapVersion, Collection<String> instrumentIds) {\n+        Object[] dataset = findCurrentDataset(mapVersion);\n+        if (dataset == null) return Optional.empty();\n+\n+        String datasetId = (String) dataset[0];\n+        Instant dataDeadline = toInstant(dataset[1]);\n+        boolean isSample = (Boolean) dataset[2];\n+        // 빈 IN 목록은 SQL 문법 오류다. 물을 종목이 없으면 묻지 않는다.\n+        Map<String, LatestPrice> prices =\n+                instrumentIds.isEmpty() ? Map.of() : findLatestTwo(datasetId, instrumentIds);\n+        return Optional.of(\n+                new LatestPricesResult.Snapshot(datasetId, dataDeadline, isSample, prices));\n+    }\n+\n+    /** 순번 1의 행으로 값을 만들고, 순번 2의 행이 있으면 직전 값으로 채운다. 순번 오름차순으로 읽으므로 1이 늘 먼저 온다. */\n+    private Map<String, LatestPrice> findLatestTwo(\n+            String datasetId, Collection<String> instrumentIds) {\n+        Query query =\n+                entityManager\n+                        .createNativeQuery(LATEST_TWO_SQL)\n+                        .setParameter(\"datasetId\", datasetId)\n+                        .setParameter(\"instrumentIds\", instrumentIds);\n+\n+        Map<String, LatestPrice> prices = new HashMap<>();\n+        for (Object item : query.getResultList()) {\n+            Object[] row = (Object[]) item;\n+            String instrumentId = (String) row[0];\n+            LocalDate date = toLocalDate(row[1]);\n+            BigDecimal adjustedClose = (BigDecimal) row[2];\n+            if (((Number) row[5]).intValue() == 1) {\n+                prices.put(\n+                        instrumentId,\n+                        new LatestPrice(\n+                                date,\n+                                adjustedClose,\n+                                (Boolean) row[3],\n+                                (Boolean) row[4],\n+                                null,\n+                                null));\n+            } else {\n+                LatestPrice last = prices.get(instrumentId);\n+                prices.put(\n+                        instrumentId,\n+                        new LatestPrice(\n+                                last.date(),\n+                                last.adjustedClose(),\n+                                last.tradingSuspended(),\n+                                last.priceCarriedForward(),\n+                                date,\n+                                adjustedClose));\n+            }\n+        }\n+        return prices;\n+    }\n+\n     private Object[] findCurrentDataset(String mapVersion) {\n         Query query =\n                 entityManager\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/PriceSeriesRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/PriceSeriesRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,7 @@ import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;\n import com.ssafy.thorp.sector.application.service.SectorService;\n import com.ssafy.thorp.sector.presentation.response.EvaluationWindowResponse;\n import com.ssafy.thorp.sector.presentation.response.InstrumentProfileResponse;\n+import com.ssafy.thorp.sector.presentation.response.LatestPricesResponse;\n import com.ssafy.thorp.sector.presentation.response.PriceSeriesResponse;\n import com.ssafy.thorp.sector.presentation.response.SectorListResponse;\n import java.util.List;\n@@ -80,6 +81,19 @@ public class SectorController {\n                 ApiResponse.ok(PriceSeriesResponse.from(sectorService.getPriceSeries(code))));\n     }\n \n+    /**\n+     * 섹터마다 대표 ETF의 마지막 거래일 수정종가와 그 직전 값. 투자 대상 고르기의 '지금 국내 시장' 띠가 쓴다.\n+     *\n+     * <p>일부 섹터에 가격이 없으면 그 섹터 코드를 {@code missingSectorCodes}에 싣고 200이다. 대응표 미발행은 409 {@code\n+     * SECTOR_MAP_NOT_READY}, 어느 섹터에도 가격이 없으면 409 {@code PRICE_SERIES_NOT_READY}다({@link\n+     * SectorExceptionHandler}).\n+     */\n+    @GetMapping(\"/latest-prices\")\n+    public ResponseEntity<ApiResponse<LatestPricesResponse>> getLatestPrices() {\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(LatestPricesResponse.from(sectorService.getLatestPrices())));\n+    }\n+\n     /**\n      * 공통 평가 가능 기간. 003의 \"이 조합은 언제부터 비교 가능합니다\" 안내가 쓴다(FR-007).\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,62 @@\n+package com.ssafy.thorp.sector.presentation.response;\n+\n+import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /sectors/latest-prices} 응답 본문.\n+ *\n+ * <p>금액에는 {@link PlainBigDecimalSerializer}를 <b>필드마다</b> 붙인다. 가격 흐름 응답과 같은 까닭이다({@link\n+ * PriceSeriesResponse}).\n+ */\n+public record LatestPricesResponse(\n+        String mapVersion,\n+        String datasetId,\n+        Instant dataDeadline,\n+        boolean isSample,\n+        List<LatestPriceItem> prices,\n+        List<String> missingSectorCodes) {\n+\n+    public static LatestPricesResponse from(LatestPricesResult result) {\n+        return new LatestPricesResponse(\n+                result.mapVersion(),\n+                result.datasetId(),\n+                result.dataDeadline(),\n+                result.isSample(),\n+                result.prices().stream().map(LatestPriceItem::from).toList(),\n+                result.missingSectorCodes());\n+    }\n+\n+    /** 한 섹터의 마지막 값. 직전 값이 없으면 두 {@code previous} 필드가 함께 {@code null}이다. */\n+    public record LatestPriceItem(\n+            String sectorCode,\n+            String instrumentId,\n+            String name,\n+            LocalDate date,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal adjustedClose,\n+            boolean tradingSuspended,\n+            boolean priceCarriedForward,\n+            LocalDate previousDate,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class)\n+                    BigDecimal previousAdjustedClose) {\n+\n+        static LatestPriceItem from(LatestPricesResult.SectorLatestPrice item) {\n+            LatestPricesResult.LatestPrice price = item.price();\n+            return new LatestPriceItem(\n+                    item.sectorCode(),\n+                    item.instrumentId(),\n+                    item.name(),\n+                    price.date(),\n+                    price.adjustedClose(),\n+                    price.tradingSuspended(),\n+                    price.priceCarriedForward(),\n+                    price.previousDate(),\n+                    price.previousAdjustedClose());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/response/LatestPricesResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/response/LatestPricesResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,8 @@ import com.ssafy.thorp.sector.application.repository.InstrumentProfileRepository\n import com.ssafy.thorp.sector.application.repository.PriceSeriesRepository;\n import com.ssafy.thorp.sector.application.result.EvaluationWindowInputs;\n import com.ssafy.thorp.sector.application.result.EvaluationWindowView;\n+import com.ssafy.thorp.sector.application.result.LatestPricesResult;\n+import com.ssafy.thorp.sector.application.result.PriceSeriesResult;\n import com.ssafy.thorp.sector.application.result.SectorListResult;\n import com.ssafy.thorp.sector.application.service.EvaluationWindowQueryService;\n import com.ssafy.thorp.sector.application.service.EvaluationWindowService;\n@@ -29,6 +31,7 @@ import com.ssafy.thorp.strategy.application.port.WarmupRule;\n import java.time.DayOfWeek;\n import java.time.LocalDate;\n import java.util.ArrayList;\n+import java.util.Collection;\n import java.util.List;\n import java.util.Map;\n import java.util.Optional;\n@@ -414,8 +417,18 @@ class EvaluationWindowQueryServiceTest {\n     }\n \n     private static PriceSeriesRepository stubPriceSeriesRepository() {\n-        return (mapVersion, instrumentId) -> {\n-            throw new UnsupportedOperationException(\"평가 기간 조회는 가격 흐름을 읽지 않는다\");\n+        return new PriceSeriesRepository() {\n+            @Override\n+            public Optional<PriceSeriesResult> findCurrentSeries(\n+                    String mapVersion, String instrumentId) {\n+                throw new UnsupportedOperationException(\"평가 기간 조회는 가격 흐름을 읽지 않는다\");\n+            }\n+\n+            @Override\n+            public Optional<LatestPricesResult.Snapshot> findLatestPrices(\n+                    String mapVersion, Collection<String> instrumentIds) {\n+                throw new UnsupportedOperationException(\"평가 기간 조회는 최근 가격을 읽지 않는다\");\n+            }\n         };\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/EvaluationWindowQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,283 @@\n+package com.ssafy.thorp.sector;\n+\n+import static org.hamcrest.Matchers.contains;\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.support.IntegrationTestSupport;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * {@code GET /sectors/latest-prices} 계약 검증.\n+ *\n+ * <p>확인하는 것은 넷이다. 섹터마다 마지막 날과 그 직전 날의 수정종가가 오는지, 거래일이 하루뿐인 종목의 직전 값이 비어 오는지, 가격이 없는 섹터가 빠지지 않고\n+ * {@code missingSectorCodes}로 밝혀지는지, 부분 갱신된 자료 버전을 고르지 않는지다. 어느 섹터에도 가격이 없을 때의 409도 본다.\n+ *\n+ * <p>픽스처를 넣는 방식과 대응표를 검사마다 가르는 까닭은 {@link PriceSeriesApiIT}와 같다.\n+ *\n+ * <p>Docker가 없으면 통째로 skip된다({@code PostgresTestSupport}). 결과의 {@code skipped}를 확인한다.\n+ */\n+class LatestPricesApiIT extends IntegrationTestSupport {\n+\n+    private static final String BOTH_MAP = \"SEM-LP-BOTH\";\n+    private static final String MISSING_MAP = \"SEM-LP-MISSING\";\n+    private static final String PARTIAL_MAP = \"SEM-LP-PARTIAL\";\n+    private static final String EMPTY_MAP = \"SEM-LP-EMPTY\";\n+\n+    private static final String CONSTRUCTION = \"CONSTRUCTION_LP\";\n+    private static final String BANK = \"BANK_LP\";\n+    private static final String CONSTRUCTION_ETF = \"117700.XKRX\";\n+    private static final String BANK_ETF = \"091170.XKRX\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @BeforeEach\n+    void clean() {\n+        deleteFixtures();\n+    }\n+\n+    @AfterEach\n+    void restore() {\n+        deleteFixtures();\n+    }\n+\n+    @Test\n+    @DisplayName(\"섹터마다 마지막 거래일과 그 직전 거래일의 수정종가가 온다\")\n+    void returnsLastTwoClosesPerSector() throws Exception {\n+        String datasetId = \"KRX_DAILY_LP_BOTH\";\n+        long mapVersionId = publishMap(BOTH_MAP);\n+        publishDataset(mapVersionId, datasetId, \"2026-09-22 15:30:00+09\", true);\n+        // 일부러 뒤섞어 넣는다. 마지막 날을 저장 순서로 고르고 있으면 여기서 드러난다.\n+        insertPrice(datasetId, CONSTRUCTION_ETF, \"2026-09-18\", \"10500.0000\", true, true);\n+        insertPrice(datasetId, CONSTRUCTION_ETF, \"2026-09-16\", \"10000.0000\", false, false);\n+        insertPrice(datasetId, CONSTRUCTION_ETF, \"2026-09-17\", \"10250.5000\", false, false);\n+        // 거래일이 하루뿐이다. 직전 값을 0이나 같은 값으로 채우면 \"변화 없음\"으로 읽힌다.\n+        insertPrice(datasetId, BANK_ETF, \"2026-09-18\", \"8000.0000\", false, false);\n+\n+        String construction = \"$.data.prices[?(@.sectorCode == '\" + CONSTRUCTION + \"')]\";\n+        String bank = \"$.data.prices[?(@.sectorCode == '\" + BANK + \"')]\";\n+        mockMvc.perform(get(\"/sectors/latest-prices\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.mapVersion\").value(BOTH_MAP))\n+                .andExpect(jsonPath(\"$.data.datasetId\").value(datasetId))\n+                .andExpect(jsonPath(\"$.data.prices.length()\").value(2))\n+                .andExpect(jsonPath(\"$.data.missingSectorCodes.length()\").value(0))\n+                .andExpect(jsonPath(construction + \".instrumentId\", contains(CONSTRUCTION_ETF)))\n+                .andExpect(jsonPath(construction + \".name\", contains(\"KODEX 건설\")))\n+                .andExpect(jsonPath(construction + \".date\", contains(\"2026-09-18\")))\n+                .andExpect(jsonPath(construction + \".adjustedClose\", contains(\"10500.00000000\")))\n+                .andExpect(jsonPath(construction + \".tradingSuspended\", contains(true)))\n+                .andExpect(jsonPath(construction + \".priceCarriedForward\", contains(true)))\n+                .andExpect(jsonPath(construction + \".previousDate\", contains(\"2026-09-17\")))\n+                .andExpect(\n+                        jsonPath(\n+                                construction + \".previousAdjustedClose\",\n+                                contains(\"10250.50000000\")))\n+                .andExpect(jsonPath(bank + \".date\", contains(\"2026-09-18\")))\n+                .andExpect(jsonPath(bank + \".previousDate\", contains(nullValue())))\n+                .andExpect(jsonPath(bank + \".previousAdjustedClose\", contains(nullValue())));\n+    }\n+\n+    @Test\n+    @DisplayName(\"가격이 없는 섹터는 빼지 않고 missingSectorCodes로 밝힌다\")\n+    void reportsSectorsWithoutPrices() throws Exception {\n+        String datasetId = \"KRX_DAILY_LP_MISSING\";\n+        long mapVersionId = publishMap(MISSING_MAP);\n+        publishDataset(mapVersionId, datasetId, \"2026-09-22 15:30:00+09\", true);\n+        insertPrice(datasetId, CONSTRUCTION_ETF, \"2026-09-16\", \"10000.0000\", false, false);\n+\n+        mockMvc.perform(get(\"/sectors/latest-prices\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.prices.length()\").value(1))\n+                .andExpect(jsonPath(\"$.data.prices[0].sectorCode\").value(CONSTRUCTION))\n+                .andExpect(jsonPath(\"$.data.missingSectorCodes\", contains(BANK)));\n+    }\n+\n+    @Test\n+    @DisplayName(\"부분 갱신된 자료 버전은 고르지 않는다 (FR-014)\")\n+    void ignoresIncompleteDataset() throws Exception {\n+        String fullDatasetId = \"KRX_DAILY_LP_FULL\";\n+        String partialDatasetId = \"KRX_DAILY_LP_PARTIAL\";\n+        long mapVersionId = publishMap(PARTIAL_MAP);\n+        publishDataset(mapVersionId, fullDatasetId, \"2026-09-22 15:30:00+09\", true);\n+        publishDataset(mapVersionId, partialDatasetId, \"2026-09-23 15:30:00+09\", false);\n+        insertPrice(fullDatasetId, CONSTRUCTION_ETF, \"2026-09-16\", \"10000.0000\", false, false);\n+        insertPrice(partialDatasetId, CONSTRUCTION_ETF, \"2026-09-17\", \"99999.0000\", false, false);\n+\n+        mockMvc.perform(get(\"/sectors/latest-prices\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.datasetId\").value(fullDatasetId))\n+                .andExpect(jsonPath(\"$.data.prices[0].date\").value(\"2026-09-16\"))\n+                .andExpect(jsonPath(\"$.data.prices[0].adjustedClose\").value(\"10000.00000000\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"어느 섹터에도 가격이 없으면 빈 목록이 아니라 409다\")\n+    void noPricesAtAllIsConflict() throws Exception {\n+        long mapVersionId = publishMap(EMPTY_MAP);\n+        publishDataset(mapVersionId, \"KRX_DAILY_LP_EMPTY\", \"2026-09-22 15:30:00+09\", true);\n+\n+        mockMvc.perform(get(\"/sectors/latest-prices\"))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"PRICE_SERIES_NOT_READY\"));\n+    }\n+\n+    /**\n+     * 픽스처를 FK 역순으로 지운다.\n+     *\n+     * <p>{@code dataset_version}에는 UPDATE·DELETE를 거부하는 불변 트리거가 걸려 있다(FR-017). 그래서 그 표는 지우지 못하고 이 검사\n+     * 전용 {@code dataset_id}를 써서 이미 있으면 다시 넣지 않는다. {@code daily_price}도 같은 트리거가 걸려 있어 지우지 않고, 대신 이\n+     * 검사만 쓰는 자료 버전에 넣어 다른 검사와 섞이지 않게 한다.\n+     *\n+     * <p>대응표는 반드시 비운다. {@code effective_to IS NULL}인 행을 남기면 부분 UNIQUE 인덱스 때문에 다음 검사의 INSERT가 실패한다.\n+     */\n+    private void deleteFixtures() {\n+        jdbcTemplate.update(\n+                \"UPDATE sector_etf_map_version\"\n+                        + \" SET effective_to = effective_from + INTERVAL '1 second'\"\n+                        + \" WHERE effective_to IS NULL\");\n+        jdbcTemplate.update(\n+                \"DELETE FROM sector_etf_map_entry WHERE sector_id IN\"\n+                        + \" (SELECT id FROM sector WHERE code IN (?, ?))\",\n+                CONSTRUCTION,\n+                BANK);\n+        jdbcTemplate.update(\"DELETE FROM sector WHERE code IN (?, ?)\", CONSTRUCTION, BANK);\n+    }\n+\n+    /** 그 이름의 대응표를 열고 섹터 둘을 붙인다. 반환값은 대응표 버전의 PK다. */\n+    private long publishMap(String mapVersion) {\n+        Long mapVersionId =\n+                jdbcTemplate.queryForObject(\n+                        \"\"\"\n+                        INSERT INTO sector_etf_map_version\n+                            (version, effective_from, effective_to, is_sample, published_at)\n+                        VALUES (?, TIMESTAMPTZ '2026-09-23 00:00:00+09', NULL, TRUE,\n+                                TIMESTAMPTZ '2026-09-23 00:00:00+09')\n+                        ON CONFLICT (version) DO UPDATE SET effective_to = NULL\n+                        RETURNING id\n+                        \"\"\",\n+                        Long.class,\n+                        mapVersion);\n+        insertEntry(mapVersionId, insertSector(CONSTRUCTION, \"건설\"), etfId(CONSTRUCTION_ETF));\n+        insertEntry(mapVersionId, insertSector(BANK, \"은행\"), etfId(BANK_ETF));\n+        return mapVersionId;\n+    }\n+\n+    private long insertSector(String code, String name) {\n+        return jdbcTemplate.queryForObject(\n+                \"INSERT INTO sector (code, name, classification) VALUES (?, ?, 'INDUSTRY')\"\n+                        + \" RETURNING id\",\n+                Long.class,\n+                code,\n+                name);\n+    }\n+\n+    /** 대표 ETF는 여러 검사가 공유하므로 있으면 그대로 쓴다. */\n+    private long etfId(String instrumentId) {\n+        boolean construction = CONSTRUCTION_ETF.equals(instrumentId);\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO representative_etf\n+                    (instrument_id, name, listed_on, benchmark_index, manager)\n+                VALUES (?, ?, DATE '2009-10-30', ?, '삼성자산운용')\n+                ON CONFLICT (instrument_id) DO UPDATE\n+                    SET name = EXCLUDED.name,\n+                        benchmark_index = EXCLUDED.benchmark_index\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                instrumentId,\n+                construction ? \"KODEX 건설\" : \"KODEX 은행\",\n+                construction ? \"KRX 건설\" : \"KRX 은행\");\n+    }\n+\n+    private void insertEntry(long mapVersionId, long sectorId, long etfId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO sector_etf_map_entry (map_version_id, sector_id, etf_id)\"\n+                        + \" VALUES (?, ?, ?)\",\n+                mapVersionId,\n+                sectorId,\n+                etfId);\n+    }\n+\n+    /**\n+     * 자료 버전을 만든다. 이미 있으면 그 행의 PK를 돌려준다.\n+     *\n+     * <p>불변 트리거가 UPDATE를 거부하므로 {@code ON CONFLICT DO UPDATE}를 쓰지 않는다. 발행된 자료 버전은 고치지 않는다(FR-017).\n+     */\n+    private long publishDataset(\n+            long mapVersionId, String datasetId, String deadline, boolean complete) {\n+        Long found =\n+                jdbcTemplate\n+                        .query(\n+                                \"SELECT id FROM dataset_version WHERE dataset_id = ?\",\n+                                (rs, row) -> rs.getLong(\"id\"),\n+                                datasetId)\n+                        .stream()\n+                        .findFirst()\n+                        .orElse(null);\n+        if (found != null) return found;\n+\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO dataset_version\n+                    (dataset_id, data_deadline, collected_at, last_success_at,\n+                     complete, failure_reason, is_sample, source, map_version_id)\n+                VALUES (?, ?::timestamptz, ?::timestamptz, ?::timestamptz,\n+                        ?, ?, TRUE, 'pykrx', ?)\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                datasetId,\n+                deadline,\n+                deadline,\n+                deadline,\n+                complete,\n+                complete ? null : \"이용 한도로 중간에 끊겼다\",\n+                mapVersionId);\n+    }\n+\n+    /**\n+     * 하루치 시세 한 행.\n+     *\n+     * <p>OHLC는 검사의 관심사가 아니지만 표의 제약({@code high >= max(open, low, close)})을 지켜야 들어간다. 그래서 종가를 기준으로 네\n+     * 값을 같게 둔다 — 하루 동안 값이 움직이지 않은 날과 같은 모양이며, 이 검사가 보는 수정종가에는 영향이 없다.\n+     */\n+    private void insertPrice(\n+            String datasetId,\n+            String instrumentId,\n+            String date,\n+            String adjustedClose,\n+            boolean suspended,\n+            boolean carriedForward) {\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO daily_price\n+                    (dataset_id, instrument_id, date, open, high, low, close,\n+                     volume, value, adjusted_close, adjustment_factor,\n+                     trading_suspended, price_carried_forward)\n+                VALUES (?, ?, ?::date, ?::numeric, ?::numeric, ?::numeric, ?::numeric,\n+                        0, 0, ?::numeric, 1, ?, ?)\n+                ON CONFLICT (dataset_id, instrument_id, date) DO NOTHING\n+                \"\"\",\n+                datasetId,\n+                instrumentId,\n+                date,\n+                adjustedClose,\n+                adjustedClose,\n+                adjustedClose,\n+                adjustedClose,\n+                adjustedClose,\n+                suspended,\n+                carriedForward);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/LatestPricesApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/LatestPricesApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,7 @@\n \n **근거**: [spec.md](../spec.md) FR-001·FR-002·FR-011·FR-015, User Story 1·3\n \n-FRONT가 섹터 선택 화면(002)과 결과의 근거 패널(005)에서 쓰는 조회 계약이다. 가격 시계열은 이 계약으로 내보내지 않는다.\n+FRONT가 섹터 선택 화면(002)과 결과의 근거 패널(005)에서 쓰는 조회 계약이다. 가격은 대표 ETF의 가격 흐름(`price-series`)과 최근 가격(`latest-prices`) 두 조회로만 내보낸다.\n \n ## 공통 규칙\n \n@@ -117,6 +117,46 @@ User Story 3의 펼쳐 보는 층이다.\n \n **Backend가 시계열을 읽는 유일한 자리다.** plan.md는 \"시계열을 읽는 것은 워커이고 Backend는 메타데이터만 본다\"고 정했는데, 그 전제는 시계열을 쓰는 곳이 계산뿐이었다는 것이다. 고르기 전에 흐름을 보여 달라는 요구는 조회이고 워커는 메시지를 받아 도는 쪽이라 화면의 물음에 답할 수 없다. 계산은 여전히 워커가 한다.\n \n+## GET /sectors/latest-prices — 섹터 대표 ETF의 최근 가격\n+\n+투자 대상 고르기의 '지금 국내 시장' 띠가 쓴다([002](../../002-sector-weight-selection/spec.md) FR-018). 섹터마다 가격 흐름 전체를 받아 마지막 두 점만 쓰던 자리를 요청 한 번으로 줄인다.\n+\n+```json\n+{\n+  \"mapVersion\": \"SEM-2026-09-10-001\",\n+  \"datasetId\": \"KRX_DAILY_20260922\",\n+  \"dataDeadline\": \"2026-09-22T06:30:00Z\",\n+  \"isSample\": true,\n+  \"prices\": [\n+    {\n+      \"sectorCode\": \"CONSTRUCTION\",\n+      \"instrumentId\": \"117700.XKRX\",\n+      \"name\": \"KODEX 건설\",\n+      \"date\": \"2026-09-18\",\n+      \"adjustedClose\": \"10500.00000000\",\n+      \"tradingSuspended\": false,\n+      \"priceCarriedForward\": false,\n+      \"previousDate\": \"2026-09-17\",\n+      \"previousAdjustedClose\": \"10250.50000000\"\n+    }\n+  ],\n+  \"missingSectorCodes\": [\"BANK\"]\n+}\n+```\n+\n+| 필드 | 근거 |\n+|---|---|\n+| `prices[]` | 열린 대응표의 섹터 순서를 따른다. 가격이 있는 섹터만 담는다 |\n+| `adjustedClose`·`date` | 그 자료 버전에서 가장 늦은 거래일의 수정종가다. 같은 섹터의 `price-series` 마지막 점과 늘 같다 |\n+| `previousDate`·`previousAdjustedClose` | 그 직전 거래일 값이다. 거래일이 하루뿐이면 **둘 다 `null`이다** — 0이나 같은 값으로 채우면 \"변화 없음\"으로 읽힌다 |\n+| `tradingSuspended`·`priceCarriedForward` | 마지막 날의 표시다. 그 날 값이 직전 값을 옮겨 적은 것일 수 있다(원칙 V) |\n+| `missingSectorCodes` | 그 자료 버전에 가격이 한 행도 없는 섹터다. 조용히 빼지 않는다 |\n+| `datasetId`·`dataDeadline`·`isSample` | `price-series`와 같은 뜻이며 값을 고르는 규칙도 같다 |\n+\n+**등락률을 계산하지 않는다.** 직전 값을 그대로 싣고 무엇과 견줄지는 보는 쪽이 정한다. `price-series`가 수익률로 바꾸지 않는 것과 같은 판단이다.\n+\n+**일부 섹터에 가격이 없으면 200이고, 어느 섹터에도 없으면 409 `PRICE_SERIES_NOT_READY`다.** 띠는 받은 것만 보이면 되므로 한 섹터의 적재 지연이 나머지를 막지 않는다. 고를 자료 버전이 없을 때도 같은 409다.\n+\n ## GET /sectors/evaluation-window — 공통 평가 가능 기간\n \n 003의 \"이 조합은 언제부터 비교 가능합니다\" 안내가 쓴다. 산식과 경계 동작은 [evaluation-window.md](./evaluation-window.md)가 기준이며, 이 엔드포인트는 그 산식의 HTTP 표면이다.\n@@ -196,7 +236,7 @@ User Story 3의 펼쳐 보는 층이다.\n | 없는 섹터 코드 | 404 | `SECTOR_NOT_FOUND` |\n | 대응표가 발행되지 않음 | 409 | `SECTOR_MAP_NOT_READY` |\n | 대표 상품 정보가 아직 만들어지지 않음 | 409 | `INSTRUMENT_PROFILE_NOT_READY` |\n-| 가격 자료가 아직 적재되지 않음 | 409 | `PRICE_SERIES_NOT_READY` |\n+| 가격 자료가 아직 적재되지 않음(최근 가격은 어느 섹터에도 없을 때) | 409 | `PRICE_SERIES_NOT_READY` |\n | 후보 목록이 빈 요청 | 400 | 검증 실패 |\n | 평가 기간 산출 자료가 아직 없음 | 409 | `EVALUATION_WINDOW_NOT_READY` |\n | 등록되지 않은 전략 | 422 | `STRATEGY_NOT_REGISTERED` |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/contracts/sector-api.md",
+          "old_path": "specs/001-etf-market-data/contracts/sector-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2261401,
+      "head_commit_sha": "f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132",
+      "base_commit_sha": "2a83cd62ad1fbc55096bb9277262530c18a03814",
+      "start_commit_sha": "e4d658b5dcad0bf58307c8deb930e343eb0598e3",
+      "created_at": "2026-10-02T10:29:59.851+09:00",
+      "merge_request_id": 963128,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "3740afb6db4afc20c9200efcfd30bfaa007daee0",
+      "commits": [
+        {
+          "id": "f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132",
+          "short_id": "f4aac8bb",
+          "created_at": "2026-10-02T09:30:45.000+09:00",
+          "parent_ids": [
+            "2a83cd62ad1fbc55096bb9277262530c18a03814"
+          ],
+          "title": "feat(be): 섹터 대표 ETF의 마지막 거래일 값과 직전 값을 한 번에 주는 최근 가격 조회를 둔다",
+          "message": "feat(be): 섹터 대표 ETF의 마지막 거래일 값과 직전 값을 한 번에 주는 최근 가격 조회를 둔다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T09:30:45.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T09:30:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f4aac8bb37a2eaadf17f6d5882d5d3e6d04c9132"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

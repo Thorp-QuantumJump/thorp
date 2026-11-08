@@ -1,0 +1,535 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943210,
+    "iid": 83,
+    "project_id": 1444456,
+    "title": "chore(infra): 커밋 메시지(ci-all)을 입력해서 전체 ci 스테이지를 돌리는 설정을 추가.",
+    "description": "## 작업 내용 요약\n\n`thorp-ci` Job을 만들었습니다. \n\nCI 파이프라인을 구현해두었지만 **실행하는 Job이 없었고, 이번에 만들었습니다.**\n\n## 관련 티켓 번호 & 링크\n\nticket #200 (Jira S15P21E205-200 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-200\n\n선행 작업: #183, #197\n\n## 주요 변경 사항\n\n### 1. `merge`에 git identity 지정 — `Jenkinsfile`\n\n`Merge with dev`가 `Committer identity unknown`으로 실패했습니다. Jenkins 컨테이너에 `user.email`·`user.name`이 없습니다. `--no-commit`을 줘도 `git merge`는 커밋을 만들 수 있는 상태로 들어가므로 committer를 요구합니다.\n\n```groovy\ngit -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev\n```\n\n전역 설정을 건드리지 않고 그 명령에만 줍니다. `--no-commit`이라 이 identity가 이력에 찍히는 일은 없습니다.\n\n### 2. `python3-venv` 설치 — `infra/jenkins/Dockerfile`\n\n`Worker Setup`이 `ensurepip is not available`로 실패했습니다. 베이스 이미지에 python3는 있지만 venv 모듈이 빠져 있어 Worker·Data가 시작조차 하지 못했습니다.\n\n### 3. 커밋 메시지로 전체를 돌리는 스위치 — `Jenkinsfile`\n\n파트 스테이지는 평소 `changeset`으로 걸러집니다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 하고, 그러자고 네 파트 파일을 하나씩 건드리는 것은 번거롭습니다.\n\n```groovy\nCI_RUN_ALL = sh(returnStdout: true,\n    script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n```\n\n```groovy\nwhen {\n    anyOf {\n        changeset \"frontend/**\"\n        environment name: 'CI_RUN_ALL', value: 'true'\n    }\n}\n```\n\n커밋 메시지에 `[ci-all]`을 넣으면 걸러내기를 건너뜁니다. 빈 커밋 하나로 전체를 돌릴 수 있습니다.\n\n```bash\ngit commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n```\n\n## 테스트\n\n- [x] `[ci-all]`로 전체 실행 — **21개 스테이지 모두 통과** (약 7분)\n- [x] Frontend: vitest 43 + node --test 13, 리포트 2종 생성\n- [x] Backend: Testcontainers로 PostgreSQL을 띄워 통과\n- [x] Worker: ruff 통과, pytest 330 통과\n- [x] Data: ruff 통과, pytest 458 통과\n- [x] Migration version: 마이그레이션 9개, 중복·역전 없음\n\n## 리뷰 포인트\n\n1. **머지 후 Jenkins 이미지를 다시 빌드했습니다.**\n2. **`[ci-all]` 판정을 커밋 메시지로 했습니다.**\n3. **이번 범위에 넣지 않은 3가지**\n   * BE Test 종료 시 RabbitMQ 타임아웃 경고(테스트는 통과)\n   * GitLab MR 화면에 테스트 결과를 띄우려면 필요한 플러그인\n   * 그리고 Worker(pandas 2.3.3)와 Data(pandas 3.0.5)의 버전 차이",
+    "state": "merged",
+    "created_at": "2026-09-14T14:50:47.134+09:00",
+    "updated_at": "2026-09-15T11:11:29.861+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T14:51:01.753+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/200-ci-runtime-and-full-run",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "292c01497732e37923b23a131909bb7b581605b9",
+    "merge_commit_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:50:48.036+09:00",
+    "reference": "!83",
+    "references": {
+      "short": "!83",
+      "relative": "!83",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!83"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/83",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943210,
+    "iid": 83,
+    "project_id": 1444456,
+    "title": "chore(infra): 커밋 메시지(ci-all)을 입력해서 전체 ci 스테이지를 돌리는 설정을 추가.",
+    "description": "## 작업 내용 요약\n\n`thorp-ci` Job을 만들었습니다. \n\nCI 파이프라인을 구현해두었지만 **실행하는 Job이 없었고, 이번에 만들었습니다.**\n\n## 관련 티켓 번호 & 링크\n\nticket #200 (Jira S15P21E205-200 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-200\n\n선행 작업: #183, #197\n\n## 주요 변경 사항\n\n### 1. `merge`에 git identity 지정 — `Jenkinsfile`\n\n`Merge with dev`가 `Committer identity unknown`으로 실패했습니다. Jenkins 컨테이너에 `user.email`·`user.name`이 없습니다. `--no-commit`을 줘도 `git merge`는 커밋을 만들 수 있는 상태로 들어가므로 committer를 요구합니다.\n\n```groovy\ngit -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev\n```\n\n전역 설정을 건드리지 않고 그 명령에만 줍니다. `--no-commit`이라 이 identity가 이력에 찍히는 일은 없습니다.\n\n### 2. `python3-venv` 설치 — `infra/jenkins/Dockerfile`\n\n`Worker Setup`이 `ensurepip is not available`로 실패했습니다. 베이스 이미지에 python3는 있지만 venv 모듈이 빠져 있어 Worker·Data가 시작조차 하지 못했습니다.\n\n### 3. 커밋 메시지로 전체를 돌리는 스위치 — `Jenkinsfile`\n\n파트 스테이지는 평소 `changeset`으로 걸러집니다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 하고, 그러자고 네 파트 파일을 하나씩 건드리는 것은 번거롭습니다.\n\n```groovy\nCI_RUN_ALL = sh(returnStdout: true,\n    script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n```\n\n```groovy\nwhen {\n    anyOf {\n        changeset \"frontend/**\"\n        environment name: 'CI_RUN_ALL', value: 'true'\n    }\n}\n```\n\n커밋 메시지에 `[ci-all]`을 넣으면 걸러내기를 건너뜁니다. 빈 커밋 하나로 전체를 돌릴 수 있습니다.\n\n```bash\ngit commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n```\n\n## 테스트\n\n- [x] `[ci-all]`로 전체 실행 — **21개 스테이지 모두 통과** (약 7분)\n- [x] Frontend: vitest 43 + node --test 13, 리포트 2종 생성\n- [x] Backend: Testcontainers로 PostgreSQL을 띄워 통과\n- [x] Worker: ruff 통과, pytest 330 통과\n- [x] Data: ruff 통과, pytest 458 통과\n- [x] Migration version: 마이그레이션 9개, 중복·역전 없음\n\n## 리뷰 포인트\n\n1. **머지 후 Jenkins 이미지를 다시 빌드했습니다.**\n2. **`[ci-all]` 판정을 커밋 메시지로 했습니다.**\n3. **이번 범위에 넣지 않은 3가지**\n   * BE Test 종료 시 RabbitMQ 타임아웃 경고(테스트는 통과)\n   * GitLab MR 화면에 테스트 결과를 띄우려면 필요한 플러그인\n   * 그리고 Worker(pandas 2.3.3)와 Data(pandas 3.0.5)의 버전 차이",
+    "state": "merged",
+    "created_at": "2026-09-14T14:50:47.134+09:00",
+    "updated_at": "2026-09-15T11:11:29.861+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T14:51:01.753+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/200-ci-runtime-and-full-run",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "292c01497732e37923b23a131909bb7b581605b9",
+    "merge_commit_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:50:48.036+09:00",
+    "reference": "!83",
+    "references": {
+      "short": "!83",
+      "relative": "!83",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!83"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/83",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "head_sha": "292c01497732e37923b23a131909bb7b581605b9",
+      "start_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "8c6254635621fe090b11d161b4966b51ee901398",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802327,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T14:50:47.278+09:00",
+          "updated_at": "2026-09-14T14:50:47.284+09:00",
+          "system": true,
+          "noteable_id": 943210,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 83,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5ecdab0c5191f16a4c83150d75cb623d67be702a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802328,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T14:50:47.299+09:00",
+          "updated_at": "2026-09-14T14:50:47.308+09:00",
+          "system": true,
+          "noteable_id": 943210,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 83,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f067822217c90bffd4dadefc76b76e797fceb354",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802334,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 인프라 및 파이프라인 문제 해결**: Jenkins 환경에서 `git merge` 실행 시 필요한 identity를 전역 설정 변경 없이 `-c` 옵션으로 안전하게 주입하였으며, Python venv 모듈 누락 문제를 `python3-venv` 패키지 추가로 깔끔하게 해결했습니다.\n- **개발자 경험(DX) 개선**: 커밋 메시지 기반의 `[ci-all]` 스위치를 도입하여 불필요한 전체 빌드 비용을 줄이면서도, CI 구조 변경 시 전체 파이프라인을 쉽게 검증할 수 있는 유연한 방안을 마련했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **`[ci-all]` 작동 검증 시나리오**: \n  1. 특정 파트(예: `frontend/**`) 소스 코드만 변경하고 커밋 메시지에 `[ci-all]`을 포함하지 않은 채 푸시하여, 해당 파트만 실행되고 나머지 파트는 건너뛰어지는지 확인합니다.\n  2. 빈 커밋(`git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"`)을 생성하여 푸시한 후, `CI_RUN_ALL` 환경 변수가 `true`로 평가되어 모든 파트 스테이지가 정상적으로 실행되는지 확인합니다.\n- **Python venv 설치 검증 시나리오**:\n  - 변경된 `infra/jenkins/Dockerfile`을 기반으로 Jenkins Worker 이미지를 빌드한 뒤, Worker 및 Data 파트의 Setup 스테이지에서 `ensurepip` 오류 없이 가상 환경이 정상 생성되고 의존성이 설치되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:292c01497732e37923b23a131909bb7b581605b9 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T14:50:56.081+09:00",
+          "updated_at": "2026-09-14T14:50:56.081+09:00",
+          "system": false,
+          "noteable_id": 943210,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 83,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2b174ed6126069d0385e922059889f436a3f202c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802337,
+          "type": null,
+          "body": "mentioned in commit 053e3acb3eb603198dac7b54687bfbc88ed0c319",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T14:51:01.524+09:00",
+          "updated_at": "2026-09-14T14:51:01.533+09:00",
+          "system": true,
+          "noteable_id": 943210,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 83,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194324,
+      "head_commit_sha": "292c01497732e37923b23a131909bb7b581605b9",
+      "base_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "start_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "created_at": "2026-09-14T14:50:47.560+09:00",
+      "merge_request_id": 943210,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "cdf96277e7fcd70fdb49cf9576be94324085cf27"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194324,
+      "head_commit_sha": "292c01497732e37923b23a131909bb7b581605b9",
+      "base_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "start_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "created_at": "2026-09-14T14:50:47.560+09:00",
+      "merge_request_id": 943210,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "cdf96277e7fcd70fdb49cf9576be94324085cf27",
+      "commits": [
+        {
+          "id": "292c01497732e37923b23a131909bb7b581605b9",
+          "short_id": "292c0149",
+          "created_at": "2026-09-14T14:46:52.000+09:00",
+          "parent_ids": [
+            "8433f637bf8abaea5d9289c9a248d15323bf1abe"
+          ],
+          "title": "fix(infra): Jenkins 컨테이너에 python3-venv 를 넣는다 [ci-all]",
+          "message": "fix(infra): Jenkins 컨테이너에 python3-venv 를 넣는다 [ci-all]\n\nWorker Setup 이 첫 명령에서 'ensurepip is not available' 로 끝났다. 베이스 이미지에 python3 는 있지만 venv 모듈이 빠져 있다. Worker·Data 는 파트별로 venv 를 만들어 pip install 을 돌리므로 둘 다 시작조차 하지 못한다.\n\npython3-venv 는 이미지의 기본 python3 버전에 맞는 것을 가져오므로 버전을 따로 고정하지 않는다.\n\n이 변경은 이미지를 다시 빌드해야 적용된다. 저장소에 머지하는 것만으로는 컨테이너가 바뀌지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T14:29:59.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T14:46:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/292c01497732e37923b23a131909bb7b581605b9"
+        },
+        {
+          "id": "8433f637bf8abaea5d9289c9a248d15323bf1abe",
+          "short_id": "8433f637",
+          "created_at": "2026-09-14T14:46:52.000+09:00",
+          "parent_ids": [
+            "235e6376155a60764508dbcc6b69cd501f68a34a"
+          ],
+          "title": "fix(infra): CI 병합에 git identity 를 지정한다 [ci-all]",
+          "message": "fix(infra): CI 병합에 git identity 를 지정한다 [ci-all]\n\nJenkins 컨테이너에는 git user.email·user.name 이 없어 merge 가 'Committer identity unknown' 으로 끝났다. --no-commit 을 줘도 merge 는 커밋을 만들 수 있는 상태로 들어가므로 committer 를 요구한다.\n\n전역 설정을 건드리지 않고 -c 로 이 명령에만 준다. --no-commit 이라 실제로 커밋이 남지는 않으므로 이 identity 가 이력에 찍히는 일은 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T14:18:24.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T14:46:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8433f637bf8abaea5d9289c9a248d15323bf1abe"
+        },
+        {
+          "id": "235e6376155a60764508dbcc6b69cd501f68a34a",
+          "short_id": "235e6376",
+          "created_at": "2026-09-14T14:46:52.000+09:00",
+          "parent_ids": [
+            "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c"
+          ],
+          "title": "chore(infra): 커밋 메시지 [ci-all] 로 전체 스테이지를 돌린다 [ci-all]",
+          "message": "chore(infra): 커밋 메시지 [ci-all] 로 전체 스테이지를 돌린다 [ci-all]\n\n파트 스테이지는 평소 changeset 으로 걸러진다. 바뀌지 않은 파트를 매번 빌드하면 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 하고, 그러자고 네 파트 파일을 하나씩 건드리는 것은 번거롭다.\n\n커밋 메시지에 [ci-all] 이 있으면 environment 의 CI_RUN_ALL 이 true 가 되고, 각 파트 when 의 anyOf 가 changeset 을 건너뛴다. 빈 커밋 하나로 전체를 돌릴 수 있다.\n\n  git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n\n이 커밋 자체가 [ci-all] 을 달고 있어 스위치가 동작하는지 바로 확인된다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T14:10:28.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T14:46:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/235e6376155a60764508dbcc6b69cd501f68a34a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -16,8 +16,12 @@ USER root\n #   2) 팀의 로컬 개발 환경이 24.x 이므로 같은 메이저를 맞춰야 CI에서만 나타나는 차이를 줄일 수 있다.\n ARG NODE_MAJOR=24\n \n+# Worker·Data CI 는 파트별로 venv 를 만들어 pip install 을 돌린다. 베이스 이미지에 python3 는\n+# 있지만 venv 모듈이 빠져 있어, 없으면 Worker Setup 이 첫 명령에서\n+# \"ensurepip is not available\" 로 끝난다. python3-venv 는 이미지의 기본 python3 버전에 맞는\n+# 것을 가져온다.\n RUN apt-get update \\\n- && apt-get install -y --no-install-recommends ca-certificates curl gnupg \\\n+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg python3-venv \\\n  && install -m 0755 -d /etc/apt/keyrings \\\n  && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \\\n  && chmod a+r /etc/apt/keyrings/docker.asc \\\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Dockerfile",
+          "old_path": "infra/jenkins/Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,12 @@ pipeline {\n         // Merge with dev 스테이지의 git fetch 가 쓸 자격. Job 설정의 Credentials 와 같은 것을\n         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.\n         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'\n+\n+        // 파트 스테이지는 평소 changeset 으로 걸러진다. 바뀌지 않은 파트를 매번 빌드하면\n+        // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.\n+        // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.\n+        //   git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n+        CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n     }\n \n     stages {\n@@ -57,7 +63,10 @@ pipeline {\n                         # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.\n                         #              post 단계에서 git merge --abort 로 되돌린다.\n                         # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.\n-                        if ! git merge --no-commit --no-ff origin/dev; then\n+                        # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는\n+                        #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로\n+                        #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.\n+                        if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev; then\n                             echo \"origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.\" >&2\n                             exit 1\n                         fi\n@@ -74,7 +83,12 @@ pipeline {\n         }\n \n         stage('Frontend') {\n-            when { changeset \"frontend/**\" }\n+            when {\n+                anyOf {\n+                    changeset \"frontend/**\"\n+                    environment name: 'CI_RUN_ALL', value: 'true'\n+                }\n+            }\n             stages {\n                 stage('FE Install') {\n                     steps {\n@@ -126,7 +140,12 @@ pipeline {\n         }\n \n         stage('Backend') {\n-            when { changeset \"backend/**\" }\n+            when {\n+                anyOf {\n+                    changeset \"backend/**\"\n+                    environment name: 'CI_RUN_ALL', value: 'true'\n+                }\n+            }\n             stages {\n                 stage('BE Format') {\n                     steps {\n@@ -171,7 +190,12 @@ pipeline {\n         }\n \n         stage('Worker') {\n-            when { changeset \"worker/**\" }\n+            when {\n+                anyOf {\n+                    changeset \"worker/**\"\n+                    environment name: 'CI_RUN_ALL', value: 'true'\n+                }\n+            }\n             stages {\n                 stage('Worker Setup') {\n                     steps {\n@@ -212,7 +236,12 @@ pipeline {\n         }\n \n         stage('Data') {\n-            when { changeset \"data/**\" }\n+            when {\n+                anyOf {\n+                    changeset \"data/**\"\n+                    environment name: 'CI_RUN_ALL', value: 'true'\n+                }\n+            }\n             stages {\n                 stage('Data Setup') {\n                     steps {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802334": []
+  }
+}

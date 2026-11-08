@@ -1,0 +1,555 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943017,
+    "iid": 80,
+    "project_id": 1444456,
+    "title": "fix(infra): CI 파이프라인 dev 병합 단계 Git 인증 실패 수정 (자격주입완)",
+    "description": "## 작업 내용 요약\n\n`thorp-ci` 첫 실행이 `Merge with dev`에서 멈춰 이후 모든 스테이지가 건너뛰어졌습니다.\n\n```\n+ git fetch --no-tags origin dev\nfatal: could not read Username for 'https://lab.ssafy.com': No such device or address\n```\n\n`checkout` 스텝은 `GIT_ASKPASS`로 자격을 주입하지만 **`sh` 스텝은 별개 프로세스라 그것을 물려받지 못합니다.** 로컬에서는 자격이 캐시되어 있어 드러나지 않았습니다.\n\n## 관련 티켓 번호 & 링크\n\nticket #197 (Jira S15P21E205-197 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-197\n\n## 주요 변경 사항\n\n`Jenkinsfile` 한 파일입니다. `Merge with dev`를 `withCredentials`로 감싸고 `git fetch`에 자격을 넘깁니다.\n\n```groovy\nGIT_CREDENTIALS_ID = 'gitlab-deploy-token'   // environment\n\nwithCredentials([usernamePassword(credentialsId: env.GIT_CREDENTIALS_ID, ...)]) {\n    sh '''\n        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev\n    '''\n}\n```\n\n토큰을 remote URL에 넣지 않은 이유는 `.git/config`와 콘솔 로그에 남기 때문입니다.\n\n## 테스트\n\n- [x] `Jenkinsfile` 중괄호 균형과 문자열 블록 짝 확인\n- [ ] Jenkins 실행 — 머지 후 확인\n\n## 리뷰 포인트\n\n1. **credential id를 파일에 적은 것이 괜찮은지 봐 주세요.** 비밀값은 아니지만 Job 설정과 두 곳을 맞춰야 합니다. 파라미터로 받는 편이 낫다면 바꾸겠습니다.\n2. **이 MR 이후에야 나머지 스테이지가 처음 실행됩니다.** `Migration version`, 파트별 빌드, Testcontainers 동작은 모두 미검증입니다. 추가 문제는 별도 티켓으로 다루겠습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T13:45:12.074+09:00",
+    "updated_at": "2026-09-14T14:03:01.429+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T13:45:33.129+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/197-ci-merge-stage-credentials",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "33942c94fe4621e9b0a2c97ead682ec59b557c6b",
+    "merge_commit_sha": "b870684eba1fe7c34bf7e1c0dc9b6b3305053925",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T13:45:12.981+09:00",
+    "reference": "!80",
+    "references": {
+      "short": "!80",
+      "relative": "!80",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!80"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/80",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943017,
+    "iid": 80,
+    "project_id": 1444456,
+    "title": "fix(infra): CI 파이프라인 dev 병합 단계 Git 인증 실패 수정 (자격주입완)",
+    "description": "## 작업 내용 요약\n\n`thorp-ci` 첫 실행이 `Merge with dev`에서 멈춰 이후 모든 스테이지가 건너뛰어졌습니다.\n\n```\n+ git fetch --no-tags origin dev\nfatal: could not read Username for 'https://lab.ssafy.com': No such device or address\n```\n\n`checkout` 스텝은 `GIT_ASKPASS`로 자격을 주입하지만 **`sh` 스텝은 별개 프로세스라 그것을 물려받지 못합니다.** 로컬에서는 자격이 캐시되어 있어 드러나지 않았습니다.\n\n## 관련 티켓 번호 & 링크\n\nticket #197 (Jira S15P21E205-197 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-197\n\n## 주요 변경 사항\n\n`Jenkinsfile` 한 파일입니다. `Merge with dev`를 `withCredentials`로 감싸고 `git fetch`에 자격을 넘깁니다.\n\n```groovy\nGIT_CREDENTIALS_ID = 'gitlab-deploy-token'   // environment\n\nwithCredentials([usernamePassword(credentialsId: env.GIT_CREDENTIALS_ID, ...)]) {\n    sh '''\n        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev\n    '''\n}\n```\n\n토큰을 remote URL에 넣지 않은 이유는 `.git/config`와 콘솔 로그에 남기 때문입니다.\n\n## 테스트\n\n- [x] `Jenkinsfile` 중괄호 균형과 문자열 블록 짝 확인\n- [ ] Jenkins 실행 — 머지 후 확인\n\n## 리뷰 포인트\n\n1. **credential id를 파일에 적은 것이 괜찮은지 봐 주세요.** 비밀값은 아니지만 Job 설정과 두 곳을 맞춰야 합니다. 파라미터로 받는 편이 낫다면 바꾸겠습니다.\n2. **이 MR 이후에야 나머지 스테이지가 처음 실행됩니다.** `Migration version`, 파트별 빌드, Testcontainers 동작은 모두 미검증입니다. 추가 문제는 별도 티켓으로 다루겠습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T13:45:12.074+09:00",
+    "updated_at": "2026-09-14T14:03:01.429+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T13:45:33.129+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/197-ci-merge-stage-credentials",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "33942c94fe4621e9b0a2c97ead682ec59b557c6b",
+    "merge_commit_sha": "b870684eba1fe7c34bf7e1c0dc9b6b3305053925",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T13:45:12.981+09:00",
+    "reference": "!80",
+    "references": {
+      "short": "!80",
+      "relative": "!80",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!80"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/80",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "head_sha": "33942c94fe4621e9b0a2c97ead682ec59b557c6b",
+      "start_sha": "8b894d09136c212242aa1665e3eaa0851d513939"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "4dbba681cef71bd9f42b541111603e271162ebfe",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801633,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T13:45:12.185+09:00",
+          "updated_at": "2026-09-14T13:45:12.189+09:00",
+          "system": true,
+          "noteable_id": 943017,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 80,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2e2b781159430a2101c550909c95250edf03e09a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801634,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T13:45:12.208+09:00",
+          "updated_at": "2026-09-14T13:45:12.216+09:00",
+          "system": true,
+          "noteable_id": 943017,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 80,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ce8c336d61267e4fcd4dc6905122e92be716fd7a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801637,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **안전한 자격 증명 주입**: `git` 명령어에 직접 토큰을 인자로 전달하거나 URL에 포함하는 대신, `withCredentials`와 `credential.helper`를 조합하여 민감한 정보가 `.git/config`나 콘솔 로그에 노출되지 않도록 안전하게 처리했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (리뷰 포인트 1번에 대해: `GIT_CREDENTIALS_ID`를 환경 변수로 선언하여 관리하는 방식은 가독성과 유지보수 측면에서 적절합니다. Jenkins Job 설정과 코드 내 ID를 일치시켜야 하는 제약은 일반적이며 파라미터화하는 것보다 현재 방식이 파이프라인 코드를 선언적으로 유지하는 데 더 유리합니다.)\n\n### 테스트 제안\n1. **정상 인증 테스트**: 실제 Jenkins 환경에서 `fix(infra)/197-ci-merge-stage-credentials` 브랜치로 PR/Push를 발생시켜 `Merge with dev` 스테이지의 `git fetch`가 인증 오류 없이 정상 수행되는지 확인합니다.\n2. **이미 병합된 브랜치 테스트**: `origin/dev`를 이미 포함하고 있는 브랜치에서 파이프라인을 실행하여, 병합 단계가 올바르게 건너뛰어지는지(`이미 origin/dev 를 포함한다. 병합을 건너뛴다.`) 확인합니다.\n3. **충돌 발생 시나리오 테스트**: `origin/dev`와 충돌이 발생하는 코드를 푸시하여, `git merge`가 실패하고 스크립트가 의도대로 종료되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:33942c94fe4621e9b0a2c97ead682ec59b557c6b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T13:45:20.474+09:00",
+          "updated_at": "2026-09-14T13:45:20.474+09:00",
+          "system": false,
+          "noteable_id": 943017,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 80,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "403e0787f720b0f3216718fc303173fe825631ca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801640,
+          "type": null,
+          "body": "mentioned in commit b870684eba1fe7c34bf7e1c0dc9b6b3305053925",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T13:45:33.201+09:00",
+          "updated_at": "2026-09-14T13:45:33.206+09:00",
+          "system": true,
+          "noteable_id": 943017,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 80,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b8c29160ebf5aba20244ccd87cf2b68b52b3fe99",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801759,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T13:57:36.516+09:00",
+          "updated_at": "2026-09-14T13:57:36.516+09:00",
+          "system": false,
+          "noteable_id": 943017,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 80,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7d736bb6f0d0687953a45f5f7c560fedcd2cbd12",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801833,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\"><span class=\"idiff left right deletion\">[INFRA]</span> CI 파이프라인 dev 병합 단계 Git 인증 실패 수정 (자격주입완)</code> to <code class=\"idiff\"><span class=\"idiff left right addition\">fix(infra):</span> CI 파이프라인 dev 병합 단계 Git 인증 실패 수정 (자격주입완)</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T14:03:01.513+09:00",
+          "updated_at": "2026-09-14T14:03:01.517+09:00",
+          "system": true,
+          "noteable_id": 943017,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 80,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2193708,
+      "head_commit_sha": "33942c94fe4621e9b0a2c97ead682ec59b557c6b",
+      "base_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "start_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "created_at": "2026-09-14T13:45:12.463+09:00",
+      "merge_request_id": 943017,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "d29094f544f3a947621ea0f3a00fd7f4ce800110"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2193708,
+      "head_commit_sha": "33942c94fe4621e9b0a2c97ead682ec59b557c6b",
+      "base_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "start_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+      "created_at": "2026-09-14T13:45:12.463+09:00",
+      "merge_request_id": 943017,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "d29094f544f3a947621ea0f3a00fd7f4ce800110",
+      "commits": [
+        {
+          "id": "33942c94fe4621e9b0a2c97ead682ec59b557c6b",
+          "short_id": "33942c94",
+          "created_at": "2026-09-14T13:38:57.000+09:00",
+          "parent_ids": [
+            "8b894d09136c212242aa1665e3eaa0851d513939"
+          ],
+          "title": "fix(infra): CI의 dev 병합 단계에 Git 자격을 주입한다",
+          "message": "fix(infra): CI의 dev 병합 단계에 Git 자격을 주입한다\n\nthorp-ci Job 첫 실행이 Merge with dev 스테이지에서 'could not read Username' 으로 실패했다. Jenkins의 checkout 스텝은 GIT_ASKPASS 로 자격을 주입해 clone 에 성공하지만, 그 뒤 sh 스텝은 별개 프로세스라 그것을 물려받지 못한다. HTTPS 저장소에 접근하며 사용자명을 묻고 터미널이 없어 그대로 끝난다. 로컬에서는 개발자 자격이 캐시되어 있어 드러나지 않던 문제다.\n\nwithCredentials 로 감싸고 git fetch 에 credential helper 로 자격을 넘긴다. 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남으므로, 그 명령이 실행되는 동안에만 살아 있는 helper 를 쓴다. credential id 는 environment 의 GIT_CREDENTIALS_ID 에 모아 Job 설정과 함께 고칠 지점을 한 곳으로 둔다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T13:38:57.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T13:38:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/33942c94fe4621e9b0a2c97ead682ec59b557c6b"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -22,6 +22,10 @@ pipeline {\n         // 빌드는 초록색으로 끝난다. 마이그레이션과 Entity 매핑을 맞춰 보는 검증이 통째로 비어도\n         // 알아챌 수 없다. CI에서는 그 상태를 실패로 본다 (backend RequiredDockerTest).\n         THORP_REQUIRE_DOCKER = 'true'\n+\n+        // Merge with dev 스테이지의 git fetch 가 쓸 자격. Job 설정의 Credentials 와 같은 것을\n+        // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.\n+        GIT_CREDENTIALS_ID = 'gitlab-deploy-token'\n     }\n \n     stages {\n@@ -30,29 +34,39 @@ pipeline {\n         // 못한 것이 그 경우다. 이후 단계는 dev를 합친 결과 위에서 돈다.\n         stage('Merge with dev') {\n             steps {\n-                sh '''\n-                    set -e\n-                    git fetch --no-tags origin dev\n-\n-                    if git merge-base --is-ancestor origin/dev HEAD; then\n-                        echo \"이미 origin/dev 를 포함한다. 병합을 건너뛴다.\"\n-                        exit 0\n-                    fi\n-\n-                    # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.\n-                    #              post 단계에서 git merge --abort 로 되돌린다.\n-                    # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.\n-                    if ! git merge --no-commit --no-ff origin/dev; then\n-                        echo \"origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.\" >&2\n-                        exit 1\n-                    fi\n-                    echo \"origin/dev 를 병합한 결과로 검증한다.\"\n-                '''\n+                // checkout 스텝은 GIT_ASKPASS 로 자격을 주입하지만, sh 스텝은 별개 프로세스라\n+                // 그것을 물려받지 못한다. 자격 없이 fetch 하면 사용자명을 묻다가\n+                // \"could not read Username for ...\" 로 끝난다.\n+                withCredentials([usernamePassword(\n+                    credentialsId: env.GIT_CREDENTIALS_ID,\n+                    usernameVariable: 'GIT_USERNAME',\n+                    passwordVariable: 'GIT_PASSWORD'\n+                )]) {\n+                    sh '''\n+                        set -e\n+\n+                        # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.\n+                        # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.\n+                        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev\n+\n+                        if git merge-base --is-ancestor origin/dev HEAD; then\n+                            echo \"이미 origin/dev 를 포함한다. 병합을 건너뛴다.\"\n+                            exit 0\n+                        fi\n+\n+                        # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.\n+                        #              post 단계에서 git merge --abort 로 되돌린다.\n+                        # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.\n+                        if ! git merge --no-commit --no-ff origin/dev; then\n+                            echo \"origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.\" >&2\n+                            exit 1\n+                        fi\n+                        echo \"origin/dev 를 병합한 결과로 검증한다.\"\n+                    '''\n+                }\n             }\n         }\n \n-        // 병합 결과의 마이그레이션 버전을 본다. 빈 DB에 전체 적용해 보는 테스트로는\n-        // 기준 브랜치보다 낮은 버전(out-of-order)을 잡지 못하므로 여기서 따로 검사한다.\n         stage('Migration version') {\n             steps {\n                 sh 'bash infra/scripts/check-migration-version.sh origin/dev'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2801637": [],
+    "2801759": []
+  }
+}

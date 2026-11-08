@@ -1,0 +1,655 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963475,
+    "iid": 384,
+    "project_id": 1444456,
+    "title": "refactor(fe): 없는 홈·대시보드를 가리키는 설명과 어긋난 파일 이름 수정",
+    "description": "# 작업 내용 요약\n\n고아 운영 코드를 정리한 뒤에도 주석과 테스트 이름이 이미 없는 홈·대시보드 화면, `/dashboard`·`/backtest` 경로, 지워진 '국내 시장 참고 정보' 영역을 가리키고 있었습니다. 이 설명을 지금 코드에 맞추고, export와 이름이 어긋난 `DataStateNotice.tsx`를 `DataState.tsx`로 바꿉니다. 동작은 바뀌지 않습니다.\n\n# 주요 변경 사항\n\n- 첫 화면 지표 조회(`useMarketIndicators`·`fetchLatestMarketIndicators`·`fetchMarketIndicatorsFor`)와 `App.tsx` 지연 로딩 설명을 실제 사용처에 맞춤\n- `AppHeader`: 이미 없는 두 경로를 \"지우지 않았다\"고 적은 문단 삭제\n- `AuthEntryGuard`: 방금 로그인한 사용자는 저장된 화면으로, 이미 로그인한 채 들어온 사용자는 전략 진단 첫 단계로 보낸다고 정정. 같은 동작을 확인하는 `LoginPage` 테스트 이름의 '홈'도 고침\n- `components/marketflow/DataStateNotice.tsx` → `DataState.tsx` (export는 `DataStateLine`·`DataStateFacts`)\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` 통과 (Vitest 1,569건, skipped 0. lint 경고 25건은 이번에 손대지 않은 파일의 기존 경고)\n\n# 리뷰 포인트\n\n- `specs/009` tasks.md T020 완료 기록의 옛 파일 경로는 이력이라 그대로 두었습니다.\n- 첫 화면이 예시 지표 11개 중 4개만 쓰는 문제와 `useMarketIndicators`의 안 쓰는 반환값(`isLoading`·`refetch` 등)은 지표 모델 정리 작업으로 넘겼습니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-10-05T00:13:48.639+09:00",
+    "updated_at": "2026-10-05T00:16:41.218+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-05T00:16:40.784+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/orphan-cleanup-followups",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c484c88a0543b7bccdec47d9f145df1085c1928e",
+    "merge_commit_sha": "6301b524c75109a698aaf905675ac5c132a567b8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-05T00:13:50.358+09:00",
+    "reference": "!384",
+    "references": {
+      "short": "!384",
+      "relative": "!384",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!384"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/384",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963475,
+    "iid": 384,
+    "project_id": 1444456,
+    "title": "refactor(fe): 없는 홈·대시보드를 가리키는 설명과 어긋난 파일 이름 수정",
+    "description": "# 작업 내용 요약\n\n고아 운영 코드를 정리한 뒤에도 주석과 테스트 이름이 이미 없는 홈·대시보드 화면, `/dashboard`·`/backtest` 경로, 지워진 '국내 시장 참고 정보' 영역을 가리키고 있었습니다. 이 설명을 지금 코드에 맞추고, export와 이름이 어긋난 `DataStateNotice.tsx`를 `DataState.tsx`로 바꿉니다. 동작은 바뀌지 않습니다.\n\n# 주요 변경 사항\n\n- 첫 화면 지표 조회(`useMarketIndicators`·`fetchLatestMarketIndicators`·`fetchMarketIndicatorsFor`)와 `App.tsx` 지연 로딩 설명을 실제 사용처에 맞춤\n- `AppHeader`: 이미 없는 두 경로를 \"지우지 않았다\"고 적은 문단 삭제\n- `AuthEntryGuard`: 방금 로그인한 사용자는 저장된 화면으로, 이미 로그인한 채 들어온 사용자는 전략 진단 첫 단계로 보낸다고 정정. 같은 동작을 확인하는 `LoginPage` 테스트 이름의 '홈'도 고침\n- `components/marketflow/DataStateNotice.tsx` → `DataState.tsx` (export는 `DataStateLine`·`DataStateFacts`)\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` 통과 (Vitest 1,569건, skipped 0. lint 경고 25건은 이번에 손대지 않은 파일의 기존 경고)\n\n# 리뷰 포인트\n\n- `specs/009` tasks.md T020 완료 기록의 옛 파일 경로는 이력이라 그대로 두었습니다.\n- 첫 화면이 예시 지표 11개 중 4개만 쓰는 문제와 `useMarketIndicators`의 안 쓰는 반환값(`isLoading`·`refetch` 등)은 지표 모델 정리 작업으로 넘겼습니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-10-05T00:13:48.639+09:00",
+    "updated_at": "2026-10-05T00:16:41.218+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-05T00:16:40.784+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/orphan-cleanup-followups",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c484c88a0543b7bccdec47d9f145df1085c1928e",
+    "merge_commit_sha": "6301b524c75109a698aaf905675ac5c132a567b8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-05T00:13:50.358+09:00",
+    "reference": "!384",
+    "references": {
+      "short": "!384",
+      "relative": "!384",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!384"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/384",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "head_sha": "c484c88a0543b7bccdec47d9f145df1085c1928e",
+      "start_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "bbbcc77369a130af6860255cd3ba6faea68759ba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881408,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:13:48.750+09:00",
+          "updated_at": "2026-10-05T00:13:48.754+09:00",
+          "system": true,
+          "noteable_id": 963475,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 384,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "86eaec7f686a91be3a33fc2f267434ea4c25e4ce",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881409,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:13:48.789+09:00",
+          "updated_at": "2026-10-05T00:13:48.836+09:00",
+          "system": true,
+          "noteable_id": 963475,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 384,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "559e2cb415d4f247048da6475867fd320e5e9303",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881410,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서화와 코드 동기화**: 이미 제거되었거나 변경된 컴포넌트/경로(`/dashboard`, `/backtest`, 홈 화면 등)를 가리키던 주석과 테스트 이름을 실제 코드베이스 상태에 맞게 정확히 정돈하여 유지보수성을 높였습니다.\n- **깔끔한 리팩터링 범위**: 파일 이름 변경(`DataStateNotice.tsx` → `DataState.tsx`)과 관련된 임포트 및 테스트 참조를 누락 없이 정확하게 수정하였으며, 기능적 변경 없이 코드베이스의 정합성만 높이는 목적에 맞게 변경 사항이 간결합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **인증 리디렉션 테스트 시나리오 (`AuthEntryGuard` / `LoginPage`)**:\n  1. 이미 로그인된 사용자가 `/login` 경로로 접근할 때, 인증 입력 폼 대신 전략 진단 첫 단계 등 기본 도착 화면으로 올바르게 리디렉션되는지 확인합니다.\n  2. 방금 로그인한 사용자가 `resume` 파라미터나 저장된 이전 화면 경로가 있을 때 해당 경로로, 없으면 전략 진단 첫 단계로 이동하는지 확인합니다.\n- **마켓 지표 렌더링 테스트**:\n  - `DataState.test.tsx` 파일명 및 임포트 변경 후, 데이터 공급 상태(정상, 수집 실패, 자료 없음)에 따른 UI(`DataStateFacts`)가 기존과 동일하게 올바르게 렌더링되는지 단위 테스트(`npm test`)를 통해 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c484c88a0543b7bccdec47d9f145df1085c1928e -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-05T00:13:57.644+09:00",
+          "updated_at": "2026-10-05T00:13:57.644+09:00",
+          "system": false,
+          "noteable_id": 963475,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 384,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "820ae7edc2138eb699184cc62d3c5e57d76a9c8d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881411,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:14:05.810+09:00",
+          "updated_at": "2026-10-05T00:14:05.814+09:00",
+          "system": true,
+          "noteable_id": 963475,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 384,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d5e8098c8da785f7e10ec16465e925635c098483",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881421,
+          "type": null,
+          "body": "mentioned in commit 6301b524c75109a698aaf905675ac5c132a567b8",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:16:40.853+09:00",
+          "updated_at": "2026-10-05T00:16:40.880+09:00",
+          "system": true,
+          "noteable_id": 963475,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 384,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262339,
+      "head_commit_sha": "c484c88a0543b7bccdec47d9f145df1085c1928e",
+      "base_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "start_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "created_at": "2026-10-05T00:13:49.094+09:00",
+      "merge_request_id": 963475,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "0cf58ed84c299f5eafec84f7759f82f135eca4fa"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262339,
+      "head_commit_sha": "c484c88a0543b7bccdec47d9f145df1085c1928e",
+      "base_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "start_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "created_at": "2026-10-05T00:13:49.094+09:00",
+      "merge_request_id": 963475,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "0cf58ed84c299f5eafec84f7759f82f135eca4fa",
+      "commits": [
+        {
+          "id": "c484c88a0543b7bccdec47d9f145df1085c1928e",
+          "short_id": "c484c88a",
+          "created_at": "2026-10-04T23:40:56.000+09:00",
+          "parent_ids": [
+            "362645199d0aecfbb3298af02e24bb99c8d3721c"
+          ],
+          "title": "refactor(fe): 로그인 화면 이동 설명과 지워진 참고 정보 영역 근거를 고친다",
+          "message": "refactor(fe): 로그인 화면 이동 설명과 지워진 참고 정보 영역 근거를 고친다\n\n앞 커밋 리뷰에서 나온 지적을 반영한다.\n\n- AuthEntryGuard: 저장해 둔 화면으로 보내는 것은 이 화면에서 방금 로그인한 사용자뿐이다.\n  이미 로그인한 채 들어온 사용자는 늘 전략 진단 첫 단계로 간다. 앞 커밋의 설명은 두 경우를 하나로 적었다.\n- LoginPage 테스트 이름의 '홈'을 실제로 확인하는 '기본 도착 화면'으로 바꾼다.\n- fetchMarketIndicatorsFor: 목록을 받는 근거로 든 '참고 정보 영역'은 89202e59에서 지워졌다.\n  지금 부르는 곳이 fetchLatestMarketIndicators 하나라고 적는다.\n\n동작은 바뀌지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T23:40:56.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T23:40:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c484c88a0543b7bccdec47d9f145df1085c1928e"
+        },
+        {
+          "id": "362645199d0aecfbb3298af02e24bb99c8d3721c",
+          "short_id": "36264519",
+          "created_at": "2026-10-04T23:21:07.000+09:00",
+          "parent_ids": [
+            "6b6bda13998dcfacbac71a6d51b249b768b27143"
+          ],
+          "title": "refactor(fe): 없는 홈·대시보드를 가리키는 설명과 어긋난 파일 이름을 고친다",
+          "message": "refactor(fe): 없는 홈·대시보드를 가리키는 설명과 어긋난 파일 이름을 고친다\n\n고아 운영 코드 정리 뒤 남은 설명이 사라진 화면과 경로를 가리켰다.\n\n- App.tsx·useMarketIndicators·fetchLatestMarketIndicators: '홈·대시보드'를 실제 사용처인 첫 화면으로 고친다.\n- AppHeader: '/dashboard'·'/backtest' 경로를 지우지 않았다는 문단을 뺀다. 두 경로는 이미 없다.\n- AuthEntryGuard: 로그인 사용자를 '홈'이 아니라 돌아갈 화면(없으면 전략 진단 첫 단계)으로 보낸다고 적는다.\n- DataStateNotice.tsx를 DataState.tsx로 바꾼다. 남은 export는 DataStateLine·DataStateFacts 둘이다.\n  specs/009 tasks.md T020의 옛 경로는 완료 이력이라 그대로 둔다.\n\n동작은 바뀌지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T23:21:07.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T23:21:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/362645199d0aecfbb3298af02e24bb99c8d3721c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -45,8 +45,8 @@ async function fetchMarketIndicator(code: MarketIndicatorCode) {\n /**\n  * 한 원천기관의 실패가 다른 지표를 가리지 않도록 요청 결과를 독립적으로 모은다.\n  *\n- * 필요한 지표만 고를 수 있게 목록을 받는다. 참고 정보 영역 하나 때문에 11개를 모두\n- * 부르면 그 영역의 지연이 다른 화면까지 끌고 간다.\n+ * 필요한 지표만 고를 수 있게 목록을 받는다. 지금 부르는 곳은 11개를 모두 넘기는\n+ * `fetchLatestMarketIndicators` 하나다.\n  */\n export async function fetchMarketIndicatorsFor(\n   codes: readonly MarketIndicatorCode[],\n@@ -69,7 +69,7 @@ export async function fetchMarketIndicatorsFor(\n   return batch\n }\n \n-/** 대시보드가 쓰는 11개 전부다. */\n+/** 11개 전부다. 첫 화면의 `useMarketIndicators`가 부른다. */\n export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {\n   return fetchMarketIndicatorsFor(marketIndicatorCodes)\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/market.ts",
+          "old_path": "frontend/src/api/market.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,10 @@ function AuthenticatedEntryRedirect({ resume }: { resume: boolean }) {\n   return <Navigate to={target} replace />\n }\n \n-/** 인증 여부 확인 전에는 인증 폼을 숨기고, 로그인 사용자는 홈으로 돌려보낸다. */\n+/**\n+ * 인증 여부 확인 전에는 인증 폼을 숨긴다. 이 화면에서 방금 로그인한 사용자는 저장해 둔 돌아갈 화면(없으면 전략 진단\n+ * 첫 단계)으로, 이미 로그인한 채 들어온 사용자는 전략 진단 첫 단계로 보낸다.\n+ */\n export function AuthEntryGuard({ children }: { children: ReactNode }) {\n   const { status } = useAuth()\n   const previousStatusRef = useRef(status)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthEntryGuard.tsx",
+          "old_path": "frontend/src/auth/AuthEntryGuard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import { render, screen } from '@testing-library/react'\n import { describe, expect, it } from 'vitest'\n-import { DataStateFacts } from './DataStateNotice'\n+import { DataStateFacts } from './DataState'\n \n describe('DataStateFacts', () => {\n   it('정상 공급이면 표를 달지 않고, 수집 실패·자료 없음은 확인 중입니다로 보인다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataState.test.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataState.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,7 @@ import { ScanLine } from 'lucide-react'\n import { motion, useReducedMotion } from 'motion/react'\n import type { ReactNode } from 'react'\n import type { FieldDetailResult, IndicatorDisplay } from '@/types/marketFlow'\n-import { DataStateFacts } from './DataStateNotice'\n+import { DataStateFacts } from './DataState'\n import { ThreeMonthChart } from './ThreeMonthChart'\n import { InlineHelp } from '@/components/common/InlineHelp'\n import { describeAxis, formatNarrative, formatObservation, formatUpdatedAt, sourceParts } from './marketFlowFormat'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,7 @@ import { Popover } from 'radix-ui'\n import { useId } from 'react'\n import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from '@/components/common/useHoverOpen'\n import type { FieldSummary } from '@/types/marketFlow'\n-import { DataStateLine } from './DataStateNotice'\n+import { DataStateLine } from './DataState'\n import { formatNarrative, stateLineLabels } from './marketFlowFormat'\n import styles from './MarketFlow.module.css'\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,9 +28,6 @@ import styles from './AppHeader.module.css'\n  * 첫 화면에서 메뉴를 눌러 들어온 화면의 헤더가 다른 메뉴를 보이면, 사용자는 한 번의 이동으로\n  * 서비스의 구성이 통째로 바뀐 것처럼 겪는다.\n  *\n- * '대시보드'(`/dashboard`)와 '백테스트'(`/backtest`)는 메뉴에서 뺐다. 003·005가 완성되면\n- * 대체될 임시 화면이라 언젠가 빠질 자리이기 때문이다. **두 경로 자체는 지우지 않았다.**\n- *\n  * `covers`는 이 메뉴가 현재 위치로 표시될 경로들이다. **`path` 하나로는 모자란다** — 전략 진단은\n  * 섹터·비중(`/diagnosis/sectors`) → 전략 선택(`/strategy`) → 설정 조합 자동 비교(`/param-search`)\n  * → 결과(`/results/…`)로 이어지는 한 흐름인데 주소가 서로 형제라, 두 번째 단계로 넘어가는 순간\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -98,7 +98,7 @@ function mergeIndicators(\n   })\n }\n \n-/** 홈과 대시보드가 같은 최신 지표 조회 결과를 사용하도록 UI 지표 모델에 병합한다. */\n+/** 최신 지표 조회 결과를 첫 화면이 쓰는 UI 지표 모델에 병합한다. */\n export function useMarketIndicators(\n   marketIndicators: Indicator[],\n   macroIndicators: Indicator[],\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useMarketIndicators.ts",
+          "old_path": "frontend/src/hooks/useMarketIndicators.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -149,7 +149,7 @@ describe('LoginPage', () => {\n     await act(async () => loginRequest.resolve(authenticatedUser))\n   })\n \n-  it('이미 로그인한 사용자는 인증 입력 대신 홈으로 이동한다', async () => {\n+  it('이미 로그인한 사용자는 인증 입력 대신 기본 도착 화면으로 이동한다', async () => {\n     apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)\n     renderLogin()\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LoginPage.test.tsx",
+          "old_path": "frontend/src/pages/LoginPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'\n import { AssistantProvider, AssistantWidget } from '@/components/assistant/AssistantWidget'\n import { LandingPage } from '@/pages/LandingPage'\n \n-// 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.\n+// 첫 화면 밖의 화면은 각 경로에 접근할 때 불러온다.\n // 설정 조합 자동 비교(spec 007)도 전략 화면에서 넘어올 때 불러온다.\n const ParamSearchPage = lazy(() =>\n   import('@/pages/ParamSearchPage').then((module) => ({\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881410": []
+  }
+}

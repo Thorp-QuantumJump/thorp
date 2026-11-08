@@ -1,0 +1,572 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944484,
+    "iid": 109,
+    "project_id": 1444456,
+    "title": "fix(be): JRE 런타임에 없는 난수 알고리즘을 쓰지 않는다",
+    "description": "# **작업 내용 요약**\n\n운영 배포가 백엔드 기동 실패로 막혀 있다. `NewsRetryPolicy` 생성자의 `RandomGenerator.getDefault()` 가 기본 알고리즘 `L32X64MixRandom` 을 고르는데, 그 구현은 `jdk.random` 모듈에 있고 운영 런타임 이미지 `eclipse-temurin:21-jre` 에는 그 모듈이 없다. 빈 생성이 실패해 `newsIngestionService` 까지 연쇄로 못 만들고 스프링 컨텍스트가 통째로 죽는다.\n\n영향이 뉴스 기능에 그치지 않는다. 백엔드가 뜨지 못하면 백엔드가 선언해야 할 RabbitMQ 토폴로지도 만들어지지 않아, `backtest.jobs.bulk` 를 기다리는 `worker-flex` 까지 재시작을 반복한다. 2026-09-15 배포 전체가 이 한 지점에서 멈춰 있었다.\n\n**`RandomGenerator` 를 쓴 것이 잘못은 아니다.** Java 17(JEP 356)에서 들어온 최신 API 이고 Java 21 프로젝트에서 쓰는 것이 옳다. 이 MR 은 그 최신 API 에서 구형으로 내려가는 조치이며, 원인은 코드가 아니라 빌드와 런타임의 이미지가 다르다는 구조에 있다.\n\n# **관련 티켓**\n\n* ticket #228\n* link https://ssafy.atlassian.net/browse/S15P21E205-228\n\n# **주요 변경 사항**\n\n* 기본 생성자의 난수원을 `RandomGenerator.getDefault()` 에서 `new java.util.Random()` 으로 바꿨다. `java.base` 에 있어 어떤 런타임에도 존재한다.\n* 필드 타입 `RandomGenerator` 와 시험용 생성자 `NewsRetryPolicy(RandomGenerator)` 는 그대로다. `java.util.Random` 이 Java 17 부터 `RandomGenerator` 를 구현하기 때문이다.\n* 무심코 되돌리지 않도록 생성자에 근거를 Javadoc 으로 남겼다.\n\n# **테스트**\n\n* 완료`./gradlew test --tests \"*NewsRetryPolicy*\"` 통과\n* 완료`./gradlew spotlessApply compileJava` 통과\n* 완료`nextLong(long bound)` 가 `RandomGenerator` 의 default 메서드라 `java.util.Random` 에서도 그대로 동작함을 컴파일·테스트로 확인\n* 미완료운영 배포 1회로 백엔드 기동과 `worker-flex` 정상화 확인 (머지 후)\n\n# **리뷰 포인트**\n\n* **왜 `ThreadLocalRandom` 이 아닌가**: `ThreadLocalRandom.current()` 가 돌려주는 객체는 호출한 스레드에 묶이므로 필드에 담아 두면 안 된다. 지금 구조가 생성자에서 한 번 잡아 필드로 쓰는 형태라 `java.util.Random`(스레드 안전) 이 맞다.\n* **왜 런타임 이미지를 `21-jdk` 로 바꾸지 않았나**: 그러면 최신 API 를 그대로 쓸 수 있지만 이미지가 200MB 가량 커진다. 배포가 막혀 있어 영향 범위가 가장 작은 쪽을 택했다. 런타임 이미지 정책은 인프라 쪽에서 따로 볼 문제라고 본다.\n* **CI 로는 잡히지 않는 부류다**: 빌드와 테스트는 `21-jdk` 에서 돌아 `jdk.random` 이 있고, JRE 로 바뀌는 것은 런타임 단계뿐이다. 이번에 잡힌 자리가 운영 배포의 스모크 테스트라 배포가 멈췄다. CI 에 런타임 이미지로 한 번 기동해 보는 단계가 있으면 이 부류가 머지 전에 걸린다 — 이 MR 범위 밖이라 별도로 논의가 필요하다.\n\n# **공통 확인**\n\n* 완료**순위 배지·추천 표현 0건** — 재시도 간격 계산이라 표시 요소가 없다\n* 완료**결제·포인트·상품 선택 단계 0건** — 해당 없음\n* 완료**전략 ID 상수·전략별 분기 0건** — 해당 없음\n* 완료**계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n* 완료**검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-09-15T13:14:54.992+09:00",
+    "updated_at": "2026-09-15T13:17:55.904+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T13:17:55.328+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/228-news-retry-random",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+    "merge_commit_sha": "7f8cdf4c119f5abbce428ee0329201f75eac6357",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T13:14:55.889+09:00",
+    "reference": "!109",
+    "references": {
+      "short": "!109",
+      "relative": "!109",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!109"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/109",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944484,
+    "iid": 109,
+    "project_id": 1444456,
+    "title": "fix(be): JRE 런타임에 없는 난수 알고리즘을 쓰지 않는다",
+    "description": "# **작업 내용 요약**\n\n운영 배포가 백엔드 기동 실패로 막혀 있다. `NewsRetryPolicy` 생성자의 `RandomGenerator.getDefault()` 가 기본 알고리즘 `L32X64MixRandom` 을 고르는데, 그 구현은 `jdk.random` 모듈에 있고 운영 런타임 이미지 `eclipse-temurin:21-jre` 에는 그 모듈이 없다. 빈 생성이 실패해 `newsIngestionService` 까지 연쇄로 못 만들고 스프링 컨텍스트가 통째로 죽는다.\n\n영향이 뉴스 기능에 그치지 않는다. 백엔드가 뜨지 못하면 백엔드가 선언해야 할 RabbitMQ 토폴로지도 만들어지지 않아, `backtest.jobs.bulk` 를 기다리는 `worker-flex` 까지 재시작을 반복한다. 2026-09-15 배포 전체가 이 한 지점에서 멈춰 있었다.\n\n**`RandomGenerator` 를 쓴 것이 잘못은 아니다.** Java 17(JEP 356)에서 들어온 최신 API 이고 Java 21 프로젝트에서 쓰는 것이 옳다. 이 MR 은 그 최신 API 에서 구형으로 내려가는 조치이며, 원인은 코드가 아니라 빌드와 런타임의 이미지가 다르다는 구조에 있다.\n\n# **관련 티켓**\n\n* ticket #228\n* link https://ssafy.atlassian.net/browse/S15P21E205-228\n\n# **주요 변경 사항**\n\n* 기본 생성자의 난수원을 `RandomGenerator.getDefault()` 에서 `new java.util.Random()` 으로 바꿨다. `java.base` 에 있어 어떤 런타임에도 존재한다.\n* 필드 타입 `RandomGenerator` 와 시험용 생성자 `NewsRetryPolicy(RandomGenerator)` 는 그대로다. `java.util.Random` 이 Java 17 부터 `RandomGenerator` 를 구현하기 때문이다.\n* 무심코 되돌리지 않도록 생성자에 근거를 Javadoc 으로 남겼다.\n\n# **테스트**\n\n* 완료`./gradlew test --tests \"*NewsRetryPolicy*\"` 통과\n* 완료`./gradlew spotlessApply compileJava` 통과\n* 완료`nextLong(long bound)` 가 `RandomGenerator` 의 default 메서드라 `java.util.Random` 에서도 그대로 동작함을 컴파일·테스트로 확인\n* 미완료운영 배포 1회로 백엔드 기동과 `worker-flex` 정상화 확인 (머지 후)\n\n# **리뷰 포인트**\n\n* **왜 `ThreadLocalRandom` 이 아닌가**: `ThreadLocalRandom.current()` 가 돌려주는 객체는 호출한 스레드에 묶이므로 필드에 담아 두면 안 된다. 지금 구조가 생성자에서 한 번 잡아 필드로 쓰는 형태라 `java.util.Random`(스레드 안전) 이 맞다.\n* **왜 런타임 이미지를 `21-jdk` 로 바꾸지 않았나**: 그러면 최신 API 를 그대로 쓸 수 있지만 이미지가 200MB 가량 커진다. 배포가 막혀 있어 영향 범위가 가장 작은 쪽을 택했다. 런타임 이미지 정책은 인프라 쪽에서 따로 볼 문제라고 본다.\n* **CI 로는 잡히지 않는 부류다**: 빌드와 테스트는 `21-jdk` 에서 돌아 `jdk.random` 이 있고, JRE 로 바뀌는 것은 런타임 단계뿐이다. 이번에 잡힌 자리가 운영 배포의 스모크 테스트라 배포가 멈췄다. CI 에 런타임 이미지로 한 번 기동해 보는 단계가 있으면 이 부류가 머지 전에 걸린다 — 이 MR 범위 밖이라 별도로 논의가 필요하다.\n\n# **공통 확인**\n\n* 완료**순위 배지·추천 표현 0건** — 재시도 간격 계산이라 표시 요소가 없다\n* 완료**결제·포인트·상품 선택 단계 0건** — 해당 없음\n* 완료**전략 ID 상수·전략별 분기 0건** — 해당 없음\n* 완료**계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n* 완료**검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-09-15T13:14:54.992+09:00",
+    "updated_at": "2026-09-15T13:17:55.904+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T13:17:55.328+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/228-news-retry-random",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+    "merge_commit_sha": "7f8cdf4c119f5abbce428ee0329201f75eac6357",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T13:14:55.889+09:00",
+    "reference": "!109",
+    "references": {
+      "short": "!109",
+      "relative": "!109",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!109"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/109",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T13:23:42.980+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 195381,
+      "iid": 19,
+      "project_id": 1444456,
+      "sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+      "ref": "fix(be)/228-news-retry-random",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T13:15:07.985+09:00",
+      "updated_at": "2026-09-15T13:23:42.981+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195381"
+    },
+    "head_pipeline": {
+      "id": 195381,
+      "iid": 19,
+      "project_id": 1444456,
+      "sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+      "ref": "fix(be)/228-news-retry-random",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T13:15:07.985+09:00",
+      "updated_at": "2026-09-15T13:23:42.981+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195381",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T13:23:42.980+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": 514,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195381",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117",
+      "head_sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+      "start_sha": "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "734afcc4257fb6acbe1bbd9de92a9c54d3a28e91",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807525,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T13:14:55.089+09:00",
+          "updated_at": "2026-09-15T13:14:55.097+09:00",
+          "system": true,
+          "noteable_id": 944484,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 109,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "04f9e68b647f76d04cc7d1ff241628ab0b556171",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807526,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 사유 기록**: Javadoc을 통해 `RandomGenerator.getDefault()` 대신 `java.util.Random`을 선택한 명확한 배경(운영 런타임 이미지인 `eclipse-temurin:21-jre`의 모듈 누락 문제 및 CI와 운영 환경의 차이)을 상세히 기록하여 향후 발생할 수 있는 잠재적 회귀를 방지했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `NewsRetryPolicy` 클래스가 포함된 Spring 애플리케이션 컨텍스트가 `eclipse-temurin:21-jre` 기반의 최소 런타임 환경에서 예외 없이 정상적으로 기동(`ApplicationContext` 로드 성공)하는지 확인하는 통합 테스트를 수행합니다.\n- 재시도 지터(Jitter) 로직이 기존과 동일하게 의도된 범위 내의 난수를 발생시키며 정상 동작하는지 단위 테스트를 통해 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d02efa76c10da67b3108b2ca7804815d2e162f2c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T13:15:02.357+09:00",
+          "updated_at": "2026-09-15T13:15:02.357+09:00",
+          "system": false,
+          "noteable_id": 944484,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 109,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "618d6f79bd8c5813549701ba99947ad66172d009",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807560,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T13:17:49.231+09:00",
+          "updated_at": "2026-09-15T13:17:49.234+09:00",
+          "system": true,
+          "noteable_id": 944484,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 109,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "33f53a2ff079e572ce094c5e1bda87b8d16522b5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807561,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T13:17:49.276+09:00",
+          "updated_at": "2026-09-15T13:17:49.281+09:00",
+          "system": true,
+          "noteable_id": 944484,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 109,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "33e41c010fb3747421dc3c7644795888bd1975d2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807563,
+          "type": null,
+          "body": "mentioned in commit 7f8cdf4c119f5abbce428ee0329201f75eac6357",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T13:17:55.348+09:00",
+          "updated_at": "2026-09-15T13:17:55.359+09:00",
+          "system": true,
+          "noteable_id": 944484,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 109,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2198515,
+      "head_commit_sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+      "base_commit_sha": "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117",
+      "start_commit_sha": "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117",
+      "created_at": "2026-09-15T13:14:55.468+09:00",
+      "merge_request_id": 944484,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "62ab531e5a1d2467ca77c76cb328d7fd4fad34cd"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2198515,
+      "head_commit_sha": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+      "base_commit_sha": "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117",
+      "start_commit_sha": "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117",
+      "created_at": "2026-09-15T13:14:55.468+09:00",
+      "merge_request_id": 944484,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "62ab531e5a1d2467ca77c76cb328d7fd4fad34cd",
+      "commits": [
+        {
+          "id": "d02efa76c10da67b3108b2ca7804815d2e162f2c",
+          "short_id": "d02efa76",
+          "created_at": "2026-09-15T13:14:52.000+09:00",
+          "parent_ids": [
+            "b4e88fa449a311de0ff2a43ad775cfd9e8fc1117"
+          ],
+          "title": "fix(be): JRE 런타임에 없는 난수 알고리즘을 쓰지 않는다",
+          "message": "fix(be): JRE 런타임에 없는 난수 알고리즘을 쓰지 않는다\n\nNewsRetryPolicy 가 RandomGenerator.getDefault() 로 기본 알고리즘\nL32X64MixRandom 을 고르는데, 그 구현은 jdk.random 모듈에 있다. 운영 런타임\n이미지 eclipse-temurin:21-jre 에는 그 모듈이 없어, 이 빈을 만드는 단계에서\n스프링 컨텍스트가 통째로 죽는다.\n\n영향이 뉴스 기능에 그치지 않는다. 백엔드가 뜨지 못하면 백엔드가 선언해야 할\nRabbitMQ 토폴로지도 만들어지지 않아, backtest.jobs.bulk 를 기다리는\nworker-flex 까지 재시작을 반복한다. 2026-09-15 배포가 이 한 지점에서 멈췄다.\n\n지터용 난수원을 java.base 의 java.util.Random 으로 바꾼다. Java 17 부터\nRandomGenerator 를 구현하므로 필드 타입과 시험용 생성자는 그대로 둔다.\n쓰임이 재시도 간격의 흔들림이라 암호학적 강도가 필요 없다.\n\nRandomGenerator 를 쓴 것이 잘못은 아니었다. 그것은 Java 17 에서 들어온 최신\nAPI 이고, 빌드와 테스트가 21-jdk 에서 돌아 런타임과의 차이가 드러나지 않는\n구조가 원인에 가깝다. 무심코 되돌리지 않도록 생성자에 근거를 남겼다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T13:14:52.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T13:14:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d02efa76c10da67b3108b2ca7804815d2e162f2c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.news.application.service;\n import com.ssafy.thorp.news.application.port.NewsSourceClient;\n import java.time.Duration;\n import java.util.Optional;\n+import java.util.Random;\n import java.util.random.RandomGenerator;\n import org.springframework.stereotype.Component;\n \n@@ -43,8 +44,18 @@ public class NewsRetryPolicy {\n \n     private final RandomGenerator random;\n \n+    /**\n+     * 지터용 난수원으로 {@link Random}을 쓴다. {@code java.base}에 있어 어떤 런타임에도 존재한다.\n+     *\n+     * <p><b>{@code RandomGenerator.getDefault()}로 되돌리지 않는다.</b> 그것이 고르는 기본 알고리즘 {@code\n+     * L32X64MixRandom}의 구현은 {@code jdk.random} 모듈에 있는데, 운영 런타임 이미지 {@code eclipse-temurin:21-jre}에는\n+     * 그 모듈이 없어 이 빈을 만드는 단계에서 애플리케이션 전체가 기동에 실패한다(2026-09-15 운영 배포 중단). 빌드와 테스트는 {@code 21-jdk}에서 돌아\n+     * {@code jdk.random}이 있으므로 CI로는 드러나지 않는다.\n+     *\n+     * <p>쓰임이 재시도 간격의 흔들림이라 암호학적 강도가 필요 없다. 난수원을 바꿀 때는 그 구현이 운영 런타임에 있는 모듈인지 먼저 확인한다.\n+     */\n     public NewsRetryPolicy() {\n-        this(RandomGenerator.getDefault());\n+        this(new Random());\n     }\n \n     /** 시험에서 흔들림을 고정하기 위한 생성자. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetryPolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetryPolicy.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2807526": []
+  }
+}

@@ -1,0 +1,644 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944645,
+    "iid": 111,
+    "project_id": 1444456,
+    "title": "fix(be): 같은 조건을 다시 접수하면 500이 나는 결함을 고친다",
+    "description": "# 작업 내용 요약\n\n`POST /param-searches`에 **같은 본문을 두 번** 보내면 두 번째가 500이던 결함을 고친다. 원인은 007과 004의 전제가 어긋난 자리에 있었다 — 007은 \"후보 하나 = 실행 하나\"를 스키마에 못박았고(`search_candidate.backtest_job_id` UNIQUE), 004는 같은 조건이면 일부러 같은 실행을 돌려준다(spec 004 R-02 합류·재사용). 두 번째 묶음의 후보가 같은 실행 행을 받는 순간 제약에 걸렸고, 예외를 삼키는 `catch`가 그 사실을 가린 채 트랜잭션은 이미 rollback-only여서 묶음 행까지 통째로 사라졌다.\n\n**틀린 쪽은 제약이다.** 재사용을 막으면 같은 계산을 두 번 돌리게 되는데, 그것이 007이 아끼려는 바로 그 비용이다. 유니크를 조회용 부분 인덱스로 낮추고, 결과 이벤트가 실행에 걸린 후보를 **전부** 끝내게 한다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-221\n- link https://ssafy.atlassian.net/browse/S15P21E205-221\n\n# 주요 변경 사항\n\n- `V20260915120000__search_candidate_shared_job.sql` — `uk_search_candidate_job` UNIQUE를 떼고 `idx_search_candidate_job` 부분 인덱스(`WHERE backtest_job_id IS NOT NULL`)로 낮춘다\n- `SearchCandidateRepository.findByBacktestJobId` → `findAllByBacktestJobId` (다건). 실행 하나에 걸린 후보가 여럿일 수 있고 **서로 다른 묶음의 것일 수도 있다**\n- `ParamSearchProgressService.candidateFinished`가 걸린 후보를 전부 끝낸다. 하나만 끝내면 나머지 묶음이 영영 `RUNNING`이다. **묶음 id 순으로 잠근다** — 순서가 이벤트마다 다르면 두 이벤트가 서로의 락을 기다린다\n- `CandidateDispatcher.dispatch`의 `catch (RuntimeException)` 제거. 같은 트랜잭션에 참여하는 호출이라 잡아도 되살릴 수 없었고, 노리던 브로커 장애는 애초에 여기로 오지 않는다(004는 커밋 뒤에 발행하고 재발행기가 `published_at NULL`을 집어 간다)\n- `specs/007-auto-parameter-search/data-model.md` 인덱스 설명을 같이 고친다 — 문서가 UNIQUE를 근거로 남아 있으면 다음 사람이 같은 제약을 다시 세운다\n\n# 테스트\n\n- [x] `cd backend && ./gradlew spotlessApply build` — 953 tests / 0 failed\n- [x] Docker를 띄우고 `THORP_REQUIRE_DOCKER=true ./gradlew cleanTest build` 재실행 — Testcontainers 테스트가 실제로 돌았음을 확인(skipped 1, 무관한 항목)\n- [x] `ParamSearchLaunchIT` 회귀 2건 (목이 아닌 **실제 런처**로 004까지 닿는 유일한 테스트)\n  - 같은 조건을 두 번 접수해도 둘 다 받고, 묶음은 새로 생기며(FR-013c) 두 묶음의 후보가 같은 실행을 나눠 쓴다\n  - 공유한 실행이 끝나면 걸려 있던 두 묶음의 후보가 함께 끝난다\n- [x] `CandidateDispatcherTest` — 발행 중 예외가 밖으로 나가고 후보 상태는 건드리지 않는다\n- [x] `ParamSearchMigrationTest` — `backtest_job_id` 인덱스가 하나이고 UNIQUE가 아니다\n- [x] `infra/scripts/check-migration-version.sh origin/dev` 통과 (기준 최대 20260914140000 → 추가 20260915120000)\n\n# 리뷰 포인트\n\n- **004 담당 확인 부탁**: 007이 004의 합류·재사용을 그대로 받아들이는 방향(A안)이다. 004 쪽에서 \"한 실행에 여러 묶음의 후보가 붙는다\"를 전제로 깨지는 곳이 있는지 봐 주면 좋겠다\n- **스키마 영향**: UNIQUE 인덱스 제거는 기존 행을 위반시키지 않으므로 되돌리기도 안전하다(되돌리려면 중복 행을 먼저 정리해야 한다). 데이터 삭제·타입 변경은 없다\n- 묶음 락 순서를 `paramSearchId` 오름차순으로 고정했다. 다른 경로(취소·재시도)에서 묶음을 잠그는 순서와 어긋나는지 봐 주면 좋겠다\n- `dispatch`에서 예외를 내보내기로 한 판단 — `advance()`(AFTER_COMMIT·REQUIRES_NEW) 경로에서 터지면 그 결과 반영이 롤백된다. 지금은 그런 예외가 곧 결함이라 드러나는 편이 낫다고 봤다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 화면 변경 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 이번 변경에 전략 지식이 들어가지 않는다. 회귀 테스트도 전략을 이름이 아니라 \"등록표 활성 ∩ 004 지원 ∩ 축 보유 ∩ 기준 아님\"으로 조회해서 고른다(FR-025)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 발행 실패 후보는 `PENDING`으로 남고 `FAILED`로 바꾸지 않는다(FR-011)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 검증 라벨 경로 변경 없음",
+    "state": "merged",
+    "created_at": "2026-09-15T14:02:30.328+09:00",
+    "updated_at": "2026-09-15T15:49:39.054+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-15T14:02:50.367+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/221-search-candidate-shared-job",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fd68472f2b595907041fc179f6107cd26bb578ef",
+    "merge_commit_sha": "05769933808062862ca5d27c9a90e64cfaf5b768",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T14:02:31.979+09:00",
+    "reference": "!111",
+    "references": {
+      "short": "!111",
+      "relative": "!111",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!111"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/111",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944645,
+    "iid": 111,
+    "project_id": 1444456,
+    "title": "fix(be): 같은 조건을 다시 접수하면 500이 나는 결함을 고친다",
+    "description": "# 작업 내용 요약\n\n`POST /param-searches`에 **같은 본문을 두 번** 보내면 두 번째가 500이던 결함을 고친다. 원인은 007과 004의 전제가 어긋난 자리에 있었다 — 007은 \"후보 하나 = 실행 하나\"를 스키마에 못박았고(`search_candidate.backtest_job_id` UNIQUE), 004는 같은 조건이면 일부러 같은 실행을 돌려준다(spec 004 R-02 합류·재사용). 두 번째 묶음의 후보가 같은 실행 행을 받는 순간 제약에 걸렸고, 예외를 삼키는 `catch`가 그 사실을 가린 채 트랜잭션은 이미 rollback-only여서 묶음 행까지 통째로 사라졌다.\n\n**틀린 쪽은 제약이다.** 재사용을 막으면 같은 계산을 두 번 돌리게 되는데, 그것이 007이 아끼려는 바로 그 비용이다. 유니크를 조회용 부분 인덱스로 낮추고, 결과 이벤트가 실행에 걸린 후보를 **전부** 끝내게 한다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-221\n- link https://ssafy.atlassian.net/browse/S15P21E205-221\n\n# 주요 변경 사항\n\n- `V20260915120000__search_candidate_shared_job.sql` — `uk_search_candidate_job` UNIQUE를 떼고 `idx_search_candidate_job` 부분 인덱스(`WHERE backtest_job_id IS NOT NULL`)로 낮춘다\n- `SearchCandidateRepository.findByBacktestJobId` → `findAllByBacktestJobId` (다건). 실행 하나에 걸린 후보가 여럿일 수 있고 **서로 다른 묶음의 것일 수도 있다**\n- `ParamSearchProgressService.candidateFinished`가 걸린 후보를 전부 끝낸다. 하나만 끝내면 나머지 묶음이 영영 `RUNNING`이다. **묶음 id 순으로 잠근다** — 순서가 이벤트마다 다르면 두 이벤트가 서로의 락을 기다린다\n- `CandidateDispatcher.dispatch`의 `catch (RuntimeException)` 제거. 같은 트랜잭션에 참여하는 호출이라 잡아도 되살릴 수 없었고, 노리던 브로커 장애는 애초에 여기로 오지 않는다(004는 커밋 뒤에 발행하고 재발행기가 `published_at NULL`을 집어 간다)\n- `specs/007-auto-parameter-search/data-model.md` 인덱스 설명을 같이 고친다 — 문서가 UNIQUE를 근거로 남아 있으면 다음 사람이 같은 제약을 다시 세운다\n\n# 테스트\n\n- [x] `cd backend && ./gradlew spotlessApply build` — 953 tests / 0 failed\n- [x] Docker를 띄우고 `THORP_REQUIRE_DOCKER=true ./gradlew cleanTest build` 재실행 — Testcontainers 테스트가 실제로 돌았음을 확인(skipped 1, 무관한 항목)\n- [x] `ParamSearchLaunchIT` 회귀 2건 (목이 아닌 **실제 런처**로 004까지 닿는 유일한 테스트)\n  - 같은 조건을 두 번 접수해도 둘 다 받고, 묶음은 새로 생기며(FR-013c) 두 묶음의 후보가 같은 실행을 나눠 쓴다\n  - 공유한 실행이 끝나면 걸려 있던 두 묶음의 후보가 함께 끝난다\n- [x] `CandidateDispatcherTest` — 발행 중 예외가 밖으로 나가고 후보 상태는 건드리지 않는다\n- [x] `ParamSearchMigrationTest` — `backtest_job_id` 인덱스가 하나이고 UNIQUE가 아니다\n- [x] `infra/scripts/check-migration-version.sh origin/dev` 통과 (기준 최대 20260914140000 → 추가 20260915120000)\n\n# 리뷰 포인트\n\n- **004 담당 확인 부탁**: 007이 004의 합류·재사용을 그대로 받아들이는 방향(A안)이다. 004 쪽에서 \"한 실행에 여러 묶음의 후보가 붙는다\"를 전제로 깨지는 곳이 있는지 봐 주면 좋겠다\n- **스키마 영향**: UNIQUE 인덱스 제거는 기존 행을 위반시키지 않으므로 되돌리기도 안전하다(되돌리려면 중복 행을 먼저 정리해야 한다). 데이터 삭제·타입 변경은 없다\n- 묶음 락 순서를 `paramSearchId` 오름차순으로 고정했다. 다른 경로(취소·재시도)에서 묶음을 잠그는 순서와 어긋나는지 봐 주면 좋겠다\n- `dispatch`에서 예외를 내보내기로 한 판단 — `advance()`(AFTER_COMMIT·REQUIRES_NEW) 경로에서 터지면 그 결과 반영이 롤백된다. 지금은 그런 예외가 곧 결함이라 드러나는 편이 낫다고 봤다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 화면 변경 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 이번 변경에 전략 지식이 들어가지 않는다. 회귀 테스트도 전략을 이름이 아니라 \"등록표 활성 ∩ 004 지원 ∩ 축 보유 ∩ 기준 아님\"으로 조회해서 고른다(FR-025)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 발행 실패 후보는 `PENDING`으로 남고 `FAILED`로 바꾸지 않는다(FR-011)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 검증 라벨 경로 변경 없음",
+    "state": "merged",
+    "created_at": "2026-09-15T14:02:30.328+09:00",
+    "updated_at": "2026-09-15T15:49:39.054+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-15T14:02:50.367+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/221-search-candidate-shared-job",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fd68472f2b595907041fc179f6107cd26bb578ef",
+    "merge_commit_sha": "05769933808062862ca5d27c9a90e64cfaf5b768",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T14:02:31.979+09:00",
+    "reference": "!111",
+    "references": {
+      "short": "!111",
+      "relative": "!111",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!111"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/111",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "d305812fb5e7ea58db49c41e216c6147b3720898",
+      "head_sha": "fd68472f2b595907041fc179f6107cd26bb578ef",
+      "start_sha": "7f8cdf4c119f5abbce428ee0329201f75eac6357"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ed034fb81a9ee38d0e1dc3011c888ac022fb1f4d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808153,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **근본적인 아키텍처 충돌 해결**: 동일 조건 재접수 시 500 에러를 유발하던 데이터베이스 제약(`UNIQUE`)을 설계 수준에서 정확히 파악하고, 조회용 부분 인덱스로 전환하여 004 스펙(합류·재사용)과 007 스펙 간의 정합성을 깔끔하게 맞췄습니다.\n- **철저한 동시성 및 데드락 방지**: `ParamSearchProgressService.candidateFinished`에서 여러 묶음이 동시에 같은 실행 결과를 받을 때 발생할 수 있는 데드락 위험을 방지하기 위해 `paramSearchId` 기준으로 정렬(`Comparator.comparing`)하여 락을 획득하도록 구현한 점이 매우 훌륭합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **동시 이벤트 수신 테스트**: 동일한 `sharedJobId`에 대한 `BacktestFinished` 이벤트가 서로 다른 스레드에서 동시에(Race Condition 상황) 발생할 때, 데이터 일관성이 유지되고 데드락 없이 모든 묶음의 후보 상태가 정상적으로 `COMPLETED`로 전이되는지 검증하는 동시성 테스트를 추가할 것을 제안합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fd68472f2b595907041fc179f6107cd26bb578ef -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T14:02:35.461+09:00",
+          "updated_at": "2026-09-15T14:02:35.461+09:00",
+          "system": false,
+          "noteable_id": 944645,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 111,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e5efd7f5685b8d79dcc276534f86d3e244bd1e2b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808156,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T14:02:47.482+09:00",
+          "updated_at": "2026-09-15T14:02:47.491+09:00",
+          "system": true,
+          "noteable_id": 944645,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 111,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8c14ba128633ec67f0f1e97614aebd14897fcbe6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808158,
+          "type": null,
+          "body": "mentioned in commit 05769933808062862ca5d27c9a90e64cfaf5b768",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T14:02:50.493+09:00",
+          "updated_at": "2026-09-15T14:02:50.497+09:00",
+          "system": true,
+          "noteable_id": 944645,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 111,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7eefd161c85d1abf9b43780bc141a30c91dd0c64",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809426,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:49:53.881+09:00",
+          "updated_at": "2026-09-15T15:49:53.889+09:00",
+          "system": true,
+          "noteable_id": 944645,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 111,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2199049,
+      "head_commit_sha": "fd68472f2b595907041fc179f6107cd26bb578ef",
+      "base_commit_sha": "d305812fb5e7ea58db49c41e216c6147b3720898",
+      "start_commit_sha": "7f8cdf4c119f5abbce428ee0329201f75eac6357",
+      "created_at": "2026-09-15T14:02:30.722+09:00",
+      "merge_request_id": 944645,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "742dc615ff4ee5ed2653145398bbe94db413290b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2199049,
+      "head_commit_sha": "fd68472f2b595907041fc179f6107cd26bb578ef",
+      "base_commit_sha": "d305812fb5e7ea58db49c41e216c6147b3720898",
+      "start_commit_sha": "7f8cdf4c119f5abbce428ee0329201f75eac6357",
+      "created_at": "2026-09-15T14:02:30.722+09:00",
+      "merge_request_id": 944645,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "742dc615ff4ee5ed2653145398bbe94db413290b",
+      "commits": [
+        {
+          "id": "fd68472f2b595907041fc179f6107cd26bb578ef",
+          "short_id": "fd68472f",
+          "created_at": "2026-09-15T12:34:19.000+09:00",
+          "parent_ids": [
+            "35c7c6500890630a401e022b885f07a00bcf5b0a"
+          ],
+          "title": "test(be): 같은 조건 재접수와 공유 실행의 종료를 고정한다",
+          "message": "test(be): 같은 조건 재접수와 공유 실행의 종료를 고정한다\n\nParamSearchLaunchIT 는 목이 아니라 실제 런처로 004까지 닿는 유일한 테스트다. 결함이 004와\n007의 전제가 어긋난 자리에 있었으니 재현도 여기여야 한다.\n\n둘을 고정한다. 같은 조건을 두 번 접수해도 둘 다 받아들이고 묶음은 새로 생기며(FR-013c)\n두 묶음의 후보가 같은 실행 행을 나눠 쓴다는 것, 그리고 그 실행이 끝나면 걸려 있던 후보가\n함께 끝난다는 것. 뒤엣것을 빠뜨리면 실행은 다시 오지 않으므로 한쪽 묶음이 영영 RUNNING 이다.\n\ndata-model.md 의 인덱스 설명도 함께 고친다 — 문서가 UNIQUE 를 근거로 남아 있으면 다음 사람이\n같은 제약을 다시 세운다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-15T12:34:19.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-15T12:34:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fd68472f2b595907041fc179f6107cd26bb578ef"
+        },
+        {
+          "id": "35c7c6500890630a401e022b885f07a00bcf5b0a",
+          "short_id": "35c7c650",
+          "created_at": "2026-09-15T12:24:29.000+09:00",
+          "parent_ids": [
+            "f13ba4ab3715588ea0591f333c652a8a191371aa"
+          ],
+          "title": "fix(be): 발행 경로에서 삼킬 수 없는 예외를 삼키지 않는다",
+          "message": "fix(be): 발행 경로에서 삼킬 수 없는 예외를 삼키지 않는다\n\ndispatch() 의 catch (RuntimeException) 는 \"발행 실패면 후보를 PENDING 으로 남긴다\"를\n의도했지만 그 복원력은 없었다. launchCandidate → 004 접수가 같은 트랜잭션에 참여하므로\n거기서 제약 위반이 나면 트랜잭션은 이미 rollback-only 다. 잡아도 되살아나지 않고 커밋\n시점에 UnexpectedRollbackException 이 되어, 후보 하나의 실패가 묶음 전체를 지운 채\n500 으로 나갔다. 원인은 로그로 이미 지나간 뒤라 500 의 이유를 찾을 수도 없었다.\n\n이 catch 가 노리던 브로커 장애는 애초에 여기로 오지 않는다. 004는 작업 메시지를 커밋\n뒤에 보내고(R-18), 보내지 못한 실행은 published_at NULL 로 남아 재발행기가 집어 간다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-15T12:24:29.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-15T12:24:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/35c7c6500890630a401e022b885f07a00bcf5b0a"
+        },
+        {
+          "id": "f13ba4ab3715588ea0591f333c652a8a191371aa",
+          "short_id": "f13ba4ab",
+          "created_at": "2026-09-15T12:24:17.000+09:00",
+          "parent_ids": [
+            "d305812fb5e7ea58db49c41e216c6147b3720898"
+          ],
+          "title": "fix(be): 후보가 004의 재사용 실행을 공유할 수 있게 한다",
+          "message": "fix(be): 후보가 004의 재사용 실행을 공유할 수 있게 한다\n\nsearch_candidate.backtest_job_id 의 UNIQUE 는 \"후보 하나 = 실행 하나\"를 스키마에\n못박았지만, 004는 같은 조건의 요청을 살아 있는 실행에 합류시키거나 완료 결과를\n재사용한다(spec 004 R-02). 같은 조건을 다시 접수하면 두 번째 묶음의 후보가 첫 번째와\n같은 실행 행을 받아 제약에 걸렸고, 묶음 행까지 통째로 롤백돼 500 이 나갔다.\n\n둘 중 틀린 쪽은 이 제약이다. 재사용을 막으면 같은 계산을 두 번 돌리게 되는데 그것이\n007이 아끼려는 비용이다. 유니크를 조회용 부분 인덱스로 낮춘다.\n\n대신 실행 하나에 후보가 여럿 걸린다 — 서로 다른 묶음의 것일 수도 있다. 결과 이벤트는\n걸린 후보를 전부 끝낸다. 하나만 끝내면 나머지 묶음이 영영 RUNNING 으로 남는다.\n묶음 id 순으로 잠그는 이유는 두 이벤트가 서로의 락을 기다리지 않게 하기 위해서다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-15T12:24:17.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-15T12:24:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f13ba4ab3715588ea0591f333c652a8a191371aa"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -3,7 +3,6 @@ package com.ssafy.thorp.paramsearch.application.repository;\n import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import java.util.List;\n-import java.util.Optional;\n \n /** 탐색 후보 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다. */\n public interface SearchCandidateRepository {\n@@ -35,6 +34,11 @@ public interface SearchCandidateRepository {\n \n     long countByStatus(Long paramSearchId, CandidateStatus status);\n \n-    /** 결과 이벤트가 도착했을 때 어느 후보의 것인지 찾는다. Job 하나는 후보 하나에만 붙는다. */\n-    Optional<SearchCandidate> findByBacktestJobId(Long backtestJobId);\n+    /**\n+     * 결과 이벤트가 도착했을 때 어느 후보의 것인지 찾는다.\n+     *\n+     * <p><b>실행 하나에 후보가 여럿 걸릴 수 있다.</b> 004가 같은 조건의 요청을 살아 있는 실행에 합류시키거나 완료 결과를 재사용하기 때문이다(spec 004\n+     * R-02). 같은 조건을 두 번 접수하면 두 묶음의 후보가 같은 실행 행을 가리키므로, 걸린 후보를 <b>전부</b> 돌려주지 않으면 한쪽 묶음이 영영 끝나지 않는다.\n+     */\n+    List<SearchCandidate> findAllByBacktestJobId(Long backtestJobId);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/repository/SearchCandidateRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/repository/SearchCandidateRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,8 +11,6 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import java.time.Clock;\n import java.util.List;\n-import org.slf4j.Logger;\n-import org.slf4j.LoggerFactory;\n import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n import org.springframework.stereotype.Service;\n \n@@ -29,8 +27,6 @@ import org.springframework.stereotype.Service;\n @ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n public class CandidateDispatcher {\n \n-    private static final Logger log = LoggerFactory.getLogger(CandidateDispatcher.class);\n-\n     private final CandidateJobLauncher launcher;\n     private final ParamSearchRepository paramSearchRepository;\n     private final SearchCandidateRepository candidateRepository;\n@@ -104,20 +100,20 @@ public class CandidateDispatcher {\n     /**\n      * 후보 하나를 발행한다.\n      *\n-     * <p>발행 실패(브로커 장애)는 후보를 {@code PENDING}으로 남긴다 — 계산 실패와 발행 실패는 다르다(FR-011). {@code FAILED}로 바꾸면\n-     * \"이 조합은 계산할 수 없다\"는 뜻이 되어 결과 해석이 틀어지고, 재시도 대상 셈도 어긋난다.\n+     * <p>후보를 {@code FAILED}로 바꾸지 않는다 — 계산 실패와 발행 실패는 다르다(FR-011). {@code FAILED}는 \"이 조합은 계산할 수 없다\"는\n+     * 뜻이라 결과 해석이 틀어지고 재시도 대상 셈도 어긋난다. 여기서 터지면 후보는 {@code PENDING}인 채로 남는다.\n+     *\n+     * <p><b>예외를 잡지 않는다.</b> 한때 {@code catch (RuntimeException)}으로 \"발행 실패면 다음 후보로 넘어간다\"를 의도했지만 그\n+     * 복원력은 없었다 — {@code launchCandidate} → 004 접수가 <b>같은 트랜잭션에 참여</b>하므로, 거기서 제약 위반이 나면 트랜잭션은 이미\n+     * rollback-only다. 잡아도 되살아나지 않고 커밋 시점에 {@code UnexpectedRollbackException}이 되어, 후보 하나의 실패가 묶음\n+     * 전체를 지운 채 500으로 나갔다.\n+     *\n+     * <p>이 catch가 노리던 브로커 장애는 애초에 여기로 오지 않는다. 004는 작업 메시지를 <b>커밋 뒤에</b> 보내고(spec 004 R-18), 보내지 못한\n+     * 실행은 {@code published_at NULL}로 남아 재발행기가 집어 간다. 브로커가 죽어도 접수는 성공하고 후보는 발행된 채로 기다린다.\n      */\n     private void dispatch(ParamSearchSnapshot snapshot, SearchCandidate candidate) {\n-        try {\n-            long backtestJobId = launcher.launchCandidate(snapshot, candidate);\n-            candidateRepository.update(candidate.markDispatched(backtestJobId));\n-        } catch (RuntimeException e) {\n-            log.warn(\n-                    \"candidate dispatch failed, staying PENDING: searchId={} candidateNo={}\",\n-                    snapshot.searchId(),\n-                    candidate.getCandidateNo(),\n-                    e);\n-        }\n+        long backtestJobId = launcher.launchCandidate(snapshot, candidate);\n+        candidateRepository.update(candidate.markDispatched(backtestJobId));\n     }\n \n     /** 묶음이 끝났는가 — 대기도 실행 중도 없으면 끝이다(내부 계약 §4 \"묶음 종료\"). */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CandidateDispatcher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CandidateDispatcher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,8 @@ import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n-import java.util.Optional;\n+import java.util.Comparator;\n+import java.util.List;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n@@ -23,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;\n  * <p><b>집계를 세어서 다시 쓴다.</b> 이전 값에 1을 더하지 않는 이유는 동시 수신 때문이다 — 두 이벤트가 같은 값을 읽어 각자 더하면 하나가 사라진다. 묶음 행을\n  * 잠근 뒤 후보 상태별로 다시 세면 그 경쟁이 없다(내부 계약 §4).\n  *\n+ * <p><b>실행 하나에 후보가 여럿 걸릴 수 있다.</b> 004가 같은 조건의 요청을 살아 있는 실행에 합류시키므로(spec 004 R-02), 같은 조건을 두 번 접수하면\n+ * 두 묶음의 후보가 같은 실행 행을 가리킨다. 결과 이벤트 하나가 그 후보 전부를 끝내야 한다 — 하나만 끝내면 나머지 묶음이 영영 {@code RUNNING}으로 남는다.\n+ *\n  * <p>{@code REQUIRES_NEW}로 여는 이유: 이 메서드는 {@code AFTER_COMMIT} 콜백에서 불린다. 그 시점의 원래 트랜잭션은 커밋됐지만 자원이 아직\n  * 묶여 있어서, 기본 전파로 열면 끝난 트랜잭션에 참여해 <b>변경이 다시 커밋되지 않는다</b>(backend CLAUDE.md).\n  */\n@@ -55,7 +59,7 @@ public class ParamSearchProgressService {\n     }\n \n     /**\n-     * 후보 하나가 끝났다.\n+     * 실행 하나가 끝났다. 그 실행에 걸린 후보를 전부 끝낸다.\n      *\n      * @param backtestJobId 끝난 실행 행의 id\n      * @param failed 실패로 끝났는가\n@@ -64,18 +68,31 @@ public class ParamSearchProgressService {\n      */\n     @Transactional(propagation = Propagation.REQUIRES_NEW)\n     public boolean candidateFinished(long backtestJobId, boolean failed, String errorCode) {\n-        Optional<SearchCandidate> found = candidateRepository.findByBacktestJobId(backtestJobId);\n-        if (found.isEmpty()) {\n+        List<SearchCandidate> bound = candidateRepository.findAllByBacktestJobId(backtestJobId);\n+        if (bound.isEmpty()) {\n             // 묶음에 속하지 않은 단일 실행이 대부분이다. 경고를 남기면 로그가 그것으로 덮인다(내부 계약 §3).\n             return false;\n         }\n-        SearchCandidate candidate = found.get();\n+        // 묶음 id 순으로 처리한다. 한 실행에 여러 묶음의 후보가 걸려 있으면 묶음 행을 여럿 잠그게 되는데,\n+        // 잠그는 순서가 이벤트마다 다르면 서로의 락을 기다리다 엉킨다.\n+        bound.stream()\n+                .sorted(Comparator.comparing(SearchCandidate::getParamSearchId))\n+                .forEach(candidate -> applyResult(candidate, failed, errorCode));\n+        return true;\n+    }\n+\n+    /**\n+     * 후보 하나에 결과를 반영하고 그 묶음을 전진시킨다.\n+     *\n+     * <p>이미 끝난 후보는 건너뛴다 — 늦게 도착한 결과가 취소·한도로 닫힌 후보를 되살리면 안 된다.\n+     */\n+    private void applyResult(SearchCandidate candidate, boolean failed, String errorCode) {\n         if (candidate.getStatus().isFinal()) {\n             log.info(\n                     \"late candidate result ignored: candidateId={} status={}\",\n                     candidate.getId(),\n                     candidate.getStatus());\n-            return true;\n+            return;\n         }\n         candidateRepository.update(\n                 failed\n@@ -101,7 +118,6 @@ public class ParamSearchProgressService {\n             // 아직 남았다 — 창의 빈자리를 채운다. 멈추기로 한 묶음이면 advance 가 스스로 막는다.\n             dispatcher.advance(settled.getId(), snapshotOf(settled));\n         }\n-        return true;\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchProgressService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchProgressService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,6 @@ package com.ssafy.thorp.paramsearch.infrastructure.persistence;\n \n import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import java.util.List;\n-import java.util.Optional;\n import org.springframework.data.domain.Limit;\n import org.springframework.data.jpa.repository.JpaRepository;\n \n@@ -28,5 +27,6 @@ interface SearchCandidateJpaRepository extends JpaRepository<SearchCandidateJpaE\n \n     long countByParamSearchIdAndStatus(Long paramSearchId, CandidateStatus status);\n \n-    Optional<SearchCandidateJpaEntity> findByBacktestJobId(Long backtestJobId);\n+    /** 실행 하나에 걸린 후보 전부. 순서를 고정해야 잠그는 순서도 고정된다(spec 004 R-02 합류·재사용). */\n+    List<SearchCandidateJpaEntity> findByBacktestJobIdOrderByIdAsc(Long backtestJobId);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,7 +4,6 @@ import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateReposit\n import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import java.util.List;\n-import java.util.Optional;\n import org.springframework.data.domain.Limit;\n import org.springframework.stereotype.Repository;\n \n@@ -118,9 +117,9 @@ public class SearchCandidateRepositoryImpl implements SearchCandidateRepository\n     }\n \n     @Override\n-    public Optional<SearchCandidate> findByBacktestJobId(Long backtestJobId) {\n-        return jpaRepository\n-                .findByBacktestJobId(backtestJobId)\n-                .map(SearchCandidateMapper::toDomain);\n+    public List<SearchCandidate> findAllByBacktestJobId(Long backtestJobId) {\n+        return jpaRepository.findByBacktestJobIdOrderByIdAsc(backtestJobId).stream()\n+                .map(SearchCandidateMapper::toDomain)\n+                .toList();\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+-- \"후보 하나 = 실행 하나\"라는 전제를 거둔다(S15P21E205-221).\n+--\n+-- V3는 search_candidate.backtest_job_id에 UNIQUE를 걸어 그 전제를 스키마에 못박았다. 그런데 004는\n+-- 같은 조건의 요청을 살아 있는 실행에 합류시키거나 완료 결과를 재사용한다(spec 004 R-02,\n+-- BacktestService.joinExisting). 같은 조건을 다시 접수하면 두 번째 묶음의 후보가 첫 번째와 같은 실행\n+-- 행을 받고, 그 순간 UNIQUE에 걸려 접수 전체가 롤백됐다 — 계약 §7의 \"같은 조건으로 다시 요청하면 항상\n+-- 새 묶음이다\"(FR-013c)가 지켜지지 않았다.\n+--\n+-- 둘 중 하나는 틀렸고 틀린 쪽은 이 제약이다. 재사용을 막으면 같은 조건의 계산을 두 번 돌리게 되는데,\n+-- 그것은 007이 아끼려는 바로 그 비용이다. 유니크를 조회용 인덱스로 낮춘다.\n+--\n+-- 대신 실행 하나에 후보가 여럿 걸릴 수 있다 — 서로 다른 묶음의 것일 수도 있다. 결과 이벤트가 어느\n+-- 후보의 것인지 찾는 경로는 그래서 다건 조회다(ParamSearchProgressService).\n+DROP INDEX uk_search_candidate_job;\n+\n+-- 발행 전·제외·미실행 후보는 backtest_job_id가 NULL이고, 후보 대부분이 한때 그 상태다. 부분 인덱스로\n+-- 두면 그 행들을 담지 않아 인덱스가 작고 갱신도 싸다.\n+CREATE INDEX idx_search_candidate_job ON search_candidate (backtest_job_id)\n+    WHERE backtest_job_id IS NOT NULL;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260915120000__search_candidate_shared_job.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260915120000__search_candidate_shared_job.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.paramsearch.application.service;\n \n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n import static org.mockito.ArgumentMatchers.any;\n import static org.mockito.ArgumentMatchers.anyInt;\n import static org.mockito.Mockito.never;\n@@ -90,18 +91,22 @@ class CandidateDispatcherTest {\n     }\n \n     @Test\n-    @DisplayName(\"발행에 실패한 후보는 PENDING으로 남는다 — 계산 실패와 발행 실패는 다르다\")\n-    void publishFailureKeepsCandidatePending() {\n+    @DisplayName(\"발행 중 예외는 삼키지 않고 내보낸다 — 같은 트랜잭션이라 잡아도 되살릴 수 없다\")\n+    void launchFailurePropagates() {\n         when(candidateRepository.countByStatus(SEARCH_ID, CandidateStatus.DISPATCHED))\n                 .thenReturn(0L);\n         when(candidateRepository.findNextByStatus(SEARCH_ID, CandidateStatus.PENDING, WINDOW))\n                 .thenReturn(pending(1));\n         when(launcher.launchCandidate(any(), any()))\n-                .thenThrow(new IllegalStateException(\"broker down\"));\n+                .thenThrow(new IllegalStateException(\"launch failed\"));\n \n-        dispatcher.fillWindow(SEARCH_ID, snapshot());\n+        // 잡으면 트랜잭션은 이미 rollback-only 라 커밋 시점에 UnexpectedRollbackException 이 되고,\n+        // 원인이 여기서 이미 로그로 지나간 뒤라 500 의 이유를 찾을 수 없다(S15P21E205-221).\n+        assertThatThrownBy(() -> dispatcher.fillWindow(SEARCH_ID, snapshot()))\n+                .isInstanceOf(IllegalStateException.class);\n \n-        // FAILED로 바꾸면 \"이 조합은 계산할 수 없다\"는 뜻이 되어 결과 해석과 재시도 셈이 틀어진다(FR-011).\n+        // 상태는 건드리지 않는다. FAILED로 바꾸면 \"이 조합은 계산할 수 없다\"는 뜻이 되어\n+        // 결과 해석과 재시도 셈이 틀어진다(FR-011).\n         verify(candidateRepository, never()).update(any());\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/CandidateDispatcherTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/CandidateDispatcherTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -146,7 +146,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK가 있다\")\n+    @DisplayName(\"묶음 UNIQUE·후보 순번 UNIQUE와 FK가 있고, Job 인덱스는 UNIQUE가 아니다\")\n     void constraintsExist() {\n         List<String> foreignKeyTables =\n                 jdbcTemplate.queryForList(\n@@ -163,14 +163,18 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n                         Integer.class);\n         assertThat(candidateNoUnique).isEqualTo(1);\n \n-        // backtest_job_id는 부분 UNIQUE 인덱스라 table_constraints가 아니라 pg_indexes에 있다.\n-        Integer jobUnique =\n-                jdbcTemplate.queryForObject(\n-                        \"SELECT COUNT(*) FROM pg_indexes\"\n+        // backtest_job_id 인덱스는 조회용이며 UNIQUE 가 아니다. 004가 같은 조건의 요청을 한 실행에\n+        // 합류시키므로(spec 004 R-02) 실행 하나에 후보가 여럿 걸린다 — UNIQUE 이던 시절에는 같은 조건을\n+        // 두 번 접수하는 것만으로 접수가 500 이었다(S15P21E205-221).\n+        List<String> jobIndexes =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT indexdef FROM pg_indexes\"\n                                 + \" WHERE schemaname = 'public'\"\n-                                + \" AND indexname = 'uk_search_candidate_job'\",\n-                        Integer.class);\n-        assertThat(jobUnique).isEqualTo(1);\n+                                + \" AND tablename = 'search_candidate'\"\n+                                + \" AND indexdef LIKE '%(backtest_job_id)%'\",\n+                        String.class);\n+        assertThat(jobIndexes).hasSize(1);\n+        assertThat(jobIndexes.get(0)).doesNotContain(\"UNIQUE\");\n     }\n \n     @Test\n@@ -318,8 +322,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n         entityManager.flush();\n         entityManager.clear();\n \n-        assertThat(candidateRepository.findByBacktestJobId(9002L))\n-                .get()\n+        assertThat(candidateRepository.findAllByBacktestJobId(9002L))\n+                .singleElement()\n                 .satisfies(\n                         reloaded -> {\n                             assertThat(reloaded.getRetryCount()).isEqualTo(1);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/ParamSearchMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/ParamSearchMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -305,11 +305,9 @@ class ParamSearchIntakeIT extends PostgresTestSupport {\n \n         ParamSearch reloaded = paramSearchRepository.findById(saved.getId()).orElseThrow();\n         assertThat(reloaded.getCounts().completed()).isEqualTo(1);\n-        assertThat(\n-                        candidateRepository\n-                                .findByBacktestJobId(dispatched.getBacktestJobId())\n-                                .orElseThrow()\n-                                .getStatus())\n+        assertThat(candidateRepository.findAllByBacktestJobId(dispatched.getBacktestJobId()))\n+                .singleElement()\n+                .extracting(SearchCandidate::getStatus)\n                 .isEqualTo(CandidateStatus.COMPLETED);\n         // 한 건이 끝나면 대기 후보 하나가 창에 들어간다(내부 계약 §4 \"후보 종료\").\n         assertThat(candidateRepository.countByStatus(saved.getId(), CandidateStatus.DISPATCHED))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchIntakeIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchIntakeIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,9 @@ package com.ssafy.thorp.paramsearch;\n import static org.assertj.core.api.Assertions.assertThat;\n import static org.assertj.core.api.Assumptions.assumeThat;\n \n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.application.port.BacktestJobPublisher;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n@@ -11,6 +13,7 @@ import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.support.PostgresTestSupport;\n@@ -21,8 +24,10 @@ import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n import org.springframework.beans.factory.annotation.Autowired;\n import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.context.ApplicationEventPublisher;\n import org.springframework.jdbc.core.JdbcTemplate;\n import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.transaction.support.TransactionTemplate;\n \n /**\n  * 접수가 <b>실제 발행기</b>로 004까지 닿는지(T043 보강).\n@@ -63,6 +68,8 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n     @Autowired private SearchCandidateRepository candidateRepository;\n     @Autowired private ParameterRegistryPort registry;\n     @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ApplicationEventPublisher events;\n+    @Autowired private TransactionTemplate transactionTemplate;\n \n     /** 브로커는 이 테스트의 관심사가 아니다. 발행 자체는 004의 테스트가 본다. */\n     @MockitoBean private BacktestJobPublisher publisher;\n@@ -113,6 +120,69 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n                                 assertThat(candidate.getBacktestJobId()).isEqualTo(baselineJobId));\n     }\n \n+    @Test\n+    @DisplayName(\"같은 조건을 두 번 접수해도 둘 다 받고, 두 묶음의 후보가 같은 실행을 나눠 쓴다\")\n+    void sameConditionTwiceSharesRuns() {\n+        List<String> targets = searchableStrategyIdsExcludingBaseline();\n+        assumeThat(targets).isNotEmpty();\n+\n+        ParamSearchResult first = paramSearchService.create(createCommand(targets));\n+        // 두 번째 접수가 500 이던 자리다(S15P21E205-221). 004는 같은 조건의 요청을 살아 있는 실행에\n+        // 합류시키는데(spec 004 R-02), search_candidate.backtest_job_id 에 UNIQUE 가 걸려 있어\n+        // 두 번째 후보가 같은 실행 행을 받는 순간 제약에 걸렸고 묶음 행까지 통째로 롤백됐다.\n+        ParamSearchResult second = paramSearchService.create(createCommand(targets));\n+\n+        ParamSearch before = paramSearchRepository.findBySearchId(first.searchId()).orElseThrow();\n+        ParamSearch after = paramSearchRepository.findBySearchId(second.searchId()).orElseThrow();\n+        // 같은 조건이어도 묶음은 항상 새로 생긴다(FR-013c, 계약 §7).\n+        assertThat(after.getSearchId()).isNotEqualTo(before.getSearchId());\n+\n+        List<Long> beforeJobs = dispatchedJobIds(before);\n+        List<Long> afterJobs = dispatchedJobIds(after);\n+        assertThat(afterJobs).as(\"발행 창만큼은 나가야 한다\").isNotEmpty();\n+        // 조합이 같으니 004가 돌려주는 실행도 같다 — 아낀 계산이 곧 재사용의 값이다.\n+        assertThat(afterJobs).isEqualTo(beforeJobs);\n+        assertThat(after.getBaselineJobId()).isEqualTo(before.getBaselineJobId());\n+\n+        // 실행은 공유해도 후보 행은 묶음마다 따로 남는다.\n+        assertThat(candidateRepository.findAllByBacktestJobId(afterJobs.get(0)))\n+                .hasSize(2)\n+                .extracting(SearchCandidate::getParamSearchId)\n+                .containsExactlyInAnyOrder(before.getId(), after.getId());\n+    }\n+\n+    @Test\n+    @DisplayName(\"공유한 실행이 끝나면 걸려 있던 두 묶음의 후보가 함께 끝난다\")\n+    void sharedRunFinishesEveryCandidateOnIt() {\n+        List<String> targets = searchableStrategyIdsExcludingBaseline();\n+        assumeThat(targets).isNotEmpty();\n+\n+        ParamSearchResult first = paramSearchService.create(createCommand(targets));\n+        ParamSearchResult second = paramSearchService.create(createCommand(targets));\n+        ParamSearch before = paramSearchRepository.findBySearchId(first.searchId()).orElseThrow();\n+        long sharedJobId = dispatchedJobIds(before).get(0);\n+\n+        // 004가 발행하는 것과 같은 이벤트를 같은 경로(AFTER_COMMIT 리스너)로 흘린다.\n+        transactionTemplate.executeWithoutResult(\n+                status ->\n+                        events.publishEvent(\n+                                new BacktestFinished(\n+                                        sharedJobId,\n+                                        \"BT-STUB-\" + sharedJobId,\n+                                        RunStatus.COMPLETED,\n+                                        null)));\n+\n+        // 하나만 끝내면 나머지 묶음이 영영 RUNNING 으로 남는다 — 실행은 다시 오지 않는다.\n+        assertThat(candidateRepository.findAllByBacktestJobId(sharedJobId))\n+                .hasSize(2)\n+                .allSatisfy(\n+                        candidate ->\n+                                assertThat(candidate.getStatus())\n+                                        .isEqualTo(CandidateStatus.COMPLETED));\n+        assertThat(paramSearchRepository.findBySearchId(second.searchId()).orElseThrow())\n+                .satisfies(reloaded -> assertThat(reloaded.getCounts().completed()).isEqualTo(1));\n+    }\n+\n     @Test\n     @DisplayName(\"기준 전략의 규칙 버전이 실행 조건 스냅샷에 들어 있다\")\n     void executionPlanCarriesBaselineRulesVersion() {\n@@ -154,6 +224,14 @@ class ParamSearchLaunchIT extends PostgresTestSupport {\n                 requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());\n     }\n \n+    /** 이 묶음이 실제로 발행한 실행 행 id를 순번대로. 후보가 자기 결과를 찾는 그 값이다. */\n+    private List<Long> dispatchedJobIds(ParamSearch search) {\n+        return candidateRepository.findByParamSearchId(search.getId()).stream()\n+                .filter(candidate -> candidate.getBacktestJobId() != null)\n+                .map(SearchCandidate::getBacktestJobId)\n+                .toList();\n+    }\n+\n     private boolean runExists(Long runId) {\n         Integer count =\n                 jdbcTemplate.queryForObject(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLaunchIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLaunchIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -152,7 +152,10 @@ QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초\n - `(param_search_id, candidate_no)` UNIQUE\n - `(param_search_id, status)` — 집계와 다음 발행 대상 조회\n - `(param_search_id, selected)` — 표시 후보 조회\n-- `backtest_job_id` UNIQUE (NULL 허용) — Job 하나가 두 후보에 붙지 않게\n+- `backtest_job_id` (NULL 제외 부분 인덱스) — 결과 이벤트가 어느 후보의 것인지 찾는 경로.\n+  **UNIQUE가 아니다**: 004가 같은 조건의 요청을 살아 있는 실행에 합류시키거나 완료 결과를 재사용하므로\n+  (spec 004 R-02) 실행 하나에 후보가 여럿 걸린다 — 서로 다른 묶음의 것일 수도 있다. 한때 UNIQUE였고,\n+  그래서 같은 조건을 두 번 접수하는 것만으로 접수가 500이었다(S15P21E205-221)\n \n ### 4.1 `search_candidate.status` 상태 전이\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/data-model.md",
+          "old_path": "specs/007-auto-parameter-search/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-15T14:02:47.443+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2808153": []
+  }
+}

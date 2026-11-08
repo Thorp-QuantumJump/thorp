@@ -1,0 +1,899 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963571,
+    "iid": 394,
+    "project_id": 1444456,
+    "title": "fix(be): spec013개선- B07 review",
+    "description": "# 작업 내용 요약\n\n병합된 B07(배우기 2판 스키마·관리·공개 조회)을 다시 리뷰해 나온 10건을 고친다. 형식을 바꾸는 저장이 호출 순서에 기대던 구조와, 저장 데이터 오류가 400으로 보이던 문제를 근본에서 막는다. 확인 문제 식별자 소진과 위치 표기는 계약에 한 줄씩 더하고, 관리 목록·게시·공개 조회의 조회 수를 줄인다.\n\n# 주요 변경 사항\n\n- 글 저장소 `save()`가 DB의 용어 행으로 글을 다시 만들지 않고, 넘겨받은 글에 대리키만 채워 돌려준다. 용어 교체와 부르는 순서에 기대지 않는다\n- 저장된 글·판이 도메인 규칙을 어기면 400 `INVALID_INPUT`이 아니라 500(저장 데이터 오류)이다. 저장된 글자 조각에 모르는 키가 있으면 버리지 않고 실패한다\n- 계약: `quiz_seq`가 9999를 넘게 되면 저장과, 정답이 바뀐 문제의 게시를 400 `INVALID_INPUT`(`details.fields`의 `quiz`)으로 거절한다(data-model §6-2, 관리 계약 §5·§6)\n- 계약: 게시 검사 위치의 `quiz`에 `field`(`prompt`·`explanation`)를 더한다. 질문과 풀이에 같은 금지 표현이 있으면 둘 다 싣는다(data-model §8-4). 기존 422 픽스처 모양은 그대로다\n- 공개 글 조회는 판과 공개 배치를 한 문장으로 읽는다. 게시는 가장 최근 판 하나만, V2→V1 저장은 LEGACY 판 존재만 읽는다. 관리 목록은 용어·공개 판·마지막 기록·판 번호를 한 번씩 묶어 읽는다(27편 기준 약 80개 → 7개 질의)\n- `backend/CLAUDE.md`: Spring 없이 Flyway로 DB를 보는 테스트(`EtfMarketDataSchemaIT`·`LearningStagesMigrationUpgradeIT`)의 전용 컨테이너 예외를 적는다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과(2,420개, skip 5는 live·성능·Docker 가드)\n- [x] `infra/scripts/check-migration-version.sh` 통과(스키마 변경 없음)\n\n# 리뷰 포인트\n\n- 식별자 소진 시 그 글에는 더 줄 식별자가 없다(지운 번호를 다시 쓰지 않는 규칙 유지). 형식을 넓히는 대신 사유가 보이는 400으로 막았다. 실제로는 저장 한 번에 최대 18개를 쓰므로 수백 번 다시 써야 닿는다\n- 저장 데이터 위반이 500으로 바뀌므로, 깨진 행이 있으면 관리 목록이 400이 아니라 500으로 실패하고 오류 로그에 남는다\n- 관리 목록은 공개 판 본문을 여전히 읽지만 글마다가 아니라 한 질의다. `needsReview` 판정에 제도 안내 블록이 필요해서다\n- `quiz` 위치의 `field`는 화면(B14) 전이라 소비자가 아직 없다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음. 게시 검사가 질문·풀이의 금지 표현을 빠짐없이 싣게 됐다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 저장 조각의 모르는 키를 버리지 않고 실패시킨다(원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-06T16:11:10.282+09:00",
+    "updated_at": "2026-10-06T20:21:50.443+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-06T16:11:20.071+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/learning-v2-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "81ad24dbb6335ae427ad159694465449bb692c87",
+    "merge_commit_sha": "de01f341f3fdf7b083fc9ba1241654c4e92c8fb9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-06T16:11:12.752+09:00",
+    "reference": "!394",
+    "references": {
+      "short": "!394",
+      "relative": "!394",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!394"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/394",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963571,
+    "iid": 394,
+    "project_id": 1444456,
+    "title": "fix(be): spec013개선- B07 review",
+    "description": "# 작업 내용 요약\n\n병합된 B07(배우기 2판 스키마·관리·공개 조회)을 다시 리뷰해 나온 10건을 고친다. 형식을 바꾸는 저장이 호출 순서에 기대던 구조와, 저장 데이터 오류가 400으로 보이던 문제를 근본에서 막는다. 확인 문제 식별자 소진과 위치 표기는 계약에 한 줄씩 더하고, 관리 목록·게시·공개 조회의 조회 수를 줄인다.\n\n# 주요 변경 사항\n\n- 글 저장소 `save()`가 DB의 용어 행으로 글을 다시 만들지 않고, 넘겨받은 글에 대리키만 채워 돌려준다. 용어 교체와 부르는 순서에 기대지 않는다\n- 저장된 글·판이 도메인 규칙을 어기면 400 `INVALID_INPUT`이 아니라 500(저장 데이터 오류)이다. 저장된 글자 조각에 모르는 키가 있으면 버리지 않고 실패한다\n- 계약: `quiz_seq`가 9999를 넘게 되면 저장과, 정답이 바뀐 문제의 게시를 400 `INVALID_INPUT`(`details.fields`의 `quiz`)으로 거절한다(data-model §6-2, 관리 계약 §5·§6)\n- 계약: 게시 검사 위치의 `quiz`에 `field`(`prompt`·`explanation`)를 더한다. 질문과 풀이에 같은 금지 표현이 있으면 둘 다 싣는다(data-model §8-4). 기존 422 픽스처 모양은 그대로다\n- 공개 글 조회는 판과 공개 배치를 한 문장으로 읽는다. 게시는 가장 최근 판 하나만, V2→V1 저장은 LEGACY 판 존재만 읽는다. 관리 목록은 용어·공개 판·마지막 기록·판 번호를 한 번씩 묶어 읽는다(27편 기준 약 80개 → 7개 질의)\n- `backend/CLAUDE.md`: Spring 없이 Flyway로 DB를 보는 테스트(`EtfMarketDataSchemaIT`·`LearningStagesMigrationUpgradeIT`)의 전용 컨테이너 예외를 적는다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과(2,420개, skip 5는 live·성능·Docker 가드)\n- [x] `infra/scripts/check-migration-version.sh` 통과(스키마 변경 없음)\n\n# 리뷰 포인트\n\n- 식별자 소진 시 그 글에는 더 줄 식별자가 없다(지운 번호를 다시 쓰지 않는 규칙 유지). 형식을 넓히는 대신 사유가 보이는 400으로 막았다. 실제로는 저장 한 번에 최대 18개를 쓰므로 수백 번 다시 써야 닿는다\n- 저장 데이터 위반이 500으로 바뀌므로, 깨진 행이 있으면 관리 목록이 400이 아니라 500으로 실패하고 오류 로그에 남는다\n- 관리 목록은 공개 판 본문을 여전히 읽지만 글마다가 아니라 한 질의다. `needsReview` 판정에 제도 안내 블록이 필요해서다\n- `quiz` 위치의 `field`는 화면(B14) 전이라 소비자가 아직 없다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음. 게시 검사가 질문·풀이의 금지 표현을 빠짐없이 싣게 됐다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 저장 조각의 모르는 키를 버리지 않고 실패시킨다(원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-06T16:11:10.282+09:00",
+    "updated_at": "2026-10-06T20:21:50.443+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-06T16:11:20.071+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/learning-v2-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "81ad24dbb6335ae427ad159694465449bb692c87",
+    "merge_commit_sha": "de01f341f3fdf7b083fc9ba1241654c4e92c8fb9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-06T16:11:12.752+09:00",
+    "reference": "!394",
+    "references": {
+      "short": "!394",
+      "relative": "!394",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!394"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/394",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "28",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "58a794a7a492685db22882eb04783a48843e3144",
+      "head_sha": "81ad24dbb6335ae427ad159694465449bb692c87",
+      "start_sha": "58a794a7a492685db22882eb04783a48843e3144"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "66f0aa9a29ea4fb1018fc743a1a2ba4bfd688bc9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881837,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-06T16:11:10.381+09:00",
+          "updated_at": "2026-10-06T16:11:10.385+09:00",
+          "system": true,
+          "noteable_id": 963571,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 394,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c76bb323a2192a70f8ccac63b009b202098e8b02",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881838,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-06T16:11:10.409+09:00",
+          "updated_at": "2026-10-06T16:11:10.419+09:00",
+          "system": true,
+          "noteable_id": 963571,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 394,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0177972f0beb9c979148227e8e37fadaa14525e6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881839,
+          "type": null,
+          "body": "mentioned in commit de01f341f3fdf7b083fc9ba1241654c4e92c8fb9",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-06T16:11:20.131+09:00",
+          "updated_at": "2026-10-06T16:11:20.135+09:00",
+          "system": true,
+          "noteable_id": 963571,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 394,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c0ee26e1c7471c4f207a55e4e393881eda1f11fa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881840,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **성능 및 쿼리 최적화**: 관리 목록 조회(`LearningAdminService.list`) 시 발생하던 N+1 문제를 단건 조회의 묶음 처리(`findLastForEachArticle`, `findAllCurrentlyPublished`, `findAllByOrderByIdAsc` 등)를 통해 대폭 개선하여 쿼리 횟수를 획기적으로 줄였습니다.\n- **예외 처리 및 데이터 무결성**: 손상된 영속 데이터(모르는 JSON 키, 도메인 규칙 위반)를 마주했을 때 400 에러 대신 500(또는 `IllegalStateException`)으로 명확히 실패하도록 방어적으로 구현하여 데이터 오염을 조기에 감지하도록 설계했습니다.\n\n### 발견 사항\n- [Low] `backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningAdminService.java`: `list()` 메서드 내에서 여러 리포지토리 메서드들을 호출하여 컨텍스트를 구성하고 있습니다. 데이터 파편화 조회가 줄어들었으나, 대량의 아티클과 리비전이 존재하는 환경에서 메모리 상의 맵핑 연산(`revisionNos` 필터링 및 맵 생성 등)이 빈번하게 일어나므로 향후 데이터 증가에 따른 메모리 사용량을 모니터링할 필요가 있습니다.\n\n### 테스트 제안\n1. **식별자 소진 테스트**: `quiz_seq`가 `9999`에 도달한 상태에서 새로운 문제나 보기를 추가하여 저장하거나 정답이 변경된 상태로 게시 시도 시 `400 INVALID_INPUT` (`fields: [\"quiz\"]`) 응답이 정확히 반환되는지 검증합니다.\n2. **금지 표현 중복 검증 테스트**: 하나의 확인 문제 내에서 질문(`prompt`)과 풀이(`explanation`) 모두에 동일한 금지 표현이 포함되어 있을 때, `PublishCheckV2`가 각각의 `field`(\"prompt\", \"explanation\")를 가진 `CheckLocation`으로 두 개의 실패 항목을 모두 반환하는지 시나리오 테스트를 수행합니다.\n3. **영속성 장애 복구 테스트**: JSON 스냅샷에 정의되지 않은 임의의 알 수 없는 키가 포함된 상태로 DB 조회가 일어났을 때, `RunJsonDeserializer`가 이를 감지하고 `IllegalStateException`을 발생시키는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:81ad24dbb6335ae427ad159694465449bb692c87 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-06T16:11:21.580+09:00",
+          "updated_at": "2026-10-06T16:11:21.580+09:00",
+          "system": false,
+          "noteable_id": 963571,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 394,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9e4c612823c4c3933bde85c1ad637ed1a5586b17",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881907,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">fix(be): spec013<span class=\"idiff left right deletion\"> - </span>개선 B07 review</code> to <code class=\"idiff\">fix(be): spec013개선<span class=\"idiff left right addition\">-</span> B07 review</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-06T20:21:50.530+09:00",
+          "updated_at": "2026-10-06T20:21:50.534+09:00",
+          "system": true,
+          "noteable_id": 963571,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 394,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "712f9c334e05931258718167ee891a85a6a314c7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884977,
+          "type": null,
+          "body": "mentioned in commit e3c176fbb3d0e89ba731b710e1c44c0c0eb14681",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:05.457+09:00",
+          "updated_at": "2026-10-13T15:16:05.535+09:00",
+          "system": true,
+          "noteable_id": 963571,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 394,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262606,
+      "head_commit_sha": "81ad24dbb6335ae427ad159694465449bb692c87",
+      "base_commit_sha": "58a794a7a492685db22882eb04783a48843e3144",
+      "start_commit_sha": "58a794a7a492685db22882eb04783a48843e3144",
+      "created_at": "2026-10-06T16:11:10.748+09:00",
+      "merge_request_id": 963571,
+      "state": "collected",
+      "real_size": "28",
+      "patch_id_sha": "1a90535fd28577e08131a4e96871fd3da8ced1bc"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262606,
+      "head_commit_sha": "81ad24dbb6335ae427ad159694465449bb692c87",
+      "base_commit_sha": "58a794a7a492685db22882eb04783a48843e3144",
+      "start_commit_sha": "58a794a7a492685db22882eb04783a48843e3144",
+      "created_at": "2026-10-06T16:11:10.748+09:00",
+      "merge_request_id": 963571,
+      "state": "collected",
+      "real_size": "28",
+      "patch_id_sha": "1a90535fd28577e08131a4e96871fd3da8ced1bc",
+      "commits": [
+        {
+          "id": "81ad24dbb6335ae427ad159694465449bb692c87",
+          "short_id": "81ad24db",
+          "created_at": "2026-10-06T15:57:10.000+09:00",
+          "parent_ids": [
+            "58a794a7a492685db22882eb04783a48843e3144"
+          ],
+          "title": "fix(be): B07 리뷰 지적 10건을 고친다",
+          "message": "fix(be): B07 리뷰 지적 10건을 고친다\n\n- 글 저장소 save()가 DB의 용어 행으로 글을 다시 만들지 않고 넘겨받은 글에 대리키만 채워\n  돌려준다. V1→V2 저장 실패의 근본 원인을 저장소에서 없애고 saveDraft의 저장 순서를 되돌린다.\n- 저장된 글·판이 도메인 규칙을 어기면 IllegalArgumentException(400) 대신 키를 담은\n  IllegalStateException(500)으로 실패한다.\n- 저장된 글자 조각에 세 키 밖의 키가 있으면 조용히 버리지 않고 실패한다(RunJson 전용 역직렬화).\n- quiz_seq가 9999를 넘게 되면 저장·게시를 400 INVALID_INPUT(details.fields의 quiz)으로\n  거절한다. data-model §6-2와 관리 계약 §5·§6에 적는다.\n- 확인 문제 위치에 field(prompt·explanation)를 더해 질문과 풀이의 같은 금지 표현을 둘 다\n  돌려준다. data-model §8-4에 적는다.\n- 공개 글 조회는 판과 공개 배치를 JPQL 한 문장으로 읽고, REPEATABLE_READ 적용을 테스트로 고정한다.\n- 게시는 가장 최근 판 하나만, V2→V1 저장은 LEGACY 판 존재만 읽는다. 관리 목록은 용어·공개 판·\n  마지막 기록·판 번호를 한 번씩 묶어 읽는다. 글 대리키 조회는 id만 읽는다.\n- backend/CLAUDE.md에 Spring 없이 Flyway로 DB를 보는 테스트의 전용 컨테이너 예외를 적는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-06T15:57:10.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-06T15:57:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/81ad24dbb6335ae427ad159694465449bb692c87"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,8 +1,11 @@\n package com.ssafy.thorp.learning.application.repository;\n \n import com.ssafy.thorp.learning.domain.model.ArticleRevision;\n+import com.ssafy.thorp.learning.domain.model.Edition;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n+import java.util.Collection;\n import java.util.List;\n+import java.util.Map;\n import java.util.Optional;\n \n /**\n@@ -24,4 +27,13 @@ public interface ArticleRevisionRepository {\n \n     /** 이 글의 판 전부. {@code revision_no} 오름차순. */\n     List<ArticleRevision> findByArticleId(ArticleId articleId);\n+\n+    /** 이 글의 가장 최근 판({@code revision_no}가 가장 큰 판). 판이 없으면 비어 있다. 옛 판을 모두 읽지 않는다. */\n+    Optional<ArticleRevision> findLatestByArticleId(ArticleId articleId);\n+\n+    /** 이 글에 그 종류의 판이 있는가. 판 본문을 읽지 않는다. */\n+    boolean existsByArticleIdAndEdition(ArticleId articleId, Edition edition);\n+\n+    /** 판 대리키 → 판 번호. 없는 대리키는 결과에 없다. 판 본문을 읽지 않는다. */\n+    Map<Long, Integer> findRevisionNos(Collection<Long> revisionIds);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/ArticleRevisionRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/ArticleRevisionRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,6 +7,7 @@ import com.ssafy.thorp.learning.domain.model.ArticleRevision;\n import com.ssafy.thorp.learning.domain.model.LearningArticle;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n import java.util.List;\n+import java.util.Map;\n import java.util.Optional;\n \n /**\n@@ -41,6 +42,9 @@ public interface LearningArticleRepository {\n     /** 이 글의 공개 중인 판. 초안이거나 없는 글이면 비어 있다. */\n     Optional<ArticleRevision> findPublishedRevision(ArticleId articleId);\n \n+    /** 공개 중인 판 전부(글 → 판). 초안인 글은 결과에 없다. */\n+    Map<ArticleId, ArticleRevision> findPublishedRevisions();\n+\n     /** 이 글의 공개 중인 판과 공개 배치. 초안이거나 없는 글이면 비어 있다. */\n     Optional<PublishedArticleView> findPublished(ArticleId articleId);\n \n@@ -50,7 +54,12 @@ public interface LearningArticleRepository {\n      */\n     List<CurrentArticleEntry> findCurrentInReadingOrder();\n \n-    /** 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다. */\n+    /**\n+     * 새 글이면 추가하고, 있으면 글 컬럼만 바꾼다. 용어는 저장하지 않는다.\n+     *\n+     * @return 넘겨받은 글에 대리키를 채운 것. 저장된 용어 행으로 다시 만들지 않으므로 용어 교체({@code LearningTermRepository})와 부르는\n+     *     순서에 기대지 않는다\n+     */\n     LearningArticle save(LearningArticle article);\n \n     boolean existsByArticleKey(ArticleId articleId);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/LearningArticleRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/LearningArticleRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ package com.ssafy.thorp.learning.application.repository;\n \n import com.ssafy.thorp.learning.domain.model.PublicationEvent;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n+import java.util.Map;\n import java.util.Optional;\n \n /**\n@@ -15,4 +16,7 @@ public interface PublicationEventRepository {\n \n     /** 이 글의 마지막 기록. 기록이 없으면 비어 있다. */\n     Optional<PublicationEvent> findLastByArticleId(ArticleId articleId);\n+\n+    /** 글마다 마지막 기록. 기록이 없는 글은 결과에 없다. */\n+    Map<ArticleId, PublicationEvent> findLastForEachArticle();\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/PublicationEventRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/PublicationEventRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -68,10 +68,10 @@ import java.time.LocalDate;\n import java.time.ZoneId;\n import java.time.temporal.ChronoUnit;\n import java.util.ArrayList;\n-import java.util.Comparator;\n import java.util.HashSet;\n import java.util.List;\n import java.util.Map;\n+import java.util.Objects;\n import java.util.Optional;\n import java.util.Set;\n import java.util.function.Function;\n@@ -141,14 +141,39 @@ public class LearningAdminService {\n      */\n     @Transactional(readOnly = true)\n     public List<AdminArticleSummaryResult> list() {\n-        Optional<Set<String>> openSectorCodes = openSectorCodes(sectorMapPort.currentMap());\n-        Map<StageKey, LearningStage> stages = stagesByKey();\n-        LocalDate today = today();\n+        Map<ArticleId, PublicationEvent> lastEvents = eventRepository.findLastForEachArticle();\n+        ListContext context =\n+                new ListContext(\n+                        stagesByKey(),\n+                        openSectorCodes(sectorMapPort.currentMap()),\n+                        today(),\n+                        articleRepository.findPublishedRevisions(),\n+                        lastEvents,\n+                        revisionRepository.findRevisionNos(\n+                                lastEvents.values().stream()\n+                                        .map(PublicationEvent::revisionId)\n+                                        .filter(Objects::nonNull)\n+                                        .toList()));\n         return articleRepository.findAllOrdered().stream()\n-                .map(article -> summarize(article, stages, openSectorCodes, today))\n+                .map(article -> summarize(article, context))\n                 .toList();\n     }\n \n+    /**\n+     * 관리 목록이 글마다 쓰는 값. 글마다 따로 조회하지 않도록 목록 앞에서 한 번씩 읽어 둔다.\n+     *\n+     * @param published 공개 중인 판(글 → 판)\n+     * @param lastEvents 글마다 마지막 게시 기록\n+     * @param revisionNos 마지막 기록이 가리키는 판의 번호\n+     */\n+    private record ListContext(\n+            Map<StageKey, LearningStage> stages,\n+            Optional<Set<String>> openSectorCodes,\n+            LocalDate today,\n+            Map<ArticleId, ArticleRevision> published,\n+            Map<ArticleId, PublicationEvent> lastEvents,\n+            Map<Long, Integer> revisionNos) {}\n+\n     /**\n      * 새 글은 본문이 빈 V2 초안이다. 읽는 순서 값은 단계 번호 × 100 + 단계 안 순서(999를 넘으면 999)다. V2 글에서는 쓰지 않지만 테이블 CHECK를\n      * 지키는 값이다(data-model §13-3).\n@@ -221,9 +246,7 @@ public class LearningAdminService {\n         ArticleFormat format = command.format() == null ? article.format() : command.format();\n         boolean hasLegacyRevision = false;\n         if (article.format() == ArticleFormat.V2 && format == ArticleFormat.V1) {\n-            hasLegacyRevision =\n-                    revisionRepository.findByArticleId(id).stream()\n-                            .anyMatch(revision -> revision.edition() == Edition.LEGACY);\n+            hasLegacyRevision = revisionRepository.existsByArticleIdAndEdition(id, Edition.LEGACY);\n             if (!hasLegacyRevision) {\n                 throw new FormatOutdatedException();\n             }\n@@ -254,10 +277,8 @@ public class LearningAdminService {\n                                 command.terms(),\n                                 quiz),\n                         hasLegacyRevision);\n-        // 용어를 먼저 바꾼다. 글 저장이 저장된 용어로 글을 다시 만들므로, 형식을 바꿀 때 옛 형식의 용어가 남아 있으면 새 형식에 맞지 않아 실패한다.\n-        // 용어를 먼저 바꾼다. 글 저장은 저장된 용어로 글을 다시 만들므로, 형식을 바꿀 때 옛 형식의 용어가 남아 있으면 새 형식에 맞지 않아 실패한다.\n-        termRepository.replaceForArticle(id, command.terms());\n         articleRepository.save(saved);\n+        termRepository.replaceForArticle(id, command.terms());\n         LearningArticle reloaded =\n                 articleRepository\n                         .findByArticleKey(id)\n@@ -319,17 +340,14 @@ public class LearningAdminService {\n         requireTermsNotPublishedElsewhere(id, article.terms());\n \n         Instant now = now();\n-        List<ArticleRevision> revisions = revisionRepository.findByArticleId(id);\n-        int revisionNo =\n-                revisions.stream().mapToInt(ArticleRevision::revisionNo).max().orElse(0) + 1;\n+        // 다음 판 번호와 같은 문제 판정의 기준은 가장 최근 판 하나로 정한다. 옛 판 본문을 모두 읽지 않는다.\n+        Optional<ArticleRevision> latest = revisionRepository.findLatestByArticleId(id);\n+        int revisionNo = latest.map(ArticleRevision::revisionNo).orElse(0) + 1;\n         List<RenamedQuestion> renamed = List.of();\n         ArticleSnapshot snapshot;\n         if (mode == PublishMode.CURRENT) {\n             List<QuizQuestion> latestQuiz =\n-                    revisions.stream()\n-                            .max(Comparator.comparingInt(ArticleRevision::revisionNo))\n-                            .map(latest -> latest.snapshot().quiz())\n-                            .orElse(List.of());\n+                    latest.map(revision -> revision.snapshot().quiz()).orElse(List.of());\n             QuizIdentity.Reconciled reconciled =\n                     QuizIdentity.reconcile(article.quiz(), latestQuiz, article.quizSeq());\n             article = article.withReconciledQuiz(reconciled);\n@@ -510,14 +528,10 @@ public class LearningAdminService {\n                 true);\n     }\n \n-    private AdminArticleSummaryResult summarize(\n-            LearningArticle article,\n-            Map<StageKey, LearningStage> stages,\n-            Optional<Set<String>> openSectorCodes,\n-            LocalDate today) {\n+    private AdminArticleSummaryResult summarize(LearningArticle article, ListContext context) {\n         Optional<ArticleRevision> published =\n                 article.status() == ArticleStatus.PUBLISHED\n-                        ? articleRepository.findPublishedRevision(article.articleId())\n+                        ? Optional.ofNullable(context.published().get(article.articleId()))\n                         : Optional.empty();\n         boolean hasUnpublishedChanges =\n                 published\n@@ -529,24 +543,22 @@ public class LearningAdminService {\n         Boolean needsUpdate =\n                 published.isEmpty()\n                         ? Boolean.FALSE\n-                        : needsUpdate(published.get().snapshot().example(), openSectorCodes);\n+                        : needsUpdate(\n+                                published.get().snapshot().example(), context.openSectorCodes());\n         LastPublication lastPublication =\n-                eventRepository\n-                        .findLastByArticleId(article.articleId())\n+                Optional.ofNullable(context.lastEvents().get(article.articleId()))\n                         .map(\n                                 event ->\n                                         new LastPublication(\n                                                 event.action(),\n                                                 event.revisionId() == null\n                                                         ? null\n-                                                        : revisionRepository\n-                                                                .findById(event.revisionId())\n-                                                                .map(ArticleRevision::revisionNo)\n-                                                                .orElse(null),\n+                                                        : context.revisionNos()\n+                                                                .get(event.revisionId()),\n                                                 event.actorUserId(),\n                                                 event.occurredAt()))\n                         .orElse(null);\n-        LearningStage stage = stages.get(article.placement().stageKey());\n+        LearningStage stage = context.stages().get(article.placement().stageKey());\n         if (stage == null) {\n             throw new IllegalStateException(\n                     \"draft placement points to a missing stage: \" + article.placement());\n@@ -564,7 +576,7 @@ public class LearningAdminService {\n                 new StageSummary(stage.stageKey().value(), stage.number(), stage.released()),\n                 article.placement().position(),\n                 published.map(ArticleRevision::edition).orElse(null),\n-                published.map(revision -> needsReview(revision, today)).orElse(null),\n+                published.map(revision -> needsReview(revision, context.today())).orElse(null),\n                 0);\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningAdminService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningAdminService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,13 +8,14 @@ import java.util.Objects;\n /**\n  * 게시 전 검사에 걸린 위치(data-model §8-4, learning-admin-api §6).\n  *\n- * <p>v1 검사는 {@code index}·{@code termId}만 쓴다. 그래서 v1 거절 응답의 모양은 9월 판 그대로다. v2 검사는 블록·용어 안의\n+ * <p>v1 검사는 {@code index}·{@code termId}만 쓴다. 그래서 v1 거절 응답의 모양은 9월 판 그대로다. v2 검사는 블록·용어·문제 안의\n  * 필드({@code field})와 확인 문제 위치를 더한다.\n  *\n  * @param index {@code BLOCK}이면 {@code blocks} 순번(0부터), {@code QUIZ}면 식별자 없는 새 문제의 순번. 본문 전체나 문제 전체를\n  *     가리키면 null이다\n  * @param termId {@code TERM}일 때만 있다\n- * @param field 블록·용어 안의 필드. 예: {@code lines[1]}, {@code wrong}, {@code rows[0][1]}, {@code meaning}\n+ * @param field 블록·용어·문제 안의 필드. 예: {@code lines[1]}, {@code wrong}, {@code rows[0][1]}, {@code\n+ *     meaning}, 문제의 {@code prompt}·{@code explanation}\n  * @param questionId {@code QUIZ}에서 문제를 가리킬 때\n  * @param choiceId {@code QUIZ}에서 보기를 가리킬 때\n  */\n@@ -45,9 +46,9 @@ public record CheckLocation(\n         if ((termId != null) != (part == Part.TERM)) {\n             throw new IllegalArgumentException(\"termId must be present exactly for term locations\");\n         }\n-        if (field != null && part != Part.BLOCK && part != Part.TERM) {\n+        if (field != null && part != Part.BLOCK && part != Part.TERM && part != Part.QUIZ) {\n             throw new IllegalArgumentException(\n-                    \"field is only for block and term locations: \" + part);\n+                    \"field is only for block, term and quiz locations: \" + part);\n         }\n         if ((questionId != null || choiceId != null) && part != Part.QUIZ) {\n             throw new IllegalArgumentException(\n@@ -102,6 +103,16 @@ public record CheckLocation(\n                 : new CheckLocation(Part.QUIZ, null, null, null, questionId, null);\n     }\n \n+    /**\n+     * 문제 안의 글자 칸 하나({@code prompt}·{@code explanation}). 같은 문제의 두 칸에 같은 표현이 있으면 둘을 따로 보고해야 운영자가 한\n+     * 번에 고친다.\n+     */\n+    public static CheckLocation quizQuestion(QuestionId questionId, int index, String field) {\n+        return questionId == null\n+                ? new CheckLocation(Part.QUIZ, index, null, field, null, null)\n+                : new CheckLocation(Part.QUIZ, null, null, field, questionId, null);\n+    }\n+\n     /** 문제의 보기 하나. */\n     public static CheckLocation quizChoice(QuestionId questionId, int index, ChoiceId choiceId) {\n         return questionId == null\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/CheckLocation.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/CheckLocation.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -162,6 +162,28 @@ public record LearningArticle(\n                 0);\n     }\n \n+    /** 저장소가 새 행에 준 대리키를 채운다. 그 밖의 값은 그대로다. */\n+    public LearningArticle withId(long newId) {\n+        return new LearningArticle(\n+                newId,\n+                articleId,\n+                title,\n+                question,\n+                readingOrder,\n+                format,\n+                placement,\n+                publishedPlacement,\n+                blocks,\n+                example,\n+                sources,\n+                status,\n+                publishedRevisionId,\n+                draftVersion,\n+                terms,\n+                quiz,\n+                quizSeq);\n+    }\n+\n     /**\n      * 저장 요청이 담는 초안 내용. 생략된 필드는 호출자가 지금 초안의 값으로 채워 넘긴다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/LearningArticle.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/LearningArticle.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -265,7 +265,11 @@ public final class PublishCheckV2 {\n             QuizQuestion question = questions.get(index);\n             CheckLocation location = CheckLocation.quizQuestion(question.questionId(), index);\n             if (question.prompt().isBlank()) {\n-                failures.add(fail(Check.QUIZ, location, \"질문이 비어 있습니다.\"));\n+                failures.add(\n+                        fail(\n+                                Check.QUIZ,\n+                                CheckLocation.quizQuestion(question.questionId(), index, \"prompt\"),\n+                                \"질문이 비어 있습니다.\"));\n             }\n             int choices = question.choices().size();\n             if (choices < rules.minChoices() || choices > rules.maxChoices()) {\n@@ -296,7 +300,12 @@ public final class PublishCheckV2 {\n                 failures.add(fail(Check.QUIZ, location, \"정답 보기가 하나가 아닙니다.\"));\n             }\n             if (question.explanation().isBlank()) {\n-                failures.add(fail(Check.QUIZ, location, \"풀이가 비어 있습니다.\"));\n+                failures.add(\n+                        fail(\n+                                Check.QUIZ,\n+                                CheckLocation.quizQuestion(\n+                                        question.questionId(), index, \"explanation\"),\n+                                \"풀이가 비어 있습니다.\"));\n             }\n         }\n     }\n@@ -426,8 +435,10 @@ public final class PublishCheckV2 {\n         List<QuizQuestion> questions = draft.quiz();\n         for (int index = 0; index < questions.size(); index++) {\n             QuizQuestion question = questions.get(index);\n-            CheckLocation location = CheckLocation.quizQuestion(question.questionId(), index);\n-            texts.add(new LocatedText(location, question.prompt()));\n+            texts.add(\n+                    new LocatedText(\n+                            CheckLocation.quizQuestion(question.questionId(), index, \"prompt\"),\n+                            question.prompt()));\n             for (QuizChoice choice : question.choices()) {\n                 if (choice.correct()) {\n                     texts.add(\n@@ -437,7 +448,10 @@ public final class PublishCheckV2 {\n                                     choice.text()));\n                 }\n             }\n-            texts.add(new LocatedText(location, question.explanation()));\n+            texts.add(\n+                    new LocatedText(\n+                            CheckLocation.quizQuestion(question.questionId(), index, \"explanation\"),\n+                            question.explanation()));\n         }\n         return texts;\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/PublishCheckV2.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/PublishCheckV2.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,6 +21,9 @@ import java.util.Set;\n  */\n public final class QuizIdentity {\n \n+    /** 식별자 형식({@code q}·{@code c} 뒤 1~4자리, data-model §2)이 담을 수 있는 가장 큰 카운터 값. */\n+    public static final int MAX_SEQUENCE = 9999;\n+\n     private QuizIdentity() {}\n \n     /** 식별자를 채운 문제 목록과 오른 카운터. */\n@@ -98,14 +101,17 @@ public final class QuizIdentity {\n         for (QuizQuestion question : requested) {\n             QuestionId questionId = question.questionId();\n             if (questionId == null) {\n-                questionId = QuestionId.of(++sequence);\n+                sequence = next(sequence);\n+                questionId = QuestionId.of(sequence);\n             }\n             List<QuizChoice> choices = new ArrayList<>();\n             for (QuizChoice choice : question.choices()) {\n-                choices.add(\n-                        choice.choiceId() == null\n-                                ? choice.withId(ChoiceId.of(++sequence))\n-                                : choice);\n+                if (choice.choiceId() == null) {\n+                    sequence = next(sequence);\n+                    choices.add(choice.withId(ChoiceId.of(sequence)));\n+                } else {\n+                    choices.add(choice);\n+                }\n             }\n             assigned.add(question.withIds(questionId, choices));\n         }\n@@ -138,13 +144,35 @@ public final class QuizIdentity {\n                 reconciled.add(question);\n                 continue;\n             }\n-            QuestionId fresh = QuestionId.of(++sequence);\n+            sequence = next(sequence);\n+            QuestionId fresh = QuestionId.of(sequence);\n             renamed.add(new Renamed(question.questionId(), fresh));\n             reconciled.add(question.withIds(fresh, question.choices()));\n         }\n         return new Reconciled(reconciled, renamed, sequence);\n     }\n \n+    /**\n+     * 카운터의 다음 값. 형식이 담을 수 없는 값이면 위치({@code quiz})와 함께 거절한다. 지운 번호를 다시 쓰지 않으므로 이 글에는 더 줄 식별자가 없다.\n+     * 그대로 두면 식별자 형식 오류가 사유 없이 400으로 나간다.\n+     *\n+     * @throws InvalidDraftException 카운터가 {@link #MAX_SEQUENCE}를 넘는다\n+     */\n+    private static int next(int sequence) {\n+        if (sequence >= MAX_SEQUENCE) {\n+            throw new InvalidDraftException(\n+                    List.of(\n+                            new FieldViolation(\n+                                    \"quiz\",\n+                                    \"이 글의 문제·보기 식별자를 모두 썼습니다(q\"\n+                                            + MAX_SEQUENCE\n+                                            + \"·c\"\n+                                            + MAX_SEQUENCE\n+                                            + \"까지). 새 문제·보기를 더하거나 정답이 바뀐 문제를 게시할 수 없습니다.\")));\n+        }\n+        return sequence + 1;\n+    }\n+\n     private static boolean sameQuestion(QuizQuestion previous, QuizQuestion next) {\n         return previous.correctChoiceIds().equals(next.correctChoiceIds())\n                 && previous.choiceIds().equals(next.choiceIds());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/QuizIdentity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/QuizIdentity.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,15 +20,19 @@ final class ArticleRevisionMapper {\n                 revision.edition());\n     }\n \n+    /** 저장된 판이 도메인 규칙을 어기면 판 대리키를 담은 {@link IllegalStateException}으로 실패한다(400으로 내보내지 않는다). */\n     static ArticleRevision toDomain(LearningArticleRevisionJpaEntity entity) {\n-        return new ArticleRevision(\n-                entity.getId(),\n-                entity.getRevisionNo(),\n-                entity.getEdition(),\n-                LearningContentJson.snapshotFromJson(entity.getSnapshot()),\n-                entity.getCheckVersion(),\n-                entity.getSectorMapVersion(),\n-                entity.getPublishedByUserId(),\n-                entity.getPublishedAt());\n+        return LearningContentJson.storedValue(\n+                \"learning_article_revision(\" + entity.getId() + \")\",\n+                () ->\n+                        new ArticleRevision(\n+                                entity.getId(),\n+                                entity.getRevisionNo(),\n+                                entity.getEdition(),\n+                                LearningContentJson.snapshotFromJson(entity.getSnapshot()),\n+                                entity.getCheckVersion(),\n+                                entity.getSectorMapVersion(),\n+                                entity.getPublishedByUserId(),\n+                                entity.getPublishedAt()));\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/ArticleRevisionMapper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/ArticleRevisionMapper.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,8 +2,12 @@ package com.ssafy.thorp.learning.infrastructure.persistence;\n \n import com.ssafy.thorp.learning.application.repository.ArticleRevisionRepository;\n import com.ssafy.thorp.learning.domain.model.ArticleRevision;\n+import com.ssafy.thorp.learning.domain.model.Edition;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n+import java.util.Collection;\n+import java.util.HashMap;\n import java.util.List;\n+import java.util.Map;\n import java.util.Optional;\n import org.springframework.stereotype.Repository;\n \n@@ -41,6 +45,34 @@ public class ArticleRevisionRepositoryImpl implements ArticleRevisionRepository\n         return revisionJpaRepository.findById(revisionId).map(ArticleRevisionMapper::toDomain);\n     }\n \n+    @Override\n+    public Optional<ArticleRevision> findLatestByArticleId(ArticleId articleId) {\n+        return articleJpaRepository\n+                .findIdByArticleKey(articleId.value())\n+                .flatMap(revisionJpaRepository::findFirstByArticleIdOrderByRevisionNoDesc)\n+                .map(ArticleRevisionMapper::toDomain);\n+    }\n+\n+    @Override\n+    public boolean existsByArticleIdAndEdition(ArticleId articleId, Edition edition) {\n+        return articleJpaRepository\n+                .findIdByArticleKey(articleId.value())\n+                .map(id -> revisionJpaRepository.existsByArticleIdAndEdition(id, edition))\n+                .orElse(false);\n+    }\n+\n+    @Override\n+    public Map<Long, Integer> findRevisionNos(Collection<Long> revisionIds) {\n+        Map<Long, Integer> revisionNos = new HashMap<>();\n+        if (revisionIds.isEmpty()) {\n+            return revisionNos;\n+        }\n+        revisionJpaRepository\n+                .findRevisionNos(revisionIds)\n+                .forEach(row -> revisionNos.put(row.getId(), row.getRevisionNo()));\n+        return revisionNos;\n+    }\n+\n     @Override\n     public List<ArticleRevision> findByArticleId(ArticleId articleId) {\n         return articleJpaRepository\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/ArticleRevisionRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/ArticleRevisionRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+package com.ssafy.thorp.learning.infrastructure.persistence;\n+\n+/** 글 키를 붙인 게시 기록 한 줄({@code LearningPublicationEventJpaRepository}의 JPQL 생성자 식). */\n+public record KeyedEventRow(String articleKey, LearningPublicationEventJpaEntity event) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/KeyedEventRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/KeyedEventRow.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,10 @@ public interface LearningArticleJpaRepository\n \n     Optional<LearningArticleJpaEntity> findByArticleKey(String articleKey);\n \n+    /** 대리키만. 본문 JSON을 읽지 않는다. */\n+    @Query(\"select a.id from LearningArticleJpaEntity a where a.articleKey = :articleKey\")\n+    Optional<Long> findIdByArticleKey(@Param(\"articleKey\") String articleKey);\n+\n     @Lock(LockModeType.PESSIMISTIC_WRITE)\n     @Query(\"select a from LearningArticleJpaEntity a where a.articleKey = :articleKey\")\n     Optional<LearningArticleJpaEntity> lockByArticleKey(@Param(\"articleKey\") String articleKey);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,10 +15,23 @@ final class LearningArticleMapper {\n \n     private LearningArticleMapper() {}\n \n+    /**\n+     * 저장된 행이 도메인 규칙을 어기면(예: 형식에 맞지 않는 용어) 글 키를 담은 {@link IllegalStateException}으로 실패한다. 요청 입력이 아니라\n+     * 저장 데이터의 문제이므로 400으로 내보내지 않는다({@link LearningContentJson#storedValue}).\n+     */\n     static LearningArticle toDomain(\n             LearningArticleJpaEntity entity,\n             List<LearningTermJpaEntity> terms,\n             StageLookup stages) {\n+        return LearningContentJson.storedValue(\n+                \"learning_article(\" + entity.getArticleKey() + \")\",\n+                () -> build(entity, terms, stages));\n+    }\n+\n+    private static LearningArticle build(\n+            LearningArticleJpaEntity entity,\n+            List<LearningTermJpaEntity> terms,\n+            StageLookup stages) {\n         return new LearningArticle(\n                 entity.getId(),\n                 new ArticleId(entity.getArticleKey()),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleMapper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleMapper.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,10 @@ import com.ssafy.thorp.learning.domain.model.LearningArticle;\n import com.ssafy.thorp.learning.domain.model.Placement;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n import jakarta.persistence.EntityManager;\n+import java.util.ArrayList;\n+import java.util.HashMap;\n import java.util.List;\n+import java.util.Map;\n import java.util.Optional;\n import org.springframework.stereotype.Repository;\n \n@@ -56,11 +59,21 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository\n                         });\n     }\n \n+    /** 용어는 모든 글 것을 한 번에 읽어 글마다 나눈다. 글마다 따로 읽지 않는다. */\n     @Override\n     public List<LearningArticle> findAllOrdered() {\n         StageLookup stages = StageLookup.load(stageJpaRepository);\n+        Map<Long, List<LearningTermJpaEntity>> termsByArticle = new HashMap<>();\n+        for (LearningTermJpaEntity term : termJpaRepository.findAllByOrderByIdAsc()) {\n+            termsByArticle.computeIfAbsent(term.getArticleId(), key -> new ArrayList<>()).add(term);\n+        }\n         return articleJpaRepository.findAllInStageOrder().stream()\n-                .map(entity -> withTerms(entity, stages))\n+                .map(\n+                        entity ->\n+                                LearningArticleMapper.toDomain(\n+                                        entity,\n+                                        termsByArticle.getOrDefault(entity.getId(), List.of()),\n+                                        stages))\n                 .toList();\n     }\n \n@@ -86,36 +99,35 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository\n                 .map(ArticleRevisionMapper::toDomain);\n     }\n \n-    /**\n-     * 판과 공개 배치를 두 문장으로 읽는다. 둘이 같은 순간의 값이려면 호출하는 트랜잭션이 한 스냅숏이어야 한다({@code\n-     * LearningQueryService.getPublished}). 공개 배치가 비어 있으면 테이블 CHECK가 막는 상태라 실패시킨다.\n-     */\n+    @Override\n+    public Map<ArticleId, ArticleRevision> findPublishedRevisions() {\n+        Map<ArticleId, ArticleRevision> revisions = new HashMap<>();\n+        for (PublishedRevisionRow row : revisionJpaRepository.findAllCurrentlyPublished()) {\n+            revisions.put(\n+                    new ArticleId(row.articleKey()),\n+                    ArticleRevisionMapper.toDomain(row.revision()));\n+        }\n+        return revisions;\n+    }\n+\n+    /** 판과 공개 배치를 한 문장으로 읽는다. 공개 배치가 비어 있으면 테이블 CHECK가 막는 상태라 실패시킨다. */\n     @Override\n     public Optional<PublishedArticleView> findPublished(ArticleId articleId) {\n         return revisionJpaRepository\n-                .findCurrentlyPublished(articleId.value())\n+                .findCurrentlyPublishedWithPlacement(articleId.value())\n                 .map(\n-                        revision -> {\n-                            LearningArticleJpaEntity article =\n-                                    articleJpaRepository\n-                                            .findByArticleKey(articleId.value())\n-                                            .orElseThrow(\n-                                                    () ->\n-                                                            new IllegalStateException(\n-                                                                    \"published article vanished: \"\n-                                                                            + articleId));\n-                            StageLookup stages = StageLookup.load(stageJpaRepository);\n-                            return new PublishedArticleView(\n-                                    ArticleRevisionMapper.toDomain(revision),\n-                                    new Placement(\n-                                            stages.keyOf(\n-                                                    LearningContentJson.required(\n-                                                            article.getPublishedStageId(),\n-                                                            \"published_stage_id\")),\n-                                            LearningContentJson.required(\n-                                                    article.getPublishedStagePosition(),\n-                                                    \"published_stage_position\")));\n-                        });\n+                        row ->\n+                                new PublishedArticleView(\n+                                        ArticleRevisionMapper.toDomain(row.revision()),\n+                                        new Placement(\n+                                                StageLookup.load(stageJpaRepository)\n+                                                        .keyOf(\n+                                                                LearningContentJson.required(\n+                                                                        row.publishedStageId(),\n+                                                                        \"published_stage_id\")),\n+                                                LearningContentJson.required(\n+                                                        row.publishedStagePosition(),\n+                                                        \"published_stage_position\"))));\n     }\n \n     @Override\n@@ -132,24 +144,28 @@ public class LearningArticleRepositoryImpl implements LearningArticleRepository\n                 .toList();\n     }\n \n+    /**\n+     * 돌려주는 값은 넘겨받은 글에 대리키를 채운 것이다. 저장된 용어 행으로 글을 다시 만들면, 형식을 바꾸는 저장에서 용어를 아직 바꾸기 전에 옛 용어가 새 형식에 맞지\n+     * 않아 실패한다.\n+     */\n     @Override\n     public LearningArticle save(LearningArticle article) {\n         StageLookup stages = StageLookup.load(stageJpaRepository);\n-        LearningArticleJpaEntity entity;\n         if (article.id() == null) {\n-            entity = articleJpaRepository.save(LearningArticleMapper.toEntity(article, stages));\n-        } else {\n-            entity =\n-                    articleJpaRepository\n-                            .findById(article.id())\n-                            .orElseThrow(\n-                                    () ->\n-                                            new IllegalArgumentException(\n-                                                    \"article not found: id=\" + article.id()));\n-            LearningArticleMapper.apply(entity, article, stages);\n-            entity = articleJpaRepository.saveAndFlush(entity);\n+            LearningArticleJpaEntity created =\n+                    articleJpaRepository.save(LearningArticleMapper.toEntity(article, stages));\n+            return article.withId(created.getId());\n         }\n-        return withTerms(entity, stages);\n+        LearningArticleJpaEntity entity =\n+                articleJpaRepository\n+                        .findById(article.id())\n+                        .orElseThrow(\n+                                () ->\n+                                        new IllegalArgumentException(\n+                                                \"article not found: id=\" + article.id()));\n+        LearningArticleMapper.apply(entity, article, stages);\n+        articleJpaRepository.saveAndFlush(entity);\n+        return article;\n     }\n \n     @Override\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n package com.ssafy.thorp.learning.infrastructure.persistence;\n \n+import com.ssafy.thorp.learning.domain.model.Edition;\n+import java.util.Collection;\n import java.util.List;\n import java.util.Optional;\n import org.springframework.data.jpa.repository.Query;\n@@ -19,6 +21,24 @@ public interface LearningArticleRevisionJpaRepository\n \n     List<LearningArticleRevisionJpaEntity> findByArticleIdOrderByRevisionNoAsc(Long articleId);\n \n+    /** 이 글의 가장 최근 판. 게시가 다음 판 번호와 같은 문제 판정의 기준을 함께 얻는다. */\n+    Optional<LearningArticleRevisionJpaEntity> findFirstByArticleIdOrderByRevisionNoDesc(\n+            Long articleId);\n+\n+    boolean existsByArticleIdAndEdition(Long articleId, Edition edition);\n+\n+    /** 판 번호만. 본문 JSON을 읽지 않는다. */\n+    interface RevisionNoRow {\n+        Long getId();\n+\n+        Integer getRevisionNo();\n+    }\n+\n+    @Query(\n+            \"select r.id as id, r.revisionNo as revisionNo\"\n+                    + \" from LearningArticleRevisionJpaEntity r where r.id in :ids\")\n+    List<RevisionNoRow> findRevisionNos(@Param(\"ids\") Collection<Long> ids);\n+\n     /** 공개 목록 한 줄. native alias는 PostgreSQL이 소문자로 접으므로 따옴표로 감싼다. */\n     interface PublishedSummaryRow {\n         String getArticleId();\n@@ -89,4 +109,24 @@ public interface LearningArticleRevisionJpaRepository\n                     + \" and a.articleKey = :articleKey\")\n     Optional<LearningArticleRevisionJpaEntity> findCurrentlyPublished(\n             @Param(\"articleKey\") String articleKey);\n+\n+    /** 이 글의 공개 중인 판과 공개 배치. 한 문장으로 읽는다. */\n+    @Query(\n+            \"select new com.ssafy.thorp.learning.infrastructure.persistence.PublishedRevisionRow(\"\n+                    + \"a.articleKey, r, a.publishedStageId, a.publishedStagePosition)\"\n+                    + \" from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a\"\n+                    + \" where a.publishedRevisionId = r.id\"\n+                    + \" and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED\"\n+                    + \" and a.articleKey = :articleKey\")\n+    Optional<PublishedRevisionRow> findCurrentlyPublishedWithPlacement(\n+            @Param(\"articleKey\") String articleKey);\n+\n+    /** 공개 중인 판 전부. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */\n+    @Query(\n+            \"select new com.ssafy.thorp.learning.infrastructure.persistence.PublishedRevisionRow(\"\n+                    + \"a.articleKey, r, a.publishedStageId, a.publishedStagePosition)\"\n+                    + \" from LearningArticleRevisionJpaEntity r, LearningArticleJpaEntity a\"\n+                    + \" where a.publishedRevisionId = r.id\"\n+                    + \" and a.status = com.ssafy.thorp.learning.domain.model.ArticleStatus.PUBLISHED\")\n+    List<PublishedRevisionRow> findAllCurrentlyPublished();\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleRevisionJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningArticleRevisionJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,11 @@\n package com.ssafy.thorp.learning.infrastructure.persistence;\n \n+import com.fasterxml.jackson.annotation.JsonIgnore;\n+import com.fasterxml.jackson.core.JsonParser;\n+import com.fasterxml.jackson.databind.DeserializationContext;\n+import com.fasterxml.jackson.databind.JsonDeserializer;\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;\n import com.ssafy.thorp.learning.domain.model.ArticleBlock;\n import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramBlock;\n import com.ssafy.thorp.learning.domain.model.ArticleBlock.DiagramBlock.Series;\n@@ -31,12 +37,15 @@ import com.ssafy.thorp.learning.domain.vo.ChoiceId;\n import com.ssafy.thorp.learning.domain.vo.ExampleAllocation;\n import com.ssafy.thorp.learning.domain.vo.QuestionId;\n import com.ssafy.thorp.learning.domain.vo.TermId;\n+import java.io.IOException;\n import java.math.BigDecimal;\n import java.time.LocalDate;\n import java.time.format.DateTimeParseException;\n import java.util.ArrayList;\n+import java.util.Iterator;\n import java.util.List;\n import java.util.Locale;\n+import java.util.Map;\n import java.util.function.Predicate;\n import java.util.function.Supplier;\n \n@@ -78,8 +87,81 @@ public final class LearningContentJson {\n \n     private LearningContentJson() {}\n \n-    /** 글자 조각. 종류마다 키가 하나({@code text}만, {@code term}+{@code text}, {@code source})다. */\n-    public record RunJson(String text, String term, SourceJson source) {}\n+    /**\n+     * 글자 조각. 종류마다 키가 하나({@code text}만, {@code term}+{@code text}, {@code source})다.\n+     *\n+     * @param unknownKeys 읽을 때 만난 세 키 밖의 키(값이 문자열·객체가 아닌 키 포함). 쓰지 않는다. 영속성 매퍼는 모르는 키를 무시하므로 읽기에서\n+     *     이름을 모아 두고 {@link #runFromJson}이 거절한다. 조용히 버리면 문장 일부가 사라진 채 공개된다(원칙 VI)\n+     */\n+    @JsonDeserialize(using = RunJsonDeserializer.class)\n+    public record RunJson(String text, String term, SourceJson source, List<String> unknownKeys) {\n+\n+        public RunJson {\n+            unknownKeys = unknownKeys == null ? List.of() : List.copyOf(unknownKeys);\n+        }\n+\n+        RunJson(String text, String term, SourceJson source) {\n+            this(text, term, source, List.of());\n+        }\n+\n+        @Override\n+        @JsonIgnore\n+        public List<String> unknownKeys() {\n+            return unknownKeys;\n+        }\n+    }\n+\n+    /**\n+     * {@link RunJson}을 읽는다. 세 키는 그대로 받고, 그 밖의 키와 값 모양이 틀린 키는 이름만 모은다. JSON {@code null} 값은 키가 없는\n+     * 것으로 본다.\n+     */\n+    public static final class RunJsonDeserializer extends JsonDeserializer<RunJson> {\n+\n+        @Override\n+        public RunJson deserialize(JsonParser parser, DeserializationContext context)\n+                throws IOException {\n+            JsonNode node = parser.readValueAsTree();\n+            if (!node.isObject()) {\n+                return new RunJson(null, null, null, List.of(\"(\" + node.getNodeType() + \")\"));\n+            }\n+            String text = null;\n+            String term = null;\n+            SourceJson source = null;\n+            List<String> unknown = new ArrayList<>();\n+            for (Iterator<Map.Entry<String, JsonNode>> fields = node.fields(); fields.hasNext(); ) {\n+                Map.Entry<String, JsonNode> field = fields.next();\n+                JsonNode value = field.getValue();\n+                if (value.isNull()) {\n+                    continue;\n+                }\n+                switch (field.getKey()) {\n+                    case \"text\" -> {\n+                        if (value.isTextual()) {\n+                            text = value.textValue();\n+                        } else {\n+                            unknown.add(\"text\");\n+                        }\n+                    }\n+                    case \"term\" -> {\n+                        if (value.isTextual()) {\n+                            term = value.textValue();\n+                        } else {\n+                            unknown.add(\"term\");\n+                        }\n+                    }\n+                    case \"source\" -> {\n+                        if (value.isObject()) {\n+                            source = parser.getCodec().treeToValue(value, SourceJson.class);\n+                        } else {\n+                            unknown.add(\"source\");\n+                        }\n+                    }\n+                    default -> unknown.add(field.getKey());\n+                }\n+            }\n+            return new RunJson(text, term, source, unknown);\n+        }\n+    }\n \n     /**\n      * 본문 블록. 종류와 형식에 해당하는 키만 있다. V1의 {@code paragraph}·{@code hypothetical}은 {@code text}, V2는\n@@ -386,8 +468,12 @@ public final class LearningContentJson {\n         return required(lists, key).stream().map(runs -> runsFromJson(runs, key)).toList();\n     }\n \n-    /** 조각 하나에는 키가 하나뿐이다. 둘 이상이거나 없으면 저장 데이터가 깨진 것이다. */\n+    /** 조각 하나에는 키가 하나뿐이다. 둘 이상이거나 없거나 모르는 키가 있으면 저장 데이터가 깨진 것이다. */\n     private static Run runFromJson(RunJson run, String key) {\n+        if (!run.unknownKeys().isEmpty()) {\n+            throw new IllegalStateException(\n+                    \"stored run has unknown keys at \" + key + \": \" + run.unknownKeys());\n+        }\n         if (run.source() != null) {\n             if (run.text() != null || run.term() != null) {\n                 throw new IllegalStateException(\"stored source run has extra keys at \" + key);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningContentJson.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningContentJson.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,8 @@\n package com.ssafy.thorp.learning.infrastructure.persistence;\n \n+import java.util.List;\n import java.util.Optional;\n+import org.springframework.data.jpa.repository.Query;\n import org.springframework.data.repository.Repository;\n \n /** 기록은 추가·조회만 한다. 삭제 메서드가 딸려 오지 않도록 {@code JpaRepository}를 상속하지 않는다. */\n@@ -10,4 +12,14 @@ public interface LearningPublicationEventJpaRepository\n     LearningPublicationEventJpaEntity save(LearningPublicationEventJpaEntity entity);\n \n     Optional<LearningPublicationEventJpaEntity> findFirstByArticleIdOrderByIdDesc(Long articleId);\n+\n+    /** 글마다 마지막 기록. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */\n+    @Query(\n+            \"select new com.ssafy.thorp.learning.infrastructure.persistence\"\n+                    + \".KeyedEventRow(a.articleKey, e)\"\n+                    + \" from LearningPublicationEventJpaEntity e, LearningArticleJpaEntity a\"\n+                    + \" where a.id = e.articleId\"\n+                    + \" and e.id = (select max(e2.id) from LearningPublicationEventJpaEntity e2\"\n+                    + \" where e2.articleId = e.articleId)\")\n+    List<KeyedEventRow> findLastForEachArticle();\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningPublicationEventJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningPublicationEventJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,9 @@ public interface LearningTermJpaRepository extends JpaRepository<LearningTermJpa\n \n     List<LearningTermJpaEntity> findByArticleIdOrderByIdAsc(Long articleId);\n \n+    /** 모든 글의 용어. 관리 목록이 글마다 따로 읽지 않게 한 번에 읽는다. */\n+    List<LearningTermJpaEntity> findAllByOrderByIdAsc();\n+\n     Optional<LearningTermJpaEntity> findByTermKey(String termKey);\n \n     @Query(\"select t.termKey from LearningTermJpaEntity t\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningTermJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningTermJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,8 +12,7 @@ final class PersistenceLookups {\n      */\n     static Long requireArticleId(LearningArticleJpaRepository repository, ArticleId articleId) {\n         return repository\n-                .findByArticleKey(articleId.value())\n-                .map(LearningArticleJpaEntity::getId)\n+                .findIdByArticleKey(articleId.value())\n                 .orElseThrow(() -> new IllegalArgumentException(\"article not found: \" + articleId));\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PersistenceLookups.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PersistenceLookups.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,8 @@ package com.ssafy.thorp.learning.infrastructure.persistence;\n import com.ssafy.thorp.learning.application.repository.PublicationEventRepository;\n import com.ssafy.thorp.learning.domain.model.PublicationEvent;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n+import java.util.HashMap;\n+import java.util.Map;\n import java.util.Optional;\n import org.springframework.stereotype.Repository;\n \n@@ -50,6 +52,16 @@ public class PublicationEventRepositoryImpl implements PublicationEventRepositor\n                 .map(entity -> toDomain(articleId, entity));\n     }\n \n+    @Override\n+    public Map<ArticleId, PublicationEvent> findLastForEachArticle() {\n+        Map<ArticleId, PublicationEvent> events = new HashMap<>();\n+        for (KeyedEventRow row : eventJpaRepository.findLastForEachArticle()) {\n+            ArticleId articleId = new ArticleId(row.articleKey());\n+            events.put(articleId, toDomain(articleId, row.event()));\n+        }\n+        return events;\n+    }\n+\n     private static PublicationEvent toDomain(\n             ArticleId articleId, LearningPublicationEventJpaEntity entity) {\n         return new PublicationEvent(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PublicationEventRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PublicationEventRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.learning.infrastructure.persistence;\n+\n+/**\n+ * 공개 중인 판과 그 글의 키·공개 배치를 한 문장으로 읽은 행({@code LearningArticleRevisionJpaRepository}의 JPQL 생성자 식). 값이\n+ * 모두 같은 순간의 것이라 게시 취소·다시 게시와 겹쳐도 어긋나지 않는다.\n+ *\n+ * @param publishedStageId 게시 중인 글이면 테이블 CHECK가 채워 둔다\n+ * @param publishedStagePosition 게시 중인 글이면 테이블 CHECK가 채워 둔다\n+ */\n+public record PublishedRevisionRow(\n+        String articleKey,\n+        LearningArticleRevisionJpaEntity revision,\n+        Long publishedStageId,\n+        Short publishedStagePosition) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PublishedRevisionRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/PublishedRevisionRow.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -64,6 +64,9 @@ import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n import org.junit.jupiter.params.ParameterizedTest;\n import org.junit.jupiter.params.provider.ValueSource;\n+import org.springframework.transaction.TransactionDefinition;\n+import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;\n+import org.springframework.transaction.interceptor.TransactionAttribute;\n \n /**\n  * 공개 조회 유스케이스의 판정(learning-public-api §2·§3). 저장소·단계·대응표 포트는 목이고 규칙 파일은 실제 파일이다.\n@@ -507,4 +510,21 @@ class LearningQueryServiceTest {\n \n         assertThat(service.getPublishedTerm(\"max-drawdown\")).isEqualTo(term);\n     }\n+\n+    @Test\n+    @DisplayName(\n+            \"공개 글 하나는 한 스냅숏(REPEATABLE_READ, 읽기 전용)에서 읽는다 — 여러 문장 사이의 게시 취소·다시 게시와 겹쳐도 판과 배치가 어긋나지 않는다\")\n+    void getPublishedReadsOneSnapshot() throws NoSuchMethodException {\n+        // Spring이 프록시에 실제로 적용하는 속성(메서드 설정이 클래스 설정보다 앞선다)으로 본다.\n+        TransactionAttribute attribute =\n+                new AnnotationTransactionAttributeSource()\n+                        .getTransactionAttribute(\n+                                LearningQueryService.class.getMethod(\"getPublished\", String.class),\n+                                LearningQueryService.class);\n+\n+        assertThat(attribute).isNotNull();\n+        assertThat(attribute.getIsolationLevel())\n+                .isEqualTo(TransactionDefinition.ISOLATION_REPEATABLE_READ);\n+        assertThat(attribute.isReadOnly()).isTrue();\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/application/service/LearningQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/application/service/LearningQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -356,7 +356,9 @@ class PublishCheckV2Test {\n         assertThat(assertOnly(broken, Check.QUIZ))\n                 .extracting(PublishCheckFailure::location, PublishCheckFailure::message)\n                 .containsExactly(\n-                        tuple(CheckLocation.quizQuestion(new QuestionId(\"q4\"), 1), \"질문이 비어 있습니다.\"),\n+                        tuple(\n+                                CheckLocation.quizQuestion(new QuestionId(\"q4\"), 1, \"prompt\"),\n+                                \"질문이 비어 있습니다.\"),\n                         tuple(\n                                 CheckLocation.quizChoice(\n                                         new QuestionId(\"q4\"), 1, new ChoiceId(\"c5\")),\n@@ -364,7 +366,9 @@ class PublishCheckV2Test {\n                         tuple(\n                                 CheckLocation.quizQuestion(new QuestionId(\"q4\"), 1),\n                                 \"정답 보기가 하나가 아닙니다.\"),\n-                        tuple(CheckLocation.quizQuestion(new QuestionId(\"q4\"), 1), \"풀이가 비어 있습니다.\"));\n+                        tuple(\n+                                CheckLocation.quizQuestion(new QuestionId(\"q4\"), 1, \"explanation\"),\n+                                \"풀이가 비어 있습니다.\"));\n \n         Draft oneChoice = Draft.passing();\n         oneChoice.quiz.set(0, question(\"q1\", \"질문\", \"풀이\", choice(\"c2\", \"가\", true)));\n@@ -461,6 +465,26 @@ class PublishCheckV2Test {\n                                 \"추천합니다\"));\n     }\n \n+    @Test\n+    @DisplayName(\"질문과 풀이에 같은 금지 표현이 있으면 field로 갈라 둘 다 돌려준다 (data-model §8-4)\")\n+    void quizPromptAndExplanationAreReportedApart() {\n+        Draft draft = Draft.passing();\n+        draft.quiz.set(\n+                0,\n+                question(\n+                        \"q1\",\n+                        \"오를 확률은?\",\n+                        \"확률로 말하지 않는다.\",\n+                        choice(\"c2\", \"그렇다\", false),\n+                        choice(\"c3\", \"아니다\", true)));\n+\n+        assertThat(assertOnly(draft, Check.FORBIDDEN_EXPRESSION))\n+                .extracting(PublishCheckFailure::location)\n+                .containsExactly(\n+                        CheckLocation.quizQuestion(new QuestionId(\"q1\"), 0, \"prompt\"),\n+                        CheckLocation.quizQuestion(new QuestionId(\"q1\"), 0, \"explanation\"));\n+    }\n+\n     @Test\n     @DisplayName(\"용어의 다른 이름도 금지 표현과 결과성 숫자를 본다\")\n     void termAliasesAreChecked() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/model/PublishCheckV2Test.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/model/PublishCheckV2Test.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -166,6 +166,35 @@ class QuizIdentityTest {\n         assertThat(reconciled.quizSeq()).isEqualTo(9);\n     }\n \n+    @Test\n+    @DisplayName(\"카운터가 9999를 넘게 되면 식별자를 주지 않고 quiz 자리로 거절한다 (data-model §6-2)\")\n+    void exhaustedSequenceIsRejected() {\n+        QuizIdentity.Assigned last =\n+                QuizIdentity.assign(List.of(question(null, choice(null, true))), List.of(), 9997);\n+        assertThat(last.quizSeq()).isEqualTo(9999);\n+        assertThat(ids(last.quiz())).containsExactly(\"q9998\", \"c9999\");\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                QuizIdentity.assign(\n+                                        List.of(question(null, choice(null, true))),\n+                                        List.of(),\n+                                        9998))\n+                .isInstanceOfSatisfying(\n+                        InvalidDraftException.class,\n+                        invalid ->\n+                                assertThat(invalid.violations())\n+                                        .extracting(FieldViolation::field)\n+                                        .containsExactly(\"quiz\"));\n+\n+        List<QuizQuestion> latest =\n+                List.of(question(\"q1\", choice(\"c2\", true), choice(\"c3\", false)));\n+        List<QuizQuestion> changed =\n+                List.of(question(\"q1\", choice(\"c2\", false), choice(\"c3\", true)));\n+        assertThatThrownBy(() -> QuizIdentity.reconcile(changed, latest, 9999))\n+                .isInstanceOf(InvalidDraftException.class);\n+    }\n+\n     @Test\n     @DisplayName(\"보기가 빠져도 새 문제이고 새 식별자를 받는다 (data-model §6-3)\")\n     void removedChoiceIsRenamed() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/model/QuizIdentityTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/model/QuizIdentityTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -250,6 +250,26 @@ class LearningRepositoryTest extends RepositoryTestSupport {\n                             assertThat(event.revisionId()).isEqualTo(saved.id());\n                             assertThat(event.actorUserId()).isEqualTo(7L);\n                         });\n+        // 관리 목록과 게시가 쓰는 묶음·단건 조회도 같은 값을 돌려준다.\n+        assertThat(articleRepository.findPublishedRevisions())\n+                .containsExactly(Map.entry(ARTICLE, saved));\n+        assertThat(eventRepository.findLastForEachArticle())\n+                .containsOnlyKeys(ARTICLE)\n+                .extractingByKey(ARTICLE)\n+                .extracting(PublicationEvent::revisionId)\n+                .isEqualTo(saved.id());\n+        assertThat(revisionRepository.findLatestByArticleId(ARTICLE)).contains(saved);\n+        assertThat(revisionRepository.existsByArticleIdAndEdition(ARTICLE, Edition.LEGACY))\n+                .isTrue();\n+        assertThat(revisionRepository.existsByArticleIdAndEdition(ARTICLE, Edition.CURRENT))\n+                .isFalse();\n+        assertThat(revisionRepository.findRevisionNos(List.of(saved.id(), -1L)))\n+                .containsExactly(Map.entry(saved.id(), 1));\n+        assertThat(articleRepository.findAllOrdered())\n+                .hasSize(27)\n+                .filteredOn(article -> article.articleId().equals(ARTICLE))\n+                .singleElement()\n+                .satisfies(article -> assertThat(article.terms()).isEqualTo(load().terms()));\n \n         // 같은 판으로 색인을 다시 써도 같은 term_key가 UNIQUE에 걸리지 않고, 지우면 공개에서 빠진다.\n         publishedTermRepository.replaceForArticle(ARTICLE, saved.id(), terms, ArticleFormat.V1);\n@@ -683,6 +703,33 @@ class LearningRepositoryTest extends RepositoryTestSupport {\n                 .hasMessageContaining(\"content\");\n     }\n \n+    @Test\n+    @DisplayName(\"저장된 글자 조각에 모르는 키가 있으면 버리지 않고 실패한다 (원칙 VI)\")\n+    void storedRunWithUnknownKeyFails() {\n+        long id =\n+                insertPublishedRevision(\n+                        COMPLETE_V2_SNAPSHOT.replace(\n+                                \"{\\\"text\\\":\\\"문단\\\"}\", \"{\\\"text\\\":\\\"문단\\\",\\\"emphasis\\\":true}\"));\n+\n+        assertThatThrownBy(() -> revisionRepository.findById(id))\n+                .isInstanceOf(IllegalStateException.class)\n+                .hasMessageContaining(\"unknown keys\")\n+                .hasMessageContaining(\"emphasis\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"저장된 글이 도메인 규칙을 어기면 요청 오류(400)가 아니라 저장 데이터 오류로 실패한다\")\n+    void storedArticleViolationIsStateError() {\n+        flushAndClear();\n+        jdbcTemplate.update(\n+                \"UPDATE learning_term SET meaning = '뜻' WHERE term_key = 'max-drawdown'\");\n+\n+        assertThatThrownBy(this::load)\n+                .isInstanceOf(IllegalStateException.class)\n+                .hasMessageContaining(\"learning_article(returns-and-losses)\")\n+                .hasRootCauseInstanceOf(IllegalArgumentException.class);\n+    }\n+\n     @Test\n     @DisplayName(\"format이 없는(V1) 판에 V2 블록이 있으면 실패한다\")\n     void v1SnapshotWithV2BlockFails() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -157,7 +157,7 @@ common: 모든 계층에서 참조 가능\n   - `common/persistence/MigrationFileConventionTest` 파일명 규칙과 버전 중복. **Docker 없이 돈다**\n   - `common/persistence/FlywayMigrationTest`·`paramsearch/.../ParamSearchMigrationTest` 빈 DB 적용과 스키마 구조\n   - `infra/scripts/check-migration-version.sh` 기준 브랜치 대비 버전 역전(out-of-order). 빈 DB 테스트로는 잡히지 않아 CI가 따로 돌린다. 타임스탬프 버전에서는 이 검사가 중복 검사보다 중요하다 — 파일명이 겹치지 않으니 Git이 조용히 병합하고, 낮은 버전이 뒤늦게 머지되면 운영에서만 기동이 막힌다\n-- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다\n+- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다. **예외는 Spring 컨텍스트 없이 Flyway API로 마이그레이션만 적용한 DB를 보는 테스트다**: 스키마 제약만 보는 `EtfMarketDataSchemaIT`(공용 컨테이너의 커넥션 여유가 없다)와, 특정 마이그레이션 직전 버전까지 적용한 DB에 나머지를 올려 보는 `LearningStagesMigrationUpgradeIT`(시나리오마다 Flyway `target`을 정한다). 이들은 전용 컨테이너를 띄우고 커넥션을 하나만 열며, 같은 skip 규칙(`@Testcontainers(disabledWithoutDocker = true)`)을 따른다. 버전 번호가 필요하면 이 경우에도 `support/MigrationFiles`로 찾는다\n \n - **내 기록(`myrecord`)은 계산 결과를 복제하지 않고 `backtest_request`·`param_search`·`regime_search_log`를 가리킨다. 삭제는 `my_record.deleted_at`만 바꾼다.** 상태(완료·실패·진행 중)는 컬럼이 아니라 읽을 때 원본을 조인해 파생하고(`MyRecordViewQuery`), 목록 응답에 수익률·하락 폭·비용을 싣지 않는다(원칙 III). 항목 생성은 004·007 접수 이벤트(`BacktestRequestAccepted`·`ParamSearchAccepted`)를 `MyRecordRegistrar`가 듣는 방식이라 접수 서비스가 006을 부르지 않는다 — 방향은 `myrecord → paramsearch` 하나다(ArchUnit 규칙 11). 탐색 묶음 저장 상한은 `SaveSlotGuard` 포트로 접수 직전에 판정하고 409 `RECORD_LIMIT_REACHED`다. 시간 기반 자동 삭제 배치를 만들지 않는다(spec 006 PD-13)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -230,7 +230,7 @@ PUT /admin/learning/articles/{articleId}\n \n | 응답 | 조건 |\n |---|---|\n-| `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`·조각 키, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `url`이 `http`·`https`가 아님, **(2판)** 형식 모양 위반, 지어 낸 문제·보기 식별자. `error.details.fields`에 위반 위치를 싣는다 |\n+| `400 INVALID_INPUT` | 필드 길이·개수 위반, 알 수 없는 블록 `type`·조각 키, `termId` 형식, 섹터 코드 중복, `weightTenths` 범위 밖, `url`이 `http`·`https`가 아님, **(2판)** 형식 모양 위반, 지어 낸 문제·보기 식별자, 식별자를 모두 쓴 글의 새 문제·보기([data-model](../data-model.md) §6-2). `error.details.fields`에 위반 위치를 싣는다 |\n | `404 LEARNING_ARTICLE_NOT_FOUND` | 없는 글 |\n | `404 LEARNING_STAGE_NOT_FOUND` **(2판)** | 없는 `stageKey` |\n | `409 LEARNING_DRAFT_CHANGED` | `expectedDraftVersion`이 서버 값과 다르다(R12). `error.details.currentDraftVersion`을 싣는다 |\n@@ -331,6 +331,7 @@ POST /admin/learning/articles/{articleId}/publish\n | `409 LEARNING_TERM_ID_TAKEN` | 이 글의 `termId`를 다른 글이 게시 중이고 `transferFrom`이 없다 |\n | `409 LEARNING_TERM_TRANSFER_INVALID` **(2판)** | `transferFrom`이 지금 소유 글과 다르다(그사이 소유가 바뀌었다) |\n | `409 LEARNING_STAGE_NOT_RELEASED` · `409 LEARNING_FORMAT_OUTDATED` **(2판)** | 위 게시 방식 표 |\n+| `400 INVALID_INPUT` **(2판)** | 정답이 바뀐 문제에 줄 새 식별자가 남지 않았다([data-model](../data-model.md) §6-2). `error.details.fields`에 `quiz`를 싣고 아무것도 바꾸지 않는다 |\n \n ## 7. 게시 취소\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/contracts/learning-admin-api.md",
+          "old_path": "specs/013-learning-pages/contracts/learning-admin-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -330,6 +330,7 @@ O/X 문제는 보기 두 개로 쓴다. 관리 화면의 원고 가져오기는\n ### 6-2. 식별자 주기\n \n - 저장할 때 `questionId`나 `choiceId`가 `null`인 항목에 서버가 `quiz_seq`를 1씩 올려 `q{n}`·`c{n}`을 준다. 문제와 보기가 같은 카운터를 쓴다. 지운 번호는 다시 쓰지 않는다.\n+- 식별자 형식(§2)은 `n`이 9999까지다. 줄 번호가 9999를 넘게 되면 그 저장과, 정답이 바뀐 문제에 새 식별자를 줘야 하는 게시(§6-3)는 `400 INVALID_INPUT`(`details.fields`의 `quiz`)으로 거절한다. 지운 번호를 다시 쓰지 않으므로 그 글에는 더 줄 식별자가 없다.\n - 저장 응답은 식별자가 채워진 초안을 돌려준다. 화면은 다음 저장에 그 식별자를 그대로 보낸다.\n \n ### 6-3. 같은 문제 판정 (게시할 때)\n@@ -465,7 +466,7 @@ quiz:\n | `title` · `question` · `example` | 없음 | 해당 필드 |\n | `block` | `index`(0부터), `field`(선택. 예: `lines[1]`, `wrong`, `items[2]`, `rows[0][1]`, `description`) | 본문 블록. 본문 전체를 가리킬 때(소제목 수, 읽기 시간 등)는 `index`가 없다 |\n | `term` | `termId`, `field`(선택) | 용어 설명 |\n-| `quiz` **(2판)** | `questionId`(새 문제면 `index`), `choiceId`(선택) | 확인 문제 |\n+| `quiz` **(2판)** | `questionId`(새 문제면 `index`), `choiceId`(선택), `field`(선택. 문제 안의 `prompt`·`explanation`) | 확인 문제. 질문과 풀이에 같은 표현이 있으면 `field`로 갈라 둘 다 싣는다 |\n \n ## 9. 예시(`example`)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/data-model.md",
+          "old_path": "specs/013-learning-pages/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881840": []
+  }
+}

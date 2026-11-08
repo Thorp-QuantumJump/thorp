@@ -1,0 +1,569 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945171,
+    "iid": 124,
+    "project_id": 1444456,
+    "title": "docs(fe): 작업 묶음을 목적 단위 열둘로 정하고 plan에 옮긴다",
+    "description": "## 작업 내용 요약\n\nMR !116이 병합된 뒤 229 브랜치에 push된 커밋 두 개를 dev에 반영한다. spec 003의 태스크 79개를 목적 단위 작업 묶음 열둘로 묶고, 각 묶음에 Jira 티켓 번호와 브랜치 이름을 채운 내용이다.\n\n## 관련 티켓\n\nS15P21E205-229 (병합 이후 추가된 커밋이라 같은 티켓의 두 번째 MR이다)\n\n## 주요 변경 사항\n\n- tasks.md: 태스크를 묶음 B01\\~B12로 나누고, 묶음별 포함 T###·수·position·선행을 표로 정리했다. 묶음 이름을 계층이 아니라 \"머지되면 무엇이 되나\"로 붙였다\n- plan.md: 같은 묶음 표를 \"작업 묶음 구성\" 절로 옮기고, 묶음별 Jira 티켓 S15P21E205-233\\~244와 브랜치 이름을 채웠다\n\n## 테스트\n\n문서 변경이라 코드 테스트 없음. 묶음 표가 T001\\~T078과 T018a 전부를 빠짐도 중복도 없이 덮는지 대조했다.\n\n## 리뷰 포인트\n\n- MR !116 병합 이후에 push된 커밋이라 dev에 빠져 있다. 이 MR을 먼저 병합해야 245 MR의 차이가 품질 점검 커밋 하나로 좁혀진다\n- 묶음 경계가 실제로 독립 병합 가능한 단위인지 — 특히 B06(외부 결정 대기)과 B04→B05 순서",
+    "state": "merged",
+    "created_at": "2026-09-15T16:58:09.833+09:00",
+    "updated_at": "2026-09-15T16:58:48.427+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T16:58:48.221+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/229-spec-003-tasks",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+    "merge_commit_sha": "b343fe4209e4be136899431dde59bb98aeff2362",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T16:58:11.261+09:00",
+    "reference": "!124",
+    "references": {
+      "short": "!124",
+      "relative": "!124",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!124"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/124",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945171,
+    "iid": 124,
+    "project_id": 1444456,
+    "title": "docs(fe): 작업 묶음을 목적 단위 열둘로 정하고 plan에 옮긴다",
+    "description": "## 작업 내용 요약\n\nMR !116이 병합된 뒤 229 브랜치에 push된 커밋 두 개를 dev에 반영한다. spec 003의 태스크 79개를 목적 단위 작업 묶음 열둘로 묶고, 각 묶음에 Jira 티켓 번호와 브랜치 이름을 채운 내용이다.\n\n## 관련 티켓\n\nS15P21E205-229 (병합 이후 추가된 커밋이라 같은 티켓의 두 번째 MR이다)\n\n## 주요 변경 사항\n\n- tasks.md: 태스크를 묶음 B01\\~B12로 나누고, 묶음별 포함 T###·수·position·선행을 표로 정리했다. 묶음 이름을 계층이 아니라 \"머지되면 무엇이 되나\"로 붙였다\n- plan.md: 같은 묶음 표를 \"작업 묶음 구성\" 절로 옮기고, 묶음별 Jira 티켓 S15P21E205-233\\~244와 브랜치 이름을 채웠다\n\n## 테스트\n\n문서 변경이라 코드 테스트 없음. 묶음 표가 T001\\~T078과 T018a 전부를 빠짐도 중복도 없이 덮는지 대조했다.\n\n## 리뷰 포인트\n\n- MR !116 병합 이후에 push된 커밋이라 dev에 빠져 있다. 이 MR을 먼저 병합해야 245 MR의 차이가 품질 점검 커밋 하나로 좁혀진다\n- 묶음 경계가 실제로 독립 병합 가능한 단위인지 — 특히 B06(외부 결정 대기)과 B04→B05 순서",
+    "state": "merged",
+    "created_at": "2026-09-15T16:58:09.833+09:00",
+    "updated_at": "2026-09-15T16:58:48.427+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T16:58:48.221+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/229-spec-003-tasks",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+    "merge_commit_sha": "b343fe4209e4be136899431dde59bb98aeff2362",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T16:58:11.261+09:00",
+    "reference": "!124",
+    "references": {
+      "short": "!124",
+      "relative": "!124",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!124"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/124",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T16:58:23.544+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196461,
+      "iid": 38,
+      "project_id": 1444456,
+      "sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+      "ref": "docs(fe)/229-spec-003-tasks",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T16:58:22.827+09:00",
+      "updated_at": "2026-09-15T16:58:23.545+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196461"
+    },
+    "head_pipeline": {
+      "id": 196461,
+      "iid": 38,
+      "project_id": 1444456,
+      "sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+      "ref": "docs(fe)/229-spec-003-tasks",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T16:58:22.827+09:00",
+      "updated_at": "2026-09-15T16:58:23.545+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196461",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T16:58:23.544+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196461",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "08ffbe5e8d002df5e92a171d852c26dbcb853f0a",
+      "head_sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+      "start_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "1ac476a38f99a669f62cf0912f125a0debc2ae21",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810361,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T16:58:09.923+09:00",
+          "updated_at": "2026-09-15T16:58:09.928+09:00",
+          "system": true,
+          "noteable_id": 945171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 124,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1b1f79312a88443a740adfa0bd7cdf5c591dde03",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810362,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T16:58:09.990+09:00",
+          "updated_at": "2026-09-15T16:58:10.007+09:00",
+          "system": true,
+          "noteable_id": 945171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 124,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5d1aaf0a584094dc260143df0af210d17e349e57",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810365,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (이번 변경은 마크다운 문서 내의 작업 분할 및 Jira 티켓/브랜치 매핑을 정리한 문서 수정 사항으로, 코드 실행 영역에 직접적인 버그나 보안 취약점을 유발하지 않습니다.)\n\n### 테스트 제안\n문서 변경 사항이므로 자동화된 코드 테스트는 필요하지 않습니다. 대신 다음 항목을 수동으로 검증할 것을 제안합니다.\n\n1. **태스크 커버리지 검증 시나리오**: `tasks.md` 및 `plan.md`에 정의된 묶음(B01~B12)이 기존 `T001`부터 `T078` 및 `T018a`까지의 모든 태스크를 누락이나 중복 없이 정확히 포함하고 있는지 대조 확인합니다.\n2. **의존성 및 선행 조건 검증 시나리오**: 묶음 간 선행 조건(예: B01 완료 후 B02 진행, B03 계약 선행 커밋 등)이 실제 개발 및 브랜치 병합 순서와 모순 없이 부합하는지 팀 내 프로세스 관점에서 검토합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:15aec57e45f152e175c16b92030b48e614eeab84 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T16:58:18.462+09:00",
+          "updated_at": "2026-09-15T16:58:18.462+09:00",
+          "system": false,
+          "noteable_id": 945171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 124,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bc3a25c4300ded970a1a47f4d95a06b7fd3a1781",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810368,
+          "type": null,
+          "body": "mentioned in commit b343fe4209e4be136899431dde59bb98aeff2362",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T16:58:48.275+09:00",
+          "updated_at": "2026-09-15T16:58:48.280+09:00",
+          "system": true,
+          "noteable_id": 945171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 124,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2200891,
+      "head_commit_sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+      "base_commit_sha": "08ffbe5e8d002df5e92a171d852c26dbcb853f0a",
+      "start_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "created_at": "2026-09-15T16:58:10.380+09:00",
+      "merge_request_id": 945171,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "35bb6d5894f36f03578353840afd45ff611dfdb1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2200891,
+      "head_commit_sha": "15aec57e45f152e175c16b92030b48e614eeab84",
+      "base_commit_sha": "08ffbe5e8d002df5e92a171d852c26dbcb853f0a",
+      "start_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+      "created_at": "2026-09-15T16:58:10.380+09:00",
+      "merge_request_id": 945171,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "35bb6d5894f36f03578353840afd45ff611dfdb1",
+      "commits": [
+        {
+          "id": "15aec57e45f152e175c16b92030b48e614eeab84",
+          "short_id": "15aec57e",
+          "created_at": "2026-09-15T15:42:21.000+09:00",
+          "parent_ids": [
+            "298a4d4df6f854b259bcbd74ead6bed52978fd78"
+          ],
+          "title": "docs(fe): 묶음 열둘에 티켓 번호와 브랜치 이름을 채운다",
+          "message": "docs(fe): 묶음 열둘에 티켓 번호와 브랜치 이름을 채운다\n\nS15P21E205-233부터 244까지 열둘을 만들고 브랜치도 함께 만들었다.\nplan.md 머리의 \"이 문서에 브랜치 이름을 적지 않는다\"는 문장을 고쳤다.\nconstitution이 묶음 구성을 plan에 두라고 요구하고 묶음마다 브랜치가\n하나씩 딸리므로, 적지 않으면 티켓과 브랜치의 대응이 어디에도 남지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T15:42:21.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T15:42:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/15aec57e45f152e175c16b92030b48e614eeab84"
+        },
+        {
+          "id": "298a4d4df6f854b259bcbd74ead6bed52978fd78",
+          "short_id": "298a4d4d",
+          "created_at": "2026-09-15T15:31:01.000+09:00",
+          "parent_ids": [
+            "08ffbe5e8d002df5e92a171d852c26dbcb853f0a"
+          ],
+          "title": "docs(fe): 작업 묶음을 목적 단위 열둘로 정하고 plan에 옮긴다",
+          "message": "docs(fe): 작업 묶음을 목적 단위 열둘로 정하고 plan에 옮긴다\n\n묶음을 계층(값 타입·로더·컴포넌트·조립)으로 자르면 조각마다 브랜치를\n따는 동안 아무것도 완결되지 않는다. 묶음 조건 1이 요구하는 \"하나의 목적\"을\n크기에 맞추려다 잃은 것이라, 목적(무엇이 달라지나)으로 다시 잘랐다.\n\n- tasks.md: 묶음 표를 B01~B12로 바꾸고 \"끝나면 무엇이 달라지나\" 표를 더한다\n- plan.md: \"작업 묶음 구성\" 절을 새로 만든다. constitution이 묶음 구성을\n  plan에 두라고 요구하는데 지금까지 없었다\n- 태스크 79개는 그대로다. 티켓·브랜치·MR 단위만 정한 것이다\n\n크기는 둘에서 열하나까지 벌어지는데 받아들였다. B02를 다시 자르면 앞\n조각이 혼자서는 아무 일도 하지 않아 \"미완성 task 없음\"을 어긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T15:31:01.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T15:31:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/298a4d4df6f854b259bcbd74ead6bed52978fd78"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -2,7 +2,9 @@\n \n **Spec 디렉터리**: `003-strategy-settings` | **Date**: 2026-09-15 | **Spec**: [spec.md](spec.md)\n \n-> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다. 이 문서에 브랜치 이름을 적지 않는다.\n+> 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다.\n+> 브랜치 이름은 아래 \"작업 묶음 구성\"에 티켓 번호와 함께 적는다 — constitution이 묶음 구성을 plan에 두라고\n+> 요구하고, 묶음마다 브랜치가 하나씩 딸리기 때문이다.\n \n **Input**: Feature specification from `/specs/003-strategy-settings/spec.md`\n \n@@ -142,6 +144,63 @@ frontend/src/\n \n **`domain/model`을 두지 않는다**: 등록표의 값 타입(`StrategyRegistration`·`ParameterAxis`·`AllowedRange`)은 지금 `paramsearch/application/port`에 있고, 옮길 때도 같은 자리에 둔다. 도메인 모델 층을 따로 만들면 같은 것이 두 곳에 생기고, 007이 참조하는 타입이 무엇인지 흐려진다.\n \n+## 작업 묶음 구성 (티켓·Branch·MR 단위)\n+\n+constitution \"Jira 연계\"가 **`작업 묶음 = 1 Branch = 1 MR`**이고 **\"묶음 구성은 plan을 시작할 때\n+정한다\"**고 요구한다. [tasks.md](tasks.md)의 `T###` 79개는 실행 지시의 최소 단위이며 티켓 단위가\n+아니다. **Jira Task·브랜치·MR의 단위는 아래 묶음 열둘이다.**\n+\n+묶음마다 constitution이 정한 세 조건을 확인했다. 하나의 목적을 공유하는가, 독립적으로\n+구현·검증·리뷰하고 다른 묶음을 건드리지 않고 되돌릴 수 있는가, 리뷰어가 한 번에 읽을 수 있고\n+안에 미완성 task가 없는가.\n+\n+| 묶음 · 티켓 | Jira Task 제목 | 브랜치 | 포함 T### | 수 | 선행 |\n+|---|---|---|---|---|---|\n+| B01 · [S15P21E205-233](https://ssafy.atlassian.net/browse/S15P21E205-233) | `[BE] 등록표를 003 소유로 옮긴다` | `refactor(be)/233-registry-move` | T001, T007~T012 | 7 | 없음 |\n+| B02 · [S15P21E205-234](https://ssafy.atlassian.net/browse/S15P21E205-234) | `[BE] 등록표가 화면에 필요한 항목을 담는다` | `feat(be)/234-registry-fields` | T013~T022(T018a 포함) | 11 | B01 |\n+| B03 · [S15P21E205-235](https://ssafy.atlassian.net/browse/S15P21E205-235) | `[BE] 전략·파라미터 등록표 조회 API` | `feat(be)/235-registry-api` | T003, T004, T023~T028 | 8 | B02 |\n+| B04 · [S15P21E205-236](https://ssafy.atlassian.net/browse/S15P21E205-236) | `[FE] 전략 카드 다섯을 보인다` | `feat(fe)/236-strategy-cards` | T005, T006, T029, T030, T033~T035, T043 | 8 | B03의 계약 |\n+| B05 · [S15P21E205-237](https://ssafy.atlassian.net/browse/S15P21E205-237) | `[FE] 카드를 골라 분석을 시작한다` | `feat(fe)/237-strategy-select-run` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | B04 |\n+| B06 · [S15P21E205-238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | `feat(fe)/238-analysis-wiring` | T039, T042 | 2 | B05 + 외부 결정 |\n+| B07 · [S15P21E205-239](https://ssafy.atlassian.net/browse/S15P21E205-239) | `[BE] 접수 시점에 설정을 다시 검증한다` | `feat(be)/239-settings-revalidation` | T002, T047~T051 | 6 | B02 |\n+| B08 · [S15P21E205-240](https://ssafy.atlassian.net/browse/S15P21E205-240) | `[FE] 상세 설정을 열어 값을 바꾼다` | `feat(fe)/240-detail-settings` | T052~T057, T060~T063 | 10 | B05 |\n+| B09 · [S15P21E205-241](https://ssafy.atlassian.net/browse/S15P21E205-241) | `[FE] 바꾼 값을 그 자리에서 판정한다` | `feat(fe)/241-live-verdict` | T058, T059, T064 | 3 | B08 |\n+| B10 · [S15P21E205-242](https://ssafy.atlassian.net/browse/S15P21E205-242) | `[FE] 기간·금액·조건을 바꾼다` | `feat(fe)/242-analysis-conditions` | T065~T069 | 5 | B09 |\n+| B11 · [S15P21E205-243](https://ssafy.atlassian.net/browse/S15P21E205-243) | `[FE] 설정 조합 자동 비교로 넘어간다` | `feat(fe)/243-autocompare-entry` | T070, T071 | 2 | B05 |\n+| B12 · [S15P21E205-244](https://ssafy.atlassian.net/browse/S15P21E205-244) | `[DOCS] 문서 동기화와 최종 검증` | `docs(fe)/244-spec-003-wrapup` | T072~T078 | 7 | 전부 |\n+\n+**묶음 열둘 = 티켓 열둘 = 브랜치 열둘 = MR 열둘.** 79개 태스크를 빠짐도 중복도 없이 덮는다.\n+**티켓 열둘과 브랜치 열둘을 2026-09-15에 만들었다.** 표의 링크가 그 티켓이다. 개별 `T###`\n+번호는 MR 본문의 \"주요 변경 사항\"에 나열한다.\n+\n+```text\n+B01 ─▶ B02 ─┬─▶ B03 ─▶ B04 ─▶ B05 ─┬─▶ B08 ─▶ B09 ─▶ B10 ─┐\n+            │                       ├─▶ B11                 ├─▶ B12\n+            └─▶ B07                 └─▶ B06 (외부 결정 대기) ┘\n+```\n+\n+### 묶음 이름을 목적으로 붙인 이유\n+\n+초판은 계층으로 잘라 열여섯이었다. \"값 타입 확장\"·\"화면 컴포넌트\" 같은 이름은 그 MR이 머지돼도\n+무엇이 달라지는지 말해 주지 않고, 조각마다 브랜치를 따는 동안 아무것도 완결되지 않는다. 묶음 조건\n+1이 요구하는 \"하나의 목적\"을 크기에 맞추려다 잃은 것이다.\n+\n+지금 이름은 그대로 Jira Task 제목이 되고 \"이게 끝나면 무엇이 되나\"를 한 줄로 답한다. 대신 크기가\n+둘에서 열하나까지 벌어지는데, 그것을 받아들였다. B02를 \"값 타입\"과 \"로더\"로 다시 자르면 앞 조각이\n+혼자서는 아무 일도 하지 않아 묶음 조건 3의 \"미완성 task 없음\"을 어긴다.\n+\n+### 크기 위험\n+\n+B02와 B08이 열하나·열이라 가장 크다. 둘 다 더 쪼개면 목적이 흩어지므로 브랜치는 하나로 두고\n+**안에서는 커밋으로 나눈다.** B01·B02의 007 회귀 확인(T011·T021)도 커밋 경계로 둔다.\n+\n+### 묶음에 넣지 않은 것\n+\n+없다. T001~T078과 T018a 전부가 어느 묶음엔가 속한다. 다만 **B06은 외부 결정을 기다린다** —\n+[004](../004-backtest-execution/spec.md)의 규칙·비용 버전 조회 수단과 [001](../001-etf-market-data/spec.md)의\n+평가 기간 엔드포인트가 정해지기 전에는 시작할 수 없다. 막히지 않은 열하나가 함께 서지 않도록\n+따로 뺀 것이다.\n+\n ## Complexity Tracking\n \n | 항목 | 왜 단순한 방법으로 끝내지 않았나 | 기각한 더 단순한 방법 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/plan.md",
+          "old_path": "specs/003-strategy-settings/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,7 +26,9 @@\n \n Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**. 스키마 변경(마이그레이션)도 없다 — 등록표는 자원 파일이고 설정값은 브라우저에만 둔다([research](research.md) R1·R8).\n \n-**`T###`는 브랜치 단위가 아니다.** constitution \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로 정한다. 아래 78개는 실행 지시의 최소 단위이고, 묶음 제안은 \"Dependencies & Execution Order\"의 \"묶음(브랜치·MR) 제안\"에 있다. 묶음을 어떻게 잡을지는 개발자가 정한다.\n+**`T###`는 티켓·브랜치 단위가 아니다.** constitution \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로 정한다.\n+아래 79개는 실행 지시의 최소 단위이고, **티켓·브랜치·MR의 단위는 묶음 B01~B12 열둘이다** —\n+\"Dependencies & Execution Order\"의 \"작업 묶음\" 표와 [plan.md](plan.md) \"작업 묶음 구성\"에 있다.\n \n ## Path Conventions\n \n@@ -259,30 +261,69 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - **US3 (P2)**: US1의 T032·T037·T039·T042와 US2의 `AxisNumberField`(T054)를 쓴다. 백엔드 태스크 없음\n - **US4 (P3)**: US1의 T040만. 가장 작다\n \n-### 묶음(브랜치·MR) 제안\n-\n-constitution \"Jira 연계\"에 따라 묶음은 개발자가 정한다. 아래는 독립적으로 검증·롤백할 수 있는 단위로 나눈 제안이다. **plan.md에는 묶음 표가 없으므로** 채택하면 plan.md에 옮겨 적는다.\n-\n-| 묶음 | 담는 태스크 | position | 선행 |\n-|---|---|---|---|\n-| M1 등록표 이관 | T001·T002·T007~T022 | `be` | 없음 |\n-| M2 등록표 조회 API | T003·T004·T023~T028 | `be` | M1 |\n-| M3 전략 화면(US1) | T005·T006·T029~T046 | `fe` | 없음(계약으로 병행). 연동 확인만 M2 뒤 |\n-| M4 접수 재검증(US2 BE) | T047~T051 | `be` | M1 |\n-| M5 상세 설정(US2 FE) | T052~T064 | `fe` | M3 |\n-| M6 기간·금액·조건과 자동 비교 진입(US3·US4) | T065~T071 | `fe` | M5(`AxisNumberField`) |\n-| M7 문서·정리·전체 검증 | T072~T078 | `docs`(코드 정리 T075·T076은 각 파트 브랜치에서) | 전부 |\n+### 작업 묶음 = 티켓·브랜치·MR 단위 (B01~B12)\n+\n+**`T###`는 티켓 단위가 아니다.** constitution \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로 정한다.\n+아래 열둘이 Jira Task·브랜치·MR의 단위이고, 79개 태스크는 그 안에서 실행 지시의 최소 단위로 남는다.\n+같은 표가 [plan.md](plan.md) \"작업 묶음 구성\"에 있다.\n+\n+**묶음 이름을 계층이 아니라 목적으로 붙였다.** \"값 타입 확장\" 같은 이름은 그 MR이 끝나도 무엇이\n+달라지는지 말해 주지 않는다. 아래 이름은 그대로 Jira Task 제목이 되고, MR을 열어 본 사람이\n+\"이게 머지되면 무엇이 되나\"를 한 줄로 안다.\n+\n+| 묶음 · 티켓 | Jira Task 제목 | 포함 T### | 수 | position | 선행 |\n+|---|---|---|---|---|---|\n+| B01 · [233](https://ssafy.atlassian.net/browse/S15P21E205-233) | `[BE] 등록표를 003 소유로 옮긴다` | T001, T007~T012 | 7 | `be` | 없음 |\n+| B02 · [234](https://ssafy.atlassian.net/browse/S15P21E205-234) | `[BE] 등록표가 화면에 필요한 항목을 담는다` | T013~T022(T018a 포함) | 11 | `be` | B01 |\n+| B03 · [235](https://ssafy.atlassian.net/browse/S15P21E205-235) | `[BE] 전략·파라미터 등록표 조회 API` | T003, T004, T023~T028 | 8 | `be` | B02 |\n+| B04 · [236](https://ssafy.atlassian.net/browse/S15P21E205-236) | `[FE] 전략 카드 다섯을 보인다` | T005, T006, T029, T030, T033~T035, T043 | 8 | `fe` | B03의 계약(T003·T004) |\n+| B05 · [237](https://ssafy.atlassian.net/browse/S15P21E205-237) | `[FE] 카드를 골라 분석을 시작한다` | T031, T032, T036~T038, T040, T041, T044~T046 | 10 | `fe` | B04 |\n+| B06 · [238](https://ssafy.atlassian.net/browse/S15P21E205-238) | `[FE] 분석 요청과 평가 기간을 연결한다` | T039, T042 | 2 | `fe` | B05 + **외부 결정** |\n+| B07 · [239](https://ssafy.atlassian.net/browse/S15P21E205-239) | `[BE] 접수 시점에 설정을 다시 검증한다` | T002, T047~T051 | 6 | `be` | B02 |\n+| B08 · [240](https://ssafy.atlassian.net/browse/S15P21E205-240) | `[FE] 상세 설정을 열어 값을 바꾼다` | T052~T057, T060~T063 | 10 | `fe` | B05 |\n+| B09 · [241](https://ssafy.atlassian.net/browse/S15P21E205-241) | `[FE] 바꾼 값을 그 자리에서 판정한다` | T058, T059, T064 | 3 | `fe` | B08 |\n+| B10 · [242](https://ssafy.atlassian.net/browse/S15P21E205-242) | `[FE] 기간·금액·조건을 바꾼다` | T065~T069 | 5 | `fe` | B09 |\n+| B11 · [243](https://ssafy.atlassian.net/browse/S15P21E205-243) | `[FE] 설정 조합 자동 비교로 넘어간다` | T070, T071 | 2 | `fe` | B05 |\n+| B12 · [244](https://ssafy.atlassian.net/browse/S15P21E205-244) | `[DOCS] 문서 동기화와 최종 검증` | T072~T078 | 7 | `fe` | 전부 |\n \n ```text\n-M1 ─▶ M2 ─────────────┐\n- └──▶ M4              ├─▶ (연동 확인) ─▶ M7\n-M3 ─▶ M5 ─▶ M6 ───────┘\n+B01 ─▶ B02 ─┬─▶ B03 ─▶ B04 ─▶ B05 ─┬─▶ B08 ─▶ B09 ─▶ B10 ─┐\n+            │                       ├─▶ B11                 ├─▶ B12\n+            └─▶ B07                 └─▶ B06 (외부 결정 대기) ┘\n ```\n \n-- **M1이 나머지 백엔드 전부를 막는다.** 등록표가 옮겨지기 전에는 `strategy` 패키지에 조회 서비스를 둘 수 없다\n-- **M3은 M1·M2를 기다리지 않는다** — [contracts/strategy-registry-api.md](contracts/strategy-registry-api.md)가 응답 모양을 고정했고 T006 픽스처로 화면 테스트가 돈다. 실제 서버와 붙여 보는 것만 M2 뒤다\n-- **M4는 M2와 병렬이다** — 둘 다 M1의 포트만 쓴다. 파일이 겹치지 않는다(`strategy/application/service/` 안의 서로 다른 클래스, `backtest/application/service/BacktestService.java`는 M4만)\n-- **묶음 안의 태스크를 절반만 올리지 않는다.** 특히 M1은 §4의 2단계·4단계 확인(T011·T021)이 통과한 상태로만 MR을 올린다\n+**각 묶음이 끝나면 무엇이 달라지나.** 이것이 묶음 조건 1(하나의 목적)을 만족하는지 보는 기준이다.\n+\n+| 묶음 | 끝나면 |\n+|---|---|\n+| B01 | 등록표의 소유가 003으로 넘어오고 007이 그대로 돈다. 의존 방향이 규칙으로 선다 |\n+| B02 | 등록표가 활성 여부·워밍업 규칙·전략별 축·분석 조건을 담는다 |\n+| B03 | 화면이 읽을 수 있는 조회 주소가 열린다 |\n+| B04 | 다섯 카드가 이름과 한 줄 설명으로 보이고, 못 고르는 카드는 이유가 함께 보인다 |\n+| B05 | 카드 한 번과 '분석하기' 한 번으로 요청이 만들어진다 |\n+| B06 | 그 요청이 실제로 서버로 나간다 |\n+| B07 | 화면을 우회한 요청도 서버가 거절한다 |\n+| B08 | 상세 설정에서 등록 범위 밖 값이 저장되지 않는다 |\n+| B09 | 규칙 위반과 워밍업 재판정이 입력 즉시 보인다 |\n+| B10 | 분석 기간과 시작 금액을 허용 범위 안에서 바꾼다 |\n+| B11 | 고른 전략 하나가 007의 확인 화면으로 넘어간다 |\n+| B12 | 임시 대역의 잔재가 없고 양쪽 빌드가 돈다 |\n+\n+**묶음을 계층으로 더 쪼개지 않는다.** B02를 \"값 타입\"과 \"로더\"로 나누면 앞 조각이 혼자서는\n+아무것도 이루지 않는다. 묶음 조건 3의 \"미완성 task가 없다\"를 어긴다. 크기를 고르게 맞추는 것보다\n+목적이 하나인 편이 중요하다 — 그래서 크기가 둘에서 열하나까지 벌어진다.\n+\n+- **B01이 나머지 백엔드 전부를 막는다.** 등록표가 옮겨지기 전에는 `strategy` 패키지에 조회 서비스를 둘 수 없다\n+- **B04는 B03의 계약 부분만 기다린다** — [contracts/strategy-registry-api.md](contracts/strategy-registry-api.md)가\n+  응답 모양을 고정했고 T006 픽스처로 화면 테스트가 돈다. B03이 계약(T003·T004)을 먼저 커밋하면\n+  머지 전에도 프런트엔드가 출발할 수 있다. 실제 서버와 붙여 보는 것만 B03 머지 뒤다\n+- **B07은 B03과 병렬이다** — 둘 다 B02의 포트만 쓰고 파일이 겹치지 않는다\n+  (`strategy/application/service/` 안의 서로 다른 클래스, `backtest/application/service/BacktestService.java`는 B07만)\n+- **B06은 외부 결정을 기다린다.** 따로 뺀 이유는 막히지 않은 것이 막힌 것 때문에 함께 서지 않게 하려는 것이다\n+- **묶음 안의 태스크를 절반만 올리지 않는다.** 특히 B01·B02는 §4의 2단계·4단계 확인(T011·T021)이\n+  통과한 상태로만 MR을 올린다. 그 확인은 브랜치를 나누지 말고 커밋으로 나눈다\n+- **묶음마다 Jira Task를 먼저 만들고 그 번호로 브랜치를 만든다**(constitution). 브랜치는\n+  `{type}({position})/{티켓번호}-{설명}`이며 B01은 이동이라 `refactor`, B12는 `docs`, 나머지는 `feat`다\n \n ### 파트 사이 순서\n \n@@ -331,21 +372,25 @@ Task: \"T043\" / \"T044\" / \"T045\" / \"T046\"               # 테스트 병렬\n \n ### MVP First (User Story 1만)\n \n-1. Phase 1 Setup(T001~T006)\n-2. Phase 2 Foundational(T007~T022) = 묶음 **M1** — **여기가 가장 위험하다. 007이 실제로 쓰는 등록표를 옮긴다.** T011·T021의 확인을 건너뛰지 않는다\n-3. Phase 3 US1 — 백엔드(T023~T028) = **M2**, 프론트엔드(T029~T046) = **M3**\n-4. **멈추고 검증**: quickstart 2·3·3-1·4·9. ①·②가 미결이면 4는 \"막힌 상태가 정직하게 보이는가\"까지\n-5. 데모 — 카드를 고르고 기본값으로 분석 요청을 조립하는 데까지\n+1. **B01** 등록표를 003 소유로 옮긴다 — **여기가 가장 위험하다. 007이 실제로 쓰는 등록표를 건드린다.** T011·T012의 확인을 건너뛰지 않는다\n+2. **B02** 등록표가 화면에 필요한 항목을 담는다 — T021의 확인으로 007이 그대로 도는지 다시 본다\n+3. **B03** 조회 API를 연다. 계약(T003·T004)을 먼저 커밋해 B04가 출발할 수 있게 한다\n+4. **B04** 다섯 카드를 보인다\n+5. **B05** 카드를 골라 분석을 시작한다\n+6. **멈추고 검증**: quickstart 2·3·3-1·4·9. ①·②가 미결이면 4는 \"막힌 상태가 정직하게 보이는가\"까지\n+7. 데모 — 카드를 고르고 기본값으로 분석 요청을 조립하는 데까지\n \n-**MVP = 묶음 3개(M1~M3) = 브랜치·MR 3개.** T001~T046이다.\n+**MVP = 묶음 다섯(B01~B05) = 티켓·브랜치·MR 다섯.** T001~T046 가운데 T039·T042를 뺀 것이다(그 둘은 B06).\n \n ### Incremental Delivery\n \n-1. Setup + Foundational(M1) → 007이 그대로 돌고 등록표가 003 소유가 된다\n-2. US1(M2·M3) → quickstart 2·3·4·9 → **MVP 데모**\n-3. US2(M4·M5) → quickstart 5·5-1·6·7·10 → 범위·규칙·재판정\n-4. US3·US4(M6) → quickstart 8·11 → 조건 확인과 007 진입\n-5. Polish(M7) → 문서·잔재·전체 검증\n+1. B01·B02 → 등록표가 003 소유가 되고 007이 그대로 돈다\n+2. B03·B04·B05 → quickstart 2·3·4·9 → **MVP 데모**\n+3. B07 → quickstart 5-1 뒷부분 → 화면을 우회한 요청도 서버가 막는다\n+4. B08·B09 → quickstart 5·6·7·10 → 범위·규칙·재판정\n+5. B10·B11 → quickstart 8·11 → 조건 확인과 007 진입\n+6. B06 → 외부 결정이 나면 분석 요청을 실제로 내보낸다\n+7. B12 → 문서·잔재·전체 검증\n \n 릴리즈는 매주 금요일이므로(constitution Git 규칙) 한 주에 닫을 묶음을 골라 쌓는다.\n \n@@ -353,7 +398,7 @@ Task: \"T043\" / \"T044\" / \"T045\" / \"T046\"               # 테스트 병렬\n \n 구현을 막거나 방향을 바꿀 수 있는 사실이다. 티켓으로 만들지 않고 여기와 MR 본문에 적는다(AGENTS.md \"곁가지는 티켓으로 만들지 않는다\").\n \n-① **001의 `GET /sectors/evaluation-window`가 아직 없다.** 001 `tasks.md` T017이 \"워밍업이 003 등록표에서 와야 하는데 003이 없어 만들 수 없다\"며 보류했다. 003이 등록표를 열면(M1·M2) 001이 붙일 수 있다. 다만 설정을 바꿀 때마다 다시 판정하려면(FR-011) 그 엔드포인트가 `strategy=` 대신(또는 더해) `warmupTradingDays=`를 받아야 한다 — 001 계약 `sector-api.md`의 변경이라 **001과 합의할 일이지 003이 정할 일이 아니다.** 그 전까지 T042는 카드를 막힌 상태로 두고 값을 지어내지 않는다.\n+① **001의 `GET /sectors/evaluation-window`가 아직 없다.** 001 `tasks.md` T017이 \"워밍업이 003 등록표에서 와야 하는데 003이 없어 만들 수 없다\"며 보류했다. 003이 등록표를 열면(B01~B03) 001이 붙일 수 있다. 다만 설정을 바꿀 때마다 다시 판정하려면(FR-011) 그 엔드포인트가 `strategy=` 대신(또는 더해) `warmupTradingDays=`를 받아야 한다 — 001 계약 `sector-api.md`의 변경이라 **001과 합의할 일이지 003이 정할 일이 아니다.** 그 전까지 T042는 카드를 막힌 상태로 두고 값을 지어내지 않는다.\n \n ② **분석 요청의 `rulesVersion`(004 필수 필드)과 `costProfileVersion`을 화면이 알 길이 없다.** [data-model](data-model.md) §7 \"확인된 빈 구멍\"의 세 갈래(004가 조회 API를 연다 / 003 등록표 응답에 싣는다 / 화면은 적용 여부만 보인다) 중 어느 쪽인지 **004와 함께 정한다.** T039는 이 둘을 `analysisVersions.ts` 한 파일에 격리했으므로 결정 뒤 그 파일만 바뀐다. 결정 전에는 '분석하기'가 막힌다 — US1 종단 데모가 이 결정 뒤라는 뜻이다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2810365": []
+  }
+}

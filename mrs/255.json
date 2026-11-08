@@ -1,0 +1,903 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 953567,
+    "iid": 255,
+    "project_id": 1444456,
+    "title": "feat(be): 사례 연결 메시지 계약 v1을 양쪽 코드에 고정",
+    "description": "## 작업 내용 요약\n\n백엔드와 워커가 같은 픽스처 일곱 개로 사례 연결 메시지 계약 v1을 고정한다. 한쪽 스키마만 고치면 다른 쪽 빌드가 깨진다. 구간 계산·토폴로지 선언·발행 구현은 이 MR에 없다.\n\n## 관련 티켓\n\nS15P21E205-363\n\n## 주요 변경 사항\n\n- 작업·이벤트 메시지 계약 v1 확정. 백엔드 `port/message` record와 워커 pydantic 모델이 `docs/specs/regime-link-messaging/examples/`를 양쪽에서 읽어 round-trip으로 대조한다.\n- 계약이 정한 `return` 키는 Java·Python 모두 예약어다. 메시지 DTO에 Jackson 애노테이션을 달 수 없어(ArchUnit 규칙 7) Java는 직렬화 쪽 mixin으로, Python은 alias로 이름을 맞춘다.\n- 워커 계약 모델은 `extra=\"forbid\"`다. 계약에 없는 키가 오면 계약 어긋남으로 보고 멈춘다.\n- `FINISHED` payload가 `status`와 `result`·`error`의 짝을 검증해, 결과 없는 COMPLETED를 발행 전에 막는다.\n- 발행 실패 예외에 이름을 준다(`RegimeLinkPublishFailedException`). 구현이 다른 유형을 새로 만들지 않는 것이 포트의 계약이다.\n- 워커 토폴로지 상수는 계약 문서와 대조한다. 백엔드 `RegimeLinkRabbitConfig`(T030)가 생기면 Java 상수 대조로 바뀐다.\n\n## 테스트\n\n- `cd backend && ./gradlew spotlessApply build` — 1820건 통과, skipped 4(기존 Docker·라이브 API 건)\n- `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` — 456건 통과, skipped 1\n- skip 하나는 T030 전이라 도는 Java 상수 대조다. 패키지 디렉터리 존재를 닻으로 확인해 경로가 틀렸을 때 영영 건너뛰지 않게 했다.\n\n## 리뷰 포인트\n\n- 워커 `extra=\"forbid\"`: 백테스트 계약은 같은 자리를 `extra=\"ignore\"`로 둔다. 백엔드와 워커가 따로 배포되므로, 필드를 더하기만 하는 변경도 배포 시차 동안 작업을 DLQ로 보낸다. T006이 요구한 설정이라 그대로 두었는데 계약 수준에서 유지할지 판단이 필요하다.\n- 직렬화를 `RegimeLinkMessageJson`으로 따로 둔 것: 백테스트 매퍼와 설정이 같지만 스키마 버전이 다른 계약이라 인스턴스를 나눴다. 설정 코드가 두 곳에 있는 것은 감수했다.\n- 계약에 DLX에서 DLQ로 가는 routing key 이름이 없다. T030이 정해야 한다.",
+    "state": "merged",
+    "created_at": "2026-09-21T09:15:31.255+09:00",
+    "updated_at": "2026-09-21T09:21:29.319+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-21T09:21:29.342+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/363-regime-link-contract",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b485b04040158f0ab7c1511560672b146de2be33",
+    "merge_commit_sha": "e58f1648c2770f9d067dba52d57ad70b29c83456",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T09:15:33.207+09:00",
+    "reference": "!255",
+    "references": {
+      "short": "!255",
+      "relative": "!255",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!255"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/255",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 953567,
+    "iid": 255,
+    "project_id": 1444456,
+    "title": "feat(be): 사례 연결 메시지 계약 v1을 양쪽 코드에 고정",
+    "description": "## 작업 내용 요약\n\n백엔드와 워커가 같은 픽스처 일곱 개로 사례 연결 메시지 계약 v1을 고정한다. 한쪽 스키마만 고치면 다른 쪽 빌드가 깨진다. 구간 계산·토폴로지 선언·발행 구현은 이 MR에 없다.\n\n## 관련 티켓\n\nS15P21E205-363\n\n## 주요 변경 사항\n\n- 작업·이벤트 메시지 계약 v1 확정. 백엔드 `port/message` record와 워커 pydantic 모델이 `docs/specs/regime-link-messaging/examples/`를 양쪽에서 읽어 round-trip으로 대조한다.\n- 계약이 정한 `return` 키는 Java·Python 모두 예약어다. 메시지 DTO에 Jackson 애노테이션을 달 수 없어(ArchUnit 규칙 7) Java는 직렬화 쪽 mixin으로, Python은 alias로 이름을 맞춘다.\n- 워커 계약 모델은 `extra=\"forbid\"`다. 계약에 없는 키가 오면 계약 어긋남으로 보고 멈춘다.\n- `FINISHED` payload가 `status`와 `result`·`error`의 짝을 검증해, 결과 없는 COMPLETED를 발행 전에 막는다.\n- 발행 실패 예외에 이름을 준다(`RegimeLinkPublishFailedException`). 구현이 다른 유형을 새로 만들지 않는 것이 포트의 계약이다.\n- 워커 토폴로지 상수는 계약 문서와 대조한다. 백엔드 `RegimeLinkRabbitConfig`(T030)가 생기면 Java 상수 대조로 바뀐다.\n\n## 테스트\n\n- `cd backend && ./gradlew spotlessApply build` — 1820건 통과, skipped 4(기존 Docker·라이브 API 건)\n- `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` — 456건 통과, skipped 1\n- skip 하나는 T030 전이라 도는 Java 상수 대조다. 패키지 디렉터리 존재를 닻으로 확인해 경로가 틀렸을 때 영영 건너뛰지 않게 했다.\n\n## 리뷰 포인트\n\n- 워커 `extra=\"forbid\"`: 백테스트 계약은 같은 자리를 `extra=\"ignore\"`로 둔다. 백엔드와 워커가 따로 배포되므로, 필드를 더하기만 하는 변경도 배포 시차 동안 작업을 DLQ로 보낸다. T006이 요구한 설정이라 그대로 두었는데 계약 수준에서 유지할지 판단이 필요하다.\n- 직렬화를 `RegimeLinkMessageJson`으로 따로 둔 것: 백테스트 매퍼와 설정이 같지만 스키마 버전이 다른 계약이라 인스턴스를 나눴다. 설정 코드가 두 곳에 있는 것은 감수했다.\n- 계약에 DLX에서 DLQ로 가는 routing key 이름이 없다. T030이 정해야 한다.",
+    "state": "merged",
+    "created_at": "2026-09-21T09:15:31.255+09:00",
+    "updated_at": "2026-09-21T09:21:29.319+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-21T09:21:29.342+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/363-regime-link-contract",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b485b04040158f0ab7c1511560672b146de2be33",
+    "merge_commit_sha": "e58f1648c2770f9d067dba52d57ad70b29c83456",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T09:15:33.207+09:00",
+    "reference": "!255",
+    "references": {
+      "short": "!255",
+      "relative": "!255",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!255"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/255",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "25",
+    "latest_build_started_at": "2026-09-21T09:15:41.702+09:00",
+    "latest_build_finished_at": "2026-09-21T09:21:28.421+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 210836,
+      "iid": 232,
+      "project_id": 1444456,
+      "sha": "b485b04040158f0ab7c1511560672b146de2be33",
+      "ref": "feat(be)/363-regime-link-contract",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T09:15:41.594+09:00",
+      "updated_at": "2026-09-21T09:21:28.429+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/210836"
+    },
+    "head_pipeline": {
+      "id": 210836,
+      "iid": 232,
+      "project_id": 1444456,
+      "sha": "b485b04040158f0ab7c1511560672b146de2be33",
+      "ref": "feat(be)/363-regime-link-contract",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T09:15:41.594+09:00",
+      "updated_at": "2026-09-21T09:21:28.429+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/210836",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T09:15:41.702+09:00",
+      "finished_at": "2026-09-21T09:21:28.421+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/210836",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "head_sha": "b485b04040158f0ab7c1511560672b146de2be33",
+      "start_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a73fe245bd7eecc8c761b16d1c1833f0cbefad1f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2843840,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T09:15:31.351+09:00",
+          "updated_at": "2026-09-21T09:15:31.355+09:00",
+          "system": true,
+          "noteable_id": 953567,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 255,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0bda7f431df7cca2a241f67f2d1acc91e4a374f6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2843841,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T09:15:31.371+09:00",
+          "updated_at": "2026-09-21T09:15:31.378+09:00",
+          "system": true,
+          "noteable_id": 953567,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 255,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "11adf93294598957ec1391dada165331f4b8a0d0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2843843,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 계약 기반 테스트 (Contract-First Design):** Java(Jackson Mixin)와 Python(Pydantic Alias) 환경 각각에서 동일한 JSON 픽스처(Round-trip)를 활용해 양방향 직렬화/역직렬화 호환성을 완벽하게 검증하도록 설계되었습니다.\n- **방어적 프로그래밍과 도메인 불변식 유지:** Pydantic 모델 내부에 명시적인 `@model_validator`를 두어 `COMPLETED` 상태에 결과가 누락되거나 `FAILED` 상태에 에러 정보가 빠지는 등의 모순된 상태 조합을 발행 전 원천 차단한 점이 매우 훌륭합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (Java record와 Python pydantic 모델 간의 예약어(`return`) 처리, `extra=\"forbid\"`를 통한 스키마 드리프트 방지, 명확한 예외 및 에러 코드 매핑이 매우 정교하게 구현되어 있습니다.)\n\n### 테스트 제안\n- **필드 누락 및 예기치 않은 추가 필드 테스트:** `extra=\"forbid\"` 설정이 정상적으로 작동하는지 확인하기 위해, 정의되지 않은 임의의 필드가 포함된 메시지를 수신했을 때 Pydantic `ValidationError`가 발생하는지 검증하는 테스트 시나리오를 추가합니다.\n- **상태-페이로드 정합성 검증 테스트:** `RegimeLinkFinishedPayload`에서 `status=COMPLETED`이면서 `error`가 존재하거나, `status=FAILED`이면서 `result`가 존재하는 오염된 페이로드가 주어졌을 때 모델 검증 단계에서 거부되는지 확인하는 시나리오를 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b485b04040158f0ab7c1511560672b146de2be33 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T09:15:40.902+09:00",
+          "updated_at": "2026-09-21T09:15:40.902+09:00",
+          "system": false,
+          "noteable_id": 953567,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 255,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4d9c9bc00a23535b1b28e9877d54185a5b5f954a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2843844,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for b485b04040158f0ab7c1511560672b146de2be33 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T09:15:43.795+09:00",
+          "updated_at": "2026-09-21T09:15:43.799+09:00",
+          "system": true,
+          "noteable_id": 953567,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 255,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e919dde2c831a2d6c98a258dc4055c2f57d418a5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2843879,
+          "type": null,
+          "body": "mentioned in commit e58f1648c2770f9d067dba52d57ad70b29c83456",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T09:21:29.396+09:00",
+          "updated_at": "2026-09-21T09:21:29.402+09:00",
+          "system": true,
+          "noteable_id": 953567,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 255,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2229282,
+      "head_commit_sha": "b485b04040158f0ab7c1511560672b146de2be33",
+      "base_commit_sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "start_commit_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "created_at": "2026-09-21T09:15:31.835+09:00",
+      "merge_request_id": 953567,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "2d429675150ef7ca23cd01a88378e886c8db3099"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2229282,
+      "head_commit_sha": "b485b04040158f0ab7c1511560672b146de2be33",
+      "base_commit_sha": "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785",
+      "start_commit_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "created_at": "2026-09-21T09:15:31.835+09:00",
+      "merge_request_id": 953567,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "2d429675150ef7ca23cd01a88378e886c8db3099",
+      "commits": [
+        {
+          "id": "b485b04040158f0ab7c1511560672b146de2be33",
+          "short_id": "b485b040",
+          "created_at": "2026-09-21T09:02:55.000+09:00",
+          "parent_ids": [
+            "da7736bed171fcc972df650f202d871ceaf6c7e9"
+          ],
+          "title": "fix(be): 사례 연결 계약의 코드리뷰 지적을 반영한다",
+          "message": "fix(be): 사례 연결 계약의 코드리뷰 지적을 반영한다\n\n발행 실패 예외에 이름을 준다(`RegimeLinkPublishFailedException`). 포트 javadoc이\n유형 없이 \"예외를 던진다\"고만 적어 호출자가 무엇을 잡을지 정할 수 없었다.\n\n`FINISHED` payload가 `status`와 `result`·`error`의 짝을 검증한다. 이벤트를 만드는\n쪽이 워커라, 결과 없는 COMPLETED 는 발행 뒤 백엔드에서야 드러나고 그때는 이미\nACK 한 뒤다.\n\n계약 상수 대조에서 조용히 지나가던 세 자리를 막는다. 대조 대상은 손으로 적은\n목록 대신 모듈에서 걷고, 계약 문서의 이름은 글자 종류를 제한하지 않는 방식으로\n읽으며, Java 파일이 없어 skip 할 때는 패키지 존재를 닻으로 확인한다. 픽스처에\n나오지 않는 enum 값도 양쪽 집합을 직접 맞춘다.\n\n워커 예외 이름을 백테스트 경로와 가른다 — 같은 이름의 무관한 예외는 import 를\n잘못 적은 `except` 가 조용히 아무것도 잡지 않게 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-21T09:02:55.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-21T09:02:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b485b04040158f0ab7c1511560672b146de2be33"
+        },
+        {
+          "id": "da7736bed171fcc972df650f202d871ceaf6c7e9",
+          "short_id": "da7736be",
+          "created_at": "2026-09-20T23:52:28.000+09:00",
+          "parent_ids": [
+            "d1654d8ebc8ab72d2ce966dac1ab2ce1b2612785"
+          ],
+          "title": "feat(be): 사례 연결 메시지 계약 v1을 양쪽 코드에 고정",
+          "message": "feat(be): 사례 연결 메시지 계약 v1을 양쪽 코드에 고정\n\n백엔드 `regimelink/application/port/message`의 record와 워커\n`worker/regime_link/contracts.py`의 pydantic 모델이 같은 픽스처 7개를 읽어\nround-trip을 검증한다. 한쪽만 고치면 다른 쪽 빌드가 깨진다.\n\n계약이 정한 `return` 키는 Java·Python 모두 예약어라 필드 이름으로 쓸 수 없다.\nJava는 메시지 DTO에 Jackson 애노테이션을 달 수 없어(ArchUnit 규칙 7) mixin을\n두는 `RegimeLinkMessageJson`을, Python은 pydantic alias를 쓴다.\n\n워커 계약 상수는 `RegimeLinkRabbitConfig`(T030)가 아직 없어 계약 문서와\n대조하고, Java 파일이 생기면 대조가 저절로 살아난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T23:52:28.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T23:52:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da7736bed171fcc972df650f202d871ceaf6c7e9"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+package com.ssafy.thorp.regimelink.application.exception;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+\n+/**\n+ * 사례 연결 작업 메시지 발행 실패. 브로커 장애는 도메인 규칙 위반이 아니라 유스케이스 수행 실패라 application 계층에 둔다.\n+ *\n+ * <p>{@code RegimeLinkJobPublisher.publish}가 브로커 확인을 받지 못했을 때 던지는 <b>유일한</b> 예외다. 호출자가 무엇을 잡아야 하는지\n+ * 계약에 이름으로 박아 두는 것이 목적이다 — 이름이 없으면 발행 실패가 아무도 잡지 않은 채 접수 경로 밖으로 번진다.\n+ *\n+ * <p>링크를 발행된 것으로 기록하기 전에 던져 그 저장을 되돌린다. 큐에 들어가지 못한 링크가 {@code QUEUED}로 남지 않게 하는 것이 목적이다.\n+ */\n+public class RegimeLinkPublishFailedException extends BusinessException {\n+\n+    public RegimeLinkPublishFailedException(String linkId, Throwable cause) {\n+        super(ErrorCode.BROKER_UNAVAILABLE, \"사례 연결 계산 작업을 큐에 넣지 못했습니다: linkId=\" + linkId, cause);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/exception/RegimeLinkPublishFailedException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/exception/RegimeLinkPublishFailedException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/**\n+ * 결과가 어떤 자료 위에서 계산됐는가. 010과 같이 <b>항상</b> {@code HISTORICAL_REVISION}이다 — 최신 개정자료로 과거를 다시 본 역사 비교이지\n+ * 당시 발표값 재현이 아니다(spec FR-015).\n+ */\n+public enum BasisKind {\n+    HISTORICAL_REVISION\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/BasisKind.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/BasisKind.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,7 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/** 체결 방향. 004 {@code fills[].side}를 그대로 옮긴 값이라 진입·청산(LONG·SHORT)이 아니라 매수·매도다. */\n+public enum FillSide {\n+    BUY,\n+    SELL\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/FillSide.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/FillSide.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/**\n+ * {@code FINISHED(FAILED)}의 실패 사유(계약 §FINISHED.error). 네 값이 전부이며 워커는 {@code DATA_INSUFFICIENT}를 내지\n+ * 않는다.\n+ *\n+ * <p>계약 위반(JSON·스키마 오류)은 이 목록에 없다 — 이벤트가 아니라 reject → DLQ로 가고, 백엔드가 DLQ를 소비해 링크를 {@code\n+ * FAILED(SYSTEM_FAILURE)}로 끝낸다.\n+ */\n+public enum RegimeLinkErrorCode {\n+    /** 메시지의 입력 행·필드가 모자라다. 워커는 채우지 않는다 */\n+    INPUT_INCOMPLETE,\n+    /** 시장 자료 정합 검증 실패 */\n+    MARKET_DATA_MISSING,\n+    /** 계약은 맞지만 계산할 수 없는 조합 */\n+    INVALID_REQUEST,\n+    /** 그 밖의 결정적 오류 */\n+    ENGINE_ERROR\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkErrorCode.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkErrorCode.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+import java.time.Instant;\n+\n+/**\n+ * 워커 → 백엔드 이벤트 envelope(schemaVersion 1). {@code regime-link.events} 큐로 들어온다.\n+ *\n+ * <p>계약 기준: {@code docs/specs/regime-link-messaging/README.md} \"이벤트 봉투\", 픽스처 {@code event-*.json}.\n+ * 작업과 달리 {@code schemaVersion}이 본문 첫 필드에 있다.\n+ *\n+ * <p>type별 payload: {@code STARTED} → {@link RegimeLinkStartedPayload}, {@code FINISHED} → {@link\n+ * RegimeLinkFinishedPayload}. 수신 측(infrastructure)은 본문 {@code type}을 먼저 읽고 그에 맞는 {@code P}로 역직렬화한다.\n+ *\n+ * @param eventId 이벤트 고유 ID. 재발행해도 유지한다(멱등 키)\n+ * @param linkId 연결 식별자. 작업의 {@code job.linkId}와 같다\n+ * @param attempt 이 이벤트가 속한 발행 시도 번호. 작업의 {@code job.attempt}와 같다\n+ * @param occurredAt UTC\n+ */\n+public record RegimeLinkEvent<P>(\n+        int schemaVersion,\n+        String eventId,\n+        String linkId,\n+        int attempt,\n+        RegimeLinkEventType type,\n+        Instant occurredAt,\n+        P payload) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkEvent.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkEvent.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/**\n+ * 워커 → 백엔드 이벤트 종류. 백테스트와 달리 진행률({@code PROGRESS})이 없다 — 63거래일은 한 번에 끝난다.\n+ *\n+ * <p>payload는 {@code STARTED} → {@link RegimeLinkStartedPayload}, {@code FINISHED} → {@link\n+ * RegimeLinkFinishedPayload}다.\n+ */\n+public enum RegimeLinkEventType {\n+    STARTED,\n+    FINISHED\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkEventType.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkEventType.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,30 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+\n+/**\n+ * {@code FINISHED} 이벤트 payload. 계산이 실패해도 <b>정상 결과</b>로 발행되므로 이 이벤트가 왔다는 것은 워커가 끝까지 처리했다는 뜻이다.\n+ *\n+ * <p>{@code COMPLETED}면 {@code result}가 있고 {@code error}가 없다. {@code FAILED}면 반대다. 둘 다 실린 payload는\n+ * 계약 위반이며 백엔드가 이벤트를 반영하기 전에 막는다.\n+ *\n+ * @param partial 구간 안 상장폐지로 63거래일을 채우지 못했다. {@code window21}은 언제나 완성이라 이 값과 무관하다\n+ * @param delistedOn {@code partial=true}일 때의 상장폐지일. 그 밖에는 키가 없다\n+ */\n+public record RegimeLinkFinishedPayload(\n+        RegimeLinkStatus status,\n+        boolean partial,\n+        LocalDate delistedOn,\n+        RegimeLinkResultPayload result,\n+        ErrorDetail error,\n+        ResourceUsage resource) {\n+\n+    /**\n+     * @param message 사람이 읽는 진단 문구. 화면에 그대로 내보내지 않는다\n+     */\n+    public record ErrorDetail(RegimeLinkErrorCode code, String message) {}\n+\n+    /** 측정 기록용. 백테스트와 달리 메모리·CPU는 재지 않는다 — 63거래일 계산이라 벽시계만으로 충분하다. */\n+    public record ResourceUsage(BigDecimal wallSeconds) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkFinishedPayload.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkFinishedPayload.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,140 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * 사례 연결 작업 메시지 본문(schemaVersion 1). 백엔드가 조립해 {@code regime-link.jobs}로 발행하고 워커 {@code\n+ * worker.regime_link.slicer}가 그대로 받는다.\n+ *\n+ * <p>계약 기준: {@code docs/specs/regime-link-messaging/README.md}, 픽스처 {@code\n+ * job-continuous.json}·{@code job-fresh-cash.json}·{@code job-partial-delisted.json}. JSON 키 =\n+ * record 컴포넌트 이름(camelCase)이고 BigDecimal 문자열·null 키 생략 같은 직렬화 규칙은 infrastructure의 {@code\n+ * RegimeLinkMessageJson}이 맡는다.\n+ *\n+ * <p>{@code schemaVersion}은 본문에 없다 — 작업은 AMQP 헤더로만 버전을 싣고 이벤트만 본문 첫 필드에 싣는다(계약 \"표기 규칙\").\n+ *\n+ * <p><b>구간을 잘라 담는 것은 백엔드다.</b> 워커는 여기 실린 범위 밖을 요청하지 않고, 범위가 모자라면 채우지 않고 {@code INPUT_INCOMPLETE}로\n+ * 실패한다. 자료 부족 판정은 발행 전 백엔드 몫이라 여기까지 온 작업은 이미 계산할 수 있다고 본 것이다(research R13).\n+ */\n+public record RegimeLinkJob(\n+        JobSpec job,\n+        WindowSpec window,\n+        RunSpec run,\n+        UniverseSpec universe,\n+        MarketDataSpec marketData,\n+        InputsSpec inputs,\n+        String inputDigest) {\n+\n+    /**\n+     * @param linkId 연결 식별자. 이벤트 envelope의 {@code linkId}·{@code correlation_id}와 같다\n+     * @param attempt 이 연결의 발행 시도 번호. {@code message_id = \"RLJ-\" + linkId + \"-\" + attempt}\n+     */\n+    public record JobSpec(String linkId, int attempt, RegimeLinkScenario scenario) {}\n+\n+    /**\n+     * 사후 구간의 날짜 경계. 날짜는 전부 거래일이다.\n+     *\n+     * @param d0 사례 종료 다음 거래일. 구간의 첫날\n+     * @param d21 보조 구간의 마지막 거래일\n+     * @param d63 주 구간의 마지막 거래일\n+     * @param lastAvailable 실제로 계산할 수 있는 마지막 거래일. 구간 안 상장폐지면 <b>폐지 전날까지로 이미 줄인 값</b>이라 워커가 다시 줄이지\n+     *     않는다\n+     * @param completedTradingDays d0~lastAvailable의 거래일 수. {@code inputs.portfolioSeries}의 행 수는 이 값\n+     *     + 1이다 (baselineDate 행이 하나 더 있다)\n+     * @param baselineDate d0 직전 거래일. {@code CONTINUOUS}의 구간 기준 평가액이 이 날의 것이고 {@code FRESH_CASH}에서는\n+     *     참고용이다\n+     */\n+    public record WindowSpec(\n+            LocalDate d0,\n+            LocalDate d21,\n+            LocalDate d63,\n+            LocalDate lastAvailable,\n+            int completedTradingDays,\n+            LocalDate baselineDate) {}\n+\n+    /**\n+     * 잘라낼 원천 실행(004). 실행 자체는 고치지 않고 읽기만 한다.\n+     *\n+     * @param effectiveStart 원천 실행의 성과 집계 시작일. d0보다 뒤면 애초에 발행되지 않는다({@code OUT_OF_PERIOD})\n+     * @param initialCash {@code FRESH_CASH}의 구간 기준값\n+     * @param analyticsMethod 지표 산출 방식 버전. 결과 {@code basis}에 그대로 실린다\n+     */\n+    public record RunSpec(\n+            String runId,\n+            LocalDate effectiveStart,\n+            BigDecimal initialCash,\n+            String analyticsMethod) {}\n+\n+    public record UniverseSpec(String mappingVersion, List<UniverseItem> items) {}\n+\n+    /**\n+     * @param delistedOn 상장폐지일. 구간 안이면 그 전날까지만 계산하고 결과가 {@code partial=true}다. 폐지되지 않았으면 키가 없다\n+     */\n+    public record UniverseItem(String sectorId, String instrumentId, LocalDate delistedOn) {}\n+\n+    public record MarketDataSpec(\n+            String datasetId, String dataVersion, String benchmarkInstrumentId) {}\n+\n+    /**\n+     * 004 저장 결과에서 구간만큼 잘라 담은 입력(계약 \"구간 입력의 출처와 제약\", DEP-004-011).\n+     *\n+     * @param portfolioSeries baselineDate~lastAvailable의 <b>모든</b> 거래일\n+     * @param openingPositions baselineDate 이전 마지막 보유 스냅샷. {@code FRESH_CASH}는 빈 목록\n+     * @param dailyPositions d0~lastAvailable 안에서 004가 남긴 스냅샷(수량이 바뀐 날)만. 백엔드는 채우지 않는다\n+     * @param trades d0~lastAvailable 안의 개별 체결. 결과의 {@code trades}와 이름만 같고 모양이 다르다\n+     * @param cashFlows 분배금 등 구간 안 현금 흐름\n+     */\n+    public record InputsSpec(\n+            List<PortfolioPoint> portfolioSeries,\n+            List<Position> openingPositions,\n+            List<DailyPositions> dailyPositions,\n+            List<InputTrade> trades,\n+            List<CashFlow> cashFlows) {}\n+\n+    public record PortfolioPoint(LocalDate date, BigDecimal equity, BigDecimal cash) {}\n+\n+    public record Position(String instrumentId, long quantity) {}\n+\n+    /**\n+     * 하루치 보유 스냅샷.\n+     *\n+     * <p>{@code positions}는 <b>그날 보유 전체</b>이고 수량 0인 종목은 빠져 있다. 그래서 워커의 이월은 실린 종목만 고치는 부분 갱신이 아니라\n+     * 덮어쓰기다 — 체결로 더하되 스냅샷이 있는 날은 그 수량으로 맞춘다. 분할 같은 기업행위는 체결 밖에서 수량을 바꾸므로 체결만 누적하면 그날부터 수량이 틀린다.\n+     */\n+    public record DailyPositions(LocalDate date, List<Position> positions) {}\n+\n+    /**\n+     * 개별 체결 한 건. 004 {@code fills[]}를 그대로 옮긴 것이라 진입·청산을 묶은 거래 단위가 아니다.\n+     *\n+     * @param price 실제 체결가(호가차·슬리피지 반영)\n+     * @param referencePrice 가격 충격 전 기준가. 비용의 기준 금액은 {@code quantity × referencePrice}다\n+     * @param cashCost 체결 대금과 별도로 현금에서 빠진 비용(수수료 + 세금). 체결가에 반영된 호가차·슬리피지는 들어 있지 않다\n+     * @param reason 표시용. 004가 남기지 않았으면 키가 없다\n+     */\n+    public record InputTrade(\n+            String fillId,\n+            Instant time,\n+            String instrumentId,\n+            FillSide side,\n+            long quantity,\n+            BigDecimal price,\n+            BigDecimal referencePrice,\n+            FillCosts costs,\n+            BigDecimal cashCost,\n+            TradeReason reason) {}\n+\n+    /** 체결 한 건의 비용 네 갈래. 합계({@code total})는 두지 않는다 — 결과 쪽 {@code costs}에만 있다. */\n+    public record FillCosts(\n+            BigDecimal commission, BigDecimal spread, BigDecimal slippage, BigDecimal tax) {}\n+\n+    /**\n+     * 구간 안 현금 흐름. 체결과 이것만으로 구간 현금이 되살아난다(DEP-004-011 대조에서 확인).\n+     *\n+     * @param type 004와 같은 자유 문자열이며 현재 쓰이는 값은 {@code DISTRIBUTION} 하나다. enum으로 좁히면 004가 갈래를 늘린 날 정상\n+     *     메시지가 DLQ로 간다\n+     */\n+    public record CashFlow(LocalDate date, String instrumentId, String type, BigDecimal amount) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkJob.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkJob.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,95 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * {@code FINISHED(COMPLETED)}의 계산 결과. 011 화면의 숫자는 전부 여기서 나온다.\n+ *\n+ * <p>계약 기준: {@code docs/specs/regime-link-messaging/README.md} \"{@code FINISHED.result}\", 픽스처\n+ * {@code event-finished-completed.json}·{@code event-finished-incomplete63.json}.\n+ *\n+ * <p><b>{@code returnRate}의 JSON 키는 {@code return}이다.</b> {@code return}은 Java 예약어라 컴포넌트 이름으로 쓸 수\n+ * 없고, 이 패키지는 Jackson 애노테이션을 쓰지 않으므로(ArchUnit 규칙 7) 이름 대응은 infrastructure의 {@code\n+ * RegimeLinkMessageJson}이 mixin으로 붙인다.\n+ *\n+ * @param holdings 구간의 <b>모든</b> 거래일. 작업의 {@code dailyPositions}(수량이 바뀐 날만)와 {@code\n+ *     portfolioSeries}로 산출한다\n+ * @param trades 구간의 모든 거래. 개수가 {@code window63.tradeCount}와 같다\n+ * @param kospi {@code marketData.benchmarkInstrumentId}의 같은 날짜 종가로 낸 참고 값. 전략과의 차이는 계산하지 않는다\n+ * @param inputDigest 작업 메시지의 값을 그대로 돌려준다. 워커는 검증하지 않고 재현 대조는 백엔드 몫이다\n+ */\n+public record RegimeLinkResultPayload(\n+        WindowSummary window63,\n+        WindowSummary window21,\n+        List<Holding> holdings,\n+        List<ResultTrade> trades,\n+        Benchmark kospi,\n+        Basis basis,\n+        String inputDigest) {\n+\n+    /**\n+     * 구간 요약. {@code window21}은 d0~d21, {@code window63}은 d0~min(d63, lastAvailable)이다.\n+     *\n+     * @param tradingDays 실제 구간 길이. {@code complete}가 63(또는 21)을 다 채웠는지다\n+     * @param returnRate 구간 수익률. JSON 키는 {@code return}이며 <b>연환산하지 않는다</b>\n+     * @param maxDrawdown 구간 최대 하락 폭. 연환산하지 않는다\n+     * @param tradesPerMonth {@code tradeCount ÷ (tradingDays ÷ 21)}, 소수 둘째 자리\n+     * @param turnover 실제 체결대금 기반 회전율. 단위는 {@code turnoverBasis}가 밝힌다\n+     * @param lossContribution 섹터별 구간 손익 ÷ 전체 구간 손익. 이익 종목도 빼지 않고 들어가 몫의 합이 1이며, 전체 구간 손익이 0일 때만 키가\n+     *     없다. 이름이 '손실'이지만 이익 종목을 빼지 않는다\n+     */\n+    public record WindowSummary(\n+            int tradingDays,\n+            BigDecimal returnRate,\n+            BigDecimal maxDrawdown,\n+            int tradeCount,\n+            BigDecimal tradesPerMonth,\n+            BigDecimal turnover,\n+            TurnoverBasis turnoverBasis,\n+            WindowCosts costs,\n+            Map<String, BigDecimal> lossContribution,\n+            boolean complete) {}\n+\n+    /** 구간 비용 네 갈래와 합계. 체결 단위 {@code FillCosts}와 달리 {@code total}이 있다. */\n+    public record WindowCosts(\n+            BigDecimal commission,\n+            BigDecimal spread,\n+            BigDecimal slippage,\n+            BigDecimal tax,\n+            BigDecimal total) {}\n+\n+    /**\n+     * @param actual 종목별 그날 비중(평가액 ÷ 자산). 목표 비중이 아니라 실제 보유 비중이다\n+     */\n+    public record Holding(LocalDate date, Map<String, BigDecimal> actual) {}\n+\n+    /**\n+     * 표시용 거래 한 건. 작업의 {@code InputTrade}와 이름만 같고 모양이 다르다 — 시각 대신 날짜를, 비용 네 갈래 대신 한 값을 쓴다. 두 모델을 하나로\n+     * 합치지 않는다.\n+     *\n+     * @param cost 이 체결의 비용 합계\n+     */\n+    public record ResultTrade(\n+            LocalDate date,\n+            String instrumentId,\n+            FillSide side,\n+            long quantity,\n+            BigDecimal price,\n+            BigDecimal cost,\n+            TradeReason reason) {}\n+\n+    /** 참고 지수의 두 구간 값. 전략 결과와 나란히 두기만 하고 초과 수익을 계산하지 않는다. */\n+    public record Benchmark(BenchmarkWindow window63, BenchmarkWindow window21) {}\n+\n+    /**\n+     * @param returnRate JSON 키는 {@code return}이다\n+     */\n+    public record BenchmarkWindow(BigDecimal returnRate, BigDecimal maxDrawdown) {}\n+\n+    /** 이 숫자가 어떤 자료 위에서 나왔는가. 화면이 역사 비교임을 밝히는 근거다(spec FR-015). */\n+    public record Basis(\n+            BasisKind kind, String dataVersion, String datasetId, String analyticsMethod) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkResultPayload.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkResultPayload.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/**\n+ * 사후 구간을 무엇을 기준으로 재는가(research R3).\n+ *\n+ * <p>{@code CONTINUOUS}는 기존 실행을 그대로 이어 본 것이라 기준값이 {@code inputs.portfolioSeries}의 {@code\n+ * baselineDate} 평가액이고, {@code FRESH_CASH}는 사례 직후에 새로 시작한 것이라 기준값이 {@code run.initialCash}다. 시작 보유도\n+ * 앞의 것은 {@code openingPositions}가 있고 뒤의 것은 빈 목록이다.\n+ */\n+public enum RegimeLinkScenario {\n+    CONTINUOUS,\n+    FRESH_CASH\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkScenario.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkScenario.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+import java.time.Instant;\n+\n+/**\n+ * {@code STARTED} 이벤트 payload. 계산을 집어 들었다는 신호이며 링크를 {@code RUNNING}으로 옮긴다.\n+ *\n+ * @param resource 어느 프로세스가 집었는지. 재전달 진단용이라 못 채우면 키가 없다\n+ */\n+public record RegimeLinkStartedPayload(Instant startedAt, ProcessInfo resource) {\n+\n+    /** 못 재는 플랫폼도 있어 두 값 모두 생략 가능하다. */\n+    public record ProcessInfo(Integer pid, String hostname) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkStartedPayload.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkStartedPayload.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/**\n+ * {@code FINISHED} 종결 상태. 계산이 실패해도 이벤트는 정상 발행되므로 둘 다 워커가 끝까지 처리한 결과다.\n+ *\n+ * <p>링크가 {@code DATA_INSUFFICIENT}로 끝나는 경우는 여기 없다 — 자료 부족은 발행 전 백엔드 판정이라 작업 메시지가 나가지 않는다(research\n+ * R13).\n+ */\n+public enum RegimeLinkStatus {\n+    COMPLETED,\n+    FAILED\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/RegimeLinkStatus.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/** 체결 사유. 004 {@code fills[].reason}과 같은 값이며 011은 표시용으로만 쓴다. */\n+public enum TradeReason {\n+    SIGNAL,\n+    REBALANCE,\n+    HALT_DEFERRED,\n+    LIQUIDATION\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/TradeReason.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/TradeReason.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+package com.ssafy.thorp.regimelink.application.port.message;\n+\n+/**\n+ * 회전율의 연환산 단위. 구간 회전율만 연환산하고 수익률·최대 하락 폭은 연환산하지 않으므로, 값과 단위를 함께 실어 63거래일 값이 1년 값으로 읽히는 것을\n+ * 막는다(research R3).\n+ */\n+public enum TurnoverBasis {\n+    /** 252거래일 기준 연환산 */\n+    ANNUALIZED_252\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/TurnoverBasis.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/message/TurnoverBasis.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,28 @@\n+package com.ssafy.thorp.regimelink.application.port;\n+\n+import com.ssafy.thorp.regimelink.application.exception.RegimeLinkPublishFailedException;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkJob;\n+\n+/**\n+ * 사례 연결 작업 메시지를 워커에 전달하는 출력 포트.\n+ *\n+ * <p>구간을 잘라 담는 조립은 application이 끝내고 여기에는 완성된 본문만 넘긴다. 구현은 {@code infrastructure.messaging}에 두고\n+ * application 계층은 이 인터페이스만 안다.\n+ *\n+ * <p>발행 전 관문(원천 실행이 {@code COMPLETED}인지, 잘라낸 범위가 {@code baselineDate}~{@code lastAvailable}를 덮는지,\n+ * 종목 수·행 수 상한을 넘지 않는지, 체결 기록이 있는지)은 호출자가 이미 통과시킨 것으로 본다(계약 \"검증 책임\").\n+ */\n+public interface RegimeLinkJobPublisher {\n+\n+    /**\n+     * {@code regime-link.jobs}로 작업 한 건을 발행한다.\n+     *\n+     * <p>브로커가 받았다고 확인(publisher confirm)한 뒤에만 정상 반환한다. 확인되지 않으면 {@link\n+     * RegimeLinkPublishFailedException}을 던지며, 호출자는 링크를 발행된 것으로 기록하지 않는다 — 발행 실패를 성공으로 숨기면 영원히\n+     * {@code QUEUED}인 링크가 남는다. 구현이 다른 예외 유형을 새로 만들지 않는 것이 이 포트의 계약이다.\n+     *\n+     * <p>메시지 속성({@code message_id = \"RLJ-\" + linkId + \"-\" + attempt}, {@code correlation_id =\n+     * linkId}, header {@code schemaVersion})은 구현이 {@code job}에서 뽑아 붙인다.\n+     */\n+    void publish(RegimeLinkJob job);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/RegimeLinkJobPublisher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/port/RegimeLinkJobPublisher.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,65 @@\n+package com.ssafy.thorp.regimelink.infrastructure.messaging;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.fasterxml.jackson.annotation.JsonProperty;\n+import com.fasterxml.jackson.databind.DeserializationFeature;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.SerializationFeature;\n+import com.fasterxml.jackson.databind.json.JsonMapper;\n+import com.fasterxml.jackson.databind.module.SimpleModule;\n+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;\n+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkResultPayload;\n+import java.math.BigDecimal;\n+\n+/**\n+ * 사례 연결 메시지 전용 직렬화. 계약 기준: {@code docs/specs/regime-link-messaging/README.md} \"표기 규칙\".\n+ *\n+ * <p>토폴로지 선언과 발행은 {@code RegimeLinkRabbitConfig}(spec 011 T030)가 맡고 이 클래스는 <b>표기만</b> 맡는다. 계약 픽스처\n+ * round-trip 테스트와 발행·수신 경로가 같은 매퍼를 써야 \"테스트가 통과했다 == 나가는 메시지가 픽스처와 같다\"가 성립하므로 한 곳에 둔다.\n+ *\n+ * <p>백테스트 매퍼({@code BacktestRabbitConfig.messageObjectMapper()})와 설정이 같지만 빌려 쓰지 않는다 — 큐도 스키마 버전도 다른\n+ * 계약이라, 한쪽 계약이 표기를 바꾼 날 다른 쪽이 조용히 따라가면 안 된다.\n+ *\n+ * <ul>\n+ *   <li>BigDecimal → plain 문자열, 읽기는 숫자·문자열 모두 수용\n+ *   <li>LocalDate·Instant → ISO 문자열(시각은 UTC \"…Z\")\n+ *   <li>null 필드는 키 생략(NON_NULL)\n+ *   <li>필수 정수(primitive) 누락·null → 실패. enum 자리의 숫자와 정수 자리의 소수 → 실패. 알 수 없는 필드 → 무시\n+ * </ul>\n+ */\n+public final class RegimeLinkMessageJson {\n+\n+    private RegimeLinkMessageJson() {}\n+\n+    public static ObjectMapper objectMapper() {\n+        SimpleModule decimals =\n+                new SimpleModule().addSerializer(BigDecimal.class, new PlainBigDecimalSerializer());\n+        return JsonMapper.builder()\n+                .addModule(new JavaTimeModule())\n+                .addModule(decimals)\n+                .addMixIn(RegimeLinkResultPayload.WindowSummary.class, ReturnKey.class)\n+                .addMixIn(RegimeLinkResultPayload.BenchmarkWindow.class, ReturnKey.class)\n+                .serializationInclusion(JsonInclude.Include.NON_NULL)\n+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)\n+                .enable(SerializationFeature.WRITE_ENUMS_USING_TO_STRING)\n+                .enable(DeserializationFeature.READ_ENUMS_USING_TO_STRING)\n+                .enable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)\n+                .enable(DeserializationFeature.FAIL_ON_NUMBERS_FOR_ENUMS)\n+                .disable(DeserializationFeature.ACCEPT_FLOAT_AS_INT)\n+                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)\n+                .build();\n+    }\n+\n+    /**\n+     * {@code returnRate} 컴포넌트를 JSON 키 {@code return}에 대응시킨다.\n+     *\n+     * <p>계약이 정한 키는 {@code return}인데 Java 예약어라 record 컴포넌트로 쓸 수 없고, 메시지 DTO는 Jackson에 의존하지 않는다는 규칙\n+     * (ArchUnit 규칙 7)이 있어 애노테이션을 record에 직접 달 수도 없다. mixin은 그 둘을 모두 지키는 자리다.\n+     */\n+    private abstract static class ReturnKey {\n+\n+        @JsonProperty(\"return\")\n+        abstract BigDecimal returnRate();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/infrastructure/messaging/RegimeLinkMessageJson.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/infrastructure/messaging/RegimeLinkMessageJson.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,237 @@\n+package com.ssafy.thorp.regimelink.contract;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.fasterxml.jackson.core.type.TypeReference;\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.exc.MismatchedInputException;\n+import com.ssafy.thorp.regimelink.application.port.message.BasisKind;\n+import com.ssafy.thorp.regimelink.application.port.message.FillSide;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkErrorCode;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkEvent;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkEventType;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkFinishedPayload;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkJob;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkResultPayload;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkScenario;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkStartedPayload;\n+import com.ssafy.thorp.regimelink.application.port.message.RegimeLinkStatus;\n+import com.ssafy.thorp.regimelink.application.port.message.TurnoverBasis;\n+import com.ssafy.thorp.regimelink.infrastructure.messaging.RegimeLinkMessageJson;\n+import java.io.IOException;\n+import java.nio.file.Files;\n+import java.nio.file.Path;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 계약 픽스처({@code docs/specs/regime-link-messaging/examples})를 record로 읽고 다시 써서 원본과 정확 동치인지 확인한다.\n+ *\n+ * <p>워커 테스트({@code worker/tests/regime_link/test_contracts.py})가 <b>같은 파일</b>을 읽는다. 한쪽만 고치면 다른 쪽이\n+ * 깨지는 것이 이 테스트의 목적이다 — 픽스처가 양쪽 코드의 단일 기준이다.\n+ *\n+ * <p>픽스처에는 null 값이 없고 생략 가능한 필드는 키가 빠져 있으므로 정규화 없이 JSON 트리를 그대로 비교한다(키 순서만 무시). gradle test의 작업\n+ * 디렉터리는 {@code backend/}다.\n+ */\n+class RegimeLinkMessageContractTest {\n+\n+    private static final Path FIXTURES =\n+            Path.of(\"..\", \"docs\", \"specs\", \"regime-link-messaging\", \"examples\");\n+\n+    private static final TypeReference<RegimeLinkEvent<RegimeLinkStartedPayload>> STARTED =\n+            new TypeReference<>() {};\n+    private static final TypeReference<RegimeLinkEvent<RegimeLinkFinishedPayload>> FINISHED =\n+            new TypeReference<>() {};\n+\n+    private final ObjectMapper mapper = RegimeLinkMessageJson.objectMapper();\n+\n+    @Test\n+    void 연속_운용_작업() throws IOException {\n+        RegimeLinkJob job = roundTrip(\"job-continuous.json\", new TypeReference<>() {});\n+\n+        assertThat(job.job().linkId()).isEqualTo(\"RL-20260918-000101\");\n+        assertThat(job.job().attempt()).isEqualTo(1);\n+        assertThat(job.job().scenario()).isEqualTo(RegimeLinkScenario.CONTINUOUS);\n+        // baselineDate 행이 하나 더 있어 행 수 = completedTradingDays + 1 (계약 \"픽스처가 보장하는 것\")\n+        assertThat(job.inputs().portfolioSeries()).hasSize(job.window().completedTradingDays() + 1);\n+        assertThat(job.inputs().portfolioSeries().get(0).date())\n+                .isEqualTo(job.window().baselineDate());\n+        // 연속 운용은 시작 보유가 있다\n+        assertThat(job.inputs().openingPositions()).isNotEmpty();\n+        assertThat(job.inputs().openingPositions().get(0).quantity()).isEqualTo(179L);\n+        assertThat(job.inputs().trades().get(0).side()).isEqualTo(FillSide.SELL);\n+        assertThat(job.inputs().cashFlows().get(0).type()).isEqualTo(\"DISTRIBUTION\");\n+        assertThat(job.inputDigest()).hasSize(64);\n+    }\n+\n+    @Test\n+    void 현금_시작_작업() throws IOException {\n+        RegimeLinkJob job = roundTrip(\"job-fresh-cash.json\", new TypeReference<>() {});\n+\n+        assertThat(job.job().scenario()).isEqualTo(RegimeLinkScenario.FRESH_CASH);\n+        // 기준은 run.initialCash이고 시작 보유는 빈 목록이다(research R3)\n+        assertThat(job.inputs().openingPositions()).isEmpty();\n+        assertThat(job.run().initialCash()).isEqualByComparingTo(\"10000000.00\");\n+        assertThat(job.inputs().trades().get(0).side()).isEqualTo(FillSide.BUY);\n+    }\n+\n+    @Test\n+    void 구간_안_상장폐지_작업() throws IOException {\n+        RegimeLinkJob job = roundTrip(\"job-partial-delisted.json\", new TypeReference<>() {});\n+\n+        // 백엔드가 이미 폐지 전날까지로 줄여 보낸다 — 워커가 다시 줄이지 않는다\n+        assertThat(job.window().lastAvailable()).isBefore(job.window().d63());\n+        assertThat(job.window().completedTradingDays()).isEqualTo(50);\n+        assertThat(job.inputs().portfolioSeries()).hasSize(51);\n+        assertThat(job.universe().items())\n+                .filteredOn(item -> item.delistedOn() != null)\n+                .singleElement()\n+                .satisfies(\n+                        item -> {\n+                            assertThat(item.instrumentId()).isEqualTo(\"244580.XKRX\");\n+                            assertThat(item.delistedOn()).hasToString(\"2012-06-11\");\n+                        });\n+    }\n+\n+    @Test\n+    void 시작_이벤트() throws IOException {\n+        RegimeLinkEvent<RegimeLinkStartedPayload> event = roundTrip(\"event-started.json\", STARTED);\n+\n+        assertThat(event.schemaVersion()).isEqualTo(1);\n+        assertThat(event.type()).isEqualTo(RegimeLinkEventType.STARTED);\n+        assertThat(event.linkId()).isEqualTo(\"RL-20260918-000101\");\n+        assertThat(event.payload().startedAt()).hasToString(\"2026-09-18T02:00:00Z\");\n+        assertThat(event.payload().resource().pid()).isEqualTo(4242);\n+    }\n+\n+    @Test\n+    void 완료_이벤트() throws IOException {\n+        RegimeLinkEvent<RegimeLinkFinishedPayload> event =\n+                roundTrip(\"event-finished-completed.json\", FINISHED);\n+        RegimeLinkFinishedPayload payload = event.payload();\n+        RegimeLinkResultPayload result = payload.result();\n+\n+        assertThat(payload.status()).isEqualTo(RegimeLinkStatus.COMPLETED);\n+        assertThat(payload.partial()).isFalse();\n+        assertThat(payload.delistedOn()).isNull();\n+        assertThat(payload.error()).isNull();\n+        assertThat(result.window63().complete()).isTrue();\n+        assertThat(result.window63().tradingDays()).isEqualTo(63);\n+        assertThat(result.window63().turnoverBasis()).isEqualTo(TurnoverBasis.ANNUALIZED_252);\n+        // 시계열과 목록은 구간 전체를 담는다\n+        assertThat(result.holdings()).hasSize(result.window63().tradingDays());\n+        assertThat(result.trades()).hasSize(result.window63().tradeCount());\n+        // 이익 종목도 빠지지 않는다 — 보유 섹터 셋이 모두 들어간다\n+        assertThat(result.window63().lossContribution())\n+                .containsOnlyKeys(\"SEMICONDUCTOR\", \"BATTERY\", \"BIO\");\n+        assertThat(result.kospi().window63().returnRate()).isEqualByComparingTo(\"0.0180\");\n+        assertThat(result.basis().kind()).isEqualTo(BasisKind.HISTORICAL_REVISION);\n+    }\n+\n+    @Test\n+    void 육십삼거래일을_못_채운_완료_이벤트() throws IOException {\n+        RegimeLinkEvent<RegimeLinkFinishedPayload> event =\n+                roundTrip(\"event-finished-incomplete63.json\", FINISHED);\n+        RegimeLinkFinishedPayload payload = event.payload();\n+\n+        // 계산은 끝났고(COMPLETED) 63을 못 채웠을 뿐이다\n+        assertThat(payload.status()).isEqualTo(RegimeLinkStatus.COMPLETED);\n+        assertThat(payload.partial()).isTrue();\n+        assertThat(payload.delistedOn()).hasToString(\"2012-06-11\");\n+        assertThat(payload.result().window63().complete()).isFalse();\n+        assertThat(payload.result().window63().tradingDays()).isEqualTo(50);\n+        // window21은 언제나 완성이다 — 21 미만이면 애초에 발행되지 않는다\n+        assertThat(payload.result().window21().complete()).isTrue();\n+        assertThat(payload.result().window21().tradingDays()).isEqualTo(21);\n+    }\n+\n+    @Test\n+    void 실패_이벤트() throws IOException {\n+        RegimeLinkEvent<RegimeLinkFinishedPayload> event =\n+                roundTrip(\"event-finished-failed.json\", FINISHED);\n+        RegimeLinkFinishedPayload payload = event.payload();\n+\n+        assertThat(payload.status()).isEqualTo(RegimeLinkStatus.FAILED);\n+        assertThat(payload.result()).isNull();\n+        assertThat(payload.error().code()).isEqualTo(RegimeLinkErrorCode.INPUT_INCOMPLETE);\n+        assertThat(payload.resource().wallSeconds()).isEqualByComparingTo(\"0.12\");\n+    }\n+\n+    @Test\n+    void 직렬화_표기_규약() throws IOException {\n+        JsonNode out =\n+                mapper.readTree(\n+                        mapper.writeValueAsString(read(\"event-finished-completed.json\", FINISHED)));\n+        JsonNode window63 = out.at(\"/payload/result/window63\");\n+\n+        // 계약이 정한 키는 return이다 — 예약어라 record 컴포넌트는 returnRate이고 mixin이 이름을 맞춘다\n+        assertThat(window63.has(\"returnRate\")).isFalse();\n+        assertThat(window63.get(\"return\").asText()).isEqualTo(\"0.0276\");\n+        assertThat(out.at(\"/payload/result/kospi/window21/return\").isTextual()).isTrue();\n+        assertThat(window63.get(\"tradingDays\").isInt()).isTrue(); // 거래일 수는 숫자\n+        assertThat(window63.get(\"turnover\").isTextual()).isTrue(); // 소수는 문자열\n+        assertThat(out.get(\"occurredAt\").asText()).endsWith(\"Z\"); // Instant → UTC ISO\n+        assertThat(out.at(\"/payload\").has(\"delistedOn\")).isFalse(); // null 키 생략\n+        assertThat(out.at(\"/payload\").has(\"error\")).isFalse();\n+    }\n+\n+    @Test\n+    void 작업_본문에는_schemaVersion이_없다() throws IOException {\n+        // 작업은 AMQP 헤더로만 버전을 싣는다(계약 \"표기 규칙\")\n+        assertThat(mapper.readTree(raw(\"job-continuous.json\")).has(\"schemaVersion\")).isFalse();\n+        assertThat(mapper.readTree(raw(\"event-started.json\")).has(\"schemaVersion\")).isTrue();\n+    }\n+\n+    @Test\n+    void 필수_정수_누락은_실패한다() {\n+        String noAttempt =\n+                \"\"\"\n+                {\"schemaVersion\":1,\"eventId\":\"E\",\"linkId\":\"RL-1\",\"type\":\"STARTED\",\n+                 \"occurredAt\":\"2026-09-18T02:00:00Z\",\"payload\":{\"startedAt\":\"2026-09-18T02:00:00Z\"}}\n+                \"\"\";\n+        assertThatThrownBy(() -> mapper.readValue(noAttempt, STARTED))\n+                .isInstanceOf(MismatchedInputException.class);\n+    }\n+\n+    @Test\n+    void 미지의_enum_값은_실패한다() {\n+        String badType =\n+                \"\"\"\n+                {\"schemaVersion\":1,\"eventId\":\"E\",\"linkId\":\"RL-1\",\"attempt\":1,\"type\":\"PROGRESS\",\n+                 \"occurredAt\":\"2026-09-18T02:00:00Z\",\"payload\":{\"startedAt\":\"2026-09-18T02:00:00Z\"}}\n+                \"\"\";\n+        assertThatThrownBy(() -> mapper.readValue(badType, STARTED))\n+                .isInstanceOf(MismatchedInputException.class);\n+    }\n+\n+    @Test\n+    void 정수_자리의_소수는_실패한다() {\n+        String floatQuantity =\n+                \"\"\"\n+                {\"job\":{\"linkId\":\"RL-1\",\"attempt\":1,\"scenario\":\"CONTINUOUS\"},\n+                 \"inputs\":{\"openingPositions\":[{\"instrumentId\":\"091160.XKRX\",\"quantity\":1.5}]}}\n+                \"\"\";\n+        assertThatThrownBy(\n+                        () ->\n+                                mapper.readValue(\n+                                        floatQuantity, new TypeReference<RegimeLinkJob>() {}))\n+                .isInstanceOf(MismatchedInputException.class);\n+    }\n+\n+    private <T> T roundTrip(String file, TypeReference<T> type) throws IOException {\n+        String original = raw(file);\n+        T value = mapper.readValue(original, type);\n+        JsonNode written = mapper.readTree(mapper.writeValueAsString(value));\n+        assertThat(written).as(file).isEqualTo(mapper.readTree(original));\n+        return value;\n+    }\n+\n+    private <T> T read(String file, TypeReference<T> type) throws IOException {\n+        return mapper.readValue(raw(file), type);\n+    }\n+\n+    private static String raw(String file) throws IOException {\n+        return Files.readString(FIXTURES.resolve(file));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/regimelink/contract/RegimeLinkMessageContractTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/regimelink/contract/RegimeLinkMessageContractTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -134,9 +134,9 @@ flowchart LR\n - [X] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·\"내보내지 않는 것\")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다\n - [X] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)\n - [X] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다\n-- [ ] T005 (BE) `regimelink/application/port/message/`에 `RegimeLinkJob`·`RegimeLinkEvent`·`RegimeLinkFinishedPayload`·`RegimeLinkResultPayload`(holdings는 dailyPositions로 산출, turnoverBasis 포함) record(Jackson, camelCase)와 `RegimeLinkJobPublisher` 포트 인터페이스를 작성. `backend/src/test/java/com/ssafy/thorp/regimelink/contract/RegimeLinkMessageContractTest.java`가 T001 픽스처 7개를 읽어 역직렬화→직렬화 round-trip을 검증\n-- [ ] T006 (WK) `worker/src/worker/regime_link/contracts.py`에 `ContractModel` 기반 pydantic 모델(`RegimeLinkJob`·`RegimeLinkEvent`·payload, `extra=\"forbid\"`, 기본값 금지)을 작성. `worker/tests/regime_link/test_contracts.py`가 같은 픽스처 7개로 round-trip. `worker/contracts/`(백테스트 계약)에 넣지 않는다\n-- [ ] T007 (WK) `worker/src/worker/regime_link/messaging.py`에 exchange·queue·routing key·`SCHEMA_VERSION`·prefetch 상수와 `EventPublisher`·`JobAcknowledger` Protocol을 작성(pika import 금지). `worker/tests/regime_link/test_messaging.py`가 백엔드 `RegimeLinkRabbitConfig.java`(T030)를 읽어 상수 일치를 대조 — T030 전까지는 계약 문서의 값과 대조한다\n+- [X] T005 (BE) `regimelink/application/port/message/`에 `RegimeLinkJob`·`RegimeLinkEvent`·`RegimeLinkFinishedPayload`·`RegimeLinkResultPayload`(holdings는 dailyPositions로 산출, turnoverBasis 포함) record(Jackson, camelCase)와 `RegimeLinkJobPublisher` 포트 인터페이스를 작성. `backend/src/test/java/com/ssafy/thorp/regimelink/contract/RegimeLinkMessageContractTest.java`가 T001 픽스처 7개를 읽어 역직렬화→직렬화 round-trip을 검증\n+- [X] T006 (WK) `worker/src/worker/regime_link/contracts.py`에 `ContractModel` 기반 pydantic 모델(`RegimeLinkJob`·`RegimeLinkEvent`·payload, `extra=\"forbid\"`, 기본값 금지)을 작성. `worker/tests/regime_link/test_contracts.py`가 같은 픽스처 7개로 round-trip. `worker/contracts/`(백테스트 계약)에 넣지 않는다\n+- [X] T007 (WK) `worker/src/worker/regime_link/messaging.py`에 exchange·queue·routing key·`SCHEMA_VERSION`·prefetch 상수와 `EventPublisher`·`JobAcknowledger` Protocol을 작성(pika import 금지). `worker/tests/regime_link/test_messaging.py`가 백엔드 `RegimeLinkRabbitConfig.java`(T030)를 읽어 상수 일치를 대조 — T030 전까지는 계약 문서의 값과 대조한다\n \n **Checkpoint**: 계약이 양쪽에서 고정됐다. 이후 M2·M3(워커)와 M4·M5(백엔드)는 병렬로 간다.\n \n@@ -181,7 +181,7 @@ flowchart LR\n \n ## 백엔드 — 메시징·작업 조립·이벤트 (M5)\n \n-- [ ] T030 (BE) `infrastructure/messaging/RegimeLinkRabbitConfig`: exchange `regime-link`, 큐 `regime-link.jobs`(quorum, `x-delivery-limit=1`, DLX)·`regime-link.jobs.dlq`·`regime-link.events` `Declarables`, 상수는 `public static final String`(워커 T007이 읽는다). `RegimeLinkJobPublisherImpl`(발행 confirm, `message_id=\"RLJ-\"+linkId+\"-\"+attempt`, header `schemaVersion: 1`)\n+- [ ] T030 (BE) `infrastructure/messaging/RegimeLinkRabbitConfig`: exchange `regime-link`, 큐 `regime-link.jobs`(quorum, `x-delivery-limit=1`, DLX)·`regime-link.jobs.dlq`·`regime-link.events` `Declarables`, 상수는 `public static final String`(워커 T007이 읽는다). `RegimeLinkJobPublisherImpl`(발행 confirm, `message_id=\"RLJ-\"+linkId+\"-\"+attempt`, header `schemaVersion: 1`). 직렬화는 T005가 만든 `RegimeLinkMessageJson.objectMapper()`를 쓰고 새로 만들지 않는다 — 계약 테스트와 발행 경로가 같은 매퍼여야 round-trip 통과가 곧 나가는 메시지를 보장한다. 이 파일이 생기면 워커 `test_topology_constants_match_the_backend`의 skip이 풀린다\n - [ ] T031 (BE) `application/service/RegimeLinkJobAssembler`: 입력 실행이 `COMPLETED`인지 확인 → `PostWindow`로 `baselineDate~lastAvailable` 조각을 `BacktestRunReadPort`로 읽어 `RegimeLinkJob` 조립 → `inputDigest`(canonical JSON sha256) → 크기 상한(`dailyPositions`의 종목 수 ≤ 대응표 섹터 수, 날짜 행 ≤ 65) 초과면 발행하지 않고 `FAILED(INPUT_TOO_LARGE)`. 시계열 산술은 하지 않는다(범위만 정한다)\n - [ ] T032 (BE) `infrastructure/messaging/RegimeLinkEventListener` + `application/service/RegimeLinkEventHandler`: `STARTED`→`RUNNING`(`started_at`), `FINISHED(COMPLETED)`→결과 저장·`COMPLETED`(`finished_at`), `FINISHED(FAILED)`→`FAILED{code,message}`. 종결 뒤 늦은 이벤트는 기록만. `eventId` 중복은 ACK만. DLQ 소비자 → `FAILED(SYSTEM_FAILURE)`. 워커의 `DATA_INSUFFICIENT` 코드는 계약에 없다 — 들어오면 `ENGINE_ERROR`로 기록하고 '자료 부족'으로 바꾸지 않는다. 조회 응답의 `failure.retryable`은 `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이 `attempt ≥ 2`면 false(research R13)\n - [ ] T033 (BE) `application/service/PendingRunSweeper`(`@Scheduled`, 간격 `thorp.regimelink.pending-run-sweep-interval` **기본값 없음**): `PENDING_RUN` 링크의 입력 실행 상태를 `BacktestRunReadPort`로 확인 → `COMPLETED`면 T031로 조립·발행(`QUEUED`), `FAILED|CANCELLED`면 `FAILED(RUN_FAILED)`. 004 코드에 이벤트를 추가하지 않는다(plan 위험 표)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,5 +13,6 @@\n * ``consumer`` 수신·검증·계산 호출·발행 순서·ACK 판단\n * ``rabbitmq`` pika 구현체\n \n-이 묶음(M1a)은 자리만 만든다. 각 모듈의 내용은 M1b~M3에서 채운다.\n+``contracts``·``messaging``은 M1b에서 채웠다. 계산(``slicer``)과 소비·발행\n+(``consumer``·``rabbitmq``)은 M2·M3에서 채운다.\n \"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/__init__.py",
+          "old_path": "worker/src/worker/regime_link/__init__.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,472 @@\n \"\"\"사례 연결 작업·이벤트 메시지 계약(pydantic).\n \n-기준은 ``docs/specs/regime-link-messaging/``(README + ``examples/*.json``)이고 백엔드\n-``com.ssafy.thorp.regimelink.application.port.message``의 record와 같은 모양이다. 백테스트 계약인\n-``worker.contracts``에 넣지 않는다 — 큐도 스키마도 다르다.\n+기준은 ``docs/specs/regime-link-messaging/``(README + ``examples/*.json``)이고\n+백엔드 ``com.ssafy.thorp.regimelink.application.port.message``의 record와 같은\n+모양이다. 백테스트 계약인 ``worker.contracts``에 넣지 않는다 — 큐도 스키마도 다르다.\n \n-``ContractModel``을 따라 JSON camelCase ↔ 내부 snake_case는 alias로, null은 키 생략으로 다루고\n-``extra=\"forbid\"``에 기본값을 두지 않는다. 값이 없으면 지어내지 말고 계약 오류로 멈춘다.\n+``ContractModel``을 따라 JSON camelCase ↔ 내부 snake_case는 alias로, null은 키\n+생략으로 다룬다. 다만 ``extra=\"forbid\"``로 좁혀 **계약에 없는 키가 오면 멈춘다**.\n+백테스트 계약은 ``extra=\"ignore\"``라 모르는 필드를 넘기지만, 011은 백엔드가 잘라\n+담은 입력으로만 계산하므로 모르는 키는 곧 양쪽 계약이 어긋났다는 신호다. 조용히\n+무시하면 틀린 입력으로 숫자를 낸다.\n \n-내용은 T006(묶음 M1b)에서 채운다.\n+**없는 값을 기본값으로 채우지 않는다.** 계약이 언제나 싣는 필드에는 기본값을 두지\n+않아 누락이 곧 검증 실패가 되고, 생략 가능한 필드만 ``T | None = None``으로\n+선언한다(계약 \"표기 규칙\"의 null 규칙).\n \"\"\"\n+\n+from datetime import date\n+from decimal import Decimal\n+from enum import StrEnum\n+from typing import Generic, TypeVar\n+\n+from pydantic import ConfigDict, Field, model_validator\n+\n+from worker.contracts.base import ContractModel, UtcDatetime\n+\n+# --- 공통 설정 -----------------------------------------------------------------------\n+\n+\n+class RegimeLinkModel(ContractModel):\n+    \"\"\"011 계약 모델의 공통 설정.\n+\n+    ``ContractModel``의 alias·null 규칙에 ``extra=\"forbid\"``만 더한다.\n+    \"\"\"\n+\n+    model_config = ConfigDict(extra=\"forbid\")\n+\n+\n+# --- 열거값 (백엔드 enum과 같은 값) ---------------------------------------------------\n+\n+\n+class RegimeLinkScenario(StrEnum):\n+    \"\"\"사후 구간을 무엇을 기준으로 재는가(research R3).\n+\n+    ``CONTINUOUS``는 기준값이 ``inputs.portfolio_series``의 ``baseline_date``\n+    평가액이고, ``FRESH_CASH``는 ``run.initial_cash``다. 시작 보유도 앞의 것은 있고\n+    뒤의 것은 빈 목록이다.\n+    \"\"\"\n+\n+    CONTINUOUS = \"CONTINUOUS\"\n+    FRESH_CASH = \"FRESH_CASH\"\n+\n+\n+class RegimeLinkEventType(StrEnum):\n+    \"\"\"백테스트와 달리 진행률(``PROGRESS``)이 없다 — 63거래일은 한 번에 끝난다.\"\"\"\n+\n+    STARTED = \"STARTED\"\n+    FINISHED = \"FINISHED\"\n+\n+\n+class RegimeLinkStatus(StrEnum):\n+    \"\"\"계산이 실패해도 이벤트는 정상 발행되므로 둘 다 끝까지 처리한 결과다.\"\"\"\n+\n+    COMPLETED = \"COMPLETED\"\n+    FAILED = \"FAILED\"\n+\n+\n+class RegimeLinkErrorCode(StrEnum):\n+    \"\"\"``FINISHED(FAILED)``의 실패 사유. 네 값이 전부다.\n+\n+    워커는 ``DATA_INSUFFICIENT``를 내지 않는다 — 자료 부족은 발행 전 백엔드\n+    판정이라 그런 작업은 여기까지 오지 않는다(research R13). 계약 위반(JSON·스키마\n+    오류)도 여기 없다 — 이벤트가 아니라 reject → DLQ다.\n+    \"\"\"\n+\n+    INPUT_INCOMPLETE = \"INPUT_INCOMPLETE\"\n+    MARKET_DATA_MISSING = \"MARKET_DATA_MISSING\"\n+    INVALID_REQUEST = \"INVALID_REQUEST\"\n+    ENGINE_ERROR = \"ENGINE_ERROR\"\n+\n+\n+class FillSide(StrEnum):\n+    \"\"\"004 ``fills[].side``를 그대로 옮긴 값이라 진입·청산이 아니라 매수·매도다.\"\"\"\n+\n+    BUY = \"BUY\"\n+    SELL = \"SELL\"\n+\n+\n+class TradeReason(StrEnum):\n+    \"\"\"004 ``fills[].reason``과 같은 값. 011은 표시용으로만 쓴다.\"\"\"\n+\n+    SIGNAL = \"SIGNAL\"\n+    REBALANCE = \"REBALANCE\"\n+    HALT_DEFERRED = \"HALT_DEFERRED\"\n+    LIQUIDATION = \"LIQUIDATION\"\n+\n+\n+class TurnoverBasis(StrEnum):\n+    \"\"\"회전율의 연환산 단위.\n+\n+    수익률·최대 하락 폭은 연환산하지 않으므로 이 단위는 회전율에만 붙는다. 값과\n+    단위를 함께 실어 63거래일 값이 1년 값으로 읽히는 것을 막는다(research R3).\n+    \"\"\"\n+\n+    ANNUALIZED_252 = \"ANNUALIZED_252\"\n+\n+\n+class BasisKind(StrEnum):\n+    \"\"\"결과가 어떤 자료 위에서 나왔는가.\n+\n+    010과 같이 **항상** 역사 비교다 — 최신 개정자료로 과거를 다시 본 것이지 당시\n+    발표값 재현이 아니다(spec FR-015).\n+    \"\"\"\n+\n+    HISTORICAL_REVISION = \"HISTORICAL_REVISION\"\n+\n+\n+# --- 작업 메시지 ---------------------------------------------------------------------\n+\n+\n+class JobSpec(RegimeLinkModel):\n+    \"\"\"``attempt``는 이 연결의 발행 시도 번호이며 ``message_id``에 실려 온다.\"\"\"\n+\n+    link_id: str\n+    attempt: int\n+    scenario: RegimeLinkScenario\n+\n+\n+class WindowSpec(RegimeLinkModel):\n+    \"\"\"사후 구간의 날짜 경계. 전부 거래일이다.\n+\n+    ``last_available``은 구간 안 상장폐지면 **폐지 전날까지로 백엔드가 이미 줄인\n+    값**이라 워커가 다시 줄이지 않는다. ``completed_trading_days``는\n+    d0~last_available의 거래일 수이고 ``inputs.portfolio_series``의 행 수는 그 값\n+    + 1이다(baseline_date 행이 하나 더 있다).\n+    \"\"\"\n+\n+    d0: date\n+    d21: date\n+    d63: date\n+    last_available: date\n+    completed_trading_days: int\n+    baseline_date: date\n+\n+\n+class RunSpec(RegimeLinkModel):\n+    \"\"\"잘라낼 원천 실행(004). 실행 자체는 읽기만 한다.\"\"\"\n+\n+    run_id: str\n+    effective_start: date\n+    initial_cash: Decimal\n+    analytics_method: str\n+\n+\n+class UniverseItem(RegimeLinkModel):\n+    \"\"\"``delisted_on``이 구간 안이면 그 전날까지만 계산하고 ``partial=True``다.\"\"\"\n+\n+    sector_id: str\n+    instrument_id: str\n+    delisted_on: date | None = None\n+\n+\n+class UniverseSpec(RegimeLinkModel):\n+    mapping_version: str\n+    items: list[UniverseItem]\n+\n+\n+class MarketDataSpec(RegimeLinkModel):\n+    dataset_id: str\n+    data_version: str\n+    benchmark_instrument_id: str\n+\n+\n+class PortfolioPoint(RegimeLinkModel):\n+    date: date\n+    equity: Decimal\n+    cash: Decimal\n+\n+\n+class Position(RegimeLinkModel):\n+    instrument_id: str\n+    quantity: int\n+\n+\n+class DailyPositions(RegimeLinkModel):\n+    \"\"\"하루치 보유 스냅샷.\n+\n+    ``positions``는 **그날 보유 전체**이고 수량 0인 종목은 빠져 있다. 그래서 이월은\n+    실린 종목만 고치는 부분 갱신이 아니라 덮어쓰기다 — 체결로 더하되 스냅샷이 있는\n+    날은 그 수량으로 맞춘다. 분할 같은 기업행위는 체결 밖에서 수량을 바꾸므로\n+    체결만 누적하면 그날부터 수량이 틀린다.\n+    \"\"\"\n+\n+    date: date\n+    positions: list[Position]\n+\n+\n+class FillCosts(RegimeLinkModel):\n+    \"\"\"체결 한 건의 비용 네 갈래.\n+\n+    합계는 두지 않는다 — 결과 쪽 ``WindowCosts``에만 있다.\n+    \"\"\"\n+\n+    commission: Decimal\n+    spread: Decimal\n+    slippage: Decimal\n+    tax: Decimal\n+\n+\n+class InputTrade(RegimeLinkModel):\n+    \"\"\"개별 체결 한 건. 004 ``fills[]``를 그대로 옮긴 것이다.\n+\n+    진입·청산을 묶은 거래 단위가 아니다. ``price``는 실제 체결가(호가차·슬리피지\n+    반영), ``reference_price``는 충격 전 기준가이고 비용의 기준 금액은\n+    ``quantity × reference_price``다. ``cash_cost``는 체결 대금과 별도로 현금에서\n+    빠진 비용(수수료 + 세금)이라 체결가에 이미 반영된 호가차·슬리피지는 들어 있지\n+    않다.\n+    \"\"\"\n+\n+    fill_id: str\n+    time: UtcDatetime\n+    instrument_id: str\n+    side: FillSide\n+    quantity: int\n+    price: Decimal\n+    reference_price: Decimal\n+    costs: FillCosts\n+    cash_cost: Decimal\n+    reason: TradeReason | None = None\n+\n+\n+class CashFlow(RegimeLinkModel):\n+    \"\"\"구간 안 현금 흐름.\n+\n+    체결과 이것만으로 구간 현금이 되살아난다(DEP-004-011 대조에서 확인).\n+    ``type``은 004와 같은 자유 문자열이며 현재 쓰이는 값은 ``DISTRIBUTION``\n+    하나다. StrEnum으로 좁히면 004가 갈래를 늘린 날 정상 메시지가 DLQ로 간다.\n+    \"\"\"\n+\n+    date: date\n+    instrument_id: str\n+    type: str\n+    amount: Decimal\n+\n+\n+class InputsSpec(RegimeLinkModel):\n+    \"\"\"004 저장 결과에서 구간만큼 잘라 담은 입력.\n+\n+    근거는 계약 \"구간 입력의 출처와 제약\"(DEP-004-011)이다.\n+    ``portfolio_series``는 baseline_date~last_available의 **모든** 거래일,\n+    ``daily_positions``는 그중 004가 스냅샷을 남긴 날(수량이 바뀐 날)만이다.\n+    백엔드가 잘라 담으므로 워커는 이 범위 밖을 요청하지 않고, 모자라면 채우지 않고\n+    ``INPUT_INCOMPLETE``로 실패한다.\n+    \"\"\"\n+\n+    portfolio_series: list[PortfolioPoint]\n+    opening_positions: list[Position]\n+    daily_positions: list[DailyPositions]\n+    trades: list[InputTrade]\n+    cash_flows: list[CashFlow]\n+\n+\n+class RegimeLinkJob(RegimeLinkModel):\n+    \"\"\"``regime-link.jobs``로 오는 작업 메시지 본문.\n+\n+    ``schema_version``이 본문에 없다 — 작업은 AMQP 헤더로만 버전을 싣고 이벤트만\n+    본문 첫 필드에 싣는다(계약 \"표기 규칙\"). ``input_digest``는 백엔드가 만든\n+    값이며 워커는 검증하지 않고 결과에 그대로 돌려준다.\n+    \"\"\"\n+\n+    job: JobSpec\n+    window: WindowSpec\n+    run: RunSpec\n+    universe: UniverseSpec\n+    market_data: MarketDataSpec\n+    inputs: InputsSpec\n+    input_digest: str\n+\n+\n+# --- 이벤트 -------------------------------------------------------------------------\n+\n+\n+class ProcessInfo(RegimeLinkModel):\n+    \"\"\"어느 프로세스가 집었는지. 진단용이라 못 채우면 키를 생략한다.\"\"\"\n+\n+    pid: int | None = None\n+    hostname: str | None = None\n+\n+\n+class RegimeLinkStartedPayload(RegimeLinkModel):\n+    started_at: UtcDatetime\n+    resource: ProcessInfo | None = None\n+\n+\n+class WindowCosts(RegimeLinkModel):\n+    \"\"\"구간 비용 네 갈래와 합계.\n+\n+    체결 단위 ``FillCosts``와 달리 ``total``이 있다.\n+    \"\"\"\n+\n+    commission: Decimal\n+    spread: Decimal\n+    slippage: Decimal\n+    tax: Decimal\n+    total: Decimal\n+\n+\n+class WindowSummary(RegimeLinkModel):\n+    \"\"\"구간 요약.\n+\n+    ``window21``은 d0~d21, ``window63``은 d0~min(d63, last_available)이다.\n+    ``window_return``의 JSON 키는 계약대로 ``return``이다 — Python 예약어라 필드\n+    이름으로 쓸 수 없어 alias로 대응한다. **수익률과 최대 하락 폭은 연환산하지\n+    않고** 회전율만 ``turnover_basis``가 밝히는 단위로 연환산한다.\n+\n+    ``loss_contribution``은 섹터별 구간 손익 ÷ 전체 구간 손익이라 이익 종목도 빼지\n+    않고 들어가 몫의 합이 1이며, 전체 구간 손익이 0일 때만 키가 없다. 이름이\n+    '손실'이지만 이익 종목을 빼지 않는다.\n+    \"\"\"\n+\n+    trading_days: int\n+    window_return: Decimal = Field(alias=\"return\")\n+    max_drawdown: Decimal\n+    trade_count: int\n+    trades_per_month: Decimal\n+    turnover: Decimal\n+    turnover_basis: TurnoverBasis\n+    costs: WindowCosts\n+    loss_contribution: dict[str, Decimal] | None = None\n+    complete: bool\n+\n+\n+class Holding(RegimeLinkModel):\n+    \"\"\"``actual``은 종목별 그날 비중(평가액 ÷ 자산)이다. 목표 비중이 아니다.\"\"\"\n+\n+    date: date\n+    actual: dict[str, Decimal]\n+\n+\n+class ResultTrade(RegimeLinkModel):\n+    \"\"\"표시용 거래 한 건.\n+\n+    작업의 ``InputTrade``와 이름만 같고 모양이 다르다 — 시각 대신 날짜를, 비용 네\n+    갈래 대신 한 값을 쓴다. 두 모델을 하나로 합치지 않는다.\n+    \"\"\"\n+\n+    date: date\n+    instrument_id: str\n+    side: FillSide\n+    quantity: int\n+    price: Decimal\n+    cost: Decimal\n+    reason: TradeReason | None = None\n+\n+\n+class BenchmarkWindow(RegimeLinkModel):\n+    \"\"\"``window_return``의 JSON 키는 ``return``이다.\"\"\"\n+\n+    window_return: Decimal = Field(alias=\"return\")\n+    max_drawdown: Decimal\n+\n+\n+class Benchmark(RegimeLinkModel):\n+    \"\"\"참고 지수의 두 구간 값.\n+\n+    전략 결과와 나란히 두기만 하고 초과 수익을 계산하지 않는다.\n+    \"\"\"\n+\n+    window63: BenchmarkWindow\n+    window21: BenchmarkWindow\n+\n+\n+class Basis(RegimeLinkModel):\n+    \"\"\"이 숫자가 어떤 자료 위에서 나왔는가.\n+\n+    화면이 역사 비교임을 밝히는 근거다(spec FR-015).\n+    \"\"\"\n+\n+    kind: BasisKind\n+    data_version: str\n+    dataset_id: str\n+    analytics_method: str\n+\n+\n+class RegimeLinkResultPayload(RegimeLinkModel):\n+    \"\"\"``FINISHED(COMPLETED)``의 계산 결과.\n+\n+    011 화면의 숫자는 전부 여기서 나온다. ``holdings``는 구간의 **모든** 거래일을,\n+    ``trades``는 구간의 모든 거래를 담는다(개수가 ``window63.trade_count``와\n+    같다). ``kospi``는 ``market_data.benchmark_instrument_id``의 같은 날짜 종가로\n+    낸 참고 값이고 전략과의 차이는 계산하지 않는다.\n+    \"\"\"\n+\n+    window63: WindowSummary\n+    window21: WindowSummary\n+    holdings: list[Holding]\n+    trades: list[ResultTrade]\n+    kospi: Benchmark\n+    basis: Basis\n+    input_digest: str\n+\n+\n+class ErrorDetail(RegimeLinkModel):\n+    \"\"\"``message``는 사람이 읽는 진단 문구다. 화면에 그대로 내보내지 않는다.\"\"\"\n+\n+    code: RegimeLinkErrorCode\n+    message: str\n+\n+\n+class ResourceUsage(RegimeLinkModel):\n+    \"\"\"측정 기록용.\n+\n+    백테스트와 달리 메모리·CPU는 재지 않는다 — 63거래일 계산이라 벽시계만으로\n+    충분하다.\n+    \"\"\"\n+\n+    wall_seconds: Decimal\n+\n+\n+class RegimeLinkFinishedPayload(RegimeLinkModel):\n+    \"\"\"계산이 실패해도 **정상 결과**로 발행한다.\n+\n+    이 이벤트는 워커가 끝까지 처리했다는 뜻이다. ``COMPLETED``면 ``result``가 있고\n+    ``error``가 없으며 ``FAILED``면 반대다. ``partial``은 구간 안 상장폐지로\n+    63거래일을 채우지 못했다는 뜻이며 ``window21``은 언제나 완성이라 이 값과\n+    무관하다.\n+\n+    **이 짝은 모델이 지킨다.** 이벤트를 만드는 쪽이 워커라, 분기 실수로 결과 없는\n+    ``COMPLETED``를 발행하면 브로커를 건너 백엔드에서야 드러나고 그때는 이미\n+    ACK한 뒤라 되돌릴 길이 없다. 발행 전에 멈추는 편이 싸다.\n+    \"\"\"\n+\n+    status: RegimeLinkStatus\n+    partial: bool\n+    delisted_on: date | None = None\n+    result: RegimeLinkResultPayload | None = None\n+    error: ErrorDetail | None = None\n+    resource: ResourceUsage | None = None\n+\n+    @model_validator(mode=\"after\")\n+    def _outcome_matches_status(self) -> \"RegimeLinkFinishedPayload\":\n+        if self.status is RegimeLinkStatus.COMPLETED:\n+            if self.result is None:\n+                raise ValueError(\"COMPLETED 는 result 가 있어야 한다\")\n+            if self.error is not None:\n+                raise ValueError(\"COMPLETED 에는 error 가 없어야 한다\")\n+        if self.status is RegimeLinkStatus.FAILED:\n+            if self.error is None:\n+                raise ValueError(\"FAILED 는 error 가 있어야 한다\")\n+            if self.result is not None:\n+                raise ValueError(\"FAILED 에는 result 가 없어야 한다\")\n+        return self\n+\n+\n+P = TypeVar(\"P\", RegimeLinkStartedPayload, RegimeLinkFinishedPayload)\n+\n+\n+class RegimeLinkEvent(RegimeLinkModel, Generic[P]):\n+    \"\"\"``regime-link.events``로 발행하는 envelope.\n+\n+    ``RegimeLinkEvent[RegimeLinkFinishedPayload]``처럼 payload 타입을 지정한다.\n+    수신 측은 본문 ``type``을 먼저 읽고 그에 맞는 payload 타입으로 검증한다.\n+    ``event_id``는 재발행해도 유지하는 멱등 키다.\n+    \"\"\"\n+\n+    schema_version: int\n+    event_id: str\n+    link_id: str\n+    attempt: int\n+    type: RegimeLinkEventType\n+    occurred_at: UtcDatetime\n+    payload: P\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/contracts.py",
+          "old_path": "worker/src/worker/regime_link/contracts.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,102 @@\n \"\"\"사례 연결 브로커 계약 상수와 경계 Protocol.\n \n-exchange·queue·routing key·``SCHEMA_VERSION``·prefetch를 둔다. 이 값들은 설정이 아니라 계약이라\n-``worker.config``(환경변수)로 빼지 않고, 백엔드 ``RegimeLinkRabbitConfig``의 ``public static final\n-String``과 같은 값을 유지한다. **pika를 import하지 않는다.**\n+exchange·queue·routing key·``SCHEMA_VERSION``·prefetch를 둔다. 이 값들은 설정이\n+아니라 계약이라 ``worker.config``(환경변수)로 빼지 않고, 백엔드\n+``RegimeLinkRabbitConfig``의 ``public static final String``과 같은 값을 유지한다.\n+**pika를 import하지 않는다** — 그래서 브로커 없이 전체 흐름을 테스트할 수 있다.\n \n-발행과 ACK의 경계는 ``EventPublisher``·``JobAcknowledger`` Protocol이며 구현은 ``rabbitmq``에 있다.\n+**토폴로지는 워커가 선언하지 않는다.** exchange·queue·binding 선언은 백엔드\n+책임이고 워커는 이미 있는 큐를 소비만 한다. 큐가 없으면 만들지 않고 종료한다(계약\n+\"메시지 속성과 토폴로지\") — 속성이 어긋난 큐를 워커가 만들면 백엔드 선언과 충돌한다.\n \n-내용은 T007(묶음 M1b)에서 채운다.\n+백테스트 경로(``worker.messaging``)와 이름이 겹치지 않는 별도 계약이다. 두 모듈의\n+상수를 공유하거나 한쪽을 import해 쓰지 않는다.\n \"\"\"\n+\n+from typing import Protocol\n+\n+from worker.regime_link.contracts import RegimeLinkEvent\n+\n+# --- 계약 상수 (backend RegimeLinkRabbitConfig와 일치) --------------------------------\n+\n+EXCHANGE = \"regime-link\"\n+DEAD_LETTER_EXCHANGE = \"regime-link.dlx\"\n+\n+#: 작업 큐. quorum, ``x-delivery-limit=1``, DLX 는 위 ``DEAD_LETTER_EXCHANGE`` 다.\n+JOBS_QUEUE = \"regime-link.jobs\"\n+JOBS_ROUTING_KEY = \"regime-link.job.requested\"\n+\n+#: 재전달 상한을 넘긴 작업이 가는 큐. **백엔드가 소비**해 링크를\n+#: ``FAILED(SYSTEM_FAILURE)`` 로 끝낸다. 워커는 이 큐를 읽지 않는다.\n+JOBS_DEAD_LETTER_QUEUE = \"regime-link.jobs.dlq\"\n+\n+EVENTS_QUEUE = \"regime-link.events\"\n+EVENTS_ROUTING_KEY = \"regime-link.event\"\n+\n+#: 메시지 스키마 버전. 작업은 AMQP 헤더 ``schemaVersion`` 으로, 이벤트는 본문 첫\n+#: 필드로 싣는다. 백테스트 계약(``worker.messaging.SCHEMA_VERSION``)과 **별개로\n+#: 센다** — 같은 브로커를 쓸 뿐 스키마가 다르므로 한쪽이 올라간다고 다른 쪽이\n+#: 따라가지 않는다.\n+SCHEMA_VERSION = 1\n+\n+#: 작업 큐의 quorum 재전달 상한. 워커가 죽어 unacked 메시지가 재전달되면 한 번만\n+#: 다시 실행되고, 두 번째도 끊기면 브로커가 DLQ 로 보낸다.\n+JOBS_DELIVERY_LIMIT = 1\n+\n+#: manual ACK + prefetch 1. 한 번에 작업 하나만 받아 CPU 병목을 워커 수로\n+#: 조절한다. 재전달 상한이 1 이라, 처리하지 않은 메시지를 unacked 로 잡아 두면\n+#: 유일한 재시도를 실행 없이 태운다.\n+PREFETCH_COUNT = 1\n+\n+\n+# --- 오류 분류 (계약 \"처리 규칙\") ------------------------------------------------------\n+\n+\n+class RegimeLinkContractViolation(Exception):\n+    \"\"\"계약 오류. 재전달해도 계속 실패하므로 requeue 없이 reject → DLQ.\n+\n+    JSON 파싱 실패, pydantic ``ValidationError``, 지원하지 않는\n+    ``schemaVersion``. 계산이 실패한 것과 다르다 — 그쪽은 ``FINISHED(FAILED)`` 를\n+    발행하고 ACK 한다.\n+\n+    백테스트 경로의 ``worker.messaging.ContractViolation`` 과 **이름을 가른다.**\n+    두 모듈에 같은 이름의 무관한 예외를 두면 import 를 잘못 적은 ``except`` 가\n+    조용히 아무것도 잡지 않아, 계약 오류가 DLQ 로 가는 대신 처리되지 않은 예외로\n+    빠져나간다. 타입이 다르다는 사실이 이름에 드러나야 한다.\n+    \"\"\"\n+\n+\n+class RegimeLinkPublishError(RuntimeError):\n+    \"\"\"이벤트 발행이 브로커에서 확인되지 않았다. 일시 장애로 보고 ACK 하지 않는다.\n+\n+    발행 실패를 완료로 숨기지 않는다 — 숨기면 백엔드가 모르는 채 링크가 영영\n+    ``RUNNING`` 으로 남는다. 이름을 가르는 이유는\n+    :class:`RegimeLinkContractViolation` 과 같다.\n+    \"\"\"\n+\n+\n+# --- 경계 인터페이스 ------------------------------------------------------------------\n+\n+\n+class EventPublisher(Protocol):\n+    \"\"\"``regime-link.events`` 발행자. 구현은 ``worker.regime_link.rabbitmq`` 에 있다.\"\"\"\n+\n+    def publish(self, event: RegimeLinkEvent) -> None:\n+        \"\"\"브로커 확인(publisher confirm)과 라우팅 확인까지 끝난 뒤 정상 반환한다.\n+\n+        확인되지 않으면 :class:`RegimeLinkPublishError`. 즉 \"정상 반환 == 브로커가 받았다\"\n+        이므로 호출자는 ``FINISHED`` 발행 뒤에만 ACK 하면 계약의 순서를 지킬 수 있다.\n+        \"\"\"\n+\n+\n+class JobAcknowledger(Protocol):\n+    \"\"\"작업 메시지 한 건의 ACK/reject. 구현체가 delivery tag 를 들고 있다.\"\"\"\n+\n+    def ack(self) -> None:\n+        \"\"\"처리 완료. ``FINISHED`` 발행이 확인된 뒤에만 호출한다.\"\"\"\n+\n+    def reject(self) -> None:\n+        \"\"\"계약 오류. requeue 없이 거부해 DLQ 로 보낸다.\"\"\"\n+\n+    def requeue(self) -> None:\n+        \"\"\"일시 장애. 큐로 되돌려 나중에 다시 받는다. ACK 하지 않는다.\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/messaging.py",
+          "old_path": "worker/src/worker/regime_link/messaging.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+\"\"\"사례 연결(spec 011) 워커 테스트.\n+\n+백테스트 테스트와 파일 이름이 겹치므로(``test_contracts.py``) 패키지로 두어 모듈 이름을 가른다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/__init__.py",
+          "old_path": "worker/tests/regime_link/__init__.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,310 @@\n+\"\"\"사례 연결 계약 픽스처 round-trip과 계약 오류 거부.\n+\n+백엔드 ``RegimeLinkMessageContractTest``와 **같은 픽스처·같은 규칙**이다. 한쪽만\n+고치면 다른 쪽이 깨지는 것이 목적이라 픽스처를 테스트 리소스로 복사하지 않고\n+원본을 읽는다.\n+\"\"\"\n+\n+import json\n+import re\n+from enum import StrEnum\n+from typing import Any\n+\n+import pytest\n+from fixture_paths import REGIME_LINK_BACKEND_MESSAGE_DIR, REGIME_LINK_FIXTURE_DIR\n+from pydantic import ValidationError\n+\n+from worker.regime_link import contracts\n+from worker.regime_link.contracts import (\n+    BasisKind,\n+    FillSide,\n+    RegimeLinkErrorCode,\n+    RegimeLinkEvent,\n+    RegimeLinkEventType,\n+    RegimeLinkFinishedPayload,\n+    RegimeLinkJob,\n+    RegimeLinkModel,\n+    RegimeLinkScenario,\n+    RegimeLinkStartedPayload,\n+    RegimeLinkStatus,\n+    TurnoverBasis,\n+)\n+from worker.regime_link.messaging import SCHEMA_VERSION\n+\n+StartedEvent = RegimeLinkEvent[RegimeLinkStartedPayload]\n+FinishedEvent = RegimeLinkEvent[RegimeLinkFinishedPayload]\n+\n+FIXTURES: list[tuple[str, type[RegimeLinkModel]]] = [\n+    (\"job-continuous.json\", RegimeLinkJob),\n+    (\"job-fresh-cash.json\", RegimeLinkJob),\n+    (\"job-partial-delisted.json\", RegimeLinkJob),\n+    (\"event-started.json\", StartedEvent),\n+    (\"event-finished-completed.json\", FinishedEvent),\n+    (\"event-finished-incomplete63.json\", FinishedEvent),\n+    (\"event-finished-failed.json\", FinishedEvent),\n+]\n+\n+\n+def load(name: str) -> str:\n+    return (REGIME_LINK_FIXTURE_DIR / name).read_text(encoding=\"utf-8\")\n+\n+\n+def load_dict(name: str) -> dict[str, Any]:\n+    return json.loads(load(name))\n+\n+\n+# --- round-trip ---------------------------------------------------------------------\n+\n+\n+@pytest.mark.parametrize((\"name\", \"model\"), FIXTURES, ids=[f[0] for f in FIXTURES])\n+def test_roundtrip_exact(name: str, model: type[RegimeLinkModel]) -> None:\n+    \"\"\"픽스처 → 모델 → JSON 이 원본과 정확 동치 (null 키 생략, 정규화 없음).\"\"\"\n+    original = load(name)\n+    written = model.model_validate_json(original).to_json()\n+\n+    assert json.loads(written) == json.loads(original)\n+\n+\n+def test_job_continuous_keeps_the_window_shape() -> None:\n+    job = RegimeLinkJob.model_validate_json(load(\"job-continuous.json\"))\n+\n+    assert job.job.scenario is RegimeLinkScenario.CONTINUOUS\n+    # baselineDate 행이 하나 더 있어 행 수 = completedTradingDays + 1\n+    assert len(job.inputs.portfolio_series) == job.window.completed_trading_days + 1\n+    assert job.inputs.portfolio_series[0].date == job.window.baseline_date\n+    # 연속 운용은 시작 보유가 있다\n+    assert job.inputs.opening_positions[0].quantity == 179\n+    assert job.inputs.trades[0].side is FillSide.SELL\n+    assert job.inputs.cash_flows[0].type == \"DISTRIBUTION\"\n+    assert len(job.input_digest) == 64\n+\n+\n+def test_job_fresh_cash_starts_from_initial_cash() -> None:\n+    job = RegimeLinkJob.model_validate_json(load(\"job-fresh-cash.json\"))\n+\n+    assert job.job.scenario is RegimeLinkScenario.FRESH_CASH\n+    # 기준은 run.initialCash이고 시작 보유는 빈 목록이다(research R3)\n+    assert job.inputs.opening_positions == []\n+    assert str(job.run.initial_cash) == \"10000000.00\"\n+    assert job.inputs.trades[0].side is FillSide.BUY\n+\n+\n+def test_job_partial_delisted_is_already_shortened() -> None:\n+    job = RegimeLinkJob.model_validate_json(load(\"job-partial-delisted.json\"))\n+\n+    # 백엔드가 이미 폐지 전날까지로 줄여 보낸다 — 워커가 다시 줄이지 않는다\n+    assert job.window.last_available < job.window.d63\n+    assert job.window.completed_trading_days == 50\n+    assert len(job.inputs.portfolio_series) == 51\n+    delisted = [item for item in job.universe.items if item.delisted_on is not None]\n+    assert [item.instrument_id for item in delisted] == [\"244580.XKRX\"]\n+    # 폐지되지 않은 종목은 키가 없다 (null 규칙)\n+    items = load_dict(\"job-partial-delisted.json\")[\"universe\"][\"items\"]\n+    assert \"delistedOn\" not in items[0]\n+\n+\n+def test_started_event() -> None:\n+    event = StartedEvent.model_validate_json(load(\"event-started.json\"))\n+\n+    assert event.schema_version == SCHEMA_VERSION == 1\n+    assert event.type is RegimeLinkEventType.STARTED\n+    assert event.payload.resource is not None\n+    assert event.payload.resource.pid == 4242\n+\n+\n+def test_finished_completed_event() -> None:\n+    event = FinishedEvent.model_validate_json(load(\"event-finished-completed.json\"))\n+    payload = event.payload\n+    result = payload.result\n+\n+    assert payload.status is RegimeLinkStatus.COMPLETED\n+    assert payload.partial is False\n+    assert payload.delisted_on is None\n+    assert payload.error is None\n+    assert result is not None\n+    assert result.window63.complete is True\n+    assert result.window63.trading_days == 63\n+    assert result.window63.turnover_basis is TurnoverBasis.ANNUALIZED_252\n+    # 시계열과 목록은 구간 전체를 담는다\n+    assert len(result.holdings) == result.window63.trading_days\n+    assert len(result.trades) == result.window63.trade_count\n+    # 이익 종목도 빠지지 않는다 — 보유 섹터 셋이 모두 들어간다\n+    assert result.window63.loss_contribution is not None\n+    assert set(result.window63.loss_contribution) == {\n+        \"SEMICONDUCTOR\",\n+        \"BATTERY\",\n+        \"BIO\",\n+    }\n+    assert result.basis.kind is BasisKind.HISTORICAL_REVISION\n+\n+\n+def test_finished_incomplete63_event() -> None:\n+    event = FinishedEvent.model_validate_json(load(\"event-finished-incomplete63.json\"))\n+    payload = event.payload\n+\n+    # 계산은 끝났고(COMPLETED) 63을 못 채웠을 뿐이다\n+    assert payload.status is RegimeLinkStatus.COMPLETED\n+    assert payload.partial is True\n+    assert payload.delisted_on is not None\n+    assert payload.delisted_on.isoformat() == \"2012-06-11\"\n+    assert payload.result is not None\n+    assert payload.result.window63.complete is False\n+    assert payload.result.window63.trading_days == 50\n+    # window21은 언제나 완성이다 — 21 미만이면 애초에 발행되지 않는다\n+    assert payload.result.window21.complete is True\n+    assert payload.result.window21.trading_days == 21\n+\n+\n+def test_finished_failed_event() -> None:\n+    event = FinishedEvent.model_validate_json(load(\"event-finished-failed.json\"))\n+    payload = event.payload\n+\n+    assert payload.status is RegimeLinkStatus.FAILED\n+    assert payload.result is None\n+    assert payload.error is not None\n+    assert payload.error.code is RegimeLinkErrorCode.INPUT_INCOMPLETE\n+\n+\n+# --- 표기 규칙 -----------------------------------------------------------------------\n+\n+\n+def test_return_uses_the_contract_key() -> None:\n+    \"\"\"계약이 정한 키는 ``return``이다.\n+\n+    예약어라 필드 이름은 ``window_return``이고 alias가 둘을 맞춘다.\n+    \"\"\"\n+    event = FinishedEvent.model_validate_json(load(\"event-finished-completed.json\"))\n+    written = json.loads(event.to_json())[\"payload\"][\"result\"]\n+\n+    assert \"windowReturn\" not in written[\"window63\"]\n+    assert written[\"window63\"][\"return\"] == \"0.0276\"\n+    assert written[\"kospi\"][\"window21\"][\"return\"] == \"0.0050\"\n+    # 소수는 문자열, 거래일 수는 숫자\n+    assert isinstance(written[\"window63\"][\"turnover\"], str)\n+    assert isinstance(written[\"window63\"][\"tradingDays\"], int)\n+\n+\n+def test_job_body_has_no_schema_version() -> None:\n+    \"\"\"작업은 헤더로만 버전을 싣고 이벤트만 본문 첫 필드에 싣는다.\"\"\"\n+    assert \"schemaVersion\" not in load_dict(\"job-continuous.json\")\n+    assert \"schemaVersion\" in load_dict(\"event-started.json\")\n+\n+\n+# --- 계약 오류 거부 -------------------------------------------------------------------\n+\n+\n+def test_unknown_field_is_rejected() -> None:\n+    \"\"\"모르는 키는 양쪽 계약이 어긋났다는 신호라 조용히 넘기지 않는다.\"\"\"\n+    body = load_dict(\"job-continuous.json\")\n+    body[\"inputs\"][\"weightsSeries\"] = []\n+\n+    with pytest.raises(ValidationError):\n+        RegimeLinkJob.model_validate(body)\n+\n+\n+def test_missing_required_field_is_rejected() -> None:\n+    \"\"\"빠진 값을 기본값으로 채우지 않는다.\"\"\"\n+    body = load_dict(\"job-continuous.json\")\n+    del body[\"window\"][\"baselineDate\"]\n+\n+    with pytest.raises(ValidationError):\n+        RegimeLinkJob.model_validate(body)\n+\n+\n+def test_fraction_in_an_integer_slot_is_rejected() -> None:\n+    \"\"\"수량은 정수다. 소수를 반올림해 통과시키지 않는다.\"\"\"\n+    body = load_dict(\"job-continuous.json\")\n+    body[\"inputs\"][\"openingPositions\"][0][\"quantity\"] = 1.5\n+\n+    with pytest.raises(ValidationError):\n+        RegimeLinkJob.model_validate(body)\n+\n+\n+def test_unknown_enum_value_is_rejected() -> None:\n+    \"\"\"자료 부족은 발행 전 백엔드 판정이라 워커의 실패 사유가 아니다(R13).\"\"\"\n+    body = load_dict(\"event-finished-failed.json\")\n+    body[\"payload\"][\"error\"][\"code\"] = \"DATA_INSUFFICIENT\"\n+\n+    with pytest.raises(ValidationError):\n+        FinishedEvent.model_validate(body)\n+\n+\n+def test_naive_datetime_is_rejected() -> None:\n+    \"\"\"시간대 없는 시각은 백엔드 ``Instant``가 읽지 못하므로 먼저 막는다.\"\"\"\n+    body = load_dict(\"event-started.json\")\n+    body[\"payload\"][\"startedAt\"] = \"2026-09-18T02:00:00\"\n+\n+    with pytest.raises(ValidationError):\n+        StartedEvent.model_validate(body)\n+\n+\n+def test_finished_completed_without_result_is_rejected() -> None:\n+    \"\"\"COMPLETED 인데 result 가 없는 이벤트는 만들 수도 읽을 수도 없다.\"\"\"\n+    body = load_dict(\"event-finished-completed.json\")\n+    del body[\"payload\"][\"result\"]\n+\n+    with pytest.raises(ValidationError):\n+        FinishedEvent.model_validate(body)\n+\n+\n+def test_finished_completed_with_error_is_rejected() -> None:\n+    body = load_dict(\"event-finished-completed.json\")\n+    body[\"payload\"][\"error\"] = {\"code\": \"ENGINE_ERROR\", \"message\": \"둘 다 실을 수 없다\"}\n+\n+    with pytest.raises(ValidationError):\n+        FinishedEvent.model_validate(body)\n+\n+\n+def test_finished_failed_without_error_is_rejected() -> None:\n+    body = load_dict(\"event-finished-failed.json\")\n+    del body[\"payload\"][\"error\"]\n+\n+    with pytest.raises(ValidationError):\n+        FinishedEvent.model_validate(body)\n+\n+\n+def test_finished_failed_with_result_is_rejected() -> None:\n+    \"\"\"실패한 계산에 결과를 실으면 화면이 실패를 숫자로 읽는다.\"\"\"\n+    completed = load_dict(\"event-finished-completed.json\")\n+    body = load_dict(\"event-finished-failed.json\")\n+    body[\"payload\"][\"result\"] = completed[\"payload\"][\"result\"]\n+\n+    with pytest.raises(ValidationError):\n+        FinishedEvent.model_validate(body)\n+\n+\n+# --- 백엔드 enum 과의 값 대조 ----------------------------------------------------------\n+\n+\n+def java_enum_values(source: str) -> dict[str, set[str]]:\n+    \"\"\"Java 소스에서 ``public enum`` 이름과 그 상수 집합을 읽는다.\"\"\"\n+    without_comments = re.sub(r\"/\\*.*?\\*/\", \" \", source, flags=re.DOTALL)\n+    without_comments = re.sub(r\"//[^\\n]*\", \" \", without_comments)\n+    found: dict[str, set[str]] = {}\n+    for match in re.finditer(r\"public enum (\\w+)\\s*\\{(.*?)\\}\", without_comments, flags=re.DOTALL):\n+        body = match.group(2).split(\";\")[0]  # 상수 목록은 첫 세미콜론 앞까지다\n+        found[match.group(1)] = set(re.findall(r\"\\b[A-Z][A-Z0-9_]*\\b\", body))\n+    return found\n+\n+\n+def test_enum_values_match_the_backend() -> None:\n+    \"\"\"양쪽 enum 의 값 집합이 같다.\n+\n+    픽스처에 나오지 않는 값(``MARKET_DATA_MISSING``·``LIQUIDATION`` 등)은 round-trip\n+    으로는 한 번도 지나가지 않아, 한쪽에서만 이름이 바뀌거나 사라져도 그 값을 처음\n+    발행하는 순간까지 드러나지 않는다. 그래서 값 집합을 직접 맞춘다.\n+    \"\"\"\n+    assert REGIME_LINK_BACKEND_MESSAGE_DIR.is_dir(), (\n+        f\"{REGIME_LINK_BACKEND_MESSAGE_DIR} 가 없다 — 경로가 틀렸거나 패키지가 옮겨졌다\"\n+    )\n+\n+    declared: dict[str, set[str]] = {}\n+    for path in sorted(REGIME_LINK_BACKEND_MESSAGE_DIR.glob(\"*.java\")):\n+        declared.update(java_enum_values(path.read_text(encoding=\"utf-8\")))\n+    assert declared, \"백엔드 enum 을 하나도 읽지 못했다\"\n+\n+    for name, values in sorted(declared.items()):\n+        model = getattr(contracts, name, None)\n+        assert model is not None, f\"{name} 이 워커 계약에 없다\"\n+        assert issubclass(model, StrEnum), f\"{name} 이 워커에서 StrEnum 이 아니다\"\n+        assert {member.value for member in model} == values, name\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/test_contracts.py",
+          "old_path": "worker/tests/regime_link/test_contracts.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,123 @@\n+\"\"\"사례 연결 계약 상수 대조.\n+\n+큐·exchange·routing key·스키마 버전은 백엔드와 합의한 계약값이다. 백테스트는 워커\n+테스트가 백엔드 ``BacktestRabbitConfig.java``를 직접 읽어 대조하는데, 011은 그 Java\n+파일(``RegimeLinkRabbitConfig``, T030)이 아직 없으므로 **계약 문서**\n+(``docs/specs/regime-link-messaging/README.md``)와 대조한다. Java 파일이 생기면\n+아래 ``test_topology_constants_match_the_backend``가 저절로 살아난다.\n+\"\"\"\n+\n+import re\n+from pathlib import Path\n+\n+import pytest\n+from fixture_paths import REGIME_LINK_BACKEND_CONFIG, REGIME_LINK_CONTRACT_README\n+\n+from worker.regime_link import messaging\n+\n+#: 계약 문서에서 이름을 읽어 올 절. 다른 절의 예시 문장이 섞이지 않게 범위를 좁힌다.\n+TOPOLOGY_SECTION = \"## 메시지 속성과 토폴로지\"\n+\n+#: 계약 이름의 접두어. exchange·큐·routing key 가 모두 이것으로 시작한다.\n+NAME_PREFIX = \"regime-link\"\n+\n+\n+def contract_section() -> str:\n+    text = REGIME_LINK_CONTRACT_README.read_text(encoding=\"utf-8\")\n+    start = text.index(TOPOLOGY_SECTION)\n+    end = text.find(\"\\n## \", start + 1)\n+    if end == -1:\n+        end = len(text)\n+    return text[start:end]\n+\n+\n+def documented_names() -> set[str]:\n+    \"\"\"계약 문서의 토폴로지 절이 backtick 으로 적은 이름.\n+\n+    글자 종류를 제한하는 정규식으로 뽑지 않는다. ``regime-link.jobs-dlq`` 처럼\n+    하이픈·숫자가 든 이름을 계약에 새로 적으면 그런 정규식은 그 이름을 **조용히\n+    건너뛰어**, 워커도 모르는 이름이 계약에만 남은 상태가 통과한다. backtick 토큰을\n+    통째로 걷은 뒤 접두어로만 거른다.\n+    \"\"\"\n+    tokens = re.findall(r\"`([^`]+)`\", contract_section())\n+    return {token for token in tokens if token.startswith(NAME_PREFIX)}\n+\n+\n+def held_names() -> set[str]:\n+    \"\"\"모듈이 들고 있는 계약 이름 상수.\n+\n+    대조할 상수를 손으로 적은 목록으로 두지 않는다 — 상수를 더하면서 목록에 넣는\n+    것을 잊으면 그 상수는 계약과 한 번도 대조되지 않은 채 통과한다.\n+    \"\"\"\n+    return {\n+        value\n+        for name, value in vars(messaging).items()\n+        if not name.startswith(\"_\") and isinstance(value, str) and value.startswith(NAME_PREFIX)\n+    }\n+\n+\n+# --- 계약 상수 -----------------------------------------------------------------------\n+\n+\n+def test_topology_names_match_the_contract() -> None:\n+    \"\"\"워커가 아는 이름과 계약 문서가 적은 이름이 정확히 같다 (T030 전까지).\"\"\"\n+    documented = documented_names()\n+    assert documented, \"계약 문서에서 토폴로지 이름을 찾지 못했다\"\n+\n+    assert held_names() == documented\n+\n+\n+def test_schema_version_matches_the_contract() -> None:\n+    match = re.search(r\"schemaVersion: (\\d+)\", contract_section())\n+    assert match is not None, \"계약 문서에서 schemaVersion 을 찾지 못했다\"\n+    assert messaging.SCHEMA_VERSION == int(match.group(1)) == 1\n+\n+\n+def test_delivery_limit_matches_the_contract() -> None:\n+    match = re.search(r\"x-delivery-limit=(\\d+)\", contract_section())\n+    assert match is not None, \"계약 문서에서 x-delivery-limit 을 찾지 못했다\"\n+    assert messaging.JOBS_DELIVERY_LIMIT == int(match.group(1)) == 1\n+\n+\n+def test_prefetch_is_one() -> None:\n+    assert messaging.PREFETCH_COUNT == 1\n+\n+\n+def test_topology_constants_match_the_backend() -> None:\n+    \"\"\"백엔드 ``RegimeLinkRabbitConfig`` 가 생기면 그 상수와 직접 대조한다.\"\"\"\n+    if not REGIME_LINK_BACKEND_CONFIG.exists():\n+        # 경로가 틀려 영영 skip 되는 것과 아직 T030 을 안 한 것을 가른다. 이 skip 은\n+        # \"못 잡는 쪽\"으로 실패하므로 닻이 없으면 대조가 영영 돌지 않아도 알 수 없다.\n+        assert REGIME_LINK_BACKEND_CONFIG.parent.is_dir(), (\n+            f\"{REGIME_LINK_BACKEND_CONFIG.parent} 가 없다 — 경로가 틀렸거나 패키지가 옮겨졌다\"\n+        )\n+        pytest.skip(\"RegimeLinkRabbitConfig.java 는 spec 011 T030(묶음 M5)에서 만든다\")\n+\n+    source = REGIME_LINK_BACKEND_CONFIG.read_text(encoding=\"utf-8\")\n+    declared = dict(re.findall(r'public static final String (\\w+) = \"([^\"]+)\";', source))\n+    assert declared, \"backend RegimeLinkRabbitConfig constants not found\"\n+    for name, value in declared.items():\n+        # 백엔드에만 있는 이름은 계약 문서와 이 모듈에도 더해야 한다\n+        assert hasattr(messaging, name), f\"{name} 이 워커 계약 상수에 없다\"\n+        assert getattr(messaging, name) == value, name\n+\n+    version = re.search(r\"public static final int SCHEMA_VERSION = (\\d+);\", source)\n+    assert version is not None, \"backend SCHEMA_VERSION constant not found\"\n+    assert messaging.SCHEMA_VERSION == int(version.group(1))\n+\n+\n+# --- 경계 --------------------------------------------------------------------------\n+\n+\n+def test_messaging_has_no_broker_client() -> None:\n+    \"\"\"pika 는 ``rabbitmq`` 에만 있다.\n+\n+    이 경계 덕분에 브로커 없이 소비 흐름을 시험할 수 있다.\n+    \"\"\"\n+    assert messaging.__file__ is not None, \"messaging 모듈 경로를 찾지 못했다\"\n+    source = Path(messaging.__file__).read_text(encoding=\"utf-8\")\n+    pattern = r\"^\\s*(?:from|import)\\s+([\\w.]+)\"\n+    imported = set(re.findall(pattern, source, flags=re.MULTILINE))\n+\n+    assert imported, \"import 문을 찾지 못했다\"\n+    assert not {name for name in imported if name.split(\".\")[0] == \"pika\"}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/test_messaging.py",
+          "old_path": "worker/tests/regime_link/test_messaging.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,3 +14,45 @@ FIXTURE_DIR = (\n \n #: 3종목 24개월 합성 픽스처(spec 004 T004). 결과는 항상 픽스처로 식별된다.\n THREE_ETF_DIR = Path(__file__).resolve().parents[1] / \"examples\" / \"three_etf_24m\"\n+\n+#: spec 011 사례 연결 계약 픽스처. 백테스트와 다른 경로·다른 스키마다(011 T001).\n+REGIME_LINK_FIXTURE_DIR = (\n+    Path(__file__).resolve().parents[2] / \"docs\" / \"specs\" / \"regime-link-messaging\" / \"examples\"\n+)\n+\n+#: 백엔드 011 메시지 계약 record·enum 이 있는 패키지. 양쪽 enum 값 집합을 대조한다.\n+REGIME_LINK_BACKEND_MESSAGE_DIR = (\n+    Path(__file__).resolve().parents[2]\n+    / \"backend\"\n+    / \"src\"\n+    / \"main\"\n+    / \"java\"\n+    / \"com\"\n+    / \"ssafy\"\n+    / \"thorp\"\n+    / \"regimelink\"\n+    / \"application\"\n+    / \"port\"\n+    / \"message\"\n+)\n+\n+#: 백엔드 토폴로지 상수(011 T030). 아직 없으면 계약 문서와 대조한다.\n+REGIME_LINK_BACKEND_CONFIG = (\n+    Path(__file__).resolve().parents[2]\n+    / \"backend\"\n+    / \"src\"\n+    / \"main\"\n+    / \"java\"\n+    / \"com\"\n+    / \"ssafy\"\n+    / \"thorp\"\n+    / \"regimelink\"\n+    / \"infrastructure\"\n+    / \"messaging\"\n+    / \"RegimeLinkRabbitConfig.java\"\n+)\n+\n+#: 워커·백엔드가 함께 읽는 메시지 계약 문서(011 T001).\n+REGIME_LINK_CONTRACT_README = (\n+    Path(__file__).resolve().parents[2] / \"docs\" / \"specs\" / \"regime-link-messaging\" / \"README.md\"\n+)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixture_paths.py",
+          "old_path": "worker/tests/fixture_paths.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2843843": []
+  }
+}

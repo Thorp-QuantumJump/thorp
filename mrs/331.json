@@ -1,0 +1,1219 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959689,
+    "iid": 331,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면에 질문하기 플로팅 버튼과 말풍선을 둔다",
+    "description": "## 작업 내용 요약\n\n결과 화면 여백에 로봇 아이콘 플로팅 버튼을 두고, 누르면 옆에 말풍선이 열려 그 결과에 대해 묻고 답과 근거 카드를 본다. 근거 카드를 누르면 그 값이 있는 결과 탭이 열린다. 서버 플래그가 꺼져 있으면(지금 배포 환경) 버튼이 아예 없어 사용자에게 보이는 변화는 없다.\n\n## 관련 티켓\n\n- S15P21E205-441 (Story S15P21E205-433 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **버튼**(FR-001·FR-002): 접근 이름 `질문하기`, 보이는 글자 없이 `Bot` 아이콘. `App`의 라우트 전환 바깥에 한 번 마운트되고, 페이지가 등록한 맥락이 있고 로그인·가입·관리 경로가 아니고 `capabilities`가 그 화면 종류를 켰을 때만 그린다. 넓은 화면은 포인터로 끌어 옮기고 놓으면 가까운 쪽 여백에 붙으며 자리는 `localStorage` `thorp.assistant.fabPosition`에 남는다. ≤600px은 끌기 없이 우측 하단 고정. `ui/Button`을 쓰지 않아 주 모양 버튼은 여전히 '비교 대상 고르기' 하나다.\n- **말풍선**(FR-003·FR-004): 넓은 화면은 비교 대상 팝오버와 같은 `radix-ui` Popover(비모달, z 55, 물음표 도움말 80·대화상자 60 아래), 좁은 화면은 바닥 시트. Escape·바깥 누르기·다시 누르기로 닫히고 초점은 버튼으로 돌아온다. 열릴 때 초점은 입력에. 맥락 표시 `기준 결과에 질문`, 예시 질문 셋, 300자 입력 하나, 첫 전송 전 외부 전달 안내. 답변 종류를 고르는 조작은 없다.\n- **답과 근거**(FR-010·FR-012): 답 문장 아래 `evidence`에 온 카드만(라벨·값·기준 날짜·탭 이름). 카드 → `ResultPage`가 등록한 `openTab` → 탭 묶음이 그 탭을 연다. 429는 서버 문구와 다시 가능한 시점(초 또는 시각), 503은 고정 문구와 재시도 버튼. 자동 재시도는 없다.\n- **화면 전환**(FR-015): 맥락(토큰)이 바뀌면 진행 중 요청을 `AbortController`로 취소하고 이력을 비우며 말풍선을 닫는다. 요청 번호로 늦게 온 이전 답을 버린다.\n- **결과 탭 제어 prop**: `ResultTabs`에 `activeTab`·`onActiveTabChange`를 더했다. 없으면 지금처럼 비제어다. `ResultDetailTabs`가 그대로 넘기고 `ResultPage`가 상태를 든다. 열 수 없는 탭(하락 구간 없음의 '손실이 커진 때') 요청은 무시한다.\n- **페이지 맥락**: `useAssistantPageContext(page, { openTab })`로 페이지가 등록·해제한다. 제공자 밖에서는 아무것도 하지 않아 기존 `ResultPage` 테스트가 그대로 돈다.\n- **API·타입**: `api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — CSRF 보호 mutation 경로, 취소는 오류로 바꾸지 않음), `types/assistant.ts`.\n\n## 테스트\n\n- `npm run lint && npm run build && npm test` — lint 0 errors(기존 warning 25), build 통과, Vitest 151 files·1429 tests 통과(skipped 0). `test:legacy`(node --test 넷)는 이 PC의 Node 22.15가 `.ts`를 직접 못 읽어 실패하는데(`ERR_UNKNOWN_FILE_EXTENSION`, 이 MR과 무관한 파일), `--experimental-strip-types`를 붙이면 4파일 15건 모두 통과한다.\n- 버튼: 접근 이름·아이콘 `aria-hidden`·주 모양 버튼 0개, 비활성 환경·로그인/관리 경로·맥락 없음에서 없음, 기본 우측 하단, 끌어 놓으면 왼쪽 여백에 붙고 저장, 다시 그려도 그 자리, 살짝 누름은 열기, 좁은 화면 끌기 무시, Tab+Enter 열기.\n- 말풍선: 맥락·예시·입력 하나·안내·초점, 왼쪽이면 오른쪽으로 펼침, 예시 클릭 전송과 카드 두 장, 카드 → 탭, Escape·바깥 누르기 닫힘과 초점 복귀, 화면 전환 시 abort·이전 답 미표시, 429 문구, 503 문구+재시도(자동 재시도 없음), 범위 밖 답, 좁은 화면 바닥 시트.\n- 결과 화면: 도우미의 탭 열기 요청이 `설정·근거` 탭을 열고 열 수 없는 탭은 무시. 탭 묶음 제어 모드.\n- **자동 테스트 밖(남음)**: 데스크톱에서 끌기·붙기·펼침 방향, 모바일에서 고정·바닥 시트 배치를 사람이 봐야 한다. 이 브랜치를 로컬에서 띄우려면 `backend/.env`에 `THORP_ASSISTANT_ENABLED_SCOPES=RESULT`와 키 셋을 넣어 켠다.\n\n## 리뷰 포인트\n\n- **예시 질문을 누르면 바로 보낸다.** \"전송은 사용자가 제출할 때만\"(FR-004)에서 예시 클릭을 제출로 봤다. 입력창에 채우기만 하는 쪽이 낫다고 보면 한 줄이다.\n- **좁은 화면은 Popover 대신 직접 만든 바닥 시트**다. Radix Popover의 위치 계산을 CSS로 덮어 시트로 만드는 것보다 `role=\"dialog\" aria-modal=\"false\"` div 하나가 단순했다. Escape·바깥 누르기는 document 리스너다.\n- **`capabilities`는 앱 수명 동안 한 번만 묻는다.** 플래그를 켜고 끄면 새로고침해야 반영된다. 관문 뒤 한 번 켜는 값이라 그렇게 뒀다.\n- **이력은 말풍선이 살아 있는 동안만 보인다.** 각 질문은 독립이고 저장하지 않는다(spec Out of Scope). 닫았다 열어도 같은 화면이면 남고, 화면이 바뀌면 비운다.\n\n## 전달만 하는 것\n\n- 배포 영향 없음. 새 환경 변수·nginx·백엔드 변경이 없다.\n- 이 MR만으로는 실제 답이 나오지 않는다. 묶음 4(근거 팩) 머지와 플래그 `RESULT`가 있어야 한다.\n\n## 남은 것\n\n- T046의 사람 배치 확인(데스크톱 끌기·모바일 시트). MR 리뷰 때 함께 본다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-25T13:35:55.702+09:00",
+    "updated_at": "2026-09-25T13:41:36.184+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T13:41:36.208+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/441-assistant-bubble",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+    "merge_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T13:35:57.356+09:00",
+    "reference": "!331",
+    "references": {
+      "short": "!331",
+      "relative": "!331",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!331"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/331",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959689,
+    "iid": 331,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면에 질문하기 플로팅 버튼과 말풍선을 둔다",
+    "description": "## 작업 내용 요약\n\n결과 화면 여백에 로봇 아이콘 플로팅 버튼을 두고, 누르면 옆에 말풍선이 열려 그 결과에 대해 묻고 답과 근거 카드를 본다. 근거 카드를 누르면 그 값이 있는 결과 탭이 열린다. 서버 플래그가 꺼져 있으면(지금 배포 환경) 버튼이 아예 없어 사용자에게 보이는 변화는 없다.\n\n## 관련 티켓\n\n- S15P21E205-441 (Story S15P21E205-433 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **버튼**(FR-001·FR-002): 접근 이름 `질문하기`, 보이는 글자 없이 `Bot` 아이콘. `App`의 라우트 전환 바깥에 한 번 마운트되고, 페이지가 등록한 맥락이 있고 로그인·가입·관리 경로가 아니고 `capabilities`가 그 화면 종류를 켰을 때만 그린다. 넓은 화면은 포인터로 끌어 옮기고 놓으면 가까운 쪽 여백에 붙으며 자리는 `localStorage` `thorp.assistant.fabPosition`에 남는다. ≤600px은 끌기 없이 우측 하단 고정. `ui/Button`을 쓰지 않아 주 모양 버튼은 여전히 '비교 대상 고르기' 하나다.\n- **말풍선**(FR-003·FR-004): 넓은 화면은 비교 대상 팝오버와 같은 `radix-ui` Popover(비모달, z 55, 물음표 도움말 80·대화상자 60 아래), 좁은 화면은 바닥 시트. Escape·바깥 누르기·다시 누르기로 닫히고 초점은 버튼으로 돌아온다. 열릴 때 초점은 입력에. 맥락 표시 `기준 결과에 질문`, 예시 질문 셋, 300자 입력 하나, 첫 전송 전 외부 전달 안내. 답변 종류를 고르는 조작은 없다.\n- **답과 근거**(FR-010·FR-012): 답 문장 아래 `evidence`에 온 카드만(라벨·값·기준 날짜·탭 이름). 카드 → `ResultPage`가 등록한 `openTab` → 탭 묶음이 그 탭을 연다. 429는 서버 문구와 다시 가능한 시점(초 또는 시각), 503은 고정 문구와 재시도 버튼. 자동 재시도는 없다.\n- **화면 전환**(FR-015): 맥락(토큰)이 바뀌면 진행 중 요청을 `AbortController`로 취소하고 이력을 비우며 말풍선을 닫는다. 요청 번호로 늦게 온 이전 답을 버린다.\n- **결과 탭 제어 prop**: `ResultTabs`에 `activeTab`·`onActiveTabChange`를 더했다. 없으면 지금처럼 비제어다. `ResultDetailTabs`가 그대로 넘기고 `ResultPage`가 상태를 든다. 열 수 없는 탭(하락 구간 없음의 '손실이 커진 때') 요청은 무시한다.\n- **페이지 맥락**: `useAssistantPageContext(page, { openTab })`로 페이지가 등록·해제한다. 제공자 밖에서는 아무것도 하지 않아 기존 `ResultPage` 테스트가 그대로 돈다.\n- **API·타입**: `api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — CSRF 보호 mutation 경로, 취소는 오류로 바꾸지 않음), `types/assistant.ts`.\n\n## 테스트\n\n- `npm run lint && npm run build && npm test` — lint 0 errors(기존 warning 25), build 통과, Vitest 151 files·1429 tests 통과(skipped 0). `test:legacy`(node --test 넷)는 이 PC의 Node 22.15가 `.ts`를 직접 못 읽어 실패하는데(`ERR_UNKNOWN_FILE_EXTENSION`, 이 MR과 무관한 파일), `--experimental-strip-types`를 붙이면 4파일 15건 모두 통과한다.\n- 버튼: 접근 이름·아이콘 `aria-hidden`·주 모양 버튼 0개, 비활성 환경·로그인/관리 경로·맥락 없음에서 없음, 기본 우측 하단, 끌어 놓으면 왼쪽 여백에 붙고 저장, 다시 그려도 그 자리, 살짝 누름은 열기, 좁은 화면 끌기 무시, Tab+Enter 열기.\n- 말풍선: 맥락·예시·입력 하나·안내·초점, 왼쪽이면 오른쪽으로 펼침, 예시 클릭 전송과 카드 두 장, 카드 → 탭, Escape·바깥 누르기 닫힘과 초점 복귀, 화면 전환 시 abort·이전 답 미표시, 429 문구, 503 문구+재시도(자동 재시도 없음), 범위 밖 답, 좁은 화면 바닥 시트.\n- 결과 화면: 도우미의 탭 열기 요청이 `설정·근거` 탭을 열고 열 수 없는 탭은 무시. 탭 묶음 제어 모드.\n- **자동 테스트 밖(남음)**: 데스크톱에서 끌기·붙기·펼침 방향, 모바일에서 고정·바닥 시트 배치를 사람이 봐야 한다. 이 브랜치를 로컬에서 띄우려면 `backend/.env`에 `THORP_ASSISTANT_ENABLED_SCOPES=RESULT`와 키 셋을 넣어 켠다.\n\n## 리뷰 포인트\n\n- **예시 질문을 누르면 바로 보낸다.** \"전송은 사용자가 제출할 때만\"(FR-004)에서 예시 클릭을 제출로 봤다. 입력창에 채우기만 하는 쪽이 낫다고 보면 한 줄이다.\n- **좁은 화면은 Popover 대신 직접 만든 바닥 시트**다. Radix Popover의 위치 계산을 CSS로 덮어 시트로 만드는 것보다 `role=\"dialog\" aria-modal=\"false\"` div 하나가 단순했다. Escape·바깥 누르기는 document 리스너다.\n- **`capabilities`는 앱 수명 동안 한 번만 묻는다.** 플래그를 켜고 끄면 새로고침해야 반영된다. 관문 뒤 한 번 켜는 값이라 그렇게 뒀다.\n- **이력은 말풍선이 살아 있는 동안만 보인다.** 각 질문은 독립이고 저장하지 않는다(spec Out of Scope). 닫았다 열어도 같은 화면이면 남고, 화면이 바뀌면 비운다.\n\n## 전달만 하는 것\n\n- 배포 영향 없음. 새 환경 변수·nginx·백엔드 변경이 없다.\n- 이 MR만으로는 실제 답이 나오지 않는다. 묶음 4(근거 팩) 머지와 플래그 `RESULT`가 있어야 한다.\n\n## 남은 것\n\n- T046의 사람 배치 확인(데스크톱 끌기·모바일 시트). MR 리뷰 때 함께 본다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-25T13:35:55.702+09:00",
+    "updated_at": "2026-09-25T13:41:36.184+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T13:41:36.208+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/441-assistant-bubble",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+    "merge_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T13:35:57.356+09:00",
+    "reference": "!331",
+    "references": {
+      "short": "!331",
+      "relative": "!331",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!331"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/331",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": "2026-09-25T13:36:09.267+09:00",
+    "latest_build_finished_at": "2026-09-25T13:43:05.400+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 222011,
+      "iid": 360,
+      "project_id": 1444456,
+      "sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+      "ref": "feat(fe)/441-assistant-bubble",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-25T13:36:09.143+09:00",
+      "updated_at": "2026-09-25T13:43:05.409+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/222011"
+    },
+    "head_pipeline": {
+      "id": 222011,
+      "iid": 360,
+      "project_id": 1444456,
+      "sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+      "ref": "feat(fe)/441-assistant-bubble",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-25T13:36:09.143+09:00",
+      "updated_at": "2026-09-25T13:43:05.409+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/222011",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-25T13:36:09.267+09:00",
+      "finished_at": "2026-09-25T13:43:05.400+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/222011",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "8a236ddcb57e03f92f54218b6c46b8e488236f78",
+      "head_sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+      "start_sha": "272f159bcd835fd1b6c67857157f9d0fe3b3a289"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "60d75eaf0317a2f0ea08983302666c895fd7f4ef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867840,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T13:35:55.825+09:00",
+          "updated_at": "2026-09-25T13:35:55.829+09:00",
+          "system": true,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9a5d8f0647d1f0c6251496a62f35e74ac81d1ab9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867841,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T13:35:55.851+09:00",
+          "updated_at": "2026-09-25T13:35:55.859+09:00",
+          "system": true,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f4a2222bab5f1041e8a29933af4d4cdb753cabda",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867842,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 예외 처리 및 AbortController 활용**: API 통신 시 `AbortSignal`을 통해 화면 전환이나 맥락 변경 시 진행 중인 네트워크 요청을 적절히 취소하고, 오래된 응답 데이터가 덮어씌워지지 않도록 요청 순서 번호(sequence)를 관리한 설계가 돋보입니다.\n- **접근성(a11y) 및 반응형 고려**: 적절한 ARIA 속성(`aria-label`, `aria-expanded`, `aria-controls`, `role=\"dialog\"`)과 포커스 관리, `prefers-reduced-motion` 미디어 쿼리 대응이 세심하게 구현되어 있습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **화면 전환 시 취소 및 초기화 테스트**: 질문 전송 중 빠르게 다른 결과 화면(다른 토큰 경로)으로 이동했을 때, 이전 요청이 올바르게 `abort`되는지 시나리오 테스트를 수행합니다.\n- **네트워크 오류(429 / 503) 시나리오 테스트**: 백엔드에서 429(Rate Limit) 또는 503(Service Unavailable) 응답을 반환할 때, UI에 재시도 버튼의 노출 여부와 안내 문구(남은 시간 표시 등)가 기획대로 정확히 렌더링되는지 확인합니다.\n- **모바일 화면(바닥 시트) 상호작용 테스트**: 600px 이하의 뷰포트 환경에서 플로팅 버튼이 우측 하단에 고정되고, 클릭 시 Radix Popover가 아닌 바닥 시트(Bottom Sheet)로 정상 오픈되며, 외부 터치나 Escape 키로 닫히는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-25T13:36:05.726+09:00",
+          "updated_at": "2026-09-25T13:36:05.726+09:00",
+          "system": false,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d5d66a5ff3dc47ff8711fdae8b49edcbd5d372b2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867849,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T13:37:11.499+09:00",
+          "updated_at": "2026-09-25T13:37:11.507+09:00",
+          "system": true,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5b9fe2053b6a6019a5b847aa2008012ad8c24189",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867853,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T13:38:33.494+09:00",
+          "updated_at": "2026-09-25T13:38:33.497+09:00",
+          "system": true,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "beebf55ebc0a700d6b9ae33b2413f716bd52cfa7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867860,
+          "type": null,
+          "body": "mentioned in commit 2231b81a559eb84f1a99e934aee71874d2a70f77",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T13:41:36.359+09:00",
+          "updated_at": "2026-09-25T13:41:36.366+09:00",
+          "system": true,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bf159455d9df267a41e05d3fa79da8d0523044a2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885031,
+          "type": null,
+          "body": "mentioned in commit de84e4c6bfaa10a963d37ed0ab1d0096f7bd9e2d",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:09.652+09:00",
+          "updated_at": "2026-10-13T15:16:09.730+09:00",
+          "system": true,
+          "noteable_id": 959689,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 331,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2249801,
+      "head_commit_sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+      "base_commit_sha": "8a236ddcb57e03f92f54218b6c46b8e488236f78",
+      "start_commit_sha": "272f159bcd835fd1b6c67857157f9d0fe3b3a289",
+      "created_at": "2026-09-25T13:35:56.177+09:00",
+      "merge_request_id": 959689,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "2be0786cfc544173e234d1ce3bd752d37424264d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2249801,
+      "head_commit_sha": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+      "base_commit_sha": "8a236ddcb57e03f92f54218b6c46b8e488236f78",
+      "start_commit_sha": "272f159bcd835fd1b6c67857157f9d0fe3b3a289",
+      "created_at": "2026-09-25T13:35:56.177+09:00",
+      "merge_request_id": 959689,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "2be0786cfc544173e234d1ce3bd752d37424264d",
+      "commits": [
+        {
+          "id": "0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22",
+          "short_id": "0cc2277a",
+          "created_at": "2026-09-25T13:07:22.000+09:00",
+          "parent_ids": [
+            "cdf5c97b7ae6edf85c502d5bd929342b6774c4cb"
+          ],
+          "title": "fix(fe): 도우미 예시 질문 셋을 수익률 계산·MDD·손실 최대 시점 보유로 바꾼다",
+          "message": "fix(fe): 도우미 예시 질문 셋을 수익률 계산·MDD·손실 최대 시점 보유로 바꾼다\n\n세 문장 모두 실제 결과에 보내 답이 오는지 확인한 표현이다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T13:07:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T13:07:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0cc2277a9529bc74c14ea9bb4a0182b1f2a7fc22"
+        },
+        {
+          "id": "cdf5c97b7ae6edf85c502d5bd929342b6774c4cb",
+          "short_id": "cdf5c97b",
+          "created_at": "2026-09-25T12:59:01.000+09:00",
+          "parent_ids": [
+            "4827fcedd1d5f316f05101955637fadb583d9e5d"
+          ],
+          "title": "feat(fe): 도우미 말풍선에 처음 화면으로 돌아가는 화살표 버튼을 둔다",
+          "message": "feat(fe): 도우미 말풍선에 처음 화면으로 돌아가는 화살표 버튼을 둔다\n\n보낸 뒤에만 머리글 왼쪽에 보이고, 누르면 진행 중 요청을 취소하고\n이력을 비워 안내·예시 질문으로 돌아간다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:59:01.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:59:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cdf5c97b7ae6edf85c502d5bd929342b6774c4cb"
+        },
+        {
+          "id": "4827fcedd1d5f316f05101955637fadb583d9e5d",
+          "short_id": "4827fced",
+          "created_at": "2026-09-25T12:46:08.000+09:00",
+          "parent_ids": [
+            "b3f0c816303836e543f31fcd8754a915b9eccab4"
+          ],
+          "title": "fix(fe): 도우미 말풍선 머리글을 '결과 도우미'로 바꾼다",
+          "message": "fix(fe): 도우미 말풍선 머리글을 '결과 도우미'로 바꾼다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:46:08.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:46:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4827fcedd1d5f316f05101955637fadb583d9e5d"
+        },
+        {
+          "id": "b3f0c816303836e543f31fcd8754a915b9eccab4",
+          "short_id": "b3f0c816",
+          "created_at": "2026-09-25T12:40:54.000+09:00",
+          "parent_ids": [
+            "bacf81c65655d28b522acce7a89076b08d92841e"
+          ],
+          "title": "fix(fe): 도우미 보내기 버튼을 글자 대신 종이비행기 아이콘으로 바꾼다",
+          "message": "fix(fe): 도우미 보내기 버튼을 글자 대신 종이비행기 아이콘으로 바꾼다\n\n접근 이름은 그대로 '보내기'(기다리는 동안 '답을 기다리는 중')다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:40:54.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:40:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b3f0c816303836e543f31fcd8754a915b9eccab4"
+        },
+        {
+          "id": "bacf81c65655d28b522acce7a89076b08d92841e",
+          "short_id": "bacf81c6",
+          "created_at": "2026-09-25T12:37:30.000+09:00",
+          "parent_ids": [
+            "d602e2ec9c949f597ca84599e5a28330ca26ab34"
+          ],
+          "title": "fix(fe): 도우미에서 Enter 로 보내도 입력이 비게 한다",
+          "message": "fix(fe): 도우미에서 Enter 로 보내도 입력이 비게 한다\n\n이력을 훅으로 옮기며 입력 비우기를 제출 처리기로 옮겼는데, Enter 는 send 를\n바로 불러 입력이 남았다. 보내기 버튼과 Enter 가 같은 길을 지난다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:37:30.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:37:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bacf81c65655d28b522acce7a89076b08d92841e"
+        },
+        {
+          "id": "d602e2ec9c949f597ca84599e5a28330ca26ab34",
+          "short_id": "d602e2ec",
+          "created_at": "2026-09-25T12:34:25.000+09:00",
+          "parent_ids": [
+            "f2bc4e1b5afb87904f4af268dc339c1cab4aa53c"
+          ],
+          "title": "feat(fe): 도우미 말풍선을 닫았다 열어도 같은 화면이면 대화가 남는다",
+          "message": "feat(fe): 도우미 말풍선을 닫았다 열어도 같은 화면이면 대화가 남는다\n\n이력과 진행 중 요청을 useAssistantConversation 훅으로 빼서 플로팅 버튼이 든다.\n저장하지 않으므로 새로 고치면 사라지고, 화면이 바뀌면 요청을 취소하고 비운다(FR-015).\n닫는 동안 온 답도 다시 열면 보인다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:34:25.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:34:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d602e2ec9c949f597ca84599e5a28330ca26ab34"
+        },
+        {
+          "id": "f2bc4e1b5afb87904f4af268dc339c1cab4aa53c",
+          "short_id": "f2bc4e1b",
+          "created_at": "2026-09-25T12:27:08.000+09:00",
+          "parent_ids": [
+            "7f6421a416994154f053eab0de846698d0acae2f"
+          ],
+          "title": "feat(fe): 도우미가 답을 만드는 동안 문구 앞에 회전 아이콘을 보인다",
+          "message": "feat(fe): 도우미가 답을 만드는 동안 문구 앞에 회전 아이콘을 보인다\n\nprefers-reduced-motion 이면 돌지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:27:08.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:27:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f2bc4e1b5afb87904f4af268dc339c1cab4aa53c"
+        },
+        {
+          "id": "7f6421a416994154f053eab0de846698d0acae2f",
+          "short_id": "7f6421a4",
+          "created_at": "2026-09-25T12:27:08.000+09:00",
+          "parent_ids": [
+            "74426ef429eb4b1618d4e00d6d3dedc70284f288"
+          ],
+          "title": "refactor(fe): 근거 카드가 쓰던 탭 열기 경로를 걷어낸다",
+          "message": "refactor(fe): 근거 카드가 쓰던 탭 열기 경로를 걷어낸다\n\n결과 탭 묶음의 제어 prop(activeTab·onActiveTabChange)을 dev 상태로 되돌리고,\n도우미 맥락 등록에서 탭 열기 핸들러를 뺀다. 화면은 맥락(kind·publicToken)만 등록한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:27:08.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:27:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7f6421a416994154f053eab0de846698d0acae2f"
+        },
+        {
+          "id": "74426ef429eb4b1618d4e00d6d3dedc70284f288",
+          "short_id": "74426ef4",
+          "created_at": "2026-09-25T12:20:42.000+09:00",
+          "parent_ids": [
+            "131a6c58bea23d2a76466c899153ded09a8e8db4"
+          ],
+          "title": "fix(fe): 도우미 첫 안내 말풍선을 글자 길이에 맞춘다",
+          "message": "fix(fe): 도우미 첫 안내 말풍선을 글자 길이에 맞춘다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:20:42.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:20:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/74426ef429eb4b1618d4e00d6d3dedc70284f288"
+        },
+        {
+          "id": "131a6c58bea23d2a76466c899153ded09a8e8db4",
+          "short_id": "131a6c58",
+          "created_at": "2026-09-25T12:20:42.000+09:00",
+          "parent_ids": [
+            "d79f6061b488e25947c807d6fc09198184d2ac87"
+          ],
+          "title": "refactor(fe): 도우미 답변 아래 근거 카드를 뺀다",
+          "message": "refactor(fe): 도우미 답변 아래 근거 카드를 뺀다\n\n답만 보이고 카드·탭 열기 버튼은 없앤다. 결과 화면의 탭 열기 등록\n(assistantPageContext·ResultTabs 제어 prop)은 그대로 둔다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T12:20:42.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T12:20:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/131a6c58bea23d2a76466c899153ded09a8e8db4"
+        },
+        {
+          "id": "d79f6061b488e25947c807d6fc09198184d2ac87",
+          "short_id": "d79f6061",
+          "created_at": "2026-09-25T11:37:58.000+09:00",
+          "parent_ids": [
+            "9d747ea82f99e14e1673c4ea3c88371a8bfc4c3c"
+          ],
+          "title": "fix(fe): 도우미 질문 요청의 시간 제한을 서버 예산(2분)에 맞춘다",
+          "message": "fix(fe): 도우미 질문 요청의 시간 제한을 서버 예산(2분)에 맞춘다\n\n공용 apiClient의 10초 제한이 모델 응답(7~12초) 전에 끊겨\n\"서버에 연결할 수 없습니다\"로 보였다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T11:37:58.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T11:37:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d79f6061b488e25947c807d6fc09198184d2ac87"
+        },
+        {
+          "id": "9d747ea82f99e14e1673c4ea3c88371a8bfc4c3c",
+          "short_id": "9d747ea8",
+          "created_at": "2026-09-25T11:31:38.000+09:00",
+          "parent_ids": [
+            "2c18ee019a9ee322769515eeaab730b36f85cb03",
+            "8a236ddcb57e03f92f54218b6c46b8e488236f78"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/441-assistant-bubble-wt",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/441-assistant-bubble-wt\n\n# Conflicts:\n#\tspecs/015-context-assistant/tasks.md\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T11:31:38.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T11:31:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9d747ea82f99e14e1673c4ea3c88371a8bfc4c3c"
+        },
+        {
+          "id": "2c18ee019a9ee322769515eeaab730b36f85cb03",
+          "short_id": "2c18ee01",
+          "created_at": "2026-09-25T11:31:07.000+09:00",
+          "parent_ids": [
+            "b32778775ca9733bc43ceeb3fe7d3d927790ee24"
+          ],
+          "title": "fix(fe): 도우미 말풍선의 첫 안내 문구를 질문 권유로 바꾼다",
+          "message": "fix(fe): 도우미 말풍선의 첫 안내 문구를 질문 권유로 바꾼다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T11:31:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T11:31:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2c18ee019a9ee322769515eeaab730b36f85cb03"
+        },
+        {
+          "id": "b32778775ca9733bc43ceeb3fe7d3d927790ee24",
+          "short_id": "b3277877",
+          "created_at": "2026-09-25T11:28:05.000+09:00",
+          "parent_ids": [
+            "6ed2979f83d6b99a7c40d56c9e6c5ca639ce3806"
+          ],
+          "title": "fix(fe): 도우미 말풍선의 연초록 바탕 위 글자를 진한 잉크색으로 바꾼다",
+          "message": "fix(fe): 도우미 말풍선의 연초록 바탕 위 글자를 진한 잉크색으로 바꾼다\n\n질문 말풍선·전송 안내·닫기 hover·열린 플로팅 버튼이 accent-soft 바탕에\n밝은 글자를 얹어 읽기 어려웠다. 버튼이 accent 위에 쓰는\n--thorp-action-foreground 토큰을 같이 쓴다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T11:28:05.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T11:28:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b32778775ca9733bc43ceeb3fe7d3d927790ee24"
+        },
+        {
+          "id": "6ed2979f83d6b99a7c40d56c9e6c5ca639ce3806",
+          "short_id": "6ed2979f",
+          "created_at": "2026-09-25T03:17:07.000+09:00",
+          "parent_ids": [
+            "67d749680e983f8914d58e08e0c807c3e4b47fbe"
+          ],
+          "title": "docs: 묶음 5 자동 검증 완료를 표시한다 — 사람 배치 확인만 남김",
+          "message": "docs: 묶음 5 자동 검증 완료를 표시한다 — 사람 배치 확인만 남김\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:17:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:17:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6ed2979f83d6b99a7c40d56c9e6c5ca639ce3806"
+        },
+        {
+          "id": "67d749680e983f8914d58e08e0c807c3e4b47fbe",
+          "short_id": "67d74968",
+          "created_at": "2026-09-25T03:17:07.000+09:00",
+          "parent_ids": [
+            "aceb24bfb231be6ece864ab9bf248e9a5d82823f"
+          ],
+          "title": "feat(fe): 플로팅 버튼·말풍선·탭 제어를 테스트로 고정한다",
+          "message": "feat(fe): 플로팅 버튼·말풍선·탭 제어를 테스트로 고정한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:17:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:17:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/67d749680e983f8914d58e08e0c807c3e4b47fbe"
+        },
+        {
+          "id": "aceb24bfb231be6ece864ab9bf248e9a5d82823f",
+          "short_id": "aceb24bf",
+          "created_at": "2026-09-25T03:17:07.000+09:00",
+          "parent_ids": [
+            "19a32848c44ad8e9c8d2468bf0e4aec7fb1b592c"
+          ],
+          "title": "feat(fe): 결과 화면이 도우미 맥락을 등록하고 근거 카드가 탭을 열 수 있게 한다",
+          "message": "feat(fe): 결과 화면이 도우미 맥락을 등록하고 근거 카드가 탭을 열 수 있게 한다\n\n- ResultTabs 에 activeTab·onActiveTabChange 제어 prop(없으면 지금처럼 비제어)\n- ResultPage 가 맥락을 등록하고 탭 열기 요청을 받는다. 열 수 없는 탭은 무시\n- App 의 라우트 전환 바깥에 AssistantProvider·AssistantWidget\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:17:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:17:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/aceb24bfb231be6ece864ab9bf248e9a5d82823f"
+        },
+        {
+          "id": "19a32848c44ad8e9c8d2468bf0e4aec7fb1b592c",
+          "short_id": "19a32848",
+          "created_at": "2026-09-25T03:17:07.000+09:00",
+          "parent_ids": [
+            "1a7cfd60cfa1c8ee55e324026425f16d15526211"
+          ],
+          "title": "feat(fe): 질문하기 플로팅 버튼과 말풍선을 만든다",
+          "message": "feat(fe): 질문하기 플로팅 버튼과 말풍선을 만든다\n\n- 넓은 화면: 끌어 옮기면 가까운 여백에 붙고, 누르면 옆에 비모달 Popover(z 55). 좁은 화면: 우측 하단 고정 + 바닥 시트\n- 말풍선: 맥락 표시·예시 질문 셋·300자 입력·첫 전송 전 외부 전달 안내·답과 근거 카드(카드 → 탭)\n- 429 는 다시 가능한 시점, 503 은 고정 문구+재시도 버튼. 맥락이 바뀌면 요청을 취소하고 이력을 비운다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:17:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:17:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/19a32848c44ad8e9c8d2468bf0e4aec7fb1b592c"
+        },
+        {
+          "id": "1a7cfd60cfa1c8ee55e324026425f16d15526211",
+          "short_id": "1a7cfd60",
+          "created_at": "2026-09-25T03:17:07.000+09:00",
+          "parent_ids": [
+            "76bef9088c972e97a429e3c09a3c4efa17e7bd0c"
+          ],
+          "title": "feat(fe): 페이지 맥락 등록과 플로팅 버튼 자리 저장, App 마운트 자리를 만든다",
+          "message": "feat(fe): 페이지 맥락 등록과 플로팅 버튼 자리 저장, App 마운트 자리를 만든다\n\n- 페이지가 useAssistantPageContext 로 맥락·탭 열기 핸들러를 등록하고 언마운트 때 지운다\n- 버튼은 등록된 맥락이 있고 로그인·가입·관리 경로가 아니고 서버 플래그가 켜졌을 때만 그린다\n- 자리는 localStorage thorp.assistant.fabPosition, 값이 이상하면 기본 우측 하단\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:17:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:17:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a7cfd60cfa1c8ee55e324026425f16d15526211"
+        },
+        {
+          "id": "76bef9088c972e97a429e3c09a3c4efa17e7bd0c",
+          "short_id": "76bef908",
+          "created_at": "2026-09-25T03:17:07.000+09:00",
+          "parent_ids": [
+            "e21b86cb6d2745ead3c75870c8631f04d918897a"
+          ],
+          "title": "feat(fe): 도우미 API 호출과 타입을 둔다",
+          "message": "feat(fe): 도우미 API 호출과 타입을 둔다\n\n- fetchAssistantCapabilities(실패는 꺼진 것으로), askAssistant(question, context, signal) — CSRF 보호 mutation, 취소는 오류로 바꾸지 않음\n- 429 retryAfterSeconds·503 고정 문구를 화면이 읽을 수 있는 AssistantError\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:17:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:17:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/76bef9088c972e97a429e3c09a3c4efa17e7bd0c"
+        },
+        {
+          "id": "e21b86cb6d2745ead3c75870c8631f04d918897a",
+          "short_id": "e21b86cb",
+          "created_at": "2026-09-25T03:02:47.000+09:00",
+          "parent_ids": [
+            "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40"
+          ],
+          "title": "docs: 묶음 5 티켓 번호를 tasks 에 적는다",
+          "message": "docs: 묶음 5 티켓 번호를 tasks 에 적는다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T03:02:47.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T03:02:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e21b86cb6d2745ead3c75870c8631f04d918897a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,128 @@\n+import axios from 'axios'\n+import { ApiClientError, apiClient, runCsrfProtectedMutation } from './client'\n+import type { AssistantAnswer, AssistantCapabilities, AssistantContext } from '@/types/assistant'\n+import type { ResultEnvelope } from '@/types/result'\n+\n+/**\n+ * 화면 맥락 도우미(spec 015) 호출. 계약 §1.\n+ *\n+ * <p>화면이 판단에 쓰는 것은 상태 코드·오류 코드·`retryAfterSeconds`다. 429는 다시 가능한 시점을 보이고,\n+ * 503은 고정 문구와 재시도 버튼이다. 취소된 요청(`AbortSignal`)은 오류로 바꾸지 않고 그대로 던진다 —\n+ * 화면이 떠난 요청의 답을 새 화면에 보이지 않기 위한 취소이지 실패가 아니다.\n+ */\n+export class AssistantError extends Error {\n+  readonly code: string | null\n+  readonly status: number | null\n+  readonly retryAfterSeconds: number | null\n+\n+  constructor(\n+    message: string,\n+    options: {\n+      code?: string | null\n+      status?: number | null\n+      retryAfterSeconds?: number | null\n+      cause?: unknown\n+    } = {},\n+  ) {\n+    super(message, { cause: options.cause })\n+    this.name = 'AssistantError'\n+    this.code = options.code ?? null\n+    this.status = options.status ?? null\n+    this.retryAfterSeconds = options.retryAfterSeconds ?? null\n+  }\n+\n+  /** 모델 장애·시간 초과·연결 실패처럼 사용자가 다시 시도해 볼 만한 실패 */\n+  get retryable(): boolean {\n+    return this.status === null || this.status === 503\n+  }\n+}\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+function readErrorBody(\n+  body: unknown,\n+): { code: string; message: string; retryAfterSeconds: number | null } | null {\n+  if (!isRecord(body) || !isRecord(body.error)) return null\n+  const { code, message, details } = body.error\n+  if (typeof code !== 'string' || typeof message !== 'string') return null\n+  const retryAfter = isRecord(details) ? details.retryAfterSeconds : undefined\n+  return {\n+    code,\n+    message,\n+    retryAfterSeconds: typeof retryAfter === 'number' ? retryAfter : null,\n+  }\n+}\n+\n+const unreachableMessage = '서버에 연결할 수 없습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.'\n+const unexpectedMessage = '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'\n+\n+export function normalizeAssistantError(error: unknown): AssistantError {\n+  if (error instanceof AssistantError) return error\n+  if (error instanceof ApiClientError && axios.isAxiosError(error.cause)) {\n+    return normalizeAssistantError(error.cause)\n+  }\n+  if (axios.isAxiosError(error)) {\n+    if (!error.response) return new AssistantError(unreachableMessage, { cause: error })\n+    const body = readErrorBody(error.response.data)\n+    return new AssistantError(body?.message ?? unexpectedMessage, {\n+      code: body?.code ?? null,\n+      status: error.response.status,\n+      retryAfterSeconds: body?.retryAfterSeconds ?? null,\n+      cause: error,\n+    })\n+  }\n+  if (error instanceof ApiClientError) {\n+    return new AssistantError(error.message, { code: error.code, cause: error })\n+  }\n+  return new AssistantError(unexpectedMessage, { cause: error })\n+}\n+\n+function unwrap<T>(body: ResultEnvelope<T>): T {\n+  if (!body.success || body.data === null) {\n+    throw new AssistantError(body.success ? '응답 본문이 비어 있습니다.' : body.error.message, {\n+      code: body.success ? null : body.error.code,\n+    })\n+  }\n+  return body.data\n+}\n+\n+/** 플래그와 무관하게 항상 200이다. 실패하면 꺼진 것으로 본다 — 버튼이 없는 쪽이 안전하다. */\n+export async function fetchAssistantCapabilities(): Promise<AssistantCapabilities> {\n+  try {\n+    const response = await apiClient.get<ResultEnvelope<AssistantCapabilities>>(\n+      '/assistant/capabilities',\n+    )\n+    return unwrap(response.data)\n+  } catch {\n+    return { enabled: false, scopes: [] }\n+  }\n+}\n+\n+export async function askAssistant(\n+  question: string,\n+  context: AssistantContext,\n+  signal?: AbortSignal,\n+): Promise<AssistantAnswer> {\n+  try {\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ResultEnvelope<AssistantAnswer>>(\n+        '/assistant/questions',\n+        { question, context },\n+        // 서버가 질문 하나에 2분(thorp.assistant.timeout.total)까지 쓴다. 공용 10초로는 모델 응답 전에 끊긴다.\n+        { signal, timeout: 120_000 },\n+      ),\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    if (axios.isCancel(error) || (error instanceof ApiClientError && axios.isCancel(error.cause))) {\n+      throw error\n+    }\n+    throw normalizeAssistantError(error)\n+  }\n+}\n+\n+export function isAssistantRequestCancelled(error: unknown): boolean {\n+  return axios.isCancel(error) || (error instanceof ApiClientError && axios.isCancel(error.cause))\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/assistant.ts",
+          "old_path": "frontend/src/api/assistant.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,268 @@\n+import { act, screen, waitFor, within } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { AssistantError } from '@/api/assistant'\n+import { EXAMPLE_QUESTIONS, TRANSFER_NOTICE } from './AssistantBubble'\n+import { FAB_POSITION_KEY } from './fabPosition'\n+import {\n+  OTHER_TOKEN,\n+  TOKEN,\n+  answered,\n+  clearMatchMedia,\n+  mockMatchMedia,\n+  renderAssistant,\n+} from './assistantTestSupport'\n+\n+const api = vi.hoisted(() => ({\n+  fetchAssistantCapabilities: vi.fn(),\n+  askAssistant: vi.fn(),\n+}))\n+vi.mock('@/api/assistant', async (importOriginal) => ({\n+  ...(await importOriginal<typeof import('@/api/assistant')>()),\n+  fetchAssistantCapabilities: api.fetchAssistantCapabilities,\n+  askAssistant: api.askAssistant,\n+}))\n+\n+/** spec 015 US3·US4, FR-003·FR-004·FR-010·FR-012·FR-015(T041). */\n+describe('AssistantBubble', () => {\n+  beforeEach(() => {\n+    window.localStorage.clear()\n+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })\n+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })\n+    api.fetchAssistantCapabilities.mockReset()\n+    api.askAssistant.mockReset()\n+    api.fetchAssistantCapabilities.mockResolvedValue({ enabled: true, scopes: ['RESULT'] })\n+    api.askAssistant.mockResolvedValue(answered)\n+  })\n+\n+  afterEach(() => {\n+    clearMatchMedia()\n+  })\n+\n+  async function open(user: ReturnType<typeof userEvent.setup>) {\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+    await user.click(fab)\n+    return { fab, dialog: await screen.findByRole('dialog', { name: '질문하기' }) }\n+  }\n+\n+  it('열면 맥락 표시·예시 질문·입력 하나·전송 안내가 있고 초점은 입력에 있다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+\n+    const { dialog } = await open(user)\n+\n+    expect(within(dialog).getByText('결과 도우미')).not.toBeNull()\n+    expect(within(dialog).getByText(TRANSFER_NOTICE)).not.toBeNull()\n+    const examples = within(dialog).getByRole('list', { name: '예시 질문' })\n+    expect(within(examples).getAllByRole('button')).toHaveLength(EXAMPLE_QUESTIONS.length)\n+    expect(within(dialog).getAllByRole('textbox')).toHaveLength(1)\n+    expect(within(dialog).queryByRole('radio')).toBeNull()\n+    expect(within(dialog).queryByRole('combobox')).toBeNull()\n+    await waitFor(() => expect(document.activeElement).toBe(within(dialog).getByRole('textbox')))\n+    expect(api.askAssistant).not.toHaveBeenCalled()\n+  })\n+\n+  it('왼쪽 여백에 있으면 오른쪽으로 펼치고, 팝오버는 뒤 화면을 막지 않는다', async () => {\n+    window.localStorage.setItem(FAB_POSITION_KEY, JSON.stringify({ side: 'left', y: 200 }))\n+    const user = userEvent.setup()\n+    renderAssistant()\n+\n+    const { dialog } = await open(user)\n+\n+    expect(dialog.getAttribute('data-side')).toBe('right')\n+    expect(dialog.getAttribute('data-shell')).toBe('popover')\n+    expect(dialog.getAttribute('aria-modal')).not.toBe('true')\n+  })\n+\n+  it('예시 질문을 누르면 그 질문이 보내지고 답만 보인다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n+\n+    expect(api.askAssistant).toHaveBeenCalledTimes(1)\n+    expect(api.askAssistant.mock.calls[0][0]).toBe(EXAMPLE_QUESTIONS[0])\n+    expect(api.askAssistant.mock.calls[0][1]).toEqual({ kind: 'RESULT', publicToken: TOKEN })\n+    expect(await within(dialog).findByText(answered.answer)).not.toBeNull()\n+    expect(within(dialog).queryByRole('list', { name: '근거' })).toBeNull()\n+    expect(within(dialog).queryByText(TRANSFER_NOTICE)).toBeNull()\n+  })\n+\n+  it('직접 입력해 보내면 입력이 비고 300자를 넘게 칠 수 없다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+    const input = within(dialog).getByRole('textbox') as HTMLTextAreaElement\n+\n+    expect(input.maxLength).toBe(300)\n+    await user.type(input, '거래비용은?')\n+    await user.click(within(dialog).getByRole('button', { name: '보내기' }))\n+\n+    expect(api.askAssistant.mock.calls[0][0]).toBe('거래비용은?')\n+    await within(dialog).findByText(answered.answer)\n+    expect(input.value).toBe('')\n+\n+    // Enter 로 보내도 입력이 빈다.\n+    await user.type(input, '수익률은?{Enter}')\n+    expect(api.askAssistant.mock.calls[1][0]).toBe('수익률은?')\n+    expect(input.value).toBe('')\n+  })\n+\n+  it('Escape 로 닫히고 초점이 버튼으로 돌아온다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { fab } = await open(user)\n+\n+    await user.keyboard('{Escape}')\n+\n+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull())\n+    expect(document.activeElement).toBe(fab)\n+    expect(fab.getAttribute('aria-expanded')).toBe('false')\n+  })\n+\n+  it('바깥을 누르면 닫힌다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    await open(user)\n+\n+    await user.click(document.body)\n+\n+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull())\n+  })\n+\n+  it('처음으로 버튼은 보낸 뒤에만 있고, 누르면 안내와 예시 질문으로 돌아간다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+    expect(within(dialog).queryByRole('button', { name: '처음으로' })).toBeNull()\n+\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n+    await within(dialog).findByText(answered.answer)\n+    await user.click(within(dialog).getByRole('button', { name: '처음으로' }))\n+\n+    expect(within(dialog).queryByText(answered.answer)).toBeNull()\n+    expect(within(dialog).getByText(TRANSFER_NOTICE)).not.toBeNull()\n+    expect(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] })).not.toBeNull()\n+    expect(within(dialog).queryByRole('button', { name: '처음으로' })).toBeNull()\n+  })\n+\n+  it('닫았다 다시 열어도 같은 화면이면 질문과 답이 남아 있다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n+    await within(dialog).findByText(answered.answer)\n+\n+    await user.keyboard('{Escape}')\n+    const reopened = await open(user)\n+\n+    expect(within(reopened.dialog).getByText(EXAMPLE_QUESTIONS[0])).not.toBeNull()\n+    expect(within(reopened.dialog).getByText(answered.answer)).not.toBeNull()\n+    expect(within(reopened.dialog).queryByText(TRANSFER_NOTICE)).toBeNull()\n+  })\n+\n+  it('화면이 바뀌면 진행 중 요청을 취소하고 말풍선을 닫으며 이전 답을 새 화면에 보이지 않는다', async () => {\n+    let resolveFirst: (answer: typeof answered) => void = () => {}\n+    let firstSignal: AbortSignal | undefined\n+    api.askAssistant.mockImplementation((_q: string, _c: unknown, signal?: AbortSignal) => {\n+      firstSignal = signal\n+      return new Promise((resolve) => {\n+        resolveFirst = resolve\n+      })\n+    })\n+    const user = userEvent.setup()\n+    const view = renderAssistant()\n+    const { dialog } = await open(user)\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n+    expect(within(dialog).getByRole('status').textContent).toContain('답을 만들고')\n+\n+    // 다른 결과로 이동 — 실제 앱에서는 라우트 전환으로 `ResultPage`가 새 토큰을 등록한다.\n+    view.unmount()\n+    renderAssistant({ path: `/results/${OTHER_TOKEN}` })\n+    await screen.findByRole('button', { name: '질문하기' })\n+    expect(firstSignal?.aborted).toBe(true)\n+    expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull()\n+\n+    await act(async () => {\n+      resolveFirst(answered)\n+    })\n+    const reopened = await open(user)\n+    expect(within(reopened.dialog).queryByText(answered.answer)).toBeNull()\n+    expect(within(reopened.dialog).getByText(TRANSFER_NOTICE)).not.toBeNull()\n+  })\n+\n+  it('한도 초과(429)는 다시 가능한 시점을 보이고 재시도 버튼이 없다', async () => {\n+    api.askAssistant.mockRejectedValue(\n+      new AssistantError('질문 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.', {\n+        code: 'ASSISTANT_LIMIT',\n+        status: 429,\n+        retryAfterSeconds: 42,\n+      }),\n+    )\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n+\n+    const alert = await within(dialog).findByRole('alert')\n+    expect(alert.textContent).toContain('질문 한도에 도달했습니다')\n+    expect(alert.textContent).toContain('42초 뒤')\n+    expect(within(alert).queryByRole('button', { name: '다시 시도' })).toBeNull()\n+  })\n+\n+  it('모델 장애(503)는 고정 문구와 재시도 버튼이고 자동으로 다시 보내지 않는다', async () => {\n+    api.askAssistant.mockRejectedValueOnce(\n+      new AssistantError('지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.', {\n+        code: 'ASSISTANT_UNAVAILABLE',\n+        status: 503,\n+      }),\n+    )\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n+    const alert = await within(dialog).findByRole('alert')\n+    expect(alert.textContent).toContain('지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.')\n+    expect(api.askAssistant).toHaveBeenCalledTimes(1)\n+\n+    await user.click(within(alert).getByRole('button', { name: '다시 시도' }))\n+\n+    expect(api.askAssistant).toHaveBeenCalledTimes(2)\n+    expect(api.askAssistant.mock.calls[1][0]).toBe(EXAMPLE_QUESTIONS[0])\n+    expect(await within(dialog).findByText(answered.answer)).not.toBeNull()\n+  })\n+\n+  it('범위 밖·근거 부족 답은 고정 문장만 보이고 근거 카드가 없다', async () => {\n+    api.askAssistant.mockResolvedValue({\n+      status: 'OUT_OF_SCOPE',\n+      answer: '이 도우미는 지금 보고 있는 기준 결과의 기록을 설명합니다.',\n+      evidence: [],\n+      page: { kind: 'RESULT' },\n+    })\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    const { dialog } = await open(user)\n+\n+    await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[2] }))\n+\n+    expect(await within(dialog).findByText(/기준 결과의 기록을 설명합니다/)).not.toBeNull()\n+    expect(within(dialog).queryByRole('list', { name: '근거' })).toBeNull()\n+  })\n+\n+  it('좁은 화면에서는 바닥 시트이고 Escape 로 닫힌다', async () => {\n+    mockMatchMedia(true)\n+    const user = userEvent.setup()\n+    renderAssistant()\n+\n+    const { fab, dialog } = await open(user)\n+\n+    expect(dialog.getAttribute('data-shell')).toBe('sheet')\n+    expect(dialog.getAttribute('aria-modal')).toBe('false')\n+    await user.keyboard('{Escape}')\n+    await waitFor(() => expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull())\n+    expect(document.activeElement).toBe(fab)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantBubble.test.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantBubble.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,260 @@\n+import { ArrowLeft, LoaderCircle, SendHorizontal, X } from 'lucide-react'\n+import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'\n+import { askAssistant, isAssistantRequestCancelled, normalizeAssistantError } from '@/api/assistant'\n+import { Button } from '@/components/ui/button'\n+import type { AssistantAnswer } from '@/types/assistant'\n+import type { AssistantPage } from './assistantPageContext'\n+import styles from './assistant.module.css'\n+\n+export const QUESTION_MAX_LENGTH = 300\n+export const TRANSFER_NOTICE = '백테스트 결과에 대해서 질문해보세요.'\n+export const EXAMPLE_QUESTIONS = [\n+  '수익률은 어떻게 계산된거야?',\n+  'MDD가 뭐야?',\n+  '손실이 가장 컸을 때 어떻게 보유하고 있었어?',\n+] as const\n+\n+type Failure = { message: string; retryable: boolean; retryAfterSeconds: number | null }\n+\n+type Exchange = {\n+  id: number\n+  question: string\n+  answer: AssistantAnswer | null\n+  failure: Failure | null\n+}\n+\n+function retryWording(retryAfterSeconds: number | null): string {\n+  if (retryAfterSeconds === null) return '잠시 후 다시 시도할 수 있어요.'\n+  if (retryAfterSeconds < 90) return `${retryAfterSeconds}초 뒤에 다시 시도할 수 있어요.`\n+  const at = new Date(Date.now() + retryAfterSeconds * 1000)\n+  const hh = String(at.getHours()).padStart(2, '0')\n+  const mm = String(at.getMinutes()).padStart(2, '0')\n+  return `${hh}:${mm} 이후에 다시 시도할 수 있어요.`\n+}\n+\n+export type AssistantConversation = {\n+  exchanges: Exchange[]\n+  sending: boolean\n+  send: (text: string) => Promise<void>\n+  /** 처음 화면(안내·예시 질문)으로 돌아간다. 진행 중 요청은 취소한다 */\n+  reset: () => void\n+}\n+\n+/**\n+ * 한 화면의 질문·답 이력과 진행 중 요청. 말풍선이 아니라 플로팅 버튼이 들고 있어서 말풍선을 닫았다 열어도 남는다.\n+ * 저장하지 않으므로 새로 고치면 사라지고, 화면(맥락)이 바뀌면 진행 중 요청을 취소하고 이력을 비운다(FR-015).\n+ * 요청 번호로 늦게 온 이전 답을 버린다.\n+ */\n+export function useAssistantConversation(page: AssistantPage): AssistantConversation {\n+  const [exchanges, setExchanges] = useState<Exchange[]>([])\n+  const [sending, setSending] = useState(false)\n+  const controllerRef = useRef<AbortController | null>(null)\n+  const sequenceRef = useRef(0)\n+\n+  useEffect(() => {\n+    setExchanges([])\n+    setSending(false)\n+    return () => {\n+      controllerRef.current?.abort()\n+      controllerRef.current = null\n+      sequenceRef.current += 1\n+    }\n+  }, [page.kind, page.publicToken])\n+\n+  const send = useCallback(\n+    async (text: string) => {\n+      const trimmed = text.trim()\n+      if (!trimmed || controllerRef.current) return\n+      const controller = new AbortController()\n+      controllerRef.current = controller\n+      const sequence = ++sequenceRef.current\n+      const id = sequence\n+      setExchanges((current) => [...current, { id, question: trimmed, answer: null, failure: null }])\n+      setSending(true)\n+      try {\n+        const answer = await askAssistant(\n+          trimmed,\n+          { kind: page.kind, publicToken: page.publicToken },\n+          controller.signal,\n+        )\n+        if (sequenceRef.current !== sequence) return\n+        setExchanges((current) =>\n+          current.map((item) => (item.id === id ? { ...item, answer } : item)),\n+        )\n+      } catch (error) {\n+        if (isAssistantRequestCancelled(error) || sequenceRef.current !== sequence) return\n+        const failure = normalizeAssistantError(error)\n+        setExchanges((current) =>\n+          current.map((item) =>\n+            item.id === id\n+              ? {\n+                  ...item,\n+                  failure: {\n+                    message: failure.message,\n+                    retryable: failure.retryable,\n+                    retryAfterSeconds: failure.status === 429 ? failure.retryAfterSeconds : null,\n+                  },\n+                }\n+              : item,\n+          ),\n+        )\n+      } finally {\n+        if (sequenceRef.current === sequence) {\n+          controllerRef.current = null\n+          setSending(false)\n+        }\n+      }\n+    },\n+    [page.kind, page.publicToken],\n+  )\n+\n+  const reset = useCallback(() => {\n+    controllerRef.current?.abort()\n+    controllerRef.current = null\n+    sequenceRef.current += 1\n+    setExchanges([])\n+    setSending(false)\n+  }, [])\n+\n+  return { exchanges, sending, send, reset }\n+}\n+\n+/**\n+ * 말풍선 안쪽(spec 015 FR-004·FR-010·FR-012·FR-015).\n+ *\n+ * <p>맥락 표시, 예시 질문 두셋, 300자 입력 하나. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 안내를 보이고 전송은\n+ * 사용자가 제출할 때만 한다. 답의 숫자는 서버가 채운 값이다. 이력은 `useAssistantConversation`이 들고 있다.\n+ */\n+export function AssistantBubble({\n+  conversation,\n+  onClose,\n+  autoFocus = false,\n+}: {\n+  conversation: AssistantConversation\n+  onClose: () => void\n+  autoFocus?: boolean\n+}) {\n+  const { exchanges, sending, send, reset } = conversation\n+  const [question, setQuestion] = useState('')\n+  const textareaRef = useRef<HTMLTextAreaElement>(null)\n+\n+  useEffect(() => {\n+    if (autoFocus) textareaRef.current?.focus()\n+  }, [autoFocus])\n+\n+  // 보내기 버튼과 Enter 가 같은 길이다. 보내면서 입력을 비운다.\n+  const sendTyped = () => {\n+    if (sending) return\n+    setQuestion('')\n+    void send(question)\n+  }\n+\n+  const submit = (event: FormEvent) => {\n+    event.preventDefault()\n+    sendTyped()\n+  }\n+\n+  const sent = exchanges.length > 0\n+\n+  return (\n+    <div className={styles.bubble}>\n+      <div className={styles.head}>\n+        <span className={styles.headStart}>\n+          {sent ? (\n+            <button type=\"button\" className={styles.close} aria-label=\"처음으로\" onClick={reset}>\n+              <ArrowLeft size={18} aria-hidden=\"true\" />\n+            </button>\n+          ) : null}\n+          <span className={styles.context}>결과 도우미</span>\n+        </span>\n+        <button type=\"button\" className={styles.close} aria-label=\"말풍선 닫기\" onClick={onClose}>\n+          <X size={18} aria-hidden=\"true\" />\n+        </button>\n+      </div>\n+      {!sent ? <p className={styles.notice}>{TRANSFER_NOTICE}</p> : null}\n+      {!sent ? (\n+        <ul className={styles.examples} aria-label=\"예시 질문\">\n+          {EXAMPLE_QUESTIONS.map((example) => (\n+            <li key={example}>\n+              <button type=\"button\" className={styles.example} onClick={() => void send(example)}>\n+                {example}\n+              </button>\n+            </li>\n+          ))}\n+        </ul>\n+      ) : null}\n+      <ol className={styles.log} aria-live=\"polite\" aria-label=\"질문과 답\">\n+        {exchanges.map((exchange) => (\n+          <li key={exchange.id} className={styles.exchange}>\n+            <p className={styles.question}>{exchange.question}</p>\n+            {exchange.answer === null && exchange.failure === null ? (\n+              <p className={styles.pending} role=\"status\">\n+                <LoaderCircle className={styles.spinner} aria-hidden=\"true\" />\n+                답을 만들고 있어요…\n+              </p>\n+            ) : null}\n+            {exchange.answer ? (\n+              <>\n+                <p className={styles.answer} data-status={exchange.answer.status}>\n+                  {exchange.answer.answer}\n+                </p>\n+              </>\n+            ) : null}\n+            {exchange.failure ? (\n+              <div className={styles.failure} role=\"alert\">\n+                <p>\n+                  {exchange.failure.message}\n+                  {exchange.failure.retryAfterSeconds !== null\n+                    ? ` ${retryWording(exchange.failure.retryAfterSeconds)}`\n+                    : ''}\n+                </p>\n+                {exchange.failure.retryable ? (\n+                  <Button\n+                    type=\"button\"\n+                    variant=\"secondary\"\n+                    size=\"sm\"\n+                    onClick={() => void send(exchange.question)}\n+                  >\n+                    다시 시도\n+                  </Button>\n+                ) : null}\n+              </div>\n+            ) : null}\n+          </li>\n+        ))}\n+      </ol>\n+      <form className={styles.form} onSubmit={submit}>\n+        <textarea\n+          ref={textareaRef}\n+          className={styles.input}\n+          aria-label=\"질문\"\n+          placeholder=\"이 결과에 대해 물어보세요\"\n+          rows={2}\n+          maxLength={QUESTION_MAX_LENGTH}\n+          value={question}\n+          onChange={(event) => setQuestion(event.target.value)}\n+          onKeyDown={(event) => {\n+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {\n+              event.preventDefault()\n+              sendTyped()\n+            }\n+          }}\n+        />\n+        <div className={styles.formRow}>\n+          <span className={styles.counter} aria-live=\"off\">\n+            {question.length}/{QUESTION_MAX_LENGTH}\n+          </span>\n+          <Button\n+            type=\"submit\"\n+            variant=\"secondary\"\n+            size=\"icon-sm\"\n+            aria-label={sending ? '답을 기다리는 중' : '보내기'}\n+            disabled={sending || question.trim().length === 0}\n+          >\n+            <SendHorizontal aria-hidden=\"true\" />\n+          </Button>\n+        </div>\n+      </form>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantBubble.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantBubble.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,137 @@\n+import { fireEvent, screen, waitFor } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { FAB_POSITION_KEY } from './fabPosition'\n+import { clearMatchMedia, mockMatchMedia, renderAssistant } from './assistantTestSupport'\n+\n+const api = vi.hoisted(() => ({\n+  fetchAssistantCapabilities: vi.fn(),\n+  askAssistant: vi.fn(),\n+}))\n+vi.mock('@/api/assistant', async (importOriginal) => ({\n+  ...(await importOriginal<typeof import('@/api/assistant')>()),\n+  fetchAssistantCapabilities: api.fetchAssistantCapabilities,\n+  askAssistant: api.askAssistant,\n+}))\n+\n+/** spec 015 US3·FR-001·FR-002(T040). 버튼은 여백의 보조 요소이고, 끌어 옮기면 가까운 여백에 붙는다. */\n+describe('AssistantFab', () => {\n+  beforeEach(() => {\n+    window.localStorage.clear()\n+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 })\n+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })\n+    api.fetchAssistantCapabilities.mockReset()\n+    api.askAssistant.mockReset()\n+    api.fetchAssistantCapabilities.mockResolvedValue({ enabled: true, scopes: ['RESULT'] })\n+  })\n+\n+  afterEach(() => {\n+    clearMatchMedia()\n+  })\n+\n+  it('접근 이름은 질문하기이고 보이는 글자 없이 로봇 아이콘만 있으며 주 모양 버튼이 아니다', async () => {\n+    renderAssistant()\n+\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+    expect(fab.textContent).toBe('')\n+    expect(fab.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')\n+    expect(fab.getAttribute('aria-expanded')).toBe('false')\n+    expect(document.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]')).toHaveLength(0)\n+  })\n+\n+  it('기능이 꺼진 환경에서는 버튼이 없다', async () => {\n+    api.fetchAssistantCapabilities.mockResolvedValue({ enabled: false, scopes: [] })\n+    renderAssistant()\n+\n+    await waitFor(() => expect(api.fetchAssistantCapabilities).toHaveBeenCalled())\n+    expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()\n+  })\n+\n+  it('로그인·관리 경로에서는 맥락이 있어도 버튼이 없다', async () => {\n+    renderAssistant({ path: '/login' })\n+    await waitFor(() => expect(api.fetchAssistantCapabilities).toHaveBeenCalled())\n+    expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()\n+  })\n+\n+  it('맥락을 등록한 화면이 없으면 버튼이 없고 서버에 묻지도 않는다', () => {\n+    renderAssistant({ path: '/learn' })\n+\n+    expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()\n+    expect(api.fetchAssistantCapabilities).not.toHaveBeenCalled()\n+  })\n+\n+  it('기본 자리는 우측 하단이다', async () => {\n+    renderAssistant()\n+\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+    expect(fab.getAttribute('data-side')).toBe('right')\n+    expect(fab.style.top).toBe('720px')\n+    expect(fab.style.right).not.toBe('')\n+  })\n+\n+  it('끌어서 왼쪽 여백 가까이 놓으면 그쪽에 붙고 자리가 저장되며, 그 끌기는 말풍선을 열지 않는다', async () => {\n+    renderAssistant()\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+\n+    fireEvent.pointerDown(fab, { pointerId: 1, button: 0, clientX: 1240, clientY: 740 })\n+    fireEvent.pointerMove(fab, { pointerId: 1, clientX: 400, clientY: 300 })\n+    fireEvent.pointerUp(fab, { pointerId: 1, clientX: 400, clientY: 300 })\n+    fireEvent.click(fab)\n+\n+    expect(fab.getAttribute('data-side')).toBe('left')\n+    expect(fab.style.top).toBe('280px')\n+    expect(JSON.parse(window.localStorage.getItem(FAB_POSITION_KEY) ?? '{}')).toEqual({\n+      side: 'left',\n+      y: 280,\n+    })\n+    expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull()\n+  })\n+\n+  it('다시 그려도 저장한 자리에 있다', async () => {\n+    window.localStorage.setItem(FAB_POSITION_KEY, JSON.stringify({ side: 'left', y: 120 }))\n+    renderAssistant()\n+\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+    expect(fab.getAttribute('data-side')).toBe('left')\n+    expect(fab.style.top).toBe('120px')\n+  })\n+\n+  it('살짝 눌렀다 떼는 것은 끌기가 아니라 열기다', async () => {\n+    renderAssistant()\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+\n+    fireEvent.pointerDown(fab, { pointerId: 1, button: 0, clientX: 1240, clientY: 740 })\n+    fireEvent.pointerMove(fab, { pointerId: 1, clientX: 1241, clientY: 741 })\n+    fireEvent.pointerUp(fab, { pointerId: 1, clientX: 1241, clientY: 741 })\n+    fireEvent.click(fab)\n+\n+    expect(await screen.findByRole('dialog', { name: '질문하기' })).not.toBeNull()\n+    expect(fab.getAttribute('data-side')).toBe('right')\n+  })\n+\n+  it('좁은 화면(≤600px)에서는 끌기가 무시되고 우측 하단 고정이다', async () => {\n+    mockMatchMedia(true)\n+    renderAssistant()\n+    const fab = await screen.findByRole('button', { name: '질문하기' })\n+\n+    fireEvent.pointerDown(fab, { pointerId: 1, button: 0, clientX: 500, clientY: 700 })\n+    fireEvent.pointerMove(fab, { pointerId: 1, clientX: 40, clientY: 100 })\n+    fireEvent.pointerUp(fab, { pointerId: 1, clientX: 40, clientY: 100 })\n+\n+    expect(fab.getAttribute('data-narrow')).toBe('true')\n+    expect(fab.style.top).toBe('')\n+    expect(window.localStorage.getItem(FAB_POSITION_KEY)).toBeNull()\n+  })\n+\n+  it('Tab 으로 닿고 Enter 로 연다', async () => {\n+    const user = userEvent.setup()\n+    renderAssistant()\n+    await screen.findByRole('button', { name: '질문하기' })\n+\n+    await user.tab()\n+    expect(document.activeElement?.getAttribute('aria-label')).toBe('질문하기')\n+    await user.keyboard('{Enter}')\n+\n+    expect(await screen.findByRole('dialog', { name: '질문하기' })).not.toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantFab.test.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantFab.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,230 @@\n+import { Bot } from 'lucide-react'\n+import { Popover } from 'radix-ui'\n+import {\n+  type CSSProperties,\n+  type PointerEvent as ReactPointerEvent,\n+  useCallback,\n+  useEffect,\n+  useId,\n+  useRef,\n+  useState,\n+} from 'react'\n+import { AssistantBubble, useAssistantConversation } from './AssistantBubble'\n+import type { AssistantPage } from './assistantPageContext'\n+import styles from './assistant.module.css'\n+import {\n+  DRAG_THRESHOLD_PX,\n+  type FabPosition,\n+  clampFabY,\n+  loadFabPosition,\n+  saveFabPosition,\n+  snapSide,\n+} from './fabPosition'\n+\n+const NARROW_QUERY = '(max-width: 600px)'\n+\n+/** 좁은 화면(≤600px)이면 끌기 없이 우측 하단 고정 + 바닥 시트다(FR-002·FR-003). jsdom 처럼 `matchMedia`가 없으면 넓은 화면이다. */\n+function useNarrowScreen(): boolean {\n+  const [narrow, setNarrow] = useState(() => window.matchMedia?.(NARROW_QUERY).matches ?? false)\n+  useEffect(() => {\n+    const query = window.matchMedia?.(NARROW_QUERY)\n+    if (!query) return undefined\n+    const update = () => setNarrow(query.matches)\n+    update()\n+    query.addEventListener('change', update)\n+    return () => query.removeEventListener('change', update)\n+  }, [])\n+  return narrow\n+}\n+\n+type DragState = { pointerId: number; startX: number; startY: number; dx: number; dy: number }\n+\n+/**\n+ * 질문하기 플로팅 버튼(spec 015 US3, FR-001~FR-003).\n+ *\n+ * <p>넓은 화면: 포인터로 끌어 옮기고 놓으면 가까운 쪽 여백에 붙는다. 자리는 브라우저에 기억한다. 누르면 옆에\n+ * 말풍선(Radix Popover, 비모달)이 열리고 Escape·바깥 누르기·다시 누르기로 닫히며 초점은 버튼으로 돌아온다.\n+ * 좁은 화면: 우측 하단 고정, 말풍선은 바닥 시트다. 화면(맥락)이 바뀌면 닫는다(FR-015).\n+ *\n+ * <p>`ui/Button`을 쓰지 않는다 — 결과 화면의 주 모양 버튼은 '비교 대상 고르기' 하나여야 한다(원칙 II).\n+ */\n+export function AssistantFab({ page }: { page: AssistantPage }) {\n+  const narrow = useNarrowScreen()\n+  const panelId = useId()\n+  const buttonRef = useRef<HTMLButtonElement>(null)\n+  const sheetRef = useRef<HTMLDivElement>(null)\n+  const [position, setPosition] = useState<FabPosition>(() => loadFabPosition(window.innerHeight))\n+  const [drag, setDrag] = useState<DragState | null>(null)\n+  const suppressClickRef = useRef(false)\n+  const [open, setOpen] = useState(false)\n+  const conversation = useAssistantConversation(page)\n+\n+  const close = useCallback(() => {\n+    setOpen(false)\n+    buttonRef.current?.focus()\n+  }, [])\n+\n+  // 화면이 바뀌면 이전 화면의 말풍선을 닫는다. 이력은 useAssistantConversation 이 맥락 변화를 보고 버린다.\n+  useEffect(() => {\n+    setOpen(false)\n+  }, [page.kind, page.publicToken])\n+\n+  const onPointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {\n+    if (narrow || event.button !== 0) return\n+    event.currentTarget.setPointerCapture?.(event.pointerId)\n+    setDrag({ pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, dx: 0, dy: 0 })\n+  }\n+  const onPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {\n+    if (!drag || event.pointerId !== drag.pointerId) return\n+    setDrag({ ...drag, dx: event.clientX - drag.startX, dy: event.clientY - drag.startY })\n+  }\n+  const onPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {\n+    if (!drag || event.pointerId !== drag.pointerId) return\n+    event.currentTarget.releasePointerCapture?.(event.pointerId)\n+    const moved = Math.hypot(drag.dx, drag.dy) >= DRAG_THRESHOLD_PX\n+    if (moved) {\n+      const next: FabPosition = {\n+        side: snapSide(event.clientX, window.innerWidth),\n+        y: clampFabY(position.y + drag.dy, window.innerHeight),\n+      }\n+      setPosition(next)\n+      saveFabPosition(next)\n+      suppressClickRef.current = true\n+    }\n+    setDrag(null)\n+  }\n+  const onClick = () => {\n+    if (suppressClickRef.current) {\n+      suppressClickRef.current = false\n+      return\n+    }\n+    setOpen((current) => !current)\n+  }\n+\n+  const style: CSSProperties | undefined = narrow\n+    ? undefined\n+    : {\n+        top: position.y,\n+        [position.side]: 'var(--thorp-page-gutter, 16px)',\n+        transform: drag ? `translate(${drag.dx}px, ${drag.dy}px)` : undefined,\n+      }\n+\n+  const button = (\n+    <button\n+      ref={buttonRef}\n+      type=\"button\"\n+      className={styles.fab}\n+      style={style}\n+      data-side={position.side}\n+      data-narrow={narrow || undefined}\n+      data-dragging={drag ? 'true' : undefined}\n+      aria-label=\"질문하기\"\n+      aria-haspopup=\"dialog\"\n+      aria-expanded={open}\n+      aria-controls={open ? panelId : undefined}\n+      onPointerDown={onPointerDown}\n+      onPointerMove={onPointerMove}\n+      onPointerUp={onPointerUp}\n+      onPointerCancel={() => setDrag(null)}\n+      onClick={onClick}\n+    >\n+      <Bot size={24} aria-hidden=\"true\" />\n+    </button>\n+  )\n+\n+  const bubble = (\n+    <AssistantBubble conversation={conversation} onClose={close} autoFocus={narrow} />\n+  )\n+\n+  if (narrow) {\n+    return (\n+      <>\n+        {button}\n+        {open ? (\n+          <BottomSheet id={panelId} sheetRef={sheetRef} buttonRef={buttonRef} onClose={close}>\n+            {bubble}\n+          </BottomSheet>\n+        ) : null}\n+      </>\n+    )\n+  }\n+\n+  return (\n+    <Popover.Root\n+      open={open}\n+      onOpenChange={(next) => {\n+        if (!next) close()\n+      }}\n+    >\n+      <Popover.Anchor asChild>{button}</Popover.Anchor>\n+      <Popover.Portal>\n+        <Popover.Content\n+          id={panelId}\n+          className={styles.popover}\n+          side={position.side === 'left' ? 'right' : 'left'}\n+          align=\"end\"\n+          sideOffset={8}\n+          collisionPadding={16}\n+          aria-label=\"질문하기\"\n+          data-shell=\"popover\"\n+          onOpenAutoFocus={(event) => {\n+            event.preventDefault()\n+            document.getElementById(panelId)?.querySelector('textarea')?.focus()\n+          }}\n+          onCloseAutoFocus={(event) => {\n+            event.preventDefault()\n+            buttonRef.current?.focus()\n+          }}\n+        >\n+          {bubble}\n+        </Popover.Content>\n+      </Popover.Portal>\n+    </Popover.Root>\n+  )\n+}\n+\n+/** 좁은 화면의 바닥 시트. 비모달이라 뒤 화면을 막지 않고, Escape·바깥 누르기로 닫힌다. */\n+function BottomSheet({\n+  id,\n+  sheetRef,\n+  buttonRef,\n+  onClose,\n+  children,\n+}: {\n+  id: string\n+  sheetRef: React.RefObject<HTMLDivElement | null>\n+  buttonRef: React.RefObject<HTMLButtonElement | null>\n+  onClose: () => void\n+  children: React.ReactNode\n+}) {\n+  useEffect(() => {\n+    const onKeyDown = (event: KeyboardEvent) => {\n+      if (event.key === 'Escape') onClose()\n+    }\n+    const onPointerDown = (event: PointerEvent) => {\n+      const target = event.target as Node\n+      if (sheetRef.current?.contains(target) || buttonRef.current?.contains(target)) return\n+      onClose()\n+    }\n+    document.addEventListener('keydown', onKeyDown)\n+    document.addEventListener('pointerdown', onPointerDown)\n+    return () => {\n+      document.removeEventListener('keydown', onKeyDown)\n+      document.removeEventListener('pointerdown', onPointerDown)\n+    }\n+  }, [onClose, sheetRef, buttonRef])\n+\n+  return (\n+    <div\n+      ref={sheetRef}\n+      id={id}\n+      role=\"dialog\"\n+      aria-modal=\"false\"\n+      aria-label=\"질문하기\"\n+      className={styles.sheet}\n+      data-shell=\"sheet\"\n+    >\n+      {children}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantFab.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantFab.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,56 @@\n+import { type ReactNode, useCallback, useEffect, useMemo, useState } from 'react'\n+import { useLocation } from 'react-router-dom'\n+import { fetchAssistantCapabilities } from '@/api/assistant'\n+import type { AssistantCapabilities } from '@/types/assistant'\n+import { AssistantFab } from './AssistantFab'\n+import {\n+  type AssistantPage,\n+  AssistantPageContext,\n+  type AssistantPageRegistry,\n+  useAssistantPageRegistry,\n+} from './assistantPageContext'\n+\n+/** 로그인·가입·관리 화면에는 버튼을 두지 않는다(FR-001). 맥락이 등록돼도 이 경로면 그리지 않는다. */\n+const HIDDEN_PATH_PREFIXES = ['/login', '/signup', '/admin']\n+\n+/** 페이지가 등록한 맥락을 `App` 수준에서 들고 있는다. 라우트가 바뀌어도 살아 있다. */\n+export function AssistantProvider({ children }: { children: ReactNode }) {\n+  const [page, setPage] = useState<AssistantPage | null>(null)\n+\n+  const register = useCallback((next: AssistantPage) => {\n+    setPage(next)\n+    return () => {\n+      setPage((current) => (current === next ? null : current))\n+    }\n+  }, [])\n+\n+  const value = useMemo<AssistantPageRegistry>(() => ({ page, register }), [page, register])\n+  return <AssistantPageContext.Provider value={value}>{children}</AssistantPageContext.Provider>\n+}\n+\n+/**\n+ * 플로팅 버튼의 마운트 자리(`App`, 라우트 전환 바깥). 등록된 맥락이 있고, 숨김 경로가 아니고, 서버 플래그가\n+ * 그 화면 종류를 켰을 때만 버튼을 그린다(FR-001·FR-016). 플래그는 앱 수명 동안 한 번만 묻는다.\n+ */\n+export function AssistantWidget() {\n+  const registry = useAssistantPageRegistry()\n+  const { pathname } = useLocation()\n+  const [capabilities, setCapabilities] = useState<AssistantCapabilities | null>(null)\n+  const page = registry?.page ?? null\n+\n+  useEffect(() => {\n+    if (!page || capabilities) return undefined\n+    let alive = true\n+    void fetchAssistantCapabilities().then((loaded) => {\n+      if (alive) setCapabilities(loaded)\n+    })\n+    return () => {\n+      alive = false\n+    }\n+  }, [page, capabilities])\n+\n+  if (!registry || !page) return null\n+  if (HIDDEN_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null\n+  if (!capabilities?.enabled || !capabilities.scopes.includes(page.kind)) return null\n+  return <AssistantFab page={page} />\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantWidget.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantWidget.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,273 @@\n+/* 화면 맥락 도우미(spec 015). 층 순서: 버튼 54 < 말풍선 55 < 대화상자 60·61 < 물음표 도움말 80. */\n+\n+.fab {\n+  position: fixed;\n+  z-index: 54;\n+  display: inline-flex;\n+  align-items: center;\n+  justify-content: center;\n+  width: 56px;\n+  height: 56px;\n+  padding: 0;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 999px;\n+  background: var(--thorp-surface-raised, var(--thorp-background));\n+  color: var(--thorp-accent, var(--thorp-foreground));\n+  box-shadow: 0 10px 28px rgb(0 0 0 / 22%);\n+  cursor: grab;\n+  touch-action: none;\n+  transition:\n+    top 0.18s ease,\n+    left 0.18s ease,\n+    right 0.18s ease,\n+    box-shadow 0.18s ease;\n+}\n+\n+.fab:hover {\n+  box-shadow: 0 12px 32px rgb(0 0 0 / 28%);\n+}\n+\n+.fab:focus-visible {\n+  outline: var(--thorp-focus-outline, 2px solid var(--thorp-accent));\n+  outline-offset: var(--thorp-focus-offset, 2px);\n+}\n+\n+.fab[data-dragging='true'] {\n+  cursor: grabbing;\n+  transition: none;\n+}\n+\n+.fab[data-narrow='true'] {\n+  right: 16px;\n+  bottom: 16px;\n+  cursor: pointer;\n+  touch-action: auto;\n+}\n+\n+.fab[aria-expanded='true'] {\n+  background: var(--thorp-accent-soft, var(--thorp-surface-raised));\n+  color: var(--thorp-action-foreground, var(--thorp-accent));\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .fab {\n+    transition: none;\n+  }\n+}\n+\n+/* 넓은 화면의 말풍선. 비교 대상 팝오버와 같은 표면이고 한 층 아래다. */\n+.popover {\n+  z-index: 55;\n+  display: flex;\n+  flex-direction: column;\n+  width: min(400px, calc(100vw - 32px));\n+  max-height: min(600px, var(--radix-popover-content-available-height, calc(100svh - 32px)));\n+  overflow: hidden;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-card, 12px);\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n+  box-shadow: 0 14px 36px rgb(0 0 0 / 24%);\n+}\n+\n+/* 좁은 화면의 바닥 시트. 뒤 화면을 막지 않는다. */\n+.sheet {\n+  position: fixed;\n+  z-index: 55;\n+  inset: auto 0 0 0;\n+  display: flex;\n+  flex-direction: column;\n+  max-height: 80svh;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-bottom: 0;\n+  border-radius: var(--thorp-radius-card, 12px) var(--thorp-radius-card, 12px) 0 0;\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n+  box-shadow: 0 -10px 30px rgb(0 0 0 / 22%);\n+}\n+\n+.bubble {\n+  display: flex;\n+  flex-direction: column;\n+  min-height: 0;\n+  padding: 14px 16px 16px;\n+  gap: 10px;\n+  font-size: 0.95rem;\n+  line-height: 1.6;\n+}\n+\n+.head {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 8px;\n+}\n+\n+.headStart {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 4px;\n+}\n+\n+.context {\n+  font-size: 0.85rem;\n+  font-weight: 600;\n+  color: var(--thorp-muted);\n+}\n+\n+.close {\n+  display: inline-flex;\n+  padding: 4px;\n+  border: 0;\n+  border-radius: 999px;\n+  background: transparent;\n+  color: var(--thorp-muted);\n+  cursor: pointer;\n+}\n+\n+.close:hover {\n+  background: var(--thorp-accent-soft, transparent);\n+  color: var(--thorp-action-foreground, var(--thorp-foreground));\n+}\n+\n+.notice {\n+  margin: 0;\n+  padding: 8px 10px;\n+  border-radius: var(--thorp-radius-inset, 8px);\n+  background: var(--thorp-accent-soft, var(--thorp-background));\n+  font-size: 0.85rem;\n+  color: var(--thorp-action-foreground, var(--thorp-copy));\n+  align-self: flex-start;\n+  max-width: 100%;\n+}\n+\n+.examples {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 6px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.example {\n+  padding: 6px 10px;\n+  border: 1px solid var(--thorp-line-control, var(--thorp-line));\n+  border-radius: 999px;\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+  font-size: 0.85rem;\n+  cursor: pointer;\n+}\n+\n+.example:hover {\n+  border-color: var(--thorp-line-control-hover, var(--thorp-line-strong));\n+}\n+\n+.log {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 12px;\n+  margin: 0;\n+  padding: 0;\n+  overflow-y: auto;\n+  list-style: none;\n+  min-height: 0;\n+}\n+\n+.exchange {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 6px;\n+}\n+\n+.question {\n+  align-self: flex-end;\n+  max-width: 90%;\n+  margin: 0;\n+  padding: 8px 12px;\n+  border-radius: 14px 14px 4px 14px;\n+  background: var(--thorp-accent-soft, var(--thorp-background));\n+  color: var(--thorp-action-foreground, var(--thorp-foreground));\n+  overflow-wrap: anywhere;\n+}\n+\n+.pending,\n+.answer {\n+  margin: 0;\n+  overflow-wrap: anywhere;\n+}\n+\n+.pending {\n+  display: flex;\n+  align-items: center;\n+  gap: 6px;\n+  color: var(--thorp-muted);\n+}\n+\n+.spinner {\n+  width: 1em;\n+  height: 1em;\n+  flex: none;\n+  animation: spin 0.9s linear infinite;\n+}\n+\n+@keyframes spin {\n+  to {\n+    transform: rotate(360deg);\n+  }\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .spinner {\n+    animation: none;\n+  }\n+}\n+\n+.answer[data-status='INSUFFICIENT_EVIDENCE'],\n+.answer[data-status='OUT_OF_SCOPE'] {\n+  color: var(--thorp-copy);\n+}\n+\n+.failure {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  gap: 8px;\n+  color: var(--thorp-negative, var(--thorp-foreground));\n+}\n+\n+.failure p {\n+  margin: 0;\n+  flex: 1 1 200px;\n+}\n+\n+.form {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 6px;\n+}\n+\n+.input {\n+  width: 100%;\n+  resize: vertical;\n+  padding: 8px 10px;\n+  border: 1px solid var(--thorp-line-control, var(--thorp-line));\n+  border-radius: var(--thorp-radius-control, 8px);\n+  background: var(--thorp-background);\n+  color: var(--thorp-foreground);\n+  font: inherit;\n+}\n+\n+.formRow {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 8px;\n+}\n+\n+.counter {\n+  font-size: 0.8rem;\n+  color: var(--thorp-muted);\n+  font-variant-numeric: tabular-nums;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/assistant.module.css",
+          "old_path": "frontend/src/components/assistant/assistant.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+import { createContext, useContext, useEffect } from 'react'\n+import type { AssistantPageKind } from '@/types/assistant'\n+\n+/**\n+ * 도우미가 어느 화면의 무엇을 보고 있는지(spec 015 Key Entities \"페이지 맥락\").\n+ *\n+ * <p>페이지는 마운트 때 자기 맥락을 등록하고 언마운트 때 지운다. 버튼·말풍선은 `App`에 한 번만 있으므로\n+ * 등록된 맥락이 없으면 그리지 않는다. 1차는 결과 화면(`RESULT`)만 등록한다.\n+ */\n+export type AssistantPage = {\n+  kind: AssistantPageKind\n+  publicToken: string\n+}\n+\n+export type AssistantPageRegistry = {\n+  page: AssistantPage | null\n+  register: (page: AssistantPage) => () => void\n+}\n+\n+export const AssistantPageContext = createContext<AssistantPageRegistry | null>(null)\n+\n+export function useAssistantPageRegistry(): AssistantPageRegistry | null {\n+  return useContext(AssistantPageContext)\n+}\n+\n+/**\n+ * 화면이 자기 맥락을 등록한다. 제공자 밖(테스트 등)에서는 아무것도 하지 않는다.\n+ *\n+ * <p>`page`는 호출자가 `useMemo`로 고정한다. 매 렌더 새 객체면 등록을 반복한다.\n+ */\n+export function useAssistantPageContext(page: AssistantPage | null): void {\n+  const registry = useContext(AssistantPageContext)\n+  useEffect(() => {\n+    if (!registry || !page) return undefined\n+    return registry.register(page)\n+  }, [registry, page])\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/assistantPageContext.ts",
+          "old_path": "frontend/src/components/assistant/assistantPageContext.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+import { render } from '@testing-library/react'\n+import { useMemo } from 'react'\n+import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import type { AssistantAnswer } from '@/types/assistant'\n+import { AssistantProvider, AssistantWidget } from './AssistantWidget'\n+import { useAssistantPageContext } from './assistantPageContext'\n+\n+export const TOKEN = '0123456789abcdef0123456789abcdef'\n+export const OTHER_TOKEN = 'fedcba9876543210fedcba9876543210'\n+\n+export const answered: AssistantAnswer = {\n+  status: 'ANSWERED',\n+  answer: '비용을 뺀 전체 수익률은 16.67%이고, 거래비용은 모두 17,078원입니다.',\n+  evidence: [\n+    { id: 'F1', label: '비용 차감 후 전체 수익률', value: '16.67%', asOf: '2024-12-31', tab: 'summary' },\n+    { id: 'F4', label: '거래비용 합계', value: '17,078원', asOf: null, tab: 'settings' },\n+  ],\n+  page: { kind: 'RESULT' },\n+}\n+\n+/** 결과 화면 대역. 실제 `ResultPage`처럼 자기 맥락을 등록한다. */\n+export function FakeResultPage({ token }: { token: string }) {\n+  const page = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])\n+  useAssistantPageContext(page)\n+  return <main>결과 {token.slice(0, 4)}</main>\n+}\n+\n+export function renderAssistant({ path = `/results/${TOKEN}` }: { path?: string } = {}) {\n+  return render(\n+    <MemoryRouter initialEntries={[path]}>\n+      <AssistantProvider>\n+        <Routes>\n+          <Route path=\"/results/:token\" element={<RouteResult />} />\n+          <Route path=\"/login\" element={<RouteResult />} />\n+          <Route path=\"/admin/learning\" element={<RouteResult />} />\n+          <Route path=\"/learn\" element={<main>배우기</main>} />\n+        </Routes>\n+        <AssistantWidget />\n+      </AssistantProvider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+function RouteResult() {\n+  // 경로에 토큰이 없으면(로그인·관리 화면 대역) 결과 하나를 등록한 채로 그 경로에 있는 상황을 흉내 낸다.\n+  const token = window.location.pathname.includes('/results/') ? TOKEN : TOKEN\n+  return <FakeResultPage token={token} />\n+}\n+\n+/** jsdom에는 `matchMedia`가 없다. 좁은 화면을 흉내 낼 때만 붙인다. */\n+export function mockMatchMedia(matches: boolean) {\n+  Object.defineProperty(window, 'matchMedia', {\n+    configurable: true,\n+    value: (query: string) => ({\n+      matches,\n+      media: query,\n+      onchange: null,\n+      addEventListener: () => {},\n+      removeEventListener: () => {},\n+      addListener: () => {},\n+      removeListener: () => {},\n+      dispatchEvent: () => false,\n+    }),\n+  })\n+}\n+\n+export function clearMatchMedia() {\n+  // @ts-expect-error 테스트에서만 붙였다 뗀다\n+  delete window.matchMedia\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/assistantTestSupport.tsx",
+          "old_path": "frontend/src/components/assistant/assistantTestSupport.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+import { beforeEach, describe, expect, it } from 'vitest'\n+import {\n+  FAB_POSITION_KEY,\n+  clampFabY,\n+  defaultFabPosition,\n+  loadFabPosition,\n+  saveFabPosition,\n+  snapSide,\n+} from './fabPosition'\n+\n+/** spec 015 FR-002. 저장소가 없거나 값이 이상해도 버튼은 항상 화면 안 어딘가에 있다. */\n+describe('fabPosition', () => {\n+  beforeEach(() => {\n+    window.localStorage.clear()\n+  })\n+\n+  it('기본 자리는 우측 하단이고 세로는 화면 안으로 자른다', () => {\n+    expect(defaultFabPosition(800)).toEqual({ side: 'right', y: 720 })\n+    expect(clampFabY(-50, 800)).toBe(16)\n+    expect(clampFabY(5000, 800)).toBe(728)\n+  })\n+\n+  it('놓은 자리가 가운데보다 왼쪽이면 왼쪽 여백이다', () => {\n+    expect(snapSide(100, 1280)).toBe('left')\n+    expect(snapSide(1000, 1280)).toBe('right')\n+  })\n+\n+  it('저장한 자리를 읽고, 화면이 작아졌으면 안으로 당긴다', () => {\n+    saveFabPosition({ side: 'left', y: 700 })\n+    expect(loadFabPosition(800)).toEqual({ side: 'left', y: 700 })\n+    expect(loadFabPosition(400)).toEqual({ side: 'left', y: 328 })\n+  })\n+\n+  it('망가진 값은 기본 자리로 돌아간다', () => {\n+    window.localStorage.setItem(FAB_POSITION_KEY, '{\"side\":\"top\",\"y\":\"x\"}')\n+    expect(loadFabPosition(800)).toEqual({ side: 'right', y: 720 })\n+    window.localStorage.setItem(FAB_POSITION_KEY, 'not json')\n+    expect(loadFabPosition(800)).toEqual({ side: 'right', y: 720 })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/fabPosition.test.tsx",
+          "old_path": "frontend/src/components/assistant/fabPosition.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,64 @@\n+/**\n+ * 플로팅 버튼의 자리(spec 015 FR-002). 넓은 화면에서 끌어 놓으면 가까운 쪽 여백에 붙고 세로 위치는 화면\n+ * 안에서 자유다. 브라우저 `localStorage`에 기억한다 — 대화는 남기지 않고 버튼 자리만 남는다(FR-014).\n+ */\n+export type FabSide = 'left' | 'right'\n+\n+export type FabPosition = {\n+  side: FabSide\n+  /** 화면 위에서 버튼 위쪽까지의 px */\n+  y: number\n+}\n+\n+export const FAB_POSITION_KEY = 'thorp.assistant.fabPosition'\n+export const FAB_SIZE = 56\n+export const FAB_MARGIN = 16\n+/** 이만큼 못 움직였으면 끌기가 아니라 누른 것이다 */\n+export const DRAG_THRESHOLD_PX = 4\n+\n+export function clampFabY(y: number, viewportHeight: number): number {\n+  const max = Math.max(FAB_MARGIN, viewportHeight - FAB_SIZE - FAB_MARGIN)\n+  return Math.min(max, Math.max(FAB_MARGIN, Math.round(y)))\n+}\n+\n+export function defaultFabPosition(viewportHeight: number): FabPosition {\n+  return { side: 'right', y: clampFabY(viewportHeight - FAB_SIZE - 24, viewportHeight) }\n+}\n+\n+/** 놓은 자리가 화면 가운데보다 왼쪽이면 왼쪽 여백, 아니면 오른쪽 여백이다. */\n+export function snapSide(clientX: number, viewportWidth: number): FabSide {\n+  return clientX < viewportWidth / 2 ? 'left' : 'right'\n+}\n+\n+function storage(): Storage | null {\n+  try {\n+    return window.localStorage\n+  } catch {\n+    return null\n+  }\n+}\n+\n+export function loadFabPosition(viewportHeight: number): FabPosition {\n+  const fallback = defaultFabPosition(viewportHeight)\n+  try {\n+    const raw = storage()?.getItem(FAB_POSITION_KEY)\n+    if (!raw) return fallback\n+    const parsed: unknown = JSON.parse(raw)\n+    if (typeof parsed !== 'object' || parsed === null) return fallback\n+    const { side, y } = parsed as { side?: unknown; y?: unknown }\n+    if ((side !== 'left' && side !== 'right') || typeof y !== 'number' || !Number.isFinite(y)) {\n+      return fallback\n+    }\n+    return { side, y: clampFabY(y, viewportHeight) }\n+  } catch {\n+    return fallback\n+  }\n+}\n+\n+export function saveFabPosition(position: FabPosition): void {\n+  try {\n+    storage()?.setItem(FAB_POSITION_KEY, JSON.stringify(position))\n+  } catch {\n+    // 저장소가 막혀 있으면 이번 세션 동안만 기억한다.\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/fabPosition.ts",
+          "old_path": "frontend/src/components/assistant/fabPosition.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import { Popover } from 'radix-ui'\n import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'\n import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n+import { useAssistantPageContext } from '@/components/assistant/assistantPageContext'\n import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'\n import comparisonStyles from '@/components/result/comparison.module.css'\n import { CompareTargetChip } from '@/components/result/CompareTargetChip'\n@@ -157,6 +158,9 @@ function ResultView({\n         : null,\n     [summary, timeseries],\n   )\n+  // 화면 맥락 도우미(spec 015). 이 화면의 맥락을 등록한다.\n+  const assistantPage = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])\n+  useAssistantPageContext(assistantPage)\n \n   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.\n   const summaryBlock = (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+/**\n+ * 화면 맥락 도우미(spec 015) 응답 타입. 계약은 `specs/015-context-assistant/contracts/assistant-api.md` §1,\n+ * 예시는 `docs/specs/assistant-api/examples/`다.\n+ */\n+\n+export type AssistantPageKind = 'RESULT'\n+\n+/** `GET /assistant/capabilities`. 꺼져 있으면 `scopes`가 비고 화면은 버튼을 그리지 않는다. */\n+export type AssistantCapabilities = {\n+  enabled: boolean\n+  scopes: AssistantPageKind[]\n+}\n+\n+/** `POST /assistant/questions` 요청의 `context`. 종류마다 식별자 하나뿐이다. */\n+export type AssistantContext = {\n+  kind: 'RESULT'\n+  publicToken: string\n+}\n+\n+export type AssistantAnswerStatus = 'ANSWERED' | 'INSUFFICIENT_EVIDENCE' | 'OUT_OF_SCOPE'\n+\n+/** 결과 화면 탭 id(005). 근거 카드는 이 탭으로 이동한다. */\n+export type AssistantEvidenceTab = 'summary' | 'analysis' | 'settings' | 'trades' | 'loss'\n+\n+export type AssistantEvidence = {\n+  /** 이 응답 안에서만 뜻이 있는 `Fn` */\n+  id: string\n+  label: string\n+  /** 서버가 표기까지 끝낸 값. 답 안의 숫자는 모두 여기서 왔다 */\n+  value: string\n+  asOf: string | null\n+  tab: AssistantEvidenceTab\n+}\n+\n+export type AssistantAnswer = {\n+  status: AssistantAnswerStatus\n+  answer: string\n+  /** 답에 실제로 쓰인 근거만. `ANSWERED`가 아니면 빈 배열 */\n+  evidence: AssistantEvidence[]\n+  page: { kind: AssistantPageKind }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/assistant.ts",
+          "old_path": "frontend/src/types/assistant.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ import { lazy, Suspense, useLayoutEffect } from 'react'\n import { Navigate, Route, Routes, useLocation } from 'react-router-dom'\n import { AuthEntryGuard } from '@/auth/AuthEntryGuard'\n import { ProtectedRoute } from '@/auth/ProtectedRoute'\n+import { AssistantProvider, AssistantWidget } from '@/components/assistant/AssistantWidget'\n import { LandingPage } from '@/pages/LandingPage'\n \n // 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.\n@@ -200,7 +201,11 @@ function AnimatedRoutes() {\n function App() {\n   return (\n     <MotionConfig reducedMotion=\"user\">\n-      <AnimatedRoutes />\n+      {/* 화면 맥락 도우미(spec 015)는 라우트 전환 바깥에 한 번만 있다. 페이지가 맥락을 등록하면 버튼이 보인다. */}\n+      <AssistantProvider>\n+        <AnimatedRoutes />\n+        <AssistantWidget />\n+      </AssistantProvider>\n     </MotionConfig>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -99,13 +99,13 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n \n **Independent Test**: 가짜 API로 버튼·끌기·말풍선·답변·오류·페이지 전환을 검증한다.\n \n-- [ ] T040 [P] [US3] 실패 테스트 `frontend/src/components/assistant/AssistantFab.test.tsx` — 접근 이름 `질문하기`, 보이는 글자 없음, `Bot` 아이콘 `aria-hidden`; `capabilities.enabled=false`면 없음; 로그인·가입·관리 경로에 없음; 기본 우측 하단; 끌어 가운데 놓으면 가까운 여백으로 붙고 `thorp.assistant.fabPosition`에 저장; 재렌더 시 저장 자리; ≤600px에서 끌기 무시·우측 하단 고정; Tab·Enter로 열림; `[data-variant=\"default\"]` 버튼은 '비교 대상 고르기' 하나\n-- [ ] T041 [P] [US3] 실패 테스트 `.../AssistantBubble.test.tsx` — 열면 맥락 표시·예시 질문·입력 하나·전송 안내·입력에 초점; 왼쪽 여백이면 오른쏙으로 펼침; 답과 `factIds`에 쓰인 근거 카드만; 근거 카드 클릭이 해당 탭으로; 페이지 이동 시 `abort`·요청 번호로 이전 답 미표시·말풍선 닫힘; Escape·바깥 누르기로 닫히고 초점 복귀; 429 대기 문구, 503 문구+재시도 버튼(자동 재시도 없음); ≤600px 바닥 시트; `InlineHelp`(z 80)가 위에 뜸\n-- [ ] T042 [US3] `frontend/src/types/assistant.ts`·`frontend/src/api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — `runCsrfProtectedMutation` 경로)·`assistantPageContext.tsx`(`useAssistantPageContext`)·`fabPosition.ts`(`localStorage` try/catch, 테스트는 `fabPosition.test.tsx` — `vite.config.ts` `test.include`가 `.test.ts`를 잡지 않는다)\n-- [ ] T043 [US3] `AssistantFab.tsx`(pointer 끌기 직접 구현, 붙기, `prefers-reduced-motion`)·`AssistantBubble.tsx`(`radix-ui` Popover·`useDisclosure`, z 55, `role=\"dialog\" aria-modal=\"false\"`, 바닥 시트)·`assistant.module.css`\n-- [ ] T044 [US3] `App.tsx`에 `AnimatedRoutes` 바깥 마운트, `ResultPage.tsx`에 맥락 등록과 \"탭 열기 요청\" 연결, **`ResultTabs.tsx`에 제어 prop(`activeTab`·`onActiveTabChange`, 없으면 지금처럼 비제어) 추가**와 `ResultDetailTabs.tsx` 전달, `ResultTabs.test.tsx`·`ResultPage.test.tsx` 갱신 — 근거 카드 클릭이 그 탭을 여는 경로다\n-- [ ] T045 [US4] 오류 문구 — 503 \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\", 429 다시 가능한 시점, `OUT_OF_SCOPE`·`INSUFFICIENT_EVIDENCE` 카드\n-- [ ] T046 `npm run lint && npm run build && npm test`(skipped 0, `vite.config.ts` `test.include` 확인). 데스크톱(끌기·붙기·펼침 방향)·모바일(고정·바닥 시트)에서 사람이 배치 확인. 서버 플래그가 꺼져 있으면 버튼이 없음을 확인\n+- [x] T040 [P] [US3] 실패 테스트 `frontend/src/components/assistant/AssistantFab.test.tsx` — 접근 이름 `질문하기`, 보이는 글자 없음, `Bot` 아이콘 `aria-hidden`; `capabilities.enabled=false`면 없음; 로그인·가입·관리 경로에 없음; 기본 우측 하단; 끌어 가운데 놓으면 가까운 여백으로 붙고 `thorp.assistant.fabPosition`에 저장; 재렌더 시 저장 자리; ≤600px에서 끌기 무시·우측 하단 고정; Tab·Enter로 열림; `[data-variant=\"default\"]` 버튼은 '비교 대상 고르기' 하나\n+- [x] T041 [P] [US3] 실패 테스트 `.../AssistantBubble.test.tsx` — 열면 맥락 표시·예시 질문·입력 하나·전송 안내·입력에 초점; 왼쪽 여백이면 오른쏙으로 펼침; 답과 `factIds`에 쓰인 근거 카드만; 근거 카드 클릭이 해당 탭으로; 페이지 이동 시 `abort`·요청 번호로 이전 답 미표시·말풍선 닫힘; Escape·바깥 누르기로 닫히고 초점 복귀; 429 대기 문구, 503 문구+재시도 버튼(자동 재시도 없음); ≤600px 바닥 시트; `InlineHelp`(z 80)가 위에 뜸\n+- [x] T042 [US3] `frontend/src/types/assistant.ts`·`frontend/src/api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — `runCsrfProtectedMutation` 경로)·`assistantPageContext.tsx`(`useAssistantPageContext`)·`fabPosition.ts`(`localStorage` try/catch, 테스트는 `fabPosition.test.tsx` — `vite.config.ts` `test.include`가 `.test.ts`를 잡지 않는다)\n+- [x] T043 [US3] `AssistantFab.tsx`(pointer 끌기 직접 구현, 붙기, `prefers-reduced-motion`)·`AssistantBubble.tsx`(`radix-ui` Popover·`useDisclosure`, z 55, `role=\"dialog\" aria-modal=\"false\"`, 바닥 시트)·`assistant.module.css`\n+- [x] T044 [US3] `App.tsx`에 `AnimatedRoutes` 바깥 마운트, `ResultPage.tsx`에 맥락 등록과 \"탭 열기 요청\" 연결, **`ResultTabs.tsx`에 제어 prop(`activeTab`·`onActiveTabChange`, 없으면 지금처럼 비제어) 추가**와 `ResultDetailTabs.tsx` 전달, `ResultTabs.test.tsx`·`ResultPage.test.tsx` 갱신 — 근거 카드 클릭이 그 탭을 여는 경로다\n+- [x] T045 [US4] 오류 문구 — 503 \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\", 429 다시 가능한 시점, `OUT_OF_SCOPE`·`INSUFFICIENT_EVIDENCE` 카드\n+- [ ] T046 `npm run lint && npm run build && npm test`(skipped 0, `vite.config.ts` `test.include` 확인). 데스크톱(끌기·붙기·펼침 방향)·모바일(고정·바닥 시트)에서 사람이 배치 확인. 서버 플래그가 꺼져 있으면 버튼이 없음을 확인 — **자동 검증은 끝났고 사람 배치 확인만 남았다(MR 리뷰 때 확인)**\n \n ---\n \n@@ -133,7 +133,7 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n | 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |\n | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |\n | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |\n-| 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |\n+| 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` (S15P21E205-441) | `feat(fe)/441-assistant-bubble` | 5 | T040~T046 | 1 |\n | 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |\n \n 티켓은 브랜치를 딸 때 만든다(`AGENTS.md`). Epic S15P21E205-30, Story S15P21E205-433 `relates to`.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/tasks.md",
+          "old_path": "specs/015-context-assistant/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-25T13:37:11.419+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2867842": []
+  }
+}

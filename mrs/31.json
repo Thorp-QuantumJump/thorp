@@ -1,0 +1,661 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 939060,
+    "iid": 31,
+    "project_id": 1444456,
+    "title": "feat(fe): 전체적인 테마 변경",
+    "description": "# 작업 내용 요약\n\n전체적으로 검정 - 초록 테마로 변경하였습니다.\n\n앞으로 이 테마를 기준으로 수정을 진행할 예정입니다.\n\n![image.png](/uploads/38b3c8914d7b8626c73b69a3c2cd5e09/image.png){width=900 height=466}\n\n# 주요 변경 사항\n\n- 테마 변경",
+    "state": "merged",
+    "created_at": "2026-09-10T11:40:11.313+09:00",
+    "updated_at": "2026-09-10T11:42:37.526+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-10T11:42:37.092+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/116-themechange-login",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4d729c72a798d342faa5a488dd81a991517b4ac7",
+    "merge_commit_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T11:40:13.728+09:00",
+    "reference": "!31",
+    "references": {
+      "short": "!31",
+      "relative": "!31",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!31"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/31",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 939060,
+    "iid": 31,
+    "project_id": 1444456,
+    "title": "feat(fe): 전체적인 테마 변경",
+    "description": "# 작업 내용 요약\n\n전체적으로 검정 - 초록 테마로 변경하였습니다.\n\n앞으로 이 테마를 기준으로 수정을 진행할 예정입니다.\n\n![image.png](/uploads/38b3c8914d7b8626c73b69a3c2cd5e09/image.png){width=900 height=466}\n\n# 주요 변경 사항\n\n- 테마 변경",
+    "state": "merged",
+    "created_at": "2026-09-10T11:40:11.313+09:00",
+    "updated_at": "2026-09-10T11:42:37.526+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-10T11:42:37.092+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/116-themechange-login",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4d729c72a798d342faa5a488dd81a991517b4ac7",
+    "merge_commit_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T11:40:13.728+09:00",
+    "reference": "!31",
+    "references": {
+      "short": "!31",
+      "relative": "!31",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!31"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/31",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "19",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "05acf6a6507897b46599aee28425e34d0bd84eb0",
+      "head_sha": "4d729c72a798d342faa5a488dd81a991517b4ac7",
+      "start_sha": "f8fe8c6abbf40e0f726d2eed543cf46ab1d9abee"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "19bc08662f9b417f6d1bcccfaeaa015e47f740e1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2784644,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T11:40:11.441+09:00",
+          "updated_at": "2026-09-10T11:40:11.449+09:00",
+          "system": true,
+          "noteable_id": 939060,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 31,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c99a4189773c7eff4742b89943c7cbc792c5f734",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2784645,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **디자인 시스템 구축 및 일관성 향상**: 전역 CSS 변수(`--thorp-*`)를 정의하고 각 컴포넌트의 하드코딩된 색상 값을 체계적으로 마이그레이션하여, 다크 테마 전환과 유지보수성을 크게 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **다크 테마 렌더링 및 가독성 테스트**:\n  - `BacktestPage`, `DashboardPage`, `HomePage` 및 주요 차트(`BacktestChart`, `MarketRegimeChart`)에 접근하여 검정-초록 테마 적용 시 텍스트 가독성(대비율)이 충분히 확보되는지 시각적으로 확인합니다.\n- **인터랙션 및 포커스 가시성 테스트**:\n  - 주요 버튼, 입력 필드(`input`, `select`), 네비게이션 링크에 키보드 포커스(`focus-visible`)를 이동시켰을 때 초록색 아웃라인/링이 정상적으로 표시되는지 확인합니다.\n- **모달 및 드로어(Drawer) 오버레이 테스트**:\n  - `AppHeader`의 모바일 메뉴(Drawer)를 열었을 때 배경 오버레이와 드로어 내부 요소들의 색상 및 그림자가 다크 테마 환경에 맞게 자연스럽게 출력되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:4d729c72a798d342faa5a488dd81a991517b4ac7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-10T11:40:20.857+09:00",
+          "updated_at": "2026-09-10T11:40:20.857+09:00",
+          "system": false,
+          "noteable_id": 939060,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 31,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1bbd769713d9199b7051bfc751e1e12a51bcf9f8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2784656,
+          "type": null,
+          "body": "mentioned in commit f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T11:42:37.276+09:00",
+          "updated_at": "2026-09-10T11:42:37.286+09:00",
+          "system": true,
+          "noteable_id": 939060,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 31,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2180644,
+      "head_commit_sha": "4d729c72a798d342faa5a488dd81a991517b4ac7",
+      "base_commit_sha": "05acf6a6507897b46599aee28425e34d0bd84eb0",
+      "start_commit_sha": "f8fe8c6abbf40e0f726d2eed543cf46ab1d9abee",
+      "created_at": "2026-09-10T11:40:12.095+09:00",
+      "merge_request_id": 939060,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "b93aca763b9340b659861b58cd0cd6edc626b4b0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2180644,
+      "head_commit_sha": "4d729c72a798d342faa5a488dd81a991517b4ac7",
+      "base_commit_sha": "05acf6a6507897b46599aee28425e34d0bd84eb0",
+      "start_commit_sha": "f8fe8c6abbf40e0f726d2eed543cf46ab1d9abee",
+      "created_at": "2026-09-10T11:40:12.095+09:00",
+      "merge_request_id": 939060,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "b93aca763b9340b659861b58cd0cd6edc626b4b0",
+      "commits": [
+        {
+          "id": "4d729c72a798d342faa5a488dd81a991517b4ac7",
+          "short_id": "4d729c72",
+          "created_at": "2026-09-10T11:38:15.000+09:00",
+          "parent_ids": [
+            "05acf6a6507897b46599aee28425e34d0bd84eb0"
+          ],
+          "title": "feat(fe): 전체적인 테마 변경",
+          "message": "feat(fe): 전체적인 테마 변경\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-10T11:38:15.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-10T11:38:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4d729c72a798d342faa5a488dd81a991517b4ac7"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -4,14 +4,14 @@\n   max-width: 100%;\n   min-height: 260px;\n   --chart-background: transparent;\n-  --chart-grid: #e2e6e9;\n-  --chart-foreground: #657180;\n-  --chart-foreground-muted: #9aa3ad;\n-  --chart-crosshair: #60707c;\n-  --chart-label: #7c8793;\n-  --chart-tooltip-background: rgb(18 27 39 / 94%);\n-  --chart-tooltip-foreground: #fff;\n-  --chart-tooltip-muted: #bac3ca;\n+  --chart-grid: var(--thorp-line);\n+  --chart-foreground: var(--thorp-copy);\n+  --chart-foreground-muted: var(--thorp-muted);\n+  --chart-crosshair: var(--thorp-accent-soft);\n+  --chart-label: var(--thorp-copy);\n+  --chart-tooltip-background: rgb(7 17 11 / 96%);\n+  --chart-tooltip-foreground: var(--thorp-foreground);\n+  --chart-tooltip-muted: var(--thorp-copy);\n }\n \n .tooltip {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/BacktestChart.module.css",
+          "old_path": "frontend/src/components/backtest/BacktestChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -94,7 +94,7 @@ export function BacktestChart({\n         <Line\n           dataKey=\"benchmark\"\n           curve={curveLinear}\n-          stroke=\"#9aa3ad\"\n+          stroke=\"var(--thorp-neutral)\"\n           strokeWidth={1.6}\n           animate\n           fadeEdges={false}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/BacktestChart.tsx",
+          "old_path": "frontend/src/components/backtest/BacktestChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,7 @@\n   width: 100%;\n   min-width: 690px;\n   border-collapse: collapse;\n-  color: #273241;\n+  color: var(--thorp-foreground);\n   font-size: 0.8rem;\n   font-variant-numeric: tabular-nums;\n }\n@@ -17,13 +17,13 @@\n .table th,\n .table td {\n   padding: 8px 12px;\n-  border-bottom: 1px solid #edf0f2;\n+  border-bottom: 1px solid var(--thorp-line);\n   text-align: right;\n   white-space: nowrap;\n }\n \n .table thead th {\n-  color: #929ca7;\n+  color: var(--thorp-muted);\n   font-size: 0.7rem;\n   font-weight: 650;\n   letter-spacing: 0.03em;\n@@ -41,7 +41,7 @@\n \n .clickableRow:hover,\n .clickableRow[data-active='true'] {\n-  background: #f3faf9;\n+  background: var(--thorp-accent-muted);\n }\n \n .strategyButton {\n@@ -58,7 +58,7 @@\n \n .strategyButton:focus-visible {\n   border-radius: 4px;\n-  outline: 2px solid #18a7a0;\n+  outline: 2px solid var(--thorp-accent);\n   outline-offset: 3px;\n }\n \n@@ -70,21 +70,21 @@\n }\n \n .benchmarkDot {\n-  background: #9aa3ad;\n+  background: var(--thorp-neutral);\n }\n \n .positive {\n-  color: #168d62;\n+  color: var(--thorp-positive);\n   font-weight: 650;\n }\n \n .negative {\n-  color: #d05a3c;\n+  color: var(--thorp-negative);\n }\n \n .benchmarkRow {\n-  background: #fafbfb;\n-  color: #6c7783;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-copy);\n }\n \n .benchmarkRow th,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/ResultTable.module.css",
+          "old_path": "frontend/src/components/backtest/ResultTable.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,21 +10,21 @@\n   width: 100%;\n   padding: 7px 2px;\n   border: 0;\n-  border-bottom: 1px solid #edf0f1;\n+  border-bottom: 1px solid var(--thorp-line);\n   border-radius: 0;\n-  background: #fff;\n-  color: #192331;\n+  background: var(--thorp-background);\n+  color: var(--thorp-foreground);\n   cursor: pointer;\n   text-align: left;\n   transition: color 160ms ease, background 160ms ease;\n }\n \n .strategy[data-selected='true'] {\n-  background: linear-gradient(90deg, #eff9f7 0%, rgb(239 249 247 / 0%) 88%);\n+  background: linear-gradient(90deg, var(--thorp-accent-muted) 0%, transparent 88%);\n }\n \n .strategy:focus-visible {\n-  outline: 3px solid rgb(24 167 160 / 18%);\n+  outline: 3px solid rgb(3 199 90 / 26%);\n   outline-offset: 2px;\n }\n \n@@ -50,7 +50,7 @@\n \n .copy small {\n   overflow: hidden;\n-  color: #8a949f;\n+  color: var(--thorp-muted);\n   font-size: 0.66rem;\n   text-overflow: ellipsis;\n   white-space: nowrap;\n@@ -61,12 +61,12 @@\n   width: 19px;\n   height: 19px;\n   place-items: center;\n-  border: 1px solid #d9dee3;\n+  border: 1px solid var(--thorp-line-strong);\n   border-radius: 5px;\n-  color: #168d87;\n+  color: var(--thorp-accent);\n }\n \n .strategy[data-selected='true'] .check {\n-  border-color: #94cec9;\n-  background: #e3f5f2;\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent-muted);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/StrategySelector.module.css",
+          "old_path": "frontend/src/components/backtest/StrategySelector.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,7 @@\n .details {\n   overflow: hidden;\n   border: 1px solid var(--market-line);\n-  border-radius: 17px;\n+  border-radius: 10px;\n   background: var(--market-surface);\n   box-shadow: var(--market-shadow-soft);\n }\n@@ -25,13 +25,13 @@\n }\n \n .details summary:focus-visible {\n-  outline: 3px solid rgb(22 143 138 / 20%);\n+  outline: 3px solid rgb(3 199 90 / 28%);\n   outline-offset: -3px;\n }\n \n .details summary > span {\n   gap: 8px;\n-  color: #43515d;\n+  color: var(--market-ink);\n   font-size: 0.8rem;\n   font-weight: 680;\n }\n@@ -41,7 +41,7 @@\n }\n \n .details summary > small {\n-  color: #929ca5;\n+  color: var(--market-muted);\n   font-size: 0.68rem;\n }\n \n@@ -61,8 +61,8 @@\n .fciNote {\n   min-width: 0;\n   padding: 15px;\n-  border-radius: 13px;\n-  background: #f7f9f9;\n+  border-radius: 6px;\n+  background: var(--thorp-surface-muted);\n }\n \n .sourceCard > div,\n@@ -73,7 +73,7 @@\n \n .sourceCard strong,\n .stabilityCard > div > span {\n-  color: #465460;\n+  color: var(--market-ink);\n   font-size: 0.73rem;\n   font-weight: 680;\n }\n@@ -81,26 +81,26 @@\n .sourceCard > div > span {\n   padding: 3px 6px;\n   border-radius: 999px;\n-  background: #e6f3f2;\n+  background: var(--thorp-accent-muted);\n   color: var(--market-brand);\n   font-size: 0.6rem;\n   white-space: nowrap;\n }\n \n .sourceCard > div > span[data-status='review-needed'] {\n-  background: #fff2e7;\n-  color: #b16b26;\n+  background: rgb(232 189 114 / 12%);\n+  color: var(--market-warning);\n }\n \n .sourceCard p {\n   margin: 13px 0 6px;\n-  color: #66747f;\n+  color: var(--market-copy);\n   font-size: 0.69rem;\n }\n \n .sourceCard > small,\n .stabilityCard > small {\n-  color: #929ca4;\n+  color: var(--market-muted);\n   font-size: 0.62rem;\n   line-height: 1.45;\n }\n@@ -113,7 +113,7 @@\n }\n \n .stabilityCard > div small {\n-  color: #9aa3aa;\n+  color: var(--market-muted);\n   font-size: 0.6rem;\n }\n \n@@ -138,8 +138,8 @@\n .fciNote {\n   align-items: flex-start;\n   gap: 10px;\n-  border: 1px solid #d8e5e3;\n-  background: #eff6f5;\n+  border: 1px solid var(--market-line-strong, var(--market-line));\n+  background: var(--thorp-accent-muted);\n   color: var(--market-ink);\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/DataFreshnessPanel.module.css",
+          "old_path": "frontend/src/components/home/DataFreshnessPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,11 +2,11 @@\n   position: relative;\n   align-self: stretch;\n   overflow: hidden;\n-  border: 1px solid #d8dedf;\n-  border-radius: 13px;\n-  background: rgb(255 255 255 / 91%);\n+  border: 1px solid var(--market-line-strong, var(--market-line));\n+  border-radius: 10px;\n+  background: rgb(7 17 11 / 88%);\n   color: var(--market-ink);\n-  box-shadow: 0 28px 72px rgb(35 49 54 / 10%);\n+  box-shadow: var(--market-shadow);\n   backdrop-filter: blur(10px);\n }\n \n@@ -26,8 +26,8 @@\n   min-height: 46px;\n   padding: 0 16px 0 20px;\n   border-bottom: 1px solid var(--market-line);\n-  background: #f7f8f8;\n-  color: #89949a;\n+  background: var(--thorp-surface-muted);\n+  color: var(--market-muted);\n   font-size: 0.58rem;\n   font-weight: 680;\n   letter-spacing: 0.1em;\n@@ -35,7 +35,7 @@\n \n .windowIdentity {\n   gap: 9px;\n-  color: #607079;\n+  color: var(--market-copy);\n }\n \n .windowIdentity > span {\n@@ -57,7 +57,7 @@\n .pauseButton {\n   border: 0;\n   background: transparent;\n-  color: #8a959b;\n+  color: var(--market-muted);\n   cursor: pointer;\n   font: inherit;\n }\n@@ -81,7 +81,7 @@\n }\n \n .chartTabs button[aria-selected='true'] {\n-  color: #30444c;\n+  color: var(--market-ink);\n }\n \n .chartTabs button[aria-selected='true']::after {\n@@ -90,7 +90,7 @@\n \n .chartTabs button:focus-visible,\n .pauseButton:focus-visible {\n-  outline: 2px solid rgb(22 143 138 / 35%);\n+  outline: 2px solid rgb(3 199 90 / 38%);\n   outline-offset: 2px;\n }\n \n@@ -99,20 +99,20 @@\n   width: 27px;\n   height: 27px;\n   place-items: center;\n-  border: 1px solid #dce2e3;\n+  border: 1px solid var(--market-line);\n   border-radius: 6px;\n }\n \n .progressTrack {\n   height: 2px;\n-  background: #edf0f1;\n+  background: var(--market-line-soft);\n }\n \n .progressTrack span {\n   display: block;\n   width: 100%;\n   height: 100%;\n-  background: #688d8a;\n+  background: var(--market-brand);\n   transform-origin: left center;\n }\n \n@@ -155,7 +155,7 @@\n }\n \n .currentState strong {\n-  color: #365f5d;\n+  color: var(--thorp-accent-soft);\n   font-size: 0.75rem;\n }\n \n@@ -174,7 +174,7 @@\n }\n \n .chartFooter strong {\n-  color: #64727a;\n+  color: var(--market-copy);\n   font-size: 0.7rem;\n }\n \n@@ -182,7 +182,7 @@\n   position: absolute;\n   right: 16px;\n   bottom: 6px;\n-  color: #a1aaaf;\n+  color: var(--market-muted);\n   font-size: 0.5rem;\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketOverviewCarousel.module.css",
+          "old_path": "frontend/src/components/home/MarketOverviewCarousel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,25 +18,25 @@\n }\n \n .gridLine {\n-  stroke: #edf0f1;\n+  stroke: var(--market-line-soft);\n   stroke-width: 1;\n }\n \n .referenceLine {\n-  stroke: #aeb9bd;\n+  stroke: var(--market-muted);\n   stroke-dasharray: 4 5;\n   stroke-width: 1.1;\n }\n \n .xTickLine {\n-  stroke: #cbd3d5;\n+  stroke: var(--market-line-strong, var(--market-line));\n   stroke-width: 1;\n }\n \n .yTick,\n .xTick,\n .indexLabel {\n-  fill: #818c92;\n+  fill: var(--market-muted);\n   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;\n   font-size: 10px;\n }\n@@ -48,25 +48,25 @@\n }\n \n .cycleLine {\n-  stroke: #527f7c;\n+  stroke: var(--market-brand);\n   stroke-linecap: round;\n   stroke-linejoin: round;\n   stroke-width: 2.6;\n-  filter: drop-shadow(0 4px 6px rgb(38 82 79 / 10%));\n+  filter: drop-shadow(0 4px 8px rgb(3 199 90 / 18%));\n }\n \n .latestHalo {\n-  fill: #e7f1f0;\n+  fill: var(--thorp-accent-muted);\n }\n \n .latestPoint {\n-  fill: #527f7c;\n-  stroke: #fff;\n+  fill: var(--market-brand);\n+  stroke: var(--market-surface);\n   stroke-width: 2.5;\n }\n \n .latestValue {\n-  fill: #365f5d;\n+  fill: var(--thorp-accent-soft);\n   font-size: 11px;\n   font-weight: 750;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeChart.module.css",
+          "old_path": "frontend/src/components/home/MarketRegimeChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -70,12 +70,12 @@\n \n .regimeLine strong {\n   margin-left: 7px;\n-  color: #33424b;\n+  color: var(--market-ink);\n   font-size: 0.74rem;\n }\n \n .regimeLine strong[data-risk='true'] {\n-  color: #a95743;\n+  color: var(--market-warning);\n }\n \n .driverGrid {\n@@ -92,7 +92,7 @@\n }\n \n .driver > span {\n-  color: #9aa4aa;\n+  color: var(--market-muted);\n   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;\n   font-size: 0.63rem;\n   font-weight: 650;\n@@ -100,7 +100,7 @@\n \n .driver p {\n   margin: 0;\n-  color: #52616b;\n+  color: var(--market-copy);\n   font-size: 0.73rem;\n   line-height: 1.55;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeHero.module.css",
+          "old_path": "frontend/src/components/home/MarketRegimeHero.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,7 +49,7 @@\n   grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);\n   overflow: hidden;\n   border: 1px solid var(--market-line);\n-  border-radius: 20px;\n+  border-radius: 10px;\n   background: var(--market-surface);\n   box-shadow: var(--market-shadow-soft);\n }\n@@ -98,7 +98,7 @@\n }\n \n .scoreRow span {\n-  color: #929ca4;\n+  color: var(--market-muted);\n   font-size: 0.62rem;\n }\n \n@@ -110,9 +110,9 @@\n \n .events span {\n   padding: 5px 8px;\n-  border-radius: 7px;\n-  background: #f1f4f4;\n-  color: #65727e;\n+  border-radius: 4px;\n+  background: var(--thorp-surface-muted);\n+  color: var(--market-copy);\n   font-size: 0.65rem;\n }\n \n@@ -127,7 +127,7 @@\n \n .observationGrid h4 {\n   margin: 0;\n-  color: #43515d;\n+  color: var(--market-ink);\n   font-size: 0.72rem;\n }\n \n@@ -136,7 +136,7 @@\n   gap: 7px;\n   margin: 9px 0 0;\n   padding-left: 15px;\n-  color: #71808b;\n+  color: var(--market-copy);\n   font-size: 0.67rem;\n   line-height: 1.5;\n }\n@@ -156,18 +156,18 @@\n \n .comparisonHeader {\n   min-height: 34px;\n-  color: #a0a9b0;\n+  color: var(--market-muted);\n   font-size: 0.64rem;\n   font-weight: 680;\n }\n \n .comparisonRow strong {\n-  color: #46535f;\n+  color: var(--market-ink);\n   font-size: 0.72rem;\n }\n \n .comparisonRow span {\n-  color: #697681;\n+  color: var(--market-copy);\n   font-size: 0.72rem;\n   font-variant-numeric: tabular-nums;\n }\n@@ -179,7 +179,7 @@\n \n .note {\n   margin: 14px 0 0;\n-  color: #9ba4ab;\n+  color: var(--market-muted);\n   font-size: 0.62rem;\n   line-height: 1.5;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/SimilarMarketPanel.module.css",
+          "old_path": "frontend/src/components/home/SimilarMarketPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -64,7 +64,7 @@\n   width: max(100%, min(440px, calc(100vw - 48px)));\n   padding: 20px;\n   border: 1px solid var(--market-line);\n-  border-radius: 17px;\n+  border-radius: 10px;\n   background: var(--market-surface);\n   box-shadow: var(--market-shadow);\n   overflow: hidden;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/IndicatorHistoryCard.module.css",
+          "old_path": "frontend/src/components/market/IndicatorHistoryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -55,7 +55,7 @@\n   min-width: 0;\n   padding: 19px;\n   border: 1px solid var(--market-line);\n-  border-radius: 17px;\n+  border-radius: 8px;\n   background: var(--market-surface);\n   box-shadow: var(--market-shadow-soft);\n }\n@@ -80,12 +80,12 @@\n \n .cardHeader h3 {\n   margin: 3px 0 0;\n-  color: #3c4a57;\n+  color: var(--market-copy);\n   font-size: 0.82rem;\n }\n \n .cardHeader small {\n-  color: #9aa4ad;\n+  color: var(--market-muted);\n   font-size: 0.62rem;\n   white-space: nowrap;\n }\n@@ -133,7 +133,7 @@\n .interpretation {\n   min-height: 39px;\n   margin: 9px 0 15px;\n-  color: #687581;\n+  color: var(--market-copy);\n   font-size: 0.72rem;\n   line-height: 1.55;\n }\n@@ -141,7 +141,7 @@\n .meta {\n   padding-top: 12px;\n   border-top: 1px solid var(--market-line-soft);\n-  color: #98a2aa;\n+  color: var(--market-muted);\n   font-size: 0.62rem;\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MacroIndicatorGrid.module.css",
+          "old_path": "frontend/src/components/market/MacroIndicatorGrid.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,7 +54,7 @@\n   min-width: 0;\n   padding: 17px;\n   border: 1px solid var(--market-line);\n-  border-radius: 17px;\n+  border-radius: 8px;\n   background: var(--market-surface);\n   box-shadow: var(--market-shadow-soft);\n }\n@@ -66,13 +66,13 @@\n }\n \n .cardTop > span {\n-  color: #465461;\n+  color: var(--market-copy);\n   font-size: 0.78rem;\n   font-weight: 680;\n }\n \n .cardTop small {\n-  color: #a0a9b0;\n+  color: var(--market-muted);\n   font-size: 0.64rem;\n   white-space: nowrap;\n }\n@@ -115,7 +115,7 @@\n .interpretation {\n   min-height: 42px;\n   margin: 9px 0 13px;\n-  color: #697681;\n+  color: var(--market-copy);\n   font-size: 0.72rem;\n   line-height: 1.55;\n }\n@@ -123,7 +123,7 @@\n .source {\n   padding-top: 11px;\n   border-top: 1px solid var(--market-line-soft);\n-  color: #99a2aa;\n+  color: var(--market-muted);\n   font-size: 0.62rem;\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketSnapshot.module.css",
+          "old_path": "frontend/src/components/market/MarketSnapshot.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -53,14 +53,14 @@\n   min-width: 0;\n   padding: 22px;\n   border: 1px solid var(--market-line);\n-  border-radius: 18px;\n+  border-radius: 8px;\n   background: var(--market-surface);\n   box-shadow: var(--market-shadow-soft);\n }\n \n .rank {\n   margin-bottom: 19px;\n-  color: #bdc4c8;\n+  color: var(--market-muted);\n   font-size: 0.66rem;\n   font-weight: 720;\n   letter-spacing: 0.1em;\n@@ -88,7 +88,7 @@\n   height: 4px;\n   margin-top: 12px;\n   border-radius: 99px;\n-  background: #e9eeee;\n+  background: var(--market-line);\n }\n \n .meter span {\n@@ -101,7 +101,7 @@\n .reason {\n   min-height: 59px;\n   margin: 17px 0 0;\n-  color: #66747f;\n+  color: var(--market-copy);\n   font-size: 0.74rem;\n   line-height: 1.65;\n }\n@@ -112,9 +112,9 @@\n   min-height: 46px;\n   margin: 14px 0 18px;\n   padding: 11px;\n-  border-radius: 10px;\n-  background: #f7f8f8;\n-  color: #7c878f;\n+  border-radius: 6px;\n+  background: var(--thorp-surface-muted);\n+  color: var(--market-copy);\n   font-size: 0.68rem;\n   line-height: 1.45;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/StrategyRecommendationSection.module.css",
+          "old_path": "frontend/src/components/market/StrategyRecommendationSection.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,10 +41,10 @@\n }\n \n .inner[data-scrolled='true'] {\n-  border-color: #d7dfe1;\n-  border-radius: 18px;\n-  background: rgb(255 255 255 / 96%);\n-  box-shadow: 0 14px 34px rgb(43 62 72 / 10%);\n+  border-color: var(--thorp-line-strong);\n+  border-radius: 10px;\n+  background: rgb(7 17 11 / 94%);\n+  box-shadow: 0 14px 34px rgb(0 0 0 / 28%);\n   transform: translateY(10px);\n   backdrop-filter: blur(18px);\n }\n@@ -57,9 +57,9 @@\n .menuButton,\n .drawerHeader button {\n   justify-content: center;\n-  border: 1px solid #dbe2e4;\n-  background: #fff;\n-  color: #263440;\n+  border: 1px solid var(--thorp-line-strong);\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n   cursor: pointer;\n }\n \n@@ -73,13 +73,13 @@\n }\n \n .menuButton:hover {\n-  border-color: #8fc7c3;\n-  background: #f0f8f7;\n-  color: #168f8a;\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent-muted);\n+  color: var(--thorp-accent-soft);\n }\n \n .brand {\n-  color: #182331;\n+  color: var(--thorp-foreground);\n   font-size: 1.5rem;\n   font-weight: 720;\n   letter-spacing: -0.055em;\n@@ -87,7 +87,7 @@\n }\n \n .brand span {\n-  color: #168f8a;\n+  color: var(--thorp-accent);\n }\n \n .desktopNav {\n@@ -103,7 +103,7 @@\n   min-height: 34px;\n   padding: 0 13px;\n   border-radius: 4px;\n-  color: #6f7d88;\n+  color: var(--thorp-copy);\n   font-size: 0.76rem;\n   font-weight: 650;\n   text-decoration: none;\n@@ -112,22 +112,22 @@\n .desktopNav a[aria-current='page'] {\n   border-radius: 0;\n   background: transparent;\n-  box-shadow: inset 0 -2px 0 #168f8a;\n-  color: #168f8a;\n+  box-shadow: inset 0 -2px 0 var(--thorp-accent);\n+  color: var(--thorp-accent-soft);\n }\n \n .homeLink {\n   gap: 7px;\n   justify-self: end;\n   padding-right: 16px;\n-  color: #596874;\n+  color: var(--thorp-copy);\n   font-size: 0.78rem;\n   font-weight: 630;\n   text-decoration: none;\n }\n \n .homeLink:hover {\n-  color: #168f8a;\n+  color: var(--thorp-accent-soft);\n }\n \n .menuButton:focus-visible,\n@@ -137,7 +137,7 @@\n .drawer button:focus-visible,\n .drawer a:focus-visible {\n   border-radius: 8px;\n-  outline: 3px solid rgb(22 143 138 / 25%);\n+  outline: 3px solid rgb(3 199 90 / 30%);\n   outline-offset: 3px;\n }\n \n@@ -152,7 +152,7 @@\n   inset: 0;\n   width: 100%;\n   border: 0;\n-  background: rgb(15 25 35 / 43%);\n+  background: rgb(0 4 2 / 68%);\n   cursor: pointer;\n   backdrop-filter: blur(2px);\n }\n@@ -165,9 +165,9 @@\n   display: flex;\n   width: min(340px, 88vw);\n   padding: 22px;\n-  border-right: 1px solid #dfe5e6;\n-  background: #fff;\n-  box-shadow: 24px 0 60px rgb(17 31 42 / 16%);\n+  border-right: 1px solid var(--thorp-line-strong);\n+  background: var(--thorp-surface);\n+  box-shadow: 24px 0 60px rgb(0 0 0 / 44%);\n   flex-direction: column;\n }\n \n@@ -175,7 +175,7 @@\n   justify-content: space-between;\n   gap: 20px;\n   padding-bottom: 21px;\n-  border-bottom: 1px solid #edf0f1;\n+  border-bottom: 1px solid var(--thorp-line);\n }\n \n .drawerHeader > div {\n@@ -184,14 +184,14 @@\n }\n \n .drawerHeader span {\n-  color: #168f8a;\n+  color: var(--thorp-accent);\n   font-size: 0.64rem;\n   font-weight: 750;\n   letter-spacing: 0.16em;\n }\n \n .drawerHeader strong {\n-  color: #172331;\n+  color: var(--thorp-foreground);\n   font-size: 1.45rem;\n }\n \n@@ -213,14 +213,14 @@\n   padding: 14px;\n   border: 1px solid transparent;\n   border-radius: 4px;\n-  color: #263440;\n+  color: var(--thorp-foreground);\n   text-decoration: none;\n }\n \n .drawerLink:hover,\n .drawerLink[aria-current='page'] {\n-  border-color: #cde4e2;\n-  background: #eff8f7;\n+  border-color: var(--thorp-line-strong);\n+  background: var(--thorp-accent-muted);\n }\n \n .drawerIcon {\n@@ -228,13 +228,13 @@\n   width: 42px;\n   height: 42px;\n   border-radius: 3px;\n-  background: #f1f4f4;\n-  color: #53636f;\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-copy);\n }\n \n .drawerLink[aria-current='page'] .drawerIcon {\n-  background: #dff2f0;\n-  color: #168f8a;\n+  background: var(--thorp-accent-muted);\n+  color: var(--thorp-accent-soft);\n }\n \n .drawerLink > span:last-child {\n@@ -247,7 +247,7 @@\n }\n \n .drawerLink small {\n-  color: #7d8993;\n+  color: var(--thorp-muted);\n   font-size: 0.72rem;\n   line-height: 1.45;\n }\n@@ -257,8 +257,8 @@\n   min-height: 46px;\n   margin-top: auto;\n   padding: 0 13px;\n-  border-top: 1px solid #edf0f1;\n-  color: #667580;\n+  border-top: 1px solid var(--thorp-line);\n+  color: var(--thorp-copy);\n   font-size: 0.82rem;\n   font-weight: 630;\n   text-decoration: none;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,13 @@\n .page {\n   min-height: 100svh;\n-  background: #fff;\n-  color: #182331;\n-  --surface: #fff;\n-  --line: #e1e6e8;\n-  --muted: #7f8a96;\n-  --brand: #168f8a;\n-  --brand-soft: #e8f6f4;\n+  background: var(--thorp-background);\n+  color: var(--thorp-foreground);\n+  color-scheme: dark;\n+  --surface: var(--thorp-surface-raised);\n+  --line: var(--thorp-line);\n+  --muted: var(--thorp-muted);\n+  --brand: var(--thorp-accent);\n+  --brand-soft: var(--thorp-accent-muted);\n }\n \n .titleLine,\n@@ -88,7 +89,7 @@\n \n .legend span {\n   gap: 6px;\n-  color: #7b8691;\n+  color: var(--thorp-copy);\n   font-size: 0.7rem;\n   white-space: nowrap;\n }\n@@ -100,7 +101,7 @@\n }\n \n .benchmarkMarker {\n-  background: #9aa3ad;\n+  background: var(--thorp-neutral);\n }\n \n .chartStage {\n@@ -116,11 +117,11 @@\n   align-items: center;\n   gap: 10px;\n   padding: 8px 11px;\n-  border: 1px solid #d9e6e4;\n+  border: 1px solid var(--thorp-line-strong);\n   border-radius: 999px;\n-  background: rgb(255 255 255 / 91%);\n-  box-shadow: 0 10px 28px rgb(23 58 61 / 10%);\n-  color: #66737f;\n+  background: rgb(7 17 11 / 92%);\n+  box-shadow: var(--thorp-shadow);\n+  color: var(--thorp-copy);\n   font-size: 0.72rem;\n   transform: translateX(-50%);\n   backdrop-filter: blur(10px);\n@@ -141,7 +142,7 @@\n .metric {\n   min-width: 0;\n   padding: 9px 14px;\n-  background: #fff;\n+  background: var(--surface);\n }\n \n .metric + .metric {\n@@ -156,18 +157,18 @@\n .metric strong {\n   display: block;\n   margin-top: 2px;\n-  color: #263140;\n+  color: var(--thorp-foreground);\n   font-size: 1.13rem;\n   font-variant-numeric: tabular-nums;\n   letter-spacing: -0.02em;\n }\n \n .metric strong[data-tone='positive'] {\n-  color: #158b61;\n+  color: var(--thorp-positive);\n }\n \n .metric strong[data-tone='negative'] {\n-  color: #d45d3f;\n+  color: var(--thorp-negative);\n }\n \n .resultPanel {\n@@ -188,10 +189,10 @@\n   gap: 6px;\n   min-height: 31px;\n   padding: 0 9px;\n-  border: 1px solid #dfe4e7;\n+  border: 1px solid var(--line);\n   border-radius: 8px;\n-  background: #fff;\n-  color: #6f7c88;\n+  background: var(--surface);\n+  color: var(--thorp-copy);\n   cursor: pointer;\n   font-size: 0.72rem;\n   font-weight: 620;\n@@ -220,7 +221,7 @@\n }\n \n .fieldGroup label {\n-  color: #6f7b87;\n+  color: var(--thorp-copy);\n   font-size: 0.72rem;\n   font-weight: 650;\n }\n@@ -231,18 +232,18 @@\n   min-width: 0;\n   height: 34px;\n   padding: 0 10px;\n-  border: 1px solid #dfe4e7;\n+  border: 1px solid var(--line);\n   border-radius: 7px;\n-  background: #fff;\n-  color: #293644;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-foreground);\n   outline: none;\n   font-size: 0.72rem;\n }\n \n .fieldGroup select:focus,\n .fieldGroup input:focus {\n-  border-color: #74bcb7;\n-  box-shadow: 0 0 0 3px rgb(24 167 160 / 10%);\n+  border-color: var(--brand);\n+  box-shadow: 0 0 0 3px rgb(3 199 90 / 14%);\n }\n \n .dateGrid {\n@@ -260,7 +261,7 @@\n   z-index: 1;\n   top: 50%;\n   left: 10px;\n-  color: #88939d;\n+  color: var(--thorp-muted);\n   transform: translateY(-50%);\n   pointer-events: none;\n }\n@@ -272,7 +273,7 @@\n .divider {\n   height: 1px;\n   margin: 12px 0 8px;\n-  background: #edf0f1;\n+  background: var(--line);\n }\n \n .strategyHeading {\n@@ -287,13 +288,13 @@\n }\n \n .strategyHeading span {\n-  color: #53606c;\n+  color: var(--thorp-copy);\n   font-size: 0.76rem;\n   font-weight: 680;\n }\n \n .strategyHeading small {\n-  color: #a2aab1;\n+  color: var(--thorp-muted);\n   font-size: 0.66rem;\n }\n \n@@ -310,8 +311,8 @@\n   margin-top: 10px;\n   border: 0;\n   border-radius: 7px;\n-  background: #182331;\n-  color: #fff;\n+  background: var(--brand);\n+  color: #021108;\n   cursor: pointer;\n   font-size: 0.76rem;\n   font-weight: 680;\n@@ -319,7 +320,7 @@\n }\n \n .runButton:hover:not(:disabled) {\n-  background: #176f6c;\n+  background: var(--thorp-accent-soft);\n   transform: translateY(-1px);\n }\n \n@@ -331,13 +332,13 @@\n .runButton:focus-visible,\n .resetButton:focus-visible {\n   border-radius: 6px;\n-  outline: 3px solid rgb(24 167 160 / 22%);\n+  outline: 3px solid rgb(3 199 90 / 28%);\n   outline-offset: 3px;\n }\n \n .configNote {\n   margin: 6px 4px 0;\n-  color: #9aa3ac;\n+  color: var(--thorp-muted);\n   font-size: 0.66rem;\n   line-height: 1.55;\n   text-align: center;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.module.css",
+          "old_path": "frontend/src/pages/BacktestPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n .page {\n-  background: #fff;\n+  background: var(--thorp-background);\n }\n \n .container {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/DashboardPage.module.css",
+          "old_path": "frontend/src/pages/DashboardPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,7 @@\n   right: -250px;\n   width: 1050px;\n   height: 670px;\n-  border: 1px solid #e4e8e8;\n+  border: 1px solid var(--market-line-soft);\n   border-radius: 50%;\n   transform: rotate(-9deg);\n }\n@@ -31,7 +31,7 @@\n   left: -480px;\n   width: 930px;\n   height: 410px;\n-  border: 1px solid #e9ecec;\n+  border: 1px solid var(--market-line-soft);\n   border-radius: 50%;\n   transform: rotate(12deg);\n }\n@@ -44,9 +44,11 @@\n   position: relative;\n   margin-top: 12px;\n   padding: clamp(62px, 7vw, 92px) max(40px, calc((100vw - 1320px) / 2)) 84px;\n-  border-top: 1px solid #dde3e3;\n+  border-top: 1px solid var(--market-line);\n   border-radius: clamp(48px, 7vw, 96px) clamp(48px, 7vw, 96px) 0 0;\n-  background: #f3f6f5;\n+  background:\n+    linear-gradient(180deg, rgb(3 199 90 / 3%), transparent 280px),\n+    var(--thorp-background);\n }\n \n .contentFlow {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/HomePage.module.css",
+          "old_path": "frontend/src/pages/HomePage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,28 +3,30 @@\n   min-width: 0;\n   min-height: 100svh;\n   overflow-x: clip;\n-  background: #fbfcfb;\n-  color: #182331;\n-  --market-surface: #fff;\n-  --market-ink: #172331;\n-  --market-copy: #60707c;\n-  --market-muted: #87939d;\n-  --market-line: #dfe5e6;\n-  --market-line-soft: #edf0f1;\n-  --market-brand: #168f8a;\n-  --market-positive: #21865f;\n-  --market-negative: #c75d48;\n-  --market-warning: #c2782b;\n-  --market-neutral: #687783;\n-  --market-shadow: 0 20px 48px rgb(28 50 60 / 5%);\n-  --market-shadow-soft: 0 8px 28px rgb(28 50 60 / 3%);\n+  background: var(--thorp-background);\n+  color: var(--thorp-foreground);\n+  color-scheme: dark;\n+  --market-surface: var(--thorp-surface-raised);\n+  --market-ink: var(--thorp-foreground);\n+  --market-copy: var(--thorp-copy);\n+  --market-muted: var(--thorp-muted);\n+  --market-line: var(--thorp-line-strong);\n+  --market-line-soft: var(--thorp-line);\n+  --market-line-strong: var(--thorp-line-strong);\n+  --market-brand: var(--thorp-accent);\n+  --market-positive: var(--thorp-positive);\n+  --market-negative: var(--thorp-negative);\n+  --market-warning: var(--thorp-warning);\n+  --market-neutral: var(--thorp-neutral);\n+  --market-shadow: 0 16px 42px rgb(0 0 0 / 24%);\n+  --market-shadow-soft: none;\n }\n \n .footer {\n   margin-top: 25px;\n   padding-top: 20px;\n-  border-top: 1px solid #dfe5e6;\n-  color: #939da5;\n+  border-top: 1px solid var(--market-line);\n+  color: var(--market-muted);\n   font-size: 0.65rem;\n   text-align: center;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/styles/MarketLayout.module.css",
+          "old_path": "frontend/src/styles/MarketLayout.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,64 +10,82 @@\n   font-size: 17px;\n   font-family: 'Pretendard', -apple-system, 'Segoe UI', Roboto, sans-serif;\n   line-height: 1.5;\n-  --background: oklch(1 0 0);\n-  --foreground: oklch(0.145 0 0);\n-  --card: oklch(1 0 0);\n-  --card-foreground: oklch(0.145 0 0);\n-  --popover: oklch(1 0 0);\n-  --popover-foreground: oklch(0.145 0 0);\n-  --primary: oklch(0.205 0 0);\n-  --primary-foreground: oklch(0.985 0 0);\n-  --secondary: oklch(0.97 0 0);\n-  --secondary-foreground: oklch(0.205 0 0);\n-  --muted: oklch(0.97 0 0);\n-  --muted-foreground: oklch(0.556 0 0);\n-  --accent: oklch(0.97 0 0);\n-  --accent-foreground: oklch(0.205 0 0);\n-  --destructive: oklch(0.577 0.245 27.325);\n-  --border: oklch(0.922 0 0);\n-  --input: oklch(0.922 0 0);\n-  --ring: oklch(0.708 0 0);\n-  --chart-1: oklch(0.87 0 0);\n-  --chart-2: oklch(0.556 0 0);\n-  --chart-3: oklch(0.439 0 0);\n-  --chart-4: oklch(0.371 0 0);\n-  --chart-5: oklch(0.269 0 0);\n+  --thorp-background: #030805;\n+  --thorp-surface: #07110b;\n+  --thorp-surface-raised: #0b1710;\n+  --thorp-surface-muted: #0e1c14;\n+  --thorp-foreground: #f2f7f3;\n+  --thorp-copy: #a6b5ab;\n+  --thorp-muted: #718278;\n+  --thorp-line: rgb(134 242 168 / 14%);\n+  --thorp-line-strong: rgb(134 242 168 / 24%);\n+  --thorp-accent: rgb(3 199 90);\n+  --thorp-accent-soft: #86f2a8;\n+  --thorp-accent-muted: rgb(3 199 90 / 12%);\n+  --thorp-positive: #63dc8a;\n+  --thorp-negative: #ef8a68;\n+  --thorp-warning: #e8bd72;\n+  --thorp-neutral: #8fa198;\n+  --thorp-shadow: 0 22px 58px rgb(0 0 0 / 34%);\n+  --background: var(--thorp-background);\n+  --foreground: var(--thorp-foreground);\n+  --card: var(--thorp-surface-raised);\n+  --card-foreground: var(--thorp-foreground);\n+  --popover: var(--thorp-surface-raised);\n+  --popover-foreground: var(--thorp-foreground);\n+  --primary: var(--thorp-accent);\n+  --primary-foreground: #021108;\n+  --secondary: var(--thorp-surface-muted);\n+  --secondary-foreground: var(--thorp-foreground);\n+  --muted: var(--thorp-surface-muted);\n+  --muted-foreground: var(--thorp-copy);\n+  --accent: var(--thorp-accent-muted);\n+  --accent-foreground: var(--thorp-accent-soft);\n+  --destructive: var(--thorp-negative);\n+  --border: var(--thorp-line);\n+  --input: var(--thorp-line-strong);\n+  --ring: var(--thorp-accent);\n+  --chart-1: var(--thorp-accent);\n+  --chart-2: #70d6b0;\n+  --chart-3: #8cb8a0;\n+  --chart-4: var(--thorp-warning);\n+  --chart-5: var(--thorp-negative);\n   --radius: 0.625rem;\n-  --sidebar: oklch(0.985 0 0);\n-  --sidebar-foreground: oklch(0.145 0 0);\n-  --sidebar-primary: oklch(0.205 0 0);\n-  --sidebar-primary-foreground: oklch(0.985 0 0);\n-  --sidebar-accent: oklch(0.97 0 0);\n-  --sidebar-accent-foreground: oklch(0.205 0 0);\n-  --sidebar-border: oklch(0.922 0 0);\n-  --sidebar-ring: oklch(0.708 0 0);\n-  --chart-background: oklch(1 0 0);\n-  --chart-foreground: oklch(0.145 0.004 285);\n-  --chart-foreground-muted: oklch(0.55 0.014 260);\n+  --sidebar: var(--thorp-surface);\n+  --sidebar-foreground: var(--thorp-foreground);\n+  --sidebar-primary: var(--thorp-accent);\n+  --sidebar-primary-foreground: #021108;\n+  --sidebar-accent: var(--thorp-accent-muted);\n+  --sidebar-accent-foreground: var(--thorp-accent-soft);\n+  --sidebar-border: var(--thorp-line);\n+  --sidebar-ring: var(--thorp-accent);\n+  --chart-background: var(--thorp-background);\n+  --chart-foreground: var(--thorp-foreground);\n+  --chart-foreground-muted: var(--thorp-muted);\n   --chart-line-primary: var(--chart-1);\n   --chart-line-secondary: var(--chart-2);\n-  --chart-crosshair: oklch(0.4 0.1828 274.34);\n-  --chart-grid: oklch(0.9 0 0);\n+  --chart-crosshair: var(--thorp-accent-soft);\n+  --chart-grid: var(--thorp-line);\n   --chart-brush-border: var(--chart-grid);\n-  --chart-tooltip-background: oklch(0.21 0.006 285 / 0.8);\n-  --chart-tooltip-foreground: oklch(0.985 0 0);\n-  --chart-tooltip-muted: oklch(0.65 0.01 260);\n-  --chart-marker-background: oklch(0.97 0.005 260);\n-  --chart-marker-border: oklch(0.85 0.01 260);\n-  --chart-marker-foreground: oklch(0.3 0.01 260);\n-  --chart-label: oklch(0.45 0.01 260);\n-  --chart-scale-01: oklch(0.98 0.003 106);\n-  --chart-scale-02: oklch(0.92 0.008 106);\n-  --chart-scale-03: oklch(0.82 0.015 106);\n-  --chart-scale-04: oklch(0.68 0.02 106);\n-  --chart-scale-05: oklch(0.55 0.025 106);\n-  --chart-scale-pattern-color: oklch(0.96 0.005 106);\n+  --chart-tooltip-background: rgb(7 17 11 / 94%);\n+  --chart-tooltip-foreground: var(--thorp-foreground);\n+  --chart-tooltip-muted: var(--thorp-copy);\n+  --chart-marker-background: var(--thorp-surface-muted);\n+  --chart-marker-border: var(--thorp-line-strong);\n+  --chart-marker-foreground: var(--thorp-foreground);\n+  --chart-label: var(--thorp-copy);\n+  --chart-scale-01: #07110b;\n+  --chart-scale-02: #0c1c13;\n+  --chart-scale-03: #13301f;\n+  --chart-scale-04: #1b4b2e;\n+  --chart-scale-05: #267442;\n+  --chart-scale-pattern-color: #0a160f;\n }\n \n body {\n   margin: 0;\n   min-height: 100vh;\n+  background: var(--thorp-background);\n }\n \n #root {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/index.css",
+          "old_path": "frontend/src/index.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2784645": []
+  }
+}

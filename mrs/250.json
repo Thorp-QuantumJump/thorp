@@ -1,0 +1,820 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 953050,
+    "iid": 250,
+    "project_id": 1444456,
+    "title": "feat(de): 어댑터·변환·정규화를 잇는 수집 실행 경로를 만든다",
+    "description": "## 작업 내용 요약\n\n17개 지표를 원천에서 받아 적재하는 경로가 처음으로 끝까지 이어진다. 어댑터·변환·발행이 라이브러리로만 있고 부르는 코드가 없어 한 번도 연속으로 돌아본 적이 없었다. 원본 이력과 지표별 수집 상태도 남기 시작해 008 조회의 수집 상태가 더 이상 빈 값이 아니다.\n\n## 관련 티켓\n\n* ticket # S15P21E205-376\n* link https://ssafy.atlassian.net/browse/S15P21E205-376\n\n## 주요 변경 사항\n\n* 원천에 HTTP 를 거는 전송 계층 신설. 재시도 대상(5xx·시간 초과)과 아닌 것(4xx), 한도(429)를 가르고 원천별 키 주입 차이를 흡수한다\n* `ingest.run()` — 수집 → 정규화 → 원본 이력 → 발행 → 지표별 상태를 한 흐름으로 잇는다\n* `macro_raw_revision` 적재. 같은 본문은 해시로 걸러 이력이 늘지 않는다\n* `macro_collection_item_status` 적재. 성공·실패·한도·키 미발급을 구분한다\n* 등록표를 세우는 진입점 신설(`register_macro_registry.py`)과 화면 분류 분리(`macro/display.py`)\n* PostgreSQL 대역을 `tests/conftest.py` 로 옮겨 발행·수집 테스트가 함께 쓴다\n* 스키마 변경 없음\n\n## 테스트\n\n* [x] `ruff check src scripts tests` 와 `THORP_REQUIRE_DOCKER=true pytest` — 1103 passed, skipped 0\n* [x] DB 통합 8건 (원본 이력 중복 제거, 개정 누적, 지표별 상태, 오류 분류 보존, 보류 시에도 기록, 등록표 진입점 → 수집 연결)\n* [ ] 실제 원천 호출은 하지 않았다. 저장된 표본으로만 검증했다\n\n## 리뷰 포인트\n\n* **원천에 HTTP 를 거는 코드가 저장소에 없었다.** 어댑터는 경로·인자 조립과 파싱만 했고 `requests` 는 쓰이지 않았다. 전송 계층을 새로 만들었으므로 오류 분류 기준을 봐 주면 좋겠다\n* **등록표를 세우는 진입점도 없었다.** `versioning` 의 함수를 테스트만 부르고 있어, 그대로면 서버에서 수집이 \"현재 포인터가 없다\"로 멈춘다\n* 발행이 보류돼도 수집 기록은 남긴다. 순서가 발행 먼저인 이유는 수집 시도 행을 발행기가 만들기 때문이다\n* 화면 이름을 `display.py` 에 코드로 뒀다. 기획이 바꾸면 여기를 고쳐야 하는데, 더 나은 자리가 있으면 알려 달라\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 수집·적재만 한다\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음. 지표 목록·원천·구간은 모두 등록표에서 읽어 지표가 늘어도 이 코드를 고치지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 못 받은 지표는 관측 0건이고 발행이 보류된다. 실패를 빈 값으로 넘기지 않으며 종료 코드로도 알린다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 실패는 한도·키 미발급·그 밖으로 갈라 기록하고, 17개가 다 차기 전에는 공개 버전을 만들지 않는다",
+    "state": "merged",
+    "created_at": "2026-09-20T19:33:49.746+09:00",
+    "updated_at": "2026-09-20T19:52:27.932+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-20T19:52:06.202+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/376-macro-ingest-runner",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+    "merge_commit_sha": "48e064b6162db6678d7b6fa15e6521bb139ab875",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T19:33:51.458+09:00",
+    "reference": "!250",
+    "references": {
+      "short": "!250",
+      "relative": "!250",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!250"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/250",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 953050,
+    "iid": 250,
+    "project_id": 1444456,
+    "title": "feat(de): 어댑터·변환·정규화를 잇는 수집 실행 경로를 만든다",
+    "description": "## 작업 내용 요약\n\n17개 지표를 원천에서 받아 적재하는 경로가 처음으로 끝까지 이어진다. 어댑터·변환·발행이 라이브러리로만 있고 부르는 코드가 없어 한 번도 연속으로 돌아본 적이 없었다. 원본 이력과 지표별 수집 상태도 남기 시작해 008 조회의 수집 상태가 더 이상 빈 값이 아니다.\n\n## 관련 티켓\n\n* ticket # S15P21E205-376\n* link https://ssafy.atlassian.net/browse/S15P21E205-376\n\n## 주요 변경 사항\n\n* 원천에 HTTP 를 거는 전송 계층 신설. 재시도 대상(5xx·시간 초과)과 아닌 것(4xx), 한도(429)를 가르고 원천별 키 주입 차이를 흡수한다\n* `ingest.run()` — 수집 → 정규화 → 원본 이력 → 발행 → 지표별 상태를 한 흐름으로 잇는다\n* `macro_raw_revision` 적재. 같은 본문은 해시로 걸러 이력이 늘지 않는다\n* `macro_collection_item_status` 적재. 성공·실패·한도·키 미발급을 구분한다\n* 등록표를 세우는 진입점 신설(`register_macro_registry.py`)과 화면 분류 분리(`macro/display.py`)\n* PostgreSQL 대역을 `tests/conftest.py` 로 옮겨 발행·수집 테스트가 함께 쓴다\n* 스키마 변경 없음\n\n## 테스트\n\n* [x] `ruff check src scripts tests` 와 `THORP_REQUIRE_DOCKER=true pytest` — 1103 passed, skipped 0\n* [x] DB 통합 8건 (원본 이력 중복 제거, 개정 누적, 지표별 상태, 오류 분류 보존, 보류 시에도 기록, 등록표 진입점 → 수집 연결)\n* [ ] 실제 원천 호출은 하지 않았다. 저장된 표본으로만 검증했다\n\n## 리뷰 포인트\n\n* **원천에 HTTP 를 거는 코드가 저장소에 없었다.** 어댑터는 경로·인자 조립과 파싱만 했고 `requests` 는 쓰이지 않았다. 전송 계층을 새로 만들었으므로 오류 분류 기준을 봐 주면 좋겠다\n* **등록표를 세우는 진입점도 없었다.** `versioning` 의 함수를 테스트만 부르고 있어, 그대로면 서버에서 수집이 \"현재 포인터가 없다\"로 멈춘다\n* 발행이 보류돼도 수집 기록은 남긴다. 순서가 발행 먼저인 이유는 수집 시도 행을 발행기가 만들기 때문이다\n* 화면 이름을 `display.py` 에 코드로 뒀다. 기획이 바꾸면 여기를 고쳐야 하는데, 더 나은 자리가 있으면 알려 달라\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 수집·적재만 한다\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음. 지표 목록·원천·구간은 모두 등록표에서 읽어 지표가 늘어도 이 코드를 고치지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 못 받은 지표는 관측 0건이고 발행이 보류된다. 실패를 빈 값으로 넘기지 않으며 종료 코드로도 알린다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 실패는 한도·키 미발급·그 밖으로 갈라 기록하고, 17개가 다 차기 전에는 공개 버전을 만들지 않는다",
+    "state": "merged",
+    "created_at": "2026-09-20T19:33:49.746+09:00",
+    "updated_at": "2026-09-20T19:52:27.932+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-20T19:52:06.202+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/376-macro-ingest-runner",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+    "merge_commit_sha": "48e064b6162db6678d7b6fa15e6521bb139ab875",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T19:33:51.458+09:00",
+    "reference": "!250",
+    "references": {
+      "short": "!250",
+      "relative": "!250",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!250"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/250",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-20T19:48:50.773+09:00",
+    "latest_build_finished_at": "2026-09-20T19:51:52.580+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 209866,
+      "iid": 218,
+      "project_id": 1444456,
+      "sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+      "ref": "feat(de)/376-macro-ingest-runner",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T19:48:50.649+09:00",
+      "updated_at": "2026-09-20T19:51:52.593+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209866"
+    },
+    "head_pipeline": {
+      "id": 209866,
+      "iid": 218,
+      "project_id": 1444456,
+      "sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+      "ref": "feat(de)/376-macro-ingest-runner",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T19:48:50.649+09:00",
+      "updated_at": "2026-09-20T19:51:52.593+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209866",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-20T19:48:50.773+09:00",
+      "finished_at": "2026-09-20T19:51:52.580+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209866",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "head_sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+      "start_sha": "a7383cf39f00e223096794b840bea4a264634021"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "55c691af7630912c51ae50e5afb134fe1eb5151c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841918,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T19:33:49.868+09:00",
+          "updated_at": "2026-09-20T19:33:49.876+09:00",
+          "system": true,
+          "noteable_id": 953050,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 250,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "97931d270980f417611bb38de822c514e44ba567",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841919,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **공통 테스트 인프라 추출**: `tests/conftest.py`로 PostgreSQL Docker 대역을 이동시켜 여러 테스트 파일(`test_macro_publish_postgres.py`, `test_macro_ingest_postgres.py`)이 중복 코드 없이 일관되게 DB 통합 테스트를 공유하도록 구조를 잘 개선했습니다.\n- **방어적 수집 및 이력 관리 설계**: 원본 데이터 보존 시 해시 기반 중복 제거(`macro_raw_revision`)를 적용하고, 발행 보류 시에도 수집 시도와 상태(`macro_collection_item_status`)를 명확히 남기도록 구현하여 디버깅과 감사 추적이 용이해졌습니다.\n\n### 발견 사항\n- [Critical] `data/tests/test_macro_ingest_postgres.py`: 파일 하단부(`test_run_publishes_when_all_seventeen_are_filled` 함수 내부)에 코드 줄바꿈 도중 잘린 듯한 미완성 구문(`dubai`)이 남아 있어 테스트 실행 시 `SyntaxError`가 발생합니다. 즉시 수정이 필요합니다.\n- [Medium] `data/src/data_pipeline/macro/ingest.py`: 파일 내용은 제공된 diff 상에서 완전히 비어 있습니다(빈 파일로 포함됨). 만약 MR 설명에서 언급한 `ingest.run()` 구현 및 관련 로직이 이 파일에 있어야 한다면, 코드가 누락되었거나 다른 경로에 잘못 포함되었을 가능성이 있으므로 확인이 필요합니다.\n\n### 테스트 제안\n- 미완성 코드가 포함된 `data/tests/test_macro_ingest_postgres.py`의 마지막 테스트 함수(`test_run_publishes_when_all_seventeen_are_filled`)를 올바르게 완성하고, `THORP_REQUIRE_DOCKER=true pytest` 명령을 통해 로컬/CI 환경에서 모든 17개 지표 수집 및 발행 시나리오가 정상 통과하는지 검증해야 합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8b604d172d11dc64e373c5602db89c7e3b98e396 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T19:34:00.096+09:00",
+          "updated_at": "2026-09-20T19:48:44.909+09:00",
+          "system": false,
+          "noteable_id": 953050,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 250,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2577adf87520d8c7b2955bdef1145696471e6a28",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841963,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>8b604d17 - fix(de): 한도에 닿으면 수집을 멈추고 정제 파일을 남긴다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/250/diffs?diff_id=2227693&start_sha=625840c79d5d812380af1e4cb716d3a32d9264fb)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T19:48:35.996+09:00",
+          "updated_at": "2026-09-20T19:48:35.999+09:00",
+          "system": true,
+          "noteable_id": 953050,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 250,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "69c9099082106b8d53b8222110cc6ec40148aec7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841965,
+          "type": null,
+          "body": "컴파일 통과, 해당 테스트 1 passed, `dubai`는 픽스처 경로 줄바꿈",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T19:50:07.251+09:00",
+          "updated_at": "2026-09-20T19:50:07.251+09:00",
+          "system": false,
+          "noteable_id": 953050,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 250,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b816da590713b8ad6c2c1aaa6a95c1da20e8374a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841969,
+          "type": null,
+          "body": "mentioned in commit 48e064b6162db6678d7b6fa15e6521bb139ab875",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T19:52:06.158+09:00",
+          "updated_at": "2026-09-20T19:52:06.175+09:00",
+          "system": true,
+          "noteable_id": 953050,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 250,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2227693,
+      "head_commit_sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+      "base_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "start_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "created_at": "2026-09-20T19:48:35.774+09:00",
+      "merge_request_id": 953050,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "5b88226d619d8879d758cf09bfcc4528547ea4ca"
+    },
+    {
+      "id": 2227653,
+      "head_commit_sha": "625840c79d5d812380af1e4cb716d3a32d9264fb",
+      "base_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "start_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "created_at": "2026-09-20T19:33:50.129+09:00",
+      "merge_request_id": 953050,
+      "state": "without_files",
+      "real_size": "11",
+      "patch_id_sha": "f64195dda475b9c483f83dadad66441f6ea7193a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2227693,
+      "head_commit_sha": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+      "base_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "start_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "created_at": "2026-09-20T19:48:35.774+09:00",
+      "merge_request_id": 953050,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "5b88226d619d8879d758cf09bfcc4528547ea4ca",
+      "commits": [
+        {
+          "id": "8b604d172d11dc64e373c5602db89c7e3b98e396",
+          "short_id": "8b604d17",
+          "created_at": "2026-09-20T19:44:41.000+09:00",
+          "parent_ids": [
+            "625840c79d5d812380af1e4cb716d3a32d9264fb"
+          ],
+          "title": "fix(de): 한도에 닿으면 수집을 멈추고 정제 파일을 남긴다",
+          "message": "fix(de): 한도에 닿으면 수집을 멈추고 정제 파일을 남긴다\n\n리뷰가 제안한 429 시나리오를 넣었더니 두 가지가 드러났다.\n\n한도에 닿아도 남은 구간을 계속 불렀다. 관세청 전 구간은 서른일곱 조각이라\n한 번 거절당한 뒤 서른여섯 번을 더 부르며 한도를 깎고, 원천이 접근을 끊는\n쪽으로 간다. 이제 그 자리에서 멈추고 받은 구간은 그대로 둔다 — 다음 실행이\n그만큼 덜 부른다. 같은 원천의 뒤 지표도 부르지 않고 상태만 남긴다.\n\n정제 Parquet 를 쓰는 코드도 없었다. 경로 규칙만 있고 쓰는 쪽이 없어 발행이\n늘 \"processed 매니페스트에 파일이 없다\"로 거절됐다. 지금까지 통합 테스트가\n전부 보류로 끝나 이 자리를 지나지 않았다. decimal 은 문자열로 적는다 —\n부동소수로 쓰면 같은 자료로 다시 돌려도 파일 해시가 달라진다.\n\n발행이 성공하는 경로를 처음으로 검증한다. 17개가 다 차면 자료 버전이\nPUBLISHED 가 되고 현재 포인터가 그리로 움직이는 것까지 본다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T19:44:41.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T19:44:41.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8b604d172d11dc64e373c5602db89c7e3b98e396"
+        },
+        {
+          "id": "625840c79d5d812380af1e4cb716d3a32d9264fb",
+          "short_id": "625840c7",
+          "created_at": "2026-09-20T19:27:30.000+09:00",
+          "parent_ids": [
+            "448941e3d5a426958f007e083c97c21047d258b3"
+          ],
+          "title": "feat(de): 등록표를 운영에 세우는 진입점을 만든다",
+          "message": "feat(de): 등록표를 운영에 세우는 진입점을 만든다\n\n수집은 현재 포인터를 읽어 세 버전을 고정하는데, 그 포인터를 세우는 자리가\n저장소 어디에도 없었다. versioning 에 함수는 있고 테스트만 불렀다. 그래서\n서버에서 수집을 돌리면 \"현재 포인터가 없다\"에서 멈춘다.\n\n화면 분류는 계산 등록표와 따로 둔다. 화면 문구를 고쳤다고 과거 검색 결과가\n달라지면 안 되고, 분야 매핑을 고쳤다고 이름까지 새 버전이 될 이유도 없다.\n이름은 FR-001 표와 pd11 표기를 그대로 옮겼고 다듬지 않았다 — 코드가 고쳐 쓰면\n문서와 화면이 갈라진다.\n\n이미 포인터가 있으면 덮지 않고 종료 코드 1로 알린다. 다른 작업이 세운 버전을\n지우면 그 버전을 참조하던 자료가 뜬다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T19:27:30.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T19:27:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/625840c79d5d812380af1e4cb716d3a32d9264fb"
+        },
+        {
+          "id": "448941e3d5a426958f007e083c97c21047d258b3",
+          "short_id": "448941e3",
+          "created_at": "2026-09-20T18:59:30.000+09:00",
+          "parent_ids": [
+            "db411a2d70ac927ee92e23a79fdab6717b207025"
+          ],
+          "title": "feat(de): 수집 결과를 발행과 기록까지 잇는다",
+          "message": "feat(de): 수집 결과를 발행과 기록까지 잇는다\n\ncollect 에서 끝나던 실행을 발행·원본 이력·지표별 상태까지 이었다. 008 조회가\n읽는 macro_raw_revision 과 macro_collection_item_status 에 쓰는 쪽이 없어,\n지금까지 응답의 수집 상태와 실패 지표 목록은 늘 비어 있었다.\n\n발행이 보류돼도 기록은 남긴다. 보류는 정상적인 상태이고, 그때 기록까지\n사라지면 다음 실행에서 무엇을 고칠지 알 수 없다. 순서는 발행이 먼저다 —\n수집 시도 행을 발행기가 만들기 때문에 지표별 상태는 그 뒤에 붙는다.\n\n같은 본문을 다시 받으면 원본 이력이 늘지 않는다. 정기 재조회는 바뀐 것이\n없는 달도 함께 받으므로, 해시로 거르지 않으면 돌릴 때마다 개정이 일어난 것처럼\n쌓여 진짜 개정과 구분되지 않는다.\n\nPostgreSQL 대역을 conftest 로 옮겨 발행 테스트와 함께 쓴다. 스키마를 손으로\n만들지 않고 운영과 같은 마이그레이션을 적용하므로, 마이그레이션이 틀리면\n테스트가 통과하지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T18:59:30.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T18:59:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/448941e3d5a426958f007e083c97c21047d258b3"
+        },
+        {
+          "id": "db411a2d70ac927ee92e23a79fdab6717b207025",
+          "short_id": "db411a2d",
+          "created_at": "2026-09-20T18:50:53.000+09:00",
+          "parent_ids": [
+            "a7383cf39f00e223096794b840bea4a264634021"
+          ],
+          "title": "feat(de): 어댑터·변환·정규화를 잇는 수집 실행 경로를 만든다",
+          "message": "feat(de): 어댑터·변환·정규화를 잇는 수집 실행 경로를 만든다\n\n조각은 다 있었는데 차례로 부르는 코드가 없어 한 번도 연속으로 돌아본 적이\n없었다. 진입점이 등록표만 읽고 계획을 출력하다 끝났다.\n\n원천에 실제로 요청을 거는 자리가 아예 없어 전송 계층부터 만들었다. 어댑터는\n경로와 인자를 만들고 응답을 읽을 뿐이라 HTTP 를 모른다. 그 전송을 한자리에\n모으지 않으면 재시도와 오류 분류가 원천마다 갈려 한쪽은 영영 매달리고 다른\n쪽은 한 번에 포기한다. 인증키를 넣는 방법도 원천마다 달라(경로 안·질의 인자·\n없음) 그 차이를 부르는 쪽이 알 필요가 없게 했다.\n\n받은 본문은 그대로 파일로 남기고 해시를 붙인다. 값이 달라졌을 때 원천이\n개정한 것인지 우리 변환이 바뀐 것인지는 원본이 있어야 갈린다.\n\n한 지표가 실패해도 나머지를 계속 받는다. 첫 실패에서 멈추면 무엇이 더\n실패했는지 알 수 없고 다음 실행도 같은 자리에서 멈춘다. 실패는 한도 도달·\n키 미발급·그 밖으로 갈라 적는데, 사람이 할 다음 행동이 다르기 때문이다.\n재시도를 다 쓰면 원인이 SourceError 로 감싸이므로 풀어서 기록한다.\n\n네트워크는 Fetcher 뒤에 있어 저장된 표본으로 이 경로 전체가 돈다. 인증키\n없이 돌리면 KEY_NOT_ISSUED 로 갈라지고 종료 코드 1로 끝난다 — 아무것도 받지\n않은 실행을 성공으로 말하지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T18:50:53.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T18:50:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/db411a2d70ac927ee92e23a79fdab6717b207025"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -37,7 +37,12 @@ _SRC = Path(__file__).resolve().parents[1] / \"src\"\n if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우\n     sys.path.insert(0, str(_SRC))\n \n-from data_pipeline.macro import registry  # noqa: E402\n+from sqlalchemy import create_engine  # noqa: E402\n+\n+from data_pipeline.macro import fetch as transport  # noqa: E402\n+from data_pipeline.macro import ingest, registry  # noqa: E402\n+from data_pipeline.macro.config import load_source_config  # noqa: E402\n+from data_pipeline.repository import database_url_from_env  # noqa: E402\n \n MODE_INITIAL = \"initial\"\n MODE_REGULAR = \"regular\"\n@@ -67,6 +72,12 @@ def build_parser() -> argparse.ArgumentParser:\n         action=\"store_true\",\n         help=\"원천을 부르지 않고 대상과 계획만 보여준다\",\n     )\n+    parser.add_argument(\n+        \"--data-root\",\n+        default=\"/data\",\n+        metavar=\"PATH\",\n+        help=\"raw/processed 를 쓸 뿌리. 운영 컨테이너는 DATA_DIR 이 여기로 마운트된다\",\n+    )\n     return parser\n \n \n@@ -118,10 +129,36 @@ def main(argv: list[str] | None = None) -> int:\n         print(\"--dry-run 이라 원천을 부르지 않았다\")\n         return 0\n \n-    # 수집 본체는 T018~T031 이 채운다. 여기서 조용히 0으로 끝내면 아무것도 받지 않은 실행이\n-    # 성공으로 보이므로, 아직 없다는 사실을 종료 코드로도 알린다.\n-    print(\"수집 구현이 아직 없다(T018~T031). --dry-run 으로 계획만 확인할 수 있다\")\n-    return 2\n+    timeout = max(load_source_config(source).timeout_seconds for source in registry.used_sources())\n+    report = ingest.run(\n+        create_engine(database_url_from_env()),\n+        indicators,\n+        fetcher=transport.RequestsFetcher(timeout),\n+        data_root=Path(args.data_root),\n+        mode=args.mode,\n+    )\n+\n+    for outcome in report.outcomes:\n+        mark = \"ok  \" if outcome.succeeded else \"실패\"\n+        detail = f\" ({outcome.error_class})\" if outcome.error_class else \"\"\n+        print(f\"  {mark} {outcome.indicator_id:32} {outcome.status}{detail}\")\n+\n+    print(\n+        f\"받은 관측 {report.received_observations}건\"\n+        f\" / 실패 지표 {len(report.failed)}개\"\n+        f\" / 새 원본 이력 {report.raw_revisions_written}건\"\n+    )\n+\n+    # 아무것도 받지 못한 실행을 성공으로 말하지 않는다. 0 으로 끝나면 배치가 돈 줄 알고 넘어간다.\n+    if report.received_observations == 0:\n+        print(\"받은 관측이 0건이다. 원천·인증키·구간을 확인한다\")\n+        return 1\n+    if not report.published:\n+        print(f\"발행 보류: {report.publication_held}\")\n+        print(\"17개가 모두 찬 뒤에만 공개한다(FR-011). 수집 기록은 남았다\")\n+        return 1\n+    print(f\"자료 버전 {report.dataset_version_id} 를 발행했다\")\n+    return 0\n \n \n if __name__ == \"__main__\":\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_macro.py",
+          "old_path": "data/scripts/ingest_macro.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,107 @@\n+\"\"\"등록표를 DB에 세우는 진입점 (spec 008 FR-002·FR-003).\n+\n+**수집보다 먼저 한 번 돌린다.** `ingest_macro.py` 는 현재 포인터를 읽어 세 버전을 고정하는데,\n+포인터가 없으면 그 자리에서 멈춘다. 계산 등록표와 화면 분류는 자료보다 먼저 있어야 한다 — 첫\n+수집 전에도 화면은 17개가 무엇인지 보여줄 수 있어야 하기 때문이다.\n+\n+사용 예::\n+\n+    # 무엇을 세울지만 본다\n+    .venv/bin/python scripts/register_macro_registry.py --dry-run\n+\n+    # 실제로 세운다\n+    .venv/bin/python scripts/register_macro_registry.py \\\\\n+        --calculation-key macro-calc-v1 --display-key macro-display-v1\n+\n+**두 번 돌려도 안전하지 않다.** 같은 버전 키로 다시 세우려 하면 거절된다 — 발행한 등록표는\n+불변이고, 값을 고치려면 행을 고치는 것이 아니라 새 버전을 올린다(FR-003). 이미 포인터가 있으면\n+건드리지 않고 그 사실을 알린다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import argparse\n+import sys\n+from pathlib import Path\n+\n+from sqlalchemy import create_engine, text\n+\n+_SRC = Path(__file__).resolve().parents[1] / \"src\"\n+if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우\n+    sys.path.insert(0, str(_SRC))\n+\n+from data_pipeline.macro import display, registry  # noqa: E402\n+from data_pipeline.macro.versioning import (  # noqa: E402\n+    initialize_current_publication,\n+    register_calculation_version,\n+    register_display_version,\n+)\n+from data_pipeline.repository import database_url_from_env  # noqa: E402\n+\n+\n+def build_parser() -> argparse.ArgumentParser:\n+    parser = argparse.ArgumentParser(\n+        prog=\"register_macro_registry\",\n+        description=\"17개 지표의 계산 등록표와 화면 분류를 세운다 (spec 008)\",\n+    )\n+    parser.add_argument(\"--calculation-key\", default=\"macro-calc-v1\")\n+    parser.add_argument(\"--display-key\", default=\"macro-display-v1\")\n+    parser.add_argument(\n+        \"--reason\", default=\"초기 등록 (pd11 실조회 확정값)\", help=\"이 버전을 만든 이유\"\n+    )\n+    parser.add_argument(\n+        \"--dry-run\", action=\"store_true\", help=\"DB를 건드리지 않고 세울 내용만 보여준다\"\n+    )\n+    return parser\n+\n+\n+def main(argv: list[str] | None = None) -> int:\n+    args = build_parser().parse_args(argv)\n+    registry.validate()\n+    indicators = registry.INDICATORS\n+\n+    print(f\"계산 등록표 {args.calculation_key} — 지표 {len(indicators)}개\")\n+    for field_id, (name, order, _) in sorted(display.FIELDS.items(), key=lambda x: x[1][1]):\n+        members = [i.indicator_id for i in indicators if i.field_id == field_id]\n+        print(f\"  {order}. {name:12} {len(members)}개\")\n+    print(\n+        f\"화면 분류 {args.display_key} — 분야 {len(display.FIELDS)}개\"\n+        f\" / 지표 {len(display.INDICATORS)}개\"\n+    )\n+\n+    if args.dry_run:\n+        print(\"--dry-run 이라 DB를 건드리지 않았다\")\n+        return 0\n+\n+    engine = create_engine(database_url_from_env())\n+    with engine.begin() as connection:\n+        existing = connection.execute(\n+            text(\n+                \"SELECT registry_version_id FROM macro_current_publication\"\n+                \" WHERE singleton_key = 'X'\"\n+            )\n+        ).scalar_one_or_none()\n+    if existing is not None:\n+        # 조용히 덮지 않는다. 다른 작업이 세운 버전을 지우면 그 버전을 참조하던 자료가 뜬다.\n+        print(f\"이미 포인터가 있다 (계산 등록표 {existing}). 새 버전을 올리려면 versioning 을 쓴다\")\n+        return 1\n+\n+    calculation_id = register_calculation_version(\n+        engine, args.calculation_key, args.reason, indicators\n+    )\n+    display_id = register_display_version(\n+        engine,\n+        args.display_key,\n+        args.reason,\n+        display.FIELDS,\n+        display.INDICATORS,\n+        indicators,\n+    )\n+    initialize_current_publication(engine, calculation_id, display_id)\n+    print(f\"세웠다 — 계산 등록표 {calculation_id} / 화면 분류 {display_id}\")\n+    print(\"이제 scripts/ingest_macro.py 로 수집할 수 있다\")\n+    return 0\n+\n+\n+if __name__ == \"__main__\":\n+    raise SystemExit(main())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/register_macro_registry.py",
+          "old_path": "data/scripts/register_macro_registry.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,56 @@\n+\"\"\"화면 분류 — 분야·지표의 이름과 순서 (spec 008 FR-003).\n+\n+**계산 등록표와 따로 둔다.** 화면 문구를 고쳤다고 과거 검색 결과가 달라지면 안 되고, 반대로\n+분야 매핑을 고쳤다고 이름까지 새 버전이 될 이유도 없다. 두 버전이 서로 다른 속도로 움직이므로\n+:mod:`~data_pipeline.macro.registry` 와 이 모듈을 나눠 둔다.\n+\n+여기 있는 이름은 spec FR-001 표와 pd11-source-verification.md 의 표기를 그대로 옮긴 것이다.\n+**번역하거나 다듬지 않는다** — 화면에 나갈 말은 기획이 정하는 것이고, 코드가 고쳐 쓰면 문서와\n+화면이 갈라진다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from typing import Final\n+\n+from data_pipeline.macro.registry import (\n+    FIELD_CONSUMPTION_INVESTMENT,\n+    FIELD_EXTERNAL_TRADE,\n+    FIELD_FINANCE_HOUSING,\n+    FIELD_LABOR,\n+    FIELD_OVERSEAS,\n+    FIELD_PRICES_COMMODITIES,\n+    FIELD_PRODUCTION,\n+)\n+\n+#: 분야 표시: ``분야 id -> (이름, 순서, 설명)``. 순서는 FR-001 표의 차례다.\n+FIELDS: Final[dict[str, tuple[str, int, str | None]]] = {\n+    FIELD_PRODUCTION: (\"생산\", 1, \"전산업·광공업·서비스업 생산 지수\"),\n+    FIELD_CONSUMPTION_INVESTMENT: (\"소비·투자\", 2, \"소매판매·설비투자·건설기성\"),\n+    FIELD_EXTERNAL_TRADE: (\"대외거래\", 3, \"수출·수입과 무역수지\"),\n+    FIELD_LABOR: (\"노동\", 4, \"취업자 수와 실업률\"),\n+    FIELD_PRICES_COMMODITIES: (\"물가·원자재\", 5, \"소비자물가와 국제 유가\"),\n+    FIELD_FINANCE_HOUSING: (\"금융·주택\", 6, \"금리·환율과 주택 매매가격\"),\n+    FIELD_OVERSEAS: (\"해외 경기\", 7, \"주요국 경기선행지수\"),\n+}\n+\n+#: 지표 표시: ``지표 id -> (이름, 순서)``. 순서는 분야 차례를 따라 1부터 이어진다.\n+INDICATORS: Final[dict[str, tuple[str, int]]] = {\n+    \"all_industry_production\": (\"전산업생산\", 1),\n+    \"mining_manufacturing_production\": (\"광공업생산\", 2),\n+    \"service_production\": (\"서비스업생산\", 3),\n+    \"retail_sales_index\": (\"소매판매액지수\", 4),\n+    \"facility_investment_index\": (\"설비투자지수\", 5),\n+    \"construction_completed_constant\": (\"건설기성액(불변)\", 6),\n+    \"exports\": (\"수출\", 7),\n+    \"imports\": (\"수입\", 8),\n+    \"trade_balance\": (\"무역수지\", 9),\n+    \"employed_persons\": (\"취업자 수\", 10),\n+    \"unemployment_rate\": (\"실업률\", 11),\n+    \"consumer_price_index\": (\"소비자물가\", 12),\n+    \"dubai_crude\": (\"두바이유\", 13),\n+    \"treasury_bond_3y\": (\"국고채 3년\", 14),\n+    \"usd_krw_rate\": (\"원/달러 환율\", 15),\n+    \"housing_sale_price\": (\"주택 매매가격\", 16),\n+    \"g20_cli\": (\"G20 경기선행지수\", 17),\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/display.py",
+          "old_path": "data/src/data_pipeline/macro/display.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,142 @@\n+\"\"\"원천에 실제로 요청을 거는 자리 (spec 008 FR-011b).\n+\n+**어댑터는 HTTP 를 모른다.** 경로·인자를 만들고 응답을 읽을 뿐이라, 그 둘 사이를 잇는 전송이\n+여기 하나로 모인다. 어댑터마다 요청을 걸면 재시도·타임아웃·오류 분류가 제각각이 되고, 그러면\n+한 원천은 영영 매달리고 다른 원천은 한 번 만에 포기한다.\n+\n+**인증키는 이 모듈 밖으로 나가지 않는다**(FR-021). 경로에 키를 끼우는 것도 여기서만 하고, 오류\n+메시지에는 키를 지운 경로를 싣는다 — 오류는 로그로 가고 로그는 남는다.\n+\n+**HTTP 상태를 다시 걸 것과 아닌 것으로 가른다.** 5xx·시간 초과·끊긴 연결은 일시 오류이고,\n+4xx 는 몇 번을 걸어도 같은 답이 온다. 429 만 따로 두는 이유는 한도 도달이 실패가 아니라 \"여기까지\"\n+이기 때문이다 — 그 시점까지 받은 것은 남기고 멈춘다(FR-011).\n+\n+테스트는 :class:`Fetcher` 를 갈아 끼워 저장된 표본을 읽는다. 그래서 인증키 없이도 수집 경로\n+전체를 시험할 수 있다(FR-022).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import json\n+from typing import Any, Final, Protocol\n+from urllib.parse import urlencode\n+\n+from data_pipeline.macro.config import SourceConfig, require_api_key\n+from data_pipeline.macro.sources.base import (\n+    PermanentSourceError,\n+    QuotaExhaustedError,\n+    TransientSourceError,\n+    fetch_with_retry,\n+)\n+\n+#: 키 자리 표시. 어댑터가 만든 경로의 ``{key}`` 를 전송 직전에만 채운다.\n+KEY_PLACEHOLDER: Final[str] = \"{key}\"\n+\n+_QUOTA_STATUS: Final[int] = 429\n+_RETRYABLE_STATUS: Final[frozenset[int]] = frozenset({408, 500, 502, 503, 504})\n+\n+\n+class Fetcher(Protocol):\n+    \"\"\"요청 하나를 보내고 본문을 문자열로 돌려준다.\"\"\"\n+\n+    def get(self, url: str, params: dict[str, str] | None = None) -> str: ...\n+\n+\n+class RequestsFetcher:\n+    \"\"\"`requests` 로 실제 요청을 건다. 운영 경로다.\"\"\"\n+\n+    def __init__(self, timeout_seconds: float) -> None:\n+        self._timeout = timeout_seconds\n+\n+    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+        import requests  # 지연 임포트 — 표본만 읽는 테스트는 이 의존을 건드리지 않는다\n+\n+        try:\n+            response = requests.get(url, params=params, timeout=self._timeout)\n+        except requests.Timeout as error:\n+            raise TransientSourceError(f\"시간 초과: {_safe(url)}\") from error\n+        except requests.RequestException as error:\n+            raise TransientSourceError(f\"요청 실패: {_safe(url)}\") from error\n+\n+        status = response.status_code\n+        if status == _QUOTA_STATUS:\n+            raise QuotaExhaustedError(f\"호출 한도에 닿았다: {_safe(url)}\")\n+        if status in _RETRYABLE_STATUS:\n+            raise TransientSourceError(f\"원천 오류 {status}: {_safe(url)}\")\n+        if status >= 400:\n+            # 인증 거부·없는 경로가 여기다. 관세청 옛 주소는 키가 멀쩡해도 이 자리로 온다.\n+            raise PermanentSourceError(f\"원천이 거절했다 {status}: {_safe(url)}\")\n+        return response.text\n+\n+\n+def _safe(url: str) -> str:\n+    \"\"\"오류 메시지에 실을 경로. 키가 들어갈 수 있는 자리를 지운다.\"\"\"\n+    if KEY_PLACEHOLDER in url:\n+        return url\n+    parts = url.split(\"/\")\n+    return \"/\".join(part if len(part) < 20 else \"***\" for part in parts)\n+\n+\n+def fetch_text(\n+    fetcher: Fetcher,\n+    config: SourceConfig,\n+    path: str = \"\",\n+    params: dict[str, str] | None = None,\n+    *,\n+    needs_key: bool = True,\n+    key_param: str | None = None,\n+) -> str:\n+    \"\"\"설정된 재시도 안에서 한 요청을 끝낸다.\n+\n+    키를 넣는 방법이 원천마다 다르다. 한국은행은 경로 안에 박고, 국가통계포털과 관세청은\n+    질의 인자로 받으며, 경제협력개발기구는 키가 없다. 그 차이를 부르는 쪽이 알 필요는 없다.\n+    \"\"\"\n+    request_params = dict(params or {})\n+    request_path = path\n+    if needs_key and config.api_key_env is not None:\n+        key = require_api_key(config)\n+        if key_param is not None:\n+            request_params[key_param] = key\n+        elif KEY_PLACEHOLDER in path:\n+            request_path = path.replace(KEY_PLACEHOLDER, key)\n+        else:\n+            raise PermanentSourceError(\n+                f\"{config.source_id}: 키를 넣을 자리가 없다. 경로의 {KEY_PLACEHOLDER} 나\"\n+                \" key_param 중 하나가 있어야 한다\"\n+            )\n+\n+    url = f\"{config.base_url}/{request_path.lstrip('/')}\" if request_path else config.base_url\n+    return fetch_with_retry(\n+        lambda: fetcher.get(url, request_params or None), config\n+    )\n+\n+\n+def fetch_json(\n+    fetcher: Fetcher,\n+    config: SourceConfig,\n+    path: str = \"\",\n+    params: dict[str, str] | None = None,\n+    *,\n+    needs_key: bool = True,\n+    key_param: str | None = None,\n+) -> Any:\n+    \"\"\"JSON 을 돌려주는 원천용. 본문이 JSON 이 아니면 그 자리에서 멈춘다.\n+\n+    원천이 오류를 HTML 로 돌려주는 일이 있는데, 그것을 빈 결과로 넘기면 수집이 성공한 것처럼\n+    보인다.\n+    \"\"\"\n+    body = fetch_text(\n+        fetcher, config, path, params, needs_key=needs_key, key_param=key_param\n+    )\n+    try:\n+        return json.loads(body)\n+    except json.JSONDecodeError as error:\n+        raise PermanentSourceError(\n+            f\"{config.source_id}: 응답이 JSON 이 아니다 ({body[:120]!r})\"\n+        ) from error\n+\n+\n+def describe(config: SourceConfig, path: str, params: dict[str, str] | None) -> str:\n+    \"\"\"무엇을 부를지 사람이 읽을 수 있게 적는다. **키는 넣지 않는다.**\"\"\"\n+    query = f\"?{urlencode(params)}\" if params else \"\"\n+    return f\"{config.base_url}/{path.lstrip('/')}{query}\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/fetch.py",
+          "old_path": "data/src/data_pipeline/macro/fetch.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,676 @@\n+\"\"\"수집 실행 — 어댑터·변환·정규화·발행을 한 줄로 잇는다 (spec 008 FR-017, tasks T081).\n+\n+여기까지 오기 전에는 조각이 다 있어도 **한 번도 연속으로 돌아본 적이 없었다.** 어댑터는 경로를\n+만들고 응답을 읽을 줄 알고, 변환기는 월 값을 만들 줄 알고, 발행기는 스냅샷을 쓸 줄 아는데, 그것들을\n+차례로 부르는 코드가 없었다.\n+\n+세 가지를 함께 한다.\n+\n+- **원본을 먼저 남긴다**(T080, FR-009). 받은 본문을 그대로 파일로 쓰고 해시를 `macro_raw_revision`\n+  에 쌓는다. 값이 달라졌을 때 원천이 개정한 것인지 우리 변환이 바뀐 것인지는 원본이 있어야 갈린다.\n+  같은 응답을 다시 받으면 해시가 같아 이력이 늘지 않는다.\n+- **지표마다 결과를 남긴다**(T082, FR-011). 성공·실패·한도 도달·키 미발급을 구분해\n+  `macro_collection_item_status` 에 쓴다. 한 덩어리로 묶으면 사람이 할 다음 행동이\n+  응답에서 사라진다.\n+- **하나라도 못 받으면 발행하지 않는다**(FR-011). 판정은 :mod:`~data_pipeline.macro.publish` 가\n+  하고 여기서는 그 결과를 그대로 따른다.\n+\n+**네트워크는 :class:`~data_pipeline.macro.fetch.Fetcher` 뒤에 있다.** 저장된 표본을 읽는 대역을\n+끼우면 인증키 없이 이 경로 전체가 돈다(FR-022).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import logging\n+from collections.abc import Mapping, Sequence\n+from dataclasses import dataclass, field\n+from datetime import UTC, date, datetime\n+from pathlib import Path\n+\n+from sqlalchemy import text\n+from sqlalchemy.engine import Engine\n+\n+from data_pipeline.macro import fetch as transport\n+from data_pipeline.macro import normalize as normalizer\n+from data_pipeline.macro import publish, registry, storage\n+from data_pipeline.macro.config import (\n+    SOURCE_CUSTOMS,\n+    SOURCE_ECOS,\n+    SOURCE_KOSIS,\n+    SOURCE_OECD,\n+    MacroConfigError,\n+    SourceConfig,\n+    load_source_config,\n+)\n+from data_pipeline.macro.normalize import NormalizedObservation\n+from data_pipeline.macro.registry import IndicatorDefinition\n+from data_pipeline.macro.sources import customs, ecos, housing, kosis, oecd\n+from data_pipeline.macro.sources.base import (\n+    MAX_MONTHS_CUSTOMS,\n+    PermanentSourceError,\n+    QuotaExhaustedError,\n+    SourceError,\n+    SourceObservation,\n+    split_months,\n+)\n+\n+logger = logging.getLogger(__name__)\n+\n+#: `macro_collection_item_status` 가 받는 값. 사람이 할 다음 행동이 저마다 다르다.\n+STATUS_SUCCEEDED = \"SUCCEEDED\"\n+STATUS_FAILED = \"FAILED\"\n+STATUS_QUOTA = \"QUOTA_EXHAUSTED\"\n+STATUS_KEY_NOT_ISSUED = \"KEY_NOT_ISSUED\"\n+STATUS_RIGHTS_PENDING = \"RIGHTS_PENDING\"\n+STATUS_RIGHTS_UNVERIFIED = \"RIGHTS_UNVERIFIED\"\n+\n+\n+@dataclass(frozen=True)\n+class RawDocument:\n+    \"\"\"받은 그대로의 응답 하나. 파일로 남고 해시로 개정을 가린다.\"\"\"\n+\n+    indicator_id: str\n+    source: str\n+    body: str\n+    received_at: datetime\n+    path: Path\n+    sha256: str\n+\n+\n+@dataclass\n+class IndicatorOutcome:\n+    \"\"\"지표 하나의 수집 결과. 성공이든 아니든 반드시 하나씩 남는다.\"\"\"\n+\n+    indicator_id: str\n+    source: str\n+    status: str\n+    observations: list[SourceObservation] = field(default_factory=list)\n+    raw_documents: list[RawDocument] = field(default_factory=list)\n+    error_class: str | None = None\n+    excluded_rows: int = 0\n+\n+    @property\n+    def succeeded(self) -> bool:\n+        return self.status == STATUS_SUCCEEDED\n+\n+\n+def _window(indicator: IndicatorDefinition, mode: str, today: date) -> tuple[str, str]:\n+    \"\"\"받을 구간. 최초는 전 구간, 정기는 최근 N개월이다 (FR-017).\n+\n+    뒤쪽 구간을 함께 받는 이유는 잠정치가 확정치로 개정된 것을 잡기 위해서다. 새 발표분만\n+    받으면 정정을 놓친다.\n+    \"\"\"\n+    end = f\"{today.year:04d}-{today.month:02d}\"\n+    if mode == \"initial\":\n+        return indicator.series_start or \"2000-01\", end\n+    months_back = max(indicator.refresh_months_n, 1)\n+    year = today.year\n+    month = today.month - months_back\n+    while month <= 0:\n+        month += 12\n+        year -= 1\n+    return f\"{year:04d}-{month:02d}\", end\n+\n+\n+def _compact(period: str) -> str:\n+    \"\"\"``YYYY-MM`` 을 원천이 받는 ``YYYYMM`` 으로.\"\"\"\n+    return period.replace(\"-\", \"\")\n+\n+\n+def _save_raw(\n+    outcome: IndicatorOutcome,\n+    data_root: Path,\n+    source_id: str,\n+    indicator_id: str,\n+    body: str,\n+    received_at: datetime,\n+) -> None:\n+    \"\"\"원본을 파일로 남기고 결과에 붙인다 (T080).\n+\n+    확장자는 본문 모양을 따른다 — 관세청만 XML 이고 나머지는 JSON 이다. 되읽을 때 무엇으로\n+    파싱할지 파일 이름이 말해 준다.\n+    \"\"\"\n+    suffix = \".xml\" if body.lstrip().startswith(\"<\") else \".json\"\n+    path = storage.raw_path(data_root, source_id, indicator_id, received_at, suffix)\n+    path.parent.mkdir(parents=True, exist_ok=True)\n+    path.write_text(body, encoding=\"utf-8\")\n+    outcome.raw_documents.append(\n+        RawDocument(\n+            indicator_id=indicator_id,\n+            source=source_id,\n+            body=body,\n+            received_at=received_at,\n+            path=path,\n+            sha256=storage.content_hash(body.encode(\"utf-8\")),\n+        )\n+    )\n+\n+\n+def _classify(error: Exception) -> tuple[str, str]:\n+    \"\"\"실패를 사람이 다음에 할 행동으로 가른다. 한 덩어리로 묶지 않는다(FR-011).\n+\n+    **원인을 풀어 본다.** 재시도를 다 쓰면 `fetch_with_retry` 가 마지막 오류를 `SourceError`\n+    로 감싸는데, 그대로 적으면 기록에 남는 것이 전부 ``SourceError`` 가 되어 무엇 때문에\n+    실패했는지 알 수 없다. 사람이 로그를 뒤지지 않고 상태만 보고 다음 행동을 정할 수 있어야\n+    이 열이 쓸모가 있다.\n+    \"\"\"\n+    cause = error.__cause__ if type(error) is SourceError and error.__cause__ else error\n+    if isinstance(cause, MacroConfigError):\n+        return STATUS_KEY_NOT_ISSUED, type(cause).__name__\n+    if isinstance(cause, QuotaExhaustedError):\n+        return STATUS_QUOTA, type(cause).__name__\n+    return STATUS_FAILED, type(cause).__name__\n+\n+\n+def collect(\n+    indicators: Sequence[IndicatorDefinition],\n+    *,\n+    fetcher: transport.Fetcher,\n+    data_root: Path,\n+    mode: str = \"initial\",\n+    today: date | None = None,\n+    configs: Mapping[str, SourceConfig] | None = None,\n+) -> list[IndicatorOutcome]:\n+    \"\"\"17개를 원천별로 받아 지표마다 결과를 하나씩 돌려준다.\n+\n+    **한 지표가 실패해도 나머지를 계속 받는다.** 첫 실패에서 멈추면 무엇이 더 실패했는지 알 수\n+    없고, 다음 실행에서 같은 자리에서 또 멈춘다.\n+    \"\"\"\n+    today = today or datetime.now(UTC).date()\n+    resolved = dict(configs or {})\n+    outcomes: list[IndicatorOutcome] = []\n+\n+    by_source: dict[str, list[IndicatorDefinition]] = {}\n+    for indicator in indicators:\n+        by_source.setdefault(indicator.primary_source, []).append(indicator)\n+\n+    for source_id, members in by_source.items():\n+        config = resolved.get(source_id) or load_source_config(source_id)\n+        if source_id == SOURCE_CUSTOMS:\n+            outcomes.extend(\n+                _collect_customs(members, fetcher, config, data_root, mode, today)\n+            )\n+            continue\n+        quota_reached = False\n+        for indicator in members:\n+            if quota_reached:\n+                # 한도는 원천 단위다. 앞 지표가 거절당했으면 뒤 지표도 같은 답을 받는다 —\n+                # 부르지 않고 그 사실을 상태로 남긴다. 무엇을 못 받았는지는 기록에 남아야 한다.\n+                outcomes.append(\n+                    IndicatorOutcome(\n+                        indicator_id=indicator.indicator_id,\n+                        source=source_id,\n+                        status=STATUS_QUOTA,\n+                        error_class=\"QuotaExhaustedError\",\n+                    )\n+                )\n+                continue\n+            outcome = _collect_one(indicator, fetcher, config, data_root, mode, today)\n+            outcomes.append(outcome)\n+            quota_reached = outcome.status == STATUS_QUOTA\n+    return outcomes\n+\n+\n+def _collect_one(\n+    indicator: IndicatorDefinition,\n+    fetcher: transport.Fetcher,\n+    config: SourceConfig,\n+    data_root: Path,\n+    mode: str,\n+    today: date,\n+) -> IndicatorOutcome:\n+    outcome = IndicatorOutcome(\n+        indicator_id=indicator.indicator_id,\n+        source=indicator.primary_source,\n+        status=STATUS_SUCCEEDED,\n+    )\n+    start, end = _window(indicator, mode, today)\n+    received_at = datetime.now(UTC)\n+    try:\n+        if indicator.link_chain:\n+            outcome.observations = _collect_linked(\n+                indicator, fetcher, config, data_root, start, end, received_at, outcome\n+            )\n+        elif indicator.primary_source == SOURCE_ECOS:\n+            path = ecos.build_path(indicator, _compact(start), _compact(end))\n+            body = transport.fetch_text(fetcher, config, path)\n+            _save_raw(\n+                outcome, data_root, config.source_id, indicator.indicator_id, body, received_at\n+            )\n+            outcome.observations = ecos.parse(indicator, _as_json(body, config))\n+        elif indicator.primary_source == SOURCE_KOSIS:\n+            params = kosis.build_params(indicator, _compact(start), _compact(end))\n+            body = transport.fetch_text(fetcher, config, \"\", params, key_param=\"apiKey\")\n+            _save_raw(\n+                outcome, data_root, config.source_id, indicator.indicator_id, body, received_at\n+            )\n+            outcome.observations = kosis.parse(indicator, _as_json(body, config))\n+        elif indicator.primary_source == SOURCE_OECD:\n+            path = oecd.build_path(indicator)\n+            body = transport.fetch_text(fetcher, config, path, needs_key=False)\n+            _save_raw(\n+                outcome, data_root, config.source_id, indicator.indicator_id, body, received_at\n+            )\n+            outcome.observations = oecd.parse(indicator, _as_json(body, config))\n+        else:\n+            raise PermanentSourceError(\n+                f\"{indicator.indicator_id}: 모르는 원천 {indicator.primary_source!r}\"\n+            )\n+    except (SourceError, MacroConfigError) as error:\n+        outcome.status, outcome.error_class = _classify(error)\n+        logger.warning(\"%s 수집 실패: %s\", indicator.indicator_id, error)\n+    return outcome\n+\n+\n+def _collect_linked(\n+    indicator: IndicatorDefinition,\n+    fetcher: transport.Fetcher,\n+    config: SourceConfig,\n+    data_root: Path,\n+    start: str,\n+    end: str,\n+    received_at: datetime,\n+    outcome: IndicatorOutcome,\n+) -> list[SourceObservation]:\n+    \"\"\"개편으로 나뉜 계열. 사슬의 표를 모두 받아 겹침 구간 비율로 잇는다 (FR-010).\n+\n+    **현행 표만 받고 끝내지 않는다.** 그렇게 하면 응답은 정상이고 값도 멀쩡한데 확보 구간만\n+    조용히 짧아진다 — 주택가격은 2000-01 이 아니라 2021-06 부터만 온다.\n+    \"\"\"\n+    values_by_base_month: dict[str, dict[str, object]] = {}\n+    for table in indicator.link_chain:\n+        params = housing.build_params(table, _compact(table.coverage_start), _compact(end))\n+        body = transport.fetch_text(fetcher, config, \"\", params, key_param=\"apiKey\")\n+        _save_raw(\n+            outcome,\n+            data_root,\n+            config.source_id,\n+            f\"{indicator.indicator_id}__{table.base_month.replace('-', '')}\",\n+            body,\n+            received_at,\n+        )\n+        values_by_base_month[table.base_month] = housing.parse_table(\n+            table, _as_json(body, config)\n+        )\n+\n+    segments = housing.segments_from(values_by_base_month, indicator.link_chain)\n+    linked = housing.link(segments)\n+    return [\n+        SourceObservation(\n+            indicator_id=indicator.indicator_id,\n+            period=point.period,\n+            value=point.value,\n+            unit=indicator.raw_unit,\n+        )\n+        for point in linked.points\n+        if point.period >= start\n+    ]\n+\n+\n+def _collect_customs(\n+    indicators: Sequence[IndicatorDefinition],\n+    fetcher: transport.Fetcher,\n+    config: SourceConfig,\n+    data_root: Path,\n+    mode: str,\n+    today: date,\n+) -> list[IndicatorOutcome]:\n+    \"\"\"세 지표가 한 응답에서 나온다. 요청은 조회 기간 1년 제한 때문에 나눠 건다 (FR-017a).\"\"\"\n+    members = tuple(indicators)\n+    outcomes = {\n+        indicator.indicator_id: IndicatorOutcome(\n+            indicator_id=indicator.indicator_id,\n+            source=SOURCE_CUSTOMS,\n+            status=STATUS_SUCCEEDED,\n+        )\n+        for indicator in members\n+    }\n+    start, end = _window(members[0], mode, today)\n+    windows = split_months(_first_day(start), _first_day(end), MAX_MONTHS_CUSTOMS)\n+    received_at = datetime.now(UTC)\n+\n+    for window in windows:\n+        try:\n+            params = customs.build_params(\n+                window.start.strftime(\"%Y%m\"), window.end.strftime(\"%Y%m\")\n+            )\n+            body = transport.fetch_text(\n+                fetcher, config, \"\", params, key_param=\"serviceKey\"\n+            )\n+            label = f\"trade__{window.start:%Y%m}_{window.end:%Y%m}\"\n+            first = outcomes[members[0].indicator_id]\n+            _save_raw(first, data_root, SOURCE_CUSTOMS, label, body, received_at)\n+            response = customs.parse_all(body, members)\n+            for indicator in members:\n+                outcomes[indicator.indicator_id].observations.extend(\n+                    response[indicator.indicator_id]\n+                )\n+            first.excluded_rows += response.excluded_total_rows\n+        except (SourceError, MacroConfigError) as error:\n+            status, error_class = _classify(error)\n+            # 한 구간이 실패하면 세 지표 모두 그 사실을 안고 간다. 받은 구간까지는 남긴다.\n+            for indicator in members:\n+                outcomes[indicator.indicator_id].status = status\n+                outcomes[indicator.indicator_id].error_class = error_class\n+            logger.warning(\"관세청 %s~%s 수집 실패: %s\", window.start, window.end, error)\n+            if status == STATUS_QUOTA:\n+                # **한도에 닿으면 그 자리에서 멈춘다**(FR-011). 전 구간이 서른일곱 조각이라\n+                # 계속 부르면 남은 서른여섯 번이 전부 같은 거절을 받으며 한도를 더 깎고,\n+                # 원천이 접근을 끊는 쪽으로 간다. 받은 구간은 그대로 두어 다음 실행이\n+                # 그만큼 덜 부르게 한다.\n+                break\n+    return list(outcomes.values())\n+\n+\n+def _first_day(period: str) -> date:\n+    year, month = period.split(\"-\")\n+    return date(int(year), int(month), 1)\n+\n+\n+def _as_json(body: str, config: SourceConfig) -> object:\n+    import json\n+\n+    try:\n+        return json.loads(body)\n+    except json.JSONDecodeError as error:\n+        raise PermanentSourceError(\n+            f\"{config.source_id}: 응답이 JSON 이 아니다 ({body[:120]!r})\"\n+        ) from error\n+\n+\n+def normalize_outcomes(\n+    indicators: Sequence[IndicatorDefinition],\n+    outcomes: Sequence[IndicatorOutcome],\n+    *,\n+    as_of: date | None = None,\n+    trading_days: Mapping[str, Sequence[str]] | None = None,\n+    received_at: datetime | None = None,\n+) -> dict[str, list[NormalizedObservation]]:\n+    \"\"\"받은 관측을 지표별 변환값으로 바꾼다. 못 받은 지표는 빈 목록이다.\"\"\"\n+    by_id = {indicator.indicator_id: indicator for indicator in indicators}\n+    result: dict[str, list[NormalizedObservation]] = {}\n+    for outcome in outcomes:\n+        indicator = by_id.get(outcome.indicator_id)\n+        if indicator is None or not outcome.observations:\n+            result[outcome.indicator_id] = []\n+            continue\n+        result[outcome.indicator_id] = normalizer.normalize(\n+            indicator,\n+            outcome.observations,\n+            as_of=as_of,\n+            trading_days=trading_days,\n+            received_at=received_at,\n+        )\n+    return result\n+\n+\n+def write_processed(\n+    observations: Mapping[str, Sequence[NormalizedObservation]], data_root: Path\n+) -> list[Path]:\n+    \"\"\"정규화한 값을 지표/연도 파티션 Parquet 로 쓴다 (data/CLAUDE.md 구조 규칙).\n+\n+    적재는 ``raw/ → processed/ → PostgreSQL`` 한 방향이고, 발행기는 이 파일 목록을 봉인해\n+    매니페스트를 만든다. 파일이 없으면 발행이 거절된다 — 스냅샷이 참조할 실체가 없기 때문이다.\n+\n+    **decimal 은 문자열로 적는다.** 부동소수로 쓰면 주택가격 지수의 끝자리가 흔들리고, 같은\n+    자료로 다시 돌려도 파일 해시가 달라져 재현성 판정이 무너진다(SC-004).\n+\n+    빠진 달도 행으로 남긴다. 값 자리는 비우고 사유를 함께 적는다 — 파일에서 지우면 왜 없는지\n+    되짚을 곳이 사라진다(원칙 VI).\n+    \"\"\"\n+    import pyarrow as pa\n+    import pyarrow.parquet as pq\n+\n+    written: list[Path] = []\n+    for indicator_id, values in sorted(observations.items()):\n+        by_year: dict[int, list[NormalizedObservation]] = {}\n+        for value in values:\n+            by_year.setdefault(int(value.period[:4]), []).append(value)\n+        for year, rows in sorted(by_year.items()):\n+            table = pa.table(\n+                {\n+                    \"indicator_id\": [row.indicator_id for row in rows],\n+                    \"target_month\": [row.period for row in rows],\n+                    \"transformed_value\": [\n+                        None if row.transformed_value is None else str(row.transformed_value)\n+                        for row in rows\n+                    ],\n+                    \"missing_reason\": [row.missing_reason for row in rows],\n+                    \"transform_rule\": [row.transform_rule for row in rows],\n+                    \"raw_unit\": [row.raw_unit for row in rows],\n+                    \"transformed_unit\": [row.transformed_unit for row in rows],\n+                    \"source_updated_at\": [row.source_updated_at for row in rows],\n+                }\n+            )\n+            path = storage.processed_path(data_root, indicator_id, year)\n+            path.parent.mkdir(parents=True, exist_ok=True)\n+            pq.write_table(table, path)\n+            written.append(path)\n+    return written\n+\n+\n+def record_raw_revisions(engine: Engine, outcomes: Sequence[IndicatorOutcome]) -> int:\n+    \"\"\"원본 이력을 append-only 로 쌓는다 (T080, FR-009).\n+\n+    **같은 응답을 다시 받으면 행을 늘리지 않는다.** 정기 재조회는 바뀐 것이 없는 달도 함께\n+    받으므로, 해시로 거르지 않으면 돌릴 때마다 개정이 일어난 것처럼 쌓인다.\n+    \"\"\"\n+    written = 0\n+    with engine.begin() as connection:\n+        for outcome in outcomes:\n+            for document in outcome.raw_documents:\n+                existing = connection.execute(\n+                    text(\n+                        \"SELECT 1 FROM macro_raw_revision\"\n+                        \" WHERE indicator_id = :indicator AND raw_hash = :hash LIMIT 1\"\n+                    ),\n+                    {\"indicator\": document.indicator_id, \"hash\": document.sha256},\n+                ).first()\n+                if existing is not None:\n+                    continue\n+                next_revision = connection.execute(\n+                    text(\n+                        \"SELECT COALESCE(MAX(observed_revision), 0) + 1\"\n+                        \" FROM macro_raw_revision WHERE indicator_id = :indicator\"\n+                        \"   AND target_month = :month\"\n+                    ),\n+                    {\"indicator\": document.indicator_id, \"month\": _received_month(document)},\n+                ).scalar_one()\n+                connection.execute(\n+                    text(\n+                        \"INSERT INTO macro_raw_revision\"\n+                        \" (indicator_id, source, target_month, raw_unit, received_at,\"\n+                        \"  observed_revision, raw_path, raw_hash)\"\n+                        \" VALUES (:indicator, :source, :month, :unit, :received,\"\n+                        \"  :revision, :path, :hash)\"\n+                    ),\n+                    {\n+                        \"indicator\": document.indicator_id,\n+                        \"source\": document.source,\n+                        \"month\": _received_month(document),\n+                        \"unit\": \"raw\",\n+                        \"received\": document.received_at,\n+                        \"revision\": next_revision,\n+                        \"path\": str(document.path),\n+                        \"hash\": document.sha256,\n+                    },\n+                )\n+                written += 1\n+    return written\n+\n+\n+def _received_month(document: RawDocument) -> date:\n+    \"\"\"원본 한 건이 대표하는 달. 응답이 여러 달을 담으므로 수신한 달로 적는다.\n+\n+    관측치별 대상월은 `macro_observation` 이 들고, 여기 있는 것은 \"이 응답을 언제 받았는가\"다.\n+    \"\"\"\n+    return date(document.received_at.year, document.received_at.month, 1)\n+\n+\n+def record_item_status(\n+    engine: Engine, attempt_key: str, outcomes: Sequence[IndicatorOutcome]\n+) -> None:\n+    \"\"\"지표별 수집 결과를 남긴다 (T082, FR-011).\n+\n+    008 조회가 이 표에서 실패 지표 목록을 읽는다. 쓰지 않으면 화면은 늘 \"실패 없음\"으로 보인다.\n+    \"\"\"\n+    now = datetime.now(UTC)\n+    with engine.begin() as connection:\n+        attempt_id = connection.execute(\n+            text(\"SELECT id FROM macro_collection_attempt WHERE attempt_key = :key\"),\n+            {\"key\": attempt_key},\n+        ).scalar_one_or_none()\n+        if attempt_id is None:\n+            raise ValueError(f\"수집 시도 {attempt_key!r} 가 없다. 발행 전에 기록할 수 없다\")\n+        for outcome in outcomes:\n+            connection.execute(\n+                text(\n+                    \"INSERT INTO macro_collection_item_status\"\n+                    \" (attempt_id, indicator_id, source, status, last_success_at,\"\n+                    \"  last_error_at, error_class, quota_exhausted, raw_location)\"\n+                    \" VALUES (:attempt, :indicator, :source, :status, :success,\"\n+                    \"  :error_at, :error_class, :quota, :raw)\"\n+                    \" ON CONFLICT (attempt_id, indicator_id) DO UPDATE SET\"\n+                    \"  status = EXCLUDED.status, last_success_at = EXCLUDED.last_success_at,\"\n+                    \"  last_error_at = EXCLUDED.last_error_at,\"\n+                    \"  error_class = EXCLUDED.error_class,\"\n+                    \"  quota_exhausted = EXCLUDED.quota_exhausted,\"\n+                    \"  raw_location = EXCLUDED.raw_location\"\n+                ),\n+                {\n+                    \"attempt\": attempt_id,\n+                    \"indicator\": outcome.indicator_id,\n+                    \"source\": outcome.source,\n+                    \"status\": outcome.status,\n+                    \"success\": now if outcome.succeeded else None,\n+                    \"error_at\": None if outcome.succeeded else now,\n+                    \"error_class\": outcome.error_class,\n+                    \"quota\": outcome.status == STATUS_QUOTA,\n+                    \"raw\": str(outcome.raw_documents[-1].path)\n+                    if outcome.raw_documents\n+                    else None,\n+                },\n+            )\n+\n+\n+def rights_status(indicator: IndicatorDefinition) -> str | None:\n+    \"\"\"권리 판정이 수집을 막는지. 막지 않으면 ``None`` 이다 (FR-016a).\"\"\"\n+    if indicator.license_review_status == registry.REVIEW_UNVERIFIED:\n+        return STATUS_RIGHTS_UNVERIFIED\n+    if indicator.license_review_status == registry.REVIEW_PENDING_RIGHTS:\n+        return STATUS_RIGHTS_PENDING\n+    return None\n+\n+\n+@dataclass(frozen=True)\n+class IngestReport:\n+    \"\"\"한 번의 수집 실행이 남긴 것. 사람이 읽고 다음 행동을 정하는 데 쓴다.\"\"\"\n+\n+    attempt_key: str\n+    outcomes: tuple[IndicatorOutcome, ...]\n+    received_observations: int\n+    raw_revisions_written: int\n+    dataset_version_id: int | None\n+    publication_held: str | None\n+\n+    @property\n+    def failed(self) -> tuple[IndicatorOutcome, ...]:\n+        return tuple(outcome for outcome in self.outcomes if not outcome.succeeded)\n+\n+    @property\n+    def published(self) -> bool:\n+        return self.dataset_version_id is not None\n+\n+\n+def run(\n+    engine: Engine,\n+    indicators: Sequence[IndicatorDefinition],\n+    *,\n+    fetcher: transport.Fetcher,\n+    data_root: Path,\n+    mode: str = \"initial\",\n+    version_key: str | None = None,\n+    today: date | None = None,\n+    configs: Mapping[str, SourceConfig] | None = None,\n+    trading_days: Mapping[str, Sequence[str]] | None = None,\n+) -> IngestReport:\n+    \"\"\"수집부터 발행까지 한 번에 돈다 (T080·T081·T082).\n+\n+    **발행이 보류돼도 기록은 남긴다.** 17개가 다 차지 않으면 스냅샷을 내보내지 않지만, 무엇을\n+    받았고 무엇이 실패했는지는 남아야 한다 — 그래야 다음 실행에서 무엇을 고칠지 알 수 있다.\n+    그래서 원본 이력과 지표별 상태를 발행 성공 여부와 무관하게 쓴다(FR-011).\n+\n+    순서가 중요하다. `publish_atomically` 가 수집 시도 행을 만들기 때문에 지표별 상태는 그\n+    뒤에 쓴다. 발행이 보류로 끝나도 시도 행은 남으므로 상태를 붙일 자리는 있다.\n+    \"\"\"\n+    today = today or datetime.now(UTC).date()\n+    received_at = datetime.now(UTC)\n+    attempt_key = f\"{mode}-{received_at:%Y%m%dT%H%M%S%f}\"\n+    resolved_version = version_key or f\"macro-{received_at:%Y%m%dT%H%M%S}\"\n+\n+    outcomes = collect(\n+        indicators,\n+        fetcher=fetcher,\n+        data_root=data_root,\n+        mode=mode,\n+        today=today,\n+        configs=configs,\n+    )\n+    observations = normalize_outcomes(\n+        indicators, outcomes, as_of=today, trading_days=trading_days, received_at=received_at\n+    )\n+    raw_written = record_raw_revisions(engine, outcomes)\n+    processed_files = tuple(write_processed(observations, data_root))\n+\n+    pointer = _current_pointer(engine)\n+    raw_files = tuple(\n+        document.path for outcome in outcomes for document in outcome.raw_documents\n+    )\n+    request = publish.AtomicPublicationRequest(\n+        version_key=resolved_version,\n+        attempt_key=attempt_key,\n+        pointer=pointer,\n+        indicators=tuple(indicators),\n+        observations=observations,\n+        raw_files=raw_files,\n+        processed_files=processed_files,\n+        data_root=data_root,\n+    )\n+\n+    dataset_id: int | None = None\n+    held: str | None = None\n+    try:\n+        dataset_id = publish.publish_atomically(engine, request)\n+    except publish.PublishError as error:\n+        held = str(error)\n+        logger.warning(\"발행 보류: %s\", error)\n+\n+    record_item_status(engine, attempt_key, outcomes)\n+\n+    return IngestReport(\n+        attempt_key=attempt_key,\n+        outcomes=tuple(outcomes),\n+        received_observations=sum(len(o.observations) for o in outcomes),\n+        raw_revisions_written=raw_written,\n+        dataset_version_id=dataset_id,\n+        publication_held=held,\n+    )\n+\n+\n+def _current_pointer(engine: Engine) -> publish.PublicationPointer:\n+    \"\"\"지금 공개 중인 세 버전. 없으면 등록표부터 세우라고 말한다.\"\"\"\n+    with engine.begin() as connection:\n+        row = connection.execute(\n+            text(\n+                \"SELECT dataset_version_id, registry_version_id, display_version_id\"\n+                \" FROM macro_current_publication WHERE singleton_key = 'X'\"\n+            )\n+        ).first()\n+    if row is None:\n+        raise ValueError(\n+            \"현재 포인터가 없다. versioning.register_calculation_version 과\"\n+            \" initialize_current_publication 으로 등록표·표시 버전을 먼저 세운다\"\n+        )\n+    return publish.PublicationPointer(\n+        dataset_id=row[0], registry_id=row[1], display_id=row[2]\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/ingest.py",
+          "old_path": "data/src/data_pipeline/macro/ingest.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -454,6 +454,21 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:\n         raise RegistryError(f\"지표가 하나도 없는 분야가 있다: {sorted(missing)}\")\n \n \n+def used_sources(\n+    indicators: tuple[IndicatorDefinition, ...] = INDICATORS,\n+) -> tuple[str, ...]:\n+    \"\"\"등록표가 실제로 쓰는 원천. 설정에 있는 넷 전부가 아니라 **쓰이는 것만** 돌려준다.\n+\n+    수집 진입점이 이 목록으로 설정을 읽는다. `config.SOURCE_IDS` 를 그대로 쓰면 등록표에서\n+    빠진 원천의 접속 설정까지 요구하게 되고, 그 원천을 안 쓰기로 한 결정이 코드에서 지워진다.\n+    \"\"\"\n+    seen: list[str] = []\n+    for indicator in indicators:\n+        if indicator.primary_source not in seen:\n+            seen.append(indicator.primary_source)\n+    return tuple(seen)\n+\n+\n def by_field() -> dict[str, tuple[IndicatorDefinition, ...]]:\n     \"\"\"분야별 지표. 표시 순서는 `INDICATORS` 의 순서를 따른다.\"\"\"\n     grouped: dict[str, list[IndicatorDefinition]] = {field_id: [] for field_id in FIELD_IDS}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,119 @@\n+\"\"\"`macro_*` 통합 테스트가 함께 쓰는 PostgreSQL 대역.\n+\n+컨테이너를 띄우고 운영과 같은 마이그레이션을 적용한다. 스키마를 손으로 만들지 않는 이유는 그러면\n+마이그레이션이 틀려도 테스트가 통과하기 때문이다.\n+\n+**Docker 가 없으면 건너뛴다. 다만 `THORP_REQUIRE_DOCKER=true` 면 실패로 만든다** — CI 는 그 값을\n+켜고 돌려, 건너뛴 것이 통과로 보이지 않게 한다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import os\n+import secrets\n+import subprocess\n+import time\n+from pathlib import Path\n+\n+import psycopg\n+import pytest\n+from sqlalchemy import create_engine\n+from sqlalchemy.engine import URL\n+from sqlalchemy.exc import OperationalError\n+\n+MIGRATIONS = (\n+    \"V20260918120000__macro_registry.sql\",\n+    \"V20260918153100__macro_normalized_missing_reasons.sql\",\n+)\n+\n+\n+def _docker(*arguments: str) -> str:\n+    result = subprocess.run(\n+        [\"docker\", *arguments], capture_output=True, text=True, check=True, timeout=30\n+    )\n+    return result.stdout.strip()\n+\n+\n+def _current_container_network() -> str | None:\n+    \"\"\"Docker 소켓을 공유하는 컨테이너 안이면 현재 컨테이너의 네트워크를 돌려준다.\"\"\"\n+    if not Path(\"/.dockerenv\").exists():\n+        return None\n+    hostname = os.getenv(\"HOSTNAME\")\n+    if not hostname:\n+        return None\n+    try:\n+        networks = _docker(\n+            \"inspect\",\n+            \"--format\",\n+            \"{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{println}}{{end}}\",\n+            hostname,\n+        ).splitlines()\n+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n+        return None\n+    return networks[0] if networks else None\n+\n+\n+@pytest.fixture\n+def postgres_engine():\n+    required = os.getenv(\"THORP_REQUIRE_DOCKER\", \"\").lower() == \"true\"\n+    try:\n+        _docker(\"info\", \"--format\", \"{{.ServerVersion}}\")\n+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n+        if required:\n+            pytest.fail(\"THORP_REQUIRE_DOCKER=true인데 Docker 엔진에 접속할 수 없다\")\n+        pytest.skip(\"PostgreSQL 통합 테스트용 Docker 엔진이 없다\")\n+\n+    name = f\"macro-publish-test-{secrets.token_hex(5)}\"\n+    password = secrets.token_urlsafe(24)\n+    network = _current_container_network()\n+    try:\n+        run_arguments = [\"run\", \"-d\", \"--rm\", \"--name\", name]\n+        if network:\n+            run_arguments.extend((\"--network\", network))\n+            host = name\n+            port = 5432\n+        else:\n+            run_arguments.extend((\"-p\", \"127.0.0.1::5432\"))\n+            host = \"127.0.0.1\"\n+        run_arguments.extend(\n+            (\n+                \"-e\",\n+                f\"POSTGRES_PASSWORD={password}\",\n+                \"-e\",\n+                \"POSTGRES_DB=macro_test\",\n+                \"postgres:16-alpine\",\n+            )\n+        )\n+        _docker(*run_arguments)\n+        if not network:\n+            port = int(_docker(\"port\", name, \"5432/tcp\").rsplit(\":\", 1)[1])\n+        url = URL.create(\n+            \"postgresql+psycopg\", username=\"postgres\", password=password,\n+            host=host, port=port, database=\"macro_test\",\n+        )\n+        engine = create_engine(url)\n+        deadline = time.monotonic() + 45\n+        while True:\n+            try:\n+                with engine.connect():\n+                    break\n+            except OperationalError:\n+                if time.monotonic() >= deadline:\n+                    raise\n+                time.sleep(0.25)\n+        migration_dir = Path(__file__).resolve().parents[2] / \"backend\" / \"src\" / \"main\" \\\n+            / \"resources\" / \"db\" / \"migration\"\n+        with psycopg.connect(\n+            host=host, port=port, dbname=\"macro_test\",\n+            user=\"postgres\", password=password,\n+        ) as connection:\n+            for migration in MIGRATIONS:\n+                connection.execute((migration_dir / migration).read_text(encoding=\"utf-8\"))\n+        yield engine\n+    finally:\n+        if \"engine\" in locals():\n+            engine.dispose()\n+        try:\n+            _docker(\"stop\", name)\n+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n+            pass\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/conftest.py",
+          "old_path": "data/tests/conftest.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,292 @@\n+\"\"\"수집 실행 경로를 저장된 표본으로 끝까지 돌린다 (tasks.md T080·T081·T082).\n+\n+**네트워크를 쓰지 않는다.** `Fetcher` 자리에 표본을 돌려주는 대역을 끼운다 — 그래서 인증키 없이도\n+어댑터·변환·정규화가 이어 붙는지 확인할 수 있다(FR-022).\n+\n+여기서 보는 것은 값의 정확성이 아니다. 그건 어댑터·변환 테스트가 이미 본다. 이 파일이 보는 것은\n+**조각들이 실제로 이어지는가**다 — 지금까지 조각은 다 있었는데 부르는 코드가 없어 한 번도 연속으로\n+돌아본 적이 없었다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import json\n+import pathlib\n+from datetime import date\n+\n+import pytest\n+\n+from data_pipeline.macro import ingest, registry\n+from data_pipeline.macro.config import SourceConfig\n+from data_pipeline.macro.sources.base import (\n+    PermanentSourceError,\n+    QuotaExhaustedError,\n+    TransientSourceError,\n+)\n+\n+FIXTURES = pathlib.Path(__file__).parent / \"fixtures\" / \"macro\"\n+\n+\n+class FixtureFetcher:\n+    \"\"\"요청을 표본 파일로 바꿔 돌려주는 대역. 무엇을 불렀는지도 남긴다.\"\"\"\n+\n+    def __init__(self, bodies: dict[str, str], default: str | None = None) -> None:\n+        self._bodies = bodies\n+        self._default = default\n+        self.calls: list[tuple[str, dict[str, str] | None]] = []\n+\n+    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+        self.calls.append((url, params))\n+        for marker, body in self._bodies.items():\n+            if marker in url or (params and marker in str(params)):\n+                return body\n+        if self._default is None:\n+            raise AssertionError(f\"표본이 없는 요청이다: {url} {params}\")\n+        return self._default\n+\n+\n+class FailingFetcher:\n+    def __init__(self, error: Exception) -> None:\n+        self._error = error\n+\n+    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+        raise self._error\n+\n+\n+def _config(source_id: str) -> SourceConfig:\n+    \"\"\"재시도 대기 없이 도는 설정. 테스트가 실제로 1·2·4초를 자지 않게 한다.\"\"\"\n+    return SourceConfig(\n+        source_id=source_id,\n+        base_url=\"https://example.invalid\",\n+        api_key_env=None,\n+        timeout_seconds=1.0,\n+        max_attempts=1,\n+        backoff_seconds=0.01,\n+        backoff_multiplier=1.0,\n+    )\n+\n+\n+def _indicator(indicator_id: str) -> registry.IndicatorDefinition:\n+    return next(i for i in registry.INDICATORS if i.indicator_id == indicator_id)\n+\n+\n+def _ecos_body() -> str:\n+    return (FIXTURES / \"ecos\" / \"dubai_crude_monthly.json\").read_text(encoding=\"utf-8\")\n+\n+\n+def test_collects_and_saves_raw(tmp_path):\n+    \"\"\"받은 본문이 파일로 남고 해시가 붙는다 (T080).\"\"\"\n+    indicator = _indicator(\"dubai_crude\")\n+    fetcher = FixtureFetcher({}, default=_ecos_body())\n+\n+    outcomes = ingest.collect(\n+        [indicator],\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    assert len(outcomes) == 1\n+    outcome = outcomes[0]\n+    assert outcome.succeeded\n+    assert outcome.observations, \"관측이 하나도 안 나왔다\"\n+    assert len(outcome.raw_documents) == 1\n+    document = outcome.raw_documents[0]\n+    assert document.path.exists()\n+    assert document.path.read_text(encoding=\"utf-8\") == _ecos_body()\n+    assert len(document.sha256) == 64\n+\n+\n+def test_raw_path_is_under_data_root(tmp_path):\n+    \"\"\"원본은 `raw/macro/{원천}/{지표}/{연도}/` 아래에 쌓인다.\"\"\"\n+    fetcher = FixtureFetcher({}, default=_ecos_body())\n+\n+    outcomes = ingest.collect(\n+        [_indicator(\"dubai_crude\")],\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    path = outcomes[0].raw_documents[0].path\n+    assert path.is_relative_to(tmp_path / \"raw\" / \"macro\" / \"ecos\" / \"dubai_crude\")\n+\n+\n+def test_failure_does_not_stop_other_indicators(tmp_path):\n+    \"\"\"한 지표가 실패해도 나머지를 계속 받는다. 실패는 그 지표에만 남는다.\"\"\"\n+    good = _indicator(\"dubai_crude\")\n+    bad = _indicator(\"treasury_bond_3y\")\n+\n+    class Selective:\n+        def get(self, url, params=None):\n+            if \"817Y002\" in url:\n+                raise TransientSourceError(\"끊김\")\n+            return _ecos_body()\n+\n+    outcomes = ingest.collect(\n+        [good, bad],\n+        fetcher=Selective(),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    by_id = {outcome.indicator_id: outcome for outcome in outcomes}\n+    assert by_id[\"dubai_crude\"].succeeded\n+    assert not by_id[\"treasury_bond_3y\"].succeeded\n+    assert by_id[\"treasury_bond_3y\"].status == ingest.STATUS_FAILED\n+\n+\n+@pytest.mark.parametrize(\n+    (\"error\", \"expected\"),\n+    [\n+        (QuotaExhaustedError(\"한도\"), ingest.STATUS_QUOTA),\n+        (PermanentSourceError(\"거절\"), ingest.STATUS_FAILED),\n+        (TransientSourceError(\"끊김\"), ingest.STATUS_FAILED),\n+    ],\n+)\n+def test_failures_keep_their_kind(tmp_path, error, expected):\n+    \"\"\"한도 도달과 그냥 실패를 한 덩어리로 묶지 않는다 (FR-011).\n+\n+    사람이 할 다음 행동이 다르다 — 한도는 기다리면 되고 거절은 설정을 봐야 한다.\n+    \"\"\"\n+    outcomes = ingest.collect(\n+        [_indicator(\"dubai_crude\")],\n+        fetcher=FailingFetcher(error),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    assert outcomes[0].status == expected\n+    assert outcomes[0].error_class == type(error).__name__\n+\n+\n+def test_regular_mode_asks_for_a_shorter_window(tmp_path):\n+    \"\"\"정기 수집은 전 구간이 아니라 최근 N개월만 부른다 (FR-017).\"\"\"\n+    fetcher = FixtureFetcher({}, default=_ecos_body())\n+\n+    ingest.collect(\n+        [_indicator(\"dubai_crude\")],\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"regular\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    url = fetcher.calls[0][0]\n+    assert \"202606\" in url, f\"최근 3개월 시작월이 없다: {url}\"\n+    assert \"199201\" not in url, \"정기 수집인데 전 구간을 불렀다\"\n+\n+\n+def test_initial_mode_asks_from_series_start(tmp_path):\n+    fetcher = FixtureFetcher({}, default=_ecos_body())\n+\n+    ingest.collect(\n+        [_indicator(\"dubai_crude\")],\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    assert \"199201\" in fetcher.calls[0][0]\n+\n+\n+def test_normalize_outcomes_turns_observations_into_values(tmp_path):\n+    \"\"\"받은 관측이 변환값까지 이어진다 — 이 연결이 없던 것이 T081 이다.\"\"\"\n+    indicator = _indicator(\"dubai_crude\")\n+    outcomes = ingest.collect(\n+        [indicator],\n+        fetcher=FixtureFetcher({}, default=_ecos_body()),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    normalized = ingest.normalize_outcomes([indicator], outcomes)\n+\n+    assert \"dubai_crude\" in normalized\n+    assert normalized[\"dubai_crude\"], \"변환 결과가 비었다\"\n+    first = normalized[\"dubai_crude\"][0]\n+    assert first.indicator_id == \"dubai_crude\"\n+    assert first.transform_rule == indicator.transform_rule\n+\n+\n+def test_customs_splits_requests_into_one_year_windows(tmp_path):\n+    \"\"\"관세청은 조회 기간 1년 제한이라 나눠 부른다 (FR-017a).\"\"\"\n+    body = (FIXTURES / \"customs\" / \"newtrade_2026.xml\").read_text(encoding=\"utf-8\")\n+    members = [\n+        _indicator(\"exports\"),\n+        _indicator(\"imports\"),\n+        _indicator(\"trade_balance\"),\n+    ]\n+    fetcher = FixtureFetcher({}, default=body)\n+\n+    outcomes = ingest.collect(\n+        members,\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"customs\": _config(\"customs\")},\n+    )\n+\n+    assert len(fetcher.calls) >= 37, f\"연 단위로 안 나눴다: {len(fetcher.calls)}회\"\n+    assert {outcome.indicator_id for outcome in outcomes} == {\n+        \"exports\",\n+        \"imports\",\n+        \"trade_balance\",\n+    }\n+\n+\n+def test_rights_status_separates_pending_from_unverified():\n+    \"\"\"권리 확인 대기와 미확인을 가른다. 미확인만 발행을 막는다 (FR-016a).\"\"\"\n+    assert ingest.rights_status(_indicator(\"dubai_crude\")) == ingest.STATUS_RIGHTS_PENDING\n+    assert ingest.rights_status(_indicator(\"treasury_bond_3y\")) is None\n+\n+\n+def test_every_indicator_gets_an_outcome(tmp_path):\n+    \"\"\"성공이든 아니든 지표마다 결과가 하나씩 남는다 — 빠지면 수집 기록에 구멍이 생긴다.\"\"\"\n+    outcomes = ingest.collect(\n+        registry.INDICATORS,\n+        fetcher=FailingFetcher(TransientSourceError(\"끊김\")),\n+        data_root=tmp_path,\n+        mode=\"regular\",\n+        today=date(2026, 9, 20),\n+        configs={source: _config(source) for source in registry.used_sources()},\n+    )\n+\n+    assert len(outcomes) == registry.EXPECTED_INDICATOR_COUNT\n+    assert {outcome.indicator_id for outcome in outcomes} == {\n+        indicator.indicator_id for indicator in registry.INDICATORS\n+    }\n+\n+\n+def test_json_body_that_is_not_json_stops_instead_of_emptying(tmp_path):\n+    \"\"\"원천이 HTML 오류를 돌려주면 빈 결과로 넘기지 않는다.\"\"\"\n+    outcomes = ingest.collect(\n+        [_indicator(\"dubai_crude\")],\n+        fetcher=FixtureFetcher({}, default=\"<html>error</html>\"),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    assert not outcomes[0].succeeded\n+    assert outcomes[0].observations == []\n+\n+\n+def test_fixture_bodies_are_valid_json():\n+    \"\"\"표본이 깨지면 이 파일의 다른 시험이 엉뚱한 이유로 실패한다. 먼저 확인한다.\"\"\"\n+    json.loads(_ecos_body())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_ingest.py",
+          "old_path": "data/tests/test_macro_ingest.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,475 @@\n+\"\"\"수집 실행이 DB에 무엇을 남기는지 실제 PostgreSQL 로 본다 (tasks.md T080·T082).\n+\n+표본을 읽는 테스트는 조각이 이어지는지만 본다. 여기서 보는 것은 **그 결과가 실제로 기록되는가**다\n+— 원본 이력과 지표별 수집 상태는 008 조회가 읽는 자리라, 쓰이지 않으면 화면이 늘 \"실패 없음\"으로\n+보인다.\n+\n+Docker 가 없으면 건너뛴다. `THORP_REQUIRE_DOCKER=true` 면 건너뛰지 않고 실패한다(conftest).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from dataclasses import replace\n+from datetime import date\n+from decimal import Decimal\n+from pathlib import Path\n+\n+import pytest\n+from sqlalchemy import text\n+\n+from data_pipeline.macro import ingest\n+from data_pipeline.macro.registry import INDICATORS\n+from data_pipeline.macro.sources.base import SourceObservation, TransientSourceError\n+from data_pipeline.macro.versioning import (\n+    initialize_current_publication,\n+    register_calculation_version,\n+)\n+\n+# 표본을 직접 만들지 않고 관측을 바로 돌려주는 대역을 쓴다. 어댑터 파싱은 다른 파일이 본다.\n+_MONTHS = (\"2026-05\", \"2026-06\", \"2026-07\")\n+\n+\n+class StubFetcher:\n+    \"\"\"모든 요청에 같은 본문을 돌려준다. 원본 저장 경로를 보기 위한 최소 대역.\"\"\"\n+\n+    def __init__(self, body: str = '{\"ok\": true}') -> None:\n+        self._body = body\n+\n+    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+        return self._body\n+\n+\n+@pytest.fixture\n+def dummy_keys(monkeypatch):\n+    \"\"\"원천에 닿는 경로를 보려면 키가 있어야 한다. 값은 쓰이지 않는다 — 대역이 받는다.\n+\n+    키를 넣지 않으면 대부분의 지표가 fetcher 에 닿기도 전에 KEY_NOT_ISSUED 로 갈린다.\n+    그것도 맞는 동작이지만, 여기서 보려는 것은 원천 실패가 어떻게 기록되는가다.\n+    \"\"\"\n+    for name in (\"ECOS_API_KEY\", \"KOSIS_API_KEY\", \"DATA_GO_KR_SERVICE_KEY\"):\n+        monkeypatch.setenv(name, \"test-key\")\n+\n+\n+@pytest.fixture\n+def seeded_indicators():\n+    \"\"\"전 구간을 짧게 줄인 17개. 실제 시작월을 쓰면 표본 없이 수백 달을 요구한다.\"\"\"\n+    return tuple(replace(indicator, series_start=\"2026-05\") for indicator in INDICATORS)\n+\n+\n+def _prepare_registry(engine, indicators) -> None:\n+    registry_id = register_calculation_version(\n+        engine, \"calc-ingest\", \"ingest 통합 테스트\", indicators\n+    )\n+    with engine.begin() as connection:\n+        display_id = connection.execute(\n+            text(\n+                \"INSERT INTO macro_display_version (version_key, change_reason, created_at)\"\n+                \" VALUES ('display-ingest', 'ingest 통합 테스트', CURRENT_TIMESTAMP)\"\n+                \" RETURNING id\"\n+            )\n+        ).scalar_one()\n+    initialize_current_publication(engine, registry_id, display_id)\n+\n+\n+def _outcome(indicator_id: str, *, values: bool = True) -> ingest.IndicatorOutcome:\n+    observations = (\n+        [\n+            SourceObservation(\n+                indicator_id=indicator_id, period=month, value=Decimal(\"101.2\")\n+            )\n+            for month in _MONTHS\n+        ]\n+        if values\n+        else []\n+    )\n+    return ingest.IndicatorOutcome(\n+        indicator_id=indicator_id,\n+        source=\"kosis\",\n+        status=ingest.STATUS_SUCCEEDED if values else ingest.STATUS_FAILED,\n+        observations=observations,\n+        error_class=None if values else \"TransientSourceError\",\n+    )\n+\n+\n+def _raw_document(tmp_path: Path, indicator_id: str, body: str) -> ingest.RawDocument:\n+    from datetime import UTC, datetime\n+\n+    from data_pipeline.macro import storage\n+\n+    received_at = datetime.now(UTC)\n+    path = storage.raw_path(tmp_path, \"kosis\", indicator_id, received_at, \".json\")\n+    path.parent.mkdir(parents=True, exist_ok=True)\n+    path.write_text(body, encoding=\"utf-8\")\n+    return ingest.RawDocument(\n+        indicator_id=indicator_id,\n+        source=\"kosis\",\n+        body=body,\n+        received_at=received_at,\n+        path=path,\n+        sha256=storage.content_hash(body.encode(\"utf-8\")),\n+    )\n+\n+\n+def test_raw_revisions_are_written_once_per_body(postgres_engine, tmp_path: Path) -> None:\n+    \"\"\"같은 응답을 다시 받으면 이력이 늘지 않는다 (T080, FR-009).\n+\n+    정기 재조회는 바뀐 것이 없는 달도 함께 받는다. 해시로 거르지 않으면 돌릴 때마다 개정이\n+    일어난 것처럼 쌓여, 진짜 개정과 구분되지 않는다.\n+    \"\"\"\n+    outcome = _outcome(\"all_industry_production\")\n+    outcome.raw_documents.append(_raw_document(tmp_path, \"all_industry_production\", \"body-1\"))\n+\n+    first = ingest.record_raw_revisions(postgres_engine, [outcome])\n+    second = ingest.record_raw_revisions(postgres_engine, [outcome])\n+\n+    assert first == 1\n+    assert second == 0, \"같은 본문인데 이력이 늘었다\"\n+    with postgres_engine.begin() as connection:\n+        rows = connection.execute(\n+            text(\"SELECT raw_hash, observed_revision FROM macro_raw_revision\")\n+        ).all()\n+    assert len(rows) == 1\n+    assert rows[0][1] == 1\n+\n+\n+def test_changed_body_adds_a_revision(postgres_engine, tmp_path: Path) -> None:\n+    \"\"\"본문이 달라지면 새 이력이 쌓인다 — 그것이 개정이다.\"\"\"\n+    outcome = _outcome(\"all_industry_production\")\n+    outcome.raw_documents.append(_raw_document(tmp_path, \"all_industry_production\", \"body-1\"))\n+    ingest.record_raw_revisions(postgres_engine, [outcome])\n+\n+    revised = _outcome(\"all_industry_production\")\n+    revised.raw_documents.append(_raw_document(tmp_path, \"all_industry_production\", \"body-2\"))\n+    written = ingest.record_raw_revisions(postgres_engine, [revised])\n+\n+    assert written == 1\n+    with postgres_engine.begin() as connection:\n+        revisions = connection.execute(\n+            text(\"SELECT observed_revision FROM macro_raw_revision ORDER BY observed_revision\")\n+        ).scalars().all()\n+    assert revisions == [1, 2]\n+\n+\n+def test_run_records_item_status_for_every_indicator(\n+    postgres_engine, tmp_path: Path, seeded_indicators\n+) -> None:\n+    \"\"\"성공이든 실패든 지표마다 상태가 하나씩 남는다 (T082, FR-011).\"\"\"\n+    _prepare_registry(postgres_engine, seeded_indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        seeded_indicators,\n+        fetcher=StubFetcher(),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 7, 15),\n+    )\n+\n+    with postgres_engine.begin() as connection:\n+        rows = connection.execute(\n+            text(\n+                \"SELECT indicator_id, status FROM macro_collection_item_status\"\n+                \" WHERE attempt_id = (SELECT id FROM macro_collection_attempt\"\n+                \"                     WHERE attempt_key = :key)\"\n+            ),\n+            {\"key\": report.attempt_key},\n+        ).all()\n+\n+    assert len(rows) == len(seeded_indicators)\n+    assert {row[0] for row in rows} == {i.indicator_id for i in seeded_indicators}\n+\n+\n+def test_failed_indicator_keeps_its_error_class(\n+    postgres_engine, tmp_path: Path, seeded_indicators, dummy_keys\n+) -> None:\n+    \"\"\"실패 지표의 오류 분류가 그대로 남는다. 로그를 뒤지지 않고 다음 행동을 정할 수 있어야 한다.\"\"\"\n+    _prepare_registry(postgres_engine, seeded_indicators)\n+\n+    class AlwaysFails:\n+        def get(self, url, params=None):\n+            raise TransientSourceError(\"끊김\")\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        seeded_indicators,\n+        fetcher=AlwaysFails(),\n+        data_root=tmp_path,\n+        mode=\"regular\",\n+        today=date(2026, 7, 15),\n+    )\n+\n+    assert report.failed, \"전부 실패했는데 실패로 안 잡혔다\"\n+    with postgres_engine.begin() as connection:\n+        statuses = connection.execute(\n+            text(\n+                \"SELECT DISTINCT status, error_class FROM macro_collection_item_status\"\n+                \" WHERE attempt_id = (SELECT id FROM macro_collection_attempt\"\n+                \"                     WHERE attempt_key = :key)\"\n+            ),\n+            {\"key\": report.attempt_key},\n+        ).all()\n+\n+    assert statuses == [(ingest.STATUS_FAILED, \"TransientSourceError\")]\n+\n+\n+def test_publication_is_held_but_records_still_land(\n+    postgres_engine, tmp_path: Path, seeded_indicators, dummy_keys\n+) -> None:\n+    \"\"\"발행이 보류돼도 수집 기록은 남는다 (FR-011).\n+\n+    보류는 정상적인 상태다. 그때 기록까지 사라지면 다음 실행에서 무엇을 고쳐야 하는지 알 수 없다.\n+    \"\"\"\n+    _prepare_registry(postgres_engine, seeded_indicators)\n+\n+    class AlwaysFails:\n+        def get(self, url, params=None):\n+            raise TransientSourceError(\"끊김\")\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        seeded_indicators,\n+        fetcher=AlwaysFails(),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 7, 15),\n+    )\n+\n+    assert not report.published\n+    assert report.publication_held is not None\n+    with postgres_engine.begin() as connection:\n+        attempts = connection.execute(\n+            text(\"SELECT status FROM macro_collection_attempt WHERE attempt_key = :key\"),\n+            {\"key\": report.attempt_key},\n+        ).scalars().all()\n+        items = connection.execute(\n+            text(\"SELECT count(*) FROM macro_collection_item_status\")\n+        ).scalar_one()\n+\n+    assert attempts == [\"PARTIAL\"]\n+    assert items == len(seeded_indicators)\n+\n+\n+def test_run_without_pointer_says_what_to_do(\n+    postgres_engine, tmp_path: Path, seeded_indicators\n+) -> None:\n+    \"\"\"등록표를 세우지 않고 돌리면 무엇을 먼저 해야 하는지 말한다.\"\"\"\n+    with pytest.raises(ValueError, match=\"현재 포인터가 없다\"):\n+        ingest.run(\n+            postgres_engine,\n+            seeded_indicators,\n+            fetcher=StubFetcher(),\n+            data_root=tmp_path,\n+            mode=\"initial\",\n+            today=date(2026, 7, 15),\n+        )\n+\n+\n+def test_registry_bootstrap_lets_ingest_run(postgres_engine, tmp_path: Path, monkeypatch) -> None:\n+    \"\"\"등록표 진입점이 세운 상태에서 수집이 돈다 — 둘이 실제로 이어지는지 본다.\n+\n+    진입점을 만들기 전에는 `ingest.run` 이 \"현재 포인터가 없다\"로 멈췄다. 등록표를 세우는 자리가\n+    저장소 어디에도 없었기 때문이다.\n+    \"\"\"\n+    import register_macro_registry as bootstrap\n+\n+    # str(url) 은 비밀번호를 *** 로 가린다. 그대로 쓰면 인증에 실패한다.\n+    monkeypatch.setattr(\n+        bootstrap,\n+        \"database_url_from_env\",\n+        lambda: postgres_engine.url.render_as_string(hide_password=False),\n+    )\n+\n+    assert bootstrap.main([\"--calculation-key\", \"calc-boot\", \"--display-key\", \"disp-boot\"]) == 0\n+\n+    with postgres_engine.begin() as connection:\n+        fields = connection.execute(text(\"SELECT count(*) FROM macro_display_field\")).scalar_one()\n+        names = connection.execute(\n+            text(\"SELECT count(*) FROM macro_display_indicator\")\n+        ).scalar_one()\n+        pointer = connection.execute(\n+            text(\"SELECT count(*) FROM macro_current_publication\")\n+        ).scalar_one()\n+\n+    assert (fields, names, pointer) == (7, 17, 1)\n+\n+    # 이제 수집이 포인터를 읽고 돈다.\n+    report = ingest.run(\n+        postgres_engine,\n+        tuple(replace(i, series_start=\"2026-05\") for i in INDICATORS),\n+        fetcher=StubFetcher(),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 7, 15),\n+    )\n+    assert report.attempt_key\n+\n+\n+def test_registry_bootstrap_refuses_to_overwrite(postgres_engine, monkeypatch) -> None:\n+    \"\"\"이미 포인터가 있으면 덮지 않는다.\n+\n+    다른 작업이 세운 버전을 지우면 그 버전을 참조하던 자료가 뜬다.\n+    \"\"\"\n+    import register_macro_registry as bootstrap\n+\n+    # str(url) 은 비밀번호를 *** 로 가린다. 그대로 쓰면 인증에 실패한다.\n+    monkeypatch.setattr(\n+        bootstrap,\n+        \"database_url_from_env\",\n+        lambda: postgres_engine.url.render_as_string(hide_password=False),\n+    )\n+    assert bootstrap.main([\"--calculation-key\", \"calc-1\", \"--display-key\", \"disp-1\"]) == 0\n+\n+    assert bootstrap.main([\"--calculation-key\", \"calc-2\", \"--display-key\", \"disp-2\"]) == 1\n+\n+\n+def _ecos_shaped(indicator):\n+    \"\"\"모든 지표를 같은 표본으로 받을 수 있게 원천 정의만 바꾼다.\n+\n+    발행 성공 경로를 보려면 17개가 **모두** 유효 변환값을 가져야 하는데, 주택가격 연결 사슬처럼\n+    표본이 갖춰지지 않은 계열이 있다. 여기서 보려는 것은 값의 정확성이 아니라\n+    **발행까지 이어지는가** 이므로, 원천 정의를 하나로 맞춰 17개가 다 차는 상황을 만든다.\n+    값 검증은 어댑터·변환 테스트가 한다.\n+    \"\"\"\n+    return replace(\n+        indicator,\n+        primary_source=\"ecos\",\n+        table_code=\"902Y003\",\n+        item_code=\"010102\",\n+        classification=(),\n+        org_id=None,\n+        source_cycle=\"M\",\n+        link_chain=(),\n+        transform_rule=\"MONTH_AVERAGE\",\n+        raw_unit=\"달러/배럴\",\n+        transformed_unit=\"달러/배럴\",\n+        series_start=\"2024-01\",\n+    )\n+\n+\n+def test_run_publishes_when_all_seventeen_are_filled(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"17개가 다 차면 자료 버전이 실제로 발행된다.\n+\n+    지금까지 통합 테스트는 늘 보류로 끝났다. 보류만 검증하면 발행 경로는 한 번도 지나지 않는다.\n+    \"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        indicators,\n+        fetcher=StubFetcher(body),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 8, 15),  # 표본 마지막 달\n+    )\n+\n+    assert report.publication_held is None, report.publication_held\n+    assert report.published, \"17개가 다 찼는데 발행되지 않았다\"\n+    assert report.raw_revisions_written > 0\n+\n+    with postgres_engine.begin() as connection:\n+        published = connection.execute(\n+            text(\n+                \"SELECT status, complete_indicator_count FROM macro_dataset_version\"\n+                \" WHERE id = :id\"\n+            ),\n+            {\"id\": report.dataset_version_id},\n+        ).one()\n+        pointer = connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one()\n+\n+    assert published == (\"PUBLISHED\", 17)\n+    assert pointer == report.dataset_version_id, \"발행했는데 현재 포인터가 안 움직였다\"\n+\n+\n+def test_quota_stops_collection_and_keeps_what_arrived(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"한도에 닿으면 그 시점에서 멈추고, 받은 구간은 남긴다 (FR-011).\n+\n+    관세청은 전 구간이 37회 넘는 분할 호출이라 중간에 한도에 걸리는 일이 실제로 일어난다. 그때\n+    남은 구간을 계속 부르면 한도를 더 깎고 차단으로 이어질 수 있다. 받은 만큼은 버리지 않는다 —\n+    다음 실행이 그만큼 덜 불러도 되기 때문이다.\n+    \"\"\"\n+    from pathlib import Path as _Path\n+\n+    from data_pipeline.macro.sources.base import QuotaExhaustedError\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"customs\" / \"newtrade_2026.xml\"\n+    ).read_text(encoding=\"utf-8\")\n+    allowed = 3\n+\n+    class QuotaAfter:\n+        def __init__(self) -> None:\n+            self.calls = 0\n+\n+        def get(self, url, params=None):\n+            self.calls += 1\n+            if self.calls > allowed:\n+                raise QuotaExhaustedError(\"한도 도달\")\n+            return body\n+\n+    fetcher = QuotaAfter()\n+    members = tuple(\n+        indicator for indicator in INDICATORS if indicator.primary_source == \"customs\"\n+    )\n+\n+    outcomes = ingest.collect(\n+        members,\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+    )\n+\n+    assert fetcher.calls == allowed + 1, (\n+        f\"한도 뒤에도 계속 불렀다: {fetcher.calls}회\"\n+    )\n+    for outcome in outcomes:\n+        assert outcome.status == ingest.STATUS_QUOTA\n+        assert outcome.observations, \"한도 전에 받은 구간까지 버렸다\"\n+\n+\n+def test_quota_is_recorded_and_publication_is_held(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"한도 도달이 수집 기록에 남고 발행은 보류된다.\"\"\"\n+    from data_pipeline.macro.sources.base import QuotaExhaustedError\n+\n+    indicators = tuple(replace(i, series_start=\"2026-05\") for i in INDICATORS)\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    class AlwaysQuota:\n+        def get(self, url, params=None):\n+            raise QuotaExhaustedError(\"한도 도달\")\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        indicators,\n+        fetcher=AlwaysQuota(),\n+        data_root=tmp_path,\n+        mode=\"regular\",\n+        today=date(2026, 7, 15),\n+    )\n+\n+    assert not report.published\n+    with postgres_engine.begin() as connection:\n+        rows = connection.execute(\n+            text(\n+                \"SELECT DISTINCT status, quota_exhausted FROM macro_collection_item_status\"\n+                \" WHERE attempt_id = (SELECT id FROM macro_collection_attempt\"\n+                \"                     WHERE attempt_key = :key)\"\n+            ),\n+            {\"key\": report.attempt_key},\n+        ).all()\n+\n+    assert rows == [(ingest.STATUS_QUOTA, True)]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_ingest_postgres.py",
+          "old_path": "data/tests/test_macro_ingest_postgres.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,20 +2,13 @@\n \n from __future__ import annotations\n \n-import os\n-import secrets\n-import subprocess\n-import time\n from dataclasses import replace\n from datetime import date\n from decimal import Decimal\n from pathlib import Path\n \n-import psycopg\n import pytest\n-from sqlalchemy import create_engine, text\n-from sqlalchemy.engine import URL\n-from sqlalchemy.exc import OperationalError\n+from sqlalchemy import text\n \n from data_pipeline.macro.normalize import NormalizedObservation\n from data_pipeline.macro.publish import (\n@@ -29,103 +22,6 @@ from data_pipeline.macro.versioning import (\n     register_calculation_version,\n )\n \n-MIGRATIONS = (\n-    \"V20260918120000__macro_registry.sql\",\n-    \"V20260918153100__macro_normalized_missing_reasons.sql\",\n-)\n-\n-\n-def _docker(*arguments: str) -> str:\n-    result = subprocess.run(\n-        [\"docker\", *arguments], capture_output=True, text=True, check=True, timeout=30\n-    )\n-    return result.stdout.strip()\n-\n-\n-def _current_container_network() -> str | None:\n-    \"\"\"Docker 소켓을 공유하는 컨테이너 안이면 현재 컨테이너의 네트워크를 돌려준다.\"\"\"\n-    if not Path(\"/.dockerenv\").exists():\n-        return None\n-    hostname = os.getenv(\"HOSTNAME\")\n-    if not hostname:\n-        return None\n-    try:\n-        networks = _docker(\n-            \"inspect\",\n-            \"--format\",\n-            \"{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{println}}{{end}}\",\n-            hostname,\n-        ).splitlines()\n-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n-        return None\n-    return networks[0] if networks else None\n-\n-\n-@pytest.fixture\n-def postgres_engine():\n-    required = os.getenv(\"THORP_REQUIRE_DOCKER\", \"\").lower() == \"true\"\n-    try:\n-        _docker(\"info\", \"--format\", \"{{.ServerVersion}}\")\n-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n-        if required:\n-            pytest.fail(\"THORP_REQUIRE_DOCKER=true인데 Docker 엔진에 접속할 수 없다\")\n-        pytest.skip(\"PostgreSQL 통합 테스트용 Docker 엔진이 없다\")\n-\n-    name = f\"macro-publish-test-{secrets.token_hex(5)}\"\n-    password = secrets.token_urlsafe(24)\n-    network = _current_container_network()\n-    try:\n-        run_arguments = [\"run\", \"-d\", \"--rm\", \"--name\", name]\n-        if network:\n-            run_arguments.extend((\"--network\", network))\n-            host = name\n-            port = 5432\n-        else:\n-            run_arguments.extend((\"-p\", \"127.0.0.1::5432\"))\n-            host = \"127.0.0.1\"\n-        run_arguments.extend(\n-            (\n-                \"-e\",\n-                f\"POSTGRES_PASSWORD={password}\",\n-                \"-e\",\n-                \"POSTGRES_DB=macro_test\",\n-                \"postgres:16-alpine\",\n-            )\n-        )\n-        _docker(*run_arguments)\n-        if not network:\n-            port = int(_docker(\"port\", name, \"5432/tcp\").rsplit(\":\", 1)[1])\n-        url = URL.create(\n-            \"postgresql+psycopg\", username=\"postgres\", password=password,\n-            host=host, port=port, database=\"macro_test\",\n-        )\n-        engine = create_engine(url)\n-        deadline = time.monotonic() + 45\n-        while True:\n-            try:\n-                with engine.connect():\n-                    break\n-            except OperationalError:\n-                if time.monotonic() >= deadline:\n-                    raise\n-                time.sleep(0.25)\n-        migration_dir = Path(__file__).resolve().parents[2] / \"backend\" / \"src\" / \"main\" \\\n-            / \"resources\" / \"db\" / \"migration\"\n-        with psycopg.connect(\n-            host=host, port=port, dbname=\"macro_test\",\n-            user=\"postgres\", password=password,\n-        ) as connection:\n-            for migration in MIGRATIONS:\n-                connection.execute((migration_dir / migration).read_text(encoding=\"utf-8\"))\n-        yield engine\n-    finally:\n-        if \"engine\" in locals():\n-            engine.dispose()\n-        try:\n-            _docker(\"stop\", name)\n-        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n-            pass\n-\n \n def test_atomic_publish_against_postgresql(postgres_engine, tmp_path: Path) -> None:\n     indicators = tuple(replace(indicator, series_start=\"2026-07\") for indicator in INDICATORS)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish_postgres.py",
+          "old_path": "data/tests/test_macro_publish_postgres.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -299,6 +299,6 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기\n \n **Purpose**: 열려 있는 작업 어느 것도 맡지 않은 구멍을 메운다. 라이브러리는 있는데 그것을 부르거나 결과를 남기는 자리가 없는 곳들이다\n \n-- [ ] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)\n-- [ ] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)\n-- [ ] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)\n+- [X] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)\n+- [X] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)\n+- [X] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2227653,
+      "head_commit_sha": "625840c79d5d812380af1e4cb716d3a32d9264fb",
+      "base_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "start_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+      "created_at": "2026-09-20T19:33:50.129+09:00",
+      "merge_request_id": 953050,
+      "state": "without_files",
+      "real_size": "11",
+      "patch_id_sha": "f64195dda475b9c483f83dadad66441f6ea7193a",
+      "commits": [
+        {
+          "id": "625840c79d5d812380af1e4cb716d3a32d9264fb",
+          "short_id": "625840c7",
+          "created_at": "2026-09-20T19:27:30.000+09:00",
+          "parent_ids": [
+            "448941e3d5a426958f007e083c97c21047d258b3"
+          ],
+          "title": "feat(de): 등록표를 운영에 세우는 진입점을 만든다",
+          "message": "feat(de): 등록표를 운영에 세우는 진입점을 만든다\n\n수집은 현재 포인터를 읽어 세 버전을 고정하는데, 그 포인터를 세우는 자리가\n저장소 어디에도 없었다. versioning 에 함수는 있고 테스트만 불렀다. 그래서\n서버에서 수집을 돌리면 \"현재 포인터가 없다\"에서 멈춘다.\n\n화면 분류는 계산 등록표와 따로 둔다. 화면 문구를 고쳤다고 과거 검색 결과가\n달라지면 안 되고, 분야 매핑을 고쳤다고 이름까지 새 버전이 될 이유도 없다.\n이름은 FR-001 표와 pd11 표기를 그대로 옮겼고 다듬지 않았다 — 코드가 고쳐 쓰면\n문서와 화면이 갈라진다.\n\n이미 포인터가 있으면 덮지 않고 종료 코드 1로 알린다. 다른 작업이 세운 버전을\n지우면 그 버전을 참조하던 자료가 뜬다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T19:27:30.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T19:27:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/625840c79d5d812380af1e4cb716d3a32d9264fb"
+        },
+        {
+          "id": "448941e3d5a426958f007e083c97c21047d258b3",
+          "short_id": "448941e3",
+          "created_at": "2026-09-20T18:59:30.000+09:00",
+          "parent_ids": [
+            "db411a2d70ac927ee92e23a79fdab6717b207025"
+          ],
+          "title": "feat(de): 수집 결과를 발행과 기록까지 잇는다",
+          "message": "feat(de): 수집 결과를 발행과 기록까지 잇는다\n\ncollect 에서 끝나던 실행을 발행·원본 이력·지표별 상태까지 이었다. 008 조회가\n읽는 macro_raw_revision 과 macro_collection_item_status 에 쓰는 쪽이 없어,\n지금까지 응답의 수집 상태와 실패 지표 목록은 늘 비어 있었다.\n\n발행이 보류돼도 기록은 남긴다. 보류는 정상적인 상태이고, 그때 기록까지\n사라지면 다음 실행에서 무엇을 고칠지 알 수 없다. 순서는 발행이 먼저다 —\n수집 시도 행을 발행기가 만들기 때문에 지표별 상태는 그 뒤에 붙는다.\n\n같은 본문을 다시 받으면 원본 이력이 늘지 않는다. 정기 재조회는 바뀐 것이\n없는 달도 함께 받으므로, 해시로 거르지 않으면 돌릴 때마다 개정이 일어난 것처럼\n쌓여 진짜 개정과 구분되지 않는다.\n\nPostgreSQL 대역을 conftest 로 옮겨 발행 테스트와 함께 쓴다. 스키마를 손으로\n만들지 않고 운영과 같은 마이그레이션을 적용하므로, 마이그레이션이 틀리면\n테스트가 통과하지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T18:59:30.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T18:59:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/448941e3d5a426958f007e083c97c21047d258b3"
+        },
+        {
+          "id": "db411a2d70ac927ee92e23a79fdab6717b207025",
+          "short_id": "db411a2d",
+          "created_at": "2026-09-20T18:50:53.000+09:00",
+          "parent_ids": [
+            "a7383cf39f00e223096794b840bea4a264634021"
+          ],
+          "title": "feat(de): 어댑터·변환·정규화를 잇는 수집 실행 경로를 만든다",
+          "message": "feat(de): 어댑터·변환·정규화를 잇는 수집 실행 경로를 만든다\n\n조각은 다 있었는데 차례로 부르는 코드가 없어 한 번도 연속으로 돌아본 적이\n없었다. 진입점이 등록표만 읽고 계획을 출력하다 끝났다.\n\n원천에 실제로 요청을 거는 자리가 아예 없어 전송 계층부터 만들었다. 어댑터는\n경로와 인자를 만들고 응답을 읽을 뿐이라 HTTP 를 모른다. 그 전송을 한자리에\n모으지 않으면 재시도와 오류 분류가 원천마다 갈려 한쪽은 영영 매달리고 다른\n쪽은 한 번에 포기한다. 인증키를 넣는 방법도 원천마다 달라(경로 안·질의 인자·\n없음) 그 차이를 부르는 쪽이 알 필요가 없게 했다.\n\n받은 본문은 그대로 파일로 남기고 해시를 붙인다. 값이 달라졌을 때 원천이\n개정한 것인지 우리 변환이 바뀐 것인지는 원본이 있어야 갈린다.\n\n한 지표가 실패해도 나머지를 계속 받는다. 첫 실패에서 멈추면 무엇이 더\n실패했는지 알 수 없고 다음 실행도 같은 자리에서 멈춘다. 실패는 한도 도달·\n키 미발급·그 밖으로 갈라 적는데, 사람이 할 다음 행동이 다르기 때문이다.\n재시도를 다 쓰면 원인이 SourceError 로 감싸이므로 풀어서 기록한다.\n\n네트워크는 Fetcher 뒤에 있어 저장된 표본으로 이 경로 전체가 돈다. 인증키\n없이 돌리면 KEY_NOT_ISSUED 로 갈라지고 종료 코드 1로 끝난다 — 아무것도 받지\n않은 실행을 성공으로 말하지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T18:50:53.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T18:50:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/db411a2d70ac927ee92e23a79fdab6717b207025"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2841919": [],
+    "2841965": []
+  }
+}

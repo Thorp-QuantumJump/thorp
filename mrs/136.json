@@ -1,0 +1,608 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945886,
+    "iid": 136,
+    "project_id": 1444456,
+    "title": "docs(be): 사용자 인증 통합 검증 결과를 정리",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n사용자 인증 기능의 FE·BE·API 계약 및 통합 동작을 검증하고 결과를 문서화했습니다.\n\n# 관련 티켓\n\n* ticket # S15P21E205-255\n* link\n\n# 주요 변경 사항\n\n* 인증 API 7개의 구현 상태 및 계약 일치 여부 확인\n* 회원가입·로그인·인증 복원·세션 만료·로그아웃 흐름 검증\n* T056\\~T060 완료 처리 및 검증 결과·화면 캡처 기록\n\n# 테스트\n\n* FE 테스트 149개 통과, lint 및 build 성공\n* BE 테스트 1,272개 통과, 외부 시장 API 테스트 1개 제외\n* 로컬 환경에서 전체 인증 흐름 확인\n\n# 리뷰 포인트\n\n* 운영 환경의 실제 이메일 발송 설정 및 검증 필요\n* 360px 화면에서 회원가입 소개 문구가 일부 잘리는 현상은 별도 FE 수정 필요\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T10:06:47.907+09:00",
+    "updated_at": "2026-09-16T10:13:43.487+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T10:13:43.218+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/255-auth-verification",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+    "merge_commit_sha": "ba861638fd2eeb8d5c21e8202c0708be997c40f8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T10:06:49.056+09:00",
+    "reference": "!136",
+    "references": {
+      "short": "!136",
+      "relative": "!136",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!136"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/136",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945886,
+    "iid": 136,
+    "project_id": 1444456,
+    "title": "docs(be): 사용자 인증 통합 검증 결과를 정리",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n사용자 인증 기능의 FE·BE·API 계약 및 통합 동작을 검증하고 결과를 문서화했습니다.\n\n# 관련 티켓\n\n* ticket # S15P21E205-255\n* link\n\n# 주요 변경 사항\n\n* 인증 API 7개의 구현 상태 및 계약 일치 여부 확인\n* 회원가입·로그인·인증 복원·세션 만료·로그아웃 흐름 검증\n* T056\\~T060 완료 처리 및 검증 결과·화면 캡처 기록\n\n# 테스트\n\n* FE 테스트 149개 통과, lint 및 build 성공\n* BE 테스트 1,272개 통과, 외부 시장 API 테스트 1개 제외\n* 로컬 환경에서 전체 인증 흐름 확인\n\n# 리뷰 포인트\n\n* 운영 환경의 실제 이메일 발송 설정 및 검증 필요\n* 360px 화면에서 회원가입 소개 문구가 일부 잘리는 현상은 별도 FE 수정 필요\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T10:06:47.907+09:00",
+    "updated_at": "2026-09-16T10:13:43.487+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T10:13:43.218+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/255-auth-verification",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+    "merge_commit_sha": "ba861638fd2eeb8d5c21e8202c0708be997c40f8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T10:06:49.056+09:00",
+    "reference": "!136",
+    "references": {
+      "short": "!136",
+      "relative": "!136",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!136"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/136",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-16T10:07:00.509+09:00",
+    "latest_build_finished_at": "2026-09-16T10:07:03.753+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197644,
+      "iid": 53,
+      "project_id": 1444456,
+      "sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+      "ref": "docs(be)/255-auth-verification",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T10:07:00.354+09:00",
+      "updated_at": "2026-09-16T10:07:03.759+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197644"
+    },
+    "head_pipeline": {
+      "id": 197644,
+      "iid": 53,
+      "project_id": 1444456,
+      "sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+      "ref": "docs(be)/255-auth-verification",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T10:07:00.354+09:00",
+      "updated_at": "2026-09-16T10:07:03.759+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197644",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T10:07:00.509+09:00",
+      "finished_at": "2026-09-16T10:07:03.753+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197644",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c",
+      "head_sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+      "start_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f39280c179839056e9aef5d2700bc2a3522e4964",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813190,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T10:06:48.032+09:00",
+          "updated_at": "2026-09-16T10:06:48.039+09:00",
+          "system": true,
+          "noteable_id": 945886,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 136,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "052f2ee62f872e9010c22690b5cc3a6a995cd8e5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813192,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서 기반 검증 및 투명성**: 인증 기능 구현 후 FE/BE 테스트 결과, OpenAPI 계약 대조, 통합 시나리오 결과를 개별 Markdown 파일(`specs/014-user-auth/verification/`)에 상세히 기록했습니다. 특히 360px 모바일 화면 레이아웃 잘림 현상이나 실제 SMTP 미검증 같은 한계와 미완료 항목을 숨기지 않고 명시한 점이 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (본 MR은 주로 문서화 및 검증 결과 정리 작업을 다루고 있으며, 기능 소스코드의 직접적인 변경 없이 사양 및 테스트 결과 기록에 집중되어 있습니다.)\n\n### 테스트 제안\n- **모바일 반응형 레이아웃 테스트**: 360px 이하의 뷰포트 너비에서 회원가입 페이지의 소개 문구 및 폼 요소가 수평 오버플로우 없이 정상적으로 렌더링되는지 확인하는 시각적 회귀 테스트(Visual Regression Test) 추가\n- **운영 환경 SMTP 연동 테스트**: 스테이징 또는 운영 환경에서 실제 이메일 발송, 인증번호 수신, 만료 시간 경과 후의 예외 흐름 검증 시나리오 수행\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3a04ba4e4298699126a140d571a02f0035bd00e8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T10:06:55.436+09:00",
+          "updated_at": "2026-09-16T10:06:55.436+09:00",
+          "system": false,
+          "noteable_id": 945886,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 136,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ec7bfba65d511b7d1fddf4d9af79491888ec9f78",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813278,
+          "type": null,
+          "body": "mentioned in commit ba861638fd2eeb8d5c21e8202c0708be997c40f8",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T10:13:43.182+09:00",
+          "updated_at": "2026-09-16T10:13:43.187+09:00",
+          "system": true,
+          "noteable_id": 945886,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 136,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2203240,
+      "head_commit_sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+      "base_commit_sha": "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c",
+      "start_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "created_at": "2026-09-16T10:06:48.291+09:00",
+      "merge_request_id": 945886,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "de4be6965731a40d76b708edbc922c23ccec43fa"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2203240,
+      "head_commit_sha": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+      "base_commit_sha": "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c",
+      "start_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "created_at": "2026-09-16T10:06:48.291+09:00",
+      "merge_request_id": 945886,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "de4be6965731a40d76b708edbc922c23ccec43fa",
+      "commits": [
+        {
+          "id": "3a04ba4e4298699126a140d571a02f0035bd00e8",
+          "short_id": "3a04ba4e",
+          "created_at": "2026-09-16T09:59:42.000+09:00",
+          "parent_ids": [
+            "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c"
+          ],
+          "title": "docs(be): 사용자 인증 통합 검증 결과를 정리",
+          "message": "docs(be): 사용자 인증 통합 검증 결과를 정리\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-16T09:59:42.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-16T09:59:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3a04ba4e4298699126a140d571a02f0035bd00e8"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -6,15 +6,17 @@\n \n | External API | Backend internal path | 상태 |\n |---|---|---|\n-| `POST /api/accounts/email-verifications` | `POST /accounts/email-verifications` | 기존 기능 재사용, controller mapping 정규화 필요 |\n-| `POST /api/accounts/email-verifications/confirm` | `POST /accounts/email-verifications/confirm` | 기존 기능 재사용, controller mapping 정규화 필요 |\n-| `POST /api/accounts` | `POST /accounts` | 기존 기능 재사용, controller mapping 정규화 필요 |\n-| `GET /api/auth/csrf` | `GET /auth/csrf` | 신규 필요 |\n-| `POST /api/auth/sessions` | `POST /auth/sessions` | 신규 필요 |\n-| `GET /api/auth/me` | `GET /auth/me` | 신규 필요 |\n-| `DELETE /api/auth/sessions/current` | `DELETE /auth/sessions/current` | 신규 필요 |\n-\n-현재 Account controller는 내부 경로에도 `/api`를 포함하지만 proxy가 이미 접두사를 제거한다. 구현 단계에서 proxy를 바꾸지 않고 Account controller를 `/accounts` 기준으로 맞춘다.\n+| `POST /api/accounts/email-verifications` | `POST /accounts/email-verifications` | 구현·계약 검증 완료 |\n+| `POST /api/accounts/email-verifications/confirm` | `POST /accounts/email-verifications/confirm` | 구현·계약 검증 완료 |\n+| `POST /api/accounts` | `POST /accounts` | 구현·계약 검증 완료 |\n+| `GET /api/auth/csrf` | `GET /auth/csrf` | 구현·계약 검증 완료 |\n+| `POST /api/auth/sessions` | `POST /auth/sessions` | 구현·계약 검증 완료 |\n+| `GET /api/auth/me` | `GET /auth/me` | 구현·계약 검증 완료 |\n+| `DELETE /api/auth/sessions/current` | `DELETE /auth/sessions/current` | 구현·계약 검증 완료 |\n+\n+2026-09-16에 Vite proxy와 Backend 내부 경로, 성공·오류 응답을 대조했다. Account controller는\n+내부 `/accounts`, 인증 controller는 내부 `/auth`를 사용하며 외부 `/api`와 중복되지 않는다.\n+상세 결과는 [verification/contract.md](../verification/contract.md)에 있다.\n \n ## Cookie and CSRF\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/contracts/README.md",
+          "old_path": "specs/014-user-auth/contracts/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,8 +3,8 @@ info:\n   title: Thorp Account and Authentication API\n   version: 0.1.0\n   description: >-\n-    014-user-auth의 외부 /api 계약이다. x-implementation-status가 existing인\n-    operation은 현재 account 구현을 재사용하되 proxy 경로 정규화가 필요하다.\n+    014-user-auth의 외부 /api 계약이다. 2026-09-16 기준 7개 operation은\n+    Backend 내부 경로와 FE proxy 경로에서 구현·검증됐다.\n servers:\n   - url: /api\n paths:\n@@ -12,7 +12,7 @@ paths:\n     post:\n       operationId: requestEmailVerification\n       summary: 이메일 인증번호 발송\n-      x-implementation-status: existing-path-fix-required\n+      x-implementation-status: implemented\n       security:\n         - csrfToken: []\n       requestBody:\n@@ -34,7 +34,7 @@ paths:\n     post:\n       operationId: confirmEmailVerification\n       summary: 이메일 인증번호 확인\n-      x-implementation-status: existing-path-fix-required\n+      x-implementation-status: implemented\n       security:\n         - csrfToken: []\n       requestBody:\n@@ -56,7 +56,7 @@ paths:\n     post:\n       operationId: signup\n       summary: 회원가입\n-      x-implementation-status: existing-path-fix-required\n+      x-implementation-status: implemented\n       security:\n         - csrfToken: []\n       requestBody:\n@@ -82,7 +82,7 @@ paths:\n     get:\n       operationId: prepareCsrfToken\n       summary: SPA 상태 변경 요청용 CSRF token 준비\n-      x-implementation-status: required\n+      x-implementation-status: implemented\n       responses:\n         '204':\n           description: XSRF-TOKEN cookie가 준비됨\n@@ -97,7 +97,7 @@ paths:\n     post:\n       operationId: login\n       summary: 이메일·비밀번호 로그인\n-      x-implementation-status: required\n+      x-implementation-status: implemented\n       security:\n         - csrfToken: []\n       requestBody:\n@@ -130,7 +130,7 @@ paths:\n     get:\n       operationId: getCurrentUser\n       summary: 현재 로그인한 사용자 조회\n-      x-implementation-status: required\n+      x-implementation-status: implemented\n       responses:\n         '200':\n           description: 유효한 로그인 상태\n@@ -146,7 +146,7 @@ paths:\n     delete:\n       operationId: logout\n       summary: 현재 server session 종료\n-      x-implementation-status: required\n+      x-implementation-status: implemented\n       security:\n         - sessionCookie: []\n           csrfToken: []\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/contracts/auth-api.yaml",
+          "old_path": "specs/014-user-auth/contracts/auth-api.yaml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "Binary files /dev/null and b/specs/014-user-auth/verification/evidence/login-desktop-1440x900.png differ\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/verification/evidence/login-desktop-1440x900.png",
+          "old_path": "specs/014-user-auth/verification/evidence/login-desktop-1440x900.png",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "Binary files /dev/null and b/specs/014-user-auth/verification/evidence/signup-mobile-360x800.png differ\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/verification/evidence/signup-mobile-360x800.png",
+          "old_path": "specs/014-user-auth/verification/evidence/signup-mobile-360x800.png",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+# Backend Verification\n+\n+**실행일**: 2026-09-16  \n+**환경**: Java 21, Docker PostgreSQL 16 (`thorp-postgres` healthy)\n+\n+## 실행 명령\n+\n+```powershell\n+$env:THORP_REQUIRE_DOCKER = 'true'\n+.\\gradlew.bat spotlessApply build\n+```\n+\n+`THORP_REQUIRE_DOCKER=true`로 실행해 Docker가 없거나 PostgreSQL 기반 검증이 skip되면 빌드가\n+실패하도록 했다.\n+\n+## 실행 결과\n+\n+| 항목 | 결과 |\n+|---|---|\n+| Spotless apply/check | PASS |\n+| Compile/package | PASS |\n+| 전체 테스트 | 1,272 tests, failures 0, errors 0, skipped 1 |\n+| Gradle build | PASS (`14m 39s`) |\n+\n+유일한 skip은 인증과 무관하고 외부 실서비스 키를 요구하는\n+`com.ssafy.thorp.market.MarketLiveApiTest`다. 인증 및 PostgreSQL 검증은 skip 없이 실행됐다.\n+\n+| 핵심 suite | tests | 결과 |\n+|---|---:|---|\n+| `AccountControllerContractTest` | 9 | PASS |\n+| `AuthenticationControllerIntegrationTest` | 9 | PASS |\n+| `LogoutIntegrationTest` | 7 | PASS |\n+| `AuthSessionLifecycleIntegrationTest` | 9 | PASS |\n+| `ProxySecureCookieIntegrationTest` | 3 | PASS |\n+| `FlywayMigrationTest` | 28 | PASS |\n+\n+위 suite는 계정 내부 경로, CSRF, 로그인과 현재 사용자 복원, PostgreSQL 세션 저장·만료,\n+로그아웃 멱등성, 운영 Secure cookie, Spring Session 마이그레이션을 실제 PostgreSQL 위에서 검증한다.\n+\n+T057의 formatting과 PostgreSQL-backed test 검증은 통과했다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/verification/backend.md",
+          "old_path": "specs/014-user-auth/verification/backend.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,53 @@\n+# Authentication Contract Verification\n+\n+**기준**: `contracts/auth-api.yaml`  \n+**실행일**: 2026-09-16\n+\n+## Operation 대조\n+\n+| Operation | 외부 → 내부 경로 | 성공 계약 | 오류 계약 | 결과 |\n+|---|---|---|---|---|\n+| `requestEmailVerification` | `POST /api/accounts/email-verifications` → `POST /accounts/email-verifications` | 204, body 없음 | 400/403/500 envelope | PASS |\n+| `confirmEmailVerification` | `POST /api/accounts/email-verifications/confirm` → `POST /accounts/email-verifications/confirm` | 204, body 없음 | 400/403/500 envelope | PASS |\n+| `signup` | `POST /api/accounts` → `POST /accounts` | 201 `SignupSuccessEnvelope` | 400/403/500 envelope | PASS |\n+| `prepareCsrfToken` | `GET /api/auth/csrf` → `GET /auth/csrf` | 204 + `XSRF-TOKEN` | 500 envelope | PASS |\n+| `login` | `POST /api/auth/sessions` → `POST /auth/sessions` | 200 `AuthenticatedUserSuccessEnvelope` + session cookie | 400/401/403/500 envelope | PASS |\n+| `getCurrentUser` | `GET /api/auth/me` → `GET /auth/me` | 200 `AuthenticatedUserSuccessEnvelope` | 401/500 envelope | PASS |\n+| `logout` | `DELETE /api/auth/sessions/current` → `DELETE /auth/sessions/current` | 204, session 무효화 | 403/500 envelope | PASS |\n+\n+## 성공 응답 확인\n+\n+- 로컬 Vite proxy를 거쳐 CSRF 204, 회원가입 201, 로그인 200, 현재 사용자 복원 200,\n+  로그아웃 204를 확인했다.\n+- 회원가입 응답은 `userId`, 정규화된 `email`, `nickname`, `ACTIVE`만 포함했다.\n+- 로그인과 현재 사용자 응답은 같은 비민감 사용자 필드만 포함했고 비밀번호·전화번호·세션 식별자는\n+  포함하지 않았다.\n+- 로그아웃 뒤 동일 세션의 `/api/auth/me`는 401 `AUTHENTICATION_REQUIRED`를 반환했다.\n+- 인증번호 발송·확인의 204 성공 경로는 `AccountControllerContractTest`에서 검증했다. 실제 SMTP\n+  전달은 배포 자격 증명이 필요한 외부 통합이므로 이 로컬 검증에서는 수행하지 않았다.\n+\n+## 오류 응답 확인\n+\n+로컬 외부 경로에서 다음 응답을 확인했다.\n+\n+| 조건 | HTTP / code |\n+|---|---|\n+| 잘못된 이메일 형식 | 400 `INVALID_INPUT` |\n+| 존재하지 않는 이메일 인증 요청 확인 | 400 `EMAIL_VERIFICATION_NOT_FOUND` |\n+| 이메일 확인 전 회원가입 | 400 `EMAIL_VERIFICATION_REQUIRED` |\n+| CSRF 없는 로그인 | 403 `CSRF_TOKEN_INVALID` |\n+| 잘못된 로그인 정보 | 401 `INVALID_CREDENTIALS` |\n+| 세션 없는 현재 사용자 조회 | 401 `AUTHENTICATION_REQUIRED` |\n+\n+`DUPLICATE_EMAIL`, `DUPLICATE_PHONE`, `EMAIL_VERIFICATION_INVALID`,\n+`EMAIL_VERIFICATION_EXPIRED`, 예상하지 못한 500 sanitizing은 Backend 계약/서비스 테스트에서\n+검증됐다.\n+\n+## 확인된 차이\n+\n+`INVALID_INPUT`의 계약 예시는 일반 문구지만 Bean Validation의 실제 `message`는 실패한 필드와\n+검증 문구를 포함한다. 응답 구조와 안정된 분기 키인 `error.code`는 계약과 일치하며 FE도 메시지\n+문자열이 아니라 code로 분기한다. 따라서 구조적 불일치는 아니며, 오류 문구를 byte-for-byte 계약으로\n+간주하지 않는다.\n+\n+T058의 7개 operation과 성공·오류 계약 대조는 통과했다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/verification/contract.md",
+          "old_path": "specs/014-user-auth/verification/contract.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,34 @@\n+# Frontend Verification\n+\n+**실행일**: 2026-09-16  \n+**환경**: Node.js `v24.18.0`, npm `11.16.0`\n+\n+## 실행 결과\n+\n+| 명령 | 결과 | 세부 |\n+|---|---|---|\n+| `npm run lint` | PASS | 오류 0건, 경고 19건 |\n+| `npm run build` | PASS | TypeScript 검사와 Vite production build 완료 |\n+| `npm test` | PASS | Vitest 22 files / 136 tests, Node test 13 tests, 총 149 tests |\n+\n+테스트는 실패·취소·skip·todo가 모두 0건이다. Vitest JUnit 결과는\n+`frontend/build/test-results/vitest.xml`, Node test 결과는\n+`frontend/build/test-results/node-test.xml`에 생성됐다.\n+\n+## 경고 확인\n+\n+ESLint 경고 19건은 기존 차트 공통 코드의 Fast Refresh export 경고와 Hook dependency 경고다.\n+이번 인증 기능 파일에서는 lint 오류나 경고가 발생하지 않았다. 이 검증 묶음은 인증 기능의 결과를\n+기록하는 문서 작업이므로 차트 코드를 함께 수정하지 않는다.\n+\n+## 인증 범위 증거\n+\n+- 회원가입 입력 검증·중복 제출·이메일만 로그인 화면으로 전달: `SignupPage.test.tsx`\n+- 로그인 오류·중복 제출·내 기록 복귀: `LoginPage.test.tsx`\n+- 앱 시작 복원과 공개 경로 유지: `AuthProvider.test.tsx`, `App.auth.test.tsx`\n+- 보호 경로·내부 복귀 위치 검증: `ProtectedRoute.test.tsx`, `returnTarget.test.ts`\n+- 로그아웃 미확인·401 만료·탭/페이지 복원: `LogoutFlow.test.tsx`, `AuthRecovery.test.tsx`,\n+  `AuthRevalidation.test.tsx`\n+- 상태 알림·키보드 초점: `AuthAccessibility.test.tsx`\n+\n+T056의 lint, 단위/컴포넌트 테스트, production build 검증은 통과했다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/verification/frontend.md",
+          "old_path": "specs/014-user-auth/verification/frontend.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+# Authentication Integration Verification\n+\n+**실행일**: 2026-09-16  \n+**경로**: 브라우저 외부 경로 `http://127.0.0.1:5173/api` → Vite proxy → Backend\n+\n+## 사용자 흐름 결과\n+\n+| 흐름 | 증거 | 결과 |\n+|---|---|---|\n+| 회원가입 | 이메일 확인 완료 상태만 로컬 fixture로 준비한 뒤 `/api/accounts` 201, 정규화된 이메일과 `ACTIVE` 응답 확인 | PASS |\n+| 로그인 | 가입 계정으로 `/api/auth/sessions` 200 확인. 공백·대문자가 섞인 이메일도 같은 사용자로 로그인 | PASS |\n+| 상태 복원 | 새 `/api/auth/me` 요청이 동일 사용자로 200 반환 | PASS |\n+| 내 기록 보호·복귀 | `App.auth.test.tsx`, `ProtectedRoute.test.tsx`, `LoginPage.test.tsx`에서 비로그인 차단, 내부 하위 위치 1회 복귀, 외부 URL 거부 확인 | PASS |\n+| 세션 만료 | PostgreSQL 세션의 마지막 접근 시각을 만료 범위 밖으로 이동한 뒤 `/api/auth/me` 401 확인 | PASS |\n+| 로그아웃 | `/api/auth/sessions/current` 204 뒤 `/api/auth/me` 401 확인 | PASS |\n+| 연결 실패·로그아웃 미확인 | `AuthRecovery.test.tsx`, `LogoutFlow.test.tsx`에서 보호 정보 즉시 제거와 재시도/재확인 확인 | PASS |\n+| 탭 재활성화·페이지 캐시 복원 | `AuthRevalidation.test.tsx`, `AuthRecovery.test.tsx`에서 재확인과 공개 화면 유지 확인 | PASS |\n+\n+실제 이메일 발송 성공은 운영 SMTP 자격 증명이 없어 수행하지 않았다. 발송·확인 controller 204와\n+인증 lifecycle은 자동 테스트로 검증했고, 실제 가입 성공 흐름은 확인 완료 fixture부터 실행했다.\n+운영 배포 전 실제 SMTP 환경에서 전달·재발송·만료를 한 번 더 확인해야 한다.\n+\n+## 화면 증거\n+\n+- [데스크톱 로그인 1440×900](evidence/login-desktop-1440x900.png)\n+- [모바일 회원가입 360×800](evidence/signup-mobile-360x800.png)\n+\n+데스크톱 로그인 화면은 폼과 안내가 한 화면 안에 표시됐다. **360px 회원가입 화면은 큰 소개 문구가\n+오른쪽 viewport 밖으로 잘려 가로 방향 반응형 기준을 충족하지 못했다.** 인증 폼 자체는 세로 흐름으로\n+표시되지만 quickstart의 “360px 이상에서 가로 overflow 없이 흐름 완료”는 현재 PASS로 판정할 수 없다.\n+이 검증 문서 작업에서는 화면 CSS를 함께 수정하지 않고 별도 FE 수정 대상으로 남긴다.\n+\n+## 종합 판정\n+\n+인증 기능·세션·보호 경로의 자동 및 로컬 API 흐름은 통과했다. T059의 시나리오 실행과 증거 기록은\n+완료했지만, 360px 시각 검증과 실제 SMTP 전달 검증은 release 전 후속 조치가 필요하다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/verification/integration.md",
+          "old_path": "specs/014-user-auth/verification/integration.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,20 @@\n \n ## Summary\n \n-기존 Spring Boot의 회원가입·이메일 인증 기능을 보존하고, 누락된 로그인·현재 사용자 조회·로그아웃을 서버 관리 세션으로 추가한다. 인증 상태는 PostgreSQL-backed HTTP session과 `HttpOnly` 쿠키로 유지하며 SPA의 상태 변경 요청은 CSRF 토큰으로 보호한다. React는 공용 Axios 클라이언트와 단일 인증 Provider를 통해 `확인 중 / 로그인됨 / 비로그인 / 만료 / 확인 실패 / 로그아웃 미확인` 상태를 표현하고, `내 기록`만 보호한다. 실제 구현은 이후 FE·BE·통합 작업 묶음으로 나누며 이 PLAN은 문서만 생성한다.\n+기존 Spring Boot의 회원가입·이메일 인증 기능을 보존하고, 누락됐던 로그인·현재 사용자 조회·로그아웃을 서버 관리 세션으로 추가했다. 인증 상태는 PostgreSQL-backed HTTP session과 `HttpOnly` 쿠키로 유지하며 SPA의 상태 변경 요청은 CSRF 토큰으로 보호한다. React는 공용 Axios 클라이언트와 단일 인증 Provider를 통해 `확인 중 / 로그인됨 / 비로그인 / 만료 / 확인 실패 / 로그아웃 미확인` 상태를 표현하고, `내 기록`만 보호한다.\n+\n+## Implementation Status (2026-09-16)\n+\n+- T001~T055의 FE·BE 구현이 현재 소스 트리에 반영됐다.\n+- FE lint/build와 149개 테스트, BE Spotless/build와 1,272개 테스트를 실행했다. 인증 및 PostgreSQL\n+  테스트는 skip 없이 통과했다. 상세 결과는 [verification/frontend.md](verification/frontend.md)와\n+  [verification/backend.md](verification/backend.md)에 있다.\n+- 계약 7개 operation과 로컬 회원가입→로그인→복원→만료/로그아웃 흐름을 검증했다.\n+  [verification/contract.md](verification/contract.md),\n+  [verification/integration.md](verification/integration.md)를 기준 기록으로 사용한다.\n+- 확인된 편차는 두 가지다. 360px 회원가입 화면의 큰 소개 문구가 viewport 밖으로 잘리며, 실제 SMTP\n+  전달은 운영 자격 증명이 없어 자동 계약 테스트와 확인 완료 fixture 이후의 가입 흐름까지만 검증했다.\n+  둘 다 확인되지 않은 상태를 PASS로 표시하지 않고 release 전 후속 확인 대상으로 남긴다.\n \n ## Technical Context\n \n@@ -144,6 +157,8 @@ backend/\n - 반복 로그인·인증번호 발송의 횟수 제한, 관측 구간, 계정 잠금 여부는 현재 팀 정책과 Backend 구현에서 확인되지 않아 이 feature에서 임의의 수치로 정하지 않는다.\n - 운영 배포 전 별도 BE 보안 Task에서 정책·429 오류 계약·로그 및 지표를 합의한다. 014의 FE는 해당 정책이 추가되더라도 공통 오류 envelope를 사용자 조치 가능 안내로 표시할 수 있어야 한다.\n - 이메일 발송은 외부 SMTP 지연을 포함하므로 별도 pending 상태와 재시도 동작을 가진다.\n+- 2026-09-16 Phase 8 검증 시점에도 rate-limit 수치와 계정 잠금 정책은 구현 범위 밖이다. 별도\n+  `[BE] 인증 요청 남용 방지 정책 수립 및 적용` Jira Task에서 정책·429 계약·관측 기준을 확정해야 한다.\n \n ## Work Partition for Task Generation\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/plan.md",
+          "old_path": "specs/014-user-auth/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n # Quickstart: 사용자 인증 구현 검증\n \n-이 문서는 [plan.md](plan.md)와 [API contract](contracts/auth-api.yaml)를 구현한 뒤 FE·BE·통합 동작을 재현하는 검증 가이드다. 현재 PLAN 단계에서는 아래 명령을 실행하거나 구현 코드를 변경하지 않는다.\n+이 문서는 [plan.md](plan.md)와 [API contract](contracts/auth-api.yaml)를 구현한 뒤 FE·BE·통합 동작을 재현하는 검증 가이드다. 2026-09-16 실행 결과는 [verification/](verification/)에 기록했다.\n \n ## Prerequisites\n \n@@ -143,4 +143,15 @@ npm run dev\n - network failure·session expiry·CSRF 실패 검증 기록\n - 구현 완료, 사용성 확인, MR 병합을 서로 구분한 Jira/MR 기록\n \n+2026-09-16 기준 실행 기록:\n+\n+- [Frontend lint/test/build](verification/frontend.md)\n+- [Backend Spotless/PostgreSQL tests](verification/backend.md)\n+- [7개 API operation 계약 대조](verification/contract.md)\n+- [통합 흐름과 desktop/360px 화면 증거](verification/integration.md)\n+\n+현재 알려진 미완료 검증은 실제 SMTP 자격 증명을 사용한 메일 전달과 360px 회원가입 소개 문구의\n+가로 잘림 수정 후 재검증이다. 반복 로그인·인증번호 발송 제한과 계정 잠금 정책은 별도 보안 Task로\n+남아 있으며 014가 임의 수치를 정하지 않는다.\n+\n Task 완료는 constitution의 구현·테스트·리뷰·MR 병합·문서 수정 다섯 조건을 모두 충족해야 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/quickstart.md",
+          "old_path": "specs/014-user-auth/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -176,11 +176,11 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n **Purpose**: 전체 계약·회귀·문서 증거를 확인하고 MR 단위로 마무리한다.\n \n-- [ ] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`\n-- [ ] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`\n-- [ ] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`\n-- [ ] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`\n-- [ ] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`\n+- [x] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`\n+- [x] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`\n+- [x] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`\n+- [x] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`\n+- [x] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`\n \n ---\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2813192": []
+  }
+}

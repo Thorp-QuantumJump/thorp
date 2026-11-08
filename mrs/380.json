@@ -1,0 +1,519 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963470,
+    "iid": 380,
+    "project_id": 1444456,
+    "title": "refactor(be): 테스트 정리 - 분배금 원장에서 읽는 곳이 없는 unpaid 프로퍼티 삭제",
+    "description": "## 작업 내용 요약\n\n테스트 정리 뒤 운영 코드와 테스트 어디에서도 읽지 않게 된 `DistributionLedger.unpaid`를 지운다. 분배금 계산은 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- `DistributionLedger.unpaid` 프로퍼티를 지운다. 대기 자격 목록(`_pending`)은 권리락일 기록과 지급일 지급이 계속 쓰므로 그대로 둔다.\n\n## 테스트\n\n- `ruff check src tests scripts`, `ruff format --check src tests scripts`: 통과\n- `pytest`: 526건 통과(규칙 골든 테스트 포함)\n\n## 리뷰 포인트\n\n- `on_ex_date`의 반환값과 `Entitlement.ex_date`도 운영이 읽지 않지만, 이번 범위 밖이라 남겼다.",
+    "state": "merged",
+    "created_at": "2026-10-04T20:21:14.749+09:00",
+    "updated_at": "2026-10-04T20:23:56.463+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T20:21:32.402+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(be)/worker-orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14",
+    "merge_commit_sha": "057a34cd42a38f69295d5e4a1c1d01873bebcd13",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T20:21:15.988+09:00",
+    "reference": "!380",
+    "references": {
+      "short": "!380",
+      "relative": "!380",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!380"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/380",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963470,
+    "iid": 380,
+    "project_id": 1444456,
+    "title": "refactor(be): 테스트 정리 - 분배금 원장에서 읽는 곳이 없는 unpaid 프로퍼티 삭제",
+    "description": "## 작업 내용 요약\n\n테스트 정리 뒤 운영 코드와 테스트 어디에서도 읽지 않게 된 `DistributionLedger.unpaid`를 지운다. 분배금 계산은 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- `DistributionLedger.unpaid` 프로퍼티를 지운다. 대기 자격 목록(`_pending`)은 권리락일 기록과 지급일 지급이 계속 쓰므로 그대로 둔다.\n\n## 테스트\n\n- `ruff check src tests scripts`, `ruff format --check src tests scripts`: 통과\n- `pytest`: 526건 통과(규칙 골든 테스트 포함)\n\n## 리뷰 포인트\n\n- `on_ex_date`의 반환값과 `Entitlement.ex_date`도 운영이 읽지 않지만, 이번 범위 밖이라 남겼다.",
+    "state": "merged",
+    "created_at": "2026-10-04T20:21:14.749+09:00",
+    "updated_at": "2026-10-04T20:23:56.463+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T20:21:32.402+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(be)/worker-orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14",
+    "merge_commit_sha": "057a34cd42a38f69295d5e4a1c1d01873bebcd13",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T20:21:15.988+09:00",
+    "reference": "!380",
+    "references": {
+      "short": "!380",
+      "relative": "!380",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!380"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/380",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "head_sha": "fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14",
+      "start_sha": "b1cfb8aafcc2d1185410b9cac6b20e85809e103f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f3e06b330f137d9b3972ea733e401e9cc647c989",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881384,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:21:14.845+09:00",
+          "updated_at": "2026-10-04T20:21:14.850+09:00",
+          "system": true,
+          "noteable_id": 963470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 380,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "aa92bceace5cef4330465f6e56e2f0d8f9d765d3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881385,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:21:14.901+09:00",
+          "updated_at": "2026-10-04T20:21:14.944+09:00",
+          "system": true,
+          "noteable_id": 963470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 380,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2f1d274f7580d99c831e523d380d17b104aeee0b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881386,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `DistributionLedger` 클래스에서 사용되지 않는 `unpaid` 프로퍼티를 깔끔하게 제거하여 불필요한 코드와 혼동을 줄였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `DistributionLedger`를 사용하는 기존 단위 테스트 및 통합 테스트(예: 분배금 계산 및 지급 로직 관련 테스트)가 `unpaid` 프로퍼티 제거 후에도 정상적으로 통과하는지 확인하세요.\n- `_pending` 프로퍼티 및 권리락일/지급일 관련 로직이 의도대로 정확히 동작하는지 기존 테스트 스위트(`pytest`)를 통해 검증하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T20:21:21.844+09:00",
+          "updated_at": "2026-10-04T20:21:21.844+09:00",
+          "system": false,
+          "noteable_id": 963470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 380,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "812f3bcea893a34c444bc4c508266e8d4d0829a4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881387,
+          "type": null,
+          "body": "mentioned in commit 057a34cd42a38f69295d5e4a1c1d01873bebcd13",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:21:32.557+09:00",
+          "updated_at": "2026-10-04T20:21:32.590+09:00",
+          "system": true,
+          "noteable_id": 963470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 380,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7aa93c3e616c7c9d2a39ddb96736cd40a1ed0cce",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881388,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">refactor(be): 분배금 원장에서 읽는 곳이 없는 unpaid 프로퍼티<span class=\"idiff left right deletion\">를 지운다</span></code> to <code class=\"idiff\">refactor(be): <span class=\"idiff left addition\">테스트 정리 - </span>분배금 원장에서 읽는 곳이 없는 unpaid 프로퍼티<span class=\"idiff right addition\"> 삭제</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:23:56.546+09:00",
+          "updated_at": "2026-10-04T20:23:56.551+09:00",
+          "system": true,
+          "noteable_id": 963470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 380,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262328,
+      "head_commit_sha": "fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "b1cfb8aafcc2d1185410b9cac6b20e85809e103f",
+      "created_at": "2026-10-04T20:21:15.336+09:00",
+      "merge_request_id": 963470,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "f862510eb12740c87b3eb2f3bd62e7407a1f9ee1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262328,
+      "head_commit_sha": "fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "b1cfb8aafcc2d1185410b9cac6b20e85809e103f",
+      "created_at": "2026-10-04T20:21:15.336+09:00",
+      "merge_request_id": 963470,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "f862510eb12740c87b3eb2f3bd62e7407a1f9ee1",
+      "commits": [
+        {
+          "id": "fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14",
+          "short_id": "fe2fecd9",
+          "created_at": "2026-10-04T18:45:11.000+09:00",
+          "parent_ids": [
+            "e88aedab374ff7590d552cdc9c0f9a65072d0818"
+          ],
+          "title": "refactor(be): 분배금 원장에서 읽는 곳이 없는 unpaid 프로퍼티를 지운다",
+          "message": "refactor(be): 분배금 원장에서 읽는 곳이 없는 unpaid 프로퍼티를 지운다\n\nDistributionLedger.unpaid는 원장 수준 테스트가 지워진 뒤 운영 코드와 테스트 어디서도\n읽지 않는다. 대기 자격 목록(_pending)은 권리락일 기록과 지급일 지급이 계속 쓰므로 그대로 두어\n분배금 계산 결과는 바뀌지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:45:11.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:45:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fe2fecd9f0e6f6be17fb0c4ad563b8ff2a331d14"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -90,11 +90,6 @@ class DistributionLedger:\n             for item in due\n         ]\n \n-    @property\n-    def unpaid(self) -> list[Entitlement]:\n-        \"\"\"아직 지급일이 오지 않은 자격. 실행이 끝나면 그대로 버려진다.\"\"\"\n-        return list(self._pending)\n-\n \n @dataclass(frozen=True)\n class SplitOutcome:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/corporate_actions.py",
+          "old_path": "worker/src/worker/corporate_actions.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881386": []
+  }
+}

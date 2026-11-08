@@ -1,9 +1,0 @@
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "ASSISTANT_LIMIT",
-    "message": "질문 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.",
-    "details": { "retryAfterSeconds": 42 }
-  }
-}

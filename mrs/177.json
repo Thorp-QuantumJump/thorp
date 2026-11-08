@@ -1,0 +1,1283 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948323,
+    "iid": 177,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세",
+    "description": "# 작업 내용 요약\n\n경제 전체를 하나의 판정으로 요약하던 `/home` 목업 화면을 걷어내고, spec 009가 요구하는 시장 흐름 화면을 세웠다. 7개 분야 요약을 먼저 보이고, 분야를 열면 지표의 실제 값·단위· 최근 3개월 경로·대상월·출처를 그대로 보여 준다. WB02가 dev에 올린 조회 API를 그대로 쓴다.\n\n![image.png](/uploads/36405ef9ef77b9660c24141be2d62f99/image.png){width=900 height=457}\n\n# 관련 티켓\n\n- ticket # S15P21E205-314\n- link https://ssafy.atlassian.net/browse/S15P21E205-314\n\n# 주요 변경 사항\n\n- **라우트**: `/market-flow` 신설, `/home`은 `<Navigate replace>`로 영구 리다이렉트. 외부에 이미 퍼진 `/home` 링크를 깨지 않으려고 리다이렉트를 함께 넣었다. 메뉴 링크 네 곳(`LandingHeader`, `AppHeader`, `MyRecordsEntryPage`, `MarketStatusSummary`)을 새 경로로 옮겼다.\n- **화면**: `MarketFlowPage` + `FieldSummaryCard` / `FieldDetail` / `DataStateNotice` / `ThreeMonthChart`. 요약 카드에 점수·등급·신호등을 두지 않았고, 좋고 나쁨을 뜻하는 색도 쓰지 않았다(FR-003, SC-002). `T_g` 이후 발표는 지표 행 아래 한 줄로 분리해, 3개월 경로 3칸 안에 섞이지 않게 했다(FR-008).\n- **상태 표시**: `EXAMPLE`·`EMPTY`·`COLLECTION_FAILED`를 오류 화면이 아니라 자료 상태로 그린다(FR-014). '실시간'·'현재'·'지연' 표현을 쓰지 않고 대상월과 마지막 갱신 시각을 항상 함께 보인다(FR-011).\n- **삭제**: `HomePage`, `MarketRegimeHero`, `SimilarMarketPanel`과 이 둘에서만 닿던 `MarketOverviewCarousel`·`MarketRegimeChart`. `MarketRegimeHero`가 띄우던 \"지금은 조심하되, 완전히 나쁜 시장은 아닙니다.\"가 남아 있으면 SC-002를 통과할 수 없다.\n- **테스트 수집**: `vite.config.ts`의 `include`에 `src/api/*.test.ts`를 넣고, 개별 파일 나열 네 줄을 지웠다. 이 glob이 `node:test` 전용인 `src/api/market.test.ts`까지 잡아서 `exclude`를 함께 뒀다. 수집 가드가 한 폴더 glob(`dir/*.ext`)을 해석하도록 넓혔다.\n\n# 테스트\n\n- [x] `npm run lint` — error 0 (warning 19건은 전부 이번 diff 밖의 기존 파일)\n- [x] `npm run build` — 통과\n- [x] `npm test` — 51파일 / 469개 통과, **skipped 0**\n- [x] AI 코드리뷰 1회 — 블로킹 버그 없음, 아래 리뷰 포인트로 옮김\n\n# 리뷰 포인트\n\n1. **`marketFlow.ts:105`의 `historicalComparisonNotice` 검사가 계약보다 엄격하다.** 계약의 `required`에 이 필드가 없는데 파서는 `string`을 요구해서, 계약대로 `null`이 오면 7개 분야 파싱 전체가 실패한다. 지금은 백엔드가 상수로 항상 채워 보내서( `MarketFlowFieldsResponse.HISTORICAL_COMPARISON_NOTICE`) 터지지 않는다. **파서를 푸는 것보다 계약의 `required`에 넣는 게 맞다고 본다** — FR-012가 이 문구를 항상 보이라고 요구하니 사실상 필수 필드다. 계약을 고치는 게 맞는지 봐 달라.\n2. **`testCollection.guard.test.tsx`가 `exclude`를 읽지 않는다.** glob 도입으로 `src/api/market.test.ts`가 가드에는 \"수집됨\"으로 보이지만 실제로는 `exclude` 대상이다. 지금은 `test:legacy`가 돌려서 맞아떨어지는데, 거기서 빠지면 아무도 안 돌리는 파일을 가드가 통과시킨다. 이번 MR에서 `exclude`까지 읽게 할지, 별도로 뺄지 의견 달라.\n3. `MarketStatusSummary`는 링크만 새 경로로 바꿨다. 이 컴포넌트가 아직 목업 전체 판정을 그리고 있어 \"자세히 보기\"가 국면 설명 없는 화면으로 가지만, **대시보드는 003·005 소유라 009에서 건드리지 않았다.** 이 처리가 맞는지 확인 부탁한다.\n4. `MarketFlowPage.tsx:30`이 첫 분야를 자동으로 연다. 기본 화면에서도 상세가 한 벌 보이는 편이 낫다고 판단했는데, FR-005의 \"기본 화면은 분야 열기\"와 어긋나 보이면 말해 달라.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 분야는 `displayOrder`로 정렬만 하고 순위를 뜻하지 않는다. \"1위\"·\"추천\"·\"최적\" 문구와 우승 배지 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 이 MR은 전략을 다루지 않는다. `strategyId` 등장 0회\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 결측 지표값은 `null`로 두고, `ThreeMonthChart`는 `null` 지점에서 선을 끊는다(0으로 잇지 않는다). `narrative`가 없으면 빈 문장 대신 자료 상태를 보인다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 예시 자료는 `EXAMPLE`로 표시하고 `READY`로 섞지 않는다(FR-014)",
+    "state": "merged",
+    "created_at": "2026-09-17T11:37:47.543+09:00",
+    "updated_at": "2026-09-17T13:50:10.607+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-17T12:19:36.566+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/314-market-flow-overview",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "27d734a30034699213c080550f03416a436e68f0",
+    "merge_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T11:37:50.087+09:00",
+    "reference": "!177",
+    "references": {
+      "short": "!177",
+      "relative": "!177",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!177"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/177",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948323,
+    "iid": 177,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세",
+    "description": "# 작업 내용 요약\n\n경제 전체를 하나의 판정으로 요약하던 `/home` 목업 화면을 걷어내고, spec 009가 요구하는 시장 흐름 화면을 세웠다. 7개 분야 요약을 먼저 보이고, 분야를 열면 지표의 실제 값·단위· 최근 3개월 경로·대상월·출처를 그대로 보여 준다. WB02가 dev에 올린 조회 API를 그대로 쓴다.\n\n![image.png](/uploads/36405ef9ef77b9660c24141be2d62f99/image.png){width=900 height=457}\n\n# 관련 티켓\n\n- ticket # S15P21E205-314\n- link https://ssafy.atlassian.net/browse/S15P21E205-314\n\n# 주요 변경 사항\n\n- **라우트**: `/market-flow` 신설, `/home`은 `<Navigate replace>`로 영구 리다이렉트. 외부에 이미 퍼진 `/home` 링크를 깨지 않으려고 리다이렉트를 함께 넣었다. 메뉴 링크 네 곳(`LandingHeader`, `AppHeader`, `MyRecordsEntryPage`, `MarketStatusSummary`)을 새 경로로 옮겼다.\n- **화면**: `MarketFlowPage` + `FieldSummaryCard` / `FieldDetail` / `DataStateNotice` / `ThreeMonthChart`. 요약 카드에 점수·등급·신호등을 두지 않았고, 좋고 나쁨을 뜻하는 색도 쓰지 않았다(FR-003, SC-002). `T_g` 이후 발표는 지표 행 아래 한 줄로 분리해, 3개월 경로 3칸 안에 섞이지 않게 했다(FR-008).\n- **상태 표시**: `EXAMPLE`·`EMPTY`·`COLLECTION_FAILED`를 오류 화면이 아니라 자료 상태로 그린다(FR-014). '실시간'·'현재'·'지연' 표현을 쓰지 않고 대상월과 마지막 갱신 시각을 항상 함께 보인다(FR-011).\n- **삭제**: `HomePage`, `MarketRegimeHero`, `SimilarMarketPanel`과 이 둘에서만 닿던 `MarketOverviewCarousel`·`MarketRegimeChart`. `MarketRegimeHero`가 띄우던 \"지금은 조심하되, 완전히 나쁜 시장은 아닙니다.\"가 남아 있으면 SC-002를 통과할 수 없다.\n- **테스트 수집**: `vite.config.ts`의 `include`에 `src/api/*.test.ts`를 넣고, 개별 파일 나열 네 줄을 지웠다. 이 glob이 `node:test` 전용인 `src/api/market.test.ts`까지 잡아서 `exclude`를 함께 뒀다. 수집 가드가 한 폴더 glob(`dir/*.ext`)을 해석하도록 넓혔다.\n\n# 테스트\n\n- [x] `npm run lint` — error 0 (warning 19건은 전부 이번 diff 밖의 기존 파일)\n- [x] `npm run build` — 통과\n- [x] `npm test` — 51파일 / 469개 통과, **skipped 0**\n- [x] AI 코드리뷰 1회 — 블로킹 버그 없음, 아래 리뷰 포인트로 옮김\n\n# 리뷰 포인트\n\n1. **`marketFlow.ts:105`의 `historicalComparisonNotice` 검사가 계약보다 엄격하다.** 계약의 `required`에 이 필드가 없는데 파서는 `string`을 요구해서, 계약대로 `null`이 오면 7개 분야 파싱 전체가 실패한다. 지금은 백엔드가 상수로 항상 채워 보내서( `MarketFlowFieldsResponse.HISTORICAL_COMPARISON_NOTICE`) 터지지 않는다. **파서를 푸는 것보다 계약의 `required`에 넣는 게 맞다고 본다** — FR-012가 이 문구를 항상 보이라고 요구하니 사실상 필수 필드다. 계약을 고치는 게 맞는지 봐 달라.\n2. **`testCollection.guard.test.tsx`가 `exclude`를 읽지 않는다.** glob 도입으로 `src/api/market.test.ts`가 가드에는 \"수집됨\"으로 보이지만 실제로는 `exclude` 대상이다. 지금은 `test:legacy`가 돌려서 맞아떨어지는데, 거기서 빠지면 아무도 안 돌리는 파일을 가드가 통과시킨다. 이번 MR에서 `exclude`까지 읽게 할지, 별도로 뺄지 의견 달라.\n3. `MarketStatusSummary`는 링크만 새 경로로 바꿨다. 이 컴포넌트가 아직 목업 전체 판정을 그리고 있어 \"자세히 보기\"가 국면 설명 없는 화면으로 가지만, **대시보드는 003·005 소유라 009에서 건드리지 않았다.** 이 처리가 맞는지 확인 부탁한다.\n4. `MarketFlowPage.tsx:30`이 첫 분야를 자동으로 연다. 기본 화면에서도 상세가 한 벌 보이는 편이 낫다고 판단했는데, FR-005의 \"기본 화면은 분야 열기\"와 어긋나 보이면 말해 달라.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 분야는 `displayOrder`로 정렬만 하고 순위를 뜻하지 않는다. \"1위\"·\"추천\"·\"최적\" 문구와 우승 배지 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 이 MR은 전략을 다루지 않는다. `strategyId` 등장 0회\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 결측 지표값은 `null`로 두고, `ThreeMonthChart`는 `null` 지점에서 선을 끊는다(0으로 잇지 않는다). `narrative`가 없으면 빈 문장 대신 자료 상태를 보인다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 예시 자료는 `EXAMPLE`로 표시하고 `READY`로 섞지 않는다(FR-014)",
+    "state": "merged",
+    "created_at": "2026-09-17T11:37:47.543+09:00",
+    "updated_at": "2026-09-17T13:50:10.607+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-17T12:19:36.566+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/314-market-flow-overview",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "27d734a30034699213c080550f03416a436e68f0",
+    "merge_commit_sha": "33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T11:37:50.087+09:00",
+    "reference": "!177",
+    "references": {
+      "short": "!177",
+      "relative": "!177",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!177"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/177",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "37",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "6b02652adc87de06b6c710c192f913067d71a77d",
+      "head_sha": "27d734a30034699213c080550f03416a436e68f0",
+      "start_sha": "b7165f63ea592d61c316ccabb779ceb8ca5fda4c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "28550f16b27327424b38d76a1ba3f0a766c12cf7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822806,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-17T11:37:47.688+09:00",
+          "updated_at": "2026-09-17T11:37:47.694+09:00",
+          "system": true,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "268d5d7a7b72c28f7618cc0330570111a9f770bd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822808,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **네트워크 오류 시나리오**: `fetchMarketFlowFields` 또는 `fetchMarketFlowField` API 호출 실패 시 `MarketFlowPage`에서 재시도 버튼이 올바르게 동작하는지 확인합니다.\n2. **키보드 접근성 시나리오**: `MarketFlowPage`의 분야 목록에서 화살표 키(`ArrowDown`, `ArrowUp`, `Home`, `End`)를 이용해 포커스와 상세 데이터가 정상적으로 연동되어 전환되는지 확인합니다.\n3. **결측치 및 3개월 경로 시나리오**: `ThreeMonthChart`에서 `value`가 `null`인 데이터 포인트가 포함되어 있을 때, 선 그래프가 결측 구간에서 단절되고 `null` 값이 0으로 강제 변환되지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:27d734a30034699213c080550f03416a436e68f0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T11:37:53.917+09:00",
+          "updated_at": "2026-09-17T12:16:00.768+09:00",
+          "system": false,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "38163a9e9dc7414f96a9e83a3ed0551e0a498eef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822911,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>b0fd2190 - test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/177/diffs?diff_id=2211528&start_sha=7eb5ae943ecc4defdcabd35bdde83c7ed3200144)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-17T11:54:37.465+09:00",
+          "updated_at": "2026-09-17T11:54:37.470+09:00",
+          "system": true,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3022581964ad37c458c47ec32293d4b793fe43be",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822999,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>59e5c258 - fix(fe): 역사 비교 안내 계약 동기화와 수집 가드의 exclude 반영</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/177/diffs?diff_id=2211608&start_sha=b0fd21900f146e153d52ba302ad550a125158ecb)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-17T12:04:48.359+09:00",
+          "updated_at": "2026-09-17T12:04:48.362+09:00",
+          "system": true,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "578b52855570b4af94eebe49c203505f3db8d52b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2823106,
+          "type": null,
+          "body": "added 47 commits\n\n<ul><li>59e5c258...6b02652a - 46 commits from branch <code>dev</code></li><li>27d734a3 - Merge branch &#39;dev&#39; into feat(fe)/314-market-flow-overview</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/177/diffs?diff_id=2211712&start_sha=59e5c258ad444544d04aca43eb9fffa0bf5b0433)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-17T12:15:53.417+09:00",
+          "updated_at": "2026-09-17T12:15:53.421+09:00",
+          "system": true,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6e0a54e848f26e1c6bc8e769d9ffc0e9169efafa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2823153,
+          "type": null,
+          "body": "mentioned in commit 33fb8547d755582e5a3e2ded5ce72dd846d446fc",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-17T12:19:36.807+09:00",
+          "updated_at": "2026-09-17T12:19:36.816+09:00",
+          "system": true,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2b6f8a0224b7d2509721de8868bd5409d90f7472",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2823928,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T13:30:04.295+09:00",
+          "updated_at": "2026-09-17T13:30:04.295+09:00",
+          "system": false,
+          "noteable_id": 948323,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 177,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2211712,
+      "head_commit_sha": "27d734a30034699213c080550f03416a436e68f0",
+      "base_commit_sha": "6b02652adc87de06b6c710c192f913067d71a77d",
+      "start_commit_sha": "b7165f63ea592d61c316ccabb779ceb8ca5fda4c",
+      "created_at": "2026-09-17T12:15:53.011+09:00",
+      "merge_request_id": 948323,
+      "state": "collected",
+      "real_size": "37",
+      "patch_id_sha": "bd2583bc48d43326e99d8a0c3add0d4557d1c537"
+    },
+    {
+      "id": 2211608,
+      "head_commit_sha": "59e5c258ad444544d04aca43eb9fffa0bf5b0433",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "de9a2905824dd990d792ea1f3856e2f1d9317f78",
+      "created_at": "2026-09-17T12:04:48.112+09:00",
+      "merge_request_id": 948323,
+      "state": "without_files",
+      "real_size": "37",
+      "patch_id_sha": "297920edf899a58c33b26eb8e62a874bffa23d34"
+    },
+    {
+      "id": 2211528,
+      "head_commit_sha": "b0fd21900f146e153d52ba302ad550a125158ecb",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "bdfc93407a3dc62260ec666f643d1afe743e2e60",
+      "created_at": "2026-09-17T11:54:37.213+09:00",
+      "merge_request_id": 948323,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "fc4a1a3d4ee5ee209bf93c77b1b6b3d02960edd9"
+    },
+    {
+      "id": 2211415,
+      "head_commit_sha": "7eb5ae943ecc4defdcabd35bdde83c7ed3200144",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "created_at": "2026-09-17T11:37:48.050+09:00",
+      "merge_request_id": 948323,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "efe7703ab1b74cbd97e60c196c70cc660aa047f1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2211712,
+      "head_commit_sha": "27d734a30034699213c080550f03416a436e68f0",
+      "base_commit_sha": "6b02652adc87de06b6c710c192f913067d71a77d",
+      "start_commit_sha": "b7165f63ea592d61c316ccabb779ceb8ca5fda4c",
+      "created_at": "2026-09-17T12:15:53.011+09:00",
+      "merge_request_id": 948323,
+      "state": "collected",
+      "real_size": "37",
+      "patch_id_sha": "bd2583bc48d43326e99d8a0c3add0d4557d1c537",
+      "commits": [
+        {
+          "id": "27d734a30034699213c080550f03416a436e68f0",
+          "short_id": "27d734a3",
+          "created_at": "2026-09-17T12:15:46.000+09:00",
+          "parent_ids": [
+            "59e5c258ad444544d04aca43eb9fffa0bf5b0433",
+            "6b02652adc87de06b6c710c192f913067d71a77d"
+          ],
+          "title": "Merge branch 'dev' into feat(fe)/314-market-flow-overview",
+          "message": "Merge branch 'dev' into feat(fe)/314-market-flow-overview\n\nfrontend/vite.config.ts의 test.include 한 곳이 충돌했다. dev는 개별 항목으로\n'src/utils/analysisPeriod.test.ts'를 더했고, 이 브랜치는 개별 'src/api/*' 네 줄을\nglob으로 묶으면서 exclude를 더했다. 둘은 다른 목적이라 양쪽을 모두 남겼다.\n\ndev의 항목을 빼면 수집 가드가 analysisPeriod.test.ts를 잡아내 실패한다.\n어느 쪽도 버리지 않은 것이 맞는지 그렇게 확인했다.\n\nfrontend: lint 0 errors, build 통과, 59파일 601개 통과(skipped 0)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T12:15:46.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T12:15:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/27d734a30034699213c080550f03416a436e68f0"
+        },
+        {
+          "id": "59e5c258ad444544d04aca43eb9fffa0bf5b0433",
+          "short_id": "59e5c258",
+          "created_at": "2026-09-17T12:04:44.000+09:00",
+          "parent_ids": [
+            "b0fd21900f146e153d52ba302ad550a125158ecb"
+          ],
+          "title": "fix(fe): 역사 비교 안내 계약 동기화와 수집 가드의 exclude 반영",
+          "message": "fix(fe): 역사 비교 안내 계약 동기화와 수집 가드의 exclude 반영\n\nMR AI 코드리뷰 High/Medium 두 건 반영.\n\n[High] historicalComparisonNotice 계약 동기화\n계약의 required에 이 필드를 넣어 파서·백엔드와 말을 맞춘다. 파서를 느슨하게 푸는\n대신 계약을 고친 까닭은, 같은 성격의 안내 문구인 multipleReferenceMonthNotice가\n이미 FieldDetailResult의 required에 있고 백엔드도 두 문구를 똑같이 상수로 채우기\n때문이다(MarketFlowFieldsResponse.HISTORICAL_COMPARISON_NOTICE). 목록 쪽 required\n누락은 계약의 실수였다. FR-012가 역사 비교에 이 문구를 함께 두라고 요구하므로,\n문구 없이 분야 자료만 그리는 것은 보여서는 안 되는 상태다. 파서에 그 판단 근거를\n주석으로 남기고, 키 누락·null 두 경우를 막는 테스트를 더했다.\n\n[Medium] 수집 가드가 test.exclude를 읽는다\ninclude에 걸려도 exclude가 도로 빼면 Vitest는 그 파일을 돌리지 않는데, 가드가\ninclude만 봐서 '수집됨'으로 오인하고 있었다. test:legacy에서 market.test.ts가\n빠지면 아무도 돌리지 않는 파일을 통과시키는 상태였다. exclude를 읽어 빼도록 고치고,\n그 상황을 직접 못 박는 테스트를 더했다. 실제로 test:legacy 인자에서 빼 보면\n가드가 실패하는 것을 확인했다.\n\nexclude는 설정 모듈을 가져오지 않고 텍스트로 읽는다. jsdom 워커에서\nvitest/config를 가져오면 esbuild가 TextEncoder invariant로 죽어 가드 자신이\n실행되지 않고, 텍스트 해석이 오히려 사람이 적은 패턴만 남겨 정확하다.\n\nfrontend: lint 0 errors, build 통과, 51파일 495개 통과(skipped 0)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T12:04:44.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T12:04:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/59e5c258ad444544d04aca43eb9fffa0bf5b0433"
+        },
+        {
+          "id": "b0fd21900f146e153d52ba302ad550a125158ecb",
+          "short_id": "b0fd2190",
+          "created_at": "2026-09-17T11:54:31.000+09:00",
+          "parent_ids": [
+            "7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+          ],
+          "title": "test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강",
+          "message": "test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강\n\nMR AI 코드리뷰 지적 세 건 반영. 프로덕션 코드는 바꾸지 않았다.\n\n- 파서: 봉투 단계(httpStatus·isSuccess·code·message·result 부재)와 result 검증\n  단계를 나눠 확인한다. 모르는 fieldId, 타입에 없는 STALE, 3칸이 아닌 경로도\n  막는지 본다. 파서 오류는 normalizeApiError가 ApiClientError로 감싸 원래 문장이\n  cause에만 남으므로 거기까지 확인하고, 프로미스가 성공하면 명시적으로 실패시킨다\n- 리다이렉트: 화면 전환만이 아니라 주소가 /market-flow로 바뀌는지와, 뒤로 가기가\n  /home으로 되돌아오지 않는지를 본다. replace를 빼면 두 번째 테스트가 실패한다\n- 키보드: ArrowDown·ArrowUp·Home·End가 포커스와 분야 선택을 함께 옮기는지,\n  양 끝에서 순환하는지, Tab·Enter·ArrowLeft를 가로채지 않는지 본다\n\nfrontend: lint 0 errors, build 통과, 51파일 492개 통과(skipped 0)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:54:31.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:54:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b0fd21900f146e153d52ba302ad550a125158ecb"
+        },
+        {
+          "id": "7eb5ae943ecc4defdcabd35bdde83c7ed3200144",
+          "short_id": "7eb5ae94",
+          "created_at": "2026-09-17T11:15:19.000+09:00",
+          "parent_ids": [
+            "7818ed1359fde428f95ee043ee9a8133857ac3fa"
+          ],
+          "title": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세",
+          "message": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세\n\nspec 009 WB03(T015~T023).\n\n- `/market-flow` 라우트를 세우고 `/home`은 영구 리다이렉트로 남긴다\n- 7개 분야 요약 카드와 분야 상세(지표 값·단위·3개월 경로·대상월·출처)를 그린다\n- EXAMPLE·EMPTY·COLLECTION_FAILED를 오류가 아닌 자료 상태로 표시한다\n- 경제 전체를 점수·등급으로 요약하던 목업(HomePage·MarketRegimeHero·\n  SimilarMarketPanel과 그 하위 차트)을 지운다\n- vitest 수집 목록에 `src/api/*.test.ts`·`src/marketflow/**/*.test.ts`를 더하고,\n  수집 가드가 한 폴더 glob을 해석하게 넓힌다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:15:19.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:15:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,210 @@\n+import { AxiosHeaders, type AxiosResponse } from 'axios'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import type { FieldStatus, FieldSummary, MarketFlowFieldId } from '@/types/marketFlow'\n+import { ApiClientError, apiClient } from './client'\n+import { fetchMarketFlowField, fetchMarketFlowFields } from './marketFlow'\n+\n+function response<T>(data: T): AxiosResponse<T> {\n+  return { data, status: 200, statusText: 'OK', headers: {}, config: { headers: new AxiosHeaders() } }\n+}\n+\n+/** 계약을 지키는 목록 응답. 각 검증 테스트는 여기서 한 군데만 망가뜨린다. */\n+function validSummaryBody() {\n+  return {\n+    httpStatus: 'OK',\n+    isSuccess: true,\n+    message: 'ok',\n+    code: 200,\n+    result: {\n+      registryVersion: 'registry-v1',\n+      datasetVersion: 'dataset-v1',\n+      narrativeRuleVersion: 'narrative-v1',\n+      historicalComparisonNotice: '개정자료 안내',\n+      fields: [field('production', 'READY')],\n+    },\n+  }\n+}\n+\n+/**\n+ * 파서가 던진 Error는 `normalizeApiError`가 `ApiClientError('unexpected')`로 감싼다.\n+ * 원래 문장은 `cause`에만 남으므로, 삼킨 게 아니라 감싼 것인지 거기까지 확인한다.\n+ */\n+async function expectRejectedByParser(promise: Promise<unknown>, parserMessage: string) {\n+  const caught: unknown = await promise.then(\n+    () => {\n+      throw new Error('파서가 막지 않고 값을 돌려주었다.')\n+    },\n+    (error: unknown) => error,\n+  )\n+\n+  expect(caught).toBeInstanceOf(ApiClientError)\n+  const error = caught as ApiClientError\n+  expect(error.kind).toBe('unexpected')\n+  expect((error.cause as Error).message).toBe(parserMessage)\n+}\n+\n+function field(fieldId: MarketFlowFieldId, status: FieldStatus): FieldSummary {\n+  return {\n+    fieldId,\n+    displayName: fieldId,\n+    displayOrder: 1,\n+    status,\n+    narrative: status === 'READY' ? '생산 증가율이 낮아졌습니다.' : null,\n+    narrativeSubjects: [],\n+    referenceMonth: '2026-07',\n+    referenceMonthHeldBackBy: [],\n+    lastUpdatedAt: '2026-09-15T21:10:00Z',\n+    isExampleData: status === 'EXAMPLE',\n+  }\n+}\n+\n+describe('시장 흐름 API', () => {\n+  beforeEach(() => vi.restoreAllMocks())\n+\n+  it('네 가지 자료 상태를 모두 정상 목록으로 읽는다', async () => {\n+    const fields = [\n+      field('production', 'READY'),\n+      field('consumption_investment', 'EXAMPLE'),\n+      field('external_trade', 'EMPTY'),\n+      field('labor', 'COLLECTION_FAILED'),\n+    ]\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      response({\n+        httpStatus: 'OK', isSuccess: true, message: 'ok', code: 200,\n+        result: {\n+          registryVersion: 'registry-v1', datasetVersion: 'dataset-v1',\n+          narrativeRuleVersion: 'narrative-v1', historicalComparisonNotice: '개정자료 안내', fields,\n+        },\n+      }),\n+    )\n+\n+    await expect(fetchMarketFlowFields()).resolves.toMatchObject({ fields })\n+    expect(apiClient.get).toHaveBeenCalledWith('/market-flow/fields', { signal: undefined })\n+  })\n+\n+  it('분야 상세 경로를 인코딩해 공용 클라이언트로 조회한다', async () => {\n+    const summary = field('labor', 'READY')\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      response({\n+        httpStatus: 'OK', isSuccess: true, message: 'ok', code: 200,\n+        result: {\n+          ...summary,\n+          multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.',\n+          indicators: [{\n+            indicatorId: 'employment', name: '취업자 수', unit: '%', value: 0.7,\n+            path: [\n+              { month: '2026-06', value: 1.4 }, { month: '2026-07', value: 1.0 },\n+              { month: '2026-08', value: 0.7 },\n+            ],\n+            referenceMonth: '2026-08', releaseDate: '2026-09-10',\n+            source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: null,\n+          }],\n+        },\n+      }),\n+    )\n+\n+    await expect(fetchMarketFlowField('labor')).resolves.toMatchObject({ fieldId: 'labor' })\n+    expect(apiClient.get).toHaveBeenCalledWith('/market-flow/fields/labor', { signal: undefined })\n+  })\n+\n+  const ENVELOPE_MESSAGE = '시장 흐름 API 응답 형식이 계약과 다릅니다.'\n+  const SUMMARY_MESSAGE = '시장 흐름 분야 목록을 읽을 수 없습니다.'\n+\n+  // 성공 봉투가 아닌 응답은 result를 읽기 전에 막는다. 여기서 통과시키면\n+  // 실패 응답의 result가 화면까지 흘러가 빈 값이 정상 자료처럼 보인다.\n+  it.each([\n+    ['httpStatus가 OK가 아니면', { httpStatus: 'BAD_REQUEST' }],\n+    ['isSuccess가 false면', { isSuccess: false }],\n+    ['code가 200이 아니면', { code: 500 }],\n+    ['message가 문자열이 아니면', { message: null }],\n+  ])('%s 봉투 단계에서 막는다', async (_label, broken) => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(response({ ...validSummaryBody(), ...broken }))\n+\n+    await expectRejectedByParser(fetchMarketFlowFields(), ENVELOPE_MESSAGE)\n+  })\n+\n+  it.each([\n+    ['응답이 객체가 아니면', 'unexpected string'],\n+    ['봉투가 비어 있으면', null],\n+    ['result 키가 아예 없으면', { httpStatus: 'OK', isSuccess: true, message: 'ok', code: 200 }],\n+  ])('%s 봉투 단계에서 막는다', async (_label, body) => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(response(body))\n+\n+    await expectRejectedByParser(fetchMarketFlowFields(), ENVELOPE_MESSAGE)\n+  })\n+\n+  // 봉투는 멀쩡한데 result가 계약과 다른 경우다. 타입 단언만 있고 검사가 없으면\n+  // 여기서 통과해 화면이 undefined를 렌더하다 죽는다.\n+  // FR-012는 역사 비교를 보일 때 안내 문구를 함께 두라고 요구한다. 문구 없이 분야 자료만\n+  // 그리는 편이 낫다고 판단해 파서를 느슨하게 풀면 이 두 테스트가 막는다.\n+  // 계약도 이 필드를 required로 두고, 백엔드도 상수로 항상 채운다.\n+  it.each([\n+    ['키가 없으면', { historicalComparisonNotice: undefined }],\n+    ['null로 오면', { historicalComparisonNotice: null }],\n+  ])('역사 비교 안내 문구가 %s 목록 전체를 막는다', async (_label, brokenResult) => {\n+    const body = validSummaryBody()\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      response({ ...body, result: { ...body.result, ...brokenResult } }),\n+    )\n+\n+    await expectRejectedByParser(fetchMarketFlowFields(), SUMMARY_MESSAGE)\n+  })\n+\n+  it.each([\n+    ['fields가 배열이 아니면', { fields: {} }],\n+    ['registryVersion이 없으면', { registryVersion: undefined }],\n+    ['narrativeRuleVersion이 문자열이 아니면', { narrativeRuleVersion: 7 }],\n+  ])('%s 목록 검증에서 막는다', async (_label, brokenResult) => {\n+    const body = validSummaryBody()\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      response({ ...body, result: { ...body.result, ...brokenResult } }),\n+    )\n+\n+    await expectRejectedByParser(fetchMarketFlowFields(), SUMMARY_MESSAGE)\n+  })\n+\n+  it.each([\n+    ['모르는 분야 id는', { fieldId: 'crypto' }],\n+    ['타입에 없는 STALE 상태는', { status: 'STALE' }],\n+    ['isExampleData가 boolean이 아니면', { isExampleData: 'false' }],\n+    ['narrativeSubjects가 문자열 배열이 아니면', { narrativeSubjects: [1, 2] }],\n+  ])('%s 분야 하나만 어긋나도 목록 전체를 막는다', async (_label, brokenField) => {\n+    const body = validSummaryBody()\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      response({\n+        ...body,\n+        result: {\n+          ...body.result,\n+          fields: [field('production', 'READY'), { ...field('labor', 'READY'), ...brokenField }],\n+        },\n+      }),\n+    )\n+\n+    await expectRejectedByParser(fetchMarketFlowFields(), SUMMARY_MESSAGE)\n+  })\n+\n+  it('3개월 경로가 3칸이 아닌 지표는 상세 조회를 막는다', async () => {\n+    const summary = field('labor', 'READY')\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      response({\n+        httpStatus: 'OK', isSuccess: true, message: 'ok', code: 200,\n+        result: {\n+          ...summary,\n+          multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.',\n+          indicators: [{\n+            indicatorId: 'employment', name: '취업자 수', unit: '%', value: 0.7,\n+            // FR-007이 요구하는 3개월 경로가 두 칸뿐이다.\n+            path: [{ month: '2026-07', value: 1.0 }, { month: '2026-08', value: 0.7 }],\n+            referenceMonth: '2026-08', releaseDate: '2026-09-10',\n+            source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: null,\n+          }],\n+        },\n+      }),\n+    )\n+\n+    await expectRejectedByParser(\n+      fetchMarketFlowField('labor'),\n+      '시장 흐름 분야 상세를 읽을 수 없습니다.',\n+    )\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/marketFlow.test.ts",
+          "old_path": "frontend/src/api/marketFlow.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,159 @@\n+import { apiClient, normalizeApiError } from './client'\n+import type {\n+  FieldDetailResult,\n+  FieldStatus,\n+  FieldSummary,\n+  FieldSummaryResult,\n+  IndicatorDisplay,\n+  MarketFlowFieldId,\n+  MarketFlowSuccessEnvelope,\n+  PathPoint,\n+} from '@/types/marketFlow'\n+\n+const fieldIds: MarketFlowFieldId[] = [\n+  'production',\n+  'consumption_investment',\n+  'external_trade',\n+  'labor',\n+  'prices_commodities',\n+  'finance_housing',\n+  'overseas',\n+]\n+const fieldStatuses: FieldStatus[] = ['READY', 'EXAMPLE', 'EMPTY', 'COLLECTION_FAILED']\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+function isNullableString(value: unknown): value is string | null {\n+  return value === null || typeof value === 'string'\n+}\n+\n+function isStringArray(value: unknown): value is string[] {\n+  return Array.isArray(value) && value.every((item) => typeof item === 'string')\n+}\n+\n+function isPathPoint(value: unknown): value is PathPoint {\n+  return (\n+    isRecord(value) &&\n+    typeof value.month === 'string' &&\n+    (value.value === null || typeof value.value === 'number')\n+  )\n+}\n+\n+function isFieldSummary(value: unknown): value is FieldSummary {\n+  if (!isRecord(value)) return false\n+  return (\n+    fieldIds.includes(value.fieldId as MarketFlowFieldId) &&\n+    typeof value.displayName === 'string' &&\n+    typeof value.displayOrder === 'number' &&\n+    fieldStatuses.includes(value.status as FieldStatus) &&\n+    isNullableString(value.narrative) &&\n+    isStringArray(value.narrativeSubjects) &&\n+    isNullableString(value.referenceMonth) &&\n+    isStringArray(value.referenceMonthHeldBackBy) &&\n+    isNullableString(value.lastUpdatedAt) &&\n+    typeof value.isExampleData === 'boolean'\n+  )\n+}\n+\n+function isIndicator(value: unknown): value is IndicatorDisplay {\n+  if (!isRecord(value)) return false\n+  const after = value.afterReferenceMonthRelease\n+  const validAfter =\n+    after === null ||\n+    (isRecord(after) &&\n+      typeof after.referenceMonth === 'string' &&\n+      typeof after.value === 'number' &&\n+      typeof after.unit === 'string')\n+  return (\n+    typeof value.indicatorId === 'string' &&\n+    typeof value.name === 'string' &&\n+    typeof value.unit === 'string' &&\n+    (value.value === null || typeof value.value === 'number') &&\n+    Array.isArray(value.path) &&\n+    value.path.length === 3 &&\n+    value.path.every(isPathPoint) &&\n+    typeof value.referenceMonth === 'string' &&\n+    isNullableString(value.releaseDate) &&\n+    typeof value.source === 'string' &&\n+    typeof value.agency === 'string' &&\n+    validAfter\n+  )\n+}\n+\n+function readEnvelopeResult(value: unknown): unknown {\n+  if (\n+    !isRecord(value) ||\n+    value.httpStatus !== 'OK' ||\n+    value.isSuccess !== true ||\n+    typeof value.message !== 'string' ||\n+    value.code !== 200 ||\n+    !('result' in value)\n+  ) {\n+    throw new Error('시장 흐름 API 응답 형식이 계약과 다릅니다.')\n+  }\n+  return value.result\n+}\n+\n+/**\n+ * `historicalComparisonNotice`를 `string`으로 **의무화한 것은 의도한 선택이다.**\n+ * FR-012가 역사 비교를 보일 때 이 문구를 함께 두라고 요구하므로, 문구 없이 분야 자료만\n+ * 그리는 것은 표시해서는 안 되는 상태다. 백엔드도 상수로 항상 채워 보내고\n+ * (`MarketFlowFieldsResponse.HISTORICAL_COMPARISON_NOTICE`), 계약의 `required`에도 들어 있다.\n+ * 값이 비어 오면 그것은 계약 위반이므로 조용히 넘기지 않고 여기서 막는다.\n+ * **`isNullableString`으로 느슨하게 바꾸지 말 것.**\n+ */\n+function parseSummaryEnvelope(value: unknown): MarketFlowSuccessEnvelope<FieldSummaryResult> {\n+  const result = readEnvelopeResult(value)\n+  if (\n+    !isRecord(result) ||\n+    typeof result.registryVersion !== 'string' ||\n+    typeof result.datasetVersion !== 'string' ||\n+    typeof result.narrativeRuleVersion !== 'string' ||\n+    typeof result.historicalComparisonNotice !== 'string' ||\n+    !Array.isArray(result.fields) ||\n+    !result.fields.every(isFieldSummary)\n+  ) {\n+    throw new Error('시장 흐름 분야 목록을 읽을 수 없습니다.')\n+  }\n+  return value as MarketFlowSuccessEnvelope<FieldSummaryResult>\n+}\n+\n+function parseDetailEnvelope(value: unknown): MarketFlowSuccessEnvelope<FieldDetailResult> {\n+  const result = readEnvelopeResult(value)\n+  if (\n+    !isFieldSummary(result) ||\n+    !isRecord(result) ||\n+    typeof result.multipleReferenceMonthNotice !== 'string' ||\n+    !Array.isArray(result.indicators) ||\n+    !result.indicators.every(isIndicator)\n+  ) {\n+    throw new Error('시장 흐름 분야 상세를 읽을 수 없습니다.')\n+  }\n+  return value as MarketFlowSuccessEnvelope<FieldDetailResult>\n+}\n+\n+export async function fetchMarketFlowFields(signal?: AbortSignal): Promise<FieldSummaryResult> {\n+  try {\n+    const response = await apiClient.get<unknown>('/market-flow/fields', { signal })\n+    return parseSummaryEnvelope(response.data).result\n+  } catch (error) {\n+    throw normalizeApiError(error)\n+  }\n+}\n+\n+export async function fetchMarketFlowField(\n+  fieldId: MarketFlowFieldId,\n+  signal?: AbortSignal,\n+): Promise<FieldDetailResult> {\n+  try {\n+    const response = await apiClient.get<unknown>(\n+      `/market-flow/fields/${encodeURIComponent(fieldId)}`,\n+      { signal },\n+    )\n+    return parseDetailEnvelope(response.data).result\n+  } catch (error) {\n+    throw normalizeApiError(error)\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/marketFlow.ts",
+          "old_path": "frontend/src/api/marketFlow.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,7 +37,7 @@ export function MarketStatusSummary({ regime }: MarketStatusSummaryProps) {\n         </dl>\n         <div className={styles.metaRow}>\n           <span>분석 기준 {formatDataDate(regime.asOf)}</span>\n-          <Link className={styles.detailLink} to=\"/home\">\n+          <Link className={styles.detailLink} to=\"/market-flow\">\n             자세히 보기 <ArrowUpRight size={14} aria-hidden=\"true\" />\n           </Link>\n         </div>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MarketStatusSummary.tsx",
+          "old_path": "frontend/src/components/dashboard/MarketStatusSummary.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,233 +0,0 @@\n-.chartPanel {\n-  position: relative;\n-  align-self: stretch;\n-  overflow: hidden;\n-  border: 1px solid var(--market-line-strong, var(--market-line));\n-  border-radius: 10px;\n-  background: rgb(7 17 11 / 88%);\n-  color: var(--market-ink);\n-  box-shadow: var(--market-shadow);\n-  backdrop-filter: blur(10px);\n-}\n-\n-.windowBar,\n-.windowIdentity,\n-.controls,\n-.chartTabs,\n-.chartHeader,\n-.chartFooter,\n-.chartFooter span {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.windowBar {\n-  justify-content: space-between;\n-  min-height: 46px;\n-  padding: 0 16px 0 20px;\n-  border-bottom: 1px solid var(--market-line);\n-  background: var(--thorp-surface-muted);\n-  color: var(--market-muted);\n-  font-size: 0.58rem;\n-  font-weight: 680;\n-  letter-spacing: 0.1em;\n-}\n-\n-.windowIdentity {\n-  gap: 9px;\n-  color: var(--market-copy);\n-}\n-\n-.windowIdentity > span {\n-  width: 7px;\n-  height: 7px;\n-  border-radius: 50%;\n-  background: var(--market-brand);\n-}\n-\n-.controls {\n-  gap: 11px;\n-}\n-\n-.chartTabs {\n-  gap: 2px;\n-}\n-\n-.chartTabs button,\n-.pauseButton {\n-  border: 0;\n-  background: transparent;\n-  color: var(--market-muted);\n-  cursor: pointer;\n-  font: inherit;\n-}\n-\n-.chartTabs button {\n-  position: relative;\n-  padding: 8px 9px;\n-  font-size: 0.58rem;\n-  font-weight: 680;\n-  letter-spacing: -0.01em;\n-}\n-\n-.chartTabs button::after {\n-  position: absolute;\n-  right: 9px;\n-  bottom: 3px;\n-  left: 9px;\n-  height: 1px;\n-  background: transparent;\n-  content: '';\n-}\n-\n-.chartTabs button[aria-selected='true'] {\n-  color: var(--market-ink);\n-}\n-\n-.chartTabs button[aria-selected='true']::after {\n-  background: var(--market-brand);\n-}\n-\n-.chartTabs button:focus-visible,\n-.pauseButton:focus-visible {\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset-compact);\n-}\n-\n-.pauseButton {\n-  display: grid;\n-  width: 27px;\n-  height: 27px;\n-  place-items: center;\n-  border: 1px solid var(--market-line);\n-  border-radius: 6px;\n-}\n-\n-.progressTrack {\n-  height: 2px;\n-  background: var(--market-line-soft);\n-}\n-\n-.progressTrack span {\n-  display: block;\n-  width: 100%;\n-  height: 100%;\n-  background: var(--market-brand);\n-  transform-origin: left center;\n-}\n-\n-.slide {\n-  min-height: 486px;\n-}\n-\n-.chartHeader {\n-  justify-content: space-between;\n-  gap: 24px;\n-  padding: 25px 27px 0;\n-}\n-\n-.chartHeader > div:first-child {\n-  display: grid;\n-  min-width: 0;\n-  gap: 3px;\n-}\n-\n-.chartHeader span {\n-  color: var(--market-muted);\n-  font-size: 0.61rem;\n-  font-weight: 680;\n-  letter-spacing: 0.12em;\n-}\n-\n-.chartHeader > div:first-child strong {\n-  color: var(--market-ink);\n-  font-size: 1rem;\n-  word-break: keep-all;\n-}\n-\n-.currentState {\n-  display: grid;\n-  flex: 0 0 auto;\n-  gap: 3px;\n-  padding-left: 16px;\n-  border-left: 1px solid var(--market-line);\n-  text-align: right;\n-}\n-\n-.currentState strong {\n-  color: var(--thorp-accent-soft);\n-  font-size: 0.75rem;\n-}\n-\n-.chartFooter {\n-  justify-content: space-between;\n-  gap: 10px;\n-  margin: 0 27px;\n-  padding: 15px 0 19px;\n-  border-top: 1px solid var(--market-line-soft);\n-  color: var(--market-muted);\n-  font-size: 0.64rem;\n-}\n-\n-.chartFooter span {\n-  gap: 7px;\n-}\n-\n-.chartFooter strong {\n-  color: var(--market-copy);\n-  font-size: 0.7rem;\n-}\n-\n-.dataNotice {\n-  position: absolute;\n-  right: 16px;\n-  bottom: 6px;\n-  color: var(--market-muted);\n-  font-size: 0.5rem;\n-}\n-\n-@media (max-width: 1024px) {\n-  .windowIdentity {\n-    display: none;\n-  }\n-\n-  .windowBar {\n-    justify-content: flex-end;\n-  }\n-}\n-\n-@media (max-width: 520px) {\n-  .windowBar {\n-    padding-inline: 10px;\n-  }\n-\n-  .controls {\n-    width: 100%;\n-    justify-content: space-between;\n-  }\n-\n-  .chartTabs button {\n-    padding-inline: 7px;\n-  }\n-\n-  .slide {\n-    min-height: 320px;\n-  }\n-\n-  .chartHeader {\n-    align-items: flex-end;\n-    padding-inline: 18px;\n-  }\n-\n-  .chartHeader > div:first-child strong {\n-    font-size: 0.88rem;\n-  }\n-\n-  .chartFooter {\n-    margin-inline: 18px;\n-  }\n-\n-  .dataNotice {\n-    display: none;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketOverviewCarousel.module.css",
+          "old_path": "frontend/src/components/home/MarketOverviewCarousel.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,143 +0,0 @@\n-import { Pause, Play, ShieldAlert } from 'lucide-react'\n-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'\n-import { useEffect, useState } from 'react'\n-import type { MarketOverviewChart } from '@/types/market'\n-import { formatDataDate } from '@/utils/marketFormat'\n-import { MarketRegimeChart } from './MarketRegimeChart'\n-import styles from './MarketOverviewCarousel.module.css'\n-\n-interface MarketOverviewCarouselProps {\n-  charts: MarketOverviewChart[]\n-  asOf: string\n-  isMock: boolean\n-}\n-\n-const rotationIntervalMs = 7000\n-\n-/** 현재 지표의 표기 자릿수와 단위를 유지해 최신 값을 표시한다. */\n-function formatCurrentValue(chart: MarketOverviewChart) {\n-  const latestValue = chart.series.at(-1)?.value\n-  if (latestValue === undefined) return '-'\n-\n-  const formatted = new Intl.NumberFormat('ko-KR', {\n-    minimumFractionDigits: chart.valueDecimals,\n-    maximumFractionDigits: chart.valueDecimals,\n-  }).format(latestValue)\n-\n-  return chart.valueUnit ? `${formatted} ${chart.valueUnit}` : formatted\n-}\n-\n-/** 세 가지 시장 차트를 일정 시간마다 넘기고 사용자가 직접 선택하거나 멈출 수 있게 한다. */\n-export function MarketOverviewCarousel({\n-  charts,\n-  asOf,\n-  isMock,\n-}: MarketOverviewCarouselProps) {\n-  const prefersReducedMotion = useReducedMotion()\n-  const [activeIndex, setActiveIndex] = useState(0)\n-  const [isPaused, setIsPaused] = useState(false)\n-  const activeChart = charts[activeIndex] ?? charts[0]\n-\n-  useEffect(() => {\n-    if (isPaused || charts.length < 2) return\n-\n-    const timer = window.setTimeout(() => {\n-      setActiveIndex((currentIndex) => (currentIndex + 1) % charts.length)\n-    }, rotationIntervalMs)\n-\n-    return () => window.clearTimeout(timer)\n-  }, [activeIndex, charts.length, isPaused])\n-\n-  if (!activeChart) return null\n-\n-  return (\n-    <aside\n-      className={styles.chartPanel}\n-      aria-label=\"한국 시장 주요 지표 장기 추이\"\n-      aria-roledescription=\"carousel\"\n-    >\n-      <div className={styles.windowBar}>\n-        <div className={styles.windowIdentity}>\n-          <span aria-hidden=\"true\" />\n-          MARKET PULSE\n-        </div>\n-\n-        <div className={styles.controls}>\n-          <div className={styles.chartTabs} role=\"tablist\" aria-label=\"표시할 시장 지표\">\n-            {charts.map((chart, index) => (\n-              <button\n-                key={chart.id}\n-                type=\"button\"\n-                role=\"tab\"\n-                id={`market-chart-tab-${chart.id}`}\n-                aria-controls=\"market-chart-panel\"\n-                aria-selected={activeIndex === index}\n-                onClick={() => setActiveIndex(index)}\n-              >\n-                {chart.tabLabel}\n-              </button>\n-            ))}\n-          </div>\n-\n-          <button\n-            className={styles.pauseButton}\n-            type=\"button\"\n-            aria-label={isPaused ? '차트 자동 전환 재생' : '차트 자동 전환 일시정지'}\n-            aria-pressed={isPaused}\n-            onClick={() => setIsPaused((currentValue) => !currentValue)}\n-          >\n-            {isPaused ? <Play size={13} aria-hidden=\"true\" /> : <Pause size={13} aria-hidden=\"true\" />}\n-          </button>\n-        </div>\n-      </div>\n-\n-      <div className={styles.progressTrack} aria-hidden=\"true\">\n-        {!isPaused && (\n-          <motion.span\n-            key={activeChart.id}\n-            initial={{ scaleX: 0 }}\n-            animate={{ scaleX: 1 }}\n-            transition={{ duration: rotationIntervalMs / 1000, ease: 'linear' }}\n-          />\n-        )}\n-      </div>\n-\n-      <AnimatePresence mode=\"wait\" initial={false}>\n-        <motion.div\n-          className={styles.slide}\n-          key={activeChart.id}\n-          id=\"market-chart-panel\"\n-          role=\"tabpanel\"\n-          aria-labelledby={`market-chart-tab-${activeChart.id}`}\n-          initial={{ opacity: 0, x: prefersReducedMotion ? 0 : 42 }}\n-          animate={{ opacity: 1, x: 0 }}\n-          exit={{ opacity: 0, x: prefersReducedMotion ? 0 : -42 }}\n-          transition={{ duration: prefersReducedMotion ? 0 : 0.46, ease: [0.22, 1, 0.36, 1] }}\n-        >\n-          <div className={styles.chartHeader}>\n-            <div>\n-              <span>{activeChart.name}</span>\n-              <strong>{activeChart.insight}</strong>\n-            </div>\n-            <div className={styles.currentState}>\n-              <span>현재 지수</span>\n-              <strong>{formatCurrentValue(activeChart)}</strong>\n-            </div>\n-          </div>\n-\n-          <MarketRegimeChart chart={activeChart} />\n-\n-          <div className={styles.chartFooter}>\n-            <span>\n-              <ShieldAlert size={14} aria-hidden=\"true\" />\n-              {activeChart.sourceLabel} · 분석 기준 {formatDataDate(asOf)}\n-            </span>\n-            <strong>{activeChart.referenceLabel ?? '최근 10년'}</strong>\n-          </div>\n-        </motion.div>\n-      </AnimatePresence>\n-\n-      <span className={styles.dataNotice}>{isMock ? 'UI 검증용 예시 데이터' : 'LIVE DATA'}</span>\n-    </aside>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketOverviewCarousel.tsx",
+          "old_path": "frontend/src/components/home/MarketOverviewCarousel.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,87 +0,0 @@\n-.container {\n-  width: 100%;\n-  aspect-ratio: 600 / 310;\n-  padding: 3px 21px 0;\n-}\n-\n-.chart {\n-  display: block;\n-  width: 100%;\n-  height: 100%;\n-  overflow: visible;\n-}\n-\n-.gridLine,\n-.referenceLine,\n-.xTickLine {\n-  shape-rendering: crispEdges;\n-}\n-\n-.gridLine {\n-  stroke: var(--market-line-soft);\n-  stroke-width: 1;\n-}\n-\n-.referenceLine {\n-  stroke: var(--market-muted);\n-  stroke-dasharray: 4 5;\n-  stroke-width: 1.1;\n-}\n-\n-.xTickLine {\n-  stroke: var(--market-line-strong, var(--market-line));\n-  stroke-width: 1;\n-}\n-\n-.yTick,\n-.xTick,\n-.indexLabel {\n-  fill: var(--market-muted);\n-  font-family: var(--thorp-font-mono);\n-  font-size: 10px;\n-}\n-\n-.indexLabel {\n-  font-size: 8px;\n-  font-weight: 700;\n-  letter-spacing: 0.12em;\n-}\n-\n-.cycleLine {\n-  stroke: var(--market-brand);\n-  stroke-linecap: round;\n-  stroke-linejoin: round;\n-  stroke-width: 2.6;\n-  filter: drop-shadow(0 4px 8px rgb(3 199 90 / 18%));\n-}\n-\n-.latestHalo {\n-  fill: var(--thorp-accent-muted);\n-}\n-\n-.latestPoint {\n-  fill: var(--market-brand);\n-  stroke: var(--market-surface);\n-  stroke-width: 2.5;\n-}\n-\n-.latestValue {\n-  fill: var(--thorp-accent-soft);\n-  font-size: 11px;\n-  font-weight: 750;\n-}\n-\n-@media (max-width: 430px) {\n-  .yTick,\n-  .xTick {\n-    font-size: 16px;\n-  }\n-\n-  .indexLabel {\n-    font-size: 13px;\n-  }\n-\n-  .latestValue {\n-    font-size: 17px;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeChart.module.css",
+          "old_path": "frontend/src/components/home/MarketRegimeChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,154 +0,0 @@\n-import { scaleLinear } from '@visx/scale'\n-import { curveMonotoneX, line } from 'd3-shape'\n-import { motion, useReducedMotion } from 'motion/react'\n-import type { MarketCyclePoint, MarketOverviewChart } from '@/types/market'\n-import styles from './MarketRegimeChart.module.css'\n-\n-interface MarketRegimeChartProps {\n-  chart: MarketOverviewChart\n-}\n-\n-const chartMargin = { top: 34, right: 36, bottom: 44, left: 54 }\n-const chartWidth = 600\n-const chartHeight = 310\n-const xTickYears = [2018, 2020, 2022, 2024, 2026]\n-\n-/** 월 문자열을 시간 축에서 비교할 수 있는 UTC 타임스탬프로 변환한다. */\n-function toTimestamp(date: string) {\n-  return Date.parse(`${date}-01T00:00:00Z`)\n-}\n-\n-/** 지표별 자릿수를 유지하면서 축과 현재 값을 짧은 숫자로 표현한다. */\n-function formatChartValue(value: number, decimals = 0) {\n-  return new Intl.NumberFormat('ko-KR', {\n-    minimumFractionDigits: decimals,\n-    maximumFractionDigits: decimals,\n-  }).format(value)\n-}\n-\n-/** 같은 연도 축 위에 선택된 시장 지표의 장기 흐름을 단일선으로 그린다. */\n-export function MarketRegimeChart({ chart }: MarketRegimeChartProps) {\n-  const prefersReducedMotion = useReducedMotion()\n-  const firstPoint = chart.series[0]\n-  const latestPoint = chart.series.at(-1)\n-\n-  if (!firstPoint || !latestPoint) return null\n-\n-  const xScale = scaleLinear({\n-    domain: [toTimestamp(firstPoint.date), toTimestamp(latestPoint.date)],\n-    range: [chartMargin.left, chartWidth - chartMargin.right],\n-  })\n-  const yScale = scaleLinear({\n-    domain: chart.yDomain,\n-    range: [chartHeight - chartMargin.bottom, chartMargin.top],\n-  })\n-  const path = line<MarketCyclePoint>()\n-    .x((point) => xScale(toTimestamp(point.date)))\n-    .y((point) => yScale(point.value))\n-    .curve(curveMonotoneX)(chart.series)\n-  const latestX = xScale(toTimestamp(latestPoint.date))\n-  const latestY = yScale(latestPoint.value)\n-\n-  return (\n-    <div className={styles.container}>\n-      <svg\n-        className={styles.chart}\n-        viewBox={`0 0 ${chartWidth} ${chartHeight}`}\n-        role=\"img\"\n-        aria-labelledby={`chart-title-${chart.id} chart-description-${chart.id}`}\n-      >\n-        <title id={`chart-title-${chart.id}`}>최근 10년 {chart.name}</title>\n-        <desc id={`chart-description-${chart.id}`}>\n-          2016년부터 2026년까지 {chart.name}의 예시 흐름과 현재 값{' '}\n-          {formatChartValue(latestPoint.value, chart.valueDecimals)}을 표시합니다.\n-        </desc>\n-\n-        <motion.g\n-          initial={{ opacity: 0 }}\n-          animate={{ opacity: 1 }}\n-          transition={{ duration: prefersReducedMotion ? 0 : 0.42 }}\n-        >\n-          {chart.yTicks.map((tick) => {\n-            const y = yScale(tick)\n-            const isReference = tick === chart.referenceValue\n-\n-            return (\n-              <g key={tick}>\n-                <line\n-                  className={isReference ? styles.referenceLine : styles.gridLine}\n-                  x1={chartMargin.left}\n-                  x2={chartWidth - chartMargin.right}\n-                  y1={y}\n-                  y2={y}\n-                />\n-                <text className={styles.yTick} textAnchor=\"end\" x={chartMargin.left - 12} y={y + 4}>\n-                  {formatChartValue(tick)}\n-                </text>\n-              </g>\n-            )\n-          })}\n-\n-          {xTickYears.map((year) => {\n-            const x = xScale(Date.parse(`${year}-01-01T00:00:00Z`))\n-\n-            return (\n-              <g key={year}>\n-                <line\n-                  className={styles.xTickLine}\n-                  x1={x}\n-                  x2={x}\n-                  y1={chartHeight - chartMargin.bottom}\n-                  y2={chartHeight - chartMargin.bottom + 6}\n-                />\n-                <text\n-                  className={styles.xTick}\n-                  textAnchor=\"middle\"\n-                  x={x}\n-                  y={chartHeight - 17}\n-                >\n-                  {year}\n-                </text>\n-              </g>\n-            )\n-          })}\n-        </motion.g>\n-\n-        {path && (\n-          <motion.path\n-            className={styles.cycleLine}\n-            d={path}\n-            fill=\"none\"\n-            initial={{ pathLength: 0, opacity: 0 }}\n-            animate={{ pathLength: 1, opacity: 1 }}\n-            transition={{\n-              delay: prefersReducedMotion ? 0 : 0.2,\n-              duration: prefersReducedMotion ? 0 : 1.65,\n-              ease: [0.22, 1, 0.36, 1],\n-            }}\n-          />\n-        )}\n-\n-        <motion.g\n-          initial={{ opacity: 0, scale: 0.6 }}\n-          animate={{ opacity: 1, scale: 1 }}\n-          transition={{\n-            delay: prefersReducedMotion ? 0 : 1.72,\n-            duration: prefersReducedMotion ? 0 : 0.35,\n-            ease: [0.22, 1, 0.36, 1],\n-          }}\n-          style={{ transformBox: 'fill-box', transformOrigin: 'center' }}\n-        >\n-          <circle className={styles.latestHalo} cx={latestX} cy={latestY} r={9} />\n-          <circle className={styles.latestPoint} cx={latestX} cy={latestY} r={4.5} />\n-          <text className={styles.latestValue} textAnchor=\"end\" x={latestX - 8} y={latestY - 12}>\n-            {formatChartValue(latestPoint.value, chart.valueDecimals)}\n-          </text>\n-        </motion.g>\n-\n-        <text className={styles.indexLabel} x={chartMargin.left} y={chartMargin.top - 13}>\n-          {chart.axisLabel}\n-        </text>\n-      </svg>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeChart.tsx",
+          "old_path": "frontend/src/components/home/MarketRegimeChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,141 +0,0 @@\n-.hero {\n-  position: relative;\n-  display: grid;\n-  grid-template-columns: minmax(360px, 0.82fr) minmax(560px, 1.18fr);\n-  align-items: center;\n-  gap: clamp(56px, 6vw, 96px);\n-  min-height: 560px;\n-  padding: 48px 0 70px;\n-}\n-\n-.copyColumn {\n-  min-width: 0;\n-  max-width: 530px;\n-}\n-\n-.kicker,\n-.regimeLine {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.kicker {\n-  gap: 7px;\n-  color: var(--market-brand);\n-  font-size: 0.72rem;\n-  font-weight: 760;\n-  letter-spacing: 0.14em;\n-}\n-\n-.hero h1 {\n-  margin: 25px 0 0;\n-  color: var(--market-ink);\n-  font-size: clamp(2.15rem, 3.25vw, 2.9rem);\n-  font-weight: 660;\n-  letter-spacing: -0.055em;\n-  line-height: 1.12;\n-  word-break: keep-all;\n-}\n-\n-.summary {\n-  margin: 22px 0 0;\n-  color: var(--market-copy);\n-  font-size: 0.9rem;\n-  line-height: 1.8;\n-  word-break: keep-all;\n-}\n-\n-.regimeLine {\n-  flex-wrap: wrap;\n-  gap: 0;\n-  margin-top: 28px;\n-  padding: 14px 0;\n-  border-block: 1px solid var(--market-line);\n-}\n-\n-.regimeLine > span {\n-  padding: 0 18px;\n-  border-right: 1px solid var(--market-line);\n-  color: var(--market-muted);\n-  font-size: 0.7rem;\n-}\n-\n-.regimeLine > span:first-child {\n-  padding-left: 0;\n-}\n-\n-.regimeLine > span:last-child {\n-  border-right: 0;\n-}\n-\n-.regimeLine strong {\n-  margin-left: 7px;\n-  color: var(--market-ink);\n-  font-size: 0.74rem;\n-}\n-\n-.regimeLine strong[data-risk='true'] {\n-  color: var(--market-warning);\n-}\n-\n-.driverGrid {\n-  display: grid;\n-  gap: 0;\n-  margin-top: 17px;\n-}\n-\n-.driver {\n-  display: flex;\n-  gap: 13px;\n-  min-width: 0;\n-  padding: 9px 0;\n-}\n-\n-.driver > span {\n-  color: var(--market-muted);\n-  font-family: var(--thorp-font-mono);\n-  font-size: 0.63rem;\n-  font-weight: 650;\n-}\n-\n-.driver p {\n-  margin: 0;\n-  color: var(--market-copy);\n-  font-size: 0.73rem;\n-  line-height: 1.55;\n-}\n-\n-@media (max-width: 1024px) {\n-  .hero {\n-    grid-template-columns: minmax(310px, 0.78fr) minmax(430px, 1.22fr);\n-    gap: 38px;\n-    min-height: 500px;\n-  }\n-}\n-\n-@media (max-width: 780px) {\n-  .hero {\n-    grid-template-columns: 1fr;\n-    gap: 42px;\n-    padding: 34px 0 52px;\n-  }\n-\n-  .copyColumn {\n-    max-width: none;\n-  }\n-}\n-\n-@media (max-width: 520px) {\n-  .hero h1 {\n-    font-size: 2.05rem;\n-  }\n-\n-  .regimeLine > span {\n-    padding: 0 10px;\n-  }\n-\n-  .regimeLine strong {\n-    display: block;\n-    margin: 4px 0 0;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeHero.module.css",
+          "old_path": "frontend/src/components/home/MarketRegimeHero.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,60 +0,0 @@\n-import { ChartNoAxesCombined } from 'lucide-react'\n-import { motion } from 'motion/react'\n-import type { MarketRegime } from '@/types/market'\n-import { cycleLabels, inflationLabels, riskLabels } from '@/utils/marketFormat'\n-import { MarketOverviewCarousel } from './MarketOverviewCarousel'\n-import styles from './MarketRegimeHero.module.css'\n-\n-interface MarketRegimeHeroProps {\n-  regime: MarketRegime\n-}\n-\n-/** 경기·물가·시장 위험을 조합한 한국 시장의 대표 진단을 표시한다. */\n-export function MarketRegimeHero({ regime }: MarketRegimeHeroProps) {\n-  return (\n-    <motion.section\n-      className={styles.hero}\n-      initial={{ opacity: 0, y: 12 }}\n-      animate={{ opacity: 1, y: 0 }}\n-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}\n-      aria-labelledby=\"market-regime-title\"\n-    >\n-      <div className={styles.copyColumn}>\n-        <span className={styles.kicker}>\n-          <ChartNoAxesCombined size={15} aria-hidden=\"true\" />\n-          KOREA MARKET INTELLIGENCE\n-        </span>\n-\n-        <h1 id=\"market-regime-title\">{regime.headline}</h1>\n-        <p className={styles.summary}>{regime.summary}</p>\n-\n-        <div className={styles.regimeLine} aria-label=\"한국 시장 국면\">\n-          <span>\n-            경기 <strong>{cycleLabels[regime.cycle]}</strong>\n-          </span>\n-          <span>\n-            물가 <strong>{inflationLabels[regime.inflation]}</strong>\n-          </span>\n-          <span>\n-            시장 <strong data-risk=\"true\">{riskLabels[regime.risk]}</strong>\n-          </span>\n-        </div>\n-\n-        <div className={styles.driverGrid} aria-label=\"핵심 판단 근거\">\n-          {regime.drivers.map((driver, index) => (\n-            <div className={styles.driver} key={driver}>\n-              <span>{String(index + 1).padStart(2, '0')}</span>\n-              <p>{driver}</p>\n-            </div>\n-          ))}\n-        </div>\n-      </div>\n-\n-      <MarketOverviewCarousel\n-        charts={regime.overviewCharts}\n-        asOf={regime.asOf}\n-        isMock={regime.isMock}\n-      />\n-    </motion.section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeHero.tsx",
+          "old_path": "frontend/src/components/home/MarketRegimeHero.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,233 +0,0 @@\n-.section {\n-  display: flex;\n-  min-width: 0;\n-  min-height: clamp(480px, 58svh, 600px);\n-  flex-direction: column;\n-  justify-content: center;\n-}\n-\n-.sectionHeader,\n-.sectionHeader > span,\n-.scoreRow,\n-.events {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.sectionHeader {\n-  align-items: flex-end;\n-  justify-content: space-between;\n-  gap: 20px;\n-  margin-bottom: 26px;\n-}\n-\n-.sectionHeader p {\n-  margin: 0 0 4px;\n-  color: var(--market-brand);\n-  font-size: 0.78rem;\n-  font-weight: 720;\n-  letter-spacing: 0.12em;\n-}\n-\n-.sectionHeader h2 {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: clamp(1.75rem, 3vw, 2.8rem);\n-  font-weight: 620;\n-  letter-spacing: -0.035em;\n-  line-height: 1.06;\n-}\n-\n-.sectionHeader > span {\n-  gap: 6px;\n-  color: var(--market-muted);\n-  font-size: 0.7rem;\n-}\n-\n-.panel {\n-  display: grid;\n-  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);\n-  overflow: hidden;\n-  border: 1px solid var(--market-line);\n-  border-radius: 10px;\n-  background: var(--market-surface);\n-  box-shadow: var(--market-shadow-soft);\n-}\n-\n-.overview,\n-.comparison {\n-  min-width: 0;\n-  padding: 25px;\n-}\n-\n-.overview {\n-  border-right: 1px solid var(--market-line-soft);\n-}\n-\n-.label {\n-  color: var(--market-muted);\n-  font-size: 0.7rem;\n-  font-weight: 650;\n-}\n-\n-.overview h3 {\n-  margin: 6px 0 0;\n-  color: var(--market-ink);\n-  font-size: 1.45rem;\n-  letter-spacing: -0.045em;\n-}\n-\n-.scoreRow {\n-  gap: 20px;\n-  margin-top: 22px;\n-}\n-\n-.scoreRow > div {\n-  display: grid;\n-  gap: 3px;\n-}\n-\n-.scoreRow strong {\n-  color: var(--market-brand);\n-  font-size: 1.02rem;\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-.scoreRow strong[data-positive] {\n-  color: var(--market-positive);\n-}\n-\n-.scoreRow span {\n-  color: var(--market-muted);\n-  font-size: 0.62rem;\n-}\n-\n-.events {\n-  flex-wrap: wrap;\n-  gap: 6px;\n-  margin-top: 20px;\n-}\n-\n-.events span {\n-  padding: 5px 8px;\n-  border-radius: 4px;\n-  background: var(--thorp-surface-muted);\n-  color: var(--market-copy);\n-  font-size: 0.65rem;\n-}\n-\n-.observationGrid {\n-  display: grid;\n-  grid-template-columns: repeat(2, minmax(0, 1fr));\n-  gap: 18px;\n-  margin-top: 22px;\n-  padding-top: 19px;\n-  border-top: 1px solid var(--market-line-soft);\n-}\n-\n-.observationGrid h4 {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: 0.72rem;\n-}\n-\n-.observationGrid ul {\n-  display: grid;\n-  gap: 7px;\n-  margin: 9px 0 0;\n-  padding-left: 15px;\n-  color: var(--market-copy);\n-  font-size: 0.67rem;\n-  line-height: 1.5;\n-}\n-\n-.comparison {\n-  align-self: center;\n-}\n-\n-.comparisonRow {\n-  display: grid;\n-  grid-template-columns: minmax(145px, 1fr) 0.65fr 0.65fr;\n-  gap: 12px;\n-  align-items: center;\n-  min-height: 47px;\n-  border-bottom: 1px solid var(--market-line-soft);\n-}\n-\n-.comparisonHeader {\n-  min-height: 34px;\n-  color: var(--market-muted);\n-  font-size: 0.64rem;\n-  font-weight: 680;\n-}\n-\n-.comparisonRow strong {\n-  color: var(--market-ink);\n-  font-size: 0.72rem;\n-}\n-\n-.comparisonRow span {\n-  color: var(--market-copy);\n-  font-size: 0.72rem;\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-.comparisonRow span:nth-child(2) {\n-  color: var(--market-brand);\n-  font-weight: 680;\n-}\n-\n-.note {\n-  margin: 14px 0 0;\n-  color: var(--market-muted);\n-  font-size: 0.62rem;\n-  line-height: 1.5;\n-}\n-\n-@media (max-width: 980px) {\n-  .panel {\n-    grid-template-columns: 1fr;\n-  }\n-\n-  .overview {\n-    border-right: 0;\n-    border-bottom: 1px solid var(--market-line-soft);\n-  }\n-}\n-\n-@media (max-width: 620px) {\n-  .section {\n-    min-height: auto;\n-  }\n-\n-  .sectionHeader {\n-    align-items: flex-start;\n-    flex-direction: column;\n-  }\n-\n-  .overview,\n-  .comparison {\n-    padding: 20px;\n-  }\n-\n-  .scoreRow {\n-    align-items: flex-start;\n-    flex-direction: column;\n-    gap: 12px;\n-  }\n-\n-  .observationGrid {\n-    grid-template-columns: 1fr;\n-  }\n-\n-  .comparisonRow {\n-    grid-template-columns: minmax(110px, 1fr) 0.7fr 0.7fr;\n-    gap: 8px;\n-  }\n-}\n-\n-@media (max-height: 720px) {\n-  .section {\n-    min-height: auto;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/SimilarMarketPanel.module.css",
+          "old_path": "frontend/src/components/home/SimilarMarketPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,109 +0,0 @@\n-import { CalendarDays } from 'lucide-react'\n-import { motion } from 'motion/react'\n-import type { Indicator, SimilarMarketPeriod } from '@/types/market'\n-import { formatComparisonValue, formatDataDate } from '@/utils/marketFormat'\n-import styles from './SimilarMarketPanel.module.css'\n-\n-interface SimilarMarketPanelProps {\n-  period: SimilarMarketPeriod\n-  indicators: Indicator[]\n-}\n-\n-/** 비교 지표 ID를 사용자가 이해할 수 있는 이름으로 연결한다. */\n-function getIndicatorName(indicatorId: string, indicators: Indicator[]) {\n-  return indicators.find((indicator) => indicator.id === indicatorId)?.name ?? indicatorId\n-}\n-\n-/** 현재 6개월 흐름과 가장 유사한 과거 구간의 공통점과 차이를 비교한다. */\n-export function SimilarMarketPanel({ period, indicators }: SimilarMarketPanelProps) {\n-  return (\n-    <section className={styles.section} aria-labelledby=\"similar-market-title\">\n-      <div className={styles.sectionHeader}>\n-        <div>\n-          <p>과거와 비교해 보기</p>\n-          <h2 id=\"similar-market-title\">지금과 비슷했던 시장</h2>\n-        </div>\n-        <span>\n-          <CalendarDays size={13} aria-hidden=\"true\" />\n-          최근 {period.comparisonWindowMonths}개월 흐름을 비교했어요\n-        </span>\n-      </div>\n-\n-      <motion.div\n-        className={styles.panel}\n-        initial={{ opacity: 0, y: 30, scale: 0.99 }}\n-        whileInView={{ opacity: 1, y: 0, scale: 1 }}\n-        viewport={{ once: false, amount: 0.18 }}\n-        transition={{ duration: 0.62, ease: [0.22, 1, 0.36, 1] }}\n-      >\n-        <div className={styles.overview}>\n-          <span className={styles.label}>가장 유사한 구간</span>\n-          <h3>\n-            {formatDataDate(period.periodStart)} — {formatDataDate(period.periodEnd)}\n-          </h3>\n-          <div className={styles.scoreRow}>\n-            <div>\n-              <strong>{period.similarityScore.toFixed(1)}%</strong>\n-              <span>유사도</span>\n-            </div>\n-            <div>\n-              <strong data-positive>+{period.futureReturn3m.toFixed(1)}%</strong>\n-              <span>이후 3개월 KOSPI</span>\n-            </div>\n-            <div>\n-              <strong data-positive>+{period.futureReturn6m.toFixed(1)}%</strong>\n-              <span>이후 6개월 KOSPI</span>\n-            </div>\n-          </div>\n-\n-          <div className={styles.events} aria-label=\"당시 주요 이벤트\">\n-            {period.events.map((event) => (\n-              <span key={event}>{event}</span>\n-            ))}\n-          </div>\n-\n-          <div className={styles.observationGrid}>\n-            <div>\n-              <h4>공통점</h4>\n-              <ul>\n-                {period.similarities.map((similarity) => (\n-                  <li key={similarity}>{similarity}</li>\n-                ))}\n-              </ul>\n-            </div>\n-            <div>\n-              <h4>차이점</h4>\n-              <ul>\n-                {period.differences.map((difference) => (\n-                  <li key={difference}>{difference}</li>\n-                ))}\n-              </ul>\n-            </div>\n-          </div>\n-        </div>\n-\n-        <div className={styles.comparison} role=\"table\" aria-label=\"현재와 과거 지표 비교\">\n-          <div className={`${styles.comparisonRow} ${styles.comparisonHeader}`} role=\"row\">\n-            <span role=\"columnheader\">지표</span>\n-            <span role=\"columnheader\">현재</span>\n-            <span role=\"columnheader\">과거</span>\n-          </div>\n-          {period.comparisons.map((comparison) => (\n-            <div className={styles.comparisonRow} role=\"row\" key={comparison.indicatorId}>\n-              <strong role=\"cell\">{getIndicatorName(comparison.indicatorId, indicators)}</strong>\n-              <span role=\"cell\">\n-                {formatComparisonValue(comparison.currentValue, comparison.unit)}\n-              </span>\n-              <span role=\"cell\">\n-                {formatComparisonValue(comparison.historicalValue, comparison.unit)}\n-              </span>\n-            </div>\n-          ))}\n-          <p className={styles.note}>\n-            유사도와 이후 수익률은 UI 구조 검증용 값이며 실제 분석 결과가 아닙니다.\n-          </p>\n-        </div>\n-      </motion.div>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/SimilarMarketPanel.tsx",
+          "old_path": "frontend/src/components/home/SimilarMarketPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,7 +10,7 @@ import styles from '@/pages/LandingPage.module.css'\n  */\n const primaryMenuItems = [\n   { to: '/diagnosis/sectors', label: '전략 진단' },\n-  { to: '/home', label: '시장 흐름' },\n+  { to: '/market-flow', label: '시장 흐름' },\n   { to: '/learn', label: '배우기' },\n ]\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "old_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { DataStateNotice } from './DataStateNotice'\n+\n+describe('DataStateNotice', () => {\n+  it.each([\n+    ['EXAMPLE', '예시 자료'], ['EMPTY', '표시할 자료 없음'],\n+    ['COLLECTION_FAILED', '최근 수집 실패'],\n+  ] as const)('%s 상태를 오류 경계 없이 설명한다', (status, label) => {\n+    render(<DataStateNotice status={status} referenceMonth=\"2026-07\" lastUpdatedAt={null} historicalComparisonNotice=\"최신 개정자료를 이용한 역사 비교\" />)\n+    expect(screen.getByText(label)).toBeTruthy()\n+    expect(screen.getByText('최신 개정자료를 이용한 역사 비교')).toBeTruthy()\n+    expect(document.body.textContent).not.toMatch(/실시간|현재|지연/)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,39 @@\n+import type { FieldStatus } from '@/types/marketFlow'\n+import { formatUpdatedAt } from './marketFlowFormat'\n+import styles from './MarketFlow.module.css'\n+\n+const stateLabels: Record<FieldStatus, string> = {\n+  READY: '자료 확인',\n+  EXAMPLE: '예시 자료',\n+  EMPTY: '표시할 자료 없음',\n+  COLLECTION_FAILED: '최근 수집 실패',\n+}\n+\n+interface DataStateNoticeProps {\n+  status: FieldStatus\n+  referenceMonth: string | null\n+  lastUpdatedAt: string | null\n+  isExampleData?: boolean\n+  historicalComparisonNotice?: string\n+  compact?: boolean\n+}\n+\n+/** 공급 상태는 경제 판단과 구분하며 예시 여부와 기준 시점을 숨기지 않는다. */\n+export function DataStateNotice({\n+  status, referenceMonth, lastUpdatedAt, isExampleData = false,\n+  historicalComparisonNotice, compact = false,\n+}: DataStateNoticeProps) {\n+  return (\n+    <div className={styles.dataState} data-status={status} data-compact={compact}>\n+      <div className={styles.stateLabels}>\n+        <span className={styles.stateLabel}>{stateLabels[status]}</span>\n+        {isExampleData && status !== 'EXAMPLE' ? <span className={styles.stateLabel}>예시 자료</span> : null}\n+      </div>\n+      <dl className={styles.stateMeta}>\n+        <div><dt>대상월</dt><dd>{referenceMonth ?? '확인할 수 없음'}</dd></div>\n+        <div><dt>마지막 갱신</dt><dd>{formatUpdatedAt(lastUpdatedAt)}{lastUpdatedAt ? ' KST' : ''}</dd></div>\n+      </dl>\n+      {historicalComparisonNotice ? <p className={styles.historyNotice}>{historicalComparisonNotice}</p> : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+import { render, screen, within } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { FieldDetail } from './FieldDetail'\n+\n+describe('FieldDetail', () => {\n+  it('기준월 뒤 발표 값은 3개월 경로 밖의 별도 안내로 보여 준다', () => {\n+    render(<FieldDetail detail={{ fieldId: 'labor', displayName: '노동', displayOrder: 4, status: 'READY', narrative: '변화', narrativeSubjects: [], referenceMonth: '2026-08', referenceMonthHeldBackBy: [], lastUpdatedAt: '2026-09-15T21:10:00Z', isExampleData: false, multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [{ indicatorId: 'unemployment', name: '실업률', unit: '%', value: 2.9, path: [{ month: '2026-06', value: 2.8 }, { month: '2026-07', value: 2.8 }, { month: '2026-08', value: 2.9 }], referenceMonth: '2026-08', releaseDate: '2026-09-10', source: '경제활동인구조사', agency: '통계청', afterReferenceMonthRelease: { referenceMonth: '2026-09', value: 3.1, unit: '%' } }] }} />)\n+    const path = screen.getByRole('list', { name: '실업률 3개월 경로' })\n+    expect(within(path).queryByText('3.1 %')).toBeNull()\n+    expect(screen.getByText(/기준월 뒤 발표 · 2026-09 3.1 %/)).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.test.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,72 @@\n+import { ArrowUpRight, ScanLine } from 'lucide-react'\n+import { motion, useReducedMotion } from 'motion/react'\n+import type { FieldDetailResult } from '@/types/marketFlow'\n+import { DataStateNotice } from './DataStateNotice'\n+import { ThreeMonthChart } from './ThreeMonthChart'\n+import { formatObservation, formatUpdatedAt } from './marketFlowFormat'\n+import styles from './MarketFlow.module.css'\n+\n+/** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */\n+export function FieldDetail({ detail }: { detail: FieldDetailResult }) {\n+  const reducedMotion = useReducedMotion()\n+  const titleId = `field-${detail.fieldId}-title`\n+  const similarNoteId = `similar-note-${detail.fieldId}`\n+  return (\n+    <motion.section\n+      className={styles.detail}\n+      aria-labelledby={titleId}\n+      initial={reducedMotion ? false : { opacity: 0, y: 5 }}\n+      animate={{ opacity: 1, y: 0 }}\n+      transition={{ duration: reducedMotion ? 0 : 0.2 }}\n+    >\n+      <header className={styles.detailHeader}>\n+        <div className={styles.detailTitle}>\n+          <div><span className={styles.detailEyebrow}>FIELD / {String(detail.displayOrder).padStart(2, '0')}</span><h2 id={titleId}>{detail.displayName}</h2></div>\n+          <span className={styles.indicatorCount}>소속 지표 <b>{detail.indicators.length}</b></span>\n+        </div>\n+        <p className={styles.detailNarrative}>{detail.narrative ?? '아래 자료 공급 상태와 기준 시점을 확인해 주세요.'}</p>\n+        <DataStateNotice status={detail.status} referenceMonth={detail.referenceMonth} lastUpdatedAt={detail.lastUpdatedAt} isExampleData={detail.isExampleData} />\n+        <p className={styles.referenceNote}>{detail.multipleReferenceMonthNotice}</p>\n+        {detail.referenceMonthHeldBackBy.length > 0 ? (\n+          <p className={styles.referenceNote}>\n+            기준월 결정에 반영된 지표: {detail.referenceMonthHeldBackBy.map((id) => detail.indicators.find((indicator) => indicator.indicatorId === id)?.name ?? id).join(', ')}\n+          </p>\n+        ) : null}\n+      </header>\n+      {detail.indicators.length === 0 ? (\n+        <div className={styles.emptyDetail}><ScanLine size={28} aria-hidden=\"true\" /><p>표시할 지표 자료가 없습니다.</p><span>다른 분야의 자료는 계속 살펴볼 수 있습니다.</span></div>\n+      ) : (\n+        <div className={styles.indicatorList}>\n+          {detail.indicators.map((indicator) => (\n+            <article className={styles.indicator} key={indicator.indicatorId}>\n+              <div className={styles.indicatorHeading}>\n+                <div><span className={styles.indicatorAgency}>{indicator.agency}</span><h3>{indicator.name}</h3></div>\n+                <strong className={styles.observation}>{formatObservation(indicator.value)}{indicator.value === null ? null : <small>{indicator.unit}</small>}</strong>\n+              </div>\n+              <ThreeMonthChart indicator={indicator} />\n+              {indicator.afterReferenceMonthRelease ? (\n+                <p className={styles.afterRelease}>\n+                  기준월 뒤 발표 · {indicator.afterReferenceMonthRelease.referenceMonth}{' '}\n+                  {formatObservation(indicator.afterReferenceMonthRelease.value)} {indicator.afterReferenceMonthRelease.unit}\n+                  <span>3개월 경로에는 포함하지 않습니다.</span>\n+                </p>\n+              ) : null}\n+              <dl className={styles.indicatorMeta}>\n+                <div><dt>대상월</dt><dd>{indicator.referenceMonth}</dd></div>\n+                <div><dt>발표일</dt><dd>{indicator.releaseDate ?? '확인할 수 없음'}</dd></div>\n+                <div><dt>출처</dt><dd>{indicator.source}</dd></div>\n+                <div><dt>작성기관</dt><dd>{indicator.agency}</dd></div>\n+                <div className={styles.updatedMeta}><dt>마지막 갱신</dt><dd>{formatUpdatedAt(detail.lastUpdatedAt)}{detail.lastUpdatedAt ? ' KST' : ''}</dd></div>\n+              </dl>\n+            </article>\n+          ))}\n+        </div>\n+      )}\n+      {/* spec 010의 검색 목적지/입력 계약이 연결되기 전에는 임의 검색 결과를 제공하지 않는다. */}\n+      <div className={styles.similarEntry}>\n+        <div><span className={styles.detailEyebrow}>EXPLORE THE PAST</span><p id={similarNoteId}>이 분야와 비슷했던 시기를 찾는 기능을 준비하고 있습니다.</p></div>\n+        <button type=\"button\" className={styles.similarButton} disabled aria-describedby={similarNoteId}>비슷했던 때 보기 <ArrowUpRight size={18} aria-hidden=\"true\" /><small>준비 중</small></button>\n+      </div>\n+    </motion.section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it, vi } from 'vitest'\n+import { FieldSummaryCard } from './FieldSummaryCard'\n+\n+describe('FieldSummaryCard', () => {\n+  it('요약 문장이 없으면 빈칸 대신 자료 상태를 보여 준다', () => {\n+    render(<FieldSummaryCard onOpen={vi.fn()} field={{ fieldId: 'labor', displayName: '노동', displayOrder: 4, status: 'EMPTY', narrative: null, narrativeSubjects: [], referenceMonth: null, referenceMonthHeldBackBy: [], lastUpdatedAt: null, isExampleData: false }} />)\n+    expect(screen.getByText('표시할 자료 없음')).toBeTruthy()\n+    expect(screen.getByText(/변화 요약 대신/)).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldSummaryCard.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,56 @@\n+import { ArrowUpRight } from 'lucide-react'\n+import { motion, useReducedMotion } from 'motion/react'\n+import type { FieldSummary } from '@/types/marketFlow'\n+import { DataStateNotice } from './DataStateNotice'\n+import styles from './MarketFlow.module.css'\n+\n+interface FieldSummaryCardProps {\n+  field: FieldSummary\n+  selected?: boolean\n+  onOpen: (field: FieldSummary) => void\n+}\n+\n+/** 기존 호출부 이름은 유지하되, 카드를 얇은 선택 행으로 표현한다. */\n+export function FieldSummaryCard({ field, selected = false, onOpen }: FieldSummaryCardProps) {\n+  const reducedMotion = useReducedMotion()\n+  return (\n+    <motion.article\n+      className={styles.summaryCard}\n+      data-selected={selected}\n+      initial={reducedMotion ? false : { opacity: 0, y: 6 }}\n+      animate={{ opacity: 1, y: 0 }}\n+      transition={{ duration: reducedMotion ? 0 : 0.22, delay: reducedMotion ? 0 : (field.displayOrder - 1) * 0.025 }}\n+    >\n+      {selected ? (\n+        <motion.span\n+          className={styles.selectionLine}\n+          layoutId={reducedMotion ? undefined : 'market-flow-selection'}\n+          transition={{ duration: 0.2 }}\n+          aria-hidden=\"true\"\n+        />\n+      ) : null}\n+      <h3 className={styles.summaryHeading}>\n+        <button\n+          type=\"button\"\n+          className={styles.openButton}\n+          aria-label={`${field.displayName} 분야 열기`}\n+          aria-pressed={selected}\n+          aria-controls=\"market-flow-detail\"\n+          onClick={() => onOpen(field)}\n+        >\n+          <span className={styles.fieldNumber} aria-hidden=\"true\">{String(field.displayOrder).padStart(2, '0')}</span>\n+          <span>{field.displayName}</span>\n+          <ArrowUpRight size={16} aria-hidden=\"true\" />\n+        </button>\n+      </h3>\n+      <p className={styles.narrative}>{field.narrative ?? '변화 요약 대신 아래 자료 상태를 확인해 주세요.'}</p>\n+      <DataStateNotice\n+        status={field.status}\n+        referenceMonth={field.referenceMonth}\n+        lastUpdatedAt={field.lastUpdatedAt}\n+        isExampleData={field.isExampleData}\n+        compact\n+      />\n+    </motion.article>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,102 @@\n+.summaryCard { position: relative; padding: 10px 10px 10px 15px; border-bottom: 1px solid var(--thorp-line); transition: background 180ms ease; }\n+.summaryCard:last-child { border-bottom: 0; }\n+.summaryCard:hover, .summaryCard:focus-within { background: var(--thorp-surface); }\n+.summaryCard[data-selected='true'] { background: linear-gradient(90deg, var(--thorp-accent-muted), transparent); }\n+.selectionLine { position: absolute; inset: 10px auto 10px 0; width: 2px; background: var(--thorp-accent); }\n+.summaryHeading { margin: 0; font-size: .92rem; }\n+.openButton { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 28px; padding: 0; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }\n+.openButton::after { position: absolute; inset: 0; content: ''; }\n+.openButton svg { margin-left: auto; color: var(--thorp-copy); transition: transform 180ms ease, color 180ms ease; flex-shrink: 0; }\n+.openButton:hover svg, .openButton:focus-visible svg { transform: translate(2px, -2px); color: var(--thorp-accent-soft); }\n+.fieldNumber { color: var(--thorp-copy); font: 500 .67rem/1 var(--thorp-font-display); }\n+.summaryCard[data-selected='true'] .fieldNumber, .summaryCard[data-selected='true'] .openButton svg { color: var(--thorp-accent-soft); }\n+.openButton:focus-visible { outline: none; }\n+.openButton:focus-visible::after, .pathPoint:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+.narrative { margin: 2px 0 7px; color: var(--thorp-copy); font-size: .76rem; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }\n+.dataState { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--thorp-copy); }\n+.stateLabels { display: flex; flex-wrap: wrap; gap: 4px; }\n+.stateLabel { display: inline-block; padding: 2px 5px; border: 1px solid var(--thorp-line-strong); font-size: .65rem; line-height: 1.3; white-space: nowrap; }\n+.stateMeta { display: flex; flex-wrap: wrap; gap: 5px 12px; margin: 0; font-size: .67rem; line-height: 1.45; font-variant-numeric: tabular-nums; }\n+.stateMeta div { display: flex; flex-wrap: wrap; gap: 5px; }\n+.stateMeta dt { color: var(--thorp-copy); }\n+.stateMeta dd { margin: 0; color: var(--thorp-foreground); }\n+.dataState[data-compact='true'] { gap: 4px 8px; }\n+.dataState[data-compact='true'] .stateMeta { display: contents; font-size: .64rem; }\n+.dataState[data-compact='true'] .stateMeta div { display: flex; align-items: baseline; gap: 5px; font-size: .64rem; }\n+.dataState[data-compact='true'] .stateMeta div:last-child { width: 100%; }\n+.dataState[data-compact='true'] .stateMeta dd { color: var(--thorp-copy); }\n+.historyNotice { width: 100%; margin: 0; font-size: .75rem; line-height: 1.5; }\n+.detail { min-width: 0; }\n+.detailHeader { padding-bottom: 18px; border-bottom: 1px solid var(--thorp-line-strong); }\n+.detailTitle { display: flex; align-items: center; justify-content: space-between; gap: 16px; }\n+.detailEyebrow { color: var(--thorp-accent-soft); font: 500 .6rem/1.4 var(--thorp-font-display); letter-spacing: .14em; }\n+.detailTitle h2 { margin: 5px 0 0; font: 600 1.8rem/1.2 var(--thorp-font-body); letter-spacing: -.045em; }\n+.indicatorCount { align-self: flex-end; color: var(--thorp-copy); font-size: .72rem; }\n+.indicatorCount b { margin-left: 5px; color: var(--thorp-foreground); font-family: var(--thorp-font-display); font-weight: 500; }\n+.detailNarrative { margin: 12px 0; color: var(--thorp-foreground); font-size: .91rem; line-height: 1.55; word-break: keep-all; }\n+.referenceNote { margin: 7px 0 0; color: var(--thorp-copy); font-size: .68rem; line-height: 1.5; }\n+.indicator { padding: 20px 0; border-bottom: 1px solid var(--thorp-line); }\n+.indicatorHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }\n+.indicatorHeading h3 { margin: 5px 0 0; font-size: .99rem; line-height: 1.45; letter-spacing: -.025em; word-break: keep-all; }\n+.indicatorAgency { color: var(--thorp-copy); font-size: .65rem; }\n+.observation { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 6px; font: 500 clamp(1.5rem, 2.4vw, 2.1rem)/1.15 var(--thorp-font-display); font-variant-numeric: tabular-nums; letter-spacing: -.035em; }\n+.observation small { color: var(--thorp-copy); font: 400 .72rem/1.4 var(--thorp-font-body); letter-spacing: 0; }\n+.chartBlock { margin-top: 16px; }\n+.chartCaption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; color: var(--thorp-copy); font-size: .64rem; line-height: 1.5; }\n+.chart { display: block; width: 100%; height: auto; overflow: visible; margin-top: 7px; }\n+.chartGrid line { stroke: var(--thorp-chart-grid); stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; }\n+.chartGrid text, .chartEmpty { fill: var(--thorp-copy); font: 11px var(--thorp-font-display); }\n+.chartEmpty { font-family: var(--thorp-font-body); font-size: 13px; }\n+.chartLine { fill: none; stroke: var(--thorp-chart-line-primary); stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }\n+.chartPoint { fill: var(--thorp-background); stroke: var(--thorp-accent-soft); stroke-width: 1.8; vector-effect: non-scaling-stroke; }\n+.crosshair { stroke: var(--thorp-line-strong); stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }\n+.path { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); list-style: none; margin: 0 0 14px; padding: 0; border-top: 1px solid var(--thorp-line); border-bottom: 1px solid var(--thorp-line); }\n+.path li { min-width: 0; }\n+.path li + li { border-left: 1px solid var(--thorp-line); }\n+.pathPoint { display: grid; gap: 5px; width: 100%; height: 100%; min-height: 62px; padding: 10px 12px; border: 0; text-align: left; background: transparent; color: var(--thorp-foreground); cursor: crosshair; transition: background 180ms ease; }\n+.pathPoint:hover, .pathPoint:focus-visible { background: var(--thorp-accent-muted); }\n+.pathMonth { display: flex; justify-content: space-between; align-items: center; gap: 4px; color: var(--thorp-copy); font: 400 .67rem/1.4 var(--thorp-font-display); }\n+.pathMonth small { color: var(--thorp-copy); font-size: .62rem; }\n+.pathPoint strong { overflow-wrap: anywhere; font: 500 .9rem/1.4 var(--thorp-font-display); font-variant-numeric: tabular-nums; }\n+.pathPoint strong small { font: 400 .65rem/1.4 var(--thorp-font-body); color: var(--thorp-copy); }\n+.chartNote { color: var(--thorp-copy); font-size: .68rem; margin: -6px 0 14px; }\n+.afterRelease { display: flex; flex-wrap: wrap; gap: 4px 12px; border-left: 2px solid var(--thorp-line-strong); padding: 4px 10px; margin: 0 0 14px; color: var(--thorp-foreground); font-size: .73rem; line-height: 1.5; }\n+.afterRelease span { color: var(--thorp-copy); font-size: .68rem; }\n+.indicatorMeta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 18px; margin: 0; font-size: .67rem; line-height: 1.5; }\n+.indicatorMeta div { display: flex; gap: 10px; min-width: 0; }\n+.indicatorMeta dt { flex: 0 0 46px; color: var(--thorp-copy); }\n+.indicatorMeta dd { margin: 0; color: var(--thorp-copy); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }\n+.updatedMeta { grid-column: 1 / -1; }\n+.indicatorMeta .updatedMeta dt { flex-basis: auto; }\n+.emptyDetail { display: grid; justify-items: start; align-content: center; min-height: 240px; color: var(--thorp-copy); }\n+.emptyDetail p { margin: 16px 0 8px; color: var(--thorp-foreground); }\n+.emptyDetail span { font-size: .78rem; }\n+.similarEntry { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 18px; padding: 22px 0; }\n+.similarEntry > div { flex: 1 1 200px; }\n+.similarEntry p { margin: 7px 0 0; font-size: .74rem; line-height: 1.6; color: var(--thorp-copy); }\n+.similarButton { display: grid; grid-template-columns: auto auto; align-items: center; gap: 6px 16px; padding: 10px 14px; min-height: 58px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-copy); font: 500 .84rem/1.4 var(--thorp-font-body); text-align: left; cursor: not-allowed; }\n+.similarButton small { grid-column: 1 / -1; font-size: .64rem; font-weight: 400; }\n+@media (max-width: 1100px) {\n+  .summaryCard { padding-left: 12px; padding-right: 7px; }\n+  .indicatorMeta { gap: 5px 10px; }\n+}\n+@media (max-width: 800px) {\n+  .summaryCard { padding: 12px 14px; }\n+  .openButton { min-height: 30px; }\n+  .narrative { font-size: .8rem; }\n+  .chartGrid text { font-size: 14px; }\n+}\n+@media (max-width: 480px) {\n+  .indicatorHeading { align-items: start; flex-direction: column; gap: 10px; }\n+  .observation { font-size: 1.8rem; justify-content: start; }\n+  .pathPoint { padding: 10px 7px; }\n+  .pathMonth { flex-wrap: wrap; font-size: .65rem; }\n+  .pathPoint strong { font-size: .82rem; }\n+  .indicatorMeta { grid-template-columns: 1fr; gap: 6px; }\n+  .similarEntry { align-items: stretch; }\n+  .similarButton { width: 100%; }\n+}\n+@media (prefers-reduced-motion: reduce) {\n+  .summaryCard, .openButton svg, .pathPoint { transition: none; }\n+  .openButton:hover svg, .openButton:focus-visible svg { transform: none; }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,91 @@\n+import { scaleLinear } from '@visx/scale'\n+import { motion, useReducedMotion } from 'motion/react'\n+import { useId, useMemo, useState } from 'react'\n+import type { IndicatorDisplay } from '@/types/marketFlow'\n+import { formatObservation } from './marketFlowFormat'\n+import styles from './MarketFlow.module.css'\n+\n+const plot = { width: 640, height: 172, left: 58, right: 622, top: 14, bottom: 146 }\n+\n+/** 실제 세 관측점만 직선으로 연결한다. 0을 포함한 축, 결측 구간의 단절을 유지한다. */\n+export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay }) {\n+  const reducedMotion = useReducedMotion()\n+  const descriptionId = useId()\n+  const [activePoint, setActivePoint] = useState<number | null>(null)\n+  const chart = useMemo(() => {\n+    const values = indicator.path.flatMap(({ value }) => value === null ? [] : [value])\n+    const min = Math.min(0, ...values)\n+    const max = Math.max(0, ...values)\n+    const y = scaleLinear({ domain: min === max ? [0, 1] : [min, max], range: [plot.bottom, plot.top], nice: true })\n+    const x = (index: number) => plot.left + index * (plot.right - plot.left) / 2\n+    // M은 새 구간 시작이다. null 양옆의 값을 L로 이어서 보간하지 않는다.\n+    const path = indicator.path.map((point, index) => {\n+      if (point.value === null) return ''\n+      const command = index === 0 || indicator.path[index - 1].value === null ? 'M' : 'L'\n+      return `${command}${x(index)},${y(point.value)}`\n+    }).join(' ')\n+    return { x, y, path, ticks: y.ticks(3), hasValues: values.length > 0 }\n+  }, [indicator.path])\n+\n+  return (\n+    <div className={styles.chartBlock} data-reduced-motion={Boolean(reducedMotion)}>\n+      <div className={styles.chartCaption} id={descriptionId}>\n+        <span>최근 3개월 경로</span><span>0을 포함한 축 · 단위 {indicator.unit}</span>\n+      </div>\n+      <svg\n+        viewBox={`0 0 ${plot.width} ${plot.height}`}\n+        className={styles.chart}\n+        role=\"img\"\n+        aria-label={`${indicator.name} 3개월 선 그래프`}\n+        aria-describedby={descriptionId}\n+      >\n+        <title>{indicator.name}: {indicator.path.map((point) => `${point.month} ${formatObservation(point.value)}${point.value === null ? '' : ` ${indicator.unit}`}`).join(', ')}</title>\n+        {chart.ticks.map((tick) => (\n+          <g key={tick} className={styles.chartGrid}>\n+            <line x1={plot.left} x2={plot.right} y1={chart.y(tick)} y2={chart.y(tick)} />\n+            <text x={plot.left - 10} y={chart.y(tick)} dy=\".35em\" textAnchor=\"end\">\n+              {new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 2 }).format(tick)}\n+            </text>\n+          </g>\n+        ))}\n+        {activePoint !== null ? (\n+          <line className={styles.crosshair} x1={chart.x(activePoint)} x2={chart.x(activePoint)} y1={plot.top} y2={plot.bottom} />\n+        ) : null}\n+        {chart.hasValues ? (\n+          <motion.path\n+            className={styles.chartLine}\n+            d={chart.path}\n+            initial={reducedMotion ? false : { pathLength: 0 }}\n+            animate={{ pathLength: 1 }}\n+            transition={{ duration: reducedMotion ? 0 : 0.55, ease: 'easeOut' }}\n+          />\n+        ) : <text className={styles.chartEmpty} x=\"50%\" y=\"50%\" textAnchor=\"middle\">관측값 없음</text>}\n+        {indicator.path.map((point, index) => point.value === null ? null : (\n+          <circle\n+            key={point.month}\n+            className={styles.chartPoint}\n+            data-month={point.month}\n+            cx={chart.x(index)} cy={chart.y(point.value)} r={activePoint === index ? 5 : 3.5}\n+          />\n+        ))}\n+      </svg>\n+      <ol className={styles.path} aria-label={`${indicator.name} 3개월 경로`}>\n+        {indicator.path.map((point, index) => (\n+          <li key={point.month}>\n+            <button\n+              type=\"button\"\n+              aria-label={`${point.month}, ${formatObservation(point.value)}${point.value === null ? '' : ` ${indicator.unit}`}`}\n+              onMouseEnter={() => setActivePoint(index)} onMouseLeave={() => setActivePoint(null)}\n+              onFocus={() => setActivePoint(index)} onBlur={() => setActivePoint(null)}\n+              className={styles.pathPoint}\n+            >\n+              <span className={styles.pathMonth}>{point.month}<small>{['t-2', 't-1', 't'][index]}</small></span>\n+              <strong>{formatObservation(point.value)}{point.value === null ? null : <small> {indicator.unit}</small>}</strong>\n+            </button>\n+          </li>\n+        ))}\n+      </ol>\n+      {indicator.path.some((point) => point.value === null) ? <p className={styles.chartNote}>자료가 없는 달은 연결하지 않습니다.</p> : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/ThreeMonthChart.tsx",
+          "old_path": "frontend/src/components/marketflow/ThreeMonthChart.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+/** 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다. */\n+export function formatObservation(value: number | null): string {\n+  return value === null ? '자료 없음' : value.toLocaleString('ko-KR', { maximumFractionDigits: 10 })\n+}\n+\n+export function formatUpdatedAt(value: string | null): string {\n+  if (!value) return '확인할 수 없음'\n+  const parsed = new Date(value)\n+  if (Number.isNaN(parsed.getTime())) return value\n+  return new Intl.DateTimeFormat('sv-SE', {\n+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',\n+    hour: '2-digit', minute: '2-digit', hour12: false,\n+  }).format(parsed)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,7 +41,7 @@ const navigationItems = [\n   {\n     label: '시장 흐름',\n     description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',\n-    path: '/home',\n+    path: '/market-flow',\n     icon: ChartNoAxesCombined,\n   },\n   {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,10 @@ import { describe, expect, it } from 'vitest'\n  * 파일도 `package.json`의 `test:legacy` 인자 목록에 적힌 것만 실행된다. 두 목록 어디에도 걸리지\n  * 않는 테스트 파일이 있으면 그 파일은 있으나 마나 하므로 여기서 실패시킨다.\n  *\n+ * **`test.exclude`까지 읽어야 한다.** include에 걸려도 exclude가 도로 빼면 Vitest는 그 파일을\n+ * 돌리지 않는다. exclude를 보지 않으면 가드가 \"수집됨\"으로 오인해, 정작 아무도 돌리지 않는\n+ * 파일을 통과시킨다. 그러면 이 가드가 막으려던 상황이 그대로 일어난다.\n+ *\n  * 이 파일의 확장자가 `.tsx`인 까닭은, 목록을 고치지 않아도 반드시 수집되는 패턴이\n  * `src/**` + `*.test.tsx` 하나뿐이기 때문이다. 가드 자신이 수집되지 않으면 아무것도 지키지 못한다.\n  */\n@@ -46,7 +50,7 @@ function collectPlainTypeScriptTests(directory: string = sourceRoot): string[] {\n type PatternMatcher = (relativePath: string) => boolean\n \n /**\n- * 지금 쓰는 표현은 `dir/**` + `/*.ext`와 정확 경로 두 가지뿐이다. 그 둘만 해석하고,\n+ * 지금 쓰는 표현은 재귀 `dir/**` + `/*.ext`, 한 폴더 `dir/*.ext`, 정확 경로다.\n  * **해석할 수 없는 형태가 들어오면 통과시키지 않고 예외를 던진다.** 모르는 패턴을 통과로\n  * 처리하면 검사가 조용히 사라진다.\n  */\n@@ -55,6 +59,21 @@ export function compilePattern(pattern: string): PatternMatcher {\n   const globIndex = pattern.indexOf(globToken)\n \n   if (globIndex === -1) {\n+    const singleGlobIndex = pattern.indexOf('*')\n+\n+    if (singleGlobIndex !== -1 && pattern.indexOf('*', singleGlobIndex + 1) === -1) {\n+      const prefix = pattern.slice(0, singleGlobIndex)\n+      const suffix = pattern.slice(singleGlobIndex + 1)\n+\n+      if (prefix.endsWith('/') && !suffix.includes('/') && !pattern.includes('{') && !pattern.includes('?')) {\n+        return (relativePath) => {\n+          if (!relativePath.startsWith(prefix) || !relativePath.endsWith(suffix)) return false\n+          const wildcardValue = relativePath.slice(prefix.length, relativePath.length - suffix.length)\n+          return wildcardValue.length > 0 && !wildcardValue.includes('/')\n+        }\n+      }\n+    }\n+\n     if (pattern.includes('*') || pattern.includes('{') || pattern.includes('?')) {\n       throw new Error(`해석할 수 없는 수집 패턴이다: ${pattern}`)\n     }\n@@ -110,6 +129,33 @@ async function readViteIncludePatterns(): Promise<string[]> {\n   return patterns\n }\n \n+/**\n+ * `test.exclude` 값을 읽는다. **include와 달리 설정 모듈을 가져오지 않고 텍스트만 읽는다.**\n+ * 이유가 둘이다. 하나는 jsdom 워커에서 `vitest/config`를 가져오면 esbuild가 TextEncoder\n+ * invariant로 죽어 가드 자신이 실행되지 않는 것이고, 다른 하나는 이쪽이 오히려 정확하기\n+ * 때문이다. 우리 설정의 exclude는 `[...configDefaults.exclude, '우리가 쓴 값']` 꼴이라,\n+ * 따옴표 안을 뽑으면 **사람이 직접 적은 패턴만** 남는다. Vitest 기본값은 전부 `src` 밖을\n+ * 가리키므로 이 검사에 영향을 주지 않는다.\n+ *\n+ * **exclude 키가 있는데 읽지 못하면 건너뛰지 않고 예외를 던진다.** 못 읽은 것을 \"제외 없음\"\n+ * 으로 처리하면 가드가 실제보다 느슨해져, 아무도 돌리지 않는 파일을 통과시킨다.\n+ */\n+function readViteExcludePatterns(): string[] {\n+  const source = readFileSync(resolve(frontendRoot, 'vite.config.ts'), 'utf8')\n+  const arrayLiteral = /exclude:\\s*\\[([\\s\\S]*?)\\]/.exec(source)\n+\n+  if (!arrayLiteral) {\n+    if (/\\bexclude:/.test(source)) {\n+      throw new Error('vite.config.ts에서 test.exclude 배열을 읽지 못했다. 이 검사를 건너뛰지 않는다.')\n+    }\n+    return []\n+  }\n+\n+  return [...arrayLiteral[1].matchAll(/'([^']+)'|\"([^\"]+)\"/g)].map(\n+    (match) => match[1] ?? match[2],\n+  )\n+}\n+\n /** `test:legacy`가 `node --test`에 넘기는 파일 목록을 읽는다. */\n function readLegacyTestFiles(): string[] {\n   const manifest = JSON.parse(readFileSync(resolve(frontendRoot, 'package.json'), 'utf8')) as {\n@@ -138,30 +184,53 @@ describe('테스트 수집 경로', () => {\n     expect(files.length).toBeGreaterThan(0)\n   })\n \n-  it('모든 .test.ts가 Vitest include나 test:legacy 목록 가운데 하나에 걸린다', async () => {\n+  it('모든 .test.ts가 Vitest 수집이나 test:legacy 목록 가운데 하나에 걸린다', async () => {\n     const files = collectPlainTypeScriptTests()\n-    const matchers = [\n-      ...(await readViteIncludePatterns()).map(compilePattern),\n-      ...readLegacyTestFiles().map(compilePattern),\n-    ]\n+    const included = (await readViteIncludePatterns()).map(compilePattern)\n+    const excluded = readViteExcludePatterns().map(compilePattern)\n+    const legacy = readLegacyTestFiles().map(compilePattern)\n+\n+    // include에 걸려도 exclude가 도로 빼면 Vitest는 그 파일을 돌리지 않는다.\n+    const collectedByVitest = (file: string) =>\n+      included.some((matches) => matches(file)) && !excluded.some((matches) => matches(file))\n \n-    const uncollected = files.filter((file) => !matchers.some((matches) => matches(file)))\n+    const uncollected = files.filter(\n+      (file) => !collectedByVitest(file) && !legacy.some((matches) => matches(file)),\n+    )\n \n     expect(uncollected).toEqual([])\n   })\n \n+  it('exclude된 파일은 include에 걸려도 Vitest 수집으로 세지 않는다', async () => {\n+    const included = (await readViteIncludePatterns()).map(compilePattern)\n+    const excluded = readViteExcludePatterns().map(compilePattern)\n+    const legacyOnly = 'src/api/market.test.ts'\n+\n+    // node:test 전용 파일이라 include glob에는 분명히 걸린다. 그래서 exclude를 읽지 않으면\n+    // 가드가 이 파일을 Vitest가 돌리는 것으로 오인한다.\n+    expect(included.some((matches) => matches(legacyOnly))).toBe(true)\n+    expect(excluded.some((matches) => matches(legacyOnly))).toBe(true)\n+\n+    // 실제로 돌려주는 곳은 test:legacy 하나뿐이다. 거기서 빠지면 위 검사가 실패해야 한다.\n+    expect(readLegacyTestFiles()).toContain(legacyOnly)\n+  })\n+\n   it('해석할 수 없는 형태의 패턴은 통과시키지 않고 실패시킨다', () => {\n     expect(() => compilePattern('src/**/{a,b}.test.ts')).toThrow()\n-    expect(() => compilePattern('src/*.test.ts')).toThrow()\n+    expect(() => compilePattern('src/*/*.test.ts')).toThrow()\n     expect(() => compilePattern('src/api/?.test.ts')).toThrow()\n   })\n \n-  it('알고 있는 두 형태를 바르게 해석한다', () => {\n+  it('알고 있는 세 형태를 바르게 해석한다', () => {\n     const glob = compilePattern('src/**/*.test.tsx')\n     expect(glob('src/pages/LandingPage.test.tsx')).toBe(true)\n     expect(glob('src/pages/LandingPage.test.ts')).toBe(false)\n     expect(glob('src/.test.tsx')).toBe(false)\n \n+    const oneDirectory = compilePattern('src/api/*.test.ts')\n+    expect(oneDirectory('src/api/marketFlow.test.ts')).toBe(true)\n+    expect(oneDirectory('src/api/nested/marketFlow.test.ts')).toBe(false)\n+\n     const exact = compilePattern('src/api/auth.test.ts')\n     expect(exact('src/api/auth.test.ts')).toBe(true)\n     expect(exact('src/api/sectors.test.ts')).toBe(false)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/testCollection.guard.test.tsx",
+          "old_path": "frontend/src/diagnosis/testCollection.guard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,78 +0,0 @@\n-.container {\n-  width: 100%;\n-  padding: 0;\n-}\n-\n-.heroStage {\n-  position: relative;\n-  width: min(100% - 80px, 1320px);\n-  margin: 0 auto;\n-}\n-\n-.orbitPrimary,\n-.orbitSecondary {\n-  position: absolute;\n-  z-index: 0;\n-  pointer-events: none;\n-}\n-\n-.orbitPrimary {\n-  top: -410px;\n-  right: -250px;\n-  width: 1050px;\n-  height: 670px;\n-  border: 1px solid var(--market-line-soft);\n-  border-radius: 50%;\n-  transform: rotate(-9deg);\n-}\n-\n-.orbitSecondary {\n-  bottom: -230px;\n-  left: -480px;\n-  width: 930px;\n-  height: 410px;\n-  border: 1px solid var(--market-line-soft);\n-  border-radius: 50%;\n-  transform: rotate(12deg);\n-}\n-\n-.heroStage > section {\n-  z-index: 1;\n-}\n-\n-.contentBoundary {\n-  position: relative;\n-  margin-top: 12px;\n-  padding: clamp(62px, 7vw, 92px) max(40px, calc((100vw - 1320px) / 2)) 84px;\n-  border-top: 1px solid var(--market-line);\n-  border-radius: clamp(48px, 7vw, 96px) clamp(48px, 7vw, 96px) 0 0;\n-  background:\n-    linear-gradient(180deg, rgb(3 199 90 / 3%), transparent 280px),\n-    var(--thorp-background);\n-}\n-\n-.contentFlow {\n-  display: grid;\n-  width: 100%;\n-  max-width: 1320px;\n-  margin: 0 auto;\n-  min-width: 0;\n-  gap: clamp(48px, 6vh, 72px);\n-}\n-\n-\n-@media (max-width: 760px) {\n-  .heroStage {\n-    width: min(100% - 28px, 1440px);\n-  }\n-\n-  .orbitPrimary {\n-    right: -580px;\n-  }\n-\n-  .contentBoundary {\n-    margin-top: 0;\n-    padding: 48px 14px 64px;\n-    border-radius: 38px 38px 0 0;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/HomePage.module.css",
+          "old_path": "frontend/src/pages/HomePage.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,85 +0,0 @@\n-import { useMemo, useState } from 'react'\n-import { DataFreshnessPanel } from '@/components/home/DataFreshnessPanel'\n-import { MacroIndicatorGrid } from '@/components/market/MacroIndicatorGrid'\n-import { MarketRegimeHero } from '@/components/home/MarketRegimeHero'\n-import { MarketSnapshot } from '@/components/market/MarketSnapshot'\n-import { MarketDataStatus } from '@/components/market/MarketDataStatus'\n-import { SimilarMarketPanel } from '@/components/home/SimilarMarketPanel'\n-import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'\n-import { AppHeader } from '@/components/navigation/AppHeader'\n-import { marketMock } from '@/data/marketMock'\n-import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n-import { withCurrentIndicatorValues } from '@/utils/marketComparison'\n-import layout from '@/styles/MarketLayout.module.css'\n-import styles from './HomePage.module.css'\n-\n-/** 기존 시장 분석 화면을 홈으로 제공하고 상세 지표·차트·유사 시장 탐색을 유지한다. */\n-export function HomePage() {\n-  const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)\n-  const {\n-    marketIndicators,\n-    macroIndicators,\n-    failedCodes,\n-    isRefreshing,\n-    refetch,\n-  } = useMarketIndicators(\n-    marketMock.marketIndicators,\n-    marketMock.macroIndicators,\n-  )\n-  const allComparisonIndicators = useMemo(\n-    () => [...marketIndicators, ...macroIndicators],\n-    [macroIndicators, marketIndicators],\n-  )\n-  const comparisonPeriod = useMemo(\n-    () => withCurrentIndicatorValues(marketMock.similarPeriod, allComparisonIndicators),\n-    [allComparisonIndicators],\n-  )\n-\n-  return (\n-    <div className={layout.page}>\n-      <AppHeader />\n-\n-      <main className={styles.container}>\n-        <div className={styles.heroStage}>\n-          <span className={styles.orbitPrimary} aria-hidden=\"true\" />\n-          <span className={styles.orbitSecondary} aria-hidden=\"true\" />\n-          <MarketRegimeHero regime={marketMock.regime} />\n-        </div>\n-\n-        <div className={styles.contentBoundary}>\n-          <div className={styles.contentFlow}>\n-            <MarketDataStatus\n-              failedCount={failedCodes.length}\n-              isRefreshing={isRefreshing}\n-              onRetry={() => void refetch()}\n-            />\n-            <MarketSnapshot\n-              indicators={marketIndicators}\n-              activeIndicatorId={activeIndicatorId}\n-              onActiveChange={setActiveIndicatorId}\n-            />\n-            <MacroIndicatorGrid\n-              indicators={macroIndicators}\n-              activeIndicatorId={activeIndicatorId}\n-              onActiveChange={setActiveIndicatorId}\n-            />\n-            <SimilarMarketPanel\n-              period={comparisonPeriod}\n-              indicators={allComparisonIndicators}\n-            />\n-            <StrategyRecommendationSection strategies={marketMock.strategyRecommendations} />\n-            <DataFreshnessPanel\n-              sources={marketMock.dataFreshness}\n-              stabilityIndicators={marketMock.stabilityIndicators}\n-            />\n-          </div>\n-\n-          <footer className={layout.footer}>\n-            지표 최신값은 연동 API를 우선 사용하며, 과거 차트·시장 해석·추천 결과는 UI\n-            검증용 예시 데이터입니다. 투자 권유나 수익을 보장하는 정보가 아닙니다.\n-          </footer>\n-        </div>\n-      </main>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/HomePage.tsx",
+          "old_path": "frontend/src/pages/HomePage.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,7 +50,7 @@ beforeAll(() => {\n /** FR-001이 첫 화면에 요구하는 메뉴 넷과 각 목적지다. */\n const expectedMenus = [\n   { label: '전략 진단', href: '/diagnosis/sectors' },\n-  { label: '시장 흐름', href: '/home' },\n+  { label: '시장 흐름', href: '/market-flow' },\n   { label: '배우기', href: '/learn' },\n   { label: '내 기록', href: '/records' },\n ]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.test.tsx",
+          "old_path": "frontend/src/pages/LandingPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,88 @@\n+.page {\n+  min-height: 100vh;\n+  color: var(--thorp-foreground);\n+  background: var(--thorp-background);\n+}\n+.main { width: min(1320px, calc(100% - 80px)); margin: 0 auto; padding: 26px 0 64px; }\n+.hero { position: relative; display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: end; padding-bottom: 28px; }\n+.hero::before {\n+  position: absolute; inset: -25px 0 0 30%; content: ''; pointer-events: none;\n+  background: radial-gradient(ellipse at 60% 20%, var(--thorp-accent-muted), transparent 68%);\n+  opacity: .35;\n+}\n+.eyebrow { display: inline-flex; align-items: center; gap: 7px; color: var(--thorp-accent-soft); font: 600 .65rem/1.4 var(--thorp-font-display); letter-spacing: .16em; }\n+.hero h1 { margin: 10px 0 0; font: 600 clamp(1.9rem, 3vw, 2.7rem)/1.18 var(--thorp-font-body); letter-spacing: -.055em; }\n+.hero h1 span { color: var(--thorp-copy); }\n+.heroAside { position: relative; max-width: 440px; padding: 0 0 3px 22px; border-left: 1px solid var(--thorp-line-strong); }\n+.heroAside p { margin: 0 0 10px; color: var(--thorp-copy); font-size: .84rem; line-height: 1.65; word-break: keep-all; }\n+.heroAside > span { color: var(--thorp-copy); font-size: .72rem; }\n+.workspaceHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--thorp-line-strong); border-bottom: 1px solid var(--thorp-line-strong); padding: 12px 0; }\n+.workspaceHeading h2 { display: flex; gap: 12px; margin: 0; font-size: .9rem; font-weight: 600; }\n+.workspaceHeading h2 span { font: 500 .74rem/1.5 var(--thorp-font-display); color: var(--thorp-accent-soft); }\n+.workspaceHeading > span { color: var(--thorp-copy); font: 400 .72rem/1.4 var(--thorp-font-body); }\n+.workspaceHeading i { margin: 0 8px; color: var(--thorp-muted); font-style: normal; }\n+.workspace { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.65fr); align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }\n+.fieldRail { min-width: 0; }\n+.fieldList { padding-right: 24px; }\n+.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: 105px; }\n+.detailPanel:focus-visible, .detailJump:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+.detailJump { display: none; }\n+.loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: .82rem; }\n+.loadingTrack { display: block; width: 100%; height: 2px; overflow: hidden; background: var(--thorp-line); }\n+.loadingTrack::after { display: block; content: ''; width: 28%; height: 100%; background: var(--thorp-accent); animation: data-flow 1.4s ease-in-out infinite alternate; }\n+@keyframes data-flow { from { transform: translateX(0); } to { transform: translateX(255%); } }\n+.loadFailure { padding: 24px 0; color: var(--thorp-copy); font-size: .86rem; }\n+.loadFailure h2 { margin: 0; color: var(--thorp-foreground); font-size: 1.5rem; }\n+.loadFailure button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: 1px solid var(--thorp-line-strong); color: var(--thorp-foreground); background: transparent; cursor: pointer; }\n+.loadFailure button:hover { border-color: var(--thorp-accent); }\n+.historyNotice { margin: 0; padding: 13px 0; color: var(--thorp-copy); font-size: .72rem; line-height: 1.6; }\n+.connections { padding-top: 36px; }\n+.connectionHeader { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px 20px; margin-bottom: 20px; }\n+.connectionHeader h2 { margin: 0; font-size: 1.25rem; letter-spacing: -.035em; }\n+.connectionHeader p { margin: 0 0 0 auto; font-size: .78rem; color: var(--thorp-copy); }\n+.connectionGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--thorp-line-strong); border-bottom: 1px solid var(--thorp-line); }\n+.connectionGrid article { position: relative; min-width: 0; padding: 24px; }\n+.connectionGrid article:first-child { padding-left: 0; }\n+.connectionGrid article:last-child { padding-right: 0; }\n+.connectionGrid article + article { border-left: 1px solid var(--thorp-line); }\n+.connectionGrid article > svg { display: block; color: var(--thorp-copy); margin-bottom: 18px; }\n+.connectionLabel { color: var(--thorp-copy); font: 500 .6rem/1.4 var(--thorp-font-display); letter-spacing: .12em; }\n+.connectionGrid h3 { margin: 7px 0 9px; font-size: 1.05rem; }\n+.connectionGrid p { margin: 0; min-height: 3.3em; color: var(--thorp-copy); font-size: .8rem; line-height: 1.65; word-break: keep-all; }\n+.connectionGrid button { display: flex; width: 100%; align-items: center; gap: 8px; border: 0; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; background: transparent; color: var(--thorp-copy); text-align: left; font: 500 .8rem/1.4 var(--thorp-font-body); cursor: not-allowed; }\n+.connectionGrid button small { margin-left: auto; white-space: nowrap; font-size: .65rem; }\n+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }\n+@media (max-width: 1100px) {\n+  .main { width: calc(100% - 48px); }\n+  .workspace { grid-template-columns: minmax(310px, .95fr) minmax(0, 1.5fr); }\n+  .fieldList { padding-right: 18px; }\n+  .detailPanel { padding-left: 20px; }\n+}\n+@media (max-width: 800px) {\n+  .main { width: calc(100% - 32px); padding-top: 16px; }\n+  .hero { grid-template-columns: 1fr; gap: 18px; padding-bottom: 22px; }\n+  .heroAside { border: 0; padding: 0; max-width: 540px; }\n+  .heroAside > span { display: none; }\n+  .heroAside p { margin: 0; }\n+  .workspace { grid-template-columns: 1fr; }\n+  .fieldList { padding: 0; }\n+  .detailPanel { border-left: 0; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; }\n+  .detailJump { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 48px; padding: 10px 14px; margin: 14px 0 24px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-accent-soft); font: 500 .8rem/1.5 var(--thorp-font-body); cursor: pointer; }\n+  .connectionGrid { grid-template-columns: 1fr; }\n+  .connectionGrid article, .connectionGrid article:first-child, .connectionGrid article:last-child { padding: 22px 0; }\n+  .connectionGrid article + article { border-left: 0; border-top: 1px solid var(--thorp-line); }\n+  .connectionGrid article > svg { float: right; }\n+  .connectionGrid p { min-height: 0; }\n+  .connectionHeader { display: grid; }\n+  .connectionHeader p { margin: 0; }\n+}\n+@media (max-width: 420px) {\n+  .main { width: calc(100% - 28px); }\n+  .hero h1 { font-size: 1.95rem; }\n+  .workspaceHeading { gap: 6px; }\n+  .workspaceHeading > span { font-size: .64rem; }\n+  .workspaceHeading i { margin: 0 4px; }\n+}\n+@media (prefers-reduced-motion: reduce) {\n+  .loadingTrack::after { animation: none; width: 100%; opacity: .5; }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "old_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,98 @@\n+import { fireEvent, screen, waitFor } from '@testing-library/react'\n+import { describe, expect, it, vi } from 'vitest'\n+import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n+import { renderWithRouter } from '@/test/renderWithRouter'\n+import type { FieldSummary } from '@/types/marketFlow'\n+import { MarketFlowPage } from './MarketFlowPage'\n+\n+vi.mock('@/api/marketFlow', () => ({ fetchMarketFlowFields: vi.fn(), fetchMarketFlowField: vi.fn() }))\n+vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))\n+\n+const fieldNames = ['생산', '소비·투자', '대외거래', '노동', '물가·원자재', '금융·주택', '해외 경기']\n+const fields: FieldSummary[] = fieldNames.map((displayName, index) => ({\n+  fieldId: ['production', 'consumption_investment', 'external_trade', 'labor', 'prices_commodities', 'finance_housing', 'overseas'][index] as FieldSummary['fieldId'],\n+  displayName, displayOrder: index + 1, status: 'READY', narrative: `${displayName} 변화`,\n+  narrativeSubjects: [], referenceMonth: '2026-07', referenceMonthHeldBackBy: [],\n+  lastUpdatedAt: '2026-09-15T21:10:00Z', isExampleData: false,\n+}))\n+\n+describe('MarketFlowPage', () => {\n+  it('로그인 없이 일곱 분야를 먼저 보여 주고 전체 경제 판정을 만들지 않는다', async () => {\n+    vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '최신 개정자료를 이용한 역사 비교입니다.', fields })\n+    // 화면은 첫 분야 상세를 함께 연다. 이 호출을 두지 않으면 요약 검증 전에 화면이 먼저 무너진다.\n+    vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })\n+    renderWithRouter(<MarketFlowPage />)\n+\n+    for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()\n+    expect(document.body.textContent).not.toMatch(/경제 전체.*(점수|등급)|(점수|등급).*경제 전체/)\n+  })\n+\n+  it('분야 열기를 누르면 해당 상세를 조회한다', async () => {\n+    vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })\n+    vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })\n+    renderWithRouter(<MarketFlowPage />)\n+    const buttons = await screen.findAllByRole('button', { name: /분야 열기/ })\n+    // 첫 분야는 화면이 스스로 열어 두므로, 누른 효과는 다른 분야로 확인한다.\n+    fireEvent.click(buttons[3])\n+    await waitFor(() => expect(fetchMarketFlowField).toHaveBeenCalledWith('labor', expect.any(AbortSignal)))\n+  })\n+\n+  describe('분야 목록 키보드 이동', () => {\n+    async function renderFieldButtons() {\n+      vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })\n+      vi.mocked(fetchMarketFlowField).mockImplementation(async (fieldId) => ({\n+        ...fields.find((item) => item.fieldId === fieldId)!,\n+        multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.',\n+        indicators: [],\n+      }))\n+      renderWithRouter(<MarketFlowPage />)\n+      return await screen.findAllByRole('button', { name: /분야 열기/ })\n+    }\n+\n+    /**\n+     * 목록은 화살표로 옮겨 다니는 한 벌이라 Tab 정지점이 일곱 개로 늘어나지 않는다.\n+     * 그래서 포커스만 옮기고 끝내면 안 되고, 옮긴 분야가 실제로 열려야 한다.\n+     */\n+    it.each([\n+      ['ArrowDown', 0, 1, 'consumption_investment'],\n+      ['ArrowUp', 2, 1, 'consumption_investment'],\n+      ['Home', 4, 0, 'production'],\n+      ['End', 0, 6, 'overseas'],\n+    ])('%s는 %i번에서 %i번 분야로 포커스와 선택을 함께 옮긴다', async (key, from, to, expectedId) => {\n+      const buttons = await renderFieldButtons()\n+      buttons[from].focus()\n+\n+      fireEvent.keyDown(buttons[from], { key })\n+\n+      expect(document.activeElement).toBe(buttons[to])\n+      await waitFor(() => expect(fetchMarketFlowField).toHaveBeenCalledWith(expectedId, expect.any(AbortSignal)))\n+      expect(buttons[to].getAttribute('aria-pressed')).toBe('true')\n+    })\n+\n+    it.each([\n+      ['ArrowUp', 0, 6],\n+      ['ArrowDown', 6, 0],\n+    ])('%s는 끝에서 반대쪽 끝으로 돈다', async (key, from, to) => {\n+      const buttons = await renderFieldButtons()\n+      buttons[from].focus()\n+\n+      fireEvent.keyDown(buttons[from], { key })\n+\n+      expect(document.activeElement).toBe(buttons[to])\n+    })\n+\n+    it('목록이 쓰지 않는 키는 가로채지 않는다', async () => {\n+      const buttons = await renderFieldButtons()\n+      buttons[2].focus()\n+\n+      // Tab·Enter는 브라우저와 button 기본 동작에 맡긴다. 여기서 preventDefault하면\n+      // 키보드 사용자가 목록 밖으로 나가지 못한다.\n+      for (const key of ['Tab', 'Enter', 'ArrowLeft']) {\n+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })\n+        buttons[2].dispatchEvent(event)\n+        expect(event.defaultPrevented).toBe(false)\n+      }\n+      expect(document.activeElement).toBe(buttons[2])\n+    })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,152 @@\n+import { Activity, ArrowDown, ArrowUpRight, ChartNoAxesCombined, Newspaper, RefreshCw, Waypoints } from 'lucide-react'\n+import { LayoutGroup, motion, useReducedMotion } from 'motion/react'\n+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'\n+import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n+import { FieldDetail } from '@/components/marketflow/FieldDetail'\n+import { FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import type { FieldDetailResult, FieldSummary, FieldSummaryResult, MarketFlowFieldId } from '@/types/marketFlow'\n+import styles from './MarketFlowPage.module.css'\n+\n+type DetailState =\n+  | { fieldId: MarketFlowFieldId; status: 'loading' | 'error' }\n+  | { fieldId: MarketFlowFieldId; status: 'success'; data: FieldDetailResult }\n+\n+function LoadingNotice({ children }: { children: string }) {\n+  return <div className={styles.loading} role=\"status\"><span className={styles.loadingTrack} aria-hidden=\"true\" /><p>{children}</p></div>\n+}\n+\n+/** 일곱 분야를 동시에 훑고, 같은 화면에서 선택한 분야의 원자료를 조회한다. */\n+export function MarketFlowPage() {\n+  const reducedMotion = useReducedMotion()\n+  const selectionGroup = useId()\n+  const detailPanel = useRef<HTMLDivElement>(null)\n+  const [summary, setSummary] = useState<FieldSummaryResult | null>(null)\n+  const [summaryError, setSummaryError] = useState(false)\n+  const [summaryRequest, setSummaryRequest] = useState(0)\n+  const [selectedId, setSelectedId] = useState<MarketFlowFieldId | null>(null)\n+  const [detail, setDetail] = useState<DetailState | null>(null)\n+  const [detailRequest, setDetailRequest] = useState(0)\n+  const selected = summary?.fields.find((field) => field.fieldId === selectedId) ?? summary?.fields[0]\n+  const selectedFieldId = selected?.fieldId\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    setSummaryError(false)\n+    fetchMarketFlowFields(controller.signal)\n+      .then((result) => {\n+        if (!controller.signal.aborted) {\n+          setSummary({ ...result, fields: [...result.fields].sort((a, b) => a.displayOrder - b.displayOrder) })\n+        }\n+      })\n+      .catch(() => {\n+        if (!controller.signal.aborted) setSummaryError(true)\n+      })\n+    return () => controller.abort()\n+  }, [summaryRequest])\n+\n+  const openField = useCallback((field: FieldSummary) => {\n+    // 같은 분야의 선택은 조회/차트 애니메이션을 다시 시작하지 않는다.\n+    if (field.fieldId !== selectedFieldId) setSelectedId(field.fieldId)\n+  }, [selectedFieldId])\n+\n+  useEffect(() => {\n+    if (!selectedFieldId) return\n+    const controller = new AbortController()\n+    setDetail({ fieldId: selectedFieldId, status: 'loading' })\n+    fetchMarketFlowField(selectedFieldId, controller.signal)\n+      .then((data) => {\n+        if (!controller.signal.aborted) setDetail({ fieldId: selectedFieldId, status: 'success', data })\n+      })\n+      .catch(() => {\n+        if (!controller.signal.aborted) setDetail({ fieldId: selectedFieldId, status: 'error' })\n+      })\n+    return () => controller.abort()\n+  }, [selectedFieldId, detailRequest])\n+\n+  function navigateFields(event: KeyboardEvent<HTMLElement>) {\n+    const target = event.target as HTMLElement\n+    if (!target.closest('button[aria-controls=\"market-flow-detail\"]')) return\n+    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[aria-controls=\"market-flow-detail\"]'))\n+    const index = buttons.indexOf(target.closest('button') as HTMLButtonElement)\n+    const nextIndex = event.key === 'ArrowDown' ? (index + 1) % buttons.length\n+      : event.key === 'ArrowUp' ? (index - 1 + buttons.length) % buttons.length\n+      : event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : null\n+    if (nextIndex === null) return\n+    event.preventDefault()\n+    buttons[nextIndex].focus()\n+    buttons[nextIndex].click()\n+  }\n+\n+  const displayedDetail = detail?.fieldId === selectedFieldId ? detail : null\n+  const introMotion = reducedMotion ? false : { opacity: 0, y: 7 }\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main}>\n+        <header className={styles.hero}>\n+          <motion.div initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>\n+            <span className={styles.eyebrow}><Activity size={14} aria-hidden=\"true\" /> MARKET FLOW</span>\n+            <h1>시장 흐름을<br /><span>분야별로 확인하세요.</span></h1>\n+          </motion.div>\n+          <motion.div className={styles.heroAside} initial={introMotion} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.3, delay: reducedMotion ? 0 : 0.06 }}>\n+            <p>경제를 하나의 점수로 단정하지 않고, 생산·소비·대외거래 등 일곱 분야의 실제 지표와 최근 경로를 나누어 보여드립니다.</p>\n+            <span>분야를 살펴보고, 지표의 경로를 읽어보세요.</span>\n+          </motion.div>\n+        </header>\n+\n+        <div className={styles.workspaceHeading}>\n+          <h2 id=\"field-list-title\"><span>01</span> 분야별 경제 흐름</h2>\n+          <span>7개 분야 <i aria-hidden=\"true\">/</i> 최근 3개월</span>\n+        </div>\n+        {summaryError ? (\n+          <section className={styles.loadFailure} role=\"alert\">\n+            <p>분야 자료를 불러오지 못했습니다.</p>\n+            <button type=\"button\" onClick={() => setSummaryRequest((value) => value + 1)}><RefreshCw size={15} aria-hidden=\"true\" /> 다시 불러오기</button>\n+          </section>\n+        ) : !summary ? <LoadingNotice>분야 자료를 불러오는 중입니다.</LoadingNotice> : (\n+          <>\n+            <div className={styles.workspace}>\n+              <section className={styles.fieldRail} aria-labelledby=\"field-list-title\" onKeyDown={navigateFields}>\n+                <div className={styles.fieldList}>\n+                  <LayoutGroup id={selectionGroup}>\n+                    {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} />)}\n+                  </LayoutGroup>\n+                </div>\n+                <button type=\"button\" className={styles.detailJump} onClick={() => {\n+                  detailPanel.current?.focus({ preventScroll: true })\n+                  detailPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })\n+                }}>선택한 분야 상세 보기 <ArrowDown size={16} aria-hidden=\"true\" /></button>\n+              </section>\n+              <div id=\"market-flow-detail\" className={styles.detailPanel} ref={detailPanel} tabIndex={-1} aria-label=\"선택한 분야 상세\">\n+                <p className={styles.srOnly} role=\"status\">{displayedDetail?.status === 'success' ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>\n+                {displayedDetail?.status === 'success' ? (\n+                  // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.\n+                  <FieldDetail key={displayedDetail.fieldId} detail={displayedDetail.data} />\n+                ) : displayedDetail?.status === 'error' ? (\n+                  <section className={styles.loadFailure} role=\"alert\">\n+                    <h2>{selected?.displayName}</h2>\n+                    <p>분야 상세를 불러오지 못했습니다. 다른 분야는 계속 확인할 수 있습니다.</p>\n+                    <button type=\"button\" onClick={() => setDetailRequest((value) => value + 1)}><RefreshCw size={15} aria-hidden=\"true\" /> 상세 다시 불러오기</button>\n+                  </section>\n+                ) : <LoadingNotice>{`${selected?.displayName ?? '분야'} 상세를 불러오는 중입니다.`}</LoadingNotice>}\n+              </div>\n+            </div>\n+            <p className={styles.historyNotice}>{summary.historicalComparisonNotice}</p>\n+          </>\n+        )}\n+\n+        {/* 국내 시장/섹터는 WB04, 뉴스는 WB04·012, 전략 비교는 후속 연결 작업에 의존한다. */}\n+        <section className={styles.connections} aria-labelledby=\"reference-title\">\n+          <div className={styles.connectionHeader}><span className={styles.eyebrow}>NEXT PERSPECTIVE</span><h2 id=\"reference-title\">흐름을 더 넓게 읽는 방법</h2><p>분야의 변화에서 다음 질문으로.</p></div>\n+          <div className={styles.connectionGrid}>\n+            <article><ChartNoAxesCombined size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>MARKET CONTEXT</span><h3>국내 시장 참고 정보</h3><p>국내 지수와 섹터를 함께 살펴볼 수 있도록 연결을 준비하고 있습니다.</p><button type=\"button\" disabled>국내 시장과 섹터 보기 <ArrowUpRight size={17} aria-hidden=\"true\" /><small>준비 중</small></button></article>\n+            <article><Newspaper size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>BEHIND THE NUMBERS</span><h3>시장 흐름 뉴스</h3><p>지표와 관련된 소식을 한곳에서 읽을 수 있도록 뉴스 묶음을 준비하고 있습니다.</p><button type=\"button\" disabled>관련 뉴스 읽기 <ArrowUpRight size={17} aria-hidden=\"true\" /><small>준비 중</small></button></article>\n+            <article><Waypoints size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>과거 사례를 선택한 뒤, 같은 기간에서 전략의 차이를 비교할 수 있도록 준비합니다.</p><button type=\"button\" disabled>전략 비교로 이어가기 <ArrowUpRight size={17} aria-hidden=\"true\" /><small>준비 중</small></button></article>\n+          </div>\n+        </section>\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,7 +26,7 @@ export function MyRecordsEntryPage() {\n             전략 검증하기\n             <ArrowRight size={16} aria-hidden=\"true\" />\n           </Link>\n-          <Link to=\"/home\">시장 흐름 보기</Link>\n+          <Link to=\"/market-flow\">시장 흐름 보기</Link>\n         </div>\n         <p className={styles.scopeNote}>\n           이 화면은 사용자별 기록을 보호하는 진입점이며, 기록 목록은 spec 006 범위입니다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsEntryPage.tsx",
+          "old_path": "frontend/src/pages/MyRecordsEntryPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -250,7 +250,7 @@ describe('SectorSelectionPage', () => {\n       links.map((link) => [link.textContent, link.getAttribute('href')]),\n     ).toEqual([\n       ['전략 진단', '/diagnosis/sectors'],\n-      ['시장 흐름', '/home'],\n+      ['시장 흐름', '/market-flow'],\n       ['배우기', '/learn'],\n       ['내 기록', '/records'],\n     ])\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,68 @@\n+export type MarketFlowFieldId =\n+  | 'production'\n+  | 'consumption_investment'\n+  | 'external_trade'\n+  | 'labor'\n+  | 'prices_commodities'\n+  | 'finance_housing'\n+  | 'overseas'\n+\n+export type FieldStatus = 'READY' | 'EXAMPLE' | 'EMPTY' | 'COLLECTION_FAILED'\n+\n+export interface FieldSummary {\n+  fieldId: MarketFlowFieldId\n+  displayName: string\n+  displayOrder: number\n+  status: FieldStatus\n+  narrative: string | null\n+  narrativeSubjects: string[]\n+  referenceMonth: string | null\n+  referenceMonthHeldBackBy: string[]\n+  lastUpdatedAt: string | null\n+  isExampleData: boolean\n+}\n+\n+export interface FieldSummaryResult {\n+  registryVersion: string\n+  datasetVersion: string\n+  narrativeRuleVersion: string\n+  historicalComparisonNotice: string\n+  fields: FieldSummary[]\n+}\n+\n+export interface PathPoint {\n+  month: string\n+  value: number | null\n+}\n+\n+export interface AfterReferenceMonthRelease {\n+  referenceMonth: string\n+  value: number\n+  unit: string\n+}\n+\n+export interface IndicatorDisplay {\n+  indicatorId: string\n+  name: string\n+  unit: string\n+  value: number | null\n+  path: [PathPoint, PathPoint, PathPoint]\n+  referenceMonth: string\n+  releaseDate: string | null\n+  source: string\n+  agency: string\n+  afterReferenceMonthRelease: AfterReferenceMonthRelease | null\n+}\n+\n+export interface FieldDetailResult extends FieldSummary {\n+  multipleReferenceMonthNotice: string\n+  indicators: IndicatorDisplay[]\n+}\n+\n+export interface MarketFlowSuccessEnvelope<T> {\n+  httpStatus: 'OK'\n+  isSuccess: true\n+  message: string\n+  code: 200\n+  result: T\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/marketFlow.ts",
+          "old_path": "frontend/src/types/marketFlow.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,12 @@\n-import { render, screen } from '@testing-library/react'\n-import { MemoryRouter } from 'react-router-dom'\n+import { fireEvent, render, screen } from '@testing-library/react'\n+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n import { authenticatedUser } from '@/test/authFixtures'\n import App from './App'\n \n vi.mock('@/pages/LandingPage', () => ({ LandingPage: () => <h1>랜딩 화면</h1> }))\n-vi.mock('@/pages/HomePage', () => ({ HomePage: () => <h1>홈 화면</h1> }))\n+vi.mock('@/pages/MarketFlowPage', () => ({ MarketFlowPage: () => <h1>시장 흐름 화면</h1> }))\n vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드 화면</h1> }))\n vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))\n vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))\n@@ -39,13 +39,38 @@ function renderApp(path: string, auth = anonymousAuth) {\n   )\n }\n \n+/** 리다이렉트가 주소를 실제로 바꿨는지, 뒤로 가기가 어디로 가는지 보기 위한 탐침이다. */\n+function HistoryProbe() {\n+  const location = useLocation()\n+  const navigate = useNavigate()\n+  return (\n+    <>\n+      <p data-testid=\"pathname\">{location.pathname}</p>\n+      <button type=\"button\" onClick={() => navigate(-1)}>\n+        뒤로 가기\n+      </button>\n+    </>\n+  )\n+}\n+\n+function renderAppWithHistory(entries: string[], index: number) {\n+  return render(\n+    <MemoryRouter initialEntries={entries} initialIndex={index}>\n+      <AuthContext.Provider value={anonymousAuth}>\n+        <App />\n+        <HistoryProbe />\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n describe('App authentication routes', () => {\n   beforeEach(() => {\n     window.sessionStorage.clear()\n   })\n \n   it.each([\n-    ['/home', '홈 화면'],\n+    ['/market-flow', '시장 흐름 화면'],\n     ['/dashboard', '대시보드 화면'],\n     ['/backtest', '백테스트 화면'],\n   ])('비로그인 상태에서도 공개 경로 %s를 이용할 수 있다', async (path, heading) => {\n@@ -54,6 +79,26 @@ describe('App authentication routes', () => {\n     expect(await screen.findByRole('heading', { name: heading })).toBeTruthy()\n   })\n \n+  it('/home은 새 시장 흐름 경로로 연결하고 주소까지 바꾼다', async () => {\n+    renderAppWithHistory(['/home'], 0)\n+\n+    expect(await screen.findByRole('heading', { name: '시장 흐름 화면' })).toBeTruthy()\n+    // 화면만 갈아끼우고 주소가 /home으로 남으면 공유된 링크가 옛 경로를 계속 퍼뜨린다.\n+    expect(screen.getByTestId('pathname').textContent).toBe('/market-flow')\n+  })\n+\n+  it('/home 리다이렉트는 기록을 덮어써서 뒤로 가기가 되돌아오지 않는다', async () => {\n+    // 랜딩에서 옛 링크를 눌러 들어온 상황이다.\n+    renderAppWithHistory(['/', '/home'], 1)\n+    expect(await screen.findByRole('heading', { name: '시장 흐름 화면' })).toBeTruthy()\n+\n+    fireEvent.click(screen.getByRole('button', { name: '뒤로 가기' }))\n+\n+    // replace가 빠지면 뒤로 가기가 /home을 다시 만나 앞으로 튕겨 나온다.\n+    expect(await screen.findByRole('heading', { name: '랜딩 화면' })).toBeTruthy()\n+    expect(screen.getByTestId('pathname').textContent).toBe('/')\n+  })\n+\n   it('내 기록 경로만 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {\n     renderApp('/records/run-17?tab=trades#cost')\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.auth.test.tsx",
+          "old_path": "frontend/src/App.auth.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,9 +20,9 @@ const ParamSearchPage = lazy(() =>\n   })),\n )\n \n-const HomePage = lazy(() =>\n-  import('@/pages/HomePage').then((module) => ({\n-    default: module.HomePage,\n+const MarketFlowPage = lazy(() =>\n+  import('@/pages/MarketFlowPage').then((module) => ({\n+    default: module.MarketFlowPage,\n   })),\n )\n \n@@ -94,7 +94,8 @@ function AnimatedRoutes() {\n         <Suspense fallback={<div role=\"status\" aria-label=\"페이지를 불러오는 중\" />}>\n           <Routes location={location}>\n             <Route path=\"/\" element={<LandingPage />} />\n-            <Route path=\"/home\" element={<HomePage />} />\n+            <Route path=\"/market-flow\" element={<MarketFlowPage />} />\n+            <Route path=\"/home\" element={<Navigate to=\"/market-flow\" replace />} />\n             <Route path=\"/dashboard\" element={<DashboardPage />} />\n             <Route path=\"/backtest\" element={<BacktestPage />} />\n             <Route path=\"/param-search\" element={<ParamSearchPage />} />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,7 @@\n import { fileURLToPath } from 'node:url'\n import tailwindcss from '@tailwindcss/vite'\n import react from '@vitejs/plugin-react'\n-import { defineConfig } from 'vitest/config'\n+import { configDefaults, defineConfig } from 'vitest/config'\n \n // https://vite.dev/config/\n export default defineConfig({\n@@ -19,16 +19,16 @@ export default defineConfig({\n     // `src/diagnosis/testCollection.guard.test.tsx`가 빠진 파일을 찾아 실패시킨다.\n     include: [\n       'src/**/*.test.tsx',\n-      'src/api/auth.test.ts',\n-      'src/api/learningGlossary.test.ts',\n-      'src/api/sectors.test.ts',\n-      'src/api/strategyRegistry.test.ts',\n+      'src/api/*.test.ts',\n       'src/auth/**/*.test.ts',\n       'src/diagnosis/**/*.test.ts',\n+      'src/marketflow/**/*.test.ts',\n       'src/utils/analysisPeriod.test.ts',\n       'src/utils/warmupRule.test.ts',\n       'src/utils/validationRules.test.ts',\n     ],\n+    // 이 파일은 node:test 전용이며 아래 package.json의 test:legacy에서 별도로 실행한다.\n+    exclude: [...configDefaults.exclude, 'src/api/market.test.ts'],\n     setupFiles: ['./src/test/setup.ts'],\n   },\n   server: {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -116,7 +116,8 @@ components:\n       type: object\n       description: >-\n         값이 없는 필드는 키를 생략하지 않고 명시적 null로 보낸다. 012와 같은 규칙이다.\n-      required: [registryVersion, datasetVersion, narrativeRuleVersion, fields]\n+      required:\n+        [registryVersion, datasetVersion, narrativeRuleVersion, historicalComparisonNotice, fields]\n       properties:\n         registryVersion:\n           type: string\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/contracts/openapi.yaml",
+          "old_path": "specs/009-market-flow-overview/contracts/openapi.yaml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -27,7 +27,7 @@ T015가 이 문제를 먼저 막는다.\n |---|---|---|---|---|\n | WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |\n | WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | `S15P21E205-272` |\n-| WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | 미발급 |\n+| WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | S15P21E205-314 |\n | WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |\n \n **세 조건을 어떻게 만족하는가**\n@@ -148,42 +148,42 @@ T015가 이 문제를 먼저 막는다.\n **Independent Test**: `/market-flow`에 들어가 7개 분야 요약이 보이고, 경제 전체를 하나의 점수·등급으로\n 요약한 요소가 0개이며, 분야를 열면 지표 실제 값·단위·3개월 경로·대상월·출처가 보이는지 확인한다.\n \n-- [ ] T015 [WB03] [FE] 테스트 수집 목록 확장 (`frontend/vite.config.ts`) · Jira 미발급\n+- [x] T015 [WB03] [FE] 테스트 수집 목록 확장 (`frontend/vite.config.ts`) · Jira S15P21E205-314\n   - `test.include`에 `'src/api/*.test.ts'`와 `'src/marketflow/**/*.test.ts'`를 더한다\n   - **이 task가 먼저다.** 지금 목록은 `src/api/auth.test.ts`와 `src/auth/**/*.test.ts`만 이름으로 집어 넣고 있어, T017과 T024가 만드는 `.ts` 테스트가 실패하지 않고 조용히 빠진다 (frontend/CLAUDE.md)\n   - 확장 뒤 `npm test`의 수집 파일 수가 늘었는지 눈으로 확인한다\n-- [ ] T016 [WB03] [P] [US1] [FE] 계약 대응 타입 (`frontend/src/types/marketFlow.ts`) · Jira 미발급\n+- [x] T016 [WB03] [P] [US1] [FE] 계약 대응 타입 (`frontend/src/types/marketFlow.ts`) · Jira S15P21E205-314\n   - [contracts/openapi.yaml](contracts/openapi.yaml)의 schema와 1:1로 맞춘다. 필드는 camelCase (frontend/CLAUDE.md)\n   - `FieldStatus`는 넷뿐이다. `STALE`을 타입에 두지 않는다\n-- [ ] T017 [WB03] [P] [US1] [FE] 조회 함수 (`frontend/src/api/marketFlow.ts`, `frontend/src/api/marketFlow.test.ts`) · Jira 미발급\n+- [x] T017 [WB03] [P] [US1] [FE] 조회 함수 (`frontend/src/api/marketFlow.ts`, `frontend/src/api/marketFlow.test.ts`) · Jira S15P21E205-314\n   - `apiClient`를 경유한다. 컴포넌트에서 axios를 직접 부르지 않고 URL을 하드코딩하지 않는다 (frontend/CLAUDE.md)\n   - `EMPTY`·`COLLECTION_FAILED`는 오류가 아니라 정상 응답이다. 예외로 던지지 않는다\n   - 테스트: 네 상태 예시 JSON을 모두 통과시키는지\n-- [ ] T018 [WB03] [US1] [FE] 분야 요약 카드 (`frontend/src/components/marketflow/FieldSummaryCard.tsx`, `frontend/src/components/marketflow/FieldSummaryCard.test.tsx`) · Jira 미발급\n+- [x] T018 [WB03] [US1] [FE] 분야 요약 카드 (`frontend/src/components/marketflow/FieldSummaryCard.tsx`, `frontend/src/components/marketflow/FieldSummaryCard.test.tsx`) · Jira S15P21E205-314\n   - 분야 이름·변화 요약 문장·기준월·상태·마지막 갱신 시각을 그린다\n   - **점수·등급·신호등을 그리지 않는다.** 색으로 좋고 나쁨을 표현하는 것도 등급 표시다 (FR-003, SC-002)\n   - 테스트: `narrative`가 null인 상태에서 빈 요약 대신 상태 표시가 보이는지\n-- [ ] T019 [WB03] [US2] [FE] 분야 상세 (`frontend/src/components/marketflow/FieldDetail.tsx`, `frontend/src/components/marketflow/FieldDetail.test.tsx`) · Jira 미발급\n+- [x] T019 [WB03] [US2] [FE] 분야 상세 (`frontend/src/components/marketflow/FieldDetail.tsx`, `frontend/src/components/marketflow/FieldDetail.test.tsx`) · Jira S15P21E205-314\n   - 지표마다 실제 값·단위·3개월 경로(t-2·t-1·t)·대상월·발표일·출처·작성기관을 보인다 (FR-007, FR-013, FR-015)\n   - **T_g 이후 발표는 그 지표 행 바로 아래 한 줄**로, 3개월 경로와 구분된 서식으로 그린다 (FR-008, 2026-09-16 clarify)\n   - 분야 기준월과 \"분야마다 기준월이 다를 수 있습니다\" 한 문장 안내를 보인다\n   - 테스트: `afterReferenceMonthRelease`가 있는 지표에서 그 값이 경로 3칸 안에 렌더되지 않는지\n-- [ ] T020 [WB03] [US3] [FE] 자료 시점·상태 표시 (`frontend/src/components/marketflow/DataStateNotice.tsx`, `frontend/src/components/marketflow/DataStateNotice.test.tsx`) · Jira 미발급\n+- [x] T020 [WB03] [US3] [FE] 자료 시점·상태 표시 (`frontend/src/components/marketflow/DataStateNotice.tsx`, `frontend/src/components/marketflow/DataStateNotice.test.tsx`) · Jira S15P21E205-314\n   - `EXAMPLE`·`EMPTY`·`COLLECTION_FAILED`를 오류 화면이 아닌 상태 표시로 그린다 (FR-014, SC-005)\n   - 대상월과 마지막 갱신 시각을 항상 함께 보인다. **'실시간'·'현재' 표현과 '지연' 판정 표시를 쓰지 않는다** (FR-011)\n   - '최신 개정자료를 이용한 역사 비교' 표시를 화면에 둔다 (FR-012)\n   - 테스트: 세 상태 각각에서 오류 경계로 떨어지지 않는지, 금지 표현이 렌더되지 않는지\n-- [ ] T021 [WB03] [US1] [FE] 시장 흐름 화면 조립 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/pages/MarketFlowPage.module.css`, `frontend/src/pages/MarketFlowPage.test.tsx`) · Jira 미발급\n+- [x] T021 [WB03] [US1] [FE] 시장 흐름 화면 조립 (`frontend/src/pages/MarketFlowPage.tsx`, `frontend/src/pages/MarketFlowPage.module.css`, `frontend/src/pages/MarketFlowPage.test.tsx`) · Jira S15P21E205-314\n   - 7개 분야 요약을 먼저 그리고, 뉴스·국내 시장 참고 정보 영역은 늦게 채워져도 요약 표시를 막지 않는다 (SC-007, FR-017)\n   - 가장 중요한 행동 버튼은 하나다. 기본 화면은 분야 열기, 열린 분야에서는 '비슷했던 때 보기' (FR-005)\n   - 자료 공급원·API 이름을 고르는 입력을 두지 않는다 (FR-006)\n   - 테스트: 로그인하지 않은 상태로 7개 분야가 보이는지(SC-001), 그리고 **경제 전체를 하나의 점수·등급으로 요약한 요소가 0개인지(SC-002)**\n-- [ ] T022 [WB03] [US1] [FE] 라우트와 메뉴 전환 (`frontend/src/App.tsx`, `frontend/src/components/landing/LandingHeader.tsx`, `frontend/src/components/navigation/AppHeader.tsx`, `frontend/src/pages/MyRecordsEntryPage.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · Jira 미발급\n+- [x] T022 [WB03] [US1] [FE] 라우트와 메뉴 전환 (`frontend/src/App.tsx`, `frontend/src/components/landing/LandingHeader.tsx`, `frontend/src/components/navigation/AppHeader.tsx`, `frontend/src/pages/MyRecordsEntryPage.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · Jira S15P21E205-314\n   - `/market-flow` 라우트를 더하고 `/home`은 `/market-flow`로 영구 리다이렉트한다 ([research.md](research.md) R4)\n   - 메뉴 링크를 바꾼다: `LandingHeader.tsx:13`의 `'시장 흐름' → '/home'`, `AppHeader.tsx`의 시장 흐름 항목, `MyRecordsEntryPage.tsx:29`의 '시장 흐름 보기'\n   - `LandingPage.test.tsx:53`이 `{ label: '시장 흐름', href: '/home' }`을 기대하고 있으므로 함께 고친다. **이 테스트를 지우지 말고 새 경로로 바꾼다**\n   - 리다이렉트를 먼저 넣어야 외부에 이미 퍼진 `/home` 링크가 깨지지 않는다\n-- [ ] T023 [WB03] [US1] [FE] 목업 진단 화면 제거 (`frontend/src/pages/HomePage.tsx`, `frontend/src/pages/HomePage.module.css`, `frontend/src/components/home/MarketRegimeHero.tsx`, `frontend/src/components/home/MarketRegimeHero.module.css`, `frontend/src/components/home/SimilarMarketPanel.tsx`, `frontend/src/components/home/SimilarMarketPanel.module.css`, `frontend/src/data/marketMock.ts`) · Jira 미발급\n+- [x] T023 [WB03] [US1] [FE] 목업 진단 화면 제거 (`frontend/src/pages/HomePage.tsx`, `frontend/src/pages/HomePage.module.css`, `frontend/src/components/home/MarketRegimeHero.tsx`, `frontend/src/components/home/MarketRegimeHero.module.css`, `frontend/src/components/home/SimilarMarketPanel.tsx`, `frontend/src/components/home/SimilarMarketPanel.module.css`, `frontend/src/data/marketMock.ts`) · Jira S15P21E205-314\n   - **지우는 것**: `HomePage`(T022의 리다이렉트로 대체됨), `MarketRegimeHero`, `SimilarMarketPanel`. 세 파일 모두 `HomePage`만 쓰고 있어 함께 지울 수 있다\n     - `MarketRegimeHero`는 `regime.headline`으로 \"지금은 조심하되, 완전히 나쁜 시장은 아닙니다.\"라는 경제 전체 판정을 띄운다. **이것이 남아 있으면 SC-002를 통과할 수 없다** (FR-003, D08, 원칙 II)\n     - `SimilarMarketPanel`은 010이 소유할 검색 결과를 목업으로 선점한다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/tasks.md",
+          "old_path": "specs/009-market-flow-overview/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2211608,
+      "head_commit_sha": "59e5c258ad444544d04aca43eb9fffa0bf5b0433",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "de9a2905824dd990d792ea1f3856e2f1d9317f78",
+      "created_at": "2026-09-17T12:04:48.112+09:00",
+      "merge_request_id": 948323,
+      "state": "without_files",
+      "real_size": "37",
+      "patch_id_sha": "297920edf899a58c33b26eb8e62a874bffa23d34",
+      "commits": [
+        {
+          "id": "59e5c258ad444544d04aca43eb9fffa0bf5b0433",
+          "short_id": "59e5c258",
+          "created_at": "2026-09-17T12:04:44.000+09:00",
+          "parent_ids": [
+            "b0fd21900f146e153d52ba302ad550a125158ecb"
+          ],
+          "title": "fix(fe): 역사 비교 안내 계약 동기화와 수집 가드의 exclude 반영",
+          "message": "fix(fe): 역사 비교 안내 계약 동기화와 수집 가드의 exclude 반영\n\nMR AI 코드리뷰 High/Medium 두 건 반영.\n\n[High] historicalComparisonNotice 계약 동기화\n계약의 required에 이 필드를 넣어 파서·백엔드와 말을 맞춘다. 파서를 느슨하게 푸는\n대신 계약을 고친 까닭은, 같은 성격의 안내 문구인 multipleReferenceMonthNotice가\n이미 FieldDetailResult의 required에 있고 백엔드도 두 문구를 똑같이 상수로 채우기\n때문이다(MarketFlowFieldsResponse.HISTORICAL_COMPARISON_NOTICE). 목록 쪽 required\n누락은 계약의 실수였다. FR-012가 역사 비교에 이 문구를 함께 두라고 요구하므로,\n문구 없이 분야 자료만 그리는 것은 보여서는 안 되는 상태다. 파서에 그 판단 근거를\n주석으로 남기고, 키 누락·null 두 경우를 막는 테스트를 더했다.\n\n[Medium] 수집 가드가 test.exclude를 읽는다\ninclude에 걸려도 exclude가 도로 빼면 Vitest는 그 파일을 돌리지 않는데, 가드가\ninclude만 봐서 '수집됨'으로 오인하고 있었다. test:legacy에서 market.test.ts가\n빠지면 아무도 돌리지 않는 파일을 통과시키는 상태였다. exclude를 읽어 빼도록 고치고,\n그 상황을 직접 못 박는 테스트를 더했다. 실제로 test:legacy 인자에서 빼 보면\n가드가 실패하는 것을 확인했다.\n\nexclude는 설정 모듈을 가져오지 않고 텍스트로 읽는다. jsdom 워커에서\nvitest/config를 가져오면 esbuild가 TextEncoder invariant로 죽어 가드 자신이\n실행되지 않고, 텍스트 해석이 오히려 사람이 적은 패턴만 남겨 정확하다.\n\nfrontend: lint 0 errors, build 통과, 51파일 495개 통과(skipped 0)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T12:04:44.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T12:04:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/59e5c258ad444544d04aca43eb9fffa0bf5b0433"
+        },
+        {
+          "id": "b0fd21900f146e153d52ba302ad550a125158ecb",
+          "short_id": "b0fd2190",
+          "created_at": "2026-09-17T11:54:31.000+09:00",
+          "parent_ids": [
+            "7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+          ],
+          "title": "test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강",
+          "message": "test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강\n\nMR AI 코드리뷰 지적 세 건 반영. 프로덕션 코드는 바꾸지 않았다.\n\n- 파서: 봉투 단계(httpStatus·isSuccess·code·message·result 부재)와 result 검증\n  단계를 나눠 확인한다. 모르는 fieldId, 타입에 없는 STALE, 3칸이 아닌 경로도\n  막는지 본다. 파서 오류는 normalizeApiError가 ApiClientError로 감싸 원래 문장이\n  cause에만 남으므로 거기까지 확인하고, 프로미스가 성공하면 명시적으로 실패시킨다\n- 리다이렉트: 화면 전환만이 아니라 주소가 /market-flow로 바뀌는지와, 뒤로 가기가\n  /home으로 되돌아오지 않는지를 본다. replace를 빼면 두 번째 테스트가 실패한다\n- 키보드: ArrowDown·ArrowUp·Home·End가 포커스와 분야 선택을 함께 옮기는지,\n  양 끝에서 순환하는지, Tab·Enter·ArrowLeft를 가로채지 않는지 본다\n\nfrontend: lint 0 errors, build 통과, 51파일 492개 통과(skipped 0)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:54:31.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:54:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b0fd21900f146e153d52ba302ad550a125158ecb"
+        },
+        {
+          "id": "7eb5ae943ecc4defdcabd35bdde83c7ed3200144",
+          "short_id": "7eb5ae94",
+          "created_at": "2026-09-17T11:15:19.000+09:00",
+          "parent_ids": [
+            "7818ed1359fde428f95ee043ee9a8133857ac3fa"
+          ],
+          "title": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세",
+          "message": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세\n\nspec 009 WB03(T015~T023).\n\n- `/market-flow` 라우트를 세우고 `/home`은 영구 리다이렉트로 남긴다\n- 7개 분야 요약 카드와 분야 상세(지표 값·단위·3개월 경로·대상월·출처)를 그린다\n- EXAMPLE·EMPTY·COLLECTION_FAILED를 오류가 아닌 자료 상태로 표시한다\n- 경제 전체를 점수·등급으로 요약하던 목업(HomePage·MarketRegimeHero·\n  SimilarMarketPanel과 그 하위 차트)을 지운다\n- vitest 수집 목록에 `src/api/*.test.ts`·`src/marketflow/**/*.test.ts`를 더하고,\n  수집 가드가 한 폴더 glob을 해석하게 넓힌다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:15:19.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:15:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2211528,
+      "head_commit_sha": "b0fd21900f146e153d52ba302ad550a125158ecb",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "bdfc93407a3dc62260ec666f643d1afe743e2e60",
+      "created_at": "2026-09-17T11:54:37.213+09:00",
+      "merge_request_id": 948323,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "fc4a1a3d4ee5ee209bf93c77b1b6b3d02960edd9",
+      "commits": [
+        {
+          "id": "b0fd21900f146e153d52ba302ad550a125158ecb",
+          "short_id": "b0fd2190",
+          "created_at": "2026-09-17T11:54:31.000+09:00",
+          "parent_ids": [
+            "7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+          ],
+          "title": "test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강",
+          "message": "test(fe): 시장 흐름 파서·리다이렉트·키보드 이동 검증 보강\n\nMR AI 코드리뷰 지적 세 건 반영. 프로덕션 코드는 바꾸지 않았다.\n\n- 파서: 봉투 단계(httpStatus·isSuccess·code·message·result 부재)와 result 검증\n  단계를 나눠 확인한다. 모르는 fieldId, 타입에 없는 STALE, 3칸이 아닌 경로도\n  막는지 본다. 파서 오류는 normalizeApiError가 ApiClientError로 감싸 원래 문장이\n  cause에만 남으므로 거기까지 확인하고, 프로미스가 성공하면 명시적으로 실패시킨다\n- 리다이렉트: 화면 전환만이 아니라 주소가 /market-flow로 바뀌는지와, 뒤로 가기가\n  /home으로 되돌아오지 않는지를 본다. replace를 빼면 두 번째 테스트가 실패한다\n- 키보드: ArrowDown·ArrowUp·Home·End가 포커스와 분야 선택을 함께 옮기는지,\n  양 끝에서 순환하는지, Tab·Enter·ArrowLeft를 가로채지 않는지 본다\n\nfrontend: lint 0 errors, build 통과, 51파일 492개 통과(skipped 0)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:54:31.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:54:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b0fd21900f146e153d52ba302ad550a125158ecb"
+        },
+        {
+          "id": "7eb5ae943ecc4defdcabd35bdde83c7ed3200144",
+          "short_id": "7eb5ae94",
+          "created_at": "2026-09-17T11:15:19.000+09:00",
+          "parent_ids": [
+            "7818ed1359fde428f95ee043ee9a8133857ac3fa"
+          ],
+          "title": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세",
+          "message": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세\n\nspec 009 WB03(T015~T023).\n\n- `/market-flow` 라우트를 세우고 `/home`은 영구 리다이렉트로 남긴다\n- 7개 분야 요약 카드와 분야 상세(지표 값·단위·3개월 경로·대상월·출처)를 그린다\n- EXAMPLE·EMPTY·COLLECTION_FAILED를 오류가 아닌 자료 상태로 표시한다\n- 경제 전체를 점수·등급으로 요약하던 목업(HomePage·MarketRegimeHero·\n  SimilarMarketPanel과 그 하위 차트)을 지운다\n- vitest 수집 목록에 `src/api/*.test.ts`·`src/marketflow/**/*.test.ts`를 더하고,\n  수집 가드가 한 폴더 glob을 해석하게 넓힌다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:15:19.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:15:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2211415,
+      "head_commit_sha": "7eb5ae943ecc4defdcabd35bdde83c7ed3200144",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "created_at": "2026-09-17T11:37:48.050+09:00",
+      "merge_request_id": 948323,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "efe7703ab1b74cbd97e60c196c70cc660aa047f1",
+      "commits": [
+        {
+          "id": "7eb5ae943ecc4defdcabd35bdde83c7ed3200144",
+          "short_id": "7eb5ae94",
+          "created_at": "2026-09-17T11:15:19.000+09:00",
+          "parent_ids": [
+            "7818ed1359fde428f95ee043ee9a8133857ac3fa"
+          ],
+          "title": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세",
+          "message": "feat(fe): 시장 흐름 화면 교체와 분야 요약·상세\n\nspec 009 WB03(T015~T023).\n\n- `/market-flow` 라우트를 세우고 `/home`은 영구 리다이렉트로 남긴다\n- 7개 분야 요약 카드와 분야 상세(지표 값·단위·3개월 경로·대상월·출처)를 그린다\n- EXAMPLE·EMPTY·COLLECTION_FAILED를 오류가 아닌 자료 상태로 표시한다\n- 경제 전체를 점수·등급으로 요약하던 목업(HomePage·MarketRegimeHero·\n  SimilarMarketPanel과 그 하위 차트)을 지운다\n- vitest 수집 목록에 `src/api/*.test.ts`·`src/marketflow/**/*.test.ts`를 더하고,\n  수집 가드가 한 폴더 glob을 해석하게 넓힌다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-17T11:15:19.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-17T11:15:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7eb5ae943ecc4defdcabd35bdde83c7ed3200144"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2822808": [],
+    "2823928": []
+  }
+}

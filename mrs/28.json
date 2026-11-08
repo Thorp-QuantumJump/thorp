@@ -1,0 +1,867 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 938128,
+    "iid": 28,
+    "project_id": 1444456,
+    "title": "feat(fe):랜딩페이지초판본",
+    "description": "# 작업 내용 요약\n\n랜딩페이지 만들어 봤습니다.\n\n추후에는 좀 더 많은 애니메이션을 추가할 듯 싶습니다 \n\n**VGPU**라는 툴도 좀 써보았습니다. (툴이라해야되나) \n\n그래서 CSS 생성때문에 코드가 굉장히 많습니다.\n\n![image.png](/uploads/11cf2de4ad6ae038f2f951716bcde2a0/image.png){width=900 height=460}\n\n![image.png](/uploads/0f1bda2dfd0c308daa8cca89a24edaee/image.png){width=900 height=460}\n\n![image.png](/uploads/72042eaf55c996abc5ae8080ea5d3ffc/image.png){width=900 height=462}\n\n![image.png](/uploads/3774fd022af128e6350b9c13e29b2c04/image.png){width=900 height=464}\n\n# 주요 변경 사항\n\n* 랜딩페이지 완전변경\n\n# 논의할점\n\n검정에 초록색 테마로 할 것인가?",
+    "state": "merged",
+    "created_at": "2026-09-09T15:14:15.347+09:00",
+    "updated_at": "2026-09-10T16:52:02.309+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-09T17:04:27.688+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/113-landingpage-overalltheme",
+    "user_notes_count": 4,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8d03d63dd8923382f0d76bb50a79db33d1f042d5",
+    "merge_commit_sha": "243fa5b78ee84d263b687550a8c124639a9d53dc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-09T15:14:17.344+09:00",
+    "reference": "!28",
+    "references": {
+      "short": "!28",
+      "relative": "!28",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!28"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/28",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 938128,
+    "iid": 28,
+    "project_id": 1444456,
+    "title": "feat(fe):랜딩페이지초판본",
+    "description": "# 작업 내용 요약\n\n랜딩페이지 만들어 봤습니다.\n\n추후에는 좀 더 많은 애니메이션을 추가할 듯 싶습니다 \n\n**VGPU**라는 툴도 좀 써보았습니다. (툴이라해야되나) \n\n그래서 CSS 생성때문에 코드가 굉장히 많습니다.\n\n![image.png](/uploads/11cf2de4ad6ae038f2f951716bcde2a0/image.png){width=900 height=460}\n\n![image.png](/uploads/0f1bda2dfd0c308daa8cca89a24edaee/image.png){width=900 height=460}\n\n![image.png](/uploads/72042eaf55c996abc5ae8080ea5d3ffc/image.png){width=900 height=462}\n\n![image.png](/uploads/3774fd022af128e6350b9c13e29b2c04/image.png){width=900 height=464}\n\n# 주요 변경 사항\n\n* 랜딩페이지 완전변경\n\n# 논의할점\n\n검정에 초록색 테마로 할 것인가?",
+    "state": "merged",
+    "created_at": "2026-09-09T15:14:15.347+09:00",
+    "updated_at": "2026-09-10T16:52:02.309+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-09T17:04:27.688+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/113-landingpage-overalltheme",
+    "user_notes_count": 4,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8d03d63dd8923382f0d76bb50a79db33d1f042d5",
+    "merge_commit_sha": "243fa5b78ee84d263b687550a8c124639a9d53dc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-09T15:14:17.344+09:00",
+    "reference": "!28",
+    "references": {
+      "short": "!28",
+      "relative": "!28",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!28"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/28",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "head_sha": "8d03d63dd8923382f0d76bb50a79db33d1f042d5",
+      "start_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "4455329cb3cf05b1e4e7356c6b36688e22dad1ee",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2780770,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T15:14:15.565+09:00",
+          "updated_at": "2026-09-09T15:14:15.574+09:00",
+          "system": true,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bfb77c836c6a3e6aa3717277cb0d515a4a623f00",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2780778,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **웹 표준 및 접근성 고려**: 애니메이션과 인터랙티브한 3D 캐러셀(`AlgorithmOrbit`), 모바일 메뉴(`LandingHeader`) 구현 시 `aria-*` 속성, 키보드 네비게이션(`ArrowLeft`, `ArrowRight`, `Escape`), `screen reader`용 라이브 리전 등을 세심하게 반영하여 접근성을 높였습니다.\n- **점진적 향상(Progressive Enhancement) 설계**: WebGPU API 및 `vgpu` 라이브러리를 활용한 배경 렌더링에서, 브라우저가 지원하지 않거나 사용자가 모션 줄이기(`prefers-reduced-motion`)를 선호할 경우 기존 SVG/CSS 기반 폴백으로 안정적으로 전환되도록 설계했습니다.\n\n### 발견 사항\n- [Low] `frontend/src/components/landing/MarketAtmosphereCanvas.tsx`: `import('vgpu')` 동적 임포트 실패 시(`catch` 블록) `setIsReady(false)` 외에 별도의 에러 로깅이나 폴백 상태 처리가 없어, 런타임 환경에 따라 디버깅이 어려울 수 있습니다. 다만 정적 분석상 치명적인 예외 크래시로 이어지지는 않습니다.\n\n### 테스트 제안\n- **모션 설정 테스트**: 운영체제 또는 브라우저의 `prefers-reduced-motion: reduce` 설정 활성화 시, `AlgorithmOrbit`과 `MarketAtmosphereCanvas`가 애니메이션을 적절히 생략하거나 정적 상태를 유지하는지 확인합니다.\n- **키보드 접근성 테스트**: 랜딩 페이지 진입 후 `Tab` 키를 통해 주요 네비게이션 및 알고리즘 캐러셀에 포커스가 이동하고, 방향키(`ArrowLeft`, `ArrowRight`)로 전략 카드가 정상적으로 전환되는지 시나리오를 검증합니다.\n- **WebGPU 지원 여부 테스트**: WebGPU가 지원되지 않는 환경(예: 구형 브라우저 또는 비활성화 상태)에서 `MarketAtmosphereCanvas`가 에러 없이 기본 폴백 배경을 올바르게 유지하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8d03d63dd8923382f0d76bb50a79db33d1f042d5 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-09T15:14:26.255+09:00",
+          "updated_at": "2026-09-09T16:59:07.338+09:00",
+          "system": false,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ec8386097ab40780e5fae12c8d2e912cf930f8d2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2780835,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>54e2c0a0 - feat(fe): ai리뷰 1차수정</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/28/diffs?diff_id=2177586&start_sha=47c1bfcc99361f379747cd7b7ccafb698aa265d9)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T15:20:32.351+09:00",
+          "updated_at": "2026-09-09T15:20:32.355+09:00",
+          "system": true,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c08a8c38c49058f6a829a05533aad5a3424d17c8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2780890,
+          "type": null,
+          "body": "둘다 오탐이라네요 끝.",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T15:26:03.049+09:00",
+          "updated_at": "2026-09-09T15:26:03.049+09:00",
+          "system": false,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d5babcc36ea42d0a858c1b293168486c5a959620",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2781830,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>8d03d63d - feat(fe): 자체 추가점검 수정</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/28/diffs?diff_id=2178421&start_sha=54e2c0a0fcd041a0b97c996af15be5821b73c5d7)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T16:58:59.021+09:00",
+          "updated_at": "2026-09-09T16:58:59.036+09:00",
+          "system": true,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6833d82be1a10a4ce5c62fd3dc85b3295a0d4728",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2781833,
+          "type": null,
+          "body": "* 알고리즘 캐러셀은 화면에 보일 때만 자동 회전합니다.\n* 드래그 후 카드 클릭이 오작동하지 않도록 분리했습니다.\n* 자동 회전은 스크린 리더로 반복 안내하지 않고, 사용자가 직접 조작했을 때만 안내합니다.\n* 지표 상태를 `LIVE`, `불러오는 중`, `연결 실패 · 예시값`, `예시 데이터`로 명확히 표시합니다.\n* 모바일 메뉴는 `Escape`로 닫히며 메뉴 버튼으로 포커스가 돌아갑니다.\n* WGSL을 별도 파일로 분리해 셰이더 자체 검증이 가능하게 했습니다.\n* `npm run test`, `npm run check:shader` 명령을 추가했습니다.",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T16:59:07.546+09:00",
+          "updated_at": "2026-09-09T16:59:07.546+09:00",
+          "system": false,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6b5c49ca6330ee43e99f68fdb6493d77611c6158",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2781918,
+          "type": null,
+          "body": "mentioned in commit 243fa5b78ee84d263b687550a8c124639a9d53dc",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T17:04:27.588+09:00",
+          "updated_at": "2026-09-09T17:04:27.605+09:00",
+          "system": true,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b518128a53586d713fde8b9b2c8855e2f1680f3a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788016,
+          "type": null,
+          "body": "따봉",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T16:52:02.283+09:00",
+          "updated_at": "2026-09-10T16:52:02.283+09:00",
+          "system": false,
+          "noteable_id": 938128,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 28,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2178421,
+      "head_commit_sha": "8d03d63dd8923382f0d76bb50a79db33d1f042d5",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b",
+      "created_at": "2026-09-09T16:58:58.503+09:00",
+      "merge_request_id": 938128,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "11d4393128f60a16e15fcd62921d2dbcc263f834"
+    },
+    {
+      "id": 2177586,
+      "head_commit_sha": "54e2c0a0fcd041a0b97c996af15be5821b73c5d7",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b",
+      "created_at": "2026-09-09T15:20:32.087+09:00",
+      "merge_request_id": 938128,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "5e3788dcd7238dd6f0c4c5fe24e1e73afca93d6a"
+    },
+    {
+      "id": 2177517,
+      "head_commit_sha": "47c1bfcc99361f379747cd7b7ccafb698aa265d9",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b",
+      "created_at": "2026-09-09T15:14:16.365+09:00",
+      "merge_request_id": 938128,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "ef9f3d3e09e2920ef30190e1c7b63460d2037009"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2178421,
+      "head_commit_sha": "8d03d63dd8923382f0d76bb50a79db33d1f042d5",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b",
+      "created_at": "2026-09-09T16:58:58.503+09:00",
+      "merge_request_id": 938128,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "11d4393128f60a16e15fcd62921d2dbcc263f834",
+      "commits": [
+        {
+          "id": "8d03d63dd8923382f0d76bb50a79db33d1f042d5",
+          "short_id": "8d03d63d",
+          "created_at": "2026-09-09T16:58:46.000+09:00",
+          "parent_ids": [
+            "54e2c0a0fcd041a0b97c996af15be5821b73c5d7"
+          ],
+          "title": "feat(fe): 자체 추가점검 수정",
+          "message": "feat(fe): 자체 추가점검 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T16:58:46.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T16:58:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8d03d63dd8923382f0d76bb50a79db33d1f042d5"
+        },
+        {
+          "id": "54e2c0a0fcd041a0b97c996af15be5821b73c5d7",
+          "short_id": "54e2c0a0",
+          "created_at": "2026-09-09T15:20:25.000+09:00",
+          "parent_ids": [
+            "47c1bfcc99361f379747cd7b7ccafb698aa265d9"
+          ],
+          "title": "feat(fe): ai리뷰 1차수정",
+          "message": "feat(fe): ai리뷰 1차수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T15:20:25.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T15:20:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/54e2c0a0fcd041a0b97c996af15be5821b73c5d7"
+        },
+        {
+          "id": "47c1bfcc99361f379747cd7b7ccafb698aa265d9",
+          "short_id": "47c1bfcc",
+          "created_at": "2026-09-09T15:11:20.000+09:00",
+          "parent_ids": [
+            "37c9678937905561446a0560ed0c5d7ae5906684"
+          ],
+          "title": "feat(fe):랜딩페이지초판본",
+          "message": "feat(fe):랜딩페이지초판본\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T15:11:20.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T15:11:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/47c1bfcc99361f379747cd7b7ccafb698aa265d9"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,228 @@\n+import { ArrowUpRight } from 'lucide-react'\n+import { motion, useInView, useReducedMotion } from 'motion/react'\n+import {\n+  useEffect,\n+  useRef,\n+  useState,\n+  type KeyboardEvent,\n+  type MouseEvent,\n+  type PointerEvent,\n+} from 'react'\n+import { Link } from 'react-router-dom'\n+import { strategyResults } from '@/data/backtestMock'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+function relativeIndex(index: number, selectedIndex: number, length: number) {\n+  let difference = index - selectedIndex\n+  if (difference > length / 2) difference -= length\n+  if (difference < -length / 2) difference += length\n+  return difference\n+}\n+\n+/** 전략 카드를 원근에 놓고 앞쪽 카드를 선명하게 탐색하는 3D 캐러셀이다. */\n+export function AlgorithmOrbit() {\n+  const [selectedIndex, setSelectedIndex] = useState(0)\n+  const [stageWidth, setStageWidth] = useState(960)\n+  const [announcement, setAnnouncement] = useState('')\n+  const stageRef = useRef<HTMLDivElement>(null)\n+  const pointerStartRef = useRef<number | null>(null)\n+  const didDragRef = useRef(false)\n+  const reducedMotion = useReducedMotion()\n+  const isInView = useInView(stageRef, { amount: 0.2 })\n+\n+  useEffect(() => {\n+    const stage = stageRef.current\n+    if (!stage) return\n+\n+    const observer = new ResizeObserver(([entry]) => {\n+      if (entry) setStageWidth(entry.contentRect.width)\n+    })\n+    observer.observe(stage)\n+    return () => observer.disconnect()\n+  }, [])\n+\n+  useEffect(() => {\n+    if (reducedMotion || !isInView) return\n+\n+    const intervalId = window.setInterval(() => {\n+      if (document.visibilityState === 'visible') {\n+        setSelectedIndex((selectedIndex + 1) % strategyResults.length)\n+      }\n+    }, 3600)\n+\n+    return () => window.clearInterval(intervalId)\n+  }, [isInView, reducedMotion, selectedIndex])\n+\n+  const move = (direction: number) => {\n+    const nextIndex = (selectedIndex + direction + strategyResults.length) % strategyResults.length\n+    setSelectedIndex(nextIndex)\n+    setAnnouncement(`${strategyResults[nextIndex]?.name ?? ''} 전략 선택됨`)\n+  }\n+\n+  const selectStrategy = (index: number) => {\n+    setSelectedIndex(index)\n+    setAnnouncement(`${strategyResults[index]?.name ?? ''} 전략 선택됨`)\n+  }\n+\n+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {\n+    if (event.key === 'ArrowLeft') {\n+      event.preventDefault()\n+      move(-1)\n+    }\n+    if (event.key === 'ArrowRight') {\n+      event.preventDefault()\n+      move(1)\n+    }\n+  }\n+\n+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {\n+    pointerStartRef.current = event.clientX\n+    didDragRef.current = false\n+    event.currentTarget.setPointerCapture(event.pointerId)\n+  }\n+\n+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {\n+    if (pointerStartRef.current === null) return\n+    if (Math.abs(event.clientX - pointerStartRef.current) > 8) {\n+      didDragRef.current = true\n+    }\n+  }\n+\n+  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {\n+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {\n+      event.currentTarget.releasePointerCapture(event.pointerId)\n+    }\n+    if (pointerStartRef.current === null) return\n+    const distance = event.clientX - pointerStartRef.current\n+    pointerStartRef.current = null\n+    didDragRef.current = Math.abs(distance) > 8\n+    if (Math.abs(distance) < 44) return\n+    move(distance > 0 ? -1 : 1)\n+  }\n+\n+  const handlePointerCancel = (event: PointerEvent<HTMLDivElement>) => {\n+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {\n+      event.currentTarget.releasePointerCapture(event.pointerId)\n+    }\n+    pointerStartRef.current = null\n+    didDragRef.current = false\n+  }\n+\n+  const preventClickAfterDrag = (event: MouseEvent<HTMLElement>) => {\n+    if (!didDragRef.current) return false\n+    event.preventDefault()\n+    event.stopPropagation()\n+    didDragRef.current = false\n+    return true\n+  }\n+\n+  const xRadius = Math.min(280, Math.max(112, stageWidth * 0.27))\n+\n+  return (\n+    <motion.section\n+      id=\"algorithms\"\n+      className={styles.algorithmSection}\n+      initial={{ opacity: 0, y: 54 }}\n+      whileInView={{ opacity: 1, y: 0 }}\n+      viewport={{ once: true, amount: 0.12 }}\n+      transition={{ duration: 0.82, ease: [0.22, 1, 0.36, 1] }}\n+      aria-labelledby=\"algorithm-title\"\n+    >\n+      <div className={styles.algorithmHeader}>\n+        <p>ALGORITHM LIBRARY</p>\n+        <h2 id=\"algorithm-title\">\n+          검증된 알고리즘을\n+          <br />\n+          사용해보세요.\n+        </h2>\n+        <span>카드를 눌러 각 전략의 수익과 위험을 비교해보세요.</span>\n+      </div>\n+\n+      <div\n+        ref={stageRef}\n+        className={styles.orbitStage}\n+        role=\"region\"\n+        aria-label=\"알고리즘 선택 캐러셀\"\n+        aria-roledescription=\"3D 캐러셀\"\n+        tabIndex={0}\n+        onKeyDown={handleKeyDown}\n+        onPointerDown={handlePointerDown}\n+        onPointerMove={handlePointerMove}\n+        onPointerUp={handlePointerUp}\n+        onPointerCancel={handlePointerCancel}\n+      >\n+        <div className={styles.orbitFloor} aria-hidden=\"true\" />\n+        {strategyResults.map((strategy, index) => {\n+          const relative = relativeIndex(index, selectedIndex, strategyResults.length)\n+          const angle = relative * ((Math.PI * 2) / strategyResults.length)\n+          const depth = Math.cos(angle)\n+          const isSelected = index === selectedIndex\n+          const x = Math.sin(angle) * xRadius\n+          const y = -(1 - depth) * Math.min(72, stageWidth * 0.07)\n+          const z = depth * 190\n+          const scale = 0.72 + ((depth + 1) / 2) * 0.28\n+          const opacity = 0.36 + ((depth + 1) / 2) * 0.64\n+          const blur = reducedMotion ? 0 : (1 - depth) * 2\n+\n+          return (\n+            <motion.article\n+              key={strategy.id}\n+              className={styles.algorithmCard}\n+              data-selected={isSelected}\n+              aria-current={isSelected ? 'true' : undefined}\n+              animate={{\n+                x,\n+                y,\n+                z: reducedMotion ? 0 : z,\n+                scale: reducedMotion && !isSelected ? 0.84 : scale,\n+                rotateX: reducedMotion ? 0 : (1 - depth) * -4,\n+                rotateY: reducedMotion ? 0 : Math.sin(angle) * -13,\n+                opacity,\n+                filter: `blur(${blur.toFixed(1)}px)`,\n+              }}\n+              transition={reducedMotion\n+                ? { duration: 0 }\n+                : { type: 'spring', stiffness: 145, damping: 24, mass: 0.85 }}\n+              style={{ zIndex: Math.round((depth + 1) * 50) }}\n+            >\n+              <div className={styles.cardIndex}>\n+                <span>0{index + 1}</span>\n+                <span>{strategy.parameter}</span>\n+              </div>\n+              <div>\n+                <p>QUANT STRATEGY</p>\n+                <h3>{strategy.name}</h3>\n+                <span>{strategy.description}</span>\n+              </div>\n+              <dl>\n+                <div><dt>CAGR</dt><dd>{strategy.cagr}</dd></div>\n+                <div><dt>MDD</dt><dd>{strategy.mdd}</dd></div>\n+                <div><dt>SHARPE</dt><dd>{strategy.sharpe}</dd></div>\n+              </dl>\n+              {isSelected ? (\n+                <Link to=\"/backtest\" onClick={preventClickAfterDrag}>\n+                  이 전략 백테스트하기\n+                  <ArrowUpRight aria-hidden=\"true\" size={18} />\n+                </Link>\n+              ) : (\n+                <button\n+                  type=\"button\"\n+                  className={styles.cardSelectButton}\n+                  aria-label={`${strategy.name} 전략 선택`}\n+                  onClick={(event) => {\n+                    if (!preventClickAfterDrag(event)) selectStrategy(index)\n+                  }}\n+                  tabIndex={0}\n+                />\n+              )}\n+            </motion.article>\n+          )\n+        })}\n+      </div>\n+\n+      <p className={styles.srOnly} aria-live=\"polite\">\n+        {announcement}\n+      </p>\n+    </motion.section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/AlgorithmOrbit.tsx",
+          "old_path": "frontend/src/components/landing/AlgorithmOrbit.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,92 @@\n+import type { CSSProperties } from 'react'\n+import type { Indicator } from '@/types/market'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+interface IndicatorConveyorProps {\n+  indicators: Indicator[]\n+}\n+\n+function formatValue(indicator: Indicator) {\n+  const value = new Intl.NumberFormat('ko-KR', {\n+    minimumFractionDigits: indicator.decimals,\n+    maximumFractionDigits: indicator.decimals,\n+  }).format(indicator.value)\n+  return `${value}${indicator.unit === '원' ? '원' : ` ${indicator.unit}`}`\n+}\n+\n+function createSparkline(indicator: Indicator) {\n+  const values = indicator.series.map((point) => point.value)\n+  if (values.length < 2) return ''\n+\n+  const minimum = Math.min(...values)\n+  const maximum = Math.max(...values)\n+  const range = maximum - minimum || 1\n+\n+  return values\n+    .map((value, index) => {\n+      const x = (index / (values.length - 1)) * 94 + 3\n+      const y = 29 - ((value - minimum) / range) * 22\n+      return `${x.toFixed(1)},${y.toFixed(1)}`\n+    })\n+    .join(' ')\n+}\n+\n+function getStatusLabel(indicator: Indicator) {\n+  switch (indicator.dataStatus) {\n+    case 'live':\n+      return `LIVE · ${indicator.source.provider}`\n+    case 'stale':\n+      return '갱신 지연'\n+    case 'loading':\n+      return '불러오는 중'\n+    case 'error':\n+      return '연결 실패 · 예시값'\n+    default:\n+      return '예시 데이터'\n+  }\n+}\n+\n+function IndicatorItem({ indicator }: { indicator: Indicator }) {\n+  const changePrefix = indicator.change !== null && indicator.change > 0 ? '+' : ''\n+  const toneStyle = { '--indicator-tone': `var(--landing-${indicator.tone})` } as CSSProperties\n+\n+  return (\n+    <article\n+      className={styles.indicatorItem}\n+      data-status={indicator.dataStatus ?? 'example'}\n+      style={toneStyle}\n+      title={indicator.statusMessage ?? undefined}\n+    >\n+      <div className={styles.indicatorMeta}>\n+        <span>{indicator.code.replaceAll('_', ' ')}</span>\n+        <small>{getStatusLabel(indicator)}</small>\n+      </div>\n+      <div className={styles.indicatorReading}>\n+        <strong>{formatValue(indicator)}</strong>\n+        <span>\n+          {indicator.change === null ? '발표 대기' : `${changePrefix}${indicator.change} ${indicator.changeUnit ?? ''}`}\n+        </span>\n+      </div>\n+      <svg viewBox=\"0 0 100 32\" role=\"img\" aria-label={`${indicator.name} 최근 흐름`}>\n+        <line x1=\"3\" y1=\"29\" x2=\"97\" y2=\"29\" />\n+        <polyline points={createSparkline(indicator)} />\n+      </svg>\n+    </article>\n+  )\n+}\n+\n+/** 시장과 거시 지표를 끊김 없는 가로 스트립으로 표시한다. */\n+export function IndicatorConveyor({ indicators }: IndicatorConveyorProps) {\n+  return (\n+    <div className={styles.conveyorViewport} tabIndex={0} aria-label=\"주요 시장·거시 지표 흐름\">\n+      <div className={styles.conveyorTrack}>\n+        <div className={styles.conveyorGroup}>\n+          {indicators.map((indicator) => <IndicatorItem key={indicator.id} indicator={indicator} />)}\n+        </div>\n+        <div className={styles.conveyorGroup} aria-hidden=\"true\">\n+          {indicators.map((indicator) => <IndicatorItem key={`copy-${indicator.id}`} indicator={indicator} />)}\n+        </div>\n+      </div>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/IndicatorConveyor.tsx",
+          "old_path": "frontend/src/components/landing/IndicatorConveyor.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,91 @@\n+import { ArrowUpRight, Menu, X } from 'lucide-react'\n+import { useEffect, useRef, useState, type MouseEvent } from 'react'\n+import { Link } from 'react-router-dom'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+const navigationItems = [\n+  { href: '#market-analysis', label: '시장 분석' },\n+  { href: '#backtest-service', label: '백테스트' },\n+  { href: '#algorithms', label: '알고리즘' },\n+]\n+\n+/** 랜딩 안에서만 사용하는 섹션 탐색 헤더다. */\n+export function LandingHeader() {\n+  const [isMenuOpen, setIsMenuOpen] = useState(false)\n+  const menuButtonRef = useRef<HTMLButtonElement>(null)\n+\n+  useEffect(() => {\n+    if (!isMenuOpen) return\n+\n+    const handleEscape = (event: globalThis.KeyboardEvent) => {\n+      if (event.key !== 'Escape') return\n+      event.preventDefault()\n+      setIsMenuOpen(false)\n+      window.requestAnimationFrame(() => menuButtonRef.current?.focus())\n+    }\n+\n+    document.addEventListener('keydown', handleEscape)\n+    return () => document.removeEventListener('keydown', handleEscape)\n+  }, [isMenuOpen])\n+\n+  const moveToSection = (event: MouseEvent<HTMLAnchorElement>, href: string) => {\n+    const target = document.querySelector(href)\n+    if (!target) return\n+\n+    event.preventDefault()\n+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches\n+    target.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' })\n+    setIsMenuOpen(false)\n+  }\n+\n+  return (\n+    <header className={styles.landingHeader}>\n+      <Link className={styles.wordmark} to=\"/\" aria-label=\"Thorp 랜딩 홈\">\n+        Thorp<span>.</span>\n+      </Link>\n+\n+      <nav className={styles.desktopNavigation} aria-label=\"랜딩 주요 메뉴\">\n+        {navigationItems.map((item) => (\n+          <a key={item.href} href={item.href} onClick={(event) => moveToSection(event, item.href)}>\n+            {item.label}\n+          </a>\n+        ))}\n+      </nav>\n+\n+      <Link className={styles.headerCta} to=\"/dashboard\">\n+        서비스 시작\n+        <ArrowUpRight aria-hidden=\"true\" size={16} strokeWidth={1.8} />\n+      </Link>\n+\n+      <button\n+        ref={menuButtonRef}\n+        type=\"button\"\n+        className={styles.menuButton}\n+        aria-label={isMenuOpen ? '메뉴 닫기' : '메뉴 열기'}\n+        aria-expanded={isMenuOpen}\n+        aria-controls=\"landing-mobile-navigation\"\n+        aria-haspopup=\"true\"\n+        onClick={() => setIsMenuOpen((current) => !current)}\n+      >\n+        {isMenuOpen ? <X aria-hidden=\"true\" size={20} /> : <Menu aria-hidden=\"true\" size={20} />}\n+      </button>\n+\n+      {isMenuOpen ? (\n+        <nav\n+          id=\"landing-mobile-navigation\"\n+          className={styles.mobileNavigation}\n+          aria-label=\"랜딩 모바일 메뉴\"\n+        >\n+          {navigationItems.map((item) => (\n+            <a key={item.href} href={item.href} onClick={(event) => moveToSection(event, item.href)}>\n+              {item.label}\n+            </a>\n+          ))}\n+          <Link to=\"/dashboard\" onClick={() => setIsMenuOpen(false)}>\n+            서비스 시작\n+          </Link>\n+        </nav>\n+      ) : null}\n+    </header>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "old_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,264 @@\n+import { ArrowDown, ArrowUpRight, BarChart3, FlaskConical, Radar } from 'lucide-react'\n+import { motion, useReducedMotion } from 'motion/react'\n+import type { CSSProperties } from 'react'\n+import { Link } from 'react-router-dom'\n+import { backtestChartData, type BacktestPoint } from '@/data/backtestMock'\n+import type { Indicator } from '@/types/market'\n+import { IndicatorConveyor } from './IndicatorConveyor'\n+import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }\n+\n+type PreviewSeries = Exclude<keyof BacktestPoint, 'date'>\n+\n+function buildPreviewPath(series: PreviewSeries) {\n+  const left = 42\n+  const top = 40\n+  const width = 916\n+  const height = 278\n+  const minimum = 88\n+  const maximum = 230\n+\n+  return backtestChartData\n+    .map((point, index) => {\n+      const x = left + (index / (backtestChartData.length - 1)) * width\n+      const value = Number(point[series])\n+      const y = top + height - ((value - minimum) / (maximum - minimum)) * height\n+      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`\n+    })\n+    .join(' ')\n+}\n+\n+const comparisonPaths = [\n+  buildPreviewPath('benchmark'),\n+  buildPreviewPath('dualMomentum'),\n+  buildPreviewPath('rsiMeanReversion'),\n+]\n+const resultPath = buildPreviewPath('trend')\n+\n+/** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */\n+export function HeroSection() {\n+  const reducedMotion = useReducedMotion()\n+\n+  const moveToMarket = () => {\n+    document.querySelector('#market-analysis')?.scrollIntoView({\n+      behavior: reducedMotion ? 'auto' : 'smooth',\n+      block: 'start',\n+    })\n+  }\n+\n+  return (\n+    <section className={styles.hero} aria-labelledby=\"landing-title\">\n+      <div className={styles.heroFallback} aria-hidden=\"true\">\n+        <span className={styles.heroGlow} />\n+        <svg className={styles.heroChart} viewBox=\"0 0 1600 700\" preserveAspectRatio=\"none\">\n+          <defs>\n+            <linearGradient id=\"landing-chart-gradient\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0\">\n+              <stop offset=\"0\" stopColor=\"#03c75a\" stopOpacity=\"0\" />\n+              <stop offset=\"0.52\" stopColor=\"#03c75a\" stopOpacity=\"0.65\" />\n+              <stop offset=\"1\" stopColor=\"#86f2a8\" stopOpacity=\"0.12\" />\n+            </linearGradient>\n+          </defs>\n+          <path\n+            d=\"M0 505 L80 492 L160 520 L240 458 L320 476 L400 420 L480 451 L560 388 L640 405 L720 330 L800 360 L880 298 L960 346 L1040 260 L1120 292 L1200 224 L1280 242 L1360 180 L1440 210 L1520 138 L1600 162\"\n+          />\n+          <path\n+            className={styles.heroChartGlow}\n+            d=\"M0 505 L80 492 L160 520 L240 458 L320 476 L400 420 L480 451 L560 388 L640 405 L720 330 L800 360 L880 298 L960 346 L1040 260 L1120 292 L1200 224 L1280 242 L1360 180 L1440 210 L1520 138 L1600 162\"\n+          />\n+        </svg>\n+        <div className={styles.candleField}>\n+          {Array.from({ length: 26 }, (_, index) => (\n+            <span\n+              key={index}\n+              style={{\n+                '--candle-height': `${22 + ((index * 17) % 54)}px`,\n+                '--candle-shift': `${(index % 5) * 8}px`,\n+                '--candle-delay': `${index * -0.08}s`,\n+              } as CSSProperties}\n+            />\n+          ))}\n+        </div>\n+      </div>\n+      <MarketAtmosphereCanvas />\n+\n+      <motion.div\n+        className={styles.heroContent}\n+        initial=\"hidden\"\n+        animate=\"visible\"\n+        variants={{\n+          hidden: {},\n+          visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },\n+        }}\n+      >\n+        <motion.p\n+          className={styles.eyebrow}\n+          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}\n+        >\n+          KOREA MARKET INTELLIGENCE\n+        </motion.p>\n+        <motion.h1\n+          id=\"landing-title\"\n+          variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}\n+          transition={revealTransition}\n+        >\n+          <span>시장을 확인하고</span>\n+          <span>전략을 <em>검증하세요.</em></span>\n+        </motion.h1>\n+        <motion.p\n+          className={styles.heroDescription}\n+          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n+          transition={revealTransition}\n+        >\n+          데이터로 시장을 읽고, 검증된 전략으로 판단하세요.\n+        </motion.p>\n+        <motion.div\n+          className={styles.heroActions}\n+          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n+          transition={revealTransition}\n+        >\n+          <Link className={styles.primaryCta} to=\"/dashboard\">\n+            시장 살펴보기\n+            <ArrowUpRight aria-hidden=\"true\" size={18} />\n+          </Link>\n+          <button type=\"button\" className={styles.secondaryCta} onClick={moveToMarket}>\n+            서비스 알아보기\n+            <ArrowDown aria-hidden=\"true\" size={17} />\n+          </button>\n+        </motion.div>\n+      </motion.div>\n+\n+      <div className={styles.heroFootnote} aria-hidden=\"true\">\n+        <span>01</span>\n+        <span>SCROLL TO EXPLORE</span>\n+      </div>\n+    </section>\n+  )\n+}\n+\n+/** 실제 연동 지표를 비대칭 레이아웃과 무한 스트립으로 소개한다. */\n+export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] }) {\n+  return (\n+    <motion.section\n+      id=\"market-analysis\"\n+      className={`${styles.storySection} ${styles.marketSection}`}\n+      initial={{ opacity: 0, x: 72 }}\n+      whileInView={{ opacity: 1, x: 0 }}\n+      viewport={{ once: true, amount: 0.18 }}\n+      transition={revealTransition}\n+      aria-labelledby=\"market-analysis-title\"\n+    >\n+      <div className={styles.sectionNumber} aria-hidden=\"true\">\n+        01 / MARKET PULSE\n+      </div>\n+      <div className={styles.marketContent}>\n+        <div className={styles.sectionHeading}>\n+          <Radar aria-hidden=\"true\" size={22} strokeWidth={1.6} />\n+          <p>MARKET ANALYSIS</p>\n+          <h2 id=\"market-analysis-title\">\n+            지표를 기반으로\n+            <br />\n+            시장을 분석합니다.\n+          </h2>\n+          <span>주요 시장·거시 지표를 한곳에서 확인하고 현재 시장의 흐름을 읽어보세요.</span>\n+        </div>\n+\n+        <IndicatorConveyor indicators={indicators} />\n+\n+        <Link className={styles.textCta} to=\"/dashboard\">\n+          <span>시장 분석 보러 가기</span>\n+          <ArrowUpRight aria-hidden=\"true\" size={21} />\n+        </Link>\n+      </div>\n+    </motion.section>\n+  )\n+}\n+\n+/** 기존 예시 시계열로 전략 결과가 과거 시장 위에 그려지는 과정을 보여준다. */\n+export function BacktestIntroSection() {\n+  return (\n+    <motion.section\n+      id=\"backtest-service\"\n+      className={`${styles.storySection} ${styles.backtestSection}`}\n+      initial={{ opacity: 0, x: -72 }}\n+      whileInView={{ opacity: 1, x: 0 }}\n+      viewport={{ once: true, amount: 0.18 }}\n+      transition={revealTransition}\n+      aria-labelledby=\"backtest-intro-title\"\n+    >\n+      <div className={styles.backtestContent}>\n+        <div className={styles.sectionHeading}>\n+          <FlaskConical aria-hidden=\"true\" size={22} strokeWidth={1.6} />\n+          <p>BACKTEST STUDIO</p>\n+          <h2 id=\"backtest-intro-title\">\n+            나의 전략을\n+            <br />\n+            과거에서 실험해보세요.\n+          </h2>\n+          <span>같은 시장과 기간에서 전략을 비교하고 수익과 위험을 직접 검증해보세요.</span>\n+        </div>\n+\n+        <div className={styles.backtestVisual}>\n+          <div className={styles.chartTopline}>\n+            <span><BarChart3 aria-hidden=\"true\" size={17} /> KOSPI 200 / 2019—2023</span>\n+            <strong>STRATEGY 01</strong>\n+          </div>\n+          <svg viewBox=\"0 0 1000 390\" role=\"img\" aria-label=\"과거 시장과 추세추종 전략의 백테스트 성과 비교 차트\">\n+            {[86, 144, 202, 260, 318].map((y) => (\n+              <line key={y} className={styles.chartGrid} x1=\"42\" x2=\"958\" y1={y} y2={y} />\n+            ))}\n+            {comparisonPaths.map((path, index) => (\n+              <motion.path\n+                key={path}\n+                className={styles.comparisonPath}\n+                d={path}\n+                initial={{ pathLength: 0, opacity: 0 }}\n+                whileInView={{ pathLength: 1, opacity: 0.34 + index * 0.08 }}\n+                viewport={{ once: false, amount: 0.35 }}\n+                transition={{ duration: 1.1, delay: index * 0.08, ease: 'easeOut' }}\n+              />\n+            ))}\n+            <motion.path\n+              className={styles.resultPathGlow}\n+              d={resultPath}\n+              initial={{ pathLength: 0, opacity: 0 }}\n+              whileInView={{ pathLength: 1, opacity: 1 }}\n+              viewport={{ once: false, amount: 0.35 }}\n+              transition={{ duration: 1.55, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}\n+            />\n+            <motion.path\n+              className={styles.resultPath}\n+              d={resultPath}\n+              initial={{ pathLength: 0 }}\n+              whileInView={{ pathLength: 1 }}\n+              viewport={{ once: false, amount: 0.35 }}\n+              transition={{ duration: 1.55, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}\n+            />\n+            <g className={styles.chartYears}>\n+              <text x=\"42\" y=\"370\">2019</text>\n+              <text x=\"271\" y=\"370\">2020</text>\n+              <text x=\"500\" y=\"370\">2021</text>\n+              <text x=\"729\" y=\"370\">2022</text>\n+              <text x=\"958\" y=\"370\" textAnchor=\"end\">2023</text>\n+            </g>\n+          </svg>\n+          <div className={styles.previewMetrics}>\n+            <span>누적 수익 <strong>+124.8%</strong></span>\n+            <span>CAGR <strong>18.4%</strong></span>\n+            <span>MDD <strong>-9.1%</strong></span>\n+            <span>SHARPE <strong>1.42</strong></span>\n+          </div>\n+        </div>\n+\n+        <Link className={styles.textCta} to=\"/backtest\">\n+          <span>백테스트 시작하기</span>\n+          <ArrowUpRight aria-hidden=\"true\" size={21} />\n+        </Link>\n+      </div>\n+      <div className={styles.sectionNumber} aria-hidden=\"true\">\n+        02 / TEST THE PAST\n+      </div>\n+    </motion.section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,132 @@\n+import { useEffect, useRef, useState } from 'react'\n+import styles from '@/pages/LandingPage.module.css'\n+import atmosphereShader from './market-atmosphere.wgsl?raw'\n+\n+/** WebGPU가 가능할 때만 Hero 배경을 렌더링하고, 실패 시 SVG 배경을 그대로 유지한다. */\n+export function MarketAtmosphereCanvas() {\n+  const canvasRef = useRef<HTMLCanvasElement>(null)\n+  const pointerRef = useRef({ x: 0.5, y: 0.5 })\n+  const [isReady, setIsReady] = useState(false)\n+\n+  useEffect(() => {\n+    const canvas = canvasRef.current\n+    if (!canvas || !('gpu' in navigator)) return\n+\n+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')\n+    if (reducedMotion.matches) return\n+\n+    let disposed = false\n+    let frameId = 0\n+    let gpuContext: { dispose: () => void } | null = null\n+    let isVisible = true\n+    let scheduleRender: () => void = () => {}\n+\n+    const stopRender = () => {\n+      window.cancelAnimationFrame(frameId)\n+      frameId = 0\n+    }\n+\n+    const visibilityObserver = new IntersectionObserver(\n+      ([entry]) => {\n+        isVisible = entry?.isIntersecting ?? false\n+        if (isVisible) scheduleRender()\n+        else stopRender()\n+      },\n+      { threshold: 0.02 },\n+    )\n+    visibilityObserver.observe(canvas)\n+\n+    const handlePointerMove = (event: PointerEvent) => {\n+      pointerRef.current = {\n+        x: event.clientX / Math.max(window.innerWidth, 1),\n+        y: event.clientY / Math.max(window.innerHeight, 1),\n+      }\n+    }\n+    window.addEventListener('pointermove', handlePointerMove, { passive: true })\n+\n+    const handleVisibilityChange = () => {\n+      if (document.visibilityState === 'visible') scheduleRender()\n+      else stopRender()\n+    }\n+    document.addEventListener('visibilitychange', handleVisibilityChange)\n+\n+    const start = async () => {\n+      try {\n+        const { effect, frame, init, surface } = await import('vgpu')\n+        const gpu = await init()\n+        if (disposed) {\n+          gpu.dispose()\n+          return\n+        }\n+\n+        gpuContext = gpu\n+        const target = surface(gpu, canvas, { dpr: [1, 1.5] })\n+        const atmosphere = effect(gpu, atmosphereShader, {\n+          set: { params: { data: [0, 0.5, 0.5, 0] } },\n+        })\n+        atmosphere.compileSync(target)\n+        if (disposed) return\n+\n+        const startedAt = performance.now()\n+        let hasRendered = false\n+\n+        const render = () => {\n+          frameId = 0\n+          if (disposed || !isVisible || document.visibilityState !== 'visible') return\n+\n+          const elapsed = (performance.now() - startedAt) / 1000\n+          const pointer = pointerRef.current\n+          atmosphere.set({ params: { data: [elapsed, pointer.x, pointer.y, 0] } })\n+          frame(gpu, (currentFrame) => {\n+            currentFrame.pass(target, atmosphere)\n+          })\n+          if (!hasRendered) {\n+            hasRendered = true\n+            setIsReady(true)\n+          }\n+\n+          scheduleRender()\n+        }\n+\n+        scheduleRender = () => {\n+          if (\n+            !disposed\n+            && isVisible\n+            && document.visibilityState === 'visible'\n+            && frameId === 0\n+          ) {\n+            frameId = window.requestAnimationFrame(render)\n+          }\n+        }\n+        scheduleRender()\n+      } catch {\n+        if (!disposed) {\n+          setIsReady(false)\n+          gpuContext?.dispose()\n+          gpuContext = null\n+        }\n+      }\n+    }\n+\n+    void start()\n+\n+    return () => {\n+      disposed = true\n+      stopRender()\n+      window.removeEventListener('pointermove', handlePointerMove)\n+      document.removeEventListener('visibilitychange', handleVisibilityChange)\n+      visibilityObserver.disconnect()\n+      gpuContext?.dispose()\n+      gpuContext = null\n+    }\n+  }, [])\n+\n+  return (\n+    <canvas\n+      ref={canvasRef}\n+      className={styles.atmosphereCanvas}\n+      data-ready={isReady}\n+      aria-hidden=\"true\"\n+    />\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/MarketAtmosphereCanvas.tsx",
+          "old_path": "frontend/src/components/landing/MarketAtmosphereCanvas.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,60 @@\n+struct Params {\n+  data: vec4f,\n+}\n+\n+@group(0) @binding(0) var<uniform> params: Params;\n+\n+fn hash(value: f32) -> f32 {\n+  return fract(sin(value * 127.1) * 43758.5453);\n+}\n+\n+fn softLine(value: f32, linePosition: f32, width: f32) -> f32 {\n+  return 1.0 - smoothstep(width, width * 2.4, abs(value - linePosition));\n+}\n+\n+@fragment fn fs_main(@location(0) uv: vec2f) -> @location(0) vec4f {\n+  let time = params.data.x;\n+  let pointer = params.data.yz;\n+  let p = vec2f(uv.x, 1.0 - uv.y);\n+\n+  let minorGridX = softLine(fract(p.x * 22.0), 0.0, 0.006);\n+  let minorGridY = softLine(fract(p.y * 12.0), 0.0, 0.008);\n+  let grid = max(minorGridX, minorGridY) * 0.075;\n+\n+  let wave = 0.29\n+    + sin(p.x * 8.0 + time * 0.14) * 0.035\n+    + sin(p.x * 19.0 - time * 0.1) * 0.018\n+    + p.x * 0.055;\n+  let waveCore = softLine(p.y, wave, 0.0025);\n+  let waveGlow = exp(-abs(p.y - wave) * 85.0);\n+\n+  let candleCell = floor(p.x * 34.0);\n+  let candleX = fract(p.x * 34.0);\n+  let candleCenter = 0.24\n+    + sin(candleCell * 1.47) * 0.035\n+    + (hash(candleCell) - 0.5) * 0.11\n+    + p.x * 0.035;\n+  let candleHeight = 0.022 + hash(candleCell + 9.0) * 0.065;\n+  let candleBody = step(0.27, candleX) * step(candleX, 0.73)\n+    * step(abs(p.y - candleCenter), candleHeight * 0.45);\n+  let candleWick = step(0.47, candleX) * step(candleX, 0.53)\n+    * step(abs(p.y - candleCenter), candleHeight);\n+  let candleMask = max(candleBody, candleWick) * smoothstep(0.08, 0.27, p.y)\n+    * (1.0 - smoothstep(0.42, 0.56, p.y));\n+\n+  let pointerGlow = exp(-distance(p, vec2f(pointer.x, 1.0 - pointer.y)) * 4.8) * 0.07;\n+  let centerGlow = exp(-distance(p, vec2f(0.56, 0.56)) * 3.2) * 0.12;\n+  let movingGlow = exp(-distance(p, vec2f(0.2 + fract(time * 0.015) * 0.7, wave)) * 8.0) * 0.18;\n+\n+  var color = vec3f(0.008, 0.026, 0.019);\n+  color += vec3f(0.05, 0.14, 0.09) * grid;\n+  color += vec3f(0.012, 0.78, 0.35) * waveCore * 0.38;\n+  color += vec3f(0.0, 0.52, 0.22) * waveGlow * 0.18;\n+  color += vec3f(0.05, 0.48, 0.22) * candleMask * 0.24;\n+  color += vec3f(0.0, 0.55, 0.22) * (pointerGlow + centerGlow + movingGlow);\n+\n+  let vignette = smoothstep(0.94, 0.2, distance(p, vec2f(0.5, 0.5)));\n+  color *= 0.68 + vignette * 0.42;\n+\n+  return vec4f(color, 1.0);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/market-atmosphere.wgsl",
+          "old_path": "frontend/src/components/landing/market-atmosphere.wgsl",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,131 +1,1311 @@\n .page {\n+  --landing-background: #030806;\n+  --landing-surface: #08110d;\n+  --landing-surface-strong: #0b1510;\n+  --landing-accent: #03c75a;\n+  --landing-accent-soft: #86f2a8;\n+  --landing-text: #f3f7f4;\n+  --landing-muted: #91a097;\n+  --landing-line: rgb(160 190 173 / 14%);\n+  --landing-positive: #45dc7d;\n+  --landing-negative: #ef8a68;\n+  --landing-warning: #e8bd72;\n+  --landing-neutral: #9caaa1;\n+  position: relative;\n+  height: 100svh;\n+  min-height: 100vh;\n+  overflow-x: clip;\n+  overflow-y: auto;\n+  scroll-behavior: smooth;\n+  scroll-snap-type: y mandatory;\n+  background:\n+    radial-gradient(circle at 80% 22%, rgb(3 199 90 / 7%), transparent 27rem),\n+    linear-gradient(180deg, #030806 0%, #050b08 45%, #030806 100%);\n+  color: var(--landing-text);\n+  font-family: 'Geist Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;\n+}\n+\n+.page::before {\n+  position: fixed;\n+  z-index: 20;\n+  inset: 0;\n+  background-image: url(\"data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.23'/%3E%3C/svg%3E\");\n+  content: '';\n+  opacity: 0.035;\n+  pointer-events: none;\n+}\n+\n+.landingHeader {\n+  position: absolute;\n+  z-index: 30;\n+  top: clamp(18px, 3vw, 42px);\n+  left: 50%;\n+  display: grid;\n+  grid-template-columns: 1fr auto 1fr;\n+  align-items: center;\n+  width: min(calc(100% - 48px), 1440px);\n+  min-height: 62px;\n+  padding: 0 10px 0 22px;\n+  border: 1px solid rgb(191 221 205 / 14%);\n+  border-radius: 13px;\n+  background: rgb(4 12 8 / 68%);\n+  box-shadow: 0 18px 60px rgb(0 0 0 / 20%);\n+  backdrop-filter: blur(18px);\n+  transform: translateX(-50%);\n+}\n+\n+.wordmark {\n+  justify-self: start;\n+  color: var(--landing-text);\n+  font-size: 1.3rem;\n+  font-weight: 720;\n+  letter-spacing: -0.055em;\n+  text-decoration: none;\n+}\n+\n+.wordmark span {\n+  color: var(--landing-accent);\n+}\n+\n+.desktopNavigation {\n+  display: flex;\n+  align-items: center;\n+  gap: clamp(24px, 3.2vw, 54px);\n+}\n+\n+.desktopNavigation a,\n+.mobileNavigation a {\n+  position: relative;\n+  color: #a8b5ad;\n+  font-size: 0.78rem;\n+  font-weight: 540;\n+  letter-spacing: -0.01em;\n+  text-decoration: none;\n+  transition: color 180ms ease;\n+}\n+\n+.desktopNavigation a::after {\n+  position: absolute;\n+  right: 0;\n+  bottom: -8px;\n+  left: 0;\n+  height: 1px;\n+  background: var(--landing-accent);\n+  content: '';\n+  transform: scaleX(0);\n+  transform-origin: right;\n+  transition: transform 220ms ease;\n+}\n+\n+.desktopNavigation a:hover,\n+.mobileNavigation a:hover {\n+  color: var(--landing-text);\n+}\n+\n+.desktopNavigation a:hover::after {\n+  transform: scaleX(1);\n+  transform-origin: left;\n+}\n+\n+.headerCta {\n+  display: inline-flex;\n+  align-items: center;\n+  justify-self: end;\n+  gap: 9px;\n+  min-height: 42px;\n+  padding: 0 16px;\n+  border-radius: 8px;\n+  background: var(--landing-text);\n+  color: #061009;\n+  font-size: 0.76rem;\n+  font-weight: 680;\n+  text-decoration: none;\n+  transition: gap 180ms ease, background 180ms ease, transform 180ms ease;\n+}\n+\n+.headerCta:hover {\n+  gap: 13px;\n+  background: var(--landing-accent-soft);\n+  transform: translateY(-1px);\n+}\n+\n+.menuButton,\n+.mobileNavigation {\n+  display: none;\n+}\n+\n+.hero {\n   position: relative;\n   display: grid;\n   min-height: 100svh;\n+  scroll-snap-align: start;\n+  scroll-snap-stop: always;\n   place-items: center;\n   overflow: hidden;\n+  isolation: isolate;\n   background:\n-    linear-gradient(rgb(20 31 44 / 4%) 1px, transparent 1px),\n-    linear-gradient(90deg, rgb(20 31 44 / 4%) 1px, transparent 1px),\n-    #f3f1ea;\n-  background-size: 54px 54px;\n-  color: #111a26;\n+    linear-gradient(rgb(147 181 162 / 5%) 1px, transparent 1px),\n+    linear-gradient(90deg, rgb(147 181 162 / 5%) 1px, transparent 1px);\n+  background-size: clamp(48px, 5vw, 78px) clamp(48px, 5vw, 78px);\n }\n \n-.page::before {\n+.hero::before,\n+.hero::after {\n   position: absolute;\n-  inset: 24px;\n-  border: 1px solid rgb(17 26 38 / 10%);\n+  z-index: -1;\n   content: '';\n   pointer-events: none;\n }\n \n-.glow {\n-  position: absolute;\n-  width: min(70vw, 820px);\n+.hero::before {\n+  inset: 0;\n+  background:\n+    linear-gradient(180deg, rgb(3 8 6 / 12%), transparent 32%, rgb(3 8 6 / 38%)),\n+    radial-gradient(ellipse at center, transparent 25%, rgb(3 8 6 / 72%) 100%);\n+}\n+\n+.hero::after {\n+  right: -12vw;\n+  bottom: -38vw;\n+  width: 75vw;\n   aspect-ratio: 1;\n+  border: 1px solid rgb(3 199 90 / 10%);\n   border-radius: 50%;\n-  background: radial-gradient(circle, rgb(42 191 186 / 13%), transparent 66%);\n-  filter: blur(18px);\n+  box-shadow: 0 0 0 11vw rgb(3 199 90 / 2.5%), 0 0 0 22vw rgb(3 199 90 / 1.5%);\n+  transform: rotateX(66deg);\n+}\n+\n+.heroFallback,\n+.atmosphereCanvas {\n+  position: absolute;\n+  z-index: -3;\n+  inset: 0;\n+  width: 100%;\n+  height: 100%;\n   pointer-events: none;\n }\n \n-.hero {\n+.atmosphereCanvas {\n+  z-index: -2;\n+  opacity: 0;\n+  transition: opacity 900ms ease;\n+}\n+\n+.atmosphereCanvas[data-ready='true'] {\n+  opacity: 0.78;\n+}\n+\n+.heroGlow {\n+  position: absolute;\n+  top: 5%;\n+  left: 50%;\n+  width: min(76vw, 1050px);\n+  height: 76%;\n+  background:\n+    radial-gradient(circle at 50% 30%, rgb(3 199 90 / 22%), transparent 23%),\n+    radial-gradient(ellipse at 50% 58%, rgb(3 199 90 / 11%), transparent 54%);\n+  filter: blur(25px);\n+  transform: translateX(-50%);\n+  animation: glowBreath 7s ease-in-out infinite alternate;\n+}\n+\n+.heroChart {\n+  position: absolute;\n+  right: -3%;\n+  bottom: 3%;\n+  left: -3%;\n+  width: 106%;\n+  height: min(53vh, 570px);\n+  overflow: visible;\n+  filter: drop-shadow(0 0 16px rgb(3 199 90 / 25%));\n+  opacity: 0.52;\n+}\n+\n+.heroChart path {\n+  fill: none;\n+  stroke: url(#landing-chart-gradient);\n+  stroke-linecap: round;\n+  stroke-linejoin: round;\n+  stroke-width: 2.2;\n+  vector-effect: non-scaling-stroke;\n+}\n+\n+.heroChart .heroChartGlow {\n+  stroke: rgb(3 199 90 / 20%);\n+  stroke-width: 13;\n+}\n+\n+.candleField {\n+  position: absolute;\n+  right: 0;\n+  bottom: 13%;\n+  left: 0;\n+  display: flex;\n+  align-items: flex-end;\n+  justify-content: space-around;\n+  gap: 2vw;\n+  padding: 0 2vw;\n+  opacity: 0.38;\n+}\n+\n+.candleField span {\n+  position: relative;\n+  width: clamp(5px, 0.55vw, 9px);\n+  height: var(--candle-height);\n+  margin-bottom: var(--candle-shift);\n+  border: 1px solid rgb(97 238 145 / 68%);\n+  background: rgb(3 199 90 / 28%);\n+  animation: candlePulse 4s ease-in-out infinite alternate;\n+  animation-delay: var(--candle-delay);\n+}\n+\n+.candleField span::before {\n+  position: absolute;\n+  top: -14px;\n+  bottom: -14px;\n+  left: 50%;\n+  width: 1px;\n+  background: rgb(97 238 145 / 46%);\n+  content: '';\n+  transform: translateX(-50%);\n+}\n+\n+.heroContent {\n   position: relative;\n-  z-index: 1;\n+  z-index: 2;\n   display: flex;\n   align-items: center;\n   flex-direction: column;\n-  padding: 48px 24px;\n+  width: min(100% - 40px, 1100px);\n+  padding: clamp(150px, 17vh, 210px) 0 120px;\n   text-align: center;\n }\n \n+.eyebrow,\n+.sectionHeading > p,\n+.algorithmHeader > p {\n+  margin: 0;\n+  color: var(--landing-accent-soft);\n+  font-size: 0.68rem;\n+  font-weight: 670;\n+  letter-spacing: 0.19em;\n+}\n+\n .eyebrow {\n-  margin: 0 0 18px;\n-  color: #688079;\n-  font-size: 0.72rem;\n-  font-weight: 650;\n-  letter-spacing: 0.21em;\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 12px;\n+  margin-bottom: 27px;\n+}\n+\n+.eyebrow::before {\n+  width: 28px;\n+  height: 1px;\n+  background: var(--landing-accent);\n+  content: '';\n }\n \n .hero h1 {\n   margin: 0;\n-  font-size: clamp(5.25rem, 15vw, 11.5rem);\n-  font-weight: 590;\n-  letter-spacing: -0.085em;\n-  line-height: 0.82;\n+  font-size: clamp(3.45rem, 7.2vw, 7.1rem);\n+  font-weight: 540;\n+  letter-spacing: -0.075em;\n+  line-height: 0.98;\n+}\n+\n+.hero h1 > span {\n+  display: block;\n }\n \n-.hero h1 span {\n-  color: #22a7a1;\n+.hero h1 em {\n+  background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);\n+  background-clip: text;\n+  color: transparent;\n+  font-style: normal;\n+  text-shadow: 0 0 42px rgb(3 199 90 / 15%);\n }\n \n-.description {\n-  margin: 30px 0 34px;\n-  color: #68727e;\n-  font-size: clamp(0.92rem, 1.5vw, 1.08rem);\n-  letter-spacing: -0.02em;\n+.heroDescription {\n+  max-width: 530px;\n+  margin: 29px 0 0;\n+  color: var(--landing-muted);\n+  font-size: clamp(0.92rem, 1.25vw, 1.05rem);\n+  letter-spacing: -0.025em;\n }\n \n-.cta {\n+.heroActions {\n+  display: flex;\n+  align-items: center;\n+  gap: 12px;\n+  margin-top: 38px;\n+}\n+\n+.primaryCta,\n+.secondaryCta {\n   display: inline-flex;\n   align-items: center;\n   justify-content: center;\n-  gap: 12px;\n-  min-height: 50px;\n+  gap: 11px;\n+  min-height: 52px;\n   padding: 0 21px;\n-  border-radius: 999px;\n-  background: #111a26;\n-  box-shadow: 0 16px 36px rgb(17 26 38 / 16%);\n-  color: #fff;\n-  font-size: 0.9rem;\n-  font-weight: 650;\n+  border: 1px solid transparent;\n+  border-radius: 8px;\n+  font-size: 0.82rem;\n+  font-weight: 680;\n   text-decoration: none;\n-  transition: gap 180ms ease, transform 180ms ease, background 180ms ease;\n+  transition: gap 180ms ease, border-color 180ms ease, background 180ms ease, transform 180ms ease;\n+}\n+\n+.primaryCta {\n+  background: var(--landing-accent);\n+  color: #021108;\n }\n \n-.cta:hover {\n-  gap: 17px;\n-  background: #1e504f;\n+.secondaryCta {\n+  border-color: rgb(210 234 220 / 22%);\n+  background: rgb(7 18 12 / 64%);\n+  color: var(--landing-text);\n+  cursor: pointer;\n+}\n+\n+.primaryCta:hover,\n+.secondaryCta:hover {\n+  gap: 16px;\n   transform: translateY(-2px);\n }\n \n-.cta:focus-visible {\n-  outline: 3px solid rgb(34 167 161 / 30%);\n-  outline-offset: 4px;\n+.primaryCta:hover {\n+  background: #56e889;\n+}\n+\n+.secondaryCta:hover {\n+  border-color: rgb(134 242 168 / 48%);\n+  background: rgb(14 34 23 / 88%);\n }\n \n-.version {\n+.heroFootnote {\n   position: absolute;\n-  right: 42px;\n-  bottom: 34px;\n-  margin: 0;\n-  color: #8a928e;\n-  font-size: 0.65rem;\n+  right: clamp(24px, 4vw, 68px);\n+  bottom: 28px;\n+  left: clamp(24px, 4vw, 68px);\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  color: #647269;\n+  font-size: 0.59rem;\n+  letter-spacing: 0.16em;\n+}\n+\n+.heroFootnote::before {\n+  position: absolute;\n+  right: 160px;\n+  left: 40px;\n+  height: 1px;\n+  background: linear-gradient(90deg, rgb(160 190 173 / 15%), transparent);\n+  content: '';\n+}\n+\n+.storyFlow {\n+  position: relative;\n+  background:\n+    radial-gradient(circle at 13% 22%, rgb(3 199 90 / 7%), transparent 22rem),\n+    radial-gradient(circle at 88% 63%, rgb(3 199 90 / 5%), transparent 24rem),\n+    linear-gradient(rgb(160 190 173 / 3.5%) 1px, transparent 1px),\n+    linear-gradient(90deg, rgb(160 190 173 / 3.5%) 1px, transparent 1px),\n+    var(--landing-background);\n+  background-size: auto, auto, 72px 72px, 72px 72px, auto;\n+}\n+\n+.storySection {\n+  position: relative;\n+  display: grid;\n+  width: min(100%, 1600px);\n+  min-height: 100svh;\n+  scroll-snap-align: start;\n+  scroll-snap-stop: always;\n+  margin: 0 auto;\n+  padding: clamp(96px, 12vh, 150px) clamp(24px, 5vw, 86px);\n+  border-bottom: 1px solid var(--landing-line);\n+}\n+\n+.storySection::before {\n+  position: absolute;\n+  top: 0;\n+  bottom: 0;\n+  width: 1px;\n+  background: linear-gradient(transparent, var(--landing-line) 20%, var(--landing-line) 80%, transparent);\n+  content: '';\n+}\n+\n+.marketSection {\n+  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);\n+}\n+\n+.marketSection::before {\n+  left: 33.5%;\n+}\n+\n+.backtestSection {\n+  grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);\n+}\n+\n+.backtestSection::before {\n+  right: 31%;\n+}\n+\n+.sectionNumber {\n+  align-self: center;\n+  color: #536158;\n+  font-size: 0.62rem;\n+  letter-spacing: 0.2em;\n+  writing-mode: vertical-rl;\n+}\n+\n+.marketSection .sectionNumber {\n+  justify-self: start;\n+}\n+\n+.backtestSection .sectionNumber {\n+  justify-self: end;\n+}\n+\n+.marketContent,\n+.backtestContent {\n+  align-self: center;\n+  min-width: 0;\n+}\n+\n+.marketContent {\n+  padding-left: clamp(38px, 5vw, 88px);\n+}\n+\n+.backtestContent {\n+  padding-right: clamp(38px, 5vw, 88px);\n+}\n+\n+.sectionHeading {\n+  position: relative;\n+  padding-left: 46px;\n+}\n+\n+.sectionHeading > svg {\n+  position: absolute;\n+  top: 2px;\n+  left: 0;\n+  color: var(--landing-accent);\n+}\n+\n+.sectionHeading h2,\n+.algorithmHeader h2 {\n+  margin: 16px 0 20px;\n+  color: var(--landing-text);\n+  font-size: clamp(2.55rem, 4.4vw, 4.9rem);\n+  font-weight: 520;\n+  letter-spacing: -0.065em;\n+  line-height: 1.04;\n+}\n+\n+.sectionHeading > span,\n+.algorithmHeader > span {\n+  display: block;\n+  max-width: 650px;\n+  color: var(--landing-muted);\n+  font-size: 0.9rem;\n+  line-height: 1.75;\n+}\n+\n+.conveyorViewport {\n+  width: 100%;\n+  margin: clamp(50px, 7vh, 76px) 0 34px;\n+  overflow: hidden;\n+  border-top: 1px solid var(--landing-line);\n+  border-bottom: 1px solid var(--landing-line);\n+  outline: none;\n+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);\n+}\n+\n+.conveyorViewport:focus-visible {\n+  box-shadow: inset 0 0 0 2px rgb(3 199 90 / 55%);\n+}\n+\n+.conveyorTrack {\n+  display: flex;\n+  width: max-content;\n+  animation: conveyorMove 38s linear infinite;\n+}\n+\n+.conveyorGroup {\n+  display: flex;\n+}\n+\n+.indicatorItem {\n+  position: relative;\n+  display: grid;\n+  grid-template-columns: minmax(150px, 1fr) 120px;\n+  gap: 24px;\n+  width: clamp(330px, 29vw, 430px);\n+  min-height: 168px;\n+  padding: 24px 27px;\n+  border-right: 1px solid var(--landing-line);\n+  background: rgb(8 18 12 / 44%);\n+}\n+\n+.indicatorItem:first-child {\n+  border-left: 1px solid var(--landing-line);\n+}\n+\n+.indicatorMeta,\n+.indicatorReading {\n+  display: flex;\n+  flex-direction: column;\n+}\n+\n+.indicatorMeta {\n+  gap: 5px;\n+}\n+\n+.indicatorMeta > span {\n+  overflow: hidden;\n+  color: #dbe6df;\n+  font-size: 0.72rem;\n+  font-weight: 670;\n+  letter-spacing: 0.1em;\n+  text-overflow: ellipsis;\n+  white-space: nowrap;\n+}\n+\n+.indicatorMeta small {\n+  overflow: hidden;\n+  color: #68766d;\n+  font-size: 0.55rem;\n+  letter-spacing: 0.08em;\n+  text-overflow: ellipsis;\n+  white-space: nowrap;\n+}\n+\n+.indicatorItem[data-status='live'] .indicatorMeta small {\n+  color: var(--landing-accent-soft);\n+}\n+\n+.indicatorItem[data-status='stale'] .indicatorMeta small {\n+  color: var(--landing-warning);\n+}\n+\n+.indicatorItem[data-status='error'] .indicatorMeta small {\n+  color: var(--landing-negative);\n+}\n+\n+.indicatorReading {\n+  grid-column: 1;\n+  gap: 5px;\n+  align-self: end;\n+}\n+\n+.indicatorReading strong {\n+  font-size: 1.52rem;\n+  font-weight: 610;\n+  letter-spacing: -0.045em;\n+}\n+\n+.indicatorReading span {\n+  color: var(--indicator-tone);\n+  font-size: 0.66rem;\n+  font-weight: 630;\n+}\n+\n+.indicatorItem svg {\n+  grid-row: 1 / span 2;\n+  grid-column: 2;\n+  align-self: center;\n+  width: 100%;\n+  overflow: visible;\n+}\n+\n+.indicatorItem svg line {\n+  stroke: rgb(160 190 173 / 11%);\n+  stroke-width: 1;\n+}\n+\n+.indicatorItem svg polyline {\n+  fill: none;\n+  stroke: var(--indicator-tone);\n+  stroke-linecap: square;\n+  stroke-linejoin: miter;\n+  stroke-width: 2;\n+  vector-effect: non-scaling-stroke;\n+}\n+\n+.textCta {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  width: min(100%, 720px);\n+  padding: 18px 0;\n+  border-top: 1px solid var(--landing-line);\n+  border-bottom: 1px solid var(--landing-line);\n+  color: var(--landing-text);\n+  font-size: 0.83rem;\n+  font-weight: 620;\n+  text-decoration: none;\n+  transition: color 180ms ease, padding 180ms ease;\n+}\n+\n+.textCta:hover {\n+  padding-right: 9px;\n+  color: var(--landing-accent-soft);\n+}\n+\n+.backtestVisual {\n+  position: relative;\n+  margin: clamp(44px, 6vh, 68px) 0 34px;\n+  border-top: 1px solid var(--landing-line);\n+  border-bottom: 1px solid var(--landing-line);\n+  background:\n+    linear-gradient(90deg, rgb(3 199 90 / 4%), transparent 42%),\n+    rgb(6 14 9 / 42%);\n+}\n+\n+.chartTopline {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  min-height: 52px;\n+  padding: 0 18px;\n+  border-bottom: 1px solid var(--landing-line);\n+  color: #7c8b81;\n+  font-size: 0.6rem;\n+  letter-spacing: 0.09em;\n+}\n+\n+.chartTopline span {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 9px;\n+}\n+\n+.chartTopline strong {\n+  color: var(--landing-accent-soft);\n+  font-weight: 630;\n+}\n+\n+.backtestVisual > svg {\n+  display: block;\n+  width: 100%;\n+  min-height: 270px;\n+}\n+\n+.chartGrid {\n+  stroke: rgb(160 190 173 / 9%);\n+  stroke-dasharray: 3 8;\n+}\n+\n+.comparisonPath,\n+.resultPath,\n+.resultPathGlow {\n+  fill: none;\n+  stroke-linecap: square;\n+  stroke-linejoin: miter;\n+  vector-effect: non-scaling-stroke;\n+}\n+\n+.comparisonPath {\n+  stroke: #839087;\n+  stroke-width: 1.25;\n+}\n+\n+.resultPath {\n+  stroke: var(--landing-accent);\n+  stroke-width: 2.75;\n+}\n+\n+.resultPathGlow {\n+  stroke: rgb(3 199 90 / 22%);\n+  stroke-width: 15;\n+  filter: blur(3px);\n+}\n+\n+.chartYears text {\n+  fill: #59675e;\n+  font-size: 18px;\n+  letter-spacing: 0.08em;\n+}\n+\n+.previewMetrics {\n+  display: grid;\n+  grid-template-columns: repeat(4, 1fr);\n+  border-top: 1px solid var(--landing-line);\n+}\n+\n+.previewMetrics span {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 4px;\n+  padding: 17px 19px;\n+  border-right: 1px solid var(--landing-line);\n+  color: #65736a;\n+  font-size: 0.58rem;\n+  letter-spacing: 0.07em;\n+}\n+\n+.previewMetrics span:last-child {\n+  border-right: 0;\n+}\n+\n+.previewMetrics strong {\n+  color: #cbd8cf;\n+  font-size: 0.95rem;\n+  font-weight: 590;\n+  letter-spacing: -0.015em;\n+}\n+\n+.previewMetrics span:first-child strong,\n+.previewMetrics span:nth-child(2) strong {\n+  color: var(--landing-accent-soft);\n+}\n+\n+.previewMetrics span:nth-child(3) strong {\n+  color: var(--landing-negative);\n+}\n+\n+.algorithmSection {\n+  position: relative;\n+  display: flex;\n+  align-items: center;\n+  flex-direction: column;\n+  min-height: 100svh;\n+  scroll-snap-align: start;\n+  scroll-snap-stop: always;\n+  padding: clamp(72px, 8vh, 92px) clamp(18px, 5vw, 72px) 36px;\n+  overflow: hidden;\n+  isolation: isolate;\n+}\n+\n+.algorithmSection::before {\n+  position: absolute;\n+  z-index: -1;\n+  top: 22%;\n+  left: 50%;\n+  width: min(92vw, 1280px);\n+  aspect-ratio: 2.2;\n+  border: 1px solid rgb(3 199 90 / 13%);\n+  border-radius: 50%;\n+  box-shadow: 0 0 100px rgb(3 199 90 / 7%);\n+  content: '';\n+  transform: translateX(-50%) rotateX(65deg);\n+}\n+\n+.algorithmHeader {\n+  position: relative;\n+  z-index: 4;\n+  max-width: 860px;\n+  text-align: center;\n+}\n+\n+.algorithmHeader > span {\n+  margin: 0 auto;\n+}\n+\n+.orbitStage {\n+  position: relative;\n+  width: min(100%, 1320px);\n+  height: clamp(350px, 38vw, 430px);\n+  margin-top: 8px;\n+  outline: none;\n+  perspective: 1250px;\n+  perspective-origin: 50% 28%;\n+  touch-action: pan-y;\n+  transform-style: preserve-3d;\n+}\n+\n+.orbitStage:focus-visible {\n+  box-shadow: inset 0 0 0 1px rgb(3 199 90 / 58%);\n+}\n+\n+.orbitFloor {\n+  position: absolute;\n+  top: 54%;\n+  left: 50%;\n+  width: min(76vw, 900px);\n+  height: 220px;\n+  border: 1px solid rgb(160 190 173 / 12%);\n+  border-radius: 50%;\n+  background:\n+    repeating-radial-gradient(ellipse, transparent 0 34px, rgb(3 199 90 / 3%) 35px 36px),\n+    radial-gradient(ellipse, rgb(3 199 90 / 8%), transparent 68%);\n+  box-shadow: inset 0 0 72px rgb(3 199 90 / 3%);\n+  transform: translate(-50%, -50%) rotateX(66deg);\n+}\n+\n+.algorithmCard {\n+  position: absolute;\n+  top: 23%;\n+  left: calc(50% - min(29vw, 150px));\n+  display: flex;\n+  flex-direction: column;\n+  width: min(58vw, 300px);\n+  min-height: 236px;\n+  padding: 16px;\n+  border: 1px solid rgb(178 210 192 / 17%);\n+  border-radius: 12px;\n+  background:\n+    linear-gradient(145deg, rgb(16 31 22 / 96%), rgb(5 14 9 / 98%)),\n+    var(--landing-surface-strong);\n+  box-shadow: 0 28px 70px rgb(0 0 0 / 52%);\n+  transform-origin: center center;\n+  transform-style: preserve-3d;\n+}\n+\n+.algorithmCard[data-selected='true'] {\n+  border-color: rgb(92 231 136 / 38%);\n+  box-shadow: 0 30px 85px rgb(0 0 0 / 56%), 0 0 50px rgb(3 199 90 / 9%);\n+}\n+\n+.cardIndex {\n+  display: flex;\n+  align-items: flex-start;\n+  justify-content: space-between;\n+  min-height: 40px;\n+  border-bottom: 1px solid var(--landing-line);\n+  color: #6f7e74;\n+  font-size: 0.56rem;\n+  letter-spacing: 0.06em;\n+}\n+\n+.cardIndex span:first-child {\n+  color: var(--landing-accent);\n+  font-size: 0.68rem;\n+  font-weight: 670;\n+}\n+\n+.cardIndex span:last-child {\n+  max-width: 68%;\n+  text-align: right;\n+}\n+\n+.algorithmCard > div:nth-child(2) {\n+  flex: 1;\n+  padding: 13px 0 12px;\n+}\n+\n+.algorithmCard > div:nth-child(2) p {\n+  margin: 0 0 5px;\n+  color: #69786e;\n+  font-size: 0.49rem;\n   letter-spacing: 0.15em;\n }\n \n-@media (max-width: 640px) {\n-  .page::before {\n-    inset: 14px;\n+.algorithmCard h3 {\n+  margin: 0 0 8px;\n+  color: var(--landing-text);\n+  font-size: clamp(1.05rem, 1.45vw, 1.2rem);\n+  font-weight: 570;\n+  letter-spacing: -0.045em;\n+}\n+\n+.algorithmCard > div:nth-child(2) > span {\n+  display: block;\n+  max-width: 330px;\n+  color: #8b9990;\n+  font-size: 0.64rem;\n+  line-height: 1.45;\n+}\n+\n+.algorithmCard dl {\n+  display: grid;\n+  grid-template-columns: repeat(3, 1fr);\n+  margin: 0 0 12px;\n+  border-top: 1px solid var(--landing-line);\n+  border-bottom: 1px solid var(--landing-line);\n+}\n+\n+.algorithmCard dl div {\n+  padding: 8px 5px 7px 0;\n+}\n+\n+.algorithmCard dt {\n+  color: #637168;\n+  font-size: 0.48rem;\n+  letter-spacing: 0.08em;\n+}\n+\n+.algorithmCard dd {\n+  margin: 4px 0 0;\n+  color: #dce8e0;\n+  font-size: 0.8rem;\n+  font-weight: 610;\n+}\n+\n+.algorithmCard dl div:first-child dd {\n+  color: var(--landing-accent-soft);\n+}\n+\n+.algorithmCard dl div:nth-child(2) dd {\n+  color: var(--landing-negative);\n+}\n+\n+.algorithmCard > a {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  min-height: 36px;\n+  padding: 0 12px;\n+  background: var(--landing-accent);\n+  color: #031008;\n+  font-size: 0.61rem;\n+  font-weight: 680;\n+  text-decoration: none;\n+  transition: background 180ms ease;\n+}\n+\n+.algorithmCard > a:hover {\n+  background: var(--landing-accent-soft);\n+}\n+\n+.cardSelectButton {\n+  position: absolute;\n+  inset: 0;\n+  border: 0;\n+  background: transparent;\n+  cursor: pointer;\n+}\n+\n+.srOnly {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n+\n+.wordmark:focus-visible,\n+.desktopNavigation a:focus-visible,\n+.headerCta:focus-visible,\n+.mobileNavigation a:focus-visible,\n+.primaryCta:focus-visible,\n+.secondaryCta:focus-visible,\n+.textCta:focus-visible,\n+.algorithmCard > a:focus-visible,\n+.cardSelectButton:focus-visible,\n+.menuButton:focus-visible {\n+  outline: 2px solid var(--landing-accent-soft);\n+  outline-offset: 4px;\n+}\n+\n+@keyframes glowBreath {\n+  from {\n+    opacity: 0.58;\n+    transform: translateX(-50%) scale(0.94);\n+  }\n+  to {\n+    opacity: 1;\n+    transform: translateX(-50%) scale(1.06);\n+  }\n+}\n+\n+@keyframes candlePulse {\n+  from {\n+    opacity: 0.54;\n+    transform: translateY(4px);\n+  }\n+  to {\n+    opacity: 1;\n+    transform: translateY(-3px);\n+  }\n+}\n+\n+@keyframes conveyorMove {\n+  to {\n+    transform: translateX(-50%);\n+  }\n+}\n+\n+@media (max-width: 1100px) {\n+  .landingHeader {\n+    width: calc(100% - 32px);\n+  }\n+\n+  .marketSection,\n+  .backtestSection {\n+    grid-template-columns: minmax(130px, 0.22fr) minmax(0, 0.78fr);\n+  }\n+\n+  .marketSection::before {\n+    left: 21.5%;\n+  }\n+\n+  .backtestSection {\n+    grid-template-columns: minmax(0, 0.78fr) minmax(130px, 0.22fr);\n+  }\n+\n+  .backtestSection::before {\n+    right: 21.5%;\n+  }\n+\n+  .marketContent {\n+    padding-left: 42px;\n+  }\n+\n+  .backtestContent {\n+    padding-right: 42px;\n+  }\n+}\n+\n+@media (max-width: 760px) {\n+  .page {\n+    scroll-snap-type: none;\n+  }\n+\n+  .hero,\n+  .storySection,\n+  .algorithmSection {\n+    scroll-snap-align: none;\n+  }\n+\n+  .landingHeader {\n+    grid-template-columns: 1fr auto;\n+    min-height: 56px;\n+    padding: 0 8px 0 17px;\n+  }\n+\n+  .desktopNavigation,\n+  .headerCta {\n+    display: none;\n+  }\n+\n+  .menuButton {\n+    display: grid;\n+    width: 40px;\n+    aspect-ratio: 1;\n+    border: 0;\n+    border-radius: 8px;\n+    background: rgb(255 255 255 / 6%);\n+    color: var(--landing-text);\n+    cursor: pointer;\n+    place-items: center;\n+  }\n+\n+  .mobileNavigation {\n+    position: absolute;\n+    top: calc(100% + 9px);\n+    right: 0;\n+    left: 0;\n+    display: flex;\n+    flex-direction: column;\n+    padding: 10px;\n+    border: 1px solid var(--landing-line);\n+    border-radius: 10px;\n+    background: rgb(5 14 9 / 96%);\n+    box-shadow: 0 20px 55px rgb(0 0 0 / 45%);\n+  }\n+\n+  .mobileNavigation a {\n+    padding: 13px 12px;\n+    border-bottom: 1px solid var(--landing-line);\n+  }\n+\n+  .mobileNavigation a:last-child {\n+    border-bottom: 0;\n+    color: var(--landing-accent-soft);\n+  }\n+\n+  .heroContent {\n+    width: min(100% - 28px, 610px);\n+  }\n+\n+  .hero h1 {\n+    font-size: clamp(3.2rem, 12.8vw, 5rem);\n+    line-height: 1.01;\n+  }\n+\n+  .heroDescription {\n+    max-width: 330px;\n+    line-height: 1.65;\n+  }\n+\n+  .heroActions {\n+    flex-direction: column;\n+    width: min(100%, 310px);\n+  }\n+\n+  .primaryCta,\n+  .secondaryCta {\n+    width: 100%;\n+  }\n+\n+  .heroFootnote::before,\n+  .sectionNumber,\n+  .storySection::before {\n+    display: none;\n+  }\n+\n+  .storySection {\n+    display: block;\n+    min-height: auto;\n+    padding: 100px 20px;\n+  }\n+\n+  .marketContent,\n+  .backtestContent {\n+    padding: 0;\n+  }\n+\n+  .sectionHeading {\n+    padding-left: 0;\n+  }\n+\n+  .sectionHeading > svg {\n+    position: static;\n+    margin-bottom: 16px;\n+  }\n+\n+  .sectionHeading h2,\n+  .algorithmHeader h2 {\n+    font-size: clamp(2.5rem, 11vw, 3.7rem);\n+  }\n+\n+  .conveyorViewport {\n+    margin-top: 43px;\n+    overflow-x: auto;\n+    mask-image: none;\n+    scrollbar-width: thin;\n+  }\n+\n+  .conveyorTrack {\n+    animation: none;\n+  }\n+\n+  .indicatorItem {\n+    grid-template-columns: minmax(132px, 1fr) 92px;\n+    width: min(86vw, 350px);\n+    min-height: 150px;\n+    padding: 20px;\n+  }\n+\n+  .backtestVisual > svg {\n+    min-height: 230px;\n+  }\n+\n+  .previewMetrics {\n+    grid-template-columns: repeat(2, 1fr);\n+  }\n+\n+  .previewMetrics span:nth-child(2) {\n+    border-right: 0;\n+  }\n+\n+  .previewMetrics span:nth-child(-n + 2) {\n+    border-bottom: 1px solid var(--landing-line);\n+  }\n+\n+  .algorithmSection {\n+    min-height: 720px;\n+    padding: 70px 12px 40px;\n+  }\n+\n+  .algorithmHeader {\n+    padding: 0 8px;\n+  }\n+\n+  .orbitStage {\n+    height: 360px;\n+    margin-top: 8px;\n+    perspective: 900px;\n+  }\n+\n+  .orbitFloor {\n+    top: 50%;\n+    width: 105vw;\n+  }\n+\n+  .algorithmCard {\n+    top: 22%;\n+    left: calc(50% - min(35vw, 130px));\n+    width: min(70vw, 260px);\n+    min-height: 235px;\n+    padding: 14px;\n+  }\n+\n+  .cardIndex {\n+    min-height: 38px;\n+  }\n+}\n+\n+@media (max-width: 430px) {\n+  .landingHeader {\n+    top: 12px;\n+    width: calc(100% - 22px);\n+  }\n+\n+  .heroContent {\n+    padding-top: 118px;\n   }\n \n   .hero h1 {\n-    font-size: clamp(4.5rem, 29vw, 7rem);\n+    font-size: 2.72rem;\n+  }\n+\n+  .eyebrow {\n+    font-size: 0.58rem;\n+  }\n+\n+  .heroFootnote {\n+    right: 18px;\n+    left: 18px;\n   }\n \n-  .description {\n-    max-width: 270px;\n+  .sectionHeading h2,\n+  .algorithmHeader h2 {\n+    font-size: 2.55rem;\n   }\n \n-  .version {\n-    right: 27px;\n-    bottom: 24px;\n+  .chartTopline {\n+    padding: 0 12px;\n+  }\n+\n+  .chartTopline strong {\n+    display: none;\n+  }\n+\n+  .algorithmCard {\n+    left: calc(50% - min(36vw, 125px));\n+    width: min(72vw, 250px);\n   }\n }\n \n @media (prefers-reduced-motion: reduce) {\n-  .cta {\n+  .page {\n+    scroll-behavior: auto;\n+  }\n+\n+  .atmosphereCanvas {\n+    display: none;\n+  }\n+\n+  .heroGlow,\n+  .candleField span,\n+  .conveyorTrack {\n+    animation: none;\n+  }\n+\n+  .conveyorTrack {\n+    transform: none;\n+  }\n+\n+  .conveyorViewport {\n+    overflow-x: auto;\n+    mask-image: none;\n+  }\n+\n+  .headerCta,\n+  .desktopNavigation a::after,\n+  .primaryCta,\n+  .secondaryCta,\n+  .textCta,\n+  .algorithmCard > a {\n     transition: none;\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,56 +1,31 @@\n-import { ArrowUpRight } from 'lucide-react'\n-import { motion } from 'motion/react'\n-import { Link } from 'react-router-dom'\n+import { AlgorithmOrbit } from '@/components/landing/AlgorithmOrbit'\n+import { LandingHeader } from '@/components/landing/LandingHeader'\n+import {\n+  BacktestIntroSection,\n+  HeroSection,\n+  MarketAnalysisSection,\n+} from '@/components/landing/LandingSections'\n+import { marketMock } from '@/data/marketMock'\n+import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n import styles from './LandingPage.module.css'\n \n-/** 서비스 소개와 홈 화면 진입 동선을 제공한다. */\n+/** 시장 분석부터 전략 검증까지 Thorp의 핵심 흐름을 순차적으로 소개한다. */\n export function LandingPage() {\n+  const { marketIndicators, macroIndicators } = useMarketIndicators(\n+    marketMock.marketIndicators,\n+    marketMock.macroIndicators,\n+  )\n+  const indicators = [...marketIndicators, ...macroIndicators]\n+\n   return (\n     <main className={styles.page}>\n-      <div className={styles.glow} aria-hidden=\"true\" />\n-      <motion.section\n-        className={styles.hero}\n-        initial=\"hidden\"\n-        animate=\"visible\"\n-        variants={{\n-          hidden: {},\n-          visible: { transition: { staggerChildren: 0.09 } },\n-        }}\n-      >\n-        <motion.p\n-          className={styles.eyebrow}\n-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}\n-        >\n-          QUANT RESEARCH PLATFORM\n-        </motion.p>\n-        <motion.h1\n-          variants={{\n-            hidden: { opacity: 0, y: 18 },\n-            visible: { opacity: 1, y: 0 },\n-          }}\n-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}\n-        >\n-          Thorp<span>.</span>\n-        </motion.h1>\n-        <motion.p\n-          className={styles.description}\n-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}\n-        >\n-          숫자로 전략을 검증하고, 더 나은 투자 판단을 만듭니다.\n-        </motion.p>\n-        <motion.div\n-          variants={{\n-            hidden: { opacity: 0, y: 10 },\n-            visible: { opacity: 1, y: 0 },\n-          }}\n-        >\n-          <Link className={styles.cta} to=\"/home\">\n-            시작하기\n-            <ArrowUpRight aria-hidden=\"true\" size={18} strokeWidth={1.8} />\n-          </Link>\n-        </motion.div>\n-      </motion.section>\n-      <p className={styles.version}>PROTOTYPE · 01</p>\n+      <LandingHeader />\n+      <HeroSection />\n+      <div className={styles.storyFlow}>\n+        <MarketAnalysisSection indicators={indicators} />\n+        <BacktestIntroSection />\n+        <AlgorithmOrbit />\n+      </div>\n     </main>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.tsx",
+          "old_path": "frontend/src/pages/LandingPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -31,7 +31,8 @@\n         \"shadcn\": \"^4.19.1\",\n         \"tailwind-merge\": \"^3.6.0\",\n         \"tailwindcss\": \"^4.3.3\",\n-        \"tw-animate-css\": \"^1.4.0\"\n+        \"tw-animate-css\": \"^1.4.0\",\n+        \"vgpu\": \"^0.4.1\"\n       },\n       \"devDependencies\": {\n         \"@eslint/js\": \"^9.25.0\",\n@@ -39,6 +40,7 @@\n         \"@types/react\": \"^19.1.2\",\n         \"@types/react-dom\": \"^19.1.2\",\n         \"@vitejs/plugin-react\": \"^4.4.1\",\n+        \"@webgpu/types\": \"^0.1.72\",\n         \"eslint\": \"^9.25.0\",\n         \"eslint-plugin-react-hooks\": \"^5.2.0\",\n         \"eslint-plugin-react-refresh\": \"^0.4.19\",\n@@ -1433,6 +1435,27 @@\n         \"@jridgewell/sourcemap-codec\": \"^1.4.14\"\n       }\n     },\n+    \"node_modules/@modelcontextprotocol/core\": {\n+      \"version\": \"2.0.0\",\n+      \"resolved\": \"https://registry.npmjs.org/@modelcontextprotocol/core/-/core-2.0.0.tgz\",\n+      \"integrity\": \"sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==\",\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"zod\": \"^4.2.0\"\n+      },\n+      \"engines\": {\n+        \"node\": \">=20\"\n+      }\n+    },\n+    \"node_modules/@modelcontextprotocol/core/node_modules/zod\": {\n+      \"version\": \"4.5.4\",\n+      \"resolved\": \"https://registry.npmjs.org/zod/-/zod-4.5.4.tgz\",\n+      \"integrity\": \"sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==\",\n+      \"license\": \"MIT\",\n+      \"funding\": {\n+        \"url\": \"https://github.com/sponsors/colinhacks\"\n+      }\n+    },\n     \"node_modules/@modelcontextprotocol/sdk\": {\n       \"version\": \"1.30.0\",\n       \"resolved\": \"https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.30.0.tgz\",\n@@ -1495,6 +1518,28 @@\n       \"integrity\": \"sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==\",\n       \"license\": \"MIT\"\n     },\n+    \"node_modules/@modelcontextprotocol/server\": {\n+      \"version\": \"2.0.0\",\n+      \"resolved\": \"https://registry.npmjs.org/@modelcontextprotocol/server/-/server-2.0.0.tgz\",\n+      \"integrity\": \"sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==\",\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@modelcontextprotocol/core\": \"2.0.0\",\n+        \"zod\": \"^4.2.0\"\n+      },\n+      \"engines\": {\n+        \"node\": \">=20\"\n+      }\n+    },\n+    \"node_modules/@modelcontextprotocol/server/node_modules/zod\": {\n+      \"version\": \"4.5.4\",\n+      \"resolved\": \"https://registry.npmjs.org/zod/-/zod-4.5.4.tgz\",\n+      \"integrity\": \"sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==\",\n+      \"license\": \"MIT\",\n+      \"funding\": {\n+        \"url\": \"https://github.com/sponsors/colinhacks\"\n+      }\n+    },\n     \"node_modules/@napi-rs/lzma-linux-x64-gnu\": {\n       \"version\": \"1.5.1\",\n       \"resolved\": \"https://registry.npmjs.org/@napi-rs/lzma-linux-x64-gnu/-/lzma-linux-x64-gnu-1.5.1.tgz\",\n@@ -4200,6 +4245,58 @@\n         \"url\": \"https://opencollective.com/eslint\"\n       }\n     },\n+    \"node_modules/@vgpu/adapter-mock\": {\n+      \"version\": \"0.4.1\",\n+      \"resolved\": \"https://registry.npmjs.org/@vgpu/adapter-mock/-/adapter-mock-0.4.1.tgz\",\n+      \"integrity\": \"sha512-4w6FHutvlno5nAYt/SYDB5TJlXVwL7liZeBo79jKkjOKJoIrtTO8jf9ny9M5lrLcdpzKdBcdLY1UPJRHZ+DbkQ==\",\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@vgpu/core\": \"0.4.1\"\n+      }\n+    },\n+    \"node_modules/@vgpu/adapter-node\": {\n+      \"version\": \"0.4.1\",\n+      \"resolved\": \"https://registry.npmjs.org/@vgpu/adapter-node/-/adapter-node-0.4.1.tgz\",\n+      \"integrity\": \"sha512-fZgokRT/oTodHqCgyrqtKOrqw7TO+1qxW8gcW5A30wcKnjjAj+4sRHytaJTQkJCYDpZeOHp7B2lhvAxrv1zINg==\",\n+      \"hasInstallScript\": true,\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@vgpu/core\": \"0.4.1\",\n+        \"webgpu\": \"0.4.0\"\n+      }\n+    },\n+    \"node_modules/@vgpu/core\": {\n+      \"version\": \"0.4.1\",\n+      \"resolved\": \"https://registry.npmjs.org/@vgpu/core/-/core-0.4.1.tgz\",\n+      \"integrity\": \"sha512-cWETNNvNrobCjGGKbWxujEjNgH8QCz+sTbz3zecKtq/P6V5iB8f6tFrKGmQNvc084R+XJLOAoLY/gGCo8KTbTQ==\",\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@vgpu/wgsl\": \"0.4.1\"\n+      }\n+    },\n+    \"node_modules/@vgpu/wgsl\": {\n+      \"version\": \"0.4.1\",\n+      \"resolved\": \"https://registry.npmjs.org/@vgpu/wgsl/-/wgsl-0.4.1.tgz\",\n+      \"integrity\": \"sha512-wcK3y+bSVkFhcDPxbGKVNi1tATGA8TdqdmrAuBtRhv2LXi2cEgK5VOZ5k4y5G7yX5+4T5mml9nGO3fQdGDD6WQ==\",\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@vgpu/wgsl-std\": \"0.4.1\"\n+      },\n+      \"peerDependencies\": {\n+        \"@vgpu/adapter-node\": \">=0.1.6 <1.0.0\"\n+      },\n+      \"peerDependenciesMeta\": {\n+        \"@vgpu/adapter-node\": {\n+          \"optional\": true\n+        }\n+      }\n+    },\n+    \"node_modules/@vgpu/wgsl-std\": {\n+      \"version\": \"0.4.1\",\n+      \"resolved\": \"https://registry.npmjs.org/@vgpu/wgsl-std/-/wgsl-std-0.4.1.tgz\",\n+      \"integrity\": \"sha512-K6qB9qTBXP/G0uhiJZ9cKt0MEH/bHFrcD0t3+xyjkA7QxNPMXqx7LniMHMIz3T0pC47ujCLaBRyOuHwyOqV0EA==\",\n+      \"license\": \"MIT\"\n+    },\n     \"node_modules/@visx/curve\": {\n       \"version\": \"4.0.1-alpha.0\",\n       \"resolved\": \"https://registry.npmjs.org/@visx/curve/-/curve-4.0.1-alpha.0.tgz\",\n@@ -4362,6 +4459,12 @@\n         \"vite\": \"^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0\"\n       }\n     },\n+    \"node_modules/@webgpu/types\": {\n+      \"version\": \"0.1.72\",\n+      \"resolved\": \"https://registry.npmjs.org/@webgpu/types/-/types-0.1.72.tgz\",\n+      \"integrity\": \"sha512-0cF7RFM2edNoiIS1ODJp0/Gzv4/xSXhwoR0YCza+OWpJWtn4wmo9DvK91aLlH9+uUnwIriP7ZiC3WitmyhuzBw==\",\n+      \"license\": \"BSD-3-Clause\"\n+    },\n     \"node_modules/accepts\": {\n       \"version\": \"2.0.0\",\n       \"resolved\": \"https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz\",\n@@ -7883,6 +7986,18 @@\n         \"url\": \"https://github.com/sponsors/jonschlinkert\"\n       }\n     },\n+    \"node_modules/pixelmatch\": {\n+      \"version\": \"7.2.0\",\n+      \"resolved\": \"https://registry.npmjs.org/pixelmatch/-/pixelmatch-7.2.0.tgz\",\n+      \"integrity\": \"sha512-xhcb4yHu9sM/G7foGzoLtXYcC0zHEaOXXjRKhGup0fw78Nf2Tkiapv4EQyMzrbcmQPsllAI7DbFY2UT7PlI9Pg==\",\n+      \"license\": \"ISC\",\n+      \"dependencies\": {\n+        \"pngjs\": \"^7.0.0\"\n+      },\n+      \"bin\": {\n+        \"pixelmatch\": \"bin/pixelmatch\"\n+      }\n+    },\n     \"node_modules/pkce-challenge\": {\n       \"version\": \"5.0.1\",\n       \"resolved\": \"https://registry.npmjs.org/pkce-challenge/-/pkce-challenge-5.0.1.tgz\",\n@@ -7965,6 +8080,15 @@\n         \"node\": \">=4\"\n       }\n     },\n+    \"node_modules/pngjs\": {\n+      \"version\": \"7.0.0\",\n+      \"resolved\": \"https://registry.npmjs.org/pngjs/-/pngjs-7.0.0.tgz\",\n+      \"integrity\": \"sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==\",\n+      \"license\": \"MIT\",\n+      \"engines\": {\n+        \"node\": \">=14.19.0\"\n+      }\n+    },\n     \"node_modules/postcss\": {\n       \"version\": \"8.5.26\",\n       \"resolved\": \"https://registry.npmjs.org/postcss/-/postcss-8.5.26.tgz\",\n@@ -9419,6 +9543,45 @@\n         \"node\": \">= 0.8\"\n       }\n     },\n+    \"node_modules/vgpu\": {\n+      \"version\": \"0.4.1\",\n+      \"resolved\": \"https://registry.npmjs.org/vgpu/-/vgpu-0.4.1.tgz\",\n+      \"integrity\": \"sha512-Kq2W2Y7Z0hZnSp4Hdf3jaoVL7oHjFypZapwGcMYYVkTfRXqAISmklGl3yd6wmte8yFwOhAkhJErPKZjWJBGpzA==\",\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@modelcontextprotocol/server\": \"2.0.0\",\n+        \"@vgpu/adapter-mock\": \"0.4.1\",\n+        \"@vgpu/adapter-node\": \"0.4.1\",\n+        \"@vgpu/core\": \"0.4.1\",\n+        \"@vgpu/wgsl\": \"0.4.1\",\n+        \"@vgpu/wgsl-std\": \"0.4.1\",\n+        \"@webgpu/types\": \"^0.1.69\",\n+        \"pixelmatch\": \"^7.2.0\",\n+        \"pngjs\": \"^7.0.0\",\n+        \"wgpu-matrix\": \"^3.4.2\",\n+        \"zod\": \"^4.4.3\"\n+      },\n+      \"bin\": {\n+        \"vgpu\": \"bin/vgpu.js\"\n+      },\n+      \"peerDependencies\": {\n+        \"three\": \">=0.180.0 <0.200.0\"\n+      },\n+      \"peerDependenciesMeta\": {\n+        \"three\": {\n+          \"optional\": true\n+        }\n+      }\n+    },\n+    \"node_modules/vgpu/node_modules/zod\": {\n+      \"version\": \"4.5.4\",\n+      \"resolved\": \"https://registry.npmjs.org/zod/-/zod-4.5.4.tgz\",\n+      \"integrity\": \"sha512-sC95tT5iHHH9gtpj6A81kh+NEaRAUFN+qlUPDUbRfOMvNf5QCBqsb3WgvnpVtK5Y+4UfA6KqufotuTvMGiTlsA==\",\n+      \"license\": \"MIT\",\n+      \"funding\": {\n+        \"url\": \"https://github.com/sponsors/colinhacks\"\n+      }\n+    },\n     \"node_modules/vite\": {\n       \"version\": \"6.4.3\",\n       \"resolved\": \"https://registry.npmjs.org/vite/-/vite-6.4.3.tgz\",\n@@ -9493,6 +9656,23 @@\n         }\n       }\n     },\n+    \"node_modules/webgpu\": {\n+      \"version\": \"0.4.0\",\n+      \"resolved\": \"https://registry.npmjs.org/webgpu/-/webgpu-0.4.0.tgz\",\n+      \"integrity\": \"sha512-F5pimn3Aoi0zWjuRdiVs5TnrUwSzD2lESBohsIUsqyitWkGRQlXU2fhV6ycXlQTa1bvAf3sjqiUpBEpmSQ5ptA==\",\n+      \"hasInstallScript\": true,\n+      \"license\": \"MIT\",\n+      \"dependencies\": {\n+        \"@webgpu/types\": \"^0.1.69\",\n+        \"debug\": \"^4.4.0\"\n+      }\n+    },\n+    \"node_modules/wgpu-matrix\": {\n+      \"version\": \"3.4.2\",\n+      \"resolved\": \"https://registry.npmjs.org/wgpu-matrix/-/wgpu-matrix-3.4.2.tgz\",\n+      \"integrity\": \"sha512-IfZFbG7olEYBD76VCZy2TzqM57GKy3LT++AZh37tMHPPByO6R2h61zXGBZFNPi2IzxNivNi8y5dvze5PjaczjA==\",\n+      \"license\": \"MIT\"\n+    },\n     \"node_modules/which\": {\n       \"version\": \"2.0.2\",\n       \"resolved\": \"https://registry.npmjs.org/which/-/which-2.0.2.tgz\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/package-lock.json",
+          "old_path": "frontend/package-lock.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -7,6 +7,8 @@\n     \"dev\": \"vite\",\n     \"build\": \"tsc -b && vite build --configLoader runner\",\n     \"lint\": \"eslint .\",\n+    \"test\": \"node --test src/api/market.test.ts src/utils/indicatorHistory.test.ts src/utils/marketComparison.test.ts src/utils/marketFormat.test.ts\",\n+    \"check:shader\": \"vgpu check src/components/landing/market-atmosphere.wgsl --require-validation\",\n     \"preview\": \"vite preview\"\n   },\n   \"dependencies\": {\n@@ -33,7 +35,8 @@\n     \"shadcn\": \"^4.19.1\",\n     \"tailwind-merge\": \"^3.6.0\",\n     \"tailwindcss\": \"^4.3.3\",\n-    \"tw-animate-css\": \"^1.4.0\"\n+    \"tw-animate-css\": \"^1.4.0\",\n+    \"vgpu\": \"^0.4.1\"\n   },\n   \"devDependencies\": {\n     \"@eslint/js\": \"^9.25.0\",\n@@ -41,6 +44,7 @@\n     \"@types/react\": \"^19.1.2\",\n     \"@types/react-dom\": \"^19.1.2\",\n     \"@vitejs/plugin-react\": \"^4.4.1\",\n+    \"@webgpu/types\": \"^0.1.72\",\n     \"eslint\": \"^9.25.0\",\n     \"eslint-plugin-react-hooks\": \"^5.2.0\",\n     \"eslint-plugin-react-refresh\": \"^0.4.19\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/package.json",
+          "old_path": "frontend/package.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2177586,
+      "head_commit_sha": "54e2c0a0fcd041a0b97c996af15be5821b73c5d7",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b",
+      "created_at": "2026-09-09T15:20:32.087+09:00",
+      "merge_request_id": 938128,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "5e3788dcd7238dd6f0c4c5fe24e1e73afca93d6a",
+      "commits": [
+        {
+          "id": "54e2c0a0fcd041a0b97c996af15be5821b73c5d7",
+          "short_id": "54e2c0a0",
+          "created_at": "2026-09-09T15:20:25.000+09:00",
+          "parent_ids": [
+            "47c1bfcc99361f379747cd7b7ccafb698aa265d9"
+          ],
+          "title": "feat(fe): ai리뷰 1차수정",
+          "message": "feat(fe): ai리뷰 1차수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T15:20:25.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T15:20:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/54e2c0a0fcd041a0b97c996af15be5821b73c5d7"
+        },
+        {
+          "id": "47c1bfcc99361f379747cd7b7ccafb698aa265d9",
+          "short_id": "47c1bfcc",
+          "created_at": "2026-09-09T15:11:20.000+09:00",
+          "parent_ids": [
+            "37c9678937905561446a0560ed0c5d7ae5906684"
+          ],
+          "title": "feat(fe):랜딩페이지초판본",
+          "message": "feat(fe):랜딩페이지초판본\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T15:11:20.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T15:11:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/47c1bfcc99361f379747cd7b7ccafb698aa265d9"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2177517,
+      "head_commit_sha": "47c1bfcc99361f379747cd7b7ccafb698aa265d9",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "69f260a28415b7c028c7f0bd67eba6b7ee9e849b",
+      "created_at": "2026-09-09T15:14:16.365+09:00",
+      "merge_request_id": 938128,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "ef9f3d3e09e2920ef30190e1c7b63460d2037009",
+      "commits": [
+        {
+          "id": "47c1bfcc99361f379747cd7b7ccafb698aa265d9",
+          "short_id": "47c1bfcc",
+          "created_at": "2026-09-09T15:11:20.000+09:00",
+          "parent_ids": [
+            "37c9678937905561446a0560ed0c5d7ae5906684"
+          ],
+          "title": "feat(fe):랜딩페이지초판본",
+          "message": "feat(fe):랜딩페이지초판본\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T15:11:20.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T15:11:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/47c1bfcc99361f379747cd7b7ccafb698aa265d9"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2780778": [],
+    "2780890": [],
+    "2781833": [],
+    "2788016": []
+  }
+}

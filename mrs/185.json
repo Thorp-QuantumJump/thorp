@@ -1,0 +1,1232 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948704,
+    "iid": 185,
+    "project_id": 1444456,
+    "title": "feat(be): 정리한 만료 주소도 410 으로 안내한다",
+    "description": "# 작업 내용 요약\n\n로그인하지 않은 사용자도 공개 토큰으로 결과 주소 `/results/{token}`을 열 수 있다. 만료된 비로그인 결과는 410으로 닫히고, 정리 작업이 요청을 지운 뒤에도 묘비 보관 기한 동안은 410 안내가 유지된다. 공개 응답과 오류 본문 어디에도 `backtestId`가 나가지 않는다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-318\n- link https://ssafy.atlassian.net/browse/S15P21E205-318\n\n# 주요 변경 사항\n\n- 공개 경로: `GET /results/{token}`와 하위 자원 5개(timeseries·trades·positions·weights·exceptions), `POST /results/{token}/retry`\n- 상세 응답: 004 상세에서 식별자·워커 보고를 빼고 `expiresAt`·`validationTier`·`strategyName`·`weightsSource`·`exceptionKinds`를 더했다\n- 오류: 새 코드는 `RESULT_EXPIRED`(410) 하나다. 004 오류는 코드를 유지하고 문구만 기본 문구로 바꾼다(004 문구에 `backtestId`가 들어 있다)\n- 재시도: 새 요청은 원 요청자가 아니라 호출한 사람의 것이다\n- 실행 한도: 비로그인 접수·공개 재시도는 단건(SINGLE)만 받는다. 한도가 단건 큐에만 있어, 본문의 executionType을 그대로 받으면 한도를 건너뛸 수 있었다(원칙 IX)\n- 정리 작업: 실행이 끝난 만료 비로그인 요청과 그 재사용 기록을 지우고, 토큰 해시를 묘비로 남긴다. 실행과 결과는 남긴다\n- 스키마: 새 표 `expired_public_token`(토큰 SHA-256 해시·만료 시각). 기존 행은 바꾸지 않는다\n- 설정: `thorp.result.tombstone-retention` 추가. prod는 `THORP_RESULT_TOMBSTONE_RETENTION`을 기본값 없이 읽는다\n- 계약: `docs/specs/result-api/`(요약·예시 JSON)를 새로 만들고 plan·data-model·research에 묘비 결정을 반영했다\n\n# 테스트\n\n- [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build`: 1481건, 실패 0\n- [x] `infra/scripts/check-migration-version.sh origin/dev`: 통과\n- [x] 기존 `CandidateListApiIT`가 시퀀스 다음 id를 먼저 차지해 다른 IT가 기본 키 충돌로 깨졌다. 자기 id 대역 안에서만 세게 고쳤다\n\n# 리뷰 포인트\n\n- 배포 전 운영 환경에 `THORP_RESULT_TOMBSTONE_RETENTION`을 넣어야 기동한다(예시 P30D, PD-23 확정 전 임시값)\n- 만료된 요청의 재사용 기록을 지우면 지난 기간의 재사용 집계가 줄어든다. 이대로 둘지 봐 달라\n- 004 파일(접수 컨트롤러의 비로그인 거절, 재시도 서비스, 요청·재사용 저장소, 만료 조회 조건)과 007 테스트를 건드렸다. 004·007 담당의 확인이 필요하다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 이름은 등록표에서만 읽는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 볼 결과가 없으면 null이나 409다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `validationTier`는 항상 `UNVALIDATED`다\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T14:05:47.508+09:00",
+    "updated_at": "2026-09-18T10:50:43.744+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T10:50:43.445+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/318-public-result-read",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+    "merge_commit_sha": "254b3ad86bfb8b0938b5f749c24c608dd743327d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T14:05:49.746+09:00",
+    "reference": "!185",
+    "references": {
+      "short": "!185",
+      "relative": "!185",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!185"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/185",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948704,
+    "iid": 185,
+    "project_id": 1444456,
+    "title": "feat(be): 정리한 만료 주소도 410 으로 안내한다",
+    "description": "# 작업 내용 요약\n\n로그인하지 않은 사용자도 공개 토큰으로 결과 주소 `/results/{token}`을 열 수 있다. 만료된 비로그인 결과는 410으로 닫히고, 정리 작업이 요청을 지운 뒤에도 묘비 보관 기한 동안은 410 안내가 유지된다. 공개 응답과 오류 본문 어디에도 `backtestId`가 나가지 않는다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-318\n- link https://ssafy.atlassian.net/browse/S15P21E205-318\n\n# 주요 변경 사항\n\n- 공개 경로: `GET /results/{token}`와 하위 자원 5개(timeseries·trades·positions·weights·exceptions), `POST /results/{token}/retry`\n- 상세 응답: 004 상세에서 식별자·워커 보고를 빼고 `expiresAt`·`validationTier`·`strategyName`·`weightsSource`·`exceptionKinds`를 더했다\n- 오류: 새 코드는 `RESULT_EXPIRED`(410) 하나다. 004 오류는 코드를 유지하고 문구만 기본 문구로 바꾼다(004 문구에 `backtestId`가 들어 있다)\n- 재시도: 새 요청은 원 요청자가 아니라 호출한 사람의 것이다\n- 실행 한도: 비로그인 접수·공개 재시도는 단건(SINGLE)만 받는다. 한도가 단건 큐에만 있어, 본문의 executionType을 그대로 받으면 한도를 건너뛸 수 있었다(원칙 IX)\n- 정리 작업: 실행이 끝난 만료 비로그인 요청과 그 재사용 기록을 지우고, 토큰 해시를 묘비로 남긴다. 실행과 결과는 남긴다\n- 스키마: 새 표 `expired_public_token`(토큰 SHA-256 해시·만료 시각). 기존 행은 바꾸지 않는다\n- 설정: `thorp.result.tombstone-retention` 추가. prod는 `THORP_RESULT_TOMBSTONE_RETENTION`을 기본값 없이 읽는다\n- 계약: `docs/specs/result-api/`(요약·예시 JSON)를 새로 만들고 plan·data-model·research에 묘비 결정을 반영했다\n\n# 테스트\n\n- [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build`: 1481건, 실패 0\n- [x] `infra/scripts/check-migration-version.sh origin/dev`: 통과\n- [x] 기존 `CandidateListApiIT`가 시퀀스 다음 id를 먼저 차지해 다른 IT가 기본 키 충돌로 깨졌다. 자기 id 대역 안에서만 세게 고쳤다\n\n# 리뷰 포인트\n\n- 배포 전 운영 환경에 `THORP_RESULT_TOMBSTONE_RETENTION`을 넣어야 기동한다(예시 P30D, PD-23 확정 전 임시값)\n- 만료된 요청의 재사용 기록을 지우면 지난 기간의 재사용 집계가 줄어든다. 이대로 둘지 봐 달라\n- 004 파일(접수 컨트롤러의 비로그인 거절, 재시도 서비스, 요청·재사용 저장소, 만료 조회 조건)과 007 테스트를 건드렸다. 004·007 담당의 확인이 필요하다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 이름은 등록표에서만 읽는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 볼 결과가 없으면 null이나 409다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `validationTier`는 항상 `UNVALIDATED`다\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T14:05:47.508+09:00",
+    "updated_at": "2026-09-18T10:50:43.744+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T10:50:43.445+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/318-public-result-read",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+    "merge_commit_sha": "254b3ad86bfb8b0938b5f749c24c608dd743327d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T14:05:49.746+09:00",
+    "reference": "!185",
+    "references": {
+      "short": "!185",
+      "relative": "!185",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!185"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/185",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "30",
+    "latest_build_started_at": "2026-09-18T10:46:42.125+09:00",
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 205047,
+      "iid": 157,
+      "project_id": 1444456,
+      "sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+      "ref": "feat(be)/318-public-result-read",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-18T10:46:41.888+09:00",
+      "updated_at": "2026-09-18T10:47:56.278+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/205047"
+    },
+    "head_pipeline": {
+      "id": 205047,
+      "iid": 157,
+      "project_id": 1444456,
+      "sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+      "ref": "feat(be)/318-public-result-read",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-18T10:46:41.888+09:00",
+      "updated_at": "2026-09-18T10:47:56.278+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/205047",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T10:46:42.125+09:00",
+      "finished_at": "2026-09-18T10:47:56.272+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/205047",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+      "head_sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+      "start_sha": "26ec510a40c15869980b6ab0b62a816f0f62e589"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "978753873c0f25f459bd84c0b6ee6452b6e0e931",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824444,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T14:05:47.612+09:00",
+          "updated_at": "2026-09-17T14:05:47.615+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c97384e60f32eb68055085932a30c72297e399ad",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824445,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T14:05:47.631+09:00",
+          "updated_at": "2026-09-17T14:05:47.638+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "94e0f7848e1dd91ac8d107e3454dc357dfffc028",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824449,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 무결성 설계**: 공개 토큰을 평문으로 저장하지 않고 SHA-256 해시로 변환하여 묘비(`expired_public_token`)로 관리함으로써, 정리 작업 이후에도 410(`RESULT_EXPIRED`) 상태를 정확히 안내하면서도 데이터 유출이나 무차별 대입 위험을 원천 차단했습니다.\n- **동시성 및 방어적 검증**: 비로그인 사용자의 요청에 대해 `SINGLE` 실행 타입만 허용(`T089`)하고, 실행이 완료되지 않은 요청은 정리 대상에서 제외(`T093`)하여 대기열 한도 우회 및 자원 고갈 문제를 효과적으로 예방했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- 비로그인 사용자가 `SEARCH_BUNDLE` 등의 비단건 타입으로 결과 조회(`/results/{token}`) 및 재시도(`POST /results/{token}/retry`)를 시도할 때, `400 Bad Request`(`INVALID_INPUT`)가 반환되는지 확인하는 통합 테스트 시나리오를 검증합니다.\n- 만료 시각이 지난 비로그인 요청의 백테스트 실행이 아직 `QUEUED` 상태일 때, 만료 정리 배치(`PublicResultExpirySweeper`)가 실행되어도 해당 요청 행이 삭제되지 않고 유지되는지(`T093`) 테스트합니다.\n- 정리 작업에 의해 요청이 삭제된 만료 토큰으로 공개 경로(`/results/{token}`)에 접근했을 때, `404`가 아닌 `410`(`RESULT_EXPIRED`) 응답을 반환하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ab4a073a268b4f8211a04903eb44676625a067bc -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T14:05:59.368+09:00",
+          "updated_at": "2026-09-18T10:46:36.355+09:00",
+          "system": false,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "87da99615d351700902f29847c77cb6ccb1a8223",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824536,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for b593567b750050182fd1fc9c0e5e7d155d47897a pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T14:09:39.045+09:00",
+          "updated_at": "2026-09-17T14:09:39.048+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "390323bb5b578533a9315e0c1a518f946496506d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2831410,
+          "type": null,
+          "body": "aborted the automatic merge because the source branch was updated. [Learn more](https://lab.ssafy.com/help/ci/pipelines/merge_trains.md#merge-request-dropped-from-the-merge-train).",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T10:46:27.400+09:00",
+          "updated_at": "2026-09-18T10:46:27.404+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c39d69c50d31dd601d9e85fc3eb9e33dd21d5dc0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2831411,
+          "type": null,
+          "body": "added 220 commits\n\n<ul><li>b593567b...6eda80ee - 219 commits from branch <code>dev</code></li><li>ab4a073a - Merge origin/dev into feat(be)/318-public-result-read</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/185/diffs?diff_id=2218970&start_sha=b593567b750050182fd1fc9c0e5e7d155d47897a)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T10:46:27.515+09:00",
+          "updated_at": "2026-09-18T10:46:27.522+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "525ee7ecbd5b5cc622c26726e60464a8a2e8a014",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2831479,
+          "type": null,
+          "body": "mentioned in commit 254b3ad86bfb8b0938b5f749c24c608dd743327d",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T10:50:43.471+09:00",
+          "updated_at": "2026-09-18T10:50:43.474+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "04caa9533fd8b05a4c2040d3fdefb00233529314",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885046,
+          "type": null,
+          "body": "mentioned in commit b4b390f738977659e1bd4e42577ebc55c0b21439",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.273+09:00",
+          "updated_at": "2026-10-13T15:16:11.300+09:00",
+          "system": true,
+          "noteable_id": 948704,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 185,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2218970,
+      "head_commit_sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+      "base_commit_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+      "start_commit_sha": "26ec510a40c15869980b6ab0b62a816f0f62e589",
+      "created_at": "2026-09-18T10:46:26.997+09:00",
+      "merge_request_id": 948704,
+      "state": "collected",
+      "real_size": "30",
+      "patch_id_sha": "b23190b3e8abe93cd5edc0e5d347bb84bf21222b"
+    },
+    {
+      "id": 2212866,
+      "head_commit_sha": "b593567b750050182fd1fc9c0e5e7d155d47897a",
+      "base_commit_sha": "31dc2fe0de92d0cf71baae41adc9fff7c062c31b",
+      "start_commit_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c",
+      "created_at": "2026-09-17T14:05:48.046+09:00",
+      "merge_request_id": 948704,
+      "state": "without_files",
+      "real_size": "30",
+      "patch_id_sha": "ddf00d4f20321203287af24aeaf9eec904c5c179"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2218970,
+      "head_commit_sha": "ab4a073a268b4f8211a04903eb44676625a067bc",
+      "base_commit_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+      "start_commit_sha": "26ec510a40c15869980b6ab0b62a816f0f62e589",
+      "created_at": "2026-09-18T10:46:26.997+09:00",
+      "merge_request_id": 948704,
+      "state": "collected",
+      "real_size": "30",
+      "patch_id_sha": "b23190b3e8abe93cd5edc0e5d347bb84bf21222b",
+      "commits": [
+        {
+          "id": "ab4a073a268b4f8211a04903eb44676625a067bc",
+          "short_id": "ab4a073a",
+          "created_at": "2026-09-18T10:45:57.000+09:00",
+          "parent_ids": [
+            "b593567b750050182fd1fc9c0e5e7d155d47897a",
+            "6eda80eecd60f1b96931c5742117debdf306f5cb"
+          ],
+          "title": "Merge origin/dev into feat(be)/318-public-result-read",
+          "message": "Merge origin/dev into feat(be)/318-public-result-read\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T10:45:57.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T10:45:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab4a073a268b4f8211a04903eb44676625a067bc"
+        },
+        {
+          "id": "b593567b750050182fd1fc9c0e5e7d155d47897a",
+          "short_id": "b593567b",
+          "created_at": "2026-09-17T13:46:25.000+09:00",
+          "parent_ids": [
+            "cade18c8b6d6ea4e37604125e624617b2fb1d59b"
+          ],
+          "title": "fix(be): 실행이 끝나지 않은 비로그인 요청은 정리하지 않는다",
+          "message": "fix(be): 실행이 끝나지 않은 비로그인 요청은 정리하지 않는다\n\nspec 005 T093(코드 리뷰). 만료는 생성 시각부터 세므로 대기열이 밀리면 대기\n중인 요청도 만료되는데, 그 행을 지우면 비로그인 대기 몫(요청 행과 조인해\n센다)에서 빠져 max-queued-anonymous 가 샜다. 만료 조회가 종결 실행을\n가리키는 요청만 고르게 하고, 실행이 끝난 뒤 다음 주기에 지운다. 조건을\n질의에 두어 끝나지 않은 행이 배치를 채워 정리가 멈추지 않게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T13:46:25.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T13:46:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b593567b750050182fd1fc9c0e5e7d155d47897a"
+        },
+        {
+          "id": "cade18c8b6d6ea4e37604125e624617b2fb1d59b",
+          "short_id": "cade18c8",
+          "created_at": "2026-09-17T13:25:50.000+09:00",
+          "parent_ids": [
+            "1a3400c6a93f89647d71e67e61efd108f362c9a9"
+          ],
+          "title": "docs(be): data-model 권한 판정과 토큰 형을 코드·계약에 맞춘다",
+          "message": "docs(be): data-model 권한 판정과 토큰 형을 코드·계약에 맞춘다\n\nspec 005 converge T092. 공개 경로는 조회·재시도만 하고 취소는 두지 않는다는\n점, 재시도 요청자·비로그인 단건 제한, public_token 이 VARCHAR(32)+CHECK 인\n이유를 data-model §1 에 반영했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T13:25:50.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T13:25:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cade18c8b6d6ea4e37604125e624617b2fb1d59b"
+        },
+        {
+          "id": "1a3400c6a93f89647d71e67e61efd108f362c9a9",
+          "short_id": "1a3400c6",
+          "created_at": "2026-09-17T12:50:25.000+09:00",
+          "parent_ids": [
+            "811011cc3c80eabcc80801fbb732d67008fb79c7"
+          ],
+          "title": "fix(be): 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다",
+          "message": "fix(be): 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다\n\nspec 005 converge T089·T090·T091.\n\n- 비로그인 POST /backtests 와 비로그인 공개 재시도는 executionType 이\n  SINGLE 이 아니면 400 이다. 한도는 단건 큐에만 있어 본문 값을 믿으면\n  비로그인 클라이언트가 SEARCH_BUNDLE 로 대기열을 무제한 채울 수 있었다\n  (원칙 IX). 접수 서비스가 아니라 HTTP 입구에서 막는 이유는 소유자가\n  없는 과거 탐색 묶음의 후보 접수를 깨지 않기 위해서다\n- plan·data-model·research R-03·tasks 경로 규칙에 묘비 표 결정을 반영했다\n- 루트 .env.example 에 THORP_RESULT_* 다섯 항목을 더했다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T12:50:25.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T12:50:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a3400c6a93f89647d71e67e61efd108f362c9a9"
+        },
+        {
+          "id": "811011cc3c80eabcc80801fbb732d67008fb79c7",
+          "short_id": "811011cc",
+          "created_at": "2026-09-17T12:27:13.000+09:00",
+          "parent_ids": [
+            "31dc2fe0de92d0cf71baae41adc9fff7c062c31b"
+          ],
+          "title": "feat(be): 정리한 만료 주소도 410 으로 안내한다",
+          "message": "feat(be): 정리한 만료 주소도 410 으로 안내한다\n\nspec 005 converge T087·T088. 정리 작업이 만료된 비로그인 요청을 지우면\n그 주소가 404(잘못된 주소)가 되어 spec Edge Case 의 \"결과가 남아 있지\n않다\" 안내가 사라지던 것을 막는다.\n\n- 요청을 지우는 트랜잭션에서 토큰의 SHA-256 해시와 만료 시각을 묘비\n  (expired_public_token)로 남기고, 조회는 요청이 없을 때 묘비가 있으면 410 이다\n- 묘비는 thorp.result.tombstone-retention 이 지나면 같은 주기에 지운다.\n  prod 는 기본값 없이 THORP_RESULT_TOMBSTONE_RETENTION 을 읽는다\n- 정리 작업 IT 에 결과 행을 붙여 실행과 결과가 남는지 확인한다(T088)\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T12:27:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T12:27:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/811011cc3c80eabcc80801fbb732d67008fb79c7"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -40,7 +40,7 @@ public interface BacktestRequestRepository {\n      * 만료된 <b>비로그인</b> 요청을 만료 시각이 이른 순서로 {@code limit}건 찾는다(spec 005 정리 작업). 로그인 요청은 만료가 없어 나오지 않는다.\n      *\n      * <p>만료는 {@code public_token_expires_at <= now}다 — {@link BacktestRequest#isPublicExpired}와 같은\n-     * 경계다.\n+     * 경계다. <b>가리키는 실행이 아직 끝나지 않은 요청은 나오지 않는다</b> — 지우면 비로그인 대기 몫에서 빠져 한도가 샌다(T093).\n      */\n     List<BacktestRequest> findExpiredAnonymous(Instant now, int limit);\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestRequestRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestRequestRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,12 +29,24 @@ interface BacktestRequestJpaRepository extends JpaRepository<BacktestRequestJpaE\n     /**\n      * 부분 인덱스 {@code idx_backtest_request_public_expiry}를 탄다 — 조건에 {@code publicTokenExpiresAt IS\n      * NOT NULL}이 함축되고 로그인 요청은 인덱스에 없다. 개수는 {@code Pageable}로 자른다.\n+     *\n+     * <p><b>가리키는 실행이 아직 끝나지 않은 요청은 고르지 않는다</b>(spec 005 T093). 만료는 생성 시각부터 세므로 대기열이 유효 시간보다 밀리면 대기\n+     * 중인 요청도 만료된다. 그 행을 지우면 비로그인 대기 몫({@code countQueuedSingleAnonymous}, 요청 행과 조인해 센다)에서 빠져 한도가\n+     * 새고, 볼 사람이 없는 실행이 워커를 끝까지 차지한다. 실행이 끝난 뒤 다음 주기에 지운다. 조건을 질의에 두는 이유: 배치를 뽑은 뒤 거르면 끝나지 않은 행이 배치를\n+     * 채워 뒤의 만료 행을 영영 못 지운다.\n      */\n     @Query(\n             \"\"\"\n             SELECT r FROM BacktestRequestJpaEntity r\n              WHERE r.requesterId IS NULL\n                AND r.publicTokenExpiresAt <= :now\n+               AND EXISTS (\n+                   SELECT 1 FROM BacktestRunJpaEntity run\n+                    WHERE run.id = r.runId\n+                      AND run.status IN (\n+                          com.ssafy.thorp.backtest.domain.model.RunStatus.COMPLETED,\n+                          com.ssafy.thorp.backtest.domain.model.RunStatus.FAILED,\n+                          com.ssafy.thorp.backtest.domain.model.RunStatus.CANCELLED))\n              ORDER BY r.publicTokenExpiresAt ASC, r.id ASC\n             \"\"\")\n     List<BacktestRequestJpaEntity> findExpiredAnonymous(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRequestJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRequestJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,6 +17,7 @@ import com.ssafy.thorp.backtest.application.service.BacktestRetryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n import com.ssafy.thorp.backtest.application.service.CostProfileService;\n import com.ssafy.thorp.backtest.application.service.StrategyRulesService;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;\n import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;\n@@ -31,6 +32,8 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse\n import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;\n import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n import jakarta.validation.Valid;\n import java.time.LocalDate;\n@@ -126,11 +129,19 @@ public class BacktestController {\n      * publicToken}으로만 연다. 취소·재시도·조회({@code /backtests/{id}/**})는 그대로 소유자 경로다.\n      *\n      * <p>비로그인 요청은 사용자별 대기 한도를 셀 수 없어 전체 한도만 받는다({@code ExecutionLimitPolicy}).\n+     *\n+     * <p><b>비로그인 요청은 단건({@code SINGLE})만 받는다</b>(spec 005 T089, 원칙 IX). 실행 한도는 단건 큐에만 있어서, 본문의\n+     * {@code executionType}을 그대로 믿으면 비로그인 클라이언트가 {@code SEARCH_BUNDLE}로 보내 한도 없이 대기열을 채울 수 있다.\n+     * 묶음·경제환경 파생 실행은 로그인한 사용자의 유스케이스(007·010)가 만든다.\n      */\n     @PostMapping\n     public ResponseEntity<ApiResponse<BacktestJobResponse>> create(\n             @Valid @RequestBody BacktestJobRequest request) {\n         Long requesterId = currentRequester.findRequesterId().orElse(null);\n+        if (requesterId == null && request.executionType() != ExecutionType.SINGLE) {\n+            throw new BusinessException(\n+                    ErrorCode.INVALID_INPUT, \"로그인하지 않은 요청은 단건 분석(SINGLE)만 접수합니다.\");\n+        }\n         BacktestJobResult result = backtestService.create(toCommand(request, requesterId));\n         return ResponseEntity.status(HttpStatus.ACCEPTED)\n                 .body(ApiResponse.ok(BacktestJobResponse.from(result)));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.ssafy.thorp.result.application.repository;\n+\n+import java.time.Instant;\n+\n+/**\n+ * 만료로 지운 공개 토큰의 묘비 저장소(spec 005 T087). 구현은 {@code infrastructure.persistence}에 둔다.\n+ *\n+ * <p><b>토큰 원문을 받지 않는다.</b> 호출자가 해시로 바꿔 넘긴다 — 원문이 이 경계를 넘지 않아야 저장소 구현이나 로그로 새지 않는다.\n+ *\n+ * <p>이 저장소만 {@code result}에 두는 이유: 요청·토큰은 004의 {@code backtest_request}에 있어 {@code backtest}가 저장을\n+ * 소유하지만, 묘비는 공개 열람 경계에만 뜻이 있는 005의 기록이다. {@code backtest}가 이것을 알 필요가 없다(ArchUnit 규칙 9).\n+ */\n+public interface ExpiredPublicTokenRepository {\n+\n+    /** 묘비를 남긴다. 같은 해시가 이미 있으면 아무것도 하지 않는다 — 정리 작업이 두 인스턴스에서 겹쳐 돌아도 실패하지 않는다. */\n+    void record(String tokenHash, Instant expiredAt, Instant recordedAt);\n+\n+    boolean exists(String tokenHash);\n+\n+    /**\n+     * 만료 시각이 {@code cutoff} 이전인 묘비를 오래된 것부터 {@code limit}건 지운다.\n+     *\n+     * @return 지운 수\n+     */\n+    int deleteExpiredBefore(Instant cutoff, int limit);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/application/repository/ExpiredPublicTokenRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/application/repository/ExpiredPublicTokenRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,9 @@ package com.ssafy.thorp.result.application.service;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n import java.time.Clock;\n+import java.time.Duration;\n import java.time.Instant;\n import java.util.List;\n import org.slf4j.Logger;\n@@ -23,6 +25,12 @@ import org.springframework.transaction.support.TransactionTemplate;\n  * 요청이 없는 실행의 판정과 삭제는 004 소유다(contracts/result-api.md \"004에 요청하는 변경\"). 행을 지우면 그 토큰은 404가 된다. 만료 직후\n  * 정리 전까지는 {@link PublicResultService#resolve}가 410으로 막는다.\n  *\n+ * <p><b>지우면서 묘비를 남긴다</b>(T087). 토큰 해시와 만료 시각을 {@code expired_public_token}에 같은 트랜잭션으로 적어, 지운 뒤에 들어온\n+ * 주소도 410으로 안내된다. 묘비는 보관 기한({@code thorp.result.tombstone-retention})이 지나면 같은 주기에 지운다.\n+ *\n+ * <p><b>실행이 끝나지 않은 요청은 지우지 않는다</b>(T093). 대기·실행 중인 실행의 요청을 지우면 비로그인 대기 몫에서 빠져 한도가 샌다. 조회는 만료 시각이\n+ * 지났으면 그대로 410이고, 실행이 끝난 뒤 다음 주기에 지운다.\n+ *\n  * <p><b>재사용·합류 기록도 지우지 않는다.</b> 그 기록은 {@code v_run_metric_summary}의 {@code reuse_count}가 세는 동일 결과\n  * 재조회의 측정 근거다(constitution 원칙 IX, FR-021). 지우면 정리할 때마다 집계가 줄어드므로 요청과의 연결만 NULL로 끊는다.\n  *\n@@ -46,20 +54,26 @@ public class PublicResultExpirySweeper {\n \n     private final BacktestRequestRepository requestRepository;\n     private final BacktestReuseEventRepository reuseEventRepository;\n+    private final ExpiredPublicTokenRepository expiredTokens;\n     private final Clock clock;\n     private final int batchSize;\n+    private final Duration tombstoneRetention;\n     private final TransactionTemplate newTransaction;\n \n     public PublicResultExpirySweeper(\n             BacktestRequestRepository requestRepository,\n             BacktestReuseEventRepository reuseEventRepository,\n+            ExpiredPublicTokenRepository expiredTokens,\n             PlatformTransactionManager transactionManager,\n             Clock clock,\n-            @Value(\"${thorp.result.expiry-sweep-batch-size}\") int batchSize) {\n+            @Value(\"${thorp.result.expiry-sweep-batch-size}\") int batchSize,\n+            @Value(\"${thorp.result.tombstone-retention}\") Duration tombstoneRetention) {\n         this.requestRepository = requestRepository;\n         this.reuseEventRepository = reuseEventRepository;\n+        this.expiredTokens = expiredTokens;\n         this.clock = clock;\n         this.batchSize = batchSize;\n+        this.tombstoneRetention = tombstoneRetention;\n         this.newTransaction = new TransactionTemplate(transactionManager);\n         this.newTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);\n     }\n@@ -73,7 +87,7 @@ public class PublicResultExpirySweeper {\n         int failed = 0;\n         for (BacktestRequest request : expired) {\n             try {\n-                newTransaction.executeWithoutResult(status -> deleteOne(request.getId()));\n+                newTransaction.executeWithoutResult(status -> deleteOne(request, now));\n                 deleted++;\n             } catch (RuntimeException exc) {\n                 failed++;\n@@ -85,11 +99,34 @@ public class PublicResultExpirySweeper {\n         if (deleted > 0 || failed > 0) {\n             log.info(\"만료된 비로그인 요청을 정리했다: deleted={} failed={}\", deleted, failed);\n         }\n+        pruneTombstones(now);\n     }\n \n-    private void deleteOne(long requestId) {\n+    /** 요청을 지우기 전에 묘비부터 남긴다. 같은 트랜잭션이라 묘비 없이 요청만 사라지는 순간이 없다. */\n+    private void deleteOne(BacktestRequest request, Instant now) {\n+        expiredTokens.record(\n+                PublicTokenDigest.of(request.getPublicToken()),\n+                request.getPublicTokenExpiresAt(),\n+                now);\n+        long requestId = request.getId();\n         reuseEventRepository.clearRequestId(requestId);\n         requestRepository.clearRetryOf(requestId);\n         requestRepository.deleteById(requestId);\n     }\n+\n+    /** 보관 기한이 지난 묘비를 배치 크기만큼 지운다. 실패해도 다음 주기가 이어받는다. */\n+    private void pruneTombstones(Instant now) {\n+        try {\n+            Integer pruned =\n+                    newTransaction.execute(\n+                            status ->\n+                                    expiredTokens.deleteExpiredBefore(\n+                                            now.minus(tombstoneRetention), batchSize));\n+            if (pruned != null && pruned > 0) {\n+                log.info(\"보관 기한이 지난 공개 토큰 묘비를 지웠다: deleted={}\", pruned);\n+            }\n+        } catch (RuntimeException exc) {\n+            log.warn(\"공개 토큰 묘비를 지우지 못했다. 다음 주기에 다시 시도한다: cause={}\", exc.getClass().getSimpleName());\n+        }\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultExpirySweeper.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultExpirySweeper.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,10 +14,12 @@ import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n import com.ssafy.thorp.backtest.application.service.BacktestRetryService;\n import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n import com.ssafy.thorp.backtest.domain.model.PublicResultToken;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n import com.ssafy.thorp.result.application.result.PublicResultDetail;\n import com.ssafy.thorp.result.application.result.PublicResultRetry;\n import com.ssafy.thorp.result.application.result.ValidationTier;\n@@ -56,6 +58,7 @@ public class PublicResultService {\n     private final BacktestResultQueryService queryService;\n     private final BacktestRetryService retryService;\n     private final ParameterRegistryPort registry;\n+    private final ExpiredPublicTokenRepository expiredTokens;\n     private final Clock clock;\n \n     public PublicResultService(\n@@ -63,11 +66,13 @@ public class PublicResultService {\n             BacktestResultQueryService queryService,\n             BacktestRetryService retryService,\n             ParameterRegistryPort registry,\n+            ExpiredPublicTokenRepository expiredTokens,\n             Clock clock) {\n         this.requestRepository = requestRepository;\n         this.queryService = queryService;\n         this.retryService = retryService;\n         this.registry = registry;\n+        this.expiredTokens = expiredTokens;\n         this.clock = clock;\n     }\n \n@@ -75,6 +80,9 @@ public class PublicResultService {\n      * 토큰을 요청으로 바꾼다. 순서가 곧 응답 코드의 우선순위다: 형식 → 존재 → 만료.\n      *\n      * <p>형식이 틀리면 조회하지 않는다. 로그인 사용자의 결과는 만료가 없다({@link BacktestRequest#isPublicExpired}가 false).\n+     *\n+     * <p><b>요청이 없어도 묘비가 있으면 410이다</b>(T087). 정리 작업이 만료된 요청 행을 지우면서 토큰 해시를 남기므로, 지운 뒤에 들어온 주소도 \"잘못된\n+     * 주소\"가 아니라 \"결과가 남아 있지 않다\"로 안내된다. 묘비의 보관 기한이 지나면 404다.\n      */\n     public BacktestRequest resolve(String token) {\n         PublicResultToken parsed;\n@@ -84,10 +92,16 @@ public class PublicResultService {\n             // 값 타입의 메시지에는 입력이 그대로 들어 있다. 받은 문자열을 되돌려 줄 이유가 없다.\n             throw new BusinessException(ErrorCode.INVALID_INPUT);\n         }\n+        PublicResultToken found = parsed;\n         BacktestRequest request =\n                 requestRepository\n-                        .findByPublicToken(parsed)\n-                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));\n+                        .findByPublicToken(found)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                expiredTokens.exists(PublicTokenDigest.of(found))\n+                                                        ? ErrorCode.RESULT_EXPIRED\n+                                                        : ErrorCode.RESOURCE_NOT_FOUND));\n         if (request.isPublicExpired(clock.instant())) {\n             throw new BusinessException(ErrorCode.RESULT_EXPIRED);\n         }\n@@ -158,10 +172,18 @@ public class PublicResultService {\n     /**\n      * 실패·취소한 결과를 같은 조건으로 다시 요청한다. 004 재시도를 그대로 타므로 동일 버전 합류·재사용·실행 한도(429)도 똑같이 받는다.\n      *\n+     * <p><b>비로그인 재시도는 단건 요청만 받는다</b>(T089, 원칙 IX). 재시도는 원 요청의 {@code executionType}을 물려받는데 실행 한도는\n+     * 단건 큐에만 있어, 묶음 요청의 공개 주소로 비로그인 사용자가 한도 없이 다시 접수할 수 있게 된다. 비로그인 {@code POST /backtests}와 같은\n+     * 규칙이다.\n+     *\n      * @param requesterId 지금 다시 시도하는 사람. null = 비로그인. 원 요청의 요청자를 물려받지 않는다 — 공개 주소는 남에게 건네질 수 있다\n      */\n     public PublicResultRetry retry(String token, Long requesterId) {\n         BacktestRequest original = resolve(token);\n+        if (requesterId == null && original.getExecutionType() != ExecutionType.SINGLE) {\n+            throw new BusinessException(\n+                    ErrorCode.INVALID_INPUT, \"로그인하지 않은 요청은 단건 분석(SINGLE)만 다시 시도할 수 있습니다.\");\n+        }\n         BacktestJobResult retried = publicly(() -> retryService.retry(original, requesterId));\n         return new PublicResultRetry(\n                 retried.publicToken(),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+package com.ssafy.thorp.result.application.service;\n+\n+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;\n+import java.nio.charset.StandardCharsets;\n+import java.security.MessageDigest;\n+import java.security.NoSuchAlgorithmException;\n+import java.util.HexFormat;\n+\n+/**\n+ * 공개 토큰 → 묘비 키(SHA-256 소문자 16진 64자). 정리 작업이 남기는 쪽과 조회가 찾는 쪽이 같은 함수를 써야 하므로 한 곳에 둔다.\n+ *\n+ * <p>솔트를 두지 않는다. 입력이 128비트 난수라 사전·무차별 대입으로 원문을 찾을 수 없고, 솔트를 두면 조회가 해시로 찾지 못한다.\n+ */\n+final class PublicTokenDigest {\n+\n+    private PublicTokenDigest() {}\n+\n+    static String of(PublicResultToken token) {\n+        try {\n+            byte[] digest =\n+                    MessageDigest.getInstance(\"SHA-256\")\n+                            .digest(token.value().getBytes(StandardCharsets.US_ASCII));\n+            return HexFormat.of().formatHex(digest);\n+        } catch (NoSuchAlgorithmException exc) {\n+            // 자바 표준 구현은 SHA-256 을 반드시 제공한다. 여기 오면 런타임이 망가진 것이다.\n+            throw new IllegalStateException(\"SHA-256 을 쓸 수 없습니다\", exc);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicTokenDigest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicTokenDigest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,7 @@ import org.springframework.validation.annotation.Validated;\n /**\n  * 결과 공개 열람 설정(spec 005 T004). {@code thorp.result.*}\n  *\n- * <p><b>네 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 기동에 실패한다 — 토큰 유효 시간이 없으면 비로그인 결과가 영영 열려 있게 되고, 거래\n+ * <p><b>다섯 값이 모두 {@code @NotNull} 이다.</b> 하나라도 비면 기동에 실패한다 — 토큰 유효 시간이 없으면 비로그인 결과가 영영 열려 있게 되고, 거래\n  * 내역 페이지 크기가 없으면 공개 경로에 상한 없는 조회가 열린다(원칙 IX). 운영은 {@code application-prod.yml}이 환경변수를 기본값 없이\n  * 참조한다({@code BacktestLimitProperties}와 같은 방식).\n  *\n@@ -35,6 +35,12 @@ public class ResultProperties {\n     @Min(1)\n     private Integer expirySweepBatchSize;\n \n+    /**\n+     * 만료로 지운 공개 토큰의 묘비를 남겨 두는 기간(T087). 만료 시각부터 센다. 이 기간 안에는 지운 주소도 410으로 안내되고, 지나면 404다. PD-23 확정\n+     * 전 임시값이다.\n+     */\n+    @NotNull private Duration tombstoneRetention;\n+\n     /** 공개 경로 거래 내역의 페이지 크기이자 상한(R-11 임시 상한). */\n     @NotNull\n     @Min(1)\n@@ -64,6 +70,14 @@ public class ResultProperties {\n         this.expirySweepBatchSize = expirySweepBatchSize;\n     }\n \n+    public Duration getTombstoneRetention() {\n+        return tombstoneRetention;\n+    }\n+\n+    public void setTombstoneRetention(Duration tombstoneRetention) {\n+        this.tombstoneRetention = tombstoneRetention;\n+    }\n+\n     public Integer getTradesPageSize() {\n         return tradesPageSize;\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/config/ResultProperties.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/config/ResultProperties.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+package com.ssafy.thorp.result.infrastructure.persistence;\n+\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.Table;\n+import java.time.Instant;\n+\n+/**\n+ * {@code expired_public_token} 매핑. 쓰기는 {@code INSERT … ON CONFLICT DO NOTHING} 네이티브 질의로만 하므로 이 엔티티는\n+ * 스키마 검증과 조회를 위한 것이다. 수정 경로가 없어 {@code updated_at}도 없다.\n+ */\n+@Entity\n+@Table(name = \"expired_public_token\")\n+public class ExpiredPublicTokenJpaEntity {\n+\n+    @Id\n+    @Column(name = \"token_hash\", length = 64, nullable = false)\n+    private String tokenHash;\n+\n+    @Column(name = \"expired_at\", nullable = false)\n+    private Instant expiredAt;\n+\n+    @Column(name = \"created_at\", nullable = false)\n+    private Instant createdAt;\n+\n+    protected ExpiredPublicTokenJpaEntity() {}\n+\n+    public String getTokenHash() {\n+        return tokenHash;\n+    }\n+\n+    public Instant getExpiredAt() {\n+        return expiredAt;\n+    }\n+\n+    public Instant getCreatedAt() {\n+        return createdAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/persistence/ExpiredPublicTokenJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/persistence/ExpiredPublicTokenJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+package com.ssafy.thorp.result.infrastructure.persistence;\n+\n+import java.time.Instant;\n+import org.springframework.data.jpa.repository.JpaRepository;\n+import org.springframework.data.jpa.repository.Modifying;\n+import org.springframework.data.jpa.repository.Query;\n+import org.springframework.data.repository.query.Param;\n+\n+interface ExpiredPublicTokenJpaRepository\n+        extends JpaRepository<ExpiredPublicTokenJpaEntity, String> {\n+\n+    @Modifying(flushAutomatically = true)\n+    @Query(\n+            value =\n+                    \"INSERT INTO expired_public_token (token_hash, expired_at, created_at)\"\n+                            + \" VALUES (:tokenHash, :expiredAt, :recordedAt)\"\n+                            + \" ON CONFLICT (token_hash) DO NOTHING\",\n+            nativeQuery = true)\n+    int insertIfAbsent(\n+            @Param(\"tokenHash\") String tokenHash,\n+            @Param(\"expiredAt\") Instant expiredAt,\n+            @Param(\"recordedAt\") Instant recordedAt);\n+\n+    /**\n+     * 인덱스 {@code idx_expired_public_token_expired_at}를 탄다. PostgreSQL 의 DELETE 에는 LIMIT 이 없어 하위 질의로\n+     * 자른다.\n+     */\n+    @Modifying(flushAutomatically = true)\n+    @Query(\n+            value =\n+                    \"DELETE FROM expired_public_token WHERE token_hash IN (\"\n+                            + \" SELECT token_hash FROM expired_public_token\"\n+                            + \" WHERE expired_at < :cutoff ORDER BY expired_at LIMIT :limit)\",\n+            nativeQuery = true)\n+    int deleteExpiredBefore(@Param(\"cutoff\") Instant cutoff, @Param(\"limit\") int limit);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/persistence/ExpiredPublicTokenJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/persistence/ExpiredPublicTokenJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.ssafy.thorp.result.infrastructure.persistence;\n+\n+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n+import java.time.Instant;\n+import org.springframework.stereotype.Repository;\n+\n+/** 공개 토큰 묘비 저장. 쓰기는 모두 네이티브 질의이고 호출자의 트랜잭션에 참여한다. */\n+@Repository\n+public class ExpiredPublicTokenRepositoryImpl implements ExpiredPublicTokenRepository {\n+\n+    private final ExpiredPublicTokenJpaRepository jpaRepository;\n+\n+    public ExpiredPublicTokenRepositoryImpl(ExpiredPublicTokenJpaRepository jpaRepository) {\n+        this.jpaRepository = jpaRepository;\n+    }\n+\n+    @Override\n+    public void record(String tokenHash, Instant expiredAt, Instant recordedAt) {\n+        jpaRepository.insertIfAbsent(tokenHash, expiredAt, recordedAt);\n+    }\n+\n+    @Override\n+    public boolean exists(String tokenHash) {\n+        return jpaRepository.existsById(tokenHash);\n+    }\n+\n+    @Override\n+    public int deleteExpiredBefore(Instant cutoff, int limit) {\n+        return jpaRepository.deleteExpiredBefore(cutoff, limit);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/persistence/ExpiredPublicTokenRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/infrastructure/persistence/ExpiredPublicTokenRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,23 @@\n+-- spec 005 결과 이해·비교 B02(T087): 만료로 지운 공개 토큰의 묘비.\n+--\n+-- 정리 작업은 만료된 비로그인 요청 행과 공개 토큰을 지운다(FR-021). 지운 뒤에 그 주소로 들어오면 \"그런 토큰 없음\"(404)과\n+-- 구분할 수 없어, spec Edge Case 가 요구한 \"결과가 더 이상 남아 있지 않다\" 안내(410)가 정리 주기 하나 뒤에 사라진다.\n+-- 그래서 지울 때 토큰의 SHA-256 해시와 만료 시각만 남긴다. 토큰 원문은 남기지 않는다 — 해시로는 결과를 열 수 없고, 128비트\n+-- 난수의 해시라 되돌려 원문을 찾을 수도 없다.\n+--\n+-- 묘비도 영구히 두지 않는다. 보관 기한(thorp.result.tombstone-retention, PD-23 확정 전 임시값)이 지난 묘비는 같은 정리\n+-- 작업이 지우고, 그 뒤로는 404 다. 새 표를 만들 뿐 기존 행을 바꾸지 않는다.\n+\n+CREATE TABLE expired_public_token (\n+    token_hash VARCHAR(64)              NOT NULL PRIMARY KEY,\n+    expired_at TIMESTAMP WITH TIME ZONE NOT NULL,\n+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,\n+    CONSTRAINT ck_expired_public_token_hash_format CHECK (token_hash ~ '^[0-9a-f]{64}$')\n+);\n+\n+-- 보관 기한이 지난 묘비를 만료 시각 순으로 찾는다.\n+CREATE INDEX idx_expired_public_token_expired_at ON expired_public_token (expired_at);\n+\n+COMMENT ON TABLE expired_public_token IS '만료로 지운 비로그인 공개 토큰의 해시(spec 005 T087). 지운 주소에 404 대신 410 안내를 주기 위한 것';\n+COMMENT ON COLUMN expired_public_token.token_hash IS '공개 토큰 원문의 SHA-256 소문자 16진. 원문은 저장하지 않는다';\n+COMMENT ON COLUMN expired_public_token.expired_at IS '원래 요청의 public_token_expires_at. 보관 기한은 이 시각부터 센다';\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260918130000__expired_public_token.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260918130000__expired_public_token.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -70,4 +70,5 @@ thorp:\n     public-token-ttl: PT1H\n     expiry-sweep-interval: PT1M\n     expiry-sweep-batch-size: 100\n+    tombstone-retention: PT2H\n     trades-page-size: 100\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-local.yml",
+          "old_path": "backend/src/main/resources/application-local.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -85,4 +85,5 @@ thorp:\n     public-token-ttl: ${THORP_RESULT_PUBLIC_TOKEN_TTL}\n     expiry-sweep-interval: ${THORP_RESULT_EXPIRY_SWEEP_INTERVAL}\n     expiry-sweep-batch-size: ${THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE}\n+    tombstone-retention: ${THORP_RESULT_TOMBSTONE_RETENTION}\n     trades-page-size: ${THORP_RESULT_TRADES_PAGE_SIZE}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-prod.yml",
+          "old_path": "backend/src/main/resources/application-prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -196,13 +196,15 @@ thorp:\n   result:\n     # 결과 공개 열람(spec 005 T004). **네 값 모두 임시값이다** — 유효 시간은 PD-23, 거래 내역 페이지 크기는\n     # R-11 이 정한다. 확정 전까지 수치는 이 파일에만 두고 spec 문서에 적지 않는다.\n-    # 네 값이 모두 @NotNull 이라 하나라도 비면 기동에 실패한다(ResultProperties).\n+    # 다섯 값이 모두 @NotNull 이라 하나라도 비면 기동에 실패한다(ResultProperties).\n     #\n     # 비로그인 요청의 공개 토큰 유효 시간. 기준은 요청 생성 시각이다(R-03). 로그인 요청은 만료가 없다.\n     public-token-ttl: P7D\n     # 만료된 비로그인 요청을 훑는 주기와 한 번에 지우는 수(B02 정리 작업).\n     expiry-sweep-interval: PT10M\n     expiry-sweep-batch-size: 100\n+    # 만료로 지운 토큰의 묘비를 남겨 두는 기간(T087). 만료 시각부터 센다. 이 기간 안에는 지운 주소도 410 안내를 받는다.\n+    tombstone-retention: P30D\n     # 공개 경로 /results/{token}/trades 의 페이지 크기이자 상한. 004 거래 내역 기본값과 같게 둔다.\n     trades-page-size: 100\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -119,7 +119,7 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {\n     }\n \n     /** 시작일이 다르면 동일 버전 키가 달라 합류하지 않는다 — 매번 새 실행이 큐에 쌓인다. */\n-    private static CreateBacktestCommand request(long requesterId, int day, ExecutionType type) {\n+    private static CreateBacktestCommand request(Long requesterId, int day, ExecutionType type) {\n         return new CreateBacktestCommand(\n                 requesterId,\n                 type,\n@@ -457,4 +457,55 @@ class ExecutionLimitApiIT extends IntegrationTestSupport {\n         assertThat(body).doesNotContain(\"BT-\");\n         assertThat(jdbcTemplate.queryForObject(hits, Integer.class, user)).isEqualTo(before + 2);\n     }\n+\n+    @Test\n+    @DisplayName(\n+            \"비로그인 요청은 단건이 아니면 접수 전에 400 이다 — 비단건은 한도 밖이라 그대로 받으면 대기열을 무제한으로 채운다 (spec 005 T089, 원칙 IX)\")\n+    void anonymousNonSingleIntakeIsRejectedBeforeQueueing() throws Exception {\n+        String body =\n+                java.nio.file.Files.readString(\n+                                java.nio.file.Path.of(\n+                                        \"..\",\n+                                        \"docs\",\n+                                        \"specs\",\n+                                        \"backtest-api\",\n+                                        \"examples\",\n+                                        \"backtest-request.json\"))\n+                        .replace(\"\\\"SINGLE\\\"\", \"\\\"SEARCH_BUNDLE\\\"\");\n+        String runs = \"SELECT count(*) FROM backtest_run\";\n+        long before = jdbcTemplate.queryForObject(runs, Long.class);\n+\n+        mockMvc.perform(\n+                        post(\"/backtests\")\n+                                .with(csrf())\n+                                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)\n+                                .content(body))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+\n+        assertThat(jdbcTemplate.queryForObject(runs, Long.class)).isEqualTo(before);\n+    }\n+\n+    @Test\n+    @DisplayName(\"비로그인 사용자가 묶음 요청의 공개 주소로 다시 시도하면 400 이고 새 요청이 생기지 않는다 (spec 005 T089)\")\n+    void anonymousPublicRetryOfNonSingleIsRejected() throws Exception {\n+        long owner = newUser(\"b\");\n+        BacktestJobResult bundle =\n+                backtestService.create(request(owner, 26, ExecutionType.SEARCH_BUNDLE));\n+        transactionTemplate.executeWithoutResult(\n+                status -> {\n+                    BacktestRequest found =\n+                            requestRepository.findByBacktestId(bundle.backtestId()).orElseThrow();\n+                    BacktestRun run = runRepository.findById(found.getRunId()).orElseThrow();\n+                    runRepository.update(run.markFailed(\"DATA_INSUFFICIENT\", \"no data\"));\n+                });\n+        String requests = \"SELECT count(*) FROM backtest_request\";\n+        long before = jdbcTemplate.queryForObject(requests, Long.class);\n+\n+        mockMvc.perform(post(\"/results/\" + bundle.publicToken() + \"/retry\").with(csrf()))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+\n+        assertThat(jdbcTemplate.queryForObject(requests, Long.class)).isEqualTo(before);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionLimitApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionLimitApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -66,6 +66,13 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {\n                 .getId();\n     }\n \n+    /** 종결 실행. 정리 조회는 실행이 끝난 요청만 고른다(spec 005 T093). */\n+    private long newFinishedRun() {\n+        long id = newRun();\n+        runs.update(runs.findById(id).orElseThrow().markFailed(\"DATA_INSUFFICIENT\", \"no data\"));\n+        return id;\n+    }\n+\n     private BacktestRequest save(long runId, long requesterId, ResultSource source) {\n         return requests.save(\n                 BacktestRequest.create(\n@@ -188,15 +195,18 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"만료된 비로그인 요청만 만료 순서대로 개수만큼 찾는다 — 로그인 요청과 아직 유효한 요청은 나오지 않는다\")\n+    @DisplayName(\"만료된 비로그인 요청만 만료 순서대로 개수만큼 찾는다 — 로그인 요청, 아직 유효한 요청, 실행이 끝나지 않은 요청은 나오지 않는다\")\n     void findsExpiredAnonymousRequestsOnly() {\n-        long runId = newRun();\n+        long runId = newFinishedRun();\n+        long queuedRunId = newRun();\n         Instant now = Instant.parse(\"2026-09-11T03:00:00Z\");\n         BacktestRequest older = saveAnonymous(runId, now.minusSeconds(7200));\n         BacktestRequest atBoundary = saveAnonymous(runId, now);\n         BacktestRequest newer = saveAnonymous(runId, now.minusSeconds(60));\n         BacktestRequest stillValid = saveAnonymous(runId, now.plusSeconds(1));\n         BacktestRequest loggedIn = save(runId, newUser(\"f@example.com\"), ResultSource.JOINED);\n+        // 만료가 가장 이르지만 실행이 아직 QUEUED 다. 지우면 비로그인 대기 몫에서 빠진다(T093).\n+        BacktestRequest unfinished = saveAnonymous(queuedRunId, now.minusSeconds(86_400));\n         entityManager.flush();\n         entityManager.clear();\n \n@@ -210,7 +220,9 @@ class BacktestRequestRepositoryImplTest extends RepositoryTestSupport {\n                         newer.getBacktestId().value(),\n                         atBoundary.getBacktestId().value())\n                 .doesNotContain(\n-                        stillValid.getBacktestId().value(), loggedIn.getBacktestId().value());\n+                        stillValid.getBacktestId().value(),\n+                        loggedIn.getBacktestId().value(),\n+                        unfinished.getBacktestId().value());\n         assertThat(requests.findExpiredAnonymous(now, 2)).hasSize(2);\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRequestRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRequestRepositoryImplTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -219,6 +219,25 @@ class FlywayMigrationTest extends RepositoryTestSupport {\n                 .contains(\"uk_backtest_request_public_token\", \"idx_backtest_request_public_expiry\");\n     }\n \n+    @Test\n+    @DisplayName(\"expired_public_token 이 토큰 해시와 만료 시각만 갖고 해시 형식을 DB 에서도 막는다 (spec 005 T087)\")\n+    void expiredPublicTokenHoldsOnlyHashAndExpiry() {\n+        assertThat(columnsOf(\"expired_public_token\"))\n+                .containsExactlyInAnyOrder(\"token_hash\", \"expired_at\", \"created_at\");\n+        assertThat(\n+                        jdbcTemplate.queryForList(\n+                                \"SELECT conname FROM pg_constraint\"\n+                                        + \" WHERE conrelid = 'expired_public_token'::regclass\",\n+                                String.class))\n+                .contains(\"ck_expired_public_token_hash_format\");\n+        assertThat(\n+                        jdbcTemplate.queryForList(\n+                                \"SELECT indexname FROM pg_indexes\"\n+                                        + \" WHERE tablename = 'expired_public_token'\",\n+                                String.class))\n+                .contains(\"idx_expired_public_token_expired_at\");\n+    }\n+\n     @Test\n     @DisplayName(\"backtest_reuse_event 가 재사용·합류 기록에 필요한 컬럼만 갖는다 (FR-008)\")\n     void backtestReuseEventHasAllColumns() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,9 @@ package com.ssafy.thorp.result.application.service;\n \n import static org.assertj.core.api.Assertions.assertThat;\n \n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n@@ -14,9 +16,13 @@ import com.ssafy.thorp.backtest.domain.model.PublicResultToken;\n import com.ssafy.thorp.backtest.domain.model.ResultSource;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;\n+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;\n import java.math.BigDecimal;\n+import java.sql.Timestamp;\n import java.time.Clock;\n+import java.time.Duration;\n import java.time.Instant;\n import java.time.LocalDate;\n import java.time.ZoneOffset;\n@@ -30,20 +36,24 @@ import org.springframework.transaction.PlatformTransactionManager;\n import org.springframework.transaction.support.TransactionTemplate;\n \n /**\n- * 만료된 비로그인 요청 정리를 실제 PostgreSQL 외래 키로 본다(spec 005 T026, FR-021).\n+ * 만료된 비로그인 요청 정리를 실제 PostgreSQL 외래 키로 본다(spec 005 T026·T087·T088, FR-021).\n  *\n  * <p>목으로는 확인할 수 없는 것이 핵심이다 — 재사용 기록·재시도 요청이 요청 행을 외래 키로 가리키므로 참조를 끊는 순서가 틀리면 DB가 거절한다. 그리고 <b>같은\n  * 실행을 가리키는 로그인 요청과 실행·결과는 남아야 한다</b>(004 FR-003). <b>재사용·합류 기록도 남아</b> 집계 뷰의 {@code reuse_count}가\n- * 정리로 줄지 않아야 한다(원칙 IX).\n+ * 정리로 줄지 않아야 하며(원칙 IX), 지운 토큰은 해시 묘비로 남아야 한다(T087).\n  *\n  * <p>스케줄러는 끄고 시각을 고정한 인스턴스를 직접 만든다. 만료 시각을 2000년대 초로 두어 같은 컨테이너를 쓰는 다른 IT가 남긴 만료 행보다 앞에 오게 한다 — 정리는\n  * 만료가 이른 순서로 배치 크기만큼 지운다.\n  */\n class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n \n+    private static final Duration RETENTION = Duration.ofDays(30);\n+\n     @Autowired private BacktestRunRepository runRepository;\n     @Autowired private BacktestRequestRepository requestRepository;\n     @Autowired private BacktestReuseEventRepository reuseEventRepository;\n+    @Autowired private BacktestResultRepository resultRepository;\n+    @Autowired private ExpiredPublicTokenRepository expiredTokens;\n     @Autowired private PlatformTransactionManager transactionManager;\n     @Autowired private TransactionTemplate transactionTemplate;\n     @Autowired private JdbcTemplate jdbcTemplate;\n@@ -52,9 +62,11 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n         return new PublicResultExpirySweeper(\n                 requestRepository,\n                 reuseEventRepository,\n+                expiredTokens,\n                 transactionManager,\n                 Clock.fixed(now, ZoneOffset.UTC),\n-                batchSize);\n+                batchSize,\n+                RETENTION);\n     }\n \n     private BacktestRun newRun() {\n@@ -76,6 +88,30 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n                                         42)));\n     }\n \n+    /** 결과 행이 붙은 완료 실행. 결과 저장은 한 트랜잭션 안에서 해야 한다({@code BacktestResultApiIT}와 같다). */\n+    private BacktestRun completedRun() {\n+        return transactionTemplate.execute(\n+                status -> {\n+                    BacktestRun run = newRun();\n+                    var event = MessageFixtures.finishedCompleted();\n+                    resultRepository.save(\n+                            new SaveBacktestResultCommand(\n+                                    run.getId(),\n+                                    event.executionId(),\n+                                    event.eventId(),\n+                                    event.payload().engineOutput(),\n+                                    null));\n+                    return runRepository.update(run.markCompleted());\n+                });\n+    }\n+\n+    /** 결과 행이 없는 종결 실행. 정리 작업은 실행이 끝난 요청만 지운다(T093). */\n+    private BacktestRun finishedRun() {\n+        BacktestRun run = newRun();\n+        return transactionTemplate.execute(\n+                status -> runRepository.update(run.markFailed(\"DATA_INSUFFICIENT\", \"no data\")));\n+    }\n+\n     private long newUser() {\n         String suffix = Long.toString(System.nanoTime() % 1_000_000_000L);\n         String email = \"sweeper-\" + suffix + \"@example.com\";\n@@ -106,30 +142,23 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n                                         expiresAt)));\n     }\n \n-    /** 결과 행은 실행에 붙는다. 정리가 실행을 건드리지 않는지를 결과까지 두고 본다(004 FR-003). */\n-    private void saveResult(BacktestRun run) {\n-        jdbcTemplate.update(\n-                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n-                        + \" finished_at, portfolio_series, diagnostics, created_at, updated_at)\"\n-                        + \" VALUES (?, 'EX-1', 'EV-1', NOW(), NOW(), CAST('[]' AS jsonb),\"\n-                        + \" CAST('{}' AS jsonb), NOW(), NOW())\",\n-                run.getId());\n+    private boolean exists(BacktestRequest request) {\n+        return count(\"SELECT count(*) FROM backtest_request WHERE id = ?\", request.getId()) > 0;\n     }\n \n-    private boolean resultExists(BacktestRun run) {\n-        return jdbcTemplate.queryForObject(\n-                        \"SELECT count(*) FROM backtest_result WHERE run_id = ?\",\n-                        Long.class,\n-                        run.getId())\n-                > 0;\n+    private long count(String sql, Object... args) {\n+        return jdbcTemplate.queryForObject(sql, Long.class, args);\n     }\n \n-    private boolean exists(BacktestRequest request) {\n-        return jdbcTemplate.queryForObject(\n-                        \"SELECT count(*) FROM backtest_request WHERE id = ?\",\n-                        Long.class,\n-                        request.getId())\n-                > 0;\n+    /** 해시를 DB가 따로 계산해 찾는다. 코드의 해시 함수를 그대로 쓰면 두 쪽이 같이 틀려도 통과한다. null = 묘비 없음. */\n+    private Instant tombstoneExpiry(BacktestRequest request) {\n+        List<Timestamp> found =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT expired_at FROM expired_public_token\"\n+                                + \" WHERE token_hash = encode(sha256(convert_to(?, 'UTF8')), 'hex')\",\n+                        Timestamp.class,\n+                        request.getPublicToken().value());\n+        return found.isEmpty() ? null : found.get(0).toInstant();\n     }\n \n     private BacktestReuseEvent reuseEvent(\n@@ -167,23 +196,17 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"만료된 비로그인 요청만 지우고 같은 실행의 로그인 요청·실행은 남긴다. 재사용 기록과 재시도 요청은 남기고 참조만 끊는다\")\n+    @DisplayName(\"만료된 비로그인 요청만 지우고 같은 실행의 로그인 요청·실행·결과와 재사용 기록은 남긴다. 요청 참조를 끊고 토큰은 해시 묘비로 남긴다\")\n     void deletesExpiredAnonymousRequestOnly() {\n         Instant now = Instant.parse(\"2001-06-01T00:00:00Z\");\n-        BacktestRun run = newRun();\n-        saveResult(run);\n+        Instant expiredAt = Instant.parse(\"2001-05-20T00:00:00Z\");\n+        BacktestRun run = completedRun();\n         long user = transactionTemplate.execute(status -> newUser());\n \n         BacktestRequest loggedIn = request(run, user, null, ResultSource.NEW, null);\n-        BacktestRequest expired =\n-                request(\n-                        run,\n-                        null,\n-                        null,\n-                        ResultSource.JOINED,\n-                        Instant.parse(\"2001-01-01T00:00:00Z\"));\n-        BacktestReuseEvent joined =\n-                reuseEvent(run, expired, ResultSource.JOINED, now.minusSeconds(86_400 * 150));\n+        BacktestRequest expired = request(run, null, null, ResultSource.REUSED, expiredAt);\n+        BacktestReuseEvent reused =\n+                reuseEvent(run, expired, ResultSource.REUSED, expiredAt.minus(Duration.ofDays(7)));\n         BacktestRequest retryChild =\n                 request(\n                         run,\n@@ -200,7 +223,7 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n         assertThat(exists(loggedIn)).isTrue();\n         assertThat(exists(retryChild)).isTrue();\n         assertThat(exists(notYetExpired)).isTrue();\n-        assertThat(requestIdOf(joined)).as(\"재사용 기록은 남고 지워진 요청과의 연결만 끊긴다\").isNull();\n+        assertThat(requestIdOf(reused)).as(\"재사용 기록은 남고 지워진 요청과의 연결만 끊긴다\").isNull();\n         assertThat(\n                         jdbcTemplate.queryForObject(\n                                 \"SELECT retry_of_request_id FROM backtest_request WHERE id = ?\",\n@@ -208,15 +231,51 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n                                 retryChild.getId()))\n                 .as(\"재시도 요청은 남고 원본 참조만 끊긴다\")\n                 .isNull();\n-        assertThat(runRepository.findById(run.getId())).as(\"실행은 다른 요청이 볼 수 있어 지우지 않는다\").isPresent();\n-        assertThat(resultExists(run)).as(\"결과도 남은 요청이 열 수 있어 지우지 않는다\").isTrue();\n+        assertThat(count(\"SELECT count(*) FROM backtest_run WHERE id = ?\", run.getId()))\n+                .as(\"실행은 다른 요청이 볼 수 있어 지우지 않는다\")\n+                .isEqualTo(1);\n+        assertThat(count(\"SELECT count(*) FROM backtest_result WHERE run_id = ?\", run.getId()))\n+                .as(\"결과도 지우지 않는다 (T088)\")\n+                .isEqualTo(1);\n+\n+        assertThat(tombstoneExpiry(expired)).as(\"지운 토큰은 묘비로 남는다 (T087)\").isEqualTo(expiredAt);\n+        assertThat(tombstoneExpiry(notYetExpired)).as(\"지우지 않은 토큰은 묘비가 없다\").isNull();\n+        assertThat(\n+                        count(\n+                                \"SELECT count(*) FROM expired_public_token WHERE token_hash = ?\",\n+                                expired.getPublicToken().value()))\n+                .as(\"토큰 원문은 저장하지 않는다\")\n+                .isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"만료됐어도 가리키는 실행이 끝나지 않았으면 지우지 않고, 끝난 뒤 다음 주기에 지운다 — 비로그인 대기 몫에서 빠지지 않는다 (T093)\")\n+    void keepsExpiredRequestWhileItsRunIsUnfinished() {\n+        Instant expiresAt = Instant.parse(\"2003-01-01T00:00:00Z\");\n+        BacktestRun queued = newRun();\n+        BacktestRequest waiting = request(queued, null, null, ResultSource.NEW, expiresAt);\n+\n+        sweeperAt(expiresAt.plusSeconds(60), 1000).sweep();\n+        assertThat(exists(waiting)).as(\"QUEUED 실행의 요청은 남는다\").isTrue();\n+        assertThat(tombstoneExpiry(waiting)).as(\"지우지 않았으니 묘비도 없다\").isNull();\n+\n+        transactionTemplate.executeWithoutResult(\n+                status ->\n+                        runRepository.update(\n+                                runRepository\n+                                        .findById(queued.getId())\n+                                        .orElseThrow()\n+                                        .markFailed(\"DATA_INSUFFICIENT\", \"no data\")));\n+        sweeperAt(expiresAt.plusSeconds(120), 1000).sweep();\n+        assertThat(exists(waiting)).isFalse();\n+        assertThat(tombstoneExpiry(waiting)).isEqualTo(expiresAt);\n     }\n \n     @Test\n     @DisplayName(\"재사용·합류 기록을 지우지 않아 정리 전후로 reuse_count 가 같다 — 끊긴 기록 여럿이 요청 유일 색인에 걸리지 않는다\")\n     void keepsReuseCountAcrossSweep() {\n         Instant now = Instant.parse(\"2001-07-01T00:00:00Z\");\n-        BacktestRun run = newRun();\n+        BacktestRun run = finishedRun();\n         recordFinishedMetric(run);\n         BacktestRequest joinedRequest =\n                 request(\n@@ -251,7 +310,8 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n     @DisplayName(\"만료 시각과 같은 순간부터 지운다 — 조회의 410 경계와 같다\")\n     void expiryBoundaryIsInclusive() {\n         Instant expiresAt = Instant.parse(\"2002-01-01T00:00:00Z\");\n-        BacktestRequest atBoundary = request(newRun(), null, null, ResultSource.NEW, expiresAt);\n+        BacktestRequest atBoundary =\n+                request(finishedRun(), null, null, ResultSource.NEW, expiresAt);\n \n         sweeperAt(expiresAt.minusMillis(1), 1000).sweep();\n         assertThat(exists(atBoundary)).isTrue();\n@@ -263,7 +323,7 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n     @Test\n     @DisplayName(\"한 주기에 배치 크기만큼, 만료가 이른 것부터 지운다\")\n     void deletesAtMostBatchSize() {\n-        BacktestRun run = newRun();\n+        BacktestRun run = finishedRun();\n         BacktestRequest first =\n                 request(run, null, null, ResultSource.NEW, Instant.parse(\"2000-01-01T00:00:00Z\"));\n         BacktestRequest second =\n@@ -277,4 +337,35 @@ class PublicResultExpirySweeperIT extends PortMockedIntegrationTestSupport {\n         assertThat(exists(second)).isFalse();\n         assertThat(exists(third)).isTrue();\n     }\n+\n+    @Test\n+    @DisplayName(\"보관 기한이 지난 묘비만 지우고, 같은 토큰을 두 번 기록해도 실패하지 않는다 (T087)\")\n+    void prunesTombstonesPastRetention() {\n+        // 다른 시험이 남긴 묘비(2000년 이후)보다 앞선 시각이라 이 시험의 두 묘비만 판정 대상이다.\n+        String old = \"a\".repeat(63) + \"1\";\n+        String recent = \"a\".repeat(63) + \"2\";\n+        Instant now = Instant.parse(\"1999-06-01T00:00:00Z\");\n+        Instant recentExpiry = now.minus(RETENTION).plusSeconds(1);\n+        transactionTemplate.executeWithoutResult(\n+                status -> {\n+                    expiredTokens.record(old, now.minus(RETENTION).minusSeconds(1), now);\n+                    expiredTokens.record(recent, recentExpiry, now);\n+                    // 두 인스턴스가 같은 요청을 동시에 정리한 경우다. 기존 묘비를 덮거나 예외를 내지 않는다.\n+                    expiredTokens.record(recent, now, now);\n+                });\n+\n+        sweeperAt(now, 1000).sweep();\n+\n+        assertThat(expiredTokens.exists(old)).isFalse();\n+        assertThat(expiredTokens.exists(recent)).isTrue();\n+        assertThat(\n+                        jdbcTemplate\n+                                .queryForObject(\n+                                        \"SELECT expired_at FROM expired_public_token\"\n+                                                + \" WHERE token_hash = ?\",\n+                                        Timestamp.class,\n+                                        recent)\n+                                .toInstant())\n+                .isEqualTo(recentExpiry);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/result/application/service/PublicResultExpirySweeperIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/result/application/service/PublicResultExpirySweeperIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,6 +28,7 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n import com.ssafy.thorp.result.application.result.PublicResultDetail;\n import com.ssafy.thorp.result.application.result.PublicResultRetry;\n import com.ssafy.thorp.result.application.result.ValidationTier;\n@@ -60,6 +61,8 @@ class PublicResultServiceTest {\n     private final BacktestResultQueryService queryService = mock(BacktestResultQueryService.class);\n     private final BacktestRetryService retryService = mock(BacktestRetryService.class);\n     private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);\n+    private final ExpiredPublicTokenRepository expiredTokens =\n+            mock(ExpiredPublicTokenRepository.class);\n \n     private final PublicResultService service =\n             new PublicResultService(\n@@ -67,6 +70,7 @@ class PublicResultServiceTest {\n                     queryService,\n                     retryService,\n                     registry,\n+                    expiredTokens,\n                     Clock.fixed(NOW, ZoneOffset.UTC));\n \n     private static BacktestRequest request(Long requesterId, Instant expiresAt) {\n@@ -136,6 +140,21 @@ class PublicResultServiceTest {\n                 .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);\n     }\n \n+    @Test\n+    @DisplayName(\n+            \"요청은 없지만 정리 작업이 남긴 묘비가 있으면 404 가 아니라 410 이다 — 묘비는 토큰 원문이 아니라 SHA-256 으로 찾는다 (T087)\")\n+    void deletedExpiredTokenIsGoneNotNotFound() {\n+        when(requestRepository.findByPublicToken(any())).thenReturn(Optional.empty());\n+        // echo -n 0123456789abcdef0123456789abcdef | sha256sum\n+        when(expiredTokens.exists(\n+                        \"3eb1bd439947eb762998e566ccc2e099c791118b2f40579cc4f7da2b5061b7f9\"))\n+                .thenReturn(true);\n+\n+        assertThatThrownBy(() -> service.getDetail(TOKEN))\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.RESULT_EXPIRED);\n+    }\n+\n     @Test\n     @DisplayName(\"비로그인 결과는 만료 시각이 되면 410 이고 하위 자원도 읽지 않는다\")\n     void expiredAnonymousResultIsGone() {\n@@ -261,6 +280,31 @@ class PublicResultServiceTest {\n                         });\n     }\n \n+    @Test\n+    @DisplayName(\"비로그인 사용자는 단건이 아닌 요청을 다시 시도할 수 없다 — 재시도가 실행 한도를 건너뛰는 입구가 되지 않는다 (T089)\")\n+    void anonymousCannotRetryNonSingleRequest() {\n+        BacktestRequest bundle =\n+                BacktestRequest.restore(\n+                        1L,\n+                        new BacktestId(BACKTEST_ID),\n+                        11L,\n+                        7L,\n+                        ExecutionType.SEARCH_BUNDLE,\n+                        ResultSource.NEW,\n+                        null,\n+                        null,\n+                        null,\n+                        false,\n+                        PublicResultToken.of(TOKEN),\n+                        null);\n+        stored(bundle);\n+\n+        assertThatThrownBy(() -> service.retry(TOKEN, null))\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.INVALID_INPUT);\n+        verify(retryService, never()).retry(any(BacktestRequest.class), any());\n+    }\n+\n     @Test\n     @DisplayName(\"재시도는 호출한 사람의 이름으로 접수하고, 원 요청의 backtestId 대신 원 토큰을 돌려준다\")\n     void retryTranslatesIdentifiersToTokens() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/result/application/service/PublicResultServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/result/application/service/PublicResultServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,6 +15,7 @@ import com.jayway.jsonpath.JsonPath;\n import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n@@ -28,12 +29,17 @@ import com.ssafy.thorp.backtest.domain.model.RunProgress;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;\n+import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n+import com.ssafy.thorp.result.application.service.PublicResultExpirySweeper;\n import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;\n import java.math.BigDecimal;\n import java.nio.file.Files;\n import java.nio.file.Path;\n+import java.time.Clock;\n+import java.time.Duration;\n import java.time.Instant;\n import java.time.LocalDate;\n+import java.time.ZoneOffset;\n import java.time.temporal.ChronoUnit;\n import java.util.LinkedHashMap;\n import java.util.List;\n@@ -84,6 +90,11 @@ class ResultApiIT extends PortMockedIntegrationTestSupport {\n     @Autowired private ObjectMapper objectMapper;\n     @Autowired private TransactionTemplate transactionTemplate;\n     @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private BacktestReuseEventRepository reuseEventRepository;\n+    @Autowired private ExpiredPublicTokenRepository expiredTokens;\n+\n+    @Autowired\n+    private org.springframework.transaction.PlatformTransactionManager transactionManager;\n \n     private long requesterId;\n \n@@ -380,6 +391,42 @@ class ResultApiIT extends PortMockedIntegrationTestSupport {\n         }\n     }\n \n+    @Test\n+    @DisplayName(\"정리 작업이 만료된 요청을 지운 뒤에도 그 주소는 404 가 아니라 410 이고 본문이 예시와 같다 (T087, SC-008)\")\n+    void expiredResultStaysGoneAfterSweep() throws Exception {\n+        String token = anonymousTokenFor(completedRun());\n+        jdbcTemplate.update(\n+                \"UPDATE backtest_request SET public_token_expires_at = NOW() - INTERVAL '1 hour'\"\n+                        + \" WHERE public_token = ?\",\n+                token);\n+\n+        new PublicResultExpirySweeper(\n+                        requestRepository,\n+                        reuseEventRepository,\n+                        expiredTokens,\n+                        transactionManager,\n+                        Clock.fixed(Instant.now(), ZoneOffset.UTC),\n+                        1000,\n+                        Duration.ofDays(30))\n+                .sweep();\n+\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT count(*) FROM backtest_request WHERE public_token = ?\",\n+                                Long.class,\n+                                token))\n+                .as(\"요청 행은 지워졌다\")\n+                .isZero();\n+        assertThat(objectMapper.readTree(body(get(\"/results/\" + token), 410)))\n+                .isEqualTo(example(\"result-expired.json\"));\n+        mockMvc.perform(get(\"/results/\" + token + \"/timeseries\"))\n+                .andExpect(status().isGone())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESULT_EXPIRED\"));\n+        // 한 번도 발급되지 않은 토큰은 여전히 404 다.\n+        mockMvc.perform(get(\"/results/\" + PublicResultToken.generate().value()))\n+                .andExpect(status().isNotFound());\n+    }\n+\n     @Test\n     @DisplayName(\"로그인 사용자의 결과도 같은 토큰으로 열리고 만료가 없다\")\n     void loggedInResultOpensWithoutExpiry() throws Exception {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/result/presentation/controller/ResultApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/result/presentation/controller/ResultApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,7 +17,7 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec\n - 경로 변수 `{token}`은 접수 응답의 `publicToken`이다. 32자 소문자 16진 문자열이고, 형식이 틀리면 조회하지 않고 `400 INVALID_INPUT`이다.\n - **로그인하지 않아도 된다.** 토큰을 가진 사람이 결과를 본다. `POST`에는 저장소의 CSRF 규약이 그대로 적용된다.\n - 응답 봉투는 `ApiResponse`(`success`·`data`·`error`)이고, 금액·비율은 문자열이다(004와 같다).\n-- 비로그인 결과에는 `expiresAt`이 있고 그 시각부터 모든 경로가 `410 RESULT_EXPIRED`다. 로그인 사용자의 결과는 `expiresAt`이 `null`이고 만료되지 않는다. 만료된 요청 행은 정리 작업이 주기적으로 지우며, 지운 뒤에는 `404`다. 그래서 만료 뒤 오래 지난 주소는 410이 아니라 404로 보일 수 있다.\n+- 비로그인 결과에는 `expiresAt`이 있고 그 시각부터 모든 경로가 `410 RESULT_EXPIRED`다. 로그인 사용자의 결과는 `expiresAt`이 `null`이고 만료되지 않는다. 만료된 요청 행은 정리 작업이 주기적으로 지우지만, 토큰 해시를 묘비로 남겨 지운 뒤에도 `410`이다. 묘비 보관 기한(`thorp.result.tombstone-retention`)이 지나면 `404`다.\n - **어느 응답에도 `backtestId`가 없다**(SC-009). 화면은 토큰만 들고 다닌다.\n \n ## 2. 경로 대응\n@@ -64,7 +64,7 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec\n | code | HTTP | 뜻 |\n |---|---|---|\n | `INVALID_INPUT` | 400 | 토큰 형식 오류, 거래 질의 오류, `date` 누락 |\n-| `RESOURCE_NOT_FOUND` | 404 | 그런 토큰이 없다(정리된 만료 결과 포함) |\n+| `RESOURCE_NOT_FOUND` | 404 | 그런 토큰이 없다(발급된 적 없거나 묘비 보관 기한이 지났다) |\n | `RESULT_EXPIRED` | 410 | 비로그인 결과의 유효 시간이 지났다 |\n | `RESULT_NOT_READY` | 409 | 아직 계산 중이다 |\n | `BACKTEST_FAILED` | 409 | 실패해 결과가 없다 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/result-api/README.md",
+          "old_path": "docs/specs/result-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,6 +76,8 @@ THORP_LIMIT_PROVISIONAL=true\n THORP_RESULT_PUBLIC_TOKEN_TTL=P7D\n THORP_RESULT_EXPIRY_SWEEP_INTERVAL=PT10M\n THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE=100\n+# 만료로 지운 결과 주소에 \"남아 있지 않다\"(410) 안내를 이어 주는 기간. 지나면 \"잘못된 주소\"(404)다.\n+THORP_RESULT_TOMBSTONE_RETENTION=P30D\n THORP_RESULT_TRADES_PAGE_SIZE=100\n \n # 배우기 관리 계정 허용 목록(spec 013). 쉼표로 구분한 사용자 ID(users.id)다. 예: 12,34\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/.env.prod.example",
+          "old_path": "infra/.env.prod.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -132,6 +132,7 @@ services:\n       THORP_RESULT_PUBLIC_TOKEN_TTL: ${THORP_RESULT_PUBLIC_TOKEN_TTL}\n       THORP_RESULT_EXPIRY_SWEEP_INTERVAL: ${THORP_RESULT_EXPIRY_SWEEP_INTERVAL}\n       THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE: ${THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE}\n+      THORP_RESULT_TOMBSTONE_RETENTION: ${THORP_RESULT_TOMBSTONE_RETENTION}\n       THORP_RESULT_TRADES_PAGE_SIZE: ${THORP_RESULT_TRADES_PAGE_SIZE}\n       # 배우기 관리 계정 허용 목록(spec 013). application-prod.yml 이 기본값 없이 참조한다. 쉼표로 구분한 사용자 ID이고\n       # 빈 값으로 적으면 관리자가 없다(관리 경로가 모두 404). ${VAR} 로만 두면 compose 가 없는 변수를 경고만 남기고 빈 문자열로\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker-compose.prod.yml",
+          "old_path": "infra/docker-compose.prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,8 +84,8 @@\n \n | code | HTTP | 뜻 | 화면 처리 |\n |---|---|---|---|\n-| RESULT_EXPIRED | 410 | 비로그인 결과의 유효 시간이 지났다. 정리 작업이 요청 행을 지운 뒤에는 아래 404가 된다 | 남아 있지 않다는 안내와 같은 조건으로 다시 분석할 진입점 (SC-008) |\n-| RESOURCE_NOT_FOUND | 404 | 그런 토큰이 없다 | 잘못된 주소 안내. 만료와 다르게 보인다 |\n+| RESULT_EXPIRED | 410 | 비로그인 결과의 유효 시간이 지났다. 정리 작업이 요청 행을 지운 뒤에도 묘비 보관 기한 동안은 410이다 | 남아 있지 않다는 안내와 같은 조건으로 다시 분석할 진입점 (SC-008) |\n+| RESOURCE_NOT_FOUND | 404 | 그런 토큰이 없다(발급된 적 없거나 묘비 보관 기한이 지났다) | 잘못된 주소 안내. 만료와 다르게 보인다 |\n | INVALID_INPUT | 400 | 토큰 형식 오류 | 위와 같다 |\n | RESULT_NOT_READY | 409 | 아직 계산 중이라 하위 자원이 없다 | 진행 상태를 보인다 |\n | BACKTEST_FAILED | 409 | 실패해 부분 결과도 없다 | 사유와 다시 시도 선택 |\n@@ -95,6 +95,8 @@\n \n **004에서 온 오류의 문구는 코드의 기본 문구다.** 입력 검증의 400(거래 질의·`date` 누락)은 원인 문구를 그대로 싣는다. 004 예외의 문구에는 `backtestId`가 들어 있어 공개 경로는 문구를 바꿔 내보낸다. 코드·HTTP 상태·`details`(예: `retryAfterSeconds`)는 그대로다. 만료 응답 예시는 `docs/specs/result-api/examples/result-expired.json`이다.\n \n+**정리 뒤에도 410을 유지하는 방법**: 정리 작업은 요청 행과 토큰을 지우면서(FR-021) 토큰의 SHA-256 해시와 만료 시각만 묘비(`expired_public_token`)로 남긴다. 조회는 토큰이 없을 때 묘비를 찾아 있으면 410이다. 묘비는 보관 기한(`thorp.result.tombstone-retention`, PD-23 확정 전 임시값)이 지나면 지운다. 해시로는 결과를 열 수 없고 128비트 난수라 원문을 되찾을 수도 없다.\n+\n **410과 404를 나누는 근거**: 만료(410)와 없음(404)을 다르게 답하면 \"이 토큰이 한 번 존재했다\"는 사실이 밖으로 드러난다. 그러나 토큰이 안전한 난수 최소 128비트라 이웃 값을 맞출 가능성이 사실상 0이어서 존재 여부를 훑어 알아내는 것 자체가 불가능하고, 알아낸다 해도 내용은 얻을 수 없다. 반면 사용자에게는 \"사라졌다\"와 \"잘못된 주소\"가 다른 안내여야 한다(SC-008, Edge Cases). 그래서 구분을 유지한다.\n \n ## 공개 응답에서 버리는 필드\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/contracts/result-api.md",
+          "old_path": "specs/005-result-comparison/contracts/result-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,24 +6,33 @@\n \n ## 1. 저장 항목 변경\n \n-새 테이블은 만들지 않는다. 004의 `backtest_request` 하나만 손댄다.\n+004의 `backtest_request`에 컬럼을 더하고, 만료로 지운 토큰의 묘비 표 `expired_public_token` 하나를 새로 만든다.\n \n | 컬럼 | 형 | 설명 |\n |---|---|---|\n | requester_id | BIGINT FK → users, **NOT NULL → NULL 허용** | 로그인 사용자의 요청에만 채운다. 비로그인 요청은 비어 있다 ([research.md](research.md) R-02) |\n-| public_token | CHAR(32) UNIQUE NOT NULL | 결과 화면 주소에 쓰는 무작위 128비트 값의 16진 표기. 접수 시점에 발급한다 (R-01) |\n+| public_token | VARCHAR(32) UNIQUE NOT NULL, CHECK `^[0-9a-f]{32}$` | 결과 화면 주소에 쓰는 무작위 128비트 값의 소문자 16진 표기. 접수 시점에 발급한다 (R-01). CHAR가 아닌 이유: Hibernate 스키마 검증(`ddl-auto: validate`)이 CHAR를 String 매핑과 다른 형으로 보아 기동이 실패한다. 길이와 문자 집합은 CHECK가 지킨다 |\n | public_token_expires_at | TIMESTAMP NULL | `requester_id`가 없는 요청에만 채운다. 로그인 사용자의 결과는 만료하지 않는다 (R-03) |\n \n **인덱스**: `public_token`에 유니크 인덱스, `(public_token_expires_at)`에 정리 작업용 인덱스.\n \n-**마이그레이션 주의**: `requester_id`를 NOT NULL에서 NULL 허용으로 바꾸는 것은 제약 완화라 기존 행에 영향이 없다. `public_token`은 NOT NULL이므로 기존 행에 값을 채우는 단계가 먼저 와야 한다. 004 data-model이 기존 데모 데이터 삭제를 권장해 두었으므로 그 방침을 따르면 채울 행이 없다. 파일 이름은 저장소의 현재 관례인 `V{yyyyMMddHHmmss}__{설명}.sql`을 따른다(최신은 `V20260916104500__news_grouping_v2.sql`). 서로 다른 작업이 같은 번호를 쓰지 않게 하려는 규칙이므로 constitution \"스키마 변경 규칙\" 절과 함께 지킨다.\n+**`expired_public_token`** (2026-09-17 T087)\n+\n+| 컬럼 | 형 | 설명 |\n+|---|---|---|\n+| token_hash | VARCHAR(64) PK | 공개 토큰 원문의 SHA-256 소문자 16진. 원문은 저장하지 않는다 |\n+| expired_at | TIMESTAMPTZ NOT NULL | 원래 요청의 `public_token_expires_at`. 보관 기한은 이 시각부터 센다 |\n+| created_at | TIMESTAMPTZ NOT NULL | 정리 작업이 묘비를 남긴 시각 |\n+\n+정리 작업이 만료된 비로그인 요청 행을 지우는 트랜잭션에서 남긴다. 조회는 토큰으로 요청을 찾지 못하면 이 표에서 해시를 찾아, 있으면 410·없으면 404로 답한다. 보관 기한(`thorp.result.tombstone-retention`, PD-23 확정 전 임시값)이 지난 묘비는 같은 정리 작업이 지운다. **왜 필요한가**: FR-021은 요청과 토큰을 지우라고 하고 Edge Case는 만료된 주소에 \"결과가 더 이상 남아 있지 않다\"를 요구한다. 행을 지우기만 하면 다음 정리 주기부터 \"잘못된 주소\"(404)와 구분할 수 없다. 해시는 128비트 난수의 해시라 결과를 열 수도 원문을 되찾을 수도 없다.\n \n-**권한 판정**: 취소·재시도는 다음 둘 중 하나를 만족해야 한다.\n+**마이그레이션 주의**: `requester_id`를 NOT NULL에서 NULL 허용으로 바꾸는 것은 제약 완화라 기존 행에 영향이 없다. `public_token`은 NOT NULL이므로 기존 행에 값을 채우는 단계가 먼저 와야 한다. 004 data-model이 기존 데모 데이터 삭제를 권장해 두었으므로 그 방침을 따르면 채울 행이 없다. 파일 이름은 저장소의 현재 관례인 `V{yyyyMMddHHmmss}__{설명}.sql`을 따른다(최신은 `V20260916104500__news_grouping_v2.sql`). 서로 다른 작업이 같은 번호를 쓰지 않게 하려는 규칙이므로 constitution \"스키마 변경 규칙\" 절과 함께 지킨다.\n \n-- 로그인 사용자: `requester_id`가 현재 사용자와 같다.\n-- 비로그인: 요청에 담긴 `public_token`이 그 행의 값과 같다.\n+**권한 판정**: 두 경로가 따로 판정한다.\n \n-어느 쪽도 아니면 404로 숨긴다(004 R-12의 기존 방침 유지).\n+- 소유자 경로(`/backtests/{backtestId}/**`, 004): 조회·취소·재시도 모두 `requester_id`가 현재 사용자와 같아야 한다. 아니면 404로 숨긴다(004 R-12).\n+- 공개 경로(`/results/{publicToken}/**`, 005): 토큰을 가진 사람이면 조회하고 **재시도만** 한다. 공개 취소 경로는 두지 않는다 — spec Clarification이 \"비교 대상을 바꿔도 앞서 요청한 실행을 취소하지 않는다\"로 정했고, 토큰은 남에게 건네질 수 있다([contracts/result-api.md](contracts/result-api.md)).\n+- 공개 재시도로 생기는 새 요청의 요청자는 원 요청자가 아니라 **지금 호출한 사람**이다(비로그인이면 없음, 만료 시각이 붙는다). 비로그인 재시도는 원 요청이 단건(`SINGLE`)일 때만 받는다 — 실행 한도가 단건 큐에만 있어서다(T089, 원칙 IX).\n \n ## 2. 결과 주소\n \n@@ -36,7 +45,7 @@\n **상태 전이**\n \n ```text\n-발급 ──> 열람 가능 ──> (비로그인·유효 시간 경과) ──> 만료 ──> 삭제\n+발급 ──> 열람 가능 ──> (비로그인·유효 시간 경과) ──> 만료(410) ──> 요청 삭제·묘비(410) ──> 묘비 삭제(404)\n                    └─> (로그인 사용자) ──────────> 만료 없음\n ```\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/data-model.md",
+          "old_path": "specs/005-result-comparison/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,7 @@\n \n **Primary Dependencies**: Spring Boot 3.5, Gradle / Vite 6, react-router-dom 7, @visx(shape·scale·grid·responsive), d3-array, d3-shape, axios, Vitest, Testing Library\n \n-**Storage**: 새 테이블을 만들지 않는다. 004의 `backtest_request`에 공개 토큰과 만료 시각 두 컬럼을 더하고 `requester_id`를 nullable로 완화한다(Flyway 새 버전). 결과·시계열·거래 내역은 004가 저장한 것을 그대로 읽는다.\n+**Storage**: 004의 `backtest_request`에 공개 토큰과 만료 시각 두 컬럼을 더하고 `requester_id`를 nullable로 완화한다(Flyway 새 버전). 새 테이블은 만료로 지운 토큰의 묘비 `expired_public_token`(토큰 SHA-256 해시·만료 시각) 하나다 — FR-021이 요청과 토큰을 지우라고 하고 Edge Case가 만료 주소에 \"남아 있지 않다\" 안내를 요구해서, 지운 뒤에도 410을 주려면 원문 없이 만료 사실만 남겨야 한다(2026-09-17 T087, [research.md](research.md) R-03). 결과·시계열·거래 내역은 004가 저장한 것을 그대로 읽는다.\n \n **Testing**: backend `./gradlew spotlessApply build`(ArchUnit 포함), frontend `npm run lint && npm run build && npm run test`. 계약 검증은 003·004가 쓰는 방식을 따라 `docs/specs/` 아래 응답 예시를 픽스처로 두고 실제 응답과 대조한다.\n \n@@ -127,10 +127,11 @@ backend/src/main/java/com/ssafy/thorp/\n └── result/                            # 신규. 공개 열람 경계\n     ├── presentation/controller/        #   GET /results/{token} 및 하위 자원\n     ├── presentation/response/          #   004 응답을 공개용으로 감싼 DTO\n-    ├── application/                    #   토큰 → backtestId 해석, 만료 판정\n-    └── domain/                         #   PublicResultToken 값 타입\n+    ├── application/                    #   토큰 → 요청 해석, 만료 판정, 만료 정리\n+    ├── application/repository/         #   묘비 저장소 포트(이 패키지의 유일한 저장소)\n+    └── infrastructure/persistence/     #   expired_public_token 매핑\n \n-backend/src/main/resources/db/migration/   # public_token·만료·requester_id 완화 마이그레이션\n+backend/src/main/resources/db/migration/   # public_token·만료·requester_id 완화, expired_public_token 마이그레이션\n \n frontend/src/\n ├── pages/\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/plan.md",
+          "old_path": "specs/005-result-comparison/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,6 +23,7 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n - **Decision**: `backtest_request`에 `public_token_expires_at`을 두고, `requester_id`가 없는 요청에만 값을 채운다. 만료 판단 기준(생성 시각인지 마지막 열람 시각인지)은 PD-23이 정한다. 확정 전까지는 생성 시각 기준을 임시 기본으로 두고, 값은 설정(`thorp.result.public-token-ttl`)으로 뺀다. 만료된 토큰 조회는 `410 RESULT_EXPIRED`로 답한다. 정리 작업은 만료된 비로그인 **요청 행과 토큰**을 지우고, 그 요청이 가리키던 공용 `backtest_run`·결과는 **그것을 가리키는 요청이 하나도 남지 않았을 때만** 지운다(2026-09-16 checklist CHK017에서 확정). 기본값은 PD-23이 확정되기 전까지 설정 파일에만 두고 문서에 수치를 적지 않는다.\n - **삭제 범위를 이렇게 나눈 이유**: 004 FR-003이 완료된 동일 버전 결과를 요청자와 무관하게 서비스 전체에서 재사용한다. 비로그인 요청 하나가 만료될 때 공용 계산까지 지우면 같은 계산을 '내 기록'에서 참조하는 로그인 사용자의 결과가 깨진다. 반대로 계산을 아예 건드리지 않으면 clarify에서 정한 \"결과도 삭제한다\"가 되돌아간다. 참조가 없는 계산만 지우는 것이 둘을 함께 지키는 방법이며, 그 판정과 삭제는 계산 기록을 소유한 004의 일이라 004에 요청하는 변경에 넣는다([contracts/result-api.md](contracts/result-api.md)).\n+- **정리 뒤에도 410을 유지하는 방법 (2026-09-17 T087)**: 요청 행을 지우면 토큰이 사라져 다음 조회는 \"그런 토큰 없음\"(404)과 구분되지 않는다. 그래서 지우는 트랜잭션에서 토큰의 SHA-256 해시와 만료 시각만 `expired_public_token`에 남기고, 조회는 요청이 없을 때 해시를 찾아 있으면 410으로 답한다. 묘비는 보관 기한(`thorp.result.tombstone-retention`)이 지나면 지우고 그 뒤로는 404다. 버린 선택지: 요청 행 삭제를 유예하는 방식은 스키마 변경이 없지만 유예 기간 동안 토큰 원문이 남고 기간이 끝나면 결국 404가 된다. 문서를 고쳐 404를 허용하는 방식은 Edge Case의 안내 구분을 포기한다.\n - **Rationale**: spec FR-021이 \"값과 분리해 만료 장치를 먼저 만든다\"를 명시했고, PD-06이 같은 방식(값은 미확정, 한도 장치는 먼저)으로 처리된 선례가 있다. 404가 아니라 410을 쓰는 이유는 Edge Case가 \"결과가 더 이상 남아 있지 않다는 안내\"와 \"존재한 적 없음\"을 다르게 보이도록 요구하기 때문이다.\n - **Alternatives**: 마지막 열람 시각 기준 갱신 — 자주 보는 결과가 무기한 남아 만료의 목적이 흐려진다. 다만 PD-23이 이 기준을 정하므로 선택지로 남긴다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/research.md",
+          "old_path": "specs/005-result-comparison/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -67,7 +67,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ## Path Conventions\n \n-- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`·`application/repository`는 두지 않는다(값 타입과 저장은 `backtest`가 소유한다). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`\n+- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`은 두지 않는다(값 타입과 요청 저장은 `backtest`가 소유한다). 예외로 만료 토큰 묘비만 `result/application/repository`·`result/infrastructure/persistence`에 둔다 — 공개 열람 경계에만 뜻이 있는 005의 기록이라 `backtest`가 알 필요가 없다(T087·T090). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`\n - 백엔드 004 소유 접점(최소로 손댄다): `backtest/domain/model/{BacktestRequest,PublicResultToken}.java`, `backtest/infrastructure/persistence/{BacktestRequestJpaEntity,BacktestRequestMapper,BacktestRequestRepositoryImpl}.java`, `backtest/application/service/{BacktestService,BacktestRetryService,BacktestResultQueryService,ExecutionLimitPolicy,ExecutionMetricRecorder}.java`, `backtest/application/repository/BacktestRequestRepository.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/request/TradePageQuery.java`, `backtest/presentation/response/{BacktestJobResponse,BacktestRetryResponse}.java` (모두 `backend/src/main/java/com/ssafy/thorp/` 아래)\n - 마이그레이션: `backend/src/main/resources/db/migration/V{yyyyMMddHHmmss}__public_result_token.sql` (작성 시각 타임스탬프. 현재 마지막은 `V20260916163000__widen_instrument_id_format.sql`)\n - 계약 문서·픽스처: `docs/specs/result-api/{README.md,examples/*.json}`(신규), `docs/specs/backtest-api/{README.md,examples/backtest-accepted.json}`(004 접수 응답 갱신)\n@@ -415,6 +415,25 @@ Task: \"api/result.test.ts — 경로·오류 정규화\" (T038)\n - `backtestId`(`BT-…`)는 백엔드 `result` 패키지의 응답과 프론트엔드 결과 화면 어디에도 없어야 한다(SC-009). T084·T085가 검사한다\n - 각 묶음의 MR 본문 \"주요 변경 사항\"에 포함한 T### 번호를 나열해 추적한다(constitution \"Jira 연계\")\n \n+## Phase 9: Convergence\n+\n+- [X] T087 (BE) 만료 정리 뒤에도 만료 주소가 404(잘못된 주소)가 아니라 410 `RESULT_EXPIRED` 안내를 받게 한다 — 지금은 `PublicResultExpirySweeper`가 요청 행을 지우면 `PublicResultService.resolve`가 404를 내서, 만료 뒤 다음 정리 주기 이후로는 안내가 사라진다. FR-021의 \"요청과 공개 토큰을 지운다\"와 함께 지킬 방식(예: 토큰 원문이 아니라 해시와 만료 시각만 남기는 묘비 행)을 정해 구현하고, `PublicResultExpirySweeperIT`·`ResultApiIT`에 \"정리 뒤에도 410\" 단언을 더한다. 방식이 스키마를 바꾸면 constitution \"스키마 변경 규칙\"대로 같은 MR에 담는다 per spec Edge Case(만료된 결과 주소 안내), US1 (contradicts)\n+- [X] T088 (BE 테스트) `PublicResultExpirySweeperIT`의 공유 실행 시나리오에 결과 행(`backtest_result`)을 붙이고, 만료 요청을 지운 뒤 실행과 결과가 모두 남는지 단언한다 per T026 (partial)\n+\n+## Phase 10: Convergence\n+\n+- [X] T089 (BE) CRITICAL — 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다. 지금은 `POST /backtests`가 클라이언트가 보낸 `executionType`을 그대로 받아, 비로그인 요청이 `SEARCH_BUNDLE`·`REGIME_*`로 보내면 `backtest/application/service/ExecutionLimitPolicy.requireAdmission`이 한도 검사 없이 통과시키고, `POST /results/{token}/retry`도 원 요청의 `executionType`을 물려받아 같은 우회를 이어 간다. 비로그인 요청(요청자 없음)의 `executionType`이 `SINGLE`이 아니면 접수 단계에서 거절(400)하고, `ExecutionLimitApiIT`에 \"비로그인 비단건 접수는 거절되고 대기 실행이 늘지 않는다\"·\"공개 재시도도 같다\" 단언을 더한다. 004 소유 파일이라 리뷰어에 004 담당을 지정한다 per Constitution IX, T012 (contradicts)\n+- [X] T090 (DOCS) 묘비 결정을 설계 문서에 반영한다 — `plan.md` Storage(\"새 테이블을 만들지 않는다\")·`data-model.md` §1에 `expired_public_token`(토큰 SHA-256 해시·만료 시각, 보관 기한 `thorp.result.tombstone-retention`)과 그 이유(FR-021 삭제와 만료 안내 410을 함께 지킨다)를 더하고, `research.md` R-03에 정리 뒤 410 유지 방식을, 이 문서 Path Conventions에 `result/application/repository`·`result/infrastructure/persistence`(묘비 저장소만)를 적는다 per plan: storage decision, T087 (contradicts)\n+- [X] T091 (INFRA) 루트 `.env.example`에 `THORP_RESULT_PUBLIC_TOKEN_TTL`·`THORP_RESULT_EXPIRY_SWEEP_INTERVAL`·`THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE`·`THORP_RESULT_TOMBSTONE_RETENTION`·`THORP_RESULT_TRADES_PAGE_SIZE`를 `infra/.env.prod.example`과 같은 설명으로 더한다 per T004 (partial)\n+\n+## Phase 11: Convergence\n+\n+- [X] T092 (DOCS) `data-model.md` §1을 코드·계약에 맞춘다 — ① \"권한 판정\"에서 비로그인 취소를 빼고 \"비로그인은 공개 토큰으로 재시도만 한다. 공개 취소 경로는 두지 않는다(spec Clarification: 비교 대상을 바꿔도 앞선 실행을 취소하지 않는다, contracts/result-api.md)\"로 고친다. 재시도의 새 요청자는 호출한 사람이고 비로그인 재시도는 단건만 받는다(T089)는 점도 적는다 ② `public_token` 형을 마이그레이션과 같게 `VARCHAR(32)` + 형식 CHECK(`^[0-9a-f]{32}$`)로 고치고, CHAR가 아닌 이유(Hibernate 스키마 검증이 String 매핑과 다른 형으로 본다)를 적는다 per plan: data-model §1 (contradicts)\n+\n+## Phase 12: Code Review\n+\n+- [X] T093 (BE) 정리 작업이 실행이 끝나지 않은 비로그인 요청을 지우지 않게 한다 — 만료는 생성 시각부터 세므로 대기열이 유효 시간보다 밀리면 대기 중인 요청도 만료되는데, 그 행을 지우면 비로그인 대기 몫(`countQueuedSingleAnonymous`가 요청 행과 조인해 센다)에서 빠져 `max-queued-anonymous`가 새고 볼 사람이 없는 실행이 워커를 차지한다. `BacktestRequestJpaRepository.findExpiredAnonymous`가 종결(COMPLETED·FAILED·CANCELLED) 실행을 가리키는 요청만 고르게 하고(배치를 뽑은 뒤 거르면 끝나지 않은 행이 배치를 채워 정리가 멈춘다), `PublicResultExpirySweeperIT`에 \"QUEUED 실행의 만료 요청은 남고, 실행이 끝난 뒤 지워진다\"를 더한다 per /code-review 발견 (contradicts)\n+\n ---\n \n ## Phase 9: Convergence\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,3 +54,14 @@ DATA_DIR=/srv/thorp/data\n WORKER_REPLICAS=2\n # nginx 인증서·서버 이름에 쓰이는 도메인\n DOMAIN=example.com\n+\n+# --- 결과 공개 열람(spec 005) ---\n+# 백엔드 prod 프로필은 이 값들이 없으면 기동하지 않는다. 로컬 프로필은 application-local.yml 값을 쓴다.\n+# 유효 시간(PD-23)과 거래 내역 페이지 상한(R-11)은 팀 확정 전 임시값이다. 기간은 ISO-8601(P7D·PT10M) 형식이다.\n+# TTL 은 로그인하지 않고 낸 분석의 결과 주소가 열려 있는 시간이다 — 로그인 사용자의 결과는 만료되지 않는다.\n+THORP_RESULT_PUBLIC_TOKEN_TTL=P7D\n+THORP_RESULT_EXPIRY_SWEEP_INTERVAL=PT10M\n+THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE=100\n+# 만료로 지운 결과 주소에 \"남아 있지 않다\"(410) 안내를 이어 주는 기간. 지나면 \"잘못된 주소\"(404)다.\n+THORP_RESULT_TOMBSTONE_RETENTION=P30D\n+THORP_RESULT_TRADES_PAGE_SIZE=100\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".env.example",
+          "old_path": ".env.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2212866,
+      "head_commit_sha": "b593567b750050182fd1fc9c0e5e7d155d47897a",
+      "base_commit_sha": "31dc2fe0de92d0cf71baae41adc9fff7c062c31b",
+      "start_commit_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c",
+      "created_at": "2026-09-17T14:05:48.046+09:00",
+      "merge_request_id": 948704,
+      "state": "without_files",
+      "real_size": "30",
+      "patch_id_sha": "ddf00d4f20321203287af24aeaf9eec904c5c179",
+      "commits": [
+        {
+          "id": "b593567b750050182fd1fc9c0e5e7d155d47897a",
+          "short_id": "b593567b",
+          "created_at": "2026-09-17T13:46:25.000+09:00",
+          "parent_ids": [
+            "cade18c8b6d6ea4e37604125e624617b2fb1d59b"
+          ],
+          "title": "fix(be): 실행이 끝나지 않은 비로그인 요청은 정리하지 않는다",
+          "message": "fix(be): 실행이 끝나지 않은 비로그인 요청은 정리하지 않는다\n\nspec 005 T093(코드 리뷰). 만료는 생성 시각부터 세므로 대기열이 밀리면 대기\n중인 요청도 만료되는데, 그 행을 지우면 비로그인 대기 몫(요청 행과 조인해\n센다)에서 빠져 max-queued-anonymous 가 샜다. 만료 조회가 종결 실행을\n가리키는 요청만 고르게 하고, 실행이 끝난 뒤 다음 주기에 지운다. 조건을\n질의에 두어 끝나지 않은 행이 배치를 채워 정리가 멈추지 않게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T13:46:25.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T13:46:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b593567b750050182fd1fc9c0e5e7d155d47897a"
+        },
+        {
+          "id": "cade18c8b6d6ea4e37604125e624617b2fb1d59b",
+          "short_id": "cade18c8",
+          "created_at": "2026-09-17T13:25:50.000+09:00",
+          "parent_ids": [
+            "1a3400c6a93f89647d71e67e61efd108f362c9a9"
+          ],
+          "title": "docs(be): data-model 권한 판정과 토큰 형을 코드·계약에 맞춘다",
+          "message": "docs(be): data-model 권한 판정과 토큰 형을 코드·계약에 맞춘다\n\nspec 005 converge T092. 공개 경로는 조회·재시도만 하고 취소는 두지 않는다는\n점, 재시도 요청자·비로그인 단건 제한, public_token 이 VARCHAR(32)+CHECK 인\n이유를 data-model §1 에 반영했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T13:25:50.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T13:25:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cade18c8b6d6ea4e37604125e624617b2fb1d59b"
+        },
+        {
+          "id": "1a3400c6a93f89647d71e67e61efd108f362c9a9",
+          "short_id": "1a3400c6",
+          "created_at": "2026-09-17T12:50:25.000+09:00",
+          "parent_ids": [
+            "811011cc3c80eabcc80801fbb732d67008fb79c7"
+          ],
+          "title": "fix(be): 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다",
+          "message": "fix(be): 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다\n\nspec 005 converge T089·T090·T091.\n\n- 비로그인 POST /backtests 와 비로그인 공개 재시도는 executionType 이\n  SINGLE 이 아니면 400 이다. 한도는 단건 큐에만 있어 본문 값을 믿으면\n  비로그인 클라이언트가 SEARCH_BUNDLE 로 대기열을 무제한 채울 수 있었다\n  (원칙 IX). 접수 서비스가 아니라 HTTP 입구에서 막는 이유는 소유자가\n  없는 과거 탐색 묶음의 후보 접수를 깨지 않기 위해서다\n- plan·data-model·research R-03·tasks 경로 규칙에 묘비 표 결정을 반영했다\n- 루트 .env.example 에 THORP_RESULT_* 다섯 항목을 더했다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T12:50:25.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T12:50:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a3400c6a93f89647d71e67e61efd108f362c9a9"
+        },
+        {
+          "id": "811011cc3c80eabcc80801fbb732d67008fb79c7",
+          "short_id": "811011cc",
+          "created_at": "2026-09-17T12:27:13.000+09:00",
+          "parent_ids": [
+            "31dc2fe0de92d0cf71baae41adc9fff7c062c31b"
+          ],
+          "title": "feat(be): 정리한 만료 주소도 410 으로 안내한다",
+          "message": "feat(be): 정리한 만료 주소도 410 으로 안내한다\n\nspec 005 converge T087·T088. 정리 작업이 만료된 비로그인 요청을 지우면\n그 주소가 404(잘못된 주소)가 되어 spec Edge Case 의 \"결과가 남아 있지\n않다\" 안내가 사라지던 것을 막는다.\n\n- 요청을 지우는 트랜잭션에서 토큰의 SHA-256 해시와 만료 시각을 묘비\n  (expired_public_token)로 남기고, 조회는 요청이 없을 때 묘비가 있으면 410 이다\n- 묘비는 thorp.result.tombstone-retention 이 지나면 같은 주기에 지운다.\n  prod 는 기본값 없이 THORP_RESULT_TOMBSTONE_RETENTION 을 읽는다\n- 정리 작업 IT 에 결과 행을 붙여 실행과 결과가 남는지 확인한다(T088)\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T12:27:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T12:27:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/811011cc3c80eabcc80801fbb732d67008fb79c7"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2824449": []
+  }
+}

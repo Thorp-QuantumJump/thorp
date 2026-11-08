@@ -1,0 +1,649 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945099,
+    "iid": 123,
+    "project_id": 1444456,
+    "title": "docs: 루트 README 전면 개편",
+    "description": "<h2>작업 내용 요약</h2><p>평가자와 외부인이 Thorp의 문제, 해결 방식, 핵심 기능과 실제 구현 수준을 빠르게 이해하도록 루트 README를 전면 개편했습니다.</p><h2>관련 티켓</h2><p>ticket # S15P21E205-249<br>link: https://ssafy.atlassian.net/browse/S15P21E205-249</p><h2>주요 변경 사항</h2><ul><li>제품 문제와 전략 진단 원칙을 먼저 설명하도록 문서 흐름 재구성</li><li>백테스트, 자동 탐색, 시장, 뉴스, 인증, 내 기록의 구현 상태와 남은 경계 분리</li><li>현재 Backend-Worker 실행 구조와 Docker Compose 빠른 시작 갱신</li><li>기술 구성과 상세 문서 탐색 경로 정리</li></ul><h2>테스트</h2><p>✅ git diff --check<br>✅ 내부 Markdown 링크 19개 확인<br>✅ README 외 변경 파일 없음<br>✅ Controller, Worker, Frontend route, Compose와 상태 문장 대조<br>⚠ Docker 실행 파일이 없어 Compose 실제 기동은 미확인</p><h2>리뷰 포인트</h2><ul><li>구현 완료, 일부 구현, 후속 범위의 구분이 현재 코드와 일치하는지</li><li>평가자 관점에서 핵심 가치가 기술 설명보다 먼저 이해되는지</li><li>투자 추천이나 미검증 성능 주장으로 읽히는 표현이 없는지</li></ul>",
+    "state": "merged",
+    "created_at": "2026-09-15T16:33:27.401+09:00",
+    "updated_at": "2026-09-15T23:19:11.846+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T16:39:42.512+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/249-root-readme",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+    "merge_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T16:33:28.616+09:00",
+    "reference": "!123",
+    "references": {
+      "short": "!123",
+      "relative": "!123",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!123"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/123",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945099,
+    "iid": 123,
+    "project_id": 1444456,
+    "title": "docs: 루트 README 전면 개편",
+    "description": "<h2>작업 내용 요약</h2><p>평가자와 외부인이 Thorp의 문제, 해결 방식, 핵심 기능과 실제 구현 수준을 빠르게 이해하도록 루트 README를 전면 개편했습니다.</p><h2>관련 티켓</h2><p>ticket # S15P21E205-249<br>link: https://ssafy.atlassian.net/browse/S15P21E205-249</p><h2>주요 변경 사항</h2><ul><li>제품 문제와 전략 진단 원칙을 먼저 설명하도록 문서 흐름 재구성</li><li>백테스트, 자동 탐색, 시장, 뉴스, 인증, 내 기록의 구현 상태와 남은 경계 분리</li><li>현재 Backend-Worker 실행 구조와 Docker Compose 빠른 시작 갱신</li><li>기술 구성과 상세 문서 탐색 경로 정리</li></ul><h2>테스트</h2><p>✅ git diff --check<br>✅ 내부 Markdown 링크 19개 확인<br>✅ README 외 변경 파일 없음<br>✅ Controller, Worker, Frontend route, Compose와 상태 문장 대조<br>⚠ Docker 실행 파일이 없어 Compose 실제 기동은 미확인</p><h2>리뷰 포인트</h2><ul><li>구현 완료, 일부 구현, 후속 범위의 구분이 현재 코드와 일치하는지</li><li>평가자 관점에서 핵심 가치가 기술 설명보다 먼저 이해되는지</li><li>투자 추천이나 미검증 성능 주장으로 읽히는 표현이 없는지</li></ul>",
+    "state": "merged",
+    "created_at": "2026-09-15T16:33:27.401+09:00",
+    "updated_at": "2026-09-15T23:19:11.846+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T16:39:42.512+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/249-root-readme",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+    "merge_commit_sha": "c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T16:33:28.616+09:00",
+    "reference": "!123",
+    "references": {
+      "short": "!123",
+      "relative": "!123",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!123"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/123",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-15T16:39:19.905+09:00",
+    "latest_build_finished_at": "2026-09-15T16:39:23.604+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196370,
+      "iid": 37,
+      "project_id": 1444456,
+      "sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "ref": "docs(be)/249-root-readme",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T16:39:19.806+09:00",
+      "updated_at": "2026-09-15T16:39:23.611+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196370"
+    },
+    "head_pipeline": {
+      "id": 196370,
+      "iid": 37,
+      "project_id": 1444456,
+      "sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "ref": "docs(be)/249-root-readme",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T16:39:19.806+09:00",
+      "updated_at": "2026-09-15T16:39:23.611+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196370",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-15T16:39:19.905+09:00",
+      "finished_at": "2026-09-15T16:39:23.604+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196370",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "head_sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "start_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5b95400771299cb52d1d0deb8b003d890bb7a194",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810034,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T16:33:27.629+09:00",
+          "updated_at": "2026-09-15T16:33:27.658+09:00",
+          "system": true,
+          "noteable_id": 945099,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 123,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9231600645326591523877915b654cb33a38dde1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810035,
+          "type": null,
+          "body": "restored source branch `docs(be)/249-root-readme`",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T16:33:28.568+09:00",
+          "updated_at": "2026-09-15T16:33:28.577+09:00",
+          "system": true,
+          "noteable_id": 945099,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 123,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "abab955aeeb40606ecdbfdaae103d4fc9587ab28",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810037,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- 제품의 목적(투자 추천이 아닌 전략 진단)과 현재 구현 수준을 마크다운 표 형태로 명확히 분리하여, 평가자나 외부 기여자가 코드 상태를 오해하지 않도록 투명하게 서술했습니다.\n- Docker Compose 실행 명령을 `.env.example` 준비부터 백엔드, 워커, 프론트엔드, 종료 절차까지 단계별로 상세히 재구성하여 온보딩 경험을 크게 개선했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (문서 전용 MR이며 코드 로직이나 설정 파일의 오류를 유발하는 변경 사항은 없습니다.)\n\n### 테스트 제안\n- 새로 작성된 루트 README의 모든 상대 경로 링크(`specs/README.md`, `docs/adr/0006-backtest-request-run-split.md` 등)가 실제 파일 시스템 구조와 정확히 일치하는지 마크다운 링크 검증 도구나 수동 클릭으로 확인합니다.\n- 제시된 Docker Compose 명령 (`docker compose -f docker-compose.dev.yml --profile app up -d --build`)을 클린 환경에서 실행하여 프로필 및 컨테이너 기동이 정상적으로 완료되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:cfa461c00c142fb97e3d28a679537883cca2cac8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T16:33:34.725+09:00",
+          "updated_at": "2026-09-15T16:33:34.725+09:00",
+          "system": false,
+          "noteable_id": 945099,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 123,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ec009b3ffe14e31940d8dcb186db742c161d1105",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810109,
+          "type": null,
+          "body": "mentioned in commit c3a3a5e7d95690590c04098abb1c5bf57f80b260",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T16:39:42.593+09:00",
+          "updated_at": "2026-09-15T16:39:42.596+09:00",
+          "system": true,
+          "noteable_id": 945099,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 123,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b986bbb7cb87d45ab0efae36e19221703f2aad95",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811743,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T23:18:56.037+09:00",
+          "updated_at": "2026-09-15T23:18:56.040+09:00",
+          "system": true,
+          "noteable_id": 945099,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 123,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5acccd32b28fd9318d9d787cdb1f3c3214b7e8ef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811745,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\"><span class=\"idiff left right deletion\">[DOCS]</span> 루트 README 전면 개편</code> to <code class=\"idiff\"><span class=\"idiff left right addition\">docs:</span> 루트 README 전면 개편</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T23:19:11.914+09:00",
+          "updated_at": "2026-09-15T23:19:11.918+09:00",
+          "system": true,
+          "noteable_id": 945099,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 123,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2200661,
+      "head_commit_sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "created_at": "2026-09-15T16:33:28.199+09:00",
+      "merge_request_id": 945099,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "c9ab2d722628052111a1f91dca17abd95d1d98e1"
+    },
+    {
+      "id": 2200660,
+      "head_commit_sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "created_at": "2026-09-15T16:33:27.681+09:00",
+      "merge_request_id": 945099,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "c9ab2d722628052111a1f91dca17abd95d1d98e1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2200661,
+      "head_commit_sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "created_at": "2026-09-15T16:33:28.199+09:00",
+      "merge_request_id": 945099,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "c9ab2d722628052111a1f91dca17abd95d1d98e1",
+      "commits": [
+        {
+          "id": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+          "short_id": "cfa461c0",
+          "created_at": "2026-09-15T16:32:36.000+09:00",
+          "parent_ids": [
+            "7accca2725a28309749a1e65e6ec9358f825e7d9"
+          ],
+          "title": "docs(be): 루트 README 전면 개편",
+          "message": "docs(be): 루트 README 전면 개편\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T16:32:36.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T16:32:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cfa461c00c142fb97e3d28a679537883cca2cac8"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -2,110 +2,227 @@\n \n > Team Quantum Jump · SSAFY S15P21E205\n \n-국내 섹터 ETF의 배분 전략과 설정 조합이 과거 수익·손실·비용에 어떤 차이를 만드는지 같은 조건에서\n-비교하는 학습·시뮬레이션 플랫폼. 제품 방향과 범위의 원본은 Notion 기획서, 프로젝트 원칙은\n-[`.specify/memory/constitution.md`](.specify/memory/constitution.md)다.\n+Thorp는 국내 섹터 ETF의 배분 규칙과 설정을 **같은 기간·금액·비용 조건에서 과거 데이터로 비교**하는\n+전략 진단 플랫폼입니다. 수익이 가장 높았던 전략을 추천하는 대신, 선택한 규칙이 언제 어떻게 움직였고\n+수익·손실·거래비용에 어떤 차이를 만들었는지 확인하도록 돕습니다.\n+\n+제품 방향과 범위의 원본은 팀 Notion 기획서이며, 저장소에서 지켜야 할 원칙은\n+[`constitution`](.specify/memory/constitution.md)에 있습니다.\n+\n+## 우리가 풀려는 문제\n+\n+투자 전략은 이름만으로 비교하기 어렵습니다. 같은 전략도 대상 섹터, 리밸런싱 주기, 비용, 분석 기간이\n+달라지면 결과의 의미가 달라집니다. 설정 조합이 늘어나면 유리한 사례만 골라 보거나 서로 다른 조건의\n+결과를 같은 기준처럼 비교하기도 쉽습니다.\n+\n+Thorp는 다음 세 가지 질문에 답할 수 있는 분석 흐름을 만듭니다.\n+\n+1. **같은 조건에서 규칙을 바꾸면 결과가 어떻게 달라지는가?**\n+2. **전체 수익뿐 아니라 가장 크게 줄었던 폭과 거래비용은 어떠한가?**\n+3. **과거의 경제환경과 당시 뉴스를 함께 보면 전략의 행동을 어떻게 해석할 수 있는가?**\n+\n+## Thorp의 접근 방식\n+\n+- **비교 조건을 고정합니다.** 후보 전략은 같은 섹터 집합·평가 기간·금액·비용·정보 기준으로 계산합니다.\n+- **복잡한 계산은 시스템이 맡습니다.** 사용자는 섹터와 전략을 고르고, 계산 작업은 비동기 Worker가\n+  처리합니다.\n+- **결과와 근거를 함께 남깁니다.** 사용한 데이터·전략·비용·모델 버전과 자료 부족 여부를 기록해 같은\n+  분석을 다시 설명할 수 있게 합니다.\n+- **진단과 추천을 구분합니다.** 기본값은 입력을 돕는 출발점일 뿐 최적값이나 투자 권고가 아닙니다.\n+\n+## 핵심 기능\n+\n+### 전략 진단\n+\n+- 국내 섹터 ETF 여러 종목을 한 포트폴리오로 구성\n+- 고정 비중·동일 비중·역변동성 배분 규칙 실행\n+- 비용 차감 후 성과, 최대 하락 폭, 거래비용, 시계열, 거래·보유·비중·예외 기록 조회\n+- 비동기 실행 상태 조회와 취소·재시도·부분 결과 처리\n+- 같은 조건의 진행 중 실행 합류 및 완료 결과 재사용\n+\n+### 설정 조합 자동 비교\n+\n+- 실행 전에 후보 수와 임시 실행 한도를 확인\n+- 등록 범위를 벗어난 조합을 계산 전에 제외하고 이유를 기록\n+- 대량 후보를 별도 작업 큐로 실행하고 진행·취소·부분 완료·실패 후보 재시도 지원\n+- 사전에 정한 기준으로 표시 후보를 좁히되, 순위나 추천으로 표현하지 않음\n+- 미사용 검증 기준이 확정되지 않은 결과는 `UNVALIDATED`로 명시\n+\n+### 분석 맥락과 사용자 흐름\n+\n+- KOSPI·KOSDAQ·환율·변동성·금리·경기·물가·수출·통화량 시장 지표 API\n+- 섹터 목록과 대표 ETF 자료·출처 조회\n+- RSS·GDELT 기반 뉴스 수집, 묶음 생성, 현재·과거 뉴스 조회 API\n+- 회원가입·이메일 인증·로그인·세션 복원과 보호된 내 기록 진입점\n+\n+## 현재 구현 수준\n+\n+아래 표는 **코드와 검증 기록을 기준으로 한 현재 상태**입니다. 기능 구현, 사용자 사용성 확인, 투자 판단에\n+도움이 된다는 효과 입증은 서로 다른 단계이며, 하나를 다른 단계의 근거로 사용하지 않습니다.\n+\n+| 영역 | 현재 상태 | 확인된 범위와 남은 경계 |\n+|---|---|---|\n+| 백테스트 실행 경로 | **구현·E2E 동작 확인** | Backend 접수 → RabbitMQ → Worker → PostgreSQL → 결과 조회가 실제 프로세스로 검증됐습니다. |\n+| 배분 엔진 | **일부 전략 구현** | 고정 비중·동일 비중·역변동성은 실행됩니다. 섹터 모멘텀·최소분산은 계산 규칙 확정 전이라 접수에서 거절합니다. |\n+| 백테스트 화면 | **UI 프로토타입** | `/backtest`의 차트와 비교 화면은 예시 데이터를 사용하며 실제 백테스트 API와 아직 연결되지 않았습니다. |\n+| 자동 설정 비교 | **Backend·Frontend 구현** | 확인·접수·진행·선정·취소·재시도 화면과 API가 있습니다. 평가 분할이 미등록이라 결과는 현재 모두 `UNVALIDATED`입니다. |\n+| ETF·시장 자료 | **파이프라인·조회 API 구현, 연동 보완 중** | KRX 수집과 조회 기능이 있으나 백테스트 접수의 데이터 버전은 아직 로컬 검증용 픽스처를 가리킵니다. 외부 지표는 API 키와 제공기관 상태에 의존합니다. |\n+| 시장 흐름 | **API·일부 화면 구현** | 시장 지표 조회와 화면 구성이 있습니다. 분야별 경제환경 유사 구간 검색과 전략 비교 연결은 후속 범위입니다. |\n+| 뉴스 | **Backend API 구현** | 수집·필터·묶음·조회와 실패 격리를 검증했습니다. 사용자 화면 통합은 후속 범위입니다. |\n+| 사용자 인증 | **일부 흐름 구현** | 회원가입, 이메일 인증, 로그인, 세션 복원과 화면 접근 보호가 있습니다. Backend 로그아웃 API와 백테스트의 개발용 사용자 헤더를 세션으로 교체하는 작업은 남아 있습니다. |\n+| 내 기록 | **진입 경계만 구현** | 로그인 후 보호된 진입 화면까지 있으며 기록 목록·다시 보기·보관 기능은 아직 구현되지 않았습니다. |\n+| 배우기 | **명세 단계** | 입문자를 위한 학습 페이지와 진단 연결은 제품 범위에 포함되지만 아직 화면으로 구현되지 않았습니다. |\n+\n+백테스트 실제 실행 검증 범위와 제약은\n+[`backtest-execution-verification-2026-09.md`](docs/guides/backtest-execution-verification-2026-09.md)에서 확인할 수\n+있습니다. 전체 기능의 범위·우선순위·미확정 항목은 [`specs/README.md`](specs/README.md)가 기준입니다.\n+\n+## 백테스트 서비스 실행 구조\n+\n+```text\n+사용자\n+  │\n+  ▼\n+Frontend/API client ── 요청·상태 조회 ──▶ Backend\n+                                  │  요청 검증·실행 기록\n+                                  ▼\n+                     RabbitMQ ── 작업 큐 분배\n+                                  │\n+                                  ▼\n+                       Python Worker × N\n+                                  │  시장 자료 조회·백테스트 계산\n+                                  ▼\n+                     RabbitMQ ── 진행·결과 이벤트\n+                                  │\n+                                  ▼\n+                              Backend\n+                                  │  상태·결과 저장\n+                                  ▼\n+                            PostgreSQL\n+```\n+\n+- Backend는 백테스트를 계산하지 않고 요청을 검증한 뒤 작업을 발행합니다.\n+- 아래 Backend–Worker 경로는 구현돼 있지만 현재 백테스트 UI는 아직 이 API client 경로에 연결되지 않았습니다.\n+- `backtest.jobs`는 단건 분석, `backtest.jobs.bulk`는 자동 탐색과 파생 실행을 처리합니다.\n+- Worker는 같은 코드를 역할별로 실행하며 RabbitMQ의 competing consumers 방식으로 작업을 나눕니다.\n+- 상태는 `QUEUED → RUNNING → COMPLETED | FAILED | CANCELLED`로 변합니다. 현재 화면 갱신 방식은 폴링입니다.\n+- Kafka는 개발 환경에 설치돼 있지만 백테스트 Job 전달에는 사용하지 않습니다.\n+- Spark·Hadoop 도입은 확정 사항이 아닙니다. 실행 측정으로 병목을 확인한 뒤 결정합니다.\n+\n+메시지와 HTTP 계약은 각각 [`backtest-messaging`](docs/specs/backtest-messaging/)과\n+[`backtest-api`](docs/specs/backtest-api/)에 있으며, 요청과 실행을 분리한 설계 결정은\n+[`ADR-0006`](docs/adr/0006-backtest-request-run-split.md)에 있습니다.\n+\n+## 기술 구성\n+\n+| 영역 | 주요 기술 | 역할 |\n+|---|---|---|\n+| Frontend | React 19, TypeScript, Vite | 전략·시장·인증 화면과 결과 시각화 |\n+| Backend | Java 21, Spring Boot 3.5, Gradle | API, 실행 조정, 상태·결과 저장 |\n+| Worker | Python 3.11, pandas, NautilusTrader | 다종목 리밸런싱과 성과 계산 |\n+| Data | Python 3.11, HTTP client | KRX 가격·기업행위·섹터 자료 수집·정제 |\n+| Messaging | RabbitMQ | 단건·대량 작업 분배와 진행·결과 이벤트 전달 |\n+| Storage | PostgreSQL 16 | 사용자 요청, 실행 상태, 결과와 재현 정보 저장 |\n+| Infra | Docker Compose, Nginx, Jenkins | 로컬·운영 실행과 CI/CD |\n+\n+## 빠른 시작\n \n-> **현재 개발 범위**: 다섯 배분 전략(고정 비중·동일 비중·역변동성·섹터 모멘텀·최소분산), 자동 파라미터\n-> 대량 탐색, 전략과 독립된 분야별 경제환경 검색. **현재 코드 상태**는 아래 \"현재 구현 상태\"를 본다 —\n-> 다종목 섹터 ETF 배분 백테스트가 접수부터 결과 조회까지 끝에서 끝까지 붙어 있다.\n+### 준비물\n \n-## 목표 아키텍처\n+- Docker와 Docker Compose\n+- 프론트엔드를 실행하려면 Node.js와 npm\n+- 서비스별로 직접 개발하려면 Java 21, Python 3.11, `uv`가 추가로 필요합니다.\n \n+### 1. 환경변수 준비\n+\n+macOS/Linux:\n+\n+```bash\n+cp .env.example .env\n ```\n-사용자 → Frontend → Backend (Job 생성/조회 API)\n-                        ↓\n-                    RabbitMQ (Job 전달/분배)\n-                        ↓\n-              Backtest Worker × N (Python, 실제 연산)\n-                        ↓\n-                    PostgreSQL (결과 저장)\n+\n+Windows PowerShell:\n+\n+```powershell\n+Copy-Item .env.example .env\n ```\n \n-- Backend는 백테스트를 직접 계산하지 않고 Job을 만들어 RabbitMQ에 넣는다.\n-- Worker들이 같은 큐를 구독해 Job을 나눠 처리한다. (competing consumers, 개수를 늘려 분산 처리)\n-- 백테스트 요청은 비동기: `QUEUED → RUNNING → COMPLETED` 상태를 폴링으로 조회.\n-- Spark/Hadoop은 **계산량 실측 후** 도입을 결정한다. 그때를 대비해 연산은 Worker 뒤에,\n-  데이터는 Parquet 친화적으로 격리해 두었다.\n-\n-### 현재 구현 상태 (2026-09-15, spec 004 T001~T015 병합 기준)\n-\n-- **끝에서 끝까지 붙어 있다.** `POST /backtests` 접수 → 커밋 뒤 RabbitMQ 발행 → 워커가 001 자료로 계산 →\n-  `backtest.events`로 STARTED/PROGRESS/FINISHED → 백엔드 결과 Consumer가 PostgreSQL에 저장 → `GET /backtests/{id}`와\n-  하위 리소스(시계열·거래·보유·비중·예외)로 조회. 계약은 [`docs/specs/backtest-api/`](docs/specs/backtest-api/)와\n-  [`docs/specs/backtest-messaging/`](docs/specs/backtest-messaging/), 설계 결정은 [ADR-0006](docs/adr/0006-backtest-request-run-split.md).\n-- **워커는 다종목 리밸런싱 엔진 하나**(`portfolio_execution.py` + `allocation/`)다. 다섯 배분 전략 중 고정 비중·동일 비중·역변동성은\n-  실행되고, 섹터 모멘텀·최소분산은 계산 규칙이 팀 결정(PD-03·PD-04) 대기라 접수에서 `422 RULES_NOT_REGISTERED`로 거절한다.\n-  목표 위험 맞춤(`TARGET_RISK`) 오버레이가 있다. 단일 종목 모멘텀 DEMO 엔진은 삭제됐다.\n-- **요청과 실행은 다대일이다.** 같은 조건의 요청은 진행 중 실행에 합류하거나 완료 결과를 재사용한다. 취소는 요청 단위이고 실행 중 취소는\n-  fanout 제어 채널로 워커를 실제로 멈춰 부분 결과를 남긴다. 실패·취소한 요청은 재시도할 수 있다.\n-- **작업 큐는 둘**이다 — `backtest.jobs`(단건)·`backtest.jobs.bulk`(자동 탐색·경제환경 파생). quorum 큐 + `x-delivery-limit=1`로 워커\n-  크래시는 한 번 자동 재시도되고 두 번째는 DLQ다. 워커는 단건 전용(`WORKER_ROLE=single`)과 벌크 우선 공용(`flex`) 두 역할로 배치한다.\n-- **실행 한도 장치**(사용자별·단건 큐 전체 대기 상한 → 429, 실행 시간 상한·정체 → CANCEL, 취소 무응답 → 강제 종결)와 **측정 기록**\n-  (`backtest_run_metric`, 뷰 `v_run_metric_summary`, 운영자 API `GET /internal/execution-metrics`)이 있다. 한도 **값**은 임시값이며\n-  측정 자료로 팀이 정한다(PD-06).\n-- **아직 없는 것**: 백테스트 요청자를 로그인 세션에서 읽는 것(spec 014의 세션·CSRF 경계와 `/auth/*`는 있지만 접수는 아직 개발용 `X-User-Id`\n-  헤더, 운영자 경로는 `X-Ops-Token`), 실시간 진행 푸시(폴링으로 조회), 진짜 KRX 자료 버전을 접수가 가리키는 것(백엔드 자료 메타데이터가 아직 픽스처\n-  상수 — 001 T019와 함께 풀 후속). 끝에서 끝까지 실제로 돈 기록은 [`docs/guides/backtest-execution-verification-2026-09.md`](docs/guides/backtest-execution-verification-2026-09.md).\n-- 브로커는 RabbitMQ(ADR-0002). Kafka는 설치만 돼 있고 Job 전달에 쓰지 않는다.\n-\n-처음 코드를 읽는다면 [`backend/CLAUDE.md`](backend/CLAUDE.md)·[`worker/CLAUDE.md`](worker/CLAUDE.md)의 규칙과\n-[ADR-0006](docs/adr/0006-backtest-request-run-split.md)을 먼저 본다. 끝에서 끝까지 직접 돌려 보려면\n-[`specs/004-backtest-execution/quickstart.md`](specs/004-backtest-execution/quickstart.md)를 따른다.\n-\n-## 폴더 구조\n-\n-| 폴더        | 파트  | 스택                          | 설명 |\n-|-------------|-------|-------------------------------|------|\n-| `frontend/` | FRONT | React + Vite + TypeScript     | 알고리즘/파라미터 선택 UI, 결과 시각화 |\n-| `backend/`  | BACK  | Spring Boot 3 (Java 21, Gradle) | 백테스트 Job 생성·상태·결과 API |\n-| `worker/`   | BACK/AI | Python 3.11 + pandas        | RabbitMQ에서 Job을 받아 백테스트 실행 |\n-| `data/`     | DATA  | Python 3.11 + pykrx/pandas    | KRX 시세 수집·정제 파이프라인 |\n-| `ai/`       | AI    | Python                        | (예약) 유사 국면 탐색·GDELT 등 확장 |\n-| `infra/`    | INFRA | Docker, Compose               | Dockerfile, 배포/운영 스크립트 |\n-| `docs/`     | 공통  | Markdown                      | ADR, 스펙 문서 |\n+기본 PostgreSQL·RabbitMQ 계정은 로컬 개발용입니다. `.env`는 커밋하지 않습니다. 외부 API 키가 없어도\n+핵심 컨테이너는 실행할 수 있지만, KRX·ECOS·KOSIS·공공데이터 시장 조회와 이메일 발송은 각각의 키나\n+계정이 필요합니다. 필요한 변수와 발급 조건은 [`.env.example`](.env.example)의 주석을 확인하세요.\n \n-## 빠른 시작\n+### 2. Backend와 Worker 실행\n \n ```bash\n-# 0. 환경변수 준비\n-cp .env.example .env\n+docker compose -f docker-compose.dev.yml --profile app up -d --build\n+docker compose -f docker-compose.dev.yml ps\n+```\n \n-# 1. 인프라(PostgreSQL + RabbitMQ) 실행\n-docker compose -f docker-compose.dev.yml up -d postgres rabbitmq\n-#    기존 rabbitmq-data 볼륨이 있으면(메시지 계약 v2 이전에 백엔드를 띄운 적 있음) 작업 큐를 1회 전환한다:\n-#    ./infra/scripts/migrate-jobs-queue.sh --dev     (docs/guides/backtest-queue-migration.md)\n+이 명령은 PostgreSQL, RabbitMQ, 개발용 Kafka, Backend, 단건 Worker와 공용 Worker를 실행합니다.\n \n-# 2. 백엔드\n-cd backend && ./gradlew bootRun\n+기존 `rabbitmq-data` 볼륨을 메시지 계약 v2 이전부터 사용했다면 서비스를 올리기 전에\n+[`backtest-queue-migration.md`](docs/guides/backtest-queue-migration.md)의 안전 조건과 전환 절차를 먼저\n+확인하세요.\n \n-# 3. 워커\n-cd worker\n-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\\Scripts\\activate\n-pip install -r requirements.txt -r requirements-dev.txt\n-python -m worker.main\n+### 3. Frontend 실행\n \n-# 4. 프론트엔드\n-cd frontend && npm install && npm run dev\n+```bash\n+cd frontend\n+npm ci\n+npm run dev\n+```\n+\n+- Frontend: `http://localhost:5173`\n+- Backend health: `http://localhost:8080/actuator/health`\n+- RabbitMQ 관리 화면: `http://localhost:15672` — 로컬 기본 계정 `thorp` / `thorp`\n+\n+화면은 기능별 구현 상태에 따라 실제 API와 예시 데이터를 함께 사용합니다. 실제 백테스트 파이프라인을\n+로컬 픽스처로 재현하려면 [`spec 004 quickstart`](specs/004-backtest-execution/quickstart.md)를 따르세요.\n \n-# 5. 데이터 수집 (예시)\n-cd data\n-pip install -r requirements.txt\n-python scripts/ingest_krx.py --start 2021-01-01 --end 2026-08-26\n+### 4. 종료\n+\n+```bash\n+docker compose -f docker-compose.dev.yml --profile app down\n ```\n \n-전체를 컨테이너로 띄우려면:\n+이 명령은 컨테이너와 네트워크를 내리지만 데이터 볼륨은 보존합니다.\n+\n+## 저장소 안내\n+\n+| 경로 | 내용 | 먼저 볼 문서 |\n+|---|---|---|\n+| `frontend/` | React 화면과 API 연동 | [`frontend/CLAUDE.md`](frontend/CLAUDE.md) |\n+| `backend/` | Spring API와 실행 조정 | [`backend/CLAUDE.md`](backend/CLAUDE.md) |\n+| `worker/` | 백테스트 계산 Worker | [`worker/README.md`](worker/README.md) |\n+| `data/` | KRX 데이터 파이프라인 | [`data/README.md`](data/README.md) |\n+| `specs/` | 기능 명세·계획·작업·계약 | [`specs/README.md`](specs/README.md) |\n+| `docs/adr/` | 주요 설계 결정 | [`docs/adr/0006-backtest-request-run-split.md`](docs/adr/0006-backtest-request-run-split.md) |\n+| `docs/specs/` | 구현된 API·메시지 계약 | [`docs/specs/backtest-api/`](docs/specs/backtest-api/) |\n+| `infra/` | 이미지·배포·운영 스크립트 | [`infra/docker-compose.prod.yml`](infra/docker-compose.prod.yml) |\n+\n+## 개발과 검증\n+\n+파트별 규칙과 대표 검증 명령은 각 폴더의 `CLAUDE.md`를 따릅니다.\n \n ```bash\n-docker compose -f docker-compose.dev.yml --profile app up -d --build\n+# Backend\n+cd backend && ./gradlew spotlessCheck test\n+\n+# Frontend\n+cd frontend && npm run lint && npm run build\n+\n+# Worker\n+cd worker && uv run ruff check src tests scripts && uv run ruff format --check src tests scripts && uv run pytest\n+\n+# Data\n+cd data && uv run ruff check src scripts tests && uv run pytest\n ```\n \n-## 컨벤션\n+브랜치·커밋·Jira·AI 협업 규칙은 [`AGENTS.md`](AGENTS.md), 최상위 제품 원칙과 완료 기준은\n+[`constitution`](.specify/memory/constitution.md)을 따릅니다.\n \n-프로젝트 원칙은 [constitution](.specify/memory/constitution.md)이 최상위이고, 브랜치/커밋/MR 컨벤션과\n-AI 협업 규칙은 [CLAUDE.md](./CLAUDE.md)와 팀 Notion(Git Convention·Jira Convention)을 따른다.\n-MR 본문 양식은 `.gitlab/merge_request_templates/Default.md`가 자동 적용된다.\n+## 주의\n \n-- 브랜치: `{type}({position})/{JIRA_NUMBER}-{description}` (예: `feat(be)/12-kakao-oauth`)\n-- 커밋: `feat(be): 작업 내역 요약`\n-- 매주 금요일 버전 릴리즈\n+Thorp의 출력은 선택한 규칙을 과거 데이터로 진단한 결과입니다. 미래 수익을 보장하거나 특정 전략·ETF의\n+매매를 추천하지 않습니다. 구현된 기능, 사용성 확인, 효과 검증의 상태는 위 \"현재 구현 수준\"과 각 spec의\n+검증 기록을 기준으로 판단합니다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "README.md",
+          "old_path": "README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2200660,
+      "head_commit_sha": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "created_at": "2026-09-15T16:33:27.681+09:00",
+      "merge_request_id": 945099,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "c9ab2d722628052111a1f91dca17abd95d1d98e1",
+      "commits": [
+        {
+          "id": "cfa461c00c142fb97e3d28a679537883cca2cac8",
+          "short_id": "cfa461c0",
+          "created_at": "2026-09-15T16:32:36.000+09:00",
+          "parent_ids": [
+            "7accca2725a28309749a1e65e6ec9358f825e7d9"
+          ],
+          "title": "docs(be): 루트 README 전면 개편",
+          "message": "docs(be): 루트 README 전면 개편\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T16:32:36.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T16:32:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cfa461c00c142fb97e3d28a679537883cca2cac8"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2810037": []
+  }
+}

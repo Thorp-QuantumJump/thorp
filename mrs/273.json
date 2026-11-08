@@ -1,0 +1,826 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954332,
+    "iid": 273,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록의 설정 바꿔 비교를 005 함수에 그대로 잇고 대체 섹터 안내를 채운다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US2의 화면 몫입니다. 목록 행의 '설정 바꿔 비교'가 기록 상세의 `reopenPayload`를 005의 `prefillStrategySettings`에 **그대로** 넘겨 003 설정 화면을 열고, 섹터를 넘기지 못하면 그 자리에 문장과 섹터·비중 단계 연결을 둡니다. 002 섹터 선택 화면에서 저장 당시 섹터가 지금 대응표에 없을 때의 안내 문장을 006 몫으로 채웠고, 대체 섹터를 자동으로 고르지 않습니다.\n\n006은 인계 빌더를 만들지 않았습니다(research R4). 005 파일은 docstring 한 줄, 002 파일은 문장 하나와 주석만 바뀌었습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-391 `[FE] 설정 바꿔 비교 인계와 대체 섹터 제안`\n- Story: -378 / Epic: -377 · 선행: -385(FE-1)·-389(BE-3), 둘 다 dev 머지 완료\n\n# 주요 변경 사항\n\n- **`reopenSettings` 어댑터**(T029): `reopenSettings(detail, navigate, signal)`이 `detail.reopenPayload`를 자르거나 채우지 않고(`warmupTradingDays`도 그대로) 005 함수에 넘겨 `PrefillOutcome`을 그대로 돌려줍니다. 서버가 `available=false`로 판정했거나 사본이 없으면 005를 부르지 않고 `failed`입니다.\n- **`ReopenSettingsButton`**(T030, 005 `OtherConditionsButton`과 같은 모양·결과 처리): 상세가 없으면 `GET /my-records/{id}`로 받아 옮깁니다. `moved`·`canceled`는 아무것도 없고, `reselectSectors`는 `role=\"status\"` 문장 + `/diagnosis/sectors` 연결, `failed`는 `role=\"alert\"` 문장. 화면을 떠나면 요청을 끊습니다.\n- **행·상세 연결**: `RecordRow`의 자리표시 버튼(`aria-disabled` + \"다음 묶음에서 연결됩니다\")을 실제 버튼으로 바꿨습니다. 펼쳐 보는 층(`RecordDetailPanel`)이 상세를 받으면 `onLoaded`로 행에 올려 버튼이 다시 받지 않고, 그 상세가 `available=false`면 버튼을 감춥니다. 펼치지 않고 눌러 받은 상세도 버튼이 기억해, `available=false`면 \"열 수 없습니다\" 문장을 남기고 버튼을 거둡니다 — 같은 답을 다시 받지 않습니다. **경제환경 행은 상세 없이도 버튼을 두지 않습니다** — 옮길 조건이 없어 서버가 늘 `false`인 종류라(contracts/record-handoff.md 규칙 3) 화면이 판정하는 게 아닙니다.\n- **002 대체 섹터 안내**(T031): `SectorSelectionPage`의 `missingCount > 0` 갈래가 원래 앞문장 뒤에 006의 제안 \"아래 목록에서 대체 섹터를 직접 골라 주세요.\"를 붙입니다. 이 화면은 기록에서 왔는지 모르므로 \"저장 당시\"·\"대응표\" 같은 006 말은 쓰지 않습니다(1차 리뷰 반영, `tasks.md` T031 문구도 맞춤). `unusableCount` 문장은 그대로고, 자동 대체는 없습니다. `selectionStorage.ts`의 \"006 FR-008이 소유\" 주석을 구현을 가리키게 고쳤습니다.\n\n# 테스트\n\n- `npm run lint && npm run build && npm test` — lint 오류 0(경고 20은 기존 그대로), build 통과, Vitest 122파일 1203건 통과·skipped 0(1차 리뷰 반영 뒤 재실행), legacy 13건 통과.\n- `reopenSettings.test.ts`(새 파일, `vite.config.ts` include에 추가): 페이로드가 같은 참조로 넘어가고 `warmupTradingDays: 77` 유지, `reselectSectors` 그대로 노출, `available=false`·경제환경 상세는 005 미호출.\n- `MyRecordsPage.test.tsx` +4: 클릭 → 상세 GET → 005 호출 1회·같은 페이로드 → 003 경로로 이동; `reselectSectors` → status 문장 + 섹터·비중 연결, 이동 없음; 펼치지 않고 눌러 `available=false`를 받으면 alert 문장 + 버튼 없음 + GET 1회; `available=false` 상세를 펼치면 버튼 사라지고 상세 GET은 1회. 원칙 II 케이스는 이제 경제환경 행에 버튼이 **없음**을 단언합니다.\n- `SectorSelectionWeights.test.tsx`: 문장 정확히 일치, 남은 섹터만 체크되고 사라진 섹터의 대체가 자동 선택되지 않음.\n\n# 리뷰 포인트\n\n- **행에서 버튼을 누르기 전에는 `available`을 모릅니다.** 목록 응답에 그 값이 없어, 시나리오가 `FULL_PERIOD`가 아닌 분석은 눌렀을 때 한 번 \"이 기록은 설정 바꿔 비교로 열 수 없습니다\"를 보고 버튼이 사라집니다. 목록에 `reopenAvailable`을 실으면 그 한 번도 없앨 수 있지만 BE 왕복이 필요해 두지 않았습니다.\n- `RecordDetailPanel`은 `onLoaded`를 ref로 읽어 fetch effect의 deps에 두지 않습니다. 인라인 함수를 넘기는 호출자가 생기면 렌더마다 상세를 다시 받게 되는 지뢰였습니다(1차 리뷰 반영).\n\n# 전달만 하는 것 (티켓 아님)\n\n- **005**: `prefillStrategySettings` docstring이 이 어댑터를 가리킵니다. 시그니처를 바꾸면 006이 깨집니다.\n- **002**: `SectorSelectionPage.tsx`·`selectionStorage.ts`의 \"006 FR-008이 소유\" 주석이 \"006이 정했다\"로 바뀌고 문장이 채워졌습니다. 동작 변경은 문장 하나입니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE-4 더 보기 메뉴(이름 바꾸기·삭제, BE-6 뒤), DOCS-1.\n- `tasks.md`의 T029~T031 체크박스는 머지 뒤에 표시합니다. 이 브랜치의 마지막 커밋은 이미 dev에 머지된 BE-3(T027·T028·T032)·FE-3(T037~T040·T039a) 항목만 표시합니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-21T14:06:31.448+09:00",
+    "updated_at": "2026-09-21T14:10:40.326+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T14:10:40.075+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/391-my-record-reopen-settings",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+    "merge_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T14:06:36.621+09:00",
+    "reference": "!273",
+    "references": {
+      "short": "!273",
+      "relative": "!273",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!273"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/273",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954332,
+    "iid": 273,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록의 설정 바꿔 비교를 005 함수에 그대로 잇고 대체 섹터 안내를 채운다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US2의 화면 몫입니다. 목록 행의 '설정 바꿔 비교'가 기록 상세의 `reopenPayload`를 005의 `prefillStrategySettings`에 **그대로** 넘겨 003 설정 화면을 열고, 섹터를 넘기지 못하면 그 자리에 문장과 섹터·비중 단계 연결을 둡니다. 002 섹터 선택 화면에서 저장 당시 섹터가 지금 대응표에 없을 때의 안내 문장을 006 몫으로 채웠고, 대체 섹터를 자동으로 고르지 않습니다.\n\n006은 인계 빌더를 만들지 않았습니다(research R4). 005 파일은 docstring 한 줄, 002 파일은 문장 하나와 주석만 바뀌었습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-391 `[FE] 설정 바꿔 비교 인계와 대체 섹터 제안`\n- Story: -378 / Epic: -377 · 선행: -385(FE-1)·-389(BE-3), 둘 다 dev 머지 완료\n\n# 주요 변경 사항\n\n- **`reopenSettings` 어댑터**(T029): `reopenSettings(detail, navigate, signal)`이 `detail.reopenPayload`를 자르거나 채우지 않고(`warmupTradingDays`도 그대로) 005 함수에 넘겨 `PrefillOutcome`을 그대로 돌려줍니다. 서버가 `available=false`로 판정했거나 사본이 없으면 005를 부르지 않고 `failed`입니다.\n- **`ReopenSettingsButton`**(T030, 005 `OtherConditionsButton`과 같은 모양·결과 처리): 상세가 없으면 `GET /my-records/{id}`로 받아 옮깁니다. `moved`·`canceled`는 아무것도 없고, `reselectSectors`는 `role=\"status\"` 문장 + `/diagnosis/sectors` 연결, `failed`는 `role=\"alert\"` 문장. 화면을 떠나면 요청을 끊습니다.\n- **행·상세 연결**: `RecordRow`의 자리표시 버튼(`aria-disabled` + \"다음 묶음에서 연결됩니다\")을 실제 버튼으로 바꿨습니다. 펼쳐 보는 층(`RecordDetailPanel`)이 상세를 받으면 `onLoaded`로 행에 올려 버튼이 다시 받지 않고, 그 상세가 `available=false`면 버튼을 감춥니다. 펼치지 않고 눌러 받은 상세도 버튼이 기억해, `available=false`면 \"열 수 없습니다\" 문장을 남기고 버튼을 거둡니다 — 같은 답을 다시 받지 않습니다. **경제환경 행은 상세 없이도 버튼을 두지 않습니다** — 옮길 조건이 없어 서버가 늘 `false`인 종류라(contracts/record-handoff.md 규칙 3) 화면이 판정하는 게 아닙니다.\n- **002 대체 섹터 안내**(T031): `SectorSelectionPage`의 `missingCount > 0` 갈래가 원래 앞문장 뒤에 006의 제안 \"아래 목록에서 대체 섹터를 직접 골라 주세요.\"를 붙입니다. 이 화면은 기록에서 왔는지 모르므로 \"저장 당시\"·\"대응표\" 같은 006 말은 쓰지 않습니다(1차 리뷰 반영, `tasks.md` T031 문구도 맞춤). `unusableCount` 문장은 그대로고, 자동 대체는 없습니다. `selectionStorage.ts`의 \"006 FR-008이 소유\" 주석을 구현을 가리키게 고쳤습니다.\n\n# 테스트\n\n- `npm run lint && npm run build && npm test` — lint 오류 0(경고 20은 기존 그대로), build 통과, Vitest 122파일 1203건 통과·skipped 0(1차 리뷰 반영 뒤 재실행), legacy 13건 통과.\n- `reopenSettings.test.ts`(새 파일, `vite.config.ts` include에 추가): 페이로드가 같은 참조로 넘어가고 `warmupTradingDays: 77` 유지, `reselectSectors` 그대로 노출, `available=false`·경제환경 상세는 005 미호출.\n- `MyRecordsPage.test.tsx` +4: 클릭 → 상세 GET → 005 호출 1회·같은 페이로드 → 003 경로로 이동; `reselectSectors` → status 문장 + 섹터·비중 연결, 이동 없음; 펼치지 않고 눌러 `available=false`를 받으면 alert 문장 + 버튼 없음 + GET 1회; `available=false` 상세를 펼치면 버튼 사라지고 상세 GET은 1회. 원칙 II 케이스는 이제 경제환경 행에 버튼이 **없음**을 단언합니다.\n- `SectorSelectionWeights.test.tsx`: 문장 정확히 일치, 남은 섹터만 체크되고 사라진 섹터의 대체가 자동 선택되지 않음.\n\n# 리뷰 포인트\n\n- **행에서 버튼을 누르기 전에는 `available`을 모릅니다.** 목록 응답에 그 값이 없어, 시나리오가 `FULL_PERIOD`가 아닌 분석은 눌렀을 때 한 번 \"이 기록은 설정 바꿔 비교로 열 수 없습니다\"를 보고 버튼이 사라집니다. 목록에 `reopenAvailable`을 실으면 그 한 번도 없앨 수 있지만 BE 왕복이 필요해 두지 않았습니다.\n- `RecordDetailPanel`은 `onLoaded`를 ref로 읽어 fetch effect의 deps에 두지 않습니다. 인라인 함수를 넘기는 호출자가 생기면 렌더마다 상세를 다시 받게 되는 지뢰였습니다(1차 리뷰 반영).\n\n# 전달만 하는 것 (티켓 아님)\n\n- **005**: `prefillStrategySettings` docstring이 이 어댑터를 가리킵니다. 시그니처를 바꾸면 006이 깨집니다.\n- **002**: `SectorSelectionPage.tsx`·`selectionStorage.ts`의 \"006 FR-008이 소유\" 주석이 \"006이 정했다\"로 바뀌고 문장이 채워졌습니다. 동작 변경은 문장 하나입니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE-4 더 보기 메뉴(이름 바꾸기·삭제, BE-6 뒤), DOCS-1.\n- `tasks.md`의 T029~T031 체크박스는 머지 뒤에 표시합니다. 이 브랜치의 마지막 커밋은 이미 dev에 머지된 BE-3(T027·T028·T032)·FE-3(T037~T040·T039a) 항목만 표시합니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-21T14:06:31.448+09:00",
+    "updated_at": "2026-09-21T14:10:40.326+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T14:10:40.075+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/391-my-record-reopen-settings",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+    "merge_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T14:06:36.621+09:00",
+    "reference": "!273",
+    "references": {
+      "short": "!273",
+      "relative": "!273",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!273"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/273",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "15",
+    "latest_build_started_at": "2026-09-21T14:06:48.622+09:00",
+    "latest_build_finished_at": "2026-09-21T14:31:05.233+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 212194,
+      "iid": 269,
+      "project_id": 1444456,
+      "sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+      "ref": "feat(fe)/391-my-record-reopen-settings",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T14:06:48.487+09:00",
+      "updated_at": "2026-09-21T14:31:05.240+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212194"
+    },
+    "head_pipeline": {
+      "id": 212194,
+      "iid": 269,
+      "project_id": 1444456,
+      "sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+      "ref": "feat(fe)/391-my-record-reopen-settings",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T14:06:48.487+09:00",
+      "updated_at": "2026-09-21T14:31:05.240+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212194",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T14:06:48.622+09:00",
+      "finished_at": "2026-09-21T14:31:05.233+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212194",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "head_sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+      "start_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a08bad7b47be7fd738189b5afb7365f3fb75c0dd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846735,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:06:31.564+09:00",
+          "updated_at": "2026-09-21T14:06:31.568+09:00",
+          "system": true,
+          "noteable_id": 954332,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 273,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fd9c82396ce5364e66a85fe7e633e53bd3d52fa2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846736,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:06:33.040+09:00",
+          "updated_at": "2026-09-21T14:06:33.376+09:00",
+          "system": true,
+          "noteable_id": 954332,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 273,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d8d3b07704e7bb484bdd236e725fdd7abdec37a6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846738,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 견고한 비동기 처리**: `ReopenSettingsButton`과 `reopenSettings` 어댑터를 분리하여 005의 페이로드 구조를 그대로 활용하면서도, 취소선(`AbortController`)과 에러 핸들링을 깔끔하게 처리했습니다.\n- **메모리 및 불필요한 렌더링 방지**: `RecordDetailPanel`에서 `onLoaded` 콜백을 `useRef`로 관리하여, 인라인 함수 전달로 인해 발생할 수 있는 무한 루프나 불필요한 effect 재실행을 훌륭하게 예방했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **네트워크 실패 시나리오**: `ReopenSettingsButton`에서 `fetchMyRecord` 호출 중 네트워크 에러나 타임아웃이 발생했을 때, `DETAIL_FAILED` 메시지가 올바르게 `alert`로 노출되고 `sending` 상태가 적절히 해제되는지 테스트합니다.\n- **동일 컴포넌트 마운트 해제 후 비동기 응답 처리**: `ReopenSettingsButton`이 포함된 행이 언마운트된 직후 `fetchMyRecord`나 `prefillStrategySettings`의 프로미스가resolve될 때, `AbortSignal`에 의해 상태 업데이트가 안전하게 무시되는지(memory leak 방지) 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T14:06:44.378+09:00",
+          "updated_at": "2026-09-21T14:06:44.378+09:00",
+          "system": false,
+          "noteable_id": 954332,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 273,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0b385e8c81d929d135537dcb54d46503afff42f4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846801,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:10:38.623+09:00",
+          "updated_at": "2026-09-21T14:10:38.631+09:00",
+          "system": true,
+          "noteable_id": 954332,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 273,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6840093e37383b32a1fcbc64b9456563774c12ff",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846802,
+          "type": null,
+          "body": "mentioned in commit 935b224328315dd0dfce173c01e7c7ad25c441c1",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:10:40.074+09:00",
+          "updated_at": "2026-09-21T14:10:40.078+09:00",
+          "system": true,
+          "noteable_id": 954332,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 273,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2231825,
+      "head_commit_sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+      "base_commit_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "start_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "created_at": "2026-09-21T14:06:34.276+09:00",
+      "merge_request_id": 954332,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "5ade7fb0f1abf6d7d9a0482e3ac6515a7402df69"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2231825,
+      "head_commit_sha": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+      "base_commit_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "start_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "created_at": "2026-09-21T14:06:34.276+09:00",
+      "merge_request_id": 954332,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "5ade7fb0f1abf6d7d9a0482e3ac6515a7402df69",
+      "commits": [
+        {
+          "id": "858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8",
+          "short_id": "858d121d",
+          "created_at": "2026-09-21T13:58:18.000+09:00",
+          "parent_ids": [
+            "d397bbc08ffa9b7a5badfbd0471407ab8bcd337d"
+          ],
+          "title": "fix(fe): 002 안내 문장을 진입 경로에 참인 말로 두고 열 수 없다는 판정을 기억한다",
+          "message": "fix(fe): 002 안내 문장을 진입 경로에 참인 말로 두고 열 수 없다는 판정을 기억한다\n\n- 사라진 섹터 문장의 앞문장은 원래대로(\"이전에 골랐던 섹터 N개가 지금 목록에 없어 선택에서 빠졌습니다\"), 뒷문장이 006의 대체 제안이다. 이 화면은 기록에서 왔는지 모르므로 \"저장 당시\"·\"대응표\"는 쓰지 않는다\n- ReopenSettingsButton이 눌러서 받은 상세를 기억해 available=false면 버튼을 거두고 문장만 남긴다 — 같은 답을 다시 받지 않는다\n- RecordDetailPanel의 onLoaded를 ref로 읽어 effect deps에서 뺀다(인라인 함수를 넘기면 요청이 끝없이 돈다)\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:58:18.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:58:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/858d121d1fbbcbf9e340e4c86e32d3460cbd2aa8"
+        },
+        {
+          "id": "d397bbc08ffa9b7a5badfbd0471407ab8bcd337d",
+          "short_id": "d397bbc0",
+          "created_at": "2026-09-21T13:36:38.000+09:00",
+          "parent_ids": [
+            "f3f6929d029c192dadd16dc1e6b26a9945a2a07b"
+          ],
+          "title": "docs: 006 tasks.md에 dev 머지된 BE-3·FE-3 항목을 표시한다",
+          "message": "docs: 006 tasks.md에 dev 머지된 BE-3·FE-3 항목을 표시한다\n\nT027·T028·T032(BE-3, -389)와 T037~T040·T039a(FE-3, -388)는 dev에 머지됐다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:36:38.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:36:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d397bbc08ffa9b7a5badfbd0471407ab8bcd337d"
+        },
+        {
+          "id": "f3f6929d029c192dadd16dc1e6b26a9945a2a07b",
+          "short_id": "f3f6929d",
+          "created_at": "2026-09-21T13:36:01.000+09:00",
+          "parent_ids": [
+            "e4370de6ccc10659546cb8c32b9e20a7c6ee0ff2",
+            "86c50debc354907aded62cf2b0a715aee93db69e"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/391-my-record-reopen-settings",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/391-my-record-reopen-settings\n\n# Conflicts:\n#\tfrontend/src/pages/MyRecordsPage.test.tsx\n#\tfrontend/src/test/myRecordsFixtures.ts\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:36:01.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:36:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f3f6929d029c192dadd16dc1e6b26a9945a2a07b"
+        },
+        {
+          "id": "e4370de6ccc10659546cb8c32b9e20a7c6ee0ff2",
+          "short_id": "e4370de6",
+          "created_at": "2026-09-21T12:53:22.000+09:00",
+          "parent_ids": [
+            "c53917f64523421063c319c885205e2e825bc04b"
+          ],
+          "title": "feat(fe): 내 기록의 설정 바꿔 비교를 005 함수에 그대로 잇고 대체 섹터 안내를 채운다",
+          "message": "feat(fe): 내 기록의 설정 바꿔 비교를 005 함수에 그대로 잇고 대체 섹터 안내를 채운다\n\n- reopenSettings 어댑터가 기록 상세의 reopenPayload를 자르거나 채우지 않고 prefillStrategySettings에 넘긴다(R4)\n- 행의 '설정 바꿔 비교'가 상세를 받아(펼쳐 둔 상세가 있으면 그대로) 003 화면으로 옮기고, reselectSectors·failed는 그 자리에 문장으로 남긴다\n- 경제환경 기록과 서버가 available=false로 판정한 기록에는 버튼을 두지 않는다\n- 002 섹터 선택 화면의 사라진 섹터 안내를 006 문장으로 채우고 자동 대체는 하지 않는다(T031)\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T12:53:22.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T12:53:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e4370de6ccc10659546cb8c32b9e20a7c6ee0ff2"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -49,15 +49,21 @@ export function RecordDetailPanel({\n   recordId,\n   labels,\n   onClose,\n+  onLoaded,\n }: {\n   id: string\n   recordId: string\n   labels: RecordLabels\n   onClose: () => void\n+  /** 상세를 받으면 행에 알린다 — 행의 '설정 바꿔 비교'가 다시 받지 않게 */\n+  onLoaded?: (detail: MyRecordDetail) => void\n }) {\n   const [state, setState] = useState<State>({ status: 'loading' })\n   const [attempt, setAttempt] = useState(0)\n   const titleRef = useRef<HTMLHeadingElement>(null)\n+  // deps 에 넣지 않는다. 호출자가 인라인 함수를 넘기면 렌더마다 effect 가 다시 돌아 상세를 끝없이 받는다.\n+  const onLoadedRef = useRef(onLoaded)\n+  onLoadedRef.current = onLoaded\n   const titleId = `${id}-title`\n \n   useEffect(() => {\n@@ -70,7 +76,9 @@ export function RecordDetailPanel({\n     setState({ status: 'loading' })\n     fetchMyRecord(recordId, controller.signal).then(\n       (detail) => {\n-        if (active) setState({ status: 'loaded', detail })\n+        if (!active) return\n+        setState({ status: 'loaded', detail })\n+        onLoadedRef.current?.(detail)\n       },\n       (error: unknown) => {\n         if (!active) return\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordDetailPanel.tsx",
+          "old_path": "frontend/src/components/records/RecordDetailPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,13 +1,13 @@\n import { CloudSun, Layers, LineChart } from 'lucide-react'\n-import { forwardRef, useId } from 'react'\n+import { forwardRef, useId, useState } from 'react'\n import { Link } from 'react-router-dom'\n import { Button } from '@/components/ui/button'\n import { useDisclosure } from '@/hooks/useDisclosure'\n-import type { MyRecordListItem } from '@/types/myRecords'\n+import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'\n import { RecordDetailPanel } from './RecordDetailPanel'\n+import { ReopenSettingsButton } from './ReopenSettingsButton'\n import {\n   KIND_LABEL,\n-  REOPEN_NOT_YET,\n   STATUS_LABEL,\n   WITHDRAWN_REASON,\n   formatSavedAt,\n@@ -49,6 +49,8 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(\n ) {\n   const panelId = useId()\n   const detail = useDisclosure(panelId, initiallyOpen)\n+  // 펼쳐 보는 층이 받아 둔 상세. '설정 바꿔 비교'가 다시 받지 않고, 서버가 열 수 없다고 판정했으면 버튼을 감춘다.\n+  const [loadedDetail, setLoadedDetail] = useState<MyRecordDetail | null>(null)\n   const reasonId = useId()\n   const href = reviewHref(item)\n   const Icon = KIND_ICON[item.kind]\n@@ -120,22 +122,14 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(\n             다시 보기\n           </Button>\n         )}\n-        <Button\n-          type=\"button\"\n-          variant=\"outline\"\n-          aria-disabled=\"true\"\n-          aria-describedby={`${reasonId}-reopen`}\n-          className={DISABLED_LOOK}\n-        >\n-          설정 바꿔 비교\n-        </Button>\n+        {/* 경제환경 기록은 옮길 조건이 없어 서버가 늘 available=false 다(contracts/record-handoff.md 규칙 3). 상세를 받지 않고도 안다. */}\n+        {item.kind === 'REGIME_SEARCH' ? null : (\n+          <ReopenSettingsButton recordId={item.recordId} detail={loadedDetail} />\n+        )}\n         <Button type=\"button\" variant=\"outline\" {...detail.toggleProps}>\n           {detail.open ? '접기' : '자세히'}\n         </Button>\n       </div>\n-      <p className={styles.srOnly} id={`${reasonId}-reopen`}>\n-        {REOPEN_NOT_YET}\n-      </p>\n       {href ? null : (\n         <p id={reasonId} className={styles.hint}>\n           {WITHDRAWN_REASON}\n@@ -143,7 +137,13 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(\n       )}\n \n       {detail.open ? (\n-        <RecordDetailPanel id={panelId} recordId={item.recordId} labels={labels} onClose={detail.close} />\n+        <RecordDetailPanel\n+          id={panelId}\n+          recordId={item.recordId}\n+          labels={labels}\n+          onClose={detail.close}\n+          onLoaded={setLoadedDetail}\n+        />\n       ) : null}\n     </li>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordRow.tsx",
+          "old_path": "frontend/src/components/records/RecordRow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,94 @@\n+import { useEffect, useRef, useState } from 'react'\n+import { Link, useNavigate } from 'react-router-dom'\n+import { fetchMyRecord } from '@/api/myRecords'\n+import {\n+  type PrefillOutcome,\n+  SECTOR_SELECTION_PATH,\n+} from '@/components/result/prefillStrategySettings'\n+import { Button } from '@/components/ui/button'\n+import type { MyRecordDetail } from '@/types/myRecords'\n+import { reopenSettings } from './reopenSettings'\n+import styles from './records.module.css'\n+\n+/** 이동하지 못해 그 자리에 남기는 안내 */\n+type Notice = Extract<PrefillOutcome, { status: 'failed' | 'reselectSectors' }>\n+\n+const DETAIL_FAILED = '기록의 저장 조건을 불러오지 못해 설정 화면으로 넘길 수 없습니다. 잠시 후 다시 시도해 주세요.'\n+\n+/**\n+ * '설정 바꿔 비교'(spec 006 FR-007, T030). 005 `OtherConditionsButton`과 같은 모양·같은 결과 처리다 — 보조 모양이고,\n+ * 누르면 기록 상세를 받아(이미 있으면 그대로) `reopenSettings`로 003 설정 화면에 옮긴다.\n+ *\n+ * <p>결과 처리(contracts/record-handoff.md): `moved`는 할 일 없음, `reselectSectors`는 문장 + 섹터·비중 단계 연결,\n+ * `failed`는 문장, `canceled`(화면을 떠남)는 아무것도 없다. 화면을 떠나면 요청을 끊는다.\n+ *\n+ * <p>서버가 열 수 없다고 판정한 기록(`reopenSettings.available === false`)에는 이 버튼을 두지 않는다 — 그 판정은\n+ * 상세를 받아야 알 수 있어, 목록 행에서는 상세를 아직 모르면 버튼을 두고 눌렀을 때 판정 결과를 보인 뒤 버튼을 거둔다.\n+ */\n+export function ReopenSettingsButton({\n+  recordId,\n+  detail = null,\n+}: {\n+  recordId: string\n+  /** 펼쳐 보는 층이 이미 받아 둔 상세. 있으면 다시 받지 않는다 */\n+  detail?: MyRecordDetail | null\n+}) {\n+  const navigate = useNavigate()\n+  const [sending, setSending] = useState(false)\n+  const [notice, setNotice] = useState<Notice | null>(null)\n+  // 눌러서 직접 받아 온 상세. 열 수 없다는 판정을 기억해 버튼을 거두고, 다시 눌러도 같은 답을 다시 받지 않는다.\n+  const [learned, setLearned] = useState<MyRecordDetail | null>(null)\n+  const controllerRef = useRef<AbortController | null>(null)\n+\n+  useEffect(() => () => controllerRef.current?.abort(), [])\n+\n+  const known = detail ?? learned\n+  // 버튼만 거둔다. 눌러서 알게 된 경우에는 \"열 수 없다\" 문장은 남아야 왜 버튼이 사라졌는지 읽힌다.\n+  const unavailable = known?.reopenSettings?.available === false\n+\n+  const move = async () => {\n+    if (sending) return\n+    const controller = new AbortController()\n+    controllerRef.current = controller\n+    setSending(true)\n+    setNotice(null)\n+\n+    let loaded = known\n+    if (!loaded) {\n+      try {\n+        loaded = await fetchMyRecord(recordId, controller.signal)\n+        setLearned(loaded)\n+      } catch {\n+        if (controller.signal.aborted) return\n+        setSending(false)\n+        setNotice({ status: 'failed', message: DETAIL_FAILED })\n+        return\n+      }\n+    }\n+    const outcome = await reopenSettings(loaded, navigate, controller.signal)\n+    if (controller.signal.aborted || outcome.status === 'moved') return\n+\n+    setSending(false)\n+    if (outcome.status !== 'canceled') setNotice(outcome)\n+  }\n+\n+  return (\n+    <>\n+      {unavailable ? null : (\n+        <Button type=\"button\" variant=\"outline\" disabled={sending} onClick={() => void move()}>\n+          설정 바꿔 비교\n+        </Button>\n+      )}\n+      {notice ? (\n+        <div className={styles.alert} role={notice.status === 'failed' ? 'alert' : 'status'}>\n+          <p>{notice.message}</p>\n+          {notice.status === 'reselectSectors' ? (\n+            <Button asChild variant=\"link\" size=\"sm\" className=\"px-0\">\n+              <Link to={SECTOR_SELECTION_PATH}>섹터·비중 단계로 가기</Link>\n+            </Button>\n+          ) : null}\n+        </div>\n+      ) : null}\n+    </>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/ReopenSettingsButton.tsx",
+          "old_path": "frontend/src/components/records/ReopenSettingsButton.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -46,7 +46,6 @@ export const SORT_OPTIONS = [\n ] as const\n \n export const WITHDRAWN_REASON = '검색 결과가 철회되어 더 볼 수 없습니다.'\n-export const REOPEN_NOT_YET = \"'설정 바꿔 비교'는 다음 묶음에서 연결됩니다.\"\n \n /** 서버가 준 ISO 시각을 사용자 지역 날짜·시각으로. 지어내지 않고 못 읽으면 원문을 둔다. */\n export function formatSavedAt(value: string): string {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/recordLabels.ts",
+          "old_path": "frontend/src/components/records/recordLabels.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -176,17 +176,6 @@\n   gap: 8px 10px;\n }\n \n-.srOnly {\n-  position: absolute;\n-  width: 1px;\n-  height: 1px;\n-  margin: -1px;\n-  padding: 0;\n-  overflow: hidden;\n-  clip: rect(0 0 0 0);\n-  white-space: nowrap;\n-  border: 0;\n-}\n \n .panel {\n   display: flex;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/records.module.css",
+          "old_path": "frontend/src/components/records/records.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { regimeRecord, reopenableDetail as reopenable } from '@/test/myRecordsFixtures'\n+import type { MyRecordDetail } from '@/types/myRecords'\n+\n+/** 006 T029. research R4 — 006은 빌더를 만들지 않고 005 함수를 그대로 부른다. */\n+\n+const prefillMocks = vi.hoisted(() => ({ prefillStrategySettings: vi.fn() }))\n+\n+vi.mock('@/components/result/prefillStrategySettings', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/components/result/prefillStrategySettings')>()\n+  return { ...actual, prefillStrategySettings: prefillMocks.prefillStrategySettings }\n+})\n+\n+const { REOPEN_UNAVAILABLE, reopenSettings } = await import('./reopenSettings')\n+\n+// 경제환경 기록의 상세. 서버가 reopenSettings.available=false 로 판정하고 reopenPayload 를 만들지 않는다.\n+const regimeDetail: MyRecordDetail = {\n+  ...regimeRecord,\n+  lastViewedAt: null,\n+  referenceVersions: {},\n+  reopenSettings: { available: false },\n+}\n+\n+describe('reopenSettings', () => {\n+  beforeEach(() => {\n+    prefillMocks.prefillStrategySettings.mockReset()\n+    prefillMocks.prefillStrategySettings.mockResolvedValue({ status: 'moved' })\n+  })\n+\n+  afterEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('reopenPayload 를 005 함수에 그대로 넘긴다 — 자르거나 채우지 않고 warmupTradingDays 도 그대로다', async () => {\n+    const navigate = vi.fn()\n+    const controller = new AbortController()\n+\n+    await expect(reopenSettings(reopenable, navigate, controller.signal)).resolves.toEqual({\n+      status: 'moved',\n+    })\n+\n+    expect(prefillMocks.prefillStrategySettings).toHaveBeenCalledTimes(1)\n+    const [passed, passedNavigate, passedSignal] = prefillMocks.prefillStrategySettings.mock.calls[0]\n+    expect(passed).toBe(reopenable.reopenPayload)\n+    expect(passed.warmupTradingDays).toBe(77)\n+    expect(passedNavigate).toBe(navigate)\n+    expect(passedSignal).toBe(controller.signal)\n+  })\n+\n+  it('대응표가 달라 섹터를 넘기지 못하면 005 의 reselectSectors 결과를 그대로 드러낸다', async () => {\n+    prefillMocks.prefillStrategySettings.mockResolvedValue({\n+      status: 'reselectSectors',\n+      message: '이 결과의 섹터 대응표가 지금 대응표와 달라 섹터는 넘기지 않았습니다.',\n+    })\n+\n+    const outcome = await reopenSettings(reopenable, vi.fn())\n+\n+    expect(outcome.status).toBe('reselectSectors')\n+    expect(outcome.status === 'reselectSectors' && outcome.message).toContain('대응표')\n+  })\n+\n+  it('서버가 열 수 없다고 판정한 기록(경제환경·별도 시나리오)은 005 함수를 부르지 않는다', async () => {\n+    const navigate = vi.fn()\n+\n+    await expect(reopenSettings(regimeDetail, navigate)).resolves.toEqual({\n+      status: 'failed',\n+      message: REOPEN_UNAVAILABLE,\n+    })\n+    await expect(\n+      reopenSettings({ ...reopenable, reopenSettings: { available: false } }, navigate),\n+    ).resolves.toMatchObject({ status: 'failed' })\n+\n+    expect(prefillMocks.prefillStrategySettings).not.toHaveBeenCalled()\n+    expect(navigate).not.toHaveBeenCalled()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/reopenSettings.test.ts",
+          "old_path": "frontend/src/components/records/reopenSettings.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+import {\n+  type PrefillOutcome,\n+  prefillStrategySettings,\n+} from '@/components/result/prefillStrategySettings'\n+import type { MyRecordDetail } from '@/types/myRecords'\n+\n+export const REOPEN_UNAVAILABLE = '이 기록은 설정 바꿔 비교로 열 수 없습니다.'\n+\n+/**\n+ * 내 기록의 '설정 바꿔 비교'(spec 006 FR-007, research R4, contracts/record-handoff.md).\n+ *\n+ * <p><b>006은 인계 코드를 만들지 않는다.</b> 기록 상세의 `reopenPayload`는 005 결과의 `config`와 같은 모양이라, 005가\n+ * 006용으로 열어 둔 `prefillStrategySettings`에 <b>그대로</b> 넘긴다. 값을 자르거나 채우지 않고(`warmupTradingDays`도\n+ * 그대로), 대응표가 달라 섹터를 넘길 수 없는 판정도 그 함수가 한다. 두 벌이면 \"결과에서 열면 되는데 기록에서 열면 안 되는\"\n+ * 모습으로 어긋난다.\n+ *\n+ * <p>서버가 열 수 없다고 판정한 기록(`reopenSettings.available === false`, 경제환경·별도 시나리오)이나 사본이 없는 기록은\n+ * 부르지 않고 `failed`로 돌려준다 — 화면은 그런 기록에 버튼을 두지 않으므로 정상 경로에서는 오지 않는다.\n+ */\n+export async function reopenSettings(\n+  detail: MyRecordDetail,\n+  navigate: (path: string) => void,\n+  signal?: AbortSignal,\n+): Promise<PrefillOutcome> {\n+  if (detail.reopenSettings?.available !== true || !detail.reopenPayload) {\n+    return { status: 'failed', message: REOPEN_UNAVAILABLE }\n+  }\n+  return prefillStrategySettings(detail.reopenPayload, navigate, signal)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/reopenSettings.ts",
+          "old_path": "frontend/src/components/records/reopenSettings.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,7 +41,8 @@ import type { RegistryResponse } from '@/types/strategyRegistry'\n  * <p><b>결과에 없는 값은 앞서 고른 값이나 등록표 기본값으로 둔다.</b> 요청 사본에는 최소 평가 기간이 없어, 이\n  * 탭에서 고른 값이 있으면 그것을, 없으면 003이 처음 열릴 때와 같은 등록표 기본값을 넣는다.\n  *\n- * <p>006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019).\n+ * <p>006의 '설정 바꿔 비교'도 이 함수를 쓴다(FR-019) — `components/records/reopenSettings.ts`가 기록 상세의\n+ * `reopenPayload`(같은 `ResultConfig` 모양)를 그대로 넘긴다. 006은 빌더를 따로 두지 않는다.\n  */\n \n export const STRATEGY_SETTINGS_PATH = '/strategy'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/prefillStrategySettings.ts",
+          "old_path": "frontend/src/components/result/prefillStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,7 +11,8 @@ import type { SectorSummary } from '@/types/sector'\n  * **읽어 온 값을 신뢰하지 않는다.** `sessionStorage`는 사용자가 편집할 수 있는 자리다. 섹터\n  * 코드는 현재 `GET /sectors` 응답에 있는 코드만, 비중은 0 이상 1000 이하 정수만 받아들인다.\n  * 검사에서 빠진 항목은 **조용히 버리지 않고** 빠졌다는 사실을 돌려준다(원칙 VI). 무엇을 제안할지는\n- * 006 FR-008과 UI-01이 소유하므로 002가 정하지 않는다.\n+ * 006이 정했다(FR-008, `SectorSelectionPage`의 `missingCount` 문장) — 대체 섹터를 자동으로 고르지 않고\n+ * 사용자가 직접 고르게 한다.\n  */\n \n /** 014의 `thorp.auth.returnTarget`과 같은 이름 규칙이다(research.md 결정 3). */\n@@ -44,11 +45,11 @@ export type SelectionRestoreProblem = 'unreadable' | 'newerFormat'\n  * 보관된 항목을 쓰지 못한 까닭이다. **셋을 한 자루에 담지 않는다.**\n  *\n  * 화면이 \"지금 목록에 없어 빠졌다\"고만 말하면 비중이 망가졌거나 중복이라 빠진 항목까지 없는\n- * 섹터로 둔갑한다. 무엇을 제안할지는 006이 소유하지만, 무엇이 왜 빠졌는지 사실을 정확히\n- * 알리는 것은 002의 몫이다(원칙 VI).\n+ * 섹터로 둔갑한다. 무엇을 제안할지는 006이 정했지만(직접 고르게 한다), 무엇이 왜 빠졌는지 사실을\n+ * 정확히 알리는 것은 002의 몫이다(원칙 VI).\n  */\n export type SelectionDropReason =\n-  /** 현재 `GET /sectors` 응답에 없는 코드다. 006이 제안을 소유하는 경우가 이것이다. */\n+  /** 현재 `GET /sectors` 응답에 없는 코드다. 006의 대체 섹터 안내 문장이 붙는 경우가 이것이다. */\n   | 'notInCatalog'\n   /** 코드는 있으나 비중이 0 이상 1000 이하 정수가 아니다. */\n   | 'unusableWeight'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/selectionStorage.ts",
+          "old_path": "frontend/src/diagnosis/selectionStorage.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,6 +7,7 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'\n import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'\n import { NO_LINK_NOTICE } from '@/components/records/RegimeRecordPanel'\n import { WITHDRAWN_REASON } from '@/components/records/recordLabels'\n+import { SECTOR_SELECTION_PATH, STRATEGY_SETTINGS_PATH } from '@/components/result/prefillStrategySettings'\n import { authenticatedUser } from '@/test/authFixtures'\n import {\n   analysisDetail,\n@@ -17,6 +18,8 @@ import {\n   regimeDetailRecord,\n   regimeRecord,\n   regimeRecordFromResult,\n+  reopenableDetail,\n+  unavailableDetail,\n   withdrawnRegimeRecord,\n } from '@/test/myRecordsFixtures'\n import {\n@@ -40,6 +43,7 @@ const otherMocks = vi.hoisted(() => ({\n   getParamSearchCandidates: vi.fn(),\n   getRegimeBaselineMonths: vi.fn(),\n }))\n+const prefillMocks = vi.hoisted(() => ({ prefillStrategySettings: vi.fn() }))\n \n vi.mock('@/api/myRecords', async (importOriginal) => {\n   const actual = await importOriginal<typeof import('@/api/myRecords')>()\n@@ -53,6 +57,10 @@ vi.mock('@/api/strategyRegistry', async (importOriginal) => {\n   const actual = await importOriginal<typeof import('@/api/strategyRegistry')>()\n   return { ...actual, fetchStrategyRegistry: otherMocks.fetchStrategyRegistry }\n })\n+vi.mock('@/components/result/prefillStrategySettings', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/components/result/prefillStrategySettings')>()\n+  return { ...actual, prefillStrategySettings: prefillMocks.prefillStrategySettings }\n+})\n vi.mock('@/api/paramSearch', async (importOriginal) => {\n   const actual = await importOriginal<typeof import('@/api/paramSearch')>()\n   return {\n@@ -95,6 +103,7 @@ function renderPage(path = '/records', auth = authenticatedAuth) {\n             }\n           />\n           <Route path=\"/login\" element={<h1>로그인 화면</h1>} />\n+          <Route path={STRATEGY_SETTINGS_PATH} element={<h1>전략 설정 화면</h1>} />\n         </Routes>\n       </AuthContext.Provider>\n     </MemoryRouter>,\n@@ -109,6 +118,7 @@ describe('MyRecordsPage', () => {\n     apiMocks.fetchMyRecord.mockReset()\n     otherMocks.fetchSectorCatalog.mockReset()\n     otherMocks.fetchStrategyRegistry.mockReset()\n+    prefillMocks.prefillStrategySettings.mockReset()\n     otherMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))\n     otherMocks.fetchStrategyRegistry.mockReturnValue(new Promise(() => {}))\n     otherMocks.getParamSearch.mockReset()\n@@ -157,11 +167,83 @@ describe('MyRecordsPage', () => {\n       const primary = row.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]')\n       expect(primary).toHaveLength(1)\n       expect(primary[0].textContent).toBe('다시 보기')\n-      const reopen = within(row).getByRole('button', { name: '설정 바꿔 비교' })\n-      expect(reopen.getAttribute('data-variant')).toBe('outline')\n-      // 아직 연결되지 않은 버튼은 disabled 가 아니라 aria-disabled 다 — 초점을 받아야 사유가 읽힌다(FR-021).\n-      expect(reopen.getAttribute('aria-disabled')).toBe('true')\n     }\n+    expect(within(rows[0]).getByRole('button', { name: '설정 바꿔 비교' }).getAttribute('data-variant')).toBe(\n+      'outline',\n+    )\n+    // 경제환경 기록에는 옮길 조건이 없어 버튼을 두지 않는다(contracts/record-handoff.md 규칙 3).\n+    expect(within(rows[2]).queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()\n+  })\n+\n+  it('설정 바꿔 비교는 상세를 받아 reopenPayload 를 005 함수에 그대로 넘기고 옮긴다(FR-007, R4)', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.fetchMyRecord.mockResolvedValue(reopenableDetail)\n+    prefillMocks.prefillStrategySettings.mockImplementation(\n+      async (_payload: unknown, navigate: (path: string) => void) => {\n+        navigate(STRATEGY_SETTINGS_PATH)\n+        return { status: 'moved' as const }\n+      },\n+    )\n+\n+    renderPage()\n+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))\n+\n+    expect(await screen.findByRole('heading', { name: '전략 설정 화면' })).toBeTruthy()\n+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledWith(analysisRecord.recordId, expect.any(AbortSignal))\n+    expect(prefillMocks.prefillStrategySettings).toHaveBeenCalledTimes(1)\n+    const [passed] = prefillMocks.prefillStrategySettings.mock.calls[0]\n+    expect(passed).toBe(reopenableDetail.reopenPayload)\n+    expect(passed.warmupTradingDays).toBe(77)\n+  })\n+\n+  it('대응표가 달라 섹터를 넘기지 못하면 그 자리에 문장과 섹터·비중 단계 연결을 두고 옮기지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.fetchMyRecord.mockResolvedValue(reopenableDetail)\n+    prefillMocks.prefillStrategySettings.mockResolvedValue({\n+      status: 'reselectSectors',\n+      message: '이 결과의 섹터 대응표가 지금 대응표와 달라 섹터는 넘기지 않았습니다.',\n+    })\n+\n+    renderPage()\n+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))\n+\n+    const notice = await screen.findByRole('status')\n+    expect(notice.textContent).toContain('섹터는 넘기지 않았습니다')\n+    expect(within(notice).getByRole('link', { name: '섹터·비중 단계로 가기' }).getAttribute('href')).toBe(\n+      SECTOR_SELECTION_PATH,\n+    )\n+    expect(screen.queryByRole('heading', { name: '전략 설정 화면' })).toBeNull()\n+  })\n+\n+  it('펼치지 않고 눌러 열 수 없다는 판정을 받으면 문장을 보이고 버튼을 거둔다 — 같은 답을 다시 받지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.fetchMyRecord.mockResolvedValue(unavailableDetail)\n+\n+    renderPage()\n+    await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))\n+\n+    expect((await screen.findByRole('alert')).textContent).toContain('열 수 없습니다')\n+    expect(screen.queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()\n+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledTimes(1)\n+    expect(prefillMocks.prefillStrategySettings).not.toHaveBeenCalled()\n+  })\n+\n+  it('상세가 열 수 없다고 판정한 기록은 자세히를 열면 버튼이 사라지고, 열려 있던 상세는 다시 받지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.fetchMyRecord.mockResolvedValue(unavailableDetail)\n+\n+    renderPage()\n+    expect(await screen.findByRole('button', { name: '설정 바꿔 비교' })).toBeTruthy()\n+    await user.click(screen.getByRole('button', { name: '자세히' }))\n+\n+    await screen.findByRole('heading', { name: '저장 당시 조건' })\n+    expect(screen.queryByRole('button', { name: '설정 바꿔 비교' })).toBeNull()\n+    expect(apiMocks.fetchMyRecord).toHaveBeenCalledTimes(1)\n+    expect(prefillMocks.prefillStrategySettings).not.toHaveBeenCalled()\n   })\n \n   it('기본 보기는 상태를 보내지 않고(서버 기본 = 완료), 정렬 선택지에 성과가 없다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,7 +54,7 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {\n    */\n   const [handoffBlocked, setHandoffBlocked] = useState(false)\n \n-  // 006이 제안을 소유하는 경우(목록에서 사라진 섹터)와 보관된 값 자체를 쓸 수 없던 경우를 나눈다.\n+  // 006이 제안 문장을 정한 경우(목록에서 사라진 섹터)와 보관된 값 자체를 쓸 수 없던 경우를 나눈다.\n   const missingCount = selection.dropped.filter((item) => item.reason === 'notInCatalog').length\n   const unusableCount = selection.dropped.length - missingCount\n \n@@ -130,7 +130,7 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {\n \n       {/*\n         보관해 둔 값을 그대로 쓰지 못한 경우다. 조용히 넘어가면 사용자가 무엇을 잃었는지 알 수\n-        없다(원칙 VI). 무엇을 제안할지는 006 FR-008이 소유하므로 여기서 정하지 않는다.\n+        없다(원칙 VI). 무엇을 제안할지는 006이 정했다(FR-008) — 아래 문장이 그것이다.\n       */}\n       {selection.restoreProblem !== null ? (\n         <p className={styles.restoreNotice} role=\"status\">\n@@ -141,9 +141,16 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {\n         까닭이 다르면 다른 문장으로 알린다. 셋을 \"목록에 없어 빠졌다\" 한 문장으로 합치면 목록에\n         멀쩡히 있는 섹터를 두고 없다고 말하게 된다.\n       */}\n+      {/*\n+        사라진 섹터의 대체 제안은 006이 정했다(FR-008, research R4): 대체 섹터를 자동으로 고르지 않고 사용자가\n+        아래 목록에서 직접 고르게 한다. 이 화면은 진입 경로를 모르므로(\"기록에서 왔다\" vs \"앞선 선택을 복원했다\")\n+        앞문장은 두 경로에 다 참인 말로 두고, 뒷문장이 006의 제안이다. \"저장 당시\"·\"대응표\"는 기록에서 온 사람에게만\n+        참인 말이라 쓰지 않는다.\n+      */}\n       {missingCount > 0 ? (\n         <p className={styles.restoreNotice} role=\"status\">\n-          이전에 골랐던 섹터 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다.\n+          이전에 골랐던 섹터 {missingCount}개가 지금 목록에 없어 선택에서 빠졌습니다. 아래 목록에서 대체 섹터를\n+          직접 골라 주세요.\n         </p>\n       ) : null}\n       {unusableCount > 0 ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -326,7 +326,7 @@ describe('섹터 선택 화면의 비중 규칙', () => {\n     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)\n   })\n \n-  it('보관된 섹터가 지금 목록에 없으면 빠졌다는 사실을 알린다', async () => {\n+  it('보관된 섹터가 지금 목록에 없으면 006 문장으로 알리고 대체 섹터를 자동으로 고르지 않는다(006 FR-008)', async () => {\n     window.sessionStorage.setItem(\n       SECTOR_SELECTION_STORAGE_KEY,\n       JSON.stringify({\n@@ -342,9 +342,14 @@ describe('섹터 선택 화면의 비중 규칙', () => {\n \n     await openPage()\n \n-    // 조용히 버리지 않는다. 무엇을 제안할지는 006이 소유하므로 여기서 정하지 않는다.\n-    expect(screen.getByText(/목록에 없어 선택에서/)).toBeTruthy()\n+    // 조용히 버리지 않는다. 문장은 006이 정했다(T031): 대체 섹터는 사용자가 아래 목록에서 직접 고른다.\n+    expect(\n+      screen.getByText('이전에 골랐던 섹터 1개가 지금 목록에 없어 선택에서 빠졌습니다. 아래 목록에서 대체 섹터를 직접 골라 주세요.'),\n+    ).toBeTruthy()\n     expect(checkbox('반도체').checked).toBe(true)\n+    // 빠진 자리를 다른 섹터로 채우지 않는다 — 자동으로 바꾸면 사용자가 모르는 조건으로 분석하게 된다.\n+    expect(checkbox('2차전지').checked).toBe(false)\n+    expect(checkbox('자동차').checked).toBe(false)\n   })\n \n   it('슬라이더를 움직여도 다른 섹터의 값은 하나도 바뀌지 않는다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionWeights.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionWeights.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import type { MyRecordDetail, MyRecordListItem, MyRecordListPage } from '@/types/myRecords'\n+import { resultDetailCompleted } from './resultFixtures'\n \n type AnalysisItem = Extract<MyRecordListItem, { kind: 'ANALYSIS' }>\n type RegimeItem = Extract<MyRecordListItem, { kind: 'REGIME_SEARCH' }>\n@@ -93,6 +94,19 @@ export const analysisDetailUnjudged: MyRecordDetail = {\n   referenceVersions: { datasetVersion: 'DS-2026-09-17-001' },\n }\n \n+/** '설정 바꿔 비교'를 열 수 있는 상세. `reopenPayload`는 005 결과의 `config`와 같은 모양이고 저장 당시 실효 워밍업이 들어 있다. */\n+export const reopenableDetail: MyRecordDetail = {\n+  ...analysisDetail,\n+  reopenSettings: { available: true },\n+  reopenPayload: { ...resultDetailCompleted.config, warmupTradingDays: 77 },\n+}\n+\n+/** 서버가 열 수 없다고 판정한 분석 상세(시나리오가 FULL_PERIOD 가 아닌 결과). 버튼을 두지 않는다. */\n+export const unavailableDetail: MyRecordDetail = {\n+  ...analysisDetail,\n+  reopenSettings: { available: false },\n+}\n+\n /** 같은 검색을 전략 결과에서 열어 남은 항목. 진입 경로가 다르면 별도 항목이다(Story 3 시나리오 4). */\n export const regimeRecordFromResult: RegimeItem = {\n   ...regimeRecord,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/myRecordsFixtures.ts",
+          "old_path": "frontend/src/test/myRecordsFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,6 +23,7 @@ export default defineConfig({\n       'src/auth/**/*.test.ts',\n       'src/components/marketflow/*.test.ts',\n       'src/components/result/*.test.ts',\n+      'src/components/records/*.test.ts',\n       'src/test/resultFixtures.test.ts',\n       'src/diagnosis/**/*.test.ts',\n       'src/marketflow/**/*.test.ts',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -113,12 +113,12 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n ### Implementation for User Story 2\n \n-- [ ] T027 [US2] Add `registryDrift` to `MyRecordQueryService.detail()` in `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java`: compare the saved `config` axis values against the **current** `strategy_rules` registry (reuse the 003 registry read used by `StrategyRegistryController`), return `outOfRange` and `fields[{axis, savedValue, currentRange}]`; add `reopenSettings.available = kind == ANALYSIS && config.scenario == FULL_PERIOD` (경제환경 기록과 003이 다루지 않는 시나리오는 `false`, contracts); expose `reopenPayload` in `MyRecordDetailResponse` **in exactly the shape of 005's `PublicResultDetail.config`** (`request_spec` + `currency`·`effectiveStart`·`effectiveEnd` — `BacktestDetailResult.config(run, currency)`는 `private static`이므로 복사하지 말고 접근 범위를 넓혀(package-private 정적 헬퍼 또는 `backtest/application/result`의 공용 조립기로 추출) 006이 부른다 — 두 벌이 되면 005·006 화면이 다른 조건을 보인다) so the FE can hand it to `prefillStrategySettings` unchanged (research R4, contracts/record-handoff.md); `referenceVersions`는 `backtest_run.versions`(`data`·`mapping`·`costProfile.version`·`rules.version`·`engine`)와 `request_spec.registryVersion`에서 읽고 `worker`·`dependencies`는 담지 않는다(contracts \"referenceVersions의 출처\")\n-- [ ] T028 [P] [US2] Add `backend/src/test/java/com/ssafy/thorp/myrecord/application/RegistryDriftTest.java`: unchanged registry → `outOfRange=false`; narrowed range → the axis appears in `fields` with saved value untouched; regime record → `reopenSettings.available=false`\n+- [x] T027 [US2] Add `registryDrift` to `MyRecordQueryService.detail()` in `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java`: compare the saved `config` axis values against the **current** `strategy_rules` registry (reuse the 003 registry read used by `StrategyRegistryController`), return `outOfRange` and `fields[{axis, savedValue, currentRange}]`; add `reopenSettings.available = kind == ANALYSIS && config.scenario == FULL_PERIOD` (경제환경 기록과 003이 다루지 않는 시나리오는 `false`, contracts); expose `reopenPayload` in `MyRecordDetailResponse` **in exactly the shape of 005's `PublicResultDetail.config`** (`request_spec` + `currency`·`effectiveStart`·`effectiveEnd` — `BacktestDetailResult.config(run, currency)`는 `private static`이므로 복사하지 말고 접근 범위를 넓혀(package-private 정적 헬퍼 또는 `backtest/application/result`의 공용 조립기로 추출) 006이 부른다 — 두 벌이 되면 005·006 화면이 다른 조건을 보인다) so the FE can hand it to `prefillStrategySettings` unchanged (research R4, contracts/record-handoff.md); `referenceVersions`는 `backtest_run.versions`(`data`·`mapping`·`costProfile.version`·`rules.version`·`engine`)와 `request_spec.registryVersion`에서 읽고 `worker`·`dependencies`는 담지 않는다(contracts \"referenceVersions의 출처\")\n+- [x] T028 [P] [US2] Add `backend/src/test/java/com/ssafy/thorp/myrecord/application/RegistryDriftTest.java`: unchanged registry → `outOfRange=false`; narrowed range → the axis appears in `fields` with saved value untouched; regime record → `reopenSettings.available=false`\n - [ ] T029 [US2] **Do not create a 006 builder.** Type `MyRecordDetail.reopenPayload` as 005's `ResultConfig` (`frontend/src/types/result.ts`) in `frontend/src/types/myRecords.ts`, and add one thin adapter `frontend/src/components/records/reopenSettings.ts` exporting `reopenSettings(detail, navigate, signal)` that calls 005's `prefillStrategySettings(detail.reopenPayload, navigate, signal)` (`frontend/src/components/result/prefillStrategySettings.ts`) and returns its `PrefillOutcome`; update that file's docstring line \"006의 '설정 바꿔 비교'도 이 함수를 쓴다\" to name this adapter. Unit test `frontend/src/components/records/reopenSettings.test.ts`: payload is passed through unchanged (no clamping, `warmupTradingDays` untouched), `reselectSectors` outcome is surfaced when `mappingVersion` differs from the catalog (research R4, contracts/record-handoff.md)\n - [ ] T030 [US2] Wire '설정 바꿔 비교' in `frontend/src/components/records/RecordRow.tsx` and `RecordDetailPanel.tsx`: fetch detail if needed, call `reopenSettings(detail, navigate, signal)` (T029) with an `AbortController` tied to unmount; handle `PrefillOutcome` per contracts/record-handoff.md — `moved` nothing, `reselectSectors` show `message` in `role=\"status\"` plus a link to `/diagnosis/sectors`, `failed` show `message`, `canceled` nothing; hide the button when `reopenSettings.available === false` (model on `frontend/src/components/result/OtherConditionsButton.tsx`)\n-- [ ] T031 [US2] Fill the 006-owned proposal in `frontend/src/pages/SectorSelectionPage.tsx` (the `missingCount > 0` branch near line 57/133): replace the neutral notice with \"저장 당시 섹터 N개가 현재 대응표에 없습니다. 아래 목록에서 대체 섹터를 직접 골라 주세요.\" and **do not auto-select a replacement**; keep the `unusableCount` sentence as is. Update the \"006 FR-008이 소유\" comments there and in `frontend/src/diagnosis/selectionStorage.ts` to point at this implementation. Add a case to `frontend/src/pages/SectorSelectionPage.test.tsx`\n-- [ ] T032 [US2] Add `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordReopenIT.java` (extends `IntegrationTestSupport`): create record A, submit a second `SINGLE` request with one axis changed → new `my_record` row; submit identical conditions → no new row (FR-009); record A's `backtest_result` row unchanged (SC-003)\n+- [ ] T031 [US2] Fill the 006-owned proposal in `frontend/src/pages/SectorSelectionPage.tsx` (the `missingCount > 0` branch near line 57/133): keep the existing first sentence (\"이전에 골랐던 섹터 N개가 지금 목록에 없어 선택에서 빠졌습니다.\" — the screen does not know whether the user came from a record, so \"저장 당시\"/\"대응표\" would be false for a plain session restore) and append the 006 proposal \"아래 목록에서 대체 섹터를 직접 골라 주세요.\"; **do not auto-select a replacement**; keep the `unusableCount` sentence as is. Update the \"006 FR-008이 소유\" comments there and in `frontend/src/diagnosis/selectionStorage.ts` to point at this implementation. Add a case to `frontend/src/pages/SectorSelectionPage.test.tsx`\n+- [x] T032 [US2] Add `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordReopenIT.java` (extends `IntegrationTestSupport`): create record A, submit a second `SINGLE` request with one axis changed → new `my_record` row; submit identical conditions → no new row (FR-009); record A's `backtest_result` row unchanged (SC-003)\n \n **Checkpoint**: US1+US2. 설정 바꿔 비교 → 새 항목, 동일 조건 → 기존 항목, 범위 밖 값 → 003이 비움.\n \n@@ -136,11 +136,11 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n - [x] T034 [P] [US3] Add `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordLimitIT.java` (model on `paramsearch/ParamSearchLimitReachedTest.java`): with limit 2, third `POST /param-searches` → 409 `RECORD_LIMIT_REACHED` with `current=2, limit=2`, no `param_search` row created, no message published, existing rows intact; deleting one record lets the next intake pass\n - [x] T035 [US3] Add `POST /my-records/regime-searches` to `MyRecordController.java` + `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RecordRegimeSearchRequest.java` (`searchId`, `entryPath` validated `MARKET_FLOW|STRATEGY_RESULT`, `baselineOrigin` validated `T_G|T_ALL|USER_SPECIFIED` — **화면이 보낸다**; `SnapshotKey`에 근거가 없고 서버는 요청에서만 판정하므로 추정하지 않는다, research R15) and `MyRecordRegistrar.recordRegimeSearch(ownerId, searchId, entryPath, baselineOrigin)`: resolve snapshot via the regime read path (404 if unknown), `RegimeSearchLogWriter.append`(upsert — 있으면 열람 시각만 올리고 같은 id를 돌려준다. 찾아보고 나누면 동시에 두 번 열 때 양쪽이 \"없음\"을 읽는 틈이 생겨 리뷰에서 `findActive`·`touch`를 지우고 한 문장으로 줄였다) + `REGIME_SEARCH` row in one transaction; 200과 201은 **항목**이 이미 있는지로 가른다 (contracts, research R15). 010의 `GET /regime-searches`는 손대지 않는다\n - [x] T036 [P] [US3] Add `backend/src/test/java/com/ssafy/thorp/myrecord/RegimeRecordIT.java`: logged-in POST creates one `regime_search_log` row + one `my_record` with the posted `baseline_origin`; missing `baselineOrigin` → 400; same searchId with the other `entryPath` creates a second pair; repeat POST returns 200 and only bumps `viewed_at`; anonymous → 401 and no rows (010 FR-032)\n-- [ ] T037 [US3] In `frontend/src/pages/RegimeSearchPage.tsx`, after a search result renders and `useAuth().user` is present, call `recordRegimeSearch(result.searchId, entryPath, result.baselineOrigin)` once per `searchId` where `entryPath = location.state?.entryPath ?? 'MARKET_FLOW'` (이 화면은 시장 흐름 탐색이 기본 경로다; 005의 결과 진입 버튼이 생기면 `state.entryPath = 'STRATEGY_RESULT'`를 넘긴다 — 그 버튼은 005 소유). Failure of the record call must not block the search view; log nothing to the user beyond a non-blocking status line\n-- [ ] T038 [P] [US3] Create `frontend/src/components/records/SearchBundlePanel.tsx`: for `SEARCH_BUNDLE` rows, expand to show `searchSpace`, counts (예상·유효·완료·실패·제외·미실행), selection rule, and the candidate table from existing `getParamSearch(searchId)`/`getParamSearchCandidates` in `frontend/src/api/paramSearch.ts` with per-candidate status (완료/실패/제외/취소/미실행) and 제외 사유; `PARTIAL` shows \"부분 완료 — N/M 후보\" from `counts`; 후보를 성과순으로 재정렬하는 컨트롤을 두지 않는다(원칙 III). '다시 보기' opens the existing `/param-search` route with the `searchId`\n-- [ ] T039 [P] [US3] Create `frontend/src/components/records/RegimeRecordPanel.tsx`: mode/field/baselineMonth/baselineOrigin/entryPath, `withdrawn` notice, '다시 보기' → `/regime-search?searchId={regime.snapshotKey}` (T039a가 수신한다), and the fixed sentence \"아직 연결 정보가 없습니다 — 전략 연결은 이후 기능에서 제공됩니다\" whenever the detail has no `regime.link` (011의 `regime_link_search`·`regime_link_filter`가 아직 없어 키가 없는 상태; spec FR-012, research R9); never renders placeholder values\n-- [ ] T039a [US3] In `frontend/src/pages/RegimeSearchPage.tsx` read `useSearchParams().get('searchId')`; when present, load with existing `getRegimeSearchById(searchId, limit, signal)` (`frontend/src/api/regime.ts`) instead of the form query, show a one-line \"저장된 검색을 다시 봅니다(동일 버전 조회)\" notice, and keep the form usable for a new search (which clears the param). Extend `useRegimeSearch` with an optional `searchId` branch rather than a second hook. Test in `frontend/src/pages/RegimeSearchPage.test.tsx`: with `?searchId=` the by-id API is called and the form query is not. **010 소유 파일**이므로 010 담당에게 알린다(research R17; 007 `ParamSearchPage`의 `?searchId=` 재열기와 같은 모양)\n-- [ ] T040 [US3] Extend `frontend/src/pages/MyRecordsPage.test.tsx`: bundle row expands with candidate statuses and partial banner; regime rows with different `entryPath` render as two items; withdrawn regime row has disabled '다시 보기'; 409 `RECORD_LIMIT_REACHED` from intake renders \"저장할 수 있는 탐색 묶음 N/M\" in `frontend/src/pages/ParamSearchPage.tsx` before submit (add the error branch there)\n+- [x] T037 [US3] In `frontend/src/pages/RegimeSearchPage.tsx`, after a search result renders and `useAuth().user` is present, call `recordRegimeSearch(result.searchId, entryPath, result.baselineOrigin)` once per `searchId` where `entryPath = location.state?.entryPath ?? 'MARKET_FLOW'` (이 화면은 시장 흐름 탐색이 기본 경로다; 005의 결과 진입 버튼이 생기면 `state.entryPath = 'STRATEGY_RESULT'`를 넘긴다 — 그 버튼은 005 소유). Failure of the record call must not block the search view; log nothing to the user beyond a non-blocking status line\n+- [x] T038 [P] [US3] Create `frontend/src/components/records/SearchBundlePanel.tsx`: for `SEARCH_BUNDLE` rows, expand to show `searchSpace`, counts (예상·유효·완료·실패·제외·미실행), selection rule, and the candidate table from existing `getParamSearch(searchId)`/`getParamSearchCandidates` in `frontend/src/api/paramSearch.ts` with per-candidate status (완료/실패/제외/취소/미실행) and 제외 사유; `PARTIAL` shows \"부분 완료 — N/M 후보\" from `counts`; 후보를 성과순으로 재정렬하는 컨트롤을 두지 않는다(원칙 III). '다시 보기' opens the existing `/param-search` route with the `searchId`\n+- [x] T039 [P] [US3] Create `frontend/src/components/records/RegimeRecordPanel.tsx`: mode/field/baselineMonth/baselineOrigin/entryPath, `withdrawn` notice, '다시 보기' → `/regime-search?searchId={regime.snapshotKey}` (T039a가 수신한다), and the fixed sentence \"아직 연결 정보가 없습니다 — 전략 연결은 이후 기능에서 제공됩니다\" whenever the detail has no `regime.link` (011의 `regime_link_search`·`regime_link_filter`가 아직 없어 키가 없는 상태; spec FR-012, research R9); never renders placeholder values\n+- [x] T039a [US3] In `frontend/src/pages/RegimeSearchPage.tsx` read `useSearchParams().get('searchId')`; when present, load with existing `getRegimeSearchById(searchId, limit, signal)` (`frontend/src/api/regime.ts`) instead of the form query, show a one-line \"저장된 검색을 다시 봅니다(동일 버전 조회)\" notice, and keep the form usable for a new search (which clears the param). Extend `useRegimeSearch` with an optional `searchId` branch rather than a second hook. Test in `frontend/src/pages/RegimeSearchPage.test.tsx`: with `?searchId=` the by-id API is called and the form query is not. **010 소유 파일**이므로 010 담당에게 알린다(research R17; 007 `ParamSearchPage`의 `?searchId=` 재열기와 같은 모양)\n+- [x] T040 [US3] Extend `frontend/src/pages/MyRecordsPage.test.tsx`: bundle row expands with candidate statuses and partial banner; regime rows with different `entryPath` render as two items; withdrawn regime row has disabled '다시 보기'; 409 `RECORD_LIMIT_REACHED` from intake renders \"저장할 수 있는 탐색 묶음 N/M\" in `frontend/src/pages/ParamSearchPage.tsx` before submit (add the error branch there)\n \n **Checkpoint**: US1~US3. 세 종류가 한 목록에 있고 상한 장치가 접수 전에 동작한다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/tasks.md",
+          "old_path": "specs/006-my-records/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T14:10:38.567+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2846738": []
+  }
+}

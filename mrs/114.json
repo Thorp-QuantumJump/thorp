@@ -1,0 +1,568 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944742,
+    "iid": 114,
+    "project_id": 1444456,
+    "title": "docs: 문서 체크",
+    "description": "태스크에 체크만 안해서 따로 체크하여 mr 합니",
+    "state": "merged",
+    "created_at": "2026-09-15T14:35:14.772+09:00",
+    "updated_at": "2026-09-15T15:51:17.227+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-15T14:35:24.129+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/spec_check",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fda7ed24536e9ed5fa9546556c42454aa0eb9fa1",
+    "merge_commit_sha": "9f96e850facffe76b213218e25b65c87b33e8733",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T14:35:15.547+09:00",
+    "reference": "!114",
+    "references": {
+      "short": "!114",
+      "relative": "!114",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!114"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/114",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944742,
+    "iid": 114,
+    "project_id": 1444456,
+    "title": "docs: 문서 체크",
+    "description": "태스크에 체크만 안해서 따로 체크하여 mr 합니",
+    "state": "merged",
+    "created_at": "2026-09-15T14:35:14.772+09:00",
+    "updated_at": "2026-09-15T15:51:17.227+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-15T14:35:24.129+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/spec_check",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fda7ed24536e9ed5fa9546556c42454aa0eb9fa1",
+    "merge_commit_sha": "9f96e850facffe76b213218e25b65c87b33e8733",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T14:35:15.547+09:00",
+    "reference": "!114",
+    "references": {
+      "short": "!114",
+      "relative": "!114",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!114"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/114",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "5583b6347d17ad8d940a347e5e5e77313301a370",
+      "head_sha": "fda7ed24536e9ed5fa9546556c42454aa0eb9fa1",
+      "start_sha": "1adef092930d0836580206c4104e6e44ff35c62f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "cfa0b2d39694b624adae95f30bb322f8e2aea980",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808514,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T14:35:18.042+09:00",
+          "updated_at": "2026-09-15T14:35:18.062+09:00",
+          "system": true,
+          "noteable_id": 944742,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 114,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9db68d7611b116ee0380de52f0d50c2b5ffd8834",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808517,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n* **문서 정합성 유지**: 작업 완료 상태를 나타내는 태스크 체크박스(`- [ ]` -> `- [X]`)를 실제 수행한 작업 내용에 맞게 정확히 업데이트하여 팀 내 진행 상황 가시성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (순수한 문서/태스크 체크리스트 변경으로 코드나 빌드에 영향을 주지 않습니다.)\n\n### 테스트 제안\n* 본 변경은 마크다운 문서 내 태스크 체크박스 상태 변경(`specs/007-auto-parameter-search/tasks.md`)이므로 별도의 기능 테스트가 필요하지 않습니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fda7ed24536e9ed5fa9546556c42454aa0eb9fa1 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T14:35:22.047+09:00",
+          "updated_at": "2026-09-15T14:35:22.047+09:00",
+          "system": false,
+          "noteable_id": 944742,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 114,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e3681eeeede080dece1cdad8f8af2918d2589c81",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808518,
+          "type": null,
+          "body": "mentioned in commit 9f96e850facffe76b213218e25b65c87b33e8733",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T14:35:24.138+09:00",
+          "updated_at": "2026-09-15T14:35:24.142+09:00",
+          "system": true,
+          "noteable_id": 944742,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 114,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2b8ce5da29a325ed65d753ee84d3fc2301f1ed13",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809410,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:49:12.251+09:00",
+          "updated_at": "2026-09-15T15:49:12.258+09:00",
+          "system": true,
+          "noteable_id": 944742,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 114,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a66cad5958a13d885e58b0f2efa1b9c97041ce59",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809450,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:51:17.173+09:00",
+          "updated_at": "2026-09-15T15:51:17.177+09:00",
+          "system": true,
+          "noteable_id": 944742,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 114,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "829517ab6f65d2f5348cf8c5f53e375af7863c7d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809453,
+          "type": null,
+          "body": "left review comments",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:51:19.431+09:00",
+          "updated_at": "2026-09-15T15:51:19.433+09:00",
+          "system": true,
+          "noteable_id": 944742,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 114,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2199398,
+      "head_commit_sha": "fda7ed24536e9ed5fa9546556c42454aa0eb9fa1",
+      "base_commit_sha": "5583b6347d17ad8d940a347e5e5e77313301a370",
+      "start_commit_sha": "1adef092930d0836580206c4104e6e44ff35c62f",
+      "created_at": "2026-09-15T14:35:15.032+09:00",
+      "merge_request_id": 944742,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "5cab837b5fb9791a959de9b593821ba02fe3edfd"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2199398,
+      "head_commit_sha": "fda7ed24536e9ed5fa9546556c42454aa0eb9fa1",
+      "base_commit_sha": "5583b6347d17ad8d940a347e5e5e77313301a370",
+      "start_commit_sha": "1adef092930d0836580206c4104e6e44ff35c62f",
+      "created_at": "2026-09-15T14:35:15.032+09:00",
+      "merge_request_id": 944742,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "5cab837b5fb9791a959de9b593821ba02fe3edfd",
+      "commits": [
+        {
+          "id": "fda7ed24536e9ed5fa9546556c42454aa0eb9fa1",
+          "short_id": "fda7ed24",
+          "created_at": "2026-09-15T14:34:29.000+09:00",
+          "parent_ids": [
+            "5583b6347d17ad8d940a347e5e5e77313301a370"
+          ],
+          "title": "ãdocs: 문서 체크",
+          "message": "ãdocs: 문서 체크\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-15T14:34:29.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-15T14:34:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fda7ed24536e9ed5fa9546556c42454aa0eb9fa1"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -367,11 +367,11 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n - [ ] T117 (BE) **완료 불가(2026-09-14)** — 이번 묶음에서 끝낼 수 없다. 막는 것이 둘이다. (1) **저장할 곳이 없다**: `backtest`에 측정 클래스·테이블이 하나도 없고 `ExecutionType`에 `AUTO_SEARCH_BATCH`도 없다. `backtest_run`의 `queued_at`·`started_at`·`finished_at`·`publish_count`는 측정의 **입력**이지 측정 기록이 아니다. 내부 계약 §5가 \"007이 새 측정 저장소를 만들지 않는다\"고 정해 007 안에 만들 수도 없다. (2) **건당 원가를 정할 수 없다**: 무엇을 원가로 셀지(CPU초·워커 시간·스토리지)가 미정이라 임의로 정하면 PD-06 결정의 입력을 지어내는 셈이다(원칙 IX, constitution \"실행 전 결정 임의 확정 금지\"). 자원 사용은 워커가 기록할 몫이라 007 범위 밖이다. 소요 시간·동시 처리 수·실패 건수는 007이 이미 만들 수 있으므로, 004 T012(S15P21E205-127)가 저장소를 열면 포트만 붙이면 된다. 원래 내용: 실행 측정 기록 — 실행 유형 `AUTO_SEARCH_BATCH`로 대기 포함 소요 시간·동시 처리 수·실패·건당 원가 기록. 계산·데이터·저장 원가를 구분한다 (FR-010, FR-023, [contracts/param-search-internal.md](contracts/param-search-internal.md) §5). **측정값을 목표로 제시하지 않는다**\n - [X] T117a (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java` — 완료·부분 완료 묶음이 FR-020 기록 항목 전체(탐색 공간·탐색 방법·전체 후보·미실행 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전)를 갖는지, 제외 후보도 사유를 남기는지 검증. 이것이 FR-022가 요구하는 '한 묶음으로 다시 열리는' 저장 상태이며 006 화면 구성은 범위 밖이다 (SC-007, FR-022, 원칙 VIII)\n-- [ ] T118 (BE) `./gradlew spotlessApply` 적용과 `./gradlew test` 통과 확인\n+- [X] T118 (BE) `./gradlew spotlessApply` 적용과 `./gradlew test` 통과 확인\n \n ### Frontend\n \n-- [ ] T119 (FE) `npm run lint`와 `npm test` 통과 확인\n+- [X] T119 (FE) `npm run lint`와 `npm test` 통과 확인\n \n ### 문서\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-15T14:35:17.959+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2808517": []
+  }
+}

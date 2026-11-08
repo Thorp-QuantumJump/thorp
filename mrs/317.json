@@ -1,0 +1,824 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959209,
+    "iid": 317,
+    "project_id": 1444456,
+    "title": "feat(be): 내가 써 본 전략·설정 조합 조회 API를 추가한다",
+    "description": "# 작업 내용 요약\n\n로그인한 사용자가 단일 분석에서 돌려 본 **전략 + 설정값 조합**을 중복 없이 최근 순으로 돌려주는 `GET /my-records/used-strategies`를 추가했습니다. 005 결과 화면의 '비교 대상 고르기'가 등록표 기본값 외에 \"내가 바꿔 돌렸던 설정\"을 후보로 올리기 위한 원천입니다(`S15P21E205-419`가 씁니다). 결과나 실행 식별자는 싣지 않고 조합만 돌려줍니다 — 조건은 기준 결과에서 오고, 같은 조건의 완료 실행이 있는지는 004 동일 버전 재사용이 답합니다.\n\n# 경로 이동 (2026-09-23 오후)\n\n처음엔 `GET /backtests/used-strategies`(004)에 두었는데, 화면이 후보의 이름표로 **내 기록 항목 이름**을 쓰게 되면서 006으로 옮겼습니다. 기록 이름은 006만 알고 004→006 의존을 만들 수 없어서입니다. 004에는 요청 이력으로 실행을 읽는 저장소 질의(`BacktestRunRepository.findRecentRequestedBy`)만 남습니다. 응답에 `recordName`(살아 있는 항목 이름, 지웠으면 `null`)이 더해져 FR-017의 삭제 표시를 자연히 따릅니다. 계약은 006 contracts `my-records-api.md`로 옮기고 backtest-api README §1.12는 가리키는 글만 남겼습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-418 `[BE] 내가 돌려 본 전략·설정 조합 조회 API`\n- Story: -300(같은 조건의 두 결과를 한 그래프에) / Epic: -30 · 후속: -419(FE 여러 대상 비교)\n\n# 주요 변경 사항\n\n- **`GET /my-records/used-strategies`**(로그인 필요, 401 `AUTHENTICATION_REQUIRED`): 요청자의 `SINGLE` 요청이 가리키는 실행에서 `strategyId`·`rulesVersion`·`parameters`를 읽어 `strategyId`+`parameters` 구조적 같음으로 접습니다. 최근 요청 순, 상한 20건. 탐색 묶음(`SEARCH_BUNDLE`)이 만든 실행은 사용자가 고른 설정이 아니라 제외합니다.\n- **저장소**: `BacktestRunRepository.findRecentRequestedBy(requesterId, executionType, limit)` — 요청 표와 조인해 요청 최신순으로 실행을 읽습니다. `distinct`를 쓰지 않고(정렬 기준이 선택 목록에 없어 Postgres가 거부) 서비스가 조합 단위로 접습니다. 최근 200요청까지 읽습니다.\n- **문서**: `docs/specs/backtest-api/README.md` §1.12, 004 contracts `rest-api.md`에 절 추가. 006 FR-017의 \"005는 등록표에서 고른다\"를 \"등록표와 분석 요청 이력(조합만)에서 고른다\"로 고쳤습니다 — 내 기록 목록을 읽지 않으므로 006 삭제와 여전히 무관합니다.\n\n# 테스트\n\n- `./gradlew spotlessApply build` — 전체 통과(8분 35초, 2006건·skipped 4·실패 0). Docker Desktop이 내려가 있으면 IT가 조용히 skipped 로 잡히므로 리포트의 `skipped` 수를 함께 봤습니다.\n- 새 IT `BacktestUsedStrategiesApiIT` 3건: 같은 조합 반복(동일 버전 재사용 포함)은 한 건·다른 설정값은 별건·최근 순, 남의 요청과 탐색 묶음 제외, 비로그인 401. 실제 접수 경로(`BacktestService.create`)로 이력을 만듭니다.\n\n# 리뷰 포인트\n\n- 조합의 같음에 `rulesVersion`을 넣지 않았습니다. 같은 설정을 규칙 버전이 바뀐 뒤 다시 돌렸어도 사용자에게는 한 조합이라고 봤습니다. 응답에는 참고용으로 실어 두었고, 새 비교 요청은 현재 등록표 버전을 씁니다.\n- `parameters`는 접수가 저장한 JSON 그대로입니다. 등록표가 바뀌면 현재 축·범위에 맞지 않을 수 있어 **화면이 현재 등록표로 다시 판정**하도록 계약에 적었습니다. 서버가 걸러내면 등록표 판정 로직이 두 곳이 됩니다.\n- 스캔 200요청·상한 20조합은 고정값입니다. 설정으로 뺄 이유가 아직 없어 상수로 두었습니다.\n\n# 전달만 하는 것\n\n- 이 API의 화면 쪽 사용(후보 목록·여러 대상 비교)은 `S15P21E205-419`입니다.\n\n# 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T16:35:31.016+09:00",
+    "updated_at": "2026-09-24T16:43:34.961+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T16:43:35.002+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/418-used-strategies",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+    "merge_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T16:35:32.571+09:00",
+    "reference": "!317",
+    "references": {
+      "short": "!317",
+      "relative": "!317",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!317"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/317",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959209,
+    "iid": 317,
+    "project_id": 1444456,
+    "title": "feat(be): 내가 써 본 전략·설정 조합 조회 API를 추가한다",
+    "description": "# 작업 내용 요약\n\n로그인한 사용자가 단일 분석에서 돌려 본 **전략 + 설정값 조합**을 중복 없이 최근 순으로 돌려주는 `GET /my-records/used-strategies`를 추가했습니다. 005 결과 화면의 '비교 대상 고르기'가 등록표 기본값 외에 \"내가 바꿔 돌렸던 설정\"을 후보로 올리기 위한 원천입니다(`S15P21E205-419`가 씁니다). 결과나 실행 식별자는 싣지 않고 조합만 돌려줍니다 — 조건은 기준 결과에서 오고, 같은 조건의 완료 실행이 있는지는 004 동일 버전 재사용이 답합니다.\n\n# 경로 이동 (2026-09-23 오후)\n\n처음엔 `GET /backtests/used-strategies`(004)에 두었는데, 화면이 후보의 이름표로 **내 기록 항목 이름**을 쓰게 되면서 006으로 옮겼습니다. 기록 이름은 006만 알고 004→006 의존을 만들 수 없어서입니다. 004에는 요청 이력으로 실행을 읽는 저장소 질의(`BacktestRunRepository.findRecentRequestedBy`)만 남습니다. 응답에 `recordName`(살아 있는 항목 이름, 지웠으면 `null`)이 더해져 FR-017의 삭제 표시를 자연히 따릅니다. 계약은 006 contracts `my-records-api.md`로 옮기고 backtest-api README §1.12는 가리키는 글만 남겼습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-418 `[BE] 내가 돌려 본 전략·설정 조합 조회 API`\n- Story: -300(같은 조건의 두 결과를 한 그래프에) / Epic: -30 · 후속: -419(FE 여러 대상 비교)\n\n# 주요 변경 사항\n\n- **`GET /my-records/used-strategies`**(로그인 필요, 401 `AUTHENTICATION_REQUIRED`): 요청자의 `SINGLE` 요청이 가리키는 실행에서 `strategyId`·`rulesVersion`·`parameters`를 읽어 `strategyId`+`parameters` 구조적 같음으로 접습니다. 최근 요청 순, 상한 20건. 탐색 묶음(`SEARCH_BUNDLE`)이 만든 실행은 사용자가 고른 설정이 아니라 제외합니다.\n- **저장소**: `BacktestRunRepository.findRecentRequestedBy(requesterId, executionType, limit)` — 요청 표와 조인해 요청 최신순으로 실행을 읽습니다. `distinct`를 쓰지 않고(정렬 기준이 선택 목록에 없어 Postgres가 거부) 서비스가 조합 단위로 접습니다. 최근 200요청까지 읽습니다.\n- **문서**: `docs/specs/backtest-api/README.md` §1.12, 004 contracts `rest-api.md`에 절 추가. 006 FR-017의 \"005는 등록표에서 고른다\"를 \"등록표와 분석 요청 이력(조합만)에서 고른다\"로 고쳤습니다 — 내 기록 목록을 읽지 않으므로 006 삭제와 여전히 무관합니다.\n\n# 테스트\n\n- `./gradlew spotlessApply build` — 전체 통과(8분 35초, 2006건·skipped 4·실패 0). Docker Desktop이 내려가 있으면 IT가 조용히 skipped 로 잡히므로 리포트의 `skipped` 수를 함께 봤습니다.\n- 새 IT `BacktestUsedStrategiesApiIT` 3건: 같은 조합 반복(동일 버전 재사용 포함)은 한 건·다른 설정값은 별건·최근 순, 남의 요청과 탐색 묶음 제외, 비로그인 401. 실제 접수 경로(`BacktestService.create`)로 이력을 만듭니다.\n\n# 리뷰 포인트\n\n- 조합의 같음에 `rulesVersion`을 넣지 않았습니다. 같은 설정을 규칙 버전이 바뀐 뒤 다시 돌렸어도 사용자에게는 한 조합이라고 봤습니다. 응답에는 참고용으로 실어 두었고, 새 비교 요청은 현재 등록표 버전을 씁니다.\n- `parameters`는 접수가 저장한 JSON 그대로입니다. 등록표가 바뀌면 현재 축·범위에 맞지 않을 수 있어 **화면이 현재 등록표로 다시 판정**하도록 계약에 적었습니다. 서버가 걸러내면 등록표 판정 로직이 두 곳이 됩니다.\n- 스캔 200요청·상한 20조합은 고정값입니다. 설정으로 뺄 이유가 아직 없어 상수로 두었습니다.\n\n# 전달만 하는 것\n\n- 이 API의 화면 쪽 사용(후보 목록·여러 대상 비교)은 `S15P21E205-419`입니다.\n\n# 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T16:35:31.016+09:00",
+    "updated_at": "2026-09-24T16:43:34.961+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T16:43:35.002+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/418-used-strategies",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+    "merge_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T16:35:32.571+09:00",
+    "reference": "!317",
+    "references": {
+      "short": "!317",
+      "relative": "!317",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!317"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/317",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-24T16:35:41.450+09:00",
+    "latest_build_finished_at": "2026-09-24T16:43:45.288+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 220959,
+      "iid": 342,
+      "project_id": 1444456,
+      "sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+      "ref": "feat(be)/418-used-strategies",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T16:35:41.342+09:00",
+      "updated_at": "2026-09-24T16:43:45.293+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220959"
+    },
+    "head_pipeline": {
+      "id": 220959,
+      "iid": 342,
+      "project_id": 1444456,
+      "sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+      "ref": "feat(be)/418-used-strategies",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T16:35:41.342+09:00",
+      "updated_at": "2026-09-24T16:43:45.293+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220959",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-24T16:35:41.450+09:00",
+      "finished_at": "2026-09-24T16:43:45.288+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220959",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "head_sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+      "start_sha": "1d6ad2340fdac251675582e06c3b26eb21c99bf3"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "cbb920b016a0b06148c77952141c528a5db80982",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865891,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T16:35:31.130+09:00",
+          "updated_at": "2026-09-24T16:35:31.134+09:00",
+          "system": true,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ee2fd7de7fcd5a90cf367c89e411e874d5f1b237",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865892,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T16:35:31.153+09:00",
+          "updated_at": "2026-09-24T16:35:31.161+09:00",
+          "system": true,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4132e1157b0a66a3684c3f7a11b8916196caa3e4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865894,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T16:35:39.227+09:00",
+          "updated_at": "2026-09-24T16:35:39.237+09:00",
+          "system": true,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8b21a724daa940612ca49a86a9eeaa95808c0b60",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865896,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **설계와 책임 분리**: 사용자의 과거 분석 조합을 조회하는 기능을 `004`(백테스트) 대신 기록과 이름을 관리하는 `006`(마이레코드) 영역으로 정확히 배치하여, 기록 항목 이름(`recordName`)과 실행 이력 간의 의존성 문제를 깔끔하게 해결했습니다.\n- **성능 및 확장성 고려**: 데이터베이스에서 대량의 이력을 가져올 때 발생할 수 있는 문제를 방지하기 위해 스캔 상한(`USED_STRATEGY_SCAN = 200`)과 결과 상한(`USED_STRATEGY_LIMIT = 20`)을 명시적인 상수로 정의하고, 애플리케이션 레벨에서 조합 단위로 정교하게 중복을 제거(`LinkedHashMap`)했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **대량 요청 이력 처리 및 상한 테스트**: 사용자가 200건을 초과하는 단일 백테스트 요청 이력을 가지고 있을 때, `USED_STRATEGY_SCAN` 제한 내에서 중복이 제거된 고유 조합이 올바르게 상한 20건까지만 반환되는지 검증합니다.\n- **삭제된 기록 항목 처리 테스트**: 특정 조합을 생성한 내 기록 항목이 삭제(`recordName`이 `null`이 되는 상황)되었을 때, API 응답의 `recordName`이 `null`로 잘 내려오며 화면 계약(전략 이름 대체)에 부합하는지 확인합니다.\n- **구조적 파라미터 동등성 테스트**: JSON 필드의 순서가 다르거나 내부 공백/표현 방식에 차이가 있는 `parameters`맵이 주어졌을 때, 서비스 레이어에서 구조적으로 동일한 조합으로 인식하여 올바르게 접히는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c2f04150de12f7678cf327bd4b10be4c0f3afe61 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-24T16:35:40.978+09:00",
+          "updated_at": "2026-09-24T16:35:40.978+09:00",
+          "system": false,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6ae0793dbf99d32ada184697fbae5978a96c0e9e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865910,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for c2f04150de12f7678cf327bd4b10be4c0f3afe61 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T16:38:57.402+09:00",
+          "updated_at": "2026-09-24T16:38:57.405+09:00",
+          "system": true,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5feb4a52eb524205a551f3bf282ab7956ea6dea7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865917,
+          "type": null,
+          "body": "mentioned in commit 067f9feebfebe163e0816961bf3750eb419f1cfc",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T16:43:34.996+09:00",
+          "updated_at": "2026-09-24T16:43:35.001+09:00",
+          "system": true,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4392d969813762cb313c48686b19d112294f10b1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885017,
+          "type": null,
+          "body": "mentioned in commit 7e6ce182935cd6c221236cca4daed7a41873108e",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.474+09:00",
+          "updated_at": "2026-10-13T15:16:08.485+09:00",
+          "system": true,
+          "noteable_id": 959209,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 317,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248111,
+      "head_commit_sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "1d6ad2340fdac251675582e06c3b26eb21c99bf3",
+      "created_at": "2026-09-24T16:35:31.693+09:00",
+      "merge_request_id": 959209,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "887fe3525f6fe21e7d48c773baaccb94aa401da8"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248111,
+      "head_commit_sha": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "1d6ad2340fdac251675582e06c3b26eb21c99bf3",
+      "created_at": "2026-09-24T16:35:31.693+09:00",
+      "merge_request_id": 959209,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "887fe3525f6fe21e7d48c773baaccb94aa401da8",
+      "commits": [
+        {
+          "id": "c2f04150de12f7678cf327bd4b10be4c0f3afe61",
+          "short_id": "c2f04150",
+          "created_at": "2026-09-23T17:18:46.000+09:00",
+          "parent_ids": [
+            "1980b0790924bb22aa7ebb1f6d3cc32a5b3d38dd"
+          ],
+          "title": "refactor(be): 써 본 조합 조회를 006으로 옮기고 내 기록 이름을 붙인다",
+          "message": "refactor(be): 써 본 조합 조회를 006으로 옮기고 내 기록 이름을 붙인다\n\nGET /backtests/used-strategies → GET /my-records/used-strategies. 조합의 이름표는\n그 실행을 가리키는 살아 있는 내 기록 항목의 이름(recordName)이고, 지운 항목은 null 이라\n006 FR-017 의 삭제 표시를 따른다. 004 는 기록 이름을 모르므로 유스케이스가 006 에 있어야\n한다. 004 에는 요청 이력으로 실행을 읽는 저장소 질의만 남긴다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T17:18:46.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T17:18:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c2f04150de12f7678cf327bd4b10be4c0f3afe61"
+        },
+        {
+          "id": "1980b0790924bb22aa7ebb1f6d3cc32a5b3d38dd",
+          "short_id": "1980b079",
+          "created_at": "2026-09-23T09:42:56.000+09:00",
+          "parent_ids": [
+            "d309e30ce9e68a6bd370db915c083221ab8c0f45"
+          ],
+          "title": "docs(be): 써 본 전략·설정 조합 조회 계약을 적고 006 FR-017을 맞춘다",
+          "message": "docs(be): 써 본 전략·설정 조합 조회 계약을 적고 006 FR-017을 맞춘다\n\nbacktest-api README §1.12와 004 contracts에 절을 더한다. 006 FR-017의\n\"005는 등록표에서 고른다\"를 등록표와 분석 요청 이력(조합만)으로 고친다 —\n내 기록 목록을 읽지 않으므로 006 삭제와는 여전히 무관하다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T09:42:56.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T09:42:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1980b0790924bb22aa7ebb1f6d3cc32a5b3d38dd"
+        },
+        {
+          "id": "d309e30ce9e68a6bd370db915c083221ab8c0f45",
+          "short_id": "d309e30c",
+          "created_at": "2026-09-23T09:42:55.000+09:00",
+          "parent_ids": [
+            "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+          ],
+          "title": "feat(be): 내가 써 본 전략·설정 조합 조회 API를 추가한다",
+          "message": "feat(be): 내가 써 본 전략·설정 조합 조회 API를 추가한다\n\nGET /backtests/used-strategies. 요청자의 SINGLE 요청이 가리키는 실행에서\nstrategyId·rulesVersion·parameters를 읽어 strategyId+parameters 구조적 같음으로\n접는다. 최근 요청 순, 상한 20건, 탐색 묶음 실행은 제외한다. 005 비교 후보의\n원천이며 결과·실행 식별자는 싣지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T09:42:55.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T09:42:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d309e30ce9e68a6bd370db915c083221ab8c0f45"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.backtest.application.repository;\n import com.ssafy.thorp.backtest.application.result.RunView;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n import com.ssafy.thorp.backtest.domain.model.CancelReason;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n import java.time.Instant;\n import java.util.Collection;\n import java.util.List;\n@@ -99,6 +100,15 @@ public interface BacktestRunRepository {\n \n     Optional<BacktestRun> findByBacktestId(String backtestId);\n \n+    /**\n+     * 이 사용자의 요청이 가리키는 실행을 요청 최신순으로. 같은 실행을 여러 요청이 가리키면 여러 번 나온다 — 부른 쪽이 조합 단위로 접는다(spec 005 비교 후보,\n+     * {@code GET /backtests/used-strategies}).\n+     *\n+     * @param executionType 이 유형의 요청만. 탐색 묶음이 만든 실행은 사용자가 고른 설정이 아니라서 후보에서 뺀다\n+     */\n+    List<BacktestRun> findRecentRequestedBy(\n+            long requesterId, ExecutionType executionType, int limit);\n+\n     /**\n      * 같은 동일 버전 키의 접수를 직렬화한다(R-02, T010). 트랜잭션이 끝나면 저절로 풀린다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestRunRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestRunRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -69,6 +69,20 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L\n     @Query(\"update BacktestRunJpaEntity r set r.publishCount = r.publishCount + 1 where r.id = :id\")\n     int incrementPublishCount(@Param(\"id\") Long id);\n \n+    /**\n+     * 요청 표와 조인해 이 사용자의 요청 최신순으로 실행을 읽는다. {@code distinct}를 쓰지 않는 이유: 정렬 기준({@code req.id})이 선택 목록에\n+     * 없어 Postgres 가 거부한다. 중복은 부른 쪽이 접는다.\n+     */\n+    @Query(\n+            \"select run from BacktestRunJpaEntity run, BacktestRequestJpaEntity req\"\n+                    + \" where req.runId = run.id and req.requesterId = :requesterId\"\n+                    + \" and req.executionType = :executionType\"\n+                    + \" order by req.id desc\")\n+    List<BacktestRunJpaEntity> findRecentRequestedBy(\n+            @Param(\"requesterId\") long requesterId,\n+            @Param(\"executionType\") ExecutionType executionType,\n+            Limit limit);\n+\n     /** 취소 경로: 실행 행을 잠근 채 활성 요청 수를 세고 갱신한다(R-04). */\n     @Lock(LockModeType.PESSIMISTIC_WRITE)\n     @Query(\"select r from BacktestRunJpaEntity r where r.id = :id\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -161,6 +161,13 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {\n         jpaRepository.markWorkerInfo(runId, queue, role);\n     }\n \n+    @Override\n+    public List<BacktestRun> findRecentRequestedBy(\n+            long requesterId, ExecutionType executionType, int limit) {\n+        return toDomain(\n+                jpaRepository.findRecentRequestedBy(requesterId, executionType, Limit.of(limit)));\n+    }\n+\n     @Override\n     public List<BacktestRun> findStaleRunning(Instant since, int limit) {\n         return toDomain(jpaRepository.findStale(RunStatus.RUNNING, since, Limit.of(limit)));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import java.util.Map;\n+\n+/**\n+ * 사용자가 단일 분석에서 써 본 전략·설정값 조합 하나({@code GET /my-records/used-strategies}, spec 005 비교 후보).\n+ *\n+ * <p>결과가 아니라 <b>조합</b>이다. 005 비교는 조건(섹터·기간·비용)을 기준 결과에서 가져오고 이 조합만 상대편에 붙여 004 에 새로 요청한다. 그래서 어느\n+ * 실행에서 나왔는지, 그 실행이 끝났는지는 싣지 않는다 — 같은 조건의 완료 실행이 있으면 004 의 동일 버전 재사용이 알아서 돌려준다.\n+ *\n+ * @param recordName 그 조합을 가리키는 살아 있는 내 기록 항목의 이름. 사용자가 붙인 이름이라 화면이 후보의 이름표로 쓴다. 항목을 지웠거나 없으면 {@code\n+ *     null}이고 화면은 전략 이름으로 대신한다(006 FR-017의 삭제 표시를 따른다)\n+ * @param rulesVersion 그 실행이 쓴 규칙 버전. 참고 표시용이다 — 새 요청은 현재 등록표의 버전을 싣는다\n+ * @param parameters 003 등록표 축 이름 기준의 설정값. 접수가 저장한 값 그대로다\n+ */\n+public record UsedStrategy(\n+        String strategyId,\n+        String recordName,\n+        String rulesVersion,\n+        Map<String, Object> parameters) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/UsedStrategy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/UsedStrategy.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,8 @@ import com.ssafy.thorp.backtest.application.port.message.Scenario;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n import com.ssafy.thorp.backtest.application.service.ExecutionPolicy;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n@@ -12,11 +14,13 @@ import com.ssafy.thorp.myrecord.application.result.MyRecordDetail;\n import com.ssafy.thorp.myrecord.application.result.MyRecordPage;\n import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n import com.ssafy.thorp.myrecord.application.result.SourceVersions;\n+import com.ssafy.thorp.myrecord.application.result.UsedStrategy;\n import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n import com.ssafy.thorp.regime.domain.vo.SnapshotKey;\n import java.time.Clock;\n import java.time.Instant;\n import java.util.LinkedHashMap;\n+import java.util.List;\n import java.util.Map;\n import org.springframework.stereotype.Service;\n import org.springframework.transaction.annotation.Transactional;\n@@ -208,4 +212,46 @@ public class MyRecordQueryService {\n             target.put(key, value);\n         }\n     }\n+\n+    /** 요청 이력을 조합 단위로 접을 때 한 번에 읽는 요청 수. 같은 조합을 되풀이한 사용자라도 이 안에서 스무 조합은 나온다. */\n+    private static final int USED_STRATEGY_SCAN = 200;\n+\n+    /** 후보 상한. 비교 목록이 이보다 길면 고르는 화면이 아니라 검색 화면이 된다(원칙 II). */\n+    private static final int USED_STRATEGY_LIMIT = 20;\n+\n+    /**\n+     * 이 사용자가 단일 분석에서 써 본 전략·설정값 조합, 최근 순·중복 없이({@code GET /my-records/used-strategies}, 005 비교 후보).\n+     *\n+     * <p>조합의 같음은 {@code strategyId}와 {@code parameters}의 구조적 같음이다 — 접수가 저장한 JSON 이라 키 순서는 같음에 영향이\n+     * 없다. 규칙 버전은 같음에 넣지 않는다. 같은 설정을 규칙 버전이 바뀐 뒤 다시 돌렸어도 사용자에게는 한 조합이다.\n+     *\n+     * <p>이름은 그 실행을 가리키는 <b>살아 있는</b> 내 기록 항목에서 읽는다. 지운 항목은 이름을 주지 않으므로 화면은 전략 이름으로 대신한다 (FR-017).\n+     * 여기가 006 안에 있는 이유다 — 004 는 기록 이름을 모른다.\n+     */\n+    @Transactional(readOnly = true)\n+    public List<UsedStrategy> usedStrategies(long ownerId) {\n+        Map<List<Object>, UsedStrategy> byCombination = new LinkedHashMap<>();\n+        for (BacktestRun run :\n+                runs.findRecentRequestedBy(ownerId, ExecutionType.SINGLE, USED_STRATEGY_SCAN)) {\n+            List<Object> key = List.of(run.getStrategyId(), run.getParameters());\n+            if (byCombination.containsKey(key)) {\n+                continue;\n+            }\n+            String recordName =\n+                    records.findActiveByOwnerAndRun(ownerId, run.getId())\n+                            .map(record -> record.name().value())\n+                            .orElse(null);\n+            byCombination.put(\n+                    key,\n+                    new UsedStrategy(\n+                            run.getStrategyId(),\n+                            recordName,\n+                            run.getPlan().rulesVersion(),\n+                            run.getParameters()));\n+            if (byCombination.size() >= USED_STRATEGY_LIMIT) {\n+                break;\n+            }\n+        }\n+        return List.copyOf(byCombination.values());\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,6 +21,7 @@ import com.ssafy.thorp.myrecord.presentation.request.RenameMyRecordRequest;\n import com.ssafy.thorp.myrecord.presentation.response.DeletedMyRecordResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;\n+import com.ssafy.thorp.myrecord.presentation.response.UsedStrategiesResponse;\n import jakarta.validation.Valid;\n import java.nio.charset.StandardCharsets;\n import java.time.LocalDate;\n@@ -112,6 +113,18 @@ public class MyRecordController {\n                 ApiResponse.ok(MyRecordListResponse.from(queryService.list(ownerId, query))));\n     }\n \n+    /**\n+     * 이 사용자가 단일 분석에서 써 본 전략·설정값 조합(005 비교 후보, `S15P21E205-418`). 결과 화면이 '내 전략' 후보를 채울 때 읽는다.\n+     *\n+     * <p>{@code /{recordId}}와는 리터럴 우선 규칙으로 갈린다.\n+     */\n+    @GetMapping(\"/used-strategies\")\n+    public ResponseEntity<ApiResponse<UsedStrategiesResponse>> usedStrategies() {\n+        long ownerId = currentRequester.requireRequesterId();\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(UsedStrategiesResponse.from(queryService.usedStrategies(ownerId))));\n+    }\n+\n     /**\n      * 경제환경 검색을 기록으로 남긴다(spec 006 T035, research R15). 010의 {@code GET /regime-searches}는 바뀌지 않는다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+package com.ssafy.thorp.myrecord.presentation.response;\n+\n+import com.ssafy.thorp.myrecord.application.result.UsedStrategy;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * {@code GET /my-records/used-strategies} 응답. 계약은 {@code\n+ * specs/006-my-records/contracts/my-records-api.md}.\n+ *\n+ * <p>중복 없이 최근 순이다. 설정값은 접수가 저장한 JSON 그대로 내보낸다 — 화면이 현재 등록표로 유효성을 다시 판정한다.\n+ */\n+public record UsedStrategiesResponse(List<Item> items) {\n+\n+    public static UsedStrategiesResponse from(List<UsedStrategy> used) {\n+        return new UsedStrategiesResponse(\n+                used.stream()\n+                        .map(\n+                                u ->\n+                                        new Item(\n+                                                u.strategyId(),\n+                                                u.recordName(),\n+                                                u.rulesVersion(),\n+                                                u.parameters()))\n+                        .toList());\n+    }\n+\n+    /**\n+     * @param recordName 그 조합을 가리키는 내 기록 항목 이름. 지웠거나 없으면 {@code null}\n+     */\n+    public record Item(\n+            String strategyId,\n+            String recordName,\n+            String rulesVersion,\n+            Map<String, Object> parameters) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/UsedStrategiesResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/UsedStrategiesResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,128 @@\n+package com.ssafy.thorp.myrecord;\n+\n+import static com.ssafy.thorp.support.Requesters.as;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.service.BacktestService;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.support.IntegrationTestSupport;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * {@code GET /my-records/used-strategies}(006 contracts, spec 005 비교 후보).\n+ *\n+ * <p>요청 이력에서 전략·설정값 조합을 접고 내 기록 항목 이름을 붙이는지 본다. 실제 접수 경로({@link BacktestService#create})로 요청을 만들어\n+ * 동일 버전 재사용(REUSED)이 낀 이력도 한 조합으로 나오는지 함께 고정한다.\n+ */\n+class MyRecordUsedStrategiesApiIT extends IntegrationTestSupport {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private long newUser() {\n+        String suffix = \"used\" + (System.nanoTime() % 1_000_000_000L);\n+        String email = suffix + \"@example.com\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    /**\n+     * 다른 IT 와 기간을 겹치지 않게 둔다 — 본문이 같으면 동일 버전 키가 같아 저쪽 실행에 합류한다. {@code registryVersion}은 싣지 않는다 — 이\n+     * 픽스처의 parameters 는 등록표 축 이름이 아니라 접수가 등록표 판정을 걸면 409 다.\n+     */\n+    private static CreateBacktestCommand request(\n+            long requesterId, ExecutionType type, String strategyId, Map<String, Object> params) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                type,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", null),\n+                        new CreateBacktestCommand.AllocationItem(\"BATTERY\", \"305720.XKRX\", null)),\n+                strategyId,\n+                \"1\",\n+                null,\n+                params,\n+                LocalDate.of(2024, 3, 4),\n+                LocalDate.of(2024, 9, 30),\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 조합의 반복 요청은 한 건으로 접고, 설정값이 다르면 별건이며, 최근 것이 앞이다\")\n+    void collapsesRepeatedCombinationsNewestFirst() throws Exception {\n+        long user = newUser();\n+        Map<String, Object> monthly = Map.of(\"rebalance\", \"MONTH_END\");\n+        Map<String, Object> quarterly = Map.of(\"rebalance\", \"QUARTER_END\");\n+\n+        backtestService.create(request(user, ExecutionType.SINGLE, \"EQUAL_WEIGHT\", monthly));\n+        backtestService.create(request(user, ExecutionType.SINGLE, \"EQUAL_WEIGHT\", quarterly));\n+        // 같은 조합을 다시 — 동일 버전 재사용으로 실행은 공유하지만 요청은 새로 생긴다.\n+        backtestService.create(request(user, ExecutionType.SINGLE, \"EQUAL_WEIGHT\", monthly));\n+\n+        mockMvc.perform(get(\"/my-records/used-strategies\").with(as(user)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.items.length()\").value(2))\n+                .andExpect(jsonPath(\"$.data.items[0].strategyId\").value(\"EQUAL_WEIGHT\"))\n+                .andExpect(jsonPath(\"$.data.items[0].parameters.rebalance\").value(\"MONTH_END\"))\n+                .andExpect(jsonPath(\"$.data.items[0].rulesVersion\").value(\"1\"))\n+                // 접수가 만든 내 기록 항목의 이름이 조합의 이름표로 붙는다.\n+                .andExpect(jsonPath(\"$.data.items[0].recordName\").isString())\n+                .andExpect(jsonPath(\"$.data.items[1].parameters.rebalance\").value(\"QUARTER_END\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"남의 요청과 탐색 묶음이 만든 실행은 보이지 않는다\")\n+    void excludesOtherUsersAndSearchBundles() throws Exception {\n+        long user = newUser();\n+        long other = newUser();\n+\n+        backtestService.create(\n+                request(other, ExecutionType.SINGLE, \"EQUAL_WEIGHT\", Map.of(\"rebalance\", \"W\")));\n+        backtestService.create(\n+                request(\n+                        user,\n+                        ExecutionType.SEARCH_BUNDLE,\n+                        \"EQUAL_WEIGHT\",\n+                        Map.of(\"rebalance\", \"BUNDLE\")));\n+\n+        mockMvc.perform(get(\"/my-records/used-strategies\").with(as(user)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.items.length()\").value(0));\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그인 없이는 401 AUTHENTICATION_REQUIRED 다\")\n+    void requiresLogin() throws Exception {\n+        mockMvc.perform(get(\"/my-records/used-strategies\"))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordUsedStrategiesApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordUsedStrategiesApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -251,6 +251,11 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 \n   옛 행은 이미 접수된 실행의 발행·재시도만 쓰고 새 요청은 고를 수 없다. 그래서 전략당 한 행이라는 계약은 버전이 늘어도 그대로다\n   (DB 부분 유니크 인덱스 `uk_strategy_rules_current`가 보장한다).\n \n+## 1.12 내가 써 본 전략·설정 조합\n+\n+`GET /my-records/used-strategies`로 006이 제공한다(`S15P21E205-418`). 004 는 요청 이력에서 실행을 읽는 저장소 질의만 두고, 내 기록 항목 이름을 붙이는 일은 006 몫이다. 계약은\n+[`specs/006-my-records/contracts/my-records-api.md`](../../../specs/006-my-records/contracts/my-records-api.md).\n+\n ## 2. 결과 조회\n \n 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec \"API 응답 분리\"). 필드 의미·타입·nullable 규칙은\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -286,6 +286,29 @@\n 이용 범위가 다른 자료가 섞여 있으면 **허용된 부분만 담고 제외 항목을 명시한다**(Edge Cases). 파일을\n 아예 만들지 않는 처리는 하지 않는다.\n \n+## GET /my-records/used-strategies\n+\n+005 결과 화면의 '비교 대상 고르기'가 **내 전략** 후보를 채울 때 읽는다(`S15P21E205-418`). 로그인 필요.\n+\n+```json\n+{ \"success\": true,\n+  \"data\": { \"items\": [\n+    { \"strategyId\": \"INVERSE_VOLATILITY\", \"recordName\": \"반도체·이차전지·은행 역변동성 9/23\", \"rulesVersion\": \"1\",\n+      \"parameters\": { \"lookbackDays\": 126, \"rebalancePeriod\": { \"mode\": \"CALENDAR\", \"unit\": \"MONTH_END\" }, \"maxWeight\": 50 } },\n+    { \"strategyId\": \"EQUAL_WEIGHT\", \"recordName\": null, \"rulesVersion\": \"1\",\n+      \"parameters\": { \"rebalancePeriod\": { \"mode\": \"CALENDAR\", \"unit\": \"QUARTER_END\" } } } ] },\n+  \"error\": null }\n+```\n+\n+- 이 사용자의 **`executionType=SINGLE` 요청**이 가리키는 실행에서 `strategyId`·`parameters`를 읽어 **조합 단위로 접는다**. 같은 조합을 여러 번\n+  돌렸어도(동일 버전 재사용 포함) 한 건이다. 같음은 `strategyId`와 `parameters`의 구조적 같음이고 `rulesVersion`은 같음에 넣지 않는다.\n+- **최근 요청 순**, 상한 20건. 탐색 묶음(`SEARCH_BUNDLE`)이 만든 실행은 사용자가 고른 설정이 아니라 나가지 않는다.\n+- `recordName`은 그 조합의 가장 최근 실행을 가리키는 **살아 있는** 내 기록 항목의 이름이다. 항목을 지웠으면 `null`이고 화면은 전략 이름으로 대신한다\n+  (FR-017 삭제 표시). 결과·실행·기록 식별자는 나가지 않는다 — 이 응답은 \"무엇으로 돌렸는가\"이고, 그 조합을 지금 조건에 붙인 결과가 이미 있는지는\n+  `POST /backtests`의 동일 버전 재사용(`resultSource: REUSED`)이 답한다.\n+- `parameters`는 접수가 저장한 JSON 그대로다(003 등록표 축 이름). 등록표가 바뀐 뒤에는 현재 축·허용 범위에 맞지 않을 수 있으므로 **화면이 현재\n+  등록표로 유효성을 다시 판정**하고, 맞지 않는 조합은 후보에서 뺀다. 새 비교 요청에는 이 응답의 `rulesVersion`이 아니라 004 `GET /backtests/registry`의 현재 버전을 싣는다.\n+\n ## 오류\n \n | 상황 | status · code |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/contracts/my-records-api.md",
+          "old_path": "specs/006-my-records/contracts/my-records-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -158,7 +158,7 @@\n \n #### 정리·보관·개인정보 (§5, D14)\n \n-- **FR-017**: 사용자는 항목 이름을 바꾸고 항목을 삭제할 수 있다. 삭제는 확인 뒤 수행한다. **삭제 단위는 개인 기록 항목(소유·이름·목록 노출·경제환경 연결 대상으로서의 지위)이며 그가 가리키는 공용 계산 결과(결과·거래 내역·참조 버전)는 삭제하지 않는다.** FR-009의 동일 결과 재사용 구조라 같은 결과를 다른 사용자의 항목이나 다른 기록이 함께 가리킬 수 있어, 한 사용자의 삭제가 다른 사용자의 재현을 깨뜨리지 않게 하기 위함이다. 삭제된 항목은 그 사용자의 내 기록 목록과 006이 제공하는 모든 선택 자리에서 제외되며 다시 복구할 수 없다. [005](../005-result-comparison/spec.md)의 비교 대상 선택은 저장된 기록이 아니라 전략·버전 등록표에서 고르므로 006 삭제와 무관하고, [011](../011-regime-strategy-link/spec.md)의 연결 대상은 011 기록을 기준으로 한다 — 두 spec이 내 기록을 선택 목록으로 쓰게 되면 삭제 표시를 따라야 하며 006은 그 사실을 전달한다. 삭제된 항목을 참조하던 기록은 유지하되 참조 삭제 표시를 붙이고, 그 표시는 공용 결과가 아니라 개인 항목이 없어졌다는 뜻이다.\n+- **FR-017**: 사용자는 항목 이름을 바꾸고 항목을 삭제할 수 있다. 삭제는 확인 뒤 수행한다. **삭제 단위는 개인 기록 항목(소유·이름·목록 노출·경제환경 연결 대상으로서의 지위)이며 그가 가리키는 공용 계산 결과(결과·거래 내역·참조 버전)는 삭제하지 않는다.** FR-009의 동일 결과 재사용 구조라 같은 결과를 다른 사용자의 항목이나 다른 기록이 함께 가리킬 수 있어, 한 사용자의 삭제가 다른 사용자의 재현을 깨뜨리지 않게 하기 위함이다. 삭제된 항목은 그 사용자의 내 기록 목록과 006이 제공하는 모든 선택 자리에서 제외되며 다시 복구할 수 없다. [005](../005-result-comparison/spec.md)의 비교 대상 선택은 저장된 기록이 아니라 전략·버전 등록표와 사용자의 분석 요청 이력(006 `GET /my-records/used-strategies`, 전략·설정값 조합과 살아 있는 항목의 이름만)에서 고른다. 지운 항목의 이름은 후보에 붙지 않으므로 삭제 표시를 따르고, [011](../011-regime-strategy-link/spec.md)의 연결 대상은 011 기록을 기준으로 한다 — 두 spec이 내 기록을 선택 목록으로 쓰게 되면 삭제 표시를 따라야 하며 006은 그 사실을 전달한다. 삭제된 항목을 참조하던 기록은 유지하되 참조 삭제 표시를 붙이고, 그 표시는 공용 결과가 아니라 개인 항목이 없어졌다는 뜻이다.\n - **FR-018**: 보관 기간·연결 해제·탐색 묶음 저장 상한은 결정 항목 PD-13이며 무기한 보관을 전제하지 않는다. 확정 전에는 사용자 삭제만 제공하고 시간 기반 자동 삭제(저장일·마지막 열람일 기준 만료, 삭제 여유 기간, 삭제 예고 표시)를 만들지 않는다. 나중에 보관 기간을 도입할 수 있도록 항목마다 생성 시각과 마지막 열람 시각을 저장한다. 상한은 탐색 묶음에만 둔다 — 단일 분석·경제환경 항목에는 개수 상한이 없다. 상한에 도달하면 새 저장 전에 알리고 기존 항목을 몰래 삭제하지 않는다. 이 알림은 실행 자원 한도([004](../004-backtest-execution/spec.md) PD-06)와 다른 사유로 구분해 전달한다. (§5, D14) 탐색 묶음 상한은 값과 분리해 장치를 먼저 만든다: 사용자당 묶음 개수 상한은 설정 가능한 값이고 초기 임시값은 20개이며, 이 spec은 확정값을 고정하지 않는다(004 PD-06의 한도 장치 방식과 같다). 공용 계산 결과 자체의 보관·만료는 이 spec이 아니라 004와 [005](../005-result-comparison/spec.md) PD-23이 소유한다.\n - **FR-019**: 시도·실패·최종 평가 열람 등 감사 정보는 내부에서 관리하고 사용자 화면에 나열하지 않는다. 개인 식별정보는 계산 기록과 분리해 보관한다. (§5)\n - **FR-020**: 내 기록 저장·재조회는 식별된 사용자 단위로 동작한다. 식별되지 않은 사용자도 진단·시장 흐름·배우기는 이용할 수 있고, 저장이 필요할 때만 식별을 안내한다. **인증·인가 방식은 [014](../014-user-auth/spec.md)가 소유하며 006은 다시 정하지 않는다.** 006의 선행 조건은 014의 세션 인증과 현재 사용자 확인([014](../014-user-auth/spec.md) FR-008), 그리고 비로그인 사용자의 '내 기록' 접근 제한과 로그인 후 원래 위치 복귀([014](../014-user-auth/spec.md) FR-011·FR-012)뿐이며 2026-09-18 현재 이 기능은 구현·계약 검증이 끝났다. 006은 요청자의 사용자 식별을 그 세션 인증에서 받아 쓰고 임시 식별 수단을 따로 만들지 않는다. 다른 사용자의 기록은 없는 것으로 응답하며 존재 여부를 알리지 않는다. 이름 변경·삭제 중 로그인이 만료되면 014 FR-012의 규칙(보호 정보 숨김·재로그인 안내·원래 위치 복귀)을 따른다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/spec.md",
+          "old_path": "specs/006-my-records/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T16:35:39.157+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2865896": []
+  }
+}

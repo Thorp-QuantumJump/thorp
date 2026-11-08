@@ -1,0 +1,675 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 957319,
+    "iid": 299,
+    "project_id": 1444456,
+    "title": "docs(be): 사용성 관찰 회차의 진행 서식과 결과 틀을 만든다",
+    "description": "# 작업 내용 요약\n\n내일 진행할 사용성 관찰 회차(PD-14)의 진행 서식과 결과 기록 틀을 넣는다. 한 회차로 002·003·005·010 네 spec 의 사용성 성공 기준을 함께 관찰한다. 관찰 전 자료 점검은 2026-09-22 운영에서 수행해 결과를 문서에 적었다. \n\n# 관련 티켓\n\n- ticket # S15P21E205-286\n- link https://ssafy.atlassian.net/browse/S15P21E205-286\n\n# 주요 변경 사항\n\n- 진행 서식 한 벌: 참여자 6\\~8명, 과제 다섯, 막힘 판정 세 가지((가) 도움 요청 · (나) 완료 실패 · (다) 의도와 다른 값), 참여자별 기록 서식\n- spec 별 결과 기록 빈 틀 넷(002·003·005·010). 회차가 끝나면 그 파일을 채운다\n- 관찰 전 자료 점검 결과 기록: 자료 버전 `macro-20260922T031332`, 분야 7개 READY, 검색 응답 `sampleData: false`\n\n# 테스트\n\n- [x] 자동 테스트 대상이 아닌 문서 변경이다\n- [x] 자료 점검은 운영 환경에서 실제 조회로 수행했고 결과를 문서에 적었다. 회차 당일 다시 확인한다\n\n# 리뷰 포인트\n\n- 002 결과 문서를 이번에 더했다. `tasks.md` 가 비어 요구하는 task 가 없지만 과제 1 이 관찰하는 것이 002 SC-004 라, 표에서 빠지면 그 과제만 기록이 사라진다. task 유무가 아니라 관찰 대상 여부로 자리를 정한 판단이 맞는지 봐 달라\n- 이 문서를 합격 판정표로 읽지 않도록 \"기록과 조치까지만 요구한다\"를 앞에 두었다. 각 spec 의 기준이 합격 비율을 두지 않기 때문이다\n- 참여자 6\\~8명이 수요를 입증하는 표본이 아니라는 문장을 결과 문서 필수 항목에 넣었다(원칙 VI)\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건**\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 관찰하지 않은 항목은 빈칸이 아니라 \"관찰하지 않음\"으로 적도록 했다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 회차 전 빈 틀임을 각 문서 머리에 인용 블록으로 두었다",
+    "state": "merged",
+    "created_at": "2026-09-22T22:10:43.860+09:00",
+    "updated_at": "2026-09-22T22:14:02.440+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T22:14:02.132+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/286-regime-usability",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+    "merge_commit_sha": "1940190769f06475314e220c906113eb0cb0768f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T22:10:44.835+09:00",
+    "reference": "!299",
+    "references": {
+      "short": "!299",
+      "relative": "!299",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!299"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/299",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 957319,
+    "iid": 299,
+    "project_id": 1444456,
+    "title": "docs(be): 사용성 관찰 회차의 진행 서식과 결과 틀을 만든다",
+    "description": "# 작업 내용 요약\n\n내일 진행할 사용성 관찰 회차(PD-14)의 진행 서식과 결과 기록 틀을 넣는다. 한 회차로 002·003·005·010 네 spec 의 사용성 성공 기준을 함께 관찰한다. 관찰 전 자료 점검은 2026-09-22 운영에서 수행해 결과를 문서에 적었다. \n\n# 관련 티켓\n\n- ticket # S15P21E205-286\n- link https://ssafy.atlassian.net/browse/S15P21E205-286\n\n# 주요 변경 사항\n\n- 진행 서식 한 벌: 참여자 6\\~8명, 과제 다섯, 막힘 판정 세 가지((가) 도움 요청 · (나) 완료 실패 · (다) 의도와 다른 값), 참여자별 기록 서식\n- spec 별 결과 기록 빈 틀 넷(002·003·005·010). 회차가 끝나면 그 파일을 채운다\n- 관찰 전 자료 점검 결과 기록: 자료 버전 `macro-20260922T031332`, 분야 7개 READY, 검색 응답 `sampleData: false`\n\n# 테스트\n\n- [x] 자동 테스트 대상이 아닌 문서 변경이다\n- [x] 자료 점검은 운영 환경에서 실제 조회로 수행했고 결과를 문서에 적었다. 회차 당일 다시 확인한다\n\n# 리뷰 포인트\n\n- 002 결과 문서를 이번에 더했다. `tasks.md` 가 비어 요구하는 task 가 없지만 과제 1 이 관찰하는 것이 002 SC-004 라, 표에서 빠지면 그 과제만 기록이 사라진다. task 유무가 아니라 관찰 대상 여부로 자리를 정한 판단이 맞는지 봐 달라\n- 이 문서를 합격 판정표로 읽지 않도록 \"기록과 조치까지만 요구한다\"를 앞에 두었다. 각 spec 의 기준이 합격 비율을 두지 않기 때문이다\n- 참여자 6\\~8명이 수요를 입증하는 표본이 아니라는 문장을 결과 문서 필수 항목에 넣었다(원칙 VI)\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건**\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 관찰하지 않은 항목은 빈칸이 아니라 \"관찰하지 않음\"으로 적도록 했다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 회차 전 빈 틀임을 각 문서 머리에 인용 블록으로 두었다",
+    "state": "merged",
+    "created_at": "2026-09-22T22:10:43.860+09:00",
+    "updated_at": "2026-09-22T22:14:02.440+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T22:14:02.132+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/286-regime-usability",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+    "merge_commit_sha": "1940190769f06475314e220c906113eb0cb0768f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T22:10:44.835+09:00",
+    "reference": "!299",
+    "references": {
+      "short": "!299",
+      "relative": "!299",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!299"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/299",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "5",
+    "latest_build_started_at": "2026-09-22T22:10:54.663+09:00",
+    "latest_build_finished_at": "2026-09-22T22:10:59.333+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 217486,
+      "iid": 313,
+      "project_id": 1444456,
+      "sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+      "ref": "docs(be)/286-regime-usability",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T22:10:54.554+09:00",
+      "updated_at": "2026-09-22T22:10:59.339+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/217486"
+    },
+    "head_pipeline": {
+      "id": 217486,
+      "iid": 313,
+      "project_id": 1444456,
+      "sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+      "ref": "docs(be)/286-regime-usability",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T22:10:54.554+09:00",
+      "updated_at": "2026-09-22T22:10:59.339+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/217486",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T22:10:54.663+09:00",
+      "finished_at": "2026-09-22T22:10:59.333+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/217486",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "0c46d6d94b7e1831858513f5589784ead1fd1356",
+      "head_sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+      "start_sha": "f686fa39fea744c8ec842d01491ebf343f9a3b1c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "55d5c015addda1f68ba9443ed58bcb0b4f135de1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858626,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:10:43.958+09:00",
+          "updated_at": "2026-09-22T22:10:43.965+09:00",
+          "system": true,
+          "noteable_id": 957319,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 299,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "96e0b777fcc9b860f3580af15294c6e655d0bbb0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858627,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- 사용성 관찰(Usability Observation)을 위한 진행 서식과 각 스펙(002, 003, 005, 010)별 결과 템플릿 문서를 체계적이고 명확하게 설계하였습니다.\n- 관찰 결과가 객관적으로 기록되도록 '막힘'의 정의, 참여자 규모의 한계 명시, 가감 없는 기록 원칙 등을 문서 내에 잘 가이드하고 있습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (모두 Markdown 문서 추가 작업으로, 코드 로직, 보안, 성능 등에 영향을 주는 변경 사항이 없습니다.)\n\n### 테스트 제안\n문서 변경 및 템플릿 추가 건이므로 별도의 자동화 테스트는 필요하지 않습니다. 다음 수동 검증 시나리오를 제안합니다.\n1. **템플릿 정합성 확인 시나리오**: 추가된 5개의 Markdown 파일(`docs/guides/usability-observation-2026-09.md` 및 각 스펙 폴더 내 `usability-2026-09.md`)의 내부 링크(`../../` 등)가 깨지지 않고 올바른 경로를 가리키는지 마크다운 뷰어나 링크 체크 도구를 통해 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3823bb8738b097a0fddb30a451e552478cd33815 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T22:11:17.119+09:00",
+          "updated_at": "2026-09-22T22:11:17.119+09:00",
+          "system": false,
+          "noteable_id": 957319,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 299,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f204e7a5c0ab0f4679aee528afbdee128b8ed7ff",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858628,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T22:11:41.581+09:00",
+          "updated_at": "2026-09-22T22:11:41.587+09:00",
+          "system": true,
+          "noteable_id": 957319,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 299,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "24b8f1808fa5f31d45f9d5fed86aea7f8514163f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858634,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:13:12.638+09:00",
+          "updated_at": "2026-09-22T22:13:12.641+09:00",
+          "system": true,
+          "noteable_id": 957319,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 299,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "48de3b9cfb7c18eec8fdd749fe5740e889301959",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858641,
+          "type": null,
+          "body": "mentioned in commit 1940190769f06475314e220c906113eb0cb0768f",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:14:02.143+09:00",
+          "updated_at": "2026-09-22T22:14:02.174+09:00",
+          "system": true,
+          "noteable_id": 957319,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 299,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fb18db2e33938713e4d2c45eec2e100c24d31a24",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885060,
+          "type": null,
+          "body": "mentioned in commit 4df88d730831a4a92d8a5fdfc363115a96ae1ab1",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:12.386+09:00",
+          "updated_at": "2026-10-13T15:16:12.410+09:00",
+          "system": true,
+          "noteable_id": 957319,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 299,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2241742,
+      "head_commit_sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+      "base_commit_sha": "0c46d6d94b7e1831858513f5589784ead1fd1356",
+      "start_commit_sha": "f686fa39fea744c8ec842d01491ebf343f9a3b1c",
+      "created_at": "2026-09-22T22:10:44.300+09:00",
+      "merge_request_id": 957319,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "8c1d197be2368922e3eaf82ea429c550df200d37"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2241742,
+      "head_commit_sha": "3823bb8738b097a0fddb30a451e552478cd33815",
+      "base_commit_sha": "0c46d6d94b7e1831858513f5589784ead1fd1356",
+      "start_commit_sha": "f686fa39fea744c8ec842d01491ebf343f9a3b1c",
+      "created_at": "2026-09-22T22:10:44.300+09:00",
+      "merge_request_id": 957319,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "8c1d197be2368922e3eaf82ea429c550df200d37",
+      "commits": [
+        {
+          "id": "3823bb8738b097a0fddb30a451e552478cd33815",
+          "short_id": "3823bb87",
+          "created_at": "2026-09-22T22:09:59.000+09:00",
+          "parent_ids": [
+            "f50aee2b098e7954d49cd533ae967f99b9f071da"
+          ],
+          "title": "docs(be): 섹터·비중 과제의 관찰 결과를 남길 곳을 만든다",
+          "message": "docs(be): 섹터·비중 과제의 관찰 결과를 남길 곳을 만든다\n\n결과 문서 표에 002 가 없었다. 과제 1 이 관찰하는 것이 002 SC-004 인데 남길 파일이\n지정돼 있지 않아, 회차에서 그 과제만 기록이 사라질 자리였다. tasks.md 가 이미 비어\n요구하는 task 가 없었던 탓이다.\n\n002 도 다른 셋과 같은 빈 틀을 두고 표에 넣는다. 단계는 User Story 1·2 의 네 단계\n(섹터 선택·비중 수정·합계 맞추기·다음 단계 이동)다. 오해 유형 칸에는 FR-009·FR-016 이\n화면에 두라고 한 두 문장이 읽혔는지 함께 본다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T22:09:59.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T22:09:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3823bb8738b097a0fddb30a451e552478cd33815"
+        },
+        {
+          "id": "f50aee2b098e7954d49cd533ae967f99b9f071da",
+          "short_id": "f50aee2b",
+          "created_at": "2026-09-22T16:02:13.000+09:00",
+          "parent_ids": [
+            "6c8af7af4f1a96b72d93e8d67a3c036436b5b8bd"
+          ],
+          "title": "docs(be): 관찰 전 자료 점검을 운영에서 수행하고 기록한다",
+          "message": "docs(be): 관찰 전 자료 점검을 운영에서 수행하고 기록한다\n\n배포된 화면이 실제 자료로 도는지, 예시 자료가 섞이지 않았는지 확인했다. 둘 다 통과했고 그\n사실과 근거를 서식에 적었다 — 점검했다고만 적으면 무엇을 보고 통과로 판정했는지 남지 않는다.\n\n**회차 당일에 다시 점검하라고 덧붙인다.** 자료는 사람이 배치를 돌려야 채워지는 구조이고, 오늘\n010 사전 계산이 운영에서 한 번도 돌지 않아 검색 화면이 비어 있던 것을 겪었다. 오늘 통과한 것이\n회차 날의 상태를 보장하지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T16:02:13.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T16:02:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f50aee2b098e7954d49cd533ae967f99b9f071da"
+        },
+        {
+          "id": "6c8af7af4f1a96b72d93e8d67a3c036436b5b8bd",
+          "short_id": "6c8af7af",
+          "created_at": "2026-09-22T14:52:52.000+09:00",
+          "parent_ids": [
+            "0c46d6d94b7e1831858513f5589784ead1fd1356"
+          ],
+          "title": "docs(be): 사용성 관찰 회차의 진행 서식과 결과 틀을 만든다",
+          "message": "docs(be): 사용성 관찰 회차의 진행 서식과 결과 틀을 만든다\n\nPD-14 는 002·003·005·010 의 사용성 기준을 **한 회차**로 관찰하라고 정했다. 그런데 과제와\n판정 기준이 네 spec 에 흩어져 있어 회차를 잡을 때마다 서식을 다시 짜야 했다. 한곳에 모은다.\n\n'막혔다'의 정의는 002 SC-004 의 것을 모든 과제에 그대로 쓴다. spec 마다 다르게 세면 같은 회차의\n기록을 나중에 견줄 수 없다. (다) 판정은 관찰 뒤 \"어떤 값을 넣으려 했나\" 를 물어야 세어지므로\n그 질문을 서식에 넣었다 — 빠지면 (다) 는 영영 0건으로 남는다.\n\n사전 준비에 자료 점검을 넣는다. 오늘 010 사전 계산이 운영에서 한 번도 돌지 않아 검색 화면이\n비어 있었다. 그 상태로 관찰하면 화면 탓인지 자료 탓인지 가릴 수 없다.\n\n결과 빈 틀 셋을 미리 둔다. **\"아직 관찰하지 않았다\"를 문서 머리에 박아 둔다** — 빈 표만 남으면\n다음 사람이 \"관찰했는데 아무도 안 막혔다\"로 읽는다(원칙 VI).\n\n003·005 의 틀도 함께 둔다. 담당은 다르지만 같은 회차 한 번으로 세 spec 이 닫히는 구조라, 틀을\n따로 만들면 회차 도중에 서식이 갈라진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T14:52:52.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T14:52:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6c8af7af4f1a96b72d93e8d67a3c036436b5b8bd"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,163 @@\n+# 사용성 관찰 진행 문서 (2026-09 회차)\n+\n+PD-14가 정한 **한 회차**의 진행 서식이다. 002·003·005·010의 사용성 성공 기준이 이 관찰의\n+일부이므로([specs/README.md](../../specs/README.md) \"공통 검증·완료 규칙\") 회차를 나누지 않고\n+같은 참여자에게 과제를 나눠 준다.\n+\n+**이 문서는 합격 판정표가 아니다.** 각 spec의 기준은 합격 비율을 두지 않고 **기록과 조치까지만**\n+요구한다. 채워야 하는 것은 \"몇 명이 통과했다\"가 아니라 \"누가 어디서 막혔고 무엇을 고쳤다\"다.\n+\n+## 참여자\n+\n+전략을 검증하려는 개인 **6~8명**.\n+\n+**이 인원은 오류를 찾기 위한 시작 규모이며 수요를 입증하는 표본이 아니다.** 결과 문서에 이\n+문장을 반드시 남긴다 — 빠지면 관찰 결과가 \"쓸 사람이 있다\"는 근거로 읽힌다(원칙 VI).\n+\n+진행자는 화면을 설명하지 않는다. 참여자가 물으면 그 사실을 기록하고, 그것이 곧 '막혔다'다.\n+\n+## 사전 준비\n+\n+- [x] 관찰 대상 화면이 **실제 자료로** 도는지 확인한다. 008 적재와 010 사전 계산이 돌지 않으면\n+      화면이 비어 과제를 수행할 수 없다.\n+      → 2026-09-22 확인. 자료 버전 `macro-20260922T031332`, 분야 7개 모두 `READY`,\n+      경제환경 검색 기준월 7개 + 종합, 분야 검색이 사례 3건을 돌려준다.\n+- [x] 예시 자료 표시(`versions.sampleData`)가 켜져 있지 않은지 본다. 켜져 있으면 참여자가 보는\n+      값이 지어낸 값이고, 그 위에서 관찰한 오해는 화면 탓인지 값 탓인지 가릴 수 없다.\n+      → 2026-09-22 확인. 검색 응답 `sampleData: false`, 예시 자료로 표시된 분야 0개.\n+- [ ] 참여자별 기록지를 준비한다(아래 서식).\n+- [ ] 회차 일정을 003·005 담당자와 함께 잡는다.\n+\n+**점검은 회차 당일에 다시 한다.** 위 확인은 2026-09-22 의 것이고, 자료는 사람이 배치를 돌려야\n+채워지는 구조라 그사이 비어 있을 수 있다.\n+\n+## 무엇을 '막혔다'로 세는가\n+\n+002 SC-004의 정의를 모든 과제에 그대로 쓴다. 한 참여자가 어느 단계에서 다음 셋 중 하나에\n+해당하면 그 단계에서 막힌 것이다.\n+\n+| | 판정 |\n+|---|---|\n+| 가 | 진행자에게 도움을 청했다 |\n+| 나 | 도움 없이는 그 단계를 끝내지 못했다 |\n+| 다 | 의도와 다른 값을 넣은 채 다음으로 넘어갔고, 관찰 뒤 확인에서 그 사실이 드러났다 |\n+\n+**(다)를 세려면 관찰 뒤 확인이 필요하다.** 과제가 끝난 뒤 \"어떤 값을 넣으려 했는지\" 물어\n+화면에 남은 값과 견준다. 이 질문을 빼면 (다)는 영영 0건으로 남는다.\n+\n+**같은 단계에서 두 명 이상이 막히면 그 화면을 고친다.** 고친 뒤 같은 시나리오를 다시 관찰해\n+두 명 미만일 때 끝낸다(003 T074a).\n+\n+## 과제\n+\n+순서를 이대로 둔다. 뒤 과제가 앞 과제의 화면을 지나기 때문이다.\n+\n+### 과제 1 — 섹터·비중 (002 SC-004)\n+\n+> 섹터를 골라 비중을 정하고 다음 단계로 넘어가세요.\n+\n+관찰 단계: 섹터 선택 → 비중 수정 → 합계 맞추기 → 다음 단계 이동.\n+\n+### 과제 2 — 전략 고르기 (003 SC-006)\n+\n+> 전략 하나를 고르고 분석을 요청하세요.\n+\n+단계별로 막힌 인원을 센다.\n+\n+### 과제 3 — 결과 읽기 (005 SC-002·SC-007·SC-010)\n+\n+셋을 각각 준다.\n+\n+1. > 상세를 열지 않고 이 세 숫자가 무슨 뜻인지 말해 주세요.\n+2. > 손실이 가장 커진 때와 거래 내역, 비용 가정을 찾아 주세요. (진행자 도움 없이)\n+3. > 이 인쇄물에서 기준과 비교 대상을 구분해 주세요. (회색조 인쇄물을 준다)\n+\n+3번은 색만으로 구분되는 자리를 찾는 과제다. 회색조 인쇄물을 미리 뽑아 둔다.\n+\n+### 과제 4 — 경제환경 탐색 (010 SC-008)\n+\n+> 지금과 고용환경이 가까운 과거를 찾고, 물가에서 다른 점을 설명해 주세요.\n+\n+**참여자별로 둘을 적는다.**\n+\n+| 물음 | 왜 보는가 |\n+|---|---|\n+| 종합 비교를 열지 않고 분야 탐색만으로 과제를 끝냈는가 | 종합 비교는 선택이다. 그것을 열어야 끝난다면 분야 탐색이 제 역할을 못 하는 것이다 |\n+| 분야 유사성을 경제 전체의 일치로 오해했는가 | \"고용이 비슷하다\"를 \"그때와 경제가 같다\"로 읽으면 이 화면이 하지 않겠다고 한 단정을 사용자가 대신 한 것이다 |\n+\n+### 과제 5 — 배우기에서 진단으로 (선택)\n+\n+입문자가 섞여 있으면 학습 → 진단 이동도 관찰한다. PD-14가 \"필요하면\"으로 둔 항목이라\n+하지 않아도 되며, **하지 않았으면 하지 않았다고 적는다.**\n+\n+## 기록 서식\n+\n+참여자마다 한 벌 채운다.\n+\n+```\n+참여자 번호:            관찰 일시:\n+배경(전략 검증 경험):\n+\n+[과제 1 — 섹터·비중]\n+  섹터 선택      막힘 없음 / 가 / 나 / 다      메모:\n+  비중 수정      막힘 없음 / 가 / 나 / 다      메모:\n+  합계 맞추기    막힘 없음 / 가 / 나 / 다      메모:\n+  다음 단계      막힘 없음 / 가 / 나 / 다      메모:\n+\n+[과제 2 — 전략 고르기]\n+  전략 카드 고르기   막힘 없음 / 가 / 나 / 다   메모:\n+  분석 요청 접수     막힘 없음 / 가 / 나 / 다   메모:\n+\n+[과제 3 — 결과 읽기]\n+  세 숫자의 뜻        말한 대로 적는다:\n+  손실 큰 때·거래 내역·비용 가정   찾음 / 못 찾음   메모:\n+  회색조에서 기준·비교 대상 구분   구분함 / 못 함   메모:\n+\n+[과제 4 — 경제환경 탐색]\n+  종합 비교를 열었는가            열지 않음 / 열었음(왜:            )\n+  분야 탐색만으로 끝났는가        끝남 / 못 끝남\n+  분야 유사성을 전체 일치로 읽었는가   아니오 / 예(말한 대로:            )\n+\n+[과제 5 — 배우기→진단]  수행 / 수행하지 않음\n+  메모:\n+\n+관찰 뒤 확인((다) 판정용)\n+  \"어떤 값을 넣으려 했나요?\" 답:\n+  화면에 남은 값:\n+```\n+\n+## 결과 문서\n+\n+관찰이 끝나면 spec마다 결과를 남긴다. 한 파일에 몰지 않는 이유는 각 spec의 task가 자기 폴더\n+아래 결과 문서를 요구하기 때문이다.\n+\n+빈 틀을 미리 만들어 두었다. 회차가 끝나면 그 파일을 채운다.\n+\n+| spec | 남길 곳 | 닫히는 task |\n+|---|---|---|\n+| 002 | [usability-2026-09.md](../../specs/002-sector-weight-selection/usability-2026-09.md) | 없음 (SC-004는 기록·조치만 요구한다) |\n+| 003 | [usability-2026-09.md](../../specs/003-strategy-settings/usability-2026-09.md) | T074a |\n+| 005 | [usability-2026-09.md](../../specs/005-result-comparison/usability-2026-09.md) | T083a |\n+| 010 | [usability-2026-09.md](../../specs/010-economic-regime-search/usability-2026-09.md) | T155 |\n+\n+**002는 요구하는 task가 없어도 기록할 곳이 있어야 한다.** tasks.md가 이미 비어 있어 이 표에서\n+빠질 뻔했는데, 과제 1이 관찰하는 것이 002 SC-004다. 남길 곳이 없으면 회차에서 유일하게 기록이\n+사라지는 과제가 된다.\n+\n+010은 `quickstart.md`의 실행 기록에서 그 파일을 가리킨다. 실행 기록에 관찰 결과를 통째로 옮겨\n+적으면 같은 내용이 두 곳에 남고 한쪽만 고쳐진다.\n+\n+각 결과 문서에 반드시 들어가야 하는 것.\n+\n+- [ ] 참여자별 기록(막힌 단계와 오해 유형을 **말한 대로**)\n+- [ ] 두 명 이상이 막힌 단계와 **그래서 무엇을 고쳤는지**\n+- [ ] 고친 뒤 다시 관찰한 결과(003 T074a)\n+- [ ] **관찰하지 않은 항목은 \"관찰하지 않음\"으로.** 빈칸을 남기면 다음 사람이 통과한 것으로\n+      읽는다\n+- [ ] 이 인원이 오류 발견 규모이지 수요를 입증하는 표본이 아니라는 문장\n+\n+## 회차 뒤에 남는 일\n+\n+관찰만으로는 PD-14가 닫히지 않는다. PD-14는 참여자·과제·일정·관찰 기준을 정하는 결정이고,\n+이 회차를 돌린 뒤 실제로 쓴 값으로 [specs/README.md](../../specs/README.md)의 PD-14 행을\n+갱신해야 확정된다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/guides/usability-observation-2026-09.md",
+          "old_path": "docs/guides/usability-observation-2026-09.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,64 @@\n+# 사용성 관찰 결과 — 002 섹터·비중 선택 (2026-09 회차)\n+\n+SC-004. 진행자의 설명 없이 섹터를 고르고 비중을 정해 다음 단계로 넘어가는 과제를 관찰한 기록이다.\n+\n+진행 서식과 '막혔다'의 정의는 [docs/guides/usability-observation-2026-09.md](../../docs/guides/usability-observation-2026-09.md)에 있다.\n+\n+**002에는 이 결과를 요구하는 task가 없다.** tasks.md가 이미 비어 있기 때문이며, 그렇다고 관찰\n+결과를 남기지 않아도 되는 것은 아니다. SC-004가 **기록과 조치까지**를 요구하므로 과제 1의 결과는\n+여기에 남는다. 이 문서가 없으면 회차에서 유일하게 기록할 곳이 없는 과제가 된다.\n+\n+> **아직 관찰하지 않았다.** 이 문서는 회차 전에 만든 빈 틀이다. 관찰 없이 칸을 채우지 않는다\n+> (원칙 VI). 회차가 끝나면 이 인용 블록을 지우고 아래를 채운다.\n+\n+## 회차 정보\n+\n+| | |\n+|---|---|\n+| 일시 | |\n+| 참여자 수 | |\n+| 진행자 | |\n+| 관찰한 화면의 자료 | 실제 자료 / 예시 자료 (예시 자료면 그 사실을 여기 적는다) |\n+\n+**이 인원은 오류를 찾기 위한 시작 규모이며 수요를 입증하는 표본이 아니다.**\n+\n+섹터 목록이 예시 대응표에서 왔다면 그 사실을 위 칸에 적는다. FR-015가 화면에 예시 표시를\n+요구하므로, 참여자가 그 표시를 보고 한 행동과 못 보고 한 행동은 다르게 읽어야 한다.\n+\n+## 단계별 막힘\n+\n+User Story 1·2의 흐름 네 단계다.\n+\n+| 참여자 | 섹터 선택 | 비중 수정 | 합계 맞추기 | 다음 단계 이동 |\n+|---|---|---|---|---|\n+| | | | | |\n+\n+각 칸에 `막힘 없음` 또는 `가`·`나`·`다` 중 하나와 메모를 적는다.\n+\n+**같은 단계에서 두 명 이상이 막히면 그 화면을 수정한다**(SC-004).\n+\n+## 오해 유형\n+\n+말한 대로 적는다. 요약하면 무엇을 오해했는지가 사라진다.\n+\n+이 화면에서 특히 볼 것 둘은 FR이 표시를 요구한 문장들이다 — 고른 섹터가 갖는 두 가지 뜻\n+(FR-009), 그리고 0%인 섹터가 목록에는 남는다는 것(FR-016). 둘 다 도움말 뒤로 내리지 않고\n+화면에 둔 문장이라, 읽히지 않았다면 그 판단을 다시 봐야 한다.\n+\n+| 참여자 | 무엇을 | 어떻게 읽었는가 |\n+|---|---|---|\n+| | | |\n+\n+## 두 명 이상이 막힌 단계와 조치\n+\n+| 단계 | 인원 | 무엇을 고쳤는가 | 다시 관찰한 결과 |\n+|---|---|---|---|\n+| | | | |\n+\n+고치지 않기로 한 단계가 있으면 **왜 고치지 않는지** 적는다. 빈칸으로 두면 놓친 것과 구분되지 않는다.\n+\n+## 관찰하지 못한 것\n+\n+| 항목 | 왜 |\n+|---|---|\n+| | |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/usability-2026-09.md",
+          "old_path": "specs/002-sector-weight-selection/usability-2026-09.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,51 @@\n+# 사용성 관찰 결과 — 003 전략 설정 (2026-09 회차)\n+\n+SC-006 · T074a. 진행자의 화면 설명 없이 전략 카드 하나를 고르고 분석 요청을 접수하는 과제를 관찰한 기록이다.\n+\n+진행 서식과 '막혔다'의 정의는 [docs/guides/usability-observation-2026-09.md](../../docs/guides/usability-observation-2026-09.md)에 있다.\n+\n+> **아직 관찰하지 않았다.** 이 문서는 회차 전에 만든 빈 틀이다. 관찰 없이 칸을 채우지 않는다\n+> (원칙 VI). 회차가 끝나면 이 인용 블록을 지우고 아래를 채운다.\n+\n+## 회차 정보\n+\n+| | |\n+|---|---|\n+| 일시 | |\n+| 참여자 수 | |\n+| 진행자 | |\n+| 관찰한 화면의 자료 | 실제 자료 / 예시 자료 (예시 자료면 그 사실을 여기 적는다) |\n+\n+**이 인원은 오류를 찾기 위한 시작 규모이며 수요를 입증하는 표본이 아니다.**\n+\n+## 단계별 막힘\n+\n+| 참여자 | 전략 카드 고르기 | 분석 요청 접수 |\n+|---|---|---|\n+| | | |\n+\n+각 칸에 `막힘 없음` 또는 `가`·`나`·`다` 중 하나와 메모를 적는다.\n+\n+**같은 단계에서 두 명 이상이 막히면 화면을 고치고 같은 시나리오를 다시 관찰해 두 명 미만일 때 끝낸다**(T074a).\n+\n+## 오해 유형\n+\n+말한 대로 적는다. 요약하면 무엇을 오해했는지가 사라진다.\n+\n+| 참여자 | 무엇을 | 어떻게 읽었는가 |\n+|---|---|---|\n+| | | |\n+\n+## 두 명 이상이 막힌 단계와 조치\n+\n+| 단계 | 인원 | 무엇을 고쳤는가 | 다시 관찰한 결과 |\n+|---|---|---|---|\n+| | | | |\n+\n+고치지 않기로 한 단계가 있으면 **왜 고치지 않는지** 적는다. 빈칸으로 두면 놓친 것과 구분되지 않는다.\n+\n+## 관찰하지 못한 것\n+\n+| 항목 | 왜 |\n+|---|---|\n+| | |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/usability-2026-09.md",
+          "old_path": "specs/003-strategy-settings/usability-2026-09.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,49 @@\n+# 사용성 관찰 결과 — 005 결과 비교 (2026-09 회차)\n+\n+SC-002·SC-007·SC-010 · T083a. 과제 셋(상세를 열지 않고 세 숫자의 뜻 말하기, 진행자 도움 없이 손실이 커진 때·거래 내역·비용 가정 찾기, 회색조 인쇄물에서 기준과 비교 대상 구분하기)을 관찰한 기록이다.\n+\n+진행 서식과 '막혔다'의 정의는 [docs/guides/usability-observation-2026-09.md](../../docs/guides/usability-observation-2026-09.md)에 있다.\n+\n+> **아직 관찰하지 않았다.** 이 문서는 회차 전에 만든 빈 틀이다. 관찰 없이 칸을 채우지 않는다\n+> (원칙 VI). 회차가 끝나면 이 인용 블록을 지우고 아래를 채운다.\n+\n+## 회차 정보\n+\n+| | |\n+|---|---|\n+| 일시 | |\n+| 참여자 수 | |\n+| 진행자 | |\n+| 관찰한 화면의 자료 | 실제 자료 / 예시 자료 (예시 자료면 그 사실을 여기 적는다) |\n+\n+**이 인원은 오류를 찾기 위한 시작 규모이며 수요를 입증하는 표본이 아니다.**\n+\n+## 단계별 막힘\n+\n+| 참여자 | 세 숫자의 뜻(말한 대로) | 손실·거래 내역·비용 찾기 | 회색조에서 기준·비교 대상 구분 |\n+|---|---|---|---|\n+| | | | |\n+\n+**두 명 이상이 같은 지점에서 오해하면 요약 화면을 고친다**(SC-002).\n+\n+## 오해 유형\n+\n+말한 대로 적는다. 요약하면 무엇을 오해했는지가 사라진다.\n+\n+| 참여자 | 무엇을 | 어떻게 읽었는가 |\n+|---|---|---|\n+| | | |\n+\n+## 두 명 이상이 막힌 단계와 조치\n+\n+| 단계 | 인원 | 무엇을 고쳤는가 | 다시 관찰한 결과 |\n+|---|---|---|---|\n+| | | | |\n+\n+고치지 않기로 한 단계가 있으면 **왜 고치지 않는지** 적는다. 빈칸으로 두면 놓친 것과 구분되지 않는다.\n+\n+## 관찰하지 못한 것\n+\n+| 항목 | 왜 |\n+|---|---|\n+| | |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/usability-2026-09.md",
+          "old_path": "specs/005-result-comparison/usability-2026-09.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,49 @@\n+# 사용성 관찰 결과 — 010 경제환경 검색 (2026-09 회차)\n+\n+SC-008 · T155. '지금과 고용환경이 가까운 과거를 찾고, 물가에서 다른 점을 설명하기' 과제를 관찰한 기록이다.\n+\n+진행 서식과 '막혔다'의 정의는 [docs/guides/usability-observation-2026-09.md](../../docs/guides/usability-observation-2026-09.md)에 있다.\n+\n+> **아직 관찰하지 않았다.** 이 문서는 회차 전에 만든 빈 틀이다. 관찰 없이 칸을 채우지 않는다\n+> (원칙 VI). 회차가 끝나면 이 인용 블록을 지우고 아래를 채운다.\n+\n+## 회차 정보\n+\n+| | |\n+|---|---|\n+| 일시 | |\n+| 참여자 수 | |\n+| 진행자 | |\n+| 관찰한 화면의 자료 | 실제 자료 / 예시 자료 (예시 자료면 그 사실을 여기 적는다) |\n+\n+**이 인원은 오류를 찾기 위한 시작 규모이며 수요를 입증하는 표본이 아니다.**\n+\n+## 단계별 막힘\n+\n+| 참여자 | 종합 비교를 열었는가 | 분야 탐색만으로 끝났는가 | 분야 유사성을 전체 일치로 읽었는가 |\n+|---|---|---|---|\n+| | | | |\n+\n+**둘을 참여자마다 적는다**(T155). 종합 비교를 열어야 과제가 끝난다면 분야 탐색이 제 역할을 못 하는 것이고, 분야 유사성을 경제 전체의 일치로 읽으면 이 화면이 하지 않겠다고 한 단정을 사용자가 대신 한 것이다.\n+\n+## 오해 유형\n+\n+말한 대로 적는다. 요약하면 무엇을 오해했는지가 사라진다.\n+\n+| 참여자 | 무엇을 | 어떻게 읽었는가 |\n+|---|---|---|\n+| | | |\n+\n+## 두 명 이상이 막힌 단계와 조치\n+\n+| 단계 | 인원 | 무엇을 고쳤는가 | 다시 관찰한 결과 |\n+|---|---|---|---|\n+| | | | |\n+\n+고치지 않기로 한 단계가 있으면 **왜 고치지 않는지** 적는다. 빈칸으로 두면 놓친 것과 구분되지 않는다.\n+\n+## 관찰하지 못한 것\n+\n+| 항목 | 왜 |\n+|---|---|\n+| | |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/usability-2026-09.md",
+          "old_path": "specs/010-economic-regime-search/usability-2026-09.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2858627": []
+  }
+}

@@ -1,0 +1,661 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963463,
+    "iid": 373,
+    "project_id": 1444456,
+    "title": "chore(be): 워커 테스트 정리",
+    "description": "## 작업 내용 요약\n\n테스트 감사에서 확인된 워커 테스트를 정리한다. 자리표시 테스트와 중복 테스트를 지우고, 대역만 보던 테스트 세 건이 실제 엔진과 설정을 보게 고친다. 운영 코드는 바꾸지 않는다.\n\n## 주요 변경 사항\n\n- `assert True`뿐인 `test_placeholder.py`, 왕복 시험과 겹치는 픽스처 크기 상한 시험, 쓰이지 않는 픽스처 생성기 상수를 지운다.\n- 엔진 프로토콜 검사는 테스트 안의 대역 대신 `main`이 넘기는 실제 `PortfolioBacktestEngine`을 본다.\n- 미지급 분배금 검사는 원장 프로퍼티 대신 엔진 결과로 확인한다.\n- 011 토폴로지 대조에서, 백엔드 파일이 없으면 조용히 건너뛰던 분기를 지우고 파일 존재를 단언한다.\n- `specs/011` T105 완료 메모의 시험 수를 지운 시험에 맞춘다.\n\n## 테스트\n\n- `ruff check src tests`, `ruff format --check`: 통과\n- `pytest`: 526건 통과(3건 삭제, 1건 추가)\n\n## 리뷰 포인트\n\n- `DistributionLedger.unpaid`는 이제 운영과 테스트 어디에서도 읽지 않는다. 지울지 정해야 한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:34:45.411+09:00",
+    "updated_at": "2026-10-04T18:35:10.079+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:35:09.660+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(be)/worker-unused-test-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "55735399036a0481b5b58eca59a4168a44bd8848",
+    "merge_commit_sha": "46e76a61b343d38438ae30f57331b91a5b838504",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:34:48.314+09:00",
+    "reference": "!373",
+    "references": {
+      "short": "!373",
+      "relative": "!373",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!373"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/373",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963463,
+    "iid": 373,
+    "project_id": 1444456,
+    "title": "chore(be): 워커 테스트 정리",
+    "description": "## 작업 내용 요약\n\n테스트 감사에서 확인된 워커 테스트를 정리한다. 자리표시 테스트와 중복 테스트를 지우고, 대역만 보던 테스트 세 건이 실제 엔진과 설정을 보게 고친다. 운영 코드는 바꾸지 않는다.\n\n## 주요 변경 사항\n\n- `assert True`뿐인 `test_placeholder.py`, 왕복 시험과 겹치는 픽스처 크기 상한 시험, 쓰이지 않는 픽스처 생성기 상수를 지운다.\n- 엔진 프로토콜 검사는 테스트 안의 대역 대신 `main`이 넘기는 실제 `PortfolioBacktestEngine`을 본다.\n- 미지급 분배금 검사는 원장 프로퍼티 대신 엔진 결과로 확인한다.\n- 011 토폴로지 대조에서, 백엔드 파일이 없으면 조용히 건너뛰던 분기를 지우고 파일 존재를 단언한다.\n- `specs/011` T105 완료 메모의 시험 수를 지운 시험에 맞춘다.\n\n## 테스트\n\n- `ruff check src tests`, `ruff format --check`: 통과\n- `pytest`: 526건 통과(3건 삭제, 1건 추가)\n\n## 리뷰 포인트\n\n- `DistributionLedger.unpaid`는 이제 운영과 테스트 어디에서도 읽지 않는다. 지울지 정해야 한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:34:45.411+09:00",
+    "updated_at": "2026-10-04T18:35:10.079+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:35:09.660+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(be)/worker-unused-test-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "55735399036a0481b5b58eca59a4168a44bd8848",
+    "merge_commit_sha": "46e76a61b343d38438ae30f57331b91a5b838504",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:34:48.314+09:00",
+    "reference": "!373",
+    "references": {
+      "short": "!373",
+      "relative": "!373",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!373"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/373",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "9",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "head_sha": "55735399036a0481b5b58eca59a4168a44bd8848",
+      "start_sha": "2eff10c3e2960c8481c5cc50639fce1592f438ba"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "4e603ebf57b750a7e28ab0cb89286019d23bb260",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881353,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:34:45.503+09:00",
+          "updated_at": "2026-10-04T18:34:45.508+09:00",
+          "system": true,
+          "noteable_id": 963463,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 373,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "009f2269c485e79ddb20c4dca4eb2b81560146b0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881354,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:34:45.743+09:00",
+          "updated_at": "2026-10-04T18:34:45.750+09:00",
+          "system": true,
+          "noteable_id": 963463,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 373,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6a0b1f02108983552b14d168d0d997740fe7f534",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881355,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 불필요한 자리표시 및 중복 테스트가 깔끔하게 정리되었고, 대역 객체 검증을 실제 엔진 검증으로 전환한 점과 백엔드 설정 파일 존재 여부를 엄격하게 확인하도록 수정한 점 모두 견고성을 높이는 훌륭한 변경입니다.\n\n### 테스트 제안\n- **미지급 분배금 실행 종료 후 검증 (`test_distribution_paid_after_the_run_ends_is_not_counted_as_cash`)**: \n  - 지급일이 실행 종료일보다 뒤인 경우, 해당 분배금이 포트폴리오 현금이나 자산 평가액에 반영되지 않고 분배금이 없는 기준선(baseline) 실행 결과와 포트폴리오 시계열(`cash`, `equity`)이 정확히 일치하는지 시나리오별로 확인합니다.\n- **토폴로지 설정 파일 누락 시 실패 검증 (`test_topology_constants_match_the_backend`)**:\n  - `REGIME_LINK_BACKEND_CONFIG` 경로에 백엔드 설정 파일이 존재하지 않을 때, `pytest.skip` 대신 `AssertionError`가 발생하며 명시적인 오류 메시지와 함께 테스트가 실패하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:55735399036a0481b5b58eca59a4168a44bd8848 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T18:34:54.960+09:00",
+          "updated_at": "2026-10-04T18:34:54.960+09:00",
+          "system": false,
+          "noteable_id": 963463,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 373,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "24fe53a16f1456fa0f8539a0503450c98fb12826",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881356,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">chore(be): 워커 테스트 정</code> to <code class=\"idiff\">chore(be): 워커 테스트 정<span class=\"idiff left right addition\">리</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:35:03.296+09:00",
+          "updated_at": "2026-10-04T18:35:03.300+09:00",
+          "system": true,
+          "noteable_id": 963463,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 373,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e0e111645880c4b8188545a64140bfe0d7db25bf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881357,
+          "type": null,
+          "body": "mentioned in commit 46e76a61b343d38438ae30f57331b91a5b838504",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:35:09.733+09:00",
+          "updated_at": "2026-10-04T18:35:09.738+09:00",
+          "system": true,
+          "noteable_id": 963463,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 373,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262312,
+      "head_commit_sha": "55735399036a0481b5b58eca59a4168a44bd8848",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "2eff10c3e2960c8481c5cc50639fce1592f438ba",
+      "created_at": "2026-10-04T18:34:45.871+09:00",
+      "merge_request_id": 963463,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "d148e18bf43bd1065ec0cbdc2e26ec189c8f14f2"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262312,
+      "head_commit_sha": "55735399036a0481b5b58eca59a4168a44bd8848",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "2eff10c3e2960c8481c5cc50639fce1592f438ba",
+      "created_at": "2026-10-04T18:34:45.871+09:00",
+      "merge_request_id": 963463,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "d148e18bf43bd1065ec0cbdc2e26ec189c8f14f2",
+      "commits": [
+        {
+          "id": "55735399036a0481b5b58eca59a4168a44bd8848",
+          "short_id": "55735399",
+          "created_at": "2026-10-04T17:36:01.000+09:00",
+          "parent_ids": [
+            "a4f891f0908527129a7191da11bd5317aa7eae4f"
+          ],
+          "title": "chore(be): T105 완료 메모의 크기 상한 시험 수를 지운 시험에 맞춰 두 건으로 고친다",
+          "message": "chore(be): T105 완료 메모의 크기 상한 시험 수를 지운 시험에 맞춰 두 건으로 고친다\n\n크기 상한 안쪽 픽스처만 읽던 시험을 지웠으므로 남은 상한 시험 두 건의 이름을 적는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:36:01.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:36:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/55735399036a0481b5b58eca59a4168a44bd8848"
+        },
+        {
+          "id": "a4f891f0908527129a7191da11bd5317aa7eae4f",
+          "short_id": "a4f891f0",
+          "created_at": "2026-10-04T17:27:52.000+09:00",
+          "parent_ids": [
+            "6ef80b98e07075d59f542e0aad619cd6f5271802"
+          ],
+          "title": "chore(be): 워커 테스트 세 건이 실제 결함에서 실패하도록 고친다",
+          "message": "chore(be): 워커 테스트 세 건이 실제 결함에서 실패하도록 고친다\n\n- 지급일이 실행 종료 뒤인 분배금이 현금·자산에 들어가지 않는지 엔진 결과로 확인한다.\n  원장 대기 목록만 보던 테스트를 test_portfolio_execution.py의 기업행위 절로 옮겼다.\n- 엔진 경계 Protocol 검사를 테스트 안 스텁 대신 실제 PortfolioBacktestEngine으로 한다.\n- 사례 연결 토폴로지 대조는 백엔드 RegimeLinkRabbitConfig.java가 없으면 건너뛰지 않고 실패한다.\n  이미 끝난 T030을 기다리던 안내 문구도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:27:52.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:27:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a4f891f0908527129a7191da11bd5317aa7eae4f"
+        },
+        {
+          "id": "6ef80b98e07075d59f542e0aad619cd6f5271802",
+          "short_id": "6ef80b98",
+          "created_at": "2026-10-04T17:27:44.000+09:00",
+          "parent_ids": [
+            "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+          ],
+          "title": "chore(be): 워커 테스트에서 아무것도 확인하지 않는 자리표시 테스트와 쓰이지 않는 픽스처 상수를 지운다",
+          "message": "chore(be): 워커 테스트에서 아무것도 확인하지 않는 자리표시 테스트와 쓰이지 않는 픽스처 상수를 지운다\n\n- test_placeholder.py는 assert True 한 줄인 CI 배선 확인용 자리표시라 지운다.\n- 사례 연결 픽스처 생성기의 SECTOR_OF는 아무도 읽지 않는다. 지운 뒤 다시 만들어도 픽스처는 같다.\n- test_fixtures_are_within_the_size_limits는 test_roundtrip_exact가 같은 세 작업 픽스처를\n  같은 모델로 먼저 검증하므로 지운다. 상한을 넘는 쪽은 다른 두 테스트가 본다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:27:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:27:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6ef80b98e07075d59f542e0aad619cd6f5271802"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -408,7 +408,7 @@ T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두\n \n ## Phase 15: Convergence\n \n-- [X] T105 작업 메시지의 크기 상한을 워커 pydantic에 둔다 — `RegimeLinkJob`이 `portfolioSeries`의 날짜 행 ≤ 65와 `openingPositions`·`dailyPositions[].positions`의 종목 수 ≤ `universe.items` 수를 검증하고(종목 수는 교차 필드라 model validator), 넘으면 `ValidationError`가 나 계약 오류 경로(reject → DLQ)로 끝나는 것을 `worker/tests/regime_link/test_contracts.py`가 확인한다. 백엔드 발행 전 관문(T031·T104)과 별개의 둘째 줄이며, 지금은 상한을 넘긴 작업이 워커를 그대로 통과한다 per contracts/regime-link-messaging §검증 책임(워커 열 \"계약 상한은 pydantic으로\")·plan 위험 표 (missing) → **완료**: `RegimeLinkJob._within_size_limits`(model validator) + `test_contracts.py` 세 건\n+- [X] T105 작업 메시지의 크기 상한을 워커 pydantic에 둔다 — `RegimeLinkJob`이 `portfolioSeries`의 날짜 행 ≤ 65와 `openingPositions`·`dailyPositions[].positions`의 종목 수 ≤ `universe.items` 수를 검증하고(종목 수는 교차 필드라 model validator), 넘으면 `ValidationError`가 나 계약 오류 경로(reject → DLQ)로 끝나는 것을 `worker/tests/regime_link/test_contracts.py`가 확인한다. 백엔드 발행 전 관문(T031·T104)과 별개의 둘째 줄이며, 지금은 상한을 넘긴 작업이 워커를 그대로 통과한다 per contracts/regime-link-messaging §검증 책임(워커 열 \"계약 상한은 pydantic으로\")·plan 위험 표 (missing) → **완료**: `RegimeLinkJob._within_size_limits`(model validator) + `test_contracts.py` 두 건(`test_job_over_the_row_limit_is_a_contract_violation`·`test_snapshot_wider_than_the_universe_is_a_contract_violation`)\n - [X] T106 이벤트 `resource`의 생략 가능 여부를 계약과 모델에서 하나로 맞춘다 — 계약 §이벤트 봉투는 `delistedOn?`·`result?`·`error?`에만 `?`를 붙이고 `resource`에는 붙이지 않는데, 워커 `RegimeLinkStartedPayload.resource`·`RegimeLinkFinishedPayload.resource`와 `ProcessInfo.pid`·`hostname`은 `None` 기본값이라 T006의 \"기본값 금지\"와도 어긋난다. 계약 표기를 기준으로 모델을 좁히거나, 생략을 허용하기로 정하면 계약·`docs/specs/regime-link-messaging/README.md`·백엔드 record javadoc에 같은 MR에서 `?`를 적는다 per contracts/regime-link-messaging §이벤트 봉투·T006 (partial) → **완료**: 계약 표기(필수)로 모델을 좁혔다 — `ProcessInfo.pid`·`hostname`, 두 payload의 `resource` 기본값 제거, 백엔드 javadoc 갱신\n - [X] T107 DLX에서 DLQ로 가는 routing key를 계약이 정한다 — 계약 §토폴로지는 `regime-link.dlx` → `regime-link.jobs.dlq`만 적고 그 사이 routing key 이름을 정하지 않는다. 별도 이름을 둘지(백테스트의 `backtest.job.dead`에 해당) 작업 routing key를 그대로 쓸지 정해 계약과 README에 적고, 별도 이름이면 워커 `regime_link/messaging.py` 상수와 `test_messaging.py`의 `NAME_CONSTANTS`에 함께 더한다. T030이 Java 상수를 만들 때 워커의 이름 집합 대조가 깨지지 않으려면 그보다 먼저 끝낸다 per contracts/regime-link-messaging §토폴로지·T007·T030 (partial) → **완료**: 별도 이름 `regime-link.job.dead`로 정해 계약·README에 적고 백엔드 상수를 public 으로, 워커 `JOBS_DEAD_LETTER_ROUTING_KEY`를 더했다(이름 대조 시험이 함께 본다)\n - [X] T108 파트 문서에 011 메시지 계약 경로를 적는다 — `backend/CLAUDE.md`의 \"직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다\"가 `regimelink`에는 맞지 않으므로 011은 `RegimeLinkMessageJson.objectMapper()`를 쓴다는 것을, `worker/CLAUDE.md`에는 `regime_link/`가 `docs/specs/regime-link-messaging/`을 기준으로 하는 별도 계약이라 백테스트 `contracts/`와 섞지 않는다는 것을 한 줄씩 더한다 per Constitution 완료의 정의 조건 5·backend/CLAUDE.md 메시지 JSON 규칙·T005 (partial) → **완료**: `backend/CLAUDE.md`·`worker/CLAUDE.md`에 한 줄씩\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,7 +42,6 @@ BATTERY = \"305720.XKRX\"\n BIO = \"244580.XKRX\"\n BENCHMARK = \"KOSPI\"\n UNIVERSE = [(\"SEMICONDUCTOR\", SEMI), (\"BATTERY\", BATTERY), (\"BIO\", BIO)]\n-SECTOR_OF = {iid: sector for sector, iid in UNIVERSE}\n \n BASELINE = date(2012, 3, 30)\n OPENING = {SEMI: 179, BATTERY: 151, BIO: 233}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/fixtures/make_fixtures.py",
+          "old_path": "worker/tests/regime_link/fixtures/make_fixtures.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -340,8 +340,3 @@ def test_snapshot_wider_than_the_universe_is_a_contract_violation() -> None:\n \n     with pytest.raises(ValidationError, match=\"종목 수\"):\n         RegimeLinkJob.model_validate(body)\n-\n-\n-def test_fixtures_are_within_the_size_limits() -> None:\n-    for name in (\"job-continuous.json\", \"job-fresh-cash.json\", \"job-partial-delisted.json\"):\n-        RegimeLinkJob.model_validate_json(load(name))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/test_contracts.py",
+          "old_path": "worker/tests/regime_link/test_contracts.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,16 +1,14 @@\n \"\"\"사례 연결 계약 상수 대조.\n \n-큐·exchange·routing key·스키마 버전은 백엔드와 합의한 계약값이다. 백테스트는 워커\n-테스트가 백엔드 ``BacktestRabbitConfig.java``를 직접 읽어 대조하는데, 011은 그 Java\n-파일(``RegimeLinkRabbitConfig``, T030)이 아직 없으므로 **계약 문서**\n-(``docs/specs/regime-link-messaging/README.md``)와 대조한다. Java 파일이 생기면\n-아래 ``test_topology_constants_match_the_backend``가 저절로 살아난다.\n+큐·exchange·routing key·스키마 버전은 백엔드와 합의한 계약값이다. 워커가 아는 이름은\n+**계약 문서**(``docs/specs/regime-link-messaging/README.md``)와 대조하고, 백테스트가\n+``BacktestRabbitConfig.java``를 읽듯 백엔드 ``RegimeLinkRabbitConfig.java``(T030)도 직접\n+읽어 그 상수와 대조한다.\n \"\"\"\n \n import re\n from pathlib import Path\n \n-import pytest\n from fixture_paths import REGIME_LINK_BACKEND_CONFIG, REGIME_LINK_CONTRACT_README\n \n from worker.regime_link import messaging\n@@ -60,7 +58,7 @@ def held_names() -> set[str]:\n \n \n def test_topology_names_match_the_contract() -> None:\n-    \"\"\"워커가 아는 이름과 계약 문서가 적은 이름이 정확히 같다 (T030 전까지).\"\"\"\n+    \"\"\"워커가 아는 이름과 계약 문서가 적은 이름이 정확히 같다.\"\"\"\n     documented = documented_names()\n     assert documented, \"계약 문서에서 토폴로지 이름을 찾지 못했다\"\n \n@@ -84,14 +82,12 @@ def test_prefetch_is_one() -> None:\n \n \n def test_topology_constants_match_the_backend() -> None:\n-    \"\"\"백엔드 ``RegimeLinkRabbitConfig`` 가 생기면 그 상수와 직접 대조한다.\"\"\"\n-    if not REGIME_LINK_BACKEND_CONFIG.exists():\n-        # 경로가 틀려 영영 skip 되는 것과 아직 T030 을 안 한 것을 가른다. 이 skip 은\n-        # \"못 잡는 쪽\"으로 실패하므로 닻이 없으면 대조가 영영 돌지 않아도 알 수 없다.\n-        assert REGIME_LINK_BACKEND_CONFIG.parent.is_dir(), (\n-            f\"{REGIME_LINK_BACKEND_CONFIG.parent} 가 없다 — 경로가 틀렸거나 패키지가 옮겨졌다\"\n-        )\n-        pytest.skip(\"RegimeLinkRabbitConfig.java 는 spec 011 T030(묶음 M5)에서 만든다\")\n+    \"\"\"백엔드 ``RegimeLinkRabbitConfig`` 의 상수와 직접 대조한다.\"\"\"\n+    # 파일이 없으면 건너뛰지 않고 실패한다. 이름이 바뀌거나 옮겨진 것을 skip 으로 넘기면\n+    # 대조가 영영 돌지 않아도 알 수 없다.\n+    assert REGIME_LINK_BACKEND_CONFIG.is_file(), (\n+        f\"{REGIME_LINK_BACKEND_CONFIG} 가 없다 — 경로가 틀렸거나 파일이 옮겨졌다\"\n+    )\n \n     source = REGIME_LINK_BACKEND_CONFIG.read_text(encoding=\"utf-8\")\n     declared = dict(re.findall(r'public static final String (\\w+) = \"([^\"]+)\";', source))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/test_messaging.py",
+          "old_path": "worker/tests/regime_link/test_messaging.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -36,7 +36,7 @@ REGIME_LINK_BACKEND_MESSAGE_DIR = (\n     / \"message\"\n )\n \n-#: 백엔드 토폴로지 상수(011 T030). 아직 없으면 계약 문서와 대조한다.\n+#: 백엔드 토폴로지 상수(011 T030). 워커 계약 상수와 직접 대조한다.\n REGIME_LINK_BACKEND_CONFIG = (\n     Path(__file__).resolve().parents[2]\n     / \"backend\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixture_paths.py",
+          "old_path": "worker/tests/fixture_paths.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,12 +6,12 @@\n import json\n \n import pytest\n-from conftest import FIXTURE_DIR\n+from conftest import FIXTURE_DIR, THREE_ETF_DIR\n from pydantic import ValidationError\n \n from worker.contracts.base import ContractModel\n from worker.contracts.control import ControlMessage, ControlType\n-from worker.contracts.engine import BacktestEngine, ProgressCallback\n+from worker.contracts.engine import BacktestEngine\n from worker.contracts.engine_input import EngineInput, Scenario\n from worker.contracts.engine_output import EngineOutput, RunStatus, TradeReason\n from worker.contracts.events import (\n@@ -21,6 +21,8 @@ from worker.contracts.events import (\n     ProgressPayload,\n     StartedPayload,\n )\n+from worker.engine_runner import PortfolioBacktestEngine\n+from worker.market_data import CsvMarketDataProvider\n from worker.messaging import SCHEMA_VERSION\n \n FIXTURES: list[tuple[str, type[ContractModel]]] = [\n@@ -185,10 +187,12 @@ def test_engine_output_non_final_status_is_rejected() -> None:\n         EngineOutput.model_validate(body)\n \n \n-def test_dummy_engine_satisfies_protocol() -> None:\n-    class DummyEngine:\n-        def run(self, engine_input: EngineInput, on_progress: ProgressCallback) -> EngineOutput:\n-            raise NotImplementedError\n+def test_portfolio_engine_satisfies_protocol() -> None:\n+    \"\"\"``main`` 이 실행 Consumer 에 넘기는 실제 엔진이 경계 Protocol 을 만족한다.\n \n-    assert isinstance(DummyEngine(), BacktestEngine)\n+    CI 는 타입 검사기를 돌리지 않으므로 엔진의 ``run`` 이 이름을 잃으면 여기서 잡는다.\n+    \"\"\"\n+    engine = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))\n+\n+    assert isinstance(engine, BacktestEngine)\n     assert not isinstance(object(), BacktestEngine)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_contracts.py",
+          "old_path": "worker/tests/test_contracts.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -70,15 +70,6 @@ def test_distribution_is_paid_once():\n     assert ledger.on_pay_date(PAY_DATE) == [], \"같은 분배금이 두 번 들어오면 안 된다\"\n \n \n-def test_unpaid_entitlement_is_not_counted_as_cash():\n-    \"\"\"지급일이 실행 종료일 뒤면 끝내 받지 못한다. 받은 것으로 치지 않는다.\"\"\"\n-    ledger = DistributionLedger([distribution()])\n-    ledger.on_ex_date(EX_DATE, {ETF: Decimal(10)})\n-\n-    assert len(ledger.unpaid) == 1\n-    assert ledger.unpaid[0].cash == Decimal(\"1200\")\n-\n-\n def test_unheld_instrument_earns_nothing():\n     ledger = DistributionLedger([distribution()])\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_corporate_actions.py",
+          "old_path": "worker/tests/test_corporate_actions.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +0,0 @@\n-def test_placeholder() -> None:\n-    \"\"\"CI 배선 확인용. 엔진 구현이 들어오면 교체한다.\"\"\"\n-    assert True\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_placeholder.py",
+          "old_path": "worker/tests/test_placeholder.py",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -330,6 +330,26 @@ def test_distribution_is_paid_once_on_the_pay_date_for_ex_date_holdings() -> Non\n     assert with_flows[0].cash == before.cash + flow.amount, \"지급일에 현금이 정확히 그만큼 는다\"\n \n \n+def test_distribution_paid_after_the_run_ends_is_not_counted_as_cash() -> None:\n+    \"\"\"지급일이 실행 종료일 뒤면 끝내 받지 못한다. 받은 것으로 치지 않는다.\n+\n+    권리락일(4/29)에 들고 있어 자격은 생기지만 지급일(5/2) 전에 실행이 끝난다. 분배금을 뺀\n+    자료로 돌린 결과와 날마다 현금·자산이 같아야 한다 — 종료일에 남은 자격을 현금이나 자산에\n+    얹으면 여기서 갈린다.\n+    \"\"\"\n+    window = three_etf(\"2024-04-01\", \"2024-04-30\")\n+    output = completed(**window)\n+    assert holding(output, BATTERY_EX_DATE - timedelta(days=1), BATTERY) > 0\n+    assert output.portfolio_series[-1].date < BATTERY_PAY_DATE\n+    assert not any(s.cash_flows for s in output.portfolio_series)\n+\n+    baseline = run_patched(lambda market: replace(market, distributions=()), **window)\n+    assert baseline.run.status is RunStatus.COMPLETED, baseline.run.error\n+    assert [(s.date, s.cash, s.equity) for s in output.portfolio_series] == [\n+        (s.date, s.cash, s.equity) for s in baseline.portfolio_series\n+    ]\n+\n+\n def test_split_doubles_quantity_without_a_trade() -> None:\n     output = completed(**three_etf(\"2024-02-01\", \"2024-03-29\"))\n     after = next(s for s in output.portfolio_series if s.date == SPLIT_DAY)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_portfolio_execution.py",
+          "old_path": "worker/tests/test_portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881355": []
+  }
+}

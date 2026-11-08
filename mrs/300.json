@@ -1,0 +1,1006 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 957322,
+    "iid": 300,
+    "project_id": 1444456,
+    "title": "fix(fe): 첫 화면이 지어낸 성과를 말하지 않게 한다",
+    "description": "# 작업 내용 요약\n\n첫 화면이 지어낸 성과 수치와 등록표에 없는 전략 이름을 보이고 있었다. 그 표시를 걷고, 전략 카드는 등록표 응답에서 이름·설명을 읽는다. v1 데모 화면 `/backtest`·`/dashboard`는 라우트와 파일을 모두 없앴다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-416\n- link https://ssafy.atlassian.net/browse/S15P21E205-416\n\n# 주요 변경 사항\n\n- 첫 화면에서 `누적 수익 +124.8% / CAGR 18.4% / MDD -9.1% / SHARPE 1.42`와 \"KOSPI 200 / 2019—2023\" 축을 단 곡선을 없앴다. 남긴 곡선은 사인파 무늬이며 축·기간·종목 이름이 없고 보조기기에서 숨긴다\n- 전략 카드가 `GET /strategies/registry` 응답에서 이름·설명·개수를 읽는다(003 FR-005). 카드의 CAGR·MDD·SHARPE 칸을 없앴다. 조회가 실패하면 대신할 값을 지어내지 않고 실패를 말한 뒤 다시 시도할 길을 둔다(003 FR-018)\n- 구역 제목 \"검증된 알고리즘을 사용해보세요\"를 \"배분 규칙을 같은 조건에서 비교하세요\"로 바꿨다\n- `/backtest`·`/dashboard` 라우트·화면·전용 컴포넌트·`data/backtestMock.ts`·`types/backtest.ts` 제거. 그 화면만 쓰던 `MarketDataStatus`와 지어낸 적합도 점수를 보이던 `StrategyRecommendationSection`, `marketMock`의 `strategyRecommendations`도 함께 지웠다\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` — lint 오류 0(기존 경고 21 유지), 빌드 성공, 테스트 1332개 통과·skipped 0\n- [x] 백엔드를 띄워 실제 등록표로 확인했다. 카드 5장에 고정 비중·동일 비중·역변동성·섹터 모멘텀·최소분산이 뜨고, 페이지 본문 전체에서 `CAGR`·`MDD`·`SHARPE`·`124.8`·`누적 수익` 문자열이 0건이다\n- [x] 등록표를 못 부르는 상태에서 카드 대신 실패 문구와 다시 시도 버튼이 나오는 것을 화면으로 확인했다\n\n# 리뷰 포인트\n\n- 전략 카드에 성과를 싣지 않기로 했다. 실행하지 않은 전략에는 성과가 없고, 있는 것처럼 보이면 첫 화면이 추천을 하는 셈이 된다. 대신 카드가 설명 한 줄만 갖게 되어 이전보다 허전한데, 이 균형이 맞는지 봐 달라\n- \"검증된\"을 뺀 근거는 005 FR-012다. 판정 기준(PD-12)이 정해지기 전까지 결과 화면에서도 검증 구분을 말하지 못하는데 첫 화면이 먼저 단정할 수는 없다고 봤다\n- 남긴 장식 곡선을 아예 없앨지 판단이 필요하다. 수치와 축을 뗐으니 자료로 읽힐 여지는 없다고 봤지만, 차트 모양 자체가 성과를 연상시킨다고 보면 지우는 쪽이 맞다\n- 첫 화면의 빠진 진입점(경제환경 검색·자동 탐색) 추가와 문구 정리는 이 MR 범위 밖으로 두었다. UI/UX 개선 단계에서 한다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 카드의 성과 비교 표현을 없애 오히려 줄었다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 이 MR이 고친 것이 정확히 그것이다. 전략 이름 다섯 개를 상수로 들고 있던 자리를 등록표 조회로 바꿨고, `strategyId`로 분기하지 않는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 등록표 조회 실패를 빈 목록이나 임시 값으로 대신하지 않는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — \"검증된 알고리즘\" 문구를 내린 것이 이 항목이다",
+    "state": "merged",
+    "created_at": "2026-09-22T22:15:05.467+09:00",
+    "updated_at": "2026-09-22T22:20:58.497+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T22:20:58.528+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/416-remove-demo-screens",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🖥️ Frontend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+    "merge_commit_sha": "d1a85a7d02c21d5cd874b9afce2a9a02cf8eb90c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T22:15:09.522+09:00",
+    "reference": "!300",
+    "references": {
+      "short": "!300",
+      "relative": "!300",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!300"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/300",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 957322,
+    "iid": 300,
+    "project_id": 1444456,
+    "title": "fix(fe): 첫 화면이 지어낸 성과를 말하지 않게 한다",
+    "description": "# 작업 내용 요약\n\n첫 화면이 지어낸 성과 수치와 등록표에 없는 전략 이름을 보이고 있었다. 그 표시를 걷고, 전략 카드는 등록표 응답에서 이름·설명을 읽는다. v1 데모 화면 `/backtest`·`/dashboard`는 라우트와 파일을 모두 없앴다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-416\n- link https://ssafy.atlassian.net/browse/S15P21E205-416\n\n# 주요 변경 사항\n\n- 첫 화면에서 `누적 수익 +124.8% / CAGR 18.4% / MDD -9.1% / SHARPE 1.42`와 \"KOSPI 200 / 2019—2023\" 축을 단 곡선을 없앴다. 남긴 곡선은 사인파 무늬이며 축·기간·종목 이름이 없고 보조기기에서 숨긴다\n- 전략 카드가 `GET /strategies/registry` 응답에서 이름·설명·개수를 읽는다(003 FR-005). 카드의 CAGR·MDD·SHARPE 칸을 없앴다. 조회가 실패하면 대신할 값을 지어내지 않고 실패를 말한 뒤 다시 시도할 길을 둔다(003 FR-018)\n- 구역 제목 \"검증된 알고리즘을 사용해보세요\"를 \"배분 규칙을 같은 조건에서 비교하세요\"로 바꿨다\n- `/backtest`·`/dashboard` 라우트·화면·전용 컴포넌트·`data/backtestMock.ts`·`types/backtest.ts` 제거. 그 화면만 쓰던 `MarketDataStatus`와 지어낸 적합도 점수를 보이던 `StrategyRecommendationSection`, `marketMock`의 `strategyRecommendations`도 함께 지웠다\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` — lint 오류 0(기존 경고 21 유지), 빌드 성공, 테스트 1332개 통과·skipped 0\n- [x] 백엔드를 띄워 실제 등록표로 확인했다. 카드 5장에 고정 비중·동일 비중·역변동성·섹터 모멘텀·최소분산이 뜨고, 페이지 본문 전체에서 `CAGR`·`MDD`·`SHARPE`·`124.8`·`누적 수익` 문자열이 0건이다\n- [x] 등록표를 못 부르는 상태에서 카드 대신 실패 문구와 다시 시도 버튼이 나오는 것을 화면으로 확인했다\n\n# 리뷰 포인트\n\n- 전략 카드에 성과를 싣지 않기로 했다. 실행하지 않은 전략에는 성과가 없고, 있는 것처럼 보이면 첫 화면이 추천을 하는 셈이 된다. 대신 카드가 설명 한 줄만 갖게 되어 이전보다 허전한데, 이 균형이 맞는지 봐 달라\n- \"검증된\"을 뺀 근거는 005 FR-012다. 판정 기준(PD-12)이 정해지기 전까지 결과 화면에서도 검증 구분을 말하지 못하는데 첫 화면이 먼저 단정할 수는 없다고 봤다\n- 남긴 장식 곡선을 아예 없앨지 판단이 필요하다. 수치와 축을 뗐으니 자료로 읽힐 여지는 없다고 봤지만, 차트 모양 자체가 성과를 연상시킨다고 보면 지우는 쪽이 맞다\n- 첫 화면의 빠진 진입점(경제환경 검색·자동 탐색) 추가와 문구 정리는 이 MR 범위 밖으로 두었다. UI/UX 개선 단계에서 한다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 카드의 성과 비교 표현을 없애 오히려 줄었다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 이 MR이 고친 것이 정확히 그것이다. 전략 이름 다섯 개를 상수로 들고 있던 자리를 등록표 조회로 바꿨고, `strategyId`로 분기하지 않는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 등록표 조회 실패를 빈 목록이나 임시 값으로 대신하지 않는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — \"검증된 알고리즘\" 문구를 내린 것이 이 항목이다",
+    "state": "merged",
+    "created_at": "2026-09-22T22:15:05.467+09:00",
+    "updated_at": "2026-09-22T22:20:58.497+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T22:20:58.528+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/416-remove-demo-screens",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🖥️ Frontend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+    "merge_commit_sha": "d1a85a7d02c21d5cd874b9afce2a9a02cf8eb90c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T22:15:09.522+09:00",
+    "reference": "!300",
+    "references": {
+      "short": "!300",
+      "relative": "!300",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!300"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/300",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "29",
+    "latest_build_started_at": "2026-09-22T22:15:19.716+09:00",
+    "latest_build_finished_at": "2026-09-22T22:20:57.684+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 217498,
+      "iid": 314,
+      "project_id": 1444456,
+      "sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+      "ref": "fix(fe)/416-remove-demo-screens",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T22:15:19.614+09:00",
+      "updated_at": "2026-09-22T22:20:57.691+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/217498"
+    },
+    "head_pipeline": {
+      "id": 217498,
+      "iid": 314,
+      "project_id": 1444456,
+      "sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+      "ref": "fix(fe)/416-remove-demo-screens",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T22:15:19.614+09:00",
+      "updated_at": "2026-09-22T22:20:57.691+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/217498",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T22:15:19.716+09:00",
+      "finished_at": "2026-09-22T22:20:57.684+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/217498",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "f686fa39fea744c8ec842d01491ebf343f9a3b1c",
+      "head_sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+      "start_sha": "1940190769f06475314e220c906113eb0cb0768f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e66d9b8e10952c2cd2f2a4024bb48b4f425a709b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858651,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:15:05.572+09:00",
+          "updated_at": "2026-09-22T22:15:05.579+09:00",
+          "system": true,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "749d0671069cd1cafa6459b7f61c52c127d816f8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858653,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 불필요한 데모 화면 및 하드코딩된 목업 컴포넌트(`DashboardPage`, `BacktestPage` 등)를 안전하게 제거하고, 전략 목록을 실제 API 등록표에서 동적으로 로드하도록 일관성 있게 잘 정리된 변경입니다.\n\n### 테스트 제안\n- 랜딩 페이지(`AlgorithmOrbit`)에서 API 통신 실패 시 오류 상태 및 `다시 시도` 버튼이 정상적으로 렌더링되고 동작하는지 시나리오 테스트\n- 성공적으로 전략 등록표를 불러왔을 때 3D 캐러셀에 데이터가 정상 매핑되는지 확인\n- 제거된 라우트(`/dashboard`, `/backtest`)에 접근 시 적절히 처리(또는 리다이렉트)되는지 확인\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:6310cbe58bcb42fc398d4a95833ca3fb48391560 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T22:15:17.179+09:00",
+          "updated_at": "2026-09-22T22:15:17.179+09:00",
+          "system": false,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4798c788923e29841de49c961b4dda6106b65bc1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858664,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:17:08.434+09:00",
+          "updated_at": "2026-09-22T22:17:08.438+09:00",
+          "system": true,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "774496db2e27e341b08d370a2f5574fd0512fd6d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858665,
+          "type": null,
+          "body": "requested review from @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:17:08.469+09:00",
+          "updated_at": "2026-09-22T22:17:08.473+09:00",
+          "system": true,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "397273e2fa090cfa3f1b634713e22fff51742532",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858666,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 6310cbe58bcb42fc398d4a95833ca3fb48391560 pass",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:17:17.765+09:00",
+          "updated_at": "2026-09-22T22:17:17.769+09:00",
+          "system": true,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8ccc6f9ba28dee7a2557edfc7db7aeaed0bffd98",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2858686,
+          "type": null,
+          "body": "mentioned in commit d1a85a7d02c21d5cd874b9afce2a9a02cf8eb90c",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T22:20:58.554+09:00",
+          "updated_at": "2026-09-22T22:20:58.560+09:00",
+          "system": true,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6b055cacef45a9a152516a05f6a5459f5d8a3136",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885059,
+          "type": null,
+          "body": "mentioned in commit d43d8d3049078b884acea861ea8fe38e3a3cc073",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:12.271+09:00",
+          "updated_at": "2026-10-13T15:16:12.328+09:00",
+          "system": true,
+          "noteable_id": 957322,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 300,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2241765,
+      "head_commit_sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+      "base_commit_sha": "f686fa39fea744c8ec842d01491ebf343f9a3b1c",
+      "start_commit_sha": "1940190769f06475314e220c906113eb0cb0768f",
+      "created_at": "2026-09-22T22:15:05.883+09:00",
+      "merge_request_id": 957322,
+      "state": "collected",
+      "real_size": "29",
+      "patch_id_sha": "6d758947b76a347f413802db6297b04ca515dd48"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2241765,
+      "head_commit_sha": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+      "base_commit_sha": "f686fa39fea744c8ec842d01491ebf343f9a3b1c",
+      "start_commit_sha": "1940190769f06475314e220c906113eb0cb0768f",
+      "created_at": "2026-09-22T22:15:05.883+09:00",
+      "merge_request_id": 957322,
+      "state": "collected",
+      "real_size": "29",
+      "patch_id_sha": "6d758947b76a347f413802db6297b04ca515dd48",
+      "commits": [
+        {
+          "id": "6310cbe58bcb42fc398d4a95833ca3fb48391560",
+          "short_id": "6310cbe5",
+          "created_at": "2026-09-22T21:48:56.000+09:00",
+          "parent_ids": [
+            "f686fa39fea744c8ec842d01491ebf343f9a3b1c"
+          ],
+          "title": "fix(fe): 첫 화면이 지어낸 성과를 말하지 않게 한다",
+          "message": "fix(fe): 첫 화면이 지어낸 성과를 말하지 않게 한다\n\n첫 화면이 `누적 수익 +124.8%`·CAGR·MDD·SHARPE를 적고 있었다. 데모 자료의 값이라\n어떤 실행에서도 나온 적이 없다. 전략 카드도 등록표에 없는 다섯 이름을 \"수익과 위험을\n비교해보세요\"로 돌렸다. 첫 화면이 근거 없는 성과를 단정하고 없는 전략을 광고한 셈이다.\n\n성과 수치와 기간·종목을 단 차트를 걷고, 전략 카드는 `GET /strategies/registry`에서\n이름·설명을 읽는다(003 FR-005). 조회가 실패하면 값을 지어내지 않고 실패를 말한 뒤\n다시 시도할 길을 둔다(003 FR-018). 남긴 곡선은 사인파 무늬이며 축을 달지 않고\n보조기기에서 숨긴다.\n\nv1 데모 화면 `/backtest`·`/dashboard`는 라우트와 파일을 모두 없앴다. 그 화면만 쓰던\n`MarketDataStatus`와 지어낸 적합도 점수를 보이던 `StrategyRecommendationSection`도\n함께 지웠다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T21:48:56.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T21:48:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6310cbe58bcb42fc398d4a95833ca3fb48391560"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,71 +0,0 @@\n-.chart {\n-  width: 100%;\n-  min-width: 0;\n-  max-width: 100%;\n-  min-height: 260px;\n-  --chart-background: transparent;\n-  --chart-grid: var(--thorp-line);\n-  --chart-foreground: var(--thorp-copy);\n-  --chart-foreground-muted: var(--thorp-muted);\n-  --chart-crosshair: var(--thorp-accent-soft);\n-  --chart-label: var(--thorp-copy);\n-  --chart-tooltip-background: rgb(7 17 11 / 96%);\n-  --chart-tooltip-foreground: var(--thorp-foreground);\n-  --chart-tooltip-muted: var(--thorp-copy);\n-}\n-\n-.tooltip {\n-  width: min(284px, calc(100vw - 100px));\n-  padding: 12px;\n-  color: var(--chart-tooltip-foreground);\n-  font-size: 0.76rem;\n-}\n-\n-.tooltipHeading,\n-.tooltipRow,\n-.tooltipLabel {\n-  display: flex;\n-  align-items: center;\n-  justify-content: space-between;\n-  gap: 8px;\n-}\n-\n-.tooltipHeading > span,\n-.tooltipCaption,\n-.tooltipValues > span {\n-  color: var(--chart-tooltip-muted);\n-  font-size: 0.7rem;\n-}\n-\n-.tooltipCaption {\n-  margin: 4px 0 8px;\n-}\n-\n-.tooltipRow + .tooltipRow {\n-  margin-top: 6px;\n-}\n-\n-.tooltipLabel {\n-  justify-content: flex-start;\n-  min-width: 0;\n-}\n-\n-.tooltipLabel i {\n-  width: 8px;\n-  height: 8px;\n-  flex-shrink: 0;\n-  border-radius: 50%;\n-}\n-\n-.tooltipValues {\n-  display: grid;\n-  flex-shrink: 0;\n-  text-align: right;\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-@media (max-width: 720px) {\n-  .chart {\n-    min-height: 260px;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/BacktestChart.module.css",
+          "old_path": "frontend/src/components/backtest/BacktestChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,136 +0,0 @@\n-import { curveLinear } from '@visx/curve'\n-import { Grid } from '@/components/charts/grid'\n-import { Line, LineChart } from '@/components/charts/line-chart'\n-import { ChartTooltip } from '@/components/charts/tooltip'\n-import { XAxis } from '@/components/charts/x-axis'\n-import {\n-  backtestChartData,\n-  strategyResults,\n-  type StrategyId,\n-} from '@/data/backtestMock'\n-import styles from './BacktestChart.module.css'\n-\n-interface BacktestChartProps {\n-  activeStrategies: StrategyId[]\n-  focusedStrategy: StrategyId | null\n-  status: 'loading' | 'ready'\n-  revealSignature: string\n-  initialCapital: number\n-}\n-\n-const tooltipDateFormatter = new Intl.DateTimeFormat('ko-KR', {\n-  year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC',\n-})\n-const capitalFormatter = new Intl.NumberFormat('ko-KR', {\n-  style: 'currency', currency: 'KRW', maximumFractionDigits: 0,\n-})\n-const returnFormatter = new Intl.NumberFormat('ko-KR', {\n-  style: 'percent', signDisplay: 'exceptZero', minimumFractionDigits: 1,\n-  maximumFractionDigits: 1,\n-})\n-\n-/** 차트의 초기값 100을 기준으로 해당 시점의 모의 수익률과 평가금액을 표시한다. */\n-function BacktestTooltip({ point, activeStrategies, initialCapital }: {\n-  point: Record<string, unknown>\n-  activeStrategies: StrategyId[]\n-  initialCapital: number\n-}) {\n-  const series = [\n-    ...strategyResults.filter((strategy) => activeStrategies.includes(strategy.id)),\n-    { id: 'benchmark', name: 'KOSPI 200', color: 'var(--chart-foreground-muted)' },\n-  ]\n-\n-  return (\n-    <div className={styles.tooltip} role=\"tooltip\">\n-      <div className={styles.tooltipHeading}>\n-        <strong>{point.date instanceof Date ? tooltipDateFormatter.format(point.date) : '—'}</strong>\n-        <span>모의 데이터</span>\n-      </div>\n-      <p className={styles.tooltipCaption}>누적수익률 · 평가금액</p>\n-      {series.map((seriesItem) => {\n-        const value = point[seriesItem.id]\n-        const hasValue = typeof value === 'number' && Number.isFinite(value)\n-\n-        return (\n-          <div className={styles.tooltipRow} key={seriesItem.id}>\n-            <span className={styles.tooltipLabel}>\n-              <i style={{ backgroundColor: seriesItem.color }} aria-hidden=\"true\" />\n-              {seriesItem.name}\n-            </span>\n-            <div className={styles.tooltipValues}>\n-              <strong>{hasValue ? returnFormatter.format(value / 100 - 1) : '—'}</strong>\n-              <span>{hasValue ? capitalFormatter.format(initialCapital * value / 100) : '—'}</span>\n-            </div>\n-          </div>\n-        )\n-      })}\n-    </div>\n-  )\n-}\n-\n-/** 활성 전략과 KOSPI 200 벤치마크의 누적 성과를 선 차트로 비교한다. */\n-export function BacktestChart({\n-  activeStrategies,\n-  focusedStrategy,\n-  status,\n-  revealSignature,\n-  initialCapital,\n-}: BacktestChartProps) {\n-  return (\n-    <div className={styles.chart}>\n-      <LineChart\n-        data={backtestChartData}\n-        xDataKey=\"date\"\n-        status={status}\n-        loadingLabel=\"전략을 계산하고 있습니다\"\n-        animationDuration={1400}\n-        revealSignature={revealSignature}\n-        aspectRatio=\"3.35 / 1\"\n-        margin={{ top: 16, right: 18, bottom: 34, left: 18 }}\n-      >\n-        <Grid horizontal numTicksRows={5} strokeDasharray=\"2,5\" />\n-\n-        {/* 벤치마크는 전략 성과를 판단하는 공통 기준선으로 유지한다. */}\n-        <Line\n-          dataKey=\"benchmark\"\n-          curve={curveLinear}\n-          stroke=\"var(--thorp-neutral)\"\n-          strokeWidth={1.6}\n-          animate\n-          fadeEdges={false}\n-          showHighlight={false}\n-        />\n-\n-        {/* 강조 전략이 있으면 나머지 전략의 색을 낮춰 비교 대상을 선명하게 한다. */}\n-        {strategyResults.map((strategy) =>\n-          activeStrategies.includes(strategy.id) ? (\n-            <Line\n-              key={strategy.id}\n-              dataKey={strategy.id}\n-              curve={curveLinear}\n-              stroke={\n-                focusedStrategy && focusedStrategy !== strategy.id\n-                  ? strategy.mutedColor\n-                  : strategy.color\n-              }\n-              strokeWidth={focusedStrategy === strategy.id ? 3.8 : 2.5}\n-              animate\n-              fadeEdges={false}\n-            />\n-          ) : null,\n-        )}\n-\n-        <XAxis numTicks={5} tickMode=\"domain\" />\n-        <ChartTooltip\n-          content={({ point }) => (\n-            <BacktestTooltip\n-              point={point}\n-              activeStrategies={activeStrategies}\n-              initialCapital={initialCapital}\n-            />\n-          )}\n-        />\n-      </LineChart>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/BacktestChart.tsx",
+          "old_path": "frontend/src/components/backtest/BacktestChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,103 +0,0 @@\n-.wrapper {\n-  width: 100%;\n-  min-width: 0;\n-  max-width: 100%;\n-  overflow-x: auto;\n-}\n-\n-.table {\n-  width: 100%;\n-  min-width: 690px;\n-  border-collapse: collapse;\n-  color: var(--thorp-foreground);\n-  font-size: 0.8rem;\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-.table th,\n-.table td {\n-  padding: 8px 12px;\n-  border-bottom: 1px solid var(--thorp-line);\n-  text-align: right;\n-  white-space: nowrap;\n-}\n-\n-.table thead th {\n-  color: var(--thorp-muted);\n-  font-size: 0.7rem;\n-  font-weight: 650;\n-  letter-spacing: 0.03em;\n-}\n-\n-.table th:first-child,\n-.table td:first-child {\n-  text-align: left;\n-}\n-\n-.clickableRow {\n-  cursor: pointer;\n-  transition: background 160ms ease;\n-}\n-\n-.clickableRow:hover,\n-.clickableRow[data-active='true'] {\n-  background: var(--thorp-accent-muted);\n-}\n-\n-.strategyButton {\n-  display: inline-flex;\n-  align-items: center;\n-  gap: 9px;\n-  border: 0;\n-  background: transparent;\n-  color: inherit;\n-  cursor: inherit;\n-  font: inherit;\n-  font-weight: 650;\n-}\n-\n-.strategyButton:focus-visible {\n-  border-radius: 4px;\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset);\n-}\n-\n-.dot,\n-.benchmarkDot {\n-  width: 8px;\n-  height: 8px;\n-  border-radius: 50%;\n-}\n-\n-.benchmarkDot {\n-  background: var(--thorp-neutral);\n-}\n-\n-.positive {\n-  color: var(--thorp-positive);\n-  font-weight: 650;\n-}\n-\n-.negative {\n-  color: var(--thorp-negative);\n-}\n-\n-.benchmarkRow {\n-  background: var(--thorp-surface);\n-  color: var(--thorp-copy);\n-}\n-\n-.benchmarkRow th,\n-.benchmarkRow td {\n-  border-bottom: 0;\n-}\n-\n-@media (max-width: 780px) {\n-  .table {\n-    min-width: 520px;\n-  }\n-\n-  .optional {\n-    display: none;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/ResultTable.module.css",
+          "old_path": "frontend/src/components/backtest/ResultTable.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,102 +0,0 @@\n-import { motion } from 'motion/react'\n-import {\n-  strategyResults,\n-  type StrategyId,\n-  type StrategyResult,\n-} from '@/data/backtestMock'\n-import styles from './ResultTable.module.css'\n-\n-interface ResultTableProps {\n-  activeStrategies: StrategyId[]\n-  focusedStrategy: StrategyId | null\n-  onFocus: (strategyId: StrategyId | null) => void\n-}\n-\n-/** 전략 한 개의 성과 지표 셀을 동일한 순서로 렌더링한다. */\n-function ResultCells({ strategy }: { strategy: StrategyResult }) {\n-  return (\n-    <>\n-      <td className={styles.positive}>{strategy.totalReturn}</td>\n-      <td>{strategy.cagr}</td>\n-      <td className={styles.negative}>{strategy.mdd}</td>\n-      <td>{strategy.sharpe}</td>\n-      <td className={styles.optional}>{strategy.volatility}</td>\n-      <td className={styles.optional}>{strategy.trades}</td>\n-    </>\n-  )\n-}\n-\n-/** 활성 전략의 결과를 비교하고 선택한 행을 차트 강조 상태와 연결한다. */\n-export function ResultTable({\n-  activeStrategies,\n-  focusedStrategy,\n-  onFocus,\n-}: ResultTableProps) {\n-  // 사용자가 비교 대상으로 선택한 전략만 결과 표에 노출한다.\n-  const visibleStrategies = strategyResults.filter((strategy) =>\n-    activeStrategies.includes(strategy.id),\n-  )\n-\n-  return (\n-    <div className={styles.wrapper}>\n-      <table className={styles.table}>\n-        <thead>\n-          <tr>\n-            <th>전략</th>\n-            <th>누적 수익</th>\n-            <th>CAGR</th>\n-            <th>MDD</th>\n-            <th>Sharpe</th>\n-            <th className={styles.optional}>변동성</th>\n-            <th className={styles.optional}>거래 수</th>\n-          </tr>\n-        </thead>\n-        <tbody>\n-          {visibleStrategies.map((strategy) => {\n-            const isDimmed =\n-              focusedStrategy !== null && focusedStrategy !== strategy.id\n-\n-            return (\n-              <motion.tr\n-                key={strategy.id}\n-                className={styles.clickableRow}\n-                data-active={focusedStrategy === strategy.id}\n-                animate={{ opacity: isDimmed ? 0.34 : 1 }}\n-                transition={{ duration: 0.18 }}\n-                onClick={() =>\n-                  onFocus(focusedStrategy === strategy.id ? null : strategy.id)\n-                }\n-              >\n-                <th scope=\"row\">\n-                  <button type=\"button\" className={styles.strategyButton}>\n-                    <span\n-                      className={styles.dot}\n-                      style={{ backgroundColor: strategy.color }}\n-                      aria-hidden=\"true\"\n-                    />\n-                    {strategy.name}\n-                  </button>\n-                </th>\n-                <ResultCells strategy={strategy} />\n-              </motion.tr>\n-            )\n-          })}\n-          <tr className={styles.benchmarkRow}>\n-            <th scope=\"row\">\n-              <span className={styles.strategyButton}>\n-                <span className={styles.benchmarkDot} aria-hidden=\"true\" />\n-                KOSPI 200\n-              </span>\n-            </th>\n-            <td className={styles.positive}>+80.2%</td>\n-            <td>12.5%</td>\n-            <td className={styles.negative}>-22.4%</td>\n-            <td>0.72</td>\n-            <td className={styles.optional}>18.5%</td>\n-            <td className={styles.optional}>—</td>\n-          </tr>\n-        </tbody>\n-      </table>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/ResultTable.tsx",
+          "old_path": "frontend/src/components/backtest/ResultTable.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,72 +0,0 @@\n-.list {\n-  display: grid;\n-}\n-\n-.strategy {\n-  display: grid;\n-  grid-template-columns: auto minmax(0, 1fr) auto;\n-  align-items: center;\n-  gap: 10px;\n-  width: 100%;\n-  padding: 7px 2px;\n-  border: 0;\n-  border-bottom: 1px solid var(--thorp-line);\n-  border-radius: 0;\n-  background: var(--thorp-background);\n-  color: var(--thorp-foreground);\n-  cursor: pointer;\n-  text-align: left;\n-  transition: color 160ms ease, background 160ms ease;\n-}\n-\n-.strategy[data-selected='true'] {\n-  background: linear-gradient(90deg, var(--thorp-accent-muted) 0%, transparent 88%);\n-}\n-\n-.strategy:focus-visible {\n-  outline: var(--thorp-focus-outline);\n-  outline-offset: var(--thorp-focus-offset-compact);\n-}\n-\n-.marker {\n-  width: 9px;\n-  height: 9px;\n-  border-radius: 50%;\n-}\n-\n-.copy {\n-  display: grid;\n-  min-width: 0;\n-  gap: 1px;\n-}\n-\n-.copy strong {\n-  overflow: hidden;\n-  font-size: 0.76rem;\n-  font-weight: 650;\n-  text-overflow: ellipsis;\n-  white-space: nowrap;\n-}\n-\n-.copy small {\n-  overflow: hidden;\n-  color: var(--thorp-muted);\n-  font-size: 0.66rem;\n-  text-overflow: ellipsis;\n-  white-space: nowrap;\n-}\n-\n-.check {\n-  display: grid;\n-  width: 19px;\n-  height: 19px;\n-  place-items: center;\n-  border: 1px solid var(--thorp-line-strong);\n-  border-radius: 5px;\n-  color: var(--thorp-accent);\n-}\n-\n-.strategy[data-selected='true'] .check {\n-  border-color: var(--thorp-accent);\n-  background: var(--thorp-accent-muted);\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/StrategySelector.module.css",
+          "old_path": "frontend/src/components/backtest/StrategySelector.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,45 +0,0 @@\n-import { Check } from 'lucide-react'\n-import { motion } from 'motion/react'\n-import { strategyResults, type StrategyId } from '@/data/backtestMock'\n-import styles from './StrategySelector.module.css'\n-\n-interface StrategySelectorProps {\n-  selected: StrategyId[]\n-  onToggle: (strategyId: StrategyId) => void\n-}\n-\n-/** 비교할 전략 목록과 각 전략의 선택 상태를 표시한다. */\n-export function StrategySelector({ selected, onToggle }: StrategySelectorProps) {\n-  return (\n-    <div className={styles.list}>\n-      {strategyResults.map((strategy) => {\n-        const isSelected = selected.includes(strategy.id)\n-\n-        return (\n-          <motion.button\n-            key={strategy.id}\n-            type=\"button\"\n-            className={styles.strategy}\n-            data-selected={isSelected}\n-            onClick={() => onToggle(strategy.id)}\n-            whileTap={{ scale: 0.985 }}\n-            aria-pressed={isSelected}\n-          >\n-            <span\n-              className={styles.marker}\n-              style={{ backgroundColor: strategy.color }}\n-              aria-hidden=\"true\"\n-            />\n-            <span className={styles.copy}>\n-              <strong>{strategy.name}</strong>\n-              <small>{strategy.parameter}</small>\n-            </span>\n-            <span className={styles.check} aria-hidden=\"true\">\n-              {isSelected && <Check size={14} strokeWidth={2.4} />}\n-            </span>\n-          </motion.button>\n-        )\n-      })}\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/StrategySelector.tsx",
+          "old_path": "frontend/src/components/backtest/StrategySelector.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,178 +0,0 @@\n-.section {\n-  min-width: 0;\n-}\n-\n-.header,\n-.toggle,\n-.card,\n-.cardHeader {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.header {\n-  justify-content: space-between;\n-  gap: 16px;\n-  margin-bottom: 10px;\n-}\n-\n-.header h2 {\n-  margin: 0;\n-  font-size: 1.05rem;\n-  font-weight: 680;\n-  letter-spacing: -0.025em;\n-}\n-\n-.toggle {\n-  gap: 2px;\n-  padding: 2px;\n-  border: 1px solid var(--market-line);\n-  border-radius: var(--radius-sm);\n-  background: var(--market-surface);\n-}\n-\n-.toggle button {\n-  min-width: 46px;\n-  min-height: 28px;\n-  padding: 3px 8px;\n-  border: 0;\n-  border-radius: 4px;\n-  background: transparent;\n-  color: var(--market-copy);\n-  font-size: 0.68rem;\n-  cursor: pointer;\n-}\n-\n-.toggle button[aria-pressed='true'] {\n-  background: var(--market-line-soft);\n-  box-shadow: inset 0 -2px 0 var(--market-brand);\n-  color: var(--market-ink);\n-  font-weight: 680;\n-}\n-\n-.toggle button:focus-visible {\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset-compact);\n-}\n-\n-.grid {\n-  display: grid;\n-  grid-template-columns: repeat(5, minmax(0, 1fr));\n-  overflow: hidden;\n-  border-top: 1px solid var(--market-line);\n-  border-bottom: 1px solid var(--market-line);\n-  background: transparent;\n-}\n-\n-.grid[data-group='macro'] {\n-  grid-template-columns: repeat(6, minmax(0, 1fr));\n-}\n-\n-.card {\n-  min-width: 0;\n-  min-height: 104px;\n-  padding: 14px 18px;\n-  gap: 12px;\n-}\n-\n-.card + .card {\n-  border-left: 1px solid var(--market-line-soft);\n-}\n-\n-.cardCopy {\n-  min-width: 0;\n-  flex: 1 1 58%;\n-}\n-\n-.cardHeader {\n-  justify-content: space-between;\n-  gap: 8px;\n-}\n-\n-.cardHeader h3 {\n-  overflow: hidden;\n-  margin: 0;\n-  color: var(--market-copy);\n-  font-size: 0.67rem;\n-  font-weight: 620;\n-  text-overflow: ellipsis;\n-  white-space: nowrap;\n-}\n-\n-.cardHeader small {\n-  display: none;\n-  color: var(--market-muted);\n-  font-size: 0.57rem;\n-  white-space: nowrap;\n-}\n-\n-.card strong {\n-  display: block;\n-  margin-top: 9px;\n-  color: var(--market-ink);\n-  font-size: 1.05rem;\n-  font-variant-numeric: tabular-nums;\n-  letter-spacing: -0.035em;\n-  white-space: nowrap;\n-}\n-\n-.change {\n-  display: block;\n-  margin-top: 2px;\n-  color: var(--market-neutral);\n-  font-size: 0.62rem;\n-  font-weight: 650;\n-  white-space: nowrap;\n-}\n-\n-.change[data-tone='positive'] {\n-  color: var(--market-positive);\n-}\n-\n-.change[data-tone='negative'] {\n-  color: var(--market-negative);\n-}\n-\n-.change[data-tone='warning'] {\n-  color: var(--market-warning);\n-}\n-\n-.change[data-status='loading'],\n-.change[data-status='live'],\n-.change[data-status='stale'],\n-.change[data-status='error'] {\n-  color: var(--market-muted);\n-}\n-\n-.card svg {\n-  min-width: 48px;\n-  height: 38px;\n-  flex: 1 1 42%;\n-}\n-\n-@media (max-width: 1050px) {\n-  .grid {\n-    overflow-x: auto;\n-    grid-template-columns: repeat(5, minmax(190px, 1fr));\n-  }\n-\n-  .grid[data-group='macro'] {\n-    grid-template-columns: repeat(6, minmax(190px, 1fr));\n-  }\n-}\n-\n-@media (max-width: 560px) {\n-  .grid {\n-    grid-template-columns: repeat(5, minmax(170px, 1fr));\n-    scroll-snap-type: x proximity;\n-  }\n-\n-  .grid[data-group='macro'] {\n-    grid-template-columns: repeat(6, minmax(170px, 1fr));\n-  }\n-\n-  .card {\n-    min-height: 96px;\n-    scroll-snap-align: start;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.module.css",
+          "old_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,89 +0,0 @@\n-import { AnimatePresence, motion } from 'motion/react'\n-import type { Indicator } from '@/types/market'\n-import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n-import {\n-  formatDataDate,\n-  formatIndicatorContext,\n-  formatIndicatorValue,\n-} from '@/utils/marketFormat'\n-import { TrendSparkline } from '@/components/market/TrendSparkline'\n-import styles from './DashboardIndicatorStrip.module.css'\n-\n-interface DashboardIndicatorStripProps {\n-  group: 'market' | 'macro'\n-  marketIndicators: Indicator[]\n-  macroIndicators: Indicator[]\n-  onGroupChange: (group: 'market' | 'macro') => void\n-}\n-\n-/** 선택한 지표군을 한 줄짜리 요약 카드로 전환해 보여준다. */\n-export function DashboardIndicatorStrip({\n-  group,\n-  marketIndicators,\n-  macroIndicators,\n-  onGroupChange,\n-}: DashboardIndicatorStripProps) {\n-  const indicators = group === 'market' ? marketIndicators : macroIndicators\n-\n-  return (\n-    <section className={styles.section} aria-labelledby=\"dashboard-indicator-title\">\n-      <div className={styles.header}>\n-        <h2 id=\"dashboard-indicator-title\">지표 요약</h2>\n-        <div className={styles.toggle} role=\"group\" aria-label=\"지표 분류\">\n-          <button\n-            type=\"button\"\n-            aria-pressed={group === 'market'}\n-            onClick={() => onGroupChange('market')}\n-          >\n-            시장\n-          </button>\n-          <button\n-            type=\"button\"\n-            aria-pressed={group === 'macro'}\n-            onClick={() => onGroupChange('macro')}\n-          >\n-            거시\n-          </button>\n-        </div>\n-      </div>\n-\n-      <AnimatePresence mode=\"wait\" initial={false}>\n-        <motion.div\n-          className={styles.grid}\n-          data-group={group}\n-          key={group}\n-          initial={{ opacity: 0, x: 14 }}\n-          animate={{ opacity: 1, x: 0 }}\n-          exit={{ opacity: 0, x: -14 }}\n-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}\n-        >\n-          {indicators.map((indicator, index) => (\n-            <article className={styles.card} key={indicator.id}>\n-              <div className={styles.cardCopy}>\n-                <div className={styles.cardHeader}>\n-                  <h3>{indicator.name}</h3>\n-                  <small>{formatDataDate(indicator.observationDate)}</small>\n-                </div>\n-                <strong>{formatIndicatorValue(indicator)}</strong>\n-                <span\n-                  className={styles.change}\n-                  data-tone={indicator.tone}\n-                  data-status={indicator.dataStatus}\n-                  title={indicator.statusMessage ?? undefined}\n-                >\n-                  {formatIndicatorContext(indicator)}\n-                </span>\n-              </div>\n-              <TrendSparkline\n-                series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}\n-                tone={indicator.tone}\n-                delay={index * 0.04}\n-                addDetail\n-              />\n-            </article>\n-          ))}\n-        </motion.div>\n-      </AnimatePresence>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.tsx",
+          "old_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,118 +0,0 @@\n-.summary {\n-  display: grid;\n-  grid-template-columns: minmax(0, 1.45fr) minmax(380px, 0.8fr);\n-  padding: 17px 8px;\n-  border-top: 1px solid var(--market-line);\n-  border-bottom: 1px solid var(--market-line);\n-  background: transparent;\n-  gap: 28px;\n-}\n-\n-.eyebrow,\n-.detailLink,\n-.metaRow,\n-.states > div {\n-  display: flex;\n-  align-items: center;\n-  gap: 8px;\n-}\n-\n-.eyebrow {\n-  color: var(--market-brand);\n-  font-size: 0.7rem;\n-  font-weight: 650;\n-}\n-\n-.summary h1 {\n-  margin: 7px 0 5px;\n-  color: var(--market-ink);\n-  font-size: clamp(1.15rem, 2vw, 1.45rem);\n-  font-weight: 700;\n-  letter-spacing: -0.035em;\n-}\n-\n-.description {\n-  margin: 0;\n-  color: var(--market-copy);\n-  font-size: 0.75rem;\n-  line-height: 1.55;\n-}\n-\n-.stateArea {\n-  padding-left: 24px;\n-  border-left: 1px solid var(--market-line-soft);\n-}\n-\n-.states {\n-  display: grid;\n-  margin: 0;\n-}\n-\n-.states > div {\n-  min-height: 30px;\n-  justify-content: space-between;\n-}\n-\n-.states > div + div {\n-  border-top: 1px solid var(--market-line-soft);\n-}\n-\n-.states dt {\n-  color: var(--market-copy);\n-  font-size: 0.68rem;\n-}\n-\n-.states dd {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: 0.72rem;\n-  font-weight: 680;\n-}\n-\n-.states dd[data-risk='riskOff'] {\n-  color: var(--market-warning);\n-}\n-\n-.states dd[data-risk='riskOn'] {\n-  color: var(--market-positive);\n-}\n-\n-.metaRow {\n-  justify-content: space-between;\n-  margin-top: 7px;\n-  padding-top: 7px;\n-  border-top: 1px solid var(--market-line-soft);\n-  color: var(--market-neutral);\n-  font-size: 0.66rem;\n-}\n-\n-.detailLink {\n-  width: fit-content;\n-  color: var(--market-brand);\n-  font-size: 0.74rem;\n-  font-weight: 600;\n-  text-decoration: none;\n-}\n-\n-.detailLink:hover {\n-  text-decoration: underline;\n-}\n-\n-.detailLink:focus-visible {\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset-wide);\n-}\n-\n-@media (max-width: 720px) {\n-  .summary {\n-    grid-template-columns: 1fr;\n-    padding: 15px 4px;\n-    gap: 15px;\n-  }\n-\n-  .stateArea {\n-    padding: 12px 0 0;\n-    border-top: 1px solid var(--market-line-soft);\n-    border-left: 0;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MarketStatusSummary.module.css",
+          "old_path": "frontend/src/components/dashboard/MarketStatusSummary.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,47 +0,0 @@\n-import { ArrowUpRight, Activity } from 'lucide-react'\n-import { motion } from 'motion/react'\n-import { Link } from 'react-router-dom'\n-import type { MarketRegime } from '@/types/market'\n-import {\n-  cycleLabels,\n-  inflationLabels,\n-  riskLabels,\n-  formatDataDate,\n-} from '@/utils/marketFormat'\n-import styles from './MarketStatusSummary.module.css'\n-\n-interface MarketStatusSummaryProps {\n-  regime: MarketRegime\n-}\n-\n-/** 홈과 같은 시장 국면을 경기·물가·위험의 세 가지 상태로 압축해 표시한다. */\n-export function MarketStatusSummary({ regime }: MarketStatusSummaryProps) {\n-  return (\n-    <motion.section\n-      className={styles.summary}\n-      aria-labelledby=\"market-status-title\"\n-      initial={{ opacity: 0, y: 12 }}\n-      animate={{ opacity: 1, y: 0 }}\n-      transition={{ duration: 0.45 }}\n-    >\n-      <div className={styles.copy}>\n-        <span className={styles.eyebrow}><Activity size={15} aria-hidden=\"true\" /> 현재 시장 상황</span>\n-        <h1 id=\"market-status-title\">{regime.headline}</h1>\n-        <p className={styles.description}>{regime.summary}</p>\n-      </div>\n-      <div className={styles.stateArea}>\n-        <dl className={styles.states}>\n-          <div><dt>경기</dt><dd>{cycleLabels[regime.cycle]}</dd></div>\n-          <div><dt>물가</dt><dd>{inflationLabels[regime.inflation]}</dd></div>\n-          <div><dt>시장 위험</dt><dd data-risk={regime.risk}>{riskLabels[regime.risk]}</dd></div>\n-        </dl>\n-        <div className={styles.metaRow}>\n-          <span>분석 기준 {formatDataDate(regime.asOf)}</span>\n-          <Link className={styles.detailLink} to=\"/market-flow\">\n-            자세히 보기 <ArrowUpRight size={14} aria-hidden=\"true\" />\n-          </Link>\n-        </div>\n-      </div>\n-    </motion.section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MarketStatusSummary.tsx",
+          "old_path": "frontend/src/components/dashboard/MarketStatusSummary.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import { ArrowUpRight } from 'lucide-react'\n import { motion, useInView, useReducedMotion } from 'motion/react'\n import {\n+  useCallback,\n   useEffect,\n   useRef,\n   useState,\n@@ -9,7 +10,8 @@ import {\n   type PointerEvent,\n } from 'react'\n import { Link } from 'react-router-dom'\n-import { strategyResults } from '@/data/backtestMock'\n+import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'\n+import type { StrategyView } from '@/types/strategyRegistry'\n import styles from '@/pages/LandingPage.module.css'\n \n function relativeIndex(index: number, selectedIndex: number, length: number) {\n@@ -19,8 +21,21 @@ function relativeIndex(index: number, selectedIndex: number, length: number) {\n   return difference\n }\n \n-/** 전략 카드를 원근에 놓고 앞쪽 카드를 선명하게 탐색하는 3D 캐러셀이다. */\n+/**\n+ * 등록된 배분 전략을 원근에 놓고 탐색하는 3D 캐러셀이다.\n+ *\n+ * <p><b>전략 지식을 갖지 않는다.</b> 이름·설명·개수는 `GET /strategies/registry` 응답에서만\n+ * 읽는다(003 FR-005). 예전에는 데모 자료의 다섯 이름을 상수로 들고 있어서 등록표에 없는 전략을\n+ * 첫 화면이 광고했다.\n+ *\n+ * <p><b>성과를 싣지 않는다.</b> 카드에 CAGR·MDD·SHARPE를 적던 자리를 비웠다. 실행하지 않은\n+ * 전략에는 성과가 없고, 있는 것처럼 보이면 첫 화면이 추천을 하는 것이 된다.\n+ *\n+ * <p>조회가 실패하면 대신할 값을 지어내지 않고 실패를 말한 뒤 다시 시도할 길을 둔다(003 FR-018).\n+ */\n export function AlgorithmOrbit() {\n+  const [strategies, setStrategies] = useState<StrategyView[]>([])\n+  const [loadState, setLoadState] = useState<'loading' | 'ready' | 'failed'>('loading')\n   const [selectedIndex, setSelectedIndex] = useState(0)\n   const [stageWidth, setStageWidth] = useState(960)\n   const [announcement, setAnnouncement] = useState('')\n@@ -30,6 +45,27 @@ export function AlgorithmOrbit() {\n   const reducedMotion = useReducedMotion()\n   const isInView = useInView(stageRef, { amount: 0.2 })\n \n+  const loadStrategies = useCallback((signal?: AbortSignal) => {\n+    setLoadState('loading')\n+    return fetchStrategyRegistry(undefined, signal)\n+      .then((registry) => {\n+        setStrategies(registry.strategies)\n+        setSelectedIndex(0)\n+        setLoadState('ready')\n+      })\n+      .catch((error: unknown) => {\n+        if (normalizeStrategyRegistryError(error).canceled) return\n+        setStrategies([])\n+        setLoadState('failed')\n+      })\n+  }, [])\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    void loadStrategies(controller.signal)\n+    return () => controller.abort()\n+  }, [loadStrategies])\n+\n   useEffect(() => {\n     const stage = stageRef.current\n     if (!stage) return\n@@ -42,26 +78,27 @@ export function AlgorithmOrbit() {\n   }, [])\n \n   useEffect(() => {\n-    if (reducedMotion || !isInView) return\n+    if (reducedMotion || !isInView || strategies.length < 2) return\n \n     const intervalId = window.setInterval(() => {\n       if (document.visibilityState === 'visible') {\n-        setSelectedIndex((selectedIndex + 1) % strategyResults.length)\n+        setSelectedIndex((selectedIndex + 1) % strategies.length)\n       }\n     }, 3600)\n \n     return () => window.clearInterval(intervalId)\n-  }, [isInView, reducedMotion, selectedIndex])\n+  }, [isInView, reducedMotion, selectedIndex, strategies.length])\n \n   const move = (direction: number) => {\n-    const nextIndex = (selectedIndex + direction + strategyResults.length) % strategyResults.length\n+    if (strategies.length === 0) return\n+    const nextIndex = (selectedIndex + direction + strategies.length) % strategies.length\n     setSelectedIndex(nextIndex)\n-    setAnnouncement(`${strategyResults[nextIndex]?.name ?? ''} 전략 선택됨`)\n+    setAnnouncement(`${strategies[nextIndex]?.name ?? ''} 전략 선택됨`)\n   }\n \n   const selectStrategy = (index: number) => {\n     setSelectedIndex(index)\n-    setAnnouncement(`${strategyResults[index]?.name ?? ''} 전략 선택됨`)\n+    setAnnouncement(`${strategies[index]?.name ?? ''} 전략 선택됨`)\n   }\n \n   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {\n@@ -128,14 +165,18 @@ export function AlgorithmOrbit() {\n       transition={{ duration: 0.82, ease: [0.22, 1, 0.36, 1] }}\n       aria-labelledby=\"algorithm-title\"\n     >\n+      {/*\n+        '검증된 알고리즘'이라고 적던 자리다. 검증 구분은 판정 기준(PD-12)이 정해지기 전까지\n+        결과 화면에서도 말하지 못하는 것이라(005 FR-012) 첫 화면이 먼저 단정할 수 없다.\n+      */}\n       <div className={styles.algorithmHeader}>\n         <p>ALGORITHM LIBRARY</p>\n         <h2 id=\"algorithm-title\">\n-          검증된 알고리즘을\n+          배분 규칙을\n           <br />\n-          사용해보세요.\n+          같은 조건에서 비교하세요.\n         </h2>\n-        <span>카드를 눌러 각 전략의 수익과 위험을 비교해보세요.</span>\n+        <span>카드를 눌러 각 전략이 비중을 어떤 규칙으로 정하는지 확인하세요.</span>\n       </div>\n \n       <div\n@@ -152,9 +193,22 @@ export function AlgorithmOrbit() {\n         onPointerCancel={handlePointerCancel}\n       >\n         <div className={styles.orbitFloor} aria-hidden=\"true\" />\n-        {strategyResults.map((strategy, index) => {\n-          const relative = relativeIndex(index, selectedIndex, strategyResults.length)\n-          const angle = relative * ((Math.PI * 2) / strategyResults.length)\n+        {loadState === 'loading' ? (\n+          <p className={styles.orbitNotice} role=\"status\">\n+            전략 목록을 불러오는 중입니다.\n+          </p>\n+        ) : null}\n+        {loadState === 'failed' ? (\n+          <div className={styles.orbitNotice} role=\"status\">\n+            <p>전략 목록을 불러오지 못했습니다.</p>\n+            <button type=\"button\" onClick={() => void loadStrategies()}>\n+              다시 시도\n+            </button>\n+          </div>\n+        ) : null}\n+        {strategies.map((strategy, index) => {\n+          const relative = relativeIndex(index, selectedIndex, strategies.length)\n+          const angle = relative * ((Math.PI * 2) / strategies.length)\n           const depth = Math.cos(angle)\n           const isSelected = index === selectedIndex\n           const x = Math.sin(angle) * xRadius\n@@ -166,7 +220,7 @@ export function AlgorithmOrbit() {\n \n           return (\n             <motion.article\n-              key={strategy.id}\n+              key={strategy.strategyId}\n               className={styles.algorithmCard}\n               data-selected={isSelected}\n               aria-current={isSelected ? 'true' : undefined}\n@@ -187,18 +241,12 @@ export function AlgorithmOrbit() {\n             >\n               <div className={styles.cardIndex}>\n                 <span>0{index + 1}</span>\n-                <span>{strategy.parameter}</span>\n               </div>\n               <div>\n                 <p>QUANT STRATEGY</p>\n                 <h3>{strategy.name}</h3>\n                 <span>{strategy.description}</span>\n               </div>\n-              <dl>\n-                <div><dt>CAGR</dt><dd>{strategy.cagr}</dd></div>\n-                <div><dt>MDD</dt><dd>{strategy.mdd}</dd></div>\n-                <div><dt>SHARPE</dt><dd>{strategy.sharpe}</dd></div>\n-              </dl>\n               {isSelected ? (\n                 <Link to=\"/diagnosis/sectors\" onClick={preventClickAfterDrag}>\n                   이 전략 백테스트하기\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/AlgorithmOrbit.tsx",
+          "old_path": "frontend/src/components/landing/AlgorithmOrbit.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,7 @@\n-import { ArrowDown, ArrowUpRight, BarChart3, FlaskConical, Radar } from 'lucide-react'\n+import { ArrowDown, ArrowUpRight, FlaskConical, Radar } from 'lucide-react'\n import { motion, useReducedMotion } from 'motion/react'\n import type { CSSProperties } from 'react'\n import { Link } from 'react-router-dom'\n-import { backtestChartData, type BacktestPoint } from '@/data/backtestMock'\n import type { Indicator } from '@/types/market'\n import { IndicatorConveyor } from './IndicatorConveyor'\n import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'\n@@ -11,32 +10,35 @@ import styles from '@/pages/LandingPage.module.css'\n \n const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }\n \n-type PreviewSeries = Exclude<keyof BacktestPoint, 'date'>\n-\n-function buildPreviewPath(series: PreviewSeries) {\n+/**\n+ * 진단 구역의 장식용 곡선을 만든다.\n+ *\n+ * <p><b>성과가 아니다.</b> 예전에는 예시 시계열을 실제 백테스트 결과처럼 그리고 그 옆에 누적\n+ * 수익·CAGR·MDD·SHARPE를 적었는데, 어떤 실행에서도 나온 적 없는 값이라 첫 화면이 근거 없는\n+ * 성과를 단정하는 꼴이었다. 지금 이 곡선은 사인파로 만든 무늬일 뿐이고 축·기간·종목 이름을\n+ * 달지 않는다. 실제 수치는 결과 화면이 자기 실행에서 읽어 보인다.\n+ */\n+function buildDecorativeCurve(seed: number, amplitude: number) {\n   const left = 42\n-  const top = 40\n   const width = 916\n-  const height = 278\n-  const minimum = 88\n-  const maximum = 230\n+  const middle = 190\n+  const steps = 48\n \n-  return backtestChartData\n-    .map((point, index) => {\n-      const x = left + (index / (backtestChartData.length - 1)) * width\n-      const value = Number(point[series])\n-      const y = top + height - ((value - minimum) / (maximum - minimum)) * height\n-      return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`\n-    })\n-    .join(' ')\n+  return Array.from({ length: steps + 1 }, (_, index) => {\n+    const ratio = index / steps\n+    const x = left + ratio * width\n+    const wave = Math.sin(ratio * Math.PI * 1.6 + seed) + Math.sin(ratio * Math.PI * 3.1 + seed) * 0.35\n+    const y = middle - wave * amplitude - ratio * 34\n+    return `${index === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`\n+  }).join(' ')\n }\n \n const comparisonPaths = [\n-  buildPreviewPath('benchmark'),\n-  buildPreviewPath('dualMomentum'),\n-  buildPreviewPath('rsiMeanReversion'),\n+  buildDecorativeCurve(0.4, 74),\n+  buildDecorativeCurve(1.7, 58),\n+  buildDecorativeCurve(2.9, 44),\n ]\n-const resultPath = buildPreviewPath('trend')\n+const resultPath = buildDecorativeCurve(0.9, 96)\n \n /** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */\n export function HeroSection() {\n@@ -183,7 +185,7 @@ export function MarketAnalysisSection({ indicators }: { indicators: Indicator[]\n   )\n }\n \n-/** 기존 예시 시계열로 전략 결과가 과거 시장 위에 그려지는 과정을 보여준다. */\n+/** 진단이 무엇을 하는지 알리고 섹터 고르기로 보낸다. 성과 수치는 결과 화면에만 둔다. */\n export function BacktestIntroSection() {\n   return (\n     <motion.section\n@@ -202,12 +204,9 @@ export function BacktestIntroSection() {\n           <h2 id=\"backtest-intro-title\">나의 전략을 실험해보세요.</h2>\n         </div>\n \n-        <div className={styles.backtestVisual}>\n-          <div className={styles.chartTopline}>\n-            <span><BarChart3 aria-hidden=\"true\" size={17} /> KOSPI 200 / 2019—2023</span>\n-            <strong>STRATEGY 01</strong>\n-          </div>\n-          <svg viewBox=\"0 0 1000 390\" role=\"img\" aria-label=\"과거 시장과 추세추종 전략의 백테스트 성과 비교 차트\">\n+        {/* 장식이다. 자료를 읽지 않으므로 축·기간·수치를 달지 않고 보조기기에서 숨긴다. */}\n+        <div className={styles.backtestVisual} aria-hidden=\"true\">\n+          <svg viewBox=\"0 0 1000 390\">\n             {[86, 144, 202, 260, 318].map((y) => (\n               <line key={y} className={styles.chartGrid} x1=\"42\" x2=\"958\" y1={y} y2={y} />\n             ))}\n@@ -238,20 +237,7 @@ export function BacktestIntroSection() {\n               viewport={{ once: false, amount: 0.35 }}\n               transition={{ duration: 1.55, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}\n             />\n-            <g className={styles.chartYears}>\n-              <text x=\"42\" y=\"370\">2019</text>\n-              <text x=\"271\" y=\"370\">2020</text>\n-              <text x=\"500\" y=\"370\">2021</text>\n-              <text x=\"729\" y=\"370\">2022</text>\n-              <text x=\"958\" y=\"370\" textAnchor=\"end\">2023</text>\n-            </g>\n           </svg>\n-          <div className={styles.previewMetrics}>\n-            <span>누적 수익 <strong>+124.8%</strong></span>\n-            <span>CAGR <strong>18.4%</strong></span>\n-            <span>MDD <strong>-9.1%</strong></span>\n-            <span>SHARPE <strong>1.42</strong></span>\n-          </div>\n         </div>\n \n         {/* 헤더 메뉴의 '전략 진단'과 같은 곳이다(002 T024). 백테스트는 섹터·전략을 고른\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,53 +0,0 @@\n-.notice,\n-.notice button {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.notice {\n-  min-height: 34px;\n-  justify-content: space-between;\n-  gap: 16px;\n-  padding: 7px 2px;\n-  border-top: 1px solid var(--market-line-soft);\n-  border-bottom: 1px solid var(--market-line-soft);\n-  color: var(--market-muted);\n-  font-size: 0.68rem;\n-}\n-\n-.notice button {\n-  gap: 5px;\n-  padding: 4px 8px;\n-  border: 0;\n-  background: transparent;\n-  color: var(--market-brand);\n-  font: inherit;\n-  font-weight: 680;\n-  cursor: pointer;\n-}\n-\n-.notice button:disabled {\n-  cursor: wait;\n-  opacity: 0.55;\n-}\n-\n-.notice button:focus-visible {\n-  outline: var(--thorp-focus-outline-compact);\n-  outline-offset: var(--thorp-focus-offset-compact);\n-}\n-\n-.notice button:disabled svg {\n-  animation: spin 0.8s linear infinite;\n-}\n-\n-@keyframes spin {\n-  to {\n-    transform: rotate(360deg);\n-  }\n-}\n-\n-@media (prefers-reduced-motion: reduce) {\n-  .notice button:disabled svg {\n-    animation: none;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketDataStatus.module.css",
+          "old_path": "frontend/src/components/market/MarketDataStatus.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,27 +0,0 @@\n-import { RefreshCw } from 'lucide-react'\n-import styles from './MarketDataStatus.module.css'\n-\n-interface MarketDataStatusProps {\n-  failedCount: number\n-  isRefreshing: boolean\n-  onRetry: () => void\n-}\n-\n-/** 일부 지표 연결 실패를 알리고 전체 최신값을 즉시 다시 조회할 수 있게 한다. */\n-export function MarketDataStatus({\n-  failedCount,\n-  isRefreshing,\n-  onRetry,\n-}: MarketDataStatusProps) {\n-  if (failedCount === 0) return null\n-\n-  return (\n-    <div className={styles.notice} role=\"status\" aria-live=\"polite\">\n-      <span>{failedCount}개 지표 연결 실패 · 예시값 표시 중</span>\n-      <button type=\"button\" onClick={onRetry} disabled={isRefreshing}>\n-        <RefreshCw size={13} aria-hidden=\"true\" />\n-        {isRefreshing ? '다시 불러오는 중' : '다시 불러오기'}\n-      </button>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketDataStatus.tsx",
+          "old_path": "frontend/src/components/market/MarketDataStatus.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,203 +0,0 @@\n-.section {\n-  display: flex;\n-  min-width: 0;\n-  min-height: clamp(480px, 58svh, 600px);\n-  flex-direction: column;\n-  justify-content: center;\n-}\n-\n-.sectionHeader,\n-.cardHeader,\n-.risk {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.sectionHeader {\n-  align-items: flex-end;\n-  justify-content: space-between;\n-  gap: 20px;\n-  margin-bottom: 26px;\n-}\n-\n-.sectionHeader p {\n-  margin: 0 0 4px;\n-  color: var(--market-brand);\n-  font-size: 0.78rem;\n-  font-weight: 720;\n-  letter-spacing: 0.12em;\n-}\n-\n-.sectionHeader h2 {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: clamp(1.75rem, 3vw, 2.8rem);\n-  font-weight: 620;\n-  letter-spacing: -0.035em;\n-  line-height: 1.06;\n-}\n-\n-.sectionHeader > span {\n-  color: var(--market-muted);\n-  font-size: 0.68rem;\n-}\n-\n-.grid {\n-  display: grid;\n-  grid-template-columns: repeat(3, minmax(0, 1fr));\n-  gap: 11px;\n-}\n-\n-.card {\n-  position: relative;\n-  min-width: 0;\n-  padding: 22px;\n-  border: 1px solid var(--market-line);\n-  border-radius: 8px;\n-  background: var(--market-surface);\n-  box-shadow: var(--market-shadow-soft);\n-}\n-\n-.rank {\n-  margin-bottom: 19px;\n-  color: var(--market-muted);\n-  font-size: 0.66rem;\n-  font-weight: 720;\n-  letter-spacing: 0.1em;\n-}\n-\n-.cardHeader {\n-  justify-content: space-between;\n-  gap: 15px;\n-}\n-\n-.cardHeader h3 {\n-  margin: 0;\n-  color: var(--market-ink);\n-  font-size: 0.98rem;\n-  letter-spacing: -0.025em;\n-}\n-\n-.cardHeader strong {\n-  color: var(--market-brand);\n-  font-size: 0.8rem;\n-}\n-\n-.meter {\n-  overflow: hidden;\n-  height: 4px;\n-  margin-top: 12px;\n-  border-radius: 99px;\n-  background: var(--market-line);\n-}\n-\n-.meter span {\n-  display: block;\n-  height: 100%;\n-  border-radius: inherit;\n-  background: var(--market-brand);\n-}\n-\n-.reason {\n-  min-height: 59px;\n-  margin: 17px 0 0;\n-  color: var(--market-copy);\n-  font-size: 0.74rem;\n-  line-height: 1.65;\n-}\n-\n-.risk {\n-  align-items: flex-start;\n-  gap: 8px;\n-  min-height: 46px;\n-  margin: 14px 0 18px;\n-  padding: 11px;\n-  border-radius: 6px;\n-  background: var(--thorp-surface-muted);\n-  color: var(--market-copy);\n-  font-size: 0.68rem;\n-  line-height: 1.45;\n-}\n-\n-.risk svg {\n-  flex: 0 0 auto;\n-  color: var(--market-warning);\n-}\n-\n-.action > * {\n-  width: 100%;\n-}\n-\n-.section[data-density='compact'] .card {\n-  padding: 15px 18px;\n-  border: 0;\n-  border-radius: 0;\n-  background: transparent;\n-  box-shadow: none;\n-}\n-\n-.section[data-density='compact'] .grid {\n-  gap: 0;\n-  border-top: 1px solid var(--market-line);\n-  border-bottom: 1px solid var(--market-line);\n-}\n-\n-.section[data-density='compact'] .card + .card {\n-  border-left: 1px solid var(--market-line-soft);\n-}\n-\n-.section[data-density='compact'] .reason {\n-  display: -webkit-box;\n-  min-height: 36px;\n-  margin-top: 10px;\n-  overflow: hidden;\n-  line-height: 1.45;\n-  -webkit-box-orient: vertical;\n-  -webkit-line-clamp: 2;\n-}\n-\n-.section[data-density='compact'] .meter {\n-  margin-top: 8px;\n-}\n-\n-.section[data-density='compact'] .action {\n-  margin-top: 12px;\n-}\n-\n-.section[data-density='compact'] .action a {\n-  min-height: 38px;\n-  font-size: 0.72rem;\n-}\n-\n-@media (max-width: 860px) {\n-  .grid {\n-    grid-template-columns: 1fr;\n-  }\n-\n-  .reason,\n-  .risk {\n-    min-height: 0;\n-  }\n-\n-  .section[data-density='compact'] .card + .card {\n-    border-top: 1px solid var(--market-line-soft);\n-    border-left: 0;\n-  }\n-}\n-\n-@media (max-width: 600px) {\n-  .section {\n-    min-height: auto;\n-  }\n-\n-  .sectionHeader {\n-    align-items: flex-start;\n-    flex-direction: column;\n-  }\n-}\n-\n-@media (max-height: 720px) {\n-  .section {\n-    min-height: auto;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/StrategyRecommendationSection.module.css",
+          "old_path": "frontend/src/components/market/StrategyRecommendationSection.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,78 +0,0 @@\n-import { ArrowRight, ShieldAlert } from 'lucide-react'\n-import { motion } from 'motion/react'\n-import { Link } from 'react-router-dom'\n-import { Button } from '@/components/ui/button'\n-import type { StrategyRecommendation } from '@/types/market'\n-import layout from '@/styles/MarketLayout.module.css'\n-import styles from './StrategyRecommendationSection.module.css'\n-\n-interface StrategyRecommendationSectionProps {\n-  compact?: boolean\n-  strategies: StrategyRecommendation[]\n-}\n-\n-/** 세 가지 MVP 전략의 시장 적합 근거와 위험을 백테스트 동선에 연결한다. */\n-export function StrategyRecommendationSection({\n-  strategies,\n-  compact = false,\n-}: StrategyRecommendationSectionProps) {\n-  return (\n-    <section className={`${styles.section} ${compact ? layout.compactSection : ''}`} data-density={compact ? 'compact' : undefined} aria-labelledby=\"strategy-recommendation-title\">\n-      <div className={`${styles.sectionHeader} ${compact ? layout.compactHeader : ''}`}>\n-        <div>\n-          <p>이 시장에 맞는 전략</p>\n-          <h2 id=\"strategy-recommendation-title\">\n-            {compact ? '추천 퀀트 전략' : '현재 시장에서 살펴볼 퀀트 전략'}\n-          </h2>\n-        </div>\n-        <span>적합도는 예시이며 예상 수익률이 아닙니다.</span>\n-      </div>\n-\n-      <div className={styles.grid}>\n-        {strategies.map((strategy, index) => (\n-          <motion.article\n-            className={styles.card}\n-            key={strategy.id}\n-            initial={{ opacity: 0, y: 30, scale: 0.985 }}\n-            whileInView={{ opacity: 1, y: 0, scale: 1 }}\n-            viewport={{ once: false, amount: 0.2 }}\n-            transition={{\n-              delay: index * 0.09,\n-              duration: 0.58,\n-              ease: [0.22, 1, 0.36, 1],\n-            }}\n-          >\n-            {!compact && <div className={styles.rank}>0{index + 1}</div>}\n-            <div className={styles.cardHeader}>\n-              <h3>{strategy.name}</h3>\n-              <strong>{strategy.suitability}%</strong>\n-            </div>\n-            <div className={styles.meter} aria-label={`시장 적합도 ${strategy.suitability}%`}>\n-              <motion.span\n-                initial={{ width: 0 }}\n-                whileInView={{ width: `${strategy.suitability}%` }}\n-                viewport={{ once: false }}\n-                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}\n-              />\n-            </div>\n-            <p className={styles.reason}>{strategy.reason}</p>\n-            {!compact && (\n-              <p className={styles.risk}>\n-                <ShieldAlert size={14} aria-hidden=\"true\" />\n-                <span>{strategy.risk}</span>\n-              </p>\n-            )}\n-            <div className={styles.action}>\n-              <Button asChild size=\"lg\">\n-                <Link to={strategy.backtestPath}>\n-                  백테스트에서 확인하기\n-                  <ArrowRight aria-hidden=\"true\" />\n-                </Link>\n-              </Button>\n-            </div>\n-          </motion.article>\n-        ))}\n-      </div>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/StrategyRecommendationSection.tsx",
+          "old_path": "frontend/src/components/market/StrategyRecommendationSection.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,142 +0,0 @@\n-export type StrategyId =\n-  | 'trend'\n-  | 'dualMomentum'\n-  | 'rsiMeanReversion'\n-  | 'bollingerBands'\n-  | 'lowVolatility'\n-\n-export interface StrategyResult {\n-  id: StrategyId\n-  name: string\n-  description: string\n-  parameter: string\n-  color: string\n-  mutedColor: string\n-  totalReturn: string\n-  cagr: string\n-  mdd: string\n-  sharpe: string\n-  volatility: string\n-  trades: number\n-}\n-\n-export interface BacktestPoint extends Record<string, unknown> {\n-  date: Date\n-  trend: number\n-  dualMomentum: number\n-  rsiMeanReversion: number\n-  bollingerBands: number\n-  lowVolatility: number\n-  benchmark: number\n-}\n-\n-// 전략 선택과 결과 비교 UI에서 함께 사용하는 고정 성과 데이터다.\n-export const strategyResults: StrategyResult[] = [\n-  {\n-    id: 'trend',\n-    name: '이동평균 추세추종',\n-    description: '중기 추세에 올라타고 하락 구간의 노출을 줄입니다.',\n-    parameter: 'MA 20 / 60 · 월 리밸런싱',\n-    color: '#18a7a0',\n-    mutedColor: 'rgb(24 167 160 / 18%)',\n-    totalReturn: '+124.8%',\n-    cagr: '18.4%',\n-    mdd: '-9.1%',\n-    sharpe: '1.42',\n-    volatility: '12.4%',\n-    trades: 156,\n-  },\n-  {\n-    id: 'dualMomentum',\n-    name: '듀얼 모멘텀',\n-    description: '상대·절대 모멘텀을 함께 사용해 강한 자산을 선택합니다.',\n-    parameter: '12개월 모멘텀 · 월 리밸런싱',\n-    color: '#f19a24',\n-    mutedColor: 'rgb(241 154 36 / 18%)',\n-    totalReturn: '+84.6%',\n-    cagr: '13.2%',\n-    mdd: '-12.1%',\n-    sharpe: '1.05',\n-    volatility: '14.2%',\n-    trades: 89,\n-  },\n-  {\n-    id: 'rsiMeanReversion',\n-    name: 'RSI 평균회귀',\n-    description: '단기 과매도 구간의 가격 정상화를 포착합니다.',\n-    parameter: 'RSI 14 · 매수 30 / 매도 70',\n-    color: '#8c5ee8',\n-    mutedColor: 'rgb(140 94 232 / 18%)',\n-    totalReturn: '+62.4%',\n-    cagr: '10.8%',\n-    mdd: '-15.8%',\n-    sharpe: '0.78',\n-    volatility: '18.1%',\n-    trades: 234,\n-  },\n-  {\n-    id: 'bollingerBands',\n-    name: '볼린저 밴드',\n-    description: '밴드 하단 이탈 후 복귀하는 가격 움직임을 살펴봅니다.',\n-    parameter: '기간 20 · 표준편차 2 · 중심선 청산',\n-    color: '#4779b5',\n-    mutedColor: 'rgb(71 121 181 / 18%)',\n-    totalReturn: '+73.2%',\n-    cagr: '11.6%',\n-    mdd: '-14.3%',\n-    sharpe: '0.91',\n-    volatility: '16.2%',\n-    trades: 182,\n-  },\n-  {\n-    id: 'lowVolatility',\n-    name: '저변동성',\n-    description: '최근 가격 변동이 작은 종목을 골라 분산 투자합니다.',\n-    parameter: '변동성 60일 · 하위 20% · 월 리밸런싱',\n-    color: '#a57561',\n-    mutedColor: 'rgb(165 117 97 / 18%)',\n-    totalReturn: '+48.6%',\n-    cagr: '8.2%',\n-    mdd: '-7.4%',\n-    sharpe: '1.12',\n-    volatility: '8.6%',\n-    trades: 64,\n-  },\n-]\n-\n-// 한 틱씩 그려지는 차트 연출을 확인하기 위한 시계열 원본 데이터다.\n-const rawPoints = [\n-  ['2019-01-01', 100, 100, 100, 100, 100, 100],\n-  ['2019-04-01', 106, 102, 104, 105, 103, 102],\n-  ['2019-07-01', 112, 105, 110, 108, 109, 105],\n-  ['2019-10-01', 108, 103, 116, 111, 106, 107],\n-  ['2020-01-01', 119, 111, 111, 116, 114, 111],\n-  ['2020-04-01', 104, 98, 108, 94, 97.7, 103],\n-  ['2020-07-01', 126, 116, 122, 120, 118, 112],\n-  ['2020-10-01', 138, 124, 130, 132, 128, 117],\n-  ['2021-01-01', 149, 132, 137, 143, 135, 121],\n-  ['2021-04-01', 143, 127, 134, 147, 130, 123],\n-  ['2021-07-01', 164, 138, 145, 153, 142, 128],\n-  ['2021-10-01', 178, 145, 151, 160, 149, 132],\n-  ['2022-01-01', 169, 137, 145, 143, 138, 127],\n-  ['2022-04-01', 158, 129, 139, 127, 129, 122.2],\n-  ['2022-07-01', 176, 142, 151, 136, 144, 129],\n-  ['2022-10-01', 183, 148, 157, 142, 152, 133],\n-  ['2023-01-01', 196, 154, 162, 151, 158, 138],\n-  ['2023-04-01', 188, 149, 158, 158, 151, 140],\n-  ['2023-07-01', 210, 167, 169, 171, 165, 144],\n-  ['2023-10-01', 224.8, 184.6, 162.4, 180.2, 173.2, 148.6],\n-] as const\n-\n-// 문자열 날짜와 전략별 값을 Bklit 차트가 사용하는 데이터 형태로 변환한다.\n-export const backtestChartData: BacktestPoint[] = rawPoints.map(\n-  ([date, trend, dualMomentum, rsiMeanReversion, benchmark, bollingerBands, lowVolatility]) => ({\n-    date: new Date(date),\n-    trend,\n-    dualMomentum,\n-    rsiMeanReversion,\n-    benchmark,\n-    bollingerBands,\n-    lowVolatility,\n-  }),\n-)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/backtestMock.ts",
+          "old_path": "frontend/src/data/backtestMock.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -593,32 +593,6 @@ export const marketMock: MarketData = {\n       },\n     ],\n   },\n-  strategyRecommendations: [\n-    {\n-      id: 'trend',\n-      name: '이동평균 추세추종',\n-      suitability: 84,\n-      reason: '시장 방향이 뚜렷할 때 따라가고, 하락할 때 투자 비중을 줄이는 전략입니다.',\n-      risk: '가격이 자주 오르내리면 매수와 매도가 반복될 수 있습니다.',\n-      backtestPath: '/backtest',\n-    },\n-    {\n-      id: 'dual-momentum',\n-      name: '듀얼 모멘텀',\n-      suitability: 76,\n-      reason: '잘 오르는 자산을 고르는 방식이라 업종별 차이가 큰 현재 시장에 활용할 수 있습니다.',\n-      risk: '시장이 갑자기 반전하면 대응이 늦을 수 있습니다.',\n-      backtestPath: '/backtest',\n-    },\n-    {\n-      id: 'rsi-mean-reversion',\n-      name: 'RSI 평균회귀',\n-      suitability: 48,\n-      reason: '많이 떨어진 뒤의 짧은 반등을 노리지만 지금처럼 불안한 시장에서는 주의가 필요합니다.',\n-      risk: '하락세가 강하면 낮은 가격이 오래 이어질 수 있습니다.',\n-      backtestPath: '/backtest',\n-    },\n-  ],\n   dataFreshness: [\n     {\n       id: 'krx',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/marketMock.ts",
+          "old_path": "frontend/src/data/marketMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,427 +0,0 @@\n-.page {\n-  min-height: 100svh;\n-  background: var(--thorp-background);\n-  color: var(--thorp-foreground);\n-  --surface: var(--thorp-surface-raised);\n-  --line: var(--thorp-line);\n-  --muted: var(--thorp-muted);\n-  --brand: var(--thorp-accent);\n-  --brand-soft: var(--thorp-accent-muted);\n-}\n-\n-.titleLine,\n-.legend,\n-.legend span,\n-.configTitle,\n-.strategyHeading > div,\n-.resetButton,\n-.runButton {\n-  display: flex;\n-  align-items: center;\n-}\n-\n-.container {\n-  width: min(100% - 40px, 1520px);\n-  margin: 0 auto;\n-  padding: 16px 0 26px;\n-}\n-\n-.workspace {\n-  display: grid;\n-  grid-template-columns: minmax(0, 1fr) 306px;\n-  gap: 16px;\n-  min-width: 0;\n-  width: 100%;\n-  align-items: start;\n-}\n-\n-.mainColumn {\n-  display: grid;\n-  min-width: 0;\n-  max-width: 100%;\n-  gap: 10px;\n-}\n-\n-.panel {\n-  min-width: 0;\n-}\n-\n-.chartPanel {\n-  padding: 6px 8px 4px;\n-  border-bottom: 1px solid var(--line);\n-}\n-\n-.panelHeader,\n-.resultHeader {\n-  display: flex;\n-  align-items: flex-start;\n-  justify-content: space-between;\n-  gap: 20px;\n-}\n-\n-.titleLine {\n-  gap: 8px;\n-}\n-\n-.panelHeader h2,\n-.resultHeader h2,\n-.configTitle h2 {\n-  margin: 0;\n-  font-size: 0.88rem;\n-  font-weight: 690;\n-  letter-spacing: -0.025em;\n-}\n-\n-.panelHeader p,\n-.configTitle p {\n-  margin: 4px 0 0;\n-  color: var(--muted);\n-  font-size: 0.74rem;\n-}\n-\n-.legend {\n-  flex-wrap: wrap;\n-  justify-content: flex-end;\n-  gap: 7px 13px;\n-  max-width: 58%;\n-}\n-\n-.legend span {\n-  gap: 6px;\n-  color: var(--thorp-copy);\n-  font-size: 0.7rem;\n-  white-space: nowrap;\n-}\n-\n-.legend i {\n-  width: 7px;\n-  height: 7px;\n-  border-radius: 50%;\n-}\n-\n-.benchmarkMarker {\n-  background: var(--thorp-neutral);\n-}\n-\n-.chartStage {\n-  position: relative;\n-  margin-top: 2px;\n-}\n-\n-.progressBadge {\n-  position: absolute;\n-  top: 14px;\n-  left: 50%;\n-  display: flex;\n-  align-items: center;\n-  gap: 10px;\n-  padding: 8px 11px;\n-  border: 1px solid var(--thorp-line-strong);\n-  border-radius: 999px;\n-  background: rgb(7 17 11 / 92%);\n-  box-shadow: var(--thorp-shadow);\n-  color: var(--thorp-copy);\n-  font-size: 0.72rem;\n-  transform: translateX(-50%);\n-  backdrop-filter: blur(10px);\n-}\n-\n-.progressBadge strong {\n-  color: var(--brand);\n-  font-size: 0.74rem;\n-}\n-\n-.metricGrid {\n-  display: grid;\n-  grid-template-columns: repeat(4, minmax(0, 1fr));\n-  border-top: 1px solid var(--line);\n-  border-bottom: 1px solid var(--line);\n-}\n-\n-.metric {\n-  min-width: 0;\n-  padding: 9px 14px;\n-  background: var(--surface);\n-}\n-\n-.metric + .metric {\n-  border-left: 1px solid var(--line);\n-}\n-\n-.metric span {\n-  color: var(--muted);\n-  font-size: 0.7rem;\n-}\n-\n-.metric strong {\n-  display: block;\n-  margin-top: 2px;\n-  color: var(--thorp-foreground);\n-  font-size: 1.13rem;\n-  font-variant-numeric: tabular-nums;\n-  letter-spacing: -0.02em;\n-}\n-\n-.metric strong[data-tone='positive'] {\n-  color: var(--thorp-positive);\n-}\n-\n-.metric strong[data-tone='negative'] {\n-  color: var(--thorp-negative);\n-}\n-\n-.resultPanel {\n-  overflow: hidden;\n-  padding: 7px 8px 0;\n-}\n-\n-.resultHeader {\n-  align-items: center;\n-  padding: 0 3px 5px;\n-}\n-\n-.resultHeader p {\n-  display: none;\n-}\n-\n-.resetButton {\n-  gap: 6px;\n-  min-height: 31px;\n-  padding: 0 9px;\n-  border: 1px solid var(--line);\n-  border-radius: 8px;\n-  background: var(--surface);\n-  color: var(--thorp-copy);\n-  cursor: pointer;\n-  font-size: 0.72rem;\n-  font-weight: 620;\n-}\n-\n-.configPanel {\n-  position: sticky;\n-  top: 82px;\n-  padding: 8px 0 8px 18px;\n-  border-left: 1px solid var(--line);\n-}\n-\n-.configTitle {\n-  gap: 10px;\n-  margin-bottom: 8px;\n-}\n-\n-.configTitle > svg {\n-  color: var(--brand);\n-}\n-\n-.fieldGroup {\n-  display: grid;\n-  gap: 4px;\n-  margin-top: 8px;\n-}\n-\n-.fieldGroup label {\n-  color: var(--thorp-copy);\n-  font-size: 0.72rem;\n-  font-weight: 650;\n-}\n-\n-.fieldGroup select,\n-.fieldGroup input {\n-  width: 100%;\n-  min-width: 0;\n-  height: 34px;\n-  padding: 0 10px;\n-  border: 1px solid var(--line);\n-  border-radius: 7px;\n-  background: var(--thorp-surface);\n-  color: var(--thorp-foreground);\n-  outline: none;\n-  font-size: 0.72rem;\n-}\n-\n-.fieldGroup select:focus,\n-.fieldGroup input:focus {\n-  border-color: var(--brand);\n-  box-shadow: var(--thorp-focus-shadow-subtle);\n-}\n-\n-.dateGrid {\n-  display: grid;\n-  grid-template-columns: repeat(2, minmax(0, 1fr));\n-  gap: 8px;\n-}\n-\n-.inputIconWrap {\n-  position: relative;\n-}\n-\n-.inputIconWrap > svg {\n-  position: absolute;\n-  z-index: 1;\n-  top: 50%;\n-  left: 10px;\n-  color: var(--thorp-muted);\n-  transform: translateY(-50%);\n-  pointer-events: none;\n-}\n-\n-.inputIconWrap select {\n-  padding-left: 34px;\n-}\n-\n-.divider {\n-  height: 1px;\n-  margin: 12px 0 8px;\n-  background: var(--line);\n-}\n-\n-.strategyHeading {\n-  display: flex;\n-  align-items: center;\n-  justify-content: space-between;\n-  margin-bottom: 2px;\n-}\n-\n-.strategyHeading > div {\n-  gap: 7px;\n-}\n-\n-.strategyHeading span {\n-  color: var(--thorp-copy);\n-  font-size: 0.76rem;\n-  font-weight: 680;\n-}\n-\n-.strategyHeading small {\n-  color: var(--thorp-muted);\n-  font-size: 0.66rem;\n-}\n-\n-.strategyHeading strong {\n-  color: var(--brand);\n-  font-size: 0.75rem;\n-}\n-\n-.runButton {\n-  justify-content: center;\n-  gap: 9px;\n-  width: 100%;\n-  min-height: 38px;\n-  margin-top: 10px;\n-  border: 0;\n-  border-radius: 7px;\n-  background: var(--brand);\n-  color: var(--thorp-action-foreground);\n-  cursor: pointer;\n-  font-size: 0.76rem;\n-  font-weight: 680;\n-  transition: background 170ms ease, transform 170ms ease;\n-}\n-\n-.runButton:hover:not(:disabled) {\n-  background: var(--thorp-accent-soft);\n-  transform: translateY(-1px);\n-}\n-\n-.runButton:disabled {\n-  cursor: wait;\n-  opacity: 0.72;\n-}\n-\n-.runButton:focus-visible,\n-.resetButton:focus-visible {\n-  border-radius: 6px;\n-  outline: var(--thorp-focus-outline);\n-  outline-offset: var(--thorp-focus-offset);\n-}\n-\n-.configNote {\n-  margin: 6px 4px 0;\n-  color: var(--thorp-muted);\n-  font-size: 0.66rem;\n-  line-height: 1.55;\n-  text-align: center;\n-}\n-\n-@media (max-width: 1050px) {\n-  .workspace {\n-    grid-template-columns: 1fr;\n-  }\n-\n-  .configPanel {\n-    position: static;\n-    grid-row: 1;\n-    padding: 12px 0;\n-    border-top: 1px solid var(--line);\n-    border-bottom: 1px solid var(--line);\n-    border-left: 0;\n-  }\n-}\n-\n-@media (max-width: 760px) {\n-  .container {\n-    width: min(100% - 28px, 1520px);\n-    padding-top: 14px;\n-  }\n-\n-  .panelHeader {\n-    flex-direction: column;\n-  }\n-\n-  .legend {\n-    justify-content: flex-start;\n-    max-width: none;\n-  }\n-\n-  .metricGrid {\n-    grid-template-columns: repeat(2, minmax(0, 1fr));\n-  }\n-\n-  .chartPanel {\n-    padding: 10px 0 6px;\n-  }\n-\n-  .resultPanel {\n-    padding: 10px 0 0;\n-  }\n-}\n-\n-@media (max-width: 420px) {\n-  .dateGrid {\n-    grid-template-columns: 1fr;\n-  }\n-\n-  .resultHeader {\n-    align-items: flex-start;\n-  }\n-}\n-\n-@media (prefers-reduced-motion: reduce) {\n-  .runButton {\n-    transition: none;\n-  }\n-}\n-\n-/* 설정 조합 자동 비교로 넘어가는 보조 진입점. 이 화면의 주요 행동은 백테스트 실행 하나다. */\n-.autoSearchLink {\n-  display: inline-flex;\n-  align-items: center;\n-  justify-content: center;\n-  gap: 7px;\n-  min-height: 38px;\n-  border: 1px solid var(--thorp-line-strong);\n-  border-radius: 5px;\n-  color: var(--thorp-accent-soft);\n-  font-size: 0.76rem;\n-  font-weight: 700;\n-  text-decoration: none;\n-}\n-\n-.autoSearchLink:hover {\n-  border-color: var(--thorp-accent-soft);\n-}\n-\n-.autoSearchLink:focus-visible {\n-  outline: var(--thorp-focus-outline);\n-  outline-offset: var(--thorp-focus-offset);\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.module.css",
+          "old_path": "frontend/src/pages/BacktestPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,289 +0,0 @@\n-import {\n-  ArrowRight,\n-  ChartNoAxesCombined,\n-  CircleDollarSign,\n-  Play,\n-  RotateCcw,\n-  SlidersHorizontal,\n-} from 'lucide-react'\n-import { AnimatePresence, motion } from 'motion/react'\n-import { useEffect, useMemo, useState } from 'react'\n-import { Link } from 'react-router-dom'\n-import { BacktestChart } from '@/components/backtest/BacktestChart'\n-import { ResultTable } from '@/components/backtest/ResultTable'\n-import { StrategySelector } from '@/components/backtest/StrategySelector'\n-import { AppHeader } from '@/components/navigation/AppHeader'\n-import {\n-  strategyResults,\n-  type StrategyId,\n-  type StrategyResult,\n-} from '@/data/backtestMock'\n-import styles from './BacktestPage.module.css'\n-\n-type BacktestViewStatus = 'loading' | 'ready'\n-\n-const initialStrategies: StrategyId[] = [\n-  'trend',\n-  'dualMomentum',\n-  'rsiMeanReversion',\n-]\n-\n-/** 백테스트 조건, 전략 비교, 실행 상태와 결과 화면을 조합한다. */\n-export function BacktestPage() {\n-  const [activeStrategies, setActiveStrategies] =\n-    useState<StrategyId[]>(initialStrategies)\n-  const [focusedStrategy, setFocusedStrategy] = useState<StrategyId | null>(null)\n-  const [status, setStatus] = useState<BacktestViewStatus>('ready')\n-  const [progress, setProgress] = useState(100)\n-  const [runIndex, setRunIndex] = useState(1)\n-  const [initialCapital, setInitialCapital] = useState(10_000_000)\n-\n-  // 프로토타입 실행 시간을 재현하고 완료 시 차트를 ready 상태로 전환한다.\n-  useEffect(() => {\n-    if (status !== 'loading') return\n-\n-    const startedAt = Date.now()\n-    const duration = 1600\n-    const interval = window.setInterval(() => {\n-      const nextProgress = Math.min(\n-        94,\n-        Math.round(((Date.now() - startedAt) / duration) * 100),\n-      )\n-      setProgress(nextProgress)\n-    }, 80)\n-\n-    const timeout = window.setTimeout(() => {\n-      window.clearInterval(interval)\n-      setProgress(100)\n-      setStatus('ready')\n-    }, duration)\n-\n-    return () => {\n-      window.clearInterval(interval)\n-      window.clearTimeout(timeout)\n-    }\n-  }, [status, runIndex])\n-\n-  // 선택하거나 강조한 전략을 핵심 성과 지표의 기준으로 사용한다.\n-  const summaryStrategy = useMemo<StrategyResult>(() => {\n-    const preferredId = focusedStrategy ?? activeStrategies[0]\n-    return (\n-      strategyResults.find((strategy) => strategy.id === preferredId) ??\n-      strategyResults[0]\n-    )\n-  }, [activeStrategies, focusedStrategy])\n-\n-  // 비교 전략을 추가·제거하되 최소 한 개의 전략은 유지한다.\n-  const toggleStrategy = (strategyId: StrategyId) => {\n-    setActiveStrategies((current) => {\n-      const isSelected = current.includes(strategyId)\n-      if (isSelected && current.length === 1) return current\n-\n-      return isSelected\n-        ? current.filter((id) => id !== strategyId)\n-        : [...current, strategyId]\n-    })\n-\n-    if (focusedStrategy === strategyId) setFocusedStrategy(null)\n-  }\n-\n-  // 이전 강조 상태를 초기화하고 새 백테스트 실행 연출을 시작한다.\n-  const runBacktest = () => {\n-    if (status === 'loading') return\n-    setFocusedStrategy(null)\n-    setProgress(0)\n-    setRunIndex((current) => current + 1)\n-    setStatus('loading')\n-  }\n-\n-  return (\n-    <main className={styles.page}>\n-      <AppHeader />\n-\n-      <div className={styles.container}>\n-        <div className={styles.workspace}>\n-          <div className={styles.mainColumn}>\n-            {/* 선택한 전략과 벤치마크의 누적 성과를 같은 축에서 비교한다. */}\n-            <section className={`${styles.panel} ${styles.chartPanel}`}>\n-              <div className={styles.panelHeader}>\n-                <div>\n-                  <div className={styles.titleLine}>\n-                    <ChartNoAxesCombined size={17} aria-hidden=\"true\" />\n-                    <h2>포트폴리오 성장</h2>\n-                  </div>\n-                  <p>초기값 100으로 정규화 · 수수료 반영 예시 데이터</p>\n-                </div>\n-                <div className={styles.legend} aria-label=\"차트 범례\">\n-                  {strategyResults\n-                    .filter((strategy) => activeStrategies.includes(strategy.id))\n-                    .map((strategy) => (\n-                      <span key={strategy.id}>\n-                        <i style={{ background: strategy.color }} aria-hidden=\"true\" />\n-                        {strategy.name}\n-                      </span>\n-                    ))}\n-                  <span>\n-                    <i className={styles.benchmarkMarker} aria-hidden=\"true\" />\n-                    KOSPI 200\n-                  </span>\n-                </div>\n-              </div>\n-\n-              <div className={styles.chartStage} aria-busy={status === 'loading'}>\n-                <BacktestChart\n-                  activeStrategies={activeStrategies}\n-                  focusedStrategy={focusedStrategy}\n-                  status={status}\n-                  revealSignature={`run-${runIndex}`}\n-                  initialCapital={initialCapital}\n-                />\n-                <AnimatePresence>\n-                  {status === 'loading' && (\n-                    <motion.div\n-                      className={styles.progressBadge}\n-                      initial={{ opacity: 0, y: 8 }}\n-                      animate={{ opacity: 1, y: 0 }}\n-                      exit={{ opacity: 0, y: -6 }}\n-                      role=\"status\"\n-                      aria-live=\"polite\"\n-                    >\n-                      <span>백테스트 실행 중</span>\n-                      <strong>{progress}%</strong>\n-                    </motion.div>\n-                  )}\n-                </AnimatePresence>\n-              </div>\n-            </section>\n-\n-            {/* 현재 기준 전략의 핵심 성과 지표를 요약한다. */}\n-            <section className={styles.metricGrid} aria-label=\"핵심 성과 지표\">\n-              {[\n-                ['누적 수익률', summaryStrategy.totalReturn, 'positive'],\n-                ['CAGR', summaryStrategy.cagr, 'positive'],\n-                ['최대 낙폭', summaryStrategy.mdd, 'negative'],\n-                ['Sharpe Ratio', summaryStrategy.sharpe, 'neutral'],\n-              ].map(([label, value, tone], index) => (\n-                <motion.article\n-                  layout\n-                  key={label}\n-                  className={styles.metric}\n-                  initial={{ opacity: 0, y: 8 }}\n-                  animate={{ opacity: 1, y: 0 }}\n-                  transition={{ delay: index * 0.035 }}\n-                >\n-                  <span>{label}</span>\n-                  <strong data-tone={tone}>{value}</strong>\n-                </motion.article>\n-              ))}\n-            </section>\n-\n-            {/* 결과 행 선택과 차트 강조 상태를 연결한다. */}\n-            <section className={`${styles.panel} ${styles.resultPanel}`}>\n-              <div className={styles.resultHeader}>\n-                <div>\n-                  <h2>전략별 결과 비교</h2>\n-                  <p>전략 행을 누르면 차트에서도 해당 전략이 강조됩니다.</p>\n-                </div>\n-                {focusedStrategy && (\n-                  <button\n-                    type=\"button\"\n-                    className={styles.resetButton}\n-                    onClick={() => setFocusedStrategy(null)}\n-                  >\n-                    <RotateCcw size={14} aria-hidden=\"true\" />\n-                    전체 보기\n-                  </button>\n-                )}\n-              </div>\n-              <ResultTable\n-                activeStrategies={activeStrategies}\n-                focusedStrategy={focusedStrategy}\n-                onFocus={setFocusedStrategy}\n-              />\n-            </section>\n-          </div>\n-\n-          {/* 비교 대상 모두에 공통으로 적용할 백테스트 조건을 입력한다. */}\n-          <aside className={`${styles.panel} ${styles.configPanel}`}>\n-            <div className={styles.configTitle}>\n-              <SlidersHorizontal size={17} aria-hidden=\"true\" />\n-              <div>\n-                <h2>백테스트 설정</h2>\n-                <p>공통 조건과 비교 전략을 선택하세요.</p>\n-              </div>\n-            </div>\n-\n-            <div className={styles.fieldGroup}>\n-              <label htmlFor=\"market\">투자 대상</label>\n-              <select id=\"market\" defaultValue=\"kospi200\">\n-                <option value=\"kospi200\">KOSPI 200</option>\n-              </select>\n-            </div>\n-\n-            <div className={styles.dateGrid}>\n-              <div className={styles.fieldGroup}>\n-                <label htmlFor=\"start-date\">시작일</label>\n-                <input id=\"start-date\" type=\"date\" defaultValue=\"2019-01-01\" />\n-              </div>\n-              <div className={styles.fieldGroup}>\n-                <label htmlFor=\"end-date\">종료일</label>\n-                <input id=\"end-date\" type=\"date\" defaultValue=\"2023-12-31\" />\n-              </div>\n-            </div>\n-\n-            <div className={styles.fieldGroup}>\n-              <label htmlFor=\"capital\">초기 투자금</label>\n-              <div className={styles.inputIconWrap}>\n-                <CircleDollarSign size={16} aria-hidden=\"true\" />\n-                <select\n-                  id=\"capital\"\n-                  value={initialCapital}\n-                  onChange={(event) => setInitialCapital(Number(event.target.value))}\n-                >\n-                  <option value=\"1000000\">1,000,000원</option>\n-                  <option value=\"10000000\">10,000,000원</option>\n-                  <option value=\"100000000\">100,000,000원</option>\n-                </select>\n-              </div>\n-            </div>\n-\n-            <div className={styles.divider} />\n-\n-            <div className={styles.strategyHeading}>\n-              <div>\n-                <span>비교 전략</span>\n-                <small>최대 {strategyResults.length}개</small>\n-              </div>\n-              <strong>{activeStrategies.length}/{strategyResults.length}</strong>\n-            </div>\n-            <StrategySelector selected={activeStrategies} onToggle={toggleStrategy} />\n-\n-            <button\n-              type=\"button\"\n-              className={styles.runButton}\n-              onClick={runBacktest}\n-              disabled={status === 'loading'}\n-            >\n-              <Play size={16} fill=\"currentColor\" aria-hidden=\"true\" />\n-              {status === 'loading' ? `계산 중 ${progress}%` : '백테스트 실행'}\n-            </button>\n-            <p className={styles.configNote}>\n-              현재 화면의 결과는 UI 검증을 위한 고정 예시 데이터입니다.\n-            </p>\n-\n-            {/*\n-              설정 조합 자동 비교(spec 007)로 넘어가는 진입점이다. 대상 섹터·전략은 질의 문자열로\n-              넘기는데, 이 화면의 전략은 아직 예시 데이터라 등록표의 전략 ID가 아니다 — 그래서\n-              지금은 대상 없이 열리고 그 화면이 들어온 경로를 안내한다. 전략 화면이 등록표를\n-              읽게 되면 여기서 고른 값을 그대로 붙인다.\n-            */}\n-            <Link to=\"/param-search\" className={styles.autoSearchLink}>\n-              설정 조합 자동 비교\n-              <ArrowRight size={14} aria-hidden=\"true\" />\n-            </Link>\n-          </aside>\n-        </div>\n-      </div>\n-    </main>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.tsx",
+          "old_path": "frontend/src/pages/BacktestPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,19 +0,0 @@\n-.page {\n-  background: var(--thorp-background);\n-}\n-\n-.container {\n-  display: grid;\n-  width: min(100% - 56px, 1400px);\n-  margin: 0 auto;\n-  padding: 14px 0 22px;\n-  gap: 18px;\n-}\n-\n-@media (max-width: 760px) {\n-  .container {\n-    width: calc(100% - 28px);\n-    padding-top: 10px;\n-    gap: 18px;\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/DashboardPage.module.css",
+          "old_path": "frontend/src/pages/DashboardPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,53 +0,0 @@\n-import { useState } from 'react'\n-import { DashboardIndicatorStrip } from '@/components/dashboard/DashboardIndicatorStrip'\n-import { MarketStatusSummary } from '@/components/dashboard/MarketStatusSummary'\n-import { MarketDataStatus } from '@/components/market/MarketDataStatus'\n-import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'\n-import { AppHeader } from '@/components/navigation/AppHeader'\n-import { marketMock } from '@/data/marketMock'\n-import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n-import layout from '@/styles/MarketLayout.module.css'\n-import styles from './DashboardPage.module.css'\n-\n-/** 시장 요약 → 지표 확인 → 추천 전략 순서로 빠르게 살펴보는 대시보드다. */\n-export function DashboardPage() {\n-  const [indicatorGroup, setIndicatorGroup] = useState<'market' | 'macro'>('market')\n-  const {\n-    marketIndicators,\n-    macroIndicators,\n-    failedCodes,\n-    isRefreshing,\n-    refetch,\n-  } = useMarketIndicators(\n-    marketMock.marketIndicators,\n-    marketMock.macroIndicators,\n-  )\n-\n-  return (\n-    <div className={`${layout.page} ${styles.page}`}>\n-      <AppHeader />\n-      <main className={styles.container}>\n-        <MarketDataStatus\n-          failedCount={failedCodes.length}\n-          isRefreshing={isRefreshing}\n-          onRetry={() => void refetch()}\n-        />\n-        <MarketStatusSummary regime={marketMock.regime} />\n-\n-        <DashboardIndicatorStrip\n-          group={indicatorGroup}\n-          marketIndicators={marketIndicators}\n-          macroIndicators={macroIndicators}\n-          onGroupChange={setIndicatorGroup}\n-        />\n-\n-        <StrategyRecommendationSection compact strategies={marketMock.strategyRecommendations} />\n-\n-        <footer className={layout.footer}>\n-          지표 최신값은 연동 API를 우선 사용하며, 시장 해석·차트·추천 결과는 UI 검증용 예시\n-          데이터입니다. 투자 권유나 수익을 보장하는 정보가 아닙니다.\n-        </footer>\n-      </main>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/DashboardPage.tsx",
+          "old_path": "frontend/src/pages/DashboardPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -733,29 +733,6 @@\n     rgb(6 14 9 / 42%);\n }\n \n-.chartTopline {\n-  display: flex;\n-  align-items: center;\n-  justify-content: space-between;\n-  min-height: 52px;\n-  padding: 0 18px;\n-  border-bottom: 1px solid var(--landing-line);\n-  color: #7c8b81;\n-  font-size: 0.6rem;\n-  letter-spacing: 0.09em;\n-}\n-\n-.chartTopline span {\n-  display: inline-flex;\n-  align-items: center;\n-  gap: 9px;\n-}\n-\n-.chartTopline strong {\n-  color: var(--landing-accent-soft);\n-  font-weight: 630;\n-}\n-\n /*\n   **차트 키는 화면 높이가 정한다.** viewBox 비율(1000×390)대로 두면 폭의 39%가 키가 되어,\n   넓은 화면일수록 차트가 커지면서 제목·지표·버튼을 더한 섹션이 한 칸을 넘어 한 번 더 굴러야\n@@ -800,49 +777,6 @@\n   filter: blur(3px);\n }\n \n-.chartYears text {\n-  fill: #59675e;\n-  font-size: 18px;\n-  letter-spacing: 0.08em;\n-}\n-\n-.previewMetrics {\n-  display: grid;\n-  grid-template-columns: repeat(4, 1fr);\n-  border-top: 1px solid var(--landing-line);\n-}\n-\n-.previewMetrics span {\n-  display: flex;\n-  flex-direction: column;\n-  gap: 4px;\n-  padding: 17px 19px;\n-  border-right: 1px solid var(--landing-line);\n-  color: #65736a;\n-  font-size: 0.58rem;\n-  letter-spacing: 0.07em;\n-}\n-\n-.previewMetrics span:last-child {\n-  border-right: 0;\n-}\n-\n-.previewMetrics strong {\n-  color: #cbd8cf;\n-  font-size: 0.95rem;\n-  font-weight: 590;\n-  letter-spacing: -0.015em;\n-}\n-\n-.previewMetrics span:first-child strong,\n-.previewMetrics span:nth-child(2) strong {\n-  color: var(--landing-accent-soft);\n-}\n-\n-.previewMetrics span:nth-child(3) strong {\n-  color: var(--landing-negative);\n-}\n-\n .algorithmSection {\n   position: relative;\n   display: flex;\n@@ -897,6 +831,40 @@\n   box-shadow: inset 0 0 0 1px rgb(3 199 90 / 58%);\n }\n \n+/* 등록표를 부르는 동안과 부르지 못했을 때 자리를 채운다. 값을 지어내지 않고 상태를 말한다. */\n+.orbitNotice {\n+  position: absolute;\n+  top: 50%;\n+  left: 50%;\n+  display: flex;\n+  flex-direction: column;\n+  align-items: center;\n+  gap: 12px;\n+  margin: 0;\n+  color: #8b9a91;\n+  font-size: 0.82rem;\n+  text-align: center;\n+  transform: translate(-50%, -50%);\n+}\n+\n+.orbitNotice p {\n+  margin: 0;\n+}\n+\n+.orbitNotice button {\n+  padding: 8px 18px;\n+  border: 1px solid var(--landing-line);\n+  border-radius: 999px;\n+  background: transparent;\n+  color: var(--landing-accent-soft);\n+  font: inherit;\n+  cursor: pointer;\n+}\n+\n+.orbitNotice button:hover {\n+  border-color: var(--landing-accent-soft);\n+}\n+\n .orbitFloor {\n   position: absolute;\n   top: 54%;\n@@ -986,39 +954,6 @@\n   line-height: 1.45;\n }\n \n-.algorithmCard dl {\n-  display: grid;\n-  grid-template-columns: repeat(3, 1fr);\n-  margin: 0 0 12px;\n-  border-top: 1px solid var(--landing-line);\n-  border-bottom: 1px solid var(--landing-line);\n-}\n-\n-.algorithmCard dl div {\n-  padding: 8px 5px 7px 0;\n-}\n-\n-.algorithmCard dt {\n-  color: #637168;\n-  font-size: 0.48rem;\n-  letter-spacing: 0.08em;\n-}\n-\n-.algorithmCard dd {\n-  margin: 4px 0 0;\n-  color: #dce8e0;\n-  font-size: 0.8rem;\n-  font-weight: 610;\n-}\n-\n-.algorithmCard dl div:first-child dd {\n-  color: var(--landing-accent-soft);\n-}\n-\n-.algorithmCard dl div:nth-child(2) dd {\n-  color: var(--landing-negative);\n-}\n-\n .algorithmCard > a {\n   display: flex;\n   align-items: center;\n@@ -1280,18 +1215,6 @@\n     min-height: 230px;\n   }\n \n-  .previewMetrics {\n-    grid-template-columns: repeat(2, 1fr);\n-  }\n-\n-  .previewMetrics span:nth-child(2) {\n-    border-right: 0;\n-  }\n-\n-  .previewMetrics span:nth-child(-n + 2) {\n-    border-bottom: 1px solid var(--landing-line);\n-  }\n-\n   .algorithmSection {\n     min-height: 720px;\n     padding: 70px 12px 40px;\n@@ -1353,14 +1276,6 @@\n     font-size: 2.55rem;\n   }\n \n-  .chartTopline {\n-    padding: 0 12px;\n-  }\n-\n-  .chartTopline strong {\n-    display: none;\n-  }\n-\n   .algorithmCard {\n     left: calc(50% - min(36vw, 125px));\n     width: min(72vw, 250px);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,25 @@ vi.mock('@/api/market', async () => {\n   }\n })\n \n+// 전략 카드는 등록표에서 읽는다(003 FR-005). 이름을 코드에 두지 않으므로 응답으로 준다.\n+vi.mock('@/api/strategyRegistry', async () => {\n+  const actual =\n+    await vi.importActual<typeof import('@/api/strategyRegistry')>('@/api/strategyRegistry')\n+  return {\n+    ...actual,\n+    fetchStrategyRegistry: vi.fn(() =>\n+      Promise.resolve({\n+        registryVersion: 'test',\n+        provisional: false,\n+        analysisConditions: {},\n+        strategies: [\n+          { strategyId: 'EQUAL_WEIGHT', name: '동일 비중', description: '설명', selectable: true },\n+        ],\n+      }),\n+    ),\n+  }\n+})\n+\n /** jsdom에 없는 브라우저 API를 채운다. 없으면 애니메이션 계층이 렌더링 도중 멈춘다. */\n beforeAll(() => {\n   if (!window.matchMedia) {\n@@ -118,8 +137,8 @@ describe('LandingPage', () => {\n   })\n \n   it('첫 화면에 옛 대시보드·백테스트 경로로 가는 링크가 없다', () => {\n-    // 경로 자체는 003·005가 소유하므로 지우지 않는다(002 research 결정 5). 첫 화면에서\n-    // 그곳으로 보내지 않는 것만 고정한다 — 하나가 남으면 사용자는 두 종류의 화면을 만난다.\n+    // 그 두 경로와 화면은 S15P21E205-416에서 저장소에서 없앴다. 링크가 되살아나면 사용자는\n+    // 없는 주소로 간다.\n     renderWithRouter(<LandingPage />)\n \n     const stale = screen\n@@ -129,6 +148,25 @@ describe('LandingPage', () => {\n     expect(stale).toEqual([])\n   })\n \n+  it('전략 카드의 이름을 등록표 응답에서 읽는다', async () => {\n+    // 이름을 코드에 상수로 두면 등록표에 없는 전략을 첫 화면이 광고하게 된다(003 FR-005).\n+    renderWithRouter(<LandingPage />)\n+\n+    expect(await screen.findByRole('heading', { name: '동일 비중' })).toBeDefined()\n+  })\n+\n+  it('첫 화면이 실행 근거 없는 성과 수치를 보이지 않는다', () => {\n+    // 예전에는 데모 자료의 `누적 수익 +124.8%`·CAGR·MDD·SHARPE를 첫 화면에 적었다. 어떤\n+    // 실행에서도 나온 적 없는 값이라 첫 화면이 성과를 단정하는 꼴이었다. 성과 수치는 자기\n+    // 실행을 가진 결과 화면에만 둔다.\n+    const { container } = renderWithRouter(<LandingPage />)\n+\n+    const text = container.textContent ?? ''\n+    for (const forbidden of ['124.8', 'CAGR', 'MDD', 'SHARPE', '누적 수익']) {\n+      expect(text).not.toContain(forbidden)\n+    }\n+  })\n+\n   it('소개 섹션은 그대로 남는다', () => {\n     renderWithRouter(<LandingPage />)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.test.tsx",
+          "old_path": "frontend/src/pages/LandingPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,13 +0,0 @@\n-/** 백엔드 BacktestJobRequest / 응답과 맞추는 타입. 스펙 확정 시 갱신한다. */\n-export type BacktestStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED'\n-\n-export interface BacktestJobRequest {\n-  strategy: string\n-  startDate: string // YYYY-MM-DD\n-  endDate: string\n-}\n-\n-export interface BacktestSummary {\n-  backtestId: number\n-  status: BacktestStatus\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/backtest.ts",
+          "old_path": "frontend/src/types/backtest.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,8 +7,6 @@ import type { AxisValue } from './strategyRegistry'\n  * `specs/004-backtest-execution/contracts/rest-api.md`다. 003의 분석 요청과 005의 비교 요청이 공유한다.\n  * `evaluationSplitVersion`·`scenarioParams`는 005가 원본 결과의 평가 조건을 보존할 때 사용한다.\n  *\n- * `types/backtest.ts`는 v1 데모 화면(`BacktestPage`)이 쓰는 이전 모양이라 여기와 다르다.\n- *\n  * **금액과 비율은 문자열이다.** 계약이 부동소수 오차를 막기 위해 `initialCash`·`targetWeight`를\n  * decimal 문자열로 받는다. 숫자를 그대로 실으면 400이다.\n  */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/backtestRequest.ts",
+          "old_path": "frontend/src/types/backtestRequest.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -103,15 +103,6 @@ export interface SimilarMarketPeriod {\n   comparisons: SimilarMarketComparison[]\n }\n \n-export interface StrategyRecommendation {\n-  id: string\n-  name: string\n-  suitability: number\n-  reason: string\n-  risk: string\n-  backtestPath: string\n-}\n-\n export interface DataFreshnessItem {\n   id: string\n   provider: string\n@@ -127,6 +118,5 @@ export interface MarketData {\n   macroIndicators: Indicator[]\n   stabilityIndicators: Indicator[]\n   similarPeriod: SimilarMarketPeriod\n-  strategyRecommendations: StrategyRecommendation[]\n   dataFreshness: DataFreshnessItem[]\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/market.ts",
+          "old_path": "frontend/src/types/market.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,8 +7,6 @@ import App from './App'\n \n vi.mock('@/pages/LandingPage', () => ({ LandingPage: () => <h1>랜딩 화면</h1> }))\n vi.mock('@/pages/MarketFlowPage', () => ({ MarketFlowPage: () => <h1>시장 흐름 화면</h1> }))\n-vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드 화면</h1> }))\n-vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))\n vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))\n vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면</h1> }))\n vi.mock('@/pages/MyRecordsPage', () => ({\n@@ -71,8 +69,6 @@ describe('App authentication routes', () => {\n \n   it.each([\n     ['/market-flow', '시장 흐름 화면'],\n-    ['/dashboard', '대시보드 화면'],\n-    ['/backtest', '백테스트 화면'],\n   ])('비로그인 상태에서도 공개 경로 %s를 이용할 수 있다', async (path, heading) => {\n     renderApp(path)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.auth.test.tsx",
+          "old_path": "frontend/src/App.auth.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,13 +5,6 @@ import { AuthEntryGuard } from '@/auth/AuthEntryGuard'\n import { ProtectedRoute } from '@/auth/ProtectedRoute'\n import { LandingPage } from '@/pages/LandingPage'\n \n-// 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.\n-const BacktestPage = lazy(() =>\n-  import('@/pages/BacktestPage').then((module) => ({\n-    default: module.BacktestPage,\n-  })),\n-)\n-\n // 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.\n // 설정 조합 자동 비교(spec 007)도 전략 화면에서 넘어올 때 불러온다.\n const ParamSearchPage = lazy(() =>\n@@ -45,12 +38,6 @@ const RegimeLinkPage = lazy(() =>\n   })),\n )\n \n-const DashboardPage = lazy(() =>\n-  import('@/pages/DashboardPage').then((module) => ({\n-    default: module.DashboardPage,\n-  })),\n-)\n-\n const SignupPage = lazy(() =>\n   import('@/pages/SignupPage').then((module) => ({\n     default: module.SignupPage,\n@@ -150,8 +137,6 @@ function AnimatedRoutes() {\n             */}\n             <Route path=\"/regime-link/start\" element={<RegimeLinkStartPage />} />\n             <Route path=\"/home\" element={<Navigate to=\"/market-flow\" replace />} />\n-            <Route path=\"/dashboard\" element={<DashboardPage />} />\n-            <Route path=\"/backtest\" element={<BacktestPage />} />\n             <Route path=\"/param-search\" element={<ParamSearchPage />} />\n             {/* 배우기는 로그인 없이 연다. 진단의 전제가 아니다(013 FR-011·FR-012). */}\n             <Route path=\"/learn\" element={<LearningListPage />} />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2858653": []
+  }
+}

@@ -1,0 +1,1048 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 940721,
+    "iid": 50,
+    "project_id": 1444456,
+    "title": "fix(infra,be): 마이그레이션 버전 검증과 스키마 변경 규칙 수립",
+    "description": "## 작업 내용 요약\n\n2026-09-11에 서로 다른 두 MR이 각각 `V3` 마이그레이션을 추가한 채 dev에 병합되어 백엔드가 기동하지 못했다. Flyway가 파일 목록을 해석하는 단계에서 `Found more than one migration with version 3`으로 멈추기 때문이다. 중복 자체는 `d05ec0f`에서 뉴스 쪽을 V4로 개명해 풀었고, 이 MR은 **같은 사고가 다시 나지 않게 하는 작업**이다.\n\n원인을 따져 보니 검증 장치가 없어서 생긴 사고가 아니었다. `FlywayMigrationTest`가 이미 빈 DB에 전체 마이그레이션을 적용하고 Entity 매핑까지 대조하고 있었다. 그런데도 통과한 이유는 두 가지다.\n\n1. **CI가 소스 브랜치만 빌드했다.** 두 브랜치는 각자 기준으로 `V3`이 하나뿐이라 정상이었고, 합친 결과를 아무도 빌드하지 않았다.\n2. **검증이 실행되지 않아도 빌드가 통과했다.** Docker가 없으면 통합 테스트가 실패가 아니라 조용한 스킵이 된다. 실제로 이 브랜치 작업 전 기준으로 **455개 중 90개가 스킵된 채 초록색**이었다.\n\n그래서 사람이 지킬 규칙을 늘리는 대신 **검증이 도는 지점을 옮기고, 검증이 비었을 때 빌드를 멈추게** 했다. 함께 논의된 Flyway 협업 규칙 여덟 개 중 판정 가능한 것만 constitution에 원칙으로 남기고, 나머지는 설정과 CI로 옮겼다.\n\n## 관련 티켓 번호 & 링크\n\nticket #172 (Jira S15P21E205-172 · GitLab 이슈는 사용하지 않음) link https://ssafy.atlassian.net/browse/S15P21E205-172\n\n## 주요 변경 사항\n\n### 1. CI가 병합 결과를 빌드한다 — `Jenkinsfile`\n\n이번 사고를 실제로 막는 유일한 조치이고 나머지보다 우선한다. `Merge with dev` 스테이지를 추가해 이후 모든 단계가 dev를 합친 결과 위에서 돌게 했다.\n\n```groovy\nif git merge-base --is-ancestor origin/dev HEAD; then\n    echo \"이미 origin/dev 를 포함한다. 병합을 건너뛴다.\"\nelse\n    git merge --no-commit --no-ff origin/dev\nfi\n```\n\n- 브랜치 이름에 의존하지 않는다. dev 자체를 빌드할 때는 조상 판정이 참이라 자동으로 건너뛴다.\n- `--no-commit`이라 워크스페이스에만 병합 결과를 만들고 `post`에서 `git merge --abort`로 되돌린다.\n- 병합할 수 없으면(충돌) 그 자리에서 실패한다.\n\n### 2. Docker 없이 도는 버전 중복 검사 — `MigrationFileConventionTest` (신규)\n\n버전 중복은 파일명만 봐도 안다. 그것까지 컨테이너에 맡기면 컨테이너가 없는 환경에서 검증이 통째로 빈다. DB도 Docker도 쓰지 않고 세 가지를 본다.\n\n- 마이그레이션 파일을 하나 이상 찾는다 (열거가 비면 나머지 단언이 공허하게 통과하므로 먼저 막는다)\n- 모든 파일명이 규칙을 지킨다 (`V<숫자 버전>__<소문자·숫자·밑줄>.sql`)\n- **버전이 중복되지 않는다** ← 이번 사고를 직접 잡는다\n\n임시로 중복 파일을 만들어 실제로 빨간불이 되는 것을 확인한 뒤 지웠다.\n\n### 3. 검증이 비면 CI가 멈춘다 — `RequiredDockerTest` (신규) + `Jenkinsfile`\n\nCI는 `THORP_REQUIRE_DOCKER=true`로 돌리고, 그 환경에서 Docker에 붙지 못하면 이 테스트가 실패해 빌드를 멈춘다. 변수가 없는 로컬에서는 테스트 자체가 실행되지 않으므로 개발자 흐름은 그대로다.\n\n### 4. 버전 역전 검사 — `infra/scripts/check-migration-version.sh` (신규)\n\n버전 중복과 함께, **기준 브랜치보다 낮거나 같은 버전을 새로 추가했는지**를 본다. 후자가 이 스크립트의 존재 이유다. 빈 DB 테스트로는 잡히지 않는다. 빈 DB에서는 번호 순서대로 전부 적용되므로, 역전은 \"이미 높은 번호가 적용된 DB\"에서만 드러나기 때문이다. 나중에 버전 체계를 timestamp로 바꾸면 이 검사가 필수가 된다.\n\n### 5. 테스트에서 버전 번호 제거 — `MigrationFiles` (신규), `FlywayMigrationTest`, `ParamSearchMigrationTest`\n\nV3를 V4로 개명할 때 파일 이름만 바꿔서 끝나지 않고 테스트까지 고쳐야 했다. 테스트가 `WHERE version = '4'`처럼 번호를 박고 있었기 때문이다. 이 결합을 끊었다.\n\n- 적용 여부는 클래스패스에서 읽은 파일 목록과 대조한다\n- 구조 단언은 테이블 이름으로만 건다\n- 버전 비교는 문자열이 아니라 수로 한다 (`\"20260911103045\" < \"4\"` 같은 사전식 역전 방지)\n\n이제 버전 체계를 바꿔도 테스트를 고칠 필요가 없다.\n\n### 6. 운영 clean 금지를 설정으로 고정 — `application-prod.yml`, `ApplicationProfileConfigTest`\n\nFlyway 11.7.2는 `cleanDisabled` 기본값이 이미 `true`지만 설정에 명시하고 단언을 걸었다. 기본값에 기대면 도구 버전을 올릴 때 조용히 바뀌어도 알아채지 못한다.\n\n### 7. constitution 3.1.0 — \"스키마 변경 규칙\" 절 신설\n\n이 문서는 도구 이름과 저장소 파일을 인용하지 않는 관례가 있어 Flyway를 언급하지 않고 원칙으로 썼다. 다섯 항이다.\n\n1. 운영에 이미 적용된 스키마 변경은 수정하지 않는다. **아직 적용되지 않은 변경은 병합 전후를 가리지 않고 수정·정리할 수 있다** (이번 V3→V4 조치가 그 근거다)\n2. 스키마 변경·코드 매핑·검증은 같은 MR에 담는다\n3. 되돌릴 수 없는 변경은 배포 전에 백업과 팀 승인을 받는다. 운영 DB를 초기화하는 명령은 쓰지 않는다\n4. 적용 기록을 사람이 직접 고치는 복구 수단은 원인을 확인한 뒤에만 쓴다\n5. 병합 가부는 사람의 확인이 아니라 자동 검증으로 판정한다. **실행되지 않은 상태(환경이 없어 건너뛴 경우 포함)를 통과로 보지 않는다**\n\n미합의 목록에서 마이그레이션 항목을 뺐고, 롤백 절차와 배포 중 호환 규칙은 합의된 바 없어 그대로 남겼다. 도구·파일명 형식·명령은 `backend/CLAUDE.md`에 두었다. 최상위 문서에 명령어를 넣으면 도구를 바꿀 때마다 전체 회의를 거쳐야 하기 때문이다.\n\n### 8. 부수 수정: 테스트 커넥션 고갈 — `PostgresTestSupport`\n\nDocker를 켜고 전체 테스트를 돌리자 **여태 스킵되어 아무도 몰랐던 문제**가 드러났다.\n\n```\nFATAL: sorry, too many clients already\n```\n\nSpring은 설정이 다른 테스트 클래스마다 컨텍스트를 따로 만들어 캐시하고, 캐시된 컨텍스트는 커넥션 풀을 잡은 채 JVM이 끝날 때까지 산다. DB에 붙는 테스트 클래스가 12개인데 Hikari 기본 풀이 10이라 최대 120개가 필요하고, PostgreSQL 기본 상한은 100이다. 단독으로 돌리면 통과하고 전체로 돌리면 실패해서 증상만으로는 원인을 찾기 어렵다.\n\n테스트는 단일 스레드로 돌아 커넥션이 많이 필요하지 않으므로 풀을 줄였다. **dev에서도 팀이 같은 문제를 독립적으로 발견해 고쳐 두었고**, 병합할 때 더 보수적인 dev 설정(`maximum-pool-size=2` + `minimum-idle=0`)을 채택했다.\n\n### 9. dev 병합 — 충돌 셋 해결\n\nMR을 올린 뒤 dev가 18커밋 앞서 나가 충돌이 생겼다. 처리 방향은 이렇다.\n\n| 충돌 파일 | 처리 |\n|-------|----|\n| `PostgresTestSupport` | **dev 것 채택.** 위 8번과 같은 이유다 |\n| `FlywayMigrationTest` | **dev 기반 + 이 브랜치 변경 재적용.** dev가 `backtest_job`을 `backtest_run`으로 개명하고 컬럼을 크게 늘려 구조 단언은 dev가 최신이다. 거기에 버전을 박은 적용 단언 셋만 버전 비의존 단언 둘로 바꿨다 |\n| `backend/CLAUDE.md` | **양쪽 병합.** dev의 타임스탬프 규칙에 이 브랜치의 검증 3종·파괴적 DDL·같은 MR 규칙을 붙였다. 이미 적용된 범위가 `V1`\\~`V3`으로 적혀 있었으나 실제로는 V4까지 있어 바로잡았다 |\n\n## 테스트\n\n- [x] Docker를 켜고 `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` — **BUILD SUCCESSFUL, 492개 중 실패 0 · 스킵 1** (dev 병합 후)\n- [x] 스킵이 90개에서 1개로 줄었다 (남은 하나는 `MarketLiveApiTest`로 원래 정상)\n- [x] `MigrationFileConventionTest` 3개 통과. 임시 중복 파일을 만들어 실제로 실패하는 것까지 확인한 뒤 지웠다\n- [x] `FlywayMigrationTest` 통과 (실제 PostgreSQL 컨테이너, dev의 `backtest_run` 확장 스키마 포함)\n- [x] `ParamSearchMigrationTest` 통과\n- [x] `RequiredDockerTest` 통과\n- [x] `check-migration-version.sh` — dev의 14자리 타임스탬프가 섞인 상태에서 최대 버전을 `20260911111000`으로 올바르게 인식\n- [ ] Jenkins에서 실제 파이프라인 동작 — **이 MR에서는 검증하지 못했다** (리뷰 포인트 1)\n\n## 리뷰 포인트\n\n1. **Jenkins 실제 동작을 확인해야 한다.** `Merge with dev`와 `Migration version` 스테이지는 로컬 git으로만 검증했다. 특히 Jenkins 컨테이너 안에서 Testcontainers가 도는지(docker.sock은 마운트되어 있다), 그리고 Job 트리거가 MR 이벤트로 걸려 있는지 확인이 필요하다. 파이프라인 코드로 병합을 수행하므로 Job 설정에 크게 의존하지는 않는다.\n2. **오류 코드 계약 불일치는 dev에서 해소됐다.** MR을 처음 올릴 때는 `BacktestResultApiIT`가 `NO_MARKET_DATA` / `DATA_INSUFFICIENT` 불일치로 실패해서, Docker 게이트를 켜면 CI가 막힌다고 적었다. dev를 병합한 뒤 전체 빌드가 통과하므로 이 MR에서 따로 손댈 것이 없다.\n3. **버전 체계는 dev가 이미 14자리 타임스탬프를 채택했다.** 처음 올릴 때는 \"순차 번호를 유지했다\"고 적었는데, 병합해 보니 팀이 `V{YYYYMMDDHHMMSS}` 규칙으로 옮겨 간 뒤였다. 이 MR의 검사 코드는 버전을 `BigInteger`로 비교하도록 만들어 둬서 그대로 동작한다 — 사전식이었다면 `\"20260911111000\" < \"4\"`가 되어 최대 버전을 잘못 잡았을 자리다. **타임스탬프에서는 `check-migration-version.sh`의 역전 검사가 중복 검사보다 중요해진다.** 파일명이 겹치지 않아 Git이 조용히 병합하고, 낮은 버전이 뒤늦게 머지되면 운영에서만 기동이 막히기 때문이다.\n4. **constitution 3.1.0은 전체 회의 비준이 필요하다.** Governance상 승인 없이 merge된 개정은 무효다. 이 MR을 머지하더라도 비준 절차는 따로 밟아야 한다.\n5. **여덟 개 규칙 중 셋은 일부러 넣지 않았다.** \"하나의 마이그레이션에 하나의 목적\"은 위반 여부를 판정할 수 없고 파일을 쪼개면 Flyway 트랜잭션 단위도 쪼개져 부분 적용 상태가 생긴다. \"작성 전 최신 dev 반영\"은 먼저 rebase한 쪽이 먼저 머지한다는 보장이 없어 CI로 대체했다. \"빈 DB 확인\"과 \"validation 실패 무시 금지\"는 이미 코드로 구현되어 있어 선언을 중복시키지 않았다. 이 판단에 이견이 있으면 알려주세요.",
+    "state": "merged",
+    "created_at": "2026-09-11T12:37:51.677+09:00",
+    "updated_at": "2026-09-15T15:57:13.369+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-11T13:42:57.549+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(be)/172-migration-safeguards",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0fe4e4bf110cea7ddda5f5d37c11ba1259124695",
+    "merge_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T12:37:53.771+09:00",
+    "reference": "!50",
+    "references": {
+      "short": "!50",
+      "relative": "!50",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!50"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/50",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 940721,
+    "iid": 50,
+    "project_id": 1444456,
+    "title": "fix(infra,be): 마이그레이션 버전 검증과 스키마 변경 규칙 수립",
+    "description": "## 작업 내용 요약\n\n2026-09-11에 서로 다른 두 MR이 각각 `V3` 마이그레이션을 추가한 채 dev에 병합되어 백엔드가 기동하지 못했다. Flyway가 파일 목록을 해석하는 단계에서 `Found more than one migration with version 3`으로 멈추기 때문이다. 중복 자체는 `d05ec0f`에서 뉴스 쪽을 V4로 개명해 풀었고, 이 MR은 **같은 사고가 다시 나지 않게 하는 작업**이다.\n\n원인을 따져 보니 검증 장치가 없어서 생긴 사고가 아니었다. `FlywayMigrationTest`가 이미 빈 DB에 전체 마이그레이션을 적용하고 Entity 매핑까지 대조하고 있었다. 그런데도 통과한 이유는 두 가지다.\n\n1. **CI가 소스 브랜치만 빌드했다.** 두 브랜치는 각자 기준으로 `V3`이 하나뿐이라 정상이었고, 합친 결과를 아무도 빌드하지 않았다.\n2. **검증이 실행되지 않아도 빌드가 통과했다.** Docker가 없으면 통합 테스트가 실패가 아니라 조용한 스킵이 된다. 실제로 이 브랜치 작업 전 기준으로 **455개 중 90개가 스킵된 채 초록색**이었다.\n\n그래서 사람이 지킬 규칙을 늘리는 대신 **검증이 도는 지점을 옮기고, 검증이 비었을 때 빌드를 멈추게** 했다. 함께 논의된 Flyway 협업 규칙 여덟 개 중 판정 가능한 것만 constitution에 원칙으로 남기고, 나머지는 설정과 CI로 옮겼다.\n\n## 관련 티켓 번호 & 링크\n\nticket #172 (Jira S15P21E205-172 · GitLab 이슈는 사용하지 않음) link https://ssafy.atlassian.net/browse/S15P21E205-172\n\n## 주요 변경 사항\n\n### 1. CI가 병합 결과를 빌드한다 — `Jenkinsfile`\n\n이번 사고를 실제로 막는 유일한 조치이고 나머지보다 우선한다. `Merge with dev` 스테이지를 추가해 이후 모든 단계가 dev를 합친 결과 위에서 돌게 했다.\n\n```groovy\nif git merge-base --is-ancestor origin/dev HEAD; then\n    echo \"이미 origin/dev 를 포함한다. 병합을 건너뛴다.\"\nelse\n    git merge --no-commit --no-ff origin/dev\nfi\n```\n\n- 브랜치 이름에 의존하지 않는다. dev 자체를 빌드할 때는 조상 판정이 참이라 자동으로 건너뛴다.\n- `--no-commit`이라 워크스페이스에만 병합 결과를 만들고 `post`에서 `git merge --abort`로 되돌린다.\n- 병합할 수 없으면(충돌) 그 자리에서 실패한다.\n\n### 2. Docker 없이 도는 버전 중복 검사 — `MigrationFileConventionTest` (신규)\n\n버전 중복은 파일명만 봐도 안다. 그것까지 컨테이너에 맡기면 컨테이너가 없는 환경에서 검증이 통째로 빈다. DB도 Docker도 쓰지 않고 세 가지를 본다.\n\n- 마이그레이션 파일을 하나 이상 찾는다 (열거가 비면 나머지 단언이 공허하게 통과하므로 먼저 막는다)\n- 모든 파일명이 규칙을 지킨다 (`V<숫자 버전>__<소문자·숫자·밑줄>.sql`)\n- **버전이 중복되지 않는다** ← 이번 사고를 직접 잡는다\n\n임시로 중복 파일을 만들어 실제로 빨간불이 되는 것을 확인한 뒤 지웠다.\n\n### 3. 검증이 비면 CI가 멈춘다 — `RequiredDockerTest` (신규) + `Jenkinsfile`\n\nCI는 `THORP_REQUIRE_DOCKER=true`로 돌리고, 그 환경에서 Docker에 붙지 못하면 이 테스트가 실패해 빌드를 멈춘다. 변수가 없는 로컬에서는 테스트 자체가 실행되지 않으므로 개발자 흐름은 그대로다.\n\n### 4. 버전 역전 검사 — `infra/scripts/check-migration-version.sh` (신규)\n\n버전 중복과 함께, **기준 브랜치보다 낮거나 같은 버전을 새로 추가했는지**를 본다. 후자가 이 스크립트의 존재 이유다. 빈 DB 테스트로는 잡히지 않는다. 빈 DB에서는 번호 순서대로 전부 적용되므로, 역전은 \"이미 높은 번호가 적용된 DB\"에서만 드러나기 때문이다. 나중에 버전 체계를 timestamp로 바꾸면 이 검사가 필수가 된다.\n\n### 5. 테스트에서 버전 번호 제거 — `MigrationFiles` (신규), `FlywayMigrationTest`, `ParamSearchMigrationTest`\n\nV3를 V4로 개명할 때 파일 이름만 바꿔서 끝나지 않고 테스트까지 고쳐야 했다. 테스트가 `WHERE version = '4'`처럼 번호를 박고 있었기 때문이다. 이 결합을 끊었다.\n\n- 적용 여부는 클래스패스에서 읽은 파일 목록과 대조한다\n- 구조 단언은 테이블 이름으로만 건다\n- 버전 비교는 문자열이 아니라 수로 한다 (`\"20260911103045\" < \"4\"` 같은 사전식 역전 방지)\n\n이제 버전 체계를 바꿔도 테스트를 고칠 필요가 없다.\n\n### 6. 운영 clean 금지를 설정으로 고정 — `application-prod.yml`, `ApplicationProfileConfigTest`\n\nFlyway 11.7.2는 `cleanDisabled` 기본값이 이미 `true`지만 설정에 명시하고 단언을 걸었다. 기본값에 기대면 도구 버전을 올릴 때 조용히 바뀌어도 알아채지 못한다.\n\n### 7. constitution 3.1.0 — \"스키마 변경 규칙\" 절 신설\n\n이 문서는 도구 이름과 저장소 파일을 인용하지 않는 관례가 있어 Flyway를 언급하지 않고 원칙으로 썼다. 다섯 항이다.\n\n1. 운영에 이미 적용된 스키마 변경은 수정하지 않는다. **아직 적용되지 않은 변경은 병합 전후를 가리지 않고 수정·정리할 수 있다** (이번 V3→V4 조치가 그 근거다)\n2. 스키마 변경·코드 매핑·검증은 같은 MR에 담는다\n3. 되돌릴 수 없는 변경은 배포 전에 백업과 팀 승인을 받는다. 운영 DB를 초기화하는 명령은 쓰지 않는다\n4. 적용 기록을 사람이 직접 고치는 복구 수단은 원인을 확인한 뒤에만 쓴다\n5. 병합 가부는 사람의 확인이 아니라 자동 검증으로 판정한다. **실행되지 않은 상태(환경이 없어 건너뛴 경우 포함)를 통과로 보지 않는다**\n\n미합의 목록에서 마이그레이션 항목을 뺐고, 롤백 절차와 배포 중 호환 규칙은 합의된 바 없어 그대로 남겼다. 도구·파일명 형식·명령은 `backend/CLAUDE.md`에 두었다. 최상위 문서에 명령어를 넣으면 도구를 바꿀 때마다 전체 회의를 거쳐야 하기 때문이다.\n\n### 8. 부수 수정: 테스트 커넥션 고갈 — `PostgresTestSupport`\n\nDocker를 켜고 전체 테스트를 돌리자 **여태 스킵되어 아무도 몰랐던 문제**가 드러났다.\n\n```\nFATAL: sorry, too many clients already\n```\n\nSpring은 설정이 다른 테스트 클래스마다 컨텍스트를 따로 만들어 캐시하고, 캐시된 컨텍스트는 커넥션 풀을 잡은 채 JVM이 끝날 때까지 산다. DB에 붙는 테스트 클래스가 12개인데 Hikari 기본 풀이 10이라 최대 120개가 필요하고, PostgreSQL 기본 상한은 100이다. 단독으로 돌리면 통과하고 전체로 돌리면 실패해서 증상만으로는 원인을 찾기 어렵다.\n\n테스트는 단일 스레드로 돌아 커넥션이 많이 필요하지 않으므로 풀을 줄였다. **dev에서도 팀이 같은 문제를 독립적으로 발견해 고쳐 두었고**, 병합할 때 더 보수적인 dev 설정(`maximum-pool-size=2` + `minimum-idle=0`)을 채택했다.\n\n### 9. dev 병합 — 충돌 셋 해결\n\nMR을 올린 뒤 dev가 18커밋 앞서 나가 충돌이 생겼다. 처리 방향은 이렇다.\n\n| 충돌 파일 | 처리 |\n|-------|----|\n| `PostgresTestSupport` | **dev 것 채택.** 위 8번과 같은 이유다 |\n| `FlywayMigrationTest` | **dev 기반 + 이 브랜치 변경 재적용.** dev가 `backtest_job`을 `backtest_run`으로 개명하고 컬럼을 크게 늘려 구조 단언은 dev가 최신이다. 거기에 버전을 박은 적용 단언 셋만 버전 비의존 단언 둘로 바꿨다 |\n| `backend/CLAUDE.md` | **양쪽 병합.** dev의 타임스탬프 규칙에 이 브랜치의 검증 3종·파괴적 DDL·같은 MR 규칙을 붙였다. 이미 적용된 범위가 `V1`\\~`V3`으로 적혀 있었으나 실제로는 V4까지 있어 바로잡았다 |\n\n## 테스트\n\n- [x] Docker를 켜고 `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` — **BUILD SUCCESSFUL, 492개 중 실패 0 · 스킵 1** (dev 병합 후)\n- [x] 스킵이 90개에서 1개로 줄었다 (남은 하나는 `MarketLiveApiTest`로 원래 정상)\n- [x] `MigrationFileConventionTest` 3개 통과. 임시 중복 파일을 만들어 실제로 실패하는 것까지 확인한 뒤 지웠다\n- [x] `FlywayMigrationTest` 통과 (실제 PostgreSQL 컨테이너, dev의 `backtest_run` 확장 스키마 포함)\n- [x] `ParamSearchMigrationTest` 통과\n- [x] `RequiredDockerTest` 통과\n- [x] `check-migration-version.sh` — dev의 14자리 타임스탬프가 섞인 상태에서 최대 버전을 `20260911111000`으로 올바르게 인식\n- [ ] Jenkins에서 실제 파이프라인 동작 — **이 MR에서는 검증하지 못했다** (리뷰 포인트 1)\n\n## 리뷰 포인트\n\n1. **Jenkins 실제 동작을 확인해야 한다.** `Merge with dev`와 `Migration version` 스테이지는 로컬 git으로만 검증했다. 특히 Jenkins 컨테이너 안에서 Testcontainers가 도는지(docker.sock은 마운트되어 있다), 그리고 Job 트리거가 MR 이벤트로 걸려 있는지 확인이 필요하다. 파이프라인 코드로 병합을 수행하므로 Job 설정에 크게 의존하지는 않는다.\n2. **오류 코드 계약 불일치는 dev에서 해소됐다.** MR을 처음 올릴 때는 `BacktestResultApiIT`가 `NO_MARKET_DATA` / `DATA_INSUFFICIENT` 불일치로 실패해서, Docker 게이트를 켜면 CI가 막힌다고 적었다. dev를 병합한 뒤 전체 빌드가 통과하므로 이 MR에서 따로 손댈 것이 없다.\n3. **버전 체계는 dev가 이미 14자리 타임스탬프를 채택했다.** 처음 올릴 때는 \"순차 번호를 유지했다\"고 적었는데, 병합해 보니 팀이 `V{YYYYMMDDHHMMSS}` 규칙으로 옮겨 간 뒤였다. 이 MR의 검사 코드는 버전을 `BigInteger`로 비교하도록 만들어 둬서 그대로 동작한다 — 사전식이었다면 `\"20260911111000\" < \"4\"`가 되어 최대 버전을 잘못 잡았을 자리다. **타임스탬프에서는 `check-migration-version.sh`의 역전 검사가 중복 검사보다 중요해진다.** 파일명이 겹치지 않아 Git이 조용히 병합하고, 낮은 버전이 뒤늦게 머지되면 운영에서만 기동이 막히기 때문이다.\n4. **constitution 3.1.0은 전체 회의 비준이 필요하다.** Governance상 승인 없이 merge된 개정은 무효다. 이 MR을 머지하더라도 비준 절차는 따로 밟아야 한다.\n5. **여덟 개 규칙 중 셋은 일부러 넣지 않았다.** \"하나의 마이그레이션에 하나의 목적\"은 위반 여부를 판정할 수 없고 파일을 쪼개면 Flyway 트랜잭션 단위도 쪼개져 부분 적용 상태가 생긴다. \"작성 전 최신 dev 반영\"은 먼저 rebase한 쪽이 먼저 머지한다는 보장이 없어 CI로 대체했다. \"빈 DB 확인\"과 \"validation 실패 무시 금지\"는 이미 코드로 구현되어 있어 선언을 중복시키지 않았다. 이 판단에 이견이 있으면 알려주세요.",
+    "state": "merged",
+    "created_at": "2026-09-11T12:37:51.677+09:00",
+    "updated_at": "2026-09-15T15:57:13.369+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-11T13:42:57.549+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(be)/172-migration-safeguards",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0fe4e4bf110cea7ddda5f5d37c11ba1259124695",
+    "merge_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T12:37:53.771+09:00",
+    "reference": "!50",
+    "references": {
+      "short": "!50",
+      "relative": "!50",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!50"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/50",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "11",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "head_sha": "0fe4e4bf110cea7ddda5f5d37c11ba1259124695",
+      "start_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5026a8ee7856885c84ca743f5e99709f274d7a99",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2791971,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **근본 원인 해결 (CI 병합 결과 빌드):** 단순히 가이드라인이나 컨벤션을 강화하는 데 그치지 않고, `Jenkinsfile`에 `Merge with dev` 스테이지를 추가하여 PR 단계에서부터 `dev`와의 병합 결과를 실제로 검증하도록 설계한 점이 매우 훌륭합니다.\n- **견고한 테스트 및 검증 분리:** Docker 환경 유무에 상관없이 파일명 규칙과 버전 중복을 검사하는 `MigrationFileConventionTest`와, CI 환경에서 Docker 누락을 감지하는 `RequiredDockerTest`를 분리하여 테스트 공백을 효과적으로 차단했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **병합 충돌 시나리오:** `Jenkinsfile`의 `Merge with dev` 스테이지에서 `origin/dev`와 현재 브랜치 간에 충돌(`conflict`)이 발생했을 때, 파이프라인이 즉시 실패하고 워크스페이스가 안전하게 정리되는지 테스트합니다.\n- **버전 역전 스크립트 검증:** `infra/scripts/check-migration-version.sh`에 `origin/dev`의 최대 버전보다 낮은 임의의 SQL 파일을 추가한 브랜치를 생성하고, 스크립트가 역전을 정확히 감지하여 비정상 종료(`exit 1`)하는지 확인합니다.\n- **Docker 강제 검증:** `THORP_REQUIRE_DOCKER=true` 환경 변수가 설정된 상태에서 Docker 데몬이 중지되어 있을 때, `RequiredDockerTest`가 기대한 대로 실패하여 빌드를 중단시키는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0fe4e4bf110cea7ddda5f5d37c11ba1259124695 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-11T12:38:01.581+09:00",
+          "updated_at": "2026-09-11T12:49:48.716+09:00",
+          "system": false,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "22560d3ca9befb9a0b106267162148b3593f1e13",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792005,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-11T12:41:40.714+09:00",
+          "updated_at": "2026-09-11T12:41:40.722+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3d02f7097640e02afd1c23803db41c440b84c980",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792008,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-11T12:41:42.755+09:00",
+          "updated_at": "2026-09-11T12:41:42.758+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0464c1247d870d359b11e744ab09437f967eef2b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792049,
+          "type": null,
+          "body": "added 19 commits\n\n<ul><li>a5e2b34e...d43d0b67 - 18 commits from branch <code>dev</code></li><li>0fe4e4bf - Merge remote-tracking branch &#39;origin/dev&#39; into chore(be)/172-migration-safeguards</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/50/diffs?diff_id=2186250&start_sha=a5e2b34e5d3cbec31a91c4fa516acac723ea3d02)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-11T12:49:40.034+09:00",
+          "updated_at": "2026-09-11T12:49:40.038+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "19d910b54be5ad17c51015690bda1b8c488c160b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792114,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-11T12:54:36.641+09:00",
+          "updated_at": "2026-09-11T12:54:36.645+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2f80aea801573d1aebf937a52bdde33c29dce820",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792525,
+          "type": null,
+          "body": "mentioned in commit 92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-11T13:42:57.634+09:00",
+          "updated_at": "2026-09-11T13:42:57.639+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4313a57f394eda75f531b3a4be65d93282856d74",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809548,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\"><span class=\"idiff left right deletion\">[BE]</span> 마이그레이션 버전 검증과 스키마 변경 규칙 수립</code> to <code class=\"idiff\"><span class=\"idiff left right addition\">fix(infra,be):</span> 마이그레이션 버전 검증과 스키마 변경 규칙 수립</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:57:13.549+09:00",
+          "updated_at": "2026-09-15T15:57:13.554+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "05ad219a67733e74427d6c7947b3484d4997dda7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809549,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:57:13.593+09:00",
+          "updated_at": "2026-09-15T15:57:13.597+09:00",
+          "system": true,
+          "noteable_id": 940721,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 50,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2186250,
+      "head_commit_sha": "0fe4e4bf110cea7ddda5f5d37c11ba1259124695",
+      "base_commit_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "start_commit_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "created_at": "2026-09-11T12:49:39.775+09:00",
+      "merge_request_id": 940721,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "92da36ea892f971a35627d6b4c9a4c7bab8d0065"
+    },
+    {
+      "id": 2186175,
+      "head_commit_sha": "a5e2b34e5d3cbec31a91c4fa516acac723ea3d02",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "created_at": "2026-09-11T12:37:52.778+09:00",
+      "merge_request_id": 940721,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "fd07c377cfd62ab2abb43b26e1594dacfe8674e0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2186250,
+      "head_commit_sha": "0fe4e4bf110cea7ddda5f5d37c11ba1259124695",
+      "base_commit_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "start_commit_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "created_at": "2026-09-11T12:49:39.775+09:00",
+      "merge_request_id": 940721,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "92da36ea892f971a35627d6b4c9a4c7bab8d0065",
+      "commits": [
+        {
+          "id": "0fe4e4bf110cea7ddda5f5d37c11ba1259124695",
+          "short_id": "0fe4e4bf",
+          "created_at": "2026-09-11T12:49:30.000+09:00",
+          "parent_ids": [
+            "a5e2b34e5d3cbec31a91c4fa516acac723ea3d02",
+            "d43d0b6719aeec34c0c920a9dad3b863f29fa588"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into chore(be)/172-migration-safeguards",
+          "message": "Merge remote-tracking branch 'origin/dev' into chore(be)/172-migration-safeguards\n\n충돌 셋을 해결했다.\n\n- PostgresTestSupport: dev 것을 취한다. 팀도 같은 커넥션 고갈을 발견했고 maximum-pool-size=2 + minimum-idle=0으로 이 브랜치의 4보다 보수적이다.\n- FlywayMigrationTest: dev가 backtest_job을 backtest_run으로 개명하고 컬럼을 크게 늘려 구조 단언은 dev가 최신이다. 그것을 기반으로 두고 버전을 박은 적용 단언 셋(version='1'/'2'/'4')만 버전 비의존 단언 둘로 바꾼다.\n- backend/CLAUDE.md: dev의 타임스탬프 규칙에 이 브랜치의 검증 3종·파괴적 DDL·같은 MR 규칙을 합친다. 이미 적용된 범위가 V1~V3으로 적혀 있었으나 실제로는 V4까지 있어 바로잡았다.\n\ndev가 14자리 타임스탬프 버전을 채택한 뒤에도 MigrationFiles는 버전을 BigInteger로 비교하므로 그대로 동작한다. check-migration-version.sh도 최대 버전을 20260911111000으로 올바르게 잡는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:49:30.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:49:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0fe4e4bf110cea7ddda5f5d37c11ba1259124695"
+        },
+        {
+          "id": "a5e2b34e5d3cbec31a91c4fa516acac723ea3d02",
+          "short_id": "a5e2b34e",
+          "created_at": "2026-09-11T12:29:44.000+09:00",
+          "parent_ids": [
+            "b35219c9bf6b2117eeffa910a053bfd540848313"
+          ],
+          "title": "chore(be): 마이그레이션 버전 검사 스크립트에 실행 권한을 준다",
+          "message": "chore(be): 마이그레이션 버전 검사 스크립트에 실행 권한을 준다\n\ninfra/scripts의 다른 스크립트와 모드를 맞춘다. Jenkinsfile은 bash로 호출하므로 동작에는 영향이 없지만, 사람이 직접 실행할 때 권한 오류가 난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:29:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:29:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a5e2b34e5d3cbec31a91c4fa516acac723ea3d02"
+        },
+        {
+          "id": "b35219c9bf6b2117eeffa910a053bfd540848313",
+          "short_id": "b35219c9",
+          "created_at": "2026-09-11T12:29:13.000+09:00",
+          "parent_ids": [
+            "bd2b5fb7bb57a5d6f6018bf18a78b078b509a393"
+          ],
+          "title": "docs(be): 스키마 변경 규칙을 constitution과 backend 문서에 세운다",
+          "message": "docs(be): 스키마 변경 규칙을 constitution과 backend 문서에 세운다\n\nconstitution 3.0.0 → 3.1.0. '스키마 변경 규칙' 절을 신설했다(MINOR, 비준은 전체 회의 승인 후 merge로 확정). 스키마 변경에서 같은 실패가 두 번 반복되어(배포 코드와 적용 스키마 불일치, 같은 버전 번호 중복) 팀이 합의했고, 미합의 목록이 정한 MINOR 개정 경로를 따랐다. 이 문서는 도구 이름을 인용하지 않는 관례가 있어 Flyway를 언급하지 않고 원칙으로 썼다. 미합의 목록에서 마이그레이션 항목을 빼되 롤백 절차와 배포 중 호환 규칙은 합의된 바 없어 남겼다. 도구·파일명 형식·명령은 backend/CLAUDE.md에 둔다 - 최상위 문서에 명령어를 넣으면 도구를 바꿀 때마다 전체 회의를 거쳐야 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:29:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:29:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b35219c9bf6b2117eeffa910a053bfd540848313"
+        },
+        {
+          "id": "bd2b5fb7bb57a5d6f6018bf18a78b078b509a393",
+          "short_id": "bd2b5fb7",
+          "created_at": "2026-09-11T12:29:13.000+09:00",
+          "parent_ids": [
+            "f8e8a2d3b2963494f7fffa134d0ef6a72203ee58"
+          ],
+          "title": "chore(be): 운영 Flyway clean 금지를 설정과 테스트로 고정한다",
+          "message": "chore(be): 운영 Flyway clean 금지를 설정과 테스트로 고정한다\n\nFlyway 11.7.2는 cleanDisabled 기본값이 이미 true지만 application-prod.yml에 명시하고 ApplicationProfileConfigTest가 단언한다. 기본값에 기대면 도구 버전을 올릴 때 조용히 바뀌어도 알아채지 못한다. constitution 스키마 변경 규칙의 '운영 데이터베이스를 초기화하는 명령은 쓰지 않는다'를 설정으로 강제하는 것이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:29:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:29:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bd2b5fb7bb57a5d6f6018bf18a78b078b509a393"
+        },
+        {
+          "id": "f8e8a2d3b2963494f7fffa134d0ef6a72203ee58",
+          "short_id": "f8e8a2d3",
+          "created_at": "2026-09-11T12:28:58.000+09:00",
+          "parent_ids": [
+            "3d9a8333b579fb67f33823b75d7cb5428bf5a354"
+          ],
+          "title": "chore(be): CI가 병합 결과를 빌드하고 검증 누락을 실패로 본다",
+          "message": "chore(be): CI가 병합 결과를 빌드하고 검증 누락을 실패로 본다\n\n2026-09-11 사고는 두 브랜치가 각자 기준으로 통과한 뒤 합쳐진 결과를 아무도 빌드하지 않아서 일어났다. Merge with dev 스테이지를 앞에 두어 이후 단계가 dev를 합친 결과 위에서 돌게 한다. 브랜치 이름 대신 조상 판정을 쓰므로 dev 자체를 빌드할 때는 자동으로 건너뛰고, --no-commit이라 post에서 되돌린다. 또한 Docker가 없으면 통합 테스트가 실패가 아니라 스킵이 되어 빌드가 초록색으로 끝나므로, CI는 THORP_REQUIRE_DOCKER=true로 돌리고 RequiredDockerTest가 그 상태를 실패로 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:58.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f8e8a2d3b2963494f7fffa134d0ef6a72203ee58"
+        },
+        {
+          "id": "3d9a8333b579fb67f33823b75d7cb5428bf5a354",
+          "short_id": "3d9a8333",
+          "created_at": "2026-09-11T12:28:58.000+09:00",
+          "parent_ids": [
+            "2fec225229039a2cc47238586ea1416fb5b046fc"
+          ],
+          "title": "chore(be): 마이그레이션 버전 중복·역전 검사를 추가한다",
+          "message": "chore(be): 마이그레이션 버전 중복·역전 검사를 추가한다\n\nMigrationFileConventionTest는 DB도 Docker도 쓰지 않고 파일명 규칙과 버전 중복을 본다. 중복은 파일명만 봐도 아는데 그것까지 컨테이너에 맡기면, Docker가 없는 환경에서 검증이 통째로 빈 채 빌드가 통과한다. check-migration-version.sh는 기준 브랜치보다 낮거나 같은 버전을 새로 추가했는지(out-of-order)를 본다. 빈 DB 테스트로는 잡히지 않는다 - 빈 DB에서는 번호 순서대로 전부 적용되므로 역전은 이미 높은 번호가 적용된 DB에서만 드러난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:58.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d9a8333b579fb67f33823b75d7cb5428bf5a354"
+        },
+        {
+          "id": "2fec225229039a2cc47238586ea1416fb5b046fc",
+          "short_id": "2fec2252",
+          "created_at": "2026-09-11T12:28:44.000+09:00",
+          "parent_ids": [
+            "2b31c7a383c1a9fb8d9072cba1a05969984e1d5f"
+          ],
+          "title": "chore(be): 마이그레이션 검증 테스트에서 버전 번호를 분리한다",
+          "message": "chore(be): 마이그레이션 검증 테스트에서 버전 번호를 분리한다\n\n테스트가 WHERE version = '4'처럼 버전을 문자열로 박고 있어, V3 중복을 풀며 뉴스 마이그레이션을 V4로 개명할 때 테스트까지 함께 고쳐야 했다. 적용 여부는 MigrationFiles가 클래스패스에서 읽은 파일 목록과 대조하고 구조 단언은 테이블 이름으로만 건다. 버전 비교는 문자열이 아니라 수로 한다 - 순차 번호와 timestamp가 섞이면 사전식 비교가 뒤집히기 때문이다. 이제 버전 체계를 바꿔도 이 테스트들은 그대로 둔다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2fec225229039a2cc47238586ea1416fb5b046fc"
+        },
+        {
+          "id": "2b31c7a383c1a9fb8d9072cba1a05969984e1d5f",
+          "short_id": "2b31c7a3",
+          "created_at": "2026-09-11T12:28:43.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "fix(be): 테스트 커넥션 풀을 줄여 동시 실행 시 고갈을 막는다",
+          "message": "fix(be): 테스트 커넥션 풀을 줄여 동시 실행 시 고갈을 막는다\n\nSpring은 설정이 다른 테스트 클래스마다 컨텍스트를 따로 만들어 캐시하고, 캐시된 컨텍스트는 커넥션 풀을 잡은 채 JVM이 끝날 때까지 산다. DB에 붙는 테스트 클래스가 12개인데 Hikari 기본 풀이 10이라 최대 120개가 필요한 반면 PostgreSQL 기본 상한은 100이다. 단독으로 돌리면 통과하고 전체로 돌리면 'FATAL: sorry, too many clients already'로 무더기 실패해 원인을 찾기 어렵다. 테스트는 단일 스레드로 돌아 커넥션이 많이 필요하지 않으므로 풀을 4로 잡는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:43.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2b31c7a383c1a9fb8d9072cba1a05969984e1d5f"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,15 @@\n <!--\n Sync Impact Report\n+- Version change: 3.0.0 → 3.1.0. \"스키마 변경 규칙\" 절을 신설했다. 원칙·섹션 추가이므로 MINOR를\n+  올린다. 비준은 전체 회의 승인 후 merge로 확정한다.\n+- 3.1.0에서 바뀐 절: (신설) \"스키마 변경 규칙\" 다섯 항. \"합의되지 않아 이 판에 넣지 않은 영역\"에서\n+  마이그레이션 항목을 빼되, 적용된 변경을 되돌리는 절차와 배포 중 이전 버전·새 스키마가 함께 도는\n+  구간의 호환 규칙은 합의되지 않아 그대로 남겼다. 3.0.0 이하 이력은 아래에 그대로 둔다.\n+- 3.1.0의 근거: 스키마 변경에서 같은 실패가 두 번 반복되어 팀이 합의했다. 배포된 코드와 적용된 스키마가\n+  어긋나 기동하지 못한 일, 그리고 서로 다른 작업이 같은 변경 번호를 써서 병합 결과가 기동하지 못한\n+  일이다. 기획서·Convention에는 이 영역의 규칙이 없으므로, \"넣지 않은 영역\"이 정한 \"반복되는 선택은\n+  팀 합의를 거쳐 MINOR 개정으로 추가한다\"는 경로를 따랐다. 도구 이름·파일 형식·명령은 기술 스택이\n+  미합의 영역이므로 이 문서에 쓰지 않고 파트 문서에 둔다.\n - Version change: 2.0.0 → 3.0.0. 추적 단위를 \"1 Task = 1 Branch = 1 MR\"에서 \"작업 묶음 = 1 Branch =\n   1 MR\"로 재정의했다. 기존 1:1 규칙을 폐기하는 하위 비호환 거버넌스 변경이므로 MAJOR를 올린다.\n   비준은 전체 회의 승인 후 merge로 확정한다.\n@@ -603,6 +613,40 @@ AI(Claude 등) 모두에게 적용된다.\n task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR로 나누면 리뷰가 잘게 부서지고 이슈 관리\n 비용만 늘어난다. 그래서 추적 단위는 task가 아니라 독립적으로 검증·롤백할 수 있는 작업 묶음으로 둔다.\n \n+## 스키마 변경 규칙\n+\n+데이터베이스 스키마를 바꾸는 모든 작업에 적용한다. 도구·파일명 형식·명령은 기술 스택에 속하므로 여기서\n+정하지 않고 파트 문서에 둔다.\n+\n+- **운영에 이미 적용된 스키마 변경은 수정하지 않는다.** 고칠 일이 생기면 새 변경을 덧붙인다. 어떤 운영\n+  환경에도 아직 적용되지 않은 변경은 병합 전후를 가리지 않고 수정·정리할 수 있다.\n+\n+  왜: 적용 기록과 변경 내용이 어긋나면 그 다음 배포가 모두 막힌다. 반대로 아직 적용되지 않은 변경까지\n+  동결하면, 되돌릴 수 있는 실수 하나가 영구 기록으로 남는다.\n+\n+- **스키마 변경·코드 매핑·검증은 같은 MR에 담는다.** 셋 중 일부만 병합하지 않는다.\n+\n+  왜: 운영은 코드와 스키마가 일치할 때만 기동한다. 한쪽만 먼저 병합되면 그 시점부터 배포가 실패하는데,\n+  실패를 만든 변경이 방금 병합한 MR이 아니라 이전 MR에 있어 원인을 찾기 어렵다.\n+\n+- **되돌릴 수 없는 변경은 배포 전에 백업과 팀 승인을 받는다.** 데이터를 지우거나 기존 값을 무효로 만드는\n+  변경(테이블·컬럼 삭제, 전체 삭제, 타입 변경, 기존 행이 위반하게 되는 제약 추가)은 MR 본문에 그 사실과\n+  영향 범위를 적는다. 운영 데이터베이스를 초기화하는 명령은 쓰지 않는다.\n+\n+  왜: 배포를 되돌려도 지워진 데이터는 돌아오지 않는다. 비어 있는 데이터베이스에서는 이런 변경이 모두\n+  통과하므로 자동 검증만으로는 걸러지지 않는다.\n+\n+- **적용 기록을 사람이 직접 고치는 복구 수단은 원인을 확인한 뒤에만 쓴다.** 쓸 수 있는 사람을 미리 정해\n+  두고, 사용한 경우 원인과 조치를 MR 또는 이슈에 남긴다.\n+\n+  왜: 기록만 맞춰 증상을 없애면, 스키마와 기록이 어긋난 상태 그대로 다음 배포가 진행된다.\n+\n+- **병합해도 되는지는 사람의 확인이 아니라 자동 검증으로 판정한다.** 검증은 병합될 결과를 대상으로\n+  실행하고, 실행되지 않은 상태(환경이 없어 건너뛴 경우를 포함한다)를 통과로 보지 않는다.\n+\n+  왜: 각 변경이 자기 브랜치에서 따로 통과해도, 합쳐진 결과는 아무도 실행해 보지 않은 채 배포될 수 있다.\n+  건너뛴 검증을 통과로 세면 검증이 비어 있다는 사실 자체가 드러나지 않는다.\n+\n ## 문서 역할과 AI 작업 방식\n \n ### 문서 역할 (가이드 1·5, §9)\n@@ -643,7 +687,8 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - 모듈·계층·폴더 구조와 복잡도 한도\n - 네이밍, DTO/Entity 구분, 예외 처리, 로깅 형식\n - API의 URI·Method·status code·응답 포맷·하위 호환 정책\n-- DB 명명·PK/FK·nullable·마이그레이션·롤백\n+- DB 명명·PK/FK·nullable, 적용된 스키마 변경을 되돌리는 절차, 배포 중 이전 버전 코드와 새 스키마가\n+  함께 도는 구간의 호환 규칙 (스키마 변경 자체의 협업 규칙은 \"스키마 변경 규칙\" 절로 옮겼다)\n - 입력 검증 방식, 인증/인가, 시크릿 관리 도구\n - 테스트 범위, lint/build 통과 기준 (Task 완료 조건 2 \"테스트 또는 동작 확인\"의 구체 명령)\n - MR merge 방식(squash 여부)과 승인 인원\n@@ -669,4 +714,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 3.0.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-10\n+**Version**: 3.1.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-11\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,6 +22,10 @@ spring:\n     locations: classpath:db/migration\n     baseline-on-migrate: false\n     validate-on-migrate: true\n+    # 스키마를 통째로 지우는 clean을 막는다. Flyway 9부터 기본값이 true지만 명시해 둔다 —\n+    # 기본값에 기대면 버전을 올릴 때 조용히 바뀌어도 알아채지 못한다.\n+    # constitution \"스키마 변경 규칙\": 운영 데이터베이스를 초기화하는 명령은 쓰지 않는다.\n+    clean-disabled: true\n \n   rabbitmq:\n     host: ${SPRING_RABBITMQ_HOST}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-prod.yml",
+          "old_path": "backend/src/main/resources/application-prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -81,7 +81,12 @@ class ApplicationProfileConfigTest {\n                         });\n     }\n \n-    /** 운영에서는 Flyway가 스키마를 만들고 Hibernate는 검증만 한다. baseline은 자동으로 켜지 않는다. */\n+    /**\n+     * 운영에서는 Flyway가 스키마를 만들고 Hibernate는 검증만 한다. baseline은 자동으로 켜지 않고, 스키마를 통째로 지우는 clean은 막아 둔다.\n+     *\n+     * <p>clean-disabled는 Flyway 기본값도 true지만 설정에 적고 여기서 단언한다. 기본값에 기대면 도구 버전을 올릴 때 조용히 바뀌어도 드러나지\n+     * 않는다.\n+     */\n     @Test\n     void prodProfileDelegatesSchemaToFlywayAndValidatesWithHibernate() {\n         prodContextRunner()\n@@ -99,6 +104,8 @@ class ApplicationProfileConfigTest {\n                                     .isEqualTo(\"false\");\n                             assertThat(environment.getProperty(\"spring.flyway.validate-on-migrate\"))\n                                     .isEqualTo(\"true\");\n+                            assertThat(environment.getProperty(\"spring.flyway.clean-disabled\"))\n+                                    .isEqualTo(\"true\");\n                         });\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,6 +9,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.infrastructure.persistence.BacktestRunRepositoryImpl;\n import com.ssafy.thorp.common.config.JpaAuditingConfig;\n+import com.ssafy.thorp.support.MigrationFiles;\n import com.ssafy.thorp.support.PostgresTestSupport;\n import java.math.BigDecimal;\n import java.time.Clock;\n@@ -32,6 +33,13 @@ import org.springframework.jdbc.core.JdbcTemplate;\n  * 제공하므로, 마이그레이션과 Entity 매핑이 어긋나면 컨텍스트 로딩 자체가 실패한다.\n  *\n  * <p>여기서 확인하는 것은 컬럼과 시퀀스의 존재다. 타입 불일치는 Hibernate가 경고로만 남기고 통과시키기 때문에, 컬럼 목록을 눈으로 맞춰 두는 이 단언이 필요하다.\n+ *\n+ * <p><b>적용 여부 단언에는 버전 번호를 적지 않는다.</b> {@link MigrationFiles}가 읽어온 클래스패스의 파일 목록과 대조한다. 예전에는 {@code WHERE\n+ * version = '4'}처럼 번호를 박고 있어서 버전을 하나 바꿀 때마다(V3 중복을 풀며 뉴스 마이그레이션을 V4로 개명한 일이 그랬다) 테스트까지 함께 고쳐야 했다. 신규\n+ * 마이그레이션이 타임스탬프 버전을 쓰게 된 뒤로는 14자리 숫자를 손으로 옮겨 적는 비용이 더 크다. 아래 단언은 파일이 몇 개든 그대로 둔다.\n+ *\n+ * <p>파일명 규칙과 버전 중복은 {@code MigrationFileConventionTest}가 Docker 없이 따로 검사한다. 이 테스트는 Docker가 없으면 통째로\n+ * 스킵되기 때문이다.\n  */\n @DataJpaTest\n @Import({JpaAuditingConfig.class, BacktestRunRepositoryImpl.class})\n@@ -53,15 +61,31 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     @Autowired private TestEntityManager entityManager;\n \n     @Test\n-    @DisplayName(\"V1이 빈 DB에 적용되고 flyway_schema_history에 성공으로 기록된다\")\n-    void v1IsAppliedToEmptyDatabase() {\n-        Integer applied =\n-                jdbcTemplate.queryForObject(\n-                        \"SELECT COUNT(*) FROM flyway_schema_history\"\n-                                + \" WHERE version = '1' AND success = TRUE\",\n-                        Integer.class);\n+    @DisplayName(\"클래스패스의 모든 마이그레이션이 빈 DB에 적용되고 성공으로 기록된다\")\n+    void allMigrationsAreAppliedToEmptyDatabase() {\n+        // BASELINE 행은 실제로 실행한 마이그레이션이 아니라 기존 스키마를 인정한 기록이고,\n+        // version이 비어 있는 행은 반복 실행(R__) 마이그레이션이다. 둘 다 파일 목록과 대조할 대상이 아니다.\n+        List<String> appliedVersions =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT version FROM flyway_schema_history\"\n+                                + \" WHERE success = TRUE AND version IS NOT NULL\"\n+                                + \" AND type <> 'BASELINE'\",\n+                        String.class);\n+\n+        assertThat(appliedVersions)\n+                .as(\"적용된 버전이 classpath:db/migration 의 파일 목록과 다르다\")\n+                .containsExactlyInAnyOrderElementsOf(MigrationFiles.versions());\n+    }\n+\n+    @Test\n+    @DisplayName(\"실패로 기록된 마이그레이션이 없다\")\n+    void noMigrationIsRecordedAsFailed() {\n+        List<String> failed =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT script FROM flyway_schema_history WHERE success = FALSE\",\n+                        String.class);\n \n-        assertThat(applied).isEqualTo(1);\n+        assertThat(failed).as(\"실패한 마이그레이션이 남아 있으면 다음 배포가 repair 없이는 진행되지 않는다\").isEmpty();\n     }\n \n     @Test\n@@ -250,18 +274,6 @@ class FlywayMigrationTest extends PostgresTestSupport {\n                         \"created_at\");\n     }\n \n-    @Test\n-    @DisplayName(\"V2가 적용되어 flyway_schema_history에 성공으로 기록된다\")\n-    void v2IsApplied() {\n-        Integer applied =\n-                jdbcTemplate.queryForObject(\n-                        \"SELECT COUNT(*) FROM flyway_schema_history\"\n-                                + \" WHERE version = '2' AND success = TRUE\",\n-                        Integer.class);\n-\n-        assertThat(applied).isEqualTo(1);\n-    }\n-\n     @Test\n     @DisplayName(\"V2가 backtest_result를 Entity 매핑과 같은 컬럼으로 만든다\")\n     void v2CreatesBacktestResultColumns() {\n@@ -333,18 +345,6 @@ class FlywayMigrationTest extends PostgresTestSupport {\n         assertThat(unique).isEqualTo(1);\n     }\n \n-    @Test\n-    @DisplayName(\"V4가 적용되어 flyway_schema_history에 성공으로 기록된다\")\n-    void v4IsApplied() {\n-        Integer applied =\n-                jdbcTemplate.queryForObject(\n-                        \"SELECT COUNT(*) FROM flyway_schema_history\"\n-                                + \" WHERE version = '4' AND success = TRUE\",\n-                        Integer.class);\n-\n-        assertThat(applied).isEqualTo(1);\n-    }\n-\n     @Test\n     @DisplayName(\"V4가 뉴스 기사 테이블을 만들고 본문 컬럼을 두지 않는다\")\n     void v4CreatesNewsArticleWithoutBodyColumns() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,67 @@\n+package com.ssafy.thorp.common.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.support.MigrationFiles;\n+import com.ssafy.thorp.support.MigrationFiles.MigrationFile;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.stream.Collectors;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 마이그레이션 파일명 규칙을 검사한다. <b>DB도 Docker도 쓰지 않는다.</b>\n+ *\n+ * <p>이 테스트가 따로 있는 이유는 검사 시점 때문이다. 스키마를 실제로 적용해 보는 {@code FlywayMigrationTest}·{@code\n+ * ParamSearchMigrationTest}는 {@code PostgresTestSupport}를 상속하므로 Docker가 없으면 <b>실패가 아니라 조용한 스킵</b>이\n+ * 되고 빌드는 통과한다. 버전 중복처럼 파일명만 봐도 알 수 있는 문제까지 컨테이너에 맡기면, 컨테이너가 없는 환경에서 검증이 통째로 비어 버린다.\n+ *\n+ * <p>실제로 2026-09-11에 서로 다른 두 MR이 각각 {@code V3}을 추가한 채 병합되어 {@code Found more than one migration\n+ * with version 3}으로 기동이 막혔다. 아래 {@link #versionsAreUnique()}가 그 상태를 Docker 없이 잡는다.\n+ */\n+class MigrationFileConventionTest {\n+\n+    @Test\n+    @DisplayName(\"마이그레이션 파일을 하나 이상 찾는다\")\n+    void migrationFilesAreFound() {\n+        // 클래스패스 열거가 빈 목록을 돌려주면 아래 단언들이 모두 공허하게 통과한다. 그 상태를 먼저 막는다.\n+        assertThat(MigrationFiles.rawFileNames())\n+                .as(\"classpath:db/migration 에서 마이그레이션을 찾지 못했다\")\n+                .isNotEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"모든 마이그레이션 파일명이 규칙을 지킨다\")\n+    void fileNamesFollowNamingRule() {\n+        List<String> violations =\n+                MigrationFiles.rawFileNames().stream()\n+                        .filter(name -> !MigrationFiles.matchesNamingRule(name))\n+                        .toList();\n+\n+        assertThat(violations).as(\"파일명 규칙: %s\", MigrationFiles.namingRuleDescription()).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"마이그레이션 버전이 중복되지 않는다\")\n+    void versionsAreUnique() {\n+        Map<String, List<String>> filesByVersion =\n+                MigrationFiles.all().stream()\n+                        .collect(\n+                                Collectors.groupingBy(\n+                                        MigrationFile::version,\n+                                        Collectors.mapping(\n+                                                MigrationFile::fileName, Collectors.toList())));\n+\n+        Map<String, List<String>> duplicated =\n+                filesByVersion.entrySet().stream()\n+                        .filter(entry -> entry.getValue().size() > 1)\n+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));\n+\n+        assertThat(duplicated)\n+                .as(\n+                        \"같은 버전을 가진 마이그레이션이 둘 이상이면 Flyway가 파일을 해석하는 단계에서 기동을 멈춘다.\"\n+                                + \" 아직 운영에 적용되지 않은 쪽의 버전을 올려 해소한다\")\n+                .isEmpty();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/MigrationFileConventionTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/MigrationFileConventionTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,7 +33,7 @@ import org.springframework.context.annotation.Import;\n import org.springframework.jdbc.core.JdbcTemplate;\n \n /**\n- * V3 마이그레이션과 Entity 매핑이 어긋나지 않는지 운영(prod)과 같은 조건으로 검증한다.\n+ * 자동 탐색 마이그레이션과 Entity 매핑이 어긋나지 않는지 운영(prod)과 같은 조건으로 검증한다.\n  *\n  * <p>Flyway·{@code ddl-auto=validate} 설정과 PostgreSQL 컨테이너는 {@link PostgresTestSupport}가 제공하므로, 스키마와\n  * 매핑이 어긋나면 <b>컨텍스트 로딩 자체가 실패</b>한다. 로컬 프로필은 {@code ddl-auto=update} + Flyway 비활성이라 이 불일치를 잡지 못한다 —\n@@ -41,6 +41,9 @@ import org.springframework.jdbc.core.JdbcTemplate;\n  *\n  * <p>컬럼 목록을 눈으로 맞춰 두는 단언이 함께 있는 이유는 {@code FlywayMigrationTest}와 같다. Hibernate는 타입 불일치를 경고로만 남기고\n  * 통과시킨다.\n+ *\n+ * <p>마이그레이션이 실제로 적용됐는지는 {@code FlywayMigrationTest}가 클래스패스의 파일 목록과 대조해 한곳에서 확인한다. 여기서는 버전 번호를 적지 않고\n+ * 이 도메인의 스키마 구조만 본다.\n  */\n @DataJpaTest\n @Import({\n@@ -69,20 +72,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n     @Autowired private TestEntityManager entityManager;\n \n     @Test\n-    @DisplayName(\"V3가 적용되어 flyway_schema_history에 성공으로 기록된다\")\n-    void v3IsApplied() {\n-        Integer applied =\n-                jdbcTemplate.queryForObject(\n-                        \"SELECT COUNT(*) FROM flyway_schema_history\"\n-                                + \" WHERE version = '3' AND success = TRUE\",\n-                        Integer.class);\n-\n-        assertThat(applied).isEqualTo(1);\n-    }\n-\n-    @Test\n-    @DisplayName(\"V3가 param_search를 Entity 매핑과 같은 컬럼으로 만든다\")\n-    void v3CreatesParamSearchColumns() {\n+    @DisplayName(\"param_search가 Entity 매핑과 같은 컬럼을 가진다\")\n+    void paramSearchHasColumnsMatchingEntity() {\n         assertThat(columnsOf(\"param_search\"))\n                 .containsExactlyInAnyOrder(\n                         \"id\",\n@@ -111,8 +102,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 search_candidate를 Entity 매핑과 같은 컬럼으로 만든다\")\n-    void v3CreatesSearchCandidateColumns() {\n+    @DisplayName(\"search_candidate가 Entity 매핑과 같은 컬럼을 가진다\")\n+    void searchCandidateHasColumnsMatchingEntity() {\n         assertThat(columnsOf(\"search_candidate\"))\n                 .containsExactlyInAnyOrder(\n                         \"id\",\n@@ -136,8 +127,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 PK용 시퀀스 둘을 만들고 후보 시퀀스 증분이 allocationSize(50)와 같다\")\n-    void v3CreatesSequencesWithMatchingIncrement() {\n+    @DisplayName(\"PK용 시퀀스 둘이 있고 후보 시퀀스 증분이 allocationSize(50)와 같다\")\n+    void sequencesExistWithMatchingIncrement() {\n         assertThat(sequenceExists(\"param_search_seq\")).isEqualTo(1);\n         assertThat(sequenceExists(\"search_candidate_seq\")).isEqualTo(1);\n \n@@ -154,8 +145,8 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK를 만든다\")\n-    void v3CreatesConstraints() {\n+    @DisplayName(\"묶음 UNIQUE·후보 순번 UNIQUE·Job UNIQUE와 FK가 있다\")\n+    void constraintsExist() {\n         List<String> foreignKeyTables =\n                 jdbcTemplate.queryForList(\n                         \"SELECT LOWER(table_name) FROM information_schema.table_constraints\"\n@@ -182,7 +173,7 @@ class ParamSearchMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3 스키마에 묶음과 후보를 저장하고 다시 읽을 수 있다\")\n+    @DisplayName(\"마이그레이션이 만든 스키마에 묶음과 후보를 저장하고 다시 읽을 수 있다\")\n     void entitiesRoundTripOnMigratedSchema() {\n         ParamSearch saved = paramSearchRepository.save(newSearch());\n         entityManager.flush();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/ParamSearchMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/ParamSearchMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,105 @@\n+package com.ssafy.thorp.support;\n+\n+import java.io.IOException;\n+import java.io.UncheckedIOException;\n+import java.math.BigInteger;\n+import java.util.Arrays;\n+import java.util.Comparator;\n+import java.util.List;\n+import java.util.regex.Matcher;\n+import java.util.regex.Pattern;\n+import org.springframework.core.io.Resource;\n+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;\n+\n+/**\n+ * 클래스패스의 Flyway 마이그레이션 파일 목록을 읽는다.\n+ *\n+ * <p>테스트가 마이그레이션 <b>버전 번호를 직접 적지 않게 하려고</b> 둔다. 예전에는 각 테스트가 {@code WHERE version = '4'}처럼 번호를 문자열로\n+ * 박고 있어서, 버전을 하나 바꾸면(V3 중복을 풀며 뉴스 마이그레이션을 V4로 개명한 일이 그랬다) 테스트까지 함께 고쳐야 했다. 여기서 파일 목록을 읽어오면 단언이 번호와\n+ * 무관해지고, 뒤에 버전 체계를 timestamp로 바꾸더라도 테스트는 그대로 둔다.\n+ *\n+ * <p>DB도 Docker도 필요 없다. 클래스패스만 읽으므로 컨테이너가 없는 환경에서도 그대로 돈다.\n+ */\n+public final class MigrationFiles {\n+\n+    /** 운영과 같은 위치다. {@code application-prod.yml}의 {@code spring.flyway.locations}와 맞춘다. */\n+    private static final String LOCATION_PATTERN = \"classpath*:db/migration/*.sql\";\n+\n+    /**\n+     * {@code V<버전>__<설명>.sql}. 버전은 숫자만 받는다.\n+     *\n+     * <p>점 표기(`V1.1`)를 받지 않는 이유: 순차 번호와 timestamp가 섞인 상태에서 점까지 허용하면 어느 쪽이 먼저인지 사람이 읽기 어렵고, 아래\n+     * {@link #versionOrder()}의 비교도 파트별 비교로 복잡해진다. 팀에 점 버전이 필요한 사례가 아직 없다.\n+     */\n+    private static final Pattern FILE_NAME =\n+            Pattern.compile(\"^V(?<version>\\\\d+)__(?<description>[a-z0-9_]+)\\\\.sql$\");\n+\n+    private MigrationFiles() {}\n+\n+    /**\n+     * 마이그레이션 파일 하나. {@code version}은 파일명에 적힌 문자열 그대로이며 {@code flyway_schema_history.version}과 같은\n+     * 값이다.\n+     */\n+    public record MigrationFile(String fileName, String version, String description) {}\n+\n+    /** 클래스패스에 있는 마이그레이션 파일 전부. 버전 오름차순이다. */\n+    public static List<MigrationFile> all() {\n+        return rawFileNames().stream().map(MigrationFiles::parse).sorted(versionOrder()).toList();\n+    }\n+\n+    /** 마이그레이션 버전 목록. 버전 오름차순이다. */\n+    public static List<String> versions() {\n+        return all().stream().map(MigrationFile::version).toList();\n+    }\n+\n+    /**\n+     * 파일명을 해석하지 않고 그대로 돌려준다.\n+     *\n+     * <p>{@link #all()}은 규칙에 맞지 않는 파일을 만나면 예외를 던지므로, \"규칙 위반을 찾는\" 테스트는 이쪽을 써야 한다.\n+     */\n+    public static List<String> rawFileNames() {\n+        try {\n+            Resource[] resources =\n+                    new PathMatchingResourcePatternResolver().getResources(LOCATION_PATTERN);\n+            return Arrays.stream(resources)\n+                    .map(Resource::getFilename)\n+                    .filter(name -> name != null)\n+                    .toList();\n+        } catch (IOException e) {\n+            throw new UncheckedIOException(\"마이그레이션 파일 목록을 읽지 못했다: \" + LOCATION_PATTERN, e);\n+        }\n+    }\n+\n+    /** 파일명이 규칙에 맞는지 본다. 규칙은 {@link #FILE_NAME} 주석 참고. */\n+    public static boolean matchesNamingRule(String fileName) {\n+        return FILE_NAME.matcher(fileName).matches();\n+    }\n+\n+    /** 사람이 읽을 파일명 규칙. 단언 실패 메시지에 쓴다. */\n+    public static String namingRuleDescription() {\n+        return \"V<숫자 버전>__<소문자·숫자·밑줄 설명>.sql\";\n+    }\n+\n+    /**\n+     * 버전 비교 순서.\n+     *\n+     * <p><b>문자열이 아니라 수로 비교한다.</b> 순차 번호와 timestamp가 섞이면 사전식 비교는 {@code \"20260911103045\" < \"4\"}로\n+     * 뒤집힌다. Flyway도 수로 비교하므로 여기서도 같게 맞춘다.\n+     */\n+    public static Comparator<MigrationFile> versionOrder() {\n+        return Comparator.comparing(file -> new BigInteger(file.version()));\n+    }\n+\n+    private static MigrationFile parse(String fileName) {\n+        Matcher matcher = FILE_NAME.matcher(fileName);\n+        if (!matcher.matches()) {\n+            throw new IllegalStateException(\n+                    \"마이그레이션 파일명이 규칙에 맞지 않는다: \"\n+                            + fileName\n+                            + \" (규칙: \"\n+                            + namingRuleDescription()\n+                            + \")\");\n+        }\n+        return new MigrationFile(fileName, matcher.group(\"version\"), matcher.group(\"description\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/support/MigrationFiles.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/support/MigrationFiles.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+package com.ssafy.thorp.support;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;\n+import org.testcontainers.DockerClientFactory;\n+\n+/**\n+ * Docker를 요구하는 환경에서 Docker가 실제로 붙는지 확인한다.\n+ *\n+ * <p>{@link PostgresTestSupport}는 {@code disabledWithoutDocker = true}라서, Docker가 없으면 DB 테스트가\n+ * <b>실패가 아니라 스킵</b>이 되고 빌드는 초록색으로 끝난다. 로컬에서는 그 편이 편하지만 CI에서는 위험하다. 마이그레이션과 Entity 매핑을 실제로 맞춰 보는 검증이\n+ * 통째로 비어 있는데도 통과한 것처럼 보이기 때문이다.\n+ *\n+ * <p>그래서 CI는 {@code THORP_REQUIRE_DOCKER=true}를 넣고 돌린다. 그 환경에서 Docker가 없으면 이 테스트가 실패해 빌드를 멈춘다. 환경\n+ * 변수가 없는 로컬에서는 이 테스트 자체가 실행되지 않으므로 개발자 흐름은 그대로다.\n+ *\n+ * <p>constitution \"스키마 변경 규칙\": 실행되지 않은 검증(환경이 없어 건너뛴 경우를 포함한다)을 통과로 보지 않는다.\n+ */\n+@EnabledIfEnvironmentVariable(\n+        named = \"THORP_REQUIRE_DOCKER\",\n+        matches = \"true\",\n+        disabledReason = \"Docker를 요구하지 않는 환경이다. CI는 이 변수를 true로 설정한다\")\n+class RequiredDockerTest {\n+\n+    @Test\n+    @DisplayName(\"Docker를 요구하는 환경에서는 Docker에 붙을 수 있다\")\n+    void dockerIsAvailable() {\n+        assertThat(DockerClientFactory.instance().isDockerAvailable())\n+                .as(\n+                        \"THORP_REQUIRE_DOCKER=true인데 Docker에 붙지 못했다.\"\n+                                + \" 이대로 두면 DB·메시징 통합 테스트가 모두 스킵된 채 빌드가 통과한다\")\n+                .isTrue();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/support/RequiredDockerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/support/RequiredDockerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -68,7 +68,15 @@ common: 모든 계층에서 참조 가능\n - 응답 decimal은 필드마다 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열이 된다. **웹 ObjectMapper에 전역 등록하지 않는다** — 다른 도메인(`MarketResponse.value`)이 숫자→문자열로 바뀌어 그 계약이 깨진다. 전역 `NON_NULL`도 금지: 거래의 `exitDate`는 명시적 null이고 시계열의 `benchmarkReturn`만 키를 생략한다\n - 결과 조회는 엔드포인트마다 읽을 컬럼이 달라 저장소 조회가 4개다(`findSummary`·`findTimeseries`·`findPortfolioSeries`·`findTrades`). `portfolio_series`는 5년치면 수백 KB이고 `@JdbcTypeCode(JSON)` 기본 타입은 지연 로딩이 없어 엔티티를 읽으면 무조건 딸려온다 — 읽지 않을 컬럼은 select에 넣지 않는다. native alias는 따옴표로 감싼다(PostgreSQL이 소문자로 접는다)\n - 거래 응답의 `entryDate`는 저장된 `entryTime`(Instant)을 **거래소 현지(Asia/Seoul)** 기준으로 바꾼 값이다. UTC로 자르면 거래소를 늘릴 때 하루 밀린다\n-- 스키마 변경은 `db/migration/V{YYYYMMDDHHMMSS}__설명.sql`(PostgreSQL 문법)로 한다. **신규 마이그레이션은 연속 번호가 아니라 작성 시각 타임스탬프를 버전으로 쓴다**(예: `V20260911143000__etf_market_data.sql`). 여러 spec이 동시에 진행되면서 `V3`을 셋이 함께 적어 두는 충돌이 반복됐고, 타임스탬프는 브랜치끼리 겹치지 않는다. **이미 적용된 `V1`~`V3`은 그대로 둔다** — Flyway가 버전을 숫자로 정렬하므로 `1 < 3 < 20260911143000` 순서가 유지되고 기존 이력과 충돌하지 않는다. prod는 Flyway + `ddl-auto: validate`, local은 `ddl-auto: update`. DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다\n+- 스키마 변경은 `db/migration/V{YYYYMMDDHHMMSS}__설명.sql`(PostgreSQL 문법)로 한다. **신규 마이그레이션은 연속 번호가 아니라 작성 시각 타임스탬프를 버전으로 쓴다**(예: `V20260911143000__etf_market_data.sql`). 여러 spec이 동시에 진행되면서 `V3`을 둘이 함께 적어 두는 충돌이 실제로 났고, 타임스탬프는 브랜치끼리 겹치지 않는다. **이미 적용된 `V1`~`V4`는 그대로 둔다** — Flyway가 버전을 숫자로 정렬하므로 `1 < 4 < 20260911143000` 순서가 유지되고 기존 이력과 충돌하지 않는다. prod는 Flyway + `ddl-auto: validate`, local은 `ddl-auto: update`\n+- **운영에 이미 적용된 마이그레이션은 고치지 않는다.** 아직 어느 운영 환경에도 적용되지 않은 파일은 병합 뒤라도 버전을 올리거나 정리할 수 있다(2026-09-11 V3 중복을 V4로 푼 것이 그 경우다). 근거는 constitution \"스키마 변경 규칙\"\n+- 스키마 변경·Entity 매핑·검증 테스트는 **같은 MR**에 담는다. prod가 `ddl-auto: validate`라 셋 중 하나만 병합되면 그 시점부터 배포가 실패하고, 원인이 방금 병합한 MR이 아니라 이전 MR에 있어 찾기 어렵다\n+- 데이터를 지우거나 기존 값을 무효로 만드는 변경(테이블·컬럼 삭제, TRUNCATE, 타입 변경, 기존 행이 위반하는 제약 추가)은 MR 본문에 영향 범위를 적고 백업·승인 뒤 배포한다. 빈 DB 테스트는 이런 변경을 전부 통과시키므로 자동 검증으로 걸러지지 않는다. `flyway clean`은 쓰지 않는다(prod `clean-disabled: true`, `ApplicationProfileConfigTest`가 단언)\n+- 마이그레이션 검증은 셋이다. **테스트에 버전 번호를 적지 않는다** — 적용 여부는 `support/MigrationFiles`가 읽은 파일 목록과 대조한다. 타임스탬프 버전은 14자리라 손으로 옮겨 적으면 오타가 난다\n+  - `common/persistence/MigrationFileConventionTest` 파일명 규칙과 버전 중복. **Docker 없이 돈다**\n+  - `common/persistence/FlywayMigrationTest`·`paramsearch/.../ParamSearchMigrationTest` 빈 DB 적용과 스키마 구조\n+  - `infra/scripts/check-migration-version.sh` 기준 브랜치 대비 버전 역전(out-of-order). 빈 DB 테스트로는 잡히지 않아 CI가 따로 돌린다. 타임스탬프 버전에서는 이 검사가 중복 검사보다 중요하다 — 파일명이 겹치지 않으니 Git이 조용히 병합하고, 낮은 버전이 뒤늦게 머지되면 운영에서만 기동이 막힌다\n+- DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다. CI는 `THORP_REQUIRE_DOCKER=true`로 돌려 `support/RequiredDockerTest`가 그 상태를 실패로 만든다\n \n ## 도메인 용어\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,121 @@\n+#!/usr/bin/env bash\n+#\n+# 마이그레이션 버전 검사. CI가 병합 전에 돌린다.\n+#\n+# 두 가지를 본다.\n+#   1) 버전 중복  - 서로 다른 작업이 같은 번호를 쓰면 병합 결과가 기동하지 못한다.\n+#   2) 버전 역전  - 기준 브랜치에 이미 더 높은 버전이 있는데 낮은 번호를 새로 추가하면,\n+#                   그 버전은 운영에서 \"이미 지나간 번호\"가 되어 기동이 막힌다(out-of-order).\n+#\n+# 빈 DB에 전체 마이그레이션을 적용해 보는 테스트로는 2)를 잡지 못한다. 빈 DB에서는 번호 순서대로\n+# 전부 적용되기 때문이다. 역전은 \"이미 높은 번호가 적용된 DB\"에서만 드러나므로 여기서 따로 본다.\n+#\n+# 사용:\n+#   infra/scripts/check-migration-version.sh [기준 ref]      # 기본값 origin/dev\n+#\n+# constitution \"스키마 변경 규칙\": 병합해도 되는지는 사람의 확인이 아니라 자동 검증으로 판정한다.\n+\n+set -euo pipefail\n+\n+BASE_REF=\"${1:-origin/dev}\"\n+MIGRATION_DIR=\"backend/src/main/resources/db/migration\"\n+\n+fail() {\n+    echo \"[실패] $*\" >&2\n+    exit 1\n+}\n+\n+# 파일명에서 버전만 뽑는다. 규칙에 맞지 않는 이름은 빈 문자열이 되어 아래에서 걸린다.\n+version_of() {\n+    echo \"$1\" | sed -nE 's|^.*/?V([0-9]+)__[a-z0-9_]+\\.sql$|\\1|p'\n+}\n+\n+# 10진수로 강제한다. 0으로 시작하는 번호를 bash가 8진수로 읽지 않게 한다.\n+as_number() {\n+    echo \"$((10#$1))\"\n+}\n+\n+if ! git rev-parse --verify --quiet \"$BASE_REF\" >/dev/null; then\n+    fail \"기준 ref '$BASE_REF' 를 찾지 못했다. 먼저 git fetch 하거나 기준 ref를 인자로 넘긴다.\"\n+fi\n+\n+echo \"기준 브랜치: $BASE_REF\"\n+\n+# ---------------------------------------------------------------------------\n+# 1) 현재 트리의 버전 중복\n+# ---------------------------------------------------------------------------\n+current_files=\"$(git ls-files \"$MIGRATION_DIR\" | grep '\\.sql$' || true)\"\n+if [ -z \"$current_files\" ]; then\n+    fail \"$MIGRATION_DIR 에서 마이그레이션을 찾지 못했다. 경로가 바뀌었는지 확인한다.\"\n+fi\n+\n+current_versions=\"\"\n+while IFS= read -r file; do\n+    [ -z \"$file\" ] && continue\n+    version=\"$(version_of \"$file\")\"\n+    if [ -z \"$version\" ]; then\n+        fail \"파일명이 규칙에 맞지 않는다: $file (규칙: V<숫자 버전>__<소문자·숫자·밑줄 설명>.sql)\"\n+    fi\n+    current_versions=\"${current_versions}${version}\"$'\\n'\n+done <<< \"$current_files\"\n+\n+duplicated=\"$(echo \"$current_versions\" | grep -v '^$' | sort | uniq -d || true)\"\n+if [ -n \"$duplicated\" ]; then\n+    echo \"[실패] 같은 버전을 가진 마이그레이션이 둘 이상이다:\" >&2\n+    while IFS= read -r version; do\n+        [ -z \"$version\" ] && continue\n+        echo \"  버전 $version:\" >&2\n+        echo \"$current_files\" | grep -E \"/V${version}__\" | sed 's/^/    /' >&2\n+    done <<< \"$duplicated\"\n+    echo \"아직 운영에 적용되지 않은 쪽의 버전을 올려 해소한다.\" >&2\n+    exit 1\n+fi\n+echo \"  버전 중복 없음 ($(echo \"$current_versions\" | grep -cv '^$')개 파일)\"\n+\n+# ---------------------------------------------------------------------------\n+# 2) 기준 브랜치 대비 버전 역전\n+# ---------------------------------------------------------------------------\n+base_max=0\n+base_files=\"$(git ls-tree -r --name-only \"$BASE_REF\" -- \"$MIGRATION_DIR\" | grep '\\.sql$' || true)\"\n+while IFS= read -r file; do\n+    [ -z \"$file\" ] && continue\n+    version=\"$(version_of \"$file\")\"\n+    [ -z \"$version\" ] && continue\n+    number=\"$(as_number \"$version\")\"\n+    if [ \"$number\" -gt \"$base_max\" ]; then\n+        base_max=\"$number\"\n+    fi\n+done <<< \"$base_files\"\n+\n+echo \"  기준 브랜치의 최대 버전: $base_max\"\n+\n+# 기준과 갈라진 지점 이후로 내 쪽에서 새로 추가한 파일만 본다.\n+added_files=\"$(git diff --name-only --diff-filter=A \"$BASE_REF...HEAD\" -- \"$MIGRATION_DIR\" | grep '\\.sql$' || true)\"\n+\n+if [ -z \"$added_files\" ]; then\n+    echo \"  새로 추가된 마이그레이션 없음\"\n+    echo \"[통과] 마이그레이션 버전 검사\"\n+    exit 0\n+fi\n+\n+violations=\"\"\n+while IFS= read -r file; do\n+    [ -z \"$file\" ] && continue\n+    version=\"$(version_of \"$file\")\"\n+    number=\"$(as_number \"$version\")\"\n+    if [ \"$number\" -le \"$base_max\" ]; then\n+        violations=\"${violations}  $file (버전 $version ≤ 기준 최대 $base_max)\"$'\\n'\n+    else\n+        echo \"  추가됨: $file (버전 $version)\"\n+    fi\n+done <<< \"$added_files\"\n+\n+if [ -n \"$violations\" ]; then\n+    echo \"[실패] 기준 브랜치보다 낮거나 같은 버전을 새로 추가했다:\" >&2\n+    printf '%s' \"$violations\" >&2\n+    echo \"기준 브랜치가 먼저 배포되면 이 버전은 운영에서 '이미 지나간 번호'가 되어 기동이 막힌다.\" >&2\n+    echo \"아직 운영에 적용되지 않았으므로 버전을 기준 최대값보다 크게 올린다.\" >&2\n+    exit 1\n+fi\n+\n+echo \"[통과] 마이그레이션 버전 검사\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/check-migration-version.sh",
+          "old_path": "infra/scripts/check-migration-version.sh",
+          "a_mode": "0",
+          "b_mode": "100755",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,48 @@ pipeline {\n         disableConcurrentBuilds()\n     }\n \n+    environment {\n+        // Testcontainers가 Docker에 붙지 못하면 DB·메시징 테스트가 실패가 아니라 '스킵'이 되고\n+        // 빌드는 초록색으로 끝난다. 마이그레이션과 Entity 매핑을 맞춰 보는 검증이 통째로 비어도\n+        // 알아챌 수 없다. CI에서는 그 상태를 실패로 본다 (backend RequiredDockerTest).\n+        THORP_REQUIRE_DOCKER = 'true'\n+    }\n+\n     stages {\n+        // 소스 브랜치만 빌드하면, 각 MR이 자기 기준으로 통과한 뒤 합쳐진 결과를 아무도 검증하지 않는다.\n+        // 2026-09-11에 서로 다른 두 MR이 각각 V3 마이그레이션을 추가한 채 병합되어 dev가 기동하지\n+        // 못한 것이 그 경우다. 이후 단계는 dev를 합친 결과 위에서 돈다.\n+        stage('Merge with dev') {\n+            steps {\n+                sh '''\n+                    set -e\n+                    git fetch --no-tags origin dev\n+\n+                    if git merge-base --is-ancestor origin/dev HEAD; then\n+                        echo \"이미 origin/dev 를 포함한다. 병합을 건너뛴다.\"\n+                        exit 0\n+                    fi\n+\n+                    # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.\n+                    #              post 단계에서 git merge --abort 로 되돌린다.\n+                    # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.\n+                    if ! git merge --no-commit --no-ff origin/dev; then\n+                        echo \"origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.\" >&2\n+                        exit 1\n+                    fi\n+                    echo \"origin/dev 를 병합한 결과로 검증한다.\"\n+                '''\n+            }\n+        }\n+\n+        // 병합 결과의 마이그레이션 버전을 본다. 빈 DB에 전체 적용해 보는 테스트로는\n+        // 기준 브랜치보다 낮은 버전(out-of-order)을 잡지 못하므로 여기서 따로 검사한다.\n+        stage('Migration version') {\n+            steps {\n+                sh 'bash infra/scripts/check-migration-version.sh origin/dev'\n+            }\n+        }\n+\n         stage('Frontend') {\n             when { changeset \"frontend/**\" }\n             steps {\n@@ -50,5 +91,11 @@ pipeline {\n         }\n     }\n \n-    \n+    post {\n+        always {\n+            // 병합 상태를 되돌려 다음 빌드의 checkout 이 꼬이지 않게 한다.\n+            // 병합하지 않았으면 abort 할 것이 없어 실패하므로 결과를 무시한다.\n+            sh 'git merge --abort >/dev/null 2>&1 || true'\n+        }\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2186175,
+      "head_commit_sha": "a5e2b34e5d3cbec31a91c4fa516acac723ea3d02",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "d43d0b6719aeec34c0c920a9dad3b863f29fa588",
+      "created_at": "2026-09-11T12:37:52.778+09:00",
+      "merge_request_id": 940721,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "fd07c377cfd62ab2abb43b26e1594dacfe8674e0",
+      "commits": [
+        {
+          "id": "a5e2b34e5d3cbec31a91c4fa516acac723ea3d02",
+          "short_id": "a5e2b34e",
+          "created_at": "2026-09-11T12:29:44.000+09:00",
+          "parent_ids": [
+            "b35219c9bf6b2117eeffa910a053bfd540848313"
+          ],
+          "title": "chore(be): 마이그레이션 버전 검사 스크립트에 실행 권한을 준다",
+          "message": "chore(be): 마이그레이션 버전 검사 스크립트에 실행 권한을 준다\n\ninfra/scripts의 다른 스크립트와 모드를 맞춘다. Jenkinsfile은 bash로 호출하므로 동작에는 영향이 없지만, 사람이 직접 실행할 때 권한 오류가 난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:29:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:29:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a5e2b34e5d3cbec31a91c4fa516acac723ea3d02"
+        },
+        {
+          "id": "b35219c9bf6b2117eeffa910a053bfd540848313",
+          "short_id": "b35219c9",
+          "created_at": "2026-09-11T12:29:13.000+09:00",
+          "parent_ids": [
+            "bd2b5fb7bb57a5d6f6018bf18a78b078b509a393"
+          ],
+          "title": "docs(be): 스키마 변경 규칙을 constitution과 backend 문서에 세운다",
+          "message": "docs(be): 스키마 변경 규칙을 constitution과 backend 문서에 세운다\n\nconstitution 3.0.0 → 3.1.0. '스키마 변경 규칙' 절을 신설했다(MINOR, 비준은 전체 회의 승인 후 merge로 확정). 스키마 변경에서 같은 실패가 두 번 반복되어(배포 코드와 적용 스키마 불일치, 같은 버전 번호 중복) 팀이 합의했고, 미합의 목록이 정한 MINOR 개정 경로를 따랐다. 이 문서는 도구 이름을 인용하지 않는 관례가 있어 Flyway를 언급하지 않고 원칙으로 썼다. 미합의 목록에서 마이그레이션 항목을 빼되 롤백 절차와 배포 중 호환 규칙은 합의된 바 없어 남겼다. 도구·파일명 형식·명령은 backend/CLAUDE.md에 둔다 - 최상위 문서에 명령어를 넣으면 도구를 바꿀 때마다 전체 회의를 거쳐야 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:29:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:29:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b35219c9bf6b2117eeffa910a053bfd540848313"
+        },
+        {
+          "id": "bd2b5fb7bb57a5d6f6018bf18a78b078b509a393",
+          "short_id": "bd2b5fb7",
+          "created_at": "2026-09-11T12:29:13.000+09:00",
+          "parent_ids": [
+            "f8e8a2d3b2963494f7fffa134d0ef6a72203ee58"
+          ],
+          "title": "chore(be): 운영 Flyway clean 금지를 설정과 테스트로 고정한다",
+          "message": "chore(be): 운영 Flyway clean 금지를 설정과 테스트로 고정한다\n\nFlyway 11.7.2는 cleanDisabled 기본값이 이미 true지만 application-prod.yml에 명시하고 ApplicationProfileConfigTest가 단언한다. 기본값에 기대면 도구 버전을 올릴 때 조용히 바뀌어도 알아채지 못한다. constitution 스키마 변경 규칙의 '운영 데이터베이스를 초기화하는 명령은 쓰지 않는다'를 설정으로 강제하는 것이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:29:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:29:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bd2b5fb7bb57a5d6f6018bf18a78b078b509a393"
+        },
+        {
+          "id": "f8e8a2d3b2963494f7fffa134d0ef6a72203ee58",
+          "short_id": "f8e8a2d3",
+          "created_at": "2026-09-11T12:28:58.000+09:00",
+          "parent_ids": [
+            "3d9a8333b579fb67f33823b75d7cb5428bf5a354"
+          ],
+          "title": "chore(be): CI가 병합 결과를 빌드하고 검증 누락을 실패로 본다",
+          "message": "chore(be): CI가 병합 결과를 빌드하고 검증 누락을 실패로 본다\n\n2026-09-11 사고는 두 브랜치가 각자 기준으로 통과한 뒤 합쳐진 결과를 아무도 빌드하지 않아서 일어났다. Merge with dev 스테이지를 앞에 두어 이후 단계가 dev를 합친 결과 위에서 돌게 한다. 브랜치 이름 대신 조상 판정을 쓰므로 dev 자체를 빌드할 때는 자동으로 건너뛰고, --no-commit이라 post에서 되돌린다. 또한 Docker가 없으면 통합 테스트가 실패가 아니라 스킵이 되어 빌드가 초록색으로 끝나므로, CI는 THORP_REQUIRE_DOCKER=true로 돌리고 RequiredDockerTest가 그 상태를 실패로 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:58.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f8e8a2d3b2963494f7fffa134d0ef6a72203ee58"
+        },
+        {
+          "id": "3d9a8333b579fb67f33823b75d7cb5428bf5a354",
+          "short_id": "3d9a8333",
+          "created_at": "2026-09-11T12:28:58.000+09:00",
+          "parent_ids": [
+            "2fec225229039a2cc47238586ea1416fb5b046fc"
+          ],
+          "title": "chore(be): 마이그레이션 버전 중복·역전 검사를 추가한다",
+          "message": "chore(be): 마이그레이션 버전 중복·역전 검사를 추가한다\n\nMigrationFileConventionTest는 DB도 Docker도 쓰지 않고 파일명 규칙과 버전 중복을 본다. 중복은 파일명만 봐도 아는데 그것까지 컨테이너에 맡기면, Docker가 없는 환경에서 검증이 통째로 빈 채 빌드가 통과한다. check-migration-version.sh는 기준 브랜치보다 낮거나 같은 버전을 새로 추가했는지(out-of-order)를 본다. 빈 DB 테스트로는 잡히지 않는다 - 빈 DB에서는 번호 순서대로 전부 적용되므로 역전은 이미 높은 번호가 적용된 DB에서만 드러난다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:58.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d9a8333b579fb67f33823b75d7cb5428bf5a354"
+        },
+        {
+          "id": "2fec225229039a2cc47238586ea1416fb5b046fc",
+          "short_id": "2fec2252",
+          "created_at": "2026-09-11T12:28:44.000+09:00",
+          "parent_ids": [
+            "2b31c7a383c1a9fb8d9072cba1a05969984e1d5f"
+          ],
+          "title": "chore(be): 마이그레이션 검증 테스트에서 버전 번호를 분리한다",
+          "message": "chore(be): 마이그레이션 검증 테스트에서 버전 번호를 분리한다\n\n테스트가 WHERE version = '4'처럼 버전을 문자열로 박고 있어, V3 중복을 풀며 뉴스 마이그레이션을 V4로 개명할 때 테스트까지 함께 고쳐야 했다. 적용 여부는 MigrationFiles가 클래스패스에서 읽은 파일 목록과 대조하고 구조 단언은 테이블 이름으로만 건다. 버전 비교는 문자열이 아니라 수로 한다 - 순차 번호와 timestamp가 섞이면 사전식 비교가 뒤집히기 때문이다. 이제 버전 체계를 바꿔도 이 테스트들은 그대로 둔다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2fec225229039a2cc47238586ea1416fb5b046fc"
+        },
+        {
+          "id": "2b31c7a383c1a9fb8d9072cba1a05969984e1d5f",
+          "short_id": "2b31c7a3",
+          "created_at": "2026-09-11T12:28:43.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "fix(be): 테스트 커넥션 풀을 줄여 동시 실행 시 고갈을 막는다",
+          "message": "fix(be): 테스트 커넥션 풀을 줄여 동시 실행 시 고갈을 막는다\n\nSpring은 설정이 다른 테스트 클래스마다 컨텍스트를 따로 만들어 캐시하고, 캐시된 컨텍스트는 커넥션 풀을 잡은 채 JVM이 끝날 때까지 산다. DB에 붙는 테스트 클래스가 12개인데 Hikari 기본 풀이 10이라 최대 120개가 필요한 반면 PostgreSQL 기본 상한은 100이다. 단독으로 돌리면 통과하고 전체로 돌리면 'FATAL: sorry, too many clients already'로 무더기 실패해 원인을 찾기 어렵다. 테스트는 단일 스레드로 돌아 커넥션이 많이 필요하지 않으므로 풀을 4로 잡는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-11T12:28:43.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-11T12:28:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2b31c7a383c1a9fb8d9072cba1a05969984e1d5f"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2791971": []
+  }
+}

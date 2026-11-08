@@ -1,0 +1,676 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 956439,
+    "iid": 296,
+    "project_id": 1444456,
+    "title": "feat(fe): 검증 구분 표시를 화면에서 걷어낸다",
+    "description": "# 작업 내용 요약\n\n결과를 열면 어떤 결과든 \"검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다\"라는 문장이 그래프 위에 붙었다. 검증 구분이란 그 결과가 좋은 설정을 찾는 데 쓴 기간의 성과인지, 찾은 설정을 확인하려고 아껴 둔 기간의 성과인지를 가르는 표시다. 구분을 가르려면 분석 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계(`PD-12`)가 아직 정해지지 않아, 모든 결과가 예외 없이 '미검증'으로 내려온다. 모든 결과에 똑같이 붙는 문장은 결과 사이를 가르지 못하면서 첫 화면의 문장 수만 늘린다.\n\n검증 구분 표시를 화면에서 걷어냈다. 분할이 등록되어 결과마다 구분이 갈리기 시작하면 그때 표시를 다시 만든다.\n\n# 관련 티켓 번호 & 링크\n\n- `S15P21E205-412` https://ssafy.atlassian.net/browse/S15P21E205-412\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 완료된 정상 결과를 연다 | 그래프 위에 미검증 문장이 붙는다 | 알릴 것이 없으므로 상태 줄이 없다 |\n| 부분 결과·취소·자료 부족·실행 실패 | 상태 문장이 나온다 | **같다.** 이번 변경은 검증 구분만 건드린다 |\n| 실패한 결과의 '다시 시도' | 문장과 함께 단추가 나온다 | 같다 |\n| 응답의 검증 구분 값 | 화면이 읽어 문장으로 바꾼다 | 응답에는 그대로 오고 화면은 읽지 않는다 |\n\n# 주요 변경 사항\n\n## 감추지 않고 지운다\n\n'미검증'일 때만 문장을 내지 않는 방법도 있었다. 그렇게 하면 쓰이지 않는 문장 틀과 고르는 코드가 남고, 그 코드는 분할이 등록될 때까지 아무 일도 하지 않으면서 읽는 사람에게는 동작하는 것처럼 보인다. 문장 틀과 고르는 코드를 함께 지웠다. 표시가 필요해지는 시점에는 분할 설계가 확정되어 있을 테니, 그때의 설계에 맞춰 다시 만드는 편이 낫다.\n\n## 응답 필드는 계약대로 남긴다\n\n서버는 검증 구분 값을 계속 보낸다. 화면이 쓰지 않는다고 해서 응답 타입에서 지우면 계약 문서와 어긋나고, 계약 예시 파일과 응답의 키 집합을 대조하는 검사도 깨진다. 타입에는 남기고 화면이 읽지 않는다는 사실을 주석과 계약 문서에 적었다.\n\n## 보일 것이 없으면 상태 줄을 그리지 않는다\n\n검증 구분이 빠지면서 완료된 정상 결과에는 알릴 것이 하나도 없는 경우가 생긴다. 상태 줄은 왼쪽 테두리와 배경색, 안쪽 여백을 가지고 있어 내용이 없어도 그래프 위에 빈 칸으로 남는다. 문장도 재시도 단추도 없으면 상자째 그리지 않는다. 빈 알림 영역이 화면 낭독기에 읽히는 문제도 함께 사라진다.\n\n## 명세를 결정에 맞춘다\n\n`FR-012`가 검증 구분을 표시하라고 요구하고 있었으므로 코드만 고치면 명세와 어긋난다. 확정 전에는 표시하지 않는다는 것과 분할이 등록되면 다시 만든다는 것을 명세와 결과 조회 계약에 적었다. 분할 설계를 소유하는 자동 파라미터 탐색 명세의 해당 기재도 같이 고쳤다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint && npm run build && npm test` — Vitest 141개 파일 1,319건 통과, 실패 0·건너뜀 0. `node --test` 13건 통과, 건너뜀 0. 린트 오류 0건(경고 20건은 이번에 건드리지 않은 기존 파일). 2026-09-22 측정.\n\n기준선은 2026-09-22 `dev`(`bc3b7e01`) 기준 Vitest 1,317건, `node --test` 13건이다. 검증 구분을 확인하던 테스트를 지우고, 구분이 문장에 섞이지 않는지와 상태 줄이 상자째 사라지는지를 확인하는 테스트를 더했다.\n\n- [x] 로컬 실행 확인: 로컬 데이터로 계산한 결과 화면에서 문장과 빈 상자가 모두 사라진 것을 확인했다.\n\n# 리뷰 포인트\n\n1. **표시를 지운 판단.** '미검증'은 검증에 실패했다는 뜻이 아니라 판정할 기준이 없다는 뜻이고, 그 사실을 사용자에게 알리려고 명세가 일부러 넣었던 표시다. 지운 뒤에는 결과가 검증 절차를 거친 것으로 읽힐 여지가 생긴다. 지금은 검증 절차 자체가 없어 오해할 대상도 없다고 보았지만, 판단이 갈릴 수 있는 지점이다.\n2. **다시 만들어야 하는 시점과 범위.** `PD-12`(분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식)가 확정되고 평가 분할이 등록되면, 결과마다 '탐색 결과'와 '미사용 검증 결과'가 갈린다. 그때 화면 표시를 다시 만들어야 한다. 명세와 계약 문서에 그 조건을 적어 두었다.\n3. **티켓 제목과 실제 작업이 어긋난다.** 티켓은 \"미검증 문장을 내린다\"로 세웠는데 실제로는 표시를 걷어냈다. 브랜치 이름도 같은 이유로 어긋난다. 작업 도중 범위가 바뀐 것이며 티켓 본문은 이 MR 기준으로 고칠 예정이다.",
+    "state": "merged",
+    "created_at": "2026-09-22T14:16:59.261+09:00",
+    "updated_at": "2026-09-22T14:28:26.923+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-22T14:28:26.942+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/412-hide-unvalidated-sentence",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+    "merge_commit_sha": "1f0024b90a09c1f3b2ae76b30c37a0dd3bbddaf6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T14:17:01.069+09:00",
+    "reference": "!296",
+    "references": {
+      "short": "!296",
+      "relative": "!296",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!296"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/296",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 956439,
+    "iid": 296,
+    "project_id": 1444456,
+    "title": "feat(fe): 검증 구분 표시를 화면에서 걷어낸다",
+    "description": "# 작업 내용 요약\n\n결과를 열면 어떤 결과든 \"검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다\"라는 문장이 그래프 위에 붙었다. 검증 구분이란 그 결과가 좋은 설정을 찾는 데 쓴 기간의 성과인지, 찾은 설정을 확인하려고 아껴 둔 기간의 성과인지를 가르는 표시다. 구분을 가르려면 분석 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계(`PD-12`)가 아직 정해지지 않아, 모든 결과가 예외 없이 '미검증'으로 내려온다. 모든 결과에 똑같이 붙는 문장은 결과 사이를 가르지 못하면서 첫 화면의 문장 수만 늘린다.\n\n검증 구분 표시를 화면에서 걷어냈다. 분할이 등록되어 결과마다 구분이 갈리기 시작하면 그때 표시를 다시 만든다.\n\n# 관련 티켓 번호 & 링크\n\n- `S15P21E205-412` https://ssafy.atlassian.net/browse/S15P21E205-412\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 완료된 정상 결과를 연다 | 그래프 위에 미검증 문장이 붙는다 | 알릴 것이 없으므로 상태 줄이 없다 |\n| 부분 결과·취소·자료 부족·실행 실패 | 상태 문장이 나온다 | **같다.** 이번 변경은 검증 구분만 건드린다 |\n| 실패한 결과의 '다시 시도' | 문장과 함께 단추가 나온다 | 같다 |\n| 응답의 검증 구분 값 | 화면이 읽어 문장으로 바꾼다 | 응답에는 그대로 오고 화면은 읽지 않는다 |\n\n# 주요 변경 사항\n\n## 감추지 않고 지운다\n\n'미검증'일 때만 문장을 내지 않는 방법도 있었다. 그렇게 하면 쓰이지 않는 문장 틀과 고르는 코드가 남고, 그 코드는 분할이 등록될 때까지 아무 일도 하지 않으면서 읽는 사람에게는 동작하는 것처럼 보인다. 문장 틀과 고르는 코드를 함께 지웠다. 표시가 필요해지는 시점에는 분할 설계가 확정되어 있을 테니, 그때의 설계에 맞춰 다시 만드는 편이 낫다.\n\n## 응답 필드는 계약대로 남긴다\n\n서버는 검증 구분 값을 계속 보낸다. 화면이 쓰지 않는다고 해서 응답 타입에서 지우면 계약 문서와 어긋나고, 계약 예시 파일과 응답의 키 집합을 대조하는 검사도 깨진다. 타입에는 남기고 화면이 읽지 않는다는 사실을 주석과 계약 문서에 적었다.\n\n## 보일 것이 없으면 상태 줄을 그리지 않는다\n\n검증 구분이 빠지면서 완료된 정상 결과에는 알릴 것이 하나도 없는 경우가 생긴다. 상태 줄은 왼쪽 테두리와 배경색, 안쪽 여백을 가지고 있어 내용이 없어도 그래프 위에 빈 칸으로 남는다. 문장도 재시도 단추도 없으면 상자째 그리지 않는다. 빈 알림 영역이 화면 낭독기에 읽히는 문제도 함께 사라진다.\n\n## 명세를 결정에 맞춘다\n\n`FR-012`가 검증 구분을 표시하라고 요구하고 있었으므로 코드만 고치면 명세와 어긋난다. 확정 전에는 표시하지 않는다는 것과 분할이 등록되면 다시 만든다는 것을 명세와 결과 조회 계약에 적었다. 분할 설계를 소유하는 자동 파라미터 탐색 명세의 해당 기재도 같이 고쳤다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint && npm run build && npm test` — Vitest 141개 파일 1,319건 통과, 실패 0·건너뜀 0. `node --test` 13건 통과, 건너뜀 0. 린트 오류 0건(경고 20건은 이번에 건드리지 않은 기존 파일). 2026-09-22 측정.\n\n기준선은 2026-09-22 `dev`(`bc3b7e01`) 기준 Vitest 1,317건, `node --test` 13건이다. 검증 구분을 확인하던 테스트를 지우고, 구분이 문장에 섞이지 않는지와 상태 줄이 상자째 사라지는지를 확인하는 테스트를 더했다.\n\n- [x] 로컬 실행 확인: 로컬 데이터로 계산한 결과 화면에서 문장과 빈 상자가 모두 사라진 것을 확인했다.\n\n# 리뷰 포인트\n\n1. **표시를 지운 판단.** '미검증'은 검증에 실패했다는 뜻이 아니라 판정할 기준이 없다는 뜻이고, 그 사실을 사용자에게 알리려고 명세가 일부러 넣었던 표시다. 지운 뒤에는 결과가 검증 절차를 거친 것으로 읽힐 여지가 생긴다. 지금은 검증 절차 자체가 없어 오해할 대상도 없다고 보았지만, 판단이 갈릴 수 있는 지점이다.\n2. **다시 만들어야 하는 시점과 범위.** `PD-12`(분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식)가 확정되고 평가 분할이 등록되면, 결과마다 '탐색 결과'와 '미사용 검증 결과'가 갈린다. 그때 화면 표시를 다시 만들어야 한다. 명세와 계약 문서에 그 조건을 적어 두었다.\n3. **티켓 제목과 실제 작업이 어긋난다.** 티켓은 \"미검증 문장을 내린다\"로 세웠는데 실제로는 표시를 걷어냈다. 브랜치 이름도 같은 이유로 어긋난다. 작업 도중 범위가 바뀐 것이며 티켓 본문은 이 MR 기준으로 고칠 예정이다.",
+    "state": "merged",
+    "created_at": "2026-09-22T14:16:59.261+09:00",
+    "updated_at": "2026-09-22T14:28:26.923+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-22T14:28:26.942+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/412-hide-unvalidated-sentence",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+    "merge_commit_sha": "1f0024b90a09c1f3b2ae76b30c37a0dd3bbddaf6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T14:17:01.069+09:00",
+    "reference": "!296",
+    "references": {
+      "short": "!296",
+      "relative": "!296",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!296"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/296",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "9",
+    "latest_build_started_at": "2026-09-22T14:22:19.878+09:00",
+    "latest_build_finished_at": "2026-09-22T14:28:26.106+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 215970,
+      "iid": 303,
+      "project_id": 1444456,
+      "sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+      "ref": "feat(fe)/412-hide-unvalidated-sentence",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T14:22:19.776+09:00",
+      "updated_at": "2026-09-22T14:28:26.114+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215970"
+    },
+    "head_pipeline": {
+      "id": 215970,
+      "iid": 303,
+      "project_id": 1444456,
+      "sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+      "ref": "feat(fe)/412-hide-unvalidated-sentence",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T14:22:19.776+09:00",
+      "updated_at": "2026-09-22T14:28:26.114+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215970",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T14:22:19.878+09:00",
+      "finished_at": "2026-09-22T14:28:26.106+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215970",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "head_sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+      "start_sha": "9ac96fac9001b9fd7c08f7548dcb4779a8ac1357"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "70895daae02d770b87a2187948449375e359b6e1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855114,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:16:59.374+09:00",
+          "updated_at": "2026-09-22T14:16:59.378+09:00",
+          "system": true,
+          "noteable_id": 956439,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 296,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3477bd4602d1c8dff0f0b9d715dd3a60a62e7133",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855115,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:16:59.390+09:00",
+          "updated_at": "2026-09-22T14:16:59.396+09:00",
+          "system": true,
+          "noteable_id": 956439,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 296,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e451dbce0a1390724aa098f4c7eebf92bcd4c599",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855120,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 스펙과 구현의 동기화**: `PD-12` 분할 설계 확정 전까지 모든 결과가 동일하게 `UNVALIDATED` 상태로 내려오는 상황에서, 불필요한 중복 문장과 화면 요소(빈 상자, 화면 낭독기용 빈 알림 영역)를 깔끔하게 제거했습니다.\n- **API 계약 유지**: 서버 응답 데이터 모델 및 API 계약 문서(`validationTier` 필드)는 그대로 유지하면서 프론트엔드 UI 로직만 격리하여 변경함으로써, 하위 호환성을 깨뜨리지 않고 안전하게 리팩터링을 수행했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **정상 완료 결과 렌더링 검증**: \n  - 시나리오: `status`가 `COMPLETED`이고 `exceptionKinds`가 비어 있으며 재시도가 필요 없는 일반적인 결과를 렌더링합니다.\n  - 기대 결과: `ResultStatusLine` 컴포넌트가 아무것도 렌더링하지 않아(`null` 반환) DOM에 빈 상자나 불필요한 `role=\"status\"` 엘리먼트가 존재하지 않음을 확인합니다.\n- **실패 결과 렌더링 검증**:\n  - 시나리오: `status`가 `FAILED`이고 `onRetry` 핸들러가 제공된 결과를 렌더링합니다.\n  - 기대 결과: 알릴 문장이 없더라도 재시도 버튼을 포함한 상태 상자가 정상적으로 그려지는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:db7c5fac98f0a9b26f25dc9fd34615ceb6671cae -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T14:17:05.495+09:00",
+          "updated_at": "2026-09-22T14:17:05.495+09:00",
+          "system": false,
+          "noteable_id": 956439,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 296,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f83b788509b4131d057250293f46b78ef21f6a11",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855212,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for db7c5fac98f0a9b26f25dc9fd34615ceb6671cae pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:23:08.350+09:00",
+          "updated_at": "2026-09-22T14:23:08.354+09:00",
+          "system": true,
+          "noteable_id": 956439,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 296,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "aaa0fef7a61dfa9bef2333deca12c4c2a45019c8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855303,
+          "type": null,
+          "body": "mentioned in commit 1f0024b90a09c1f3b2ae76b30c37a0dd3bbddaf6",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:28:27.036+09:00",
+          "updated_at": "2026-09-22T14:28:27.042+09:00",
+          "system": true,
+          "noteable_id": 956439,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 296,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2238854,
+      "head_commit_sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+      "base_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "start_commit_sha": "9ac96fac9001b9fd7c08f7548dcb4779a8ac1357",
+      "created_at": "2026-09-22T14:16:59.719+09:00",
+      "merge_request_id": 956439,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "5c68323fa4e969f9724ebb401cac86abc9c047d2"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2238854,
+      "head_commit_sha": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+      "base_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "start_commit_sha": "9ac96fac9001b9fd7c08f7548dcb4779a8ac1357",
+      "created_at": "2026-09-22T14:16:59.719+09:00",
+      "merge_request_id": 956439,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "5c68323fa4e969f9724ebb401cac86abc9c047d2",
+      "commits": [
+        {
+          "id": "db7c5fac98f0a9b26f25dc9fd34615ceb6671cae",
+          "short_id": "db7c5fac",
+          "created_at": "2026-09-22T14:10:14.000+09:00",
+          "parent_ids": [
+            "bc3b7e01deded889ea793330e150e8e03f8e3dc4"
+          ],
+          "title": "feat(fe): 검증 구분 표시를 화면에서 걷어낸다",
+          "message": "feat(fe): 검증 구분 표시를 화면에서 걷어낸다\n\n구분을 가르려면 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계가\nPD-12로 미확정이다. 분할이 없으니 모든 결과가 예외 없이 `UNVALIDATED`로\n내려오고, 모든 결과에 똑같이 붙는 표시는 결과 사이를 가르지 못하면서 첫 화면의\n문장 수만 늘린다(원칙 II).\n\n문장 틀(`VALIDATION_SENTENCE_TEMPLATES`)과 고르는 함수를 지웠다. 가를 수 없는\n동안에만 감추는 방식은 쓰지 않는 코드를 남겨 두는 셈이라, 필요해질 때 그 시점의\n설계로 다시 만드는 편이 낫다.\n\n응답의 `validationTier`는 계약 그대로 두고 타입에도 남긴다. 백엔드가 계속 보내는\n필드라 타입에서 지우면 계약과 어긋난다. 화면이 읽지 않는다는 사실은 타입 주석에\n적었다.\n\n표시가 빠지면서 완료된 정상 결과에는 보일 것이 하나도 남지 않는 경우가 생긴다.\n상태 줄 상자는 테두리·배경·안쪽 여백을 가지고 있어 내용 없이 두면 그래프 위에\n빈 칸으로 남으므로, 문장도 재시도 단추도 없으면 상자째 그리지 않는다.\n\nspec 005 FR-012와 가정, 결과 API 계약, 007 PD-12 기재를 이 결정에 맞게 고쳤다.\n평가 분할이 등록되면 그때 표시를 다시 만든다는 것도 함께 적었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-22T13:46:03.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-22T14:10:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/db7c5fac98f0a9b26f25dc9fd34615ceb6671cae"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -57,8 +57,8 @@ describe('ResultStatusLine', () => {\n     expect(container.querySelector('ul')).toBeNull()\n   })\n \n-  it('예외가 없으면 자료 부족 문장이 없다', () => {\n-    render(\n+  it('보일 것이 없으면 상자째 그리지 않는다', () => {\n+    const { container } = render(\n       <ResultStatusLine\n         detail={detail({\n           exceptionKinds: [],\n@@ -68,7 +68,27 @@ describe('ResultStatusLine', () => {\n       />,\n     )\n \n-    expect(screen.getByRole('status').textContent).not.toContain('자료 부족')\n+    // 검증 구분을 걷어내면서 완료된 정상 결과에는 알릴 상태가 하나도 남지 않는다. 상자에 테두리와\n+    // 배경, 안쪽 여백이 있어 내용 없이 두면 그래프 위에 빈 칸이 남는다.\n+    expect(container.innerHTML).toBe('')\n+    expect(screen.queryByRole('status')).toBeNull()\n+  })\n+\n+  it('알릴 문장이 없어도 다시 시도할 실패 결과는 상자를 남긴다', () => {\n+    render(\n+      <ResultStatusLine\n+        detail={detail({\n+          status: 'FAILED',\n+          summary: null,\n+          exceptionKinds: null,\n+          failure: { code: 'ENGINE_ERROR', message: '계산 엔진이 응답하지 않았습니다.' },\n+        })}\n+        completedThrough={null}\n+        onRetry={vi.fn()}\n+      />,\n+    )\n+\n+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()\n   })\n \n   it('실패 사유와 사용자가 누르는 다시 시도를 보인다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultStatusLine.test.tsx",
+          "old_path": "frontend/src/components/result/ResultStatusLine.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,7 +11,7 @@ type ResultStatusLineProps = {\n   onRetry?: () => void | Promise<void>\n }\n \n-/** 결과 의미를 바꾸는 상태와 검증 구분을 결과 옆 한 문장으로 보인다(FR-012~FR-013). */\n+/** 결과 의미를 바꾸는 상태를 결과 옆 한 문장으로 보인다(FR-013). 알릴 상태가 없으면 아무것도 그리지 않는다. */\n export function ResultStatusLine({\n   detail,\n   completedThrough,\n@@ -33,12 +33,22 @@ export function ResultStatusLine({\n     }\n   }\n \n+  const sentence = selectStatusSentence(detail, completedThrough)\n+  const retryable = detail.status === 'FAILED' && Boolean(onRetry)\n+\n+  // 보일 것이 하나도 없으면 상자째 그리지 않는다. `.line`이 테두리·배경·안쪽 여백을 가지고 있어,\n+  // 안이 비어도 그래프 위에 빈 상자가 남는다. 빈 `role=\"status\"`도 화면 낭독기에 아무것도 없는\n+  // 알림 영역을 만든다.\n+  if (!sentence && !retryable && !retryError) return null\n+\n   return (\n     <div className={styles.line}>\n-      <p className={styles.sentence} role=\"status\">\n-        {selectStatusSentence(detail, completedThrough)}\n-      </p>\n-      {detail.status === 'FAILED' && onRetry ? (\n+      {sentence ? (\n+        <p className={styles.sentence} role=\"status\">\n+          {sentence}\n+        </p>\n+      ) : null}\n+      {retryable ? (\n         <Button type=\"button\" variant=\"outline\" disabled={retrying} onClick={() => void retry()}>\n           {retrying ? '다시 요청하는 중' : '다시 시도'}\n         </Button>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultStatusLine.tsx",
+          "old_path": "frontend/src/components/result/ResultStatusLine.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,13 +1,9 @@\n import { describe, expect, it } from 'vitest'\n import { resultDetailCompleted } from '@/test/resultFixtures'\n import type { PublicResultDetail } from '@/types/result'\n-import {\n-  STATUS_SENTENCE_TEMPLATES,\n-  VALIDATION_SENTENCE_TEMPLATES,\n-  selectStatusSentence,\n-} from './statusSentences'\n+import { STATUS_SENTENCE_TEMPLATES, selectStatusSentence } from './statusSentences'\n \n-/** 005 T076. FR-012~FR-013, SC-004~SC-005, quickstart 5. */\n+/** 005 T076. FR-013, SC-004~SC-005, quickstart 5. */\n \n const forbiddenWords = ['추천', '최적', '승자', '우승', '유리', '좋다', '할 것', '유사', '확률']\n \n@@ -17,10 +13,7 @@ function detail(overrides: Partial<PublicResultDetail>): PublicResultDetail {\n \n describe('결과 상태 문장 틀', () => {\n   it('틀 전체 문자열에 금지 어휘가 하나도 없다', () => {\n-    const allTemplates = [\n-      ...Object.values(STATUS_SENTENCE_TEMPLATES),\n-      ...Object.values(VALIDATION_SENTENCE_TEMPLATES),\n-    ].join('\\n')\n+    const allTemplates = Object.values(STATUS_SENTENCE_TEMPLATES).join('\\n')\n \n     for (const word of forbiddenWords) {\n       expect(allTemplates, word).not.toContain(word)\n@@ -102,10 +95,22 @@ describe('결과 상태 문장 틀', () => {\n     ).toContain('실행이 끝나지 못했습니다(ENGINE_ERROR): 계산 엔진이 응답하지 않았습니다.')\n   })\n \n-  it('미검증은 판정 기준이 정해지지 않았다는 이유와 항상 함께 있다', () => {\n+  it('검증 구분은 문장에 담지 않는다', () => {\n+    // 구분을 가르려면 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계(PD-12)가 아직\n+    // 없다. 가를 수 없는 것을 화면에 적지 않는다(005 FR-012).\n     const sentence = selectStatusSentence(resultDetailCompleted, null)\n \n-    expect(sentence).toContain('검증되지 않았습니다.')\n-    expect(sentence).toContain('판정 기준이 아직 정해지지 않았습니다.')\n+    expect(sentence).not.toContain('검증')\n+    expect(sentence).toContain('자료 부족·계산 제한 기록이')\n   })\n+\n+  it('알릴 상태가 없으면 빈 문장을 돌려준다', () => {\n+    const sentence = selectStatusSentence(\n+      detail({ status: 'COMPLETED', partial: false, summary: null, exceptionKinds: null }),\n+      null,\n+    )\n+\n+    expect(sentence).toBe('')\n+  })\n+\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/statusSentences.test.ts",
+          "old_path": "frontend/src/components/result/statusSentences.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,9 @@\n-import type { PublicResultDetail, ValidationTier } from '@/types/result'\n+import type { PublicResultDetail } from '@/types/result'\n \n export const SUMMARY_NOT_CALCULATED = '취소 시점까지의 지표는 계산되지 않았습니다.'\n \n /**\n- * 결과 의미를 바꾸는 상태의 고정 문장 틀(FR-012~FR-013, data-model §3-4).\n+ * 결과 의미를 바꾸는 상태의 고정 문장 틀(FR-013, data-model §3-4).\n  *\n  * <p>이 파일은 SC-004의 검수 대상이다. 컴포넌트는 문장을 만들지 않고 이 틀의 값 자리만 채운다.\n  */\n@@ -22,24 +22,10 @@ export const STATUS_SENTENCE_TEMPLATES = {\n   failureWithoutDetail: '실행이 끝나지 못했습니다.',\n } as const\n \n-export const VALIDATION_SENTENCE_TEMPLATES = {\n-  SEARCH_RESULT: '탐색 결과입니다.',\n-  HELD_OUT_RESULT: '미사용 검증 결과입니다.',\n-  UNVALIDATED: '검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다.',\n-  unknown: '검증 구분을 확인할 수 없습니다.',\n-} as const\n-\n function fill(template: string, values: Record<string, string>): string {\n   return template.replace(/\\{(\\w+)\\}/g, (placeholder, key: string) => values[key] ?? placeholder)\n }\n \n-function validationSentence(tier: ValidationTier): string {\n-  if (tier === 'SEARCH_RESULT') return VALIDATION_SENTENCE_TEMPLATES.SEARCH_RESULT\n-  if (tier === 'HELD_OUT_RESULT') return VALIDATION_SENTENCE_TEMPLATES.HELD_OUT_RESULT\n-  if (tier === 'UNVALIDATED') return VALIDATION_SENTENCE_TEMPLATES.UNVALIDATED\n-  return VALIDATION_SENTENCE_TEMPLATES.unknown\n-}\n-\n function summaryUnavailableSentence(detail: PublicResultDetail): string | null {\n   switch (detail.summaryUnavailable) {\n     case null:\n@@ -56,7 +42,7 @@ function summaryUnavailableSentence(detail: PublicResultDetail): string | null {\n }\n \n /**\n- * 결과 의미를 바꾸는 상태와 검증 구분을 한 단락으로 만든다.\n+ * 결과 의미를 바꾸는 상태를 한 단락으로 만든다. 알릴 상태가 없으면 빈 문자열이다.\n  *\n  * <p>여러 상태가 함께 있으면 문장을 이어 쓰되 경고 목록으로 늘리지 않는다. 서버가 주지 않은 사유나\n  * 완료 범위를 지어내지 않는다.\n@@ -102,6 +88,5 @@ export function selectStatusSentence(\n     )\n   }\n \n-  parts.push(validationSentence(detail.validationTier))\n   return parts.join(' ')\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/statusSentences.ts",
+          "old_path": "frontend/src/components/result/statusSentences.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,7 +54,8 @@ describe('결과 화면의 비교 연결 (T061)', () => {\n     )\n     expect(screen.getByLabelText('분석 조건').textContent).toContain('비교 대상 비교용 전략')\n     expect(screen.getByText(/비교 대상의 비중도/)).toBeTruthy()\n-    expect(screen.getAllByText(/판정 기준이 아직 정해지지 않았습니다/)).toHaveLength(2)\n+    // 판정 기준(PD-12)이 정해지기 전까지 미검증 문장은 내지 않는다.\n+    expect(screen.queryByText(/판정 기준이 아직 정해지지 않았습니다/)).toBeNull()\n     expect(container.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]')).toHaveLength(\n       1,\n     )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,12 @@\n \n export type ResultStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'\n \n-/** PD-12 확정 전에는 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이다 */\n+/**\n+ * PD-12 확정 전에는 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이다.\n+ *\n+ * <b>화면은 이 값을 읽지 않는다</b>(005 FR-012). 모든 결과가 같은 값이라 결과 사이를 가르지 못한다.\n+ * 응답 계약에는 그대로 있으므로 타입에도 남긴다.\n+ */\n export type ValidationTier = 'UNVALIDATED' | (string & Record<never, never>)\n \n /** 004 `summaryUnavailable`. 새 사유가 더해져도 버리지 않도록 열어 둔다 */\n@@ -131,6 +136,7 @@ export type PublicResultDetail = {\n   summary: ResultSummary | null\n   summaryUnavailable: SummaryUnavailableReason | null\n   failure: ResultFailure | null\n+  /** 응답에 실려 오지만 화면은 쓰지 않는다. 위 {@link ValidationTier} 주석 참고 */\n   validationTier: ValidationTier\n   /** 003 등록표의 전략 이름. 없으면 `null`이고 화면은 이름을 지어내지 않는다 */\n   strategyName: string | null\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/result.ts",
+          "old_path": "frontend/src/types/result.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -55,7 +55,7 @@\n \n - **`backtestId`를 담지 않는다.** 004의 내부 실행 식별자가 화면에 드러나면 SC-009를 어긴다. 재시도도 공개 토큰으로 받는다. 공개 취소 경로는 두지 않는다.\n - `expiresAt`은 비로그인 결과에만 있다. 로그인 사용자의 결과에서는 `null`이다.\n-- `validationTier`는 PD-12 확정 전까지 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이라는 뜻이며 화면도 그렇게 쓴다.\n+- `validationTier`는 PD-12 확정 전까지 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이라는 뜻이다. 모든 결과가 같은 값이라 결과 사이를 가르지 못하므로 **화면은 이 값을 읽지 않는다**(FR-012). 평가 분할이 등록되면 그때 화면 표시를 만든다.\n - `progress`·`queueWaitSeconds`는 `status`가 `QUEUED`·`RUNNING`일 때만 담는다. 비교 대상 자리의 진행 상태 표시에 쓴다.\n - `strategyName`은 서버가 003 등록표에서 `config.strategyId`로 찾아 채운다. 첫 화면이 등록표를 따로 부르면 SC-001의 요청 수를 넘기기 때문이다. 등록표에 없거나 읽지 못하면 `null`이고, 화면은 이름을 지어내지 않는다.\n - `weightsSource`(`USER`|`COMPUTED`)는 FR-014를 첫 화면에서 보이려고 `/weights` 없이 담는다. `exceptionKinds`는 예외 기록 `kind`의 중복 없는 목록(처음 나온 순서)이며 결과 옆 한 문장을 `/exceptions` 없이 만들기 위해 담는다(R-12). 둘 다 `status`가 `COMPLETED`·`CANCELLED`이고 볼 결과가 있을 때만 값이 있다. 결과를 볼 수 없으면(계산 중, 실패, 시작 전 취소) `null`이고, `exceptionKinds`의 빈 목록은 \"예외 없음\"이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/contracts/result-api.md",
+          "old_path": "specs/005-result-comparison/contracts/result-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -151,7 +151,7 @@\n - **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. 계산이 제한되었는지의 판정과 그 사유는 [004](../004-backtest-execution/spec.md) FR-030에 따라 004가 결과에 담아 준다. 005는 그것을 표시할 뿐 자료 길이로 스스로 판정하지 않는다. (§4.2.3, 원칙 VI)\n - **FR-010**: '손실이 커진 때 보기'는 FR-001의 음영과 같은 최대 하락 구간 하나를 강조하고 그 구간의 보유·거래·비용을 보인다. 여러 구간을 고르는 임계값은 두지 않는다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n - **FR-011**: 기본 설정 비교와 자동 탐색에서 선택한 후보 비교를 구분해 표시한다. 자동 탐색 후보의 안정성·선정 이유·탈락 사유·전체 후보는 [007](../007-auto-parameter-search/spec.md)의 상세에서 본다. 후보를 비교 대상으로 놓는 진입은 007 FR-019가 소유한다. 005는 비교 주소의 비교 대상 식별자로 후보 결과의 공개 토큰을 받아 '자동 탐색 후보 비교'로 표시한다. (§4.2.3)\n-- **FR-012**: 결과 옆에 '탐색 결과 / 미사용 검증 결과 / 미검증'을 구분 표시한다. 탐색에 사용한 성과와 미사용 기간 성과를 섞지 않는다. PD-12 확정 전의 '미검증'은 검증에 실패했다는 뜻이 아니므로, \"검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다\"처럼 상태와 이유를 한 문장에 함께 적는다. (§4.2.3, §7.3, D11)\n+- **FR-012**: **PD-12가 확정될 때까지 검증 구분을 화면에 표시하지 않는다.** 구분을 가르려면 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계가 아직 없어, 모든 결과가 예외 없이 '미검증'으로 내려온다. 가를 수 없는 것을 표시하면 결과 사이를 가르지 못하면서 첫 화면의 문장 수만 늘린다(원칙 II). 응답의 `validationTier`는 계약에 그대로 두되 화면 코드는 그 값을 읽지 않는다. PD-12가 확정되고 평가 분할이 등록되면 그때 '탐색 결과 / 미사용 검증 결과' 표시를 다시 만들고, 탐색에 사용한 성과와 미사용 기간 성과를 섞지 않는다. (§4.2.3, §7.3, D11)\n - **FR-013**: 결과 의미를 바꾸는 상태는 네 갈래로 한정한다. 부분 완료(취소나 한도로 일부 기간만 계산됨), 지표 없음(핵심 숫자가 계산되지 않음), 자료 부족·계산 제한(004가 결과에 담은 예외 기록), 실행 실패다. 이 넷은 해당 결과 옆에 한 문장으로 표시하고 상세 안에만 숨기지 않으며, 이 밖의 상태는 상세에 둔다. 합류한 실행을 먼저 취소한 요청(004 R-04, `summaryUnavailable`)은 핵심 숫자 3개가 계산되지 않은 상태이므로 FR-001의 숫자 자리에 0이나 대체값을 넣지 않고 \"취소 시점까지의 지표는 계산되지 않았다\" 한 문장과 완료 범위를 표시한다. 결과 의미를 바꾸지 않는 내부 검증 미완료는 경고 목록으로 늘리지 않는다. (§4.1, §7.2, §7.4)\n - **FR-014**: 자동 배분 전략의 출력 비중은 선택한 규칙의 계산 결과로 표시하고 사용자 입력 비중과 구분한다. (§4.2.1, D13)\n - **FR-015**: 종료 시 시가평가 결과와 청산 비용 포함 결과를 구분해 표시한다. (§6.4.1)\n@@ -195,7 +195,7 @@\n - 첫 화면 응답 시간 목표와 거래 내역을 한 번에 받는 건수는 004의 실행 측정(PD-06)이 나온 뒤 같은 기준으로 정한다. 그때까지 거래 내역 조회에는 설정으로 뺀 임시 상한을 두어 무제한 조회를 허용하지 않는다(원칙 IX).\n - 사용자가 입력한 금액·섹터·기간·전략 설정은 그 자체로 개인을 가리키지 않으므로 결과에는 개인 식별 정보가 없다(FR-019). [006](../006-my-records/spec.md)이 결과에 이름·메모·사용자 필드를 붙이게 되면 그 필드는 공개 응답에서 제외한다.\n - 광범위 국내 주가지수 자료는 [001](../001-etf-market-data/spec.md)이 확보한 KOSPI 시리즈다. 이를 결과와 같은 기간·시작 금액으로 환산하는 일은 서버가 맡으며, 위 최대 하락 구간 외에 화면이 값을 계산하는 예외를 더 두지 않는다(FR-017).\n-- 검증 구분(탐색/미사용 검증/미검증) 판정 기준은 PD-12에서 정하며, 확정 전 모든 결과는 '미검증'으로 표시한다.\n+- 검증 구분(탐색/미사용 검증/미검증) 판정 기준은 PD-12에서 정한다. 확정 전에는 모든 결과가 '미검증'이므로 화면에서 이 표시를 만들지 않는다(FR-012). 분할이 등록되면 결과마다 구분이 갈리고, 그때 표시를 다시 만든다.\n - 한국어 웹 화면이며 데스크톱 브라우저를 우선한다. 폭 360px 화면에서 가로 스크롤 없이 요소가 세로로 쌓여 핵심 숫자 3개·그래프·요약 1문장·조건 한 줄을 읽을 수 있어야 하며, 모바일 전용 화면은 이번 범위에서 만들지 않는다. 결과 주소를 받은 사람이 휴대폰에서 열 수 있어야 하므로(FR-019) 좁은 화면에 안내문만 보이는 처리는 하지 않는다.\n \n ## Pre-Implementation Decisions *(팀 확정 필요)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -247,7 +247,7 @@\n | 번호 | 결정 항목 | 상태 | 출발안 | 근거 |\n |---|---|---|---|---|\n | PD-05 | 자동 탐색 잔여 항목: 동률 처리 (방법·선정 구조·표시 후보 수·안정성 산식·두 필터 문턱은 2026-09-10 확정, 실행 한도 네 값은 2026-09-10 임시값 확정) | 일부 확정 — **구현은 Edge Case의 대체 규칙을 적용 중**(2026-09-14): 동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다. 묶음 스냅샷에 `tieHandling: SHOW_ALL_TIED` 로 남으므로 규칙이 확정돼도 끝난 묶음의 처리는 바뀌지 않는다 | 방법=전체 그리드, 실행시간 상한=120초(임시), 후보 수 상한=120(임시), 발행 창=4(임시, 워커 수 x 2), 연속 실패 한도=5(임시, 발행 창 초과), 선정=세 축 필터 후 비용 차감 수익 정렬, 표시 후보 수=5, 안정성=1축 이웃 성과차 절댓값 평균, 문턱=동일 비중 기준 대비+상위 50% | §6.4.3, D10, D18 |\n-| PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 — **구현은 평가 분할을 등록하지 않아 전 후보가 `UNVALIDATED`**(2026-09-14). 이는 '검증 통과'가 아니라 '검증 여부를 말할 수 없음'이며 응답·화면에 항상 함께 표시한다. 분할이 등록되면 후보마다 탐색 구간과 잠금 구간 라벨이 갈린다 | 마지막 12개월 잠금 | §7.3, D11 |\n+| PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 — **구현은 평가 분할을 등록하지 않아 전 후보가 `UNVALIDATED`**(2026-09-14). 이는 '검증 통과'가 아니라 '검증 여부를 말할 수 없음'이다. 값은 응답에 항상 싣되, 모든 후보가 같은 값이라 결과 사이를 가르지 못하므로 화면에는 이 표시를 만들지 않는다([005](../005-result-comparison/spec.md) FR-012). 분할이 등록되면 후보마다 탐색 구간과 잠금 구간 라벨이 갈리고, 그때 화면 표시를 다시 만든다 | 마지막 12개월 잠금 | §7.3, D11 |\n | PD-06 | 실행 한도 (소유: [004](../004-backtest-execution/spec.md)) | 실측 후 고정 — **측정 입력이 아직 없다**(2026-09-14). 004에 실행 측정 저장소가 없어 007의 `AUTO_SEARCH_BATCH` 기록(FR-023, T117)을 남길 곳이 없다. 004 T012 뒤에 착수한다 | 실측 전 임시 상한 | §6.5, D18 |\n \n ## Out of Scope\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/spec.md",
+          "old_path": "specs/007-auto-parameter-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2855120": []
+  }
+}

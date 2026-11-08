@@ -1,0 +1,793 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 950712,
+    "iid": 222,
+    "project_id": 1444456,
+    "title": "feat(de): 거시지표 자료 버전 발행과 기준월 산출",
+    "description": "## 작업 내용 요약\n\n17개 지표의 발행 가능 여부를 판정하고 분야별·전체 기준월을 산출한다. 실제 파일 저장과 공개 포인터 교체는 묶음 E가 맡으며, 이 묶음은 판정과 기준월 계산까지만 다룬다. 원천 주기를 등록표에서 선언하도록 변경했다.\n\n## 관련 티켓\n\n- [S15P21E205-343](https://ssafy.atlassian.net/browse/S15P21E205-343)\n\n## 주요 변경 사항\n\n- **발행 판정**: 17개 등록표의 중복 ID를 거부하고, 각 지표에 유효 월별 변환값이 1건 이상 있을 때만 통과한다. 원값만 있는 월은 세지 않는다. 권리 상태는 확인 완료 또는 명시된 권리 확인 대기만 허용한다.\n- **보류 사유**: 미수집(`NOT_COLLECTED`), 변환 유효값 없음(`NO_VALID_VALUE`), 권리 미확인·알 수 없는 상태(`LICENSE_UNVERIFIED`)를 구분하고 해당 사유를 모두 모은다. 보류된 판정에는 기준월을 붙이지 않는다.\n- **기준월**: 분야별 `T_g` 7개와 전체 `T_all`을 유효 월 교집합의 최대월로 계산한다. 교집합이 비면 `null`로 두고, 기준월을 물린 지표 ID를 함께 반환한다.\n- **원천 주기**: `source_cycle`을 등록표에 두고, 어댑터와 변환기가 선언 주기와 다른 관측을 거부한다. 통계표 코드나 관측 기간을 훑어 주기를 추측하지 않는다.\n\n## 테스트\n\n- [x] `ruff check src scripts tests` 통과\n- [x] 수정 파일 `ruff format --check` 통과\n- [x] `pytest` 전체 1,061건 통과, skip 0건\n- [x] 17개 모두 유효, 1개 유효값 없음, 17개 미만·중복 ID, 권리 상태 오탈자·중단 상태의 발행 판정 확인\n- [x] 공통월 없음, 분야별 기준월 차이, `held_back_by` 반환 확인\n- [x] 자동 테스트 밖 확인 대상 없음 — 저장된 표본과 등록표를 사용하는 판정·계산 범위\n\n## 리뷰 포인트\n\n- 보류 상태의 기준월은 공개값처럼 오해될 수 있어 반환하지 않는다. 진단 정보는 보류 사유와 지표별 유효 건수로 제공한다.\n- 이 MR은 발행 **판정**과 기준월 **계산**만 구현한다. 파일 봉인·트랜잭션 기록·포인터 교체는 묶음 E(T038·T039)다.\n- 원천 주기 리팩터는 묶음 C의 원래 작업 목록 밖이지만, 같은 등록표·변환 경계를 수정하므로 포함했다. 이 분할이 적절한지 검토해 달라.\n- `held_back_by`는 지표별 최신 유효월 중 가장 늦은 후보 월에 값이 없는 지표를 반환한다. 공통 기준월이 `null`인 경우에도 반환할 수 있다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 없음 — 이 MR에는 표시·추천 코드가 없다.\n- [x] 결제·포인트·상품 선택 단계 없음\n- [x] 전략 ID 상수·전략별 분기 없음\n- [x] 계산 불가 값을 0이나 가장 가까운 월로 대체하지 않음\n- [x] 권리 미확인과 권리 확인 대기를 구분하고, 보류 결과를 공개 가능한 기준월로 표시하지 않음",
+    "state": "merged",
+    "created_at": "2026-09-18T12:20:33.792+09:00",
+    "updated_at": "2026-09-18T14:31:48.707+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-18T14:31:48.157+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/343-macro-publish-baseline",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+    "merge_commit_sha": "80bf1f8612f5826b90f31dee142cd4940b8b7447",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T12:20:35.256+09:00",
+    "reference": "!222",
+    "references": {
+      "short": "!222",
+      "relative": "!222",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!222"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/222",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 950712,
+    "iid": 222,
+    "project_id": 1444456,
+    "title": "feat(de): 거시지표 자료 버전 발행과 기준월 산출",
+    "description": "## 작업 내용 요약\n\n17개 지표의 발행 가능 여부를 판정하고 분야별·전체 기준월을 산출한다. 실제 파일 저장과 공개 포인터 교체는 묶음 E가 맡으며, 이 묶음은 판정과 기준월 계산까지만 다룬다. 원천 주기를 등록표에서 선언하도록 변경했다.\n\n## 관련 티켓\n\n- [S15P21E205-343](https://ssafy.atlassian.net/browse/S15P21E205-343)\n\n## 주요 변경 사항\n\n- **발행 판정**: 17개 등록표의 중복 ID를 거부하고, 각 지표에 유효 월별 변환값이 1건 이상 있을 때만 통과한다. 원값만 있는 월은 세지 않는다. 권리 상태는 확인 완료 또는 명시된 권리 확인 대기만 허용한다.\n- **보류 사유**: 미수집(`NOT_COLLECTED`), 변환 유효값 없음(`NO_VALID_VALUE`), 권리 미확인·알 수 없는 상태(`LICENSE_UNVERIFIED`)를 구분하고 해당 사유를 모두 모은다. 보류된 판정에는 기준월을 붙이지 않는다.\n- **기준월**: 분야별 `T_g` 7개와 전체 `T_all`을 유효 월 교집합의 최대월로 계산한다. 교집합이 비면 `null`로 두고, 기준월을 물린 지표 ID를 함께 반환한다.\n- **원천 주기**: `source_cycle`을 등록표에 두고, 어댑터와 변환기가 선언 주기와 다른 관측을 거부한다. 통계표 코드나 관측 기간을 훑어 주기를 추측하지 않는다.\n\n## 테스트\n\n- [x] `ruff check src scripts tests` 통과\n- [x] 수정 파일 `ruff format --check` 통과\n- [x] `pytest` 전체 1,061건 통과, skip 0건\n- [x] 17개 모두 유효, 1개 유효값 없음, 17개 미만·중복 ID, 권리 상태 오탈자·중단 상태의 발행 판정 확인\n- [x] 공통월 없음, 분야별 기준월 차이, `held_back_by` 반환 확인\n- [x] 자동 테스트 밖 확인 대상 없음 — 저장된 표본과 등록표를 사용하는 판정·계산 범위\n\n## 리뷰 포인트\n\n- 보류 상태의 기준월은 공개값처럼 오해될 수 있어 반환하지 않는다. 진단 정보는 보류 사유와 지표별 유효 건수로 제공한다.\n- 이 MR은 발행 **판정**과 기준월 **계산**만 구현한다. 파일 봉인·트랜잭션 기록·포인터 교체는 묶음 E(T038·T039)다.\n- 원천 주기 리팩터는 묶음 C의 원래 작업 목록 밖이지만, 같은 등록표·변환 경계를 수정하므로 포함했다. 이 분할이 적절한지 검토해 달라.\n- `held_back_by`는 지표별 최신 유효월 중 가장 늦은 후보 월에 값이 없는 지표를 반환한다. 공통 기준월이 `null`인 경우에도 반환할 수 있다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 없음 — 이 MR에는 표시·추천 코드가 없다.\n- [x] 결제·포인트·상품 선택 단계 없음\n- [x] 전략 ID 상수·전략별 분기 없음\n- [x] 계산 불가 값을 0이나 가장 가까운 월로 대체하지 않음\n- [x] 권리 미확인과 권리 확인 대기를 구분하고, 보류 결과를 공개 가능한 기준월로 표시하지 않음",
+    "state": "merged",
+    "created_at": "2026-09-18T12:20:33.792+09:00",
+    "updated_at": "2026-09-18T14:31:48.707+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-18T14:31:48.157+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/343-macro-publish-baseline",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+    "merge_commit_sha": "80bf1f8612f5826b90f31dee142cd4940b8b7447",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T12:20:35.256+09:00",
+    "reference": "!222",
+    "references": {
+      "short": "!222",
+      "relative": "!222",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!222"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/222",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-18T12:37:38.813+09:00",
+    "latest_build_finished_at": "2026-09-18T12:39:10.794+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 205488,
+      "iid": 161,
+      "project_id": 1444456,
+      "sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+      "ref": "feat(de)/343-macro-publish-baseline",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T12:37:38.691+09:00",
+      "updated_at": "2026-09-18T12:39:10.806+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/205488"
+    },
+    "head_pipeline": {
+      "id": 205488,
+      "iid": 161,
+      "project_id": 1444456,
+      "sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+      "ref": "feat(de)/343-macro-publish-baseline",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T12:37:38.691+09:00",
+      "updated_at": "2026-09-18T12:39:10.806+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/205488",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T12:37:38.813+09:00",
+      "finished_at": "2026-09-18T12:39:10.794+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/205488",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "head_sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+      "start_sha": "1bd3b207d6dde51a70ac1352938720bb29037942"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b015311229f7c7c439c52eb5291a0e61764375b8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2832466,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T12:20:33.929+09:00",
+          "updated_at": "2026-09-18T12:20:33.939+09:00",
+          "system": true,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "83a3eba04a8f87f908739ba98438f98de7c19741",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2832470,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n* **관심사 분리 및 방어적 설계**: 발행 여부 판정과 기준월 산출 로직(`publish.py`)을 실제 파일 쓰기나 트랜잭션 처리와 분리하여 단위 테스트가 용이하고 순수 함수 형태로 견고하게 잘 구현되었습니다.\n* **명확한 에러 처리와 규약 준수**: 등록표 선언 주기(`source_cycle`)를 관측 데이터 훑기(guessing)로 추측하지 않고 명시적으로 검증하도록 하여 예기치 못한 원천 데이터 변경에 안전하게 대응하도록 설계되었습니다.\n\n### 발견 사항\n\n* [Medium] `data/src/data_pipeline/macro/publish.py`: `baselines` 함수 내부에서 `_baseline_for_scope`를 호출할 때 빈 집합이나 예외 상황에 대한 처리가 다소 암묵적입니다. `members`가 비어 있는 경우 `PublishError`를 발생시키지만, 외부에서 전달된 `indicators`가 비어 있거나 필드 매핑이 잘못된 경우의 방어 로직이 `field_id` 검증에만 의존하고 있습니다. 입력 데이터 정합성에 대한 추가적인 가드(guard)가 있으면 더 안전합니다.\n* [Low] `data/src/data_pipeline/macro/registry.py`: `source_cycle` 필드의 기본값으로 `CYCLE_MONTHLY`를 사용하고 있으나, 기존 등록된 지표 중 일별 주기(`CYCLE_DAILY`)를 사용하는 `treasury_bond_3y` 외에 향후 추가될 일별 지표들에 대한 누락 방지 검증이 `validate()` 함수 내에서 명시적으로 다뤄지는지 확인이 필요합니다(`source_cycle in CYCLE_IDS` 검증은 존재하나, 테이블 코드나 변환 규칙과의 정합성 교차 검증은 제한적입니다).\n\n### 테스트 제안\n* **발행 게이트 경계값 테스트**: 17개 지표 중 정확히 1개가 결측되었을 때, 17개 모두 유효할 때, 그리고 17개 미만/초과 개수가 들어왔을 때의 예외 처리 시나리오를 추가로 검증하세요.\n* **기준월 교집합 예외 시나리오**: 분야별 지표들의 유효 월 교집합이 완전히 겹치지 않아 `reference_month`가 `None`이 될 때, `held_back_by`에 올바른 지표 ID들이 누락 없이 반환되는지 확인하는 테스트를 구체화하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T12:20:42.194+09:00",
+          "updated_at": "2026-09-18T12:27:59.100+09:00",
+          "system": false,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9639755945faebafa5fdccec32cab93825767ffd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2832533,
+          "type": null,
+          "body": "added 4 commits\n\n<ul><li>910671bf - refactor(de): 원천 주기를 등록표가 들게 한다</li><li>e94c9aa8 - feat(de): 발행 게이트와 기준월 산출을 만든다</li><li>e8fa7cb9 - docs(de): 묶음 C 작업 세 개를 완료로 표시한다</li><li>4e9af8f2 - fix(de): 거시자료 발행 판정 누락을 막는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/222/diffs?diff_id=2219899&start_sha=1bd3b207d6dde51a70ac1352938720bb29037942)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T12:27:48.735+09:00",
+          "updated_at": "2026-09-18T12:27:48.742+09:00",
+          "system": true,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "777916bc47dfc73ecbe13bb56eef3e4080a4a85c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834005,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T14:29:28.193+09:00",
+          "updated_at": "2026-09-18T14:29:28.197+09:00",
+          "system": true,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1709eeaaa05e1e8ea79ae6c0ac85c0d8aed2a04a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834021,
+          "type": null,
+          "body": "오탐입니다.",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T14:31:45.455+09:00",
+          "updated_at": "2026-09-18T14:31:45.455+09:00",
+          "system": false,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bd069e06eba6f10ab1f40d0a5e1e905bdcc55731",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834022,
+          "type": null,
+          "body": "mentioned in commit 80bf1f8612f5826b90f31dee142cd4940b8b7447",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T14:31:48.251+09:00",
+          "updated_at": "2026-09-18T14:31:48.261+09:00",
+          "system": true,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7f210f10a66d7dc459c1fd28f31e93224dc18ef5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885040,
+          "type": null,
+          "body": "mentioned in commit 2502a8b45467870c21324f685f75fbfd1ee27261",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:10.966+09:00",
+          "updated_at": "2026-10-13T15:16:10.969+09:00",
+          "system": true,
+          "noteable_id": 950712,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 222,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2219899,
+      "head_commit_sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+      "base_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "start_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "created_at": "2026-09-18T12:27:48.486+09:00",
+      "merge_request_id": 950712,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "4a8d9d6838ff2663333afb5c3b07771489e43b11"
+    },
+    {
+      "id": 2219843,
+      "head_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "base_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "start_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "created_at": "2026-09-18T12:20:34.217+09:00",
+      "merge_request_id": 950712,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2219899,
+      "head_commit_sha": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+      "base_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "start_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "created_at": "2026-09-18T12:27:48.486+09:00",
+      "merge_request_id": 950712,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "4a8d9d6838ff2663333afb5c3b07771489e43b11",
+      "commits": [
+        {
+          "id": "4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f",
+          "short_id": "4e9af8f2",
+          "created_at": "2026-09-18T12:27:12.000+09:00",
+          "parent_ids": [
+            "e8fa7cb99888b5add59266a0126a782f911e8c9e"
+          ],
+          "title": "fix(de): 거시자료 발행 판정 누락을 막는다",
+          "message": "fix(de): 거시자료 발행 판정 누락을 막는다\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T12:27:12.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T12:27:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4e9af8f28379e5f442f0f5e0dd2ce97f23a5086f"
+        },
+        {
+          "id": "e8fa7cb99888b5add59266a0126a782f911e8c9e",
+          "short_id": "e8fa7cb9",
+          "created_at": "2026-09-18T12:08:08.000+09:00",
+          "parent_ids": [
+            "e94c9aa8332bc82cfd61db58c40fc7faf7ea2019"
+          ],
+          "title": "docs(de): 묶음 C 작업 세 개를 완료로 표시한다",
+          "message": "docs(de): 묶음 C 작업 세 개를 완료로 표시한다\n\nT030·T031·T035. 발행 기록(T038·T039)은 묶음 E 이고 백엔드 조회(T032~T034)는\n묶음 D 라 여기서 손대지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T12:08:08.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T12:08:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e8fa7cb99888b5add59266a0126a782f911e8c9e"
+        },
+        {
+          "id": "e94c9aa8332bc82cfd61db58c40fc7faf7ea2019",
+          "short_id": "e94c9aa8",
+          "created_at": "2026-09-18T12:07:59.000+09:00",
+          "parent_ids": [
+            "910671bf6661835f194ba1df6c98531448617d4e"
+          ],
+          "title": "feat(de): 발행 게이트와 기준월 산출을 만든다",
+          "message": "feat(de): 발행 게이트와 기준월 산출을 만든다\n\n17개가 다 되기 전에는 공개하지 않는다. 발행은 두 관문을 지나야 한다 — 지표마다 유효한\n월별 변환값이 1건 이상이고, 17개 전부의 이용 권리가 미확인이 아니어야 한다.\n\n**원값만 있는 달은 유효 건수에 넣지 않는다.** 원천이 값을 줬어도 변환을 거치지 못했으면\n화면에 내보낼 값이 없다. 원값 유무로 세면 17개가 찼다고 판정되면서 실제로는 빈 화면이\n나간다(SC-008).\n\n**권리 확인 대기는 발행을 막지 않는다.** 조건 자체를 모르는 미확인만 막는다. 두바이유는\n공식 원천이 조건을 공개했는데 그 계열이 어느 쪽인지 물을 창구가 없는 상태다. 둘을 한\n상태로 묶으면 두바이유 하나 때문에 나머지 16개까지 멈춘다.\n\n보류 사유는 첫 번째에서 멈추지 않고 전부 모은다. 하나만 알려 주면 고치고 다시 돌렸을 때\n또 다른 하나가 나오고, 몇 번을 돌려야 끝나는지 알 수 없다. 수집이 아예 안 된 것과 받았으나\n변환하지 못한 것도 구분한다 — 앞은 수집을 보고 뒤는 변환 규칙을 본다.\n\n기준월은 교집합의 최대월이다. 분야 지표들이 **함께** 값을 가진 달 중 가장 최근이고, 비면\n자료 없음이다 — 가장 가까운 달로 대신하면 그 달 값이 없는 지표가 비교에 들어간다. 기준월을\n물린 지표도 함께 남긴다. 밝히지 않으면 화면은 \"6월까지만 볼 수 있다\"만 말하고 왜 그런지는\n아무도 답하지 못한다.\n\n**보류된 판정에는 기준월을 달지 않는다.** 보류인데 기준월이 채워져 있으면 그 값이 공개된\n것처럼 읽힌다.\n\n발행을 실제로 기록하는 일(파일 봉인, 한 트랜잭션 쓰기, 포인터 교체)은 T038·T039 다.\n판정과 기록을 나눈 이유는 판정만 따로 시험할 수 있어야 하고 기록이 실패해도 판정이\n달라지지 않아야 해서다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T12:07:59.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T12:07:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e94c9aa8332bc82cfd61db58c40fc7faf7ea2019"
+        },
+        {
+          "id": "910671bf6661835f194ba1df6c98531448617d4e",
+          "short_id": "910671bf",
+          "created_at": "2026-09-18T11:59:59.000+09:00",
+          "parent_ids": [
+            "1bd3b207d6dde51a70ac1352938720bb29037942"
+          ],
+          "title": "refactor(de): 원천 주기를 등록표가 들게 한다",
+          "message": "refactor(de): 원천 주기를 등록표가 들게 한다\n\n어댑터가 통계표 코드로 일별·월별을 갈랐다(`table_code == \"817Y002\"`). 등록표가 아는\n사실을 코드가 따로 들고 있던 자리라, 새 일별 계열이 들어올 때마다 이 분기를 고쳐야\n했다 — 전략을 `strategyId` 로 분기하지 않는 것과 같은 이유다(FR-005, FR-025).\n\n등록표에 `source_cycle` 을 두고 국고채만 일별로 선언한다. 어댑터는 옮길 뿐 고르지\n않는다.\n\n변환도 관측의 기간 표기를 훑어 주기를 추측하던 것을 그만둔다. 추측은 자료가 비었을\n때 답을 내지 못하고, 원천이 주기를 바꿨을 때도 조용히 따라간다. 등록표 선언을 기준으로\n삼고 어긋나면 멈추면 두 방향이 모두 드러난다 — 월별이라 적힌 계열에 일별이 온 경우와\n그 반대, 그리고 한 계열에 두 표기가 섞인 경우까지.\n\n등록된 17개 중 일별 원천에서 월 평균을 내는 조합은 없다(두바이유는 변환이 월 평균이지만\n원천이 월값을 직접 준다). 접기 경로를 검증하는 테스트는 주기를 일별로 선언한 지표를\n만들어 쓰고, 그것이 등록표에 없다는 사실을 함께 적었다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T11:44:32.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T11:59:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/910671bf6661835f194ba1df6c98531448617d4e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -43,12 +43,18 @@ _MAX_ITEM_LEVELS: Final[int] = 4\n \n \n def cycle_for(indicator: IndicatorDefinition) -> str:\n-    \"\"\"등록표의 확보 구간 표기로 주기를 가른다.\n+    \"\"\"등록표가 선언한 주기를 그대로 쓴다. **여기서 추측하지 않는다**(FR-005).\n \n     국고채만 일별이다. 월별 표(721Y001)는 항목2 구분이 없는 평균값이라 월 기말을 얻을 수\n-    없어서 일별 표를 쓴다(pd11 §1).\n+    없어서 일별 표를 쓴다(pd11 §1). 그 사실은 등록표가 들고, 이 함수는 옮길 뿐이다 —\n+    통계표 코드로 갈랐을 때는 새 일별 계열이 들어올 때마다 이 코드를 고쳐야 했다.\n     \"\"\"\n-    return \"D\" if indicator.table_code == \"817Y002\" else \"M\"\n+    if indicator.source_cycle not in _CYCLE_LENGTH:\n+        raise SourceContractError(\n+            f\"{indicator.indicator_id}: 등록표의 주기가 한국은행이 아는 값이 아니다\"\n+            f\" ({indicator.source_cycle})\"\n+        )\n+    return indicator.source_cycle\n \n \n def item_codes(indicator: IndicatorDefinition) -> tuple[str, ...]:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/sources/ecos.py",
+          "old_path": "data/src/data_pipeline/macro/sources/ecos.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,8 @@ from decimal import Decimal\n from typing import Final\n \n from data_pipeline.macro.registry import (\n+    CYCLE_DAILY,\n+    CYCLE_MONTHLY,\n     TRANSFORM_MOM,\n     TRANSFORM_MONTH_AVERAGE,\n     TRANSFORM_MONTH_END,\n@@ -289,6 +291,35 @@ def passthrough(observations: Sequence[SourceObservation]) -> list[MonthlyValue]\n # --------------------------------------------------------------------------\n # 등록표가 고른 규칙으로 보내기\n # --------------------------------------------------------------------------\n+#: 주기별 기간 표기 길이. 월별은 ``YYYY-MM``, 일별은 ``YYYY-MM-DD`` 다.\n+_PERIOD_LENGTH: Final[Mapping[str, int]] = {CYCLE_MONTHLY: 7, CYCLE_DAILY: 10}\n+\n+\n+def _require_declared_cycle(\n+    indicator: IndicatorDefinition, observations: Sequence[SourceObservation]\n+) -> bool:\n+    \"\"\"등록표가 선언한 주기와 관측의 기간 표기가 맞는지 본다. 월별이면 참이다.\n+\n+    **관측을 훑어 주기를 추측하지 않는다.** 추측은 자료가 비었을 때 답을 내지 못하고,\n+    원천이 주기를 바꿨을 때도 조용히 따라가 버린다. 등록표가 선언한 것을 기준으로 삼고\n+    어긋나면 멈추면, 두 방향의 어긋남이 모두 드러난다 — 월별이라 적힌 계열에 일별이 온\n+    경우와 그 반대 모두.\n+    \"\"\"\n+    expected = _PERIOD_LENGTH.get(indicator.source_cycle)\n+    if expected is None:\n+        raise ValueError(\n+            f\"{indicator.indicator_id}: 등록표의 주기가 모르는 값이다({indicator.source_cycle})\"\n+        )\n+    wrong = [o.period for o in observations if len(o.period) != expected]\n+    if wrong:\n+        raise ValueError(\n+            f\"{indicator.indicator_id}: 등록표는 주기를 {indicator.source_cycle} 로\"\n+            f\" 선언했는데 기간 표기가 다른 관측이 {len(wrong)}건 있다({', '.join(wrong[:3])}).\"\n+            \" 원천이 주기를 바꿨는지 본다\"\n+        )\n+    return indicator.source_cycle == CYCLE_MONTHLY\n+\n+\n def apply(\n     indicator: IndicatorDefinition,\n     observations: Sequence[SourceObservation],\n@@ -302,7 +333,7 @@ def apply(\n     (환율의 말일자료, 두바이유의 월 평균) 그 값을 그대로 쓴다 — 등록표가 그 사실을 적어 둔다.\n     \"\"\"\n     rule = indicator.transform_rule\n-    monthly_source = all(len(o.period) == 7 for o in observations)\n+    monthly_source = _require_declared_cycle(indicator, observations)\n \n     if rule in (TRANSFORM_OFFICIAL_AMOUNT, TRANSFORM_SEASONAL_RATE):\n         return passthrough(observations)\n@@ -329,9 +360,9 @@ def apply(\n             # 분모로 골라 값이 조용히 틀린다. 일별을 월로 접는 규칙은 등록표가 정할 일이라\n             # 여기서 고르지 않는다(FR-005).\n             raise ValueError(\n-                f\"{indicator.indicator_id}: {rule} 는 월 값끼리 견주는 변환인데 원천이 일별\"\n-                \" 값을 줬다. 등록표가 일별을 월로 접는 규칙(월 기말·월 평균)을 먼저 정해야\"\n-                \" 한다 — 접지 않고 견주면 같은 달이 여러 번 나온다\"\n+                f\"{indicator.indicator_id}: {rule} 는 월 값끼리 견주는 변환인데 등록표가\"\n+                \" 일별 계열이라고 선언했다. 일별을 월로 접는 규칙(월 기말·월 평균)을 먼저\"\n+                \" 정해야 한다 — 접지 않고 견주면 같은 달이 여러 번 나온다\"\n             )\n         levels = passthrough(observations)\n         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/transform/monthly.py",
+          "old_path": "data/src/data_pipeline/macro/transform/monthly.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,240 @@\n-\"\"\"발행 게이트와 기준월 — 17개가 다 되기 전에는 공개하지 않는다 (FR-011·FR-013).\n+\"\"\"발행 게이트와 기준월 — 17개가 다 되기 전에는 공개하지 않는다 (FR-011·FR-013·FR-016a).\n \n-발행은 두 관문을 모두 지나야 한다. 17개 각각에 유효한 월별 변환값이 1건 이상 있어야 하고,\n-17개 전부의 이용 권리가 확인되어야 한다(FR-016a). 하나라도 어긋나면 현재 포인터를 움직이지\n-않고 직전 완결 버전을 그대로 둔다 — 반쯤 채운 버전을 내보내면 소비자는 그것이 완결본인지\n-알 길이 없다.\n+발행은 두 관문을 모두 지나야 한다. 17개 각각에 **유효한 월별 변환값이 1건 이상** 있어야 하고,\n+17개 전부의 이용 권리가 미확인이 아니어야 한다. 하나라도 어긋나면 현재 포인터를 움직이지 않고\n+직전 완결 버전을 그대로 둔다 — 반쯤 채운 버전을 내보내면 소비자는 그것이 완결본인지 알 길이\n+없다. 009·010 은 직전 완결 버전이 있으면 계속 읽고, 없으면 등록 정보와 자료 없음 상태만 받는다.\n \n-T030·T031·T038·T039가 채운다. 지금은 자리만 있다.\n+**원값만 있는 달은 유효 건수에 넣지 않는다.** 원천이 값을 줬어도 변환을 거치지 못했으면\n+(분모가 0이었거나, 거래일이 덜 모였거나, 계열이 시작되기 전이거나) 그 달은 화면에 내보낼 수\n+없다. 원값 유무로 세면 17개가 다 찼다고 판정되면서 실제로는 빈 화면이 나간다(SC-008).\n+\n+**권리 확인 대기는 발행을 막지 않는다.** 조건 자체를 모르는 미확인만 막는다. 두바이유는 공식\n+원천이 조건을 공개했는데 그 계열이 어느 쪽인지 물을 창구가 없는 상태라 확인 대기로 두고 쓴다\n+(pd11 §1, FR-016a). 둘을 한 상태로 묶으면 두바이유 하나 때문에 나머지 16개까지 멈춘다.\n+\n+**기준월은 교집합의 최대월이다**(FR-013). 분야 g 의 `T_g` 는 그 분야 지표들이 **함께** 값을 가진\n+달 중 가장 최근이고, `T_all` 은 17개가 함께 가진 달 중 가장 최근이다. 교집합이 비면 자료 없음\n+(``None``)이다 — 가장 가까운 달로 대신하지 않는다. 지표마다 최신월이 다를 때 \"대충 최근\"을 골라\n+주면, 어느 지표는 실제로 그 달 값이 없는데 비교에 들어간다.\n+\n+**기준월을 물린 지표를 함께 남긴다.** `T_g` 가 뒤로 밀렸을 때 어느 지표 때문인지 밝히지 않으면,\n+화면은 \"6월까지만 볼 수 있다\"만 말하고 왜 그런지는 아무도 답하지 못한다(FR-023).\n+\n+**보류된 판정에는 기준월을 달지 않는다.** 보류인데 기준월이 채워져 있으면 그 값이 공개된 것처럼\n+읽힌다. 보류 사유는 :attr:`PublicationDecision.blockers` 와 유효 건수가 답한다.\n+\n+발행을 **실제로 기록하는** 일(파일 봉인, 한 트랜잭션 쓰기, 포인터 교체)은 T038·T039 다. 이\n+모듈은 \"발행해도 되는가\"와 \"기준월이 언제인가\"만 정한다.\n \"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Iterable, Mapping, Sequence\n+from dataclasses import dataclass\n+from typing import Final\n+\n+from data_pipeline.macro.normalize import NormalizedObservation\n+from data_pipeline.macro.registry import (\n+    EXPECTED_INDICATOR_COUNT,\n+    FIELD_IDS,\n+    REVIEW_PENDING_RIGHTS,\n+    REVIEW_VERIFIED,\n+    IndicatorDefinition,\n+    RegistryError,\n+)\n+from data_pipeline.macro.registry import (\n+    validate as validate_registry,\n+)\n+\n+#: 전체 지표를 묶는 기준월의 범위 식별자. 7개 분야 id 와 같은 자리에 들어간다(data-model §2).\n+SCOPE_ALL: Final[str] = \"ALL\"\n+\n+#: 발행 보류 사유. 화면 문구가 아니라 판정 결과다.\n+BLOCK_NO_VALID_VALUE: Final[str] = \"NO_VALID_VALUE\"\n+\"\"\"유효한 월별 변환값이 0건이다. 원값만 있는 달은 세지 않는다 (FR-011, SC-008).\"\"\"\n+\n+BLOCK_LICENSE_UNVERIFIED: Final[str] = \"LICENSE_UNVERIFIED\"\n+\"\"\"이용 조건이 미확인이거나 권리 상태가 알려진 허용값이 아니다 (FR-016a).\"\"\"\n+\n+PUBLISHABLE_LICENSE_REVIEW_STATUSES: Final[frozenset[str]] = frozenset(\n+    {REVIEW_VERIFIED, REVIEW_PENDING_RIGHTS}\n+)\n+\"\"\"확인 완료와 명시된 권리 확인 대기만 발행할 수 있다.\"\"\"\n+\n+BLOCK_NOT_COLLECTED: Final[str] = \"NOT_COLLECTED\"\n+\"\"\"등록표에 있는데 관측이 아예 오지 않았다. 유효 건수 0 과 구분한다 — 전자는 수집이 돌지\n+않았다는 뜻이고 후자는 받았으나 변환하지 못했다는 뜻이라 대응이 다르다.\"\"\"\n+\n+\n+class PublishError(ValueError):\n+    \"\"\"발행 판정을 내릴 수 없는 입력이다.\"\"\"\n+\n+\n+@dataclass(frozen=True)\n+class PublicationBlocker:\n+    \"\"\"발행을 막은 지표 하나와 그 사유.\"\"\"\n+\n+    indicator_id: str\n+    reason: str\n+\n+\n+@dataclass(frozen=True)\n+class Baseline:\n+    \"\"\"범위 하나의 기준월. `macro_baseline` 한 행이 된다 (data-model §2).\"\"\"\n+\n+    #: 7개 분야 id 또는 :data:`SCOPE_ALL`.\n+    scope_id: str\n+    #: 교집합의 최대월. 교집합이 비면 ``None`` 이고 그것은 자료 없음이다.\n+    reference_month: str | None\n+    #: 후보 월에 유효 변환값이 없어 기준월을 물린 지표. 후보 월이 곧 기준월이면 비어 있다.\n+    held_back_by: tuple[str, ...]\n+\n+    @property\n+    def has_data(self) -> bool:\n+        return self.reference_month is not None\n+\n+\n+@dataclass(frozen=True)\n+class PublicationDecision:\n+    \"\"\"발행해도 되는가, 된다면 기준월은 언제인가.\"\"\"\n+\n+    blockers: tuple[PublicationBlocker, ...]\n+    #: 발행 가능할 때만 채워진다. 보류된 판정에는 기준월을 달지 않는다 — 모듈 docstring 참고.\n+    baselines: tuple[Baseline, ...]\n+    #: 지표별 유효 변환값 건수. 보류 사유를 사람이 읽을 때의 근거다.\n+    valid_month_counts: Mapping[str, int]\n+\n+    @property\n+    def can_publish(self) -> bool:\n+        return not self.blockers\n+\n+    def baseline_for(self, scope_id: str) -> Baseline | None:\n+        for baseline in self.baselines:\n+            if baseline.scope_id == scope_id:\n+                return baseline\n+        return None\n+\n+\n+def valid_months(observations: Iterable[NormalizedObservation]) -> frozenset[str]:\n+    \"\"\"변환값이 실제로 있는 대상월만 모은다.\n+\n+    결측 사유가 붙은 달은 뺀다 — 원값이 있든 없든 화면에 내보낼 값이 없기 때문이다.\n+    \"\"\"\n+    return frozenset(o.period for o in observations if not o.is_missing)\n+\n+\n+def _valid_by_indicator(\n+    indicators: Sequence[IndicatorDefinition],\n+    observations: Mapping[str, Sequence[NormalizedObservation]],\n+) -> dict[str, frozenset[str]]:\n+    return {\n+        indicator.indicator_id: valid_months(observations.get(indicator.indicator_id, ()))\n+        for indicator in indicators\n+    }\n+\n+\n+def gate(\n+    indicators: Sequence[IndicatorDefinition],\n+    observations: Mapping[str, Sequence[NormalizedObservation]],\n+) -> tuple[PublicationBlocker, ...]:\n+    \"\"\"발행을 막는 것이 있는지 지표마다 본다. 비어 있으면 발행해도 된다.\n+\n+    **첫 번째에서 멈추지 않고 전부 모은다.** 하나만 알려 주면 고치고 다시 돌렸을 때 또 다른\n+    하나가 나오고, 몇 번을 돌려야 끝나는지 알 수 없다.\n+    \"\"\"\n+    if len(indicators) != EXPECTED_INDICATOR_COUNT:\n+        raise PublishError(\n+            f\"발행 판정은 등록표의 {EXPECTED_INDICATOR_COUNT}개 전부를 받아야 한다:\"\n+            f\" {len(indicators)}개가 왔다\"\n+        )\n+    try:\n+        validate_registry(tuple(indicators))\n+    except RegistryError as error:\n+        raise PublishError(f\"발행 등록표가 유효하지 않다: {error}\") from error\n+\n+    blockers: list[PublicationBlocker] = []\n+    for indicator in indicators:\n+        if indicator.license_review_status not in PUBLISHABLE_LICENSE_REVIEW_STATUSES:\n+            blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_LICENSE_UNVERIFIED))\n+        received = observations.get(indicator.indicator_id)\n+        if received is None:\n+            blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_NOT_COLLECTED))\n+            continue\n+        if not valid_months(received):\n+            blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_NO_VALID_VALUE))\n+    return tuple(blockers)\n+\n+\n+def _baseline_for_scope(\n+    scope_id: str, members: Sequence[str], valid: Mapping[str, frozenset[str]]\n+) -> Baseline:\n+    \"\"\"범위 하나의 기준월과 물린 지표를 낸다.\n+\n+    후보 월은 **지표별 최신 유효월 중 최대**다. 기준월(교집합의 최대)이 후보 월과 같으면\n+    아무도 물리지 않았다는 뜻이고, 다르거나 기준월이 없으면 후보 월에 값이 없는 지표들이\n+    물린 것이다(data-model §3.3).\n+    \"\"\"\n+    if not members:\n+        raise PublishError(f\"{scope_id}에 속한 지표가 없다\")\n+\n+    month_sets = [valid[indicator_id] for indicator_id in members]\n+    common = frozenset.intersection(*month_sets) if all(month_sets) else frozenset()\n+    reference_month = max(common) if common else None\n+\n+    latest = [max(months) for months in month_sets if months]\n+    candidate = max(latest) if latest else None\n+    if candidate is None or candidate == reference_month:\n+        held_back: tuple[str, ...] = ()\n+    else:\n+        held_back = tuple(\n+            indicator_id for indicator_id in members if candidate not in valid[indicator_id]\n+        )\n+    return Baseline(scope_id=scope_id, reference_month=reference_month, held_back_by=held_back)\n+\n+\n+def baselines(\n+    indicators: Sequence[IndicatorDefinition],\n+    observations: Mapping[str, Sequence[NormalizedObservation]],\n+) -> tuple[Baseline, ...]:\n+    \"\"\"분야별 `T_g` 일곱과 전체 `T_all` 하나를 낸다 (FR-013).\n+\n+    순서는 :data:`~data_pipeline.macro.registry.FIELD_IDS` 를 따르고 마지막이 전체다.\n+    \"\"\"\n+    valid = _valid_by_indicator(indicators, observations)\n+\n+    members_by_field: dict[str, list[str]] = {field_id: [] for field_id in FIELD_IDS}\n+    for indicator in indicators:\n+        if indicator.field_id not in members_by_field:\n+            raise PublishError(\n+                f\"{indicator.indicator_id}의 분야가 7개 밖이다: {indicator.field_id}\"\n+            )\n+        members_by_field[indicator.field_id].append(indicator.indicator_id)\n+\n+    result = [\n+        _baseline_for_scope(field_id, members_by_field[field_id], valid) for field_id in FIELD_IDS\n+    ]\n+    result.append(_baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in indicators], valid))\n+    return tuple(result)\n+\n+\n+def plan_publication(\n+    indicators: Sequence[IndicatorDefinition],\n+    observations: Mapping[str, Sequence[NormalizedObservation]],\n+) -> PublicationDecision:\n+    \"\"\"발행 판정과 기준월을 한 번에 낸다. 보류면 기준월을 달지 않는다.\n+\n+    T038 의 원자적 발행이 이 결과를 받아 파일을 봉인하고 한 트랜잭션에 쓴다. 판정과 기록을\n+    나눈 이유는, 판정만 따로 시험할 수 있어야 하고 기록이 실패해도 판정이 달라지지 않기\n+    때문이다.\n+    \"\"\"\n+    blockers = gate(indicators, observations)\n+    counts = {\n+        indicator.indicator_id: len(valid_months(observations.get(indicator.indicator_id, ())))\n+        for indicator in indicators\n+    }\n+    return PublicationDecision(\n+        blockers=blockers,\n+        baselines=() if blockers else baselines(indicators, observations),\n+        valid_month_counts=counts,\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/publish.py",
+          "old_path": "data/src/data_pipeline/macro/publish.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,6 +47,13 @@ FIELD_IDS: Final[tuple[str, ...]] = (\n     FIELD_OVERSEAS,\n )\n \n+#: 원천이 값을 주는 주기. **어댑터가 통계표 코드로 추측하지 않는다** — 새 일별 계열이\n+#: 들어올 때 코드를 고쳐야 하는 자리가 생기고, 그 자리는 등록표가 들어야 한다(FR-005).\n+CYCLE_DAILY: Final[str] = \"D\"\n+CYCLE_MONTHLY: Final[str] = \"M\"\n+\n+CYCLE_IDS: Final[tuple[str, ...]] = (CYCLE_DAILY, CYCLE_MONTHLY)\n+\n #: 변환 여섯 (FR-001 표). 앞의 넷은 계산하고 뒤의 둘은 원천 값을 그대로 쓴다.\n TRANSFORM_YOY: Final[str] = \"YOY_GROWTH\"\n TRANSFORM_MOM: Final[str] = \"MOM_GROWTH\"\n@@ -104,6 +111,13 @@ class IndicatorDefinition:\n     break_link_rule: str | None = None\n     missing_rule: str | None = None\n     refresh_months_n: int = DEFAULT_REFRESH_MONTHS_N\n+    #: 원천이 값을 주는 주기. 17개 중 국고채만 일별이고 나머지는 월별이다.\n+    #:\n+    #: 변환이 이 값을 본다. 월 기말·월 평균은 원천이 일별로 줄 때만 접는 일이 필요하고,\n+    #: 증가율은 월 값끼리 견주는 것이라 일별 계열에 그대로 걸 수 없다. 관측의 기간 표기를\n+    #: 훑어 주기를 추측하지 않는 이유는, 추측은 자료가 비었을 때 답을 내지 못하고 원천이\n+    #: 주기를 바꿨을 때도 조용히 따라가기 때문이다.\n+    source_cycle: str = CYCLE_MONTHLY\n     #: 개편으로 나뉜 계열을 잇는 통계표 사슬. 비어 있으면 표 하나로 받는 보통 지표다.\n     #:\n     #: **비어 있지 않으면 보통 경로로 받으면 안 된다.** 위의 ``table_code`` 는 사슬의 첫\n@@ -333,7 +347,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n     IndicatorDefinition(\n         indicator_id=\"treasury_bond_3y\", field_id=FIELD_FINANCE_HOUSING,\n         primary_source=SOURCE_ECOS, table_code=\"817Y002\", item_code=\"010200000\", org_id=None,\n-        classification=(), raw_unit=\"연%\",\n+        classification=(), source_cycle=CYCLE_DAILY, raw_unit=\"연%\",\n         transformed_unit=\"연%\", transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\",\n         attribution=_ECOS_ATTRIBUTION, license_status=\"ALLOWED\",\n         license_review_status=REVIEW_VERIFIED, series_start=\"1998-11\",\n@@ -420,6 +434,11 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:\n             )\n         if indicator.refresh_months_n < 1:\n             raise RegistryError(f\"{indicator.indicator_id}의 재조회 구간이 1보다 작다\")\n+        if indicator.source_cycle not in CYCLE_IDS:\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}의 주기가 {', '.join(CYCLE_IDS)} 밖이다:\"\n+                f\" {indicator.source_cycle}\"\n+            )\n \n     used_fields = {indicator.field_id for indicator in indicators}\n     missing = set(FIELD_IDS) - used_fields\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,11 +7,12 @@ from __future__ import annotations\n \n import json\n import pathlib\n+from dataclasses import replace\n from datetime import UTC, date, datetime\n from decimal import Decimal\n \n from data_pipeline.macro.normalize import normalize\n-from data_pipeline.macro.registry import INDICATORS\n+from data_pipeline.macro.registry import CYCLE_DAILY, INDICATORS\n from data_pipeline.macro.sources import ecos, kosis\n from data_pipeline.macro.sources.base import SourceObservation\n from data_pipeline.macro.transform import monthly\n@@ -20,6 +21,11 @@ FIXTURES = pathlib.Path(__file__).parent / \"fixtures\" / \"macro\"\n \n BY_ID = {indicator.indicator_id: indicator for indicator in INDICATORS}\n \n+#: 일별 원천에서 월 평균을 내는 지표. **등록표에는 없다** — 두바이유는 변환이 월 평균이지만\n+#: 원천이 월값을 직접 주므로 접는 일이 없다(pd11 §1). 접기 경로를 검증하려면 주기를 일별로\n+#: 선언한 지표가 필요하고, 그것을 여기서 만든다. 새 일별 원천이 들어오면 등록표 쪽이 생긴다.\n+DAILY_AVERAGE = replace(BY_ID[\"dubai_crude\"], source_cycle=CYCLE_DAILY)\n+\n \n def obs(indicator_id: str, period: str, value: str | None) -> SourceObservation:\n     return SourceObservation(\n@@ -81,7 +87,7 @@ class TestMonthAverageLineage:\n         ]\n         calendar_days = {\"2026-01\": [\"2026-01-02\", \"2026-01-05\", \"2026-01-06\"]}\n \n-        result = normalize(BY_ID[\"dubai_crude\"], daily, trading_days=calendar_days)\n+        result = normalize(DAILY_AVERAGE, daily, trading_days=calendar_days)\n \n         assert result[0].transformed_value == Decimal(\"82.000000\")\n         assert result[0].lineage_periods == (\"2026-01-02\", \"2026-01-05\", \"2026-01-06\")\n@@ -173,10 +179,9 @@ class TestTimestamps:\n             SourceObservation(\"x\", \"2026-01-02\", Decimal(\"80\"), source_updated_at=\"2026-02-01\"),\n             SourceObservation(\"x\", \"2026-01-05\", Decimal(\"82\"), source_updated_at=\"2026-03-01\"),\n         ]\n-        indicator = BY_ID[\"dubai_crude\"]\n         calendar_days = {\"2026-01\": [\"2026-01-02\", \"2026-01-05\"]}\n \n-        result = normalize(indicator, daily, trading_days=calendar_days)\n+        result = normalize(DAILY_AVERAGE, daily, trading_days=calendar_days)\n \n         assert result[0].source_updated_at == \"2026-03-01\"\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_normalize.py",
+          "old_path": "data/tests/test_macro_normalize.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,302 @@\n+\"\"\"발행 게이트와 기준월 테스트 (T035·T031) — FR-011, FR-013, FR-016a.\n+\n+핵심은 하나다. **17개 중 하나라도 유효 변환값이 0건이면 발행이 보류된다.**\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from dataclasses import replace\n+from decimal import Decimal\n+\n+import pytest\n+\n+from data_pipeline.macro import publish\n+from data_pipeline.macro.normalize import NormalizedObservation\n+from data_pipeline.macro.registry import (\n+    EXPECTED_INDICATOR_COUNT,\n+    FIELD_IDS,\n+    INDICATORS,\n+    REVIEW_PENDING_RIGHTS,\n+    REVIEW_UNVERIFIED,\n+    REVIEW_VERIFIED,\n+)\n+from data_pipeline.macro.transform import monthly\n+\n+BY_ID = {indicator.indicator_id: indicator for indicator in INDICATORS}\n+ALL_IDS = tuple(indicator.indicator_id for indicator in INDICATORS)\n+\n+\n+def value(indicator_id: str, period: str) -> NormalizedObservation:\n+    indicator = BY_ID[indicator_id]\n+    return NormalizedObservation(\n+        indicator_id=indicator_id,\n+        period=period,\n+        transformed_value=Decimal(\"1.0\"),\n+        missing_reason=None,\n+        raw_values=((period, Decimal(\"1.0\")),),\n+        transform_rule=indicator.transform_rule,\n+        raw_unit=indicator.raw_unit,\n+        transformed_unit=indicator.transformed_unit,\n+        source_updated_at=None,\n+    )\n+\n+\n+def missing(\n+    indicator_id: str, period: str, reason: str = monthly.MISSING_SOURCE\n+) -> NormalizedObservation:\n+    indicator = BY_ID[indicator_id]\n+    return NormalizedObservation(\n+        indicator_id=indicator_id,\n+        period=period,\n+        transformed_value=None,\n+        missing_reason=reason,\n+        raw_values=((period, Decimal(\"1.0\")),),\n+        transform_rule=indicator.transform_rule,\n+        raw_unit=indicator.raw_unit,\n+        transformed_unit=indicator.transformed_unit,\n+        source_updated_at=None,\n+    )\n+\n+\n+def all_filled(*periods: str) -> dict[str, list[NormalizedObservation]]:\n+    \"\"\"17개 전부가 같은 달들을 채운 상태.\"\"\"\n+    return {i: [value(i, p) for p in periods] for i in ALL_IDS}\n+\n+\n+class TestGate:\n+    \"\"\"발행 게이트 — 두 관문을 모두 지나야 한다 (FR-011, FR-016a).\"\"\"\n+\n+    def test_17개가_다_차면_발행할_수_있다(self) -> None:\n+        decision = publish.plan_publication(INDICATORS, all_filled(\"2026-07\"))\n+\n+        assert decision.can_publish\n+        assert decision.blockers == ()\n+\n+    @pytest.mark.parametrize(\"starved\", [\"all_industry_production\", \"g20_cli\", \"trade_balance\"])\n+    def test_하나라도_유효_변환값이_0건이면_보류한다(self, starved: str) -> None:\n+        observations = all_filled(\"2026-07\")\n+        observations[starved] = [missing(starved, \"2026-07\")]\n+\n+        decision = publish.plan_publication(INDICATORS, observations)\n+\n+        assert not decision.can_publish\n+        assert (\n+            publish.PublicationBlocker(starved, publish.BLOCK_NO_VALID_VALUE) in decision.blockers\n+        )\n+\n+    def test_보류되면_기준월을_달지_않는다(self) -> None:\n+        \"\"\"보류인데 기준월이 채워져 있으면 그 값이 공개된 것처럼 읽힌다.\"\"\"\n+        observations = all_filled(\"2026-07\")\n+        observations[\"consumer_price_index\"] = [missing(\"consumer_price_index\", \"2026-07\")]\n+\n+        decision = publish.plan_publication(INDICATORS, observations)\n+\n+        assert decision.baselines == ()\n+\n+    def test_원값만_있는_달은_유효_건수에_넣지_않는다(self) -> None:\n+        \"\"\"원값 유무로 세면 17개가 찼다고 판정되면서 화면은 빈다 (SC-008).\"\"\"\n+        observations = all_filled(\"2026-07\")\n+        raw_only = missing(\"employed_persons\", \"2026-07\", monthly.MISSING_NOT_TRANSFORMABLE)\n+        assert raw_only.raw_values[0][1] is not None\n+        observations[\"employed_persons\"] = [raw_only]\n+\n+        decision = publish.plan_publication(INDICATORS, observations)\n+\n+        assert not decision.can_publish\n+        assert decision.valid_month_counts[\"employed_persons\"] == 0\n+\n+    def test_수집이_아예_안_된_것과_변환_실패를_구분한다(self) -> None:\n+        \"\"\"전자는 수집이 안 돌았다는 뜻이고 후자는 받았으나 못 만들었다는 뜻이다.\"\"\"\n+        observations = all_filled(\"2026-07\")\n+        del observations[\"service_production\"]\n+        observations[\"retail_sales_index\"] = [missing(\"retail_sales_index\", \"2026-07\")]\n+\n+        reasons = {b.indicator_id: b.reason for b in publish.gate(INDICATORS, observations)}\n+\n+        assert reasons[\"service_production\"] == publish.BLOCK_NOT_COLLECTED\n+        assert reasons[\"retail_sales_index\"] == publish.BLOCK_NO_VALID_VALUE\n+\n+    def test_보류_사유를_전부_모은다(self) -> None:\n+        \"\"\"하나만 알려 주면 고치고 다시 돌렸을 때 또 나오고 몇 번을 돌릴지 모른다.\"\"\"\n+        observations = all_filled(\"2026-07\")\n+        for starved in (\"exports\", \"imports\", \"unemployment_rate\"):\n+            observations[starved] = [missing(starved, \"2026-07\")]\n+\n+        decision = publish.plan_publication(INDICATORS, observations)\n+\n+        assert {b.indicator_id for b in decision.blockers} == {\n+            \"exports\",\n+            \"imports\",\n+            \"unemployment_rate\",\n+        }\n+\n+    def test_등록표_전부를_받지_않으면_판정하지_않는다(self) -> None:\n+        with pytest.raises(publish.PublishError, match=\"17개 전부를 받아야\"):\n+            publish.gate(INDICATORS[:5], all_filled(\"2026-07\"))\n+\n+    def test_17행이어도_지표_id가_중복되면_판정하지_않는다(self) -> None:\n+        indicators = (INDICATORS[0], INDICATORS[0], *INDICATORS[2:])\n+\n+        with pytest.raises(publish.PublishError, match=\"지표 id 가 겹친다\"):\n+            publish.plan_publication(indicators, all_filled(\"2026-07\"))\n+\n+\n+class TestLicenseGate:\n+    \"\"\"이용 조건 — 미확인만 막는다 (FR-016a).\"\"\"\n+\n+    def test_권리_미확인_지표가_있으면_보류한다(self) -> None:\n+        indicators = tuple(\n+            replace(i, license_review_status=REVIEW_UNVERIFIED)\n+            if i.indicator_id == \"dubai_crude\"\n+            else i\n+            for i in INDICATORS\n+        )\n+\n+        decision = publish.plan_publication(indicators, all_filled(\"2026-07\"))\n+\n+        assert not decision.can_publish\n+        assert (\n+            publish.PublicationBlocker(\"dubai_crude\", publish.BLOCK_LICENSE_UNVERIFIED)\n+            in decision.blockers\n+        )\n+\n+    def test_권리_확인_대기는_발행을_막지_않는다(self) -> None:\n+        \"\"\"두바이유가 그 상태다. 미확인과 묶으면 하나 때문에 나머지 16개가 멈춘다.\"\"\"\n+        assert BY_ID[\"dubai_crude\"].license_review_status == REVIEW_PENDING_RIGHTS\n+\n+        decision = publish.plan_publication(INDICATORS, all_filled(\"2026-07\"))\n+\n+        assert decision.can_publish\n+\n+    @pytest.mark.parametrize(\"invalid_status\", [\"UNVERIFED\", \"\", \"SUSPENDED\"])\n+    def test_모르는_권리_상태는_발행을_보류한다(self, invalid_status: str) -> None:\n+        indicators = tuple(\n+            replace(i, license_review_status=invalid_status)\n+            if i.indicator_id == \"dubai_crude\"\n+            else i\n+            for i in INDICATORS\n+        )\n+\n+        decision = publish.plan_publication(indicators, all_filled(\"2026-07\"))\n+\n+        assert not decision.can_publish\n+        assert decision.baselines == ()\n+        assert (\n+            publish.PublicationBlocker(\"dubai_crude\", publish.BLOCK_LICENSE_UNVERIFIED)\n+            in decision.blockers\n+        )\n+\n+    def test_등록표의_17개가_미확인이_아니다(self) -> None:\n+        statuses = {i.license_review_status for i in INDICATORS}\n+\n+        assert REVIEW_UNVERIFIED not in statuses\n+        assert statuses <= {REVIEW_VERIFIED, REVIEW_PENDING_RIGHTS}\n+\n+\n+class TestBaselines:\n+    \"\"\"기준월 — 교집합의 최대월 (FR-013).\"\"\"\n+\n+    def test_분야_일곱과_전체_하나를_낸다(self) -> None:\n+        result = publish.baselines(INDICATORS, all_filled(\"2026-07\"))\n+\n+        assert len(result) == len(FIELD_IDS) + 1\n+        assert [b.scope_id for b in result] == [*FIELD_IDS, publish.SCOPE_ALL]\n+\n+    def test_모두_같은_달을_가지면_그_달이_기준월이다(self) -> None:\n+        result = publish.baselines(INDICATORS, all_filled(\"2026-05\", \"2026-06\", \"2026-07\"))\n+\n+        assert all(b.reference_month == \"2026-07\" for b in result)\n+        assert all(b.held_back_by == () for b in result)\n+\n+    def test_교집합의_최대월을_고른다(self) -> None:\n+        \"\"\"한 지표가 6월까지만 있으면 전체 기준월은 6월이다 — 7월로 당기지 않는다.\"\"\"\n+        observations = all_filled(\"2026-06\", \"2026-07\")\n+        observations[\"g20_cli\"] = [value(\"g20_cli\", \"2026-06\")]\n+\n+        overall = publish.baselines(INDICATORS, observations)[-1]\n+\n+        assert overall.scope_id == publish.SCOPE_ALL\n+        assert overall.reference_month == \"2026-06\"\n+\n+    def test_기준월을_물린_지표를_남긴다(self) -> None:\n+        \"\"\"왜 6월까지만 보이는지 밝히지 않으면 아무도 답하지 못한다 (FR-023).\"\"\"\n+        observations = all_filled(\"2026-06\", \"2026-07\")\n+        observations[\"g20_cli\"] = [value(\"g20_cli\", \"2026-06\")]\n+\n+        overall = publish.baselines(INDICATORS, observations)[-1]\n+\n+        assert overall.held_back_by == (\"g20_cli\",)\n+\n+    def test_물리지_않은_분야는_빈_배열이다(self) -> None:\n+        observations = all_filled(\"2026-06\", \"2026-07\")\n+        observations[\"g20_cli\"] = [value(\"g20_cli\", \"2026-06\")]\n+\n+        by_scope = {b.scope_id: b for b in publish.baselines(INDICATORS, observations)}\n+\n+        assert by_scope[\"production\"].reference_month == \"2026-07\"\n+        assert by_scope[\"production\"].held_back_by == ()\n+        assert by_scope[\"overseas\"].held_back_by == ()\n+\n+    def test_공통_대상월이_없으면_자료_없음이다(self) -> None:\n+        \"\"\"가장 가까운 달로 대신하지 않는다. 그 달 값이 없는 지표가 비교에 들어간다.\"\"\"\n+        observations = all_filled(\"2026-07\")\n+        observations[\"g20_cli\"] = [value(\"g20_cli\", \"2026-06\")]\n+\n+        overall = publish.baselines(INDICATORS, observations)[-1]\n+\n+        assert overall.reference_month is None\n+        assert overall.has_data is False\n+\n+    def test_교집합이_비어도_물린_지표는_남긴다(self) -> None:\n+        \"\"\"T_g 가 없어도 후보 월이 있으면 부족 지표를 기록한다 (data-model §3.3).\"\"\"\n+        observations = all_filled(\"2026-07\")\n+        observations[\"g20_cli\"] = [value(\"g20_cli\", \"2026-06\")]\n+\n+        overall = publish.baselines(INDICATORS, observations)[-1]\n+\n+        assert overall.reference_month is None\n+        assert overall.held_back_by == (\"g20_cli\",)\n+\n+    def test_분야마다_따로_센다(self) -> None:\n+        \"\"\"한 분야가 물려도 다른 분야의 기준월은 그대로다.\"\"\"\n+        observations = all_filled(\"2026-06\", \"2026-07\")\n+        observations[\"exports\"] = [value(\"exports\", \"2026-06\")]\n+\n+        by_scope = {b.scope_id: b for b in publish.baselines(INDICATORS, observations)}\n+\n+        assert by_scope[\"external_trade\"].reference_month == \"2026-06\"\n+        assert by_scope[\"external_trade\"].held_back_by == (\"exports\",)\n+        assert by_scope[\"labor\"].reference_month == \"2026-07\"\n+        assert by_scope[\"production\"].reference_month == \"2026-07\"\n+\n+\n+class TestValidMonths:\n+    def test_결측월을_세지_않는다(self) -> None:\n+        months = publish.valid_months(\n+            [\n+                value(\"consumer_price_index\", \"2026-06\"),\n+                missing(\"consumer_price_index\", \"2026-07\"),\n+            ]\n+        )\n+\n+        assert months == frozenset({\"2026-06\"})\n+\n+    def test_지표별_유효_건수를_돌려준다(self) -> None:\n+        observations = all_filled(\"2026-05\", \"2026-06\", \"2026-07\")\n+\n+        decision = publish.plan_publication(INDICATORS, observations)\n+\n+        assert set(decision.valid_month_counts) == set(ALL_IDS)\n+        assert all(count == 3 for count in decision.valid_month_counts.values())\n+\n+\n+class TestDecisionLookup:\n+    def test_범위로_기준월을_찾는다(self) -> None:\n+        decision = publish.plan_publication(INDICATORS, all_filled(\"2026-07\"))\n+\n+        assert decision.baseline_for(publish.SCOPE_ALL) is not None\n+        assert decision.baseline_for(\"production\") is not None\n+        assert decision.baseline_for(\"없는_분야\") is None\n+\n+    def test_등록표가_열일곱개다(self) -> None:\n+        assert len(INDICATORS) == EXPECTED_INDICATOR_COUNT == 17\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish.py",
+          "old_path": "data/tests/test_macro_publish.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,12 +7,13 @@ from __future__ import annotations\n \n import json\n import pathlib\n+from dataclasses import replace\n from datetime import date\n from decimal import Decimal\n \n import pytest\n \n-from data_pipeline.macro.registry import INDICATORS\n+from data_pipeline.macro.registry import CYCLE_DAILY, INDICATORS\n from data_pipeline.macro.sources import ecos\n from data_pipeline.macro.sources.base import SourceObservation\n from data_pipeline.macro.transform import monthly\n@@ -297,15 +298,35 @@ class TestApply:\n \n         assert result[\"2026-07\"].value == Decimal(\"0.500000\")\n \n-    def test_증가율_지표에_일별_원천이_오면_멈춘다(self) -> None:\n+    def test_등록표가_선언한_주기와_다른_관측은_멈춘다(self) -> None:\n+        \"\"\"관측을 훑어 주기를 추측하지 않는다. 등록표 선언이 기준이고 어긋나면 멈춘다.\"\"\"\n+        daily = [\n+            obs(\"all_industry_production\", \"2025-01-29\", \"100\"),\n+            obs(\"all_industry_production\", \"2025-01-30\", \"101\"),\n+        ]\n+\n+        with pytest.raises(ValueError, match=\"주기를 M 로 선언했는데\"):\n+            monthly.apply(BY_ID[\"all_industry_production\"], daily)\n+\n+    def test_월별로_선언한_계열에_일별_표기가_섞여도_멈춘다(self) -> None:\n+        mixed = [\n+            obs(\"all_industry_production\", \"2025-01\", \"100\"),\n+            obs(\"all_industry_production\", \"2025-02-03\", \"101\"),\n+        ]\n+\n+        with pytest.raises(ValueError, match=\"기간 표기가 다른 관측이 1건\"):\n+            monthly.apply(BY_ID[\"all_industry_production\"], mixed)\n+\n+    def test_증가율은_일별로_선언한_계열에_걸지_않는다(self) -> None:\n         \"\"\"접지 않고 견주면 month_of 가 여러 날을 같은 달로 접어 대상월이 중복된다.\"\"\"\n+        daily_growth = replace(BY_ID[\"all_industry_production\"], source_cycle=CYCLE_DAILY)\n         daily = [\n             obs(\"all_industry_production\", \"2025-01-29\", \"100\"),\n             obs(\"all_industry_production\", \"2025-01-30\", \"101\"),\n         ]\n \n         with pytest.raises(ValueError, match=\"월 값끼리 견주는 변환\"):\n-            monthly.apply(BY_ID[\"all_industry_production\"], daily)\n+            monthly.apply(daily_growth, daily)\n \n     def test_모르는_규칙은_조용히_넘기지_않는다(self) -> None:\n         broken = BY_ID[\"exports\"].__class__(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_transform.py",
+          "old_path": "data/tests/test_macro_transform.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -107,12 +107,12 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [X] T027 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 변환기를 만든다. 전년동월 대비는 비교월을 t-12로 고정하고, 분모가 결측이거나 0이면 결측으로 두고 사유를 변환 불가로 남긴다\n - [X] T028 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 월 기말과 월 평균을 넣는다. 월 기말은 그 달 마지막 거래일, 월 평균은 그 달 거래일이 모두 모였을 때만 산출한다. 원천이 월값을 직접 주면 그 값을 쓰고 등록표에 그 사실을 적는다\n - [X] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다\n-- [ ] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)\n-- [ ] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)\n+- [X] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)\n+- [X] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)\n - [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)\n - [ ] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016, FR-016c)\n - [ ] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)\n-- [ ] T035 [US1] `data/tests/test_macro_publish.py`에 발행 테스트를 둔다. 17개 중 하나라도 유효 변환값이 0건이면 발행이 보류되는지 확인한다\n+- [X] T035 [US1] `data/tests/test_macro_publish.py`에 발행 테스트를 둔다. 17개 중 하나라도 유효 변환값이 0건이면 발행이 보류되는지 확인한다\n \n **Checkpoint**: 17개 지표를 받아 변환하고 한 응답으로 조회할 수 있다. 여기까지가 최소 완성본이다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2219843,
+      "head_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "base_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "start_commit_sha": "1bd3b207d6dde51a70ac1352938720bb29037942",
+      "created_at": "2026-09-18T12:20:34.217+09:00",
+      "merge_request_id": 950712,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null,
+      "commits": [],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2832470": [],
+    "2834021": []
+  }
+}

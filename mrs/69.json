@@ -1,0 +1,697 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942246,
+    "iid": 69,
+    "project_id": 1444456,
+    "title": "fix(de): 수집 입력 기본값과 입력 파일 키 표기 정리 (S15P21E205-189)",
+    "description": "## 작업 내용 요약\n\nspec 001의 JT4(`S15P21E205-179`, T007·T008·T009)가 병합된 뒤 기능 이해 브리프가 찾아낸 수집 결함 두 건을 고친다. 두 건 모두 처리 방식을 팀이 확정했다(2026-09-13).\n\n## 관련 이슈\n\n- `S15P21E205-189` [DE] 수집 입력 기본값과 입력 파일 키 표기 정리\n- 지라 과제는 이 MR이 병합되어도 자동으로 닫지 않는다\n\n## 주요 변경 사항\n\n**1. 기업행위 목록이 없다는 사실을 기록으로 남긴다.** `--corporate-actions`를 주지 않으면 기업행위를 0건으로 보고 누적 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아지는데, 자료 부족 기록도 남지 않아 결과만 보아서는 알 수 없었다. 적재 지시를 붙이면 불변 트리거가 걸려 되돌릴 수도 없다.\n\n이제 목록을 말할 수 없는 경우 그 종목의 **전 구간을 `MISSING_CORPORATE_ACTION` 자료 부족 구간으로 남긴다.** 새 분기를 만들지 않고 기존 장치(`_unknown_action_gaps`)에 넣을 값으로 이름 붙인 상수 `ACTIONS_KNOWN_FROM_NEVER`를 두어 길을 하나로 모았다. 그 값이 구간의 날짜로 새어 나가지 않는 것을 테스트로 고정했다. **인자를 필수로 만들지는 않았다.** 시험 수집을 막지 않기 위해서다.\n\n**2. 파이프라인 입력 파일의 키 표기를 snake_case로 통일한다.** 수집 스크립트는 camelCase를, 대조 스크립트는 snake_case를 요구해 같은 상장 구간 파일이나 기업행위 파일을 두 곳에 넣을 수 없었다. 수집 쪽을 snake_case로 맞췄다. 변환 계약(`*_from_records`)과 이름이 같아 변환 계층을 더 두지 않아도 된다. 루트 `CLAUDE.md`의 camelCase 규칙은 API JSON을 대상으로 한 것이라 이 파일에는 해당하지 않는다. `--help`의 예시 JSON과 오류 메시지도 함께 고쳤다.\n\n## 테스트 체크리스트\n\n- [x] `data`: `ruff check src scripts tests` 통과\n- [x] `data`: `ruff format --check src scripts tests` 통과 (24개 파일)\n- [x] `data`: `pytest` **407 passed**, 실패 0 (기준선 392)\n- [x] 키 통일 테스트는 이름을 따로 적어 비교하지 않고 **같은 파일을 실제 대조 스크립트의 읽기 경로에 넣어 같은 결과가 나오는지** 확인한다. 두 스크립트가 다시 갈라지면 깨진다\n- [x] 기업행위 파일 없이 만든 계열에 전 구간 자료 부족 행이 한 건 남는지, 그리고 그 계열의 조정 종가가 원시 종가와 같아 기록 없이는 구분할 수 없다는 사실을 함께 고정했다\n- [x] 실제 KRX 호출 없이 픽스처로 검증했다\n\n## 리뷰 포인트\n\n**1. 확정 범위를 한 걸음 넘은 동작이 있다.** 파일은 주었지만 `--actions-known-from`을 주지 않은 경우도 전 구간 자료 부족으로 바뀌었다. 이전에는 \"목록이 전 구간을 담았다\"로 보았다. 파일이 어느 구간을 담는지는 파일만 아는 값이라 코드가 대신 주장하면 안 된다는 논리인데, 실무에서는 목록을 제대로 갖춘 수집에서도 그 날짜를 반드시 선언해야 한다는 뜻이 된다. 과하다고 보면 되돌릴 수 있다.\n\n**2. 파이프라인 입력 파일의 열 이름 규약이 어느 문서에도 없다.** 이번에 코드와 `--help`와 docstring으로만 고정했다. spec 문서 수정을 범위 밖으로 두어 적지 않았다. 규약을 남기려면 `data/CLAUDE.md`에 한 줄이 필요하다.\n\n**3. 함께 낡은 문서 둘.** `data/README.md`의 실행 예시가 없는 인자를 쓰고 필수 인자가 빠져 있다(이번 결함과 무관한 기존 낡음). 그리고 인계 문서(`docs/guides/etf-market-data-pipeline-handoff.md`, 병합되지 않고 `docs(be)/179-jt4-handoff` 브랜치에만 있음)의 적재 순서가 이번 변경으로 확실히 낡았다. 그 브랜치의 MR은 닫혀 있어 이 MR에서 확인하지 못했다.\n\n**4. 브리프가 올린 나머지 두 건은 그대로다.** 재대조를 강제하는 장치가 없다는 것과, 정지일 조정 가격의 정의가 계약과 구현에서 갈린다는 것이다. 둘 다 팀 판단과 계약 문서 수정이 걸려 범위 밖으로 두었다.",
+    "state": "merged",
+    "created_at": "2026-09-13T23:02:33.753+09:00",
+    "updated_at": "2026-09-14T14:23:12.184+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-14T12:47:22.498+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/189-ingest-input-defaults",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "49c8fb594499160c2a0cdfe5940e8acca8c1a83c",
+    "merge_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T23:02:35.340+09:00",
+    "reference": "!69",
+    "references": {
+      "short": "!69",
+      "relative": "!69",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!69"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/69",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942246,
+    "iid": 69,
+    "project_id": 1444456,
+    "title": "fix(de): 수집 입력 기본값과 입력 파일 키 표기 정리 (S15P21E205-189)",
+    "description": "## 작업 내용 요약\n\nspec 001의 JT4(`S15P21E205-179`, T007·T008·T009)가 병합된 뒤 기능 이해 브리프가 찾아낸 수집 결함 두 건을 고친다. 두 건 모두 처리 방식을 팀이 확정했다(2026-09-13).\n\n## 관련 이슈\n\n- `S15P21E205-189` [DE] 수집 입력 기본값과 입력 파일 키 표기 정리\n- 지라 과제는 이 MR이 병합되어도 자동으로 닫지 않는다\n\n## 주요 변경 사항\n\n**1. 기업행위 목록이 없다는 사실을 기록으로 남긴다.** `--corporate-actions`를 주지 않으면 기업행위를 0건으로 보고 누적 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아지는데, 자료 부족 기록도 남지 않아 결과만 보아서는 알 수 없었다. 적재 지시를 붙이면 불변 트리거가 걸려 되돌릴 수도 없다.\n\n이제 목록을 말할 수 없는 경우 그 종목의 **전 구간을 `MISSING_CORPORATE_ACTION` 자료 부족 구간으로 남긴다.** 새 분기를 만들지 않고 기존 장치(`_unknown_action_gaps`)에 넣을 값으로 이름 붙인 상수 `ACTIONS_KNOWN_FROM_NEVER`를 두어 길을 하나로 모았다. 그 값이 구간의 날짜로 새어 나가지 않는 것을 테스트로 고정했다. **인자를 필수로 만들지는 않았다.** 시험 수집을 막지 않기 위해서다.\n\n**2. 파이프라인 입력 파일의 키 표기를 snake_case로 통일한다.** 수집 스크립트는 camelCase를, 대조 스크립트는 snake_case를 요구해 같은 상장 구간 파일이나 기업행위 파일을 두 곳에 넣을 수 없었다. 수집 쪽을 snake_case로 맞췄다. 변환 계약(`*_from_records`)과 이름이 같아 변환 계층을 더 두지 않아도 된다. 루트 `CLAUDE.md`의 camelCase 규칙은 API JSON을 대상으로 한 것이라 이 파일에는 해당하지 않는다. `--help`의 예시 JSON과 오류 메시지도 함께 고쳤다.\n\n## 테스트 체크리스트\n\n- [x] `data`: `ruff check src scripts tests` 통과\n- [x] `data`: `ruff format --check src scripts tests` 통과 (24개 파일)\n- [x] `data`: `pytest` **407 passed**, 실패 0 (기준선 392)\n- [x] 키 통일 테스트는 이름을 따로 적어 비교하지 않고 **같은 파일을 실제 대조 스크립트의 읽기 경로에 넣어 같은 결과가 나오는지** 확인한다. 두 스크립트가 다시 갈라지면 깨진다\n- [x] 기업행위 파일 없이 만든 계열에 전 구간 자료 부족 행이 한 건 남는지, 그리고 그 계열의 조정 종가가 원시 종가와 같아 기록 없이는 구분할 수 없다는 사실을 함께 고정했다\n- [x] 실제 KRX 호출 없이 픽스처로 검증했다\n\n## 리뷰 포인트\n\n**1. 확정 범위를 한 걸음 넘은 동작이 있다.** 파일은 주었지만 `--actions-known-from`을 주지 않은 경우도 전 구간 자료 부족으로 바뀌었다. 이전에는 \"목록이 전 구간을 담았다\"로 보았다. 파일이 어느 구간을 담는지는 파일만 아는 값이라 코드가 대신 주장하면 안 된다는 논리인데, 실무에서는 목록을 제대로 갖춘 수집에서도 그 날짜를 반드시 선언해야 한다는 뜻이 된다. 과하다고 보면 되돌릴 수 있다.\n\n**2. 파이프라인 입력 파일의 열 이름 규약이 어느 문서에도 없다.** 이번에 코드와 `--help`와 docstring으로만 고정했다. spec 문서 수정을 범위 밖으로 두어 적지 않았다. 규약을 남기려면 `data/CLAUDE.md`에 한 줄이 필요하다.\n\n**3. 함께 낡은 문서 둘.** `data/README.md`의 실행 예시가 없는 인자를 쓰고 필수 인자가 빠져 있다(이번 결함과 무관한 기존 낡음). 그리고 인계 문서(`docs/guides/etf-market-data-pipeline-handoff.md`, 병합되지 않고 `docs(be)/179-jt4-handoff` 브랜치에만 있음)의 적재 순서가 이번 변경으로 확실히 낡았다. 그 브랜치의 MR은 닫혀 있어 이 MR에서 확인하지 못했다.\n\n**4. 브리프가 올린 나머지 두 건은 그대로다.** 재대조를 강제하는 장치가 없다는 것과, 정지일 조정 가격의 정의가 계약과 구현에서 갈린다는 것이다. 둘 다 팀 판단과 계약 문서 수정이 걸려 범위 밖으로 두었다.",
+    "state": "merged",
+    "created_at": "2026-09-13T23:02:33.753+09:00",
+    "updated_at": "2026-09-14T14:23:12.184+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-14T12:47:22.498+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/189-ingest-input-defaults",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "49c8fb594499160c2a0cdfe5940e8acca8c1a83c",
+    "merge_commit_sha": "8b894d09136c212242aa1665e3eaa0851d513939",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T23:02:35.340+09:00",
+    "reference": "!69",
+    "references": {
+      "short": "!69",
+      "relative": "!69",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!69"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/69",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "6",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "head_sha": "49c8fb594499160c2a0cdfe5940e8acca8c1a83c",
+      "start_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "89e4e03ba71f6eda0595a3add47c7e01e4340f6a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798382,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-13T23:02:33.866+09:00",
+          "updated_at": "2026-09-13T23:02:33.875+09:00",
+          "system": true,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e1dafc5b03782a11667bc47fc112c8b03b8fdaad",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798383,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 입력 파일의 필드 네이밍 규칙(`snake_case`) 통일과 기업행위 미제공 시 누락 구간(Data Gap) 처리 방식이 설계 의도에 맞게 견고하게 구현되었습니다. 예외 처리와 관련 테스트(`test_ingest_krx_inputs.py`)도 충실하게 작성되어 있습니다.\n\n### 테스트 제안\n- **기업행위 파일 및 `--actions-known-from` 조합 시나리오 테스트**:\n  - 기업행위 파일(`--corporate-actions`)을 제공하고 `--actions-known-from` 인자를 누락했을 때, 의도대로 `ACTIONS_KNOWN_FROM_NEVER`가 반환되어 전 구간이 `MISSING_CORPORATE_ACTION`으로 마킹되는지 확인하는 시나리오.\n  - 기업행위 파일은 없는데 `--actions-known-from`만 주었을 때, `SystemExit` 예외가 발생하며 적절한 안내 메시지가 출력되는지 검증하는 시나리오.\n- **대조 스크립트 연동 호환성 테스트**:\n  - 수정된 `snake_case` 형식의 상장 구간 및 기업행위 JSON 파일을 `scripts/ingest_krx.py`와 `scripts/reconcile.py`에 차례로 입력했을 때, 파싱 에러 없이 동일한 레코드 객체로 정상 변환되는지 통합 관점에서 확인하는 시나리오.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:49c8fb594499160c2a0cdfe5940e8acca8c1a83c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-13T23:02:43.283+09:00",
+          "updated_at": "2026-09-14T01:00:58.091+09:00",
+          "system": false,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c4fc45a890e31fc5b008731b4e602327100a4606",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798694,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>49c8fb59 - fix(de): 목록 없이 온 기업행위 구간 선언을 무시하지 않고 거부한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/69/diffs?diff_id=2191287&start_sha=eaff4ec875bdc970016ae129c676054d96cf81bb)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T01:00:52.481+09:00",
+          "updated_at": "2026-09-14T01:00:52.485+09:00",
+          "system": true,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3dfbf118ac20bf0b676d98ee0671c45201e5fbbb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801097,
+          "type": null,
+          "body": "mentioned in merge request !68",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T12:45:31.213+09:00",
+          "updated_at": "2026-09-14T12:45:31.218+09:00",
+          "system": true,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "34fed9b73f083d5fd247e79a81569bf60196b218",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801111,
+          "type": null,
+          "body": "## 병합 전 검증 결과\n\n전용 워크트리에 가상 환경을 새로 만들어 돌렸다. 다른 워크트리의 `.venv`를 빌려 쓰면 남의 코드가 돌면서도 통과로 보이므로 쓰지 않았다. `pyproject.toml`의 `pythonpath = [\"src\", \"scripts\"]`와 `site-packages`에 `data_pipeline`이 없다는 것을 확인해, 테스트가 읽는 코드가 이 브랜치의 것임을 확실히 했다.\n\n```\nruff check src scripts tests    → All checks passed!\nruff format --check             → 24 files already formatted\npytest -q                       → 407 passed (실패 0건, 건너뜀 0건)\n```\n\n기준선인 `dev`의 391건보다 16건 많다. `skipped`는 한 건도 없고 테스트 코드에 `pytest.skip`·`skipif`·`xfail`도 없다. 전체가 2초 안에 끝나 실제 원천을 호출하지 않는다는 것도 함께 확인했다.\n\n## 확정된 두 처리가 실제로 들어갔는지\n\n**기업행위 파일이 없을 때 자료 부족으로 남기는 것** — 배선이 끊긴 곳 없이 이어져 있다. `corporate_actions.py:58`의 `ACTIONS_KNOWN_FROM_NEVER`가 \"기업행위가 없다\"와 \"기업행위를 모른다\"를 가르고, `_unknown_action_gaps()`가 그보다 앞 구간을 자료 부족으로 남긴다. 구간 끝이 `date.max`가 아니라 계열의 마지막 날이라는 점도 테스트가 잡고 있다. `gaps.py`의 `build_instrument_series`가 이 값을 받아 넘기고, `ingest_krx.py`의 `resolve_actions_known_from()`이 세 경우(파일 없음 · 파일만 있고 시작일 없음 · 파일 없이 시작일만)를 갈라 처리한다. 저장소의 허용 사유 목록에도 `MISSING_CORPORATE_ACTION`이 들어 있어 적재가 거부되지 않는다.\n\n**입력 파일 키를 snake_case로 통일한 것** — 한쪽만 바뀐 흔적이 없다. `ingest_krx.py`가 `instrument_id`·`listed_on`·`delisted_on`·`ex_date`·`event_type`·`amount`·`pay_date`를 읽고, 인자 설명의 예시 JSON도 함께 바뀌었다. `reconcile.py`와 `data_pipeline/reconciliation.py`는 원래부터 같은 표기다.\n\n이 통일을 지키는 테스트가 `TestInputFileKeys`에 갖춰져 있다. 이름을 양쪽에 따로 적어 두고 비교하는 방식이 아니라 **`reconcile`의 읽기 함수를 직접 불러 같은 파일을 넣어 보는** 방식이라, 한쪽만 바뀌면 깨진다. 옛 camelCase 파일을 조용히 받아들이지 않는지도 따로 본다.\n\n## 리뷰가 제안한 시나리오 두 가지\n\n둘 다 이미 덮여 있어 새로 만들지 않았다.\n\n- **파일 없이 시작일만 준 경우 거부** — `test_no_file_with_a_declared_coverage_start_is_refused`. 안내 문구에 `--corporate-actions`와 `MISSING_CORPORATE_ACTION`이 들어 있는지까지 본다. HEAD 커밋이 고친 지점과 일치한다.\n- **파일은 주고 시작일을 뺀 경우 전 구간 표시** — `test_a_file_without_a_declared_start_is_also_unknown`과 `test_never_marks_the_whole_series` 두 조각으로 나뉘어 있다. 두 조각이 같은 상수로 맞물려 있어 빈틈은 아니지만, **이 경우를 끝에서 끝까지 한 번에 도는 테스트는 없다.** 끝까지 도는 테스트는 파일이 아예 없는 경우만 쓴다. 지금 막을 사유는 아니라 보고 남겨 둔다.\n\n## Jira 완료 조건 중 확인하지 못한 것\n\n`-189`가 완료 조건으로 「인계 문서(`docs/guides/etf-market-data-pipeline-handoff.md`)가 3절에 적어 둔 적재 순서와 어긋나지 않는지 확인한다」를 걸어 두었다.\n\n**확인하지 못했다.** 그 파일은 `docs(be)/179-jt4-handoff` 브랜치에만 있고 이 브랜치에는 없다. `docs/guides/`에 있는 것은 `backtest-queue-migration.md`·`nautilus-momentum-engine.md`·`prod-db-flyway-migration.md` 셋뿐이다. 조건대로 이 사실을 여기에 남긴다. **그 브랜치가 병합될 때 적재 순서를 이 변경과 맞춰 보아야 한다.**\n\n## 범위 밖에서 발견한 것 (이번에 고치지 않았다)\n\n1. **`pip install -r requirements.txt`가 이 환경에서 실패한다.** `requirements.txt`의 한글 주석을 pip이 로케일(cp949)로 읽어 `UnicodeDecodeError`가 난다. `PYTHONUTF8=1`을 붙이면 통과한다. `data/CLAUDE.md`가 안내하는 `uv pip install`은 UTF-8로 읽어 드러나지 않지만, 표준 `pip`을 쓰는 사람은 막힌다. 이번 변경이 만든 문제는 아니다.\n2. **`data/CLAUDE.md`의 검증 명령에 `ruff format --check`가 빠져 있다.** 적힌 것은 `ruff check src scripts tests && pytest`뿐이라, 파트 문서만 따르면 포맷 검사가 돌지 않는다.\n3. **섹터 대응표 파일은 여전히 camelCase다.** `sector_map.py`가 `instrumentId`·`listedOn`·`delistedOn`을 요구한다. 이 파일은 `ingest_sector_map.py`만 읽고 `reconcile.py`는 읽지 않으므로 이번에 고친 문제와는 별개이고, 계약 픽스처가 그 표기를 고정하고 있다. 다만 `TestInputFileKeys`의 클래스 설명이 \"파이프라인 입력 파일은 snake_case 한 가지다\"라고 쓴 것은 대응표 파일까지 포함하면 사실보다 넓은 진술이다. 코드 결함이 아니라 설명의 범위 문제다.\n\n## 병합 순서\n\n이 MR과 !68이 `data/scripts/ingest_krx.py`를 함께 고쳐 **충돌한다.** 가상 병합으로 확인한 결과 어느 쪽을 먼저 넣든 두 번째가 이 파일에서 충돌을 풀어야 한다. 변경이 작고 리뷰 지적이 없는 이쪽을 먼저 넣어, 충돌 해결 부담을 !68에 한 번만 지운다.",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T12:47:16.453+09:00",
+          "updated_at": "2026-09-14T12:47:16.453+09:00",
+          "system": false,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "42d54d9785c67a852f3df31b41b1817246c240a0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801113,
+          "type": null,
+          "body": "mentioned in commit 8b894d09136c212242aa1665e3eaa0851d513939",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-14T12:47:22.550+09:00",
+          "updated_at": "2026-09-14T12:47:22.558+09:00",
+          "system": true,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4197fa109f66dfa251febd881348c30fbe891d19",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801159,
+          "type": null,
+          "body": "점점 코멘트가 길어져서 읽기 힘드므로 현재 길이이의 20%이하로 줄여주십시오",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:52:06.050+09:00",
+          "updated_at": "2026-09-14T12:52:06.050+09:00",
+          "system": false,
+          "noteable_id": 942246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 69,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2191287,
+      "head_commit_sha": "49c8fb594499160c2a0cdfe5940e8acca8c1a83c",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T01:00:52.243+09:00",
+      "merge_request_id": 942246,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "789a03a47de190bb5d332f95d8bc208ce9941b29"
+    },
+    {
+      "id": 2191056,
+      "head_commit_sha": "eaff4ec875bdc970016ae129c676054d96cf81bb",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-13T23:02:34.104+09:00",
+      "merge_request_id": 942246,
+      "state": "without_files",
+      "real_size": "6",
+      "patch_id_sha": "e3f6b0ce15569753ec5617a6b2aae575f1966493"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2191287,
+      "head_commit_sha": "49c8fb594499160c2a0cdfe5940e8acca8c1a83c",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T01:00:52.243+09:00",
+      "merge_request_id": 942246,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "789a03a47de190bb5d332f95d8bc208ce9941b29",
+      "commits": [
+        {
+          "id": "49c8fb594499160c2a0cdfe5940e8acca8c1a83c",
+          "short_id": "49c8fb59",
+          "created_at": "2026-09-14T00:56:33.000+09:00",
+          "parent_ids": [
+            "eaff4ec875bdc970016ae129c676054d96cf81bb"
+          ],
+          "title": "fix(de): 목록 없이 온 기업행위 구간 선언을 무시하지 않고 거부한다",
+          "message": "fix(de): 목록 없이 온 기업행위 구간 선언을 무시하지 않고 거부한다\n\n--corporate-actions 없이 --actions-known-from만 주면 선언값을 조용히 버리고 전 구간을\n자료 부족으로 남겼다. 사용자가 준 값이 아무 일도 하지 않은 채 결과만 달라지므로 원칙 VI\n\"사용자 입력을 몰래 바꾸지 않는다\"에 어긋난다. 담을 목록이 없는데 그 목록이 담은 구간을\n선언하는 것은 뜻이 성립하지 않으므로, 무시하는 대신 무엇을 어떻게 고치라는지 알리고 멈춘다.\n\n기능 이해 브리프 specs/001-etf-market-data/briefs/189-ingest-input-defaults.md 「불일치」 3번.\n\n검증: ruff check 통과, ruff format --check 24개 파일 통과, pytest 407 passed.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-14T00:56:33.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-14T00:56:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/49c8fb594499160c2a0cdfe5940e8acca8c1a83c"
+        },
+        {
+          "id": "eaff4ec875bdc970016ae129c676054d96cf81bb",
+          "short_id": "eaff4ec8",
+          "created_at": "2026-09-13T22:25:11.000+09:00",
+          "parent_ids": [
+            "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+          ],
+          "title": "fix(be): 기업행위 목록이 없을 때를 자료 부족으로 남기고 입력 키를 snake_case로 맞춘다",
+          "message": "fix(be): 기업행위 목록이 없을 때를 자료 부족으로 남기고 입력 키를 snake_case로 맞춘다\n\n기업행위 파일을 주지 않으면 누적 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아지는데,\n자료 부족 기록이 없어 결과만으로는 기업행위가 없었던 것인지 목록을 넣지 않은 것인지 가릴 수\n없었다. 인자를 필수로 만드는 대신 그 종목의 전 구간을 MISSING_CORPORATE_ACTION 구간으로\n남긴다. --actions-known-from이 없을 때도 같은 규칙을 따른다.\n\n상장 구간·기업행위 입력 파일의 열 이름을 reconcile.py와 같은 snake_case로 통일해 한 파일을\n두 스크립트에 그대로 넣을 수 있게 했다. 인자 설명의 예시 JSON도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:25:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-13T22:25:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/eaff4ec875bdc970016ae129c676054d96cf81bb"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -8,6 +8,14 @@\n (:mod:`data_pipeline.krx` 문서 2번) 거래일 달력 없이 ETF를 수집하면 휴장일 행을 만든다.\n 달력의 출처는 지수 자료뿐이다(:mod:`data_pipeline.index`).\n \n+**입력 파일의 열 이름은 snake_case다.** ``data_pipeline``의 ``*_from_records`` 계약과 같은\n+이름이라 변환을 한 겹 더 두지 않아도 되고, 같은 파일을 ``scripts/reconcile.py``에 그대로 넣을\n+수 있다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을 대상으로 한 것이다.\n+\n+**기업행위 목록이 담은 구간을 말할 수 없으면 그만큼을 자료 부족 구간으로 남긴다**\n+(:func:`resolve_actions_known_from`). 파일을 주지 않으면 전 구간이 그렇게 되고, 그래서\n+\"기업행위가 없었다\"와 \"목록을 넣지 않았다\"가 결과에서 구분된다 (FR-006).\n+\n **``--commit`` 없이는 DB를 건드리지 않는다.** 발행된 자료 버전은 트리거가 UPDATE·DELETE를\n 막아 되돌릴 수 없어서(FR-017), 적재를 기본 동작으로 두면 잘못 부른 한 번을 수습할 방법이 없다.\n \n@@ -41,6 +49,7 @@ if str(_DATA_ROOT / \"src\") not in sys.path:\n \n from data_pipeline import gaps, index, krx, repository  # noqa: E402\n from data_pipeline.corporate_actions import (  # noqa: E402\n+    ACTIONS_KNOWN_FROM_NEVER,\n     CorporateAction,\n     CorporateActionError,\n     corporate_actions_from_records,\n@@ -130,9 +139,10 @@ def build_parser() -> argparse.ArgumentParser:\n         type=Path,\n         help=(\n             \"상장 구간 JSON 파일. \"\n-            '[{\"instrumentId\": \"069500.XKRX\", \"listedOn\": \"2002-10-14\", \"delistedOn\": null}] '\n-            \"모양이다. 원천의 종목기본정보 서비스에 활용 승인이 없어 상장일을 받을 수 없으므로 \"\n-            \"대응표가 소유한 값을 밖에서 받는다 (FR-005)\"\n+            '[{\"instrument_id\": \"069500.XKRX\", \"listed_on\": \"2002-10-14\", \"delisted_on\": null}] '\n+            \"모양이다. 열 이름은 snake_case이며 scripts/reconcile.py의 --listing과 같은 파일을 \"\n+            \"그대로 쓸 수 있다. 원천의 종목기본정보 서비스에 활용 승인이 없어 상장일을 받을 수 \"\n+            \"없으므로 대응표가 소유한 값을 밖에서 받는다 (FR-005)\"\n         ),\n     )\n     parser.add_argument(\n@@ -141,9 +151,11 @@ def build_parser() -> argparse.ArgumentParser:\n         default=None,\n         help=(\n             \"기업행위 JSON 파일(선택). \"\n-            '[{\"instrumentId\": ..., \"exDate\": ..., \"eventType\": \"DISTRIBUTION\", '\n-            '\"amount\": \"120\", \"payDate\": ...}] 모양이다. '\n-            \"주지 않으면 기업행위가 없는 것으로 보고 누적 계수가 전부 1이 된다\"\n+            '[{\"instrument_id\": \"069500.XKRX\", \"ex_date\": \"2026-04-29\", '\n+            '\"event_type\": \"DISTRIBUTION\", \"amount\": \"120\", \"pay_date\": \"2026-05-08\"}] '\n+            \"모양이며 열 이름은 snake_case다. scripts/reconcile.py의 --corporate-actions와 \"\n+            \"같은 파일을 그대로 쓴다. 주지 않으면 기업행위를 반영할 수 없으므로 각 종목의 \"\n+            \"전 구간을 MISSING_CORPORATE_ACTION 자료 부족 구간으로 기록한다 (FR-006)\"\n         ),\n     )\n     parser.add_argument(\n@@ -155,7 +167,8 @@ def build_parser() -> argparse.ArgumentParser:\n             \"그날보다 앞 구간은 빠진 기업행위가 있을 수 있으므로 MISSING_CORPORATE_ACTION \"\n             \"자료 부족 구간으로 기록한다 (FR-006). 기업행위는 원천 API로 받을 수 없어 공시를 \"\n             \"옮긴 파일로 들어오고, 그 파일이 어느 날부터를 담는지는 파일이 알려 주는 값이지 \"\n-            \"코드가 알아낼 수 있는 값이 아니다. 주지 않으면 목록이 전 구간을 담았다고 본다\"\n+            \"코드가 알아낼 수 있는 값이 아니다. 주지 않으면 담은 구간을 말할 수 없는 것이므로 \"\n+            \"전 구간을 자료 부족 구간으로 기록한다. 전 구간을 담았다면 수집 시작일을 적는다\"\n         ),\n     )\n     parser.add_argument(\n@@ -221,21 +234,25 @@ def _optional_day(record: dict[str, Any], field: str, where: str) -> date | None\n def listing_windows(path: Path) -> dict[str, krx.ListingWindow]:\n     \"\"\"상장 구간 JSON을 :class:`krx.ListingWindow` 로 바꾼다.\n \n-    파일 형식은 API JSON 관례를 따라 camelCase다(``CLAUDE.md``). 상장일이 없으면 그 종목의\n-    수집 자체를 할 수 없으므로 필수로 요구한다 — 없는 값을 0이나 수집 시작일로 채우면\n-    상장 전 구간이 있는 것처럼 보여 SC-003의 판정이 무의미해진다.\n+    **열 이름은 snake_case다.** ``data_pipeline``의 ``*_from_records`` 계약과 같은 이름이라\n+    변환을 한 겹 더 두지 않아도 되고, 같은 파일을 ``scripts/reconcile.py``의 ``--listing``에\n+    그대로 넣을 수 있다. 루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을 대상으로 한 것이라\n+    파이프라인 입력 파일에는 해당하지 않는다.\n+\n+    상장일이 없으면 그 종목의 수집 자체를 할 수 없으므로 필수로 요구한다 — 없는 값을 0이나\n+    수집 시작일로 채우면 상장 전 구간이 있는 것처럼 보여 SC-003의 판정이 무의미해진다.\n     \"\"\"\n     windows: list[krx.ListingWindow] = []\n     for position, record in enumerate(_records_from_json(path, \"상장 구간\")):\n         where = f\"상장 구간 {position}번째 항목\"\n-        instrument_id = record.get(\"instrumentId\")\n+        instrument_id = record.get(\"instrument_id\")\n         if not isinstance(instrument_id, str):\n-            raise IngestError(f\"{where}의 instrumentId가 문자열이 아니다: {instrument_id!r}\")\n+            raise IngestError(f\"{where}의 instrument_id가 문자열이 아니다: {instrument_id!r}\")\n         windows.append(\n             krx.ListingWindow(\n                 instrument_id=instrument_id.strip(),\n-                listed_on=_required_day(record, \"listedOn\", where),\n-                delisted_on=_optional_day(record, \"delistedOn\", where),\n+                listed_on=_required_day(record, \"listed_on\", where),\n+                delisted_on=_optional_day(record, \"delisted_on\", where),\n             )\n         )\n     return krx.windows_by_instrument(windows)\n@@ -244,9 +261,13 @@ def listing_windows(path: Path) -> dict[str, krx.ListingWindow]:\n def corporate_actions(path: Path | None) -> list[CorporateAction]:\n     \"\"\"기업행위 JSON을 :class:`CorporateAction` 으로 바꾼다.\n \n-    파일이 없으면 빈 목록이다. 기업행위가 없는 것으로 보는 것이며, 그때 누적 계수는 전부 1이라\n-    조정 종가가 원시 종가와 같아진다. 값 규칙 검사는 모두\n-    :func:`corporate_actions_from_records` 가 맡고 여기서는 날짜 문자열만 풀어 준다.\n+    **열 이름은 snake_case이며** ``scripts/reconcile.py``의 ``--corporate-actions``와 같은\n+    파일이다. 값 규칙 검사는 모두 :func:`corporate_actions_from_records` 가 맡고 여기서는\n+    날짜 문자열만 풀어 준다.\n+\n+    파일이 없으면 빈 목록이다. **이때 계수가 전부 1이 되는 것을 기업행위가 없는 것으로 보아서는\n+    안 된다.** 목록이 담은 구간을 :func:`resolve_actions_known_from` 이 \"말할 수 없음\"으로 정해\n+    전 구간이 자료 부족 구간으로 남는다.\n     \"\"\"\n     if path is None:\n         return []\n@@ -255,16 +276,49 @@ def corporate_actions(path: Path | None) -> list[CorporateAction]:\n         where = f\"기업행위 {position}번째 항목\"\n         records.append(\n             {\n-                \"instrument_id\": str(record.get(\"instrumentId\")),\n-                \"ex_date\": _required_day(record, \"exDate\", where),\n-                \"event_type\": str(record.get(\"eventType\")),\n+                \"instrument_id\": str(record.get(\"instrument_id\")),\n+                \"ex_date\": _required_day(record, \"ex_date\", where),\n+                \"event_type\": str(record.get(\"event_type\")),\n                 \"amount\": record.get(\"amount\"),\n-                \"pay_date\": _optional_day(record, \"payDate\", where),\n+                \"pay_date\": _optional_day(record, \"pay_date\", where),\n             }\n         )\n     return corporate_actions_from_records(records)\n \n \n+def resolve_actions_known_from(path: Path | None, declared: date | None) -> date:\n+    \"\"\"조정 계열에 넘길 \"기업행위 목록이 빠짐없는 가장 이른 날\"을 정한다 (FR-006).\n+\n+    두 경우에 :data:`ACTIONS_KNOWN_FROM_NEVER` 를 돌려주고, 그러면 그 종목의 전 구간이\n+    ``MISSING_CORPORATE_ACTION`` 자료 부족 구간으로 남는다.\n+\n+    * **기업행위 파일을 주지 않았다.** 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아지는데,\n+      기록이 없으면 결과만 보아서는 기업행위가 없었던 것인지 목록을 넣지 않은 것인지 가릴 수\n+      없다. 적재 지시를 붙이면 불변 트리거가 걸려 되돌릴 수도 없다.\n+    * **파일은 주었으나 ``--actions-known-from``이 없다.** 그 파일이 어느 날부터를 담는지는\n+      파일이 알려 주는 값이라, 없으면 담은 구간을 말할 수 없다. 전 구간을 담았다고 보는 것은\n+      코드가 대신 하는 주장이다.\n+\n+    인자를 필수로 만들지 않는 이유는 시험 수집을 막지 않기 위함이다. 기록이 남으므로 없는 것을\n+    있는 것처럼 내보내지는 않는다.\n+\n+    **파일 없이 ``--actions-known-from``만 주면 거부한다.** 담을 목록이 없는데 그 목록이 어느\n+    날부터 빠짐없다고 선언하는 것이라 뜻이 성립하지 않는다. 조용히 무시하면 사용자가 준 값이\n+    아무 일도 하지 않은 채 결과만 달라지므로 원칙 VI(\"사용자 입력을 몰래 바꾸지 않는다\")에\n+    어긋난다. 무시하지 않고 무시할 수 없음을 알린다.\n+    \"\"\"\n+    if declared is not None and path is None:\n+        raise SystemExit(\n+            \"--actions-known-from은 --corporate-actions와 함께 주어야 한다. \"\n+            \"기업행위 목록 없이 그 목록이 담은 구간을 선언할 수 없다. \"\n+            \"목록을 넣지 않을 생각이면 --actions-known-from도 빼라 \"\n+            \"(그 종목의 전 구간이 MISSING_CORPORATE_ACTION 자료 부족 구간으로 남는다).\"\n+        )\n+    if path is None or declared is None:\n+        return ACTIONS_KNOWN_FROM_NEVER\n+    return declared\n+\n+\n def resolve_instrument_ids(values: Sequence[str]) -> list[str]:\n     \"\"\"6자리 코드와 ``{6자리}.XKRX``를 모두 받아 식별자로 맞춘다.\n \n@@ -469,6 +523,36 @@ def _build_tables(\n     return tables, series\n \n \n+def _report_corporate_actions(\n+    args: argparse.Namespace, known_from: date | None, gap_rows: Sequence[dict[str, Any]]\n+) -> None:\n+    \"\"\"기업행위 목록이 어느 구간을 담았는지와 그로 생긴 자료 부족 구간을 낸다 (FR-006).\n+\n+    조정 종가가 원시 종가와 같은 결과는 \"기업행위가 없었다\"와 \"목록을 넣지 않았다\"에서 똑같이\n+    나온다. 요약에서 둘을 가르지 않으면 읽는 사람이 결과만 보고 구분할 수 없다.\n+    \"\"\"\n+    affected = sorted(\n+        {\n+            str(row[\"instrument_id\"])\n+            for row in gap_rows\n+            if row[\"reason\"] == gaps.REASON_MISSING_CORPORATE_ACTION\n+        }\n+    )\n+    if args.corporate_actions is None:\n+        print(\"기업행위 목록: 없음 (--corporate-actions를 주지 않았다)\")\n+    elif known_from == ACTIONS_KNOWN_FROM_NEVER:\n+        print(f\"기업행위 목록: {args.corporate_actions} (담은 구간 미상)\")\n+        print(\"  --actions-known-from이 없어 목록이 어느 날부터를 담았는지 말할 수 없다\")\n+    else:\n+        print(f\"기업행위 목록: {args.corporate_actions} ({known_from}부터 빠짐없다)\")\n+    if affected:\n+        scope = \"전 구간\" if known_from == ACTIONS_KNOWN_FROM_NEVER else f\"{known_from} 이전 구간\"\n+        print(\n+            f\"  {gaps.REASON_MISSING_CORPORATE_ACTION} 자료 부족 구간: \"\n+            f\"{len(affected)}종목의 {scope} ({', '.join(affected)})\"\n+        )\n+\n+\n def _report(\n     *,\n     dataset_id: str,\n@@ -479,6 +563,7 @@ def _report(\n     calendar: Sequence[date],\n     tables: dict[str, list[dict[str, Any]]],\n     reason: str | None,\n+    known_from: date | None,\n     written: list[Path],\n     loaded: dict[str, int] | None,\n ) -> None:\n@@ -487,6 +572,7 @@ def _report(\n     # 줄글에 em dash(U+2014)를 쓰지 않는다. 윈도 콘솔의 기본 부호화(cp949)가 그 글자를\n     # 담지 못해 출력 자체가 UnicodeEncodeError로 죽는다. 주석·docstring은 출력되지 않아 무관하다.\n     print(f\"거래일 달력: {len(calendar)}일 ({calendar[0]} ~ {calendar[-1]}), 출처는 지수 자료다\")\n+    _report_corporate_actions(args, known_from, tables[\"data_gap\"])\n     print(f\"수집 완료 여부: {'완료' if reason is None else '부분 갱신'}\")\n     if reason is not None:\n         print(f\"중단 사유: {reason}\")\n@@ -519,6 +605,7 @@ def run(args: argparse.Namespace) -> int:\n             \"가려낼 수 없다 (FR-005, SC-003)\"\n         )\n     actions = corporate_actions(args.corporate_actions)\n+    known_from = resolve_actions_known_from(args.corporate_actions, args.actions_known_from)\n \n     indices, etf, calendar = _collect(args, windows, instrument_ids)\n     deadline = data_deadline(etf, indices)\n@@ -532,7 +619,7 @@ def run(args: argparse.Namespace) -> int:\n         instrument_ids,\n         actions,\n         deadline,\n-        args.actions_known_from,\n+        known_from,\n     )\n \n     written: list[Path] = []\n@@ -575,6 +662,7 @@ def run(args: argparse.Namespace) -> int:\n         calendar=calendar,\n         tables=tables,\n         reason=reason,\n+        known_from=known_from,\n         written=written,\n         loaded=loaded,\n     )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_krx.py",
+          "old_path": "data/scripts/ingest_krx.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,6 +51,13 @@ EVENT_TYPES: Final[frozenset[str]] = frozenset({EVENT_DISTRIBUTION, EVENT_SPLIT}\n #: ``data_gap.reason``. 기업행위를 반영할 수 없어 그 이전 구간을 쓸 수 없을 때다 (FR-006).\n REASON_MISSING_CORPORATE_ACTION: Final[str] = \"MISSING_CORPORATE_ACTION\"\n \n+#: ``actions_known_from``에 넣는 \"목록이 담은 구간을 말할 수 없다\"는 값. 기업행위 파일 자체가\n+#: 없을 때가 그렇다. 모든 날이 이 값보다 앞이므로 :func:`build_adjustment_series` 는 계열\n+#: 전체를 ``MISSING_CORPORATE_ACTION`` 자료 부족 구간으로 남긴다. 값을 지어내지 않으면서도\n+#: \"기업행위가 없다\"와 \"기업행위를 모른다\"를 가르는 자리이며, 이 값은 구간의 날짜로 새어\n+#: 나가지 않는다 — 구간의 끝은 언제나 계열의 마지막 날이다.\n+ACTIONS_KNOWN_FROM_NEVER: Final[date] = date.max\n+\n INSTRUMENT_ID_PATTERN: Final[re.Pattern[str]] = re.compile(r\"\\A[0-9]{6}\\.XKRX\\Z\")\n \n #: 누적 곱셈의 작업 정밀도. 저장 자리수(아래)보다 넉넉히 두어 중간 계산에서 깎이지 않게 한다.\n@@ -302,6 +309,12 @@ def build_adjustment_series(\n     누적 계수는 이전 구간 **전체**에 곱해지는 값이라, 하나를 빠뜨리면 그 앞의 조정가가\n     모두 틀린다. 그래서 구간도 계열 시작부터 그날 직전까지 전체다.\n \n+    **목록 자체가 없으면** :data:`ACTIONS_KNOWN_FROM_NEVER` 를 넣는다. 그러면 계열 전체가\n+    자료 부족 구간이 된다. 목록이 없는 것과 기업행위가 없는 것은 다른 상태인데, 둘을 같게\n+    다루면 누적 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아진 채로, 그 사실을 알리는\n+    기록도 없이 발행된다. ``None``은 \"목록이 계열 전 구간을 담았다\"는 **부르는 쪽의 주장**이며\n+    기본값이 아닌 선언으로 쓴다.\n+\n     ``ex_date``가 계열의 첫 날보다 앞이거나 같은 분배금은 **곱할 대상이 없어** 건너뛴다.\n     그날 이미 가격이 떨어진 뒤의 자료만 갖고 있으므로 조정할 것이 없고, 직전 종가가 없어\n     계수를 만들 수도 없다. 이 건너뜀은 자료 부족이 아니다.\n@@ -378,7 +391,11 @@ def _previous_close(\n def _unknown_action_gaps(\n     instrument_id: str, days: Sequence[date], actions_known_from: date | None\n ) -> list[dict[str, Any]]:\n-    \"\"\"기업행위 목록이 담지 못한 앞 구간을 자료 부족으로 남긴다 (FR-006).\"\"\"\n+    \"\"\"기업행위 목록이 담지 못한 앞 구간을 자료 부족으로 남긴다 (FR-006).\n+\n+    ``actions_known_from``이 :data:`ACTIONS_KNOWN_FROM_NEVER` 면 모든 날이 그보다 앞이라\n+    구간이 계열 전체가 된다. 목록이 없을 때 쓰는 길이 이 한 갈래로 모인다.\n+    \"\"\"\n     if not days or actions_known_from is None:\n         return []\n     end = max((day for day in days if day < actions_known_from), default=None)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/corporate_actions.py",
+          "old_path": "data/src/data_pipeline/corporate_actions.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -411,7 +411,9 @@ def build_instrument_series(\n     **이 인자를 여기서 받지 않으면 FR-006의 ``MISSING_CORPORATE_ACTION`` 기록이 파이프라인\n     경로에서 영원히 만들어지지 않는다.** 2020년부터만 담은 기업행위 파일로 2010년 상장\n     종목을 처리하면 2010~2019년의 누적 계수가 틀린 채로, 그 사실을 알리는 자료 부족 구간도\n-    없이 발행된다.\n+    없이 발행된다. 기업행위 목록 자체가 없으면\n+    :data:`data_pipeline.corporate_actions.ACTIONS_KNOWN_FROM_NEVER` 를 넘겨 계열 전체를\n+    자료 부족 구간으로 남긴다.\n     \"\"\"\n     closes = raw_close_series(quotes, calendar, window)\n     adjustment = build_adjustment_series(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/gaps.py",
+          "old_path": "data/src/data_pipeline/gaps.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,6 +17,7 @@ import pytest\n \n from data_pipeline import corporate_actions as module\n from data_pipeline.corporate_actions import (\n+    ACTIONS_KNOWN_FROM_NEVER,\n     ADJUSTED_CLOSE_EXPONENT,\n     ADJUSTMENT_FACTOR_EXPONENT,\n     EVENT_DISTRIBUTION,\n@@ -315,11 +316,34 @@ class TestMissingCorporateAction:\n         series = build_adjustment_series(INSTRUMENT_ID, CLOSES, [], actions_known_from=DAYS[0])\n         assert series.gaps == ()\n \n-    def test_no_gap_when_the_coverage_start_is_unknown(self) -> None:\n-        # 값을 주지 않으면 구간을 만들지 않는다. 모른다는 사실을 자료 부족으로 옮겨 적으면\n-        # 기업행위가 없는 종목까지 전 구간이 제외된다.\n+    def test_none_is_the_callers_declaration_that_the_list_covers_everything(self) -> None:\n+        # ``None``은 \"이 목록이 계열 전 구간을 담았다\"는 부르는 쪽의 주장이다. 모른다는 뜻이\n+        # 아니다 — 모를 때 쓰는 값은 ACTIONS_KNOWN_FROM_NEVER이며 아래에서 확인한다.\n         assert build_adjustment_series(INSTRUMENT_ID, CLOSES, []).gaps == ()\n \n+    def test_never_marks_the_whole_series(self) -> None:\n+        # 목록이 어느 구간을 담았는지 말할 수 없을 때다(기업행위 파일 자체가 없는 경우).\n+        # 계열 전체가 자료 부족 구간이 되어, 계수가 전부 1인 결과가 \"기업행위가 없었다\"로\n+        # 읽히지 않는다.\n+        series = build_adjustment_series(\n+            INSTRUMENT_ID, CLOSES, [], actions_known_from=ACTIONS_KNOWN_FROM_NEVER\n+        )\n+        assert len(series.gaps) == 1\n+        gap = series.gaps[0]\n+        assert gap[\"reason\"] == REASON_MISSING_CORPORATE_ACTION\n+        assert (gap[\"start_date\"], gap[\"end_date\"]) == (DAYS[0], DAYS[-1])\n+\n+    def test_never_does_not_leak_into_the_gap_dates(self) -> None:\n+        # 구간의 끝은 계열의 마지막 날이지 date.max가 아니다. 그 값이 새어 나가면 적재에서\n+        # 있지도 않은 날짜가 남는다.\n+        series = build_adjustment_series(\n+            INSTRUMENT_ID, CLOSES, [], actions_known_from=ACTIONS_KNOWN_FROM_NEVER\n+        )\n+        assert ACTIONS_KNOWN_FROM_NEVER not in {\n+            series.gaps[0][\"start_date\"],\n+            series.gaps[0][\"end_date\"],\n+        }\n+\n     def test_the_range_before_the_coverage_start_is_marked(self) -> None:\n         series = build_adjustment_series(\n             INSTRUMENT_ID, CLOSES, [], actions_known_from=date(2026, 3, 5)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_corporate_actions.py",
+          "old_path": "data/tests/test_corporate_actions.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,202 @@\n+\"\"\"수집 진입점의 입력 파일 규약과 기본값 (spec 001 FR-005·FR-006).\n+\n+``src/data_pipeline/``이 아니라 ``scripts/ingest_krx.py``가 정하는 두 가지를 고정한다.\n+\n+1. **기업행위 파일을 주지 않았을 때 무엇이 남는가.** 목록이 없으면 누적 계수가 전부 1이 되어\n+   조정 종가가 원시 종가와 같아진다. 그 결과는 \"기업행위가 없었다\"와 똑같이 생겼으므로,\n+   자료 부족 기록이 없으면 결과만 보아서는 둘을 가릴 수 없다. ``--commit``까지 붙으면 불변\n+   트리거가 걸려 되돌릴 수도 없다.\n+2. **입력 파일의 열 이름.** 같은 성격의 파일을 ``ingest_krx.py``와 ``reconcile.py``가 다른\n+   표기로 읽으면 한 파일을 두 스크립트에 넣을 수 없다. 두 스크립트가 같은 파일을 읽는지를\n+   여기서 확인한다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import json\n+from datetime import date\n+from decimal import Decimal\n+from pathlib import Path\n+\n+import pytest\n+\n+import ingest_krx\n+import reconcile\n+from data_pipeline.corporate_actions import (\n+    ACTIONS_KNOWN_FROM_NEVER,\n+    EVENT_DISTRIBUTION,\n+    corporate_actions_from_records,\n+)\n+from data_pipeline.gaps import REASON_MISSING_CORPORATE_ACTION, build_instrument_series\n+from data_pipeline.krx import DailyQuote, ListingWindow\n+from data_pipeline.reconciliation import listing_windows_from_records\n+\n+INSTRUMENT_ID = \"091160.XKRX\"\n+DAYS: tuple[date, ...] = tuple(date(2026, 9, day) for day in (1, 2, 3, 4))\n+CLOSES: tuple[str, ...] = (\"10000\", \"10200\", \"10100\", \"10400\")\n+\n+LISTING_RECORDS = [\n+    {\"instrument_id\": INSTRUMENT_ID, \"listed_on\": \"2006-06-27\", \"delisted_on\": None},\n+]\n+ACTION_RECORDS = [\n+    {\n+        \"instrument_id\": INSTRUMENT_ID,\n+        \"ex_date\": \"2026-09-03\",\n+        \"event_type\": EVENT_DISTRIBUTION,\n+        \"amount\": \"120\",\n+        \"pay_date\": \"2026-09-10\",\n+    },\n+]\n+\n+#: 고치기 전의 표기. 이 모양을 다시 받아들이면 \"두 스크립트가 같은 파일을 읽는다\"가 깨진다.\n+CAMEL_LISTING_RECORDS = [\n+    {\"instrumentId\": INSTRUMENT_ID, \"listedOn\": \"2006-06-27\", \"delistedOn\": None},\n+]\n+CAMEL_ACTION_RECORDS = [\n+    {\n+        \"instrumentId\": INSTRUMENT_ID,\n+        \"exDate\": \"2026-09-03\",\n+        \"eventType\": EVENT_DISTRIBUTION,\n+        \"amount\": \"120\",\n+        \"payDate\": \"2026-09-10\",\n+    },\n+]\n+\n+\n+def write_json(path: Path, records: list[dict[str, object]]) -> Path:\n+    path.write_text(json.dumps(records, ensure_ascii=False), encoding=\"utf-8\")\n+    return path\n+\n+\n+def quotes() -> list[DailyQuote]:\n+    \"\"\"체결이 있었던 나흘. 정지·결측이 섞이면 확인하려는 것이 흐려지므로 넣지 않는다.\"\"\"\n+    return [\n+        DailyQuote(\n+            instrument_id=INSTRUMENT_ID,\n+            date=day,\n+            close=Decimal(close),\n+            open=Decimal(close),\n+            high=Decimal(close),\n+            low=Decimal(close),\n+            volume=1000,\n+            value=1000 * int(close),\n+        )\n+        for day, close in zip(DAYS, CLOSES, strict=True)\n+    ]\n+\n+\n+class TestInputFileKeys:\n+    \"\"\"파이프라인 입력 파일은 snake_case 한 가지다.\n+\n+    ``data_pipeline``의 ``*_from_records`` 계약과 이름이 같아 변환 계층을 더 두지 않아도 된다.\n+    루트 ``CLAUDE.md``의 camelCase 규칙은 API JSON을 대상으로 한 것이라 이 파일에는 해당하지\n+    않는다.\n+    \"\"\"\n+\n+    def test_listing_file_uses_snake_case(self, tmp_path: Path) -> None:\n+        path = write_json(tmp_path / \"listing.json\", LISTING_RECORDS)\n+        windows = ingest_krx.listing_windows(path)\n+        assert windows[INSTRUMENT_ID] == ListingWindow(INSTRUMENT_ID, date(2006, 6, 27), None)\n+\n+    def test_the_same_listing_file_feeds_the_reconcile_script(self, tmp_path: Path) -> None:\n+        # 두 스크립트가 같은 파일을 읽는지가 이 과제의 본체다. ``reconcile.py``의 읽기를\n+        # 그대로 써서 확인한다 — 같은 이름을 따로 적어 두면 한쪽만 바뀌어도 통과한다.\n+        path = write_json(tmp_path / \"listing.json\", LISTING_RECORDS)\n+        from_reconcile = listing_windows_from_records(reconcile._read_records(path, \"--listing\"))\n+        assert from_reconcile == list(ingest_krx.listing_windows(path).values())\n+\n+    def test_a_camel_case_listing_file_is_refused(self, tmp_path: Path) -> None:\n+        # 조용히 둘 다 받아들이면 어느 표기가 규약인지 알 수 없게 되고, 한 파일에 두 표기가\n+        # 섞여도 드러나지 않는다.\n+        path = write_json(tmp_path / \"listing.json\", CAMEL_LISTING_RECORDS)\n+        with pytest.raises(ingest_krx.IngestError, match=\"instrument_id\"):\n+            ingest_krx.listing_windows(path)\n+\n+    def test_corporate_action_file_uses_snake_case(self, tmp_path: Path) -> None:\n+        path = write_json(tmp_path / \"actions.json\", ACTION_RECORDS)\n+        (action,) = ingest_krx.corporate_actions(path)\n+        assert action.instrument_id == INSTRUMENT_ID\n+        assert action.ex_date == date(2026, 9, 3)\n+        assert action.pay_date == date(2026, 9, 10)\n+        assert action.event_type == EVENT_DISTRIBUTION\n+        assert action.amount == Decimal(\"120\")\n+\n+    def test_the_same_action_file_feeds_the_reconcile_script(self, tmp_path: Path) -> None:\n+        path = write_json(tmp_path / \"actions.json\", ACTION_RECORDS)\n+        from_reconcile = corporate_actions_from_records(\n+            reconcile._read_records(path, \"--corporate-actions\")\n+        )\n+        assert from_reconcile == ingest_krx.corporate_actions(path)\n+\n+    def test_a_camel_case_action_file_is_refused(self, tmp_path: Path) -> None:\n+        path = write_json(tmp_path / \"actions.json\", CAMEL_ACTION_RECORDS)\n+        with pytest.raises(ingest_krx.IngestError, match=\"ex_date\"):\n+            ingest_krx.corporate_actions(path)\n+\n+    def test_the_help_text_shows_the_same_keys(self) -> None:\n+        # 인자 설명이 사용자가 파일을 만들 때 보는 유일한 안내다. 여기에 옛 표기가 남으면\n+        # 코드가 받지 않는 파일을 만들게 된다.\n+        help_text = ingest_krx.build_parser().format_help()\n+        for camel in (\"instrumentId\", \"listedOn\", \"delistedOn\", \"exDate\", \"payDate\", \"eventType\"):\n+            assert camel not in help_text, f\"인자 설명에 옛 표기가 남아 있다: {camel}\"\n+        assert '\"instrument_id\"' in help_text\n+        assert '\"ex_date\"' in help_text\n+\n+\n+class TestMissingCorporateActionFile:\n+    \"\"\"기업행위 파일이 없으면 그 종목의 전 구간이 자료 부족 구간이 된다 (FR-006).\n+\n+    인자를 필수로 만들지 않는다. 시험 수집을 막지 않으면서도 없는 것을 있는 것처럼 내보내지\n+    않는 쪽이 확정된 처리다(2026-09-13).\n+    \"\"\"\n+\n+    def test_no_file_means_the_coverage_is_unknown(self) -> None:\n+        assert ingest_krx.resolve_actions_known_from(None, None) == ACTIONS_KNOWN_FROM_NEVER\n+\n+    def test_no_file_with_a_declared_coverage_start_is_refused(self) -> None:\n+        # 목록이 없는데 \"이 날부터 빠짐없다\"고 선언하는 것은 뜻이 성립하지 않는다. 조용히\n+        # 무시하면 사용자가 준 값이 아무 일도 하지 않은 채 결과만 달라진다 (원칙 VI).\n+        with pytest.raises(SystemExit) as caught:\n+            ingest_krx.resolve_actions_known_from(None, date(2020, 1, 1))\n+        message = str(caught.value)\n+        assert \"--corporate-actions\" in message\n+        assert \"MISSING_CORPORATE_ACTION\" in message\n+\n+    def test_a_file_without_a_declared_start_is_also_unknown(self, tmp_path: Path) -> None:\n+        # 그 파일이 어느 날부터를 담는지는 파일이 알려 주는 값이다. 없으면 담은 구간을 말할 수\n+        # 없으므로, 전 구간을 담았다고 보지 않는다.\n+        path = write_json(tmp_path / \"actions.json\", ACTION_RECORDS)\n+        assert ingest_krx.resolve_actions_known_from(path, None) == ACTIONS_KNOWN_FROM_NEVER\n+\n+    def test_a_declared_start_is_kept(self, tmp_path: Path) -> None:\n+        path = write_json(tmp_path / \"actions.json\", ACTION_RECORDS)\n+        assert ingest_krx.resolve_actions_known_from(path, date(2020, 1, 1)) == date(2020, 1, 1)\n+\n+    def test_the_whole_series_is_recorded_as_a_gap(self) -> None:\n+        built = build_instrument_series(\n+            quotes(),\n+            DAYS,\n+            ListingWindow(INSTRUMENT_ID, DAYS[0]),\n+            ingest_krx.corporate_actions(None),\n+            actions_known_from=ingest_krx.resolve_actions_known_from(None, None),\n+        )\n+        gaps = [row for row in built.gap_rows if row[\"reason\"] == REASON_MISSING_CORPORATE_ACTION]\n+        assert len(gaps) == 1\n+        assert (gaps[0][\"instrument_id\"], gaps[0][\"start_date\"], gaps[0][\"end_date\"]) == (\n+            INSTRUMENT_ID,\n+            DAYS[0],\n+            DAYS[-1],\n+        )\n+\n+    def test_the_prices_still_look_unadjusted(self) -> None:\n+        # 기록이 필요한 까닭이 여기 있다. 계수가 전부 1이라 조정 종가가 원시 종가와 같고,\n+        # 그 모양은 기업행위가 정말 없었을 때와 구분되지 않는다.\n+        built = build_instrument_series(\n+            quotes(),\n+            DAYS,\n+            ListingWindow(INSTRUMENT_ID, DAYS[0]),\n+            ingest_krx.corporate_actions(None),\n+            actions_known_from=ingest_krx.resolve_actions_known_from(None, None),\n+        )\n+        assert all(row[\"adjustment_factor\"] == Decimal(1) for row in built.price_rows)\n+        assert all(row[\"adjusted_close\"] == row[\"close\"] for row in built.price_rows)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_ingest_krx_inputs.py",
+          "old_path": "data/tests/test_ingest_krx_inputs.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,4 +14,6 @@ select = [\"E\", \"F\", \"I\", \"UP\", \"B\"]\n \n [tool.pytest.ini_options]\n testpaths = [\"tests\"]\n-pythonpath = [\"src\"]\n+# `scripts/`도 넣는 이유는 진입점이 입력 파일의 열 이름 규약과 기본값을 정하고 있어서다.\n+# 그 규칙은 `src/`를 거치지 않으므로 진입점을 불러오지 않으면 테스트가 닿지 못한다.\n+pythonpath = [\"src\", \"scripts\"]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/pyproject.toml",
+          "old_path": "data/pyproject.toml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2191056,
+      "head_commit_sha": "eaff4ec875bdc970016ae129c676054d96cf81bb",
+      "base_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-13T23:02:34.104+09:00",
+      "merge_request_id": 942246,
+      "state": "without_files",
+      "real_size": "6",
+      "patch_id_sha": "e3f6b0ce15569753ec5617a6b2aae575f1966493",
+      "commits": [
+        {
+          "id": "eaff4ec875bdc970016ae129c676054d96cf81bb",
+          "short_id": "eaff4ec8",
+          "created_at": "2026-09-13T22:25:11.000+09:00",
+          "parent_ids": [
+            "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+          ],
+          "title": "fix(be): 기업행위 목록이 없을 때를 자료 부족으로 남기고 입력 키를 snake_case로 맞춘다",
+          "message": "fix(be): 기업행위 목록이 없을 때를 자료 부족으로 남기고 입력 키를 snake_case로 맞춘다\n\n기업행위 파일을 주지 않으면 누적 계수가 전부 1이 되어 조정 종가가 원시 종가와 같아지는데,\n자료 부족 기록이 없어 결과만으로는 기업행위가 없었던 것인지 목록을 넣지 않은 것인지 가릴 수\n없었다. 인자를 필수로 만드는 대신 그 종목의 전 구간을 MISSING_CORPORATE_ACTION 구간으로\n남긴다. --actions-known-from이 없을 때도 같은 규칙을 따른다.\n\n상장 구간·기업행위 입력 파일의 열 이름을 reconcile.py와 같은 snake_case로 통일해 한 파일을\n두 스크립트에 그대로 넣을 수 있게 했다. 인자 설명의 예시 JSON도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-13T22:25:11.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-13T22:25:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/eaff4ec875bdc970016ae129c676054d96cf81bb"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2798383": [],
+    "2801111": [],
+    "2801159": []
+  }
+}

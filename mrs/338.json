@@ -1,0 +1,749 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 961047,
+    "iid": 338,
+    "project_id": 1444456,
+    "title": "feat(fe): 사례 기간을 분석 기간으로 이어받고 종합 비교 진입·표시를 정리하며 시장 지표를 소수 첫째 자리로 맞춘다",
+    "description": "## 작업 내용 요약\n\n과거 시장 탐색을 실제로 써 보며 나온 불편을 정리한다. 사례에서 백테스트로 넘어가면 분석 기간이 그 사례에 맞춰지고, 전략 진단의 종합 비교가 '비슷했던 때 보기'로 이어지며, 종합 비교 사례는 핵심 문장만 먼저 보인다. 시장 지표 숫자는 화면 어디서나 소수 첫째 자리로 맞춘다.\n\n## 관련 티켓\n\nS15P21E205-450\n\n## 주요 변경 사항\n\n- **사례 기간 이어받기(003)**\n  - 사례(`case`)를 들고 전략 설정에 왔는데 사용자가 기간을 고르지 않았으면, 분석 기간을 **사례 직후 구간까지 포함하도록 미리 맞춘다**.\n  - 끝은 `d63`(미완성이면 자료 마감일)이다. 시작은 워밍업 상한과 \"끝 − 최소 평가 기간\" 중 이른 날이며, 공통 평가 가능 범위 안으로 자른다.\n  - 한 사례에 한 번만 맞추고, 사용자가 바꾼 기간은 덮지 않는다.\n  - 기존 제약 문구 뒤에 \"분석 기간을 미리 맞춰 두었습니다. 바꿀 수 있습니다.\"를 덧붙인다. 규칙은 `entry-handoff.md` §3에 적었다.\n- **종합 비교 이어가기(010)**\n  - `/regime-search?mode=composite`로 들어오면 종합 비교를 연다.\n  - 전략 진단의 '지금과 비슷했던 과거 시장'이 종합 비교를 보던 중이면 '자세히'·'참고 사례 보기'가 이 주소로 간다.\n  - Thorp 종합 비교 버튼에 눌림 상태(`aria-pressed`, 강조색)를 더한다.\n- **사례 표시(010)**\n  - 비슷한 점·다른 점을 한 문장씩 먼저 보이고, 나머지 문장과 당시 맥락 링크는 \"설명 더 보기\"로 펼친다.\n  - 문장은 서버가 만든 그대로이고 화면은 몇 개를 먼저 보일지만 정한다(FR-022).\n- **사례 상세**: '이 기간으로 전략 비교'를 강조색 버튼 모양으로 바꾼다. 이동이라 링크는 그대로다.\n- **시장 지표 숫자**\n  - 소수 첫째 자리로 맞춘 곳: 전략 진단 지수 값·변화율, 랜딩 미리보기 변화율·지표 표시 자릿수, 3개월 차트 축.\n  - 백테스트 결과의 수익률·비중은 시장 지표가 아니라 두 자리 그대로 둔다.\n\n## 테스트\n\n- frontend: `npm run lint`(오류 0) · `npm run build` · `vitest run` 1449개 통과\n- 추가 시험\n  - 미리 맞출 기간 규칙(`casePeriodConstraint.test.ts`)\n  - 사례 진입 시 기간이 채워지는지(`StrategySettingsPage.caseWindow.test.tsx`)\n  - `?mode=composite` 진입과 버튼 눌림\n  - 설명 접기·펼치기\n  - 전략 진단 카드의 종합 비교 링크\n\n## 리뷰 포인트\n\n- 미리 맞춘 기간은 분석 조건 보관값에 저장된다. 사례 없이 다시 전략 설정에 들어와도 그 기간이 남는데, 이게 괜찮은지.\n- 설명을 한 문장씩만 먼저 보이는 규칙이 분야 검색에도 똑같이 적용된다(분야는 보통 한쪽에 1\\~2문장이다).\n- 과거 시장 탐색 문장의 소수·유사성 판정은 이 MR과 무관하다. 운영 사전 계산 배치(446 절차)로 반영됐다.",
+    "state": "merged",
+    "created_at": "2026-09-27T15:26:05.197+09:00",
+    "updated_at": "2026-09-27T17:58:37.262+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-27T15:33:41.171+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/450-regime-flow-polish",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+    "merge_commit_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-27T15:26:08.331+09:00",
+    "reference": "!338",
+    "references": {
+      "short": "!338",
+      "relative": "!338",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!338"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/338",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 961047,
+    "iid": 338,
+    "project_id": 1444456,
+    "title": "feat(fe): 사례 기간을 분석 기간으로 이어받고 종합 비교 진입·표시를 정리하며 시장 지표를 소수 첫째 자리로 맞춘다",
+    "description": "## 작업 내용 요약\n\n과거 시장 탐색을 실제로 써 보며 나온 불편을 정리한다. 사례에서 백테스트로 넘어가면 분석 기간이 그 사례에 맞춰지고, 전략 진단의 종합 비교가 '비슷했던 때 보기'로 이어지며, 종합 비교 사례는 핵심 문장만 먼저 보인다. 시장 지표 숫자는 화면 어디서나 소수 첫째 자리로 맞춘다.\n\n## 관련 티켓\n\nS15P21E205-450\n\n## 주요 변경 사항\n\n- **사례 기간 이어받기(003)**\n  - 사례(`case`)를 들고 전략 설정에 왔는데 사용자가 기간을 고르지 않았으면, 분석 기간을 **사례 직후 구간까지 포함하도록 미리 맞춘다**.\n  - 끝은 `d63`(미완성이면 자료 마감일)이다. 시작은 워밍업 상한과 \"끝 − 최소 평가 기간\" 중 이른 날이며, 공통 평가 가능 범위 안으로 자른다.\n  - 한 사례에 한 번만 맞추고, 사용자가 바꾼 기간은 덮지 않는다.\n  - 기존 제약 문구 뒤에 \"분석 기간을 미리 맞춰 두었습니다. 바꿀 수 있습니다.\"를 덧붙인다. 규칙은 `entry-handoff.md` §3에 적었다.\n- **종합 비교 이어가기(010)**\n  - `/regime-search?mode=composite`로 들어오면 종합 비교를 연다.\n  - 전략 진단의 '지금과 비슷했던 과거 시장'이 종합 비교를 보던 중이면 '자세히'·'참고 사례 보기'가 이 주소로 간다.\n  - Thorp 종합 비교 버튼에 눌림 상태(`aria-pressed`, 강조색)를 더한다.\n- **사례 표시(010)**\n  - 비슷한 점·다른 점을 한 문장씩 먼저 보이고, 나머지 문장과 당시 맥락 링크는 \"설명 더 보기\"로 펼친다.\n  - 문장은 서버가 만든 그대로이고 화면은 몇 개를 먼저 보일지만 정한다(FR-022).\n- **사례 상세**: '이 기간으로 전략 비교'를 강조색 버튼 모양으로 바꾼다. 이동이라 링크는 그대로다.\n- **시장 지표 숫자**\n  - 소수 첫째 자리로 맞춘 곳: 전략 진단 지수 값·변화율, 랜딩 미리보기 변화율·지표 표시 자릿수, 3개월 차트 축.\n  - 백테스트 결과의 수익률·비중은 시장 지표가 아니라 두 자리 그대로 둔다.\n\n## 테스트\n\n- frontend: `npm run lint`(오류 0) · `npm run build` · `vitest run` 1449개 통과\n- 추가 시험\n  - 미리 맞출 기간 규칙(`casePeriodConstraint.test.ts`)\n  - 사례 진입 시 기간이 채워지는지(`StrategySettingsPage.caseWindow.test.tsx`)\n  - `?mode=composite` 진입과 버튼 눌림\n  - 설명 접기·펼치기\n  - 전략 진단 카드의 종합 비교 링크\n\n## 리뷰 포인트\n\n- 미리 맞춘 기간은 분석 조건 보관값에 저장된다. 사례 없이 다시 전략 설정에 들어와도 그 기간이 남는데, 이게 괜찮은지.\n- 설명을 한 문장씩만 먼저 보이는 규칙이 분야 검색에도 똑같이 적용된다(분야는 보통 한쪽에 1\\~2문장이다).\n- 과거 시장 탐색 문장의 소수·유사성 판정은 이 MR과 무관하다. 운영 사전 계산 배치(446 절차)로 반영됐다.",
+    "state": "merged",
+    "created_at": "2026-09-27T15:26:05.197+09:00",
+    "updated_at": "2026-09-27T17:58:37.262+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-27T15:33:41.171+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/450-regime-flow-polish",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+    "merge_commit_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-27T15:26:08.331+09:00",
+    "reference": "!338",
+    "references": {
+      "short": "!338",
+      "relative": "!338",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!338"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/338",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "19",
+    "latest_build_started_at": "2026-09-27T15:26:21.873+09:00",
+    "latest_build_finished_at": "2026-09-27T15:31:09.045+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 225112,
+      "iid": 368,
+      "project_id": 1444456,
+      "sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+      "ref": "feat(fe)/450-regime-flow-polish",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-27T15:26:21.729+09:00",
+      "updated_at": "2026-09-27T15:31:09.052+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225112"
+    },
+    "head_pipeline": {
+      "id": 225112,
+      "iid": 368,
+      "project_id": 1444456,
+      "sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+      "ref": "feat(fe)/450-regime-flow-polish",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-27T15:26:21.729+09:00",
+      "updated_at": "2026-09-27T15:31:09.052+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225112",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-27T15:26:21.873+09:00",
+      "finished_at": "2026-09-27T15:31:09.045+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225112",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1e8146520b199755c4620f16cdbc5950cdde568b",
+      "head_sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+      "start_sha": "22a3d1c33827496d1ba3d5206c44fc19f8a87564"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "9298c563df41592b542306fe0268e0772cc9ffa3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874066,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-27T15:26:05.306+09:00",
+          "updated_at": "2026-09-27T15:26:05.319+09:00",
+          "system": true,
+          "noteable_id": 961047,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 338,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bc84d1fa579ec4ac9f027f85f4bafdab72067bb0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874067,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 전체적인 코드 구조, 비즈니스 로직(사례 기간 미리 맞추기 및 UI 상태 관리), 테스트 커버리지 모두 깔끔하게 구현되어 있습니다.\n\n### 테스트 제안\n- **사례 기간 자동 설정 중복 방지 테스트**: 사용자가 사례를 통해 `StrategySettingsPage`에 진입하여 기간이 자동으로 채워진 직후, 수동으로 기간을 변경했을 때 이후 다른 상태 변경(예: 다른 설정 토글 등)에 의해 사용자의 커스텀 기간이 다시 초기화되지 않고 유지되는지 확인하는 시나리오 테스트.\n- **종합 비교 모드 상태 복원 테스트**: `?mode=composite` 쿼리 파라미터로 진입 시, 비동기 데이터(`baselines`) 로딩 상태에 따라 `Thorp 종합 비교` 버튼의 `aria-pressed` 속성과 화면 렌더링이 레이스 컨디션 없이 올바르게 동기화되는지 검증.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:23187d0928652dae4e325c61ae8a6ab1ef5ef534 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-27T15:26:15.974+09:00",
+          "updated_at": "2026-09-27T15:26:15.974+09:00",
+          "system": false,
+          "noteable_id": 961047,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 338,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "24f40722452332db673a35960004e6466a243374",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874081,
+          "type": null,
+          "body": "mentioned in commit 70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-27T15:33:41.179+09:00",
+          "updated_at": "2026-09-27T15:33:41.182+09:00",
+          "system": true,
+          "noteable_id": 961047,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 338,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ccc56ff5785ec33278c7dba7a80f9df24151b97a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885034,
+          "type": null,
+          "body": "mentioned in commit 9ae95b5de533692d225dd628417a60bfd60844fe",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:10.111+09:00",
+          "updated_at": "2026-10-13T15:16:10.122+09:00",
+          "system": true,
+          "noteable_id": 961047,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 338,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2255112,
+      "head_commit_sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+      "base_commit_sha": "1e8146520b199755c4620f16cdbc5950cdde568b",
+      "start_commit_sha": "22a3d1c33827496d1ba3d5206c44fc19f8a87564",
+      "created_at": "2026-09-27T15:26:05.906+09:00",
+      "merge_request_id": 961047,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "64af7003d0665c72470eb68a950e5c3d69017d4c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2255112,
+      "head_commit_sha": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+      "base_commit_sha": "1e8146520b199755c4620f16cdbc5950cdde568b",
+      "start_commit_sha": "22a3d1c33827496d1ba3d5206c44fc19f8a87564",
+      "created_at": "2026-09-27T15:26:05.906+09:00",
+      "merge_request_id": 961047,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "64af7003d0665c72470eb68a950e5c3d69017d4c",
+      "commits": [
+        {
+          "id": "23187d0928652dae4e325c61ae8a6ab1ef5ef534",
+          "short_id": "23187d09",
+          "created_at": "2026-09-26T12:09:57.000+09:00",
+          "parent_ids": [
+            "1e8146520b199755c4620f16cdbc5950cdde568b"
+          ],
+          "title": "feat(fe): 사례 기간을 분석 기간으로 이어받고 종합 비교 진입·표시를 정리하며 시장 지표를 소수 첫째 자리로 맞춘다",
+          "message": "feat(fe): 사례 기간을 분석 기간으로 이어받고 종합 비교 진입·표시를 정리하며 시장 지표를 소수 첫째 자리로 맞춘다\n\n- 사례에서 전략 설정으로 오면 분석 기간을 사례 직후 구간까지 포함하도록 미리 맞춘다(한 사례에 한 번, 바꿀 수 있다).\n- 전략 진단의 종합 비교에서 '비슷했던 때 보기'로 가면 종합 비교가 선택된 상태로 열린다(?mode=composite, 버튼 눌림 표시).\n- 사례는 비슷한 점·다른 점을 한 문장씩 먼저 보이고 나머지와 당시 맥락은 '설명 더 보기'로 펼친다.\n- 사례 상세의 '이 기간으로 전략 비교'를 버튼 모양으로 바꾼다.\n- 전략 진단 지수·랜딩 미리보기·3개월 차트 축의 숫자를 소수 첫째 자리로 맞춘다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "EUNSEO-YA",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-26T12:09:57.000+09:00",
+          "committer_name": "EUNSEO-YA",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-26T12:09:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/23187d0928652dae4e325c61ae8a6ab1ef5ef534"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -31,7 +31,7 @@ describe('MarketNow (002 FR-018, 009 FR-017)', () => {\n     const readings = container.querySelectorAll('[data-direction]')\n     expect(readings[0].getAttribute('data-direction')).toBe('up')\n     expect(readings[0].textContent).toContain('2,650')\n-    expect(readings[0].textContent).toContain('+1.92%')\n+    expect(readings[0].textContent).toContain('+1.9%')\n     expect(readings[1].getAttribute('data-direction')).toBe('down')\n     // 출처와 기준일은 카드 아래 한 줄이다.\n     expect(screen.getByText(/기준 · 출처 KRX/)).toBeTruthy()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/MarketNow.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/MarketNow.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -44,7 +44,7 @@ function directionOf(change: number | null) {\n \n function formatChange(change: number) {\n   const sign = change > 0 ? '+' : change < 0 ? '−' : ''\n-  return `${sign}${Math.abs(change).toFixed(2)}%`\n+  return `${sign}${Math.abs(change).toFixed(1)}%`\n }\n \n export function MarketNow() {\n@@ -81,7 +81,7 @@ export function MarketNow() {\n             <li key={reading.code} className={styles.card}>\n               <span className={styles.name}>{reading.label}</span>\n               <span className={styles.reading} data-direction={direction}>\n-                <strong>{reading.value.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}</strong>\n+                <strong>{reading.value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}</strong>\n                 {reading.change === null ? null : <em>{formatChange(reading.change)}</em>}\n               </span>\n             </li>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/MarketNow.tsx",
+          "old_path": "frontend/src/components/diagnosis/MarketNow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -121,7 +121,8 @@ describe('SimilarPastMarket (002 FR-018)', () => {\n     )\n     renderWithRouter(<SimilarPastMarket caseId={null} />)\n     expect(await screen.findByText(/설정된 종합 유사성 기준을 충족하는 사례가 없습니다/)).toBeTruthy()\n-    expect(screen.getByRole('link', { name: /참고 사례 보기/ }).getAttribute('href')).toContain('searchId=S-1')\n+    // 종합 비교가 선택된 상태로 '비슷했던 때 보기'를 연다(S15P21E205-450).\n+    expect(screen.getByRole('link', { name: /참고 사례 보기/ }).getAttribute('href')).toBe('/regime-search?mode=composite')\n     fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))\n     await waitFor(() =>\n       expect(vi.mocked(getRegimeSearch).mock.calls.at(-1)?.[0]).toEqual({ mode: 'field', field: 'production', limit: 3 }),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,6 +41,15 @@ function observationRange(months: string[]) {\n   return first === last ? first : `${first} ~ ${last}`\n }\n \n+/**\n+ * '비슷했던 때 보기'로 가는 주소. 종합 비교를 보던 중이면 종합 비교가 선택된 상태로 연다(S15P21E205-450).\n+ * 분야 검색은 저장된 판(searchId)을 그대로 연다 — 카드와 같은 결과다.\n+ */\n+function regimeSearchPath(result: RegimeSearchResult): string {\n+  if (result.mode === 'COMPOSITE') return '/regime-search?mode=composite'\n+  return `/regime-search?searchId=${encodeURIComponent(result.searchId)}`\n+}\n+\n export function SimilarPastMarket({ caseId }: { caseId: string | null }) {\n   const [baselines, setBaselines] = useState<RegimeBaselineMonths | null>(null)\n   const [baselinesFailed, setBaselinesFailed] = useState(false)\n@@ -158,7 +167,7 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {\n                       분야별로 살펴보기\n                     </button>\n                   ) : null}{' '}\n-                  <Link className={styles.detail} to={`/regime-search?searchId=${encodeURIComponent(result.searchId)}`}>\n+                  <Link className={styles.detail} to={regimeSearchPath(result)}>\n                     참고 사례 보기 <ArrowUpRight size={14} aria-hidden=\"true\" />\n                   </Link>\n                 </p>\n@@ -190,7 +199,7 @@ export function SimilarPastMarket({ caseId }: { caseId: string | null }) {\n                             이 기간으로 백테스트\n                           </Link>\n                         )}\n-                        <Link className={styles.detail} to={`/regime-search?searchId=${encodeURIComponent(result.searchId)}`}>\n+                        <Link className={styles.detail} to={regimeSearchPath(result)}>\n                           자세히 <ArrowUpRight size={14} aria-hidden=\"true\" />\n                         </Link>\n                       </div>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.tsx",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -101,7 +101,7 @@ function toMarkets(indicators: Indicator[]): Market[] {\n     return {\n       ...market,\n       base: indicator && indicator.value > 0 ? indicator.value : 1,\n-      decimals: indicator?.decimals ?? 2,\n+      decimals: indicator?.decimals ?? 1,\n     }\n   })\n }\n@@ -114,7 +114,7 @@ function format(value: number, decimals: number) {\n }\n \n function formatChange(change: number) {\n-  return `${change > 0 ? '+' : ''}${change.toFixed(2)}%`\n+  return `${change > 0 ? '+' : ''}${change.toFixed(1)}%`\n }\n \n function directionOf(change: number) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "old_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -55,7 +55,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay })\n           <g key={tick} className={styles.chartGrid}>\n             <line x1={plot.left} x2={plot.right} y1={chart.y(tick)} y2={chart.y(tick)} />\n             <text x={plot.left - 10} y={chart.y(tick)} dy=\".35em\" textAnchor=\"end\">\n-              {new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 2 }).format(tick)}\n+              {new Intl.NumberFormat('ko-KR', { notation: 'compact', maximumFractionDigits: 1 }).format(tick)}\n             </text>\n           </g>\n         ))}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/ThreeMonthChart.tsx",
+          "old_path": "frontend/src/components/marketflow/ThreeMonthChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,6 +20,8 @@\n .context a { color: var(--thorp-foreground); text-decoration: underline; text-underline-offset: 2px; }\n .context a:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .contextSource { color: var(--thorp-copy); }\n+.moreReasons { grid-column: 2; justify-self: start; padding: 0; border: 0; background: none; color: var(--thorp-copy); font-size: .78rem; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }\n+.moreReasons:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }\n .detailButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .detailSlot { grid-column: 1 / -1; min-width: 0; }\n@@ -31,7 +33,7 @@\n .limitNote { margin: 14px 0 0; color: var(--thorp-copy); font-size: .78rem; }\n @media (max-width: 640px) {\n   .case { grid-template-columns: 1fr; gap: 10px; }\n-  .months, .reasons, .context, .detailButton { grid-column: 1; }\n+  .months, .reasons, .context, .moreReasons, .detailButton { grid-column: 1; }\n   .reasons { grid-template-columns: 1fr; gap: 14px; }\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.module.css",
+          "old_path": "frontend/src/components/regime/CaseList.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -75,6 +75,9 @@ describe('사례 목록', () => {\n     }\n     render(<CaseList result={withContext} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n     expect(screen.getByText(withContext.phaseNote as string)).toBeTruthy()\n+    // 당시 맥락은 '설명 더 보기' 안에 있다(S15P21E205-450).\n+    expect(screen.queryByRole('link', { name: 'KDI 경제동향 2009년 1월호' })).toBeNull()\n+    fireEvent.click(screen.getAllByRole('button', { name: '설명 더 보기' })[0])\n     const link = screen.getByRole('link', { name: 'KDI 경제동향 2009년 1월호' })\n     expect(link.getAttribute('rel')).toContain('noopener')\n     expect(screen.getByText('경기 저점').tagName).toBe('SPAN')\n@@ -128,4 +131,32 @@ describe('사례 목록', () => {\n     expect(onBrowseFields).toHaveBeenCalledOnce()\n     expect(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' })).toBeTruthy()\n   })\n+\n+  it('문장이 많은 사례는 한 문장씩만 먼저 보이고 설명 더 보기로 펼친다', () => {\n+    const base = result(1, 1, 1)\n+    const long: RegimeSearchResult = {\n+      ...base,\n+      cases: [\n+        {\n+          ...base.cases[0],\n+          similar: ['비슷 1', '비슷 2'],\n+          different: ['다름 1', '다름 2', '다름 3'],\n+        },\n+      ],\n+    }\n+    render(<CaseList result={long} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n+    expect(screen.getByText('비슷 1')).toBeTruthy()\n+    expect(screen.queryByText('비슷 2')).toBeNull()\n+    expect(screen.queryByText('다름 3')).toBeNull()\n+    fireEvent.click(screen.getByRole('button', { name: '설명 더 보기' }))\n+    expect(screen.getByText('비슷 2')).toBeTruthy()\n+    expect(screen.getByText('다름 3')).toBeTruthy()\n+    fireEvent.click(screen.getByRole('button', { name: '설명 접기' }))\n+    expect(screen.queryByText('다름 3')).toBeNull()\n+  })\n+\n+  it('한 문장씩인 사례에는 펼치기 버튼이 없다', () => {\n+    render(<CaseList result={result(1, 1, 1)} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n+    expect(screen.queryByRole('button', { name: '설명 더 보기' })).toBeNull()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,6 +25,14 @@ interface CaseListProps {\n export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot, onBrowseFields }: CaseListProps) {\n   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)\n   const [showReferences, setShowReferences] = useState(false)\n+  const [expandedCases, setExpandedCases] = useState<Set<string>>(() => new Set())\n+  const toggleCase = (endMonth: string) =>\n+    setExpandedCases((current) => {\n+      const next = new Set(current)\n+      if (next.has(endMonth)) next.delete(endMonth)\n+      else next.add(endMonth)\n+      return next\n+    })\n   const references = result.referenceCases ?? []\n   const renderCase = (item: RegimeCaseSummary) => (\n     <li key={item.endMonth} className={styles.case}>\n@@ -34,35 +42,57 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p\n       <p className={styles.months}>\n         관측 구간 <span>{item.observationMonths.join(' · ')}</span>\n       </p>\n-      <div className={styles.reasons}>\n-        <section>\n-          <h4>비슷한 점</h4>\n-          <ul>{item.similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>\n-        </section>\n-        <section>\n-          <h4>다른 점</h4>\n-          <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>\n-        </section>\n-      </div>\n-      {item.context && item.context.length > 0 && (\n-        <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>\n-          <h4>당시 맥락</h4>\n-          <p>{copy.contextNote}</p>\n-          <ul>\n-            {item.context.map((link) => (\n-              <li key={`${link.kind}-${link.date}-${link.title}`}>\n-                <time dateTime={link.date}>{link.date}</time>{' '}\n-                {link.url ? (\n-                  <a href={link.url} target=\"_blank\" rel=\"noopener noreferrer\">{link.title}</a>\n-                ) : (\n-                  <span>{link.title}</span>\n-                )}\n-                <span className={styles.contextSource}> · {link.source}</span>\n-              </li>\n-            ))}\n-          </ul>\n-        </section>\n-      )}\n+      {(() => {\n+        // 문장이 많은 사례(종합 비교)는 처음에 한 문장씩만 보인다(S15P21E205-450). 문장은 서버가 만든 그대로이고\n+        // 화면은 몇 개를 먼저 보일지만 정한다.\n+        const expanded = expandedCases.has(item.endMonth)\n+        const hidden = Math.max(0, item.similar.length - 1) + Math.max(0, item.different.length - 1)\n+        const similar = expanded ? item.similar : item.similar.slice(0, 1)\n+        const different = expanded ? item.different : item.different.slice(0, 1)\n+        return (\n+          <>\n+            <div className={styles.reasons}>\n+              <section>\n+                <h4>비슷한 점</h4>\n+                <ul>{similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>\n+              </section>\n+              <section>\n+                <h4>다른 점</h4>\n+                <ul>{different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>\n+              </section>\n+            </div>\n+            {(hidden > 0 || (item.context?.length ?? 0) > 0) && (\n+              <button\n+                type=\"button\"\n+                className={styles.moreReasons}\n+                aria-expanded={expanded}\n+                onClick={() => toggleCase(item.endMonth)}\n+              >\n+                {expanded ? '설명 접기' : '설명 더 보기'}\n+              </button>\n+            )}\n+            {expanded && item.context && item.context.length > 0 && (\n+              <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>\n+                <h4>당시 맥락</h4>\n+                <p>{copy.contextNote}</p>\n+                <ul>\n+                  {item.context.map((link) => (\n+                    <li key={`${link.kind}-${link.date}-${link.title}`}>\n+                      <time dateTime={link.date}>{link.date}</time>{' '}\n+                      {link.url ? (\n+                        <a href={link.url} target=\"_blank\" rel=\"noopener noreferrer\">{link.title}</a>\n+                      ) : (\n+                        <span>{link.title}</span>\n+                      )}\n+                      <span className={styles.contextSource}> · {link.source}</span>\n+                    </li>\n+                  ))}\n+                </ul>\n+              </section>\n+            )}\n+          </>\n+        )\n+      })()}\n       {item.detailAvailable && (\n         <button\n           type=\"button\" className={styles.detailButton}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+import { describe, expect, it } from 'vitest'\n+import { CASE_PERIOD_PREFILLED_NOTE, defaultCasePeriod } from './casePeriodConstraint'\n+\n+const constraint = { startMax: '2012-01-02', endMin: '2012-07-03', note: '' }\n+\n+describe('사례에서 들어왔을 때 미리 맞출 분석 기간 (S15P21E205-450)', () => {\n+  it('사례 사후 구간 끝에서 끝나고 최소 평가 기간을 채운다', () => {\n+    expect(defaultCasePeriod(constraint, { start: '2005-01-03', end: '2026-08-31' }, 3)).toEqual({\n+      start: '2009-07-03',\n+      end: '2012-07-03',\n+    })\n+  })\n+\n+  it('최소 평가 기간이 없으면 워밍업이 끝나는 마지막 날부터다', () => {\n+    expect(defaultCasePeriod(constraint, { start: '2005-01-03', end: '2026-08-31' }, 0)).toEqual({\n+      start: '2012-01-02',\n+      end: '2012-07-03',\n+    })\n+  })\n+\n+  it('범위 앞쪽에 막히면 범위 시작부터이고 모자란 평가 기간은 끝을 늘려 채운다', () => {\n+    expect(defaultCasePeriod(constraint, { start: '2011-01-03', end: '2026-08-31' }, 3)).toEqual({\n+      start: '2011-01-03',\n+      end: '2014-01-03',\n+    })\n+  })\n+\n+  it('범위가 사례를 덮지 못하면 맞추지 않는다', () => {\n+    expect(defaultCasePeriod(constraint, { start: '2012-03-02', end: '2026-08-31' }, 0)).toBeNull()\n+  })\n+\n+  it('미리 맞췄다는 문구가 있다', () => {\n+    expect(CASE_PERIOD_PREFILLED_NOTE).toContain('미리 맞춰')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/casePeriodConstraint.test.ts",
+          "old_path": "frontend/src/components/strategy/casePeriodConstraint.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,4 @@\n+import { addYears } from '@/utils/analysisPeriod'\n /**\n  * 011 사례 경로에서 003이 더 지키는 분석 기간 제약(011 `contracts/entry-handoff.md` §3).\n  *\n@@ -79,3 +80,38 @@ export function rangeCoversCase(\n ): boolean {\n   return range.start <= constraint.startMax && range.end >= constraint.endMin\n }\n+\n+/** 미리 맞춘 기간에 덧붙는 고정 문구. 사용자가 고른 기간과 구분되게 한다. */\n+export const CASE_PERIOD_PREFILLED_NOTE =\n+  '이 사례 직후 구간까지 들어가도록 분석 기간을 미리 맞춰 두었습니다. 바꿀 수 있습니다.'\n+\n+/**\n+ * 사례에서 들어왔을 때 미리 맞출 분석 기간(S15P21E205-450). 고르지 않으면 범위 전체가 기간이 되는데,\n+ * 그 기간도 제약은 만족하지만 사례와 무관해 보여 \"기간이 선택되지 않았다\"로 읽힌다.\n+ *\n+ * - 끝: 사례 사후 구간의 끝(`endMin`).\n+ * - 시작: 워밍업이 사후 구간을 먹지 않는 마지막 날(`startMax`)과 끝에서 최소 평가 기간을 뺀 날 중 이른 쪽.\n+ *   범위 앞쪽에 막히면 범위 시작으로 두고, 그래도 최소 평가 기간이 모자라면 끝을 범위 안에서 늘린다.\n+ *\n+ * 범위가 사례를 덮지 못하면 `null` — 그때는 화면이 이미 이유와 함께 분석을 막는다.\n+ */\n+export function defaultCasePeriod(\n+  constraint: CasePeriodConstraint,\n+  range: { start: string; end: string },\n+  minEvaluationYears: number,\n+): { start: string; end: string } | null {\n+  if (!rangeCoversCase(range, constraint)) return null\n+  let end = constraint.endMin\n+  const minimumStart =\n+    minEvaluationYears > 0 ? addYears(end, -minEvaluationYears) : constraint.startMax\n+  let start = minimumStart < constraint.startMax ? minimumStart : constraint.startMax\n+  if (start < range.start) {\n+    start = range.start\n+    if (minEvaluationYears > 0) {\n+      const needed = addYears(start, minEvaluationYears)\n+      if (needed > end) end = needed < range.end ? needed : range.end\n+    }\n+  }\n+  return { start, end }\n+}\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/casePeriodConstraint.ts",
+          "old_path": "frontend/src/components/strategy/casePeriodConstraint.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,7 +12,7 @@ const marketIndicators: Indicator[] = [\n     category: 'market',\n     value: 2715.32,\n     unit: 'pt',\n-    decimals: 2,\n+    decimals: 1,\n     change: 1.8,\n     changeUnit: '% · 1개월',\n     direction: 'up',\n@@ -44,7 +44,7 @@ const marketIndicators: Indicator[] = [\n     category: 'market',\n     value: 838.21,\n     unit: 'pt',\n-    decimals: 2,\n+    decimals: 1,\n     change: -0.7,\n     changeUnit: '% · 1개월',\n     direction: 'down',\n@@ -136,7 +136,7 @@ const marketIndicators: Indicator[] = [\n     category: 'liquidity',\n     value: 3.18,\n     unit: '%',\n-    decimals: 2,\n+    decimals: 1,\n     change: 0.07,\n     changeUnit: '%p · 1개월',\n     direction: 'up',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/marketMock.ts",
+          "old_path": "frontend/src/data/marketMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,7 @@\n .searchForm button { min-height: 46px; padding: 8px 20px; border: 1px solid var(--thorp-accent); border-radius: var(--thorp-radius-control, 5px); color: var(--thorp-action-foreground); background: var(--thorp-accent); font: 600 .85rem/1.3 var(--thorp-font-body); cursor: pointer; }\n .searchForm button:disabled { opacity: .55; cursor: not-allowed; }\n .searchForm .compositeButton { color: var(--thorp-foreground); background: var(--thorp-surface); border-color: var(--thorp-line-strong); }\n+.searchForm .compositeButton[aria-pressed='true'] { color: var(--thorp-background, #0b0d0c); background: var(--thorp-accent, #86f2a8); border-color: var(--thorp-accent, #86f2a8); font-weight: 700; }\n .searchForm select:focus-visible, .searchForm button:focus-visible, .monthControl input:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .loading { margin: 24px 0; color: var(--thorp-copy); font-size: .85rem; }\n .results { min-width: 0; }\n@@ -30,3 +31,10 @@\n :global(:root:not([data-design='classic'])) .searchForm .compositeButton:hover:not(:disabled) { border-color: var(--thorp-line-control-hover); }\n :global(:root:not([data-design='classic'])) .resultHeading { border-top: 0; padding: 4px 2px 16px; }\n :global(:root:not([data-design='classic'])) .disclosures { gap: 8px; }\n+\n+/* 사례 상세의 '이 기간으로 전략 비교'(S15P21E205-450). 이동이라 링크이지만 눈에 띄는 버튼 모양으로 둔다. */\n+.caseActionRow { margin: 16px 0 0; }\n+.caseAction { display: inline-flex; align-items: center; min-height: 40px; padding: 8px 16px; border-radius: var(--thorp-radius-control, 5px); background: var(--thorp-accent); color: var(--thorp-background); font-weight: 700; text-decoration: none; }\n+.caseAction:hover { background: var(--thorp-accent-hover); }\n+.caseAction:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.module.css",
+          "old_path": "frontend/src/pages/RegimeSearchPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -90,6 +90,23 @@ describe('경제환경 검색 화면', () => {\n       )\n     })\n \n+    it('전략 진단에서 종합 비교로 넘어오면 종합 비교가 선택된 상태로 연다 (S15P21E205-450)', async () => {\n+      vi.mocked(getRegimeSearch).mockResolvedValue(\n+        regimeResult({ mode: 'COMPOSITE', field: null }),\n+      )\n+\n+      renderPage({ entries: ['/regime-search?mode=composite'] })\n+\n+      await waitFor(() =>\n+        expect(vi.mocked(getRegimeSearch)).toHaveBeenCalledWith(\n+          expect.objectContaining({ mode: 'composite' }),\n+          expect.any(AbortSignal),\n+        ),\n+      )\n+      const button = await screen.findByRole('button', { name: 'Thorp 종합 비교' })\n+      await waitFor(() => expect(button.getAttribute('aria-pressed')).toBe('true'))\n+    })\n+\n     it('모르는 분야로 넘어오면 검색하지 않고 화면을 그대로 연다', async () => {\n       renderPage({ entries: ['/regime-search?field=없는-분야&month=2026-07'] })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -45,6 +45,8 @@ export function RegimeSearchPage() {\n   // 남고, 주소를 건네면 같은 검색을 볼 수 있다.\n   const entryField = params.get('field')\n   const entryMonth = params.get('month')\n+  // 전략 진단의 '지금과 비슷했던 과거 시장'에서 종합 비교를 보다가 넘어온 경우(S15P21E205-450).\n+  const entryComposite = params.get('mode') === 'composite'\n   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query, savedSearchId)\n   const location = useLocation()\n   // 로그인 사용자의 검색을 내 기록에 남긴다(010 FR-032, 006 T037).\n@@ -94,6 +96,12 @@ export function RegimeSearchPage() {\n   // **한 번만 연다.** 사용자가 화면에서 분야를 바꾼 뒤에도 주소는 그대로라, 다시 열면 사용자가\n   // 고른 것을 주소가 덮는다.\n   const entryOpened = useRef(false)\n+  useEffect(() => {\n+    if (entryOpened.current || savedSearchId || !baselines || !entryComposite || entryField) return\n+    if (!baselines.composite) return\n+    entryOpened.current = true\n+    setQuery({ mode: 'composite' })\n+  }, [baselines, entryComposite, entryField, savedSearchId])\n   useEffect(() => {\n     if (entryOpened.current || savedSearchId || !baselines || !entryField) return\n     const field = baselines.byField.find((candidate) => candidate.id === entryField)\n@@ -191,7 +199,13 @@ export function RegimeSearchPage() {\n               </div>\n             )}\n             <button type=\"submit\" disabled={!fieldId || isLoading}>과거 사례 찾기</button>\n-            <button type=\"button\" disabled={!baselines.composite || isLoading} onClick={openComposite} className={styles.compositeButton}>\n+            <button\n+              type=\"button\"\n+              disabled={!baselines.composite || isLoading}\n+              onClick={openComposite}\n+              className={styles.compositeButton}\n+              aria-pressed={result?.mode === 'COMPOSITE'}\n+            >\n               Thorp 종합 비교\n             </button>\n           </form>\n@@ -257,8 +271,10 @@ export function RegimeSearchPage() {\n                       const caseId = buildCaseId(result.searchId, item.endMonth)\n                       if (caseId === null) return undefined\n                       return (\n-                        <p>\n-                          <Link to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 전략 비교</Link>\n+                        <p className={styles.caseActionRow}>\n+                          <Link className={styles.caseAction} to={buildRegimeLinkStartPath({ caseId })}>\n+                            이 기간으로 전략 비교\n+                          </Link>\n                         </p>\n                       )\n                     }}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -265,6 +265,19 @@ describe(\"003 분석 기간의 사례 제약 (011 진입 계약 §3)\", () => {\n     ).toBeTruthy();\n   });\n \n+  it(\"사례에서 들어오면 분석 기간을 사례 직후 구간까지 미리 맞추고 그렇다고 말한다 (S15P21E205-450)\", async () => {\n+    const user = userEvent.setup();\n+    renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport());\n+    await openConditions(user);\n+\n+    const end = (await screen.findByLabelText(\"종료일\")) as HTMLInputElement;\n+    await waitFor(() => expect(end.value).toBe(\"2012-07-03\"));\n+    const start = screen.getByLabelText(\"시작일\") as HTMLInputElement;\n+    expect(start.value <= EXPECTED_START_MAX).toBe(true);\n+    expect(start.value >= RANGE.start).toBe(true);\n+    expect(screen.getByText(/분석 기간을 미리 맞춰 두었습니다/)).toBeTruthy();\n+  });\n+\n   it(\"하한 밖 기간을 고르면 저장하지 않고 이유를 말한다\", async () => {\n     const user = userEvent.setup();\n     renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.caseWindow.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.caseWindow.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,6 +30,8 @@ import {\n } from \"@/components/strategy/analysisSupport\";\n import {\n   buildCasePeriodConstraint,\n+  CASE_PERIOD_PREFILLED_NOTE,\n+  defaultCasePeriod,\n   rangeCoversCase,\n   type CasePeriodConstraint,\n } from \"@/components/strategy/casePeriodConstraint\";\n@@ -799,8 +801,16 @@ export function StrategySettingsPage({\n       : CASE_RANGE_UNCOVERABLE;\n   })();\n \n-  const activeCaseConstraint =\n+  const [casePeriodPrefilled, setCasePeriodPrefilled] = useState(false);\n+  const baseCaseConstraint =\n     caseConstraint === \"uncomputable\" ? null : caseConstraint;\n+  const activeCaseConstraint =\n+    baseCaseConstraint !== null && casePeriodPrefilled\n+      ? {\n+          ...baseCaseConstraint,\n+          note: `${baseCaseConstraint.note} ${CASE_PERIOD_PREFILLED_NOTE}`,\n+        }\n+      : baseCaseConstraint;\n   const { periodStart, periodEnd } = settings.analysisCondition;\n   const chosenPeriod = useMemo(\n     (): AnalysisPeriod | null =>\n@@ -810,6 +820,29 @@ export function StrategySettingsPage({\n     [periodStart, periodEnd],\n   );\n   const period = chosenPeriod ?? evaluableRange;\n+\n+  // 사례에서 들어왔고 아직 기간을 고르지 않았으면 사례 직후 구간을 포함하는 기간으로 미리 맞춘다(S15P21E205-450).\n+  // 한 사례에 한 번만 한다 — 사용자가 기간을 지우거나 바꾸면 그 선택을 다시 덮지 않는다.\n+  const prefilledCaseRef = useRef<string | null>(null);\n+  useEffect(() => {\n+    if (\n+      caseId === null ||\n+      baseCaseConstraint === null ||\n+      evaluableRange === null ||\n+      chosenPeriod !== null ||\n+      prefilledCaseRef.current === caseId\n+    )\n+      return;\n+    const next = defaultCasePeriod(\n+      baseCaseConstraint,\n+      evaluableRange,\n+      Number.isInteger(minEvaluationYears) ? minEvaluationYears : 0,\n+    );\n+    prefilledCaseRef.current = caseId;\n+    if (next === null) return;\n+    settings.setAnalysisCondition({ periodStart: next.start, periodEnd: next.end });\n+    setCasePeriodPrefilled(true);\n+  }, [caseId, baseCaseConstraint, evaluableRange, chosenPeriod, minEvaluationYears, settings]);\n   const periodOutOfRange =\n     chosenPeriod !== null &&\n     evaluableRange !== null &&\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,7 @@ export default defineConfig({\n       'src/components/regimelink/*.test.ts',\n       'src/components/regime/*.test.ts',\n       'src/components/result/*.test.ts',\n+      'src/components/strategy/*.test.ts',\n       'src/hooks/*.test.ts',\n       'src/components/records/*.test.ts',\n       'src/test/resultFixtures.test.ts',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,6 +54,11 @@ sessionStorage 한 항목으로 한다 — 그 방식은 바꾸지 않고 `case`\n   응답의 `postWindow`에서 읽는다(003이 스스로 계산하지 않는다).\n - 한 문장 안내: \"이 사례(YYYY년 M월) 직후 구간을 포함해야 하므로 기간을 여기까지만 줄일 수\n   있습니다.\" 고정 문구다.\n+- **기간을 고르지 않았으면 미리 맞춘다**(S15P21E205-450). 끝은 `d63`(미완성이면 자료 마감일), 시작은 시작일 상한과\n+  \"끝 − 최소 평가 기간\" 중 이른 날이며 공통 평가 가능 범위의 시작보다 앞서면 범위 시작으로 두고 모자란 평가 기간은\n+  끝을 범위 안에서 늘려 채운다. 한 사례에 한 번만 맞추며, 사용자가 바꾼 기간은 덮지 않는다. 위 고정 문구 뒤에\n+  \"이 사례 직후 구간까지 들어가도록 분석 기간을 미리 맞춰 두었습니다. 바꿀 수 있습니다.\"를 덧붙인다. 고르지 않은\n+  기간(범위 전체)도 제약은 만족하지만 사례와 무관해 보여 \"사례 기간이 선택되지 않았다\"로 읽혔다.\n - 공통 평가 가능 범위(003 FR-009)가 이 제약을 채울 수 없으면(사례가 너무 이르거나 늦어 어느\n   전략의 자료로도 사후 구간을 덮지 못하면) 그 전략 카드를 003의 기존 규칙대로 고를 수 없게 하고\n   이유를 보인다. 사례를 바꾸거나 빼지 않는다(FR-017).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/contracts/entry-handoff.md",
+          "old_path": "specs/011-regime-strategy-link/contracts/entry-handoff.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2874067": []
+  }
+}

@@ -1,0 +1,883 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949255,
+    "iid": 195,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 주소를 열면 핵심 숫자와 요약 한 문장을 보인다",
+    "description": "# 작업 내용 요약\n\n`/results/{token}`을 열면 로그인 없이 조건 한 줄·핵심 숫자 3개·해석 요약 1문장이 보인다. 만료된 주소와 잘못된 주소는 서로 다른 안내로 닫히고 숫자 자리를 그리지 않는다. 그래프·상태 문장·자세히 보기는 B04·B06·B07이 표시해 둔 자리에 끼운다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-307\n- link https://ssafy.atlassian.net/browse/S15P21E205-307\n\n# 주요 변경 사항\n\n- 공개 경로 `/results/:token`: 첫 화면은 상세와 시계열만 요청하고, 계산 중이면 응답을 받은 뒤 다음 조회를 건다\n- 요약 카드: 비용 차감 후 수익률·가장 크게 줄었던 폭·거래비용과 각 정의, 조건 한 줄(기간·비교 대상·비용 반영), 시가평가/청산 구분. 요약이 없으면 0 대신 계산되지 않았다는 문장과 완료 범위를 보인다\n- 해석 요약: 고정 문장 틀(비교 대상 유무 × 차이 방향 × 부분 결과)에서 골라 값만 채운다. 차이는 빼지 않고 두 값을 나란히 적으며, 화면에 보이는 자릿수로 비교한다\n- 오류: 410은 만료 안내, 404·400(봉투 없는 응답 포함)은 잘못된 주소 안내. 32자 소문자 16진이 아닌 토큰은 요청하지 않고 400으로 처리한다\n- 화면 픽스처를 `docs/specs/result-api/examples`와 키 단위로 대조한다(프론트가 계약 예시를 테스트에서 직접 읽는 첫 사례)\n\n# 테스트\n\n- [x] `npm run lint` 오류 0 (경고 19건은 기존 파일)\n- [x] `npm run build` 통과\n- [x] `npm test` 새 테스트 전부 통과, skipped 0. 전체 실행에서 `SignupPage` 2\\~4건이 5초 시간 초과로 실패하며, 이 변경이 없는 origin/dev 전체 실행에서도 같은 파일이 실패한다(단독 실행은 통과)\n- [x] 상태 코드 분기를 지운 상태에서 새 테스트가 실패하는지 확인했다\n- [ ] 실서버 확인(quickstart 1·7·8·10, 360px 폭)은 배포 환경에서 확인 예정\n\n# 리뷰 포인트\n\n- T027은 토큰을 그대로 쓰라고 했지만 형식 검사를 먼저 한다. `..`가 경로에 들어가면 브라우저가 다른 API로 정리할 수 있어서다\n- 공개 상세는 끝난 결과에 `progress`를 담지 않는다. 그래서 취소 결과의 완료 범위를 시계열 마지막 날짜로 보인다(004 §2.5가 취소 요청의 시계열을 스냅샷 날짜까지 자른다). 시계열을 못 받으면 \"확인할 수 없음\"이다\n- 계산 중 폴링이 한 번 실패하면 폴링을 멈추고 다시 불러오기를 준다. 조용히 계속 두드리지 않기 위한 선택이다\n- 만료 안내의 진입점은 `/strategy`다. 조건이 남아 있지 않아 문구를 \"조건을 다시 골라 분석하기\"로 했다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 문장 틀 전체에 금지 어휘가 없음을 테스트가 막는다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 이름은 응답의 `strategyName`, 없으면 `strategyId`를 그대로 보인다. 분기 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 요약이 없거나 만료·없음이면 숫자 자리를 그리지 않는다. 읽지 못한 값은 0으로 바꾸지 않는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `validationTier` 표시는 B06 몫이며 이 MR은 검증 표시를 하지 않는다\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T16:27:54.728+09:00",
+    "updated_at": "2026-09-17T17:06:46.619+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T17:06:46.374+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/307-result-first-screen",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+    "merge_commit_sha": "412b572ce8256feaf64d830b027478afc0eebde2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T16:28:01.003+09:00",
+    "reference": "!195",
+    "references": {
+      "short": "!195",
+      "relative": "!195",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!195"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/195",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949255,
+    "iid": 195,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 주소를 열면 핵심 숫자와 요약 한 문장을 보인다",
+    "description": "# 작업 내용 요약\n\n`/results/{token}`을 열면 로그인 없이 조건 한 줄·핵심 숫자 3개·해석 요약 1문장이 보인다. 만료된 주소와 잘못된 주소는 서로 다른 안내로 닫히고 숫자 자리를 그리지 않는다. 그래프·상태 문장·자세히 보기는 B04·B06·B07이 표시해 둔 자리에 끼운다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-307\n- link https://ssafy.atlassian.net/browse/S15P21E205-307\n\n# 주요 변경 사항\n\n- 공개 경로 `/results/:token`: 첫 화면은 상세와 시계열만 요청하고, 계산 중이면 응답을 받은 뒤 다음 조회를 건다\n- 요약 카드: 비용 차감 후 수익률·가장 크게 줄었던 폭·거래비용과 각 정의, 조건 한 줄(기간·비교 대상·비용 반영), 시가평가/청산 구분. 요약이 없으면 0 대신 계산되지 않았다는 문장과 완료 범위를 보인다\n- 해석 요약: 고정 문장 틀(비교 대상 유무 × 차이 방향 × 부분 결과)에서 골라 값만 채운다. 차이는 빼지 않고 두 값을 나란히 적으며, 화면에 보이는 자릿수로 비교한다\n- 오류: 410은 만료 안내, 404·400(봉투 없는 응답 포함)은 잘못된 주소 안내. 32자 소문자 16진이 아닌 토큰은 요청하지 않고 400으로 처리한다\n- 화면 픽스처를 `docs/specs/result-api/examples`와 키 단위로 대조한다(프론트가 계약 예시를 테스트에서 직접 읽는 첫 사례)\n\n# 테스트\n\n- [x] `npm run lint` 오류 0 (경고 19건은 기존 파일)\n- [x] `npm run build` 통과\n- [x] `npm test` 새 테스트 전부 통과, skipped 0. 전체 실행에서 `SignupPage` 2\\~4건이 5초 시간 초과로 실패하며, 이 변경이 없는 origin/dev 전체 실행에서도 같은 파일이 실패한다(단독 실행은 통과)\n- [x] 상태 코드 분기를 지운 상태에서 새 테스트가 실패하는지 확인했다\n- [ ] 실서버 확인(quickstart 1·7·8·10, 360px 폭)은 배포 환경에서 확인 예정\n\n# 리뷰 포인트\n\n- T027은 토큰을 그대로 쓰라고 했지만 형식 검사를 먼저 한다. `..`가 경로에 들어가면 브라우저가 다른 API로 정리할 수 있어서다\n- 공개 상세는 끝난 결과에 `progress`를 담지 않는다. 그래서 취소 결과의 완료 범위를 시계열 마지막 날짜로 보인다(004 §2.5가 취소 요청의 시계열을 스냅샷 날짜까지 자른다). 시계열을 못 받으면 \"확인할 수 없음\"이다\n- 계산 중 폴링이 한 번 실패하면 폴링을 멈추고 다시 불러오기를 준다. 조용히 계속 두드리지 않기 위한 선택이다\n- 만료 안내의 진입점은 `/strategy`다. 조건이 남아 있지 않아 문구를 \"조건을 다시 골라 분석하기\"로 했다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 문장 틀 전체에 금지 어휘가 없음을 테스트가 막는다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 이름은 응답의 `strategyName`, 없으면 `strategyId`를 그대로 보인다. 분기 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 요약이 없거나 만료·없음이면 숫자 자리를 그리지 않는다. 읽지 못한 값은 0으로 바꾸지 않는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `validationTier` 표시는 B06 몫이며 이 MR은 검증 표시를 하지 않는다\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T16:27:54.728+09:00",
+    "updated_at": "2026-09-17T17:06:46.619+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T17:06:46.374+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/307-result-first-screen",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+    "merge_commit_sha": "412b572ce8256feaf64d830b027478afc0eebde2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T16:28:01.003+09:00",
+    "reference": "!195",
+    "references": {
+      "short": "!195",
+      "relative": "!195",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!195"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/195",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "22",
+    "latest_build_started_at": "2026-09-17T16:28:12.636+09:00",
+    "latest_build_finished_at": "2026-09-17T16:31:36.555+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 203025,
+      "iid": 120,
+      "project_id": 1444456,
+      "sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+      "ref": "feat(fe)/307-result-first-screen",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T16:28:12.449+09:00",
+      "updated_at": "2026-09-17T16:31:36.563+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203025"
+    },
+    "head_pipeline": {
+      "id": 203025,
+      "iid": 120,
+      "project_id": 1444456,
+      "sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+      "ref": "feat(fe)/307-result-first-screen",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T16:28:12.449+09:00",
+      "updated_at": "2026-09-17T16:31:36.563+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203025",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T16:28:12.636+09:00",
+      "finished_at": "2026-09-17T16:31:36.555+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203025",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "head_sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+      "start_sha": "5c25d67afe8c3fe8199acf5e327044d3f4c1025e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "42ca49cd267f8431e702028f2f197bda0530c2bc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826581,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T16:27:54.789+09:00",
+          "updated_at": "2026-09-17T16:27:54.793+09:00",
+          "system": true,
+          "noteable_id": 949255,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 195,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9ceb36c2d4a86f060fb88381f2a837e16545c59b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826582,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T16:27:54.818+09:00",
+          "updated_at": "2026-09-17T16:27:54.826+09:00",
+          "system": true,
+          "noteable_id": 949255,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 195,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6f8e426f528dff71ed264409a498a261e0ce77e5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826590,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 테스트 주도 설계 및 계약 검증**: 프론트엔드 타입 정의와 API 클라이언트, 컴포넌트, 페이지 전반에 걸쳐 단위/통합 테스트(`resultFixtures.test.ts`, `summarySentences.test.ts` 등)가 매우 꼼꼼하게 작성되어 있으며, JSON 계약 예시와 픽스처의 구조 일치를 강제하여 API 계약 변경에 안전하게 대응할 수 있도록 설계되었습니다.\n- **방어적 에러 핸들링과 UI 상태 분리**: 410(만료)과 404/400(잘못된 주소) 에러를 명확히 구분하여 사용자에게 적절한 네비게이션 가이드를 제공하며, 데이터가 불완전하거나 없는 상태에서 임의의 '0'이나 대체값을 렌더링하지 않고 명확한 안내 문구를 노출하는 원칙(SC-008)을 잘 준수했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **폴링 중단 및 언마운트 검증 (`useResult`)**:\n  - `QUEUED` 또는 `RUNNING` 상태에서 컴포넌트가 언마운트되었을 때, 타이머(`setTimeout`)와 `AbortController`가 정상적으로 정리되어 메모리 누수나 백그라운드 불필요 요청이 발생하지 않는지 시나리오 테스트로 검증합니다.\n- **토큰 포맷 유효성 검사**:\n  - 32자 16진수 형식이 아닌 잘못된 토큰 값이 URL 파라미터로 들어왔을 때, `fetchResult` 호출 전 자체 검증 단계에서 즉시 `INVALID_INPUT` 에러를 발생시키고 네트워크 요청을 원천 차단하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T16:28:11.553+09:00",
+          "updated_at": "2026-09-17T16:28:11.553+09:00",
+          "system": false,
+          "noteable_id": 949255,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 195,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5f570fc089aab01fa5f7385e102601590eb58b49",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827106,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:06:41.632+09:00",
+          "updated_at": "2026-09-17T17:06:41.635+09:00",
+          "system": true,
+          "noteable_id": 949255,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 195,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "43dc90857600560e62e30a5b23c819585a28567c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827107,
+          "type": null,
+          "body": "mentioned in commit 412b572ce8256feaf64d830b027478afc0eebde2",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:06:46.700+09:00",
+          "updated_at": "2026-09-17T17:06:46.709+09:00",
+          "system": true,
+          "noteable_id": 949255,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 195,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2214773,
+      "head_commit_sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+      "base_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "start_commit_sha": "5c25d67afe8c3fe8199acf5e327044d3f4c1025e",
+      "created_at": "2026-09-17T16:27:55.263+09:00",
+      "merge_request_id": 949255,
+      "state": "collected",
+      "real_size": "22",
+      "patch_id_sha": "7e6c3ecea5aeb11a665220579b5621c0d39a42d5"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2214773,
+      "head_commit_sha": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+      "base_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "start_commit_sha": "5c25d67afe8c3fe8199acf5e327044d3f4c1025e",
+      "created_at": "2026-09-17T16:27:55.263+09:00",
+      "merge_request_id": 949255,
+      "state": "collected",
+      "real_size": "22",
+      "patch_id_sha": "7e6c3ecea5aeb11a665220579b5621c0d39a42d5",
+      "commits": [
+        {
+          "id": "6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169",
+          "short_id": "6948ba5b",
+          "created_at": "2026-09-17T15:45:05.000+09:00",
+          "parent_ids": [
+            "580cbcbd570c2e3a532de059bb058fb2f0b78c58"
+          ],
+          "title": "fix(fe): 봉투 없는 오류와 형식이 틀린 토큰도 주소 안내로 닫는다",
+          "message": "fix(fe): 봉투 없는 오류와 형식이 틀린 토큰도 주소 안내로 닫는다\n\n- 오류 이름이 없으면 HTTP 상태(410·404·400)로 만료와 잘못된 주소를 가른다\n- 32자 소문자 16진이 아닌 토큰은 요청하지 않고 400 INVALID_INPUT으로 돌려준다\n- 토큰이 바뀌면 결과 화면을 새로 그려 앞 결과의 숫자를 남기지 않는다\n- 만료 안내가 조건을 되살려 준다고 약속하지 않게 문구를 고친다\n- 수로 읽히지 않는 값은 비교 문장을 고르지 않는다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T15:44:27.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T15:45:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6948ba5b0e10dbcb258336c5d7fbb90f2b4fc169"
+        },
+        {
+          "id": "580cbcbd570c2e3a532de059bb058fb2f0b78c58",
+          "short_id": "580cbcbd",
+          "created_at": "2026-09-17T15:45:04.000+09:00",
+          "parent_ids": [
+            "af70b20bc5a58d4ae8dc8c78ee2e3d1f858214ae"
+          ],
+          "title": "docs(fe): spec 005 B03 태스크 완료를 표시한다",
+          "message": "docs(fe): spec 005 B03 태스크 완료를 표시한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T15:36:31.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T15:45:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/580cbcbd570c2e3a532de059bb058fb2f0b78c58"
+        },
+        {
+          "id": "af70b20bc5a58d4ae8dc8c78ee2e3d1f858214ae",
+          "short_id": "af70b20b",
+          "created_at": "2026-09-17T15:45:03.000+09:00",
+          "parent_ids": [
+            "c804006afc640788ddacff322332dcb97e0e2b27"
+          ],
+          "title": "feat(fe): 결과 주소를 열면 핵심 숫자와 요약 한 문장을 보인다",
+          "message": "feat(fe): 결과 주소를 열면 핵심 숫자와 요약 한 문장을 보인다\n\n- /results/:token 공개 경로와 결과 API 모듈·useResult 훅을 더한다. 첫 화면은 상세와 시계열만 부른다\n- 요약 카드(핵심 숫자 3개·정의·조건 한 줄·청산 구분)와 고정 문장 틀로 만든 해석 요약을 둔다\n- 만료(410)와 잘못된 주소(404·400)를 다른 문구로 안내하고 숫자 자리를 그리지 않는다\n- 픽스처를 docs/specs/result-api 계약 예시와 키 단위로 대조한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T15:36:29.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T15:45:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/af70b20bc5a58d4ae8dc8c78ee2e3d1f858214ae"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,194 @@\n+import { AxiosError, AxiosHeaders } from 'axios'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { resultDetailCompleted, resultToken } from '@/test/resultFixtures'\n+\n+/** 005 T038. contracts \"경로 대응\"·\"오류\". */\n+\n+const clientMocks = vi.hoisted(() => ({\n+  get: vi.fn(),\n+  post: vi.fn(),\n+  runCsrfProtectedMutation: vi.fn(),\n+}))\n+\n+vi.mock('./client', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('./client')>()\n+  return {\n+    ...actual,\n+    apiClient: { get: clientMocks.get, post: clientMocks.post },\n+    runCsrfProtectedMutation: clientMocks.runCsrfProtectedMutation,\n+  }\n+})\n+\n+const {\n+  ResultError,\n+  fetchResult,\n+  fetchResultExceptions,\n+  fetchResultPositions,\n+  fetchResultTimeseries,\n+  fetchResultTrades,\n+  fetchResultWeights,\n+  normalizeResultError,\n+  retryResult,\n+} = await import('./result')\n+const { ApiClientError } = await import('./client')\n+\n+function ok<T>(data: T) {\n+  return { data: { success: true, data, error: null } }\n+}\n+\n+function axiosFailure(status: number, body: unknown): AxiosError {\n+  const headers = new AxiosHeaders()\n+  return new AxiosError('failed', String(status), { headers }, null, {\n+    status,\n+    statusText: '',\n+    headers,\n+    config: { headers },\n+    data: body,\n+  })\n+}\n+\n+describe('api/result', () => {\n+  beforeEach(() => {\n+    clientMocks.get.mockReset()\n+    clientMocks.post.mockReset()\n+    clientMocks.runCsrfProtectedMutation.mockReset()\n+    clientMocks.runCsrfProtectedMutation.mockImplementation((request: () => Promise<unknown>) =>\n+      request(),\n+    )\n+  })\n+\n+  afterEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('토큰을 그대로 경로에 쓴다', async () => {\n+    clientMocks.get.mockResolvedValue(ok(resultDetailCompleted))\n+    const controller = new AbortController()\n+\n+    await expect(fetchResult(resultToken, controller.signal)).resolves.toEqual(resultDetailCompleted)\n+    expect(clientMocks.get).toHaveBeenCalledWith(`/results/${resultToken}`, {\n+      signal: controller.signal,\n+    })\n+  })\n+\n+  it('하위 자원 경로를 조립한다', async () => {\n+    clientMocks.get.mockResolvedValue(ok({}))\n+\n+    await fetchResultTimeseries(resultToken)\n+    await fetchResultWeights(resultToken)\n+    await fetchResultExceptions(resultToken)\n+    await fetchResultPositions(resultToken, '2024-03-29')\n+\n+    expect(clientMocks.get.mock.calls.map((call) => call[0])).toEqual([\n+      `/results/${resultToken}/timeseries`,\n+      `/results/${resultToken}/weights`,\n+      `/results/${resultToken}/exceptions`,\n+      `/results/${resultToken}/positions?date=2024-03-29`,\n+    ])\n+  })\n+\n+  it.each(['..', '../backtests/1', 'ABCDEF0123456789ABCDEF0123456789', `${resultToken}0`, ''])(\n+    '형식이 틀린 토큰 %j 은 요청하지 않고 400 INVALID_INPUT이다',\n+    async (token) => {\n+      await expect(fetchResult(token)).rejects.toMatchObject({ code: 'INVALID_INPUT', status: 400 })\n+      await expect(fetchResultTimeseries(token)).rejects.toMatchObject({ code: 'INVALID_INPUT' })\n+      await expect(retryResult(token)).rejects.toMatchObject({ code: 'INVALID_INPUT' })\n+\n+      expect(clientMocks.get).not.toHaveBeenCalled()\n+      expect(clientMocks.runCsrfProtectedMutation).not.toHaveBeenCalled()\n+    },\n+  )\n+\n+  it('거래 질의의 size·from·to 등을 질의 문자열에 싣고 정하지 않은 항목은 뺀다', async () => {\n+    clientMocks.get.mockResolvedValue(ok({ content: [] }))\n+\n+    await fetchResultTrades(resultToken, {\n+      page: 2,\n+      size: 50,\n+      instrumentId: '900001.XKRX',\n+      status: 'CLOSED',\n+      from: '2024-01-02',\n+      to: '2024-03-29',\n+    })\n+    await fetchResultTrades(resultToken)\n+\n+    expect(clientMocks.get.mock.calls[0][0]).toBe(\n+      `/results/${resultToken}/trades?page=2&size=50&instrumentId=900001.XKRX&status=CLOSED&from=2024-01-02&to=2024-03-29`,\n+    )\n+    expect(clientMocks.get.mock.calls[1][0]).toBe(`/results/${resultToken}/trades`)\n+  })\n+\n+  it.each([\n+    [410, 'RESULT_EXPIRED'],\n+    [404, 'RESOURCE_NOT_FOUND'],\n+    [400, 'INVALID_INPUT'],\n+    [409, 'RESULT_NOT_READY'],\n+    [409, 'BACKTEST_FAILED'],\n+    [409, 'NO_PARTIAL_RESULT'],\n+  ] as const)('%i %s 를 코드와 상태로 정규화한다', async (status, code) => {\n+    clientMocks.get.mockRejectedValue(\n+      axiosFailure(status, { success: false, data: null, error: { code, message: '안내 문구' } }),\n+    )\n+\n+    const caught = await fetchResult(resultToken).catch((error: unknown) => error)\n+\n+    expect(caught).toBeInstanceOf(ResultError)\n+    const failure = caught as InstanceType<typeof ResultError>\n+    expect(failure.is(code)).toBe(true)\n+    expect(failure.status).toBe(status)\n+    expect(failure.message).toBe('안내 문구')\n+  })\n+\n+  it('모르는 코드도 접지 않고 그대로 싣는다', () => {\n+    const failure = normalizeResultError(\n+      axiosFailure(500, { success: false, data: null, error: { code: 'NEW_CODE', message: 'x' } }),\n+    )\n+\n+    expect(failure.code).toBe('NEW_CODE')\n+  })\n+\n+  it('200으로 온 실패 봉투도 오류로 다룬다', async () => {\n+    clientMocks.get.mockResolvedValue({\n+      data: { success: false, data: null, error: { code: 'RESULT_EXPIRED', message: '만료' } },\n+    })\n+\n+    await expect(fetchResult(resultToken)).rejects.toMatchObject({ code: 'RESULT_EXPIRED' })\n+  })\n+\n+  it('다시 시도는 CSRF 보호 mutation을 거치고 한도 오류의 대기 시간을 싣는다', async () => {\n+    const accepted = {\n+      publicToken: 'b41e0c9a7d2f35618ce4a09b7f1d2c63',\n+      status: 'QUEUED',\n+      resultSource: 'NEW',\n+      retryOfToken: resultToken,\n+    }\n+    clientMocks.post.mockResolvedValueOnce(ok(accepted))\n+\n+    await expect(retryResult(resultToken)).resolves.toEqual(accepted)\n+    expect(clientMocks.runCsrfProtectedMutation).toHaveBeenCalledTimes(1)\n+    expect(clientMocks.post).toHaveBeenCalledWith(`/results/${resultToken}/retry`, null)\n+\n+    // 공용 mutation은 오류를 ApiClientError로 감싸 던진다. 상태 코드와 details는 원래 오류에서 읽는다.\n+    const limited = axiosFailure(429, {\n+      success: false,\n+      data: null,\n+      error: { code: 'EXECUTION_LIMIT', message: '한도', details: { retryAfterSeconds: 30 } },\n+    })\n+    clientMocks.runCsrfProtectedMutation.mockRejectedValueOnce(\n+      new ApiClientError('api', '한도', { code: 'EXECUTION_LIMIT', cause: limited }),\n+    )\n+\n+    await expect(retryResult(resultToken)).rejects.toMatchObject({\n+      code: 'EXECUTION_LIMIT',\n+      status: 429,\n+      retryAfterSeconds: 30,\n+    })\n+  })\n+\n+  it('응답이 없으면 연결 실패 문구로 바꾼다', () => {\n+    const failure = normalizeResultError(new AxiosError('Network Error'))\n+\n+    expect(failure.code).toBeNull()\n+    expect(failure.message).toContain('서버에 연결할 수 없습니다')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/result.test.ts",
+          "old_path": "frontend/src/api/result.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,234 @@\n+import axios from 'axios'\n+import { ApiClientError, apiClient, runCsrfProtectedMutation } from './client'\n+import type {\n+  PublicResultDetail,\n+  ResultEnvelope,\n+  ResultErrorCode,\n+  ResultExceptions,\n+  ResultPositions,\n+  ResultRetryAccepted,\n+  ResultTimeseries,\n+  ResultTradePage,\n+  ResultWeights,\n+} from '@/types/result'\n+\n+/**\n+ * spec 005 공개 결과 열람 API.\n+ *\n+ * 계약은 `docs/specs/result-api/README.md`다. 로그인하지 않아도 부를 수 있고, 경로에는 공개 토큰만\n+ * 쓴다 — 004의 `backtestId`는 이 모듈 어디에도 나오지 않는다(SC-009).\n+ *\n+ * <p><b>형식이 틀린 토큰은 요청하지 않는다.</b> 토큰은 32자 소문자 16진이고, 아니면 서버도 조회하지 않고\n+ * `400 INVALID_INPUT`이다. 주소창에서 온 `..`나 `/`를 경로에 넣으면 브라우저가 경로를 정리해 다른 자원을\n+ * 부를 수 있으므로, 같은 400을 요청 없이 돌려준다. 형식이 맞는 토큰은 그대로 경로에 쓴다.\n+ */\n+\n+const publicTokenPattern = /^[0-9a-f]{32}$/\n+\n+const basePath = '/results'\n+\n+/**\n+ * 화면이 분기할 수 있는 005 오류.\n+ *\n+ * `code`는 서버가 준 문자열 그대로다 — `ResultErrorCode`에 없는 코드도 싣는다. 모르는 코드를 아는\n+ * 코드로 접으면 화면이 잘못된 안내를 한다(`api/paramSearch.ts`와 같은 이유).\n+ */\n+export class ResultError extends Error {\n+  readonly code: string | null\n+  readonly status: number | null\n+  /** `429 EXECUTION_LIMIT`의 `details.retryAfterSeconds`. 없으면 `null` */\n+  readonly retryAfterSeconds: number | null\n+\n+  constructor(\n+    message: string,\n+    options: {\n+      code?: string | null\n+      status?: number | null\n+      retryAfterSeconds?: number | null\n+      cause?: unknown\n+    } = {},\n+  ) {\n+    super(message, { cause: options.cause })\n+    this.name = 'ResultError'\n+    this.code = options.code ?? null\n+    this.status = options.status ?? null\n+    this.retryAfterSeconds = options.retryAfterSeconds ?? null\n+  }\n+\n+  /** 화면이 자주 묻는 질문 하나를 이름으로 둔다. 오타는 컴파일 단계에서 걸린다. */\n+  is(code: ResultErrorCode): boolean {\n+    return this.code === code\n+  }\n+}\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+function readErrorBody(\n+  body: unknown,\n+): { code: string; message: string; retryAfterSeconds: number | null } | null {\n+  if (!isRecord(body) || !isRecord(body.error)) return null\n+  const { code, message, details } = body.error\n+  if (typeof code !== 'string' || typeof message !== 'string') return null\n+  const retryAfter = isRecord(details) ? details.retryAfterSeconds : undefined\n+  return {\n+    code,\n+    message,\n+    retryAfterSeconds: typeof retryAfter === 'number' ? retryAfter : null,\n+  }\n+}\n+\n+const unreachableMessage = '서버에 연결할 수 없습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.'\n+const unexpectedMessage = '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'\n+\n+/** Axios 오류를 화면이 분기할 수 있는 005 오류로 바꾼다. */\n+export function normalizeResultError(error: unknown): ResultError {\n+  if (error instanceof ResultError) return error\n+\n+  // CSRF 보호 mutation은 공용 오류로 한 번 감싸서 던진다. 상태 코드와 `details`는 원래 오류에 있다.\n+  if (error instanceof ApiClientError && axios.isAxiosError(error.cause)) {\n+    return normalizeResultError(error.cause)\n+  }\n+\n+  if (axios.isAxiosError(error)) {\n+    if (!error.response) return new ResultError(unreachableMessage, { cause: error })\n+\n+    const body = readErrorBody(error.response.data)\n+    return new ResultError(body?.message ?? unexpectedMessage, {\n+      code: body?.code ?? null,\n+      status: error.response.status,\n+      retryAfterSeconds: body?.retryAfterSeconds ?? null,\n+      cause: error,\n+    })\n+  }\n+\n+  if (error instanceof ApiClientError) {\n+    return new ResultError(error.message, { code: error.code, cause: error })\n+  }\n+\n+  return new ResultError(unexpectedMessage, { cause: error })\n+}\n+\n+/**\n+ * 성공 껍데기를 벗긴다. `success: false`가 200으로 와도 오류로 다룬다 — `data`의 `null`이 화면까지\n+ * 내려가면 빈 결과 화면이 그려진다(SC-008).\n+ */\n+function unwrap<T>(body: ResultEnvelope<T>): T {\n+  if (!body.success || body.data === null) {\n+    throw new ResultError(body.success ? '응답 본문이 비어 있습니다.' : body.error.message, {\n+      code: body.success ? null : body.error.code,\n+    })\n+  }\n+  return body.data\n+}\n+\n+/** 형식이 틀린 토큰이면 서버와 같은 `400 INVALID_INPUT`을 던진다. */\n+function resultPath(token: string, suffix = ''): string {\n+  if (!publicTokenPattern.test(token)) {\n+    throw new ResultError('결과 주소의 형식이 올바르지 않습니다.', {\n+      code: 'INVALID_INPUT',\n+      status: 400,\n+    })\n+  }\n+  return `${basePath}/${token}${suffix}`\n+}\n+\n+async function getResource<T>(path: () => string, signal?: AbortSignal): Promise<T> {\n+  try {\n+    const response = await apiClient.get<ResultEnvelope<T>>(path(), { signal })\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeResultError(error)\n+  }\n+}\n+\n+/**\n+ * 상태·조건·요약. 폴링 대상이다.\n+ *\n+ * <p>분석이 실패해도 200이다 — `status`·`failure`로 판단한다. 만료는 `410 RESULT_EXPIRED`,\n+ * 없는 토큰은 `404 RESOURCE_NOT_FOUND`, 형식 오류는 `400 INVALID_INPUT`이다.\n+ */\n+export function fetchResult(token: string, signal?: AbortSignal): Promise<PublicResultDetail> {\n+  return getResource(() => resultPath(token), signal)\n+}\n+\n+/** 그래프용 시계열. 받은 그대로 그리고 점 수를 줄이지 않는다(R-08). */\n+export function fetchResultTimeseries(\n+  token: string,\n+  signal?: AbortSignal,\n+): Promise<ResultTimeseries> {\n+  return getResource(() => resultPath(token, '/timeseries'), signal)\n+}\n+\n+/** 거래 내역 질의. 정하지 않은 항목은 보내지 않는다 — 기본값과 상한은 서버가 정한다. */\n+export type ResultTradeQuery = {\n+  page?: number\n+  size?: number\n+  instrumentId?: string\n+  status?: 'OPEN' | 'CLOSED'\n+  from?: string\n+  to?: string\n+}\n+\n+/**\n+ * 거래 내역. `size`는 서버의 공개 상한으로 잘릴 수 있으니 실제 크기는 응답 `size`로 확인한다.\n+ * 첫 화면에서 부르지 않는다(SC-001).\n+ */\n+export function fetchResultTrades(\n+  token: string,\n+  query: ResultTradeQuery = {},\n+  signal?: AbortSignal,\n+): Promise<ResultTradePage> {\n+  const params = new URLSearchParams()\n+  if (query.page !== undefined) params.set('page', String(query.page))\n+  if (query.size !== undefined) params.set('size', String(query.size))\n+  if (query.instrumentId) params.set('instrumentId', query.instrumentId)\n+  if (query.status) params.set('status', query.status)\n+  if (query.from) params.set('from', query.from)\n+  if (query.to) params.set('to', query.to)\n+\n+  const search = params.toString()\n+  return getResource(() => resultPath(token, `/trades${search ? `?${search}` : ''}`), signal)\n+}\n+\n+/** 그날 이하에서 가장 최근 스냅샷의 보유 구성. 응답의 `snapshotDate`를 함께 보인다. */\n+export function fetchResultPositions(\n+  token: string,\n+  date: string,\n+  signal?: AbortSignal,\n+): Promise<ResultPositions> {\n+  const params = new URLSearchParams({ date })\n+  return getResource(() => resultPath(token, `/positions?${params.toString()}`), signal)\n+}\n+\n+/** 리밸런싱마다의 목표·실제 비중과 비중 출처. */\n+export function fetchResultWeights(token: string, signal?: AbortSignal): Promise<ResultWeights> {\n+  return getResource(() => resultPath(token, '/weights'), signal)\n+}\n+\n+/** 예외 처리 기록. */\n+export function fetchResultExceptions(\n+  token: string,\n+  signal?: AbortSignal,\n+): Promise<ResultExceptions> {\n+  return getResource(() => resultPath(token, '/exceptions'), signal)\n+}\n+\n+/**\n+ * 실패·취소한 결과를 같은 조건으로 다시 접수한다. 응답의 `publicToken`이 새 결과의 주소다.\n+ *\n+ * <p>한도에 걸리면(`429 EXECUTION_LIMIT`) `retryAfterSeconds`를 실어 던진다. 조용히 다시 보내지 않는다(원칙 IX).\n+ */\n+export async function retryResult(token: string): Promise<ResultRetryAccepted> {\n+  try {\n+    // 공용 mutation 안에서 던지면 형식 오류가 '예상 못한 오류'로 감싸진다. 보내기 전에 먼저 검사한다.\n+    const path = resultPath(token, '/retry')\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ResultEnvelope<ResultRetryAccepted>>(path, null),\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeResultError(error)\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/result.ts",
+          "old_path": "frontend/src/api/result.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+.card {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 16px;\n+  padding: 22px 24px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 14px;\n+  background: var(--thorp-surface);\n+}\n+\n+.visuallyHidden {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  overflow: hidden;\n+  clip: rect(0 0 0 0);\n+  white-space: nowrap;\n+}\n+\n+/* 조건 한 줄은 한 묶음이다. 좁은 화면에서는 항목을 생략하지 않고 줄만 바꾼다(FR-003). */\n+.condition {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 4px 16px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.88rem;\n+  line-height: 1.6;\n+  overflow-wrap: anywhere;\n+}\n+\n+.metrics {\n+  display: grid;\n+  grid-template-columns: repeat(3, minmax(0, 1fr));\n+  gap: 16px;\n+  margin: 0;\n+}\n+\n+.metric {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 6px;\n+  min-width: 0;\n+}\n+\n+.metricLabel {\n+  color: var(--thorp-copy);\n+  font-size: 0.85rem;\n+}\n+\n+.metricValue {\n+  margin: 0;\n+  font-family: var(--thorp-font-mono);\n+  font-size: clamp(1.5rem, 4vw, 2rem);\n+  font-variant-numeric: tabular-nums;\n+  letter-spacing: -0.02em;\n+}\n+\n+.metricDefinition {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.8rem;\n+  line-height: 1.55;\n+}\n+\n+.note,\n+.unavailable {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.88rem;\n+  line-height: 1.65;\n+}\n+\n+@media (max-width: 600px) {\n+  .card {\n+    padding: 16px;\n+  }\n+\n+  .metrics {\n+    grid-template-columns: minmax(0, 1fr);\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,120 @@\n+import { render, screen, within } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import {\n+  resultDetailCancelledNoSummary,\n+  resultDetailCompleted,\n+  syntheticStrategyName,\n+} from '@/test/resultFixtures'\n+import type { PublicResultDetail, ResultSummary } from '@/types/result'\n+import { COMPUTED_WEIGHTS_NOTE } from './conditionLine'\n+import { METRIC_DEFINITIONS, ResultSummaryCard, SUMMARY_NOT_CALCULATED } from './ResultSummaryCard'\n+\n+/** 005 T036. FR-001~FR-003, FR-013~FR-015, quickstart 1·2. */\n+\n+function withSummary(overrides: Partial<ResultSummary>): PublicResultDetail {\n+  return {\n+    ...resultDetailCompleted,\n+    summary: { ...resultDetailCompleted.summary!, ...overrides },\n+  }\n+}\n+\n+describe('ResultSummaryCard', () => {\n+  it('핵심 숫자 3개와 각 정의, 조건 한 줄, 청산 구분을 텍스트로 보인다', () => {\n+    render(<ResultSummaryCard detail={resultDetailCompleted} completedThrough=\"2024-12-31\" />)\n+\n+    expect(screen.getByText('16.67%')).not.toBeNull()\n+    expect(screen.getByText('-4.18%')).not.toBeNull()\n+    expect(screen.getByText('17,078원')).not.toBeNull()\n+    for (const definition of Object.values(METRIC_DEFINITIONS)) {\n+      expect(screen.getByText(definition)).not.toBeNull()\n+    }\n+    expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')\n+\n+    const condition = screen.getByLabelText('분석 조건')\n+    expect(within(condition).getByText('분석 기간 2023-07-03 ~ 2024-12-31')).not.toBeNull()\n+    expect(\n+      within(condition).getByText(`기준 ${syntheticStrategyName} · 비교 대상 없음`),\n+    ).not.toBeNull()\n+    expect(\n+      within(condition).getByText('비용 반영 (PROVISIONAL-TEST-1, 임시 비용 기준)'),\n+    ).not.toBeNull()\n+\n+    expect(screen.getByText(/종료일 시가평가 기준 수익률은 16\\.67%/).textContent).toContain(\n+      '청산 비용 3,996원을 포함해 16.63%',\n+    )\n+  })\n+\n+  it('요약이 없으면 숫자 자리를 그리지 않고 계산되지 않았다고 쓴다', () => {\n+    const { container } = render(\n+      <ResultSummaryCard detail={resultDetailCancelledNoSummary} completedThrough={null} />,\n+    )\n+\n+    expect(screen.queryByRole('definition')).toBeNull()\n+    // `\\b`는 한글 경계를 모르므로 금액은 숫자 바로 뒤의 '원'으로 찾는다.\n+    expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n+    expect(container.textContent).toContain(SUMMARY_NOT_CALCULATED)\n+    expect(container.textContent).toContain('완료된 거래일이 없습니다')\n+  })\n+\n+  it('실행이 계속 돈 취소 결과는 완료 범위를 날짜로 밝힌다', () => {\n+    const detail: PublicResultDetail = {\n+      ...resultDetailCancelledNoSummary,\n+      summaryUnavailable: 'CANCELLED_WHILE_RUN_CONTINUED',\n+    }\n+\n+    const { container, rerender } = render(\n+      <ResultSummaryCard detail={detail} completedThrough=\"2024-03-29\" />,\n+    )\n+    expect(container.textContent).toContain(SUMMARY_NOT_CALCULATED)\n+    expect(container.textContent).toContain('2024-03-29까지 계산이 진행되었습니다.')\n+\n+    rerender(<ResultSummaryCard detail={detail} completedThrough={null} />)\n+    expect(container.textContent).toContain('완료 범위는 확인할 수 없습니다.')\n+  })\n+\n+  it('수익률과 가장 크게 줄었던 폭이 모두 0이면 좋은 결과로 읽히지 않게 설명한다', () => {\n+    const { container } = render(\n+      <ResultSummaryCard\n+        detail={withSummary({ netTotalReturn: '0.000000', maxDrawdown: '0.000000', tradeCount: 0 })}\n+        completedThrough={null}\n+      />,\n+    )\n+\n+    expect(container.textContent).toContain('손실이 없었다는 평가가 아닙니다')\n+    expect(container.textContent).toContain('체결된 거래가 없습니다')\n+  })\n+\n+  it('규칙이 계산한 비중이면 출처 문장을 보이고 사용자 비중이면 보이지 않는다', () => {\n+    const { rerender } = render(\n+      <ResultSummaryCard detail={resultDetailCompleted} completedThrough={null} />,\n+    )\n+    expect(screen.getByText(COMPUTED_WEIGHTS_NOTE)).not.toBeNull()\n+\n+    rerender(\n+      <ResultSummaryCard\n+        detail={{ ...resultDetailCompleted, weightsSource: 'USER' }}\n+        completedThrough={null}\n+      />,\n+    )\n+    expect(screen.queryByText(COMPUTED_WEIGHTS_NOTE)).toBeNull()\n+  })\n+\n+  it('등록표에서 이름을 찾지 못하면 전략 식별자를 그대로 보인다', () => {\n+    render(\n+      <ResultSummaryCard\n+        detail={{ ...resultDetailCompleted, strategyName: null }}\n+        completedThrough={null}\n+      />,\n+    )\n+\n+    expect(screen.getByText('기준 WAVE_LEVELING · 비교 대상 없음')).not.toBeNull()\n+  })\n+\n+  it('청산을 가정하지 않은 결과는 시가평가 기준이라고 밝힌다', () => {\n+    render(\n+      <ResultSummaryCard detail={withSummary({ liquidation: null })} completedThrough={null} />,\n+    )\n+\n+    expect(screen.getByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).not.toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,106 @@\n+import type { PublicResultDetail } from '@/types/result'\n+import { buildConditionLine } from './conditionLine'\n+import { formatMoney, formatRatio, isZeroValue } from './formatResult'\n+import styles from './ResultSummaryCard.module.css'\n+\n+export const METRIC_DEFINITIONS = {\n+  netTotalReturn: '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',\n+  maxDrawdown:\n+    '운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',\n+  totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',\n+} as const\n+\n+export const SUMMARY_NOT_CALCULATED = '취소 시점까지의 지표는 계산되지 않았습니다.'\n+\n+type ResultSummaryCardProps = {\n+  detail: PublicResultDetail\n+  /**\n+   * 부분 결과·취소 결과의 완료 범위(마지막으로 계산한 거래일). 모르면 `null`이다.\n+   *\n+   * 공개 상세는 계산 중일 때만 `progress`를 담으므로, 화면이 시계열의 마지막 날짜로 채운다.\n+   */\n+  completedThrough: string | null\n+}\n+\n+/**\n+ * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의, 조건 한 줄, 종료 시 평가 구분(FR-001~FR-003, FR-015).\n+ *\n+ * <p>숫자는 응답 문자열을 자릿수만 다듬어 보인다. <b>요약이 없으면 숫자 자리를 그리지 않는다</b> — 0이나\n+ * 대체값을 넣으면 없는 결과를 만든다(FR-013, 원칙 VI).\n+ *\n+ * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).\n+ */\n+export function ResultSummaryCard({ detail, completedThrough }: ResultSummaryCardProps) {\n+  const condition = buildConditionLine(detail)\n+  const { summary } = detail\n+\n+  return (\n+    <section className={styles.card} aria-labelledby=\"result-summary-title\">\n+      <h2 id=\"result-summary-title\" className={styles.visuallyHidden}>\n+        결과 요약\n+      </h2>\n+\n+      <p className={styles.condition} aria-label=\"분석 조건\">\n+        <span>{condition.period}</span>\n+        <span>{condition.comparison}</span>\n+        <span>{condition.cost}</span>\n+      </p>\n+      {condition.weightsNote ? <p className={styles.note}>{condition.weightsNote}</p> : null}\n+\n+      {summary ? (\n+        <>\n+          <dl className={styles.metrics}>\n+            <Metric\n+              label=\"비용 차감 후 전체 수익률\"\n+              value={formatRatio(summary.netTotalReturn)}\n+              definition={METRIC_DEFINITIONS.netTotalReturn}\n+            />\n+            <Metric\n+              label=\"가장 크게 줄었던 폭\"\n+              value={formatRatio(summary.maxDrawdown)}\n+              definition={METRIC_DEFINITIONS.maxDrawdown}\n+            />\n+            <Metric\n+              label=\"거래비용\"\n+              value={formatMoney(summary.totalTradingCost)}\n+              definition={METRIC_DEFINITIONS.totalTradingCost}\n+            />\n+          </dl>\n+\n+          {isZeroValue(summary.netTotalReturn) && isZeroValue(summary.maxDrawdown) ? (\n+            <p className={styles.note}>\n+              수익률과 가장 크게 줄었던 폭이 모두 0입니다. 기간 동안 자산가치가 달라지지 않았다는\n+              뜻이며 손실이 없었다는 평가가 아닙니다.\n+              {summary.tradeCount === 0 ? ' 이 기간에 체결된 거래가 없습니다.' : ''}\n+            </p>\n+          ) : null}\n+\n+          <p className={styles.note}>\n+            {summary.liquidation\n+              ? `종료일 시가평가 기준 수익률은 ${formatRatio(summary.liquidation.markToMarket.totalReturn)}이고, 종료일에 모두 판다고 가정하면 청산 비용 ${formatMoney(summary.liquidation.liquidated.liquidationCost)}을 포함해 ${formatRatio(summary.liquidation.liquidated.totalReturn)}입니다.`\n+              : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}\n+          </p>\n+        </>\n+      ) : detail.summaryUnavailable ? (\n+        <p className={styles.unavailable}>\n+          {SUMMARY_NOT_CALCULATED}{' '}\n+          {detail.summaryUnavailable === 'CANCELLED_BEFORE_START'\n+            ? '계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.'\n+            : completedThrough\n+              ? `${completedThrough}까지 계산이 진행되었습니다.`\n+              : '완료 범위는 확인할 수 없습니다.'}\n+        </p>\n+      ) : null}\n+    </section>\n+  )\n+}\n+\n+function Metric({ label, value, definition }: { label: string; value: string; definition: string }) {\n+  return (\n+    <div className={styles.metric}>\n+      <dt className={styles.metricLabel}>{label}</dt>\n+      <dd className={styles.metricValue}>{value}</dd>\n+      <dd className={styles.metricDefinition}>{definition}</dd>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+.notice {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n+  gap: 14px;\n+}\n+\n+.title {\n+  margin: 0;\n+  font-size: clamp(1.5rem, 4vw, 2.2rem);\n+  line-height: 1.2;\n+  letter-spacing: -0.03em;\n+}\n+\n+.copy {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.95rem;\n+  line-height: 1.7;\n+}\n+\n+.action {\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.95rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultUnavailableNotice.module.css",
+          "old_path": "frontend/src/components/result/ResultUnavailableNotice.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,42 @@\n+import { Link } from 'react-router-dom'\n+import styles from './ResultUnavailableNotice.module.css'\n+\n+export const EXPIRED_MESSAGE = '결과가 더 이상 남아 있지 않습니다.'\n+export const NOT_FOUND_MESSAGE = '주소가 올바르지 않아 결과를 찾을 수 없습니다.'\n+\n+/**\n+ * 결과를 열 수 없는 주소의 안내(contracts \"오류\").\n+ *\n+ * <p>만료(410)와 잘못된 주소(404·400)는 사용자가 할 수 있는 일이 달라 문구를 나눈다. 만료된 결과는\n+ * 같은 조건으로 다시 분석할 수 있지만 조건이 남아 있지 않다. 그래서 조건을 다시 고르는 전략 선택\n+ * 화면으로 잇고, 문구도 조건을 되살려 준다고 약속하지 않는다.\n+ *\n+ * <p><b>어느 쪽도 숫자 자리나 그래프 자리를 그리지 않는다</b>(SC-008).\n+ */\n+export function ResultUnavailableNotice({ reason }: { reason: 'expired' | 'notFound' }) {\n+  return (\n+    <section className={styles.notice} aria-labelledby=\"result-unavailable-title\">\n+      <h1 id=\"result-unavailable-title\" className={styles.title}>\n+        {reason === 'expired' ? EXPIRED_MESSAGE : NOT_FOUND_MESSAGE}\n+      </h1>\n+      {reason === 'expired' ? (\n+        <>\n+          <p className={styles.copy}>\n+            로그인하지 않고 만든 결과는 정해진 시간이 지나면 지워집니다. 조건은 남아 있지 않으므로\n+            같은 조건을 다시 골라 분석해 주세요.\n+          </p>\n+          <Link className={styles.action} to=\"/strategy\">\n+            조건을 다시 골라 분석하기\n+          </Link>\n+        </>\n+      ) : (\n+        <>\n+          <p className={styles.copy}>받은 주소가 끝까지 복사되었는지 확인해 주세요.</p>\n+          <Link className={styles.action} to=\"/diagnosis/sectors\">\n+            새로 분석하기\n+          </Link>\n+        </>\n+      )}\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultUnavailableNotice.tsx",
+          "old_path": "frontend/src/components/result/ResultUnavailableNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,51 @@\n+import type { PublicResultDetail } from '@/types/result'\n+\n+/**\n+ * 조건 한 줄(FR-003)의 세 항목과 비중 출처 문장(FR-014).\n+ *\n+ * '한 줄'은 하나의 묶음이라는 뜻이다. 세 항목을 어느 폭에서도 생략하지 않고, 좁은 화면에서는\n+ * 줄바꿈만 허용한다 — 그래서 문자열 하나가 아니라 항목별로 돌려주고 화면이 한 묶음 안에 나란히 둔다.\n+ */\n+export type ConditionLine = {\n+  /** 분석 기간 */\n+  period: string\n+  /** 비교 대상 */\n+  comparison: string\n+  /** 비용 적용 여부 */\n+  cost: string\n+  /** 규칙이 비중을 계산한 결과일 때만 문장이 있다 */\n+  weightsNote: string | null\n+}\n+\n+export type ConditionLineInput = Pick<\n+  PublicResultDetail,\n+  'config' | 'versions' | 'strategyName' | 'weightsSource'\n+> & {\n+  /** 비교 대상의 이름. 없으면 `null` */\n+  targetName?: string | null\n+}\n+\n+export const COMPUTED_WEIGHTS_NOTE = '비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.'\n+\n+/**\n+ * 전략 이름. 등록표에서 찾지 못해 `strategyName`이 없으면 `strategyId`를 그대로 보인다.\n+ * 이름을 지어내지 않는다.\n+ */\n+export function strategyLabel(detail: Pick<PublicResultDetail, 'config' | 'strategyName'>): string {\n+  return detail.strategyName ?? detail.config.strategyId\n+}\n+\n+/** 응답의 조건과 버전으로 조건 한 줄을 만든다. 값을 계산하지 않고 고르고 잇기만 한다. */\n+export function buildConditionLine(input: ConditionLineInput): ConditionLine {\n+  const { config, versions } = input\n+  const costProfile = versions.costProfile\n+\n+  return {\n+    period: `분석 기간 ${config.effectiveStart} ~ ${config.effectiveEnd}`,\n+    comparison: `기준 ${strategyLabel(input)} · 비교 대상 ${input.targetName ?? '없음'}`,\n+    cost: costProfile\n+      ? `비용 반영 (${costProfile.version}${costProfile.provisional ? ', 임시 비용 기준' : ''})`\n+      : '비용 반영 여부를 확인할 수 없음',\n+    weightsNote: input.weightsSource === 'COMPUTED' ? COMPUTED_WEIGHTS_NOTE : null,\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/conditionLine.ts",
+          "old_path": "frontend/src/components/result/conditionLine.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,7 @@\n+/**\n+ * 결과 화면이 쓰는 상수.\n+ *\n+ * 계산 중인 결과를 다시 물어보는 간격이다. 004 진행 보고 배치보다 짧게 잡을 이유가 없고, 너무 길면\n+ * 끝난 뒤에도 한참 진행 중으로 보인다. 제품 기준값이 아니라 화면 동작값이므로 여기 한 곳에만 둔다.\n+ */\n+export const RESULT_POLL_INTERVAL_MS = 3_000\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/constants.ts",
+          "old_path": "frontend/src/components/result/constants.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,30 @@\n+/**\n+ * 결과 값의 표기. **자릿수만 다듬고 값을 다시 계산하지 않는다.**\n+ *\n+ * 응답의 비율·금액은 문자열이다. 비율은 백분율 소수 둘째 자리, 금액은 원 단위로만 보인다.\n+ * 읽을 수 없는 값은 0으로 바꾸지 않고 받은 문자열을 그대로 둔다 — 0으로 바꾸면 없는 결과를\n+ * 만들어 낸다(원칙 VI).\n+ */\n+\n+/** `\"0.166652\"` → `\"16.67%\"`, `\"-0.041757\"` → `\"-4.18%\"` */\n+export function formatRatio(value: string): string {\n+  const ratio = Number(value)\n+  if (value.trim() === '' || !Number.isFinite(ratio)) return value\n+  const percent = (ratio * 100).toFixed(2)\n+  // 반올림으로 생긴 \"-0.00\"은 음수가 아니다.\n+  return `${percent === '-0.00' ? '0.00' : percent}%`\n+}\n+\n+const moneyFormat = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 })\n+\n+/** `\"17078.49\"` → `\"17,078원\"` */\n+export function formatMoney(value: string): string {\n+  const amount = Number(value)\n+  if (value.trim() === '' || !Number.isFinite(amount)) return value\n+  return `${moneyFormat.format(amount)}원`\n+}\n+\n+/** 값이 수로 읽히고 0인가. 읽을 수 없으면 `false`다 */\n+export function isZeroValue(value: string): boolean {\n+  return value.trim() !== '' && Number(value) === 0\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/formatResult.ts",
+          "old_path": "frontend/src/components/result/formatResult.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,132 @@\n+import { describe, expect, it } from 'vitest'\n+import {\n+  PARTIAL_PREFIX_TEMPLATES,\n+  SENTENCE_TEMPLATES,\n+  type SentenceSubject,\n+  selectSummarySentence,\n+  selectTemplateKey,\n+} from './summarySentences'\n+\n+/** 005 T035. SC-004, quickstart 4. */\n+\n+const forbiddenWords = ['추천', '최적', '승자', '우승', '유리', '좋다', '할 것', '유사', '확률']\n+\n+const base: SentenceSubject = {\n+  name: '물결 고르기',\n+  netTotalReturn: '0.166652',\n+  maxDrawdown: '-0.041757',\n+  totalTradingCost: '17078.49',\n+}\n+\n+function target(overrides: Partial<SentenceSubject>): SentenceSubject {\n+  return { ...base, name: '썰물 나누기', ...overrides }\n+}\n+\n+describe('해석 요약 문장 틀', () => {\n+  it('틀 전체 문자열에 금지 어휘가 하나도 없다', () => {\n+    const allTemplates = [\n+      ...Object.values(SENTENCE_TEMPLATES),\n+      ...Object.values(PARTIAL_PREFIX_TEMPLATES),\n+    ].join('\\n')\n+\n+    for (const word of forbiddenWords) {\n+      expect(allTemplates, word).not.toContain(word)\n+    }\n+  })\n+\n+  it('비교 대상이 없으면 세 숫자만 말하는 틀을 고른다', () => {\n+    expect(selectTemplateKey({ base })).toBe('single')\n+    expect(selectSummarySentence({ base })).toBe(\n+      '비용을 뺀 뒤 전체 수익률은 16.67%, 운용 중 고점 대비 가장 크게 줄었던 폭은 -4.18%, 거래비용은 17,078원입니다.',\n+    )\n+  })\n+\n+  it.each([\n+    [{ netTotalReturn: '0.20', maxDrawdown: '-0.08' }, 'higherLarger'],\n+    [{ netTotalReturn: '0.20', maxDrawdown: '-0.02' }, 'higherSmaller'],\n+    [{ netTotalReturn: '0.20' }, 'higherSame'],\n+    [{ netTotalReturn: '0.10', maxDrawdown: '-0.08' }, 'lowerLarger'],\n+    [{ netTotalReturn: '0.10', maxDrawdown: '-0.02' }, 'lowerSmaller'],\n+    [{ netTotalReturn: '0.10' }, 'lowerSame'],\n+    [{ maxDrawdown: '-0.08' }, 'sameLarger'],\n+    [{ maxDrawdown: '-0.02' }, 'sameSmaller'],\n+    [{}, 'identical'],\n+    [{ totalTradingCost: '20000.00' }, 'costOnlyMore'],\n+    [{ totalTradingCost: '10000.00' }, 'costOnlyLess'],\n+  ] as const)('차이 방향 %o 에서 %s 틀을 고른다', (overrides, expected) => {\n+    expect(selectTemplateKey({ base, target: target(overrides) })).toBe(expected)\n+  })\n+\n+  it('보이는 자릿수에서 같은 값은 같다고 말한다', () => {\n+    // 16.6652%와 16.6653%는 모두 16.67%로 보인다. 한쪽이 높다고 쓰면 숫자와 문장이 다른 말을 한다.\n+    expect(selectTemplateKey({ base, target: target({ netTotalReturn: '0.166653' }) })).toBe(\n+      'identical',\n+    )\n+  })\n+\n+  it('수로 읽히지 않는 값이 있으면 비교하지 않고 같다고도 쓰지 않는다', () => {\n+    const unreadable = target({ netTotalReturn: 'N/A' })\n+\n+    expect(selectTemplateKey({ base, target: unreadable })).toBe('single')\n+    expect(selectTemplateKey({ base: { ...base, maxDrawdown: '' }, target: target({}) })).toBe(\n+      'single',\n+    )\n+  })\n+\n+  it('모든 틀이 값 자리를 남기지 않고 채워진다', () => {\n+    const cases = [\n+      { base },\n+      { base, target: target({ netTotalReturn: '0.20', maxDrawdown: '-0.08' }) },\n+      { base, target: target({ totalTradingCost: '20000.00' }) },\n+      { base, target: target({}) },\n+      { base, partial: { completedThrough: '2024-03-29' } },\n+      { base, partial: { completedThrough: null } },\n+    ]\n+\n+    for (const input of cases) {\n+      const sentence = selectSummarySentence(input)\n+      expect(sentence).not.toMatch(/undefined|NaN|\\{|\\}/)\n+    }\n+  })\n+\n+  it('틀에 적힌 값 자리가 모두 채울 수 있는 이름이다', () => {\n+    const known = new Set([\n+      'baseName',\n+      'baseReturn',\n+      'baseDrawdown',\n+      'baseCost',\n+      'targetName',\n+      'targetReturn',\n+      'targetDrawdown',\n+      'targetCost',\n+      'completedThrough',\n+    ])\n+    const placeholders = [\n+      ...Object.values(SENTENCE_TEMPLATES),\n+      ...Object.values(PARTIAL_PREFIX_TEMPLATES),\n+    ].flatMap((template) => [...template.matchAll(/\\{(\\w+)\\}/g)].map((match) => match[1]))\n+\n+    expect(placeholders.filter((name) => !known.has(name))).toEqual([])\n+  })\n+\n+  it('부분 결과면 완료 범위까지의 값이라고 먼저 밝힌다', () => {\n+    expect(selectSummarySentence({ base, partial: { completedThrough: '2024-03-29' } })).toMatch(\n+      /^2024-03-29까지 계산한 값입니다\\. 비용을 뺀 뒤/,\n+    )\n+    expect(selectSummarySentence({ base, partial: { completedThrough: null } })).toMatch(\n+      /^완료 범위까지 계산한 값입니다\\. /,\n+    )\n+  })\n+\n+  it('비교 문장은 두 값을 나란히 적고 차이를 만들어 내지 않는다', () => {\n+    const sentence = selectSummarySentence({\n+      base,\n+      target: target({ netTotalReturn: '0.20', maxDrawdown: '-0.08' }),\n+    })\n+\n+    expect(sentence).toBe(\n+      '같은 조건에서 비교 대상(썰물 나누기)은 기준(물결 고르기)보다 수익률이 높고(20.00%, 기준 16.67%) 가장 크게 줄었던 폭도 컸습니다(-8.00%, 기준 -4.18%).',\n+    )\n+    expect(sentence).not.toContain('%p')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/summarySentences.test.ts",
+          "old_path": "frontend/src/components/result/summarySentences.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,152 @@\n+import { formatMoney, formatRatio } from './formatResult'\n+\n+/**\n+ * 해석 요약 1문장의 고정 문장 틀(FR-006, research R-07, data-model §3-5).\n+ *\n+ * 이 파일은 SC-004의 검수 대상이다. 화면이 문장을 새로 짓지 않는다. 금지 어휘는\n+ * `summarySentences.test.ts`가 막는다.\n+ *\n+ * <p>틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다.\n+ * 차이는 <b>크기를 비교만 하고 빼지 않는다</b> — 두 값을 나란히 적어 사용자가 읽게 한다. 이 화면은\n+ * 값을 계산하지 않는다.\n+ *\n+ * <p>틀의 `{이름}` 자리만 값으로 채운다. 이름 뒤에 조사가 붙지 않도록 이름은 괄호 안에 둔다.\n+ */\n+\n+export const SENTENCE_TEMPLATES = {\n+  /** 비교 대상 없음: 기준 결과의 세 숫자 */\n+  single:\n+    '비용을 뺀 뒤 전체 수익률은 {baseReturn}, 운용 중 고점 대비 가장 크게 줄었던 폭은 {baseDrawdown}, 거래비용은 {baseCost}입니다.',\n+  /** 두 결과의 세 숫자가 모두 같다 */\n+  identical:\n+    '같은 조건에서 기준({baseName})과 비교 대상({targetName})의 수익률·가장 크게 줄었던 폭·거래비용이 모두 같습니다.',\n+  /** 수익률과 가장 크게 줄었던 폭은 같고 거래비용만 다르다 */\n+  costOnlyMore:\n+    '같은 조건에서 두 결과의 수익률과 가장 크게 줄었던 폭은 같고, 거래비용은 비교 대상({targetName}) {targetCost}으로 기준({baseName}) {baseCost}보다 많습니다.',\n+  costOnlyLess:\n+    '같은 조건에서 두 결과의 수익률과 가장 크게 줄었던 폭은 같고, 거래비용은 비교 대상({targetName}) {targetCost}으로 기준({baseName}) {baseCost}보다 적습니다.',\n+  /** 비교 대상 기준으로 수익률 방향 × 가장 크게 줄었던 폭의 방향 */\n+  higherLarger:\n+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 높고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭도 컸습니다({targetDrawdown}, 기준 {baseDrawdown}).',\n+  higherSmaller:\n+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 높고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 작았습니다({targetDrawdown}, 기준 {baseDrawdown}).',\n+  higherSame:\n+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 높고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 같았습니다({baseDrawdown}).',\n+  lowerLarger:\n+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 컸습니다({targetDrawdown}, 기준 {baseDrawdown}).',\n+  lowerSmaller:\n+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭도 작았습니다({targetDrawdown}, 기준 {baseDrawdown}).',\n+  lowerSame:\n+    '같은 조건에서 비교 대상({targetName})은 기준({baseName})보다 수익률이 낮고({targetReturn}, 기준 {baseReturn}) 가장 크게 줄었던 폭은 같았습니다({baseDrawdown}).',\n+  sameLarger:\n+    '같은 조건에서 두 결과의 수익률은 같고({baseReturn}) 가장 크게 줄었던 폭은 비교 대상({targetName})이 기준({baseName})보다 컸습니다({targetDrawdown}, 기준 {baseDrawdown}).',\n+  sameSmaller:\n+    '같은 조건에서 두 결과의 수익률은 같고({baseReturn}) 가장 크게 줄었던 폭은 비교 대상({targetName})이 기준({baseName})보다 작았습니다({targetDrawdown}, 기준 {baseDrawdown}).',\n+} as const\n+\n+/** 부분 결과 접두. 완료 범위를 모르면 날짜 없이 쓴다 */\n+export const PARTIAL_PREFIX_TEMPLATES = {\n+  withDate: '{completedThrough}까지 계산한 값입니다. ',\n+  withoutDate: '완료 범위까지 계산한 값입니다. ',\n+} as const\n+\n+export type SentenceTemplateKey = keyof typeof SENTENCE_TEMPLATES\n+\n+/** 문장 틀에 넣을 한 결과의 값. 응답 문자열 그대로다 */\n+export type SentenceSubject = {\n+  name: string\n+  netTotalReturn: string\n+  maxDrawdown: string\n+  totalTradingCost: string\n+}\n+\n+export type SentenceInput = {\n+  base: SentenceSubject\n+  target?: SentenceSubject | null\n+  /** 부분 결과면 완료 범위. 날짜를 모르면 `completedThrough: null` */\n+  partial?: { completedThrough: string | null } | null\n+}\n+\n+type Direction = 'higher' | 'lower' | 'same'\n+\n+/**\n+ * **화면에 보이는 자릿수로 비교한다.** 보이는 두 값이 같은데 한쪽이 높다고 쓰면 문장과 숫자가 다른\n+ * 말을 한다. 비율은 백분율 소수 둘째 자리, 금액은 원 단위다(`formatResult.ts`와 같은 자릿수).\n+ */\n+function compare(target: string, base: string, displayed: (value: string) => string): Direction {\n+  const t = Number(displayed(target).replace(/[^\\d.-]/g, ''))\n+  const b = Number(displayed(base).replace(/[^\\d.-]/g, ''))\n+  if (t === b) return 'same'\n+  return t > b ? 'higher' : 'lower'\n+}\n+\n+function isNumeric(value: string): boolean {\n+  return value.trim() !== '' && Number.isFinite(Number(value))\n+}\n+\n+/**\n+ * 조건에 맞는 틀의 이름을 고른다.\n+ *\n+ * 두 결과 가운데 하나라도 수로 읽히지 않는 값이 있으면 방향을 정할 수 없으므로 비교하지 않고 기준\n+ * 결과만 말한다. 읽지 못한 값을 0으로 보고 \"같다\"고 쓰지 않는다.\n+ */\n+export function selectTemplateKey(input: SentenceInput): SentenceTemplateKey {\n+  const { base, target } = input\n+  if (!target) return 'single'\n+\n+  const subjects = [base, target]\n+  const comparable = subjects.every(\n+    (subject) =>\n+      isNumeric(subject.netTotalReturn) &&\n+      isNumeric(subject.maxDrawdown) &&\n+      isNumeric(subject.totalTradingCost),\n+  )\n+  if (!comparable) return 'single'\n+\n+  const returnDirection = compare(target.netTotalReturn, base.netTotalReturn, formatRatio)\n+  // 가장 크게 줄었던 폭은 0 이하의 비율이다. 값이 더 낮으면(더 음수면) 폭이 더 크다.\n+  const drawdownDirection = compare(target.maxDrawdown, base.maxDrawdown, formatRatio)\n+  const drawdownWord =\n+    drawdownDirection === 'same' ? 'Same' : drawdownDirection === 'lower' ? 'Larger' : 'Smaller'\n+\n+  if (returnDirection === 'same' && drawdownDirection === 'same') {\n+    const costDirection = compare(target.totalTradingCost, base.totalTradingCost, formatMoney)\n+    if (costDirection === 'same') return 'identical'\n+    return costDirection === 'higher' ? 'costOnlyMore' : 'costOnlyLess'\n+  }\n+\n+  return `${returnDirection}${drawdownWord}` as SentenceTemplateKey\n+}\n+\n+function fill(template: string, values: Record<string, string>): string {\n+  return template.replace(/\\{(\\w+)\\}/g, (placeholder, key: string) => values[key] ?? placeholder)\n+}\n+\n+/**\n+ * 조건에 맞는 틀을 골라 값 자리만 채운 해석 요약 1문장.\n+ *\n+ * 값은 자릿수만 다듬어 넣는다(비율은 %, 금액은 원).\n+ */\n+export function selectSummarySentence(input: SentenceInput): string {\n+  const { base, target, partial } = input\n+  const values: Record<string, string> = {\n+    baseName: base.name,\n+    baseReturn: formatRatio(base.netTotalReturn),\n+    baseDrawdown: formatRatio(base.maxDrawdown),\n+    baseCost: formatMoney(base.totalTradingCost),\n+  }\n+  if (target) {\n+    values.targetName = target.name\n+    values.targetReturn = formatRatio(target.netTotalReturn)\n+    values.targetDrawdown = formatRatio(target.maxDrawdown)\n+    values.targetCost = formatMoney(target.totalTradingCost)\n+  }\n+\n+  const prefix = partial\n+    ? partial.completedThrough\n+      ? fill(PARTIAL_PREFIX_TEMPLATES.withDate, { completedThrough: partial.completedThrough })\n+      : PARTIAL_PREFIX_TEMPLATES.withoutDate\n+    : ''\n+\n+  return prefix + fill(SENTENCE_TEMPLATES[selectTemplateKey(input)], values)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/summarySentences.ts",
+          "old_path": "frontend/src/components/result/summarySentences.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,131 @@\n+import { useCallback, useEffect, useState } from 'react'\n+import { ResultError, fetchResult, fetchResultTimeseries } from '@/api/result'\n+import { RESULT_POLL_INTERVAL_MS } from '@/components/result/constants'\n+import type { PublicResultDetail, ResultStatus, ResultTimeseries } from '@/types/result'\n+\n+/**\n+ * 시계열을 받지 못한 이유. 그래프 자리가 이 값으로 안내한다(B04).\n+ *\n+ * `code`는 서버가 준 이름 그대로다. 받지 못했다고 빈 계열로 바꾸지 않는다 — 빈 곡선은 \"돌았고 비어\n+ * 있었다\"는 거짓이 된다(004 §2.5).\n+ */\n+export type TimeseriesState =\n+  | { status: 'none' }\n+  | { status: 'loaded'; data: ResultTimeseries }\n+  | { status: 'unavailable'; code: string | null; message: string }\n+\n+export type ResultState =\n+  | { status: 'loading' }\n+  | { status: 'ready'; detail: PublicResultDetail; timeseries: TimeseriesState }\n+  /** `410 RESULT_EXPIRED`. 결과를 열지 않는다(SC-008) */\n+  | { status: 'expired' }\n+  /** `404`·`400`. 잘못된 주소이며 만료와 다르게 안내한다 */\n+  | { status: 'notFound' }\n+  /** 연결 실패 등. 사용자가 다시 시도할 수 있다 */\n+  | { status: 'error'; message: string }\n+\n+const inFlightStatuses: ResultStatus[] = ['QUEUED', 'RUNNING']\n+\n+/**\n+ * 볼 결과가 있는 상태인가. 시작 전에 취소된 결과는 하위 자원이 `409 NO_PARTIAL_RESULT`라 부르지 않는다.\n+ * 실패한 결과도 `409 BACKTEST_FAILED`라 부르지 않는다.\n+ */\n+function hasViewableResult(detail: PublicResultDetail): boolean {\n+  if (detail.status === 'COMPLETED') return true\n+  return detail.status === 'CANCELLED' && detail.summaryUnavailable !== 'CANCELLED_BEFORE_START'\n+}\n+\n+/**\n+ * 코드가 없으면 HTTP 상태로 가른다. 응답 봉투 없이 404·400이 오는 경우(프록시나 보안 필터가 먼저\n+ * 답한 경우)에도 잘못된 주소 안내가 떠야 한다 — 다시 불러오기를 주면 같은 실패를 반복한다.\n+ */\n+function toFailureState(error: unknown): ResultState {\n+  const failure = error instanceof ResultError ? error : new ResultError('결과를 불러오지 못했습니다.')\n+  if (failure.is('RESULT_EXPIRED') || (failure.code === null && failure.status === 410)) {\n+    return { status: 'expired' }\n+  }\n+  if (\n+    failure.is('RESOURCE_NOT_FOUND') ||\n+    failure.is('INVALID_INPUT') ||\n+    (failure.code === null && (failure.status === 404 || failure.status === 400))\n+  ) {\n+    return { status: 'notFound' }\n+  }\n+  return { status: 'error', message: failure.message }\n+}\n+\n+/**\n+ * 공개 토큰으로 결과를 읽는다(`GET /results/{token}` → 종결 상태면 `/timeseries`).\n+ *\n+ * <p><b>첫 화면이 부르는 요청은 상세와 시계열 둘뿐이다(SC-001).</b> 거래 내역·비중·예외는 사용자가\n+ * '자세히 보기'를 열 때 따로 부른다.\n+ *\n+ * <p>`QUEUED`·`RUNNING`이면 응답을 받은 뒤에 다음 조회를 건다 — 타이머가 겹치지 않는다. 화면을 떠나면\n+ * 요청을 취소하고, 떠난 뒤 도착한 응답은 버린다.\n+ *\n+ * <p>만료·없음은 다시 물어도 바뀌지 않으므로 멈춘다. 연결 실패도 폴링을 멈추고 사용자가 `retry`를\n+ * 누를 때 다시 부른다 — 조용히 계속 두드리지 않는다.\n+ */\n+export function useResult(token: string): ResultState & { retry: () => void } {\n+  const [state, setState] = useState<ResultState>({ status: 'loading' })\n+  const [attempt, setAttempt] = useState(0)\n+\n+  const retry = useCallback(() => setAttempt((count) => count + 1), [])\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    let active = true\n+    let timer = 0\n+\n+    const load = async () => {\n+      let detail: PublicResultDetail\n+      try {\n+        detail = await fetchResult(token, controller.signal)\n+      } catch (error) {\n+        if (active) setState(toFailureState(error))\n+        return\n+      }\n+      if (!active) return\n+\n+      if (inFlightStatuses.includes(detail.status)) {\n+        setState({ status: 'ready', detail, timeseries: { status: 'none' } })\n+        timer = window.setTimeout(() => void load(), RESULT_POLL_INTERVAL_MS)\n+        return\n+      }\n+\n+      if (!hasViewableResult(detail)) {\n+        setState({ status: 'ready', detail, timeseries: { status: 'none' } })\n+        return\n+      }\n+\n+      let timeseries: TimeseriesState\n+      try {\n+        timeseries = {\n+          status: 'loaded',\n+          data: await fetchResultTimeseries(token, controller.signal),\n+        }\n+      } catch (error) {\n+        const failure =\n+          error instanceof ResultError ? error : new ResultError('그래프 자료를 불러오지 못했습니다.')\n+        // 상세를 받은 뒤 만료 시각을 넘긴 경우다. 이미 받은 숫자를 남기지 않고 만료로 닫는다(SC-008).\n+        if (failure.is('RESULT_EXPIRED') || (failure.code === null && failure.status === 410)) {\n+          if (active) setState({ status: 'expired' })\n+          return\n+        }\n+        timeseries = { status: 'unavailable', code: failure.code, message: failure.message }\n+      }\n+      if (active) setState({ status: 'ready', detail, timeseries })\n+    }\n+\n+    setState({ status: 'loading' })\n+    void load()\n+\n+    return () => {\n+      active = false\n+      window.clearTimeout(timer)\n+      controller.abort()\n+    }\n+  }, [token, attempt])\n+\n+  return { ...state, retry }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useResult.ts",
+          "old_path": "frontend/src/hooks/useResult.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,80 @@\n+.page {\n+  min-height: 100svh;\n+  overflow-x: clip;\n+  background:\n+    linear-gradient(var(--thorp-line) 1px, transparent 1px),\n+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),\n+    var(--thorp-background);\n+  background-size: 72px 72px, 72px 72px, auto;\n+  color: var(--thorp-foreground);\n+}\n+\n+.main {\n+  width: min(100% - 40px, 880px);\n+  margin: 0 auto;\n+  padding: clamp(90px, 15vh, 160px) 0 80px;\n+}\n+\n+/* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */\n+.result {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 20px;\n+  min-width: 0;\n+}\n+\n+.title {\n+  margin: 0;\n+  font-size: clamp(1.7rem, 4.5vw, 2.6rem);\n+  line-height: 1.1;\n+  letter-spacing: -0.04em;\n+}\n+\n+.status {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.95rem;\n+  line-height: 1.7;\n+}\n+\n+.error {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n+  gap: 12px;\n+}\n+\n+.retry {\n+  padding: 8px 14px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 10px;\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n+  font: inherit;\n+  cursor: pointer;\n+}\n+\n+.retry:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+.sentence {\n+  margin: 0;\n+  font-size: 1rem;\n+  line-height: 1.75;\n+  overflow-wrap: anywhere;\n+}\n+\n+.source {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.8rem;\n+}\n+\n+@media (max-width: 600px) {\n+  .main {\n+    width: min(100% - 32px, 880px);\n+    padding-top: 72px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.module.css",
+          "old_path": "frontend/src/pages/ResultPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,233 @@\n+import { act, render, screen } from '@testing-library/react'\n+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { ResultError } from '@/api/result'\n+import { RESULT_POLL_INTERVAL_MS } from '@/components/result/constants'\n+import { EXPIRED_MESSAGE, NOT_FOUND_MESSAGE } from '@/components/result/ResultUnavailableNotice'\n+import {\n+  resultDetailCancelledNoSummary,\n+  resultDetailCompleted,\n+  resultDetailRunning,\n+  resultTimeseries,\n+  resultToken,\n+} from '@/test/resultFixtures'\n+import { ResultPage } from './ResultPage'\n+\n+/** 005 T037. SC-001·SC-008·SC-009, quickstart 1·7·8. */\n+\n+const apiMocks = vi.hoisted(() => ({\n+  fetchResult: vi.fn(),\n+  fetchResultTimeseries: vi.fn(),\n+  fetchResultTrades: vi.fn(),\n+  fetchResultPositions: vi.fn(),\n+  fetchResultWeights: vi.fn(),\n+  fetchResultExceptions: vi.fn(),\n+  retryResult: vi.fn(),\n+}))\n+\n+vi.mock('@/api/result', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/api/result')>()\n+  return { ...actual, ...apiMocks }\n+})\n+vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))\n+\n+function renderResult(token = resultToken) {\n+  return render(\n+    <MemoryRouter initialEntries={[`/results/${token}`]}>\n+      <Routes>\n+        <Route path=\"/results/:token\" element={<ResultPage />} />\n+      </Routes>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('ResultPage', () => {\n+  beforeEach(() => {\n+    for (const mock of Object.values(apiMocks)) mock.mockReset()\n+  })\n+\n+  afterEach(() => {\n+    vi.useRealTimers()\n+  })\n+\n+  it('완료 결과는 상세와 시계열만 한 번씩 부르고 네 요소를 보인다', async () => {\n+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+\n+    renderResult()\n+\n+    expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은 16\\.67%/)).not.toBeNull()\n+    expect(screen.getByLabelText('분석 조건')).not.toBeNull()\n+    expect(screen.getByText('16.67%')).not.toBeNull()\n+    expect(screen.getByText('자료 출처: 한국거래소 통계정보')).not.toBeNull()\n+\n+    expect(apiMocks.fetchResult).toHaveBeenCalledTimes(1)\n+    expect(apiMocks.fetchResult.mock.calls[0][0]).toBe(resultToken)\n+    expect(apiMocks.fetchResultTimeseries).toHaveBeenCalledTimes(1)\n+    expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()\n+    expect(apiMocks.fetchResultPositions).not.toHaveBeenCalled()\n+    expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()\n+    expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n+  })\n+\n+  it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {\n+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+\n+    const { container } = renderResult()\n+    await screen.findByText(/비용을 뺀 뒤 전체 수익률은/)\n+\n+    expect(container.innerHTML).not.toContain('BT-')\n+    expect(container.innerHTML).not.toContain('backtestId')\n+  })\n+\n+  it('만료되면 다시 분석할 진입점을 보이고 숫자를 그리지 않는다', async () => {\n+    apiMocks.fetchResult.mockRejectedValue(\n+      new ResultError('결과가 더 이상 남아 있지 않습니다.', { code: 'RESULT_EXPIRED', status: 410 }),\n+    )\n+\n+    const { container } = renderResult()\n+\n+    expect(await screen.findByRole('heading', { name: EXPIRED_MESSAGE })).not.toBeNull()\n+    expect(\n+      screen.getByRole('link', { name: '조건을 다시 골라 분석하기' }).getAttribute('href'),\n+    ).toBe('/strategy')\n+    expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n+    expect(apiMocks.fetchResultTimeseries).not.toHaveBeenCalled()\n+  })\n+\n+  it('없는 주소는 만료와 다른 문구로 안내한다', async () => {\n+    apiMocks.fetchResult.mockRejectedValue(\n+      new ResultError('없음', { code: 'RESOURCE_NOT_FOUND', status: 404 }),\n+    )\n+\n+    const { container } = renderResult('9f2c1a7b4e0d83526af1c9d0b7e34513')\n+\n+    expect(await screen.findByRole('heading', { name: NOT_FOUND_MESSAGE })).not.toBeNull()\n+    expect(screen.queryByText(EXPIRED_MESSAGE)).toBeNull()\n+    expect(screen.queryByRole('link', { name: '조건을 다시 골라 분석하기' })).toBeNull()\n+    expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n+  })\n+\n+  it.each([\n+    [404, NOT_FOUND_MESSAGE],\n+    [400, NOT_FOUND_MESSAGE],\n+    [410, EXPIRED_MESSAGE],\n+  ])('응답 봉투 없이 %i 가 와도 상태 코드로 안내를 고른다', async (status, message) => {\n+    // 프록시나 보안 필터가 먼저 답하면 오류 이름이 없다. 다시 불러오기를 주면 같은 실패를 반복한다.\n+    apiMocks.fetchResult.mockRejectedValue(new ResultError('요청 실패', { status }))\n+\n+    renderResult()\n+\n+    expect(await screen.findByRole('heading', { name: message })).not.toBeNull()\n+    expect(screen.queryByRole('button', { name: '다시 불러오기' })).toBeNull()\n+  })\n+\n+  // 토큰이 바뀐 직후 한 번의 렌더에 앞 결과가 남는 문제는 `ResultPage`의 `key`가 막는다. 그 한 번은\n+  // act가 효과까지 흘려보낸 뒤라 jsdom에서 관찰되지 않으므로, 여기서는 새 토큰으로 다시 부르는지만 본다.\n+  it('토큰이 바뀌면 불러오는 중으로 돌아가 새 토큰으로 다시 부른다', async () => {\n+    const otherToken = 'b41e0c9a7d2f35618ce4a09b7f1d2c63'\n+    let resolveOther: (value: unknown) => void = () => {}\n+    apiMocks.fetchResult.mockImplementation((token: string) =>\n+      token === resultToken\n+        ? Promise.resolve(resultDetailCompleted)\n+        : new Promise((resolve) => {\n+            resolveOther = resolve\n+          }),\n+    )\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+\n+    function GoToOther() {\n+      const navigate = useNavigate()\n+      return (\n+        <button type=\"button\" onClick={() => navigate(`/results/${otherToken}`)}>\n+          다른 결과\n+        </button>\n+      )\n+    }\n+\n+    render(\n+      <MemoryRouter initialEntries={[`/results/${resultToken}`]}>\n+        <GoToOther />\n+        <Routes>\n+          <Route path=\"/results/:token\" element={<ResultPage />} />\n+        </Routes>\n+      </MemoryRouter>,\n+    )\n+    expect(await screen.findByText('16.67%')).not.toBeNull()\n+\n+    await act(async () => {\n+      screen.getByRole('button', { name: '다른 결과' }).click()\n+    })\n+\n+    expect(screen.queryByText('16.67%')).toBeNull()\n+    expect(screen.getByRole('status').textContent).toBe('결과를 불러오는 중입니다.')\n+    expect(apiMocks.fetchResult.mock.calls.map((call) => call[0])).toEqual([\n+      resultToken,\n+      otherToken,\n+    ])\n+\n+    await act(async () => {\n+      resolveOther({ ...resultDetailCompleted, publicToken: otherToken })\n+    })\n+    expect(await screen.findByText('16.67%')).not.toBeNull()\n+  })\n+\n+  it('형식이 틀린 토큰도 잘못된 주소로 안내한다', async () => {\n+    apiMocks.fetchResult.mockRejectedValue(\n+      new ResultError('형식 오류', { code: 'INVALID_INPUT', status: 400 }),\n+    )\n+\n+    renderResult('not-a-token')\n+\n+    expect(await screen.findByRole('heading', { name: NOT_FOUND_MESSAGE })).not.toBeNull()\n+  })\n+\n+  it('계산 중이면 폴링하다 완료되면 결과를 보인다', async () => {\n+    vi.useFakeTimers({ shouldAdvanceTime: true })\n+    apiMocks.fetchResult\n+      .mockResolvedValueOnce(resultDetailRunning)\n+      .mockResolvedValueOnce(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+\n+    renderResult()\n+\n+    expect(await screen.findByText(/전체 380거래일 중 180거래일을 마쳤습니다/)).not.toBeNull()\n+    expect(apiMocks.fetchResultTimeseries).not.toHaveBeenCalled()\n+\n+    await act(async () => {\n+      await vi.advanceTimersByTimeAsync(RESULT_POLL_INTERVAL_MS)\n+    })\n+\n+    expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은 16\\.67%/)).not.toBeNull()\n+    expect(apiMocks.fetchResult).toHaveBeenCalledTimes(2)\n+    expect(apiMocks.fetchResultTimeseries).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('시작 전에 취소된 결과는 하위 자원을 부르지 않고 숫자 없이 사유를 보인다', async () => {\n+    apiMocks.fetchResult.mockResolvedValue(resultDetailCancelledNoSummary)\n+\n+    const { container } = renderResult()\n+\n+    expect(await screen.findByText(/취소 시점까지의 지표는 계산되지 않았습니다/)).not.toBeNull()\n+    expect(apiMocks.fetchResultTimeseries).not.toHaveBeenCalled()\n+    expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n+  })\n+\n+  it('연결에 실패하면 다시 불러오기를 두고 누르면 다시 부른다', async () => {\n+    apiMocks.fetchResult\n+      .mockRejectedValueOnce(new ResultError('서버에 연결할 수 없습니다.'))\n+      .mockResolvedValueOnce(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+\n+    renderResult()\n+\n+    const retry = await screen.findByRole('button', { name: '다시 불러오기' })\n+    await act(async () => {\n+      retry.click()\n+    })\n+\n+    expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은/)).not.toBeNull()\n+    expect(apiMocks.fetchResult).toHaveBeenCalledTimes(2)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,132 @@\n+import { useParams } from 'react-router-dom'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { strategyLabel } from '@/components/result/conditionLine'\n+import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'\n+import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'\n+import { selectSummarySentence } from '@/components/result/summarySentences'\n+import { type TimeseriesState, useResult } from '@/hooks/useResult'\n+import type { PublicResultDetail } from '@/types/result'\n+import styles from './ResultPage.module.css'\n+\n+/**\n+ * 결과 첫 화면(`/results/:token`, spec 005 US1).\n+ *\n+ * <p><b>바로 보이는 것은 네 가지뿐이다</b>: 조건 한 줄, 핵심 숫자 3개, 그래프 1개, 해석 요약 1문장\n+ * (FR-001, SC-001). 상세는 요청해야 열리고, 내부 계산 항목을 나열하지 않는다(FR-020).\n+ *\n+ * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).\n+ *\n+ * <p>그래프(B04 T044)·상태 한 문장(B06 T075)·자세히 보기(B07 T064)·비교(B05 T050)는 뒤 묶음이\n+ * 표시한 자리에 끼운다.\n+ */\n+export function ResultPage() {\n+  const { token = '' } = useParams()\n+  // 토큰만 바뀌면 라우터가 같은 화면을 다시 쓴다. 앞 결과의 숫자가 새 주소 아래 한순간이라도 보이지\n+  // 않도록 토큰마다 새로 그린다.\n+  return <ResultScreen key={token} token={token} />\n+}\n+\n+function ResultScreen({ token }: { token: string }) {\n+  const result = useResult(token)\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main}>\n+        {result.status === 'loading' ? (\n+          <p className={styles.status} role=\"status\">\n+            결과를 불러오는 중입니다.\n+          </p>\n+        ) : null}\n+\n+        {result.status === 'expired' ? <ResultUnavailableNotice reason=\"expired\" /> : null}\n+        {result.status === 'notFound' ? <ResultUnavailableNotice reason=\"notFound\" /> : null}\n+\n+        {result.status === 'error' ? (\n+          <div className={styles.error} role=\"alert\">\n+            <p className={styles.status}>{result.message}</p>\n+            <button type=\"button\" className={styles.retry} onClick={result.retry}>\n+              다시 불러오기\n+            </button>\n+          </div>\n+        ) : null}\n+\n+        {result.status === 'ready' ? (\n+          <ResultView detail={result.detail} timeseries={result.timeseries} />\n+        ) : null}\n+      </main>\n+    </div>\n+  )\n+}\n+\n+function ResultView({\n+  detail,\n+  timeseries,\n+}: {\n+  detail: PublicResultDetail\n+  timeseries: TimeseriesState\n+}) {\n+  const completedThrough = completedRange(detail, timeseries)\n+  const { summary } = detail\n+\n+  return (\n+    <article className={styles.result} aria-labelledby=\"result-title\">\n+      <h1 id=\"result-title\" className={styles.title}>\n+        분석 결과\n+      </h1>\n+\n+      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (\n+        <p className={styles.status} role=\"status\">\n+          {inFlightMessage(detail)}\n+        </p>\n+      ) : null}\n+\n+      {detail.status === 'FAILED' ? (\n+        <p className={styles.status}>분석이 끝나지 못해 결과 숫자가 없습니다.</p>\n+      ) : null}\n+\n+      <ResultSummaryCard detail={detail} completedThrough={completedThrough} />\n+\n+      {/* B04 T044: 자산가치 곡선과 최대 하락 구간 음영이 이 자리에 온다. */}\n+\n+      {summary ? (\n+        <p className={styles.sentence}>\n+          {selectSummarySentence({\n+            base: {\n+              name: strategyLabel(detail),\n+              netTotalReturn: summary.netTotalReturn,\n+              maxDrawdown: summary.maxDrawdown,\n+              totalTradingCost: summary.totalTradingCost,\n+            },\n+            partial: detail.partial ? { completedThrough } : null,\n+          })}\n+        </p>\n+      ) : null}\n+\n+      {/* B06 T075: 결과 의미를 바꾸는 상태의 한 문장이 이 자리에 온다. */}\n+      {/* B07 T064: '자세히 보기'가 이 자리에 온다. */}\n+\n+      <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>\n+    </article>\n+  )\n+}\n+\n+/**\n+ * 완료 범위. 계산 중이면 진행 보고의 날짜를, 끝난 결과면 받은 시계열의 마지막 날짜를 쓴다.\n+ * 공개 상세는 끝난 결과에 `progress`를 담지 않는다. 둘 다 없으면 지어내지 않고 `null`이다.\n+ */\n+function completedRange(detail: PublicResultDetail, timeseries: TimeseriesState): string | null {\n+  if (detail.progress?.lastTradingDate) return detail.progress.lastTradingDate\n+  if (timeseries.status !== 'loaded') return null\n+  const points = timeseries.data.points\n+  return points.length > 0 ? points[points.length - 1].date : null\n+}\n+\n+function inFlightMessage(detail: PublicResultDetail): string {\n+  if (detail.status === 'QUEUED') return '분석이 차례를 기다리고 있습니다.'\n+  const progress = detail.progress\n+  if (progress?.completedTradingDays != null && progress.totalTradingDays) {\n+    return `분석을 계산하고 있습니다. 전체 ${progress.totalTradingDays}거래일 중 ${progress.completedTradingDays}거래일을 마쳤습니다.`\n+  }\n+  return '분석을 계산하고 있습니다.'\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,126 @@\n+import { readFileSync } from 'node:fs'\n+import { dirname, resolve } from 'node:path'\n+import { fileURLToPath } from 'node:url'\n+import { describe, expect, it } from 'vitest'\n+import {\n+  makeEquitySeries,\n+  resultDetailCancelledNoSummary,\n+  resultDetailCompleted,\n+  resultDetailRunning,\n+  resultExpiredEnvelope,\n+  resultTimeseries,\n+} from './resultFixtures'\n+\n+/**\n+ * 005 T039. 화면 테스트 픽스처가 계약 예시 파일과 같은 모양인지 대조한다.\n+ *\n+ * <p>프론트엔드가 `docs/specs`의 계약 예시를 테스트에서 직접 읽는 첫 사례다. 지금까지는 주석으로만\n+ * 가리켰다. 계약 예시가 바뀌었는데 픽스처가 그대로면 화면 테스트는 옛 모양으로 통과한다.\n+ *\n+ * <p>값이 아니라 <b>키 집합</b>과 분기에 쓰는 값(`status`·`validationTier`)만 본다. 전략 이름·종목 같은\n+ * 값은 픽스처가 일부러 지어낸 것이다(`resultFixtures.ts` 머리 주석).\n+ */\n+\n+const examplesDir = resolve(\n+  dirname(fileURLToPath(import.meta.url)),\n+  '..',\n+  '..',\n+  '..',\n+  'docs',\n+  'specs',\n+  'result-api',\n+  'examples',\n+)\n+\n+function readExample(name: string): Record<string, unknown> {\n+  return JSON.parse(readFileSync(resolve(examplesDir, name), 'utf8')) as Record<string, unknown>\n+}\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null && !Array.isArray(value)\n+}\n+\n+/**\n+ * 중첩된 키를 점 경로로 모은다. 배열은 첫 원소의 모양만 본다. 자유 형식 사전(`parameters`)은 값이\n+ * 합성이라 키 이름을 대조하지 않는다.\n+ */\n+function keyPaths(value: unknown, prefix = ''): string[] {\n+  if (Array.isArray(value)) return value.length > 0 ? keyPaths(value[0], `${prefix}[]`) : []\n+  if (!isRecord(value)) return []\n+  if (prefix.endsWith('parameters')) return []\n+\n+  return Object.keys(value)\n+    .sort()\n+    .flatMap((key) => {\n+      const path = prefix ? `${prefix}.${key}` : key\n+      return [path, ...keyPaths(value[key], path)]\n+    })\n+}\n+\n+function envelope(data: unknown) {\n+  return { success: true, data, error: null }\n+}\n+\n+describe('결과 픽스처와 계약 예시', () => {\n+  it.each([\n+    ['result-detail-completed.json', resultDetailCompleted],\n+    ['result-detail-running.json', resultDetailRunning],\n+    ['result-detail-cancelled-no-summary.json', resultDetailCancelledNoSummary],\n+  ])('%s 와 키 집합·status·validationTier가 같다', (file, fixture) => {\n+    const example = readExample(file)\n+    const data = example.data as Record<string, unknown>\n+\n+    expect(keyPaths(envelope(fixture))).toEqual(keyPaths(example))\n+    expect(fixture.status).toBe(data.status)\n+    expect(fixture.validationTier).toBe(data.validationTier)\n+  })\n+\n+  it('만료 본문이 계약 예시와 같다', () => {\n+    expect(resultExpiredEnvelope).toEqual(readExample('result-expired.json'))\n+  })\n+\n+  it('시계열이 계약 예시와 같은 키와 같은 점 수를 갖는다', () => {\n+    const example = readExample('result-timeseries.json')\n+    const points = (example.data as { points: unknown[] }).points\n+\n+    expect(keyPaths(envelope(resultTimeseries))).toEqual(keyPaths(example))\n+    expect(resultTimeseries.points).toHaveLength(points.length)\n+  })\n+\n+  it('어느 예시에도 004의 내부 실행 식별자가 없다', () => {\n+    for (const file of [\n+      'result-detail-completed.json',\n+      'result-detail-running.json',\n+      'result-detail-cancelled-no-summary.json',\n+      'result-expired.json',\n+      'result-timeseries.json',\n+    ]) {\n+      expect(JSON.stringify(readExample(file)), file).not.toMatch(/BT-|backtestId/)\n+    }\n+  })\n+})\n+\n+describe('makeEquitySeries', () => {\n+  it('가장 낮은 하락 비율이 정한 저점에 오고 고점에서는 0이다', () => {\n+    const series = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })\n+    const drawdowns = series.map((point) => Number(point.drawdown))\n+    const minimum = Math.min(...drawdowns)\n+\n+    expect(drawdowns.indexOf(minimum)).toBe(55)\n+    expect(drawdowns[40]).toBe(0)\n+    expect(minimum).toBeLessThan(0)\n+  })\n+\n+  it('긴 계열(1,900점)도 거래일 순서대로 만든다', () => {\n+    const series = makeEquitySeries({ points: 1_900, peakIndex: 700, troughIndex: 900 })\n+\n+    expect(series).toHaveLength(1_900)\n+    expect(series.every((point, index) => index === 0 || point.date > series[index - 1].date)).toBe(\n+      true,\n+    )\n+  })\n+\n+  it('고점이 저점보다 뒤면 만들지 않는다', () => {\n+    expect(() => makeEquitySeries({ points: 10, peakIndex: 5, troughIndex: 3 })).toThrow()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/resultFixtures.test.ts",
+          "old_path": "frontend/src/test/resultFixtures.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,206 @@\n+import type {\n+  PublicResultDetail,\n+  ResultEnvelope,\n+  ResultTimeseries,\n+  ResultTimeseriesPoint,\n+} from '@/types/result'\n+\n+/**\n+ * 005 결과 화면 테스트용 픽스처.\n+ *\n+ * <p>모양은 계약 예시(`docs/specs/result-api/examples/*.json`)와 같고, `resultFixtures.test.ts`가 키 집합과\n+ * `status`·`validationTier`를 파일과 대조한다.\n+ *\n+ * <p><b>전략 이름과 식별자는 등록표에 없는 합성값이다.</b> 실제 전략 이름을 쓰면 화면이 그 전략을 알고\n+ * 있어도 테스트가 통과한다 — 지어낸 이름이 그대로 보여야 \"응답만 보고 그린다\"가 증명된다.\n+ * `strategyRegistryFixtures.ts`가 같은 이유로 같은 방식을 쓴다.\n+ *\n+ * <p>숫자와 버전 문자열은 계약 형식을 보이려는 값이다. 제품의 기준값이 아니다.\n+ */\n+\n+export const resultToken = '9f2c1a7b4e0d83526af1c9d0b7e34512'\n+\n+export const syntheticStrategyName = '물결 고르기'\n+\n+export const resultDetailCompleted: PublicResultDetail = {\n+  publicToken: resultToken,\n+  status: 'COMPLETED',\n+  resultSource: 'NEW',\n+  partial: false,\n+  cancelRequested: false,\n+  expiresAt: '2026-09-23T04:11:00Z',\n+  progress: null,\n+  queuedAt: '2026-09-16T04:11:00Z',\n+  startedAt: '2026-09-16T04:11:03Z',\n+  finishedAt: '2026-09-16T04:12:41Z',\n+  queueWaitSeconds: null,\n+  config: {\n+    end: '2024-12-31',\n+    items: [\n+      { sectorId: 'HARBOR', instrumentId: '900001.XKRX', targetWeight: '0.4000' },\n+      { sectorId: 'LIGHTHOUSE', instrumentId: '900002.XKRX', targetWeight: '0.3000' },\n+      { sectorId: 'DOCKYARD', instrumentId: '900003.XKRX', targetWeight: '0.3000' },\n+    ],\n+    initialCash: '10000000.00',\n+    parameters: { tideWindow: 'MONTH_END' },\n+    mappingVersion: 'SECTOR-ETF-TEST-1',\n+    start: '2023-07-03',\n+    evaluationSplitVersion: 'SPLIT-1',\n+    warmupTradingDays: 0,\n+    scenario: 'FULL_PERIOD',\n+    rulesVersion: '1',\n+    strategyId: 'WAVE_LEVELING',\n+    currency: 'KRW',\n+    effectiveStart: '2023-07-03',\n+    effectiveEnd: '2024-12-31',\n+  },\n+  versions: {\n+    engine: 'engine-test / worker-test',\n+    rules: { version: '1', provisional: false },\n+    data: 'FIXTURE-test',\n+    evaluationSplit: 'SPLIT-1',\n+    costProfile: { version: 'PROVISIONAL-TEST-1', provisional: true },\n+    mapping: 'SECTOR-ETF-TEST-1',\n+  },\n+  summary: {\n+    initialEquity: '10000000.00',\n+    finalEquity: '11666521.51',\n+    currency: 'KRW',\n+    totalReturn: '0.166652',\n+    cagr: '0.366917',\n+    maxDrawdown: '-0.041757',\n+    sharpeRatio: '2.342630',\n+    volatility: '0.132307',\n+    tradeCount: 2,\n+    winRate: '0.500000',\n+    totalCommission: '3941.19',\n+    totalSlippageCost: '13137.30',\n+    netTotalReturn: '0.166652',\n+    totalTradingCost: '17078.49',\n+    costs: {\n+      commission: '3941.19',\n+      spread: '0.00',\n+      slippage: '13137.30',\n+      tax: '0.00',\n+      total: '17078.49',\n+    },\n+    liquidation: {\n+      markToMarket: { finalEquity: '11666521.51', totalReturn: '0.166652' },\n+      liquidated: {\n+        finalEquity: '11662525.96',\n+        totalReturn: '0.166253',\n+        liquidationCost: '3995.55',\n+      },\n+    },\n+    analytics: { recoveryDays: 9, turnover: '1.219991' },\n+    exceptionCount: 1,\n+  },\n+  summaryUnavailable: null,\n+  failure: null,\n+  validationTier: 'UNVALIDATED',\n+  strategyName: syntheticStrategyName,\n+  weightsSource: 'COMPUTED',\n+  exceptionKinds: ['HALT_DEFERRED'],\n+}\n+\n+export const resultDetailRunning: PublicResultDetail = {\n+  ...resultDetailCompleted,\n+  status: 'RUNNING',\n+  progress: {\n+    stage: 'COMPUTING',\n+    lastTradingDate: '2024-03-29',\n+    completedTradingDays: 180,\n+    totalTradingDays: 380,\n+  },\n+  finishedAt: null,\n+  queueWaitSeconds: 3,\n+  summary: null,\n+  weightsSource: null,\n+  exceptionKinds: null,\n+}\n+\n+export const resultDetailCancelledNoSummary: PublicResultDetail = {\n+  ...resultDetailCompleted,\n+  status: 'CANCELLED',\n+  partial: true,\n+  startedAt: null,\n+  summary: null,\n+  summaryUnavailable: 'CANCELLED_BEFORE_START',\n+  weightsSource: null,\n+  exceptionKinds: null,\n+}\n+\n+export const resultExpiredEnvelope: ResultEnvelope<PublicResultDetail> = {\n+  success: false,\n+  data: null,\n+  error: {\n+    code: 'RESULT_EXPIRED',\n+    message: '결과가 더 이상 남아 있지 않습니다. 같은 조건으로 다시 분석할 수 있습니다.',\n+  },\n+}\n+\n+/** 거래일만 세는 날짜 열. 주말을 건너뛴다 */\n+function tradingDates(count: number, start = '2025-01-01'): string[] {\n+  const dates: string[] = []\n+  const cursor = new Date(`${start}T00:00:00Z`)\n+  while (dates.length < count) {\n+    const day = cursor.getUTCDay()\n+    if (day !== 0 && day !== 6) dates.push(cursor.toISOString().slice(0, 10))\n+    cursor.setUTCDate(cursor.getUTCDate() + 1)\n+  }\n+  return dates\n+}\n+\n+/**\n+ * 고점과 저점이 정해진 합성 자산가치 계열.\n+ *\n+ * <p>`peakIndex`까지 오르고 `troughIndex`까지 내린 뒤 끝까지 조금씩 회복한다. `drawdown`은 그때까지의\n+ * 최고 자산가치 대비 비율이라 가장 낮은 값이 정확히 `troughIndex`에 온다. 음영 구간과 긴 계열(1,900점)\n+ * 테스트에 쓴다.\n+ */\n+export function makeEquitySeries({\n+  points,\n+  peakIndex,\n+  troughIndex,\n+  initialEquity = 10_000_000,\n+}: {\n+  points: number\n+  peakIndex: number\n+  troughIndex: number\n+  initialEquity?: number\n+}): ResultTimeseriesPoint[] {\n+  if (!(0 <= peakIndex && peakIndex < troughIndex && troughIndex < points)) {\n+    throw new Error('peakIndex < troughIndex < points 이어야 한다')\n+  }\n+\n+  const dates = tradingDates(points)\n+  const peakEquity = initialEquity * 1.08\n+  const troughEquity = peakEquity * 0.95\n+  let runningMax = 0\n+\n+  return dates.map((date, index) => {\n+    let equity: number\n+    if (index <= peakIndex) {\n+      equity = initialEquity + ((peakEquity - initialEquity) * index) / Math.max(peakIndex, 1)\n+    } else if (index <= troughIndex) {\n+      equity = peakEquity - ((peakEquity - troughEquity) * (index - peakIndex)) / (troughIndex - peakIndex)\n+    } else {\n+      // 고점을 넘지 않게 회복시켜 최저점이 하나로 남게 한다.\n+      const remaining = points - 1 - troughIndex\n+      equity = troughEquity + ((peakEquity - troughEquity) * 0.5 * (index - troughIndex)) / remaining\n+    }\n+\n+    runningMax = Math.max(runningMax, equity)\n+    return {\n+      date,\n+      equity: equity.toFixed(2),\n+      cumulativeReturn: (equity / initialEquity - 1).toFixed(6),\n+      drawdown: (equity / runningMax - 1).toFixed(6),\n+    }\n+  })\n+}\n+\n+export const resultTimeseries: ResultTimeseries = {\n+  partial: false,\n+  points: makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 }),\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/resultFixtures.ts",
+          "old_path": "frontend/src/test/resultFixtures.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,252 @@\n+/**\n+ * 공개 결과 열람(`/results/{token}`, spec 005)의 응답 타입.\n+ *\n+ * 원본 계약은 `specs/005-result-comparison/contracts/result-api.md`이고 요약은\n+ * `docs/specs/result-api/README.md`다. 예시 파일(`docs/specs/result-api/examples/*.json`)이 기준이며\n+ * `src/test/resultFixtures.test.ts`가 이 타입으로 만든 픽스처와 키를 대조한다.\n+ *\n+ * **금액과 비율은 문자열이다.** 004 계약과 같다(`types/backtestRequest.ts` 머리 주석). 화면은 자릿수만\n+ * 다듬고 값을 다시 계산하지 않는다.\n+ *\n+ * **`backtestId`를 이 타입에 두지 않는다(SC-009).** 공개 응답에는 004의 내부 실행 식별자가 없고, 화면은\n+ * 공개 토큰만 들고 다닌다. 필드를 더하다 식별자가 섞이면 결과 주소나 DOM에 드러난다.\n+ */\n+\n+export type ResultStatus = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELLED'\n+\n+/** PD-12 확정 전에는 항상 `UNVALIDATED`다. '검증 통과'가 아니라 '말할 수 없음'이다 */\n+export type ValidationTier = 'UNVALIDATED' | (string & Record<never, never>)\n+\n+/** 004 `summaryUnavailable`. 새 사유가 더해져도 버리지 않도록 열어 둔다 */\n+export type SummaryUnavailableReason =\n+  | 'CANCELLED_WHILE_RUN_CONTINUED'\n+  | 'CANCELLED_BEFORE_START'\n+  | 'CANCEL_UNANSWERED'\n+  | (string & Record<never, never>)\n+\n+export type WeightsSource = 'USER' | 'COMPUTED'\n+\n+export type ResultProgress = {\n+  stage: 'PREPARING_DATA' | 'COMPUTING' | 'SAVING' | (string & Record<never, never>)\n+  lastTradingDate: string | null\n+  completedTradingDays: number | null\n+  totalTradingDays: number | null\n+}\n+\n+export type ResultConfigItem = {\n+  sectorId: string\n+  instrumentId: string\n+  targetWeight?: string\n+}\n+\n+/** 접수가 저장한 요청 사본에 `currency`·`effectiveStart`·`effectiveEnd`를 얹은 것이다 */\n+export type ResultConfig = {\n+  strategyId: string\n+  rulesVersion: string\n+  parameters: Record<string, unknown>\n+  items: ResultConfigItem[]\n+  mappingVersion: string\n+  start: string\n+  end: string\n+  effectiveStart: string\n+  effectiveEnd: string\n+  initialCash: string\n+  currency: string\n+  warmupTradingDays: number\n+  scenario: string\n+  evaluationSplitVersion: string | null\n+}\n+\n+export type VersionMark = {\n+  version: string\n+  provisional: boolean\n+}\n+\n+/** 004 `versions`에서 워커 자기 보고(`worker`)를 뺀 것이다 */\n+export type ResultVersions = {\n+  engine: string | null\n+  rules: VersionMark | null\n+  data: string | null\n+  evaluationSplit: string | null\n+  costProfile: VersionMark | null\n+  mapping: string | null\n+}\n+\n+export type ResultLiquidation = {\n+  markToMarket: { finalEquity: string; totalReturn: string }\n+  liquidated: { finalEquity: string; totalReturn: string; liquidationCost: string }\n+}\n+\n+export type ResultSummary = {\n+  initialEquity: string\n+  finalEquity: string\n+  currency: string\n+  totalReturn: string\n+  cagr: string | null\n+  /** 운용 중 고점 대비 최대 하락. 0 이하의 비율이다 */\n+  maxDrawdown: string\n+  sharpeRatio: string | null\n+  volatility: string | null\n+  tradeCount: number\n+  winRate: string | null\n+  totalCommission: string\n+  totalSlippageCost: string\n+  /** 비용 차감 후 전체 수익률. 핵심 숫자 하나 */\n+  netTotalReturn: string\n+  /** 거래비용 합계. 핵심 숫자 하나 */\n+  totalTradingCost: string\n+  costs: { commission: string; spread: string; slippage: string; tax: string; total: string }\n+  /** 요청이 청산을 끄면 `null`이다 */\n+  liquidation: ResultLiquidation | null\n+  analytics: { recoveryDays: number | null; turnover: string | null } | null\n+  exceptionCount: number\n+}\n+\n+export type ResultFailure = {\n+  code: string\n+  message: string\n+}\n+\n+/** `GET /results/{token}` */\n+export type PublicResultDetail = {\n+  publicToken: string\n+  status: ResultStatus\n+  resultSource: string\n+  partial: boolean\n+  cancelRequested: boolean\n+  /** 비로그인 결과의 만료 시각. 로그인 결과는 `null` */\n+  expiresAt: string | null\n+  /** `QUEUED`·`RUNNING`일 때만 있다 */\n+  progress: ResultProgress | null\n+  queuedAt: string\n+  startedAt: string | null\n+  finishedAt: string | null\n+  /** `QUEUED`·`RUNNING`일 때만 있다 */\n+  queueWaitSeconds: number | null\n+  config: ResultConfig\n+  versions: ResultVersions\n+  summary: ResultSummary | null\n+  summaryUnavailable: SummaryUnavailableReason | null\n+  failure: ResultFailure | null\n+  validationTier: ValidationTier\n+  /** 003 등록표의 전략 이름. 없으면 `null`이고 화면은 이름을 지어내지 않는다 */\n+  strategyName: string | null\n+  /** 볼 결과가 없으면 `null` */\n+  weightsSource: WeightsSource | null\n+  /** 예외 `kind`의 중복 없는 목록. 볼 결과가 없으면 `null`, 빈 목록은 \"예외 없음\" */\n+  exceptionKinds: string[] | null\n+}\n+\n+export type ResultCashFlow = {\n+  type: string\n+  instrumentId?: string\n+  amount: string\n+}\n+\n+export type ResultTimeseriesPoint = {\n+  date: string\n+  equity: string\n+  cumulativeReturn: string\n+  drawdown: string\n+  /** 벤치마크가 없거나 그날 값이 없으면 키가 없다 */\n+  benchmarkReturn?: string\n+  /** 현금 흐름이 있는 날에만 있다 */\n+  cashFlows?: ResultCashFlow[]\n+}\n+\n+/** `GET /results/{token}/timeseries` */\n+export type ResultTimeseries = {\n+  partial: boolean\n+  points: ResultTimeseriesPoint[]\n+}\n+\n+export type ResultTrade = {\n+  tradeId: string\n+  instrumentId: string\n+  side: string\n+  status: 'OPEN' | 'CLOSED'\n+  entryDate: string\n+  exitDate: string | null\n+  entryPrice: string\n+  exitPrice: string | null\n+  quantity: string\n+  grossPnl: string | null\n+  commission: string\n+  slippageCost: string\n+  realizedPnl: string | null\n+  returnRate: string | null\n+  reason: string\n+  plannedDate?: string\n+}\n+\n+/** `GET /results/{token}/trades` */\n+export type ResultTradePage = {\n+  page: number\n+  size: number\n+  totalElements: number\n+  totalPages: number\n+  content: ResultTrade[]\n+}\n+\n+/** `GET /results/{token}/positions?date=` */\n+export type ResultPositions = {\n+  partial: boolean\n+  requestedDate: string\n+  snapshotDate: string\n+  positions: {\n+    instrumentId: string\n+    quantity: string\n+    marketValue: string\n+    weight: string\n+    unrealizedPnl: string\n+  }[]\n+}\n+\n+/** `GET /results/{token}/weights` */\n+export type ResultWeights = {\n+  partial: boolean\n+  weightsSource: WeightsSource\n+  points: {\n+    date: string\n+    target: Record<string, string>\n+    actual: Record<string, string>\n+    weightError: string\n+    riskScale?: string\n+    estimatedVolatility?: string\n+  }[]\n+}\n+\n+/** `GET /results/{token}/exceptions` */\n+export type ResultExceptions = {\n+  partial: boolean\n+  items: {\n+    date: string\n+    instrumentId?: string\n+    kind: string\n+    rule?: string\n+    action?: string\n+  }[]\n+}\n+\n+/** `POST /results/{token}/retry` 202 */\n+export type ResultRetryAccepted = {\n+  publicToken: string\n+  status: ResultStatus\n+  resultSource: string\n+  retryOfToken: string\n+}\n+\n+/** 공개 경로가 보내는 오류 이름. 화면은 문구가 아니라 이 이름으로 분기한다 */\n+export type ResultErrorCode =\n+  | 'RESULT_EXPIRED'\n+  | 'RESOURCE_NOT_FOUND'\n+  | 'INVALID_INPUT'\n+  | 'RESULT_NOT_READY'\n+  | 'BACKTEST_FAILED'\n+  | 'NO_PARTIAL_RESULT'\n+  | 'NOT_RETRYABLE'\n+  | 'EXECUTION_LIMIT'\n+\n+export type ResultEnvelope<T> =\n+  | { success: true; data: T; error: null }\n+  | { success: false; data: null; error: { code: string; message: string } }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/result.ts",
+          "old_path": "frontend/src/types/result.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,6 +79,13 @@ const StrategySettingsPage = lazy(() =>\n   })),\n )\n \n+// 결과 화면(spec 005)이다. 공개 토큰만 있으면 로그인 없이 연다.\n+const ResultPage = lazy(() =>\n+  import('@/pages/ResultPage').then((module) => ({\n+    default: module.ResultPage,\n+  })),\n+)\n+\n /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */\n function AnimatedRoutes() {\n   const location = useLocation()\n@@ -112,6 +119,8 @@ function AnimatedRoutes() {\n             <Route path=\"/diagnosis/sectors\" element={<SectorSelectionPage />} />\n             {/* 섹터·비중을 마친 뒤 전략을 고르는 자리다. 앞 단계를 마치지 않았으면 되돌린다. */}\n             <Route path=\"/strategy\" element={<StrategySettingsPage />} />\n+            {/* 결과 주소는 받은 사람 누구나 연다. 보호 경로 밖에 둔다(005 FR-019). */}\n+            <Route path=\"/results/:token\" element={<ResultPage />} />\n             <Route\n               path=\"/records/*\"\n               element={\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,6 +22,8 @@ export default defineConfig({\n       'src/api/*.test.ts',\n       'src/auth/**/*.test.ts',\n       'src/components/marketflow/*.test.ts',\n+      'src/components/result/*.test.ts',\n+      'src/test/resultFixtures.test.ts',\n       'src/diagnosis/**/*.test.ts',\n       'src/marketflow/**/*.test.ts',\n       'src/utils/analysisPeriod.test.ts',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -82,9 +82,9 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [X] T002 [P] (DOCS) `docs/specs/result-api/examples/{result-detail-completed,result-detail-running,result-detail-cancelled-no-summary,result-expired,result-timeseries}.json` — contracts §GET 예시를 바탕으로 한 **완전한** 200/410 응답 봉투(`ApiResponse` 규약). `backtestId`·`runId`·`worker`·요청자 필드가 없고 어디에도 `BT-` 문자열이 없다. `result-timeseries.json`은 고점·저점이 정해진 짧은 계열(음영 구간 테스트에 쓴다). T025(BE 계약 IT)와 T039(FE 픽스처 대조)가 이 파일을 읽는다\n - [X] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`에 spec 005 블록을 열고 `RESULT_EXPIRED(HttpStatus.GONE, \"결과가 더 이상 남아 있지 않습니다. 같은 조건으로 다시 분석할 수 있습니다.\")`를 추가한다. 주석에 계약 위치(`specs/005-result-comparison/contracts/result-api.md` \"오류\")를 적는다. 나머지 코드(`INVALID_INPUT`·`RESOURCE_NOT_FOUND`·`RESULT_NOT_READY`·`BACKTEST_FAILED`·`NO_PARTIAL_RESULT`·`NOT_RETRYABLE`)는 004 블록을 재사용한다\n - [X] T004 [P] (INFRA) 설정값 자리 — `backend/src/main/resources/application.yml`의 `thorp:` 블록에 `result: {public-token-ttl, expiry-sweep-interval, expiry-sweep-batch-size, trades-page-size}`를 두고, `application-local.yml`에 로컬 값, `application-prod.yml`에는 `${THORP_RESULT_PUBLIC_TOKEN_TTL}`·`${THORP_RESULT_TRADES_PAGE_SIZE}`처럼 **기본값 없는** 환경변수 참조(`application-prod.yml` 63행부터의 관례), `infra/.env.prod.example`과 루트 `.env.example`에 항목 추가. 문서에 수치를 적지 않는다(PD-23). `backend/src/main/java/com/ssafy/thorp/result/infrastructure/config/ResultProperties.java`(`@ConfigurationProperties(prefix = \"thorp.result\")`, 네 값 모두 `@NotNull`이라 하나라도 비면 기동 실패)와 `ResultConfig.java`(`backtest/infrastructure/config/BacktestLimitConfig.java`와 같은 등록 방식)\n-- [ ] T005 [P] (FE) `frontend/src/types/result.ts` — contracts와 1:1 타입: `PublicResultDetail`(`publicToken`·`status`·`partial`·`expiresAt`·`progress`·`queueWaitSeconds`·`config`·`versions`·`summary`·`summaryUnavailable`·`failure`·`validationTier`·`strategyName`·`weightsSource`·`exceptionKinds`), `ResultProgress`, `ResultSummary`(`netTotalReturn`·`maxDrawdown`·`totalTradingCost`·`liquidation`·`analytics`·`exceptionCount`), `ResultTimeseriesPoint`(`date`·`equity`·`drawdown`·`cashFlows`), `ResultTradePage`, `ResultPositions`, `ResultWeights`, `ResultExceptions`, `ResultRetryAccepted`, `ResultErrorCode`, `ValidationTier`. 금액·비율은 문자열(004 계약과 같다. `frontend/src/types/backtestRequest.ts` 머리 주석 방식). 머리 주석에 \"`backtestId`를 이 타입에 두지 않는다(SC-009)\"\n-- [ ] T006 [P] (FE) `frontend/src/test/resultFixtures.ts` — 화면 테스트용 픽스처 5종(T002와 같은 내용)과 시계열 생성 함수 `makeEquitySeries({points, peakIndex, troughIndex})`(고점·저점이 정해진 합성 계열. 1,900점짜리도 만든다). 전략 이름은 등록표에 없는 합성값을 쓴다(`frontend/src/test/strategyRegistryFixtures.ts`와 같은 이유: 응답만 보고 그린다는 것을 증명한다)\n-- [ ] T007 [P] (FE) `frontend/src/components/result/` 디렉터리와 `frontend/src/api/result.ts` 빈 모듈을 만들고, `frontend/vite.config.ts`의 `test.include`에 `'src/components/result/*.test.ts'`·`'src/api/result.test.ts'`·`'src/test/resultFixtures.test.ts'`를 더한다. `include`는 허용 목록이라 빠지면 조용히 수집되지 않는다(`frontend/CLAUDE.md`). `*.test.tsx`는 이미 걸린다\n+- [X] T005 [P] (FE) `frontend/src/types/result.ts` — contracts와 1:1 타입: `PublicResultDetail`(`publicToken`·`status`·`partial`·`expiresAt`·`progress`·`queueWaitSeconds`·`config`·`versions`·`summary`·`summaryUnavailable`·`failure`·`validationTier`·`strategyName`·`weightsSource`·`exceptionKinds`), `ResultProgress`, `ResultSummary`(`netTotalReturn`·`maxDrawdown`·`totalTradingCost`·`liquidation`·`analytics`·`exceptionCount`), `ResultTimeseriesPoint`(`date`·`equity`·`drawdown`·`cashFlows`), `ResultTradePage`, `ResultPositions`, `ResultWeights`, `ResultExceptions`, `ResultRetryAccepted`, `ResultErrorCode`, `ValidationTier`. 금액·비율은 문자열(004 계약과 같다. `frontend/src/types/backtestRequest.ts` 머리 주석 방식). 머리 주석에 \"`backtestId`를 이 타입에 두지 않는다(SC-009)\"\n+- [X] T006 [P] (FE) `frontend/src/test/resultFixtures.ts` — 화면 테스트용 픽스처 5종(T002와 같은 내용)과 시계열 생성 함수 `makeEquitySeries({points, peakIndex, troughIndex})`(고점·저점이 정해진 합성 계열. 1,900점짜리도 만든다). 전략 이름은 등록표에 없는 합성값을 쓴다(`frontend/src/test/strategyRegistryFixtures.ts`와 같은 이유: 응답만 보고 그린다는 것을 증명한다)\n+- [X] T007 [P] (FE) `frontend/src/components/result/` 디렉터리와 `frontend/src/api/result.ts` 빈 모듈을 만들고, `frontend/vite.config.ts`의 `test.include`에 `'src/components/result/*.test.ts'`·`'src/api/result.test.ts'`·`'src/test/resultFixtures.test.ts'`를 더한다. `include`는 허용 목록이라 빠지면 조용히 수집되지 않는다(`frontend/CLAUDE.md`). `*.test.tsx`는 이미 걸린다\n \n ---\n \n@@ -129,22 +129,22 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Frontend — 첫 화면\n \n-- [ ] T027 [US1] (FE) `frontend/src/api/result.ts` — `fetchResult(token, signal?)`, `fetchResultTimeseries`, `fetchResultTrades(token, {page, size, instrumentId, status, from, to})`, `fetchResultPositions(token, date)`, `fetchResultWeights`, `fetchResultExceptions`, `retryResult(token)`(`runCsrfProtectedMutation` 경유). `ResultError`·`normalizeResultError`는 `frontend/src/api/paramSearch.ts`의 `ParamSearchError` 방식으로, 코드 `RESULT_EXPIRED`·`RESOURCE_NOT_FOUND`·`INVALID_INPUT`·`RESULT_NOT_READY`·`BACKTEST_FAILED`·`NO_PARTIAL_RESULT`. 모든 호출은 `frontend/src/api/client.ts`의 `apiClient`를 거친다\n-- [ ] T028 [US1] (FE) `frontend/src/hooks/useResult.ts` — 토큰으로 상세를 받고 `QUEUED`·`RUNNING`이면 `frontend/src/components/result/constants.ts`의 `RESULT_POLL_INTERVAL_MS`로 폴링, 종결 상태면 시계열을 받는다. 상태는 `loading | ready | expired | notFound | error`. **첫 화면에서 부르는 요청은 상세·시계열 둘뿐이다**(SC-001). 언마운트 시 `AbortSignal`로 취소\n-- [ ] T029 [US1] (FE) `frontend/src/App.tsx`에 `/results/:token` 라우트 — 공개 경로(`ProtectedRoute`·`AuthEntryGuard` 밖), 다른 페이지와 같은 `lazy(() => import('@/pages/ResultPage').then(...))` 패턴. `frontend/src/pages/ResultPage.tsx` + `ResultPage.module.css` 골격: 조건 한 줄, 요약 카드 자리, 그래프 자리, 상태 문장 자리, '자세히 보기' 자리, 출처 줄. 정보 세 층(FR-020): 바로 보이는 것과 펼치는 것만 DOM에 두고 내부 계산 항목을 나열하지 않는다\n-- [ ] T030 [US1] (FE) `frontend/src/components/result/conditionLine.ts` — `config`·`versions`·`strategyName`·`weightsSource`에서 분석 기간(`effectiveStart`~`effectiveEnd`)·비교 대상(기준 전략 이름과 비교 대상 이름 또는 '없음')·비용 적용 여부(`versions.costProfile`의 버전과 `provisional` 표시)를 **한 묶음**으로 만드는 순수 함수(FR-003). 세 항목을 어느 폭에서도 생략하지 않고 좁은 화면에서는 줄바꿈만 허용한다. 비중 출처: `COMPUTED`면 \"비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다르다\"(FR-014). `strategyName`이 없으면 `strategyId`를 그대로 보이고 지어내지 않는다\n-- [ ] T031 [US1] (FE) `frontend/src/components/result/ResultSummaryCard.tsx` — 핵심 숫자 3개(비용 차감 후 전체 수익률·가장 크게 줄었던 폭·거래비용)를 텍스트로, 각 숫자 옆 정의 한 줄(FR-002: 운용 중 고점 대비 최대 하락이며 시작 금액 대비 손실과 다르다), 조건 한 줄(T030), 종료 시 시가평가와 청산 비용 포함의 구분(FR-015, `summary.liquidation{markToMarket, liquidated}`). `summaryUnavailable`이면 숫자 자리에 0이나 대체값 없이 \"취소 시점까지의 지표는 계산되지 않았습니다\"와 완료 범위(`progress.lastTradingDate`)를 보인다(FR-013). 수익률과 최대 하락 폭이 모두 0이면 그 사실을 한 문장으로 설명하고 좋은 결과로 표시하지 않는다(Edge Case). 문자열 값은 자릿수만 다듬고 다시 계산하지 않는다\n-- [ ] T032 [US1] (FE) `frontend/src/components/result/summarySentences.ts` — 해석 요약 1문장의 고정 문장 틀(FR-006, R-07, data-model §3-5). 틀: 비교 대상 없음(세 값), 비교 대상 있음(수익률·최대 하락 폭의 차이 방향별), 차이 없음(둘 다 같음), 거래비용만 다름, 부분 결과 접두(\"완료 범위까지의 값이다\"). `selectSummarySentence({base, target, partial})`가 조건에 맞는 틀을 골라 값 자리만 채운다. 머리 주석: \"이 파일은 SC-004의 검수 대상이다. 화면이 문장을 새로 짓지 않는다. 금지 어휘는 `summarySentences.test.ts`가 막는다\"\n-- [ ] T033 [US1] (FE) `frontend/src/components/result/ResultUnavailableNotice.tsx` — 410: \"결과가 더 이상 남아 있지 않습니다\"와 같은 조건으로 다시 분석할 진입점(조건이 남아 있지 않으므로 `/strategy`로 가는 연결). 404·400: 잘못된 주소 안내(만료와 다른 문구, contracts \"오류\"). 어느 쪽도 숫자 자리·그래프 자리를 그리지 않는다(SC-008: 빈 값이나 0으로 채운 결과 화면 금지)\n-- [ ] T034 [US1] (FE) `frontend/src/pages/ResultPage.tsx` 조립 — `useResult` + 카드 + 요약 문장 + 안내. 좁은 화면(360px)에서 요소가 세로로 쌓이고 가로 스크롤이 없다(`ResultPage.module.css`, spec Assumptions). KRX 출처 줄 '한국거래소 통계정보'(FR-020). 핵심 숫자 3개와 조건 한 줄은 텍스트로 존재해 스크린 리더가 읽는다(FR-022). 그래프(T044)·상태 문장(T075)·상세(T064)·비교(T050)는 뒤 태스크가 끼운다\n+- [X] T027 [US1] (FE) `frontend/src/api/result.ts` — `fetchResult(token, signal?)`, `fetchResultTimeseries`, `fetchResultTrades(token, {page, size, instrumentId, status, from, to})`, `fetchResultPositions(token, date)`, `fetchResultWeights`, `fetchResultExceptions`, `retryResult(token)`(`runCsrfProtectedMutation` 경유). `ResultError`·`normalizeResultError`는 `frontend/src/api/paramSearch.ts`의 `ParamSearchError` 방식으로, 코드 `RESULT_EXPIRED`·`RESOURCE_NOT_FOUND`·`INVALID_INPUT`·`RESULT_NOT_READY`·`BACKTEST_FAILED`·`NO_PARTIAL_RESULT`. 모든 호출은 `frontend/src/api/client.ts`의 `apiClient`를 거친다\n+- [X] T028 [US1] (FE) `frontend/src/hooks/useResult.ts` — 토큰으로 상세를 받고 `QUEUED`·`RUNNING`이면 `frontend/src/components/result/constants.ts`의 `RESULT_POLL_INTERVAL_MS`로 폴링, 종결 상태면 시계열을 받는다. 상태는 `loading | ready | expired | notFound | error`. **첫 화면에서 부르는 요청은 상세·시계열 둘뿐이다**(SC-001). 언마운트 시 `AbortSignal`로 취소\n+- [X] T029 [US1] (FE) `frontend/src/App.tsx`에 `/results/:token` 라우트 — 공개 경로(`ProtectedRoute`·`AuthEntryGuard` 밖), 다른 페이지와 같은 `lazy(() => import('@/pages/ResultPage').then(...))` 패턴. `frontend/src/pages/ResultPage.tsx` + `ResultPage.module.css` 골격: 조건 한 줄, 요약 카드 자리, 그래프 자리, 상태 문장 자리, '자세히 보기' 자리, 출처 줄. 정보 세 층(FR-020): 바로 보이는 것과 펼치는 것만 DOM에 두고 내부 계산 항목을 나열하지 않는다\n+- [X] T030 [US1] (FE) `frontend/src/components/result/conditionLine.ts` — `config`·`versions`·`strategyName`·`weightsSource`에서 분석 기간(`effectiveStart`~`effectiveEnd`)·비교 대상(기준 전략 이름과 비교 대상 이름 또는 '없음')·비용 적용 여부(`versions.costProfile`의 버전과 `provisional` 표시)를 **한 묶음**으로 만드는 순수 함수(FR-003). 세 항목을 어느 폭에서도 생략하지 않고 좁은 화면에서는 줄바꿈만 허용한다. 비중 출처: `COMPUTED`면 \"비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다르다\"(FR-014). `strategyName`이 없으면 `strategyId`를 그대로 보이고 지어내지 않는다\n+- [X] T031 [US1] (FE) `frontend/src/components/result/ResultSummaryCard.tsx` — 핵심 숫자 3개(비용 차감 후 전체 수익률·가장 크게 줄었던 폭·거래비용)를 텍스트로, 각 숫자 옆 정의 한 줄(FR-002: 운용 중 고점 대비 최대 하락이며 시작 금액 대비 손실과 다르다), 조건 한 줄(T030), 종료 시 시가평가와 청산 비용 포함의 구분(FR-015, `summary.liquidation{markToMarket, liquidated}`). `summaryUnavailable`이면 숫자 자리에 0이나 대체값 없이 \"취소 시점까지의 지표는 계산되지 않았습니다\"와 완료 범위(`progress.lastTradingDate`)를 보인다(FR-013). 수익률과 최대 하락 폭이 모두 0이면 그 사실을 한 문장으로 설명하고 좋은 결과로 표시하지 않는다(Edge Case). 문자열 값은 자릿수만 다듬고 다시 계산하지 않는다\n+- [X] T032 [US1] (FE) `frontend/src/components/result/summarySentences.ts` — 해석 요약 1문장의 고정 문장 틀(FR-006, R-07, data-model §3-5). 틀: 비교 대상 없음(세 값), 비교 대상 있음(수익률·최대 하락 폭의 차이 방향별), 차이 없음(둘 다 같음), 거래비용만 다름, 부분 결과 접두(\"완료 범위까지의 값이다\"). `selectSummarySentence({base, target, partial})`가 조건에 맞는 틀을 골라 값 자리만 채운다. 머리 주석: \"이 파일은 SC-004의 검수 대상이다. 화면이 문장을 새로 짓지 않는다. 금지 어휘는 `summarySentences.test.ts`가 막는다\"\n+- [X] T033 [US1] (FE) `frontend/src/components/result/ResultUnavailableNotice.tsx` — 410: \"결과가 더 이상 남아 있지 않습니다\"와 같은 조건으로 다시 분석할 진입점(조건이 남아 있지 않으므로 `/strategy`로 가는 연결). 404·400: 잘못된 주소 안내(만료와 다른 문구, contracts \"오류\"). 어느 쪽도 숫자 자리·그래프 자리를 그리지 않는다(SC-008: 빈 값이나 0으로 채운 결과 화면 금지)\n+- [X] T034 [US1] (FE) `frontend/src/pages/ResultPage.tsx` 조립 — `useResult` + 카드 + 요약 문장 + 안내. 좁은 화면(360px)에서 요소가 세로로 쌓이고 가로 스크롤이 없다(`ResultPage.module.css`, spec Assumptions). KRX 출처 줄 '한국거래소 통계정보'(FR-020). 핵심 숫자 3개와 조건 한 줄은 텍스트로 존재해 스크린 리더가 읽는다(FR-022). 그래프(T044)·상태 문장(T075)·상세(T064)·비교(T050)는 뒤 태스크가 끼운다\n \n ### Frontend 테스트\n \n-- [ ] T035 [US1] (FE 테스트) `frontend/src/components/result/summarySentences.test.ts` — 틀 전체 문자열에 금지 어휘('추천', '최적', '승자', '우승', '유리', '좋다', '할 것', '유사', '확률') 0건(SC-004, quickstart 4); 조건 분기별로 다른 틀이 선택된다; 값 자리가 채워진 문장에 `undefined`·`NaN`이 없다; 부분 결과 접두\n-- [ ] T036 [US1] (FE 테스트) `frontend/src/components/result/ResultSummaryCard.test.tsx` — 숫자 3개·정의·조건 한 줄·청산 구분이 렌더된다; `summaryUnavailable`이면 텍스트 '0'이 없고 \"계산되지 않았습니다\"와 완료 범위가 있다; 0·0 결과 문장; `COMPUTED`면 비중 출처 문구, `USER`면 없음\n-- [ ] T037 [US1] (FE 테스트) `frontend/src/pages/ResultPage.test.tsx` — 완료 결과에서 `vi.mock('@/api/result')`의 호출이 `fetchResult`·`fetchResultTimeseries` 각 1회뿐이고 `fetchResultTrades`·`fetchResultWeights`·`fetchResultExceptions`는 0회(SC-001, quickstart 1); 410이면 안내와 다시 분석 진입점이 있고 숫자 텍스트가 없다(quickstart 7); 404 문구가 410과 다르다(quickstart 8); DOM 전체에 `BT-` 문자열 0건(SC-009); `RUNNING`이면 폴링 뒤 `COMPLETED`로 바뀐다\n-- [ ] T038 [US1] (FE 테스트) `frontend/src/api/result.test.ts` — 경로 조립(토큰을 그대로 쓰고 인코딩하지 않는다), 오류 정규화 6종, `retryResult`가 CSRF 보호 mutation을 탄다, `size`·`from`·`to`가 질의 문자열에 실린다\n-- [ ] T039 [US1] (FE 테스트) `frontend/src/test/resultFixtures.test.ts` — TS 픽스처와 `docs/specs/result-api/examples/*.json`을 `node:fs`로 읽어 키 집합과 `status`·`validationTier` 값이 같음을 확인한다. 프론트에서 계약 픽스처를 대조하는 첫 관례이므로 MR 본문에 그 사실을 적는다(지금까지 프론트는 `docs/specs`를 주석으로만 참조했다)\n+- [X] T035 [US1] (FE 테스트) `frontend/src/components/result/summarySentences.test.ts` — 틀 전체 문자열에 금지 어휘('추천', '최적', '승자', '우승', '유리', '좋다', '할 것', '유사', '확률') 0건(SC-004, quickstart 4); 조건 분기별로 다른 틀이 선택된다; 값 자리가 채워진 문장에 `undefined`·`NaN`이 없다; 부분 결과 접두\n+- [X] T036 [US1] (FE 테스트) `frontend/src/components/result/ResultSummaryCard.test.tsx` — 숫자 3개·정의·조건 한 줄·청산 구분이 렌더된다; `summaryUnavailable`이면 텍스트 '0'이 없고 \"계산되지 않았습니다\"와 완료 범위가 있다; 0·0 결과 문장; `COMPUTED`면 비중 출처 문구, `USER`면 없음\n+- [X] T037 [US1] (FE 테스트) `frontend/src/pages/ResultPage.test.tsx` — 완료 결과에서 `vi.mock('@/api/result')`의 호출이 `fetchResult`·`fetchResultTimeseries` 각 1회뿐이고 `fetchResultTrades`·`fetchResultWeights`·`fetchResultExceptions`는 0회(SC-001, quickstart 1); 410이면 안내와 다시 분석 진입점이 있고 숫자 텍스트가 없다(quickstart 7); 404 문구가 410과 다르다(quickstart 8); DOM 전체에 `BT-` 문자열 0건(SC-009); `RUNNING`이면 폴링 뒤 `COMPLETED`로 바뀐다\n+- [X] T038 [US1] (FE 테스트) `frontend/src/api/result.test.ts` — 경로 조립(토큰을 그대로 쓰고 인코딩하지 않는다), 오류 정규화 6종, `retryResult`가 CSRF 보호 mutation을 탄다, `size`·`from`·`to`가 질의 문자열에 실린다\n+- [X] T039 [US1] (FE 테스트) `frontend/src/test/resultFixtures.test.ts` — TS 픽스처와 `docs/specs/result-api/examples/*.json`을 `node:fs`로 읽어 키 집합과 `status`·`validationTier` 값이 같음을 확인한다. 프론트에서 계약 픽스처를 대조하는 첫 관례이므로 MR 본문에 그 사실을 적는다(지금까지 프론트는 `docs/specs`를 주석으로만 참조했다)\n \n **Checkpoint**: 완료된 결과가 주소로 열리고 네 요소만 보이며, 만료·없음이 서로 다르게 안내된다. 그래프는 B04가 끼운다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2826590": []
+  }
+}

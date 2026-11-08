@@ -1,0 +1,1044 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 953698,
+    "iid": 259,
+    "project_id": 1444456,
+    "title": "feat(be): 내 기록 목록·상세 API",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US1의 서버 몫입니다. `GET /my-records`(목록)와 `GET /my-records/{recordId}`(상세)를 만들고, 상세에 저장 당시 대응표와 현재 대응표를 **항목(etf_id) 단위**로 비교한 `mappingDrift`를 넣었습니다. FE-1이 이 API로 실연동하면 MVP 체크포인트(S1·S2·S5·S12·S13)입니다.\n\n상태·사유·결과 토큰은 저장된 값이 아니라 읽는 순간 원본(`backtest_run`·`backtest_request`·`param_search`·`regime_search_log`·`regime_search_snapshot`)에서 파생합니다. 성과 수치는 select에 없습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-383 `[BE] 내 기록 목록·상세 API와 대응표 변경 판정`\n- Story: -378 / Epic: -377 · 선행: -379(BE-1, dev 머지 완료)\n\n# 주요 변경 사항\n\n- **목록 질의 하나**(`MyRecordViewQuery`). `my_record`에 종류별 원본을 조인한 CTE에서 상태를 CASE로 파생하고 바깥 WHERE가 그 값으로 필터합니다. `ANALYSIS`의 요청은 저장돼 있지 않으므로 LATERAL 서브쿼리가 `(소유자, 실행, 단건)`에서 **취소하지 않은 최신 요청**을 골라 공개 토큰과 취소 여부를 읽습니다 — BE-1의 `findViewableRequestId`와 같은 규칙입니다.\n- **상태 매핑.** 분석: 요청 취소 또는 실행 CANCELLED → `CANCELLED`, QUEUED/RUNNING → `RUNNING`, 나머지는 실행 상태 그대로. 묶음: QUEUED/RUNNING → `RUNNING`, REJECTED → `FAILED`, 나머지 그대로(`PARTIAL` 포함). 경제환경: `snapshot_id IS NULL` → `WITHDRAWN`, 아니면 010 스냅샷 상태 그대로(완료/실패로 바꿔 부르지 않습니다, FR-004). 사유는 `failure_code`·`stop_reason`·`status_reason`입니다.\n- **기본 보기는 `COMPLETED` + `THRESHOLD_APPLIED`**, 상태를 명시하면 대체합니다. 필터는 kind/status(IN), sector/strategy(`&&` 배열 겹침, GIN 인덱스), 기간 겹침. 정렬은 `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC` 셋뿐입니다. 허용하지 않는 값은 enum 바인딩 실패로 400 `INVALID_INPUT`이고 조용히 기본값으로 바꾸지 않습니다.\n- **커서는 `(saved_at, id)` 또는 `(name, id)` keyset**, base64로 불투명하게 나갑니다. 한 쪽보다 하나 더 읽어 다음 쪽 유무를 알고 전체 개수는 돌려주지 않습니다(R14). `size` 1~50, 기본 20.\n- **상세.** 남의 것·없는 것·지운 것은 한 가지 404 `RESOURCE_NOT_FOUND`입니다(403은 존재를 알립니다). 읽는 순간 `last_viewed_at`을 그 컬럼만 UPDATE로 남깁니다. `referenceVersions`는 004·007이 남긴 원문을 **이름만 바꿔** 담고(`data→datasetVersion`, `mapping→sectorEtfMapVersion`, `rules`·`costProfile`은 `{version, provisional}` 그대로, `request_spec.registryVersion`), 없는 키는 만들지 않고 `worker`·`dependencies`는 담지 않습니다. 경제환경은 스냅샷 키에서 자료·등록표·모델 버전을 꺼냅니다.\n- **`mappingDrift`**(`MyRecordMappingDriftChecker`, R8). 저장 버전과 열린 버전의 `sector_etf_map_entry`를 이 기록의 섹터마다 비교합니다. 조회는 두 번(버전 행 하나로 저장·열린 버전을 함께, 다르면 항목을 한 문장으로)이고 같은 버전이면 한 번입니다. 대표 ETF가 모두 같으면 버전 문자열이 달라도 `changed=false`. 섹터가 빠졌으면 `SECTOR_REMOVED`, 남았는데 ETF가 다르면 `INSTRUMENT_REPLACED`, 문장은 섹터 **이름**으로 만듭니다. 판정할 근거가 없으면(저장 버전 없음·버전 행 없음·열린 버전 없음) 키를 만들지 않습니다 — \"안 바뀜\"과 \"모름\"을 섞지 않습니다.\n- 스키마 변경 없음. 컨트롤러·응답 DTO(`MyRecordListResponse`·`MyRecordDetailResponse`)는 계약 예시 모양이고, 종류별 열쇠(`resultToken`·`searchId`·`regime`)는 그 종류에만 키가 있습니다.\n\n# 테스트\n\n- `./gradlew spotlessApply build` — **1843건 통과, 실패 0, skip 4**(Docker 켜고 실행). 스키마 변경이 없어 마이그레이션 버전 검사는 대상이 없습니다.\n- `MyRecordListQueryIT`(PostgreSQL): 기본 보기·정렬, 실패/취소/부분 완료는 필터로만·사유 동반, **요청을 취소했으면 실행이 COMPLETED여도 CANCELLED**, QUEUED→RUNNING, 스냅샷 NULL→WITHDRAWN, 섹터 겹침·종류·전략·기간 필터, **커서 사이에 새 항목이 끼어도 겹침·누락 없음**(이름 정렬 커서 포함), 남의 항목·지운 항목 미노출, 참조 버전 원문 읽기(`worker` 키까지 원문에 있지만 응답에는 안 나감)·열람 표시.\n- `MappingDriftCheckerTest`: quickstart S5 세 경우 + 판정 불가.\n- `MyRecordApiIT`(MockMvc): 비로그인 401, `sort=RETURN_DESC`·`status=DONE`·`size=0`·깨진 커서 400, 실제 접수가 남긴 항목의 목록·상세(성과 키 없음, `worker` 없음, 시드 대응표 그대로라 `mappingDrift.changed=false`), 남의 기록 404·남의 목록 빈 배열.\n\n# 리뷰 포인트\n\n- **`referenceVersions`를 T027(US2)에서 앞당겼습니다.** quickstart S1-7(\"상세를 펼친다 → 자료·대응표·등록표·비용 버전이 보인다\")이 MVP 체크포인트 안에 있고, 대응표 판정이 어차피 `versions.mapping`을 읽어야 해서 비용이 거의 없었습니다. T027에 남는 것은 `registryDrift`·`reopenSettings`·`reopenPayload`입니다. 미루는 쪽이 낫다고 보시면 상세 응답에서 빼겠습니다.\n- **상세 GET이 `last_viewed_at`을 씁니다.** '다시 보기'는 005의 `/results/{token}`이 열어 006 서버가 모르고, 결과 화면이 기록에서 들어왔을 때(`?recordId=`) 상세를 부르는 것이 그 자리입니다. 조회에 쓰기 부작용을 붙이는 것이라 마음에 걸리면 `POST /my-records/{id}/view`로 뺄 수 있습니다 — 값은 보관 기간 힌트(PD-13)일 뿐 자동 삭제에 쓰지 않습니다.\n- **판정 불가면 `mappingDrift` 키가 없습니다**(`changed:false`가 아님). 저장 버전이 없는 실행(접수 경로를 거치지 않은 옛 실행), 버전 행이 없을 때, 그리고 **이 기록의 섹터가 저장 버전 항목에 하나도 없어 견준 것이 없을 때**가 그 경우입니다. FE가 \"키 없음 = 문장 없음\"으로 다루면 됩니다. 저장 버전이 곧 열린 버전이면 항목을 읽지 않고 `changed:false`입니다.\n- **빠진 섹터와 교체된 ETF가 함께 일어나면 `SECTOR_REMOVED`만 알립니다**(kind가 하나라). 대체 섹터를 고르는 002 화면이 현재 대응표를 보이므로 교체는 거기서 드러납니다.\n- **BE-1의 `findViewableRequestId`를 지웠습니다.** 같은 규칙(취소하지 않은 최신 단건 요청)이 목록 SQL의 LATERAL 서브쿼리에 있어야 하고, 두 벌을 두면 한쪽만 고쳐집니다. 운영 호출자는 없었고 `MyRecordIntakeIT`는 `findView().resultToken()`으로 같은 것을 단언합니다. data-model·research의 참조도 옮겼습니다(마이그레이션 주석은 적용된 파일이라 두었습니다).\n- **원본 값이 계약 밖이면 500입니다.** 007이 상태를 하나 더하고 SQL CASE를 안 고치면 `RecordStatus.valueOf`가 던지는데, 그대로 두면 전역 처리기가 400 `INVALID_INPUT`으로 감싸 WARN만 남습니다. `IllegalStateException`으로 바꿔 던집니다.\n- **`QUEUED`를 `RUNNING`으로 보입니다.** 계약 상태 집합에 QUEUED가 없어서입니다. 사용자에게는 \"돌고 있다\"로 충분하다고 봤습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **FE-1**: 이 API로 실연동할 수 있습니다. `mappingDrift`는 키가 없을 수 있고, `referenceVersions`의 `rulesVersion`·`costProfileVersion`은 `{version, provisional}` 객체입니다(T025의 '잠정' 표시 근거).\n- **001**: 대응표 표를 SQL로 읽는 곳이 하나 생겼습니다(`SectorMapEntriesImpl`, 버전별 항목). 자바 코드는 건드리지 않았습니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- US2(`registryDrift`·`reopenSettings`·`reopenPayload`, BE-3), 상한 판정 호출·경제환경 기록 POST(BE-4), 내보내기(BE-5), 이름 변경·삭제(BE-6).\n- `tasks.md`의 T017~T020 체크박스는 머지 뒤에 표시합니다. T001~T015는 BE-1 머지분으로 이번에 표시했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T10:08:32.480+09:00",
+    "updated_at": "2026-09-21T10:35:38.107+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T10:35:37.725+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/383-my-record-list-api",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+    "merge_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T10:08:35.191+09:00",
+    "reference": "!259",
+    "references": {
+      "short": "!259",
+      "relative": "!259",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!259"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/259",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 953698,
+    "iid": 259,
+    "project_id": 1444456,
+    "title": "feat(be): 내 기록 목록·상세 API",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US1의 서버 몫입니다. `GET /my-records`(목록)와 `GET /my-records/{recordId}`(상세)를 만들고, 상세에 저장 당시 대응표와 현재 대응표를 **항목(etf_id) 단위**로 비교한 `mappingDrift`를 넣었습니다. FE-1이 이 API로 실연동하면 MVP 체크포인트(S1·S2·S5·S12·S13)입니다.\n\n상태·사유·결과 토큰은 저장된 값이 아니라 읽는 순간 원본(`backtest_run`·`backtest_request`·`param_search`·`regime_search_log`·`regime_search_snapshot`)에서 파생합니다. 성과 수치는 select에 없습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-383 `[BE] 내 기록 목록·상세 API와 대응표 변경 판정`\n- Story: -378 / Epic: -377 · 선행: -379(BE-1, dev 머지 완료)\n\n# 주요 변경 사항\n\n- **목록 질의 하나**(`MyRecordViewQuery`). `my_record`에 종류별 원본을 조인한 CTE에서 상태를 CASE로 파생하고 바깥 WHERE가 그 값으로 필터합니다. `ANALYSIS`의 요청은 저장돼 있지 않으므로 LATERAL 서브쿼리가 `(소유자, 실행, 단건)`에서 **취소하지 않은 최신 요청**을 골라 공개 토큰과 취소 여부를 읽습니다 — BE-1의 `findViewableRequestId`와 같은 규칙입니다.\n- **상태 매핑.** 분석: 요청 취소 또는 실행 CANCELLED → `CANCELLED`, QUEUED/RUNNING → `RUNNING`, 나머지는 실행 상태 그대로. 묶음: QUEUED/RUNNING → `RUNNING`, REJECTED → `FAILED`, 나머지 그대로(`PARTIAL` 포함). 경제환경: `snapshot_id IS NULL` → `WITHDRAWN`, 아니면 010 스냅샷 상태 그대로(완료/실패로 바꿔 부르지 않습니다, FR-004). 사유는 `failure_code`·`stop_reason`·`status_reason`입니다.\n- **기본 보기는 `COMPLETED` + `THRESHOLD_APPLIED`**, 상태를 명시하면 대체합니다. 필터는 kind/status(IN), sector/strategy(`&&` 배열 겹침, GIN 인덱스), 기간 겹침. 정렬은 `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC` 셋뿐입니다. 허용하지 않는 값은 enum 바인딩 실패로 400 `INVALID_INPUT`이고 조용히 기본값으로 바꾸지 않습니다.\n- **커서는 `(saved_at, id)` 또는 `(name, id)` keyset**, base64로 불투명하게 나갑니다. 한 쪽보다 하나 더 읽어 다음 쪽 유무를 알고 전체 개수는 돌려주지 않습니다(R14). `size` 1~50, 기본 20.\n- **상세.** 남의 것·없는 것·지운 것은 한 가지 404 `RESOURCE_NOT_FOUND`입니다(403은 존재를 알립니다). 읽는 순간 `last_viewed_at`을 그 컬럼만 UPDATE로 남깁니다. `referenceVersions`는 004·007이 남긴 원문을 **이름만 바꿔** 담고(`data→datasetVersion`, `mapping→sectorEtfMapVersion`, `rules`·`costProfile`은 `{version, provisional}` 그대로, `request_spec.registryVersion`), 없는 키는 만들지 않고 `worker`·`dependencies`는 담지 않습니다. 경제환경은 스냅샷 키에서 자료·등록표·모델 버전을 꺼냅니다.\n- **`mappingDrift`**(`MyRecordMappingDriftChecker`, R8). 저장 버전과 열린 버전의 `sector_etf_map_entry`를 이 기록의 섹터마다 비교합니다. 조회는 두 번(버전 행 하나로 저장·열린 버전을 함께, 다르면 항목을 한 문장으로)이고 같은 버전이면 한 번입니다. 대표 ETF가 모두 같으면 버전 문자열이 달라도 `changed=false`. 섹터가 빠졌으면 `SECTOR_REMOVED`, 남았는데 ETF가 다르면 `INSTRUMENT_REPLACED`, 문장은 섹터 **이름**으로 만듭니다. 판정할 근거가 없으면(저장 버전 없음·버전 행 없음·열린 버전 없음) 키를 만들지 않습니다 — \"안 바뀜\"과 \"모름\"을 섞지 않습니다.\n- 스키마 변경 없음. 컨트롤러·응답 DTO(`MyRecordListResponse`·`MyRecordDetailResponse`)는 계약 예시 모양이고, 종류별 열쇠(`resultToken`·`searchId`·`regime`)는 그 종류에만 키가 있습니다.\n\n# 테스트\n\n- `./gradlew spotlessApply build` — **1843건 통과, 실패 0, skip 4**(Docker 켜고 실행). 스키마 변경이 없어 마이그레이션 버전 검사는 대상이 없습니다.\n- `MyRecordListQueryIT`(PostgreSQL): 기본 보기·정렬, 실패/취소/부분 완료는 필터로만·사유 동반, **요청을 취소했으면 실행이 COMPLETED여도 CANCELLED**, QUEUED→RUNNING, 스냅샷 NULL→WITHDRAWN, 섹터 겹침·종류·전략·기간 필터, **커서 사이에 새 항목이 끼어도 겹침·누락 없음**(이름 정렬 커서 포함), 남의 항목·지운 항목 미노출, 참조 버전 원문 읽기(`worker` 키까지 원문에 있지만 응답에는 안 나감)·열람 표시.\n- `MappingDriftCheckerTest`: quickstart S5 세 경우 + 판정 불가.\n- `MyRecordApiIT`(MockMvc): 비로그인 401, `sort=RETURN_DESC`·`status=DONE`·`size=0`·깨진 커서 400, 실제 접수가 남긴 항목의 목록·상세(성과 키 없음, `worker` 없음, 시드 대응표 그대로라 `mappingDrift.changed=false`), 남의 기록 404·남의 목록 빈 배열.\n\n# 리뷰 포인트\n\n- **`referenceVersions`를 T027(US2)에서 앞당겼습니다.** quickstart S1-7(\"상세를 펼친다 → 자료·대응표·등록표·비용 버전이 보인다\")이 MVP 체크포인트 안에 있고, 대응표 판정이 어차피 `versions.mapping`을 읽어야 해서 비용이 거의 없었습니다. T027에 남는 것은 `registryDrift`·`reopenSettings`·`reopenPayload`입니다. 미루는 쪽이 낫다고 보시면 상세 응답에서 빼겠습니다.\n- **상세 GET이 `last_viewed_at`을 씁니다.** '다시 보기'는 005의 `/results/{token}`이 열어 006 서버가 모르고, 결과 화면이 기록에서 들어왔을 때(`?recordId=`) 상세를 부르는 것이 그 자리입니다. 조회에 쓰기 부작용을 붙이는 것이라 마음에 걸리면 `POST /my-records/{id}/view`로 뺄 수 있습니다 — 값은 보관 기간 힌트(PD-13)일 뿐 자동 삭제에 쓰지 않습니다.\n- **판정 불가면 `mappingDrift` 키가 없습니다**(`changed:false`가 아님). 저장 버전이 없는 실행(접수 경로를 거치지 않은 옛 실행), 버전 행이 없을 때, 그리고 **이 기록의 섹터가 저장 버전 항목에 하나도 없어 견준 것이 없을 때**가 그 경우입니다. FE가 \"키 없음 = 문장 없음\"으로 다루면 됩니다. 저장 버전이 곧 열린 버전이면 항목을 읽지 않고 `changed:false`입니다.\n- **빠진 섹터와 교체된 ETF가 함께 일어나면 `SECTOR_REMOVED`만 알립니다**(kind가 하나라). 대체 섹터를 고르는 002 화면이 현재 대응표를 보이므로 교체는 거기서 드러납니다.\n- **BE-1의 `findViewableRequestId`를 지웠습니다.** 같은 규칙(취소하지 않은 최신 단건 요청)이 목록 SQL의 LATERAL 서브쿼리에 있어야 하고, 두 벌을 두면 한쪽만 고쳐집니다. 운영 호출자는 없었고 `MyRecordIntakeIT`는 `findView().resultToken()`으로 같은 것을 단언합니다. data-model·research의 참조도 옮겼습니다(마이그레이션 주석은 적용된 파일이라 두었습니다).\n- **원본 값이 계약 밖이면 500입니다.** 007이 상태를 하나 더하고 SQL CASE를 안 고치면 `RecordStatus.valueOf`가 던지는데, 그대로 두면 전역 처리기가 400 `INVALID_INPUT`으로 감싸 WARN만 남습니다. `IllegalStateException`으로 바꿔 던집니다.\n- **`QUEUED`를 `RUNNING`으로 보입니다.** 계약 상태 집합에 QUEUED가 없어서입니다. 사용자에게는 \"돌고 있다\"로 충분하다고 봤습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **FE-1**: 이 API로 실연동할 수 있습니다. `mappingDrift`는 키가 없을 수 있고, `referenceVersions`의 `rulesVersion`·`costProfileVersion`은 `{version, provisional}` 객체입니다(T025의 '잠정' 표시 근거).\n- **001**: 대응표 표를 SQL로 읽는 곳이 하나 생겼습니다(`SectorMapEntriesImpl`, 버전별 항목). 자바 코드는 건드리지 않았습니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- US2(`registryDrift`·`reopenSettings`·`reopenPayload`, BE-3), 상한 판정 호출·경제환경 기록 POST(BE-4), 내보내기(BE-5), 이름 변경·삭제(BE-6).\n- `tasks.md`의 T017~T020 체크박스는 머지 뒤에 표시합니다. T001~T015는 BE-1 머지분으로 이번에 표시했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T10:08:32.480+09:00",
+    "updated_at": "2026-09-21T10:35:38.107+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T10:35:37.725+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/383-my-record-list-api",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+    "merge_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T10:08:35.191+09:00",
+    "reference": "!259",
+    "references": {
+      "short": "!259",
+      "relative": "!259",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!259"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/259",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "23",
+    "latest_build_started_at": "2026-09-21T10:12:56.811+09:00",
+    "latest_build_finished_at": "2026-09-21T10:22:26.789+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 211110,
+      "iid": 241,
+      "project_id": 1444456,
+      "sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+      "ref": "feat(be)/383-my-record-list-api",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T10:12:56.699+09:00",
+      "updated_at": "2026-09-21T10:22:26.801+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211110"
+    },
+    "head_pipeline": {
+      "id": 211110,
+      "iid": 241,
+      "project_id": 1444456,
+      "sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+      "ref": "feat(be)/383-my-record-list-api",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T10:12:56.699+09:00",
+      "updated_at": "2026-09-21T10:22:26.801+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211110",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T10:12:56.811+09:00",
+      "finished_at": "2026-09-21T10:22:26.789+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211110",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "head_sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+      "start_sha": "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7b6a10868c819d21a3962f0750a941914991e275",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2844310,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T10:08:32.640+09:00",
+          "updated_at": "2026-09-21T10:08:32.646+09:00",
+          "system": true,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b249e50fc7deda67315da2472684f96f8f3cb470",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2844311,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T10:08:32.682+09:00",
+          "updated_at": "2026-09-21T10:08:32.694+09:00",
+          "system": true,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "42105b87bd63b89348d15667d88f398f26d4e48c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2844314,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T10:08:39.692+09:00",
+          "updated_at": "2026-09-21T10:08:39.703+09:00",
+          "system": true,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "60858bbab5d3a4216e8663d20cd0f0c576475b29",
+      "individual_note": false,
+      "resolvable": true,
+      "resolved": false,
+      "notes": [
+        {
+          "id": 2844315,
+          "type": "DiscussionNote",
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Low] `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordViewQuery.java`\n  - `toView` 메서드에서 배열(`sector_codes`, `strategy_ids`)을 가져올 때 `(String[]) rs.getArray(...).getArray()` 캐스팅을 사용하고 있습니다. DB 드라이버나 널(Null) 처리 방식에 따라 `ClassCastException`이나 `NullPointerException`이 발생할 여지가 있으므로, 배열 컬럼이 비어있거나 null일 때의 안전한 변환 로직(예: 체크 후 `Collections.emptyList()` 반환 등)을 보완하는 것이 안전합니다.\n\n### 테스트 제안\n- `MyRecordListQueryIT` 파일이 비어 있습니다(`file path=\"backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordListQueryIT.java\" flags=\"new\"`). PR 설명에 언급된 목록 필터링(종류, 상태, 섹터/전략 GIN 인덱스 겹침, 기간 겹침, 커서 페이지네이션) 시나리오를 검증하는 통합 테스트를 해당 파일에 구현해야 합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e2607feb05a783b8cf9f62abca9ff1aa6898979b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T10:08:40.398+09:00",
+          "updated_at": "2026-09-21T10:12:05.938+09:00",
+          "system": false,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        },
+        {
+          "id": 2844392,
+          "type": "DiscussionNote",
+          "body": "- \\[Low\\] 동적 SQL 파라미터 밀림: 코드 변경 없음. 자리표시자를 붙이는 문장(inList·textArray·정렬 분기)이 같은 자리에서 파라미터도 넣어 둘이 어긋날 경로가 없습니다. 리뷰어가 우려한 \"향후 유지보수\"에 대한 방어는 이미 그 구조 자체입니다.\n- 테스트 제안 3건: 모두 실제 빈틈이라 추가했습니다.\n\n추가한 검사 (test(be): 내 기록 목록의 경계값 검사를 더한다)\n\n- 같은 saved_at인 항목 4건을 쪽 크기 1로 네 번 넘겨 빠짐·중복이 없는지. 식별자 tiebreak가 실제로 자리를 가르는 것을 확인합니다.\n- size=50은 200, size=51은 400 INVALID_INPUT.\n- 저장 당시 대응표 버전을 존재하지 않는 값으로 바꾼 뒤 상세를 열면 mappingDrift 키가 응답에 없고 referenceVersions.sectorEtfMapVersion은 그대로 나오는지.",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T10:12:05.897+09:00",
+          "updated_at": "2026-09-21T10:12:05.897+09:00",
+          "system": false,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bfdb4a17ca0fafbd206a85785cd110c88c46f791",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2844381,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>e2607feb - test(be): 내 기록 목록의 경계값 검사를 더한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/259/diffs?diff_id=2229770&start_sha=4afa929875022c16ac17307493e7d592912ecd2a)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T10:11:25.937+09:00",
+          "updated_at": "2026-09-21T10:11:25.940+09:00",
+          "system": true,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7f3ee345f192bf00d2c7d86b4e1489ef88c70124",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2844646,
+          "type": null,
+          "body": "mentioned in commit b36ccbab340b8b37bed4cda554cf59c906e79a81",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T10:35:37.965+09:00",
+          "updated_at": "2026-09-21T10:35:38.020+09:00",
+          "system": true,
+          "noteable_id": 953698,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 259,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2229770,
+      "head_commit_sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+      "base_commit_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "start_commit_sha": "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90",
+      "created_at": "2026-09-21T10:11:25.642+09:00",
+      "merge_request_id": 953698,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "9c84910c863aee7a73802b8b60bcc969039cc666"
+    },
+    {
+      "id": 2229704,
+      "head_commit_sha": "4afa929875022c16ac17307493e7d592912ecd2a",
+      "base_commit_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "start_commit_sha": "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90",
+      "created_at": "2026-09-21T10:08:33.173+09:00",
+      "merge_request_id": 953698,
+      "state": "without_files",
+      "real_size": "23",
+      "patch_id_sha": "6402a08ce90770ea73deec8fd82fea0a599283d7"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2229770,
+      "head_commit_sha": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+      "base_commit_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "start_commit_sha": "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90",
+      "created_at": "2026-09-21T10:11:25.642+09:00",
+      "merge_request_id": 953698,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "9c84910c863aee7a73802b8b60bcc969039cc666",
+      "commits": [
+        {
+          "id": "e2607feb05a783b8cf9f62abca9ff1aa6898979b",
+          "short_id": "e2607feb",
+          "created_at": "2026-09-21T10:11:22.000+09:00",
+          "parent_ids": [
+            "4afa929875022c16ac17307493e7d592912ecd2a"
+          ],
+          "title": "test(be): 내 기록 목록의 경계값 검사를 더한다",
+          "message": "test(be): 내 기록 목록의 경계값 검사를 더한다\n\n같은 저장일을 가진 항목 여럿을 쪽 크기 1로 넘겨 식별자가 자리를 가르는지, size 상한\n50/51 이 계약대로 통과·거절되는지, 저장 당시 대응표 버전이 지금 없을 때 응답에서\nmappingDrift 키가 생략되는지(changed:false 가 아니라) 확인한다. 리뷰 제안분이다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:11:22.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:11:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e2607feb05a783b8cf9f62abca9ff1aa6898979b"
+        },
+        {
+          "id": "4afa929875022c16ac17307493e7d592912ecd2a",
+          "short_id": "4afa9298",
+          "created_at": "2026-09-21T09:57:21.000+09:00",
+          "parent_ids": [
+            "20483de5f0ed4513c288e1e907f9e05eb0e7a501"
+          ],
+          "title": "fix(be): 내 기록 상세의 대응표 판정과 원본 읽기를 리뷰대로 고친다",
+          "message": "fix(be): 내 기록 상세의 대응표 판정과 원본 읽기를 리뷰대로 고친다\n\n대응표 판정이 비교한 섹터가 하나도 없을 때 \"안 바뀜\"을 돌려줬다. 기록의 섹터가 저장 버전\n항목에 없으면 견준 것이 없으니 판정하지 않는다(원칙 VI). 저장 버전이 곧 열린 버전이면\n항목을 읽지 않고 끝내고, 두 버전이 다를 때만 항목을 한 문장으로 읽는다 — 상세를 열\n때마다 판정하므로 조회를 넷에서 둘 또는 하나로 줄인다.\n\n원본 값이 계약 밖이면(상태값 추가·깨진 스냅샷 키) 데이터 결함이라 500이어야 하는데,\nIllegalArgumentException 을 그대로 두면 전역 처리기가 400 으로 감싸 WARN 만 남는다.\nIllegalStateException 으로 바꿔 던진다. 요청 사본에는 null 값 키가 올 수 있어 원문\n맵 복사를 Map.copyOf 에서 null 을 허용하는 복사로 바꾼다.\n\nBE-1의 findViewableRequestId 를 지운다. 같은 규칙(취소하지 않은 최신 단건 요청)이 목록\nSQL 의 LATERAL 서브쿼리에 있어야 하고 두 벌이면 한쪽만 고쳐진다. 운영 호출자는 없었고\n접수 IT 는 findView().resultToken() 으로 같은 것을 단언한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T09:57:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T09:57:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4afa929875022c16ac17307493e7d592912ecd2a"
+        },
+        {
+          "id": "20483de5f0ed4513c288e1e907f9e05eb0e7a501",
+          "short_id": "20483de5",
+          "created_at": "2026-09-21T09:34:45.000+09:00",
+          "parent_ids": [
+            "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5"
+          ],
+          "title": "feat(be): 내 기록 목록·상세 API와 대응표 변경 판정을 만든다",
+          "message": "feat(be): 내 기록 목록·상세 API와 대응표 변경 판정을 만든다\n\nGET /my-records 와 GET /my-records/{recordId} 를 더한다(spec 006 US1, T017~T020).\n상태·사유·결과 토큰은 저장된 값이 아니라 읽는 순간 종류별 원본에서 파생한다 —\n복제하면 갱신 누락이 \"실패한 분석이 목록에서는 완료로 보이는\" 조용한 거짓이 된다.\n성과 수치 컬럼은 select 에 없다(원칙 III).\n\n목록은 CTE 하나다. ANALYSIS 의 요청은 저장돼 있지 않으므로 LATERAL 서브쿼리가\n(소유자·실행·단건)에서 취소하지 않은 최신 요청을 골라 공개 토큰과 취소 여부를 읽는다\n— findViewableRequestId 와 같은 규칙이다. 커서는 (saved_at, id)·(name, id) keyset 이라\n쪽을 넘기는 사이 새 항목이 끼어도 겹치거나 빠지지 않는다. 전체 개수는 세지 않는다.\n\n상세는 남의 것·없는 것·지운 것을 한 가지 404 로 답하고(403 은 존재를 알린다), 읽는\n순간 last_viewed_at 을 그 컬럼만 UPDATE 로 남긴다. referenceVersions 는 004·007 이 남긴\n원문을 이름만 바꿔 담고 없는 키는 만들지 않는다. worker·dependencies 는 담지 않는다.\n\nmappingDrift 는 저장 버전과 열린 버전의 대응표 항목을 섹터마다 비교한다(research R8).\n대표 ETF 가 모두 같으면 버전 문자열이 달라도 바뀐 것이 아니다 — 버전만 보면 다른\n섹터 때문에 나온 새 버전에도 경고가 뜬다. 판정할 근거가 없으면 키를 만들지 않아\n\"안 바뀜\"과 \"모름\"을 섞지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T09:34:45.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T09:34:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20483de5f0ed4513c288e1e907f9e05eb0e7a501"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,99 @@\n+package com.ssafy.thorp.myrecord.application.command;\n+\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.format.DateTimeParseException;\n+import java.util.Base64;\n+import java.util.List;\n+import java.util.Set;\n+\n+/**\n+ * 목록 질의(spec 006 contracts \"GET /my-records\").\n+ *\n+ * <p><b>성과 정렬은 없다</b>(research R7, 원칙 III). 정렬 축은 저장일과 이름뿐이다.\n+ *\n+ * <p>상태를 비우면 <b>기본 보기</b>다 — 단일 분석·묶음의 완료와 경제환경의 문턱 적용(정상 완료에 해당). 명시하면 기본 보기를 대체한다(FR-004). 허용하지\n+ * 않는 값은 400이고 조용히 기본값으로 바꾸지 않는다(원칙 VI) — enum 변환은 컨트롤러 인자 바인딩이 하므로 여기 오는 값은 이미 유효하다.\n+ *\n+ * @param cursor 이전 쪽의 마지막 자리. 첫 쪽이면 null\n+ * @param size 쪽 크기 1~50. 전체 개수는 돌려주지 않는다(research R14)\n+ */\n+public record MyRecordListQuery(\n+        Set<RecordKind> kinds,\n+        Set<RecordStatus> statuses,\n+        List<String> sectorCodes,\n+        List<String> strategyIds,\n+        LocalDate periodFrom,\n+        LocalDate periodTo,\n+        RecordSort sort,\n+        Cursor cursor,\n+        int size) {\n+\n+    public static final int DEFAULT_SIZE = 20;\n+    public static final int MAX_SIZE = 50;\n+\n+    /** 기본 보기. 상태를 명시하지 않은 요청이 보는 것. */\n+    public static final Set<RecordStatus> DEFAULT_STATUSES =\n+            Set.of(RecordStatus.COMPLETED, RecordStatus.THRESHOLD_APPLIED);\n+\n+    public MyRecordListQuery {\n+        kinds = kinds == null ? Set.of() : Set.copyOf(kinds);\n+        statuses = statuses == null || statuses.isEmpty() ? DEFAULT_STATUSES : Set.copyOf(statuses);\n+        sectorCodes = sectorCodes == null ? List.of() : List.copyOf(sectorCodes);\n+        strategyIds = strategyIds == null ? List.of() : List.copyOf(strategyIds);\n+        sort = sort == null ? RecordSort.SAVED_AT_DESC : sort;\n+        if (size < 1 || size > MAX_SIZE) {\n+            throw new IllegalArgumentException(\"size 는 1 이상 \" + MAX_SIZE + \" 이하여야 합니다: \" + size);\n+        }\n+        if (periodFrom != null && periodTo != null && periodFrom.isAfter(periodTo)) {\n+            throw new IllegalArgumentException(\n+                    \"periodFrom 이 periodTo 보다 늦습니다: \" + periodFrom + \" > \" + periodTo);\n+        }\n+    }\n+\n+    /** 정렬. 수익률·하락 폭·비용은 선택지에 없다(research R7). */\n+    public enum RecordSort {\n+        SAVED_AT_DESC,\n+        SAVED_AT_ASC,\n+        NAME_ASC\n+    }\n+\n+    /**\n+     * 쪽 자리. 바깥에는 불투명한 문자열로 나간다 — 안의 값을 계약으로 삼으면 정렬 기준을 바꿀 때 이미 나간 커서를 해석할 수 없다.\n+     *\n+     * <p>저장일과 이름을 함께 담아 어느 정렬에서 받은 커서든 그 정렬의 키로 자리를 잡는다. 식별자를 함께 두는 이유: 같은 저장일·같은 이름이 여럿이면 어디까지\n+     * 보냈는지 구별되지 않아 그 행들이 되풀이된다.\n+     */\n+    public record Cursor(Instant savedAt, String name, long id) {\n+\n+        private static final String DELIMITER = \"|\";\n+\n+        public String encode() {\n+            String raw = savedAt.toString() + DELIMITER + id + DELIMITER + name;\n+            return Base64.getUrlEncoder()\n+                    .withoutPadding()\n+                    .encodeToString(raw.getBytes(StandardCharsets.UTF_8));\n+        }\n+\n+        /** 모양이 다르면 400이다. 이름은 마지막 조각이라 구분자를 품어도 된다. */\n+        public static Cursor parse(String encoded) {\n+            if (encoded == null || encoded.isBlank()) {\n+                return null;\n+            }\n+            try {\n+                String raw =\n+                        new String(Base64.getUrlDecoder().decode(encoded), StandardCharsets.UTF_8);\n+                String[] parts = raw.split(\"\\\\\" + DELIMITER, 3);\n+                if (parts.length != 3) {\n+                    throw new IllegalArgumentException(\"cursor 를 읽을 수 없습니다.\");\n+                }\n+                return new Cursor(Instant.parse(parts[0]), parts[2], Long.parseLong(parts[1]));\n+            } catch (IllegalArgumentException | DateTimeParseException e) {\n+                throw new IllegalArgumentException(\"cursor 를 읽을 수 없습니다.\", e);\n+            }\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/command/MyRecordListQuery.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/command/MyRecordListQuery.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.myrecord.application.port;\n+\n+import java.util.List;\n+import java.util.Optional;\n+\n+/**\n+ * 섹터-ETF 대응표의 항목을 버전으로 읽는 통로(spec 006 research R8).\n+ *\n+ * <p>001의 {@code SectorRepository}는 <b>지금 열린</b> 버전만 읽는다. UI-01 판정은 저장 당시 버전의 항목도 필요하므로 006이 자기 포트를\n+ * 둔다. 읽기만 한다 — 대응표의 원본은 자료 파이프라인이다.\n+ */\n+public interface SectorMapEntries {\n+\n+    /**\n+     * 저장 당시 버전과 지금 열린 버전({@code effective_to IS NULL})의 항목을 한 번에 읽는다.\n+     *\n+     * @return 두 버전 행 중 하나라도 없으면 빈 값 — 항목 0개와 구분해야 \"판정 불가\"를 말할 수 있다. 두 버전이 같은 행이면 {@code\n+     *     same=true}이고 항목은 읽지 않는다(바뀔 수 없다)\n+     */\n+    Optional<Versions> load(String savedMapVersion);\n+\n+    /**\n+     * @param sectorName 화면 문장에 쓴다. 사용자는 코드가 아니라 이름으로 섹터를 안다\n+     * @param etfId {@code representative_etf.id}. 대표 ETF가 바뀌었는지는 이 값으로 본다\n+     */\n+    record Entry(String sectorCode, String sectorName, long etfId) {}\n+\n+    /**\n+     * @param same 저장 버전이 곧 열린 버전이다. 그러면 {@code saved}·{@code current}는 비어 있다\n+     */\n+    record Versions(boolean same, List<Entry> saved, List<Entry> current) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/port/SectorMapEntries.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/port/SectorMapEntries.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,12 @@\n package com.ssafy.thorp.myrecord.application.repository;\n \n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordPage;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.application.result.SourceVersions;\n import com.ssafy.thorp.myrecord.domain.model.MyRecord;\n import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import java.time.Instant;\n import java.util.Optional;\n \n /**\n@@ -10,7 +15,8 @@ import java.util.Optional;\n  * <p><b>찾는 메서드가 모두 \"살아 있는\" 항목만 본다.</b> 삭제는 {@code deleted_at}을 채우는 것이고 지운 행은 남으므로, 조건을 빠뜨리면 지운 항목이\n  * 목록·상한·재사용 판정에 되살아난다(research R6).\n  *\n- * <p>목록 질의({@code findPage})는 여기 없다. 상태를 종류별 원본에서 조인해 읽어야 해서 형태가 다르고, 006의 목록·상세 API와 함께 들어온다.\n+ * <p>목록·상세 읽기({@link #findPage}·{@link #findView})는 도메인 모델이 아니라 {@link MyRecordView}를 돌려준다. 상태·결과\n+ * 토큰을 종류별 원본에서 조인해 파생하는 값이라 {@code my_record} 한 표의 모델로는 담을 수 없다(data-model §1 \"상태는 컬럼이 아니다\").\n  */\n public interface MyRecordRepository {\n \n@@ -40,20 +46,26 @@ public interface MyRecordRepository {\n     /** 같은 사용자가 같은 경제환경 로그 행을 가리키는 살아 있는 항목. 진입 경로가 다르면 로그 행이 달라 별도 항목이 된다. */\n     Optional<MyRecord> findActiveByOwnerAndRegimeLog(long ownerId, long regimeLogId);\n \n+    /** 탐색 묶음 저장 상한 판정이 세는 경로(FR-018, research R11). 지운 항목은 세지 않는다. */\n+    long countActiveByOwnerAndKind(long ownerId, RecordKind kind);\n+\n     /**\n-     * 그 사용자가 이 실행에 대해 <b>지금 보는 요청</b>. 공개 토큰과 상태를 여기서 읽는다.\n+     * 목록 한 쪽. 소유자의 살아 있는 항목만, 필터·정렬·커서는 {@link MyRecordListQuery}가 정한다.\n      *\n-     * <p>기록은 요청을 저장하지 않는다. 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고(동일 결과 재사용) 취소는 실행이 아니라 요청에 붙기 때문이다 — 하나를 골라\n-     * 저장해 두면 그 요청만 취소된 순간 목록이 '취소'를 보인다. 고르는 규칙은 <b>취소하지 않은 것 중 최신</b>이고, 전부 취소했으면 그중 최신이다(그때는\n-     * 사용자에게 취소가 맞다).\n-     *\n-     * <p><b>단건 요청만 본다.</b> 동일 버전 키에 실행 유형이 없어 같은 사용자의 탐색 후보도 같은 실행에 합류할 수 있는데, 항목을 만드는 쪽은 단건만\n-     * 만든다(FR-011: 후보는 묶음 항목이 대표한다). 유형을 가리지 않으면 단건 기록이 탐색 후보 요청의 상태를 따라간다.\n+     * <p><b>성과 수치 컬럼을 select 에 넣지 않는다</b>(원칙 III).\n+     */\n+    MyRecordPage findPage(long ownerId, MyRecordListQuery query);\n+\n+    /** 한 항목. 남의 것·지운 것·없는 것을 구분하지 않고 빈 값이다 — 부른 쪽이 한 가지 404 로 답한다(FR-020). */\n+    Optional<MyRecordView> findView(long ownerId, String recordId);\n+\n+    /**\n+     * 원본이 남긴 참조 버전의 원문. 경제환경 항목은 스냅샷 키가 버전을 품고 있어 여기 오지 않는다.\n      *\n-     * @return 그 사용자의 단건 요청이 하나도 없으면 빈 값. 접수가 항목을 만들므로 정상 경로에서는 비지 않는다\n+     * @param id {@code my_record} PK\n      */\n-    Optional<Long> findViewableRequestId(long ownerId, long runId);\n+    Optional<SourceVersions> findSourceVersions(long id, RecordKind kind);\n \n-    /** 탐색 묶음 저장 상한 판정이 세는 경로(FR-018, research R11). 지운 항목은 세지 않는다. */\n-    long countActiveByOwnerAndKind(long ownerId, RecordKind kind);\n+    /** '다시 보기'로 열었다. 보관 기간(PD-13)을 나중에 도입할 수 있게 시각만 남긴다 — <b>시간 기반 자동 삭제는 만들지 않는다.</b> */\n+    void markViewed(long id, Instant at);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/repository/MyRecordRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/repository/MyRecordRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import java.util.List;\n+\n+/**\n+ * UI-01 판정 결과(spec 006 research R8). 저장 당시 대응표와 현재 대응표의 <b>항목</b>을 비교한 것이다.\n+ *\n+ * <p>버전 문자열이 달라도 이 기록이 쓴 섹터의 대표 ETF가 같으면 {@code changed=false}다. 대응표는 다른 섹터 때문에도 새 버전이 나오므로 버전만 보면\n+ * 내 섹터가 그대로인데도 경고가 뜬다 — 원칙 II가 금지한 \"결과가 바뀌지 않았는데 늘어나는 경고\"다.\n+ *\n+ * @param kind 바뀐 종류. {@code changed=false}면 null\n+ * @param sectorCodes 영향을 받은 섹터. {@code changed=false}면 빈 목록\n+ * @param message 화면에 그대로 보이는 한 문장. {@code changed=false}면 null\n+ */\n+public record MappingDrift(boolean changed, Kind kind, List<String> sectorCodes, String message) {\n+\n+    public enum Kind {\n+        /** 섹터는 남았는데 대표 ETF가 다른 종목으로 바뀌었다. */\n+        INSTRUMENT_REPLACED,\n+        /** 섹터 자체가 현재 대응표에서 빠졌다. '설정 바꿔 비교'에서 대체 섹터를 고르게 하되 자동으로 바꾸지 않는다(FR-008). */\n+        SECTOR_REMOVED\n+    }\n+\n+    public static MappingDrift none() {\n+        return new MappingDrift(false, null, List.of(), null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MappingDrift.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MappingDrift.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import java.util.Map;\n+\n+/**\n+ * 한 항목의 상세(spec 006 contracts \"GET /my-records/{recordId}\"). 목록 항목에 <b>펼쳐 보는 층</b>의 값을 더한다(원칙 II 정보\n+ * 세 층).\n+ *\n+ * @param referenceVersions 저장 당시 참조 버전. 004·007·010이 남긴 값을 <b>이름만 바꿔 담고</b> 값을 만들지 않는다. 원본에 없는 키는\n+ *     만들지 않는다 — 화면이 '기록되지 않음'을 보인다(원칙 VI). {@code worker}·{@code dependencies}는 운영 정보라 담지 않는다\n+ * @param mappingDrift UI-01 판정. 판정할 근거(저장 당시 대응표 버전)가 없으면 null — \"안 바뀜\"과 \"모름\"을 섞지 않는다\n+ */\n+public record MyRecordDetail(\n+        MyRecordView view, Map<String, Object> referenceVersions, MappingDrift mappingDrift) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordDetail.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordDetail.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import java.util.List;\n+\n+/**\n+ * 목록 한 쪽. <b>전체 개수는 없다</b>(research R14) — 세면 매 요청이 원본 표 셋을 훑고, 화면이 그 수를 쓸 자리도 없다.\n+ *\n+ * @param nextCursor 다음 쪽이 없으면 null\n+ */\n+public record MyRecordPage(List<MyRecordView> items, MyRecordListQuery.Cursor nextCursor) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordPage.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordPage.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,78 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.myrecord.domain.vo.AnalysisPeriod;\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n+import com.ssafy.thorp.regime.domain.vo.SnapshotKey;\n+import java.time.Instant;\n+import java.util.List;\n+\n+/**\n+ * 목록·상세가 보는 항목 한 줄(spec 006 contracts \"GET /my-records\" 응답 항목).\n+ *\n+ * <p>{@code my_record} 행에 종류별 원본을 조인해 읽은 값이다. 상태·사유·결과 토큰은 저장된 것이 아니라 <b>읽을 때 원본에서\n+ * 파생</b>한다(data-model §1 \"상태는 컬럼이 아니다\"). 성과 수치는 없다 — 목록에 수익을 나란히 보이면 정렬이 없어도 순위 화면이 된다(원칙 III).\n+ *\n+ * @param id DB PK. 응답에 나가지 않고 커서와 열람 표시에만 쓴다\n+ * @param statusReason 실패·취소·부분 완료·계산 불가의 사유 코드. 낮은 수익과 섞지 않는다(FR-014)\n+ * @param resultToken {@code ANALYSIS}에만 있다. '다시 보기' 링크의 열쇠(research R3)\n+ * @param searchId {@code SEARCH_BUNDLE}에만 있다\n+ * @param regime {@code REGIME_SEARCH}에만 있다\n+ */\n+public record MyRecordView(\n+        long id,\n+        String recordId,\n+        RecordKind kind,\n+        String name,\n+        List<String> sectorCodes,\n+        List<String> strategyIds,\n+        AnalysisPeriod period,\n+        Instant savedAt,\n+        Instant lastViewedAt,\n+        RecordStatus status,\n+        String statusReason,\n+        String resultToken,\n+        String searchId,\n+        Regime regime,\n+        boolean isCopy) {\n+\n+    /**\n+     * 경제환경 항목의 검색 정보. {@code regime_search_log} 행에서 읽는다.\n+     *\n+     * @param key 010 스냅샷 식별 키의 사본. 모드·분야·기준월은 여기서 꺼낸다 — 철회로 스냅샷이 사라져도 무엇을 봤는지는 남는다\n+     * @param withdrawn 010 FR-035 철회로 스냅샷 참조가 끊겼다. '다시 보기'가 열리지 않는다\n+     */\n+    public record Regime(\n+            SnapshotKey key,\n+            BaselineOrigin baselineOrigin,\n+            EntryPath entryPath,\n+            boolean withdrawn) {}\n+\n+    /** 열람 표시를 반영한 사본. 상세가 표시와 같은 트랜잭션에서 돌아가므로 다시 읽지 않고 값만 맞춘다. */\n+    public MyRecordView viewedAt(Instant at) {\n+        return new MyRecordView(\n+                id,\n+                recordId,\n+                kind,\n+                name,\n+                sectorCodes,\n+                strategyIds,\n+                period,\n+                savedAt,\n+                at,\n+                status,\n+                statusReason,\n+                resultToken,\n+                searchId,\n+                regime,\n+                isCopy);\n+    }\n+\n+    /** 이 줄 뒤에서 다음 쪽을 시작하는 자리. */\n+    public MyRecordListQuery.Cursor cursor() {\n+        return new MyRecordListQuery.Cursor(savedAt, name, id);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordView.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordView.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import java.util.Collections;\n+import java.util.LinkedHashMap;\n+import java.util.Map;\n+\n+/**\n+ * 원본이 남긴 참조 버전의 <b>원문</b>. 이름을 바꾸는 것은 {@code MyRecordQueryService}가 한다.\n+ *\n+ * <ul>\n+ *   <li>{@code ANALYSIS}: {@code versions} = {@code backtest_run.versions}(접수가 확정한 값이라 실패한 실행에도\n+ *       있다), {@code spec} = {@code backtest_run.request_spec}\n+ *   <li>{@code SEARCH_BUNDLE}: {@code versions} = {@code param_search.reference_versions}, {@code\n+ *       spec} = {@code param_search.execution_plan}(대응표 버전이 여기 있다)\n+ * </ul>\n+ *\n+ * <p>경제환경 항목은 여기 없다 — 스냅샷 키 자체가 자료·등록표·모델 버전을 품는다({@code SnapshotKey}).\n+ *\n+ * <p>값이 null 인 키를 허용한다. 요청 사본({@code RequestSpecCodec})은 {@code mappingVersion} 같은 선택 항목을 null 로 넣을\n+ * 수 있고, 저장 규약(null 키 생략)에 기대어 {@code Map.copyOf}를 쓰면 그 규약이 바뀐 날 상세가 500 이 된다.\n+ */\n+public record SourceVersions(Map<String, Object> versions, Map<String, Object> spec) {\n+\n+    public SourceVersions {\n+        versions = nullTolerantCopy(versions);\n+        spec = nullTolerantCopy(spec);\n+    }\n+\n+    private static Map<String, Object> nullTolerantCopy(Map<String, Object> source) {\n+        return source == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(source));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/SourceVersions.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/SourceVersions.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,107 @@\n+package com.ssafy.thorp.myrecord.application.service;\n+\n+import com.ssafy.thorp.myrecord.application.port.SectorMapEntries;\n+import com.ssafy.thorp.myrecord.application.result.MappingDrift;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import java.util.function.Function;\n+import java.util.stream.Collectors;\n+import org.springframework.stereotype.Service;\n+\n+/**\n+ * UI-01 판정(spec 006 research R8). 저장 당시 대응표 버전의 항목과 지금 열린 버전의 항목을 <b>섹터마다</b> 비교한다.\n+ *\n+ * <p>판정은 여기 한 곳이고 화면은 버전 문자열을 비교하지 않는다(원칙 II). 버전 문자열이 달라도 이 기록이 쓴 섹터의 대표 ETF({@code etf_id})가 모두\n+ * 같으면 바뀐 것이 아니다.\n+ */\n+@Service\n+public class MyRecordMappingDriftChecker {\n+\n+    private final SectorMapEntries entries;\n+\n+    public MyRecordMappingDriftChecker(SectorMapEntries entries) {\n+        this.entries = entries;\n+    }\n+\n+    /**\n+     * @param savedMapVersion 기록이 참조한 대응표 버전. 없으면 판정할 수 없다\n+     * @param sectorCodes 기록이 쓴 섹터. 저장 당시 버전에 없던 섹터(탐색 묶음이 종목으로 접수해 현재 대응표로 되짚은 코드)는 비교하지 않는다\n+     * @return 판정. 근거가 없으면(저장 버전 없음·그 버전 행 없음·열린 버전 없음·비교한 섹터 없음) 빈 값 — \"안 바뀜\"으로 답하지 않는다(원칙 VI)\n+     */\n+    public Optional<MappingDrift> check(String savedMapVersion, List<String> sectorCodes) {\n+        if (savedMapVersion == null || sectorCodes.isEmpty()) {\n+            return Optional.empty();\n+        }\n+        Optional<SectorMapEntries.Versions> loaded = entries.load(savedMapVersion);\n+        if (loaded.isEmpty()) {\n+            return Optional.empty();\n+        }\n+        if (loaded.get().same()) {\n+            // 저장 버전이 곧 열린 버전이다. 항목을 견줄 것 없이 바뀐 것이 없다.\n+            return Optional.of(MappingDrift.none());\n+        }\n+        Map<String, SectorMapEntries.Entry> before = byCode(loaded.get().saved());\n+        Map<String, SectorMapEntries.Entry> now = byCode(loaded.get().current());\n+\n+        int compared = 0;\n+        List<SectorMapEntries.Entry> removed = new ArrayList<>();\n+        List<SectorMapEntries.Entry> replaced = new ArrayList<>();\n+        for (String code : sectorCodes) {\n+            SectorMapEntries.Entry was = before.get(code);\n+            if (was == null) {\n+                continue;\n+            }\n+            compared++;\n+            SectorMapEntries.Entry is = now.get(code);\n+            if (is == null) {\n+                removed.add(was);\n+            } else if (is.etfId() != was.etfId()) {\n+                replaced.add(was);\n+            }\n+        }\n+        if (compared == 0) {\n+            // 이 기록의 섹터가 저장 버전에 하나도 없다. 견준 것이 없으니 \"안 바뀜\"이라 말할 수 없다.\n+            return Optional.empty();\n+        }\n+        // 섹터가 빠진 것이 우선이다 — 사용자가 대체 섹터를 골라야 다음 분석이 성립한다(FR-008). 둘이 함께\n+        // 일어나면 빠진 섹터만 알린다. 대체 섹터를 고르는 화면(002)이 현재 대응표를 보이므로 교체된 ETF 는 거기서 드러난다.\n+        if (!removed.isEmpty()) {\n+            return Optional.of(\n+                    new MappingDrift(\n+                            true,\n+                            MappingDrift.Kind.SECTOR_REMOVED,\n+                            codes(removed),\n+                            names(removed) + \" 섹터가 현재 대응표에 없습니다. 설정 바꿔 비교에서 대체 섹터를 골라 주세요.\"));\n+        }\n+        if (!replaced.isEmpty()) {\n+            return Optional.of(\n+                    new MappingDrift(\n+                            true,\n+                            MappingDrift.Kind.INSTRUMENT_REPLACED,\n+                            codes(replaced),\n+                            names(replaced) + \" 섹터의 대표 ETF가 저장 당시와 다릅니다.\"));\n+        }\n+        return Optional.of(MappingDrift.none());\n+    }\n+\n+    private static Map<String, SectorMapEntries.Entry> byCode(List<SectorMapEntries.Entry> list) {\n+        return list.stream()\n+                .collect(\n+                        Collectors.toMap(\n+                                SectorMapEntries.Entry::sectorCode,\n+                                Function.identity(),\n+                                (first, second) -> first));\n+    }\n+\n+    private static List<String> codes(List<SectorMapEntries.Entry> list) {\n+        return list.stream().map(SectorMapEntries.Entry::sectorCode).toList();\n+    }\n+\n+    private static String names(List<SectorMapEntries.Entry> list) {\n+        return list.stream()\n+                .map(SectorMapEntries.Entry::sectorName)\n+                .collect(Collectors.joining(\"·\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordMappingDriftChecker.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordMappingDriftChecker.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,118 @@\n+package com.ssafy.thorp.myrecord.application.service;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordDetail;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordPage;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.application.result.SourceVersions;\n+import com.ssafy.thorp.regime.domain.vo.SnapshotKey;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.util.LinkedHashMap;\n+import java.util.Map;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 내 기록 목록·상세 읽기(spec 006 US1).\n+ *\n+ * <p><b>남의 기록은 403이 아니라 404다</b>(FR-020, contracts 공통). 403은 그 식별자가 존재한다는 사실을 알려 준다. 없는 것·지운 것·남의\n+ * 것을 한 가지로 답하므로 저장소도 셋을 구분하지 않고 빈 값을 돌려준다.\n+ */\n+@Service\n+public class MyRecordQueryService {\n+\n+    private final MyRecordRepository records;\n+    private final MyRecordMappingDriftChecker driftChecker;\n+    private final Clock clock;\n+\n+    public MyRecordQueryService(\n+            MyRecordRepository records, MyRecordMappingDriftChecker driftChecker, Clock clock) {\n+        this.records = records;\n+        this.driftChecker = driftChecker;\n+        this.clock = clock;\n+    }\n+\n+    @Transactional(readOnly = true)\n+    public MyRecordPage list(long ownerId, MyRecordListQuery query) {\n+        return records.findPage(ownerId, query);\n+    }\n+\n+    /**\n+     * 한 항목의 상세. 읽는 순간을 '다시 보기'로 남긴다 — 상세는 결과 화면이 기록에서 들어왔을 때({@code ?recordId=})와 펼쳐 보는 층이 부르는 경로라\n+     * 열람 표시를 따로 받지 않는다. 시각 하나만 남기고 자동 삭제에는 쓰지 않는다(2026-09-18 명료화).\n+     */\n+    @Transactional\n+    public MyRecordDetail detail(long ownerId, String recordId) {\n+        MyRecordView view =\n+                records.findView(ownerId, recordId)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.RESOURCE_NOT_FOUND,\n+                                                \"기록을 찾을 수 없습니다: \" + recordId));\n+        Instant now = clock.instant();\n+        records.markViewed(view.id(), now);\n+        Map<String, Object> referenceVersions = referenceVersions(view);\n+        return new MyRecordDetail(\n+                view.viewedAt(now),\n+                referenceVersions,\n+                driftChecker\n+                        .check(\n+                                (String) referenceVersions.get(\"sectorEtfMapVersion\"),\n+                                view.sectorCodes())\n+                        .orElse(null));\n+    }\n+\n+    /**\n+     * 참조 버전을 계약 이름으로 옮긴다(contracts \"referenceVersions의 출처\"). <b>이름만 바꾸고 값을 만들지 않는다.</b> 원본에 없는 키는\n+     * 만들지 않고 {@code worker}·{@code dependencies}는 담지 않는다(운영 정보, 005 {@code\n+     * PublicResultService.withoutWorkerReport}와 같은 판단).\n+     *\n+     * <p>{@code rulesVersion}·{@code costProfileVersion}은 {@code {version, provisional}} 꼴 그대로다 —\n+     * 잠정 여부가 함께 보여야 사용자가 확정 규칙 결과와 임시 규칙 결과를 구분한다.\n+     */\n+    private Map<String, Object> referenceVersions(MyRecordView view) {\n+        Map<String, Object> out = new LinkedHashMap<>();\n+        switch (view.kind()) {\n+            case ANALYSIS -> {\n+                SourceVersions src = source(view);\n+                put(out, \"datasetVersion\", src.versions().get(\"data\"));\n+                put(out, \"sectorEtfMapVersion\", src.versions().get(\"mapping\"));\n+                put(out, \"rulesVersion\", src.versions().get(\"rules\"));\n+                put(out, \"costProfileVersion\", src.versions().get(\"costProfile\"));\n+                put(out, \"engineVersion\", src.versions().get(\"engine\"));\n+                put(out, \"registryVersion\", src.spec().get(\"registryVersion\"));\n+            }\n+            case SEARCH_BUNDLE -> {\n+                SourceVersions src = source(view);\n+                put(out, \"datasetVersion\", src.versions().get(\"marketData\"));\n+                put(out, \"sectorEtfMapVersion\", src.spec().get(\"mappingVersion\"));\n+                put(out, \"registryVersion\", src.versions().get(\"registry\"));\n+                put(out, \"costProfileVersion\", src.versions().get(\"cost\"));\n+                put(out, \"engineVersion\", src.versions().get(\"engine\"));\n+            }\n+            case REGIME_SEARCH -> {\n+                SnapshotKey key = view.regime().key();\n+                out.put(\"datasetVersion\", key.dataVersion());\n+                out.put(\"registryVersion\", key.registryVersion());\n+                out.put(\"modelVersion\", key.modelVersion());\n+            }\n+        }\n+        return out;\n+    }\n+\n+    private SourceVersions source(MyRecordView view) {\n+        return records.findSourceVersions(view.id(), view.kind())\n+                .orElseGet(() -> new SourceVersions(Map.of(), Map.of()));\n+    }\n+\n+    private static void put(Map<String, Object> target, String key, Object value) {\n+        if (value != null) {\n+            target.put(key, value);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,17 @@\n package com.ssafy.thorp.myrecord.infrastructure.persistence;\n \n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordPage;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.application.result.SourceVersions;\n import com.ssafy.thorp.myrecord.domain.model.MyRecord;\n import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import java.sql.Timestamp;\n import java.time.Clock;\n+import java.time.Instant;\n import java.time.LocalDate;\n+import java.util.List;\n import java.util.Optional;\n import org.springframework.jdbc.core.JdbcTemplate;\n import org.springframework.stereotype.Repository;\n@@ -69,29 +76,71 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {\n         return jpaRepository.countActiveByOwnerAndKind(ownerId, kind);\n     }\n \n+    @Override\n+    public MyRecordPage findPage(long ownerId, MyRecordListQuery query) {\n+        MyRecordViewQuery q = new MyRecordViewQuery(ownerId).page(query);\n+        List<MyRecordView> rows =\n+                jdbcTemplate.query(q.sql(), MyRecordViewQuery::mapRow, q.params());\n+        if (rows.size() <= query.size()) {\n+            return new MyRecordPage(rows, null);\n+        }\n+        List<MyRecordView> page = rows.subList(0, query.size());\n+        return new MyRecordPage(List.copyOf(page), page.get(page.size() - 1).cursor());\n+    }\n+\n+    @Override\n+    public Optional<MyRecordView> findView(long ownerId, String recordId) {\n+        MyRecordViewQuery q = new MyRecordViewQuery(ownerId).recordId(recordId);\n+        return jdbcTemplate.query(q.sql(), MyRecordViewQuery::mapRow, q.params()).stream()\n+                .findFirst();\n+    }\n+\n     /**\n-     * 취소하지 않은 것 중 최신, 없으면 취소한 것 중 최신.\n-     *\n-     * <p><b>단건 요청만 본다.</b> 동일 버전 키에는 실행 유형이 들어가지 않으므로(004 {@code DedupKeyCalculator} — 일부러 뺐다) 같은\n-     * 사용자의 탐색 후보나 경제환경 파생 실행이 조건만 같으면 이 실행에 합류한다. 유형을 가리지 않으면 그중 최신이 골라져, 단건 분석 기록이 탐색 후보 요청의 취소\n-     * 상태와 공개 토큰을 따라간다. 항목을 만드는 쪽도 {@code SINGLE} 만 만들므로(등록기) 읽는 쪽이 같은 조건을 건다.\n-     *\n-     * <p>{@code backtest_request} 는 004 소유라 엔티티를 매핑하지 않고 SQL 로 읽는다. 006 이 필요한 것은 식별자 하나다.\n+     * 원본의 JSONB 를 원문으로 읽는다. 004·007 엔티티를 매핑하지 않고 SQL 로 읽는다 — 표의 소유자는 그쪽이고 006이 필요한 것은 두 컬럼이다. 실패한\n+     * 실행에도 {@code backtest_run.versions}는 있다(접수가 확정한 값). {@code backtest_result.versions}는 워커 보고라\n+     * 쓰지 않는다.\n      */\n     @Override\n-    public Optional<Long> findViewableRequestId(long ownerId, long runId) {\n+    public Optional<SourceVersions> findSourceVersions(long id, RecordKind kind) {\n+        String sql =\n+                switch (kind) {\n+                    case ANALYSIS ->\n+                            \"\"\"\n+                            SELECT run.versions::text AS versions, run.request_spec::text AS spec\n+                              FROM my_record r JOIN backtest_run run ON run.id = r.analysis_run_id\n+                             WHERE r.id = ?\n+                            \"\"\";\n+                    case SEARCH_BUNDLE ->\n+                            \"\"\"\n+                            SELECT ps.reference_versions::text AS versions,\n+                                   ps.execution_plan::text AS spec\n+                              FROM my_record r JOIN param_search ps ON ps.id = r.param_search_id\n+                             WHERE r.id = ?\n+                            \"\"\";\n+                    case REGIME_SEARCH -> null;\n+                };\n+        if (sql == null) {\n+            return Optional.empty();\n+        }\n         return jdbcTemplate\n                 .query(\n-                        \"\"\"\n-                        SELECT id FROM backtest_request\n-                        WHERE requester_id = ? AND run_id = ? AND execution_type = 'SINGLE'\n-                        ORDER BY (cancelled_at IS NOT NULL), created_at DESC, id DESC\n-                        LIMIT 1\n-                        \"\"\",\n-                        (rs, rowNum) -> rs.getLong(\"id\"),\n-                        ownerId,\n-                        runId)\n+                        sql,\n+                        (rs, rowNum) ->\n+                                new SourceVersions(\n+                                        MyRecordViewQuery.json(rs.getString(\"versions\")),\n+                                        MyRecordViewQuery.json(rs.getString(\"spec\"))),\n+                        id)\n                 .stream()\n                 .findFirst();\n     }\n+\n+    /** 이 컬럼만 쓴다. 엔티티를 읽어 통째로 저장하면 같은 행을 고치는 다른 경로(이름 변경·삭제)의 갱신을 되돌릴 수 있다. */\n+    @Override\n+    public void markViewed(long id, Instant at) {\n+        jdbcTemplate.update(\n+                \"UPDATE my_record SET last_viewed_at = ?, updated_at = ? WHERE id = ?\",\n+                Timestamp.from(at),\n+                Timestamp.from(at),\n+                id);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,245 @@\n+package com.ssafy.thorp.myrecord.infrastructure.persistence;\n+\n+import com.fasterxml.jackson.core.type.TypeReference;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.myrecord.domain.vo.AnalysisPeriod;\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n+import com.ssafy.thorp.regime.domain.vo.SnapshotKey;\n+import java.io.IOException;\n+import java.io.UncheckedIOException;\n+import java.sql.ResultSet;\n+import java.sql.SQLException;\n+import java.sql.Timestamp;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.OffsetDateTime;\n+import java.util.ArrayList;\n+import java.util.Collection;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.stream.Collectors;\n+\n+/**\n+ * 목록·상세가 읽는 질의 하나(spec 006 T017, data-model §1 \"상태는 컬럼이 아니다\").\n+ *\n+ * <p>{@code my_record}에 종류별 원본을 조인해 상태·사유·결과 토큰을 <b>읽는 순간 파생</b>한다. 상태를 저장하지 않는 이유는 워커 이벤트로 계속 바뀌는\n+ * 값을 복제하면 갱신 누락이 \"실패한 분석이 목록에서는 완료로 보이는\" 모습으로 드러나기 때문이다(원칙 VI, research R2).\n+ *\n+ * <p><b>성과 수치 컬럼은 select 에 없다</b>(원칙 III). {@code backtest_result}·{@code search_candidate}는 조인하지\n+ * 않는다.\n+ *\n+ * <p>{@code ANALYSIS}의 요청은 저장돼 있지 않으므로 {@code (소유자, 실행)}으로 <b>취소하지 않은 최신 요청</b>을 고른다(LATERAL). 기록이\n+ * 요청을 저장하지 않는 이유: 한 사용자가 같은 실행에 요청을 여럿 가질 수 있고(동일 결과 재사용) 취소는 실행이 아니라 요청에 붙어서, 하나를 골라 저장해 두면 그 요청만\n+ * 취소된 순간 목록이 '취소'를 보인다. 전부 취소했으면 그중 최신이다(그때는 사용자에게 취소가 맞다). <b>단건({@code SINGLE}) 요청만 본다</b> — 동일\n+ * 버전 키에 실행 유형이 없어 같은 사용자의 탐색 후보도 같은 실행에 합류하는데, 유형을 가리지 않으면 단건 기록이 후보 요청의 상태·토큰을 따라간다. 이 규칙이 사는 곳은\n+ * 여기 하나다({@code MyRecordIntakeIT}가 접수 경로로 고정한다).\n+ *\n+ * <p>커서는 정렬 키와 식별자의 짝이다({@code (saved_at, id)} 또는 {@code (name, id)}). offset 을 쓰지 않는 이유: 쪽을 넘기는 사이\n+ * 새 항목이 들어오면 offset 이 가리키는 자리가 밀려 같은 항목을 두 번 받거나 건너뛴다(research R14).\n+ */\n+final class MyRecordViewQuery {\n+\n+    private static final ObjectMapper JSON = new ObjectMapper();\n+    private static final TypeReference<Map<String, Object>> MAP = new TypeReference<>() {};\n+\n+    /**\n+     * 파생 컬럼을 포함한 뷰. 상태를 CTE 안에서 만들어야 바깥 WHERE 가 그 값으로 필터할 수 있다.\n+     *\n+     * <p>{@code QUEUED}는 계약에 없는 상태라 {@code RUNNING}으로 보인다(사용자에게는 \"돌고 있다\"). 탐색 묶음의 {@code REJECTED}는\n+     * 항목이 만들어지지 않지만(등록기), 혹시 있으면 실패로 보인다.\n+     */\n+    static final String VIEW =\n+            \"\"\"\n+            WITH v AS (\n+                SELECT r.id, r.record_id, r.kind, r.name, r.sector_codes, r.strategy_ids,\n+                       r.period_start, r.period_end, r.saved_at, r.last_viewed_at, r.is_copy,\n+                       req.public_token AS result_token,\n+                       ps.search_id,\n+                       rl.snapshot_key, rl.snapshot_id, rl.entry_path, rl.baseline_origin,\n+                       CASE r.kind\n+                         WHEN 'ANALYSIS' THEN CASE\n+                             WHEN req.cancelled_at IS NOT NULL OR run.status = 'CANCELLED'\n+                                 THEN 'CANCELLED'\n+                             WHEN run.status IN ('QUEUED', 'RUNNING') THEN 'RUNNING'\n+                             ELSE run.status END\n+                         WHEN 'SEARCH_BUNDLE' THEN CASE\n+                             WHEN ps.status IN ('QUEUED', 'RUNNING') THEN 'RUNNING'\n+                             WHEN ps.status = 'REJECTED' THEN 'FAILED'\n+                             ELSE ps.status END\n+                         ELSE CASE\n+                             WHEN rl.snapshot_id IS NULL THEN 'WITHDRAWN'\n+                             ELSE snap.status END\n+                       END AS status,\n+                       CASE r.kind\n+                         WHEN 'ANALYSIS' THEN run.failure_code\n+                         WHEN 'SEARCH_BUNDLE' THEN ps.stop_reason\n+                         ELSE snap.status_reason\n+                       END AS status_reason\n+                  FROM my_record r\n+                  LEFT JOIN backtest_run run ON run.id = r.analysis_run_id\n+                  LEFT JOIN LATERAL (\n+                       SELECT q.public_token, q.cancelled_at\n+                         FROM backtest_request q\n+                        WHERE q.requester_id = r.owner_id\n+                          AND q.run_id = r.analysis_run_id\n+                          AND q.execution_type = 'SINGLE'\n+                        ORDER BY (q.cancelled_at IS NOT NULL), q.created_at DESC, q.id DESC\n+                        LIMIT 1) req ON TRUE\n+                  LEFT JOIN param_search ps ON ps.id = r.param_search_id\n+                  LEFT JOIN regime_search_log rl ON rl.id = r.regime_log_id\n+                  LEFT JOIN regime_search_snapshot snap ON snap.id = rl.snapshot_id\n+                 WHERE r.owner_id = ? AND r.deleted_at IS NULL\n+            )\n+            SELECT * FROM v\n+            \"\"\";\n+\n+    private final StringBuilder sql = new StringBuilder(VIEW);\n+    private final List<Object> params = new ArrayList<>();\n+\n+    MyRecordViewQuery(long ownerId) {\n+        params.add(ownerId);\n+    }\n+\n+    MyRecordViewQuery recordId(String recordId) {\n+        sql.append(\" WHERE record_id = ?\");\n+        params.add(recordId);\n+        return this;\n+    }\n+\n+    /** 필터·정렬·커서를 붙인다. 한 쪽보다 하나 더 읽어 다음 쪽이 있는지 안다 — 개수를 세지 않는다. */\n+    MyRecordViewQuery page(MyRecordListQuery query) {\n+        sql.append(\" WHERE status IN \").append(inList(query.statuses()));\n+        if (!query.kinds().isEmpty()) {\n+            sql.append(\" AND kind IN \").append(inList(query.kinds()));\n+        }\n+        if (!query.sectorCodes().isEmpty()) {\n+            sql.append(\" AND sector_codes && \").append(textArray(query.sectorCodes()));\n+        }\n+        if (!query.strategyIds().isEmpty()) {\n+            sql.append(\" AND strategy_ids && \").append(textArray(query.strategyIds()));\n+        }\n+        // 분석 기간이 요청 구간과 겹치는 항목. 기간이 없는 항목(경제환경)은 어느 구간에도 걸리지 않는다.\n+        if (query.periodFrom() != null) {\n+            sql.append(\" AND period_end >= ?\");\n+            params.add(query.periodFrom());\n+        }\n+        if (query.periodTo() != null) {\n+            sql.append(\" AND period_start <= ?\");\n+            params.add(query.periodTo());\n+        }\n+        MyRecordListQuery.Cursor cursor = query.cursor();\n+        switch (query.sort()) {\n+            case SAVED_AT_DESC -> {\n+                if (cursor != null) {\n+                    sql.append(\" AND (saved_at, id) < (?, ?)\");\n+                    params.add(Timestamp.from(cursor.savedAt()));\n+                    params.add(cursor.id());\n+                }\n+                sql.append(\" ORDER BY saved_at DESC, id DESC\");\n+            }\n+            case SAVED_AT_ASC -> {\n+                if (cursor != null) {\n+                    sql.append(\" AND (saved_at, id) > (?, ?)\");\n+                    params.add(Timestamp.from(cursor.savedAt()));\n+                    params.add(cursor.id());\n+                }\n+                sql.append(\" ORDER BY saved_at ASC, id ASC\");\n+            }\n+            case NAME_ASC -> {\n+                if (cursor != null) {\n+                    sql.append(\" AND (name, id) > (?, ?)\");\n+                    params.add(cursor.name());\n+                    params.add(cursor.id());\n+                }\n+                sql.append(\" ORDER BY name ASC, id ASC\");\n+            }\n+        }\n+        sql.append(\" LIMIT ?\");\n+        params.add(query.size() + 1);\n+        return this;\n+    }\n+\n+    String sql() {\n+        return sql.toString();\n+    }\n+\n+    Object[] params() {\n+        return params.toArray();\n+    }\n+\n+    private String inList(Collection<? extends Enum<?>> values) {\n+        values.forEach(value -> params.add(value.name()));\n+        return values.stream().map(v -> \"?\").collect(Collectors.joining(\", \", \"(\", \")\"));\n+    }\n+\n+    /** 배열 바인딩 대신 스칼라 자리표시자로 배열을 만든다. GIN 인덱스({@code idx_my_record_sectors})는 그대로 탄다. */\n+    private String textArray(List<String> values) {\n+        params.addAll(values);\n+        return values.stream()\n+                .map(v -> \"?\")\n+                .collect(Collectors.joining(\", \", \"ARRAY[\", \"]::text[]\"));\n+    }\n+\n+    /**\n+     * 원본 값이 계약 밖이면(007이 상태를 하나 더했는데 CASE 를 안 고쳤다, 스냅샷 키가 깨졌다) 데이터 결함이다. {@code\n+     * IllegalArgumentException} 그대로 두면 전역 처리기가 클라이언트 입력 오류(400)로 감싸 WARN 으로만 남는다 — 500 이 맞다.\n+     */\n+    static MyRecordView mapRow(ResultSet rs, int rowNum) throws SQLException {\n+        String recordId = rs.getString(\"record_id\");\n+        try {\n+            return toView(rs);\n+        } catch (IllegalArgumentException e) {\n+            throw new IllegalStateException(\"기록의 원본 값이 계약 밖이다: record_id=\" + recordId, e);\n+        }\n+    }\n+\n+    private static MyRecordView toView(ResultSet rs) throws SQLException {\n+        RecordKind kind = RecordKind.valueOf(rs.getString(\"kind\"));\n+        return new MyRecordView(\n+                rs.getLong(\"id\"),\n+                rs.getString(\"record_id\"),\n+                kind,\n+                rs.getString(\"name\"),\n+                List.of((String[]) rs.getArray(\"sector_codes\").getArray()),\n+                List.of((String[]) rs.getArray(\"strategy_ids\").getArray()),\n+                AnalysisPeriod.ofNullable(\n+                        rs.getObject(\"period_start\", LocalDate.class),\n+                        rs.getObject(\"period_end\", LocalDate.class)),\n+                instant(rs, \"saved_at\"),\n+                instant(rs, \"last_viewed_at\"),\n+                RecordStatus.valueOf(rs.getString(\"status\")),\n+                rs.getString(\"status_reason\"),\n+                rs.getString(\"result_token\"),\n+                rs.getString(\"search_id\"),\n+                kind == RecordKind.REGIME_SEARCH\n+                        ? new MyRecordView.Regime(\n+                                SnapshotKey.parse(rs.getString(\"snapshot_key\")),\n+                                BaselineOrigin.valueOf(rs.getString(\"baseline_origin\")),\n+                                EntryPath.valueOf(rs.getString(\"entry_path\")),\n+                                rs.getObject(\"snapshot_id\") == null)\n+                        : null,\n+                rs.getBoolean(\"is_copy\"));\n+    }\n+\n+    private static Instant instant(ResultSet rs, String column) throws SQLException {\n+        OffsetDateTime value = rs.getObject(column, OffsetDateTime.class);\n+        return value == null ? null : value.toInstant();\n+    }\n+\n+    /** JSONB 컬럼 원문을 맵으로. NULL 이면 빈 맵 — 없는 키는 부른 쪽이 만들지 않는다. */\n+    static Map<String, Object> json(String raw) {\n+        if (raw == null) {\n+            return Map.of();\n+        }\n+        try {\n+            return JSON.readValue(raw, MAP);\n+        } catch (IOException e) {\n+            throw new UncheckedIOException(e);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordViewQuery.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordViewQuery.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,92 @@\n+package com.ssafy.thorp.myrecord.infrastructure.persistence;\n+\n+import com.ssafy.thorp.myrecord.application.port.SectorMapEntries;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import java.util.stream.Collectors;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.stereotype.Repository;\n+\n+/**\n+ * 대응표 항목을 버전으로 읽는다. 001의 엔티티를 매핑하지 않고 SQL 로 읽는다 — 표의 소유자는 001이고 006이 필요한 것은 (섹터, ETF) 짝이다. 001의 스프링\n+ * 데이터 인터페이스는 그 패키지 안에 갇혀 있어 빌려 쓸 수 없다.\n+ *\n+ * <p>질의는 둘이다. 버전 행 하나(저장 버전과 열린 버전을 함께)로 \"버전 없음\"과 \"항목 0개\"를 가르고 두 버전이 같은 행이면 거기서 끝낸다 — 상세를 열 때마다\n+ * 판정하므로 대부분의 호출이 여기서 돌아간다. 다르면 두 버전의 항목을 한 문장으로 읽는다.\n+ */\n+@Repository\n+public class SectorMapEntriesImpl implements SectorMapEntries {\n+\n+    private static final String VERSIONS =\n+            \"\"\"\n+            SELECT id, version, (effective_to IS NULL) AS open\n+              FROM sector_etf_map_version\n+             WHERE version = ? OR effective_to IS NULL\n+            \"\"\";\n+\n+    private static final String ENTRIES =\n+            \"\"\"\n+            SELECT e.map_version_id, s.code, s.name, e.etf_id\n+              FROM sector_etf_map_entry e\n+              JOIN sector s ON s.id = e.sector_id\n+             WHERE e.map_version_id IN (?, ?)\n+             ORDER BY s.code\n+            \"\"\";\n+\n+    private final JdbcTemplate jdbcTemplate;\n+\n+    public SectorMapEntriesImpl(JdbcTemplate jdbcTemplate) {\n+        this.jdbcTemplate = jdbcTemplate;\n+    }\n+\n+    @Override\n+    public Optional<Versions> load(String savedMapVersion) {\n+        record Row(long id, String version, boolean open) {}\n+        List<Row> rows =\n+                jdbcTemplate.query(\n+                        VERSIONS,\n+                        (rs, n) ->\n+                                new Row(\n+                                        rs.getLong(\"id\"),\n+                                        rs.getString(\"version\"),\n+                                        rs.getBoolean(\"open\")),\n+                        savedMapVersion);\n+        Optional<Long> saved =\n+                rows.stream()\n+                        .filter(r -> r.version().equals(savedMapVersion))\n+                        .map(Row::id)\n+                        .findFirst();\n+        Optional<Long> open = rows.stream().filter(Row::open).map(Row::id).findFirst();\n+        if (saved.isEmpty() || open.isEmpty()) {\n+            return Optional.empty();\n+        }\n+        if (saved.get().equals(open.get())) {\n+            return Optional.of(new Versions(true, List.of(), List.of()));\n+        }\n+        record EntryRow(long mapId, Entry entry) {}\n+        Map<Long, List<Entry>> byMap =\n+                jdbcTemplate\n+                        .query(\n+                                ENTRIES,\n+                                (rs, n) ->\n+                                        new EntryRow(\n+                                                rs.getLong(\"map_version_id\"),\n+                                                new Entry(\n+                                                        rs.getString(\"code\"),\n+                                                        rs.getString(\"name\"),\n+                                                        rs.getLong(\"etf_id\"))),\n+                                saved.get(),\n+                                open.get())\n+                        .stream()\n+                        .collect(\n+                                Collectors.groupingBy(\n+                                        EntryRow::mapId,\n+                                        Collectors.mapping(EntryRow::entry, Collectors.toList())));\n+        return Optional.of(\n+                new Versions(\n+                        false,\n+                        byMap.getOrDefault(saved.get(), List.of()),\n+                        byMap.getOrDefault(open.get(), List.of())));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/SectorMapEntriesImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/SectorMapEntriesImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,83 @@\n+package com.ssafy.thorp.myrecord.presentation.controller;\n+\n+import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n+import com.ssafy.thorp.common.web.response.ApiResponse;\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;\n+import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Set;\n+import org.springframework.format.annotation.DateTimeFormat;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PathVariable;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RequestParam;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 내 기록 API(spec 006 contracts/my-records-api.md).\n+ *\n+ * <p>경로 전체가 로그인 필요다({@code SecurityConfig}의 {@code /my-records/**} → {@code authenticated()}). 소유자는\n+ * {@link CurrentRequester}로 구하고 남의 기록은 403이 아니라 404다(FR-020).\n+ *\n+ * <p>허용하지 않는 {@code sort}·{@code kind}·{@code status} 값은 400 {@code INVALID_INPUT}이다 — enum 인자 바인딩\n+ * 실패를 전역 처리기가 그렇게 감싼다. 조용히 기본값으로 바꾸지 않는다(원칙 VI).\n+ */\n+@RestController\n+@RequestMapping(\"/my-records\")\n+public class MyRecordController {\n+\n+    private final MyRecordQueryService queryService;\n+    private final CurrentRequester currentRequester;\n+\n+    public MyRecordController(\n+            MyRecordQueryService queryService, CurrentRequester currentRequester) {\n+        this.queryService = queryService;\n+        this.currentRequester = currentRequester;\n+    }\n+\n+    /** 목록. 기본 보기는 완료 항목이고 저장일 최신순이다(FR-004). 성과 정렬은 없다(research R7). */\n+    @GetMapping\n+    public ResponseEntity<ApiResponse<MyRecordListResponse>> list(\n+            @RequestParam(required = false) String cursor,\n+            @RequestParam(required = false) Integer size,\n+            @RequestParam(required = false) MyRecordListQuery.RecordSort sort,\n+            @RequestParam(required = false) Set<RecordKind> kind,\n+            @RequestParam(required = false) Set<RecordStatus> status,\n+            @RequestParam(required = false) List<String> sector,\n+            @RequestParam(required = false) List<String> strategy,\n+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)\n+                    LocalDate periodFrom,\n+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)\n+                    LocalDate periodTo) {\n+        long ownerId = currentRequester.requireRequesterId();\n+        MyRecordListQuery query =\n+                new MyRecordListQuery(\n+                        kind,\n+                        status,\n+                        sector,\n+                        strategy,\n+                        periodFrom,\n+                        periodTo,\n+                        sort,\n+                        MyRecordListQuery.Cursor.parse(cursor),\n+                        size == null ? MyRecordListQuery.DEFAULT_SIZE : size);\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(MyRecordListResponse.from(queryService.list(ownerId, query))));\n+    }\n+\n+    /** 상세. 남의 것·없는 것·지운 것은 모두 404 {@code RESOURCE_NOT_FOUND}다. */\n+    @GetMapping(\"/{recordId}\")\n+    public ResponseEntity<ApiResponse<MyRecordDetailResponse>> detail(\n+            @PathVariable String recordId) {\n+        long ownerId = currentRequester.requireRequesterId();\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(\n+                        MyRecordDetailResponse.from(queryService.detail(ownerId, recordId))));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,59 @@\n+package com.ssafy.thorp.myrecord.presentation.response;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.ssafy.thorp.myrecord.application.result.MappingDrift;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordDetail;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import java.time.Instant;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * {@code GET /my-records/{recordId}} 응답(contracts). 목록 항목에 펼쳐 보는 층을 더한다.\n+ *\n+ * <p>{@code mappingDrift}가 없으면 키를 만들지 않는다 — 판정할 근거(저장 당시 대응표 버전)가 없었다는 뜻이고, {@code changed:false}로\n+ * 답하면 \"안 바뀜\"과 \"모름\"이 섞인다(원칙 VI). {@code registryDrift}·{@code reopenSettings}·{@code reopenPayload}는\n+ * US2(설정 바꿔 비교)와 함께 들어온다.\n+ */\n+public record MyRecordDetailResponse(\n+        String recordId,\n+        RecordKind kind,\n+        String name,\n+        List<String> sectorCodes,\n+        List<String> strategyIds,\n+        MyRecordListResponse.Period period,\n+        Instant savedAt,\n+        Instant lastViewedAt,\n+        RecordStatus status,\n+        String statusReason,\n+        @JsonInclude(JsonInclude.Include.NON_NULL) String resultToken,\n+        @JsonInclude(JsonInclude.Include.NON_NULL) String searchId,\n+        @JsonInclude(JsonInclude.Include.NON_NULL) MyRecordListResponse.Regime regime,\n+        boolean isCopy,\n+        Map<String, Object> referenceVersions,\n+        @JsonInclude(JsonInclude.Include.NON_NULL) MappingDrift mappingDrift) {\n+\n+    public static MyRecordDetailResponse from(MyRecordDetail detail) {\n+        MyRecordView view = detail.view();\n+        MyRecordListResponse.Item item = MyRecordListResponse.Item.from(view);\n+        return new MyRecordDetailResponse(\n+                item.recordId(),\n+                item.kind(),\n+                item.name(),\n+                item.sectorCodes(),\n+                item.strategyIds(),\n+                item.period(),\n+                item.savedAt(),\n+                view.lastViewedAt(),\n+                item.status(),\n+                item.statusReason(),\n+                item.resultToken(),\n+                item.searchId(),\n+                item.regime(),\n+                item.isCopy(),\n+                detail.referenceVersions(),\n+                detail.mappingDrift());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordDetailResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordDetailResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,92 @@\n+package com.ssafy.thorp.myrecord.presentation.response;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordPage;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.myrecord.domain.vo.AnalysisPeriod;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /my-records} 응답(contracts). <b>수익률·하락 폭·비용은 없다</b> — 목록에서 성과를 나란히 보이면 순위 화면이 된다(원칙\n+ * III).\n+ *\n+ * <p>종류별 열쇠({@code resultToken}·{@code searchId}·{@code regime})는 그 종류에만 있고 다른 종류에는 키를 만들지 않는다.\n+ * {@code statusReason}·{@code period}는 없을 때 명시적 null 이다 — 계약 예시가 그렇다.\n+ */\n+public record MyRecordListResponse(List<Item> items, String nextCursor) {\n+\n+    public static MyRecordListResponse from(MyRecordPage page) {\n+        return new MyRecordListResponse(\n+                page.items().stream().map(Item::from).toList(),\n+                page.nextCursor() == null ? null : page.nextCursor().encode());\n+    }\n+\n+    public record Item(\n+            String recordId,\n+            RecordKind kind,\n+            String name,\n+            List<String> sectorCodes,\n+            List<String> strategyIds,\n+            Period period,\n+            Instant savedAt,\n+            RecordStatus status,\n+            String statusReason,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String resultToken,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String searchId,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) Regime regime,\n+            boolean isCopy) {\n+\n+        public static Item from(MyRecordView view) {\n+            return new Item(\n+                    view.recordId(),\n+                    view.kind(),\n+                    view.name(),\n+                    view.sectorCodes(),\n+                    view.strategyIds(),\n+                    Period.from(view.period()),\n+                    view.savedAt(),\n+                    view.status(),\n+                    view.statusReason(),\n+                    view.resultToken(),\n+                    view.searchId(),\n+                    Regime.from(view.regime()),\n+                    view.isCopy());\n+        }\n+    }\n+\n+    public record Period(LocalDate start, LocalDate end) {\n+        static Period from(AnalysisPeriod period) {\n+            return period == null ? null : new Period(period.start(), period.end());\n+        }\n+    }\n+\n+    /**\n+     * '다시 보기'는 {@code /regime-search?searchId={snapshotKey}}로 저장 revision 을 고정 조회한다(research R17).\n+     */\n+    public record Regime(\n+            String snapshotKey,\n+            String mode,\n+            String fieldId,\n+            LocalDate baselineMonth,\n+            String baselineOrigin,\n+            String entryPath,\n+            boolean withdrawn) {\n+        static Regime from(MyRecordView.Regime regime) {\n+            if (regime == null) {\n+                return null;\n+            }\n+            return new Regime(\n+                    regime.key().toString(),\n+                    regime.key().mode().name(),\n+                    regime.key().fieldId(),\n+                    regime.key().baselineMonth(),\n+                    regime.baselineOrigin().name(),\n+                    regime.entryPath().name(),\n+                    regime.withdrawn());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordListResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordListResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,110 @@\n+package com.ssafy.thorp.myrecord.application;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.myrecord.application.port.SectorMapEntries;\n+import com.ssafy.thorp.myrecord.application.result.MappingDrift;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordMappingDriftChecker;\n+import java.util.List;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * UI-01 판정의 세 경우(quickstart S5)와 판정 불가를 고정한다(spec 006 research R8).\n+ *\n+ * <p>첫 검사가 가장 중요하다 — 버전 번호만 올랐을 때 알림이 뜨면 UI-01 결정과 원칙 II를 함께 어긴다.\n+ */\n+class MappingDriftCheckerTest {\n+\n+    private static final String SAVED = \"SEM-1\";\n+    private static final List<SectorMapEntries.Entry> SAVED_ENTRIES =\n+            List.of(\n+                    new SectorMapEntries.Entry(\"SEMICONDUCTOR\", \"반도체\", 1L),\n+                    new SectorMapEntries.Entry(\"BATTERY\", \"2차전지\", 2L),\n+                    new SectorMapEntries.Entry(\"BIO\", \"바이오\", 3L));\n+\n+    @Test\n+    @DisplayName(\"다른 섹터만 바뀐 새 버전이면 바뀌지 않은 것이다 — 버전 문자열이 달라도 알리지 않는다\")\n+    void 다른_섹터만_바뀌면_변경이_아니다() {\n+        // 현재 버전은 BIO 의 ETF 만 다르다. 이 기록은 반도체·2차전지만 쓴다.\n+        List<SectorMapEntries.Entry> current =\n+                List.of(\n+                        new SectorMapEntries.Entry(\"SEMICONDUCTOR\", \"반도체\", 1L),\n+                        new SectorMapEntries.Entry(\"BATTERY\", \"2차전지\", 2L),\n+                        new SectorMapEntries.Entry(\"BIO\", \"바이오\", 99L));\n+\n+        Optional<MappingDrift> drift =\n+                checker(current).check(SAVED, List.of(\"SEMICONDUCTOR\", \"BATTERY\"));\n+\n+        assertThat(drift).hasValue(MappingDrift.none());\n+    }\n+\n+    @Test\n+    @DisplayName(\"저장 버전이 곧 열린 버전이면 항목을 견주지 않고 바뀌지 않은 것이다\")\n+    void 같은_버전이면_변경이_아니다() {\n+        MyRecordMappingDriftChecker checker =\n+                new MyRecordMappingDriftChecker(\n+                        version ->\n+                                Optional.of(\n+                                        new SectorMapEntries.Versions(true, List.of(), List.of())));\n+\n+        assertThat(checker.check(SAVED, List.of(\"BATTERY\"))).hasValue(MappingDrift.none());\n+    }\n+\n+    @Test\n+    @DisplayName(\"이 기록이 쓴 섹터의 대표 ETF가 교체됐으면 INSTRUMENT_REPLACED 와 한 문장\")\n+    void 대표_ETF가_바뀌면_교체다() {\n+        List<SectorMapEntries.Entry> current =\n+                List.of(\n+                        new SectorMapEntries.Entry(\"SEMICONDUCTOR\", \"반도체\", 1L),\n+                        new SectorMapEntries.Entry(\"BATTERY\", \"2차전지\", 22L),\n+                        new SectorMapEntries.Entry(\"BIO\", \"바이오\", 3L));\n+\n+        MappingDrift drift =\n+                checker(current).check(SAVED, List.of(\"SEMICONDUCTOR\", \"BATTERY\")).orElseThrow();\n+\n+        assertThat(drift.changed()).isTrue();\n+        assertThat(drift.kind()).isEqualTo(MappingDrift.Kind.INSTRUMENT_REPLACED);\n+        assertThat(drift.sectorCodes()).containsExactly(\"BATTERY\");\n+        assertThat(drift.message()).isEqualTo(\"2차전지 섹터의 대표 ETF가 저장 당시와 다릅니다.\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"이 기록이 쓴 섹터가 목록에서 빠졌으면 SECTOR_REMOVED — 대체 섹터는 사용자가 고른다\")\n+    void 섹터가_빠지면_제거다() {\n+        List<SectorMapEntries.Entry> current =\n+                List.of(\n+                        new SectorMapEntries.Entry(\"SEMICONDUCTOR\", \"반도체\", 1L),\n+                        new SectorMapEntries.Entry(\"BIO\", \"바이오\", 3L));\n+\n+        MappingDrift drift =\n+                checker(current).check(SAVED, List.of(\"SEMICONDUCTOR\", \"BATTERY\")).orElseThrow();\n+\n+        assertThat(drift.kind()).isEqualTo(MappingDrift.Kind.SECTOR_REMOVED);\n+        assertThat(drift.sectorCodes()).containsExactly(\"BATTERY\");\n+        assertThat(drift.message()).startsWith(\"2차전지 섹터가 현재 대응표에 없습니다.\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"근거가 없으면 판정하지 않는다 — 저장 버전 없음·버전 행 없음·섹터 없음·저장 버전에 없는 섹터만 있음\")\n+    void 근거가_없으면_판정하지_않는다() {\n+        MyRecordMappingDriftChecker checker = checker(SAVED_ENTRIES);\n+\n+        assertThat(checker.check(null, List.of(\"BATTERY\"))).isEmpty();\n+        assertThat(checker.check(\"SEM-없음\", List.of(\"BATTERY\"))).isEmpty();\n+        assertThat(checker.check(SAVED, List.of())).isEmpty();\n+        // 저장 버전에 없는 섹터만 있으면 견준 것이 없다. \"안 바뀜\"이 아니다.\n+        assertThat(checker.check(SAVED, List.of(\"BANK\"))).isEmpty();\n+    }\n+\n+    private static MyRecordMappingDriftChecker checker(List<SectorMapEntries.Entry> current) {\n+        return new MyRecordMappingDriftChecker(\n+                version ->\n+                        SAVED.equals(version)\n+                                ? Optional.of(\n+                                        new SectorMapEntries.Versions(\n+                                                false, SAVED_ENTRIES, current))\n+                                : Optional.empty());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/application/MappingDriftCheckerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/application/MappingDriftCheckerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,515 @@\n+package com.ssafy.thorp.myrecord.infrastructure;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery.RecordSort;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordPage;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.application.result.SourceVersions;\n+import com.ssafy.thorp.myrecord.domain.model.MyRecord;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.myrecord.domain.model.RecordRef;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.myrecord.domain.vo.AnalysisPeriod;\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n+import com.ssafy.thorp.myrecord.domain.vo.RecordName;\n+import com.ssafy.thorp.myrecord.infrastructure.persistence.MyRecordRepositoryImpl;\n+import com.ssafy.thorp.myrecord.infrastructure.persistence.RegimeSearchLogWriterImpl;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n+import com.ssafy.thorp.support.RepositoryTestSupport;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Set;\n+import java.util.concurrent.atomic.AtomicInteger;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/**\n+ * 목록 질의가 종류별 원본에서 상태를 파생하고 필터·커서가 계약대로 동작하는지 PostgreSQL 에서 확인한다(spec 006 T018, contracts \"GET\n+ * /my-records\").\n+ *\n+ * <p>원본 행(실행·요청·묶음·스냅샷)은 SQL 로 직접 넣는다 — 004·007·010 접수 경로를 끌어오면 검사가 무엇을 보는지 흐려진다. 상태는 {@code\n+ * my_record}에 없으므로 원본 컬럼을 바꾸는 것이 곧 검사 준비다.\n+ */\n+class MyRecordListQueryIT extends RepositoryTestSupport {\n+\n+    private static final Instant BASE = Instant.parse(\"2026-09-20T00:00:00Z\");\n+    private static final AtomicInteger SEQ = new AtomicInteger();\n+    private static final String KEY = \"FIELD:EMPLOYMENT:2026-08-01:FIXTURE-1:REG-1:REGIME-V1\";\n+\n+    @Autowired private MyRecordRepositoryImpl records;\n+    @Autowired private RegimeSearchLogWriterImpl regimeLogs;\n+    @Autowired private TestEntityManager entityManager;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @Test\n+    @DisplayName(\"기본 보기는 완료한 분석·묶음과 문턱 적용 경제환경만 보이고 저장일 최신순이다\")\n+    void 기본_보기는_완료_항목만() {\n+        long owner = newUser();\n+        long completedRun = newRun(\"COMPLETED\", null);\n+        String token = newRequest(owner, completedRun, false);\n+        MyRecord completed = analysis(owner, completedRun, BASE.plusSeconds(10));\n+        analysis(owner, newRun(\"FAILED\", \"ENGINE_ERROR\"), BASE.plusSeconds(20));\n+        analysis(owner, newRun(\"RUNNING\", null), BASE.plusSeconds(30));\n+        long bundleId = newParamSearch(owner, \"COMPLETED\", null);\n+        MyRecord bundle = bundle(owner, bundleId, BASE.plusSeconds(40));\n+        bundle(owner, newParamSearch(owner, \"PARTIAL\", \"TIME_LIMIT\"), BASE.plusSeconds(50));\n+        MyRecord regime =\n+                regime(\n+                        owner,\n+                        newRegimeLog(owner, newSnapshot(\"THRESHOLD_APPLIED\", null)),\n+                        BASE.plusSeconds(60));\n+        regime(owner, newRegimeLog(owner, null), BASE.plusSeconds(70));\n+        flush();\n+\n+        MyRecordPage page = records.findPage(owner, query());\n+\n+        assertThat(page.nextCursor()).isNull();\n+        assertThat(page.items())\n+                .extracting(MyRecordView::recordId)\n+                .containsExactly(\n+                        regime.recordId().value(),\n+                        bundle.recordId().value(),\n+                        completed.recordId().value());\n+        MyRecordView first = page.items().get(2);\n+        assertThat(first.status()).isEqualTo(RecordStatus.COMPLETED);\n+        assertThat(first.resultToken()).isEqualTo(token);\n+        assertThat(first.searchId()).isNull();\n+        assertThat(first.regime()).isNull();\n+        MyRecordView second = page.items().get(1);\n+        assertThat(second.kind()).isEqualTo(RecordKind.SEARCH_BUNDLE);\n+        assertThat(second.searchId()).startsWith(\"PS-\");\n+        assertThat(second.resultToken()).isNull();\n+        MyRecordView third = page.items().get(0);\n+        assertThat(third.status()).isEqualTo(RecordStatus.THRESHOLD_APPLIED);\n+        assertThat(third.regime().withdrawn()).isFalse();\n+        assertThat(third.regime().key().toString()).isEqualTo(KEY);\n+        assertThat(third.regime().entryPath()).isEqualTo(EntryPath.MARKET_FLOW);\n+        assertThat(third.period()).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"실패·취소는 상태 필터를 줘야 보이고 사유가 함께 온다. 요청을 취소했으면 실행이 끝났어도 취소다\")\n+    void 실패_취소는_필터로만_보인다() {\n+        long owner = newUser();\n+        MyRecord failed = analysis(owner, newRun(\"FAILED\", \"ENGINE_ERROR\"), BASE.plusSeconds(10));\n+        long cancelledRun = newRun(\"COMPLETED\", null);\n+        newRequest(owner, cancelledRun, true);\n+        MyRecord cancelled = analysis(owner, cancelledRun, BASE.plusSeconds(20));\n+        MyRecord partial =\n+                bundle(owner, newParamSearch(owner, \"PARTIAL\", \"TIME_LIMIT\"), BASE.plusSeconds(30));\n+        flush();\n+\n+        assertThat(records.findPage(owner, query()).items()).isEmpty();\n+\n+        MyRecordPage page =\n+                records.findPage(\n+                        owner,\n+                        query(\n+                                Set.of(\n+                                        RecordStatus.FAILED,\n+                                        RecordStatus.CANCELLED,\n+                                        RecordStatus.PARTIAL)));\n+\n+        assertThat(page.items())\n+                .extracting(\n+                        MyRecordView::recordId, MyRecordView::status, MyRecordView::statusReason)\n+                .containsExactly(\n+                        org.assertj.core.groups.Tuple.tuple(\n+                                partial.recordId().value(), RecordStatus.PARTIAL, \"TIME_LIMIT\"),\n+                        org.assertj.core.groups.Tuple.tuple(\n+                                cancelled.recordId().value(), RecordStatus.CANCELLED, null),\n+                        org.assertj.core.groups.Tuple.tuple(\n+                                failed.recordId().value(), RecordStatus.FAILED, \"ENGINE_ERROR\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"대기 중 실행은 RUNNING 으로, 스냅샷이 사라진 경제환경 로그는 WITHDRAWN 으로 보인다\")\n+    void 대기는_RUNNING_철회는_WITHDRAWN() {\n+        long owner = newUser();\n+        MyRecord queued = analysis(owner, newRun(\"QUEUED\", null), BASE.plusSeconds(10));\n+        MyRecord withdrawn = regime(owner, newRegimeLog(owner, null), BASE.plusSeconds(20));\n+        flush();\n+\n+        MyRecordPage page =\n+                records.findPage(\n+                        owner, query(Set.of(RecordStatus.RUNNING, RecordStatus.WITHDRAWN)));\n+\n+        assertThat(page.items())\n+                .extracting(MyRecordView::recordId, MyRecordView::status)\n+                .containsExactly(\n+                        org.assertj.core.groups.Tuple.tuple(\n+                                withdrawn.recordId().value(), RecordStatus.WITHDRAWN),\n+                        org.assertj.core.groups.Tuple.tuple(\n+                                queued.recordId().value(), RecordStatus.RUNNING));\n+        assertThat(page.items().get(0).regime().withdrawn()).isTrue();\n+    }\n+\n+    @Test\n+    @DisplayName(\"섹터 필터는 하나라도 겹치면 포함이고, 종류·전략·기간 필터도 함께 건다\")\n+    void 섹터_필터는_겹치면_포함() {\n+        long owner = newUser();\n+        MyRecord two =\n+                save(owner, List.of(\"SEMICONDUCTOR\", \"BANK\"), List.of(\"EQUAL_WEIGHT\"), 2019, 10);\n+        MyRecord bio = save(owner, List.of(\"BIO\"), List.of(\"SECTOR_MOMENTUM\"), 2023, 20);\n+        flush();\n+\n+        assertThat(records.findPage(owner, sectors(\"BANK\", \"BIO\")).items())\n+                .extracting(MyRecordView::recordId)\n+                .containsExactly(bio.recordId().value(), two.recordId().value());\n+        assertThat(records.findPage(owner, sectors(\"BATTERY\")).items()).isEmpty();\n+\n+        MyRecordListQuery momentum =\n+                new MyRecordListQuery(\n+                        Set.of(RecordKind.ANALYSIS),\n+                        null,\n+                        null,\n+                        List.of(\"SECTOR_MOMENTUM\"),\n+                        null,\n+                        null,\n+                        null,\n+                        null,\n+                        20);\n+        assertThat(records.findPage(owner, momentum).items())\n+                .extracting(MyRecordView::recordId)\n+                .containsExactly(bio.recordId().value());\n+\n+        // 2019~2026 은 2020 구간과 겹치고 2023~2026 은 겹치지 않는다.\n+        MyRecordListQuery in2020 =\n+                new MyRecordListQuery(\n+                        null,\n+                        null,\n+                        null,\n+                        null,\n+                        LocalDate.of(2020, 1, 1),\n+                        LocalDate.of(2020, 12, 31),\n+                        null,\n+                        null,\n+                        20);\n+        assertThat(records.findPage(owner, in2020).items())\n+                .extracting(MyRecordView::recordId)\n+                .containsExactly(two.recordId().value());\n+    }\n+\n+    @Test\n+    @DisplayName(\"커서로 넘긴 다음 쪽은 사이에 새 항목이 들어와도 겹치거나 빠지지 않는다\")\n+    void 커서는_새_항목이_끼어도_안정적() {\n+        long owner = newUser();\n+        for (int i = 1; i <= 5; i++) {\n+            analysis(owner, newRun(\"COMPLETED\", null), BASE.plusSeconds(i * 10));\n+        }\n+        flush();\n+\n+        MyRecordPage first = records.findPage(owner, sized(2, null));\n+        assertThat(first.items()).hasSize(2);\n+        assertThat(first.nextCursor()).isNotNull();\n+\n+        // 첫 쪽을 본 뒤 가장 최신 항목이 새로 들어온다. offset 이면 두 번째 쪽이 한 항목을 다시 보인다.\n+        analysis(owner, newRun(\"COMPLETED\", null), BASE.plusSeconds(600));\n+        flush();\n+\n+        MyRecordPage second = records.findPage(owner, sized(2, first.nextCursor()));\n+        MyRecordPage third = records.findPage(owner, sized(2, second.nextCursor()));\n+\n+        assertThat(third.nextCursor()).isNull();\n+        List<String> seen =\n+                java.util.stream.Stream.of(first, second, third)\n+                        .flatMap(page -> page.items().stream())\n+                        .map(MyRecordView::recordId)\n+                        .toList();\n+        assertThat(seen).hasSize(5).doesNotHaveDuplicates();\n+        assertThat(seen).isSortedAccordingTo(java.util.Comparator.reverseOrder());\n+\n+        // 이름 정렬도 같은 자리를 잡는다. 커서 문자열은 불투명하게 오간다.\n+        MyRecordListQuery byName =\n+                new MyRecordListQuery(\n+                        null, null, null, null, null, null, RecordSort.NAME_ASC, null, 3);\n+        MyRecordPage names = records.findPage(owner, byName);\n+        MyRecordPage moreNames =\n+                records.findPage(\n+                        owner,\n+                        new MyRecordListQuery(\n+                                null,\n+                                null,\n+                                null,\n+                                null,\n+                                null,\n+                                null,\n+                                RecordSort.NAME_ASC,\n+                                MyRecordListQuery.Cursor.parse(names.nextCursor().encode()),\n+                                3));\n+        assertThat(moreNames.items()).hasSize(3);\n+        assertThat(moreNames.nextCursor()).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"저장일이 같은 항목이 여럿이어도 쪽 크기 1로 넘기면 하나씩 빠짐없이 온다 — 식별자가 자리를 가른다\")\n+    void 같은_저장일도_커서가_가른다() {\n+        long owner = newUser();\n+        for (int i = 0; i < 4; i++) {\n+            analysis(owner, newRun(\"COMPLETED\", null), BASE);\n+        }\n+        flush();\n+\n+        List<String> seen = new java.util.ArrayList<>();\n+        MyRecordListQuery.Cursor cursor = null;\n+        int pages = 0;\n+        do {\n+            MyRecordPage page = records.findPage(owner, sized(1, cursor));\n+            page.items().forEach(item -> seen.add(item.recordId()));\n+            cursor = page.nextCursor();\n+            pages++;\n+        } while (cursor != null && pages < 10);\n+\n+        assertThat(pages).isEqualTo(4);\n+        assertThat(seen).hasSize(4).doesNotHaveDuplicates();\n+    }\n+\n+    @Test\n+    @DisplayName(\"다른 사용자의 항목은 목록에도 상세에도 없다. 지운 항목도 같다\")\n+    void 남의_항목은_보이지_않는다() {\n+        long owner = newUser();\n+        long other = newUser();\n+        MyRecord mine = analysis(owner, newRun(\"COMPLETED\", null), BASE.plusSeconds(10));\n+        MyRecord theirs = analysis(other, newRun(\"COMPLETED\", null), BASE.plusSeconds(20));\n+        flush();\n+\n+        assertThat(records.findPage(owner, query()).items())\n+                .extracting(MyRecordView::recordId)\n+                .containsExactly(mine.recordId().value());\n+        assertThat(records.findView(owner, theirs.recordId().value())).isEmpty();\n+        assertThat(records.findView(owner, mine.recordId().value())).isPresent();\n+\n+        jdbcTemplate.update(\n+                \"UPDATE my_record SET deleted_at = NOW() WHERE record_id = ?\",\n+                mine.recordId().value());\n+        assertThat(records.findView(owner, mine.recordId().value())).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"참조 버전 원문을 원본에서 읽고, 열람 표시는 그 컬럼만 바꾼다\")\n+    void 참조_버전과_열람_표시() {\n+        long owner = newUser();\n+        long runId = newRun(\"COMPLETED\", null);\n+        MyRecord record = analysis(owner, runId, BASE);\n+        long bundleId = newParamSearch(owner, \"COMPLETED\", null);\n+        MyRecord bundle = bundle(owner, bundleId, BASE.plusSeconds(1));\n+        flush();\n+\n+        SourceVersions analysis =\n+                records.findSourceVersions(record.id(), RecordKind.ANALYSIS).orElseThrow();\n+        assertThat(analysis.versions().get(\"mapping\")).isEqualTo(\"SECTOR-ETF-2026-09\");\n+        assertThat(analysis.versions().get(\"rules\"))\n+                .isEqualTo(java.util.Map.of(\"version\", \"RULES-1\", \"provisional\", true));\n+        assertThat(analysis.spec().get(\"registryVersion\")).isEqualTo(\"REG-1\");\n+\n+        SourceVersions search =\n+                records.findSourceVersions(bundle.id(), RecordKind.SEARCH_BUNDLE).orElseThrow();\n+        assertThat(search.versions().get(\"marketData\")).isEqualTo(\"FIXTURE-1\");\n+        assertThat(search.spec().get(\"mappingVersion\")).isEqualTo(\"SECTOR-ETF-2026-09\");\n+\n+        Instant viewedAt = BASE.plusSeconds(3600);\n+        records.markViewed(record.id(), viewedAt);\n+        MyRecordView view = records.findView(owner, record.recordId().value()).orElseThrow();\n+        assertThat(view.lastViewedAt()).isEqualTo(viewedAt);\n+        assertThat(view.name()).isEqualTo(record.name().value());\n+    }\n+\n+    // --- 질의 ---------------------------------------------------------------\n+\n+    private static MyRecordListQuery query() {\n+        return query(null);\n+    }\n+\n+    private static MyRecordListQuery query(Set<RecordStatus> statuses) {\n+        return new MyRecordListQuery(null, statuses, null, null, null, null, null, null, 20);\n+    }\n+\n+    private static MyRecordListQuery sectors(String... codes) {\n+        return new MyRecordListQuery(null, null, List.of(codes), null, null, null, null, null, 20);\n+    }\n+\n+    private static MyRecordListQuery sized(int size, MyRecordListQuery.Cursor cursor) {\n+        return new MyRecordListQuery(null, null, null, null, null, null, null, cursor, size);\n+    }\n+\n+    // --- 기록 ---------------------------------------------------------------\n+\n+    private MyRecord analysis(long owner, long runId, Instant savedAt) {\n+        return records.save(\n+                MyRecord.create(\n+                        owner,\n+                        new RecordRef.Analysis(runId),\n+                        RecordName.of(\"분석 \" + SEQ.incrementAndGet()),\n+                        List.of(\"SEMICONDUCTOR\", \"BATTERY\"),\n+                        List.of(\"EQUAL_WEIGHT\"),\n+                        new AnalysisPeriod(LocalDate.of(2019, 1, 2), LocalDate.of(2026, 8, 29)),\n+                        savedAt));\n+    }\n+\n+    private MyRecord save(\n+            long owner, List<String> sectors, List<String> strategies, int startYear, int offset) {\n+        return records.save(\n+                MyRecord.create(\n+                        owner,\n+                        new RecordRef.Analysis(newRun(\"COMPLETED\", null)),\n+                        RecordName.of(\"분석 \" + SEQ.incrementAndGet()),\n+                        sectors,\n+                        strategies,\n+                        new AnalysisPeriod(\n+                                LocalDate.of(startYear, 1, 2), LocalDate.of(2026, 8, 29)),\n+                        BASE.plusSeconds(offset)));\n+    }\n+\n+    private MyRecord bundle(long owner, long paramSearchId, Instant savedAt) {\n+        return records.save(\n+                MyRecord.create(\n+                        owner,\n+                        new RecordRef.SearchBundle(paramSearchId),\n+                        RecordName.of(\"탐색 \" + SEQ.incrementAndGet()),\n+                        List.of(\"BANK\"),\n+                        List.of(\"SECTOR_MOMENTUM\", \"MIN_VARIANCE\"),\n+                        new AnalysisPeriod(LocalDate.of(2019, 1, 2), LocalDate.of(2026, 8, 29)),\n+                        savedAt));\n+    }\n+\n+    private MyRecord regime(long owner, long logId, Instant savedAt) {\n+        return records.save(\n+                MyRecord.create(\n+                        owner,\n+                        new RecordRef.RegimeSearch(logId),\n+                        RecordName.of(\"고용환경 \" + SEQ.incrementAndGet()),\n+                        List.of(),\n+                        List.of(),\n+                        null,\n+                        savedAt));\n+    }\n+\n+    private void flush() {\n+        entityManager.flush();\n+        entityManager.clear();\n+    }\n+\n+    // --- 원본 행 -------------------------------------------------------------\n+\n+    private long newUser() {\n+        String suffix = String.format(\"%08d\", SEQ.incrementAndGet());\n+        String email = \"ml\" + suffix + \"@t.test\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"ml\" + suffix,\n+                \"011\" + suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    /** 접수가 확정한 참조 버전을 {@code versions}·{@code request_spec}에 함께 넣는다 — 실패한 실행에도 있는 값이다. */\n+    private long newRun(String status, String failureCode) {\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\n+                    parameters, instrument_ids, start_date, end_date, initial_cash,\n+                    position_sizing_type, random_seed, status, failure_code, versions,\n+                    request_spec, created_at, updated_at)\n+                VALUES (nextval('backtest_run_seq'),\n+                    'BT-LIST-' || lpad(currval('backtest_run_seq')::text, 6, '0'),\n+                    'EQUAL_WEIGHT', '1', '{}'::jsonb, '[\"091160.XKRX\"]'::jsonb,\n+                    DATE '2019-01-02', DATE '2026-08-29', 10000000.00, 'STRATEGY_DEFINED', 42,\n+                    ?, ?,\n+                    '{\"mapping\": \"SECTOR-ETF-2026-09\", \"data\": \"FIXTURE-1\",\n+                      \"rules\": {\"version\": \"RULES-1\", \"provisional\": true},\n+                      \"costProfile\": {\"version\": \"CP-1\", \"provisional\": false},\n+                      \"engine\": \"worker-0.9\", \"worker\": \"must-not-leak\"}'::jsonb,\n+                    '{\"registryVersion\": \"REG-1\"}'::jsonb,\n+                    NOW(), NOW())\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                status,\n+                failureCode);\n+    }\n+\n+    /** 단건 요청 하나. 공개 토큰을 돌려준다 — 목록의 {@code resultToken}이 이 값이어야 한다. */\n+    private String newRequest(long owner, long runId, boolean cancelled) {\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO backtest_request (id, backtest_id, run_id, requester_id,\n+                    execution_type, result_source, public_token, cancelled_at,\n+                    created_at, updated_at)\n+                VALUES (nextval('backtest_request_seq'),\n+                    'BT-LISTREQ-' || lpad(currval('backtest_request_seq')::text, 6, '0'),\n+                    ?, ?, 'SINGLE', 'NEW',\n+                    lpad(to_hex(currval('backtest_request_seq')), 32, '0'),\n+                    CASE WHEN ? THEN NOW() ELSE NULL END, NOW(), NOW())\n+                RETURNING public_token\n+                \"\"\",\n+                String.class,\n+                runId,\n+                owner,\n+                cancelled);\n+    }\n+\n+    private long newParamSearch(long owner, String status, String stopReason) {\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO param_search (id, search_id, owner_user_id, strategy_ids,\n+                    instrument_ids, registry_version, search_space, search_method, selection_rule,\n+                    limits, reference_versions, execution_plan, status, stop_reason, counts,\n+                    data_version_changed, created_at, updated_at)\n+                VALUES (nextval('param_search_seq'),\n+                    'PS-20260920-' || lpad(currval('param_search_seq')::text, 6, '0'), ?,\n+                    '[]'::jsonb, '[]'::jsonb, 'REG-1', '{}'::jsonb, 'GRID', '{}'::jsonb,\n+                    '{}'::jsonb,\n+                    '{\"marketData\": \"FIXTURE-1\", \"registry\": \"REG-1\", \"cost\": \"CP-1\",\n+                      \"engine\": \"worker-0.9\"}'::jsonb,\n+                    '{\"mappingVersion\": \"SECTOR-ETF-2026-09\"}'::jsonb,\n+                    ?, ?, '{}'::jsonb, false, NOW(), NOW())\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                owner,\n+                status,\n+                stopReason);\n+    }\n+\n+    private long newSnapshot(String status, String statusReason) {\n+        return jdbcTemplate.queryForObject(\n+                \"\"\"\n+                INSERT INTO regime_search_snapshot (\n+                    snapshot_key, mode, field_id, baseline_month, revision, content_hash,\n+                    data_version, registry_version, model_version, status, status_reason,\n+                    scale, comparison_months, ranked_candidates, candidate_counts, data_asof,\n+                    computed_at, created_at, updated_at)\n+                VALUES (?, 'FIELD', 'EMPLOYMENT', DATE '2026-08-01', 1, ?,\n+                    'FIXTURE-1', 'REG-1', 'REGIME-V1', ?, ?,\n+                    '{}'::jsonb, '{}'::jsonb, '[]'::jsonb, '{}'::jsonb, '{}'::jsonb,\n+                    now(), now(), now())\n+                RETURNING id\n+                \"\"\",\n+                Long.class,\n+                KEY,\n+                String.format(\"%064d\", SEQ.incrementAndGet()),\n+                status,\n+                statusReason);\n+    }\n+\n+    /** 같은 소유자·키·진입 경로는 한 행이라(uk_regime_log_owner_key_path) 철회 행은 다른 경로로 만든다. */\n+    private long newRegimeLog(long owner, Long snapshotId) {\n+        return regimeLogs.append(\n+                owner,\n+                KEY,\n+                snapshotId,\n+                snapshotId == null ? EntryPath.STRATEGY_RESULT : EntryPath.MARKET_FLOW,\n+                BaselineOrigin.T_G,\n+                BASE);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordListQueryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordListQueryIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,197 @@\n+package com.ssafy.thorp.myrecord;\n+\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.application.service.BacktestService;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.support.IntegrationTestSupport;\n+import com.ssafy.thorp.support.Requesters;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.hamcrest.Matchers;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * 내 기록 API 의 경계를 HTTP 로 확인한다(spec 006 contracts 공통·오류, quickstart S12·S13).\n+ *\n+ * <p>목록·필터의 세부는 {@code MyRecordListQueryIT}가 본다. 여기서 보는 것은 컨트롤러와 보안 설정이 붙은 뒤의 응답 — 401·400·404 와 실제\n+ * 접수가 남긴 항목의 상세.\n+ *\n+ * <p><b>기간을 다른 IT와 겹치지 않게 둔다.</b> 본문이 같으면 동일 버전 키도 같아 다른 IT가 만든 실행에 합류한다.\n+ */\n+class MyRecordApiIT extends IntegrationTestSupport {\n+\n+    private static final LocalDate[] PERIOD_A = {\n+        LocalDate.of(2024, 3, 4), LocalDate.of(2024, 11, 29)\n+    };\n+    private static final LocalDate[] PERIOD_B = {\n+        LocalDate.of(2024, 3, 5), LocalDate.of(2024, 11, 28)\n+    };\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @Test\n+    @DisplayName(\"비로그인은 401 이다 — 기록은 식별된 사용자 단위로만 있다(FR-020)\")\n+    void 비로그인은_401() throws Exception {\n+        mockMvc.perform(get(\"/my-records\"))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"허용하지 않는 정렬·상태·크기는 400 이다. 조용히 기본값으로 바꾸지 않는다\")\n+    void 허용하지_않는_값은_400() throws Exception {\n+        long owner = newUser(\"bad\");\n+\n+        // 성과 정렬은 선택지에 없다(원칙 III, research R7).\n+        mockMvc.perform(get(\"/my-records\").param(\"sort\", \"RETURN_DESC\").with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        mockMvc.perform(get(\"/my-records\").param(\"status\", \"DONE\").with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        mockMvc.perform(get(\"/my-records\").param(\"size\", \"0\").with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        mockMvc.perform(get(\"/my-records\").param(\"size\", \"51\").with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        mockMvc.perform(get(\"/my-records\").param(\"size\", \"50\").with(Requesters.as(owner)))\n+                .andExpect(status().isOk());\n+        mockMvc.perform(\n+                        get(\"/my-records\")\n+                                .param(\"cursor\", \"not-a-cursor\")\n+                                .with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"접수가 남긴 항목이 목록과 상세에 보이고, 상세에는 참조 버전과 대응표 판정이 있다\")\n+    void 접수한_항목의_목록과_상세() throws Exception {\n+        long owner = newUser(\"mine\");\n+        BacktestJobResult accepted = backtestService.create(request(owner, PERIOD_A));\n+        // 대기 중인 실행은 기본 보기에 없다(RUNNING). 끝난 것으로 바꿔 기본 보기로 확인한다.\n+        jdbcTemplate.update(\n+                \"UPDATE backtest_run SET status = 'COMPLETED' WHERE id =\"\n+                        + \" (SELECT run_id FROM backtest_request WHERE backtest_id = ?)\",\n+                accepted.backtestId());\n+\n+        mockMvc.perform(get(\"/my-records\").with(Requesters.as(owner)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.items\", Matchers.hasSize(1)))\n+                .andExpect(jsonPath(\"$.data.items[0].kind\").value(\"ANALYSIS\"))\n+                .andExpect(jsonPath(\"$.data.items[0].status\").value(\"COMPLETED\"))\n+                .andExpect(jsonPath(\"$.data.items[0].resultToken\").value(accepted.publicToken()))\n+                .andExpect(\n+                        jsonPath(\"$.data.items[0].sectorCodes\")\n+                                .value(Matchers.containsInAnyOrder(\"SEMICONDUCTOR\", \"BATTERY\")))\n+                .andExpect(jsonPath(\"$.data.items[0].searchId\").doesNotExist())\n+                .andExpect(jsonPath(\"$.data.items[0].regime\").doesNotExist())\n+                // 성과 수치는 목록 응답에 없다(S13-5).\n+                .andExpect(jsonPath(\"$.data.items[0].totalReturn\").doesNotExist())\n+                .andExpect(jsonPath(\"$.data.nextCursor\").value(Matchers.nullValue()));\n+\n+        String recordId =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT record_id FROM my_record WHERE owner_id = ?\", String.class, owner);\n+        mockMvc.perform(get(\"/my-records/{id}\", recordId).with(Requesters.as(owner)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.recordId\").value(recordId))\n+                .andExpect(jsonPath(\"$.data.lastViewedAt\").isNotEmpty())\n+                .andExpect(\n+                        jsonPath(\"$.data.referenceVersions.sectorEtfMapVersion\")\n+                                .value(\"SECTOR-ETF-2026-09\"))\n+                // 등록표 버전을 주지 않은 접수다. 없으면 키를 만들지 않는다 — 화면이 \"기록되지 않음\"을 보인다(원칙 VI).\n+                .andExpect(jsonPath(\"$.data.referenceVersions.registryVersion\").doesNotExist())\n+                .andExpect(jsonPath(\"$.data.referenceVersions.rulesVersion.version\").isNotEmpty())\n+                .andExpect(jsonPath(\"$.data.referenceVersions.worker\").doesNotExist())\n+                // 저장 당시 대응표가 지금 열린 대응표 그대로다 — 바뀐 것이 없다.\n+                .andExpect(jsonPath(\"$.data.mappingDrift.changed\").value(false));\n+\n+        // 저장 당시 대응표 버전이 지금 없으면 판정할 근거가 없다. changed:false 가 아니라 키가 없어야 한다(원칙 VI).\n+        jdbcTemplate.update(\n+                \"UPDATE backtest_run SET versions = jsonb_set(versions, '{mapping}',\"\n+                        + \" '\\\"SECTOR-ETF-없음\\\"') WHERE id =\"\n+                        + \" (SELECT run_id FROM backtest_request WHERE backtest_id = ?)\",\n+                accepted.backtestId());\n+        mockMvc.perform(get(\"/my-records/{id}\", recordId).with(Requesters.as(owner)))\n+                .andExpect(status().isOk())\n+                .andExpect(\n+                        jsonPath(\"$.data.referenceVersions.sectorEtfMapVersion\")\n+                                .value(\"SECTOR-ETF-없음\"))\n+                .andExpect(jsonPath(\"$.data.mappingDrift\").doesNotExist());\n+    }\n+\n+    @Test\n+    @DisplayName(\"남의 기록은 403이 아니라 404다 — 존재를 알리지 않는다\")\n+    void 남의_기록은_404() throws Exception {\n+        long owner = newUser(\"owner\");\n+        long other = newUser(\"other\");\n+        backtestService.create(request(owner, PERIOD_B));\n+        String recordId =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT record_id FROM my_record WHERE owner_id = ?\", String.class, owner);\n+\n+        mockMvc.perform(get(\"/my-records/{id}\", recordId).with(Requesters.as(other)))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+        mockMvc.perform(get(\"/my-records/{id}\", \"MR-20260101-000000\").with(Requesters.as(owner)))\n+                .andExpect(status().isNotFound());\n+        mockMvc.perform(get(\"/my-records\").with(Requesters.as(other)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.items\", Matchers.empty()));\n+    }\n+\n+    private long newUser(String tag) {\n+        String suffix = tag + (System.nanoTime() % 1_000_000_000L);\n+        String email = \"my-record-api-\" + suffix + \"@t.test\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"a\" + suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    private static CreateBacktestCommand request(Long requesterId, LocalDate[] period) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                null,\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                period[0],\n+                period[1],\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,8 +51,7 @@ class MyRecordIntakeIT extends IntegrationTestSupport {\n                 .isEqualTo(\"ANALYSIS\");\n         // 기록은 요청이 아니라 실행을 가리킨다. 공개 토큰과 상태는 읽을 때 요청을 골라 읽는다.\n         assertThat(analysisRunIdOf(owner)).isEqualTo(runIdOf(accepted));\n-        assertThat(records.findViewableRequestId(owner, runIdOf(accepted)))\n-                .hasValue(requestIdOf(accepted));\n+        assertThat(viewableToken(owner)).isEqualTo(accepted.publicToken());\n     }\n \n     @Test\n@@ -82,11 +81,11 @@ class MyRecordIntakeIT extends IntegrationTestSupport {\n \n         // 취소는 실행이 아니라 요청에 붙는다(BacktestDetailResult). 취소한 요청을 보면 목록이\n         // '취소'와 부분 결과를 보이지만 이 사용자의 분석은 아직 돌고 있다.\n-        assertThat(records.findViewableRequestId(owner, runId)).hasValue(requestIdOf(first));\n+        assertThat(viewableToken(owner)).isEqualTo(first.publicToken());\n \n         // 남은 요청까지 취소하면 그때는 취소가 맞다. 가장 최근 것을 본다.\n         cancelService.cancel(first.backtestId(), owner);\n-        assertThat(records.findViewableRequestId(owner, runId)).hasValue(requestIdOf(second));\n+        assertThat(viewableToken(owner)).isEqualTo(second.publicToken());\n     }\n \n     @Test\n@@ -101,9 +100,9 @@ class MyRecordIntakeIT extends IntegrationTestSupport {\n         long candidateRequestId = joinAsSearchCandidate(owner, runId);\n \n         assertThat(candidateRequestId).as(\"후보 요청이 더 나중에 생겼다\").isGreaterThan(requestIdOf(single));\n-        assertThat(records.findViewableRequestId(owner, runId))\n+        assertThat(viewableToken(owner))\n                 .as(\"단건 기록이 탐색 후보 요청의 상태·토큰을 따라가지 않는다\")\n-                .hasValue(requestIdOf(single));\n+                .isEqualTo(single.publicToken());\n     }\n \n     @Test\n@@ -141,6 +140,14 @@ class MyRecordIntakeIT extends IntegrationTestSupport {\n         return jdbcTemplate.queryForObject(\"SELECT count(*) FROM my_record\", Integer.class);\n     }\n \n+    /** 목록이 보이는 공개 토큰. 그 사용자의 단건 요청 중 취소하지 않은 최신 것이어야 한다(MyRecordViewQuery). */\n+    private String viewableToken(long owner) {\n+        String recordId =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT record_id FROM my_record WHERE owner_id = ?\", String.class, owner);\n+        return records.findView(owner, recordId).orElseThrow().resultToken();\n+    }\n+\n     private long analysisRunIdOf(long owner) {\n         return jdbcTemplate.queryForObject(\n                 \"SELECT analysis_run_id FROM my_record WHERE owner_id = ?\", Long.class, owner);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordIntakeIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordIntakeIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,7 +42,7 @@ Flyway 변경 1건(`V2026{...}__my_record.sql`)에 표 **하나**를 만들고,\n 그 요청만 취소된 순간 기록이 틀린 상태(취소·부분 결과)를 보이고, 어느 요청을 골라도 뒤에 오는 취소가 그것을\n 틀리게 만든다 — 접수 때 다시 잇는 것으로는 막지 못한다(2026-09-21 코드리뷰).\n \n-공개 토큰과 상태는 읽을 때 `(소유자, 실행)`으로 요청을 골라 읽는다(`MyRecordRepository.findViewableRequestId`).\n+공개 토큰과 상태는 읽을 때 `(소유자, 실행)`으로 요청을 골라 읽는다(`MyRecordViewQuery`의 LATERAL 서브쿼리).\n 고르는 규칙은 **취소하지 않은 것 중 최신**이고, 전부 취소했으면 그중 최신이다(그때는 사용자에게 취소가 맞다).\n | `param_search_id` | BIGINT | → `param_search(id)`, nullable | 탐색 묶음 |\n | `regime_log_id` | BIGINT | → `regime_search_log(id)`, nullable | 경제환경 탐색. 검색 경로·기준월 근거·스냅샷 참조는 그 행에 있다. 경로가 다르면 로그 행이 다르므로 별도 항목이 된다(FR-012 후단) |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/data-model.md",
+          "old_path": "specs/006-my-records/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,7 +48,7 @@ Technical Context에 남은 미확정을 없애기 위해 저장소의 현재 \n \n 토큰은 **저장하지 않고 읽을 때 고른다.** `my_record`는 실행만 가리키고, 공개 토큰은 그 사용자의\n `(소유자, 실행, 단건)` 요청 중 취소하지 않은 최신 것에서 읽는다(data-model §1,\n-`MyRecordRepository.findViewableRequestId`). 요청 하나를 저장해 두면 그것만 취소된 순간 기록이 취소·부분\n+`MyRecordViewQuery`). 요청 하나를 저장해 두면 그것만 취소된 순간 기록이 취소·부분\n 결과를 보이고, 접수 때 다시 잇는 것으로도 막지 못한다 — 나중 요청을 취소하면 같은 문제가 돌아온다\n (2026-09-21 코드리뷰).\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/research.md",
+          "old_path": "specs/006-my-records/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,9 +50,9 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n **Purpose**: 새 라이브러리는 없다. 공통 오류 코드·설정값·보안 경계만 준비한다.\n \n-- [ ] T001 [P] Add `RECORD_LIMIT_REACHED`(409, \"저장할 수 있는 탐색 묶음 개수에 도달했습니다. 기존 항목을 지운 뒤 다시 시작해 주세요.\")와 `RECORD_WITHDRAWN`(410, \"더 볼 수 없는 검색 결과입니다.\") to `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`\n-- [ ] T002 [P] Add `thorp.my-records.search-bundle-limit: 20` with a comment that the value is a PD-13 임시값 and the 장치 is the deliverable, in `backend/src/main/resources/application.yml`; bind it in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/config/MyRecordProperties.java` (`@ConfigurationProperties(\"thorp.my-records\")`, `@NotNull @Min(1)` so a missing value fails startup like `BacktestLimitProperties`)\n-- [ ] T003 Add `.requestMatchers(\"/my-records/**\").authenticated()` next to the `/auth/me` rule in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` with a comment that 006 endpoints all require login (spec FR-020)\n+- [x] T001 [P] Add `RECORD_LIMIT_REACHED`(409, \"저장할 수 있는 탐색 묶음 개수에 도달했습니다. 기존 항목을 지운 뒤 다시 시작해 주세요.\")와 `RECORD_WITHDRAWN`(410, \"더 볼 수 없는 검색 결과입니다.\") to `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`\n+- [x] T002 [P] Add `thorp.my-records.search-bundle-limit: 20` with a comment that the value is a PD-13 임시값 and the 장치 is the deliverable, in `backend/src/main/resources/application.yml`; bind it in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/config/MyRecordProperties.java` (`@ConfigurationProperties(\"thorp.my-records\")`, `@NotNull @Min(1)` so a missing value fails startup like `BacktestLimitProperties`)\n+- [x] T003 Add `.requestMatchers(\"/my-records/**\").authenticated()` next to the `/auth/me` rule in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` with a comment that 006 endpoints all require login (spec FR-020)\n \n **Checkpoint**: 빌드가 통과하고 `/my-records`가 401을 돌려준다.\n \n@@ -64,18 +64,18 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n **⚠️ CRITICAL**: 이 단계가 끝나기 전에는 사용자 스토리 구현을 병합하지 않는다.\n \n-- [ ] T004 Create Flyway migration `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__my_record.sql` per data-model §1: `my_record_seq`, `my_record` table (record_id `^MR-\\d{8}-\\d{6}$`, owner_id→users, kind CHECK, three nullable FKs `analysis_run_id`→backtest_run·`param_search_id`→param_search·`regime_log_id`→regime_search_log (요청은 가리키지 않는다 — data-model §1), `ck_my_record_ref_matches_kind`, `ck_my_record_period`, TEXT[] sector_codes/strategy_ids, saved_at, last_viewed_at, deleted_at, is_copy), indexes `idx_my_record_list`·`idx_my_record_sectors`(GIN)·`uk_my_record_analysis`·`uk_my_record_search`·`uk_my_record_regime`·`idx_my_record_kind_count`; plus `COMMENT ON COLUMN param_search.owner_user_id IS '접수 요청자(users.id). 007 접수가 채우고 006 내 기록이 소유자 필터에 쓴다. 비로그인 접수는 없다.'` and the same `COMMENT ON INDEX` for the owner index whose V3 comment still says \"인증 도입 전에는 owner_user_id가 NULL이라 쓰이지 않는다\" — 기존 마이그레이션은 고치지 않는다(constitution 스키마 변경 규칙)\n-- [ ] T005 [P] Create domain model in `backend/src/main/java/com/ssafy/thorp/myrecord/domain/model/`: `MyRecord` (id, `RecordId`, ownerId, `RecordKind`, `RecordRef` sealed interface with `Analysis(runId)`·`SearchBundle(paramSearchId)`·`RegimeSearch(logId)`, `RecordName`, sectorCodes, strategyIds, `AnalysisPeriod`, savedAt, lastViewedAt, deletedAt, isCopy) with `rename(RecordName)`, `delete(Instant)`, `markViewed(Instant)`, `isDeleted()`, `ownedBy(long)`; `RecordId` value object with `MR-` format check; `RecordName` with 1~120자 trim rule. Spring·JPA import 금지\n-- [ ] T006 [P] Create `backend/src/main/java/com/ssafy/thorp/myrecord/domain/model/RecordKind.java` (`ANALYSIS`, `SEARCH_BUNDLE`, `REGIME_SEARCH`) and `RecordStatus.java` (`COMPLETED`, `RUNNING`, `FAILED`, `CANCELLED`, `PARTIAL`, `NOT_COMPUTABLE`, `NEAREST_ONLY`, `THRESHOLD_APPLIED`, `WITHDRAWN`) with a comment that the last four are 010 상태를 그대로 옮긴 것이며 완료/실패로 바꿔 부르지 않는다(spec FR-004)\n-- [ ] T007 Create repository interface `backend/src/main/java/com/ssafy/thorp/myrecord/application/repository/MyRecordRepository.java`: `save`, `findByRecordId(String)`, `findActiveByOwnerAndRun(long owner, long runId)`, `findActiveByOwnerAndParamSearch`, `findActiveByOwnerAndRegimeLog`, `countActiveByOwnerAndKind(long owner, RecordKind)`, `nextRecordId(LocalDate)`, and list query `findPage(MyRecordListQuery)` returning `MyRecordListPage` (rows already joined with status — see T017)\n-- [ ] T008 Create JPA mapping in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/`: `MyRecordJpaEntity` (extends `BaseEntity`, `@Column(columnDefinition = \"text[]\")` for arrays via existing array type strategy used elsewhere or `@JdbcTypeCode(SqlTypes.ARRAY)`), `MyRecordMapper` (static `toEntity`/`toDomain`), `MyRecordJpaRepository`, `MyRecordRepositoryImpl` implementing T007 except `findPage` (T017). `record_id` 생성은 `MR-{yyyyMMdd}-{000001}` 일련번호로 `backtest_id`와 같은 방식\n-- [ ] T009 [P] Add repository test `backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordRepositoryIT.java` (extends `RepositoryTestSupport`): save/find round trip for three kinds, `ck_my_record_ref_matches_kind` rejects a row with two refs, `uk_my_record_analysis` rejects a second live non-copy row for the same owner+run but **allows** one when `is_copy = true` and one when the first is deleted\n-- [ ] T010 Add application event `backend/src/main/java/com/ssafy/thorp/backtest/application/event/BacktestRequestAccepted.java` (record: requestId, runId, requesterId nullable, `ExecutionType`, sectorCodes, strategyId, periodStart, periodEnd, acceptedAt) and publish it via `events.publishEvent(...)` right after **both** `requestRepository.save(newRequest(...))` sites (새 실행·합류/재사용) in `backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java`. 004의 동작은 바뀌지 않는다\n-- [ ] T011 Add application event `backend/src/main/java/com/ssafy/thorp/paramsearch/application/event/ParamSearchAccepted.java` (record: paramSearchId, ownerUserId, strategyIds, sectorCodes/instrumentIds, periodStart, periodEnd, acceptedAt) and publish it at the end of `create(...)` in `backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java` after the `ParamSearch` is saved **on the accepted path only** — the `rejected(...)` branch (CANDIDATE_LIMIT, saves a `REJECTED` row) does not publish; nothing ran, so there is nothing to reopen (data-model §4)\n-- [ ] T012 Create port `backend/src/main/java/com/ssafy/thorp/myrecord/application/port/RegimeSearchLogWriter.java` (`long append(long ownerId, String snapshotKey, Long snapshotId, EntryPath, BaselineOrigin, Instant viewedAt)`, `void touch(long logId, Instant)`, `Optional<Long> findActive(long ownerId, String snapshotKey, EntryPath)`) and implement it in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/RegimeSearchLogWriterImpl.java` using the existing `com.ssafy.thorp.regime.infrastructure.persistence.RegimeSearchLogJpaRepository`. 010의 읽기 리포지토리는 손대지 않는다\n-- [ ] T013 Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/RecordNamer.java`: `{대표 섹터 이름}{ 외 N}? {전략 이름} {yyyy-MM-dd}` (비중 최대 섹터 우선, 탐색 묶음은 전략 여러 개면 \"전략 N개 탐색\", 경제환경은 `{분야 이름 또는 종합} {기준월 yyyy-MM}`), reading display names from `sector`/`strategy_rules` via existing repositories. 유일성을 강제하지 않는다(research R12)\n-- [ ] T014 Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordRegistrar.java`: `@TransactionalEventListener(phase = BEFORE_COMMIT)` on `BacktestRequestAccepted` — skip when `requesterId == null` or `executionType != SINGLE`; find live non-copy row by owner+run, return it if present (FR-009), else create `ANALYSIS` row; listener on `ParamSearchAccepted` — create `SEARCH_BUNDLE` row (defensively skip if the search status is `REJECTED`). Both use `RecordNamer` and `Clock`\n-- [ ] T015 Add service test `backend/src/test/java/com/ssafy/thorp/myrecord/application/MyRecordRegistrarTest.java`: anonymous request → no row; `SEARCH_BUNDLE` execution type → no `ANALYSIS` row; second `SINGLE` request on the same run → same record, row count unchanged; deleted record + same run → new row created\n+- [x] T004 Create Flyway migration `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__my_record.sql` per data-model §1: `my_record_seq`, `my_record` table (record_id `^MR-\\d{8}-\\d{6}$`, owner_id→users, kind CHECK, three nullable FKs `analysis_run_id`→backtest_run·`param_search_id`→param_search·`regime_log_id`→regime_search_log (요청은 가리키지 않는다 — data-model §1), `ck_my_record_ref_matches_kind`, `ck_my_record_period`, TEXT[] sector_codes/strategy_ids, saved_at, last_viewed_at, deleted_at, is_copy), indexes `idx_my_record_list`·`idx_my_record_sectors`(GIN)·`uk_my_record_analysis`·`uk_my_record_search`·`uk_my_record_regime`·`idx_my_record_kind_count`; plus `COMMENT ON COLUMN param_search.owner_user_id IS '접수 요청자(users.id). 007 접수가 채우고 006 내 기록이 소유자 필터에 쓴다. 비로그인 접수는 없다.'` and the same `COMMENT ON INDEX` for the owner index whose V3 comment still says \"인증 도입 전에는 owner_user_id가 NULL이라 쓰이지 않는다\" — 기존 마이그레이션은 고치지 않는다(constitution 스키마 변경 규칙)\n+- [x] T005 [P] Create domain model in `backend/src/main/java/com/ssafy/thorp/myrecord/domain/model/`: `MyRecord` (id, `RecordId`, ownerId, `RecordKind`, `RecordRef` sealed interface with `Analysis(runId)`·`SearchBundle(paramSearchId)`·`RegimeSearch(logId)`, `RecordName`, sectorCodes, strategyIds, `AnalysisPeriod`, savedAt, lastViewedAt, deletedAt, isCopy) with `rename(RecordName)`, `delete(Instant)`, `markViewed(Instant)`, `isDeleted()`, `ownedBy(long)`; `RecordId` value object with `MR-` format check; `RecordName` with 1~120자 trim rule. Spring·JPA import 금지\n+- [x] T006 [P] Create `backend/src/main/java/com/ssafy/thorp/myrecord/domain/model/RecordKind.java` (`ANALYSIS`, `SEARCH_BUNDLE`, `REGIME_SEARCH`) and `RecordStatus.java` (`COMPLETED`, `RUNNING`, `FAILED`, `CANCELLED`, `PARTIAL`, `NOT_COMPUTABLE`, `NEAREST_ONLY`, `THRESHOLD_APPLIED`, `WITHDRAWN`) with a comment that the last four are 010 상태를 그대로 옮긴 것이며 완료/실패로 바꿔 부르지 않는다(spec FR-004)\n+- [x] T007 Create repository interface `backend/src/main/java/com/ssafy/thorp/myrecord/application/repository/MyRecordRepository.java`: `save`, `findByRecordId(String)`, `findActiveByOwnerAndRun(long owner, long runId)`, `findActiveByOwnerAndParamSearch`, `findActiveByOwnerAndRegimeLog`, `countActiveByOwnerAndKind(long owner, RecordKind)`, `nextRecordId(LocalDate)`, and list query `findPage(MyRecordListQuery)` returning `MyRecordListPage` (rows already joined with status — see T017)\n+- [x] T008 Create JPA mapping in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/`: `MyRecordJpaEntity` (extends `BaseEntity`, `@Column(columnDefinition = \"text[]\")` for arrays via existing array type strategy used elsewhere or `@JdbcTypeCode(SqlTypes.ARRAY)`), `MyRecordMapper` (static `toEntity`/`toDomain`), `MyRecordJpaRepository`, `MyRecordRepositoryImpl` implementing T007 except `findPage` (T017). `record_id` 생성은 `MR-{yyyyMMdd}-{000001}` 일련번호로 `backtest_id`와 같은 방식\n+- [x] T009 [P] Add repository test `backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordRepositoryIT.java` (extends `RepositoryTestSupport`): save/find round trip for three kinds, `ck_my_record_ref_matches_kind` rejects a row with two refs, `uk_my_record_analysis` rejects a second live non-copy row for the same owner+run but **allows** one when `is_copy = true` and one when the first is deleted\n+- [x] T010 Add application event `backend/src/main/java/com/ssafy/thorp/backtest/application/event/BacktestRequestAccepted.java` (record: requestId, runId, requesterId nullable, `ExecutionType`, sectorCodes, strategyId, periodStart, periodEnd, acceptedAt) and publish it via `events.publishEvent(...)` right after **both** `requestRepository.save(newRequest(...))` sites (새 실행·합류/재사용) in `backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java`. 004의 동작은 바뀌지 않는다\n+- [x] T011 Add application event `backend/src/main/java/com/ssafy/thorp/paramsearch/application/event/ParamSearchAccepted.java` (record: paramSearchId, ownerUserId, strategyIds, sectorCodes/instrumentIds, periodStart, periodEnd, acceptedAt) and publish it at the end of `create(...)` in `backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java` after the `ParamSearch` is saved **on the accepted path only** — the `rejected(...)` branch (CANDIDATE_LIMIT, saves a `REJECTED` row) does not publish; nothing ran, so there is nothing to reopen (data-model §4)\n+- [x] T012 Create port `backend/src/main/java/com/ssafy/thorp/myrecord/application/port/RegimeSearchLogWriter.java` (`long append(long ownerId, String snapshotKey, Long snapshotId, EntryPath, BaselineOrigin, Instant viewedAt)`, `void touch(long logId, Instant)`, `Optional<Long> findActive(long ownerId, String snapshotKey, EntryPath)`) and implement it in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/RegimeSearchLogWriterImpl.java` using the existing `com.ssafy.thorp.regime.infrastructure.persistence.RegimeSearchLogJpaRepository`. 010의 읽기 리포지토리는 손대지 않는다\n+- [x] T013 Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/RecordNamer.java`: `{대표 섹터 이름}{ 외 N}? {전략 이름} {yyyy-MM-dd}` (비중 최대 섹터 우선, 탐색 묶음은 전략 여러 개면 \"전략 N개 탐색\", 경제환경은 `{분야 이름 또는 종합} {기준월 yyyy-MM}`), reading display names from `sector`/`strategy_rules` via existing repositories. 유일성을 강제하지 않는다(research R12)\n+- [x] T014 Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordRegistrar.java`: `@TransactionalEventListener(phase = BEFORE_COMMIT)` on `BacktestRequestAccepted` — skip when `requesterId == null` or `executionType != SINGLE`; find live non-copy row by owner+run, return it if present (FR-009), else create `ANALYSIS` row; listener on `ParamSearchAccepted` — create `SEARCH_BUNDLE` row (defensively skip if the search status is `REJECTED`). Both use `RecordNamer` and `Clock`\n+- [x] T015 Add service test `backend/src/test/java/com/ssafy/thorp/myrecord/application/MyRecordRegistrarTest.java`: anonymous request → no row; `SEARCH_BUNDLE` execution type → no `ANALYSIS` row; second `SINGLE` request on the same run → same record, row count unchanged; deleted record + same run → new row created\n - [ ] T016 [P] Add FE types `frontend/src/types/myRecords.ts` from `contracts/my-records-api.md` (`MyRecordKind`, `MyRecordStatus`, `MyRecordListItem` discriminated by `kind`, `MyRecordDetail` with `referenceVersions`·`mappingDrift`·`registryDrift`·`reopenSettings`·`reopenPayload: ResultConfig`(005 `frontend/src/types/result.ts` 재사용), `MyRecordListQuery`, `MyRecordListPage`, `RecordLimitError { current, limit }`) and API client `frontend/src/api/myRecords.ts` (`fetchMyRecords(query)`, `fetchMyRecord(recordId)`, `renameMyRecord`, `deleteMyRecord`, `recordRegimeSearch(searchId, entryPath)`, `exportMyRecordUrl(recordId, format)`; mutations through `runCsrfProtectedMutation`) with `frontend/src/api/myRecords.test.ts`\n \n **Checkpoint**: 로그인 사용자가 단건 분석·탐색을 접수하면 `my_record` 행이 생기고, 같은 조건을 다시 접수해도 행이 늘지 않는다.\n@@ -90,7 +90,7 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n ### Tests for User Story 1\n \n-- [ ] T017 [US1] Implement `findPage` in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java` as one native query joining `backtest_request`+`backtest_run`, `param_search`, `regime_search_log`+`regime_search_snapshot` by kind to derive `status`/`statusReason`/`resultToken`/`searchId`/`regime` fields — `ANALYSIS` 의 요청은 저장돼 있지 않으므로 `MyRecordRepository.findViewableRequestId` 규칙(취소하지 않은 최신)으로 고른다(data-model §1 \"상태는 컬럼이 아니다\"), with filters kind/status/sector(`&&` on TEXT[])/strategy/period overlap, sort `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC`, keyset cursor `(saved_at, id)` encoded base64, `size` 1~50. **성과 수치 컬럼을 select에 넣지 않는다**(원칙 III)\n+- [ ] T017 [US1] Implement `findPage` in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java` as one native query joining `backtest_request`+`backtest_run`, `param_search`, `regime_search_log`+`regime_search_snapshot` by kind to derive `status`/`statusReason`/`resultToken`/`searchId`/`regime` fields — `ANALYSIS` 의 요청은 저장돼 있지 않으므로 취소하지 않은 최신 요청을 LATERAL 서브쿼리로 고른다(data-model §1 \"상태는 컬럼이 아니다\"), with filters kind/status/sector(`&&` on TEXT[])/strategy/period overlap, sort `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC`, keyset cursor `(saved_at, id)` encoded base64, `size` 1~50. **성과 수치 컬럼을 select에 넣지 않는다**(원칙 III)\n - [ ] T018 [P] [US1] Add `backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordListQueryIT.java`: default view shows only COMPLETED analysis/bundle rows and THRESHOLD_APPLIED regime rows (contracts `status` 기본값); FAILED/CANCELLED appear only with status filter; RUNNING run maps to `RUNNING`; regime log with NULL snapshot_id maps to `WITHDRAWN`; sector filter matches when any code overlaps; cursor page 2 has no overlap/gap after a new row is inserted between requests; another owner's rows never appear\n - [ ] T019 [US1] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java` (`list(ownerId, query)`, `detail(ownerId, recordId)` → 404 `RESOURCE_NOT_FOUND` for other owners/deleted, `markViewed`) and `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java` with `GET /my-records`, `GET /my-records/{recordId}` using `CurrentRequester.requireRequesterId()`; request params validated so unknown `sort|kind|status` → 400 `INVALID_INPUT` (원칙 VI, contracts 공통); responses in `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordListResponse.java`, `MyRecordDetailResponse.java`\n - [ ] T020 [US1] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordMappingDriftChecker.java`: read the record's `sectorEtfMapVersion` from `backtest_run.versions.mapping` (접수가 확정한 값이라 FAILED 실행에도 있다; `backtest_result.versions`는 워커 보고라 실패 행에 없다) or `param_search.reference_versions`, compare each saved sector's `sector_etf_map_entry.etf_id` in that version with the current latest version; return `changed=false` when every entry matches even if the version string differs, else `INSTRUMENT_REPLACED` or `SECTOR_REMOVED` with sector codes and one Korean sentence (UI-01, research R8). Wire into `detail()` as `mappingDrift`; add `backend/src/test/java/com/ssafy/thorp/myrecord/application/MappingDriftCheckerTest.java` covering the three quickstart S5 cases\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/tasks.md",
+          "old_path": "specs/006-my-records/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2229704,
+      "head_commit_sha": "4afa929875022c16ac17307493e7d592912ecd2a",
+      "base_commit_sha": "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5",
+      "start_commit_sha": "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90",
+      "created_at": "2026-09-21T10:08:33.173+09:00",
+      "merge_request_id": 953698,
+      "state": "without_files",
+      "real_size": "23",
+      "patch_id_sha": "6402a08ce90770ea73deec8fd82fea0a599283d7",
+      "commits": [
+        {
+          "id": "4afa929875022c16ac17307493e7d592912ecd2a",
+          "short_id": "4afa9298",
+          "created_at": "2026-09-21T09:57:21.000+09:00",
+          "parent_ids": [
+            "20483de5f0ed4513c288e1e907f9e05eb0e7a501"
+          ],
+          "title": "fix(be): 내 기록 상세의 대응표 판정과 원본 읽기를 리뷰대로 고친다",
+          "message": "fix(be): 내 기록 상세의 대응표 판정과 원본 읽기를 리뷰대로 고친다\n\n대응표 판정이 비교한 섹터가 하나도 없을 때 \"안 바뀜\"을 돌려줬다. 기록의 섹터가 저장 버전\n항목에 없으면 견준 것이 없으니 판정하지 않는다(원칙 VI). 저장 버전이 곧 열린 버전이면\n항목을 읽지 않고 끝내고, 두 버전이 다를 때만 항목을 한 문장으로 읽는다 — 상세를 열\n때마다 판정하므로 조회를 넷에서 둘 또는 하나로 줄인다.\n\n원본 값이 계약 밖이면(상태값 추가·깨진 스냅샷 키) 데이터 결함이라 500이어야 하는데,\nIllegalArgumentException 을 그대로 두면 전역 처리기가 400 으로 감싸 WARN 만 남는다.\nIllegalStateException 으로 바꿔 던진다. 요청 사본에는 null 값 키가 올 수 있어 원문\n맵 복사를 Map.copyOf 에서 null 을 허용하는 복사로 바꾼다.\n\nBE-1의 findViewableRequestId 를 지운다. 같은 규칙(취소하지 않은 최신 단건 요청)이 목록\nSQL 의 LATERAL 서브쿼리에 있어야 하고 두 벌이면 한쪽만 고쳐진다. 운영 호출자는 없었고\n접수 IT 는 findView().resultToken() 으로 같은 것을 단언한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T09:57:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T09:57:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4afa929875022c16ac17307493e7d592912ecd2a"
+        },
+        {
+          "id": "20483de5f0ed4513c288e1e907f9e05eb0e7a501",
+          "short_id": "20483de5",
+          "created_at": "2026-09-21T09:34:45.000+09:00",
+          "parent_ids": [
+            "3d35fd08aae028f4d3c6e2ee6271cf40cf3d56b5"
+          ],
+          "title": "feat(be): 내 기록 목록·상세 API와 대응표 변경 판정을 만든다",
+          "message": "feat(be): 내 기록 목록·상세 API와 대응표 변경 판정을 만든다\n\nGET /my-records 와 GET /my-records/{recordId} 를 더한다(spec 006 US1, T017~T020).\n상태·사유·결과 토큰은 저장된 값이 아니라 읽는 순간 종류별 원본에서 파생한다 —\n복제하면 갱신 누락이 \"실패한 분석이 목록에서는 완료로 보이는\" 조용한 거짓이 된다.\n성과 수치 컬럼은 select 에 없다(원칙 III).\n\n목록은 CTE 하나다. ANALYSIS 의 요청은 저장돼 있지 않으므로 LATERAL 서브쿼리가\n(소유자·실행·단건)에서 취소하지 않은 최신 요청을 골라 공개 토큰과 취소 여부를 읽는다\n— findViewableRequestId 와 같은 규칙이다. 커서는 (saved_at, id)·(name, id) keyset 이라\n쪽을 넘기는 사이 새 항목이 끼어도 겹치거나 빠지지 않는다. 전체 개수는 세지 않는다.\n\n상세는 남의 것·없는 것·지운 것을 한 가지 404 로 답하고(403 은 존재를 알린다), 읽는\n순간 last_viewed_at 을 그 컬럼만 UPDATE 로 남긴다. referenceVersions 는 004·007 이 남긴\n원문을 이름만 바꿔 담고 없는 키는 만들지 않는다. worker·dependencies 는 담지 않는다.\n\nmappingDrift 는 저장 버전과 열린 버전의 대응표 항목을 섹터마다 비교한다(research R8).\n대표 ETF 가 모두 같으면 버전 문자열이 달라도 바뀐 것이 아니다 — 버전만 보면 다른\n섹터 때문에 나온 새 버전에도 경고가 뜬다. 판정할 근거가 없으면 키를 만들지 않아\n\"안 바뀜\"과 \"모름\"을 섞지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T09:34:45.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T09:34:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20483de5f0ed4513c288e1e907f9e05eb0e7a501"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T10:08:39.548+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2844315": [],
+    "2844392": []
+  }
+}

@@ -1,0 +1,652 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951907,
+    "iid": 230,
+    "project_id": 1444456,
+    "title": "feat(fe): 전략 진단 선택 화면 UX 개선",
+    "description": "# 작업 내용 요약\n\n섹터를 고를 때 선택 카드와 안내가 세로로 늘어나 비중 입력과 다음 행동을 찾기 어려웠습니다. 전략 카드와 설정·설명 펼침도 역할이 비슷하게 보여 무엇을 선택하는지 구분하기 어려웠습니다. 섹터 고르기 → 전략 고르기 → 분석하기 흐름은 유지하면서 각 행동의 시각적 계층을 분리했습니다.\n\n# 관련 티켓\n\n- 없음. 요청에 따라 티켓 번호 없이 진행한 UI 개선입니다.\n- 관련 명세: `specs/002-sector-weight-selection`의 FR-005·FR-007·FR-013, `specs/003-strategy-settings`의 FR-001~003·SC-005.\n\n# 무엇이 달라졌나\n\n| 상황 | 이전 | 이후 |\n|---|---|---|\n| 섹터 목록 | 카드가 한 열로 길게 나열됨 | 넓은 화면은 2열, 좁은 화면은 1열로 표시하고 선택 상태를 테두리로 구분함 |\n| 선택 안내와 화면 흔들림 | 첫 선택 때 안내가 추가되고 스크롤바에 따라 화면 폭이 흔들릴 수 있음 | 안내 자리를 미리 확보하고 스크롤바 공간을 유지함 |\n| 전략 선택 | 카드와 펼침 버튼의 역할이 비슷하게 보이고 선택 결과가 목록 뒤에 놓임 | 카드는 선택 표시를 갖고, 선택한 카드 바로 아래에 요약·실행 영역을 별도 층으로 표시하며 설정은 펼침 행으로 구분함 |\n| 진단 순서와 비중 | 섹터·비중을 정하고 전략을 골라 분석함 | 같은 순서를 유지하며 비중 값이나 분석 요청 계약은 변경하지 않음 |\n\n# 주요 변경 사항\n\n## 섹터 선택 정보를 더 짧고 안정적으로 표시\n\n한 열로 길게 나열되던 섹터를 넓은 화면에서 두 열로 보여 주고 상단 여백과 카드 간격을 줄였습니다. 선택 전후 안내 영역과 스크롤바 공간은 유지해 목록 전체가 갑자기 밀리는 현상을 줄였습니다. 비중은 명세대로 선택한 카드 안에서 바로 수정할 수 있도록 유지했으며, 펼쳐진 입력 영역은 배경·경계선·짧은 전환 효과로 구분했습니다.\n\n## 전략 선택과 상세 설정의 역할 구분\n\n전략 카드는 선택 표시가 있는 형태로 바꾸고, 선택한 전략의 요약과 실행 버튼을 해당 카드 바로 다음에 배치했습니다. 상세 설정과 섹터의 종목 설명은 별도의 펼침 행과 화살표로 표현했습니다. 선택 영역만 층을 달리해 카드 선택과 설명 열기가 같은 행동처럼 보이지 않게 했습니다.\n\n# 테스트\n\n- [x] 2026-09-21, 대상 커밋 `0032d99d`의 독립 워크트리에서 `npm run lint`: 오류 0건, 경고 20건.\n- [x] 같은 워크트리에서 `npm run build`: 성공.\n- [x] 같은 워크트리에서 `npm test`: Vitest 1,150건 통과·실패 0건·건너뜀 0건, Node 테스트 13건 통과·실패 0건·건너뜀 0건. 새 화면 테스트가 Vitest 수집 대상에 포함된 것도 확인했습니다.\n- [ ] 실제 브라우저에서 좁은 화면과 넓은 화면의 카드 확장·스크롤·층 겹침은 별도 시각 확인이 필요합니다.\n\n# 리뷰 포인트\n\n1. 선택한 섹터의 비중 입력은 여전히 카드 높이를 늘리고 합계·설명은 목록 아래에 있습니다. 실제 사용에서 합계 확인을 위해 긴 스크롤이 필요하다는 피드백이 확인됐으므로, 다음 UX 작업에서는 우측 요약 또는 화면 고정 요약을 검토해야 합니다.\n2. 랜딩의 진입 버튼, 로그인 전환 지연, 브라우저 뒤로가기 뒤 빈 화면은 이 변경에 포함되지 않았습니다. 각각 현상을 재현하고 원인을 확인한 뒤 별도로 수정해야 합니다.\n\n# 공통 확인\n\n- [x] 이번 변경에서 순위 배지나 투자 추천 표현을 추가하지 않았습니다.\n- [x] 결제·포인트·상품 선택 단계를 추가하지 않았습니다.\n- [x] 전략 ID 상수나 전략별 분기를 추가하지 않았습니다.\n- [x] 계산하지 않은 성과를 0으로 채우는 처리를 추가하지 않았습니다.\n- [x] 검증되지 않은 결과를 검증된 것처럼 표시하는 처리를 추가하지 않았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T17:55:27.401+09:00",
+    "updated_at": "2026-09-21T11:12:10.189+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T10:52:53.703+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/strategy-diagnosis-ux",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+    "merge_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T17:55:29.960+09:00",
+    "reference": "!230",
+    "references": {
+      "short": "!230",
+      "relative": "!230",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!230"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/230",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951907,
+    "iid": 230,
+    "project_id": 1444456,
+    "title": "feat(fe): 전략 진단 선택 화면 UX 개선",
+    "description": "# 작업 내용 요약\n\n섹터를 고를 때 선택 카드와 안내가 세로로 늘어나 비중 입력과 다음 행동을 찾기 어려웠습니다. 전략 카드와 설정·설명 펼침도 역할이 비슷하게 보여 무엇을 선택하는지 구분하기 어려웠습니다. 섹터 고르기 → 전략 고르기 → 분석하기 흐름은 유지하면서 각 행동의 시각적 계층을 분리했습니다.\n\n# 관련 티켓\n\n- 없음. 요청에 따라 티켓 번호 없이 진행한 UI 개선입니다.\n- 관련 명세: `specs/002-sector-weight-selection`의 FR-005·FR-007·FR-013, `specs/003-strategy-settings`의 FR-001~003·SC-005.\n\n# 무엇이 달라졌나\n\n| 상황 | 이전 | 이후 |\n|---|---|---|\n| 섹터 목록 | 카드가 한 열로 길게 나열됨 | 넓은 화면은 2열, 좁은 화면은 1열로 표시하고 선택 상태를 테두리로 구분함 |\n| 선택 안내와 화면 흔들림 | 첫 선택 때 안내가 추가되고 스크롤바에 따라 화면 폭이 흔들릴 수 있음 | 안내 자리를 미리 확보하고 스크롤바 공간을 유지함 |\n| 전략 선택 | 카드와 펼침 버튼의 역할이 비슷하게 보이고 선택 결과가 목록 뒤에 놓임 | 카드는 선택 표시를 갖고, 선택한 카드 바로 아래에 요약·실행 영역을 별도 층으로 표시하며 설정은 펼침 행으로 구분함 |\n| 진단 순서와 비중 | 섹터·비중을 정하고 전략을 골라 분석함 | 같은 순서를 유지하며 비중 값이나 분석 요청 계약은 변경하지 않음 |\n\n# 주요 변경 사항\n\n## 섹터 선택 정보를 더 짧고 안정적으로 표시\n\n한 열로 길게 나열되던 섹터를 넓은 화면에서 두 열로 보여 주고 상단 여백과 카드 간격을 줄였습니다. 선택 전후 안내 영역과 스크롤바 공간은 유지해 목록 전체가 갑자기 밀리는 현상을 줄였습니다. 비중은 명세대로 선택한 카드 안에서 바로 수정할 수 있도록 유지했으며, 펼쳐진 입력 영역은 배경·경계선·짧은 전환 효과로 구분했습니다.\n\n## 전략 선택과 상세 설정의 역할 구분\n\n전략 카드는 선택 표시가 있는 형태로 바꾸고, 선택한 전략의 요약과 실행 버튼을 해당 카드 바로 다음에 배치했습니다. 상세 설정과 섹터의 종목 설명은 별도의 펼침 행과 화살표로 표현했습니다. 선택 영역만 층을 달리해 카드 선택과 설명 열기가 같은 행동처럼 보이지 않게 했습니다.\n\n# 테스트\n\n- [x] 2026-09-21, 대상 커밋 `0032d99d`의 독립 워크트리에서 `npm run lint`: 오류 0건, 경고 20건.\n- [x] 같은 워크트리에서 `npm run build`: 성공.\n- [x] 같은 워크트리에서 `npm test`: Vitest 1,150건 통과·실패 0건·건너뜀 0건, Node 테스트 13건 통과·실패 0건·건너뜀 0건. 새 화면 테스트가 Vitest 수집 대상에 포함된 것도 확인했습니다.\n- [ ] 실제 브라우저에서 좁은 화면과 넓은 화면의 카드 확장·스크롤·층 겹침은 별도 시각 확인이 필요합니다.\n\n# 리뷰 포인트\n\n1. 선택한 섹터의 비중 입력은 여전히 카드 높이를 늘리고 합계·설명은 목록 아래에 있습니다. 실제 사용에서 합계 확인을 위해 긴 스크롤이 필요하다는 피드백이 확인됐으므로, 다음 UX 작업에서는 우측 요약 또는 화면 고정 요약을 검토해야 합니다.\n2. 랜딩의 진입 버튼, 로그인 전환 지연, 브라우저 뒤로가기 뒤 빈 화면은 이 변경에 포함되지 않았습니다. 각각 현상을 재현하고 원인을 확인한 뒤 별도로 수정해야 합니다.\n\n# 공통 확인\n\n- [x] 이번 변경에서 순위 배지나 투자 추천 표현을 추가하지 않았습니다.\n- [x] 결제·포인트·상품 선택 단계를 추가하지 않았습니다.\n- [x] 전략 ID 상수나 전략별 분기를 추가하지 않았습니다.\n- [x] 계산하지 않은 성과를 0으로 채우는 처리를 추가하지 않았습니다.\n- [x] 검증되지 않은 결과를 검증된 것처럼 표시하는 처리를 추가하지 않았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T17:55:27.401+09:00",
+    "updated_at": "2026-09-21T11:12:10.189+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T10:52:53.703+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/strategy-diagnosis-ux",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+    "merge_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T17:55:29.960+09:00",
+    "reference": "!230",
+    "references": {
+      "short": "!230",
+      "relative": "!230",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!230"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/230",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "12",
+    "latest_build_started_at": "2026-09-18T17:55:41.804+09:00",
+    "latest_build_finished_at": "2026-09-18T18:04:19.987+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 207327,
+      "iid": 172,
+      "project_id": 1444456,
+      "sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+      "ref": "feat(fe)/strategy-diagnosis-ux",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T17:55:41.610+09:00",
+      "updated_at": "2026-09-18T18:04:19.993+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207327"
+    },
+    "head_pipeline": {
+      "id": 207327,
+      "iid": 172,
+      "project_id": 1444456,
+      "sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+      "ref": "feat(fe)/strategy-diagnosis-ux",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T17:55:41.610+09:00",
+      "updated_at": "2026-09-18T18:04:19.993+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207327",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T17:55:41.804+09:00",
+      "finished_at": "2026-09-18T18:04:19.987+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207327",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b28565a07cb644d19b824e4957edd3c747af529f",
+      "head_sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+      "start_sha": "e45deb813271e475401e801f2c903901ef4224b5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "aafbc07ba68ec525f41dcf80b0585bbdd24cbf99",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837066,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-18T17:55:27.501+09:00",
+          "updated_at": "2026-09-18T17:55:27.507+09:00",
+          "system": true,
+          "noteable_id": 951907,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 230,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bf36dae6e1ce0e7bdc331b2e54e122cf4a4bed8a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837069,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `StrategyCardList` 컴포넌트에 `selectedContent`를 주입할 수 있도록 설계하여, 선택된 전략 하단에 상세 설정 및 액션 패널이 자연스럽게 렌더링되도록 UX를 효과적으로 개선했습니다.\n- `html` 요소에 `scrollbar-gutter: stable`을 적용하여 동적 콘텐츠 변경 시 스크롤바 생성/제거로 인한 화면 흔들림(Layout Shift) 현상을 깔끔하게 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **시나리오 1 (전략 선택 시 패널 확장)**: 전략 카드 목록에서 특정 전략을 선택했을 때, 해당 카드 바로 아래에 선택된 전략의 상세 설정 패널과 액션 버튼(`분석하기` 등)이 올바르게 나타나는지 확인합니다.\n- **시나리오 2 (반응형 레이아웃)**: 화면 너비를 560px 이하로 줄였을 때, 전략 카드 목록(`StrategyCardList`)과 섹터 목록(`SectorCatalogBoard`)이 단일 열(1열) 레이아웃으로 자연스럽게 전환되는지 검증합니다.\n- **시나리오 3 (접근성 및 애니메이션 축소)**: `prefers-reduced-motion: reduce` 환경 설정 시 상세 패널 및 토글 아이콘의 CSS 트랜지션/애니메이션이 비활성화되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0032d99d50378806a65201d9c7f32c3bb2537ee6 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T17:55:37.460+09:00",
+          "updated_at": "2026-09-18T17:55:37.460+09:00",
+          "system": false,
+          "noteable_id": 951907,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 230,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b4b4749f1ff6d3d9ce0951e341a2a4263e114bef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2844891,
+          "type": null,
+          "body": "mentioned in commit 6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T10:52:53.753+09:00",
+          "updated_at": "2026-09-21T10:52:53.756+09:00",
+          "system": true,
+          "noteable_id": 951907,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 230,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e4e9cc6f1073cc54ddca5ca85f4425335058e929",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845101,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T11:12:10.322+09:00",
+          "updated_at": "2026-09-21T11:12:10.326+09:00",
+          "system": true,
+          "noteable_id": 951907,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 230,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2223913,
+      "head_commit_sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+      "base_commit_sha": "b28565a07cb644d19b824e4957edd3c747af529f",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:55:27.703+09:00",
+      "merge_request_id": 951907,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "7a70cd571cbe3f6ffcde5e4c0e3bdca65e4df529"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2223913,
+      "head_commit_sha": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+      "base_commit_sha": "b28565a07cb644d19b824e4957edd3c747af529f",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:55:27.703+09:00",
+      "merge_request_id": 951907,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "7a70cd571cbe3f6ffcde5e4c0e3bdca65e4df529",
+      "commits": [
+        {
+          "id": "0032d99d50378806a65201d9c7f32c3bb2537ee6",
+          "short_id": "0032d99d",
+          "created_at": "2026-09-18T17:51:19.000+09:00",
+          "parent_ids": [
+            "b28565a07cb644d19b824e4957edd3c747af529f"
+          ],
+          "title": "feat(fe): 전략 진단 선택 화면 UX 개선",
+          "message": "feat(fe): 전략 진단 선택 화면 UX 개선\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-18T17:42:31.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-18T17:51:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0032d99d50378806a65201d9c7f32c3bb2537ee6"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import { useId, useRef, useState } from 'react'\n+import { ChevronDown } from 'lucide-react'\n import { InstrumentProfilePanel } from './InstrumentProfilePanel'\n import { WeightInput } from './WeightInput'\n import type { SectorClassification, SectorSummary } from '@/types/sector'\n@@ -132,7 +133,8 @@ export function SectorListItem({\n           aria-label={`${sector.name}에 담긴 종목 보기`}\n           onClick={() => setProfileOpen((open) => !open)}\n         >\n-          담긴 종목 보기\n+          <span>담긴 종목 보기</span>\n+          <ChevronDown data-slot=\"profile-chevron\" size={15} strokeWidth={1.8} aria-hidden=\"true\" />\n         </button>\n \n         {profileOpen ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorListItem.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorListItem.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,28 +1,42 @@\n .panel {\n   display: grid;\n   gap: 12px;\n+  padding-top: 4px;\n+  border-top: 1px solid var(--thorp-line);\n }\n \n .toggle {\n-  justify-self: start;\n-  padding: 8px 14px;\n-  border: 1px solid var(--thorp-line);\n-  border-radius: 10px;\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  width: 100%;\n+  padding: 10px 2px;\n+  border: 0;\n+  border-radius: 0;\n   background: transparent;\n-  color: inherit;\n+  color: var(--thorp-copy);\n   font: inherit;\n-  font-size: 0.9rem;\n+  font-size: 0.84rem;\n   font-weight: 700;\n   cursor: pointer;\n+  text-align: left;\n+  -webkit-user-select: none;\n+  user-select: none;\n }\n \n-.toggle::after {\n-  content: ' ▾';\n-  color: var(--thorp-copy);\n+.toggle:hover,\n+.toggle[aria-expanded='true'] {\n+  color: var(--thorp-foreground);\n+}\n+\n+.toggleIcon {\n+  flex: none;\n+  color: var(--thorp-accent-soft);\n+  transition: transform 0.16s ease;\n }\n \n-.toggle[aria-expanded='true']::after {\n-  content: ' ▴';\n+.toggle[aria-expanded='true'] .toggleIcon {\n+  transform: rotate(180deg);\n }\n \n .toggle:focus-visible,\n@@ -34,6 +48,13 @@\n .body {\n   display: grid;\n   gap: 14px;\n+  padding-top: 2px;\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .toggleIcon {\n+    transition: none;\n+  }\n }\n \n .axes {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.module.css",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import { useId, useState } from 'react'\n+import { ChevronDown } from 'lucide-react'\n import { TermHelp } from '@/components/learning/TermHelp'\n import { applicableAxes, type AxisValues } from '@/hooks/useStrategySettings'\n import type { LearningReturnState } from '@/types/learning'\n@@ -76,7 +77,8 @@ export function DetailSettingsPanel({\n         aria-controls={bodyId}\n         onClick={() => setOpen((current) => !current)}\n       >\n-        상세 설정\n+        <span>상세 설정</span>\n+        <ChevronDown className={styles.toggleIcon} size={16} strokeWidth={1.8} aria-hidden=\"true\" />\n       </button>\n \n       {open ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,17 +1,43 @@\n .card {\n+  position: relative;\n   display: grid;\n-  gap: 7px;\n+  align-content: start;\n+  gap: 5px;\n   width: 100%;\n-  padding: 16px 17px;\n+  padding: 12px 14px 12px 42px;\n   border: 1px solid var(--thorp-line-strong);\n   border-radius: 7px;\n   background: var(--thorp-surface);\n   cursor: pointer;\n   text-align: left;\n+  -webkit-user-select: none;\n+  user-select: none;\n+  transition:\n+    border-color 0.15s ease,\n+    background-color 0.15s ease,\n+    box-shadow 0.15s ease;\n+}\n+\n+.card::before {\n+  position: absolute;\n+  top: 14px;\n+  left: 14px;\n+  width: 14px;\n+  height: 14px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 50%;\n+  background: var(--thorp-surface);\n+  box-shadow: inset 0 0 0 3px var(--thorp-surface);\n+  content: '';\n }\n \n .card:hover[data-selectable='true'] {\n   border-color: var(--thorp-accent-soft);\n+  background: var(--thorp-surface-raised);\n+}\n+\n+.card:hover[data-selectable='true']::before {\n+  border-color: var(--thorp-accent-soft);\n }\n \n .card:focus-visible {\n@@ -21,15 +47,26 @@\n \n .card[data-selected='true'] {\n   border-color: var(--thorp-accent);\n+  background: var(--thorp-accent-muted);\n   box-shadow: inset 0 0 0 1px var(--thorp-accent);\n }\n \n+.card[data-selected='true']::before {\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent);\n+}\n+\n /* 고를 수 없는 카드는 흐려 보이되 초점과 문구는 그대로 읽힌다. */\n .card[data-selectable='false'] {\n   cursor: not-allowed;\n   background: var(--thorp-surface-raised);\n }\n \n+.card[data-selectable='false']::before {\n+  border-style: dashed;\n+  background: var(--thorp-surface-raised);\n+}\n+\n .card[data-selectable='false'] .name,\n .card[data-selectable='false'] .description {\n   color: var(--thorp-muted);\n@@ -44,21 +81,22 @@\n .description {\n   color: var(--thorp-copy);\n   font-size: 0.76rem;\n-  line-height: 1.55;\n+  line-height: 1.45;\n }\n \n .notice {\n   display: grid;\n-  gap: 5px;\n-  margin-top: 3px;\n+  gap: 3px;\n+  margin-top: 2px;\n }\n \n .reason {\n   display: grid;\n-  gap: 3px;\n+  grid-template-columns: max-content minmax(0, 1fr);\n+  gap: 8px;\n   color: var(--thorp-copy);\n   font-size: 0.72rem;\n-  line-height: 1.5;\n+  line-height: 1.45;\n }\n \n .reasonLabel {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCard.module.css",
+          "old_path": "frontend/src/components/strategy/StrategyCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,28 @@\n .list {\n   display: grid;\n+  grid-template-columns: repeat(2, minmax(0, 1fr));\n   gap: 11px;\n }\n \n+.selectedContent {\n+  position: relative;\n+  z-index: 2;\n+  grid-column: 1 / -1;\n+  isolation: isolate;\n+  margin: 2px 7px 8px;\n+}\n+\n+.selectedContent::before {\n+  position: absolute;\n+  z-index: -1;\n+  inset: 7px -7px -7px 7px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 10px;\n+  background: var(--thorp-surface);\n+  content: '';\n+  pointer-events: none;\n+}\n+\n .list:focus-visible {\n   outline: var(--thorp-focus-outline);\n   outline-offset: var(--thorp-focus-offset-compact);\n@@ -20,3 +40,13 @@\n   border-radius: 7px;\n   background: var(--thorp-surface-raised);\n }\n+\n+@media (max-width: 560px) {\n+  .list {\n+    grid-template-columns: 1fr;\n+  }\n+\n+  .selectedContent {\n+    margin-inline: 0;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCardList.module.css",
+          "old_path": "frontend/src/components/strategy/StrategyCardList.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useEffect, useRef } from 'react'\n+import { Fragment, type ReactNode, useEffect, useRef } from 'react'\n import { RegistryUnavailableNotice } from './RegistryUnavailableNotice'\n import { StrategyCard, type WarmupVerdict } from './StrategyCard'\n import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'\n@@ -41,6 +41,8 @@ interface StrategyCardListProps {\n    * 동안에는 `unknown`을 돌려주어 그 사실이 화면에 남게 한다.\n    */\n   judgeWarmup: (strategy: StrategyView) => WarmupVerdict\n+  /** 고른 카드 바로 다음에 붙는 요약·행동 영역이다. */\n+  selectedContent?: ReactNode\n }\n \n /**\n@@ -69,6 +71,7 @@ export function StrategyCardList({\n   onSelect,\n   onRetry,\n   judgeWarmup,\n+  selectedContent,\n }: StrategyCardListProps) {\n   const listRef = useRef<HTMLDivElement>(null)\n   const recoveredFromFailure = useRef(false)\n@@ -118,15 +121,22 @@ export function StrategyCardList({\n       role=\"group\"\n       aria-label=\"전략 고르기\"\n     >\n-      {state.registry.strategies.map((strategy) => (\n-        <StrategyCard\n-          key={strategy.strategyId}\n-          strategy={strategy}\n-          selected={selectedStrategyId === strategy.strategyId}\n-          warmup={judgeWarmup(strategy)}\n-          onSelect={() => onSelect(strategy.strategyId)}\n-        />\n-      ))}\n+      {state.registry.strategies.map((strategy) => {\n+        const selected = selectedStrategyId === strategy.strategyId\n+        return (\n+          <Fragment key={strategy.strategyId}>\n+            <StrategyCard\n+              strategy={strategy}\n+              selected={selected}\n+              warmup={judgeWarmup(strategy)}\n+              onSelect={() => onSelect(strategy.strategyId)}\n+            />\n+            {selected && selectedContent ? (\n+              <div className={styles.selectedContent}>{selectedContent}</div>\n+            ) : null}\n+          </Fragment>\n+        )\n+      })}\n     </div>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCardList.tsx",
+          "old_path": "frontend/src/components/strategy/StrategyCardList.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,9 +10,9 @@\n }\n \n .main {\n-  width: min(100% - 40px, 760px);\n+  width: min(100% - 40px, 960px);\n   margin: 0 auto;\n-  padding: clamp(90px, 15vh, 160px) 0 80px;\n+  padding: clamp(30px, 5vh, 56px) 0 80px;\n }\n \n .title {\n@@ -23,7 +23,7 @@\n }\n \n .lead {\n-  margin: 0 0 28px;\n+  margin: 0 0 20px;\n   color: var(--thorp-copy);\n   font-size: clamp(0.92rem, 1.7vw, 1rem);\n   line-height: 1.7;\n@@ -71,7 +71,7 @@\n .catalog {\n   display: flex;\n   flex-direction: column;\n-  gap: 14px;\n+  gap: 12px;\n }\n \n .listTitle {\n@@ -104,15 +104,41 @@\n \n /* 비중 입력 묶음의 머리다. 비중 칸이 하나라도 있으면 언제나 보인다. */\n .initialValueNotice {\n+  display: grid;\n+  grid-template-columns: 18px minmax(0, 1fr);\n+  align-items: center;\n+  gap: 8px;\n+  min-height: 34px;\n   margin: 0;\n+  padding: 7px 10px;\n+  border-left: 2px solid var(--thorp-line-strong);\n+  background: var(--thorp-surface);\n   color: var(--thorp-copy);\n   font-size: 0.82rem;\n   line-height: 1.6;\n }\n \n+.initialValueNotice::before {\n+  display: inline-grid;\n+  place-items: center;\n+  width: 16px;\n+  height: 16px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 50%;\n+  color: var(--thorp-accent-soft);\n+  content: 'i';\n+  font-family: var(--thorp-font-mono);\n+  font-size: 0.65rem;\n+  font-style: normal;\n+  font-weight: 700;\n+  line-height: 1;\n+}\n+\n .list {\n   display: grid;\n-  gap: 10px;\n+  grid-template-columns: repeat(2, minmax(0, 1fr));\n+  align-items: start;\n+  gap: 9px;\n   margin: 0;\n   padding: 0;\n   list-style: none;\n@@ -123,12 +149,11 @@\n   고른 카드와 고르지 않은 카드가 한눈에 구분되도록 테두리와 바탕을 함께 바꾼다.\n */\n .item {\n+  overflow: hidden;\n   border: 1px solid var(--thorp-line);\n   border-radius: 12px;\n   background: var(--thorp-surface);\n-  transition:\n-    border-color 0.15s ease,\n-    background-color 0.15s ease;\n+  transition: border-color 0.15s ease;\n }\n \n .item:hover {\n@@ -137,7 +162,7 @@\n \n .item[data-selected='true'] {\n   border-color: var(--thorp-accent);\n-  background: var(--thorp-accent-muted);\n+  box-shadow: inset 0 0 0 1px rgb(3 199 90 / 18%);\n }\n \n /* 초점이 어디에 있는지 카드 단위로도 드러낸다. */\n@@ -150,18 +175,19 @@\n   360px에서도 한 줄로 눌려 넘치지 않게 좁아지면 두 줄로 쌓는다.\n */\n .item [data-slot='choice'] {\n-  display: flex;\n-  flex-wrap: wrap;\n-  align-items: baseline;\n-  justify-content: space-between;\n-  gap: 6px 12px;\n-  padding: 14px 16px;\n+  display: grid;\n+  grid-template-columns: auto minmax(0, 1fr);\n+  align-items: center;\n+  gap: 4px 11px;\n+  padding: 11px 13px;\n   border-radius: 12px;\n   cursor: pointer;\n+  -webkit-user-select: none;\n+  user-select: none;\n }\n \n .item [data-slot='choice-box'] {\n-  align-self: center;\n+  grid-row: 1 / span 2;\n   width: 1.05rem;\n   height: 1.05rem;\n   accent-color: var(--thorp-accent);\n@@ -191,13 +217,13 @@\n \n .item [data-slot='etf'] {\n   display: inline-flex;\n+  grid-column: 2;\n   align-items: baseline;\n   gap: 6px;\n   min-width: 0;\n   /* 이름 묶음과 붙지 않게 반대편으로 민다. 좁아져 줄이 바뀌면 아래 미디어 쿼리가 푼다. */\n-  margin-left: auto;\n   color: var(--thorp-copy);\n-  font-size: 0.86rem;\n+  font-size: 0.78rem;\n }\n \n .item [data-slot='etf-label'] {\n@@ -218,9 +244,11 @@\n   flex-wrap: wrap;\n   align-items: center;\n   gap: 8px 12px;\n-  margin: 0 16px;\n-  padding: 12px 0 14px;\n-  border-top: 1px dashed var(--thorp-line);\n+  margin: 0;\n+  padding: 10px 13px 12px;\n+  border-top: 1px solid var(--thorp-line-strong);\n+  background: var(--thorp-surface-raised);\n+  animation: weight-panel-in 160ms ease-out both;\n }\n \n .item [data-slot='weight-label'] {\n@@ -277,50 +305,49 @@\n \n /* 대표 상품 정보를 펼치는 층이다. 카드 안에서 한 단 아래로 내려간다. */\n .item [data-slot='profile'] {\n-  margin: 0 16px;\n-  padding-bottom: 14px;\n-  border-top: 1px dashed var(--thorp-line);\n+  margin: 0;\n+  border-top: 1px solid var(--thorp-line);\n }\n \n .item [data-slot='profile-toggle'] {\n-  display: inline-flex;\n+  display: flex;\n   align-items: center;\n-  gap: 6px;\n-  margin-top: 10px;\n-  padding: 5px 0;\n+  justify-content: space-between;\n+  gap: 12px;\n+  width: 100%;\n+  margin: 0;\n+  padding: 9px 13px;\n   border: 0;\n   background: none;\n   color: var(--thorp-copy);\n   font: inherit;\n   font-size: 0.8rem;\n-  text-decoration: underline;\n-  text-decoration-color: var(--thorp-line-strong);\n-  text-underline-offset: 4px;\n   cursor: pointer;\n+  text-align: left;\n+  -webkit-user-select: none;\n+  user-select: none;\n }\n \n-.item [data-slot='profile-toggle']:hover {\n+.item [data-slot='profile-toggle']:hover,\n+.item [data-slot='profile-toggle'][aria-expanded='true'] {\n+  background: var(--thorp-surface-raised);\n   color: var(--thorp-foreground);\n-  text-decoration-color: currentColor;\n }\n \n-/* 펼쳤는지를 글자 말고도 드러낸다. 삼각형이 돌아가는 방향이 곧 상태다. */\n-.item [data-slot='profile-toggle']::before {\n-  content: '';\n-  width: 0;\n-  height: 0;\n-  border-top: 4px solid transparent;\n-  border-bottom: 4px solid transparent;\n-  border-left: 5px solid currentColor;\n+.item [data-slot='profile-chevron'] {\n+  flex: none;\n+  color: var(--thorp-accent-soft);\n   transition: transform 0.15s ease;\n }\n \n-.item [data-slot='profile-toggle'][aria-expanded='true']::before {\n-  transform: rotate(90deg);\n+.item [data-slot='profile-toggle'][aria-expanded='true'] [data-slot='profile-chevron'] {\n+  transform: rotate(180deg);\n }\n \n .item [data-slot='profile-panel'] {\n-  padding: 12px 0 2px;\n+  padding: 4px 13px 12px;\n+  background: var(--thorp-surface-raised);\n+  animation: weight-panel-in 160ms ease-out both;\n }\n \n .item [data-slot='profile-loading'] {\n@@ -491,6 +518,29 @@\n   border-color: currentColor;\n }\n \n+@keyframes weight-panel-in {\n+  from {\n+    opacity: 0;\n+    transform: translateY(-4px);\n+  }\n+\n+  to {\n+    opacity: 1;\n+    transform: translateY(0);\n+  }\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .item [data-slot='weight'],\n+  .item [data-slot='profile-panel'] {\n+    animation: none;\n+  }\n+\n+  .item [data-slot='profile-chevron'] {\n+    transition: none;\n+  }\n+}\n+\n /* 합계와 남은 비중이 놓이는 자리다. 별도 알림 영역으로 빼지 않는다. */\n .total {\n   display: grid;\n@@ -633,20 +683,14 @@\n   font-size: 0.78rem;\n }\n \n-@media (max-width: 600px) {\n+@media (max-width: 560px) {\n   .main {\n     width: min(100% - 28px, 760px);\n-    padding-top: 72px;\n+    padding: 24px 0 80px;\n   }\n \n-  /* 좁은 화면에서는 이름 묶음과 대표 ETF를 아래위로 쌓는다. */\n-  .item [data-slot='choice'] {\n-    flex-direction: column;\n-    align-items: flex-start;\n-  }\n-\n-  .item [data-slot='etf'] {\n-    margin-left: 0;\n+  .list {\n+    grid-template-columns: 1fr;\n   }\n \n   /*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -170,14 +170,14 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {\n       ) : null}\n \n       {/*\n-        초깃값이 입력 편의를 위한 예시이며 투자 권고가 아니라는 표시다. 비중 입력 칸이 하나\n-        이상 있을 때 **항상** 둔다(FR-005, 원칙 III, research.md 결정 7).\n+        선택 전후 같은 자리를 유지해 카드 목록이 갑자기 밀리지 않게 한다. 선택 뒤에는 초깃값이\n+        입력 편의를 위한 예시이며 투자 권고가 아니라는 사실을 알린다(FR-005, 원칙 III).\n       */}\n-      {selectedCount > 0 ? (\n-        <p className={styles.initialValueNotice}>\n-          채워진 비중은 입력 편의를 위한 예시이며 투자 권고가 아닙니다. 직접 고쳐서 쓰세요.\n-        </p>\n-      ) : null}\n+      <p className={styles.initialValueNotice} aria-live=\"polite\">\n+        {selectedCount > 0\n+          ? '채워진 비중은 입력 편의를 위한 예시이며 투자 권고가 아닙니다. 직접 고쳐서 쓰세요.'\n+          : '섹터를 선택하면 카드 안에서 비중을 바로 조절할 수 있습니다.'}\n+      </p>\n \n       {/*\n         `list-style: none`이 걸리면 Safari와 VoiceOver 조합에서 `<ul>`의 목록 역할이 사라진다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -142,6 +142,8 @@ describe('섹터 선택 화면의 비중 규칙', () => {\n \n     expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)\n     expect(screen.queryByText(/합계/)).toBeNull()\n+    expect(screen.getByText(/선택하면 카드 안에서 비중을 바로 조절/)).toBeTruthy()\n+    expect(screen.queryByRole('button', { name: '전략 고르러 가기' })).toBeNull()\n     // 아직 아무것도 고르지 않았으므로 두 개 이상 안내도 띄우지 않는다.\n     expect(screen.queryByText(/두 개 이상/)).toBeNull()\n   })\n@@ -154,6 +156,11 @@ describe('섹터 선택 화면의 비중 규칙', () => {\n \n     expect(shownWeights()).toEqual([50, 50])\n     expect(totalText()).toContain('100.0')\n+    expect(screen.getByText(/투자 권고가 아닙니다/)).toBeTruthy()\n+    expect(screen.queryByText(/선택하면 카드 안에서 비중을 바로 조절/)).toBeNull()\n+    expect(screen.getByRole('button', { name: '전략 고르러 가기' }).hasAttribute('disabled')).toBe(\n+      false,\n+    )\n   })\n \n   it('시나리오 2. 섹터 3개를 고르면 33.4 / 33.3 / 33.3이 보이고 예시라는 표시가 함께 보인다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionWeights.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionWeights.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,10 +11,10 @@\n \n .main {\n   display: grid;\n-  gap: 22px;\n-  width: min(100% - 40px, 760px);\n+  gap: 16px;\n+  width: min(100% - 40px, 960px);\n   margin: 0 auto;\n-  padding: clamp(90px, 15vh, 160px) 0 80px;\n+  padding: clamp(30px, 5vh, 56px) 0 80px;\n }\n \n .title {\n@@ -25,7 +25,7 @@\n }\n \n .lead {\n-  margin: -10px 0 0;\n+  margin: -6px 0 2px;\n   color: var(--thorp-copy);\n   font-size: clamp(0.92rem, 1.7vw, 1rem);\n   line-height: 1.7;\n@@ -102,6 +102,17 @@\n   gap: 12px;\n }\n \n+.selectionPanel {\n+  position: relative;\n+  z-index: 1;\n+  padding: 16px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-left: 3px solid var(--thorp-accent);\n+  border-radius: 10px;\n+  background: rgb(7 17 11 / 98%);\n+  box-shadow: 0 14px 38px rgb(0 0 0 / 26%);\n+}\n+\n .sectionTitle {\n   margin: 0;\n   font-size: 1.05rem;\n@@ -173,7 +184,7 @@\n @media (max-width: 600px) {\n   .main {\n     width: min(100% - 28px, 760px);\n-    padding-top: 72px;\n+    padding-top: 24px;\n   }\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.module.css",
+          "old_path": "frontend/src/pages/StrategySettingsPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -959,98 +959,123 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n                 onSelect={handleSelect}\n                 onRetry={reloadRegistry}\n                 judgeWarmup={judgeWarmup}\n+                selectedContent={\n+                  settings.ready && settings.selectedStrategy && selectedId !== null ? (\n+                    <section\n+                      className={`${styles.section} ${styles.selectionPanel}`}\n+                      aria-labelledby=\"selected-strategy-title\"\n+                    >\n+                      <h2 id=\"selected-strategy-title\" className={styles.sectionTitle}>\n+                        선택한 전략: {settings.selectedStrategy.name}\n+                      </h2>\n+\n+                      <SettingsStatusBadge isDefault={settings.isDefault(selectedId)} />\n+\n+                      <ConditionSummaryLine\n+                        period={period}\n+                        sectorCount={universeSize ?? 0}\n+                        initialAmount={\n+                          initialAmount === null\n+                            ? null\n+                            : {\n+                                value: initialAmount,\n+                                unit: registry?.analysisConditions.initialAmount.unit,\n+                              }\n+                        }\n+                        costProfile={costProfile}\n+                      />\n+\n+                      {unbalancedUserWeights && selection.status === 'ready' ? (\n+                        <div className={styles.weightNotice} role=\"status\">\n+                          <p>{weightsUnbalancedMessage(selection.weights.totalTenths)}</p>\n+                          <button type=\"button\" onClick={() => navigate('/diagnosis/sectors')}>\n+                            섹터·비중 단계로 이동\n+                          </button>\n+                        </div>\n+                      ) : null}\n+\n+                      {strategyInvalid.length > 0 ? (\n+                        <InvalidValueList\n+                          label=\"다시 확인할 설정값\"\n+                          entries={strategyInvalid}\n+                          onRestore={restoreInvalidValue}\n+                        />\n+                      ) : null}\n+\n+                      {selectedJudgement &&\n+                      (selectedJudgement.verdict.state === 'blocked' ||\n+                        selectedJudgement.verdict.state === 'unknown') ? (\n+                        <p\n+                          className={styles.judgement}\n+                          role=\"status\"\n+                          data-state={selectedJudgement.verdict.state}\n+                        >\n+                          {selectedJudgement.verdict.message}\n+                        </p>\n+                      ) : null}\n+\n+                      {periodOutOfRange || periodTooShort ? (\n+                        <div className={styles.weightNotice} role=\"status\">\n+                          <p>\n+                            {periodOutOfRange && evaluableRange\n+                              ? periodOutOfRangeMessage(evaluableRange)\n+                              : periodTooShortMessage(minEvaluationYearsLabel)}\n+                          </p>\n+                          {chosenPeriod !== null ? (\n+                            <button\n+                              type=\"button\"\n+                              onClick={() => settings.resetAnalysisCondition('period')}\n+                            >\n+                              범위 전체로 되돌리기\n+                            </button>\n+                          ) : null}\n+                        </div>\n+                      ) : null}\n+\n+                      <ReducedPeriodNotice\n+                        input={reducedPeriod}\n+                        fallbackMessage={\n+                          selectedJudgement?.verdict.state === 'reduced'\n+                            ? selectedJudgement.verdict.message\n+                            : undefined\n+                        }\n+                      />\n+\n+                      <ActionButtons\n+                        analyze={{\n+                          disabled: analyzeBlocker !== null,\n+                          reason: analyzeBlocker ?? undefined,\n+                          busy: submission.status === 'sending',\n+                        }}\n+                        autoCompare={{\n+                          disabled: autoCompareBlocker !== null,\n+                          reason: autoCompareBlocker ?? undefined,\n+                        }}\n+                        onAnalyze={() => {\n+                          void handleAnalyze()\n+                        }}\n+                        onAutoCompare={handleAutoCompare}\n+                      />\n+\n+                      {settings.values !== null && universeSize !== null ? (\n+                        <DetailSettingsPanel\n+                          strategy={settings.selectedStrategy}\n+                          values={settings.values}\n+                          universeSize={universeSize}\n+                          targetWeights={targetWeights}\n+                          onChange={(axisName, value) =>\n+                            settings.setValue(selectedId, axisName, value)\n+                          }\n+                          onResetAxis={(axisName) => settings.resetAxis(selectedId, axisName)}\n+                          onResetAll={() => settings.resetAll(selectedId)}\n+                        />\n+                      ) : null}\n+                    </section>\n+                  ) : undefined\n+                }\n               />\n             </section>\n \n-            {settings.ready && settings.selectedStrategy && selectedId !== null ? (\n-              <section className={styles.section} aria-labelledby=\"selected-strategy-title\">\n-                <h2 id=\"selected-strategy-title\" className={styles.sectionTitle}>\n-                  선택한 전략: {settings.selectedStrategy.name}\n-                </h2>\n-\n-                <SettingsStatusBadge isDefault={settings.isDefault(selectedId)} />\n-\n-                <ConditionSummaryLine\n-                  period={period}\n-                  sectorCount={universeSize ?? 0}\n-                  initialAmount={\n-                    initialAmount === null\n-                      ? null\n-                      : { value: initialAmount, unit: registry?.analysisConditions.initialAmount.unit }\n-                  }\n-                  costProfile={costProfile}\n-                />\n-\n-                {/*\n-                  사용자 비중의 합계가 어긋났다는 안내와 되돌아갈 길이다(T091). '분석하기' 아래의 이유\n-                  문장만으로는 고칠 자리가 다른 화면이라는 것까지 알려 주지 못해 이동 수단을 함께 둔다.\n-                */}\n-                {unbalancedUserWeights && selection.status === 'ready' ? (\n-                  <div className={styles.weightNotice} role=\"status\">\n-                    <p>{weightsUnbalancedMessage(selection.weights.totalTenths)}</p>\n-                    <button type=\"button\" onClick={() => navigate('/diagnosis/sectors')}>\n-                      섹터·비중 단계로 이동\n-                    </button>\n-                  </div>\n-                ) : null}\n-\n-                {strategyInvalid.length > 0 ? (\n-                  <InvalidValueList\n-                    label=\"다시 확인할 설정값\"\n-                    entries={strategyInvalid}\n-                    onRestore={restoreInvalidValue}\n-                  />\n-                ) : null}\n-\n-                {/*\n-                  줄어든 기간(`reduced`)은 '분석하기' 바로 위의 안내가 맡는다. 여기서도 보이면 같은 문장이\n-                  한 화면에 세 번 나온다(카드·여기·버튼 위).\n-                */}\n-                {selectedJudgement &&\n-                (selectedJudgement.verdict.state === 'blocked' ||\n-                  selectedJudgement.verdict.state === 'unknown') ? (\n-                  <p className={styles.judgement} role=\"status\" data-state={selectedJudgement.verdict.state}>\n-                    {selectedJudgement.verdict.message}\n-                  </p>\n-                ) : null}\n-\n-                {/*\n-                  접힌 채로 시작해 기본 화면의 입력을 늘리지 않는다(SC-005). 값을 바꾸면 위의 기본 설정\n-                  표시·카드 판정·'분석하기'가 그 자리에서 다시 계산되고 서버로 요청이 나가지 않는다.\n-                */}\n-                {settings.values !== null && universeSize !== null ? (\n-                  <DetailSettingsPanel\n-                    strategy={settings.selectedStrategy}\n-                    values={settings.values}\n-                    universeSize={universeSize}\n-                    targetWeights={targetWeights}\n-                    onChange={(axisName, value) => settings.setValue(selectedId, axisName, value)}\n-                    onResetAxis={(axisName) => settings.resetAxis(selectedId, axisName)}\n-                    onResetAll={() => settings.resetAll(selectedId)}\n-                  />\n-                ) : null}\n-                {/*\n-                  고른 기간이 지금 범위를 벗어났거나 최소 평가 기간보다 짧으면, 패널이 접혀 있어도 보이게\n-                  알린다. 되돌리기는 범위 전체로만 돌리고 날짜를 대신 골라 주지 않는다.\n-                */}\n-                {periodOutOfRange || periodTooShort ? (\n-                  <div className={styles.weightNotice} role=\"status\">\n-                    <p>\n-                      {periodOutOfRange && evaluableRange\n-                        ? periodOutOfRangeMessage(evaluableRange)\n-                        : periodTooShortMessage(minEvaluationYearsLabel)}\n-                    </p>\n-                    {chosenPeriod !== null ? (\n-                      <button type=\"button\" onClick={() => settings.resetAnalysisCondition('period')}>\n-                        범위 전체로 되돌리기\n-                      </button>\n-                    ) : null}\n-                  </div>\n-                ) : null}\n-\n-              </section>\n-            ) : null}\n-\n             {/*\n               전략을 고르기 전에도 닿는 자리에 둔다(T102). 최소 평가 기간은 카드의 선택 가능 여부를 바꾸는\n               값이라, 그 값이 모든 카드를 막으면 선택에 묶인 입력으로는 되돌릴 길이 없다(FR-011a). 접힌 채로\n@@ -1084,15 +1109,21 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n               />\n             ) : null}\n \n-            {/* '분석하기' 바로 위. 고른 카드와 같은 문장이다(SC-004). */}\n-            {settings.ready && settings.selectedStrategy ? (\n-              <ReducedPeriodNotice\n-                input={reducedPeriod}\n-                fallbackMessage={\n-                  selectedJudgement?.verdict.state === 'reduced'\n-                    ? selectedJudgement.verdict.message\n-                    : undefined\n-                }\n+            {!settings.selectedStrategy ? (\n+              <ActionButtons\n+                analyze={{\n+                  disabled: analyzeBlocker !== null,\n+                  reason: analyzeBlocker ?? undefined,\n+                  busy: submission.status === 'sending',\n+                }}\n+                autoCompare={{\n+                  disabled: autoCompareBlocker !== null,\n+                  reason: autoCompareBlocker ?? undefined,\n+                }}\n+                onAnalyze={() => {\n+                  void handleAnalyze()\n+                }}\n+                onAutoCompare={handleAutoCompare}\n               />\n             ) : null}\n \n@@ -1118,23 +1149,6 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n                 </button>\n               </div>\n             ) : null}\n-\n-            <ActionButtons\n-              analyze={{\n-                disabled: analyzeBlocker !== null,\n-                reason: analyzeBlocker ?? undefined,\n-                busy: submission.status === 'sending',\n-              }}\n-              autoCompare={{\n-                disabled: autoCompareBlocker !== null,\n-                reason: autoCompareBlocker ?? undefined,\n-              }}\n-              onAnalyze={() => {\n-                void handleAnalyze()\n-              }}\n-              onAutoCompare={handleAutoCompare}\n-            />\n-\n             {registryChanged ? (\n               <RegistryChangedNotice\n                 phase={registryReloadPhase}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -98,6 +98,11 @@\n   --chart-scale-pattern-color: #0a160f;\n }\n \n+html {\n+  /* 동적으로 내용이 늘어나도 가운데 정렬된 화면이 스크롤바 너비만큼 흔들리지 않게 한다. */\n+  scrollbar-gutter: stable;\n+}\n+\n body {\n   margin: 0;\n   min-height: 100vh;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/index.css",
+          "old_path": "frontend/src/index.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2837069": []
+  }
+}

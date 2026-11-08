@@ -1,0 +1,1511 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942166,
+    "iid": 67,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 v2 저장·조회 API — /weights·/exceptions, summary 확장, 취소 요청 읽기 필터 (T009, S15P21E205-146)",
+    "description": "# 작업 내용 요약\n\nspec 004 T009입니다. FINISHED의 v2 블록(비중 기록·비용·청산·분석·예외·버전)을 `backtest_result`에 저장하고, `GET /backtests/{id}/weights`·`/exceptions`를 새로 열었습니다. 상세 `summary`에 v2 항목 여섯(핵심 숫자 `netTotalReturn`·`totalTradingCost`, `costs`, `liquidation`, `analytics{recoveryDays, turnover}`, `exceptionCount`)을 붙였고, `/trades`에 `reason`·`plannedDate`, `/timeseries`에 `cashFlows`를 더했습니다. T005가 T009 몫으로 미룬 **먼저 취소한 요청의 읽기 필터**(R-04)도 여기서 붙였습니다.\n\n**커밋을 셋으로 나눴습니다.** 저장·조회 → API → 문서.\n\n| 커밋 | 내용 |\n|---|---|\n| `6d5ea74` | 엔티티에 v2 열 7개 매핑, `findSummary` 확장(costs·liquidation·analytics·예외 건수), `findBlocks`(비중·예외) 신설. 저장소 테스트 + 프로젝션 테스트 |\n| `0376aaf` | `/weights`·`/exceptions` 엔드포인트, `summary` 확장, `reason`·`plannedDate`·`cashFlows`·`partial`, 취소 요청 읽기 필터(`ResultView`), 계약 예시 5개 갱신·신설, 단위·컨트롤러·IT 테스트 |\n| `7a76b50` | API README §2.1·§2.5~2.7·§3, backend CLAUDE.md, tasks.md T009 완료·결정 ①~⑦ |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-146\n- link https://ssafy.atlassian.net/browse/S15P21E205-146\n- 선행: S15P21E205-135(T005 접수·상태 API), S15P21E205-142(T008 지표)\n- 뒤: S15P21E205-149(T011 취소 — `BacktestRequest.cancel`을 부르면 이 MR의 읽기 필터가 그대로 동작), S15P21E205-154(T013 — API README §4의 \"현재 엔진은 1종목\" 문구 정리)\n\n# 주요 변경 사항\n\n- **마이그레이션 없음.** T003(`V20260911111000`)이 `weights_series`·`weights_source`·`costs`·`liquidation`·`analytics`·`exceptions`·`versions` 열을 이미 만들어 두었습니다. `BacktestResultJpaEntity`에 매핑만 붙여 `EngineOutput`을 그대로 저장합니다(결과 도메인 모델 없음, 기존 규칙).\n- **요약 조회 확장** — `findSummaryRow`가 `costs::text`·`liquidation::text`·`analytics::text`와 `COALESCE(jsonb_array_length(exceptions), 0)`을 함께 읽습니다. 시계열은 여전히 읽지 않습니다(`BacktestResultProjectionTest`가 `portfolio_series`를 깨진 JSON으로 바꿔 놓고 요약·블록 조회가 성공하는지로 고정).\n- **`findBlocks`** — 비중 기록·비중 출처·예외 기록을 한 조회로. 둘 다 KB 단위라 엔드포인트별로 쪼개지 않았습니다. 열이 null이면 빈 리스트(결과 행 없음 = 빈 Optional과 구분).\n- **`/weights`** — `points[{date, target, actual, weightError, riskScale?, estimatedVolatility?}]` + `weightsSource`. 비중 맵 값은 `@JsonSerialize(contentUsing = PlainBigDecimalSerializer)`로 문자열. TARGET_RISK 아닌 실행은 두 키를 생략합니다(quickstart S11이 이 리소스로 `riskScale`을 확인).\n- **`/exceptions`** — `items[{date, instrumentId?, kind, rule?, action?}]`. `kind`는 개방 집합.\n- **`summary` v2** — 기존 열두 항목은 그대로 두고 여섯을 더했습니다(하위 호환). `analytics`는 요약에 `recoveryDays`·`turnover`만(rest-api.md 그대로), 나머지 파생 지표는 저장만 합니다.\n- **취소 요청 읽기 필터(R-04)** — `requireResultReady`가 `ResultView(run, cutoff, partial)`를 돌려줍니다. 먼저 취소해 실행이 계속 돈 요청(`isCancelled && !isStoppedRun`)은 `cutoff = cancelledLastTradingDate`이고, 시계열·보유·비중·예외는 `cutoff` 이하만, 거래는 `cutoff` 다음 날 0시(Asia/Seoul) 전 진입만 저장소 파라미터 `entryTimeBefore`로 자릅니다(DB 페이징이라 서비스에서 자르면 건수가 틀어집니다). `cutoff`가 null(첫 PROGRESS 전 취소)이면 409 `NO_PARTIAL_RESULT`. 지표는 다시 계산하지 않습니다.\n- **`partial`** — 하위 리소스 응답 다섯 개에 `요청 취소 || 실행 partial`. 예시 파일에도 `partial: false`를 추가했습니다.\n- **키 생략 규칙** — `plannedDate`·`cashFlows`·`riskScale`·`estimatedVolatility`·예외 `instrumentId`는 null이면 키를 뺍니다(`benchmarkReturn`과 같은 방식). `reason`은 항상 있습니다.\n- **거래소 시간대 상수** — `ExecutionPolicy.EXCHANGE_ZONE`을 두고 거래 응답의 `entryDate` 변환과 서비스의 거래 경계가 같은 값을 씁니다.\n- **계약 예시** — `backtest-weights.json`·`backtest-exceptions.json` 신설(메시징 픽스처 `event-finished-completed.json`을 투영), `backtest-detail.json` summary 확장, `backtest-trades.json`에 `reason`·`partial`, `backtest-timeseries.json`에 `partial`. `BacktestResultApiIT`가 여섯 리소스 모두 예시와 동치인지 단언합니다.\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` — **763 tests, 0 failures**(skipped 2: `MarketLiveApiTest` 외부 API, `RequiredDockerTest` CI 전용 — 기존과 같음). Docker Desktop을 띄워 PostgreSQL IT 전부 실제로 돌렸습니다\n- [x] TDD: 저장소·프로젝션 테스트(v2 getter·`findBlocks`) → 컴파일 실패 확인 → 매핑·쿼리 구현. 서비스·컨트롤러·IT 테스트(`getWeights`·`getExceptions`·취소 필터·`findTrades` 3-인자) → 컴파일 실패 확인 → 구현\n- [x] 새 테스트: `BacktestResultRepositoryImplTest`(v2 getter 7개), `BacktestResultProjectionTest`(요약 v2 항목·`findBlocks`·시계열 미읽음), `BacktestResultQueryServiceTest`(summary v2, weights/exceptions, 취소 스냅샷 자르기, NO_PARTIAL_RESULT, 거래 진입 경계), `BacktestControllerTest`(두 엔드포인트·요청자 헤더), `BacktestResultApiIT`(weights·exceptions 예시 동치, 409·404·500 경로에 두 리소스 추가)\n- [x] `git diff --check origin/dev...HEAD` 통과\n- [x] 워커 변경 없음\n\n# 리뷰 포인트\n\n- **취소 읽기 필터를 T011 전에 붙였습니다.** T005 결정 ⑥은 T009 몫이라 했고 tasks.md T009 항목은 \"T011 이후 활성\"이라 해서 둘이 어긋났는데, 필터는 `BacktestRequest`의 취소 필드만 읽으므로 T011이 그 필드를 채우기 시작하면 바로 동작합니다. 지금은 취소 경로가 없어 운영에서 죽은 코드지만 단위 테스트로 고정했습니다.\n- **거래 경계를 진입 시각으로 잡았습니다.** 스냅샷 날짜에 진입해 그 뒤 청산된 거래는 `CLOSED`로 보이는데, `exitDate`가 스냅샷을 넘습니다. \"진입만 스냅샷 안\"이 맞는지, 아니면 청산도 스냅샷 안인 거래만 보일지는 결정이 필요합니다. 후자면 `exit_time` 조건 하나가 늘어납니다.\n- **`summary`에 v1 열두 항목을 남겼습니다.** 계약 본문은 v2 여섯만 말하지만 기존 프론트가 `totalReturn`·`sharpeRatio` 등을 쓰고 있을 수 있어 뺄 근거가 없었습니다. 정리하려면 FE와 같은 MR에서.\n- **`versions.rules.provisional`은 여전히 비어 있습니다**(T008 결정 ③). 결과 JSONB `versions`는 저장되지만 상세 응답 `versions`는 접수 계획의 값이고, 조립기가 규칙 사본에 `provisional`을 넣는 변경은 접수 경로라 별도 티켓을 제안합니다.\n- API README §4의 \"현재 엔진은 1종목만 처리한다\"·\"같은 조건으로 다시 요청하면 항상 새 Job\" 문구는 T006·T005 이후 틀렸지만 이 MR 범위 밖이라 T013 정리로 남겼습니다.",
+    "state": "merged",
+    "created_at": "2026-09-13T20:27:26.986+09:00",
+    "updated_at": "2026-09-14T14:34:17.637+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-13T20:48:38.973+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/146-result-v2-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "93d236874373e25039230ff6fe5b219e96bd0d15",
+    "merge_commit_sha": "61ce548ba9db033c0b4e1292cc43f775b3e6b35f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T20:27:29.718+09:00",
+    "reference": "!67",
+    "references": {
+      "short": "!67",
+      "relative": "!67",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!67"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/67",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942166,
+    "iid": 67,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 v2 저장·조회 API — /weights·/exceptions, summary 확장, 취소 요청 읽기 필터 (T009, S15P21E205-146)",
+    "description": "# 작업 내용 요약\n\nspec 004 T009입니다. FINISHED의 v2 블록(비중 기록·비용·청산·분석·예외·버전)을 `backtest_result`에 저장하고, `GET /backtests/{id}/weights`·`/exceptions`를 새로 열었습니다. 상세 `summary`에 v2 항목 여섯(핵심 숫자 `netTotalReturn`·`totalTradingCost`, `costs`, `liquidation`, `analytics{recoveryDays, turnover}`, `exceptionCount`)을 붙였고, `/trades`에 `reason`·`plannedDate`, `/timeseries`에 `cashFlows`를 더했습니다. T005가 T009 몫으로 미룬 **먼저 취소한 요청의 읽기 필터**(R-04)도 여기서 붙였습니다.\n\n**커밋을 셋으로 나눴습니다.** 저장·조회 → API → 문서.\n\n| 커밋 | 내용 |\n|---|---|\n| `6d5ea74` | 엔티티에 v2 열 7개 매핑, `findSummary` 확장(costs·liquidation·analytics·예외 건수), `findBlocks`(비중·예외) 신설. 저장소 테스트 + 프로젝션 테스트 |\n| `0376aaf` | `/weights`·`/exceptions` 엔드포인트, `summary` 확장, `reason`·`plannedDate`·`cashFlows`·`partial`, 취소 요청 읽기 필터(`ResultView`), 계약 예시 5개 갱신·신설, 단위·컨트롤러·IT 테스트 |\n| `7a76b50` | API README §2.1·§2.5~2.7·§3, backend CLAUDE.md, tasks.md T009 완료·결정 ①~⑦ |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-146\n- link https://ssafy.atlassian.net/browse/S15P21E205-146\n- 선행: S15P21E205-135(T005 접수·상태 API), S15P21E205-142(T008 지표)\n- 뒤: S15P21E205-149(T011 취소 — `BacktestRequest.cancel`을 부르면 이 MR의 읽기 필터가 그대로 동작), S15P21E205-154(T013 — API README §4의 \"현재 엔진은 1종목\" 문구 정리)\n\n# 주요 변경 사항\n\n- **마이그레이션 없음.** T003(`V20260911111000`)이 `weights_series`·`weights_source`·`costs`·`liquidation`·`analytics`·`exceptions`·`versions` 열을 이미 만들어 두었습니다. `BacktestResultJpaEntity`에 매핑만 붙여 `EngineOutput`을 그대로 저장합니다(결과 도메인 모델 없음, 기존 규칙).\n- **요약 조회 확장** — `findSummaryRow`가 `costs::text`·`liquidation::text`·`analytics::text`와 `COALESCE(jsonb_array_length(exceptions), 0)`을 함께 읽습니다. 시계열은 여전히 읽지 않습니다(`BacktestResultProjectionTest`가 `portfolio_series`를 깨진 JSON으로 바꿔 놓고 요약·블록 조회가 성공하는지로 고정).\n- **`findBlocks`** — 비중 기록·비중 출처·예외 기록을 한 조회로. 둘 다 KB 단위라 엔드포인트별로 쪼개지 않았습니다. 열이 null이면 빈 리스트(결과 행 없음 = 빈 Optional과 구분).\n- **`/weights`** — `points[{date, target, actual, weightError, riskScale?, estimatedVolatility?}]` + `weightsSource`. 비중 맵 값은 `@JsonSerialize(contentUsing = PlainBigDecimalSerializer)`로 문자열. TARGET_RISK 아닌 실행은 두 키를 생략합니다(quickstart S11이 이 리소스로 `riskScale`을 확인).\n- **`/exceptions`** — `items[{date, instrumentId?, kind, rule?, action?}]`. `kind`는 개방 집합.\n- **`summary` v2** — 기존 열두 항목은 그대로 두고 여섯을 더했습니다(하위 호환). `analytics`는 요약에 `recoveryDays`·`turnover`만(rest-api.md 그대로), 나머지 파생 지표는 저장만 합니다.\n- **취소 요청 읽기 필터(R-04)** — `requireResultReady`가 `ResultView(run, cutoff, partial)`를 돌려줍니다. 먼저 취소해 실행이 계속 돈 요청(`isCancelled && !isStoppedRun`)은 `cutoff = cancelledLastTradingDate`이고, 시계열·보유·비중·예외는 `cutoff` 이하만, 거래는 `cutoff` 다음 날 0시(Asia/Seoul) 전 진입만 저장소 파라미터 `entryTimeBefore`로 자릅니다(DB 페이징이라 서비스에서 자르면 건수가 틀어집니다). `cutoff`가 null(첫 PROGRESS 전 취소)이면 409 `NO_PARTIAL_RESULT`. 지표는 다시 계산하지 않습니다.\n- **`partial`** — 하위 리소스 응답 다섯 개에 `요청 취소 || 실행 partial`. 예시 파일에도 `partial: false`를 추가했습니다.\n- **키 생략 규칙** — `plannedDate`·`cashFlows`·`riskScale`·`estimatedVolatility`·예외 `instrumentId`는 null이면 키를 뺍니다(`benchmarkReturn`과 같은 방식). `reason`은 항상 있습니다.\n- **거래소 시간대 상수** — `ExecutionPolicy.EXCHANGE_ZONE`을 두고 거래 응답의 `entryDate` 변환과 서비스의 거래 경계가 같은 값을 씁니다.\n- **계약 예시** — `backtest-weights.json`·`backtest-exceptions.json` 신설(메시징 픽스처 `event-finished-completed.json`을 투영), `backtest-detail.json` summary 확장, `backtest-trades.json`에 `reason`·`partial`, `backtest-timeseries.json`에 `partial`. `BacktestResultApiIT`가 여섯 리소스 모두 예시와 동치인지 단언합니다.\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` — **763 tests, 0 failures**(skipped 2: `MarketLiveApiTest` 외부 API, `RequiredDockerTest` CI 전용 — 기존과 같음). Docker Desktop을 띄워 PostgreSQL IT 전부 실제로 돌렸습니다\n- [x] TDD: 저장소·프로젝션 테스트(v2 getter·`findBlocks`) → 컴파일 실패 확인 → 매핑·쿼리 구현. 서비스·컨트롤러·IT 테스트(`getWeights`·`getExceptions`·취소 필터·`findTrades` 3-인자) → 컴파일 실패 확인 → 구현\n- [x] 새 테스트: `BacktestResultRepositoryImplTest`(v2 getter 7개), `BacktestResultProjectionTest`(요약 v2 항목·`findBlocks`·시계열 미읽음), `BacktestResultQueryServiceTest`(summary v2, weights/exceptions, 취소 스냅샷 자르기, NO_PARTIAL_RESULT, 거래 진입 경계), `BacktestControllerTest`(두 엔드포인트·요청자 헤더), `BacktestResultApiIT`(weights·exceptions 예시 동치, 409·404·500 경로에 두 리소스 추가)\n- [x] `git diff --check origin/dev...HEAD` 통과\n- [x] 워커 변경 없음\n\n# 리뷰 포인트\n\n- **취소 읽기 필터를 T011 전에 붙였습니다.** T005 결정 ⑥은 T009 몫이라 했고 tasks.md T009 항목은 \"T011 이후 활성\"이라 해서 둘이 어긋났는데, 필터는 `BacktestRequest`의 취소 필드만 읽으므로 T011이 그 필드를 채우기 시작하면 바로 동작합니다. 지금은 취소 경로가 없어 운영에서 죽은 코드지만 단위 테스트로 고정했습니다.\n- **거래 경계를 진입 시각으로 잡았습니다.** 스냅샷 날짜에 진입해 그 뒤 청산된 거래는 `CLOSED`로 보이는데, `exitDate`가 스냅샷을 넘습니다. \"진입만 스냅샷 안\"이 맞는지, 아니면 청산도 스냅샷 안인 거래만 보일지는 결정이 필요합니다. 후자면 `exit_time` 조건 하나가 늘어납니다.\n- **`summary`에 v1 열두 항목을 남겼습니다.** 계약 본문은 v2 여섯만 말하지만 기존 프론트가 `totalReturn`·`sharpeRatio` 등을 쓰고 있을 수 있어 뺄 근거가 없었습니다. 정리하려면 FE와 같은 MR에서.\n- **`versions.rules.provisional`은 여전히 비어 있습니다**(T008 결정 ③). 결과 JSONB `versions`는 저장되지만 상세 응답 `versions`는 접수 계획의 값이고, 조립기가 규칙 사본에 `provisional`을 넣는 변경은 접수 경로라 별도 티켓을 제안합니다.\n- API README §4의 \"현재 엔진은 1종목만 처리한다\"·\"같은 조건으로 다시 요청하면 항상 새 Job\" 문구는 T006·T005 이후 틀렸지만 이 MR 범위 밖이라 T013 정리로 남겼습니다.",
+    "state": "merged",
+    "created_at": "2026-09-13T20:27:26.986+09:00",
+    "updated_at": "2026-09-14T14:34:17.637+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-13T20:48:38.973+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/146-result-v2-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "93d236874373e25039230ff6fe5b219e96bd0d15",
+    "merge_commit_sha": "61ce548ba9db033c0b4e1292cc43f775b3e6b35f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T20:27:29.718+09:00",
+    "reference": "!67",
+    "references": {
+      "short": "!67",
+      "relative": "!67",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!67"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/67",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "39",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "head_sha": "93d236874373e25039230ff6fe5b219e96bd0d15",
+      "start_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "38ca85c8ee6cba241ccee38c4b53ea335375a84f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798078,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T20:27:27.297+09:00",
+          "updated_at": "2026-09-13T20:27:27.304+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "80176d108dce8bad70101dc5d8f6c4ffc1911c07",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798079,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 계층 분리와 설계 문서화**: 비즈니스 요구사항(R-04, FR-026 등)과 아키텍처 결정을 코드 내 주석과 설명에 상세히 기록하여 가독성과 유지보수성을 크게 높였습니다.\n- **견고한 테스트 커버리지**: 단위 테스트뿐만 아니라 통합 테스트(IT)와 프로젝션 테스트, API 계약 예시 동치성 검증까지 촘촘하게 구현되어 변경 사항의 안정성을 잘 확보했습니다.\n\n### 발견 사항\n\n- [High] `backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaRepository.java`\n  - JPQL 내 `AND (CAST(:visibleBefore AS java.time.Instant) IS NULL OR t.exitTime < :visibleBefore)` 구문에서 Hibernate/JPA 구현체에 따라 `CAST(... AS java.time.Instant)` 문법이 데이터베이스 방언(Dialect)에 맞춰 올바르게 변환되지 않거나 예외를 유발할 수 있습니다. `(:visibleBefore IS NULL OR t.exitTime < :visibleBefore)` 형태로 파라미터 타입을 직접 바인딩하는 방식을 권장합니다.\n\n- [Medium] `backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java`\n  - `ResultView.tradesVisibleBefore()`에서 `cutoff.plusDays(1).atStartOfDay(ExecutionPolicy.EXCHANGE_ZONE).toInstant()`를 계산할 때, 서머타임(DST)이나 시간대 변경 시점에 따라 하루의 시작 시각 계산이 의도와 달라질 수 있습니다(`ZoneId.of(\"Asia/Seoul\")`은 DST가 없어 비교적 안전하지만 잠재적 리스크 존재). 날짜 연산(LocalDate 기준 비교)을 인스턴스 변환 전 혹은 DB 쿼리 레벨에서 안전하게 처리하는지 검토가 필요합니다.\n\n### 테스트 제안\n- **취소 요청 경계 시나리오 테스트**: `cutoff` 날짜와 정확히 일치하는 시점에 청산된 거래, 그리고 `cutoff` 다음 날 새벽에 청산된 거래가 각각 `visibleBefore` 필터링에 의해 올바르게 포함되거나 제외되는지 경계값(Boundary) 테스트를 추가하세요.\n- **`NO_PARTIAL_RESULT` 예외 시나리오 테스트**: 첫 PROGRESS 이벤트 발생 전 취소된 백테스트에 대해 하위 리소스(`/timeseries`, `/weights` 등)를 호출했을 때 409(`NO_PARTIAL_RESULT`) 응답이 정확히 반환되는지 통합 테스트로 검증하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:93d236874373e25039230ff6fe5b219e96bd0d15 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-13T20:27:37.373+09:00",
+          "updated_at": "2026-09-13T20:43:19.022+09:00",
+          "system": false,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2397041532e9bec637d97e3e9e6fb715a2fa7e44",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798085,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>7d94288e - fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/67/diffs?diff_id=2190807&start_sha=7a76b50386980275960e89e837b4722dcf5a628c)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T20:33:55.159+09:00",
+          "updated_at": "2026-09-13T20:33:55.163+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3bd28589a248a468a3c44dba1d3596a4eb714473",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798104,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>da366519 - fix(be): 먼저 취소한 요청의 거래는 경계 전에 청산된 것만 보인다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/67/diffs?diff_id=2190825&start_sha=7d94288ec4351f0c3fd645f01ba3b48caebd4a64)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T20:41:00.947+09:00",
+          "updated_at": "2026-09-13T20:41:00.951+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "12608ad5b75eda473586acc24cd79ff5bce9fdaf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798108,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>93d23687 - fix(be): 먼저 취소한 요청의 거래는 경계 전에 청산된 것만 보인다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/67/diffs?diff_id=2190827&start_sha=da366519326808e04aebd36f9a09deabb3da0e8e)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T20:43:10.517+09:00",
+          "updated_at": "2026-09-13T20:43:10.521+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7a4b8ce7b1ad8694e88123966c263767a1b818d0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798112,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T20:48:37.159+09:00",
+          "updated_at": "2026-09-13T20:48:37.170+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b7faa188eca101abe068e9ccd524f1d7360efe02",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798113,
+          "type": null,
+          "body": "mentioned in commit 61ce548ba9db033c0b4e1292cc43f775b3e6b35f",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T20:48:39.414+09:00",
+          "updated_at": "2026-09-13T20:48:39.422+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "14f7547dffa66c876dd73096e51858e85a39814f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802166,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:34:17.597+09:00",
+          "updated_at": "2026-09-14T14:34:17.601+09:00",
+          "system": true,
+          "noteable_id": 942166,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 67,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2190827,
+      "head_commit_sha": "93d236874373e25039230ff6fe5b219e96bd0d15",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:43:10.208+09:00",
+      "merge_request_id": 942166,
+      "state": "collected",
+      "real_size": "39",
+      "patch_id_sha": "74f44673aa0dfe90f616e506ad8f77c7ea157026"
+    },
+    {
+      "id": 2190825,
+      "head_commit_sha": "da366519326808e04aebd36f9a09deabb3da0e8e",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:41:00.654+09:00",
+      "merge_request_id": 942166,
+      "state": "without_files",
+      "real_size": "39",
+      "patch_id_sha": "d08e1224ad0cc0311d315b56d1c55a5e7e7c021f"
+    },
+    {
+      "id": 2190807,
+      "head_commit_sha": "7d94288ec4351f0c3fd645f01ba3b48caebd4a64",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:33:54.773+09:00",
+      "merge_request_id": 942166,
+      "state": "without_files",
+      "real_size": "39",
+      "patch_id_sha": "ed68e758130a6f5e7febf178d15e45b2425f9e0f"
+    },
+    {
+      "id": 2190801,
+      "head_commit_sha": "7a76b50386980275960e89e837b4722dcf5a628c",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:27:27.794+09:00",
+      "merge_request_id": 942166,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "603fbfc2231db1a12f5f9beb075ff0964159fcac"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2190827,
+      "head_commit_sha": "93d236874373e25039230ff6fe5b219e96bd0d15",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:43:10.208+09:00",
+      "merge_request_id": 942166,
+      "state": "collected",
+      "real_size": "39",
+      "patch_id_sha": "74f44673aa0dfe90f616e506ad8f77c7ea157026",
+      "commits": [
+        {
+          "id": "93d236874373e25039230ff6fe5b219e96bd0d15",
+          "short_id": "93d23687",
+          "created_at": "2026-09-13T20:43:07.000+09:00",
+          "parent_ids": [
+            "7d94288ec4351f0c3fd645f01ba3b48caebd4a64"
+          ],
+          "title": "fix(be): 먼저 취소한 요청의 거래는 경계 전에 청산된 것만 보인다",
+          "message": "fix(be): 먼저 취소한 요청의 거래는 경계 전에 청산된 것만 보인다\n\n끝까지 OPEN 인 거래도 저장된 행은 실행 종료 시점 값이다 — 워커가 분할일에 열린 묶음의 수량·진입가를,\n부분 매도 때 남은 OPEN 거래의 수량·수수료를 바꾼다. 경계 뒤 변경이 취소 요청에 새는 것을 막으려면\n경계 시점 값을 따로 저장해야 하는데 백엔드는 결과를 재구성하지 않으므로, \"복원하지 않고 제외\" 정책을\n유지해 exitTime < :visibleBefore 하나로 좁혔다(3차 리뷰). 취소 요청의 /trades 는 전체 진입 내역이\n아니며 경계 시점 보유는 /positions 가 준다는 제한을 계약 문서에 적었다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:40:57.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:43:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/93d236874373e25039230ff6fe5b219e96bd0d15"
+        },
+        {
+          "id": "7d94288ec4351f0c3fd645f01ba3b48caebd4a64",
+          "short_id": "7d94288e",
+          "created_at": "2026-09-13T20:33:51.000+09:00",
+          "parent_ids": [
+            "7a76b50386980275960e89e837b4722dcf5a628c"
+          ],
+          "title": "fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다",
+          "message": "fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다\n\n리뷰 1: 경계를 진입 시각만 봐서 스냅샷 전에 진입해 뒤에 청산된 거래가 CLOSED 상태·청산가·실현손익까지\n보였다(R-04 위반). 진입과 청산이 모두 경계 전인 거래(또는 끝까지 열려 있던 거래)만 보인다. 가로지르는\n거래를 OPEN 으로 꾸미지 않는 이유: 저장된 commission 이 양쪽 합이라 진입 측만 되돌릴 수 없어 합성 행이\n된다.\n리뷰 2: 하위 리소스 다섯 개 중 /positions 만 partial 이 빠져 있었다. 결과·응답 DTO 와 예시에 넣었다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:33:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:33:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7d94288ec4351f0c3fd645f01ba3b48caebd4a64"
+        },
+        {
+          "id": "7a76b50386980275960e89e837b4722dcf5a628c",
+          "short_id": "7a76b503",
+          "created_at": "2026-09-13T20:12:40.000+09:00",
+          "parent_ids": [
+            "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+          ],
+          "title": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록",
+          "message": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:12:40.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:12:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a76b50386980275960e89e837b4722dcf5a628c"
+        },
+        {
+          "id": "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e",
+          "short_id": "0376aaf5",
+          "created_at": "2026-09-13T20:08:56.000+09:00",
+          "parent_ids": [
+            "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+          ],
+          "title": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터",
+          "message": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터\n\nGET /backtests/{id}/weights(리밸런싱별 목표·실제 비중, weightsSource, TARGET_RISK 의 riskScale·\nestimatedVolatility)와 /exceptions(예외 처리 기록)를 연다. 상세 summary 에 netTotalReturn·\ntotalTradingCost·costs·liquidation·analytics{recoveryDays, turnover}·exceptionCount 를 붙이고,\n/trades 항목에 reason·plannedDate, /timeseries 항목에 cashFlows 를 더한다. 하위 리소스 응답에\npartial 을 싣는다.\n\n먼저 취소해 실행이 계속 돈 요청(R-04)은 자기 스냅샷 날짜까지만 본다 — 날짜 항목은 읽기 필터로,\n거래는 스냅샷 다음 날 0시(거래소 현지) 전 진입만 저장소에 요청한다. 완료한 거래일이 없는 취소는\n409 NO_PARTIAL_RESULT. T005 결정 ⑥이 T009 로 미룬 몫이다.\n\n계약 예시 backtest-weights.json·backtest-exceptions.json 을 추가하고 detail·trades·timeseries 예시를\nv2 항목으로 갱신했다. BacktestResultApiIT 가 응답과 예시의 동치를 단언한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:08:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:08:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+        },
+        {
+          "id": "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce",
+          "short_id": "6d5ea749",
+          "created_at": "2026-09-13T19:59:33.000+09:00",
+          "parent_ids": [
+            "9403dbe4a2169e3d84ea68d311349c2354d1f669"
+          ],
+          "title": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다",
+          "message": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다\n\nT003 이 만든 weights_series·weights_source·costs·liquidation·analytics·exceptions·versions 컬럼을\n엔티티에 매핑해 FINISHED 의 EngineOutput 을 그대로 저장한다(T009). 요약 조회는 costs·liquidation·\nanalytics 와 예외 건수(jsonb_array_length)를 함께 읽고, 비중·예외 블록은 시계열을 읽지 않는 별도\n조회(findBlocks)로 꺼낸다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T19:59:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T19:59:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -3,8 +3,10 @@ package com.ssafy.thorp.backtest.application.repository;\n import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;\n import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;\n import com.ssafy.thorp.backtest.application.result.BacktestSeries;\n+import java.time.Instant;\n import java.util.List;\n import java.util.Optional;\n import org.springframework.data.domain.Page;\n@@ -58,6 +60,13 @@ public interface BacktestResultRepository {\n      */\n     Optional<List<EngineOutput.PortfolioSnapshot>> findPortfolioSeries(Long runId);\n \n+    /**\n+     * 비중 기록·비중 출처·예외 기록. {@code /weights}·{@code /exceptions}가 쓴다. 시계열은 읽지 않는다.\n+     *\n+     * <p>블록이 저장되지 않은 결과(null 컬럼)는 빈 리스트로 돌려준다 — 결과 행이 없는 것(빈 Optional)과 다르다.\n+     */\n+    Optional<BacktestResultBlocks> findBlocks(Long runId);\n+\n     /**\n      * 거래 내역 한 페이지. 정렬은 {@code (entry_time, id)} 고정이므로 {@code Pageable}의 {@code Sort}를 받지 않는다 — 계약이\n      * 정렬을 고정했고 같은 시각의 거래 순서가 흔들리면 페이지 경계에서 행이 중복·누락된다.\n@@ -66,5 +75,10 @@ public interface BacktestResultRepository {\n      * {@code @Service}·{@code @Transactional}로 Spring에 의존하고, 계층 규칙은 {@code\n      * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.\n      */\n-    Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query);\n+    /**\n+     * @param visibleBefore null = 제한 없음. 먼저 취소한 요청은 스냅샷 다음 날 0시(거래소 현지) 전에 <b>청산된</b> 거래만 본다 —\n+     *     가로지르는 거래와 OPEN 거래는 저장된 값이 실행 종료 시점이라 경계 시점 상태가 아니다(R-04)\n+     */\n+    Page<EngineOutput.TradeResult> findTrades(\n+            Long runId, FindBacktestTradesQuery query, Instant visibleBefore);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -52,10 +52,15 @@ public record BacktestDetailResult(\n             Integer totalTradingDays) {}\n \n     /**\n-     * 전체 기간 성과.\n+     * 전체 기간 성과(rest-api.md {@code summary}). 핵심 숫자 3개는 {@code netTotalReturn}·{@code\n+     * maxDrawdown}·{@code totalTradingCost}다. 앞 열두 항목은 v1부터 있던 값이고 뒤 여섯이 v2 추가분이다.\n      *\n-     * <p>v2 계약이 정한 항목(netTotalReturn·liquidation·costs·analytics·exceptionCount)은 결과 JSONB를 채우는\n-     * T009에서 붙는다. 지금은 기존 결과 컬럼에서 나오는 값 그대로다.\n+     * @param netTotalReturn 비용 차감 후 전체 수익률(FR-027). null = 미산출\n+     * @param totalTradingCost 거래비용 합계. null = 미산출\n+     * @param costs 비용 네 갈래와 합. null = 미저장\n+     * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끔\n+     * @param analytics 파생 지표 중 요약에 넣는 둘. 나머지는 결과 JSONB 에 있다. null = 미저장\n+     * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}\n      */\n     public record Summary(\n             BigDecimal initialEquity,\n@@ -69,7 +74,16 @@ public record BacktestDetailResult(\n             int tradeCount,\n             BigDecimal winRate,\n             BigDecimal totalCommission,\n-            BigDecimal totalSlippageCost) {}\n+            BigDecimal totalSlippageCost,\n+            BigDecimal netTotalReturn,\n+            BigDecimal totalTradingCost,\n+            EngineOutput.Costs costs,\n+            EngineOutput.Liquidation liquidation,\n+            AnalyticsSummary analytics,\n+            int exceptionCount) {}\n+\n+    /** {@code analytics} 중 요약에 실리는 둘(rest-api.md). */\n+    public record AnalyticsSummary(Integer recoveryDays, BigDecimal turnover) {}\n \n     /** 실패 사유. 코드 집합은 엔진 소유이고 HTTP {@code ErrorCode}와 다르다. */\n     public record Failure(String code, String message) {}\n@@ -201,6 +215,15 @@ public record BacktestDetailResult(\n                 p.tradeCount(),\n                 p.winRate(),\n                 e.totalCommission(),\n-                e.totalSlippageCost());\n+                e.totalSlippageCost(),\n+                p.netTotalReturn(),\n+                p.totalTradingCost(),\n+                result.costs(),\n+                result.liquidation(),\n+                result.analytics() == null\n+                        ? null\n+                        : new AnalyticsSummary(\n+                                result.analytics().recoveryDays(), result.analytics().turnover()),\n+                result.exceptionCount());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+package com.ssafy.thorp.backtest.application.result;\n+\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /backtests/{backtestId}/exceptions}의 유스케이스 출력(FR-020·FR-030). 005가 \"결과 옆 한 문장\"에 쓰는\n+ * 원천이다.\n+ *\n+ * @param partial 취소·한도로 끊긴 부분 결과인가\n+ */\n+public record BacktestExceptionsResult(\n+        String backtestId, boolean partial, List<EngineOutput.ExceptionRecord> items) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestExceptionsResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestExceptionsResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,11 +13,13 @@ import java.util.List;\n  * <p>{@code equity}·{@code cash}·{@code positionValue}는 담지 않는다(설계 예시에 없다). 총자산은 {@code\n  * /timeseries}가 날짜별로 이미 준다.\n  *\n+ * @param partial 취소·한도로 끊긴 부분 결과인가. 먼저 취소한 요청은 스냅샷 날짜 이하의 보유만 본다(R-04)\n  * @param snapshotDate {@code requestedDate}보다 앞일 수 있다\n  * @param positions 빈 리스트 = 그날 보유 없음이 확정. \"스냅샷 없음\"과 다르다\n  */\n public record BacktestPositionsResult(\n         String backtestId,\n+        boolean partial,\n         LocalDate requestedDate,\n         LocalDate snapshotDate,\n         List<Position> positions) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestPositionsResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestPositionsResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+package com.ssafy.thorp.backtest.application.result;\n+\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import java.util.List;\n+\n+/**\n+ * 결과 행의 비중·예외 블록(FR-026·FR-030). {@code /weights}·{@code /exceptions}가 쓴다.\n+ *\n+ * <p>둘을 한 조회로 읽는 이유: 리밸런싱 기록은 월 1건, 예외는 사건당 1건이라 둘 다 KB 단위고, 시계열(수백 KB)은 읽지 않는다는 점이 중요하다. 엔드포인트마다\n+ * 조회를 쪼개면 코드만 늘고 얻는 것이 없다.\n+ *\n+ * @param weightsSeries 비어 있을 수 있다(엔진이 채우지 않은 결과). null 은 없다\n+ * @param weightsSource null = 엔진이 기록하지 않았다\n+ * @param exceptions 비어 있을 수 있다. null 은 없다\n+ */\n+public record BacktestResultBlocks(\n+        List<EngineOutput.WeightsPoint> weightsSeries,\n+        WeightsSource weightsSource,\n+        List<EngineOutput.ExceptionRecord> exceptions) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultBlocks.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultBlocks.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,6 +15,10 @@ import java.time.Instant;\n  * @param execution null = 실패로 계산 불가\n  * @param benchmarkInstrumentId null = 결과에 벤치마크가 없음. **요청에 지정했더라도** 워커가 계산하지 않았으면 null이다\n  * @param benchmarkTotalReturn null = 위와 같음\n+ * @param costs 비용 합계(FR-027). null = 실패 또는 v2 이전 결과\n+ * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끄거나 실패\n+ * @param analytics 파생 지표(FR-027). null = 실패 또는 v2 이전 결과\n+ * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}가 따로 읽는다\n  */\n public record BacktestResultSummary(\n         String errorCode,\n@@ -24,7 +28,11 @@ public record BacktestResultSummary(\n         EngineOutput.PerformanceResult performance,\n         EngineOutput.ExecutionResult execution,\n         String benchmarkInstrumentId,\n-        BigDecimal benchmarkTotalReturn) {\n+        BigDecimal benchmarkTotalReturn,\n+        EngineOutput.Costs costs,\n+        EngineOutput.Liquidation liquidation,\n+        EngineOutput.Analytics analytics,\n+        int exceptionCount) {\n \n     /** 벤치마크 스칼라 둘이 모두 있을 때만 벤치마크가 산출된 것으로 본다. */\n     public boolean hasBenchmark() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultSummary.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultSummary.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.backtest.application.result;\n \n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n import java.math.BigDecimal;\n import java.time.LocalDate;\n import java.util.List;\n@@ -9,16 +10,20 @@ import java.util.List;\n  *\n  * <p>{@code cash}·{@code positionValue}·{@code dailyReturn}·{@code positions}는 담지 않는다(설계\n  * TimeseriesResponse 표에 없다). 보유 구성은 {@code /positions}가 따로 준다.\n+ *\n+ * @param partial 취소·한도로 끊긴 부분 결과인가\n  */\n-public record BacktestTimeseriesResult(String backtestId, List<Point> points) {\n+public record BacktestTimeseriesResult(String backtestId, boolean partial, List<Point> points) {\n \n     /**\n      * @param benchmarkReturn null = 벤치마크 미지정이거나 그 거래일 값이 없음. 응답에서 키를 생략한다\n+     * @param cashFlows 분배금 등 그날 현금 흐름(FR-013). null = 없음. 응답에서 키를 생략한다\n      */\n     public record Point(\n             LocalDate date,\n             BigDecimal equity,\n             BigDecimal cumulativeReturn,\n             BigDecimal drawdown,\n-            BigDecimal benchmarkReturn) {}\n+            BigDecimal benchmarkReturn,\n+            List<EngineOutput.CashFlow> cashFlows) {}\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestTimeseriesResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestTimeseriesResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,7 @@ import java.util.List;\n  */\n public record BacktestTradePageResult(\n         String backtestId,\n+        boolean partial,\n         int page,\n         int size,\n         long totalElements,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestTradePageResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestTradePageResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.ssafy.thorp.backtest.application.result;\n+\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /backtests/{backtestId}/weights}의 유스케이스 출력(FR-026). 리밸런싱마다 목표·실제 비중.\n+ *\n+ * @param partial 취소·한도로 끊긴 부분 결과인가. 먼저 취소한 요청은 자기 스냅샷까지만 담긴다(R-04)\n+ * @param weightsSource null = 엔진이 기록하지 않았다\n+ */\n+public record BacktestWeightsResult(\n+        String backtestId,\n+        boolean partial,\n+        WeightsSource weightsSource,\n+        List<EngineOutput.WeightsPoint> points) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestWeightsResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestWeightsResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,11 +7,14 @@ import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository\n import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;\n import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;\n import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;\n import com.ssafy.thorp.backtest.application.result.BacktestSeries;\n import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;\n@@ -21,10 +24,12 @@ import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n import java.math.BigDecimal;\n import java.time.Clock;\n+import java.time.Instant;\n import java.time.LocalDate;\n import java.util.List;\n import java.util.Map;\n import java.util.Optional;\n+import java.util.function.Function;\n import java.util.stream.Collectors;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n@@ -96,11 +101,14 @@ public class BacktestResultQueryService {\n      * benchmarkReturn}이 null이고 응답에서 키가 생략된다. 축이 어긋나면 차트에서 벤치마크 선이 끊겨 보인다.\n      */\n     public BacktestTimeseriesResult getTimeseries(String backtestId, long requesterId) {\n-        BacktestRun job = requireResultReady(backtestId, requesterId);\n-        BacktestSeries series = require(resultRepository.findTimeseries(job.getId()), job);\n+        ResultView view = requireResultReady(backtestId, requesterId);\n+        BacktestSeries series =\n+                require(resultRepository.findTimeseries(view.run().getId()), view.run());\n         Map<LocalDate, BigDecimal> benchmark = benchmarkByDate(series.benchmark());\n         List<BacktestTimeseriesResult.Point> points =\n-                series.portfolioSeries().stream()\n+                view\n+                        .visible(series.portfolioSeries(), EngineOutput.PortfolioSnapshot::date)\n+                        .stream()\n                         .map(\n                                 s ->\n                                         new BacktestTimeseriesResult.Point(\n@@ -108,9 +116,35 @@ public class BacktestResultQueryService {\n                                                 s.equity(),\n                                                 s.cumulativeReturn(),\n                                                 s.drawdown(),\n-                                                benchmark.get(s.date())))\n+                                                benchmark.get(s.date()),\n+                                                s.cashFlows()))\n                         .toList();\n-        return new BacktestTimeseriesResult(backtestId, points);\n+        return new BacktestTimeseriesResult(backtestId, view.partial(), points);\n+    }\n+\n+    /** 리밸런싱마다 목표·실제 비중(FR-026). 결과 행이 없으면 500, 블록이 비어 있으면 빈 목록이다. */\n+    public BacktestWeightsResult getWeights(String backtestId, long requesterId) {\n+        ResultView view = requireResultReady(backtestId, requesterId);\n+        BacktestResultBlocks blocks = requireBlocks(view.run());\n+        return new BacktestWeightsResult(\n+                backtestId,\n+                view.partial(),\n+                blocks.weightsSource(),\n+                view.visible(blocks.weightsSeries(), EngineOutput.WeightsPoint::date));\n+    }\n+\n+    /** 예외 처리 기록(FR-020·FR-030). */\n+    public BacktestExceptionsResult getExceptions(String backtestId, long requesterId) {\n+        ResultView view = requireResultReady(backtestId, requesterId);\n+        BacktestResultBlocks blocks = requireBlocks(view.run());\n+        return new BacktestExceptionsResult(\n+                backtestId,\n+                view.partial(),\n+                view.visible(blocks.exceptions(), EngineOutput.ExceptionRecord::date));\n+    }\n+\n+    private BacktestResultBlocks requireBlocks(BacktestRun job) {\n+        return require(resultRepository.findBlocks(job.getId()), job);\n     }\n \n     /**\n@@ -122,13 +156,16 @@ public class BacktestResultQueryService {\n      */\n     public BacktestTradePageResult getTrades(\n             String backtestId, long requesterId, FindBacktestTradesQuery query) {\n-        BacktestRun job = requireResultReady(backtestId, requesterId);\n+        ResultView view = requireResultReady(backtestId, requesterId);\n+        BacktestRun job = view.run();\n         if (!resultRepository.exists(job.getId())) {\n             throw missingResultRow(job);\n         }\n-        Page<EngineOutput.TradeResult> page = resultRepository.findTrades(job.getId(), query);\n+        Page<EngineOutput.TradeResult> page =\n+                resultRepository.findTrades(job.getId(), query, view.tradesVisibleBefore());\n         return new BacktestTradePageResult(\n                 backtestId,\n+                view.partial(),\n                 page.getNumber(),\n                 page.getSize(),\n                 page.getTotalElements(),\n@@ -148,12 +185,16 @@ public class BacktestResultQueryService {\n      */\n     public BacktestPositionsResult getPositions(\n             String backtestId, long requesterId, LocalDate date) {\n-        BacktestRun job = requireResultReady(backtestId, requesterId);\n+        ResultView view = requireResultReady(backtestId, requesterId);\n+        BacktestRun job = view.run();\n         List<EngineOutput.PortfolioSnapshot> series =\n-                require(resultRepository.findPortfolioSeries(job.getId()), job);\n+                view.visible(\n+                        require(resultRepository.findPortfolioSeries(job.getId()), job),\n+                        EngineOutput.PortfolioSnapshot::date);\n         EngineOutput.PortfolioSnapshot snapshot = latestSnapshotOnOrBefore(series, date, job);\n         return new BacktestPositionsResult(\n                 backtestId,\n+                view.partial(),\n                 date,\n                 snapshot.date(),\n                 snapshot.positions().stream()\n@@ -234,22 +275,63 @@ public class BacktestResultQueryService {\n     }\n \n     /**\n-     * 하위 리소스 세 개의 공통 관문. **판정은 결과 행 존재가 아니라 Job 상태로 한다** — 실패한 실행도 결과 행이 있으므로(오류만 채워짐) \"행이 있으면\n-     * 200\"으로 짜면 FAILED에 빈 시계열을 주게 된다.\n+     * 하위 리소스가 볼 수 있는 결과의 범위.\n+     *\n+     * <p>먼저 취소해 실행이 계속 돈 요청은 자기 스냅샷 날짜({@code cutoff})까지만 본다 — 실행이 뒤에 더 계산했어도 이 요청의 표시 범위는 늘어나지\n+     * 않는다(R-04). 백엔드가 지표를 다시 계산하지 않으므로 **읽기 필터**다: 날짜가 있는 항목은 날짜로, 거래는 청산 시각으로 자른다.\n+     *\n+     * @param cutoff null = 자르지 않는다(취소하지 않았거나, 이 취소가 실행을 멈춰 FINISHED 가 범위를 확정했다)\n+     */\n+    record ResultView(BacktestRun run, LocalDate cutoff, boolean partial) {\n+\n+        <T> List<T> visible(List<T> items, Function<T, LocalDate> dateOf) {\n+            if (cutoff == null) {\n+                return items;\n+            }\n+            return items.stream().filter(item -> !dateOf.apply(item).isAfter(cutoff)).toList();\n+        }\n+\n+        /**\n+         * 거래는 DB 에서 페이징하므로 경계를 저장소에 넘긴다. 스냅샷 다음 날 0시(거래소 현지) 전에 청산된 거래만 보인다 — 저장된 거래 행은 실행 종료 시점\n+         * 값이라 가로지르는 거래도 OPEN 거래도 경계 시점 상태가 아니다.\n+         */\n+        Instant tradesVisibleBefore() {\n+            return cutoff == null\n+                    ? null\n+                    : cutoff.plusDays(1).atStartOfDay(ExecutionPolicy.EXCHANGE_ZONE).toInstant();\n+        }\n+    }\n+\n+    /**\n+     * 하위 리소스의 공통 관문. **판정은 결과 행 존재가 아니라 Job 상태로 한다** — 실패한 실행도 결과 행이 있으므로(오류만 채워짐) \"행이 있으면 200\"으로\n+     * 짜면 FAILED에 빈 시계열을 주게 된다.\n      *\n      * <p>{@code switch}에 {@code default}를 두지 않는다. 상태가 추가되면 컴파일이 깨져서 여기를 고치게 된다.\n+     *\n+     * <p>취소한 요청(rest-api.md 하위 리소스 절): 공용 실행이 종결 전이면 {@code RESULT_NOT_READY}, {@code FAILED} 면\n+     * {@code BACKTEST_FAILED}(위 switch 가 그대로 처리한다). 실행이 끝났는데 완료한 거래일이 없는 취소(첫 PROGRESS 전)는 {@code\n+     * NO_PARTIAL_RESULT} — 실행이 나중에 계산한 범위로 대신하지 않는다.\n      */\n-    BacktestRun requireResultReady(String backtestId, long requesterId) {\n-        BacktestRun job = requireOwned(backtestId, requesterId).run();\n+    ResultView requireResultReady(String backtestId, long requesterId) {\n+        RequestAndRun found = requireOwned(backtestId, requesterId);\n+        BacktestRun job = found.run();\n         switch (job.getStatus()) {\n             case QUEUED, RUNNING ->\n                     throw new BacktestResultNotReadyException(backtestId, job.getStatus());\n             case FAILED -> throw new BacktestFailedException(backtestId);\n-            // 취소는 부분 결과가 붙는다. 스냅샷 날짜로 자르는 읽기 필터와 요청 단위 권한은\n-            // 결과 API v2(T009)·취소(T011)가 붙인다. 여기서는 통과시킨다.\n             case CANCELLED, COMPLETED -> {}\n         }\n-        return job;\n+        BacktestRequest request = found.request();\n+        LocalDate cutoff = null;\n+        if (request.isCancelled() && !request.isStoppedRun()) {\n+            cutoff = request.getCancelledLastTradingDate();\n+            if (cutoff == null) {\n+                throw new BusinessException(\n+                        ErrorCode.NO_PARTIAL_RESULT,\n+                        \"취소 시점까지 완료한 거래일이 없습니다: backtestId=\" + backtestId);\n+            }\n+        }\n+        return new ResultView(job, cutoff, request.isCancelled() || job.isPartial());\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,6 +14,7 @@ import com.ssafy.thorp.backtest.application.port.message.Scenario;\n import com.ssafy.thorp.backtest.application.port.message.SignalTiming;\n import com.ssafy.thorp.backtest.application.port.message.TradingHaltPolicy;\n import java.math.BigDecimal;\n+import java.time.ZoneId;\n import java.util.List;\n \n /**\n@@ -48,6 +49,9 @@ public final class ExecutionPolicy {\n                     PriceSource.ADJUSTED,\n                     DistributionPolicy.CASH_ON_PAY_DATE);\n \n+    /** 체결 시각을 거래일로 바꾸는 거래소 현지 시간대. 모든 종목이 XKRX 다(ADR-0002 D4). */\n+    public static final ZoneId EXCHANGE_ZONE = ZoneId.of(\"Asia/Seoul\");\n+\n     public static final String CURRENCY = \"KRW\";\n     public static final boolean SHORT_SELLING = false;\n     public static final BigDecimal LEVERAGE = new BigDecimal(\"1.0\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/ExecutionPolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/ExecutionPolicy.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+/**\n+ * 비중·예외 블록 조회의 native 프로젝션. JSON 컬럼은 문자열로 받아 구현체가 파싱한다.\n+ *\n+ * <p>alias를 따옴표로 감싸는 이유는 {@link BacktestResultSummaryRow} javadoc과 같다.\n+ */\n+interface BacktestResultBlocksRow {\n+\n+    /** null = 엔진이 비중 기록을 채우지 않았다 */\n+    String getWeightsSeries();\n+\n+    /** {@code USER} / {@code COMPUTED}. null = 미기록 */\n+    String getWeightsSource();\n+\n+    /** null = 예외 기록 없음(미저장) */\n+    String getExceptions();\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultBlocksRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultBlocksRow.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,9 +3,12 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;\n import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n import com.ssafy.thorp.common.persistence.BaseEntity;\n import jakarta.persistence.Column;\n import jakarta.persistence.Entity;\n+import jakarta.persistence.EnumType;\n+import jakarta.persistence.Enumerated;\n import jakarta.persistence.FetchType;\n import jakarta.persistence.Id;\n import jakarta.persistence.JoinColumn;\n@@ -74,6 +77,29 @@ public class BacktestResultJpaEntity extends BaseEntity {\n     @Column(nullable = false)\n     private EngineOutput.Diagnostics diagnostics;\n \n+    // v2 블록(spec 004 FR-026·FR-027·FR-030, T009). 표시용이라 JSONB 이고 weights_source 만 필터용 스칼라다.\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private List<EngineOutput.WeightsPoint> weightsSeries;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(length = 10)\n+    private WeightsSource weightsSource;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private EngineOutput.Costs costs;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private EngineOutput.Liquidation liquidation;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private EngineOutput.Analytics analytics;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private List<EngineOutput.ExceptionRecord> exceptions;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private EngineOutput.Versions versions;\n+\n     protected BacktestResultJpaEntity() {}\n \n     private BacktestResultJpaEntity(BacktestRunJpaEntity job, SaveBacktestResultCommand command) {\n@@ -91,6 +117,13 @@ public class BacktestResultJpaEntity extends BaseEntity {\n         this.portfolioSeries = output.portfolioSeries();\n         this.benchmark = command.benchmark();\n         this.diagnostics = output.diagnostics();\n+        this.weightsSeries = output.weightsSeries();\n+        this.weightsSource = output.weightsSource();\n+        this.costs = output.costs();\n+        this.liquidation = output.liquidation();\n+        this.analytics = output.analytics();\n+        this.exceptions = output.exceptions();\n+        this.versions = output.versions();\n     }\n \n     /** 계약 DTO → 엔티티. 결과 도메인 모델이 없으므로 별도 Mapper 없이 여기서 매핑한다. */\n@@ -150,4 +183,33 @@ public class BacktestResultJpaEntity extends BaseEntity {\n     public EngineOutput.Diagnostics getDiagnostics() {\n         return diagnostics;\n     }\n+\n+    /** null = 엔진이 채우지 않았다(실패 또는 v2 이전 결과). 아래 여섯 getter 도 같다. */\n+    public List<EngineOutput.WeightsPoint> getWeightsSeries() {\n+        return weightsSeries;\n+    }\n+\n+    public WeightsSource getWeightsSource() {\n+        return weightsSource;\n+    }\n+\n+    public EngineOutput.Costs getCosts() {\n+        return costs;\n+    }\n+\n+    public EngineOutput.Liquidation getLiquidation() {\n+        return liquidation;\n+    }\n+\n+    public EngineOutput.Analytics getAnalytics() {\n+        return analytics;\n+    }\n+\n+    public List<EngineOutput.ExceptionRecord> getExceptions() {\n+        return exceptions;\n+    }\n+\n+    public EngineOutput.Versions getVersions() {\n+        return versions;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaEntity.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,13 +24,30 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt\n                            performance::text AS \"performance\",\n                            execution::text   AS \"execution\",\n                            benchmark ->> 'instrumentId' AS \"benchmarkInstrumentId\",\n-                           benchmark ->> 'totalReturn'  AS \"benchmarkTotalReturn\"\n+                           benchmark ->> 'totalReturn'  AS \"benchmarkTotalReturn\",\n+                           costs::text       AS \"costs\",\n+                           liquidation::text AS \"liquidation\",\n+                           analytics::text   AS \"analytics\",\n+                           COALESCE(jsonb_array_length(exceptions), 0) AS \"exceptionCount\"\n                       FROM backtest_result\n                      WHERE run_id = :jobId\n                     \"\"\",\n             nativeQuery = true)\n     Optional<BacktestResultSummaryRow> findSummaryRow(@Param(\"jobId\") Long jobId);\n \n+    /** 비중 기록·출처·예외 기록. {@code /weights}·{@code /exceptions}용이며 시계열은 읽지 않는다. */\n+    @Query(\n+            value =\n+                    \"\"\"\n+                    SELECT weights_series::text AS \"weightsSeries\",\n+                           weights_source       AS \"weightsSource\",\n+                           exceptions::text     AS \"exceptions\"\n+                      FROM backtest_result\n+                     WHERE run_id = :jobId\n+                    \"\"\",\n+            nativeQuery = true)\n+    Optional<BacktestResultBlocksRow> findBlocksRow(@Param(\"jobId\") Long jobId);\n+\n     /** 시계열 + 벤치마크. 성과·집계·오류 컬럼은 읽지 않는다. */\n     @Query(\n             value =\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,11 +7,14 @@ import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;\n import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;\n import com.ssafy.thorp.backtest.application.result.BacktestSeries;\n import com.ssafy.thorp.backtest.infrastructure.messaging.BacktestRabbitConfig;\n import java.math.BigDecimal;\n+import java.time.Instant;\n import java.util.List;\n import java.util.Optional;\n import org.springframework.data.domain.Page;\n@@ -36,6 +39,10 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {\n \n     private static final TypeReference<List<EngineOutput.PortfolioSnapshot>> SERIES =\n             new TypeReference<>() {};\n+    private static final TypeReference<List<EngineOutput.WeightsPoint>> WEIGHTS =\n+            new TypeReference<>() {};\n+    private static final TypeReference<List<EngineOutput.ExceptionRecord>> EXCEPTIONS =\n+            new TypeReference<>() {};\n \n     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();\n \n@@ -85,7 +92,29 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {\n                                                 row.getExecution(),\n                                                 EngineOutput.ExecutionResult.class),\n                                         row.getBenchmarkInstrumentId(),\n-                                        decimal(row.getBenchmarkTotalReturn())));\n+                                        decimal(row.getBenchmarkTotalReturn()),\n+                                        read(row.getCosts(), EngineOutput.Costs.class),\n+                                        read(row.getLiquidation(), EngineOutput.Liquidation.class),\n+                                        read(row.getAnalytics(), EngineOutput.Analytics.class),\n+                                        row.getExceptionCount()));\n+    }\n+\n+    @Override\n+    public Optional<BacktestResultBlocks> findBlocks(Long runId) {\n+        return resultRepository\n+                .findBlocksRow(runId)\n+                .map(\n+                        row ->\n+                                new BacktestResultBlocks(\n+                                        orEmpty(read(row.getWeightsSeries(), WEIGHTS)),\n+                                        row.getWeightsSource() == null\n+                                                ? null\n+                                                : WeightsSource.valueOf(row.getWeightsSource()),\n+                                        orEmpty(read(row.getExceptions(), EXCEPTIONS))));\n+    }\n+\n+    private static <T> List<T> orEmpty(List<T> value) {\n+        return value == null ? List.of() : value;\n     }\n \n     @Override\n@@ -105,12 +134,14 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {\n     }\n \n     @Override\n-    public Page<EngineOutput.TradeResult> findTrades(Long runId, FindBacktestTradesQuery query) {\n+    public Page<EngineOutput.TradeResult> findTrades(\n+            Long runId, FindBacktestTradesQuery query, Instant visibleBefore) {\n         return tradeRepository\n                 .findPage(\n                         runId,\n                         query.instrumentId(),\n                         query.status(),\n+                        visibleBefore,\n                         PageRequest.of(query.page(), query.size()))\n                 // detail 하나만 꺼내면 계약 형태의 거래가 그대로 나온다. 컬럼은 필터·정렬용이다\n                 .map(BacktestTradeJpaEntity::getDetail);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,4 +33,16 @@ interface BacktestResultSummaryRow {\n \n     /** {@code benchmark ->> 'totalReturn'}. 문자열 그대로 */\n     String getBenchmarkTotalReturn();\n+\n+    /** {@code costs} JSONB 전체. 5필드. null = 미저장 */\n+    String getCosts();\n+\n+    /** {@code liquidation} JSONB 전체. null = 청산을 끈 요청 또는 미저장 */\n+    String getLiquidation();\n+\n+    /** {@code analytics} JSONB 전체. 상관 행렬은 종목 수²이지만 50종목이라도 수 KB 다 */\n+    String getAnalytics();\n+\n+    /** {@code jsonb_array_length(exceptions)}. 본문은 읽지 않는다. 컬럼이 null 이면 0 */\n+    Integer getExceptionCount();\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultSummaryRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultSummaryRow.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.backtest.infrastructure.persistence;\n \n import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import java.time.Instant;\n import java.util.List;\n import org.springframework.data.domain.Page;\n import org.springframework.data.domain.Pageable;\n@@ -16,6 +17,12 @@ interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntit\n     /**\n      * 필터 조합이 네 가지라 파생 쿼리 네 개도, {@code Specification}도 만들지 않는다. nullable 파라미터 두 개가 가장 짧다.\n      *\n+     * <p>{@code visibleBefore}(null = 제한 없음)는 먼저 취소한 요청의 경계다(R-04). <b>경계 전에 청산된 거래만</b> 보인다. 저장된\n+     * 거래 행은 실행 <b>종료</b> 시점의 값이다 — 가로지르는 거래는 청산가·실현손익이 경계 밖이고, 끝까지 OPEN 인 거래도 분할·부분 매도로 수량·진입가·수수료가\n+     * 경계 뒤에 바뀐다. 경계 시점 상태를 되살리려면 그때 값을 따로 저장해야 하는데 백엔드는 결과를 재구성하지 않으므로(원칙 1) 빼는 쪽을 택했다. 그래서 취소 요청의\n+     * 거래 목록은 전체 진입 내역이 아니며, 경계 시점 보유는 {@code /positions}가 준다. {@code exitTime IS NULL} 은 비교가 거짓이라\n+     * 자연히 빠진다.\n+     *\n      * <p>정렬을 쿼리에 박아 {@code Pageable}의 {@code Sort}를 무시한다 — 계약이 고정했고 인덱스 {@code (run_id, entry_time,\n      * id)}를 그대로 탄다.\n      */\n@@ -25,11 +32,14 @@ interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntit\n              WHERE t.job.id = :jobId\n                AND (:instrumentId IS NULL OR t.instrumentId = :instrumentId)\n                AND (:status IS NULL OR t.status = :status)\n+               AND (CAST(:visibleBefore AS java.time.Instant) IS NULL\n+                    OR t.exitTime < :visibleBefore)\n              ORDER BY t.entryTime ASC, t.id ASC\n             \"\"\")\n     Page<BacktestTradeJpaEntity> findPage(\n             @Param(\"jobId\") Long jobId,\n             @Param(\"instrumentId\") String instrumentId,\n             @Param(\"status\") TradeStatus status,\n+            @Param(\"visibleBefore\") Instant visibleBefore,\n             Pageable pageable);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,20 +4,24 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n import com.ssafy.thorp.backtest.application.port.message.Scenario;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;\n import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;\n import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;\n import com.ssafy.thorp.backtest.presentation.request.TradePageQuery;\n import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;\n+import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;\n+import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;\n import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n import jakarta.servlet.http.HttpServletRequest;\n@@ -40,7 +44,7 @@ import org.springframework.web.bind.annotation.RestController;\n  *\n  * <p>POST /backtests → Job 저장(QUEUED) 후 Worker에 발행, 202와 { backtestId, status: QUEUED } 즉시 반환.\n  *\n- * <p>결과 조회는 응답 크기 때문에 네 리소스로 나뉜다 — 계약과 예시는 {@code docs/specs/backtest-api/README.md} §2다. POST 응답은\n+ * <p>결과 조회는 응답 크기 때문에 여섯 리소스로 나뉜다 — 계약과 예시는 {@code docs/specs/backtest-api/README.md} §2다. POST 응답은\n  * 그대로 { backtestId, status }이며 커지지 않는다.\n  */\n @RestController\n@@ -122,6 +126,24 @@ public class BacktestController {\n         return ResponseEntity.ok(ApiResponse.ok(BacktestPositionsResponse.from(result)));\n     }\n \n+    /** 리밸런싱마다 목표·실제 비중(FR-026). {@code weightsSource}로 사용자 입력 비중과 계산 비중을 구분한다. */\n+    @GetMapping(\"/{backtestId}/weights\")\n+    public ResponseEntity<ApiResponse<BacktestWeightsResponse>> getWeights(\n+            @PathVariable String backtestId, HttpServletRequest http) {\n+        BacktestWeightsResult result =\n+                queryService.getWeights(backtestId, currentRequester.requireRequesterId(http));\n+        return ResponseEntity.ok(ApiResponse.ok(BacktestWeightsResponse.from(result)));\n+    }\n+\n+    /** 예외 처리 기록(FR-020·FR-030). 005가 \"결과 옆 한 문장\"에 쓰는 원천이다. */\n+    @GetMapping(\"/{backtestId}/exceptions\")\n+    public ResponseEntity<ApiResponse<BacktestExceptionsResponse>> getExceptions(\n+            @PathVariable String backtestId, HttpServletRequest http) {\n+        BacktestExceptionsResult result =\n+                queryService.getExceptions(backtestId, currentRequester.requireRequesterId(http));\n+        return ResponseEntity.ok(ApiResponse.ok(BacktestExceptionsResponse.from(result)));\n+    }\n+\n     /**\n      * 요청 DTO → 커맨드. 기본값을 채우고 {@code instrumentId} 형식을 검증한다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -52,7 +52,38 @@ public record BacktestDetailResponse(\n             int tradeCount,\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal winRate,\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalCommission,\n-            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalSlippageCost) {}\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalSlippageCost,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal netTotalReturn,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalTradingCost,\n+            Costs costs,\n+            Liquidation liquidation,\n+            Analytics analytics,\n+            int exceptionCount) {}\n+\n+    /** 비용 네 갈래와 합(FR-027). */\n+    public record Costs(\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal commission,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal spread,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal slippage,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal tax,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal total) {}\n+\n+    /** 종료 시 시가평가와 청산 가정치(FR-017). */\n+    public record Liquidation(MarkToMarket markToMarket, Liquidated liquidated) {}\n+\n+    public record MarkToMarket(\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn) {}\n+\n+    public record Liquidated(\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal finalEquity,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal liquidationCost) {}\n+\n+    /** 요약에 실리는 파생 지표 둘. {@code recoveryDays} null = 미회복. */\n+    public record Analytics(\n+            Integer recoveryDays,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal turnover) {}\n \n     public record Failure(String code, String message) {}\n \n@@ -95,6 +126,31 @@ public record BacktestDetailResponse(\n                 source.tradeCount(),\n                 source.winRate(),\n                 source.totalCommission(),\n-                source.totalSlippageCost());\n+                source.totalSlippageCost(),\n+                source.netTotalReturn(),\n+                source.totalTradingCost(),\n+                source.costs() == null\n+                        ? null\n+                        : new Costs(\n+                                source.costs().commission(),\n+                                source.costs().spread(),\n+                                source.costs().slippage(),\n+                                source.costs().tax(),\n+                                source.costs().total()),\n+                source.liquidation() == null\n+                        ? null\n+                        : new Liquidation(\n+                                new MarkToMarket(\n+                                        source.liquidation().markToMarket().finalEquity(),\n+                                        source.liquidation().markToMarket().totalReturn()),\n+                                new Liquidated(\n+                                        source.liquidation().liquidated().finalEquity(),\n+                                        source.liquidation().liquidated().totalReturn(),\n+                                        source.liquidation().liquidated().liquidationCost())),\n+                source.analytics() == null\n+                        ? null\n+                        : new Analytics(\n+                                source.analytics().recoveryDays(), source.analytics().turnover()),\n+                source.exceptionCount());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestDetailResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestDetailResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+package com.ssafy.thorp.backtest.presentation.response;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /backtests/{backtestId}/exceptions} 응답. 계약: {@code docs/specs/backtest-api/README.md}\n+ * §2.7과 {@code examples/backtest-exceptions.json}.\n+ *\n+ * <p>{@code kind}는 개방 집합이다(ZERO_VOLATILITY, NO_SELECTION, ESTIMATION_FAILED, CONSTRAINT_VIOLATION,\n+ * HALT_DEFERRED, HALT_SUPERSEDED, WEIGHT_ROUNDING, SPLIT_FRACTION …). 포트폴리오 전체에 걸린 예외는 {@code\n+ * instrumentId} 키가 없다.\n+ */\n+public record BacktestExceptionsResponse(String backtestId, boolean partial, List<Item> items) {\n+\n+    public record Item(\n+            LocalDate date,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String instrumentId,\n+            String kind,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String rule,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String action) {}\n+\n+    public static BacktestExceptionsResponse from(BacktestExceptionsResult result) {\n+        return new BacktestExceptionsResponse(\n+                result.backtestId(),\n+                result.partial(),\n+                result.items().stream()\n+                        .map(\n+                                e ->\n+                                        new Item(\n+                                                e.date(),\n+                                                e.instrumentId(),\n+                                                e.kind(),\n+                                                e.rule(),\n+                                                e.action()))\n+                        .toList());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestExceptionsResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestExceptionsResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,6 +16,7 @@ import java.util.List;\n  */\n public record BacktestPositionsResponse(\n         String backtestId,\n+        boolean partial,\n         LocalDate requestedDate,\n         LocalDate snapshotDate,\n         List<Position> positions) {\n@@ -30,6 +31,7 @@ public record BacktestPositionsResponse(\n     public static BacktestPositionsResponse from(BacktestPositionsResult result) {\n         return new BacktestPositionsResponse(\n                 result.backtestId(),\n+                result.partial(),\n                 result.requestedDate(),\n                 result.snapshotDate(),\n                 result.positions().stream()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestPositionsResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestPositionsResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,7 +12,7 @@ import java.util.List;\n  * {@code GET /backtests/{backtestId}/timeseries} 응답. 계약: {@code docs/specs/backtest-api/README.md}\n  * §2.2와 {@code examples/backtest-timeseries.json}(발췌).\n  */\n-public record BacktestTimeseriesResponse(String backtestId, List<Point> points) {\n+public record BacktestTimeseriesResponse(String backtestId, boolean partial, List<Point> points) {\n \n     /**\n      * {@code benchmarkReturn}만 <b>키를 생략한다</b>({@code @JsonInclude}를 필드에 붙인다). 설계가 \"벤치마크를 지정하지 않았으면\n@@ -25,11 +25,19 @@ public record BacktestTimeseriesResponse(String backtestId, List<Point> points)\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal drawdown,\n             @JsonInclude(JsonInclude.Include.NON_NULL)\n                     @JsonSerialize(using = PlainBigDecimalSerializer.class)\n-                    BigDecimal benchmarkReturn) {}\n+                    BigDecimal benchmarkReturn,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) List<CashFlow> cashFlows) {}\n+\n+    /** 분배금 등 그날 현금 흐름(FR-013). 있는 날에만 {@code cashFlows} 키가 있다. */\n+    public record CashFlow(\n+            String type,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String instrumentId,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal amount) {}\n \n     public static BacktestTimeseriesResponse from(BacktestTimeseriesResult result) {\n         return new BacktestTimeseriesResponse(\n                 result.backtestId(),\n+                result.partial(),\n                 result.points().stream()\n                         .map(\n                                 p ->\n@@ -38,7 +46,18 @@ public record BacktestTimeseriesResponse(String backtestId, List<Point> points)\n                                                 p.equity(),\n                                                 p.cumulativeReturn(),\n                                                 p.drawdown(),\n-                                                p.benchmarkReturn()))\n+                                                p.benchmarkReturn(),\n+                                                p.cashFlows() == null\n+                                                        ? null\n+                                                        : p.cashFlows().stream()\n+                                                                .map(\n+                                                                        f ->\n+                                                                                new CashFlow(\n+                                                                                        f.type(),\n+                                                                                        f\n+                                                                                                .instrumentId(),\n+                                                                                        f.amount()))\n+                                                                .toList()))\n                         .toList());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestTimeseriesResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestTimeseriesResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,13 @@\n package com.ssafy.thorp.backtest.presentation.response;\n \n+import com.fasterxml.jackson.annotation.JsonInclude;\n import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.TradeReason;\n import com.ssafy.thorp.backtest.application.port.message.TradeSide;\n import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import com.ssafy.thorp.backtest.application.service.ExecutionPolicy;\n import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n import java.math.BigDecimal;\n import java.time.Instant;\n@@ -20,6 +23,7 @@ import java.util.List;\n  */\n public record BacktestTradePageResponse(\n         String backtestId,\n+        boolean partial,\n         int page,\n         int size,\n         long totalElements,\n@@ -34,12 +38,15 @@ public record BacktestTradePageResponse(\n      *\n      * <p>현재 모든 종목이 XKRX다(ADR-0002 D4). 거래소가 늘면 {@code instrumentId} suffix → zone 매핑으로 뺀다.\n      */\n-    private static final ZoneId EXCHANGE = ZoneId.of(\"Asia/Seoul\");\n+    private static final ZoneId EXCHANGE = ExecutionPolicy.EXCHANGE_ZONE;\n \n     /**\n      * OPEN 거래는 {@code exitDate}·{@code exitPrice}·{@code grossPnl}·{@code realizedPnl}·{@code\n      * returnRate}가 <b>명시적 {@code null}</b>이다(키가 있다). 설계 예시가 그렇게 적혀 있고, 0으로 대체해 표시하면 안 된다는 뜻이다. 그래서\n      * 이 record에는 {@code @JsonInclude}를 붙이지 않는다.\n+     *\n+     * <p>v2 추가분 {@code reason}(REBALANCE·HALT_DEFERRED·LIQUIDATION·SIGNAL)은 항상 있고, {@code\n+     * plannedDate}는 거래 불가로 미룬 거래에만 있어 없으면 키를 생략한다.\n      */\n     public record Trade(\n             String tradeId,\n@@ -55,7 +62,9 @@ public record BacktestTradePageResponse(\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal commission,\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal slippageCost,\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal realizedPnl,\n-            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal returnRate) {}\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal returnRate,\n+            TradeReason reason,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) LocalDate plannedDate) {}\n \n     /** 체결 봉 timestamp → 거래소 현지 거래일. UTC로 자르지 않는다. */\n     static LocalDate tradingDate(Instant instant) {\n@@ -65,6 +74,7 @@ public record BacktestTradePageResponse(\n     public static BacktestTradePageResponse from(BacktestTradePageResult result) {\n         return new BacktestTradePageResponse(\n                 result.backtestId(),\n+                result.partial(),\n                 result.page(),\n                 result.size(),\n                 result.totalElements(),\n@@ -87,6 +97,8 @@ public record BacktestTradePageResponse(\n                 t.commission(),\n                 t.slippageCost(),\n                 t.realizedPnl(),\n-                t.returnRate());\n+                t.returnRate(),\n+                t.reason(),\n+                t.plannedDate());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestTradePageResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestTradePageResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,56 @@\n+package com.ssafy.thorp.backtest.presentation.response;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n+import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * {@code GET /backtests/{backtestId}/weights} 응답. 계약: {@code docs/specs/backtest-api/README.md}\n+ * §2.6과 {@code examples/backtest-weights.json}.\n+ *\n+ * <p>{@code riskScale}·{@code estimatedVolatility}는 {@code TARGET_RISK} 시나리오에서만 있고 그 밖에는 <b>키를\n+ * 생략한다</b>(PD-18). 비중 맵의 값도 다른 소수처럼 문자열이다.\n+ */\n+public record BacktestWeightsResponse(\n+        String backtestId, boolean partial, WeightsSource weightsSource, List<Point> points) {\n+\n+    public record Point(\n+            LocalDate date,\n+            @JsonSerialize(contentUsing = PlainBigDecimalSerializer.class)\n+                    Map<String, BigDecimal> target,\n+            @JsonSerialize(contentUsing = PlainBigDecimalSerializer.class)\n+                    Map<String, BigDecimal> actual,\n+            @JsonInclude(JsonInclude.Include.NON_NULL)\n+                    @JsonSerialize(using = PlainBigDecimalSerializer.class)\n+                    BigDecimal weightError,\n+            @JsonInclude(JsonInclude.Include.NON_NULL)\n+                    @JsonSerialize(using = PlainBigDecimalSerializer.class)\n+                    BigDecimal riskScale,\n+            @JsonInclude(JsonInclude.Include.NON_NULL)\n+                    @JsonSerialize(using = PlainBigDecimalSerializer.class)\n+                    BigDecimal estimatedVolatility) {}\n+\n+    public static BacktestWeightsResponse from(BacktestWeightsResult result) {\n+        return new BacktestWeightsResponse(\n+                result.backtestId(),\n+                result.partial(),\n+                result.weightsSource(),\n+                result.points().stream()\n+                        .map(\n+                                p ->\n+                                        new Point(\n+                                                p.date(),\n+                                                p.target(),\n+                                                p.actual(),\n+                                                p.weightError(),\n+                                                p.riskScale(),\n+                                                p.estimatedVolatility()))\n+                        .toList());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestWeightsResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestWeightsResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,15 +10,18 @@ import static org.mockito.Mockito.when;\n import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;\n import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;\n import com.ssafy.thorp.backtest.application.result.BacktestSeries;\n import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestResultNotReadyException;\n@@ -38,6 +41,7 @@ import java.math.BigDecimal;\n import java.time.Clock;\n import java.time.Instant;\n import java.time.LocalDate;\n+import java.time.ZoneId;\n import java.time.ZoneOffset;\n import java.util.List;\n import java.util.Map;\n@@ -115,14 +119,14 @@ class BacktestResultQueryServiceTest {\n                 new BigDecimal(\"11666521.51\"),\n                 \"KRW\",\n                 new BigDecimal(\"0.166652\"),\n-                null,\n+                new BigDecimal(\"0.166652\"),\n                 new BigDecimal(\"0.366917\"),\n                 new BigDecimal(\"-0.041757\"),\n                 new BigDecimal(\"2.342630\"),\n                 new BigDecimal(\"0.132307\"),\n                 2,\n                 new BigDecimal(\"0.500000\"),\n-                null);\n+                new BigDecimal(\"17078.49\"));\n     }\n \n     private static EngineOutput.ExecutionResult execution() {\n@@ -139,7 +143,56 @@ class BacktestResultQueryServiceTest {\n                 errorCode == null ? performance() : null,\n                 errorCode == null ? execution() : null,\n                 benchmark ? \"069500.XKRX\" : null,\n-                benchmark ? new BigDecimal(\"0.053292\") : null);\n+                benchmark ? new BigDecimal(\"0.053292\") : null,\n+                errorCode == null ? costs() : null,\n+                errorCode == null ? liquidation() : null,\n+                errorCode == null ? analytics() : null,\n+                errorCode == null ? 1 : 0);\n+    }\n+\n+    private static EngineOutput.Costs costs() {\n+        return new EngineOutput.Costs(\n+                new BigDecimal(\"3941.19\"),\n+                new BigDecimal(\"0.00\"),\n+                new BigDecimal(\"13137.30\"),\n+                new BigDecimal(\"0.00\"),\n+                new BigDecimal(\"17078.49\"));\n+    }\n+\n+    private static EngineOutput.Liquidation liquidation() {\n+        return new EngineOutput.Liquidation(\n+                new EngineOutput.MarkToMarket(\n+                        new BigDecimal(\"11666521.51\"), new BigDecimal(\"0.166652\")),\n+                new EngineOutput.Liquidated(\n+                        new BigDecimal(\"11662525.96\"),\n+                        new BigDecimal(\"0.166253\"),\n+                        new BigDecimal(\"3995.55\")));\n+    }\n+\n+    private static EngineOutput.Analytics analytics() {\n+        return new EngineOutput.Analytics(\n+                9, new BigDecimal(\"1.219991\"), null, null, null, null, \"sample-covariance-daily\");\n+    }\n+\n+    /** 먼저 취소해 실행은 계속 돈 요청(R-04). 스냅샷 날짜까지만 볼 수 있다. */\n+    private static BacktestRequest cancelledJoinedRequest(LocalDate snapshot) {\n+        return BacktestRequest.restore(\n+                21L,\n+                BacktestId.from(BACKTEST_ID),\n+                JOB_ID,\n+                REQUESTER,\n+                ExecutionType.SINGLE,\n+                ResultSource.JOINED,\n+                null,\n+                Instant.parse(\"2026-09-07T01:00:10Z\"),\n+                snapshot,\n+                false);\n+    }\n+\n+    private void givenCancelledJoined(LocalDate snapshot) {\n+        when(requestRepository.findByBacktestId(BACKTEST_ID))\n+                .thenReturn(Optional.of(cancelledJoinedRequest(snapshot)));\n+        when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(jobIn(RunStatus.COMPLETED)));\n     }\n \n     private void given(RunStatus status) {\n@@ -189,6 +242,172 @@ class BacktestResultQueryServiceTest {\n         // execution에서 비용 2개만 가져온다. orderCount 등은 노출하지 않는다\n         assertThat(summary.totalCommission()).isEqualByComparingTo(\"3941.19\");\n         assertThat(summary.totalSlippageCost()).isEqualByComparingTo(\"13137.30\");\n+        // v2 항목(rest-api.md summary): 핵심 숫자 3개 + 청산 + 비용 + analytics 2개 + 예외 건수\n+        assertThat(summary.netTotalReturn()).isEqualByComparingTo(\"0.166652\");\n+        assertThat(summary.totalTradingCost()).isEqualByComparingTo(\"17078.49\");\n+        assertThat(summary.costs()).isEqualTo(costs());\n+        assertThat(summary.liquidation()).isEqualTo(liquidation());\n+        assertThat(summary.analytics().recoveryDays()).isEqualTo(9);\n+        assertThat(summary.analytics().turnover()).isEqualByComparingTo(\"1.219991\");\n+        assertThat(summary.exceptionCount()).isEqualTo(1);\n+    }\n+\n+    // ---------- getWeights · getExceptions ----------\n+\n+    private static EngineOutput.WeightsPoint weightsPoint(String date) {\n+        return new EngineOutput.WeightsPoint(\n+                LocalDate.parse(date),\n+                Map.of(\"005930.XKRX\", new BigDecimal(\"0.5\")),\n+                Map.of(\"005930.XKRX\", new BigDecimal(\"0.49\")),\n+                new BigDecimal(\"0.01\"),\n+                null,\n+                null);\n+    }\n+\n+    private static EngineOutput.ExceptionRecord exception(String date) {\n+        return new EngineOutput.ExceptionRecord(\n+                LocalDate.parse(date), \"005930.XKRX\", \"HALT_DEFERRED\", \"DEFER\", \"deferred\");\n+    }\n+\n+    private void givenBlocks() {\n+        when(resultRepository.findBlocks(JOB_ID))\n+                .thenReturn(\n+                        Optional.of(\n+                                new BacktestResultBlocks(\n+                                        List.of(\n+                                                weightsPoint(\"2025-01-02\"),\n+                                                weightsPoint(\"2025-02-03\")),\n+                                        WeightsSource.COMPUTED,\n+                                        List.of(\n+                                                exception(\"2025-01-10\"),\n+                                                exception(\"2025-02-10\")))));\n+    }\n+\n+    @Test\n+    @DisplayName(\"비중 기록은 리밸런싱 포인트와 비중 출처를 그대로 돌려준다\")\n+    void weightsReturnPointsAndSource() {\n+        given(RunStatus.COMPLETED);\n+        givenBlocks();\n+\n+        BacktestWeightsResult result = service.getWeights(BACKTEST_ID, REQUESTER);\n+\n+        assertThat(result.backtestId()).isEqualTo(BACKTEST_ID);\n+        assertThat(result.partial()).isFalse();\n+        assertThat(result.weightsSource()).isEqualTo(WeightsSource.COMPUTED);\n+        assertThat(result.points()).hasSize(2);\n+        assertThat(result.points().get(0).weightError()).isEqualByComparingTo(\"0.01\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"예외 기록은 그대로 돌려주고 관문을 쓴다 — RUNNING 이면 RESULT_NOT_READY\")\n+    void exceptionsReturnRecordsAndUseGate() {\n+        given(RunStatus.COMPLETED);\n+        givenBlocks();\n+        assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items()).hasSize(2);\n+\n+        given(RunStatus.RUNNING);\n+        assertThatThrownBy(() -> service.getExceptions(BACKTEST_ID, REQUESTER))\n+                .isInstanceOf(BacktestResultNotReadyException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"비중도 결과 행이 없으면 500이다\")\n+    void weightsMissingResultRow() {\n+        given(RunStatus.COMPLETED);\n+        when(resultRepository.findBlocks(JOB_ID)).thenReturn(Optional.empty());\n+\n+        assertThatThrownBy(() -> service.getWeights(BACKTEST_ID, REQUESTER))\n+                .isInstanceOf(IllegalStateException.class);\n+    }\n+\n+    // ---------- 먼저 취소한 요청의 읽기 필터(R-04, T005 결정 ⑥) ----------\n+\n+    @Test\n+    @DisplayName(\"먼저 취소해 실행이 계속 돈 요청은 스냅샷 날짜까지만 보고 partial=true 다\")\n+    void cancelledJoinedRequestIsCutAtItsSnapshot() {\n+        givenCancelledJoined(LocalDate.parse(\"2025-01-10\"));\n+        when(resultRepository.findTimeseries(JOB_ID))\n+                .thenReturn(\n+                        Optional.of(\n+                                new BacktestSeries(\n+                                        List.of(\n+                                                snapshot(\"2025-01-02\", \"10000000.00\"),\n+                                                snapshot(\"2025-01-10\", \"10100000.00\"),\n+                                                snapshot(\"2025-01-13\", \"10200000.00\")),\n+                                        null)));\n+        givenBlocks();\n+\n+        BacktestTimeseriesResult series = service.getTimeseries(BACKTEST_ID, REQUESTER);\n+        assertThat(series.partial()).isTrue();\n+        assertThat(series.points())\n+                .extracting(BacktestTimeseriesResult.Point::date)\n+                .containsExactly(LocalDate.parse(\"2025-01-02\"), LocalDate.parse(\"2025-01-10\"));\n+\n+        assertThat(service.getWeights(BACKTEST_ID, REQUESTER).points())\n+                .extracting(EngineOutput.WeightsPoint::date)\n+                .containsExactly(LocalDate.parse(\"2025-01-02\"));\n+        assertThat(service.getExceptions(BACKTEST_ID, REQUESTER).items())\n+                .extracting(EngineOutput.ExceptionRecord::date)\n+                .containsExactly(LocalDate.parse(\"2025-01-10\"));\n+\n+        // 보유도 스냅샷 뒤 날짜를 요청하면 스냅샷 이하의 마지막 보유로 답하고 partial 을 싣는다\n+        when(resultRepository.findPortfolioSeries(JOB_ID))\n+                .thenReturn(\n+                        Optional.of(\n+                                List.of(\n+                                        snapshotWith(\n+                                                \"2025-01-02\", List.of(position(\"005930.XKRX\"))),\n+                                        snapshotWith(\"2025-01-13\", List.of()))));\n+        BacktestPositionsResult positions =\n+                service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.parse(\"2025-01-13\"));\n+        assertThat(positions.partial()).isTrue();\n+        assertThat(positions.snapshotDate()).isEqualTo(LocalDate.parse(\"2025-01-02\"));\n+        assertThat(positions.positions()).hasSize(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"완료한 거래일이 없는 취소 요청은 409 NO_PARTIAL_RESULT 다 — 실행 결과로 대신하지 않는다\")\n+    void cancelledBeforeAnyProgressHasNoPartialResult() {\n+        givenCancelledJoined(null);\n+\n+        assertThatThrownBy(() -> service.getTimeseries(BACKTEST_ID, REQUESTER))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(e -> ((BusinessException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.NO_PARTIAL_RESULT);\n+    }\n+\n+    @Test\n+    @DisplayName(\"취소 요청의 거래는 스냅샷 다음 날 0시(거래소 현지) 를 경계로 저장소에 요청한다\")\n+    void cancelledJoinedRequestBoundsTradesByEntryTime() {\n+        givenCancelledJoined(LocalDate.parse(\"2025-01-10\"));\n+        when(resultRepository.exists(JOB_ID)).thenReturn(true);\n+        FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);\n+        Instant bound =\n+                LocalDate.parse(\"2025-01-11\").atStartOfDay(ZoneId.of(\"Asia/Seoul\")).toInstant();\n+        when(resultRepository.findTrades(JOB_ID, query, bound))\n+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));\n+\n+        BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);\n+\n+        assertThat(result.partial()).isTrue();\n+        assertThat(result.content()).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"취소하지 않은 요청의 보유 조회는 partial=false 다\")\n+    void positionsOfOrdinaryRequestAreNotPartial() {\n+        given(RunStatus.COMPLETED);\n+        when(resultRepository.findPortfolioSeries(JOB_ID))\n+                .thenReturn(\n+                        Optional.of(\n+                                List.of(\n+                                        snapshotWith(\n+                                                \"2025-01-02\", List.of(position(\"005930.XKRX\"))))));\n+\n+        assertThat(\n+                        service.getPositions(BACKTEST_ID, REQUESTER, LocalDate.parse(\"2025-01-02\"))\n+                                .partial())\n+                .isFalse();\n     }\n \n     @Test\n@@ -360,7 +579,7 @@ class BacktestResultQueryServiceTest {\n         given(RunStatus.COMPLETED);\n         when(resultRepository.exists(JOB_ID)).thenReturn(true);\n         FindBacktestTradesQuery query = new FindBacktestTradesQuery(1, 2, null, null);\n-        when(resultRepository.findTrades(JOB_ID, query))\n+        when(resultRepository.findTrades(JOB_ID, query, null))\n                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(1, 2), 5));\n \n         BacktestTradePageResult result = service.getTrades(BACKTEST_ID, REQUESTER, query);\n@@ -377,7 +596,7 @@ class BacktestResultQueryServiceTest {\n         given(RunStatus.COMPLETED);\n         when(resultRepository.exists(JOB_ID)).thenReturn(true);\n         FindBacktestTradesQuery query = new FindBacktestTradesQuery(0, 100, null, null);\n-        when(resultRepository.findTrades(JOB_ID, query))\n+        when(resultRepository.findTrades(JOB_ID, query, null))\n                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 100), 0));\n \n         assertThat(service.getTrades(BACKTEST_ID, REQUESTER, query).content()).isEmpty();\n@@ -556,7 +775,7 @@ class BacktestResultQueryServiceTest {\n                                         new FindBacktestTradesQuery(0, 100, null, null)))\n                 .isInstanceOf(IllegalStateException.class);\n         // 거래 조회까지 가지 않는다\n-        verify(resultRepository, never()).findTrades(any(), any());\n+        verify(resultRepository, never()).findTrades(any(), any(), any());\n     }\n \n     // ---------- 하위 리소스 관문 ----------\n@@ -587,7 +806,8 @@ class BacktestResultQueryServiceTest {\n     void gateCompleted() {\n         given(RunStatus.COMPLETED);\n \n-        assertThat(service.requireResultReady(BACKTEST_ID, REQUESTER).getId()).isEqualTo(JOB_ID);\n+        assertThat(service.requireResultReady(BACKTEST_ID, REQUESTER).run().getId())\n+                .isEqualTo(JOB_ID);\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,7 @@ import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import com.ssafy.thorp.backtest.application.result.BacktestResultBlocks;\n import com.ssafy.thorp.backtest.application.result.BacktestResultSummary;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n@@ -131,6 +132,30 @@ class BacktestResultProjectionTest extends PostgresTestSupport {\n         assertThat(summary.benchmarkInstrumentId()).isNull();\n         assertThat(summary.benchmarkTotalReturn()).isNull();\n         assertThat(summary.hasBenchmark()).isFalse();\n+        // v2 요약 항목(T009): 비용·청산·분석 블록과 예외 건수. 예외 본문은 읽지 않는다\n+        EngineOutput output = event.payload().engineOutput();\n+        assertThat(summary.costs()).isEqualTo(output.costs());\n+        assertThat(summary.liquidation()).isEqualTo(output.liquidation());\n+        assertThat(summary.analytics()).isEqualTo(output.analytics());\n+        assertThat(summary.exceptionCount()).isEqualTo(output.exceptions().size());\n+    }\n+\n+    @Test\n+    @DisplayName(\"비중·예외 블록 조회는 시계열을 읽지 않고 두 리스트와 비중 출처를 돌려준다\")\n+    void findsWeightsAndExceptionsWithoutSeries() {\n+        Long jobId = saveFixtureResult();\n+        EngineOutput output = MessageFixtures.finishedCompleted().payload().engineOutput();\n+        jdbcTemplate.update(\n+                \"UPDATE backtest_result SET portfolio_series = '{\\\"broken\\\":true}'::jsonb\"\n+                        + \" WHERE run_id = ?\",\n+                jobId);\n+\n+        BacktestResultBlocks blocks = resultRepository.findBlocks(jobId).orElseThrow();\n+\n+        assertThat(blocks.weightsSeries()).isEqualTo(output.weightsSeries());\n+        assertThat(blocks.weightsSource()).isEqualTo(output.weightsSource());\n+        assertThat(blocks.exceptions()).isEqualTo(output.exceptions());\n+        assertThat(resultRepository.findBlocks(999_999L)).isEmpty();\n     }\n \n     @Test\n@@ -176,9 +201,11 @@ class BacktestResultProjectionTest extends PostgresTestSupport {\n         Long jobId = saveFixtureResult();\n \n         Page<EngineOutput.TradeResult> first =\n-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 2, null, null));\n+                resultRepository.findTrades(\n+                        jobId, new FindBacktestTradesQuery(0, 2, null, null), null);\n         Page<EngineOutput.TradeResult> second =\n-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(1, 2, null, null));\n+                resultRepository.findTrades(\n+                        jobId, new FindBacktestTradesQuery(1, 2, null, null), null);\n \n         assertThat(first.getTotalElements()).isEqualTo(3);\n         assertThat(first.getTotalPages()).isEqualTo(2);\n@@ -201,14 +228,16 @@ class BacktestResultProjectionTest extends PostgresTestSupport {\n                         resultRepository\n                                 .findTrades(\n                                         jobId,\n-                                        new FindBacktestTradesQuery(0, 100, \"000660.XKRX\", null))\n+                                        new FindBacktestTradesQuery(0, 100, \"000660.XKRX\", null),\n+                                        null)\n                                 .getTotalElements())\n                 .isEqualTo(1);\n         assertThat(\n                         resultRepository\n                                 .findTrades(\n                                         jobId,\n-                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN))\n+                                        new FindBacktestTradesQuery(0, 100, null, TradeStatus.OPEN),\n+                                        null)\n                                 .getTotalElements())\n                 .isEqualTo(1);\n         assertThat(\n@@ -216,7 +245,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {\n                                 .findTrades(\n                                         jobId,\n                                         new FindBacktestTradesQuery(\n-                                                0, 100, \"005930.XKRX\", TradeStatus.CLOSED))\n+                                                0, 100, \"005930.XKRX\", TradeStatus.CLOSED),\n+                                        null)\n                                 .getTotalElements())\n                 .isEqualTo(1);\n         // 있는 종목이지만 그 상태의 거래가 없는 조합\n@@ -225,11 +255,45 @@ class BacktestResultProjectionTest extends PostgresTestSupport {\n                                 .findTrades(\n                                         jobId,\n                                         new FindBacktestTradesQuery(\n-                                                0, 100, \"000660.XKRX\", TradeStatus.OPEN))\n+                                                0, 100, \"000660.XKRX\", TradeStatus.OPEN),\n+                                        null)\n                                 .getContent())\n                 .isEmpty();\n     }\n \n+    @Test\n+    @DisplayName(\"취소 요청의 거래 경계: 경계 전에 청산된 거래만 보인다 — 가로지르는 거래와 OPEN 거래는 빠진다\")\n+    void tradesCrossingTheVisibleBoundaryAreExcluded() {\n+        Long jobId = saveFixtureResult();\n+        // 픽스처: TRD-000001 01-22 → 03-12 CLOSED, TRD-000002 02-06 → 04-03 CLOSED, TRD-000003 05-14\n+        // OPEN\n+        Instant before =\n+                LocalDate.parse(\"2025-03-13\").atStartOfDay(ZoneId.of(\"Asia/Seoul\")).toInstant();\n+        FindBacktestTradesQuery all = new FindBacktestTradesQuery(0, 100, null, null);\n+\n+        assertThat(resultRepository.findTrades(jobId, all, before).getContent())\n+                .extracting(EngineOutput.TradeResult::tradeId)\n+                .containsExactly(\"TRD-000001\");\n+        // 02-06 진입은 경계 전이지만 04-03 청산이 경계 뒤라 status 필터로도 나오지 않는다\n+        assertThat(\n+                        resultRepository\n+                                .findTrades(\n+                                        jobId,\n+                                        new FindBacktestTradesQuery(\n+                                                0, 100, null, TradeStatus.CLOSED),\n+                                        before)\n+                                .getTotalElements())\n+                .isEqualTo(1);\n+        assertThat(resultRepository.findTrades(jobId, all, null).getTotalElements()).isEqualTo(3);\n+        // 끝까지 OPEN 인 거래(05-14 진입)는 경계가 그 뒤(06-01)여도 보이지 않는다 — 저장된 OPEN 행은 실행\n+        // 종료 시점 값(분할·부분 매도로 수량·수수료가 바뀐다)이라 경계 시점 상태가 아니다\n+        Instant june =\n+                LocalDate.parse(\"2025-06-01\").atStartOfDay(ZoneId.of(\"Asia/Seoul\")).toInstant();\n+        assertThat(resultRepository.findTrades(jobId, all, june).getContent())\n+                .extracting(EngineOutput.TradeResult::tradeId)\n+                .containsExactly(\"TRD-000001\", \"TRD-000002\");\n+    }\n+\n     @Test\n     @DisplayName(\"거래의 detail을 꺼내면 계약 형태의 거래가 그대로 나온다\")\n     void tradeContentIsContractShape() {\n@@ -237,7 +301,8 @@ class BacktestResultProjectionTest extends PostgresTestSupport {\n         BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();\n \n         Page<EngineOutput.TradeResult> page =\n-                resultRepository.findTrades(jobId, new FindBacktestTradesQuery(0, 100, null, null));\n+                resultRepository.findTrades(\n+                        jobId, new FindBacktestTradesQuery(0, 100, null, null), null);\n \n         // record equals는 BigDecimal의 scale까지 본다\n         assertThat(page.getContent()).isEqualTo(event.payload().engineOutput().trades());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultProjectionTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultProjectionTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -112,6 +112,14 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {\n         assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());\n         assertThat(result.getBenchmark()).isNull();\n         assertThat(result.getDiagnostics()).isEqualTo(output.diagnostics());\n+        // v2 블록(T009). 표시용이라 전부 JSONB 이고 weights_source 만 필터용 스칼라다\n+        assertThat(result.getWeightsSeries()).isEqualTo(output.weightsSeries());\n+        assertThat(result.getWeightsSource()).isEqualTo(output.weightsSource());\n+        assertThat(result.getCosts()).isEqualTo(output.costs());\n+        assertThat(result.getLiquidation()).isEqualTo(output.liquidation());\n+        assertThat(result.getAnalytics()).isEqualTo(output.analytics());\n+        assertThat(result.getExceptions()).isEqualTo(output.exceptions());\n+        assertThat(result.getVersions()).isEqualTo(output.versions());\n         assertThat(result.getCreatedAt()).isNotNull();\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,9 +14,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n \n import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestExceptionsResult;\n import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;\n@@ -257,13 +261,73 @@ class BacktestControllerTest {\n     @Test\n     @DisplayName(\"하위 리소스도 요청자 헤더가 없으면 조회되지 않는다 — 상세만 막으면 우회 경로가 남는다\")\n     void subResourcesRequireRequester() throws Exception {\n-        for (String path : List.of(\"/timeseries\", \"/trades\", \"/positions?date=2024-06-28\")) {\n+        for (String path :\n+                List.of(\n+                        \"/timeseries\",\n+                        \"/trades\",\n+                        \"/positions?date=2024-06-28\",\n+                        \"/weights\",\n+                        \"/exceptions\")) {\n             mockMvc.perform(get(\"/backtests/\" + BACKTEST_ID + path))\n                     .andExpect(status().isBadRequest());\n         }\n         verifyNoInteractions(queryService);\n     }\n \n+    @Test\n+    @DisplayName(\"비중 기록은 리밸런싱 포인트·비중 출처·partial 을 내려준다 — 없는 선택 항목은 키를 생략한다\")\n+    void weightsEndpoint() throws Exception {\n+        when(queryService.getWeights(eq(BACKTEST_ID), anyLong()))\n+                .thenReturn(\n+                        new BacktestWeightsResult(\n+                                BACKTEST_ID,\n+                                false,\n+                                WeightsSource.USER,\n+                                List.of(\n+                                        new EngineOutput.WeightsPoint(\n+                                                LocalDate.of(2024, 1, 3),\n+                                                Map.of(\"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                                                Map.of(\"091160.XKRX\", new BigDecimal(\"0.3998\")),\n+                                                new BigDecimal(\"0.0002\"),\n+                                                null,\n+                                                null))));\n+\n+        mockMvc.perform(\n+                        get(\"/backtests/{id}/weights\", BACKTEST_ID)\n+                                .header(CurrentRequester.DEV_HEADER, USER))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.weightsSource\").value(\"USER\"))\n+                .andExpect(jsonPath(\"$.data.partial\").value(false))\n+                .andExpect(jsonPath(\"$.data.points[0].target['091160.XKRX']\").value(\"0.4000\"))\n+                .andExpect(jsonPath(\"$.data.points[0].weightError\").value(\"0.0002\"))\n+                .andExpect(jsonPath(\"$.data.points[0].riskScale\").doesNotExist());\n+    }\n+\n+    @Test\n+    @DisplayName(\"예외 기록은 항목 그대로 내려준다\")\n+    void exceptionsEndpoint() throws Exception {\n+        when(queryService.getExceptions(eq(BACKTEST_ID), anyLong()))\n+                .thenReturn(\n+                        new BacktestExceptionsResult(\n+                                BACKTEST_ID,\n+                                true,\n+                                List.of(\n+                                        new EngineOutput.ExceptionRecord(\n+                                                LocalDate.of(2024, 6, 11),\n+                                                \"091160.XKRX\",\n+                                                \"HALT_DEFERRED\",\n+                                                \"DEFER_TO_NEXT_TRADABLE\",\n+                                                \"planned 2024-06-11 -> next tradable day\"))));\n+\n+        mockMvc.perform(\n+                        get(\"/backtests/{id}/exceptions\", BACKTEST_ID)\n+                                .header(CurrentRequester.DEV_HEADER, USER))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.partial\").value(true))\n+                .andExpect(jsonPath(\"$.data.items[0].kind\").value(\"HALT_DEFERRED\"))\n+                .andExpect(jsonPath(\"$.data.items[0].instrumentId\").value(\"091160.XKRX\"));\n+    }\n+\n     @Test\n     @DisplayName(\"결과가 준비되지 않은 하위 리소스는 409다\")\n     void subResourceNotReady() throws Exception {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -204,6 +204,24 @@ class BacktestResultApiIT extends PostgresTestSupport {\n                 .isEqualTo(expectedData(\"backtest-trades.json\", id));\n     }\n \n+    @Test\n+    @DisplayName(\"비중 응답이 계약 예시와 같다 — weightsSource 와 리밸런싱 포인트\")\n+    void weightsMatchExample() throws Exception {\n+        String id = requestFor(completedJob());\n+\n+        assertThat(actualData(\"/backtests/\" + id + \"/weights\"))\n+                .isEqualTo(expectedData(\"backtest-weights.json\", id));\n+    }\n+\n+    @Test\n+    @DisplayName(\"예외 응답이 계약 예시와 같다\")\n+    void exceptionsMatchExample() throws Exception {\n+        String id = requestFor(completedJob());\n+\n+        assertThat(actualData(\"/backtests/\" + id + \"/exceptions\"))\n+                .isEqualTo(expectedData(\"backtest-exceptions.json\", id));\n+    }\n+\n     @Test\n     @DisplayName(\"보유 응답이 계약 예시와 같다 — 직전 스냅샷 규칙\")\n     void positionsMatchExample() throws Exception {\n@@ -238,7 +256,13 @@ class BacktestResultApiIT extends PostgresTestSupport {\n     void subResourcesReturnConflictBeforeResult() throws Exception {\n         String id = requestFor(transactionTemplate.execute(status -> newJob()));\n \n-        for (String path : List.of(\"/timeseries\", \"/trades\", \"/positions?date=2025-01-02\")) {\n+        for (String path :\n+                List.of(\n+                        \"/timeseries\",\n+                        \"/trades\",\n+                        \"/positions?date=2025-01-02\",\n+                        \"/weights\",\n+                        \"/exceptions\")) {\n             mockMvc.perform(\n                             get(\"/backtests/\" + id + path)\n                                     .header(CurrentRequester.DEV_HEADER, requesterId))\n@@ -264,7 +288,13 @@ class BacktestResultApiIT extends PostgresTestSupport {\n                 .andExpect(jsonPath(\"$.data.failure.code\").value(\"DATA_INSUFFICIENT\"))\n                 .andExpect(jsonPath(\"$.data.summary\").doesNotExist());\n \n-        for (String path : List.of(\"/timeseries\", \"/trades\", \"/positions?date=2025-01-02\")) {\n+        for (String path :\n+                List.of(\n+                        \"/timeseries\",\n+                        \"/trades\",\n+                        \"/positions?date=2025-01-02\",\n+                        \"/weights\",\n+                        \"/exceptions\")) {\n             mockMvc.perform(\n                             get(\"/backtests/\" + id + path)\n                                     .header(CurrentRequester.DEV_HEADER, requesterId))\n@@ -287,7 +317,14 @@ class BacktestResultApiIT extends PostgresTestSupport {\n                                 job.getId()))\n                 .isEqualTo(3);\n \n-        for (String path : List.of(\"\", \"/timeseries\", \"/trades\", \"/positions?date=2025-01-22\")) {\n+        for (String path :\n+                List.of(\n+                        \"\",\n+                        \"/timeseries\",\n+                        \"/trades\",\n+                        \"/positions?date=2025-01-22\",\n+                        \"/weights\",\n+                        \"/exceptions\")) {\n             mockMvc.perform(\n                             get(\"/backtests/\" + id + path)\n                                     .header(CurrentRequester.DEV_HEADER, requesterId))\n@@ -321,7 +358,14 @@ class BacktestResultApiIT extends PostgresTestSupport {\n     void unknownBacktestIdIsNotFound() throws Exception {\n         String missing = \"BT-29991231-999999\";\n \n-        for (String path : List.of(\"\", \"/timeseries\", \"/trades\", \"/positions?date=2025-01-02\")) {\n+        for (String path :\n+                List.of(\n+                        \"\",\n+                        \"/timeseries\",\n+                        \"/trades\",\n+                        \"/positions?date=2025-01-02\",\n+                        \"/weights\",\n+                        \"/exceptions\")) {\n             mockMvc.perform(\n                             get(\"/backtests/\" + missing + path)\n                                     .header(CurrentRequester.DEV_HEADER, requesterId))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestResultApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestResultApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -46,7 +46,7 @@ class BacktestTradePageResponseTest {\n \n     private static BacktestTradePageResponse.Trade mapped(EngineOutput.TradeResult t) {\n         return BacktestTradePageResponse.from(\n-                        new BacktestTradePageResult(\"BT-1\", 0, 100, 1, 1, List.of(t)))\n+                        new BacktestTradePageResult(\"BT-1\", false, 0, 100, 1, 1, List.of(t)))\n                 .content()\n                 .get(0);\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/response/BacktestTradePageResponseTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/response/BacktestTradePageResponseTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -72,9 +72,9 @@ common: 모든 계층에서 참조 가능\n - 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 \"키 없음 == null\"), `allocation.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)\n - 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다\n - 결과 Consumer(`BacktestEventListener`): 역직렬화 직후 `BacktestEventValidator`로 계약을 명시 검증한다. 계약 오류는 `AmqpRejectAndDontRequeueException`(재시도 후 DLQ), 일시 오류는 그대로 전파(재시도), 모르는 `runId`(요청/실행 분리 전까지 `backtestId` 값과 같다)·늦은 이벤트는 로그 후 정상 반환(ACK). 멱등성은 상태 전이(`BacktestJob.markRunning/markCompleted/markFailed`)로 보장하며 별도 처리 이력 테이블을 두지 않는다\n-- 결과 조회 API(`GET /backtests/{id}` + `/timeseries`·`/trades`·`/positions`): 계약과 예시는 `docs/specs/backtest-api/`이고 `BacktestResultApiIT`가 응답과 예시 파일의 동치를 단언한다. 상세는 실패해도 200(`status`·`error`로 전달), 하위 리소스는 결과가 없으면 409(`RESULT_NOT_READY` 재시도 가능 / `BACKTEST_FAILED` 무의미)이며 **빈 배열을 만들어 내지 않는다**. 최종 상태인데 결과 행이 없으면 500이다(저장 트랜잭션 불변식 위반)\n+- 결과 조회 API(`GET /backtests/{id}` + `/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`): 계약과 예시는 `docs/specs/backtest-api/`이고 `BacktestResultApiIT`가 응답과 예시 파일의 동치를 단언한다. 하위 리소스는 `BacktestResultQueryService.requireResultReady`가 돌려주는 `ResultView` 하나를 관문으로 쓴다 — 먼저 취소한 요청의 스냅샷 자르기(R-04)와 `partial` 판정이 거기 있으니 엔드포인트마다 다시 쓰지 말 것. 상세는 실패해도 200(`status`·`error`로 전달), 하위 리소스는 결과가 없으면 409(`RESULT_NOT_READY` 재시도 가능 / `BACKTEST_FAILED` 무의미)이며 **빈 배열을 만들어 내지 않는다**. 최종 상태인데 결과 행이 없으면 500이다(저장 트랜잭션 불변식 위반)\n - 응답 decimal은 필드마다 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열이 된다. **웹 ObjectMapper에 전역 등록하지 않는다** — 다른 도메인(`MarketResponse.value`)이 숫자→문자열로 바뀌어 그 계약이 깨진다. 전역 `NON_NULL`도 금지: 거래의 `exitDate`는 명시적 null이고 시계열의 `benchmarkReturn`만 키를 생략한다\n-- 결과 조회는 엔드포인트마다 읽을 컬럼이 달라 저장소 조회가 4개다(`findSummary`·`findTimeseries`·`findPortfolioSeries`·`findTrades`). `portfolio_series`는 5년치면 수백 KB이고 `@JdbcTypeCode(JSON)` 기본 타입은 지연 로딩이 없어 엔티티를 읽으면 무조건 딸려온다 — 읽지 않을 컬럼은 select에 넣지 않는다. native alias는 따옴표로 감싼다(PostgreSQL이 소문자로 접는다)\n+- 결과 조회는 엔드포인트마다 읽을 컬럼이 달라 저장소 조회가 5개다(`findSummary`·`findTimeseries`·`findPortfolioSeries`·`findTrades`·`findBlocks`). 비중·예외 블록은 KB 단위라 `findBlocks` 하나로 함께 읽고, 예외 건수는 `jsonb_array_length`로 요약 조회에 얹는다. `portfolio_series`는 5년치면 수백 KB이고 `@JdbcTypeCode(JSON)` 기본 타입은 지연 로딩이 없어 엔티티를 읽으면 무조건 딸려온다 — 읽지 않을 컬럼은 select에 넣지 않는다. native alias는 따옴표로 감싼다(PostgreSQL이 소문자로 접는다)\n - 거래 응답의 `entryDate`는 저장된 `entryTime`(Instant)을 **거래소 현지(Asia/Seoul)** 기준으로 바꾼 값이다. UTC로 자르면 거래소를 늘릴 때 하루 밀린다\n - 스키마 변경은 `db/migration/V{YYYYMMDDHHMMSS}__설명.sql`(PostgreSQL 문법)로 한다. **신규 마이그레이션은 연속 번호가 아니라 작성 시각 타임스탬프를 버전으로 쓴다**(예: `V20260911143000__etf_market_data.sql`). 여러 spec이 동시에 진행되면서 `V3`을 둘이 함께 적어 두는 충돌이 실제로 났고, 타임스탬프는 브랜치끼리 겹치지 않는다. **이미 적용된 `V1`~`V4`는 그대로 둔다** — Flyway가 버전을 숫자로 정렬하므로 `1 < 4 < 20260911143000` 순서가 유지되고 기존 이력과 충돌하지 않는다. prod는 Flyway + `ddl-auto: validate`, local은 `ddl-auto: update`\n - **운영에 이미 적용된 마이그레이션은 고치지 않는다.** 아직 어느 운영 환경에도 적용되지 않은 파일은 병합 뒤라도 버전을 올리거나 정리할 수 있다(2026-09-11 V3 중복을 V4로 푼 것이 그 경우다). 근거는 constitution \"스키마 변경 규칙\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,7 +40,32 @@\n       \"tradeCount\": 2,\n       \"winRate\": \"0.500000\",\n       \"totalCommission\": \"3941.19\",\n-      \"totalSlippageCost\": \"13137.30\"\n+      \"totalSlippageCost\": \"13137.30\",\n+      \"netTotalReturn\": \"0.166652\",\n+      \"totalTradingCost\": \"17078.49\",\n+      \"costs\": {\n+        \"commission\": \"3941.19\",\n+        \"spread\": \"0.00\",\n+        \"slippage\": \"13137.30\",\n+        \"tax\": \"0.00\",\n+        \"total\": \"17078.49\"\n+      },\n+      \"liquidation\": {\n+        \"markToMarket\": {\n+          \"finalEquity\": \"11666521.51\",\n+          \"totalReturn\": \"0.166652\"\n+        },\n+        \"liquidated\": {\n+          \"finalEquity\": \"11662525.96\",\n+          \"totalReturn\": \"0.166253\",\n+          \"liquidationCost\": \"3995.55\"\n+        }\n+      },\n+      \"analytics\": {\n+        \"recoveryDays\": 9,\n+        \"turnover\": \"1.219991\"\n+      },\n+      \"exceptionCount\": 1\n     },\n     \"summaryUnavailable\": null,\n     \"failure\": null\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-detail.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-detail.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"backtestId\": \"BT-20260911-000001\",\n+    \"partial\": false,\n+    \"items\": [\n+      {\n+        \"date\": \"2025-02-26\",\n+        \"instrumentId\": \"000660.XKRX\",\n+        \"kind\": \"HALT_DEFERRED\",\n+        \"rule\": \"DEFER_TO_NEXT_TRADABLE\",\n+        \"action\": \"Order deferred to the next tradable session.\"\n+      }\n+    ]\n+  },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-exceptions.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-exceptions.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@\n   \"success\": true,\n   \"data\": {\n     \"backtestId\": \"BT-20260907-000001\",\n+    \"partial\": false,\n     \"requestedDate\": \"2025-01-23\",\n     \"snapshotDate\": \"2025-01-22\",\n     \"positions\": [\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-positions.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-positions.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,8 @@\n         \"cumulativeReturn\": \"0.000000\",\n         \"drawdown\": \"0.000000\"\n       }\n-    ]\n+    ],\n+    \"partial\": false\n   },\n   \"error\": null\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-timeseries.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-timeseries.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,8 @@\n         \"commission\": \"1437.75\",\n         \"slippageCost\": \"4792.50\",\n         \"realizedPnl\": \"-87230.25\",\n-        \"returnRate\": \"-0.018049\"\n+        \"returnRate\": \"-0.018049\",\n+        \"reason\": \"SIGNAL\"\n       },\n       {\n         \"tradeId\": \"TRD-000002\",\n@@ -37,7 +38,8 @@\n         \"commission\": \"1693.44\",\n         \"slippageCost\": \"5644.80\",\n         \"realizedPnl\": \"1010261.76\",\n-        \"returnRate\": \"0.196702\"\n+        \"returnRate\": \"0.196702\",\n+        \"reason\": \"SIGNAL\"\n       },\n       {\n         \"tradeId\": \"TRD-000003\",\n@@ -53,9 +55,11 @@\n         \"commission\": \"810.00\",\n         \"slippageCost\": \"2700.00\",\n         \"realizedPnl\": null,\n-        \"returnRate\": null\n+        \"returnRate\": null,\n+        \"reason\": \"SIGNAL\"\n       }\n-    ]\n+    ],\n+    \"partial\": false\n   },\n   \"error\": null\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-trades.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-trades.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,75 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"backtestId\": \"BT-20260911-000001\",\n+    \"partial\": false,\n+    \"weightsSource\": \"COMPUTED\",\n+    \"points\": [\n+      {\n+        \"date\": \"2025-01-01\",\n+        \"target\": {},\n+        \"actual\": {},\n+        \"weightError\": \"0.000000\"\n+      },\n+      {\n+        \"date\": \"2025-01-22\",\n+        \"target\": {\n+          \"005930.XKRX\": \"0.483452\"\n+        },\n+        \"actual\": {\n+          \"005930.XKRX\": \"0.483452\"\n+        },\n+        \"weightError\": \"0.000000\"\n+      },\n+      {\n+        \"date\": \"2025-02-06\",\n+        \"target\": {\n+          \"005930.XKRX\": \"0.492301\",\n+          \"000660.XKRX\": \"0.505287\"\n+        },\n+        \"actual\": {\n+          \"005930.XKRX\": \"0.492301\",\n+          \"000660.XKRX\": \"0.505287\"\n+        },\n+        \"weightError\": \"0.000000\"\n+      },\n+      {\n+        \"date\": \"2025-03-12\",\n+        \"target\": {\n+          \"000660.XKRX\": \"0.561130\"\n+        },\n+        \"actual\": {\n+          \"000660.XKRX\": \"0.561130\"\n+        },\n+        \"weightError\": \"0.000000\"\n+      },\n+      {\n+        \"date\": \"2025-04-03\",\n+        \"target\": {},\n+        \"actual\": {},\n+        \"weightError\": \"0.000000\"\n+      },\n+      {\n+        \"date\": \"2025-05-14\",\n+        \"target\": {\n+          \"005930.XKRX\": \"0.494527\"\n+        },\n+        \"actual\": {\n+          \"005930.XKRX\": \"0.494527\"\n+        },\n+        \"weightError\": \"0.000000\"\n+      },\n+      {\n+        \"date\": \"2025-06-30\",\n+        \"target\": {\n+          \"005930.XKRX\": \"0.526892\"\n+        },\n+        \"actual\": {\n+          \"005930.XKRX\": \"0.526892\"\n+        },\n+        \"weightError\": \"0.000000\"\n+      }\n+    ]\n+  },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-weights.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-weights.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,6 +76,8 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n | `GET /backtests/{backtestId}/timeseries` | 차트용 거래일별 시계열 |\n | `GET /backtests/{backtestId}/trades` | 포지션 단위 거래 내역(페이지네이션·필터) |\n | `GET /backtests/{backtestId}/positions?date=` | 특정 시점 보유 구성(직전 스냅샷 규칙) |\n+| `GET /backtests/{backtestId}/weights` | 리밸런싱마다 목표·실제 비중과 비중 출처(FR-026) |\n+| `GET /backtests/{backtestId}/exceptions` | 예외 처리 기록(FR-020·FR-030) — 005가 \"결과 옆 한 문장\"에 쓰는 원천 |\n \n 예시 파일이 계약의 기준이다. 백엔드 통합 테스트가 응답과 이 파일들의 동치를 단언한다.\n 네 파일은 브로커 계약 픽스처 [`../backtest-messaging/examples/event-finished-completed.json`](../backtest-messaging/examples/event-finished-completed.json)와\n@@ -85,6 +87,11 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n - [`examples/backtest-timeseries.json`](examples/backtest-timeseries.json)\n - [`examples/backtest-trades.json`](examples/backtest-trades.json)\n - [`examples/backtest-positions.json`](examples/backtest-positions.json)\n+- [`examples/backtest-weights.json`](examples/backtest-weights.json)\n+- [`examples/backtest-exceptions.json`](examples/backtest-exceptions.json)\n+\n+하위 리소스 다섯 개는 모두 `partial`을 싣는다 — 취소·실행 시간 한도로 끊긴 부분 결과라는 뜻이고, 먼저 취소해 실행이 계속 돈 요청은\n+자기 스냅샷 날짜까지만 담긴다(§2.5).\n \n ### 2.1 상태·설정·요약 — `GET /backtests/{backtestId}`\n \n@@ -116,14 +123,26 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n **`config.initialCash`의 자릿수는 요청과 다를 수 있다.** 저장 컬럼이 `NUMERIC(19,2)`이라 `\"10000000\"`으로 보낸 값이\n `\"10000000.00\"`으로 돌아온다. 값은 같고 표기 자릿수만 컬럼 scale로 정규화된다.\n \n-`summary`의 v2 항목(`netTotalReturn`·`liquidation`·`costs`·`analytics`·`exceptionCount`)은 결과 JSONB를 채우는\n-T009에서 붙는다. 지금은 기존 결과 컬럼에서 나오는 값 그대로다.\n+`summary`는 v1 항목 열두 개(`initialEquity`…`totalSlippageCost`)를 그대로 두고 v2 항목 여섯을 더한 것이다(spec 004 T009).\n+핵심 숫자 3개는 `netTotalReturn`(비용 차감 후 전체 수익률)·`maxDrawdown`·`totalTradingCost`다.\n+\n+| 항목 | 뜻 |\n+|---|---|\n+| `netTotalReturn` | 비용 차감 후 전체 수익률. 자산 곡선이 이미 비용을 뺀 값이라 `totalReturn`과 같다 |\n+| `totalTradingCost` | 거래비용 합계 = `costs.total` |\n+| `costs{commission, spread, slippage, tax, total}` | 비용 네 갈래(FR-027) |\n+| `liquidation{markToMarket{finalEquity,totalReturn}, liquidated{finalEquity,totalReturn,liquidationCost}}` | 종료일 종가 전량 매도 가정치(FR-017). 요청이 청산을 끄면 `null` |\n+| `analytics{recoveryDays, turnover}` | 회복 거래일(미회복이면 `null`)·연환산 회전율. 나머지 파생 지표(상관·위험 기여·손실 기여)는 결과 저장소에 있고 이 API 로는 내려주지 않는다 |\n+| `exceptionCount` | 예외 처리 기록 건수. 본문은 `/exceptions` |\n+\n+값의 정의는 워커 `performance.calculate_analytics` docstring 이 원본이다(spec 004 T008 결정 ①).\n \n ### 2.2 시계열 — `GET /backtests/{backtestId}/timeseries`\n \n 거래일마다 1개, 해당 거래일 Close 기준이다. `cash`·`positionValue`·`dailyReturn`·`positions`는 내려주지 않는다.\n \n `benchmarkReturn`은 벤치마크가 없거나 그 날짜 값이 없으면 **키 자체를 생략한다**(`null`이 아니다).\n+`cashFlows[{type, instrumentId?, amount}]`는 분배금 등 현금 흐름이 있는 날에만 있다(FR-013, `type`은 현재 `DISTRIBUTION`). 없는 날은 키를 생략한다.\n \n 예시 파일의 `points`는 **발췌다** — 픽스처의 전체 시계열은 129개이고 파일에는 앞 3개만 담았다. 실제 응답은 거래일 수만큼 온다(5년이면 약 1,250개).\n \n@@ -144,6 +163,9 @@ T009에서 붙는다. 지금은 기존 결과 컬럼에서 나오는 값 그대\n OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`가 **명시적 `null`**이다(키가 있다).\n 0으로 대체해 표시하지 않는다.\n \n+`reason`은 거래 사유(`REBALANCE` 리밸런싱, `HALT_DEFERRED` 거래 불가로 미룬 체결, `LIQUIDATION` 종료 청산, `SIGNAL` 단일 종목 신호)이고\n+항상 있다. `plannedDate`는 `HALT_DEFERRED`에서만 있는 원래 체결 예정일이며 없으면 키를 생략한다.\n+\n ### 2.4 보유 구성 — `GET /backtests/{backtestId}/positions?date=`\n \n `date`는 필수다(`YYYY-MM-DD`). 보유 구성이 바뀐 거래일 + 시작일 + 종료일에만 스냅샷이 있으므로,\n@@ -156,14 +178,34 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`\n \n ### 2.5 하위 리소스의 준비 상태\n \n-`/timeseries`·`/trades`·`/positions`는 결과가 없으면 데이터를 만들어 내지 않고 409를 준다.\n+`/timeseries`·`/trades`·`/positions`·`/weights`·`/exceptions`는 결과가 없으면 데이터를 만들어 내지 않고 409를 준다.\n **빈 배열로 응답하지 않는다** — 실패한 실행에 `{\"points\":[]}`를 주면 \"돌았고 자산 곡선이 비어 있었다\"는 거짓이 된다.\n \n-| Job 상태 | HTTP | `error.code` | 프론트 동작 |\n+| 상태 | HTTP | `error.code` | 프론트 동작 |\n |---|---|---|---|\n-| `QUEUED`·`RUNNING` | 409 | `RESULT_NOT_READY` | 폴링 계속 |\n-| `FAILED` | 409 | `BACKTEST_FAILED` | **폴링 중단.** `GET /backtests/{id}`의 `error` 표시 |\n-| `COMPLETED` | 200 | — | 그린다 |\n+| 실행 `QUEUED`·`RUNNING` | 409 | `RESULT_NOT_READY` | 폴링 계속 |\n+| 실행 `FAILED` | 409 | `BACKTEST_FAILED` | **폴링 중단.** `GET /backtests/{id}`의 `failure` 표시 |\n+| 실행 `COMPLETED`·`CANCELLED` | 200 | — | 그린다. `partial=true`면 부분 구간임을 표시 |\n+| 요청이 먼저 취소됐고 완료한 거래일이 없음 | 409 | `NO_PARTIAL_RESULT` | 재시도 무의미. 새 요청을 낸다 |\n+\n+**먼저 취소해 실행이 계속 돈 요청**(spec 004 R-04)은 공용 실행이 끝난 뒤 자기 스냅샷 날짜(`progress.lastTradingDate`)까지만 잘라 준다 —\n+백엔드가 지표를 다시 계산하지 않는 읽기 필터다. 날짜가 있는 항목(시계열·보유·비중·예외)은 날짜로 자른다. 거래는 스냅샷 다음 날 0시(거래소 현지) 전에\n+**청산된 거래만** 준다 — 저장된 거래 행은 실행 종료 시점 값이라, 스냅샷을 가로질러 뒤에 청산된 거래는 청산가·실현손익이, 끝까지 OPEN인 거래는 분할·부분 매도로\n+바뀐 수량·수수료가 스냅샷 밖이다. **따라서 취소 요청의 `/trades`는 전체 진입 내역이 아니다**(`status=OPEN` 필터는 빈 페이지). 스냅샷 시점 보유는 `/positions`가 준다. 공용 실행이 종결 전이면 `RESULT_NOT_READY`, `FAILED`로 끝나면 `BACKTEST_FAILED`다.\n+\n+### 2.6 비중 기록 — `GET /backtests/{backtestId}/weights`\n+\n+리밸런싱마다 1개. `points[{date, target:{instrumentId: weight}, actual:{…}, weightError, riskScale?, estimatedVolatility?}]`와\n+`weightsSource`(`USER` 사용자가 준 비중 / `COMPUTED` 전략이 계산한 비중). `target`은 판단일에 정한 목표(현금 몫은 빠져 합이 1 미만일 수 있다),\n+`actual`은 체결 뒤 실제 비중, `weightError`는 Σ|target − actual|(정수 수량 반올림 등). `riskScale`·`estimatedVolatility`는\n+`scenario=TARGET_RISK`에서만 있고 그때 `target`은 조절 뒤 비중이다(PD-18). 그 밖에는 키를 생략한다. 예시: [`examples/backtest-weights.json`](examples/backtest-weights.json).\n+\n+### 2.7 예외 처리 기록 — `GET /backtests/{backtestId}/exceptions`\n+\n+`items[{date, instrumentId?, kind, rule?, action?}]`. `kind`는 개방 집합이다 — `HALT_DEFERRED`(거래 불가 이월), `HALT_SUPERSEDED`(이월 주문이\n+다음 판단일을 넘겨 새 목표로 교체), `WEIGHT_ROUNDING`(정수 수량으로 한 주도 못 삼), `SPLIT_FRACTION`(분할 단주), `ZERO_VOLATILITY`, `NO_SELECTION`,\n+`ESTIMATION_FAILED`, `CONSTRAINT_VIOLATION` 등. 포트폴리오 전체에 걸린 예외는 `instrumentId`가 없다. 정렬은 날짜 오름차순(엔진 기록 순).\n+예시: [`examples/backtest-exceptions.json`](examples/backtest-exceptions.json).\n \n ## 3. 오류 응답\n \n@@ -179,6 +221,7 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`\n | 404 | `RESOURCE_NOT_FOUND` | 없는 `backtestId` 조회 |\n | 409 | `RESULT_NOT_READY` | 하위 리소스(`/timeseries`·`/trades`·`/positions`)를 조회했는데 Job이 `QUEUED`·`RUNNING`이다. **재시도하면 된다** |\n | 409 | `BACKTEST_FAILED` | 하위 리소스를 조회했는데 Job이 `FAILED`다. **재시도해도 같다** — `GET /backtests/{id}`의 `error`를 본다 |\n+| 409 | `NO_PARTIAL_RESULT` | 먼저 취소한 요청에 완료한 거래일이 없다(첫 PROGRESS 전 취소). **재시도 무의미** — 같은 조건을 다시 보려면 새 요청을 낸다 |\n | 503 | `BROKER_UNAVAILABLE` | 작업 큐에 연결 실패. Job은 저장되지 않으므로 **그대로 재시도해도 안전하다** |\n | 500 | `INTERNAL_ERROR` | 그 외. **`COMPLETED`인데 결과가 없는 데이터 손상**도 여기다 — 재시도하지 말고 백엔드 로그를 본다 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -101,10 +101,11 @@\n   - 수기 대조: 스프레드시트로 계산한 대표 거래일 3개(첫 리밸런싱·분배금 지급일·거래 정지 이월일)의 체결일·수량·현금·비용·분배금을 JSON으로 고정, `PROVISIONAL_TOLERANCE = 0`(PD-12 확정 시 상수만 변경). 스프레드시트 원본 CSV 보관\n   - 검증(SC-004 \"판단일 다음 거래일 이후\"): `reason ∈ {SIGNAL, REBALANCE, LIQUIDATION}`인 체결은 체결일 = 판단일 다음 거래일, `reason=HALT_DEFERRED`인 체결은 `plannedDate` = 판단일 다음 거래일이고 체결일 = 그 이후 첫 거래 가능일. 두 경우 모두 신호에 판단일 이후 자료를 쓰지 않았는지(look-ahead 0건) 확인. 정수 수량, 결과 시작일 = effectiveStart\n   - 구현 시 결정(T008): ① **`analytics` 정의는 spec 이 이름만 정했으므로 `performance.calculate_analytics` docstring 을 원본으로 삼았다** — `recoveryDays` 는 최대 하락 저점에서 전 고점을 다시 넘은 첫날까지의 거래일 수(하락 없으면 0, 미회복 None), `turnover` 는 (매수+매도 대금)/2/평균 자산 × 252/평가일수, `correlationMatrix`·`riskContribution`(wᵢ(Σw)ᵢ/wᵀΣw, w = 리밸런싱 실제 비중 평균)은 평가 기간 조정 종가 일별 수익률의 표본 공분산(`method=\"sample-covariance-daily\"`), `lossContribution` 은 종목별(실현+종료일 미실현−미청산 매수 수수료+분배금)/전체 손익(합 1, 손익 합 = 자산 증감, 전체 0 이면 None — 2차 리뷰 2), `weightError` 는 리밸런싱 기록의 평균. 계산 불가는 키 생략 ② **결과 조립을 `engine_runner.assemble_output(request, market, execution, started, status=, partial=)` 로 뗐다.** T011·T014 는 `execute_portfolio(..., stop_after=lambda day: ...)` 로 그날 평가를 마친 뒤 멈추고(멈춘 날은 종료일이라 보유 스냅샷을 남긴다 — 없으면 부분 결과의 미실현 손익이 손익 기여에서 빠진다, 2차 리뷰 3) 이 함수에 `status=CANCELLED, partial=True` 로 넘기면 `lastTradingDate` 까지의 시계열로 같은 지표가 나온다 ③ **`versions.rules.provisional` 은 규칙 사본(`allocation.rules`)에 `provisional` 키가 있을 때만 싣는다.** 등록표의 `provisional` 열은 백엔드에 있고 `EngineInputAssembler` 가 사본에 넣지 않으므로 워커는 모른다 — 백엔드가 사본에 그 키를 합치거나 저장 시 등록표에서 채우는 것이 후속(T009 검토). `versions.worker` 는 `worker.__version__`(`thorp-worker 0.1.1`) — 운영 이미지는 패키지를 설치하지 않고 `src` 를 복사하므로 `importlib.metadata` 는 `PackageNotFoundError` 다(2차 리뷰 1). pyproject 는 `dynamic = [\"version\"]` 으로 그 값을 읽는다 ④ **수기 대조의 '스프레드시트' 는 워커를 import 하지 않는 표준 라이브러리 스크립트다**(`docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`). 규칙을 문서에서 옮겨 적어 픽스처 CSV 원본에서 계산하고 CSV 출력과 JSON 기대값을 남긴다. 대표 거래일: 2024-01-03 첫 체결, 2024-05-02 분배금 지급(04-29 권리락 보유 × 85원), 2024-06-11 정지 → 06-12 이월 체결. `PROVISIONAL_TOLERANCE = 0` 에서 전부 일치했다 ⑤ 결정성 픽스처는 `tests/fixtures/engine-input-three-etf-{fixed,equal,inverse_vol,target-risk}.json`(2023-08-01~2024-06-28, 전 비용 프로필, 청산 포함). 워커 로컬 테스트 환경은 Windows 에서 `uv sync --python 3.13` 으로 만든다(`uv.lock` 에 cp313 win_amd64 wheel 있음)\n-- [ ] T009 [US2] [BE] 결과 v2 저장·조회 API(비중·예외·거래 사유·현금 흐름) (`backtest/application/service/BacktestResultQueryService.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/response/{BacktestWeightsResponse,BacktestExceptionsResponse,BacktestTimeseriesResponse,BacktestTradePageResponse}.java`, `backtest/infrastructure/persistence/BacktestResultJpaEntity.java`, `backend/src/test/.../BacktestResultApiIT.java`) — Jira `S15P21E205-146`\n+- [x] T009 [US2] [BE] 결과 v2 저장·조회 API(비중·예외·거래 사유·현금 흐름) (`backtest/application/service/BacktestResultQueryService.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/response/{BacktestWeightsResponse,BacktestExceptionsResponse,BacktestTimeseriesResponse,BacktestTradePageResponse}.java`, `backtest/infrastructure/persistence/BacktestResultJpaEntity.java`, `backend/src/test/.../BacktestResultApiIT.java`) — Jira `S15P21E205-146`\n   - FINISHED payload의 v2 필드를 `backtest_result` JSONB 열에 저장(T005 저장 경로 확장)\n   - `GET /backtests/{id}/weights`(weightsSource 포함), `GET /backtests/{id}/exceptions`, `/trades` 항목 reason·plannedDate, `/timeseries` 항목 cashFlows\n   - 409 규칙 유지(RESULT_NOT_READY, BACKTEST_FAILED); CANCELLED는 200 + partial=true(T011 이후 활성)\n+  - 구현 시 결정(T009): ① **마이그레이션 없음** — T003 이 `weights_series`·`weights_source`·`costs`·`liquidation`·`analytics`·`exceptions`·`versions` 열을 이미 만들었고 엔티티 매핑만 붙였다. `EngineOutput` 을 그대로 저장한다 ② **`summary` 는 v1 열두 항목을 유지하고 v2 여섯을 더했다**(하위 호환). `analytics` 는 요약에 `recoveryDays`·`turnover` 둘만, 예외는 건수(`jsonb_array_length`)만 실어 폴링 리소스를 가볍게 둔다 ③ **비중·예외 블록은 한 조회(`findBlocks`)로 읽는다** — 둘 다 KB 단위고 시계열(수백 KB)을 읽지 않는 것이 중요한 점이라 엔드포인트별로 쪼개지 않았다. 블록이 null 이면 빈 리스트(결과 행 없음과 구분) ④ **먼저 취소한 요청의 읽기 필터(T005 결정 ⑥·R-04)를 여기서 붙였다.** `requireResultReady` 가 `ResultView(run, cutoff, partial)` 를 돌려주고, 날짜 항목은 `cutoff` 이하만, 거래는 `cutoff` 다음 날 0시(거래소 현지) 전에 **청산된** 것만 저장소 파라미터(`visibleBefore`)로 자른다 — 저장된 거래 행은 실행 종료 시점 값이라 가로지르는 거래(청산 정보)도 OPEN 거래(분할·부분 매도로 바뀐 수량·수수료)도 경계 시점 상태가 아니고, 지워서 꾸미면 양쪽 합인 수수료를 되돌릴 수 없어 합성 행이 된다. 취소 요청의 `/trades` 는 전체 진입 내역이 아니며 경계 시점 보유는 `/positions` 가 준다(2차 리뷰 1·3차 리뷰). 완료한 거래일이 없는 취소는 409 `NO_PARTIAL_RESULT`. T011 은 취소 경로에서 `BacktestRequest.cancel` 을 부르면 이 필터가 그대로 살아난다 ⑤ **하위 리소스 응답 다섯 개에 `partial` 을 넣었다**(요청 취소 또는 실행 부분 결과, `/positions` 포함 — 2차 리뷰 2). 예시 파일 `backtest-{timeseries,trades,positions}.json` 에 `partial: false` 추가, `backtest-weights.json`·`backtest-exceptions.json` 신설, `backtest-detail.json` summary 확장 ⑥ 선택 항목의 키 생략 규칙: `plannedDate`(HALT_DEFERRED 만)·`cashFlows`(있는 날만)·`riskScale`·`estimatedVolatility`(TARGET_RISK 만)·예외의 `instrumentId`(포트폴리오 전체면 없음)는 null 이면 키를 뺀다. `reason` 은 항상 있다(픽스처는 `SIGNAL`) ⑦ **`versions.rules.provisional` 후속은 미해결**: 결과 JSONB `versions` 는 저장되지만 상세 응답의 `versions` 는 여전히 접수 계획(`run.plan.versions`)의 값이고, 워커가 `provisional` 을 알 길이 없는 것(T008 결정 ③)도 그대로다. 조립기가 규칙 사본에 `provisional` 을 합쳐 보내는 변경은 접수 경로(T005 소유)라 별도 티켓으로 뺀다\n \n **Checkpoint**: 세 전략이 픽스처에서 수기 계산과 일치하고 결정적이다. S1을 실제 전략으로 재검증한다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2190825,
+      "head_commit_sha": "da366519326808e04aebd36f9a09deabb3da0e8e",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:41:00.654+09:00",
+      "merge_request_id": 942166,
+      "state": "without_files",
+      "real_size": "39",
+      "patch_id_sha": "d08e1224ad0cc0311d315b56d1c55a5e7e7c021f",
+      "commits": [
+        {
+          "id": "da366519326808e04aebd36f9a09deabb3da0e8e",
+          "short_id": "da366519",
+          "created_at": "2026-09-13T20:40:57.000+09:00",
+          "parent_ids": [
+            "7d94288ec4351f0c3fd645f01ba3b48caebd4a64"
+          ],
+          "title": "fix(be): 먼저 취소한 요청의 거래는 경계 전에 청산된 것만 보인다",
+          "message": "fix(be): 먼저 취소한 요청의 거래는 경계 전에 청산된 것만 보인다\n\n끝까지 OPEN 인 거래도 저장된 행은 실행 종료 시점 값이다 — 워커가 분할일에 열린 묶음의 수량·진입가를,\n부분 매도 때 남은 OPEN 거래의 수량·수수료를 바꾼다. 경계 뒤 변경이 취소 요청에 새는 것을 막으려면\n경계 시점 값을 따로 저장해야 하는데 백엔드는 결과를 재구성하지 않으므로, \"복원하지 않고 제외\" 정책을\n유지해 exitTime < :visibleBefore 하나로 좁혔다(3차 리뷰). 취소 요청의 /trades 는 전체 진입 내역이\n아니며 경계 시점 보유는 /positions 가 준다는 제한을 계약 문서에 적었다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:40:57.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:40:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da366519326808e04aebd36f9a09deabb3da0e8e"
+        },
+        {
+          "id": "7d94288ec4351f0c3fd645f01ba3b48caebd4a64",
+          "short_id": "7d94288e",
+          "created_at": "2026-09-13T20:33:51.000+09:00",
+          "parent_ids": [
+            "7a76b50386980275960e89e837b4722dcf5a628c"
+          ],
+          "title": "fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다",
+          "message": "fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다\n\n리뷰 1: 경계를 진입 시각만 봐서 스냅샷 전에 진입해 뒤에 청산된 거래가 CLOSED 상태·청산가·실현손익까지\n보였다(R-04 위반). 진입과 청산이 모두 경계 전인 거래(또는 끝까지 열려 있던 거래)만 보인다. 가로지르는\n거래를 OPEN 으로 꾸미지 않는 이유: 저장된 commission 이 양쪽 합이라 진입 측만 되돌릴 수 없어 합성 행이\n된다.\n리뷰 2: 하위 리소스 다섯 개 중 /positions 만 partial 이 빠져 있었다. 결과·응답 DTO 와 예시에 넣었다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:33:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:33:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7d94288ec4351f0c3fd645f01ba3b48caebd4a64"
+        },
+        {
+          "id": "7a76b50386980275960e89e837b4722dcf5a628c",
+          "short_id": "7a76b503",
+          "created_at": "2026-09-13T20:12:40.000+09:00",
+          "parent_ids": [
+            "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+          ],
+          "title": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록",
+          "message": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:12:40.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:12:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a76b50386980275960e89e837b4722dcf5a628c"
+        },
+        {
+          "id": "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e",
+          "short_id": "0376aaf5",
+          "created_at": "2026-09-13T20:08:56.000+09:00",
+          "parent_ids": [
+            "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+          ],
+          "title": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터",
+          "message": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터\n\nGET /backtests/{id}/weights(리밸런싱별 목표·실제 비중, weightsSource, TARGET_RISK 의 riskScale·\nestimatedVolatility)와 /exceptions(예외 처리 기록)를 연다. 상세 summary 에 netTotalReturn·\ntotalTradingCost·costs·liquidation·analytics{recoveryDays, turnover}·exceptionCount 를 붙이고,\n/trades 항목에 reason·plannedDate, /timeseries 항목에 cashFlows 를 더한다. 하위 리소스 응답에\npartial 을 싣는다.\n\n먼저 취소해 실행이 계속 돈 요청(R-04)은 자기 스냅샷 날짜까지만 본다 — 날짜 항목은 읽기 필터로,\n거래는 스냅샷 다음 날 0시(거래소 현지) 전 진입만 저장소에 요청한다. 완료한 거래일이 없는 취소는\n409 NO_PARTIAL_RESULT. T005 결정 ⑥이 T009 로 미룬 몫이다.\n\n계약 예시 backtest-weights.json·backtest-exceptions.json 을 추가하고 detail·trades·timeseries 예시를\nv2 항목으로 갱신했다. BacktestResultApiIT 가 응답과 예시의 동치를 단언한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:08:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:08:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+        },
+        {
+          "id": "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce",
+          "short_id": "6d5ea749",
+          "created_at": "2026-09-13T19:59:33.000+09:00",
+          "parent_ids": [
+            "9403dbe4a2169e3d84ea68d311349c2354d1f669"
+          ],
+          "title": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다",
+          "message": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다\n\nT003 이 만든 weights_series·weights_source·costs·liquidation·analytics·exceptions·versions 컬럼을\n엔티티에 매핑해 FINISHED 의 EngineOutput 을 그대로 저장한다(T009). 요약 조회는 costs·liquidation·\nanalytics 와 예외 건수(jsonb_array_length)를 함께 읽고, 비중·예외 블록은 시계열을 읽지 않는 별도\n조회(findBlocks)로 꺼낸다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T19:59:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T19:59:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2190807,
+      "head_commit_sha": "7d94288ec4351f0c3fd645f01ba3b48caebd4a64",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:33:54.773+09:00",
+      "merge_request_id": 942166,
+      "state": "without_files",
+      "real_size": "39",
+      "patch_id_sha": "ed68e758130a6f5e7febf178d15e45b2425f9e0f",
+      "commits": [
+        {
+          "id": "7d94288ec4351f0c3fd645f01ba3b48caebd4a64",
+          "short_id": "7d94288e",
+          "created_at": "2026-09-13T20:33:51.000+09:00",
+          "parent_ids": [
+            "7a76b50386980275960e89e837b4722dcf5a628c"
+          ],
+          "title": "fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다",
+          "message": "fix(be): 취소 요청의 거래 경계에 청산 시각을 포함하고 /positions 에 partial 을 싣는다\n\n리뷰 1: 경계를 진입 시각만 봐서 스냅샷 전에 진입해 뒤에 청산된 거래가 CLOSED 상태·청산가·실현손익까지\n보였다(R-04 위반). 진입과 청산이 모두 경계 전인 거래(또는 끝까지 열려 있던 거래)만 보인다. 가로지르는\n거래를 OPEN 으로 꾸미지 않는 이유: 저장된 commission 이 양쪽 합이라 진입 측만 되돌릴 수 없어 합성 행이\n된다.\n리뷰 2: 하위 리소스 다섯 개 중 /positions 만 partial 이 빠져 있었다. 결과·응답 DTO 와 예시에 넣었다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:33:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:33:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7d94288ec4351f0c3fd645f01ba3b48caebd4a64"
+        },
+        {
+          "id": "7a76b50386980275960e89e837b4722dcf5a628c",
+          "short_id": "7a76b503",
+          "created_at": "2026-09-13T20:12:40.000+09:00",
+          "parent_ids": [
+            "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+          ],
+          "title": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록",
+          "message": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:12:40.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:12:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a76b50386980275960e89e837b4722dcf5a628c"
+        },
+        {
+          "id": "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e",
+          "short_id": "0376aaf5",
+          "created_at": "2026-09-13T20:08:56.000+09:00",
+          "parent_ids": [
+            "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+          ],
+          "title": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터",
+          "message": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터\n\nGET /backtests/{id}/weights(리밸런싱별 목표·실제 비중, weightsSource, TARGET_RISK 의 riskScale·\nestimatedVolatility)와 /exceptions(예외 처리 기록)를 연다. 상세 summary 에 netTotalReturn·\ntotalTradingCost·costs·liquidation·analytics{recoveryDays, turnover}·exceptionCount 를 붙이고,\n/trades 항목에 reason·plannedDate, /timeseries 항목에 cashFlows 를 더한다. 하위 리소스 응답에\npartial 을 싣는다.\n\n먼저 취소해 실행이 계속 돈 요청(R-04)은 자기 스냅샷 날짜까지만 본다 — 날짜 항목은 읽기 필터로,\n거래는 스냅샷 다음 날 0시(거래소 현지) 전 진입만 저장소에 요청한다. 완료한 거래일이 없는 취소는\n409 NO_PARTIAL_RESULT. T005 결정 ⑥이 T009 로 미룬 몫이다.\n\n계약 예시 backtest-weights.json·backtest-exceptions.json 을 추가하고 detail·trades·timeseries 예시를\nv2 항목으로 갱신했다. BacktestResultApiIT 가 응답과 예시의 동치를 단언한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:08:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:08:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+        },
+        {
+          "id": "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce",
+          "short_id": "6d5ea749",
+          "created_at": "2026-09-13T19:59:33.000+09:00",
+          "parent_ids": [
+            "9403dbe4a2169e3d84ea68d311349c2354d1f669"
+          ],
+          "title": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다",
+          "message": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다\n\nT003 이 만든 weights_series·weights_source·costs·liquidation·analytics·exceptions·versions 컬럼을\n엔티티에 매핑해 FINISHED 의 EngineOutput 을 그대로 저장한다(T009). 요약 조회는 costs·liquidation·\nanalytics 와 예외 건수(jsonb_array_length)를 함께 읽고, 비중·예외 블록은 시계열을 읽지 않는 별도\n조회(findBlocks)로 꺼낸다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T19:59:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T19:59:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2190801,
+      "head_commit_sha": "7a76b50386980275960e89e837b4722dcf5a628c",
+      "base_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "start_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+      "created_at": "2026-09-13T20:27:27.794+09:00",
+      "merge_request_id": 942166,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "603fbfc2231db1a12f5f9beb075ff0964159fcac",
+      "commits": [
+        {
+          "id": "7a76b50386980275960e89e837b4722dcf5a628c",
+          "short_id": "7a76b503",
+          "created_at": "2026-09-13T20:12:40.000+09:00",
+          "parent_ids": [
+            "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+          ],
+          "title": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록",
+          "message": "docs(be): 결과 API v2 계약 문서 갱신과 T009 완료·결정 기록\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:12:40.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:12:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a76b50386980275960e89e837b4722dcf5a628c"
+        },
+        {
+          "id": "0376aaf5ee5a1229ecc3c322f3097e8850d5e20e",
+          "short_id": "0376aaf5",
+          "created_at": "2026-09-13T20:08:56.000+09:00",
+          "parent_ids": [
+            "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+          ],
+          "title": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터",
+          "message": "feat(be): 결과 v2 조회 API — /weights·/exceptions, summary 확장, 거래 사유·현금 흐름, 취소 요청 읽기 필터\n\nGET /backtests/{id}/weights(리밸런싱별 목표·실제 비중, weightsSource, TARGET_RISK 의 riskScale·\nestimatedVolatility)와 /exceptions(예외 처리 기록)를 연다. 상세 summary 에 netTotalReturn·\ntotalTradingCost·costs·liquidation·analytics{recoveryDays, turnover}·exceptionCount 를 붙이고,\n/trades 항목에 reason·plannedDate, /timeseries 항목에 cashFlows 를 더한다. 하위 리소스 응답에\npartial 을 싣는다.\n\n먼저 취소해 실행이 계속 돈 요청(R-04)은 자기 스냅샷 날짜까지만 본다 — 날짜 항목은 읽기 필터로,\n거래는 스냅샷 다음 날 0시(거래소 현지) 전 진입만 저장소에 요청한다. 완료한 거래일이 없는 취소는\n409 NO_PARTIAL_RESULT. T005 결정 ⑥이 T009 로 미룬 몫이다.\n\n계약 예시 backtest-weights.json·backtest-exceptions.json 을 추가하고 detail·trades·timeseries 예시를\nv2 항목으로 갱신했다. BacktestResultApiIT 가 응답과 예시의 동치를 단언한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T20:08:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T20:08:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0376aaf5ee5a1229ecc3c322f3097e8850d5e20e"
+        },
+        {
+          "id": "6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce",
+          "short_id": "6d5ea749",
+          "created_at": "2026-09-13T19:59:33.000+09:00",
+          "parent_ids": [
+            "9403dbe4a2169e3d84ea68d311349c2354d1f669"
+          ],
+          "title": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다",
+          "message": "feat(be): 결과 v2 블록을 backtest_result 에 저장하고 요약·비중·예외 조회를 연다\n\nT003 이 만든 weights_series·weights_source·costs·liquidation·analytics·exceptions·versions 컬럼을\n엔티티에 매핑해 FINISHED 의 EngineOutput 을 그대로 저장한다(T009). 요약 조회는 costs·liquidation·\nanalytics 와 예외 건수(jsonb_array_length)를 함께 읽고, 비중·예외 블록은 시계열을 읽지 않는 별도\n조회(findBlocks)로 꺼낸다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T19:59:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T19:59:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d5ea749c6c88da9e5ee8d7407b681b6836ed3ce"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-13T20:48:37.112+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2798079": []
+  }
+}

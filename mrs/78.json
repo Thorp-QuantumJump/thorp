@@ -1,0 +1,804 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942817,
+    "iid": 78,
+    "project_id": 1444456,
+    "title": "feat(be): 거부·취소·재시도·부분 결과와 실행 한도 (S15P21E205-164)",
+    "description": "# 작업 내용 요약\n\nspec 007 자동 파라미터 탐색의 묶음 M7 `[BE] 거부·취소·재시도·부분 결과와 실행 한도` 를 구현했다(T091\\~T103, T098a·b·c, T101a, T134 — 18개 전부). 접수 거부가 남기는 기록, 취소와 부분 결과, 실패 후보 재시도, 실행시간·연속 실패 한도다.\n\n관통하는 원칙 하나는 **\"멈춤은 즉시가 아니라 여기까지만\"** 이다. 취소도 한도도 이미 큐에 든 후보는 끊지 않는다 — prefetch 1 + manual ACK 에서 발행된 메시지는 회수할 수 없고(research R2), 계산이 끝나가는 후보를 버리면 그만큼이 통째로 사라진다. 그래서 결과는 \"중단\"이 아니라 PARTIAL 이고, 남은 대기 후보는 '미실행'으로 남아 완료 범위를 밝힌다(FR-009).\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-164\n- link https://ssafy.atlassian.net/browse/S15P21E205-164\n\n# 주요 변경 사항\n\n- `ParamSearch.requestStop` — 중단 사유를 상태보다 먼저 기록한다. 이미 발행된 후보가 완주하는 동안은 RUNNING 이 사실이고(계약 §5), 사유만 박아 두면 **발행을 막는 근거**와 **마지막 후보가 끝났을 때 어느 사유로 PARTIAL 이 되는지**가 한 값으로 풀린다. 먼저 적힌 사유가 이긴다 — 취소한 묶음이 뒤이어 한도에 걸릴 때 덮어쓰면 사용자가 누른 취소가 기록에서 사라진다\n- `ParamSearchCompletionService` 신설 — 집계 갱신·최종 상태 전이·선정 1회를 한곳에 모았다. 끝나는 길이 둘(마지막 후보의 결과, 취소·한도)이라 같은 판정을 두 곳에 두면 한쪽만 고쳐져 취소된 묶음에만 선정이 안 붙는다. **M5 가 주석으로 M7 에 인계한 자리가 여기서 닫혔다**\n- `ParamSearchCancelService` + `POST /param-searches/{id}/cancel` — 대기 후보를 '미실행'으로 확정하고 더 발행하지 않는다. 묶음 행을 비관적 락으로 잡는다: 취소는 HTTP 스레드, 후보 종료는 이벤트 리스너 스레드라 락이 없으면 취소가 세는 사이에 후보가 나간다(불변식 2)\n- `ParamSearchRetryService` + `POST /param-searches/{id}/retry-failed` — FAILED 후보만 다시 발행한다. **새 묶음을 만들지 않고** 접수 시점 스냅샷을 그대로 쓴다(FR-024·FR-012). 발행 창을 넘겨 보내지 않고 나머지는 `remainingFailed` 로 알린다 — 자동으로 이어 보내지 않는 것이 계약이다(§5.1)\n- `ParamSearch.reopenForRetry` + 전이 COMPLETED·PARTIAL → RUNNING — 다시 열 때 **선정은 지우고 중단 사유는 남긴다**. 후보가 더 붙으면 안정성 필터의 상대 분위가 달라져 이전 선정은 사실이 아니고, 취소로 미실행이 된 후보는 되살리지 않으므로 이 묶음은 다시 끝나도 여전히 부분 결과다\n- `TimeLimitGuard`·`FailureLimitGuard` + 다음 발행 직전 판정 — 실행시간을 먼저 본다(둘 다 참일 때 사용자가 먼저 알아야 할 것이 \"시간이 다 됐다\"이다). 남은 대기 후보가 없으면 아예 보지 않는다: 멈출 것이 없는데 사유를 남기면 정상 완료가 한도 도달로 기록된다\n- 연속 실패는 **끝난 순서**로 센다(`findRecentlyFinished`). 순번 순서가 아니다 — 창 안에서 먼저 나간 후보가 늦게 끝나는 일이 흔해 순번으로 세면 \"줄줄이 실패했다\"를 잘못 읽는다. 후보 행에 종료 시각 컬럼이 없고 실행 중에 그 행을 건드리는 것은 종료 처리뿐이라 `updated_at` 이 곧 끝난 시각이다\n- 누적이 아니라 연속인 이유 — 자료 결측처럼 남은 후보도 같은 이유로 실패할 상황을 끊는 것이 목적이라, 중간에 성공이 하나라도 있으면 그 상황이 아니다. 누적으로 세면 후보가 많은 묶음에서 드문드문 난 실패가 쌓여 멀쩡한 탐색이 멈춘다\n- **M5 결함 수정** — `SearchCandidate` 의 방어 복사가 `Map.copyOf` 라 null 값을 거부했다. 안정성은 이웃이 없으면 `value` 가 null 이고(FR-013b) 선정 사유는 계산되지 않은 후보에서 `code` 가 null 인데, 그런 후보가 하나라도 있으면 선정 저장이 NullPointerException 으로 죽어 **묶음이 끝나지 않았다**. AFTER_COMMIT 리스너가\n- T095·T096·T134(거부)와 T102·T103(부분 결과·실패 기록)은 M3·M5 에서 이미 구현돼 있어 이번에는 테스트로 고정만 했다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (커밋 4개 각 단계마다 재확인)\n- [x] `ParamSearchRejectionIT` 4건 — 상한 초과·유효 조합 0건이 REJECTED 로 저장되고, 표본 추출도 후보 생성도 하지 않는지(후보 행 0건 + 발행기 무호출)\n- [x] `ParamSearchCancelIT` 6건 — 대기 후보의 '미실행' 확정, 취소 뒤 발행 0건, PARTIAL 종료와 선정, SKIPPED 불가역, 409·404\n- [x] `ParamSearchRetryTest` 6건 — 새 묶음 미생성과 스냅샷 동일성, 선정 삭제·재계산, retryCount 증가와 옛 사유 삭제, SKIPPED 미부활, 409·404\n- [x] `ParamSearchLimitReachedTest` 4건 — 연속 실패 한도 도달 시 발행 중단·PARTIAL·FAILURE_LIMIT, 남은 후보의 사유, 부분 결과 문장, 성공이 섞이면 연속이 끊김\n- [x] `SearchCandidateNullableMapTest` 3건 — 계산 불가 안정성·null 사유 항목이 그대로 담기고 방어 복사가 유지되는지\n- [x] `StatusTransitionTest` 갱신 — \"최종 상태는 어디로도 안 간다\"를 둘로 갈랐다. FAILED·REJECTED 는 그대로 막다른 길, COMPLETED·PARTIAL 은 재시도 한 길만 열림\n- [x] 실행 중인 서버로 종단 확인 — 후보 5건·창 4 묶음을 만들어 취소 → `202 {skipped:1, inFlight:4, status:\"RUNNING\"}`, 발행분 완주 후 `PARTIAL`·`CANCELLED`·선정 계산, 재시도 → `202 {retried:1, remainingFailed:0}`·같은 묶음 재개방·retryCount 1, 재시도 완료 후 선정 재계산. 409 ALREADY_FINISHED / 409 NOTHING_TO_RETRY / 404 둘 다 확인\n- [x] 재시도 후보가 수익 0.40 으로 가장 높은데도 선정에서 빠지는 것을 확인 — 이웃과의 차가 커 안정성 상위 50% 문턱(0.05)을 못 넘었다. 손계산과 일치하며 \"우연히 좋았던 한 점을 고르지 않는다\"는 설계 의도 그대로다\n- [ ] 워커를 띄운 실제 계산으로 확인 — `daily_price` 가 비어 있어 아직 불가(spec 001 적재 대기). 종단 확인은 계약 이벤트를 직접 발행해 대신했다\n\n# 리뷰 포인트\n\n- [ ] 연속 실패를 `updated_at` 순서로 센다. 후보 행에 종료 시각 컬럼이 없어 택한 방법이고, 실행 중에 그 행을 건드리는 것이 종료 처리뿐이라 성립한다. 선정 저장·재시도가 그 값을 바꾸지만 둘 다 한도 판정이 끝난 뒤이거나 사용자가 부른 시점이다. **종료 시각 컬럼을 두는 편이 나은지** 봐 달라\n  * 끝난 묶음을 다시 여는 전이(COMPLETED·PARTIAL → RUNNING)를 새로 열었다. 상태 기계에 사이클이 생기는 변경이라 따로 본다. 대안은 재시도마다 새 묶음을 만드는 것인데 그러면 같은 탐색의 결과가 두 곳으로 갈려 비교가 성립하지 않는다(FR-024)\n  * 재시도가 발행 창을 넘기지 않고 나머지를 `remainingFailed` 로 남긴다. 계약 §5.1 의 \"자동으로 반복하지 않는다\"를 이렇게 읽었는데, **화면이 남은 수를 보고 다시 누르는 흐름**이 맞는지 확인해 달라\n  * M5 의 null 맵 결함은 이 묶음 범위가 아니지만, 취소 테스트가 바로 밟아 고치지 않으면 M7 이 성립하지 않았다. 분리해야 한다면 알려 달라\n  * 검증 중 별건을 하나 발견했다. **실패 이벤트의 계약 모양이 성공과 다른데**(`engineOutput.run.error` 필수, `performance` 없음), 성공 예시에서 `status` 만 바꾼 메시지는 조용히 무시돼 후보가 DISPATCHED 에 머물고 묶음이 닫히지 않았다. 워커가 계약을 지키면 문제없지만, 004 검증기가 계약 위반 메시지를 DLQ 로 보내는 동안 007 후보는 영원히 발행 상태로 ALREADY_FINISHED / 409 NOTHING_TO_RETRY / 404 둘 다 확인\n- [x] 재시도 후보가 수익 0.40 으로 가장 높은데도 선정에서 빠지는 것을 확인 — 이웃과의 차가 커 안정성 상위 50% 문턱(0.05)을 못 넘었다. 손계산과 일치하며 \"우연히 좋았던 한 점을 고르지 않는다\"는 설계 의도 그대로다\n- [ ] 워커를 띄운 실제 계산으로 확인 — `daily_price` 가 비어 있어 아직 불가(spec 001 적재 대기). 종단 확인은 계약 이벤트를 직접 발행해 대신했다",
+    "state": "merged",
+    "created_at": "2026-09-14T12:04:28.542+09:00",
+    "updated_at": "2026-09-14T12:20:01.846+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T12:19:53.930+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/164-paramsearch-reject-cancel-limits",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3acc35b3bc411347b7d83bede137aed01d406b71",
+    "merge_commit_sha": "de6f38f44a62dbdae315a4251c56e11f8822e483",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T12:04:30.358+09:00",
+    "reference": "!78",
+    "references": {
+      "short": "!78",
+      "relative": "!78",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!78"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/78",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 13,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942817,
+    "iid": 78,
+    "project_id": 1444456,
+    "title": "feat(be): 거부·취소·재시도·부분 결과와 실행 한도 (S15P21E205-164)",
+    "description": "# 작업 내용 요약\n\nspec 007 자동 파라미터 탐색의 묶음 M7 `[BE] 거부·취소·재시도·부분 결과와 실행 한도` 를 구현했다(T091\\~T103, T098a·b·c, T101a, T134 — 18개 전부). 접수 거부가 남기는 기록, 취소와 부분 결과, 실패 후보 재시도, 실행시간·연속 실패 한도다.\n\n관통하는 원칙 하나는 **\"멈춤은 즉시가 아니라 여기까지만\"** 이다. 취소도 한도도 이미 큐에 든 후보는 끊지 않는다 — prefetch 1 + manual ACK 에서 발행된 메시지는 회수할 수 없고(research R2), 계산이 끝나가는 후보를 버리면 그만큼이 통째로 사라진다. 그래서 결과는 \"중단\"이 아니라 PARTIAL 이고, 남은 대기 후보는 '미실행'으로 남아 완료 범위를 밝힌다(FR-009).\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-164\n- link https://ssafy.atlassian.net/browse/S15P21E205-164\n\n# 주요 변경 사항\n\n- `ParamSearch.requestStop` — 중단 사유를 상태보다 먼저 기록한다. 이미 발행된 후보가 완주하는 동안은 RUNNING 이 사실이고(계약 §5), 사유만 박아 두면 **발행을 막는 근거**와 **마지막 후보가 끝났을 때 어느 사유로 PARTIAL 이 되는지**가 한 값으로 풀린다. 먼저 적힌 사유가 이긴다 — 취소한 묶음이 뒤이어 한도에 걸릴 때 덮어쓰면 사용자가 누른 취소가 기록에서 사라진다\n- `ParamSearchCompletionService` 신설 — 집계 갱신·최종 상태 전이·선정 1회를 한곳에 모았다. 끝나는 길이 둘(마지막 후보의 결과, 취소·한도)이라 같은 판정을 두 곳에 두면 한쪽만 고쳐져 취소된 묶음에만 선정이 안 붙는다. **M5 가 주석으로 M7 에 인계한 자리가 여기서 닫혔다**\n- `ParamSearchCancelService` + `POST /param-searches/{id}/cancel` — 대기 후보를 '미실행'으로 확정하고 더 발행하지 않는다. 묶음 행을 비관적 락으로 잡는다: 취소는 HTTP 스레드, 후보 종료는 이벤트 리스너 스레드라 락이 없으면 취소가 세는 사이에 후보가 나간다(불변식 2)\n- `ParamSearchRetryService` + `POST /param-searches/{id}/retry-failed` — FAILED 후보만 다시 발행한다. **새 묶음을 만들지 않고** 접수 시점 스냅샷을 그대로 쓴다(FR-024·FR-012). 발행 창을 넘겨 보내지 않고 나머지는 `remainingFailed` 로 알린다 — 자동으로 이어 보내지 않는 것이 계약이다(§5.1)\n- `ParamSearch.reopenForRetry` + 전이 COMPLETED·PARTIAL → RUNNING — 다시 열 때 **선정은 지우고 중단 사유는 남긴다**. 후보가 더 붙으면 안정성 필터의 상대 분위가 달라져 이전 선정은 사실이 아니고, 취소로 미실행이 된 후보는 되살리지 않으므로 이 묶음은 다시 끝나도 여전히 부분 결과다\n- `TimeLimitGuard`·`FailureLimitGuard` + 다음 발행 직전 판정 — 실행시간을 먼저 본다(둘 다 참일 때 사용자가 먼저 알아야 할 것이 \"시간이 다 됐다\"이다). 남은 대기 후보가 없으면 아예 보지 않는다: 멈출 것이 없는데 사유를 남기면 정상 완료가 한도 도달로 기록된다\n- 연속 실패는 **끝난 순서**로 센다(`findRecentlyFinished`). 순번 순서가 아니다 — 창 안에서 먼저 나간 후보가 늦게 끝나는 일이 흔해 순번으로 세면 \"줄줄이 실패했다\"를 잘못 읽는다. 후보 행에 종료 시각 컬럼이 없고 실행 중에 그 행을 건드리는 것은 종료 처리뿐이라 `updated_at` 이 곧 끝난 시각이다\n- 누적이 아니라 연속인 이유 — 자료 결측처럼 남은 후보도 같은 이유로 실패할 상황을 끊는 것이 목적이라, 중간에 성공이 하나라도 있으면 그 상황이 아니다. 누적으로 세면 후보가 많은 묶음에서 드문드문 난 실패가 쌓여 멀쩡한 탐색이 멈춘다\n- **M5 결함 수정** — `SearchCandidate` 의 방어 복사가 `Map.copyOf` 라 null 값을 거부했다. 안정성은 이웃이 없으면 `value` 가 null 이고(FR-013b) 선정 사유는 계산되지 않은 후보에서 `code` 가 null 인데, 그런 후보가 하나라도 있으면 선정 저장이 NullPointerException 으로 죽어 **묶음이 끝나지 않았다**. AFTER_COMMIT 리스너가\n- T095·T096·T134(거부)와 T102·T103(부분 결과·실패 기록)은 M3·M5 에서 이미 구현돼 있어 이번에는 테스트로 고정만 했다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (커밋 4개 각 단계마다 재확인)\n- [x] `ParamSearchRejectionIT` 4건 — 상한 초과·유효 조합 0건이 REJECTED 로 저장되고, 표본 추출도 후보 생성도 하지 않는지(후보 행 0건 + 발행기 무호출)\n- [x] `ParamSearchCancelIT` 6건 — 대기 후보의 '미실행' 확정, 취소 뒤 발행 0건, PARTIAL 종료와 선정, SKIPPED 불가역, 409·404\n- [x] `ParamSearchRetryTest` 6건 — 새 묶음 미생성과 스냅샷 동일성, 선정 삭제·재계산, retryCount 증가와 옛 사유 삭제, SKIPPED 미부활, 409·404\n- [x] `ParamSearchLimitReachedTest` 4건 — 연속 실패 한도 도달 시 발행 중단·PARTIAL·FAILURE_LIMIT, 남은 후보의 사유, 부분 결과 문장, 성공이 섞이면 연속이 끊김\n- [x] `SearchCandidateNullableMapTest` 3건 — 계산 불가 안정성·null 사유 항목이 그대로 담기고 방어 복사가 유지되는지\n- [x] `StatusTransitionTest` 갱신 — \"최종 상태는 어디로도 안 간다\"를 둘로 갈랐다. FAILED·REJECTED 는 그대로 막다른 길, COMPLETED·PARTIAL 은 재시도 한 길만 열림\n- [x] 실행 중인 서버로 종단 확인 — 후보 5건·창 4 묶음을 만들어 취소 → `202 {skipped:1, inFlight:4, status:\"RUNNING\"}`, 발행분 완주 후 `PARTIAL`·`CANCELLED`·선정 계산, 재시도 → `202 {retried:1, remainingFailed:0}`·같은 묶음 재개방·retryCount 1, 재시도 완료 후 선정 재계산. 409 ALREADY_FINISHED / 409 NOTHING_TO_RETRY / 404 둘 다 확인\n- [x] 재시도 후보가 수익 0.40 으로 가장 높은데도 선정에서 빠지는 것을 확인 — 이웃과의 차가 커 안정성 상위 50% 문턱(0.05)을 못 넘었다. 손계산과 일치하며 \"우연히 좋았던 한 점을 고르지 않는다\"는 설계 의도 그대로다\n- [ ] 워커를 띄운 실제 계산으로 확인 — `daily_price` 가 비어 있어 아직 불가(spec 001 적재 대기). 종단 확인은 계약 이벤트를 직접 발행해 대신했다\n\n# 리뷰 포인트\n\n- [ ] 연속 실패를 `updated_at` 순서로 센다. 후보 행에 종료 시각 컬럼이 없어 택한 방법이고, 실행 중에 그 행을 건드리는 것이 종료 처리뿐이라 성립한다. 선정 저장·재시도가 그 값을 바꾸지만 둘 다 한도 판정이 끝난 뒤이거나 사용자가 부른 시점이다. **종료 시각 컬럼을 두는 편이 나은지** 봐 달라\n  * 끝난 묶음을 다시 여는 전이(COMPLETED·PARTIAL → RUNNING)를 새로 열었다. 상태 기계에 사이클이 생기는 변경이라 따로 본다. 대안은 재시도마다 새 묶음을 만드는 것인데 그러면 같은 탐색의 결과가 두 곳으로 갈려 비교가 성립하지 않는다(FR-024)\n  * 재시도가 발행 창을 넘기지 않고 나머지를 `remainingFailed` 로 남긴다. 계약 §5.1 의 \"자동으로 반복하지 않는다\"를 이렇게 읽었는데, **화면이 남은 수를 보고 다시 누르는 흐름**이 맞는지 확인해 달라\n  * M5 의 null 맵 결함은 이 묶음 범위가 아니지만, 취소 테스트가 바로 밟아 고치지 않으면 M7 이 성립하지 않았다. 분리해야 한다면 알려 달라\n  * 검증 중 별건을 하나 발견했다. **실패 이벤트의 계약 모양이 성공과 다른데**(`engineOutput.run.error` 필수, `performance` 없음), 성공 예시에서 `status` 만 바꾼 메시지는 조용히 무시돼 후보가 DISPATCHED 에 머물고 묶음이 닫히지 않았다. 워커가 계약을 지키면 문제없지만, 004 검증기가 계약 위반 메시지를 DLQ 로 보내는 동안 007 후보는 영원히 발행 상태로 ALREADY_FINISHED / 409 NOTHING_TO_RETRY / 404 둘 다 확인\n- [x] 재시도 후보가 수익 0.40 으로 가장 높은데도 선정에서 빠지는 것을 확인 — 이웃과의 차가 커 안정성 상위 50% 문턱(0.05)을 못 넘었다. 손계산과 일치하며 \"우연히 좋았던 한 점을 고르지 않는다\"는 설계 의도 그대로다\n- [ ] 워커를 띄운 실제 계산으로 확인 — `daily_price` 가 비어 있어 아직 불가(spec 001 적재 대기). 종단 확인은 계약 이벤트를 직접 발행해 대신했다",
+    "state": "merged",
+    "created_at": "2026-09-14T12:04:28.542+09:00",
+    "updated_at": "2026-09-14T12:20:01.846+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T12:19:53.930+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/164-paramsearch-reject-cancel-limits",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3acc35b3bc411347b7d83bede137aed01d406b71",
+    "merge_commit_sha": "de6f38f44a62dbdae315a4251c56e11f8822e483",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T12:04:30.358+09:00",
+    "reference": "!78",
+    "references": {
+      "short": "!78",
+      "relative": "!78",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!78"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/78",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 13,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "25",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "80cbea037fc59cae27f059ef73b0a05ee1ede339",
+      "head_sha": "3acc35b3bc411347b7d83bede137aed01d406b71",
+      "start_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "72e650fe73dbb072a59661eb018784017eb220d1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800795,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **도메인 불변식과 동시성 보호**: 취소 및 완료 판정 과정에서 비관적 락(`findByIdForUpdate`)을 활용하여 HTTP 스레드(취소)와 이벤트 리스너 스레드(후보 종료) 간의 경합 조건을 안전하게 방어했습니다.\n- **아키텍처 및 계약 준수**: 실패 후보 재시도시 새 묶음을 생성하지 않고 기존 스냅샷을 재사용함으로써, 다중 묶음 분산으로 인한 결과 비교 왜곡 문제를 깔끔하게 해결했습니다.\n\n### 발견 사항\n- [Low] `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java`: 테스트 파일 하단부(`ParamSearchRetryTest.java`)의 코드가 잘려(`private void in`) 있어 컴파일 오류나 테스트 누락이 발생할 수 있습니다. 해당 코드가 온전히 작성되었는지 확인이 필요합니다.\n\n### 테스트 제안\n- **동시성 취소/완료 시나리오 테스트**: 대기 중인 후보가 발행되는 시점과 사용자의 취소 요청이 밀리초 단위로 동시에 발생할 때, `skipped` 카운트와 `inFlight` 카운트가 정합성을 유지하며 데이터 유실이나 중복 전이가 일어나지 않는지 부하 테스트를 권장합니다.\n- **연속 실패 한도 경계값 테스트**: 연속 실패 한도가 `N`일 때, `N-1`번 실패 후 `1`번 성공하고 다시 `N`번 실패하는 시나리오를 주입하여 연속 실패 카운트가 정상적으로 리셋되는지 검증하는 테스트를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3acc35b3bc411347b7d83bede137aed01d406b71 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T12:04:37.888+09:00",
+          "updated_at": "2026-09-14T12:04:37.888+09:00",
+          "system": false,
+          "noteable_id": 942817,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 78,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f6bf67ab516828f7ae0017c337bebac187dd55f2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800908,
+          "type": null,
+          "body": "오탐입니다",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T12:19:49.302+09:00",
+          "updated_at": "2026-09-14T12:19:49.302+09:00",
+          "system": false,
+          "noteable_id": 942817,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 78,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "01c5568d27ff54177d8fe262e5c58c43eaf5d054",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800909,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T12:19:53.996+09:00",
+          "updated_at": "2026-09-14T12:19:54.026+09:00",
+          "system": true,
+          "noteable_id": 942817,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 78,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ab77c2b64662e9b90e0781cd578aafd16736c50c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800911,
+          "type": null,
+          "body": "mentioned in commit de6f38f44a62dbdae315a4251c56e11f8822e483",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T12:19:55.247+09:00",
+          "updated_at": "2026-09-14T12:19:55.285+09:00",
+          "system": true,
+          "noteable_id": 942817,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 78,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2193020,
+      "head_commit_sha": "3acc35b3bc411347b7d83bede137aed01d406b71",
+      "base_commit_sha": "80cbea037fc59cae27f059ef73b0a05ee1ede339",
+      "start_commit_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c",
+      "created_at": "2026-09-14T12:04:28.934+09:00",
+      "merge_request_id": 942817,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "a4445991dfd706e6992cec9a280803f0c872b67a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2193020,
+      "head_commit_sha": "3acc35b3bc411347b7d83bede137aed01d406b71",
+      "base_commit_sha": "80cbea037fc59cae27f059ef73b0a05ee1ede339",
+      "start_commit_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c",
+      "created_at": "2026-09-14T12:04:28.934+09:00",
+      "merge_request_id": 942817,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "a4445991dfd706e6992cec9a280803f0c872b67a",
+      "commits": [
+        {
+          "id": "3acc35b3bc411347b7d83bede137aed01d406b71",
+          "short_id": "3acc35b3",
+          "created_at": "2026-09-14T11:48:21.000+09:00",
+          "parent_ids": [
+            "e137e8d019014b46ecb672ba64824d2fc176bd2b"
+          ],
+          "title": "feat(be): 실행시간·연속 실패 한도로 발행을 멈추고 부분 결과로 닫는다",
+          "message": "feat(be): 실행시간·연속 실패 한도로 발행을 멈추고 부분 결과로 닫는다\n\nT099·T100·T101·T101a (spec 007 M7, FR-005·FR-009, SC-003).\nT102·T103 은 M3·M5 에서 이미 구현돼 있어 이번 테스트로 확인만 했다.\n\n한도가 하는 일은 **더 발행하지 않는 것**뿐이다. 이미 큐에 든 후보는 끊지 않는다\n— 회수할 수 없고(research R2), 계산이 끝나가는 후보를 버리면 그만큼이 통째로\n사라진다. 그래서 결과는 \"중단\"이 아니라 PARTIAL 이고 남은 대기 후보는 사유와\n함께 '미실행'으로 남아 완료 범위를 밝힌다.\n\n연속 실패는 **끝난 순서**로 센다. 순번 순서가 아니다 — 창 안에서 먼저 나간\n후보가 늦게 끝나는 일이 흔해 순번으로 세면 \"줄줄이 실패했다\"를 잘못 읽는다.\n후보 행에 종료 시각 컬럼이 없고 실행 중에 그 행을 건드리는 것은 종료 처리뿐이라\nupdated_at 이 곧 끝난 시각이다.\n\n누적이 아니라 연속인 이유: 자료 결측처럼 남은 후보도 같은 이유로 실패할 상황을\n끊는 것이 목적이라, 중간에 성공이 하나라도 있으면 그 상황이 아니다. 누적으로\n세면 후보가 많은 묶음에서 드문드문 난 실패가 쌓여 멀쩡한 탐색이 멈춘다.\n\n한도는 다음 발행 직전에 본다. 실행시간을 먼저 보는 이유는 둘 다 참일 때 사용자가\n먼저 알아야 할 것이 \"시간이 다 됐다\"이기 때문이고, 이미 사유가 있으면 덮어쓰지\n않는다. 남은 대기 후보가 없으면 아예 보지 않는다 — 멈출 것이 없는데 사유를\n남기면 정상 완료가 한도 도달로 기록된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T11:48:21.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T11:48:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3acc35b3bc411347b7d83bede137aed01d406b71"
+        },
+        {
+          "id": "e137e8d019014b46ecb672ba64824d2fc176bd2b",
+          "short_id": "e137e8d0",
+          "created_at": "2026-09-14T11:38:00.000+09:00",
+          "parent_ids": [
+            "da9a864caf49447f1a50b511dd61cc88c476ea7f"
+          ],
+          "title": "feat(be): 실패 후보 재시도를 만든다",
+          "message": "feat(be): 실패 후보 재시도를 만든다\n\nT098a·T098b·T098c (spec 007 M7, FR-024, SC-009).\n\n새 묶음을 만들지 않는다. 참조 버전·탐색 공간·선정 규칙을 접수 시점 스냅샷\n그대로 쓴다 — 다시 돌린 후보의 결과가 먼저 끝난 후보들과 같은 조건이어야 나란히\n놓을 수 있다(FR-012). 새 묶음이면 같은 탐색의 결과가 두 곳으로 갈린다.\n\n끝난 묶음을 다시 여는 전이(COMPLETED·PARTIAL → RUNNING)를 더했다. 다시 열 때\n선정은 지운다 — 후보가 더 붙으므로 이전 선정은 이미 사실이 아니고, 안정성\n필터가 묶음 내 상대 분위라 후보 하나가 늘면 분위 자체가 달라진다. 중단 사유는\n남긴다: 취소로 미실행이 된 후보는 되살리지 않으므로 이 묶음은 다시 끝나도\n여전히 부분 결과이고, 사유를 지우면 완료 범위 표시가 뜻을 잃는다.\n\nSKIPPED 는 대상이 아니다(data-model §4.1). 발행 창을 넘겨 보내지도 않는다 —\n실패가 창보다 많으면 창만큼만 보내고 나머지는 remainingFailed 로 알린다.\n자동으로 이어 보내지 않는 것이 계약이다(§5.1).\n\nStatusTransitionTest 의 \"최종 상태는 어디로도 가지 않는다\"를 둘로 갈랐다.\nFAILED·REJECTED 는 그대로 막다른 길이고, COMPLETED·PARTIAL 은 재시도라는\n길 하나만 열렸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T11:38:00.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T11:38:00.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e137e8d019014b46ecb672ba64824d2fc176bd2b"
+        },
+        {
+          "id": "da9a864caf49447f1a50b511dd61cc88c476ea7f",
+          "short_id": "da9a864c",
+          "created_at": "2026-09-14T11:23:05.000+09:00",
+          "parent_ids": [
+            "0691ad42728f4c33bbf4e2f853554871525974c4"
+          ],
+          "title": "feat(be): 탐색 취소와 PARTIAL 종료를 만들고 계산 불가 안정성 저장 결함을 고친다",
+          "message": "feat(be): 탐색 취소와 PARTIAL 종료를 만들고 계산 불가 안정성 저장 결함을 고친다\n\nT093·T094·T097·T098 (spec 007 M7, FR-009, 내부 계약 §4 불변식 2·4).\n\n취소는 \"즉시 멈춤\"이 아니라 \"여기까지만\"이다. 아직 발행하지 않은 후보를\n'미실행'으로 확정하고 더 발행하지 않되, 이미 큐에 들어간 후보는 완주한다 —\nprefetch 1 + manual ACK 에서 발행된 메시지는 회수할 수 없다(research R2).\n그래서 취소 응답의 상태는 아직 RUNNING 일 수 있다(계약 §5).\n\n중단 사유를 상태보다 먼저 기록한다(ParamSearch.requestStop). 사유만 박아 두면\n**발행을 막는 근거**와 **마지막 후보가 끝났을 때 어느 사유로 PARTIAL 이 되는지**가\n한 값으로 풀린다. 먼저 적힌 사유가 이긴다 — 취소한 묶음이 뒤이어 한도에도 걸릴 때\n덮어쓰면 사용자가 누른 취소가 기록에서 사라진다.\n\n종료 판정을 ParamSearchCompletionService 한곳에 모았다. 끝나는 길이 둘(마지막\n후보의 결과, 취소·한도)이라 같은 판정을 두 곳에 두면 한쪽만 고쳐져 취소된\n묶음에만 선정이 안 붙는다. M5 가 주석으로 M7 에 인계한 그 자리다.\n\n**M5 결함 하나를 함께 고쳤다.** SearchCandidate 의 방어 복사가 Map.copyOf 라\nnull 값을 거부했다. 안정성은 이웃이 없으면 value 가 null 이고(FR-013b) 선정\n사유는 계산되지 않은 후보에서 code 가 null 인데, 그 후보가 하나라도 있으면\n선정 저장이 NullPointerException 으로 죽어 **묶음이 끝나지 않았다** — 화면에는\n영원히 \"실행 중\"으로 남는다. 후보가 하나뿐이거나 대부분 실패한 묶음이 그 경우다.\nM5 테스트는 후보 4건이 모두 이웃을 가져 이 경로를 밟지 않았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T11:23:05.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T11:23:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da9a864caf49447f1a50b511dd61cc88c476ea7f"
+        },
+        {
+          "id": "0691ad42728f4c33bbf4e2f853554871525974c4",
+          "short_id": "0691ad42",
+          "created_at": "2026-09-14T11:09:18.000+09:00",
+          "parent_ids": [
+            "80cbea037fc59cae27f059ef73b0a05ee1ede339"
+          ],
+          "title": "test(be): 접수 거부가 남기는 기록을 통합 테스트로 고정한다",
+          "message": "test(be): 접수 거부가 남기는 기록을 통합 테스트로 고정한다\n\nT091·T092 (spec 007 M7, FR-005b·FR-020, Edge Case).\nT095·T096·T134 는 M3 에서 이미 구현돼 있어 테스트만 채웠다.\n\n거부도 재현 기록이다. 무엇을 왜 실행하지 않았는지가 남아야 사용자가 범위를\n좁혀 다시 할 수 있다. 그래서 거부는 예외를 던지면서도 묶음을 REJECTED 로\n저장한다는 것과, 거부에서 하지 **않는** 것을 함께 고정한다 — 상한을 넘겼다고\n표본을 뽑아 줄여 실행하지 않고(FR-005b), 유효 조합이 없는데 제약을 느슨히\n해 억지로 후보를 만들지 않는다. 후보 행 0건과 발행기 무호출로 그것을 본다.\n\n등록표는 fixture 를 쓴다. 운영 등록표로는 두 경로를 만들 수 없다 — 상한을\n넘기려면 후보값이 그만큼 필요한데 등록된 축이 작고, 유효 조합 0건을 만들려면\n모든 조합을 거르는 규칙이 필요한데 그런 전략은 실행 지원 목록에 없어 그 앞에서\n다른 사유로 거부된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T11:09:18.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T11:09:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0691ad42728f4c33bbf4e2f853554871525974c4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -26,6 +26,13 @@ public interface SearchCandidateRepository {\n     /** 발행 창이 다음에 올릴 후보를 순번대로 {@code limit}건만 가져온다. */\n     List<SearchCandidate> findNextByStatus(Long paramSearchId, CandidateStatus status, int limit);\n \n+    /**\n+     * 최근에 끝난 후보부터 {@code limit}건. 연속 실패 한도 판정에 쓴다(FR-005).\n+     *\n+     * <p>순번이 아니라 <b>끝난 순서</b>다 — 창 안에서 먼저 발행된 후보가 늦게 끝나는 일이 흔해서, 순번으로 세면 \"줄줄이 실패했다\"를 잘못 읽는다.\n+     */\n+    List<SearchCandidate> findRecentlyFinished(Long paramSearchId, int limit);\n+\n     long countByStatus(Long paramSearchId, CandidateStatus status);\n \n     /** 결과 이벤트가 도착했을 때 어느 후보의 것인지 찾는다. Job 하나는 후보 하나에만 붙는다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/repository/SearchCandidateRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/repository/SearchCandidateRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+package com.ssafy.thorp.paramsearch.application.result;\n+\n+/**\n+ * 취소 접수 결과(contracts/param-search-api.md §5).\n+ *\n+ * @param status 응답 시점의 상태. <b>아직 {@code RUNNING}일 수 있다</b> — 이미 큐에 들어간 후보는 회수할 수 없어 완주하고, 그것이 다 끝나야\n+ *     {@code PARTIAL}이 된다(research R2)\n+ * @param skipped 발행 전이라 '미실행'으로 돌린 후보 수\n+ * @param inFlight 이미 발행돼 완주할 후보 수. 이 값이 0이면 응답 시점에 이미 {@code PARTIAL}이다\n+ */\n+public record ParamSearchCancelResult(String searchId, String status, int skipped, long inFlight) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchCancelResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchCancelResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+package com.ssafy.thorp.paramsearch.application.result;\n+\n+/**\n+ * 실패 후보 재시도 결과(contracts/param-search-api.md §5.1).\n+ *\n+ * @param retried 이번에 다시 발행한 후보 수\n+ * @param remainingFailed 아직 실패로 남은 후보 수. 발행 창이 좁아 이번에 다 보내지 못한 만큼이며, <b>자동으로 이어 보내지 않는다</b> — 반복\n+ *     재시도는 사용자가 다시 요청할 때만 일어난다(계약 §5.1)\n+ */\n+public record ParamSearchRetryResult(\n+        String searchId, String status, int retried, long remainingFailed) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchRetryResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchRetryResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,49 @@\n+package com.ssafy.thorp.paramsearch.application.service.limit;\n+\n+import com.ssafy.thorp.paramsearch.application.port.SearchLimits;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import java.util.List;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 연속 실패 한도(FR-005, 내부 계약 §4 \"한도 도달\").\n+ *\n+ * <p><b>누적 실패가 아니라 연속 실패다.</b> 자료 결측이나 설정 오류처럼 <b>남은 후보도 같은 이유로 실패할</b> 상황을 끊는 것이 목적이라, 중간에 성공이\n+ * 하나라도 있으면 그 상황이 아니다. 누적으로 세면 후보가 많은 묶음에서 드문드문 난 실패가 쌓여 멀쩡한 탐색이 멈춘다.\n+ *\n+ * <p><b>끝난 순서로 센다.</b> 순번 순서가 아니다 — 발행 창 안에서 먼저 나간 후보가 늦게 끝나는 일이 흔해서, 순번으로 세면 \"줄줄이 실패했다\"를 잘못 읽는다.\n+ *\n+ * <p>한도는 <b>발행 창보다 커야 한다.</b> 창에 든 후보가 한꺼번에 실패하는 일만으로 묶음이 멈추면, 일시적인 브로커·자료 문제에 탐색 전체가 끊긴다\n+ * (application.yml 주석). 그 관계는 설정이 지키고 여기서는 값을 그대로 쓴다.\n+ *\n+ * <p>{@code consecutiveFailureLimit}은 <b>임시값</b>이다(PD-05 대기). 응답의 {@code limits.provisional}이 그 사실을\n+ * 화면에 나른다(FR-005a).\n+ */\n+@Component\n+@ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n+public class FailureLimitGuard {\n+\n+    private final SearchCandidateRepository candidateRepository;\n+    private final SearchLimits limits;\n+\n+    public FailureLimitGuard(SearchCandidateRepository candidateRepository, SearchLimits limits) {\n+        this.candidateRepository = candidateRepository;\n+        this.limits = limits;\n+    }\n+\n+    /** 마지막으로 끝난 후보들이 한도만큼 내리 실패했는가. */\n+    public boolean isReached(Long paramSearchId) {\n+        int limit = limits.consecutiveFailureLimit();\n+        List<SearchCandidate> recent =\n+                candidateRepository.findRecentlyFinished(paramSearchId, limit);\n+        if (recent.size() < limit) {\n+            // 끝난 후보가 한도보다 적으면 \"연속 N건\"이 성립하지 않는다.\n+            return false;\n+        }\n+        return recent.stream()\n+                .allMatch(candidate -> candidate.getStatus() == CandidateStatus.FAILED);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/limit/FailureLimitGuard.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/limit/FailureLimitGuard.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,49 @@\n+package com.ssafy.thorp.paramsearch.application.service.limit;\n+\n+import com.ssafy.thorp.paramsearch.application.port.SearchLimits;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import java.time.Clock;\n+import java.time.Duration;\n+import java.time.Instant;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 실행시간 한도(FR-005, 내부 계약 §4 \"한도 도달\").\n+ *\n+ * <p><b>묶음 시작 시각부터 잰다.</b> 후보별 실행시간이 아니라 묶음 전체의 벽시계 시간이다 — 사용자가 기다리는 것은 묶음이고, 후보 하나하나가 빨라도 수백 건이면\n+ * 오래 걸린다.\n+ *\n+ * <p><b>넘겼다고 실행 중인 후보를 끊지 않는다.</b> 여기서 하는 일은 <b>더 발행하지 않는다</b>는 판정뿐이다. 이미 큐에 든 후보는 회수할 수\n+ * 없고(research R2), 계산이 끝나가는 후보를 버리면 그만큼의 계산이 통째로 사라진다. 그래서 한도는 \"여기까지만\"이고 그 결과가 {@code\n+ * PARTIAL}이다(FR-009).\n+ *\n+ * <p>{@code timeLimitSeconds}는 <b>임시값</b>이다. 실측 전이라 팀이 정하지 않았고(PD-05·PD-06), 응답의 {@code\n+ * limits.provisional}이 그 사실을 화면에 나른다(FR-005a).\n+ */\n+@Component\n+@ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n+public class TimeLimitGuard {\n+\n+    private final SearchLimits limits;\n+    private final Clock clock;\n+\n+    public TimeLimitGuard(SearchLimits limits, Clock clock) {\n+        this.limits = limits;\n+        this.clock = clock;\n+    }\n+\n+    /**\n+     * 실행시간 한도에 닿았는가.\n+     *\n+     * <p>시작 시각이 없으면(아직 {@code QUEUED}) 잴 기준이 없으므로 닿지 않은 것으로 본다 — 발행이 시작되지 않았다는 뜻이라 막을 것도 없다.\n+     */\n+    public boolean isReached(ParamSearch search) {\n+        Instant startedAt = search.getStartedAt();\n+        if (startedAt == null) {\n+            return false;\n+        }\n+        return Duration.between(startedAt, clock.instant()).getSeconds()\n+                >= limits.timeLimitSeconds();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/limit/TimeLimitGuard.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/limit/TimeLimitGuard.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -74,7 +74,9 @@ public class CandidateDispatcher {\n      */\n     public void advance(Long paramSearchId, ParamSearchSnapshot snapshot) {\n         ParamSearch locked = paramSearchRepository.findByIdForUpdate(paramSearchId).orElse(null);\n-        if (locked == null || locked.getStatus().isFinal()) {\n+        if (locked == null || locked.getStatus().isFinal() || locked.isStopRequested()) {\n+            // 멈추기로 한 묶음에는 새 후보를 내보내지 않는다. 상태는 아직 RUNNING 이지만\n+            // 사유가 박혀 있으면 그것이 발행을 막는 근거다(불변식 2).\n             return;\n         }\n         fillWindow(paramSearchId, snapshot);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CandidateDispatcher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CandidateDispatcher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,89 @@\n+package com.ssafy.thorp.paramsearch.application.service;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchCancelResult;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n+import java.util.List;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 탐색 취소(FR-009, contracts/param-search-api.md §5, research R2).\n+ *\n+ * <p>취소가 하는 일은 둘이다 — <b>아직 발행하지 않은 후보를 '미실행'으로 확정</b>하고, <b>더 발행하지 않는다</b>. 이미 큐에 들어간 후보는 완주한다:\n+ * prefetch 1 + manual ACK 구조에서 발행된 메시지는 회수할 수 없다. 그래서 취소는 \"즉시 멈춤\"이 아니라 \"여기까지만\"이다.\n+ *\n+ * <p><b>부분 결과를 버리지 않는다</b>(FR-009). 취소된 묶음도 완료된 후보끼리는 같은 조건으로 계산됐으므로 그대로 비교할 수 있다 — 그래서 {@code\n+ * PARTIAL}도 선정을 계산한다(data-model §3).\n+ *\n+ * <p>묶음 행을 비관적 락으로 잡는 이유: 취소는 HTTP 스레드에서 오고 후보 종료는 이벤트 리스너 스레드에서 온다. 락 없이 하면 취소가 {@code PENDING}을\n+ * 세는 사이에 리스너가 그 후보를 발행해, 취소한 뒤에 나간 후보가 생긴다(내부 계약 §4 불변식 2).\n+ */\n+@Service\n+@ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n+public class ParamSearchCancelService {\n+\n+    private final ParamSearchRepository paramSearchRepository;\n+    private final SearchCandidateRepository candidateRepository;\n+    private final ParamSearchCompletionService completionService;\n+\n+    public ParamSearchCancelService(\n+            ParamSearchRepository paramSearchRepository,\n+            SearchCandidateRepository candidateRepository,\n+            ParamSearchCompletionService completionService) {\n+        this.paramSearchRepository = paramSearchRepository;\n+        this.candidateRepository = candidateRepository;\n+        this.completionService = completionService;\n+    }\n+\n+    /**\n+     * 묶음을 취소한다.\n+     *\n+     * @throws BusinessException 없는 묶음이면 404, 이미 끝난 묶음이면 409 {@code ALREADY_FINISHED}\n+     */\n+    @Transactional\n+    public ParamSearchCancelResult cancel(String searchId) {\n+        ParamSearch found =\n+                paramSearchRepository\n+                        .findBySearchId(searchId)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.RESOURCE_NOT_FOUND,\n+                                                \"탐색 묶음을 찾을 수 없습니다: \" + searchId));\n+        ParamSearch locked = paramSearchRepository.findByIdForUpdate(found.getId()).orElseThrow();\n+        if (locked.getStatus().isFinal()) {\n+            // 끝난 것은 멈출 수 없다. 조용히 성공으로 답하면 사용자는 멈췄다고 믿는다.\n+            throw new BusinessException(ErrorCode.ALREADY_FINISHED, \"이미 끝난 탐색입니다: \" + searchId);\n+        }\n+\n+        int skipped = skipPending(locked.getId());\n+        long inFlight =\n+                candidateRepository.countByStatus(locked.getId(), CandidateStatus.DISPATCHED);\n+\n+        ParamSearch stopped =\n+                paramSearchRepository.update(locked.requestStop(StopReason.CANCELLED));\n+        ParamSearch settled = completionService.settle(stopped);\n+\n+        return new ParamSearchCancelResult(\n+                settled.getSearchId().value(), settled.getStatus().name(), skipped, inFlight);\n+    }\n+\n+    /** 아직 발행하지 않은 후보를 '미실행'으로 확정한다. 되돌아오지 않는 상태다 — 재시도 대상도 아니다(FR-024). */\n+    private int skipPending(Long paramSearchId) {\n+        List<SearchCandidate> pending =\n+                candidateRepository.findByParamSearchIdAndStatus(\n+                        paramSearchId, CandidateStatus.PENDING);\n+        for (SearchCandidate candidate : pending) {\n+            candidateRepository.update(candidate.markSkipped(\"CANCELLED\", \"사용자가 취소해 실행되지 않았습니다\"));\n+        }\n+        return pending.size();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchCancelService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchCancelService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,88 @@\n+package com.ssafy.thorp.paramsearch.application.service;\n+\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;\n+import java.time.Clock;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.stereotype.Service;\n+\n+/**\n+ * 묶음의 끝을 확정한다 — 집계 갱신, 최종 상태 전이, 선정 1회(FR-008·FR-009·FR-013).\n+ *\n+ * <p><b>끝나는 길이 둘이라 한곳에 모았다.</b> 마지막 후보가 결과를 보내 끝나는 길({@link ParamSearchProgressService})과, 취소·한도가\n+ * 남은 후보를 '미실행'으로 돌려 끝나는 길({@link ParamSearchCancelService})이다. 두 곳에 같은 판정을 두면 한쪽만 고쳐져 <b>취소된 묶음에만\n+ * 선정이 안 붙는</b> 식으로 갈라진다.\n+ *\n+ * <p>끝났는가의 기준은 하나다 — {@code PENDING} 0 && {@code DISPATCHED} 0(내부 계약 §4 \"묶음 종료\"). 멈추기로 한 묶음이라도 이미\n+ * 발행된 후보가 남아 있으면 아직 끝이 아니다. 그 후보들은 회수할 수 없어 완주한다(research R2).\n+ *\n+ * <p>{@code stopReason}이 있으면 {@code PARTIAL}, 없으면 {@code COMPLETED}다. 둘 다 선정을 계산한다 — 취소된 묶음도 완료된\n+ * 후보끼리는 같은 조건으로 계산됐으므로 그대로 비교할 수 있다(data-model §3).\n+ */\n+@Service\n+@ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n+public class ParamSearchCompletionService {\n+\n+    private final ParamSearchRepository paramSearchRepository;\n+    private final SearchCandidateRepository candidateRepository;\n+    private final CandidateDispatcher dispatcher;\n+    private final ParamSearchSelectionService selectionService;\n+    private final Clock clock;\n+\n+    public ParamSearchCompletionService(\n+            ParamSearchRepository paramSearchRepository,\n+            SearchCandidateRepository candidateRepository,\n+            CandidateDispatcher dispatcher,\n+            ParamSearchSelectionService selectionService,\n+            Clock clock) {\n+        this.paramSearchRepository = paramSearchRepository;\n+        this.candidateRepository = candidateRepository;\n+        this.dispatcher = dispatcher;\n+        this.selectionService = selectionService;\n+        this.clock = clock;\n+    }\n+\n+    /**\n+     * 집계를 다시 세고, 남은 후보가 없으면 최종 상태로 확정하며 선정을 1회 계산한다.\n+     *\n+     * <p><b>호출자가 묶음 행을 잠근 뒤 부른다.</b> 선정이 묶음당 1회여야 해서(불변식 3) 종료 판정과 전이가 한 임계 구역 안에 있어야 한다.\n+     *\n+     * @param search 잠긴 묶음 행\n+     * @return 갱신된 묶음. 아직 끝나지 않았으면 집계만 갱신된 상태다\n+     */\n+    public ParamSearch settle(ParamSearch search) {\n+        ParamSearch counted = paramSearchRepository.update(search.withCounts(recount(search)));\n+        if (counted.getStatus().isFinal() || !dispatcher.isDrained(counted.getId())) {\n+            return counted;\n+        }\n+        ParamSearch finished =\n+                counted.isStopRequested()\n+                        ? counted.markPartial(counted.getStopReason(), clock.instant())\n+                        : counted.markCompleted(clock.instant());\n+        return paramSearchRepository.update(selectionService.selectOnce(finished));\n+    }\n+\n+    /**\n+     * 후보 상태를 세어 집계를 다시 만든다.\n+     *\n+     * <p><b>이전 값에 더하지 않고 센다.</b> 두 이벤트가 같은 값을 읽어 각자 더하면 하나가 사라진다 — 묶음 행을 잠근 뒤 세는 것이 동시 수신에서 유일하게\n+     * 안전하다(내부 계약 §4).\n+     *\n+     * <p>{@code expected}·{@code valid}는 접수 때 정해진 값이라 다시 세지 않는다. 그 둘은 \"무엇을 하려 했는가\"이고 나머지는 \"어떻게\n+     * 됐는가\"다.\n+     */\n+    private SearchCounts recount(ParamSearch search) {\n+        Long id = search.getId();\n+        SearchCounts before = search.getCounts();\n+        return new SearchCounts(\n+                before.expected(),\n+                before.valid(),\n+                candidateRepository.countByStatus(id, CandidateStatus.COMPLETED),\n+                candidateRepository.countByStatus(id, CandidateStatus.FAILED),\n+                candidateRepository.countByStatus(id, CandidateStatus.EXCLUDED),\n+                candidateRepository.countByStatus(id, CandidateStatus.SKIPPED));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchCompletionService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchCompletionService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,11 +3,12 @@ package com.ssafy.thorp.paramsearch.application.service;\n import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;\n import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.service.limit.FailureLimitGuard;\n+import com.ssafy.thorp.paramsearch.application.service.limit.TimeLimitGuard;\n import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n-import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;\n-import java.time.Clock;\n+import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n import java.util.Optional;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n@@ -34,20 +35,23 @@ public class ParamSearchProgressService {\n     private final ParamSearchRepository paramSearchRepository;\n     private final SearchCandidateRepository candidateRepository;\n     private final CandidateDispatcher dispatcher;\n-    private final ParamSearchSelectionService selectionService;\n-    private final Clock clock;\n+    private final ParamSearchCompletionService completionService;\n+    private final TimeLimitGuard timeLimitGuard;\n+    private final FailureLimitGuard failureLimitGuard;\n \n     public ParamSearchProgressService(\n             ParamSearchRepository paramSearchRepository,\n             SearchCandidateRepository candidateRepository,\n             CandidateDispatcher dispatcher,\n-            ParamSearchSelectionService selectionService,\n-            Clock clock) {\n+            ParamSearchCompletionService completionService,\n+            TimeLimitGuard timeLimitGuard,\n+            FailureLimitGuard failureLimitGuard) {\n         this.paramSearchRepository = paramSearchRepository;\n         this.candidateRepository = candidateRepository;\n         this.dispatcher = dispatcher;\n-        this.selectionService = selectionService;\n-        this.clock = clock;\n+        this.completionService = completionService;\n+        this.timeLimitGuard = timeLimitGuard;\n+        this.failureLimitGuard = failureLimitGuard;\n     }\n \n     /**\n@@ -87,46 +91,66 @@ public class ParamSearchProgressService {\n                                         new IllegalStateException(\n                                                 \"candidate without a search: \"\n                                                         + candidate.getId()));\n-        ParamSearch updated = paramSearchRepository.update(locked.withCounts(recount(locked)));\n-        finishOrAdvance(updated);\n+        // 한도는 다음 발행 직전에 본다. 여기서 멈추기로 하면 그 사유가 곧 PARTIAL 의 사유가 된다.\n+        // 이미 발행된 후보는 끊지 않는다 — 계산이 끝나가는 후보를 버리면 그만큼이 통째로 사라진다.\n+        ParamSearch guarded = applyLimits(locked);\n+        // 집계 갱신과 종료 판정·선정은 completionService 한곳이 한다. 취소로 끝나는 길과\n+        // 같은 코드를 쓰지 않으면 한쪽만 고쳐져 취소된 묶음에만 선정이 안 붙는다.\n+        ParamSearch settled = completionService.settle(guarded);\n+        if (!settled.getStatus().isFinal()) {\n+            // 아직 남았다 — 창의 빈자리를 채운다. 멈추기로 한 묶음이면 advance 가 스스로 막는다.\n+            dispatcher.advance(settled.getId(), snapshotOf(settled));\n+        }\n         return true;\n     }\n \n-    /** 후보 상태를 세어 집계를 다시 만든다. 더하지 않고 세는 것이 동시 수신에서 유일하게 안전하다. */\n-    private SearchCounts recount(ParamSearch search) {\n-        Long id = search.getId();\n-        SearchCounts before = search.getCounts();\n-        return new SearchCounts(\n-                before.expected(),\n-                before.valid(),\n-                candidateRepository.countByStatus(id, CandidateStatus.COMPLETED),\n-                candidateRepository.countByStatus(id, CandidateStatus.FAILED),\n-                candidateRepository.countByStatus(id, CandidateStatus.EXCLUDED),\n-                candidateRepository.countByStatus(id, CandidateStatus.SKIPPED));\n-    }\n-\n     /**\n-     * 남은 후보가 있으면 창을 채우고, 없으면 묶음을 끝낸다.\n+     * 실행시간·연속 실패 한도를 보고, 닿았으면 멈추기로 표시한다(FR-005, 내부 계약 §4 \"한도 도달\").\n      *\n-     * <p>미실행 후보가 남은 채 끝나면 {@code PARTIAL}이다 — 취소·한도 도달의 결과이며 완료된 후보로는 그대로 비교할 수 있다(FR-009).\n+     * <p><b>순서가 뜻을 갖는다.</b> 실행시간을 먼저 본다 — 오래 걸려 멈추는 것과 줄줄이 실패해 멈추는 것이 동시에 참일 때, 사용자가 먼저 알아야 할 것은\n+     * \"시간이 다 됐다\"이기 때문이다. 이미 사유가 있으면 {@code requestStop}이 덮어쓰지 않는다.\n+     *\n+     * <p>남은 대기 후보가 없으면 보지 않는다 — 멈출 것이 없는데 사유를 남기면 정상 완료가 한도 도달로 기록된다.\n      */\n-    private void finishOrAdvance(ParamSearch search) {\n-        if (!dispatcher.isDrained(search.getId())) {\n-            dispatcher.advance(search.getId(), snapshotOf(search));\n-            return;\n+    private ParamSearch applyLimits(ParamSearch search) {\n+        if (search.isStopRequested()\n+                || candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING)\n+                        == 0) {\n+            return search;\n+        }\n+        StopReason reason = null;\n+        if (timeLimitGuard.isReached(search)) {\n+            reason = StopReason.TIME_LIMIT;\n+        } else if (failureLimitGuard.isReached(search.getId())) {\n+            reason = StopReason.FAILURE_LIMIT;\n         }\n-        // 여기가 묶음의 끝이다 — PENDING 0 && DISPATCHED 0(내부 계약 §4 \"묶음 종료\").\n-        if (search.getCounts().skipped() > 0) {\n-            // 멈춘 사유는 멈춘 쪽(취소·한도)이 남기고 PARTIAL 전이도 그쪽이 한다.\n-            // 선정은 최종 상태가 된 뒤에만 붙일 수 있으므로(ParamSearch.withSelection)\n-            // 그 경로가 전이 직후 selectOnce 를 부른다. 취소된 묶음도 완료된 후보끼리는\n-            // 그대로 비교할 수 있다(data-model §3).\n-            return;\n+        if (reason == null) {\n+            return search;\n         }\n-        // 완료로 확정한 뒤 선정을 딱 한 번 계산한다. 안정성 필터가 묶음 내 상대 분위라\n-        // 중간에 재면 나중에 끝난 후보가 분위를 흔들어 앞선 판정의 근거가 사라진다(불변식 3).\n-        paramSearchRepository.update(\n-                selectionService.selectOnce(search.markCompleted(clock.instant())));\n+        log.info(\n+                \"param search stopped by a limit: searchId={} reason={}\",\n+                search.getSearchId().value(),\n+                reason);\n+        ParamSearch stopped = paramSearchRepository.update(search.requestStop(reason));\n+        skipPending(stopped, reason);\n+        return stopped;\n+    }\n+\n+    /** 한도로 멈추면 남은 대기 후보는 '미실행'이다 — 취소와 같은 뜻이며 되돌아오지 않는다(FR-009). */\n+    private void skipPending(ParamSearch search, StopReason reason) {\n+        for (SearchCandidate candidate :\n+                candidateRepository.findByParamSearchIdAndStatus(\n+                        search.getId(), CandidateStatus.PENDING)) {\n+            candidateRepository.update(candidate.markSkipped(reason.name(), detailOf(reason)));\n+        }\n+    }\n+\n+    private static String detailOf(StopReason reason) {\n+        return switch (reason) {\n+            case TIME_LIMIT -> \"실행시간 상한에 닿아 실행되지 않았습니다\";\n+            case FAILURE_LIMIT -> \"연속 실패가 이어져 실행되지 않았습니다\";\n+            default -> \"실행되지 않았습니다\";\n+        };\n     }\n \n     private static ParamSearchSnapshot snapshotOf(ParamSearch search) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchProgressService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchProgressService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,122 @@\n+package com.ssafy.thorp.paramsearch.application.service;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;\n+import com.ssafy.thorp.paramsearch.application.port.SearchLimits;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchRetryResult;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import java.util.List;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 실패 후보 재시도(FR-024, contracts/param-search-api.md §5.1).\n+ *\n+ * <p><b>새 묶음을 만들지 않는다.</b> 참조 버전·탐색 공간·선정 규칙을 접수 시점 스냅샷 그대로 쓴다 — 다시 돌린 후보의 결과가 먼저 끝난 후보들과 같은 조건이어야\n+ * 나란히 놓을 수 있다(FR-012). 새 묶음으로 만들면 그 비교가 성립하지 않고, 사용자는 같은 탐색의 결과가 두 곳에 나뉜 것을 보게 된다.\n+ *\n+ * <p><b>{@code SKIPPED}는 대상이 아니다.</b> 취소·한도로 빠진 후보를 재시도로 되살리면 \"여기까지 계산했다\"는 완료 범위 표시가 뜻을 잃는다. 재시도는\n+ * {@code FAILED}에서만 출발한다(data-model §4.1).\n+ *\n+ * <p><b>발행 창을 넘겨 보내지 않는다</b>(내부 계약 §4 불변식 1). 실패가 창보다 많으면 이번에 창만큼만 보내고 나머지는 {@code FAILED}로 둔다 —\n+ * 자동으로 이어 보내지 않는다. 반복 재시도는 사용자가 다시 요청할 때만 일어난다(계약 §5.1).\n+ */\n+@Service\n+@ConditionalOnProperty(prefix = \"thorp.param-search\", name = \"enabled\", havingValue = \"true\")\n+public class ParamSearchRetryService {\n+\n+    private final ParamSearchRepository paramSearchRepository;\n+    private final SearchCandidateRepository candidateRepository;\n+    private final CandidateJobLauncher launcher;\n+    private final SearchLimits limits;\n+\n+    public ParamSearchRetryService(\n+            ParamSearchRepository paramSearchRepository,\n+            SearchCandidateRepository candidateRepository,\n+            CandidateJobLauncher launcher,\n+            SearchLimits limits) {\n+        this.paramSearchRepository = paramSearchRepository;\n+        this.candidateRepository = candidateRepository;\n+        this.launcher = launcher;\n+        this.limits = limits;\n+    }\n+\n+    /**\n+     * 실패 후보를 다시 발행한다.\n+     *\n+     * @throws BusinessException 없는 묶음이면 404, 실패 후보가 없으면 409 {@code NOTHING_TO_RETRY}\n+     */\n+    @Transactional\n+    public ParamSearchRetryResult retryFailed(String searchId) {\n+        ParamSearch found =\n+                paramSearchRepository\n+                        .findBySearchId(searchId)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.RESOURCE_NOT_FOUND,\n+                                                \"탐색 묶음을 찾을 수 없습니다: \" + searchId));\n+        ParamSearch locked = paramSearchRepository.findByIdForUpdate(found.getId()).orElseThrow();\n+\n+        List<SearchCandidate> failed =\n+                candidateRepository.findByParamSearchIdAndStatus(\n+                        locked.getId(), CandidateStatus.FAILED);\n+        if (failed.isEmpty()) {\n+            // 되살릴 것이 없는데 202로 답하면 사용자는 다시 돌고 있다고 믿는다.\n+            throw new BusinessException(\n+                    ErrorCode.NOTHING_TO_RETRY, \"다시 시도할 실패 후보가 없습니다: \" + searchId);\n+        }\n+\n+        ParamSearch reopened =\n+                paramSearchRepository.update(\n+                        locked.getStatus().isFinal() ? locked.reopenForRetry() : locked);\n+        ParamSearchSnapshot snapshot = snapshotOf(reopened);\n+\n+        int retried = dispatch(reopened, failed, snapshot);\n+        long remainingFailed =\n+                candidateRepository.countByStatus(reopened.getId(), CandidateStatus.FAILED);\n+        return new ParamSearchRetryResult(\n+                reopened.getSearchId().value(),\n+                reopened.getStatus().name(),\n+                retried,\n+                remainingFailed);\n+    }\n+\n+    /**\n+     * 창의 빈자리만큼 다시 발행한다.\n+     *\n+     * <p>발행 실패(브로커 장애)는 후보를 {@code FAILED}로 남긴다 — 계산 실패와 발행 실패는 다르지만, 여기서는 이미 실패한 후보라 되돌릴 상태가 없다.\n+     * 다음 재시도 요청이 같은 후보를 다시 집는다.\n+     */\n+    private int dispatch(\n+            ParamSearch search, List<SearchCandidate> failed, ParamSearchSnapshot snapshot) {\n+        long inFlight =\n+                candidateRepository.countByStatus(search.getId(), CandidateStatus.DISPATCHED);\n+        int room = limits.dispatchWindow() - (int) inFlight;\n+        int retried = 0;\n+        for (SearchCandidate candidate : failed) {\n+            if (retried >= room) {\n+                break;\n+            }\n+            long backtestJobId = launcher.launchCandidate(snapshot, candidate);\n+            candidateRepository.update(candidate.markDispatched(backtestJobId));\n+            retried++;\n+        }\n+        return retried;\n+    }\n+\n+    private static ParamSearchSnapshot snapshotOf(ParamSearch search) {\n+        return ParamSearchSnapshot.fromMap(\n+                search.getId(),\n+                search.getSearchId().value(),\n+                search.getOwnerUserId(),\n+                search.getExecutionPlan());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchRetryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchRetryService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -176,6 +176,49 @@ public class ParamSearch {\n                 .build();\n     }\n \n+    /**\n+     * 멈추기로 했다 — 취소·실행시간 한도·연속 실패 한도(FR-009, 내부 계약 §4 불변식 2).\n+     *\n+     * <p><b>상태는 아직 바꾸지 않는다.</b> 이미 발행된 후보는 회수할 수 없어 완주하므로, 그때까지는 {@code RUNNING}이 사실이다. 계약도 취소 응답의\n+     * 상태가 아직 {@code RUNNING}일 수 있다고 정한다(contracts §5). 사유만 먼저 박아 두면 <b>발행을 막는 근거</b>와 <b>마지막 후보가\n+     * 끝났을 때 어느 사유로 {@code PARTIAL}이 되는지</b>가 한 값으로 해결된다.\n+     *\n+     * <p><b>먼저 적힌 사유가 이긴다.</b> 취소한 묶음이 뒤이어 실행시간 한도에도 걸리는 일은 흔한데, 그때 사유를 덮어쓰면 사용자가 누른 취소가 기록에서 사라진다.\n+     *\n+     * @throws IllegalStateException 이미 끝난 묶음일 때 — 끝난 것은 멈출 수 없다\n+     */\n+    public ParamSearch requestStop(StopReason stopReason) {\n+        Objects.requireNonNull(stopReason, \"stopReason must not be null\");\n+        if (status.isFinal()) {\n+            throw new IllegalStateException(\"already finished: \" + status);\n+        }\n+        if (this.stopReason != null) {\n+            return this;\n+        }\n+        return toBuilder().stopReason(stopReason).build();\n+    }\n+\n+    /** 멈추기로 한 묶음인가. 발행 경로가 이 값을 보고 새 후보를 내보내지 않는다(불변식 2). */\n+    public boolean isStopRequested() {\n+        return stopReason != null && !status.isFinal();\n+    }\n+\n+    /**\n+     * 실패 후보 재시도로 묶음을 다시 연다(FR-024).\n+     *\n+     * <p><b>새 묶음을 만들지 않는다.</b> 참조 버전·탐색 공간·선정 규칙은 접수 시점 스냅샷 그대로다 — 재시도해 얻은 결과가 먼저 끝난 후보들과 같은 조건이어야\n+     * 나란히 놓을 수 있다(FR-012·FR-013c).\n+     *\n+     * <p><b>선정은 비운다.</b> 후보가 더 붙으므로 이전 선정은 이미 사실이 아니다. 안정성 필터가 묶음 내 상대 분위라 후보 하나가 늘면 분위 자체가 달라진다 —\n+     * 다시 끝날 때 한 번 더 계산한다(불변식 3).\n+     *\n+     * <p><b>중단 사유는 남긴다.</b> 취소로 '미실행'이 된 후보는 재시도 대상이 아니라 그대로 남으므로, 이 묶음은 다시 끝나도 여전히 부분 결과다. 사유를 지우면\n+     * 취소한 적 없는 묶음처럼 보이고 완료 범위 표시가 뜻을 잃는다.\n+     */\n+    public ParamSearch reopenForRetry() {\n+        return transitionTo(ParamSearchStatus.RUNNING).selection(null).finishedAt(null).build();\n+    }\n+\n     /** 집계를 갱신한다. 상태는 그대로다 — 상태 전이 판정은 별도다. */\n     public ParamSearch withCounts(SearchCounts counts) {\n         return toBuilder()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearch.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearch.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,7 @@ import java.util.Set;\n  *                    ├─▶ PARTIAL     취소·한도 도달로 미실행 후보가 남음\n  *                    └─▶ FAILED      접수 후 실행 자체가 불가 (기준 발행 실패 등)\n  * QUEUED ──▶ REJECTED                접수 시점 거부 (상한 초과·유효 조합 0건)\n+ * COMPLETED·PARTIAL ──▶ RUNNING     실패 후보 재시도로 다시 열림 (FR-024)\n  * </pre>\n  *\n  * <p>{@code REJECTED}는 저장하되 후보를 만들지 않는다. {@code PARTIAL}은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009). {@code\n@@ -45,7 +46,10 @@ public enum ParamSearchStatus {\n         return switch (this) {\n             case QUEUED -> next == RUNNING || next == REJECTED;\n             case RUNNING -> next == COMPLETED || next == PARTIAL || next == FAILED;\n-            case COMPLETED, PARTIAL, FAILED, REJECTED -> false;\n+            // 재시도로 다시 연다(FR-024). 실패 후보를 다시 돌리면 묶음은 다시 진행 중이 되고,\n+            // 끝나면 선정을 다시 계산한다. 새 묶음을 만들지 않는 것이 이 전이의 목적이다.\n+            case COMPLETED, PARTIAL -> next == RUNNING;\n+            case FAILED, REJECTED -> false;\n         };\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearchStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ParamSearchStatus.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,8 @@ package com.ssafy.thorp.paramsearch.domain.model;\n \n import com.ssafy.thorp.paramsearch.domain.vo.GridCoordinates;\n import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;\n+import java.util.Collections;\n+import java.util.LinkedHashMap;\n import java.util.Map;\n import java.util.Objects;\n \n@@ -53,14 +55,23 @@ public class SearchCandidate {\n         this.status = builder.status;\n         this.reasonCode = builder.reasonCode;\n         this.reasonDetail = builder.reasonDetail;\n-        this.stability = builder.stability == null ? null : Map.copyOf(builder.stability);\n+        this.stability = unmodifiableOrNull(builder.stability);\n         this.retryCount = builder.retryCount;\n-        this.periodPerformance =\n-                builder.periodPerformance == null ? null : Map.copyOf(builder.periodPerformance);\n+        this.periodPerformance = unmodifiableOrNull(builder.periodPerformance);\n         this.validationLabel = builder.validationLabel;\n         this.selected = builder.selected;\n-        this.selectionReason =\n-                builder.selectionReason == null ? null : Map.copyOf(builder.selectionReason);\n+        this.selectionReason = unmodifiableOrNull(builder.selectionReason);\n+    }\n+\n+    /**\n+     * 방어 복사. <b>{@code Map.copyOf}를 쓰지 않는다</b> — 그것은 null 값을 거부한다.\n+     *\n+     * <p>여기 담기는 맵은 <b>값이 없다는 사실 자체가 뜻</b>인 자리다. 안정성은 이웃이 없으면 {@code value}가 null이고(FR-013b), 선정 사유는\n+     * 계산되지 않은 후보에서 {@code code}가 null이다. 키를 지우면 화면이 \"없음\"과 \"필드가 아예 없음\"을 구분할 수 없고, 0으로 채우면 계산 불가가 \"가장\n+     * 안정적\"으로 뒤집힌다(FR-011, 원칙 VI). 그래서 null을 담을 수 있는 복사가 필요하다.\n+     */\n+    private static Map<String, Object> unmodifiableOrNull(Map<String, Object> source) {\n+        return source == null ? null : Collections.unmodifiableMap(new LinkedHashMap<>(source));\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/SearchCandidate.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/SearchCandidate.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,6 +17,15 @@ interface SearchCandidateJpaRepository extends JpaRepository<SearchCandidateJpaE\n     List<SearchCandidateJpaEntity> findByParamSearchIdAndStatusOrderByCandidateNoAsc(\n             Long paramSearchId, CandidateStatus status, Limit limit);\n \n+    /**\n+     * 최근에 끝난 후보부터. 연속 실패 한도가 \"끝난 순서\"를 봐야 해서 쓴다(FR-005).\n+     *\n+     * <p>{@code updatedAt}으로 정렬하는 이유: 후보 행에 종료 시각 컬럼이 따로 없고, 실행 중에 후보 행을 건드리는 것은 종료 처리뿐이라 그 값이 곧 끝난\n+     * 시각이다. {@code candidateNo} 순서로 대신할 수 없다 — 창 안에서 먼저 발행된 후보가 늦게 끝나는 일이 흔하다.\n+     */\n+    List<SearchCandidateJpaEntity> findByParamSearchIdAndStatusInOrderByUpdatedAtDesc(\n+            Long paramSearchId, List<CandidateStatus> statuses, Limit limit);\n+\n     long countByParamSearchIdAndStatus(Long paramSearchId, CandidateStatus status);\n \n     Optional<SearchCandidateJpaEntity> findByBacktestJobId(Long backtestJobId);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -100,6 +100,18 @@ public class SearchCandidateRepositoryImpl implements SearchCandidateRepository\n                 .toList();\n     }\n \n+    @Override\n+    public List<SearchCandidate> findRecentlyFinished(Long paramSearchId, int limit) {\n+        return jpaRepository\n+                .findByParamSearchIdAndStatusInOrderByUpdatedAtDesc(\n+                        paramSearchId,\n+                        List.of(CandidateStatus.COMPLETED, CandidateStatus.FAILED),\n+                        Limit.of(limit))\n+                .stream()\n+                .map(SearchCandidateMapper::toDomain)\n+                .toList();\n+    }\n+\n     @Override\n     public long countByStatus(Long paramSearchId, CandidateStatus status) {\n         return jpaRepository.countByParamSearchIdAndStatus(paramSearchId, status);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/SearchCandidateRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,12 +7,16 @@ import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;\n import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;\n import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n import com.ssafy.thorp.paramsearch.application.service.CandidateQueryService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchCancelService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchRetryService;\n import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchCreateRequest;\n import com.ssafy.thorp.paramsearch.presentation.request.ParamSearchPreviewRequest;\n import com.ssafy.thorp.paramsearch.presentation.response.CandidatePageResponse;\n+import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchCancelResponse;\n import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchPreviewResponse;\n import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchResponse;\n+import com.ssafy.thorp.paramsearch.presentation.response.ParamSearchRetryResponse;\n import jakarta.servlet.http.HttpServletRequest;\n import jakarta.validation.Valid;\n import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n@@ -42,14 +46,20 @@ public class ParamSearchController {\n \n     private final ParamSearchService paramSearchService;\n     private final CandidateQueryService candidateQueryService;\n+    private final ParamSearchCancelService cancelService;\n+    private final ParamSearchRetryService retryService;\n     private final CurrentRequester currentRequester;\n \n     public ParamSearchController(\n             ParamSearchService paramSearchService,\n             CandidateQueryService candidateQueryService,\n+            ParamSearchCancelService cancelService,\n+            ParamSearchRetryService retryService,\n             CurrentRequester currentRequester) {\n         this.paramSearchService = paramSearchService;\n         this.candidateQueryService = candidateQueryService;\n+        this.cancelService = cancelService;\n+        this.retryService = retryService;\n         this.currentRequester = currentRequester;\n     }\n \n@@ -77,6 +87,36 @@ public class ParamSearchController {\n                 ApiResponse.ok(ParamSearchResponse.from(paramSearchService.get(searchId))));\n     }\n \n+    /**\n+     * 취소(계약 §5). {@code 202}로 접수하고, 발행하지 않은 후보를 '미실행'으로 확정한다.\n+     *\n+     * <p><b>이미 큐에 들어간 후보는 완주한다.</b> prefetch 1 + manual ACK 구조에서 발행된 메시지는 회수할 수 없다(research R2).\n+     * 그래서 응답의 {@code status}는 아직 {@code RUNNING}일 수 있고, 실행 중 후보가 모두 끝나면 {@code PARTIAL}이 된다.\n+     */\n+    @PostMapping(\"/{searchId}/cancel\")\n+    public ResponseEntity<ApiResponse<ParamSearchCancelResponse>> cancel(\n+            @PathVariable String searchId) {\n+        return ResponseEntity.status(HttpStatus.ACCEPTED)\n+                .body(\n+                        ApiResponse.ok(\n+                                ParamSearchCancelResponse.from(cancelService.cancel(searchId))));\n+    }\n+\n+    /**\n+     * 실패 후보 재시도(계약 §5.1). {@code 202}로 접수한다.\n+     *\n+     * <p><b>새 묶음을 만들지 않는다</b> — 묶음 시작 시점의 참조 버전·탐색 공간·선정 규칙을 그대로 쓴다(FR-024). {@code\n+     * SKIPPED}('미실행')는 대상이 아니다: 취소·한도로 빠진 것을 되살리면 완료 범위 표시가 뜻을 잃는다.\n+     */\n+    @PostMapping(\"/{searchId}/retry-failed\")\n+    public ResponseEntity<ApiResponse<ParamSearchRetryResponse>> retryFailed(\n+            @PathVariable String searchId) {\n+        return ResponseEntity.status(HttpStatus.ACCEPTED)\n+                .body(\n+                        ApiResponse.ok(\n+                                ParamSearchRetryResponse.from(retryService.retryFailed(searchId))));\n+    }\n+\n     /**\n      * 후보 목록(계약 §4). 전체 후보를 본다 — 표시 후보만 보려면 {@code selected=true}다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/controller/ParamSearchController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/controller/ParamSearchController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.ssafy.thorp.paramsearch.presentation.response;\n+\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchCancelResult;\n+\n+/**\n+ * 취소 응답(contracts/param-search-api.md §5).\n+ *\n+ * <p>{@code skipped}와 {@code inFlight}를 함께 주는 이유: 취소는 \"즉시 멈춤\"이 아니라 \"여기까지만\"이다. 몇 개를 실제로 멈췄고 몇 개가 끝까지\n+ * 도는지 알려 주지 않으면, 화면은 취소를 눌렀는데도 결과가 계속 늘어나는 것을 설명할 수 없다.\n+ */\n+public record ParamSearchCancelResponse(\n+        String searchId, String status, int skipped, long inFlight) {\n+\n+    public static ParamSearchCancelResponse from(ParamSearchCancelResult result) {\n+        return new ParamSearchCancelResponse(\n+                result.searchId(), result.status(), result.skipped(), result.inFlight());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchCancelResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchCancelResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+package com.ssafy.thorp.paramsearch.presentation.response;\n+\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchRetryResult;\n+\n+/** 재시도 응답(contracts/param-search-api.md §5.1). */\n+public record ParamSearchRetryResponse(\n+        String searchId, String status, int retried, long remainingFailed) {\n+\n+    public static ParamSearchRetryResponse from(ParamSearchRetryResult result) {\n+        return new ParamSearchRetryResponse(\n+                result.searchId(), result.status(), result.retried(), result.remainingFailed());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchRetryResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchRetryResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,80 @@\n+package com.ssafy.thorp.paramsearch.domain.model;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatCode;\n+\n+import com.ssafy.thorp.paramsearch.domain.vo.GridCoordinates;\n+import com.ssafy.thorp.paramsearch.domain.vo.ParameterCombination;\n+import com.ssafy.thorp.paramsearch.domain.vo.StabilityScore;\n+import java.util.HashMap;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 후보가 들고 다니는 맵은 <b>값이 없다는 사실 자체가 뜻</b>이다.\n+ *\n+ * <p>안정성은 이웃이 없으면 {@code value}가 null이고(FR-013b), 선정 사유는 계산되지 않은 후보에서 {@code code}가 null이다. 그래서 방어\n+ * 복사가 null 값을 담을 수 있어야 한다 — {@code Map.copyOf}는 null 값을 거부한다.\n+ *\n+ * <p>이 테스트가 생긴 이유: 이웃이 없는 후보가 하나라도 있는 묶음에서 선정 저장이 {@code NullPointerException}으로 죽어 <b>묶음이 끝나지\n+ * 않았다.</b> 후보가 하나뿐이거나 대부분이 실패한 묶음이 정확히 그 경우다. 그런 묶음은 화면에서 영원히 \"실행 중\"으로 남는다.\n+ */\n+class SearchCandidateNullableMapTest {\n+\n+    @Test\n+    @DisplayName(\"계산 불가 안정성을 붙여도 죽지 않고 value가 null로 남는다\")\n+    void uncalculableStabilityKeepsItsNullValue() {\n+        SearchCandidate candidate = pending();\n+\n+        SearchCandidate withStability =\n+                assertThatNoThrow(\n+                        () -> candidate.withStability(StabilityScore.uncalculable().toMap()));\n+\n+        assertThat(withStability.getStability()).containsEntry(\"calculable\", false);\n+        assertThat(withStability.getStability())\n+                .as(\"키를 지우면 화면이 '없음'과 '필드가 아예 없음'을 구분할 수 없다\")\n+                .containsKey(\"value\");\n+        assertThat(withStability.getStability().get(\"value\")).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"사유에 null 항목이 있어도 그대로 담긴다\")\n+    void selectionReasonKeepsNullEntries() {\n+        Map<String, Object> reason = new HashMap<>();\n+        reason.put(\"outcome\", \"NOT_EVALUATED\");\n+        // 계산되지 않은 후보는 사유 코드가 없을 수 있다. 0이나 빈 문자열로 채우면 사유가 있는 척이 된다.\n+        reason.put(\"code\", null);\n+\n+        SearchCandidate selected = assertThatNoThrow(() -> pending().withSelection(false, reason));\n+\n+        assertThat(selected.getSelectionReason()).containsKey(\"code\");\n+        assertThat(selected.getSelectionReason().get(\"code\")).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"붙인 맵은 밖에서 바꿀 수 없다\")\n+    void theStoredMapIsNotWritable() {\n+        Map<String, Object> mutable = new HashMap<>();\n+        mutable.put(\"calculable\", false);\n+        mutable.put(\"value\", null);\n+        SearchCandidate candidate = pending().withStability(mutable);\n+\n+        mutable.put(\"value\", \"0.99\");\n+\n+        assertThat(candidate.getStability().get(\"value\")).as(\"방어 복사가 없으면 저장된 뒤에도 값이 바뀐다\").isNull();\n+    }\n+\n+    private static <T> T assertThatNoThrow(java.util.function.Supplier<T> action) {\n+        assertThatCode(action::get).doesNotThrowAnyException();\n+        return action.get();\n+    }\n+\n+    private static SearchCandidate pending() {\n+        return SearchCandidate.pending(\n+                1,\n+                \"TEST_STRATEGY\",\n+                ParameterCombination.of(Map.of(\"x\", 1)),\n+                GridCoordinates.of(Map.of(\"x\", 0)));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/SearchCandidateNullableMapTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/SearchCandidateNullableMapTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,13 +51,25 @@ class StatusTransitionTest {\n         @ParameterizedTest\n         @EnumSource(\n                 value = ParamSearchStatus.class,\n-                names = {\"COMPLETED\", \"PARTIAL\", \"FAILED\", \"REJECTED\"})\n-        @DisplayName(\"최종 상태에서는 어디로도 가지 않는다\")\n-        void finalStatusesAreTerminal(ParamSearchStatus status) {\n+                names = {\"FAILED\", \"REJECTED\"})\n+        @DisplayName(\"실패·거부에서는 어디로도 가지 않는다\")\n+        void deadEndStatusesAreTerminal(ParamSearchStatus status) {\n             assertThat(status.isFinal()).isTrue();\n             assertThat(allowedFrom(status)).isEmpty();\n         }\n \n+        @ParameterizedTest\n+        @EnumSource(\n+                value = ParamSearchStatus.class,\n+                names = {\"COMPLETED\", \"PARTIAL\"})\n+        @DisplayName(\"끝난 묶음은 재시도로만 다시 열린다\")\n+        void finishedBundlesReopenOnlyForRetry(ParamSearchStatus status) {\n+            assertThat(status.isFinal()).as(\"다시 열릴 수 있어도 그때까지는 최종 상태다 — 발행 경로가 이 값을 본다\").isTrue();\n+            assertThat(allowedFrom(status))\n+                    .as(\"실패 후보를 다시 돌리는 길 하나뿐이다. 새 묶음을 만들지 않는다(FR-024)\")\n+                    .containsExactly(ParamSearchStatus.RUNNING);\n+        }\n+\n         @Test\n         @DisplayName(\"null로의 전이는 거부한다\")\n         void nullTransitionIsRejected() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/StatusTransitionTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/domain/model/StatusTransitionTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,264 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchCancelResult;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchCancelService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchProgressService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.context.ApplicationEventPublisher;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 취소와 부분 결과(T093·T094, FR-009, 내부 계약 §4 불변식 2·4).\n+ *\n+ * <p>취소는 \"즉시 멈춤\"이 아니라 \"여기까지만\"이다. 이미 큐에 들어간 후보는 회수할 수 없어 완주한다(research R2). 그래서 여기서 보는 것이 셋이다 — 발행 전\n+ * 후보가 '미실행'으로 확정되는가, 취소 뒤에 <b>새 후보가 한 건도 나가지 않는가</b>, 남은 후보가 끝났을 때 {@code PARTIAL}로 닫히며 부분 결과와 선정이\n+ * 남는가.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            // 창을 1로 좁혀 '발행된 1건 + 대기 3건'을 만든다. 취소가 무엇을 남기고 무엇을 막는지 갈라 보려면\n+            // 두 무리가 동시에 있어야 한다.\n+            \"thorp.param-search.dispatch-window=1\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class ParamSearchCancelIT extends PostgresTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParamSearchCancelService cancelService;\n+    @Autowired private ParamSearchProgressService progressService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ApplicationEventPublisher events;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextJobId = new AtomicLong(940_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextJobId.set(940_000L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"취소하면 대기 후보가 미실행으로 확정되고 발행된 후보만 남는다\")\n+    void cancelSkipsPendingAndLetsInFlightFinish() {\n+        ParamSearch search = accept();\n+        long dispatchedBefore =\n+                candidateRepository.countByStatus(search.getId(), CandidateStatus.DISPATCHED);\n+        assertThat(dispatchedBefore).as(\"발행 창이 1이라 한 건만 나가 있어야 한다\").isEqualTo(1);\n+\n+        ParamSearchCancelResult result = cancelService.cancel(search.getSearchId().value());\n+\n+        assertThat(result.skipped()).isEqualTo(3);\n+        assertThat(result.inFlight()).isEqualTo(1);\n+        assertThat(result.status())\n+                .as(\"발행된 후보가 완주하기 전까지는 아직 RUNNING 이다(계약 §5)\")\n+                .isEqualTo(ParamSearchStatus.RUNNING.name());\n+        assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING))\n+                .isZero();\n+        assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED))\n+                .isEqualTo(3);\n+    }\n+\n+    @Test\n+    @DisplayName(\"취소 뒤에는 후보가 끝나도 새로 발행하지 않는다\")\n+    void noCandidateIsDispatchedAfterCancel() {\n+        ParamSearch search = accept();\n+        cancelService.cancel(search.getSearchId().value());\n+        int launchesBefore = Mockito.mockingDetails(launcher).getInvocations().size();\n+\n+        // 발행돼 있던 후보가 끝난다 — 평소라면 여기서 다음 후보가 창에 들어간다.\n+        finish(inFlight(search));\n+\n+        assertThat(Mockito.mockingDetails(launcher).getInvocations())\n+                .as(\"취소가 즉시 효과를 내려면 여기서 발행이 늘면 안 된다(불변식 2)\")\n+                .hasSize(launchesBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"남은 후보가 끝나면 PARTIAL로 닫히고 부분 결과와 선정이 남는다\")\n+    void lastInFlightCandidateClosesTheBundleAsPartial() {\n+        ParamSearch search = accept();\n+        cancelService.cancel(search.getSearchId().value());\n+\n+        finish(inFlight(search));\n+\n+        ParamSearch closed = paramSearchRepository.findById(search.getId()).orElseThrow();\n+        assertThat(closed.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);\n+        assertThat(closed.getStopReason()).isEqualTo(StopReason.CANCELLED);\n+        assertThat(closed.getCounts().skipped()).isEqualTo(3);\n+        assertThat(closed.getSelection())\n+                .as(\"취소된 묶음도 완료된 후보끼리는 비교할 수 있다(data-model §3)\")\n+                .isNotNull();\n+\n+        ParamSearchResult view = paramSearchService.get(closed.getSearchId().value());\n+        assertThat(view.partial()).isTrue();\n+        assertThat(view.partialNote()).contains(\"3\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"미실행 후보는 되돌아오지 않는다\")\n+    void skippedCandidatesStaySkipped() {\n+        ParamSearch search = accept();\n+        cancelService.cancel(search.getSearchId().value());\n+        finish(inFlight(search));\n+\n+        assertThat(candidateRepository.findByParamSearchId(search.getId()))\n+                .filteredOn(candidate -> candidate.getStatus() == CandidateStatus.SKIPPED)\n+                .allSatisfy(\n+                        candidate -> {\n+                            assertThat(candidate.getReasonCode()).isEqualTo(\"CANCELLED\");\n+                            assertThat(candidate.getBacktestJobId())\n+                                    .as(\"발행되지 않았으므로 실행 행이 없다\")\n+                                    .isNull();\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"끝난 묶음을 취소하면 409 ALREADY_FINISHED다\")\n+    void cancellingAFinishedBundleIsConflict() {\n+        ParamSearch search = accept();\n+        cancelService.cancel(search.getSearchId().value());\n+        finish(inFlight(search));\n+\n+        assertThatThrownBy(() -> cancelService.cancel(search.getSearchId().value()))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(e -> ((BusinessException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.ALREADY_FINISHED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 묶음 취소는 404다\")\n+    void cancellingAnUnknownBundleIsNotFound() {\n+        assertThatThrownBy(() -> cancelService.cancel(\"PS-20000101-000001\"))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(e -> ((BusinessException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);\n+    }\n+\n+    private SearchCandidate inFlight(ParamSearch search) {\n+        return candidateRepository\n+                .findByParamSearchIdAndStatus(search.getId(), CandidateStatus.DISPATCHED)\n+                .get(0);\n+    }\n+\n+    private void finish(SearchCandidate candidate) {\n+        insertResult(candidate.getBacktestJobId());\n+        transactionTemplate.executeWithoutResult(\n+                status ->\n+                        events.publishEvent(\n+                                new BacktestFinished(\n+                                        candidate.getBacktestJobId(),\n+                                        \"BT-STUB-\" + candidate.getBacktestJobId(),\n+                                        RunStatus.COMPLETED,\n+                                        null)));\n+    }\n+\n+    private ParamSearch accept() {\n+        ParamSearchResult accepted =\n+                paramSearchService.create(\n+                        new CreateParamSearchCommand(\n+                                null,\n+                                UNIVERSE,\n+                                searchableStrategyIds(),\n+                                null,\n+                                null,\n+                                null,\n+                                Map.of(),\n+                                registry.version()));\n+        return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();\n+    }\n+\n+    private long insertRun() {\n+        long id = nextJobId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    private void insertResult(long runId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n+                        + \" finished_at, portfolio_series, diagnostics, performance, created_at,\"\n+                        + \" updated_at)\"\n+                        + \" VALUES (?, ?, ?, NOW(), NOW(), '[]'::jsonb, '{}'::jsonb, ?::jsonb,\"\n+                        + \" NOW(), NOW())\"\n+                        + \" ON CONFLICT (run_id) DO NOTHING\",\n+                runId,\n+                \"EXEC-\" + runId,\n+                \"EVT-\" + runId,\n+                \"\"\"\n+                {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n+                \"\"\");\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n+    private List<String> searchableStrategyIds() {\n+        List<String> registered =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n+                                + \" 'REGISTERED'\",\n+                        String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> !registration.axes().isEmpty())\n+                .map(StrategyRegistration::strategyId)\n+                .filter(registered::contains)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchCancelIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchCancelIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,237 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.context.ApplicationEventPublisher;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 연속 실패 한도 도달(T101a, FR-005·FR-009, SC-003).\n+ *\n+ * <p>한도가 하는 일은 <b>더 발행하지 않는 것</b>뿐이다. 이미 큐에 든 후보는 끊지 않는다 — 계산이 끝나가는 후보를 버리면 그만큼이 통째로 사라진다. 그래서 결과는\n+ * \"중단\"이 아니라 {@code PARTIAL}이고, 남은 대기 후보는 '미실행'으로 남아 완료 범위를 밝힌다.\n+ *\n+ * <p>연속 실패 한도를 1로 좁혀 둔다. 여기서 볼 것은 한도 값이 아니라 <b>닿았을 때의 동작</b>이다. 실행시간 한도는 같은 자리에서 같은 방식으로 판정하므로\n+ * ({@code applyLimits}) 사유 이름만 다르다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            \"thorp.param-search.dispatch-window=1\",\n+            \"thorp.param-search.consecutive-failure-limit=1\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class ParamSearchLimitReachedTest extends PostgresTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ApplicationEventPublisher events;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextJobId = new AtomicLong(960_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextJobId.set(960_000L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"연속 실패 한도에 닿으면 발행을 멈추고 PARTIAL + FAILURE_LIMIT으로 닫힌다\")\n+    void consecutiveFailuresStopTheBundle() {\n+        ParamSearch search = accept();\n+        int launchesBefore = Mockito.mockingDetails(launcher).getInvocations().size();\n+\n+        // 발행돼 있던 한 건이 실패한다. 한도가 1이라 이것으로 연속 실패가 성립한다.\n+        finishAsFailure(inFlight(search));\n+\n+        ParamSearch closed = paramSearchRepository.findById(search.getId()).orElseThrow();\n+        assertThat(closed.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);\n+        assertThat(closed.getStopReason()).isEqualTo(StopReason.FAILURE_LIMIT);\n+        assertThat(Mockito.mockingDetails(launcher).getInvocations())\n+                .as(\"한도에 닿은 뒤에는 새 후보가 나가지 않는다(불변식 2)\")\n+                .hasSize(launchesBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"남은 대기 후보는 사유와 함께 미실행으로 남는다\")\n+    void remainingCandidatesAreMarkedSkipped() {\n+        ParamSearch search = accept();\n+\n+        finishAsFailure(inFlight(search));\n+\n+        assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.PENDING))\n+                .isZero();\n+        assertThat(candidateRepository.findByParamSearchId(search.getId()))\n+                .filteredOn(candidate -> candidate.getStatus() == CandidateStatus.SKIPPED)\n+                .isNotEmpty()\n+                .allSatisfy(\n+                        candidate -> {\n+                            assertThat(candidate.getReasonCode())\n+                                    .isEqualTo(StopReason.FAILURE_LIMIT.name());\n+                            assertThat(candidate.getReasonDetail()).isNotBlank();\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"부분 결과 문장이 완료·미실행 수를 담는다\")\n+    void partialNoteTellsTheScope() {\n+        ParamSearch search = accept();\n+\n+        finishAsFailure(inFlight(search));\n+\n+        ParamSearchResult view = paramSearchService.get(search.getSearchId().value());\n+        assertThat(view.partial()).isTrue();\n+        assertThat(view.stopReason()).isEqualTo(StopReason.FAILURE_LIMIT);\n+        assertThat(view.partialNote())\n+                .as(\"몇 개 중 몇 개까지 계산했는지가 다음 판단을 가른다(FR-009)\")\n+                .contains(String.valueOf(view.counts().skipped()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"성공이 섞여 있으면 연속이 끊겨 멈추지 않는다\")\n+    void aSuccessBreaksTheStreak() {\n+        ParamSearch search = accept();\n+\n+        finishAsSuccess(inFlight(search));\n+\n+        ParamSearch running = paramSearchRepository.findById(search.getId()).orElseThrow();\n+        assertThat(running.getStatus())\n+                .as(\"드문드문 난 실패로 멀쩡한 탐색이 멈추면 안 된다\")\n+                .isEqualTo(ParamSearchStatus.RUNNING);\n+        assertThat(running.getStopReason()).isNull();\n+        assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.DISPATCHED))\n+                .as(\"다음 후보가 창에 들어간다\")\n+                .isEqualTo(1);\n+    }\n+\n+    private SearchCandidate inFlight(ParamSearch search) {\n+        return candidateRepository\n+                .findByParamSearchIdAndStatus(search.getId(), CandidateStatus.DISPATCHED)\n+                .get(0);\n+    }\n+\n+    private void finishAsFailure(SearchCandidate candidate) {\n+        publish(candidate, true);\n+    }\n+\n+    private void finishAsSuccess(SearchCandidate candidate) {\n+        insertResult(candidate.getBacktestJobId());\n+        publish(candidate, false);\n+    }\n+\n+    private void publish(SearchCandidate candidate, boolean failed) {\n+        transactionTemplate.executeWithoutResult(\n+                status ->\n+                        events.publishEvent(\n+                                new BacktestFinished(\n+                                        candidate.getBacktestJobId(),\n+                                        \"BT-STUB-\" + candidate.getBacktestJobId(),\n+                                        failed ? RunStatus.FAILED : RunStatus.COMPLETED,\n+                                        failed ? \"ENGINE_ERROR\" : null)));\n+    }\n+\n+    private ParamSearch accept() {\n+        ParamSearchResult accepted =\n+                paramSearchService.create(\n+                        new CreateParamSearchCommand(\n+                                null,\n+                                UNIVERSE,\n+                                searchableStrategyIds(),\n+                                null,\n+                                null,\n+                                null,\n+                                Map.of(),\n+                                registry.version()));\n+        return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();\n+    }\n+\n+    private long insertRun() {\n+        long id = nextJobId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    private void insertResult(long runId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n+                        + \" finished_at, portfolio_series, diagnostics, performance, created_at,\"\n+                        + \" updated_at)\"\n+                        + \" VALUES (?, ?, ?, NOW(), NOW(), '[]'::jsonb, '{}'::jsonb, ?::jsonb,\"\n+                        + \" NOW(), NOW())\"\n+                        + \" ON CONFLICT (run_id) DO NOTHING\",\n+                runId,\n+                \"EXEC-\" + runId,\n+                \"EVT-\" + runId,\n+                \"\"\"\n+                {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n+                \"\"\");\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n+    private List<String> searchableStrategyIds() {\n+        List<String> registered =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n+                                + \" 'REGISTERED'\",\n+                        String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> !registration.axes().isEmpty())\n+                .map(StrategyRegistration::strategyId)\n+                .filter(registered::contains)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,180 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.exception.ParamSearchRejectedException;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n+import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+\n+/**\n+ * 접수 거부가 남기는 기록(T091·T092, FR-005b·FR-020, Edge Case).\n+ *\n+ * <p><b>거부도 재현 기록이다.</b> 무엇을 왜 실행하지 않았는지가 남아야 사용자가 \"범위를 좁혀 다시\" 할 수 있고, 나중에 그 묶음을 되짚을 수 있다. 그래서 거부는\n+ * 예외를 던지면서도 묶음을 {@code REJECTED}로 <b>저장</b>한다.\n+ *\n+ * <p>거부에서 하지 <b>않는</b> 것도 함께 고정한다 — 표본을 뽑아 상한 안으로 줄여 실행하거나(FR-005b), 유효 조합이 없는데 제약을 느슨히 해 억지로 후보를\n+ * 만들지 않는다. 후보 행과 실행 행이 0건인지 보는 이유가 그것이다.\n+ *\n+ * <p>등록표는 fixture다. 운영 등록표로는 이 두 경로를 만들 수 없다 — 상한(운영 120·로컬 24)을 넘기려면 후보값이 그만큼 필요한데 등록된 축이 작고, 유효\n+ * 조합 0건을 만들려면 모든 조합을 걸러 내는 규칙이 필요한데 그런 전략은 실행 지원 목록에 없어 그 앞에서 다른 사유로 거부된다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            // 상한을 낮춰 둔다. 여기서 볼 것은 상한 값이 아니라 넘겼을 때의 동작이다.\n+            \"thorp.param-search.max-candidates=2\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class ParamSearchRejectionIT extends PostgresTestSupport {\n+\n+    private static final String VERSION = \"FIXTURE-REJECT-1\";\n+    private static final String STRATEGY = \"FIXTURE_STRATEGY\";\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ParamSearchService paramSearchService;\n+\n+    @MockitoBean private ParameterRegistryPort registry;\n+    @MockitoBean private StrategyExecutionSupportPort executionSupport;\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        Mockito.when(executionSupport.supportedStrategies())\n+                .thenReturn(RegistryFixtures.supporting(STRATEGY).supportedStrategies());\n+    }\n+\n+    @Test\n+    @DisplayName(\"상한을 넘으면 422이고 묶음만 REJECTED로 남는다 — 표본을 뽑지 않는다\")\n+    void overTheLimitIsRejectedWithoutSampling() {\n+        // 축 하나에 후보값 4개 = 조합 4건. 상한 2를 넘긴다.\n+        useRegistry(\n+                RegistryFixtures.registry(VERSION)\n+                        .strategy(STRATEGY, RegistryFixtures.axisOfSize(\"x\", 4))\n+                        .build());\n+\n+        assertThatThrownBy(() -> paramSearchService.create(command()))\n+                .isInstanceOf(ParamSearchRejectedException.class)\n+                .extracting(e -> ((ParamSearchRejectedException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.CANDIDATE_LIMIT_EXCEEDED);\n+\n+        ParamSearch rejected = onlySearch();\n+        assertThat(rejected.getStatus()).isEqualTo(ParamSearchStatus.REJECTED);\n+        assertThat(rejected.getStopReason()).isEqualTo(StopReason.CANDIDATE_LIMIT);\n+        assertThat(candidateRepository.findByParamSearchId(rejected.getId()))\n+                .as(\"상한을 넘겼다고 표본을 뽑아 실행하지 않는다(FR-005b)\")\n+                .isEmpty();\n+        Mockito.verifyNoInteractions(launcher);\n+    }\n+\n+    @Test\n+    @DisplayName(\"상한 초과 메시지에 유효 후보 수와 상한, 좁히는 방법이 들어 있다\")\n+    void theLimitMessageTellsWhatToDo() {\n+        useRegistry(\n+                RegistryFixtures.registry(VERSION)\n+                        .strategy(STRATEGY, RegistryFixtures.axisOfSize(\"x\", 4))\n+                        .build());\n+\n+        assertThatThrownBy(() -> paramSearchService.create(command()))\n+                .hasMessageContaining(\"4\")\n+                .hasMessageContaining(\"2\")\n+                .as(\"화면이 '무엇을 하라'를 그대로 보여 줄 수 있어야 한다(FR-005b)\")\n+                .hasMessageContaining(\"줄이\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"유효 조합이 0건이면 422이고 어느 제약인지 한 문장이 남는다\")\n+    void noValidCombinationIsRejectedWithTheReason() {\n+        // 모든 조합을 거르는 규칙. 판정은 등록표가 소유하므로 fixture가 그 자리를 대신한다.\n+        useRegistry(\n+                RegistryFixtures.registry(VERSION)\n+                        .strategy(STRATEGY, RegistryFixtures.axisOfSize(\"x\", 2))\n+                        .rule(STRATEGY, \"ALWAYS_VIOLATED\", (combination, context) -> true)\n+                        .build());\n+\n+        assertThatThrownBy(() -> paramSearchService.create(command()))\n+                .isInstanceOf(ParamSearchRejectedException.class)\n+                .extracting(e -> ((ParamSearchRejectedException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.NO_VALID_COMBINATION);\n+\n+        ParamSearch rejected = onlySearch();\n+        assertThat(rejected.getStatus()).isEqualTo(ParamSearchStatus.REJECTED);\n+        assertThat(rejected.getStopReason()).isEqualTo(StopReason.NO_VALID_CANDIDATE);\n+        assertThat(rejected.getCounts().valid()).isZero();\n+        assertThat(rejected.getCounts().excluded())\n+                .as(\"제외된 조합의 수는 세어 둔다 — 0건이 '아무것도 없었다'와 구분된다\")\n+                .isPositive();\n+        Mockito.verifyNoInteractions(launcher);\n+    }\n+\n+    @Test\n+    @DisplayName(\"거부해도 묶음 식별자가 남아 사용자가 기록을 되짚을 수 있다\")\n+    void theRejectedBundleKeepsItsIdentifier() {\n+        useRegistry(\n+                RegistryFixtures.registry(VERSION)\n+                        .strategy(STRATEGY, RegistryFixtures.axisOfSize(\"x\", 4))\n+                        .build());\n+\n+        assertThatThrownBy(() -> paramSearchService.create(command()))\n+                .isInstanceOfSatisfying(\n+                        ParamSearchRejectedException.class,\n+                        exception ->\n+                                assertThat(exception.getRejected().getSearchId().value())\n+                                        .startsWith(\"PS-\"));\n+    }\n+\n+    private void useRegistry(ParameterRegistryPort fixture) {\n+        Mockito.when(registry.version()).thenReturn(fixture.version());\n+        Mockito.when(registry.activeStrategies()).thenReturn(fixture.activeStrategies());\n+        Mockito.when(registry.baselineStrategyId()).thenReturn(fixture.baselineStrategyId());\n+        Mockito.when(registry.find(Mockito.anyString()))\n+                .thenAnswer(invocation -> fixture.find(invocation.getArgument(0)));\n+        Mockito.when(registry.validate(Mockito.anyString(), Mockito.any(), Mockito.any()))\n+                .thenAnswer(\n+                        invocation ->\n+                                fixture.validate(\n+                                        invocation.getArgument(0),\n+                                        invocation.getArgument(1),\n+                                        invocation.getArgument(2)));\n+    }\n+\n+    private CreateParamSearchCommand command() {\n+        return new CreateParamSearchCommand(\n+                null, UNIVERSE, List.of(STRATEGY), null, null, null, Map.of(), VERSION);\n+    }\n+\n+    private ParamSearch onlySearch() {\n+        List<Long> ids = jdbcTemplate.queryForList(\"SELECT id FROM param_search\", Long.class);\n+        assertThat(ids).as(\"거부도 묶음 하나로 남는다(FR-020)\").hasSize(1);\n+        return paramSearchRepository.findById(ids.get(0)).orElseThrow();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRejectionIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRejectionIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,291 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchRetryResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchCancelService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchRetryService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.context.ApplicationEventPublisher;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 실패 후보 재시도(T098c, FR-024, SC-009).\n+ *\n+ * <p>여기서 지키는 것이 셋이다 — <b>새 묶음을 만들지 않고</b> 접수 시점 스냅샷을 그대로 쓰는가, <b>{@code SKIPPED}는 되살리지 않는가</b>, 다시\n+ * 끝났을 때 <b>선정을 다시 계산하는가</b>.\n+ *\n+ * <p>선정을 다시 계산해야 하는 이유는 안정성 필터가 묶음 내 상대 분위이기 때문이다. 후보 하나가 늘면 분위 자체가 달라져 이전 선정은 더 이상 사실이 아니다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            // 창을 1로 좁힌다. 취소가 '미실행'으로 돌릴 대기 후보가 남아 있어야\n+            // 재시도가 그것을 되살리지 않는다는 것을 볼 수 있다.\n+            \"thorp.param-search.dispatch-window=1\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class ParamSearchRetryTest extends PostgresTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParamSearchRetryService retryService;\n+    @Autowired private ParamSearchCancelService cancelService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ApplicationEventPublisher events;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextJobId = new AtomicLong(950_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextJobId.set(950_000L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"재시도는 새 묶음을 만들지 않고 같은 묶음을 다시 연다\")\n+    void retryReopensTheSameBundle() {\n+        ParamSearch search = acceptAndFinish(1);\n+        Map<String, Object> planBefore = search.getExecutionPlan();\n+        Map<String, Object> ruleBefore = search.getSelectionRule().toMap();\n+\n+        ParamSearchRetryResult result = retryService.retryFailed(search.getSearchId().value());\n+\n+        assertThat(result.searchId()).isEqualTo(search.getSearchId().value());\n+        assertThat(result.retried()).isEqualTo(1);\n+        assertThat(countSearches()).as(\"같은 탐색의 결과가 두 묶음으로 갈리면 비교가 성립하지 않는다\").isEqualTo(1);\n+\n+        ParamSearch reopened = paramSearchRepository.findById(search.getId()).orElseThrow();\n+        assertThat(reopened.getStatus()).isEqualTo(ParamSearchStatus.RUNNING);\n+        assertThat(reopened.getExecutionPlan())\n+                .as(\"참조 버전·구간·금액이 그대로여야 먼저 끝난 후보와 나란히 놓을 수 있다(FR-012)\")\n+                .isEqualTo(planBefore);\n+        assertThat(reopened.getSelectionRule().toMap())\n+                .as(\"선정 규칙을 바꾸면 그것은 새 실험이다(FR-013c)\")\n+                .isEqualTo(ruleBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"다시 연 묶음은 이전 선정을 지우고, 끝나면 다시 계산한다\")\n+    void selectionIsClearedAndRecomputed() {\n+        ParamSearch search = acceptAndFinish(1);\n+        assertThat(search.getSelection()).as(\"먼저 끝났을 때 선정이 있어야 비교가 된다\").isNotNull();\n+\n+        retryService.retryFailed(search.getSearchId().value());\n+\n+        assertThat(paramSearchRepository.findById(search.getId()).orElseThrow().getSelection())\n+                .as(\"후보가 더 붙으므로 이전 선정은 이미 사실이 아니다\")\n+                .isNull();\n+\n+        finishAll(search);\n+\n+        ParamSearch closed = paramSearchRepository.findById(search.getId()).orElseThrow();\n+        assertThat(closed.getStatus()).isEqualTo(ParamSearchStatus.COMPLETED);\n+        assertThat(closed.getSelection()).isNotNull();\n+        assertThat(closed.getCounts().failed()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"재시도한 후보의 재시도 횟수가 올라가고 이전 실패 사유는 지워진다\")\n+    void retryCountRisesAndTheOldReasonIsCleared() {\n+        ParamSearch search = acceptAndFinish(1);\n+\n+        retryService.retryFailed(search.getSearchId().value());\n+\n+        SearchCandidate retried =\n+                candidateRepository\n+                        .findByParamSearchIdAndStatus(search.getId(), CandidateStatus.DISPATCHED)\n+                        .get(0);\n+        assertThat(retried.getRetryCount()).isEqualTo(1);\n+        assertThat(retried.getReasonCode()).as(\"성공한 후보에 옛 실패 사유가 붙어 있으면 결과 해석이 틀어진다\").isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"미실행 후보는 재시도 대상이 아니다\")\n+    void skippedCandidatesAreNotRevived() {\n+        ParamSearch search = accept();\n+        // 발행된 후보 하나를 실패로 끝내고, 나머지는 취소로 '미실행'이 되게 한다.\n+        finish(dispatched(search).get(0), true);\n+        cancelService.cancel(search.getSearchId().value());\n+        finishAll(search);\n+\n+        long skippedBefore =\n+                candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED);\n+        assertThat(skippedBefore).as(\"취소로 빠진 후보가 있어야 이 검증이 성립한다\").isPositive();\n+\n+        ParamSearchRetryResult result = retryService.retryFailed(search.getSearchId().value());\n+\n+        assertThat(result.retried()).isEqualTo(1);\n+        assertThat(candidateRepository.countByStatus(search.getId(), CandidateStatus.SKIPPED))\n+                .as(\"취소로 빠진 것을 되살리면 '여기까지 계산했다'는 표시가 뜻을 잃는다\")\n+                .isEqualTo(skippedBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"실패 후보가 없으면 409 NOTHING_TO_RETRY다\")\n+    void nothingToRetryIsConflict() {\n+        ParamSearch search = acceptAndFinish(0);\n+\n+        assertThatThrownBy(() -> retryService.retryFailed(search.getSearchId().value()))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(e -> ((BusinessException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.NOTHING_TO_RETRY);\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 묶음 재시도는 404다\")\n+    void retryingAnUnknownBundleIsNotFound() {\n+        assertThatThrownBy(() -> retryService.retryFailed(\"PS-20000101-000001\"))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(e -> ((BusinessException) e).getErrorCode())\n+                .isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);\n+    }\n+\n+    /** 접수한 뒤 앞 {@code failCount}건을 실패로, 나머지를 성공으로 끝낸다. */\n+    private ParamSearch acceptAndFinish(int failCount) {\n+        ParamSearch search = accept();\n+        List<SearchCandidate> dispatched = dispatched(search);\n+        for (int i = 0; i < dispatched.size(); i++) {\n+            finish(dispatched.get(i), i < failCount);\n+        }\n+        finishAll(search);\n+        return paramSearchRepository.findById(search.getId()).orElseThrow();\n+    }\n+\n+    /** 발행된 후보가 없을 때까지 결과를 흘린다 — 창이 좁아 여러 차례에 나눠 나간다. */\n+    private void finishAll(ParamSearch search) {\n+        List<SearchCandidate> inFlight = dispatched(search);\n+        while (!inFlight.isEmpty()) {\n+            inFlight.forEach(candidate -> finish(candidate, false));\n+            inFlight = dispatched(search);\n+        }\n+    }\n+\n+    private List<SearchCandidate> dispatched(ParamSearch search) {\n+        return candidateRepository.findByParamSearchIdAndStatus(\n+                search.getId(), CandidateStatus.DISPATCHED);\n+    }\n+\n+    private void finish(SearchCandidate candidate, boolean failed) {\n+        if (!failed) {\n+            insertResult(candidate.getBacktestJobId());\n+        }\n+        transactionTemplate.executeWithoutResult(\n+                status ->\n+                        events.publishEvent(\n+                                new BacktestFinished(\n+                                        candidate.getBacktestJobId(),\n+                                        \"BT-STUB-\" + candidate.getBacktestJobId(),\n+                                        failed ? RunStatus.FAILED : RunStatus.COMPLETED,\n+                                        failed ? \"ENGINE_ERROR\" : null)));\n+    }\n+\n+    private ParamSearch accept() {\n+        ParamSearchResult accepted =\n+                paramSearchService.create(\n+                        new CreateParamSearchCommand(\n+                                null,\n+                                UNIVERSE,\n+                                searchableStrategyIds(),\n+                                null,\n+                                null,\n+                                null,\n+                                Map.of(),\n+                                registry.version()));\n+        return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();\n+    }\n+\n+    private int countSearches() {\n+        return jdbcTemplate.queryForObject(\"SELECT COUNT(*) FROM param_search\", Integer.class);\n+    }\n+\n+    private long insertRun() {\n+        long id = nextJobId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    private void insertResult(long runId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n+                        + \" finished_at, portfolio_series, diagnostics, performance, created_at,\"\n+                        + \" updated_at)\"\n+                        + \" VALUES (?, ?, ?, NOW(), NOW(), '[]'::jsonb, '{}'::jsonb, ?::jsonb,\"\n+                        + \" NOW(), NOW())\"\n+                        + \" ON CONFLICT (run_id) DO NOTHING\",\n+                runId,\n+                \"EXEC-\" + runId,\n+                \"EVT-\" + runId,\n+                \"\"\"\n+                {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n+                \"\"\");\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n+    private List<String> searchableStrategyIds() {\n+        List<String> registered =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n+                                + \" 'REGISTERED'\",\n+                        String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> !registration.axes().isEmpty())\n+                .map(StrategyRegistration::strategyId)\n+                .filter(registered::contains)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -263,29 +263,29 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n - [X] T089 [P] [US3] (BE 테스트) `CandidateValidator` 단위 테스트 — fixture 등록표가 거부하는 조합이 100% 제외되고 **규칙이 돌려준 사유 코드가 그대로** 남는지, 위반 규칙이 007 코드에 없는지 검증 (SC-002, FR-025)\n - [X] T090 [P] [US3] (BE 테스트) `EXCLUDED` 후보에 `backtest_job` 행이 만들어지지 않는지 검증 — 계산 전 제외다\n-- [ ] T091 [P] [US3] (BE 테스트) 상한 초과 접수 통합 테스트 — `422 CANDIDATE_LIMIT_EXCEEDED`, 묶음은 `REJECTED`로 저장, 후보·Job 0건, **표본 추출 없음**\n-- [ ] T092 [P] [US3] (BE 테스트) 유효 조합 0건 통합 테스트 — `422 NO_VALID_COMBINATION`과 어느 제약인지 한 문장\n-- [ ] T093 [P] [US3] (BE 테스트) 취소 통합 테스트 — `PENDING` → `SKIPPED`, 취소 후 추가 발행 0건, `PARTIAL` 전이 (내부 계약 §4 불변식 2·4)\n-- [ ] T094 [P] [US3] (BE 테스트) 끝난 묶음 취소 시 `409 ALREADY_FINISHED`\n+- [X] T091 [P] [US3] (BE 테스트) 상한 초과 접수 통합 테스트 — `422 CANDIDATE_LIMIT_EXCEEDED`, 묶음은 `REJECTED`로 저장, 후보·Job 0건, **표본 추출 없음**\n+- [X] T092 [P] [US3] (BE 테스트) 유효 조합 0건 통합 테스트 — `422 NO_VALID_COMBINATION`과 어느 제약인지 한 문장\n+- [X] T093 [P] [US3] (BE 테스트) 취소 통합 테스트 — `PENDING` → `SKIPPED`, 취소 후 추가 발행 0건, `PARTIAL` 전이 (내부 계약 §4 불변식 2·4)\n+- [X] T094 [P] [US3] (BE 테스트) 끝난 묶음 취소 시 `409 ALREADY_FINISHED`\n \n ### Implementation for User Story 3 — Backend 거부\n \n-- [ ] T095 [US3] (BE) `ParamSearchService.create()`에 상한 초과 거부 추가 — 묶음을 `REJECTED`로 저장하고 `stop_reason` 기록. 유효 후보 수·상한·좁히는 방법을 메시지에 담는다 (FR-005b)\n-- [ ] T096 [US3] (BE) 같은 지점에 유효 조합 0건 거부 추가 — `REJECTED` 저장과 제약 사유 한 문장 (Edge Case)\n+- [X] T095 [US3] (BE) `ParamSearchService.create()`에 상한 초과 거부 추가 — 묶음을 `REJECTED`로 저장하고 `stop_reason` 기록. 유효 후보 수·상한·좁히는 방법을 메시지에 담는다 (FR-005b)\n+- [X] T096 [US3] (BE) 같은 지점에 유효 조합 0건 거부 추가 — `REJECTED` 저장과 제약 사유 한 문장 (Edge Case)\n \n ### Implementation for User Story 3 — Backend 중단·취소\n \n-- [ ] T097 [US3] (BE) `ParamSearchService.cancel()` — `PENDING` 후보 전부 `SKIPPED`, 추가 발행 중단. 발행된 후보는 완주한다 (research R2)\n-- [ ] T098 [US3] (BE) `POST /param-searches/{searchId}/cancel` 엔드포인트와 `skipped`·`inFlight` 응답, 끝난 묶음은 409\n-- [ ] T099 [P] [US3] (BE) `application/service/limit/TimeLimitGuard.java` — 묶음 시작 시각 기준 실행시간 한도 판정\n-- [ ] T100 [P] [US3] (BE) `application/service/limit/FailureLimitGuard.java` — 연속 실패 한도 판정\n-- [ ] T101 [US3] (BE) 한도 도달 시 `stop_reason`(`CANDIDATE_LIMIT`·`TIME_LIMIT`·`FAILURE_LIMIT`) 기록과 발행 중단 (T099, T100 의존)\n-- [ ] T098a [US3] (BE) `ParamSearchService.retryFailed()` — `FAILED` 후보만 `DISPATCHED`로 되돌려 재발행하고 `retry_count`를 올린다. 묶음 시작 시점 스냅샷(참조 버전·탐색 공간·선정 규칙)을 그대로 쓰고 새 묶음을 만들지 않는다. `SKIPPED` 후보는 대상이 아니다 (FR-024)\n-- [ ] T098b [US3] (BE) `POST /param-searches/{searchId}/retry-failed` 엔드포인트와 응답 DTO — 재시도 대상 수·재발행 수 반환, 실패 후보가 없으면 `409 NOTHING_TO_RETRY` ([contracts/param-search-api.md](contracts/param-search-api.md) §5.1)\n-- [ ] T098c [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java` — 재시도가 새 묶음을 만들지 않고 스냅샷을 재사용하는지, `SKIPPED`가 제외되는지, 재시도 완료 후 선정이 다시 계산되는지 검증 (SC-009)\n-- [ ] T101a [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java` — 실행시간·연속 실패 한도 도달 시 발행이 멈추고 `PARTIAL` + `stop_reason`이 남으며 부분 결과 문장이 나오는지 검증 (SC-003)\n-- [ ] T102 [US3] (BE) `GET /param-searches/{searchId}` 응답에 `partial`·`partialNote`·`stopReason` 채우기 — 완료·미실행 후보 수를 문장으로 (FR-009)\n-- [ ] T103 [US3] (BE) 후보 계산 실패·자료 부족을 `FAILED` + `reason_code`로 기록하고 성과 필드를 `null`로 유지 (FR-011)\n+- [X] T097 [US3] (BE) `ParamSearchService.cancel()` — `PENDING` 후보 전부 `SKIPPED`, 추가 발행 중단. 발행된 후보는 완주한다 (research R2)\n+- [X] T098 [US3] (BE) `POST /param-searches/{searchId}/cancel` 엔드포인트와 `skipped`·`inFlight` 응답, 끝난 묶음은 409\n+- [X] T099 [P] [US3] (BE) `application/service/limit/TimeLimitGuard.java` — 묶음 시작 시각 기준 실행시간 한도 판정\n+- [X] T100 [P] [US3] (BE) `application/service/limit/FailureLimitGuard.java` — 연속 실패 한도 판정\n+- [X] T101 [US3] (BE) 한도 도달 시 `stop_reason`(`CANDIDATE_LIMIT`·`TIME_LIMIT`·`FAILURE_LIMIT`) 기록과 발행 중단 (T099, T100 의존)\n+- [X] T098a [US3] (BE) `ParamSearchService.retryFailed()` — `FAILED` 후보만 `DISPATCHED`로 되돌려 재발행하고 `retry_count`를 올린다. 묶음 시작 시점 스냅샷(참조 버전·탐색 공간·선정 규칙)을 그대로 쓰고 새 묶음을 만들지 않는다. `SKIPPED` 후보는 대상이 아니다 (FR-024)\n+- [X] T098b [US3] (BE) `POST /param-searches/{searchId}/retry-failed` 엔드포인트와 응답 DTO — 재시도 대상 수·재발행 수 반환, 실패 후보가 없으면 `409 NOTHING_TO_RETRY` ([contracts/param-search-api.md](contracts/param-search-api.md) §5.1)\n+- [X] T098c [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java` — 재시도가 새 묶음을 만들지 않고 스냅샷을 재사용하는지, `SKIPPED`가 제외되는지, 재시도 완료 후 선정이 다시 계산되는지 검증 (SC-009)\n+- [X] T101a [P] [US3] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java` — 실행시간·연속 실패 한도 도달 시 발행이 멈추고 `PARTIAL` + `stop_reason`이 남으며 부분 결과 문장이 나오는지 검증 (SC-003)\n+- [X] T102 [US3] (BE) `GET /param-searches/{searchId}` 응답에 `partial`·`partialNote`·`stopReason` 채우기 — 완료·미실행 후보 수를 문장으로 (FR-009)\n+- [X] T103 [US3] (BE) 후보 계산 실패·자료 부족을 `FAILED` + `reason_code`로 기록하고 성과 필드를 `null`로 유지 (FR-011)\n \n ### Implementation for User Story 3 — Frontend\n \n@@ -351,7 +351,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 5\n \n-- [ ] T134 [US5] (BE) `SearchTargetResolver`를 `preview()`·`create()` 경로에 연결해 거부를 마무리한다 — 미등록·실행 미지원을 조합 생성 전에 끊고, 묶음을 `REJECTED`로 저장하며 `stop_reason`에 두 사유를 구분해 남긴다. 미리보기에서는 저장 없이 사유만 알린다 (T036d·T095·T096 의존, FR-026)\n+- [X] T134 [US5] (BE) `SearchTargetResolver`를 `preview()`·`create()` 경로에 연결해 거부를 마무리한다 — 미등록·실행 미지원을 조합 생성 전에 끊고, 묶음을 `REJECTED`로 저장하며 `stop_reason`에 두 사유를 구분해 남긴다. 미리보기에서는 저장 없이 사유만 알린다 (T036d·T095·T096 의존, FR-026)\n - [ ] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)\n - [ ] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-14T12:19:53.807+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2800795": [],
+    "2800908": []
+  }
+}

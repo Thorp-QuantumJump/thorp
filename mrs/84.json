@@ -1,0 +1,1262 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943213,
+    "iid": 84,
+    "project_id": 1444456,
+    "title": "feat(be): 동일 버전 재사용·합류 기록과 재시도 API, DLQ 종결",
+    "description": "# 작업 내용 요약\n\nspec 004 T010입니다. 동일 버전 재사용·합류의 **기록**, 동시 접수 **경합**, **재시도 API**, **DLQ 종결** 넷을 붙였습니다.\nT005가 재사용·합류 분기 자체는 이미 넣어 뒀으므로(중복 요청이 부분 유니크 인덱스에 걸려 500이 나서 앞당겼습니다) 이 MR은 그 위에\n\"아낀 계산을 셀 수 있게 하고\", \"동시에 들어와도 500이 나지 않게 하고\", \"실패한 것을 다시 돌릴 수 있게 하고\", \"죽은 메시지를 종결로\n잇는\" 부분입니다.\n\n**커밋은 열둘입니다.** 기능 다섯 → 문서 하나 → 리뷰 반영 여섯. 각 테스트는 먼저 실패하는 것을 확인한 뒤 구현했습니다.\n\n| 커밋 | 내용 |\n|---|---|\n| `a6f5cfa` | `backtest_reuse_event` 표·도메인·포트·엔티티·저장소. `FlywayMigrationTest` |\n| `f7da6ae` | `joinExisting`이 요청 저장과 같은 트랜잭션에서 기록. `BacktestServiceTest` +3, `BacktestDedupIT` |\n| `633b65d` | 동일 버전 키 자문 잠금(`lockDedupKey`)으로 동시 접수 직렬화. tasks.md 결정 ①②③ |\n| `befa617` | 재시도 API: `RequestSpecCodec`, `BacktestRetryService`, `POST /{id}/retry`, `BacktestRetryResponse`. `RequestSpecCodecTest`·`BacktestRetryServiceTest`·`BacktestRetryIT` |\n| `cff256b` | DLQ 리스너와 `handleDeadLetter`, 결과 행 없는 FAILED 상세 처리. `BacktestDeadLetterListenerIT` |\n| `69fe188` | API README §1.6·§1.7, tasks.md T010 완료·결정 ③④⑤ |\n| `572ac55` | 1차 리뷰 1(첫 시도) — 되돌렸습니다. 아래 참고 |\n| `4826fa1` | 1차 리뷰 2: IT가 메시지 도착을 기다리게 |\n| `74c8ff1` | 1차 리뷰 3: FR 번호 정정 |\n| `df541e8` | 2차 리뷰 1: DLQ 집계를 발행 시도 번호로 멱등하게(`backtest_run_dlq_attempt`) |\n| `23a04f2` | 2차 리뷰 2: 대기를 Awaitility로 |\n| `42afd85` | 3차 리뷰 1: 발행 시도 번호를 확보한 쪽이 들고 가게 |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-148\n- link https://ssafy.atlassian.net/browse/S15P21E205-148\n- 선행: S15P21E205-135(T005 접수·재사용 분기), S15P21E205-130(T003 스키마)\n- 뒤: S15P21E205-168(T014 실행 한도 장치), S15P21E205-153(T012 측정 — 이 MR의 `backtest_reuse_event`를 뷰가 조인합니다)\n\n# 주요 변경 사항\n\n**① 재사용·합류 기록 (FR-008)**\n\n- 마이그레이션 `V20260914120000__backtest_reuse_event.sql` — `id, run_id, request_id, kind, request_execution_type, at`.\n- **append-only라 `BaseEntity`를 상속하지 않습니다.** `updated_at`이 영원히 `created_at`과 같으므로 발생 시각 `at` 하나면 됩니다.\n- `kind`는 새 enum 없이 `ResultSource`를 쓰되 생성자와 DB CHECK가 `NEW`를 거부합니다 — 새 계산은 실행 행 자체가 기록입니다.\n- `request_id`에 UNIQUE. 한 요청은 많아야 한 번 합류하므로 중복 기록이 T012의 `reuse_count`를 부풀리는 것을 DB가 막습니다.\n- 요청 행의 `result_source`로 대신하지 않는 이유: 그 값은 요청의 **현재 상태**이고 이 표는 접수 **시점의 판단**입니다.\n\n**② 동시 접수 경합 (R-02)**\n\n- `create()`가 동일 버전 키를 계산한 직후 조회 **전에** `pg_advisory_xact_lock`을 잡습니다(`BacktestRunRepository.lockDedupKey`).\n- 잠금 식별자는 키(SHA-256 hex)의 앞 16자를 그대로 읽은 값입니다. 키 자체가 고른 해시라 다시 해싱하지 않고, `hashtext()`는\n  문서화되지 않은 내부 함수라 쓰지 않았습니다(판 올림에 값이 바뀌면 잠금이 갈라집니다).\n- 키가 다르면 서로 기다리지 않고 트랜잭션이 끝나면 풀립니다. 취소 경로(요청 행 → 실행 행)와 잠금 종류가 달라 교착 고리가 없습니다.\n\n**③ 재시도 API (FR-002)**\n\n- `POST /backtests/{id}/retry` → `202 {backtestId, status, resultSource, retryOf}`. 본인만(남의 요청은 404), 끝나지 않았거나\n  성공한 분석은 `409 NOT_RETRYABLE`.\n- **실행을 복제하지 않고 접수를 다시 탑니다.** 저장된 요청 사본(`request_spec`)을 명령으로 되돌려 `create()`에 넘기므로, 그 사이\n  전략 등록표가 내려갔으면 422이고 같은 조건을 누가 돌리고 있으면 `JOINED`(완료돼 있으면 `REUSED`)입니다.\n- `RequestSpecCodec`에 **쓰기와 읽기를 같이** 뒀습니다. 접수(T005)가 쓰고 재시도(T010)가 읽는데 떨어져 있으면 한쪽만 고쳤을 때\n  재시도가 조용히 다른 조건으로 계산됩니다. 사본은 JSONB라 decimal이 문자열로 돌아오므로 읽는 쪽이 문자열·숫자를 모두 받습니다.\n- 비용 조건 버전만 원본 것을 씁니다(\"같은 조건을 다시\"이지 \"지금 기본값으로 새로\"가 아닙니다). 자료 버전은 반대로 지금 값입니다.\n- 판정은 **요청 기준 상태**입니다 — 실행이 다른 요청 때문에 돌고 있어도 내 요청이 취소됐으면 재시도할 수 있습니다.\n\n**④ DLQ 종결 (R-18 ③)**\n\n- `backtest.jobs.dlq` 리스너. 발행한 메시지가 **전부** 죽었을 때만(`dlqCount >= publishCount`) `FAILED(SYSTEM_FAILURE)`로\n  종결합니다 — confirm 유실로 중복 실행이 생겼을 때 한쪽만 죽은 것으로 살아 있는 실행을 끊지 않기 위해서입니다.\n- 본문을 읽지 않고 `correlationId`의 runId와 `publishAttempt` 헤더만 씁니다. 여기까지 온 메시지는 워커가 소화하지 못한 것이라\n  본문이 온전하다는 보장이 없습니다. 자동 재투입은 하지 않습니다(같은 실패를 무한히 돕니다).\n- 마이그레이션 `V20260914140000__backtest_run_dlq_attempt.sql` — `(run_id, attempt)` PK가 같은 시도를 두 번 세는 것을 막습니다.\n- **결과 행 없는 FAILED를 500으로 다루지 않도록 상세 조회를 함께 고쳤습니다.** DLQ 종결에는 저장할 산출물이 없어 결과 행이 없는 것이\n  정상이고, 실패 사유는 실행 행에 있습니다. T014의 취소 무응답 종결도 같은 상태를 만듭니다.\n\n**문서**: API README §1.6 재시도·§1.7 시스템 장애 종결, 메시징 README 속성 표에 `publishAttempt` 행, tasks.md T010 완료 + 결정 ①~⑥.\n\n# 테스트\n\n- [x] 백엔드 `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build --rerun-tasks` — **853 passed, 0 failures**\n      (skipped 1: `MarketLiveApiTest`). Docker Desktop을 띄워 PostgreSQL·RabbitMQ 컨테이너 IT를 전부 실제로 돌렸습니다\n- [x] 새 테스트: `RequestSpecCodecTest` 4(왕복·시나리오 입력값·문자열 decimal·빈 사본 거절), `BacktestRetryServiceTest` 5,\n      `BacktestDeadLetterListenerTest` 5, `BacktestServiceTest` +3, `BacktestEventServiceTest` +5, `BacktestControllerTest` +2,\n      `BacktestResultQueryServiceTest` +1, `BacktestJobDispatcherTest` +2, `BacktestDedupIT` 2, `BacktestRetryIT` 2,\n      `BacktestRunDeadLetterRecordIT` 2, `BacktestDeadLetterListenerIT` 1, `FlywayMigrationTest` +2\n- [x] TDD: 각 항목마다 해당 코드만 되돌려 RED를 확인했습니다. 동시 접수는 잠금 한 줄을 주석 처리하고 **세 번 연속** 실패\n      (`DataIntegrityViolationException`), 멱등 판정은 끄면 IT 두 건, 시도 번호 고정은 끄면 재현 테스트 한 건\n- [x] 불안정 테스트 확인: 전체 스위트를 `--rerun-tasks`로 **두 번 연속** 돌려 853/0 failed\n- [x] `infra/scripts/check-migration-version.sh` 통과(추가 버전 2개가 기준 브랜치 최대값보다 큼)\n- [x] `git diff --check origin/dev...HEAD` 통과\n\n# 리뷰 포인트\n\n- **동시 접수를 \"잡아서 재조회\"가 아니라 자문 잠금으로 막았습니다.** tasks.md 문구는 \"부분 유니크 위반 시 재조회해 JOINED로 전환\"인데,\n  PostgreSQL은 제약 위반이 나면 그 트랜잭션이 abort돼 **같은 트랜잭션에서 재조회가 불가능**합니다. 세이브포인트로 감쌀 수도 있지만\n  애초에 부딪히지 않는 쪽이 예외 경로가 없어 단순합니다. 그 판단을 tasks.md 결정 ②에 남겼습니다.\n- **DLQ 멱등 처리를 두 번 고쳤습니다.** 처음엔 AMQP `redelivered` 표시로 걸렀는데 방향이 반대였습니다 — 그 표시는 \"이미 세었다\"가\n  아니라 \"이미 보낸 적 있다\"라서 커밋 전에 죽어 다시 온 **첫 전달까지** 버립니다. 발행 시도 번호(`publishAttempt` 헤더 +\n  `backtest_run_dlq_attempt` PK)로 바꿨습니다. 비트마스크 한 컬럼으로 줄이지 않은 이유는 재발행기가 브로커 복구까지 30초마다 다시\n  보내 `publish_count`에 상한이 없기 때문입니다.\n- **시도 번호는 확보한 쪽이 들고 갑니다.** 최초 발행이 커밋 후 콜백에서 DB 최신값을 다시 읽으면, 콜백이 늦어지는 사이 재발행기가 올린\n  번호를 보아 두 발행이 같은 번호를 답니다. 접수가 확보한 번호를 `RunAccepted` 이벤트에 실어 나릅니다. 재발행은 올리기와 읽기가 한\n  트랜잭션(UPDATE가 행을 잠금)이라 그대로 뒀습니다.\n- **`BacktestJobPublisher.publish`에 인자가 하나 늘었습니다**(`int publishAttempt`). 호출처는 `BacktestJobDispatcher` 한 곳이고,\n  워커는 이 헤더를 읽지 않으므로 계산에는 영향이 없습니다. 메시징 README 속성 표에 \"백엔드가 자기 자신에게 보내는 표시\"라고 적었습니다.\n- **IT 본문의 기간을 다른 IT와 겹치지 않게 두었습니다.** 컨테이너를 스위트가 공유하므로 본문이 같으면 동일 버전 키도 같아서 다른 IT가\n  만든 실행에 합류합니다(그게 정상 동작입니다). 처음엔 `BacktestCancelFlowIT`와 같은 본문을 써서 한 실행을 두 테스트가 나눠 갖고\n  저쪽이 깨졌습니다. 그 이유를 IT javadoc에 적어 뒀습니다.\n- **T010에 남은 것은 없습니다.** ⓕ 취소 무응답 종결과 실행 한도는 T014(-168), 측정 기록·집계 뷰는 T012(-153)입니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T14:51:41.221+09:00",
+    "updated_at": "2026-09-14T14:52:28.408+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-14T14:52:27.924+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/148-dedup-reuse-retry-dlq",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "42afd85ad3f967867f2abbae83d1a22a283e0ccb",
+    "merge_commit_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:51:44.327+09:00",
+    "reference": "!84",
+    "references": {
+      "short": "!84",
+      "relative": "!84",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!84"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/84",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943213,
+    "iid": 84,
+    "project_id": 1444456,
+    "title": "feat(be): 동일 버전 재사용·합류 기록과 재시도 API, DLQ 종결",
+    "description": "# 작업 내용 요약\n\nspec 004 T010입니다. 동일 버전 재사용·합류의 **기록**, 동시 접수 **경합**, **재시도 API**, **DLQ 종결** 넷을 붙였습니다.\nT005가 재사용·합류 분기 자체는 이미 넣어 뒀으므로(중복 요청이 부분 유니크 인덱스에 걸려 500이 나서 앞당겼습니다) 이 MR은 그 위에\n\"아낀 계산을 셀 수 있게 하고\", \"동시에 들어와도 500이 나지 않게 하고\", \"실패한 것을 다시 돌릴 수 있게 하고\", \"죽은 메시지를 종결로\n잇는\" 부분입니다.\n\n**커밋은 열둘입니다.** 기능 다섯 → 문서 하나 → 리뷰 반영 여섯. 각 테스트는 먼저 실패하는 것을 확인한 뒤 구현했습니다.\n\n| 커밋 | 내용 |\n|---|---|\n| `a6f5cfa` | `backtest_reuse_event` 표·도메인·포트·엔티티·저장소. `FlywayMigrationTest` |\n| `f7da6ae` | `joinExisting`이 요청 저장과 같은 트랜잭션에서 기록. `BacktestServiceTest` +3, `BacktestDedupIT` |\n| `633b65d` | 동일 버전 키 자문 잠금(`lockDedupKey`)으로 동시 접수 직렬화. tasks.md 결정 ①②③ |\n| `befa617` | 재시도 API: `RequestSpecCodec`, `BacktestRetryService`, `POST /{id}/retry`, `BacktestRetryResponse`. `RequestSpecCodecTest`·`BacktestRetryServiceTest`·`BacktestRetryIT` |\n| `cff256b` | DLQ 리스너와 `handleDeadLetter`, 결과 행 없는 FAILED 상세 처리. `BacktestDeadLetterListenerIT` |\n| `69fe188` | API README §1.6·§1.7, tasks.md T010 완료·결정 ③④⑤ |\n| `572ac55` | 1차 리뷰 1(첫 시도) — 되돌렸습니다. 아래 참고 |\n| `4826fa1` | 1차 리뷰 2: IT가 메시지 도착을 기다리게 |\n| `74c8ff1` | 1차 리뷰 3: FR 번호 정정 |\n| `df541e8` | 2차 리뷰 1: DLQ 집계를 발행 시도 번호로 멱등하게(`backtest_run_dlq_attempt`) |\n| `23a04f2` | 2차 리뷰 2: 대기를 Awaitility로 |\n| `42afd85` | 3차 리뷰 1: 발행 시도 번호를 확보한 쪽이 들고 가게 |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-148\n- link https://ssafy.atlassian.net/browse/S15P21E205-148\n- 선행: S15P21E205-135(T005 접수·재사용 분기), S15P21E205-130(T003 스키마)\n- 뒤: S15P21E205-168(T014 실행 한도 장치), S15P21E205-153(T012 측정 — 이 MR의 `backtest_reuse_event`를 뷰가 조인합니다)\n\n# 주요 변경 사항\n\n**① 재사용·합류 기록 (FR-008)**\n\n- 마이그레이션 `V20260914120000__backtest_reuse_event.sql` — `id, run_id, request_id, kind, request_execution_type, at`.\n- **append-only라 `BaseEntity`를 상속하지 않습니다.** `updated_at`이 영원히 `created_at`과 같으므로 발생 시각 `at` 하나면 됩니다.\n- `kind`는 새 enum 없이 `ResultSource`를 쓰되 생성자와 DB CHECK가 `NEW`를 거부합니다 — 새 계산은 실행 행 자체가 기록입니다.\n- `request_id`에 UNIQUE. 한 요청은 많아야 한 번 합류하므로 중복 기록이 T012의 `reuse_count`를 부풀리는 것을 DB가 막습니다.\n- 요청 행의 `result_source`로 대신하지 않는 이유: 그 값은 요청의 **현재 상태**이고 이 표는 접수 **시점의 판단**입니다.\n\n**② 동시 접수 경합 (R-02)**\n\n- `create()`가 동일 버전 키를 계산한 직후 조회 **전에** `pg_advisory_xact_lock`을 잡습니다(`BacktestRunRepository.lockDedupKey`).\n- 잠금 식별자는 키(SHA-256 hex)의 앞 16자를 그대로 읽은 값입니다. 키 자체가 고른 해시라 다시 해싱하지 않고, `hashtext()`는\n  문서화되지 않은 내부 함수라 쓰지 않았습니다(판 올림에 값이 바뀌면 잠금이 갈라집니다).\n- 키가 다르면 서로 기다리지 않고 트랜잭션이 끝나면 풀립니다. 취소 경로(요청 행 → 실행 행)와 잠금 종류가 달라 교착 고리가 없습니다.\n\n**③ 재시도 API (FR-002)**\n\n- `POST /backtests/{id}/retry` → `202 {backtestId, status, resultSource, retryOf}`. 본인만(남의 요청은 404), 끝나지 않았거나\n  성공한 분석은 `409 NOT_RETRYABLE`.\n- **실행을 복제하지 않고 접수를 다시 탑니다.** 저장된 요청 사본(`request_spec`)을 명령으로 되돌려 `create()`에 넘기므로, 그 사이\n  전략 등록표가 내려갔으면 422이고 같은 조건을 누가 돌리고 있으면 `JOINED`(완료돼 있으면 `REUSED`)입니다.\n- `RequestSpecCodec`에 **쓰기와 읽기를 같이** 뒀습니다. 접수(T005)가 쓰고 재시도(T010)가 읽는데 떨어져 있으면 한쪽만 고쳤을 때\n  재시도가 조용히 다른 조건으로 계산됩니다. 사본은 JSONB라 decimal이 문자열로 돌아오므로 읽는 쪽이 문자열·숫자를 모두 받습니다.\n- 비용 조건 버전만 원본 것을 씁니다(\"같은 조건을 다시\"이지 \"지금 기본값으로 새로\"가 아닙니다). 자료 버전은 반대로 지금 값입니다.\n- 판정은 **요청 기준 상태**입니다 — 실행이 다른 요청 때문에 돌고 있어도 내 요청이 취소됐으면 재시도할 수 있습니다.\n\n**④ DLQ 종결 (R-18 ③)**\n\n- `backtest.jobs.dlq` 리스너. 발행한 메시지가 **전부** 죽었을 때만(`dlqCount >= publishCount`) `FAILED(SYSTEM_FAILURE)`로\n  종결합니다 — confirm 유실로 중복 실행이 생겼을 때 한쪽만 죽은 것으로 살아 있는 실행을 끊지 않기 위해서입니다.\n- 본문을 읽지 않고 `correlationId`의 runId와 `publishAttempt` 헤더만 씁니다. 여기까지 온 메시지는 워커가 소화하지 못한 것이라\n  본문이 온전하다는 보장이 없습니다. 자동 재투입은 하지 않습니다(같은 실패를 무한히 돕니다).\n- 마이그레이션 `V20260914140000__backtest_run_dlq_attempt.sql` — `(run_id, attempt)` PK가 같은 시도를 두 번 세는 것을 막습니다.\n- **결과 행 없는 FAILED를 500으로 다루지 않도록 상세 조회를 함께 고쳤습니다.** DLQ 종결에는 저장할 산출물이 없어 결과 행이 없는 것이\n  정상이고, 실패 사유는 실행 행에 있습니다. T014의 취소 무응답 종결도 같은 상태를 만듭니다.\n\n**문서**: API README §1.6 재시도·§1.7 시스템 장애 종결, 메시징 README 속성 표에 `publishAttempt` 행, tasks.md T010 완료 + 결정 ①~⑥.\n\n# 테스트\n\n- [x] 백엔드 `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build --rerun-tasks` — **853 passed, 0 failures**\n      (skipped 1: `MarketLiveApiTest`). Docker Desktop을 띄워 PostgreSQL·RabbitMQ 컨테이너 IT를 전부 실제로 돌렸습니다\n- [x] 새 테스트: `RequestSpecCodecTest` 4(왕복·시나리오 입력값·문자열 decimal·빈 사본 거절), `BacktestRetryServiceTest` 5,\n      `BacktestDeadLetterListenerTest` 5, `BacktestServiceTest` +3, `BacktestEventServiceTest` +5, `BacktestControllerTest` +2,\n      `BacktestResultQueryServiceTest` +1, `BacktestJobDispatcherTest` +2, `BacktestDedupIT` 2, `BacktestRetryIT` 2,\n      `BacktestRunDeadLetterRecordIT` 2, `BacktestDeadLetterListenerIT` 1, `FlywayMigrationTest` +2\n- [x] TDD: 각 항목마다 해당 코드만 되돌려 RED를 확인했습니다. 동시 접수는 잠금 한 줄을 주석 처리하고 **세 번 연속** 실패\n      (`DataIntegrityViolationException`), 멱등 판정은 끄면 IT 두 건, 시도 번호 고정은 끄면 재현 테스트 한 건\n- [x] 불안정 테스트 확인: 전체 스위트를 `--rerun-tasks`로 **두 번 연속** 돌려 853/0 failed\n- [x] `infra/scripts/check-migration-version.sh` 통과(추가 버전 2개가 기준 브랜치 최대값보다 큼)\n- [x] `git diff --check origin/dev...HEAD` 통과\n\n# 리뷰 포인트\n\n- **동시 접수를 \"잡아서 재조회\"가 아니라 자문 잠금으로 막았습니다.** tasks.md 문구는 \"부분 유니크 위반 시 재조회해 JOINED로 전환\"인데,\n  PostgreSQL은 제약 위반이 나면 그 트랜잭션이 abort돼 **같은 트랜잭션에서 재조회가 불가능**합니다. 세이브포인트로 감쌀 수도 있지만\n  애초에 부딪히지 않는 쪽이 예외 경로가 없어 단순합니다. 그 판단을 tasks.md 결정 ②에 남겼습니다.\n- **DLQ 멱등 처리를 두 번 고쳤습니다.** 처음엔 AMQP `redelivered` 표시로 걸렀는데 방향이 반대였습니다 — 그 표시는 \"이미 세었다\"가\n  아니라 \"이미 보낸 적 있다\"라서 커밋 전에 죽어 다시 온 **첫 전달까지** 버립니다. 발행 시도 번호(`publishAttempt` 헤더 +\n  `backtest_run_dlq_attempt` PK)로 바꿨습니다. 비트마스크 한 컬럼으로 줄이지 않은 이유는 재발행기가 브로커 복구까지 30초마다 다시\n  보내 `publish_count`에 상한이 없기 때문입니다.\n- **시도 번호는 확보한 쪽이 들고 갑니다.** 최초 발행이 커밋 후 콜백에서 DB 최신값을 다시 읽으면, 콜백이 늦어지는 사이 재발행기가 올린\n  번호를 보아 두 발행이 같은 번호를 답니다. 접수가 확보한 번호를 `RunAccepted` 이벤트에 실어 나릅니다. 재발행은 올리기와 읽기가 한\n  트랜잭션(UPDATE가 행을 잠금)이라 그대로 뒀습니다.\n- **`BacktestJobPublisher.publish`에 인자가 하나 늘었습니다**(`int publishAttempt`). 호출처는 `BacktestJobDispatcher` 한 곳이고,\n  워커는 이 헤더를 읽지 않으므로 계산에는 영향이 없습니다. 메시징 README 속성 표에 \"백엔드가 자기 자신에게 보내는 표시\"라고 적었습니다.\n- **IT 본문의 기간을 다른 IT와 겹치지 않게 두었습니다.** 컨테이너를 스위트가 공유하므로 본문이 같으면 동일 버전 키도 같아서 다른 IT가\n  만든 실행에 합류합니다(그게 정상 동작입니다). 처음엔 `BacktestCancelFlowIT`와 같은 본문을 써서 한 실행을 두 테스트가 나눠 갖고\n  저쪽이 깨졌습니다. 그 이유를 IT javadoc에 적어 뒀습니다.\n- **T010에 남은 것은 없습니다.** ⓕ 취소 무응답 종결과 실행 한도는 T014(-168), 측정 기록·집계 뷰는 T012(-153)입니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T14:51:41.221+09:00",
+    "updated_at": "2026-09-14T14:52:28.408+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-14T14:52:27.924+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/148-dedup-reuse-retry-dlq",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "42afd85ad3f967867f2abbae83d1a22a283e0ccb",
+    "merge_commit_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:51:44.327+09:00",
+    "reference": "!84",
+    "references": {
+      "short": "!84",
+      "relative": "!84",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!84"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/84",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "41",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "head_sha": "42afd85ad3f967867f2abbae83d1a22a283e0ccb",
+      "start_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e498ef7764175b8e710434329270b29b08c54c5b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802342,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:51:41.379+09:00",
+          "updated_at": "2026-09-14T14:51:41.383+09:00",
+          "system": true,
+          "noteable_id": 943213,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 84,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0385dd7a1457e4ba006fc1df5220e023dcc795f7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802343,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:51:41.398+09:00",
+          "updated_at": "2026-09-14T14:51:41.405+09:00",
+          "system": true,
+          "noteable_id": 943213,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 84,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1e705b4a7f014966d375097b01bb54eaa41341ba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802345,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **동시성 및 레이스 컨디션 방지**: PostgreSQL의 `pg_advisory_xact_lock`을 활용하여 동일 버전 키(`dedupKey`) 기반의 동시 접수를 직렬화하고, 불필요한 고유 제약 위반(500 에러)을 깔끔하게 방지한 설계가 돋보입니다.\n- **멱등성을 고려한 DLQ 처리**: DLQ 소비 시 At-least-once 전달 특성으로 인한 중복 처리를 막기 위해 `(run_id, attempt)` 복합 키 기반의 `backtest_run_dlq_attempt` 테이블과 `ON CONFLICT DO NOTHING` 전략을 사용한 점이 매우 견고합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **동시성 경합 시나리오 (`BacktestDedupIT`)**: 동일한 `dedupKey`를 가지는 다수의 요청(예: 10개 이상)을 동시에 접수(Multi-threading)하여, 오직 1개의 `NEW` 실행과 나머지의 `JOINED`/`REUSED` 처리 및 단 1개의 재사용 기록(`backtest_reuse_event`) 생성이 보장되는지 검증합니다.\n2. **DLQ 중복 메시지 처리 시나리오 (`BacktestEventServiceTest`)**: 동일한 `(run_id, attempt)`를 가진 DLQ 메시지가 네트워크 유실 및 재전송으로 인해 리스너에 두 번 이상 인입되었을 때, `dlqCount`가 중복 증가하지 않고 1회만 카운트되어 의도치 않은 시스템 실패(`FAILED`) 처리를 방지하는지 확인합니다.\n3. **재시도 API 검증 (`BacktestRetryIT`)**: 실패(`FAILED`) 또는 취소(`CANCELLED`)된 백테스트 요청에 대해 `POST /backtests/{id}/retry`를 호출했을 때, 기존 비용 프로필 버전(`costProfileVersion`)은 유지되면서 최신 데이터 및 전략 기준으로 새로운 실행이 정상 접수되고 원본 ID가 `retryOf`로 올바르게 매핑되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:42afd85ad3f967867f2abbae83d1a22a283e0ccb -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T14:51:53.266+09:00",
+          "updated_at": "2026-09-14T14:51:53.266+09:00",
+          "system": false,
+          "noteable_id": 943213,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 84,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b176936aaa204e94370800c9e389063e90e8d7a7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802352,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:52:19.836+09:00",
+          "updated_at": "2026-09-14T14:52:19.846+09:00",
+          "system": true,
+          "noteable_id": 943213,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 84,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "601b56df7137759cc1b77e5011ef75be5dad667d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802353,
+          "type": null,
+          "body": "mentioned in commit cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:52:27.996+09:00",
+          "updated_at": "2026-09-14T14:52:28.000+09:00",
+          "system": true,
+          "noteable_id": 943213,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 84,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194334,
+      "head_commit_sha": "42afd85ad3f967867f2abbae83d1a22a283e0ccb",
+      "base_commit_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "start_commit_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+      "created_at": "2026-09-14T14:51:41.870+09:00",
+      "merge_request_id": 943213,
+      "state": "collected",
+      "real_size": "41",
+      "patch_id_sha": "776a5d6dabcdf899ef598160c1dd0e512fc9c3fb"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194334,
+      "head_commit_sha": "42afd85ad3f967867f2abbae83d1a22a283e0ccb",
+      "base_commit_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "start_commit_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+      "created_at": "2026-09-14T14:51:41.870+09:00",
+      "merge_request_id": 943213,
+      "state": "collected",
+      "real_size": "41",
+      "patch_id_sha": "776a5d6dabcdf899ef598160c1dd0e512fc9c3fb",
+      "commits": [
+        {
+          "id": "42afd85ad3f967867f2abbae83d1a22a283e0ccb",
+          "short_id": "42afd85a",
+          "created_at": "2026-09-14T14:36:40.000+09:00",
+          "parent_ids": [
+            "23a04f2d6ff9914ecec71210b02ac0d6ec0ca326"
+          ],
+          "title": "fix(be): 발행 시도 번호를 확보한 쪽이 들고 간다",
+          "message": "fix(be): 발행 시도 번호를 확보한 쪽이 들고 간다\n\n3차 리뷰 1. 지적대로였다. 최초 발행이 자기 번호를 보관하지 않고 커밋 후 콜백에서 DB 의 최신\npublish_count 를 다시 읽었다. 그 콜백이 늦어지는 사이 재발행기가 번호를 올리고 시도 2를 보내면,\n뒤늦게 깨어난 최초 발행도 2를 읽어 같은 번호를 단다. 서로 다른 두 메시지가 한 번호라 DLQ 집계가\n한 건으로 접히고 dlq_count < publish_count 로 남아 종결 판정이 영영 서지 않는다.\n\n접수가 확보한 번호를 RunAccepted 이벤트에 실어 나르고, 발행은 그 값을 쓴다. 재발행은 올리기와\n읽기가 한 트랜잭션이고 UPDATE 가 행을 잠그므로 읽은 값이 곧 자기 번호다 — 그쪽은 그대로 둔다.\nsend() 는 시도 번호를 인자로만 받게 해서 실행에서 다시 읽을 길을 없앴다.\n\n리뷰어가 재현한 순서를 BacktestJobDispatcherTest 에 고정했다(접수는 1을 확보했는데 DB 는 이미\n2인 상태 → 1로 발행). 고치기 전 코드에서 2로 나가 실제로 깨지는 것을 확인했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T14:36:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T14:36:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42afd85ad3f967867f2abbae83d1a22a283e0ccb"
+        },
+        {
+          "id": "23a04f2d6ff9914ecec71210b02ac0d6ec0ca326",
+          "short_id": "23a04f2d",
+          "created_at": "2026-09-14T14:20:26.000+09:00",
+          "parent_ids": [
+            "df541e867b9f62da733bcdc0bac172623e74eb88"
+          ],
+          "title": "test(be): DLQ 통합 테스트의 대기를 Awaitility 로 바꾼다",
+          "message": "test(be): DLQ 통합 테스트의 대기를 Awaitility 로 바꾼다\n\n2차 리뷰 2. 지적대로였다. Thread.onSpinWait() 루프는 10초 동안 쉬지 않고 basicGet 을 반복해\n브로커와 CPU 를 쓸데없이 때린다. 이미 BacktestEventListenerIT 가 쓰고 있는 Awaitility 로\n100ms 간격 조건 대기로 바꿨다.\n\n같은 테스트에서 publishAttempt 헤더를 실어 보내고 리스너가 그 번호까지 넘기는지 확인한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T14:20:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T14:20:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/23a04f2d6ff9914ecec71210b02ac0d6ec0ca326"
+        },
+        {
+          "id": "df541e867b9f62da733bcdc0bac172623e74eb88",
+          "short_id": "df541e86",
+          "created_at": "2026-09-14T14:20:16.000+09:00",
+          "parent_ids": [
+            "74c8ff1218496460302eba2e7545a5ea5477cc54"
+          ],
+          "title": "fix(be): DLQ 집계를 발행 시도 번호로 멱등하게 만든다",
+          "message": "fix(be): DLQ 집계를 발행 시도 번호로 멱등하게 만든다\n\n2차 리뷰 1. 지적대로였다. 앞선 수정(redelivered 표시로 거르기)은 방향이 반대였다 — 그 표시는\n\"이미 세었다\"가 아니라 \"이미 보낸 적 있다\"라서, 커밋 전에 죽어 다시 온 **첫 전달까지** 버린다.\n그러면 죽은 실행이 한 번도 집계되지 않고 RUNNING 으로 남는다. 아직 없는 T014 RunLivenessSweeper\n를 안전망으로 세운 것도 잘못이다 — T010 은 스스로 완결돼야 한다.\n\n발행 시도마다 번호가 있다(publish_count 는 시도 직전에 오르므로 그때의 값이 그 시도의 번호다).\n발행기가 publishAttempt 헤더로 그 번호를 실어 보내고, 백엔드는 backtest_run_dlq_attempt\n(run_id, attempt) 에 기록한 뒤 **그 INSERT 가 실제로 들어갔을 때만** dlq_count 를 올린다. PK 가\n중복을 막으므로 ON CONFLICT DO NOTHING 의 반환값이 곧 \"처음 세는가\"다. 재전달은 세지 않고,\n커밋 전에 죽어 다시 온 첫 전달은 제대로 센다(기록도 함께 롤백됐기 때문이다).\n\n비트마스크 한 컬럼으로 줄이지 않았다 — 재발행기가 브로커 복구까지 30초마다 다시 보내므로\npublish_count 에 상한이 없고, 64를 넘는 순간 조용히 틀리는 구조를 만들지 않는다.\n\nBacktestRunDeadLetterRecordIT 가 실제 DB 로 \"같은 시도 두 번 → 한 번만\", \"다른 시도는 따로,\n도착 순서가 뒤바뀌어도\" 를 고정한다. 멱등 판정을 끄면 둘 다 깨지는 것을 확인했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T14:20:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T14:20:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/df541e867b9f62da733bcdc0bac172623e74eb88"
+        },
+        {
+          "id": "74c8ff1218496460302eba2e7545a5ea5477cc54",
+          "short_id": "74c8ff12",
+          "created_at": "2026-09-14T13:32:34.000+09:00",
+          "parent_ids": [
+            "4826fa13f758ea2928953fb7d6efbe1f86ced754"
+          ],
+          "title": "docs(be): 재시도·시스템 장애 종결의 요구사항 번호를 바로잡는다",
+          "message": "docs(be): 재시도·시스템 장애 종결의 요구사항 번호를 바로잡는다\n\n리뷰 3. 지적대로였다. FR-009 는 \"서버·인프라 설정을 요구하거나 노출하지 않는다\"로 무관하다.\n재시도와 시스템 장애 종결은 FR-002, 동일 버전 합류·재사용은 FR-003 이라 §1.6·§1.7 을 고쳤다.\n재사용 기록(backtest_reuse_event)의 FR-008 은 \"원가와 동일 결과 재조회를 구분해 기록한다\"가\n맞아 그대로 둔다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T13:32:34.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T13:32:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/74c8ff1218496460302eba2e7545a5ea5477cc54"
+        },
+        {
+          "id": "4826fa13f758ea2928953fb7d6efbe1f86ced754",
+          "short_id": "4826fa13",
+          "created_at": "2026-09-14T13:32:34.000+09:00",
+          "parent_ids": [
+            "572ac5581366c6fbd0a6ba95cc1471d5ea6987ed"
+          ],
+          "title": "test(be): DLQ 통합 테스트가 메시지 도착을 기다리게 한다",
+          "message": "test(be): DLQ 통합 테스트가 메시지 도착을 기다리게 한다\n\n리뷰 2. 지적대로였다. 발행은 비동기인데 basicGet 을 바로 불러서, 전체 스위트에서는 아직 큐에\n없어 실패하고 단독 실행에서는 통과했다. 되돌아오는 재전달도 같은 문제라 두 곳 모두 고쳤다.\n\n조건 기반으로 기다린다(최대 10초, 못 받으면 단언 실패). 마지막 \"작업 큐로 돌아오지 않는다\"만\n기다리지 않는다 — 그 앞의 verify 가 돌아온 시점에 메시지는 이미 DLQ 로 갔으므로 한 번만 보면 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T13:32:34.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T13:32:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4826fa13f758ea2928953fb7d6efbe1f86ced754"
+        },
+        {
+          "id": "572ac5581366c6fbd0a6ba95cc1471d5ea6987ed",
+          "short_id": "572ac558",
+          "created_at": "2026-09-14T13:32:20.000+09:00",
+          "parent_ids": [
+            "69fe188b18d6edfa28e729d50f6554443a44da32"
+          ],
+          "title": "fix(be): 재전달된 DLQ delivery 를 다시 세지 않는다",
+          "message": "fix(be): 재전달된 DLQ delivery 를 다시 세지 않는다\n\n리뷰 1. 지적대로였다. 이 전달은 at-least-once 라 DB 가 커밋된 뒤 ACK 이 유실되면 브로커가 같은\n메시지를 다시 준다. 그것을 또 세면 dlq_count 가 실제 죽은 메시지 수보다 커지고, 살아 있는 작업이\n하나 남았는데도 dlqCount >= publishCount 가 서서 실행이 잘못 FAILED 로 끝난다.\n\n**셈을 한쪽으로만 틀리게 만든다.** redelivered 표시가 붙은 delivery 는 세지 않는다. 그래서 커밋\n전에 죽어 재전달된 경우에는 한 번을 놓칠 수 있는데, 그 방향은 실행이 종결되지 않고 남는 쪽이라\n살아 있는 실행을 끊는 것보다 안전하다 — 남은 실행은 유예 감시(T014 RunLivenessSweeper)가 거둔다.\n\n메시지마다 고유한 식별자로 걸러내는 방법은 택하지 않았다. 발행기의 message_id 는 JOB-{runId} 로\n재발행에도 유지되는 값이라(그렇게 정해져 있다) 같은 실행의 서로 다른 메시지를 구분하지 못한다.\n구분하려면 발행 시도 번호를 메시지에 실어 보내고 실행 행에 그 집합을 남겨야 하는데, 안전한\n방향으로 틀리는 한 줄로 같은 사고를 막을 수 있어 그 비용을 쓰지 않았다.\n\n판단 지점이 delivery 의미론이라 리스너에 두고, 그 셈에 기대는 쪽(handleDeadLetter)에는 \"두 번\n세지 않는 것은 호출자 몫\"이라고 적었다. BacktestDeadLetterListenerTest 가 브로커 없이 세 갈래를\n고정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T13:32:20.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T13:32:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/572ac5581366c6fbd0a6ba95cc1471d5ea6987ed"
+        },
+        {
+          "id": "69fe188b18d6edfa28e729d50f6554443a44da32",
+          "short_id": "69fe188b",
+          "created_at": "2026-09-14T12:28:56.000+09:00",
+          "parent_ids": [
+            "cff256bbca0cfdc801663251bd82294d113c5963"
+          ],
+          "title": "docs(be): 재시도·DLQ 종결을 API 계약에 적고 T010 을 닫는다",
+          "message": "docs(be): 재시도·DLQ 종결을 API 계약에 적고 T010 을 닫는다\n\n- backtest-api/README.md §1.6 재시도: 접수를 다시 타므로 등록표가 내려갔으면 422, 같은 조건이\n  이미 돌고 있으면 JOINED·REUSED. 비용 조건은 원본 것, 자료 버전은 지금 값. 판정은 요청 기준 상태.\n- §1.7 시스템 장애로 끊긴 실행: 발행한 메시지가 전부 DLQ 로 갔을 때만 FAILED(SYSTEM_FAILURE)이고\n  결과 행이 없다. 상세는 200 + 실행 행의 실패 사유, 하위는 409 BACKTEST_FAILED, 자동 재투입 없음.\n- tasks.md T010 완료 표시 + 구현 시 결정 ③~⑤(재시도 사본 왕복과 RequestSpecCodec, DLQ 는\n  correlationId 만 읽음, 결과 행 없는 FAILED 는 500 이 아님).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T12:28:56.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T12:28:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/69fe188b18d6edfa28e729d50f6554443a44da32"
+        },
+        {
+          "id": "cff256bbca0cfdc801663251bd82294d113c5963",
+          "short_id": "cff256bb",
+          "created_at": "2026-09-14T12:28:44.000+09:00",
+          "parent_ids": [
+            "befa617d21e5c07825814def670a88ddf190d8cf"
+          ],
+          "title": "feat(be): DLQ 로 끝난 작업 메시지를 세어 실행을 SYSTEM_FAILURE 로 종결한다",
+          "message": "feat(be): DLQ 로 끝난 작업 메시지를 세어 실행을 SYSTEM_FAILURE 로 종결한다\n\nspec 004 T010, R-18 ③.\n\n브로커가 재전달 상한(x-delivery-limit=1)을 다 쓰고 보낸 작업 메시지를 backtest.jobs.dlq 에서\n받는다. **메시지 하나가 죽었다고 실행을 끝내지 않는다** — confirm 유실로 같은 실행의 메시지가\n둘 생길 수 있고 그 중 하나만 DLQ 로 가면 다른 하나는 아직 워커에서 돌고 있다. 발행한 메시지가\n전부 죽었을 때만(dlqCount >= publishCount) FAILED(SYSTEM_FAILURE) 로 종결한다. dlq_count 는\npublish_count 와 같은 이유로 DB 에서 올린다 — 읽어서 더하면 동시에 둘이 죽을 때 증가 하나를\n잃고 종결 판정이 영영 서지 않는다.\n\n리스너는 본문을 읽지 않고 correlationId 의 runId 만 쓴다. 발행기가 넣어 두고 DLX 로 옮겨져도\n보존되며, 여기까지 온 메시지는 워커가 소화하지 못한 것이라 본문이 온전하다는 보장이 없다.\n자동 재투입은 하지 않는다(같은 실패를 무한히 돈다) — 다시 돌리는 것은 재시도 API 몫이다.\n\n**결과 행 없는 FAILED 를 500 으로 다루지 않도록 상세 조회를 함께 고쳤다.** DLQ 종결에는 저장할\n산출물이 없으므로 결과 행이 없는 것이 정상이고, 실패 사유는 실행 행에 있다. 이대로 두면 사용자가\n무슨 일이 있었는지 영영 볼 수 없다. T014 의 취소 무응답 종결도 같은 상태를 만든다.\n\nBacktestDeadLetterListenerIT 는 실제 브로커로 \"두 번째 nack 에서 DLX 로 이동 → correlationId\n보존 → 리스너가 runId 로 처리 → 작업 큐로 되돌아오지 않음\"까지 본다. 종결 판정은 DB 몫이라\nBacktestEventServiceTest 가 네 갈래로 나눠 본다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T12:28:44.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T12:28:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cff256bbca0cfdc801663251bd82294d113c5963"
+        },
+        {
+          "id": "befa617d21e5c07825814def670a88ddf190d8cf",
+          "short_id": "befa617d",
+          "created_at": "2026-09-14T12:28:24.000+09:00",
+          "parent_ids": [
+            "633b65d13656d3d51078ea968a43aa534bb3e735"
+          ],
+          "title": "feat(be): 실패·취소한 분석의 재시도 API",
+          "message": "feat(be): 실패·취소한 분석의 재시도 API\n\nspec 004 T010 (FR-009).\n\nPOST /backtests/{id}/retry 는 저장해 둔 요청 사본(request_spec)을 접수 명령으로 되돌려 create()\n를 다시 태운다. 실행을 복제하지 않는 이유: 그 사이 전략 등록표가 내려갔거나 자료 버전이 움직인\n것을 지금 기준으로 다시 판정해야 하고, 동일 버전 재사용·합류도 똑같이 받아야 한다 — 원본이\n실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 새로 계산하지 않고 합류한다.\n\nRequestSpecCodec 이 사본을 쓰고 읽는다. **두 방향을 한 클래스에 둔다** — 접수(T005)가 쓰고\n재시도(T010)가 읽는데 멀리 떨어져 있으면 한쪽만 고쳤을 때 재시도가 조용히 다른 조건으로\n계산된다. 사본은 JSONB 라 decimal 이 문자열로 돌아오므로 읽는 쪽이 문자열·숫자를 모두 받는다 —\n저장 계층 설정이 이 사본의 계약을 좌우하면 안 된다.\n\n비용 조건 버전만 원본 실행의 것을 그대로 쓴다. \"같은 조건을 다시\"이지 \"지금 기본값으로 새로\"가\n아니다. 자료 버전은 반대로 지금 값이다(자료가 늘었으면 그것은 다른 계산이다).\n\n재시도 가능 판정은 요청 기준 상태다(R-04 파생 상태) — 실행이 다른 요청 때문에 아직 돌고 있어도\n이 요청이 취소됐으면 재시도할 수 있다. 남의 요청은 403 이 아니라 404 다(R-12).\n\n202 는 BacktestJobResponse 와 나눈 BacktestRetryResponse 다. 재시도에만 있는 retryOf 때문에\n접수 응답에 영원히 null 인 칸을 만들면 그 계약이 바뀐다.\n\nBacktestRetryIT 는 **재시도한 실행의 동일 버전 키가 원본과 같은지**로 왕복 전체를 단언한다 —\n한 칸이라도 새면 키가 달라진다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T12:28:24.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T12:28:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/befa617d21e5c07825814def670a88ddf190d8cf"
+        },
+        {
+          "id": "633b65d13656d3d51078ea968a43aa534bb3e735",
+          "short_id": "633b65d1",
+          "created_at": "2026-09-14T12:08:39.000+09:00",
+          "parent_ids": [
+            "f7da6ae2945b7b57f2e382a1bbba8d8b42d54d47"
+          ],
+          "title": "feat(be): 같은 동일 버전 키의 접수를 자문 잠금으로 직렬화한다",
+          "message": "feat(be): 같은 동일 버전 키의 접수를 자문 잠금으로 직렬화한다\n\nspec 004 T010 (R-02).\n\n동일 버전 조회와 실행 INSERT 사이에 다른 접수가 같은 키로 먼저 INSERT 하면 부분 유니크 인덱스\nuk_backtest_run_dedup_active 에 걸려, 정상적인 사용자 행동(같은 조건을 동시에 요청)이 500 이\n됐다. create() 가 키를 계산한 직후 조회 전에 pg_advisory_xact_lock 을 잡아 같은 키의 접수를\n줄 세운다 — 뒤엣것은 앞엣것이 커밋한 실행을 보고 합류한다.\n\n**tasks.md 의 \"부분 유니크 위반 시 재조회\"는 PostgreSQL 에서 그대로 쓸 수 없다** — 제약 위반이\n나면 그 트랜잭션이 abort 돼 같은 트랜잭션에서 더 질의할 수 없다. 세이브포인트로 감쌀 수도\n있지만 애초에 부딪히지 않는 쪽이 예외 경로가 없어 단순하다. 그 판단을 tasks.md T010 결정 ②로\n남겼다.\n\n잠금 식별자는 동일 버전 키(SHA-256 hex)의 앞 16자를 그대로 읽은 값이다. 키 자체가 고르게 퍼진\n해시라 다시 해싱하지 않는다. hashtext() 는 문서화되지 않은 내부 함수라 쓰지 않았다 — 판 올림에\n값이 바뀌면 잠금이 갈라진다. 키가 다르면 서로 기다리지 않고 트랜잭션이 끝나면 풀린다. 취소\n경로(요청 행 → 실행 행)와 잠금 종류가 달라 교착 고리가 생기지 않는다.\n\nBacktestDedupIT 가 두 스레드로 확인한다. 잠금 한 줄을 빼면 DataIntegrityViolationException 으로\n실제로 깨지는 것을 세 번 연속 확인했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T12:08:39.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T12:08:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/633b65d13656d3d51078ea968a43aa534bb3e735"
+        },
+        {
+          "id": "f7da6ae2945b7b57f2e382a1bbba8d8b42d54d47",
+          "short_id": "f7da6ae2",
+          "created_at": "2026-09-14T11:44:30.000+09:00",
+          "parent_ids": [
+            "a6f5cfa24fa4d705cc23bf696392a14005376216"
+          ],
+          "title": "feat(be): 합류·재사용 접수에 기록을 남긴다",
+          "message": "feat(be): 합류·재사용 접수에 기록을 남긴다\n\nspec 004 T010 (FR-008).\n\njoinExisting 이 요청을 저장한 뒤 같은 트랜잭션에서 재사용 기록을 남긴다. 둘 중 하나만 남으면\n아낀 계산을 셀 수 없거나 세지 않아야 할 것을 센다.\n\nT005 가 남겨 둔 \"재사용 기록은 T010 이 붙인다\" 주석을 걷어냈다.\n\nBacktestDedupIT: 두 사용자가 같은 본문을 보내면 실행 1·요청 2·기록 1이고 kind=JOINED 다.\n**본문의 기간을 다른 IT 와 겹치지 않게 두었다** — PostgreSQL 컨테이너를 스위트가 공유하므로\n본문이 같으면 동일 버전 키도 같아서 다른 IT 가 만든 실행에 합류한다(그게 정상 동작이다).\n처음엔 BacktestCancelFlowIT 와 같은 본문을 써서 한 실행을 두 테스트가 나눠 갖고 저쪽이 깨졌다.\n그 이유를 IT javadoc 에 적어 두었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T11:44:30.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T11:44:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f7da6ae2945b7b57f2e382a1bbba8d8b42d54d47"
+        },
+        {
+          "id": "a6f5cfa24fa4d705cc23bf696392a14005376216",
+          "short_id": "a6f5cfa2",
+          "created_at": "2026-09-14T11:44:15.000+09:00",
+          "parent_ids": [
+            "aeda4c9a1dd3c456d8817b346b6ac567f596bb34"
+          ],
+          "title": "feat(be): 재사용·합류 기록 표와 저장소",
+          "message": "feat(be): 재사용·합류 기록 표와 저장소\n\nspec 004 T010 (FR-008), data-model.md §backtest_reuse_event.\n\n같은 조건의 요청이 새 계산 없이 끝난 사실을 한 줄씩 남길 자리를 만든다. T012 의\nv_run_metric_summary 가 이 표를 조인해 reuse_count 를 센다.\n\n요청 행의 result_source 로 대신하지 않는다 — 그 값은 요청의 현재 상태이고 이 표는 접수 시점의\n판단에 대한 기록이다. 한 컬럼에 겹쳐 두면 상태가 바뀐 뒤 과거의 판단을 되짚을 수 없다.\n\n- append-only 라 BaseEntity 를 상속하지 않는다. updated_at 이 영원히 created_at 과 같으므로\n  발생 시각 at 하나만 둔다.\n- kind 는 새 enum 을 만들지 않고 ResultSource 를 쓰되 NEW 를 생성자에서 거부한다. 새 계산은\n  실행 행 자체가 기록이라 이 표에 오지 않는다. DB CHECK 가 한 번 더 막는다.\n- request_id 에 UNIQUE. 한 요청은 많아야 한 번 합류·재사용하므로 중복 기록이 reuse_count 를\n  부풀리는 것을 DB 가 막는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-14T11:44:15.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-14T11:44:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a6f5cfa24fa4d705cc23bf696392a14005376216"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -16,5 +16,10 @@ public interface BacktestJobPublisher {\n      * <p>동기 오류(연결 불가·채널 오류)만 잡는다. publisher confirm과 returns가 없으므로 unroutable 메시지와 비동기 nack는 감지하지\n      * 못한다. outbox 도입 전까지의 알려진 한계다.\n      */\n-    void publish(EngineInput engineInput);\n+    /**\n+     * @param publishAttempt 이 발행의 시도 번호({@code backtest_run.publish_count} 를 올린 직후의 값). 메시지에 실려\n+     *     나가고, 그 메시지가 DLQ 로 끝나면 백엔드가 \"어느 시도가 죽었는지\"를 이 번호로 구분한다(R-18 ③) — 없으면 재전달된 DLQ 메시지를 다른 시도의\n+     *     죽음으로 잘못 세어 살아 있는 실행을 끊는다\n+     */\n+    void publish(EngineInput engineInput, int publishAttempt);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/BacktestJobPublisher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/BacktestJobPublisher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.backtest.application.repository;\n+\n+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;\n+\n+/**\n+ * 재사용·합류 기록 저장소 포트(FR-008). 추가만 한다 — 지우거나 고치는 경로를 두지 않는다.\n+ *\n+ * <p>조회는 두지 않았다. 이 기록을 읽는 곳은 T012의 집계 뷰뿐이고, 그 뷰는 SQL에서 직접 조인한다.\n+ */\n+public interface BacktestReuseEventRepository {\n+\n+    /** 기록을 남기고 id가 채워진 값을 돌려준다. */\n+    BacktestReuseEvent save(BacktestReuseEvent event);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestReuseEventRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestReuseEventRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,6 +41,18 @@ public interface BacktestRunRepository {\n \n     Optional<BacktestRun> findByBacktestId(String backtestId);\n \n+    /**\n+     * 같은 동일 버전 키의 접수를 직렬화한다(R-02, T010). 트랜잭션이 끝나면 저절로 풀린다.\n+     *\n+     * <p>동일 버전 조회와 실행 INSERT 사이에 다른 접수가 같은 키로 먼저 INSERT 하면 부분 유니크 인덱스 {@code\n+     * uk_backtest_run_dedup_active} 에 걸려 정상적인 사용자 행동이 500 이 된다. 잡아서 재조회하는 방법은 PostgreSQL 에서 쓸 수 없다\n+     * — 제약 위반이 나면 그 트랜잭션이 abort 돼 같은 트랜잭션에서 더 질의할 수 없다. 세이브포인트로 감쌀 수도 있지만, 애초에 부딪히지 않게 하는 쪽이 예외 경로가\n+     * 없어 단순하다.\n+     *\n+     * <p>키마다 다른 잠금이라 서로 다른 조건의 접수는 기다리지 않는다. 같은 키의 접수만 줄을 서고, 앞엣것이 커밋하면 뒤엣것의 조회가 그 실행을 보고 합류한다.\n+     */\n+    void lockDedupKey(String dedupKey);\n+\n     /**\n      * 같은 동일 버전 키로 아직 살아 있는 실행(QUEUED·RUNNING·COMPLETED). 부분 유니크 인덱스와 같은 상태 집합이다.\n      *\n@@ -59,6 +71,16 @@ public interface BacktestRunRepository {\n      */\n     void recordPublishAttempt(Long runId);\n \n+    /**\n+     * DLQ 로 끝난 발행 시도를 기록하고 {@code dlq_count} 를 하나 올린다(R-18 ③). 상태·진행 컬럼은 건드리지 않는다.\n+     *\n+     * <p><b>같은 시도를 두 번 세지 않는다.</b> DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면 같은 메시지가 다시 온다. 시도 번호로\n+     * 기록을 남겨 두 번째부터는 세지 않는다 — 두 번 세면 살아 있는 작업이 남았는데도 종결 판정이 서서 실행을 잘못 끊는다.\n+     *\n+     * @return 이번에 처음 세었으면 true. false = 이미 센 시도(재전달)\n+     */\n+    boolean recordDeadLetter(Long runId, int attempt, Instant at);\n+\n     /** 발행 confirm 시각을 남긴다. 이 컬럼만 바꾼다. */\n     void recordPublished(Long runId, Instant at);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestRunRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestRunRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -104,6 +104,22 @@ public record BacktestDetailResult(\n         return build(request, run, currency, now, null, \"CANCELLED_BEFORE_START\", null);\n     }\n \n+    /**\n+     * 워커의 산출물 없이 백엔드가 끊은 실패(T010 DLQ 종결, T014 취소 무응답). 결과 행이 없는 것이 정상이므로 실패 사유는 <b>실행 행</b>에서 읽는다 —\n+     * 이것을 결과 유실 500 으로 다루면 사용자는 무슨 일이 있었는지 영영 볼 수 없다.\n+     */\n+    public static BacktestDetailResult failedWithoutResult(\n+            BacktestRequest request, BacktestRun run, String currency, Instant now) {\n+        return build(\n+                request,\n+                run,\n+                currency,\n+                now,\n+                null,\n+                null,\n+                new Failure(run.getFailureCode(), run.getFailureMessage()));\n+    }\n+\n     /**\n      * 결과 행이 있는 실행(COMPLETED·FAILED·CANCELLED). 상태에 따라 요약과 실패가 갈린다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,6 +14,7 @@ import java.util.Map;\n  *\n  * @param resultSource NEW 새 계산 / JOINED 진행 중 실행에 합류 / REUSED 완료 결과 재사용\n  * @param effectiveStart 워밍업 이후 실제 평가 시작일. 요청 시작일보다 뒤다\n+ * @param retryOf 재시도라면 원본 요청의 backtestId. 접수(T005) 경로에서는 null 이고 응답에도 싣지 않는다\n  */\n public record BacktestJobResult(\n         String backtestId,\n@@ -21,7 +22,20 @@ public record BacktestJobResult(\n         ResultSource resultSource,\n         LocalDate effectiveStart,\n         LocalDate effectiveEnd,\n-        Map<String, Object> versions) {\n+        Map<String, Object> versions,\n+        String retryOf) {\n+\n+    /** 재시도 응답용. 접수 결과 자체는 원본을 알지 못하므로 재시도 유스케이스가 붙인다. */\n+    public BacktestJobResult withRetryOf(String originalBacktestId) {\n+        return new BacktestJobResult(\n+                backtestId,\n+                status,\n+                resultSource,\n+                effectiveStart,\n+                effectiveEnd,\n+                versions,\n+                originalBacktestId);\n+    }\n \n     public static BacktestJobResult of(BacktestRequest request, BacktestRun run) {\n         return new BacktestJobResult(\n@@ -30,6 +44,7 @@ public record BacktestJobResult(\n                 request.getResultSource(),\n                 run.getPlan().effectiveStart(),\n                 run.getPlan().effectiveEnd(),\n-                run.getPlan().versions());\n+                run.getPlan().versions(),\n+                null);\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestJobResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestJobResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -193,6 +193,62 @@ public class BacktestEventService {\n                                 payload.totalTradingDays())));\n     }\n \n+    /**\n+     * 작업 메시지 하나가 DLQ 로 끝났다(R-18 ③, T010). 브로커가 재전달 상한({@code x-delivery-limit=1})을 다 쓴 뒤 보낸 것이다.\n+     *\n+     * <p><b>메시지 하나가 죽었다고 실행을 끝내지 않는다.</b> confirm 이 유실돼 같은 실행의 메시지가 둘 생길 수 있고(R-18), 그 중 하나만 DLQ 로\n+     * 가면 다른 하나는 아직 워커에서 돌고 있다. 발행한 메시지가 <b>전부</b> DLQ 로 끝났을 때만({@code dlqCount >= publishCount})\n+     * 실행을 {@code FAILED(SYSTEM_FAILURE)}로 종결한다. 그래서 {@code publishCount}가 실제 메시지 수의 상한이어야 한다 — 모자라면\n+     * 살아 있는 실행을 끊는다.\n+     *\n+     * <p>결과 행은 만들지 않는다. 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다 — 상세 조회는 실행 행의 실패 사유를 그대로 보여 준다.\n+     *\n+     * <p><b>같은 시도를 두 번 세지 않는다.</b> DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면 같은 메시지가 다시 온다. 저장소가\n+     * {@code (runId, attempt)} 기록으로 걸러 주므로 재전달은 세지 않고, <b>커밋 전에 죽어 다시 온 첫 전달은 제대로 센다</b> — 그 경우 기록도\n+     * 함께 롤백됐기 때문이다.\n+     */\n+    @Transactional\n+    public void handleDeadLetter(String runId, int attempt) {\n+        BacktestRun job = jobRepository.findByBacktestIdForUpdate(runId).orElse(null);\n+        if (job == null) {\n+            log.warn(\"dead-lettered job for unknown runId dropped: runId={}\", runId);\n+            return;\n+        }\n+        if (!jobRepository.recordDeadLetter(job.getId(), attempt, clock.instant())) {\n+            log.info(\n+                    \"dead-lettered job already counted; redelivery ignored: runId={} attempt={}\",\n+                    runId,\n+                    attempt);\n+            return;\n+        }\n+        // 방금 올린 값을 포함해 다시 읽는다. 셈은 DB 가 하므로 여기서 더하지 않는다.\n+        BacktestRun counted = jobRepository.findById(job.getId()).orElseThrow();\n+        if (counted.getStatus().isFinal()) {\n+            log.info(\n+                    \"dead-lettered job for a finished run: runId={} status={}\",\n+                    runId,\n+                    counted.getStatus());\n+            return;\n+        }\n+        if (!counted.getLifecycle().allMessagesDeadLettered()) {\n+            log.info(\n+                    \"dead-lettered job counted, other messages may still run: runId={} dlq={}/{}\",\n+                    runId,\n+                    counted.getLifecycle().dlqCount(),\n+                    counted.getLifecycle().publishCount());\n+            return;\n+        }\n+        BacktestRun failed = counted.markFailed(\"SYSTEM_FAILURE\", \"작업 메시지가 모두 처리되지 못했습니다(DLQ).\");\n+        jobRepository.update(failed.withLifecycle(failed.getLifecycle().finished(clock.instant())));\n+        log.warn(\n+                \"run failed: every published job message was dead-lettered: runId={} dlq={}/{}\",\n+                runId,\n+                counted.getLifecycle().dlqCount(),\n+                counted.getLifecycle().publishCount());\n+        events.publishEvent(\n+                new BacktestFinished(job.getId(), runId, RunStatus.FAILED, \"SYSTEM_FAILURE\"));\n+    }\n+\n     /**\n      * 이 이벤트가 마지막으로 시작한 실행의 것인가(R-18 2번).\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestEventService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestEventService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -53,8 +53,14 @@ public class BacktestJobDispatcher {\n         this.clock = clock;\n     }\n \n-    /** 접수가 커밋됐다는 신호. 이 이벤트가 없으면(롤백) 발행도 없다. */\n-    public record RunAccepted(long runId) {}\n+    /**\n+     * 접수가 커밋됐다는 신호. 이 이벤트가 없으면(롤백) 발행도 없다.\n+     *\n+     * @param publishAttempt 접수가 확보한 시도 번호. <b>여기에 실어 나른다</b> — 이 콜백이 늦어지는 사이 재발행기가 시도 번호를 올릴 수 있고,\n+     *     그때 DB 를 다시 읽으면 최초 발행과 재발행이 같은 번호를 쓴다. 그러면 서로 다른 두 메시지가 DLQ 에서 한 건으로 집계돼 종결 판정이 영영 서지\n+     *     않는다(R-18 ③)\n+     */\n+    public record RunAccepted(long runId, int publishAttempt) {}\n \n     /**\n      * <b>여기서 나가는 예외는 접수를 실패로 만든다.</b> {@code AFTER_COMMIT} 콜백의 예외는 삼켜지지 않고 커밋을 호출한 쪽으로 전파된다 — 접수는\n@@ -66,7 +72,7 @@ public class BacktestJobDispatcher {\n     @TransactionalEventListener\n     public void onRunAccepted(RunAccepted event) {\n         try {\n-            publishAlreadyCounted(event.runId());\n+            publishAlreadyCounted(event.runId(), event.publishAttempt());\n         } catch (RuntimeException exc) {\n             log.error(\"커밋 후 발행 처리에서 예외가 났습니다. 접수는 그대로 두고 재발행기에 맡깁니다: runId={}\", event.runId(), exc);\n         }\n@@ -78,13 +84,15 @@ public class BacktestJobDispatcher {\n      * <p>실패해도 예외를 밖으로 던지지 않는다 — 커밋은 이미 끝났고 사용자에게는 202를 돌려준 뒤다. 발행이 안 된 실행은 {@code published_at}이\n      * NULL로 남아 {@link JobRepublisher}가 집어 간다.\n      */\n-    void publishAlreadyCounted(long runId) {\n+    void publishAlreadyCounted(long runId, int publishAttempt) {\n         Optional<BacktestRun> found = newTransaction.execute(status -> repository.findById(runId));\n         if (found == null || found.isEmpty()) {\n             log.warn(\"발행할 실행을 찾지 못했습니다: runId={}\", runId);\n             return;\n         }\n-        send(found.get());\n+        // 시도 번호는 접수가 확보한 값을 쓰고 방금 읽은 실행에서 다시 읽지 않는다 — 이 콜백이 늦어지면\n+        // 그 사이 재발행기가 올린 번호를 보게 되고, 두 발행이 같은 번호를 달면 DLQ 집계가 한 건으로 접힌다.\n+        send(found.get(), publishAttempt);\n     }\n \n     /**\n@@ -104,12 +112,17 @@ public class BacktestJobDispatcher {\n             log.warn(\"재발행할 실행을 찾지 못했습니다: runId={}\", runId);\n             return;\n         }\n-        send(found.get());\n+        // 올리기와 읽기가 한 트랜잭션이고 UPDATE 가 행을 잠그므로, 여기 값은 이 재발행이 확보한 번호다.\n+        send(found.get(), found.get().getLifecycle().publishCount());\n     }\n \n-    private void send(BacktestRun run) {\n+    /**\n+     * @param publishAttempt <b>호출자가 확보한</b> 시도 번호. 실행에서 다시 읽지 않는다 — 두 발행 경로가 같은 번호를 달면 DLQ 집계가 서로\n+     *     다른 두 메시지를 한 건으로 접어 종결 판정이 서지 않는다(R-18 ③)\n+     */\n+    private void send(BacktestRun run, int publishAttempt) {\n         try {\n-            publisher.publish(assembler.assemble(run));\n+            publisher.publish(assembler.assemble(run), publishAttempt);\n         } catch (RuntimeException exc) {\n             log.warn(\n                     \"작업 발행에 실패했습니다. 재발행기가 다시 시도합니다: runId={}, backtestId={}, cause={}\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -97,6 +97,11 @@ public class BacktestResultQueryService {\n             return BacktestDetailResult.cancelledBeforeStart(\n                     found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());\n         }\n+        if (summary.isEmpty() && failedWithoutResult(job)) {\n+            // 워커가 계산을 마치지 못해 저장할 산출물이 없었다(DLQ 종결·취소 무응답). 실패 사유는 실행 행에 있다.\n+            return BacktestDetailResult.failedWithoutResult(\n+                    found.request(), job, ExecutionPolicy.CURRENCY, clock.instant());\n+        }\n         return BacktestDetailResult.of(\n                 found.request(),\n                 job,\n@@ -351,6 +356,11 @@ public class BacktestResultQueryService {\n         return new ResultView(job, cutoff, request.isCancelled() || job.isPartial());\n     }\n \n+    /** 워커의 산출물 없이 백엔드가 끊은 실패인가. 실행 행에 사유가 있으면 그렇다 — 워커가 보낸 FAILED 는 결과 행을 함께 저장하므로 여기 걸리지 않는다. */\n+    private static boolean failedWithoutResult(BacktestRun job) {\n+        return job.getStatus() == RunStatus.FAILED && job.getFailureCode() != null;\n+    }\n+\n     /**\n      * 워커가 한 거래일도 계산하기 전에 끝난 취소인가. 결과 행이 없는 것이 정상인 유일한 최종 상태다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 실패·취소한 요청을 같은 조건으로 다시 시도한다(spec 004 T010).\n+ *\n+ * <p><b>접수를 다시 탄다.</b> 실행 행을 복제하지 않고 저장해 둔 요청 사본({@code request_spec})을 접수 명령으로 되돌려 {@link\n+ * BacktestService#create}에 넘긴다. 그래야 그 사이 전략 등록표가 내려갔거나(422) 자료 버전이 움직인 것을 <b>지금 기준</b>으로 다시 판정하고,\n+ * 동일 버전 재사용·합류도 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 새로 계산하지 않고 거기에 합류한다.\n+ *\n+ * <p>비용 조건 버전만은 원본 실행의 것을 그대로 쓴다. 재시도는 \"같은 조건을 다시\"이지 \"지금 기본값으로 새로\"가 아니다 — 기본 프로필이 그 사이 바뀌었는데 조용히\n+ * 따라가면 사용자가 비교하려던 두 결과의 비용 전제가 달라진다.\n+ *\n+ * <p>재시도 가능 여부는 <b>요청 기준 상태</b>로 본다(R-04 파생 상태). 실행이 아직 돌고 있어도 이 요청이 취소됐으면 그 사용자에게는 끝난 분석이다.\n+ */\n+@Service\n+public class BacktestRetryService {\n+\n+    private static final Logger log = LoggerFactory.getLogger(BacktestRetryService.class);\n+\n+    private final BacktestService backtestService;\n+    private final BacktestRequestRepository requestRepository;\n+    private final BacktestRunRepository runRepository;\n+\n+    public BacktestRetryService(\n+            BacktestService backtestService,\n+            BacktestRequestRepository requestRepository,\n+            BacktestRunRepository runRepository) {\n+        this.backtestService = backtestService;\n+        this.requestRepository = requestRepository;\n+        this.runRepository = runRepository;\n+    }\n+\n+    @Transactional\n+    public BacktestJobResult retry(String backtestId, long requesterId) {\n+        // 남의 요청은 403 이 아니라 404 로 숨긴다(R-12) — 403 은 그 식별자가 존재한다고 알려 준다.\n+        BacktestRequest request =\n+                requestRepository\n+                        .findByBacktestId(backtestId)\n+                        .filter(found -> found.getRequesterId() == requesterId)\n+                        .orElseThrow(() -> new BacktestNotFoundException(backtestId));\n+        BacktestRun run =\n+                runRepository\n+                        .findById(request.getRunId())\n+                        .orElseThrow(() -> new BacktestNotFoundException(backtestId));\n+\n+        RunStatus status = request.isCancelled() ? RunStatus.CANCELLED : run.getStatus();\n+        if (status != RunStatus.FAILED && status != RunStatus.CANCELLED) {\n+            throw new BusinessException(\n+                    ErrorCode.NOT_RETRYABLE,\n+                    \"실패하거나 취소한 분석만 다시 시도할 수 있습니다: backtestId=\" + backtestId + \", status=\" + status);\n+        }\n+\n+        CreateBacktestCommand command =\n+                RequestSpecCodec.toCommand(\n+                        run.getPlan().requestSpec(),\n+                        requesterId,\n+                        request.getExecutionType(),\n+                        run.getPlan().costProfileVersion());\n+        BacktestJobResult retried = backtestService.create(command, request.getId());\n+        log.info(\n+                \"retry accepted: original={} retried={} resultSource={}\",\n+                backtestId,\n+                retried.backtestId(),\n+                retried.resultSource());\n+        return retried.withRetryOf(backtestId);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestRetryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestRetryService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,10 +4,12 @@ import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;\n import com.ssafy.thorp.backtest.application.port.message.Scenario;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n import com.ssafy.thorp.backtest.domain.model.CostProfile;\n import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n@@ -22,7 +24,6 @@ import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n import java.math.BigDecimal;\n import java.time.Clock;\n-import java.util.ArrayList;\n import java.util.LinkedHashMap;\n import java.util.LinkedHashSet;\n import java.util.List;\n@@ -47,6 +48,7 @@ public class BacktestService {\n \n     private final BacktestRunRepository runRepository;\n     private final BacktestRequestRepository requestRepository;\n+    private final BacktestReuseEventRepository reuseEventRepository;\n     private final StrategyRulesService strategyRulesService;\n     private final CostProfileService costProfileService;\n     private final EffectivePeriodCalculator effectivePeriodCalculator;\n@@ -59,6 +61,7 @@ public class BacktestService {\n     public BacktestService(\n             BacktestRunRepository runRepository,\n             BacktestRequestRepository requestRepository,\n+            BacktestReuseEventRepository reuseEventRepository,\n             StrategyRulesService strategyRulesService,\n             CostProfileService costProfileService,\n             EffectivePeriodCalculator effectivePeriodCalculator,\n@@ -69,6 +72,7 @@ public class BacktestService {\n             @Value(\"${thorp.backtest.engine-version}\") String engineVersion) {\n         this.runRepository = runRepository;\n         this.requestRepository = requestRepository;\n+        this.reuseEventRepository = reuseEventRepository;\n         this.strategyRulesService = strategyRulesService;\n         this.costProfileService = costProfileService;\n         this.effectivePeriodCalculator = effectivePeriodCalculator;\n@@ -90,6 +94,15 @@ public class BacktestService {\n \n     @Transactional\n     public BacktestJobResult create(CreateBacktestCommand command) {\n+        return create(command, null);\n+    }\n+\n+    /**\n+     * @param retryOfRequestId 재시도라면 원본 요청의 id. 새 요청 행에 그대로 남는다(T010). 재시도도 접수를 <b>다시</b> 타므로 동일 버전\n+     *     재사용·합류 판정을 똑같이 받는다 — 원본이 실패한 뒤 다른 사람이 같은 조건을 이미 돌리고 있으면 거기에 합류한다\n+     */\n+    @Transactional\n+    public BacktestJobResult create(CreateBacktestCommand command, Long retryOfRequestId) {\n         Scenario scenario = command.scenario() == null ? Scenario.FULL_PERIOD : command.scenario();\n         validateScenario(scenario, command.scenarioParams());\n         validateUniverse(command);\n@@ -138,9 +151,14 @@ public class BacktestService {\n                                 command.scenarioParams(),\n                                 overlay == null ? null : overlay.rulesVersion()));\n \n+        // 조회 → 판단 → INSERT 를 같은 키끼리 직렬화한다. 잠그지 않으면 두 접수가 나란히 \"없다\"를 읽고\n+        // 둘 다 INSERT 해 부분 유니크 인덱스에 걸린다 — 정상적인 사용자 행동이 500 이 된다.\n+        runRepository.lockDedupKey(dedupKey);\n+\n         Optional<BacktestRun> active = runRepository.findActiveByDedupKey(dedupKey);\n         if (active.isPresent()) {\n-            Optional<BacktestJobResult> joined = joinExisting(command, active.get().getId());\n+            Optional<BacktestJobResult> joined =\n+                    joinExisting(command, active.get().getId(), retryOfRequestId);\n             if (joined.isPresent()) {\n                 return joined.get();\n             }\n@@ -157,7 +175,7 @@ public class BacktestService {\n                         period.effectiveStart(),\n                         period.effectiveEnd(),\n                         period.warmupTradingDays(),\n-                        requestSpec(command, scenario, period.warmupTradingDays()),\n+                        RequestSpecCodec.write(command, scenario, period.warmupTradingDays()),\n                         versions);\n \n         BacktestRun run =\n@@ -185,18 +203,13 @@ public class BacktestService {\n                                 command.requesterId(),\n                                 command.executionType(),\n                                 ResultSource.NEW,\n-                                null));\n-        events.publishEvent(new BacktestJobDispatcher.RunAccepted(saved.getId()));\n+                                retryOfRequestId));\n+        events.publishEvent(\n+                new BacktestJobDispatcher.RunAccepted(\n+                        saved.getId(), saved.getLifecycle().publishCount()));\n         return BacktestJobResult.of(request, saved);\n     }\n \n-    /**\n-     * 같은 조건의 실행이 이미 있다. 새로 계산하지 않고 요청만 붙인다.\n-     *\n-     * <p><b>여기까지가 T005의 몫이다.</b> 재사용 기록({@code backtest_reuse_event})과 동시 접수 경합의 재조회는 T010이 붙인다.\n-     * 그때까지 이 분기가 없으면 같은 조건을 두 사람이 요청했을 때 부분 유니크 인덱스에 걸려 500이 난다 — 정상적인 사용자 행동이 500이 되는 것은 미룰 일이\n-     * 아니다.\n-     */\n     /**\n      * 같은 조건의 살아 있는 실행에 합류(또는 완료 결과를 재사용)한다.\n      *\n@@ -206,7 +219,8 @@ public class BacktestService {\n      *\n      * @return 빈 값 = 잠근 뒤 보니 종결된 실행이라 재사용 대상이 아니다(호출자가 새 실행을 만든다)\n      */\n-    private Optional<BacktestJobResult> joinExisting(CreateBacktestCommand command, Long runId) {\n+    private Optional<BacktestJobResult> joinExisting(\n+            CreateBacktestCommand command, Long runId, Long retryOfRequestId) {\n         BacktestRun run = runRepository.findByIdForUpdate(runId).orElse(null);\n         if (run == null || !isReusable(run.getStatus())) {\n             return Optional.empty();\n@@ -228,7 +242,15 @@ public class BacktestService {\n                                 command.requesterId(),\n                                 command.executionType(),\n                                 source,\n-                                null));\n+                                retryOfRequestId));\n+        // 아낀 계산을 한 줄 남긴다(FR-008). 요청 저장과 같은 트랜잭션이라 둘 중 하나만 남지 않는다.\n+        reuseEventRepository.save(\n+                BacktestReuseEvent.of(\n+                        run.getId(),\n+                        request.getId(),\n+                        source,\n+                        command.executionType(),\n+                        clock.instant()));\n         return Optional.of(BacktestJobResult.of(request, run));\n     }\n \n@@ -400,41 +422,6 @@ public class BacktestService {\n      * <p>{@code warmupTradingDays}는 요청값이 아니라 <b>서버가 확정한 값</b>을 넣는다. 요청이 null 이었다고 null 을 돌려주면 \"그래서\n      * 몇 거래일을 썼나\"라는 질문에 답할 수 없다.\n      */\n-    private static Map<String, Object> requestSpec(\n-            CreateBacktestCommand command, Scenario scenario, int warmupTradingDays) {\n-        List<Map<String, Object>> items = new ArrayList<>();\n-        for (CreateBacktestCommand.AllocationItem item : command.items()) {\n-            Map<String, Object> entry = new LinkedHashMap<>();\n-            entry.put(\"sectorId\", item.sectorId());\n-            entry.put(\"instrumentId\", item.instrumentId());\n-            if (item.targetWeight() != null) {\n-                entry.put(\"targetWeight\", item.targetWeight());\n-            }\n-            items.add(entry);\n-        }\n-        Map<String, Object> spec = new LinkedHashMap<>();\n-        spec.put(\"mappingVersion\", command.mappingVersion());\n-        spec.put(\"items\", items);\n-        spec.put(\"strategyId\", command.strategyId());\n-        spec.put(\"rulesVersion\", command.rulesVersion());\n-        if (command.registryVersion() != null) {\n-            spec.put(\"registryVersion\", command.registryVersion());\n-        }\n-        spec.put(\"parameters\", command.parameters());\n-        spec.put(\"start\", command.start().toString());\n-        spec.put(\"end\", command.end().toString());\n-        spec.put(\"initialCash\", command.initialCash());\n-        if (command.evaluationSplitVersion() != null) {\n-            spec.put(\"evaluationSplitVersion\", command.evaluationSplitVersion());\n-        }\n-        spec.put(\"warmupTradingDays\", warmupTradingDays);\n-        spec.put(\"scenario\", scenario.name());\n-        if (command.scenarioParams() != null && !command.scenarioParams().isEmpty()) {\n-            spec.put(\"scenarioParams\", command.scenarioParams());\n-        }\n-        return spec;\n-    }\n-\n     private Map<String, Object> versions(\n             CostProfile costProfile, String rulesVersion, String dataVersion) {\n         Map<String, Object> costs = new LinkedHashMap<>();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,162 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * 접수한 요청의 canonical 사본({@code backtest_run.request_spec})을 쓰고 다시 읽는다.\n+ *\n+ * <p><b>쓰는 쪽과 읽는 쪽을 한 클래스에 둔다.</b> 접수(T005)가 쓰고 재시도(T010)가 읽는데, 둘이 멀리 떨어져 있으면 한쪽만 고쳤을 때 재시도가 조용히\n+ * 깨진다 — 사본의 모양이 계약인 셈이다. {@code RequestSpecCodecTest}가 왕복을 단언해 그 드리프트를 빌드에서 잡는다.\n+ *\n+ * <p><b>수를 읽을 때 문자열과 숫자를 모두 받는다.</b> 이 사본은 JSONB 컬럼이고 직렬화를 메시지 ObjectMapper가 맡아 decimal이 문자열로\n+ * 저장되지만({@code MessageJsonPersistenceConfig}), 그 설정은 저장 계층의 사정이지 이 사본의 계약이 아니다. 한쪽만 받으면 설정이 바뀐 날\n+ * 재시도가 전부 깨진다.\n+ *\n+ * <p>사본에 <b>없는</b> 값 셋은 호출자가 준다 — 요청자({@code requesterId})와 {@code executionType}은 요청 행의 것이라 실행 사본에\n+ * 들어가지 않고(동일 버전 키에서도 일부러 뺀다), 비용 조건 버전은 실행 계획({@code RunPlan})에 따로 있다.\n+ */\n+final class RequestSpecCodec {\n+\n+    private RequestSpecCodec() {}\n+\n+    /**\n+     * 접수가 확정한 값으로 사본을 만든다. {@code warmupTradingDays}는 요청값이 아니라 <b>실효값</b>이다 — 요청이 비워 둔 경우에도 그때 무엇으로\n+     * 계산했는지가 남아야 재시도가 같은 구간을 본다.\n+     */\n+    static Map<String, Object> write(\n+            CreateBacktestCommand command, Scenario scenario, int warmupTradingDays) {\n+        List<Map<String, Object>> items = new ArrayList<>();\n+        for (CreateBacktestCommand.AllocationItem item : command.items()) {\n+            Map<String, Object> entry = new LinkedHashMap<>();\n+            entry.put(\"sectorId\", item.sectorId());\n+            entry.put(\"instrumentId\", item.instrumentId());\n+            if (item.targetWeight() != null) {\n+                entry.put(\"targetWeight\", item.targetWeight());\n+            }\n+            items.add(entry);\n+        }\n+        Map<String, Object> spec = new LinkedHashMap<>();\n+        spec.put(\"mappingVersion\", command.mappingVersion());\n+        spec.put(\"items\", items);\n+        spec.put(\"strategyId\", command.strategyId());\n+        spec.put(\"rulesVersion\", command.rulesVersion());\n+        if (command.registryVersion() != null) {\n+            spec.put(\"registryVersion\", command.registryVersion());\n+        }\n+        spec.put(\"parameters\", command.parameters());\n+        spec.put(\"start\", command.start().toString());\n+        spec.put(\"end\", command.end().toString());\n+        spec.put(\"initialCash\", command.initialCash());\n+        if (command.evaluationSplitVersion() != null) {\n+            spec.put(\"evaluationSplitVersion\", command.evaluationSplitVersion());\n+        }\n+        spec.put(\"warmupTradingDays\", warmupTradingDays);\n+        spec.put(\"scenario\", scenario.name());\n+        if (command.scenarioParams() != null && !command.scenarioParams().isEmpty()) {\n+            spec.put(\"scenarioParams\", command.scenarioParams());\n+        }\n+        return spec;\n+    }\n+\n+    /**\n+     * 사본을 접수 명령으로 되돌린다. 재시도는 이 명령으로 접수를 <b>다시</b> 탄다 — 그래야 그 사이 전략 등록표가 내려갔거나 자료 버전이 움직인 것을 지금 기준으로\n+     * 다시 판정한다.\n+     *\n+     * @param requesterId 재시도를 누른 사람. 원 요청자와 같다(관문이 먼저 확인한다)\n+     */\n+    static CreateBacktestCommand toCommand(\n+            Map<String, Object> spec,\n+            long requesterId,\n+            ExecutionType executionType,\n+            String costProfileVersion) {\n+        if (spec == null || spec.isEmpty()) {\n+            throw new IllegalStateException(\"request_spec is empty; cannot rebuild the request\");\n+        }\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                executionType,\n+                string(spec, \"mappingVersion\"),\n+                items(spec),\n+                string(spec, \"strategyId\"),\n+                string(spec, \"rulesVersion\"),\n+                string(spec, \"registryVersion\"),\n+                map(spec, \"parameters\"),\n+                date(spec, \"start\"),\n+                date(spec, \"end\"),\n+                decimal(spec.get(\"initialCash\"), \"initialCash\"),\n+                costProfileVersion,\n+                string(spec, \"evaluationSplitVersion\"),\n+                integer(spec, \"warmupTradingDays\"),\n+                Scenario.valueOf(string(spec, \"scenario\")),\n+                map(spec, \"scenarioParams\"));\n+    }\n+\n+    @SuppressWarnings(\"unchecked\")\n+    private static List<CreateBacktestCommand.AllocationItem> items(Map<String, Object> spec) {\n+        Object raw = spec.get(\"items\");\n+        if (!(raw instanceof List<?> list) || list.isEmpty()) {\n+            throw new IllegalStateException(\"request_spec.items is missing or empty\");\n+        }\n+        List<CreateBacktestCommand.AllocationItem> items = new ArrayList<>();\n+        for (Object element : list) {\n+            Map<String, Object> entry = (Map<String, Object>) element;\n+            items.add(\n+                    new CreateBacktestCommand.AllocationItem(\n+                            string(entry, \"sectorId\"),\n+                            string(entry, \"instrumentId\"),\n+                            entry.get(\"targetWeight\") == null\n+                                    ? null\n+                                    : decimal(entry.get(\"targetWeight\"), \"items[].targetWeight\")));\n+        }\n+        return items;\n+    }\n+\n+    private static String string(Map<String, Object> spec, String key) {\n+        Object value = spec.get(key);\n+        return value == null ? null : value.toString();\n+    }\n+\n+    @SuppressWarnings(\"unchecked\")\n+    private static Map<String, Object> map(Map<String, Object> spec, String key) {\n+        Object value = spec.get(key);\n+        return value == null ? null : (Map<String, Object>) value;\n+    }\n+\n+    private static LocalDate date(Map<String, Object> spec, String key) {\n+        String value = string(spec, key);\n+        if (value == null) {\n+            throw new IllegalStateException(\"request_spec.\" + key + \" is missing\");\n+        }\n+        return LocalDate.parse(value);\n+    }\n+\n+    private static Integer integer(Map<String, Object> spec, String key) {\n+        Object value = spec.get(key);\n+        if (value == null) {\n+            return null;\n+        }\n+        if (value instanceof Number number) {\n+            return number.intValue();\n+        }\n+        return Integer.valueOf(value.toString());\n+    }\n+\n+    /** JSONB 에 문자열로 저장되든 숫자로 저장되든 같은 값을 돌려준다. */\n+    private static BigDecimal decimal(Object value, String path) {\n+        if (value == null) {\n+            throw new IllegalStateException(\"request_spec.\" + path + \" is missing\");\n+        }\n+        if (value instanceof BigDecimal decimal) {\n+            return decimal;\n+        }\n+        return new BigDecimal(value.toString());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/RequestSpecCodec.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/RequestSpecCodec.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+package com.ssafy.thorp.backtest.domain.model;\n+\n+import java.time.Instant;\n+import java.util.Objects;\n+\n+/**\n+ * 같은 조건의 요청이 새 계산 없이 끝난 기록(spec 004 FR-008, T010).\n+ *\n+ * <p>접수가 진행 중인 실행에 합류시키거나({@code JOINED}) 완료된 실행의 결과를 재사용하면({@code REUSED}) 한 줄 남긴다. 원가·운영 지표에서 새로\n+ * 계산한 실행과 아낀 요청을 가르는 근거다.\n+ *\n+ * <p><b>요청의 {@code resultSource}로 대신하지 않는다.</b> 그것은 요청의 현재 상태라 나중에 덮일 수 있고, 이 기록은 접수 시점에 무슨 판단이\n+ * 있었는지에 대한 사실이다. 그래서 추가만 하고 고치지 않는다.\n+ *\n+ * @param kind {@code JOINED} 또는 {@code REUSED}. {@code NEW}는 이 기록의 대상이 아니다 — 새 계산은 실행 행 자체가 기록이다\n+ * @param requestExecutionType 접수 시점 요청의 종류. 요청 행과 조인하지 않고도 종류별로 셀 수 있게 복사해 둔다\n+ */\n+public record BacktestReuseEvent(\n+        Long id,\n+        Long runId,\n+        Long requestId,\n+        ResultSource kind,\n+        ExecutionType requestExecutionType,\n+        Instant at) {\n+\n+    public BacktestReuseEvent {\n+        Objects.requireNonNull(runId, \"runId must not be null\");\n+        Objects.requireNonNull(requestId, \"requestId must not be null\");\n+        Objects.requireNonNull(kind, \"kind must not be null\");\n+        Objects.requireNonNull(requestExecutionType, \"requestExecutionType must not be null\");\n+        Objects.requireNonNull(at, \"at must not be null\");\n+        if (kind == ResultSource.NEW) {\n+            throw new IllegalArgumentException(\n+                    \"NEW is not a reuse: runId=\" + runId + \", requestId=\" + requestId);\n+        }\n+    }\n+\n+    /** 새 기록. id는 저장 전이라 null이다. */\n+    public static BacktestReuseEvent of(\n+            Long runId,\n+            Long requestId,\n+            ResultSource kind,\n+            ExecutionType requestExecutionType,\n+            Instant at) {\n+        return new BacktestReuseEvent(null, runId, requestId, kind, requestExecutionType, at);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestReuseEvent.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestReuseEvent.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.amqp.core.Message;\n+import org.springframework.amqp.rabbit.annotation.RabbitListener;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * {@code backtest.jobs.dlq} 의 Consumer(spec 004 R-18, T010). 작업 메시지가 재전달 상한을 다 쓰고 죽었다는 신호다.\n+ *\n+ * <p><b>본문을 읽지 않는다.</b> 발행기가 {@code correlationId} 에 runId 를 넣어 두고 DLQ 로 옮겨져도 그 속성이 보존되므로, 계약 모델을\n+ * 다시 역직렬화할 이유가 없다 — 여기까지 온 메시지는 워커가 소화하지 못한 것이라 본문이 온전하다는 보장도 없다.\n+ *\n+ * <p><b>DLQ 로 온 메시지는 다시 큐에 넣지 않는다.</b> 자동 재투입하면 같은 실패를 무한히 돈다. 재시도는 사용자가 {@code POST\n+ * /backtests/{id}/retry} 로 정한다.\n+ *\n+ * <p><b>발행 시도 번호로 멱등하게 센다.</b> 이 전달은 at-least-once 라 DB 가 커밋된 뒤 ACK 이 유실되면 브로커가 같은 메시지를 다시 준다. 그것을\n+ * 또 세면 살아 있는 작업이 남았는데도 {@code dlqCount >= publishCount} 가 서서 실행이 잘못 {@code FAILED} 로 끝난다. 발행기가 실어\n+ * 보낸 {@code publishAttempt} 를 그대로 넘기면 저장소가 {@code (runId, attempt)} 기록으로 걸러 준다 — <b>AMQP 의 {@code\n+ * redelivered} 표시로 거르지 않는다.</b> 그 표시는 \"이미 세었다\"가 아니라 \"이미 보낸 적 있다\"라서, 커밋 전에 죽어 다시 온 첫 전달까지 버리게 되고 그러면\n+ * 죽은 실행이 영영 종결되지 않는다.\n+ *\n+ * <p>runId 를 알 수 없으면 로그만 남기고 ACK 한다. 되돌려 봐야 같은 자리로 다시 오고, 그 사이 DLQ 가 막힌다.\n+ */\n+@Component\n+public class BacktestDeadLetterListener {\n+\n+    private static final Logger log = LoggerFactory.getLogger(BacktestDeadLetterListener.class);\n+\n+    private final BacktestEventService service;\n+\n+    public BacktestDeadLetterListener(BacktestEventService service) {\n+        this.service = service;\n+    }\n+\n+    @RabbitListener(queues = BacktestRabbitConfig.JOBS_DEAD_LETTER_QUEUE)\n+    public void onDeadLetteredJob(Message message) {\n+        String runId = message.getMessageProperties().getCorrelationId();\n+        if (runId == null || runId.isBlank()) {\n+            log.error(\n+                    \"dead-lettered job without a correlationId; dropping: messageId={}\",\n+                    message.getMessageProperties().getMessageId());\n+            return;\n+        }\n+        Integer attempt = publishAttemptOf(message);\n+        if (attempt == null) {\n+            // 시도 번호가 없으면 재전달을 구분할 수 없다. 세면 살아 있는 실행을 끊을 수 있으므로 세지 않고\n+            // 드러나게 남긴다 — 이 헤더를 붙이기 전 버전이 발행한 메시지에서만 생길 수 있다.\n+            log.error(\n+                    \"dead-lettered job without a {} header; not counted: runId={}\",\n+                    RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER,\n+                    runId);\n+            return;\n+        }\n+        service.handleDeadLetter(runId, attempt);\n+    }\n+\n+    /** 헤더는 브로커를 거치며 정수형이 바뀔 수 있어 {@link Number} 로 받는다. */\n+    private static Integer publishAttemptOf(Message message) {\n+        Object raw =\n+                message.getMessageProperties()\n+                        .getHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER);\n+        if (!(raw instanceof Number number) || number.intValue() < 1) {\n+            return null;\n+        }\n+        return number.intValue();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListener.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListener.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,10 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {\n \n     static final String MESSAGE_ID_PREFIX = \"JOB-\";\n     static final String SCHEMA_VERSION_HEADER = \"schemaVersion\";\n+\n+    /** 이 메시지가 몇 번째 발행 시도인가. DLQ 소비가 같은 메시지를 두 번 세지 않는 근거다(R-18 ③). */\n+    static final String PUBLISH_ATTEMPT_HEADER = \"publishAttempt\";\n+\n     static final int SCHEMA_VERSION = BacktestRabbitConfig.SCHEMA_VERSION;\n \n     private final RabbitTemplate rabbitTemplate;\n@@ -35,7 +39,7 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {\n     }\n \n     @Override\n-    public void publish(EngineInput engineInput) {\n+    public void publish(EngineInput engineInput, int publishAttempt) {\n         String runId = engineInput.run().runId();\n         try {\n             rabbitTemplate.convertAndSend(\n@@ -47,6 +51,8 @@ public class RabbitBacktestJobPublisher implements BacktestJobPublisher {\n                         message.getMessageProperties().setCorrelationId(runId);\n                         message.getMessageProperties()\n                                 .setHeader(SCHEMA_VERSION_HEADER, SCHEMA_VERSION);\n+                        message.getMessageProperties()\n+                                .setHeader(PUBLISH_ATTEMPT_HEADER, publishAttempt);\n                         message.getMessageProperties()\n                                 .setDeliveryMode(MessageDeliveryMode.PERSISTENT);\n                         return message;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestJobPublisher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestJobPublisher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,95 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.EnumType;\n+import jakarta.persistence.Enumerated;\n+import jakarta.persistence.GeneratedValue;\n+import jakarta.persistence.GenerationType;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.SequenceGenerator;\n+import jakarta.persistence.Table;\n+import java.time.Instant;\n+\n+/**\n+ * {@code backtest_reuse_event} 테이블 매핑.\n+ *\n+ * <p>{@link com.ssafy.thorp.common.persistence.BaseEntity}를 상속하지 않는다 — append-only 기록이라 {@code\n+ * updated_at}이 영원히 {@code created_at}과 같고, 발생 시각은 {@code at} 하나면 된다.\n+ *\n+ * <p>실행·요청은 스칼라 id로만 참조한다. 연관 매핑을 걸면 기록 한 줄을 읽을 때 5년치 시계열을 가진 결과까지 딸려온다.\n+ */\n+@Entity\n+@Table(name = \"backtest_reuse_event\")\n+public class BacktestReuseEventJpaEntity {\n+\n+    @Id\n+    @GeneratedValue(\n+            strategy = GenerationType.SEQUENCE,\n+            generator = \"backtest_reuse_event_seq_generator\")\n+    @SequenceGenerator(\n+            name = \"backtest_reuse_event_seq_generator\",\n+            sequenceName = \"backtest_reuse_event_seq\",\n+            allocationSize = 1)\n+    private Long id;\n+\n+    @Column(nullable = false)\n+    private Long runId;\n+\n+    @Column(nullable = false)\n+    private Long requestId;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(nullable = false, length = 10)\n+    private ResultSource kind;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(nullable = false, length = 20)\n+    private ExecutionType requestExecutionType;\n+\n+    @Column(name = \"at\", nullable = false)\n+    private Instant at;\n+\n+    protected BacktestReuseEventJpaEntity() {}\n+\n+    BacktestReuseEventJpaEntity(\n+            Long id,\n+            Long runId,\n+            Long requestId,\n+            ResultSource kind,\n+            ExecutionType requestExecutionType,\n+            Instant at) {\n+        this.id = id;\n+        this.runId = runId;\n+        this.requestId = requestId;\n+        this.kind = kind;\n+        this.requestExecutionType = requestExecutionType;\n+        this.at = at;\n+    }\n+\n+    Long getId() {\n+        return id;\n+    }\n+\n+    Long getRunId() {\n+        return runId;\n+    }\n+\n+    Long getRequestId() {\n+        return requestId;\n+    }\n+\n+    ResultSource getKind() {\n+        return kind;\n+    }\n+\n+    ExecutionType getRequestExecutionType() {\n+        return requestExecutionType;\n+    }\n+\n+    Instant getAt() {\n+        return at;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestReuseEventJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestReuseEventJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,7 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import org.springframework.data.jpa.repository.JpaRepository;\n+\n+/** 재사용·합류 기록은 추가만 하므로 기본 {@code save} 말고 필요한 것이 없다. */\n+interface BacktestReuseEventJpaRepository\n+        extends JpaRepository<BacktestReuseEventJpaEntity, Long> {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestReuseEventJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestReuseEventJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,39 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;\n+import org.springframework.stereotype.Repository;\n+\n+/** 재사용·합류 기록 저장. 추가만 하므로 저장소도 {@code save} 하나다. */\n+@Repository\n+public class BacktestReuseEventRepositoryImpl implements BacktestReuseEventRepository {\n+\n+    private final BacktestReuseEventJpaRepository jpaRepository;\n+\n+    public BacktestReuseEventRepositoryImpl(BacktestReuseEventJpaRepository jpaRepository) {\n+        this.jpaRepository = jpaRepository;\n+    }\n+\n+    @Override\n+    public BacktestReuseEvent save(BacktestReuseEvent event) {\n+        if (event.id() != null) {\n+            throw new IllegalArgumentException(\"save is for new records only: id=\" + event.id());\n+        }\n+        BacktestReuseEventJpaEntity saved =\n+                jpaRepository.save(\n+                        new BacktestReuseEventJpaEntity(\n+                                null,\n+                                event.runId(),\n+                                event.requestId(),\n+                                event.kind(),\n+                                event.requestExecutionType(),\n+                                event.at()));\n+        return new BacktestReuseEvent(\n+                saved.getId(),\n+                saved.getRunId(),\n+                saved.getRequestId(),\n+                saved.getKind(),\n+                saved.getRequestExecutionType(),\n+                saved.getAt());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestReuseEventRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestReuseEventRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -44,6 +44,14 @@ interface BacktestRunJpaRepository extends JpaRepository<BacktestRunJpaEntity, L\n     @Query(\"select r from BacktestRunJpaEntity r where r.id = :id\")\n     Optional<BacktestRunJpaEntity> lockById(@Param(\"id\") Long id);\n \n+    /**\n+     * DLQ 로 끝난 메시지를 <b>DB 에서</b> 센다(R-18). {@link #incrementPublishCount}와 같은 이유로 읽어서 더하지 않는다 — 같은\n+     * 실행의 메시지 둘이 동시에 DLQ 로 가면 증가 하나를 잃고, 그러면 종결 판정이 영영 서지 않아 실행이 RUNNING 으로 남는다.\n+     */\n+    @Modifying(clearAutomatically = true, flushAutomatically = true)\n+    @Query(\"update BacktestRunJpaEntity r set r.dlqCount = r.dlqCount + 1 where r.id = :id\")\n+    int incrementDlqCount(@Param(\"id\") Long id);\n+\n     /** 이벤트 처리: 상태 전이를 취소와 같은 행 잠금으로 직렬화한다(R-04). */\n     @Lock(LockModeType.PESSIMISTIC_WRITE)\n     @Query(\"select r from BacktestRunJpaEntity r where r.backtestId = :backtestId\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -139,6 +139,30 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {\n         jpaRepository.incrementPublishCount(runId);\n     }\n \n+    /**\n+     * 시도 기록을 먼저 넣고, <b>그 INSERT 가 실제로 들어갔을 때만</b> 카운터를 올린다. PK {@code (run_id, attempt)} 가 중복을 막으므로\n+     * {@code ON CONFLICT DO NOTHING} 의 반환값이 곧 \"처음 세는가\"다.\n+     *\n+     * <p>엔티티를 두지 않고 native 로 쓴다 — 이 표는 객체로 읽는 곳이 없고 {@code ON CONFLICT} 는 JPQL 로 표현할 수 없다.\n+     */\n+    @Override\n+    public boolean recordDeadLetter(Long runId, int attempt, Instant at) {\n+        int inserted =\n+                entityManager\n+                        .createNativeQuery(\n+                                \"INSERT INTO backtest_run_dlq_attempt (run_id, attempt, at)\"\n+                                        + \" VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING\")\n+                        .setParameter(1, runId)\n+                        .setParameter(2, attempt)\n+                        .setParameter(3, at)\n+                        .executeUpdate();\n+        if (inserted == 0) {\n+            return false;\n+        }\n+        jpaRepository.incrementDlqCount(runId);\n+        return true;\n+    }\n+\n     @Override\n     public void recordPublished(Long runId, Instant at) {\n         jpaRepository.markPublished(runId, at);\n@@ -154,6 +178,25 @@ public class BacktestRunRepositoryImpl implements BacktestRunRepository {\n         return jpaRepository.findByBacktestId(backtestId).map(BacktestRunMapper::toDomain);\n     }\n \n+    /**\n+     * {@code pg_advisory_xact_lock(bigint)}. 잠금 식별자는 동일 버전 키(SHA-256 hex 64자)의 앞 16자를 그대로 읽은 값이다 —\n+     * 키 자체가 고르게 퍼진 해시라 다시 해싱할 이유가 없고, 앞 64비트만 봐도 충돌은 실질적으로 없다. 설령 충돌해도 관계없는 두 조건의 접수가 잠깐 줄을 설 뿐이라\n+     * 답이 달라지지 않는다.\n+     *\n+     * <p>{@code hashtext()} 를 쓰지 않는다 — 문서화되지 않은 내부 함수라 판 올림에 값이 바뀔 수 있다.\n+     */\n+    @Override\n+    public void lockDedupKey(String dedupKey) {\n+        entityManager\n+                .createNativeQuery(\"SELECT pg_advisory_xact_lock(?1)\")\n+                .setParameter(1, lockIdOf(dedupKey))\n+                .getSingleResult();\n+    }\n+\n+    private static long lockIdOf(String dedupKey) {\n+        return Long.parseUnsignedLong(dedupKey.substring(0, 16), 16);\n+    }\n+\n     @Override\n     public Optional<BacktestRun> findActiveByDedupKey(String dedupKey) {\n         if (dedupKey == null) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.application.service.BacktestCancelService;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n+import com.ssafy.thorp.backtest.application.service.BacktestRetryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.presentation.request.BacktestJobRequest;\n@@ -22,6 +23,7 @@ import com.ssafy.thorp.backtest.presentation.response.BacktestDetailResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestExceptionsResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestJobResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestPositionsResponse;\n+import com.ssafy.thorp.backtest.presentation.response.BacktestRetryResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestTimeseriesResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestTradePageResponse;\n import com.ssafy.thorp.backtest.presentation.response.BacktestWeightsResponse;\n@@ -57,16 +59,19 @@ public class BacktestController {\n     private final BacktestService backtestService;\n     private final BacktestResultQueryService queryService;\n     private final BacktestCancelService cancelService;\n+    private final BacktestRetryService retryService;\n     private final CurrentRequester currentRequester;\n \n     public BacktestController(\n             BacktestService backtestService,\n             BacktestResultQueryService queryService,\n             BacktestCancelService cancelService,\n+            BacktestRetryService retryService,\n             CurrentRequester currentRequester) {\n         this.backtestService = backtestService;\n         this.queryService = queryService;\n         this.cancelService = cancelService;\n+        this.retryService = retryService;\n         this.currentRequester = currentRequester;\n     }\n \n@@ -83,6 +88,16 @@ public class BacktestController {\n                 .body(ApiResponse.ok(BacktestCancelResponse.from(result)));\n     }\n \n+    /** 실패·취소한 분석을 같은 조건으로 다시 접수한다. 재시도도 동일 버전 판정을 받으므로 합류·재사용이 될 수 있다(T010). */\n+    @PostMapping(\"/{backtestId}/retry\")\n+    public ResponseEntity<ApiResponse<BacktestRetryResponse>> retry(\n+            @PathVariable String backtestId, HttpServletRequest http) {\n+        BacktestJobResult result =\n+                retryService.retry(backtestId, currentRequester.requireRequesterId(http));\n+        return ResponseEntity.status(HttpStatus.ACCEPTED)\n+                .body(ApiResponse.ok(BacktestRetryResponse.from(result)));\n+    }\n+\n     @PostMapping\n     public ResponseEntity<ApiResponse<BacktestJobResponse>> create(\n             @Valid @RequestBody BacktestJobRequest request, HttpServletRequest http) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/controller/BacktestController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,24 @@\n+package com.ssafy.thorp.backtest.presentation.response;\n+\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+\n+/**\n+ * {@code POST /backtests/{backtestId}/retry} 202 응답(spec 004 T010).\n+ *\n+ * <p>접수 202({@link BacktestJobResponse})와 나눠 둔다 — 재시도에만 있는 {@code retryOf} 때문에 접수 응답에 영원히 null 인 칸을\n+ * 만들면 그 계약이 바뀐다.\n+ *\n+ * @param backtestId 새로 만들어진 <b>요청</b>의 식별자. 원본과 다르다\n+ * @param resultSource 재시도도 동일 버전 판정을 받는다 — 그 사이 같은 조건이 돌고 있으면 {@code JOINED} 다\n+ * @param retryOf 원본 요청의 식별자\n+ */\n+public record BacktestRetryResponse(\n+        String backtestId, RunStatus status, ResultSource resultSource, String retryOf) {\n+\n+    public static BacktestRetryResponse from(BacktestJobResult result) {\n+        return new BacktestRetryResponse(\n+                result.backtestId(), result.status(), result.resultSource(), result.retryOf());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestRetryResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestRetryResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+-- 재사용·합류 기록. spec 004 T010(Jira S15P21E205-148), data-model.md §backtest_reuse_event, FR-008.\n+--\n+-- 같은 조건의 요청이 새 계산을 만들지 않고 진행 중 실행에 합류(JOINED)하거나 완료된 실행의 결과를\n+-- 재사용(REUSED)한 사실을 한 줄씩 남긴다. 원가·운영 지표에서 \"새로 계산한 실행\"과 \"아낀 요청\"을 가르는\n+-- 근거다 — T012 의 v_run_metric_summary 가 이 표를 조인해 reuse_count 를 센다.\n+--\n+-- 요청 행의 result_source 로 대신하지 않는 이유: 그 값은 요청의 현재 상태이고, 이 표는 접수 시점에\n+-- 무슨 판단이 있었는지에 대한 기록이다. 둘을 한 컬럼에 겹쳐 두면 나중에 상태가 바뀌었을 때 과거의\n+-- 판단을 되짚을 수 없다.\n+--\n+-- 추가만 하고 고치지 않는다(append-only). 그래서 updated_at 을 두지 않고 발생 시각 at 하나만 둔다.\n+\n+CREATE SEQUENCE backtest_reuse_event_seq START WITH 1 INCREMENT BY 1;\n+\n+CREATE TABLE backtest_reuse_event (\n+    id                     BIGINT                   NOT NULL PRIMARY KEY,\n+    run_id                 BIGINT                   NOT NULL REFERENCES backtest_run (id),\n+    request_id             BIGINT                   NOT NULL REFERENCES backtest_request (id),\n+    kind                   VARCHAR(10)              NOT NULL,\n+    request_execution_type VARCHAR(20)              NOT NULL,\n+    at                     TIMESTAMP WITH TIME ZONE NOT NULL,\n+    -- NEW 는 이 표에 오지 않는다. 새 계산은 실행 행 자체가 기록이다.\n+    CONSTRAINT ck_backtest_reuse_event_kind\n+        CHECK (kind IN ('JOINED', 'REUSED'))\n+);\n+\n+COMMENT ON TABLE backtest_reuse_event IS\n+    '같은 조건의 요청이 합류(JOINED)하거나 결과를 재사용(REUSED)한 기록(FR-008). append-only';\n+COMMENT ON COLUMN backtest_reuse_event.request_execution_type IS\n+    '접수 시점 요청의 execution_type. 요청 행과 조인하지 않고도 종류별로 셀 수 있게 복사해 둔다';\n+COMMENT ON COLUMN backtest_reuse_event.at IS '접수가 재사용·합류로 판단한 시각';\n+\n+-- 한 요청은 많아야 한 번 재사용·합류한다. 중복 기록은 reuse_count 를 부풀리므로 DB 가 막는다.\n+CREATE UNIQUE INDEX uk_backtest_reuse_event_request ON backtest_reuse_event (request_id);\n+CREATE INDEX idx_backtest_reuse_event_run ON backtest_reuse_event (run_id);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260914120000__backtest_reuse_event.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260914120000__backtest_reuse_event.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,28 @@\n+-- DLQ 로 끝난 발행 시도의 기록. spec 004 T010(Jira S15P21E205-148), R-18 ③.\n+--\n+-- DLQ 소비는 at-least-once 다 — dlq_count 를 올리고 커밋한 뒤 ACK 이 유실되면 브로커가 같은 메시지를\n+-- 다시 준다. 같은 메시지를 두 번 세면 살아 있는 작업이 남았는데도 dlq_count >= publish_count 가 서서\n+-- 실행이 잘못 FAILED 로 끝난다.\n+--\n+-- 그래서 \"무엇을 세었는지\"를 남긴다. 발행 시도마다 번호가 있고(publish_count 는 시도 직전에 오르므로\n+-- 그때의 값이 그 시도의 번호다) 발행기가 그 번호를 메시지에 실어 보내므로, (run_id, attempt) 가 죽은\n+-- 메시지 하나를 정확히 가리킨다. PK 가 중복을 막고 INSERT 의 성공 여부가 곧 \"처음 세는가\"다.\n+--\n+-- 비트마스크 한 컬럼으로 줄이지 않은 이유: 재발행기(JobRepublisher)는 브로커가 돌아올 때까지 30초마다\n+-- 다시 보내므로 publish_count 에 상한이 없다. 64를 넘는 순간 조용히 틀리는 구조를 만들지 않는다.\n+--\n+-- 추가만 하고 고치지 않는다. 실행이 지워지면 함께 지운다(ON DELETE CASCADE) — 이 기록만 남아 있어 봐야\n+-- 가리킬 실행이 없다.\n+\n+CREATE TABLE backtest_run_dlq_attempt (\n+    run_id  BIGINT                   NOT NULL REFERENCES backtest_run (id) ON DELETE CASCADE,\n+    attempt INTEGER                  NOT NULL,\n+    at      TIMESTAMP WITH TIME ZONE NOT NULL,\n+    PRIMARY KEY (run_id, attempt),\n+    CONSTRAINT ck_backtest_run_dlq_attempt_positive CHECK (attempt >= 1)\n+);\n+\n+COMMENT ON TABLE backtest_run_dlq_attempt IS\n+    'DLQ 로 끝난 발행 시도(run_id, attempt). 같은 메시지를 두 번 세지 않기 위한 기록(R-18 ③)';\n+COMMENT ON COLUMN backtest_run_dlq_attempt.attempt IS\n+    '그 메시지를 보낼 때의 backtest_run.publish_count. 발행기가 publishAttempt 헤더로 실어 보낸다';\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260914140000__backtest_run_dlq_attempt.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260914140000__backtest_run_dlq_attempt.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,182 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.Callable;\n+import java.util.concurrent.CountDownLatch;\n+import java.util.concurrent.ExecutorService;\n+import java.util.concurrent.Executors;\n+import java.util.concurrent.Future;\n+import java.util.concurrent.TimeUnit;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/**\n+ * 동일 버전 재사용·합류 기록(spec 004 T010, FR-008). 실제 DB 로 \"요청 둘이 실행 하나를 공유하고 재사용 기록이 하나 남는다\"를 고정한다.\n+ *\n+ * <p>브로커는 띄우지 않는다 — 합류·재사용은 <b>발행하지 않는 것</b>이 요점이라 발행 경로를 탈 일이 없다. 접수 자체는 커밋 뒤 발행이므로 브로커가 없어도 202\n+ * 다(T005 {@code BacktestPublishAfterCommitIT}).\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class BacktestDedupIT extends PostgresTestSupport {\n+\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private BacktestRequestRepository requestRepository;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private long newUser(String tag) {\n+        String suffix = tag + (System.nanoTime() % 1_000_000_000L);\n+        String email = \"dedup-\" + suffix + \"@example.com\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"u\" + suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    /**\n+     * 같은 본문. 요청자만 다르므로 동일 버전 키가 같아야 한다.\n+     *\n+     * <p><b>기간은 다른 IT와 겹치지 않게 둔다.</b> PostgreSQL 컨테이너를 스위트가 공유하므로, 본문이 같으면 동일 버전 키도 같아서 다른 IT가 만든\n+     * 실행에 이 요청이 합류한다(그게 이 기능의 정상 동작이다). 그러면 두 테스트가 한 실행을 나눠 갖고 서로의 요청 수를 센다 — 실제로 {@code\n+     * BacktestCancelFlowIT} 와 겹쳐 깨졌다.\n+     */\n+    private static CreateBacktestCommand sameRequest(long requesterId) {\n+        return requestOver(requesterId, LocalDate.of(2024, 3, 4), LocalDate.of(2024, 10, 31));\n+    }\n+\n+    /** 동시 접수 테스트는 또 다른 기간을 쓴다 — 위 테스트의 실행에 합류하면 경합이 일어나지 않는다. */\n+    private static CreateBacktestCommand concurrentRequest(long requesterId) {\n+        return requestOver(requesterId, LocalDate.of(2024, 4, 1), LocalDate.of(2024, 9, 30));\n+    }\n+\n+    private static CreateBacktestCommand requestOver(\n+            long requesterId, LocalDate start, LocalDate end) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                \"PARAM-2026-09\",\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                start,\n+                end,\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+\n+    private int reuseEventCount(Long runId) {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT count(*) FROM backtest_reuse_event WHERE run_id = ?\", Integer.class, runId);\n+    }\n+\n+    @Test\n+    @DisplayName(\"두 사용자가 같은 본문을 보내면 실행 1·요청 2·재사용 기록 1이다 (FR-008)\")\n+    void twoRequestsShareOneRunAndRecordOneReuse() {\n+        long first = newUser(\"a\");\n+        long second = newUser(\"b\");\n+\n+        BacktestJobResult created = backtestService.create(sameRequest(first));\n+        BacktestJobResult joined = backtestService.create(sameRequest(second));\n+\n+        assertThat(created.resultSource()).isEqualTo(ResultSource.NEW);\n+        assertThat(joined.resultSource()).isEqualTo(ResultSource.JOINED);\n+        assertThat(joined.backtestId()).isNotEqualTo(created.backtestId());\n+\n+        Long runId =\n+                requestRepository.findByBacktestId(created.backtestId()).orElseThrow().getRunId();\n+        assertThat(requestRepository.findByBacktestId(joined.backtestId()).orElseThrow().getRunId())\n+                .isEqualTo(runId);\n+        assertThat(requestRepository.findByRunId(runId)).hasSize(2);\n+        // 새로 계산한 첫 요청은 기록하지 않는다 — 실행 행 자체가 그 기록이다.\n+        assertThat(reuseEventCount(runId)).isEqualTo(1);\n+\n+        Map<String, Object> event =\n+                jdbcTemplate.queryForMap(\n+                        \"SELECT kind, request_execution_type, at FROM backtest_reuse_event\"\n+                                + \" WHERE run_id = ?\",\n+                        runId);\n+        assertThat(event.get(\"kind\")).isEqualTo(\"JOINED\");\n+        assertThat(event.get(\"request_execution_type\")).isEqualTo(\"SINGLE\");\n+        assertThat(event.get(\"at\")).isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 본문이 동시에 접수돼도 실행은 하나다 — 둘 다 INSERT 해서 부분 유니크 인덱스에 걸리지 않는다\")\n+    void concurrentIntakeOfTheSameRequestCreatesOneRun() throws Exception {\n+        long first = newUser(\"c\");\n+        long second = newUser(\"d\");\n+\n+        CountDownLatch go = new CountDownLatch(1);\n+        ExecutorService pool = Executors.newFixedThreadPool(2);\n+        BacktestJobResult one;\n+        BacktestJobResult two;\n+        try {\n+            Callable<BacktestJobResult> intakeFirst =\n+                    () -> {\n+                        go.await();\n+                        return backtestService.create(concurrentRequest(first));\n+                    };\n+            Callable<BacktestJobResult> intakeSecond =\n+                    () -> {\n+                        go.await();\n+                        return backtestService.create(concurrentRequest(second));\n+                    };\n+            Future<BacktestJobResult> a = pool.submit(intakeFirst);\n+            Future<BacktestJobResult> b = pool.submit(intakeSecond);\n+            go.countDown();\n+            // 잠그지 않으면 둘 중 하나가 DataIntegrityViolationException 으로 끝난다.\n+            one = a.get(30, TimeUnit.SECONDS);\n+            two = b.get(30, TimeUnit.SECONDS);\n+        } finally {\n+            pool.shutdownNow();\n+        }\n+\n+        Long runId = requestRepository.findByBacktestId(one.backtestId()).orElseThrow().getRunId();\n+        assertThat(requestRepository.findByBacktestId(two.backtestId()).orElseThrow().getRunId())\n+                .isEqualTo(runId);\n+        // 하나는 새로 만들고 하나는 합류한다 — 어느 쪽이 먼저인지는 정하지 않는다.\n+        assertThat(List.of(one.resultSource(), two.resultSource()))\n+                .containsExactlyInAnyOrder(ResultSource.NEW, ResultSource.JOINED);\n+        assertThat(requestRepository.findByRunId(runId)).hasSize(2);\n+        assertThat(reuseEventCount(runId)).isEqualTo(1);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestDedupIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestDedupIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,8 @@ package com.ssafy.thorp.backtest.application.service;\n \n import static org.assertj.core.api.Assertions.assertThat;\n import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.anyInt;\n+import static org.mockito.ArgumentMatchers.eq;\n import static org.mockito.Mockito.never;\n import static org.mockito.Mockito.verify;\n import static org.mockito.Mockito.verifyNoInteractions;\n@@ -279,6 +281,89 @@ class BacktestEventServiceTest {\n         verify(events).publishEvent(new BacktestCancelDispatcher.CancelRequested(BACKTEST_ID));\n     }\n \n+    /** 발행 시도·DLQ 횟수를 지정한 실행. 종결 판정은 이 둘의 비교다(R-18 ③). */\n+    private BacktestRun givenDeadLetterCounts(RunStatus status, int publishCount, int dlqCount) {\n+        RunLifecycle lifecycle =\n+                new RunLifecycle(\n+                        Instant.parse(\"2026-09-11T04:00:00Z\"),\n+                        null,\n+                        null,\n+                        null,\n+                        publishCount,\n+                        dlqCount,\n+                        null);\n+        BacktestRun job = jobIn(status).withLifecycle(lifecycle);\n+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.of(job));\n+        when(jobRepository.findById(1L)).thenReturn(Optional.of(job));\n+        when(jobRepository.recordDeadLetter(eq(1L), anyInt(), any())).thenReturn(true);\n+        return job;\n+    }\n+\n+    @Test\n+    @DisplayName(\"DLQ: 발행한 메시지가 모두 죽었으면 실행을 FAILED(SYSTEM_FAILURE)로 끝낸다\")\n+    void deadLetterFinishesTheRunWhenEveryMessageDied() {\n+        givenDeadLetterCounts(RunStatus.RUNNING, 1, 1);\n+\n+        service.handleDeadLetter(BACKTEST_ID, 1);\n+\n+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());\n+        BacktestRun updated = updatedJob();\n+        assertThat(updated.getStatus()).isEqualTo(RunStatus.FAILED);\n+        assertThat(updated.getFailureCode()).isEqualTo(\"SYSTEM_FAILURE\");\n+        assertThat(updated.getLifecycle().finishedAt()).isEqualTo(clock.instant());\n+        // 결과 행은 만들지 않는다 — 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다.\n+        verifyNoInteractions(resultRepository);\n+    }\n+\n+    @Test\n+    @DisplayName(\"DLQ: 아직 살아 있는 메시지가 있으면 세기만 하고 실행을 끊지 않는다 — 중복 실행의 한쪽만 죽은 경우다\")\n+    void deadLetterOnlyCountsWhileAnotherMessageMayRun() {\n+        givenDeadLetterCounts(RunStatus.RUNNING, 2, 1);\n+\n+        service.handleDeadLetter(BACKTEST_ID, 1);\n+\n+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());\n+        verify(jobRepository, never()).update(any());\n+        verify(events, never()).publishEvent(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"DLQ: 이미 끝난 실행이면 세기만 하고 상태를 건드리지 않는다\")\n+    void deadLetterOnAFinishedRunChangesNothing() {\n+        givenDeadLetterCounts(RunStatus.COMPLETED, 1, 1);\n+\n+        service.handleDeadLetter(BACKTEST_ID, 1);\n+\n+        verify(jobRepository).recordDeadLetter(1L, 1, clock.instant());\n+        verify(jobRepository, never()).update(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"DLQ: 이미 센 시도의 재전달이면 아무것도 하지 않는다 — 두 번 세면 살아 있는 실행을 끊는다\")\n+    void deadLetterIgnoresAnAlreadyCountedAttempt() {\n+        // 셈이 이미 끝난 시도라 저장소가 false 를 준다. 그 뒤로는 아무것도 읽지도 쓰지도 않는다.\n+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID))\n+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING)));\n+        when(jobRepository.recordDeadLetter(eq(1L), anyInt(), any())).thenReturn(false);\n+\n+        service.handleDeadLetter(BACKTEST_ID, 1);\n+\n+        verify(jobRepository, never()).findById(any());\n+        verify(jobRepository, never()).update(any());\n+        verify(events, never()).publishEvent(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"DLQ: 모르는 runId 는 로그만 남기고 버린다\")\n+    void deadLetterForAnUnknownRunIsDropped() {\n+        when(jobRepository.findByBacktestIdForUpdate(BACKTEST_ID)).thenReturn(Optional.empty());\n+\n+        service.handleDeadLetter(BACKTEST_ID, 1);\n+\n+        verify(jobRepository, never()).recordDeadLetter(any(), anyInt(), any());\n+        verify(jobRepository, never()).update(any());\n+    }\n+\n     @Test\n     @DisplayName(\"FINISHED(FAILED): 결과(오류 포함)를 저장하고 Job을 FAILED로 갱신한다\")\n     void finishedFailedSavesResultAndFails() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,8 @@ package com.ssafy.thorp.backtest.application.service;\n \n import static org.assertj.core.api.Assertions.assertThatCode;\n import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.anyInt;\n+import static org.mockito.ArgumentMatchers.eq;\n import static org.mockito.Mockito.doThrow;\n import static org.mockito.Mockito.mock;\n import static org.mockito.Mockito.never;\n@@ -13,6 +15,7 @@ import com.ssafy.thorp.backtest.application.port.message.EngineInput;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.model.RunLifecycle;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n@@ -91,14 +94,52 @@ class BacktestJobDispatcherTest {\n                 RunStatus.QUEUED);\n     }\n \n+    /** 발행 시도 횟수를 지정한 실행. 재발행기가 올려 둔 상태를 흉내 낸다. */\n+    private static BacktestRun runWithPublishCount(int publishCount) {\n+        RunLifecycle lifecycle = RunLifecycle.queuedAt(NOW);\n+        for (int i = 0; i < publishCount; i++) {\n+            lifecycle = lifecycle.publishAttempted();\n+        }\n+        return run().withLifecycle(lifecycle);\n+    }\n+\n+    @Test\n+    @DisplayName(\"최초 발행은 접수가 확보한 시도 번호를 쓴다 — 늦어진 사이 재발행기가 올려 둔 값을 따라가지 않는다\")\n+    void theFirstPublishKeepsItsOwnAttemptNumber() {\n+        // 접수는 1을 확보했는데 콜백이 늦어졌고, 그 사이 재발행기가 2로 올려 시도 2를 이미 보냈다.\n+        // 여기서 DB 의 최신값(2)을 읽으면 서로 다른 두 메시지가 같은 번호를 달고, DLQ 집계가 둘을\n+        // 한 건으로 접어 dlq_count < publish_count 로 남는다 — 종결 판정이 영영 서지 않는다.\n+        when(repository.findById(11L)).thenReturn(Optional.of(runWithPublishCount(2)));\n+        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));\n+\n+        dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L, 1));\n+\n+        verify(publisher).publish(any(), eq(1));\n+    }\n+\n+    @Test\n+    @DisplayName(\"재발행은 자기가 올린 번호를 쓴다\")\n+    void republishUsesTheNumberItClaimed() {\n+        when(repository.findById(11L)).thenReturn(Optional.of(runWithPublishCount(2)));\n+        when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));\n+\n+        dispatcher.republish(11L);\n+\n+        verify(repository).recordPublishAttempt(11L);\n+        verify(publisher).publish(any(), eq(2));\n+    }\n+\n     @Test\n     @DisplayName(\"발행에 실패해도 접수 쪽으로 예외가 나가지 않는다\")\n     void publishFailureDoesNotEscape() {\n         when(repository.findById(11L)).thenReturn(Optional.of(run()));\n         when(assembler.assemble(any())).thenReturn(mock(EngineInput.class));\n-        doThrow(new AmqpException(\"broker down\")).when(publisher).publish(any());\n+        doThrow(new AmqpException(\"broker down\")).when(publisher).publish(any(), anyInt());\n \n-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))\n+        assertThatCode(\n+                        () ->\n+                                dispatcher.onRunAccepted(\n+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))\n                 .doesNotThrowAnyException();\n         verify(repository, never()).recordPublished(any(), any());\n     }\n@@ -112,9 +153,12 @@ class BacktestJobDispatcherTest {\n                 .when(repository)\n                 .recordPublished(any(), any());\n \n-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))\n+        assertThatCode(\n+                        () ->\n+                                dispatcher.onRunAccepted(\n+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))\n                 .doesNotThrowAnyException();\n-        verify(publisher).publish(any());\n+        verify(publisher).publish(any(), anyInt());\n     }\n \n     @Test\n@@ -122,9 +166,12 @@ class BacktestJobDispatcherTest {\n     void lookupFailureDoesNotEscape() {\n         when(repository.findById(11L)).thenThrow(new DataAccessResourceFailureException(\"db down\"));\n \n-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))\n+        assertThatCode(\n+                        () ->\n+                                dispatcher.onRunAccepted(\n+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))\n                 .doesNotThrowAnyException();\n-        verify(publisher, never()).publish(any());\n+        verify(publisher, never()).publish(any(), anyInt());\n     }\n \n     @Test\n@@ -132,8 +179,11 @@ class BacktestJobDispatcherTest {\n     void unknownRunIsSkipped() {\n         when(repository.findById(11L)).thenReturn(Optional.empty());\n \n-        assertThatCode(() -> dispatcher.onRunAccepted(new BacktestJobDispatcher.RunAccepted(11L)))\n+        assertThatCode(\n+                        () ->\n+                                dispatcher.onRunAccepted(\n+                                        new BacktestJobDispatcher.RunAccepted(11L, 1)))\n                 .doesNotThrowAnyException();\n-        verify(publisher, never()).publish(any());\n+        verify(publisher, never()).publish(any(), anyInt());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcherTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestJobDispatcherTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -330,6 +330,27 @@ class BacktestResultQueryServiceTest {\n         assertThat(result.progress().totalTradingDays()).isEqualTo(120);\n     }\n \n+    @Test\n+    @DisplayName(\"워커 산출물 없이 끊긴 FAILED(DLQ 종결)는 500 이 아니라 실행 행의 실패 사유를 보여 준다\")\n+    void failedWithoutResultRowShowsTheRunFailure() {\n+        when(requestRepository.findByBacktestId(BACKTEST_ID))\n+                .thenReturn(Optional.of(requestFor(REQUESTER)));\n+        when(jobRepository.findById(JOB_ID))\n+                .thenReturn(\n+                        Optional.of(\n+                                jobIn(RunStatus.RUNNING)\n+                                        .markFailed(\n+                                                \"SYSTEM_FAILURE\", \"작업 메시지가 모두 처리되지 못했습니다(DLQ).\")));\n+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.empty());\n+\n+        BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);\n+\n+        assertThat(result.status()).isEqualTo(RunStatus.FAILED);\n+        assertThat(result.failure().code()).isEqualTo(\"SYSTEM_FAILURE\");\n+        assertThat(result.summary()).isNull();\n+        assertThat(result.partial()).isFalse();\n+    }\n+\n     @Test\n     @DisplayName(\"진행 거래일이 있는 CANCELLED 인데 결과 행이 없으면 결과 유실(500)이다 — 실행 전 취소로 숨기지 않는다\")\n     void cancelledWithProgressButNoResultRowIsCorruption() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,161 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 재시도(spec 004 T010). 실제 DB 로 \"저장된 요청 사본이 같은 조건을 되살리는가\"를 고정한다.\n+ *\n+ * <p>핵심 단언은 <b>동일 버전 키가 같다</b>는 것이다. 사본은 JSONB 로 저장되면서 decimal 이 문자열이 되므로, 한 칸이라도 잘못 읽으면 키가 달라진다 —\n+ * 키가 같다는 것은 결과 숫자를 바꾸는 값이 전부 제대로 왕복했다는 뜻이다(R-03).\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class BacktestRetryIT extends PostgresTestSupport {\n+\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private BacktestRetryService retryService;\n+    @Autowired private BacktestRequestRepository requestRepository;\n+    @Autowired private BacktestRunRepository runRepository;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    private long newUser(String tag) {\n+        String suffix = tag + (System.nanoTime() % 1_000_000_000L);\n+        String email = \"retry-\" + suffix + \"@example.com\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"u\" + suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    /** 다른 IT 와 겹치지 않는 기간을 쓴다 — 본문이 같으면 저쪽 실행에 합류해 버린다. */\n+    private static CreateBacktestCommand request(long requesterId) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                \"PARAM-2026-09\",\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                LocalDate.of(2024, 5, 2),\n+                LocalDate.of(2024, 8, 30),\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+\n+    private String dedupKeyOf(Long runId) {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT dedup_key FROM backtest_run WHERE id = ?\", String.class, runId);\n+    }\n+\n+    private Long runIdOf(String backtestId) {\n+        return requestRepository.findByBacktestId(backtestId).orElseThrow().getRunId();\n+    }\n+\n+    /** 워커 없이 실행을 실패로 끝낸다. */\n+    private void failRun(Long runId) {\n+        transactionTemplate.executeWithoutResult(\n+                status -> {\n+                    BacktestRun run = runRepository.findById(runId).orElseThrow();\n+                    BacktestRun failed = run.markFailed(\"SYSTEM_FAILURE\", \"worker gone\");\n+                    runRepository.update(\n+                            failed.withLifecycle(failed.getLifecycle().finished(Instant.now())));\n+                });\n+    }\n+\n+    @Test\n+    @DisplayName(\"실패한 분석을 재시도하면 같은 조건의 새 실행이 생기고 원본을 가리킨다\")\n+    void retryRecreatesTheSameConditions() {\n+        long user = newUser(\"a\");\n+        BacktestJobResult original = backtestService.create(request(user));\n+        Long originalRunId = runIdOf(original.backtestId());\n+        failRun(originalRunId);\n+\n+        BacktestJobResult retried = retryService.retry(original.backtestId(), user);\n+\n+        assertThat(retried.retryOf()).isEqualTo(original.backtestId());\n+        assertThat(retried.backtestId()).isNotEqualTo(original.backtestId());\n+        assertThat(retried.resultSource()).isEqualTo(ResultSource.NEW);\n+\n+        Long retriedRunId = runIdOf(retried.backtestId());\n+        assertThat(retriedRunId).isNotEqualTo(originalRunId);\n+        // 사본이 JSONB 를 왕복해도 결과를 바꾸는 값은 하나도 새지 않았다.\n+        assertThat(dedupKeyOf(retriedRunId)).isEqualTo(dedupKeyOf(originalRunId));\n+        // 실효 기간도 같은 값으로 다시 확정된다(워밍업이 그대로 왕복했다는 뜻이다).\n+        assertThat(retried.effectiveStart()).isEqualTo(original.effectiveStart());\n+        assertThat(retried.effectiveEnd()).isEqualTo(original.effectiveEnd());\n+\n+        BacktestRequest saved =\n+                requestRepository.findByBacktestId(retried.backtestId()).orElseThrow();\n+        assertThat(saved.getRetryOfRequestId())\n+                .isEqualTo(\n+                        requestRepository\n+                                .findByBacktestId(original.backtestId())\n+                                .orElseThrow()\n+                                .getId());\n+    }\n+\n+    @Test\n+    @DisplayName(\"아직 돌고 있는 분석은 409 NOT_RETRYABLE 이다\")\n+    void refusesToRetryARunningRequest() {\n+        long user = newUser(\"b\");\n+        BacktestJobResult accepted = backtestService.create(request(user));\n+\n+        assertThatThrownBy(() -> retryService.retry(accepted.backtestId(), user))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.NOT_RETRYABLE);\n+        assertThat(runRepository.findById(runIdOf(accepted.backtestId())).orElseThrow().getStatus())\n+                .isEqualTo(RunStatus.QUEUED);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,194 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.eq;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.backtest.domain.model.RunPlan;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.EnumSource;\n+import org.mockito.ArgumentCaptor;\n+\n+/** 재시도 유스케이스(T010). 접수를 다시 태우는 것이 핵심이라 {@link BacktestService}는 목으로 두고 \"무엇을 넘겼는가\"를 본다. */\n+class BacktestRetryServiceTest {\n+\n+    private static final String BACKTEST_ID = \"BT-20260914-000021\";\n+    private static final long REQUESTER = 7L;\n+    private static final long OTHER = 8L;\n+    private static final Long REQUEST_ID = 21L;\n+    private static final Long RUN_ID = 11L;\n+    private static final String COST_PROFILE = \"COST-2026-09\";\n+\n+    private final BacktestService backtestService = mock(BacktestService.class);\n+    private final BacktestRequestRepository requestRepository =\n+            mock(BacktestRequestRepository.class);\n+    private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);\n+\n+    private final BacktestRetryService service =\n+            new BacktestRetryService(backtestService, requestRepository, runRepository);\n+\n+    private static CreateBacktestCommand original() {\n+        return new CreateBacktestCommand(\n+                REQUESTER,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                \"PARAM-2026-09\",\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                LocalDate.of(2024, 1, 2),\n+                LocalDate.of(2024, 12, 31),\n+                new BigDecimal(\"10000000.00\"),\n+                COST_PROFILE,\n+                \"SPLIT-1\",\n+                63,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+\n+    private static BacktestRun runIn(RunStatus status) {\n+        BacktestRun run =\n+                BacktestRun.restore(\n+                        RUN_ID,\n+                        BacktestId.from(\"BT-20260914-000011\"),\n+                        \"FIXED_WEIGHT\",\n+                        \"1\",\n+                        Map.of(\"rebalance\", \"MONTH_END\"),\n+                        List.of(new InstrumentId(\"091160.XKRX\")),\n+                        new BacktestPeriod(LocalDate.of(2024, 1, 2), LocalDate.of(2024, 12, 31)),\n+                        new BigDecimal(\"10000000.00\"),\n+                        PositionSizingMode.STRATEGY_DEFINED,\n+                        null,\n+                        null,\n+                        42,\n+                        status);\n+        return run.withPlan(\n+                new RunPlan(\n+                        \"dedup\",\n+                        \"1\",\n+                        COST_PROFILE,\n+                        \"DATA-1\",\n+                        LocalDate.of(2024, 4, 1),\n+                        LocalDate.of(2024, 12, 31),\n+                        63,\n+                        RequestSpecCodec.write(original(), Scenario.FULL_PERIOD, 63),\n+                        Map.of()));\n+    }\n+\n+    private static BacktestRequest requestOf(long requesterId, Instant cancelledAt) {\n+        return BacktestRequest.restore(\n+                REQUEST_ID,\n+                BacktestId.from(BACKTEST_ID),\n+                RUN_ID,\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                ResultSource.NEW,\n+                null,\n+                cancelledAt,\n+                null,\n+                cancelledAt != null);\n+    }\n+\n+    private void given(BacktestRequest request, RunStatus runStatus) {\n+        when(requestRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(request));\n+        when(runRepository.findById(RUN_ID)).thenReturn(Optional.of(runIn(runStatus)));\n+    }\n+\n+    private void givenCreateReturnsNew() {\n+        when(backtestService.create(any(), any()))\n+                .thenReturn(\n+                        new BacktestJobResult(\n+                                \"BT-20260914-000031\",\n+                                RunStatus.QUEUED,\n+                                ResultSource.NEW,\n+                                LocalDate.of(2024, 4, 1),\n+                                LocalDate.of(2024, 12, 31),\n+                                Map.of(),\n+                                null));\n+    }\n+\n+    @Test\n+    @DisplayName(\"실패한 요청을 재시도하면 저장된 사본으로 접수를 다시 타고 원본 id 를 남긴다\")\n+    void retriesAFailedRequest() {\n+        given(requestOf(REQUESTER, null), RunStatus.FAILED);\n+        givenCreateReturnsNew();\n+\n+        BacktestJobResult result = service.retry(BACKTEST_ID, REQUESTER);\n+\n+        ArgumentCaptor<CreateBacktestCommand> captor =\n+                ArgumentCaptor.forClass(CreateBacktestCommand.class);\n+        verify(backtestService).create(captor.capture(), eq(REQUEST_ID));\n+        assertThat(captor.getValue()).isEqualTo(original());\n+        assertThat(result.retryOf()).isEqualTo(BACKTEST_ID);\n+        assertThat(result.backtestId()).isEqualTo(\"BT-20260914-000031\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"실행은 돌고 있어도 이 요청이 취소됐으면 재시도할 수 있다 — 판정은 요청 기준 상태다\")\n+    void retriesACancelledRequestWhileTheRunContinues() {\n+        given(requestOf(REQUESTER, Instant.parse(\"2026-09-14T01:00:00Z\")), RunStatus.RUNNING);\n+        givenCreateReturnsNew();\n+\n+        assertThat(service.retry(BACKTEST_ID, REQUESTER).retryOf()).isEqualTo(BACKTEST_ID);\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = RunStatus.class,\n+            names = {\"QUEUED\", \"RUNNING\", \"COMPLETED\"})\n+    @DisplayName(\"끝나지 않았거나 성공한 분석은 409 NOT_RETRYABLE 이다\")\n+    void rejectsNonRetryableStatuses(RunStatus status) {\n+        given(requestOf(REQUESTER, null), status);\n+\n+        assertThatThrownBy(() -> service.retry(BACKTEST_ID, REQUESTER))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.NOT_RETRYABLE);\n+        verify(backtestService, never()).create(any(), any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"남의 요청은 403 이 아니라 404 다 — 식별자의 존재를 알려 주지 않는다\")\n+    void hidesOtherPeoplesRequests() {\n+        given(requestOf(OTHER, null), RunStatus.FAILED);\n+\n+        assertThatThrownBy(() -> service.retry(BACKTEST_ID, REQUESTER))\n+                .isInstanceOf(BacktestNotFoundException.class);\n+        verify(backtestService, never()).create(any(), any());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,9 +11,11 @@ import static org.mockito.Mockito.when;\n import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n import com.ssafy.thorp.backtest.application.port.message.Scenario;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.BacktestReuseEvent;\n import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n import com.ssafy.thorp.backtest.domain.model.CostProfile;\n import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n@@ -53,6 +55,8 @@ class BacktestServiceTest {\n     private final BacktestRunRepository runRepository = mock(BacktestRunRepository.class);\n     private final BacktestRequestRepository requestRepository =\n             mock(BacktestRequestRepository.class);\n+    private final BacktestReuseEventRepository reuseEventRepository =\n+            mock(BacktestReuseEventRepository.class);\n     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);\n     private final CostProfileService costProfileService = mock(CostProfileService.class);\n     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);\n@@ -63,6 +67,7 @@ class BacktestServiceTest {\n             new BacktestService(\n                     runRepository,\n                     requestRepository,\n+                    reuseEventRepository,\n                     strategyRulesService,\n                     costProfileService,\n                     new EffectivePeriodCalculator(marketMetadata),\n@@ -216,7 +221,7 @@ class BacktestServiceTest {\n     void publishesAfterCommitViaEvent() {\n         service.create(fixedWeight());\n \n-        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L));\n+        verify(events).publishEvent(new BacktestJobDispatcher.RunAccepted(11L, 1));\n     }\n \n     @Test\n@@ -231,6 +236,38 @@ class BacktestServiceTest {\n         assertThat(result.resultSource()).isEqualTo(ResultSource.JOINED);\n         verify(runRepository, never()).save(any());\n         verify(events, never()).publishEvent(any());\n+        assertThat(recordedReuse())\n+                .isEqualTo(\n+                        new BacktestReuseEvent(\n+                                null, 11L, 21L, ResultSource.JOINED, ExecutionType.SINGLE, NOW));\n+    }\n+\n+    @Test\n+    @DisplayName(\"완료된 실행의 결과를 재사용하면 REUSED 로 기록한다 — 아낀 계산을 원가 집계가 셀 수 있어야 한다\")\n+    void recordsReuseOfACompletedRun() {\n+        BacktestRun completed = saved(runningRun(), 11L).markCompleted();\n+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(completed));\n+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(completed));\n+\n+        BacktestJobResult result = service.create(fixedWeight());\n+\n+        assertThat(result.resultSource()).isEqualTo(ResultSource.REUSED);\n+        assertThat(recordedReuse().kind()).isEqualTo(ResultSource.REUSED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"새로 계산하는 요청은 재사용 기록을 남기지 않는다 — 실행 행 자체가 기록이다\")\n+    void doesNotRecordReuseForANewRun() {\n+        service.create(fixedWeight());\n+\n+        verify(reuseEventRepository, never()).save(any());\n+    }\n+\n+    private BacktestReuseEvent recordedReuse() {\n+        ArgumentCaptor<BacktestReuseEvent> captor =\n+                ArgumentCaptor.forClass(BacktestReuseEvent.class);\n+        verify(reuseEventRepository).save(captor.capture());\n+        return captor.getValue();\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -116,7 +116,7 @@ class JobRepublisherTest {\n \n         InOrder order = inOrder(repository, publisher);\n         order.verify(repository).recordPublishAttempt(11L);\n-        order.verify(publisher).publish(any());\n+        order.verify(publisher).publish(any(), anyInt());\n     }\n \n     @Test\n@@ -135,7 +135,7 @@ class JobRepublisherTest {\n         givenStaleRun();\n         org.mockito.Mockito.doThrow(new AmqpException(\"broker down\"))\n                 .when(publisher)\n-                .publish(any());\n+                .publish(any(), anyInt());\n \n         republisher.republishUnpublished();\n \n@@ -160,7 +160,7 @@ class JobRepublisherTest {\n \n         republisher.republishUnpublished();\n \n-        verify(publisher, never()).publish(any());\n+        verify(publisher, never()).publish(any(), anyInt());\n         verify(repository, never()).recordPublishAttempt(any());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/JobRepublisherTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/JobRepublisherTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,112 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/** 요청 사본의 왕복(T010). 접수가 쓴 것을 재시도가 읽어 <b>같은 명령</b>이 나와야 한다 — 한 칸이라도 새면 재시도가 다른 조건으로 계산된다. */\n+class RequestSpecCodecTest {\n+\n+    private static final String COST_PROFILE = \"COST-2026-09\";\n+\n+    private static CreateBacktestCommand command(\n+            BigDecimal targetWeight,\n+            Integer warmup,\n+            Scenario scenario,\n+            Map<String, Object> params) {\n+        return new CreateBacktestCommand(\n+                7L,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", targetWeight),\n+                        new CreateBacktestCommand.AllocationItem(\"BATTERY\", \"305720.XKRX\", null)),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                \"PARAM-2026-09\",\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                LocalDate.of(2024, 1, 2),\n+                LocalDate.of(2024, 12, 31),\n+                new BigDecimal(\"10000000.00\"),\n+                COST_PROFILE,\n+                \"SPLIT-1\",\n+                warmup,\n+                scenario,\n+                params);\n+    }\n+\n+    private static CreateBacktestCommand roundTrip(CreateBacktestCommand command, int warmup) {\n+        Map<String, Object> spec = RequestSpecCodec.write(command, command.scenario(), warmup);\n+        return RequestSpecCodec.toCommand(\n+                spec, command.requesterId(), command.executionType(), COST_PROFILE);\n+    }\n+\n+    @Test\n+    @DisplayName(\"접수가 쓴 사본을 읽으면 같은 명령이 나온다 — 실효 워밍업만 확정값으로 채워진다\")\n+    void writeThenReadYieldsTheSameCommand() {\n+        CreateBacktestCommand original =\n+                command(new BigDecimal(\"0.4000\"), null, Scenario.FULL_PERIOD, null);\n+\n+        CreateBacktestCommand rebuilt = roundTrip(original, 63);\n+\n+        // 요청이 비워 둔 워밍업은 접수가 확정한 실효값으로 채워진다. 나머지는 그대로다.\n+        assertThat(rebuilt)\n+                .isEqualTo(command(new BigDecimal(\"0.4000\"), 63, Scenario.FULL_PERIOD, null));\n+    }\n+\n+    @Test\n+    @DisplayName(\"시나리오 입력값도 왕복한다\")\n+    void scenarioParamsRoundTrip() {\n+        Map<String, Object> params = Map.of(\"targetVolatility\", \"0.1000\");\n+        CreateBacktestCommand original =\n+                command(new BigDecimal(\"0.4000\"), 63, Scenario.TARGET_RISK, params);\n+\n+        assertThat(roundTrip(original, 63)).isEqualTo(original);\n+    }\n+\n+    @Test\n+    @DisplayName(\"JSONB 가 decimal 을 문자열로 돌려줘도 같은 값으로 읽는다 — 저장 계층 설정이 계약을 좌우하지 않는다\")\n+    void readsDecimalsStoredAsStrings() {\n+        CreateBacktestCommand original =\n+                command(new BigDecimal(\"0.4000\"), 63, Scenario.FULL_PERIOD, null);\n+        Map<String, Object> spec =\n+                new LinkedHashMap<>(RequestSpecCodec.write(original, Scenario.FULL_PERIOD, 63));\n+        // MessageJsonPersistenceConfig 를 거쳐 저장됐다 돌아온 모양\n+        spec.put(\"initialCash\", \"10000000.00\");\n+        List<Map<String, Object>> items = asItems(spec);\n+        items.get(0).put(\"targetWeight\", \"0.4000\");\n+        spec.put(\"items\", items);\n+\n+        CreateBacktestCommand rebuilt =\n+                RequestSpecCodec.toCommand(spec, 7L, ExecutionType.SINGLE, COST_PROFILE);\n+\n+        assertThat(rebuilt).isEqualTo(original);\n+    }\n+\n+    @SuppressWarnings(\"unchecked\")\n+    private static List<Map<String, Object>> asItems(Map<String, Object> spec) {\n+        List<Map<String, Object>> items = (List<Map<String, Object>>) spec.get(\"items\");\n+        return items.stream().map(item -> (Map<String, Object>) new LinkedHashMap<>(item)).toList();\n+    }\n+\n+    @Test\n+    @DisplayName(\"사본이 비어 있으면 조용히 빈 요청을 만들지 않고 멈춘다\")\n+    void refusesAnEmptySpec() {\n+        assertThatThrownBy(\n+                        () ->\n+                                RequestSpecCodec.toCommand(\n+                                        Map.of(), 7L, ExecutionType.SINGLE, COST_PROFILE))\n+                .isInstanceOf(IllegalStateException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/RequestSpecCodecTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/RequestSpecCodecTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,95 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.awaitility.Awaitility.await;\n+import static org.mockito.Mockito.timeout;\n+import static org.mockito.Mockito.verify;\n+\n+import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Duration;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.amqp.core.Message;\n+import org.springframework.amqp.core.MessageProperties;\n+import org.springframework.amqp.rabbit.core.RabbitTemplate;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.autoconfigure.ImportAutoConfiguration;\n+import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.testcontainers.containers.RabbitMQContainer;\n+import org.testcontainers.junit.jupiter.Container;\n+import org.testcontainers.junit.jupiter.Testcontainers;\n+\n+/**\n+ * 작업 메시지가 재전달 상한을 다 쓰면 DLQ 로 가고, 그것을 이 리스너가 runId 와 함께 집어 온다(spec 004 R-18, T010).\n+ *\n+ * <p>브로커 쪽 약속(quorum {@code x-delivery-limit=1} → 두 번째 nack 에서 DLX 로 이동, 그때도 {@code correlationId}\n+ * 가 보존됨)과 리스너의 runId 추출까지 실제 브로커로 확인한다. 종결 판정(모든 메시지가 DLQ 로 갔는가)은 DB 몫이라 {@code\n+ * BacktestEventServiceTest} 가 본다 — 여기서는 서비스를 목으로 받아 \"무엇을 넘겼는가\"만 본다.\n+ *\n+ * <p>컨텍스트는 메시징 빈만 올린다. Docker 가 없으면 건너뛴다.\n+ */\n+@SpringBootTest(classes = {BacktestRabbitConfig.class, BacktestDeadLetterListener.class})\n+@ImportAutoConfiguration(RabbitAutoConfiguration.class)\n+@Testcontainers(disabledWithoutDocker = true)\n+class BacktestDeadLetterListenerIT {\n+\n+    private static final String RUN_ID = \"BT-20260914-000077\";\n+    private static final Duration TIMEOUT = Duration.ofSeconds(10);\n+    private static final Duration POLL = Duration.ofMillis(100);\n+\n+    @Container @ServiceConnection\n+    static RabbitMQContainer rabbitmq = new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\");\n+\n+    @Autowired private RabbitTemplate rabbitTemplate;\n+    @MockitoBean private BacktestEventService eventService;\n+\n+    /** 지금 작업 큐에 있는 메시지 하나를 받아 requeue 로 거절한다. 없으면 false. */\n+    private boolean nackNow() {\n+        return Boolean.TRUE.equals(\n+                rabbitTemplate.execute(\n+                        channel -> {\n+                            var response = channel.basicGet(BacktestRabbitConfig.JOBS_QUEUE, false);\n+                            if (response == null) {\n+                                return false;\n+                            }\n+                            channel.basicNack(response.getEnvelope().getDeliveryTag(), false, true);\n+                            return true;\n+                        }));\n+    }\n+\n+    /**\n+     * 워커가 집었다가 죽은 것과 같은 모양. <b>도착을 기다렸다가</b> 거절한다.\n+     *\n+     * <p>발행은 비동기라 {@code basicGet} 을 바로 부르면 아직 큐에 없을 수 있다. 되돌아오는 재전달도 마찬가지다 — 기다리지 않으면 전체 스위트에서 부하에\n+     * 따라 통과했다 실패했다 한다(실제로 그랬다).\n+     */\n+    private void nackWhenDelivered() {\n+        await().atMost(TIMEOUT).pollInterval(POLL).until(this::nackNow);\n+    }\n+\n+    @Test\n+    @DisplayName(\"재전달 상한을 넘긴 작업 메시지는 DLQ 로 가고 리스너가 runId·발행 시도 번호로 처리한다\")\n+    void deadLetteredJobReachesTheListenerWithItsRunId() {\n+        byte[] body = (\"{\\\"run\\\":{\\\"runId\\\":\\\"\" + RUN_ID + \"\\\"}}\").getBytes(StandardCharsets.UTF_8);\n+        MessageProperties properties = new MessageProperties();\n+        properties.setCorrelationId(RUN_ID);\n+        properties.setMessageId(\"JOB-\" + RUN_ID);\n+        properties.setHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER, 2);\n+        rabbitTemplate.send(\n+                BacktestRabbitConfig.EXCHANGE,\n+                BacktestRabbitConfig.JOBS_ROUTING_KEY,\n+                new Message(body, properties));\n+\n+        // 첫 전달은 상한 안이라 되돌아온다. 두 번째 거절에서 브로커가 DLX 로 옮긴다.\n+        nackWhenDelivered();\n+        nackWhenDelivered();\n+\n+        verify(eventService, timeout(TIMEOUT.toMillis())).handleDeadLetter(RUN_ID, 2);\n+        // 자동 재투입은 없다 — 위 verify 가 돌아온 시점에 메시지는 이미 DLQ 로 갔다.\n+        assertThat(nackNow()).isFalse();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListenerIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListenerIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,75 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import static org.mockito.ArgumentMatchers.anyInt;\n+import static org.mockito.ArgumentMatchers.anyString;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+\n+import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import java.nio.charset.StandardCharsets;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.amqp.core.Message;\n+import org.springframework.amqp.core.MessageProperties;\n+\n+/** DLQ 메시지에서 무엇을 읽고 무엇을 버리는가. 브로커 없이 볼 수 있는 판단만 여기서 고정한다. */\n+class BacktestDeadLetterListenerTest {\n+\n+    private static final String RUN_ID = \"BT-20260914-000077\";\n+\n+    private final BacktestEventService service = mock(BacktestEventService.class);\n+    private final BacktestDeadLetterListener listener = new BacktestDeadLetterListener(service);\n+\n+    private static Message message(String correlationId, Object attempt, boolean redelivered) {\n+        MessageProperties properties = new MessageProperties();\n+        properties.setCorrelationId(correlationId);\n+        properties.setRedelivered(redelivered);\n+        if (attempt != null) {\n+            properties.setHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER, attempt);\n+        }\n+        return new Message(\"{}\".getBytes(StandardCharsets.UTF_8), properties);\n+    }\n+\n+    @Test\n+    @DisplayName(\"correlationId 의 runId 와 publishAttempt 헤더를 그대로 넘긴다\")\n+    void passesTheRunIdAndPublishAttempt() {\n+        listener.onDeadLetteredJob(message(RUN_ID, 2, false));\n+\n+        verify(service).handleDeadLetter(RUN_ID, 2);\n+    }\n+\n+    @Test\n+    @DisplayName(\"재전달된 delivery 도 그대로 넘긴다 — 멱등 판정은 시도 번호로 저장소가 한다\")\n+    void stillPassesARedeliveredMessage() {\n+        // redelivered 는 \"이미 세었다\"가 아니라 \"이미 보낸 적 있다\"라서, 여기서 버리면 커밋 전에 죽어\n+        // 다시 온 첫 전달까지 버리게 되고 죽은 실행이 영영 종결되지 않는다.\n+        listener.onDeadLetteredJob(message(RUN_ID, 1, true));\n+\n+        verify(service).handleDeadLetter(RUN_ID, 1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"헤더 정수형이 Long 으로 와도 받는다 — 브로커를 거치며 폭이 바뀐다\")\n+    void acceptsALongHeader() {\n+        listener.onDeadLetteredJob(message(RUN_ID, 3L, false));\n+\n+        verify(service).handleDeadLetter(RUN_ID, 3);\n+    }\n+\n+    @Test\n+    @DisplayName(\"시도 번호가 없으면 세지 않는다 — 재전달을 구분할 수 없어 살아 있는 실행을 끊을 수 있다\")\n+    void doesNotCountWithoutAPublishAttempt() {\n+        listener.onDeadLetteredJob(message(RUN_ID, null, false));\n+\n+        verify(service, never()).handleDeadLetter(anyString(), anyInt());\n+    }\n+\n+    @Test\n+    @DisplayName(\"correlationId 가 없으면 버린다 — 되돌려 봐야 같은 자리로 다시 온다\")\n+    void dropsAMessageWithoutACorrelationId() {\n+        listener.onDeadLetteredJob(message(null, 1, false));\n+\n+        verify(service, never()).handleDeadLetter(anyString(), anyInt());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListenerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListenerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,7 +79,7 @@ class RabbitBacktestJobPublisherIT {\n     void publishesToJobsQueue() throws IOException {\n         EngineInput input = sampleInput();\n \n-        publisher.publish(input);\n+        publisher.publish(input, 2);\n \n         Message received = rabbitTemplate.receive(BacktestRabbitConfig.JOBS_QUEUE, 5000);\n         assertThat(received).isNotNull();\n@@ -90,6 +90,10 @@ class RabbitBacktestJobPublisherIT {\n         Integer schemaVersion =\n                 properties.getHeader(RabbitBacktestJobPublisher.SCHEMA_VERSION_HEADER);\n         assertThat(schemaVersion).isEqualTo(RabbitBacktestJobPublisher.SCHEMA_VERSION);\n+        // DLQ 소비가 같은 메시지를 두 번 세지 않으려면 이 번호가 메시지에 실려 있어야 한다(R-18 ③).\n+        Integer publishAttempt =\n+                properties.getHeader(RabbitBacktestJobPublisher.PUBLISH_ATTEMPT_HEADER);\n+        assertThat(publishAttempt).isEqualTo(2);\n         assertThat(properties.getReceivedDeliveryMode()).isEqualTo(MessageDeliveryMode.PERSISTENT);\n         assertThat(properties.getContentType()).isEqualTo(\"application/json\");\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestJobPublisherIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestJobPublisherIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,97 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * DLQ 집계의 멱등성(spec 004 R-18 ③, T010). 실제 DB 로 \"같은 시도를 두 번 세지 않는다\"를 고정한다.\n+ *\n+ * <p>이 셈이 많이 틀리면 살아 있는 작업이 남았는데도 실행을 {@code FAILED} 로 끊는다. DLQ 소비는 at-least-once 라 커밋 뒤 ACK 이 유실되면\n+ * 같은 메시지가 다시 오므로, 저장소가 스스로 막아야 한다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class BacktestRunDeadLetterRecordIT extends PostgresTestSupport {\n+\n+    @Autowired private BacktestRunRepository repository;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    private Long newRunId() {\n+        return transactionTemplate\n+                .execute(\n+                        status ->\n+                                repository.save(\n+                                        BacktestRun.create(\n+                                                \"FIXED_WEIGHT\",\n+                                                \"1\",\n+                                                Map.of(),\n+                                                List.of(new InstrumentId(\"091160.XKRX\")),\n+                                                new BacktestPeriod(\n+                                                        LocalDate.of(2024, 1, 2),\n+                                                        LocalDate.of(2024, 12, 31)),\n+                                                new BigDecimal(\"10000000.00\"),\n+                                                PositionSizingMode.STRATEGY_DEFINED,\n+                                                null,\n+                                                null,\n+                                                42)))\n+                .getId();\n+    }\n+\n+    private boolean record(Long runId, int attempt) {\n+        return Boolean.TRUE.equals(\n+                transactionTemplate.execute(\n+                        status -> repository.recordDeadLetter(runId, attempt, Instant.now())));\n+    }\n+\n+    private int dlqCountOf(Long runId) {\n+        return repository.findById(runId).orElseThrow().getLifecycle().dlqCount();\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 시도를 다시 기록하면 세지 않는다 — 커밋 뒤 ACK 이 유실돼 재전달된 경우다\")\n+    void countsEachPublishAttemptOnlyOnce() {\n+        Long runId = newRunId();\n+\n+        assertThat(record(runId, 1)).isTrue();\n+        assertThat(record(runId, 1)).isFalse();\n+\n+        assertThat(dlqCountOf(runId)).isEqualTo(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"다른 시도는 따로 센다 — 중복 실행의 메시지가 각각 죽은 경우다\")\n+    void countsDistinctAttemptsSeparately() {\n+        Long runId = newRunId();\n+\n+        assertThat(record(runId, 2)).isTrue();\n+        assertThat(record(runId, 1)).isTrue();\n+        assertThat(record(runId, 2)).isFalse();\n+\n+        // 도착 순서가 뒤바뀌어도 센 것은 둘이다.\n+        assertThat(dlqCountOf(runId)).isEqualTo(2);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunDeadLetterRecordIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunDeadLetterRecordIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,6 +24,7 @@ import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n import com.ssafy.thorp.backtest.application.service.BacktestCancelService;\n import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n+import com.ssafy.thorp.backtest.application.service.BacktestRetryService;\n import com.ssafy.thorp.backtest.application.service.BacktestService;\n import com.ssafy.thorp.backtest.domain.exception.BacktestFailedException;\n import com.ssafy.thorp.backtest.domain.exception.BacktestNotFoundException;\n@@ -86,6 +87,7 @@ class BacktestControllerTest {\n     @MockitoBean private BacktestService backtestService;\n     @MockitoBean private BacktestResultQueryService queryService;\n     @MockitoBean private BacktestCancelService cancelService;\n+    @MockitoBean private BacktestRetryService retryService;\n \n     private static BacktestJobResult accepted() {\n         return new BacktestJobResult(\n@@ -94,7 +96,8 @@ class BacktestControllerTest {\n                 ResultSource.NEW,\n                 LocalDate.of(2023, 7, 3),\n                 LocalDate.of(2024, 12, 31),\n-                Map.of(\"rules\", \"1\"));\n+                Map.of(\"rules\", \"1\"),\n+                null);\n     }\n \n     private org.springframework.test.web.servlet.ResultActions postBody(String body)\n@@ -389,4 +392,33 @@ class BacktestControllerTest {\n                 .andExpect(status().isConflict())\n                 .andExpect(jsonPath(\"$.error.code\").value(\"BACKTEST_FAILED\"));\n     }\n+\n+    @Test\n+    @DisplayName(\"POST /backtests/{id}/retry 는 202 와 retryOf 를 돌려준다\")\n+    void retryReturnsAccepted() throws Exception {\n+        when(retryService.retry(BACKTEST_ID, Long.parseLong(USER)))\n+                .thenReturn(accepted().withRetryOf(BACKTEST_ID));\n+\n+        mockMvc.perform(\n+                        post(\"/backtests/{id}/retry\", BACKTEST_ID)\n+                                .header(CurrentRequester.DEV_HEADER, USER))\n+                .andExpect(status().isAccepted())\n+                .andExpect(jsonPath(\"$.data.backtestId\").value(BACKTEST_ID))\n+                .andExpect(jsonPath(\"$.data.status\").value(\"QUEUED\"))\n+                .andExpect(jsonPath(\"$.data.resultSource\").value(\"NEW\"))\n+                .andExpect(jsonPath(\"$.data.retryOf\").value(BACKTEST_ID));\n+    }\n+\n+    @Test\n+    @DisplayName(\"재시도할 수 없는 상태면 409 NOT_RETRYABLE 을 그대로 전한다\")\n+    void retryConflictIsPropagated() throws Exception {\n+        when(retryService.retry(BACKTEST_ID, Long.parseLong(USER)))\n+                .thenThrow(new BusinessException(ErrorCode.NOT_RETRYABLE, \"아직 돌고 있습니다\"));\n+\n+        mockMvc.perform(\n+                        post(\"/backtests/{id}/retry\", BACKTEST_ID)\n+                                .header(CurrentRequester.DEV_HEADER, USER))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"NOT_RETRYABLE\"));\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -182,6 +182,22 @@ class FlywayMigrationTest extends PostgresTestSupport {\n                         \"updated_at\");\n     }\n \n+    @Test\n+    @DisplayName(\"backtest_reuse_event 가 재사용·합류 기록에 필요한 컬럼만 갖는다 (FR-008)\")\n+    void backtestReuseEventHasAllColumns() {\n+        // append-only 라 updated_at 이 없다. 발생 시각은 at 하나다.\n+        assertThat(columnsOf(\"backtest_reuse_event\"))\n+                .containsExactlyInAnyOrder(\n+                        \"id\", \"run_id\", \"request_id\", \"kind\", \"request_execution_type\", \"at\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"backtest_run_dlq_attempt 가 DLQ 멱등 판정에 필요한 컬럼만 갖는다 (R-18 ③)\")\n+    void backtestRunDlqAttemptHasAllColumns() {\n+        assertThat(columnsOf(\"backtest_run_dlq_attempt\"))\n+                .containsExactlyInAnyOrder(\"run_id\", \"attempt\", \"at\");\n+    }\n+\n     @Test\n     @DisplayName(\"등록표 두 개가 시드 행과 함께 만들어진다 (R-07·R-08)\")\n     void registriesAreSeeded() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -86,6 +86,29 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n   들어와도 답이 하나로 정해진다 — 취소가 먼저면 `CANCEL_PENDING`, 접수가 먼저면 그 취소는 마지막 요청이 아니게 되어 실행이 계속 돈다.\n - 취소한 요청의 `status`는 곧바로 `CANCELLED`다. 실행이 아직 도는 동안 상세의 `cancelRequested=true`, 하위 리소스는 `409 RESULT_NOT_READY`.\n \n+## 1.6 재시도 — `POST /backtests/{backtestId}/retry`\n+\n+`202` `{backtestId, status, resultSource, retryOf}`. 실패하거나 취소한 분석을 **같은 조건으로 다시 접수**한다(spec 004 T010, FR-002).\n+`backtestId`는 새로 만들어진 요청의 것이고 `retryOf`가 원본이다.\n+\n+- **재시도도 접수를 다시 탄다.** 실행을 복제하지 않고 저장해 둔 요청 사본(`backtest_run.request_spec`)을 접수 명령으로 되돌려 `POST /backtests`와\n+  같은 경로를 태운다. 그래서 그 사이 전략 등록표가 내려갔으면 `422 RULES_NOT_REGISTERED`이고, 같은 조건을 이미 누가 돌리고 있으면 새로 계산하지\n+  않고 `resultSource: \"JOINED\"`(완료돼 있으면 `REUSED`)다 — 동일 버전 판정은 재시도에도 그대로 적용된다(FR-003).\n+- 비용 조건 버전은 원본 실행의 것을 그대로 쓴다. \"같은 조건을 다시\"이지 \"지금 기본값으로 새로\"가 아니다 — 기본 프로필이 바뀐 것을 조용히 따라가면\n+  비교하려던 두 결과의 비용 전제가 달라진다. 자료 버전은 반대로 지금 값을 쓴다(자료가 늘었으면 그것은 다른 계산이다).\n+- 요청자 본인만(남의 요청은 404). 끝나지 않았거나(`QUEUED`·`RUNNING`) 성공한(`COMPLETED`) 분석은 `409 NOT_RETRYABLE`.\n+- 판정은 **요청 기준 상태**다. 실행이 다른 요청 때문에 아직 돌고 있어도 이 요청이 취소됐으면 재시도할 수 있다.\n+\n+## 1.7 시스템 장애로 끊긴 실행\n+\n+작업 메시지가 브로커의 재전달 상한(`x-delivery-limit=1`)을 다 쓰면 DLQ로 가고, 백엔드는 그것을 세어 **발행한 메시지가 전부 죽었을 때만**\n+실행을 `FAILED`(`error.code: \"SYSTEM_FAILURE\"`)로 끝낸다(FR-002, R-18 ③). confirm 유실로 같은 실행의 메시지가 둘 생겼을 때 한쪽만 죽은 것으로\n+살아 있는 실행을 끊지 않기 위해서다.\n+\n+이렇게 끝난 실행에는 **결과 행이 없다** — 워커가 계산을 마치지 못했으므로 저장할 산출물이 없다. 상세는 `200`이고 `error`에 실행 행의 실패 사유가\n+실린다(`summary`는 `null`). 하위 리소스는 다른 실패와 같이 `409 BACKTEST_FAILED`다. 다시 돌리려면 §1.6 재시도를 쓴다 — DLQ로 간 메시지를\n+백엔드가 자동으로 다시 넣지는 않는다(같은 실패를 무한히 돈다).\n+\n ## 2. 결과 조회\n \n 결과는 응답 크기 때문에 네 리소스로 나눈다(설계 OUTPUT Spec \"API 응답 분리\"). 필드 의미·타입·nullable 규칙은\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,6 +76,11 @@ classic → quorum은 큐 인자 변경이라 같은 이름으로 재선언하\n | `message_id` | 작업: 발행 측 고유 ID(재시도 시 유지). 이벤트: 본문 `eventId` |\n | `correlation_id` | `runId` |\n | header `schemaVersion` | `2` |\n+| header `publishAttempt` | 작업만. 이 메시지를 보낼 때의 `backtest_run.publish_count`(1부터). 워커는 읽지 않는다 |\n+\n+`publishAttempt`는 **백엔드가 자기 자신에게 보내는 표시**다. 그 메시지가 DLQ로 끝났을 때 \"어느 발행 시도가 죽었는지\"를 구분해 같은 메시지를 두 번\n+세지 않는다(R-18 ③) — DLQ 소비는 at-least-once라 커밋 뒤 ACK이 유실되면 같은 메시지가 다시 오고, 두 번 세면 살아 있는 작업이 남았는데도\n+`dlq_count >= publish_count`가 서서 실행이 잘못 `FAILED`로 끝난다. 워커는 이 헤더를 읽지 않으므로 없어도 계산에는 영향이 없다.\n \n 워커(pika)는 Spring의 `__TypeId__` 헤더를 보내지 않는다. 백엔드는 헤더가 아니라 리스너 파라미터 타입과 본문 `type` 필드로 역직렬화한다.\n v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 — 백엔드·워커를 함께 배포한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/README.md",
+          "old_path": "docs/specs/backtest-messaging/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -117,11 +117,19 @@\n \n **Independent Test**: quickstart S2~S6·S12. 같은 본문 재요청이 `REUSED`, RUNNING 중 재요청이 `JOINED`, A 취소 후 B 유지, B 취소 시 `CANCELLED partial=true`와 부분 시계열 200, FAILED 후 retry 202, 워커 `kill -9` 1회는 완료·2회는 `SYSTEM_FAILURE`.\n \n-- [ ] T010 [US3] [BE] 동일 버전 재사용·합류·재시도와 DLQ 처리 (`backtest/application/service/{BacktestService,BacktestRetryService}.java`, `backtest/domain/model/BacktestReuseEvent.java`, `backtest/infrastructure/persistence/{BacktestReuseEventJpaEntity,…}.java`, `backtest/infrastructure/messaging/BacktestDeadLetterListener.java`, `backtest/presentation/controller/BacktestController.java`, `backend/src/main/resources/db/migration/V5__backtest_reuse_event.sql`, 테스트 `{BacktestServiceTest,BacktestDedupIT,BacktestRetryServiceTest,BacktestDeadLetterListenerIT}`) — Jira `S15P21E205-148`\n+- [x] T010 [US3] [BE] 동일 버전 재사용·합류·재시도와 DLQ 처리 (`backtest/application/service/{BacktestService,BacktestRetryService}.java`, `backtest/domain/model/BacktestReuseEvent.java`, `backtest/infrastructure/persistence/{BacktestReuseEventJpaEntity,…}.java`, `backtest/infrastructure/messaging/BacktestDeadLetterListener.java`, `backtest/presentation/controller/BacktestController.java`, `backend/src/main/resources/db/migration/V5__backtest_reuse_event.sql`, 테스트 `{BacktestServiceTest,BacktestDedupIT,BacktestRetryServiceTest,BacktestDeadLetterListenerIT}`) — Jira `S15P21E205-148`\n   - `create()`: 키로 활성 run 조회 → COMPLETED면 REUSED(발행 없음) / QUEUED·RUNNING이면 JOINED(발행 없음) / 없으면 NEW. 부분 유니크 위반(동시 접수 경합) 시 재조회해 JOINED로 전환\n   - `backtest_reuse_event(run_id, request_id, kind, request_execution_type, at)` 기록(FR-008, analyze M2). IT: 두 사용자·같은 본문 → run 1·request 2·reuse_event 1\n   - `POST /backtests/{id}/retry`: FAILED·CANCELLED에서만(아니면 409 NOT_RETRYABLE), 같은 canonical 요청으로 `create()` 재호출, `retry_of_request_id`, 202 {backtestId, status, resultSource, retryOf}\n   - `@RabbitListener(queues=\"backtest.jobs.dlq\")`: runId로 `run.dlq_count += 1`, `dlq_count >= publish_count`이고 비종결이면 FAILED(SYSTEM_FAILURE) 종결(이미 종결이면 무시, R-18). IT(Testcontainers RabbitMQ): quorum `x-delivery-limit=1` 확인, nack-requeue 2회 → DLQ → FAILED; confirm 유실로 생긴 중복(시도 2·confirm 1) 뒤 한 메시지만 DLQ → RUNNING 유지 → 다른 실행 COMPLETED\n+  - 구현 시 결정(T010): ① **재사용 기록은 `backtest_reuse_event` 한 표에 append-only 로 남긴다.** `BaseEntity` 를 상속하지 않는다 — `updated_at` 이 영원히 `created_at` 과 같으므로 발생 시각 `at` 하나면 된다. `kind` 는 새 enum 을 만들지 않고 `ResultSource` 를 쓰되 생성자와 DB CHECK 가 `NEW` 를 거부한다(새 계산은 실행 행 자체가 기록이다). `request_id` 에 UNIQUE 를 걸어 중복 기록이 T012 의 `reuse_count` 를 부풀리지 못하게 한다 ② **동시 접수 경합은 잡아서 재조회하지 않고 자문 잠금으로 부딪히지 않게 한다.** 위 문구(\"부분 유니크 위반 시 재조회\")는 PostgreSQL 에서 그대로 쓸 수 없다 — 제약 위반이 나면 그 트랜잭션이 abort 돼 같은 트랜잭션에서 더 질의할 수 없다. 세이브포인트로 감쌀 수도 있지만 예외 경로가 없는 쪽이 단순해서, `create()` 가 동일 버전 키를 계산한 직후 조회 **전에** `pg_advisory_xact_lock` 을 잡는다(`BacktestRunRepository.lockDedupKey`). 잠금 식별자는 키(SHA-256 hex)의 앞 16자를 그대로 읽은 값이다 — 키 자체가 고른 해시라 다시 해싱하지 않고, `hashtext()` 는 문서화되지 않은 내부 함수라 쓰지 않는다. 키가 다르면 서로 기다리지 않고, 트랜잭션이 끝나면 저절로 풀린다. 취소 경로(요청 행 → 실행 행)와 잠금 종류가 달라 교착 고리가 생기지 않는다. `BacktestDedupIT` 가 두 스레드로 확인하며, 잠금을 빼면 `DataIntegrityViolationException` 으로 실제로 깨지는 것을 세 번 연속 확인했다 ③ **재시도는 실행을 복제하지 않고 요청 사본을 접수 명령으로 되돌려 `create()` 를 다시 탄다.** 쓰는 쪽과 읽는 쪽을\n+ `RequestSpecCodec` 한 클래스에 두고 왕복 테스트로 드리프트를 막는다 — 접수(T005)가 쓰고 재시도(T010)가 읽는데 멀리 떨어져 있으면 한쪽만\n+ 고쳤을 때 재시도가 조용히 다른 조건으로 계산된다. 사본은 JSONB 라 decimal 이 문자열로 돌아오므로 읽는 쪽이 문자열·숫자를 모두 받는다.\n+ 비용 조건 버전만 원본 실행의 것을 쓰고(같은 조건을 다시 돌리는 것이지 지금 기본값으로 새로 돌리는 것이 아니다) 자료 버전은 지금 값이다.\n+ `BacktestRetryIT` 가 **재시도한 실행의 동일 버전 키가 원본과 같은지**로 왕복 전체를 단언한다 ④ **DLQ 리스너는 본문을 읽지 않고\n+ `correlationId` 의 runId 만 쓴다** — 발행기가 넣어 두고 DLX 로 옮겨져도 보존되며, 여기까지 온 메시지는 워커가 소화하지 못한 것이라 본문이\n+ 온전하다는 보장이 없다. 종결은 `dlqCount >= publishCount` 일 때만 하고 결과 행은 만들지 않는다. **DLQ 소비는 at-least-once 라 같은 시도를 두 번 세면 살아 있는 실행을 끊는다** — 발행기가 `publishAttempt` 헤더로 시도 번호를 실어 보내고, `backtest_run_dlq_attempt(run_id, attempt)` PK 가 중복을 막는다(리뷰 2차 1). AMQP 의 `redelivered` 표시로 거르는 방법은 틀렸다 — 그 표시는 \"이미 세었다\"가 아니라 \"이미 보낸 적 있다\"라서 커밋 전에 죽어 다시 온 첫 전달까지 버리고, 그러면 죽은 실행이 영영 종결되지 않는다. 비트마스크 한 컬럼으로 줄이지 않은 이유는 재발행기가 30초마다 다시 보내 `publish_count` 에 상한이 없기 때문이다. **시도 번호는 확보한 쪽이 들고 가야 한다**(리뷰 3차 1) — 최초 발행이 DB 의 최신 `publish_count` 를 다시 읽으면, 커밋 후 콜백이 늦어지는 사이 재발행기가 올린 번호를 보아 두 발행이 같은 번호를 달고 DLQ 집계가 한 건으로 접힌다. 접수가 확보한 번호는 `RunAccepted` 이벤트에 실어 나르고, 재발행은 올리기와 읽기가 한 트랜잭션(UPDATE 가 행을 잠근다)이라 읽은 값이 곧 자기 번호다 ⑤ **결과 행 없는 FAILED 를 500 으로 다루지\n+ 않는다.** DLQ 종결(T010)과 취소 무응답(T014)이 만드는 정상 상태라, 상세는 실행 행의 실패 사유를 그대로 보여 준다 ⑥ **IT 본문의 기간은 다른 IT 와 겹치지 않게 둔다.** 컨테이너를 스위트가 공유하므로 본문이 같으면 동일 버전 키도 같아서 다른 IT 가 만든 실행에 합류한다(정상 동작이다). 처음엔 `BacktestCancelFlowIT` 와 같은 본문을 써서 한 실행을 두 테스트가 나눠 갖고 저쪽이 깨졌다\n - [x] T011 [US3] [BE] 취소: API·마지막 활성 요청 규칙·워커 제어 채널·부분 결과 (`backtest/presentation/controller/BacktestController.java`, `backtest/application/service/{BacktestCancelService,BacktestEventService}.java`, `backtest/infrastructure/messaging/RabbitBacktestControlPublisher.java`, 테스트 `{BacktestCancelServiceTest,BacktestCancelFlowIT}`, `worker/src/worker/{control,rabbitmq,consumer,portfolio_execution}.py`, `worker/tests/test_control.py`) — Jira `S15P21E205-149`\n   - `POST /backtests/{id}/cancel`: 요청자 본인만, 종결이면 409 NOT_CANCELLABLE. `request.cancelled_at` 기록 → 같은 run에 활성 요청이 없으면 `run.cancel_requested_at`, QUEUED면 즉시 CANCELLED, RUNNING이면 `backtest.control`에 CANCEL{runId} 발행. 응답 `cancelRequested: true`. 취소마다 `request.cancelled_last_trading_date = run.progress_last_trading_date`(없으면 NULL = 완료 거래일 없음) 스냅샷, 마지막 활성 요청이면 `stopped_run=true`(범위는 FINISHED의 lastTradingDate가 run에 남는다 — R-04)\n   - `handleFinished(CANCELLED)`: run CANCELLED·partial=true·progress_last_trading_date, 부분 결과 저장. `handleStarted`에서 run이 이미 CANCELLED면 CANCEL 재발행(대기 중 취소)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-14T14:52:19.775+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802345": []
+  }
+}

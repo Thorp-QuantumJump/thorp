@@ -1,0 +1,516 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963467,
+    "iid": 377,
+    "project_id": 1444456,
+    "title": "chore(infra): 운영 컨테이너 자원 상한 축소 (실측기준)",
+    "description": "# 작업 내용 요약\n\n맥미니의 Colima VM(메모리 10GB)에 서비스와 배포를 함께 올릴 수 있도록, 옛 운영 서버에서 잰 실제 사용량에 맞춰 컨테이너 자원 상한을 낮춘다. 근거는 2026-10-02 에 읽은 각 컨테이너의 cgroup 최고 사용량이다. 큰 조합에서 약 2GB 까지 쓰는 worker 는 그대로 둔다.\n\n# 주요 변경 사항\n\n| 컨테이너 | 이전 | 이후 | 근거(실측) |\n|------|----|----|--------|\n| postgres | 4G, CPU 1.5, `shared_buffers=2GB` | 1G, CPU 1.0, `shared_buffers=256MB`, `maintenance_work_mem=256MB` | 최고 789MB(대부분 파일 캐시, 프로세스 27MB). DB 가 408MB 라 2GB 버퍼는 채워질 수 없다 |\n| rabbitmq | 1G | 512M | 888MB 중 688MB 가 quorum 큐 WAL 의 메모리 테이블이었다 |\n| backend | 2G, 힙 1536MB | 1.5G, 힙 1024MB | 최고 681MB |\n| nginx | 256M, CPU 0.5 | 64M, CPU 0.25 | 최고 17MB |\n| worker ×2 | 2500M | 그대로 | 큰 조합(50종목, 일별 리밸런싱)이 약 2GB 까지 쓴다 |\n\n- rabbitmq 는 상한만 낮추지 않고 메모리를 실제로 줄이는 설정을 함께 넣는다. quorum 큐 WAL 상한을 64MB 로, 메모리 경보를 384MiB 로 둔다(`infra/rabbitmq/conf.d/90-thorp.conf`).\n- rabbitmq 의 Erlang 스케줄러를 1개로 줄이고 대기 회전(busy wait)을 끈다. 옛 서버에서는 CPU 0.5 상한에 걸린 시간이 22% 였다.\n\n# 테스트\n\n- [x] 맥미니에서 1G 로 줄인 Postgres 에 옛 운영 DB 덤프를 복원했다. 8초 만에 오류 없이 끝났고, 상한 도달과 OOM 은 0회였다. 최고 955MB 중 회수할 수 없는 메모리는 약 280MB 였고 나머지는 파일 캐시였다\n- [x] rabbitmq 에 경보 384MiB, WAL 64MB, 스케줄러 1개가 반영되고, 기동 뒤 메모리는 114\\~146MB 다\n- [x] 실제 DB 로 백테스트 1건(동일 비중, 2종목)을 완료한 뒤 backend 706MB/1.5G, postgres 324MB/1G, worker 140\\~165MB 다\n- [ ] Jenkins 서버가 회수되어 이 MR 에서는 CI 가 돌지 않는다\n\n# 리뷰 포인트\n\n- backend 의 근거는 재배포 뒤 1시간 분량이라 짧다. 운영 중 1.5G 에 가까워지면 그때 다시 잰다.\n- WAL 상한을 낮추면 처리량이 클 때 디스크 쓰기가 잦아진다. 지금 규모에서는 문제가 되지 않는다고 판단했다.\n- 이 MR 의 상한을 모두 더하면 약 8GB(worker 5GB 포함)다. Jenkins 상한은 Jenkins 를 배포 전용으로 바꾸는 MR 에서 정한다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:39:19.639+09:00",
+    "updated_at": "2026-10-04T18:45:05.114+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:45:03.995+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/resource-limits",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "69509697447a823a4b7da3f131f8fbc15bcd64b7",
+    "merge_commit_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:39:20.892+09:00",
+    "reference": "!377",
+    "references": {
+      "short": "!377",
+      "relative": "!377",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!377"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/377",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963467,
+    "iid": 377,
+    "project_id": 1444456,
+    "title": "chore(infra): 운영 컨테이너 자원 상한 축소 (실측기준)",
+    "description": "# 작업 내용 요약\n\n맥미니의 Colima VM(메모리 10GB)에 서비스와 배포를 함께 올릴 수 있도록, 옛 운영 서버에서 잰 실제 사용량에 맞춰 컨테이너 자원 상한을 낮춘다. 근거는 2026-10-02 에 읽은 각 컨테이너의 cgroup 최고 사용량이다. 큰 조합에서 약 2GB 까지 쓰는 worker 는 그대로 둔다.\n\n# 주요 변경 사항\n\n| 컨테이너 | 이전 | 이후 | 근거(실측) |\n|------|----|----|--------|\n| postgres | 4G, CPU 1.5, `shared_buffers=2GB` | 1G, CPU 1.0, `shared_buffers=256MB`, `maintenance_work_mem=256MB` | 최고 789MB(대부분 파일 캐시, 프로세스 27MB). DB 가 408MB 라 2GB 버퍼는 채워질 수 없다 |\n| rabbitmq | 1G | 512M | 888MB 중 688MB 가 quorum 큐 WAL 의 메모리 테이블이었다 |\n| backend | 2G, 힙 1536MB | 1.5G, 힙 1024MB | 최고 681MB |\n| nginx | 256M, CPU 0.5 | 64M, CPU 0.25 | 최고 17MB |\n| worker ×2 | 2500M | 그대로 | 큰 조합(50종목, 일별 리밸런싱)이 약 2GB 까지 쓴다 |\n\n- rabbitmq 는 상한만 낮추지 않고 메모리를 실제로 줄이는 설정을 함께 넣는다. quorum 큐 WAL 상한을 64MB 로, 메모리 경보를 384MiB 로 둔다(`infra/rabbitmq/conf.d/90-thorp.conf`).\n- rabbitmq 의 Erlang 스케줄러를 1개로 줄이고 대기 회전(busy wait)을 끈다. 옛 서버에서는 CPU 0.5 상한에 걸린 시간이 22% 였다.\n\n# 테스트\n\n- [x] 맥미니에서 1G 로 줄인 Postgres 에 옛 운영 DB 덤프를 복원했다. 8초 만에 오류 없이 끝났고, 상한 도달과 OOM 은 0회였다. 최고 955MB 중 회수할 수 없는 메모리는 약 280MB 였고 나머지는 파일 캐시였다\n- [x] rabbitmq 에 경보 384MiB, WAL 64MB, 스케줄러 1개가 반영되고, 기동 뒤 메모리는 114\\~146MB 다\n- [x] 실제 DB 로 백테스트 1건(동일 비중, 2종목)을 완료한 뒤 backend 706MB/1.5G, postgres 324MB/1G, worker 140\\~165MB 다\n- [ ] Jenkins 서버가 회수되어 이 MR 에서는 CI 가 돌지 않는다\n\n# 리뷰 포인트\n\n- backend 의 근거는 재배포 뒤 1시간 분량이라 짧다. 운영 중 1.5G 에 가까워지면 그때 다시 잰다.\n- WAL 상한을 낮추면 처리량이 클 때 디스크 쓰기가 잦아진다. 지금 규모에서는 문제가 되지 않는다고 판단했다.\n- 이 MR 의 상한을 모두 더하면 약 8GB(worker 5GB 포함)다. Jenkins 상한은 Jenkins 를 배포 전용으로 바꾸는 MR 에서 정한다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:39:19.639+09:00",
+    "updated_at": "2026-10-04T18:45:05.114+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:45:03.995+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/resource-limits",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "69509697447a823a4b7da3f131f8fbc15bcd64b7",
+    "merge_commit_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:39:20.892+09:00",
+    "reference": "!377",
+    "references": {
+      "short": "!377",
+      "relative": "!377",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!377"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/377",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "head_sha": "69509697447a823a4b7da3f131f8fbc15bcd64b7",
+      "start_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c65c51dcca6116d94fdd766b2a2a2f5fc9f6f59c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881370,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:39:19.762+09:00",
+          "updated_at": "2026-10-04T18:39:19.766+09:00",
+          "system": true,
+          "noteable_id": 963467,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 377,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "adf7d8abfcd718537d0b05d2c23df431219a53a7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881371,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:39:19.782+09:00",
+          "updated_at": "2026-10-04T18:39:19.789+09:00",
+          "system": true,
+          "noteable_id": 963467,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 377,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dc5870bdb25b03ad3b9e0102c7b2828a783f5c3a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881372,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **근거 기반의 인프라 최적화**: 실제 운영 환경의 cgroup 실측 데이터를 바탕으로 컨테이너 자원 상한(메모리, CPU)과 내부 설정(`shared_buffers`, `RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS` 등)을 합리적으로 조정했습니다. 불필요한 자원 낭비를 줄이면서도 안정성을 고려한 점이 돋보입니다.\n- **상세한 문서화**: MR 설명과 설정 파일 주석에 자원 축소 근거와 설정값 변경 이유(예: RabbitMQ WAL 크기 및 Erlang 스케줄러 설정)를 명확히 기록하여 유지보수성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **메모리 압박 상황 테스트**: \n  - 백엔드 컨테이너(`1.5G`)와 PostgreSQL(`1G`)에 대용량 트래픽이나 복잡한 쿼리를 동시에 인가하여, 설정된 메모리 상한 내에서 정상적으로 동작하는지(OOM Killer가 발생하지 않는지) 확인합니다.\n- **RabbitMQ 처리량 및 메모리 경보 테스트**:\n  - `raft.wal_max_size_bytes = 64000000` 설정 변경으로 인해 메시지 처리량이 높을 때 디스크 I/O 병목이 발생하지 않는지, 그리고 메모리가 `384MiB`에 도달했을 때 발행 제한(Flow Control)이 의도대로 동작하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:69509697447a823a4b7da3f131f8fbc15bcd64b7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T18:39:28.549+09:00",
+          "updated_at": "2026-10-04T18:39:28.549+09:00",
+          "system": false,
+          "noteable_id": 963467,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 377,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "985f013b4afc5a23f55f16a9588148defe7b8cdb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881374,
+          "type": null,
+          "body": "mentioned in commit db9d0d845adfe3f1fa8083a965012984be58d1ad",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:45:03.949+09:00",
+          "updated_at": "2026-10-04T18:45:03.955+09:00",
+          "system": true,
+          "noteable_id": 963467,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 377,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262320,
+      "head_commit_sha": "69509697447a823a4b7da3f131f8fbc15bcd64b7",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "created_at": "2026-10-04T18:39:20.359+09:00",
+      "merge_request_id": 963467,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "62dbec1c807370043fb06fd175c2fa884441d292"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262320,
+      "head_commit_sha": "69509697447a823a4b7da3f131f8fbc15bcd64b7",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "created_at": "2026-10-04T18:39:20.359+09:00",
+      "merge_request_id": 963467,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "62dbec1c807370043fb06fd175c2fa884441d292",
+      "commits": [
+        {
+          "id": "69509697447a823a4b7da3f131f8fbc15bcd64b7",
+          "short_id": "69509697",
+          "created_at": "2026-10-04T18:07:57.000+09:00",
+          "parent_ids": [
+            "71c3135d5ffa68d81aa2cbe4019e3b29416fe35c"
+          ],
+          "title": "chore(infra): RabbitMQ 메모리 경보 주석을 확인한 사실로 고친다",
+          "message": "chore(infra): RabbitMQ 메모리 경보 주석을 확인한 사실로 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:07:57.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:07:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/69509697447a823a4b7da3f131f8fbc15bcd64b7"
+        },
+        {
+          "id": "71c3135d5ffa68d81aa2cbe4019e3b29416fe35c",
+          "short_id": "71c3135d",
+          "created_at": "2026-10-04T18:05:10.000+09:00",
+          "parent_ids": [
+            "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+          ],
+          "title": "chore(infra): 운영 컨테이너 자원 상한을 실측에 맞춰 줄인다",
+          "message": "chore(infra): 운영 컨테이너 자원 상한을 실측에 맞춰 줄인다\n\n옛 운영 서버의 cgroup 최고 사용량(2026-10-02)에 맞춰 상한을 낮춘다. 메모리 10GB 안에 서비스와\n배포를 함께 올리기 위해서다. worker 는 큰 조합이 약 2GB 까지 쓰므로 그대로 둔다.\n\n- postgres 4G → 1G, CPU 1.5 → 1.0, shared_buffers 2GB → 256MB, maintenance_work_mem 512MB → 256MB\n- rabbitmq 1G → 512M. quorum 큐 WAL 상한 64MB, 메모리 경보 384MiB(conf.d), Erlang 스케줄러 1개·대기 회전 끔\n- backend 2G → 1.5G, 힙 1536m → 1024m\n- nginx 256M → 64M, CPU 0.5 → 0.25\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:05:10.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:05:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/71c3135d5ffa68d81aa2cbe4019e3b29416fe35c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+# RabbitMQ 메모리 설정. docker-compose.prod.yml 이 /etc/rabbitmq/conf.d/ 에 읽기 전용으로 마운트한다.\n+#\n+# 옛 운영 서버(2026-10-02)에서 컨테이너 메모리 888MB 중 688MB 가 quorum 큐의 Raft WAL 이 메모리에 들고 있는\n+# 테이블이었다. 큐에 메시지가 하나도 없어도 WAL 이 기본 상한(512MB)에 차기 전까지는 비우지 않기 때문이다.\n+# WAL 상한을 64MB 로 낮춰 자주 비우게 한다. 처리량이 이 서비스 규모보다 훨씬 클 때만 손해가 난다.\n+raft.wal_max_size_bytes = 64000000\n+\n+# 메모리 경보 기준. 기본값은 상대값(0.4)이라 RabbitMQ 가 무엇을 전체 메모리로 보느냐에 따라 기준이 달라진다.\n+# 컨테이너 상한(512M)보다 확실히 아래에서 울리도록 절대값으로 둔다. 경보가 울리면 RabbitMQ 는 발행을 잠시\n+# 막고 메모리를 비우므로, 상한에 닿아 OOM 으로 죽는 것보다 낫다.\n+vm_memory_high_watermark.absolute = 384MiB\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/rabbitmq/conf.d/90-thorp.conf",
+          "old_path": "infra/rabbitmq/conf.d/90-thorp.conf",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-# 운영(EC2) 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.\n+# 운영 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.\n name: thorp\n \n services:\n@@ -6,11 +6,14 @@ services:\n     image: postgres:16-alpine\n     container_name: thorp-postgres\n     restart: unless-stopped\n+    # 자원은 실측(2026-10-02 옛 운영 서버, 4주 가동) 기준이다. DB 가 408MB 라 shared_buffers 2GB 는 채워질 수\n+    # 없었고, 컨테이너 최고 메모리는 789MB(대부분 파일 캐시, 프로세스 자체는 27MB)였다. CPU 1.5 중 상한에\n+    # 걸린 비율은 0.04% 였다. maintenance_work_mem 은 덤프 복원·인덱스 생성이 쓰므로 상한 안에서 넉넉히 둔다.\n     command: >\n       postgres\n-      -c shared_buffers=2GB\n+      -c shared_buffers=256MB\n       -c work_mem=32MB\n-      -c maintenance_work_mem=512MB\n+      -c maintenance_work_mem=256MB\n       -c max_connections=100\n     environment:\n       POSTGRES_DB: ${POSTGRES_DB}\n@@ -30,8 +33,8 @@ services:\n     deploy:\n       resources:\n         limits:\n-          memory: 4G\n-          cpus: \"1.5\"\n+          memory: 1G\n+          cpus: \"1.0\"\n     networks: [backend]\n \n   # Job 전달은 RabbitMQ가 담당한다. Kafka는 설치만 해둔 상태라 기본 기동에서 제외한다.\n@@ -77,12 +80,17 @@ services:\n     environment:\n       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}\n       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}\n+      # Erlang 은 컨테이너 CPU 상한이 아니라 호스트 코어 수만큼 스케줄러를 띄우고, 일이 없을 때도 스케줄러가\n+      # 잠깐씩 돌며 기다린다(busy wait). 옛 서버에서 CPU 0.5 상한에 걸린 시간이 22% 였던 원인이다.\n+      # 스케줄러를 하나로 두고 대기 회전을 끈다. 메모리 설정은 rabbitmq/conf.d/90-thorp.conf 에 있다.\n+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: \"+S 1:1 +sbwt none +sbwtdcpu none +sbwtdio none\"\n       TZ: Asia/Seoul\n     ports:\n       # AMQP(5672)는 호스트에 열지 않는다. 관리 UI만 SSH 터널로 접근.\n       - \"127.0.0.1:15672:15672\"\n     volumes:\n       - rabbitmq-data:/var/lib/rabbitmq\n+      - ./rabbitmq/conf.d/90-thorp.conf:/etc/rabbitmq/conf.d/90-thorp.conf:ro\n     healthcheck:\n       test: [\"CMD\", \"rabbitmq-diagnostics\", \"-q\", \"ping\"]\n       interval: 15s\n@@ -91,7 +99,7 @@ services:\n     deploy:\n       resources:\n         limits:\n-          memory: 1G\n+          memory: 512M\n           cpus: \"0.5\"\n     networks: [backend]\n \n@@ -166,7 +174,9 @@ services:\n       # 값이 없으면 메일 발송 빈을 만드는 단계에서 기동이 실패한다.\n       MAIL_USERNAME: ${MAIL_USERNAME}\n       MAIL_PASSWORD: ${MAIL_PASSWORD}\n-      JAVA_TOOL_OPTIONS: \"-Xmx1536m\"\n+      # 옛 서버 실측 최고 사용량은 681MB 였다(재배포 뒤 1시간 분량이라 근거가 짧다). 힙 1GB 에 메타스페이스·\n+      # 스레드·코드 캐시 몫을 더해 컨테이너 상한을 1.5GB 로 둔다. 상한에 닿으면 이 값부터 다시 잰다.\n+      JAVA_TOOL_OPTIONS: \"-Xmx1024m\"\n       TZ: Asia/Seoul\n     expose:\n       - \"8080\"\n@@ -178,7 +188,7 @@ services:\n     deploy:\n       resources:\n         limits:\n-          memory: 2G\n+          memory: 1536M\n           cpus: \"1.0\"\n     networks: [backend, edge]\n \n@@ -297,8 +307,9 @@ services:\n     deploy:\n       resources:\n         limits:\n-          memory: 256M\n-          cpus: \"0.5\"\n+          # 옛 서버 3주 가동 최고 17MB, CPU 상한에 걸린 비율 0.2%.\n+          memory: 64M\n+          cpus: \"0.25\"\n     networks: [edge]\n \n volumes:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker-compose.prod.yml",
+          "old_path": "infra/docker-compose.prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881372": []
+  }
+}

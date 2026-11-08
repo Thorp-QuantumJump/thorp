@@ -1,0 +1,729 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958179,
+    "iid": 307,
+    "project_id": 1444456,
+    "title": "fix(fe): 첫 화면도 공용 상단 바를 써서 로그인 상태를 반영한다",
+    "description": "# 작업 내용 요약\n\n첫 화면도 다른 화면과 같은 상단 바를 써서, 로그인한 뒤 '로그인' 버튼이 보이던 문제를 없앱니다. 너무 흐려진 작은 제목·구역 아이콘에 포인트 색을 되돌리고, 과거 사례 고르기 화면을 카드로 묶습니다.\n\n# 관련 티켓\n\n- ticket S15P21E205-425\n- https://ssafy.atlassian.net/browse/S15P21E205-425\n\n# 주요 변경 사항\n\n- 첫 화면 전용 `LandingHeader`를 지우고 공용 `AppHeader`를 씁니다. 로그인 상태에 따라 이름·로그아웃이 보이고, 메뉴 모양이 모든 화면에서 같아집니다.\n- 한 칸씩 넘기는 첫 화면 섹션이 상단 바(83px)에 가리지 않도록, 섹션 높이에서 상단 바 높이를 빼고 `scroll-padding-top`을 줍니다.\n- `--thorp-eyebrow`·`--thorp-ornament`를 포인트 초록으로 되돌립니다. 무채색은 구역 배경의 빛번짐에만 남깁니다.\n- 시장 흐름: 분야 목록 화살표를 포인트 색으로 바꾸고, 국내 시장 참고 지표(KOSPI·VKOSPI200) 값을 크게 보입니다.\n- 과거 사례 고르기: 검색 폼, 자료 기준, 사례 하나하나, 결과 없음·오류를 카드로 묶습니다. 안내 문구는 왼쪽 색 막대가 있는 카드 안 칸이고, 사례 상세는 사례 카드 안에서 카드 안 칸 모양으로 열립니다.\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` — lint 오류 0, 1366 통과, skipped 0\n- [x] 첫 화면을 1440px·390px에서 확인 — 상단 바가 붙고 첫 칸이 화면 높이에 맞음\n- [ ] 시장 흐름 포인트 색·참고 지표 화면 확인\n- [ ] 과거 사례 고르기 검색·결과 화면 확인\n\n# 리뷰 포인트\n\n- 상단 바 교체는 classic 모드에도 똑같이 적용됩니다. 로그인 버튼이 잘못 보이는 버그 수정이라 classic에 옛 상단 바를 남기지 않았습니다.\n- 국내 시장 참고 지표에는 등락 색을 넣지 않았습니다. 응답에 현재값과 관측일만 있고 전일 대비 값이 없어서, 오르내림을 칠하려면 백엔드에 등락 필드가 먼저 필요합니다.\n- 첫 화면 섹션 높이는 상단 바 높이(83px)에 묶여 있습니다. `AppHeader`의 높이가 바뀌면 `--landing-header-height`도 함께 바꿔야 합니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-23T12:32:13.207+09:00",
+    "updated_at": "2026-09-23T13:45:47.330+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-23T13:45:47.010+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/425-design-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+    "merge_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-23T12:32:14.979+09:00",
+    "reference": "!307",
+    "references": {
+      "short": "!307",
+      "relative": "!307",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!307"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/307",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958179,
+    "iid": 307,
+    "project_id": 1444456,
+    "title": "fix(fe): 첫 화면도 공용 상단 바를 써서 로그인 상태를 반영한다",
+    "description": "# 작업 내용 요약\n\n첫 화면도 다른 화면과 같은 상단 바를 써서, 로그인한 뒤 '로그인' 버튼이 보이던 문제를 없앱니다. 너무 흐려진 작은 제목·구역 아이콘에 포인트 색을 되돌리고, 과거 사례 고르기 화면을 카드로 묶습니다.\n\n# 관련 티켓\n\n- ticket S15P21E205-425\n- https://ssafy.atlassian.net/browse/S15P21E205-425\n\n# 주요 변경 사항\n\n- 첫 화면 전용 `LandingHeader`를 지우고 공용 `AppHeader`를 씁니다. 로그인 상태에 따라 이름·로그아웃이 보이고, 메뉴 모양이 모든 화면에서 같아집니다.\n- 한 칸씩 넘기는 첫 화면 섹션이 상단 바(83px)에 가리지 않도록, 섹션 높이에서 상단 바 높이를 빼고 `scroll-padding-top`을 줍니다.\n- `--thorp-eyebrow`·`--thorp-ornament`를 포인트 초록으로 되돌립니다. 무채색은 구역 배경의 빛번짐에만 남깁니다.\n- 시장 흐름: 분야 목록 화살표를 포인트 색으로 바꾸고, 국내 시장 참고 지표(KOSPI·VKOSPI200) 값을 크게 보입니다.\n- 과거 사례 고르기: 검색 폼, 자료 기준, 사례 하나하나, 결과 없음·오류를 카드로 묶습니다. 안내 문구는 왼쪽 색 막대가 있는 카드 안 칸이고, 사례 상세는 사례 카드 안에서 카드 안 칸 모양으로 열립니다.\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` — lint 오류 0, 1366 통과, skipped 0\n- [x] 첫 화면을 1440px·390px에서 확인 — 상단 바가 붙고 첫 칸이 화면 높이에 맞음\n- [ ] 시장 흐름 포인트 색·참고 지표 화면 확인\n- [ ] 과거 사례 고르기 검색·결과 화면 확인\n\n# 리뷰 포인트\n\n- 상단 바 교체는 classic 모드에도 똑같이 적용됩니다. 로그인 버튼이 잘못 보이는 버그 수정이라 classic에 옛 상단 바를 남기지 않았습니다.\n- 국내 시장 참고 지표에는 등락 색을 넣지 않았습니다. 응답에 현재값과 관측일만 있고 전일 대비 값이 없어서, 오르내림을 칠하려면 백엔드에 등락 필드가 먼저 필요합니다.\n- 첫 화면 섹션 높이는 상단 바 높이(83px)에 묶여 있습니다. `AppHeader`의 높이가 바뀌면 `--landing-header-height`도 함께 바꿔야 합니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-23T12:32:13.207+09:00",
+    "updated_at": "2026-09-23T13:45:47.330+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-23T13:45:47.010+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/425-design-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+    "merge_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-23T12:32:14.979+09:00",
+    "reference": "!307",
+    "references": {
+      "short": "!307",
+      "relative": "!307",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!307"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/307",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": "2026-09-23T12:43:32.254+09:00",
+    "latest_build_finished_at": "2026-09-23T12:47:42.213+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 219103,
+      "iid": 324,
+      "project_id": 1444456,
+      "sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+      "ref": "feat(fe)/425-design-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T12:43:32.134+09:00",
+      "updated_at": "2026-09-23T12:47:42.221+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219103"
+    },
+    "head_pipeline": {
+      "id": 219103,
+      "iid": 324,
+      "project_id": 1444456,
+      "sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+      "ref": "feat(fe)/425-design-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T12:43:32.134+09:00",
+      "updated_at": "2026-09-23T12:47:42.221+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219103",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T12:43:32.254+09:00",
+      "finished_at": "2026-09-23T12:47:42.213+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219103",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "head_sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+      "start_sha": "32147083ceb673bec955152703094efdfd02b934"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "6e52efc559d7186e37df8a22e7fcc66fcfc2dba9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861937,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T12:32:13.323+09:00",
+          "updated_at": "2026-09-23T12:32:13.332+09:00",
+          "system": true,
+          "noteable_id": 958179,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 307,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a46e4a03aeb492b5ac0b3604de59cabc85b2e9d8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861941,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **인증 상태별 상단 바 검증**: 로그인하지 않은 상태(Anonymous)와 로그인한 상태에서 `LandingPage`(`/`)에 접근했을 때, `AppHeader`가 각각 올바르게 '로그인' 버튼 또는 유저 프로필/로그아웃 관련 UI를 렌더링하는지 테스트합니다.\n- **레이아웃 및 스크롤 패딩 검증**: 뷰포트 크기를 변경(`1440px`, `390px` 등)하면서 첫 화면 섹션(`Hero`, `MarketAnalysisSection` 등)이 공용 `AppHeader`(83px)에 의해 가리지 않고, `scroll-padding-top`이 정상적으로 동작하여 스크롤 스냅 시 정확한 위치에 멈추는지 확인합니다.\n- **CSS 변수 및 디자인 모드 토글 검증**: `--thorp-eyebrow`, `--thorp-ornament` 색상 토큰이 `classic` 모드와 일반 모드에서 의도대로 올바르게 적용되는지 시각적(Visual Regression) 혹은 단위 테스트로 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:927cda10fd6bfd29ac194e5dc11424bc23373db6 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T12:32:18.715+09:00",
+          "updated_at": "2026-09-23T12:32:18.715+09:00",
+          "system": false,
+          "noteable_id": 958179,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 307,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a3a1febbfca882b2a18cfaaedb9e6c2f8966594f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2862507,
+          "type": null,
+          "body": "mentioned in commit 0823ed538d64a3141e79dd8e81fb515691b37e32",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T13:45:47.069+09:00",
+          "updated_at": "2026-09-23T13:45:47.074+09:00",
+          "system": true,
+          "noteable_id": 958179,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 307,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d69d01b480f6e01589c2da1f20147352ef7241fa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885005,
+          "type": null,
+          "body": "mentioned in commit 68aaa180545f8618f8770ce2ecbb3884b1e3d144",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.000+09:00",
+          "updated_at": "2026-10-13T15:16:08.022+09:00",
+          "system": true,
+          "noteable_id": 958179,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 307,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2244722,
+      "head_commit_sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+      "base_commit_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "start_commit_sha": "32147083ceb673bec955152703094efdfd02b934",
+      "created_at": "2026-09-23T12:32:13.557+09:00",
+      "merge_request_id": 958179,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "d0ffd390b4b971b204bb7b3ce47fb28f769ba7de"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2244722,
+      "head_commit_sha": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+      "base_commit_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "start_commit_sha": "32147083ceb673bec955152703094efdfd02b934",
+      "created_at": "2026-09-23T12:32:13.557+09:00",
+      "merge_request_id": 958179,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "d0ffd390b4b971b204bb7b3ce47fb28f769ba7de",
+      "commits": [
+        {
+          "id": "927cda10fd6bfd29ac194e5dc11424bc23373db6",
+          "short_id": "927cda10",
+          "created_at": "2026-09-23T12:30:34.000+09:00",
+          "parent_ids": [
+            "c60693ca11c1bf83a8aa97544e689d674eb05488"
+          ],
+          "title": "feat(fe): 과거 사례 고르기 화면을 카드로 묶는다",
+          "message": "feat(fe): 과거 사례 고르기 화면을 카드로 묶는다\n\n- 검색 폼·자료 기준·사례 하나하나·결과 없음·오류를 카드로, 안내 문구를 왼쪽 색 막대가 있는\n  카드 안 칸으로 둔다. 사례 상세는 사례 카드 안에서 열리므로 카드 안 칸 모양으로 겹침을 피한다.\n- :root:not([data-design='classic']) 층으로 덧붙여 classic은 예전 선 나눔 그대로다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T12:30:34.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T12:30:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/927cda10fd6bfd29ac194e5dc11424bc23373db6"
+        },
+        {
+          "id": "c60693ca11c1bf83a8aa97544e689d674eb05488",
+          "short_id": "c60693ca",
+          "created_at": "2026-09-23T12:30:34.000+09:00",
+          "parent_ids": [
+            "fa90746c8c2258cd00e2e9c715fd6890574521ac"
+          ],
+          "title": "fix(fe): 작은 제목과 구역 아이콘에 포인트 색을 되돌리고 참고 지표 값을 키운다",
+          "message": "fix(fe): 작은 제목과 구역 아이콘에 포인트 색을 되돌리고 참고 지표 값을 키운다\n\n- 영문 작은 제목·구역 아이콘·번호까지 무채색으로 낮췄더니 구역의 시작이 눈에 잡히지 않았다.\n  --thorp-eyebrow·--thorp-ornament를 포인트 초록으로 되돌리고, 무채색은 배경 빛번짐에만 남긴다.\n- 시장 흐름 분야 목록의 화살표를 포인트 색으로, 국내 시장 참고 지표 값을 크게 보인다.\n  등락은 응답에 없어 색으로 칠하지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T12:30:34.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T12:30:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c60693ca11c1bf83a8aa97544e689d674eb05488"
+        },
+        {
+          "id": "fa90746c8c2258cd00e2e9c715fd6890574521ac",
+          "short_id": "fa90746c",
+          "created_at": "2026-09-23T12:30:33.000+09:00",
+          "parent_ids": [
+            "8e59ce313b648440902d92341edddfb90f68bbc6"
+          ],
+          "title": "fix(fe): 첫 화면도 공용 상단 바를 써서 로그인 상태를 반영한다",
+          "message": "fix(fe): 첫 화면도 공용 상단 바를 써서 로그인 상태를 반영한다\n\n- 첫 화면 전용 LandingHeader는 로그인 버튼을 고정으로 두어, 로그인한 뒤에도 '로그인'이 보였다.\n  다른 화면과 같은 AppHeader로 바꿔 상단 바 모양과 로그인 상태 표시를 맞춘다.\n- 한 칸씩 넘기는 섹션이 상단 바(83px)에 가리지 않도록 섹션 높이에서 빼고 scroll-padding-top을 준다.\n- 쓰이지 않게 된 LandingHeader와 그 CSS·토큰을 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T12:30:33.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T12:30:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fa90746c8c2258cd00e2e9c715fd6890574521ac"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,102 +0,0 @@\n-import { LogIn, Menu, X } from 'lucide-react'\n-import { useEffect, useRef, useState } from 'react'\n-import { Link } from 'react-router-dom'\n-import { useLoginReturn } from '@/auth/useLoginReturn'\n-import styles from '@/pages/LandingPage.module.css'\n-\n-/**\n- * 첫 화면이 보이는 주요 메뉴다. 아직 화면이 없는 메뉴도 숨기지 않는다.\n- * 목적지는 이미 화면이 있으면 그 경로로 잇고, 배우기는 준비 중 화면이 받는다.\n- * 최종 목적지 확정은 각 메뉴를 소유한 spec의 몫이다.\n- */\n-const primaryMenuItems = [\n-  { to: '/diagnosis/sectors', label: '전략 진단' },\n-  { to: '/market-flow', label: '시장 흐름' },\n-  { to: '/learn', label: '배우기' },\n-]\n-\n-/** 보조 메뉴도 첫 화면에서 함께 보인다. */\n-const secondaryMenuItem = { to: '/records', label: '내 기록' }\n-\n-const menuItems = [...primaryMenuItems, secondaryMenuItem]\n-\n-/** 첫 화면의 메뉴 탐색 헤더다. */\n-export function LandingHeader() {\n-  const [isMenuOpen, setIsMenuOpen] = useState(false)\n-  const menuButtonRef = useRef<HTMLButtonElement>(null)\n-  const rememberReturn = useLoginReturn()\n-\n-  useEffect(() => {\n-    if (!isMenuOpen) return\n-\n-    const handleEscape = (event: globalThis.KeyboardEvent) => {\n-      if (event.key !== 'Escape') return\n-      event.preventDefault()\n-      setIsMenuOpen(false)\n-      window.requestAnimationFrame(() => menuButtonRef.current?.focus())\n-    }\n-\n-    document.addEventListener('keydown', handleEscape)\n-    return () => document.removeEventListener('keydown', handleEscape)\n-  }, [isMenuOpen])\n-\n-  return (\n-    <header className={styles.landingHeader}>\n-      <Link className={styles.wordmark} to=\"/\" aria-label=\"Thorp 랜딩 홈\">\n-        Thorp<span>.</span>\n-      </Link>\n-\n-      <nav className={styles.desktopNavigation} aria-label=\"주요 메뉴\">\n-        {primaryMenuItems.map((item) => (\n-          <Link key={item.to} to={item.to}>\n-            {item.label}\n-          </Link>\n-        ))}\n-        <Link className={styles.secondaryMenuLink} to={secondaryMenuItem.to}>\n-          {secondaryMenuItem.label}\n-        </Link>\n-      </nav>\n-\n-      <Link className={styles.headerCta} to=\"/login\" onClick={rememberReturn}>\n-        로그인\n-        <LogIn aria-hidden=\"true\" size={16} strokeWidth={1.8} />\n-      </Link>\n-\n-      <button\n-        ref={menuButtonRef}\n-        type=\"button\"\n-        className={styles.menuButton}\n-        aria-label={isMenuOpen ? '메뉴 닫기' : '메뉴 열기'}\n-        aria-expanded={isMenuOpen}\n-        aria-controls=\"landing-mobile-navigation\"\n-        aria-haspopup=\"true\"\n-        onClick={() => setIsMenuOpen((current) => !current)}\n-      >\n-        {isMenuOpen ? <X aria-hidden=\"true\" size={20} /> : <Menu aria-hidden=\"true\" size={20} />}\n-      </button>\n-\n-      {isMenuOpen ? (\n-        <nav\n-          id=\"landing-mobile-navigation\"\n-          className={styles.mobileNavigation}\n-          aria-label=\"모바일 주요 메뉴\"\n-        >\n-          {menuItems.map((item) => (\n-            <Link key={item.to} to={item.to} onClick={() => setIsMenuOpen(false)}>\n-              {item.label}\n-            </Link>\n-          ))}\n-          <Link\n-            to=\"/login\"\n-            onClick={() => {\n-              rememberReturn()\n-              setIsMenuOpen(false)\n-            }}\n-          >\n-            로그인\n-          </Link>\n-        </nav>\n-      ) : null}\n-    </header>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "old_path": "frontend/src/components/landing/LandingHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -200,6 +200,12 @@\n :global(:root:not([data-design='classic'])) .sectorChip[aria-pressed='true'] { border-color: var(--thorp-foreground); background: var(--thorp-foreground); color: var(--thorp-background); font-weight: 600; }\n \n :global(:root:not([data-design='classic'])) .referenceValues { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }\n+/* 참고 지표는 값이 먼저 읽히게 키운다. 등락은 응답에 없어 색으로 칠하지 않는다. */\n+:global(:root:not([data-design='classic'])) .referenceValues dt { color: var(--thorp-eyebrow); font-size: .7rem; font-weight: 600; letter-spacing: .04em; }\n+:global(:root:not([data-design='classic'])) .referenceValues dd { font-family: var(--thorp-font-display); font-size: 1.4rem; font-weight: 600; letter-spacing: -.02em; }\n+:global(:root:not([data-design='classic'])) .referenceValues dd small { color: var(--thorp-muted); font-size: .72rem; font-weight: 400; }\n+:global(:root:not([data-design='classic'])) .referenceValues .referenceObserved { font-family: var(--thorp-font-body); font-weight: 400; }\n+:global(:root:not([data-design='classic'])) .openButton svg { color: var(--thorp-accent-soft); }\n :global(:root:not([data-design='classic'])) .referenceValues > div { padding: 10px 12px; border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-inset); background: var(--thorp-surface-muted); }\n :global(:root:not([data-design='classic'])) .newsList { gap: 0; }\n :global(:root:not([data-design='classic'])) .newsList li { padding: 12px 0; border-bottom: 1px solid var(--thorp-line); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,7 +24,7 @@ import { useLoginReturn } from '@/auth/useLoginReturn'\n import styles from './AppHeader.module.css'\n \n /**\n- * 첫 화면(`LandingHeader`)과 같은 메뉴 넷이다. 목적지도 같다.\n+ * 첫 화면도 이 상단 바를 쓴다. 메뉴 넷과 목적지가 모든 화면에서 같다.\n  *\n  * 첫 화면에서 메뉴를 눌러 들어온 화면의 헤더가 다른 메뉴를 보이면, 사용자는 한 번의 이동으로\n  * 서비스의 구성이 통째로 바뀐 것처럼 겪는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,3 +13,8 @@\n .tableScroll th, .tableScroll td { padding: 7px 10px; border-bottom: 1px solid var(--thorp-line); text-align: left; }\n .era { margin-top: 14px; padding: 10px 12px; border-left: 2px solid var(--thorp-accent-soft); background: var(--thorp-background); }\n @media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: var(--thorp-pad-card, 12px); } }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+/* 상세는 사례 카드 안에서 열린다. 카드 안에 또 카드를 겹치지 않도록 카드 안 칸 모양으로 둔다. */\n+:global(:root:not([data-design='classic'])) .detail { margin-top: 4px; padding: var(--thorp-pad-inset); border-color: var(--thorp-line); border-radius: var(--thorp-radius-inset); background: var(--thorp-surface-muted); }\n+:global(:root:not([data-design='classic'])) .era { border-radius: 0 var(--thorp-radius-inset) var(--thorp-radius-inset) 0; }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.module.css",
+          "old_path": "frontend/src/components/regime/CaseDetail.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,3 +25,11 @@\n   .months, .reasons, .detailButton { grid-column: 1; }\n   .reasons { grid-template-columns: 1fr; gap: 14px; }\n }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+:global(:root:not([data-design='classic'])) .list { border-top: 0; }\n+:global(:root:not([data-design='classic'])) .heading { padding: 8px 2px 16px; }\n+:global(:root:not([data-design='classic'])) .cases { display: grid; gap: 12px; }\n+:global(:root:not([data-design='classic'])) .case { padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }\n+:global(:root:not([data-design='classic'])) .more { margin-top: 16px; border-radius: var(--thorp-radius-control); }\n+:global(:root:not([data-design='classic'])) .more:hover { border-color: var(--thorp-line-control-hover); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.module.css",
+          "old_path": "frontend/src/components/regime/CaseList.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,3 +5,6 @@\n .section dl > div { display: flex; flex-wrap: wrap; gap: 4px 8px; }\n .section dt { color: var(--thorp-foreground); }\n .section dd { margin: 0; }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+:global(:root:not([data-design='classic'])) .section { margin-bottom: 16px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/DataAsOf.module.css",
+          "old_path": "frontend/src/components/regime/DataAsOf.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,3 +8,9 @@\n .error { border-left-color: var(--thorp-negative); }\n .error strong { color: var(--thorp-negative); }\n @media (max-width: 520px) { .disclosure { grid-template-columns: 1fr; } }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+/* 안내는 카드 안 칸 모양이다. 어떤 안내인지는 왼쪽 색 막대가 그대로 말한다. */\n+:global(:root:not([data-design='classic'])) .disclosure { border: 1px solid var(--thorp-line); border-left: 3px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-inset); padding: var(--thorp-pad-notice); }\n+:global(:root:not([data-design='classic'])) .warning { border-left-color: var(--thorp-warning); }\n+:global(:root:not([data-design='classic'])) .error { border-left-color: var(--thorp-negative); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/Disclosure.module.css",
+          "old_path": "frontend/src/components/regime/Disclosure.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,2 +1,5 @@\n .empty { border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 40px; }\n .empty h2 { margin: 0; color: var(--thorp-foreground); font-size: 1.2rem; line-height: 1.5; }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+:global(:root:not([data-design='classic'])) .empty { padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/EmptyResult.module.css",
+          "old_path": "frontend/src/components/regime/EmptyResult.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,3 +3,7 @@\n .error p { margin: 0 0 16px; color: var(--thorp-copy); font-size: .84rem; }\n .error button { min-height: 42px; padding: 7px 14px; border: 1px solid var(--thorp-line-strong); color: var(--thorp-foreground); background: var(--thorp-surface-raised); cursor: pointer; }\n .error button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+:global(:root:not([data-design='classic'])) .error { border: 1px solid var(--thorp-line); border-left: 3px solid var(--thorp-negative); border-radius: var(--thorp-radius-card); padding: var(--thorp-pad-card); }\n+:global(:root:not([data-design='classic'])) .error button { border-radius: var(--thorp-radius-control); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/LoadError.module.css",
+          "old_path": "frontend/src/components/regime/LoadError.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -1,4 +1,6 @@\n .page {\n+  /* 상단 바(AppHeader .header의 min-height 82px + 아래 선 1px) 높이. 한 칸씩 넘기는 섹션이 상단 바에 가리지 않게 뺀다. */\n+  --landing-header-height: 83px;\n   /*\n     초록 기운이 섞였던 무채색을 B안(그래파이트)으로 옮긴 값이다. 각 자리는 var(--lp-N, 예전 값)으로\n     쓰고, classic 디자인에서는 아래에서 이 토큰을 비워(initial) 예전 값으로 돌아간다. classic을\n@@ -6,9 +8,6 @@\n   */\n   --lp-1: #0d0f0e;\n   --lp-2: #101312;\n-  --lp-3: rgb(209 214 211 / 14%);\n-  --lp-4: rgb(9 10 9 / 68%);\n-  --lp-5: #afb2b0;\n   --lp-6: rgb(6 7 6 / 12%);\n   --lp-7: rgb(6 7 6 / 38%);\n   --lp-8: rgb(6 7 6 / 72%);\n@@ -33,7 +32,6 @@\n   --lp-27: #787a78;\n   --lp-28: #727473;\n   --lp-29: #939694;\n-  --lp-30: rgb(10 12 11 / 96%);\n   --landing-background: var(--thorp-background);\n   --landing-surface: var(--thorp-surface);\n   --landing-surface-strong: var(--thorp-surface-raised);\n@@ -53,6 +51,7 @@\n   overflow-y: auto;\n   scroll-behavior: smooth;\n   scroll-snap-type: y mandatory;\n+  scroll-padding-top: var(--landing-header-height);\n   background:\n     radial-gradient(circle at 80% 22%, rgb(3 199 90 / 7%), transparent 27rem),\n     linear-gradient(180deg, var(--lp-1, #030806) 0%, var(--lp-2, #050b08) 45%, var(--lp-1, #030806) 100%);\n@@ -70,109 +69,10 @@\n   pointer-events: none;\n }\n \n-.landingHeader {\n-  position: absolute;\n-  z-index: 30;\n-  top: clamp(18px, 3vw, 42px);\n-  left: 50%;\n-  display: grid;\n-  grid-template-columns: 1fr auto 1fr;\n-  align-items: center;\n-  width: min(calc(100% - 48px), 1440px);\n-  min-height: 62px;\n-  padding: 0 10px 0 22px;\n-  border: 1px solid var(--lp-3, rgb(191 221 205 / 14%));\n-  border-radius: 13px;\n-  background: var(--lp-4, rgb(4 12 8 / 68%));\n-  box-shadow: 0 18px 60px rgb(0 0 0 / 20%);\n-  backdrop-filter: blur(18px);\n-  transform: translateX(-50%);\n-}\n-\n-.wordmark {\n-  justify-self: start;\n-  color: var(--landing-text);\n-  font-size: 1.3rem;\n-  font-weight: 720;\n-  letter-spacing: -0.055em;\n-  text-decoration: none;\n-}\n-\n-.wordmark span {\n-  color: var(--landing-accent);\n-}\n-\n-.desktopNavigation {\n-  display: flex;\n-  align-items: center;\n-  gap: clamp(24px, 3.2vw, 54px);\n-}\n-\n-.desktopNavigation a,\n-.mobileNavigation a {\n-  position: relative;\n-  color: var(--lp-5, #a8b5ad);\n-  font-size: 0.78rem;\n-  font-weight: 540;\n-  letter-spacing: -0.01em;\n-  text-decoration: none;\n-  transition: color 180ms ease;\n-}\n-\n-.desktopNavigation a::after {\n-  position: absolute;\n-  right: 0;\n-  bottom: -8px;\n-  left: 0;\n-  height: 1px;\n-  background: var(--landing-accent);\n-  content: '';\n-  transform: scaleX(0);\n-  transform-origin: right;\n-  transition: transform 220ms ease;\n-}\n-\n-.desktopNavigation a:hover,\n-.mobileNavigation a:hover {\n-  color: var(--landing-text);\n-}\n-\n-.desktopNavigation a:hover::after {\n-  transform: scaleX(1);\n-  transform-origin: left;\n-}\n-\n-.headerCta {\n-  display: inline-flex;\n-  align-items: center;\n-  justify-self: end;\n-  gap: 9px;\n-  min-height: 42px;\n-  padding: 0 16px;\n-  border-radius: var(--thorp-radius-control, 8px);\n-  background: var(--landing-text);\n-  color: var(--thorp-action-foreground);\n-  font-size: 0.76rem;\n-  font-weight: 680;\n-  text-decoration: none;\n-  transition: gap 180ms ease, background 180ms ease, transform 180ms ease;\n-}\n-\n-.headerCta:hover {\n-  gap: 13px;\n-  background: var(--landing-accent-soft);\n-  transform: translateY(-1px);\n-}\n-\n-.menuButton,\n-.mobileNavigation {\n-  display: none;\n-}\n-\n .hero {\n   position: relative;\n   display: grid;\n-  min-height: 100svh;\n+  min-height: calc(100svh - var(--landing-header-height));\n   scroll-snap-align: start;\n   scroll-snap-stop: always;\n   place-items: center;\n@@ -448,7 +348,7 @@\n   position: relative;\n   display: grid;\n   width: min(100%, 1600px);\n-  min-height: 100svh;\n+  min-height: calc(100svh - var(--landing-header-height));\n   scroll-snap-align: start;\n   scroll-snap-stop: always;\n   margin: 0 auto;\n@@ -484,7 +384,7 @@\n \n .backtestSection {\n   grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);\n-  height: 100svh;\n+  height: calc(100svh - var(--landing-header-height));\n   padding-top: clamp(64px, 8vh, 104px);\n   padding-bottom: clamp(64px, 8vh, 104px);\n }\n@@ -817,7 +717,7 @@\n   display: flex;\n   align-items: center;\n   flex-direction: column;\n-  min-height: 100svh;\n+  min-height: calc(100svh - var(--landing-header-height));\n   scroll-snap-align: start;\n   scroll-snap-stop: always;\n   padding: clamp(72px, 8vh, 92px) clamp(18px, 5vw, 72px) 36px;\n@@ -1027,16 +927,11 @@\n   border: 0;\n }\n \n-.wordmark:focus-visible,\n-.desktopNavigation a:focus-visible,\n-.headerCta:focus-visible,\n-.mobileNavigation a:focus-visible,\n .primaryCta:focus-visible,\n .secondaryCta:focus-visible,\n .textCta:focus-visible,\n .algorithmCard > a:focus-visible,\n-.cardSelectButton:focus-visible,\n-.menuButton:focus-visible {\n+.cardSelectButton:focus-visible {\n   outline: var(--thorp-focus-outline-compact);\n   outline-offset: var(--thorp-focus-offset-wide);\n }\n@@ -1070,9 +965,6 @@\n }\n \n @media (max-width: 1100px) {\n-  .landingHeader {\n-    width: calc(100% - 32px);\n-  }\n \n   .marketSection,\n   .backtestSection {\n@@ -1111,53 +1003,6 @@\n     scroll-snap-align: none;\n   }\n \n-  .landingHeader {\n-    grid-template-columns: 1fr auto;\n-    min-height: 56px;\n-    padding: 0 8px 0 17px;\n-  }\n-\n-  .desktopNavigation,\n-  .headerCta {\n-    display: none;\n-  }\n-\n-  .menuButton {\n-    display: grid;\n-    width: 40px;\n-    aspect-ratio: 1;\n-    border: 0;\n-    border-radius: var(--thorp-radius-control, 8px);\n-    background: rgb(255 255 255 / 6%);\n-    color: var(--landing-text);\n-    cursor: pointer;\n-    place-items: center;\n-  }\n-\n-  .mobileNavigation {\n-    position: absolute;\n-    top: calc(100% + 9px);\n-    right: 0;\n-    left: 0;\n-    display: flex;\n-    flex-direction: column;\n-    padding: 10px;\n-    border: 1px solid var(--landing-line);\n-    border-radius: 10px;\n-    background: var(--lp-30, rgb(5 14 9 / 96%));\n-    box-shadow: 0 20px 55px rgb(0 0 0 / 45%);\n-  }\n-\n-  .mobileNavigation a {\n-    padding: 13px 12px;\n-    border-bottom: 1px solid var(--landing-line);\n-  }\n-\n-  .mobileNavigation a:last-child {\n-    border-bottom: 0;\n-    color: var(--landing-accent-soft);\n-  }\n-\n   .heroContent {\n     width: min(100% - 28px, 610px);\n   }\n@@ -1284,10 +1129,6 @@\n }\n \n @media (max-width: 430px) {\n-  .landingHeader {\n-    top: 12px;\n-    width: calc(100% - 22px);\n-  }\n \n   .heroContent {\n     padding-top: 118px;\n@@ -1341,8 +1182,6 @@\n     mask-image: none;\n   }\n \n-  .headerCta,\n-  .desktopNavigation a::after,\n   .primaryCta,\n   .secondaryCta,\n   .textCta,\n@@ -1429,9 +1268,6 @@\n :global(:root[data-design='classic']) .page {\n   --lp-1: initial;\n   --lp-2: initial;\n-  --lp-3: initial;\n-  --lp-4: initial;\n-  --lp-5: initial;\n   --lp-6: initial;\n   --lp-7: initial;\n   --lp-8: initial;\n@@ -1456,5 +1292,4 @@\n   --lp-27: initial;\n   --lp-28: initial;\n   --lp-29: initial;\n-  --lp-30: initial;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import { readdirSync, readFileSync } from 'node:fs'\n import { screen, within } from '@testing-library/react'\n import { beforeAll, describe, expect, it, vi } from 'vitest'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n import { renderWithRouter } from '@/test/renderWithRouter'\n import { LandingPage } from './LandingPage'\n \n@@ -75,9 +76,25 @@ const expectedMenus = [\n   { label: '내 기록', href: '/records' },\n ]\n \n+/** 첫 화면도 공용 상단 바(AppHeader)를 쓰므로 그것이 읽는 인증 상태를 최소로 준다. */\n+function renderLanding() {\n+  const authValue: AuthContextValue = {\n+    status: 'anonymous',\n+    user: null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+  return renderWithRouter(\n+    <AuthContext.Provider value={authValue}>\n+      <LandingPage />\n+    </AuthContext.Provider>,\n+  )\n+}\n+\n describe('LandingPage', () => {\n   it('주요 메뉴 셋과 보조 메뉴 하나가 모두 보인다', () => {\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     for (const menu of expectedMenus) {\n       const link = screen.getByRole('link', { name: menu.label })\n@@ -86,7 +103,7 @@ describe('LandingPage', () => {\n   })\n \n   it(\"가장 중요한 행동 버튼은 '비중 비교하기' 하나이며 섹터 선택으로 간다\", () => {\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     const cta = screen.getByRole('link', { name: /비중 비교하기/ })\n     expect(cta.getAttribute('href')).toBe('/diagnosis/sectors')\n@@ -101,7 +118,7 @@ describe('LandingPage', () => {\n   })\n \n   it(\"보조 버튼 '서비스 알아보기'는 화면을 떠나지 않는다\", () => {\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     const secondary = screen.getByRole('button', { name: /서비스 알아보기/ })\n     // 링크가 아니라 버튼이라는 사실 자체가 다른 화면으로 보내지 않는다는 뜻이다.\n@@ -109,7 +126,7 @@ describe('LandingPage', () => {\n   })\n \n   it('머리 영역의 주 버튼이 대시보드로 가지 않는다', () => {\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     // 이 자리를 '비중 비교하기'가 대신한다. 옛 버튼이 남으면 첫 화면의 주된 행동이 둘이 된다.\n     expect(screen.queryByRole('link', { name: /시장 살펴보기/ })).toBeNull()\n@@ -117,7 +134,7 @@ describe('LandingPage', () => {\n \n   it('소개 섹션의 링크가 헤더 메뉴와 같은 곳을 가리킨다', () => {\n     // 002 T024. 존재만 보면 목적지가 옛 화면으로 남아 있어도 통과한다 — 실제로 그랬다.\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     expect(screen.getByRole('link', { name: /시장 분석 보러 가기/ }).getAttribute('href')).toBe('/market-flow')\n     expect(screen.getByRole('link', { name: /백테스트 시작하기/ }).getAttribute('href')).toBe('/diagnosis/sectors')\n@@ -139,7 +156,7 @@ describe('LandingPage', () => {\n   it('첫 화면에 옛 대시보드·백테스트 경로로 가는 링크가 없다', () => {\n     // 그 두 경로와 화면은 S15P21E205-416에서 저장소에서 없앴다. 링크가 되살아나면 사용자는\n     // 없는 주소로 간다.\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     const stale = screen\n       .getAllByRole('link')\n@@ -150,7 +167,7 @@ describe('LandingPage', () => {\n \n   it('전략 카드의 이름을 등록표 응답에서 읽는다', async () => {\n     // 이름을 코드에 상수로 두면 등록표에 없는 전략을 첫 화면이 광고하게 된다(003 FR-005).\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     expect(await screen.findByRole('heading', { name: '동일 비중' })).toBeDefined()\n   })\n@@ -159,7 +176,7 @@ describe('LandingPage', () => {\n     // 예전에는 데모 자료의 `누적 수익 +124.8%`·CAGR·MDD·SHARPE를 첫 화면에 적었다. 어떤\n     // 실행에서도 나온 적 없는 값이라 첫 화면이 성과를 단정하는 꼴이었다. 성과 수치는 자기\n     // 실행을 가진 결과 화면에만 둔다.\n-    const { container } = renderWithRouter(<LandingPage />)\n+    const { container } = renderLanding()\n \n     const text = container.textContent ?? ''\n     for (const forbidden of ['124.8', 'CAGR', 'MDD', 'SHARPE', '누적 수익']) {\n@@ -168,7 +185,7 @@ describe('LandingPage', () => {\n   })\n \n   it('소개 섹션은 그대로 남는다', () => {\n-    renderWithRouter(<LandingPage />)\n+    renderLanding()\n \n     expect(screen.getByRole('heading', { name: /시장을 분석합니다/ })).toBeDefined()\n     expect(screen.getByRole('heading', { name: /전략을 실험해보세요/ })).toBeDefined()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.test.tsx",
+          "old_path": "frontend/src/pages/LandingPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,10 @@\n import { AlgorithmOrbit } from '@/components/landing/AlgorithmOrbit'\n-import { LandingHeader } from '@/components/landing/LandingHeader'\n import {\n   BacktestIntroSection,\n   HeroSection,\n   MarketAnalysisSection,\n } from '@/components/landing/LandingSections'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n import { marketMock } from '@/data/marketMock'\n import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n import styles from './LandingPage.module.css'\n@@ -19,7 +19,8 @@ export function LandingPage() {\n \n   return (\n     <main className={styles.page}>\n-      <LandingHeader />\n+      {/* 다른 화면과 같은 상단 바다. 로그인 상태를 읽으므로 로그인한 사용자에게 로그인 버튼을 보이지 않는다. */}\n+      <AppHeader />\n       <HeroSection />\n       <div className={styles.storyFlow}>\n         <MarketAnalysisSection indicators={indicators} />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.tsx",
+          "old_path": "frontend/src/pages/LandingPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -117,6 +117,7 @@\n :global(:root:not([data-design='classic'])) .connectionGrid article:last-child { display: flex; flex-direction: column; padding: 24px; }\n :global(:root:not([data-design='classic'])) .connectionGrid article + article { border-left: 1px solid var(--thorp-line); }\n :global(:root:not([data-design='classic'])) .connectionLabel { color: var(--thorp-eyebrow); }\n+:global(:root:not([data-design='classic'])) .connectionGrid article > svg { color: var(--thorp-ornament); }\n /* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */\n :global(:root:not([data-design='classic'])) .connectionLink { margin-top: auto; padding-top: 14px; color: var(--thorp-foreground); font-weight: 600; }\n @media (max-width: 1100px) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "old_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,3 +23,10 @@\n .disclosures { display: grid; gap: 8px; margin-bottom: 20px; }\n @media (max-width: 800px) { .main { width: calc(100% - 32px); padding-top: 18px; } }\n @media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button, .monthControl, .monthControl input { width: 100%; } }\n+\n+/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */\n+:global(:root:not([data-design='classic'])) .hero { border-bottom: 0; padding-bottom: 24px; }\n+:global(:root:not([data-design='classic'])) .searchForm { margin-bottom: 24px; padding: var(--thorp-pad-card); border: 1px solid var(--thorp-line); border-radius: var(--thorp-radius-card); background: var(--thorp-surface); }\n+:global(:root:not([data-design='classic'])) .searchForm .compositeButton:hover:not(:disabled) { border-color: var(--thorp-line-control-hover); }\n+:global(:root:not([data-design='classic'])) .resultHeading { border-top: 0; padding: 4px 2px 16px; }\n+:global(:root:not([data-design='classic'])) .disclosures { gap: 8px; }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.module.css",
+          "old_path": "frontend/src/pages/RegimeSearchPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -91,11 +91,12 @@\n   --thorp-pad-inset: 12px 14px;\n   --thorp-overlay: rgb(0 0 0 / 68%);\n   /*\n-    초록은 누를 것(버튼·링크·고름·초점·진행)에만 쓴다. 영문 작은 제목과 장식 아이콘·번호, 구역 배경의\n-    빛번짐은 무채색이다. 초록이 모든 곳에 있으면 무엇을 누를 수 있는지가 색으로 드러나지 않는다.\n+    초록은 누를 것(버튼·링크·고름·초점·진행)과 작은 포인트(영문 작은 제목, 구역 아이콘·번호)에 쓴다.\n+    구역 배경의 빛번짐은 무채색이다 — 넓은 면이 초록이면 화면 전체가 초록으로 읽힌다. 작은 제목·아이콘까지\n+    무채색으로 낮췄더니 구역의 시작이 눈에 잡히지 않아 포인트로 되돌렸다.\n   */\n-  --thorp-eyebrow: var(--thorp-muted);\n-  --thorp-ornament: var(--thorp-copy);\n+  --thorp-eyebrow: var(--thorp-accent-soft);\n+  --thorp-ornament: var(--thorp-accent-soft);\n   --thorp-ambient: rgb(255 255 255 / 3%);\n   --thorp-input-hover: rgb(255 255 255 / 30%);\n   --thorp-surface-glass: rgb(26 29 28 / 86%);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/index.css",
+          "old_path": "frontend/src/index.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2861941": []
+  }
+}

@@ -1,0 +1,757 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945007,
+    "iid": 119,
+    "project_id": 1444456,
+    "title": "feat(be): 로그인과 현재 사용자 세션 API를 구현",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n014-user-auth Phase 4 Backend(WB-BE-2). 이메일·비밀번호 로그인, 현재 사용자 조회, CSRF 토큰 발급 세 경로를 추가해 계약의 7개 operation 중 6개를 채웠다. 인증 상태는 Spring Security SecurityContext에 담아 Spring Session이 PostgreSQL에 보관하며, 별도 인증 체계나 토큰은 만들지 않았다. 기존 회원가입·이메일 인증 경로는 건드리지 않았고 마이그레이션도 추가하지 않았다.\n\n완료 Task: T023, T024, T027, T028, T029.\n\n# 주요 변경 사항\n\n인증 API 3개 (AuthenticationController)\n\n- GET /auth/csrf → 204 + XSRF-TOKEN 쿠키\n- POST /auth/sessions → 200 + THORP_SESSION 쿠키, {success, data, error} envelope\n- requireExplicitSave(true)이고 이 로그인은 Security 인증 필터를 타지 않으므로 세션 식별자 교체와 컨텍스트 저장을 직접 부른다. 교체가 먼저다 — 순서가 바뀌면 인증 상태가 옛 세션에 들어간다\n- GET /auth/me → 200, 쿠키만으로 복원. 비로그인은 SecurityConfig 진입점이 401로 끊는다\n\nAuthenticationService\n\n- 이메일은 조회 직전에 EmailNormalizer로 다시 정규화한다\n- 계정 없음·비밀번호 불일치·비활성 계정을 본문까지 동일한 401 INVALID_CREDENTIALS로 처리한다. 구분해 주면 이메일만 넣어 가입 여부를 알아낼 수 있다. 원인은 서버 로그에만 남긴다\n- 계정을 못 찾은 경로도 버리는 해시를 한 번 대조해 응답 시간 차이를 없앴다. 이 해시는 기동 시 임의 값으로 만들어 실제 비밀번호와 무관하다\n- 로그인 성공 시에만 마지막 로그인 시각을 갱신한다 작업 내용 요약\n\n014-user-auth Phase 4 Backend(WB-BE-2). 이메일·비밀번호 로그인, 현재 사용자 조회, CSRF 토큰 발급 세 경로를 추가해 계약의 7개 operation 중 6개를 채웠다. 인증 상태는 Spring Security SecurityContext에 담아 Spring Session이 PostgreSQL에 보관하며, 별도 인증 체계나 토큰은 만들지 않았다. 기존 회원가입·이메일 인증 경로는 건드리지 않았고 마이그레이션도 추가하지 않았다.\n\n완료 Task: T023, T024, T027, T028, T029.\n\n# 저장소\n\n- findById(현재 사용자 투영), updateLastLoginAt 추가\n- 마지막 로그인은 컬럼 하나만 쓰는 @Modifying UPDATE다. 도메인 객체를 통째로 저장하면 읽어둔 시점의 옛 닉네임·상태가 함께 나가 상대의 갱신을 되돌린다\n\n응답에서 빠진 것: 비밀번호 해시, 전화번호, 세션 식별자. 계약의 AuthenticatedUser가 additionalProperties: false라 네 필드 그대로 유지했다.\n\n# 테스트\n\n┌────────────────────────────────────────────────┬───────────────────────────────────┐ │ 항목 │ 결과 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ AuthenticationServiceTest (T023) │ 10/10 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ AuthenticationControllerIntegrationTest (T024) │ 8/8, skipped 0 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ 전체 Backend │ 1170건 / 실패 0 / 오류 0 / skip 2 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ spotlessApply · spotlessCheck │ 통과 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ ./gradlew build │ BUILD SUCCESSFUL (11m 33s) │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ git diff --check │ clean │ └────────────────────────────────────────────────┴───────────────────────────────────┘\n\n통합 테스트는 Testcontainers PostgreSQL 위에서 브라우저가 하는 그대로 돈다 — /auth/csrf 쿠키를 X-XSRF-TOKEN 헤더로 되돌려 보내고 로그인 응답의 세션 쿠키를 다음 요청에 싣는다. 세션 행과 SPRING_SECURITY_CONTEXT 속성이 실제로 DB에 남는지, 재로그인 시 식별자가 바뀌고 옛 쿠키가 401이 되는지까지 확인한다. 세 거절 사유의 응답 본문 동치는 문자열 비교로 고정했다.\n\nskip 2건은 MarketLiveApiTest(외부 실시간 API)와 RequiredDockerTest(Docker 가드 자체)로 기존부터 있던 것이다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-15T16:05:15.650+09:00",
+    "updated_at": "2026-09-15T16:14:39.531+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T16:14:39.144+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/231-login-auth-restore",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+    "merge_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T16:05:16.997+09:00",
+    "reference": "!119",
+    "references": {
+      "short": "!119",
+      "relative": "!119",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!119"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/119",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945007,
+    "iid": 119,
+    "project_id": 1444456,
+    "title": "feat(be): 로그인과 현재 사용자 세션 API를 구현",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n014-user-auth Phase 4 Backend(WB-BE-2). 이메일·비밀번호 로그인, 현재 사용자 조회, CSRF 토큰 발급 세 경로를 추가해 계약의 7개 operation 중 6개를 채웠다. 인증 상태는 Spring Security SecurityContext에 담아 Spring Session이 PostgreSQL에 보관하며, 별도 인증 체계나 토큰은 만들지 않았다. 기존 회원가입·이메일 인증 경로는 건드리지 않았고 마이그레이션도 추가하지 않았다.\n\n완료 Task: T023, T024, T027, T028, T029.\n\n# 주요 변경 사항\n\n인증 API 3개 (AuthenticationController)\n\n- GET /auth/csrf → 204 + XSRF-TOKEN 쿠키\n- POST /auth/sessions → 200 + THORP_SESSION 쿠키, {success, data, error} envelope\n- requireExplicitSave(true)이고 이 로그인은 Security 인증 필터를 타지 않으므로 세션 식별자 교체와 컨텍스트 저장을 직접 부른다. 교체가 먼저다 — 순서가 바뀌면 인증 상태가 옛 세션에 들어간다\n- GET /auth/me → 200, 쿠키만으로 복원. 비로그인은 SecurityConfig 진입점이 401로 끊는다\n\nAuthenticationService\n\n- 이메일은 조회 직전에 EmailNormalizer로 다시 정규화한다\n- 계정 없음·비밀번호 불일치·비활성 계정을 본문까지 동일한 401 INVALID_CREDENTIALS로 처리한다. 구분해 주면 이메일만 넣어 가입 여부를 알아낼 수 있다. 원인은 서버 로그에만 남긴다\n- 계정을 못 찾은 경로도 버리는 해시를 한 번 대조해 응답 시간 차이를 없앴다. 이 해시는 기동 시 임의 값으로 만들어 실제 비밀번호와 무관하다\n- 로그인 성공 시에만 마지막 로그인 시각을 갱신한다 작업 내용 요약\n\n014-user-auth Phase 4 Backend(WB-BE-2). 이메일·비밀번호 로그인, 현재 사용자 조회, CSRF 토큰 발급 세 경로를 추가해 계약의 7개 operation 중 6개를 채웠다. 인증 상태는 Spring Security SecurityContext에 담아 Spring Session이 PostgreSQL에 보관하며, 별도 인증 체계나 토큰은 만들지 않았다. 기존 회원가입·이메일 인증 경로는 건드리지 않았고 마이그레이션도 추가하지 않았다.\n\n완료 Task: T023, T024, T027, T028, T029.\n\n# 저장소\n\n- findById(현재 사용자 투영), updateLastLoginAt 추가\n- 마지막 로그인은 컬럼 하나만 쓰는 @Modifying UPDATE다. 도메인 객체를 통째로 저장하면 읽어둔 시점의 옛 닉네임·상태가 함께 나가 상대의 갱신을 되돌린다\n\n응답에서 빠진 것: 비밀번호 해시, 전화번호, 세션 식별자. 계약의 AuthenticatedUser가 additionalProperties: false라 네 필드 그대로 유지했다.\n\n# 테스트\n\n┌────────────────────────────────────────────────┬───────────────────────────────────┐ │ 항목 │ 결과 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ AuthenticationServiceTest (T023) │ 10/10 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ AuthenticationControllerIntegrationTest (T024) │ 8/8, skipped 0 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ 전체 Backend │ 1170건 / 실패 0 / 오류 0 / skip 2 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ spotlessApply · spotlessCheck │ 통과 │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ ./gradlew build │ BUILD SUCCESSFUL (11m 33s) │ ├────────────────────────────────────────────────┼───────────────────────────────────┤ │ git diff --check │ clean │ └────────────────────────────────────────────────┴───────────────────────────────────┘\n\n통합 테스트는 Testcontainers PostgreSQL 위에서 브라우저가 하는 그대로 돈다 — /auth/csrf 쿠키를 X-XSRF-TOKEN 헤더로 되돌려 보내고 로그인 응답의 세션 쿠키를 다음 요청에 싣는다. 세션 행과 SPRING_SECURITY_CONTEXT 속성이 실제로 DB에 남는지, 재로그인 시 식별자가 바뀌고 옛 쿠키가 401이 되는지까지 확인한다. 세 거절 사유의 응답 본문 동치는 문자열 비교로 고정했다.\n\nskip 2건은 MarketLiveApiTest(외부 실시간 API)와 RequiredDockerTest(Docker 가드 자체)로 기존부터 있던 것이다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-15T16:05:15.650+09:00",
+    "updated_at": "2026-09-15T16:14:39.531+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T16:14:39.144+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/231-login-auth-restore",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+    "merge_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T16:05:16.997+09:00",
+    "reference": "!119",
+    "references": {
+      "short": "!119",
+      "relative": "!119",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!119"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/119",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "12",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T16:20:19.724+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196243,
+      "iid": 33,
+      "project_id": 1444456,
+      "sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+      "ref": "feat(be)/231-login-auth-restore",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T16:12:32.440+09:00",
+      "updated_at": "2026-09-15T16:20:19.726+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196243"
+    },
+    "head_pipeline": {
+      "id": 196243,
+      "iid": 33,
+      "project_id": 1444456,
+      "sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+      "ref": "feat(be)/231-login-auth-restore",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T16:12:32.440+09:00",
+      "updated_at": "2026-09-15T16:20:19.726+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196243",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T16:20:19.724+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": 467,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196243",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "head_sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+      "start_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b0d287108097d86af4603e80a3497d9264e7ca40",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809667,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T16:05:15.787+09:00",
+          "updated_at": "2026-09-15T16:05:15.794+09:00",
+          "system": true,
+          "noteable_id": 945007,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 119,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cb7b9d6e7f38f0c0be5e8de8e12c89e5638a0761",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809673,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 열거 공격 방지**: 계정 존재 여부나 비활성 상태를 노출하지 않기 위해 더미 패스워드 해시 비교를 활용하여 응답 시간 차이를 제거하고, 모든 거절 사유를 `INVALID_CREDENTIALS` 하나로 통일한 설계가 매우 훌륭합니다.\n- **명시적 세션 관리 및 동시성 고려**: `requireExplicitSave(true)` 환경에서 세션 식별자 교체(`SessionAuthenticationStrategy`)와 컨텍스트 저장을 올바른 순서로 직접 처리하였으며, 마지막 로그인 시각 갱신 시 전체 엔티티가 아닌 `@Modifying` 쿼리를 사용하여 갱신 유실(Lost Update)을 방지한 점이 돋보입니다.\n\n### 발견 사항\n- [Low] `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`: 파일 하단부(`verifyNothingWasAuthenticated()` 메서드 내부)의 코드가 잘려(truncated) 있어 컴파일 에러나 테스트 불완전성이 존재할 수 있으니 실제 소스코드에서 해당 부분이 잘 완성되어 있는지 확인이 필요합니다.\n- [Low] `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java`: 파일 최하단부(`private Instant l...`) 선언이 잘려 있어 빌드 또는 테스트 실행 시 문제가 없는지 점검해야 합니다.\n\n### 테스트 제안\n- **로그인 실패 타이밍 공격 테스트**: 존재하지 않는 이메일로 요청할 때와 존재하는 이메일에 잘못된 비밀번호로 요청할 때의 응답 지연 시간(Execution Time) 차이가 통계적으로 유의미하지 않은지 확인하는 부하/성능 테스트 시나리오를 추가합니다.\n- **세션 고정 보호(Session Fixation Protection) 테스트**: 로그인 직전의 세션 쿠키 값과 로그인 직후 응답으로 내려온 세션 쿠키 값이 확실히 달라지는지(식별자 교체 검증), 그리고 옛 세션 쿠키로 재요청 시 401 Unauthorized가 반환되는지 시나리오별로 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f7a77cf6009ca13a59fc96bc01b78a0cfecc573c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T16:05:22.747+09:00",
+          "updated_at": "2026-09-15T16:11:26.528+09:00",
+          "system": false,
+          "noteable_id": 945007,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 119,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "11c139d34b9817fba6fb7999890ec269adb47c8d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809770,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>f7a77cf6 - fix(be): ai코드리뷰1차수정</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/119/diffs?diff_id=2200424&start_sha=940631b7eb27ae56572fba8afd03cb38876f1ff2)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T16:11:20.931+09:00",
+          "updated_at": "2026-09-15T16:11:20.934+09:00",
+          "system": true,
+          "noteable_id": 945007,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 119,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1e507062edb74ebe2094abc40d3837bd193965e2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809808,
+          "type": null,
+          "body": "오탐이였습니다\\~",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T16:14:20.440+09:00",
+          "updated_at": "2026-09-15T16:14:20.440+09:00",
+          "system": false,
+          "noteable_id": 945007,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 119,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a51f6df2f1cd868de2b2b82521448b7cfe5caffd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809813,
+          "type": null,
+          "body": "mentioned in commit 7accca2725a28309749a1e65e6ec9358f825e7d9",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T16:14:39.193+09:00",
+          "updated_at": "2026-09-15T16:14:39.208+09:00",
+          "system": true,
+          "noteable_id": 945007,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 119,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2200424,
+      "head_commit_sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+      "created_at": "2026-09-15T16:11:20.558+09:00",
+      "merge_request_id": 945007,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "9c1e0fe16d6ba1b70a9e5768d2adc59d1380e4b5"
+    },
+    {
+      "id": 2200342,
+      "head_commit_sha": "940631b7eb27ae56572fba8afd03cb38876f1ff2",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+      "created_at": "2026-09-15T16:05:16.040+09:00",
+      "merge_request_id": 945007,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "a89d7a79a34b9b49d568ce678b7c2250bd8f4adc"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2200424,
+      "head_commit_sha": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+      "created_at": "2026-09-15T16:11:20.558+09:00",
+      "merge_request_id": 945007,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "9c1e0fe16d6ba1b70a9e5768d2adc59d1380e4b5",
+      "commits": [
+        {
+          "id": "f7a77cf6009ca13a59fc96bc01b78a0cfecc573c",
+          "short_id": "f7a77cf6",
+          "created_at": "2026-09-15T16:11:11.000+09:00",
+          "parent_ids": [
+            "940631b7eb27ae56572fba8afd03cb38876f1ff2"
+          ],
+          "title": "fix(be): ai코드리뷰1차수정",
+          "message": "fix(be): ai코드리뷰1차수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T16:11:11.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T16:11:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f7a77cf6009ca13a59fc96bc01b78a0cfecc573c"
+        },
+        {
+          "id": "940631b7eb27ae56572fba8afd03cb38876f1ff2",
+          "short_id": "940631b7",
+          "created_at": "2026-09-15T16:01:54.000+09:00",
+          "parent_ids": [
+            "331eb727a356bbcbf08dd282328ea6e36055fe83"
+          ],
+          "title": "feat(be): 로그인과 현재 사용자 세션 API를 구현",
+          "message": "feat(be): 로그인과 현재 사용자 세션 API를 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T16:01:54.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T16:01:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/940631b7eb27ae56572fba8afd03cb38876f1ff2"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,8 @@\n+package com.ssafy.thorp.account.application.command;\n+\n+/**\n+ * 로그인 입력값. 컨트롤러가 요청 DTO에서 만들어 넘긴다.\n+ *\n+ * <p>{@code email}은 정규화 전 값이어도 된다 — 서비스가 조회 직전에 다시 정규화한다. 비밀번호는 이 record 밖으로 복제하지 않는다.\n+ */\n+public record LoginCommand(String email, String password) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +1,32 @@\n package com.ssafy.thorp.account.application.repository;\n \n import com.ssafy.thorp.account.domain.model.User;\n+import java.time.Instant;\n import java.util.Optional;\n \n public interface UserRepository {\n     User save(User user);\n \n+    /**\n+     * 이메일로 계정을 찾는다.\n+     *\n+     * <p><b>정규형 이메일만 넘긴다.</b> 저장된 값은 {@code EmailNormalizer}를 거친 형태이므로, 사용자가 입력한 문자열을 그대로 넘기면 대소문자나\n+     * 앞뒤 공백 때문에 있는 계정을 못 찾는다 — 로그인에서는 그 실패가 \"비밀번호가 틀렸다\"와 구분되지 않아 조용히 새어 나간다.\n+     */\n     Optional<User> findByEmail(String email);\n \n+    /** 세션에 남은 식별자로 계정을 다시 읽는다. 현재 사용자 조회가 최신 닉네임·상태를 보게 하는 경로다. */\n+    Optional<User> findById(Long id);\n+\n     boolean existsByEmail(String email);\n \n     boolean existsByPhoneNumber(String phoneNumber);\n+\n+    /**\n+     * 마지막 로그인 시각만 갱신한다.\n+     *\n+     * <p>도메인 객체를 통째로 저장하지 않는다. 로그인은 사용자가 화면에서 프로필을 고치는 것과 다른 경로라, 통째로 저장하면 읽어둔 시점의 옛 닉네임·상태가 함께 나가\n+     * 상대의 갱신을 되돌린다.\n+     */\n+    void updateLastLoginAt(Long id, Instant lastLoginAt);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+package com.ssafy.thorp.account.application.result;\n+\n+/**\n+ * 인증된 사용자로서 밖에 보여도 되는 값만 담는다. 컨트롤러가 응답 DTO로 변환한다.\n+ *\n+ * <p>비밀번호 해시·전화번호·세션 식별자는 여기 담지 않는다. 계약(`contracts/auth-api.yaml`의 {@code AuthenticatedUser})이\n+ * {@code additionalProperties: false}라서, 여기에 필드를 더하면 그대로 계약 위반이 된다.\n+ */\n+public record AuthenticatedUserResult(Long userId, String email, String nickname, String status) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,159 @@\n+package com.ssafy.thorp.account.application.service;\n+\n+import com.ssafy.thorp.account.application.EmailNormalizer;\n+import com.ssafy.thorp.account.application.command.LoginCommand;\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import jakarta.servlet.http.HttpServletRequest;\n+import jakarta.servlet.http.HttpServletResponse;\n+import java.time.Clock;\n+import java.util.List;\n+import java.util.Optional;\n+import java.util.UUID;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;\n+import org.springframework.security.core.Authentication;\n+import org.springframework.security.core.context.SecurityContext;\n+import org.springframework.security.core.context.SecurityContextHolder;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;\n+import org.springframework.security.web.context.SecurityContextRepository;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 이메일·비밀번호 로그인과 현재 사용자 복원.\n+ *\n+ * <p><b>인증 상태의 주인은 Spring Security다.</b> 별도의 토큰이나 사용자 캐시를 만들지 않고, 인증 결과를 {@link\n+ * SecurityContextRepository}에 넣어 Spring Session이 PostgreSQL에 보관하게 한다. {@code SecurityConfig}가\n+ * {@code requireExplicitSave(true)}이고 이 로그인은 Spring Security의 인증 필터를 거치지 않으므로, 세션 식별자 교체와 저장을 여기서\n+ * 직접 부른다 — 부르지 않으면 로그인 응답은 200인데 다음 요청이 비로그인이 된다.\n+ *\n+ * <p><b>세션에 담는 주체는 사용자 식별자다.</b> 이메일이 아니다. Spring Session의 {@code spring_session.principal_name}은\n+ * VARCHAR(100)인데 {@code users.email}은 255라, 긴 이메일 계정이 로그인하는 순간 세션 저장이 깨진다. 식별자는 길이가 안전하고 이메일이 바뀌어도\n+ * 그대로다.\n+ *\n+ * <p><b>거절 사유는 밖으로 내보내지 않는다.</b> 계정 없음·비밀번호 불일치·비활성 계정은 모두 {@link ErrorCode#INVALID_CREDENTIALS}\n+ * 하나로 끝난다. 구분해서 알려주면 이메일만 넣어 가입 여부를 확인할 수 있다. 원인은 서버 로그에만 남긴다.\n+ */\n+@Service\n+public class AuthenticationService {\n+\n+    private static final Logger log = LoggerFactory.getLogger(AuthenticationService.class);\n+\n+    private final UserRepository userRepository;\n+    private final PasswordEncoder passwordEncoder;\n+    private final SecurityContextRepository securityContextRepository;\n+    private final SessionAuthenticationStrategy sessionAuthenticationStrategy;\n+    private final Clock clock;\n+\n+    /**\n+     * 계정을 찾지 못했을 때 대조할 버리는 해시.\n+     *\n+     * <p>계정이 없다고 바로 돌아가면 응답이 눈에 띄게 빨라서, 비밀번호를 모르는 쪽도 가입된 이메일인지 알 수 있다. 같은 비용의 해시 대조를 한 번 거쳐 그 차이를\n+     * 없앤다. 기동할 때마다 임의 값으로 만들어 어떤 실제 비밀번호와도 무관하다.\n+     */\n+    private final String absentAccountPasswordHash;\n+\n+    public AuthenticationService(\n+            UserRepository userRepository,\n+            PasswordEncoder passwordEncoder,\n+            SecurityContextRepository securityContextRepository,\n+            SessionAuthenticationStrategy sessionAuthenticationStrategy,\n+            Clock clock) {\n+        this.userRepository = userRepository;\n+        this.passwordEncoder = passwordEncoder;\n+        this.securityContextRepository = securityContextRepository;\n+        this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;\n+        this.clock = clock;\n+        this.absentAccountPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());\n+    }\n+\n+    /** 자격 증명을 확인하고 현재 요청의 세션을 인증 상태로 바꾼다. */\n+    @Transactional\n+    public AuthenticatedUserResult login(\n+            LoginCommand command, HttpServletRequest request, HttpServletResponse response) {\n+        String email = EmailNormalizer.normalize(command.email());\n+        User user = verifyCredentials(email, command.password());\n+\n+        userRepository.updateLastLoginAt(user.getId(), clock.instant());\n+\n+        Authentication authentication =\n+                UsernamePasswordAuthenticationToken.authenticated(\n+                        String.valueOf(user.getId()), null, List.of());\n+\n+        // 순서가 중요하다. 먼저 식별자를 교체해야 인증 상태가 새 세션에 들어간다(FR-018).\n+        sessionAuthenticationStrategy.onAuthentication(authentication, request, response);\n+\n+        SecurityContext context = SecurityContextHolder.createEmptyContext();\n+        context.setAuthentication(authentication);\n+        SecurityContextHolder.setContext(context);\n+        securityContextRepository.saveContext(context, request, response);\n+\n+        return projectionOf(user);\n+    }\n+\n+    /**\n+     * 세션에 남아 있는 인증 주체로 현재 사용자를 다시 읽는다.\n+     *\n+     * <p>세션에 담아 둔 값을 그대로 돌려주지 않는다. 그러면 정지된 계정이 세션이 만료될 때까지 살아 있는 사용자로 보이고, 바뀐 닉네임도 반영되지 않는다.\n+     */\n+    @Transactional(readOnly = true)\n+    public AuthenticatedUserResult currentUser(Authentication authentication) {\n+        return userId(authentication)\n+                .flatMap(userRepository::findById)\n+                .filter(user -> user.getStatus() == UserStatus.ACTIVE)\n+                .map(AuthenticationService::projectionOf)\n+                .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED));\n+    }\n+\n+    private User verifyCredentials(String email, String password) {\n+        Optional<User> found = userRepository.findByEmail(email);\n+\n+        if (found.isEmpty()) {\n+            passwordEncoder.matches(password, absentAccountPasswordHash);\n+            log.warn(\"Login rejected: reason=ACCOUNT_NOT_FOUND\");\n+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);\n+        }\n+\n+        User user = found.get();\n+\n+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {\n+            log.warn(\"Login rejected: reason=PASSWORD_MISMATCH, userId={}\", user.getId());\n+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);\n+        }\n+\n+        if (user.getStatus() != UserStatus.ACTIVE) {\n+            log.warn(\n+                    \"Login rejected: reason=ACCOUNT_NOT_ACTIVE, userId={}, status={}\",\n+                    user.getId(),\n+                    user.getStatus());\n+            throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);\n+        }\n+\n+        return user;\n+    }\n+\n+    /** 인증 주체는 로그인이 넣어 둔 사용자 식별자다. 그 형태가 아니면 우리가 만든 세션이 아니므로 로그인 상태로 보지 않는다. */\n+    private static Optional<Long> userId(Authentication authentication) {\n+        if (authentication == null || !authentication.isAuthenticated()) {\n+            return Optional.empty();\n+        }\n+        try {\n+            return Optional.of(Long.valueOf(authentication.getName()));\n+        } catch (NumberFormatException e) {\n+            log.warn(\"Unusable authentication principal in session\");\n+            return Optional.empty();\n+        }\n+    }\n+\n+    private static AuthenticatedUserResult projectionOf(User user) {\n+        return new AuthenticatedUserResult(\n+                user.getId(), user.getEmail(), user.getNickname(), user.getStatus().name());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,11 @@\n package com.ssafy.thorp.account.infrastructure.persistence;\n \n+import java.time.Instant;\n import java.util.Optional;\n import org.springframework.data.jpa.repository.JpaRepository;\n+import org.springframework.data.jpa.repository.Modifying;\n+import org.springframework.data.jpa.repository.Query;\n+import org.springframework.data.repository.query.Param;\n \n public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {\n \n@@ -12,4 +16,14 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {\n     Optional<UserEntity> findByPhoneNumber(String phoneNumber);\n \n     boolean existsByPhoneNumber(String phoneNumber);\n+\n+    /**\n+     * 마지막 로그인 시각 컬럼 하나만 쓰는 UPDATE.\n+     *\n+     * <p>엔티티를 읽어 필드를 바꾸는 방식으로 하지 않는다. Hibernate 기본 UPDATE는 바꾸지 않은 컬럼까지 함께 써서, 영속성 컨텍스트에 올라온 시점의 옛\n+     * 값이 그대로 나간다.\n+     */\n+    @Modifying\n+    @Query(\"update UserEntity u set u.lastLoginAt = :lastLoginAt where u.id = :id\")\n+    int updateLastLoginAt(@Param(\"id\") Long id, @Param(\"lastLoginAt\") Instant lastLoginAt);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import com.ssafy.thorp.account.application.repository.UserRepository;\n import com.ssafy.thorp.account.domain.model.User;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.time.Instant;\n import java.util.Optional;\n import org.springframework.dao.DataIntegrityViolationException;\n import org.springframework.stereotype.Repository;\n@@ -40,6 +41,16 @@ public class UserRepositoryImpl implements UserRepository {\n         return userJpaRepository.findByEmail(email).map(UserMapper::toDomain);\n     }\n \n+    @Override\n+    public Optional<User> findById(Long id) {\n+        return userJpaRepository.findById(id).map(UserMapper::toDomain);\n+    }\n+\n+    @Override\n+    public void updateLastLoginAt(Long id, Instant lastLoginAt) {\n+        userJpaRepository.updateLastLoginAt(id, lastLoginAt);\n+    }\n+\n     @Override\n     public boolean existsByEmail(String email) {\n         return userJpaRepository.existsByEmail(email);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,73 @@\n+package com.ssafy.thorp.account.presentation.controller;\n+\n+import com.ssafy.thorp.account.application.command.LoginCommand;\n+import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;\n+import com.ssafy.thorp.account.application.service.AuthenticationService;\n+import com.ssafy.thorp.account.presentation.request.LoginRequest;\n+import com.ssafy.thorp.account.presentation.response.AuthenticatedUserResponse;\n+import com.ssafy.thorp.common.web.response.ApiResponse;\n+import jakarta.servlet.http.HttpServletRequest;\n+import jakarta.servlet.http.HttpServletResponse;\n+import jakarta.validation.Valid;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.security.core.Authentication;\n+import org.springframework.security.web.csrf.CsrfToken;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RequestBody;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.ResponseStatus;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 인증 API. 외부 경로는 프록시가 {@code /api}를 떼고 넘긴 {@code /auth/*}다.\n+ *\n+ * <p>로그아웃({@code DELETE /auth/sessions/current})은 이 spec의 다음 작업 묶음(T044)에서 같은 컨트롤러에 붙는다.\n+ */\n+@RestController\n+@RequestMapping(\"/auth\")\n+public class AuthenticationController {\n+\n+    private final AuthenticationService authenticationService;\n+\n+    public AuthenticationController(AuthenticationService authenticationService) {\n+        this.authenticationService = authenticationService;\n+    }\n+\n+    /**\n+     * SPA가 상태 변경 요청에 쓸 CSRF 토큰 쿠키를 준비한다.\n+     *\n+     * <p>토큰은 지연 생성이라 {@link CsrfToken#getToken()}을 실제로 불러야 쿠키가 나간다. 값을 응답 본문에 싣지 않는다 — 쿠키로 내려주고\n+     * 브라우저가 헤더로 되돌려 보내는 것이 이 방식의 전부다.\n+     */\n+    @GetMapping(\"/csrf\")\n+    @ResponseStatus(HttpStatus.NO_CONTENT)\n+    public void prepareCsrfToken(CsrfToken csrfToken) {\n+        csrfToken.getToken();\n+    }\n+\n+    @PostMapping(\"/sessions\")\n+    public ResponseEntity<ApiResponse<AuthenticatedUserResponse>> login(\n+            @Valid @RequestBody LoginRequest request,\n+            HttpServletRequest httpRequest,\n+            HttpServletResponse httpResponse) {\n+\n+        LoginCommand command = new LoginCommand(request.getEmail(), request.getPassword());\n+\n+        AuthenticatedUserResult result =\n+                authenticationService.login(command, httpRequest, httpResponse);\n+\n+        return ResponseEntity.ok(ApiResponse.ok(AuthenticatedUserResponse.from(result)));\n+    }\n+\n+    /** 비로그인 요청은 여기 닿기 전에 {@code SecurityConfig}의 진입점이 401로 끊는다. */\n+    @GetMapping(\"/me\")\n+    public ResponseEntity<ApiResponse<AuthenticatedUserResponse>> currentUser(\n+            Authentication authentication) {\n+\n+        AuthenticatedUserResult result = authenticationService.currentUser(authentication);\n+\n+        return ResponseEntity.ok(ApiResponse.ok(AuthenticatedUserResponse.from(result)));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+package com.ssafy.thorp.account.presentation.request;\n+\n+import com.fasterxml.jackson.annotation.JsonSetter;\n+import com.ssafy.thorp.account.application.EmailNormalizer;\n+import jakarta.validation.constraints.Email;\n+import jakarta.validation.constraints.NotBlank;\n+\n+/**\n+ * 로그인 요청.\n+ *\n+ * <p>비밀번호에는 가입 규칙(8~25자)을 걸지 않는다. 걸면 규칙이 바뀌기 전에 가입한 계정이 자기 비밀번호로 로그인하지 못하고, 거절 응답의 종류가 달라져 \"이 길이\n+ * 규칙에 맞는 계정이 있다\"는 힌트가 된다.\n+ */\n+public class LoginRequest {\n+\n+    @NotBlank @Email private String email;\n+\n+    @NotBlank private String password;\n+\n+    public String getEmail() {\n+        return email;\n+    }\n+\n+    /** 검증 전에 정규화한다. 검증 뒤에 하면 앞뒤 공백이 붙은 이메일이 형식 오류로 먼저 걸린다. */\n+    @JsonSetter\n+    public void setEmail(String email) {\n+        this.email = email == null ? null : EmailNormalizer.normalize(email);\n+    }\n+\n+    public String getPassword() {\n+        return password;\n+    }\n+\n+    public void setPassword(String password) {\n+        this.password = password;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.ssafy.thorp.account.presentation.response;\n+\n+import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;\n+\n+/**\n+ * 로그인·현재 사용자 조회의 {@code data}.\n+ *\n+ * <p>계약(`contracts/auth-api.yaml`의 {@code AuthenticatedUser})이 {@code additionalProperties:\n+ * false}이므로 네 필드 그대로 유지한다. 전화번호·비밀번호 해시·세션 식별자는 여기 담지 않는다.\n+ */\n+public record AuthenticatedUserResponse(Long userId, String email, String nickname, String status) {\n+\n+    public static AuthenticatedUserResponse from(AuthenticatedUserResult result) {\n+        return new AuthenticatedUserResponse(\n+                result.userId(), result.email(), result.nickname(), result.status());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,284 @@\n+package com.ssafy.thorp.account.application;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.anyString;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.account.application.command.LoginCommand;\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.application.result.AuthenticatedUserResult;\n+import com.ssafy.thorp.account.application.service.AuthenticationService;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import jakarta.servlet.http.HttpServletRequest;\n+import jakarta.servlet.http.HttpServletResponse;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.time.ZoneOffset;\n+import java.util.List;\n+import java.util.Optional;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.EnumSource;\n+import org.mockito.ArgumentCaptor;\n+import org.springframework.mock.web.MockHttpServletRequest;\n+import org.springframework.mock.web.MockHttpServletResponse;\n+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;\n+import org.springframework.security.core.Authentication;\n+import org.springframework.security.core.context.SecurityContext;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;\n+import org.springframework.security.web.context.SecurityContextRepository;\n+\n+/**\n+ * 로그인 유스케이스의 판정 규칙을 단위로 고정한다.\n+ *\n+ * <p>계정 존재 여부가 드러나지 않는 것이 이 테스트의 핵심이다. 없는 이메일·틀린 비밀번호·비활성 계정은 모두 같은 {@link\n+ * ErrorCode#INVALID_CREDENTIALS}로 끝나야 하고, 그중 어느 것도 마지막 로그인 시각을 갱신하거나 인증 상태를 저장해서는 안 된다.\n+ */\n+class AuthenticationServiceTest {\n+\n+    private static final String CANONICAL_EMAIL = \"member@example.com\";\n+    private static final String RAW_PASSWORD = \"password123\";\n+    private static final String PASSWORD_HASH = \"password-hash\";\n+\n+    /** 계정을 찾지 못했을 때 대조할 버리는 해시. 서비스가 기동하며 임의 값으로 만든다. */\n+    private static final String ABSENT_ACCOUNT_HASH = \"absent-account-hash\";\n+\n+    private static final Instant NOW = Instant.parse(\"2026-09-15T01:23:45Z\");\n+\n+    private final UserRepository userRepository = mock(UserRepository.class);\n+    private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);\n+    private final SecurityContextRepository securityContextRepository =\n+            mock(SecurityContextRepository.class);\n+    private final SessionAuthenticationStrategy sessionAuthenticationStrategy =\n+            mock(SessionAuthenticationStrategy.class);\n+\n+    private final MockHttpServletRequest request = new MockHttpServletRequest();\n+    private final MockHttpServletResponse response = new MockHttpServletResponse();\n+\n+    private AuthenticationService authenticationService;\n+\n+    @BeforeEach\n+    void setUp() {\n+        when(passwordEncoder.encode(anyString())).thenReturn(ABSENT_ACCOUNT_HASH);\n+\n+        authenticationService =\n+                new AuthenticationService(\n+                        userRepository,\n+                        passwordEncoder,\n+                        securityContextRepository,\n+                        sessionAuthenticationStrategy,\n+                        Clock.fixed(NOW, ZoneOffset.UTC));\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그인은 앞뒤 공백을 제거하고 소문자로 바꾼 이메일로 계정을 찾는다\")\n+    void loginLooksUpAccountByCanonicalEmail() {\n+        User user = activeUser(42L);\n+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.of(user));\n+        when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);\n+\n+        AuthenticatedUserResult result =\n+                authenticationService.login(\n+                        new LoginCommand(\"  MEMBER@Example.COM  \", RAW_PASSWORD),\n+                        request,\n+                        response);\n+\n+        verify(userRepository).findByEmail(CANONICAL_EMAIL);\n+        assertThat(result)\n+                .isEqualTo(\n+                        new AuthenticatedUserResult(\n+                                42L, CANONICAL_EMAIL, \"회원\", UserStatus.ACTIVE.name()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"비밀번호가 맞으면 마지막 로그인 시각을 갱신하고 인증 상태를 세션에 저장한다\")\n+    void successfulLoginUpdatesLastLoginAndPersistsAuthentication() {\n+        User user = activeUser(42L);\n+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.of(user));\n+        when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);\n+\n+        authenticationService.login(\n+                new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD), request, response);\n+\n+        verify(userRepository).updateLastLoginAt(42L, NOW);\n+\n+        // 기존 익명 세션 식별자 교체는 SessionAuthenticationStrategy가 맡는다(FR-018).\n+        ArgumentCaptor<Authentication> rotated = ArgumentCaptor.forClass(Authentication.class);\n+        verify(sessionAuthenticationStrategy)\n+                .onAuthentication(\n+                        rotated.capture(),\n+                        any(HttpServletRequest.class),\n+                        any(HttpServletResponse.class));\n+\n+        ArgumentCaptor<SecurityContext> saved = ArgumentCaptor.forClass(SecurityContext.class);\n+        verify(securityContextRepository)\n+                .saveContext(\n+                        saved.capture(),\n+                        any(HttpServletRequest.class),\n+                        any(HttpServletResponse.class));\n+\n+        Authentication authentication = saved.getValue().getAuthentication();\n+        assertThat(authentication.isAuthenticated()).isTrue();\n+        assertThat(authentication.getName()).isEqualTo(\"42\");\n+        assertThat(authentication.getCredentials()).isNull();\n+        assertThat(rotated.getValue().getName()).isEqualTo(authentication.getName());\n+    }\n+\n+    @Test\n+    @DisplayName(\"가입되지 않은 이메일도 비밀번호를 대조해 응답 시간으로 계정 존재를 알려주지 않는다\")\n+    void unknownEmailStillVerifiesAPasswordAndIsRejectedAsInvalidCredentials() {\n+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.empty());\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                authenticationService.login(\n+                                        new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD),\n+                                        request,\n+                                        response))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);\n+\n+        verify(passwordEncoder).matches(RAW_PASSWORD, ABSENT_ACCOUNT_HASH);\n+        verifyNothingWasAuthenticated();\n+    }\n+\n+    @Test\n+    @DisplayName(\"비밀번호가 틀리면 계정을 찾았더라도 같은 오류로 거절한다\")\n+    void wrongPasswordIsRejectedAsInvalidCredentials() {\n+        when(userRepository.findByEmail(CANONICAL_EMAIL)).thenReturn(Optional.of(activeUser(42L)));\n+        when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(false);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                authenticationService.login(\n+                                        new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD),\n+                                        request,\n+                                        response))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(ErrorCode.INVALID_CREDENTIALS);\n+\n+        verifyNothingWasAuthenticated();\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = UserStatus.class,\n+            names = {\"PENDING_VERIFICATION\", \"SUSPENDED\", \"WITHDRAWN\"})\n+    @DisplayName(\"활성이 아닌 계정은 비밀번호가 맞아도 상태를 드러내지 않고 같은 오류로 거절한다\")\n+    void inactiveAccountIsConcealedBehindTheSameRejection(UserStatus status) {\n+        when(userRepository.findByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(user(42L, status)));\n+        when(passwordEncoder.matches(RAW_PASSWORD, PASSWORD_HASH)).thenReturn(true);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                authenticationService.login(\n+                                        new LoginCommand(CANONICAL_EMAIL, RAW_PASSWORD),\n+                                        request,\n+                                        response))\n+                .isInstanceOf(BusinessException.class)\n+                .satisfies(\n+                        error -> {\n+                            BusinessException exception = (BusinessException) error;\n+                            assertThat(exception.getErrorCode())\n+                                    .isEqualTo(ErrorCode.INVALID_CREDENTIALS);\n+                            assertThat(exception.getMessage())\n+                                    .isEqualTo(ErrorCode.INVALID_CREDENTIALS.getMessage());\n+                        });\n+\n+        verifyNothingWasAuthenticated();\n+    }\n+\n+    @Test\n+    @DisplayName(\"현재 사용자 조회는 세션의 식별자로 계정을 다시 읽어 비밀번호 없이 돌려준다\")\n+    void currentUserReadsTheAccountBehindTheSession() {\n+        when(userRepository.findById(42L)).thenReturn(Optional.of(activeUser(42L)));\n+\n+        AuthenticatedUserResult result = authenticationService.currentUser(authenticationOf(\"42\"));\n+\n+        assertThat(result)\n+                .isEqualTo(\n+                        new AuthenticatedUserResult(\n+                                42L, CANONICAL_EMAIL, \"회원\", UserStatus.ACTIVE.name()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"세션은 살아 있어도 계정이 사라졌거나 활성이 아니면 로그인 상태로 보지 않는다\")\n+    void currentUserRejectsSessionsWhoseAccountIsNoLongerUsable() {\n+        when(userRepository.findById(42L)).thenReturn(Optional.empty());\n+        when(userRepository.findById(43L)).thenReturn(Optional.of(user(43L, UserStatus.SUSPENDED)));\n+\n+        assertThatThrownBy(() -> authenticationService.currentUser(authenticationOf(\"42\")))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);\n+\n+        assertThatThrownBy(() -> authenticationService.currentUser(authenticationOf(\"43\")))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"인증 주체가 없거나 식별자 형식이 아니면 로그인 상태로 보지 않는다\")\n+    void currentUserRejectsUnusablePrincipals() {\n+        assertThatThrownBy(() -> authenticationService.currentUser(null))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);\n+\n+        assertThatThrownBy(\n+                        () -> authenticationService.currentUser(authenticationOf(\"not-a-user-id\")))\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(ErrorCode.AUTHENTICATION_REQUIRED);\n+    }\n+\n+    private void verifyNothingWasAuthenticated() {\n+        verify(userRepository, never()).updateLastLoginAt(any(), any());\n+        verify(sessionAuthenticationStrategy, never())\n+                .onAuthentication(\n+                        any(), any(HttpServletRequest.class), any(HttpServletResponse.class));\n+        verify(securityContextRepository, never())\n+                .saveContext(any(), any(HttpServletRequest.class), any(HttpServletResponse.class));\n+    }\n+\n+    private static Authentication authenticationOf(String principalName) {\n+        return UsernamePasswordAuthenticationToken.authenticated(principalName, null, List.of());\n+    }\n+\n+    private static User activeUser(Long id) {\n+        return user(id, UserStatus.ACTIVE);\n+    }\n+\n+    private static User user(Long id, UserStatus status) {\n+        return new User(\n+                id,\n+                CANONICAL_EMAIL,\n+                PASSWORD_HASH,\n+                \"회원\",\n+                \"01012345678\",\n+                null,\n+                status,\n+                false,\n+                false,\n+                false,\n+                null,\n+                NOW,\n+                NOW,\n+                null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,283 @@\n+package com.ssafy.thorp.account.presentation;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import jakarta.servlet.http.Cookie;\n+import java.time.Instant;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.MvcResult;\n+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;\n+\n+/**\n+ * 로그인·현재 사용자 조회·CSRF 발급을 실제 PostgreSQL 세션 저장소 위에서 호출한다.\n+ *\n+ * <p>브라우저가 하는 일을 그대로 따라 한다 — {@code GET /auth/csrf}로 받은 {@code XSRF-TOKEN} 쿠키를 {@code X-XSRF-TOKEN}\n+ * 헤더로 돌려보내고, 로그인 응답의 {@code THORP_SESSION} 쿠키를 다음 요청에 실어 보낸다. 토큰과 세션을 테스트 도우미로 주입하면 SPA가 실제로 쓰는 이\n+ * 경로가 검증되지 않는다.\n+ *\n+ * <p>브로커 컨테이너는 띄우지 않는다({@code BacktestResultApiIT}와 같은 방식). DB는 PostgreSQL 컨테이너다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class AuthenticationControllerIntegrationTest extends PostgresTestSupport {\n+\n+    private static final String EMAIL = \"auth-it-member@example.com\";\n+    private static final String PASSWORD = \"password123\";\n+    private static final String NICKNAME = \"인증회원\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private UserRepository userRepository;\n+    @Autowired private PasswordEncoder passwordEncoder;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private Long userId;\n+\n+    @BeforeEach\n+    void setUp() {\n+        jdbcTemplate.update(\"delete from spring_session\");\n+        jdbcTemplate.update(\"delete from users where email like 'auth-it-%'\");\n+        userId = saveUser(EMAIL, UserStatus.ACTIVE).getId();\n+    }\n+\n+    @Test\n+    @DisplayName(\"GET /auth/csrf는 SPA가 읽을 수 있는 XSRF-TOKEN 쿠키를 발급한다\")\n+    void csrfBootstrapIssuesReadableToken() throws Exception {\n+        mockMvc.perform(get(\"/auth/csrf\"))\n+                .andExpect(status().isNoContent())\n+                .andExpect(content().string(\"\"))\n+                .andExpect(cookie().exists(\"XSRF-TOKEN\"))\n+                .andExpect(cookie().httpOnly(\"XSRF-TOKEN\", false))\n+                .andExpect(cookie().path(\"XSRF-TOKEN\", \"/\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"POST /auth/sessions는 세션을 PostgreSQL에 만들고 민감정보 없는 사용자만 돌려준다\")\n+    void loginCreatesPersistentSessionAndReturnsAuthenticatedUser() throws Exception {\n+        MvcResult result =\n+                mockMvc.perform(login(EMAIL, PASSWORD))\n+                        .andExpect(status().isOk())\n+                        .andExpect(jsonPath(\"$.success\").value(true))\n+                        .andExpect(jsonPath(\"$.error\").value(nullValue()))\n+                        .andExpect(jsonPath(\"$.data.userId\").value(userId))\n+                        .andExpect(jsonPath(\"$.data.email\").value(EMAIL))\n+                        .andExpect(jsonPath(\"$.data.nickname\").value(NICKNAME))\n+                        .andExpect(jsonPath(\"$.data.status\").value(\"ACTIVE\"))\n+                        .andExpect(jsonPath(\"$.data.passwordHash\").doesNotExist())\n+                        .andExpect(jsonPath(\"$.data.password\").doesNotExist())\n+                        .andExpect(jsonPath(\"$.data.phoneNumber\").doesNotExist())\n+                        .andReturn();\n+\n+        Cookie session = result.getResponse().getCookie(\"THORP_SESSION\");\n+        assertThat(session).isNotNull();\n+        assertThat(session.isHttpOnly()).isTrue();\n+        assertThat(session.getValue()).isNotBlank();\n+\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select count(*) from spring_session\", Integer.class))\n+                .isEqualTo(1);\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select principal_name from spring_session\", String.class))\n+                .isEqualTo(String.valueOf(userId));\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select count(*) from spring_session_attributes\"\n+                                        + \" where attribute_name = ?\",\n+                                Integer.class,\n+                                \"SPRING_SECURITY_CONTEXT\"))\n+                .isEqualTo(1);\n+        assertThat(lastLoginAt()).isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"GET /auth/me는 세션 쿠키만으로 같은 사용자를 복원한다\")\n+    void currentUserIsRestoredFromTheSessionCookie() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+\n+        mockMvc.perform(get(\"/auth/me\").cookie(session))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.success\").value(true))\n+                .andExpect(jsonPath(\"$.error\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.data.userId\").value(userId))\n+                .andExpect(jsonPath(\"$.data.email\").value(EMAIL))\n+                .andExpect(jsonPath(\"$.data.nickname\").value(NICKNAME))\n+                .andExpect(jsonPath(\"$.data.status\").value(\"ACTIVE\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"세션 없이 현재 사용자를 조회하면 공통 형식의 401을 돌려준다\")\n+    void currentUserWithoutSessionIsUnauthorized() throws Exception {\n+        mockMvc.perform(get(\"/auth/me\"))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그인 성공은 그 전에 쓰던 세션 식별자를 그대로 쓰지 않는다\")\n+    void loginRotatesTheSessionIdentifier() throws Exception {\n+        Cookie first = loginAndGetSessionCookie();\n+\n+        MvcResult second =\n+                mockMvc.perform(login(EMAIL, PASSWORD).cookie(first))\n+                        .andExpect(status().isOk())\n+                        .andReturn();\n+\n+        Cookie rotated = second.getResponse().getCookie(\"THORP_SESSION\");\n+        assertThat(rotated).isNotNull();\n+        assertThat(rotated.getValue()).isNotEqualTo(first.getValue());\n+\n+        mockMvc.perform(get(\"/auth/me\").cookie(first)).andExpect(status().isUnauthorized());\n+        mockMvc.perform(get(\"/auth/me\").cookie(rotated)).andExpect(status().isOk());\n+    }\n+\n+    @Test\n+    @DisplayName(\"틀린 비밀번호와 비활성 계정은 구분되지 않는 같은 401로 끝나고 세션을 만들지 않는다\")\n+    void wrongPasswordAndInactiveAccountShareTheSameRejection() throws Exception {\n+        saveUser(\"auth-it-suspended@example.com\", UserStatus.SUSPENDED);\n+\n+        String wrongPassword = rejectionBody(login(EMAIL, \"wrong-password\"));\n+        String inactiveAccount = rejectionBody(login(\"auth-it-suspended@example.com\", PASSWORD));\n+        String unknownEmail = rejectionBody(login(\"auth-it-nobody@example.com\", PASSWORD));\n+\n+        assertThat(inactiveAccount).isEqualTo(wrongPassword);\n+        assertThat(unknownEmail).isEqualTo(wrongPassword);\n+\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select count(*) from spring_session\", Integer.class))\n+                .isZero();\n+        assertThat(lastLoginAt()).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"CSRF 토큰 없는 로그인 요청은 인증을 시도하지 않고 403으로 끝난다\")\n+    void loginWithoutCsrfTokenIsRejected() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/auth/sessions\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(credentials(EMAIL, PASSWORD)))\n+                .andExpect(status().isForbidden())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"CSRF_TOKEN_INVALID\"));\n+\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select count(*) from spring_session\", Integer.class))\n+                .isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"앞뒤 공백과 대문자가 섞인 이메일도 정규형으로 같은 계정에 로그인한다\")\n+    void loginNormalizesTheSubmittedEmailBeforeValidatingIt() throws Exception {\n+        // 정규화가 검증 뒤로 밀리면 앞뒤 공백 때문에 @Email이 먼저 걸려 400이 된다(커밋 7171ea62).\n+        mockMvc.perform(login(\"  AUTH-IT-Member@Example.COM  \", PASSWORD))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.userId\").value(userId))\n+                .andExpect(jsonPath(\"$.data.email\").value(EMAIL));\n+    }\n+\n+    @Test\n+    @DisplayName(\"이메일 형식이 아닌 로그인 요청은 자격 증명 오류와 구분되는 400으로 끝난다\")\n+    void malformedLoginRequestIsInvalidInput() throws Exception {\n+        mockMvc.perform(login(\"not-an-email\", PASSWORD))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+    }\n+\n+    /** 브라우저처럼 CSRF 쿠키를 먼저 받아 헤더로 돌려보내는 로그인 요청을 만든다. */\n+    private MockHttpServletRequestBuilder login(String email, String password) throws Exception {\n+        Cookie csrf =\n+                mockMvc.perform(get(\"/auth/csrf\"))\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"XSRF-TOKEN\");\n+        assertThat(csrf).isNotNull();\n+\n+        return post(\"/auth/sessions\")\n+                .cookie(csrf)\n+                .header(\"X-XSRF-TOKEN\", csrf.getValue())\n+                .contentType(MediaType.APPLICATION_JSON)\n+                .content(credentials(email, password));\n+    }\n+\n+    private Cookie loginAndGetSessionCookie() throws Exception {\n+        Cookie session =\n+                mockMvc.perform(login(EMAIL, PASSWORD))\n+                        .andExpect(status().isOk())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"THORP_SESSION\");\n+        assertThat(session).isNotNull();\n+        return session;\n+    }\n+\n+    private String rejectionBody(MockHttpServletRequestBuilder request) throws Exception {\n+        return mockMvc.perform(request)\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_CREDENTIALS\"))\n+                .andReturn()\n+                .getResponse()\n+                .getContentAsString();\n+    }\n+\n+    private static String credentials(String email, String password) {\n+        return \"{\\\"email\\\":\\\"%s\\\",\\\"password\\\":\\\"%s\\\"}\".formatted(email, password);\n+    }\n+\n+    private Instant lastLoginAt() {\n+        return jdbcTemplate.queryForObject(\n+                \"select last_login_at from users where id = ?\", Instant.class, userId);\n+    }\n+\n+    private User saveUser(String email, UserStatus status) {\n+        return userRepository.save(\n+                new User(\n+                        null,\n+                        email,\n+                        passwordEncoder.encode(PASSWORD),\n+                        NICKNAME,\n+                        status == UserStatus.ACTIVE ? \"01012345678\" : \"01098765432\",\n+                        null,\n+                        status,\n+                        false,\n+                        false,\n+                        false,\n+                        null,\n+                        null,\n+                        null,\n+                        null));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -83,16 +83,16 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n ### Tests for User Story 2\n \n-- [ ] T023 [P] [US2] Add failing repository and service tests for normalized-email lookup, password verification, inactive-account concealment, and last-login update in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`\n-- [ ] T024 [P] [US2] Add failing MockMvc and PostgreSQL session tests for login and current-user contracts in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java`\n+- [x] T023 [P] [US2] Add failing repository and service tests for normalized-email lookup, password verification, inactive-account concealment, and last-login update in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`\n+- [x] T024 [P] [US2] Add failing MockMvc and PostgreSQL session tests for login and current-user contracts in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java`\n - [x] T025 [P] [US2] Add failing tests for checking/authenticated/anonymous/error transitions and bootstrap deduplication in `frontend/src/auth/AuthProvider.test.tsx`\n - [x] T026 [P] [US2] Add failing login page tests for canonical email, generic credential failure, pending submission, signup-email prefill, and authenticated redirect in `frontend/src/pages/LoginPage.test.tsx`\n \n ### Implementation for User Story 2\n \n-- [ ] T027 [US2] Add normalized-email lookup and authenticated account projection in `backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java`, `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java`\n-- [ ] T028 [US2] Implement credential validation, account-state concealment, last-login update, and explicit SecurityContext persistence in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` and `backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java`\n-- [ ] T029 [US2] Implement login, current-user, and CSRF endpoints plus request/response DTOs in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java`, `backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java`, and `backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java`\n+- [x] T027 [US2] Add normalized-email lookup and authenticated account projection in `backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java`, `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java`\n+- [x] T028 [US2] Implement credential validation, account-state concealment, last-login update, and explicit SecurityContext persistence in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` and `backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java`\n+- [x] T029 [US2] Implement login, current-user, and CSRF endpoints plus request/response DTOs in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java`, `backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java`, and `backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java`\n - [x] T030 [P] [US2] Add login and current-user operations to `frontend/src/api/auth.ts`\n - [x] T031 [US2] Implement the single-owner authentication state machine and startup restoration in `frontend/src/auth/AuthProvider.tsx` after T025 and T030\n - [x] T032 [US2] Complete the login form, signup navigation, generic credential error, status announcement, and `/home` redirect for authenticated users in `frontend/src/pages/LoginPage.tsx` and `frontend/src/pages/LoginPage.module.css`\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2200342,
+      "head_commit_sha": "940631b7eb27ae56572fba8afd03cb38876f1ff2",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+      "created_at": "2026-09-15T16:05:16.040+09:00",
+      "merge_request_id": 945007,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "a89d7a79a34b9b49d568ce678b7c2250bd8f4adc",
+      "commits": [
+        {
+          "id": "940631b7eb27ae56572fba8afd03cb38876f1ff2",
+          "short_id": "940631b7",
+          "created_at": "2026-09-15T16:01:54.000+09:00",
+          "parent_ids": [
+            "331eb727a356bbcbf08dd282328ea6e36055fe83"
+          ],
+          "title": "feat(be): 로그인과 현재 사용자 세션 API를 구현",
+          "message": "feat(be): 로그인과 현재 사용자 세션 API를 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T16:01:54.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T16:01:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/940631b7eb27ae56572fba8afd03cb38876f1ff2"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2809673": [],
+    "2809808": []
+  }
+}

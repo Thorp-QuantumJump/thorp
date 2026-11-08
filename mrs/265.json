@@ -1,0 +1,484 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954106,
+    "iid": 265,
+    "project_id": 1444456,
+    "title": "fix(infra):jenkins사양임시증설",
+    "description": "# 작업 내용 요약\n\n작업 속도를 위해 Jenkins 사양 증설\n\n# 관련 티켓\n\n- ticket # 티켓없음.\n\n# 주요 변경 사항\n\n- RAM 최대 10G + swap 최대 2G\n- 호스트 4 vCPU 중 Jenkins 컨테이너 최대 3.5 vCPU\n- Jenkins JVM 최대 2G.\n\n# 테스트\n\n- [ ]\n\n# 리뷰 포인트\n\n- \\-",
+    "state": "merged",
+    "created_at": "2026-09-21T12:43:30.732+09:00",
+    "updated_at": "2026-09-21T12:45:07.181+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-21T12:45:06.939+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/임시_Jenkins_사양_증설",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2aa5e174110bf6c6b77560cddb93e7e025092379",
+    "merge_commit_sha": "91bc0c4bf5bf76fbaff655a65a3e95cf8e022b47",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T12:43:31.624+09:00",
+    "reference": "!265",
+    "references": {
+      "short": "!265",
+      "relative": "!265",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!265"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/265",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954106,
+    "iid": 265,
+    "project_id": 1444456,
+    "title": "fix(infra):jenkins사양임시증설",
+    "description": "# 작업 내용 요약\n\n작업 속도를 위해 Jenkins 사양 증설\n\n# 관련 티켓\n\n- ticket # 티켓없음.\n\n# 주요 변경 사항\n\n- RAM 최대 10G + swap 최대 2G\n- 호스트 4 vCPU 중 Jenkins 컨테이너 최대 3.5 vCPU\n- Jenkins JVM 최대 2G.\n\n# 테스트\n\n- [ ]\n\n# 리뷰 포인트\n\n- \\-",
+    "state": "merged",
+    "created_at": "2026-09-21T12:43:30.732+09:00",
+    "updated_at": "2026-09-21T12:45:07.181+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-21T12:45:06.939+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/임시_Jenkins_사양_증설",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2aa5e174110bf6c6b77560cddb93e7e025092379",
+    "merge_commit_sha": "91bc0c4bf5bf76fbaff655a65a3e95cf8e022b47",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T12:43:31.624+09:00",
+    "reference": "!265",
+    "references": {
+      "short": "!265",
+      "relative": "!265",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!265"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/265",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4",
+      "head_sha": "2aa5e174110bf6c6b77560cddb93e7e025092379",
+      "start_sha": "c53917f64523421063c319c885205e2e825bc04b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "fa0aea9a7c965b901e66044f551b0ecf21532ef3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845833,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T12:43:30.822+09:00",
+          "updated_at": "2026-09-21T12:43:30.826+09:00",
+          "system": true,
+          "noteable_id": 954106,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 265,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d232cb3113f123b821d5d958484efdb0cdd2d6bb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845834,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T12:43:30.843+09:00",
+          "updated_at": "2026-09-21T12:43:30.850+09:00",
+          "system": true,
+          "noteable_id": 954106,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 265,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "812114fe158ced8815e72dbecfd1badc8e5ebb25",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845836,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 다만 인프라 리소스 설정과 관련하여 한 가지 참고할 사항이 있습니다.\n\n- [Low] `infra/jenkins/docker-compose.ci.yml`: 호스트의 전체 vCPU가 4개인 환경에서 Jenkins 컨테이너의 CPU 한도를 `3.5`로 설정하고 메모리를 `10G`로 할당한 것은, 호스트의 전체 물리 스펙(또는 가상 머신 스펙)을 초과하거나 다른 서비스와 자원을 심각하게 경합(Resource Contention)하게 만들 수 있습니다. 특히 호스트 물리 메모리가 10GB 미만인 경우 OOM Killer에 의해 Jenkins나 다른 핵심 서비스가 강제 종료될 수 있으므로, 실제 호스트의 가용 총 자원(RAM/vCPU) 범위 내에 있는지 배포 전 반드시 확인이 필요합니다.\n\n### 테스트 제안\n- **리소스 제한 적용 확인 테스트**:\n  1. `docker compose -f infra/jenkins/docker-compose.ci.yml up -d` 명령어로 컨테이너를 정상 기동합니다.\n  2. `docker stats thorp-jenkins` 명령어를 실행하여 메모리 제한(`10G`)과 CPU 제한(`3.5`)이 Docker 데몬에 올바르게 반영되었는지 확인합니다.\n- **JVM 힙 및 빌드 안정성 테스트**:\n  1. Jenkins 파이프라인을 트리거하여 Gradle/Node 빌드 시 변경된 `JAVA_OPTS` (`-Xms512m -Xmx2048m`) 환경에서 OutOfMemoryError 없이 빌드가 정상 완료되는지 모니터링합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:2aa5e174110bf6c6b77560cddb93e7e025092379 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T12:43:39.535+09:00",
+          "updated_at": "2026-09-21T12:43:39.535+09:00",
+          "system": false,
+          "noteable_id": 954106,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 265,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "abd5d2128cd5dc317d4faf4fc56d36dd3e1da687",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845853,
+          "type": null,
+          "body": "mentioned in commit 91bc0c4bf5bf76fbaff655a65a3e95cf8e022b47",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T12:45:07.450+09:00",
+          "updated_at": "2026-09-21T12:45:07.464+09:00",
+          "system": true,
+          "noteable_id": 954106,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 265,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2231069,
+      "head_commit_sha": "2aa5e174110bf6c6b77560cddb93e7e025092379",
+      "base_commit_sha": "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4",
+      "start_commit_sha": "c53917f64523421063c319c885205e2e825bc04b",
+      "created_at": "2026-09-21T12:43:31.192+09:00",
+      "merge_request_id": 954106,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "4a9c3d1d9e457f5e9f9bbe6f64f2673ea46ef8ab"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2231069,
+      "head_commit_sha": "2aa5e174110bf6c6b77560cddb93e7e025092379",
+      "base_commit_sha": "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4",
+      "start_commit_sha": "c53917f64523421063c319c885205e2e825bc04b",
+      "created_at": "2026-09-21T12:43:31.192+09:00",
+      "merge_request_id": 954106,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "4a9c3d1d9e457f5e9f9bbe6f64f2673ea46ef8ab",
+      "commits": [
+        {
+          "id": "2aa5e174110bf6c6b77560cddb93e7e025092379",
+          "short_id": "2aa5e174",
+          "created_at": "2026-09-21T12:39:04.000+09:00",
+          "parent_ids": [
+            "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4"
+          ],
+          "title": "fix(infra):jenkins사양임시증설",
+          "message": "fix(infra):jenkins사양임시증설\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-21T12:39:04.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-21T12:39:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2aa5e174110bf6c6b77560cddb93e7e025092379"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,3 +1,58 @@\n+# # 앱 스택과 별도의 compose 프로젝트로 띄운다.\n+# # 같은 파일에 넣으면 Jenkins가 배포하면서 자기 자신을 재시작해 파이프라인이 끊긴다.\n+# name: thorp-ci\n+\n+# services:\n+#   jenkins:\n+#     build: .\n+#     image: thorp-jenkins:lts\n+#     container_name: thorp-jenkins\n+#     restart: unless-stopped\n+#     # RAM 4G + swap 2G. 메모리를 늘려도 기존 swap 허용량(2G)은 늘리지 않는다.\n+#     memswap_limit: 6G\n+#     # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아\n+#     # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.\n+#     #\n+#     # 주의: docker.sock을 마운트하는 한 이 컨테이너는 호스트 root와 동등한 권한을 갖는다.\n+#     # group_add는 그 사실을 바꾸지 못하며(컨테이너 내부 권한만 낮춘다), 실제로 막으려면\n+#     # socket proxy나 별도 머신의 에이전트가 필요하다.\n+#     group_add:\n+#       - \"${DOCKER_GID}\"\n+#     ports:\n+#       # 외부 비공개. 접근은 SSH 터널로만.\n+#       - \"127.0.0.1:9090:8080\"\n+#     environment:\n+#       TZ: Asia/Seoul\n+#       JAVA_OPTS: \"-Xmx1024m -Djava.awt.headless=true\"\n+#     volumes:\n+#       - jenkins-home:/var/jenkins_home\n+#       - /var/run/docker.sock:/var/run/docker.sock\n+#       # 기존 jenkins-home에도 재기동 때 적용한다. 실행 슬롯 수와 CI 동시 실행 상한을 건다.\n+#       # 폴더째 마운트하므로 스크립트를 더할 때 이 줄을 고치지 않아도 된다.\n+#       - ./init.groovy.d:/var/jenkins_home/init.groovy.d:ro\n+#       # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는\n+#       # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.\n+#       - ${DEPLOY_DIR}:${DEPLOY_DIR}\n+#     # nginx가 GitLab Webhook 요청만 전달할 수 있도록 앱의 외부 프록시 네트워크에\n+#     # 연결한다. Jenkins UI는 ports의 loopback 바인딩을 통해 SSH 터널로만 접근한다.\n+#     networks: [webhook]\n+#     deploy:\n+#       resources:\n+#         limits:\n+#           # CI의 Gradle·Java 테스트·Node는 Jenkins 내부에서 실행된다.\n+#           # CD의 별도 Docker 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.\n+#           memory: 4G\n+#           cpus: \"2.0\"\n+\n+# volumes:\n+#   jenkins-home:\n+\n+# networks:\n+#   webhook:\n+#     external: true\n+#     name: thorp-edge\n+\n+\n # 앱 스택과 별도의 compose 프로젝트로 띄운다.\n # 같은 파일에 넣으면 Jenkins가 배포하면서 자기 자신을 재시작해 파이프라인이 끊긴다.\n name: thorp-ci\n@@ -8,41 +63,44 @@ services:\n     image: thorp-jenkins:lts\n     container_name: thorp-jenkins\n     restart: unless-stopped\n-    # RAM 4G + swap 2G. 메모리를 늘려도 기존 swap 허용량(2G)은 늘리지 않는다.\n-    memswap_limit: 6G\n-    # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아\n-    # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.\n-    #\n-    # 주의: docker.sock을 마운트하는 한 이 컨테이너는 호스트 root와 동등한 권한을 갖는다.\n-    # group_add는 그 사실을 바꾸지 못하며(컨테이너 내부 권한만 낮춘다), 실제로 막으려면\n-    # socket proxy나 별도 머신의 에이전트가 필요하다.\n+\n+    # 임시 CI 증설:\n+    # RAM 최대 10G + swap 최대 2G\n+    mem_limit: 10G\n+    memswap_limit: 12G\n+\n+    # 호스트 4 vCPU 중 Jenkins 컨테이너 최대 3.5 vCPU\n+    cpus: \"3.5\"\n+\n+    # 이미지 기본 사용자(jenkins, uid 1000)로 실행.\n+    # docker.sock 접근을 위해 호스트 Docker 그룹을 추가한다.\n     group_add:\n       - \"${DOCKER_GID}\"\n+\n     ports:\n       # 외부 비공개. 접근은 SSH 터널로만.\n       - \"127.0.0.1:9090:8080\"\n+\n     environment:\n       TZ: Asia/Seoul\n-      JAVA_OPTS: \"-Xmx1024m -Djava.awt.headless=true\"\n+\n+      # Jenkins JVM 자체는 최대 2G.\n+      # 나머지 메모리는 Gradle / Node / 테스트 프로세스에 남긴다.\n+      JAVA_OPTS: \"-Xms512m -Xmx2048m -Djava.awt.headless=true\"\n+\n     volumes:\n       - jenkins-home:/var/jenkins_home\n       - /var/run/docker.sock:/var/run/docker.sock\n-      # 기존 jenkins-home에도 재기동 때 적용한다. 실행 슬롯 수와 CI 동시 실행 상한을 건다.\n-      # 폴더째 마운트하므로 스크립트를 더할 때 이 줄을 고치지 않아도 된다.\n       - ./init.groovy.d:/var/jenkins_home/init.groovy.d:ro\n-      # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는\n-      # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.\n       - ${DEPLOY_DIR}:${DEPLOY_DIR}\n-    # nginx가 GitLab Webhook 요청만 전달할 수 있도록 앱의 외부 프록시 네트워크에\n-    # 연결한다. Jenkins UI는 ports의 loopback 바인딩을 통해 SSH 터널로만 접근한다.\n+\n     networks: [webhook]\n+\n     deploy:\n       resources:\n         limits:\n-          # CI의 Gradle·Java 테스트·Node는 Jenkins 내부에서 실행된다.\n-          # CD의 별도 Docker 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.\n-          memory: 4G\n-          cpus: \"2.0\"\n+          memory: 10G\n+          cpus: \"3.5\"\n \n volumes:\n   jenkins-home:\n@@ -50,4 +108,4 @@ volumes:\n networks:\n   webhook:\n     external: true\n-    name: thorp-edge\n+    name: thorp-edge\n\\ No newline at end of file\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/docker-compose.ci.yml",
+          "old_path": "infra/jenkins/docker-compose.ci.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2845836": []
+  }
+}

@@ -1,0 +1,609 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963021,
+    "iid": 356,
+    "project_id": 1444456,
+    "title": "fix(fe): 국내 시장 지수를 비교 가능 기간 위로 배치",
+    "description": "## 작업 내용 요약\n\n투자 대상 고르기의 국내 시장 지수를 ‘비교 가능 기간’ 바로 위로 옮기고 두 박스의 폭을 맞춥니다. ‘지금 국내 시장’ 제목도 KOSPI 이름과 같은 글자 기준선에 정렬합니다.\n\n## 주요 변경 사항\n\n- DM-01: KOSPI·VKOSPI 200 박스를 비교 가능 기간과 같은 격자 칸에 배치합니다.\n- 제목을 지수 이름의 기준선에 맞추고, 좁은 화면에서는 세로 배치를 유지합니다.\n- 기간·투자 대상 카드 사이의 다음 단계 버튼 위치와 지수 조회 방식은 유지합니다.\n- 변경된 배치를 관련 명세에 반영합니다.\n\n## 테스트\n\n- [x] `npm run lint`: 오류 0, 기존 경고 26개\n- [x] `npm run build`: 통과\n- [x] `npm test`: 실패·건너뜀 0\n- [x] 예시 자료로 지수·기간 박스의 동일한 폭과 제목 정렬 확인\n- [x] 390px 화면에서 가로 넘침 없음을 확인\n- [x] AI 코드리뷰 완료\n\n## 리뷰 포인트\n\n- 국내 시장 지수 → 비교 가능 기간 → 투자 대상 목록의 배치 순서\n- 제목과 KOSPI 이름의 기준선 정렬",
+    "state": "merged",
+    "created_at": "2026-10-01T16:32:49.067+09:00",
+    "updated_at": "2026-10-01T18:00:40.413+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-10-01T18:00:39.701+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/diagnosis-market-placement",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+    "merge_commit_sha": "f10ab1a3c9b77413827d576671cd57a80a22b27c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T16:32:50.189+09:00",
+    "reference": "!356",
+    "references": {
+      "short": "!356",
+      "relative": "!356",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!356"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/356",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963021,
+    "iid": 356,
+    "project_id": 1444456,
+    "title": "fix(fe): 국내 시장 지수를 비교 가능 기간 위로 배치",
+    "description": "## 작업 내용 요약\n\n투자 대상 고르기의 국내 시장 지수를 ‘비교 가능 기간’ 바로 위로 옮기고 두 박스의 폭을 맞춥니다. ‘지금 국내 시장’ 제목도 KOSPI 이름과 같은 글자 기준선에 정렬합니다.\n\n## 주요 변경 사항\n\n- DM-01: KOSPI·VKOSPI 200 박스를 비교 가능 기간과 같은 격자 칸에 배치합니다.\n- 제목을 지수 이름의 기준선에 맞추고, 좁은 화면에서는 세로 배치를 유지합니다.\n- 기간·투자 대상 카드 사이의 다음 단계 버튼 위치와 지수 조회 방식은 유지합니다.\n- 변경된 배치를 관련 명세에 반영합니다.\n\n## 테스트\n\n- [x] `npm run lint`: 오류 0, 기존 경고 26개\n- [x] `npm run build`: 통과\n- [x] `npm test`: 실패·건너뜀 0\n- [x] 예시 자료로 지수·기간 박스의 동일한 폭과 제목 정렬 확인\n- [x] 390px 화면에서 가로 넘침 없음을 확인\n- [x] AI 코드리뷰 완료\n\n## 리뷰 포인트\n\n- 국내 시장 지수 → 비교 가능 기간 → 투자 대상 목록의 배치 순서\n- 제목과 KOSPI 이름의 기준선 정렬",
+    "state": "merged",
+    "created_at": "2026-10-01T16:32:49.067+09:00",
+    "updated_at": "2026-10-01T18:00:40.413+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-10-01T18:00:39.701+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/diagnosis-market-placement",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+    "merge_commit_sha": "f10ab1a3c9b77413827d576671cd57a80a22b27c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T16:32:50.189+09:00",
+    "reference": "!356",
+    "references": {
+      "short": "!356",
+      "relative": "!356",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!356"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/356",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "6",
+    "latest_build_started_at": "2026-10-01T16:33:01.435+09:00",
+    "latest_build_finished_at": "2026-10-01T16:37:12.416+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 227956,
+      "iid": 385,
+      "project_id": 1444456,
+      "sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+      "ref": "fix(fe)/diagnosis-market-placement",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-01T16:33:01.327+09:00",
+      "updated_at": "2026-10-01T16:37:12.427+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227956"
+    },
+    "head_pipeline": {
+      "id": 227956,
+      "iid": 385,
+      "project_id": 1444456,
+      "sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+      "ref": "fix(fe)/diagnosis-market-placement",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-01T16:33:01.327+09:00",
+      "updated_at": "2026-10-01T16:37:12.427+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227956",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-10-01T16:33:01.435+09:00",
+      "finished_at": "2026-10-01T16:37:12.416+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227956",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+      "head_sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+      "start_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7ef73bb91437dc922e1f3a11c5a9e80e3e419818",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880000,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T16:32:49.163+09:00",
+          "updated_at": "2026-10-01T16:32:49.171+09:00",
+          "system": true,
+          "noteable_id": 963021,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 356,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "13a860936567a7c8da11d5e96d458cf754cfef22",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880001,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. CSS Grid 영역 설정 변경(`grid-template-areas`)과 컴포넌트 위치 이동, 폰트/기준선 정렬(`align-items: baseline`) 등 UI 요구사항에 맞춘 깔끔한 수정입니다.\n\n### 테스트 제안\n- **레이아웃 정렬 검증**: 데스크톱 및 태블릿 화면에서 `.marketStrip`의 '지금 국내 시장' 제목과 내부 KOSPI 지수 이름의 기준선(baseline)이 정확히 일치하는지 시각적으로 확인합니다.\n- **반응형 레이아웃 검증**: 390px 이하의 좁은 모바일 화면(`max-width: 760px`)에서 `.cardRow` 내의 세로 배치(`market` -> `timeline` -> `notice` -> `card` 순서)가 깨지지 않고 가로 스크롤(넘침)이 발생하지 않는지 확인합니다.\n- **회귀 테스트**: 비교 가능 기간(`AvailabilityTimeline`)과 탐색 카드 사이의 '다음 단계' 버튼 및 관련 기능이 기존과 동일하게 정상 동작하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:5a530e6cea0928004eee3408124925ce71c024c7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-01T16:32:57.418+09:00",
+          "updated_at": "2026-10-01T16:32:57.418+09:00",
+          "system": false,
+          "noteable_id": 963021,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 356,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8e7d71c9a1dc1d09af508adf70ad3807ebae094c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880117,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T17:54:50.100+09:00",
+          "updated_at": "2026-10-01T17:54:50.103+09:00",
+          "system": true,
+          "noteable_id": 963021,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 356,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e0f8e7e7ad92276958bbb3fd8cd810fd8b0ce8b7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880121,
+          "type": null,
+          "body": "mentioned in commit f10ab1a3c9b77413827d576671cd57a80a22b27c",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T18:00:39.816+09:00",
+          "updated_at": "2026-10-01T18:00:39.820+09:00",
+          "system": true,
+          "noteable_id": 963021,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 356,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dff7904391a158d2f39dd2cc63eeea72b57c916f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885083,
+          "type": null,
+          "body": "mentioned in commit 5f9ae307dac0044a442fe0ddfba747e672301710",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.897+09:00",
+          "updated_at": "2026-10-13T15:16:16.917+09:00",
+          "system": true,
+          "noteable_id": 963021,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 356,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261083,
+      "head_commit_sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+      "base_commit_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+      "start_commit_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+      "created_at": "2026-10-01T16:32:49.361+09:00",
+      "merge_request_id": 963021,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "72b4e2dc421448f8c5ac40024962a71e6a6312b4"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261083,
+      "head_commit_sha": "5a530e6cea0928004eee3408124925ce71c024c7",
+      "base_commit_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+      "start_commit_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+      "created_at": "2026-10-01T16:32:49.361+09:00",
+      "merge_request_id": 963021,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "72b4e2dc421448f8c5ac40024962a71e6a6312b4",
+      "commits": [
+        {
+          "id": "5a530e6cea0928004eee3408124925ce71c024c7",
+          "short_id": "5a530e6c",
+          "created_at": "2026-10-01T16:32:46.000+09:00",
+          "parent_ids": [
+            "79b7563b2150c3e26d10789abaf9709bd838c33e"
+          ],
+          "title": "fix(fe): 국내 시장 지수를 비교 가능 기간 위로 배치",
+          "message": "fix(fe): 국내 시장 지수를 비교 가능 기간 위로 배치\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T16:32:46.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T16:32:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5a530e6cea0928004eee3408124925ce71c024c7"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -5,7 +5,7 @@ import styles from './MarketNow.module.css'\n \n /*\n   투자 대상 고르기의 '지금 국내 시장'(002 FR-018, 009 FR-017). KOSPI와 VKOSPI 200을 지수마다 카드 하나씩\n-  가로로 나란히 보인다. 투자 대상 탐색 카드 바로 아래 띠에 놓인다. 과거 사례와 견주어 볼 출발점이지 경제환경 검색의 입력이 아니다.\n+  가로로 나란히 보인다. 비교 가능 기간 바로 위에 같은 폭으로 놓인다. 과거 사례와 견주어 볼 출발점이지 경제환경 검색의 입력이 아니다.\n \n   - 한 줄에 이름·값·직전 거래일 대비 변화를 둔다. 값의 색은 오르내림이다(상승 빨강·하락 파랑, 좋고 나쁨이 아니다).\n   - 최신값 응답에는 직전 값이 없어 최근 흐름(`GET /markets/{code}/series`)의 마지막 두 거래일로 견준다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/MarketNow.tsx",
+          "old_path": "frontend/src/components/diagnosis/MarketNow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -690,6 +690,7 @@\n \n   display: grid;\n   grid-template-areas:\n+    'market .'\n     'timeline .'\n     'notice .'\n     'card proceed';\n@@ -737,6 +738,7 @@\n @media (max-width: 760px) {\n   .cardRow {\n     grid-template-areas:\n+      'market'\n       'timeline'\n       'notice'\n       'card'\n@@ -1020,13 +1022,15 @@\n   }\n }\n \n-/* 탐색 카드 아래 '지금 국내 시장' 띠. 이름은 왼쪽, 지수 카드는 가로로 나란히 선다. */\n+/* 비교 가능 기간 위 '지금 국내 시장' 띠. 이름은 왼쪽, 지수 카드는 가로로 나란히 선다. */\n .marketStrip {\n+  grid-area: market;\n+  min-width: 0;\n   display: grid;\n   grid-template-columns: auto minmax(0, 1fr);\n-  align-items: center;\n+  align-items: baseline;\n   gap: 12px 24px;\n-  margin-top: 16px;\n+  margin-bottom: var(--card-gap);\n   padding: var(--thorp-pad-card, 18px);\n   border: 1px solid var(--thorp-line-control);\n   border-radius: var(--thorp-radius-card, 18px);\n@@ -1035,7 +1039,7 @@\n \n .marketStrip h2 {\n   display: flex;\n-  align-items: center;\n+  align-items: baseline;\n   gap: 6px;\n   margin: 0;\n   color: var(--thorp-muted);\n@@ -1046,6 +1050,7 @@\n }\n \n .marketStrip h2 svg {\n+  align-self: center;\n   flex-shrink: 0;\n   color: var(--thorp-accent-soft);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -260,6 +260,17 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n             를 지나 다음 단계로 넘어가는 자리로 읽힌다.\n           */}\n           <div className={styles.cardRow}>\n+            {/*\n+              지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.\n+              비교 가능 기간 바로 위에 같은 폭으로 지수를 가로로 펼친다.\n+            */}\n+            <section className={styles.marketStrip} aria-labelledby=\"market-now-title\">\n+              <h2 id=\"market-now-title\">\n+                <ChartNoAxesCombined size={14} aria-hidden=\"true\" />\n+                지금 국내 시장\n+              </h2>\n+              <MarketNow />\n+            </section>\n             <AvailabilityTimeline\n               className={`${styles.timeline} ${styles.rowTimeline}`}\n               timeline={timeline}\n@@ -302,17 +313,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n             </p>\n           ) : null}\n \n-          {/*\n-            지금 국내 시장(KOSPI·VKOSPI, 009 FR-017). 과거 사례와 견주어 볼 출발점이지 검색의 입력이 아니다.\n-            탐색 카드 바로 아래에 지수를 가로로 펼친다. 카드 곁에 따로 두면 다음 단계 단추 뒤로 밀려 잘 읽히지 않았다.\n-          */}\n-          <section className={styles.marketStrip} aria-labelledby=\"market-now-title\">\n-            <h2 id=\"market-now-title\">\n-              <ChartNoAxesCombined size={14} aria-hidden=\"true\" />\n-              지금 국내 시장\n-            </h2>\n-            <MarketNow />\n-          </section>\n+\n         </section>\n \n         {/*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -163,3 +163,7 @@ constitution 「Jira 연계」가 \"묶음 구성은 plan을 시작할 때 정한\n |-----------|------------|-------------------------------------|\n | 원칙 X의 출처 문구를 `GET /sectors` 응답이 아니라 화면 상수로 둔다 | 섹터 목록 화면은 KRX에서 온 대표 ETF 이름과 상장일을 보이므로 원칙 X가 요구하는 '한국거래소 통계정보' 표시 대상이다. 그런데 [001 계약](../001-etf-market-data/contracts/sector-api.md)의 `GET /sectors` 응답에는 `sourceAttribution`이 없고 `GET /sectors/{code}/instrument-profile`에만 있다 | 표시를 생략하면 원칙 X를 어긴다. 상품 정보 패널을 열어야만 출처가 보이게 두는 것도 목록 화면에서는 미표시와 같다. 값을 지어내는 것이 아니라 001이 이미 상수처럼 내보내는 같은 문구를 쓰는 것이므로 표시 쪽을 택했다. 후속 조치로 `GET /sectors`에 `sourceAttribution`을 더하도록 001에 제안하며, 그 계약 변경은 001이 소유하므로 002에서 고치지 않는다(research.md 결정 8) |\n | 공통 비교 시작일 산출이 001의 `evaluation-window` 산식과 별도로 화면에 존재한다 | 002가 안내하는 값은 상장일만 반영한 시작일이고, `GET /sectors/evaluation-window`는 003이 소유하는 워밍업 거래일 수를 필수 입력으로 받는다. 전략을 고르기 전에는 그 엔드포인트를 부를 수 없다(spec.md의 Clarifications) | 003까지 안내를 미루면 SC-003(\"결과 화면에서 처음 알게 되는 사례 0건\")과 spec의 User Story 3이 성립하지 않는다. 002가 쓰는 식은 `max(listedOn)` 하나뿐이고, 이는 001 산식에서 `warmupTradingDays = 0`인 경우와 같아 두 값이 어긋날 여지가 없다. 화면에는 상장일만 반영한 값임을 밝히고 워밍업 몫은 003이 알린다(research.md 결정 4) |\n+\n+## 국내 시장 지수 배치 수정 묶음 (2026-10-01)\n+\n+`fix(fe)/diagnosis-market-placement`에서 국내 시장 지수 띠를 비교 가능 기간과 같은 격자 칸에 올린다. 제목은 첫 지수 이름의 기준선에 맞추고 좁은 화면에서는 세로 배치를 유지한다. 기간·탐색 카드 사이 다음 단계 버튼 위치와 지수 조회 계약은 유지한다. 프론트엔드 필수 검증과 실제 화면의 폭·정렬을 확인한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/plan.md",
+          "old_path": "specs/002-sector-weight-selection/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -146,7 +146,7 @@\n - **FR-015**: 섹터 목록이 아직 확정되지 않은 예시 대응표에서 온 것이면([001](../001-etf-market-data/spec.md) FR-002) 이 화면에 그 사실을 표시한다. 001 SC-006이 예시 자료를 쓰는 화면 전부에 예시 표시를 요구한다. 이 표시는 FR-005의 동일 비중 초깃값이 예시라는 표시와 가리키는 대상이 다르므로 따로 둔다.\n - **FR-016**: 고른 섹터의 비중으로 0%를 입력할 수 있다. 시스템은 0%를 거부하거나 다른 값으로 바꾸지 않으며, 0%인 섹터를 선택 목록에서 빼지도 않는다. 화면은 0%인 섹터가 '내가 정한 비중'에서는 담기지 않지만 자동 배분 전략에서는 여전히 투자 후보 집합에 남는다는 뜻을 한 문장으로 알린다. FR-009가 나눈 선택 섹터의 두 의미 중 비중이 0%라는 사실은 '내가 정한 비중' 쪽에만 적용되며, [003](../003-strategy-settings/spec.md)이 선택 섹터의 개수로 유효성 제약을 계산하므로 0%인 섹터도 그 개수에 그대로 들어간다. (§4.2.1, D04, 원칙 VI)\n - **FR-017**: 대표 ETF 대응표가 아직 발행되지 않아 [001](../001-etf-market-data/spec.md)에서 섹터 목록을 아직 받을 수 없는 상태이면, 빈 목록이나 오류 화면 대신 아직 준비 중이라는 한 문장을 보이는 정상 화면으로 처리한다. 이 상태가 [001의 섹터 조회 계약](../001-etf-market-data/contracts/sector-api.md)의 어느 응답에 해당하는지는 [plan.md](./plan.md)가 대응을 밝힌다. FR-001이 아직 만들지 않은 화면에 쓰는 처리와 같은 형태다. 이 상태에서는 섹터를 고를 수 없으므로 다음 단계로 넘어가지 않는다. (원칙 VI)\n-- **FR-018**: '지금과 비슷했던 과거 시장' 카드는 시장 흐름 하단으로 옮긴다(2026-10-01 사용자 결정). 분야 선택·종합 비교·사례 표시와 011의 기간 인계 계약은 유지하고 투자 대상 고르기에는 표시하지 않는다. 국내 시장 참고 정보는 기존 투자 대상 탐색 카드 아래에 유지한다.\n+- **FR-018**: '지금과 비슷했던 과거 시장' 카드는 시장 흐름 하단으로 옮긴다(2026-10-01 사용자 결정). 분야 선택·종합 비교·사례 표시와 011의 기간 인계 계약은 유지하고 투자 대상 고르기에는 표시하지 않는다. 국내 시장 참고 정보(KOSPI·VKOSPI 200)는 비교 가능 기간 바로 위에 같은 박스 폭으로 둔다. '지금 국내 시장' 제목은 KOSPI 이름과 같은 기준선에 정렬한다(2026-10-01 추가 사용자 결정).\n - **FR-019**: 뉴스 카드는 시장 흐름의 과거 사례 카드 옆으로 옮긴다(2026-10-01 사용자 결정). 기본 전체·분류별 섹터 필터·최대 3개 뉴스 묶음과 독립적인 오류 처리는 유지한다. 뉴스 필터는 투자 대상 선택에 영향을 주지 않는다.\n \n ### Key Entities *(include if feature involves data)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/spec.md",
+          "old_path": "specs/002-sector-weight-selection/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -466,3 +466,9 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5\n   - 선행 없음. M4·M5와 파일이 겹치지 않으므로 그 묶음과 병행할 수 있다\n \n **Checkpoint**: 보관된 값의 형식이 앞설 때 쓰는 쪽이 어떻게 움직이는지가 코드와 설명에서 같은 말을 하고, 그 동작을 고정하는 검사가 하나 있다. 위 검증 기준선의 숫자가 그대로다.\n+\n+## 국내 시장 지수 배치 수정 (2026-10-01)\n+\n+- [x] DM-01 국내 시장 지수 띠를 비교 가능 기간 바로 위 같은 폭으로 이동하고 제목 기준선을 맞춘다.\n+- [x] DM-02 프론트엔드 필수 검증과 AI 코드리뷰·화면 확인을 수행한다. lint 오류 0(기존 경고 26), build·전체 테스트 통과(skipped 0), 같은 박스 폭과 모바일 가로 넘침 없음을 확인했다.\n+- [ ] DM-03 dev 대상 MR을 병합한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/tasks.md",
+          "old_path": "specs/002-sector-weight-selection/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2880001": []
+  }
+}

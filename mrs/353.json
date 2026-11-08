@@ -1,0 +1,979 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 962902,
+    "iid": 353,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름으로 과거 사례와 뉴스 이동 및 숫자 표시 개선",
+    "description": "## 작업 내용 요약\n\n전략 진단의 과거 시장 사례와 뉴스를 시장 흐름으로 옮겨 경제 지표와 함께 탐색할 수 있게 합니다. 긴 숫자 표시를 줄이고, 지표가 하나인 분야도 두 지표 분야와 같은 카드 폭으로 표시합니다.\n\n## 주요 변경 사항\n\n- MF-01: 과거 사례·뉴스를 시장 흐름 하단으로 이동하고, 사례 재선택 링크도 시장 흐름으로 연결합니다.\n- MF-02: 지표와 요약 문장의 소수를 최대 첫째 자리까지 표시합니다. 큰 달러 금액은 천만 단위로 반올림해 `약 347억 9천만`처럼 표시하며, 원값과 계산은 유지합니다.\n- MF-05: 단일 지표는 왼쪽 반폭 카드로 표시하고, 좁은 화면에서는 전체 폭으로 표시합니다.\n- 화면 구성 변경을 관련 명세에 반영합니다.\n\n## 테스트\n\n- [x] `npm run lint`: 오류 0, 기존 경고 26개\n- [x] `npm run build`: 통과\n- [x] `npm test`: 실패·건너뜀 0\n- [x] 예시 자료로 단일 지표와 두 지표의 카드 폭이 같음을 확인\n- [x] 모바일에서 전체 폭 전환과 가로 넘침 없음을 확인\n- [x] AI 코드리뷰 완료\n\n## 리뷰 포인트\n\n- 달러 금액의 천만 단위 반올림과 음수 표시\n- 단일 지표 카드의 왼쪽 배치와 좁은 화면 전환",
+    "state": "merged",
+    "created_at": "2026-10-01T12:14:11.209+09:00",
+    "updated_at": "2026-10-01T16:15:35.410+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-10-01T16:15:34.906+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-context",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+    "merge_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T12:14:13.799+09:00",
+    "reference": "!353",
+    "references": {
+      "short": "!353",
+      "relative": "!353",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!353"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/353",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 962902,
+    "iid": 353,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름으로 과거 사례와 뉴스 이동 및 숫자 표시 개선",
+    "description": "## 작업 내용 요약\n\n전략 진단의 과거 시장 사례와 뉴스를 시장 흐름으로 옮겨 경제 지표와 함께 탐색할 수 있게 합니다. 긴 숫자 표시를 줄이고, 지표가 하나인 분야도 두 지표 분야와 같은 카드 폭으로 표시합니다.\n\n## 주요 변경 사항\n\n- MF-01: 과거 사례·뉴스를 시장 흐름 하단으로 이동하고, 사례 재선택 링크도 시장 흐름으로 연결합니다.\n- MF-02: 지표와 요약 문장의 소수를 최대 첫째 자리까지 표시합니다. 큰 달러 금액은 천만 단위로 반올림해 `약 347억 9천만`처럼 표시하며, 원값과 계산은 유지합니다.\n- MF-05: 단일 지표는 왼쪽 반폭 카드로 표시하고, 좁은 화면에서는 전체 폭으로 표시합니다.\n- 화면 구성 변경을 관련 명세에 반영합니다.\n\n## 테스트\n\n- [x] `npm run lint`: 오류 0, 기존 경고 26개\n- [x] `npm run build`: 통과\n- [x] `npm test`: 실패·건너뜀 0\n- [x] 예시 자료로 단일 지표와 두 지표의 카드 폭이 같음을 확인\n- [x] 모바일에서 전체 폭 전환과 가로 넘침 없음을 확인\n- [x] AI 코드리뷰 완료\n\n## 리뷰 포인트\n\n- 달러 금액의 천만 단위 반올림과 음수 표시\n- 단일 지표 카드의 왼쪽 배치와 좁은 화면 전환",
+    "state": "merged",
+    "created_at": "2026-10-01T12:14:11.209+09:00",
+    "updated_at": "2026-10-01T16:15:35.410+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-10-01T16:15:34.906+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-context",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+    "merge_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T12:14:13.799+09:00",
+    "reference": "!353",
+    "references": {
+      "short": "!353",
+      "relative": "!353",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!353"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/353",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "24",
+    "latest_build_started_at": "2026-10-01T12:21:11.023+09:00",
+    "latest_build_finished_at": "2026-10-01T12:25:12.625+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 227919,
+      "iid": 383,
+      "project_id": 1444456,
+      "sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "ref": "feat(fe)/market-flow-context",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-01T12:21:10.910+09:00",
+      "updated_at": "2026-10-01T12:25:12.633+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227919"
+    },
+    "head_pipeline": {
+      "id": 227919,
+      "iid": 383,
+      "project_id": 1444456,
+      "sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "ref": "feat(fe)/market-flow-context",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-01T12:21:10.910+09:00",
+      "updated_at": "2026-10-01T12:25:12.633+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227919",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-10-01T12:21:11.023+09:00",
+      "finished_at": "2026-10-01T12:25:12.625+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227919",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "head_sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "start_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2497105a845c432851679a4b15f3da7d2843353a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879736,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T12:14:11.316+09:00",
+          "updated_at": "2026-10-01T12:14:11.334+09:00",
+          "system": true,
+          "noteable_id": 962902,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 353,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "669c71002b2b0690618bb188e5e3481eebb61b9d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879737,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 재배치 및 사양 동기화**: 시장 흐름 화면(`MarketFlowPage`)으로 과거 사례(`SimilarPastMarket`)와 뉴스(`SectorNews`) 카드를 깔끔하게 이전하였으며, 관련 문서(`specs/`)를 전반적으로 정비하여 명세와 구현의 일관성을 잘 유지했습니다.\n- **견고한 예시 데이터 포맷팅 및 단위 처리**: `formatObservation` 함수 내에서 USD 등 특정 통화 단위와 절댓값(1억 이상)에 대해 안전한 천만 단위 반올림 및 음수 부호 처리를 구현하였고, `formatNarrative`를 통해 자연스러운 문장 속 숫자 정밀도를 정교하게 축소했습니다. 또한 테스트 코드(`marketFlowFormat.test.ts`, `FieldDetail.test.tsx`)를 통해 다양한 경계값 시나리오를 꼼꼼하게 검증했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **통화 금액 반올림 경계값 테스트**: \n  - 정확히 1억 미만(예: 99,999,999 USD)일 때와 정확히 1억 이상(예: 100,000,000 USD)일 때의 표시 형식이 의도대로 전환되는지 확인합니다.\n  - 음수 및 양수의 억/천만 단위 반올림 시 올림 및 내림 연산이 소수점 오차 없이 정확히 동작하는지 검증합니다.\n- **화면 리사이즈 및 레이아웃 테스트**:\n  - `MarketFlowPage`에서 좁은 화면(1180px 미만)으로 전환될 때 `context` 그리드 레이아웃이 세로 배치로 정상적으로 전환되는지 확인합니다.\n- **네트워크 오류 독립성 테스트**:\n  - 시장 흐름의 분야 데이터(`fetchMarketFlowFields`) 조회 실패 시에도 하단의 과거 사례 및 뉴스 카드가 정상적으로 렌더링되고 개별 재시도가 가능한지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:671384ec4224940878213aeed1621f8f1bd43f17 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-01T12:14:22.433+09:00",
+          "updated_at": "2026-10-01T12:21:05.790+09:00",
+          "system": false,
+          "noteable_id": 962902,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 353,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "704ecdb33ba1c515fbff38db55ed78b7fb8d257c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879744,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>671384ec - fix(fe): 단일 시장 지표 카드를 왼쪽 반폭으로 배치</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/353/diffs?diff_id=2260822&start_sha=3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T12:20:56.975+09:00",
+          "updated_at": "2026-10-01T12:20:56.980+09:00",
+          "system": true,
+          "noteable_id": 962902,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 353,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9c93a0ac3b7e7fec6fbf486fedb72b38d60e6a0b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879972,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T16:15:29.109+09:00",
+          "updated_at": "2026-10-01T16:15:29.114+09:00",
+          "system": true,
+          "noteable_id": 962902,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 353,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7ab55e3aef83875a5b9d8767102ffeeb2a196164",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879973,
+          "type": null,
+          "body": "mentioned in commit d1f244475e11e9d9e8946f4a110010732e3686e3",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T16:15:34.949+09:00",
+          "updated_at": "2026-10-01T16:15:34.961+09:00",
+          "system": true,
+          "noteable_id": 962902,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 353,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "376f745b499957596d67e550d530437efea9ad9f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885078,
+          "type": null,
+          "body": "mentioned in commit 00ed30bdd8a77f00ee2bca91e75b36ffbea91576",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.614+09:00",
+          "updated_at": "2026-10-13T15:16:16.671+09:00",
+          "system": true,
+          "noteable_id": 962902,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 353,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2260822,
+      "head_commit_sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "base_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "start_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "created_at": "2026-10-01T12:20:56.685+09:00",
+      "merge_request_id": 962902,
+      "state": "collected",
+      "real_size": "24",
+      "patch_id_sha": "e40933552c2ea7c978e9fbda849d90461ba2353b"
+    },
+    {
+      "id": 2260818,
+      "head_commit_sha": "3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0",
+      "base_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "start_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "created_at": "2026-10-01T12:14:11.514+09:00",
+      "merge_request_id": 962902,
+      "state": "without_files",
+      "real_size": "23",
+      "patch_id_sha": "d8cfc9b4ff3786cadd3b35e8d3ba3a863f9c44b3"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2260822,
+      "head_commit_sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "base_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "start_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "created_at": "2026-10-01T12:20:56.685+09:00",
+      "merge_request_id": 962902,
+      "state": "collected",
+      "real_size": "24",
+      "patch_id_sha": "e40933552c2ea7c978e9fbda849d90461ba2353b",
+      "commits": [
+        {
+          "id": "671384ec4224940878213aeed1621f8f1bd43f17",
+          "short_id": "671384ec",
+          "created_at": "2026-10-01T12:20:53.000+09:00",
+          "parent_ids": [
+            "3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0"
+          ],
+          "title": "fix(fe): 단일 시장 지표 카드를 왼쪽 반폭으로 배치",
+          "message": "fix(fe): 단일 시장 지표 카드를 왼쪽 반폭으로 배치\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T12:20:53.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T12:20:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/671384ec4224940878213aeed1621f8f1bd43f17"
+        },
+        {
+          "id": "3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0",
+          "short_id": "3d67f7b7",
+          "created_at": "2026-10-01T12:14:08.000+09:00",
+          "parent_ids": [
+            "b55fda73e51aa14f7001bec09a91065120cf5c45"
+          ],
+          "title": "docs(fe): 시장 흐름 달러 축약 반올림 예시 명시",
+          "message": "docs(fe): 시장 흐름 달러 축약 반올림 예시 명시\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T12:14:08.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T12:14:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0"
+        },
+        {
+          "id": "b55fda73e51aa14f7001bec09a91065120cf5c45",
+          "short_id": "b55fda73",
+          "created_at": "2026-10-01T12:12:56.000+09:00",
+          "parent_ids": [
+            "38efbf62ac8d5af5fbc56dd912931cdc7f13196f"
+          ],
+          "title": "feat(fe): 시장 흐름으로 과거 사례와 뉴스 이동 및 숫자 표시 개선",
+          "message": "feat(fe): 시장 흐름으로 과거 사례와 뉴스 이동 및 숫자 표시 개선\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T12:12:56.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T12:12:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b55fda73e51aa14f7001bec09a91065120cf5c45"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -8,7 +8,7 @@ import type { NewsSector } from '@/types/marketNews'\n import styles from './SectorNews.module.css'\n \n /*\n-  투자 대상 고르기의 뉴스 카드('지금과 비슷했던 과거 시장' 옆, 002 FR-019, 012 FR-001·FR-005). 기본은 '전체'로 최신 뉴스\n+  시장 흐름의 뉴스 카드('지금과 비슷했던 과거 시장' 옆, 009 FR-019, 012 FR-001·FR-005). 기본은 '전체'로 최신 뉴스\n   묶음을 보이고, 섹터를 고르면 그 섹터와 연결된 뉴스로 좁힌다.\n \n   - 칩은 012의 섹터 목록(`GET /market-news/sectors`)으로 그린다. 투자 대상 섹터와 뉴스 전용 섹터가 함께 온다 — 뉴스는 투자 대상과\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorNews.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorNews.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-/* 투자 대상 고르기의 '지금과 비슷했던 과거 시장' 카드(002 FR-018). 다른 카드와 같은 면·모서리·여백을 쓴다. */\n+/* 시장 흐름의 '지금과 비슷했던 과거 시장' 카드(009 FR-019). 다른 카드와 같은 면·모서리·여백을 쓴다. */\n .panel {\n   display: flex;\n   flex-direction: column;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.module.css",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,16 +10,9 @@ import type { RegimeBaselineMonths, RegimeSearchQuery, RegimeSearchResult } from\n import styles from './SimilarPastMarket.module.css'\n \n /*\n-  투자 대상 고르기의 '지금과 비슷했던 과거 시장'(002 FR-018). Thorp의 핵심 흐름 — 섹터를 고르고, 지금과\n-  비슷했던 과거 시장 기간을 찾아, 그 기간으로 백테스트한다 — 을 한 화면에서 잇는다.\n-\n-  - 국내 시장 참고 정보(KOSPI·VKOSPI, 009 FR-017)는 여기가 아니라 위쪽 투자 대상 탐색 카드 아래 띠에 있다.\n-  - 처음에는 첫 분야(표시 순서)의 최신 기준월로 가까운 과거 사례 3개를 보인다. 종합 비교는 누를 때만 연다\n-    (010 US3, 011 FR-001).\n-  - 사례의 순서·문구는 010이 내려 준 것만 쓴다. 순위 번호·'추천' 같은 말을 화면이 만들지 않는다(010 FR-022).\n-  - 사례를 고르면 011 진입 계약(`/regime-link/start?case=`)으로 들어가 그 기간이 분석 기간이 된다.\n-  - 이 영역을 받지 못해도 투자 대상 고르기는 막히지 않는다. 그래서 실패는 경고(alert)가 아니라 조용한 안내와\n-    다시 시도로 알린다 — 곁들이는 영역이 화면의 주 경고와 겹치면 무엇이 막혔는지 흐려진다.\n+  시장 흐름의 과거 사례 카드(009 FR-019). 첫 분야 최신 기준월로 가까운 사례 3개를 보이고\n+  종합 비교는 누를 때만 연다. 순서와 설명은 010 응답을 사용하며 사례 선택은 011 진입 계약을 따른다.\n+  조회 실패는 분야 지표 탐색을 막지 않고 이 카드에서 다시 시도할 수 있다.\n */\n \n function QuietFailure({ message, onRetry }: { message: string; onRetry: () => void }) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SimilarPastMarket.tsx",
+          "old_path": "frontend/src/components/diagnosis/SimilarPastMarket.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,6 +24,23 @@ function detailOf(referenceMonth: string | null): FieldDetailResult {\n }\n \n describe('FieldDetail', () => {\n+  it('무역수지의 현재값과 그래프 관측값을 같은 단위로 축약한다', () => {\n+    const detail = detailOf('2026-08')\n+    detail.narrative = '수출 변화는 4.346167%입니다.'\n+    detail.indicators = [{\n+      indicatorId: 'trade_balance', name: '무역수지', unit: '미국 달러', value: 34_785_482_585,\n+      path: [{ month: '2026-06', value: -34_785_482_585 }, { month: '2026-07', value: null }, { month: '2026-08', value: 34_785_482_585 }],\n+      referenceMonth: '2026-08', releaseDate: null, source: '관세청', agency: '관세청', afterReferenceMonthRelease: null,\n+    }]\n+    renderDetail(detail)\n+    expect(screen.getByText('수출 변화는 4.3%입니다.')).toBeTruthy()\n+    expect(screen.getByRole('img', { name: '무역수지 3개월 선 그래프' }).textContent).not.toContain('34,785,482,585')\n+    const path = screen.getByRole('list', { name: '무역수지 3개월 경로' })\n+    expect(path.textContent).toContain('약 -347억 9천만 미국 달러')\n+    expect(path.textContent).toContain('자료 없음')\n+    expect(detail.indicators[0].value).toBe(34_785_482_585)\n+  })\n+\n   it('역사 비교 표시는 서버가 준 안내가 있을 때만 달고, 원문을 함께 읽힌다 (009 FR-012)', () => {\n     const notice = '최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.'\n     const { unmount } = render(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.test.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,7 @@ import type { FieldDetailResult } from '@/types/marketFlow'\n import { DataStateFacts } from './DataStateNotice'\n import { ThreeMonthChart } from './ThreeMonthChart'\n import { InlineHelp } from '@/components/common/InlineHelp'\n-import { describeAxis, formatObservation, formatUpdatedAt, sourceParts } from './marketFlowFormat'\n+import { describeAxis, formatNarrative, formatObservation, formatUpdatedAt, sourceParts } from './marketFlowFormat'\n import styles from './MarketFlow.module.css'\n \n /** 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다. */\n@@ -51,7 +51,7 @@ export function FieldDetail({ detail, historyNotice }: {\n           </p>\n           <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />\n         </div>\n-        <p className={styles.detailNarrative}>{detail.narrative ?? '기준 시점과 자료 상태를 확인해 주세요.'}</p>\n+        <p className={styles.detailNarrative}>{formatNarrative(detail.narrative) ?? '기준 시점과 자료 상태를 확인해 주세요.'}</p>\n         {/*\n           넘기는 값은 분야와 그 분야의 기준월뿐이며 섹터를 골랐어도 달라지지 않는다(FR-016). 무엇을 찾는지는 버튼 설명으로\n           보조기기에만 읽히고, 찾을 수 없는 까닭(기준월 미정)만 화면에 남긴다 — 버튼이 왜 눌리지 않는지는 보여야 한다.\n@@ -86,13 +86,13 @@ export function FieldDetail({ detail, historyNotice }: {\n             <article className={styles.indicator} key={indicator.indicatorId}>\n               <div className={styles.indicatorHeading}>\n                 <h3>{indicator.name}</h3>\n-                <strong className={styles.observation}>{formatObservation(indicator.value)}{indicator.value === null ? null : <small>{indicator.unit}</small>}</strong>\n+                <strong className={styles.observation}>{formatObservation(indicator.value, indicator.unit)}{indicator.value === null ? null : <small>{indicator.unit}</small>}</strong>\n               </div>\n               <ThreeMonthChart indicator={indicator} />\n               {indicator.afterReferenceMonthRelease ? (\n                 <p className={styles.afterRelease}>\n                   기준월 뒤 발표 · {indicator.afterReferenceMonthRelease.referenceMonth}{' '}\n-                  {formatObservation(indicator.afterReferenceMonthRelease.value)} {indicator.afterReferenceMonthRelease.unit}\n+                  {formatObservation(indicator.afterReferenceMonthRelease.value, indicator.afterReferenceMonthRelease.unit)} {indicator.afterReferenceMonthRelease.unit}\n                   <span>3개월 경로에는 포함하지 않습니다.</span>\n                 </p>\n               ) : null}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,7 +4,7 @@ import { useId } from 'react'\n import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from '@/components/common/useHoverOpen'\n import type { FieldSummary } from '@/types/marketFlow'\n import { DataStateLine } from './DataStateNotice'\n-import { stateLineLabels } from './marketFlowFormat'\n+import { formatNarrative, stateLineLabels } from './marketFlowFormat'\n import styles from './MarketFlow.module.css'\n \n interface FieldSummaryCardProps {\n@@ -31,7 +31,7 @@ export function FieldSummaryCard({ field, selected = false, onOpen, listUpdatedA\n   const tipId = useId()\n   const labels = stateLineLabels(field.status, field.isExampleData)\n   const { open, settle, schedule } = useHoverOpen()\n-  const summaryText = field.narrative ?? '변화 요약 대신 자료 상태를 확인해 주세요.'\n+  const summaryText = formatNarrative(field.narrative) ?? '변화 요약 대신 자료 상태를 확인해 주세요.'\n   const stateLine = (\n     <DataStateLine\n       status={field.status}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -131,6 +131,11 @@\n   두 칸, 한 칸으로 접힌다. 개수가 적으면 남는 폭을 나눠 갖는다.\n */\n :global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }\n+/* 지표가 하나여도 두 지표 분야와 같은 반쪽 폭을 쓰고 오른쪽 칸을 비워 둔다.\n+   두 칸의 최소 폭(240px)을 확보할 수 없으면 한 칸으로 돌아간다. */\n+:global(:root:not([data-design='classic'])) .indicatorList:has(> .indicator:only-child) {\n+  grid-template-columns: repeat(auto-fill, minmax(min(100%, max(240px, calc((100% - 12px) / 2))), 1fr));\n+}\n :global(:root:not([data-design='classic'])) .indicator {\n   display: flex;\n   flex-direction: column;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -50,7 +50,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay })\n         aria-label={`${indicator.name} 3개월 선 그래프`}\n         aria-describedby={descriptionId}\n       >\n-        <title>{indicator.name}: {indicator.path.map((point) => `${point.month} ${formatObservation(point.value)}${point.value === null ? '' : ` ${indicator.unit}`}`).join(', ')}</title>\n+        <title>{indicator.name}: {indicator.path.map((point) => `${point.month} ${formatObservation(point.value, indicator.unit)}${point.value === null ? '' : ` ${indicator.unit}`}`).join(', ')}</title>\n         {chart.ticks.map((tick) => (\n           <g key={tick} className={styles.chartGrid}>\n             <line x1={plot.left} x2={plot.right} y1={chart.y(tick)} y2={chart.y(tick)} />\n@@ -72,7 +72,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay })\n           <g key={point.month}>\n             <circle className={styles.chartPoint} data-month={point.month} cx={chart.x(index)} cy={chart.y(point.value)} r={3.5} />\n             <text className={styles.chartValue} x={chart.x(index)} y={chart.y(point.value) - 14} textAnchor=\"middle\">\n-              {formatObservation(point.value)}\n+              {formatObservation(point.value, indicator.unit)}\n             </text>\n           </g>\n         ))}\n@@ -85,7 +85,7 @@ export function ThreeMonthChart({ indicator }: { indicator: IndicatorDisplay })\n       <ol className={styles.srOnly} aria-label={`${indicator.name} 3개월 경로`}>\n         {indicator.path.map((point, index) => (\n           <li key={point.month}>\n-            {['t-2', 't-1', 't'][index]} {point.month} {formatObservation(point.value)}{point.value === null ? '' : ` ${indicator.unit}`}\n+            {['t-2', 't-1', 't'][index]} {point.month} {formatObservation(point.value, indicator.unit)}{point.value === null ? '' : ` ${indicator.unit}`}\n           </li>\n         ))}\n       </ol>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/ThreeMonthChart.tsx",
+          "old_path": "frontend/src/components/marketflow/ThreeMonthChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import { describe, expect, it } from 'vitest'\n import type { PathPoint } from '@/types/marketFlow'\n-import { buildAxisDomain, formatObservation, recentDirection, sourceParts } from './marketFlowFormat'\n+import { buildAxisDomain, formatNarrative, formatObservation, recentDirection, sourceParts } from './marketFlowFormat'\n \n /**\n  * 실제 지표 값으로 검증한다. 꾸며낸 숫자로는 \"환율이 평평해 보인다\"는 문제가 재현되지 않는다.\n@@ -132,3 +132,19 @@ describe('관측값 표기', () => {\n     expect(formatObservation(null)).toBe('자료 없음')\n   })\n })\n+\n+\n+describe('시장 흐름 숫자 표시', () => {\n+  it('서버 요약 문장의 소수만 첫째 자리로 줄인다', () => {\n+    expect(formatNarrative('수출은 4.346167%, 환율은 1,351.256789원입니다.')).toBe('수출은 4.3%, 환율은 1,351.3원입니다.')\n+    expect(formatNarrative(null)).toBeNull()\n+  })\n+  it('달러 금액은 천만 단위로 반올림하고 억 자리 올림과 부호를 보존한다', () => {\n+    expect(formatObservation(34_785_482_585, '미국 달러')).toBe('약 347억 9천만')\n+    expect(formatObservation(-34_785_482_585, '미국 달러')).toBe('약 -347억 9천만')\n+    expect(formatObservation(199_999_999, '미국 달러')).toBe('약 2억')\n+    expect(formatObservation(0, '미국 달러')).toBe('0')\n+    expect(formatObservation(null, '미국 달러')).toBe('자료 없음')\n+    expect(formatObservation(34_785_482_585, '원')).toBe('34,785,482,585')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.test.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,13 +6,24 @@ import type { FieldStatus, IndicatorDisplay } from '@/types/marketFlow'\n  * 소수 첫째 자리까지 보인다(S15P21E205-447). 원천 값은 자릿수가 제각각이라(증가율 4.346167 등) 그대로 두면\n  * 읽을 수 없다. 정밀 값은 응답에 그대로 남는다.\n  */\n-export function formatObservation(value: number | null): string {\n+export function formatObservation(value: number | null, unit?: string): string {\n   if (value === null) return '자료 없음'\n+  if (unit && ['USD', '달러', '미국 달러'].includes(unit) && Math.abs(value) >= 100_000_000) {\n+    const rounded = Math.round(Math.abs(value) / 10_000_000)\n+    const hundredMillions = Math.floor(rounded / 10)\n+    const remainder = rounded % 10\n+    return `약 ${value < 0 ? '-' : ''}${hundredMillions.toLocaleString('ko-KR')}억${remainder ? ` ${remainder}천만` : ''}`\n+  }\n   const text = value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })\n   // -0.04 처럼 0으로 반올림된 음수는 \"-0\"이 아니라 \"0\"이다.\n   return text === '-0' ? '0' : text\n }\n \n+/** 서버 요약의 문장은 유지하고 숫자의 표시 정밀도만 줄인다. */\n+export function formatNarrative(text: string | null): string | null {\n+  return text?.replace(/-?\\d[\\d,]*\\.\\d+/g, (value) => formatObservation(Number(value.replaceAll(',', '')))) ?? null\n+}\n+\n export function formatUpdatedAt(value: string | null): string {\n   if (!value) return '확인할 수 없음'\n   const parsed = new Date(value)\n@@ -109,7 +120,7 @@ export function describeAxis(indicator: IndicatorDisplay): string {\n   const axis = buildAxisDomain(values)\n   return axis.includesZero\n     ? '세로축이 0을 포함합니다.'\n-    : `세로축은 ${formatObservation(axis.domain[0])}~${formatObservation(axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`\n+    : `세로축은 ${formatObservation(axis.domain[0], indicator.unit)}~${formatObservation(axis.domain[1], indicator.unit)}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`\n }\n \n /** 분야 자료 공급 상태의 표 글자. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -93,3 +93,14 @@\n @media (max-width: 800px) {\n   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }\n }\n+\n+.context {\n+  display: grid;\n+  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);\n+  align-items: stretch;\n+  gap: var(--thorp-flow-gap, 22px);\n+  margin-top: var(--thorp-flow-gap, 22px);\n+}\n+@media (max-width: 1180px) {\n+  .context { grid-template-columns: minmax(0, 1fr); }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "old_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n import { fetchMarketIndicatorsFor } from '@/api/market'\n-import { fetchMarketNewsDigests } from '@/api/marketNews'\n+import { fetchMarketNewsDigests, fetchNewsSectors } from '@/api/marketNews'\n import { fetchSectorCatalog } from '@/api/sectors'\n import { renderWithRouter } from '@/test/renderWithRouter'\n import type { FieldSummary } from '@/types/marketFlow'\n@@ -12,7 +12,9 @@ vi.mock('@/api/marketFlow', () => ({ fetchMarketFlowFields: vi.fn(), fetchMarket\n vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))\n vi.mock('@/api/sectors', () => ({ fetchSectorCatalog: vi.fn() }))\n vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))\n-vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn() }))\n+vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn(), fetchNewsSectors: vi.fn() }))\n+\n+vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn().mockResolvedValue({ byField: [] }), getRegimeSearch: vi.fn() }))\n \n const sectorCatalog = {\n   status: 'loaded' as const,\n@@ -50,6 +52,7 @@ describe('MarketFlowPage', () => {\n       context: 'CURRENT', state: 'EMPTY', sectorId: null, from: null, to: null,\n       lastUpdatedAt: null, stale: false, statusMessage: null, digests: [],\n     })\n+    vi.mocked(fetchNewsSectors).mockResolvedValue([])\n     window.sessionStorage.clear()\n   })\n \n@@ -134,8 +137,17 @@ describe('MarketFlowPage', () => {\n       expect(document.activeElement).toBe(buttons[2])\n     })\n   })\n-  describe('전략 진단으로 옮긴 영역 (009 FR-016~FR-019, Session 2026-09-24)', () => {\n-    it('섹터 좁혀 보기·국내 시장 참고 정보·뉴스·전략 비교 카드를 두지 않는다', async () => {\n+  it('분야 자료가 실패해도 과거 사례와 뉴스 카드를 유지한다', async () => {\n+    vi.mocked(fetchMarketFlowFields).mockRejectedValue(new Error('failed'))\n+    renderWithRouter(<MarketFlowPage />)\n+    expect(await screen.findByRole('alert')).toBeTruthy()\n+    expect(screen.getByRole('heading', { name: '지금과 비슷했던 과거 시장' })).toBeTruthy()\n+    expect(screen.getByRole('heading', { name: '뉴스' })).toBeTruthy()\n+    expect(fetchMarketNewsDigests).toHaveBeenCalled()\n+  })\n+\n+  describe('시장 흐름의 과거 사례와 뉴스', () => {\n+    it('과거 사례와 뉴스를 보이고 투자 대상과 국내 시장 참고 정보는 옮기지 않는다', async () => {\n       vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '개정자료 안내', fields })\n       vi.mocked(fetchMarketFlowField).mockResolvedValue({ ...fields[0], multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] })\n       renderWithRouter(<MarketFlowPage />)\n@@ -143,12 +155,13 @@ describe('MarketFlowPage', () => {\n       for (const name of fieldNames) expect(await screen.findByRole('heading', { name })).toBeTruthy()\n       expect(screen.queryByRole('heading', { name: '섹터 좁혀 보기' })).toBeNull()\n       expect(screen.queryByRole('heading', { name: '국내 시장 참고 정보' })).toBeNull()\n-      expect(screen.queryByRole('heading', { name: '뉴스' })).toBeNull()\n+      expect(screen.getByRole('heading', { name: '뉴스' })).toBeTruthy()\n+      expect(screen.getByRole('heading', { name: '지금과 비슷했던 과거 시장' })).toBeTruthy()\n       expect(screen.queryByRole('link', { name: /과거 사례 고르러 가기/ })).toBeNull()\n-      // 시장 흐름은 섹터·시장 지수·뉴스 자료를 부르지 않는다.\n+      // 뉴스만 독립적으로 조회한다.\n       expect(fetchSectorCatalog).not.toHaveBeenCalled()\n       expect(fetchMarketIndicatorsFor).not.toHaveBeenCalled()\n-      expect(fetchMarketNewsDigests).not.toHaveBeenCalled()\n+      expect(fetchMarketNewsDigests).toHaveBeenCalled()\n     })\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,5 @@\n+import { SimilarPastMarket } from '@/components/diagnosis/SimilarPastMarket'\n+import { SectorNews } from '@/components/diagnosis/SectorNews'\n import { Activity, RefreshCw } from 'lucide-react'\n import { LayoutGroup, motion, useReducedMotion } from 'motion/react'\n import { useCallback, useEffect, useId, useState, type CSSProperties, type KeyboardEvent } from 'react'\n@@ -142,6 +144,10 @@ export function MarketFlowPage() {\n           </>\n         )}\n \n+        <div className={styles.context}>\n+          <SimilarPastMarket caseId={null} />\n+          <SectorNews />\n+        </div>\n       </main>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -89,7 +89,7 @@ describe('011 시작 화면 (진입 계약 §2)', () => {\n     renderStart('/regime-link/start?case=only-a-key')\n \n     expect(await screen.findByRole('alert')).toBeTruthy()\n-    expect(screen.getByRole('link', { name: '과거 사례 다시 고르기' }).getAttribute('href')).toBe('/diagnosis/sectors')\n+    expect(screen.getByRole('link', { name: '과거 사례 다시 고르기' }).getAttribute('href')).toBe('/market-flow')\n     expect(fetchCaseWindow).not.toHaveBeenCalled()\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeLinkStartPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeLinkStartPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -99,8 +99,8 @@ export function RegimeLinkStartPage() {\n         ) : (\n           <div className={styles.blocked} role=\"alert\">\n             <p>{phase.message}</p>\n-            {/* 사례를 고르는 자리는 투자 대상 고르기의 '지금과 비슷했던 과거 시장'이다(002 FR-018). */}\n-            <Link to=\"/diagnosis/sectors\">과거 사례 다시 고르기</Link>\n+            {/* 사례를 다시 고르는 자리는 시장 흐름의 과거 시장 카드다(009 FR-019). */}\n+            <Link to=\"/market-flow\">과거 사례 다시 고르기</Link>\n           </div>\n         )}\n       </main>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeLinkStartPage.tsx",
+          "old_path": "frontend/src/pages/RegimeLinkStartPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -802,13 +802,6 @@\n   text-align: right;\n }\n \n-/* 폭이 줄면 과거 시장과 뉴스를 위아래로 둔다. */\n-@media (max-width: 1180px) {\n-  .context {\n-    grid-template-columns: minmax(0, 1fr);\n-  }\n-}\n-\n @media (max-width: 900px) {\n   /* 담긴 종목 칸까지 셋을 나란히 둘 폭이 없다. 넓힌 카드도 두 칸으로 접는다. */\n   .browserCard[data-expanded='true'] [data-slot='body'] {\n@@ -1062,12 +1055,3 @@\n     grid-template-columns: 1fr;\n   }\n }\n-\n-/* 투자 대상 아래 한 줄: 지금과 비슷했던 과거 시장(넓게)과 시장 흐름 뉴스. 높이는 둘 중 긴 쪽에 맞춘다. */\n-.context {\n-  display: grid;\n-  grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);\n-  align-items: stretch;\n-  gap: var(--thorp-flow-gap, 22px);\n-  margin-top: var(--thorp-flow-gap, 22px);\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,8 +21,6 @@ import { MINIMUM_SECTOR_COUNT } from '@/hooks/useSectorSelection'\n import { appendCaseToPath } from '@/marketflow/handoff'\n import type { SectorSummary } from '@/types/sector'\n import heading from '@/components/common/PageHeading.module.css'\n-import { SimilarPastMarket } from '@/components/diagnosis/SimilarPastMarket'\n-import { SectorNews } from '@/components/diagnosis/SectorNews'\n import { MarketNow } from '@/components/diagnosis/MarketNow'\n import styles from './SectorSelectionPage.module.css'\n \n@@ -329,15 +327,7 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n         />\n       </div>\n \n-      {/*\n-        투자 대상 아래 한 줄에 둘을 나란히 둔다. 왼쪽은 Thorp의 핵심 흐름(002 FR-018) — 고른 섹터를 지금과\n-        비슷했던 과거 시장 기간으로 백테스트한다. 오른쪽은 뉴스(FR-019)로 기본 '전체', 섹터별로\n-        좁혀 볼 수 있다. 둘 다 받지 못해도 투자 대상 고르기는 막히지 않는다.\n-      */}\n-      <div className={styles.context}>\n-        <SimilarPastMarket caseId={caseId} />\n-        <SectorNews />\n-      </div>\n+\n     </>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -146,8 +146,8 @@\n - **FR-015**: 섹터 목록이 아직 확정되지 않은 예시 대응표에서 온 것이면([001](../001-etf-market-data/spec.md) FR-002) 이 화면에 그 사실을 표시한다. 001 SC-006이 예시 자료를 쓰는 화면 전부에 예시 표시를 요구한다. 이 표시는 FR-005의 동일 비중 초깃값이 예시라는 표시와 가리키는 대상이 다르므로 따로 둔다.\n - **FR-016**: 고른 섹터의 비중으로 0%를 입력할 수 있다. 시스템은 0%를 거부하거나 다른 값으로 바꾸지 않으며, 0%인 섹터를 선택 목록에서 빼지도 않는다. 화면은 0%인 섹터가 '내가 정한 비중'에서는 담기지 않지만 자동 배분 전략에서는 여전히 투자 후보 집합에 남는다는 뜻을 한 문장으로 알린다. FR-009가 나눈 선택 섹터의 두 의미 중 비중이 0%라는 사실은 '내가 정한 비중' 쪽에만 적용되며, [003](../003-strategy-settings/spec.md)이 선택 섹터의 개수로 유효성 제약을 계산하므로 0%인 섹터도 그 개수에 그대로 들어간다. (§4.2.1, D04, 원칙 VI)\n - **FR-017**: 대표 ETF 대응표가 아직 발행되지 않아 [001](../001-etf-market-data/spec.md)에서 섹터 목록을 아직 받을 수 없는 상태이면, 빈 목록이나 오류 화면 대신 아직 준비 중이라는 한 문장을 보이는 정상 화면으로 처리한다. 이 상태가 [001의 섹터 조회 계약](../001-etf-market-data/contracts/sector-api.md)의 어느 응답에 해당하는지는 [plan.md](./plan.md)가 대응을 밝힌다. FR-001이 아직 만들지 않은 화면에 쓰는 처리와 같은 형태다. 이 상태에서는 섹터를 고를 수 없으므로 다음 단계로 넘어가지 않는다. (원칙 VI)\n-- **FR-018**: 투자 대상 고르기는 '지금과 비슷했던 과거 시장'을 함께 보인다(Session 2026-09-24). 국내 시장 참고 정보(KOSPI·VKOSPI, [009](../009-market-flow-overview/spec.md) FR-017)는 투자 대상 탐색 카드 바로 아래 띠에 지수마다 카드 하나씩 가로로 둔다(2026-09-29). '지금과 비슷했던 과거 시장'은 투자 대상 보드 아래 줄에 '뉴스'(FR-019)와 나란히 놓는다. 이 영역에는 [010](../010-economic-regime-search/spec.md) 분야 검색의 가까운 과거 사례 3개를 보인다. 처음에는 첫 분야(표시 순서)의 최신 기준월로 보이고, 분야를 바꿀 수 있으며 종합 비교는 누를 때만 연다. 사례의 순서·문구는 010이 내려 준 것만 쓰고 추천·순위 표현을 만들지 않는다(010 FR-022). 검색 상태와 사례 구분은 사례 목록 위 i 표시 뒤로 내린다 — 마우스를 얹거나 키보드 초점을 주면 그 자리에 펼쳐지고, 보조기술에는 늘 읽힌다(010 FR-037). 비슷한 점·다른 점은 이름표와 설명 문장을 같은 색(비슷한 점 초록, 다른 점 노랑)으로 보인다. 사례를 고르면 [011](../011-regime-strategy-link/spec.md) 진입 계약으로 그 기간을 분석 기간으로 이어 간다. 이 영역을 받지 못해도 투자 대상 고르기는 막히지 않는다.\n-- **FR-019**: '지금과 비슷했던 과거 시장'과 같은 줄 오른쪽에 '뉴스'를 별도 카드로 두고, 뉴스 묶음 3개가 스크롤 없이 모두 보이게 한다([012](../012-market-news-digest/spec.md) FR-001). 기본은 '전체'로 최신 뉴스 묶음을 보이고, 분류(기술·제조·산업·금융·소비·헬스케어·시장·경제)를 누르면 그 분류의 섹터 칩이 펼쳐지며, 섹터를 고르면 그 섹터의 뉴스로 좁힌다. 분류만 눌러서는 뉴스가 좁혀지지 않는다([012](../012-market-news-digest/spec.md) FR-005). 섹터 칩은 012의 뉴스 섹터 목록이며 투자 대상 섹터와 투자 대상이 아닌 뉴스 전용 섹터(예: 헬스케어·바이오, IT·AI)를 함께 담는다([012](../012-market-news-digest/spec.md) FR-005, Session 2026-09-25). 여기서 고른 섹터는 뉴스 범위만 정하며 투자 대상 선택을 바꾸지 않는다. 뉴스가 없거나 받지 못해도 투자 대상 고르기는 막히지 않는다(Session 2026-09-24).\n+- **FR-018**: '지금과 비슷했던 과거 시장' 카드는 시장 흐름 하단으로 옮긴다(2026-10-01 사용자 결정). 분야 선택·종합 비교·사례 표시와 011의 기간 인계 계약은 유지하고 투자 대상 고르기에는 표시하지 않는다. 국내 시장 참고 정보는 기존 투자 대상 탐색 카드 아래에 유지한다.\n+- **FR-019**: 뉴스 카드는 시장 흐름의 과거 사례 카드 옆으로 옮긴다(2026-10-01 사용자 결정). 기본 전체·분류별 섹터 필터·최대 3개 뉴스 묶음과 독립적인 오류 처리는 유지한다. 뉴스 필터는 투자 대상 선택에 영향을 주지 않는다.\n \n ### Key Entities *(include if feature involves data)*\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/spec.md",
+          "old_path": "specs/002-sector-weight-selection/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -190,3 +190,7 @@ constitution \"작업 묶음 = 1 Branch = 1 MR\"의 세 조건(단일 목적 / 독\n |---|---|---|\n | 읽기 모델 테이블 하나 추가 | SC-007(2초)과 원칙 VIII(재현) | 요청마다 계산하면 같은 버전에서 같은 문장이 나오는지 보장할 자리가 없다 |\n | 예시 자료 fixture 어댑터 | 병렬로 진행 중인 008과 서로를 기다리지 않기 위해 | 008 완료를 기다리면 두 작업의 일정이 묶인다. 대신 포트 시그니처를 008 담당자와 맞추는 일이 남는다 |\n+\n+## 시장 흐름 카드 이동·숫자 표시 묶음 (2026-10-01)\n+\n+`feat(fe)/market-flow-context`에서 009의 화면 개선을 한 MR로 묶는다. 과거 사례·뉴스 컴포넌트를 재사용해 시장 흐름 하단으로 옮기고, 사례 재선택 링크도 시장 흐름으로 돌린다. 지표·차트와 서버 요약의 숫자 표시만 줄이며 API 값·차트 좌표와 검색 계약은 유지한다. 변경된 소유 화면은 002·010·011·012 명세에 반영한다. 검증은 frontend 필수 lint·build·test와 카드 표시·조회 실패 독립성·숫자 반올림·사례 재선택 회귀 검사로 수행한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/plan.md",
+          "old_path": "specs/009-market-flow-overview/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -164,10 +164,10 @@\n \n #### 섹터 연결과 참고 정보 (§4.4, D07, D26)\n \n-- **FR-016**: 시장 흐름 화면은 섹터를 고르지 않는다. 경제환경 표시·지표 값·기준월·사례 순위는 섹터와 무관하다. 섹터를 고르고 그 섹터로 뉴스·전략의 범위를 좁히는 일은 전략 진단의 투자 대상 고르기([002](../002-sector-weight-selection/spec.md) FR-018)가 맡는다(Session 2026-09-24). (§4.4, D02, D07, 원칙 IV)\n+- **FR-016**: 시장 흐름의 뉴스 카드에서만 뉴스 섹터를 고를 수 있다. 경제환경 표시·지표 값·기준월·사례 순위와 투자 대상 선택은 바뀌지 않는다(2026-10-01 사용자 결정).\n - **FR-017**: 국내 시장의 가격 추세·변동성 참고 정보(KOSPI·VKOSPI)는 시장 흐름이 아니라 투자 대상 고르기의 탐색 카드 아래 띠([002](../002-sector-weight-selection/spec.md) FR-018)에 둔다. 경제환경 검색 입력에 쓰지 않는다는 규칙은 그대로다(Session 2026-09-24). (§4.4, §6.4.4)\n - **FR-018**: 시장 흐름에서 과거 사례로 가는 길은 분야마다의 '비슷했던 때 보기'(FR-009) 하나다. '이 기간으로 전략 비교'는 [010](../010-economic-regime-search/spec.md) 사례 상세와 투자 대상 고르기에 있고, 시장 흐름 화면에 따로 두지 않는다(Session 2026-09-24). (§4.3, D25)\n-- **FR-019**: 뉴스 묶음은 시장 흐름 화면에 두지 않고 투자 대상 고르기의 '뉴스' 카드(기본 '전체', 섹터별로 보기)로 보인다([002](../002-sector-weight-selection/spec.md) FR-019)([012](../012-market-news-digest/spec.md) FR-001, Session 2026-09-24). (§4.4)\n+- **FR-019**: 시장 흐름 하단에 '지금과 비슷했던 과거 시장'과 '뉴스' 카드를 나란히 둔다. 좁은 화면에서는 세로로 배치한다. 각 카드의 조회 실패는 분야 요약·상세를 막지 않는다. 뉴스는 기본 전체이며 섹터별로 좁혀 본다(2026-10-01 사용자 결정, 002 FR-018·FR-019, 012 FR-001).\n \n ### Key Entities *(include if feature involves data)*\n \n@@ -207,3 +207,9 @@\n - 뉴스 묶음의 수집·표시 규칙 ([012](../012-market-news-digest/spec.md))\n - 경제 전체를 하나의 점수로 평가하는 화면 (D08, constitution \"하지 않는 것\")\n - 지표 값의 전망·예측 표시\n+\n+### 숫자 표시 개정 (2026-10-01)\n+\n+지표 관측값·3개월 경로·분야 요약 문장의 소수는 최대 첫째 자리까지 표시한다. 달러 단위의 1억 이상 금액은 천만 단위로 반올림해 `약 347억 9천만 미국 달러`처럼 축약하며 음수 부호를 유지한다. 예를 들어 34,785,482,585달러는 천만 단위 반올림 후 약 347억 9천만 달러이며, 347억 5천만 달러로 표시하지 않는다. API 원값과 차트 좌표·방향 계산은 바꾸지 않는다.\n+\n+지표가 하나인 분야는 두 지표 분야와 같은 카드 폭으로 왼쪽 한 칸만 채우고 오른쪽은 비운다. 두 칸의 최소 카드 폭을 확보하지 못하는 좁은 화면에서는 한 칸 전체 폭으로 표시한다(2026-10-01 추가 사용자 결정).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/spec.md",
+          "old_path": "specs/009-market-flow-overview/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -270,3 +270,14 @@ WB04는 User Story 4(P3)와 바깥 spec 연결이다. 010·011이 아직 없어\n **009가 끝나도 예시 자료로 동작한다.** 실제 지표 값은 병렬로 진행 중인 008이 합쳐지고 PD-11이 확정될 때\n 들어온다. 그때 바뀌는 것은 `ExampleMacroIndicatorSnapshotAdapter` 하나다 — **T001의 포트 합의가 되어\n 있다는 전제에서다.**\n+\n+## 시장 흐름 카드 이동·숫자 표시 작업 묶음 (2026-10-01)\n+\n+브랜치: `feat(fe)/market-flow-context`. 대상 spec: 009, 연계 요구사항 002 FR-018·FR-019와 012 FR-001을 함께 갱신한다.\n+\n+- [x] MF-01 과거 사례·뉴스를 전략 진단에서 시장 흐름으로 이동하고 좁은 화면에서 세로 배치한다.\n+- [x] MF-02 요약 소수를 첫째 자리로 표시하고 달러 금액을 천만 단위로 축약한다. 원값 계산은 유지한다.\n+- [x] MF-03 프론트엔드 필수 검증과 AI 코드리뷰를 수행한다(lint 오류 0·기존 경고 26, build 통과, Vitest 1494·legacy 15 통과, skipped 0, 최종 수정 관련 회귀 검사 49 통과).\n+- [ ] MF-04 MR을 dev 대상으로 병합한다.\n+\n+- [x] MF-05 단일 지표 분야를 두 지표 분야와 같은 폭의 왼쪽 한 칸에 배치한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/tasks.md",
+          "old_path": "specs/009-market-flow-overview/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,7 +10,7 @@\n \n **근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §4.3, §4.4, §6.4.4, §6.5, §7.1, §7.3, §7.4와 결정 D07·D08·D09·D11·D21~D24·D27, 미확인 항목 U01~U04·U06, constitution의 승인된 경제환경 검색 원칙(미승인 개정 제외) 중 원칙 II~IX와 \"경제환경 검색\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n \n-**관련 spec**: 지표 값·등록표·기준월 산출값은 [008 경제지표 등록·수집](../008-macro-indicator-registry/spec.md)이 제공한다. 진입은 [002 섹터·비중 선택](../002-sector-weight-selection/spec.md)의 '지금과 비슷했던 과거 시장'(FR-018, Session 2026-09-24), [009 시장 흐름 개요](../009-market-flow-overview/spec.md)의 '비슷했던 때 보기'와 [005 결과 이해·비교](../005-result-comparison/spec.md)의 '경제환경이 비슷했던 과거 보기'([011](../011-regime-strategy-link/spec.md) 경로)다. 사례 이후 전략 결과 연결은 [011](../011-regime-strategy-link/spec.md), 기록 보존은 [006](../006-my-records/spec.md), 과거 뉴스 연결은 [012](../012-market-news-digest/spec.md)가 맡는다.\n+**관련 spec**: 지표 값·등록표·기준월 산출값은 [008 경제지표 등록·수집](../008-macro-indicator-registry/spec.md)이 제공한다. 진입은 [009 시장 흐름 개요](../009-market-flow-overview/spec.md)의 '지금과 비슷했던 과거 시장'(FR-019, 2026-10-01), [009 시장 흐름 개요](../009-market-flow-overview/spec.md)의 '비슷했던 때 보기'와 [005 결과 이해·비교](../005-result-comparison/spec.md)의 '경제환경이 비슷했던 과거 보기'([011](../011-regime-strategy-link/spec.md) 경로)다. 사례 이후 전략 결과 연결은 [011](../011-regime-strategy-link/spec.md), 기록 보존은 [006](../006-my-records/spec.md), 과거 뉴스 연결은 [012](../012-market-news-digest/spec.md)가 맡는다.\n \n ## 범위 요약\n \n@@ -200,7 +200,7 @@\n \n #### 검색 상태와 문턱 (§4.3, §7.3, §7.4, D24, U04)\n \n-- **FR-037**: **결과의 신뢰 범위를 말하는 표시는 전달 수단에 의존하지 않는다.** 대상은 다섯이다 — 검색 상태와 사유(FR-019), '최근접 참고 사례'(FR-020), 예시 자료 표시, 비교 시점에서 빠진 지표·월(FR-031), 역사 비교 표시(FR-027). 이 다섯은 ① **문구가 함께 보인다** — 색·아이콘·마우스 호버에만 의존하지 않는다, ② **키보드만으로** 검색·더 보기·모드 전환·상세 열기를 할 수 있고 그 과정에서 다섯이 모두 도달 가능하다, ③ **보조기술이 읽을 수 있다** — 각 표시가 어느 결과에 대한 것인지 프로그램적으로 연결되고, 상태가 바뀌면 그 사실이 전달된다, ④ 본문 대비 **명암비 4.5:1 이상**(굵은 큰 글자는 3:1 이상), ⑤ **좁은 폭에서도 잘리거나 접히지 않는다** — 화면이 좁다는 이유로 접어 두는 자리에 이 다섯을 넣지 않는다. **표시의 형태는 자리에 따라 다를 수 있다** — 검색 화면처럼 결과가 주인공인 자리는 이름표('검색 상태'·'사례 구분' 등)가 있는 안내 상자로 두고, [002](../002-sector-weight-selection/spec.md) 투자 대상 고르기의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약 카드는 검색 상태와 사례 구분을 사례 목록 위 i 표시 뒤로 내릴 수 있다. 이때 ① 대신 세 가지를 지킨다 — i 표시는 마우스를 얹을 때뿐 아니라 **키보드 초점으로도** 그 자리에 펼쳐지고, 보조기술에는 펼치지 않아도 같은 문장이 결과와 연결된 알림으로 읽히며, 같은 결과를 여는 '비슷했던 때 보기' 화면에서는 문구가 늘 펼쳐져 있다. ②~⑤는 어느 형태든 그대로 지킨다(constitution 원칙 II, 미승인 초안 단서). 010은 통계로만 분석하므로 *\"이 결과를 어디까지 믿어도 되는가\"* 가 결과 자체만큼 중요하고, 그 말이 전달 수단 때문에 약해지면 spec이 가장 경계하는 오독이 그대로 일어난다. (§4.3, §7.2, 원칙 VI)\n+- **FR-037**: **결과의 신뢰 범위를 말하는 표시는 전달 수단에 의존하지 않는다.** 대상은 다섯이다 — 검색 상태와 사유(FR-019), '최근접 참고 사례'(FR-020), 예시 자료 표시, 비교 시점에서 빠진 지표·월(FR-031), 역사 비교 표시(FR-027). 이 다섯은 ① **문구가 함께 보인다** — 색·아이콘·마우스 호버에만 의존하지 않는다, ② **키보드만으로** 검색·더 보기·모드 전환·상세 열기를 할 수 있고 그 과정에서 다섯이 모두 도달 가능하다, ③ **보조기술이 읽을 수 있다** — 각 표시가 어느 결과에 대한 것인지 프로그램적으로 연결되고, 상태가 바뀌면 그 사실이 전달된다, ④ 본문 대비 **명암비 4.5:1 이상**(굵은 큰 글자는 3:1 이상), ⑤ **좁은 폭에서도 잘리거나 접히지 않는다** — 화면이 좁다는 이유로 접어 두는 자리에 이 다섯을 넣지 않는다. **표시의 형태는 자리에 따라 다를 수 있다** — 검색 화면처럼 결과가 주인공인 자리는 이름표('검색 상태'·'사례 구분' 등)가 있는 안내 상자로 두고, [002](../002-sector-weight-selection/spec.md) 시장 흐름의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약 카드는 검색 상태와 사례 구분을 사례 목록 위 i 표시 뒤로 내릴 수 있다. 이때 ① 대신 세 가지를 지킨다 — i 표시는 마우스를 얹을 때뿐 아니라 **키보드 초점으로도** 그 자리에 펼쳐지고, 보조기술에는 펼치지 않아도 같은 문장이 결과와 연결된 알림으로 읽히며, 같은 결과를 여는 '비슷했던 때 보기' 화면에서는 문구가 늘 펼쳐져 있다. ②~⑤는 어느 형태든 그대로 지킨다(constitution 원칙 II, 미승인 초안 단서). 010은 통계로만 분석하므로 *\"이 결과를 어디까지 믿어도 되는가\"* 가 결과 자체만큼 중요하고, 그 말이 전달 수단 때문에 약해지면 spec이 가장 경계하는 오독이 그대로 일어난다. (§4.3, §7.2, 원칙 VI)\n - **FR-019**: 검색 상태를 '계산 불가/후보 없음' / '가까운 순서만 제공·유사성 미판정' / '교정된 기준 충족 여부' 세 가지로 구분해 결과 옆에 표시한다. '계산 불가/후보 없음'일 때는 **사유 넷을 구분해** 표시한다 — 척도 구간 60개월 미만(FR-005·FR-008) / MAD·IQR 둘 다 0(FR-006) / 어느 지표의 비교 시점이 하나도 없음(FR-001·FR-007) / 유효 후보 0건(FR-012). 화면 문구는 [contracts/regime-search-api.md](contracts/regime-search-api.md) §1이 고정한다. (§4.3, D24)\n - **FR-020**: 유사성 문턱을 교정하기 전에는 사례를 '최근접 참고 사례'로 표시하고 '충분히 유사' 배지를 붙이지 않으며, 미교정이라는 이유로 '충분한 사례가 없다'고 단정하지 않는다. 임계값·분야별 큰 차이 문턱·최소 근거량·경제적 설명력 판정 기준은 결정 항목 PD-09(U04)다. (§4.3, D24, U04)\n - **FR-021**: 교정 뒤에는 **목록을 나눈다** — 기준을 충족한 사례만 기본 목록에 보이고, **미충족 참고 사례는 별도로 열 수 있게** 한다. 한 목록에 섞어 '기준 충족' 배지를 다는 방식을 쓰지 않는다: 배지를 다는 순간 나머지가 '덜 유사한 것'으로 읽혀 FR-018이 막으려던 등급 매기기가 그대로 생긴다. 충족 사례가 하나도 없으면 같은 모양으로 미충족 참고 사례만 별도로 열리고 분야별 탐색으로 연결한다. **문턱 값은 PD-09이며 값이 정해지기 전에는 이 상태에 도달하지 않는다**(FR-020) — 화면 모양은 값과 무관하므로 여기서 고정한다. (§4.3, D24, PD-09)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/spec.md",
+          "old_path": "specs/010-economic-regime-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -178,7 +178,7 @@ analyze에서 확인된 계약 불일치를 사용자 위임에 따라 아래와\n \n #### 진입 경로 (§4.1, §4.3, D25, D26)\n \n-- **FR-001**: '경제환경이 비슷했던 과거 보기'는 시장 흐름과 전략 진단 결과에서 공통으로 접근한다. 시장 흐름 진입은 '이 기간으로 전략 비교'로 섹터와 전략을 정하고, 진단 결과 진입은 기존 섹터·전략·설정을 유지해 같은 구간을 확인한다. 진단 결과 진입에는 분야 값이 없으므로 분야(7개, 종합은 선택형)를 고르는 단계가 먼저 오고, 고른 뒤 [010](../010-economic-regime-search/spec.md) 검색과 가용성 필터가 실행된다. 종합 비교를 기본으로 열지 않는다. 분야 선택 단계에서 기준월을 고를 수 있고 기본은 그 분야의 최신 기준월이다. 시장 흐름 경로의 '이 기간으로 전략 비교'는 경제환경 검색의 사례 상세에 둔다. 투자 대상 고르기의 '지금과 비슷했던 과거 시장'([002](../002-sector-weight-selection/spec.md) FR-018)에서 사례를 고르면 시장 흐름 경로와 같은 진입 계약(`/regime-link/start?case=&sector=`)으로 들어온다. 이 자리는 첫 분야(표시 순서)의 최신 기준월로 먼저 보이고, 종합 비교는 사용자가 누를 때만 연다(Session 2026-09-24). (§4.1, §4.3)\n+- **FR-001**: '경제환경이 비슷했던 과거 보기'는 시장 흐름과 전략 진단 결과에서 공통으로 접근한다. 시장 흐름 진입은 '이 기간으로 전략 비교'로 섹터와 전략을 정하고, 진단 결과 진입은 기존 섹터·전략·설정을 유지해 같은 구간을 확인한다. 진단 결과 진입에는 분야 값이 없으므로 분야(7개, 종합은 선택형)를 고르는 단계가 먼저 오고, 고른 뒤 [010](../010-economic-regime-search/spec.md) 검색과 가용성 필터가 실행된다. 종합 비교를 기본으로 열지 않는다. 분야 선택 단계에서 기준월을 고를 수 있고 기본은 그 분야의 최신 기준월이다. 시장 흐름 경로의 '이 기간으로 전략 비교'는 경제환경 검색의 사례 상세에 둔다. 시장 흐름의 '지금과 비슷했던 과거 시장'([002](../002-sector-weight-selection/spec.md) FR-018)에서 사례를 고르면 시장 흐름 경로와 같은 진입 계약(`/regime-link/start?case=&sector=`)으로 들어온다. 이 자리는 첫 분야(표시 순서)의 최신 기준월로 먼저 보이고, 종합 비교는 사용자가 누를 때만 연다(Session 2026-09-24). (§4.1, §4.3)\n - **FR-002**: 시장 흐름 진입의 검색 대상은 전체 거시 가용 사례이며 ETF 이력으로 제한하지 않는다. 사례를 고른 뒤 섹터·비중([002](../002-sector-weight-selection/spec.md))과 전략·설정([003](../003-strategy-settings/spec.md))을 정하면 사례 식별자가 분석 요청에 함께 담긴다. 이 경로에서 003의 분석 기간은 사례의 사후 구간(워밍업 포함)을 덮지 않는 범위로 줄일 수 없으며 그 이유를 한 문장으로 보인다. (§4.3, D26)\n - **FR-003**: 전략 결과 진입의 검색 범위는 비교 묶음의 모든 전략이 평가 가능한 ETF 이력·가장 긴 워밍업·사후 자료(관측 종료 후 21거래일 이상 완성)의 공통 가용 범위를 기본으로 하고, '선택 ETF로 비교 가능한 기간'과 제외된 사례 수를 표시하며 전체 탐색으로 전환할 수 있다. 필터는 원천 자료 가용성에만 의존하고 성과나 기존 실행의 시작·평가 시작·종료일에 의존하지 않는다. 원천 워밍업은 충분하지만 기존 실행이 구간을 덮지 않으면 사례를 유지하고 분석 기간 밖으로 표시한다. 필터를 거는 대상은 [010](../010-economic-regime-search/spec.md)이 고른 표시 후보(처음 3개·최대 10개, ±6개월 건너뛰기 적용 뒤)이며, 011은 표시 후보 선정과 ±6개월 건너뛰기를 다시 하지 않고 남은 사례가 부족해도 전체 후보 목록의 아래 순위에서 채우지 않는다. 순위 번호는 010의 원래 순위를 그대로 보이고, '제외된 사례 수'는 표시 후보 중 필터로 빠진 수다. 사후 자료의 완성 거래일 수는 실행별 실제 확보 거래일 수(FR-008)로 세며, 구간 안 상장폐지로 21 미만이 되는 사례도 기본 검색에서 빠진다. (§4.3, D26, U05)\n - **FR-004**: 가용성 필터는 별도 키로 보존하고, 두 경로의 순위·필터·연결 결과는 따로 보존한다. 가용성 필터 결과로 전체 경제환경 순위를 조용히 대체하지 않는다. (§6.5, D26, 원칙 VI)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/spec.md",
+          "old_path": "specs/011-regime-strategy-link/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -161,7 +161,7 @@\n \n #### 표시 (§4.4, §6.3)\n \n-- **FR-001**: 투자 대상 고르기에서 지금 보는 섹터로 좁힌 뉴스 묶음 3개를 보인다(Session 2026-09-24, 예전에는 시장 흐름 기본 화면). 뉴스 항목은 제목·매체·발행 시각·짧은 사실 요약·원문 링크를 제공하고, 같은 사건의 중복 보도는 한 묶음으로 정리한다. 묶음이 3개 미만이면 채우지 않는다. (§4.4, §6.3)\n+- **FR-001**: 시장 흐름 하단의 뉴스 카드에 기본 전체 뉴스 묶음을 최대 3개 보이고 섹터 필터로 좁힐 수 있다(2026-10-01 사용자 결정, 002 FR-019, 009 FR-019). 제목·매체·발행 시각·짧은 사실 요약·원문 링크를 제공하며 중복 사건은 묶고 3개 미만이면 채우지 않는다.\n - **FR-002**: 기사 본문은 저장·표시·재배포하지 않는다. 원문은 원 매체 링크로만 연결한다. (§6.3, 원칙 X)\n - **FR-003**: 짧은 사실 요약과 제목은 확보한 정보(제목·메타데이터)에만 근거한다. 공개 환경에서는 허가된 매체의 기사 메타데이터만 요약과 대표 제목의 근거로 쓰며, 회신이 없거나 불허인 매체의 제목·매체명·주제가 요약 문장과 대표 제목에 직접적으로도 간접적으로도 반영되지 않는다. 전체 멤버 기준으로 저장한 요약은 내부 검증에서만 쓰고 공개 응답에 내보내지 않는다. 요약은 확인할 수 없는 내용을 생성하지 않고 확인할 수 없는 내용을 생성하지 않는다. 요약은 제목·매체명이 있고 등록된 섹터 또는 주제가 하나 이상인 경우에만 제목을 사실 문장의 핵심으로 사용해 결정론적으로 생성한다. 새로운 사실·인과·전망·판정·투자 시사점을 추가하지 않으며, 조건을 만족하지 않으면 해당 기사를 표시 대상에서 제외하고 묶음 수를 맞추려고 다른 기사나 생성한 내용으로 대체하지 않는다. (§6.3, 원칙 III·VI)\n - **FR-004**: 뉴스 묶음의 주요도 판정은 등록된 규칙(같은 사건을 다룬 보도 수·최근성)을 따른다. 최근성은 검증된 발행 시각을 우선하고, 발행 시각 미확인 기사는 검증 시각이 있는 기사보다 뒤에 두며 미확인 기사끼리는 수집 시각 최신순으로 정한다. GDELT Tone은 비중·순위·유사도 계산에 넣지 않고 규칙은 plan에서 정해 버전으로 기록한다. (§6.3)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/012-market-news-digest/spec.md",
+          "old_path": "specs/012-market-news-digest/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2260818,
+      "head_commit_sha": "3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0",
+      "base_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "start_commit_sha": "38efbf62ac8d5af5fbc56dd912931cdc7f13196f",
+      "created_at": "2026-10-01T12:14:11.514+09:00",
+      "merge_request_id": 962902,
+      "state": "without_files",
+      "real_size": "23",
+      "patch_id_sha": "d8cfc9b4ff3786cadd3b35e8d3ba3a863f9c44b3",
+      "commits": [
+        {
+          "id": "3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0",
+          "short_id": "3d67f7b7",
+          "created_at": "2026-10-01T12:14:08.000+09:00",
+          "parent_ids": [
+            "b55fda73e51aa14f7001bec09a91065120cf5c45"
+          ],
+          "title": "docs(fe): 시장 흐름 달러 축약 반올림 예시 명시",
+          "message": "docs(fe): 시장 흐름 달러 축약 반올림 예시 명시\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T12:14:08.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T12:14:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d67f7b738e3f6a1ca3560a1d9f0bcb6787818e0"
+        },
+        {
+          "id": "b55fda73e51aa14f7001bec09a91065120cf5c45",
+          "short_id": "b55fda73",
+          "created_at": "2026-10-01T12:12:56.000+09:00",
+          "parent_ids": [
+            "38efbf62ac8d5af5fbc56dd912931cdc7f13196f"
+          ],
+          "title": "feat(fe): 시장 흐름으로 과거 사례와 뉴스 이동 및 숫자 표시 개선",
+          "message": "feat(fe): 시장 흐름으로 과거 사례와 뉴스 이동 및 숫자 표시 개선\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T12:12:56.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T12:12:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b55fda73e51aa14f7001bec09a91065120cf5c45"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2879737": []
+  }
+}

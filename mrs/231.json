@@ -1,0 +1,801 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951908,
+    "iid": 231,
+    "project_id": 1444456,
+    "title": "feat(de): 경제지표 버전 분리와 원자적 발행 구현",
+    "description": "## 작업 내용 요약\n\n표시·계산 등록표·자료 버전을 분리하고 경제지표 자료의 원자적 발행을 구현했습니다. 전체 월별 이력과 등록표 정합성을 검증해 불완전한 버전이 공개되지 않도록 했습니다.\n\n## 관련 티켓\n\n- [S15P21E205-344](https://ssafy.atlassian.net/browse/S15P21E205-344)\n\n## 주요 변경 사항\n\n- 표시 문구 변경은 표시 버전만, 매핑·가중 변경은 계산 등록표 버전만 올립니다. 값 규칙 변경은 전 구간 재처리와 새 자료 버전을 요구합니다.\n- 파일 매니페스트를 봉인·해시한 뒤 스냅샷·기준월을 한 트랜잭션에 기록하고 마지막에 현재 포인터를 교체합니다.\n- 시작월부터의 전체 월별 이력, 기존 공개 월의 보존, 저장된 등록표의 분야·가중 일치를 발행 전에 검증합니다.\n- 동시 발행에서 밀린 작업은 실패로 기록합니다. 명목 동일가중 정책을 등록하고 개편 연결 근거를 보존하도록 DB 열을 확장했습니다.\n\n## 테스트\n\n- [x] `data/`: `ruff check src scripts tests` 통과\n- [x] `data/`: PostgreSQL 통합 테스트 포함 `pytest` 1081건 통과\n- [x] `backend/`: `./gradlew spotlessApply build --rerun-tasks` 통과 — 1737건 통과, 기존 3건 건너뜀, 실패 0건\n- [x] 장애 주입·동시 발행·과거 월 누락·등록표 불일치 시 공개 포인터 유지 확인\n\n## 리뷰 포인트\n\n- 발행 입력은 최근 월의 증분이 아니라 결측 월을 포함한 전체 가용 이력입니다.\n- 포인터 교체 전에 실패하면 봉인된 파일은 미참조 상태로 남지만 공개되지 않습니다.\n- 분야·지표 동일가중은 경제적 중요성이 같다는 뜻이 아닌 Thorp의 명목 설계 선택입니다.\n\n## 공통 확인\n\n- [x] 계산하지 않은 값을 0이나 가까운 달의 값으로 대체하지 않음\n- [x] 자료·등록표 버전 조합으로 값과 기준월을 재현할 수 있음\n- [x] 순위·추천 표현, 결제·상품 선택, 전략별 분기 추가 없음",
+    "state": "merged",
+    "created_at": "2026-09-18T17:55:48.439+09:00",
+    "updated_at": "2026-09-19T11:26:29.708+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-19T11:26:29.268+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/344-macro-versioned-atomic-publish",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+    "merge_commit_sha": "6607af2dab9a58f6134394af44f630f97557e72b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T17:55:50.054+09:00",
+    "reference": "!231",
+    "references": {
+      "short": "!231",
+      "relative": "!231",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!231"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/231",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951908,
+    "iid": 231,
+    "project_id": 1444456,
+    "title": "feat(de): 경제지표 버전 분리와 원자적 발행 구현",
+    "description": "## 작업 내용 요약\n\n표시·계산 등록표·자료 버전을 분리하고 경제지표 자료의 원자적 발행을 구현했습니다. 전체 월별 이력과 등록표 정합성을 검증해 불완전한 버전이 공개되지 않도록 했습니다.\n\n## 관련 티켓\n\n- [S15P21E205-344](https://ssafy.atlassian.net/browse/S15P21E205-344)\n\n## 주요 변경 사항\n\n- 표시 문구 변경은 표시 버전만, 매핑·가중 변경은 계산 등록표 버전만 올립니다. 값 규칙 변경은 전 구간 재처리와 새 자료 버전을 요구합니다.\n- 파일 매니페스트를 봉인·해시한 뒤 스냅샷·기준월을 한 트랜잭션에 기록하고 마지막에 현재 포인터를 교체합니다.\n- 시작월부터의 전체 월별 이력, 기존 공개 월의 보존, 저장된 등록표의 분야·가중 일치를 발행 전에 검증합니다.\n- 동시 발행에서 밀린 작업은 실패로 기록합니다. 명목 동일가중 정책을 등록하고 개편 연결 근거를 보존하도록 DB 열을 확장했습니다.\n\n## 테스트\n\n- [x] `data/`: `ruff check src scripts tests` 통과\n- [x] `data/`: PostgreSQL 통합 테스트 포함 `pytest` 1081건 통과\n- [x] `backend/`: `./gradlew spotlessApply build --rerun-tasks` 통과 — 1737건 통과, 기존 3건 건너뜀, 실패 0건\n- [x] 장애 주입·동시 발행·과거 월 누락·등록표 불일치 시 공개 포인터 유지 확인\n\n## 리뷰 포인트\n\n- 발행 입력은 최근 월의 증분이 아니라 결측 월을 포함한 전체 가용 이력입니다.\n- 포인터 교체 전에 실패하면 봉인된 파일은 미참조 상태로 남지만 공개되지 않습니다.\n- 분야·지표 동일가중은 경제적 중요성이 같다는 뜻이 아닌 Thorp의 명목 설계 선택입니다.\n\n## 공통 확인\n\n- [x] 계산하지 않은 값을 0이나 가까운 달의 값으로 대체하지 않음\n- [x] 자료·등록표 버전 조합으로 값과 기준월을 재현할 수 있음\n- [x] 순위·추천 표현, 결제·상품 선택, 전략별 분기 추가 없음",
+    "state": "merged",
+    "created_at": "2026-09-18T17:55:48.439+09:00",
+    "updated_at": "2026-09-19T11:26:29.708+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-19T11:26:29.268+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/344-macro-versioned-atomic-publish",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+    "merge_commit_sha": "6607af2dab9a58f6134394af44f630f97557e72b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T17:55:50.054+09:00",
+    "reference": "!231",
+    "references": {
+      "short": "!231",
+      "relative": "!231",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!231"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/231",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "9",
+    "latest_build_started_at": "2026-09-19T11:15:40.267+09:00",
+    "latest_build_finished_at": "2026-09-19T11:20:59.278+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 208081,
+      "iid": 179,
+      "project_id": 1444456,
+      "sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+      "ref": "feat(de)/344-macro-versioned-atomic-publish",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T11:15:40.150+09:00",
+      "updated_at": "2026-09-19T11:20:59.286+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208081"
+    },
+    "head_pipeline": {
+      "id": 208081,
+      "iid": 179,
+      "project_id": 1444456,
+      "sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+      "ref": "feat(de)/344-macro-versioned-atomic-publish",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T11:15:40.150+09:00",
+      "updated_at": "2026-09-19T11:20:59.286+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208081",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-19T11:15:40.267+09:00",
+      "finished_at": "2026-09-19T11:20:59.278+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208081",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "head_sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+      "start_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "8cc7d9db8214bd61252fb710ec34930c0aa5c172",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837071,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T17:55:48.596+09:00",
+          "updated_at": "2026-09-18T17:55:48.606+09:00",
+          "system": true,
+          "noteable_id": 951908,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 231,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "81513d9819050a27b580c696903207db2996194a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837074,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 버전 분리 및 원자적 발행 구현**: 표시 버전, 계산 등록표 버전, 자료 버전을 명확히 분리하고, 파일 매니페스트 봉인 및 단일 트랜잭션 내 포인터 교체를 통해 동시성 및 데이터 정합성 문제를 안전하게 방어했습니다.\n- **포괄적인 테스트 커버리지**: Python의 단위/통합 테스트(`test_macro_publish_atomic.py`, `test_macro_versioning.py`, PostgreSQL 실제 환경 연동 테스트)와 Java의 백엔드 재현성 테스트(`MacroReproducibilityTest.java`)를 통해 변경 사항의 신뢰성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **동시 발행 레이스 컨디션 심화 테스트**: 동일한 버전 키 또는 겹치는 타임스탬프를 가진 복수의 파이프라인 인스턴스가 `macro_current_publication` 테이블의 싱글톤 포인터(`singleton_key='X'`)를 동시에 갱신하려 할 때, 데이터베이스 수준의 락(Lock)이나 유니크 제약/트랜잭션 격리 수준에 의해 정확히 하나의 프로세스만 성공하고 나머지가 `ConcurrentPublication` 예외를 발생시키며 실패 상태로 정확히 기록되는지 확인하는 멀티스레드 부하 시나리오를 검증하세요.\n- **장애 주입 후 고아 파일(Orphaned Files) 정리 검증**: `publish_atomically` 실행 중 포인터 교체 직전 예외가 발생하여 롤백되었을 때, 파일 시스템에 남겨진 미참조 매니페스트 및 데이터 파일들이 향후 디스크 용량을 압박하지 않거나 별도의 정비 프로세스에 의해 안전하게 수거될 수 있는지 시나리오 테스트를 수행하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T17:55:54.517+09:00",
+          "updated_at": "2026-09-19T11:15:36.158+09:00",
+          "system": false,
+          "noteable_id": 951908,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 231,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "095f84df3626a14c63b8742c83a921cc5c2bc837",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2838108,
+          "type": null,
+          "body": "added 33 commits\n\n<ul><li>89d17e99...3791e73d - 32 commits from branch <code>dev</code></li><li>3fe2c7b9 - chore(de): dev 병합 충돌 해결</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/231/diffs?diff_id=2224779&start_sha=89d17e99f77444ce413f03444a76c88dd1e045a8)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-19T11:01:39.126+09:00",
+          "updated_at": "2026-09-19T11:01:39.130+09:00",
+          "system": true,
+          "noteable_id": 951908,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 231,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a71b33fcf49518c5540e0f37fc07d39db6d460f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2838122,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>8ce177c0 - fix(de): CI에서 PostgreSQL 통합 테스트 연결을 수정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/231/diffs?diff_id=2224794&start_sha=3fe2c7b962316a404a776583e0daad22f7ab2142)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-19T11:15:31.358+09:00",
+          "updated_at": "2026-09-19T11:15:31.362+09:00",
+          "system": true,
+          "noteable_id": 951908,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 231,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "95d449c509b36b8b6bcf0ca036eacb2d03dd58e8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2838126,
+          "type": null,
+          "body": "mentioned in commit 6607af2dab9a58f6134394af44f630f97557e72b",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-19T11:26:29.262+09:00",
+          "updated_at": "2026-09-19T11:26:29.266+09:00",
+          "system": true,
+          "noteable_id": 951908,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 231,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2224794,
+      "head_commit_sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+      "base_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "start_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "created_at": "2026-09-19T11:15:31.090+09:00",
+      "merge_request_id": 951908,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "0a1b3c0b1b408c19d4b7488796bf9c6c69e96c78"
+    },
+    {
+      "id": 2224779,
+      "head_commit_sha": "3fe2c7b962316a404a776583e0daad22f7ab2142",
+      "base_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "start_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "created_at": "2026-09-19T11:01:38.824+09:00",
+      "merge_request_id": 951908,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "44506a628318c45b3a10af60730820dc7dad2f68"
+    },
+    {
+      "id": 2223918,
+      "head_commit_sha": "89d17e99f77444ce413f03444a76c88dd1e045a8",
+      "base_commit_sha": "80bf1f8612f5826b90f31dee142cd4940b8b7447",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:55:48.888+09:00",
+      "merge_request_id": 951908,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "9924e5e678c73434d0355a27fd6d233eff170df5"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2224794,
+      "head_commit_sha": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+      "base_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "start_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "created_at": "2026-09-19T11:15:31.090+09:00",
+      "merge_request_id": 951908,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "0a1b3c0b1b408c19d4b7488796bf9c6c69e96c78",
+      "commits": [
+        {
+          "id": "8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07",
+          "short_id": "8ce177c0",
+          "created_at": "2026-09-19T11:15:18.000+09:00",
+          "parent_ids": [
+            "3fe2c7b962316a404a776583e0daad22f7ab2142"
+          ],
+          "title": "fix(de): CI에서 PostgreSQL 통합 테스트 연결을 수정한다",
+          "message": "fix(de): CI에서 PostgreSQL 통합 테스트 연결을 수정한다\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-19T11:15:18.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-19T11:15:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8ce177c0cd1b77e6b36237fb030e1aa0e1ee3d07"
+        },
+        {
+          "id": "3fe2c7b962316a404a776583e0daad22f7ab2142",
+          "short_id": "3fe2c7b9",
+          "created_at": "2026-09-19T11:01:36.000+09:00",
+          "parent_ids": [
+            "89d17e99f77444ce413f03444a76c88dd1e045a8",
+            "3791e73d0e06992238f2c9df6d92262246bf69f1"
+          ],
+          "title": "chore(de): dev 병합 충돌 해결",
+          "message": "chore(de): dev 병합 충돌 해결\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-19T11:01:36.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-19T11:01:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3fe2c7b962316a404a776583e0daad22f7ab2142"
+        },
+        {
+          "id": "89d17e99f77444ce413f03444a76c88dd1e045a8",
+          "short_id": "89d17e99",
+          "created_at": "2026-09-18T17:52:10.000+09:00",
+          "parent_ids": [
+            "80bf1f8612f5826b90f31dee142cd4940b8b7447"
+          ],
+          "title": "feat(de): 경제지표 버전 분리와 원자적 발행 구현",
+          "message": "feat(de): 경제지표 버전 분리와 원자적 발행 구현\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T17:52:10.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T17:52:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89d17e99f77444ce413f03444a76c88dd1e045a8"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+-- B/C 변환기가 실제로 내는 결측 사유도 원형 그대로 보존한다.\n+-- 기존 사유는 유지해 이전 자료 버전과 호환한다.\n+ALTER TABLE macro_calculation_registry_version\n+    ADD COLUMN nominal_weight_policy VARCHAR(240);\n+\n+-- 값 지문에 들어간 원천 선택/구간 규칙도 정의 행에서 되짚을 수 있게 한다.\n+ALTER TABLE macro_indicator_definition\n+    ADD COLUMN org_id VARCHAR(16),\n+    ADD COLUMN classification JSONB,\n+    ADD COLUMN source_cycle CHAR(1),\n+    ADD COLUMN series_start CHAR(7),\n+    ADD COLUMN link_chain JSONB;\n+ALTER TABLE macro_indicator_definition\n+    ADD CONSTRAINT ck_macro_indicator_source_cycle\n+    CHECK (source_cycle IS NULL OR source_cycle IN ('D', 'M'));\n+\n+-- 연결 근거에는 개편 경계·실측 계수·오차 설명이 함께 들어가므로 200자로 자르지 않는다.\n+ALTER TABLE macro_indicator_definition\n+    ALTER COLUMN break_link_rule TYPE TEXT;\n+\n+ALTER TABLE macro_observation DROP CONSTRAINT ck_macro_observation_missing_reason;\n+ALTER TABLE macro_observation ADD CONSTRAINT ck_macro_observation_missing_reason CHECK (\n+    missing_reason IS NULL OR missing_reason IN (\n+        'SOURCE_NOT_RELEASED', 'COLLECTION_FAILED', 'BASE_MONTH_MISSING', 'BASE_MONTH_ZERO',\n+        'BEFORE_SERIES_START', 'MONTH_AVERAGE_INCOMPLETE', 'MONTH_END_NO_TRADING_DAY',\n+        'BREAK_SEGMENT_EXCLUDED', 'SOURCE_MISSING', 'NOT_TRANSFORMABLE', 'SERIES_START',\n+        'INCOMPLETE_MONTH'\n+    )\n+);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260918153100__macro_normalized_missing_reasons.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260918153100__macro_normalized_missing_reasons.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,119 @@\n+package com.ssafy.thorp.macro;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.support.RepositoryTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/** 같은 자료·계산 등록표 버전을 고정하면 current가 바뀌어도 값·기준월은 같다 (SC-004). */\n+@DisplayName(\"거시지표 버전 고정 재조회\")\n+class MacroReproducibilityTest extends RepositoryTestSupport {\n+\n+    @Autowired private JdbcTemplate jdbc;\n+\n+    @Test\n+    void pinnedPairRetainsObservationAndBaselineAfterPointerSwitch() {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_calculation_registry_version\n+                    (version_key, value_rule_fingerprint, change_reason, status, created_at)\n+                VALUES ('REPRO-CALC-1', repeat('a', 64), '검증', 'PUBLISHED', now())\n+                \"\"\");\n+        long registryId =\n+                jdbc.queryForObject(\n+                        \"SELECT id FROM macro_calculation_registry_version\"\n+                                + \" WHERE version_key='REPRO-CALC-1'\",\n+                        Long.class);\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_display_version (version_key, change_reason, created_at)\n+                VALUES ('REPRO-DISPLAY-1', '검증', now())\n+                \"\"\");\n+        long displayId =\n+                jdbc.queryForObject(\n+                        \"SELECT id FROM macro_display_version WHERE version_key='REPRO-DISPLAY-1'\",\n+                        Long.class);\n+        long oldDataset = insertDataset(\"REPRO-DATA-1\", registryId, \"1.25\", \"2026-06-01\");\n+        long newDataset = insertDataset(\"REPRO-DATA-2\", registryId, \"2.50\", \"2026-07-01\");\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_current_publication\n+                    (dataset_version_id, registry_version_id, display_version_id, switched_at)\n+                VALUES (?, ?, ?, now())\n+                \"\"\",\n+                oldDataset,\n+                registryId,\n+                displayId);\n+\n+        List<Map<String, Object>> pinnedBefore = pinnedRows(oldDataset, registryId);\n+        jdbc.update(\n+                \"UPDATE macro_current_publication SET dataset_version_id=?, switched_at=now()\"\n+                        + \" WHERE singleton_key='X'\",\n+                newDataset);\n+        List<Map<String, Object>> pinnedAfter = pinnedRows(oldDataset, registryId);\n+\n+        assertThat(pinnedAfter).isEqualTo(pinnedBefore);\n+        assertThat(pinnedAfter).hasSize(1);\n+        assertThat(pinnedAfter.getFirst().get(\"value\")).isEqualTo(\"1.25\");\n+        assertThat(pinnedAfter.getFirst().get(\"reference_month\").toString())\n+                .isEqualTo(\"2026-06-01\");\n+        assertThat(pinnedRows(newDataset, registryId).getFirst().get(\"value\")).isEqualTo(\"2.50\");\n+    }\n+\n+    private long insertDataset(String key, long registryId, String value, String month) {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_dataset_version\n+                    (version_key, processing_registry_version_id, value_rule_fingerprint,\n+                     status, complete_indicator_count, published_at, created_at)\n+                VALUES (?, ?, repeat('a', 64), 'PUBLISHED', 17, now(), now())\n+                \"\"\",\n+                key,\n+                registryId);\n+        long datasetId =\n+                jdbc.queryForObject(\n+                        \"SELECT id FROM macro_dataset_version WHERE version_key=?\",\n+                        Long.class,\n+                        key);\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_observation\n+                    (dataset_version_id, indicator_id, target_month,\n+                     transformed_value, received_at)\n+                VALUES (?, 'consumer_price_index', ?::date, to_jsonb(?::text), now())\n+                \"\"\",\n+                datasetId,\n+                month,\n+                value);\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_baseline\n+                    (dataset_version_id, registry_version_id, scope_id,\n+                     reference_month, reference_month_held_back_by, computed_at)\n+                VALUES (?, ?, 'ALL', ?::date, '[]'::jsonb, now())\n+                \"\"\",\n+                datasetId,\n+                registryId,\n+                month);\n+        return datasetId;\n+    }\n+\n+    private List<Map<String, Object>> pinnedRows(long datasetId, long registryId) {\n+        return jdbc.queryForList(\n+                \"\"\"\n+                SELECT o.transformed_value #>> '{}' AS value,\n+                       b.reference_month AS reference_month\n+                FROM macro_observation o\n+                JOIN macro_baseline b ON b.dataset_version_id=o.dataset_version_id\n+                    AND b.registry_version_id=? AND b.scope_id='ALL'\n+                WHERE o.dataset_version_id=? AND o.indicator_id='consumer_price_index'\n+                \"\"\",\n+                registryId,\n+                datasetId);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,16 +24,25 @@\n **보류된 판정에는 기준월을 달지 않는다.** 보류인데 기준월이 채워져 있으면 그 값이 공개된 것처럼\n 읽힌다. 보류 사유는 :attr:`PublicationDecision.blockers` 와 유효 건수가 답한다.\n \n-발행을 **실제로 기록하는** 일(파일 봉인, 한 트랜잭션 쓰기, 포인터 교체)은 T038·T039 다. 이\n-모듈은 \"발행해도 되는가\"와 \"기준월이 언제인가\"만 정한다.\n+발행 판정과 기준월은 순수 함수로 유지한다. 파일 봉인과 DB 포인터 교체는 아래의 별도\n+함수에서 수행하며, 이 경계가 실패해도 판정 자체는 변하지 않는다.\n \"\"\"\n \n from __future__ import annotations\n \n-from collections.abc import Iterable, Mapping, Sequence\n+import hashlib\n+import json\n+import os\n+import re\n+from collections.abc import Callable, Iterable, Mapping, Sequence\n from dataclasses import dataclass\n+from datetime import UTC, date, datetime\n+from decimal import Decimal\n+from pathlib import Path\n from typing import Final\n \n+from sqlalchemy import Connection, Engine, text\n+\n from data_pipeline.macro.normalize import NormalizedObservation\n from data_pipeline.macro.registry import (\n     EXPECTED_INDICATOR_COUNT,\n@@ -42,10 +51,12 @@ from data_pipeline.macro.registry import (\n     REVIEW_VERIFIED,\n     IndicatorDefinition,\n     RegistryError,\n+    nominal_weights,\n )\n from data_pipeline.macro.registry import (\n     validate as validate_registry,\n )\n+from data_pipeline.macro.versioning import value_rule_fingerprint\n \n #: 전체 지표를 묶는 기준월의 범위 식별자. 7개 분야 id 와 같은 자리에 들어간다(data-model §2).\n SCOPE_ALL: Final[str] = \"ALL\"\n@@ -224,7 +235,7 @@ def plan_publication(\n ) -> PublicationDecision:\n     \"\"\"발행 판정과 기준월을 한 번에 낸다. 보류면 기준월을 달지 않는다.\n \n-    T038 의 원자적 발행이 이 결과를 받아 파일을 봉인하고 한 트랜잭션에 쓴다. 판정과 기록을\n+    아래의 원자적 발행이 이 결과를 받아 파일을 봉인하고 한 트랜잭션에 쓴다. 판정과 기록을\n     나눈 이유는, 판정만 따로 시험할 수 있어야 하고 기록이 실패해도 판정이 달라지지 않기\n     때문이다.\n     \"\"\"\n@@ -238,3 +249,472 @@ def plan_publication(\n         baselines=() if blockers else baselines(indicators, observations),\n         valid_month_counts=counts,\n     )\n+\n+\n+@dataclass(frozen=True)\n+class PublicationPointer:\n+    \"\"\"발행 시작 때 고정한 세 버전. 비교 후 교체가 동시 발행을 직렬화한다.\"\"\"\n+\n+    dataset_id: int | None\n+    registry_id: int\n+    display_id: int\n+\n+\n+@dataclass(frozen=True)\n+class SealedManifest:\n+    path: Path\n+    sha256: str\n+\n+\n+@dataclass(frozen=True)\n+class AtomicPublicationRequest:\n+    version_key: str\n+    attempt_key: str\n+    pointer: PublicationPointer\n+    indicators: tuple[IndicatorDefinition, ...]\n+    observations: Mapping[str, Sequence[NormalizedObservation]]\n+    raw_files: tuple[Path, ...]\n+    processed_files: tuple[Path, ...]\n+    data_root: Path\n+    is_sample_data: bool = False\n+    target_registry_id: int | None = None\n+    target_display_id: int | None = None\n+    weights: Mapping[str, Decimal] | None = None\n+\n+\n+class ConcurrentPublication(PublishError):\n+    \"\"\"시작할 때 본 포인터가 다른 발행으로 이미 바뀌었다.\"\"\"\n+\n+\n+_SAFE_VERSION_KEY: Final[re.Pattern[str]] = re.compile(r\"^[A-Za-z0-9_-]{1,40}$\")\n+\n+\n+def seal_manifest(\n+    data_root: Path, version_key: str, kind: str, files: Sequence[Path]\n+) -> SealedManifest:\n+    \"\"\"완성된 파일 목록·크기·해시를 결정적 JSON으로 봉인한다.\n+\n+    같은 버전 키의 재시도는 정확히 같은 매니페스트일 때만 허용한다. 실패한 DB 발행의\n+    미참조 매니페스트는 남아 재시도/정리 대상으로 보이되 current 포인터로 노출되지 않는다.\n+    \"\"\"\n+    if not _SAFE_VERSION_KEY.fullmatch(version_key) or kind not in {\"raw\", \"processed\"}:\n+        raise PublishError(\"매니페스트 식별자가 유효하지 않다\")\n+    root = data_root.resolve(strict=True)\n+    if not files:\n+        raise PublishError(f\"{kind} 매니페스트에 파일이 없다\")\n+    entries: list[dict[str, object]] = []\n+    for file in files:\n+        resolved = file.resolve(strict=True)\n+        if not resolved.is_relative_to(root) or not resolved.is_file():\n+            raise PublishError(f\"자료 루트 밖이거나 파일이 아니다: {file}\")\n+        relative = resolved.relative_to(root)\n+        if relative.parts[:2] != (kind, \"macro\"):\n+            raise PublishError(f\"{kind} 자료 경로가 아니다: {file}\")\n+        sealed = resolved\n+        if kind == \"processed\":\n+            # storage.processed_path()의 part.parquet는 다음 수집에서 교체될 수 있다.\n+            # 공개 버전은 그 가변 파일이 아니라 버전별 불변 사본을 참조해야 한다.\n+            sealed = (\n+                root / \"processed\" / \"macro\" / \"versions\" / version_key\n+                / Path(*relative.parts[2:])\n+            )\n+            sealed.parent.mkdir(parents=True, exist_ok=True)\n+            if not sealed.parent.resolve().is_relative_to(root):\n+                raise PublishError(\"봉인 대상이 자료 루트 밖이다\")\n+            try:\n+                with resolved.open(\"rb\") as source, sealed.open(\"xb\") as target:\n+                    for chunk in iter(lambda: source.read(1024 * 1024), b\"\"):\n+                        target.write(chunk)\n+                    target.flush()\n+                    os.fsync(target.fileno())\n+            except FileExistsError:\n+                pass\n+        digest = hashlib.sha256()\n+        with sealed.open(\"rb\") as source:\n+            for chunk in iter(lambda: source.read(1024 * 1024), b\"\"):\n+                digest.update(chunk)\n+        if kind == \"processed\":\n+            source_digest = hashlib.sha256()\n+            with resolved.open(\"rb\") as source:\n+                for chunk in iter(lambda: source.read(1024 * 1024), b\"\"):\n+                    source_digest.update(chunk)\n+            source_hash = source_digest.hexdigest()\n+            if source_hash != digest.hexdigest():\n+                raise PublishError(f\"봉인된 processed 파일과 입력이 다르다: {file}\")\n+        entries.append(\n+            {\"path\": sealed.relative_to(root).as_posix(), \"bytes\": sealed.stat().st_size,\n+             \"sha256\": digest.hexdigest()}\n+        )\n+    if len({entry[\"path\"] for entry in entries}) != len(entries):\n+        raise PublishError(\"매니페스트에 중복 파일이 있다\")\n+    payload = json.dumps(sorted(entries, key=lambda e: str(e[\"path\"])), sort_keys=True,\n+                         separators=(\",\", \":\")).encode(\"utf-8\")\n+    manifest = root / \"processed\" / \"macro\" / \"manifests\" / f\"{version_key}.{kind}.json\"\n+    manifest.parent.mkdir(parents=True, exist_ok=True)\n+    if not manifest.parent.resolve().is_relative_to(root):\n+        raise PublishError(\"매니페스트 대상이 자료 루트 밖이다\")\n+    try:\n+        with manifest.open(\"xb\") as target:\n+            target.write(payload)\n+            target.flush()\n+            os.fsync(target.fileno())\n+    except FileExistsError:\n+        if manifest.read_bytes() != payload:\n+            raise PublishError(f\"이미 봉인된 매니페스트와 내용이 다르다: {manifest}\") from None\n+    return SealedManifest(manifest, hashlib.sha256(payload).hexdigest())\n+\n+\n+def _month_date(period: str) -> date:\n+    try:\n+        month = date.fromisoformat(f\"{period}-01\")\n+    except ValueError as error:\n+        raise PublishError(f\"대상월이 YYYY-MM 형식이 아니다: {period}\") from error\n+    if period != month.strftime(\"%Y-%m\"):\n+        raise PublishError(f\"대상월이 YYYY-MM 형식이 아니다: {period}\")\n+    return month\n+\n+\n+def _assert_full_history(\n+    indicators: Sequence[IndicatorDefinition],\n+    observations: Mapping[str, Sequence[NormalizedObservation]],\n+) -> None:\n+    \"\"\"시작월부터 최신월까지 결측을 포함한 모든 월이 한 번씩 있어야 한다.\"\"\"\n+    expected_ids = {indicator.indicator_id for indicator in indicators}\n+    if set(observations) != expected_ids:\n+        raise PublishError(\"전체 이력의 지표 ID가 등록표와 다르다\")\n+    for indicator in indicators:\n+        months = observations[indicator.indicator_id]\n+        indices: set[int] = set()\n+        start = _month_date(indicator.series_start)\n+        start_index = start.year * 12 + start.month\n+        for observation in months:\n+            if observation.indicator_id != indicator.indicator_id:\n+                raise PublishError(\"관측값의 지표 ID가 묶음과 다르다\")\n+            month = _month_date(observation.period)\n+            index = month.year * 12 + month.month\n+            if index in indices:\n+                raise PublishError(f\"{indicator.indicator_id}에 중복 대상월이 있다\")\n+            indices.add(index)\n+        if (\n+            not indices\n+            or min(indices) != start_index\n+            or len(indices) != max(indices) - start_index + 1\n+        ):\n+            raise PublishError(f\"{indicator.indicator_id}의 전체 가용 구간에 빠진 월이 있다\")\n+\n+\n+def _assert_registered_calculation(\n+    connection: Connection,\n+    registry_id: int,\n+    indicators: Sequence[IndicatorDefinition],\n+    weights: Mapping[str, Decimal] | None,\n+) -> None:\n+    \"\"\"기준월을 계산할 입력이 저장된 등록표 정의와 정확히 같은지 확인한다.\"\"\"\n+    expected = {indicator.indicator_id: indicator.field_id for indicator in indicators}\n+    expected_weights = dict(weights) if weights is not None else nominal_weights(indicators)\n+    if set(expected_weights) != set(expected):\n+        raise PublishError(\"명목 비중의 지표 ID가 등록표와 다르다\")\n+    rows = connection.execute(\n+        text(\"SELECT indicator_id, field_id, nominal_weight FROM macro_indicator_definition \"\n+             \"WHERE registry_version_id=:id\"),\n+        {\"id\": registry_id},\n+    ).mappings().all()\n+    if {row[\"indicator_id\"] for row in rows} != set(expected) or len(rows) != len(expected):\n+        raise PublishError(\"저장된 계산 등록표의 지표 구성이 입력과 다르다\")\n+    for row in rows:\n+        raw_weight = row[\"nominal_weight\"]\n+        stored_weight = Decimal(\n+            str(json.loads(raw_weight, parse_float=Decimal)\n+                if isinstance(raw_weight, str) else raw_weight)\n+        )\n+        indicator_id = row[\"indicator_id\"]\n+        if (\n+            row[\"field_id\"] != expected[indicator_id]\n+            or stored_weight != expected_weights[indicator_id]\n+        ):\n+            raise PublishError(\"저장된 계산 등록표의 분야·가중이 입력과 다르다\")\n+\n+\n+def publish_atomically(\n+    engine: Engine,\n+    request: AtomicPublicationRequest,\n+    *,\n+    before_pointer_swap: Callable[[], None] | None = None,\n+) -> int:\n+    \"\"\"매니페스트를 먼저 봉인한 뒤 스냅샷·기준월·포인터를 한 DB 트랜잭션에 쓴다.\n+\n+    등록표/표시 버전과 singleton 포인터는 선행 등록 단계에서 존재해야 한다. 함수가\n+    받은 observations는 전체 가용 구간이며 최근 N개월 증분만 넘겨서는 안 된다.\n+    \"\"\"\n+    if not _SAFE_VERSION_KEY.fullmatch(request.version_key):\n+        raise PublishError(\"자료 버전 키가 유효하지 않다\")\n+    decision = plan_publication(request.indicators, request.observations)\n+    now = datetime.now(UTC)\n+    with engine.begin() as connection:\n+        connection.execute(\n+            text(\"INSERT INTO macro_collection_attempt \"\n+                 \"(attempt_key, mode, started_at, status) \"\n+                 \"VALUES (:key, :mode, :started, 'RUNNING')\"),\n+            {\"key\": request.attempt_key,\n+             \"mode\": \"INITIAL\" if request.pointer.dataset_id is None else \"REGULAR\",\n+             \"started\": now},\n+        )\n+    if not decision.can_publish:\n+        with engine.begin() as connection:\n+            connection.execute(\n+                text(\"UPDATE macro_collection_attempt SET status='PARTIAL', finished_at=:now \"\n+                     \"WHERE attempt_key=:key\"), {\"now\": now, \"key\": request.attempt_key}\n+            )\n+        raise PublishError(f\"발행 보류: {decision.blockers}\")\n+\n+    try:\n+        _assert_full_history(request.indicators, request.observations)\n+        raw_manifest = seal_manifest(\n+            request.data_root, request.version_key, \"raw\", request.raw_files\n+        )\n+        processed_manifest = seal_manifest(\n+            request.data_root, request.version_key, \"processed\", request.processed_files\n+        )\n+        fingerprint = value_rule_fingerprint(request.indicators)\n+        target_registry = request.target_registry_id or request.pointer.registry_id\n+        target_display = request.target_display_id or request.pointer.display_id\n+        json_cast = \"CAST(:value AS JSONB)\" if engine.dialect.name == \"postgresql\" else \":value\"\n+        with engine.begin() as connection:\n+            registry = connection.execute(\n+                text(\"SELECT value_rule_fingerprint FROM macro_calculation_registry_version \"\n+                     \"WHERE id=:id AND status='PUBLISHED'\"),\n+                {\"id\": target_registry},\n+            ).scalar_one_or_none()\n+            if registry != fingerprint:\n+                raise PublishError(\"계산 등록표와 자료 값 규칙 지문이 다르다\")\n+            _assert_registered_calculation(\n+                connection, target_registry, request.indicators, request.weights\n+            )\n+            if request.pointer.dataset_id is not None:\n+                previous_fingerprint = connection.execute(\n+                    text(\"SELECT value_rule_fingerprint FROM macro_dataset_version \"\n+                         \"WHERE id=:id AND status='PUBLISHED'\"),\n+                    {\"id\": request.pointer.dataset_id},\n+                ).scalar_one_or_none()\n+                if previous_fingerprint is None:\n+                    raise PublishError(\"기존 공개 자료 버전이 없다\")\n+                if previous_fingerprint == fingerprint:\n+                    previous = connection.execute(\n+                        text(\"SELECT indicator_id, target_month FROM macro_observation \"\n+                             \"WHERE dataset_version_id=:id\"),\n+                        {\"id\": request.pointer.dataset_id},\n+                    ).all()\n+                    current = {\n+                        (indicator_id, _month_date(observation.period))\n+                        for indicator_id, months in request.observations.items()\n+                        for observation in months\n+                    }\n+                    if not set(previous).issubset(current):\n+                        raise PublishError(\"새 자료 버전에서 기존 가용 월이 빠졌다\")\n+            if connection.execute(\n+                text(\"SELECT id FROM macro_display_version WHERE id=:id\"),\n+                {\"id\": target_display},\n+            ).scalar_one_or_none() is None:\n+                raise PublishError(\"표시 버전이 없다\")\n+            dataset_id = connection.execute(\n+                text(\"INSERT INTO macro_dataset_version \"\n+                     \"(version_key, processing_registry_version_id, value_rule_fingerprint, \"\n+                     \"status, complete_indicator_count, is_sample_data, raw_manifest_hash, \"\n+                     \"processed_manifest_hash, published_at, created_at) VALUES \"\n+                     \"(:key, :registry, :fingerprint, 'PUBLISHED', 17, :sample, :raw_hash, \"\n+                     \":processed_hash, :now, :now) RETURNING id\"),\n+                {\"key\": request.version_key, \"registry\": target_registry,\n+                 \"fingerprint\": fingerprint, \"sample\": request.is_sample_data,\n+                 \"raw_hash\": raw_manifest.sha256,\n+                 \"processed_hash\": processed_manifest.sha256, \"now\": now},\n+            ).scalar_one()\n+            for indicator in request.indicators:\n+                for observation in request.observations[indicator.indicator_id]:\n+                    if observation.indicator_id != indicator.indicator_id:\n+                        raise PublishError(\"관측값의 지표 ID가 묶음과 다르다\")\n+                    raw_value = json.dumps(\n+                        [[period, None if value is None else str(value)]\n+                         for period, value in observation.raw_values]\n+                    )\n+                    transformed = (\n+                        None if observation.transformed_value is None\n+                        else json.dumps(str(observation.transformed_value))\n+                    )\n+                    raw_expression = json_cast.replace(\":value\", \":raw_value\")\n+                    transformed_expression = json_cast.replace(\":value\", \":transformed_value\")\n+                    connection.execute(\n+                        text(\"INSERT INTO macro_observation \"\n+                             \"(dataset_version_id, indicator_id, target_month, raw_value, \"\n+                             \"transformed_value, released_at, received_at, break_segment, \"\n+                             \"missing_reason) VALUES (:dataset, :indicator, :month, \"\n+                             f\"{raw_expression}, {transformed_expression}, NULL, :received, \"\n+                             \"NULL, :missing)\"),\n+                        {\"dataset\": dataset_id, \"indicator\": indicator.indicator_id,\n+                         \"month\": _month_date(observation.period), \"raw_value\": raw_value,\n+                         \"transformed_value\": transformed,\n+                         \"received\": observation.received_at or now,\n+                         \"missing\": observation.missing_reason},\n+                    )\n+            for baseline in decision.baselines:\n+                expression = json_cast.replace(\":value\", \":held_back\")\n+                connection.execute(\n+                    text(\"INSERT INTO macro_baseline \"\n+                         \"(dataset_version_id, registry_version_id, scope_id, reference_month, \"\n+                         \"reference_month_held_back_by, computed_at) VALUES \"\n+                         f\"(:dataset, :registry, :scope, :month, {expression}, :now)\"),\n+                    {\"dataset\": dataset_id, \"registry\": target_registry,\n+                     \"scope\": baseline.scope_id,\n+                     \"month\": None if baseline.reference_month is None\n+                     else _month_date(baseline.reference_month),\n+                     \"held_back\": json.dumps(baseline.held_back_by), \"now\": now},\n+                )\n+            connection.execute(\n+                text(\"UPDATE macro_collection_attempt SET status='SUCCEEDED', finished_at=:now \"\n+                     \"WHERE attempt_key=:key\"), {\"now\": now, \"key\": request.attempt_key}\n+            )\n+            if before_pointer_swap is not None:\n+                before_pointer_swap()\n+            expected = request.pointer\n+            dataset_clause = (\n+                \"dataset_version_id IS NULL\" if expected.dataset_id is None\n+                else \"dataset_version_id=:expected_dataset\"\n+            )\n+            updated = connection.execute(\n+                text(\"UPDATE macro_current_publication SET dataset_version_id=:new_dataset, \"\n+                     \"registry_version_id=:registry, display_version_id=:display, \"\n+                     \"switched_at=:now WHERE singleton_key='X' AND \" + dataset_clause +\n+                     \" AND registry_version_id=:expected_registry \"\n+                     \"AND display_version_id=:expected_display\"),\n+                {\"new_dataset\": dataset_id, \"registry\": target_registry,\n+                 \"display\": target_display, \"now\": now,\n+                 \"expected_dataset\": expected.dataset_id,\n+                 \"expected_registry\": expected.registry_id,\n+                 \"expected_display\": expected.display_id},\n+            )\n+            if updated.rowcount != 1:\n+                raise ConcurrentPublication(\"다른 작업이 현재 발행 포인터를 먼저 바꿨다\")\n+        return dataset_id\n+    except Exception:\n+        with engine.begin() as connection:\n+            connection.execute(\n+                text(\"UPDATE macro_collection_attempt SET status='FAILED', finished_at=:now \"\n+                     \"WHERE attempt_key=:key\"),\n+                {\"now\": datetime.now(UTC), \"key\": request.attempt_key},\n+            )\n+        raise\n+\n+\n+def switch_display_version(\n+    engine: Engine, expected: PublicationPointer, target_display_id: int\n+) -> None:\n+    \"\"\"화면 문구 변경은 자료·계산 등록표를 건드리지 않고 포인터만 바꾼다.\"\"\"\n+    with engine.begin() as connection:\n+        if connection.execute(\n+            text(\"SELECT id FROM macro_display_version WHERE id=:id\"),\n+            {\"id\": target_display_id},\n+        ).scalar_one_or_none() is None:\n+            raise PublishError(\"표시 버전이 없다\")\n+        dataset_clause = (\n+            \"dataset_version_id IS NULL\" if expected.dataset_id is None\n+            else \"dataset_version_id=:expected_dataset\"\n+        )\n+        updated = connection.execute(\n+            text(\"UPDATE macro_current_publication SET display_version_id=:target, \"\n+                 \"switched_at=:now WHERE singleton_key='X' AND \" + dataset_clause +\n+                 \" AND registry_version_id=:registry AND display_version_id=:display\"),\n+            {\"target\": target_display_id, \"now\": datetime.now(UTC),\n+             \"expected_dataset\": expected.dataset_id,\n+             \"registry\": expected.registry_id, \"display\": expected.display_id},\n+        )\n+        if updated.rowcount != 1:\n+            raise ConcurrentPublication(\"다른 작업이 현재 발행 포인터를 먼저 바꿨다\")\n+\n+\n+def switch_calculation_registry(\n+    engine: Engine,\n+    expected: PublicationPointer,\n+    target_registry_id: int,\n+    indicators: tuple[IndicatorDefinition, ...],\n+    *,\n+    weights: Mapping[str, Decimal] | None = None,\n+) -> None:\n+    \"\"\"같은 값 지문의 기존 관측 시계열을 재사용해 8개 기준월만 다시 계산한다.\"\"\"\n+    if expected.dataset_id is None:\n+        raise PublishError(\"자료 버전이 없으면 기준월을 재계산할 수 없다\")\n+    fingerprint = value_rule_fingerprint(indicators)\n+    with engine.begin() as connection:\n+        dataset_fingerprint = connection.execute(\n+            text(\"SELECT value_rule_fingerprint FROM macro_dataset_version \"\n+                 \"WHERE id=:id AND status='PUBLISHED'\"),\n+            {\"id\": expected.dataset_id},\n+        ).scalar_one_or_none()\n+        target_fingerprint = connection.execute(\n+            text(\"SELECT value_rule_fingerprint FROM macro_calculation_registry_version \"\n+                 \"WHERE id=:id AND status='PUBLISHED'\"),\n+            {\"id\": target_registry_id},\n+        ).scalar_one_or_none()\n+        if fingerprint != dataset_fingerprint or fingerprint != target_fingerprint:\n+            raise PublishError(\"값 규칙 지문이 달라 기존 시계열을 재사용할 수 없다\")\n+        _assert_registered_calculation(connection, target_registry_id, indicators, weights)\n+        rows = connection.execute(\n+            text(\"SELECT indicator_id, target_month, transformed_value, missing_reason \"\n+                 \"FROM macro_observation WHERE dataset_version_id=:dataset\"),\n+            {\"dataset\": expected.dataset_id},\n+        ).mappings()\n+        by_id: dict[str, list[NormalizedObservation]] = {\n+            indicator.indicator_id: [] for indicator in indicators\n+        }\n+        definition_by_id = {indicator.indicator_id: indicator for indicator in indicators}\n+        for row in rows:\n+            indicator = definition_by_id.get(row[\"indicator_id\"])\n+            if indicator is None:\n+                raise PublishError(\"자료 버전에 등록표 밖의 지표가 있다\")\n+            target_month = row[\"target_month\"]\n+            period = (\n+                target_month.strftime(\"%Y-%m\")\n+                if isinstance(target_month, date)\n+                else str(target_month)[:7]\n+            )\n+            by_id[indicator.indicator_id].append(\n+                NormalizedObservation(\n+                    indicator_id=indicator.indicator_id,\n+                    period=period,\n+                    transformed_value=(\n+                        None if row[\"transformed_value\"] is None else Decimal(1)\n+                    ),\n+                    missing_reason=row[\"missing_reason\"],\n+                    raw_values=(), transform_rule=indicator.transform_rule,\n+                    raw_unit=indicator.raw_unit,\n+                    transformed_unit=indicator.transformed_unit,\n+                    source_updated_at=None,\n+                )\n+            )\n+        decision = plan_publication(indicators, by_id)\n+        if not decision.can_publish:\n+            raise PublishError(f\"기존 자료가 발행 게이트를 통과하지 못한다: {decision.blockers}\")\n+        json_expression = (\n+            \"CAST(:held_back AS JSONB)\" if engine.dialect.name == \"postgresql\"\n+            else \":held_back\"\n+        )\n+        for baseline in decision.baselines:\n+            connection.execute(\n+                text(\"INSERT INTO macro_baseline \"\n+                     \"(dataset_version_id, registry_version_id, scope_id, reference_month, \"\n+                     \"reference_month_held_back_by, computed_at) VALUES \"\n+                     f\"(:dataset, :registry, :scope, :month, {json_expression}, :now)\"),\n+                {\"dataset\": expected.dataset_id, \"registry\": target_registry_id,\n+                 \"scope\": baseline.scope_id,\n+                 \"month\": None if baseline.reference_month is None\n+                 else _month_date(baseline.reference_month),\n+                 \"held_back\": json.dumps(baseline.held_back_by), \"now\": datetime.now(UTC)},\n+            )\n+        updated = connection.execute(\n+            text(\"UPDATE macro_current_publication SET registry_version_id=:target, \"\n+                 \"switched_at=:now WHERE singleton_key='X' AND dataset_version_id=:dataset \"\n+                 \"AND registry_version_id=:registry AND display_version_id=:display\"),\n+            {\"target\": target_registry_id, \"now\": datetime.now(UTC),\n+             \"dataset\": expected.dataset_id, \"registry\": expected.registry_id,\n+             \"display\": expected.display_id},\n+        )\n+        if updated.rowcount != 1:\n+            raise ConcurrentPublication(\"다른 작업이 현재 발행 포인터를 먼저 바꿨다\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/publish.py",
+          "old_path": "data/src/data_pipeline/macro/publish.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -394,15 +394,23 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n \n EXPECTED_INDICATOR_COUNT: Final[int] = 17\n \n+# FR-004: 경제적 중요성이 같다는 주장이 아니라 Thorp 검색 모델의 명목 설계 선택이다.\n+NOMINAL_WEIGHT_POLICY: Final[str] = (\n+    \"Thorp의 설계 선택: 7개 분야를 각각 1/7, 분야 내부 지표를 동일가중으로 둔다. \"\n+    \"경제적 중요성이 동일하다는 의미는 아니다.\"\n+)\n+\n \n-def nominal_weights() -> dict[str, Decimal]:\n+def nominal_weights(\n+    indicators: tuple[IndicatorDefinition, ...] = INDICATORS,\n+) -> dict[str, Decimal]:\n     \"\"\"분야 간 1/7, 분야 안에서 동일가중인 명목 비중 (FR-004).\n \n-    **이것은 Thorp 의 설계 선택이지 경제적 중요성이 같다는 뜻이 아니다.** 근거를 등록표에\n-    남기는 것과 실제 거리 기여를 비교하는 것은 T040 이 이어받는다.\n+    **이것은 Thorp 의 설계 선택이지 경제적 중요성이 같다는 뜻이 아니다.**\n     \"\"\"\n+    validate(indicators)\n     per_field: dict[str, list[str]] = {field_id: [] for field_id in FIELD_IDS}\n-    for indicator in INDICATORS:\n+    for indicator in indicators:\n         per_field[indicator.field_id].append(indicator.indicator_id)\n     field_weight = Decimal(1) / Decimal(len(FIELD_IDS))\n     weights: dict[str, Decimal] = {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,257 @@\n+\"\"\"화면·계산 등록표·자료 버전의 변경 경계를 판정한다 (FR-003).\"\"\"\n+\n+from __future__ import annotations\n+\n+import hashlib\n+import json\n+from collections.abc import Mapping, Sequence\n+from dataclasses import asdict, dataclass\n+from decimal import Decimal\n+\n+from sqlalchemy import Engine, text\n+\n+from data_pipeline.macro.registry import (\n+    FIELD_IDS,\n+    NOMINAL_WEIGHT_POLICY,\n+    IndicatorDefinition,\n+    nominal_weights,\n+    validate,\n+)\n+\n+\n+@dataclass(frozen=True)\n+class VersionNumbers:\n+    display: int\n+    calculation: int\n+    dataset: int\n+\n+    def __post_init__(self) -> None:\n+        if min(self.display, self.calculation, self.dataset) < 1:\n+            raise ValueError(\"버전 번호는 모두 1 이상이어야 한다\")\n+\n+\n+@dataclass(frozen=True)\n+class VersionChange:\n+    versions: VersionNumbers\n+    reprocess_all_months: bool\n+    recompute_baselines: bool\n+    reuse_observations: bool\n+    value_rule_fingerprint: str\n+\n+\n+def _value_rule(indicator: IndicatorDefinition) -> dict[str, object]:\n+    \"\"\"값 또는 사용 가능 구간을 바꾸는 필드만 직렬화한다.\n+\n+    원천 계열 선택에 필요한 org/classification/source_cycle과 계열 시작도 포함한다.\n+    연결 사슬의 coverage_end는 조회 시각마다 달라지는 관찰 기록이므로 제외한다.\n+    \"\"\"\n+    links = [\n+        {key: value for key, value in asdict(link).items() if key != \"coverage_end\"}\n+        for link in indicator.link_chain\n+    ]\n+    return {\n+        \"indicator_id\": indicator.indicator_id,\n+        \"primary_source\": indicator.primary_source,\n+        \"table_code\": indicator.table_code,\n+        \"item_code\": indicator.item_code,\n+        \"org_id\": indicator.org_id,\n+        \"classification\": indicator.classification,\n+        \"source_cycle\": indicator.source_cycle,\n+        \"raw_unit\": indicator.raw_unit,\n+        \"transformed_unit\": indicator.transformed_unit,\n+        \"transform_rule\": indicator.transform_rule,\n+        \"series_start\": indicator.series_start,\n+        \"break_link_rule\": indicator.break_link_rule,\n+        \"link_chain\": links,\n+        \"missing_rule\": indicator.missing_rule,\n+        \"trading_calendar\": indicator.trading_calendar,\n+    }\n+\n+\n+def value_rule_fingerprint(indicators: Sequence[IndicatorDefinition]) -> str:\n+    \"\"\"17개 값 규칙의 순서 독립 SHA-256 지문.\"\"\"\n+    validate(tuple(indicators))\n+    payload = [_value_rule(i) for i in sorted(indicators, key=lambda i: i.indicator_id)]\n+    canonical = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(\",\", \":\"))\n+    return hashlib.sha256(canonical.encode(\"utf-8\")).hexdigest()\n+\n+\n+def plan_change(\n+    current: VersionNumbers,\n+    previous: Sequence[IndicatorDefinition],\n+    proposed: Sequence[IndicatorDefinition],\n+    previous_weights: Mapping[str, Decimal],\n+    proposed_weights: Mapping[str, Decimal],\n+    previous_display: Mapping[str, str],\n+    proposed_display: Mapping[str, str],\n+) -> VersionChange:\n+    \"\"\"변경 종류별로 필요한 버전만 올린다. 이 함수는 DB나 시계열을 바꾸지 않는다.\"\"\"\n+    old_fingerprint = value_rule_fingerprint(previous)\n+    new_fingerprint = value_rule_fingerprint(proposed)\n+    value_changed = old_fingerprint != new_fingerprint\n+    definition_changed = {i.indicator_id: i for i in previous} != {\n+        i.indicator_id: i for i in proposed\n+    }\n+    weights_changed = previous_weights != proposed_weights\n+    calculation_changed = definition_changed or weights_changed\n+    display_changed = previous_display != proposed_display\n+    return VersionChange(\n+        versions=VersionNumbers(\n+            current.display + int(display_changed),\n+            current.calculation + int(calculation_changed),\n+            current.dataset + int(value_changed),\n+        ),\n+        reprocess_all_months=value_changed,\n+        recompute_baselines=calculation_changed,\n+        reuse_observations=calculation_changed and not value_changed,\n+        value_rule_fingerprint=new_fingerprint,\n+    )\n+\n+\n+def register_calculation_version(\n+    engine: Engine,\n+    version_key: str,\n+    change_reason: str,\n+    indicators: tuple[IndicatorDefinition, ...],\n+    weights: Mapping[str, Decimal] | None = None,\n+    weight_policy: str | None = None,\n+) -> int:\n+    \"\"\"17개 정의와 명목 비중을 새 불변 계산 등록표 버전으로 기록한다.\"\"\"\n+    fingerprint = value_rule_fingerprint(indicators)\n+    chosen_weights = dict(weights) if weights is not None else nominal_weights(indicators)\n+    default_weights = nominal_weights(indicators)\n+    if chosen_weights != default_weights and not weight_policy:\n+        raise ValueError(\"기본 명목 비중을 바꾸면 새 가중 정책 설명이 필요하다\")\n+    if set(chosen_weights) != {indicator.indicator_id for indicator in indicators}:\n+        raise ValueError(\"명목 비중은 지표 17개 모두에 정확히 하나씩 있어야 한다\")\n+    if any(weight <= 0 for weight in chosen_weights.values()):\n+        raise ValueError(\"명목 비중은 양수여야 한다\")\n+    weight_expression = (\n+        \"CAST(:weight AS JSONB)\" if engine.dialect.name == \"postgresql\" else \":weight\"\n+    )\n+    classification_expression = (\n+        \"CAST(:classification AS JSONB)\"\n+        if engine.dialect.name == \"postgresql\" else \":classification\"\n+    )\n+    links_expression = (\n+        \"CAST(:link_chain AS JSONB)\"\n+        if engine.dialect.name == \"postgresql\" else \":link_chain\"\n+    )\n+    with engine.begin() as connection:\n+        registry_id = connection.execute(\n+            text(\"INSERT INTO macro_calculation_registry_version \"\n+                 \"(version_key, value_rule_fingerprint, change_reason, \"\n+                 \"nominal_weight_policy, status, created_at) \"\n+                 \"VALUES (:key, :fingerprint, :reason, :policy, 'PUBLISHED', CURRENT_TIMESTAMP) \"\n+                 \"RETURNING id\"),\n+            {\"key\": version_key, \"fingerprint\": fingerprint, \"reason\": change_reason,\n+             \"policy\": weight_policy or NOMINAL_WEIGHT_POLICY},\n+        ).scalar_one()\n+        for indicator in indicators:\n+            connection.execute(\n+                text(\"INSERT INTO macro_indicator_definition \"\n+                     \"(registry_version_id, indicator_id, field_id, primary_source, \"\n+                     \"table_code, item_code, org_id, classification, source_cycle, \"\n+                     \"series_start, link_chain, raw_unit, transformed_unit, transform_rule, \"\n+                     \"release_rule, break_link_rule, missing_rule, agency, attribution, \"\n+                     \"license_status, license_review_status, published_precision, \"\n+                     \"refresh_months_n, nominal_weight, trading_calendar, \"\n+                     \"revision_history_available) VALUES \"\n+                     \"(:registry, :indicator, :field, :source, :table_code, :item_code, \"\n+                     f\":org_id, {classification_expression}, :source_cycle, :series_start, \"\n+                     f\"{links_expression}, :raw_unit, :transformed_unit, :transform_rule, \"\n+                     \":release_rule, \"\n+                     \":break_link_rule, :missing_rule, :agency, :attribution, :license_status, \"\n+                     f\":license_review_status, :precision, :refresh, {weight_expression}, \"\n+                     \":trading_calendar, :revision_history)\"),\n+                {\"registry\": registry_id, \"indicator\": indicator.indicator_id,\n+                 \"field\": indicator.field_id, \"source\": indicator.primary_source,\n+                 \"table_code\": indicator.table_code, \"item_code\": indicator.item_code,\n+                 \"org_id\": indicator.org_id,\n+                 \"classification\": json.dumps(indicator.classification),\n+                 \"source_cycle\": indicator.source_cycle,\n+                 \"series_start\": indicator.series_start,\n+                 \"link_chain\": json.dumps([asdict(link) for link in indicator.link_chain]),\n+                 \"raw_unit\": indicator.raw_unit,\n+                 \"transformed_unit\": indicator.transformed_unit,\n+                 \"transform_rule\": indicator.transform_rule,\n+                 \"release_rule\": indicator.release_rule,\n+                 \"break_link_rule\": indicator.break_link_rule,\n+                 \"missing_rule\": indicator.missing_rule, \"agency\": indicator.agency,\n+                 \"attribution\": indicator.attribution,\n+                 \"license_status\": indicator.license_status,\n+                 \"license_review_status\": indicator.license_review_status,\n+                 \"precision\": indicator.published_precision,\n+                 \"refresh\": indicator.refresh_months_n,\n+                 \"weight\": json.dumps(str(chosen_weights[indicator.indicator_id])),\n+                 \"trading_calendar\": indicator.trading_calendar,\n+                 \"revision_history\": indicator.revision_history_available},\n+            )\n+    return registry_id\n+\n+\n+def register_display_version(\n+    engine: Engine,\n+    version_key: str,\n+    change_reason: str,\n+    fields: Mapping[str, tuple[str, int, str | None]],\n+    indicators: Mapping[str, tuple[str, int]],\n+    registered_indicators: tuple[IndicatorDefinition, ...],\n+) -> int:\n+    \"\"\"분야·지표 표시명/순서만 새 표시 버전으로 기록한다.\"\"\"\n+    validate(registered_indicators)\n+    if set(fields) != set(FIELD_IDS) or set(indicators) != {\n+        indicator.indicator_id for indicator in registered_indicators\n+    }:\n+        raise ValueError(\"표시 버전은 7개 분야와 17개 지표를 모두 담아야 한다\")\n+    if len({field[1] for field in fields.values()}) != len(FIELD_IDS):\n+        raise ValueError(\"분야 표시 순서가 중복된다\")\n+    with engine.begin() as connection:\n+        display_id = connection.execute(\n+            text(\"INSERT INTO macro_display_version \"\n+                 \"(version_key, change_reason, created_at) \"\n+                 \"VALUES (:key, :reason, CURRENT_TIMESTAMP) RETURNING id\"),\n+            {\"key\": version_key, \"reason\": change_reason},\n+        ).scalar_one()\n+        for field_id, (name, order, description) in fields.items():\n+            connection.execute(\n+                text(\"INSERT INTO macro_display_field \"\n+                     \"(display_version_id, field_id, display_name, display_order, description) \"\n+                     \"VALUES (:version, :field, :name, :order, :description)\"),\n+                {\"version\": display_id, \"field\": field_id, \"name\": name,\n+                 \"order\": order, \"description\": description},\n+            )\n+        for indicator_id, (name, order) in indicators.items():\n+            connection.execute(\n+                text(\"INSERT INTO macro_display_indicator \"\n+                     \"(display_version_id, indicator_id, display_name, display_order) \"\n+                     \"VALUES (:version, :indicator, :name, :order)\"),\n+                {\"version\": display_id, \"indicator\": indicator_id,\n+                 \"name\": name, \"order\": order},\n+            )\n+    return display_id\n+\n+\n+def initialize_current_publication(\n+    engine: Engine, registry_version_id: int, display_version_id: int\n+) -> None:\n+    \"\"\"첫 자료 발행 전에도 등록/표시 버전을 조회할 수 있게 빈 포인터를 한 번 만든다.\n+\n+    이미 포인터가 있으면 건드리지 않는다. 호출자의 버전과 다르면 조용히 덮지 않고\n+    거절해 다른 작업이 진행한 버전을 보존한다.\n+    \"\"\"\n+    with engine.begin() as connection:\n+        connection.execute(\n+            text(\"INSERT INTO macro_current_publication \"\n+                 \"(singleton_key, dataset_version_id, registry_version_id, \"\n+                 \"display_version_id, switched_at) VALUES \"\n+                 \"('X', NULL, :registry, :display, CURRENT_TIMESTAMP) \"\n+                 \"ON CONFLICT (singleton_key) DO NOTHING\"),\n+            {\"registry\": registry_version_id, \"display\": display_version_id},\n+        )\n+        pointer = connection.execute(\n+            text(\"SELECT dataset_version_id, registry_version_id, display_version_id \"\n+                 \"FROM macro_current_publication WHERE singleton_key='X'\")\n+        ).one()\n+        if pointer != (None, registry_version_id, display_version_id):\n+            raise ValueError(\"현재 발행 포인터가 이미 다른 버전을 가리킨다\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/versioning.py",
+          "old_path": "data/src/data_pipeline/macro/versioning.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,346 @@\n+\"\"\"파일 봉인/DB 포인터 경계와 밀린 발행의 실패 기록 (T042).\"\"\"\n+\n+from __future__ import annotations\n+\n+import json\n+from concurrent.futures import ThreadPoolExecutor\n+from dataclasses import replace\n+from decimal import Decimal\n+from pathlib import Path\n+from threading import Event\n+\n+import pytest\n+from sqlalchemy import create_engine, text\n+\n+from data_pipeline.macro.normalize import NormalizedObservation\n+from data_pipeline.macro.publish import (\n+    AtomicPublicationRequest,\n+    ConcurrentPublication,\n+    PublicationPointer,\n+    publish_atomically,\n+    switch_calculation_registry,\n+    switch_display_version,\n+)\n+from data_pipeline.macro.registry import INDICATORS, nominal_weights\n+from data_pipeline.macro.versioning import value_rule_fingerprint\n+\n+TEST_INDICATORS = tuple(replace(indicator, series_start=\"2026-07\") for indicator in INDICATORS)\n+\n+\n+def _observations(months: tuple[str, ...] = (\"2026-07\",)) -> dict[str, list[NormalizedObservation]]:\n+    return {\n+        indicator.indicator_id: [\n+            NormalizedObservation(\n+                indicator_id=indicator.indicator_id,\n+                period=month,\n+                transformed_value=Decimal(\"1.25\"),\n+                missing_reason=None,\n+                raw_values=((month, Decimal(\"1.25\")),),\n+                transform_rule=indicator.transform_rule,\n+                raw_unit=indicator.raw_unit,\n+                transformed_unit=indicator.transformed_unit,\n+                source_updated_at=None,\n+            )\n+            for month in months\n+        ]\n+        for indicator in TEST_INDICATORS\n+    }\n+\n+\n+@pytest.fixture\n+def publishing_fixture(tmp_path: Path):\n+    engine = create_engine(f\"sqlite:///{tmp_path / 'macro.db'}\")\n+    statements = (\n+        \"CREATE TABLE macro_calculation_registry_version (id INTEGER PRIMARY KEY, \"\n+        \"value_rule_fingerprint TEXT, status TEXT)\",\n+        \"CREATE TABLE macro_display_version (id INTEGER PRIMARY KEY)\",\n+        \"CREATE TABLE macro_indicator_definition (registry_version_id INTEGER, \"\n+        \"indicator_id TEXT, field_id TEXT, nominal_weight TEXT)\",\n+        \"CREATE TABLE macro_collection_attempt (attempt_key TEXT PRIMARY KEY, mode TEXT, \"\n+        \"started_at TEXT, finished_at TEXT, status TEXT)\",\n+        \"CREATE TABLE macro_dataset_version (id INTEGER PRIMARY KEY AUTOINCREMENT, \"\n+        \"version_key TEXT UNIQUE, processing_registry_version_id INTEGER, \"\n+        \"value_rule_fingerprint TEXT, status TEXT, complete_indicator_count INTEGER, \"\n+        \"is_sample_data INTEGER, raw_manifest_hash TEXT, processed_manifest_hash TEXT, \"\n+        \"published_at TEXT, created_at TEXT)\",\n+        \"CREATE TABLE macro_observation (dataset_version_id INTEGER, indicator_id TEXT, \"\n+        \"target_month TEXT, raw_value TEXT, transformed_value TEXT, released_at TEXT, \"\n+        \"received_at TEXT, break_segment TEXT, missing_reason TEXT)\",\n+        \"CREATE TABLE macro_baseline (dataset_version_id INTEGER, registry_version_id INTEGER, \"\n+        \"scope_id TEXT, reference_month TEXT, reference_month_held_back_by TEXT, computed_at TEXT)\",\n+        \"CREATE TABLE macro_current_publication (singleton_key TEXT PRIMARY KEY, \"\n+        \"dataset_version_id INTEGER, registry_version_id INTEGER, display_version_id INTEGER, \"\n+        \"switched_at TEXT)\",\n+    )\n+    with engine.begin() as connection:\n+        weights = nominal_weights(TEST_INDICATORS)\n+        for statement in statements:\n+            connection.execute(text(statement))\n+        connection.execute(\n+            text(\"INSERT INTO macro_calculation_registry_version VALUES \"\n+                 \"(1, :fingerprint, 'PUBLISHED')\"),\n+            {\"fingerprint\": value_rule_fingerprint(TEST_INDICATORS)},\n+        )\n+        for indicator in TEST_INDICATORS:\n+            connection.execute(\n+                text(\"INSERT INTO macro_indicator_definition VALUES \"\n+                     \"(1, :indicator, :field, :weight)\"),\n+                {\"indicator\": indicator.indicator_id, \"field\": indicator.field_id,\n+                 \"weight\": json.dumps(str(weights[indicator.indicator_id]))},\n+            )\n+        connection.execute(text(\"INSERT INTO macro_display_version VALUES (1)\"))\n+        connection.execute(\n+            text(\"INSERT INTO macro_current_publication VALUES ('X', NULL, 1, 1, '2026-01-01')\")\n+        )\n+    raw = tmp_path / \"raw\" / \"macro\" / \"raw.json\"\n+    processed = tmp_path / \"processed\" / \"macro\" / \"part.parquet\"\n+    raw.parent.mkdir(parents=True)\n+    processed.parent.mkdir(parents=True)\n+    raw.write_bytes(b\"raw source\")\n+    processed.write_bytes(b\"processed parquet\")\n+    request = AtomicPublicationRequest(\n+        version_key=\"macro-1\",\n+        attempt_key=\"attempt-1\",\n+        pointer=PublicationPointer(None, 1, 1),\n+        indicators=TEST_INDICATORS,\n+        observations=_observations(),\n+        raw_files=(raw,),\n+        processed_files=(processed,),\n+        data_root=tmp_path,\n+    )\n+    return engine, request\n+\n+\n+def test_failure_before_pointer_swap_rolls_back_snapshot_and_keeps_unreferenced_manifest(\n+    publishing_fixture,\n+) -> None:\n+    engine, request = publishing_fixture\n+\n+    with pytest.raises(RuntimeError, match=\"injected\"):\n+        publish_atomically(\n+            engine, request,\n+            before_pointer_swap=lambda: (_ for _ in ()).throw(RuntimeError(\"injected\")),\n+        )\n+\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() is None\n+        assert (\n+            connection.execute(text(\"SELECT count(*) FROM macro_dataset_version\")).scalar_one()\n+            == 0\n+        )\n+        assert connection.execute(text(\"SELECT count(*) FROM macro_observation\")).scalar_one() == 0\n+        assert connection.execute(\n+            text(\"SELECT status FROM macro_collection_attempt WHERE attempt_key='attempt-1'\")\n+        ).scalar_one() == \"FAILED\"\n+    assert (request.data_root / \"processed/macro/manifests/macro-1.raw.json\").exists()\n+\n+\n+def test_complete_snapshot_and_all_baselines_are_published_together(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+\n+    dataset_id = publish_atomically(engine, request)\n+\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() == dataset_id\n+        assert connection.execute(text(\"SELECT count(*) FROM macro_observation\")).scalar_one() == 17\n+        assert connection.execute(text(\"SELECT count(*) FROM macro_baseline\")).scalar_one() == 8\n+\n+\n+def test_later_processing_does_not_mutate_published_file(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    publish_atomically(engine, request)\n+    sealed = (\n+        request.data_root / \"processed/macro/versions/macro-1/part.parquet\"\n+    )\n+    request.processed_files[0].write_bytes(b\"new processing\")\n+\n+    assert sealed.read_bytes() == b\"processed parquet\"\n+\n+\n+def test_stale_publisher_loses_and_is_recorded_failed(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    winner_id = publish_atomically(engine, request)\n+    loser = replace(request, version_key=\"macro-2\", attempt_key=\"attempt-2\")\n+\n+    with pytest.raises(ConcurrentPublication):\n+        publish_atomically(engine, loser)\n+\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() == winner_id\n+        assert (\n+            connection.execute(text(\"SELECT count(*) FROM macro_dataset_version\")).scalar_one()\n+            == 1\n+        )\n+        assert connection.execute(\n+            text(\"SELECT status FROM macro_collection_attempt WHERE attempt_key='attempt-2'\")\n+        ).scalar_one() == \"FAILED\"\n+\n+\n+def test_two_parallel_publishers_produce_one_public_version(publishing_fixture) -> None:\n+    engine, first = publishing_fixture\n+    second = replace(first, version_key=\"macro-2\", attempt_key=\"attempt-2\")\n+    start = Event()\n+\n+    def run(request: AtomicPublicationRequest):\n+        start.wait(timeout=5)\n+        try:\n+            return publish_atomically(engine, request)\n+        except ConcurrentPublication as error:\n+            return error\n+\n+    with ThreadPoolExecutor(max_workers=2) as executor:\n+        futures = [executor.submit(run, request) for request in (first, second)]\n+        start.set()\n+        outcomes = [future.result(timeout=15) for future in futures]\n+\n+    assert sum(isinstance(outcome, int) for outcome in outcomes) == 1\n+    assert sum(isinstance(outcome, ConcurrentPublication) for outcome in outcomes) == 1\n+    with engine.connect() as connection:\n+        assert (\n+            connection.execute(text(\"SELECT count(*) FROM macro_dataset_version\")).scalar_one()\n+            == 1\n+        )\n+        statuses = connection.execute(\n+            text(\"SELECT status FROM macro_collection_attempt ORDER BY attempt_key\")\n+        ).scalars().all()\n+        assert sorted(statuses) == [\"FAILED\", \"SUCCEEDED\"]\n+\n+\n+def test_mismatched_fingerprint_never_changes_pointer(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    changed = (replace(request.indicators[0], raw_unit=\"new unit\"), *request.indicators[1:])\n+    mismatch = replace(request, indicators=changed)\n+\n+    with pytest.raises(ValueError, match=\"지문\"):\n+        publish_atomically(engine, mismatch)\n+\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() is None\n+\n+\n+def test_display_switch_only_changes_display_pointer(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    dataset_id = publish_atomically(engine, request)\n+    with engine.begin() as connection:\n+        connection.execute(text(\"INSERT INTO macro_display_version VALUES (2)\"))\n+\n+    switch_display_version(engine, PublicationPointer(dataset_id, 1, 1), 2)\n+\n+    with engine.connect() as connection:\n+        pointer = connection.execute(\n+            text(\"SELECT dataset_version_id, registry_version_id, display_version_id \"\n+                 \"FROM macro_current_publication\")\n+        ).one()\n+        assert pointer == (dataset_id, 1, 2)\n+        assert connection.execute(text(\"SELECT count(*) FROM macro_observation\")).scalar_one() == 17\n+\n+\n+def test_mapping_switch_reuses_observations_and_recomputes_baselines(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    dataset_id = publish_atomically(engine, request)\n+    with engine.begin() as connection:\n+        connection.execute(\n+            text(\"INSERT INTO macro_calculation_registry_version VALUES \"\n+                 \"(2, :fingerprint, 'PUBLISHED')\"),\n+            {\"fingerprint\": value_rule_fingerprint(TEST_INDICATORS)},\n+        )\n+        connection.execute(\n+            text(\"INSERT INTO macro_indicator_definition \"\n+                 \"SELECT 2, indicator_id, field_id, nominal_weight \"\n+                 \"FROM macro_indicator_definition WHERE registry_version_id=1\")\n+        )\n+\n+    switch_calculation_registry(engine, PublicationPointer(dataset_id, 1, 1), 2, TEST_INDICATORS)\n+\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT registry_version_id FROM macro_current_publication\")\n+        ).scalar_one() == 2\n+        assert (\n+            connection.execute(text(\"SELECT count(*) FROM macro_dataset_version\")).scalar_one()\n+            == 1\n+        )\n+        assert connection.execute(text(\"SELECT count(*) FROM macro_observation\")).scalar_one() == 17\n+        assert connection.execute(\n+            text(\"SELECT count(*) FROM macro_baseline WHERE registry_version_id=2\")\n+        ).scalar_one() == 8\n+\n+\n+def test_incomplete_initial_history_is_rejected(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    incomplete = replace(\n+        request,\n+        indicators=tuple(replace(i, series_start=\"2026-06\") for i in request.indicators),\n+    )\n+    with pytest.raises(ValueError, match=\"빠진 월\"):\n+        publish_atomically(engine, incomplete)\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT status FROM macro_collection_attempt WHERE attempt_key='attempt-1'\")\n+        ).scalar_one() == \"FAILED\"\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() is None\n+\n+\n+def test_later_snapshot_cannot_drop_a_previously_published_month(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    first = replace(request, observations=_observations((\"2026-07\", \"2026-08\")))\n+    dataset_id = publish_atomically(engine, first)\n+    second = replace(\n+        request, version_key=\"macro-2\", attempt_key=\"attempt-2\",\n+        pointer=PublicationPointer(dataset_id, 1, 1),\n+    )\n+    with pytest.raises(ValueError, match=\"기존 가용 월\"):\n+        publish_atomically(engine, second)\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() == dataset_id\n+\n+\n+def test_publish_rejects_field_mapping_not_saved_in_registry(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    changed = (\n+        replace(request.indicators[0], field_id=\"overseas\"),\n+        *request.indicators[1:],\n+    )\n+    with pytest.raises(ValueError, match=\"분야·가중\"):\n+        publish_atomically(engine, replace(request, indicators=changed))\n+\n+\n+def test_registry_switch_rejects_weight_mismatch(publishing_fixture) -> None:\n+    engine, request = publishing_fixture\n+    dataset_id = publish_atomically(engine, request)\n+    with engine.begin() as connection:\n+        connection.execute(\n+            text(\"INSERT INTO macro_calculation_registry_version VALUES \"\n+                 \"(2, :fingerprint, 'PUBLISHED')\"),\n+            {\"fingerprint\": value_rule_fingerprint(TEST_INDICATORS)},\n+        )\n+        connection.execute(\n+            text(\"INSERT INTO macro_indicator_definition \"\n+                 \"SELECT 2, indicator_id, field_id, nominal_weight \"\n+                 \"FROM macro_indicator_definition WHERE registry_version_id=1\")\n+        )\n+        connection.execute(\n+            text(\"UPDATE macro_indicator_definition SET nominal_weight=:weight \"\n+                 \"WHERE registry_version_id=2 AND indicator_id=:indicator\"),\n+            {\"weight\": json.dumps(\"0.9\"), \"indicator\": TEST_INDICATORS[0].indicator_id},\n+        )\n+    with pytest.raises(ValueError, match=\"분야·가중\"):\n+        switch_calculation_registry(\n+            engine, PublicationPointer(dataset_id, 1, 1), 2, TEST_INDICATORS\n+        )\n+    with engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT registry_version_id FROM macro_current_publication\")\n+        ).scalar_one() == 1\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish_atomic.py",
+          "old_path": "data/tests/test_macro_publish_atomic.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,198 @@\n+\"\"\"실제 PostgreSQL 제약과 JSONB를 거치는 원자적 발행 통합 테스트.\"\"\"\n+\n+from __future__ import annotations\n+\n+import os\n+import secrets\n+import subprocess\n+import time\n+from dataclasses import replace\n+from datetime import date\n+from decimal import Decimal\n+from pathlib import Path\n+\n+import psycopg\n+import pytest\n+from sqlalchemy import create_engine, text\n+from sqlalchemy.engine import URL\n+from sqlalchemy.exc import OperationalError\n+\n+from data_pipeline.macro.normalize import NormalizedObservation\n+from data_pipeline.macro.publish import (\n+    AtomicPublicationRequest,\n+    PublicationPointer,\n+    publish_atomically,\n+)\n+from data_pipeline.macro.registry import INDICATORS\n+from data_pipeline.macro.versioning import (\n+    initialize_current_publication,\n+    register_calculation_version,\n+)\n+\n+MIGRATIONS = (\n+    \"V20260918120000__macro_registry.sql\",\n+    \"V20260918153100__macro_normalized_missing_reasons.sql\",\n+)\n+\n+\n+def _docker(*arguments: str) -> str:\n+    result = subprocess.run(\n+        [\"docker\", *arguments], capture_output=True, text=True, check=True, timeout=30\n+    )\n+    return result.stdout.strip()\n+\n+\n+def _current_container_network() -> str | None:\n+    \"\"\"Docker 소켓을 공유하는 컨테이너 안이면 현재 컨테이너의 네트워크를 돌려준다.\"\"\"\n+    if not Path(\"/.dockerenv\").exists():\n+        return None\n+    hostname = os.getenv(\"HOSTNAME\")\n+    if not hostname:\n+        return None\n+    try:\n+        networks = _docker(\n+            \"inspect\",\n+            \"--format\",\n+            \"{{range $name, $_ := .NetworkSettings.Networks}}{{$name}}{{println}}{{end}}\",\n+            hostname,\n+        ).splitlines()\n+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n+        return None\n+    return networks[0] if networks else None\n+\n+\n+@pytest.fixture\n+def postgres_engine():\n+    required = os.getenv(\"THORP_REQUIRE_DOCKER\", \"\").lower() == \"true\"\n+    try:\n+        _docker(\"info\", \"--format\", \"{{.ServerVersion}}\")\n+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n+        if required:\n+            pytest.fail(\"THORP_REQUIRE_DOCKER=true인데 Docker 엔진에 접속할 수 없다\")\n+        pytest.skip(\"PostgreSQL 통합 테스트용 Docker 엔진이 없다\")\n+\n+    name = f\"macro-publish-test-{secrets.token_hex(5)}\"\n+    password = secrets.token_urlsafe(24)\n+    network = _current_container_network()\n+    try:\n+        run_arguments = [\"run\", \"-d\", \"--rm\", \"--name\", name]\n+        if network:\n+            run_arguments.extend((\"--network\", network))\n+            host = name\n+            port = 5432\n+        else:\n+            run_arguments.extend((\"-p\", \"127.0.0.1::5432\"))\n+            host = \"127.0.0.1\"\n+        run_arguments.extend(\n+            (\n+                \"-e\",\n+                f\"POSTGRES_PASSWORD={password}\",\n+                \"-e\",\n+                \"POSTGRES_DB=macro_test\",\n+                \"postgres:16-alpine\",\n+            )\n+        )\n+        _docker(*run_arguments)\n+        if not network:\n+            port = int(_docker(\"port\", name, \"5432/tcp\").rsplit(\":\", 1)[1])\n+        url = URL.create(\n+            \"postgresql+psycopg\", username=\"postgres\", password=password,\n+            host=host, port=port, database=\"macro_test\",\n+        )\n+        engine = create_engine(url)\n+        deadline = time.monotonic() + 45\n+        while True:\n+            try:\n+                with engine.connect():\n+                    break\n+            except OperationalError:\n+                if time.monotonic() >= deadline:\n+                    raise\n+                time.sleep(0.25)\n+        migration_dir = Path(__file__).resolve().parents[2] / \"backend\" / \"src\" / \"main\" \\\n+            / \"resources\" / \"db\" / \"migration\"\n+        with psycopg.connect(\n+            host=host, port=port, dbname=\"macro_test\",\n+            user=\"postgres\", password=password,\n+        ) as connection:\n+            for migration in MIGRATIONS:\n+                connection.execute((migration_dir / migration).read_text(encoding=\"utf-8\"))\n+        yield engine\n+    finally:\n+        if \"engine\" in locals():\n+            engine.dispose()\n+        try:\n+            _docker(\"stop\", name)\n+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):\n+            pass\n+\n+\n+def test_atomic_publish_against_postgresql(postgres_engine, tmp_path: Path) -> None:\n+    indicators = tuple(replace(indicator, series_start=\"2026-07\") for indicator in INDICATORS)\n+    registry_id = register_calculation_version(\n+        postgres_engine, \"calc-1\", \"integration test\", indicators\n+    )\n+    with postgres_engine.begin() as connection:\n+        display_id = connection.execute(\n+            text(\"INSERT INTO macro_display_version \"\n+                 \"(version_key, change_reason, created_at) \"\n+                 \"VALUES ('display-1', 'integration test', CURRENT_TIMESTAMP) RETURNING id\")\n+        ).scalar_one()\n+    initialize_current_publication(postgres_engine, registry_id, display_id)\n+    raw = tmp_path / \"raw\" / \"macro\" / \"source.json\"\n+    processed = tmp_path / \"processed\" / \"macro\" / \"part.parquet\"\n+    raw.parent.mkdir(parents=True)\n+    processed.parent.mkdir(parents=True)\n+    raw.write_bytes(b\"raw\")\n+    processed.write_bytes(b\"processed\")\n+    observations = {\n+        indicator.indicator_id: [\n+            NormalizedObservation(\n+                indicator_id=indicator.indicator_id, period=\"2026-07\",\n+                transformed_value=Decimal(\"1.25\"), missing_reason=None,\n+                raw_values=((\"2026-07\", Decimal(\"1.25\")),),\n+                transform_rule=indicator.transform_rule, raw_unit=indicator.raw_unit,\n+                transformed_unit=indicator.transformed_unit, source_updated_at=None,\n+            )\n+        ]\n+        for indicator in indicators\n+    }\n+    request = AtomicPublicationRequest(\n+        version_key=\"dataset-1\", attempt_key=\"attempt-1\",\n+        pointer=PublicationPointer(None, registry_id, display_id),\n+        indicators=indicators, observations=observations,\n+        raw_files=(raw,), processed_files=(processed,), data_root=tmp_path,\n+    )\n+    dataset_id = publish_atomically(postgres_engine, request)\n+    with postgres_engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() == dataset_id\n+        assert connection.execute(\n+            text(\"SELECT count(*) FROM macro_observation WHERE dataset_version_id=:id\"),\n+            {\"id\": dataset_id},\n+        ).scalar_one() == 17\n+        assert connection.execute(\n+            text(\"SELECT count(*) FROM macro_baseline WHERE dataset_version_id=:id\"),\n+            {\"id\": dataset_id},\n+        ).scalar_one() == 8\n+        assert connection.execute(\n+            text(\"SELECT reference_month FROM macro_baseline \"\n+                 \"WHERE dataset_version_id=:id AND scope_id='ALL'\"),\n+            {\"id\": dataset_id},\n+        ).scalar_one() == date(2026, 7, 1)\n+\n+    incomplete = replace(\n+        request, version_key=\"dataset-2\", attempt_key=\"attempt-2\",\n+        pointer=PublicationPointer(dataset_id, registry_id, display_id),\n+        indicators=tuple(replace(i, series_start=\"2026-06\") for i in indicators),\n+    )\n+    with pytest.raises(ValueError, match=\"빠진 월\"):\n+        publish_atomically(postgres_engine, incomplete)\n+    with postgres_engine.connect() as connection:\n+        assert connection.execute(\n+            text(\"SELECT dataset_version_id FROM macro_current_publication\")\n+        ).scalar_one() == dataset_id\n+        assert connection.execute(\n+            text(\"SELECT status FROM macro_collection_attempt WHERE attempt_key='attempt-2'\")\n+        ).scalar_one() == \"FAILED\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish_postgres.py",
+          "old_path": "data/tests/test_macro_publish_postgres.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,159 @@\n+\"\"\"세 버전의 독립성과 값 규칙 지문 (T036·T037·T041).\"\"\"\n+\n+from dataclasses import replace\n+from decimal import Decimal\n+\n+from sqlalchemy import create_engine, text\n+\n+from data_pipeline.macro.registry import (\n+    FIELD_IDS,\n+    INDICATORS,\n+    NOMINAL_WEIGHT_POLICY,\n+    nominal_weights,\n+)\n+from data_pipeline.macro.versioning import (\n+    VersionNumbers,\n+    initialize_current_publication,\n+    plan_change,\n+    register_calculation_version,\n+    register_display_version,\n+    value_rule_fingerprint,\n+)\n+\n+\n+def test_display_only_changes_display_version() -> None:\n+    before = VersionNumbers(1, 1, 1)\n+    change = plan_change(\n+        before,\n+        INDICATORS,\n+        INDICATORS,\n+        nominal_weights(),\n+        nominal_weights(),\n+        {\"production\": \"생산\"},\n+        {\"production\": \"산업 생산\"},\n+    )\n+\n+    assert change.versions == VersionNumbers(2, 1, 1)\n+    assert not change.reprocess_all_months\n+    assert not change.recompute_baselines\n+\n+\n+def test_mapping_or_weight_changes_only_calculation_registry() -> None:\n+    before = VersionNumbers(1, 1, 1)\n+    weights = nominal_weights()\n+    changed = dict(weights)\n+    changed[INDICATORS[0].indicator_id] += Decimal(\"0.01\")\n+    change = plan_change(before, INDICATORS, INDICATORS, weights, changed, {}, {})\n+\n+    assert change.versions == VersionNumbers(1, 2, 1)\n+    assert not change.reprocess_all_months\n+    assert change.recompute_baselines\n+    assert change.reuse_observations\n+\n+\n+def test_field_mapping_change_keeps_dataset_version() -> None:\n+    moved = (replace(INDICATORS[0], field_id=\"labor\"), *INDICATORS[1:])\n+\n+    change = plan_change(\n+        VersionNumbers(1, 1, 1), INDICATORS, moved,\n+        nominal_weights(), nominal_weights(moved), {}, {},\n+    )\n+\n+    assert change.versions == VersionNumbers(1, 2, 1)\n+    assert change.reuse_observations\n+\n+\n+def test_value_rule_change_requires_full_reprocessing() -> None:\n+    changed = (replace(INDICATORS[0], raw_unit=\"새 단위\"), *INDICATORS[1:])\n+    change = plan_change(\n+        VersionNumbers(1, 1, 1), INDICATORS, changed, nominal_weights(), nominal_weights(), {}, {}\n+    )\n+\n+    assert change.versions == VersionNumbers(1, 2, 2)\n+    assert change.reprocess_all_months\n+    assert not change.reuse_observations\n+\n+\n+def test_fingerprint_is_order_independent_but_includes_source_selection() -> None:\n+    original = value_rule_fingerprint(INDICATORS)\n+\n+    assert value_rule_fingerprint(tuple(reversed(INDICATORS))) == original\n+    changed = (replace(INDICATORS[0], item_code=\"new_item\"), *INDICATORS[1:])\n+    assert value_rule_fingerprint(changed) != original\n+\n+\n+def test_metadata_change_does_not_change_value_fingerprint() -> None:\n+    changed = (replace(INDICATORS[0], agency=\"표시용 기관명\"), *INDICATORS[1:])\n+\n+    assert value_rule_fingerprint(changed) == value_rule_fingerprint(INDICATORS)\n+    plan = plan_change(\n+        VersionNumbers(1, 1, 1), INDICATORS, changed,\n+        nominal_weights(), nominal_weights(), {}, {},\n+    )\n+    assert plan.versions == VersionNumbers(1, 2, 1)\n+    assert not plan.reprocess_all_months\n+\n+\n+def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:\n+    engine = create_engine(f\"sqlite:///{tmp_path / 'versions.db'}\")\n+    with engine.begin() as connection:\n+        connection.execute(text(\n+            \"CREATE TABLE macro_calculation_registry_version \"\n+            \"(id INTEGER PRIMARY KEY AUTOINCREMENT, \"\n+            \"version_key TEXT, value_rule_fingerprint TEXT, change_reason TEXT, \"\n+            \"nominal_weight_policy TEXT, status TEXT, created_at TEXT)\"\n+        ))\n+        connection.execute(text(\n+            \"CREATE TABLE macro_indicator_definition (registry_version_id INTEGER, \"\n+            \"indicator_id TEXT, field_id TEXT, primary_source TEXT, table_code TEXT, \"\n+            \"item_code TEXT, org_id TEXT, classification TEXT, source_cycle TEXT, \"\n+            \"series_start TEXT, link_chain TEXT, raw_unit TEXT, transformed_unit TEXT, \"\n+            \"transform_rule TEXT, \"\n+            \"release_rule TEXT, break_link_rule TEXT, missing_rule TEXT, agency TEXT, \"\n+            \"attribution TEXT, license_status TEXT, license_review_status TEXT, \"\n+            \"published_precision INTEGER, refresh_months_n INTEGER, nominal_weight TEXT, \"\n+            \"trading_calendar TEXT, revision_history_available INTEGER)\"\n+        ))\n+        connection.execute(text(\n+            \"CREATE TABLE macro_display_version (id INTEGER PRIMARY KEY AUTOINCREMENT, \"\n+            \"version_key TEXT, change_reason TEXT, created_at TEXT)\"\n+        ))\n+        connection.execute(text(\n+            \"CREATE TABLE macro_display_field (display_version_id INTEGER, field_id TEXT, \"\n+            \"display_name TEXT, display_order INTEGER, description TEXT)\"\n+        ))\n+        connection.execute(text(\n+            \"CREATE TABLE macro_display_indicator (display_version_id INTEGER, \"\n+            \"indicator_id TEXT, display_name TEXT, display_order INTEGER)\"\n+        ))\n+        connection.execute(text(\n+            \"CREATE TABLE macro_current_publication (singleton_key TEXT PRIMARY KEY, \"\n+            \"dataset_version_id INTEGER, registry_version_id INTEGER, \"\n+            \"display_version_id INTEGER, switched_at TEXT)\"\n+        ))\n+\n+    registry_id = register_calculation_version(engine, \"CALC-1\", \"initial\", INDICATORS)\n+    fields = {field_id: (field_id, order, None) for order, field_id in enumerate(FIELD_IDS)}\n+    indicator_names = {\n+        indicator.indicator_id: (indicator.indicator_id, order)\n+        for order, indicator in enumerate(INDICATORS)\n+    }\n+    display_id = register_display_version(\n+        engine, \"DISPLAY-1\", \"initial\", fields, indicator_names, INDICATORS\n+    )\n+    initialize_current_publication(engine, registry_id, display_id)\n+    initialize_current_publication(engine, registry_id, display_id)\n+\n+    with engine.connect() as connection:\n+        assert connection.execute(text(\n+            \"SELECT nominal_weight_policy FROM macro_calculation_registry_version WHERE id=:id\"\n+        ), {\"id\": registry_id}).scalar_one() == NOMINAL_WEIGHT_POLICY\n+        assert connection.execute(text(\n+            \"SELECT count(*) FROM macro_indicator_definition WHERE registry_version_id=:id\"\n+        ), {\"id\": registry_id}).scalar_one() == 17\n+        assert connection.execute(text(\n+            \"SELECT count(*) FROM macro_display_field WHERE display_version_id=:id\"\n+        ), {\"id\": display_id}).scalar_one() == 7\n+        assert connection.execute(text(\n+            \"SELECT count(*) FROM macro_current_publication\"\n+        )).scalar_one() == 1\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_versioning.py",
+          "old_path": "data/tests/test_macro_versioning.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -124,14 +124,14 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **Independent Test**: 화면 분야 이름을 바꾼 뒤 계산 등록표와 자료 버전이 그대로인지, 변환 규칙을 바꾸면 새 자료 버전이 생기고 이전 검색 결과의 참조 버전은 유지되는지 확인한다\n \n-- [ ] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)\n-- [ ] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)\n-- [ ] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)\n-- [ ] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)\n-- [ ] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)\n-- [ ] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)\n-- [ ] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다\n-- [ ] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)\n+- [X] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)\n+- [X] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)\n+- [X] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)\n+- [X] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)\n+- [X] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)\n+- [X] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)\n+- [X] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다\n+- [X] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)\n \n **Checkpoint**: 버전이 독립적으로 움직이고 같은 조합이면 같은 결과가 나온다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2224779,
+      "head_commit_sha": "3fe2c7b962316a404a776583e0daad22f7ab2142",
+      "base_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "start_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+      "created_at": "2026-09-19T11:01:38.824+09:00",
+      "merge_request_id": 951908,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "44506a628318c45b3a10af60730820dc7dad2f68",
+      "commits": [
+        {
+          "id": "3fe2c7b962316a404a776583e0daad22f7ab2142",
+          "short_id": "3fe2c7b9",
+          "created_at": "2026-09-19T11:01:36.000+09:00",
+          "parent_ids": [
+            "89d17e99f77444ce413f03444a76c88dd1e045a8",
+            "3791e73d0e06992238f2c9df6d92262246bf69f1"
+          ],
+          "title": "chore(de): dev 병합 충돌 해결",
+          "message": "chore(de): dev 병합 충돌 해결\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-19T11:01:36.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-19T11:01:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3fe2c7b962316a404a776583e0daad22f7ab2142"
+        },
+        {
+          "id": "89d17e99f77444ce413f03444a76c88dd1e045a8",
+          "short_id": "89d17e99",
+          "created_at": "2026-09-18T17:52:10.000+09:00",
+          "parent_ids": [
+            "80bf1f8612f5826b90f31dee142cd4940b8b7447"
+          ],
+          "title": "feat(de): 경제지표 버전 분리와 원자적 발행 구현",
+          "message": "feat(de): 경제지표 버전 분리와 원자적 발행 구현\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T17:52:10.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T17:52:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89d17e99f77444ce413f03444a76c88dd1e045a8"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2223918,
+      "head_commit_sha": "89d17e99f77444ce413f03444a76c88dd1e045a8",
+      "base_commit_sha": "80bf1f8612f5826b90f31dee142cd4940b8b7447",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:55:48.888+09:00",
+      "merge_request_id": 951908,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "9924e5e678c73434d0355a27fd6d233eff170df5",
+      "commits": [
+        {
+          "id": "89d17e99f77444ce413f03444a76c88dd1e045a8",
+          "short_id": "89d17e99",
+          "created_at": "2026-09-18T17:52:10.000+09:00",
+          "parent_ids": [
+            "80bf1f8612f5826b90f31dee142cd4940b8b7447"
+          ],
+          "title": "feat(de): 경제지표 버전 분리와 원자적 발행 구현",
+          "message": "feat(de): 경제지표 버전 분리와 원자적 발행 구현\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T17:52:10.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T17:52:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89d17e99f77444ce413f03444a76c88dd1e045a8"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2837074": []
+  }
+}

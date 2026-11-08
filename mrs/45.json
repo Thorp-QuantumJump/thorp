@@ -1,0 +1,641 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 940504,
+    "iid": 45,
+    "project_id": 1444456,
+    "title": "chore(infra): backtest.jobs quorum 전환 스크립트·가이드와 워커 실행 환경 (T002)",
+    "description": "# 작업 내용 요약\n\nspec 004 T002입니다. 계약 v2(T001, MR 41)가 `backtest.jobs`를 quorum 큐로 선언하게 바뀌었는데, 기존 classic 큐가 남은 환경(개발 PC의 `rabbitmq-data` 볼륨, 운영 브로커)에서는 재선언이 실패합니다. 그 전환 절차를 스크립트와 가이드로 만들고, 배포 스크립트가 배포 전에 큐 타입을 검사하도록 했습니다. 워커 실행 환경(결정성 스레드 수, 시장 자료 읽기 전용 접속, replica = 동시 실행 상한)도 compose에 반영했습니다. 코드 변경은 없습니다.\n\n# 관련 이슈\n- close #129\n- 선행: S15P21E205-128(계약 v2), S15P21E205-167(plan 개정 — 전환 전제조건·동시 실행 상한 결정)\n\n# 주요 변경 사항\n\n- **`infra/scripts/migrate-jobs-queue.sh`(신규)**: 큐 상태 확인 → 접수 중단(backend·worker 정지) → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → 삭제 → 백엔드 기동으로 quorum 재선언 → 60초 안 `type=quorum` 확인 → 워커 기동. 어느 단계든 실패하면 되돌리는 방법을 출력합니다. 큐가 없거나 이미 quorum이면 아무것도 하지 않습니다. `--dev`는 레포 루트 compose를 쓰고 컨테이너는 사람이 내립니다(bootRun 병행 때문).\n- **`infra/scripts/deploy.sh`**: `[0/4]` 단계 추가. RabbitMQ가 떠 있고 `backtest.jobs`가 classic이면 배포를 멈추고 전환 스크립트를 안내합니다. plan 리뷰가 지적한 \"선언 변경(T001)과 전환 실행이 다른 시점\" 문제를 배포 시점에 강제로 잡습니다.\n- **`docs/guides/backtest-queue-migration.md`(신규)**: 왜 필요한지, 전제조건 표(미ACK만 보면 안 되는 이유), 운영·개발 절차, 되돌리기, 워커 실행 환경 표, 장애 시나리오 S6 절차와 실측 기록 자리(T013에서 채움).\n- **`docker-compose.dev.yml` 워커**: `NUMBA/OMP/OPENBLAS/MKL_NUM_THREADS=1`(R-14, 운영과 동일), `MARKET_DATA_URL`(R-09, T004가 읽음), replicas 3 → 2(동시 실행 상한 = replica × prefetch, R-19. S6과 운영도 2).\n- **`infra/docker-compose.prod.yml`·`.env.prod.example`**: `MARKET_DATA_URL`(`MARKET_DATA_USER/PASSWORD`, 비우면 일반 계정으로 내려감. 읽기 전용 role은 T003이 만듦), `WORKER_REPLICAS`에 동시 실행 상한 주석.\n- **`README.md`**: 개발 실행 절차 1단계에 기존 볼륨 전환 안내 한 줄.\n- **`specs/004-backtest-execution/tasks.md`**: T002 완료 표시. 장애 시나리오 실측은 T013 검증 기록으로 이관(절차는 가이드에).\n\n# 테스트\n\n- [x] `bash -n`으로 두 스크립트 구문 검사\n- [x] `docker compose -f docker-compose.dev.yml config -q` 통과(운영 compose는 `.env.prod` 값이 필요해 미실행)\n- [ ] 리뷰어(Docker 데몬 있는 환경): 기존 볼륨에서 `migrate-jobs-queue.sh --dev` 실행 뒤 백엔드 기동 → `list_queues name type arguments`에 quorum·`x-delivery-limit=1`\n- [ ] 리뷰어: `ready≠0`인 상태에서 스크립트가 삭제하지 않고 중단하는지\n\n# 리뷰 반영 (9492518 이후 커밋)\n\n지적 2건 모두 운영 전환을 막거나 결과를 잃게 하는 실제 문제였습니다. 전환 순서를 다시 짰습니다.\n\n- **v1 이미지로 되살아나는 문제(1번)**: `deploy.sh`가 빌드 전에 멈추므로 전환 스크립트의 `up -d backend`가 예전 v1 이미지를 띄워 classic 큐를 그대로 되살렸습니다(그리고 다음 배포에서 또 막혀 무한 반복). 스크립트가 **내리기 전에 `build backend worker`를 먼저** 하도록 2단계를 추가했고, 마지막에 워커까지 v2로 올립니다. 되돌리기 문구도 \"이전 이미지로 `up -d`\"에서 \"이전 버전으로 체크아웃해 다시 빌드\"로 고쳤습니다. v1 이미지가 남아 있지 않을 수 있습니다.\n- **v1 결과 이벤트 유실(2번)**: 가이드가 \"백엔드가 내려가 있어도 이벤트는 쌓이고 나중에 처리된다\"고 썼는데, 올라오는 백엔드는 v2라 v1 이벤트를 계약 오류로 거절해 DLQ로 보냅니다. 결과가 저장되지 않습니다. **백엔드를 내리지 않고 nginx만 멈춰 신규 접수를 막고**, `backtest.jobs`와 `backtest.events`가 **모두 0**이 될 때까지 v1 백엔드·워커가 처리하도록 드레인 단계를 넣었습니다(10초 간격, 기본 상한 30분, `DRAIN_TIMEOUT_SECONDS`로 조절). 전제조건 표에 이벤트 큐 행과 이미지 행을 추가했고, 기록을 버리는 선택지는 \"보존된다고 안내하지 않는다\"로 명시했습니다.\n\n바뀐 순서는 다음과 같습니다.\n\n```\n1 큐 확인 → 2 v2 이미지 빌드(서비스 유지) → 3 nginx 정지(접수 차단)\n→ 4 jobs·events 드레인 → 5 정지·삭제·v2 백엔드 기동·quorum 확인 → 6 v2 워커·nginx 기동\n```\n\n점검 시간은 진행 중인 가장 긴 백테스트 하나만큼입니다. 드레인이 시간을 넘기면 nginx를 되돌리고 중단합니다.\n\n# 리뷰 포인트\n\n- **`deploy.sh`의 검사가 배포를 멈춥니다.** 운영 첫 배포 때 한 번은 반드시 걸립니다. 의도된 동작이고, 스크립트를 한 번 실행하면 다음 배포부터는 통과합니다.\n- **dev replica 3 → 2.** \"분산 처리 실험\" 주석이 붙어 있던 값입니다. quickstart S6과 운영이 2를 전제로 하고, R-19가 replica 수를 동시 실행 상한으로 정했으므로 맞췄습니다. 실험이 필요하면 로컬에서 올려 쓰면 됩니다.\n- **`MARKET_DATA_URL`을 지금 넣은 이유.** 아직 읽는 코드가 없습니다(T004). tasks T002가 R-09 환경 반영을 이 Task에 배정했고, 운영에서는 읽기 전용 계정을 `.env.prod`에 준비하는 데 시간이 걸려 먼저 열어 두었습니다. 값이 비면 일반 계정으로 내려가므로 지금 배포해도 영향이 없습니다.\n- **T002의 나머지(실측)**. Task는 \"1 Task = 1 MR\"인데 원래 T002가 두 시점으로 나뉘어 있었습니다. 실측 기록은 어차피 T013(quickstart 전체 실행 기록)에 포함되므로 그쪽으로 옮기고 T002는 완료로 표시했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-11T10:43:36.035+09:00",
+    "updated_at": "2026-09-14T14:32:56.358+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-11T10:49:38.760+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/129-quorum-queue-migration",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b5f7a1f5d7efb75efd6093e7878c1a89d94c738c",
+    "merge_commit_sha": "c0e61249ba8115fb1b0eae852ded55e31c1390a1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T10:43:43.970+09:00",
+    "reference": "!45",
+    "references": {
+      "short": "!45",
+      "relative": "!45",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!45"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/45",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 940504,
+    "iid": 45,
+    "project_id": 1444456,
+    "title": "chore(infra): backtest.jobs quorum 전환 스크립트·가이드와 워커 실행 환경 (T002)",
+    "description": "# 작업 내용 요약\n\nspec 004 T002입니다. 계약 v2(T001, MR 41)가 `backtest.jobs`를 quorum 큐로 선언하게 바뀌었는데, 기존 classic 큐가 남은 환경(개발 PC의 `rabbitmq-data` 볼륨, 운영 브로커)에서는 재선언이 실패합니다. 그 전환 절차를 스크립트와 가이드로 만들고, 배포 스크립트가 배포 전에 큐 타입을 검사하도록 했습니다. 워커 실행 환경(결정성 스레드 수, 시장 자료 읽기 전용 접속, replica = 동시 실행 상한)도 compose에 반영했습니다. 코드 변경은 없습니다.\n\n# 관련 이슈\n- close #129\n- 선행: S15P21E205-128(계약 v2), S15P21E205-167(plan 개정 — 전환 전제조건·동시 실행 상한 결정)\n\n# 주요 변경 사항\n\n- **`infra/scripts/migrate-jobs-queue.sh`(신규)**: 큐 상태 확인 → 접수 중단(backend·worker 정지) → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → 삭제 → 백엔드 기동으로 quorum 재선언 → 60초 안 `type=quorum` 확인 → 워커 기동. 어느 단계든 실패하면 되돌리는 방법을 출력합니다. 큐가 없거나 이미 quorum이면 아무것도 하지 않습니다. `--dev`는 레포 루트 compose를 쓰고 컨테이너는 사람이 내립니다(bootRun 병행 때문).\n- **`infra/scripts/deploy.sh`**: `[0/4]` 단계 추가. RabbitMQ가 떠 있고 `backtest.jobs`가 classic이면 배포를 멈추고 전환 스크립트를 안내합니다. plan 리뷰가 지적한 \"선언 변경(T001)과 전환 실행이 다른 시점\" 문제를 배포 시점에 강제로 잡습니다.\n- **`docs/guides/backtest-queue-migration.md`(신규)**: 왜 필요한지, 전제조건 표(미ACK만 보면 안 되는 이유), 운영·개발 절차, 되돌리기, 워커 실행 환경 표, 장애 시나리오 S6 절차와 실측 기록 자리(T013에서 채움).\n- **`docker-compose.dev.yml` 워커**: `NUMBA/OMP/OPENBLAS/MKL_NUM_THREADS=1`(R-14, 운영과 동일), `MARKET_DATA_URL`(R-09, T004가 읽음), replicas 3 → 2(동시 실행 상한 = replica × prefetch, R-19. S6과 운영도 2).\n- **`infra/docker-compose.prod.yml`·`.env.prod.example`**: `MARKET_DATA_URL`(`MARKET_DATA_USER/PASSWORD`, 비우면 일반 계정으로 내려감. 읽기 전용 role은 T003이 만듦), `WORKER_REPLICAS`에 동시 실행 상한 주석.\n- **`README.md`**: 개발 실행 절차 1단계에 기존 볼륨 전환 안내 한 줄.\n- **`specs/004-backtest-execution/tasks.md`**: T002 완료 표시. 장애 시나리오 실측은 T013 검증 기록으로 이관(절차는 가이드에).\n\n# 테스트\n\n- [x] `bash -n`으로 두 스크립트 구문 검사\n- [x] `docker compose -f docker-compose.dev.yml config -q` 통과(운영 compose는 `.env.prod` 값이 필요해 미실행)\n- [ ] 리뷰어(Docker 데몬 있는 환경): 기존 볼륨에서 `migrate-jobs-queue.sh --dev` 실행 뒤 백엔드 기동 → `list_queues name type arguments`에 quorum·`x-delivery-limit=1`\n- [ ] 리뷰어: `ready≠0`인 상태에서 스크립트가 삭제하지 않고 중단하는지\n\n# 리뷰 반영 (9492518 이후 커밋)\n\n지적 2건 모두 운영 전환을 막거나 결과를 잃게 하는 실제 문제였습니다. 전환 순서를 다시 짰습니다.\n\n- **v1 이미지로 되살아나는 문제(1번)**: `deploy.sh`가 빌드 전에 멈추므로 전환 스크립트의 `up -d backend`가 예전 v1 이미지를 띄워 classic 큐를 그대로 되살렸습니다(그리고 다음 배포에서 또 막혀 무한 반복). 스크립트가 **내리기 전에 `build backend worker`를 먼저** 하도록 2단계를 추가했고, 마지막에 워커까지 v2로 올립니다. 되돌리기 문구도 \"이전 이미지로 `up -d`\"에서 \"이전 버전으로 체크아웃해 다시 빌드\"로 고쳤습니다. v1 이미지가 남아 있지 않을 수 있습니다.\n- **v1 결과 이벤트 유실(2번)**: 가이드가 \"백엔드가 내려가 있어도 이벤트는 쌓이고 나중에 처리된다\"고 썼는데, 올라오는 백엔드는 v2라 v1 이벤트를 계약 오류로 거절해 DLQ로 보냅니다. 결과가 저장되지 않습니다. **백엔드를 내리지 않고 nginx만 멈춰 신규 접수를 막고**, `backtest.jobs`와 `backtest.events`가 **모두 0**이 될 때까지 v1 백엔드·워커가 처리하도록 드레인 단계를 넣었습니다(10초 간격, 기본 상한 30분, `DRAIN_TIMEOUT_SECONDS`로 조절). 전제조건 표에 이벤트 큐 행과 이미지 행을 추가했고, 기록을 버리는 선택지는 \"보존된다고 안내하지 않는다\"로 명시했습니다.\n\n바뀐 순서는 다음과 같습니다.\n\n```\n1 큐 확인 → 2 v2 이미지 빌드(서비스 유지) → 3 nginx 정지(접수 차단)\n→ 4 jobs·events 드레인 → 5 정지·삭제·v2 백엔드 기동·quorum 확인 → 6 v2 워커·nginx 기동\n```\n\n점검 시간은 진행 중인 가장 긴 백테스트 하나만큼입니다. 드레인이 시간을 넘기면 nginx를 되돌리고 중단합니다.\n\n# 리뷰 포인트\n\n- **`deploy.sh`의 검사가 배포를 멈춥니다.** 운영 첫 배포 때 한 번은 반드시 걸립니다. 의도된 동작이고, 스크립트를 한 번 실행하면 다음 배포부터는 통과합니다.\n- **dev replica 3 → 2.** \"분산 처리 실험\" 주석이 붙어 있던 값입니다. quickstart S6과 운영이 2를 전제로 하고, R-19가 replica 수를 동시 실행 상한으로 정했으므로 맞췄습니다. 실험이 필요하면 로컬에서 올려 쓰면 됩니다.\n- **`MARKET_DATA_URL`을 지금 넣은 이유.** 아직 읽는 코드가 없습니다(T004). tasks T002가 R-09 환경 반영을 이 Task에 배정했고, 운영에서는 읽기 전용 계정을 `.env.prod`에 준비하는 데 시간이 걸려 먼저 열어 두었습니다. 값이 비면 일반 계정으로 내려가므로 지금 배포해도 영향이 없습니다.\n- **T002의 나머지(실측)**. Task는 \"1 Task = 1 MR\"인데 원래 T002가 두 시점으로 나뉘어 있었습니다. 실측 기록은 어차피 T013(quickstart 전체 실행 기록)에 포함되므로 그쪽으로 옮기고 T002는 완료로 표시했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-11T10:43:36.035+09:00",
+    "updated_at": "2026-09-14T14:32:56.358+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-11T10:49:38.760+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/129-quorum-queue-migration",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b5f7a1f5d7efb75efd6093e7878c1a89d94c738c",
+    "merge_commit_sha": "c0e61249ba8115fb1b0eae852ded55e31c1390a1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T10:43:43.970+09:00",
+    "reference": "!45",
+    "references": {
+      "short": "!45",
+      "relative": "!45",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!45"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/45",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6",
+      "head_sha": "b5f7a1f5d7efb75efd6093e7878c1a89d94c738c",
+      "start_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5a8c44c9b78ea925d484b222e28650ef57babc6c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2791078,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T10:43:36.252+09:00",
+          "updated_at": "2026-09-11T10:43:36.261+09:00",
+          "system": true,
+          "noteable_id": 940504,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 45,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b7c053a3ef3d4568613b11fc558c7815b6ec67bb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2791079,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 예외 상황 분석 및 반영**: `migrate-jobs-queue.sh`와 가이드 문서에서 단순히 작업 큐(`backtest.jobs`)뿐만 아니라, 결과 이벤트 큐(`backtest.events`)까지 드레인(Drain)해야 하는 이유를 정확히 파악하고 반영했습니다. v1 이벤트가 v2 백엔드에 의해 DLQ로 유실되는 문제를 방지한 설계가 매우 훌륭합니다.\n- **배포 자동화와 가이드의 일관성**: `deploy.sh`에서 RabbitMQ 큐 타입을 선제적으로 검사하여 운영 환경에서 발생할 수 있는 `PRECONDITION_FAILED` 장애를 원천 차단하고 가이드와 연결한 점이 인상적입니다.\n\n### 발견 사항\n- [Low] `infra/scripts/migrate-jobs-queue.sh`: `DEV=true`일 때 실행하는 `$COMPOSE` 변수가 `docker compose -f ../docker-compose.dev.yml --profile app`로 설정되어 있습니다. 스크립트 실행 위치가 `infra/` 디렉터리 내부이므로 경로(`../docker-compose.dev.yml`)는 올바르지만, 사용자 환경에 따라 `infra/` 밖에서 실행하거나 경로가 달라질 때 파일 경로를 찾지 못할 수 있습니다. `cd \"$(dirname \"$0\")/..\"`로 이동한 뒤의 상대 경로임을 명시하는 주석이나 검증 로직이 있으면 더 안전할 것입니다.\n\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **Classic 큐 존재 시 배포 중단 테스트**:\n   - 기존 RabbitMQ 볼륨(`rabbitmq-data`)을 유지한 채 `backtest.jobs`가 `classic` 타입인 상태로 `infra/scripts/deploy.sh`를 실행합니다.\n   - [0/4] 단계에서 배포가 즉시 중단(`exit 1`)되고 전환 스크립트 안내 메시지가 출력되는지 확인합니다.\n2. **이벤트 드레인 및 큐 마이그레이션 스크립트 테스트 (`--dev`)**:\n   - 개발 환경에서 `backtest.jobs`와 `backtest.events`에 메시지가 쌓여 있는 상태로 `./infra/scripts/migrate-jobs-queue.sh --dev`를 실행합니다.\n   - 스크립트가 두 큐가 모두 `0`이 될 때까지 대기(Drain)한 뒤 안전하게 큐를 삭제하고, 이후 백엔드 기동 시 `quorum` 큐로 정상 재선언(`x-delivery-limit=1` 포함)되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b5f7a1f5d7efb75efd6093e7878c1a89d94c738c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-11T10:43:48.696+09:00",
+          "updated_at": "2026-09-11T10:43:48.696+09:00",
+          "system": false,
+          "noteable_id": 940504,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 45,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0703019b0071f52f085c429c31563c30878c2273",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2791182,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T10:49:37.272+09:00",
+          "updated_at": "2026-09-11T10:49:37.283+09:00",
+          "system": true,
+          "noteable_id": 940504,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 45,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2fbbf481d71e6f2ab2d94bfb1a42ff66ae3e30a6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2791183,
+          "type": null,
+          "body": "mentioned in commit c0e61249ba8115fb1b0eae852ded55e31c1390a1",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T10:49:38.849+09:00",
+          "updated_at": "2026-09-11T10:49:38.857+09:00",
+          "system": true,
+          "noteable_id": 940504,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 45,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bf081a670f71282209ff514aefd42e5d99afdbe6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802142,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:32:57.420+09:00",
+          "updated_at": "2026-09-14T14:32:57.423+09:00",
+          "system": true,
+          "noteable_id": 940504,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 45,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2185420,
+      "head_commit_sha": "b5f7a1f5d7efb75efd6093e7878c1a89d94c738c",
+      "base_commit_sha": "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6",
+      "start_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "created_at": "2026-09-11T10:43:36.797+09:00",
+      "merge_request_id": 940504,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "555657515b046122c5b649d23e7d3353dfe4e21a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2185420,
+      "head_commit_sha": "b5f7a1f5d7efb75efd6093e7878c1a89d94c738c",
+      "base_commit_sha": "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6",
+      "start_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "created_at": "2026-09-11T10:43:36.797+09:00",
+      "merge_request_id": 940504,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "555657515b046122c5b649d23e7d3353dfe4e21a",
+      "commits": [
+        {
+          "id": "b5f7a1f5d7efb75efd6093e7878c1a89d94c738c",
+          "short_id": "b5f7a1f5",
+          "created_at": "2026-09-11T10:39:40.000+09:00",
+          "parent_ids": [
+            "9492518a87d7f042440e8623d5b797f9a6f97961"
+          ],
+          "title": "fix(infra): 큐 전환 순서 교정 — v2 이미지 선빌드와 이벤트 큐 드레인",
+          "message": "fix(infra): 큐 전환 순서 교정 — v2 이미지 선빌드와 이벤트 큐 드레인\n\nT002 MR 리뷰 2건. 둘 다 운영 전환을 막거나 결과를 잃게 하는 문제였다.\n\n1) v1 이미지 되살아남: deploy.sh가 빌드 전에 멈추므로 전환 스크립트의 `up -d backend`가\n   예전 v1 이미지를 띄워 classic 큐를 다시 선언했다(다음 배포에서 또 막혀 무한 반복).\n   내리기 전에 `build backend worker`를 먼저 하고, 마지막에 워커도 v2로 올린다.\n   되돌리기 안내를 \"이전 버전 체크아웃 후 재빌드\"로 정정(v1 이미지가 없을 수 있다).\n\n2) v1 결과 이벤트 유실: 가이드가 \"백엔드를 내려도 이벤트는 나중에 처리된다\"고 했으나\n   올라오는 백엔드는 v2라 v1 이벤트(schemaVersion 1)를 계약 오류로 거절해 DLQ로 보낸다.\n   백엔드를 내리지 않고 nginx만 멈춰 접수를 막은 뒤, backtest.jobs와 backtest.events가\n   모두 0이 될 때까지 v1이 처리하도록 드레인 단계를 넣었다(10초 간격, 기본 상한 30분,\n   DRAIN_TIMEOUT_SECONDS). 전제조건 표에 이벤트 큐·이미지 행 추가, 기록을 버리는\n   선택지는 \"보존된다고 안내하지 않는다\"로 명시.\n\n순서: 큐 확인 → v2 빌드 → nginx 정지 → jobs·events 드레인 → 정지·삭제·v2 백엔드 기동\n      → v2 워커·nginx 기동. tasks.md T002 서브아이템과 deploy.sh 안내 문구도 갱신.\n\nJira: S15P21E205-129\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T10:39:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T10:39:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b5f7a1f5d7efb75efd6093e7878c1a89d94c738c"
+        },
+        {
+          "id": "9492518a87d7f042440e8623d5b797f9a6f97961",
+          "short_id": "9492518a",
+          "created_at": "2026-09-11T10:28:03.000+09:00",
+          "parent_ids": [
+            "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6"
+          ],
+          "title": "chore(infra): backtest.jobs quorum 전환 스크립트·가이드와 워커 실행 환경 (T002)",
+          "message": "chore(infra): backtest.jobs quorum 전환 스크립트·가이드와 워커 실행 환경 (T002)\n\n계약 v2(T001)가 backtest.jobs를 quorum + x-delivery-limit=1로 선언하므로 classic\n큐가 남은 환경은 재선언이 실패한다. 전환 절차를 스크립트로 만들고 배포 전에 검사한다.\n\n- infra/scripts/migrate-jobs-queue.sh: 상태 확인 → 접수 중단 → ready·unacked 0 확인 →\n  삭제 → 백엔드 기동으로 quorum 재선언 확인 → 워커 기동. 실패 시 되돌리기 안내.\n  --dev는 루트 compose, 컨테이너는 사람이 내림\n- infra/scripts/deploy.sh: [0/4] backtest.jobs가 classic이면 배포 중단·전환 안내\n- docs/guides/backtest-queue-migration.md: 전제조건(미ACK만으로는 부족), 운영·개발 절차,\n  되돌리기, 워커 실행 환경, S6 장애 시나리오 절차(실측은 T013)\n- compose 워커: NUMBA/OMP/OPENBLAS/MKL 스레드 1(R-14, dev도 적용), MARKET_DATA_URL(R-09,\n  T004가 읽음, 읽기 전용 role은 T003), dev replica 3→2(동시 실행 상한 = replica×prefetch, R-19)\n- .env.prod.example: MARKET_DATA_USER/PASSWORD, WORKER_REPLICAS 상한 주석\n- README 개발 절차에 기존 볼륨 전환 안내, tasks.md T002 완료(S6 실측은 T013로)\n\nJira: S15P21E205-129\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T10:28:03.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T10:28:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9492518a87d7f042440e8623d5b797f9a6f97961"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+# 작업 큐 quorum 전환과 워커 실행 환경 (spec 004 T002)\n+\n+백테스트 메시지 계약 v2(spec 004 T001)부터 백엔드는 작업 큐 `backtest.jobs`를 **quorum 큐 +\n+`x-delivery-limit=1`** 로 선언한다(research R-06). 워커가 실행 중에 죽어 메시지가 되돌아오면 브로커가\n+한 번만 다시 배달하고, 두 번째도 끊기면 DLQ로 보낸다 — 이것이 \"시스템 장애 1회 자동 재시도\"의 구현이다.\n+\n+**문제는 기존 환경이다.** classic → quorum은 큐 인자 변경이라 같은 이름으로 재선언하면\n+`PRECONDITION_FAILED - inequivalent arg 'x-queue-type'`으로 선언이 실패하고, 큐는 classic 그대로 남아\n+delivery-limit이 적용되지 않는다. 새 볼륨에서 시작하는 환경은 해당 없다. **RabbitMQ 볼륨을 유지하는 모든\n+환경(개발 PC의 `rabbitmq-data`, 운영 브로커)은 v2 백엔드를 띄우기 전에 큐를 한 번 지워야 한다.**\n+\n+## 전제조건 — 이것을 만족할 때만 지운다\n+\n+| 조건 | 이유 |\n+|---|---|\n+| 신규 접수가 막혀 있다(nginx 정지) | 지우는 사이 새 작업이 들어오면 잃는다. **백엔드는 내리지 않는다** — 아래 이벤트 큐를 비워야 한다 |\n+| `backtest.jobs`의 `messages_ready = 0` | 대기 중인 작업이 있으면 잃는다. **미ACK만 보는 것으로는 부족하다** |\n+| `backtest.jobs`의 `messages_unacknowledged = 0` | 워커가 처리 중인 작업이 있으면 그 결과가 붙을 메시지가 사라진다 |\n+| **`backtest.events`도 둘 다 0** | v2 백엔드는 v1 이벤트(`schemaVersion 1`)를 계약 오류로 거절해 DLQ로 보낸다(계약 README §3). 남겨 두면 그 실행들의 결과가 DB에 저장되지 않는다 |\n+| **v2 이미지가 빌드돼 있다** | 전환 뒤 `up -d`가 예전 v1 이미지를 띄우면 classic 큐가 그대로 되살아난다 |\n+\n+```bash\n+docker compose -f infra/docker-compose.prod.yml --env-file infra/.env.prod exec rabbitmq \\\n+  rabbitmqctl list_queues name type messages_ready messages_unacknowledged\n+```\n+\n+**결과 이벤트까지 v1 백엔드가 처리해야 한다.** 작업 큐만 비우는 것으로는 부족하다. 워커가 마지막 작업을\n+끝내면 `backtest.events`에 v1 이벤트를 넣는데, 이것을 소비할 수 있는 것은 v1 백엔드뿐이다. 그래서 드레인\n+동안 백엔드와 워커를 모두 살려 두고 nginx만 멈춰 신규 접수를 막는다. 두 큐가 모두 0이 되면 그때까지 접수된\n+실행의 결과가 DB에 반영된 것이다.\n+\n+숫자가 0이 아닌데 줄지도 않으면 워커가 살아 있는지, 백엔드가 이벤트를 처리 중인지 본다(`logs --tail 50 backend`).\n+**기존 실행 기록을 버려도 되는 환경이라면** 드레인 없이 큐와 볼륨을 지워도 되지만, 그때는 \"결과가 보존된다\"고\n+안내하지 않는다 — 남아 있던 작업과 결과는 사라진다.\n+\n+## 운영 전환 절차\n+\n+`infra/scripts/migrate-jobs-queue.sh`가 아래를 순서대로 하고, 실패하면 되돌리는 방법을 출력한다.\n+**레포가 배포할 버전(v2)으로 동기화된 상태에서 실행한다** — 2단계 빌드가 그 소스를 쓴다. Jenkins는 Sync\n+단계 뒤에 Deploy를 호출하므로 `deploy.sh`가 멈춘 시점의 `$DEPLOY_DIR`는 이미 v2다.\n+\n+1. 큐 상태 확인. 큐가 없거나 이미 quorum이면 아무것도 하지 않고 끝난다.\n+2. **v2 `backend`·`worker` 이미지 빌드**(기존 서비스는 계속 실행). 내리기 전에 빌드해야 5단계에서 v2가 뜬다.\n+3. 신규 접수 차단: `nginx`만 정지. 백엔드·워커는 남은 일을 끝내야 하므로 살려 둔다.\n+4. 드레인: `backtest.jobs`와 `backtest.events`가 **모두 0**이 될 때까지 10초 간격으로 확인(기본 상한 30분,\n+   `DRAIN_TIMEOUT_SECONDS`로 조절). 시간을 넘기면 `nginx`를 다시 올리고 중단한다(전환 포기).\n+5. `backend`·`worker` 정지 → `rabbitmqctl delete_queue backtest.jobs` → `backend`(v2) 기동 →\n+   최대 60초 안에 `type=quorum` 확인.\n+6. `worker`(v2)·`nginx` 기동.\n+\n+```bash\n+cd \"$DEPLOY_DIR/infra\"\n+./scripts/migrate-jobs-queue.sh\n+```\n+\n+드레인 동안 사용자에게는 서비스가 닫혀 있다. 진행 중인 백테스트가 끝나야 하므로 점검 시간은 가장 긴 실행\n+하나만큼이다.\n+\n+**배포 순서와의 관계.** 이 전환은 계약 v2 백엔드(T001 이후 dev)를 **처음 배포하는 그 단계**에서 한 번 실행한다.\n+`deploy.sh`는 시작 시 `backtest.jobs`가 classic이면 배포를 멈추고 이 스크립트를 먼저 실행하라고 알린다.\n+백엔드와 워커는 같은 배포에서 함께 올린다 — v1 워커는 v2 작업 메시지를 계약 오류로 거절하고(DLQ),\n+v2 백엔드는 v1 이벤트를 거절한다(계약 README §3).\n+\n+**되돌리기.** 5단계에서 quorum 재선언이 확인되지 않으면 백엔드 로그를 본다. 이전 버전으로 체크아웃해\n+`backend` 이미지를 다시 빌드·기동하면 classic 큐가 다시 선언된다(v1 이미지가 남아 있지 않을 수 있으므로\n+`up -d`만으로는 부족하다). 그 사이 워커는 올리지 않는다. 두 큐는 4단계에서 비운 상태이므로 잃은 메시지가 없다.\n+\n+## 개발 환경\n+\n+`docker-compose.dev.yml`은 `rabbitmq-data` 볼륨을 유지하므로 T001 이전에 한 번이라도 백엔드를 띄운 PC는\n+전부 해당된다. **백엔드와 워커를 켜 둔 채로**(두 큐를 비워야 한다) 새 요청만 보내지 않고 실행한다:\n+\n+```bash\n+./infra/scripts/migrate-jobs-queue.sh --dev\n+```\n+\n+개발 모드는 이미지 빌드와 nginx 정지를 건너뛰고, 두 큐가 빌 때까지 기다린 뒤 삭제한다. 컨테이너로 띄운\n+경우가 아니면(`bootRun`·`python -m worker.main`) 정지는 사람이 한다. 이후 백엔드를 띄우면 quorum으로 선언된다.\n+확인:\n+\n+```bash\n+docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl list_queues name type arguments\n+# backtest.jobs  quorum  [{\"x-queue-type\",\"quorum\"},{\"x-delivery-limit\",1},{\"x-dead-letter-exchange\",\"backtest.dlx\"},...]\n+```\n+\n+볼륨을 통째로 버려도 된다면 `docker compose -f docker-compose.dev.yml down -v`가 더 빠르다(PostgreSQL 데이터도 사라진다).\n+\n+## 워커 실행 환경\n+\n+| 항목 | 값 | 근거 |\n+|---|---|---|\n+| `NUMBA_NUM_THREADS` `OMP_NUM_THREADS` `OPENBLAS_NUM_THREADS` `MKL_NUM_THREADS` | `1` | 결정성(research R-14). 수치 라이브러리가 호스트 vCPU 수만큼 스레드를 띄우면 합산 순서가 달라져 같은 입력에 다른 결과가 나올 수 있고, 워커 2개 × 4스레드가 4코어에서 경쟁한다. dev·prod compose 모두 적용 |\n+| `MARKET_DATA_URL` | 시장 자료 읽기 전용 접속 | research R-09. 워커는 결과 DB에 쓰지 않는다(계약 §1). 시장 자료 공급자(T004)가 이 변수를 읽는다. 읽기 전용 role은 T003 마이그레이션이 만들며 그 전까지 dev는 일반 계정을 가리킨다 |\n+| `WORKER_REPLICAS` × prefetch 1 | **동시 실행 상한** | research R-19. 백엔드는 접수 시 동시 실행 상한을 검사하지 않는다 — 검사해도 보장이 안 된다. competing consumers 구조에서 동시 실행 수는 정확히 replica × prefetch(1)이므로 이 값이 상한이다. 운영 4 vCPU에서 2 |\n+\n+## 장애 시나리오 확인 (quickstart S6)\n+\n+절차만 여기 두고, 실측 결과는 T013 검증 기록(`docs/guides/backtest-execution-verification-2026-09.md`)에 적는다.\n+\n+1. 워커 2 replica, RUNNING 중인 실행 하나.\n+2. 그 실행을 처리 중인 워커 컨테이너를 `docker kill`(SIGKILL). 기대: 브로커가 메시지를 다른 워커에 재배달, 새 `executionId`의 STARTED → `attempt=2`, 실행은 완료. 측정 기록 `auto_retried=true`.\n+3. 다시 RUNNING 중에 두 번째 워커를 `docker kill`. 기대: `x-delivery-limit=1` 초과 → 메시지가 `backtest.jobs.dlq`로 이동 → 백엔드 DLQ 리스너가 `FAILED(SYSTEM_FAILURE)`로 종결(T010).\n+4. 확인 명령:\n+\n+```bash\n+rabbitmqctl list_queues name type messages messages_ready messages_unacknowledged\n+psql -c \"select id, status, attempt, publish_count, dlq_count, failure_code from backtest_run order by id desc limit 3\"\n+```\n+\n+| 단계 | 기대 | 실측 | 일자 |\n+|---|---|---|---|\n+| kill 1회 | 재실행·완료, attempt=2 | (T013) | |\n+| kill 2회 | DLQ → FAILED(SYSTEM_FAILURE) | (T013) | |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/guides/backtest-queue-migration.md",
+          "old_path": "docs/guides/backtest-queue-migration.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,21 @@ cd \"$(dirname \"$0\")/..\"\n ENV_FILE=\".env.prod\"\n COMPOSE=\"docker compose -f docker-compose.prod.yml --env-file $ENV_FILE\"\n \n+echo \"[0/4] 작업 큐 타입 확인 (spec 004 R-06)\"\n+# 계약 v2 백엔드는 backtest.jobs를 quorum으로 선언한다. classic 큐가 남아 있으면 재선언이\n+# PRECONDITION_FAILED로 실패하고 delivery-limit이 적용되지 않으므로, 먼저 1회 전환해야 한다.\n+if [[ -n \"$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)\" ]]; then\n+    QUEUE_TYPE=\"$($COMPOSE exec -T rabbitmq rabbitmqctl list_queues name type 2>/dev/null \\\n+        | awk '$1==\"backtest.jobs\"{print $2}' || true)\"\n+    if [[ \"$QUEUE_TYPE\" == \"classic\" ]]; then\n+        echo \"backtest.jobs 가 classic 큐다. 배포를 멈춘다. 먼저 1회 전환:\"\n+        echo \"    ./scripts/migrate-jobs-queue.sh     (docs/guides/backtest-queue-migration.md)\"\n+        echo \"  이 스크립트가 v2 이미지 빌드 → 접수 차단 → 작업·이벤트 큐 드레인 → 큐 교체 →\"\n+        echo \"  백엔드·워커·nginx 기동까지 한다. 끝나면 이 배포를 다시 실행한다.\"\n+        exit 1\n+    fi\n+fi\n+\n echo \"[1/4] 프론트엔드 빌드\"\n # 호스트 데몬이 띄우므로 Jenkins의 메모리 상한이 적용되지 않는다. 여기서 직접 건다.\n docker run --rm --memory=2g --cpus=2 \\\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/deploy.sh",
+          "old_path": "infra/scripts/deploy.sh",
+          "a_mode": "100755",
+          "b_mode": "100755",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,127 @@\n+#!/usr/bin/env bash\n+# backtest.jobs 큐를 classic → quorum(x-delivery-limit=1)으로 전환한다. 최초 1회.\n+#\n+# 왜 필요한가 (spec 004 R-06, 계약 README §2): 백엔드 v2(계약 schemaVersion 2)는 backtest.jobs를\n+# quorum으로 선언한다. classic 큐가 이미 있으면 인자가 달라 재선언이 PRECONDITION_FAILED로 실패하고,\n+# 큐는 classic으로 남아 x-delivery-limit(자동 재시도 1회)이 적용되지 않는다.\n+#\n+# 순서가 중요하다 (T002 MR 리뷰 1·2번):\n+#   1) 내리기 전에 v2 이미지를 빌드한다. 안 그러면 전환 뒤 `up -d`가 예전 v1 이미지를 띄워\n+#      classic 큐를 그대로 되살린다(deploy.sh가 다시 막아 무한 반복).\n+#   2) 작업 큐뿐 아니라 **결과 이벤트 큐(backtest.events)까지** v1 백엔드가 모두 처리한 뒤에 전환한다.\n+#      v2 백엔드는 v1 이벤트(schemaVersion 1)를 계약 오류로 거절해 DLQ로 보내므로, 남겨 두면 그\n+#      실행들의 결과가 DB에 저장되지 않는다. 그래서 드레인 동안 v1 백엔드를 내리지 않고,\n+#      신규 접수만 nginx를 멈춰 막는다.\n+#\n+# 사용 (레포가 배포할 버전으로 동기화된 상태에서 실행한다 — 빌드가 그 소스를 쓴다):\n+#   ./scripts/migrate-jobs-queue.sh          운영: docker-compose.prod.yml + .env.prod (infra/ 에서 실행)\n+#   ./scripts/migrate-jobs-queue.sh --dev    개발: 레포 루트 docker-compose.dev.yml\n+#\n+# 환경변수: DRAIN_TIMEOUT_SECONDS(기본 1800) — 드레인 대기 상한.\n+set -euo pipefail\n+\n+cd \"$(dirname \"$0\")/..\"\n+\n+JOBS_QUEUE=\"backtest.jobs\"\n+EVENTS_QUEUE=\"backtest.events\"\n+DRAIN_TIMEOUT_SECONDS=\"${DRAIN_TIMEOUT_SECONDS:-1800}\"\n+\n+DEV=false\n+if [[ \"${1:-}\" == \"--dev\" ]]; then\n+    DEV=true\n+    COMPOSE=\"docker compose -f ../docker-compose.dev.yml --profile app\"\n+else\n+    COMPOSE=\"docker compose -f docker-compose.prod.yml --env-file .env.prod\"\n+fi\n+\n+rmq() { $COMPOSE exec -T rabbitmq rabbitmqctl \"$@\"; }\n+\n+q_field() {   # $1=큐 이름 $2=컬럼. 큐가 없으면 빈 문자열\n+    rmq list_queues name \"$2\" 2>/dev/null | awk -v q=\"$1\" '$1==q{print $2}' || true\n+}\n+\n+pending() {   # $1=큐 이름 → ready + unacked (큐가 없으면 0)\n+    local ready unacked\n+    ready=\"$(q_field \"$1\" messages_ready)\"\n+    unacked=\"$(q_field \"$1\" messages_unacknowledged)\"\n+    echo $(( ${ready:-0} + ${unacked:-0} ))\n+}\n+\n+echo \"[1/6] 현재 큐 상태\"\n+TYPE=\"$(q_field \"$JOBS_QUEUE\" type)\"\n+if [[ -z \"$TYPE\" ]]; then\n+    echo \"큐 $JOBS_QUEUE 가 없다. 전환할 것이 없다 — 백엔드를 띄우면 quorum으로 선언된다.\"\n+    exit 0\n+fi\n+if [[ \"$TYPE\" == \"quorum\" ]]; then\n+    echo \"이미 quorum 큐다. 할 일이 없다.\"\n+    rmq list_queues name type arguments | grep \"^$JOBS_QUEUE\" || true\n+    exit 0\n+fi\n+echo \"type=$TYPE → 전환 대상\"\n+\n+if $DEV; then\n+    echo \"[2/6] 개발 환경: 이미지 빌드를 건너뛴다(소스에서 직접 실행).\"\n+else\n+    # 내리기 전에 빌드한다. 5단계의 `up -d backend`가 이 이미지를 쓴다.\n+    echo \"[2/6] v2 백엔드·워커 이미지 빌드 (기존 서비스는 계속 실행)\"\n+    $COMPOSE build backend worker\n+fi\n+\n+echo \"[3/6] 신규 접수 차단 — 기존 백엔드·워커는 남은 일을 끝내야 하므로 내리지 않는다\"\n+if $DEV; then\n+    echo \"개발 환경: 새 요청을 보내지 마라(POST /backtests). 백엔드·워커는 계속 띄워 둔다.\"\n+else\n+    $COMPOSE stop nginx   # 사용자 요청 차단. 서비스 점검 시간이다.\n+fi\n+\n+echo \"[4/6] 드레인 — $JOBS_QUEUE 와 $EVENTS_QUEUE 가 모두 0이 될 때까지 (최대 ${DRAIN_TIMEOUT_SECONDS}초)\"\n+DEADLINE=$(( SECONDS + DRAIN_TIMEOUT_SECONDS ))\n+while :; do\n+    JOBS_LEFT=\"$(pending \"$JOBS_QUEUE\")\"\n+    EVENTS_LEFT=\"$(pending \"$EVENTS_QUEUE\")\"\n+    echo \"  jobs=$JOBS_LEFT events=$EVENTS_LEFT\"\n+    [[ \"$JOBS_LEFT\" == \"0\" && \"$EVENTS_LEFT\" == \"0\" ]] && break\n+    if (( SECONDS >= DEADLINE )); then\n+        echo \"시간 안에 비지 않았다. 지금 지우면 접수된 작업과 저장되지 않은 결과를 잃는다.\"\n+        echo \"  - 워커가 살아 있는지, 백엔드가 이벤트를 처리 중인지 확인한다:\"\n+        echo \"      $COMPOSE ps; $COMPOSE logs --tail 50 backend\"\n+        echo \"  - 더 기다리려면 DRAIN_TIMEOUT_SECONDS를 늘려 다시 실행한다.\"\n+        if ! $DEV; then\n+            echo \"되돌리기(전환 포기): nginx를 다시 올린다.\"\n+            $COMPOSE up -d nginx\n+        fi\n+        exit 1\n+    fi\n+    sleep 10\n+done\n+echo \"  두 큐가 비었다. v1 실행의 결과는 DB에 반영됐다.\"\n+\n+echo \"[5/6] 정지 → 큐 삭제 → v2 백엔드 기동\"\n+$COMPOSE stop backend worker\n+rmq delete_queue \"$JOBS_QUEUE\"\n+\n+if $DEV; then\n+    echo \"[6/6] 삭제 완료. 백엔드(v2)를 띄우면 quorum으로 선언된다. 확인:\"\n+    echo \"  docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl list_queues name type arguments\"\n+    exit 0\n+fi\n+\n+$COMPOSE up -d backend\n+TYPE=\"\"\n+for _ in $(seq 1 30); do\n+    TYPE=\"$(q_field \"$JOBS_QUEUE\" type)\"\n+    [[ \"$TYPE\" == \"quorum\" ]] && break\n+    sleep 2\n+done\n+if [[ \"$TYPE\" != \"quorum\" ]]; then\n+    echo \"재선언 실패(type='${TYPE:-없음}'). 백엔드 로그를 본다: $COMPOSE logs --tail 100 backend\"\n+    echo \"되돌리기: 이전 버전으로 체크아웃해 backend 이미지를 다시 빌드·기동하면 classic 큐가 다시\"\n+    echo \"          선언된다. 두 큐는 4단계에서 비운 상태이므로 잃은 메시지는 없다.\"\n+    exit 1\n+fi\n+rmq list_queues name type arguments | grep \"^$JOBS_QUEUE\"\n+\n+echo \"[6/6] v2 워커·nginx 기동\"\n+$COMPOSE up -d worker nginx\n+echo \"완료: $JOBS_QUEUE 는 quorum, x-delivery-limit=1. 백엔드·워커 모두 v2 이미지.\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/migrate-jobs-queue.sh",
+          "old_path": "infra/scripts/migrate-jobs-queue.sh",
+          "a_mode": "0",
+          "b_mode": "100755",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,10 @@ POSTGRES_DB=thorp\n POSTGRES_USER=thorp\n # 반드시 바꾼다. 예: openssl rand -base64 24\n POSTGRES_PASSWORD=\n+# 워커의 시장 자료 읽기 전용 계정(spec 004 R-09). 비우면 위 일반 계정을 쓴다.\n+# 읽기 전용 role은 spec 004 T003 마이그레이션이 만든다. 그 뒤에 채운다.\n+MARKET_DATA_USER=\n+MARKET_DATA_PASSWORD=\n \n # --- RabbitMQ (Job 전달의 주 경로) ---\n RABBITMQ_USER=thorp\n@@ -31,6 +35,7 @@ DATA_GO_KR_SERVICE_KEY=\n \n # --- Worker ---\n # 4 vCPU 기준 2개가 상한선. 병목은 CPU다.\n+# 이 값 × prefetch(1) = 백테스트 동시 실행 상한(spec 004 R-19). 백엔드 설정에는 동시 실행 상한이 없다.\n WORKER_REPLICAS=2\n \n # --- 디스크 ---\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/.env.prod.example",
+          "old_path": "infra/.env.prod.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -161,6 +161,9 @@ services:\n       KAFKA_BOOTSTRAP_SERVERS: kafka:29092\n       BACKTEST_JOB_TOPIC: ${BACKTEST_JOB_TOPIC}\n       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}\n+      # 시장 자료 읽기 전용 접속(spec 004 R-09). T004 공급자가 읽는다. 읽기 전용 role(MARKET_DATA_USER)은\n+      # T003 마이그레이션이 만들며, 값이 없으면 일반 계정으로 내려간다.\n+      MARKET_DATA_URL: postgresql://${MARKET_DATA_USER:-${POSTGRES_USER}}:${MARKET_DATA_PASSWORD:-${POSTGRES_PASSWORD}}@postgres:5432/${POSTGRES_DB}\n       PARQUET_DIR: /data/parquet\n       RAW_DIR: /data/raw\n       # Numba/OpenBLAS는 컨테이너 CPU 상한이 아니라 호스트 vCPU(4)를 보고 스레드를 띄운다.\n@@ -179,7 +182,8 @@ services:\n       rabbitmq:\n         condition: service_healthy\n     deploy:\n-      # 4 vCPU에서는 2개가 상한선.\n+      # 4 vCPU에서는 2개가 상한선. 이 값 × prefetch(1) = 동시 실행 상한(spec 004 R-19) —\n+      # 백엔드는 동시 실행 상한을 따로 검사하지 않고 이 배치 값이 상한이다.\n       replicas: ${WORKER_REPLICAS}\n       resources:\n         limits:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker-compose.prod.yml",
+          "old_path": "infra/docker-compose.prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,10 +26,10 @@\n   - Java: `EngineInput` v2(run·universe.items·marketData.dataVersion/fillPrice/signalPrice·allocation{strategyId,rulesVersion,rules,parameters}·execution.costProfile·evaluation·progress, benchmark 제거), `BacktestEvent` v2 payload(stage·lastTradingDate·status/partial·resource), `ControlMessage{type,runId,requestedAt}`. `BacktestRabbitConfig`: `backtest.jobs` quorum + `x-delivery-limit=1` + 기존 DLX, fanout `backtest.control` 추가. 작업 메시지 `message_id=\"JOB-\"+runId`\n   - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate; 자원 사용량은 FINISHED payload `resource`). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가\n   - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증\n-- [ ] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`\n+- [x] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`\n   - dev compose 워커에 `NUMBA_NUM_THREADS=OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`(R-14), 워커용 읽기 전용 DB 접속 `MARKET_DATA_URL`(R-09)\n-  - `migrate-jobs-queue.sh`: 접수 중단 → `messages_ready`·`messages_unacknowledged` 모두 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언 → 실패 시 되돌리기(선언 revert). `deploy.sh`에 1회 실행 안내. **T001 배포와 같은 단계에서 실행한다**\n-  - (T010 병합 뒤) 전환 실행, `rabbitmqctl list_queues name type arguments`로 quorum·delivery-limit 확인. quickstart S6: 워커 2 replica에서 RUNNING 중 `kill -9` 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE). 가이드에 기록, 운영 배포 절차에 1회 실행 단계 추가\n+  - `migrate-jobs-queue.sh`: v2 이미지 빌드(내리기 전) → nginx만 정지해 신규 접수 차단(백엔드·워커는 유지) → `backtest.jobs`·**`backtest.events`** 모두 ready·unacked 0까지 드레인(v2 백엔드는 v1 이벤트를 거절하므로 결과 이벤트도 v1이 처리해야 한다) → `delete_queue` → v2 백엔드 기동·quorum 확인 → 워커·nginx 기동. 실패 시 되돌리기 안내. `deploy.sh`가 배포 시작 시 큐 타입을 검사해 classic이면 중단. **T001 배포와 같은 단계에서 실행한다**\n+  - `deploy.sh`가 매 배포 시작 시 `backtest.jobs` 타입을 검사해 classic이면 중단·전환 안내(운영 배포 절차의 1회 실행 단계). 스크립트가 전환 뒤 `list_queues name type arguments`로 quorum·delivery-limit을 확인한다. quickstart S6(워커 2 replica, RUNNING 중 kill 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE)) 절차는 가이드에 적었고, 실측 기록은 T010 병합 뒤 T013 검증 기록에 남긴다. dev compose 워커 replica를 2로 맞춤(동시 실행 상한 = replica × prefetch, R-19)\n \n ---\n \n@@ -162,7 +162,7 @@\n \n ### Phase Dependencies\n \n-- **Phase 1**: T001 ∥ T002(환경 반영 부분). T002의 큐 전환 실행은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패). 장애 시나리오 확인만 T010 뒤.\n+- **Phase 1**: T001 ∥ T002. T002의 큐 전환은 T001과 같은 배포 단계(전환 없이 v2 선언만 배포하면 재선언 실패, `deploy.sh`가 검사). 장애 시나리오(S6) 실측은 T010 뒤 T013 검증 기록에서.\n - **Phase 2**: T003은 T001 뒤. T004는 독립.\n - **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.\n - **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.\n@@ -191,7 +191,7 @@\n \n ### Incremental Delivery\n \n-1. T010·T011(재사용·재시도·취소) → S2~S6. T002의 장애 시나리오 확인도 이때 마무리(큐 전환 실행은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.\n+1. T010·T011(재사용·재시도·취소) → S2~S6. S6(장애 재시도) 실측은 T013 검증 기록에서(큐 전환은 T001 배포 시점에 끝나 있어야 한다). T014(한도 장치) → S12.\n 2. T012(측정) → S10. 이 뷰가 PD-06 결정 자료다.\n 3. T013 마무리.\n 4. PD-03·PD-04가 확정되면 별도 Task로 `allocation/momentum.py`·`allocation/min_variance.py`와 `strategy_rules` 행 갱신을 추가한다(이 tasks.md 범위 밖).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -63,6 +63,8 @@ cp .env.example .env\n \n # 1. 인프라(PostgreSQL + RabbitMQ) 실행\n docker compose -f docker-compose.dev.yml up -d postgres rabbitmq\n+#    기존 rabbitmq-data 볼륨이 있으면(메시지 계약 v2 이전에 백엔드를 띄운 적 있음) 작업 큐를 1회 전환한다:\n+#    ./infra/scripts/migrate-jobs-queue.sh --dev     (docs/guides/backtest-queue-migration.md)\n \n # 2. 백엔드\n cd backend && ./gradlew bootRun\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "README.md",
+          "old_path": "README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -92,13 +92,24 @@ services:\n       RABBITMQ_URL: amqp://${RABBITMQ_USER:-thorp}:${RABBITMQ_PASSWORD:-thorp}@rabbitmq:5672/\n       KAFKA_BOOTSTRAP_SERVERS: kafka:29092\n       DATABASE_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}\n+      # 시장 자료 읽기 전용 접속(spec 004 R-09). 시장 자료 공급자(T004)가 읽는다. 읽기 전용 role은\n+      # T003 마이그레이션이 만들며 그 전까지 dev는 일반 계정을 가리킨다. 워커는 결과 DB에 쓰지 않는다.\n+      MARKET_DATA_URL: postgresql://${POSTGRES_USER:-thorp}:${POSTGRES_PASSWORD:-thorp}@postgres:5432/${POSTGRES_DB:-thorp}\n+      # 결정성(spec 004 R-14): 수치 라이브러리가 호스트 vCPU 수만큼 스레드를 띄우면 합산 순서가 달라져\n+      # 같은 입력에 다른 결과가 나올 수 있다. 운영 compose와 같은 값.\n+      NUMBA_NUM_THREADS: \"1\"\n+      OMP_NUM_THREADS: \"1\"\n+      OPENBLAS_NUM_THREADS: \"1\"\n+      MKL_NUM_THREADS: \"1\"\n     depends_on:\n       postgres:\n         condition: service_healthy\n       rabbitmq:\n         condition: service_healthy\n     deploy:\n-      replicas: 3   # Worker 수를 조절해 분산 처리 실험\n+      # replica 수 × prefetch(1) = 동시 실행 상한(spec 004 R-19). 백엔드는 동시 실행 상한을 따로 검사하지 않는다.\n+      # quickstart S6(장애 재시도)도 2 replica를 전제로 한다. 운영도 2.\n+      replicas: 2\n \n volumes:\n   postgres-data:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docker-compose.dev.yml",
+          "old_path": "docker-compose.dev.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-11T10:49:37.228+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2791079": []
+  }
+}

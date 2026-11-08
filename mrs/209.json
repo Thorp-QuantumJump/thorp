@@ -1,0 +1,821 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 950070,
+    "iid": 209,
+    "project_id": 1444456,
+    "title": "fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다",
+    "description": "# 작업 내용 요약\n\nCI의 BE 단계가 앞선 빌드의 컴파일 결과를 이어 쓰고, RabbitMQ 통합 테스트 4개가 브로커 컨테이너 하나를 함께 쓴다. 테스트는 CI에서 계속 매번 다시 돈다.\n\n# 관련 티켓\n\n- S15P21E205-333\n- https://ssafy.atlassian.net/browse/S15P21E205-333\n\n# 주요 변경 사항\n\n- BE Format: `clean spotlessCheck` → `spotlessCheck`. 워크스페이스에 남은 build·.gradle을 이어 써 입력이 바뀐 태스크만 돈다.\n- BE Test: `test` → `cleanTest test`. 입력이 앞 빌드와 같아도 테스트를 건너뛰지 않고, junit이 앞 빌드의 XML을 모으지 않는다.\n- RabbitMQ 통합 테스트: 클래스마다 띄우던 컨테이너를 `RabbitTestSupport` 싱글턴으로 바꿨다. 컨텍스트는 클래스 끝에 닫고(`@DirtiesContext`), 읽는 큐는 검사 전에 비운다. 기동 대기는 3분으로 둔다.\n\n# 테스트\n\n- [x] `./gradlew cleanTest test` (최신 dev 기준): 1709건 전부 통과, RabbitMQ 컨테이너 생성 1회, 멈춘 컨테이너 포트로의 재접속 로그 0줄\n- [x] 컨테이너 기동 비용(클래스 사이 공백 + `Started` 합) 73.3초 → 31.6초, 컨테이너 생성 4회 → 1회 (직전 dev 기준 전후 비교)\n- [x] 컴파일: `clean` 뒤 전체 57.2초, main·test 파일 1개씩 바꾼 증분 9.1초. BE Format 32초 → 11초\n- [x] 소스·리소스(마이그레이션 SQL 포함)를 지우면 Gradle이 build 안의 산출물도 지운다\n- [x] `@DirtiesContext`를 빼고 EventListenerIT → DeadLetterListenerIT 순서로 돌리면 DeadLetterListenerIT가 실패하고, 넣으면 통과한다\n- [ ] 이 MR의 CI 로그에서 compileJava·compileTestJava가 증분으로 돈다\n\n# 리뷰 포인트\n\n- CI 테스트를 `cleanTest`로 늘 다시 돌리게 했다. 입력이 같을 때 건너뛰면 더 빠르지만, Gradle이 입력으로 보지 않는 Docker 이미지·날짜가 바뀌어도 통과로 남는다.\n- `clean`이 하던 \"워크스페이스를 초기 상태로 되돌리는\" 구실은 사라진다. 중단된 빌드가 `backend/build`를 망가뜨리면 Jenkins에서 워크스페이스를 지워야 한다.\n- `@DirtiesContext`는 RabbitMQ 네 클래스의 컨텍스트만 닫는다. 네 컨텍스트는 구성이 각자 달라 원래 다른 클래스가 재사용하지 않았다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(CI·테스트 코드만 바꿈)\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 테스트를 건너뛴 채 통과로 보이지 않게 `cleanTest`를 넣었다\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-18T07:50:17.975+09:00",
+    "updated_at": "2026-09-18T09:11:04.382+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T09:11:04.400+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/333-ci-small-waste",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "152ba238f38704f172023d672597a6567a98f29e",
+    "merge_commit_sha": "974e4c0795c3f2fadeaa06788f69c0e8bd85475e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T07:50:19.138+09:00",
+    "reference": "!209",
+    "references": {
+      "short": "!209",
+      "relative": "!209",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!209"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/209",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 950070,
+    "iid": 209,
+    "project_id": 1444456,
+    "title": "fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다",
+    "description": "# 작업 내용 요약\n\nCI의 BE 단계가 앞선 빌드의 컴파일 결과를 이어 쓰고, RabbitMQ 통합 테스트 4개가 브로커 컨테이너 하나를 함께 쓴다. 테스트는 CI에서 계속 매번 다시 돈다.\n\n# 관련 티켓\n\n- S15P21E205-333\n- https://ssafy.atlassian.net/browse/S15P21E205-333\n\n# 주요 변경 사항\n\n- BE Format: `clean spotlessCheck` → `spotlessCheck`. 워크스페이스에 남은 build·.gradle을 이어 써 입력이 바뀐 태스크만 돈다.\n- BE Test: `test` → `cleanTest test`. 입력이 앞 빌드와 같아도 테스트를 건너뛰지 않고, junit이 앞 빌드의 XML을 모으지 않는다.\n- RabbitMQ 통합 테스트: 클래스마다 띄우던 컨테이너를 `RabbitTestSupport` 싱글턴으로 바꿨다. 컨텍스트는 클래스 끝에 닫고(`@DirtiesContext`), 읽는 큐는 검사 전에 비운다. 기동 대기는 3분으로 둔다.\n\n# 테스트\n\n- [x] `./gradlew cleanTest test` (최신 dev 기준): 1709건 전부 통과, RabbitMQ 컨테이너 생성 1회, 멈춘 컨테이너 포트로의 재접속 로그 0줄\n- [x] 컨테이너 기동 비용(클래스 사이 공백 + `Started` 합) 73.3초 → 31.6초, 컨테이너 생성 4회 → 1회 (직전 dev 기준 전후 비교)\n- [x] 컴파일: `clean` 뒤 전체 57.2초, main·test 파일 1개씩 바꾼 증분 9.1초. BE Format 32초 → 11초\n- [x] 소스·리소스(마이그레이션 SQL 포함)를 지우면 Gradle이 build 안의 산출물도 지운다\n- [x] `@DirtiesContext`를 빼고 EventListenerIT → DeadLetterListenerIT 순서로 돌리면 DeadLetterListenerIT가 실패하고, 넣으면 통과한다\n- [ ] 이 MR의 CI 로그에서 compileJava·compileTestJava가 증분으로 돈다\n\n# 리뷰 포인트\n\n- CI 테스트를 `cleanTest`로 늘 다시 돌리게 했다. 입력이 같을 때 건너뛰면 더 빠르지만, Gradle이 입력으로 보지 않는 Docker 이미지·날짜가 바뀌어도 통과로 남는다.\n- `clean`이 하던 \"워크스페이스를 초기 상태로 되돌리는\" 구실은 사라진다. 중단된 빌드가 `backend/build`를 망가뜨리면 Jenkins에서 워크스페이스를 지워야 한다.\n- `@DirtiesContext`는 RabbitMQ 네 클래스의 컨텍스트만 닫는다. 네 컨텍스트는 구성이 각자 달라 원래 다른 클래스가 재사용하지 않았다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(CI·테스트 코드만 바꿈)\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 테스트를 건너뛴 채 통과로 보이지 않게 `cleanTest`를 넣었다\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-18T07:50:17.975+09:00",
+    "updated_at": "2026-09-18T09:11:04.382+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T09:11:04.400+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/333-ci-small-waste",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "152ba238f38704f172023d672597a6567a98f29e",
+    "merge_commit_sha": "974e4c0795c3f2fadeaa06788f69c0e8bd85475e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T07:50:19.138+09:00",
+    "reference": "!209",
+    "references": {
+      "short": "!209",
+      "relative": "!209",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!209"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/209",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "7",
+    "latest_build_started_at": "2026-09-18T09:02:50.327+09:00",
+    "latest_build_finished_at": "2026-09-18T09:11:03.465+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 204489,
+      "iid": 142,
+      "project_id": 1444456,
+      "sha": "152ba238f38704f172023d672597a6567a98f29e",
+      "ref": "fix(infra)/333-ci-small-waste",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T09:02:50.222+09:00",
+      "updated_at": "2026-09-18T09:11:03.499+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204489"
+    },
+    "head_pipeline": {
+      "id": 204489,
+      "iid": 142,
+      "project_id": 1444456,
+      "sha": "152ba238f38704f172023d672597a6567a98f29e",
+      "ref": "fix(infra)/333-ci-small-waste",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T09:02:50.222+09:00",
+      "updated_at": "2026-09-18T09:11:03.499+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204489",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T09:02:50.327+09:00",
+      "finished_at": "2026-09-18T09:11:03.465+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204489",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "head_sha": "152ba238f38704f172023d672597a6567a98f29e",
+      "start_sha": "1712d8231586e7549a81773899ac74eea27aefa9"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "23300b32da4aaf33dfd45678dbc266c6b1fa3a1d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829711,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T07:50:18.088+09:00",
+          "updated_at": "2026-09-18T07:50:18.091+09:00",
+          "system": true,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e9be681af0a9c655b5ba928eb26e3a9bae0f5315",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829712,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T07:50:18.113+09:00",
+          "updated_at": "2026-09-18T07:50:18.123+09:00",
+          "system": true,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "86e4b306eee99de530453b0cb716d4fc51d531ee",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829713,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **RabbitMQ 단일 컨테이너 공유 및 상태 격리 테스트**: `BacktestEventListenerIT`, `BacktestDeadLetterListenerIT`, `RabbitBacktestJobPublisherIT` 등 RabbitMQ 통합 테스트들을 병렬 또는 순차적으로 연속 실행하여, 한 테스트에서 발행하거나 소비한 메시지가 다른 테스트의 큐에 영향을 주지 않고 `@BeforeEach`의 `purgeQueue`를 통해 정상적으로 비워지는지 검증합니다.\n- **증분 빌드 및 테스트 강제 실행 검증**: 로컬 또는 CI 환경에서 소스 코드 변경 없이 `./gradlew spotlessCheck` 및 `./gradlew cleanTest test`를 연속으로 두 번 실행했을 때, 컴파일 및 포맷 체크는 증분 빌드로 빠르게 넘어가되 테스트(`test`)는 캐시를 타지 않고 매번 재실행되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:152ba238f38704f172023d672597a6567a98f29e -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T07:50:26.023+09:00",
+          "updated_at": "2026-09-18T09:02:43.511+09:00",
+          "system": false,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "51361bd44dd735b9ac52173216e660016a01d97d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829934,
+          "type": null,
+          "body": "added 33 commits\n\n<ul><li>c3a1773a...1712d823 - 30 commits from branch <code>dev</code></li><li>dbc12eda - fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다</li><li>e5cf2a7b - test(be): RabbitMQ 통합 테스트가 브로커 컨테이너 하나를 함께 쓴다</li><li>152ba238 - test(be): 공용 브로커의 기동 대기를 3분으로 늘린다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/209/diffs?diff_id=2217676&start_sha=c3a1773a9406436a566f060d5d0251691d20ea66)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:02:36.826+09:00",
+          "updated_at": "2026-09-18T09:02:36.832+09:00",
+          "system": true,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "08864ddaafb5895cb2632e6db75aa19a75d7acd8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829944,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:03:19.389+09:00",
+          "updated_at": "2026-09-18T09:03:19.393+09:00",
+          "system": true,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a8ec40824f7b118e488a1b49766d5134d79b6b0c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829946,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 152ba238f38704f172023d672597a6567a98f29e pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:03:22.568+09:00",
+          "updated_at": "2026-09-18T09:03:22.573+09:00",
+          "system": true,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4451326b30501213292bbed3024602e3fc76481d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830021,
+          "type": null,
+          "body": "mentioned in commit 974e4c0795c3f2fadeaa06788f69c0e8bd85475e",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:11:04.559+09:00",
+          "updated_at": "2026-09-18T09:11:04.564+09:00",
+          "system": true,
+          "noteable_id": 950070,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 209,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2217676,
+      "head_commit_sha": "152ba238f38704f172023d672597a6567a98f29e",
+      "base_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "start_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "created_at": "2026-09-18T09:02:36.353+09:00",
+      "merge_request_id": 950070,
+      "state": "collected",
+      "real_size": "7",
+      "patch_id_sha": "c0684e5329e90d2d64437a3b4dc50d08ee169c10"
+    },
+    {
+      "id": 2217501,
+      "head_commit_sha": "c3a1773a9406436a566f060d5d0251691d20ea66",
+      "base_commit_sha": "f9453f60d73557743c546c6e1585d8a8f503abd9",
+      "start_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "created_at": "2026-09-18T07:50:18.455+09:00",
+      "merge_request_id": 950070,
+      "state": "without_files",
+      "real_size": "7",
+      "patch_id_sha": "e46a0684e3424183aabcf6f1c1c59e31ff0f0500"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2217676,
+      "head_commit_sha": "152ba238f38704f172023d672597a6567a98f29e",
+      "base_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "start_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "created_at": "2026-09-18T09:02:36.353+09:00",
+      "merge_request_id": 950070,
+      "state": "collected",
+      "real_size": "7",
+      "patch_id_sha": "c0684e5329e90d2d64437a3b4dc50d08ee169c10",
+      "commits": [
+        {
+          "id": "152ba238f38704f172023d672597a6567a98f29e",
+          "short_id": "152ba238",
+          "created_at": "2026-09-18T08:39:35.000+09:00",
+          "parent_ids": [
+            "e5cf2a7b0df9389521be53435b8a3c4ec67d4715"
+          ],
+          "title": "test(be): 공용 브로커의 기동 대기를 3분으로 늘린다",
+          "message": "test(be): 공용 브로커의 기동 대기를 3분으로 늘린다\n\n부하가 걸린 기계에서 브로커가 60초 안에 \"Server startup complete\"를 찍지 못해\n컨테이너를 먼저 띄우는 클래스가 통째로 실패했다(2026-09-17 전체 시험 실행).\n컨테이너를 함께 쓰게 되면서 이 한 번의 기동에 네 클래스가 기대므로, 기동이 늦어도\n기다린다. CI는 빌드 둘이 CPU 2개를 나눠 쓴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T08:39:35.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T08:39:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/152ba238f38704f172023d672597a6567a98f29e"
+        },
+        {
+          "id": "e5cf2a7b0df9389521be53435b8a3c4ec67d4715",
+          "short_id": "e5cf2a7b",
+          "created_at": "2026-09-18T08:17:35.000+09:00",
+          "parent_ids": [
+            "dbc12eda369cc6624a4018a183e5d01313fc4db2"
+          ],
+          "title": "test(be): RabbitMQ 통합 테스트가 브로커 컨테이너 하나를 함께 쓴다",
+          "message": "test(be): RabbitMQ 통합 테스트가 브로커 컨테이너 하나를 함께 쓴다\n\n네 테스트가 클래스마다 컨테이너를 띄워 기동에 클래스당 십수 초를 썼고, 클래스가 끝나\n멈춘 컨테이너의 포트로 캐시된 컨텍스트의 리스너가 끝까지 재접속했다.\n\nPostgresTestSupport와 같은 방식의 RabbitTestSupport로 컨테이너를 한 번만 띄운다.\n브로커를 함께 쓰므로 컨텍스트는 클래스 끝에 닫고(남은 리스너가 뒤 클래스와 같은 DLQ를\n나눠 소비하지 않게), 읽는 큐는 검사 전에 비운다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T19:01:56.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T08:17:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e5cf2a7b0df9389521be53435b8a3c4ec67d4715"
+        },
+        {
+          "id": "dbc12eda369cc6624a4018a183e5d01313fc4db2",
+          "short_id": "dbc12eda",
+          "created_at": "2026-09-18T08:17:34.000+09:00",
+          "parent_ids": [
+            "1712d8231586e7549a81773899ac74eea27aefa9"
+          ],
+          "title": "fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다",
+          "message": "fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다\n\nBE Format의 clean이 워크스페이스에 남은 backend/build와 Gradle 실행 기록을 지워,\nBE Test가 빌드마다 main·test를 처음부터 컴파일했다. clean을 빼고 BE Test는\ncleanTest test로 테스트 결과만 지운다. 입력이 앞 빌드와 같아도 테스트가 건너뛰어지지\n않고, junit이 앞 빌드의 XML을 이번 결과로 모으지 않는다.\n\n소스·리소스가 사라지면 Gradle이 그 클래스 파일과 복사본도 지우는 것을 확인했다\n(다른 MR의 마이그레이션 SQL이 남지 않는다).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T19:01:55.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T08:17:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dbc12eda369cc6624a4018a183e5d01313fc4db2"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -6,10 +6,13 @@ import static org.mockito.Mockito.timeout;\n import static org.mockito.Mockito.verify;\n \n import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import com.ssafy.thorp.support.RabbitTestSupport;\n import java.nio.charset.StandardCharsets;\n import java.time.Duration;\n+import org.junit.jupiter.api.BeforeEach;\n import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n+import org.springframework.amqp.core.AmqpAdmin;\n import org.springframework.amqp.core.Message;\n import org.springframework.amqp.core.MessageProperties;\n import org.springframework.amqp.rabbit.core.RabbitTemplate;\n@@ -17,11 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;\n import org.springframework.boot.autoconfigure.ImportAutoConfiguration;\n import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;\n import org.springframework.boot.test.context.SpringBootTest;\n-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n import org.springframework.test.context.bean.override.mockito.MockitoBean;\n-import org.testcontainers.containers.RabbitMQContainer;\n-import org.testcontainers.junit.jupiter.Container;\n-import org.testcontainers.junit.jupiter.Testcontainers;\n \n /**\n  * 작업 메시지가 재전달 상한을 다 쓰면 DLQ 로 가고, 그것을 이 리스너가 runId 와 함께 집어 온다(spec 004 R-18, T010).\n@@ -34,19 +33,24 @@ import org.testcontainers.junit.jupiter.Testcontainers;\n  */\n @SpringBootTest(classes = {BacktestRabbitConfig.class, BacktestDeadLetterListener.class})\n @ImportAutoConfiguration(RabbitAutoConfiguration.class)\n-@Testcontainers(disabledWithoutDocker = true)\n-class BacktestDeadLetterListenerIT {\n+class BacktestDeadLetterListenerIT extends RabbitTestSupport {\n \n     private static final String RUN_ID = \"BT-20260914-000077\";\n     private static final Duration TIMEOUT = Duration.ofSeconds(10);\n     private static final Duration POLL = Duration.ofMillis(100);\n \n-    @Container @ServiceConnection\n-    static RabbitMQContainer rabbitmq = new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\");\n-\n     @Autowired private RabbitTemplate rabbitTemplate;\n+    @Autowired private AmqpAdmin amqpAdmin;\n     @MockitoBean private BacktestEventService eventService;\n \n+    /** 브로커를 다른 클래스와 함께 쓴다. 작업 큐에 남은 메시지가 있으면 아래 거절이 엉뚱한 메시지를 집는다. */\n+    @BeforeEach\n+    void purgeQueues() {\n+        amqpAdmin.initialize(); // 토폴로지가 아직 선언되지 않았어도 purge가 실패하지 않게 한 번 선언한다\n+        amqpAdmin.purgeQueue(BacktestRabbitConfig.JOBS_QUEUE, false);\n+        amqpAdmin.purgeQueue(BacktestRabbitConfig.JOBS_DEAD_LETTER_QUEUE, false);\n+    }\n+\n     /** 지금 작업 큐에 있는 메시지 하나를 받아 requeue 로 거절한다. 없으면 false. */\n     private boolean nackNow() {\n         return Boolean.TRUE.equals(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListenerIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestDeadLetterListenerIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,11 +12,13 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.support.PostgresTestSupport;\n+import com.ssafy.thorp.support.RabbitTestSupport;\n import java.math.BigDecimal;\n import java.time.Duration;\n import java.time.LocalDate;\n import java.util.List;\n import java.util.Map;\n+import org.junit.jupiter.api.BeforeAll;\n import org.junit.jupiter.api.BeforeEach;\n import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n@@ -29,8 +31,8 @@ import org.springframework.beans.factory.annotation.Autowired;\n import org.springframework.boot.test.context.SpringBootTest;\n import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.annotation.DirtiesContext;\n import org.testcontainers.containers.RabbitMQContainer;\n-import org.testcontainers.junit.jupiter.Container;\n \n /**\n  * 계약 픽스처를 실제 브로커의 {@code backtest.events}에 발행하고 리스너가 소비해 DB에 반영하는지, 계약 오류가 DLQ로 가는지 확인한다.\n@@ -44,10 +46,16 @@ import org.testcontainers.junit.jupiter.Container;\n             \"spring.mail.username=test@example.com\",\n             \"spring.mail.password=test\"\n         })\n+@DirtiesContext\n class BacktestEventListenerIT extends PostgresTestSupport {\n \n-    @Container @ServiceConnection\n-    static RabbitMQContainer rabbitmq = new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\");\n+    /** DB 기반을 상속하므로 {@link RabbitTestSupport}의 브로커를 필드로 받아 쓴다. 컨텍스트를 닫는 이유는 그 클래스 설명에 있다. */\n+    @ServiceConnection static final RabbitMQContainer RABBITMQ = RabbitTestSupport.RABBITMQ;\n+\n+    @BeforeAll\n+    static void startRabbitOnce() {\n+        RabbitTestSupport.startContainerOnce();\n+    }\n \n     private static final Duration TIMEOUT = Duration.ofSeconds(20);\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListenerIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListenerIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;\n import com.fasterxml.jackson.databind.ObjectMapper;\n import com.ssafy.thorp.backtest.application.port.BacktestControlPublisher;\n import com.ssafy.thorp.backtest.application.port.message.ControlMessage;\n+import com.ssafy.thorp.support.RabbitTestSupport;\n import java.io.IOException;\n import java.time.Clock;\n import org.junit.jupiter.api.DisplayName;\n@@ -22,11 +23,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;\n import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;\n import org.springframework.boot.test.context.SpringBootTest;\n import org.springframework.boot.test.context.TestConfiguration;\n-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n import org.springframework.context.annotation.Bean;\n-import org.testcontainers.containers.RabbitMQContainer;\n-import org.testcontainers.junit.jupiter.Container;\n-import org.testcontainers.junit.jupiter.Testcontainers;\n \n /**\n  * CANCEL 이 fanout {@code backtest.control}로 나가는지 실제 브로커로 확인한다(계약 §4.4).\n@@ -40,8 +37,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;\n             RabbitBacktestControlPublisherIT.ClockConfig.class\n         })\n @ImportAutoConfiguration(RabbitAutoConfiguration.class)\n-@Testcontainers(disabledWithoutDocker = true)\n-class RabbitBacktestControlPublisherIT {\n+class RabbitBacktestControlPublisherIT extends RabbitTestSupport {\n \n     /** 발행기가 requestedAt 에 쓰는 시계. 메시징 슬라이스에는 앱의 Clock 빈이 없다. */\n     @TestConfiguration\n@@ -52,9 +48,6 @@ class RabbitBacktestControlPublisherIT {\n         }\n     }\n \n-    @Container @ServiceConnection\n-    static RabbitMQContainer rabbitmq = new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\");\n-\n     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();\n \n     @Autowired private BacktestControlPublisher publisher;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestControlPublisherIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestControlPublisherIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,13 +13,16 @@ import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.support.RabbitTestSupport;\n import java.io.IOException;\n import java.math.BigDecimal;\n import java.time.LocalDate;\n import java.util.List;\n import java.util.Map;\n+import org.junit.jupiter.api.BeforeEach;\n import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n+import org.springframework.amqp.core.AmqpAdmin;\n import org.springframework.amqp.core.Message;\n import org.springframework.amqp.core.MessageDeliveryMode;\n import org.springframework.amqp.rabbit.core.RabbitTemplate;\n@@ -27,10 +30,6 @@ import org.springframework.beans.factory.annotation.Autowired;\n import org.springframework.boot.autoconfigure.ImportAutoConfiguration;\n import org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration;\n import org.springframework.boot.test.context.SpringBootTest;\n-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n-import org.testcontainers.containers.RabbitMQContainer;\n-import org.testcontainers.junit.jupiter.Container;\n-import org.testcontainers.junit.jupiter.Testcontainers;\n \n /**\n  * 실제 브로커에 발행해 계약 §3의 메시지 속성과 본문을 확인한다.\n@@ -39,11 +38,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;\n  */\n @SpringBootTest(classes = {BacktestRabbitConfig.class, RabbitBacktestJobPublisher.class})\n @ImportAutoConfiguration(RabbitAutoConfiguration.class)\n-@Testcontainers(disabledWithoutDocker = true)\n-class RabbitBacktestJobPublisherIT {\n-\n-    @Container @ServiceConnection\n-    static RabbitMQContainer rabbitmq = new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\");\n+class RabbitBacktestJobPublisherIT extends RabbitTestSupport {\n \n     private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();\n     private final EngineInputAssembler assembler =\n@@ -56,6 +51,15 @@ class RabbitBacktestJobPublisherIT {\n \n     @Autowired private BacktestJobPublisher publisher;\n     @Autowired private RabbitTemplate rabbitTemplate;\n+    @Autowired private AmqpAdmin amqpAdmin;\n+\n+    /** 브로커를 다른 클래스와 함께 쓴다. 앞 클래스가 남긴 작업 메시지를 이 테스트의 발행으로 읽지 않게 비운다. */\n+    @BeforeEach\n+    void purgeQueues() {\n+        amqpAdmin.initialize(); // 토폴로지가 아직 선언되지 않았어도 purge가 실패하지 않게 한 번 선언한다\n+        amqpAdmin.purgeQueue(BacktestRabbitConfig.JOBS_QUEUE, false);\n+        amqpAdmin.purgeQueue(BacktestRabbitConfig.BULK_JOBS_QUEUE, false);\n+    }\n \n     private EngineInput sampleInput() {\n         return assembler.assemble(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestJobPublisherIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/RabbitBacktestJobPublisherIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,52 @@\n+package com.ssafy.thorp.support;\n+\n+import java.time.Duration;\n+import org.junit.jupiter.api.BeforeAll;\n+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n+import org.springframework.test.annotation.DirtiesContext;\n+import org.testcontainers.containers.RabbitMQContainer;\n+import org.testcontainers.junit.jupiter.Testcontainers;\n+\n+/**\n+ * RabbitMQ에 붙는 테스트의 공통 기반. 브로커 컨테이너를 테스트 JVM에서 한 번만 띄우고 모든 클래스가 함께 쓴다.\n+ *\n+ * <p><b>컨테이너를 {@code @Container}로 관리하지 않고 싱글턴으로 둔다.</b> 이유는 {@link PostgresTestSupport}와 같다. 클래스마다\n+ * 띄우면 기동에만 클래스당 십수 초가 들고, 클래스가 끝나 멈춘 컨테이너의 포트로 캐시된 컨텍스트의 리스너가 계속 재접속한다. 시작을 {@code @BeforeAll}에서 하는\n+ * 이유도 같다. 정리는 Testcontainers의 Ryuk가 JVM 종료 시 한다.\n+ *\n+ * <p>브로커를 함께 쓰므로 두 가지를 지킨다.\n+ *\n+ * <ul>\n+ *   <li><b>컨텍스트를 클래스 끝에 닫는다({@link DirtiesContext}).</b> 닫지 않으면 캐시된 컨텍스트의 리스너가 살아 있는 브로커에 그대로 붙어\n+ *       있다가, 뒤에 오는 클래스의 리스너와 같은 큐를 나눠 소비한다. 예를 들어 {@code BacktestEventListenerIT}의 컨텍스트가 남아 있으면\n+ *       {@code BacktestDeadLetterListenerIT}가 DLQ로 보낸 메시지를 그쪽 리스너가 가져갈 수 있다. 이 컨텍스트들은 클래스마다 구성이 달라\n+ *       원래 다른 클래스가 재사용하지 않으므로, 닫아도 잃는 것이 없다.\n+ *   <li><b>읽는 큐는 검사 전에 비운다.</b> 앞 클래스가 남긴 메시지가 섞이지 않게 하기 위해서다. 큐마다 쓰는 테스트가 다르므로 각 테스트가\n+ *       {@code @BeforeEach}에서 비운다.\n+ * </ul>\n+ *\n+ * <p>다른 기반 클래스를 이미 상속한 테스트는 이 클래스를 상속하지 않고 {@link #RABBITMQ}를 자기 {@code @ServiceConnection} 필드에 담아\n+ * 쓴다. 그때는 {@link #startContainerOnce()}를 자기 {@code @BeforeAll}에서 부르고 {@code @DirtiesContext}도 직접\n+ * 붙인다. 이미지 태그는 운영 Compose와 맞춘다.\n+ */\n+@Testcontainers(disabledWithoutDocker = true)\n+@DirtiesContext\n+public abstract class RabbitTestSupport {\n+\n+    /**\n+     * 기동 대기는 기본값(60초)보다 길게 둔다. 브로커가 \"Server startup complete\"를 찍기까지 걸리는 시간은 그때 기계가 얼마나 바쁜지에 달려 있는데,\n+     * 이제 네 클래스가 이 한 번의 기동에 함께 기대므로 한 번 모자라면 그 자리에서 클래스가 통째로 실패한다(2026-09-17 부하가 걸린 로컬에서 실제로 났다). CI\n+     * 는 빌드 둘이 CPU 2개를 나눠 쓰므로 로컬보다 느릴 수 있다.\n+     */\n+    @ServiceConnection\n+    public static final RabbitMQContainer RABBITMQ =\n+            new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\")\n+                    .withStartupTimeout(Duration.ofMinutes(3));\n+\n+    @BeforeAll\n+    public static void startContainerOnce() {\n+        if (!RABBITMQ.isRunning()) {\n+            RABBITMQ.start();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/support/RabbitTestSupport.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/support/RabbitTestSupport.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -115,8 +115,8 @@ tasks.named('test') {\n     // 픽스처만 바뀌었을 때 :test가 UP-TO-DATE로 건너뛴다. 실제로 픽스처를 일부러 틀리게\n     // 고쳐도 BUILD SUCCESSFUL이 나왔다(2026-09-11 확인).\n     //\n-    // 묶는 장치가 조용히 꺼지는 것이 가장 나쁜 실패 방식이다. CI는 새로 클론해 받아 늘\n-    // 돌지만 로컬에서는 그냥 지나가고, 그 사이 두 구현이 갈라진다.\n+    // 묶는 장치가 조용히 꺼지는 것이 가장 나쁜 실패 방식이다. CI는 BE Test에서 cleanTest로\n+    // 늘 다시 돌리지만 로컬에서는 그냥 지나가고, 그 사이 두 구현이 갈라진다.\n     inputs.dir(file('../specs/001-etf-market-data/contracts/fixtures'))\n             .withPropertyName('evaluationWindowFixtures')\n             .withPathSensitivity(PathSensitivity.RELATIVE)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/build.gradle",
+          "old_path": "backend/build.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -389,9 +389,14 @@ pipeline {\n                         script { openCheck('Backend', 'running') }\n \n                         dir('backend') {\n-                            // clean 은 백엔드 단계 전체에서 여기 한 번만 수행한다.\n-                            // 뒤따르는 스테이지가 같은 build 디렉토리를 이어서 쓴다.\n-                            sh './gradlew clean spotlessCheck'\n+                            // clean 을 하지 않는다. 워크스페이스는 빌드마다 새로 받지 않아 앞선 빌드의\n+                            // backend/build 와 backend/.gradle 이 남아 있고, Gradle 은 그것을 이어받아\n+                            // 입력 내용이 바뀐 태스크만 다시 돌린다. clean 은 이 기록을 지워 BE Test 가\n+                            // 매번 main·test 를 처음부터 컴파일하게 만들었다.\n+                            //\n+                            // 다른 MR 의 빌드가 남긴 산출물은 섞이지 않는다. Gradle 은 소스·리소스가\n+                            // 사라지면 그 클래스 파일과 복사본(마이그레이션 SQL 포함)도 지운다.\n+                            sh './gradlew spotlessCheck'\n                         }\n                     }\n                 }\n@@ -399,7 +404,13 @@ pipeline {\n                 stage('BE Test') {\n                     steps {\n                         dir('backend') {\n-                            sh './gradlew test'\n+                            // cleanTest 로 테스트 결과만 지워 테스트를 반드시 다시 돌린다. 컴파일은\n+                            // 앞 빌드의 결과를 이어 쓴다.\n+                            //\n+                            // 빼면 입력이 앞 빌드와 같을 때 test 가 UP-TO-DATE 로 건너뛰어지고, 아래\n+                            // junit 은 앞 빌드가 남긴 XML 을 이번 결과로 모은다. Docker 이미지나 날짜처럼\n+                            // Gradle 이 입력으로 보지 않는 것이 달라져도 테스트가 돌지 않은 채 통과한다.\n+                            sh './gradlew cleanTest test'\n                         }\n                     }\n                     post {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2217501,
+      "head_commit_sha": "c3a1773a9406436a566f060d5d0251691d20ea66",
+      "base_commit_sha": "f9453f60d73557743c546c6e1585d8a8f503abd9",
+      "start_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "created_at": "2026-09-18T07:50:18.455+09:00",
+      "merge_request_id": 950070,
+      "state": "without_files",
+      "real_size": "7",
+      "patch_id_sha": "e46a0684e3424183aabcf6f1c1c59e31ff0f0500",
+      "commits": [
+        {
+          "id": "c3a1773a9406436a566f060d5d0251691d20ea66",
+          "short_id": "c3a1773a",
+          "created_at": "2026-09-17T19:01:58.000+09:00",
+          "parent_ids": [
+            "3d547edc34f1e63cd484b6469879bc64163cb86d"
+          ],
+          "title": "test(be): RabbitMQ 통합 테스트가 브로커 컨테이너 하나를 함께 쓴다",
+          "message": "test(be): RabbitMQ 통합 테스트가 브로커 컨테이너 하나를 함께 쓴다\n\n네 테스트가 클래스마다 컨테이너를 띄워 기동에 클래스당 십수 초를 썼고, 클래스가 끝나\n멈춘 컨테이너의 포트로 캐시된 컨텍스트의 리스너가 끝까지 재접속했다.\n\nPostgresTestSupport와 같은 방식의 RabbitTestSupport로 컨테이너를 한 번만 띄운다.\n브로커를 함께 쓰므로 컨텍스트는 클래스 끝에 닫고(남은 리스너가 뒤 클래스와 같은 DLQ를\n나눠 소비하지 않게), 읽는 큐는 검사 전에 비운다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T19:01:56.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T19:01:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c3a1773a9406436a566f060d5d0251691d20ea66"
+        },
+        {
+          "id": "3d547edc34f1e63cd484b6469879bc64163cb86d",
+          "short_id": "3d547edc",
+          "created_at": "2026-09-17T19:01:58.000+09:00",
+          "parent_ids": [
+            "f9453f60d73557743c546c6e1585d8a8f503abd9"
+          ],
+          "title": "fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다",
+          "message": "fix(infra): CI가 앞선 빌드의 컴파일 결과를 이어 쓰고 테스트는 늘 다시 돌린다\n\nBE Format의 clean이 워크스페이스에 남은 backend/build와 Gradle 실행 기록을 지워,\nBE Test가 빌드마다 main·test를 처음부터 컴파일했다. clean을 빼고 BE Test는\ncleanTest test로 테스트 결과만 지운다. 입력이 앞 빌드와 같아도 테스트가 건너뛰어지지\n않고, junit이 앞 빌드의 XML을 이번 결과로 모으지 않는다.\n\n소스·리소스가 사라지면 Gradle이 그 클래스 파일과 복사본도 지우는 것을 확인했다\n(다른 MR의 마이그레이션 SQL이 남지 않는다).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T19:01:55.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T19:01:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d547edc34f1e63cd484b6469879bc64163cb86d"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2829713": []
+  }
+}

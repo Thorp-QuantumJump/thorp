@@ -1,0 +1,738 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 941942,
+    "iid": 65,
+    "project_id": 1444456,
+    "title": "fix(be): 워커 포트폴리오 엔진 리뷰 반영 — 이월 주문 교체·거래 불가 기준·병합 0주·TARGET_RISK 입력 검증",
+    "description": "# 작업 내용 요약\n\n`feat(be)/137-worker-portfolio-engine` 머지 뒤에 달린 2차 AI 리뷰 6건의 후속 수정입니다. 4건은 코드 결함을 고쳤고, 1건(거래 불가 판정 기준)은 001·004 계약 충돌을 001 기준으로 확정해 코드와 문서를 함께 맞췄고, 1건(공통 결측 거래일)은 다른 브랜치(`feat(be)/180`, spec 001 T011)가 이미 해결한 것이라 중복 구현하지 않고 결정만 기록했습니다.\n\n**커밋을 지적 한 건에 하나씩 나눴습니다.** 모두 테스트를 먼저 써서 수정 전 코드에서 실패하는 것을 확인했습니다.\n\n| 커밋 | 리뷰 | 내용 |\n|---|---|---|\n| `7cd587f` | 6 [P3] | 운영 이미지 `requirements.txt` 에서 yfinance 제거 |\n| `4eaba27` | 5 [P2] | `TARGET_RISK` 목표 변동성이 NaN·Infinity 면 `INVALID_REQUEST` |\n| `6d73eb1` | 4 [P2] | 병합으로 미체결 주문이 0주가 되면 예외를 남기고 주문을 닫음 |\n| `a9039b4` | 3 [P1] | 거래 불가 판정 기준을 `trading_suspended` 하나로(001 계약 기준) |\n| `2f0d521` | 2 [P1] | 이월 주문이 다음 판단일을 넘기면 새 목표로 교체하고 미완료 리밸런싱 기록 |\n| `fa6b91a` | 1·2·3·4 | tasks.md T006 결정 기록 ⑬~⑯ |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-137 (fix 후속, 같은 티켓)\n- link https://ssafy.atlassian.net/browse/S15P21E205-137\n- 관련: S15P21E205-180 (spec 001 T011, `daily_index` 달력 — 리뷰 1 해소)\n\n# 주요 변경 사항\n\n- **[리뷰 2, P1] 장기 정지 시 이전 목표 유실** — 지적대로였습니다. `_decide` 가 이월 주문이 남은 종목을 `iid in self.pending` 으로 건너뛰면서 `pending_target` 은 새 목표로 덮어써, 정지가 월말을 넘기면 이전 `weightsSeries` 가 사라지고 옛 수량으로 체결되며 기록은 새 목표를 가리켰습니다. **정책**: 판단일에 이월 주문이 남아 있으면 `HALT_SUPERSEDED` 로 닫고(주문 record `REJECTED`, 예외 기록) 새 목표 수량으로 다시 만듭니다. 이월 주문은 Nautilus 에 낸 적이 없어 장부에서만 닫습니다. 미완료였던 이전 목표는 그 판단일의 실제 비중으로 `weightsSeries` 에 남겨 정지 때문에 목표에 닿지 못한 사실이 `weightError` 로 보이게 했습니다. 테스트는 픽스처의 반도체 ETF 를 5/20~6/4 정지로 덮어써 5/17 판단이 5/31 월말을 넘기는 상황을 만들고, 5/31 `HALT_SUPERSEDED`·`weightsSeries` 두 항목(5/31 미완료, 6/5 완료)·체결의 `plannedDate=6/3` 을 단언합니다.\n- **[리뷰 3, P1] volume 0 = 거래정지** — 문서 충돌이 실제로 있었습니다. 004 `market-data-input.md` 는 \"`trading_suspended` 또는 volume 0\", 001 `market-dataset.md` 「거래정지 처리」(2026-09-11)는 \"판정 기준은 `trading_suspended` 다. 정지가 아닌 거래량 0 인 날은 호가가 있어 체결 가능\". **001 을 따릅니다** — 자료를 만드는 쪽이 정지 의미를 정의했고 더 최근입니다. `_tradable` 에서 `volume > 0` 조건을 빼고 004 계약·워커 README·모듈 docstring 을 함께 고쳤습니다. 정지일이면서 거래량이 0 이 아니면 적재에서 거절하는 검증(`market_data.py`)은 그대로입니다.\n- **[리뷰 4, P2] 병합 0주 주문** — 지적대로였습니다. `_begin_day` 가 미체결 주문에 `apply_split` 결과의 수량만 쓰고 예외를 버려, 비율 0.5 에서 1주 주문이 0주가 되면 SELL 은 `Quantity.from_int(0)` 으로 Nautilus 에 제출되고 BUY 는 `INSUFFICIENT_CASH` 라는 틀린 사유로 거절됐습니다. `SPLIT_FRACTION` 예외를 기록하고 0주 주문은 `SPLIT_ROUNDING` 으로 닫습니다.\n- **[리뷰 5, P2] TARGET_RISK NaN/Infinity** — 지적대로였고 Infinity 는 더 나빴습니다. NaN 은 `target <= 0` 비교에서 `InvalidOperation` 을 던져(결정적 오류 처리 구간 앞) 소비자가 재전달 → DLQ 로 갔고, **Infinity 는 비교를 통과**해 추정치가 언제나 목표 아래라 조절이 조용히 사라져 주 분석과 같은 결과가 나왔습니다. `target.is_finite()` 검사 한 줄과 NaN·Infinity·-Infinity·0·음수 파라미터 테스트.\n- **[리뷰 6, P3] requirements.txt yfinance** — 지적대로였습니다. `infra/docker/worker.Dockerfile` 이 `requirements.txt` 로 설치하므로 운영 이미지에 들어갔습니다. 한 줄 삭제.\n- **[리뷰 1, P1] 공통 결측 거래일 — 이 MR 에서 고치지 않았습니다.** 코드 주석(`market_data.py` `_check_complete`)에 \"모든 종목이 함께 빠지면 못 본다, 001 몫\" 으로 적어 둔 알려진 한계입니다. 리뷰가 요구한 대로 `daily_index` 날짜 집합을 달력으로 쓰는 구현은 spec 001 T011 브랜치 `feat(be)/180` 이 이미 갖고 있습니다(`_calendar`: 비어 있으면 실패, `_check_complete(calendar=...)`). 137 에 중복 구현하지 않고 T006 결정 ⑯ 으로 기록했습니다. CSV 픽스처에는 지수 자료가 없어 픽스처 경로는 합집합 대안이 남습니다.\n- **테스트 도구** — 픽스처를 읽은 뒤 한 군데만 바꾸는 `PatchedProvider`/`run_patched` 를 테스트에 두었습니다. 병합·장기 정지·거래량 0 처럼 픽스처 CSV 에 없는 사건을 CSV 를 늘리지 않고 만듭니다.\n\n# 테스트\n\n- [x] 워커 `ruff check src tests && ruff format --check src tests && pytest` — **250 passed**(242 → 250: 리뷰 5 파라미터 5건, 리뷰 4·3·2 각 1건)\n- [x] 각 수정마다 테스트를 먼저 써서 수정 전 코드에서 실패 확인: 리뷰 5 NaN(`InvalidOperation` 전파)·Infinity(거절 안 됨), 리뷰 4(`SPLIT_FRACTION` 예외 없음·사유 `INSUFFICIENT_CASH`), 리뷰 3(거래량 0 인 날 `HALT_DEFERRED`), 리뷰 2(`HALT_SUPERSEDED` 없음·`weightsSeries` 1건·`plannedDate=5/20`)\n- [x] `git diff --check origin/dev...HEAD` 통과\n- [x] 백엔드 변경 없음(워커·문서만)\n- 환경 메모: 1차 리뷰어가 \"로컬 `.venv` 에 Python 이 없다\" 고 한 것은 WSL 에서 만든 venv 의 심볼릭링크가 `/mnt/c` 에서 깨진 것이었습니다. Windows 에서 `uv sync --python 3.13` 으로 다시 만들어 돌렸습니다(`uv.lock` 에 cp313 win_amd64 wheel 있음). `.venv` 는 gitignore 대상이라 변경 없음.\n\n# 리뷰 포인트\n\n- **거래 불가 판정을 001 기준(`trading_suspended` 만)으로 확정했습니다.** 004 계약의 \"또는 volume 0\" 을 지운 것이 맞는지. 반대로 004 를 기준으로 하려면 001 의 「거래정지 처리」와 data-model 「거래정지일 표현」을 함께 바꿔야 합니다.\n- **이월 주문 교체 정책의 기록 방식.** 미완료 리밸런싱을 다음 판단일 날짜로 `weightsSeries` 에 남기는 방식을 택했습니다(실제 비중은 그날 것). 대안은 기록하지 않고 예외만 남기는 것인데, 그러면 \"정지 때문에 한 달 동안 목표에 못 닿았다\" 가 `weightsSeries` 에서 보이지 않습니다.\n- **리뷰 1 을 180 에 맡긴 것.** 137 과 180 은 `market_data.py` 에서 충돌합니다(137 이 단일 종목 경로를 지운 부분). 180 이 dev 를 병합할 때 풀어야 하고, 그때 `_check_complete(calendar=...)` 경로가 살아 있는지 확인하면 리뷰 1 이 닫힙니다.\n- `HALT_SUPERSEDED`·`SPLIT_ROUNDING` 은 `exceptions[].kind`(개방 집합) 와 주문 record 의 `reason` 에만 쓰이고 결과 계약의 enum 은 바꾸지 않았습니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-13T11:44:03.010+09:00",
+    "updated_at": "2026-09-14T13:22:14.922+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-13T11:44:45.653+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/137-portfolio-engine-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "afd2b91a3ef3b2ebe80df6ce0275b00585995137",
+    "merge_commit_sha": "3601f7b239593a752e82732028b8effc207c6523",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T11:44:04.739+09:00",
+    "reference": "!65",
+    "references": {
+      "short": "!65",
+      "relative": "!65",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!65"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/65",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 941942,
+    "iid": 65,
+    "project_id": 1444456,
+    "title": "fix(be): 워커 포트폴리오 엔진 리뷰 반영 — 이월 주문 교체·거래 불가 기준·병합 0주·TARGET_RISK 입력 검증",
+    "description": "# 작업 내용 요약\n\n`feat(be)/137-worker-portfolio-engine` 머지 뒤에 달린 2차 AI 리뷰 6건의 후속 수정입니다. 4건은 코드 결함을 고쳤고, 1건(거래 불가 판정 기준)은 001·004 계약 충돌을 001 기준으로 확정해 코드와 문서를 함께 맞췄고, 1건(공통 결측 거래일)은 다른 브랜치(`feat(be)/180`, spec 001 T011)가 이미 해결한 것이라 중복 구현하지 않고 결정만 기록했습니다.\n\n**커밋을 지적 한 건에 하나씩 나눴습니다.** 모두 테스트를 먼저 써서 수정 전 코드에서 실패하는 것을 확인했습니다.\n\n| 커밋 | 리뷰 | 내용 |\n|---|---|---|\n| `7cd587f` | 6 [P3] | 운영 이미지 `requirements.txt` 에서 yfinance 제거 |\n| `4eaba27` | 5 [P2] | `TARGET_RISK` 목표 변동성이 NaN·Infinity 면 `INVALID_REQUEST` |\n| `6d73eb1` | 4 [P2] | 병합으로 미체결 주문이 0주가 되면 예외를 남기고 주문을 닫음 |\n| `a9039b4` | 3 [P1] | 거래 불가 판정 기준을 `trading_suspended` 하나로(001 계약 기준) |\n| `2f0d521` | 2 [P1] | 이월 주문이 다음 판단일을 넘기면 새 목표로 교체하고 미완료 리밸런싱 기록 |\n| `fa6b91a` | 1·2·3·4 | tasks.md T006 결정 기록 ⑬~⑯ |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-137 (fix 후속, 같은 티켓)\n- link https://ssafy.atlassian.net/browse/S15P21E205-137\n- 관련: S15P21E205-180 (spec 001 T011, `daily_index` 달력 — 리뷰 1 해소)\n\n# 주요 변경 사항\n\n- **[리뷰 2, P1] 장기 정지 시 이전 목표 유실** — 지적대로였습니다. `_decide` 가 이월 주문이 남은 종목을 `iid in self.pending` 으로 건너뛰면서 `pending_target` 은 새 목표로 덮어써, 정지가 월말을 넘기면 이전 `weightsSeries` 가 사라지고 옛 수량으로 체결되며 기록은 새 목표를 가리켰습니다. **정책**: 판단일에 이월 주문이 남아 있으면 `HALT_SUPERSEDED` 로 닫고(주문 record `REJECTED`, 예외 기록) 새 목표 수량으로 다시 만듭니다. 이월 주문은 Nautilus 에 낸 적이 없어 장부에서만 닫습니다. 미완료였던 이전 목표는 그 판단일의 실제 비중으로 `weightsSeries` 에 남겨 정지 때문에 목표에 닿지 못한 사실이 `weightError` 로 보이게 했습니다. 테스트는 픽스처의 반도체 ETF 를 5/20~6/4 정지로 덮어써 5/17 판단이 5/31 월말을 넘기는 상황을 만들고, 5/31 `HALT_SUPERSEDED`·`weightsSeries` 두 항목(5/31 미완료, 6/5 완료)·체결의 `plannedDate=6/3` 을 단언합니다.\n- **[리뷰 3, P1] volume 0 = 거래정지** — 문서 충돌이 실제로 있었습니다. 004 `market-data-input.md` 는 \"`trading_suspended` 또는 volume 0\", 001 `market-dataset.md` 「거래정지 처리」(2026-09-11)는 \"판정 기준은 `trading_suspended` 다. 정지가 아닌 거래량 0 인 날은 호가가 있어 체결 가능\". **001 을 따릅니다** — 자료를 만드는 쪽이 정지 의미를 정의했고 더 최근입니다. `_tradable` 에서 `volume > 0` 조건을 빼고 004 계약·워커 README·모듈 docstring 을 함께 고쳤습니다. 정지일이면서 거래량이 0 이 아니면 적재에서 거절하는 검증(`market_data.py`)은 그대로입니다.\n- **[리뷰 4, P2] 병합 0주 주문** — 지적대로였습니다. `_begin_day` 가 미체결 주문에 `apply_split` 결과의 수량만 쓰고 예외를 버려, 비율 0.5 에서 1주 주문이 0주가 되면 SELL 은 `Quantity.from_int(0)` 으로 Nautilus 에 제출되고 BUY 는 `INSUFFICIENT_CASH` 라는 틀린 사유로 거절됐습니다. `SPLIT_FRACTION` 예외를 기록하고 0주 주문은 `SPLIT_ROUNDING` 으로 닫습니다.\n- **[리뷰 5, P2] TARGET_RISK NaN/Infinity** — 지적대로였고 Infinity 는 더 나빴습니다. NaN 은 `target <= 0` 비교에서 `InvalidOperation` 을 던져(결정적 오류 처리 구간 앞) 소비자가 재전달 → DLQ 로 갔고, **Infinity 는 비교를 통과**해 추정치가 언제나 목표 아래라 조절이 조용히 사라져 주 분석과 같은 결과가 나왔습니다. `target.is_finite()` 검사 한 줄과 NaN·Infinity·-Infinity·0·음수 파라미터 테스트.\n- **[리뷰 6, P3] requirements.txt yfinance** — 지적대로였습니다. `infra/docker/worker.Dockerfile` 이 `requirements.txt` 로 설치하므로 운영 이미지에 들어갔습니다. 한 줄 삭제.\n- **[리뷰 1, P1] 공통 결측 거래일 — 이 MR 에서 고치지 않았습니다.** 코드 주석(`market_data.py` `_check_complete`)에 \"모든 종목이 함께 빠지면 못 본다, 001 몫\" 으로 적어 둔 알려진 한계입니다. 리뷰가 요구한 대로 `daily_index` 날짜 집합을 달력으로 쓰는 구현은 spec 001 T011 브랜치 `feat(be)/180` 이 이미 갖고 있습니다(`_calendar`: 비어 있으면 실패, `_check_complete(calendar=...)`). 137 에 중복 구현하지 않고 T006 결정 ⑯ 으로 기록했습니다. CSV 픽스처에는 지수 자료가 없어 픽스처 경로는 합집합 대안이 남습니다.\n- **테스트 도구** — 픽스처를 읽은 뒤 한 군데만 바꾸는 `PatchedProvider`/`run_patched` 를 테스트에 두었습니다. 병합·장기 정지·거래량 0 처럼 픽스처 CSV 에 없는 사건을 CSV 를 늘리지 않고 만듭니다.\n\n# 테스트\n\n- [x] 워커 `ruff check src tests && ruff format --check src tests && pytest` — **250 passed**(242 → 250: 리뷰 5 파라미터 5건, 리뷰 4·3·2 각 1건)\n- [x] 각 수정마다 테스트를 먼저 써서 수정 전 코드에서 실패 확인: 리뷰 5 NaN(`InvalidOperation` 전파)·Infinity(거절 안 됨), 리뷰 4(`SPLIT_FRACTION` 예외 없음·사유 `INSUFFICIENT_CASH`), 리뷰 3(거래량 0 인 날 `HALT_DEFERRED`), 리뷰 2(`HALT_SUPERSEDED` 없음·`weightsSeries` 1건·`plannedDate=5/20`)\n- [x] `git diff --check origin/dev...HEAD` 통과\n- [x] 백엔드 변경 없음(워커·문서만)\n- 환경 메모: 1차 리뷰어가 \"로컬 `.venv` 에 Python 이 없다\" 고 한 것은 WSL 에서 만든 venv 의 심볼릭링크가 `/mnt/c` 에서 깨진 것이었습니다. Windows 에서 `uv sync --python 3.13` 으로 다시 만들어 돌렸습니다(`uv.lock` 에 cp313 win_amd64 wheel 있음). `.venv` 는 gitignore 대상이라 변경 없음.\n\n# 리뷰 포인트\n\n- **거래 불가 판정을 001 기준(`trading_suspended` 만)으로 확정했습니다.** 004 계약의 \"또는 volume 0\" 을 지운 것이 맞는지. 반대로 004 를 기준으로 하려면 001 의 「거래정지 처리」와 data-model 「거래정지일 표현」을 함께 바꿔야 합니다.\n- **이월 주문 교체 정책의 기록 방식.** 미완료 리밸런싱을 다음 판단일 날짜로 `weightsSeries` 에 남기는 방식을 택했습니다(실제 비중은 그날 것). 대안은 기록하지 않고 예외만 남기는 것인데, 그러면 \"정지 때문에 한 달 동안 목표에 못 닿았다\" 가 `weightsSeries` 에서 보이지 않습니다.\n- **리뷰 1 을 180 에 맡긴 것.** 137 과 180 은 `market_data.py` 에서 충돌합니다(137 이 단일 종목 경로를 지운 부분). 180 이 dev 를 병합할 때 풀어야 하고, 그때 `_check_complete(calendar=...)` 경로가 살아 있는지 확인하면 리뷰 1 이 닫힙니다.\n- `HALT_SUPERSEDED`·`SPLIT_ROUNDING` 은 `exceptions[].kind`(개방 집합) 와 주문 record 의 `reason` 에만 쓰이고 결과 계약의 enum 은 바꾸지 않았습니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-13T11:44:03.010+09:00",
+    "updated_at": "2026-09-14T13:22:14.922+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-13T11:44:45.653+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/137-portfolio-engine-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "afd2b91a3ef3b2ebe80df6ce0275b00585995137",
+    "merge_commit_sha": "3601f7b239593a752e82732028b8effc207c6523",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T11:44:04.739+09:00",
+    "reference": "!65",
+    "references": {
+      "short": "!65",
+      "relative": "!65",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!65"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/65",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "236446014363895d426e43dbd73b1619f7ed84a0",
+      "head_sha": "afd2b91a3ef3b2ebe80df6ce0275b00585995137",
+      "start_sha": "236446014363895d426e43dbd73b1619f7ed84a0"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "4e8093226f38601f4ea13740b3cd2de0e25a8f31",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2797185,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T11:44:03.194+09:00",
+          "updated_at": "2026-09-13T11:44:03.237+09:00",
+          "system": true,
+          "noteable_id": 941942,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 65,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "63c59bdf97ef3c856ef8f01089d0775a281a6ec7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2797186,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 테스트 주도 접근**: 수정 사항(이월 주문 교체, 0주 주문 처리, `TARGET_RISK` NaN/Infinity 검증 등)에 대해 엣지 케이스를 다루는 단위 테스트를 선제적으로 작성하고 250개의 테스트 통과를 검증한 점이 훌륭합니다.\n- **문서와 구현의 동기화**: `trading_suspended` 거래 불가 기준에 대한 스펙 충돌(001 vs 004 계약)을 001 기준으로 명확히 확정하고, 관련 문서 및 계약 파일(`tasks.md`, `README.md`)을 빠짐없이 현행화했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `TARGET_RISK` 검증 로직 추가에 따라, `targetVolatility` 필드가 아예 누락되었거나(null 또는 key 부재) 타입이 문자열이 아닌 숫자형/객체로 들어오는 경우(`ValidationError` 발생 지점)에 대한 예외 처리가 기존 파이프라인에서 의도대로 `INVALID_REQUEST`로 잘 매핑되는지 통합 테스트로 확인을 권장합니다.\n- 장기 정지 상태에서 `HALT_SUPERSEDED`가 발생할 때, 이전 미완료 리밸런싱의 `weightsSeries` 기록이 실제 비중과 `weightError`를 정확히 반영하는지 검증하는 시나리오가 추가되어 있으나, 해당 시나리오에서 현금 잔고(Cash)나 타 종목의 포지션 수량이 의도치 않게 왜곡되지 않는지 추가 확인을 제안합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:afd2b91a3ef3b2ebe80df6ce0275b00585995137 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-13T11:44:11.564+09:00",
+          "updated_at": "2026-09-13T11:44:11.564+09:00",
+          "system": false,
+          "noteable_id": 941942,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 65,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a0fc411ba0bd2223c3407e322a02f65c10b1ffa2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2797187,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T11:44:22.740+09:00",
+          "updated_at": "2026-09-13T11:44:22.743+09:00",
+          "system": true,
+          "noteable_id": 941942,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 65,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e0d924bd0e3d726b9742ad134eb90da0b05c6eb8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2797188,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T11:44:25.940+09:00",
+          "updated_at": "2026-09-13T11:44:25.946+09:00",
+          "system": true,
+          "noteable_id": 941942,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 65,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0d756adf95530301dc0f0f10a26447241a12b545",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2797189,
+          "type": null,
+          "body": "mentioned in commit 3601f7b239593a752e82732028b8effc207c6523",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T11:44:45.757+09:00",
+          "updated_at": "2026-09-13T11:44:45.767+09:00",
+          "system": true,
+          "noteable_id": 941942,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 65,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2190094,
+      "head_commit_sha": "afd2b91a3ef3b2ebe80df6ce0275b00585995137",
+      "base_commit_sha": "236446014363895d426e43dbd73b1619f7ed84a0",
+      "start_commit_sha": "236446014363895d426e43dbd73b1619f7ed84a0",
+      "created_at": "2026-09-13T11:44:03.457+09:00",
+      "merge_request_id": 941942,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "5d8efc76b5ef771922e01abd4cb9c550d3fcb0d4"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2190094,
+      "head_commit_sha": "afd2b91a3ef3b2ebe80df6ce0275b00585995137",
+      "base_commit_sha": "236446014363895d426e43dbd73b1619f7ed84a0",
+      "start_commit_sha": "236446014363895d426e43dbd73b1619f7ed84a0",
+      "created_at": "2026-09-13T11:44:03.457+09:00",
+      "merge_request_id": 941942,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "5d8efc76b5ef771922e01abd4cb9c550d3fcb0d4",
+      "commits": [
+        {
+          "id": "afd2b91a3ef3b2ebe80df6ce0275b00585995137",
+          "short_id": "afd2b91a",
+          "created_at": "2026-09-13T11:41:37.000+09:00",
+          "parent_ids": [
+            "fa6b91a6d9d29f4196ef5f4c1ee7bfcf3f5b219f"
+          ],
+          "title": "docs(be): T006 체결 규칙 항목의 거래 불가 판정을 결정 ⑬과 맞춘다",
+          "message": "docs(be): T006 체결 규칙 항목의 거래 불가 판정을 결정 ⑬과 맞춘다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:41:37.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:41:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/afd2b91a3ef3b2ebe80df6ce0275b00585995137"
+        },
+        {
+          "id": "fa6b91a6d9d29f4196ef5f4c1ee7bfcf3f5b219f",
+          "short_id": "fa6b91a6",
+          "created_at": "2026-09-13T11:13:17.000+09:00",
+          "parent_ids": [
+            "2f0d521af04c99df0ed82831fa7c08fde28b82e1"
+          ],
+          "title": "docs(be): 2차 리뷰 반영 결정을 T006 기록에 남긴다 — 거래 불가 기준·이월 주문 교체·병합 0주·공통 결측",
+          "message": "docs(be): 2차 리뷰 반영 결정을 T006 기록에 남긴다 — 거래 불가 기준·이월 주문 교체·병합 0주·공통 결측\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:13:17.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:13:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fa6b91a6d9d29f4196ef5f4c1ee7bfcf3f5b219f"
+        },
+        {
+          "id": "2f0d521af04c99df0ed82831fa7c08fde28b82e1",
+          "short_id": "2f0d521a",
+          "created_at": "2026-09-13T11:11:44.000+09:00",
+          "parent_ids": [
+            "a9039b4741c28cd3e0ee9c8f1accf09bb038a04a"
+          ],
+          "title": "fix(be): 이월 주문이 다음 판단일을 넘기면 새 목표로 바꾸고 미완료 리밸런싱을 기록한다",
+          "message": "fix(be): 이월 주문이 다음 판단일을 넘기면 새 목표로 바꾸고 미완료 리밸런싱을 기록한다\n\n_decide 가 이월 주문이 남은 종목을 건너뛰면서 pending_target 은 새 목표로 덮어써, 장기 정지가\n월말을 넘기면 (1) 이전 리밸런싱의 weightsSeries 항목이 사라지고 (2) 옛 수량으로 체결되며\n(3) 기록은 새 목표를 가리켰다(리뷰 2). 판단일에 이월 주문이 남아 있으면 HALT_SUPERSEDED 로\n닫고 새 목표 수량으로 다시 만든다. 이월 주문은 Nautilus 에 낸 적이 없어 장부에서 닫기만 하면\n된다. 미완료였던 이전 목표는 그 판단일의 실제 비중으로 weightsSeries 에 남겨 정지 때문에\n목표에 닿지 못한 사실이 weightError 로 보이게 한다. 테스트는 픽스처의 반도체 ETF 를\n5/20~6/4 정지로 덮어써 5/17 판단이 5/31 월말을 넘기는 상황을 만든다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:11:44.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:11:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2f0d521af04c99df0ed82831fa7c08fde28b82e1"
+        },
+        {
+          "id": "a9039b4741c28cd3e0ee9c8f1accf09bb038a04a",
+          "short_id": "a9039b47",
+          "created_at": "2026-09-13T11:09:31.000+09:00",
+          "parent_ids": [
+            "6d73eb1f26e501a17a0af14a466f798a7d2a98b5"
+          ],
+          "title": "fix(be): 거래 불가 판정 기준을 trading_suspended 하나로 좁힌다",
+          "message": "fix(be): 거래 불가 판정 기준을 trading_suspended 하나로 좁힌다\n\n_tradable 이 volume 0 도 정지로 읽어 정지가 아닌 거래량 0 인 날의 정상 주문을 HALT_DEFERRED\n로 이월했다. 001 계약(contracts/market-dataset.md 「거래정지 처리」, 2026-09-11)은 판정 기준을\ntrading_suspended 로 정하고 거래량 0 인 날도 호가가 있어 체결 가능하다고 명시한다. 004 계약\nmarket-data-input.md 의 \"또는 volume 0\" 이 그와 어긋나 001 을 따르도록 함께 고쳤다(리뷰 3).\n정지일이면서 거래량이 0 이 아니면 적재에서 거절하는 검증은 그대로다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:09:31.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:09:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a9039b4741c28cd3e0ee9c8f1accf09bb038a04a"
+        },
+        {
+          "id": "6d73eb1f26e501a17a0af14a466f798a7d2a98b5",
+          "short_id": "6d73eb1f",
+          "created_at": "2026-09-13T11:08:46.000+09:00",
+          "parent_ids": [
+            "4eaba2714825eae9e2bee8709bd97e9f383906da"
+          ],
+          "title": "fix(be): 병합으로 미체결 주문이 0주가 되면 예외를 남기고 주문을 닫는다",
+          "message": "fix(be): 병합으로 미체결 주문이 0주가 되면 예외를 남기고 주문을 닫는다\n\n_begin_day 가 미체결 주문에 apply_split 의 수량만 쓰고 단주 예외를 버렸다. 비율 0.5 병합에서\n1주 주문이 0주가 되면 SELL 은 Quantity.from_int(0) 으로 Nautilus 에 제출되고 BUY 는\nINSUFFICIENT_CASH 라는 틀린 사유로 거절됐다(리뷰 4). SPLIT_FRACTION 예외를 기록하고 0주\n주문은 SPLIT_ROUNDING 으로 닫는다. 테스트는 픽스처를 읽은 뒤 분할 비율만 0.5 로 바꾼다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:08:46.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:08:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d73eb1f26e501a17a0af14a466f798a7d2a98b5"
+        },
+        {
+          "id": "4eaba2714825eae9e2bee8709bd97e9f383906da",
+          "short_id": "4eaba271",
+          "created_at": "2026-09-13T11:05:22.000+09:00",
+          "parent_ids": [
+            "7cd587fd0c44ce30a608bec2a492f33b88524523"
+          ],
+          "title": "fix(be): TARGET_RISK 목표 변동성이 NaN·Infinity 면 INVALID_REQUEST 로 거절",
+          "message": "fix(be): TARGET_RISK 목표 변동성이 NaN·Infinity 면 INVALID_REQUEST 로 거절\n\nDecimal(\"NaN\") 은 target <= 0 비교에서 InvalidOperation 을 던진다. 이 검사는 결정적 오류\n처리 구간 앞에 있어 소비자가 일반 예외로 받아 재전달하고 결국 DLQ 로 갔다. Infinity 는\n비교를 통과해 추정치가 언제나 목표 아래라 조절이 조용히 사라졌다(리뷰 5).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:05:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:05:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4eaba2714825eae9e2bee8709bd97e9f383906da"
+        },
+        {
+          "id": "7cd587fd0c44ce30a608bec2a492f33b88524523",
+          "short_id": "7cd587fd",
+          "created_at": "2026-09-13T11:04:48.000+09:00",
+          "parent_ids": [
+            "236446014363895d426e43dbd73b1619f7ed84a0"
+          ],
+          "title": "fix(be): 운영 이미지 requirements.txt 에서 yfinance 제거",
+          "message": "fix(be): 운영 이미지 requirements.txt 에서 yfinance 제거\n\npyproject·uv.lock 에서는 뺐지만 worker.Dockerfile 이 설치하는 requirements.txt 에 남아\n운영 이미지에 yfinance 와 전이 의존성이 계속 들어갔다(리뷰 6).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:04:48.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:04:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7cd587fd0c44ce30a608bec2a492f33b88524523"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -8,7 +8,7 @@\n \n | 자료 | 001의 표 | 열 | 용도 |\n |---|---|---|---|\n-| 일별 원시 가격 | `daily_price` | `instrument_id, date, open, high, low, close, volume, trading_suspended BOOL, dataset_id` | 체결(다음 거래일 원시 시가), 거래 불가 판정(`trading_suspended` 또는 volume 0) |\n+| 일별 원시 가격 | `daily_price` | `instrument_id, date, open, high, low, close, volume, trading_suspended BOOL, dataset_id` | 체결(다음 거래일 원시 시가), 거래 불가 판정(`trading_suspended` 하나. 정지가 아닌 volume 0 은 호가가 있어 체결 가능 — 001 contracts/market-dataset.md 「거래정지 처리」) |\n | 일별 조정 종가 | `daily_price` (같은 행) | `instrument_id, date, adjusted_close, dataset_id` | 신호·성과(분할·분배 일관 반영) |\n | 분배금 이벤트 | `corporate_action` (`event_type = 'DISTRIBUTION'`) | `instrument_id, ex_date, pay_date, amount, dataset_id` | 지급일 현금 반영(한 번만) |\n | 분할 이벤트 | `corporate_action` (`event_type = 'SPLIT'`) | `instrument_id, ex_date, amount, dataset_id` | 원시 수량 조정. `amount`가 비율이고 `pay_date`는 NULL이다 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/market-data-input.md",
+          "old_path": "specs/004-backtest-execution/contracts/market-data-input.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -73,11 +73,11 @@\n - [x] T006 [P] [US1] [BE] 워커 소비자 v2와 다종목 리밸런싱 Nautilus 전략 (`worker/src/worker/{consumer,rabbitmq,engine_runner,nautilus_engine,portfolio_execution,engine_support}.py`, `worker/tests/{test_consumer,test_portfolio_execution}.py`) — Jira `S15P21E205-137`\n   - 소비자 v2: STARTED{stage: PREPARING_DATA, resource{pid,hostname}}, PROGRESS{stage: COMPUTING, lastTradingDate,…} 20거래일 배치, FINISHED{status, partial, lastTradingDate, engineOutput, resource{peakRssMb,cpuSeconds,wallSeconds}}(`resource.getrusage`). INVALID_REQUEST·DATA_INSUFFICIENT·CONSTRAINT_VIOLATION·ESTIMATION_FAILED는 FINISHED(FAILED) 후 ACK(재시도 없음); 프로세스 예외는 전파해 unacked로 죽게 둔다. `engine_support.py` 제한을 v2 기준(fillPrice=RAW, signalPrice=ADJUSTED, 규칙 사본 필수)으로 교체\n   - `PortfolioRebalanceExecution(NautilusStrategy)`: 월말 판단일 `on_bar`(마지막 종목 bar 뒤)에서 배분 모듈(T007)에 조정 종가 이력 전달 → 목표 비중 → 현금·현재가 기준 정수 수량 주문 → 다음 거래일 시가 QuoteTick 시장가 체결. 공매도·레버리지 불가, 매도→매수 순서 고정\n-  - 거래 정지·거래 불가(halted 또는 volume 0) → 다음 거래 가능일로 이월, `reason=HALT_DEFERRED, plannedDate`\n+  - 거래 정지(`trading_suspended=true` 만 거래 불가로 판정, 거래량 0 은 정지가 아니다 — 결정 ⑬) → 다음 거래 가능일로 이월, `reason=HALT_DEFERRED, plannedDate`\n   - 워밍업: `evaluation.warmupTradingDays` 소비 후 `effectiveStart`부터 성과 집계. 종료일: 시가평가·청산(전량 매도, 비용 포함) 두 결과(`liquidation`)\n   - 비중 오차·잔여 현금을 `weightsSeries[].weightError`·`portfolioSeries[].cash`로 기록(재정규화 금지). `scenario=FRESH_CASH_FROM`(시작일·시작 현금 재지정) 지원\n   - `scenario=TARGET_RISK` 오버레이(PD-18): 리밸런싱 판단일마다 최근 `scenarioRules.lookbackDays`(63) 포트폴리오 일별 수익률 표준편차 × √252로 변동성 추정, 추정치 > `scenarioParams.targetVolatility`이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로, 아니면 그대로(하향만, 레버리지 금지). `weightsSeries[].riskScale`·`estimatedVolatility` 기록. 규칙 없이 오면 INVALID_REQUEST\n-  - 구현 시 결정(T006): ① **Nautilus 계좌는 MARGIN, 원장은 워커 장부다.** 액면분할이 Nautilus 포지션에 반영되지 않아 분할 뒤 매도가 CASH 계좌에서 \"공매도\"로 거절된다(탐침 확인). MARGIN 계좌는 매수 대금을 잔고에서 빼지 않으므로 Nautilus 잔고는 대조 대상이 아니고, 대신 체결가 = 그 방향 호가를 매 건 검사한다. 공매도 금지·현금 음수 금지는 장부가 지킨다 ② **체결 콜백은 핸들러 뒤에 온다**(탐침 확인). 매수 수량은 판단일 종가로 정하고 제출 직전 예상 현금(현금 + 매도 예상 대금)으로만 줄인다. 줄이면 `INSUFFICIENT_CASH` 경고 ③ **첫 판단일은 평가 시작일 종가**다 — 첫 월말까지 현금으로 두면 대기 기간을 평가하게 된다. 마지막 평가일은 판단하지 않는다(체결할 다음 거래일이 없다) ④ **`weightsSeries` 는 그 리밸런싱의 주문이 전부 체결·거절된 날 기록한다.** 이월 주문이 남아 있으면 정지일이 아니라 실제 체결일에 남는다 ⑤ 워밍업 우선순위: `FRESH_CASH_FROM.startDate` → `run.effectiveStart` → `evaluation.warmupTradingDays` → `rules.lookbackDays` → 0. 자료가 모자라면 `DATA_INSUFFICIENT` ⑥ **`TARGET_RISK` 오버레이(`target_risk.py`, 리뷰 반영)**: 추정 대상은 실제 보유가 아니라 **판단일에 정한 목표 비중 포트폴리오**의 최근 `scenarioRules.lookbackDays` 일별 수익률이다 — 실제 보유 수익률은 첫 판단일에 없고 리밸런싱 직후엔 옛 비중의 성질을 물려받는다. 수익률이 모자라면 대충 추정하지 않고 `ESTIMATION_FAILED`. 그래서 백엔드 `EffectivePeriodCalculator` 가 오버레이 관측 길이도 워밍업에 넣고(전략 관측 길이와 max — 같은 자료라 더하지 않는다) 조립기가 `scenarioRules.version` 을 실어 `versions.scenarioRules` 로 돌아온다. `weightsSeries[].target` 은 조절 뒤 비중, `riskScale`·`estimatedVolatility` 는 워커 계약 모델에 추가(백엔드 record에는 이미 있었다). `COST_ESCALATION` 은 비용 프로필에 `escalation` 규칙이 없어 T007 결정대로 `INVALID_REQUEST`. `FRESH_CASH_FROM` 지원 ⑦ 거래 계약에 세금 칸이 없어 `trades[].commission` 은 양쪽 수수료 합, 세금은 `realized_pnl` 과 `costs.tax` 에만 반영 ⑧ 청산(`liquidation`)은 종료일 종가 전량 매도 가정치이며 `trades`·`costs` 합계에 넣지 않는다 ⑨ 단일 종목 DEMO 엔진(`nautilus_engine.py`·`strategies/`·yfinance 공급자·`CsvDataProvider`)과 MOMENTUM 파라미터 모델을 삭제했다. `STRATEGY_PARAMETERS` 는 세 등록 전략에 `RebalanceParameters{rebalance: MONTH_END}` 를 등록한다 ⑩ `peakRssMb` 는 `resource.getrusage`(Linux KiB·macOS bytes)로, `resource` 가 없는 플랫폼(Windows)에서는 키를 생략한다 ⑪ **일시 장애는 결과가 아니다**(리뷰 반영): 일시 장애는 자료 적재에서만 나므로 러너는 `MarketDataProvider.load` 만 try 밖에 두어 전파하고(소비자 재전달 경로), 자료가 메모리에 오른 뒤의 예외는 전부 결정적 결함이라 배분·자료·입력 오류는 자기 코드로, 그 밖은 `ENGINE_ERROR` 결과로 돌려준다. 전파해 재전달시키면 같은 자리에서 또 죽어 DLQ(SYSTEM_FAILURE)로 가는데 그건 장애가 아니라 결함이다 ⑫ **분할일에는 미체결 주문 수량도 분할 비율로 조정한다**(리뷰 반영): 전날 분할 전 가격으로 정한 수량을 그대로 두면 목표의 절반만 사고 절반이 현금으로 남는다\n+  - 구현 시 결정(T006): ① **Nautilus 계좌는 MARGIN, 원장은 워커 장부다.** 액면분할이 Nautilus 포지션에 반영되지 않아 분할 뒤 매도가 CASH 계좌에서 \"공매도\"로 거절된다(탐침 확인). MARGIN 계좌는 매수 대금을 잔고에서 빼지 않으므로 Nautilus 잔고는 대조 대상이 아니고, 대신 체결가 = 그 방향 호가를 매 건 검사한다. 공매도 금지·현금 음수 금지는 장부가 지킨다 ② **체결 콜백은 핸들러 뒤에 온다**(탐침 확인). 매수 수량은 판단일 종가로 정하고 제출 직전 예상 현금(현금 + 매도 예상 대금)으로만 줄인다. 줄이면 `INSUFFICIENT_CASH` 경고 ③ **첫 판단일은 평가 시작일 종가**다 — 첫 월말까지 현금으로 두면 대기 기간을 평가하게 된다. 마지막 평가일은 판단하지 않는다(체결할 다음 거래일이 없다) ④ **`weightsSeries` 는 그 리밸런싱의 주문이 전부 체결·거절된 날 기록한다.** 이월 주문이 남아 있으면 정지일이 아니라 실제 체결일에 남는다 ⑤ 워밍업 우선순위: `FRESH_CASH_FROM.startDate` → `run.effectiveStart` → `evaluation.warmupTradingDays` → `rules.lookbackDays` → 0. 자료가 모자라면 `DATA_INSUFFICIENT` ⑥ **`TARGET_RISK` 오버레이(`target_risk.py`, 리뷰 반영)**: 추정 대상은 실제 보유가 아니라 **판단일에 정한 목표 비중 포트폴리오**의 최근 `scenarioRules.lookbackDays` 일별 수익률이다 — 실제 보유 수익률은 첫 판단일에 없고 리밸런싱 직후엔 옛 비중의 성질을 물려받는다. 수익률이 모자라면 대충 추정하지 않고 `ESTIMATION_FAILED`. 그래서 백엔드 `EffectivePeriodCalculator` 가 오버레이 관측 길이도 워밍업에 넣고(전략 관측 길이와 max — 같은 자료라 더하지 않는다) 조립기가 `scenarioRules.version` 을 실어 `versions.scenarioRules` 로 돌아온다. `weightsSeries[].target` 은 조절 뒤 비중, `riskScale`·`estimatedVolatility` 는 워커 계약 모델에 추가(백엔드 record에는 이미 있었다). `COST_ESCALATION` 은 비용 프로필에 `escalation` 규칙이 없어 T007 결정대로 `INVALID_REQUEST`. `FRESH_CASH_FROM` 지원 ⑦ 거래 계약에 세금 칸이 없어 `trades[].commission` 은 양쪽 수수료 합, 세금은 `realized_pnl` 과 `costs.tax` 에만 반영 ⑧ 청산(`liquidation`)은 종료일 종가 전량 매도 가정치이며 `trades`·`costs` 합계에 넣지 않는다 ⑨ 단일 종목 DEMO 엔진(`nautilus_engine.py`·`strategies/`·yfinance 공급자·`CsvDataProvider`)과 MOMENTUM 파라미터 모델을 삭제했다. `STRATEGY_PARAMETERS` 는 세 등록 전략에 `RebalanceParameters{rebalance: MONTH_END}` 를 등록한다 ⑩ `peakRssMb` 는 `resource.getrusage`(Linux KiB·macOS bytes)로, `resource` 가 없는 플랫폼(Windows)에서는 키를 생략한다 ⑪ **일시 장애는 결과가 아니다**(리뷰 반영): 일시 장애는 자료 적재에서만 나므로 러너는 `MarketDataProvider.load` 만 try 밖에 두어 전파하고(소비자 재전달 경로), 자료가 메모리에 오른 뒤의 예외는 전부 결정적 결함이라 배분·자료·입력 오류는 자기 코드로, 그 밖은 `ENGINE_ERROR` 결과로 돌려준다. 전파해 재전달시키면 같은 자리에서 또 죽어 DLQ(SYSTEM_FAILURE)로 가는데 그건 장애가 아니라 결함이다 ⑫ **분할일에는 미체결 주문 수량도 분할 비율로 조정한다**(리뷰 반영): 전날 분할 전 가격으로 정한 수량을 그대로 두면 목표의 절반만 사고 절반이 현금으로 남는다 ⑬ **거래 불가 판정 기준은 `trading_suspended` 하나다**(2차 리뷰 반영): 001 계약 「거래정지 처리」(2026-09-11)가 정지가 아닌 거래량 0 인 날은 호가가 있어 체결 가능하다고 정했다. 004 `market-data-input.md` 의 \"또는 volume 0\" 은 그와 어긋나 001 을 따르도록 고쳤다 ⑭ **이월 주문이 다음 판단일까지 남으면 `HALT_SUPERSEDED` 로 닫고 새 목표로 다시 만든다**(2차 리뷰 반영): 옛 수량으로 체결하면 기록(새 목표)과 어긋나고 이전 리밸런싱의 `weightsSeries` 가 사라졌다. 미완료였던 이전 목표는 그 판단일의 실제 비중으로 `weightsSeries` 에 남겨 정지 때문에 목표에 닿지 못한 사실이 `weightError` 로 보이게 한다. 이월 주문은 Nautilus 에 낸 적이 없어 장부에서만 닫는다 ⑮ **병합(분할 비율 < 1)으로 미체결 주문이 0주가 되면 `SPLIT_FRACTION` 예외를 남기고 `SPLIT_ROUNDING` 으로 닫는다**(2차 리뷰 반영): 0주 주문은 Nautilus 에 낼 수 없다 ⑯ **모든 종목이 함께 빠진 거래일은 137 에서 잡지 않는다**(2차 리뷰 1): 달력을 가격 합집합으로 만드는 한계는 알려진 것이고, 001 T011(`feat(be)/180`)이 `daily_index` 날짜 집합을 달력으로 넘기도록 이미 구현했다. 중복 구현하지 않는다\n \n **Checkpoint**: 접수·상태 흐름과 워커 실행 경로가 연결된다. 전략 계산 검증은 US2 뒤에 S1로 재확인한다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,7 @@\n 1. 09:00 D 의 QuoteTick 이 종목별로 도착한다. 첫 틱에서 그날의 기업행위(분할 → 수량, 권리락일 →\n    분배금 자격, 지급일 → 현금)를 먼저 반영한다.\n 2. 마지막 종목의 틱이 오면 전날 판단한 주문을 **매도 먼저, 매수 나중**에 제출한다. 그날 거래\n-   정지(정지 표시 또는 거래량 0)인 종목의 주문은 제출하지 않고 다음 거래 가능일로 미룬다\n+   정지(``trading_suspended``)인 종목의 주문은 제출하지 않고 다음 거래 가능일로 미룬다\n    (``HALT_DEFERRED``). 체결가는 틱의 호가 — 시가에 호가차·슬리피지를 얹은 값이다.\n 3. 15:30 D 의 Bar 가 도착한다. 마지막 봉에서 종가로 평가해 스냅샷을 남기고, D 가 판단일(평가\n    시작일과 매월 마지막 거래일)이면 목표 비중을 구해 다음 거래일 주문을 만든다.\n@@ -82,6 +82,8 @@ REBALANCE_MONTH_END = \"MONTH_END\"\n #: 결과 계약 ``exceptions[].kind``.\n HALT_DEFERRED = \"HALT_DEFERRED\"\n WEIGHT_ROUNDING = \"WEIGHT_ROUNDING\"\n+SPLIT_ROUNDING = \"SPLIT_ROUNDING\"  # 병합으로 미체결 주문이 0주가 되어 버렸다\n+HALT_SUPERSEDED = \"HALT_SUPERSEDED\"  # 이월 주문이 다음 판단일까지 남아 새 목표로 바뀌었다\n #: Nautilus 가 무제한 유동성(``liquidity.model=UNLIMITED``)으로 다루도록 두는 호가 잔량.\n UNLIMITED_SIZE = Quantity.from_str(\"18446744073\")\n VENUE = Venue(\"XKRX\")\n@@ -362,9 +364,19 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n             if order is not None:\n                 # 전날 분할 전 가격으로 정한 수량. 오늘 시가는 분할 후 가격이라 수량도 같은 비율로\n                 # 늘린다 — 그대로 두면 목표 비중의 절반만 사고 나머지가 현금으로 남는다.\n-                scaled = apply_split(split, Decimal(order.quantity)).quantity\n-                order.quantity = int(scaled)\n-                order.record.quantity = scaled\n+                scaled = apply_split(split, Decimal(order.quantity))\n+                if scaled.exception is not None:\n+                    self.exceptions.append(scaled.exception)\n+                if scaled.quantity == ZERO:\n+                    # 병합(비율 < 1)으로 한 주도 남지 않았다. 0주 주문은 낼 수 없다.\n+                    self._reject(\n+                        iid,\n+                        SPLIT_ROUNDING,\n+                        f\"{order.side.value} {order.quantity} x {split.ratio} -> 0 whole shares\",\n+                    )\n+                else:\n+                    order.quantity = int(scaled.quantity)\n+                    order.record.quantity = scaled.quantity\n             if self.quantity[iid] == ZERO:\n                 continue\n             outcome = apply_split(split, self.quantity[iid])\n@@ -389,8 +401,10 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n         frame = self.market.prices[iid]\n         if pd.Timestamp(day) not in frame.index:\n             return False\n-        row = frame.loc[pd.Timestamp(day)]\n-        return not bool(row.trading_suspended) and int(row.volume) > 0\n+        # 판정 기준은 trading_suspended 하나다. 정지가 아닌 거래량 0 인 날은 호가가 있어 체결할 수\n+        # 있다(001 contracts/market-dataset.md 「거래정지 처리」). volume 0 을 정지로 읽으면 정상\n+        # 주문을 잘못 이월한다.\n+        return not bool(frame.loc[pd.Timestamp(day)].trading_suspended)\n \n     def _submit_pending(self, day: date) -> None:\n         \"\"\"매도 먼저, 매수 나중. 둘 다 종목 이름순이라 실행마다 같은 순서다.\"\"\"\n@@ -726,6 +740,8 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n         fill_day = self.plan.next_trading_day(day)\n         if fill_day is None:\n             return\n+        if self.pending:\n+            self._supersede_pending(day, equity)\n \n         targets: dict[str, int] = {}\n         for iid in self.instrument_ids:\n@@ -749,7 +765,7 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n \n         for iid in self.instrument_ids:\n             delta = targets[iid] - int(self.quantity[iid])\n-            if delta == 0 or iid in self.pending:\n+            if delta == 0:\n                 continue\n             side = Side.BUY if delta > 0 else Side.SELL\n             record = OrderRecord(\n@@ -762,6 +778,33 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n             self.pending[iid] = PendingOrder(iid, side, abs(delta), fill_day, record)\n         self.pending_target = PlannedTarget(fill_day, weights, risk_scale, estimated)\n \n+    def _supersede_pending(self, day: date, equity: Decimal) -> None:\n+        \"\"\"이월 주문이 다음 판단일까지 남았다. 옛 목표 수량으로 체결하면 기록(새 목표)과 어긋난다.\n+\n+        이월 주문은 아직 Nautilus 에 낸 적이 없으므로 장부에서 닫기만 하면 된다. 미완료였던 이전\n+        리밸런싱은 버리지 않고 오늘 실제 비중으로 ``weightsSeries`` 에 남긴다 — 그래야 정지 때문에\n+        목표에 닿지 못했다는 사실이 ``weightError`` 로 보인다.\n+        \"\"\"\n+        if self.pending_target is not None:\n+            self._record_weights(day, equity, self.pending_target)\n+            self.pending_target = None\n+        for iid in sorted(self.pending):\n+            order = self.pending.pop(iid)\n+            order.record.status = \"REJECTED\"\n+            order.record.reason = HALT_SUPERSEDED\n+            self.exceptions.append(\n+                ExceptionRecord(\n+                    date=day,\n+                    instrument_id=iid,\n+                    kind=HALT_SUPERSEDED,\n+                    rule=str(self.request.execution.trading_halt),\n+                    action=(\n+                        f\"{order.side.value} {order.quantity} planned \"\n+                        f\"{order.planned_date.isoformat()} replaced by this rebalance\"\n+                    ),\n+                )\n+            )\n+\n \n def execute_portfolio(\n     request: EngineInput,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/portfolio_execution.py",
+          "old_path": "worker/src/worker/portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,9 +79,11 @@ def target_risk_rules(run: RunSpec) -> TargetRiskRules:\n             \"INVALID_REQUEST\",\n             f\"run.scenarioParams.targetVolatility must be a decimal for TARGET_RISK: {raw!r}\",\n         ) from exc\n-    if target <= ZERO:\n+    # NaN 은 아래 비교에서 InvalidOperation 을 던지고 Infinity 는 통과해 조절이 영원히 없다.\n+    if not target.is_finite() or target <= ZERO:\n         raise AllocationError(\n-            \"INVALID_REQUEST\", f\"run.scenarioParams.targetVolatility must be positive: {target}\"\n+            \"INVALID_REQUEST\",\n+            f\"run.scenarioParams.targetVolatility must be a finite positive decimal: {target}\",\n         )\n     version = rules.get(\"version\")\n     return TargetRiskRules(target, lookback, str(version) if version is not None else None)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/target_risk.py",
+          "old_path": "worker/src/worker/target_risk.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,10 +6,13 @@ T008 이 맡는다.\n \"\"\"\n \n import json\n+from collections.abc import Callable\n+from dataclasses import replace\n from datetime import date, timedelta\n from decimal import Decimal\n from typing import Any\n \n+import pandas as pd\n import pytest\n from conftest import BATTERY, BIO, SEMICONDUCTOR, THREE_ETF_DIR, engine_input_body\n \n@@ -23,9 +26,10 @@ from worker.contracts.engine_output import (\n )\n from worker.contracts.events import ProgressPoint\n from worker.engine_runner import PortfolioBacktestEngine, evaluation_start\n-from worker.market_data import CsvMarketDataProvider\n+from worker.market_data import CsvMarketDataProvider, MarketData\n from worker.portfolio_execution import (\n     HALT_DEFERRED,\n+    HALT_SUPERSEDED,\n     WEIGHT_ROUNDING,\n     CallbackError,\n     EngineFailure,\n@@ -57,6 +61,21 @@ def engine() -> PortfolioBacktestEngine:\n     return PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))\n \n \n+class PatchedProvider:\n+    \"\"\"픽스처를 읽은 뒤 한 군데만 바꾼다 — 픽스처에 없는 사건(병합·장기 정지)을 만들 때.\"\"\"\n+\n+    def __init__(self, patch: Callable[[MarketData], MarketData]) -> None:\n+        self.patch = patch\n+\n+    def load(self, *args: Any, **kwargs: Any) -> MarketData:\n+        return self.patch(CsvMarketDataProvider(THREE_ETF_DIR).load(*args, **kwargs))\n+\n+\n+def run_patched(patch: Callable[[MarketData], MarketData], **overrides: Any) -> EngineOutput:\n+    body = EngineInput.model_validate(engine_input_body(**overrides))\n+    return PortfolioBacktestEngine(PatchedProvider(patch)).run(body, None)\n+\n+\n def run(on_progress: Any = None, **overrides: Any) -> EngineOutput:\n     output = engine().run(EngineInput.model_validate(engine_input_body(**overrides)), on_progress)\n     return output\n@@ -225,6 +244,28 @@ def test_halted_instrument_is_deferred_to_the_next_tradable_day() -> None:\n     assert output.weights_series[0].date == date(2024, 6, 12)\n \n \n+def test_zero_volume_without_a_suspension_flag_is_still_tradable() -> None:\n+    \"\"\"정지가 아니면서 거래량이 0인 날은 호가가 있어 체결할 수 있다(001 contracts/market-dataset.md\n+    「거래정지 처리」). 판정 기준은 ``trading_suspended`` 하나다 — volume 0 을 정지로 읽으면 정상\n+    주문을 잘못 이월한다.\n+    \"\"\"\n+\n+    def zero_volume(market: MarketData) -> MarketData:\n+        market.prices[BATTERY].loc[pd.Timestamp(HALT_DAY), \"volume\"] = 0\n+        return market\n+\n+    output = run_patched(\n+        zero_volume, **three_etf(\"2024-06-03\", \"2024-06-28\", run={\"effectiveStart\": \"2024-06-10\"})\n+    )\n+    assert output.run.status is RunStatus.COMPLETED, output.run.error\n+    battery = [t for t in output.trades if t.instrument_id == BATTERY]\n+    assert battery and all(t.reason is TradeReason.REBALANCE for t in battery)\n+    assert kst_date(battery[0].entry_time) == HALT_DAY\n+    assert {e.instrument_id for e in output.exceptions or [] if e.kind == HALT_DEFERRED} == {\n+        SEMICONDUCTOR\n+    }\n+\n+\n # --- 기업행위(FR-013) ------------------------------------------------------------------\n \n \n@@ -475,6 +516,70 @@ def test_pending_order_is_scaled_on_the_split_day() -> None:\n     assert output.weights_series[0].weight_error < Decimal(\"0.01\")\n \n \n+def test_reverse_split_that_rounds_a_pending_order_to_zero_drops_it_with_a_record() -> None:\n+    \"\"\"병합(비율 0.5). 3/1 에 1주 매수를 정했는데 3/4 분할 뒤 0.5주 → 0주다.\n+\n+    0주 주문을 Nautilus 에 내면 SELL 은 터지고 BUY 는 INSUFFICIENT_CASH 라는 틀린 사유로 남는다.\n+    \"\"\"\n+\n+    def merge(market: MarketData) -> MarketData:\n+        splits = tuple(replace(s, ratio=Decimal(\"0.5\")) for s in market.splits)\n+        return replace(market, splits=splits)\n+\n+    items = [{\"sectorId\": \"BIO\", \"instrumentId\": BIO, \"targetWeight\": \"1\"}]\n+    output = run_patched(\n+        merge,\n+        run={\"start\": \"2024-03-01\", \"end\": \"2024-03-08\"},\n+        universe={\"items\": items},\n+        portfolio={\"initialCash\": \"20000\"},  # 13,097원짜리 한 주만 산다\n+    )\n+    assert output.run.status is RunStatus.COMPLETED, output.run.error\n+    assert output.trades == []\n+    assert [e.kind for e in output.exceptions or [] if e.date == SPLIT_DAY] == [\"SPLIT_FRACTION\"]\n+    warned = [w.code for w in output.diagnostics.warnings if w.date == SPLIT_DAY]\n+    assert warned == [\"SPLIT_ROUNDING\"]\n+\n+\n+def test_halt_spanning_a_rebalance_supersedes_the_deferred_order() -> None:\n+    \"\"\"반도체 ETF 가 5/20~6/4 정지. 5/17 판단의 이월 주문이 5/31 월말 판단을 넘긴다.\n+\n+    옛 수량으로 체결하면 기록(새 목표)과 주문(옛 목표)이 어긋나고 5/17 리밸런싱의 비중 기록은\n+    사라진다. 5/31 에 이월 주문을 새 목표로 바꾸고, 미완료였던 5/17 목표는 그날 실제 비중으로\n+    남긴다.\n+    \"\"\"\n+    halted = pd.date_range(\"2024-05-20\", \"2024-06-04\")\n+\n+    def long_halt(market: MarketData) -> MarketData:\n+        frame = market.prices[SEMICONDUCTOR]\n+        rows = frame.index.isin(halted)\n+        frame.loc[rows, \"trading_suspended\"] = True\n+        frame.loc[rows, \"volume\"] = 0\n+        return market\n+\n+    output = run_patched(\n+        long_halt, **three_etf(\"2024-05-13\", \"2024-06-28\", run={\"effectiveStart\": \"2024-05-17\"})\n+    )\n+    assert output.run.status is RunStatus.COMPLETED, output.run.error\n+\n+    superseded = [e for e in output.exceptions or [] if e.kind == HALT_SUPERSEDED]\n+    assert [(e.date, e.instrument_id) for e in superseded] == [(date(2024, 5, 31), SEMICONDUCTOR)]\n+\n+    # 5/17 리밸런싱은 미완료 상태로 5/31 에 기록되고, 5/31 리밸런싱은 정지 해제 뒤 6/5 에 기록된다.\n+    assert [w.date for w in output.weights_series] == [date(2024, 5, 31), date(2024, 6, 5)]\n+    unfinished = output.weights_series[0]\n+    assert unfinished.target[SEMICONDUCTOR] == Decimal(\"0.4\")\n+    assert unfinished.actual[SEMICONDUCTOR] == 0\n+    assert unfinished.weight_error is not None and unfinished.weight_error > Decimal(\"0.3\")\n+    # 5/31 종가로 정한 수량을 6/5 종가로 평가한 차이만 남는다(옛 5/17 수량이면 훨씬 크다).\n+    assert output.weights_series[1].weight_error < Decimal(\"0.05\")\n+\n+    # 실제 체결은 5/31 판단의 주문이다 — 예정일이 5/20 이 아니라 6/3 이다.\n+    semis = [t for t in output.trades if t.instrument_id == SEMICONDUCTOR]\n+    assert len(semis) == 1 and semis[0].reason is TradeReason.HALT_DEFERRED\n+    assert semis[0].planned_date == date(2024, 6, 3)\n+    assert kst_date(semis[0].entry_time) == date(2024, 6, 5)\n+\n+\n def test_transient_provider_failure_propagates_instead_of_failing_the_run() -> None:\n     \"\"\"일시 장애를 FAILED 결과로 바꾸면 소비자가 FINISHED 를 발행·ACK 해 최종 실패로 굳는다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_portfolio_execution.py",
+          "old_path": "worker/tests/test_portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -56,6 +56,20 @@ def test_rules_and_target_come_only_from_the_message() -> None:\n     assert rules == TargetRiskRules(Decimal(\"0.1000\"), 63, \"TARGET_RISK_OVERLAY/1\")\n \n \n+@pytest.mark.parametrize(\"raw\", [\"NaN\", \"Infinity\", \"-Infinity\", \"0\", \"-0.1\"])\n+def test_non_finite_or_non_positive_target_is_an_invalid_request(raw: str) -> None:\n+    \"\"\"NaN 은 비교에서 InvalidOperation 을 던져 일시 장애처럼 재전달되고, Infinity 는 통과해\n+    조절이 영원히 일어나지 않는다. 둘 다 결정적 입력 오류이므로 INVALID_REQUEST 여야 한다.\"\"\"\n+    with pytest.raises(AllocationError) as error:\n+        target_risk_rules(\n+            run_spec(\n+                scenarioParams={\"targetVolatility\": raw},\n+                scenarioRules={\"lookbackDays\": 63, \"scaleDownOnly\": True},\n+            )\n+        )\n+    assert error.value.code == \"INVALID_REQUEST\"\n+\n+\n def test_estimate_is_the_annualised_std_of_the_target_portfolio_returns() -> None:\n     frame = history(64)\n     weights = {A: Decimal(\"0.6\"), B: Decimal(\"0.4\")}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_target_risk.py",
+          "old_path": "worker/tests/test_target_risk.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,7 +79,7 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략\n   `allocation.compute_weights`(조정 종가 이력, 판단일까지만)로 목표 비중 → 정수 수량 주문 생성.\n - **판단일**은 평가 시작일과 매월 마지막 거래일(`parameters.rebalance=MONTH_END`). 마지막 평가일은\n   판단하지 않는다. 체결일은 항상 판단일 다음 거래일이다(SC-004).\n-- **거래 정지**(`trading_suspended` 또는 거래량 0)인 종목의 주문은 다음 거래 가능일로 미루고\n+- **거래 정지**(`trading_suspended`, 거래량 0 은 정지가 아니다)인 종목의 주문은 다음 거래 가능일로 미루고\n   `trades[].reason=HALT_DEFERRED`, `plannedDate` 와 `exceptions[{kind: HALT_DEFERRED}]` 를 남긴다.\n   다른 종목은 예정일에 그대로 체결된다.\n - **정수 수량·재정규화 금지.** 목표 비중을 정수 주로 못 채운 몫은 현금으로 남고 리밸런싱마다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/README.md",
+          "old_path": "worker/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,4 +7,3 @@ pydantic>=2.8\n pydantic-settings>=2.4\n python-dotenv>=1.0\n nautilus_trader==1.219.0\n-yfinance==0.2.65\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/requirements.txt",
+          "old_path": "worker/requirements.txt",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-13T11:44:25.875+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2797186": []
+  }
+}

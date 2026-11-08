@@ -1,0 +1,964 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959287,
+    "iid": 320,
+    "project_id": 1444456,
+    "title": "feat(fe): KOSPI를 비교 대상 고르기의 참고선으로 결과 그래프에 겹쳐 그린다",
+    "description": "## 작업 내용 요약\n\nKOSPI 비교를 하단 탭의 날짜·값 표에서 결과 그래프의 참고선으로 옮겼다. '비교 대상 고르기'에서 'KOSPI 함께 보기'를 켜면 서버가 시작 금액으로 환산한 KOSPI가 전략 곡선 옆에 그려지고, 주소 `?index=KOSPI`로 남는다.\n\n## 관련 티켓\n\n- S15P21E205-429 (Story 300 relates, Epic 30)\n- 선행: S15P21E205-428 (BE 환산 계열)\n- spec 005 FR-007 · FR-017, tasks Phase 16 (T105~T109)\n\n## 주요 변경 사항\n\n- **참고선**: `EquityChart`에 `reference`. 가는 옅은 실선 + 끝 이름표 `KOSPI(참고)`, 대안 텍스트와 범례(\"시작 금액 환산(배당·비용 제외)\")에 한 줄씩. 비교 대상 상한(셋)·하락 구간 음영·해석 문장·조건 줄과 무관하다.\n- **켜고 끄기**: 비교 대상 고르기 맨 위 '참고 지수 · KOSPI 함께 보기'(설명은 물음표 도움말). 결과를 새로 계산하지 않으므로 '비교하기'를 기다리지 않고 바로 적용되고, 남은 자리가 0이어도 쓸 수 있다 — 그래서 '비교 대상 고르기' 단추를 자리 0일 때 막지 않는다(목록 안에서 후보 줄만 막힌다).\n- **주소**: `?index=KOSPI`. 비교 대상을 바꿔 주소를 다시 쓸 때도 유지된다(`buildResultPath`에 `index`). 꺼져 있으면 지수 요청 0회(SC-001).\n- **비교 대상 고르기 정리**: 목록 순서를 참고 지수 → 변동성 제한 → 내 전략 → 기본 전략으로 바꿨다. 팝오버 높이는 560px과 화면에 남은 높이 중 작은 쪽이고 후보 목록만 스크롤한다(제목·버튼 고정). 열면 초점을 팝오버에 둔다 — 첫 요소가 물음표면 초점만으로 설명이 열려 첫 Esc가 팝오버를 닫지 못했다.\n- **도움말 층**: `InlineHelp` 말풍선 z-index를 50 → 80. 팝오버(61) 안의 물음표 설명이 팝오버 뒤에 가려졌다. 앱 전체의 물음표에 적용된다.\n- **이유 표시**: `available:false`면 선 대신 그래프 아래에 이유 한 줄, 요청 실패면 메시지와 'KOSPI 다시 불러오기'.\n- **삭제**: 'KOSPI 비교' 탭과 `IndexComparisonView.tsx`. dev의 430이 목표 위험 맞춤 탭을 먼저 뺐으므로 결과 탭은 다섯이 되고, 두 보기만 쓰던 `auxiliaryViews.module.css`도 지웠다.\n- 계약: 비교 주소에 `index` 인자, data-model `indexReference`, spec FR-007(탭 다섯)·FR-017 개정(430의 변동성 제한 문장과 합침).\n\n## 테스트\n\n- `npm run lint && npm run build && npm test` — lint 오류 0(경고 21은 기존), dev(430) 병합 후 Vitest 148 files / 1421 tests 통과, skipped 0.\n- `test:legacy`(`node --test`, market 테스트 4파일)는 로컬 Node 22.15가 `.ts`를 못 읽어 실패한다. `--experimental-strip-types`로 돌리면 15/15 통과. 이번 변경과 무관.\n- 로컬(`thorp_dev` + 20260922 덤프, 워커 compose)에서 실제 결과(2016-01-04~2026-09-15)로 `?index=KOSPI` 화면을 띄워 사람이 확인했다. 로그인 없이 확인해 '내 전략' 묶음은 보지 않았다.\n\n## 리뷰 포인트\n\n- 참고선 색을 `--muted-foreground`(옅은 글자색)로 뒀다. 시작 금액 점선(`--thorp-neutral`)과 같은 회색 계열이라 선 모양(실선 vs 점선)과 이름표로 가른다. 더 떨어진 색이 필요한지.\n- 도움말 z-index를 앱 전체에서 올렸다. 다른 화면에서 말풍선이 원래 덮지 않던 것을 덮게 되는 곳이 없는지.\n- 체크박스가 즉시 적용되는 것과 후보 체크박스가 '비교하기'로 한꺼번에 적용되는 것이 한 팝오버에 섞여 있다. 안내 문구로 구분했는데 충분한지.\n\n## 전달만 하는 것\n\n- 415(결과 화면 UI)에서 호버 툴팁을 넣을 때 KOSPI 값도 함께 보이면 된다.\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T19:25:01.846+09:00",
+    "updated_at": "2026-09-24T19:26:29.535+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T19:26:29.244+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/429-kospi-reference-line",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+    "merge_commit_sha": "2370e99f894296dffff7d26272a90ab573579352",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T19:25:04.671+09:00",
+    "reference": "!320",
+    "references": {
+      "short": "!320",
+      "relative": "!320",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!320"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/320",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959287,
+    "iid": 320,
+    "project_id": 1444456,
+    "title": "feat(fe): KOSPI를 비교 대상 고르기의 참고선으로 결과 그래프에 겹쳐 그린다",
+    "description": "## 작업 내용 요약\n\nKOSPI 비교를 하단 탭의 날짜·값 표에서 결과 그래프의 참고선으로 옮겼다. '비교 대상 고르기'에서 'KOSPI 함께 보기'를 켜면 서버가 시작 금액으로 환산한 KOSPI가 전략 곡선 옆에 그려지고, 주소 `?index=KOSPI`로 남는다.\n\n## 관련 티켓\n\n- S15P21E205-429 (Story 300 relates, Epic 30)\n- 선행: S15P21E205-428 (BE 환산 계열)\n- spec 005 FR-007 · FR-017, tasks Phase 16 (T105~T109)\n\n## 주요 변경 사항\n\n- **참고선**: `EquityChart`에 `reference`. 가는 옅은 실선 + 끝 이름표 `KOSPI(참고)`, 대안 텍스트와 범례(\"시작 금액 환산(배당·비용 제외)\")에 한 줄씩. 비교 대상 상한(셋)·하락 구간 음영·해석 문장·조건 줄과 무관하다.\n- **켜고 끄기**: 비교 대상 고르기 맨 위 '참고 지수 · KOSPI 함께 보기'(설명은 물음표 도움말). 결과를 새로 계산하지 않으므로 '비교하기'를 기다리지 않고 바로 적용되고, 남은 자리가 0이어도 쓸 수 있다 — 그래서 '비교 대상 고르기' 단추를 자리 0일 때 막지 않는다(목록 안에서 후보 줄만 막힌다).\n- **주소**: `?index=KOSPI`. 비교 대상을 바꿔 주소를 다시 쓸 때도 유지된다(`buildResultPath`에 `index`). 꺼져 있으면 지수 요청 0회(SC-001).\n- **비교 대상 고르기 정리**: 목록 순서를 참고 지수 → 변동성 제한 → 내 전략 → 기본 전략으로 바꿨다. 팝오버 높이는 560px과 화면에 남은 높이 중 작은 쪽이고 후보 목록만 스크롤한다(제목·버튼 고정). 열면 초점을 팝오버에 둔다 — 첫 요소가 물음표면 초점만으로 설명이 열려 첫 Esc가 팝오버를 닫지 못했다.\n- **도움말 층**: `InlineHelp` 말풍선 z-index를 50 → 80. 팝오버(61) 안의 물음표 설명이 팝오버 뒤에 가려졌다. 앱 전체의 물음표에 적용된다.\n- **이유 표시**: `available:false`면 선 대신 그래프 아래에 이유 한 줄, 요청 실패면 메시지와 'KOSPI 다시 불러오기'.\n- **삭제**: 'KOSPI 비교' 탭과 `IndexComparisonView.tsx`. dev의 430이 목표 위험 맞춤 탭을 먼저 뺐으므로 결과 탭은 다섯이 되고, 두 보기만 쓰던 `auxiliaryViews.module.css`도 지웠다.\n- 계약: 비교 주소에 `index` 인자, data-model `indexReference`, spec FR-007(탭 다섯)·FR-017 개정(430의 변동성 제한 문장과 합침).\n\n## 테스트\n\n- `npm run lint && npm run build && npm test` — lint 오류 0(경고 21은 기존), dev(430) 병합 후 Vitest 148 files / 1421 tests 통과, skipped 0.\n- `test:legacy`(`node --test`, market 테스트 4파일)는 로컬 Node 22.15가 `.ts`를 못 읽어 실패한다. `--experimental-strip-types`로 돌리면 15/15 통과. 이번 변경과 무관.\n- 로컬(`thorp_dev` + 20260922 덤프, 워커 compose)에서 실제 결과(2016-01-04~2026-09-15)로 `?index=KOSPI` 화면을 띄워 사람이 확인했다. 로그인 없이 확인해 '내 전략' 묶음은 보지 않았다.\n\n## 리뷰 포인트\n\n- 참고선 색을 `--muted-foreground`(옅은 글자색)로 뒀다. 시작 금액 점선(`--thorp-neutral`)과 같은 회색 계열이라 선 모양(실선 vs 점선)과 이름표로 가른다. 더 떨어진 색이 필요한지.\n- 도움말 z-index를 앱 전체에서 올렸다. 다른 화면에서 말풍선이 원래 덮지 않던 것을 덮게 되는 곳이 없는지.\n- 체크박스가 즉시 적용되는 것과 후보 체크박스가 '비교하기'로 한꺼번에 적용되는 것이 한 팝오버에 섞여 있다. 안내 문구로 구분했는데 충분한지.\n\n## 전달만 하는 것\n\n- 415(결과 화면 UI)에서 호버 툴팁을 넣을 때 KOSPI 값도 함께 보이면 된다.\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T19:25:01.846+09:00",
+    "updated_at": "2026-09-24T19:26:29.535+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T19:26:29.244+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/429-kospi-reference-line",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+    "merge_commit_sha": "2370e99f894296dffff7d26272a90ab573579352",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T19:25:04.671+09:00",
+    "reference": "!320",
+    "references": {
+      "short": "!320",
+      "relative": "!320",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!320"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/320",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": "2026-09-24T19:25:15.393+09:00",
+    "latest_build_finished_at": "2026-09-24T19:30:06.802+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221124,
+      "iid": 346,
+      "project_id": 1444456,
+      "sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+      "ref": "feat(fe)/429-kospi-reference-line",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T19:25:15.289+09:00",
+      "updated_at": "2026-09-24T19:30:06.811+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221124"
+    },
+    "head_pipeline": {
+      "id": 221124,
+      "iid": 346,
+      "project_id": 1444456,
+      "sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+      "ref": "feat(fe)/429-kospi-reference-line",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T19:25:15.289+09:00",
+      "updated_at": "2026-09-24T19:30:06.811+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221124",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-24T19:25:15.393+09:00",
+      "finished_at": "2026-09-24T19:30:06.802+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221124",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+      "head_sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+      "start_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0262669e61696396d2f150329033549bc8709fae",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866245,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T19:25:01.980+09:00",
+          "updated_at": "2026-09-24T19:25:01.984+09:00",
+          "system": true,
+          "noteable_id": 959287,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 320,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5014dd4844553650708fea3d734a77a9f79a8d11",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866246,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T19:25:02.005+09:00",
+          "updated_at": "2026-09-24T19:25:02.015+09:00",
+          "system": true,
+          "noteable_id": 959287,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 320,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3d05bc3ceb6817c3b522ce649953d9608789f132",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866247,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T19:25:06.240+09:00",
+          "updated_at": "2026-09-24T19:25:06.249+09:00",
+          "system": true,
+          "noteable_id": 959287,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 320,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d9a849478e3c73a9eda6e88f095d204d15d79ac9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866248,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **관심사 분리 및 조건부 로직 최적화**: KOSPI 비교 기능을 독립된 탭에서 메인 그래프의 참고선(`EquityChart`의 `reference`)으로 깔끔하게 이전했습니다. 특히 `useIndexReference` 훅을 통해 `enabled` 상태일 때만 API를 호출하도록 설계하여 불필요한 네트워크 요청을 방지(SC-001 충족)한 점이 훌륭합니다.\n- **견고한 UI/UX 및 접근성 개선**: 팝오버 내부의 스크롤 제어(`overflow: hidden` 및 목록만 `overflow-y: auto`), 초점 관리(`onOpenAutoFocus`에서 팝오버 컨테이너로 포커스 이동하여 첫 Esc 미작동 버그 방지), 그리고 `InlineHelp`의 z-index 상향 조정 등 세심한 디테일이 돋보입니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **참고선 토큰 복원 시나리오**: `?index=KOSPI` 쿼리 파라미터가 포함된 URL로 직접 진입했을 때, `useIndexReference`가 정상적으로 트리거되어 서버 API를 호출하고 그래프에 KOSPI 참고선이 올바르게 그려지는지 확인합니다.\n- **잔여 슬롯(Room) 소진 시나리오**: 비교 대상 전략을 최대치(3개)로 채워 `room === 0` 상태가 되었을 때, 일반 전략 선택 체크박스는 비활성화되지만 'KOSPI 함께 보기' 체크박스는 여전히 독립적으로 토글 가능하며 즉시 반영되는지 검증합니다.\n- **API 오류 및 데이터 부재 시나리오**: `fetchResultIndexComparison`이 `available: false`를 반환하거나 에러를 던질 때, 그래프가 깨지지 않고 지정된 안내 문구(`IndexReferenceNotice`)와 재시도 버튼이 올바르게렌더링되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fce647cd152955c0145592f73fed6fdd026918e0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-24T19:25:13.299+09:00",
+          "updated_at": "2026-09-24T19:25:13.299+09:00",
+          "system": false,
+          "noteable_id": 959287,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 320,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "88998f05f85829aed4862f49830a8f7804c125d9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866253,
+          "type": null,
+          "body": "mentioned in commit 2370e99f894296dffff7d26272a90ab573579352",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T19:26:29.324+09:00",
+          "updated_at": "2026-09-24T19:26:29.327+09:00",
+          "system": true,
+          "noteable_id": 959287,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 320,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "40b717e9ccc3b27e00afaaec02a7ee282a48734a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885021,
+          "type": null,
+          "body": "mentioned in commit 85d22b05be0e5024c1f3a9c0701841ddd0612273",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.863+09:00",
+          "updated_at": "2026-10-13T15:16:08.876+09:00",
+          "system": true,
+          "noteable_id": 959287,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 320,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248432,
+      "head_commit_sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+      "base_commit_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+      "start_commit_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+      "created_at": "2026-09-24T19:25:02.337+09:00",
+      "merge_request_id": 959287,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "31ffa769d2f25849ae57e68459dda54eab8d7787"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248432,
+      "head_commit_sha": "fce647cd152955c0145592f73fed6fdd026918e0",
+      "base_commit_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+      "start_commit_sha": "4749bf44aa6510ef5f9604e9a6d3923b853694d1",
+      "created_at": "2026-09-24T19:25:02.337+09:00",
+      "merge_request_id": 959287,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "31ffa769d2f25849ae57e68459dda54eab8d7787",
+      "commits": [
+        {
+          "id": "fce647cd152955c0145592f73fed6fdd026918e0",
+          "short_id": "fce647cd",
+          "created_at": "2026-09-24T18:58:56.000+09:00",
+          "parent_ids": [
+            "fa1856d8981057dd5d91fab3aeb2a8485c5d9475"
+          ],
+          "title": "fix(fe): 비교 대상 고르기를 참고 지수부터 늘어놓고 목록만 스크롤하며 도움말을 맨 위 층에 띄운다",
+          "message": "fix(fe): 비교 대상 고르기를 참고 지수부터 늘어놓고 목록만 스크롤하며 도움말을 맨 위 층에 띄운다\n\n- 순서: 참고 지수 → 변동성 제한 → 내 전략 → 기본 전략\n- 팝오버 높이는 560px과 남은 화면 높이 중 작은 쪽. 제목·버튼은 두고 후보 목록만 스크롤한다\n- 물음표 말풍선(z-index 50)이 팝오버(61) 뒤에 가려져 80으로 올린다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:58:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:58:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fce647cd152955c0145592f73fed6fdd026918e0"
+        },
+        {
+          "id": "fa1856d8981057dd5d91fab3aeb2a8485c5d9475",
+          "short_id": "fa1856d8",
+          "created_at": "2026-09-24T18:55:22.000+09:00",
+          "parent_ids": [
+            "6410d7fc6dc18143977508c6b819f2777f3a6472"
+          ],
+          "title": "fix(fe): 비교 대상 고르기를 열면 초점을 팝오버에 둔다",
+          "message": "fix(fe): 비교 대상 고르기를 열면 초점을 팝오버에 둔다\n\n첫 요소가 물음표 도움말이면 초점만으로 설명이 열려 첫 Esc가 팝오버를 닫지 못했다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:55:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:55:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fa1856d8981057dd5d91fab3aeb2a8485c5d9475"
+        },
+        {
+          "id": "6410d7fc6dc18143977508c6b819f2777f3a6472",
+          "short_id": "6410d7fc",
+          "created_at": "2026-09-24T18:53:12.000+09:00",
+          "parent_ids": [
+            "7463b33f040671a902e00244c39ab5a22a8c80cb"
+          ],
+          "title": "fix(fe): KOSPI 참고선 줄을 다른 후보 줄과 같은 모양으로 두고 설명을 물음표로 내린다",
+          "message": "fix(fe): KOSPI 참고선 줄을 다른 후보 줄과 같은 모양으로 두고 설명을 물음표로 내린다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:53:12.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:53:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6410d7fc6dc18143977508c6b819f2777f3a6472"
+        },
+        {
+          "id": "7463b33f040671a902e00244c39ab5a22a8c80cb",
+          "short_id": "7463b33f",
+          "created_at": "2026-09-24T18:46:29.000+09:00",
+          "parent_ids": [
+            "82728f0bfae1f8c2ff56c1684a1a6ac8be9e634e",
+            "4749bf44aa6510ef5f9604e9a6d3923b853694d1"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/429-kospi-reference-line",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/429-kospi-reference-line\n\n430(변동성 제한을 비교 대상 고르기로 옮김)과 합친다. 결과 탭은 다섯이 되고\n비교 대상 고르기에 변동성 제한 줄과 KOSPI 참고선 줄이 함께 있다.\nspec 005 FR-007·FR-017·Clarifications를 두 변경에 맞춰 합쳤다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:46:29.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:46:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7463b33f040671a902e00244c39ab5a22a8c80cb"
+        },
+        {
+          "id": "82728f0bfae1f8c2ff56c1684a1a6ac8be9e634e",
+          "short_id": "82728f0b",
+          "created_at": "2026-09-24T18:02:10.000+09:00",
+          "parent_ids": [
+            "b1241d103888dd1139d036ac37c1153e3d751548"
+          ],
+          "title": "docs(fe): 005 지수 비교를 탭에서 결과 그래프 참고선으로 바꾼 것을 적는다",
+          "message": "docs(fe): 005 지수 비교를 탭에서 결과 그래프 참고선으로 바꾼 것을 적는다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:02:10.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:02:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/82728f0bfae1f8c2ff56c1684a1a6ac8be9e634e"
+        },
+        {
+          "id": "b1241d103888dd1139d036ac37c1153e3d751548",
+          "short_id": "b1241d10",
+          "created_at": "2026-09-24T18:02:10.000+09:00",
+          "parent_ids": [
+            "5fb99267be2e4443cee710669186729024638450"
+          ],
+          "title": "feat(fe): KOSPI를 비교 대상 고르기의 참고선으로 결과 그래프에 겹쳐 그린다",
+          "message": "feat(fe): KOSPI를 비교 대상 고르기의 참고선으로 결과 그래프에 겹쳐 그린다\n\n하단 'KOSPI 비교' 탭의 표를 없애고, 비교 대상 고르기의 'KOSPI 함께 보기'로\n서버가 환산한 계열을 결과 그래프에 가는 실선과 끝 이름표 'KOSPI(참고)'로 겹친다.\n켜짐은 ?index=KOSPI로 주소에 남고 비교 대상 상한·해석 문장·음영과 무관하다.\n꺼져 있으면 지수를 요청하지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T18:02:10.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T18:02:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b1241d103888dd1139d036ac37c1153e3d751548"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -28,8 +28,9 @@\n   outline-offset: var(--thorp-focus-offset-compact);\n }\n \n+/* 도움말은 가장 위 층이다. 팝오버·대화상자(61)·날짜 판(70) 안의 물음표도 가려지지 않아야 한다. */\n .content {\n-  z-index: 50;\n+  z-index: 80;\n   display: grid;\n   gap: 8px;\n   width: min(320px, calc(100vw - 32px));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.module.css",
+          "old_path": "frontend/src/components/common/InlineHelp.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,7 +41,15 @@ function setup(\n   const select = vi.fn()\n   render(\n     <AuthContext.Provider value={auth}>\n-      <CompareTargetPicker base={base} room={3} onSelect={select} onClose={() => {}} {...props} />\n+      <CompareTargetPicker\n+        base={base}\n+        room={3}\n+        indexOn={false}\n+        onIndexChange={() => {}}\n+        onSelect={select}\n+        onClose={() => {}}\n+        {...props}\n+      />\n     </AuthContext.Provider>,\n   )\n   return select\n@@ -171,6 +179,8 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {\n             },\n           }}\n           room={3}\n+          indexOn={false}\n+          onIndexChange={() => {}}\n           onSelect={() => {}}\n           onClose={() => {}}\n         />\n@@ -196,18 +206,30 @@ describe('비교 목록 (T058, S15P21E205-419)', () => {\n     expect(await screen.findByText('준비 기간을 맞춰 결과를 다시 계산합니다.')).toBeTruthy()\n     expect(screen.queryByText(/짧아집니다/)).toBeNull()\n   })\n-  it('자리가 없으면 고를 수 없다고 알리고 모든 줄을 막는다', async () => {\n+  it('자리가 없으면 후보 줄을 모두 막는다. KOSPI 참고선은 자리에 세지 않아 그대로 쓸 수 있다', async () => {\n     setup({ room: 0 })\n     expect(await screen.findByText(/더 고를 자리가 없습니다/)).toBeTruthy()\n     expect(screen.getByText(/최대 3개까지 고를 수 있습니다\\(3개 선택됨\\)/)).toBeTruthy()\n+    const kospi = screen.getByRole('checkbox', { name: 'KOSPI 함께 보기' }) as HTMLInputElement\n     for (const box of screen.getAllByRole('checkbox'))\n-      expect((box as HTMLInputElement).disabled).toBe(true)\n+      if (box !== kospi) expect((box as HTMLInputElement).disabled).toBe(true)\n+    expect(kospi.disabled).toBe(false)\n+  })\n+  it('KOSPI 함께 보기는 비교하기를 기다리지 않고 바로 켜고 끈다', async () => {\n+    const onIndexChange = vi.fn()\n+    const select = setup({ onIndexChange })\n+    fireEvent.click(await screen.findByRole('checkbox', { name: 'KOSPI 함께 보기' }))\n+    expect(onIndexChange).toHaveBeenCalledWith(true)\n+    expect(select).not.toHaveBeenCalled()\n   })\n   it('등록표 실패는 대체 목록 대신 사유와 수동 재조회로 보인다', async () => {\n     api.registry.mockRejectedValue(new Error('등록표를 받을 수 없습니다.'))\n     setup()\n     expect(await screen.findByRole('alert')).toBeTruthy()\n-    expect(screen.queryByRole('checkbox')).toBeNull()\n+    // 후보는 없고, 목록과 상관없는 KOSPI 참고선만 남는다.\n+    expect(screen.getAllByRole('checkbox')).toEqual([\n+      screen.getByRole('checkbox', { name: 'KOSPI 함께 보기' }),\n+    ])\n     fireEvent.click(screen.getByRole('button', { name: '목록 다시 불러오기' }))\n     expect(await screen.findByText('등록표를 받을 수 없습니다.')).toBeTruthy()\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.test.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,12 +30,15 @@ type Candidate = {\n   shortenedDays: number | null\n }\n \n-/** 후보 묶음 이름. 출처별로 묶는다 — 기본 전략(등록표 기본값)과 내 전략(내가 돌려 본 조합). */\n+/**\n+ * 후보 묶음 이름. 출처별로 묶는다 — 기본 전략(등록표 기본값)과 내 전략(내가 돌려 본 조합).\n+ * 목록은 참고 지수 → 변동성 제한 → 내 전략 → 기본 전략 순이다. 자주 켜는 것부터 위에 둔다.\n+ */\n const SOURCE_LABELS: Record<CandidateSource, string> = {\n   default: '기본 전략',\n   used: '내 전략',\n }\n-const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']\n+const SOURCE_ORDER: readonly CandidateSource[] = ['used', 'default']\n const VOLATILITY_KEY = 'volatility'\n \n /** 등록표 범위(min~max, step 간격)의 후보 */\n@@ -56,16 +59,24 @@ function rangeChoices({ min, max, step }: NumericCondition): number[] {\n  * 비교 기간이 짧아진다는 사실을 적는다(FR-004). 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않는다.\n  *\n  * <p>비로그인이면 써 본 조합을 부르지 않는다 — 401 을 받아 넘기는 대신 기본값만 후보로 둔다.\n+ *\n+ * <p><b>참고 지수(KOSPI)는 후보가 아니다</b>(FR-017). 결과를 새로 계산하지 않으므로 '비교하기'를 기다리지 않고 누르는 즉시 켜고 끄며,\n+ * 남은 자리에 세지 않는다. 목록을 불러오지 못해도 이 줄은 쓸 수 있다.\n  */\n export function CompareTargetPicker({\n   base,\n   room,\n+  indexOn,\n+  onIndexChange,\n   onSelect,\n   onClose,\n }: {\n   base: PublicResultDetail\n   /** 더 고를 수 있는 자리 수 */\n   room: number\n+  /** KOSPI 참고선이 켜져 있는가 */\n+  indexOn: boolean\n+  onIndexChange: (on: boolean) => void\n   onSelect: (choices: CompareChoice[]) => void\n   onClose: () => void\n }) {\n@@ -264,6 +275,82 @@ export function CompareTargetPicker({\n         </p>\n       ) : null}\n       <ul className={styles.candidates} aria-describedby={listId}>\n+        <li className={styles.group}>\n+          <p className={styles.groupTitle}>\n+            참고 지수{' '}\n+            <InlineHelp label=\"참고 지수\" side=\"bottom\">\n+              시작 금액으로 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치입니다. 배당·비용은 빠져 있고, 비교\n+              대상 수에 세지 않으며 바로 그래프에 더해집니다.\n+            </InlineHelp>\n+          </p>\n+          <ul className={styles.combinations}>\n+            <li>\n+              <label className={styles.combination}>\n+                <input\n+                  type=\"checkbox\"\n+                  checked={indexOn}\n+                  onChange={(event) => onIndexChange(event.target.checked)}\n+                />\n+                <span className={styles.rowText}>\n+                  <span className={styles.rowTitle}>KOSPI 함께 보기</span>\n+                </span>\n+              </label>\n+            </li>\n+          </ul>\n+        </li>\n+        {volatilityRow ? (\n+          <li className={styles.group}>\n+            <p className={styles.groupTitle}>\n+              변동성 제한{' '}\n+              <InlineHelp label=\"변동성 제한\" side=\"bottom\">\n+                {TARGET_RISK_HELP}\n+              </InlineHelp>\n+            </p>\n+            <ul className={styles.combinations}>\n+              <li>\n+                <label className={styles.combination}>\n+                  <input\n+                    type=\"checkbox\"\n+                    checked={picked.includes(VOLATILITY_KEY)}\n+                    disabled={\n+                      !!volatilityRow.reason ||\n+                      room === 0 ||\n+                      (full && !picked.includes(VOLATILITY_KEY))\n+                    }\n+                    aria-label={volatilityName + ' · ' + volatilityRow.choice.strategy.name}\n+                    aria-describedby={VOLATILITY_KEY + '-hint'}\n+                    onChange={() => toggle(VOLATILITY_KEY)}\n+                  />\n+                  <span className={styles.rowText}>\n+                    <span className={styles.rowTitle}>{volatilityName}</span>\n+                    <span className={styles.rowBase}>{volatilityRow.choice.strategy.name}</span>\n+                  </span>\n+                </label>\n+                {state?.volatility && volatilityPick !== null ? (\n+                  <label className={styles.volatilityField}>\n+                    목표 변동성(연)\n+                    <select\n+                      value={volatilityPick}\n+                      onChange={(event) => setVolatilityPick(Number(event.target.value))}\n+                    >\n+                      {rangeChoices(state.volatility).map((value) => (\n+                        <option key={value} value={value}>\n+                          {value}%\n+                        </option>\n+                      ))}\n+                    </select>\n+                  </label>\n+                ) : null}\n+                <p id={VOLATILITY_KEY + '-hint'}>\n+                  {volatilityRow.reason ??\n+                    (state?.volatility\n+                      ? '같은 전략에 변동성 제한을 걸어 다시 계산합니다. 값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.'\n+                      : '같은 전략을 변동성 제한 없이 다시 계산합니다.')}\n+                </p>\n+              </li>\n+            </ul>\n+          </li>\n+        ) : null}\n         {groups.map(({ source, candidates }) => (\n           <li key={source} className={styles.group}>\n             <p className={styles.groupTitle}>{SOURCE_LABELS[source]}</p>\n@@ -319,59 +406,6 @@ export function CompareTargetPicker({\n             </ul>\n           </li>\n         ))}\n-        {volatilityRow ? (\n-          <li className={styles.group}>\n-            <p className={styles.groupTitle}>\n-              변동성 제한{' '}\n-              <InlineHelp label=\"변동성 제한\" side=\"bottom\">\n-                {TARGET_RISK_HELP}\n-              </InlineHelp>\n-            </p>\n-            <ul className={styles.combinations}>\n-              <li>\n-                <label className={styles.combination}>\n-                  <input\n-                    type=\"checkbox\"\n-                    checked={picked.includes(VOLATILITY_KEY)}\n-                    disabled={\n-                      !!volatilityRow.reason ||\n-                      room === 0 ||\n-                      (full && !picked.includes(VOLATILITY_KEY))\n-                    }\n-                    aria-label={volatilityName + ' · ' + volatilityRow.choice.strategy.name}\n-                    aria-describedby={VOLATILITY_KEY + '-hint'}\n-                    onChange={() => toggle(VOLATILITY_KEY)}\n-                  />\n-                  <span className={styles.rowText}>\n-                    <span className={styles.rowTitle}>{volatilityName}</span>\n-                    <span className={styles.rowBase}>{volatilityRow.choice.strategy.name}</span>\n-                  </span>\n-                </label>\n-                {state?.volatility && volatilityPick !== null ? (\n-                  <label className={styles.volatilityField}>\n-                    목표 변동성(연)\n-                    <select\n-                      value={volatilityPick}\n-                      onChange={(event) => setVolatilityPick(Number(event.target.value))}\n-                    >\n-                      {rangeChoices(state.volatility).map((value) => (\n-                        <option key={value} value={value}>\n-                          {value}%\n-                        </option>\n-                      ))}\n-                    </select>\n-                  </label>\n-                ) : null}\n-                <p id={VOLATILITY_KEY + '-hint'}>\n-                  {volatilityRow.reason ??\n-                    (state?.volatility\n-                      ? '같은 전략에 변동성 제한을 걸어 다시 계산합니다. 값이 낮을수록 더 자주, 더 많이 현금으로 옮깁니다.'\n-                      : '같은 전략을 변동성 제한 없이 다시 계산합니다.')}\n-                </p>\n-              </li>\n-            </ul>\n-          </li>\n-        ) : null}\n       </ul>\n       <div className={styles.actions}>\n         {state && !state.error ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,6 +24,9 @@ import styles from './EquityChart.module.css'\n  * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 각기 다른 파선이고 모든 곡선의 오른쪽 끝에\n  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.\n  *\n+ * <p><b>참고 지수선(KOSPI)은 비교 대상과 따로다</b>(FR-017). 서버가 시작 금액으로 환산한 값을 그대로 가늘고 옅은 실선으로 그리고\n+ * 끝 이름표를 붙인다. 셋의 상한에 세지 않고, 음영을 칠하지 않는다 — 전략 결과가 아니라 참고 정보다.\n+ *\n  * <p><b>비교 대상은 셋까지다</b>(`S15P21E205-419`). 넷을 넘으면 선 모양과 색으로 갈리지 않는다. 비교 대상의 하락 구간\n  * 음영은 대상이 하나일 때만 칠한다 — 둘 이상이면 빗금이 겹쳐 어느 구간이 누구 것인지 읽을 수 없다.\n  *\n@@ -47,10 +50,18 @@ export type EquityChartSeries = {\n   maxDrawdown: string | null\n }\n \n+/** 참고 지수선. 값은 서버가 시작 금액으로 환산한 금액 문자열이다 */\n+export type EquityChartReference = {\n+  name: string\n+  points: readonly { date: string; value: string }[]\n+}\n+\n export type EquityChartProps = {\n   base: EquityChartSeries\n   /** 비교 대상들. 없으면 곡선은 하나다. 셋을 넘는 것은 그리지 않는다 */\n   targets?: readonly EquityChartSeries[] | null\n+  /** 참고 지수선. 비교 대상 상한과 따로 센다 */\n+  reference?: EquityChartReference | null\n   /** `config.initialCash`. 세로축의 기준이자 가로 기준선의 위치다 */\n   initialCash: string\n   /** 대안 텍스트에 담을 기준 결과의 핵심 숫자 3개. 계산되지 않았으면 `null` */\n@@ -68,6 +79,9 @@ type ChartRow = { date: Date } & Partial<Record<string, number | Date>>\n \n const BASE_KEY = 'base'\n const BASE_STROKE = 'var(--chart-line-primary)'\n+const REFERENCE_KEY = 'reference'\n+/** 참고선은 옅은 글자색의 가는 실선이다. 전략 곡선(굵은 실선·파선)과 모양으로 갈린다 */\n+const REFERENCE_STROKE = 'var(--muted-foreground)'\n /**\n  * 비교 대상의 색과 파선. 자리 순서대로 쓴다. 파선 간격이 서로 달라 색을 못 봐도 선 모양으로 갈린다.\n  * 넷째 대상은 없다 — 상한이 셋이다.\n@@ -115,7 +129,7 @@ function toChartDate(date: string): Date {\n  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.\n  */\n function buildRows(\n-  series: readonly { key: string; points: ResultTimeseriesPoint[] }[],\n+  series: readonly { key: string; points: readonly Pick<ResultTimeseriesPoint, 'date' | 'equity'>[] }[],\n   mode: YScaleMode,\n ): ChartRow[] {\n   const byDate = new Map<string, ChartRow>()\n@@ -230,6 +244,7 @@ function scaleModeNoun(mode: YScaleMode): string {\n function buildAltText(\n   base: EquityChartSeries,\n   targets: readonly EquityChartSeries[],\n+  reference: EquityChartReference | null,\n   altNumbers: EquityChartProps['altNumbers'],\n   initialCash: string,\n   mode: YScaleMode,\n@@ -250,13 +265,18 @@ function buildAltText(\n         (targets.length === 1 ? '이며 파선으로' : '이며 서로 다른 파선으로') +\n         ' 함께 그렸습니다.'\n       : '비교 대상은 없습니다.'\n+  const referenceNote = reference\n+    ? ' 참고로 ' + reference.name + '를 시작 금액으로 환산한 선을 가는 실선으로 함께 그렸습니다.'\n+    : ''\n   const axis =\n     '세로축은 원화 자산가치이고 눈금은 ' +\n     scaleModeNoun(mode) +\n     '이며, 시작 금액은 ' +\n     formatMoney(initialCash) +\n     '입니다.'\n-  return base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison + ' ' + axis\n+  return (\n+    base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison + referenceNote + ' ' + axis\n+  )\n }\n \n /** 음영 구간을 사람이 읽을 문장으로 옮긴다 */\n@@ -266,6 +286,7 @@ function shadeNote(name: string, window: DrawdownWindow): string {\n \n export function EquityChart(props: EquityChartProps) {\n   const { base, initialCash, altNumbers } = props\n+  const reference = props.reference ?? null\n   const targets = useMemo(\n     () => (props.targets ?? []).slice(0, TARGET_STYLES.length),\n     [props.targets],\n@@ -276,8 +297,16 @@ export function EquityChart(props: EquityChartProps) {\n     () => [\n       { key: BASE_KEY, points: base.points },\n       ...targets.map((target, index) => ({ key: targetKey(index), points: target.points })),\n+      ...(reference\n+        ? [\n+            {\n+              key: REFERENCE_KEY,\n+              points: reference.points.map((point) => ({ date: point.date, equity: point.value })),\n+            },\n+          ]\n+        : []),\n     ],\n-    [base.points, targets],\n+    [base.points, targets, reference],\n   )\n   const keys = keyed.map((series) => series.key)\n   const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])\n@@ -311,6 +340,7 @@ export function EquityChart(props: EquityChartProps) {\n       name: target.name,\n       stroke: TARGET_STYLES[index].stroke,\n     })),\n+    ...(reference ? [{ dataKey: REFERENCE_KEY, name: reference.name, stroke: REFERENCE_STROKE }] : []),\n   ]\n \n   return (\n@@ -333,7 +363,7 @@ export function EquityChart(props: EquityChartProps) {\n       </div>\n \n       <div\n-        aria-label={buildAltText(base, targets, altNumbers, initialCash, scaleMode)}\n+        aria-label={buildAltText(base, targets, reference, altNumbers, initialCash, scaleMode)}\n         className={styles.chart}\n         role=\"img\"\n       >\n@@ -393,6 +423,19 @@ export function EquityChart(props: EquityChartProps) {\n             strokeWidth={2.4}\n           />\n \n+          {reference ? (\n+            <Line\n+              animate={false}\n+              curve={curveLinear}\n+              dataKey={REFERENCE_KEY}\n+              defined={(row) => typeof row[REFERENCE_KEY] === 'number'}\n+              fadeEdges={false}\n+              showHighlight={false}\n+              stroke={REFERENCE_STROKE}\n+              strokeWidth={1.4}\n+            />\n+          ) : null}\n+\n           {targets.map((_, index) => {\n             const key = targetKey(index)\n             return (\n@@ -422,6 +465,7 @@ export function EquityChart(props: EquityChartProps) {\n         {baseWindow && base.maxDrawdown ? (\n           <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>\n         ) : null}\n+        {reference ? <span>가는 실선 · {reference.name} 시작 금액 환산(배당·비용 제외)</span> : null}\n       </div>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,93 +0,0 @@\n-import { useEffect, useState } from 'react'\n-import { fetchResultIndexComparison, normalizeResultError } from '@/api/result'\n-import { Button } from '@/components/ui/button'\n-import type { ResultIndexComparison } from '@/types/result'\n-import styles from './auxiliaryViews.module.css'\n-\n-type State =\n-  | { status: 'loading' }\n-  | { status: 'ready'; data: ResultIndexComparison }\n-  | { status: 'error'; message: string }\n-\n-const unavailableReasons: Record<string, string> = {\n-  INDEX_SERIES_UNAVAILABLE:\n-    '같은 기간의 KOSPI 자료를 아직 받을 수 없어 비교를 표시하지 않았습니다.',\n-}\n-\n-/**\n- * 'KOSPI 비교' 탭(FR-017, T077·T098). 탭을 처음 고를 때 붙고 그때 서버가 환산한 KOSPI 보조 계열을 받는다.\n- * 서버가 기간 자료를 얻지 못하면 표 대신 그 이유를 이 자리에 둔다 — 값을 만들어 채우지 않는다.\n- */\n-export function IndexComparisonView({ token }: { token: string }) {\n-  const [attempt, setAttempt] = useState(0)\n-  const [state, setState] = useState<State>({ status: 'loading' })\n-  const unavailableReason =\n-    state.status === 'ready' && !state.data.available\n-      ? (unavailableReasons[state.data.reason ?? ''] ??\n-        '지수 비교 자료를 제공할 수 없어 비교를 표시하지 않았습니다.')\n-      : null\n-\n-  useEffect(() => {\n-    const controller = new AbortController()\n-    setState({ status: 'loading' })\n-    void fetchResultIndexComparison(token, controller.signal)\n-      .then((data) => setState({ status: 'ready', data }))\n-      .catch((error) => {\n-        if (!controller.signal.aborted) {\n-          setState({ status: 'error', message: normalizeResultError(error).message })\n-        }\n-      })\n-    return () => controller.abort()\n-  }, [attempt, token])\n-\n-  return (\n-    <section className={styles.view} role=\"region\" aria-label=\"지수와 비교하기\">\n-      <h2 className={styles.title}>KOSPI와 비교</h2>\n-      {unavailableReason ? (\n-        <p className={styles.reason} role=\"status\">\n-          {unavailableReason}\n-        </p>\n-      ) : null}\n-      {state.status === 'loading' ? (\n-        <p className={styles.copy}>지수 자료를 불러오는 중입니다.</p>\n-      ) : null}\n-      {state.status === 'error' ? (\n-        <>\n-          <p className={styles.reason} role=\"alert\">\n-            {state.message}\n-          </p>\n-          <Button\n-            type=\"button\"\n-            variant=\"outline\"\n-            onClick={() => setAttempt((value) => value + 1)}\n-          >\n-            다시 불러오기\n-          </Button>\n-        </>\n-      ) : null}\n-      {state.status === 'ready' && state.data.available ? (\n-        <>\n-          <div className={styles.tableScroll}>\n-            <table className={styles.table} aria-label=\"환산한 KOSPI 값\">\n-              <thead>\n-                <tr>\n-                  <th scope=\"col\">날짜</th>\n-                  <th scope=\"col\">환산 값</th>\n-                </tr>\n-              </thead>\n-              <tbody>\n-                {state.data.series.map((point) => (\n-                  <tr key={point.date}>\n-                    <td>{point.date}</td>\n-                    <td>{point.value}</td>\n-                  </tr>\n-                ))}\n-              </tbody>\n-            </table>\n-          </div>\n-          <p className={styles.note}>지수를 시작 금액으로 환산했습니다.</p>\n-        </>\n-      ) : null}\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/IndexComparisonView.tsx",
+          "old_path": "frontend/src/components/result/IndexComparisonView.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,15 +4,14 @@ import type { PublicResultDetail } from '@/types/result'\n import { AnalysisPanel, type DetailCompareTarget, SettingsPanel, TradesPanel } from './DetailPanel'\n import type { DrawdownWindow } from './drawdownWindow'\n import { isZeroValue } from './formatResult'\n-import { IndexComparisonView } from './IndexComparisonView'\n import { LOSS_WINDOW_NONE, LOSS_WINDOW_UNAVAILABLE, LossWindowView } from './LossWindowView'\n import { ResultTabs } from './ResultTabs'\n \n /**\n- * 결과 화면의 여섯 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교.\n+ * 결과 화면의 다섯 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때.\n  *\n- * <p>변동성 제한(004 목표 위험 맞춤)은 탭이 아니라 분석 조건과 '비교 대상 고르기'의 한 줄로 옮겼다 — 같은 전략의 켬·끔을\n- * 그래프에 겹쳐 보는 것이 이 보기의 목적이라서다.\n+ * <p>KOSPI 비교와 변동성 제한(004 목표 위험 맞춤)은 탭이 아니라 '비교 대상 고르기'의 한 줄로 옮겼다 — 둘 다 결과 그래프에\n+ * 겹쳐 보는 것이 목적이라서다. KOSPI는 참고선(FR-017, `S15P21E205-429`), 변동성 제한은 같은 전략의 켬·끔 비교다.\n  *\n  * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘긴다 —\n  * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프는 탭 위에, 해석 문장은 요약 탭에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에\n@@ -76,7 +75,6 @@ export function ResultDetailTabs({\n             <LossWindowView token={token} lossWindow={lossWindow} items={detail.config.items} />\n           ) : null,\n         },\n-        { id: 'index', label: 'KOSPI 비교', content: <IndexComparisonView token={token} /> },\n       ]}\n     />\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,60 +0,0 @@\n-.view {\n-  display: flex;\n-  flex-direction: column;\n-  gap: 12px;\n-  min-width: 0;\n-}\n-\n-.panel {\n-  display: flex;\n-  flex-direction: column;\n-  gap: 14px;\n-  padding: var(--thorp-pad-card, 18px 20px);\n-  border: 1px solid var(--thorp-line);\n-  border-radius: var(--thorp-radius-card, 14px);\n-  background: var(--thorp-surface);\n-}\n-\n-.title,\n-.copy,\n-.note,\n-.reason {\n-  margin: 0;\n-}\n-\n-.title {\n-  font-size: var(--thorp-text-heading, 1.05rem);\n-}\n-\n-.copy,\n-.reason {\n-  color: var(--thorp-copy);\n-  font-size: var(--thorp-text-body, 0.86rem);\n-  line-height: 1.7;\n-}\n-\n-.note {\n-  color: var(--thorp-muted);\n-  font-size: var(--thorp-text-small, 0.78rem);\n-  line-height: 1.6;\n-}\n-\n-.tableScroll {\n-  max-width: 100%;\n-  overflow-x: auto;\n-}\n-\n-.table {\n-  width: 100%;\n-  border-collapse: collapse;\n-  font-size: var(--thorp-text-small, 0.82rem);\n-  font-variant-numeric: tabular-nums;\n-}\n-\n-.table th,\n-.table td {\n-  padding: 7px 10px;\n-  border-bottom: 1px solid var(--thorp-line);\n-  text-align: left;\n-  white-space: nowrap;\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "old_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,14 +9,22 @@ describe('비교 주소', () => {\n     const path = buildResultPath(base, {\n       compareTokens: [target, second],\n       searchId: 'SEARCH / 한글&',\n+      index: true,\n     })\n     expect(parseCompareQuery(path.slice(path.indexOf('?')))).toEqual({\n       compareTokens: [target, second],\n       searchId: 'SEARCH / 한글&',\n+      index: true,\n     })\n     expect(buildResultPath(base)).toBe('/results/' + base)\n     expect(buildResultPath(base, { compareTokens: [] })).toBe('/results/' + base)\n   })\n+  it('참고 지수는 KOSPI 만 켠다', () => {\n+    expect(parseCompareQuery('?index=KOSPI').index).toBe(true)\n+    expect(parseCompareQuery('?index=kospi').index).toBe(false)\n+    expect(parseCompareQuery('').index).toBe(false)\n+    expect(buildResultPath(base, { index: true })).toBe('/results/' + base + '?index=KOSPI')\n+  })\n   it('같은 토큰은 한 번만 두고 상한을 넘는 토큰은 뒤에서 자른다', () => {\n     const tokens = ['b', 'c', 'd', 'e'].map((char) => char.repeat(32))\n     expect(parseCompareQuery('?compare=' + [tokens[0], ...tokens].join(',')).compareTokens).toEqual(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareQuery.test.ts",
+          "old_path": "frontend/src/components/result/compareQuery.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,15 @@\n const tokenPattern = /^[0-9a-f]{32}$/\n \n+/** 결과 그래프에 참고선으로 겹칠 수 있는 지수. 비교 대상 상한과 따로 센다(FR-017). */\n+export const REFERENCE_INDEX = 'KOSPI'\n+\n /** 한 그래프에 겹치는 비교 대상의 상한. 기준까지 넷을 넘으면 색·선 모양으로 갈리지 않는다(FR-004). */\n export const MAX_COMPARE_TARGETS = 3\n \n /**\n  * 비교 주소를 읽는다. `?compare=`는 쉼표로 이은 공개 토큰 목록이다(contracts \"비교 주소\").\n  * 잘못된 토큰은 버리고, 같은 토큰은 한 번만, 상한을 넘는 것은 뒤에서 자른다.\n+ * `?index=KOSPI`는 참고 지수선을 켠다. 다른 값은 없는 것으로 본다.\n  */\n export function parseCompareQuery(search: string) {\n   const query = new URLSearchParams(search)\n@@ -17,16 +21,22 @@ export function parseCompareQuery(search: string) {\n   return {\n     compareTokens: tokens.slice(0, MAX_COMPARE_TARGETS),\n     searchId: query.get('search') || null,\n+    index: query.get('index') === REFERENCE_INDEX,\n   }\n }\n \n export function buildResultPath(\n   baseToken: string,\n-  options: { compareTokens?: readonly string[] | null; searchId?: string | null } = {},\n+  options: {\n+    compareTokens?: readonly string[] | null\n+    searchId?: string | null\n+    index?: boolean\n+  } = {},\n ): string {\n   const query = new URLSearchParams()\n   const tokens = (options.compareTokens ?? []).filter((token) => tokenPattern.test(token))\n   if (tokens.length) query.set('compare', tokens.slice(0, MAX_COMPARE_TARGETS).join(','))\n   if (options.searchId) query.set('search', options.searchId)\n+  if (options.index) query.set('index', REFERENCE_INDEX)\n   return '/results/' + baseToken + (query.size ? '?' + query.toString() : '')\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareQuery.ts",
+          "old_path": "frontend/src/components/result/compareQuery.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -53,11 +53,14 @@\n   overflow-wrap: anywhere;\n }\n \n+/* 제목·안내·버튼은 제자리에 두고 후보 목록만 스크롤한다. 높이는 적당한 상한과 화면에 남은 높이 중 작은 쪽이다. */\n .popover {\n   z-index: 61;\n+  display: flex;\n+  flex-direction: column;\n   width: min(460px, calc(100vw - 32px));\n-  max-height: calc(100svh - 32px);\n-  overflow-y: auto;\n+  max-height: min(560px, var(--radix-popover-content-available-height, calc(100svh - 32px)));\n+  overflow: hidden;\n   padding: 16px;\n   border: 1px solid var(--thorp-line-strong);\n   border-radius: var(--thorp-radius-card, 12px);\n@@ -67,6 +70,9 @@\n }\n \n .popover .panel {\n+  display: flex;\n+  flex-direction: column;\n+  min-height: 0;\n   padding: 0;\n   border: 0;\n   background: transparent;\n@@ -74,7 +80,10 @@\n \n .popover .candidates {\n   gap: 8px;\n+  min-height: 0;\n   margin: 8px 0 12px;\n+  overflow-y: auto;\n+  overscroll-behavior: contain;\n }\n \n .popover .candidates p {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/comparison.module.css",
+          "old_path": "frontend/src/components/result/comparison.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,7 @@ import type { ResultTimeseriesPoint } from '@/types/result'\n  */\n \n /** 자산가치가 수로 읽히면 그 수, 아니면 `null`. 읽을 수 없는 값을 0으로 바꾸지 않는다(원칙 VI) */\n-export function readEquity(point: ResultTimeseriesPoint): number | null {\n+export function readEquity(point: Pick<ResultTimeseriesPoint, 'equity'>): number | null {\n   const value = point.equity\n   if (typeof value !== 'string' || value.trim() === '') return null\n   const parsed = Number(value)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/equityPoints.ts",
+          "old_path": "frontend/src/components/result/equityPoints.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -190,7 +190,8 @@ function readPendingState(pending: Pending): CompareTargetState {\n export function useCompareTargets(base: PublicResultDetail) {\n   const location = useLocation()\n   const navigate = useNavigate()\n-  const { compareTokens, searchId } = parseCompareQuery(location.search)\n+  // 참고 지수선(`?index=`)은 이 훅이 다루지 않지만 비교 주소를 다시 쓸 때 잃지 않게 물려준다.\n+  const { compareTokens, searchId, index } = parseCompareQuery(location.search)\n   // 훅은 반복문 안에서 부를 수 없다. 상한이 셋이라 자리 셋을 고정으로 둔다.\n   const results = [\n     useResult(compareTokens[0] ?? null),\n@@ -257,7 +258,7 @@ export function useCompareTargets(base: PublicResultDetail) {\n   const period = manualPeriod ?? inferredPeriod\n \n   const go = (tokens: string[]) =>\n-    navigate(buildResultPath(base.publicToken, { compareTokens: tokens, searchId }), {\n+    navigate(buildResultPath(base.publicToken, { compareTokens: tokens, searchId, index }), {\n       replace: true,\n       state: location.state,\n     })\n@@ -439,6 +440,7 @@ export function useCompareTargets(base: PublicResultDetail) {\n         buildResultPath(acceptedBaseToken, {\n           compareTokens: acceptedTargets,\n           searchId: period.choices.length ? null : searchId,\n+          index,\n         }),\n         { state: { returnTo: location.pathname + location.search } },\n       )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useCompareTargets.ts",
+          "old_path": "frontend/src/hooks/useCompareTargets.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+import { useEffect, useState } from 'react'\n+import { fetchResultIndexComparison, normalizeResultError } from '@/api/result'\n+import type { ResultIndexComparison } from '@/types/result'\n+\n+export type IndexReferenceState =\n+  | { status: 'off' }\n+  | { status: 'loading' }\n+  | { status: 'ready'; data: ResultIndexComparison }\n+  | { status: 'error'; message: string; retry: () => void }\n+\n+/**\n+ * 참고 지수선(KOSPI, FR-017). 켜졌을 때만 서버가 환산한 계열을 받는다 — 꺼져 있으면 요청이 없다(SC-001).\n+ * 화면은 받은 값을 다시 계산하지 않는다.\n+ */\n+export function useIndexReference(token: string, enabled: boolean): IndexReferenceState {\n+  const [attempt, setAttempt] = useState(0)\n+  const [state, setState] = useState<IndexReferenceState>({ status: 'off' })\n+\n+  useEffect(() => {\n+    if (!enabled) {\n+      setState({ status: 'off' })\n+      return\n+    }\n+    const controller = new AbortController()\n+    setState({ status: 'loading' })\n+    void fetchResultIndexComparison(token, controller.signal)\n+      .then((data) => setState({ status: 'ready', data }))\n+      .catch((error) => {\n+        if (controller.signal.aborted) return\n+        setState({\n+          status: 'error',\n+          message: normalizeResultError(error).message,\n+          retry: () => setAttempt((value) => value + 1),\n+        })\n+      })\n+    return () => controller.abort()\n+  }, [token, enabled, attempt])\n+\n+  return state\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useIndexReference.ts",
+          "old_path": "frontend/src/hooks/useIndexReference.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n import { StrictMode } from 'react'\n-import { render, screen, within } from '@testing-library/react'\n+import { render, screen } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n@@ -53,9 +53,9 @@ function LocationProbe() {\n   return <output aria-label=\"현재 주소\">{location.pathname + location.search}</output>\n }\n \n-function ResultRoute() {\n+function ResultRoute({ search = '' }: { search?: string }) {\n   return (\n-    <MemoryRouter initialEntries={[`/results/${resultToken}`]}>\n+    <MemoryRouter initialEntries={[`/results/${resultToken}${search}`]}>\n       <AuthContext.Provider value={anonymousAuthContext}>\n       <Routes>\n         <Route path=\"/results/:token\" element={<ResultPage />} />\n@@ -66,8 +66,8 @@ function ResultRoute() {\n   )\n }\n \n-function renderResult({ strict = false }: { strict?: boolean } = {}) {\n-  const route = <ResultRoute />\n+function renderResult({ strict = false, search }: { strict?: boolean; search?: string } = {}) {\n+  const route = <ResultRoute search={search} />\n   return render(strict ? <StrictMode>{route}</StrictMode> : route)\n }\n \n@@ -104,7 +104,7 @@ describe('결과 보조 보기 (B08)', () => {\n     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n   })\n \n-  it('KOSPI 비교 탭을 고르기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {\n+  it('KOSPI 참고선을 켜기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {\n     renderResult()\n \n     await screen.findByText('자료 출처: 한국거래소 통계정보')\n@@ -124,7 +124,7 @@ describe('결과 보조 보기 (B08)', () => {\n     expect(screen.queryByRole('button', { name: '이전 화면으로' })).toBeNull()\n   })\n \n-  it('KOSPI 비교 탭은 서버 값을 바꾸지 않고 그대로 보이며 주소를 유지한다', async () => {\n+  it('비교 대상 고르기에서 KOSPI를 켜면 주소에 남고 서버 값을 참고선으로 그리며, 끄면 선과 주소가 함께 빠진다', async () => {\n     api.index.mockResolvedValue({\n       available: true,\n       reason: null,\n@@ -136,33 +136,47 @@ describe('결과 보조 보기 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('tab', { name: 'KOSPI 비교' }))\n+    await user.click(await screen.findByRole('button', { name: '비교 대상 고르기' }))\n+    const toggle = await screen.findByRole('checkbox', { name: 'KOSPI 함께 보기' })\n+    await user.click(toggle)\n \n-    const panel = await screen.findByRole('region', { name: '지수와 비교하기' })\n-    expect(within(panel).getByText('10012345.67')).toBeTruthy()\n-    expect(within(panel).getByText('지수를 시작 금액으로 환산했습니다.')).toBeTruthy()\n+    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}?index=KOSPI`)\n+    expect(await screen.findByRole('img', { name: /KOSPI\\(참고\\)를 시작 금액으로 환산한 선/ })).toBeTruthy()\n+    expect(api.index).toHaveBeenCalledTimes(1)\n+    // 비교 대상이 아니다 — 결과를 새로 접수하지 않는다.\n+    expect(api.create).not.toHaveBeenCalled()\n+\n+    await user.click(toggle)\n     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n+    expect(screen.queryByRole('img', { name: /KOSPI\\(참고\\)/ })).toBeNull()\n+  })\n+\n+  it('주소에 ?index=KOSPI 가 있으면 새로 열어도 참고선이 복원된다', async () => {\n+    api.index.mockResolvedValue({\n+      available: true,\n+      reason: null,\n+      series: [{ date: '2023-07-03', value: '10000000.00' }],\n+    })\n+    renderResult({ search: '?index=KOSPI' })\n+\n+    expect(await screen.findByRole('img', { name: /KOSPI\\(참고\\)/ })).toBeTruthy()\n+    expect(api.index).toHaveBeenCalledTimes(1)\n+    expect(api.index.mock.calls[0][0]).toBe(resultToken)\n   })\n \n-  it('지수 기간 계열을 받을 수 없으면 표 대신 서버 이유에 맞는 안내를 보이고 다시 부르지 않는다', async () => {\n+  it('지수 기간 계열을 받을 수 없으면 선 대신 서버 이유에 맞는 안내를 보이고 다시 부르지 않는다', async () => {\n     api.index.mockResolvedValue({\n       available: false,\n       reason: 'INDEX_SERIES_UNAVAILABLE',\n       series: [],\n     })\n     const user = userEvent.setup()\n-    renderResult()\n-\n-    const tab = await screen.findByRole('tab', { name: 'KOSPI 비교' })\n-    await user.click(tab)\n+    renderResult({ search: '?index=KOSPI' })\n \n-    const panel = await screen.findByRole('region', { name: '지수와 비교하기' })\n-    expect(await within(panel).findByText(/같은 기간의 KOSPI 자료를 아직 받을 수 없어/)).toBeTruthy()\n-    expect(within(panel).queryByRole('table')).toBeNull()\n-    // 다른 탭으로 옮겼다 돌아와도 같은 요청을 반복하지 않는다.\n+    expect(await screen.findByText(/같은 기간의 KOSPI 자료를 받을 수 없어 참고선을/)).toBeTruthy()\n+    expect(screen.queryByRole('img', { name: /KOSPI\\(참고\\)/ })).toBeNull()\n     await user.click(screen.getByRole('tab', { name: '결과 분석' }))\n-    await user.click(tab)\n     expect(api.index).toHaveBeenCalledTimes(1)\n-    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n+    expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}?index=KOSPI`)\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -516,11 +516,11 @@ describe('ResultPage', () => {\n         '설정·근거',\n         '전체 거래 내역',\n         '손실이 커진 때',\n-        'KOSPI 비교',\n       ]) {\n         expect(screen.getByRole('tab', { name }), name).not.toBeNull()\n       }\n-      // 변동성 제한은 탭이 아니라 비교 대상 고르기의 한 줄이다.\n+      // KOSPI는 참고선, 변동성 제한은 비교 대상 한 줄이다 — 둘 다 비교 대상 고르기에 있고 탭이 아니다.\n+      expect(screen.queryByRole('tab', { name: 'KOSPI 비교' })).toBeNull()\n       expect(screen.queryByRole('tab', { name: /목표 위험|변동성/ })).toBeNull()\n       expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()\n       expect(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,20 +1,25 @@\n import { useId, useMemo } from 'react'\n import { ArrowLeft } from 'lucide-react'\n import { Popover } from 'radix-ui'\n-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'\n+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'\n import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'\n import comparisonStyles from '@/components/result/comparison.module.css'\n import { CompareTargetChip } from '@/components/result/CompareTargetChip'\n import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'\n+import { REFERENCE_INDEX } from '@/components/result/compareQuery'\n import { type CompareTargetState, useCompareTargets } from '@/hooks/useCompareTargets'\n import { describeParameters } from '@/components/result/compareCandidates'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'\n import { strategyLabel } from '@/components/result/conditionLine'\n import { findDrawdownWindow } from '@/components/result/drawdownWindow'\n-import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'\n+import {\n+  EquityChart,\n+  type EquityChartReference,\n+  type EquityChartSeries,\n+} from '@/components/result/EquityChart'\n import { hasDrawableEquity } from '@/components/result/equityPoints'\n import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'\n import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'\n@@ -24,6 +29,7 @@ import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNo\n import { selectSummarySentence } from '@/components/result/summarySentences'\n import { Button } from '@/components/ui/button'\n import { useDisclosure } from '@/hooks/useDisclosure'\n+import { type IndexReferenceState, useIndexReference } from '@/hooks/useIndexReference'\n import { useProgressSeries } from '@/hooks/useProgressSeries'\n import { type TimeseriesState, hasViewableResult, useResult } from '@/hooks/useResult'\n import type { PublicResultDetail, ResultTimeseriesPoint } from '@/types/result'\n@@ -95,7 +101,8 @@ function ResultView({\n }) {\n   const navigate = useNavigate()\n   // 내 기록에서 열었으면(006 FR-006) 재계산하지 않았다는 한 줄을 덧붙인다. 다른 동작은 바꾸지 않는다.\n-  const [searchParams] = useSearchParams()\n+  const [searchParams, setSearchParams] = useSearchParams()\n+  const location = useLocation()\n   const fromRecords = searchParams.get('from') === 'records'\n   const completedThrough = completedRange(detail, timeseries)\n   const compare = useCompareTargets(detail)\n@@ -118,6 +125,27 @@ function ResultView({\n         : null\n \n   const viewable = hasViewableResult(detail)\n+  // KOSPI 참고선(FR-017). 주소 `?index=KOSPI`로 켜고 끄며, 볼 결과가 있을 때만 받는다.\n+  const indexOn = searchParams.get('index') === REFERENCE_INDEX\n+  const indexReference = useIndexReference(token, indexOn && viewable)\n+  // 같은 응답이면 같은 객체를 넘긴다. 매번 새로 만들면 그래프가 렌더마다 행을 다시 짠다.\n+  const reference = useMemo<EquityChartReference | null>(\n+    () =>\n+      indexReference.status === 'ready' && indexReference.data.available\n+        ? { name: REFERENCE_INDEX + '(참고)', points: indexReference.data.series }\n+        : null,\n+    [indexReference],\n+  )\n+  const setIndexOn = (on: boolean) =>\n+    setSearchParams(\n+      (known) => {\n+        const next = new URLSearchParams(known)\n+        if (on) next.set('index', REFERENCE_INDEX)\n+        else next.delete('index')\n+        return next\n+      },\n+      { replace: true, state: location.state },\n+    )\n   // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.\n   const inFlight = detail.status === 'QUEUED' || detail.status === 'RUNNING'\n   const progressSeries = useProgressSeries(token, inFlight)\n@@ -216,7 +244,7 @@ function ResultView({\n                 className={styles.compareButton}\n                 id={pickerButtonId}\n                 type=\"button\"\n-                disabled={!viewable || compare.sending || compare.room === 0}\n+                disabled={!viewable || compare.sending}\n                 {...picker.toggleProps}\n               >\n                 비교 대상 고르기\n@@ -231,6 +259,11 @@ function ResultView({\n                 sideOffset={8}\n                 collisionPadding={16}\n                 aria-label=\"비교 대상 고르기\"\n+                // 첫 요소가 아니라 팝오버에 초점을 둔다. 첫 요소가 물음표면 초점만으로 설명이 열려 첫 Esc 가 팝오버를 닫지 못한다.\n+                onOpenAutoFocus={(event) => {\n+                  event.preventDefault()\n+                  document.getElementById(pickerId)?.focus()\n+                }}\n                 onCloseAutoFocus={(event) => {\n                   event.preventDefault()\n                   document.getElementById(pickerButtonId)?.focus()\n@@ -239,6 +272,8 @@ function ResultView({\n                 <CompareTargetPicker\n                   base={detail}\n                   room={compare.room}\n+                  indexOn={indexOn}\n+                  onIndexChange={setIndexOn}\n                   onClose={picker.close}\n                   onSelect={(choices) => {\n                     picker.close()\n@@ -280,7 +315,9 @@ function ResultView({\n           points: target.timeseries.status === 'loaded' ? target.timeseries.data.points : [],\n           maxDrawdown: target.compatible?.summary?.maxDrawdown ?? null,\n         }))}\n+        reference={reference}\n       />\n+      <IndexReferenceNotice state={indexReference} />\n       {viewable ? (\n         <ResultDetailTabs\n           token={token}\n@@ -328,12 +365,14 @@ function ResultChartSlot({\n   timeseries,\n   progressPoints,\n   targets,\n+  reference,\n }: {\n   detail: PublicResultDetail\n   timeseries: TimeseriesState\n   /** 계산 중 구독으로 받은 점. 최종 시계열이 오면 쓰이지 않는다 */\n   progressPoints?: ResultTimeseriesPoint[]\n   targets?: EquityChartSeries[]\n+  reference?: EquityChartReference | null\n }) {\n   if (timeseries.status === 'unavailable') {\n     return (\n@@ -366,6 +405,7 @@ function ResultChartSlot({\n   return (\n     <EquityChart\n       targets={targets}\n+      reference={reference}\n       altNumbers={\n         summary\n           ? {\n@@ -385,6 +425,35 @@ function ResultChartSlot({\n   )\n }\n \n+const INDEX_UNAVAILABLE_REASONS: Record<string, string> = {\n+  INDEX_SERIES_UNAVAILABLE: '같은 기간의 KOSPI 자료를 받을 수 없어 참고선을 그리지 않았습니다.',\n+}\n+\n+/**\n+ * 참고선을 켰는데 그리지 못한 이유. 서버가 자료를 주지 못하면 값을 만들어 채우지 않고 이유를 적는다(FR-017).\n+ */\n+function IndexReferenceNotice({ state }: { state: IndexReferenceState }) {\n+  if (state.status === 'ready' && !state.data.available) {\n+    return (\n+      <p className={styles.status} role=\"status\">\n+        {INDEX_UNAVAILABLE_REASONS[state.data.reason ?? ''] ??\n+          '지수 자료를 제공할 수 없어 참고선을 그리지 않았습니다.'}\n+      </p>\n+    )\n+  }\n+  if (state.status === 'error') {\n+    return (\n+      <div className={styles.error} role=\"alert\">\n+        <p className={styles.status}>{state.message}</p>\n+        <button type=\"button\" className={styles.retry} onClick={state.retry}>\n+          KOSPI 다시 불러오기\n+        </button>\n+      </div>\n+    )\n+  }\n+  return null\n+}\n+\n /**\n  * 완료 범위. 계산 중이면 진행 보고의 날짜를, 끝난 결과면 받은 시계열의 마지막 날짜를 쓴다.\n  * 공개 상세는 끝난 결과에 `progress`를 담지 않는다. 둘 다 없으면 지어내지 않고 `null`이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -64,7 +64,7 @@\n \n `config.executionType`에는 원 요청의 실행 종류(`SINGLE`·`SEARCH_BUNDLE` 등)를 담는다. 실행을 공유하더라도 요청 종류는 유지되며, `search` 질의가 없는 공개 주소에서도 자동 탐색 후보임을 구분한다. 탐색 식별자가 없으면 묶음 주소를 만들어 내지 않는다.\n \n-`/results/{baseToken}?compare={token1},{token2},{token3}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰을 쉼표로 이은 목록(최대 셋, `S15P21E205-419`)이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.\n+`/results/{baseToken}?compare={token1},{token2},{token3}&search={searchId}&index=KOSPI`. `compare`는 비교 대상 결과의 공개 토큰을 쉼표로 이은 목록(최대 셋, `S15P21E205-419`)이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `index=KOSPI`는 KOSPI 참고선을 켠다(FR-017, `S15P21E205-429`). 비교 대상 상한에 세지 않고, 비교 대상을 바꿔 주소를 다시 쓸 때도 유지된다. 다른 값은 없는 것으로 본다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.\n \n ## POST /results/{publicToken}/retry\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/contracts/result-api.md",
+          "old_path": "specs/005-result-comparison/contracts/result-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -82,6 +82,7 @@\n |---|---|\n | base | 기준 결과. 사용자 고정 비중 또는 동일 비중 |\n | targets | 비교 대상 결과 0~3개(`S15P21E205-419`). 주소 `?compare=`의 토큰 순서 |\n+| indexReference | KOSPI 참고선 켜짐 여부. 주소 `?index=KOSPI`. 비교 대상이 아니며 `targets` 상한에 세지 않는다(FR-017, `S15P21E205-429`) |\n | targets[].targetState | `REQUESTED` `RUNNING` `READY` `FAILED` `EXPIRED` `EXECUTION_LIMIT`. 대상마다 따로 |\n | targets[].mismatch | READY인데 기준과 겹쳐 그리지 않는 이유 `conditions` `versions` `period` 또는 없음 |\n | candidate | 비교 후보 하나. 전략 + 설정값 조합. `source`는 `default`(등록표 기본값) 또는 `used`(004 `GET /backtests/used-strategies`) |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/data-model.md",
+          "old_path": "specs/005-result-comparison/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,7 +41,8 @@\n \n ### Session 2026-09-24\n \n-- Q: '목표 위험 맞춤' 탭은 그대로 두는가? → A: 없앤다. 목표 변동성은 [003](../003-strategy-settings/spec.md) 분석 조건의 '변동성 제한'에서 처음부터 고르고, 결과 화면에서는 **비교 대상 고르기**의 '변동성 제한' 한 줄로 같은 전략·설정에 제한만 걸어(기준이 이미 켰으면 '변동성 제한 없이') 그래프에 겹쳐 본다. 탭은 매번 별도 실행을 요청하면서도 원래 결과와 나란히 보이지 않았다. 탭은 여섯이다.\n+- Q: '목표 위험 맞춤' 탭은 그대로 두는가? → A: 없앤다. 목표 변동성은 [003](../003-strategy-settings/spec.md) 분석 조건의 '변동성 제한'에서 처음부터 고르고, 결과 화면에서는 **비교 대상 고르기**의 '변동성 제한' 한 줄로 같은 전략·설정에 제한만 걸어(기준이 이미 켰으면 '변동성 제한 없이') 그래프에 겹쳐 본다. 탭은 매번 별도 실행을 요청하면서도 원래 결과와 나란히 보이지 않았다.\n+- Q: 'KOSPI 비교' 탭은 그대로 두는가? → A: 없앤다. 서버가 환산한 KOSPI를 **비교 대상 고르기**의 'KOSPI 함께 보기'로 켜 결과 그래프에 참고선으로 겹친다(FR-017, `S15P21E205-429`). 탭의 날짜·값 표로는 전략보다 나았는지 읽히지 않았다. 참고선은 비교 대상이 아니라 상한에 세지 않는다. 두 탭이 빠져 탭은 다섯이다.\n - Q: 변동성 제한의 켬·끔이 다른 두 결과는 '조건이 다른' 비교인가? → A: 아니다. 비교 대상 고르기가 바꿔 보는 축이라 조건 차이로 보지 않는다. 새 자금 투입 같은 다른 분석 방식은 지금처럼 조건 차이다. 변동성 제한이 요구하는 워밍업 차이는 FR-005의 공통 기간 확인으로 맞춘다.\n \n ## User Scenarios & Testing *(mandatory)*\n@@ -120,15 +121,15 @@\n \n ### User Story 5 - 보조 보기와 다음 탐색으로 이어간다 (Priority: P3)\n \n-[전략을 검증하려는 개인]은 결과를 다른 관점에서 확인하기 위하여 광범위 국내 주가지수와의 비교를 보조 보기로 열고, 같은 전략에 변동성 제한을 걸거나 푼 결과를 비교 대상으로 겹쳐 보며, '경제환경이 비슷했던 과거 보기'로 같은 섹터·전략·설정을 유지한 채 이어갈 수 있다. (§4.2.3, §4.3, D10, D25)\n+[전략을 검증하려는 개인]은 결과를 다른 관점에서 확인하기 위하여 광범위 국내 주가지수를 참고선으로 겹쳐 보고, 같은 전략에 변동성 제한을 걸거나 푼 결과를 비교 대상으로 겹쳐 보며, '경제환경이 비슷했던 과거 보기'로 같은 섹터·전략·설정을 유지한 채 이어갈 수 있다. (§4.2.3, §4.3, D10, D25)\n \n **Why this priority**: 보조 보기와 경제환경 연결은 진단을 확장하는 기능이며 첫 화면의 필수 요소가 아니다.\n \n-**Independent Test**: 결과에서 지수 비교 보조 보기를 열어 참고 정보로 표시되는지, '경제환경이 비슷했던 과거 보기'가 기존 조건을 유지한 채 열리는지 확인한다.\n+**Independent Test**: 결과에서 KOSPI 참고선을 켜 참고 정보로 표시되는지, '경제환경이 비슷했던 과거 보기'가 기존 조건을 유지한 채 열리는지 확인한다.\n \n **Acceptance Scenarios**:\n \n-1. **Given** 결과 화면에서, **When** 지수 비교 보조 보기를 열면, **Then** 광범위 국내 주가지수와의 비교가 참고 정보로 표시되고 기본 비교 기준을 바꾸지 않는다.\n+1. **Given** 결과 화면에서, **When** 비교 대상 고르기에서 'KOSPI 함께 보기'를 켜면, **Then** 광범위 국내 주가지수가 참고선으로 결과 그래프에 겹쳐 표시되고 기본 비교 기준과 비교 대상 수를 바꾸지 않는다.\n 2. **Given** 결과 화면에서, **When** 비교 대상 고르기의 '변동성 제한' 줄에서 목표 변동성을 골라 비교하면, **Then** 같은 전략·설정에 제한만 건 결과가 '변동성 제한 연 N%'라는 이름으로 겹쳐 그려지고, 자료가 불안정하면 그 대상 자리에 계산 제한이 표시된다.\n 3. **Given** 결과 화면에서, **When** '경제환경이 비슷했던 과거 보기'를 누르면, **Then** 기존 섹터·전략·설정이 유지된 채 [011](../011-regime-strategy-link/spec.md)의 화면이 열린다.\n \n@@ -156,7 +157,7 @@\n - **FR-004**: 비교 그래프는 기준 하나와 비교 대상 최대 셋을 동시에 그린다(2026-09-23 `S15P21E205-419`, 그 전에는 두 결과). 넷을 넘으면 선 모양과 색으로 곡선이 갈리지 않는다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이다. **비교 대상 후보는 전략이 아니라 전략·설정값 조합이다.** 후보의 출처는 둘이다 — 003 등록표의 기본값 조합과, 로그인한 사용자가 단일 분석에서 써 본 조합(004 `GET /backtests/used-strategies`). 화면은 후보마다 쓰일 설정값을 등록표의 이름표로 적어 무엇과 비교하는지 보이게 하고, 기준 결과 자신과 같은 조합은 후보에서 뺀다. 같은 전략이라도 설정값이 다르면 다른 후보다. 써 본 조합의 설정값은 현재 등록표로 다시 판정해 맞지 않으면 후보에 올리지 않는다(원칙 VI). 비로그인 사용자에게는 기본값 조합만 보인다. 자동 탐색에서 고른 후보도 비교 대상이 될 수 있다. 사용자는 남은 자리만큼 후보를 여럿 골라 한 번에 요청하고, 대상마다 자리를 두어 진행·실패·해제를 따로 다룬다. 완료되는 대상부터 곡선이 늘어난다. 비교 대상으로 고른 조합의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 진행 상태는 004가 주는 단계(자료 준비·계산·저장)와 진행 비율을 보이고, 아직 대기 중이면 지금까지 기다린 시간을 보인다. 요청이 004의 대기열 상한에 걸리면(`429 EXECUTION_LIMIT`) 비교 대상 자리에 한도에 걸렸다는 사실과 004가 알려 준 다시 시도 가능 시각을 보이고, 사용자가 누를 때만 다시 요청한다. 화면이 조용히 재시도하지 않는다(원칙 IX). 비교 대상 전략의 준비 기간(워밍업)이 기준 결과보다 길면 시작일이 뒤로 밀려 같은 그래프에 겹칠 수 없으므로, 화면은 [003](../003-strategy-settings/spec.md) 등록표에 적힌 각 전략의 준비 기간을 읽어 **고르기 전에** 그 전략을 고르면 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 기간 불일치 확인으로 이어간다. 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않으며, 004의 `INSUFFICIENT_HISTORY` 거부는 화면의 판단이 어긋났을 때 잘못된 비교를 막는 안전장치로 그대로 둔다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. 결과 화면에서 가장 중요한 행동 버튼은 '비교 대상 고르기' 하나다. '자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'·보조 보기·다음 탐색 진입점은 그보다 눈에 덜 띄는 보조 모양으로 둔다(원칙 II). (§4.1, §4.2.3, D10)\n - **FR-005**: 비교하는 두 결과는 같은 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준을 쓴다. 후보마다 유리한 과거 기간을 달리 쓰지 않으며, 기간이 다르면 겹쳐 그리지 않는다. 기간이 다를 때 화면은 공통 구간과 두 결과를 모두 다시 계산해야 한다는 사실을 보이고, 사용자가 확인하면 공통 구간을 쓰는 실행 두 건을 [004](../004-backtest-execution/spec.md)에 요청한다. 확인하기 전까지는 기준 결과만 그린다. 다시 계산한 두 건은 새 결과로 저장되어 새 비교 주소를 가지며, 원래 기준 결과와 그 주소, '내 기록' 항목은 그대로 남는다. 화면은 새 비교로 이동하고 원래 결과로 돌아가는 연결을 둔다(원칙 VI, 006의 \"설정 변경은 새 버전으로 보존하고 덮어쓰지 않는다\"와 같은 방식). (§4.2.3, §6.4.1, 원칙 IV)\n - **FR-006**: 해석 요약은 비교 대상마다 1문장이다(대상이 없으면 기준의 세 숫자로 1문장). 각 문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다. 두 결과의 수익률과 최대 하락 폭이 같을 때 그 사실만 말하는 틀과, 거래비용만 다를 때 그 차이만 말하는 틀을 따로 둔다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n-- **FR-007**: 결과 화면은 제목·그래프 1개·해석 요약 1문장·비교 대상 고르기·탭 묶음 순이며 설정 화면으로 되돌리지 않는다. 탭은 요약·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교 여섯이며(2026-09-24에 '목표 위험 맞춤' 탭을 비교 대상 고르기로 옮김) 첫 화면에서 **요약**이 열려 있다. **요약**에는 FR-001의 핵심 숫자 3개·조건 한 줄과 결과 상태 문장(FR-013)을, **결과 분석**에는 회복 기간·회전율·상관관계·위험 기여·손실 기여(추정 기간·공분산 산정법 포함)·계산 제한 항목을, **설정·근거**에는 비교 규칙·비용 가정·목표·실제 비중·구성종목 중복·대표 ETF 구성·출처를, **전체 거래 내역**에는 거래 내역과 그 조건 질의를 둔다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보인다. 계산에서 나온 값과 사용자가 넣은 조건을 한 패널에 번갈아 두지 않는다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 요약 탭의 자료(상세·시계열)와 탭들이 함께 쓰는 섹터 목록은 첫 화면과 함께 받고, 다른 탭의 자료는 사용자가 그 탭을 처음 열 때 받는다. (§4.1, §4.2.3)\n+- **FR-007**: 결과 화면은 제목·그래프 1개·해석 요약 1문장·비교 대상 고르기·탭 묶음 순이며 설정 화면으로 되돌리지 않는다. 탭은 요약·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때 다섯이며(2026-09-24에 '목표 위험 맞춤'과 'KOSPI 비교' 탭을 비교 대상 고르기로 옮김) 첫 화면에서 **요약**이 열려 있다. **요약**에는 FR-001의 핵심 숫자 3개·조건 한 줄과 결과 상태 문장(FR-013)을, **결과 분석**에는 회복 기간·회전율·상관관계·위험 기여·손실 기여(추정 기간·공분산 산정법 포함)·계산 제한 항목을, **설정·근거**에는 비교 규칙·비용 가정·목표·실제 비중·구성종목 중복·대표 ETF 구성·출처를, **전체 거래 내역**에는 거래 내역과 그 조건 질의를 둔다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보인다. 계산에서 나온 값과 사용자가 넣은 조건을 한 패널에 번갈아 두지 않는다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 요약 탭의 자료(상세·시계열)와 탭들이 함께 쓰는 섹터 목록은 첫 화면과 함께 받고, 다른 탭의 자료는 사용자가 그 탭을 처음 열 때 받는다. (§4.1, §4.2.3)\n - **FR-008**: 비교 대상의 실제 보유 섹터가 기준과 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n - **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. 계산이 제한되었는지의 판정과 그 사유는 [004](../004-backtest-execution/spec.md) FR-030에 따라 004가 결과에 담아 준다. 005는 그것을 표시할 뿐 자료 길이로 스스로 판정하지 않는다. (§4.2.3, 원칙 VI)\n - **FR-010**: '손실이 커진 때' 탭은 FR-001의 음영과 같은 최대 하락 구간 하나를 강조하고 그 구간의 보유·거래·비용을 보인다. 여러 구간을 고르는 임계값은 두지 않는다. 구간이 없거나 확인할 수 없으면 탭을 비활성으로 두고 그 사유를 탭 옆에 적는다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n@@ -166,7 +167,7 @@\n - **FR-014**: 자동 배분 전략의 출력 비중은 선택한 규칙의 계산 결과로 표시하고 사용자 입력 비중과 구분한다. (§4.2.1, D13)\n - **FR-015**: 종료 시 시가평가 결과와 청산 비용 포함 결과를 구분해 표시한다. (§6.4.1)\n - **FR-016**: '추천 비중', 주문 버튼, 자동 단일 승자, 일·주·월간 우승 전략, 사용자 간 성과 랭킹, 확률로 읽힐 표현('87% 유사', '지금도 잘될 전략' 등)을 만들지 않는다. 한 항목 기준 정렬은 제공할 수 있다. (§4.2.3, D13, D16, 원칙 III)\n-- **FR-017**: 광범위 국내 주가지수와의 비교는 FR-007 탭 묶음의 'KOSPI 비교' 탭으로 제공한다. 지수 비교는 참고 정보이며 기본 비교 기준을 바꾸지 않는다. 변동성 제한(004 '목표 위험 맞춤')은 탭이 아니라 FR-004 비교 대상 고르기의 '변동성 제한' 한 줄이다 — 기준 전략·설정·규칙 버전 그대로 목표 변동성(등록표 범위)만 골라 요청하고, 기준이 이미 켠 결과면 '변동성 제한 없이' 한 줄이 된다. 켠 결과의 이름에는 '변동성 제한 연 N%'를 붙인다(2026-09-24). 지수를 결과와 같은 기간·시작 금액으로 환산한 계열은 서버가 만들어 주고 화면은 받은 값을 그린다. 서버가 지수의 기간 자료를 얻지 못하면 그 탭은 값 대신 이유를 보인다. (§4.2.3, §6.4.1)\n+- **FR-017**: 광범위 국내 주가지수(KOSPI)와의 비교는 '비교 대상 고르기'의 'KOSPI 함께 보기'로 켜는 **참고선**이다. 결과 그래프(그래프는 여전히 하나다)에 전략 곡선과 모양이 다른 선과 끝 이름표 'KOSPI(참고)'로 겹친다. 참고선은 비교 대상이 아니다 — 비교 대상 상한(셋)에 세지 않고, 해석 문장·하락 구간 음영·조건 줄에 오르지 않으며 기본 비교 기준을 바꾸지 않는다. 켜짐은 주소 `?index=KOSPI`에 남아 다시 열어도 복원되고, 꺼져 있으면 지수를 요청하지 않는다(SC-001). 지수를 결과와 같은 기간·시작 금액으로 환산한 계열은 서버가 만들어 주고 화면은 받은 값을 그린다. 가격지수라 배당·비용이 빠져 있음을 범례에 적는다. 서버가 지수의 기간 자료를 얻지 못하면 선 대신 이유를 보인다(`S15P21E205-429`). 변동성 제한(004 '목표 위험 맞춤')은 탭이 아니라 FR-004 비교 대상 고르기의 '변동성 제한' 한 줄이다 — 기준 전략·설정·규칙 버전 그대로 목표 변동성(등록표 범위)만 골라 요청하고, 기준이 이미 켠 결과면 '변동성 제한 없이' 한 줄이 된다. 켠 결과의 이름에는 '변동성 제한 연 N%'를 붙인다(2026-09-24). (§4.2.3, §6.4.1)\n - **FR-018**: '경제환경이 비슷했던 과거 보기' 진입점을 제공한다. 진입 시 기존 섹터·전략·설정을 유지해 [011](../011-regime-strategy-link/spec.md)로 넘긴다. 넘기는 값은 섹터 후보 집합·전략·설정값·분석 기간·금액이며, 전달 형식은 011의 진입 계약이 소유한다. 011에서 돌아오는 길은 브라우저의 뒤로 가기로 원래 결과 주소에 오는 것이다. (§4.3, D25)\n - **FR-019**: 결과는 완료 시 [006 내 기록](../006-my-records/spec.md)에 보존되고, 결과 화면에서 '설정 바꿔 비교'와 내보내기 진입점을 제공한다. 결과마다 고유 주소를 두어 로그인하지 않은 사용자도 그 주소로 결과를 다시 연다. 이 주소에 쓰는 식별자는 안전한 난수에서 얻은 최소 128비트의 추측할 수 없는 값이어야 하며, [004](../004-backtest-execution/spec.md)가 발급하는 순번 형식의 실행 식별자(`BT-20260910-000123` 꼴)를 그대로 노출하지 않는다. 화면 주소용 공개 식별자와 내부 실행 식별자는 분리해 관리한다. '내 기록' 목록에 쌓이는 것은 로그인한 사용자의 결과뿐이며, 공개 흐름인 이 화면은 [014](../014-user-auth/spec.md)의 로그인을 요구하지 않는다. 주소를 아는 사람이면 누구나 열 수 있으므로 결과에는 개인을 식별할 정보를 담지 않는다. 비교 상태도 같은 주소 체계에 담는다. 기준 결과 주소에 비교 대상 식별자를 덧붙여, 새로고침하거나 그 주소를 다시 열면 두 결과가 그대로 복원된다. 비교를 위한 별도 자원을 서버에 만들지 않는다. 비교 주소를 받은 사람이 비교 대상 식별자만 떼어 그 결과를 단독으로 여는 것은 의도된 동작이다. 결과마다 독립된 주소가 있고 주소를 아는 사람은 열 수 있다는 전제와 같다. (§5)\n - **FR-020**: KRX 자료를 쓰는 결과 화면에 '한국거래소 통계정보' 출처를 표시한다. 정보는 세 층(바로 보이는 정보 / 요청하면 펼치는 정보 / 시스템이 처리하는 정보)으로 배치하고 내부 계산 항목을 동시에 나열하지 않는다. (§4.1, §6.2)\n@@ -179,7 +180,7 @@\n - **비교 뷰**: 기준 결과·비교 대상 결과·그래프·공통 조건(섹터 후보·기간·금액·비용·정보 이용 기준)·비교 종류(기본 설정 / 자동 탐색 후보)다.\n - **상세 패널 항목**: FR-007의 항목과 각 항목의 계산 제한 상태다.\n - **결과 상태 표시**: 검증 구분(탐색/미사용 검증/미검증), 자료 부족·계산 제한·부분 완료 문장이다.\n-- **보조 보기**: 지수 비교다. 변동성 제한은 비교 대상의 한 종류다(2026-09-24).\n+- **보조 보기**: 없다. 지수 비교는 결과 그래프의 참고선(FR-017)이고, 변동성 제한은 비교 대상의 한 종류다(2026-09-24).\n - **결과 주소**: 결과를 다시 여는 추측 불가능한 공개 식별자와, 비로그인 결과에 붙는 유효 시간·만료 여부다. 004의 내부 실행 식별자와 구분한다.\n \n ## Success Criteria *(mandatory)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -493,3 +493,13 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대\n - [X] T102 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010\n - [X] T103 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004\n - [X] T104 (FE) 결과 화면이 대상마다 고르기 단추 왼쪽에 칩(이름 말줄임·짧은 상태·× 해제)을 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetChip.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006\n+\n+## Phase 16: KOSPI 참고선 (`S15P21E205-428`·`S15P21E205-429`, 2026-09-24)\n+\n+428이 서버 환산 계열을 채운 뒤, 지수 비교를 탭의 표에서 결과 그래프의 참고선으로 옮긴다. T077·T080의 탭 보기를 대체한다. 원칙 II의 '그래프 1개'는 그대로다 — 그래프를 늘리지 않고 한 그래프에 선을 더한다.\n+\n+- [X] T105 (BE) `daily_index` 기간 종가 조회와 환산을 붙인다 — `sector/application/repository/IndexSeriesRepository.java`, `PublicResultService.getIndexComparison`. 결과의 자료 버전(`versions.data`)·`effectiveStart~End`, 첫 관측 종가 기준 per FR-017 · T087 (`S15P21E205-428`)\n+- [X] T106 (FE) 비교 주소에 `?index=KOSPI`를 더하고 비교 대상을 바꿔 주소를 다시 쓸 때도 유지한다 — `compareQuery.ts` · `useCompareTargets.ts` per FR-017 · contracts \"비교 주소\"\n+- [X] T107 (FE) 켜졌을 때만 지수 계열을 받는 `hooks/useIndexReference.ts`와 `EquityChart`의 `reference`(가는 실선·끝 이름표 'KOSPI(참고)'·대안 텍스트·범례, 음영·상한 제외). 'KOSPI 비교' 탭과 `IndexComparisonView.tsx`를 지운다 per FR-007 · FR-017 · SC-001 · SC-010\n+- [X] T108 (FE) 비교 대상 고르기에 'KOSPI 함께 보기'를 둔다. '비교하기'를 기다리지 않고 바로 켜고 끄며 남은 자리가 없어도 쓸 수 있다 — `CompareTargetPicker.tsx`. 자리가 없어도 고르기 단추를 막지 않는다 per FR-017\n+- [X] T109 (FE 테스트) 켜기 전 지수 요청 0회, 켜면 주소·선·재접수 없음, 주소로 복원, `available: false`면 이유와 재요청 없음 — `ResultPage.auxiliary.test.tsx` · `CompareTargetPicker.test.tsx` · `compareQuery.test.ts` per T080\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T19:25:06.165+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2866248": []
+  }
+}

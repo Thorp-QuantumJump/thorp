@@ -1,0 +1,1715 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958672,
+    "iid": 311,
+    "project_id": 1444456,
+    "title": "feat(fe): 백테스트 결과 첫 화면의 정보 배치와 비교 선택 UI를 개선한다",
+    "description": "# 작업 내용 요약\n\n백테스트 결과를 열면 수익률·MDD·거래비용과 자산가치 그래프가 위에서 함께 보이고, 분석 조건과 상세 정보는 그래프 아래 탭에서 확인할 수 있습니다. 비교 대상은 버튼 바로 아래에서 고르며, 긴 탭은 데스크톱에서 높이를 제한해 페이지가 지나치게 길어지지 않도록 했습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-427 — [FE] 백테스트 결과 첫 화면의 정보 배치와 비교 선택 UI를 개선한다\n- link: https://ssafy.atlassian.net/browse/S15P21E205-427\n- 관련 Story: S15P21E205-298 / Epic: S15P21E205-30\n\n# 주요 변경 사항\n\n- 첫 화면을 핵심 지표 3개 → 자산가치 그래프 → 상세 탭 순서로 배치했습니다. 지표 이름은 그래프 제목과 같은 크기로 키우고 왼쪽 시작선을 맞췄으며, 수익률 도움말은 요약 영역 안에 표시합니다.\n- 분석 기간·비용 조건과 이전 고점 회복 기간을 요약 탭으로 옮겼습니다. 하단의 중복된 다음 탐색 영역은 제거했습니다.\n- 비교 대상 목록은 버튼 아래 작은 팝오버로 열어 페이지 높이를 바꾸지 않습니다. 산정법 코드 등 결과 문구도 읽을 수 있는 이름으로 표시합니다.\n- 긴 상세 탭은 데스크톱에서 최대 `min(70vh, 640px)` 높이로 내부 스크롤하고, 모바일에서는 페이지 스크롤을 유지합니다. 거래 내역은 한 페이지에 20건씩 조회합니다.\n\n# 테스트\n\n- [x] `cd frontend && npm run lint` — 오류 0, 경고 21.\n- [x] `cd frontend && npm run build` — 통과.\n- [x] `cd frontend && npm test` — 최신 `dev` 병합 뒤 144파일·1,375건 통과; 실패·건너뜀 0.\n- [x] 로컬 결과 화면에서 지표와 그래프의 왼쪽 정렬, 긴 거래 탭의 내부 스크롤과 20건 표시를 확인했습니다.\n- [x] 최신 `dev`(`d3c4b2ba`)를 병합했습니다(`08393d37`). 충돌 6곳을 아래 리뷰 포인트대로 풀고 tsc·lint·build·전체 테스트를 다시 돌렸습니다.\n- [ ] 병합 뒤 로컬에서 확인할 것: 핵심 숫자의 오르내림 색(수익률 빨강·MDD 파랑, 금액·0.00%는 무색), 도움말 방향(수익률 오른쪽·나머지 아래)과 Esc 뒤 다시 열리지 않음, `?design=classic`에서 한 색 유지, 목표 위험 맞춤 탭 숫자 색.\n\n# 리뷰 포인트\n\n- **`dev` 병합 충돌 6곳을 이렇게 풀었습니다.** 이 브랜치가 424 끝에서 갈라진 뒤 `dev`에 422(도움말 Esc)·425(디자인 개편)·수익률 색 작업이 들어와 같은 파일을 양쪽이 고쳤습니다.\n  - `InlineHelp.tsx`: `dev`의 422 구현(HoverCard→Popover+타이머, `role=\"tooltip\"`)을 기준으로 두고 이 브랜치의 `side` 옵션(아래·오른쪽 펼치기)을 얹었습니다. 이 브랜치가 따로 만든 `closedByEscape` 방식은 버렸습니다 — 같은 버그를 두 방식으로 고칠 이유가 없고 `dev` 쪽이 이미 머지된 정본입니다.\n  - `InlineHelp.module.css`: 이 브랜치의 말풍선 높이 제한·내부 스크롤과 `dev`의 여백 토큰을 둘 다 둡니다.\n  - `ResultSummaryCard.tsx`·`.module.css`: 이 브랜치의 구조(수익률·MDD·거래 수수료 등, 물음표 도움말, 카드 테두리 없음)를 유지하고 `dev`의 `data-direction` 오르내림 색을 넣었습니다. **이 브랜치가 MDD를 늘 빨갛게 칠하던 규칙은 뺐습니다** — `dev` 디자인은 상승 빨강·하락 파랑이라 MDD(음수)는 파랑이 맞습니다. 의도가 다르면 여기서 다시 정해야 합니다.\n  - `ResultSummaryCard.test.tsx`: 이 브랜치 테스트에 `dev`의 오르내림 방향 테스트 2건을 더했습니다.\n  - `auxiliaryViews.module.css`: 이 브랜치가 지운 다음 단계 클래스는 그대로 두지 않고, `dev`가 넣은 목표 위험 맞춤 숫자의 오르내림 색만 받았습니다.\n  - 자동 병합된 `InlineHelp.test.tsx`에 `act` import가 빠져 보정했습니다.\n- 거래 내역 20건 설정은 손실 구간에서 여는 거래 목록에도 적용됩니다. 데스크톱의 탭 내부 스크롤과 모바일의 페이지 스크롤을 구분한 동작이 적절한지 봐 주세요.",
+    "state": "merged",
+    "created_at": "2026-09-23T16:26:27.680+09:00",
+    "updated_at": "2026-09-23T16:40:30.651+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-23T16:40:30.237+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/427-result-screen-design",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+    "merge_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T16:26:31.373+09:00",
+    "reference": "!311",
+    "references": {
+      "short": "!311",
+      "relative": "!311",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!311"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/311",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958672,
+    "iid": 311,
+    "project_id": 1444456,
+    "title": "feat(fe): 백테스트 결과 첫 화면의 정보 배치와 비교 선택 UI를 개선한다",
+    "description": "# 작업 내용 요약\n\n백테스트 결과를 열면 수익률·MDD·거래비용과 자산가치 그래프가 위에서 함께 보이고, 분석 조건과 상세 정보는 그래프 아래 탭에서 확인할 수 있습니다. 비교 대상은 버튼 바로 아래에서 고르며, 긴 탭은 데스크톱에서 높이를 제한해 페이지가 지나치게 길어지지 않도록 했습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-427 — [FE] 백테스트 결과 첫 화면의 정보 배치와 비교 선택 UI를 개선한다\n- link: https://ssafy.atlassian.net/browse/S15P21E205-427\n- 관련 Story: S15P21E205-298 / Epic: S15P21E205-30\n\n# 주요 변경 사항\n\n- 첫 화면을 핵심 지표 3개 → 자산가치 그래프 → 상세 탭 순서로 배치했습니다. 지표 이름은 그래프 제목과 같은 크기로 키우고 왼쪽 시작선을 맞췄으며, 수익률 도움말은 요약 영역 안에 표시합니다.\n- 분석 기간·비용 조건과 이전 고점 회복 기간을 요약 탭으로 옮겼습니다. 하단의 중복된 다음 탐색 영역은 제거했습니다.\n- 비교 대상 목록은 버튼 아래 작은 팝오버로 열어 페이지 높이를 바꾸지 않습니다. 산정법 코드 등 결과 문구도 읽을 수 있는 이름으로 표시합니다.\n- 긴 상세 탭은 데스크톱에서 최대 `min(70vh, 640px)` 높이로 내부 스크롤하고, 모바일에서는 페이지 스크롤을 유지합니다. 거래 내역은 한 페이지에 20건씩 조회합니다.\n\n# 테스트\n\n- [x] `cd frontend && npm run lint` — 오류 0, 경고 21.\n- [x] `cd frontend && npm run build` — 통과.\n- [x] `cd frontend && npm test` — 최신 `dev` 병합 뒤 144파일·1,375건 통과; 실패·건너뜀 0.\n- [x] 로컬 결과 화면에서 지표와 그래프의 왼쪽 정렬, 긴 거래 탭의 내부 스크롤과 20건 표시를 확인했습니다.\n- [x] 최신 `dev`(`d3c4b2ba`)를 병합했습니다(`08393d37`). 충돌 6곳을 아래 리뷰 포인트대로 풀고 tsc·lint·build·전체 테스트를 다시 돌렸습니다.\n- [ ] 병합 뒤 로컬에서 확인할 것: 핵심 숫자의 오르내림 색(수익률 빨강·MDD 파랑, 금액·0.00%는 무색), 도움말 방향(수익률 오른쪽·나머지 아래)과 Esc 뒤 다시 열리지 않음, `?design=classic`에서 한 색 유지, 목표 위험 맞춤 탭 숫자 색.\n\n# 리뷰 포인트\n\n- **`dev` 병합 충돌 6곳을 이렇게 풀었습니다.** 이 브랜치가 424 끝에서 갈라진 뒤 `dev`에 422(도움말 Esc)·425(디자인 개편)·수익률 색 작업이 들어와 같은 파일을 양쪽이 고쳤습니다.\n  - `InlineHelp.tsx`: `dev`의 422 구현(HoverCard→Popover+타이머, `role=\"tooltip\"`)을 기준으로 두고 이 브랜치의 `side` 옵션(아래·오른쪽 펼치기)을 얹었습니다. 이 브랜치가 따로 만든 `closedByEscape` 방식은 버렸습니다 — 같은 버그를 두 방식으로 고칠 이유가 없고 `dev` 쪽이 이미 머지된 정본입니다.\n  - `InlineHelp.module.css`: 이 브랜치의 말풍선 높이 제한·내부 스크롤과 `dev`의 여백 토큰을 둘 다 둡니다.\n  - `ResultSummaryCard.tsx`·`.module.css`: 이 브랜치의 구조(수익률·MDD·거래 수수료 등, 물음표 도움말, 카드 테두리 없음)를 유지하고 `dev`의 `data-direction` 오르내림 색을 넣었습니다. **이 브랜치가 MDD를 늘 빨갛게 칠하던 규칙은 뺐습니다** — `dev` 디자인은 상승 빨강·하락 파랑이라 MDD(음수)는 파랑이 맞습니다. 의도가 다르면 여기서 다시 정해야 합니다.\n  - `ResultSummaryCard.test.tsx`: 이 브랜치 테스트에 `dev`의 오르내림 방향 테스트 2건을 더했습니다.\n  - `auxiliaryViews.module.css`: 이 브랜치가 지운 다음 단계 클래스는 그대로 두지 않고, `dev`가 넣은 목표 위험 맞춤 숫자의 오르내림 색만 받았습니다.\n  - 자동 병합된 `InlineHelp.test.tsx`에 `act` import가 빠져 보정했습니다.\n- 거래 내역 20건 설정은 손실 구간에서 여는 거래 목록에도 적용됩니다. 데스크톱의 탭 내부 스크롤과 모바일의 페이지 스크롤을 구분한 동작이 적절한지 봐 주세요.",
+    "state": "merged",
+    "created_at": "2026-09-23T16:26:27.680+09:00",
+    "updated_at": "2026-09-23T16:40:30.651+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-23T16:40:30.237+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/427-result-screen-design",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+    "merge_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T16:26:31.373+09:00",
+    "reference": "!311",
+    "references": {
+      "short": "!311",
+      "relative": "!311",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!311"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/311",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "31",
+    "latest_build_started_at": "2026-09-23T16:34:15.827+09:00",
+    "latest_build_finished_at": "2026-09-23T16:57:35.248+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 219884,
+      "iid": 335,
+      "project_id": 1444456,
+      "sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+      "ref": "feat(fe)/427-result-screen-design",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T16:34:15.715+09:00",
+      "updated_at": "2026-09-23T16:57:35.255+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219884"
+    },
+    "head_pipeline": {
+      "id": 219884,
+      "iid": 335,
+      "project_id": 1444456,
+      "sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+      "ref": "feat(fe)/427-result-screen-design",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T16:34:15.715+09:00",
+      "updated_at": "2026-09-23T16:57:35.255+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219884",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T16:34:15.827+09:00",
+      "finished_at": "2026-09-23T16:57:35.248+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219884",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "head_sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+      "start_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f2c70c9b479705c8476995eb36cb006fb82024e8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863654,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T16:26:27.795+09:00",
+          "updated_at": "2026-09-23T16:26:27.799+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2c20bd492d5d14b44d47fead7c5fa8086ad2ce92",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863655,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T16:26:27.814+09:00",
+          "updated_at": "2026-09-23T16:26:27.822+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "735875371df6b26e65ba26c25a0560cb8f65353a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863656,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 UX 개선**: 백테스트 결과 첫 화면에서 핵심 지표, 자산가치 그래프, 상세 탭 순으로 정보 계층 구조를 직관적으로 재배치하고, 비교 대상 선택 UI를 팝오버 형태로 변경하여 페이지 높이 급변을 방지한 점이 좋습니다.\n- **접근성 및 반응형 고려**: 데스크톱 환경에서 긴 상세 탭의 높이를 제한(`min(70vh, 640px)`)하고 내부 스크롤을 적용하는 동시에, 모바일에서는 페이지 스크롤을 유지하도록 반응형 처리를 세심하게 구현했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **비교 대상 팝오버 상호작용 테스트**: 비교 대상 고르기 버튼을 눌러 팝오버가 열린 상태에서 `Escape` 키를 누르거나 바깥 영역을 클릭했을 때, 포커스가 트리거 버튼으로 올바르게 복귀하고 팝오버가 닫히는지 시나리오 테스트를 수행하세요.\n- **데스크톱/모바일 상세 탭 스크롤 테스트**: \n  - 뷰포트 너비가 600px을 초과하는 데스크톱 환경에서 거래 내역 등 긴 탭 선택 시 컨테이너 내부에 스크롤바가 생기고 최대 높이(`640px`)가 유지되는지 확인합니다.\n  - 모바일 뷰포트에서 동일한 탭 선택 시 내부 스크롤이 해제되고 페이지 전체 스크롤이 정상 작동하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:08393d373e3a91587245a70cf51b435ed3ae7fdd -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T16:26:39.943+09:00",
+          "updated_at": "2026-09-23T16:34:10.984+09:00",
+          "system": false,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f29ad288e7a7616b9bdc52c091ae494158f29957",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863724,
+          "type": null,
+          "body": "added 40 commits\n\n<ul><li>8c87a718...d3c4b2ba - 39 commits from branch <code>dev</code></li><li>08393d37 - Merge remote-tracking branch &#39;origin/dev&#39; into feat(fe)/427-result-screen-design</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/311/diffs?diff_id=2246359&start_sha=8c87a718387bf539dcacb70d125615ece4575d97)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T16:34:03.439+09:00",
+          "updated_at": "2026-09-23T16:34:03.442+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7df7042a897b3369d0824bf09b2944f05cf7cb8a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863760,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T16:40:20.614+09:00",
+          "updated_at": "2026-09-23T16:40:20.619+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "32076ba23d0d5ae7c89403bccafeb0f3249b8033",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863761,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T16:40:27.774+09:00",
+          "updated_at": "2026-09-23T16:40:27.826+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2dc7d4493ab8aee125e0f3a9c3607a06cfd222db",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863762,
+          "type": null,
+          "body": "mentioned in commit 17b9fc05588e375601b10cd36fb41ef172932db7",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T16:40:30.244+09:00",
+          "updated_at": "2026-09-23T16:40:30.248+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8a24d2efabb18d9f69a649f18baf6486739b4618",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885011,
+          "type": null,
+          "body": "mentioned in commit cbc457d58e512da2239eb23ba80164fa48c5aea8",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.115+09:00",
+          "updated_at": "2026-10-13T15:16:08.160+09:00",
+          "system": true,
+          "noteable_id": 958672,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 311,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2246359,
+      "head_commit_sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+      "base_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "start_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "created_at": "2026-09-23T16:34:02.991+09:00",
+      "merge_request_id": 958672,
+      "state": "collected",
+      "real_size": "31",
+      "patch_id_sha": "5ed06153edade079d47653e75b3071d96867ef8d"
+    },
+    {
+      "id": 2246283,
+      "head_commit_sha": "8c87a718387bf539dcacb70d125615ece4575d97",
+      "base_commit_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "start_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "created_at": "2026-09-23T16:26:28.173+09:00",
+      "merge_request_id": 958672,
+      "state": "without_files",
+      "real_size": "31",
+      "patch_id_sha": "5c286a681f3a134da788a287c6838d719b0aba28"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2246359,
+      "head_commit_sha": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+      "base_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "start_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "created_at": "2026-09-23T16:34:02.991+09:00",
+      "merge_request_id": 958672,
+      "state": "collected",
+      "real_size": "31",
+      "patch_id_sha": "5ed06153edade079d47653e75b3071d96867ef8d",
+      "commits": [
+        {
+          "id": "08393d373e3a91587245a70cf51b435ed3ae7fdd",
+          "short_id": "08393d37",
+          "created_at": "2026-09-23T16:31:23.000+09:00",
+          "parent_ids": [
+            "8c87a718387bf539dcacb70d125615ece4575d97",
+            "d3c4b2bab861f3b0dada5faf881783839bdc2a0d"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/427-result-screen-design",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/427-result-screen-design\n\n# Conflicts:\n#\tfrontend/src/components/common/InlineHelp.module.css\n#\tfrontend/src/components/common/InlineHelp.tsx\n#\tfrontend/src/components/result/ResultSummaryCard.module.css\n#\tfrontend/src/components/result/ResultSummaryCard.test.tsx\n#\tfrontend/src/components/result/ResultSummaryCard.tsx\n#\tfrontend/src/components/result/auxiliaryViews.module.css\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:31:23.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:31:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/08393d373e3a91587245a70cf51b435ed3ae7fdd"
+        },
+        {
+          "id": "8c87a718387bf539dcacb70d125615ece4575d97",
+          "short_id": "8c87a718",
+          "created_at": "2026-09-23T16:15:29.000+09:00",
+          "parent_ids": [
+            "a90a575666e776ba88dd520ca6a50333469050e1"
+          ],
+          "title": "style(fe): 결과 지표 제목 확대와 왼쪽 정렬",
+          "message": "style(fe): 결과 지표 제목 확대와 왼쪽 정렬\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:15:29.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:15:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c87a718387bf539dcacb70d125615ece4575d97"
+        },
+        {
+          "id": "a90a575666e776ba88dd520ca6a50333469050e1",
+          "short_id": "a90a5756",
+          "created_at": "2026-09-23T16:11:34.000+09:00",
+          "parent_ids": [
+            "ebde3a169a4454d0ae1e0bceff3291ef083f4213"
+          ],
+          "title": "style(fe): 긴 결과 탭 높이 제한과 거래 목록 축소",
+          "message": "style(fe): 긴 결과 탭 높이 제한과 거래 목록 축소\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:11:34.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:11:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a90a575666e776ba88dd520ca6a50333469050e1"
+        },
+        {
+          "id": "ebde3a169a4454d0ae1e0bceff3291ef083f4213",
+          "short_id": "ebde3a16",
+          "created_at": "2026-09-23T16:01:11.000+09:00",
+          "parent_ids": [
+            "b33be17c31b5f3e48ff369c30a86a5eb7d8f6a42"
+          ],
+          "title": "style(fe): 결과 요약 영역 상하 여백 축소",
+          "message": "style(fe): 결과 요약 영역 상하 여백 축소\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:01:11.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:01:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ebde3a169a4454d0ae1e0bceff3291ef083f4213"
+        },
+        {
+          "id": "b33be17c31b5f3e48ff369c30a86a5eb7d8f6a42",
+          "short_id": "b33be17c",
+          "created_at": "2026-09-23T15:58:51.000+09:00",
+          "parent_ids": [
+            "08bfce3c2a514368c9275e93cc05426be853532b"
+          ],
+          "title": "style(fe): 결과 요약 카드 배경과 테두리 제거",
+          "message": "style(fe): 결과 요약 카드 배경과 테두리 제거\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:58:51.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:58:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b33be17c31b5f3e48ff369c30a86a5eb7d8f6a42"
+        },
+        {
+          "id": "08bfce3c2a514368c9275e93cc05426be853532b",
+          "short_id": "08bfce3c",
+          "created_at": "2026-09-23T15:30:26.000+09:00",
+          "parent_ids": [
+            "1eb267e88f6633b21c784e03d9c7cdfd25b2457d"
+          ],
+          "title": "refactor(fe): remove redundant result next steps",
+          "message": "refactor(fe): remove redundant result next steps\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:30:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:30:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/08bfce3c2a514368c9275e93cc05426be853532b"
+        },
+        {
+          "id": "1eb267e88f6633b21c784e03d9c7cdfd25b2457d",
+          "short_id": "1eb267e8",
+          "created_at": "2026-09-23T15:23:21.000+09:00",
+          "parent_ids": [
+            "f9b57df0eafcbd49dfd62a15f2fd6dded0c7101c"
+          ],
+          "title": "fix(fe): move recovery period into result summary tab",
+          "message": "fix(fe): move recovery period into result summary tab\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:23:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:23:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1eb267e88f6633b21c784e03d9c7cdfd25b2457d"
+        },
+        {
+          "id": "f9b57df0eafcbd49dfd62a15f2fd6dded0c7101c",
+          "short_id": "f9b57df0",
+          "created_at": "2026-09-23T15:10:10.000+09:00",
+          "parent_ids": [
+            "6c34998f7693b4a1fbbb2ff6ff13cb5b9cff4df7"
+          ],
+          "title": "feat(fe): arrange summary metrics in three left-aligned columns",
+          "message": "feat(fe): arrange summary metrics in three left-aligned columns\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:10:10.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:10:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f9b57df0eafcbd49dfd62a15f2fd6dded0c7101c"
+        },
+        {
+          "id": "6c34998f7693b4a1fbbb2ff6ff13cb5b9cff4df7",
+          "short_id": "6c34998f",
+          "created_at": "2026-09-23T15:06:31.000+09:00",
+          "parent_ids": [
+            "ba600b328b4c2964bb0117f9186cec6e89417d1e"
+          ],
+          "title": "fix(fe): center summary metrics within result card",
+          "message": "fix(fe): center summary metrics within result card\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:06:31.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:06:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6c34998f7693b4a1fbbb2ff6ff13cb5b9cff4df7"
+        },
+        {
+          "id": "ba600b328b4c2964bb0117f9186cec6e89417d1e",
+          "short_id": "ba600b32",
+          "created_at": "2026-09-23T15:01:18.000+09:00",
+          "parent_ids": [
+            "88095882896972fbc0206e858fd451edd4dc69ba"
+          ],
+          "title": "fix(fe): center result summary metrics and contain return tooltip",
+          "message": "fix(fe): center result summary metrics and contain return tooltip\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:01:18.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:01:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ba600b328b4c2964bb0117f9186cec6e89417d1e"
+        },
+        {
+          "id": "88095882896972fbc0206e858fd451edd4dc69ba",
+          "short_id": "88095882",
+          "created_at": "2026-09-23T14:53:36.000+09:00",
+          "parent_ids": [
+            "14ca8704f6c5e0e91e2b725ac1e2a1631cbc2978"
+          ],
+          "title": "fix(fe): 결과 지표 도움말을 화면 안에 배치",
+          "message": "fix(fe): 결과 지표 도움말을 화면 안에 배치\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:53:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:53:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/88095882896972fbc0206e858fd451edd4dc69ba"
+        },
+        {
+          "id": "14ca8704f6c5e0e91e2b725ac1e2a1631cbc2978",
+          "short_id": "14ca8704",
+          "created_at": "2026-09-23T14:47:33.000+09:00",
+          "parent_ids": [
+            "3609aec0650aad24ad76fd7eb47e9c571bd8650f"
+          ],
+          "title": "style(fe): 결과 요약 지표 이름 간결화",
+          "message": "style(fe): 결과 요약 지표 이름 간결화\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:47:33.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:47:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14ca8704f6c5e0e91e2b725ac1e2a1631cbc2978"
+        },
+        {
+          "id": "3609aec0650aad24ad76fd7eb47e9c571bd8650f",
+          "short_id": "3609aec0",
+          "created_at": "2026-09-23T14:40:14.000+09:00",
+          "parent_ids": [
+            "a876fffd407fa2572ae94a27d2734443859571fe"
+          ],
+          "title": "style(fe): 분석 조건을 요약 탭으로 이동하고 차트 확대",
+          "message": "style(fe): 분석 조건을 요약 탭으로 이동하고 차트 확대\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:40:14.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:40:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3609aec0650aad24ad76fd7eb47e9c571bd8650f"
+        },
+        {
+          "id": "a876fffd407fa2572ae94a27d2734443859571fe",
+          "short_id": "a876fffd",
+          "created_at": "2026-09-23T14:29:16.000+09:00",
+          "parent_ids": [
+            "9b87b8e737ad8b8c895c8dd5d111923abdf1fa88"
+          ],
+          "title": "style(fe): 결과 요약을 줄이고 자산가치 그래프 확대",
+          "message": "style(fe): 결과 요약을 줄이고 자산가치 그래프 확대\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:29:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:29:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a876fffd407fa2572ae94a27d2734443859571fe"
+        },
+        {
+          "id": "9b87b8e737ad8b8c895c8dd5d111923abdf1fa88",
+          "short_id": "9b87b8e7",
+          "created_at": "2026-09-23T14:15:36.000+09:00",
+          "parent_ids": [
+            "e98dc48a7dcdd7ce79db9bae7bf389438a86f7a4"
+          ],
+          "title": "feat(fe): 비교 대상 목록을 버튼 아래 팝오버로 변경",
+          "message": "feat(fe): 비교 대상 목록을 버튼 아래 팝오버로 변경\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:15:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:15:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9b87b8e737ad8b8c895c8dd5d111923abdf1fa88"
+        },
+        {
+          "id": "e98dc48a7dcdd7ce79db9bae7bf389438a86f7a4",
+          "short_id": "e98dc48a",
+          "created_at": "2026-09-23T13:45:19.000+09:00",
+          "parent_ids": [
+            "1a00ac50ecdf004ae07046e9ab3230819918b7ba"
+          ],
+          "title": "feat(fe): 결과 첫 화면 높이와 비교 오버레이 개선",
+          "message": "feat(fe): 결과 첫 화면 높이와 비교 오버레이 개선\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T13:45:19.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T13:45:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e98dc48a7dcdd7ce79db9bae7bf389438a86f7a4"
+        },
+        {
+          "id": "1a00ac50ecdf004ae07046e9ab3230819918b7ba",
+          "short_id": "1a00ac50",
+          "created_at": "2026-09-23T13:36:16.000+09:00",
+          "parent_ids": [
+            "921f92f8f1a40e86d9c186a851007f9e03cfe5bf"
+          ],
+          "title": "feat(fe): 백테스트 결과 화면 정보 순서 개선",
+          "message": "feat(fe): 백테스트 결과 화면 정보 순서 개선\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T13:36:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T13:36:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a00ac50ecdf004ae07046e9ab3230819918b7ba"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -33,6 +33,8 @@\n   display: grid;\n   gap: 8px;\n   width: min(320px, calc(100vw - 32px));\n+  max-height: calc(100svh - 32px);\n+  overflow-y: auto;\n   padding: var(--thorp-pad-notice, 14px 16px);\n   border: 1px solid var(--thorp-line-strong);\n   border-radius: var(--thorp-radius-card, 12px);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.module.css",
+          "old_path": "frontend/src/components/common/InlineHelp.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { act, render, screen } from '@testing-library/react'\n+import { act, render, screen, waitFor } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { beforeAll, describe, expect, it } from 'vitest'\n import { InlineHelp } from './InlineHelp'\n@@ -53,9 +53,9 @@ describe('InlineHelp', () => {\n     expect(await screen.findByText('합성 지표를 설명하는 한 문장이다.')).not.toBeNull()\n \n     await user.keyboard('{Escape}')\n-    await act(async () => {})\n-\n-    expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()\n+    await waitFor(() => {\n+      expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()\n+    })\n     expect(document.activeElement).toBe(trigger)\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.test.tsx",
+          "old_path": "frontend/src/components/common/InlineHelp.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,6 +17,8 @@ interface InlineHelpProps {\n    * `'click'`은 눌러야 열리고 닫기 버튼이 붙는다. 설명이 길어 마우스를 얹은 채로 읽기 어려울 때만 쓴다.\n    */\n   on?: \"click\" | \"hover\";\n+  /** 도움말을 펼칠 방향. 오른쪽 끝 칸처럼 위로 펼치면 화면을 벗어나는 자리에서 바꾼다(427) */\n+  side?: \"top\" | \"bottom\" | \"right\";\n }\n \n /** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */\n@@ -45,7 +47,7 @@ const CLOSE_DELAY_MS = 80;\n  * 처리된다. 말풍선에는 초점을 옮기지 않는다 — 초점이 트리거에 남아야 Esc 를 누른 사람이 제자리에\n  * 있고(005 FR-022), 트리거를 떠날 때 닫는 판단도 그대로 산다.\n  */\n-export function InlineHelp({ label, children, on = \"hover\" }: InlineHelpProps) {\n+export function InlineHelp({ label, children, on = \"hover\", side = \"top\" }: InlineHelpProps) {\n   const [open, setOpen] = useState(false);\n   const timerRef = useRef<number | undefined>(undefined);\n \n@@ -107,9 +109,10 @@ export function InlineHelp({ label, children, on = \"hover\" }: InlineHelpProps) {\n             // 화면 낭독기에 \"열렸는데 갈 수 없는 대화 상자\"로 읽힌다.\n             role=\"tooltip\"\n             className={styles.content}\n-            side=\"top\"\n+            side={side}\n+            align={side === \"bottom\" ? \"start\" : \"center\"}\n             sideOffset={6}\n-            collisionPadding={12}\n+            collisionPadding={16}\n             aria-label={`${label} 도움말`}\n             // 초점은 트리거에 그대로 둔다. 옮기면 트리거가 흐려져 곧바로 닫힌다.\n             onOpenAutoFocus={(event) => event.preventDefault()}\n@@ -137,9 +140,10 @@ export function InlineHelp({ label, children, on = \"hover\" }: InlineHelpProps) {\n       <Popover.Portal>\n         <Popover.Content\n           className={styles.content}\n-          side=\"top\"\n+          side={side}\n+          align={side === \"bottom\" ? \"start\" : \"center\"}\n           sideOffset={6}\n-          collisionPadding={12}\n+          collisionPadding={16}\n           aria-label={`${label} 도움말`}\n         >\n           <p className={styles.term}>{label}</p>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.tsx",
+          "old_path": "frontend/src/components/common/InlineHelp.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,7 +16,7 @@ type Notice = Extract<PrefillOutcome, { status: 'failed' | 'reselectSectors' }>\n const DETAIL_FAILED = '기록의 저장 조건을 불러오지 못해 설정 화면으로 넘길 수 없습니다. 잠시 후 다시 시도해 주세요.'\n \n /**\n- * '설정 바꿔 비교'(spec 006 FR-007, T030). 005 `OtherConditionsButton`과 같은 모양·같은 결과 처리다 — 보조 모양이고,\n+ * '설정 바꿔 비교'(spec 006 FR-007, T030). 보조 모양이고,\n  * 누르면 기록 상세를 받아(이미 있으면 그대로) `reopenSettings`로 003 설정 화면에 옮긴다.\n  *\n  * <p>결과 처리(contracts/record-handoff.md): `moved`는 할 일 없음, `reselectSectors`는 문장 + 섹터·비중 단계 연결,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/ReopenSettingsButton.tsx",
+          "old_path": "frontend/src/components/records/ReopenSettingsButton.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -67,7 +67,7 @@ export function CompareTargetPicker({\n                   ? '기준 결과의 비용 기준을 확인할 수 없습니다.'\n                   : strategy.targetWeightSource === 'USER' &&\n                       base.config.items.some((item) => item.targetWeight == null)\n-                    ? '입력한 목표 비중이 없습니다. 다른 조건으로 비교에서 비중을 먼저 정해 주세요.'\n+                    ? '입력한 목표 비중이 없습니다. 처음부터 다시 분석에서 비중을 먼저 정해 주세요.'\n                     : longer && (!firstDay || start > end)\n                       ? '이 전략의 공통 평가 기간을 확인할 수 없습니다.'\n                       : null\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -161,7 +161,7 @@ describe('DetailPanel(결과 분석·설정·근거 탭)', () => {\n     expect(within(risk).getByText('추정 기간')).not.toBeNull()\n     expect(within(risk).getByText('2023-07-03 ~ 2024-12-31')).not.toBeNull()\n     expect(within(risk).getByText('공분산 산정법')).not.toBeNull()\n-    expect(within(risk).getByText('sample-covariance-daily')).not.toBeNull()\n+    expect(within(risk).getByText('일별 수익률의 표본 공분산')).not.toBeNull()\n \n     const loss = sectionOf(panel, '손실 기여')\n     expect(within(loss).getByText('125.00%')).not.toBeNull()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -219,7 +219,7 @@ function analyticsGap(detail: PublicResultDetail, present: boolean, what: string\n   return null\n }\n \n-/** 추정 기간은 실제 평가 기간이고 산정법은 004가 준 `method`다. 이 화면이 이름을 짓지 않는다. */\n+/** 추정 기간은 실제 평가 기간이고, 알려진 산정법 코드는 읽을 수 있는 이름으로 표시한다. */\n function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; showMethod?: boolean }) {\n   const { config } = detail\n   const method = detail.summary?.analytics?.method ?? null\n@@ -232,7 +232,7 @@ function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; s\n       {showMethod ? (\n         <>\n           <dt>공분산 산정법</dt>\n-          <dd>{method ?? EMPTY}</dd>\n+          <dd>{method === 'sample-covariance-daily' ? '일별 수익률의 표본 공분산' : method ?? EMPTY}</dd>\n         </>\n       ) : null}\n     </dl>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,13 +5,26 @@\n   min-width: 0;\n }\n \n+.headingRow {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.heading {\n+  margin: 0;\n+  font-size: 1.1rem;\n+  font-weight: 650;\n+}\n+\n /*\n  * 세로축 눈금 전환 단추. 그래프 오른쪽 위에 붙여 어느 눈금으로 보는 중인지 그래프와 함께 읽게 한다.\n  */\n .scaleToggle {\n   display: flex;\n   gap: 2px;\n-  align-self: flex-end;\n+  flex: none;\n   padding: 2px;\n   border: 1px solid var(--thorp-line);\n   /* 안쪽 버튼 모서리에 틀의 여백(2px)과 테두리(1px)를 더한다. */\n@@ -60,8 +73,8 @@\n   border-radius: var(--thorp-radius-card, 14px);\n   background: var(--thorp-surface);\n \n-  /* 넓은 화면에서는 납작하게, 좁은 화면에서는 세로를 키워 하락 구간이 눌리지 않게 한다. */\n-  aspect-ratio: 16 / 7;\n+  /* 첫 화면 높이에 맞춰 요약과 그래프가 함께 보이도록 한다. */\n+  height: clamp(250px, 44svh, 390px);\n }\n \n /*\n@@ -72,16 +85,28 @@\n   height: 100%;\n }\n \n-.notes {\n-  margin: 0;\n+.legend {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 6px 18px;\n   color: var(--thorp-copy);\n-  font-size: 0.85rem;\n+  font-size: 0.8rem;\n   line-height: 1.6;\n-  overflow-wrap: anywhere;\n+}\n+\n+.help summary {\n+  color: var(--thorp-foreground);\n+  cursor: pointer;\n+}\n+\n+.help p {\n+  max-width: 65ch;\n+  margin: 6px 0 0;\n }\n \n @media (max-width: 600px) {\n   .chart {\n+    height: auto;\n     aspect-ratio: 4 / 3;\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.module.css",
+          "old_path": "frontend/src/components/result/EquityChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -363,6 +363,14 @@ const growth: EquityChartSeries = {\n }\n \n describe('EquityChart 세로축 눈금', () => {\n+  it('차트 제목과 시작 금액 범례, 눈금 설명을 가까이 둔다', () => {\n+    render(<EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />)\n+\n+    expect(screen.getByText('자산가치 추이')).not.toBeNull()\n+    expect(screen.getByText('점선 · 시작 금액 10,000,000원')).not.toBeNull()\n+    expect(screen.getByText('차트 읽는 법')).not.toBeNull()\n+  })\n+\n   it('처음에는 로그 눈금으로 그려 금액의 상용로그에 높이를 비례시킨다', () => {\n     const { container } = render(\n       <EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -273,7 +273,6 @@ export function EquityChart(props: EquityChartProps) {\n   const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null\n \n   const notes = [\n-    initial == null ? null : '가로 점선은 시작 금액 ' + formatMoney(initialCash) + '입니다.',\n     scaleMode === 'log'\n       ? '세로축 눈금이 로그라 같은 비율의 오르내림이 어느 구간에서나 같은 높이로 보입니다.'\n       : null,\n@@ -294,18 +293,21 @@ export function EquityChart(props: EquityChartProps) {\n \n   return (\n     <div className={styles.figure}>\n-      <div aria-label=\"세로축 눈금\" className={styles.scaleToggle} role=\"group\">\n-        {(['linear', 'log'] as const).map((mode) => (\n-          <button\n-            aria-pressed={scaleMode === mode}\n-            className={styles.scaleButton}\n-            key={mode}\n-            onClick={() => setScaleMode(mode)}\n-            type=\"button\"\n-          >\n-            {scaleModeNoun(mode)}\n-          </button>\n-        ))}\n+      <div className={styles.headingRow}>\n+        <h2 className={styles.heading}>자산가치 추이</h2>\n+        <div aria-label=\"세로축 눈금\" className={styles.scaleToggle} role=\"group\">\n+          {(['linear', 'log'] as const).map((mode) => (\n+            <button\n+              aria-pressed={scaleMode === mode}\n+              className={styles.scaleButton}\n+              key={mode}\n+              onClick={() => setScaleMode(mode)}\n+              type=\"button\"\n+            >\n+              {scaleModeNoun(mode)}\n+            </button>\n+          ))}\n+        </div>\n       </div>\n \n       <div aria-label={buildAltText(props, scaleMode)} className={styles.chart} role=\"img\">\n@@ -385,7 +387,18 @@ export function EquityChart(props: EquityChartProps) {\n         </LineChart>\n       </div>\n \n-      {notes.length > 0 ? <p className={styles.notes}>{notes.join(' ')}</p> : null}\n+      <div className={styles.legend}>\n+        {initial == null ? null : <span>점선 · 시작 금액 {formatMoney(initialCash)}</span>}\n+        {baseWindow && base.maxDrawdown ? (\n+          <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>\n+        ) : null}\n+        {notes.length > 0 ? (\n+          <details className={styles.help}>\n+            <summary>차트 읽는 법</summary>\n+            <p>{notes.join(' ')}</p>\n+          </details>\n+        ) : null}\n+      </div>\n     </div>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,76 +0,0 @@\n-import { render, screen } from '@testing-library/react'\n-import { MemoryRouter } from 'react-router-dom'\n-import { describe, expect, it } from 'vitest'\n-import { AuthContext } from '@/auth/auth-context'\n-import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'\n-import { resultDetailCompleted } from '@/test/resultFixtures'\n-import { NextStepLinks } from './NextStepLinks'\n-\n-const base = 'a'.repeat(32)\n-const target = 'b'.repeat(32)\n-\n-const loggedInAuth = {\n-  ...anonymousAuthContext,\n-  user: authenticatedUser,\n-  status: 'authenticated',\n-} as typeof anonymousAuthContext\n-\n-function renderLinks(\n-  props: Partial<Parameters<typeof NextStepLinks>[0]> = {},\n-  auth = anonymousAuthContext,\n-) {\n-  return render(\n-    <MemoryRouter>\n-      <AuthContext.Provider value={auth}>\n-        <NextStepLinks config={resultDetailCompleted.config} token={base} {...props} />\n-      </AuthContext.Provider>\n-    </MemoryRouter>,\n-  )\n-}\n-\n-describe('결과 화면의 011 진입', () => {\n-  it('비교 대상이 열람 가능하면 compare를 함께 싣는다', () => {\n-    renderLinks({ compareToken: target, compareReady: true })\n-    expect(\n-      screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' }).getAttribute('href'),\n-    ).toBe(`/regime-link?base=${base}&compare=${target}`)\n-  })\n-\n-  it('비교 대상이 아직 준비되지 않았으면 base만 싣는다', () => {\n-    renderLinks({ compareToken: target, compareReady: false })\n-    expect(\n-      screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' }).getAttribute('href'),\n-    ).toBe(`/regime-link?base=${base}`)\n-  })\n-})\n-\n-/**\n- * spec 006 T045a. 기록은 로그인한 사용자에게만 있으므로(FR-020) 두 갈래를 모두 고정한다.\n- *\n- * <p>비로그인에서 링크가 열리면 눌러 본 뒤에 로그인 화면으로 튕긴다 — 막는 이유를 먼저 말하는 것이 014의 규칙이다.\n- */\n-describe('NextStepLinks 기록으로 내보내기', () => {\n-  it('로그인 사용자에게는 이 결과의 기록 목록으로 가는 연결이다', () => {\n-    renderLinks({}, loggedInAuth)\n-\n-    expect(screen.getByRole('link', { name: '기록으로 내보내기' }).getAttribute('href')).toBe(\n-      `/records?resultToken=${base}`,\n-    )\n-  })\n-\n-  it('비로그인에게는 로그인이 필요하다는 사유와 함께 막힌다', () => {\n-    renderLinks()\n-\n-    expect(screen.queryByRole('link', { name: '기록으로 내보내기' })).toBeNull()\n-    const button = screen.getByRole('button', { name: '기록으로 내보내기' })\n-    expect(button.hasAttribute('disabled')).toBe(true)\n-    const reasonId = button.getAttribute('aria-describedby')\n-    expect(document.getElementById(reasonId ?? '')?.textContent).toContain('로그인이 필요합니다')\n-  })\n-\n-  it('011 진입은 006 변경과 무관하게 그대로 열려 있다', () => {\n-    renderLinks({}, loggedInAuth)\n-\n-    expect(screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' })).toBeTruthy()\n-  })\n-})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/NextStepLinks.test.tsx",
+          "old_path": "frontend/src/components/result/NextStepLinks.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,71 +0,0 @@\n-import { useId } from 'react'\n-import { Link } from 'react-router-dom'\n-import { useAuth } from '@/auth/auth-context'\n-import { Button } from '@/components/ui/button'\n-import type { ResultConfig } from '@/types/result'\n-import { OtherConditionsButton } from './OtherConditionsButton'\n-import styles from './auxiliaryViews.module.css'\n-\n-/**\n- * 결과 화면의 다음 탐색.\n- *\n- * 011 진입(`/regime-link`)은 열려 있다(T086, entry-handoff §1). **`compare`는 비교 대상이\n- * 열람 가능할 때만 싣는다** — 아직 계산 중이거나 실패·만료된 토큰을 넘기면 011이\n- * `RESULT_NOT_READY`로 거절한다(계약 §2).\n- *\n- * 006 내 기록은 **로그인한 사용자에게만 열린다**(spec 006 T045a, FR-020). 기록은 식별된 사용자 단위로만\n- * 있으므로 비로그인에게는 014의 안내와 함께 막는다 — 눌러 본 뒤에 로그인 화면으로 보내지 않는다.\n- * 여는 주소는 목록(`/records?resultToken=`)이고, 그 결과의 줄로 초점을 옮기는 것은 006 화면이 한다.\n- */\n-export function NextStepLinks({\n-  config,\n-  token,\n-  compareToken,\n-  compareReady,\n-}: {\n-  config: ResultConfig\n-  token?: string\n-  compareToken?: string | null\n-  compareReady?: boolean\n-}) {\n-  const exportReasonId = useId()\n-  const { user } = useAuth()\n-  const regimeLinkTo =\n-    token && compareReady && compareToken\n-      ? `/regime-link?base=${token}&compare=${compareToken}`\n-      : `/regime-link?base=${token ?? ''}`\n-\n-  return (\n-    <section className={styles.nextSteps} aria-labelledby=\"next-step-title\">\n-      <h2 id=\"next-step-title\" className={styles.title}>\n-        다음 탐색\n-      </h2>\n-      <div className={styles.actions}>\n-        <OtherConditionsButton config={config} />\n-        {token ? (\n-          <Link to={regimeLinkTo}>경제환경이 비슷했던 과거 보기</Link>\n-        ) : (\n-          <Button type=\"button\" variant=\"outline\" disabled>\n-            경제환경이 비슷했던 과거 보기\n-          </Button>\n-        )}\n-        {user && token ? (\n-          <Button asChild variant=\"outline\">\n-            <Link to={`/records?resultToken=${encodeURIComponent(token)}`}>기록으로 내보내기</Link>\n-          </Button>\n-        ) : (\n-          <Button type=\"button\" variant=\"outline\" disabled aria-describedby={exportReasonId}>\n-            기록으로 내보내기\n-          </Button>\n-        )}\n-      </div>\n-      <div className={styles.disabledReason}>\n-        {user && token ? null : (\n-          <span id={exportReasonId}>\n-            기록으로 내보내려면 로그인이 필요합니다. 기록은 로그인한 사용자에게만 남습니다.\n-          </span>\n-        )}\n-      </div>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/NextStepLinks.tsx",
+          "old_path": "frontend/src/components/result/NextStepLinks.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,63 +0,0 @@\n-import { useEffect, useRef, useState } from 'react'\n-import { Link, useNavigate } from 'react-router-dom'\n-import { Button } from '@/components/ui/button'\n-import type { ResultConfig } from '@/types/result'\n-import {\n-  type PrefillOutcome,\n-  SECTOR_SELECTION_PATH,\n-  prefillStrategySettings,\n-} from './prefillStrategySettings'\n-import styles from './resultDetail.module.css'\n-\n-/** 이동하지 못해 결과 화면에 남기는 안내 */\n-type Notice = Extract<PrefillOutcome, { status: 'failed' | 'reselectSectors' }>\n-\n-/**\n- * '다른 조건으로 비교'(FR-010). 이 결과의 조건을 채운 설정 화면으로 옮긴다. 거기서 분석하면 새 결과가 되고 이\n- * 결과는 그대로 남는다.\n- *\n- * <p>보조 모양이다 — 결과 화면의 주 모양 버튼은 비교 대상 고르기 하나다(착수 전에 알아둘 것 ⑧).\n- *\n- * <p>섹터만 넘기지 못한 경우(대응표가 다르거나 이어받을 섹터가 모자람)에는 나머지 조건을 채워 둔 사실과 함께\n- * 섹터·비중 단계로 가는 연결을 둔다. 사유만 보이면 사용자가 그 단계를 스스로 찾아가야 한다.\n- */\n-export function OtherConditionsButton({ config }: { config: ResultConfig }) {\n-  const navigate = useNavigate()\n-  const [sending, setSending] = useState(false)\n-  const [notice, setNotice] = useState<Notice | null>(null)\n-  const controllerRef = useRef<AbortController | null>(null)\n-\n-  useEffect(() => () => controllerRef.current?.abort(), [])\n-\n-  const move = async () => {\n-    if (sending) return\n-    const controller = new AbortController()\n-    controllerRef.current = controller\n-    setSending(true)\n-    setNotice(null)\n-\n-    const outcome = await prefillStrategySettings(config, navigate, controller.signal)\n-    if (controller.signal.aborted || outcome.status === 'moved') return\n-\n-    setSending(false)\n-    if (outcome.status !== 'canceled') setNotice(outcome)\n-  }\n-\n-  return (\n-    <>\n-      <Button type=\"button\" variant=\"outline\" disabled={sending} onClick={() => void move()}>\n-        다른 조건으로 비교\n-      </Button>\n-      {notice ? (\n-        <div className={styles.row} role=\"alert\">\n-          <p className={styles.alert}>{notice.message}</p>\n-          {notice.status === 'reselectSectors' ? (\n-            <Button asChild variant=\"link\" size=\"sm\" className=\"px-0\">\n-              <Link to={SECTOR_SELECTION_PATH}>섹터·비중 단계로 가기</Link>\n-            </Button>\n-          ) : null}\n-        </div>\n-      ) : null}\n-    </>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/OtherConditionsButton.tsx",
+          "old_path": "frontend/src/components/result/OtherConditionsButton.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,7 +13,7 @@ import { TargetRiskView } from './TargetRiskView'\n  * 결과 화면의 일곱 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교 | 목표 위험 맞춤.\n  *\n  * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘긴다 —\n- * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프와 해석 문장은 탭 위에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에\n+ * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프는 탭 위에, 해석 문장은 요약 탭에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에\n  * 넘긴다 — 탭마다 받으면 같은 목록을 세 번 받는다. 볼 결과가 없는 실행(계산 중·실패)에는 이 탭 묶음을 두지 않고\n  * 페이지가 요약 내용만 그린다.\n  *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,8 @@\n .card {\n   display: flex;\n   flex-direction: column;\n-  gap: 16px;\n-  padding: var(--thorp-pad-card, 22px 24px);\n-  border: 1px solid var(--thorp-line);\n-  border-radius: var(--thorp-radius-card, 14px);\n-  background: var(--thorp-surface);\n+  gap: 4px;\n+  min-height: 84px;\n }\n \n .visuallyHidden {\n@@ -25,43 +22,46 @@\n   margin: 0;\n   color: var(--thorp-copy);\n   font-size: 0.88rem;\n-  line-height: 1.6;\n+  line-height: 1.4;\n   overflow-wrap: anywhere;\n }\n \n .metrics {\n   display: grid;\n   grid-template-columns: repeat(3, minmax(0, 1fr));\n+  align-items: center;\n+  flex: 1;\n   gap: 16px;\n   margin: 0;\n }\n \n .metric {\n   display: flex;\n-  flex-direction: column;\n-  gap: 6px;\n+  align-items: center;\n+  justify-content: flex-start;\n+  gap: 10px;\n   min-width: 0;\n+  text-align: center;\n }\n \n .metricLabel {\n   color: var(--thorp-copy);\n-  font-size: 0.85rem;\n+  font-size: 1.1rem;\n+  font-weight: 650;\n }\n \n .metricValue {\n   margin: 0;\n   font-family: var(--thorp-font-mono);\n-  font-size: clamp(1.5rem, 4vw, 2rem);\n+  font-size: clamp(1.7rem, 4vw, 2rem);\n+  line-height: 1.1;\n   font-variant-numeric: tabular-nums;\n   letter-spacing: -0.02em;\n }\n \n-.metricDefinition {\n-  margin: 0;\n-  color: var(--thorp-muted);\n-  font-size: 0.8rem;\n-  line-height: 1.55;\n-}\n+/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */\n+:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }\n+:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }\n \n .note {\n   margin: 0;\n@@ -70,16 +70,31 @@\n   line-height: 1.65;\n }\n \n+.valuationNote {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.85rem;\n+  line-height: 1.6;\n+}\n+\n @media (max-width: 600px) {\n   .card {\n-    padding: var(--thorp-pad-card, 16px);\n+    padding: 8px 0;\n   }\n \n   .metrics {\n-    grid-template-columns: minmax(0, 1fr);\n+    grid-template-columns: repeat(2, minmax(0, 1fr));\n   }\n-}\n \n-/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */\n-:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }\n-:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }\n+  .metric:last-child {\n+    grid-column: 1 / -1;\n+    padding-top: 12px;\n+    border-top: 1px solid var(--thorp-line);\n+  }\n+\n+  .metric {\n+    flex-direction: column;\n+    gap: 2px;\n+  }\n+\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { render, screen, within } from '@testing-library/react'\n+import { fireEvent, render, screen, within } from '@testing-library/react'\n import { describe, expect, it } from 'vitest'\n import {\n   resultDetailCancelledNoSummary,\n@@ -7,7 +7,7 @@ import {\n } from '@/test/resultFixtures'\n import type { PublicResultDetail, ResultSummary } from '@/types/result'\n import { COMPUTED_WEIGHTS_NOTE } from './conditionLine'\n-import { METRIC_DEFINITIONS, ResultSummaryCard } from './ResultSummaryCard'\n+import { METRIC_DEFINITIONS, ResultConditionLine, ResultSummaryCard } from './ResultSummaryCard'\n \n /** 005 T036. FR-001~FR-003, FR-013~FR-015, quickstart 1·2. */\n \n@@ -36,35 +36,53 @@ describe('ResultSummaryCard', () => {\n     }\n   })\n \n-  it('핵심 숫자 3개와 각 정의, 조건 한 줄, 청산 구분을 텍스트로 보인다', () => {\n+  it('핵심 숫자 3개와 요청 시 각 정의를 보인다', async () => {\n     render(<ResultSummaryCard detail={resultDetailCompleted} />)\n \n     expect(screen.getByText('16.67%')).not.toBeNull()\n     expect(screen.getByText('-4.18%')).not.toBeNull()\n     expect(screen.getByText('17,078원')).not.toBeNull()\n-    for (const definition of Object.values(METRIC_DEFINITIONS)) {\n-      expect(screen.getByText(definition)).not.toBeNull()\n+    for (const [label, definition] of [\n+      ['수익률', METRIC_DEFINITIONS.netTotalReturn],\n+      ['MDD', METRIC_DEFINITIONS.maxDrawdown],\n+      ['거래 수수료 등', METRIC_DEFINITIONS.totalTradingCost],\n+    ] as const) {\n+      const help = screen.getByRole('button', { name: `${label} 도움말` })\n+      fireEvent.focus(help)\n+      const bubble = await screen.findByText(definition)\n+      expect(bubble).not.toBeNull()\n+      if (label === '수익률') {\n+        expect(bubble.closest('[data-side]')?.getAttribute('data-side')).toBe('right')\n+        expect(bubble.closest('[data-align]')?.getAttribute('data-align')).toBe('center')\n+      }\n+      fireEvent.blur(help)\n     }\n     expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')\n \n+    expect(screen.queryByLabelText('분석 조건')).toBeNull()\n+    expect(screen.queryByText('이전 고점 회복까지 9거래일')).toBeNull()\n+    expect(screen.queryByText(/종료일 시가평가 기준 수익률은 16\\.67%/)).toBeNull()\n+  })\n+\n+  it('분석 조건을 요약 탭에서 쓸 수 있도록 별도로 렌더링한다', () => {\n+    render(<ResultConditionLine detail={resultDetailCompleted} />)\n+\n     const condition = screen.getByLabelText('분석 조건')\n     expect(within(condition).getByText('분석 기간 2023-07-03 ~ 2024-12-31')).not.toBeNull()\n     expect(\n       within(condition).getByText(`기준 ${syntheticStrategyName} · 비교 대상 없음`),\n     ).not.toBeNull()\n     expect(\n-      within(condition).getByText('비용 반영 (PROVISIONAL-TEST-1, 임시 비용 기준)'),\n+      within(condition).getByText('비용 반영 · 임시 비용 기준'),\n     ).not.toBeNull()\n-\n-    expect(screen.getByText(/종료일 시가평가 기준 수익률은 16\\.67%/).textContent).toContain(\n-      '청산 비용 3,996원을 포함해 16.63%',\n-    )\n+    expect(condition.textContent).not.toContain('PROVISIONAL-TEST-1')\n   })\n \n   it('요약이 없으면 숫자 자리를 그리지 않고 상태 문장이 쓸 자리를 비워 둔다', () => {\n     const { container } = render(<ResultSummaryCard detail={resultDetailCancelledNoSummary} />)\n \n     expect(screen.queryByRole('definition')).toBeNull()\n+    expect(container.querySelector('section')).toBeNull()\n     // `\\b`는 한글 경계를 모르므로 금액은 숫자 바로 뒤의 '원'으로 찾는다.\n     expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n     expect(container.textContent).not.toContain('계산되지 않았습니다')\n@@ -82,26 +100,26 @@ describe('ResultSummaryCard', () => {\n   })\n \n   it('규칙이 계산한 비중이면 출처 문장을 보이고 사용자 비중이면 보이지 않는다', () => {\n-    const { rerender } = render(<ResultSummaryCard detail={resultDetailCompleted} />)\n+    const { rerender } = render(<ResultConditionLine detail={resultDetailCompleted} />)\n     expect(screen.getByText(COMPUTED_WEIGHTS_NOTE)).not.toBeNull()\n \n     rerender(\n-      <ResultSummaryCard detail={{ ...resultDetailCompleted, weightsSource: 'USER' }} />,\n+      <ResultConditionLine detail={{ ...resultDetailCompleted, weightsSource: 'USER' }} />,\n     )\n     expect(screen.queryByText(COMPUTED_WEIGHTS_NOTE)).toBeNull()\n   })\n \n   it('등록표에서 이름을 찾지 못하면 전략 식별자를 그대로 보인다', () => {\n     render(\n-      <ResultSummaryCard detail={{ ...resultDetailCompleted, strategyName: null }} />,\n+      <ResultConditionLine detail={{ ...resultDetailCompleted, strategyName: null }} />,\n     )\n \n     expect(screen.getByText('기준 WAVE_LEVELING · 비교 대상 없음')).not.toBeNull()\n   })\n \n-  it('청산을 가정하지 않은 결과는 시가평가 기준이라고 밝힌다', () => {\n+  it('요약 카드는 종료일 평가 안내를 차트 위에 보이지 않는다', () => {\n     render(<ResultSummaryCard detail={withSummary({ liquidation: null })} />)\n \n-    expect(screen.getByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).not.toBeNull()\n+    expect(screen.queryByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).toBeNull()\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import type { PublicResultDetail } from '@/types/result'\n+import { InlineHelp } from '@/components/common/InlineHelp'\n import { buildConditionLine } from './conditionLine'\n import { formatMoney, formatRatio, isZeroValue, ratioDirection } from './formatResult'\n import styles from './ResultSummaryCard.module.css'\n@@ -7,30 +8,26 @@ export const METRIC_DEFINITIONS = {\n   netTotalReturn:\n     '수수료·슬리피지 등 거래비용을 뺀 뒤, 시작 금액과 비교해 끝 금액이 달라진 비율입니다.',\n   maxDrawdown:\n-    '운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',\n+    'MDD(최대 낙폭)는 운용 중 가장 높았던 자산가치에서 그 뒤 가장 낮았던 때까지 줄어든 비율입니다. 시작 금액 대비 손실과 다릅니다.',\n   totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',\n } as const\n \n-type ResultSummaryCardProps = {\n+type ResultConditionLineProps = {\n   detail: PublicResultDetail\n   target?: PublicResultDetail | null\n }\n \n /**\n- * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의, 조건 한 줄, 종료 시 평가 구분(FR-001~FR-003, FR-015).\n+ * 결과 첫 화면의 요약 카드: 핵심 숫자 3개와 각 정의(FR-001~FR-003).\n  *\n  * <p>숫자는 응답 문자열을 자릿수만 다듬어 보인다. <b>요약이 없으면 숫자 자리를 그리지 않는다</b> — 0이나\n  * 대체값을 넣으면 없는 결과를 만든다(FR-013, 원칙 VI).\n  *\n- * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).\n+ * <p>숫자는 텍스트라 스크린 리더가 읽는다(FR-022).\n  */\n-export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {\n-  const condition = buildConditionLine({\n-    ...detail,\n-    targetName: target?.strategyName ?? target?.config.strategyId,\n-    targetWeightsSource: target?.weightsSource,\n-  })\n+export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {\n   const { summary } = detail\n+  if (!summary) return null\n \n   return (\n     <section className={styles.card} aria-labelledby=\"result-summary-title\">\n@@ -38,71 +35,99 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {\n         결과 요약\n       </h2>\n \n+      <dl className={styles.metrics}>\n+        <Metric\n+          label=\"수익률\"\n+          value={formatRatio(summary.netTotalReturn)}\n+          direction={ratioDirection(summary.netTotalReturn)}\n+          definition={METRIC_DEFINITIONS.netTotalReturn}\n+          helpSide=\"right\"\n+        />\n+        <Metric\n+          label=\"MDD\"\n+          value={formatRatio(summary.maxDrawdown)}\n+          direction={ratioDirection(summary.maxDrawdown)}\n+          definition={METRIC_DEFINITIONS.maxDrawdown}\n+        />\n+        <Metric\n+          label=\"거래 수수료 등\"\n+          value={formatMoney(summary.totalTradingCost)}\n+          definition={METRIC_DEFINITIONS.totalTradingCost}\n+        />\n+      </dl>\n+\n+      {isZeroValue(summary.netTotalReturn) && isZeroValue(summary.maxDrawdown) ? (\n+        <p className={styles.note}>\n+          수익률과 가장 크게 줄었던 폭이 모두 0입니다. 기간 동안 자산가치가 달라지지 않았다는 뜻이며\n+          손실이 없었다는 평가가 아닙니다.\n+          {summary.tradeCount === 0 ? ' 이 기간에 체결된 거래가 없습니다.' : ''}\n+        </p>\n+      ) : null}\n+    </section>\n+  )\n+}\n+\n+/** 분석 조건은 그래프 아래 기본 요약 탭에서 읽는다. */\n+export function ResultConditionLine({ detail, target }: ResultConditionLineProps) {\n+  const condition = buildConditionLine({\n+    ...detail,\n+    targetName: target?.strategyName ?? target?.config.strategyId,\n+    targetWeightsSource: target?.weightsSource,\n+  })\n+\n+  return (\n+    <>\n       <p className={styles.condition} aria-label=\"분석 조건\">\n         <span>{condition.period}</span>\n         <span>{condition.comparison}</span>\n-        <span>{condition.cost}</span>\n+        <span>\n+          {detail.versions.costProfile\n+            ? detail.versions.costProfile.provisional\n+              ? '비용 반영 · 임시 비용 기준'\n+              : '비용 반영'\n+            : condition.cost}\n+        </span>\n       </p>\n       {condition.weightsNote ? <p className={styles.note}>{condition.weightsNote}</p> : null}\n+    </>\n+  )\n+}\n \n-      {summary ? (\n-        <>\n-          <dl className={styles.metrics}>\n-            <Metric\n-              label=\"비용 차감 후 전체 수익률\"\n-              value={formatRatio(summary.netTotalReturn)}\n-              direction={ratioDirection(summary.netTotalReturn)}\n-              definition={METRIC_DEFINITIONS.netTotalReturn}\n-            />\n-            <Metric\n-              label=\"가장 크게 줄었던 폭\"\n-              value={formatRatio(summary.maxDrawdown)}\n-              direction={ratioDirection(summary.maxDrawdown)}\n-              definition={METRIC_DEFINITIONS.maxDrawdown}\n-            />\n-            <Metric\n-              label=\"거래비용\"\n-              value={formatMoney(summary.totalTradingCost)}\n-              definition={METRIC_DEFINITIONS.totalTradingCost}\n-            />\n-          </dl>\n-\n-          {isZeroValue(summary.netTotalReturn) && isZeroValue(summary.maxDrawdown) ? (\n-            <p className={styles.note}>\n-              수익률과 가장 크게 줄었던 폭이 모두 0입니다. 기간 동안 자산가치가 달라지지 않았다는\n-              뜻이며 손실이 없었다는 평가가 아닙니다.\n-              {summary.tradeCount === 0 ? ' 이 기간에 체결된 거래가 없습니다.' : ''}\n-            </p>\n-          ) : null}\n-\n-          <p className={styles.note}>\n-            {summary.liquidation\n-              ? `종료일 시가평가 기준 수익률은 ${formatRatio(summary.liquidation.markToMarket.totalReturn)}이고, 종료일에 모두 판다고 가정하면 청산 비용 ${formatMoney(summary.liquidation.liquidated.liquidationCost)}을 포함해 ${formatRatio(summary.liquidation.liquidated.totalReturn)}입니다.`\n-              : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}\n-          </p>\n-        </>\n-      ) : null}\n-    </section>\n+/** 종료 시 평가 구분(FR-015)은 요약 아래의 상세 탭에서 읽는다. */\n+export function ResultValuationNote({ detail }: { detail: PublicResultDetail }) {\n+  const summary = detail.summary\n+  if (!summary) return null\n+  return (\n+    <p className={styles.valuationNote}>\n+      {summary.liquidation\n+        ? `종료일 시가평가 기준 수익률은 ${formatRatio(summary.liquidation.markToMarket.totalReturn)}이고, 종료일에 모두 판다고 가정하면 청산 비용 ${formatMoney(summary.liquidation.liquidated.liquidationCost)}을 포함해 ${formatRatio(summary.liquidation.liquidated.totalReturn)}입니다.`\n+        : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}\n+    </p>\n   )\n }\n \n function Metric({\n   label,\n   value,\n-  direction,\n   definition,\n+  direction,\n+  helpSide = 'bottom',\n }: {\n   label: string\n   value: string\n-  /** 비율의 오르내림. 색만 바꾸며 값은 그대로다. 금액처럼 방향이 없는 값은 비운다. */\n-  direction?: 'up' | 'down'\n   definition: string\n+  /** 오르내림(425). 금액과 0.00%로 보이는 값에는 달지 않는다 — 글과 색이 다른 말을 하면 안 된다 */\n+  direction?: 'up' | 'down'\n+  helpSide?: 'bottom' | 'right'\n }) {\n   return (\n     <div className={styles.metric}>\n-      <dt className={styles.metricLabel}>{label}</dt>\n-      <dd className={styles.metricValue} data-direction={direction}>{value}</dd>\n-      <dd className={styles.metricDefinition}>{definition}</dd>\n+      <dt className={styles.metricLabel}>\n+        {label} <InlineHelp label={label} side={helpSide}>{definition}</InlineHelp>\n+      </dt>\n+      <dd className={styles.metricValue} data-direction={direction}>\n+        {value}\n+      </dd>\n     </div>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,6 +105,7 @@ export function ResultTabs({ label, tabs, defaultTab }: ResultTabsProps) {\n           <div\n             key={tab.id}\n             role=\"tabpanel\"\n+            data-tab-id={tab.id}\n             id={panelId(tab.id)}\n             aria-labelledby={tabId(tab.id)}\n             hidden={tab.id !== active}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultTabs.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,28 +84,6 @@\n   font-variant-numeric: tabular-nums;\n }\n \n-.nextSteps {\n-  display: flex;\n-  flex-direction: column;\n-  gap: 10px;\n-  padding-top: 4px;\n-}\n-\n-.actions {\n-  display: flex;\n-  flex-wrap: wrap;\n-  gap: 8px 10px;\n-}\n-\n-.disabledReason {\n-  display: grid;\n-  gap: 4px;\n-  margin: 0;\n-  color: var(--thorp-muted);\n-  font-size: 0.76rem;\n-  line-height: 1.5;\n-}\n-\n /* 디자인 개편(S15P21E205-425): 목표 위험 결과의 오르내림 색. classic은 예전처럼 한 색이다. */\n :global(:root:not([data-design='classic'])) .metric dd[data-direction='up'] { color: var(--thorp-up); }\n :global(:root:not([data-design='classic'])) .metric dd[data-direction='down'] { color: var(--thorp-down); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "old_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,7 +32,7 @@ export function buildCompareRequest(\n     : base.weightsSource === 'USER'\n   if (userWeights && config.items.some((item) => item.targetWeight == null)) {\n     throw new Error(\n-      '이 결과에는 입력한 목표 비중이 없습니다. 다른 조건으로 비교에서 비중을 먼저 정해 주세요.',\n+      '이 결과에는 입력한 목표 비중이 없습니다. 처음부터 다시 분석에서 비중을 먼저 정해 주세요.',\n     )\n   }\n   return {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareRequest.ts",
+          "old_path": "frontend/src/components/result/compareRequest.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -58,3 +58,32 @@\n   line-height: 1.7;\n   overflow-wrap: anywhere;\n }\n+\n+.popover {\n+  z-index: 61;\n+  width: min(360px, calc(100vw - 32px));\n+  max-height: calc(100svh - 32px);\n+  overflow-y: auto;\n+  padding: 16px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 12px;\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n+  box-shadow: 0 14px 36px rgb(0 0 0 / 24%);\n+}\n+\n+.popover .panel {\n+  padding: 0;\n+  border: 0;\n+  background: transparent;\n+}\n+\n+.popover .candidates {\n+  gap: 8px;\n+  margin: 8px 0 12px;\n+}\n+\n+.popover .candidates p {\n+  margin-top: 2px;\n+  line-height: 1.4;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/comparison.module.css",
+          "old_path": "frontend/src/components/result/comparison.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,4 +10,4 @@ export const RESULT_POLL_INTERVAL_MS = 3_000\n  * 거래 내역을 한 번에 받는 건수(R-11). 서버가 공개 상한으로 더 작게 자를 수 있으니 실제 크기는 응답의\n  * `size`를 따른다. 응답 목표와 함께 004의 실행 측정(PD-06) 뒤에 조정하는 화면 동작값이라 이 한 곳에만 둔다.\n  */\n-export const TRADES_PAGE_SIZE = 50\n+export const TRADES_PAGE_SIZE = 20\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/constants.ts",
+          "old_path": "frontend/src/components/result/constants.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,7 @@ import type { SectorCatalog } from '@/types/sector'\n import type { RegistryResponse } from '@/types/strategyRegistry'\n \n /**\n- * '다른 조건으로 비교'(spec 005 FR-010, T068). 결과의 조건을 설정 화면에 채워 넘긴다.\n+ * 기록의 '설정 바꿔 비교'가 결과의 조건을 설정 화면에 채워 넘긴다.\n  *\n  * <p>넘기는 수단은 002와 003이 이미 쓰는 탭 세션 저장소다. 002의 섹터 선택(`writeStoredSelection`)과 003의\n  * 전략 설정(`writeStoredStrategySettings`)을 이 결과의 `config`로 쓰고 `/strategy`로 옮긴다. 거기서 분석하면\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/prefillStrategySettings.ts",
+          "old_path": "frontend/src/components/result/prefillStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,12 +9,25 @@\n \n .tablist {\n   display: flex;\n-  flex-wrap: wrap;\n+  overflow-x: auto;\n+  overflow-y: hidden;\n+  scrollbar-width: none;\n   gap: 2px 4px;\n   border-bottom: 1px solid var(--thorp-line);\n }\n \n+.tablist::-webkit-scrollbar {\n+  display: none;\n+}\n+\n+@media (max-width: 600px) {\n+  .tablist {\n+    mask-image: linear-gradient(to right, #000 90%, transparent);\n+  }\n+}\n+\n .tab {\n+  flex: none;\n   margin: 0 0 -1px;\n   padding: 10px 14px;\n   border: 0;\n@@ -61,7 +74,25 @@\n   background: var(--thorp-surface);\n }\n \n+.panel:not([data-tab-id='summary']) {\n+  max-height: min(70vh, 640px);\n+  overflow-y: auto;\n+}\n+\n .panel:focus-visible {\n   outline: var(--thorp-focus-outline);\n   outline-offset: var(--thorp-focus-offset);\n }\n+\n+.panel[data-tab-id='summary'] {\n+  padding: 0;\n+  border: 0;\n+  background: transparent;\n+}\n+\n+@media (max-width: 600px) {\n+  .panel:not([data-tab-id='summary']) {\n+    max-height: none;\n+    overflow-y: visible;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/resultTabs.module.css",
+          "old_path": "frontend/src/components/result/resultTabs.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -354,7 +354,7 @@ export function readStoredStrategySettings(): StoredStrategySettings | null {\n /**\n  * 보관한다. 보관에 성공했는지를 돌려준다.\n  *\n- * spec 005의 '다른 조건으로 비교'(T068)가 결과의 조건을 이 화면에 넘길 때도 쓴다. 넘기는 수단이 이 저장소\n+ * 내 기록의 '설정 바꿔 비교'가 결과의 조건을 이 화면에 넘길 때도 쓴다. 넘기는 수단이 이 저장소\n  * 항목뿐이라, 보관이 실패하면 넘기는 쪽이 그 사실을 알아야 사용자를 빈 설정 화면으로 보내지 않는다. 이\n  * 화면 안에서는 결과를 쓰지 않는다 — 실패해도 화면 상태로 계속 동작한다.\n  */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.ts",
+          "old_path": "frontend/src/hooks/useStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,7 +33,7 @@ function isDefault(query: MyRecordListQuery): boolean {\n  * <p>목록은 서버의 기본 보기(완료 항목, 저장일 최신순)를 그대로 보이고 필터·정렬은 서버에 맡긴다. 화면이 정렬하거나\n  * 성과로 줄 세우지 않는다(원칙 III). 빈 목록은 경고가 아니라 한 문장과 진단 시작 연결이다(FR-001).\n  *\n- * <p>`?resultToken=`으로 들어오면(005 결과 화면의 '기록으로 내보내기', T045a) 그 항목으로 초점을 옮기고 펼쳐 둔다.\n+ * <p>`?resultToken=`으로 들어오면 그 항목으로 초점을 옮기고 펼쳐 둔다.\n  */\n export function MyRecordsPage() {\n   const { user } = useAuth()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -91,7 +91,7 @@ function targetResult(overrides: Partial<PublicResultDetail> = {}): PublicResult\n   }\n }\n \n-describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n+describe('결과 보조 보기 (B08)', () => {\n   beforeEach(() => {\n     Object.values(api).forEach((mock) => mock.mockReset())\n     api.detail.mockImplementation(async (token: string) =>\n@@ -105,7 +105,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n   })\n \n-  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 미구현 탐색은 이유와 함께 비활성이다', async () => {\n+  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 다음 탐색 영역도 없다', async () => {\n     renderResult()\n \n     await screen.findByText('자료 출처: 한국거래소 통계정보')\n@@ -113,21 +113,8 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     expect(api.registry).not.toHaveBeenCalled()\n     expect(api.create).not.toHaveBeenCalled()\n \n-    // 011 진입은 열려 있다(T086). 비활성 사유 문구는 사라졌다.\n-    expect(screen.queryByText(/011 연결 계약이 아직 없어/)).toBeNull()\n-    expect(\n-      (screen.getByRole('button', { name: '기록으로 내보내기' }) as HTMLButtonElement).disabled,\n-    ).toBe(true)\n-    // 006 화면이 생겨 사유가 바뀌었다(spec 006 T045a) — 이 렌더는 비로그인이라 로그인 안내다.\n-    expect(screen.getByText(/로그인이 필요합니다/)).toBeTruthy()\n-  })\n-\n-  it('011 진입은 기준 토큰을 실은 주소로 간다(T086)', async () => {\n-    renderResult()\n-\n-    await screen.findByText('자료 출처: 한국거래소 통계정보')\n-    const entry = screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' })\n-    expect(entry.getAttribute('href')).toBe(`/regime-link?base=${resultToken}`)\n+    expect(screen.queryByRole('heading', { name: '다음 탐색' })).toBeNull()\n+    expect(screen.queryByRole('button', { name: '기록으로 내보내기' })).toBeNull()\n   })\n \n   it('스펙에 없는 이전 화면 행동을 결과 화면에 추가하지 않는다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,7 @@\n .main {\n   width: min(100% - var(--thorp-page-gutter), var(--thorp-page-width));\n   margin: 0 auto;\n-  padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);\n+  padding: min(var(--thorp-page-top), 16px) 0 var(--thorp-page-bottom);\n }\n \n /* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */\n@@ -23,17 +23,19 @@\n .result {\n   display: flex;\n   flex-direction: column;\n-  gap: 20px;\n+  gap: 10px;\n   min-width: 0;\n }\n \n .intro {\n   display: grid;\n-  gap: 10px;\n-  justify-items: start;\n+  grid-template-columns: minmax(0, 1fr) auto;\n+  align-items: end;\n+  gap: 10px 16px;\n }\n \n .backLink {\n+  grid-column: 1 / -1;\n   display: inline-flex;\n   align-items: center;\n   gap: 7px;\n@@ -97,9 +99,14 @@\n   gap: 8px 10px;\n }\n \n+@media (max-width: 600px) {\n+  .intro {\n+    grid-template-columns: minmax(0, 1fr);\n+  }\n+}\n+\n .source {\n   margin: 0;\n   color: var(--thorp-muted);\n   font-size: 0.8rem;\n }\n-\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.module.css",
+          "old_path": "frontend/src/pages/ResultPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -62,7 +62,7 @@ vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>T\n \n /**\n  * 결과 화면은 비로그인도 여는 공개 경로지만 실제 앱에서는 `main.tsx`의 `AuthProvider` 안에서 돈다. 006의\n- * '기록으로 내보내기'가 로그인 여부로 갈리므로(T045a) 테스트도 같은 자리에 둔다 — 비로그인이 기본이다.\n+ * 결과는 비로그인도 볼 수 있으므로 테스트는 비로그인이 기본이다.\n  */\n const anonymousAuth = {\n   user: null,\n@@ -83,7 +83,6 @@ function renderResult(token = resultToken) {\n       <AuthContext.Provider value={anonymousAuth}>\n       <Routes>\n         <Route path=\"/results/:token\" element={<ResultPage />} />\n-        <Route path=\"/strategy\" element={<h1>전략 설정 화면</h1>} />\n         <Route path=\"/diagnosis/sectors\" element={<h1>섹터 선택 화면</h1>} />\n       </Routes>\n       <LocationProbe />\n@@ -103,6 +102,28 @@ describe('ResultPage', () => {\n     vi.useRealTimers()\n   })\n \n+  it('비교 대상을 버튼 아래 팝오버로 열고 Escape로 닫으면 버튼에 초점이 돌아온다', async () => {\n+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+    const user = userEvent.setup()\n+    renderResult()\n+\n+    const trigger = await screen.findByRole('button', { name: '비교 대상 고르기' })\n+    await user.click(trigger)\n+\n+    const dialog = await screen.findByRole('dialog', { name: '비교 대상 고르기' })\n+    expect(dialog.parentElement?.parentElement).toBe(document.body)\n+    expect(dialog.getAttribute('data-side')).toBe('bottom')\n+    expect(document.querySelector('[class*=\"overlay_\"]')).toBeNull()\n+    expect(trigger.getAttribute('aria-expanded')).toBe('true')\n+    expect(within(dialog).getByRole('button', { name: '목록 닫기' })).not.toBeNull()\n+\n+    await user.keyboard('{Escape}')\n+    expect(screen.queryByRole('dialog', { name: '비교 대상 고르기' })).toBeNull()\n+    expect(trigger.getAttribute('aria-expanded')).toBe('false')\n+    expect(document.activeElement).toBe(trigger)\n+  })\n+\n   it('완료 결과는 상세·시계열·섹터 목록만 한 번씩 부르고 요약 탭에 네 요소를 보인다', async () => {\n     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n@@ -110,7 +131,13 @@ describe('ResultPage', () => {\n     renderResult()\n \n     expect(await screen.findByText(/비용을 뺀 뒤 전체 수익률은 16\\.67%/)).not.toBeNull()\n-    expect(screen.getByLabelText('분석 조건')).not.toBeNull()\n+    const condition = screen.getByLabelText('분석 조건')\n+    expect(within(screen.getByRole('tabpanel', { name: '요약' })).getByLabelText('분석 조건')).toBe(\n+      condition,\n+    )\n+    expect(screen.getByRole('region', { name: '결과 요약' }).contains(condition)).toBe(false)\n+    expect(within(screen.getByRole('tabpanel', { name: '요약' })).getByText(/이전 고점 회복까지 9거래일/)).not.toBeNull()\n+    expect(within(screen.getByRole('region', { name: '결과 요약' })).queryByText(/이전 고점 회복까지 9거래일/)).toBeNull()\n     expect(screen.getByText('16.67%')).not.toBeNull()\n     expect(screen.getByText('자료 출처: 한국거래소 통계정보')).not.toBeNull()\n \n@@ -128,6 +155,21 @@ describe('ResultPage', () => {\n     expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')\n   })\n \n+  it('핵심 숫자, 차트, 탭을 그 순서로 보여준다', async () => {\n+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n+\n+    renderResult()\n+\n+    const value = await screen.findByText('16.67%')\n+    const chart = screen.getByRole('img', { name: /자산가치 곡선/ })\n+    const tabs = screen.getByRole('tablist', { name: '결과 보기' })\n+    expect(value.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()\n+    expect(chart.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()\n+    const valuation = screen.getByText(/종료일 시가평가 기준 수익률은/)\n+    expect(tabs.compareDocumentPosition(valuation) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()\n+  })\n+\n   it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {\n     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n@@ -384,7 +426,8 @@ describe('ResultPage', () => {\n       const before = screen.getByLabelText('현재 주소').textContent\n \n       expect(summaryTab.getAttribute('aria-selected')).toBe('true')\n-      expect(within(screen.getByRole('tabpanel')).getByText('16.67%')).not.toBeNull()\n+      expect(screen.getByText('16.67%')).not.toBeNull()\n+      expect(within(screen.getByRole('tabpanel')).getByText(/비용을 뺀 뒤 전체 수익률은/)).not.toBeNull()\n       expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n \n       await user.click(screen.getByRole('tab', { name: '결과 분석' }))\n@@ -463,68 +506,10 @@ describe('ResultPage', () => {\n       )\n     })\n \n-    it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {\n-      const user = userEvent.setup()\n-      renderResult()\n-\n-      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))\n-\n-      expect(await screen.findByRole('heading', { name: '전략 설정 화면' })).not.toBeNull()\n-      expect(screen.getByLabelText('현재 주소').textContent).toBe('/strategy')\n-      expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(\n-        resultDetailCompleted.config.strategyId,\n-      )\n-    })\n-\n-    it('대응표가 다른 결과는 나머지 조건만 채워 두고 섹터·비중 단계 연결을 보인다', async () => {\n-      otherMocks.fetchSectorCatalog.mockResolvedValue({\n-        status: 'loaded',\n-        catalog: { ...resultSectorCatalog, mapVersion: 'SECTOR-ETF-TEST-2' },\n-      })\n-      const user = userEvent.setup()\n-      renderResult()\n-\n-      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))\n-\n-      const alert = await screen.findByRole('alert')\n-      expect(alert.textContent).toContain('섹터는 넘기지 않았습니다')\n-      expect(alert.textContent).toContain('섹터만 다시 골라 주세요')\n-      expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n-      // 섹터 선택은 건드리지 않고, 대응표와 무관한 조건은 설정 화면에 채워 둔다.\n-      expect(window.sessionStorage.getItem('thorp.diagnosis.sectorSelection')).toBeNull()\n-      expect(window.sessionStorage.getItem('thorp.strategySettings')).toContain(\n-        resultDetailCompleted.config.strategyId,\n-      )\n-\n-      await user.click(within(alert).getByRole('link', { name: '섹터·비중 단계로 가기' }))\n-      expect(await screen.findByRole('heading', { name: '섹터 선택 화면' })).not.toBeNull()\n-    })\n-\n-    it('다시 시도하면 풀릴 수 있는 실패에는 섹터·비중 단계 연결을 두지 않는다', async () => {\n-      otherMocks.fetchSectorCatalog.mockResolvedValue({\n-        status: 'failed',\n-        kind: 'network',\n-        code: null,\n-        message: '연결 실패',\n-        retryable: true,\n-      })\n-      const user = userEvent.setup()\n-      renderResult()\n-\n-      await user.click(await screen.findByRole('button', { name: '다른 조건으로 비교' }))\n-\n-      const alert = await screen.findByRole('alert')\n-      expect(alert.textContent).toContain('섹터 목록을 불러오지 못했습니다')\n-      expect(within(alert).queryByRole('link')).toBeNull()\n-    })\n-\n     it('주 모양 버튼은 비교 대상 고르기 하나고 나머지 보기는 탭이다 (착수 전에 알아둘 것 ⑧, T098)', async () => {\n       renderResult()\n       await screen.findByRole('tablist', { name: '결과 보기' })\n \n-      expect(screen.getByRole('button', { name: '다른 조건으로 비교' }).getAttribute('data-variant')).toBe(\n-        'outline',\n-      )\n       for (const name of [\n         '요약',\n         '결과 분석',\n@@ -554,7 +539,7 @@ describe('ResultPage', () => {\n       expect(screen.getByLabelText('분석 조건')).not.toBeNull()\n       expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n       expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()\n-      expect(screen.getByRole('button', { name: '다른 조건으로 비교' })).not.toBeNull()\n+      expect(screen.queryByRole('heading', { name: '다음 탐색' })).toBeNull()\n     })\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,11 @@\n import { useId, useMemo } from 'react'\n import { ArrowLeft } from 'lucide-react'\n+import { Popover } from 'radix-ui'\n import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'\n import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'\n+import comparisonStyles from '@/components/result/comparison.module.css'\n import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'\n import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'\n import { useCompareTarget } from '@/hooks/useCompareTarget'\n@@ -14,9 +16,8 @@ import { findDrawdownWindow } from '@/components/result/drawdownWindow'\n import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'\n import { hasDrawableEquity } from '@/components/result/equityPoints'\n import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'\n-import { NextStepLinks } from '@/components/result/NextStepLinks'\n import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'\n-import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'\n+import { ResultConditionLine, ResultSummaryCard, ResultValuationNote } from '@/components/result/ResultSummaryCard'\n import { ResultStatusLine } from '@/components/result/ResultStatusLine'\n import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'\n import { selectSummarySentence } from '@/components/result/summarySentences'\n@@ -30,15 +31,14 @@ import styles from './ResultPage.module.css'\n /**\n  * 결과 첫 화면(`/results/:token`, spec 005 US1).\n  *\n- * <p><b>바로 보이는 것은 네 가지뿐이다</b>: 조건 한 줄, 핵심 숫자 3개, 그래프 1개, 해석 요약 1문장\n- * (FR-001, SC-001). 상세는 요청해야 열리고, 내부 계산 항목을 나열하지 않는다(FR-020).\n+ * <p>첫 화면에는 핵심 숫자 3개와 그래프를 먼저 보인다(FR-001, SC-001). 조건과 해석은 그래프 아래\n+ * 기본 요약 탭에 두고, 내부 계산 항목은 나열하지 않는다(FR-020).\n  *\n  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).\n  *\n- * <p>화면은 제목·그래프·해석 요약 1문장·'비교 대상 고르기'·탭 묶음(`ResultDetailTabs`, T098) 순이다. 핵심 숫자와\n- * 상태 문장은 기본으로 열린 '요약' 탭 안에 있고 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양\n- * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지\n- * 않는다(SC-006).\n+ * <p>화면은 제목·핵심 숫자·그래프·탭 묶음(`ResultDetailTabs`, T098) 순이다.\n+ * 상태 문장과 해석은 기본으로 열린 '요약' 탭 안에 둔다. 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양\n+ * 버튼은 '비교 대상 고르기' 하나다. 비교 대상을 고르는 동안 주소는 바뀌지 않는다(SC-006).\n  *\n  * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.\n  */\n@@ -102,6 +102,13 @@ function ResultView({\n   const picker = useDisclosure(pickerId)\n   const pickerButtonId = pickerId + '-trigger'\n   const { summary } = detail\n+  const recoveryDays = summary?.analytics?.recoveryDays\n+  const recoverySentence =\n+    recoveryDays === null\n+      ? '분석 기간 내 이전 고점을 회복하지 못했습니다.'\n+      : typeof recoveryDays === 'number' && recoveryDays > 0\n+        ? `이전 고점 회복까지 ${recoveryDays}거래일이 걸렸습니다.`\n+        : null\n \n   const viewable = hasViewableResult(detail)\n   // 계산이 도는 동안에만 구독한다. 끝난 결과에 걸면 아무것도 오지 않는 연결이 남는다.\n@@ -116,11 +123,10 @@ function ResultView({\n     [summary, timeseries],\n   )\n \n-  // 요약 탭의 내용(핵심 숫자·상태 문장). 그래프와 해석 문장은 탭 위에 그대로 둔다. 볼 결과가 없으면 탭 없이 이것만 그린다.\n+  // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.\n   const summaryBlock = (\n     <div className={styles.summaryStack}>\n-      <ResultSummaryCard detail={detail} target={target} />\n-\n+      <ResultConditionLine detail={detail} target={target} />\n       <ResultStatusLine\n         detail={detail}\n         completedThrough={completedThrough}\n@@ -133,7 +139,29 @@ function ResultView({\n             : undefined\n         }\n       />\n-\n+      {summary ? (\n+        <p className={styles.sentence}>\n+          {selectSummarySentence({\n+            base: {\n+              name: strategyLabel(detail),\n+              netTotalReturn: summary.netTotalReturn,\n+              maxDrawdown: summary.maxDrawdown,\n+              totalTradingCost: summary.totalTradingCost,\n+            },\n+            target: target?.summary\n+              ? {\n+                  name: strategyLabel(target),\n+                  netTotalReturn: target.summary.netTotalReturn,\n+                  maxDrawdown: target.summary.maxDrawdown,\n+                  totalTradingCost: target.summary.totalTradingCost,\n+                }\n+              : null,\n+            partial: detail.partial ? { completedThrough } : null,\n+          })}\n+          {recoverySentence ? ` ${recoverySentence}` : null}\n+        </p>\n+      ) : null}\n+      <ResultValuationNote detail={detail} />\n     </div>\n   )\n \n@@ -152,6 +180,49 @@ function ResultView({\n         <h1 id=\"result-title\" className={styles.title}>\n           백테스트 결과\n         </h1>\n+        <div className={styles.actions}>\n+          <Popover.Root\n+            open={picker.open}\n+            onOpenChange={(open) => {\n+              if (!open) picker.close()\n+            }}\n+          >\n+            <Popover.Anchor asChild>\n+              <Button\n+                id={pickerButtonId}\n+                type=\"button\"\n+                disabled={!viewable || compare.targetState === 'REQUESTED'}\n+                {...picker.toggleProps}\n+              >\n+                비교 대상 고르기\n+              </Button>\n+            </Popover.Anchor>\n+            <Popover.Portal>\n+              <Popover.Content\n+                id={pickerId}\n+                className={comparisonStyles.popover}\n+                side=\"bottom\"\n+                align=\"end\"\n+                sideOffset={8}\n+                collisionPadding={16}\n+                aria-label=\"비교 대상 고르기\"\n+                onCloseAutoFocus={(event) => {\n+                  event.preventDefault()\n+                  document.getElementById(pickerButtonId)?.focus()\n+                }}\n+              >\n+                <CompareTargetPicker\n+                  base={detail}\n+                  onClose={picker.close}\n+                  onSelect={(choice) => {\n+                    picker.close()\n+                    compare.select(choice)\n+                  }}\n+                />\n+              </Popover.Content>\n+            </Popover.Portal>\n+          </Popover.Root>\n+        </div>\n       </header>\n       {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}\n       {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}\n@@ -162,67 +233,6 @@ function ResultView({\n         </p>\n       ) : null}\n \n-\n-    <ResultChartSlot\n-        detail={detail}\n-        timeseries={timeseries}\n-        progressPoints={progressSeries.points}\n-        target={\n-          target && compare.timeseries.status === 'loaded'\n-            ? {\n-                name: strategyLabel(target),\n-                points: compare.timeseries.data.points,\n-                maxDrawdown: target.summary?.maxDrawdown ?? null,\n-              }\n-            : null\n-        }\n-      />\n-\n-      {summary ? (\n-        <p className={styles.sentence}>\n-          {selectSummarySentence({\n-            base: {\n-              name: strategyLabel(detail),\n-              netTotalReturn: summary.netTotalReturn,\n-              maxDrawdown: summary.maxDrawdown,\n-              totalTradingCost: summary.totalTradingCost,\n-            },\n-            target: target?.summary\n-              ? {\n-                  name: strategyLabel(target),\n-                  netTotalReturn: target.summary.netTotalReturn,\n-                  maxDrawdown: target.summary.maxDrawdown,\n-                  totalTradingCost: target.summary.totalTradingCost,\n-                }\n-              : null,\n-            partial: detail.partial ? { completedThrough } : null,\n-          })}\n-        </p>\n-      ) : null}\n-\n-      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 나머지 보기는 아래 탭에 있다. */}\n-      <div className={styles.actions}>\n-        <Button\n-          id={pickerButtonId}\n-          type=\"button\"\n-          disabled={!viewable || compare.targetState === 'REQUESTED'}\n-          {...picker.toggleProps}\n-        >\n-          비교 대상 고르기\n-        </Button>\n-      </div>\n-      {picker.open ? (\n-        <div id={pickerId}>\n-          <CompareTargetPicker\n-            base={detail}\n-            onClose={picker.close}\n-            onSelect={(choice) => {\n-              picker.close()\n-              compare.select(choice)\n-            }}\n-          />\n-        </div>\n-      ) : null}\n       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />\n       <CompareTargetSlot\n         state={compare}\n@@ -259,6 +269,21 @@ function ResultView({\n           onCancel={compare.cancelPeriod}\n         />\n       ) : null}\n+      <ResultSummaryCard detail={detail} />\n+      <ResultChartSlot\n+        detail={detail}\n+        timeseries={timeseries}\n+        progressPoints={progressSeries.points}\n+        target={\n+          target && compare.timeseries.status === 'loaded'\n+            ? {\n+                name: strategyLabel(target),\n+                points: compare.timeseries.data.points,\n+                maxDrawdown: target.summary?.maxDrawdown ?? null,\n+              }\n+            : null\n+        }\n+      />\n       {viewable ? (\n         <ResultDetailTabs\n           token={token}\n@@ -278,13 +303,6 @@ function ResultView({\n       ) : (\n         summaryBlock\n       )}\n-      <NextStepLinks\n-        config={detail.config}\n-        token={token}\n-        compareToken={compare.compareToken}\n-        compareReady={compare.targetState === 'READY'}\n-      />\n-\n       <p className={styles.source}>자료 출처: 한국거래소 통계정보</p>\n     </article>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,8 +39,7 @@ export function authError(\n /**\n  * 비로그인 상태의 인증 컨텍스트.\n  *\n- * <p>결과 화면(005)은 공개 토큰으로 여는 경로라 인증을 몰랐지만, 006의 '기록으로 내보내기'가 로그인 여부로 갈리면서\n- * `useAuth`를 지난다(T045a). 실제 앱은 `main.tsx`의 `AuthProvider` 안에서 도므로 테스트도 같은 자리에 둔다 —\n+ * <p>실제 앱은 `main.tsx`의 `AuthProvider` 안에서 도므로 테스트도 같은 자리에 둔다 —\n  * Provider 없이 렌더하면 `useAuth`가 던진다.\n  */\n export const anonymousAuthContext = {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/authFixtures.ts",
+          "old_path": "frontend/src/test/authFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2246283,
+      "head_commit_sha": "8c87a718387bf539dcacb70d125615ece4575d97",
+      "base_commit_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "start_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "created_at": "2026-09-23T16:26:28.173+09:00",
+      "merge_request_id": 958672,
+      "state": "without_files",
+      "real_size": "31",
+      "patch_id_sha": "5c286a681f3a134da788a287c6838d719b0aba28",
+      "commits": [
+        {
+          "id": "8c87a718387bf539dcacb70d125615ece4575d97",
+          "short_id": "8c87a718",
+          "created_at": "2026-09-23T16:15:29.000+09:00",
+          "parent_ids": [
+            "a90a575666e776ba88dd520ca6a50333469050e1"
+          ],
+          "title": "style(fe): 결과 지표 제목 확대와 왼쪽 정렬",
+          "message": "style(fe): 결과 지표 제목 확대와 왼쪽 정렬\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:15:29.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:15:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c87a718387bf539dcacb70d125615ece4575d97"
+        },
+        {
+          "id": "a90a575666e776ba88dd520ca6a50333469050e1",
+          "short_id": "a90a5756",
+          "created_at": "2026-09-23T16:11:34.000+09:00",
+          "parent_ids": [
+            "ebde3a169a4454d0ae1e0bceff3291ef083f4213"
+          ],
+          "title": "style(fe): 긴 결과 탭 높이 제한과 거래 목록 축소",
+          "message": "style(fe): 긴 결과 탭 높이 제한과 거래 목록 축소\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:11:34.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:11:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a90a575666e776ba88dd520ca6a50333469050e1"
+        },
+        {
+          "id": "ebde3a169a4454d0ae1e0bceff3291ef083f4213",
+          "short_id": "ebde3a16",
+          "created_at": "2026-09-23T16:01:11.000+09:00",
+          "parent_ids": [
+            "b33be17c31b5f3e48ff369c30a86a5eb7d8f6a42"
+          ],
+          "title": "style(fe): 결과 요약 영역 상하 여백 축소",
+          "message": "style(fe): 결과 요약 영역 상하 여백 축소\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:01:11.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:01:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ebde3a169a4454d0ae1e0bceff3291ef083f4213"
+        },
+        {
+          "id": "b33be17c31b5f3e48ff369c30a86a5eb7d8f6a42",
+          "short_id": "b33be17c",
+          "created_at": "2026-09-23T15:58:51.000+09:00",
+          "parent_ids": [
+            "08bfce3c2a514368c9275e93cc05426be853532b"
+          ],
+          "title": "style(fe): 결과 요약 카드 배경과 테두리 제거",
+          "message": "style(fe): 결과 요약 카드 배경과 테두리 제거\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:58:51.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:58:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b33be17c31b5f3e48ff369c30a86a5eb7d8f6a42"
+        },
+        {
+          "id": "08bfce3c2a514368c9275e93cc05426be853532b",
+          "short_id": "08bfce3c",
+          "created_at": "2026-09-23T15:30:26.000+09:00",
+          "parent_ids": [
+            "1eb267e88f6633b21c784e03d9c7cdfd25b2457d"
+          ],
+          "title": "refactor(fe): remove redundant result next steps",
+          "message": "refactor(fe): remove redundant result next steps\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:30:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:30:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/08bfce3c2a514368c9275e93cc05426be853532b"
+        },
+        {
+          "id": "1eb267e88f6633b21c784e03d9c7cdfd25b2457d",
+          "short_id": "1eb267e8",
+          "created_at": "2026-09-23T15:23:21.000+09:00",
+          "parent_ids": [
+            "f9b57df0eafcbd49dfd62a15f2fd6dded0c7101c"
+          ],
+          "title": "fix(fe): move recovery period into result summary tab",
+          "message": "fix(fe): move recovery period into result summary tab\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:23:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:23:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1eb267e88f6633b21c784e03d9c7cdfd25b2457d"
+        },
+        {
+          "id": "f9b57df0eafcbd49dfd62a15f2fd6dded0c7101c",
+          "short_id": "f9b57df0",
+          "created_at": "2026-09-23T15:10:10.000+09:00",
+          "parent_ids": [
+            "6c34998f7693b4a1fbbb2ff6ff13cb5b9cff4df7"
+          ],
+          "title": "feat(fe): arrange summary metrics in three left-aligned columns",
+          "message": "feat(fe): arrange summary metrics in three left-aligned columns\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:10:10.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:10:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f9b57df0eafcbd49dfd62a15f2fd6dded0c7101c"
+        },
+        {
+          "id": "6c34998f7693b4a1fbbb2ff6ff13cb5b9cff4df7",
+          "short_id": "6c34998f",
+          "created_at": "2026-09-23T15:06:31.000+09:00",
+          "parent_ids": [
+            "ba600b328b4c2964bb0117f9186cec6e89417d1e"
+          ],
+          "title": "fix(fe): center summary metrics within result card",
+          "message": "fix(fe): center summary metrics within result card\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:06:31.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:06:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6c34998f7693b4a1fbbb2ff6ff13cb5b9cff4df7"
+        },
+        {
+          "id": "ba600b328b4c2964bb0117f9186cec6e89417d1e",
+          "short_id": "ba600b32",
+          "created_at": "2026-09-23T15:01:18.000+09:00",
+          "parent_ids": [
+            "88095882896972fbc0206e858fd451edd4dc69ba"
+          ],
+          "title": "fix(fe): center result summary metrics and contain return tooltip",
+          "message": "fix(fe): center result summary metrics and contain return tooltip\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T15:01:18.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T15:01:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ba600b328b4c2964bb0117f9186cec6e89417d1e"
+        },
+        {
+          "id": "88095882896972fbc0206e858fd451edd4dc69ba",
+          "short_id": "88095882",
+          "created_at": "2026-09-23T14:53:36.000+09:00",
+          "parent_ids": [
+            "14ca8704f6c5e0e91e2b725ac1e2a1631cbc2978"
+          ],
+          "title": "fix(fe): 결과 지표 도움말을 화면 안에 배치",
+          "message": "fix(fe): 결과 지표 도움말을 화면 안에 배치\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:53:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:53:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/88095882896972fbc0206e858fd451edd4dc69ba"
+        },
+        {
+          "id": "14ca8704f6c5e0e91e2b725ac1e2a1631cbc2978",
+          "short_id": "14ca8704",
+          "created_at": "2026-09-23T14:47:33.000+09:00",
+          "parent_ids": [
+            "3609aec0650aad24ad76fd7eb47e9c571bd8650f"
+          ],
+          "title": "style(fe): 결과 요약 지표 이름 간결화",
+          "message": "style(fe): 결과 요약 지표 이름 간결화\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:47:33.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:47:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14ca8704f6c5e0e91e2b725ac1e2a1631cbc2978"
+        },
+        {
+          "id": "3609aec0650aad24ad76fd7eb47e9c571bd8650f",
+          "short_id": "3609aec0",
+          "created_at": "2026-09-23T14:40:14.000+09:00",
+          "parent_ids": [
+            "a876fffd407fa2572ae94a27d2734443859571fe"
+          ],
+          "title": "style(fe): 분석 조건을 요약 탭으로 이동하고 차트 확대",
+          "message": "style(fe): 분석 조건을 요약 탭으로 이동하고 차트 확대\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:40:14.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:40:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3609aec0650aad24ad76fd7eb47e9c571bd8650f"
+        },
+        {
+          "id": "a876fffd407fa2572ae94a27d2734443859571fe",
+          "short_id": "a876fffd",
+          "created_at": "2026-09-23T14:29:16.000+09:00",
+          "parent_ids": [
+            "9b87b8e737ad8b8c895c8dd5d111923abdf1fa88"
+          ],
+          "title": "style(fe): 결과 요약을 줄이고 자산가치 그래프 확대",
+          "message": "style(fe): 결과 요약을 줄이고 자산가치 그래프 확대\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:29:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:29:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a876fffd407fa2572ae94a27d2734443859571fe"
+        },
+        {
+          "id": "9b87b8e737ad8b8c895c8dd5d111923abdf1fa88",
+          "short_id": "9b87b8e7",
+          "created_at": "2026-09-23T14:15:36.000+09:00",
+          "parent_ids": [
+            "e98dc48a7dcdd7ce79db9bae7bf389438a86f7a4"
+          ],
+          "title": "feat(fe): 비교 대상 목록을 버튼 아래 팝오버로 변경",
+          "message": "feat(fe): 비교 대상 목록을 버튼 아래 팝오버로 변경\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T14:15:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T14:15:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9b87b8e737ad8b8c895c8dd5d111923abdf1fa88"
+        },
+        {
+          "id": "e98dc48a7dcdd7ce79db9bae7bf389438a86f7a4",
+          "short_id": "e98dc48a",
+          "created_at": "2026-09-23T13:45:19.000+09:00",
+          "parent_ids": [
+            "1a00ac50ecdf004ae07046e9ab3230819918b7ba"
+          ],
+          "title": "feat(fe): 결과 첫 화면 높이와 비교 오버레이 개선",
+          "message": "feat(fe): 결과 첫 화면 높이와 비교 오버레이 개선\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T13:45:19.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T13:45:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e98dc48a7dcdd7ce79db9bae7bf389438a86f7a4"
+        },
+        {
+          "id": "1a00ac50ecdf004ae07046e9ab3230819918b7ba",
+          "short_id": "1a00ac50",
+          "created_at": "2026-09-23T13:36:16.000+09:00",
+          "parent_ids": [
+            "921f92f8f1a40e86d9c186a851007f9e03cfe5bf"
+          ],
+          "title": "feat(fe): 백테스트 결과 화면 정보 순서 개선",
+          "message": "feat(fe): 백테스트 결과 화면 정보 순서 개선\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T13:36:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T13:36:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a00ac50ecdf004ae07046e9ab3230819918b7ba"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-23T16:40:27.718+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2863656": []
+  }
+}

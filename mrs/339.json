@@ -1,0 +1,693 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 961151,
+    "iid": 339,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 지표를 한 상자에 담고 탭·펼침·투자 대상 머리를 읽기 쉽게 정리한다",
+    "description": "## 작업 내용 요약\n\n결과 화면의 핵심 지표를 한 상자로 묶고, 탭·전략 설정 펼침·투자 대상 머리를 읽기 쉽게 정리합니다. 제목과 본문이 같은 색·크기라 구분되지 않던 문제를 고칩니다.\n\n## 관련 티켓\n\nS15P21E205-451\n\n## 주요 변경 사항\n\n- 결과 지표: 수익률·MDD·거래 수수료를 한 상자에 담고, 칸 사이를 세로줄로 나눕니다.\n- 자산가치 그래프: 아래 여백을 44px에서 58px로 늘려 연·월 눈금이 최대 하락 음영(노란 구간)과 붙지 않게 합니다.\n- 결과 탭\n  - 고른 탭은 글자도 강조색(초록)으로 바뀝니다.\n  - 요약 탭도 다른 탭처럼 상자에 담습니다.\n  - 탭 안 항목은 하나씩 상자로 나눕니다.\n- 가독성\n  - 요약 탭에 '분석 조건'·'결과 해석' 작은 제목을 둡니다.\n  - 항목 제목은 밝은 글자·한 단계 큰 크기로, 본문은 회색으로 둡니다.\n- 분석 조건·전략 설정 펼침\n  - 버튼 모양(테두리·배경)으로 바꿉니다.\n  - 접혀 있을 때 '← 직접 선택해보세요'를 붙입니다. 이 문구는 버튼 이름(접근성 이름)에 넣지 않습니다.\n- 투자 대상 고르기: 안내 문장을 시장 흐름 화면처럼 오른쪽 인용 모양으로 둡니다. 800px 이하에서는 한 칸으로 쌓습니다.\n- 모든 변경은 새 디자인에만 적용하고 classic은 그대로 둡니다.\n\n## 테스트\n\n- npm run lint: 오류 0\n- npm run build: 통과\n- npm test: 153 files / 1449 tests 통과, skipped 0\n- 브라우저(1280px)로 결과(요약·결과 분석 탭), 전략 설정, 투자 대상 화면을 확인했습니다.\n\n## 리뷰 포인트\n\n- 탭 패널 안에 항목 상자를 한 번 더 두는 구성이 과하지 않은지\n- '← 직접 선택해보세요'의 화살표 방향과 문구\n- 결과 지표 상자의 세로줄이 600px 이하 두 칸 배치에서도 자연스러운지",
+    "state": "merged",
+    "created_at": "2026-09-27T17:53:53.619+09:00",
+    "updated_at": "2026-09-27T17:58:55.091+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-27T17:58:55.111+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/451-result-ui-readability",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+    "merge_commit_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-27T17:53:57.369+09:00",
+    "reference": "!339",
+    "references": {
+      "short": "!339",
+      "relative": "!339",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!339"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/339",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 961151,
+    "iid": 339,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 지표를 한 상자에 담고 탭·펼침·투자 대상 머리를 읽기 쉽게 정리한다",
+    "description": "## 작업 내용 요약\n\n결과 화면의 핵심 지표를 한 상자로 묶고, 탭·전략 설정 펼침·투자 대상 머리를 읽기 쉽게 정리합니다. 제목과 본문이 같은 색·크기라 구분되지 않던 문제를 고칩니다.\n\n## 관련 티켓\n\nS15P21E205-451\n\n## 주요 변경 사항\n\n- 결과 지표: 수익률·MDD·거래 수수료를 한 상자에 담고, 칸 사이를 세로줄로 나눕니다.\n- 자산가치 그래프: 아래 여백을 44px에서 58px로 늘려 연·월 눈금이 최대 하락 음영(노란 구간)과 붙지 않게 합니다.\n- 결과 탭\n  - 고른 탭은 글자도 강조색(초록)으로 바뀝니다.\n  - 요약 탭도 다른 탭처럼 상자에 담습니다.\n  - 탭 안 항목은 하나씩 상자로 나눕니다.\n- 가독성\n  - 요약 탭에 '분석 조건'·'결과 해석' 작은 제목을 둡니다.\n  - 항목 제목은 밝은 글자·한 단계 큰 크기로, 본문은 회색으로 둡니다.\n- 분석 조건·전략 설정 펼침\n  - 버튼 모양(테두리·배경)으로 바꿉니다.\n  - 접혀 있을 때 '← 직접 선택해보세요'를 붙입니다. 이 문구는 버튼 이름(접근성 이름)에 넣지 않습니다.\n- 투자 대상 고르기: 안내 문장을 시장 흐름 화면처럼 오른쪽 인용 모양으로 둡니다. 800px 이하에서는 한 칸으로 쌓습니다.\n- 모든 변경은 새 디자인에만 적용하고 classic은 그대로 둡니다.\n\n## 테스트\n\n- npm run lint: 오류 0\n- npm run build: 통과\n- npm test: 153 files / 1449 tests 통과, skipped 0\n- 브라우저(1280px)로 결과(요약·결과 분석 탭), 전략 설정, 투자 대상 화면을 확인했습니다.\n\n## 리뷰 포인트\n\n- 탭 패널 안에 항목 상자를 한 번 더 두는 구성이 과하지 않은지\n- '← 직접 선택해보세요'의 화살표 방향과 문구\n- 결과 지표 상자의 세로줄이 600px 이하 두 칸 배치에서도 자연스러운지",
+    "state": "merged",
+    "created_at": "2026-09-27T17:53:53.619+09:00",
+    "updated_at": "2026-09-27T17:58:55.091+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-27T17:58:55.111+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/451-result-ui-readability",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+    "merge_commit_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-27T17:53:57.369+09:00",
+    "reference": "!339",
+    "references": {
+      "short": "!339",
+      "relative": "!339",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!339"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/339",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "12",
+    "latest_build_started_at": "2026-09-27T17:54:06.274+09:00",
+    "latest_build_finished_at": "2026-09-27T17:58:54.303+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 225311,
+      "iid": 369,
+      "project_id": 1444456,
+      "sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+      "ref": "feat(fe)/451-result-ui-readability",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-27T17:54:06.134+09:00",
+      "updated_at": "2026-09-27T17:58:54.310+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225311"
+    },
+    "head_pipeline": {
+      "id": 225311,
+      "iid": 369,
+      "project_id": 1444456,
+      "sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+      "ref": "feat(fe)/451-result-ui-readability",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-27T17:54:06.134+09:00",
+      "updated_at": "2026-09-27T17:58:54.310+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225311",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-27T17:54:06.274+09:00",
+      "finished_at": "2026-09-27T17:58:54.303+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225311",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+      "head_sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+      "start_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "cfee866884cadb1199df8e866a0c6c996bd077ef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874513,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-27T17:53:53.741+09:00",
+          "updated_at": "2026-09-27T17:53:53.752+09:00",
+          "system": true,
+          "noteable_id": 961151,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 339,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c02b06281eea0868ee5e0f9b7a0e8eb7d4fe7253",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874514,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 접근성 고려**: `AnalysisConditionsPanel.tsx` 및 `DetailSettingsPanel.tsx`에서 시각적 힌트(`직접 선택해보세요`)에 `aria-hidden=\"true\"`를 적용하여 스크린 리더 사용 시 불필요한 중복 읽기를 방지하고 버튼의 원래 접근성 이름을 유지한 설계가 돋보입니다.\n- **반응형 디자인 대응**: 미디어 쿼리를 적극 활용하여 뷰포트 크기 변화(예: 600px 이하의 결과 지표 세로줄 정렬, 800px 이하의 투자 대상 헤더 레이아웃 전환)에 유연하게 대처하도록 잘 구현되었습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (CSS 스타일링, 반응형 레이아웃 및 UI 가독성 개선 작업으로 코드 구조상 치명적인 버그나 보안 취약점은 식별되지 않았습니다.)\n\n### 테스트 제안\n- **반응형 레이아웃 테스트 (600px / 800px)**:\n  - 600px 이하 화면에서 결과 지표 상자의 세로줄(`border-left`)과 패딩이 올바르게 재배치되는지 확인합니다.\n  - 800px 이하 화면에서 '투자 대상 고르기' 화면의 헤더가 2단 그리드에서 1단 세로 쌓기로 전환되고 인용 선이 제거되는지 확인합니다.\n- **다이내믹 디자인 토글 테스트**:\n  - `data-design` 속성이 `classic`일 때와 아닐 때(새 디자인) 결과 탭, 요약 카드, 펼침 버튼 등의 스타일이 기획 의도대로 분기되어 적용되는지 확인합니다.\n- **접근성(스크린 리더) 테스트**:\n  - 접혀 있는 전략 설정 및 분석 조건 버튼을 스크린 리더로 포커스했을 때, `직접 선택해보세요` 텍스트가 읽히지 않고 버튼 이름만 정확히 읽히는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d1582ef09e44541cf3a2b0b0a2e033e88f974d9a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-27T17:54:05.978+09:00",
+          "updated_at": "2026-09-27T17:54:05.978+09:00",
+          "system": false,
+          "noteable_id": 961151,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 339,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b656d9f411a1b2cd9501e88c633f6c3ff519e658",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874515,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for d1582ef09e44541cf3a2b0b0a2e033e88f974d9a pass",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-27T17:56:01.699+09:00",
+          "updated_at": "2026-09-27T17:56:01.703+09:00",
+          "system": true,
+          "noteable_id": 961151,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 339,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9dac7aef5bf224efd16de641defcf0d5c7386be0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874529,
+          "type": null,
+          "body": "mentioned in commit d1803ceac361606e26ced773cba8683e3b714f1b",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-27T17:58:55.166+09:00",
+          "updated_at": "2026-09-27T17:58:55.172+09:00",
+          "system": true,
+          "noteable_id": 961151,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 339,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5ee14c7634e8d40a7168d8ff6c89e67c75ffc682",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885035,
+          "type": null,
+          "body": "mentioned in commit f15cf29d5b66779b63e428357faa85fe1850e979",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:10.113+09:00",
+          "updated_at": "2026-10-13T15:16:10.138+09:00",
+          "system": true,
+          "noteable_id": 961151,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 339,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2255426,
+      "head_commit_sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+      "base_commit_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+      "start_commit_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+      "created_at": "2026-09-27T17:53:53.942+09:00",
+      "merge_request_id": 961151,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "bf29c21d5441b2123b2ea65b5a0946da2a3ed13c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2255426,
+      "head_commit_sha": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+      "base_commit_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+      "start_commit_sha": "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39",
+      "created_at": "2026-09-27T17:53:53.942+09:00",
+      "merge_request_id": 961151,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "bf29c21d5441b2123b2ea65b5a0946da2a3ed13c",
+      "commits": [
+        {
+          "id": "d1582ef09e44541cf3a2b0b0a2e033e88f974d9a",
+          "short_id": "d1582ef0",
+          "created_at": "2026-09-27T17:42:29.000+09:00",
+          "parent_ids": [
+            "70d6d4ea269167de9270da5ebf2a8bdb5f48bb39"
+          ],
+          "title": "feat(fe): 결과 지표를 한 상자에 담고 탭·펼침·투자 대상 머리를 읽기 쉽게 정리한다",
+          "message": "feat(fe): 결과 지표를 한 상자에 담고 탭·펼침·투자 대상 머리를 읽기 쉽게 정리한다\n\n- 결과 화면의 수익률·MDD·거래 수수료를 한 상자에 담고 칸을 세로줄로 나눈다\n- 자산가치 그래프 아래 여백을 늘려 연·월 눈금이 최대 하락 음영과 붙지 않게 한다\n- 고른 탭 글자를 강조색으로, 요약 탭도 상자에 담고 탭 안 항목을 하나씩 상자로 나눈다\n- 요약 탭에 '분석 조건'·'결과 해석' 작은 제목을 두고 항목 제목을 밝은 글자·한 단계 큰 크기로 본문과 가른다\n- 분석 조건·전략 설정 펼침을 버튼 모양으로 두고 접혀 있을 때 '직접 선택해보세요'를 붙인다\n- 투자 대상 고르기 안내 문장을 시장 흐름 화면처럼 오른쪽 인용 모양으로 둔다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "EUNSEO-YA",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-27T17:42:29.000+09:00",
+          "committer_name": "EUNSEO-YA",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-27T17:42:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d1582ef09e44541cf3a2b0b0a2e033e88f974d9a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -380,7 +380,8 @@ export function EquityChart(props: EquityChartProps) {\n     () => (zoomed ? allRows.slice(view[0], view[1] + 1) : allRows),\n     [allRows, view, zoomed],\n   )\n-  const margin = { top: 18, right: compact ? 18 : 88, bottom: 44, left: compact ? 55 : 58 }\n+  // 아래 여백은 두 줄(연·월) 눈금 글자가 최대 하락 음영과 붙지 않게 한 칸 띄운다(S15P21E205-451).\n+  const margin = { top: 18, right: compact ? 18 : 88, bottom: 58, left: compact ? 55 : 58 }\n   const chartRef = useRef<HTMLDivElement>(null)\n   const [dragging, setDragging] = useState(false)\n   // 휠·끌기 처리기는 한 번만 붙인다. 처리기가 읽는 값은 여기에 담아 늘 최신으로 둔다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,6 +71,33 @@\n   font-weight: var(--thorp-number-weight, 400);\n }\n \n+/*\n+  디자인 개편: 세 지표를 한 상자에 담고 칸 사이를 세로줄로 나눈다(S15P21E205-451). classic은 예전처럼 상자 없이 둔다.\n+*/\n+:global(:root:not([data-design='classic'])) .card {\n+  padding: var(--thorp-pad-card, 20px 24px);\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-card, 12px);\n+  background: var(--thorp-surface);\n+}\n+\n+:global(:root:not([data-design='classic'])) .metric + .metric {\n+  padding-left: 32px;\n+  border-left: 1px solid var(--thorp-line);\n+}\n+\n+@media (max-width: 600px) {\n+  :global(:root:not([data-design='classic'])) .metric + .metric {\n+    padding-left: 0;\n+    border-left: 0;\n+  }\n+\n+  :global(:root:not([data-design='classic'])) .metric:nth-child(2) {\n+    padding-left: 16px;\n+    border-left: 1px solid var(--thorp-line);\n+  }\n+}\n+\n /* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */\n :global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }\n :global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -313,3 +313,32 @@\n     padding: var(--thorp-pad-card, 18px 16px);\n   }\n }\n+\n+/*\n+  디자인 개편(S15P21E205-451): 탭 안의 항목을 하나씩 상자에 담고, 제목은 밝은 글자·한 단계 큰 크기로 본문(회색)과\n+  가른다. 제목과 본문이 같은 색·크기라 무엇이 제목인지 읽히지 않았다.\n+*/\n+:global(:root:not([data-design='classic'])) .grid > .item,\n+:global(:root:not([data-design='classic'])) .stack > .item {\n+  gap: 8px;\n+  padding: 16px 18px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-control, 10px);\n+  background: var(--thorp-surface-raised, var(--thorp-surface));\n+}\n+\n+:global(:root:not([data-design='classic'])) .itemTitle {\n+  color: var(--thorp-foreground);\n+  font-size: var(--thorp-text-heading, 1.05rem);\n+  font-weight: 700;\n+  letter-spacing: -0.01em;\n+}\n+\n+:global(:root:not([data-design='classic'])) .subTitle {\n+  color: var(--thorp-foreground);\n+}\n+\n+:global(:root:not([data-design='classic'])) .value {\n+  color: var(--thorp-foreground);\n+  font-size: 1.25rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/resultDetail.module.css",
+          "old_path": "frontend/src/components/result/resultDetail.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -97,3 +97,18 @@\n     overflow-y: visible;\n   }\n }\n+\n+/*\n+  디자인 개편(S15P21E205-451): 고른 탭은 밑줄뿐 아니라 글자도 강조색이다. 요약 탭도 다른 탭처럼 상자에 담는다 —\n+  상자 밖에 문장만 떠 있으면 위 지표 상자와 다른 층으로 읽혔다.\n+*/\n+:global(:root:not([data-design='classic'])) .tab[aria-selected='true'] {\n+  color: var(--thorp-accent);\n+  font-weight: 700;\n+}\n+\n+:global(:root:not([data-design='classic'])) .panel[data-tab-id='summary'] {\n+  padding: var(--thorp-pad-card, 20px 24px);\n+  border: 1px solid var(--thorp-line);\n+  background: var(--thorp-surface);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/resultTabs.module.css",
+          "old_path": "frontend/src/components/result/resultTabs.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,3 +76,52 @@\n     transition: none;\n   }\n }\n+\n+/*\n+  디자인 개편(S15P21E205-451): 펼침 줄을 버튼 모양으로 둔다. 글자와 화살표만 있으면 눌러서 여는 자리로\n+  읽히지 않았다. 접혀 있을 때는 '직접 선택해보세요'를 붙인다.\n+*/\n+.toggleEnd {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 8px;\n+  flex: none;\n+}\n+\n+.toggleHint {\n+  display: none;\n+}\n+\n+:global(:root:not([data-design='classic'])) .panel {\n+  padding-top: 0;\n+  border-top: 0;\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggle {\n+  padding: var(--thorp-control-pad-block, 10px) 14px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 6px);\n+  background: var(--thorp-surface-raised, var(--thorp-surface));\n+  color: var(--thorp-foreground);\n+  transition: border-color 0.16s ease, background 0.16s ease;\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggle:hover {\n+  border-color: var(--thorp-accent);\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggle[aria-expanded='true'] {\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent-muted, var(--thorp-surface-raised));\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggleHint {\n+  display: inline;\n+  color: var(--thorp-accent-soft, var(--thorp-accent));\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  font-weight: 600;\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggleHint::before {\n+  content: '← ';\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.module.css",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -398,12 +398,20 @@ export function AnalysisConditionsPanel({\n         onClick={() => setOpen((current) => !current)}\n       >\n         <span>분석 조건</span>\n-        <ChevronDown\n-          className={styles.toggleIcon}\n-          size={16}\n-          strokeWidth={1.8}\n-          aria-hidden=\"true\"\n-        />\n+        <span className={styles.toggleEnd}>\n+          {/* 접혀 있을 때만 여는 자리임을 알린다(S15P21E205-451). 버튼 이름에는 넣지 않는다. */}\n+          {open ? null : (\n+            <span className={styles.toggleHint} aria-hidden=\"true\">\n+              직접 선택해보세요\n+            </span>\n+          )}\n+          <ChevronDown\n+            className={styles.toggleIcon}\n+            size={16}\n+            strokeWidth={1.8}\n+            aria-hidden=\"true\"\n+          />\n+        </span>\n       </button>\n       {summary}\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -272,3 +272,52 @@\n   margin: 0;\n   padding-left: 18px;\n }\n+\n+/*\n+  디자인 개편(S15P21E205-451): 펼침 줄을 버튼 모양으로 둔다. 글자와 화살표만 있으면 눌러서 여는 자리로\n+  읽히지 않았다. 접혀 있을 때는 '직접 선택해보세요'를 붙인다.\n+*/\n+.toggleEnd {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 8px;\n+  flex: none;\n+}\n+\n+.toggleHint {\n+  display: none;\n+}\n+\n+:global(:root:not([data-design='classic'])) .panel {\n+  padding-top: 0;\n+  border-top: 0;\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggle {\n+  padding: var(--thorp-control-pad-block, 10px) 14px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 6px);\n+  background: var(--thorp-surface-raised, var(--thorp-surface));\n+  color: var(--thorp-foreground);\n+  transition: border-color 0.16s ease, background 0.16s ease;\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggle:hover {\n+  border-color: var(--thorp-accent);\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggle[aria-expanded='true'] {\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent-muted, var(--thorp-surface-raised));\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggleHint {\n+  display: inline;\n+  color: var(--thorp-accent-soft, var(--thorp-accent));\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  font-weight: 600;\n+}\n+\n+:global(:root:not([data-design='classic'])) .toggleHint::before {\n+  content: '← ';\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.module.css",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -112,12 +112,20 @@ export function DetailSettingsPanel({\n         onClick={() => setOpen((current) => !current)}\n       >\n         <span>전략 설정</span>\n-        <ChevronDown\n-          className={styles.toggleIcon}\n-          size={16}\n-          strokeWidth={1.8}\n-          aria-hidden=\"true\"\n-        />\n+        <span className={styles.toggleEnd}>\n+          {/* 접혀 있을 때만 여는 자리임을 알린다(S15P21E205-451). 버튼 이름에는 넣지 않는다. */}\n+          {open ? null : (\n+            <span className={styles.toggleHint} aria-hidden=\"true\">\n+              직접 선택해보세요\n+            </span>\n+          )}\n+          <ChevronDown\n+            className={styles.toggleIcon}\n+            size={16}\n+            strokeWidth={1.8}\n+            aria-hidden=\"true\"\n+          />\n+        </span>\n       </button>\n \n       {open ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,6 +20,24 @@\n   min-width: 0;\n }\n \n+/*\n+  요약 탭의 작은 제목(S15P21E205-451). 조건 줄과 해석 문장이 같은 흰 글자로 이어져 어디서 무엇이 시작하는지\n+  읽히지 않았다. 강조색 작은 제목으로 두 묶음을 가르고, 제목 바로 아래 내용은 붙여 둔다.\n+*/\n+.summaryLabel {\n+  margin: 0 0 -12px;\n+  color: var(--thorp-accent-soft, var(--thorp-copy));\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  font-weight: 700;\n+  letter-spacing: 0.02em;\n+}\n+\n+.summaryLabel:not(:first-child) {\n+  margin-top: 4px;\n+  padding-top: 18px;\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n /* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */\n .result {\n   display: flex;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.module.css",
+          "old_path": "frontend/src/pages/ResultPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -165,6 +165,7 @@ function ResultView({\n   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.\n   const summaryBlock = (\n     <div className={styles.summaryStack}>\n+      <h3 className={styles.summaryLabel}>분석 조건</h3>\n       <ResultConditionLine\n         detail={detail}\n         targets={drawn.map((target) => ({ detail: target.compatible!, name: names.get(target.key)! }))}\n@@ -181,6 +182,7 @@ function ResultView({\n             : undefined\n         }\n       />\n+      {summary ? <h3 className={styles.summaryLabel}>결과 해석</h3> : null}\n       {summary\n         ? // 해석 요약은 비교 대상마다 한 문장이다(FR-006). 대상이 없으면 기준의 세 숫자만 말한다.\n           (drawn.length === 0 ? [null] : drawn).map((target, index) => (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,6 +33,44 @@\n   line-height: 1.7;\n }\n \n+/*\n+  시장 흐름 화면(MarketFlowPage .hero·.heroAside)과 같은 머리. 좁은 화면에서는 한 칸으로 쌓고 인용 선을 뗀다.\n+*/\n+.hero {\n+  display: grid;\n+  grid-template-columns: 1.2fr 1fr;\n+  gap: 40px;\n+  align-items: end;\n+  margin-bottom: 24px;\n+}\n+\n+.hero .title {\n+  margin-bottom: 0;\n+}\n+\n+.hero .lead {\n+  max-width: 440px;\n+  margin: 0;\n+  padding: 0 0 3px 22px;\n+  border-left: 1px solid var(--thorp-line-strong);\n+  font-size: var(--thorp-text-body, 0.84rem);\n+  line-height: 1.65;\n+  word-break: keep-all;\n+}\n+\n+@media (max-width: 800px) {\n+  .hero {\n+    grid-template-columns: 1fr;\n+    gap: 14px;\n+  }\n+\n+  .hero .lead {\n+    max-width: 540px;\n+    padding: 0;\n+    border: 0;\n+  }\n+}\n+\n .loading {\n   margin: 0;\n   color: var(--thorp-copy);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -361,13 +361,18 @@ export function SectorSelectionPage() {\n     <div className={styles.page}>\n       <AppHeader />\n       <main className={styles.main} aria-labelledby=\"sector-selection-title\">\n-        <p className={heading.eyebrow} aria-hidden=\"true\">STEP 01 · SELECT</p>\n-        <h1 id=\"sector-selection-title\" className={styles.title}>\n-          투자 대상 <em className={heading.emphasis}>고르기</em>\n-        </h1>\n-        <p className={styles.lead}>\n-          백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.\n-        </p>\n+        {/* 시장 흐름 화면과 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다(S15P21E205-451). */}\n+        <header className={styles.hero}>\n+          <div>\n+            <p className={heading.eyebrow} aria-hidden=\"true\">STEP 01 · SELECT</p>\n+            <h1 id=\"sector-selection-title\" className={styles.title}>\n+              투자 대상 <em className={heading.emphasis}>고르기</em>\n+            </h1>\n+          </div>\n+          <p className={styles.lead}>\n+            백테스트에 쓸 ETF를 고릅니다. 목록에서 눌러 상품을 확인한 뒤 투자 대상에 추가하세요.\n+          </p>\n+        </header>\n \n         {result === null ? (\n           <p className={styles.loading} role=\"status\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2874514": []
+  }
+}

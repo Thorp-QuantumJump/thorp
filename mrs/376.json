@@ -1,0 +1,549 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963466,
+    "iid": 376,
+    "project_id": 1444456,
+    "title": "chore(infra): Cloudflare Tunnel 설정",
+    "description": "# 작업 내용 요약\n\n운영 서버가 회수되어 맥미니로 옮기면서, 공개 경로를 공유기 포트와 Let's Encrypt 인증서 대신 Cloudflare Tunnel 로 바꾼다. 공개 주소는 `thorp.thisis-joe.com` 이다. 사용자가 `X-Forwarded-For` 를 꾸며 IP 한도를 피할 수 있던 기존 문제도 함께 고친다.\n\n# 주요 변경 사항\n\n- nginx 는 80 포트 하나로 서비스하고, 호스트에 포트를 열지 않는다. HTTPS 리다이렉트, 인증서 설정, ACME 경로를 걷어 낸다.\n- compose 에 cloudflared 컨테이너를 더한다. 터널 토큰(`CLOUDFLARE_TUNNEL_TOKEN`)만 받으며, 토큰이 비어 있으면 compose 가 안내 문구와 함께 멈춘다. 공개 주소와 연결 대상(`http://thorp-nginx:80`)은 Cloudflare 대시보드의 터널 설정이 갖는다.\n- 사용자 IP 는 `CF-Connecting-IP` 로 복원하고, `X-Forwarded-For` 에는 그 값 하나만 넘긴다. 이전에는 사용자가 보낸 값 뒤에 덧붙였고, backend 는 맨 앞 값을 IP 로 읽으므로 IP 를 꾸밀 수 있었다.\n- `X-Forwarded-Proto` 는 Cloudflare 가 붙인 `https` 를 그대로 넘긴다. nginx 의 `$scheme`(http)을 넘기면 XSRF 쿠키에서 `Secure` 가 빠진다.\n- 배포 확인 단계는 443 대신 nginx 직접 확인과 공개 주소(터널 경유) 확인을 나눠서 한다.\n- certbot 마운트와 인증서 발급·갱신 스크립트를 지운다. `.env.prod.example` 의 `CERTBOT_EMAIL` 을 빼고 `CLOUDFLARE_TUNNEL_TOKEN` 을 넣는다.\n\n# 테스트\n\n- [x] 맥미니에서 `nginx -t` 가 통과한다\n- [x] 받은 헤더를 그대로 돌려주는 시험 서버를 backend 자리에 두고 확인했다. `CF-Connecting-IP: 203.0.113.7` 과 위조한 `X-Forwarded-For: 6.6.6.6` 을 함께 보내면, backend 가 받는 값은 `X-Forwarded-For: 203.0.113.7`, `X-Forwarded-Proto: https` 다\n- [x] 정적 파일과 SPA 경로가 200 을 돌려준다\n- [x] 토큰이 비어 있으면 `docker compose config` 가 실패하고, 있으면 통과한다\n- [ ] 실제 터널 연결과 SSE 진행 곡선은 도메인 네임서버 이전이 끝난 뒤 확인한다\n- [ ] Jenkins 서버가 회수되어 이 MR 에서는 CI 가 돌지 않는다\n\n# 리뷰 포인트\n\n- `real_ip` 는 사설 대역 전체를 신뢰한다. nginx 에 닿을 수 있는 곳이 Docker 네트워크뿐이라는 전제에 기댄 것이라, 나중에 nginx 포트를 호스트에 열면 이 설정도 함께 바꿔야 한다.\n- 배포 확인의 마지막 단계는 외부 DNS 와 터널까지 거치므로, 앱이 정상이어도 터널 장애가 있으면 배포가 실패로 표시된다. 바로 앞 단계(nginx 직접 확인)의 통과 여부로 둘을 구분한다.\n- Jenkins 의 GitLab 웹훅 경로(`/jenkins/project/`)는 그대로 둔다. GitHub 로 옮길 때 Jenkins 를 배포 전용으로 바꾸면서 함께 정리한다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:38:45.338+09:00",
+    "updated_at": "2026-10-04T18:44:56.688+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:44:56.044+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/cloudflare-tunnel",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b789b5dfad18e4264e53addc0c8c3d037e165077",
+    "merge_commit_sha": "05f49d3bd90123387e1e695df0dca1cb6fdba1b3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:38:46.458+09:00",
+    "reference": "!376",
+    "references": {
+      "short": "!376",
+      "relative": "!376",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!376"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/376",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963466,
+    "iid": 376,
+    "project_id": 1444456,
+    "title": "chore(infra): Cloudflare Tunnel 설정",
+    "description": "# 작업 내용 요약\n\n운영 서버가 회수되어 맥미니로 옮기면서, 공개 경로를 공유기 포트와 Let's Encrypt 인증서 대신 Cloudflare Tunnel 로 바꾼다. 공개 주소는 `thorp.thisis-joe.com` 이다. 사용자가 `X-Forwarded-For` 를 꾸며 IP 한도를 피할 수 있던 기존 문제도 함께 고친다.\n\n# 주요 변경 사항\n\n- nginx 는 80 포트 하나로 서비스하고, 호스트에 포트를 열지 않는다. HTTPS 리다이렉트, 인증서 설정, ACME 경로를 걷어 낸다.\n- compose 에 cloudflared 컨테이너를 더한다. 터널 토큰(`CLOUDFLARE_TUNNEL_TOKEN`)만 받으며, 토큰이 비어 있으면 compose 가 안내 문구와 함께 멈춘다. 공개 주소와 연결 대상(`http://thorp-nginx:80`)은 Cloudflare 대시보드의 터널 설정이 갖는다.\n- 사용자 IP 는 `CF-Connecting-IP` 로 복원하고, `X-Forwarded-For` 에는 그 값 하나만 넘긴다. 이전에는 사용자가 보낸 값 뒤에 덧붙였고, backend 는 맨 앞 값을 IP 로 읽으므로 IP 를 꾸밀 수 있었다.\n- `X-Forwarded-Proto` 는 Cloudflare 가 붙인 `https` 를 그대로 넘긴다. nginx 의 `$scheme`(http)을 넘기면 XSRF 쿠키에서 `Secure` 가 빠진다.\n- 배포 확인 단계는 443 대신 nginx 직접 확인과 공개 주소(터널 경유) 확인을 나눠서 한다.\n- certbot 마운트와 인증서 발급·갱신 스크립트를 지운다. `.env.prod.example` 의 `CERTBOT_EMAIL` 을 빼고 `CLOUDFLARE_TUNNEL_TOKEN` 을 넣는다.\n\n# 테스트\n\n- [x] 맥미니에서 `nginx -t` 가 통과한다\n- [x] 받은 헤더를 그대로 돌려주는 시험 서버를 backend 자리에 두고 확인했다. `CF-Connecting-IP: 203.0.113.7` 과 위조한 `X-Forwarded-For: 6.6.6.6` 을 함께 보내면, backend 가 받는 값은 `X-Forwarded-For: 203.0.113.7`, `X-Forwarded-Proto: https` 다\n- [x] 정적 파일과 SPA 경로가 200 을 돌려준다\n- [x] 토큰이 비어 있으면 `docker compose config` 가 실패하고, 있으면 통과한다\n- [ ] 실제 터널 연결과 SSE 진행 곡선은 도메인 네임서버 이전이 끝난 뒤 확인한다\n- [ ] Jenkins 서버가 회수되어 이 MR 에서는 CI 가 돌지 않는다\n\n# 리뷰 포인트\n\n- `real_ip` 는 사설 대역 전체를 신뢰한다. nginx 에 닿을 수 있는 곳이 Docker 네트워크뿐이라는 전제에 기댄 것이라, 나중에 nginx 포트를 호스트에 열면 이 설정도 함께 바꿔야 한다.\n- 배포 확인의 마지막 단계는 외부 DNS 와 터널까지 거치므로, 앱이 정상이어도 터널 장애가 있으면 배포가 실패로 표시된다. 바로 앞 단계(nginx 직접 확인)의 통과 여부로 둘을 구분한다.\n- Jenkins 의 GitLab 웹훅 경로(`/jenkins/project/`)는 그대로 둔다. GitHub 로 옮길 때 Jenkins 를 배포 전용으로 바꾸면서 함께 정리한다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:38:45.338+09:00",
+    "updated_at": "2026-10-04T18:44:56.688+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:44:56.044+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/cloudflare-tunnel",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b789b5dfad18e4264e53addc0c8c3d037e165077",
+    "merge_commit_sha": "05f49d3bd90123387e1e695df0dca1cb6fdba1b3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:38:46.458+09:00",
+    "reference": "!376",
+    "references": {
+      "short": "!376",
+      "relative": "!376",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!376"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/376",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 11,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "6",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "4a87e4d0daec576b8209dfa5fede9792c528a4d1",
+      "head_sha": "b789b5dfad18e4264e53addc0c8c3d037e165077",
+      "start_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "8b63b57525000850e61aa2010e91b6b562d43724",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881367,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:38:45.456+09:00",
+          "updated_at": "2026-10-04T18:38:45.460+09:00",
+          "system": true,
+          "noteable_id": 963466,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 376,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "befa65dc34a57b9f4a16247403119d3f428e1fb9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881368,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:38:45.475+09:00",
+          "updated_at": "2026-10-04T18:38:45.504+09:00",
+          "system": true,
+          "noteable_id": 963466,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 376,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "032a350024fcaa51837def6e0ab3f3e3291c1200",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881369,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 아키텍처 개선**: 인증서 관리 복잡성을 줄이고 Cloudflare Tunnel을 도입하여 호스트 포트를 노출하지 않도록 한 점이 훌륭합니다. 특히 `X-Forwarded-For` 헤더 스푸핑 문제를 방지하기 위해 `CF-Connecting-IP`와 `real_ip` 모듈을 올바르게 조합하여 신뢰할 수 있는 사용자 IP를 백엔드에 전달하도록 설계되었습니다.\n- **철저한 예외 처리**: Docker Compose 환경 변수에 `[VARIABLE:?error_message]` 문법을 사용하여 필수 토큰 누락 시 빌드가 즉시 중단되도록 안전장치를 마련한 점이 좋습니다.\n\n### 발견 사항\n- [Low] `infra/docker-compose.prod.yml`: `cloudflare/cloudflared:2026.5.0` 이미지 버전을 사용하고 있으나, 현재 연도(2025년 기준)나 실제 공개된 `cloudflared` 버전 체계와 다를 수 있어 이미지 pull 실패 가능성이 있습니다. 유효한 공식 릴리즈 버전인지 확인이 필요합니다.\n\n### 테스트 제안\n- 의도적으로 `CLOUDFLARE_TUNNEL_TOKEN` 변수를 비워둔 상태(`--env-file` 미지정 또는 빈 값)에서 `docker compose -f docker-compose.prod.yml config` 명령을 실행하여 가이드 문구와 함께 정상적으로 실패하는지 검증합니다.\n- 외부 프록시 환경을 모사하여 `CF-Connecting-IP` 헤더가 포함된 요청이 Nginx를 거칠 때, 백엔드 애플리케이션이 수신하는 `X-Forwarded-For` 값이 의도한 단일 실제 IP로 정확히 정제되는지 통합 테스트를 수행합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b789b5dfad18e4264e53addc0c8c3d037e165077 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T18:38:53.788+09:00",
+          "updated_at": "2026-10-04T18:38:53.788+09:00",
+          "system": false,
+          "noteable_id": 963466,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 376,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cb9125b33ca75d2212c6e615a0fc5640efd8139e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881373,
+          "type": null,
+          "body": "mentioned in commit 05f49d3bd90123387e1e695df0dca1cb6fdba1b3",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:44:56.256+09:00",
+          "updated_at": "2026-10-04T18:44:56.260+09:00",
+          "system": true,
+          "noteable_id": 963466,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 376,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262318,
+      "head_commit_sha": "b789b5dfad18e4264e53addc0c8c3d037e165077",
+      "base_commit_sha": "4a87e4d0daec576b8209dfa5fede9792c528a4d1",
+      "start_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "created_at": "2026-10-04T18:38:45.879+09:00",
+      "merge_request_id": 963466,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "65140f527cc83aacd399d37c6326fbb83c37e2c9"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262318,
+      "head_commit_sha": "b789b5dfad18e4264e53addc0c8c3d037e165077",
+      "base_commit_sha": "4a87e4d0daec576b8209dfa5fede9792c528a4d1",
+      "start_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "created_at": "2026-10-04T18:38:45.879+09:00",
+      "merge_request_id": 963466,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "65140f527cc83aacd399d37c6326fbb83c37e2c9",
+      "commits": [
+        {
+          "id": "b789b5dfad18e4264e53addc0c8c3d037e165077",
+          "short_id": "b789b5df",
+          "created_at": "2026-10-04T17:08:34.000+09:00",
+          "parent_ids": [
+            "4a87e4d0daec576b8209dfa5fede9792c528a4d1"
+          ],
+          "title": "chore(infra): Cloudflare Tunnel 뒤에서 서비스하도록 바꾼다",
+          "message": "chore(infra): Cloudflare Tunnel 뒤에서 서비스하도록 바꾼다\n\nTLS 는 Cloudflare 가 끝내고 compose 의 cloudflared 가 nginx:80 으로 넘긴다. nginx 는 호스트 포트를\n열지 않고 HTTP 하나로 서비스하며, 인증서·certbot 마운트와 발급·갱신 스크립트를 걷어 낸다.\n\n사용자 IP 는 CF-Connecting-IP 로 복원하고 X-Forwarded-For 에는 그 값 하나만 넘긴다. 이전 설정은\n사용자가 보낸 X-Forwarded-For 뒤에 덧붙여, 맨 앞 값을 읽는 백엔드에서 IP 를 꾸밀 수 있었다.\nX-Forwarded-Proto 는 Cloudflare 가 붙인 https 를 넘겨 XSRF 쿠키의 Secure 판정을 유지한다.\n\n배포 확인 단계는 443 대신 nginx:80 과 공개 주소(터널 경유)를 따로 확인한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:08:34.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:08:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b789b5dfad18e4264e53addc0c8c3d037e165077"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -41,8 +41,8 @@ pipeline {\n             // (bind mount 경로가 호스트 기준으로 해석되기 때문)\n             steps {\n                 // 이 디렉토리는 배포 전용이며 git 내용을 그대로 반영한다.\n-                // reset --hard 는 추적 파일만 되돌린다. .env.prod, certbot/(인증서·개인키),\n-                // nginx/html/(빌드 산출물)은 gitignore 대상이라 영향을 받지 않는다.\n+                // reset --hard 는 추적 파일만 되돌린다. .env.prod, nginx/html/(빌드 산출물)은\n+                // gitignore 대상이라 영향을 받지 않는다.\n                 sh '''\n                     cd \"$DEPLOY_DIR\"\n                     git fetch --prune origin\n@@ -91,7 +91,7 @@ pipeline {\n \n                     docker compose -f docker-compose.prod.yml --env-file .env.prod ps\n \n-                    # 1) nginx 설정 유효성 (인증서 경로 포함)\n+                    # 1) nginx 설정 유효성\n                     docker exec thorp-nginx nginx -t\n \n                     # 2) 백엔드 상태 — TLS를 거치지 않고 컨테이너 네트워크에서 직접 확인\n@@ -103,12 +103,15 @@ pipeline {\n                         -sf --max-time 5 --retry 30 --retry-delay 2 --retry-connrefused \\\n                         http://backend:8080/actuator/health\n \n-                    # 3) 공개 경로 — 인증서 검증을 켠 채로 확인한다.\n-                    #    --connect-to로 SNI는 실제 도메인을 유지하면서 nginx 컨테이너에 직접\n-                    #    붙으므로, hairpin NAT 없이 진짜 인증서를 검증할 수 있다.\n+                    # 3) nginx 경유 — 터널 없이 edge 네트워크에서 nginx 의 /api 프록시만 확인한다.\n                     docker run --rm --network thorp-edge curlimages/curl:8.10.1 \\\n                         -sf --max-time 5 --retry 10 --retry-delay 2 --retry-connrefused \\\n-                        --connect-to \"${DOMAIN}:443:nginx:443\" \\\n+                        -H \"Host: ${DOMAIN}\" -o /dev/null http://nginx/api/actuator/health\n+\n+                    # 4) 공개 경로 — 사용자와 같은 길(Cloudflare → 터널 → nginx)로 확인한다. 인증서 검증을 켠다.\n+                    #    3)이 통과하고 여기서 실패하면 원인은 터널(cloudflared·대시보드 설정) 쪽이다.\n+                    docker run --rm curlimages/curl:8.10.1 \\\n+                        -sf --max-time 10 --retry 10 --retry-delay 3 \\\n                         -o /dev/null \"https://${DOMAIN}/api/actuator/health\"\n                 '''\n             }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Jenkinsfile.deploy",
+          "old_path": "infra/jenkins/Jenkinsfile.deploy",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,32 +5,28 @@ upstream backend_was {\n     keepalive 32;\n }\n \n-# HTTP: 인증서 발급 경로만 열고 나머지는 HTTPS로 보낸다\n-server {\n-    listen 80;\n-    server_name ${DOMAIN};\n-\n-    location /.well-known/acme-challenge/ {\n-        root /var/www/certbot;\n-    }\n-\n-    location / {\n-        return 301 https://$host$request_uri;\n-    }\n+# 백엔드에 넘길 원래 요청의 스킴. TLS는 Cloudflare가 끝내고 cloudflared가 이 80 포트로 평문을 넘기므로\n+# $scheme 은 늘 http 다. 그대로 넘기면 백엔드가 요청을 HTTP로 보고 XSRF-TOKEN 쿠키에 Secure를 붙이지 않는다\n+# (application-prod.yml forward-headers-strategy). Cloudflare가 붙인 X-Forwarded-Proto 를 그대로 쓰고,\n+# 헤더 없이 들어온 요청(내부 확인용 curl 등)만 $scheme 으로 둔다.\n+map $http_x_forwarded_proto $thorp_forwarded_proto {\n+    default $http_x_forwarded_proto;\n+    \"\"      $scheme;\n }\n \n-# HTTPS: 정적 프론트 + /api 리버스 프록시\n+# 정적 프론트 + /api 리버스 프록시. 앞단은 Cloudflare Tunnel(compose 의 cloudflared)이다.\n+# 호스트에 포트를 열지 않으므로 이 서버에 닿는 것은 같은 Docker 네트워크의 컨테이너뿐이다.\n server {\n-    listen 443 ssl;\n-    http2 on;\n+    listen 80;\n     server_name ${DOMAIN};\n \n-    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;\n-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;\n-    ssl_protocols       TLSv1.2 TLSv1.3;\n-    ssl_prefer_server_ciphers off;\n-    ssl_session_cache   shared:SSL:10m;\n-    ssl_session_timeout 1d;\n+    # 사용자의 실제 IP. 모든 요청이 cloudflared 컨테이너에서 오므로 $remote_addr 은 늘 그 주소다.\n+    # Cloudflare가 붙이는 CF-Connecting-IP 로 바꿔 둔다 — 화면 도우미의 IP 한도가 이 값을 키로 쓴다.\n+    # 사설 대역만 믿는 것은 이 서버에 닿을 수 있는 곳이 Docker 네트워크뿐이기 때문이다.\n+    set_real_ip_from 10.0.0.0/8;\n+    set_real_ip_from 172.16.0.0/12;\n+    set_real_ip_from 192.168.0.0/16;\n+    real_ip_header   CF-Connecting-IP;\n \n     client_max_body_size 20m;\n \n@@ -42,10 +38,6 @@ server {\n     gzip_types text/css application/javascript application/json image/svg+xml;\n     gzip_min_length 1024;\n \n-    location /.well-known/acme-challenge/ {\n-        root /var/www/certbot;\n-    }\n-\n     location /api/ {\n         # 끝의 슬래시가 /api 접두사를 떼어낸다. 없으면 /api/backtests 가 그대로\n         # 전달되어 백엔드(/backtests)가 못 받는다. 지우지 말 것.\n@@ -54,8 +46,11 @@ server {\n         proxy_set_header Connection        \"\";\n         proxy_set_header Host              $host;\n         proxy_set_header X-Real-IP         $remote_addr;\n-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;\n-        proxy_set_header X-Forwarded-Proto $scheme;\n+        # $proxy_add_x_forwarded_for 를 쓰지 않는다. 그것은 사용자가 보낸 X-Forwarded-For 뒤에 덧붙이고,\n+        # 백엔드(forward-headers-strategy: framework)는 맨 앞 값을 IP로 읽으므로 사용자가 IP를 꾸밀 수 있다.\n+        # 위 real_ip 설정으로 $remote_addr 이 이미 실제 IP라 그 값 하나만 넘긴다.\n+        proxy_set_header X-Forwarded-For   $remote_addr;\n+        proxy_set_header X-Forwarded-Proto $thorp_forwarded_proto;\n         # 백테스트 조회가 길어질 수 있어 기본 60s보다 넉넉히 준다\n         proxy_connect_timeout 10s;\n         proxy_read_timeout    300s;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/nginx/templates/default.conf.template",
+          "old_path": "infra/nginx/templates/default.conf.template",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,97 +0,0 @@\n-#!/usr/bin/env bash\n-# Let's Encrypt 인증서 최초 발급.\n-#\n-# nginx는 인증서가 없으면 뜨지 않고 certbot은 nginx가 떠야 검증할 수 있다.\n-# 이 닭-달걀 문제를 임시 자체서명 인증서로 먼저 띄운 뒤 교체하는 방식으로 푼다.\n-#\n-#   STAGING=1 ./scripts/init-letsencrypt.sh   # 연습 (발급 제한 회피)\n-#   ./scripts/init-letsencrypt.sh             # 실제 발급\n-set -euo pipefail\n-\n-cd \"$(dirname \"$0\")/..\"\n-\n-ENV_FILE=\".env.prod\"\n-COMPOSE_FILE=\"docker-compose.prod.yml\"\n-\n-if [[ ! -f \"$ENV_FILE\" ]]; then\n-    echo \"오류: $ENV_FILE 이 없다. .env.prod.example을 복사해 채운다.\" >&2\n-    exit 1\n-fi\n-\n-# 파일 전체를 source 하지 않는다. bash -x 로 실행하거나 CI에서 돌릴 때\n-# 비밀번호까지 추적 출력에 실린다. 필요한 값만 뽑아 쓴다.\n-read_env() { sed -n \"s/^$1=//p\" \"$ENV_FILE\" | head -1; }\n-DOMAIN=$(read_env DOMAIN)\n-CERTBOT_EMAIL=$(read_env CERTBOT_EMAIL)\n-\n-if [[ -z \"${DOMAIN:-}\" || -z \"${CERTBOT_EMAIL:-}\" ]]; then\n-    echo \"오류: $ENV_FILE 의 DOMAIN 과 CERTBOT_EMAIL 을 채워야 한다.\" >&2\n-    exit 1\n-fi\n-\n-COMPOSE=\"docker compose -f $COMPOSE_FILE --env-file $ENV_FILE\"\n-CONF_DIR=\"$PWD/certbot/conf\"\n-WWW_DIR=\"$PWD/certbot/www\"\n-\n-STAGING_ARG=\"\"\n-if [[ \"${STAGING:-0}\" == \"1\" ]]; then\n-    STAGING_ARG=\"--staging\"\n-    echo \"[i] STAGING 모드 — 브라우저에서 신뢰되지 않는 연습용 인증서를 받는다.\"\n-fi\n-\n-make_dummy_cert() {\n-    mkdir -p \"$CONF_DIR/live/$DOMAIN\"\n-    docker run --rm -v \"$CONF_DIR:/etc/letsencrypt\" --entrypoint sh certbot/certbot -c \"\n-        openssl req -x509 -nodes -newkey rsa:2048 -days 30 \\\n-            -keyout '/etc/letsencrypt/live/$DOMAIN/privkey.pem' \\\n-            -out    '/etc/letsencrypt/live/$DOMAIN/fullchain.pem' \\\n-            -subj '/CN=$DOMAIN' 2>/dev/null\"\n-}\n-\n-# 4단계는 임시 인증서를 지운 뒤 실제 발급을 요청한다. 그 사이에 실패하면\n-# 인증서 디렉토리가 빈 채로 남아 다음 재시작 때 nginx가 아예 뜨지 못한다.\n-# 실패로 끝나면 임시 인증서를 되살려 웹서버만은 살아 있게 한다.\n-on_exit() {\n-    local code=$?\n-    [[ $code -eq 0 ]] && exit 0\n-    echo >&2\n-    echo \"오류로 중단되었다 (exit $code).\" >&2\n-    if [[ ! -s \"$CONF_DIR/live/$DOMAIN/fullchain.pem\" ]]; then\n-        echo \"인증서가 비어 있어 임시 인증서를 복구한다. nginx는 뜨지만 브라우저 경고가 난다.\" >&2\n-        make_dummy_cert || echo \"임시 인증서 복구 실패. 수동 확인이 필요하다.\" >&2\n-    fi\n-    exit $code\n-}\n-trap on_exit EXIT\n-\n-echo \"[1/5] 디렉토리 준비 ($DOMAIN)\"\n-mkdir -p \"$CONF_DIR/live/$DOMAIN\" \"$WWW_DIR\"\n-\n-echo \"[2/5] nginx 기동용 임시 인증서 생성\"\n-make_dummy_cert\n-\n-echo \"[3/5] nginx 기동 (80번 포트로 인증 요청을 받는다)\"\n-$COMPOSE up -d nginx\n-sleep 5\n-\n-echo \"[4/5] 임시 인증서 삭제 후 실제 인증서 발급\"\n-docker run --rm -v \"$CONF_DIR:/etc/letsencrypt\" --entrypoint sh certbot/certbot -c \"\n-    rm -rf /etc/letsencrypt/live/$DOMAIN \\\n-           /etc/letsencrypt/archive/$DOMAIN \\\n-           /etc/letsencrypt/renewal/$DOMAIN.conf\"\n-\n-docker run --rm \\\n-    -v \"$CONF_DIR:/etc/letsencrypt\" \\\n-    -v \"$WWW_DIR:/var/www/certbot\" \\\n-    certbot/certbot certonly --webroot -w /var/www/certbot \\\n-    -d \"$DOMAIN\" \\\n-    --email \"$CERTBOT_EMAIL\" \\\n-    --agree-tos --no-eff-email --non-interactive \\\n-    $STAGING_ARG\n-\n-echo \"[5/5] nginx 재적용\"\n-$COMPOSE exec -T nginx nginx -s reload\n-\n-echo\n-echo \"완료. https://$DOMAIN 접속을 확인한다.\"\n-echo \"자동 갱신 cron(renew-cert.sh) 등록을 잊지 말 것.\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/init-letsencrypt.sh",
+          "old_path": "infra/scripts/init-letsencrypt.sh",
+          "a_mode": "100755",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +0,0 @@\n-#!/usr/bin/env bash\n-# 인증서 갱신. cron으로 주 1회 실행한다.\n-# 만료 30일 전부터 실제 갱신이 일어나며, 갱신할 게 없으면 아무것도 하지 않고 종료한다.\n-set -euo pipefail\n-\n-cd \"$(dirname \"$0\")/..\"\n-\n-docker run --rm \\\n-    -v \"$PWD/certbot/conf:/etc/letsencrypt\" \\\n-    -v \"$PWD/certbot/www:/var/www/certbot\" \\\n-    certbot/certbot renew --webroot -w /var/www/certbot --quiet\n-\n-# 갱신 여부와 무관하게 reload — 새 인증서를 nginx가 다시 읽게 한다\n-docker exec thorp-nginx nginx -s reload\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/renew-cert.sh",
+          "old_path": "infra/scripts/renew-cert.sh",
+          "a_mode": "100755",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,11 @@\n # cp .env.prod.example .env.prod 로 복사해 사용한다. .env.prod는 커밋하지 않는다.\n \n-# --- 도메인 / 인증서 ---\n-DOMAIN=j15e205.p.ssafy.io\n-# Let's Encrypt 만료 알림 수신 주소 (팀 대표 메일)\n-CERTBOT_EMAIL=\n+# --- 도메인 / Cloudflare Tunnel ---\n+# 공개 주소. TLS 인증서는 Cloudflare가 관리한다(서버에 인증서를 두지 않는다).\n+DOMAIN=thorp.thisis-joe.com\n+# Cloudflare 대시보드(Zero Trust → Networks → Tunnels)에서 만든 터널의 토큰. 비밀값이다.\n+# 터널의 Public Hostname 은 DOMAIN → http://thorp-nginx:80 으로 둔다.\n+CLOUDFLARE_TUNNEL_TOKEN=\n \n # --- PostgreSQL ---\n POSTGRES_DB=thorp\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/.env.prod.example",
+          "old_path": "infra/.env.prod.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-# 운영(EC2) 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.\n+# 운영 전용. 로컬 개발은 레포 루트의 docker-compose.yml을 쓴다.\n name: thorp\n \n services:\n@@ -278,9 +278,9 @@ services:\n     image: nginx:1.27-alpine\n     container_name: thorp-nginx\n     restart: unless-stopped\n-    ports:\n-      - \"80:80\"\n-      - \"443:443\"\n+    # 호스트에 포트를 열지 않는다. 외부 요청은 cloudflared 가 같은 edge 네트워크에서 nginx:80 으로 넘긴다.\n+    # 공유기 포트포워딩·고정 IP·인증서가 필요 없고, 이 서버에 닿을 수 있는 곳이 컨테이너뿐이라\n+    # 템플릿의 real_ip 설정(사설 대역만 신뢰)이 안전하다.\n     environment:\n       DOMAIN: ${DOMAIN}\n       # templates/*.template 안에서 ${DOMAIN}만 치환한다.\n@@ -290,8 +290,6 @@ services:\n     volumes:\n       - ./nginx/templates:/etc/nginx/templates:ro\n       - ./nginx/html:/usr/share/nginx/html:ro\n-      - ./certbot/conf:/etc/letsencrypt:ro\n-      - ./certbot/www:/var/www/certbot:ro\n     depends_on:\n       - backend\n     deploy:\n@@ -301,6 +299,26 @@ services:\n           cpus: \"0.5\"\n     networks: [edge]\n \n+  # Cloudflare Tunnel 커넥터. Cloudflare 쪽으로 나가는 연결만 맺고 들어오는 포트는 없다.\n+  # TLS 인증서와 공개 주소(Public Hostname → http://thorp-nginx:80)는 Cloudflare 대시보드의 터널 설정이 갖고,\n+  # 이 컨테이너는 그 터널의 토큰만 받는다. 토큰이 없거나 비어 있으면 compose 명령이 멈추게 :? 로 둔다.\n+  cloudflared:\n+    image: cloudflare/cloudflared:2026.5.0\n+    container_name: thorp-cloudflared\n+    restart: unless-stopped\n+    command: tunnel --no-autoupdate run\n+    environment:\n+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?.env.prod 에 CLOUDFLARE_TUNNEL_TOKEN 을 넣으세요. Cloudflare 대시보드의 터널 토큰}\n+      TZ: Asia/Seoul\n+    depends_on:\n+      - nginx\n+    deploy:\n+      resources:\n+        limits:\n+          memory: 128M\n+          cpus: \"0.25\"\n+    networks: [edge]\n+\n volumes:\n   postgres-data:\n   kafka-data:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker-compose.prod.yml",
+          "old_path": "infra/docker-compose.prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881369": []
+  }
+}

@@ -1,0 +1,1155 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 953921,
+    "iid": 260,
+    "project_id": 1444456,
+    "title": "feat(be): 탐색 묶음 상한·경제환경 기록 API",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US3의 서버 몫입니다. 둘을 담습니다.\n\n1. **탐색 묶음 저장 상한**(T033·T034). 007이 소유한 포트 `SaveSlotGuard`를 006의 `MyRecordLimitPolicy`가 구현하고, `ParamSearchService.create(...)` **맨 앞**에서 부릅니다. 상한에 닿으면 `409 RECORD_LIMIT_REACHED`로 거절하고 본문에 `{current, limit}`을 싣습니다. 계산이 끝난 뒤 저장 단계에서 막으면 이미 쓴 계산 자원이 버려지므로 판정 자리는 접수 직전입니다(FR-018, research R11).\n2. **경제환경 기록 API**(T035·T036). `POST /my-records/regime-searches`가 `regime_search_log` 행과 `my_record` 행을 한 트랜잭션에 만듭니다. `entryPath`·`baselineOrigin`은 **화면이 보내고 서버는 추정하지 않습니다** — 010의 `SnapshotKey`에 기준월 근거가 없어 `searchId`만으로는 알 수 없습니다(research R15).\n\n010의 자바 코드와 `GET /regime-searches`는 건드리지 않았습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-384 `[BE] 탐색 묶음 저장 상한과 경제환경 기록 API`\n- Story: -378 / Epic: -377 · 선행: -379(BE-1, dev 머지), -383(BE-2, dev 머지 — 컨트롤러 파일을 그쪽이 만들고 이 MR이 메서드를 더합니다)\n\n# 주요 변경 사항\n\n- **`SaveSlotGuard`**(`paramsearch/application/port`)**를 006의 `MyRecordLimitPolicy`가 구현합니다.** 007은 무엇을 세는지도 상한이 얼마인지도 알지 못하고, 예외가 오지 않으면 접수를 계속합니다. 화살표는 `myrecord → paramsearch` 하나로 남습니다(아래 리뷰 포인트).\n- **`MyRecordLimitPolicy`**(`myrecord/application/service`). 살아 있는 `SEARCH_BUNDLE` 항목 수를 상한과 견줍니다. 지운 항목은 세지 않습니다 — 세면 \"지운 뒤 다시 시작하라\"는 안내가 거짓이 됩니다. **사본(`is_copy`)은 셉니다** — 같은 원본을 가리켜도 목록에서 한 줄을 차지하므로 자리를 먹습니다. 재사용 판정(`findActiveByOwnerAnd*`)이 사본을 빼는 것과 조건이 다른 까닭을 주석에 박았고, 사본을 만드는 경로가 생기면 그쪽도 이 판정을 지나야 합니다(지금은 만드는 코드가 없습니다).\n- **상한값은 `MyRecordLimits`(application/port)로 옮겨 받습니다.** `MyRecordProperties`는 `infrastructure.config`에 있고 application은 infrastructure를 참조할 수 없습니다(`ArchitectureTest` 계층 규칙). `ExecutionLimits`·`SearchLimits`와 같은 자리이며 BE-1의 `MyRecordConfig` 주석이 예고한 대로입니다.\n- **호출 자리는 `create(...)`의 첫 줄**입니다. preflight보다도 앞이라 등록표 조회조차 하지 않고 거절합니다. **`noRollbackFor`에 더하지 않았습니다** — 아직 아무 행도 쓰지 않아 남길 것이 없고, 후보 상한(`REJECTED`, 묶음 행을 남기는 거절)과는 성질이 다릅니다. 비로그인 접수는 기록을 만들지 않으므로 셀 것도 없어 건너뜁니다.\n- **`MyRecordRegistrar.recordRegimeSearch(...)`**. 스냅샷을 010의 읽기 경로(`RegimeSnapshotRepository.findByKey`)로 찾고 없으면 404입니다. **로그 행은 `append` 한 번으로 끝납니다** — upsert라 있으면 열람 시각만 올리고 같은 id를 돌려주므로 미리 찾아보고 갈래를 나눌 일이 없습니다. 나누면 동시에 두 번 열었을 때 양쪽이 \"없음\"을 읽는 틈이 생깁니다. 200/201은 **항목**이 있는지로 가릅니다. 항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만듭니다 — 처음 본 revision을 로그 행이 쥐고 있습니다.\n- **`RecordRegimeSearchRequest`**는 세 값을 enum(`EntryPath`·`BaselineOrigin`)으로 받습니다. 모르는 값은 본문을 읽는 단계에서 400 `INVALID_INPUT`이 되고 `@NotNull`이라 `baselineOrigin`이 빠져도 400입니다. 서버가 `BaselineOrigin.of(...)`로 지어내는 경로는 만들지 않았습니다.\n- **`MyRecordController`에 `POST /regime-searches`**. 새로 만들면 201, 이미 있으면 200이고 본문은 두 경우 모두 **목록 항목과 같습니다**(`MyRecordListResponse.Item`). 화면이 응답 모양을 갈라 읽지 않아도 됩니다.\n- **`MyRecordQueryService.item(ownerId, recordId)`** 추가. 상세와 달리 열람 표시를 남기지 않습니다 — 방금 만든 항목을 돌려주는 것이지 사용자가 다시 본 것이 아닙니다. 404 문장은 `requireView` 한 곳으로 모아 `detail()`과 함께 씁니다.\n- **`RegimeSearchLogWriter`에서 `findActive`·`touch`를 지웠습니다.** `append`의 upsert가 둘이 하던 일을 그대로 하고, 남겨 두면 프로덕션 호출자가 없는 메서드가 됩니다. BE-1의 `MyRecordRepositoryIT`가 그 둘로 단언하던 세 가지(경로별 별도 행, 재열람에 행이 늘지 않음, 열람 시각 상승)는 `append`만으로 같은 것을 단언하도록 고쳤습니다.\n- **ArchUnit 규칙 11 추가**: `paramsearch`는 `myrecord`를 참조하지 않는다. 규칙 8·9·10과 같은 모양입니다.\n- 스키마 변경 없음. 마이그레이션을 더하지 않았습니다.\n\n# 테스트\n\n- `./gradlew spotlessApply build` — **1890건 통과, 실패 0, skip 4**(Docker 켜고 실행. 마지막 전체 빌드는 1888건이고, 그 뒤 더한 `RegimeRecordIT` 2건은 따로 돌려 통과했습니다 — 테스트 파일만 바뀌었습니다). skip 4는 외부 시장 API·뉴스 성능 측정처럼 평소에도 건너뛰는 검사이고 이 MR과 무관합니다. 스키마 변경이 없어 마이그레이션 버전 검사는 대상이 없습니다.\n- `MyRecordLimitIT`(상한 2로 좁힌 컨텍스트): 세 번째 `POST /param-searches`가 409 `RECORD_LIMIT_REACHED`이고 `error.details`에 `current=2, limit=2`. 거절 뒤 `param_search` 행이 늘지 않고, 후보 발행기 호출이 늘지 않으며(계산이 시작되지 않음, S10-5), 기존 기록이 그대로입니다. 기록 하나를 지우면 다음 접수가 통과합니다.\n- `MyRecordRepositoryIT`의 경제환경 로그 검사에 **열람 시각이 뒤로 가지 않는다**를 더했습니다. `touch`가 사라져 `GREATEST` 판정이 `append` 한 문장에만 남았는데 그것을 지키는 단언이 없었습니다 — `GREATEST`를 `EXCLUDED.viewed_at`으로 바꿔 그 테스트가 터지는 것을 확인하고 원복했습니다.\n- `RegimeRecordIT` 8건: 로그 행 하나 + 기록 하나와 보낸 `baseline_origin` 그대로 저장, `baselineOrigin` 누락 400, **모르는 `entryPath`·`baselineOrigin` 값 400**, 같은 `searchId`에 다른 `entryPath`면 두 번째 쌍, 다시 열면 200에 `viewed_at`만 상승, 없는 키 404, 비로그인 401에 행 없음, **같은 검색 동시 두 번에 쌍이 하나**.\n- 동시 기록 검사는 `BacktestDedupIT`와 같은 모양(`CountDownLatch` + 스레드 둘)이고 3회 연속 통과를 확인했습니다.\n- 회귀: `ArchitectureTest` 10건(규칙 11 포함), `MyRecordRepositoryIT` 6건(`append`만으로 고친 경제환경 로그 검사 포함), `MyRecordSearchIntakeIT`·`MyRecordRegistrarTest`(생성자가 늘어 목 세 개 추가), `ParamSearchApiIT`, `ParamSearchLimitReachedTest` 4건.\n- 비로그인 접수(`requesterId == null`이라 상한 판정을 건너뛰는 갈래)는 HTTP로는 401이라 닿지 않고, 서비스를 직접 부르는 `ParamSearchLimitReachedTest`가 그 갈래를 탑니다. 전용 IT는 두지 않았습니다.\n\n# 리뷰 포인트\n\n- **상한 판정이 `create(...)`의 첫 줄입니다.** preflight 앞이라 등록표 조회도 하지 않습니다. 그래서 자리가 없는 사용자는 등록표 버전이 어긋나거나 후보 상한에 걸려 **어차피 거절될 요청에도 409**를 받습니다 — 통과시켜 봐야 저장할 곳이 없으므로 그대로 뒀고 주석에 적었습니다. 007 미리보기(`preview`)에는 넣지 않았습니다 — 저장하지 않으므로 막을 자리가 아닙니다.\n- **세는 구간에 잠금이 없습니다.** 동시에 들어온 두 접수가 같은 수를 읽어 상한을 한둘 넘길 수 있습니다. 큐 한도(`ExecutionLimitPolicy`)와 달리 넘겨도 계산 자원을 더 쓰지 않고 다음 접수가 다시 걸리므로, 자문 잠금을 두 도메인에 걸치게 만들 값은 없다고 봤습니다. 코드에 `ponytail:` 표시와 올릴 길을 남겼습니다. 정확한 개수가 필요하다고 보시면 사용자 키 잠금을 더하겠습니다.\n- **역방향 의존을 포트로 뒤집었습니다(리뷰 반영).** 처음에는 `ParamSearchService`가 `MyRecordLimitPolicy`를 직접 불러 `paramsearch ↔ myrecord` 양방향이었습니다. 이 저장소는 같은 모양을 규칙 8·9·10으로 세 쌍에 대해 이미 막아 두었고, 규칙 9 주석이 정확히 이 상황을 적고 있습니다. 007이 `SaveSlotGuard`를 소유하고 006이 구현하게 바꾼 뒤 규칙 11로 방향을 박았습니다. 구현이 하나뿐인 인터페이스지만 그 하나가 다른 도메인에 있다는 것이 이 자리의 값입니다. 이벤트로 뒤집는 길도 있었지만 상한은 **접수를 막아야** 하는 판정이라 이벤트로는 늦습니다.\n- **응답 본문이 목록 항목과 같아 `POST` 뒤에 읽기가 한 번 더 붙습니다.** 등록기 안에서 읽지 않은 까닭은 `my_record`를 JPA로 넣고 `findView`를 JDBC로 읽는데 SEQUENCE라 INSERT가 flush까지 미뤄져 같은 트랜잭션에서는 방금 넣은 행이 보이지 않기 때문입니다. 등록기는 `recordId`만 돌려주고 읽기는 커밋 뒤에 합니다.\n- **`findActive`/`touch`를 지운 것이 BE-1의 포트 계약(T012)을 줄입니다.** T012는 세 메서드를 적었지만 `append`의 upsert가 나머지 둘을 흡수했습니다. 포트 계약을 정하는 것은 문서가 아니라 호출자라고 봤습니다 — 남겨 두면 계약이 아니라 주석 달린 죽은 코드입니다. 006에 \"열람만 올리는\" 경로가 실제로 필요해지면 `touch`는 그때 세 줄입니다. BE-1 IT는 검증하려던 동작을 그대로 두고 수단만 `append`로 바꿨습니다.\n- **동시 기록의 안전은 `append`의 락에 기댑니다.** 둘 다 \"없다\"를 읽고 둘 다 INSERT 하면 `uk_my_record_regime`(부분 유니크)에 한쪽이 걸려 500이 나갑니다. 그러지 않는 것은 `INSERT ... ON CONFLICT DO UPDATE`가 충돌한 로그 행을 잠가 뒤엣것이 앞엣것의 커밋까지 기다리고, 풀린 뒤에는 앞엣것이 만든 항목을 보기 때문입니다. 자바 쪽 잠금이 아니라 그 순서에 기대는 것이라 테스트로 박았습니다.\n- **탐색 묶음 상한은 반대로 동시 접수를 직렬화하지 않습니다.** 위와 달리 여기에는 잠글 행이 없습니다(세기만 합니다). 상한 2에 동시 접수 셋이 들어오면 셋 다 통과할 수 있고, 이것은 의도한 한계입니다 — 넘겨도 계산 자원을 더 쓰지 않고 다음 접수가 걸립니다. 그래서 상한 쪽에는 동시성 검사를 두지 않았습니다(두면 지금 설계에서 실패합니다).\n- **분야 이름을 읽지 못하면 분야 id를 그대로 씁니다**(`MyRecordRegistrar.fieldLabel`). 지어낸 값이 아니라 가진 값이라 원칙 VI에 걸리지 않는다고 봤습니다. 종합 검색은 `종합`입니다(tasks.md T013).\n- **`RECORD_WITHDRAWN`(410)은 이 MR에서 쓰지 않습니다.** 기록 시점에는 스냅샷이 있어야 하므로 없는 키는 404이고, 철회는 이미 남긴 기록을 **열 때** 판정합니다(BE-2의 목록이 `WITHDRAWN` 상태로 보입니다).\n\n# 전달만 하는 것 (티켓 아님)\n\n- **007 담당**: `ParamSearchService.create(...)` **앞**에 상한 판정 호출 한 줄이 들어갑니다(생성자에 `MyRecordLimitPolicy` 한 개 추가). 후보 상한(`CANDIDATE_LIMIT`)으로 `REJECTED` 묶음을 남기는 경로는 **그대로**입니다 — 이 거절은 묶음 행을 남기지 않는 다른 종류입니다. `noRollbackFor`에도 손대지 않았습니다.\n- **010 담당**: `regime_search_log`에 행을 쓰는 경로가 열렸습니다(BE-1이 만든 `RegimeSearchLogWriter`). `GET /regime-searches`와 010 자바 코드는 변경 없습니다. `RegimeSnapshotRepository.findByKey`를 006이 읽습니다.\n- **FE-3 담당**: `POST /my-records/regime-searches { searchId, entryPath, baselineOrigin }`을 쓸 수 있습니다. 세 값 모두 필수이고 응답은 목록 항목과 같은 본문에 201(신규)/200(기존)입니다. 접수 화면(`ParamSearchPage`)의 409 분기는 `error.details.current`·`error.details.limit`으로 \"N/M\"을 만들 수 있습니다(T040).\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE 쪽 US3(T037~T040, FE-3)과 `RegimeSearchPage`의 `?searchId=` 수신(T039a).\n- 내보내기(BE-5), 이름 변경·삭제(BE-6), 설정 바꿔 비교(BE-3).\n- `tasks.md`의 T033~T036 체크박스는 머지 뒤에 표시합니다.\n- 상한값 `20`은 PD-13 확정 전 임시값입니다. 산출물은 값이 아니라 장치입니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T11:13:55.381+09:00",
+    "updated_at": "2026-09-21T11:37:21.323+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T11:37:20.777+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/384-my-record-limit-regime",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+    "merge_commit_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T11:13:56.964+09:00",
+    "reference": "!260",
+    "references": {
+      "short": "!260",
+      "relative": "!260",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!260"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/260",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 953921,
+    "iid": 260,
+    "project_id": 1444456,
+    "title": "feat(be): 탐색 묶음 상한·경제환경 기록 API",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US3의 서버 몫입니다. 둘을 담습니다.\n\n1. **탐색 묶음 저장 상한**(T033·T034). 007이 소유한 포트 `SaveSlotGuard`를 006의 `MyRecordLimitPolicy`가 구현하고, `ParamSearchService.create(...)` **맨 앞**에서 부릅니다. 상한에 닿으면 `409 RECORD_LIMIT_REACHED`로 거절하고 본문에 `{current, limit}`을 싣습니다. 계산이 끝난 뒤 저장 단계에서 막으면 이미 쓴 계산 자원이 버려지므로 판정 자리는 접수 직전입니다(FR-018, research R11).\n2. **경제환경 기록 API**(T035·T036). `POST /my-records/regime-searches`가 `regime_search_log` 행과 `my_record` 행을 한 트랜잭션에 만듭니다. `entryPath`·`baselineOrigin`은 **화면이 보내고 서버는 추정하지 않습니다** — 010의 `SnapshotKey`에 기준월 근거가 없어 `searchId`만으로는 알 수 없습니다(research R15).\n\n010의 자바 코드와 `GET /regime-searches`는 건드리지 않았습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-384 `[BE] 탐색 묶음 저장 상한과 경제환경 기록 API`\n- Story: -378 / Epic: -377 · 선행: -379(BE-1, dev 머지), -383(BE-2, dev 머지 — 컨트롤러 파일을 그쪽이 만들고 이 MR이 메서드를 더합니다)\n\n# 주요 변경 사항\n\n- **`SaveSlotGuard`**(`paramsearch/application/port`)**를 006의 `MyRecordLimitPolicy`가 구현합니다.** 007은 무엇을 세는지도 상한이 얼마인지도 알지 못하고, 예외가 오지 않으면 접수를 계속합니다. 화살표는 `myrecord → paramsearch` 하나로 남습니다(아래 리뷰 포인트).\n- **`MyRecordLimitPolicy`**(`myrecord/application/service`). 살아 있는 `SEARCH_BUNDLE` 항목 수를 상한과 견줍니다. 지운 항목은 세지 않습니다 — 세면 \"지운 뒤 다시 시작하라\"는 안내가 거짓이 됩니다. **사본(`is_copy`)은 셉니다** — 같은 원본을 가리켜도 목록에서 한 줄을 차지하므로 자리를 먹습니다. 재사용 판정(`findActiveByOwnerAnd*`)이 사본을 빼는 것과 조건이 다른 까닭을 주석에 박았고, 사본을 만드는 경로가 생기면 그쪽도 이 판정을 지나야 합니다(지금은 만드는 코드가 없습니다).\n- **상한값은 `MyRecordLimits`(application/port)로 옮겨 받습니다.** `MyRecordProperties`는 `infrastructure.config`에 있고 application은 infrastructure를 참조할 수 없습니다(`ArchitectureTest` 계층 규칙). `ExecutionLimits`·`SearchLimits`와 같은 자리이며 BE-1의 `MyRecordConfig` 주석이 예고한 대로입니다.\n- **호출 자리는 `create(...)`의 첫 줄**입니다. preflight보다도 앞이라 등록표 조회조차 하지 않고 거절합니다. **`noRollbackFor`에 더하지 않았습니다** — 아직 아무 행도 쓰지 않아 남길 것이 없고, 후보 상한(`REJECTED`, 묶음 행을 남기는 거절)과는 성질이 다릅니다. 비로그인 접수는 기록을 만들지 않으므로 셀 것도 없어 건너뜁니다.\n- **`MyRecordRegistrar.recordRegimeSearch(...)`**. 스냅샷을 010의 읽기 경로(`RegimeSnapshotRepository.findByKey`)로 찾고 없으면 404입니다. **로그 행은 `append` 한 번으로 끝납니다** — upsert라 있으면 열람 시각만 올리고 같은 id를 돌려주므로 미리 찾아보고 갈래를 나눌 일이 없습니다. 나누면 동시에 두 번 열었을 때 양쪽이 \"없음\"을 읽는 틈이 생깁니다. 200/201은 **항목**이 있는지로 가릅니다. 항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만듭니다 — 처음 본 revision을 로그 행이 쥐고 있습니다.\n- **`RecordRegimeSearchRequest`**는 세 값을 enum(`EntryPath`·`BaselineOrigin`)으로 받습니다. 모르는 값은 본문을 읽는 단계에서 400 `INVALID_INPUT`이 되고 `@NotNull`이라 `baselineOrigin`이 빠져도 400입니다. 서버가 `BaselineOrigin.of(...)`로 지어내는 경로는 만들지 않았습니다.\n- **`MyRecordController`에 `POST /regime-searches`**. 새로 만들면 201, 이미 있으면 200이고 본문은 두 경우 모두 **목록 항목과 같습니다**(`MyRecordListResponse.Item`). 화면이 응답 모양을 갈라 읽지 않아도 됩니다.\n- **`MyRecordQueryService.item(ownerId, recordId)`** 추가. 상세와 달리 열람 표시를 남기지 않습니다 — 방금 만든 항목을 돌려주는 것이지 사용자가 다시 본 것이 아닙니다. 404 문장은 `requireView` 한 곳으로 모아 `detail()`과 함께 씁니다.\n- **`RegimeSearchLogWriter`에서 `findActive`·`touch`를 지웠습니다.** `append`의 upsert가 둘이 하던 일을 그대로 하고, 남겨 두면 프로덕션 호출자가 없는 메서드가 됩니다. BE-1의 `MyRecordRepositoryIT`가 그 둘로 단언하던 세 가지(경로별 별도 행, 재열람에 행이 늘지 않음, 열람 시각 상승)는 `append`만으로 같은 것을 단언하도록 고쳤습니다.\n- **ArchUnit 규칙 11 추가**: `paramsearch`는 `myrecord`를 참조하지 않는다. 규칙 8·9·10과 같은 모양입니다.\n- 스키마 변경 없음. 마이그레이션을 더하지 않았습니다.\n\n# 테스트\n\n- `./gradlew spotlessApply build` — **1890건 통과, 실패 0, skip 4**(Docker 켜고 실행. 마지막 전체 빌드는 1888건이고, 그 뒤 더한 `RegimeRecordIT` 2건은 따로 돌려 통과했습니다 — 테스트 파일만 바뀌었습니다). skip 4는 외부 시장 API·뉴스 성능 측정처럼 평소에도 건너뛰는 검사이고 이 MR과 무관합니다. 스키마 변경이 없어 마이그레이션 버전 검사는 대상이 없습니다.\n- `MyRecordLimitIT`(상한 2로 좁힌 컨텍스트): 세 번째 `POST /param-searches`가 409 `RECORD_LIMIT_REACHED`이고 `error.details`에 `current=2, limit=2`. 거절 뒤 `param_search` 행이 늘지 않고, 후보 발행기 호출이 늘지 않으며(계산이 시작되지 않음, S10-5), 기존 기록이 그대로입니다. 기록 하나를 지우면 다음 접수가 통과합니다.\n- `MyRecordRepositoryIT`의 경제환경 로그 검사에 **열람 시각이 뒤로 가지 않는다**를 더했습니다. `touch`가 사라져 `GREATEST` 판정이 `append` 한 문장에만 남았는데 그것을 지키는 단언이 없었습니다 — `GREATEST`를 `EXCLUDED.viewed_at`으로 바꿔 그 테스트가 터지는 것을 확인하고 원복했습니다.\n- `RegimeRecordIT` 8건: 로그 행 하나 + 기록 하나와 보낸 `baseline_origin` 그대로 저장, `baselineOrigin` 누락 400, **모르는 `entryPath`·`baselineOrigin` 값 400**, 같은 `searchId`에 다른 `entryPath`면 두 번째 쌍, 다시 열면 200에 `viewed_at`만 상승, 없는 키 404, 비로그인 401에 행 없음, **같은 검색 동시 두 번에 쌍이 하나**.\n- 동시 기록 검사는 `BacktestDedupIT`와 같은 모양(`CountDownLatch` + 스레드 둘)이고 3회 연속 통과를 확인했습니다.\n- 회귀: `ArchitectureTest` 10건(규칙 11 포함), `MyRecordRepositoryIT` 6건(`append`만으로 고친 경제환경 로그 검사 포함), `MyRecordSearchIntakeIT`·`MyRecordRegistrarTest`(생성자가 늘어 목 세 개 추가), `ParamSearchApiIT`, `ParamSearchLimitReachedTest` 4건.\n- 비로그인 접수(`requesterId == null`이라 상한 판정을 건너뛰는 갈래)는 HTTP로는 401이라 닿지 않고, 서비스를 직접 부르는 `ParamSearchLimitReachedTest`가 그 갈래를 탑니다. 전용 IT는 두지 않았습니다.\n\n# 리뷰 포인트\n\n- **상한 판정이 `create(...)`의 첫 줄입니다.** preflight 앞이라 등록표 조회도 하지 않습니다. 그래서 자리가 없는 사용자는 등록표 버전이 어긋나거나 후보 상한에 걸려 **어차피 거절될 요청에도 409**를 받습니다 — 통과시켜 봐야 저장할 곳이 없으므로 그대로 뒀고 주석에 적었습니다. 007 미리보기(`preview`)에는 넣지 않았습니다 — 저장하지 않으므로 막을 자리가 아닙니다.\n- **세는 구간에 잠금이 없습니다.** 동시에 들어온 두 접수가 같은 수를 읽어 상한을 한둘 넘길 수 있습니다. 큐 한도(`ExecutionLimitPolicy`)와 달리 넘겨도 계산 자원을 더 쓰지 않고 다음 접수가 다시 걸리므로, 자문 잠금을 두 도메인에 걸치게 만들 값은 없다고 봤습니다. 코드에 `ponytail:` 표시와 올릴 길을 남겼습니다. 정확한 개수가 필요하다고 보시면 사용자 키 잠금을 더하겠습니다.\n- **역방향 의존을 포트로 뒤집었습니다(리뷰 반영).** 처음에는 `ParamSearchService`가 `MyRecordLimitPolicy`를 직접 불러 `paramsearch ↔ myrecord` 양방향이었습니다. 이 저장소는 같은 모양을 규칙 8·9·10으로 세 쌍에 대해 이미 막아 두었고, 규칙 9 주석이 정확히 이 상황을 적고 있습니다. 007이 `SaveSlotGuard`를 소유하고 006이 구현하게 바꾼 뒤 규칙 11로 방향을 박았습니다. 구현이 하나뿐인 인터페이스지만 그 하나가 다른 도메인에 있다는 것이 이 자리의 값입니다. 이벤트로 뒤집는 길도 있었지만 상한은 **접수를 막아야** 하는 판정이라 이벤트로는 늦습니다.\n- **응답 본문이 목록 항목과 같아 `POST` 뒤에 읽기가 한 번 더 붙습니다.** 등록기 안에서 읽지 않은 까닭은 `my_record`를 JPA로 넣고 `findView`를 JDBC로 읽는데 SEQUENCE라 INSERT가 flush까지 미뤄져 같은 트랜잭션에서는 방금 넣은 행이 보이지 않기 때문입니다. 등록기는 `recordId`만 돌려주고 읽기는 커밋 뒤에 합니다.\n- **`findActive`/`touch`를 지운 것이 BE-1의 포트 계약(T012)을 줄입니다.** T012는 세 메서드를 적었지만 `append`의 upsert가 나머지 둘을 흡수했습니다. 포트 계약을 정하는 것은 문서가 아니라 호출자라고 봤습니다 — 남겨 두면 계약이 아니라 주석 달린 죽은 코드입니다. 006에 \"열람만 올리는\" 경로가 실제로 필요해지면 `touch`는 그때 세 줄입니다. BE-1 IT는 검증하려던 동작을 그대로 두고 수단만 `append`로 바꿨습니다.\n- **동시 기록의 안전은 `append`의 락에 기댑니다.** 둘 다 \"없다\"를 읽고 둘 다 INSERT 하면 `uk_my_record_regime`(부분 유니크)에 한쪽이 걸려 500이 나갑니다. 그러지 않는 것은 `INSERT ... ON CONFLICT DO UPDATE`가 충돌한 로그 행을 잠가 뒤엣것이 앞엣것의 커밋까지 기다리고, 풀린 뒤에는 앞엣것이 만든 항목을 보기 때문입니다. 자바 쪽 잠금이 아니라 그 순서에 기대는 것이라 테스트로 박았습니다.\n- **탐색 묶음 상한은 반대로 동시 접수를 직렬화하지 않습니다.** 위와 달리 여기에는 잠글 행이 없습니다(세기만 합니다). 상한 2에 동시 접수 셋이 들어오면 셋 다 통과할 수 있고, 이것은 의도한 한계입니다 — 넘겨도 계산 자원을 더 쓰지 않고 다음 접수가 걸립니다. 그래서 상한 쪽에는 동시성 검사를 두지 않았습니다(두면 지금 설계에서 실패합니다).\n- **분야 이름을 읽지 못하면 분야 id를 그대로 씁니다**(`MyRecordRegistrar.fieldLabel`). 지어낸 값이 아니라 가진 값이라 원칙 VI에 걸리지 않는다고 봤습니다. 종합 검색은 `종합`입니다(tasks.md T013).\n- **`RECORD_WITHDRAWN`(410)은 이 MR에서 쓰지 않습니다.** 기록 시점에는 스냅샷이 있어야 하므로 없는 키는 404이고, 철회는 이미 남긴 기록을 **열 때** 판정합니다(BE-2의 목록이 `WITHDRAWN` 상태로 보입니다).\n\n# 전달만 하는 것 (티켓 아님)\n\n- **007 담당**: `ParamSearchService.create(...)` **앞**에 상한 판정 호출 한 줄이 들어갑니다(생성자에 `MyRecordLimitPolicy` 한 개 추가). 후보 상한(`CANDIDATE_LIMIT`)으로 `REJECTED` 묶음을 남기는 경로는 **그대로**입니다 — 이 거절은 묶음 행을 남기지 않는 다른 종류입니다. `noRollbackFor`에도 손대지 않았습니다.\n- **010 담당**: `regime_search_log`에 행을 쓰는 경로가 열렸습니다(BE-1이 만든 `RegimeSearchLogWriter`). `GET /regime-searches`와 010 자바 코드는 변경 없습니다. `RegimeSnapshotRepository.findByKey`를 006이 읽습니다.\n- **FE-3 담당**: `POST /my-records/regime-searches { searchId, entryPath, baselineOrigin }`을 쓸 수 있습니다. 세 값 모두 필수이고 응답은 목록 항목과 같은 본문에 201(신규)/200(기존)입니다. 접수 화면(`ParamSearchPage`)의 409 분기는 `error.details.current`·`error.details.limit`으로 \"N/M\"을 만들 수 있습니다(T040).\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE 쪽 US3(T037~T040, FE-3)과 `RegimeSearchPage`의 `?searchId=` 수신(T039a).\n- 내보내기(BE-5), 이름 변경·삭제(BE-6), 설정 바꿔 비교(BE-3).\n- `tasks.md`의 T033~T036 체크박스는 머지 뒤에 표시합니다.\n- 상한값 `20`은 PD-13 확정 전 임시값입니다. 산출물은 값이 아니라 장치입니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T11:13:55.381+09:00",
+    "updated_at": "2026-09-21T11:37:21.323+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T11:37:20.777+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/384-my-record-limit-regime",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+    "merge_commit_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T11:13:56.964+09:00",
+    "reference": "!260",
+    "references": {
+      "short": "!260",
+      "relative": "!260",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!260"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/260",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "17",
+    "latest_build_started_at": "2026-09-21T11:21:06.114+09:00",
+    "latest_build_finished_at": "2026-09-21T11:33:01.902+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 211461,
+      "iid": 245,
+      "project_id": 1444456,
+      "sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+      "ref": "feat(be)/384-my-record-limit-regime",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T11:21:05.991+09:00",
+      "updated_at": "2026-09-21T11:33:01.908+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211461"
+    },
+    "head_pipeline": {
+      "id": 211461,
+      "iid": 245,
+      "project_id": 1444456,
+      "sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+      "ref": "feat(be)/384-my-record-limit-regime",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T11:21:05.991+09:00",
+      "updated_at": "2026-09-21T11:33:01.908+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211461",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T11:21:06.114+09:00",
+      "finished_at": "2026-09-21T11:33:01.902+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211461",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "head_sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+      "start_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "95c966f57810ff54226ed35a701af07eab6397ab",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845130,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:13:55.540+09:00",
+          "updated_at": "2026-09-21T11:13:55.544+09:00",
+          "system": true,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f91cf6cfdf13737b489792530f928bb10ba1b27e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845131,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:13:55.651+09:00",
+          "updated_at": "2026-09-21T11:13:55.662+09:00",
+          "system": true,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a029664d2e6f2cb57bb7d7ed656c00f46356fc4d",
+      "individual_note": false,
+      "resolvable": true,
+      "resolved": false,
+      "notes": [
+        {
+          "id": 2845133,
+          "type": "DiscussionNote",
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 아키텍처 원칙 준수**: `ArchitectureTest`에 규칙 11(`paramsearch`는 `myrecord`를 참조하지 않음)을 추가하여 의존성 방향을 올바르게 제어하고, `SaveSlotGuard` 인터페이스를 통해 도메인 간 결합도를 낮춘 설계가 돋보입니다.\n- **동시성 및 데이터 무결성 고려**: `RegimeSearchLogWriter`에서 애플리케이션 레벨의 `find` 후 `insert/update` 분기를 제거하고, DB 단의 UPSERT와 유니크 인덱스를 활용하여 동시 요청 시 발생할 수 있는 Race Condition(중복 레코드 생성 문제)을 원천 차단했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (코드의 설계 의도, 예외 처리, 테스트 커버리지 및 동시성 제어가 MR 설명과 일치하며 매우 깔끔하게 작성되었습니다.)\n\n### 테스트 제안\n1. **탐색 묶음 상한 동시 요청 테스트 (`MyRecordLimitIT`)**:\n   - 상한선이 임계치(예: 2개) 직전일 때, 여러 클라이언트가 동시에 `POST /param-searches`를 전송하여 동시성 상황에서도 정확히 상한(409)이 동작하고 초과 저장되지 않는지 검증합니다.\n2. **경제환경 기록의 멱등성 및 뷰티파잉 테스트 (`RegimeRecordIT`)**:\n   - 동일한 `searchId`와 `entryPath`로 여러 번 연속 요청을 보낼 때, 첫 번째 요청은 `201 Created`와 함께 새 항목이 생성되고, 이후 요청들은 `200 OK`를 반환하며 `viewed_at` 외에 데이터가 오염되거나 중복 생성되지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7a0ff1d8436507b2e295930f6a34d2f0709c3bab -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T11:14:05.710+09:00",
+          "updated_at": "2026-09-21T11:23:32.932+09:00",
+          "system": false,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        },
+        {
+          "id": 2845257,
+          "type": "DiscussionNote",
+          "body": "1. \\[Low\\] enum 잘못된 값 → 400 — 테스트 추가함\n\n코드 경로는 짚으신 대로 정상이었습니다(handleHttpMessageNotReadable이 JsonMappingException의 path를 보고 400 INVALID_INPUT + details.fields로 변환). 다만 계약에 \"그 밖의 값은 400\"이 명시돼 있는데 검증이 없었습니다 — 기존 테스트는 누락(@NotNull)만 봤습니다. entryPath: \"SOMEWHERE_ELSE\", baselineOrigin: \"GUESSED\" 두 경우를 추가했습니다.\n\n2. 동시 기록 Race Condition — 테스트 추가함. 짚은 자리가 실제로 위험했습니다\n\n이건 \\[Low\\]가 아니라 확인이 필요한 자리였습니다. uk_my_record_regime이 부분 유니크 인덱스(WHERE deleted_at IS NULL AND is_copy = false)라, 두 요청이 모두 \"없다\"를 읽고 모두 INSERT 하면 한쪽이 제약 위반으로 500이 납니다.\n\n실제로는 안 터지는데, 이유가 제 코드가 아니라 DB에 있습니다 — append의 INSERT ... ON CONFLICT DO UPDATE가 충돌한 로그 행을 잠그기 때문에 뒤엣것이 앞엣것의 커밋까지 기다리고, 풀린 뒤엔 앞엣것이 만든 항목을 보고 200을 돌려줍니다. 자바 코드 어디에도 안 적힌 순서에 기대고 있었습니다.\n\nBacktestDedupIT:134와 같은 모양(CountDownLatch + 스레드 둘)으로 테스트를 넣었고 3회 연속 8/8 통과했습니다. 기대하신 \"로그 행 정확히 1개 + 모든 요청 200/201 성공\"이 그대로 성립합니다.\n\n3. 상한 초과 동시 접수 — 추가하지 않았습니다. 넣으면 실패합니다\n\n상한 판정에는 잠글 행이 없습니다(세기만 합니다). 상한 2에 동시 접수 셋이 오면 셋 다 통과할 수 있고, 이건 의도한 한계입니다 — 넘겨도 계산 자원을 더 쓰지 않고 다음 접수가 걸리므로 두 도메인에 걸친 자문 잠금 값어치가 없다고 판단했고, 코드에 ponytail: 표시와 MR 리뷰 포인트로 남겨 뒀습니다.\n\n즉 2번과 3번은 같은 \"동시성\"으로 보이지만 성질이 반대입니다. 순차 상한 검증은 MyRecordLimitIT가 이미 합니다. 잠금을 넣어야 한다고 보시면 그때 테스트도 함께 넣겠습니다.",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:23:32.883+09:00",
+          "updated_at": "2026-09-21T11:23:32.883+09:00",
+          "system": false,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b88240cb7cf28f589a9fdee753bf4a18cc3a3cd2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845220,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>7a0ff1d8 - test(be): 모르는 enum 값과 동시 기록을 단언한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/260/diffs?diff_id=2230520&start_sha=5caea25b80b842ec876f3432e849b2fc5ad95154)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:20:51.987+09:00",
+          "updated_at": "2026-09-21T11:20:51.992+09:00",
+          "system": true,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1ec2fddec655fc633bba7f3284040b9d037551bd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845260,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:24:02.759+09:00",
+          "updated_at": "2026-09-21T11:24:02.763+09:00",
+          "system": true,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7453a129f3e4fbaa696faf5b3eb51a0f4c18ee33",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845262,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:24:11.671+09:00",
+          "updated_at": "2026-09-21T11:24:11.685+09:00",
+          "system": true,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c820f3ee98acefacb618794a8ab540232d398008",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845390,
+          "type": null,
+          "body": "mentioned in commit b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:37:20.862+09:00",
+          "updated_at": "2026-09-21T11:37:20.871+09:00",
+          "system": true,
+          "noteable_id": 953921,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 260,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2230520,
+      "head_commit_sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+      "created_at": "2026-09-21T11:20:51.669+09:00",
+      "merge_request_id": 953921,
+      "state": "collected",
+      "real_size": "17",
+      "patch_id_sha": "eacb92abf71ca6a46d810333fde63a9aeb35e658"
+    },
+    {
+      "id": 2230434,
+      "head_commit_sha": "5caea25b80b842ec876f3432e849b2fc5ad95154",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+      "created_at": "2026-09-21T11:13:55.898+09:00",
+      "merge_request_id": 953921,
+      "state": "without_files",
+      "real_size": "17",
+      "patch_id_sha": "843401632f201029f033a110b7ff22db4c61846d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2230520,
+      "head_commit_sha": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+      "created_at": "2026-09-21T11:20:51.669+09:00",
+      "merge_request_id": 953921,
+      "state": "collected",
+      "real_size": "17",
+      "patch_id_sha": "eacb92abf71ca6a46d810333fde63a9aeb35e658",
+      "commits": [
+        {
+          "id": "7a0ff1d8436507b2e295930f6a34d2f0709c3bab",
+          "short_id": "7a0ff1d8",
+          "created_at": "2026-09-21T11:20:48.000+09:00",
+          "parent_ids": [
+            "5caea25b80b842ec876f3432e849b2fc5ad95154"
+          ],
+          "title": "test(be): 모르는 enum 값과 동시 기록을 단언한다",
+          "message": "test(be): 모르는 enum 값과 동시 기록을 단언한다\n\nAI 리뷰 반영이다.\n\n계약이 \"entryPath·baselineOrigin 이 그 밖의 값이면 400\"이라고 적었는데 누락(@NotNull)만 보고\n모르는 값은 보지 않았다. 둘 다 400 INVALID_INPUT 이고 행이 생기지 않는 것을 단언한다 — 값\n목록이 늘 때 검사할 자리가 여기 하나로 남는다.\n\n같은 검색을 동시에 두 번 여는 경우도 고정한다. 둘 다 \"없다\"를 읽고 둘 다 INSERT 하면 부분\n유니크 인덱스 uk_my_record_regime 에 한쪽이 걸려 500 이 나간다. 그러지 않는 것은 append 의\nINSERT ... ON CONFLICT DO UPDATE 가 충돌한 로그 행을 잠가 뒤엣것이 앞엣것의 커밋까지 기다리고,\n풀린 뒤에는 앞엣것이 만든 항목을 보기 때문이다. 그 순서에 기대고 있으므로 테스트로 박는다\n(BacktestDedupIT 와 같은 모양). 3회 연속 통과를 확인했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:20:48.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:20:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a0ff1d8436507b2e295930f6a34d2f0709c3bab"
+        },
+        {
+          "id": "5caea25b80b842ec876f3432e849b2fc5ad95154",
+          "short_id": "5caea25b",
+          "created_at": "2026-09-21T11:07:53.000+09:00",
+          "parent_ids": [
+            "e14cd9d7303f6b26a7e8fe641597a5bea8ff734a"
+          ],
+          "title": "test(be): 열람 시각이 뒤로 가지 않는 것을 단언한다",
+          "message": "test(be): 열람 시각이 뒤로 가지 않는 것을 단언한다\n\ntouch 를 지우면서 GREATEST 판정이 append 한 문장에만 남았는데 그것을 지키는 단언이 없었다.\nEXCLUDED.viewed_at 으로 바꿔 써도 기존 단언은 그대로 통과한다 — 늦게 도착한 옛 요청이 최신\n열람 시각을 과거로 되돌리지 않는다를 따로 본다. 바꿔서 터지는 것을 확인하고 되돌렸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:07:53.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:07:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5caea25b80b842ec876f3432e849b2fc5ad95154"
+        },
+        {
+          "id": "e14cd9d7303f6b26a7e8fe641597a5bea8ff734a",
+          "short_id": "e14cd9d7",
+          "created_at": "2026-09-21T11:02:54.000+09:00",
+          "parent_ids": [
+            "811c2f54c93c5c19772ca049c3cd44ff3b53c932"
+          ],
+          "title": "refactor(be): 상한 판정을 포트로 뒤집고 로그 쓰기를 upsert 하나로 줄인다",
+          "message": "refactor(be): 상한 판정을 포트로 뒤집고 로그 쓰기를 upsert 하나로 줄인다\n\n리뷰 반영이다.\n\n접수 서비스가 006의 정책을 직접 부르면 paramsearch ↔ myrecord 양방향이 된다. 이 저장소는\n같은 모양을 규칙 8·9·10으로 strategy·result·learning 세 쌍에 대해 이미 막아 두었고, 규칙 9\n주석이 정확히 이 상황을 적고 있다. 007이 SaveSlotGuard 를 소유하고 006이 구현하게 바꿔\n화살표를 myrecord → paramsearch 하나로 되돌리고, ArchUnit 규칙 11 로 방향을 박는다.\n구현이 하나뿐인 인터페이스지만 그 하나가 다른 도메인에 있다는 것이 이 자리의 값이다.\n\nRegimeSearchLogWriter.append 의 upsert 가 findActive + touch 가 하던 일을 그대로 한다.\n찾아보고 갈래를 나누면 동시에 두 번 열었을 때 양쪽이 \"없음\"을 읽는 틈이 생기고, 기존 로그에\n항목만 지워진 경로에서 viewed_at 을 두 번 쓴다. append 한 번으로 줄이고 200/201 은 항목이\n있는지로 가른다. 쓰이지 않게 된 findActive·touch 는 포트와 구현에서 지웠다 — BE-1 의\nMyRecordRepositoryIT 가 그 둘로 단언하던 세 가지는 append 만으로 같은 것을 단언하게 고쳤다.\n\nBusinessException 이 details 를 Map.copyOf 로 받아 순서를 버리므로 LinkedHashMap 을 Map.of\n로 바꾼다. 상한이 사본도 센다는 사실과 그 이유를 주석에 박는다 — 재사용 판정은 사본을 빼는데\n여기는 빼지 않아 두 쿼리가 나란히 다르게 생겼다. 판정이 preflight 보다 앞이라 어차피 거절될\n요청도 409 를 받는다는 것도 호출부 주석에 적는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:02:54.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:02:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e14cd9d7303f6b26a7e8fe641597a5bea8ff734a"
+        },
+        {
+          "id": "811c2f54c93c5c19772ca049c3cd44ff3b53c932",
+          "short_id": "811c2f54",
+          "created_at": "2026-09-21T10:39:42.000+09:00",
+          "parent_ids": [
+            "a54dfa8da2fb6a5f5202fb758141068dbedd5981"
+          ],
+          "title": "feat(be): 경제환경 기록 POST 를 컨트롤러에 얹는다",
+          "message": "feat(be): 경제환경 기록 POST 를 컨트롤러에 얹는다\n\nPOST /my-records/regime-searches 를 더한다(spec 006 T035·T036). 이미 같은 (스냅샷·진입 경로)\n항목이 있으면 200, 새로 만들면 201 이고 본문은 두 경우 모두 목록 항목과 같다 — 화면이 응답\n모양을 갈라 읽지 않게 한다.\n\n응답은 MyRecordQueryService.item 이 짓는다. 상세와 달리 열람 표시를 남기지 않는다 — 방금\n만든 항목을 돌려주는 것이지 사용자가 다시 본 것이 아니다. 없는 것·지운 것·남의 것을 한 가지\n404 로 답하는 문장은 requireView 한 곳으로 모았다.\n\n읽기를 등록기 안에서 하지 않은 까닭: my_record 는 JPA 로 넣고 findView 는 JDBC 로 읽는데,\nSEQUENCE 라 INSERT 가 flush 까지 미뤄져 같은 트랜잭션 안에서는 방금 넣은 행이 보이지 않는다.\n등록기는 recordId 만 돌려주고 읽기는 커밋 뒤에 한다.\n\nRegimeRecordIT: 로그 행·기록 행이 하나씩 생기고 보낸 baseline_origin 이 그대로 저장되는지,\nbaselineOrigin 이 빠지면 400 인지, 진입 경로가 다르면 두 번째 쌍이 생기는지, 다시 열면 200 에\nviewed_at 만 오르는지, 없는 키가 404 인지, 비로그인이 401 이고 행이 없는지.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:39:42.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:39:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/811c2f54c93c5c19772ca049c3cd44ff3b53c932"
+        },
+        {
+          "id": "a54dfa8da2fb6a5f5202fb758141068dbedd5981",
+          "short_id": "a54dfa8d",
+          "created_at": "2026-09-21T10:36:14.000+09:00",
+          "parent_ids": [
+            "dcaf42edf16a75b889c90008f56c11cc0c847427",
+            "b36ccbab340b8b37bed4cda554cf59c906e79a81"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/384-my-record-limit-regime",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/384-my-record-limit-regime\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:36:14.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:36:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a54dfa8da2fb6a5f5202fb758141068dbedd5981"
+        },
+        {
+          "id": "dcaf42edf16a75b889c90008f56c11cc0c847427",
+          "short_id": "dcaf42ed",
+          "created_at": "2026-09-21T10:31:09.000+09:00",
+          "parent_ids": [
+            "35b1f4b4019b3928afafc85a566e7b54dc18f1f3"
+          ],
+          "title": "feat(be): 경제환경 검색을 개인 기록으로 남기는 자리를 만든다",
+          "message": "feat(be): 경제환경 검색을 개인 기록으로 남기는 자리를 만든다\n\nMyRecordRegistrar.recordRegimeSearch 를 더한다(spec 006 T035, research R15). 스냅샷을 010의\n읽기 경로(RegimeSnapshotRepository.findByKey)로 찾고 없으면 404 다. regime_search_log 행과\nmy_record 행을 한 트랜잭션에 만든다 — 갈라지면 아무도 가리키지 않는 로그 행이나 없는 행을\n가리키는 항목이 남는다.\n\nbaselineOrigin 은 화면이 보낸 값을 그대로 쓴다. 010의 SnapshotKey 에는 기준월 근거가 없어\nsearchId 만으로는 되짚을 수 없고, 추정하면 원칙 VI 위반이다. RecordRegimeSearchRequest 는\n세 값을 enum 으로 받아 모르는 값이 본문을 읽는 단계에서 400 이 되게 한다.\n\n같은 (소유자·스냅샷·진입 경로)의 로그 행이 있으면 열람 시각만 올리고 그 항목을 돌려준다.\n항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만든다 — 처음 본 revision 은 로그 행이\n쥐고 있다. append 는 upsert 라 동시 요청에도 로그 행이 하나이고, 그 뒤 항목을 한 번 더 찾아\nuk_my_record_regime 위반으로 500 이 나가지 않게 한다.\n\nHTTP 경로(POST /my-records/regime-searches)는 MyRecordController 가 dev 에 들어온 뒤 얹는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:31:09.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:31:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dcaf42edf16a75b889c90008f56c11cc0c847427"
+        },
+        {
+          "id": "35b1f4b4019b3928afafc85a566e7b54dc18f1f3",
+          "short_id": "35b1f4b4",
+          "created_at": "2026-09-21T10:25:52.000+09:00",
+          "parent_ids": [
+            "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90"
+          ],
+          "title": "feat(be): 탐색 묶음 저장 상한을 접수 앞에 둔다",
+          "message": "feat(be): 탐색 묶음 저장 상한을 접수 앞에 둔다\n\nMyRecordLimitPolicy 를 만들어 ParamSearchService.create 맨 앞에서 부른다(spec 006 T033,\nFR-018·research R11). 판정 자리가 접수 직전인 까닭은 계산이 끝난 뒤 저장 단계에서 막으면\n이미 쓴 계산 자원이 버려지기 때문이다 — Edge Cases 가 \"새 탐색을 시작하기 전에 알린다\"로\n정했다.\n\n거절은 429 가 아니라 409 RECORD_LIMIT_REACHED 다. 429 는 큐에 쌓이는 양 이야기이고 이것은\n저장 자리 이야기라 코드를 나눈다. 본문 error.details 에 current·limit 을 실어 화면이 \"N/M\"\n을 문장에서 뽑아 쓰지 않게 한다.\n\n이 거절은 되돌려도 된다 — 어떤 행도 쓰이기 전이라 남길 묶음이 없다. 후보 상한(REJECTED)\n갈래와 다르므로 noRollbackFor 에 더하지 않는다. 비로그인 접수는 기록을 만들지 않아 셀\n것도 없어 건너뛴다.\n\n상한값은 MyRecordLimits 로 옮겨 정책이 받는다. MyRecordProperties 는 infrastructure 라\napplication 이 직접 참조할 수 없다(ArchitectureTest 계층 규칙) — ExecutionLimits 와 같은\n자리다. 세는 구간에 잠금은 두지 않았다(코드에 ponytail 표시).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:25:41.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:25:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/35b1f4b4019b3928afafc85a566e7b54dc18f1f3"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+package com.ssafy.thorp.myrecord.application.port;\n+\n+/**\n+ * 내 기록 상한 값(spec 006 FR-018). 설정에서 읽어 온 불변 사본이다.\n+ *\n+ * <p>{@code MyRecordProperties}를 정책이 직접 주입받지 않는 이유: 그 클래스는 {@code infrastructure.config}에 있고\n+ * application은 infrastructure를 참조할 수 없다({@code ArchitectureTest} 계층 규칙). {@code ExecutionLimits}와\n+ * 같은 자리다.\n+ *\n+ * @param searchBundle 한 사용자가 저장해 둘 수 있는 탐색 묶음 기록 수. <b>PD-13 확정 전 임시값</b>이며 산출물은 값이 아니라 장치다\n+ */\n+public record MyRecordLimits(int searchBundle) {\n+\n+    public MyRecordLimits {\n+        if (searchBundle < 1) {\n+            throw new IllegalArgumentException(\"searchBundle limit must be positive\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/port/MyRecordLimits.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/port/MyRecordLimits.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,6 @@ package com.ssafy.thorp.myrecord.application.port;\n import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n import java.time.Instant;\n-import java.util.Optional;\n \n /**\n  * 경제환경 개인 검색 기록({@code regime_search_log})에 행을 쓰는 통로(spec 006 research R15).\n@@ -17,17 +16,15 @@ import java.util.Optional;\n public interface RegimeSearchLogWriter {\n \n     /**\n-     * 같은 소유자·같은 스냅샷 키·같은 진입 경로의 기존 행.\n+     * 행을 하나 만든다. <b>이미 있으면 만들지 않고 열람 시각만 올린다.</b> 같은 검색을 두 번 열었다고 기록이 둘이 되면 목록이 같은 항목으로 찬다.\n      *\n-     * <p>있으면 새 행을 만들지 않고 {@link #touch}로 열람 시각만 올린다 — 같은 검색을 두 번 열었다고 기록이 둘이 되면 목록이 같은 항목으로 찬다.\n-     */\n-    Optional<Long> findActive(long ownerId, String snapshotKey, EntryPath entryPath);\n-\n-    /**\n-     * 행을 하나 만든다.\n+     * <p>찾아보고 넣는 메서드를 따로 두지 않는 것은 그 둘 사이에 틈이 생기기 때문이다. 동시에 두 번 열면 양쪽이 \"없음\"을 읽어 행이 둘이 되고, {@code\n+     * uk_my_record_regime}은 서로 다른 로그 행을 가리키는 두 항목을 막지 못한다. 판정을 DB 한 문장에 맡긴다.\n      *\n-     * @param snapshotId 고정할 revision. 철회로 사라지면 NULL이 되고 {@code snapshotKey}로 무엇을 봤는지는 남는다\n-     * @return 만들어진 행의 id. 기록 항목이 이 값을 가리킨다\n+     * @param snapshotId 고정할 revision. 철회로 사라지면 NULL이 되고 {@code snapshotKey}로 무엇을 봤는지는 남는다. 이미 있는 행의\n+     *     값은 <b>덮어쓰지 않는다</b> — 처음 본 revision 을 나중 조회가 바꾸면 \"무엇을 봤는지\"가 흔들린다\n+     * @param viewedAt 열람 시각. 뒤로 가지 않는다\n+     * @return 만들어졌거나 이미 있던 행의 id. 기록 항목이 이 값을 가리킨다\n      */\n     long append(\n             long ownerId,\n@@ -36,7 +33,4 @@ public interface RegimeSearchLogWriter {\n             EntryPath entryPath,\n             BaselineOrigin baselineOrigin,\n             Instant viewedAt);\n-\n-    /** 이미 있는 행의 열람 시각만 올린다. */\n-    void touch(long logId, Instant viewedAt);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/port/RegimeSearchLogWriter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/port/RegimeSearchLogWriter.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+/**\n+ * 경제환경 기록 요청의 결과(spec 006 T035, contracts \"POST /my-records/regime-searches\").\n+ *\n+ * <p>본문은 목록 항목과 같으므로 여기서는 <b>어느 항목인지</b>와 <b>새로 만들었는지</b>만 나른다 — 응답 본문은 컨트롤러가 목록과 같은 읽기 경로로 짓고,\n+ * {@code created}가 201과 200을 가른다.\n+ *\n+ * @param created 이 요청이 행을 만들었는가. 거짓이면 이미 있던 항목의 열람 시각만 올렸다는 뜻이다\n+ */\n+public record RegimeRecordOutcome(String recordId, boolean created) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/RegimeRecordOutcome.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/RegimeRecordOutcome.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,62 @@\n+package com.ssafy.thorp.myrecord.application.service;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.myrecord.application.port.MyRecordLimits;\n+import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;\n+import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n+import com.ssafy.thorp.paramsearch.application.port.SaveSlotGuard;\n+import java.util.Map;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 탐색 묶음 저장 상한(spec 006 FR-018, research R11).\n+ *\n+ * <p><b>값이 아니라 장치가 산출물이다.</b> 상한값은 {@link MyRecordLimits}가 설정에서 실어 오고 PD-13이 실측 뒤 정한다. 여기서는 넘었는지만\n+ * 본다 — 004의 {@code ExecutionLimitPolicy}와 같은 모양이다.\n+ *\n+ * <p><b>판정 자리는 접수 직전이다.</b> 계산이 끝난 뒤 저장 단계에서 막으면 이미 쓴 계산 자원이 버려진다 — Edge Cases가 \"새 탐색을 시작하기 전에\n+ * 알린다\"로 정했다. 007 접수({@code ParamSearchService.create})가 어떤 행을 쓰기도 전에 {@link SaveSlotGuard}로 부른다 —\n+ * 007은 무엇을 세는지 알지 못하고, 그래야 화살표가 {@code myrecord → paramsearch} 하나로 남는다.\n+ *\n+ * <p><b>거절은 429가 아니라 409다.</b> 429는 실행 자원(큐에 쌓이는 양) 이야기이고 이것은 저장 자리 이야기라 코드를 나눈다(spec FR-018). 기존\n+ * 항목을 지우지 않는다 — 무엇을 지울지는 사용자가 정한다.\n+ *\n+ * <p><b>세는 구간을 잠그지 않는다.</b> 동시에 들어온 두 접수가 같은 수를 읽으면 상한을 한둘 넘겨 저장될 수 있다. 큐 한도와 달리 넘겨도 자원을 더 쓰지 않고 다음\n+ * 접수가 다시 걸리므로, 자문 잠금을 두 도메인에 걸치게 만드는 값이 없다고 봤다.\n+ */\n+// ponytail: 세는 구간에 잠금이 없다. 동시 접수가 상한을 살짝 넘길 수 있고, 정확한 개수가 필요해지면\n+// ExecutionLimitPolicy처럼 사용자 키 자문 잠금을 잡는다.\n+@Component\n+public class MyRecordLimitPolicy implements SaveSlotGuard {\n+\n+    private final MyRecordRepository records;\n+    private final MyRecordLimits limits;\n+\n+    public MyRecordLimitPolicy(MyRecordRepository records, MyRecordLimits limits) {\n+        this.records = records;\n+        this.limits = limits;\n+    }\n+\n+    /**\n+     * 이 사용자가 탐색 묶음을 하나 더 저장해도 되는지 본다. 넘었으면 {@code 409 RECORD_LIMIT_REACHED}를 던진다.\n+     *\n+     * <p>세는 것은 <b>살아 있는</b> 묶음 항목뿐이다 — 지운 항목이 자리를 계속 차지하면 \"지운 뒤 다시 시작하라\"는 안내가 거짓이 된다. <b>사본({@code\n+     * is_copy})도 센다</b> — 같은 원본을 가리켜도 목록에서 한 줄을 차지하므로 저장 자리를 먹는다. 재사용 판정({@code\n+     * findActiveByOwnerAnd*})이 사본을 빼는 것과 조건이 다른 것은 그래서다. 사본을 만드는 경로가 생기면 그쪽도 이 판정을 지나야 한다.\n+     *\n+     * <p>본문에 현재 개수와 상한을 실어 보낸다. 화면이 \"N/M\"을 보이려면 숫자가 필요하고, 문장에 섞어 두면 문구를 다듬다가 조용히 깨진다.\n+     */\n+    @Override\n+    public void requireSaveSlot(long ownerId) {\n+        int limit = limits.searchBundle();\n+        long current = records.countActiveByOwnerAndKind(ownerId, RecordKind.SEARCH_BUNDLE);\n+        if (current < limit) {\n+            return;\n+        }\n+        throw new BusinessException(\n+                ErrorCode.RECORD_LIMIT_REACHED,\n+                ErrorCode.RECORD_LIMIT_REACHED.getMessage(),\n+                Map.of(\"current\", current, \"limit\", limit));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordLimitPolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordLimitPolicy.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,19 +41,23 @@ public class MyRecordQueryService {\n         return records.findPage(ownerId, query);\n     }\n \n+    /**\n+     * 한 항목의 목록 줄. 기록 요청({@code POST /my-records/regime-searches})의 응답이 목록 항목과 같은 본문이라 그 경로가 쓴다.\n+     *\n+     * <p>상세와 달리 열람 표시를 남기지 않는다 — 방금 만든 항목을 돌려주는 것이지 사용자가 다시 본 것이 아니다.\n+     */\n+    @Transactional(readOnly = true)\n+    public MyRecordView item(long ownerId, String recordId) {\n+        return requireView(ownerId, recordId);\n+    }\n+\n     /**\n      * 한 항목의 상세. 읽는 순간을 '다시 보기'로 남긴다 — 상세는 결과 화면이 기록에서 들어왔을 때({@code ?recordId=})와 펼쳐 보는 층이 부르는 경로라\n      * 열람 표시를 따로 받지 않는다. 시각 하나만 남기고 자동 삭제에는 쓰지 않는다(2026-09-18 명료화).\n      */\n     @Transactional\n     public MyRecordDetail detail(long ownerId, String recordId) {\n-        MyRecordView view =\n-                records.findView(ownerId, recordId)\n-                        .orElseThrow(\n-                                () ->\n-                                        new BusinessException(\n-                                                ErrorCode.RESOURCE_NOT_FOUND,\n-                                                \"기록을 찾을 수 없습니다: \" + recordId));\n+        MyRecordView view = requireView(ownerId, recordId);\n         Instant now = clock.instant();\n         records.markViewed(view.id(), now);\n         Map<String, Object> referenceVersions = referenceVersions(view);\n@@ -105,6 +109,16 @@ public class MyRecordQueryService {\n         return out;\n     }\n \n+    /** 없는 것·지운 것·남의 것을 한 가지 404 로 답한다. 두 읽기 경로가 같은 문장을 쓰도록 한 곳에 둔다. */\n+    private MyRecordView requireView(long ownerId, String recordId) {\n+        return records.findView(ownerId, recordId)\n+                .orElseThrow(\n+                        () ->\n+                                new BusinessException(\n+                                        ErrorCode.RESOURCE_NOT_FOUND,\n+                                        \"기록을 찾을 수 없습니다: \" + recordId));\n+    }\n+\n     private SourceVersions source(MyRecordView view) {\n         return records.findSourceVersions(view.id(), view.kind())\n                 .orElseGet(() -> new SourceVersions(Map.of(), Map.of()));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,15 +2,26 @@ package com.ssafy.thorp.myrecord.application.service;\n \n import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;\n import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.myrecord.application.port.RegimeSearchLogWriter;\n import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;\n+import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;\n import com.ssafy.thorp.myrecord.domain.model.MyRecord;\n import com.ssafy.thorp.myrecord.domain.model.RecordRef;\n import com.ssafy.thorp.myrecord.domain.vo.AnalysisPeriod;\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n import com.ssafy.thorp.paramsearch.application.event.ParamSearchAccepted;\n+import com.ssafy.thorp.regime.application.port.FieldRegistration;\n+import com.ssafy.thorp.regime.application.port.MacroIndicatorPort;\n+import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;\n+import com.ssafy.thorp.regime.domain.model.RegimeSnapshot;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n import com.ssafy.thorp.sector.application.repository.SectorRepository;\n import com.ssafy.thorp.sector.application.result.SectorListResult;\n import com.ssafy.thorp.sector.domain.model.Sector;\n import java.time.Clock;\n+import java.time.Instant;\n import java.time.LocalDate;\n import java.util.Comparator;\n import java.util.List;\n@@ -19,6 +30,7 @@ import java.util.stream.Collectors;\n import org.slf4j.Logger;\n import org.slf4j.LoggerFactory;\n import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n import org.springframework.transaction.event.TransactionPhase;\n import org.springframework.transaction.event.TransactionalEventListener;\n \n@@ -30,6 +42,9 @@ import org.springframework.transaction.event.TransactionalEventListener;\n  *\n  * <p><b>{@code BEFORE_COMMIT}인 이유</b>: 접수와 항목이 같은 트랜잭션에 묶여야 둘 중 하나만 남지 않는다. 접수가 끝난 뒤 항목 저장이 실패하면\n  * 사용자는 \"분석은 돌고 있는데 목록에 없는\" 상태를 보게 된다.\n+ *\n+ * <p><b>경제환경만 이벤트가 아니라 요청으로 들어온다</b>({@link #recordRegimeSearch}). 진입 경로와 기준월 근거는 스냅샷의 성질이 아니라 조회한\n+ * 화면만 아는 값이라, 010의 조회(GET)에 쓰기 부작용을 붙이는 대신 006이 기록 요청을 받는다(research R15).\n  */\n @Service\n public class MyRecordRegistrar {\n@@ -39,16 +54,25 @@ public class MyRecordRegistrar {\n     private final MyRecordRepository records;\n     private final RecordNamer namer;\n     private final SectorRepository sectorRepository;\n+    private final RegimeSearchLogWriter regimeLogs;\n+    private final RegimeSnapshotRepository snapshots;\n+    private final MacroIndicatorPort macroIndicators;\n     private final Clock clock;\n \n     public MyRecordRegistrar(\n             MyRecordRepository records,\n             RecordNamer namer,\n             SectorRepository sectorRepository,\n+            RegimeSearchLogWriter regimeLogs,\n+            RegimeSnapshotRepository snapshots,\n+            MacroIndicatorPort macroIndicators,\n             Clock clock) {\n         this.records = records;\n         this.namer = namer;\n         this.sectorRepository = sectorRepository;\n+        this.regimeLogs = regimeLogs;\n+        this.snapshots = snapshots;\n+        this.macroIndicators = macroIndicators;\n         this.clock = clock;\n     }\n \n@@ -122,6 +146,85 @@ public class MyRecordRegistrar {\n                         event.acceptedAt()));\n     }\n \n+    /**\n+     * 경제환경 검색 기록 → {@code regime_search_log} 행 + {@code REGIME_SEARCH} 항목(contracts, research R15).\n+     *\n+     * <p><b>{@code baselineOrigin}을 추정하지 않는다.</b> 010의 {@code SnapshotKey}에는 기준월 근거가 없어 {@code\n+     * searchId}만으로는 알 수 없다 — 화면이 보낸 값을 그대로 쓴다. 지어내면 원칙 VI 위반이다.\n+     *\n+     * <p><b>로그 행은 {@code append} 하나로 끝난다.</b> upsert 라 있으면 열람 시각만 올리고 같은 id 를 돌려주므로 미리 찾아보고 갈래를 나눌\n+     * 일이 없다 — 나누면 동시에 두 번 열었을 때 양쪽이 \"없음\"을 읽는 틈이 생긴다. {@code snapshot_id}·{@code baseline_origin}은\n+     * 그때 덮어쓰지 않으므로 처음 본 revision 도 그대로다.\n+     *\n+     * <p>새로 만들었는지는 <b>항목</b>이 있는지로 가른다. 항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만든다 — \"지웠다가 다시 보면 목록에 돌아온다\"가\n+     * 맞는 동작이다.\n+     *\n+     * <p>로그 행과 항목은 <b>한 트랜잭션</b>이다. 갈라지면 아무도 가리키지 않는 로그 행이나 없는 행을 가리키는 항목이 남는다.\n+     *\n+     * @return 만든/찾은 항목과 새로 만들었는지 여부. 응답 본문은 목록과 같은 읽기 경로로 컨트롤러가 짓는다\n+     * @throws BusinessException 없는 스냅샷 키면 {@code 404 RESOURCE_NOT_FOUND}\n+     */\n+    @Transactional\n+    public RegimeRecordOutcome recordRegimeSearch(\n+            long ownerId, String searchId, EntryPath entryPath, BaselineOrigin baselineOrigin) {\n+        RegimeSnapshot snapshot =\n+                snapshots\n+                        .findByKey(searchId)\n+                        .orElseThrow(\n+                                () ->\n+                                        new BusinessException(\n+                                                ErrorCode.RESOURCE_NOT_FOUND,\n+                                                \"저장할 경제환경 검색을 찾을 수 없습니다: \" + searchId));\n+        Instant now = clock.instant();\n+        long logId =\n+                regimeLogs.append(ownerId, searchId, snapshot.id(), entryPath, baselineOrigin, now);\n+        return records.findActiveByOwnerAndRegimeLog(ownerId, logId)\n+                .map(kept -> new RegimeRecordOutcome(kept.recordId().value(), false))\n+                .orElseGet(\n+                        () ->\n+                                new RegimeRecordOutcome(\n+                                        newRecord(ownerId, snapshot, logId, now), true));\n+    }\n+\n+    /** 경제환경 항목에는 섹터·전략·분석 기간이 없다 — 기준월이 그 자리를 대신한다(data-model §1). */\n+    private String newRecord(long ownerId, RegimeSnapshot snapshot, long logId, Instant now) {\n+        return records.save(\n+                        MyRecord.create(\n+                                ownerId,\n+                                new RecordRef.RegimeSearch(logId),\n+                                namer.forRegimeSearch(\n+                                        fieldLabel(snapshot.fieldId()),\n+                                        snapshot.baselineMonth().atDay(1)),\n+                                List.of(),\n+                                List.of(),\n+                                null,\n+                                now))\n+                .recordId()\n+                .value();\n+    }\n+\n+    /**\n+     * 분야 이름. 종합 검색은 분야가 없어 \"종합\"이다.\n+     *\n+     * <p>등록표를 읽지 못하면 분야 id 를 그대로 쓴다 — 이름이 없다고 기록을 못 남기게 하지는 않는다. 지어낸 값이 아니라 <b>가진 값</b>이라 원칙 VI 에\n+     * 걸리지 않는다.\n+     */\n+    private String fieldLabel(String fieldId) {\n+        if (fieldId == null) {\n+            return \"종합\";\n+        }\n+        try {\n+            return macroIndicators.fields().stream()\n+                    .filter(field -> field.id().equals(fieldId))\n+                    .map(FieldRegistration::name)\n+                    .findFirst()\n+                    .orElse(fieldId);\n+        } catch (RuntimeException e) {\n+            log.warn(\"분야 등록표를 읽지 못해 분야 id 로 이름을 짓는다\", e);\n+            return fieldId;\n+        }\n+    }\n+\n     /** 비중이 큰 섹터가 앞이다. 비중이 없는 전략(규칙이 정하는 배분)은 요청 순서를 지킨다. */\n     private static List<String> byWeightDesc(List<BacktestRequestAccepted.AcceptedSector> sectors) {\n         return sectors.stream()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordRegistrar.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordRegistrar.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,8 @@\n package com.ssafy.thorp.myrecord.infrastructure.config;\n \n+import com.ssafy.thorp.myrecord.application.port.MyRecordLimits;\n import org.springframework.boot.context.properties.EnableConfigurationProperties;\n+import org.springframework.context.annotation.Bean;\n import org.springframework.context.annotation.Configuration;\n \n /**\n@@ -12,4 +14,10 @@ import org.springframework.context.annotation.Configuration;\n  */\n @Configuration\n @EnableConfigurationProperties(MyRecordProperties.class)\n-public class MyRecordConfig {}\n+public class MyRecordConfig {\n+\n+    @Bean\n+    public MyRecordLimits myRecordLimits(MyRecordProperties properties) {\n+        return new MyRecordLimits(properties.getSearchBundleLimit());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/config/MyRecordConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/config/MyRecordConfig.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,7 +4,6 @@ import com.ssafy.thorp.myrecord.application.port.RegimeSearchLogWriter;\n import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n import java.time.Instant;\n-import java.util.Optional;\n import org.springframework.jdbc.core.JdbcTemplate;\n import org.springframework.stereotype.Repository;\n \n@@ -26,22 +25,6 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {\n         this.jdbcTemplate = jdbcTemplate;\n     }\n \n-    @Override\n-    public Optional<Long> findActive(long ownerId, String snapshotKey, EntryPath entryPath) {\n-        return jdbcTemplate\n-                .query(\n-                        \"\"\"\n-                        SELECT id FROM regime_search_log\n-                        WHERE owner_user_id = ? AND snapshot_key = ? AND entry_path = ?\n-                        \"\"\",\n-                        (rs, rowNum) -> rs.getLong(\"id\"),\n-                        ownerId,\n-                        snapshotKey,\n-                        entryPath.name())\n-                .stream()\n-                .findFirst();\n-    }\n-\n     /**\n      * 이미 있으면 열람 시각만 올리고 같은 행의 id를 돌려준다.\n      *\n@@ -79,13 +62,4 @@ public class RegimeSearchLogWriterImpl implements RegimeSearchLogWriter {\n                         java.sql.Timestamp.from(viewedAt));\n         return id;\n     }\n-\n-    /** 뒤로 가지 않는다. 늦게 도착한 옛 요청이 최신 열람 시각을 과거로 되돌리면 보관 기간 판단이 흔들린다. */\n-    @Override\n-    public void touch(long logId, Instant viewedAt) {\n-        jdbcTemplate.update(\n-                \"UPDATE regime_search_log SET viewed_at = GREATEST(viewed_at, ?) WHERE id = ?\",\n-                java.sql.Timestamp.from(viewedAt),\n-                logId);\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/RegimeSearchLogWriterImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/RegimeSearchLogWriterImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,18 +3,25 @@ package com.ssafy.thorp.myrecord.presentation.controller;\n import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;\n import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;\n import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.myrecord.presentation.request.RecordRegimeSearchRequest;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;\n+import jakarta.validation.Valid;\n import java.time.LocalDate;\n import java.util.List;\n import java.util.Set;\n import org.springframework.format.annotation.DateTimeFormat;\n+import org.springframework.http.HttpStatus;\n import org.springframework.http.ResponseEntity;\n import org.springframework.web.bind.annotation.GetMapping;\n import org.springframework.web.bind.annotation.PathVariable;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RequestBody;\n import org.springframework.web.bind.annotation.RequestMapping;\n import org.springframework.web.bind.annotation.RequestParam;\n import org.springframework.web.bind.annotation.RestController;\n@@ -33,11 +40,15 @@ import org.springframework.web.bind.annotation.RestController;\n public class MyRecordController {\n \n     private final MyRecordQueryService queryService;\n+    private final MyRecordRegistrar registrar;\n     private final CurrentRequester currentRequester;\n \n     public MyRecordController(\n-            MyRecordQueryService queryService, CurrentRequester currentRequester) {\n+            MyRecordQueryService queryService,\n+            MyRecordRegistrar registrar,\n+            CurrentRequester currentRequester) {\n         this.queryService = queryService;\n+        this.registrar = registrar;\n         this.currentRequester = currentRequester;\n     }\n \n@@ -71,6 +82,28 @@ public class MyRecordController {\n                 ApiResponse.ok(MyRecordListResponse.from(queryService.list(ownerId, query))));\n     }\n \n+    /**\n+     * 경제환경 검색을 기록으로 남긴다(spec 006 T035, research R15). 010의 {@code GET /regime-searches}는 바뀌지 않는다.\n+     *\n+     * <p>이미 같은 (스냅샷·진입 경로)의 항목이 있으면 만들지 않고 200, 새로 만들면 201이다. 본문은 두 경우 모두 <b>목록 항목과 같다</b>.\n+     *\n+     * <p>{@code entryPath}·{@code baselineOrigin}은 화면이 보낸다 — 서버가 추정하지 않는다. 빠지거나 모르는 값이면 400 {@code\n+     * INVALID_INPUT}이고, 없는 {@code searchId}는 404다.\n+     */\n+    @PostMapping(\"/regime-searches\")\n+    public ResponseEntity<ApiResponse<MyRecordListResponse.Item>> recordRegimeSearch(\n+            @Valid @RequestBody RecordRegimeSearchRequest request) {\n+        long ownerId = currentRequester.requireRequesterId();\n+        RegimeRecordOutcome outcome =\n+                registrar.recordRegimeSearch(\n+                        ownerId, request.searchId(), request.entryPath(), request.baselineOrigin());\n+        return ResponseEntity.status(outcome.created() ? HttpStatus.CREATED : HttpStatus.OK)\n+                .body(\n+                        ApiResponse.ok(\n+                                MyRecordListResponse.Item.from(\n+                                        queryService.item(ownerId, outcome.recordId()))));\n+    }\n+\n     /** 상세. 남의 것·없는 것·지운 것은 모두 404 {@code RESOURCE_NOT_FOUND}다. */\n     @GetMapping(\"/{recordId}\")\n     public ResponseEntity<ApiResponse<MyRecordDetailResponse>> detail(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,23 @@\n+package com.ssafy.thorp.myrecord.presentation.request;\n+\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n+import jakarta.validation.constraints.NotBlank;\n+import jakarta.validation.constraints.NotNull;\n+\n+/**\n+ * 경제환경 검색을 개인 기록으로 남기는 요청(contracts \"POST /my-records/regime-searches\").\n+ *\n+ * <p><b>세 값 모두 화면이 보낸다.</b> 진입 경로는 조회한 화면만 알고(010 FR-029), 기준월 근거는 010의 식별 키에 들어 있지 않아 {@code\n+ * searchId}만으로는 되짚을 수 없다 — 서버가 추정하면 원칙 VI 위반이라 빠지면 400이다(research R15).\n+ *\n+ * <p>값의 목록을 문자열로 받아 서버가 가르지 않고 enum 으로 받는다. 모르는 값은 본문을 읽는 단계에서 {@code 400 INVALID_INPUT}이 되고, 값이\n+ * 늘어날 때 검사할 자리가 한 곳으로 남는다.\n+ *\n+ * @param searchId 010이 응답한 스냅샷 식별 키({@code RegimeSearchResult.searchId}). 없는 키는 404다\n+ * @param baselineOrigin 010 응답의 값을 그대로 넘긴다\n+ */\n+public record RecordRegimeSearchRequest(\n+        @NotBlank(message = \"searchId 는 필수입니다\") String searchId,\n+        @NotNull(message = \"entryPath 는 필수입니다\") EntryPath entryPath,\n+        @NotNull(message = \"baselineOrigin 은 필수입니다\") BaselineOrigin baselineOrigin) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RecordRegimeSearchRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RecordRegimeSearchRequest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.ssafy.thorp.paramsearch.application.port;\n+\n+/**\n+ * 접수하기 전에 이 사용자에게 묶음을 저장해 둘 자리가 있는지 묻는다(spec 006 FR-018, research R11).\n+ *\n+ * <p><b>규칙은 006이 소유하고 구현 자리는 007의 접수 경로다.</b> 007은 무엇을 세는지도, 상한이 얼마인지도 알지 못한다 — 여기서 아무 예외도 오지 않으면\n+ * 접수를 계속한다.\n+ *\n+ * <p><b>007이 006을 직접 부르지 않는 이유</b>: 006의 등록기가 이미 {@code ParamSearchAccepted}를 듣는다. 접수 서비스가 006 서비스를\n+ * 마주 부르면 {@code paramsearch ↔ myrecord} 양방향이 되고, 이 저장소는 같은 모양을 {@code strategy}·{@code\n+ * result}·{@code learning}에 대해 규칙으로 막아 두었다({@code ArchitectureTest} 규칙 8·9·10). 포트를 007이 소유하면 화살표는\n+ * {@code myrecord → paramsearch} 하나로 남는다.\n+ *\n+ * <p>구현이 하나뿐인 인터페이스지만 그 하나가 <b>다른 도메인에 있다</b>는 것이 이 자리의 값이다.\n+ */\n+public interface SaveSlotGuard {\n+\n+    /**\n+     * 자리가 없으면 거절한다. 어떤 행이 쓰이기도, 어떤 후보가 발행되기도 전에 부른다 — 계산이 끝난 뒤 막으면 이미 쓴 자원이 버려진다.\n+     *\n+     * @param ownerId 접수 요청자. 비로그인 접수는 기록을 만들지 않으므로 호출자가 걸러 낸다\n+     * @throws com.ssafy.thorp.common.exception.BusinessException 자리가 없으면 {@code 409\n+     *     RECORD_LIMIT_REACHED}. 본문에 현재 개수와 상한이 실린다\n+     */\n+    void requireSaveSlot(long ownerId);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/port/SaveSlotGuard.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/port/SaveSlotGuard.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,7 @@ import com.ssafy.thorp.paramsearch.application.port.CandidatePerformance;\n import com.ssafy.thorp.paramsearch.application.port.CandidatePerformancePort;\n import com.ssafy.thorp.paramsearch.application.port.CandidateRunView;\n import com.ssafy.thorp.paramsearch.application.port.ParamSearchSnapshot;\n+import com.ssafy.thorp.paramsearch.application.port.SaveSlotGuard;\n import com.ssafy.thorp.paramsearch.application.port.SearchLimits;\n import com.ssafy.thorp.paramsearch.application.port.StrategyExecutionSupportPort;\n import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n@@ -77,6 +78,7 @@ public class ParamSearchService {\n     private final CostProfileService costProfileService;\n     private final CandidatePerformancePort performancePort;\n     private final SearchLimits limits;\n+    private final SaveSlotGuard saveSlotGuard;\n     private final Clock clock;\n     private final String engineVersion;\n     private final BigDecimal defaultInitialCash;\n@@ -96,6 +98,7 @@ public class ParamSearchService {\n             CostProfileService costProfileService,\n             CandidatePerformancePort performancePort,\n             SearchLimits limits,\n+            SaveSlotGuard saveSlotGuard,\n             Clock clock,\n             @Value(\"${thorp.backtest.engine-version}\") String engineVersion,\n             @Value(\"${thorp.param-search.default-initial-cash}\") BigDecimal defaultInitialCash,\n@@ -113,6 +116,7 @@ public class ParamSearchService {\n         this.costProfileService = costProfileService;\n         this.performancePort = performancePort;\n         this.limits = limits;\n+        this.saveSlotGuard = saveSlotGuard;\n         this.clock = clock;\n         this.engineVersion = engineVersion;\n         this.defaultInitialCash = defaultInitialCash;\n@@ -151,6 +155,16 @@ public class ParamSearchService {\n      */\n     @Transactional(noRollbackFor = ParamSearchRejectedException.class)\n     public ParamSearchResult create(CreateParamSearchCommand command) {\n+        // 저장 자리부터 본다(spec 006 FR-018, research R11). 어떤 행을 쓰기도, 어떤 후보를 발행하기도\n+        // 전이라 거절이 되돌릴 것이 없다 — 아래 rejected(...) 갈래와 달리 남길 묶음이 없어\n+        // noRollbackFor 대상이 아니다. 비로그인 접수는 기록을 만들지 않으므로 셀 것도 없다.\n+        //\n+        // 이 자리가 preflight 보다도 앞이라, 자리가 없는 사용자는 등록표 버전이 어긋나거나 후보 상한에\n+        // 걸려 어차피 거절될 요청에도 409 를 받는다. 통과시켜 봐야 저장할 곳이 없으므로 그대로 둔다.\n+        if (command.requesterId() != null) {\n+            saveSlotGuard.requireSaveSlot(command.requesterId());\n+        }\n+\n         Preflight preflight =\n                 preflight(\n                         command.strategyIds(),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;\n \n import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;\n import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.myrecord.application.port.RegimeSearchLogWriter;\n import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;\n import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;\n import com.ssafy.thorp.myrecord.application.service.RecordNamer;\n@@ -16,6 +17,8 @@ import com.ssafy.thorp.myrecord.domain.model.MyRecord;\n import com.ssafy.thorp.myrecord.domain.model.RecordRef;\n import com.ssafy.thorp.myrecord.domain.vo.RecordName;\n import com.ssafy.thorp.paramsearch.application.event.ParamSearchAccepted;\n+import com.ssafy.thorp.regime.application.port.MacroIndicatorPort;\n+import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;\n import com.ssafy.thorp.sector.application.repository.SectorRepository;\n import java.math.BigDecimal;\n import java.time.Clock;\n@@ -54,7 +57,14 @@ class MyRecordRegistrarTest {\n         when(namer.forAnalysis(any(), any(), any())).thenReturn(RecordName.of(\"이름\"));\n         when(namer.forSearchBundle(any(), any(), any())).thenReturn(RecordName.of(\"이름\"));\n         registrar =\n-                new MyRecordRegistrar(records, namer, sectors, Clock.fixed(NOW, ZoneOffset.UTC));\n+                new MyRecordRegistrar(\n+                        records,\n+                        namer,\n+                        sectors,\n+                        mock(RegimeSearchLogWriter.class),\n+                        mock(RegimeSnapshotRepository.class),\n+                        mock(MacroIndicatorPort.class),\n+                        Clock.fixed(NOW, ZoneOffset.UTC));\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/application/MyRecordRegistrarTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/application/MyRecordRegistrarTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -231,31 +231,44 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {\n                         SAVED_AT);\n         entityManager.flush();\n \n-        assertThat(regimeLogs.findActive(owner, snapshotKey, EntryPath.MARKET_FLOW))\n-                .hasValue(logId);\n         // 진입 경로가 다르면 다른 기록이다 — 한쪽이 다른 쪽을 대체하지 않는다(Story 3 시나리오 4).\n-        assertThat(regimeLogs.findActive(owner, snapshotKey, EntryPath.STRATEGY_RESULT)).isEmpty();\n-\n-        // 같은 검색을 다시 열어도 행이 늘지 않는다. 조회한 뒤 없으면 넣는 방식이면 동시에 두 번 열 때\n-        // 둘 다 \"없음\"을 읽어 기록이 둘이 되고, 목록에 같은 항목이 두 줄로 남는다.\n-        long again =\n+        long otherPath =\n                 regimeLogs.append(\n                         owner,\n                         snapshotKey,\n                         null,\n-                        EntryPath.MARKET_FLOW,\n+                        EntryPath.STRATEGY_RESULT,\n                         BaselineOrigin.T_G,\n-                        SAVED_AT.plusSeconds(60));\n+                        SAVED_AT);\n+        assertThat(otherPath).isNotEqualTo(logId);\n+\n+        // 같은 검색을 다시 열어도 행이 늘지 않고 열람 시각만 오른다. 조회한 뒤 없으면 넣는 방식이면\n+        // 동시에 두 번 열 때 양쪽이 \"없음\"을 읽어 기록이 둘이 되고, 목록에 같은 항목이 두 줄로 남는다.\n+        Instant later = SAVED_AT.plusSeconds(3600);\n+        long again =\n+                regimeLogs.append(\n+                        owner, snapshotKey, null, EntryPath.MARKET_FLOW, BaselineOrigin.T_G, later);\n+        entityManager.flush();\n+\n         assertThat(again).isEqualTo(logId);\n         assertThat(\n                         jdbcTemplate.queryForObject(\n                                 \"SELECT count(*) FROM regime_search_log WHERE owner_user_id = ?\",\n                                 Integer.class,\n                                 owner))\n-                .isEqualTo(1);\n+                .as(\"경로 둘, 같은 경로의 재열람은 행을 늘리지 않는다\")\n+                .isEqualTo(2);\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT viewed_at FROM regime_search_log WHERE id = ?\",\n+                                Instant.class,\n+                                logId))\n+                .isEqualTo(later);\n \n-        Instant later = SAVED_AT.plusSeconds(3600);\n-        regimeLogs.touch(logId, later);\n+        // 열람 시각은 뒤로 가지 않는다. 판정이 append 의 GREATEST 한 곳뿐이라 EXCLUDED 로 바꿔 써도\n+        // 위 단언은 그대로 통과한다 — 되돌아가지 않는다는 것을 따로 본다.\n+        regimeLogs.append(\n+                owner, snapshotKey, null, EntryPath.MARKET_FLOW, BaselineOrigin.T_G, SAVED_AT);\n         entityManager.flush();\n \n         assertThat(\n@@ -263,6 +276,7 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {\n                                 \"SELECT viewed_at FROM regime_search_log WHERE id = ?\",\n                                 Instant.class,\n                                 logId))\n+                .as(\"늦게 도착한 옛 요청이 열람 시각을 과거로 되돌리지 않는다\")\n                 .isEqualTo(later);\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordRepositoryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordRepositoryIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,170 @@\n+package com.ssafy.thorp.myrecord;\n+\n+import static com.ssafy.thorp.support.Requesters.as;\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.paramsearch.SearchableStrategies;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;\n+import com.ssafy.thorp.support.TestUsers;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.TestPropertySource;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;\n+\n+/**\n+ * 탐색 묶음 저장 상한(spec 006 T034, FR-018·research R11, quickstart S10).\n+ *\n+ * <p>여기서 보는 것은 상한 <b>값</b>이 아니라 <b>닿았을 때의 동작</b>이다 — 접수가 시작되기 전에 거절되는가, 거절이 아무것도 남기지 않는가, 자리를 비우면\n+ * 다시 통과하는가. 값은 PD-13이 실측 뒤 정한다.\n+ */\n+// 상한 2는 다른 테스트의 접수를 막으므로 이 테스트만 쓴다(컨텍스트를 따로 만든다).\n+@TestPropertySource(properties = {\"thorp.my-records.search-bundle-limit=2\"})\n+class MyRecordLimitIT extends LauncherMockedIntegrationTestSupport {\n+\n+    private static final String UNIVERSE = \"[\\\"091160.XKRX\\\", \\\"305720.XKRX\\\"]\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ParameterRegistryPort registry;\n+\n+    @Autowired private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextRunId = new AtomicLong(940_000L);\n+\n+    private long owner;\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        // 내 기록이 이 행들을 가리키므로 먼저 지운다(spec 006 my_record FK).\n+        jdbcTemplate.update(\"DELETE FROM my_record\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextRunId.set(940_000L);\n+        owner = TestUsers.ensure(jdbcTemplate, 94_001L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"상한에 닿으면 접수가 시작되기 전에 409로 거절하고 현재 개수와 상한을 싣는다\")\n+    void thirdIntakeIsRejectedBeforeAnythingRuns() throws Exception {\n+        accept();\n+        accept();\n+        int searchesBefore = paramSearchCount();\n+        int recordsBefore = recordCount();\n+        int launchesBefore = launchCount();\n+\n+        mockMvc.perform(intake())\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RECORD_LIMIT_REACHED\"))\n+                // 화면이 \"N/M\"을 보이려면 숫자가 필요하다. 문장에서 뽑아 쓰게 두지 않는다.\n+                .andExpect(jsonPath(\"$.error.details.current\").value(2))\n+                .andExpect(jsonPath(\"$.error.details.limit\").value(2));\n+\n+        assertThat(paramSearchCount())\n+                .as(\"거절은 묶음 행을 남기지 않는다 — 후보 상한 거절(REJECTED)과 다르다\")\n+                .isEqualTo(searchesBefore);\n+        assertThat(launchCount())\n+                .as(\"계산이 시작되지 않는다. 계산 뒤에 막으면 그만큼이 버려진다(quickstart S10)\")\n+                .isEqualTo(launchesBefore);\n+        assertThat(recordCount()).as(\"기존 항목을 지우지 않는다\").isEqualTo(recordsBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"기록 하나를 지우면 다음 접수가 통과한다\")\n+    void deletingARecordFreesASlot() throws Exception {\n+        accept();\n+        accept();\n+        mockMvc.perform(intake()).andExpect(status().isConflict());\n+\n+        jdbcTemplate.update(\n+                \"UPDATE my_record SET deleted_at = NOW() WHERE id =\"\n+                        + \" (SELECT id FROM my_record WHERE owner_id = ? ORDER BY id LIMIT 1)\",\n+                owner);\n+\n+        mockMvc.perform(intake()).andExpect(status().isAccepted());\n+        assertThat(recordCount()).as(\"지운 항목은 세지 않으므로 살아 있는 항목이 다시 둘이다\").isEqualTo(2);\n+    }\n+\n+    private void accept() throws Exception {\n+        mockMvc.perform(intake()).andExpect(status().isAccepted());\n+    }\n+\n+    private MockHttpServletRequestBuilder intake() {\n+        return post(\"/param-searches\")\n+                .with(csrf())\n+                .with(as(owner))\n+                .contentType(MediaType.APPLICATION_JSON)\n+                .content(createBody());\n+    }\n+\n+    private int paramSearchCount() {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT count(*) FROM param_search WHERE owner_user_id = ?\", Integer.class, owner);\n+    }\n+\n+    /** 살아 있는 항목만 센다 — 상한이 세는 것과 같은 조건이다. */\n+    private int recordCount() {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT count(*) FROM my_record WHERE owner_id = ? AND deleted_at IS NULL\",\n+                Integer.class,\n+                owner);\n+    }\n+\n+    private int launchCount() {\n+        return Mockito.mockingDetails(launcher).getInvocations().size();\n+    }\n+\n+    private String createBody() {\n+        return \"\"\"\n+               {\n+                 \"universe\": { \"instrumentIds\": %s },\n+                 \"strategy\": { \"strategyIds\": %s },\n+                 \"registryVersion\": \"%s\"\n+               }\n+               \"\"\"\n+                .formatted(UNIVERSE, supportedStrategyIdsJson(), registry.version());\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(007 FR-025). */\n+    private String supportedStrategyIdsJson() {\n+        return SearchableStrategies.of(registry, jdbcTemplate).stream()\n+                .map(id -> \"\\\"\" + id + \"\\\"\")\n+                .reduce((left, right) -> left + \", \" + right)\n+                .map(joined -> \"[\" + joined + \"]\")\n+                .orElse(\"[]\");\n+    }\n+\n+    /** 후보 발행 대신 실행 행만 만든다. 후보·기준이 backtest_run(id)을 FK로 참조한다. */\n+    private long insertRun() {\n+        long id = nextRunId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordLimitIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordLimitIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,295 @@\n+package com.ssafy.thorp.myrecord;\n+\n+import static com.ssafy.thorp.support.Requesters.as;\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n+import com.ssafy.thorp.support.IntegrationTestSupport;\n+import com.ssafy.thorp.support.TestUsers;\n+import java.sql.Timestamp;\n+import java.util.List;\n+import java.util.concurrent.Callable;\n+import java.util.concurrent.CountDownLatch;\n+import java.util.concurrent.ExecutorService;\n+import java.util.concurrent.Executors;\n+import java.util.concurrent.Future;\n+import java.util.concurrent.TimeUnit;\n+import org.hamcrest.Matchers;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;\n+\n+/**\n+ * 경제환경 검색 기록 API(spec 006 T036, contracts \"POST /my-records/regime-searches\", quickstart S7-4).\n+ *\n+ * <p>스냅샷 행은 {@code data/} 배치가 넣는 것이므로 여기서는 {@code RegimeSearchApiIT}가 하듯 같은 모양을 직접 심는다. 이 시험이 보는 것은\n+ * 그 위에서 <b>006이 무엇을 남기는가</b>다 — 진입 경로마다 별도 항목인지, 다시 열었을 때 항목이 늘지 않는지, 기준월 근거가 요청이 보낸 값 그대로인지.\n+ */\n+@DisplayName(\"경제환경 검색 기록\")\n+class RegimeRecordIT extends IntegrationTestSupport {\n+\n+    private static final String KEY =\n+            \"FIELD:LABOR:2026-07-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbc;\n+    @Autowired private MyRecordRegistrar registrar;\n+\n+    private long owner;\n+\n+    @BeforeEach\n+    void seed() {\n+        clean();\n+        owner = TestUsers.ensure(jdbc, 96_001L);\n+        snapshot(KEY, \"LABOR\", \"2026-07-01\");\n+    }\n+\n+    @AfterEach\n+    void clean() {\n+        jdbc.update(\"DELETE FROM my_record\");\n+        jdbc.update(\"DELETE FROM regime_search_log\");\n+        jdbc.update(\"DELETE FROM regime_search_snapshot WHERE snapshot_key LIKE 'FIELD:LABOR:%'\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그인 요청은 로그 행과 기록 항목을 하나씩 만들고 보낸 기준월 근거를 그대로 저장한다\")\n+    void createsOneLogAndOneRecord() throws Exception {\n+        mockMvc.perform(record(KEY, \"MARKET_FLOW\", \"T_G\"))\n+                .andExpect(status().isCreated())\n+                .andExpect(jsonPath(\"$.data.recordId\").value(Matchers.startsWith(\"MR-\")))\n+                .andExpect(jsonPath(\"$.data.kind\").value(\"REGIME_SEARCH\"))\n+                .andExpect(jsonPath(\"$.data.regime.snapshotKey\").value(KEY))\n+                .andExpect(jsonPath(\"$.data.regime.entryPath\").value(\"MARKET_FLOW\"))\n+                .andExpect(jsonPath(\"$.data.regime.baselineOrigin\").value(\"T_G\"));\n+\n+        assertThat(logCount()).isEqualTo(1);\n+        assertThat(recordCount()).isEqualTo(1);\n+        // 서버가 추정한 값이 아니라 화면이 보낸 값이다(research R15).\n+        assertThat(\n+                        jdbc.queryForObject(\n+                                \"SELECT baseline_origin FROM regime_search_log WHERE\"\n+                                        + \" owner_user_id = ?\",\n+                                String.class,\n+                                owner))\n+                .isEqualTo(\"T_G\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"기준월 근거가 빠지면 400이다 — 서버는 추정하지 않는다\")\n+    void missingBaselineOriginIsRejected() throws Exception {\n+        String body =\n+                \"\"\"\n+                { \"searchId\": \"%s\", \"entryPath\": \"MARKET_FLOW\" }\n+                \"\"\"\n+                        .formatted(KEY);\n+\n+        mockMvc.perform(\n+                        post(\"/my-records/regime-searches\")\n+                                .with(csrf())\n+                                .with(as(owner))\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(body))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+\n+        assertThat(logCount()).isZero();\n+        assertThat(recordCount()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"모르는 진입 경로·기준월 근거는 400이다 — 서버가 골라 주지 않는다\")\n+    void unknownEnumValueIsRejected() throws Exception {\n+        for (String body :\n+                List.of(body(KEY, \"SOMEWHERE_ELSE\", \"T_G\"), body(KEY, \"MARKET_FLOW\", \"GUESSED\"))) {\n+            mockMvc.perform(\n+                            post(\"/my-records/regime-searches\")\n+                                    .with(csrf())\n+                                    .with(as(owner))\n+                                    .contentType(MediaType.APPLICATION_JSON)\n+                                    .content(body))\n+                    .andExpect(status().isBadRequest())\n+                    .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        }\n+\n+        assertThat(logCount()).isZero();\n+        assertThat(recordCount()).isZero();\n+    }\n+\n+    /**\n+     * 같은 검색을 동시에 두 번 열어도 쌍이 하나다(부분 유니크 인덱스 {@code uk_my_record_regime}).\n+     *\n+     * <p>둘 다 \"없다\"를 읽고 둘 다 INSERT 하면 한쪽이 제약 위반으로 끝난다. 그러지 않는 것은 {@code append}의 {@code INSERT ... ON\n+     * CONFLICT DO UPDATE}가 충돌한 로그 행을 <b>잠그기</b> 때문이다 — 뒤엣것은 앞엣것이 커밋할 때까지 거기서 기다리고, 풀린 뒤에는 앞엣것이 만든\n+     * 항목을 보게 된다. 그 순서에 기대고 있으므로 여기서 고정한다.\n+     */\n+    @Test\n+    @DisplayName(\"같은 검색을 동시에 두 번 열어도 로그 행과 항목이 하나씩이다\")\n+    void concurrentRecordingCreatesOnePair() throws Exception {\n+        CountDownLatch go = new CountDownLatch(1);\n+        ExecutorService pool = Executors.newFixedThreadPool(2);\n+        RegimeRecordOutcome one;\n+        RegimeRecordOutcome two;\n+        try {\n+            Callable<RegimeRecordOutcome> open =\n+                    () -> {\n+                        go.await();\n+                        return registrar.recordRegimeSearch(\n+                                owner, KEY, EntryPath.MARKET_FLOW, BaselineOrigin.T_G);\n+                    };\n+            Future<RegimeRecordOutcome> a = pool.submit(open);\n+            Future<RegimeRecordOutcome> b = pool.submit(open);\n+            go.countDown();\n+            one = a.get(30, TimeUnit.SECONDS);\n+            two = b.get(30, TimeUnit.SECONDS);\n+        } finally {\n+            pool.shutdownNow();\n+        }\n+\n+        assertThat(one.recordId()).isEqualTo(two.recordId());\n+        assertThat(List.of(one.created(), two.created()))\n+                .as(\"하나는 만들었고 하나는 이미 있던 것을 돌려준다 — 둘 다 201이면 항목이 둘이다\")\n+                .containsExactlyInAnyOrder(true, false);\n+        assertThat(logCount()).isEqualTo(1);\n+        assertThat(recordCount()).isEqualTo(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"진입 경로가 다르면 두 번째 쌍이 생긴다 — 한쪽이 다른 쪽을 대체하지 않는다\")\n+    void otherEntryPathMakesASecondPair() throws Exception {\n+        mockMvc.perform(record(KEY, \"MARKET_FLOW\", \"T_G\")).andExpect(status().isCreated());\n+\n+        mockMvc.perform(record(KEY, \"STRATEGY_RESULT\", \"T_G\"))\n+                .andExpect(status().isCreated())\n+                .andExpect(jsonPath(\"$.data.regime.entryPath\").value(\"STRATEGY_RESULT\"));\n+\n+        assertThat(logCount()).isEqualTo(2);\n+        assertThat(recordCount()).isEqualTo(2);\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 검색을 다시 열면 200이고 열람 시각만 올라간다\")\n+    void repeatOnlyBumpsViewedAt() throws Exception {\n+        mockMvc.perform(record(KEY, \"MARKET_FLOW\", \"T_G\")).andExpect(status().isCreated());\n+        String recordId = onlyRecordId();\n+        // 두 번째 요청의 시각이 확실히 더 늦도록 첫 열람을 과거로 내려 둔다. 같은 밀리초에 들어오면\n+        // GREATEST 가 값을 그대로 두어 \"올랐는가\"를 볼 수 없다.\n+        jdbc.update(\"UPDATE regime_search_log SET viewed_at = viewed_at - INTERVAL '1 hour'\");\n+        Timestamp before = viewedAt();\n+\n+        mockMvc.perform(record(KEY, \"MARKET_FLOW\", \"T_G\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.recordId\").value(recordId));\n+\n+        assertThat(logCount()).isEqualTo(1);\n+        assertThat(recordCount()).isEqualTo(1);\n+        assertThat(viewedAt()).isAfter(before);\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 스냅샷 키는 404다\")\n+    void unknownSnapshotIsNotFound() throws Exception {\n+        mockMvc.perform(\n+                        record(\n+                                \"FIELD:LABOR:2000-01-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1\",\n+                                \"MARKET_FLOW\",\n+                                \"T_G\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+\n+        assertThat(logCount()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"비로그인 요청은 401이고 행이 생기지 않는다(010 FR-032)\")\n+    void anonymousIsRejected() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/my-records/regime-searches\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(body(KEY, \"MARKET_FLOW\", \"T_G\")))\n+                .andExpect(status().isUnauthorized());\n+\n+        assertThat(logCount()).isZero();\n+        assertThat(recordCount()).isZero();\n+    }\n+\n+    private MockHttpServletRequestBuilder record(\n+            String searchId, String entryPath, String baselineOrigin) {\n+        return post(\"/my-records/regime-searches\")\n+                .with(csrf())\n+                .with(as(owner))\n+                .contentType(MediaType.APPLICATION_JSON)\n+                .content(body(searchId, entryPath, baselineOrigin));\n+    }\n+\n+    private static String body(String searchId, String entryPath, String baselineOrigin) {\n+        return \"\"\"\n+               { \"searchId\": \"%s\", \"entryPath\": \"%s\", \"baselineOrigin\": \"%s\" }\n+               \"\"\"\n+                .formatted(searchId, entryPath, baselineOrigin);\n+    }\n+\n+    private int logCount() {\n+        return jdbc.queryForObject(\n+                \"SELECT count(*) FROM regime_search_log WHERE owner_user_id = ?\",\n+                Integer.class,\n+                owner);\n+    }\n+\n+    private int recordCount() {\n+        return jdbc.queryForObject(\n+                \"SELECT count(*) FROM my_record WHERE owner_id = ? AND deleted_at IS NULL\",\n+                Integer.class,\n+                owner);\n+    }\n+\n+    private String onlyRecordId() {\n+        return jdbc.queryForObject(\n+                \"SELECT record_id FROM my_record WHERE owner_id = ?\", String.class, owner);\n+    }\n+\n+    private Timestamp viewedAt() {\n+        return jdbc.queryForObject(\n+                \"SELECT viewed_at FROM regime_search_log WHERE owner_user_id = ?\",\n+                Timestamp.class,\n+                owner);\n+    }\n+\n+    /** 배치가 쓰는 것과 같은 모양의 행 하나. 사례는 없어도 되고 이 시험은 계산 결과를 보지 않는다. */\n+    private void snapshot(String key, String fieldId, String month) {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO regime_search_snapshot (\n+                    snapshot_key, mode, field_id, baseline_month, revision, content_hash,\n+                    data_version, registry_version, model_version, status, status_reason,\n+                    scale, comparison_months, ranked_candidates, candidate_counts, data_asof,\n+                    computed_at, created_at, updated_at)\n+                VALUES (?, 'FIELD', ?, ?::date, 1, ?, 'FIXTURE-20260915', 'FIXTURE-REG-1',\n+                    'REGIME-V1', 'NOT_COMPUTABLE', 'NO_CANDIDATE', '{}'::jsonb, '{}'::jsonb,\n+                    '[]'::jsonb, ?::jsonb, ?::jsonb, now(), now(), now())\n+                \"\"\",\n+                key,\n+                fieldId,\n+                month,\n+                \"r\".repeat(64),\n+                \"\"\"\n+                {\"evaluated\": 0, \"excluded\": {}}\n+                \"\"\",\n+                \"\"\"\n+                {\"indicators\": {}, \"newerReleases\": []}\n+                \"\"\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/RegimeRecordIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/RegimeRecordIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -151,6 +151,22 @@ class ArchitectureTest {\n                     .dependOnClassesThat()\n                     .resideInAPackage(ROOT + \".learning..\");\n \n+    /**\n+     * 규칙 11: {@code paramsearch}(007)는 {@code myrecord}(006)를 참조하지 않는다.\n+     *\n+     * <p>006의 등록기가 007의 접수 이벤트를 듣고, 저장 상한은 007이 소유한 포트({@code SaveSlotGuard})를 006이 구현해 건넨다. 방향은\n+     * {@code myrecord → paramsearch} 하나다. 이 규칙이 없으면 접수 서비스가 006의 정책·저장소를 편하게 가져다 쓰는 순간 양방향이 되고,\n+     * 007의 접수가 006의 사정에 묶인다. 근거: specs/006-my-records/research.md R11·R16.\n+     */\n+    @ArchTest\n+    static final ArchRule paramsearch는_myrecord를_참조하지_않는다 =\n+            noClasses()\n+                    .that()\n+                    .resideInAPackage(ROOT + \".paramsearch..\")\n+                    .should()\n+                    .dependOnClassesThat()\n+                    .resideInAPackage(ROOT + \".myrecord..\");\n+\n     /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */\n     @ArchTest\n     static final ArchRule 컨트롤러는_presentation_controller에만_있다 =\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2230434,
+      "head_commit_sha": "5caea25b80b842ec876f3432e849b2fc5ad95154",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+      "created_at": "2026-09-21T11:13:55.898+09:00",
+      "merge_request_id": 953921,
+      "state": "without_files",
+      "real_size": "17",
+      "patch_id_sha": "843401632f201029f033a110b7ff22db4c61846d",
+      "commits": [
+        {
+          "id": "5caea25b80b842ec876f3432e849b2fc5ad95154",
+          "short_id": "5caea25b",
+          "created_at": "2026-09-21T11:07:53.000+09:00",
+          "parent_ids": [
+            "e14cd9d7303f6b26a7e8fe641597a5bea8ff734a"
+          ],
+          "title": "test(be): 열람 시각이 뒤로 가지 않는 것을 단언한다",
+          "message": "test(be): 열람 시각이 뒤로 가지 않는 것을 단언한다\n\ntouch 를 지우면서 GREATEST 판정이 append 한 문장에만 남았는데 그것을 지키는 단언이 없었다.\nEXCLUDED.viewed_at 으로 바꿔 써도 기존 단언은 그대로 통과한다 — 늦게 도착한 옛 요청이 최신\n열람 시각을 과거로 되돌리지 않는다를 따로 본다. 바꿔서 터지는 것을 확인하고 되돌렸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:07:53.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:07:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5caea25b80b842ec876f3432e849b2fc5ad95154"
+        },
+        {
+          "id": "e14cd9d7303f6b26a7e8fe641597a5bea8ff734a",
+          "short_id": "e14cd9d7",
+          "created_at": "2026-09-21T11:02:54.000+09:00",
+          "parent_ids": [
+            "811c2f54c93c5c19772ca049c3cd44ff3b53c932"
+          ],
+          "title": "refactor(be): 상한 판정을 포트로 뒤집고 로그 쓰기를 upsert 하나로 줄인다",
+          "message": "refactor(be): 상한 판정을 포트로 뒤집고 로그 쓰기를 upsert 하나로 줄인다\n\n리뷰 반영이다.\n\n접수 서비스가 006의 정책을 직접 부르면 paramsearch ↔ myrecord 양방향이 된다. 이 저장소는\n같은 모양을 규칙 8·9·10으로 strategy·result·learning 세 쌍에 대해 이미 막아 두었고, 규칙 9\n주석이 정확히 이 상황을 적고 있다. 007이 SaveSlotGuard 를 소유하고 006이 구현하게 바꿔\n화살표를 myrecord → paramsearch 하나로 되돌리고, ArchUnit 규칙 11 로 방향을 박는다.\n구현이 하나뿐인 인터페이스지만 그 하나가 다른 도메인에 있다는 것이 이 자리의 값이다.\n\nRegimeSearchLogWriter.append 의 upsert 가 findActive + touch 가 하던 일을 그대로 한다.\n찾아보고 갈래를 나누면 동시에 두 번 열었을 때 양쪽이 \"없음\"을 읽는 틈이 생기고, 기존 로그에\n항목만 지워진 경로에서 viewed_at 을 두 번 쓴다. append 한 번으로 줄이고 200/201 은 항목이\n있는지로 가른다. 쓰이지 않게 된 findActive·touch 는 포트와 구현에서 지웠다 — BE-1 의\nMyRecordRepositoryIT 가 그 둘로 단언하던 세 가지는 append 만으로 같은 것을 단언하게 고쳤다.\n\nBusinessException 이 details 를 Map.copyOf 로 받아 순서를 버리므로 LinkedHashMap 을 Map.of\n로 바꾼다. 상한이 사본도 센다는 사실과 그 이유를 주석에 박는다 — 재사용 판정은 사본을 빼는데\n여기는 빼지 않아 두 쿼리가 나란히 다르게 생겼다. 판정이 preflight 보다 앞이라 어차피 거절될\n요청도 409 를 받는다는 것도 호출부 주석에 적는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:02:54.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:02:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e14cd9d7303f6b26a7e8fe641597a5bea8ff734a"
+        },
+        {
+          "id": "811c2f54c93c5c19772ca049c3cd44ff3b53c932",
+          "short_id": "811c2f54",
+          "created_at": "2026-09-21T10:39:42.000+09:00",
+          "parent_ids": [
+            "a54dfa8da2fb6a5f5202fb758141068dbedd5981"
+          ],
+          "title": "feat(be): 경제환경 기록 POST 를 컨트롤러에 얹는다",
+          "message": "feat(be): 경제환경 기록 POST 를 컨트롤러에 얹는다\n\nPOST /my-records/regime-searches 를 더한다(spec 006 T035·T036). 이미 같은 (스냅샷·진입 경로)\n항목이 있으면 200, 새로 만들면 201 이고 본문은 두 경우 모두 목록 항목과 같다 — 화면이 응답\n모양을 갈라 읽지 않게 한다.\n\n응답은 MyRecordQueryService.item 이 짓는다. 상세와 달리 열람 표시를 남기지 않는다 — 방금\n만든 항목을 돌려주는 것이지 사용자가 다시 본 것이 아니다. 없는 것·지운 것·남의 것을 한 가지\n404 로 답하는 문장은 requireView 한 곳으로 모았다.\n\n읽기를 등록기 안에서 하지 않은 까닭: my_record 는 JPA 로 넣고 findView 는 JDBC 로 읽는데,\nSEQUENCE 라 INSERT 가 flush 까지 미뤄져 같은 트랜잭션 안에서는 방금 넣은 행이 보이지 않는다.\n등록기는 recordId 만 돌려주고 읽기는 커밋 뒤에 한다.\n\nRegimeRecordIT: 로그 행·기록 행이 하나씩 생기고 보낸 baseline_origin 이 그대로 저장되는지,\nbaselineOrigin 이 빠지면 400 인지, 진입 경로가 다르면 두 번째 쌍이 생기는지, 다시 열면 200 에\nviewed_at 만 오르는지, 없는 키가 404 인지, 비로그인이 401 이고 행이 없는지.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:39:42.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:39:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/811c2f54c93c5c19772ca049c3cd44ff3b53c932"
+        },
+        {
+          "id": "a54dfa8da2fb6a5f5202fb758141068dbedd5981",
+          "short_id": "a54dfa8d",
+          "created_at": "2026-09-21T10:36:14.000+09:00",
+          "parent_ids": [
+            "dcaf42edf16a75b889c90008f56c11cc0c847427",
+            "b36ccbab340b8b37bed4cda554cf59c906e79a81"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/384-my-record-limit-regime",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/384-my-record-limit-regime\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:36:14.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:36:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a54dfa8da2fb6a5f5202fb758141068dbedd5981"
+        },
+        {
+          "id": "dcaf42edf16a75b889c90008f56c11cc0c847427",
+          "short_id": "dcaf42ed",
+          "created_at": "2026-09-21T10:31:09.000+09:00",
+          "parent_ids": [
+            "35b1f4b4019b3928afafc85a566e7b54dc18f1f3"
+          ],
+          "title": "feat(be): 경제환경 검색을 개인 기록으로 남기는 자리를 만든다",
+          "message": "feat(be): 경제환경 검색을 개인 기록으로 남기는 자리를 만든다\n\nMyRecordRegistrar.recordRegimeSearch 를 더한다(spec 006 T035, research R15). 스냅샷을 010의\n읽기 경로(RegimeSnapshotRepository.findByKey)로 찾고 없으면 404 다. regime_search_log 행과\nmy_record 행을 한 트랜잭션에 만든다 — 갈라지면 아무도 가리키지 않는 로그 행이나 없는 행을\n가리키는 항목이 남는다.\n\nbaselineOrigin 은 화면이 보낸 값을 그대로 쓴다. 010의 SnapshotKey 에는 기준월 근거가 없어\nsearchId 만으로는 되짚을 수 없고, 추정하면 원칙 VI 위반이다. RecordRegimeSearchRequest 는\n세 값을 enum 으로 받아 모르는 값이 본문을 읽는 단계에서 400 이 되게 한다.\n\n같은 (소유자·스냅샷·진입 경로)의 로그 행이 있으면 열람 시각만 올리고 그 항목을 돌려준다.\n항목만 지워졌으면 로그 행은 그대로 두고 항목을 다시 만든다 — 처음 본 revision 은 로그 행이\n쥐고 있다. append 는 upsert 라 동시 요청에도 로그 행이 하나이고, 그 뒤 항목을 한 번 더 찾아\nuk_my_record_regime 위반으로 500 이 나가지 않게 한다.\n\nHTTP 경로(POST /my-records/regime-searches)는 MyRecordController 가 dev 에 들어온 뒤 얹는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:31:09.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:31:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dcaf42edf16a75b889c90008f56c11cc0c847427"
+        },
+        {
+          "id": "35b1f4b4019b3928afafc85a566e7b54dc18f1f3",
+          "short_id": "35b1f4b4",
+          "created_at": "2026-09-21T10:25:52.000+09:00",
+          "parent_ids": [
+            "cd9938686e7e81ea3e7ce0e1b5b46730e2098f90"
+          ],
+          "title": "feat(be): 탐색 묶음 저장 상한을 접수 앞에 둔다",
+          "message": "feat(be): 탐색 묶음 저장 상한을 접수 앞에 둔다\n\nMyRecordLimitPolicy 를 만들어 ParamSearchService.create 맨 앞에서 부른다(spec 006 T033,\nFR-018·research R11). 판정 자리가 접수 직전인 까닭은 계산이 끝난 뒤 저장 단계에서 막으면\n이미 쓴 계산 자원이 버려지기 때문이다 — Edge Cases 가 \"새 탐색을 시작하기 전에 알린다\"로\n정했다.\n\n거절은 429 가 아니라 409 RECORD_LIMIT_REACHED 다. 429 는 큐에 쌓이는 양 이야기이고 이것은\n저장 자리 이야기라 코드를 나눈다. 본문 error.details 에 current·limit 을 실어 화면이 \"N/M\"\n을 문장에서 뽑아 쓰지 않게 한다.\n\n이 거절은 되돌려도 된다 — 어떤 행도 쓰이기 전이라 남길 묶음이 없다. 후보 상한(REJECTED)\n갈래와 다르므로 noRollbackFor 에 더하지 않는다. 비로그인 접수는 기록을 만들지 않아 셀\n것도 없어 건너뛴다.\n\n상한값은 MyRecordLimits 로 옮겨 정책이 받는다. MyRecordProperties 는 infrastructure 라\napplication 이 직접 참조할 수 없다(ArchitectureTest 계층 규칙) — ExecutionLimits 와 같은\n자리다. 세는 구간에 잠금은 두지 않았다(코드에 ponytail 표시).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:25:41.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:25:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/35b1f4b4019b3928afafc85a566e7b54dc18f1f3"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T11:24:11.610+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2845133": [],
+    "2845257": []
+  }
+}

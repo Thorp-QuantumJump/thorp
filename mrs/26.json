@@ -1,0 +1,611 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 937664,
+    "iid": 26,
+    "project_id": 1444456,
+    "title": "feat(be): 백테스트 결과를 RabbitMQ로 실어 백엔드에 저장한다 (#111)",
+    "description": "## 작업 내용 요약\n\n백테스트 결과가 RabbitMQ를 거쳐 백엔드에 저장되기까지의 경로를 실제로 통하게 했다. 발행 코드\n자체는 이미 있었고(#108, #110), 결과가 하나도 돌아오지 못하게 막고 있던 두 지점을 고쳤다.\n\n1. **벤치마크** — 백엔드는 사용자가 지정하면 `EngineInput.benchmark`를 실어 보내는데 엔진은\n   그 지정을 `INVALID_REQUEST`로 거절했다. 벤치마크를 골랐다는 이유만으로 백테스트 결과 전체가\n   FAILED로 저장됐다.\n2. **거래비용** — `ExecutionPolicy`가 `commission.model=BROKER`를 보내는데 엔진은 `ZERO`만\n   실행한다. 벤치마크를 쓰지 않아도 **모든** Job이 거절됐다. 계약 픽스처는 이미 `ZERO`였고\n   (#cdc1866, ADR-0004 D2) 백엔드만 따라오지 않은 상태여서 `EngineInputFixtureTest`도\n   dev에서 깨져 있었다.\n\n## 흐름\n\nJob 한 건이 지나가는 경로다. 참가자는 그대로이고 **어디서 거절되는지**와 **benchmark가 어디까지\n살아 있는지**만 달라진다.\n\n### as-is (dev) — 모든 Job이 성과 없이 끝난다\n\n```mermaid\nsequenceDiagram\n    autonumber\n    participant BE as Backend\n    participant JQ as backtest.jobs\n    participant WC as 실행 Consumer\n    participant EN as Engine\n    participant EQ as backtest.events\n\n    BE->>JQ: EngineInput<br/>commission=BROKER/KIWOOM, benchmark 있음\n    JQ->>WC: deliver\n    WC->>EN: run(engineInput) 그대로 전달\n    Note over EN: engine_support.unsupported_reasons()<br/>commission != ZERO, benchmark 지정<br/>둘 다 미지원\n    EN-->>WC: EngineOutput status=FAILED<br/>error.code=INVALID_REQUEST\n    WC->>EQ: FINISHED (status=FAILED)\n    EQ->>BE: deliver\n    BE->>BE: backtest_result 저장<br/>error_code=INVALID_REQUEST\n    Note over BE: 결과는 도착한다. 성과가 없다.\n```\n\n### to-be (이 MR)\n\n```mermaid\nsequenceDiagram\n    autonumber\n    participant BE as Backend\n    participant JQ as backtest.jobs\n    participant WC as 실행 Consumer\n    participant EN as Engine\n    participant EQ as backtest.events\n\n    BE->>JQ: EngineInput<br/>commission=ZERO, benchmark 있음\n    JQ->>WC: deliver\n    Note over WC: strip_benchmark()<br/>엔진 호출 입력에서만 벗긴다\n    WC->>EQ: STARTED (sequence=0)\n    WC->>EN: run(engineInput) — benchmark 없음\n    Note over EN: 거절 규칙은 유지.<br/>엔진을 직접 호출하면 benchmark는 계속 INVALID_REQUEST\n    EN-->>WC: 진행 콜백 (거래일 1개 단위)\n    WC->>EQ: PROGRESS (20거래일 묶음)\n    EN-->>WC: EngineOutput status=COMPLETED\n    WC->>EQ: FINISHED (engineOutput, benchmark 키 없음)\n    EQ->>BE: deliver\n    BE->>BE: backtest_result + backtest_trade 저장\n    WC->>JQ: ACK (FINISHED 발행이 확인된 뒤에만)\n    Note over BE: benchmark 컬럼은 null.<br/>계약이 그 생략을 \"미지정 또는 실패\"로 정의한다\n```\n\n`benchmark`가 사는 곳과 죽는 곳이 리뷰 포인트 1번이다. **백엔드 메시지에는 있고**, **엔진 호출에만\n없고**, **`FINISHED` payload에는 다시 없다.** 마지막이 \"계산하지 않았다\"는 뜻이며, 다만 결과만 보면\n벤치마크를 요청하지 않은 실행과 구별되지 않는다(아래 별도 티켓 4번).\n\n## 관련 이슈\n\nclose #111\n\n## 주요 변경 사항\n\n| 파일 | 변경 |\n| --- | --- |\n| `worker/src/worker/consumer.py` | `strip_benchmark()` 신설. 실행 Consumer가 **엔진 호출 입력에서만** `benchmark`를 벗긴다 |\n| `worker/tests/test_consumer.py` | 벤치마크 지정 요청이 COMPLETED가 되는지 등 4건 추가, `CountingEngine`이 엔진이 받은 입력을 기록 |\n| `backend/.../ExecutionPolicy.java` | `CommissionSpec(BROKER, \"KIWOOM\", \"2026-09\")` → `CommissionSpec(ZERO, null, null)` |\n| `worker/CLAUDE.md`, `worker/README.md`, `docs/specs/101-nautilus-momentum.md` | 낡은 서술 정정 |\n\n`engine_support.py`의 거절 규칙은 **그대로 뒀다.** 엔진을 직접 호출하는 쪽은 계속 거절당해야\n지원 범위가 흐려지지 않고, 벗기는 책임은 계약이 벤치마크 담당으로 지정한 실행 Consumer에 있다.\n계산기가 없으므로 `FINISHED` payload의 `benchmark`는 계속 생략되고, 계약이 그 생략을\n\"미지정 또는 실패\"로 정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다(ADR-0004 위반 아님).\n\n## 테스트 체크리스트\n\n- [x] `worker`: `ruff check` / `ruff format --check` / `pytest` → **143 passed**\n      (기존 140 + 벤치마크 4건 + 계약 검증 3건, 리뷰 반영 후 재실행)\n- [x] `backend`: `./gradlew spotlessApply test` → **BUILD SUCCESSFUL** (dev에서 실패하던\n      `EngineInputFixtureTest` 복구)\n- [x] **E2E 실측** — `POST /backtests` → `backtest.jobs` → 워커 → `backtest.events` →\n      `BacktestEventListener` → DB → `GET /backtests/{id}`\n  - `BT-20260909-000005` (SK하이닉스 `000660.XKRX`, MOMENTUM lookbackDays=120,\n    2024-03-01~09-30, 벤치마크 `069500.XKRX` 지정) → **COMPLETED**\n  - totalReturn `-0.11654566`, MDD `-0.3927751…`, Sharpe `-0.2095275…`,\n    finalEquity `8,834,543.40`, portfolioSeries 142거래일, 거래 2건, 주문 4건 전량 체결\n  - `totalCommission = 0` (ZERO 정책대로), `benchmark` 컬럼 비어 있음(계약대로 키 생략)\n  - 최종 큐: `backtest.jobs` 0, `backtest.events` 0, `backtest.events.dlq` **0**\n    (FINISHED 발행 확인 후 ACK 순서 준수, 결과 유실 없음)\n\n## 리뷰 포인트\n\n- 벤치마크를 **엔진 호출 입력에서만** 벗기는 위치가 맞는지 (`consumer._execute`).\n  엔진 안에서 무시하면 ADR-0004 위반이 엔진으로 들어가고, 백엔드가 안 보내게 하면 사용자가\n  지정한 정보가 사라진다고 판단했다.\n- 거래비용을 `ZERO`로 **고정**한 것이 DEMO 단계 결정으로 적절한지. 수수료는 결과 숫자를\n  바꾸므로 벤치마크처럼 벗길 수 없다. 요율표(`model=BROKER`)는 계약·enum에 그대로 남아 있다.\n\n## 이 MR 범위 밖에서 드러난 문제 (별도 티켓 필요)\n\n1. **yfinance SK하이닉스 데이터 불량 4건** — NaN `2025-09-19`, OHLC 모순 `2023-02-02`,\n   `2023-02-09`, `2024-10-14`(`Low 186,900 > Close 186,000`). 조회 창이\n   `run.start − 365일 … run.end`라 **MVP 목표인 5년 구간은 반드시 하나를 포함**해 항상\n   `NO_MARKET_DATA`가 된다. 불량 바 건너뛰기 / `repair=True` / pykrx 전환 중 결정 필요.\n   백엔드가 `datasetId=\"KRX_DAILY_V1\"`을 보내는데 실제 출처가 yfinance인 표기 불일치도 함께.\n2. **DB 저장 실패 시 Job 메시지 잔재** — 첫 시도에서 `POST`가 DB 제약 위반으로 500을 냈는데\n   Job 메시지는 이미 발행돼 있었다. Job 행이 없는 `backtestId`로 워커가 백테스트를 실행했다.\n   `BacktestCreateRollbackIT`는 반대 방향(발행 실패 → DB 롤백)만 막는다.\n3. **로컬 DB 스키마 드리프트** — `backtest_job.strategy`(NOT NULL)가 Flyway\n   `V1__init_schema.sql`에 없는 잔재로 남아 INSERT를 막는다. 다른 팀원 로컬에도 있을 수 있다.\n4. **벗긴 벤치마크가 결과에 드러나지 않는다** (AI 코드리뷰 지적, medium). `FINISHED` payload는\n   `benchmark` 없음 + `diagnostics.warnings` 비어 있음이라, 사용자가 벤치마크를 지정한 실행과\n   지정하지 않은 실행이 결과만으로는 구별되지 않는다. `execution.delisting=CAUSE_BASED`가\n   `DELISTING_CLASSIFICATION_UNSUPPORTED` 경고를 남기는 선례(ADR-0003 \"D-상장폐지\")를 따르는\n   편이 낫다. 그러려면 벗기는 대신 **엔진이 benchmark를 받아 run-level 경고를 남기도록** 옮겨야\n   해서 이 MR의 접근을 바꾸는 일이므로 분리했다. 지적 자체는 타당하다고 본다.\n\n이 MR에서 반영한 리뷰 지적은 2건이다(`81ccb36`): `BenchmarkSpec.instrumentId` 형식 검증 누락\n(벗기기 때문에 도달 가능해진 경로), 그리고 잘못된 ADR 인용·낡은 ADR 서술.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-09T11:57:04.206+09:00",
+    "updated_at": "2026-09-09T12:03:23.531+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-09T12:03:23.086+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/111-backtest-result-publish",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "81ccb36d34cc42b89f184196eff79e6e5a58b88f",
+    "merge_commit_sha": "71d92823bb4f347bee07007e779ec89005fef59f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-09T11:57:05.844+09:00",
+    "reference": "!26",
+    "references": {
+      "short": "!26",
+      "relative": "!26",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!26"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/26",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 937664,
+    "iid": 26,
+    "project_id": 1444456,
+    "title": "feat(be): 백테스트 결과를 RabbitMQ로 실어 백엔드에 저장한다 (#111)",
+    "description": "## 작업 내용 요약\n\n백테스트 결과가 RabbitMQ를 거쳐 백엔드에 저장되기까지의 경로를 실제로 통하게 했다. 발행 코드\n자체는 이미 있었고(#108, #110), 결과가 하나도 돌아오지 못하게 막고 있던 두 지점을 고쳤다.\n\n1. **벤치마크** — 백엔드는 사용자가 지정하면 `EngineInput.benchmark`를 실어 보내는데 엔진은\n   그 지정을 `INVALID_REQUEST`로 거절했다. 벤치마크를 골랐다는 이유만으로 백테스트 결과 전체가\n   FAILED로 저장됐다.\n2. **거래비용** — `ExecutionPolicy`가 `commission.model=BROKER`를 보내는데 엔진은 `ZERO`만\n   실행한다. 벤치마크를 쓰지 않아도 **모든** Job이 거절됐다. 계약 픽스처는 이미 `ZERO`였고\n   (#cdc1866, ADR-0004 D2) 백엔드만 따라오지 않은 상태여서 `EngineInputFixtureTest`도\n   dev에서 깨져 있었다.\n\n## 흐름\n\nJob 한 건이 지나가는 경로다. 참가자는 그대로이고 **어디서 거절되는지**와 **benchmark가 어디까지\n살아 있는지**만 달라진다.\n\n### as-is (dev) — 모든 Job이 성과 없이 끝난다\n\n```mermaid\nsequenceDiagram\n    autonumber\n    participant BE as Backend\n    participant JQ as backtest.jobs\n    participant WC as 실행 Consumer\n    participant EN as Engine\n    participant EQ as backtest.events\n\n    BE->>JQ: EngineInput<br/>commission=BROKER/KIWOOM, benchmark 있음\n    JQ->>WC: deliver\n    WC->>EN: run(engineInput) 그대로 전달\n    Note over EN: engine_support.unsupported_reasons()<br/>commission != ZERO, benchmark 지정<br/>둘 다 미지원\n    EN-->>WC: EngineOutput status=FAILED<br/>error.code=INVALID_REQUEST\n    WC->>EQ: FINISHED (status=FAILED)\n    EQ->>BE: deliver\n    BE->>BE: backtest_result 저장<br/>error_code=INVALID_REQUEST\n    Note over BE: 결과는 도착한다. 성과가 없다.\n```\n\n### to-be (이 MR)\n\n```mermaid\nsequenceDiagram\n    autonumber\n    participant BE as Backend\n    participant JQ as backtest.jobs\n    participant WC as 실행 Consumer\n    participant EN as Engine\n    participant EQ as backtest.events\n\n    BE->>JQ: EngineInput<br/>commission=ZERO, benchmark 있음\n    JQ->>WC: deliver\n    Note over WC: strip_benchmark()<br/>엔진 호출 입력에서만 벗긴다\n    WC->>EQ: STARTED (sequence=0)\n    WC->>EN: run(engineInput) — benchmark 없음\n    Note over EN: 거절 규칙은 유지.<br/>엔진을 직접 호출하면 benchmark는 계속 INVALID_REQUEST\n    EN-->>WC: 진행 콜백 (거래일 1개 단위)\n    WC->>EQ: PROGRESS (20거래일 묶음)\n    EN-->>WC: EngineOutput status=COMPLETED\n    WC->>EQ: FINISHED (engineOutput, benchmark 키 없음)\n    EQ->>BE: deliver\n    BE->>BE: backtest_result + backtest_trade 저장\n    WC->>JQ: ACK (FINISHED 발행이 확인된 뒤에만)\n    Note over BE: benchmark 컬럼은 null.<br/>계약이 그 생략을 \"미지정 또는 실패\"로 정의한다\n```\n\n`benchmark`가 사는 곳과 죽는 곳이 리뷰 포인트 1번이다. **백엔드 메시지에는 있고**, **엔진 호출에만\n없고**, **`FINISHED` payload에는 다시 없다.** 마지막이 \"계산하지 않았다\"는 뜻이며, 다만 결과만 보면\n벤치마크를 요청하지 않은 실행과 구별되지 않는다(아래 별도 티켓 4번).\n\n## 관련 이슈\n\nclose #111\n\n## 주요 변경 사항\n\n| 파일 | 변경 |\n| --- | --- |\n| `worker/src/worker/consumer.py` | `strip_benchmark()` 신설. 실행 Consumer가 **엔진 호출 입력에서만** `benchmark`를 벗긴다 |\n| `worker/tests/test_consumer.py` | 벤치마크 지정 요청이 COMPLETED가 되는지 등 4건 추가, `CountingEngine`이 엔진이 받은 입력을 기록 |\n| `backend/.../ExecutionPolicy.java` | `CommissionSpec(BROKER, \"KIWOOM\", \"2026-09\")` → `CommissionSpec(ZERO, null, null)` |\n| `worker/CLAUDE.md`, `worker/README.md`, `docs/specs/101-nautilus-momentum.md` | 낡은 서술 정정 |\n\n`engine_support.py`의 거절 규칙은 **그대로 뒀다.** 엔진을 직접 호출하는 쪽은 계속 거절당해야\n지원 범위가 흐려지지 않고, 벗기는 책임은 계약이 벤치마크 담당으로 지정한 실행 Consumer에 있다.\n계산기가 없으므로 `FINISHED` payload의 `benchmark`는 계속 생략되고, 계약이 그 생략을\n\"미지정 또는 실패\"로 정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다(ADR-0004 위반 아님).\n\n## 테스트 체크리스트\n\n- [x] `worker`: `ruff check` / `ruff format --check` / `pytest` → **143 passed**\n      (기존 140 + 벤치마크 4건 + 계약 검증 3건, 리뷰 반영 후 재실행)\n- [x] `backend`: `./gradlew spotlessApply test` → **BUILD SUCCESSFUL** (dev에서 실패하던\n      `EngineInputFixtureTest` 복구)\n- [x] **E2E 실측** — `POST /backtests` → `backtest.jobs` → 워커 → `backtest.events` →\n      `BacktestEventListener` → DB → `GET /backtests/{id}`\n  - `BT-20260909-000005` (SK하이닉스 `000660.XKRX`, MOMENTUM lookbackDays=120,\n    2024-03-01~09-30, 벤치마크 `069500.XKRX` 지정) → **COMPLETED**\n  - totalReturn `-0.11654566`, MDD `-0.3927751…`, Sharpe `-0.2095275…`,\n    finalEquity `8,834,543.40`, portfolioSeries 142거래일, 거래 2건, 주문 4건 전량 체결\n  - `totalCommission = 0` (ZERO 정책대로), `benchmark` 컬럼 비어 있음(계약대로 키 생략)\n  - 최종 큐: `backtest.jobs` 0, `backtest.events` 0, `backtest.events.dlq` **0**\n    (FINISHED 발행 확인 후 ACK 순서 준수, 결과 유실 없음)\n\n## 리뷰 포인트\n\n- 벤치마크를 **엔진 호출 입력에서만** 벗기는 위치가 맞는지 (`consumer._execute`).\n  엔진 안에서 무시하면 ADR-0004 위반이 엔진으로 들어가고, 백엔드가 안 보내게 하면 사용자가\n  지정한 정보가 사라진다고 판단했다.\n- 거래비용을 `ZERO`로 **고정**한 것이 DEMO 단계 결정으로 적절한지. 수수료는 결과 숫자를\n  바꾸므로 벤치마크처럼 벗길 수 없다. 요율표(`model=BROKER`)는 계약·enum에 그대로 남아 있다.\n\n## 이 MR 범위 밖에서 드러난 문제 (별도 티켓 필요)\n\n1. **yfinance SK하이닉스 데이터 불량 4건** — NaN `2025-09-19`, OHLC 모순 `2023-02-02`,\n   `2023-02-09`, `2024-10-14`(`Low 186,900 > Close 186,000`). 조회 창이\n   `run.start − 365일 … run.end`라 **MVP 목표인 5년 구간은 반드시 하나를 포함**해 항상\n   `NO_MARKET_DATA`가 된다. 불량 바 건너뛰기 / `repair=True` / pykrx 전환 중 결정 필요.\n   백엔드가 `datasetId=\"KRX_DAILY_V1\"`을 보내는데 실제 출처가 yfinance인 표기 불일치도 함께.\n2. **DB 저장 실패 시 Job 메시지 잔재** — 첫 시도에서 `POST`가 DB 제약 위반으로 500을 냈는데\n   Job 메시지는 이미 발행돼 있었다. Job 행이 없는 `backtestId`로 워커가 백테스트를 실행했다.\n   `BacktestCreateRollbackIT`는 반대 방향(발행 실패 → DB 롤백)만 막는다.\n3. **로컬 DB 스키마 드리프트** — `backtest_job.strategy`(NOT NULL)가 Flyway\n   `V1__init_schema.sql`에 없는 잔재로 남아 INSERT를 막는다. 다른 팀원 로컬에도 있을 수 있다.\n4. **벗긴 벤치마크가 결과에 드러나지 않는다** (AI 코드리뷰 지적, medium). `FINISHED` payload는\n   `benchmark` 없음 + `diagnostics.warnings` 비어 있음이라, 사용자가 벤치마크를 지정한 실행과\n   지정하지 않은 실행이 결과만으로는 구별되지 않는다. `execution.delisting=CAUSE_BASED`가\n   `DELISTING_CLASSIFICATION_UNSUPPORTED` 경고를 남기는 선례(ADR-0003 \"D-상장폐지\")를 따르는\n   편이 낫다. 그러려면 벗기는 대신 **엔진이 benchmark를 받아 run-level 경고를 남기도록** 옮겨야\n   해서 이 MR의 접근을 바꾸는 일이므로 분리했다. 지적 자체는 타당하다고 본다.\n\n이 MR에서 반영한 리뷰 지적은 2건이다(`81ccb36`): `BenchmarkSpec.instrumentId` 형식 검증 누락\n(벗기기 때문에 도달 가능해진 경로), 그리고 잘못된 ADR 인용·낡은 ADR 서술.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-09T11:57:04.206+09:00",
+    "updated_at": "2026-09-09T12:03:23.531+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-09T12:03:23.086+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/111-backtest-result-publish",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "81ccb36d34cc42b89f184196eff79e6e5a58b88f",
+    "merge_commit_sha": "71d92823bb4f347bee07007e779ec89005fef59f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-09T11:57:05.844+09:00",
+    "reference": "!26",
+    "references": {
+      "short": "!26",
+      "relative": "!26",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!26"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/26",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "head_sha": "81ccb36d34cc42b89f184196eff79e6e5a58b88f",
+      "start_sha": "37c9678937905561446a0560ed0c5d7ae5906684"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ef965aa05723bf7173e5db39afba59d93335c93e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2778773,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 책임 분리 및 방어적 설계**: 백엔드 사용자가 지정한 `benchmark` 필드가 엔진 내부의 거절 규칙(`INVALID_REQUEST`)에 걸려 전체 잡이 실패하는 문제를, 엔진 코드를 수정하는 대신 실행 Consumer 단계(`strip_benchmark`)에서 안전하게 분리(stripping)하여 해결했습니다. 엔진의 직접 호출 계약은 그대로 유지하면서 시스템 호환성을 확보한 설계가 훌륭합니다.\n- **문서화 및 ADR 갱신**: 아키텍처 결정 기록(ADR-0003, ADR-0004)과 `CLAUDE.md`, `README.md`에 변경 배경과 향후 과제(별도 티켓 내용)를 상세히 기술하여 유지보수성을 크게 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **벤치마크 지정/미지정 시나리오 테스트**:\n  - `benchmark`가 포함된 `EngineInput` 요청 시 워커가 정상적으로 `COMPLETED` 상태의 결과를 반환하고, 이벤트 페이로드에 `benchmark` 필드가 올바르게 생략되는지 검증합니다.\n- **계약 검증(Contract Validation) 테스트**:\n  - `worker/tests/test_contract_validation.py`에 추가된 케이스(`benchmark-not-krx`, `benchmark-blank`, `benchmark-wrong-venue`)가 잘못된 형식의 `instrumentId`를 정확히 차단하고 DLQ로 유도하는지 확인합니다.\n- **거래비용(Commission) 고정값 검증**:\n  - 백엔드 `ExecutionPolicy` 변경 후 `CommissionModel.ZERO`가 올바르게 적용되어 `totalCommission = 0`으로 계산되는지 E2E 통합 테스트로 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:81ccb36d34cc42b89f184196eff79e6e5a58b88f -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-09T11:57:13.035+09:00",
+          "updated_at": "2026-09-09T11:57:13.035+09:00",
+          "system": false,
+          "noteable_id": 937664,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 26,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "502de200d126f2e26d3464ac8213d5c325cb79ae",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2778809,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-09T12:01:44.074+09:00",
+          "updated_at": "2026-09-09T12:01:44.079+09:00",
+          "system": true,
+          "noteable_id": 937664,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 26,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "97f6d76a3ea7ff2b5a73eabe5f2112aefaf1c3b6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2778819,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-09T12:02:56.379+09:00",
+          "updated_at": "2026-09-09T12:02:56.390+09:00",
+          "system": true,
+          "noteable_id": 937664,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 26,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5197a9445a670fd550a576911e14aae83d6516fc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2778830,
+          "type": null,
+          "body": "mentioned in commit 71d92823bb4f347bee07007e779ec89005fef59f",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-09T12:03:23.226+09:00",
+          "updated_at": "2026-09-09T12:03:23.231+09:00",
+          "system": true,
+          "noteable_id": 937664,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 26,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2175902,
+      "head_commit_sha": "81ccb36d34cc42b89f184196eff79e6e5a58b88f",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "created_at": "2026-09-09T11:57:04.650+09:00",
+      "merge_request_id": 937664,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "47495ad6cd95d94bf39dbb383cac113e78c7f3cf"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2175902,
+      "head_commit_sha": "81ccb36d34cc42b89f184196eff79e6e5a58b88f",
+      "base_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "start_commit_sha": "37c9678937905561446a0560ed0c5d7ae5906684",
+      "created_at": "2026-09-09T11:57:04.650+09:00",
+      "merge_request_id": 937664,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "47495ad6cd95d94bf39dbb383cac113e78c7f3cf",
+      "commits": [
+        {
+          "id": "81ccb36d34cc42b89f184196eff79e6e5a58b88f",
+          "short_id": "81ccb36d",
+          "created_at": "2026-09-09T11:56:46.000+09:00",
+          "parent_ids": [
+            "402cc7ec3ff00e65596571f03b27b22112d600c7"
+          ],
+          "title": "fix(be): AI 코드리뷰 반영 — benchmark instrumentId 검증과 ADR 기록 정정",
+          "message": "fix(be): AI 코드리뷰 반영 — benchmark instrumentId 검증과 ADR 기록 정정\n\n- contracts/engine_input.py: BenchmarkSpec.instrumentId 형식 검증 추가.\n  계약 README §5는 benchmark의 instrumentId도 {6자리}.XKRX로 규정하고 형식\n  위반을 계약 오류(→ DLQ)로 두는데 검증이 없었다. 지금까지는 엔진이 benchmark\n  지정 자체를 거절해 도달 불가였지만, 실행 Consumer가 벗기게 되면서 형식이\n  깨진 값이 조용히 통과해 COMPLETED로 끝나는 경로가 열렸다. 위반 케이스 3건\n  테스트 추가\n- consumer.strip_benchmark docstring: 근거를 ADR-0004로 잘못 적은 것을 정정\n  (ADR-0004는 거래비용 결정이며 벤치마크를 다루지 않는다). 결과 메시지에\n  \"벗겼다\"는 표시가 남지 않는 한계와 diagnostics.warnings 선례를 명시\n- ADR-0003: benchmark 지정이 브로커 경로에서 거절 사유가 아니게 된 것을 기록\n  (기존 서술은 여전히 거절한다고 되어 있었다)\n- ADR-0004: \"백엔드에 EngineInput 조립 코드가 아직 없다\"는 낡은 서술을 고치고\n  ExecutionPolicy 반영 행 추가\n\n검증: ruff check/format 통과, pytest 143 passed (기존 140 + 신규 3)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-09T11:56:46.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-09T11:56:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/81ccb36d34cc42b89f184196eff79e6e5a58b88f"
+        },
+        {
+          "id": "402cc7ec3ff00e65596571f03b27b22112d600c7",
+          "short_id": "402cc7ec",
+          "created_at": "2026-09-09T11:04:06.000+09:00",
+          "parent_ids": [
+            "42c9c426a393b29a62b4aac126481934f4535f8d"
+          ],
+          "title": "fix(be): 고정 실행 정책의 거래비용을 계약대로 ZERO로 맞춘다",
+          "message": "fix(be): 고정 실행 정책의 거래비용을 계약대로 ZERO로 맞춘다\n\n커밋 cdc1866이 계약 픽스처의 execution.commission을 BROKER에서 ZERO로\n바꾸면서(ADR-0004 D2) ExecutionPolicy를 같이 고치지 않아, 백엔드가 계약과\n다른 메시지를 발행하고 있었다. 결과는 두 가지였다.\n\n- EngineInputFixtureTest(\"조립한 EngineInput의 직렬화 결과가 계약 픽스처와\n  같다\")가 dev에서 실패 상태였다\n- 워커 엔진이 ZERO만 실행하므로 모든 Job이 INVALID_REQUEST로 거절됐다.\n  즉 벤치마크를 쓰지 않아도 백테스트 결과가 하나도 돌아오지 않았다\n\n수수료는 결과 숫자를 바꾸므로 벤치마크처럼 벗길 수 없다. 계약의 ZERO는 임시\n우회값이 아니라 \"거래비용을 제외한 순수 전략 성능\"을 뜻하는 정식 모델이므로\n(ADR-0004 D2) DEMO 고정값으로 명시한다. 요율표 model=BROKER는 계약과 enum에\n그대로 남아 있고 전략 비교 단계에서 구현한다(D3).\n\ndocs/specs/101-nautilus-momentum.md의 \"계약이 KIWOOM 요율표를 고정한다\"는\n서술도 함께 정정했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-09T11:04:06.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-09T11:04:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/402cc7ec3ff00e65596571f03b27b22112d600c7"
+        },
+        {
+          "id": "42c9c426a393b29a62b4aac126481934f4535f8d",
+          "short_id": "42c9c426",
+          "created_at": "2026-09-09T11:03:52.000+09:00",
+          "parent_ids": [
+            "37c9678937905561446a0560ed0c5d7ae5906684"
+          ],
+          "title": "feat(be): 벤치마크 지정을 엔진 호출 입력에서만 벗겨 결과를 살린다",
+          "message": "feat(be): 벤치마크 지정을 엔진 호출 입력에서만 벗겨 결과를 살린다\n\n백엔드는 사용자가 벤치마크를 지정하면 EngineInput에 BenchmarkSpec을 실어\n보내는데(EngineInputAssembler), 엔진은 그 지정을 INVALID_REQUEST로 거절한다\n(engine_support). 그래서 벤치마크를 골랐다는 이유만으로 백테스트 결과 전체가\nFAILED로 저장됐다. 전략 성과는 벤치마크와 무관하게 계산되므로 결과를 버릴\n이유가 없다.\n\n- consumer.strip_benchmark() 신설. 실행 Consumer가 엔진 호출 입력에서만\n  benchmark를 벗긴다. 계약이 벤치마크를 실행 Consumer 책임으로 두므로\n  벗기는 주체도 여기다\n- engine_support의 거절 규칙은 유지한다. 엔진을 직접 호출하는 쪽은 계속\n  거절당해야 지원 범위가 흐려지지 않는다\n- 조용히 무시하는 것이 아니다(ADR-0004). 계산기가 아직 없어 FINISHED\n  payload의 benchmark는 계속 생략되고, 계약이 그 생략을 \"미지정 또는 실패\"로\n  정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다\n- 낡은 문서 정정: \"백엔드 요청에 벤치마크를 지정할 필드가 없다\"는 서술이\n  사실과 다르다 (README, CLAUDE.md)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-09T11:03:52.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-09T11:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42c9c426a393b29a62b4aac126481934f4535f8d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -43,7 +43,11 @@ public final class ExecutionPolicy {\n                     SignalTiming.BAR_CLOSE,\n                     ExecutionTiming.NEXT_BAR_OPEN,\n                     List.of(OrderType.MARKET),\n-                    new EngineInput.CommissionSpec(CommissionModel.BROKER, \"KIWOOM\", \"2026-09\"),\n+                    // DEMO 고정값은 ZERO다 — 수수료·세금·제비용을 모두 0으로 계산한다\n+                    // (계약 README §4.1, ADR-0004 D2). 임시 우회값이 아니라 \"거래비용을 제외한\n+                    // 순수 전략 성능\"을 뜻하는 정식 모델이며, 요율표 model=BROKER는 전략 비교\n+                    // 단계의 별도 티켓이다(ADR-0004 D3). 워커 엔진도 ZERO만 실행한다.\n+                    new EngineInput.CommissionSpec(CommissionModel.ZERO, null, null),\n                     new EngineInput.SlippageSpec(SlippageModel.FIXED_BPS, 5),\n                     false,\n                     new EngineInput.LiquiditySpec(LiquidityModel.UNLIMITED),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/ExecutionPolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/ExecutionPolicy.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -147,6 +147,14 @@ native 리포트의 단순 노출로 만들 수 없다. 이중 원장의 위험\n `EngineOutput(run.status=FAILED, run.error.code=INVALID_REQUEST)`로 반환한다(§6 \"오류와 콜백\n 의미\"의 입력 계약 오류와 구분된다 — 계약 자체를 위반한 메시지는 여전히 pydantic 예외다).\n \n+**갱신(#111).** 위 목록 중 `benchmark` 지정은 **브로커 경로에서 더 이상 거절 사유가 아니다.**\n+백엔드가 사용자 지정 벤치마크를 `EngineInput.benchmark`로 실어 보내므로 그대로 두면 벤치마크를\n+골랐다는 이유만으로 백테스트 결과 전체가 FAILED가 된다. 실행 Consumer가 엔진 호출 입력에서만\n+벗기고(`consumer.strip_benchmark`) 엔진의 거절 규칙은 유지한다 — 엔진을 직접 호출하는 쪽은\n+계속 거절당한다. 계산기가 없어 `FINISHED` payload의 `benchmark`는 생략되며, 계약이 그 생략을\n+\"미지정 또는 실패\"로 정의한다. `diagnostics.warnings`로 드러내는 방안(`D-상장폐지` 선례)은\n+별도 티켓이다.\n+\n **이 검증을 `contracts/`에 두지 않는다.** `contracts/`는 백엔드와 공유하는 계약이고, 계약\n 픽스처 `docs/specs/backtest-messaging/examples/engine-input.json`(MA_CROSSOVER·2종목·benchmark\n 있음)은 구조 검증용이라 계약 검증을 계속 통과해야 한다(백엔드 `BacktestMessageRoundTripTest`와\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/0003-nautilus-momentum-engine-boundary.md",
+          "old_path": "docs/adr/0003-nautilus-momentum-engine-boundary.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -107,9 +107,17 @@ yfinance `auto_adjust=False`로 바꿔 `SPLIT_ADJUSTED` 의미에 맞추고(배\n | `worker/src/worker/contracts/engine_input.py` | `CommissionModel` StrEnum 1개 값 | `ZERO` 추가. `model=BROKER`일 때 `broker` 필수 검증은 유지 | ✅ 완료 (검증 유지) |\n | `worker/src/worker/engine_contracts.py` | 입력 모델 한 벌 전체 | **삭제.** 엔진이 계약 입력 모델을 직접 받는다 | ✅ 완료 |\n \n-백엔드에는 `EngineInput`을 조립하는 코드가 아직 없다(발행자 미구현). 고정값은 단일 멤버 enum과\n-README 표에만 있었으므로, 백엔드 쪽 작업은 enum 값 추가와 문서·픽스처 수정뿐이었다. 조립 로직은\n-발행 구현 티켓에서 이 결정을 반영해 작성한다.\n+백엔드 조립 로직(`EngineInputAssembler`·`ExecutionPolicy`)은 발행 구현 티켓(#108)에서 작성됐고,\n+그때 `ExecutionPolicy`가 이 결정을 반영하지 않아 `BROKER/KIWOOM/2026-09`를 계속 발행했다.\n+그래서 `EngineInputFixtureTest`가 실패 상태였고, 워커 엔진이 `ZERO`만 실행하므로 **모든 Job이\n+`INVALID_REQUEST`로 거절됐다.** #111에서 아래와 같이 맞췄다.\n+\n+| 위치 | 이전 | 변경 | 상태 |\n+|---|---|---|---|\n+| `.../application/service/ExecutionPolicy.java` | `CommissionSpec(BROKER, \"KIWOOM\", \"2026-09\")` | `CommissionSpec(ZERO, null, null)` | ✅ 완료 (#111) |\n+\n+고정값은 단일 멤버 enum과 README 표에만 있었으므로 당시 백엔드 작업은 enum 값 추가와 문서·픽스처\n+수정뿐이었다.\n \n `ZERO`를 추가하면서 `model=BROKER`가 계약 검증을 새로 통과하게 되었으므로, 요율표가 없는 동안\n 엔진이 `BROKER` 요청을 `INVALID_REQUEST`로 거절한다(`worker/src/worker/engine_support.py`).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/0004-backtest-commission-model.md",
+          "old_path": "docs/adr/0004-backtest-commission-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,9 +39,10 @@ shared with the backend and the structural fixture\n ## Decisions overriding or clarifying the supplied design\n \n - Single XKRX equity, MOMENTUM, default 120 trading days, initial KRW 10,000,000,\n-  max position 100%, zero commission AND tax, fixed 5 bps adverse slippage. The contract\n-  fixes `execution.commission` to the KIWOOM broker schedule instead; ADR-0003 records why\n-  that gap blocks the input model from moving to the contract.\n+  max position 100%, zero commission AND tax, fixed 5 bps adverse slippage. The contract now\n+  fixes `execution.commission` to `model=ZERO` as well (ADR-0004 D2), so this gap is closed;\n+  the KIWOOM broker schedule (`model=BROKER`) stays in the contract for the strategy-comparison\n+  stage (ADR-0004 D3).\n - `universe.instrumentIds` follows the detailed input table, not the `instruments` tree.\n - Native market order is created at close (including quantity); gateway submits it only\n   on the next available open quote. Bars do not execute orders. This avoids execution\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/101-nautilus-momentum.md",
+          "old_path": "docs/specs/101-nautilus-momentum.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -278,7 +278,19 @@ class ExecutionSpec(ContractModel):\n \n \n class BenchmarkSpec(ContractModel):\n-    instrument_id: str\n+    instrument_id: str  # \"{6자리코드}.XKRX\"\n+\n+    @field_validator(\"instrument_id\")\n+    @classmethod\n+    def _krx_instrument_id(cls, value: str) -> str:\n+        # 계약 README §5는 benchmark의 instrumentId도 같은 형식으로 규정하고 형식 위반을\n+        # 계약 오류(→ DLQ)로 둔다. 실행 Consumer가 엔진 호출에서 benchmark를 벗기므로\n+        # (consumer.strip_benchmark) 이 검증이 없으면 형식이 깨진 값이 조용히 통과한다.\n+        if not _INSTRUMENT_ID_PATTERN.fullmatch(value):\n+            raise ValueError(\n+                f\"benchmark.instrumentId must look like '{{6-digit code}}.XKRX'; got {value!r}\"\n+            )\n+        return value\n \n \n class EngineInput(ContractModel):\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/contracts/engine_input.py",
+          "old_path": "worker/src/worker/contracts/engine_input.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,6 +9,10 @@ pika를 직접 부르지 않는다. 발행과 ACK는 ``worker.messaging`` 의 Pr\n \n **EngineOutput 내용을 해석하지 않는다.** ``run.status`` 가 COMPLETED든 FAILED든 같은\n FINISHED 이벤트에 그대로 담는다. 엔진이 계약대로 답한 것이므로 DLQ가 아니다.\n+\n+**벤치마크는 엔진에 넘기지 않는다.** 계약이 벤치마크를 실행 Consumer 책임으로 두므로\n+(:func:`strip_benchmark`) 엔진 호출 입력에서만 ``benchmark`` 를 벗긴다. 계산기는 아직 없어\n+``FINISHED`` payload의 ``benchmark`` 는 생략된다 (계약상 \"미지정 또는 실패\").\n \"\"\"\n \n import json\n@@ -89,6 +93,36 @@ def parse_job(body: bytes | str, headers: Mapping[str, Any] | None) -> EngineInp\n         raise ContractViolation(f\"job body violates the EngineInput contract: {exc}\") from exc\n \n \n+def strip_benchmark(engine_input: EngineInput) -> EngineInput:\n+    \"\"\"엔진에 넘길 입력에서만 ``benchmark`` 지정을 벗긴다.\n+\n+    벤치마크 산출은 계약상 실행 Consumer 책임이고(계약 §1·§4.2) 엔진은 지정을\n+    ``INVALID_REQUEST`` 로 거절한다(``engine_support``). 그런데 백엔드는 사용자가 벤치마크를\n+    지정하면 ``BenchmarkSpec`` 을 실어 보내므로, 벗기지 않으면 **벤치마크를 지정했다는 이유만으로\n+    백테스트 결과 전체가 FAILED가 된다.** 전략 성과는 벤치마크와 무관하게 계산되므로 결과를\n+    버릴 이유가 없다.\n+\n+    벗긴 사실을 감추지 않는다. 아직 벤치마크 계산기가 없으므로(별도 티켓)\n+    ``FINISHED`` payload의 ``benchmark`` 는 계속 생략되고, 계약이 그 생략을 \"미지정 또는 실패\"로\n+    정의하므로 수신 측은 \"벤치마크는 산출되지 않았다\"를 그대로 읽는다. 엔진의 거절 규칙은 그대로\n+    둔다 — 엔진을 직접 호출하는 쪽은 계속 거절당해야 지원 범위가 흐려지지 않는다.\n+\n+    다만 **결과 메시지에 \"벗겼다\"는 표시가 남지는 않는다.** 벤치마크를 요청하지 않은 실행과\n+    payload가 같다. ``execution.delisting=CAUSE_BASED`` 가 ``diagnostics.warnings`` 에\n+    ``DELISTING_CLASSIFICATION_UNSUPPORTED`` 를 남기는 선례(ADR-0003 \"D-상장폐지\")처럼 경고로\n+    드러내는 편이 낫고, 그 방안은 별도 티켓으로 둔다.\n+    \"\"\"\n+    if engine_input.benchmark is None:\n+        return engine_input\n+    logger.info(\n+        \"benchmark %s is not handed to the engine and is not computed; the FINISHED payload \"\n+        \"omits it (backtestId=%s)\",\n+        engine_input.benchmark.instrument_id,\n+        engine_input.run.backtest_id,\n+    )\n+    return engine_input.model_copy(update={\"benchmark\": None})\n+\n+\n class _EventStream:\n     \"\"\"한 번의 엔진 실행이 발행하는 이벤트 순서와 ``sequence`` 를 관리한다.\n \n@@ -124,9 +158,9 @@ class _EventStream:\n         self._emit(BacktestEventType.PROGRESS, payload, self._clock())\n \n     def finished(self, output: EngineOutput) -> None:\n-        # benchmark는 항상 없다. 엔진이 benchmark 지정을 INVALID_REQUEST로 거절하고 백엔드\n-        # 요청에도 지정할 필드가 없으므로 계산할 대상이 없다(별도 티켓). exclude_none이\n-        # 키를 생략한다.\n+        # benchmark는 항상 없다. 백엔드가 지정을 실어 보내도 계산기가 없어(별도 티켓) 산출할\n+        # 값이 없기 때문이며, 계약이 이 생략을 \"미지정 또는 실패\"로 정의하므로 수신 측은\n+        # 산출되지 않았음을 그대로 읽는다(strip_benchmark 참고). exclude_none이 키를 생략한다.\n         self._emit(\n             BacktestEventType.FINISHED,\n             FinishedPayload(engine_output=output, benchmark=None),\n@@ -282,7 +316,7 @@ class BacktestJobConsumer:\n         stream = _EventStream(self._publisher, backtest_id, execution_id, self._new_id, self._clock)\n         stream.started()\n         batcher = _ProgressBatcher(stream, self._progress_batch_size)\n-        output = self._engine.run(engine_input, batcher.on_progress)\n+        output = self._engine.run(strip_benchmark(engine_input), batcher.on_progress)\n         batcher.flush()\n         stream.finished(output)\n         return output\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/consumer.py",
+          "old_path": "worker/src/worker/consumer.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,7 +18,7 @@ from typing import Any\n import pytest\n from conftest import FIXTURE_DIR, engine_input_body\n \n-from worker.consumer import BacktestJobConsumer\n+from worker.consumer import BacktestJobConsumer, strip_benchmark\n from worker.contracts.base import utc_now\n from worker.contracts.engine import BacktestEngine\n from worker.contracts.engine_input import EngineInput\n@@ -109,14 +109,16 @@ class FakeEngine:\n \n \n class CountingEngine:\n-    \"\"\"실제 엔진을 그대로 실행하면서 실행 횟수만 센다 (재전달 확인용).\"\"\"\n+    \"\"\"실제 엔진을 그대로 실행하면서 실행 횟수와 엔진이 실제로 받은 입력을 기록한다.\"\"\"\n \n     def __init__(self, engine: BacktestEngine) -> None:\n         self._engine = engine\n         self.runs = 0\n+        self.inputs: list[EngineInput] = []\n \n     def run(self, engine_input: EngineInput, on_progress: Any = None) -> EngineOutput:\n         self.runs += 1\n+        self.inputs.append(engine_input)\n         return self._engine.run(engine_input, on_progress)\n \n \n@@ -408,3 +410,55 @@ def test_regression_baseline_is_untouched() -> None:\n     assert output.performance is not None\n     assert output.performance.final_equity == Decimal(\"1068.7\")\n     assert len(output.portfolio_series) == EVALUATION_TRADING_DAYS\n+\n+\n+# --- 벤치마크: 엔진 호출에서만 벗긴다 --------------------------------------------------\n+\n+#: 기본 본문(SK하이닉스 000660.XKRX 단일 종목)에 벤치마크 지정만 얹은 요청.\n+BENCHMARK_BODY = engine_input_body(benchmark={\"instrumentId\": \"069500.XKRX\"})\n+\n+\n+def test_benchmark_request_still_produces_a_result() -> None:\n+    \"\"\"벤치마크를 지정해도 결과가 나온다.\n+\n+    벗기기 전에는 엔진이 지정을 ``INVALID_REQUEST`` 로 거절해(``engine_support``) 벤치마크를\n+    골랐다는 이유만으로 백테스트 결과 전체가 FAILED로 저장됐다.\n+    \"\"\"\n+    engine = CountingEngine(real_engine())\n+    call_log, publisher = handle(json.dumps(BENCHMARK_BODY), engine=engine)\n+\n+    assert engine.inputs[0].benchmark is None  # 엔진은 지정을 받지 않는다\n+    assert call_log[-2:] == [\"publish:FINISHED\", \"ack\"]\n+    output = publisher.of_type(BacktestEventType.FINISHED)[0].payload.engine_output\n+    assert output.run.status is RunStatus.COMPLETED\n+    assert output.performance is not None\n+    assert output.performance.final_equity == Decimal(\"1068.7\")\n+\n+\n+def test_benchmark_request_omits_the_benchmark_from_finished() -> None:\n+    \"\"\"벗긴 사실을 감추지 않는다. 계산하지 않았으므로 payload에서 키가 빠진다.\n+\n+    계약이 그 생략을 \"미지정 또는 실패\"로 정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다.\n+    \"\"\"\n+    _, publisher = handle(json.dumps(BENCHMARK_BODY))\n+    finished = publisher.of_type(BacktestEventType.FINISHED)[0]\n+\n+    assert finished.payload.benchmark is None\n+    assert \"benchmark\" not in json.loads(finished.to_json())[\"payload\"]\n+\n+\n+def test_strip_benchmark_returns_the_request_untouched_when_none_is_specified() -> None:\n+    engine_input = EngineInput.model_validate(engine_input_body())\n+    assert strip_benchmark(engine_input) is engine_input\n+\n+\n+def test_strip_benchmark_changes_only_the_benchmark() -> None:\n+    \"\"\"원본은 그대로 둔다 — 벤치마크는 계약상 실행 Consumer가 나중에 계산할 대상이다.\"\"\"\n+    engine_input = EngineInput.model_validate(BENCHMARK_BODY)\n+    stripped = strip_benchmark(engine_input)\n+\n+    assert stripped.benchmark is None\n+    assert engine_input.benchmark is not None\n+    assert stripped.model_dump(exclude={\"benchmark\"}) == engine_input.model_dump(\n+        exclude={\"benchmark\"}\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_consumer.py",
+          "old_path": "worker/tests/test_consumer.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -99,6 +99,11 @@ VIOLATIONS: list[tuple[str, Callable[[dict[str, Any]], dict[str, Any]]]] = [\n     (\"slippage-bps-negative\", lambda b: _mutate(b, \"execution.slippage.bps\", -1)),\n     # ExecutionSpec: orderTypes 가 비어 있지 않다\n     (\"execution-order-types-empty\", lambda b: _mutate(b, \"execution.orderTypes\", [])),\n+    # BenchmarkSpec: instrumentId 도 {6자리}.XKRX 형식이다 (계약 README §5).\n+    # 실행 Consumer가 엔진 호출에서 benchmark를 벗기므로 이 검증이 마지막 방어선이다.\n+    (\"benchmark-not-krx\", lambda b: _mutate(b, \"benchmark.instrumentId\", \"KOSPI200\")),\n+    (\"benchmark-blank\", lambda b: _mutate(b, \"benchmark.instrumentId\", \"\")),\n+    (\"benchmark-wrong-venue\", lambda b: _mutate(b, \"benchmark.instrumentId\", \"069500.XNAS\")),\n ]\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_contract_validation.py",
+          "old_path": "worker/tests/test_contract_validation.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,9 +37,15 @@ ruff check src tests && ruff format --check src tests && pytest\n   JSON camelCase ↔ 내부 snake_case는 `ContractModel`의 alias, null은 키 생략(`to_json()` = `exclude_none`), 생략 가능 필드는 `T | None = None`\n - `contracts/engine.py` `BacktestEngine` Protocol이 실행 Consumer와 엔진의 경계. 엔진은 `run(engine_input, on_progress) -> EngineOutput`만 구현하고 DB·브로커를 모른다.\n   진행 콜백은 거래일 1개 단위, 20거래일 묶음 발행은 실행 Consumer(`consumer.py`) 책임.\n-  벤치마크도 계약상 실행 Consumer 책임이지만 **계산하지 않는다** — 엔진이 `benchmark` 지정을\n-  `INVALID_REQUEST`로 거절하고 백엔드 요청에도 지정할 필드가 없어 계산 대상이 없다.\n-  `FINISHED` payload의 `benchmark`는 항상 없음(키 생략)이며, 계산기 도입은 별도 티켓이다\n+  벤치마크도 계약상 실행 Consumer 책임이지만 **계산하지 않는다**(별도 티켓). 백엔드는 사용자가\n+  지정하면 `BenchmarkSpec`을 실어 보내는데 엔진은 그 지정을 `INVALID_REQUEST`로 거절하므로,\n+  실행 Consumer가 **엔진 호출 입력에서만** `benchmark`를 벗긴다(`consumer.strip_benchmark`).\n+  엔진의 거절 규칙(`engine_support.py`)은 유지한다 — 벗기는 책임은 계약이 벤치마크 담당으로\n+  지정한 실행 Consumer에 있고, 엔진을 직접 호출하는 쪽은 계속 거절당해야 한다.\n+  `FINISHED` payload의 `benchmark`는 항상 없음(키 생략)이며 계약이 그 생략을 \"미지정 또는 실패\"로\n+  정의하므로 수신 측은 산출되지 않았음을 그대로 읽는다. 다만 결과 메시지에 \"벗겼다\"는 표시는\n+  남지 않으므로(`diagnostics.warnings` 미사용) `DELISTING_CLASSIFICATION_UNSUPPORTED` 선례처럼\n+  경고로 드러내는 방안은 별도 티켓이다\n - `artifacts.py` 는 메시지 계약이 아니라 **로컬 진단 산출물**(`RunArtifacts`: 주문 원장 `orders`, 재현성 `metadata`)이다. 브로커로 나가지 않는다.\n   메시지에 넣어야 할 값을 여기 두거나, 진단용 값을 `contracts/engine_output.py`에 넣지 말 것. 엔진은 `run_with_artifacts`로 둘을 함께 반환하고 `run`은 메시지만 반환한다\n - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/CLAUDE.md",
+          "old_path": "worker/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -107,6 +107,8 @@ result_json = result.to_json()\n   `STRATEGIES`)에 없는 `strategy.strategyId`·`strategy.version`. 여러 항목이 동시에 미지원이면\n   한 메시지에 전부 담는다. 지원하지 않는 값을 조용히 무시하고 `COMPLETED`를 반환하지 않는다 —\n   요청한 정책과 다른 방식으로 계산한 숫자가 그 정책의 결과로 저장되기 때문이다.\n+  단 `benchmark` 지정은 실행 Consumer가 엔진 호출 전에 벗기므로(`consumer.strip_benchmark`)\n+  브로커 경로로 들어온 요청은 이 거절에 걸리지 않는다. 엔진을 직접 호출하면 그대로 거절된다.\n - `execution.delisting=CAUSE_BASED`는 거절하지 않고 받되, 사유 분류 미지원을\n   `diagnostics.warnings`에 `DELISTING_CLASSIFICATION_UNSUPPORTED`로 **실행당 1건** 남긴다.\n   이 경고는 특정 거래일이 아니라 실행 전체에 걸리므로 계약 필수 필드인 `date`에 평가 구간의\n@@ -259,10 +261,17 @@ uv run python -m worker.main\n   워커는 결과 DB에 쓰지 않는 게 계약(§1)이라 처리 이력을 남길 곳이 없고, 고정 입력에 대해\n   결정론적이라 재실행이 안전하다. 중복 방어는 계약 §7이 백엔드 결과 Consumer 쪽에 요구하며\n   (\"이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK\") `eventId`가 그 키다.\n-- **벤치마크는 계산하지 않는다.** 계약 §1은 벤치마크 계산을 실행 Consumer 책임으로 두지만,\n-  엔진이 `benchmark` 지정을 `INVALID_REQUEST`로 거절하고 백엔드 요청에도 벤치마크를 지정할\n-  필드가 없어 계산 대상이 없다. `FINISHED` payload의 `benchmark`는 항상 없음(직렬화에서 키\n-  생략)이며 계산기 도입은 별도 티켓이다.\n+- **벤치마크는 계산하지 않고, 엔진에 넘기지도 않는다.** 계약 §1이 벤치마크 계산을 실행 Consumer\n+  책임으로 두지만 계산기가 아직 없다(별도 티켓). 백엔드는 사용자가 벤치마크를 지정하면\n+  `BenchmarkSpec`을 실어 보내고 엔진은 그 지정을 `INVALID_REQUEST`로 거절하므로, 그대로 넘기면\n+  **벤치마크를 골랐다는 이유만으로 백테스트 결과 전체가 FAILED가 된다.** 그래서 실행 Consumer가\n+  엔진 호출 입력에서만 `benchmark`를 벗긴다(`consumer.strip_benchmark`). 엔진의 거절 규칙은 그대로\n+  두므로 엔진을 직접 호출하는 쪽은 계속 거절당한다. `FINISHED` payload의 `benchmark`는 항상\n+  없음(직렬화에서 키 생략)이고, 계약이 그 생략을 \"미지정 또는 실패\"로 정의하므로 수신 측은 산출되지\n+  않았음을 그대로 읽는다.\n+  다만 결과 메시지에 \"벗겼다\"는 표시는 남지 않아 벤치마크를 요청하지 않은 실행과 payload가\n+  같다. `execution.delisting=CAUSE_BASED` 처럼 `diagnostics.warnings` 로 드러내는 방안은\n+  별도 티켓이다.\n - **토폴로지(exchange·queue·binding)는 워커가 선언하지 않는다.** 선언은 백엔드\n   (Spring `Declarables`) 책임이다(계약 §2). 워커는 시작할 때 `backtest.jobs` 존재만 확인하고,\n   없으면 큐를 만들지 않고 \"백엔드를 먼저 띄워 토폴로지를 선언하라\"는 오류를 남기고 종료한다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/README.md",
+          "old_path": "worker/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2778773": []
+  }
+}

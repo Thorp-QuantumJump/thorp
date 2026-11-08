@@ -1,0 +1,751 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958171,
+    "iid": 305,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 조회에 상관관계·위험 기여·손실 기여 노출",
+    "description": "# 작업 내용 요약\n\n워커가 이미 계산해 `backtest_result.analytics`에 저장하던 `correlationMatrix`·`riskContribution`·`lossContribution`·`method`를 결과 상세 조회(`GET /backtests/{id}`, `GET /results/{token}`)의 `summary.analytics`에 내려줍니다. '자세히 보기' 패널의 세 항목은 '제공되지 않음' 고정 문구 대신 그 값을 표로 보입니다. 계산 로직은 새로 만들지 않았습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-420 `[BE] 결과 조회에 상관관계·위험 기여·손실 기여 노출`\n- Story: -301(자세히 보기) / Epic: -30(백테스트)\n- link: https://ssafy.atlassian.net/browse/S15P21E205-420\n\n# 주요 변경 사항\n\n- **응답 계약**: `summary.analytics`에 네 키가 늘었습니다. 맵의 키는 종목 id, 값은 다른 소수처럼 plain 문자열입니다. 워커가 계산하지 못한 항목은 `null`이고 0으로 채우지 않습니다. `weightError`는 그대로 `/weights`에만 둡니다.\n- **`BacktestDetailResult.Summary.analytics`**가 두 필드짜리 `AnalyticsSummary` 대신 엔진의 `EngineOutput.Analytics`를 그대로 담습니다. 어느 항목을 내보낼지는 presentation(`BacktestDetailResponse.Analytics`)이 정합니다. `costs`·`liquidation`이 이미 같은 방식입니다.\n- **중첩 맵의 `BigDecimal`은 응답에서 문자열로 바꿉니다.** `@JsonSerialize(contentUsing=…)`은 한 겹 맵까지만 닿아 `correlationMatrix`에 붙일 수 없어서, 세 맵 모두 `from()`에서 `toPlainString()`으로 옮겼습니다.\n- **FE `DetailPanel`**: 상관관계는 종목×종목 행렬(-1~1, 소수 둘째 자리), 위험 기여·손실 기여는 종목별 비율 표입니다. 추정 기간은 `config.effectiveStart~effectiveEnd`, 공분산 산정법은 응답의 `method`를 그대로 보입니다. 항목이 `null`이면 '계산 제한'입니다. `NOT_PROVIDED` 상수는 지웠습니다.\n- 문서: `docs/specs/backtest-api/README.md`의 `analytics` 행과 두 예시 JSON(`backtest-detail.json`, `result-detail-completed.json`)을 갱신했습니다.\n\n# 테스트\n\n- [x] `./gradlew spotlessApply test --tests BacktestResultQueryServiceTest --tests \"com.ssafy.thorp.result.*\" --tests \"com.ssafy.thorp.backtest.presentation.*\" --tests ArchitectureTest` 통과\n- [x] `npm run lint && npm run build` 통과(경고만, 기존과 같음)\n- [x] `npm test` — `DetailPanel.test.tsx` 20건, `resultFixtures.test.ts` 15건 통과. 전체 1363건 중 `InlineHelp.test.tsx` 1건이 함께 돌릴 때만 실패하고 단독으로는 통과합니다. 이 브랜치가 건드리지 않은 파일입니다.\n- [ ] 실제 워커 결과로 브라우저 확인 (예시 JSON과 같은 모양이라 별도 확인 안 함)\n\n# 리뷰 포인트\n\n- **`lossContribution`은 합이 1인 비율이라 100%를 넘거나 음수가 나옵니다.** 손실 난 종목이 있으면 이익 종목이 125%, 손실 종목이 -25%처럼 보입니다. 워커 정의 그대로이며 FE 안내 문장에 \"이익이 난 종목도 함께 들어가며 합은 100%\"라고 적었습니다. 표기가 헷갈리면 절대값 기준으로 바꾸는 건 워커 정의를 바꾸는 일이라 별도 티켓이 맞습니다.\n- **티켓 표기가 `[BE]`인데 FE 변경이 절반입니다.** API 노출이 원인이라 BE로 두었습니다. 1 티켓 = 1 MR 규칙상 나누지 않았습니다.\n- `resultFixtures.test.ts`의 키 대조에서 세 맵을 `target`·`actual`과 같은 이유(종목 id가 키)로 제외했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-23T12:27:28.246+09:00",
+    "updated_at": "2026-09-23T12:29:47.099+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-23T12:29:46.609+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/420-result-analytics",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+    "merge_commit_sha": "efce3145972649d95f54e08f97d59815355ee030",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T12:27:30.684+09:00",
+    "reference": "!305",
+    "references": {
+      "short": "!305",
+      "relative": "!305",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!305"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/305",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958171,
+    "iid": 305,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 조회에 상관관계·위험 기여·손실 기여 노출",
+    "description": "# 작업 내용 요약\n\n워커가 이미 계산해 `backtest_result.analytics`에 저장하던 `correlationMatrix`·`riskContribution`·`lossContribution`·`method`를 결과 상세 조회(`GET /backtests/{id}`, `GET /results/{token}`)의 `summary.analytics`에 내려줍니다. '자세히 보기' 패널의 세 항목은 '제공되지 않음' 고정 문구 대신 그 값을 표로 보입니다. 계산 로직은 새로 만들지 않았습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-420 `[BE] 결과 조회에 상관관계·위험 기여·손실 기여 노출`\n- Story: -301(자세히 보기) / Epic: -30(백테스트)\n- link: https://ssafy.atlassian.net/browse/S15P21E205-420\n\n# 주요 변경 사항\n\n- **응답 계약**: `summary.analytics`에 네 키가 늘었습니다. 맵의 키는 종목 id, 값은 다른 소수처럼 plain 문자열입니다. 워커가 계산하지 못한 항목은 `null`이고 0으로 채우지 않습니다. `weightError`는 그대로 `/weights`에만 둡니다.\n- **`BacktestDetailResult.Summary.analytics`**가 두 필드짜리 `AnalyticsSummary` 대신 엔진의 `EngineOutput.Analytics`를 그대로 담습니다. 어느 항목을 내보낼지는 presentation(`BacktestDetailResponse.Analytics`)이 정합니다. `costs`·`liquidation`이 이미 같은 방식입니다.\n- **중첩 맵의 `BigDecimal`은 응답에서 문자열로 바꿉니다.** `@JsonSerialize(contentUsing=…)`은 한 겹 맵까지만 닿아 `correlationMatrix`에 붙일 수 없어서, 세 맵 모두 `from()`에서 `toPlainString()`으로 옮겼습니다.\n- **FE `DetailPanel`**: 상관관계는 종목×종목 행렬(-1~1, 소수 둘째 자리), 위험 기여·손실 기여는 종목별 비율 표입니다. 추정 기간은 `config.effectiveStart~effectiveEnd`, 공분산 산정법은 응답의 `method`를 그대로 보입니다. 항목이 `null`이면 '계산 제한'입니다. `NOT_PROVIDED` 상수는 지웠습니다.\n- 문서: `docs/specs/backtest-api/README.md`의 `analytics` 행과 두 예시 JSON(`backtest-detail.json`, `result-detail-completed.json`)을 갱신했습니다.\n\n# 테스트\n\n- [x] `./gradlew spotlessApply test --tests BacktestResultQueryServiceTest --tests \"com.ssafy.thorp.result.*\" --tests \"com.ssafy.thorp.backtest.presentation.*\" --tests ArchitectureTest` 통과\n- [x] `npm run lint && npm run build` 통과(경고만, 기존과 같음)\n- [x] `npm test` — `DetailPanel.test.tsx` 20건, `resultFixtures.test.ts` 15건 통과. 전체 1363건 중 `InlineHelp.test.tsx` 1건이 함께 돌릴 때만 실패하고 단독으로는 통과합니다. 이 브랜치가 건드리지 않은 파일입니다.\n- [ ] 실제 워커 결과로 브라우저 확인 (예시 JSON과 같은 모양이라 별도 확인 안 함)\n\n# 리뷰 포인트\n\n- **`lossContribution`은 합이 1인 비율이라 100%를 넘거나 음수가 나옵니다.** 손실 난 종목이 있으면 이익 종목이 125%, 손실 종목이 -25%처럼 보입니다. 워커 정의 그대로이며 FE 안내 문장에 \"이익이 난 종목도 함께 들어가며 합은 100%\"라고 적었습니다. 표기가 헷갈리면 절대값 기준으로 바꾸는 건 워커 정의를 바꾸는 일이라 별도 티켓이 맞습니다.\n- **티켓 표기가 `[BE]`인데 FE 변경이 절반입니다.** API 노출이 원인이라 BE로 두었습니다. 1 티켓 = 1 MR 규칙상 나누지 않았습니다.\n- `resultFixtures.test.ts`의 키 대조에서 세 맵을 `target`·`actual`과 같은 이유(종목 id가 키)로 제외했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-23T12:27:28.246+09:00",
+    "updated_at": "2026-09-23T12:29:47.099+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-23T12:29:46.609+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/420-result-analytics",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+    "merge_commit_sha": "efce3145972649d95f54e08f97d59815355ee030",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T12:27:30.684+09:00",
+    "reference": "!305",
+    "references": {
+      "short": "!305",
+      "relative": "!305",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!305"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/305",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-23T12:27:38.386+09:00",
+    "latest_build_finished_at": "2026-09-23T12:43:25.933+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 219048,
+      "iid": 322,
+      "project_id": 1444456,
+      "sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "ref": "feat(be)/420-result-analytics",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T12:27:38.208+09:00",
+      "updated_at": "2026-09-23T12:43:25.940+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219048"
+    },
+    "head_pipeline": {
+      "id": 219048,
+      "iid": 322,
+      "project_id": 1444456,
+      "sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "ref": "feat(be)/420-result-analytics",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T12:27:38.208+09:00",
+      "updated_at": "2026-09-23T12:43:25.940+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219048",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T12:27:38.386+09:00",
+      "finished_at": "2026-09-23T12:43:25.933+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219048",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "head_sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "start_sha": "8e59ce313b648440902d92341edddfb90f68bbc6"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0a69cf7760cfb258a32d41aff9768fa3d5b20d67",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861907,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:27:28.365+09:00",
+          "updated_at": "2026-09-23T12:27:28.369+09:00",
+          "system": true,
+          "noteable_id": 958171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 305,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c19a98bfa590e75b2e508f12b6925f31a2a735ec",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861908,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:27:28.384+09:00",
+          "updated_at": "2026-09-23T12:27:28.392+09:00",
+          "system": true,
+          "noteable_id": 958171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 305,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "549d37e0ef49ef46ccd3e5ca1f90330e9f1d796b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861909,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:27:32.797+09:00",
+          "updated_at": "2026-09-23T12:27:32.834+09:00",
+          "system": true,
+          "noteable_id": 958171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 305,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3f22ad91e6e446e20e3627f28f7b608a6c2669ee",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861910,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- 백엔드에서 맵 내부의 `BigDecimal` 값들을 직렬화 문제(`@JsonSerialize`의 한계)를 고려하여 `toPlainString()`을 사용하는 유틸리티 메서드(`mapValues`, `plain`)로 깔끔하게 변환했습니다.\n- 프론트엔드 및 백엔드 전반에 걸쳐 문서, 테스트 Fixture, API 응답 스펙을 누락 없이 일관되게 갱신했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- 백엔드 `BacktestResultQueryServiceTest` 및 관련 Presentation 테스트에서 `analytics` 내부의 맵 필드(`correlationMatrix`, `riskContribution`, `lossContribution`)가 `null`로 내려올 때와 정상 값일 때의 직렬화 결과를 각각 검증하는 테스트 시나리오를 보완하세요.\n- 프론트엔드 `DetailPanel.test.tsx`에서 `correlationMatrix` 내부에 변동성 0 등으로 인해 특정 종목 쌍의 키가 누락되었을 때 UI가 빈칸(`EMPTY`)으로 올바르게 처리되는지 확인하는 테스트를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:64f2275c53e4a48bb75347e944c9a8f5d39bd639 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T12:27:38.086+09:00",
+          "updated_at": "2026-09-23T12:27:38.086+09:00",
+          "system": false,
+          "noteable_id": 958171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 305,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e0e84afe442ce3b4d0cfc5ba71a4f28da578fd05",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861925,
+          "type": null,
+          "body": "mentioned in commit efce3145972649d95f54e08f97d59815355ee030",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:29:46.747+09:00",
+          "updated_at": "2026-09-23T12:29:46.759+09:00",
+          "system": true,
+          "noteable_id": 958171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 305,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e917e911891832ce9fabe47071ac198e1c033057",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885065,
+          "type": null,
+          "body": "mentioned in commit 681703fe1dfe720e7441239fc6352d7133a60ccc",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:12.566+09:00",
+          "updated_at": "2026-10-13T15:16:12.582+09:00",
+          "system": true,
+          "noteable_id": 958171,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 305,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2244699,
+      "head_commit_sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "created_at": "2026-09-23T12:27:28.704+09:00",
+      "merge_request_id": 958171,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "ae3b2a2ffe8c27b835fa2626a3777913a88b450e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2244699,
+      "head_commit_sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "created_at": "2026-09-23T12:27:28.704+09:00",
+      "merge_request_id": 958171,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "ae3b2a2ffe8c27b835fa2626a3777913a88b450e",
+      "commits": [
+        {
+          "id": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+          "short_id": "64f2275c",
+          "created_at": "2026-09-23T09:50:21.000+09:00",
+          "parent_ids": [
+            "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+          ],
+          "title": "feat(be): 결과 조회에 상관관계·위험 기여·손실 기여 노출",
+          "message": "feat(be): 결과 조회에 상관관계·위험 기여·손실 기여 노출\n\n워커가 저장하는 analytics 중 correlationMatrix·riskContribution·lossContribution·method를\nGET /backtests/{id}·GET /results/{token}의 summary.analytics에 내려주고, '자세히 보기'\n패널의 세 항목을 표로 채운다. 계산되지 않은 항목은 null 그대로 '계산 제한'으로 보이고\n0으로 채우지 않는다(FR-009, 원칙 VI).\n\nS15P21E205-420\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T09:50:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T09:50:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/64f2275c53e4a48bb75347e944c9a8f5d39bd639"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -63,7 +63,7 @@ public record BacktestDetailResult(\n      * @param totalTradingCost 거래비용 합계. null = 미산출\n      * @param costs 비용 네 갈래와 합. null = 미저장\n      * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끔\n-     * @param analytics 파생 지표 중 요약에 넣는 둘. 나머지는 결과 JSONB 에 있다. null = 미저장\n+     * @param analytics 파생 지표(FR-027). 응답이 어느 항목을 내보내는지는 presentation 이 정한다. null = 미저장\n      * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}\n      */\n     public record Summary(\n@@ -83,12 +83,9 @@ public record BacktestDetailResult(\n             BigDecimal totalTradingCost,\n             EngineOutput.Costs costs,\n             EngineOutput.Liquidation liquidation,\n-            AnalyticsSummary analytics,\n+            EngineOutput.Analytics analytics,\n             int exceptionCount) {}\n \n-    /** {@code analytics} 중 요약에 실리는 둘(rest-api.md). */\n-    public record AnalyticsSummary(Integer recoveryDays, BigDecimal turnover) {}\n-\n     /** 실패 사유. 코드 집합은 엔진 소유이고 HTTP {@code ErrorCode}와 다르다. */\n     public record Failure(String code, String message) {}\n \n@@ -320,10 +317,7 @@ public record BacktestDetailResult(\n                 p.totalTradingCost(),\n                 result.costs(),\n                 result.liquidation(),\n-                result.analytics() == null\n-                        ? null\n-                        : new AnalyticsSummary(\n-                                result.analytics().recoveryDays(), result.analytics().turnover()),\n+                result.analytics(),\n                 result.exceptionCount());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.backtest.presentation.response;\n \n import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n import com.ssafy.thorp.backtest.domain.model.ProgressStage;\n import com.ssafy.thorp.backtest.domain.model.ResultSource;\n@@ -9,7 +10,9 @@ import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n import java.math.BigDecimal;\n import java.time.Instant;\n import java.time.LocalDate;\n+import java.util.LinkedHashMap;\n import java.util.Map;\n+import java.util.function.Function;\n \n /**\n  * {@code GET /backtests/{backtestId}} 응답(spec 004 contracts/rest-api.md).\n@@ -81,10 +84,21 @@ public record BacktestDetailResponse(\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal totalReturn,\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal liquidationCost) {}\n \n-    /** 요약에 실리는 파생 지표 둘. {@code recoveryDays} null = 미회복. */\n+    /**\n+     * 파생 지표(FR-027). 정의는 워커 {@code performance.calculate_analytics} docstring 이 원본이다.\n+     *\n+     * <p>{@code recoveryDays} null = 미회복. 맵 셋은 종목 id 를 키로 하고 값은 다른 소수처럼 plain 문자열이다 — 중첩 맵은 필드\n+     * 어노테이션으로 직렬화기를 붙일 수 없어 여기서 문자열로 바꾼다. 워커가 계산하지 못한 항목은 {@code null} 이다. 0 으로 채우지 않는다.\n+     *\n+     * @param method 공분산·상관 산정법. 현재 {@code sample-covariance-daily}\n+     */\n     public record Analytics(\n             Integer recoveryDays,\n-            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal turnover) {}\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal turnover,\n+            Map<String, Map<String, String>> correlationMatrix,\n+            Map<String, String> riskContribution,\n+            Map<String, String> lossContribution,\n+            String method) {}\n \n     public record Failure(String code, String message) {}\n \n@@ -152,10 +166,29 @@ public record BacktestDetailResponse(\n                                         source.liquidation().liquidated().finalEquity(),\n                                         source.liquidation().liquidated().totalReturn(),\n                                         source.liquidation().liquidated().liquidationCost())),\n-                source.analytics() == null\n-                        ? null\n-                        : new Analytics(\n-                                source.analytics().recoveryDays(), source.analytics().turnover()),\n+                source.analytics() == null ? null : analytics(source.analytics()),\n                 source.exceptionCount());\n     }\n+\n+    private static Analytics analytics(EngineOutput.Analytics a) {\n+        return new Analytics(\n+                a.recoveryDays(),\n+                a.turnover(),\n+                a.correlationMatrix() == null\n+                        ? null\n+                        : mapValues(a.correlationMatrix(), BacktestDetailResponse::plain),\n+                plain(a.riskContribution()),\n+                plain(a.lossContribution()),\n+                a.method());\n+    }\n+\n+    private static Map<String, String> plain(Map<String, BigDecimal> values) {\n+        return values == null ? null : mapValues(values, BigDecimal::toPlainString);\n+    }\n+\n+    private static <V, R> Map<String, R> mapValues(Map<String, V> source, Function<V, R> f) {\n+        Map<String, R> out = new LinkedHashMap<>();\n+        source.forEach((k, v) -> out.put(k, f.apply(v)));\n+        return out;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestDetailResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/BacktestDetailResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -179,7 +179,13 @@ class BacktestResultQueryServiceTest {\n \n     private static EngineOutput.Analytics analytics() {\n         return new EngineOutput.Analytics(\n-                9, new BigDecimal(\"1.219991\"), null, null, null, null, \"sample-covariance-daily\");\n+                9,\n+                new BigDecimal(\"1.219991\"),\n+                Map.of(\"005930.XKRX\", Map.of(\"000660.XKRX\", new BigDecimal(\"0.057083\"))),\n+                Map.of(\"005930.XKRX\", new BigDecimal(\"0.079481\")),\n+                null,\n+                null,\n+                \"sample-covariance-daily\");\n     }\n \n     /** 먼저 취소해 실행은 계속 돈 요청(R-04). 스냅샷 날짜까지만 볼 수 있다. */\n@@ -259,6 +265,12 @@ class BacktestResultQueryServiceTest {\n         assertThat(summary.liquidation()).isEqualTo(liquidation());\n         assertThat(summary.analytics().recoveryDays()).isEqualTo(9);\n         assertThat(summary.analytics().turnover()).isEqualByComparingTo(\"1.219991\");\n+        // 상관·위험 기여·손실 기여도 그대로 넘긴다(420). 계산 못 한 항목은 null 이지 0 이 아니다\n+        assertThat(summary.analytics().correlationMatrix()).containsKey(\"005930.XKRX\");\n+        assertThat(summary.analytics().riskContribution().get(\"005930.XKRX\"))\n+                .isEqualByComparingTo(\"0.079481\");\n+        assertThat(summary.analytics().lossContribution()).isNull();\n+        assertThat(summary.analytics().method()).isEqualTo(\"sample-covariance-daily\");\n         assertThat(summary.exceptionCount()).isEqualTo(1);\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -82,7 +82,26 @@\n       },\n       \"analytics\": {\n         \"recoveryDays\": 9,\n-        \"turnover\": \"1.219991\"\n+        \"turnover\": \"1.219991\",\n+        \"correlationMatrix\": {\n+          \"005930.XKRX\": {\n+            \"005930.XKRX\": \"1.000000\",\n+            \"000660.XKRX\": \"0.057083\"\n+          },\n+          \"000660.XKRX\": {\n+            \"005930.XKRX\": \"0.057083\",\n+            \"000660.XKRX\": \"1.000000\"\n+          }\n+        },\n+        \"riskContribution\": {\n+          \"005930.XKRX\": \"0.079481\",\n+          \"000660.XKRX\": \"0.920519\"\n+        },\n+        \"lossContribution\": {\n+          \"005930.XKRX\": \"1.000000\",\n+          \"000660.XKRX\": \"0.000000\"\n+        },\n+        \"method\": \"sample-covariance-daily\"\n       },\n       \"exceptionCount\": 1\n     },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-detail.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-detail.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -327,7 +327,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 \n | `totalTradingCost` | 거래비용 합계 = `costs.total` |\n | `costs{commission, spread, slippage, tax, total}` | 비용 네 갈래(FR-027) |\n | `liquidation{markToMarket{finalEquity,totalReturn}, liquidated{finalEquity,totalReturn,liquidationCost}}` | 종료일 종가 전량 매도 가정치(FR-017). 요청이 청산을 끄면 `null` |\n-| `analytics{recoveryDays, turnover}` | 회복 거래일(미회복이면 `null`)·연환산 회전율. 나머지 파생 지표(상관·위험 기여·손실 기여)는 결과 저장소에 있고 이 API 로는 내려주지 않는다 |\n+| `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` | 회복 거래일(미회복이면 `null`)·연환산 회전율·종목 쌍 표본 상관(변동성 0 인 쌍은 키 생략)·위험 기여(포트폴리오 분산 중 종목 몫, 합 1)·손실 기여(전체 손익 중 종목 몫, 합 1)·산정법(`sample-covariance-daily`). 맵의 키는 종목 id, 값은 문자열이다. 워커가 계산하지 못한 항목은 `null` 이고 0 으로 채우지 않는다. `weightError` 는 `/weights` 에만 있다 |\n | `exceptionCount` | 예외 처리 기록 건수. 본문은 `/exceptions` |\n \n 값의 정의는 워커 `performance.calculate_analytics` docstring 이 원본이다(spec 004 T008 결정 ①).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -96,7 +96,26 @@\n       },\n       \"analytics\": {\n         \"recoveryDays\": 9,\n-        \"turnover\": \"1.219991\"\n+        \"turnover\": \"1.219991\",\n+        \"correlationMatrix\": {\n+          \"005930.XKRX\": {\n+            \"005930.XKRX\": \"1.000000\",\n+            \"000660.XKRX\": \"0.057083\"\n+          },\n+          \"000660.XKRX\": {\n+            \"005930.XKRX\": \"0.057083\",\n+            \"000660.XKRX\": \"1.000000\"\n+          }\n+        },\n+        \"riskContribution\": {\n+          \"005930.XKRX\": \"0.079481\",\n+          \"000660.XKRX\": \"0.920519\"\n+        },\n+        \"lossContribution\": {\n+          \"005930.XKRX\": \"1.000000\",\n+          \"000660.XKRX\": \"0.000000\"\n+        },\n+        \"method\": \"sample-covariance-daily\"\n       },\n       \"exceptionCount\": 1\n     },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/result-api/examples/result-detail-completed.json",
+          "old_path": "docs/specs/result-api/examples/result-detail-completed.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,7 +13,7 @@ import {\n   resultWeights,\n } from '@/test/resultFixtures'\n import type { PublicResultDetail, ResultWeights } from '@/types/result'\n-import { CALCULATION_LIMITED, DetailPanel, type DetailCompareTarget, NOT_PROVIDED } from './DetailPanel'\n+import { CALCULATION_LIMITED, DetailPanel, type DetailCompareTarget } from './DetailPanel'\n \n /** 005 T070. FR-007~FR-009·FR-022, SC-001·SC-006. */\n \n@@ -106,17 +106,45 @@ describe('DetailPanel', () => {\n     }\n   })\n \n-  it('004가 아직 내보내지 않는 세 항목은 제공되지 않음이며 추정 기간·산정법 자리가 있다', async () => {\n+  it('상관관계·위험 기여·손실 기여를 004가 준 값으로 보이고 추정 기간·산정법이 있다', async () => {\n     const { panel } = renderPanel()\n     await screen.findByText('HALT_DEFERRED')\n \n-    for (const title of ['상관관계', '위험 기여', '손실 기여']) {\n-      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement\n-      expect(within(section).getAllByText(NOT_PROVIDED).length, title).toBeGreaterThan(0)\n-    }\n+    const correlation = within(panel).getByRole('heading', { name: '상관관계' }).closest('section') as HTMLElement\n+    expect(within(correlation).getAllByText('-0.19')).toHaveLength(2)\n+    expect(within(correlation).getAllByText('1.00')).toHaveLength(3)\n+\n     const risk = within(panel).getByRole('heading', { name: '위험 기여' }).closest('section') as HTMLElement\n+    expect(within(risk).getByText('7.95%')).not.toBeNull()\n     expect(within(risk).getByText('추정 기간')).not.toBeNull()\n+    expect(within(risk).getByText('2023-07-03 ~ 2024-12-31')).not.toBeNull()\n     expect(within(risk).getByText('공분산 산정법')).not.toBeNull()\n+    expect(within(risk).getByText('sample-covariance-daily')).not.toBeNull()\n+\n+    const loss = within(panel).getByRole('heading', { name: '손실 기여' }).closest('section') as HTMLElement\n+    expect(within(loss).getByText('125.00%')).not.toBeNull()\n+    expect(within(loss).getByText('-25.00%')).not.toBeNull()\n+  })\n+\n+  it('세 항목 중 004가 계산하지 못한 것은 계산 제한으로 보이고 0으로 채우지 않는다', async () => {\n+    const summary = resultDetailCompleted.summary as NonNullable<PublicResultDetail['summary']>\n+    const analytics = summary.analytics as NonNullable<typeof summary.analytics>\n+    const limited: PublicResultDetail = {\n+      ...resultDetailCompleted,\n+      summary: {\n+        ...summary,\n+        analytics: { ...analytics, correlationMatrix: null, riskContribution: null, lossContribution: null },\n+      },\n+    }\n+    const { panel } = renderPanel(limited)\n+    await screen.findByText('HALT_DEFERRED')\n+\n+    for (const title of ['상관관계', '위험 기여', '손실 기여']) {\n+      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement\n+      expect(within(section).getByText(new RegExp(`^${CALCULATION_LIMITED}`)), title).not.toBeNull()\n+      expect(within(section).queryByText('0.00%'), title).toBeNull()\n+      expect(within(section).queryByRole('table'), title).toBeNull()\n+    }\n   })\n \n   it('회복 기간·회전율을 004가 준 값으로 보인다', async () => {\n@@ -197,7 +225,7 @@ describe('DetailPanel', () => {\n       ...resultDetailCompleted,\n       summary: resultDetailCompleted.summary && {\n         ...resultDetailCompleted.summary,\n-        analytics: { recoveryDays: null, turnover: '1.219991' },\n+        analytics: { ...resultDetailCompleted.summary.analytics!, recoveryDays: null },\n       },\n     }\n     const { panel } = renderPanel(unrecovered)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,9 +28,9 @@ import styles from './resultDetail.module.css'\n  * 않고, 열 때 `/weights`·`/exceptions`와 섹터 목록을 받는다(SC-001). 거래 내역과 대표 상품 정보는 패널 안에서 다시\n  * 한 번 열어야 받는다.\n  *\n- * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로, 004가 아직 공개 조회로 내보내지 않는\n- * 상관관계·위험 기여·손실 기여는 '제공되지 않음'으로 둔다. 어느 쪽도 0이나 임의 값으로 채우지 않는다(FR-009,\n- * 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로 보이고 이 화면이 자료 길이로 판정하지 않는다.\n+ * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로 두고 0이나 임의 값으로 채우지 않는다\n+ * (FR-009, 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로(`analytics`의 항목이 `null`) 보이고 이 화면이 자료\n+ * 길이로 판정하지 않는다. 상관관계·위험 기여·손실 기여의 정의는 워커 `calculate_analytics`가 원본이다(420).\n  */\n \n /** 비교 대상이 준비되었을 때 B05가 넘긴다. 없으면 보유 섹터 차이를 그리지 않는다 */\n@@ -48,7 +48,6 @@ type DetailPanelProps = {\n   onClose: () => void\n }\n \n-export const NOT_PROVIDED = '제공되지 않음'\n export const CALCULATION_LIMITED = '계산 제한'\n const EMPTY = '없음'\n \n@@ -97,28 +96,24 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta\n         <TurnoverItem detail={detail} />\n       </div>\n \n-      <div className={styles.item}>\n-        <div className={styles.grid}>\n-          <Item title=\"상관관계\">\n-            <p className={styles.limited}>{NOT_PROVIDED}</p>\n-            <dl className={styles.facts}>\n-              <dt>추정 기간</dt>\n-              <dd>{NOT_PROVIDED}</dd>\n-            </dl>\n-          </Item>\n-          <Item title=\"위험 기여\">\n-            <p className={styles.limited}>{NOT_PROVIDED}</p>\n-            <dl className={styles.facts}>\n-              <dt>추정 기간</dt>\n-              <dd>{NOT_PROVIDED}</dd>\n-              <dt>공분산 산정법</dt>\n-              <dd>{NOT_PROVIDED}</dd>\n-            </dl>\n-          </Item>\n-          <Item title=\"손실 기여\">\n-            <p className={styles.limited}>{NOT_PROVIDED}</p>\n-          </Item>\n-        </div>\n+      <CorrelationItem detail={detail} labels={labels} />\n+\n+      <div className={styles.grid}>\n+        <ContributionItem\n+          title=\"위험 기여\"\n+          detail={detail}\n+          labels={labels}\n+          values={detail.summary?.analytics?.riskContribution ?? null}\n+          note=\"포트폴리오 전체 변동(분산) 가운데 각 종목이 만든 몫입니다. 실제 비중 평균과 일별 수익률 공분산으로 구하며 합은 100%입니다.\"\n+          showMethod\n+        />\n+        <ContributionItem\n+          title=\"손실 기여\"\n+          detail={detail}\n+          labels={labels}\n+          values={detail.summary?.analytics?.lossContribution ?? null}\n+          note=\"구간 손익을 종목별로 나눈 값입니다. 이익이 난 종목도 함께 들어가며 합은 100%입니다.\"\n+        />\n       </div>\n \n       <div className={styles.grid}>\n@@ -206,6 +201,135 @@ function RecoveryItem({ detail }: { detail: PublicResultDetail }) {\n   )\n }\n \n+/** 요약이 없으면 그 문장, 항목이 `null`이면 계산 제한. 둘 다 아니면 `null`을 돌려 값을 그리게 한다. */\n+function analyticsGap(detail: PublicResultDetail, present: boolean, what: string): ReactNode | null {\n+  if (detail.summary === null) return <p className={styles.copy}>{SUMMARY_NOT_CALCULATED}</p>\n+  if (!present) {\n+    return (\n+      <p className={styles.limited}>\n+        {CALCULATION_LIMITED}: 이 결과에는 {what}이 계산되지 않았습니다.\n+      </p>\n+    )\n+  }\n+  return null\n+}\n+\n+/** 추정 기간은 실제 평가 기간이고 산정법은 004가 준 `method`다. 이 화면이 이름을 짓지 않는다. */\n+function EstimationFacts({ detail, showMethod }: { detail: PublicResultDetail; showMethod?: boolean }) {\n+  const { config } = detail\n+  const method = detail.summary?.analytics?.method ?? null\n+  return (\n+    <dl className={styles.facts}>\n+      <dt>추정 기간</dt>\n+      <dd>\n+        {config.effectiveStart} ~ {config.effectiveEnd}\n+      </dd>\n+      {showMethod ? (\n+        <>\n+          <dt>공분산 산정법</dt>\n+          <dd>{method ?? EMPTY}</dd>\n+        </>\n+      ) : null}\n+    </dl>\n+  )\n+}\n+\n+/** 종목 쌍의 상관 행렬. 정의되지 않은 쌍(변동성 0)은 워커가 키를 빼므로 빈칸으로 둔다. */\n+function CorrelationItem({ detail, labels }: { detail: PublicResultDetail; labels: SectorLabels }) {\n+  const matrix = detail.summary?.analytics?.correlationMatrix ?? null\n+  const gap = analyticsGap(detail, matrix !== null, '상관관계')\n+  const ids = matrix ? Object.keys(matrix) : []\n+\n+  return (\n+    <Item title=\"상관관계\">\n+      {gap ?? (\n+        <div className={styles.tableScroll}>\n+          <table className={styles.table}>\n+            <caption>일별 수익률의 표본 상관 · 종목 {ids.length}개</caption>\n+            <thead>\n+              <tr>\n+                <th scope=\"col\">종목</th>\n+                {ids.map((id) => (\n+                  <th key={id} scope=\"col\">\n+                    {labels.instrument(id)}\n+                  </th>\n+                ))}\n+              </tr>\n+            </thead>\n+            <tbody>\n+              {ids.map((row) => (\n+                <tr key={row}>\n+                  <th scope=\"row\">{labels.instrument(row)}</th>\n+                  {ids.map((col) => (\n+                    <td key={col}>{formatCorrelation(matrix?.[row][col])}</td>\n+                  ))}\n+                </tr>\n+              ))}\n+            </tbody>\n+          </table>\n+        </div>\n+      )}\n+      <EstimationFacts detail={detail} />\n+      <p className={styles.muted}>\n+        1에 가까우면 같이 움직이고 -1에 가까우면 반대로 움직입니다. 평가 기간의 일별 수익률로 계산합니다.\n+      </p>\n+    </Item>\n+  )\n+}\n+\n+/** 상관은 비율이 아니라 -1~1 값이라 `formatRatio`를 쓰지 않는다. 읽을 수 없으면 받은 문자열 그대로(원칙 VI). */\n+function formatCorrelation(value: string | undefined): string {\n+  if (value === undefined) return EMPTY\n+  const n = Number(value)\n+  return value.trim() === '' || !Number.isFinite(n) ? value : n.toFixed(2)\n+}\n+\n+/** 위험 기여·손실 기여. 종목별 비율 한 줄씩이고 합은 1이다. */\n+function ContributionItem({\n+  title,\n+  detail,\n+  labels,\n+  values,\n+  note,\n+  showMethod,\n+}: {\n+  title: string\n+  detail: PublicResultDetail\n+  labels: SectorLabels\n+  values: Record<string, string> | null\n+  note: string\n+  showMethod?: boolean\n+}) {\n+  const gap = analyticsGap(detail, values !== null, title)\n+\n+  return (\n+    <Item title={title}>\n+      {gap ?? (\n+        <div className={styles.tableScroll}>\n+          <table className={styles.table}>\n+            <thead>\n+              <tr>\n+                <th scope=\"col\">종목</th>\n+                <th scope=\"col\">{title}</th>\n+              </tr>\n+            </thead>\n+            <tbody>\n+              {Object.entries(values ?? {}).map(([id, value]) => (\n+                <tr key={id}>\n+                  <td>{labels.instrument(id)}</td>\n+                  <td>{formatRatio(value)}</td>\n+                </tr>\n+              ))}\n+            </tbody>\n+          </table>\n+        </div>\n+      )}\n+      <EstimationFacts detail={detail} showMethod={showMethod} />\n+      <p className={styles.muted}>{note}</p>\n+    </Item>\n+  )\n+}\n+\n function TurnoverItem({ detail }: { detail: PublicResultDetail }) {\n   const turnover = detail.summary?.analytics?.turnover ?? null\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,12 +48,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {\n \n /**\n  * 중첩된 키를 점 경로로 모은다. 배열은 첫 원소의 모양만 본다. 자유 형식 사전(`parameters`)은 값이\n- * 합성이라 키 이름을 대조하지 않는다. 비중 기록의 `target`·`actual`도 종목 식별자를 키로 쓰는 사전이라 같다.\n+ * 합성이라 키 이름을 대조하지 않는다. 비중 기록의 `target`·`actual`과 `analytics`의 상관·위험 기여·손실 기여도\n+ * 종목 식별자를 키로 쓰는 사전이라 같다.\n  */\n function keyPaths(value: unknown, prefix = ''): string[] {\n   if (Array.isArray(value)) return value.length > 0 ? keyPaths(value[0], `${prefix}[]`) : []\n   if (!isRecord(value)) return []\n-  if (/(parameters|\\.target|\\.actual)$/.test(prefix)) return []\n+  if (/(parameters|\\.target|\\.actual|correlationMatrix|riskContribution|lossContribution)$/.test(prefix)) return []\n \n   return Object.keys(value)\n     .sort()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/resultFixtures.test.ts",
+          "old_path": "frontend/src/test/resultFixtures.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -98,7 +98,18 @@ export const resultDetailCompleted: PublicResultDetail = {\n         liquidationCost: '3995.55',\n       },\n     },\n-    analytics: { recoveryDays: 9, turnover: '1.219991' },\n+    analytics: {\n+      recoveryDays: 9,\n+      turnover: '1.219991',\n+      correlationMatrix: {\n+        '900001.XKRX': { '900001.XKRX': '1.000000', '900002.XKRX': '0.057083', '900003.XKRX': '-0.186170' },\n+        '900002.XKRX': { '900001.XKRX': '0.057083', '900002.XKRX': '1.000000', '900003.XKRX': '0.412000' },\n+        '900003.XKRX': { '900001.XKRX': '-0.186170', '900002.XKRX': '0.412000', '900003.XKRX': '1.000000' },\n+      },\n+      riskContribution: { '900001.XKRX': '0.079481', '900002.XKRX': '0.520519', '900003.XKRX': '0.400000' },\n+      lossContribution: { '900001.XKRX': '1.250000', '900002.XKRX': '-0.250000', '900003.XKRX': '0.000000' },\n+      method: 'sample-covariance-daily',\n+    },\n     exceptionCount: 1,\n   },\n   summaryUnavailable: null,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/resultFixtures.ts",
+          "old_path": "frontend/src/test/resultFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -85,6 +85,23 @@ export type ResultLiquidation = {\n   liquidated: { finalEquity: string; totalReturn: string; liquidationCost: string }\n }\n \n+/**\n+ * 004 파생 지표(FR-027). 정의는 워커 `performance.calculate_analytics`가 원본이다.\n+ * 맵의 키는 종목 id, 값은 비율 문자열. 워커가 계산하지 못한 항목은 `null`이다.\n+ */\n+export type ResultAnalytics = {\n+  recoveryDays: number | null\n+  turnover: string | null\n+  /** 종목 쌍의 표본 상관. 변동성 0인 쌍은 키가 없다 */\n+  correlationMatrix: Record<string, Record<string, string>> | null\n+  /** 포트폴리오 분산에서 종목이 차지하는 비율. 합 1 */\n+  riskContribution: Record<string, string> | null\n+  /** 전체 손익에서 종목 손익이 차지하는 비율. 합 1. 이익 종목도 들어간다 */\n+  lossContribution: Record<string, string> | null\n+  /** 공분산·상관 산정법. 현재 `sample-covariance-daily` */\n+  method: string | null\n+}\n+\n export type ResultSummary = {\n   initialEquity: string\n   finalEquity: string\n@@ -106,7 +123,7 @@ export type ResultSummary = {\n   costs: { commission: string; spread: string; slippage: string; tax: string; total: string }\n   /** 요청이 청산을 끄면 `null`이다 */\n   liquidation: ResultLiquidation | null\n-  analytics: { recoveryDays: number | null; turnover: string | null } | null\n+  analytics: ResultAnalytics | null\n   exceptionCount: number\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/result.ts",
+          "old_path": "frontend/src/types/result.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-23T12:27:32.670+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2861910": []
+  }
+}

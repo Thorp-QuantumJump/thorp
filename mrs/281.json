@@ -1,0 +1,841 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 955140,
+    "iid": 281,
+    "project_id": 1444456,
+    "title": "feat(de): 지표별 이용 조건과 중단·재확인 처리를 등록표에 넣는다",
+    "description": "## 작업 내용 요약\n\n경제지표 17개의 이용 조건을 지표별로 등록표에 두고, 조건이 철회된 지표는 발행에서 빠지되 사유와 함께 화면까지 전달된다. 원천이 밝힌 호출 한도를 요청 전에 집행하고, 인증키가 오류로 새던 경로를 막았다. 시장 흐름의 예시 자료는 운영 프로필에서 기동을 막는다.\n\n## 관련 티켓\n\n* S15P21E205-372\n* https://ssafy.atlassian.net/browse/S15P21E205-372\n\n## 주요 변경 사항\n\n* 지표마다 상업 이용 가부(허용/제한/모름)·재배포 규칙·내보내기 문구·재확인 기한을 갖는다. 모름을 따로 둔 것은 FR-016a 가 모름을 허용으로 읽지 말라 하고 FR-018 이 금지로 읽지 말라 하기 때문이다.\n* 이용 조건이 철회된 지표는 수집·발행·기준월 계산에서 빠진다. FR-011 의 \"17개 전부\"를 \"수집 가능한 전부\"로 읽는다 — 글자대로면 지표 하나의 중단이 플랫폼을 통째로 멈춘다. 다만 수집 가능한 지표가 0개면 발행을 막는다.\n* 스키마: `macro_indicator_definition` 에 이용 조건 네 컬럼 추가(V20260921160000).\n* 계약: 지표 상태에 `SUSPENDED`, 필드에 `suspendedReason` 추가. 중단된 지표는 값이 `null` 이고 사유가 함께 내려간다.\n* 원천 한도를 `RateLimiter` 가 요청 전에 집행한다. 셀 상한을 넘는 요청은 만들지 않고, 분당 한도는 창이 빌 때까지 기다린다.\n* 오류·로그에서 인증키를 지운다. URL 인코딩된 형태까지 지운다 — 관세청 키는 `%2F` 를 품은 채 주소에 들어간다.\n* 시장 흐름 예시 어댑터가 운영 프로필에서 기동을 막는다. 끄는 속성은 두지 않았다.\n\n## 테스트\n\n- [x] `data`: `ruff check .` 통과\n- [x] `data`: `pytest` 1187 통과\n- [x] `backend`: `./gradlew spotlessApply test --tests '*Macro*' --tests '*MarketFlow*'` 통과\n- [x] 중단 기록은 실제 마이그레이션을 적용한 PostgreSQL 컨테이너에 대고 확인\n\n## 리뷰 포인트\n\n* **운영 배포가 T064 전까지 뜨지 않는다.** 예시 어댑터 가드가 prod 기동을 막으므로, 묶음 H 로 marketflow 가 008 스냅샷을 읽게 될 때까지는 배포 순서를 맞춰야 한다.\n* **009 가 읽는 계약이 바뀐다.** `SUSPENDED` 와 `suspendedReason` 처리를 함께 맞춘다.\n* 중단을 완결 기준에서 빼는 판단이 FR-011 과 FR-016b 사이의 선택이다. 근거는 spec 이 두바이유를 두고 \"빠져도 나머지 6개 분야 검색은 유지된다\"고 적은 것이다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건 — 지표 목록은 등록표 순서이고 우열 표시가 없다\n- [x] 결제·포인트·상품 선택 단계 0건\n- [x] 전략 ID 상수·전략별 분기 0건 — 이번 범위에 전략 코드가 없다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 중단된 지표는 값이 `null` 이고 사유가 함께 나간다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 이용 조건이 미확인인 지표는 발행이 보류되고, 권리 확인 대기(`PENDING_RIGHTS`)를 확인 완료와 구분해 기록한다",
+    "state": "merged",
+    "created_at": "2026-09-21T17:53:42.626+09:00",
+    "updated_at": "2026-09-21T19:58:24.393+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-21T19:58:24.151+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/372-macro-compliance",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+    "merge_commit_sha": "e44c3c45b753f699dd9dc268c98d98988f4dbfa6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T17:53:45.987+09:00",
+    "reference": "!281",
+    "references": {
+      "short": "!281",
+      "relative": "!281",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!281"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/281",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 955140,
+    "iid": 281,
+    "project_id": 1444456,
+    "title": "feat(de): 지표별 이용 조건과 중단·재확인 처리를 등록표에 넣는다",
+    "description": "## 작업 내용 요약\n\n경제지표 17개의 이용 조건을 지표별로 등록표에 두고, 조건이 철회된 지표는 발행에서 빠지되 사유와 함께 화면까지 전달된다. 원천이 밝힌 호출 한도를 요청 전에 집행하고, 인증키가 오류로 새던 경로를 막았다. 시장 흐름의 예시 자료는 운영 프로필에서 기동을 막는다.\n\n## 관련 티켓\n\n* S15P21E205-372\n* https://ssafy.atlassian.net/browse/S15P21E205-372\n\n## 주요 변경 사항\n\n* 지표마다 상업 이용 가부(허용/제한/모름)·재배포 규칙·내보내기 문구·재확인 기한을 갖는다. 모름을 따로 둔 것은 FR-016a 가 모름을 허용으로 읽지 말라 하고 FR-018 이 금지로 읽지 말라 하기 때문이다.\n* 이용 조건이 철회된 지표는 수집·발행·기준월 계산에서 빠진다. FR-011 의 \"17개 전부\"를 \"수집 가능한 전부\"로 읽는다 — 글자대로면 지표 하나의 중단이 플랫폼을 통째로 멈춘다. 다만 수집 가능한 지표가 0개면 발행을 막는다.\n* 스키마: `macro_indicator_definition` 에 이용 조건 네 컬럼 추가(V20260921160000).\n* 계약: 지표 상태에 `SUSPENDED`, 필드에 `suspendedReason` 추가. 중단된 지표는 값이 `null` 이고 사유가 함께 내려간다.\n* 원천 한도를 `RateLimiter` 가 요청 전에 집행한다. 셀 상한을 넘는 요청은 만들지 않고, 분당 한도는 창이 빌 때까지 기다린다.\n* 오류·로그에서 인증키를 지운다. URL 인코딩된 형태까지 지운다 — 관세청 키는 `%2F` 를 품은 채 주소에 들어간다.\n* 시장 흐름 예시 어댑터가 운영 프로필에서 기동을 막는다. 끄는 속성은 두지 않았다.\n\n## 테스트\n\n- [x] `data`: `ruff check .` 통과\n- [x] `data`: `pytest` 1187 통과\n- [x] `backend`: `./gradlew spotlessApply test --tests '*Macro*' --tests '*MarketFlow*'` 통과\n- [x] 중단 기록은 실제 마이그레이션을 적용한 PostgreSQL 컨테이너에 대고 확인\n\n## 리뷰 포인트\n\n* **운영 배포가 T064 전까지 뜨지 않는다.** 예시 어댑터 가드가 prod 기동을 막으므로, 묶음 H 로 marketflow 가 008 스냅샷을 읽게 될 때까지는 배포 순서를 맞춰야 한다.\n* **009 가 읽는 계약이 바뀐다.** `SUSPENDED` 와 `suspendedReason` 처리를 함께 맞춘다.\n* 중단을 완결 기준에서 빼는 판단이 FR-011 과 FR-016b 사이의 선택이다. 근거는 spec 이 두바이유를 두고 \"빠져도 나머지 6개 분야 검색은 유지된다\"고 적은 것이다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건 — 지표 목록은 등록표 순서이고 우열 표시가 없다\n- [x] 결제·포인트·상품 선택 단계 0건\n- [x] 전략 ID 상수·전략별 분기 0건 — 이번 범위에 전략 코드가 없다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 중단된 지표는 값이 `null` 이고 사유가 함께 나간다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 이용 조건이 미확인인 지표는 발행이 보류되고, 권리 확인 대기(`PENDING_RIGHTS`)를 확인 완료와 구분해 기록한다",
+    "state": "merged",
+    "created_at": "2026-09-21T17:53:42.626+09:00",
+    "updated_at": "2026-09-21T19:58:24.393+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-21T19:58:24.151+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/372-macro-compliance",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+    "merge_commit_sha": "e44c3c45b753f699dd9dc268c98d98988f4dbfa6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T17:53:45.987+09:00",
+    "reference": "!281",
+    "references": {
+      "short": "!281",
+      "relative": "!281",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!281"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/281",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "20",
+    "latest_build_started_at": "2026-09-21T17:53:53.502+09:00",
+    "latest_build_finished_at": "2026-09-21T18:04:22.232+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 213468,
+      "iid": 287,
+      "project_id": 1444456,
+      "sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+      "ref": "feat(de)/372-macro-compliance",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T17:53:53.397+09:00",
+      "updated_at": "2026-09-21T18:04:22.238+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213468"
+    },
+    "head_pipeline": {
+      "id": 213468,
+      "iid": 287,
+      "project_id": 1444456,
+      "sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+      "ref": "feat(de)/372-macro-compliance",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T17:53:53.397+09:00",
+      "updated_at": "2026-09-21T18:04:22.238+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213468",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T17:53:53.502+09:00",
+      "finished_at": "2026-09-21T18:04:22.232+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213468",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "head_sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+      "start_sha": "757d3ad120097a8572a90b85ebb63ce39d922351"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "9a2ff1f9d70be4a86184e5c167cf979023f14b57",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849807,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T17:53:42.749+09:00",
+          "updated_at": "2026-09-21T17:53:42.759+09:00",
+          "system": true,
+          "noteable_id": 955140,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 281,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f317b832840b316d5d7e9a6a83248b137d209931",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849811,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 민감정보 보호 (FR-021)**: `redact` 함수를 구현하여 URL 인코딩된 API Key 형태까지 로그 및 예외 메시지에서 철저히 차단하고 있으며, 연쇄 예외(`__cause__`)를 통한 키 유출 가능성까지 선제적으로 방어한 점이 돋보입니다.\n- **예외 상황에 대한 견고한 설계 (FR-016b, FR-022)**: 운영 환경에서 예시 데이터가 섞이거나 배포되는 것을 막기 위해 가드(`MarketFlowExampleDataGuard`, `build_fetcher`)를 두어 기동 단계를 강제 차단하도록 설계한 점과 중단된 지표로 인해 플랫폼 전체가 멈추는 현상을 방지하면서도 사유를 명시하도록 한 처리가 매우 훌륭합니다.\n\n### 발견 사항\n- [Low] `data/tests/test_macro_compliance.py` 파일의 마지막 줄이 중간에 잘려 있습니다(`for source_id in registry.used_sour`). 테스트 실행에는 문제가 없을 수 있으나 코드의 완성도를 위해 누락된 구문이나 파일 끝부분을 확인하는 것이 좋습니다.\n\n### 테스트 제안\n- **인증키 마스킹 검증 테스트**: API Key 원문뿐만 아니라 `%2F` 등 URL 인코딩된 다양한 형태의 문자열이 포함된 에러 메시지가 주어졌을 때, `redact()` 함수가 해당 문자열을 정확히 `***`로 치환하는지 단위 테스트로 검증합니다.\n- **운영 프로필 격리 가드 테스트**: 프로필이 `prod`로 설정된 상태에서 예시 데이터 관련 속성이나 인자(`--sample-root`)가 주어졌을 때, 애플리케이션 기동 시점 혹은 팩토리 함수 호출 시점에서 명시적인 예외(`IllegalStateException`, `SystemExit`)가 발생하는지 시나리오별로 확인합니다.\n- **전체 중단 시 발행 제한 테스트**: 모든 지표의 이용 상태가 `SUSPENDED`로 변경되었을 때, `publish.plan_publication()`이 `can_publish = false`와 `BLOCK_ALL_SUSPENDED` 차단 사유를 정상적으로 반환하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:4edaade3051d315dea1715015bafdabe99b3331a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T17:53:55.108+09:00",
+          "updated_at": "2026-09-21T17:53:55.108+09:00",
+          "system": false,
+          "noteable_id": 955140,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 281,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "debb5dae01f71a6d50f3f58545bd26ff5cff2589",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850204,
+          "type": null,
+          "body": "mentioned in commit e44c3c45b753f699dd9dc268c98d98988f4dbfa6",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T19:58:24.318+09:00",
+          "updated_at": "2026-09-21T19:58:24.323+09:00",
+          "system": true,
+          "noteable_id": 955140,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 281,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2234489,
+      "head_commit_sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+      "base_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "start_commit_sha": "757d3ad120097a8572a90b85ebb63ce39d922351",
+      "created_at": "2026-09-21T17:53:43.663+09:00",
+      "merge_request_id": 955140,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "cf9256cd678ca40afedc60ba9c9f6aabf491591f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2234489,
+      "head_commit_sha": "4edaade3051d315dea1715015bafdabe99b3331a",
+      "base_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "start_commit_sha": "757d3ad120097a8572a90b85ebb63ce39d922351",
+      "created_at": "2026-09-21T17:53:43.663+09:00",
+      "merge_request_id": 955140,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "cf9256cd678ca40afedc60ba9c9f6aabf491591f",
+      "commits": [
+        {
+          "id": "4edaade3051d315dea1715015bafdabe99b3331a",
+          "short_id": "4edaade3",
+          "created_at": "2026-09-21T15:29:00.000+09:00",
+          "parent_ids": [
+            "4f7ae6c0e01127f7b53060d4324d79c778a8d4f0"
+          ],
+          "title": "fix(de): 중단된 지표가 발행을 되돌리거나 빈 발행이 나가는 것을 막는다",
+          "message": "fix(de): 중단된 지표가 발행을 되돌리거나 빈 발행이 나가는 것을 막는다\n\n코드리뷰에서 나온 여섯을 고친다. 앞의 둘은 T055(중단)가 끝에서 끝까지 동작하지 않는다는 뜻이다.\n\n- 등록표 INSERT 가 중단 시점·사유를 쓰지 않아, 중단된 지표가 있으면\n  ck_macro_indicator_suspension 위반으로 발행 트랜잭션 전체가 되돌아갔다. 나머지를 살리려던\n  FR-016b 가 정반대로 작동하던 셈이다.\n- 수집 가능한 지표가 0개면 게이트 루프가 아예 돌지 않아 보류 사유 없이 발행이 허용됐다.\n  BLOCK_ALL_SUSPENDED 로 막는다 — 빈 버전으로 폴인터가 옮겨 가면 멀쩡하던 직전 완결 버전이\n  화면에서 사라진다.\n- T053 의 이용 조건 필드(상업 이용·재배포·내보내기 문구·재확인 기한)를 스키마와 INSERT 에\n  넣는다. 006 의 내보내기가 읽을 곳은 DB 인데 지금까지 등록표 메모리에만 있었다(FR-018).\n- 한도 없는 원천(한국은행·관세청·OECD)에서 호출 기록이 무한히 쌓이던 것을 고친다.\n- redact 에 최소 길이를 둔다. 시험 환경의 짧은 키 값이 오류 문구를 통째로 망가뜨렸다.\n- 예시 표본을 폴더명으로 고르지 않는다. 국가통계포털 지표 전부가 첫 파일을 받고, 뒤이은\n  대조 실패가 원인을 잘못 짚었다.\n\n중단 기록 시험은 실제 마이그레이션을 적용한 PostgreSQL 에 대고 본다. 손으로 옮겨 적은\nsqlite 표가 운영 스키마와 어긋나 있던 것이 이 누락을 가린 원인이라, 그 표에도 같은 제약을 둔다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T15:29:00.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T15:29:00.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4edaade3051d315dea1715015bafdabe99b3331a"
+        },
+        {
+          "id": "4f7ae6c0e01127f7b53060d4324d79c778a8d4f0",
+          "short_id": "4f7ae6c0",
+          "created_at": "2026-09-21T14:58:32.000+09:00",
+          "parent_ids": [
+            "a2728d982df6f2834f07ada8c0e9ac74650c3a62"
+          ],
+          "title": "docs(de): 묶음 G 작업 열하나를 완료로 표시한다",
+          "message": "docs(de): 묶음 G 작업 열하나를 완료로 표시한다\n\nT053~T063. 남은 아홉은 H(009 담당자와 합의가 필요하다)와 I(실제 자료가 흐른 뒤에야\n의미가 있다)라 이번 범위에서 닫지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T14:58:32.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T14:58:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4f7ae6c0e01127f7b53060d4324d79c778a8d4f0"
+        },
+        {
+          "id": "a2728d982df6f2834f07ada8c0e9ac74650c3a62",
+          "short_id": "a2728d98",
+          "created_at": "2026-09-21T14:58:32.000+09:00",
+          "parent_ids": [
+            "12a5cd79cab4eeea019eda6b14993b517699851f"
+          ],
+          "title": "test(de): 이용 조건 준수와 예시 자료 격리를 고정한다",
+          "message": "test(de): 이용 조건 준수와 예시 자료 격리를 고정한다\n\n네 가지를 고정한다. 한도 초과 요청이 만들어지지 않는가, 권리 미확인 지표가 공개 버전에\n들어가지 않는가, 중단된 지표가 공개 버전과 기준월에 남지 않는가, 인증키 만기와 약관 개정이\n재확인 대상으로 잡히는가.\n\n인증키 시험은 유출이 실제로 났던 모양 그대로 재현한다 — requests 가 실패한 주소를 메시지에\n담고, 그 주소에 URL 인코딩된 키가 있는 상황이다. 메시지뿐 아니라 **트레이스백 전체**에\n키가 없는지 본다. 원인 연쇄로 새는 것은 메시지만 보면 잡히지 않는다.\n\n예시 자료 격리는 가드를 끄는 길이 없다는 것까지 단언한다. 끄는 길을 두면 배포가 급할 때\n켜지고 켜진 채로 잊힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T14:58:32.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T14:58:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a2728d982df6f2834f07ada8c0e9ac74650c3a62"
+        },
+        {
+          "id": "12a5cd79cab4eeea019eda6b14993b517699851f",
+          "short_id": "12a5cd79",
+          "created_at": "2026-09-21T14:58:17.000+09:00",
+          "parent_ids": [
+            "79b9d89e6817b89adc21b619ca199c1cb6fb0857"
+          ],
+          "title": "feat(be): 중단된 지표를 값 없이 사유와 함께 내보낸다",
+          "message": "feat(be): 중단된 지표를 값 없이 사유와 함께 내보낸다\n\n이용 권리가 거둬들여진 지표는 값을 내보내지 않는다(FR-016b). 등록 정보와 중단 사유는\n남겨 **조용히 사라지지 않고 \"빠진 상태\"임이 드러나게** 한다 — 아무 표시 없이 빠지면 화면은\n\"원래 없던 지표\"와 \"빠진 지표\"를 같게 보여 준다(원칙 VI).\n\n중단 판정이 예시 자료보다 먼저다. 뒤에 두면 개발 프로필에서 중단이 가려져, 권리가 거둬진\n계열이 개발 화면에는 그대로 그려진다.\n\n계약이 바뀐다 — 지표 status enum 에 `SUSPENDED` 가 더해지고 `suspendedReason` 이 생긴다.\n009 가 소비하는 계약이므로 그쪽 화면이 이 상태를 어떻게 그릴지 함께 정해야 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T14:58:17.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T14:58:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/12a5cd79cab4eeea019eda6b14993b517699851f"
+        },
+        {
+          "id": "79b9d89e6817b89adc21b619ca199c1cb6fb0857",
+          "short_id": "79b9d89e",
+          "created_at": "2026-09-21T14:58:05.000+09:00",
+          "parent_ids": [
+            "ca3e603537cf3756f10dc5cd3e21ee890e7d491b"
+          ],
+          "title": "feat(de): 예시 자료를 개발 프로필에 가둔다",
+          "message": "feat(de): 예시 자료를 개발 프로필에 가둔다\n\n**운영에는 예시 자료로 가는 길이 없다**(FR-022). 수집 진입점이 프로필을 나누고, 운영은\n예시 인자를 무시하지 않고 거부한다 — 무시하면 준 사람은 켜진 줄 알고 화면은 진짜 자료를\n보여 주는 줄 안다. 둘 다 틀린 채로 굴러간다.\n\n개발 프로필은 **두 번 말해야** 켜진다. 인자와 환경변수가 모두 있어야 하는데, 깃발 하나로\n켜지게 두면 운영 배치의 인자를 누가 복사해 붙이다가 섞여 들어갈 수 있어서다. 환경변수는\n실행 명령이 아니라 환경에 매여 있어 같이 복사되지 않는다.\n\n`SampleFetcher` 는 없는 표본을 빈 응답으로 대신하지 않는다. 그렇게 하면 표본을 빠뜨린\n지표가 \"원천이 값을 주지 않았다\"로 보여, 준비가 덜 된 것과 원천이 비어 있는 것이 같은\n모양이 된다.\n\n백엔드 쪽에도 같은 가드를 둔다. `ExampleMacroIndicatorSnapshotAdapter` 는 프로필 제한이\n없는 `@Component` 라 **운영에서도 빈으로 올라왔다.** 010 의 임시 대역은 RegimeFixtureGuard\n가 이미 막고 있었는데 009 가 읽는 이 경로만 열려 있었다. 같은 방식으로 기동을 막는다 —\n요청마다 막으면 운영이 일단 뜨고 화면은 지어낸 값을 그리는데, 값이 그럴듯해서 아무도\n이상하게 여기지 않는다.\n\n**이 가드는 지금 운영 기동을 막는다.** 같은 포트의 구현이 예시 어댑터 하나뿐이라, 009 의\n지표 조회를 008 스냅샷으로 바꾸는 T064(묶음 H)가 먼저 들어와야 운영이 다시 뜬다. 그\n전까지 운영에 나가던 것은 지어낸 값이었으므로 뜨지 않는 편이 맞다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T14:58:05.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T14:58:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/79b9d89e6817b89adc21b619ca199c1cb6fb0857"
+        },
+        {
+          "id": "ca3e603537cf3756f10dc5cd3e21ee890e7d491b",
+          "short_id": "ca3e6035",
+          "created_at": "2026-09-21T14:57:47.000+09:00",
+          "parent_ids": [
+            "32b2c2d37b228287bf87189656f07ee3fb262f88"
+          ],
+          "title": "feat(de): 원천 한도를 기록에서 집행으로 옮기고 인증키 유출을 막는다",
+          "message": "feat(de): 원천 한도를 기록에서 집행으로 옮기고 인증키 유출을 막는다\n\n등록표의 `rate_limit` 은 사람이 읽는 문장뿐이었다. 한도가 적혀 있을 뿐 아무도 지키지\n않았다. 기계가 쓸 수치(분당 호출·요청당 셀·최소 간격)를 더하고 `RateLimiter` 가 지킨다.\n\n**한도를 넘는 요청은 보내 보고 거절당하는 것이 아니라 만들기 전에 막는다.** 넘는 요청은\n원천에 부담을 주고 반복되면 차단으로 이어져 그 지표의 자료가 끊긴다. 분당 상한은 창이 빌\n때까지 기다리고, 요청당 셀 상한은 기다려도 해결되지 않으므로 그 자리에서 거절한다.\n\n한도는 호출 지점마다 걸지 않고 Fetcher 를 감싼다. 지점이 다섯이고 주택가격은 사슬의 표마다\n한 번씩 더 부르는데, 한 군데라도 빠뜨리면 한도는 지켜지는 척만 한다.\n\n관세청 12개월 상한이 등록표와 코드 두 곳에 있던 것도 등록표 하나로 모은다. 같은 수를 양쪽에\n두면 한쪽만 고쳐질 때 등록표가 기록용으로 전락하고, 실제로 지키는 값이 무엇인지 알 수 없다.\n\n인증키 유출은 두 곳이었다(FR-021).\n\n- 오류 메시지의 키를 **길이로** 가렸다. 20자 미만이면 그냥 통과했고 긴 통계표 코드는\n  애꿎게 가렸다. 환경변수의 실제 값으로 지운다. 관세청 키는 `%2F` 를 품은 채 주소에\n  들어가므로 URL 인코딩된 형태도 함께 지운다\n- `raise ... from error` 의 원인 연쇄가 requests 의 원본 메시지를 들고 갔고, 거기에 실패한\n  주소가 통째로 있었다. 우리 메시지를 아무리 깨끗이 써도 트레이스백이 찍히는 순간 키가\n  로그에 남는다. 연쇄를 끊고 예외 이름과 지운 메시지만 옮겨 담아 진단은 잃지 않는다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T14:57:47.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T14:57:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ca3e603537cf3756f10dc5cd3e21ee890e7d491b"
+        },
+        {
+          "id": "32b2c2d37b228287bf87189656f07ee3fb262f88",
+          "short_id": "32b2c2d3",
+          "created_at": "2026-09-21T14:57:27.000+09:00",
+          "parent_ids": [
+            "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c"
+          ],
+          "title": "feat(de): 지표별 이용 조건과 중단·재확인 처리를 등록표에 넣는다",
+          "message": "feat(de): 지표별 이용 조건과 중단·재확인 처리를 등록표에 넣는다\n\n등록표가 원천·항목은 알면서 **이용 조건은 몰랐다.** 상업 이용 가부·재배포 제한·내보내기\n문구·확인일·재확인 시한을 지표마다 적는다. 근거는 pd11 이 읽은 약관 원문이다.\n\n**상업 이용을 셋으로 나눈다.** 불리언이면 \"모른다\"를 적을 수 없는데, 제한된 것과 모르는\n것은 할 일이 정반대다 — 제한된 계열은 어느 경로로도 내보내지 않고(FR-018), 모르는 계열은\n확인 대기로 두고 수집·공개를 이어간다(FR-016a). 거짓 하나로 묶으면 두바이유가 내보내기에서\n빠지고, 참 하나로 묶으면 제한 계열이 파일로 새어 나간다.\n\n중단(FR-016b)은 사유를 인자로 받아야만 만들어진다. 기본값을 두면 사유 없는 중단이 생기고\n왜 빠졌는지 답할 근거가 사라진다. 이미 발행한 버전에서 지우지는 않는다 — 지우면 그 버전을\n참조한 과거 검색 결과의 재현이 깨진다.\n\n**발행 완결 기준을 \"17개\"에서 \"수집 가능한 지표 전부\"로 읽는다.** FR-011 을 글자 그대로\n읽으면 지표 하나가 중단되는 순간 영영 발행할 수 없고, 그러면 중단이 플랫폼을 통째로 멈춘다.\nspec 이 두바이유를 두고 \"빠져도 나머지 6개 분야 검색은 유지된다\"고 적은 것이 이 뜻이다.\n중단된 지표는 기준월 계산에서도 빠진다 — 이미 빠진 지표가 기준월을 뒤로 물리면 멀쩡한\n분야까지 과거로 끌려간다. 빠졌다는 사실과 사유는 판정 결과에 함께 실린다(원칙 VI).\n\n재확인 시한(FR-018a)이 지나도 수집을 막지 않는다. 막으면 확인이 하루 늦은 것이 자료를\n끊는 일이 되어, 확인하라는 신호가 자료를 끊는 벌이 된다. 드러내는 데까지가 이 값의 일이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T14:57:27.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T14:57:27.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/32b2c2d37b228287bf87189656f07ee3fb262f88"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -56,7 +56,11 @@ public interface MacroSnapshotRepository {\n             String rawUnit,\n             String transformedUnit,\n             String transformRule,\n-            String licenseReviewStatus) {}\n+            String licenseReviewStatus,\n+            /** 이용 허락 상태. {@code SUSPENDED} 면 값을 내보내지 않는다(FR-016b). */\n+            String licenseStatus,\n+            /** 중단 사유. 없이 지표만 사라지면 되돌릴 근거가 남지 않는다. */\n+            String licenseSuspendedReason) {}\n \n     record DisplayFieldRow(\n             String fieldId, String displayName, int displayOrder, String description) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/repository/MacroSnapshotRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/repository/MacroSnapshotRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -62,7 +62,9 @@ public record MacroSnapshotResult(\n             ObservationValue latest,\n             List<PathPoint> path,\n             List<PathPoint> latestPath,\n-            Instant lastUpdatedAt) {}\n+            Instant lastUpdatedAt,\n+            /** 이용이 중단된 지표의 사유. 중단이 아니면 {@code null} 이다(FR-016b). */\n+            String suspendedReason) {}\n \n     /** 값이 있는 관측. {@code transformedValue} 는 null 이 아니다 — null 이면 {@link PathPoint} 쪽이다. */\n     public record ObservationValue(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/result/MacroSnapshotResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/result/MacroSnapshotResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,6 +42,9 @@ import org.springframework.transaction.annotation.Transactional;\n @Service\n public class MacroSnapshotQueryService {\n \n+    /** 이용이 중단된 지표의 허락 상태. 등록표·스키마와 같은 값이다(FR-016b). */\n+    private static final String SUSPENDED_LICENSE = \"SUSPENDED\";\n+\n     /** 경로는 t-2·t-1·t 세 달이다. */\n     private static final int PATH_MONTHS = 3;\n \n@@ -209,6 +212,10 @@ public class MacroSnapshotQueryService {\n                 fieldReferenceMonth == null ? null : observations.get(fieldReferenceMonth);\n         ObservationRow latestRow = latestMonth == null ? null : observations.get(latestMonth);\n \n+        // 중단된 지표는 값을 내보내지 않는다(FR-016b). 등록 정보와 중단 사유는 남겨\n+        // 조용히 사라지지 않고 \"빠진 상태\"임이 드러나게 한다(원칙 VI).\n+        boolean suspended = SUSPENDED_LICENSE.equals(definition.licenseStatus());\n+\n         return new IndicatorSummary(\n                 definition.indicatorId(),\n                 definition.fieldId(),\n@@ -220,12 +227,13 @@ public class MacroSnapshotQueryService {\n                 definition.transformedUnit(),\n                 definition.transformRule(),\n                 resolveStatus(definition, latestMonth, sampleData, failedIndicatorIds),\n-                fieldReferenceMonth,\n-                toValue(referenceRow),\n-                toValue(latestRow),\n-                toPath(fieldReferenceMonth, observations),\n-                toPath(latestMonth, observations),\n-                latestRow == null ? null : latestRow.receivedAt());\n+                suspended ? null : fieldReferenceMonth,\n+                suspended ? null : toValue(referenceRow),\n+                suspended ? null : toValue(latestRow),\n+                suspended ? List.of() : toPath(fieldReferenceMonth, observations),\n+                suspended ? List.of() : toPath(latestMonth, observations),\n+                latestRow == null ? null : latestRow.receivedAt(),\n+                suspended ? definition.licenseSuspendedReason() : null);\n     }\n \n     /**\n@@ -238,6 +246,11 @@ public class MacroSnapshotQueryService {\n             LocalDate latestMonth,\n             boolean sampleData,\n             Set<String> failedIndicatorIds) {\n+        // **중단이 가장 먼저다.** 이용 권리가 거둬들여진 지표는 개발 대역이든 운영이든 값을\n+        // 내보내지 않는다(FR-016b). 예시 자료 뒤에 두면 개발 프로필에서 중단이 가려진다.\n+        if (SUSPENDED_LICENSE.equals(definition.licenseStatus())) {\n+            return \"SUSPENDED\";\n+        }\n         if (sampleData) {\n             return \"EXAMPLE\";\n         }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/service/MacroSnapshotQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/service/MacroSnapshotQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,7 +71,8 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {\n         return jdbc.query(\n                 \"\"\"\n                 SELECT indicator_id, field_id, attribution, agency, raw_unit,\n-                       transformed_unit, transform_rule, license_review_status\n+                       transformed_unit, transform_rule, license_review_status,\n+                       license_status, license_suspended_reason\n                 FROM macro_indicator_definition\n                 WHERE registry_version_id = ?\n                 ORDER BY indicator_id\n@@ -85,7 +86,9 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {\n                                 rs.getString(\"raw_unit\"),\n                                 rs.getString(\"transformed_unit\"),\n                                 rs.getString(\"transform_rule\"),\n-                                rs.getString(\"license_review_status\")),\n+                                rs.getString(\"license_review_status\"),\n+                                rs.getString(\"license_status\"),\n+                                rs.getString(\"license_suspended_reason\")),\n                 registryVersionId);\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/infrastructure/persistence/MacroSnapshotRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/infrastructure/persistence/MacroSnapshotRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -100,7 +100,8 @@ public record MacroSnapshotResponse(\n             ObservationValueResponse latest,\n             List<PathPointResponse> path,\n             List<PathPointResponse> latestPath,\n-            String lastUpdatedAt) {\n+            String lastUpdatedAt,\n+            String suspendedReason) {\n \n         static IndicatorResponse from(MacroSnapshotResult.IndicatorSummary indicator) {\n             return new IndicatorResponse(\n@@ -119,7 +120,8 @@ public record MacroSnapshotResponse(\n                     ObservationValueResponse.from(indicator.latest()),\n                     indicator.path().stream().map(PathPointResponse::from).toList(),\n                     indicator.latestPath().stream().map(PathPointResponse::from).toList(),\n-                    instant(indicator.lastUpdatedAt()));\n+                    instant(indicator.lastUpdatedAt()),\n+                    indicator.suspendedReason());\n         }\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/response/MacroSnapshotResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/response/MacroSnapshotResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+package com.ssafy.thorp.marketflow.infrastructure.example;\n+\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.core.env.Environment;\n+import org.springframework.core.env.Profiles;\n+\n+/**\n+ * 운영에서 예시 자료로 지표를 그리려 하면 <b>기동을 막는다</b> (FR-022).\n+ *\n+ * <p>{@link com.ssafy.thorp.regime.infrastructure.config.RegimeFixtureGuard} 와 같은 가드를 시장 흐름 쪽에 둔\n+ * 것이다. 010 의 임시 대역은 이미 막혀 있었는데 009 가 읽는 예시 어댑터는 프로필 제한이 없어 운영에서도 그대로 올라왔다.\n+ *\n+ * <p><b>왜 기동 실패인가.</b> 요청마다 막으면 운영이 일단 뜨고 화면은 지어낸 값을 그린다. 값이 그럴듯해서 아무도 이상하게 여기지 않고, 그 상태가 얼마나\n+ * 오래갔는지도 나중에 알 수 없다. 뜨지 않는 편이 훨씬 시끄럽고 그래서 고쳐진다.\n+ *\n+ * <p><b>끄는 길을 두지 않는다.</b> 속성으로 켜고 끌 수 있게 하면 배포가 급할 때 그 속성이 켜지고, 켜진 채로 잊힌다. 운영에서 예시 자료를 쓸 이유는 없으므로\n+ * 선택지를 만들지 않는다.\n+ *\n+ * <p>이 가드는 {@code marketflow} 의 지표 조회가 008 스냅샷을 읽도록 바뀌면(T064) 필요 없어지고, 예시 어댑터와 함께 사라진다(T071).\n+ */\n+@Configuration\n+public class MarketFlowExampleDataGuard {\n+\n+    private static final String PROD_PROFILE = \"prod\";\n+\n+    public MarketFlowExampleDataGuard(Environment environment) {\n+        if (environment.acceptsProfiles(Profiles.of(PROD_PROFILE))) {\n+            throw new IllegalStateException(\n+                    \"prod 프로파일에서는 시장 흐름 지표를 예시 자료로 그릴 수 없습니다\"\n+                            + \"(FR-022). \"\n+                            + ExampleMacroIndicatorSnapshotAdapter.RESOURCE_PATH\n+                            + \" 는 지어낸 값이라 운영 자료가 될 수 없습니다. \"\n+                            + \"운영에서는 marketflow 의 지표 조회를 008 스냅샷으로 바꾼 뒤(T064) 기동합니다.\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/MarketFlowExampleDataGuard.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/MarketFlowExampleDataGuard.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+-- 지표별 이용 조건을 등록표 행에 남긴다 (T053, FR-018).\n+--\n+-- 등록표(data/)는 지표마다 상업적 이용 가부·재배포 규칙·내보내기에 실을 문구를 들고 있는데,\n+-- 지금까지 이 값들이 DB 로 가지 않아 006 의 내보내기 경로가 문구를 가져올 곳이 없었다.\n+-- 원자료가 파일로 빠져나가는 경로라 문구 없이 나가면 그대로 이용 조건 위반이다.\n+ALTER TABLE macro_indicator_definition\n+    ADD COLUMN commercial_use       VARCHAR(16),\n+    ADD COLUMN redistribution_rule  VARCHAR(300),\n+    ADD COLUMN export_notice        VARCHAR(300),\n+    ADD COLUMN license_reverify_by  DATE;\n+\n+-- 셋 중 하나를 고르게 한다. 불리언으로 두면 \"모른다\"를 적을 데가 없는데, FR-016a 는 모르는\n+-- 것을 허용으로 읽지 말라고 하고 FR-018 은 모르는 것을 금지로 읽지 말라고 한다.\n+ALTER TABLE macro_indicator_definition\n+    ADD CONSTRAINT ck_macro_indicator_commercial_use CHECK (\n+        commercial_use IS NULL\n+        OR commercial_use IN ('ALLOWED', 'RESTRICTED', 'UNKNOWN'));\n+\n+COMMENT ON COLUMN macro_indicator_definition.export_notice IS\n+    '내보내기 파일에 함께 실어야 하는 출처·이용 범위 문구 (FR-018)';\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260921160000__macro_license_terms.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260921160000__macro_license_terms.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,93 @@\n+package com.ssafy.thorp.macro;\n+\n+import static org.assertj.core.api.Assertions.assertThatCode;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.marketflow.infrastructure.example.MarketFlowExampleDataGuard;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.mock.env.MockEnvironment;\n+\n+/**\n+ * 예시 자료가 운영으로 새지 않는지 본다 (T063, FR-022).\n+ *\n+ * <p>예시 자료는 인증키가 없거나 원천을 부를 수 없을 때 개발을 이어 가려고 두는 것이다. 운영에 섞이면 화면은 그럴듯한 값을 그리는데 그 값이 어디서 왔는지는 아무 데도\n+ * 적혀 있지 않다.\n+ */\n+class MacroSampleDataIsolationTest {\n+\n+    @Test\n+    @DisplayName(\"운영 프로필에서는 예시 어댑터를 쓰는 기동이 막힌다\")\n+    void prodRefusesToStartWithExampleData() {\n+        MockEnvironment prod = new MockEnvironment();\n+        prod.setActiveProfiles(\"prod\");\n+\n+        assertThatThrownBy(() -> new MarketFlowExampleDataGuard(prod))\n+                .isInstanceOf(IllegalStateException.class)\n+                .hasMessageContaining(\"prod\")\n+                .hasMessageContaining(\"FR-022\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"기동을 막는 메시지가 무엇을 해야 하는지까지 말한다\")\n+    void theRefusalSaysWhatToDoNext() {\n+        MockEnvironment prod = new MockEnvironment();\n+        prod.setActiveProfiles(\"prod\");\n+\n+        assertThatThrownBy(() -> new MarketFlowExampleDataGuard(prod))\n+                // 막기만 하고 다음 행동을 말하지 않으면 배포하는 사람이 가드를 지우는 쪽으로 간다.\n+                .hasMessageContaining(\"008 스냅샷\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"개발 프로필은 예시 자료로 기동할 수 있다\")\n+    void developmentMayUseExampleData() {\n+        MockEnvironment local = new MockEnvironment();\n+        local.setActiveProfiles(\"local\");\n+\n+        assertThatCode(() -> new MarketFlowExampleDataGuard(local)).doesNotThrowAnyException();\n+    }\n+\n+    @Test\n+    @DisplayName(\"프로필을 지정하지 않아도 막지 않는다\")\n+    void noProfileIsNotProduction() {\n+        // 프로필이 없는 것은 시험·로컬이다. 여기서 막으면 개발이 시작부터 멈춘다.\n+        assertThatCode(() -> new MarketFlowExampleDataGuard(new MockEnvironment()))\n+                .doesNotThrowAnyException();\n+    }\n+\n+    @Test\n+    @DisplayName(\"운영 프로필이 다른 프로필과 함께 켜져도 막는다\")\n+    void prodCombinedWithAnotherProfileStillRefuses() {\n+        // prod + local 같은 조합으로 가드를 우회하지 못하게 한다.\n+        MockEnvironment mixed = new MockEnvironment();\n+        mixed.setActiveProfiles(\"local\", \"prod\");\n+\n+        assertThatThrownBy(() -> new MarketFlowExampleDataGuard(mixed))\n+                .isInstanceOf(IllegalStateException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"가드를 속성으로 끌 수 있는 길이 없다\")\n+    void theGuardHasNoOffSwitch() {\n+        // 끄는 길을 두면 배포가 급할 때 켜지고, 켜진 채로 잊힌다.\n+        MockEnvironment prod = new MockEnvironment();\n+        prod.setActiveProfiles(\"prod\");\n+        prod.setProperty(\"thorp.marketflow.example.enabled\", \"true\");\n+        prod.setProperty(\"thorp.marketflow.allow-example-data\", \"true\");\n+\n+        assertThatThrownBy(() -> new MarketFlowExampleDataGuard(prod))\n+                .isInstanceOf(IllegalStateException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"막는 메시지가 어느 파일이 예시 자료인지 가리킨다\")\n+    void theRefusalNamesTheExampleResource() {\n+        MockEnvironment prod = new MockEnvironment();\n+        prod.setActiveProfiles(\"prod\");\n+\n+        // 어느 파일이 문제인지 없으면 받는 사람이 저장소를 뒤져야 한다.\n+        assertThatThrownBy(() -> new MarketFlowExampleDataGuard(prod))\n+                .hasMessageContaining(\"example\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,8 +30,10 @@\n from __future__ import annotations\n \n import argparse\n+import os\n import sys\n from pathlib import Path\n+from typing import Final\n \n _SRC = Path(__file__).resolve().parents[1] / \"src\"\n if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우\n@@ -48,6 +50,16 @@ MODE_INITIAL = \"initial\"\n MODE_REGULAR = \"regular\"\n MODES = (MODE_INITIAL, MODE_REGULAR)\n \n+PROFILE_PROD = \"prod\"\n+PROFILE_DEV = \"dev\"\n+PROFILES = (PROFILE_PROD, PROFILE_DEV)\n+\n+#: 예시 자료를 켜려면 함께 있어야 하는 환경변수 (FR-022).\n+#:\n+#: 깃발 하나로 켜지게 두지 않는 이유는, 운영 배치의 인자를 누가 복사해 붙이다가 섞여 들어갈\n+#: 수 있어서다. 환경변수는 실행 명령이 아니라 **환경**에 매여 있어 같이 복사되지 않는다.\n+SAMPLE_DATA_ENV: Final[str] = \"MACRO_ALLOW_SAMPLE_DATA\"\n+\n \n def build_parser() -> argparse.ArgumentParser:\n     parser = argparse.ArgumentParser(\n@@ -72,6 +84,18 @@ def build_parser() -> argparse.ArgumentParser:\n         action=\"store_true\",\n         help=\"원천을 부르지 않고 대상과 계획만 보여준다\",\n     )\n+    parser.add_argument(\n+        \"--profile\",\n+        default=PROFILE_PROD,\n+        choices=PROFILES,\n+        help=\"dev 는 예시 자료를 쓸 수 있다. 기본은 prod 이며 예시 자료로 가는 길이 없다\",\n+    )\n+    parser.add_argument(\n+        \"--sample-root\",\n+        default=None,\n+        metavar=\"PATH\",\n+        help=\"dev 프로필에서 읽을 예시 응답 뿌리. prod 에서는 무시되지 않고 거부된다\",\n+    )\n     parser.add_argument(\n         \"--data-root\",\n         default=\"/data\",\n@@ -113,6 +137,38 @@ def describe_plan(\n     return lines\n \n \n+def build_fetcher(args: argparse.Namespace, timeout: float) -> transport.Fetcher:\n+    \"\"\"프로필에 맞는 Fetcher 를 고른다 (FR-022).\n+\n+    **운영에는 예시 자료로 가는 길이 없다.** 수집이 실패했다고 예시로 자동 대체하지 않으며,\n+    예시 인자를 운영 프로필에 주면 무시하지 않고 거부한다 — 무시하면 준 사람은 켜진 줄 알고,\n+    화면은 진짜 자료를 보여 주는 줄 안다. 둘 다 틀린 채로 굴러간다.\n+\n+    개발 프로필은 **두 번 말해야** 켜진다. 인자와 환경변수가 모두 있어야 하며, 하나만 있으면\n+    켜지지 않고 왜 안 켜졌는지 말한다.\n+    \"\"\"\n+    if args.profile == PROFILE_PROD:\n+        if args.sample_root is not None:\n+            raise SystemExit(\n+                \"운영 프로필에 --sample-root 를 줬다. 운영은 예시 자료를 쓰지 않는다\"\n+                f\" (FR-022). 개발이면 --profile {PROFILE_DEV} 를 함께 준다\"\n+            )\n+        return transport.RequestsFetcher(timeout)\n+\n+    if os.environ.get(SAMPLE_DATA_ENV) != \"1\":\n+        raise SystemExit(\n+            f\"--profile {PROFILE_DEV} 는 {SAMPLE_DATA_ENV}=1 이 함께 있어야 켜진다 (FR-022).\"\n+            \" 예시 자료가 운영 자료로 오인되지 않도록 두 번 확인한다\"\n+        )\n+    if args.sample_root is None:\n+        raise SystemExit(f\"--profile {PROFILE_DEV} 에는 --sample-root 가 필요하다\")\n+    root = Path(args.sample_root)\n+    if not root.is_dir():\n+        raise SystemExit(f\"예시 자료 뿌리가 없다: {root}\")\n+    print(f\"[예시 자료] {root} 를 읽는다. 이 실행의 결과는 실제 자료가 아니다\")\n+    return transport.SampleFetcher(root)\n+\n+\n def main(argv: list[str] | None = None) -> int:\n     args = build_parser().parse_args(argv)\n     indicators = select_indicators(args.indicator)\n@@ -133,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:\n     report = ingest.run(\n         create_engine(database_url_from_env()),\n         indicators,\n-        fetcher=transport.RequestsFetcher(timeout),\n+        fetcher=build_fetcher(args, timeout),\n         data_root=Path(args.data_root),\n         mode=args.mode,\n     )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_macro.py",
+          "old_path": "data/scripts/ingest_macro.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,10 +21,13 @@ from collections.abc import Callable, Mapping, Sequence\n from dataclasses import dataclass\n from datetime import date, datetime\n from decimal import Decimal, InvalidOperation\n-from typing import Any, Final, TypeVar\n+from typing import TYPE_CHECKING, Any, Final, TypeVar\n \n from data_pipeline.macro.config import SourceConfig\n \n+if TYPE_CHECKING:\n+    from data_pipeline.macro.registry import SourcePolicy as SourceLimits\n+\n T = TypeVar(\"T\")\n \n \n@@ -198,3 +201,68 @@ def require_keys(payload: Mapping[str, Any], keys: Sequence[str], context: str)\n             f\"{context}: 응답에 {', '.join(missing)} 이(가) 없다.\"\n             f\" 등록표가 아는 필드는 {', '.join(keys)} 다\"\n         )\n+\n+\n+class RateLimitExceeded(PermanentSourceError):\n+    \"\"\"원천이 밝힌 한도를 넘는 요청을 만들려 했다 (FR-017a).\n+\n+    **보내 보고 거절당하는 것이 아니라 만들기 전에 막는다.** 한도를 넘는 요청은 원천에\n+    부담을 주고, 반복되면 차단으로 이어져 그 지표의 자료가 끊긴다. 거절을 받아 처리하는\n+    것보다 애초에 만들지 않는 편이 싸고 확실하다.\n+    \"\"\"\n+\n+\n+class RateLimiter:\n+    \"\"\"원천 하나의 호출 한도를 지킨다 (FR-017a).\n+\n+    두 가지를 한다. **분당 상한**은 창이 찰 때까지 기다렸다 보내고, **요청당 셀 상한**은\n+    기다려도 해결되지 않으므로 그 자리에서 거절한다 — 요청을 쪼개는 것은 부르는 쪽의 일이다.\n+\n+    수치 한도를 밝히지 않은 원천에는 최소 간격만 둔다. 한도가 없다는 말은 마음껏 불러도\n+    된다는 뜻이 아니라 과다 호출 시 차단할 수 있다는 뜻이다(pd11).\n+\n+    시계와 대기를 인자로 받는 이유는 시험이 실제로 1분을 자지 않게 하기 위해서다.\n+    \"\"\"\n+\n+    def __init__(\n+        self,\n+        policy: SourceLimits,\n+        *,\n+        now: Callable[[], float] = time.monotonic,\n+        sleep: Callable[[float], None] = time.sleep,\n+    ) -> None:\n+        self._policy = policy\n+        self._now = now\n+        self._sleep = sleep\n+        self._calls: list[float] = []\n+\n+    def check_request_size(self, cells: int, context: str) -> None:\n+        \"\"\"보내기 전에 요청 크기를 본다. 넘으면 만들지 않는다.\"\"\"\n+        cap = self._policy.max_cells_per_request\n+        if cap is not None and cells > cap:\n+            raise RateLimitExceeded(\n+                f\"{context}: 요청이 {cells:,}셀로 원천 한도 {cap:,}셀을 넘는다.\"\n+                \" 구간을 나눠 부른다\"\n+            )\n+\n+    def acquire(self) -> None:\n+        \"\"\"호출 하나를 쓸 자리가 날 때까지 기다린다.\"\"\"\n+        interval = self._policy.min_interval_seconds\n+        if interval > 0 and self._calls:\n+            waited = self._now() - self._calls[-1]\n+            if waited < interval:\n+                self._sleep(interval - waited)\n+\n+        # 창을 벗어난 기록은 한도가 있든 없든 버린다. 가지치기를 한도 분기 안에만 두면\n+        # 한도가 없는 원천(한국은행·관세청·OECD)에서 목록이 호출 수만큼 무한히 자란다.\n+        cutoff = self._now() - 60.0\n+        self._calls = [at for at in self._calls if at > cutoff]\n+\n+        limit = self._policy.max_calls_per_minute\n+        if limit is not None:\n+            while len(self._calls) >= limit:\n+                # 창에서 가장 오래된 호출이 빠질 때까지 기다린다.\n+                self._sleep(self._calls[0] - cutoff)\n+                cutoff = self._now() - 60.0\n+                self._calls = [at for at in self._calls if at > cutoff]\n+        self._calls.append(self._now())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/sources/base.py",
+          "old_path": "data/src/data_pipeline/macro/sources/base.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -72,6 +72,15 @@ _DEFAULTS: Final[dict[str, tuple[str, str | None]]] = {\n }\n \n \n+#: 인증키가 들어 있는 환경변수 이름 전부 (FR-021).\n+#:\n+#: 오류·로그를 내보내기 전에 이 값들을 지운다. 이름을 한자리에 모아 두는 이유는, 원천이\n+#: 늘 때 지우는 쪽을 함께 고치지 않으면 새 키만 조용히 새기 때문이다.\n+API_KEY_ENV_NAMES: Final[tuple[str, ...]] = tuple(\n+    sorted({env for _, env in _DEFAULTS.values() if env})\n+)\n+\n+\n def _env_name(source_id: str, suffix: str) -> str:\n     return f\"MACRO_{source_id.upper()}_{suffix}\"\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/config.py",
+          "old_path": "data/src/data_pipeline/macro/config.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,10 +18,12 @@\n from __future__ import annotations\n \n import json\n-from typing import Any, Final, Protocol\n-from urllib.parse import urlencode\n+import os\n+from pathlib import Path\n+from typing import TYPE_CHECKING, Any, Final, Protocol\n+from urllib.parse import quote, quote_plus, urlencode\n \n-from data_pipeline.macro.config import SourceConfig, require_api_key\n+from data_pipeline.macro.config import API_KEY_ENV_NAMES, SourceConfig, require_api_key\n from data_pipeline.macro.sources.base import (\n     PermanentSourceError,\n     QuotaExhaustedError,\n@@ -36,6 +38,10 @@ _QUOTA_STATUS: Final[int] = 429\n _RETRYABLE_STATUS: Final[frozenset[int]] = frozenset({408, 500, 502, 503, 504})\n \n \n+if TYPE_CHECKING:\n+    from data_pipeline.macro.sources.base import RateLimiter\n+\n+\n class Fetcher(Protocol):\n     \"\"\"요청 하나를 보내고 본문을 문자열로 돌려준다.\"\"\"\n \n@@ -66,9 +72,13 @@ class RequestsFetcher:\n                 url, params=params, headers=headers, timeout=self._timeout\n             )\n         except requests.Timeout as error:\n-            raise TransientSourceError(f\"시간 초과: {_safe(url)}\") from error\n+            raise TransientSourceError(\n+                f\"시간 초과: {_safe(url)} / {_safe_cause(error)}\"\n+            ) from None\n         except requests.RequestException as error:\n-            raise TransientSourceError(f\"요청 실패: {_safe(url)}\") from error\n+            raise TransientSourceError(\n+                f\"요청 실패: {_safe(url)} / {_safe_cause(error)}\"\n+            ) from None\n \n         status = response.status_code\n         if status == _QUOTA_STATUS:\n@@ -81,12 +91,58 @@ class RequestsFetcher:\n         return response.text\n \n \n+#: 오류 메시지에서 키를 가릴 때 쓸 자리표.\n+_REDACTED: Final[str] = \"***\"\n+\n+#: 이보다 짧은 값은 가리지 않는다. 시험 환경의 ``ECOS_API_KEY=test`` 같은 값을 지우기\n+#: 시작하면 오류 문구에서 관계없는 낱말까지 함께 사라져 진단이 불가능해진다. 실제 인증키는\n+#: 네 원천 모두 훨씬 길다.\n+_MIN_SECRET_LENGTH: Final[int] = 12\n+\n+\n+def _secret_values() -> tuple[str, ...]:\n+    \"\"\"지금 환경에 들어 있는 인증키 값들.\n+\n+    **길이로 짐작하지 않고 실제 값으로 지운다.** 길이 규칙은 짧은 키를 그냥 통과시키고,\n+    긴 통계표 코드는 애꿎게 가린다 — 둘 다 틀리는 방향이다.\n+    \"\"\"\n+    return tuple(\n+        value\n+        for name in API_KEY_ENV_NAMES\n+        if len(value := os.environ.get(name, \"\").strip()) >= _MIN_SECRET_LENGTH\n+    )\n+\n+\n+def redact(text: str) -> str:\n+    \"\"\"인증키가 섞였을 수 있는 문자열을 오류·로그에 실을 모양으로 바꾼다 (FR-021).\n+\n+    URL 인코딩된 형태도 함께 지운다 — 관세청 키는 ``%2F`` 를 품은 채 주소에 들어가므로 원문만\n+    지우면 인코딩된 쪽이 남는다.\n+    \"\"\"\n+    cleaned = text\n+    for secret in _secret_values():\n+        for form in (secret, quote(secret, safe=\"\"), quote_plus(secret)):\n+            if form:\n+                cleaned = cleaned.replace(form, _REDACTED)\n+    return cleaned\n+\n+\n def _safe(url: str) -> str:\n     \"\"\"오류 메시지에 실을 경로. 키가 들어갈 수 있는 자리를 지운다.\"\"\"\n     if KEY_PLACEHOLDER in url:\n         return url\n-    parts = url.split(\"/\")\n-    return \"/\".join(part if len(part) < 20 else \"***\" for part in parts)\n+    return redact(url)\n+\n+\n+def _safe_cause(error: Exception) -> str:\n+    \"\"\"원인 예외를 오류 메시지에 실을 한 줄로.\n+\n+    **원인을 ``__cause__`` 로 매달지 않는다.** requests 는 실패한 주소를 메시지에 통째로\n+    담는데, 그 주소에는 질의 인자로 들어간 인증키가 있다. 연쇄로 매달면 우리 메시지를 아무리\n+    깨끗이 써도 트레이스백이 찍히는 순간 키가 로그에 남는다(FR-021). 대신 예외 이름과 지운\n+    메시지를 여기에 옮겨 담아 진단에 필요한 것은 잃지 않는다.\n+    \"\"\"\n+    return f\"{type(error).__name__}: {redact(str(error))}\"\n \n \n def fetch_text(\n@@ -153,3 +209,70 @@ def describe(config: SourceConfig, path: str, params: dict[str, str] | None) ->\n     \"\"\"무엇을 부를지 사람이 읽을 수 있게 적는다. **키는 넣지 않는다.**\"\"\"\n     query = f\"?{urlencode(params)}\" if params else \"\"\n     return f\"{config.base_url}/{path.lstrip('/')}{query}\"\n+\n+\n+class ThrottledFetcher:\n+    \"\"\"원천의 호출 한도를 지키며 보내는 :class:`Fetcher` 겉면 (FR-017a).\n+\n+    한도를 **호출 지점마다** 거는 대신 여기 한 곳에 두는 이유는, 지점이 다섯이고 주택가격은\n+    사슬의 표마다 한 번씩 더 부르기 때문이다. 한 군데라도 빠뜨리면 한도는 지켜지는 척만 한다.\n+\n+    셀 상한은 여기서 보지 않는다 — 요청이 몇 셀인지는 원천마다 세는 법이 다르고 그것을 아는\n+    것은 어댑터다. 어댑터가 :meth:`RateLimiter.check_request_size` 로 따로 묻는다.\n+    \"\"\"\n+\n+    def __init__(self, inner: Fetcher, limiter: RateLimiter) -> None:\n+        self._inner = inner\n+        self._limiter = limiter\n+\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str:\n+        self._limiter.acquire()\n+        return self._inner.get(url, params, headers)\n+\n+\n+class SampleFetcher:\n+    \"\"\"저장된 예시 응답을 읽는 :class:`Fetcher` (FR-022).\n+\n+    **개발 프로필에서만 쓰인다.** 인증키가 없거나 원천을 부를 수 없을 때 파이프라인 전체를\n+    돌려 보기 위한 것이며, 운영 경로에는 이 클래스로 가는 길이 없다(`scripts/ingest_macro.py`\n+    의 `build_fetcher` 참고).\n+\n+    **없는 표본을 빈 응답으로 대신하지 않는다.** 그렇게 하면 표본을 빠뜨린 지표가 \"원천이 값을\n+    주지 않았다\"로 보여, 준비가 덜 된 것과 원천이 비어 있는 것이 같은 모양이 된다.\n+\n+    파일은 ``{원천}/{이름}.json|xml`` 로 찾는다. 어느 파일을 고를지는 요청 주소와 인자에 든\n+    식별자로 정하며, 실제 원천의 주소 규칙을 흉내 내지 않는다 — 흉내 내면 원천이 주소를 바꿀\n+    때 예시까지 함께 깨져 개발이 멈춘다.\n+    \"\"\"\n+\n+    def __init__(self, root: Path) -> None:\n+        self._root = root\n+\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str:\n+        haystack = f\"{url} {params or {}}\"\n+        for path in sorted(self._root.rglob(\"*\")):\n+            if path.suffix not in {\".json\", \".xml\"} or not path.is_file():\n+                continue\n+            # 폴더명(원천 이름)으로는 고르지 않는다. 주소에 늘 원천 이름이 들어 있어\n+            # 그 원천의 첫 파일이 전부 잡히고, 뒤이어 터지는 대조 실패가 표본을 잘못\n+            # 골랐다는 사실 대신 \"등록표가 원천과 다르다\"처럼 읽힌다.\n+            if path.stem in haystack:\n+                return path.read_text(encoding=\"utf-8\")\n+        raise SampleDataMissing(\n+            f\"예시 자료에서 이 요청에 맞는 파일을 찾지 못했다: {url} {params or {}}.\"\n+            f\" {self._root} 아래에 표본을 둔다 — 빈 응답으로 대신하지 않는다\"\n+        )\n+\n+\n+class SampleDataMissing(FileNotFoundError):\n+    \"\"\"개발 프로필인데 그 요청에 맞는 예시 응답이 없다 (FR-022).\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/fetch.py",
+          "old_path": "data/src/data_pipeline/macro/fetch.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -52,6 +52,7 @@ from data_pipeline.macro.sources.base import (\n     MAX_MONTHS_CUSTOMS,\n     PermanentSourceError,\n     QuotaExhaustedError,\n+    RateLimiter,\n     SourceError,\n     SourceObservation,\n     split_months,\n@@ -275,9 +276,15 @@ def collect(\n \n     for source_id, members in by_source.items():\n         config = resolved.get(source_id) or load_source_config(source_id)\n+        # **한도는 원천 단위다.** 지표마다 새로 만들면 분당 창이 지표 수만큼 늘어나\n+        # 한도가 사실상 없는 것이 된다 (FR-017a). 겉면으로 감싸므로 아래의 모든 호출\n+        # 지점이 — 주택가격 사슬의 표마다 부르는 것까지 — 같은 한도를 지난다.\n+        throttled = transport.ThrottledFetcher(\n+            fetcher, RateLimiter(registry.source_policy(source_id))\n+        )\n         if source_id == SOURCE_CUSTOMS:\n             outcomes.extend(\n-                _collect_customs(members, fetcher, config, data_root, mode, today)\n+                _collect_customs(members, throttled, config, data_root, mode, today)\n             )\n             continue\n         quota_reached = False\n@@ -294,7 +301,7 @@ def collect(\n                     )\n                 )\n                 continue\n-            outcome = _collect_one(indicator, fetcher, config, data_root, mode, today)\n+            outcome = _collect_one(indicator, throttled, config, data_root, mode, today)\n             outcomes.append(outcome)\n             quota_reached = outcome.status == STATUS_QUOTA\n     return outcomes\n@@ -433,7 +440,10 @@ def _collect_customs(\n         for indicator in members\n     }\n     start, end = _window(members[0], mode, today)\n-    windows = split_months(_first_day(start), _first_day(end), MAX_MONTHS_CUSTOMS)\n+    # 상한은 등록표가 든다(FR-017a). 같은 수를 코드에도 두면 한쪽만 고쳐질 때\n+    # 등록표가 기록용으로 전락하고, 실제로 지키는 값이 무엇인지 알 수 없게 된다.\n+    limit = registry.source_policy(SOURCE_CUSTOMS).max_months_per_request\n+    windows = split_months(_first_day(start), _first_day(end), limit or MAX_MONTHS_CUSTOMS)\n     received_at = datetime.now(UTC)\n \n     for window in windows:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/ingest.py",
+          "old_path": "data/src/data_pipeline/macro/ingest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,10 +47,12 @@ from data_pipeline.macro.normalize import NormalizedObservation\n from data_pipeline.macro.registry import (\n     EXPECTED_INDICATOR_COUNT,\n     FIELD_IDS,\n+    LICENSE_SUSPENDED,\n     REVIEW_PENDING_RIGHTS,\n     REVIEW_VERIFIED,\n     IndicatorDefinition,\n     RegistryError,\n+    collectible,\n     nominal_weights,\n )\n from data_pipeline.macro.registry import (\n@@ -73,6 +75,13 @@ PUBLISHABLE_LICENSE_REVIEW_STATUSES: Final[frozenset[str]] = frozenset(\n )\n \"\"\"확인 완료와 명시된 권리 확인 대기만 발행할 수 있다.\"\"\"\n \n+BLOCK_ALL_SUSPENDED: Final[str] = \"ALL_SUSPENDED\"\n+\"\"\"수집 가능한 지표가 하나도 남지 않았다 (FR-016b).\n+\n+중단된 지표를 완결 기준에서 빼는 것은 나머지로 화면을 이어 가기 위해서다. 나머지가 없으면\n+뺄 것도 없다 — 이때 그냥 통과시키면 지표가 0개인 자료 버전이 발행되고, 폴인터가 그쪽으로\n+옮겨 가면서 멀쩡하던 직전 완결 버전이 화면에서 사라진다.\"\"\"\n+\n BLOCK_NOT_COLLECTED: Final[str] = \"NOT_COLLECTED\"\n \"\"\"등록표에 있는데 관측이 아예 오지 않았다. 유효 건수 0 과 구분한다 — 전자는 수집이 돌지\n 않았다는 뜻이고 후자는 받았으나 변환하지 못했다는 뜻이라 대응이 다르다.\"\"\"\n@@ -115,6 +124,11 @@ class PublicationDecision:\n     baselines: tuple[Baseline, ...]\n     #: 지표별 유효 변환값 건수. 보류 사유를 사람이 읽을 때의 근거다.\n     valid_month_counts: Mapping[str, int]\n+    #: 이용이 중단되어 이 버전에 넣지 않은 지표와 그 사유 (FR-016b, 원칙 VI).\n+    #:\n+    #: 빈 자리로 두지 않고 함께 내보내는 이유는, 조용히 사라지면 화면이 \"원래 없던 지표\"와\n+    #: \"빠진 지표\"를 같게 보여 주기 때문이다. 이미 발행한 버전에서 지우지는 않는다.\n+    suspended: tuple[tuple[str, str], ...] = ()\n \n     @property\n     def can_publish(self) -> bool:\n@@ -164,8 +178,15 @@ def gate(\n     except RegistryError as error:\n         raise PublishError(f\"발행 등록표가 유효하지 않다: {error}\") from error\n \n+    # **중단된 지표는 완결 기준에서 뺀다**(FR-016b). FR-011 의 \"17개 전부\"를 글자 그대로 읽으면\n+    # 지표 하나가 중단되는 순간 영영 발행할 수 없고, 그러면 중단이 플랫폼을 통째로 멈춘다.\n+    # spec 이 두바이유를 두고 \"빠져도 나머지 6개 분야 검색은 유지된다\"고 적은 것이 이 뜻이다.\n+    # 빠진 지표는 조용히 사라지지 않고 `suspended` 로 함께 나간다(원칙 VI).\n     blockers: list[PublicationBlocker] = []\n-    for indicator in indicators:\n+    live = collectible(indicators)\n+    if not live:\n+        return (PublicationBlocker(SCOPE_ALL, BLOCK_ALL_SUSPENDED),)\n+    for indicator in live:\n         if indicator.license_review_status not in PUBLISHABLE_LICENSE_REVIEW_STATUSES:\n             blockers.append(PublicationBlocker(indicator.indicator_id, BLOCK_LICENSE_UNVERIFIED))\n         received = observations.get(indicator.indicator_id)\n@@ -187,7 +208,9 @@ def _baseline_for_scope(\n     물린 것이다(data-model §3.3).\n     \"\"\"\n     if not members:\n-        raise PublishError(f\"{scope_id}에 속한 지표가 없다\")\n+        # 그 분야의 지표가 전부 중단된 경우다. 오류가 아니라 자료 없음이다 — 분야가 사라진\n+        # 것이 아니라 지금 볼 값이 없는 것이고, 화면은 그 사실을 보여야 한다(FR-016b).\n+        return Baseline(scope_id=scope_id, reference_month=None, held_back_by=())\n \n     month_sets = [valid[indicator_id] for indicator_id in members]\n     common = frozenset.intersection(*month_sets) if all(month_sets) else frozenset()\n@@ -212,10 +235,13 @@ def baselines(\n \n     순서는 :data:`~data_pipeline.macro.registry.FIELD_IDS` 를 따르고 마지막이 전체다.\n     \"\"\"\n-    valid = _valid_by_indicator(indicators, observations)\n+    # 중단된 지표는 새 자료 버전에 들어가지 않으므로 기준월에도 세지 않는다(FR-016b).\n+    # 세면 이미 빠진 지표가 기준월을 뒤로 물려 멀쩡한 분야까지 과거로 끌어내린다.\n+    live = collectible(indicators)\n+    valid = _valid_by_indicator(live, observations)\n \n     members_by_field: dict[str, list[str]] = {field_id: [] for field_id in FIELD_IDS}\n-    for indicator in indicators:\n+    for indicator in live:\n         if indicator.field_id not in members_by_field:\n             raise PublishError(\n                 f\"{indicator.indicator_id}의 분야가 7개 밖이다: {indicator.field_id}\"\n@@ -225,7 +251,7 @@ def baselines(\n     result = [\n         _baseline_for_scope(field_id, members_by_field[field_id], valid) for field_id in FIELD_IDS\n     ]\n-    result.append(_baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in indicators], valid))\n+    result.append(_baseline_for_scope(SCOPE_ALL, [i.indicator_id for i in live], valid))\n     return tuple(result)\n \n \n@@ -248,6 +274,11 @@ def plan_publication(\n         blockers=blockers,\n         baselines=() if blockers else baselines(indicators, observations),\n         valid_month_counts=counts,\n+        suspended=tuple(\n+            (i.indicator_id, i.license_suspended_reason or \"\")\n+            for i in indicators\n+            if i.license_status == LICENSE_SUSPENDED\n+        ),\n     )\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/publish.py",
+          "old_path": "data/src/data_pipeline/macro/publish.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,9 @@\n \n from __future__ import annotations\n \n-from dataclasses import dataclass\n+from collections.abc import Sequence\n+from dataclasses import dataclass, replace\n+from datetime import date\n from decimal import Decimal\n from typing import Final\n \n@@ -72,6 +74,42 @@ REVIEW_VERIFIED: Final[str] = \"VERIFIED\"\n REVIEW_PENDING_RIGHTS: Final[str] = \"PENDING_RIGHTS\"\n REVIEW_UNVERIFIED: Final[str] = \"UNVERIFIED\"\n \n+#: 이용 허락 상태. 스키마의 `ck_macro_indicator_license_status` 와 같은 값이다.\n+#:\n+#: ``SUSPENDED`` 는 **원천이 조건을 바꾸거나 권한을 거둬들인 상태**다(FR-016b). 그 지표의 새\n+#: 수집과 새 자료 버전 편입을 멈추지만 **이미 발행한 버전은 지우지 않는다** — 지우면 그 버전을\n+#: 참조한 과거 검색 결과의 재현이 깨진다. 중단은 \"앞으로 안 쓴다\"이지 \"없던 일로 한다\"가 아니다.\n+LICENSE_ALLOWED: Final[str] = \"ALLOWED\"\n+LICENSE_RESTRICTED: Final[str] = \"RESTRICTED\"\n+LICENSE_SUSPENDED: Final[str] = \"SUSPENDED\"\n+LICENSE_UNKNOWN: Final[str] = \"UNKNOWN\"\n+\n+LICENSE_STATUSES: Final[tuple[str, ...]] = (\n+    LICENSE_ALLOWED,\n+    LICENSE_RESTRICTED,\n+    LICENSE_SUSPENDED,\n+    LICENSE_UNKNOWN,\n+)\n+\n+#: 새 수집과 새 자료 버전에 넣을 수 있는 이용 허락 상태.\n+COLLECTIBLE_LICENSE_STATUSES: Final[frozenset[str]] = frozenset({LICENSE_ALLOWED})\n+\n+#: 작성기관이 상업적 이용을 허락했는가 (FR-016, FR-018).\n+#:\n+#: **셋으로 나눈다. 불리언이면 \"모른다\"를 적을 수 없다.** 제한된 것과 모르는 것은 우리가 할\n+#: 일이 정반대다 — 제한된 계열은 어느 경로로도 내보내지 않고(FR-018), 모르는 계열은 확인\n+#: 대기로 두고 수집·공개를 이어간다(FR-016a). 둘을 거짓 하나로 묶으면 두바이유가 내보내기에서\n+#: 빠지고, 참 하나로 묶으면 제한 계열이 파일로 새어 나간다.\n+COMMERCIAL_ALLOWED: Final[str] = \"ALLOWED\"\n+COMMERCIAL_RESTRICTED: Final[str] = \"RESTRICTED\"\n+COMMERCIAL_UNKNOWN: Final[str] = \"UNKNOWN\"\n+\n+COMMERCIAL_USE_STATES: Final[tuple[str, ...]] = (\n+    COMMERCIAL_ALLOWED,\n+    COMMERCIAL_RESTRICTED,\n+    COMMERCIAL_UNKNOWN,\n+)\n+\n #: 정기 재조회 구간 N (FR-017). **잠정값이며 미확인으로 닫는다** — 근거는 아래에 있다.\n DEFAULT_REFRESH_MONTHS_N: Final[int] = 3\n \n@@ -146,6 +184,20 @@ class SourcePolicy:\n     max_months_per_request: int | None\n     #: 한도의 출처. 어디서 읽었는지 없으면 나중에 이 값이 추측인지 확인값인지 갈리지 않는다.\n     basis: str\n+    #: 분당 호출 상한. `None` 이면 원천이 수치로 밝히지 않았다 (FR-017a).\n+    #:\n+    #: 위의 `rate_limit` 은 사람이 읽는 문장이고 이것은 **기계가 지키는 수치**다. 문장만 두면\n+    #: 한도가 적혀 있을 뿐 아무도 지키지 않는다.\n+    max_calls_per_minute: int | None = None\n+    #: 요청 하나가 담을 수 있는 셀 수. `None` 이면 상한이 없다.\n+    max_cells_per_request: int | None = None\n+    #: 연달아 부를 때 최소로 둘 간격(초).\n+    #:\n+    #: 수치 한도를 밝히지 않은 원천에 쓴다. 한도가 없다는 말은 마음껏 불러도 된다는 뜻이\n+    #: 아니라 **과다 호출 시 차단할 수 있다**는 뜻이다(pd11). 차단되면 그 지표의 자료가\n+    #: 끊기므로 보수적으로 벌린다. 근거 있는 수가 아니라 \"적당히\"를 판정 가능한 수로 바꾼\n+    #: 것이며 실측 뒤 조정한다(원칙 IX).\n+    min_interval_seconds: float = 0.0\n \n     @property\n     def max_attempts(self) -> int:\n@@ -162,6 +214,7 @@ SOURCE_POLICIES: Final[dict[str, SourcePolicy]] = {\n     SOURCE_ECOS: SourcePolicy(\n         source_id=SOURCE_ECOS,\n         rate_limit=\"수치 한도 없음, 과다 호출 시 제한 가능\",\n+        min_interval_seconds=0.2,\n         max_months_per_request=None,\n         basis=\"한국은행 오픈API 이용안내에 호출 수 상한이 수치로 없다 (pd11 §1)\",\n     ),\n@@ -170,10 +223,13 @@ SOURCE_POLICIES: Final[dict[str, SourcePolicy]] = {\n         rate_limit=\"분당 200회, 요청당 40,000셀\",\n         max_months_per_request=None,\n         basis=\"국가통계포털 공유서비스 이용약관의 공표 한도 (FR-017, pd11 §2)\",\n+        max_calls_per_minute=200,\n+        max_cells_per_request=40_000,\n     ),\n     SOURCE_CUSTOMS: SourcePolicy(\n         source_id=SOURCE_CUSTOMS,\n         rate_limit=\"수치 한도 없음, 과다 호출 시 제한 가능\",\n+        min_interval_seconds=0.2,\n         max_months_per_request=12,\n         basis=\"공공데이터포털이 호출 수를 수치로 밝히지 않는다. 조회 기간 12개월 상한은\"\n         \" 실제 응답으로 확인했다 (pd11 §4)\",\n@@ -181,6 +237,7 @@ SOURCE_POLICIES: Final[dict[str, SourcePolicy]] = {\n     SOURCE_OECD: SourcePolicy(\n         source_id=SOURCE_OECD,\n         rate_limit=\"수치 한도 없음, 과다 호출 시 제한 가능\",\n+        min_interval_seconds=0.2,\n         max_months_per_request=None,\n         basis=\"SDMX 공개 종단점에 공표된 수치 한도가 없다 (pd11 §3)\",\n     ),\n@@ -224,6 +281,31 @@ class IndicatorDefinition:\n     attribution: str\n     license_status: str\n     license_review_status: str\n+    #: 작성기관의 상업적 이용 허락 (:data:`COMMERCIAL_USE_STATES` 중 하나).\n+    #:\n+    #: **제공기관이 아니라 작성기관을 본다**(FR-016). 한국은행이 내보내는 두바이유의 저작권은\n+    #: 국제통화기금에 있고, 제공 창구가 열려 있다는 사실이 이용 허락은 아니다.\n+    commercial_use: str\n+    #: 원자료를 그대로 제3자에게 넘기는 것에 걸린 제한 (FR-018).\n+    #:\n+    #: 우리는 어느 지표든 원자료 재배포를 하지 않으므로 이 값이 동작을 바꾸지는 않는다. 다만\n+    #: **조건을 읽고 적어 두었다는 사실**이 남아야 나중에 경로를 늘릴 때 다시 뒤지지 않는다.\n+    redistribution_rule: str\n+    #: 006 이 파일로 내보낼 때 함께 실어야 할 이용 범위 문구 (FR-018).\n+    #:\n+    #: 화면은 출처·작성기관만 붙이면 되지만 내보내기는 원자료가 파일로 빠져나가는 경로라\n+    #: 받는 사람이 무엇을 할 수 있는지 함께 가야 한다. 지표마다 조건이 달라 한 문구로 묶을 수\n+    #: 없다 — 묶으면 가장 느슨한 쪽이나 가장 빡빡한 쪽 하나가 전부를 대표하게 된다.\n+    export_notice: str\n+    #: 이용 조건을 마지막으로 확인한 날 (FR-018a). 확인하지 않았으면 ``None`` 이다.\n+    license_verified_on: date | None\n+    #: 이 날까지는 다시 확인해야 한다 (FR-018a).\n+    #:\n+    #: 한국은행 인증키는 발급일로부터 2년이고 만료되면 수집이 끊긴다. 나머지 원천은 만기가\n+    #: 없지만 약관·서비스 명세가 개정되면 조건이 달라질 수 있어 주기를 둔다. **지나도 수집을\n+    #: 막지 않는다** — 막으면 확인이 하루 늦은 것이 자료를 끊는 일이 되어, 확인하라는 신호가\n+    #: 자료를 끊는 벌이 된다. 대신 재확인 대상으로 드러난다(:func:`reverification_due`).\n+    license_reverify_by: date | None\n     series_start: str\n     revision_history_available: bool\n     #: 원천이 **몇 달 뒤늦게** 값을 내는가. 오늘이 2026-09 일 때 최신 대상월이 2026-07 이면 2다.\n@@ -253,6 +335,12 @@ class IndicatorDefinition:\n     #: 온다 — 주택가격은 2000-01 이 아니라 2021-06 부터만 온다. 그런데 응답은 정상이고\n     #: 값도 멀쩡해서 짧아진 줄 모른다. 그래서 어댑터가 이 값을 보고 거절한다(FR-010).\n     link_chain: tuple[LinkedTable, ...] = ()\n+    #: 이용이 중단된 날과 사유 (FR-016b). 중단이면 **둘 다 있어야 한다**.\n+    #:\n+    #: 사유 없이 지표만 사라지면 나중에 되돌릴 근거가 없다. 스키마의\n+    #: `ck_macro_indicator_suspension` 이 같은 것을 DB 쪽에서 막는다.\n+    license_suspended_on: date | None = None\n+    license_suspended_reason: str | None = None\n     # 아래 셋은 이 작업의 범위가 아니다. 모듈 docstring 참고.\n     published_precision: int | None = None\n     minimum_effective_scale: str | None = None\n@@ -268,6 +356,54 @@ _NO_RELEASE_DATE: Final[str] = (\n )\n _TABLE_UPDATED_AT: Final[str] = \"LST_CHN_DE 는 통계표 갱신일이며 관측치별 발표일이 아니다\"\n \n+#: 이용 조건을 확인한 날 (FR-018a). pd11 이 네 원천의 약관 원문을 읽은 날이다.\n+LICENSE_VERIFIED_ON: Final[date] = date(2026, 9, 17)\n+\n+#: 한국은행 인증키 만료 전 재확인 시한 (FR-018a, pd11 §1 약관 제4조 ③).\n+#:\n+#: 이용기간은 발급일로부터 2년이다. 발급일을 기록해 두지 않았으므로 **확인일에서 2년**으로\n+#: 잡는다 — 실제 발급일은 그보다 앞이라 이 시한은 안전한 쪽으로 틀린다. 정확한 날짜를 알게\n+#: 되면 그때 좁힌다.\n+ECOS_REVERIFY_BY: Final[date] = date(2028, 9, 17)\n+\n+#: 만기가 없는 원천의 재확인 주기 (FR-018a).\n+#:\n+#: 약관·서비스 명세가 개정되면 조건이 달라질 수 있는데 개정을 통보받을 경로가 없다. 그래서\n+#: 시한을 두고 사람이 들여다보게 한다. 1년은 근거 있는 값이 아니라 \"언젠가\"를 판정 가능한\n+#: 날짜로 바꾼 것이다(원칙 IX).\n+ANNUAL_REVERIFY_BY: Final[date] = date(2027, 9, 17)\n+\n+#: 원천별 재배포 조건과 내보내기 문구 (FR-018). 근거는 pd11 의 약관 원문 확인이다.\n+_ECOS_REDISTRIBUTION: Final[str] = (\n+    \"출처 표시 의무(약관 제7조 ②). 상업적 이용을 제한하는 통계는 작성기관 승인이 필요하다\"\n+    \"(제5조 ①). 원자료를 그대로 제3자에게 넘기지 않는다\"\n+)\n+_KOSIS_REDISTRIBUTION: Final[str] = (\n+    \"출처 표시 조건으로 이용한다. 라이선스 제한이 있는 국제통계·북한통계는 예외인데 여기 10개는\"\n+    \" 해당하지 않는다. 원자료를 그대로 제3자에게 넘기지 않는다\"\n+)\n+_CUSTOMS_REDISTRIBUTION: Final[str] = (\n+    \"공공데이터포털 이용허락범위 제한 없음. 출처는 관세청이다\"\n+)\n+_OECD_REDISTRIBUTION: Final[str] = (\n+    \"재배포·하위 라이선스에도 같은 출처 표시 의무를 승계시켜야 한다(약관 2024-07-01 개정).\"\n+    \" 표기 형식은 OECD (연도), (데이터셋 이름), (출처) DOI 또는 URL (접근일)\"\n+)\n+\n+_ECOS_EXPORT_NOTICE: Final[str] = (\n+    \"출처: 한국은행 경제통계시스템(ECOS). 상업적 이용 시 작성기관의 조건을 따른다\"\n+)\n+_KOSIS_EXPORT_NOTICE: Final[str] = (\n+    \"출처: 국가통계포털(KOSIS). 출처를 표시하면 상업적 이용을 포함해 자유롭게 쓸 수 있다\"\n+)\n+_CUSTOMS_EXPORT_NOTICE: Final[str] = (\n+    \"출처: 관세청 수출입총괄. 이용허락범위 제한이 없다\"\n+)\n+_OECD_EXPORT_NOTICE: Final[str] = (\n+    \"출처: OECD Composite Leading Indicators. 상업적 이용을 포함해 쓸 수 있으나 다시 넘길 때도\"\n+    \" 같은 출처 표시를 함께 실어야 한다\"\n+)\n+\n \n #: 국가통계포털 기관 코드 (pd11 §2).\n ORG_STATISTICS_KOREA: Final[str] = \"101\"\n@@ -390,8 +526,13 @@ def _kosis(\n         transform_rule=transform_rule,\n         agency=agency,\n         attribution=_KOSIS_ATTRIBUTION,\n-        license_status=\"ALLOWED\",\n+        license_status=LICENSE_ALLOWED,\n         license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_KOSIS_REDISTRIBUTION,\n+        export_notice=_KOSIS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n         series_start=series_start,\n         revision_history_available=True,\n         publication_lag_months=publication_lag_months,\n@@ -422,7 +563,13 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=None, item_code=\"expDlr\", org_id=None, classification=(),\n         raw_unit=\"미국 달러\", transformed_unit=\"%\",\n         transform_rule=TRANSFORM_YOY, agency=\"관세청\", attribution=\"관세청 수출입총괄\",\n-        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_CUSTOMS_REDISTRIBUTION,\n+        export_notice=_CUSTOMS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n+        series_start=\"1989-01\",\n         revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n     ),\n@@ -431,7 +578,13 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=None, item_code=\"impDlr\", org_id=None, classification=(),\n         raw_unit=\"미국 달러\", transformed_unit=\"%\",\n         transform_rule=TRANSFORM_YOY, agency=\"관세청\", attribution=\"관세청 수출입총괄\",\n-        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_CUSTOMS_REDISTRIBUTION,\n+        export_notice=_CUSTOMS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n+        series_start=\"1989-01\",\n         revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n     ),\n@@ -440,8 +593,15 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=None, item_code=\"balPayments\", org_id=None, classification=(),\n         raw_unit=\"미국 달러\",\n         transformed_unit=\"미국 달러\", transform_rule=TRANSFORM_OFFICIAL_AMOUNT, agency=\"관세청\",\n-        attribution=\"관세청 수출입총괄\", license_status=\"ALLOWED\",\n-        license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n+        attribution=\"관세청 수출입총괄\",\n+        license_status=LICENSE_ALLOWED,\n+        license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_CUSTOMS_REDISTRIBUTION,\n+        export_notice=_CUSTOMS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n+        series_start=\"1989-01\",\n         revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"원천 제공값이다. 수출에서 수입을 빼 만들지 않는다\",\n     ),\n@@ -453,8 +613,14 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=\"DT_1DA9001S\", item_code=\"T80\", org_id=ORG_STATISTICS_KOREA,\n         classification=((\"objL1\", \"00\"),), raw_unit=\"%\", transformed_unit=\"%\",\n         transform_rule=TRANSFORM_SEASONAL_RATE, agency=_STATISTICS_KOREA,\n-        attribution=_KOSIS_ATTRIBUTION, license_status=\"ALLOWED\",\n-        license_review_status=REVIEW_VERIFIED, series_start=\"1999-06\",\n+        attribution=_KOSIS_ATTRIBUTION,\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_KOSIS_REDISTRIBUTION,\n+        export_notice=_KOSIS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n+        series_start=\"1999-06\",\n         revision_history_available=True, publication_lag_months=1, release_rule=_TABLE_UPDATED_AT,\n         missing_rule=\"원천이 계절조정한 값을 그대로 쓴다. 우리가 계절조정하지 않는다\",\n     ),\n@@ -466,7 +632,18 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=\"902Y003\", item_code=\"010102\", org_id=None, classification=(),\n         raw_unit=\"달러/배럴\",\n         transformed_unit=\"달러/배럴\", transform_rule=TRANSFORM_MONTH_AVERAGE,\n-        agency=\"국제통화기금(IMF)\", attribution=_ECOS_ATTRIBUTION, license_status=\"ALLOWED\",\n+        agency=\"국제통화기금(IMF)\", attribution=_ECOS_ATTRIBUTION,\n+        license_status=LICENSE_ALLOWED,\n+        # 작성기관이 국제통화기금이라 한국은행 약관의 상업 이용 제한이 이 계열에\n+        # 걸리는지 물을 창구가 없다(pd11 §1). 제한된 것이 아니라 **모르는 것**이므로\n+        # RESTRICTED 가 아니라 UNKNOWN 이다 — RESTRICTED 로 적으면 내보내기에서 빠지는데\n+        # 그것은 확인한 사실이 아니다.\n+        commercial_use=COMMERCIAL_UNKNOWN,\n+        redistribution_rule=_ECOS_REDISTRIBUTION,\n+        export_notice=_ECOS_EXPORT_NOTICE\n+        + \" 이 계열의 작성기관은 국제통화기금이며 상업적 이용 조건을 확인하지 못했다\",\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ECOS_REVERIFY_BY,\n         # 한국은행 약관은 상업 이용 제한 계열에 작성기관 승인을 요구하는데, 이 계열이 제한\n         # 대상인지 물을 창구가 없다(pd11 §1). 조건 자체를 모르는 UNVERIFIED 와 구분해 두고\n         # 쓴다 — 하나로 묶으면 발행이 보류되어 나머지 16개까지 멈춘다.\n@@ -479,8 +656,14 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         primary_source=SOURCE_ECOS, table_code=\"817Y002\", item_code=\"010200000\", org_id=None,\n         classification=(), source_cycle=CYCLE_DAILY, raw_unit=\"연%\",\n         transformed_unit=\"연%\", transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\",\n-        attribution=_ECOS_ATTRIBUTION, license_status=\"ALLOWED\",\n-        license_review_status=REVIEW_VERIFIED, series_start=\"1998-11\",\n+        attribution=_ECOS_ATTRIBUTION,\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_ECOS_REDISTRIBUTION,\n+        export_notice=_ECOS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ECOS_REVERIFY_BY,\n+        series_start=\"1998-11\",\n         revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"일별 계열이다. 그 달 마지막 거래일 값을 쓰고 휴장일 값을 만들지 않는다\",\n     ),\n@@ -491,7 +674,13 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=\"731Y004\", item_code=\"0000001/0000200\", org_id=None, classification=(),\n         raw_unit=\"원\", transformed_unit=\"원\",\n         transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\", attribution=_ECOS_ATTRIBUTION,\n-        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1964-05\",\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_ECOS_REDISTRIBUTION,\n+        export_notice=_ECOS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ECOS_REVERIFY_BY,\n+        series_start=\"1964-05\",\n         revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"항목2 0000200 말일자료다. 평균자료(0000100)와 섞지 않는다\",\n     ),\n@@ -500,8 +689,13 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         primary_source=SOURCE_KOSIS, table_code=\"DT_30404_C012\", item_code=\"sales\",\n         org_id=ORG_REAL_ESTATE_BOARD, classification=((\"objL1\", \"00\"), (\"objL2\", \"a0\")),\n         raw_unit=\"2026.6=100\", transformed_unit=\"%\", transform_rule=TRANSFORM_MOM,\n-        agency=\"한국부동산원\", attribution=_KOSIS_ATTRIBUTION, license_status=\"ALLOWED\",\n-        license_review_status=REVIEW_VERIFIED,\n+        agency=\"한국부동산원\", attribution=_KOSIS_ATTRIBUTION,\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_KOSIS_REDISTRIBUTION,\n+        export_notice=_KOSIS_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n         # 현행 표 하나는 2021-06 부터지만 연결 사슬을 거치면 2000-01 까지 닿는다.\n         series_start=\"2000-01\",\n         revision_history_available=True, publication_lag_months=2, release_rule=_TABLE_UPDATED_AT,\n@@ -514,7 +708,13 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         table_code=\"OECD.SDD.STES,DSD_STES@DF_CLI\", item_code=_G20_CLI_KEY, org_id=None,\n         classification=(), raw_unit=\"지수\", transformed_unit=\"%\", transform_rule=TRANSFORM_YOY,\n         agency=\"경제협력개발기구(OECD)\", attribution=\"OECD Composite Leading Indicators\",\n-        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1961-01\",\n+        license_status=LICENSE_ALLOWED, license_review_status=REVIEW_VERIFIED,\n+        commercial_use=COMMERCIAL_ALLOWED,\n+        redistribution_rule=_OECD_REDISTRIBUTION,\n+        export_notice=_OECD_EXPORT_NOTICE,\n+        license_verified_on=LICENSE_VERIFIED_ON,\n+        license_reverify_by=ANNUAL_REVERIFY_BY,\n+        series_start=\"1961-01\",\n         revision_history_available=True, publication_lag_months=1,\n         release_rule=\"응답 헤더 Last-Modified 를 데이터셋 갱신일로 쓴다.\"\n         \" SDMX 헤더의 Prepared 는 응답 생성 시각이라 개정 식별자로 쓰지 않는다\",\n@@ -609,6 +809,41 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:\n                 f\"{indicator.indicator_id}의 공표 지연이 음수다:\"\n                 f\" {indicator.publication_lag_months}. 원천이 미래를 낼 수는 없다\"\n             )\n+        if indicator.license_status not in LICENSE_STATUSES:\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}의 이용 허락 상태가 {', '.join(LICENSE_STATUSES)}\"\n+                f\" 밖이다: {indicator.license_status}\"\n+            )\n+        if indicator.commercial_use not in COMMERCIAL_USE_STATES:\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}의 상업 이용 상태가\"\n+                f\" {', '.join(COMMERCIAL_USE_STATES)} 밖이다: {indicator.commercial_use}\"\n+            )\n+        # 중단은 사유와 시점이 함께 남아야 한다(FR-016b). 왜 빠졌는지 없이 지표만 사라지면\n+        # 나중에 되돌릴 근거가 없다. 스키마의 ck_macro_indicator_suspension 과 같은 규칙이다.\n+        if indicator.license_status == LICENSE_SUSPENDED and not (\n+            indicator.license_suspended_on and indicator.license_suspended_reason\n+        ):\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}가 중단인데 사유나 시점이 없다.\"\n+                \" 왜 빠졌는지 없이 지표만 사라지면 되돌릴 근거가 없다\"\n+            )\n+        if indicator.license_status != LICENSE_SUSPENDED and (\n+            indicator.license_suspended_on or indicator.license_suspended_reason\n+        ):\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}가 중단이 아닌데 중단 기록이 남아 있다\"\n+            )\n+        # 상업 이용이 제한된 계열은 어느 소비 경로로도 내보내지 않는다(FR-018). 내보낼 수\n+        # 없는 것을 수집·발행만 계속하면 쓰지 못할 자료가 쌓인다.\n+        if (\n+            indicator.commercial_use == COMMERCIAL_RESTRICTED\n+            and indicator.license_status == LICENSE_ALLOWED\n+        ):\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}는 상업 이용이 제한됐는데 이용 허락이 ALLOWED 다.\"\n+                \" 제한된 계열은 어느 경로로도 내보내지 않으므로 허락 상태를 함께 낮춘다\"\n+            )\n         if indicator.primary_source not in SOURCE_POLICIES:\n             raise RegistryError(\n                 f\"{indicator.indicator_id}의 원천 {indicator.primary_source!r} 에 호출 규칙이\"\n@@ -655,3 +890,67 @@ def by_field() -> dict[str, tuple[IndicatorDefinition, ...]]:\n     for indicator in INDICATORS:\n         grouped[indicator.field_id].append(indicator)\n     return {field_id: tuple(members) for field_id, members in grouped.items()}\n+\n+\n+def collectible(indicators: Sequence[IndicatorDefinition] = INDICATORS) -> tuple[\n+    IndicatorDefinition, ...\n+]:\n+    \"\"\"새로 수집하고 새 자료 버전에 넣을 수 있는 지표만 (FR-016b).\n+\n+    중단된 지표는 빠진다. **이미 발행한 버전에서 지우지는 않는다** — 지우면 그 버전을 참조한\n+    과거 검색 결과의 재현이 깨진다(원칙 VIII). 중단은 \"앞으로 안 쓴다\"이지 \"없던 일로 한다\"가\n+    아니다.\n+    \"\"\"\n+    return tuple(\n+        indicator\n+        for indicator in indicators\n+        if indicator.license_status in COLLECTIBLE_LICENSE_STATUSES\n+    )\n+\n+\n+def suspended(indicators: Sequence[IndicatorDefinition] = INDICATORS) -> tuple[\n+    IndicatorDefinition, ...\n+]:\n+    \"\"\"이용이 중단된 지표. 조회 응답이 \"빠진 상태임\"을 드러내는 데 쓴다 (FR-016b, 원칙 VI).\"\"\"\n+    return tuple(\n+        indicator\n+        for indicator in indicators\n+        if indicator.license_status == LICENSE_SUSPENDED\n+    )\n+\n+\n+def suspend(\n+    indicator: IndicatorDefinition, *, reason: str, on: date\n+) -> IndicatorDefinition:\n+    \"\"\"지표 하나를 중단 상태로 바꾼 사본을 낸다 (FR-016b).\n+\n+    사유를 **인자로 받아야만** 만들어진다. 기본값을 두면 사유 없는 중단이 생기고, 그러면\n+    나중에 왜 빠졌는지 답할 근거가 사라진다.\n+    \"\"\"\n+    if not reason.strip():\n+        raise RegistryError(f\"{indicator.indicator_id} 중단에 사유가 없다\")\n+    return replace(\n+        indicator,\n+        license_status=LICENSE_SUSPENDED,\n+        license_suspended_on=on,\n+        license_suspended_reason=reason,\n+    )\n+\n+\n+def reverification_due(\n+    indicators: Sequence[IndicatorDefinition] = INDICATORS, *, on: date\n+) -> tuple[IndicatorDefinition, ...]:\n+    \"\"\"``on`` 기준으로 이용 조건·인증 자격을 다시 확인해야 하는 지표 (FR-018a).\n+\n+    **지났다고 수집을 막지 않는다.** 막으면 확인이 하루 늦은 것이 자료를 끊는 일이 되어,\n+    확인하라는 신호가 자료를 끊는 벌이 된다. 드러내는 데까지가 이 함수의 일이고, 확인해 보니\n+    조건이 달라졌으면 그때 :func:`suspend` 로 넘긴다.\n+\n+    시한을 적지 않은 지표(``license_reverify_by`` 가 ``None``)는 **확인할 시점을 정하지 못한\n+    것**이므로 늘 대상이다. 시한 없음을 \"확인 안 해도 됨\"으로 읽으면 그 지표만 영영 빠진다.\n+    \"\"\"\n+    return tuple(\n+        indicator\n+        for indicator in indicators\n+        if indicator.license_reverify_by is None or indicator.license_reverify_by <= on\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -187,7 +187,10 @@ def register_calculation_version(\n                      \"table_code, item_code, org_id, classification, source_cycle, \"\n                      \"series_start, link_chain, raw_unit, transformed_unit, transform_rule, \"\n                      \"release_rule, break_link_rule, missing_rule, agency, attribution, \"\n-                     \"license_status, license_review_status, published_precision, \"\n+                     \"license_status, license_review_status, license_verified_at, \"\n+                     \"license_suspended_at, license_suspended_reason, \"\n+                     \"commercial_use, redistribution_rule, export_notice, \"\n+                     \"license_reverify_by, published_precision, \"\n                      \"refresh_months_n, nominal_weight, trading_calendar, \"\n                      \"publication_lag_months, revision_history_available) VALUES \"\n                      \"(:registry, :indicator, :field, :source, :table_code, :item_code, \"\n@@ -195,7 +198,10 @@ def register_calculation_version(\n                      f\"{links_expression}, :raw_unit, :transformed_unit, :transform_rule, \"\n                      \":release_rule, \"\n                      \":break_link_rule, :missing_rule, :agency, :attribution, :license_status, \"\n-                     f\":license_review_status, :precision, :refresh, {weight_expression}, \"\n+                     \":license_review_status, :license_verified_at, \"\n+                     \":license_suspended_at, :license_suspended_reason, \"\n+                     \":commercial_use, :redistribution_rule, :export_notice, \"\n+                     f\":license_reverify_by, :precision, :refresh, {weight_expression}, \"\n                      \":trading_calendar, :publication_lag, :revision_history)\"),\n                 {\"registry\": registry_id, \"indicator\": indicator.indicator_id,\n                  \"field\": indicator.field_id, \"source\": indicator.primary_source,\n@@ -214,6 +220,15 @@ def register_calculation_version(\n                  \"attribution\": indicator.attribution,\n                  \"license_status\": indicator.license_status,\n                  \"license_review_status\": indicator.license_review_status,\n+                 # 중단은 사유와 시점이 함께 가야 한다 — 스키마의 ck_macro_indicator_suspension\n+                 # 이 그렇게 잡혀 있어, 빼면 중단된 지표 하나가 발행 전체를 되돌린다(FR-016b).\n+                 \"license_verified_at\": indicator.license_verified_on,\n+                 \"license_suspended_at\": indicator.license_suspended_on,\n+                 \"license_suspended_reason\": indicator.license_suspended_reason,\n+                 \"commercial_use\": indicator.commercial_use,\n+                 \"redistribution_rule\": indicator.redistribution_rule,\n+                 \"export_notice\": indicator.export_notice,\n+                 \"license_reverify_by\": indicator.license_reverify_by,\n                  \"precision\": indicator.published_precision,\n                  \"refresh\": indicator.refresh_months_n,\n                  \"weight\": json.dumps(str(chosen_weights[indicator.indicator_id])),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/versioning.py",
+          "old_path": "data/src/data_pipeline/macro/versioning.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,430 @@\n+\"\"\"이용 조건 준수 테스트 (T062) — FR-016·FR-016a·FR-016b·FR-017a·FR-018·FR-018a·FR-021.\n+\n+네 가지를 본다. 한도 초과 요청이 만들어지지 않는가, 권리 미확인 지표가 공개 버전에 들어가지\n+않는가, 중단된 지표가 공개 버전과 조회 응답에 남지 않는가, 인증키 만기와 약관 개정이 재확인\n+대상으로 잡히는가.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import os\n+import traceback\n+from dataclasses import replace\n+from datetime import date\n+from decimal import Decimal\n+from unittest import mock\n+from urllib.parse import quote\n+\n+import pytest\n+import requests\n+from sqlalchemy import text\n+\n+from data_pipeline.macro import publish, registry, versioning\n+from data_pipeline.macro.config import API_KEY_ENV_NAMES\n+from data_pipeline.macro.fetch import RequestsFetcher, redact\n+from data_pipeline.macro.normalize import NormalizedObservation\n+from data_pipeline.macro.registry import (\n+    COMMERCIAL_RESTRICTED,\n+    COMMERCIAL_UNKNOWN,\n+    INDICATORS,\n+    LICENSE_ALLOWED,\n+    REVIEW_PENDING_RIGHTS,\n+    REVIEW_UNVERIFIED,\n+    RegistryError,\n+)\n+from data_pipeline.macro.sources.base import (\n+    RateLimiter,\n+    RateLimitExceeded,\n+    SourceError,\n+)\n+\n+BY_ID = {indicator.indicator_id: indicator for indicator in INDICATORS}\n+SUSPENSION_REASON = \"작성기관이 상업 이용을 제한한다고 회신했다\"\n+\n+\n+def value(indicator_id: str, period: str = \"2026-07\") -> NormalizedObservation:\n+    sample = INDICATORS[0]\n+    return NormalizedObservation(\n+        indicator_id=indicator_id,\n+        period=period,\n+        transformed_value=Decimal(\"1\"),\n+        missing_reason=None,\n+        raw_values=((period, Decimal(\"1\")),),\n+        transform_rule=sample.transform_rule,\n+        raw_unit=sample.raw_unit,\n+        transformed_unit=sample.transformed_unit,\n+        source_updated_at=None,\n+    )\n+\n+\n+def all_filled() -> dict[str, list[NormalizedObservation]]:\n+    return {i.indicator_id: [value(i.indicator_id)] for i in INDICATORS}\n+\n+\n+class TestRecordedTerms:\n+    \"\"\"지표마다 이용 조건이 적혀 있다 (FR-016, FR-016c, FR-018).\"\"\"\n+\n+    def test_열일곱개_모두_조건이_비어_있지_않다(self) -> None:\n+        for indicator in INDICATORS:\n+            assert indicator.commercial_use in registry.COMMERCIAL_USE_STATES\n+            assert indicator.redistribution_rule.strip(), indicator.indicator_id\n+            assert indicator.export_notice.strip(), indicator.indicator_id\n+            assert indicator.license_verified_on is not None, indicator.indicator_id\n+\n+    def test_내보내기_문구에_출처가_들어_있다(self) -> None:\n+        \"\"\"006 이 파일로 내보낼 때 받는 사람이 출처를 알 수 있어야 한다 (FR-018).\"\"\"\n+        for indicator in INDICATORS:\n+            assert \"출처\" in indicator.export_notice, indicator.indicator_id\n+\n+    def test_작성기관과_제공기관이_다른_지표가_있다(self) -> None:\n+        \"\"\"이용 조건은 작성기관 쪽을 먼저 본다 (FR-016). 둘이 같다고 전제하면 안 된다.\"\"\"\n+        assert BY_ID[\"dubai_crude\"].agency == \"국제통화기금(IMF)\"\n+        assert \"한국은행\" in BY_ID[\"dubai_crude\"].attribution\n+        assert BY_ID[\"housing_sale_price\"].agency == \"한국부동산원\"\n+\n+\n+class TestPendingRights:\n+    \"\"\"권리 확인 대기와 미확인은 다른 상태다 (FR-016a).\"\"\"\n+\n+    def test_두바이유는_확인_대기이며_상업_이용을_모른다(self) -> None:\n+        \"\"\"제한된 것이 아니라 **모르는 것**이다. 둘을 섞으면 대응이 반대가 된다.\"\"\"\n+        dubai = BY_ID[\"dubai_crude\"]\n+\n+        assert dubai.license_review_status == REVIEW_PENDING_RIGHTS\n+        assert dubai.commercial_use == COMMERCIAL_UNKNOWN\n+\n+    def test_확인_대기는_발행을_막지_않는다(self) -> None:\n+        assert publish.plan_publication(INDICATORS, all_filled()).can_publish\n+\n+    def test_권리_미확인_지표는_공개_버전에_들어가지_않는다(self) -> None:\n+        indicators = tuple(\n+            replace(i, license_review_status=REVIEW_UNVERIFIED)\n+            if i.indicator_id == \"g20_cli\"\n+            else i\n+            for i in INDICATORS\n+        )\n+\n+        decision = publish.plan_publication(indicators, all_filled())\n+\n+        assert not decision.can_publish\n+        assert decision.baselines == ()\n+        assert (\n+            publish.PublicationBlocker(\"g20_cli\", publish.BLOCK_LICENSE_UNVERIFIED)\n+            in decision.blockers\n+        )\n+\n+    def test_상업_이용이_제한됐는데_허락이_ALLOWED_면_등록이_거부된다(self) -> None:\n+        \"\"\"내보낼 수 없는 것을 수집·발행만 계속하면 쓰지 못할 자료가 쌓인다 (FR-018).\"\"\"\n+        broken = tuple(\n+            replace(i, commercial_use=COMMERCIAL_RESTRICTED, license_status=LICENSE_ALLOWED)\n+            if i.indicator_id == \"cpi\" or i.indicator_id == \"consumer_price_index\"\n+            else i\n+            for i in INDICATORS\n+        )\n+\n+        with pytest.raises(RegistryError, match=\"상업 이용이 제한됐는데\"):\n+            registry.validate(broken)\n+\n+\n+class TestSuspension:\n+    \"\"\"이용 조건 철회 (FR-016b).\"\"\"\n+\n+    def suspended_registry(self) -> tuple[registry.IndicatorDefinition, ...]:\n+        return tuple(\n+            registry.suspend(i, reason=SUSPENSION_REASON, on=date(2026, 10, 1))\n+            if i.indicator_id == \"dubai_crude\"\n+            else i\n+            for i in INDICATORS\n+        )\n+\n+    def test_중단된_지표는_새로_수집하지_않는다(self) -> None:\n+        live = registry.collectible(self.suspended_registry())\n+\n+        assert \"dubai_crude\" not in {i.indicator_id for i in live}\n+        assert len(live) == len(INDICATORS) - 1\n+\n+    def test_중단된_지표가_없어도_발행이_막히지_않는다(self) -> None:\n+        \"\"\"FR-011 의 '17개 전부'를 글자대로 읽으면 중단이 플랫폼을 통째로 멈춘다.\"\"\"\n+        observations = {k: v for k, v in all_filled().items() if k != \"dubai_crude\"}\n+\n+        decision = publish.plan_publication(self.suspended_registry(), observations)\n+\n+        assert decision.can_publish, decision.blockers\n+\n+    def test_중단_사실과_사유가_판정에_함께_실린다(self) -> None:\n+        \"\"\"조용히 사라지면 '원래 없던 지표'와 '빠진 지표'가 같아 보인다 (원칙 VI).\"\"\"\n+        observations = {k: v for k, v in all_filled().items() if k != \"dubai_crude\"}\n+\n+        decision = publish.plan_publication(self.suspended_registry(), observations)\n+\n+        assert decision.suspended == ((\"dubai_crude\", SUSPENSION_REASON),)\n+\n+    def test_중단된_지표가_기준월을_물리지_않는다(self) -> None:\n+        \"\"\"이미 빠진 지표가 기준월을 뒤로 끌면 멀쩡한 분야까지 과거로 내려간다.\"\"\"\n+        observations = {k: v for k, v in all_filled().items() if k != \"dubai_crude\"}\n+\n+        decision = publish.plan_publication(self.suspended_registry(), observations)\n+\n+        overall = decision.baseline_for(publish.SCOPE_ALL)\n+        assert overall is not None\n+        assert overall.reference_month == \"2026-07\"\n+        assert \"dubai_crude\" not in overall.held_back_by\n+\n+    def test_사유_없는_중단은_만들_수_없다(self) -> None:\n+        with pytest.raises(RegistryError, match=\"중단에 사유가 없다\"):\n+            registry.suspend(INDICATORS[0], reason=\"   \", on=date(2026, 10, 1))\n+\n+    def test_중단_기록이_상태와_어긋나면_등록이_거부된다(self) -> None:\n+        dangling = tuple(\n+            replace(i, license_suspended_on=date(2026, 10, 1), license_suspended_reason=\"x\")\n+            if i.indicator_id == \"exports\"\n+            else i\n+            for i in INDICATORS\n+        )\n+\n+        with pytest.raises(RegistryError, match=\"중단이 아닌데 중단 기록\"):\n+            registry.validate(dangling)\n+\n+    def test_전부_중단되면_발행이_막힌다(self) -> None:\n+        \"\"\"뺄 나머지가 없는데 통과시키면 지표 0개짜리 자료 버전이 발행된다.\n+\n+        폴인터가 그 빈 버전으로 옮겨 가면 멀쩡하던 직전 완결 버전이 화면에서 사라진다 —\n+        중단이 화면을 지키려고 만든 장치인데 정반대로 쓰인다.\n+        \"\"\"\n+        everything = tuple(\n+            registry.suspend(i, reason=SUSPENSION_REASON, on=date(2026, 10, 1))\n+            for i in INDICATORS\n+        )\n+\n+        decision = publish.plan_publication(everything, all_filled())\n+\n+        assert not decision.can_publish\n+        assert publish.BLOCK_ALL_SUSPENDED in {b.reason for b in decision.blockers}\n+\n+    def test_중단_시점과_사유가_등록표와_함께_기록된다(self, postgres_engine) -> None:\n+        \"\"\"운영 스키마는 중단에 시점·사유를 함께 요구한다(ck_macro_indicator_suspension).\n+\n+        빠뜨리면 중단된 지표 하나가 제약 위반으로 발행 트랜잭션 전체를 되돌려, 나머지를\n+        살리려던 FR-016b 가 정반대로 작동한다. 손으로 만든 표가 아니라 실제 마이그레이션에\n+        대고 본다.\n+        \"\"\"\n+        versioning.register_calculation_version(\n+            postgres_engine, \"CALC-SUSPEND\", \"중단 기록\", self.suspended_registry()\n+        )\n+\n+        with postgres_engine.begin() as connection:\n+            row = connection.execute(\n+                text(\n+                    \"SELECT license_status, license_suspended_at, license_suspended_reason,\"\n+                    \" commercial_use, export_notice, license_reverify_by\"\n+                    \" FROM macro_indicator_definition WHERE indicator_id = 'dubai_crude'\"\n+                )\n+            ).one()\n+\n+        assert row[0] == registry.LICENSE_SUSPENDED\n+        assert row[1] is not None\n+        assert row[2] == SUSPENSION_REASON\n+        # 006 의 내보내기가 읽을 곳은 DB 다. 등록표 메모리에만 있으면 문구 없이 나간다(FR-018).\n+        assert row[3] and row[4] and row[5]\n+\n+    def test_중단이어도_등록표_자체는_유효하다(self) -> None:\n+        \"\"\"중단은 오류가 아니라 상태다. 등록을 막으면 중단을 기록할 수 없다.\"\"\"\n+        registry.validate(self.suspended_registry())\n+\n+\n+class TestReverification:\n+    \"\"\"이용 조건·인증 자격 재확인 (FR-018a).\"\"\"\n+\n+    def test_한국은행은_인증키_만기_전에_걸린다(self) -> None:\n+        \"\"\"이용기간은 발급일로부터 2년이고 만료되면 수집이 끊긴다 (pd11 §1).\"\"\"\n+        due = registry.reverification_due(on=registry.ECOS_REVERIFY_BY)\n+\n+        ecos_ids = {i.indicator_id for i in INDICATORS if i.primary_source == \"ecos\"}\n+        assert ecos_ids <= {i.indicator_id for i in due}\n+\n+    def test_만기가_없는_원천도_주기가_오면_걸린다(self) -> None:\n+        \"\"\"약관 개정을 통보받을 경로가 없으므로 시한을 두고 사람이 들여다본다.\"\"\"\n+        due = registry.reverification_due(on=registry.ANNUAL_REVERIFY_BY)\n+\n+        assert {i.primary_source for i in due} == {\"customs\", \"kosis\", \"oecd\"}\n+\n+    def test_시한_전에는_아무것도_걸리지_않는다(self) -> None:\n+        assert registry.reverification_due(on=date(2027, 9, 16)) == ()\n+\n+    def test_시한을_적지_않은_지표는_늘_대상이다(self) -> None:\n+        \"\"\"시한 없음을 '확인 안 해도 됨'으로 읽으면 그 지표만 영영 빠진다.\"\"\"\n+        undated = tuple(\n+            replace(i, license_reverify_by=None) if i.indicator_id == \"exports\" else i\n+            for i in INDICATORS\n+        )\n+\n+        due = registry.reverification_due(undated, on=date(2026, 1, 1))\n+\n+        assert [i.indicator_id for i in due] == [\"exports\"]\n+\n+    def test_재확인_시한이_지나도_수집을_막지_않는다(self) -> None:\n+        \"\"\"막으면 확인이 하루 늦은 것이 자료를 끊는 일이 된다. 드러내는 데까지가 일이다.\"\"\"\n+        overdue = tuple(replace(i, license_reverify_by=date(2020, 1, 1)) for i in INDICATORS)\n+\n+        assert len(registry.collectible(overdue)) == len(INDICATORS)\n+        assert publish.plan_publication(overdue, all_filled()).can_publish\n+\n+\n+class TestRateLimits:\n+    \"\"\"원천이 밝힌 한도를 넘는 요청을 만들지 않는다 (FR-017a).\"\"\"\n+\n+    def limiter(self, source_id: str) -> tuple[RateLimiter, list[float]]:\n+        clock = [0.0]\n+        slept: list[float] = []\n+\n+        def sleep(seconds: float) -> None:\n+            slept.append(seconds)\n+            clock[0] += seconds\n+\n+        return (\n+            RateLimiter(\n+                registry.source_policy(source_id), now=lambda: clock[0], sleep=sleep\n+            ),\n+            slept,\n+        )\n+\n+    def test_국가통계포털은_분당_이백회를_넘지_않는다(self) -> None:\n+        limiter, slept = self.limiter(\"kosis\")\n+\n+        for _ in range(200):\n+            limiter.acquire()\n+        assert slept == [], \"한도 안에서 기다리면 그만큼 느려진다\"\n+\n+        limiter.acquire()\n+        assert slept, \"201번째 호출이 한도를 넘었는데 기다리지 않았다\"\n+\n+    def test_요청당_셀_상한을_넘으면_만들지_않는다(self) -> None:\n+        limiter, _ = self.limiter(\"kosis\")\n+        cap = registry.source_policy(\"kosis\").max_cells_per_request\n+        assert cap == 40_000\n+\n+        limiter.check_request_size(cap, \"cpi\")\n+        with pytest.raises(RateLimitExceeded, match=\"원천 한도\"):\n+            limiter.check_request_size(cap + 1, \"cpi\")\n+\n+    def test_수치_한도가_없는_원천도_간격을_둔다(self) -> None:\n+        \"\"\"한도가 없다는 말은 마음껏 불러도 된다는 뜻이 아니다 (pd11).\"\"\"\n+        for source_id in (\"ecos\", \"customs\", \"oecd\"):\n+            limiter, slept = self.limiter(source_id)\n+            limiter.acquire()\n+            limiter.acquire()\n+            assert slept, f\"{source_id}: 연달아 부르는데 간격을 두지 않았다\"\n+\n+    def test_관세청_분할_상한이_등록표에만_있다(self) -> None:\n+        \"\"\"같은 수를 코드에도 두면 한쪽만 고쳐질 때 등록표가 기록용으로 전락한다.\"\"\"\n+        assert registry.source_policy(\"customs\").max_months_per_request == 12\n+\n+    def test_모든_원천에_한도_근거가_적혀_있다(self) -> None:\n+        \"\"\"수치 한도가 없는 것과 확인하지 못한 것은 다르다 (FR-017a).\"\"\"\n+        for source_id in registry.used_sources():\n+            policy = registry.source_policy(source_id)\n+            assert policy.rate_limit.strip(), source_id\n+            assert policy.basis.strip(), source_id\n+\n+\n+    def test_한도가_없는_원천도_호출_기록이_쌓이지_않는다(self) -> None:\n+        \"\"\"가지치기를 한도 분기 안에만 두면 한국은행·관세청·OECD 는 영영 버리지 않는다.\n+\n+        수집기를 상주시키거나 재시도가 잦으면 호출 수만큼 목록이 자라 메모리를 잡아먹는다.\n+        \"\"\"\n+        assert registry.source_policy(\"ecos\").max_calls_per_minute is None\n+        clock = [0.0]\n+        limiter = RateLimiter(\n+            registry.source_policy(\"ecos\"), now=lambda: clock[0], sleep=lambda _: None\n+        )\n+\n+        for _ in range(500):\n+            limiter.acquire()\n+            clock[0] += 1.0\n+\n+        assert len(limiter._calls) <= 61, \"1초 간격 500회면 최근 1분치만 남아야 한다\"\n+\n+\n+class TestKeySecrecy:\n+    \"\"\"인증키는 환경변수에서만 읽고 어디에도 남기지 않는다 (FR-021).\"\"\"\n+\n+    KEY = \"7o7oLDcGaDuBkmvrCDRKWzDq5sD/9k4/pMurtSqgRZNtX9Cm\"\n+\n+    def test_환경변수_이름을_한자리에_모아_둔다(self) -> None:\n+        assert set(API_KEY_ENV_NAMES) == {\n+            \"DATA_GO_KR_SERVICE_KEY\",\n+            \"ECOS_API_KEY\",\n+            \"KOSIS_API_KEY\",\n+        }\n+\n+    def test_키의_원문과_인코딩된_형태를_모두_지운다(self, monkeypatch) -> None:\n+        \"\"\"관세청 키는 %2F 를 품은 채 주소에 들어간다. 원문만 지우면 인코딩된 쪽이 남는다.\"\"\"\n+        monkeypatch.setenv(\"DATA_GO_KR_SERVICE_KEY\", self.KEY)\n+\n+        cleaned = redact(f\"url?serviceKey={quote(self.KEY, safe='')}&k={self.KEY}\")\n+\n+        assert self.KEY not in cleaned\n+        assert quote(self.KEY, safe=\"\") not in cleaned\n+\n+    def test_너무_짧은_값은_가리지_않는다(self, monkeypatch) -> None:\n+        \"\"\"시험 환경의 ECOS_API_KEY=test 같은 값을 지우기 시작하면, 관계없는 낱말까지 함께\n+        사라져 정작 급할 때 오류 문구를 읽을 수 없다.\"\"\"\n+        monkeypatch.setenv(\"ECOS_API_KEY\", \"test\")\n+\n+        assert redact(\"응답이 test 형식이 아니다\") == \"응답이 test 형식이 아니다\"\n+\n+    def test_요청이_실패해도_키가_오류에_남지_않는다(self, monkeypatch) -> None:\n+        \"\"\"requests 는 실패한 주소를 메시지에 통째로 담는다. 그 주소에 키가 있다.\"\"\"\n+        monkeypatch.setenv(\"DATA_GO_KR_SERVICE_KEY\", self.KEY)\n+        leaky = f\"403 for url: https://x/api?serviceKey={quote(self.KEY, safe='')}\"\n+\n+        with mock.patch(\"requests.get\", side_effect=requests.ConnectionError(leaky)):\n+            with pytest.raises(SourceError) as caught:\n+                RequestsFetcher(5.0).get(\"https://x/api\", {\"serviceKey\": self.KEY})\n+\n+        assert self.KEY not in str(caught.value)\n+        assert quote(self.KEY, safe=\"\") not in str(caught.value)\n+\n+    def test_원인_연쇄로도_새지_않는다(self, monkeypatch) -> None:\n+        \"\"\"우리 메시지를 깨끗이 써도 __cause__ 가 매달리면 트레이스백에 키가 찍힌다.\"\"\"\n+        monkeypatch.setenv(\"DATA_GO_KR_SERVICE_KEY\", self.KEY)\n+        leaky = f\"403 for url: https://x/api?serviceKey={quote(self.KEY, safe='')}\"\n+\n+        with mock.patch(\"requests.get\", side_effect=requests.ConnectionError(leaky)):\n+            try:\n+                RequestsFetcher(5.0).get(\"https://x/api\", {\"serviceKey\": self.KEY})\n+            except SourceError as error:\n+                printed = \"\".join(\n+                    traceback.format_exception(type(error), error, error.__traceback__)\n+                )\n+\n+        assert self.KEY not in printed\n+        assert quote(self.KEY, safe=\"\") not in printed\n+\n+    def test_진단에_필요한_것은_남긴다(self, monkeypatch) -> None:\n+        \"\"\"다 지우면 무엇 때문에 실패했는지도 사라진다. 키만 지우고 나머지는 남긴다.\"\"\"\n+        monkeypatch.setenv(\"DATA_GO_KR_SERVICE_KEY\", self.KEY)\n+        leaky = f\"403 for url: https://x/api?serviceKey={quote(self.KEY, safe='')}\"\n+\n+        with mock.patch(\"requests.get\", side_effect=requests.ConnectionError(leaky)):\n+            with pytest.raises(SourceError) as caught:\n+                RequestsFetcher(5.0).get(\"https://x/api\", {\"serviceKey\": self.KEY})\n+\n+        assert \"ConnectionError\" in str(caught.value)\n+        assert \"403\" in str(caught.value)\n+\n+    def test_키가_설정되지_않은_환경에서도_지우기가_돈다(self, monkeypatch) -> None:\n+        for name in API_KEY_ENV_NAMES:\n+            monkeypatch.delenv(name, raising=False)\n+\n+        assert redact(\"아무 문자열\") == \"아무 문자열\"\n+\n+    def test_등록표와_설정이_키_값을_들고_있지_않다(self) -> None:\n+        \"\"\"설정 객체를 로그에 그대로 찍는 일이 흔한데 거기 키가 있으면 안 된다.\"\"\"\n+        from data_pipeline.macro.config import load_source_config\n+\n+        for source_id in registry.used_sources():\n+            config = load_source_config(source_id)\n+            rendered = repr(config)\n+            for name in API_KEY_ENV_NAMES:\n+                assert os.environ.get(name, \"___없음___\") not in rendered\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_compliance.py",
+          "old_path": "data/tests/test_macro_compliance.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -112,9 +112,17 @@ def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:\n             \"transform_rule TEXT, \"\n             \"release_rule TEXT, break_link_rule TEXT, missing_rule TEXT, agency TEXT, \"\n             \"attribution TEXT, license_status TEXT, license_review_status TEXT, \"\n+            \"license_verified_at TEXT, license_suspended_at TEXT, \"\n+            \"license_suspended_reason TEXT, commercial_use TEXT, \"\n+            \"redistribution_rule TEXT, export_notice TEXT, license_reverify_by TEXT, \"\n             \"published_precision INTEGER, refresh_months_n INTEGER, nominal_weight TEXT, \"\n             \"trading_calendar TEXT, publication_lag_months INTEGER, \"\n-            \"revision_history_available INTEGER)\"\n+            \"revision_history_available INTEGER, \"\n+            # 운영 스키마의 ck_macro_indicator_suspension 을 여기에도 둔다. 이 시험용\n+            # 표는 손으로 옮겨 적은 것이라, 제약을 빼 두면 INSERT 가 컬럼을 빠뜨려도\n+            # 여기서는 통과하고 운영에서만 트랜잭션이 되돌아간다.\n+            \"CHECK (license_status <> 'SUSPENDED' OR (\"\n+            \"license_suspended_at IS NOT NULL AND license_suspended_reason IS NOT NULL)))\"\n         ))\n         connection.execute(text(\n             \"CREATE TABLE macro_display_version (id INTEGER PRIMARY KEY AUTOINCREMENT, \"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_versioning.py",
+          "old_path": "data/tests/test_macro_versioning.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -145,7 +145,10 @@ components:\n         rawUnit: {type: string}\n         transformedUnit: {type: string}\n         transform: {type: string, description: 전년동월 대비·월 기말·월 평균 등 등록된 변환.}\n-        status: {type: string, enum: [READY, NO_DATA, COLLECTION_FAILED, EXAMPLE]}\n+        # SUSPENDED 는 이용 권리가 거둬들여진 지표다(FR-016b). 값 없이 사유만 실려 나가며,\n+        # 조용히 빠지지 않고 '빠진 상태'임이 드러난다.\n+        status: {type: string, enum: [READY, NO_DATA, COLLECTION_FAILED, EXAMPLE, SUSPENDED]}\n+        suspendedReason: {type: string, nullable: true}\n         referenceMonth:\n           $ref: '#/components/schemas/NullableMonth'\n         referenceValue:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/contracts/openapi.yaml",
+          "old_path": "specs/008-macro-indicator-registry/contracts/openapi.yaml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -163,17 +163,17 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **Independent Test**: 인증키 없는 개발 환경에서 예시 자료로 지표가 제공되고 예시 표시가 붙는지, 운영에서는 자동 대체가 일어나지 않는지 확인한다\n \n-- [ ] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다. 내보내기 경로가 함께 실어야 할 이용 범위 문구도 지표별로 둔다 — 006이 파일로 내보낼 때 쓴다 (FR-016, FR-016c, FR-018)\n-- [ ] T054 [US4] `data/src/data_pipeline/macro/registry.py`에서 두바이유를 권리 확인 대기로 표시한다. 조건 자체를 모르는 미확인과 구분되며 발행을 보류하지 않는다 (FR-016a)\n-- [ ] T055 [US4] `data/src/data_pipeline/macro/registry.py`와 `publish.py`에 이용 조건 철회 처리를 넣는다. 지표의 권리 상태가 중단이 되면 그 지표의 새 수집과 새 자료 버전 편입을 멈추고 중단 사유·시점을 등록표에 남긴다. 이미 발행한 자료 버전은 지우지 않는다 (FR-016b)\n-- [ ] T056 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에서 중단된 지표를 값 목록에서 빼고 중단 상태와 사유를 싣는다. 조용히 사라지지 않고 빠진 상태임이 드러난다 (FR-016b, 원칙 VI)\n-- [ ] T057 [US4] `data/src/data_pipeline/macro/registry.py`에 이용 조건·인증 자격 재확인 시점을 둔다. 인증키 이용기간 만료 전(한국은행은 발급일로부터 2년)과 원천의 약관·서비스 명세 개정 시 재확인하고 확인 일시를 등록표에 남긴다. 조건이 달라졌으면 T055의 중단 처리로 넘긴다 (FR-018a)\n-- [ ] T058 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)\n-- [ ] T059 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)\n-- [ ] T060 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다\n-- [ ] T061 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)\n-- [ ] T062 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다. 중단된 지표가 공개 버전과 조회 응답에 남지 않는지, 인증키 만기 임박과 약관 개정이 재확인 대상으로 잡히는지도 확인한다\n-- [ ] T063 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다\n+- [X] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다. 내보내기 경로가 함께 실어야 할 이용 범위 문구도 지표별로 둔다 — 006이 파일로 내보낼 때 쓴다 (FR-016, FR-016c, FR-018)\n+- [X] T054 [US4] `data/src/data_pipeline/macro/registry.py`에서 두바이유를 권리 확인 대기로 표시한다. 조건 자체를 모르는 미확인과 구분되며 발행을 보류하지 않는다 (FR-016a)\n+- [X] T055 [US4] `data/src/data_pipeline/macro/registry.py`와 `publish.py`에 이용 조건 철회 처리를 넣는다. 지표의 권리 상태가 중단이 되면 그 지표의 새 수집과 새 자료 버전 편입을 멈추고 중단 사유·시점을 등록표에 남긴다. 이미 발행한 자료 버전은 지우지 않는다 (FR-016b)\n+- [X] T056 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에서 중단된 지표를 값 목록에서 빼고 중단 상태와 사유를 싣는다. 조용히 사라지지 않고 빠진 상태임이 드러난다 (FR-016b, 원칙 VI)\n+- [X] T057 [US4] `data/src/data_pipeline/macro/registry.py`에 이용 조건·인증 자격 재확인 시점을 둔다. 인증키 이용기간 만료 전(한국은행은 발급일로부터 2년)과 원천의 약관·서비스 명세 개정 시 재확인하고 확인 일시를 등록표에 남긴다. 조건이 달라졌으면 T055의 중단 처리로 넘긴다 (FR-018a)\n+- [X] T058 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)\n+- [X] T059 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)\n+- [X] T060 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다\n+- [X] T061 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)\n+- [X] T062 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다. 중단된 지표가 공개 버전과 조회 응답에 남지 않는지, 인증키 만기 임박과 약관 개정이 재확인 대상으로 잡히는지도 확인한다\n+- [X] T063 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다\n \n **Checkpoint**: 이용 조건을 지키며 수집하고 개발 대역이 운영에 섞이지 않는다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2849811": []
+  }
+}

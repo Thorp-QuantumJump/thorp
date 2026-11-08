@@ -1,0 +1,510 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949513,
+    "iid": 201,
+    "project_id": 1444456,
+    "title": "fix(infra): CI가 dev의 Jenkinsfile로 MR 소스 커밋을 검사하게 한다",
+    "description": "## 작업 내용 요약\n\nCI가 검사 절차(Jenkinsfile)를 MR 브랜치가 아니라 dev에서 읽도록 준비한다. 검사 대상(MR 소스 커밋 + dev 병합 결과)과 시점은 그대로다. Jenkins가 호스트 root 권한을 가지므로 리뷰·머지를 거친 절차만 돌게 한다.\n\n## 관련 티켓\n\nS15P21E205-332\n\n## 주요 변경 사항\n\n- `skipDefaultCheckout()` 후 `Merge with dev` 첫머리에서 `gitlabMergeRequestLastCommit`을 직접 체크아웃한다. Job이 dev를 읽으면 기본 체크아웃도 dev를 받기 때문이다.\n- `[ci-all]` 판정을 체크아웃 뒤로 옮겼다.\n- Replay·지금 빌드는 커밋을 알 수 없어 이유를 알리고 실패한다(이전에도 실패했다). Replay는 `CI_SOURCE_COMMIT`으로 커밋을 넘길 수 있다.\n- Job 설정·확인·되돌리기 절차를 `infra/jenkins/README.md`에 남겼다.\n\n## 적용 순서 (머지 후)\n\n1. 머지한다. 새 Jenkinsfile은 지금 Job 설정에서도 같은 커밋을 검사한다.\n2. thorp-ci → Configure의 Branch Specifier를 `refs/heads/dev`로 바꾼다. 순서를 뒤집으면 옛 Jenkinsfile이 dev를 받아 모든 MR이 통과한다.\n3. MR 하나로 확인한다. 깨지면 `origin/${gitlabSourceBranch}`로 되돌린다.\n\n## 테스트\n\n- [x] Groovy 파서로 Jenkinsfile·init 스크립트 구문 확인\n- [ ] 이 MR의 CI(아직 MR 브랜치 Jenkinsfile로 돈다): Merge with dev, Migration version 통과, `Checking out Revision`이 MR 마지막 커밋\n- [ ] 전환 후: MR 브랜치 Jenkinsfile에 넣은 echo가 로그에 나오지 않음\n\n## 리뷰 포인트\n\n- GitLab 상태는 gitlab-plugin이 웹훅의 MR 마지막 커밋에 붙인다. 체크아웃과 무관하다.\n- Jenkinsfile을 고치는 MR은 머지 전 MR 빌드로 새 절차를 검사하지 못하고 Replay로 확인한다. 전환 당일 CI가 깨질 수 있어 팀에 미리 알린다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T17:36:36.076+09:00",
+    "updated_at": "2026-09-17T17:36:44.555+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T17:36:43.929+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/332-ci-jenkinsfile-from-dev",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fe7db765d33d576b023e42cea5beca320a4dde6a",
+    "merge_commit_sha": "2d28a9bead8c47937a9eff80e3517fa5fccf6196",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:36:37.039+09:00",
+    "reference": "!201",
+    "references": {
+      "short": "!201",
+      "relative": "!201",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!201"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/201",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949513,
+    "iid": 201,
+    "project_id": 1444456,
+    "title": "fix(infra): CI가 dev의 Jenkinsfile로 MR 소스 커밋을 검사하게 한다",
+    "description": "## 작업 내용 요약\n\nCI가 검사 절차(Jenkinsfile)를 MR 브랜치가 아니라 dev에서 읽도록 준비한다. 검사 대상(MR 소스 커밋 + dev 병합 결과)과 시점은 그대로다. Jenkins가 호스트 root 권한을 가지므로 리뷰·머지를 거친 절차만 돌게 한다.\n\n## 관련 티켓\n\nS15P21E205-332\n\n## 주요 변경 사항\n\n- `skipDefaultCheckout()` 후 `Merge with dev` 첫머리에서 `gitlabMergeRequestLastCommit`을 직접 체크아웃한다. Job이 dev를 읽으면 기본 체크아웃도 dev를 받기 때문이다.\n- `[ci-all]` 판정을 체크아웃 뒤로 옮겼다.\n- Replay·지금 빌드는 커밋을 알 수 없어 이유를 알리고 실패한다(이전에도 실패했다). Replay는 `CI_SOURCE_COMMIT`으로 커밋을 넘길 수 있다.\n- Job 설정·확인·되돌리기 절차를 `infra/jenkins/README.md`에 남겼다.\n\n## 적용 순서 (머지 후)\n\n1. 머지한다. 새 Jenkinsfile은 지금 Job 설정에서도 같은 커밋을 검사한다.\n2. thorp-ci → Configure의 Branch Specifier를 `refs/heads/dev`로 바꾼다. 순서를 뒤집으면 옛 Jenkinsfile이 dev를 받아 모든 MR이 통과한다.\n3. MR 하나로 확인한다. 깨지면 `origin/${gitlabSourceBranch}`로 되돌린다.\n\n## 테스트\n\n- [x] Groovy 파서로 Jenkinsfile·init 스크립트 구문 확인\n- [ ] 이 MR의 CI(아직 MR 브랜치 Jenkinsfile로 돈다): Merge with dev, Migration version 통과, `Checking out Revision`이 MR 마지막 커밋\n- [ ] 전환 후: MR 브랜치 Jenkinsfile에 넣은 echo가 로그에 나오지 않음\n\n## 리뷰 포인트\n\n- GitLab 상태는 gitlab-plugin이 웹훅의 MR 마지막 커밋에 붙인다. 체크아웃과 무관하다.\n- Jenkinsfile을 고치는 MR은 머지 전 MR 빌드로 새 절차를 검사하지 못하고 Replay로 확인한다. 전환 당일 CI가 깨질 수 있어 팀에 미리 알린다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T17:36:36.076+09:00",
+    "updated_at": "2026-09-17T17:36:44.555+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T17:36:43.929+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/332-ci-jenkinsfile-from-dev",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fe7db765d33d576b023e42cea5beca320a4dde6a",
+    "merge_commit_sha": "2d28a9bead8c47937a9eff80e3517fa5fccf6196",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:36:37.039+09:00",
+    "reference": "!201",
+    "references": {
+      "short": "!201",
+      "relative": "!201",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!201"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/201",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "head_sha": "fe7db765d33d576b023e42cea5beca320a4dde6a",
+      "start_sha": "e44299091945d12e29d9e279f9463ff5adbd261c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0c194cdb4933fc1f896d6e0c94e758eea8d84c11",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827581,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:36:36.167+09:00",
+          "updated_at": "2026-09-17T17:36:36.171+09:00",
+          "system": true,
+          "noteable_id": 949513,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 201,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a2acfd8c7654af0cf3b5aa85bddf0d1de35eb80c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827582,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:36:36.184+09:00",
+          "updated_at": "2026-09-17T17:36:36.191+09:00",
+          "system": true,
+          "noteable_id": 949513,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 201,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "00f1da44da5f1ddad89baad89ab6abef3a01ba30",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827585,
+          "type": null,
+          "body": "mentioned in commit 2d28a9bead8c47937a9eff80e3517fa5fccf6196",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:36:43.958+09:00",
+          "updated_at": "2026-09-17T17:36:43.977+09:00",
+          "system": true,
+          "noteable_id": 949513,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 201,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5a3ab666291a6abd364267f7d421e1c2e5c9a8bd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827587,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 아키텍처 개선**: Jenkins가 `docker.sock` 마운트로 호스트 root 권한을 가지는 환경에서, MR 소스 브랜치에 임의로 작성된 Jenkinsfile이 무단 실행되는 보안 취약점을 방지하기 위해 Jenkinsfile을 `dev` 브랜치 고정으로 변경한 설계가 매우 훌륭합니다.\n- **명확한 문서화**: 전환 절차, 브랜치 스펙ifier 설정 방식, Replay 시 대처 방법 및 롤백 가이드를 `infra/jenkins/README.md`에 상세히 기록하여 운영 리스크를 크게 낮췄습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **전환 전 MR 검증 시나리오**:\n   - 현재 MR 브랜치의 Jenkinsfile에 임의의 로그 출력(`echo`)을 추가한 뒤 MR을 생성하고, CI가 여전히 `dev` 브랜치의 Jenkinsfile 기준으로 동작하여 해당 로그가 출력되지 않는지 확인합니다.\n2. **Replay 기능 검증 시나리오**:\n   - Jenkinsfile 수정 사항을 테스트하기 위해 빌드 상세 화면에서 `Replay`를 실행하고, `environment` 블록에 `CI_SOURCE_COMMIT = '<40자리 커밋 SHA>'`를 누락했을 때 의도대로 `error()`가 발생하며 빌드가 실패하는지 확인합니다.\n   - 올바른 커밋 SHA를 입력했을 때 정상적으로 체크아웃 및 테스트 파이프라인이 수행되는지 확인합니다.\n3. **`[ci-all]` 플래그 검증 시나리오**:\n   - 커밋 메시지에 `[ci-all]`을 포함한 커밋을 생성하고, `Merge with dev` 스테이지 내 체크아웃 직후 `CI_RUN_ALL` 환경 변수가 `true`로 정상 평가되어 모든 파트 스테이지가 실행되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fe7db765d33d576b023e42cea5beca320a4dde6a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T17:36:46.594+09:00",
+          "updated_at": "2026-09-17T17:36:46.594+09:00",
+          "system": false,
+          "noteable_id": 949513,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 201,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2215644,
+      "head_commit_sha": "fe7db765d33d576b023e42cea5beca320a4dde6a",
+      "base_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "start_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "created_at": "2026-09-17T17:36:36.510+09:00",
+      "merge_request_id": 949513,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "b263b8a9ffcb71a75154b87fdc5551c0f4663a41"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2215644,
+      "head_commit_sha": "fe7db765d33d576b023e42cea5beca320a4dde6a",
+      "base_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "start_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+      "created_at": "2026-09-17T17:36:36.510+09:00",
+      "merge_request_id": 949513,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "b263b8a9ffcb71a75154b87fdc5551c0f4663a41",
+      "commits": [
+        {
+          "id": "fe7db765d33d576b023e42cea5beca320a4dde6a",
+          "short_id": "fe7db765",
+          "created_at": "2026-09-17T17:31:13.000+09:00",
+          "parent_ids": [
+            "e44299091945d12e29d9e279f9463ff5adbd261c"
+          ],
+          "title": "fix(infra): CI가 dev의 Jenkinsfile로 MR 소스 커밋을 검사하게 한다",
+          "message": "fix(infra): CI가 dev의 Jenkinsfile로 MR 소스 커밋을 검사하게 한다\n\nJob이 Jenkinsfile을 dev에서 읽어도 검사 대상이 바뀌지 않도록 기본 체크아웃을\n끄고 gitlabMergeRequestLastCommit을 직접 체크아웃한다. [ci-all] 판정은 체크아웃\n뒤로 옮긴다. Replay는 CI_SOURCE_COMMIT으로 검사할 커밋을 받는다.\n\nJob 설정(Branch Specifier refs/heads/dev)과 적용 순서는 infra/jenkins/README.md에 남긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T17:31:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T17:31:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fe7db765d33d576b023e42cea5beca320a4dde6a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -12,11 +12,14 @@ import org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty\n // 나머지 하나는 배포 몫이다. 배포 Job 은 자기 Jenkinsfile 의 disableConcurrentBuilds() 로 1개를 넘지 않는다.\n //\n // 이 제한을 Jenkinsfile 이 아니라 여기서 거는 이유는, thorp-ci 가 Jenkinsfile 을 MR 소스 브랜치에서\n-// 읽기 때문이다. dev 를 반영하지 않은 브랜치가 빌드되면 그 브랜치의 옛 Jenkinsfile 이 Job 속성을\n-// 바꾼다. 실제로 disableConcurrentBuilds() 를 뺀 뒤에도 옛 브랜치 빌드가 그것을 다시 켜서 CI 가\n+// 읽었기 때문이다. dev 를 반영하지 않은 브랜치가 빌드되면 그 브랜치의 옛 Jenkinsfile 이 Job 속성을\n+// 바꿨다. 실제로 disableConcurrentBuilds() 를 뺀 뒤에도 옛 브랜치 빌드가 그것을 다시 켜서 CI 가\n // 하나씩만 돌았다(2026-09-17, S15P21E205-319). Declarative 는 자기가 선언하지 않은 속성은 건드리지\n // 않으므로, 여기서 붙인 throttle 속성은 어느 브랜치가 빌드되어도 남는다.\n //\n+// S15P21E205-332 부터는 Jenkinsfile 을 dev 에서 읽는다. 그래도 Job 설정의 브랜치를 되돌리면 같은 일이\n+// 다시 생기므로 이 리스너는 두고, 지울지는 옛 브랜치가 정리된 뒤 판단한다(infra/jenkins/README.md).\n+//\n // throttle 은 대기열 단계에서 막는다. 그래서 2개를 넘는 빌드는 시작하지 않고 Pending 에 남으며,\n // 대기열에 있으므로 GitLab 트리거의 \"대기 중인 이전 빌드 취소\"도 동작한다. 실행 슬롯만으로 막으면\n // 빌드가 시작한 뒤 node 앞에서 기다려 대기열에 남지 않고, 그 취소가 걸리지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/init.groovy.d/20-ci-concurrency.groovy",
+          "old_path": "infra/jenkins/init.groovy.d/20-ci-concurrency.groovy",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,9 +12,10 @@\n - 슬롯 수는 288 이전 2개였고, S15P21E205-288에서 CI와 배포의 자원 경합을 줄이려고 1개로 줄였다.\n   2026-09-17 한 빌드가 끝나지 않고 그 슬롯을 붙잡아 뒤의 CI가 전부 멈춘 뒤, CI에 45분 제한을 걸고\n   CI 2개 + 배포 1개로 나눴다(S15P21E205-319).\n-- CI 상한을 Jenkinsfile이 아니라 Jenkins 시작 스크립트에 두는 이유: thorp-ci는 Jenkinsfile을 MR 소스\n-  브랜치에서 읽는다. Jenkinsfile의 `options`는 빌드가 시작될 때 Job 속성으로 저장되므로, dev를\n-  반영하지 않은 브랜치가 빌드되면 옛 설정이 되살아난다. 시작 스크립트는 thorp-ci 설정이 저장될 때마다\n+- CI 상한을 Jenkinsfile이 아니라 Jenkins 시작 스크립트에 두는 이유: thorp-ci는 S15P21E205-332 전까지\n+  Jenkinsfile을 MR 소스 브랜치에서 읽었다. Jenkinsfile의 `options`는 빌드가 시작될 때 Job 속성으로\n+  저장되므로, dev를 반영하지 않은 브랜치가 빌드되면 옛 설정이 되살아났다. 지금은 dev에서 읽지만 Job\n+  설정을 되돌리면 같은 일이 생긴다. 시작 스크립트는 thorp-ci 설정이 저장될 때마다\n   `disableConcurrentBuilds`를 지우고 throttle 상한을 다시 확인한다.\n - CI의 Gradle·Java 테스트·Node는 Jenkins 컨테이너 안에서 실행된다.\n   CD의 Node 컨테이너·Docker 이미지 빌드와 Testcontainers DB·브로커는 별도 자원을 쓴다.\n@@ -83,8 +84,56 @@ Jenkins 재생성 동안 관리 화면과 웹훅 수신에 짧은 중단이 생\n - 288 이전 자원 상한으로 되돌릴 때는 빌드 종료 후 Compose RAM=2G, `memswap_limit: 4G`를 복원하고\n   Jenkins만 재생성한다. 사용 중인 메모리보다 낮게 즉시 축소하지 않는다.\n \n+## CI가 읽는 Jenkinsfile\n+\n+thorp-ci는 검사 절차(`Jenkinsfile`)를 dev에서 읽고, MR 소스 커밋과 dev를 병합한 결과를 검사한다.\n+Jenkins 컨테이너는 `docker.sock`을 마운트해 호스트 root와 같은 권한을 가지므로, MR에서 고친 절차가\n+리뷰·머지 전에 그 권한으로 돌지 않게 한다(S15P21E205-332).\n+\n+Job 설정은 Jenkins 볼륨에만 저장되므로 여기에 남긴다. thorp-ci → Configure → Pipeline:\n+\n+| 항목 | 값 |\n+|---|---|\n+| Definition | Pipeline script from SCM |\n+| SCM | Git |\n+| Repository URL | `https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205.git` |\n+| Credentials | `gitlab-deploy-token` |\n+| Branch Specifier | `refs/heads/dev` |\n+| Script Path | `Jenkinsfile` |\n+| Lightweight checkout | 켬 |\n+\n+- Branch Specifier는 `refs/heads/dev` 형태로 적는다. `origin/dev`처럼 적으면 Lightweight checkout을\n+  쓰지 못하고 전체 체크아웃으로 넘어간다. 전체 체크아웃은 GitLab 트리거가 빌드에 붙인 MR 커밋\n+  (RevisionParameterAction)을 브랜치보다 먼저 쓴다. 지금은 트리거가 알려 준 저장소 주소(SSH)와 Job의\n+  주소(HTTPS)가 달라 그 커밋을 건너뛸 뿐이다. Lightweight checkout은 그 커밋을 보지 않는다.\n+- Jenkinsfile은 `skipDefaultCheckout()`으로 기본 체크아웃을 끄고, `Merge with dev` 스테이지에서\n+  `gitlabMergeRequestLastCommit`을 직접 체크아웃한다. 기본 체크아웃을 되살리면 모든 MR이 dev 자신을\n+  검사하고 초록불을 받는다.\n+- GitLab 검사 상태는 gitlab-plugin이 웹훅의 MR 마지막 커밋에 붙인다. 체크아웃한 커밋과 같다.\n+\n+확인: 콘솔 로그 첫머리에 `Obtained Jenkinsfile from git https://lab.ssafy.com/...`이 나오고\n+`thorp-ci@script`로 체크아웃하는 줄이 없다. `Merge with dev`의 `Checking out Revision`은 MR의 마지막\n+커밋이다.\n+\n+되돌리기: Branch Specifier를 `origin/${gitlabSourceBranch}`로 바꾼다. Jenkinsfile은 그 설정에서도 MR\n+커밋을 직접 받으므로 고치지 않는다. 반대로 Branch Specifier를 dev로 바꾸는 일은 `skipDefaultCheckout()`이\n+든 Jenkinsfile이 dev에 머지된 뒤에만 한다. 먼저 바꾸면 옛 Jenkinsfile의 기본 체크아웃이 dev를 받는다.\n+\n+### Jenkinsfile을 고치는 MR을 머지 전에 확인하기\n+\n+MR 이벤트 빌드는 dev의 절차로 돌므로 바뀐 절차를 검사하지 않는다. 그 MR의 빌드에서 Replay를 열고,\n+Jenkinsfile 내용을 MR의 것으로 바꾼 뒤 `environment` 블록에 한 줄을 더해 실행한다.\n+\n+```groovy\n+CI_SOURCE_COMMIT = '<MR 소스 커밋 40자리 SHA>'\n+```\n+\n+Replay는 웹훅 정보를 물려받지 않아 이 값이 없으면 검사할 커밋을 알 수 없고, 그 이유를 알리며 실패한다.\n+지금 빌드도 같은 이유로 실패한다. Replay 결과는 체크아웃한 커밋에 GitLab 검사 상태로 붙는다.\n+\n 관련 티켓: [S15P21E205-288](https://ssafy.atlassian.net/browse/S15P21E205-288),\n-[S15P21E205-319](https://ssafy.atlassian.net/browse/S15P21E205-319)\n+[S15P21E205-319](https://ssafy.atlassian.net/browse/S15P21E205-319),\n+[S15P21E205-332](https://ssafy.atlassian.net/browse/S15P21E205-332)\n \n 조사 근거와 적용 결과: [288 트러블슈팅](https://app.notion.com/p/3dd61b3dc08f81d0900df3c010ea6d9e),\n [319 트러블슈팅](https://app.notion.com/p/3de61b3dc08f8122ad4ad545feb7a108)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/README.md",
+          "old_path": "infra/jenkins/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,6 +14,30 @@ def ciSubject() {\n     return env.JOB_NAME\n }\n \n+// 이번 빌드가 검사할 MR 소스 커밋을 돌려준다.\n+//\n+// 이 파일은 Job 설정에서 dev 로 고정해 읽는다(infra/jenkins/README.md). 그러면 Declarative 의 기본\n+// 체크아웃도 dev 를 받아, 모든 MR 이 dev 자신을 검사하고 초록불을 받는다. 그래서 기본 체크아웃을 끄고\n+// 이 커밋을 직접 받는다.\n+//\n+// MR 이벤트로 시작한 빌드에는 gitlab-plugin 이 MR 의 마지막 커밋을 gitlabMergeRequestLastCommit 에 넣는다.\n+// updateGitlabCommitStatus 도 같은 커밋에 상태를 붙이므로, 검사한 커밋과 결과가 붙는 커밋이 같다.\n+//\n+// Replay 와 지금 빌드에는 그 값이 없다. Replay 로 Jenkinsfile 변경을 머지 전에 확인할 때는 편집 화면의\n+// environment 블록에 CI_SOURCE_COMMIT = '<커밋 SHA>' 를 더한다. MR 이벤트의 값을 먼저 보는 이유는,\n+// 그 줄이 실수로 dev 에 들어가도 MR 빌드가 고정된 커밋을 검사하지 않게 하기 위해서다.\n+//\n+// 브랜치 이름은 받지 않는다. 이름이 가리키는 커밋은 빌드 도중에도 바뀔 수 있어, 무엇을 검사했는지가\n+// 흔들린다. 기준 dev 를 커밋으로 확정하는 것과 같은 이유다.\n+def sourceCommit() {\n+    String commit = env.gitlabMergeRequestLastCommit ?: env.CI_SOURCE_COMMIT\n+    if (!commit || !commit.matches('[0-9a-f]{40}')) {\n+        error(\"검사할 커밋을 알 수 없다(받은 값: ${commit}). MR 이벤트로 시작한 빌드만 커밋을 받는다. \" +\n+              \"Replay 라면 environment 블록에 CI_SOURCE_COMMIT = '<40자리 커밋 SHA>' 를 더한다.\")\n+    }\n+    return commit\n+}\n+\n // 이 파트가 이번 변경에 포함되는지 판단한다.\n //\n // 예전에는 when 의 changeset 지시어를 썼는데, 그것은 Jenkins 가 계산한 changelog 를 본다.\n@@ -85,6 +109,10 @@ pipeline {\n     options {\n         timestamps()\n \n+        // 기본 체크아웃은 Job 에 설정된 브랜치(dev)를 받으므로 끈다. 검사할 커밋은 Merge with dev\n+        // 스테이지가 직접 받는다(sourceCommit 참고).\n+        skipDefaultCheckout()\n+\n         // 실행 슬롯은 CI와 배포가 함께 쓴다(infra/jenkins/init.groovy.d). 끝나지 않는 빌드가\n         // 슬롯을 붙잡으면 뒤에 온 빌드가 한 단계도 돌지 못한 채 대기열에 쌓인다\n         // (2026-09-17 #152~#154). 제한 시간이 지나면 timeout 은 중단 신호에 응답하지 않는\n@@ -95,10 +123,12 @@ pipeline {\n         timeout(time: 45, unit: 'MINUTES')\n \n         // disableConcurrentBuilds() 는 두지 않는다. 동시 실행 상한(2개)은 Jenkins 쪽\n-        // infra/jenkins/init.groovy.d/20-ci-concurrency.groovy 가 건다. 여기 두면 이 파일이 MR 소스\n-        // 브랜치에서 읽히므로, dev 를 반영하지 않은 브랜치가 빌드될 때마다 상한이 그 브랜치의 값으로\n-        // 바뀐다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를 thorp-ci, thorp-ci@2 로 나눠 주고,\n-        // 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로 섞이지 않는다.\n+        // infra/jenkins/init.groovy.d/20-ci-concurrency.groovy 가 건다. options 는 빌드가 시작될 때 Job\n+        // 속성으로 저장되므로, 이 파일을 MR 소스 브랜치에서 읽던 때는 dev 를 반영하지 않은 브랜치가\n+        // 빌드될 때마다 상한이 그 브랜치의 값으로 바뀌었다. Job 설정의 브랜치를 되돌리면 같은 일이\n+        // 다시 생기므로 상한은 계속 Jenkins 쪽에 둔다. 동시에 도는 빌드는 Jenkins 가 워크스페이스를\n+        // thorp-ci, thorp-ci@2 로 나눠 주고, 병합 상태와 미결 검사 목록(env)도 빌드마다 따로라 서로\n+        // 섞이지 않는다.\n \n         // gradle·ruff·pytest 출력의 ANSI 색상을 콘솔에 그대로 표시한다.\n         // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에\n@@ -126,12 +156,6 @@ pipeline {\n         // Merge with dev 스테이지의 git fetch 가 쓸 자격. Job 설정의 Credentials 와 같은 것을\n         // 가리킨다. Job 에서 credential 을 바꾸면 이 값도 함께 고쳐야 한다.\n         GIT_CREDENTIALS_ID = 'gitlab-deploy-token'\n-\n-        // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면\n-        // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.\n-        // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.\n-        //   git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n-        CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n     }\n \n     stages {\n@@ -147,6 +171,24 @@ pipeline {\n                     openCheck('Migration version', 'pending')\n                 }\n \n+                script {\n+                    // 검사할 MR 소스 커밋을 받는다. 저장소 주소와 자격은 Job 설정(scm)의 것을 그대로\n+                    // 쓰고 브랜치 자리에 커밋을 넣는다. 기본 체크아웃이 쓰던 저장소·자격과 같다.\n+                    checkout scmGit(\n+                        branches: [[name: sourceCommit()]],\n+                        userRemoteConfigs: scm.userRemoteConfigs\n+                    )\n+\n+                    // 파트 스테이지는 평소 바뀐 것만 걸러서 돈다. 바뀌지 않은 파트를 매번 빌드하면\n+                    // 시간만 들기 때문이다. 그런데 CI 자체를 손볼 때는 전체가 도는 모습을 봐야 한다.\n+                    // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.\n+                    //   git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n+                    //\n+                    // environment 블록이 아니라 체크아웃 뒤에 읽는다. environment 는 스테이지보다 먼저\n+                    // 평가되므로, 기본 체크아웃이 없으면 앞선 빌드가 남긴 워크스페이스의 커밋을 읽는다.\n+                    env.CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n+                }\n+\n                 // checkout 스텝은 GIT_ASKPASS 로 자격을 주입하지만, sh 스텝은 별개 프로세스라\n                 // 그것을 물려받지 못한다. 자격 없이 fetch 하면 사용자명을 묻다가\n                 // \"could not read Username for ...\" 로 끝난다.\n@@ -204,7 +246,7 @@ pipeline {\n                 // dev 에 들어온 남의 변경은 세지 않는다.\n                 //\n                 // environment 블록이 아니라 여기서 계산하는 이유는 기준을 하나로 두기 위해서다.\n-                // environment 는 fetch 보다 먼저 평가되어 Checkout SCM 시점의 값을 보게 된다.\n+                // environment 는 스테이지보다 먼저 평가되어, 검사할 커밋을 받기 전의 워크스페이스를 본다.\n                 // 스테이지 안에 두면 어느 스테이지에 전용 agent 를 붙여도 값이 흔들리지 않는다.\n                 //\n                 // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2827587": []
+  }
+}

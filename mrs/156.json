@@ -1,0 +1,1282 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947273,
+    "iid": 156,
+    "project_id": 1444456,
+    "title": "[DOCS] spec 010 경제환경 검색 — 설계 산출물과 태스크 155개 (구현 기준 v1 확정)",
+    "description": "## 작업 내용 요약\n\n경제환경 검색(010)의 spec을 구현에 들어갈 수 있는 상태로 만들었다. plan·research· data-model·contracts·quickstart·tasks와 요구 품질 검토 체크리스트를 붙였고, 008과의 경계(`MacroIndicatorSource` / `MacroIndicatorPort`)를 계약으로 고정했다.\n\n**구현 기준은 기획서 D21의 모델 v1(공통 척도)이다.** 중간에 \"후보마다 그 시대의 자로 잰다\"는 모델 v2를 제안해 전 문서를 v2로 바꿨다가, D21 원문을 확인한 뒤 되돌렸다. 커밋 이력에 그 왕복이 그대로 남아 있다 — 리뷰 포인트 ①을 먼저 읽어 달라.\n\n## 관련 티켓\n\nS15P21E205-230\n\n## 주요 변경 사항\n\n### 신규 산출물 (`specs/010-economic-regime-search/`)\n\n| 파일 | 내용 |\n|----|----|\n| `spec.md` | FR-001~~039(39개) · SC-001~~014 + SC-002a(15개) |\n| `plan.md` | 구조 결정, Constitution Check, 묶음 M1\\~M10 |\n| `research.md` | R1\\~R10 — 008 경계, 재계산 범위 `t ≥ M`, 문장 템플릿, 계산량 추정 |\n| `data-model.md` | 표 4개(`regime_search_snapshot`·`regime_baseline_month`·`regime_search_case`·`regime_search_log`) |\n| `contracts/regime-search-api.md` | GET 5개 + \"내보내지 않는 것\" |\n| `contracts/macro-indicator-port.md` | 008 경계 둘(Python 소스 / Java 포트) + 픽스처 10모양 |\n| `quickstart.md` | S1\\~S9 수동 검증 + \"지금 확인할 수 없는 것\" |\n| `tasks.md` | **155개, 묶음 10개** |\n| `checklists/review.md` | 요구 품질 검토 78항목 |\n| `d21-amendment.md` | 모델 v2 검증 대기 제안 (**채택 아님**) |\n\n### 설계에서 정한 것\n\n- **사전 계산**: 조회 시점에 계산하지 않는다. 배치가 (모드·분야·기준월)마다 snapshot을 만들고 Backend는 읽기만 한다 — `regime` 패키지에 계산 코드 0건을 정적 검사로 고정(T108).\n- **재계산 범위**: 바뀐 가장 오래된 월 M에 대해 `t ≥ M`인 기준월만 다시 돈다. 네 경로가 모두 `t ≥ M`으로 덮이는 논증은 research R3.\n- **중복 방지**: `content_hash`가 같으면 새 행을 만들지 않고, 다르면 `revision`이 오른다. 이전 행을 덮어쓰지 않는다.\n- **008 경계 분리**: 시계열은 Python `MacroIndicatorSource`, 등록표(이름· 순서)만 Java `MacroIndicatorPort`. Backend가 지표 시계열을 읽지 않음을\n- **임시 대역 격리**: `macro/fixture/` 두 디렉터리. 자료 버전이 `FIXTURE-`로 시작하고, `THORP_ENV=prod` + `--source fixture`면 적재 전에 실패한다. 008 완성 시 통째 삭제.\n- **M10 분리**: 사용성 관찰(SC-008)은 구현이 끝나야 시작할 수 있고 주 단위 일정이라 M9에서 떼어 별도 티켓으로 뒀다. `1 티켓 = 1 브랜치 = 1 MR`을 지키기 위해\n\n### 다른 spec 변경\n\n- `specs/008-macro-indicator-registry/spec.md` — 010이 요구하는 계약을 반영(+19/−…)\n- `.specify/memory/constitution.md` — **v2 개정안을 본문에서 분리하고 원상 복구.** 새 버전을 부여하지 않았고 마지막 승인 표기는 3.2.0 그대로다. (별개인 3.3.0 Git·Jira 초안은 내용과 미승인 상태를 유지)\n\n## 테스트\n\n문서 MR이라 실행할 코드가 없다. 대신 아래를 기계적으로 확인했다.\n\n- `/speckit-analyze` 반복 실행 — **CRITICAL 0**\n- 태스크 155개 번호 연속, 묶음 10개 경계와 범위표·병렬 목록 일치\n- 끊긴 `T###` 참조 0건, 깨진 문서 링크 0건, TODO/TBD 0건\n- FR 39개 · SC 15개 **전부 태스크에 매핑**(태스크 없는 넷은 사유를 표에 명시)\n- 상태 사유 5종·제외 사유 3종·`scale`/`era_position`/`eraPosition` 전 문서\n- constitution 충돌 **0건**\n\n## 리뷰 포인트\n\n### ① 모델 v1 → v2 → v1 왕복이 이력에 남아 있다 (먼저 볼 것)\n\n`b4ccf58`\\~`4d9cddc`가 v2, `c50f85c`가 복귀다. 최종 상태만 보면 되지만, **왜 되돌렸는지**는 봐 둘 만하다:\n\n- 제안 근거였던 \"환율 때문에 옛 시기가 배제된다\"가 **실측 없는 가설**이었다.\n- 17개 중 수준 지표는 5개이고, 제시했던 29% / 4.8%는 **명목 가중치를 실제 거리 기여도로 잘못 표현**한 것이다.\n- **D21이 시대별 척도를 이미 비교해 기각**한 상태였고, 적용 세부에 _\"과거 자체 기준 자료가 부족하면 보조 설명만 제한하고 기본 검색에서 배제 않는다\"_ 가 있어 v2의 후보 제외를 명시적으로 금지하고 있었다.\n\n정정 내역은 `d21-amendment.md` §2에 9건으로 남겼다. **이 문서는 채택된 설계가 아니라 검증 대기 제안이다** — 구현은 v1으로 한다.\n\n### ② `d21-amendment.md`를 구현 계약으로 읽지 말 것\n\n구현 계약은 spec·plan·tasks·data-model·contracts다. 이 문서는 회의 안건이며, v2 설계 원본은 커밋 `4d9cddc`에 보존돼 있다. **force-push하면 그 참조가 끊긴다.**\n\n### ③ 요구 품질 검토 78/78의 의미\n\nv1 복귀 뒤 실제로 다시 본 것은 **9항목**이고 69항목은 이전 판정이 남아 있 그 사실을 체크리스트 머리말에 경고로 적어 뒀다. 이 수치를 \"요구 품질 전면 확인\"으로 인용하지 말 것.\n\n### ④ 구현 착수 전 팀 확정이 필요한 것\n\n- **PD-09**(유사성 문턱, U04 교정 후) — 그전까지 `NEAREST_ONLY` 고정\n- **PD-10**(지표별 최소 유효 척도, 008 소유)\n- `d21-amendment.md`의 v2 채택 여부 — **v1 구현을 막지 않는다**\n\n### ⑤ 브랜치 이름이 내용과 어긋난다\n\n`docs/230-spec_create-v2`인데 최종 내용은 **v1 확정**이다. 브랜치를 판 시점에는 v2로 갈 예정이었다. 머지 후 이름은 남지 않으니 그대로 두되, 이력을 볼 때 혼동하지 않도록 적어 둔다.",
+    "state": "merged",
+    "created_at": "2026-09-16T17:24:42.624+09:00",
+    "updated_at": "2026-09-16T17:32:01.809+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-16T17:32:01.152+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/230-spec_create-v2",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+    "merge_commit_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T17:24:44.726+09:00",
+    "reference": "!156",
+    "references": {
+      "short": "!156",
+      "relative": "!156",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!156"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/156",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947273,
+    "iid": 156,
+    "project_id": 1444456,
+    "title": "[DOCS] spec 010 경제환경 검색 — 설계 산출물과 태스크 155개 (구현 기준 v1 확정)",
+    "description": "## 작업 내용 요약\n\n경제환경 검색(010)의 spec을 구현에 들어갈 수 있는 상태로 만들었다. plan·research· data-model·contracts·quickstart·tasks와 요구 품질 검토 체크리스트를 붙였고, 008과의 경계(`MacroIndicatorSource` / `MacroIndicatorPort`)를 계약으로 고정했다.\n\n**구현 기준은 기획서 D21의 모델 v1(공통 척도)이다.** 중간에 \"후보마다 그 시대의 자로 잰다\"는 모델 v2를 제안해 전 문서를 v2로 바꿨다가, D21 원문을 확인한 뒤 되돌렸다. 커밋 이력에 그 왕복이 그대로 남아 있다 — 리뷰 포인트 ①을 먼저 읽어 달라.\n\n## 관련 티켓\n\nS15P21E205-230\n\n## 주요 변경 사항\n\n### 신규 산출물 (`specs/010-economic-regime-search/`)\n\n| 파일 | 내용 |\n|----|----|\n| `spec.md` | FR-001~~039(39개) · SC-001~~014 + SC-002a(15개) |\n| `plan.md` | 구조 결정, Constitution Check, 묶음 M1\\~M10 |\n| `research.md` | R1\\~R10 — 008 경계, 재계산 범위 `t ≥ M`, 문장 템플릿, 계산량 추정 |\n| `data-model.md` | 표 4개(`regime_search_snapshot`·`regime_baseline_month`·`regime_search_case`·`regime_search_log`) |\n| `contracts/regime-search-api.md` | GET 5개 + \"내보내지 않는 것\" |\n| `contracts/macro-indicator-port.md` | 008 경계 둘(Python 소스 / Java 포트) + 픽스처 10모양 |\n| `quickstart.md` | S1\\~S9 수동 검증 + \"지금 확인할 수 없는 것\" |\n| `tasks.md` | **155개, 묶음 10개** |\n| `checklists/review.md` | 요구 품질 검토 78항목 |\n| `d21-amendment.md` | 모델 v2 검증 대기 제안 (**채택 아님**) |\n\n### 설계에서 정한 것\n\n- **사전 계산**: 조회 시점에 계산하지 않는다. 배치가 (모드·분야·기준월)마다 snapshot을 만들고 Backend는 읽기만 한다 — `regime` 패키지에 계산 코드 0건을 정적 검사로 고정(T108).\n- **재계산 범위**: 바뀐 가장 오래된 월 M에 대해 `t ≥ M`인 기준월만 다시 돈다. 네 경로가 모두 `t ≥ M`으로 덮이는 논증은 research R3.\n- **중복 방지**: `content_hash`가 같으면 새 행을 만들지 않고, 다르면 `revision`이 오른다. 이전 행을 덮어쓰지 않는다.\n- **008 경계 분리**: 시계열은 Python `MacroIndicatorSource`, 등록표(이름· 순서)만 Java `MacroIndicatorPort`. Backend가 지표 시계열을 읽지 않음을\n- **임시 대역 격리**: `macro/fixture/` 두 디렉터리. 자료 버전이 `FIXTURE-`로 시작하고, `THORP_ENV=prod` + `--source fixture`면 적재 전에 실패한다. 008 완성 시 통째 삭제.\n- **M10 분리**: 사용성 관찰(SC-008)은 구현이 끝나야 시작할 수 있고 주 단위 일정이라 M9에서 떼어 별도 티켓으로 뒀다. `1 티켓 = 1 브랜치 = 1 MR`을 지키기 위해\n\n### 다른 spec 변경\n\n- `specs/008-macro-indicator-registry/spec.md` — 010이 요구하는 계약을 반영(+19/−…)\n- `.specify/memory/constitution.md` — **v2 개정안을 본문에서 분리하고 원상 복구.** 새 버전을 부여하지 않았고 마지막 승인 표기는 3.2.0 그대로다. (별개인 3.3.0 Git·Jira 초안은 내용과 미승인 상태를 유지)\n\n## 테스트\n\n문서 MR이라 실행할 코드가 없다. 대신 아래를 기계적으로 확인했다.\n\n- `/speckit-analyze` 반복 실행 — **CRITICAL 0**\n- 태스크 155개 번호 연속, 묶음 10개 경계와 범위표·병렬 목록 일치\n- 끊긴 `T###` 참조 0건, 깨진 문서 링크 0건, TODO/TBD 0건\n- FR 39개 · SC 15개 **전부 태스크에 매핑**(태스크 없는 넷은 사유를 표에 명시)\n- 상태 사유 5종·제외 사유 3종·`scale`/`era_position`/`eraPosition` 전 문서\n- constitution 충돌 **0건**\n\n## 리뷰 포인트\n\n### ① 모델 v1 → v2 → v1 왕복이 이력에 남아 있다 (먼저 볼 것)\n\n`b4ccf58`\\~`4d9cddc`가 v2, `c50f85c`가 복귀다. 최종 상태만 보면 되지만, **왜 되돌렸는지**는 봐 둘 만하다:\n\n- 제안 근거였던 \"환율 때문에 옛 시기가 배제된다\"가 **실측 없는 가설**이었다.\n- 17개 중 수준 지표는 5개이고, 제시했던 29% / 4.8%는 **명목 가중치를 실제 거리 기여도로 잘못 표현**한 것이다.\n- **D21이 시대별 척도를 이미 비교해 기각**한 상태였고, 적용 세부에 _\"과거 자체 기준 자료가 부족하면 보조 설명만 제한하고 기본 검색에서 배제 않는다\"_ 가 있어 v2의 후보 제외를 명시적으로 금지하고 있었다.\n\n정정 내역은 `d21-amendment.md` §2에 9건으로 남겼다. **이 문서는 채택된 설계가 아니라 검증 대기 제안이다** — 구현은 v1으로 한다.\n\n### ② `d21-amendment.md`를 구현 계약으로 읽지 말 것\n\n구현 계약은 spec·plan·tasks·data-model·contracts다. 이 문서는 회의 안건이며, v2 설계 원본은 커밋 `4d9cddc`에 보존돼 있다. **force-push하면 그 참조가 끊긴다.**\n\n### ③ 요구 품질 검토 78/78의 의미\n\nv1 복귀 뒤 실제로 다시 본 것은 **9항목**이고 69항목은 이전 판정이 남아 있 그 사실을 체크리스트 머리말에 경고로 적어 뒀다. 이 수치를 \"요구 품질 전면 확인\"으로 인용하지 말 것.\n\n### ④ 구현 착수 전 팀 확정이 필요한 것\n\n- **PD-09**(유사성 문턱, U04 교정 후) — 그전까지 `NEAREST_ONLY` 고정\n- **PD-10**(지표별 최소 유효 척도, 008 소유)\n- `d21-amendment.md`의 v2 채택 여부 — **v1 구현을 막지 않는다**\n\n### ⑤ 브랜치 이름이 내용과 어긋난다\n\n`docs/230-spec_create-v2`인데 최종 내용은 **v1 확정**이다. 브랜치를 판 시점에는 v2로 갈 예정이었다. 머지 후 이름은 남지 않으니 그대로 두되, 이력을 볼 때 혼동하지 않도록 적어 둔다.",
+    "state": "merged",
+    "created_at": "2026-09-16T17:24:42.624+09:00",
+    "updated_at": "2026-09-16T17:32:01.809+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-16T17:32:01.152+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/230-spec_create-v2",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+    "merge_commit_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T17:24:44.726+09:00",
+    "reference": "!156",
+    "references": {
+      "short": "!156",
+      "relative": "!156",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!156"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/156",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "12",
+    "latest_build_started_at": "2026-09-16T17:30:16.174+09:00",
+    "latest_build_finished_at": "2026-09-16T17:30:19.544+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 199814,
+      "iid": 78,
+      "project_id": 1444456,
+      "sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+      "ref": "docs/230-spec_create-v2",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-16T17:30:16.072+09:00",
+      "updated_at": "2026-09-16T17:34:43.030+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199814"
+    },
+    "head_pipeline": {
+      "id": 199814,
+      "iid": 78,
+      "project_id": 1444456,
+      "sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+      "ref": "docs/230-spec_create-v2",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-16T17:30:16.072+09:00",
+      "updated_at": "2026-09-16T17:34:43.030+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199814",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T17:30:16.174+09:00",
+      "finished_at": "2026-09-16T17:34:43.022+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199814",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "head_sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+      "start_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e2d191fd7a807b092e98dcc04f458060376952ae",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818807,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-16T17:24:42.800+09:00",
+          "updated_at": "2026-09-16T17:24:42.804+09:00",
+          "system": true,
+          "noteable_id": 947273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 156,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "355d8f3842ee0ff20e9033e1988a1aedbe92f0af",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818808,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-16T17:24:42.818+09:00",
+          "updated_at": "2026-09-16T17:24:42.825+09:00",
+          "system": true,
+          "noteable_id": 947273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 156,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3d926a13a64bcde5089fae702f17e27d5a253c72",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818811,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **구현 기준과 제안의 명확한 분리**: 모델 v2 제안 과정에서 발생한 왕복 이력을 감추지 않고 `d21-amendment.md`로 분리하여 보존한 점, 그리고 최종 구현 기준을 기획서 D21 기반의 v1으로 명확히 고정하여 혼선을 방지한 점이 매우 훌륭합니다.\n- **철저한 문서화와 추적성**: 체크리스트(`review.md`)와 리서치 문서(`research.md`)를 통해 재계산 범위(`t ≥ M`), 해시 포함 범위, 008 경계 분리 등 기술적 결정의 근거를 상세히 기록했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 문서 및 설계 산출물 변경으로, 코드 실행 시 발생하는 버그나 보안 취약점은 식별되지 않았습니다.\n\n### 테스트 제안\n문서 및 설계 산출물 변경이므로 전통적인 단위/통합 테스트 코드는 없으나, 아래 시나리오를 통해 문서의 정합성과 설계 무결성을 검증할 것을 권장합니다.\n\n1. **재계산 범위 논증 검증 시나리오**:\n   - `MacroIndicatorPort.changed_since()`가 특정 월 $M$을 반환했을 때, 배치(`precompute_regime.py`)가 정확히 $t \\ge M$인 기준월에 대해서만 스냅샷을 재계산하고 이외의 구간은 건너뛰는지 시뮬레이션 테스트를 수행합니다.\n2. **해시 기반 중복 방지 검증 시나리오**:\n   - 동일한 `content_hash`를 가진 결과에 대해 새 `revision` 행이 생성되지 않고 기존 행이 유지되는지 데이터베이스 제약 조건 및 배치 로직을 검증합니다.\n3. **환경 변수 격리 검증 시나리오**:\n   - `THORP_ENV=prod` 환경에서 `--source fixture` 인자로 배치를 실행했을 때, 적재 과정이 즉시 차단되고 실패하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7494ae21dab736309b49cbd98805ffd1f6f724ba -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T17:24:53.713+09:00",
+          "updated_at": "2026-09-16T17:29:54.701+09:00",
+          "system": false,
+          "noteable_id": 947273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 156,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7b4a6114be69b92f08126e36ee962838d55ed39d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818890,
+          "type": null,
+          "body": "added 164 commits\n\n<ul><li>1ea4c8c2...738a9f02 - 163 commits from branch <code>dev</code></li><li>7494ae21 - Merge branch &#39;dev&#39; into &#39;docs/230-spec_create-v2&#39;</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/156/diffs?diff_id=2208046&start_sha=1ea4c8c2cea1903c5094f2067856950adf19c428)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-16T17:29:45.668+09:00",
+          "updated_at": "2026-09-16T17:29:45.672+09:00",
+          "system": true,
+          "noteable_id": 947273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 156,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "641f17672b403501d75b0bff70031010edb418e9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818919,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-16T17:31:57.037+09:00",
+          "updated_at": "2026-09-16T17:31:57.051+09:00",
+          "system": true,
+          "noteable_id": 947273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 156,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "51c5476e90edbb03c198908c00ec6e2685527655",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818924,
+          "type": null,
+          "body": "mentioned in commit 882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-16T17:32:01.516+09:00",
+          "updated_at": "2026-09-16T17:32:01.557+09:00",
+          "system": true,
+          "noteable_id": 947273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 156,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2208046,
+      "head_commit_sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "created_at": "2026-09-16T17:29:45.251+09:00",
+      "merge_request_id": 947273,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "f7ffab0c2ed1ad408dc3da5db59028182c45c7d0"
+    },
+    {
+      "id": 2207983,
+      "head_commit_sha": "1ea4c8c2cea1903c5094f2067856950adf19c428",
+      "base_commit_sha": "c86988ab55552ca045b9e23a3b000130bafa181e",
+      "start_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "created_at": "2026-09-16T17:24:43.398+09:00",
+      "merge_request_id": 947273,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "805aba0de07c65edcd976bd46931f393e9bfac0c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2208046,
+      "head_commit_sha": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "created_at": "2026-09-16T17:29:45.251+09:00",
+      "merge_request_id": 947273,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "f7ffab0c2ed1ad408dc3da5db59028182c45c7d0",
+      "commits": [
+        {
+          "id": "7494ae21dab736309b49cbd98805ffd1f6f724ba",
+          "short_id": "7494ae21",
+          "created_at": "2026-09-16T17:29:44.000+09:00",
+          "parent_ids": [
+            "1ea4c8c2cea1903c5094f2067856950adf19c428",
+            "738a9f02ffd12718d641d4811fb952fa15dd356d"
+          ],
+          "title": "Merge branch 'dev' into 'docs/230-spec_create-v2'",
+          "message": "Merge branch 'dev' into 'docs/230-spec_create-v2'\n\n# Conflicts:\n#   .specify/memory/constitution.md",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-16T17:29:44.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-16T17:29:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7494ae21dab736309b49cbd98805ffd1f6f724ba"
+        },
+        {
+          "id": "1ea4c8c2cea1903c5094f2067856950adf19c428",
+          "short_id": "1ea4c8c2",
+          "created_at": "2026-09-16T17:15:22.000+09:00",
+          "parent_ids": [
+            "c50f85ce740c336eeee9b6b993cbcd3cd922c89f"
+          ],
+          "title": "docs(be): D21 원본 대조 결과를 spec 010 에 반영한다 — 증가율 지표의 실제 값",
+          "message": "docs(be): D21 원본 대조 결과를 spec 010 에 반영한다 — 증가율 지표의 실제 값\n\nNotion 원본과 대조했다. 겹치는 항목(결정·목적)은 문구까지 일치했고, 두 판이\n존재한다는 것과 적용 세부 넷이 새로 확인됐다.\n\n적용 세부 넷 중 셋은 이미 맞았다\n- \"같은 단위의 입력값 차이\" → FR-005·FR-009\n- \"현재 기준 척도·비교 날짜·자료 버전 고정\" → snapshot_key 의 버전 셋\n- \"과거 자체 기준 자료가 부족하면 보조 설명만 제한하고 기본 검색에서 배제하지\n  않는다\" → FR-017·SC-011·T038 과 정확히 일치. **v2 의 NO_CASE_SCALE 후보 제외를\n  D21 이 명시적으로 금지하고 있었다**\n\n빠져 있던 하나를 채운다\n- \"**증가율 지표의 실제 값은 증가율이며 지수 원수준이 아니다**\". 008 은 원값과\n  변환값을 모두 보존하고 포트에 `raw_series()` 가 있어서, spec 이 \"실제 값\"만\n  말하면 지수 원수준을 표시해도 위반이 아니었다. 거리는 변환 후 값으로 재므로\n  설명만 원수준으로 말하면 순위와 설명이 다른 값을 가리킨다 — D21 이 막으려던\n  \"검색 제목과 원값 설명이 모순처럼 보이는\" 일이다\n- FR-015 본문, research R8 템플릿, 포트 계약 §1 에 명시하고 T050 조립에 반영\n- T057 신설: 증가율 지표 문장 값이 변환 후 값인지 + `regime` 패키지의\n  `raw_series` 호출 0건 정적 검사. 태스크 155개로 재번호(M4 T043~T057,\n  이후 묶음 한 칸씩 이동)\n\nd21-amendment §1 을 두 판으로 나눈다 — 1-A 적용 기준(원본 확인), 1-B 결정 기록.\nv1 유지 판단의 근거인 \"검토한 대안\" 줄은 1-B 에만 있다는 사실을 밝힌다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T17:15:22.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T17:15:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1ea4c8c2cea1903c5094f2067856950adf19c428"
+        },
+        {
+          "id": "c50f85ce740c336eeee9b6b993cbcd3cd922c89f",
+          "short_id": "c50f85ce",
+          "created_at": "2026-09-16T17:03:24.000+09:00",
+          "parent_ids": [
+            "4d9cddcb92cf0c674e28b5c022500c632d956091"
+          ],
+          "title": "docs(be): spec 010 을 구현 기준 v1 으로 되돌리고 v2 는 검증 대기 제안으로 분리한다",
+          "message": "docs(be): spec 010 을 구현 기준 v1 으로 되돌리고 v2 는 검증 대기 제안으로 분리한다\n\nD21 원문을 확인한 결과 시대별 척도는 D21 이 이미 비교해 기각한 대안이었고,\n앞선 제안은 실측 없는 가설을 근거로 삼았다. 구현 계약과 변경 제안을 분리한다.\n\n되돌린 것\n- constitution: 미승인 4.0.0 경제환경 모델 v2 개정안을 본문에서 분리하고 원칙\n  V·VI, 공통 척도 용어, 경제환경 검색 규칙, spec 위임 목록을 제안 전으로 복원.\n  새 버전을 부여하지 않으며 마지막 승인 표기는 3.2.0 이다. 별개인 3.3.0\n  Git·Jira 초안은 내용과 미승인 상태를 유지\n- spec: FR-017(시대별 보조 설명) 복원, FR-005 공통 척도, 제외 사유 셋,\n  SC-011 을 \"보조 위치가 순위에 들어가지 않음\" 으로 재정의. PD-08 은\n  \"구현 기준 v1 확정 / v2 제안 검증 대기\"\n- plan·research·data-model·contracts·quickstart·tasks: `era.py`, snapshot 의\n  공통 `scale`, 사례의 nullable `era_position`/`eraPosition` 기준으로 일치\n- d21-amendment.md: 앞선 주장 9건의 정정표(명목 가중치를 실제 거리 기여도로\n  잘못 표현한 것 포함)와 검증 계획·감수할 부담·선택지 A~D 를 담는다.\n  v2 설계는 커밋 4d9cddc 에 보존된다\n\n이번 라운드에서 함께 고친 것\n- 요구 품질 검토의 `78/78` 이 전면 재평가로 읽히지 않게 했다. v1 복귀 뒤\n  실제로 다시 본 것은 9항목이고 69항목은 이전 판정이 남아 있다는 사실을\n  머리말과 Notes 에 적는다 — 확인하지 않은 것을 확인한 것처럼 세지 않는다\n- tasks 병렬 기회 M1 행에 누락된 T002 를 넣는다\n\n막혀 있는 것은 없다. M1~M9 는 v1 기준으로 진행하고 v2 승인을 기다리지 않는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T17:03:24.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T17:03:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c50f85ce740c336eeee9b6b993cbcd3cd922c89f"
+        },
+        {
+          "id": "4d9cddcb92cf0c674e28b5c022500c632d956091",
+          "short_id": "4d9cddcb",
+          "created_at": "2026-09-16T16:24:48.000+09:00",
+          "parent_ids": [
+            "6b9c43787722c816b6916968e2667f4a14bf3a29"
+          ],
+          "title": "docs(be): D21 원문을 확인하고 제안서를 정직하게 다시 쓴다 + C5 추가",
+          "message": "docs(be): D21 원문을 확인하고 제안서를 정직하게 다시 쓴다 + C5 추가\n\n기획서 D21 원문을 받았다. 제안서 첫 판의 전제가 틀렸다.\n\n- **D21 은 시대별 척도를 이미 검토하고 기각했다** — \"공통 척도 기본 / 시대별\n  척도 기본을 비교해 전자를 채택\". 이 제안은 새 개선이 아니라 진 안을 되살리는\n  것이며, D21 의 기각 사유가 우리가 \"새로 찾았다\"고 적은 대가와 같다\n- **영향 범위를 과장했다** — 008 FR-001 을 세어 보니 17개 중 수준 지표는 5개뿐이고\n  (무역수지·실업률·두바이유·국고채·환율) 12개는 이미 증가율이라 드리프트를 안 받는다.\n  환율은 종합 거리의 약 4.8% 다. 차이가 크게 벌어지는 곳은 금융·주택 분야(3개 중 2개)\n- **D21 화면 규칙과도 충돌한다** — \"'당시 평소 대비 위치'는 기본 검색 이유로\n  혼용하지 않는다\". constitution C3 과 같은 내용이 기획서 쪽에도 있었다\n- **U01 전 번복이다** — D21 은 사용자 이해를 U01 에서 검증하겠다고 했다. 이 제안의\n  근거는 전부 논증이며 관찰이 아니다\n\n그럼에도 v2 를 제안하는 이유 셋(후보 집합 문제·원칙 V 취지·화면 규칙으로 막는 오해)과\n지는 부담 넷을 §4·§5 로 나눠 적고, 회의가 고를 수 있는 길 넷(A~D)을 §7 에 둔다.\n\n함께 고친 것\n- constitution C5: 원칙 VI \"척도가 0 → 분야·종합 제한\"이 v2 의 후보 척도 분기를\n  덮지 못했다. 질의면 분야 제한, 후보면 그 후보만 제외로 갈랐다 (spec FR-006)\n- Sync Impact Report 에 D21 기각 사실·U01 전 결정·영향 범위 5개 지표를 적었다\n- plan 구현 순서 표에 M10 행 추가, M2 행에 질의/후보 분기 반영\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T16:24:48.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T16:24:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4d9cddcb92cf0c674e28b5c022500c632d956091"
+        },
+        {
+          "id": "6b9c43787722c816b6916968e2667f4a14bf3a29",
+          "short_id": "6b9c4378",
+          "created_at": "2026-09-16T16:12:26.000+09:00",
+          "parent_ids": [
+            "bad2881ff598b62a6a6f6a03a48f044b6d58e323"
+          ],
+          "title": "docs(be): constitution 4.0.0 초안 — 척도를 재는 시점마다 따로 만든다",
+          "message": "docs(be): constitution 4.0.0 초안 — 척도를 재는 시점마다 따로 만든다\n\n모델 v2 가 constitution 네 문장과 부딪힌다. Governance \"우선순위\"가 이 문서를\n먼저 개정하라고 정하므로, 3.3.0 초안과 같은 방식으로 4.0.0 초안을 올린다.\n**전체 회의 승인 전까지 효력이 없다.**\n\n- C1 원칙 V: \"그 척도를 질의와 모든 과거 후보에 동일하게 적용한다\" → \"재는 시점\n  직전의 과거 자료로만 추정한다 — 후보 이후의 자료를 그 후보의 척도에 쓰지 않는다\"\n- C2 용어: `공통 척도` 한 줄을 둘로 나눈다. `시점별 척도`(현행 v2)를 새로 넣고\n  `공통 척도`는 모델 v1 = 내부 비교 기준으로 남긴다 (010 FR-026 이 v1 을 내부\n  기준으로 유지하므로 낱말이 둘 다 필요하다)\n- C3 경제환경 검색 절: \"시대별 위치는 보조 설명으로만\" → \"시대별 위치가 기본 거리다\"\n- C4 \"spec 에 쓰는 것\" 목록: 시대별 척도가 내부 대안에서 본 모델로 올라갔으므로\n  고정 척도와 자리를 맞바꾼다\n\n원칙 V 재정의이고 v1 로 계산한 결과와 호환되지 않으므로 MAJOR 다. Sync Impact\nReport 에 바꾼 이유와 **감수하는 대가**(산포의 시대 차이가 거리에서 지워진다)를\n함께 적었다. 008 FR-014·009 FR-007·specs/README.md 는 부결 가능성 때문에\n이번에 고치지 않고 d21-amendment §5 에 목록으로 남긴다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T16:12:26.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T16:12:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6b9c43787722c816b6916968e2667f4a14bf3a29"
+        },
+        {
+          "id": "bad2881ff598b62a6a6f6a03a48f044b6d58e323",
+          "short_id": "bad2881f",
+          "created_at": "2026-09-16T16:06:05.000+09:00",
+          "parent_ids": [
+            "d31e9dc8d7366480fb28b19c501171ed64172c24"
+          ],
+          "title": "docs(be): spec 010 의 사용성 관찰을 별도 묶음 M10 으로 떼어낸다",
+          "message": "docs(be): spec 010 의 사용성 관찰을 별도 묶음 M10 으로 떼어낸다\n\nquickstart 은 \"이번 범위 밖·별도 티켓\", tasks 는 \"M9 의 T153 에서 수행\"으로\n정반대였다. 둘 다 반쪽만 맞다 — 범위 안인 것은 tasks 가, 티켓이 따로여야 하는\n것은 quickstart 가 맞다.\n\n- SC-008 이 \"010 구현이 끝난 뒤\"로 정하는데 M9 가 구현의 마지막 묶음이라,\n  T153 은 자기 묶음이 끝나야 시작할 수 있는 순환이었다\n- 6~8명 섭외·관찰은 주 단위라 M9 에 두면 문서 작업이 끝난 뒤에도 MR 이 안 닫힌다\n  (1 티켓 = 1 브랜치 = 1 MR 위반)\n- T153/T154 를 맞바꿔 M9 = T148~T153, M10 = T154 로 나눈다. constitution\n  \"완료의 정의\"가 구현 완료와 사용성 확인을 나누는 근거를 M10 머리말에 적는다\n\n함께 고친 것\n- quickstart \"지금 확인할 수 없는 것\"에 가장 큰 차단 요인(D21·constitution\n  개정 미승인)이 빠져 있었다 — 행 추가, T152 대조 목록에도 반영\n- tasks 머리말이 \"기획서 D21 변경\"만 말하고 constitution 개정을 빠뜨렸다\n- plan 문서 트리에 checklists/review.md 와 d21-amendment.md 가 없었다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T16:06:05.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T16:06:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bad2881ff598b62a6a6f6a03a48f044b6d58e323"
+        },
+        {
+          "id": "d31e9dc8d7366480fb28b19c501171ed64172c24",
+          "short_id": "d31e9dc8",
+          "created_at": "2026-09-16T15:56:16.000+09:00",
+          "parent_ids": [
+            "42615ca1908465762cb7d235ddf393a0c2a2cd60"
+          ],
+          "title": "docs(be): spec 010 이 constitution 세 문장을 위반함을 드러내고 개정안을 낸다",
+          "message": "docs(be): spec 010 이 constitution 세 문장을 위반함을 드러내고 개정안을 낸다\n\n모델 v2 는 기획서 D21 만이 아니라 constitution 과도 부딪힌다. plan 의\nConstitution Check 가 이것을 원칙 IV \"재해석\" · V \"강화\"로 넘겼는데 회피였다.\nGovernance \"우선순위\"대로 개정으로 푼다.\n\n- 원칙 V \"그 척도를 질의와 모든 과거 후보에 동일하게 적용한다\"\n- 용어 사전 \"공통 척도 = 모든 과거 후보에 동일하게 적용하는 변환\"\n- 경제환경 검색 § \"시대별 평소 대비 위치는 보조 설명으로만 제공하고\n  기본 순위와 결합하지 않는다\"\n\n셋을 Complexity Tracking 에 FAIL 로 적고, d21-amendment.md 에 기획서 D21\n변경안과 constitution 개정안(MAJOR)을 담는다. 감수하는 대가와 되돌리는 비용도\n같이 적는다. 전체 회의 승인 전까지 효력이 없고 PD-08 이 구현 착수를 막는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:56:16.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:56:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d31e9dc8d7366480fb28b19c501171ed64172c24"
+        },
+        {
+          "id": "42615ca1908465762cb7d235ddf393a0c2a2cd60",
+          "short_id": "42615ca1",
+          "created_at": "2026-09-16T15:51:13.000+09:00",
+          "parent_ids": [
+            "24c46ff201d03be976acfc0d841e7aa26325d1fb"
+          ],
+          "title": "docs(be): spec 010 에 모델 v2 가 보지 못하는 것을 적는다",
+          "message": "docs(be): spec 010 에 모델 v2 가 보지 못하는 것을 적는다\n\nCHK007(서로 다른 자로 잰 z 를 비교해도 되는 이유)을 닫으면서, 그 논증이\n공짜가 아니라는 사실을 Assumptions 에 남긴다. z 는 산포가 시대마다 다르다는\n사실을 거리에서 지우므로 ① 같은 z 라도 실물 크기가 다르고 ② 격동기와\n평온기가 가까워질 수 있다. 고정 척도(v1)의 수준 드리프트와 맞바꾼 선택이며,\n완화는 두 척도를 상세에 나란히 보여 감추지 않는 것으로 한다(FR-028).\n\n요구 품질 검토 78/78.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:51:13.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:51:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42615ca1908465762cb7d235ddf393a0c2a2cd60"
+        },
+        {
+          "id": "24c46ff201d03be976acfc0d841e7aa26325d1fb",
+          "short_id": "24c46ff2",
+          "created_at": "2026-09-16T15:47:57.000+09:00",
+          "parent_ids": [
+            "fdd5e3851ed5db46dbe6a55f35efcbfdfd190eef"
+          ],
+          "title": "docs(be): spec 010 의 v1 잔재와 태스크 추적 누락을 닫는다",
+          "message": "docs(be): spec 010 의 v1 잔재와 태스크 추적 누락을 닫는다\n\n- plan.md 요약이 아직 \"모델 v1로 찾아\"였다 — v2로 고친다\n- PD-08 의 반영 목록이 폐지된 FR-017 을 가리키고 있었다\n- SC-013(개인 식별자 0건)을 덮는 태스크가 없었다 — T105 에 명시한다\n- plan 구조도에 `rounding.py` 와 `infrastructure/config/` 를 채운다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:47:57.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:47:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/24c46ff201d03be976acfc0d841e7aa26325d1fb"
+        },
+        {
+          "id": "fdd5e3851ed5db46dbe6a55f35efcbfdfd190eef",
+          "short_id": "fdd5e385",
+          "created_at": "2026-09-16T15:45:49.000+09:00",
+          "parent_ids": [
+            "3ae5dd629a111ebb4d075f2a30643f8f66ad2886"
+          ],
+          "title": "docs(be): spec 010 의 M2~M6 태스크를 모델 v2 설계에서 다시 도출한다",
+          "message": "docs(be): spec 010 의 M2~M6 태스크를 모델 v2 설계에서 다시 도출한다\n\nv1 잔재를 한 줄씩 고치는 대신 척도와 비교 시점(M2)부터 조회 API(M6)까지를\nv2 설계에서 다시 썼다. 후보 척도가 코드 경로로 드러나야 검증이 가능하다.\n\n- `scale_for(indicator_id, observation_end)` 공용 함수를 명시하고, 질의/후보\n  분기가 함수 안에 없음을 고정하는 테스트를 둔다\n- 후보 척도 실패를 `NO_CASE_SCALE` 제외 사유로 잇고 집계·테스트까지 연결한다\n- 재계산 범위 테스트가 네 경로(질의 비교 시점·질의 척도·후보 관측·후보 척도)를\n  모두 `t ≥ M`으로 덮는지 확인한다\n- 사례 행과 `content_hash`·마이그레이션·응답 DTO에 `case_scale`을 싣는다\n- 태스크를 154개로 renumber하고 묶음 범위표·병렬 기회·요구사항 대응표를 다시 맞춘다\n- FR-036 개인정보 컬럼 0개 검사를 마이그레이션 테스트로 되살리고 FR-018 대응을 적는다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:45:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:45:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fdd5e3851ed5db46dbe6a55f35efcbfdfd190eef"
+        },
+        {
+          "id": "3ae5dd629a111ebb4d075f2a30643f8f66ad2886",
+          "short_id": "3ae5dd62",
+          "created_at": "2026-09-16T15:31:51.000+09:00",
+          "parent_ids": [
+            "b0bf5d11bf1f897c5a1fdf85703d40e1d166e16c"
+          ],
+          "title": "docs(be): spec 010 모델 v2 의 후보 척도 분기를 검증 경로까지 잇는다",
+          "message": "docs(be): spec 010 모델 v2 의 후보 척도 분기를 검증 경로까지 잇는다\n\nFR-005·FR-006 본문은 \"질의면 계산 불가, 후보면 그 후보만 제외\"로 갈라\n놨는데, 그 분기를 인용하는 쪽이 아직 v1 의 \"척도는 하나\" 전제로 쓰여\n있었다.\n\n- 픽스처에 열째 모양(자료 시작 직후 구간)을 넣었다. 어제 만든\n  NO_CASE_SCALE 을 밟는 모양이 하나도 없어서, 그대로 두면 그 집계가\n  항상 0 이라 구현이 맞는지 틀린지 알 수 없었다. v2 가 치르는 유일한\n  실질 비용을 재는 값인데 검증 밖에 있었다.\n- 사유 코드 표(data-model, 계약)의 SCALE_WINDOW_TOO_SHORT 와 SCALE_ZERO 가\n  어느 척도인지 안 적혀 있었다. 둘 다 질의 척도임을 밝히고, 후보 척도가\n  같은 상태일 때는 검색이 계산 불가가 되는 게 아니라 그 후보만 빠진다는\n  것을 함께 적었다.\n- quickstart S3 와 M2 체크포인트가 질의/후보를 구별하지 않아 후보 쪽\n  분기를 한 번도 확인하지 않았다. 확인 절차를 붙였다.\n\nanalyze 3건(HIGH 1 / MEDIUM 1 / LOW 1) 반영.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:31:51.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:31:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3ae5dd629a111ebb4d075f2a30643f8f66ad2886"
+        },
+        {
+          "id": "b0bf5d11bf1f897c5a1fdf85703d40e1d166e16c",
+          "short_id": "b0bf5d11",
+          "created_at": "2026-09-16T15:27:46.000+09:00",
+          "parent_ids": [
+            "09caec27ebc62cac6606dc2f367b8446915b4e39"
+          ],
+          "title": "docs(be): spec 010 모델 v2 의 후보 제외 경로를 마저 채운다",
+          "message": "docs(be): spec 010 모델 v2 의 후보 제외 경로를 마저 채운다\n\nv2 는 후보도 자기 자가 필요해서 \"직전 60개월 연속 자료로 자를 만들 수\n있는 후보만\"이라는 제외 조건을 새로 만들었다. 그 조건이 만드는 결과를\n끝까지 따라가지 않아 두 곳이 비어 있었다.\n\n- 후보 제외 사유가 셋(입력 결측 / 12개월 이내 / 인접 월 건너뜀)뿐이라\n  \"자를 만들 수 없음\"이 어느 사유로도 세어지지 않았다. 그런데 이게\n  자료 초기 5년치가 통째로 빠지는 경로다 — v2 가 치르는 유일한 실질\n  비용인데 얼마나 빠졌는지 셀 자리가 없었다. NO_CASE_SCALE 을 넷째\n  사유로 넣었다.\n\n- FR-006(MAD 도 IQR 도 0) 이 질의 척도만 전제하고 있었다. 문장대로면\n  후보 하나의 척도가 0 일 때 분야 전체가 계산 불가가 된다. FR-005 가\n  60개월 미달에 대해 이미 \"질의면 계산 불가, 후보면 그 후보만 제외\"로\n  갈라 놨으므로 같은 분기를 넣었다. 분야 전체를 막지도, 그 후보를\n  사유 없이 빼지도 않는다(원칙 VI).\n\nanalyze 2건(HIGH 1 / MEDIUM 1) 반영.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:27:46.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:27:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b0bf5d11bf1f897c5a1fdf85703d40e1d166e16c"
+        },
+        {
+          "id": "09caec27ebc62cac6606dc2f367b8446915b4e39",
+          "short_id": "09caec27",
+          "created_at": "2026-09-16T15:23:35.000+09:00",
+          "parent_ids": [
+            "b4ccf5888700fa4f54822be171f5ef217fed8e6d"
+          ],
+          "title": "docs(be): spec 010 모델 v2 의 재계산 범위 논증을 완성한다",
+          "message": "docs(be): spec 010 모델 v2 의 재계산 범위 논증을 완성한다\n\nanalyze 가 v2 전환에서 남은 논증 구멍 셋을 잡았다.\n\n- FR-030 과 research R3 의 `t >= M` 워터마크 논증이 세 경로만 열거하고\n  있었다. v2 에서 생긴 네 번째 경로(후보 척도 구간 `c-122~c-3`)가 빠져\n  있어 넷째 줄을 더했다. 결론은 그대로 `t >= M` 이지만 — c 가 [M+3, M+122]\n  이고 그 후보를 쓰는 t 는 c+12 초과이므로 t >= M+15 다 — 근거가 반쪽이면\n  M5 를 구현하는 사람이 그 경로를 놓칠 수 있고, 후보 척도가 바뀌었는데\n  다시 계산하지 않는 버그는 결과가 틀렸는지 알아채기 어렵다.\n\n- plan 의 원칙 V 재확인에 v2 가 강화한 부분을 적었다. v1 은 2012년 후보를\n  2016~2026 자료로 만든 자로 쟀는데 그것은 그 후보 시점에서 보면 미래\n  자료다. v2 의 후보 척도는 c-122~c-3 라 후보 이후 자료를 전혀 쓰지 않는다.\n  최신 개정값을 쓴다는 점은 그대로여서 조건부 PASS 는 유지된다.\n\n- 요구 품질 체크리스트 CHK001 이 질의 척도 구간만 검사하고 있어 두 구간\n  모두로 고쳤다.\n\nanalyze 3건(CRITICAL 0 / HIGH 1 / MEDIUM 1 / LOW 1) 반영.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:23:35.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:23:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/09caec27ebc62cac6606dc2f367b8446915b4e39"
+        },
+        {
+          "id": "b4ccf5888700fa4f54822be171f5ef217fed8e6d",
+          "short_id": "b4ccf588",
+          "created_at": "2026-09-16T15:18:56.000+09:00",
+          "parent_ids": [
+            "c86988ab55552ca045b9e23a3b000130bafa181e"
+          ],
+          "title": "docs(be): spec 010 을 모델 v2 로 바꾼다 — 후보마다 그 시대의 자로 잰다",
+          "message": "docs(be): spec 010 을 모델 v2 로 바꾼다 — 후보마다 그 시대의 자로 잰다\n\n모델 v1 은 질의와 모든 후보를 하나의 자(질의 직전 10년)로 쟀다. 수준으로\n들어가는 지표에서 이게 무너진다.\n\n원/달러 환율 1995년 770원은 그 시절 평범한 값인데 최근 10년 자로 재면\nz = -5.9 다. 다른 후보들의 거리가 0.4~1.2 사이에 몰려 있으니 그 시기는\n상위 10개에 절대 못 든다. 반대로 1997년 1,700원은 z = +7.4 라 770원보다\n가깝게 나온다 — 1,700원이 770원보다 지금(1,350원)과 가깝다는 말인데\n말이 안 된다.\n\n즉 자료 30년을 본다고 해놓고 금융·주택 분야는 최근 10년과 수준이 비슷한\n구간만 실질 탐색하고 있었다. 17개 지표 중 5개(환율·국고채·두바이유·\n실업률·무역수지)가 수준으로 들어가 같은 문제를 갖는다.\n\n모델 v2 는 질의와 후보가 각자 자기 직전 10년의 자를 쓴다. 거리의 뜻이\n\"숫자가 비슷한가\"에서 \"각자의 시대에서 비슷한 자리에 있었나\"로 바뀐다.\n\n- FR-005 재작성 — 척도를 질의 t-122~t-3, 후보 c-122~c-3 에서 각각\n- FR-009 z 정의, FR-012 후보에 직전 60개월 조건, FR-015 설명 문장\n- FR-017 폐지 — 시대별 위치가 기본 거리에 흡수됐다. 번호는 재사용하지 않는다\n- FR-026 뒤집기 — 이제 고정 척도가 내부 비교 대안이다\n- SC-003·SC-011 재정의, PD-08 에 기획서 D21 변경 대기 표시\n- data-model: scale -> query_scale, era_position -> case_scale\n- contracts: eraPosition 삭제, queryScale·caseScale 나란히\n- plan: era.py 삭제, 원칙 IV 재해석(\"같은 자\"가 아니라 \"각자의 시대 기준\n  위치\"가 같은 조건이다)\n- research R3 에 두 척도의 정반대 성질, R8 문장 템플릿을 원값+위치+기준값으로\n\n잃는 것은 하나다. 후보도 자기 자가 필요하므로 탐색 시작이 각 지표\n자료 시작 + 5년으로 밀린다. 실제 손해는 008 이 과거 범위를 확인해야\n알 수 있어 quickstart 에 적었다.\n\n기획서 D21 변경이 선행되어야 구현을 시작한다. 계산량은 늘지 않는다 —\nv1 도 시대별 위치를 보조 설명으로 계산하고 있었고 그것을 본체로 옮긴 것이다.\n\nanalyze 6건(CRITICAL 1) 지적을 반영해 v1 잔재를 0으로 만들었다.\nFR 39 -> 38(017 폐지), 태스크 147 유지, 요구 품질 체크리스트 77/78.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:18:56.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:18:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4ccf5888700fa4f54822be171f5ef217fed8e6d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,11 @@\n <!--\n Sync Impact Report\n+- 2026-09-16 정리: 미승인 4.0.0 경제환경 모델 v2 개정안을 본문에서 분리했다. 원칙 V·VI,\n+  공통 척도 용어, 경제환경 검색 규칙과 spec 위임 목록은 v2 제안 전 내용으로 복원했다.\n+  v2 검토안은 `specs/010-economic-regime-search/d21-amendment.md`에 보존한다.\n+  승인된 원칙의 새 개정이 아니라 미승인 초안 분리이므로 새 버전을 부여하지 않는다.\n+  아래 3.3.0 Git·Jira 초안은 이번 작업과 무관하므로 내용과 미승인 상태를 유지한다.\n+  마지막 승인 표기는 3.2.0이며, 3.3.0·4.0.0 초안을 승인된 규칙으로 해석하지 않는다.\n - Version change: 3.3.0 → 3.4.0 (승인 완료). 원칙 II \"화면마다 가장 중요한 행동 버튼을\n   하나만 정한다\"에 예외 조항을 추가했다. spec 003(전략 선택·상세 설정) FR-002가 '분석하기'와\n   '설정 조합 자동 비교'를 같은 크기의 버튼 두 개로 두기로 정했는데, 자동 비교가 설정을 하나씩\n@@ -754,4 +760,8 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n+<<<<<<< .specify/memory/constitution.md\n+**Version**: 3.3.0 (초안 — 전체 회의 승인 전) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-16 (미승인 v2 초안 분리)\n+=======\n **Version**: 3.4.0 (초안 — 전체 회의 승인 전) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-15 (초안)\n+>>>>>>> .specify/memory/constitution.md\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -36,3 +36,5 @@\n - 유사성 임계값(PD-09, U04)은 기획서가 교정 후 결정하도록 남긴 값이므로 [NEEDS CLARIFICATION]이 아니라 결정 항목 표로 관리하고, 교정 전 동작('최근접 참고 사례')을 FR-020으로 적어 테스트 가능하게 했다.\n - 비슷한 점·다른 점 문장의 서술 규칙은 Assumptions에서 plan으로 넘겼다. 자유 생성 문장은 쓰지 않는다.\n - '서비스 운영자'는 사용자 스토리에 없고 실행 측정(FR-033)만 004의 규칙을 참조한다.\n+\n+- 2026-09-16 기준 정리: 구현 명세는 D21의 모델 v1로 맞추고 FR-017 보조 설명을 복원했다. v2는 `d21-amendment.md`의 검증 대기 제안으로 분리했다. 기존 품질 체크는 모델 우월성이나 구현 완료의 증거가 아니다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/checklists/requirements.md",
+          "old_path": "specs/010-economic-regime-search/checklists/requirements.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,11 @@\n # 요구 품질 검토 체크리스트: 경제환경 검색 (비슷했던 때 보기)\n \n **Purpose**: 010의 요구가 **구현에 들어가도 될 만큼 완결적·명확·일관적으로 쓰였는지** 검토한다. 기능이 잘 도는지를 보는 것이 아니라 **요구 문장 자체**를 시험한다 — spec이 영어(한국어)로 쓴 코드라면 이 문서가 그 단위 테스트다.\n-**Created**: 2026-09-16 · **검토 1회차**: 2026-09-16 (**78/78 충족** — 1회차 49건, 정리 후 재판정으로 29건 추가. 마지막 3건도 실제로 결정해 닫았다 — 교정 후 화면 모양·사용성 관찰 인원과 시점)\n+**Created**: 2026-09-16 · **검토 이력**: 2026-09-16 1회차 49건 → 재판정 29건 추가로 **78/78**(당시 spec 기준). 이후 **모델 v2 제안과 v1 복귀**를 거치면서 spec 본문이 크게 바뀌었으나 **v1 기준 재대조는 9항목만** 했다(아래 Notes).\n+> ⚠ **지금의 `78/78`은 전 항목을 현재 spec으로 재평가한 결과가 아니다.** 9항목(CHK001·007·013·016·017·043·046·067·075)만 v1 기준으로 다시 봤고, **나머지 69항목은 이전 판정이 남아 있다.** 이 수치를 \"요구 품질 전면 확인\"으로 인용하지 않는다 — 전면 재평가가 필요하면 별도로 수행하고 그 사실을 여기에 적는다.\n **Feature**: [spec.md](../spec.md) · [plan.md](../plan.md) · [data-model.md](../data-model.md) · [contracts/](../contracts/) · [tasks.md](../tasks.md)\n \n-**범위**: 010 문서 전체(FR-001~037, SC-001~014, Key Entities, Edge Cases, Assumptions, PD 표와 하위 산출물). 다른 spec은 **010이 그것에 무엇을 요구하는지**가 010 문서 안에 적혀 있는지만 본다.\n+**범위**: 010 문서 전체(FR-001~039, SC-001~014 및 SC-002a, Key Entities, Edge Cases, Assumptions, PD 표와 하위 산출물). 다른 spec은 **010이 그것에 무엇을 요구하는지**가 010 문서 안에 적혀 있는지만 본다.\n \n **Note**: This custom checklist is generated by the `/speckit-checklist` command based on feature context and requirements.\n **Review Ownership**: This checklist is a reviewer-owned requirements-quality review artifact. Mark an item `[x]` only when the reviewer determines the requirements-quality criterion is satisfied.\n@@ -31,8 +32,8 @@\n - [x] CHK012 전체 유효 후보 목록의 **크기 상한**이 정의되어 있는가 — 자료가 길어지면 무한히 커지는 값이다 [Gap, Spec §FR-030]\n - [x] CHK013 후보 제외 사유 세 가지(`MISSING_INPUT`·`WITHIN_12_MONTHS`·`NEIGHBOR_SKIPPED`)가 **빠짐없이** 열거되었는가 — 비교 시점 불일치로 빠진 후보가 어느 사유인지 [Completeness, Spec §FR-012 · data-model §2]\n - [x] CHK014 비슷한 점·다른 점 문장의 **개수 상한(양쪽 2개)**과 정렬 기준이 spec에 있는가, plan/research에만 있는가? [Traceability, Spec §Assumptions · research R8]\n-- [x] CHK015 설명 문장에서 금지되는 표현의 **판정 기준**이 목록으로 정의되어 있는가 — \"확률·추천·원인 단정\"이 낱말 목록인지 의미 판단인지 [Measurability, Spec §FR-022 · tasks T050]\n-- [x] CHK016 시대별 위치(`eraPosition`)의 계산 규칙이 요구에 정의되어 있는가 — tasks는 \"이번 범위에서 계산하지 않는다\"고 적었는데 FR-017은 제공을 요구한다 [Conflict, Spec §FR-017 · tasks 요구사항표]\n+- [x] CHK015 설명 문장에서 금지되는 표현의 **판정 기준**이 목록으로 정의되어 있는가 — \"확률·추천·원인 단정\"이 낱말 목록인지 의미 판단인지 [Measurability, Spec §FR-022 · tasks T050·T056]\n+- [x] CHK016 시대별 위치(`eraPosition`)의 보조 계산·이력 부족·0 척도 처리와 순위 분리가 요구와 태스크에 일치하는가 [Consistency, Spec §FR-017 · tasks T038·T042·T055·T141]\n - [x] CHK017 내부 비교 대안(0.7E+0.3M, 시대별 척도, 가격 추세·변동성)을 \"유지한다\"는 요구가 **어디에 어떤 형태로** 유지하는지 정의하는가 [Ambiguity, Spec §FR-026]\n \n ## 3. 표기·금지 표현 — 완결성과 측정 가능성 (M7·M8)\n@@ -61,7 +62,7 @@\n - [x] CHK035 006이 요구하는 기록 항목(006 FR-012) 중 **010이 만들 수 없는 것**이 무엇인지 요구에 명시되어 있는가 [Completeness, Spec §FR-032]\n - [x] CHK036 FR-032(\"로그인 사용자만 기록\")와 006 SC-001(\"완료한 경제환경 탐색의 100%가 기록 항목을 갖는다\")이 충돌하지 않는가 [Conflict, Spec §FR-032]\n - [x] CHK037 사후 평가 구간(63/21거래일)의 **\"관측 종료 후 첫 거래일\"** 기준을 누가 소유하는지 010 문서가 밝히는가 [Ambiguity, Spec §Assumptions · 011 FR-006]\n-- [x] CHK038 PD-09(008/U04)·PD-10(008)·PD-12(007)의 **미확정 상태에서의 010 동작**이 각각 정의되어 있는가 [Completeness, Spec §PD 표 · §FR-023]\n+- [x] CHK038 PD-09(010/U04)·PD-10(008)·PD-12(007)의 **미확정 상태에서의 010 동작**이 각각 정의되어 있는가 [Completeness, Spec §PD 표 · §FR-023]\n \n ## 5. 재현성·식별·보관 — 명확성과 측정 가능성 (M5·M6)\n \n@@ -69,7 +70,7 @@\n - [x] CHK040 \"결과가 실제로 달라진 경우\"의 **비교 대상 범위**가 정의되어 있는가 — 설명 문장·계산 시각·후보 집계가 포함인지 [Ambiguity, Spec §FR-030 · data-model §2 `content_hash`]\n - [x] CHK041 `revision`이 오르는 조건과 조회가 읽는 항목(최신)이 **spec 수준에서** 정의되어 있는가, data-model에만 있는가? [Traceability, Spec §FR-029·FR-030]\n - [x] CHK042 보관 정리의 **시점·주기·실행 주체**가 요구에 정의되어 있는가 — \"정리한다\"만 있고 언제인지 없다 [Gap, Spec §FR-029 · data-model §7]\n-- [x] CHK043 재계산 범위 `t ≥ M`의 근거(질의·척도·후보 세 경로)가 **요구 문서에** 있는가, research에만 있는가? [Traceability, Spec §FR-030 · research R3]\n+- [x] CHK043 재계산 범위 `t ≥ M`의 근거(질의·공통 척도·후보 관측·시대별 보조 척도 네 경로)가 **요구 문서에** 있는가, research에만 있는가? [Traceability, Spec §FR-030 · research R3]\n - [x] CHK044 등록표 버전·모델 버전이 바뀔 때 M이 계열 시작월이 된다는 규칙이 명시되어 있는가 [Completeness, Spec §FR-030]\n - [x] CHK045 SC-002의 \"같은 식별이면 같은 결과\"가 **구버전 항목을 고정한 재조회**까지 포함하는가 [Coverage, Spec §SC-002 · contracts §2]\n - [x] CHK046 모델 버전을 올려야 하는 변경 목록이 **빠짐없이** 열거되었는가 — 비교 시점 규칙이 이번에 추가됐다 [Completeness, Spec §Key Entities · data-model §6]\n@@ -107,7 +108,7 @@\n   - ✅ SC-008이 **6~8명·과제·기록 항목 둘**을 갖춰 판정 가능해졌다. SC 15개 전부 관측 대상과 판정 기준을 가짐\n - [x] CHK066 SC-003의 허용 오차가 PD-12 미확정인 채로 **측정 가능한 대체값**을 갖는가 [Measurability, Spec §SC-003 · PD-12]\n - [x] CHK067 SC-008(사용성 관찰)이 **누가·몇 명·무엇을 기록하는지** 정의하는가 [Measurability, Spec §SC-008]\n-  - ✅ constitution §7.2가 이미 정한 **6~8명·과제·확인 질문**을 SC-008이 인용하고, **시점을 구현 완료 후 1회**로 확정. 태스크 T146\n+  - ✅ constitution §7.2가 이미 정한 **6~8명·과제·확인 질문**을 SC-008이 인용하고, **시점을 구현 완료 후 1회**로 확정. 태스크 T154(M10)\n - [x] CHK068 FR-023의 U01~U06 \"검증 전 동작\" 표가 각 항목마다 **위반 판정이 가능한 문장**으로 쓰였는가 [Measurability, Spec §FR-023]\n - [x] CHK069 각 사용자 스토리의 Independent Test가 **그 스토리만으로 실행 가능**하게 쓰였는가 [Acceptance Criteria, Spec §US1~US4]\n - [x] CHK070 Acceptance Scenario의 Given/When/Then이 **화면 동작이 아니라 요구**를 기술하는가 [Acceptance Criteria, Spec §US1~US4]\n@@ -118,13 +119,17 @@\n - [x] CHK072 '비교 시점'·'관측 구간'·'척도 구간'·'사후 평가 구간' 네 개념이 각각 정의되고 서로 구별되는가 [Clarity, Spec §FR-001·FR-005·FR-015]\n - [x] CHK073 '사전 계산 집합'·'항목'·'revision'·'사례'의 관계가 한 곳에서 정의되는가 [Clarity, Spec §Key Entities · data-model §2]\n - [x] CHK074 spec의 모든 FR·SC가 하위 산출물(plan·data-model·contracts·tasks) 중 최소 하나로 **추적 가능**한가 [Traceability, tasks 요구사항↔태스크 표]\n-- [x] CHK075 태스크가 없는 요구(FR-017·FR-021·FR-025·FR-026·SC-008)가 **왜 없는지** 문서에 적혀 있는가 [Traceability, tasks 요구사항↔태스크 표]\n+- [x] CHK075 현재 구현에서 제외·유보한 요구(FR-021·FR-025·FR-026)의 이유와 FR-017 구현·SC-008 별도 관찰 태스크가 구분돼 있는가 [Traceability, tasks 요구사항↔태스크 표]\n - [x] CHK076 Assumptions의 항목들이 **검증 가능하거나 검증 불가임이 명시**되어 있는가 [Assumption, Spec §Assumptions]\n - [x] CHK077 Out of Scope 항목이 인접 spec(008·011·012·014)의 범위와 **빈틈 없이** 맞물리는가 [Coverage, Spec §Out of Scope]\n - [x] CHK078 2026-09-16 Clarification 8건이 **spec 본문 요구에 모두 반영**되었고 옛 문장이 남아 있지 않은가 [Consistency, Spec §Clarifications]\n \n ## Notes\n \n+- 2026-09-16 기준 재정리: 모델 선택 관련 CHK001·CHK007·CHK013·CHK016·CHK017·CHK043·CHK046·CHK067·CHK075 **9항목**을 v1 및 M10 기준으로 대조했다. 공통 척도·후보 자격·보조 설명·재계산·계약·태스크 참조를 확인했다.\n+- **나머지 69항목은 v1 복귀 뒤 재대조하지 않았다.** 대부분 모델 선택과 무관한 항목(표시 규칙·접근성·기록·보관 등)이지만, **확인하지 않은 것을 확인한 것처럼 세지 않기 위해** 여기에 적어 둔다(원칙 VI).\n+- 78/78 표시는 구현·실제 자료 검증·v2 효과 입증을 뜻하지 않는다.\n+\n - Mark items `[x]` only after review confirms the requirement-quality criterion is satisfied\n - Leave items unchecked when they still require clarification, correction, or reviewer evaluation\n - `/speckit-implement` reads checklist checkbox state as a gate and must not modify markers\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/checklists/review.md",
+          "old_path": "specs/010-economic-regime-search/checklists/review.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,13 +54,15 @@ T_g로 검색하면 아직 snapshot이 없는 달이라 **404**가 난다. 화\n |---|---|---|\n | `registry()` | 지표 목록(id·이름·단위·변환), 지표 → 분야 매핑, 등록표 버전 | FR-002·FR-003 |\n | `monthly_series(indicator_id)` | 대상월 → **변환값** 전 구간 | FR-006 |\n-| `raw_series(indicator_id)` | 대상월 → **원값** 전 구간 | FR-006 |\n+| `raw_series(indicator_id)` | 대상월 → **변환 전 원값** 전 구간 | FR-006 |\n | `baseline_months()` | 분야별 T_g, 17개 공통 T_all | FR-013 |\n | `publication(indicator_id, month)` | 그 값의 대상월·발표일·개정 여부 | FR-007 |\n | `data_version()` | 현재 자료 버전 | FR-009 |\n | `changed_since(data_version)` | 그 버전 이후 값이 새로 들어오거나 개정된 **가장 오래된 대상월 M** | FR-009·FR-017 |\n | `is_sample_data()` | 예시 자료인가 | FR-022 |\n \n+> ⚠ **`raw_series()`는 010의 계산·표시 경로에서 쓰지 않는다.** 거리도 설명 문장도 `monthly_series()`의 **변환 후 값**을 쓴다(spec FR-015, research R8, D21 적용 세부). 이 메서드는 008이 원값을 보존하는지 확인하는 용도로만 둔다.\n+\n `changed_since()`가 spec FR-030의 재계산 범위를 정한다 — `t ≥ M`인 기준월만 다시 계산한다\n (research R3). 008이 답할 수 없으면 `None`을 돌려주고, 그때는 계열 시작월을 M으로 삼아 전 구간을\n 계산한다.\n@@ -183,8 +185,9 @@ cd data && python scripts/precompute_regime.py --source macro --all\n | 7 | 거리가 정확히 같은 두 후보 | 동률 → 오래된 월 우선 (spec FR-012) |\n | 8 | **질의 3개월 중 한 달만 결측** | 지표별 비교 시점, 빠진 지표·월 표기 (spec FR-001·FR-031) |\n | 9 | **질의 3개월이 전부 결측인 지표** | `QUERY_INPUT_MISSING` — 그 지표를 빼고 계산하지 않음 (spec FR-007) |\n+| 10 | **자료 시작 직후 후보 구간**(비교 시점 입력은 있으나 그 직전 60개월은 없음), 질의 공통 척도는 유효 | 후보 자격은 유지하고 시대별 보조 설명만 제한한다(FR-012·FR-017) |\n \n-8·9는 2026-09-16 Clarification으로 추가됐다. 이 경로가 픽스처에 없으면 검증 밖으로 나간다.\n+8·9는 2026-09-16 Clarification으로 추가됐다. 10은 v1의 후보 자격과 보조 설명 가용성을 구분한다. 이 경로가 픽스처에 없으면 검증 밖으로 나간다.\n \n **이 모양들은 008이 와도 사라지면 안 된다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수\n 있는데, 그러면 `NOT_COMPUTABLE`·동률 경로가 검증 밖으로 나간다. 그래서 **운영 픽스처(§4.1)는\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/contracts/macro-indicator-port.md",
+          "old_path": "specs/010-economic-regime-search/contracts/macro-indicator-port.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -190,12 +190,12 @@\n     {\n       \"id\": \"UNEMPLOYMENT_RATE\", \"name\": \"실업률\", \"unit\": \"%\",\n       \"queryRaw\": \"3.1\", \"caseRaw\": \"3.2\",\n-      \"queryZ\": \"-0.590219224283\", \"caseZ\": \"-0.421585160202\",\n+      \"queryZ\": \"-0.590178531422\", \"caseZ\": \"-0.421556093873\",\n       \"comparisonMonths\": [\"2012-01\", \"2012-02\", \"2012-03\"],\n-      \"e\": \"0.168634064081\",\n+      \"e\": \"0.168622437549\",\n       \"nominalWeight\": \"0.500000000000\",\n-      \"distanceShare\": \"0.408372910114\",\n-      \"scale\": {\"median\": \"3.45\", \"spread\": \"0.593040000000\", \"method\": \"MAD\",\n+      \"distanceShare\": \"0.204173755344\",\n+      \"scale\": {\"median\": \"3.45\", \"spread\": \"0.593040887402\", \"method\": \"MAD\",\n                 \"windowStart\": \"2016-05\", \"windowEnd\": \"2026-04\", \"months\": 120}\n     }\n   ],\n@@ -210,6 +210,8 @@\n }\n ```\n \n+**위 응답은 필드 형태를 설명하는 축약 예시다.** 실업률의 세 비교 시점 값은 이 예시에서 각각 같다고 가정했고, 노동 분야의 나머지 지표는 생략했다. 전체 거리·기여도 수기 검증에는 T042의 전체 비교 시점·지표 픽스처를 사용한다.\n+\n - `nominalWeight`(명목 비중 `1/n`)와 `distanceShare`(실제 거리 기여 `E_i ÷ 분야 안 ΣE_i`)를 **나란히**\n   내보낸다 — spec FR-010이 기록하라는 값이고, 둘의 차이가 U02 검증의 관측 대상이다. 명목 비중이\n   같아도 실제 기여는 다를 수 있다.\n@@ -219,10 +221,10 @@\n - `contribution`은 전체 거리가 0이면 **키 자체를 생략한다**(spec Edge Cases). `distanceShare`도\n   분야 안 `ΣE_i`가 0이면 같다.\n - `eraPosition`은 **그 사례가 당시 기준으로 어땠는지**를 지표별 문장으로 준다(spec FR-017). 이력이\n-  부족한 지표는 **키가 없고**, 전부 부족하면 `null`이다. **0으로 채우지 않는다.**\n-- **z 값·분위수·백분율을 넣지 않는다**(spec FR-017·FR-022) — 숫자로 놓이면 유사도처럼 읽힌다.\n+  부족하거나 보조 척도가 0인 지표는 **키가 없고**, 전부 계산 불가이면 `null`이다. **0으로 채우지 않는다.**\n+- **`eraPosition`에 시대별 z 값·분위수·백분율을 넣지 않는다**(spec FR-017·FR-022) — 숫자로 놓이면 유사도처럼 읽힌다.\n   `method`·`windowStart`·`windowEnd`·`months`는 수기 대조용이고 화면에 그대로 내보내지 않는다.\n-- 이 값은 **기준월과 무관**하다. 같은 `endMonth`면 어느 검색에서 열어도 같은 문장이 온다(SC-011).\n+- 이 값은 **같은 자료·등록표·모델 버전에서 기준월과 무관**하다. 같은 `endMonth`면 어느 검색에서 열어도 같은 문장이 온다(SC-011).\n - `postPeriod.available`은 011이 붙기 전까지 `false`다. 빈 값을 만들어 내지 않는다.\n - `indicators[].scale`과 `comparisonMonths`가 SC-003의 수기 대조 입력이다 — 중앙값·산포·방법·\n   기준 구간·비교 시점이 전부 있어 독립 계산으로 z와 `E_i`를 다시 만들 수 있다(spec FR-028).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/contracts/regime-search-api.md",
+          "old_path": "specs/010-economic-regime-search/contracts/regime-search-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,221 @@\n+# D21 · constitution 개정 제안 — 시대별 척도 비교 검증 (모델 v2)\n+\n+**상태**: 검증 대기 제안 — **기본 모델 변경은 보류**, 현재 구현 기준은 D21의 **모델 v1**\n+**작성일**: 2026-09-16 (같은 날 D21 원문 확인 및 v1 구현 기준과 v2 제안 분리)\n+**막고 있는 것**: 없음 — [spec.md](spec.md) PD-08과 [tasks.md](tasks.md) M1~M9는 v1 기준으로 진행한다.\n+M10은 구현 완료 뒤 사용성 관찰이며, v2 채택 승인과는 별개다.\n+\n+> ## 먼저 읽을 것 — 구현 계약과 변경 제안을 구분한다\n+>\n+> D21은 공통 척도와 시대별 척도를 비교해 **공통 척도를 기본으로 채택**했다.\n+> 이 문서는 그 선택을 바꿀지 검증하기 위한 제안이다. v2의 우월성이 입증됐거나 변경이 승인됐다는\n+> 뜻이 아니다. **v2는 폐지하지 않고 보존하되, 운영 구현·API·화면에 추가하지 않는다.**\n+> 현재 구현 계약은 spec·plan·tasks·data-model·contracts이며, 이 문서가 이를 덮어쓰지 않는다.\n+\n+---\n+\n+## 1. D21 원문\n+\n+**2026-09-16 Notion 원본과 대조했다.** 그 결과 D21은 **두 판(뷰)**으로 존재하며 아래에 둘 다 싣는다.\n+1-A가 이번에 원본에서 확인한 **적용 기준**이고, 1-B는 그 이전 판인 **결정 기록**이다.\n+겹치는 항목(결정·목적)은 **문구까지 일치**했다. **두 판에만 있는 항목이 서로 다르므로 어느 판을 인용하는지 밝힌다.**\n+\n+### 1-A. 적용 기준 (2026-09-16 원본 확인)\n+\n+| 항목 | 내용 |\n+|---|---|\n+| **결정** | 기본 검색은 현재 질의 구간 직전의 **공통 척도를 현재와 모든 과거 후보에 동일하게 적용**해 실제 입력값과 3개월 경로의 차이를 비교한다. 각 시대의 평소 대비 위치는 **보조 설명으로만** 제공하고 기본 순위와 합치지 않는다. |\n+| **적용 세부** | ① 기본 순위는 **같은 단위의 입력값 차이**에 기반한다. ② **증가율 지표의 실제 값은 증가율이며 지수 원수준이 아니다.** ③ 현재 기준 척도·비교 날짜·**자료 버전을 고정**한다. ④ **과거 자체 기준 자료가 부족하면 보조 설명만 제한하고 기본 검색에서 배제하지 않는다.** |\n+| **이유** | 계산 결과를 왜곡하지 않으면서 사용자가 비교의 의미를 직접 확인할 수 있게 한다. |\n+| **남은 실행 항목** | **U01**에서 공통 척도 결과가 사용자 기대와 경제적 특징에 부합하는지 확인한다. 큰 차이의 자동 판정 수치는 **U04**와 연계한다. |\n+\n+**010 반영**: ①③ → FR-005·FR-009·`snapshot_key` / ② → **FR-015·research R8·포트 계약 §1**(2026-09-16 추가) /\n+④ → FR-017·SC-011·T038(보조 설명만 제한, 후보 자격 불변) / U01·U04 → PD-08·PD-09.\n+**④는 v2의 `NO_CASE_SCALE` 후보 제외를 D21이 명시적으로 금지하고 있었다는 뜻이다.**\n+\n+### 1-B. 결정 기록 (이전 판)\n+\n+1-A에 없는 **반박할 전제·왜 문제가 되는가·정하지 않으면·검토한 대안·화면 표시**를 담는다.\n+**v1 유지 판단의 근거인 \"검토한 대안\" 줄은 이 판에만 있다.**\n+\n+| 항목 | 내용 |\n+|---|---|\n+| 제목 | 유사성의 의미와 설명 |\n+| 반박할 전제 | \"표준화 값이 가까우면 사용자가 생각하는 경제환경도 비슷하다.\" |\n+| 왜 문제가 되는가 | **시대별 상대 위치가 같아도 실제 금리·물가·교역 수준은 다를 수 있다.** 검색 제목과 원값 설명이 서로 모순처럼 보일 수 있다. |\n+| 정하지 않으면 | 사용자가 상대적 유사성을 **실제 수치의 일치 또는 같은 투자 여건으로 오해**한다. |\n+| 필요한 근거·질문 | 실제 수치·최근 경로를 기본 검색에 반영하면서 시대별 상대 위치를 어떻게 보조 설명할 것인가. **실제 이해 여부는 U01에서 확인한다.** |\n+| 검토한 대안 | 공통 척도 기본 / **시대별 척도 기본을 비교해 전자를 채택.** |\n+| 결정 | 기본 검색은 현재 질의 구간 직전의 **공통 척도를 현재와 모든 과거 후보에 동일하게 적용**해 실제 입력값과 3개월 경로의 차이를 비교한다. 각 시대의 평소 대비 위치는 **보조 설명으로만** 제공하고 기본 순위와 합치지 않는다. |\n+| 화면·표시 | 실제 값·단위·3개월 경로와 닮은 점/차이를 **먼저** 보여준다. '당시 평소 대비 위치'는 상세에서 구분하고 **기본 검색 이유로 혼용하지 않는다.** |\n+| 목적 | 계산 결과를 왜곡하지 않으면서 사용자가 비교의 의미를 직접 확인할 수 있게 한다. |\n+\n+---\n+\n+## 2. 앞선 제안에서 틀렸던 것 (정정)\n+\n+| 앞선 주장 | 정정 |\n+|---|---|\n+| 시대별 척도는 D21이 미처 검토하지 않은 개선이다 | D21이 이미 비교한 대안이다. 다시 제안할 수 있으나 새로운 검증 근거가 필요하다 |\n+| 환율 하나 때문에 옛 시기가 사실상 배제된다 / 최근 10년만 실질 탐색한다 | 실제 후보 순위·기여도 측정이 없는 가설이다. 척도 산출 구간 10년과 후보 탐색 범위는 다르다 |\n+| 환율 영향은 약 4.8%, 수준 지표 영향은 약 29%뿐이다 | **명목 가중치**를 실제 거리 기여도로 잘못 표현했다. 큰 지표 차이는 작은 명목 가중치로도 실제 거리를 지배할 수 있다 |\n+| 나머지 12개는 증가율이라 드리프트 영향이 없다 | 증가율 자체의 중심·산포도 시대별로 달라질 수 있다. 변화율 변환만으로 영향이 없다고 보장할 수 없다 |\n+| 문제는 금융·주택에 집중된다고 실측했다 | 등록표의 지표 수와 변환을 센 것이다. 실제 검색 영향이나 순위 변화는 아직 측정하지 않았다 |\n+| 공통 척도는 후보월 이후 자료를 쓰므로 미래 정보 누수다 | 현재 정보로 과거를 비교하는 역사 탐색과 당시 의사결정 재현을 구분해야 한다. 후보월 이후라는 이유만으로 누수라고 단정하지 않는다 |\n+| 옛 사례가 순위에서 밀리면 기능이 동작하지 않는다 | 실제 입력값의 유사성을 찾는 목적이라면 수준이 다른 사례가 멀게 나오는 것은 의도한 결과일 수 있다 |\n+| 화면에 원값과 두 척도를 보이면 오해를 막을 수 있다 | 설명을 돕는 설계 가설이다. 사용자 이해가 확인됐다는 뜻이 아니며, v1도 보조 설명으로 당시 기준을 제시할 수 있다 |\n+| v2의 계산량은 늘지 않는다 | 후보월별 재사용은 가능하지만 전체 계산량·적재 비용의 우열은 실행 조건을 맞춰 측정해야 한다 |\n+\n+---\n+\n+## 3. 등록표에서 확인한 범위 ([008](../008-macro-indicator-registry/spec.md) FR-001)\n+\n+| 분야 | 지표 수 | 수준으로 들어가는 지표 | 분야 안 명목 비중 합 |\n+|---|---|---|---|\n+| 생산 | 3 | — | 0 |\n+| 소비·투자 | 3 | — | 0 |\n+| 대외거래 | 3 | 무역수지(공식 금액) | 1/3 |\n+| 노동 | 2 | 실업률(계절조정 비율) | 1/2 |\n+| 물가·원자재 | 2 | 두바이유(월 평균) | 1/2 |\n+| 금융·주택 | 3 | 국고채 3년·원/달러 환율(월 기말) | 2/3 |\n+| 해외 경기 | 1 | — | 0 |\n+| **합계** | **17** | **5개** | 종합 명목 비중은 아래 식 |\n+\n+분야 동일가중 기준 수준 지표의 **명목 비중 합**은 `(1/3 + 1/2 + 1/2 + 2/3) / 7 = 2/7 ≈ 28.6%`,\n+환율의 명목 비중은 `1/7 × 1/3 = 1/21 ≈ 4.8%`다. 실제 종합 거리 기여도는\n+`w_i × E_i / Σ(w_j × E_j)`이며 후보마다 달라진다. 예를 들어 환율의 E만 20, 나머지는 모두 1이면\n+환율의 실제 거리 기여도는 **50%**다. 이 예는 수식 설명용이며 실제 경제자료 측정값이 아니다.\n+\n+금융·주택은 수준 지표 명목 비중이 높으므로 우선 살펴볼 분야다. **v1·v2의 결과 차이가 가장 크다는\n+결론이나 다른 분야에는 영향이 없다는 결론은 이 표로 내리지 않는다.**\n+\n+---\n+\n+## 4. v2를 검증할 이유와 방법\n+\n+### ① 유사성의 의미가 다르다\n+\n+v1은 질의 직전 공통 척도로 실제 입력값과 경로의 차이를 비교한다. 지표별 반올림 전 차이는\n+`|(x_t-m_t)/s_t - (x_c-m_t)/s_t| = |x_t-x_c|/s_t`다.\n+v2는 `|(x_t-m_t)/s_t - (x_c-m_c)/s_c|`로 각 시대의 평소 대비 위치 차이를 비교한다.\n+여기서 x는 008이 정한 변환 후 입력값이다. **계산 오류 수정이 아니라 검색 질문의 변경**이다.\n+\n+### ② 같은 표본에서 두 종류의 차이를 따로 본다\n+\n+검증 전에 자료·등록표 버전, 질의 기준월, 분야, 비교 시점과 측정 항목을 고정한다.\n+수익률이 좋은 사례가 나오는 방향으로 표본·척도·가중을 고르지 않는다(FR-025).\n+\n+| 비교 | 고정할 조건 | 확인할 것 |\n+|---|---|---|\n+| 거리 정의 비교 | 두 방식 모두 계산 가능한 공통 후보 집합, 동일 입력·가중·표시 규칙 | 상위 사례 교체, 원값·3개월 경로 차이, 지표별 실제 기여, 수준·산포 차이 |\n+| 후보 가용성 비교 | 같은 질의·자료에 각 모델의 후보 조건을 적용 | 유효 후보 수·최초 후보월·제외 사유. v2의 후보 직전 이력 부족과 0 척도를 따로 집계 |\n+| 사용자 이해 비교 | 실제 값·단위·검색 이유를 함께 제시하고 두 방식의 제시 순서를 교차 | 상대 위치를 수치 일치·같은 투자 여건으로 오해하는지, 찾으려던 사례에 부합하는지(U01) |\n+| 계산 비용 비교 | 같은 자료·실행 환경, 초기 계산과 증분 갱신을 구분 | 소요 시간·계산 횟수·저장량. 후보월 재사용 여부도 기록 |\n+\n+오래된 사례가 더 많이 나오거나 이후 성과가 좋다는 사실만으로 우수한 모델이라고 판정하지 않는다.\n+이 비교는 **내부 실험**이며 두 모델의 운영 API나 선택 화면을 만들겠다는 요구가 아니다(FR-026).\n+검증 표본과 채택 판정 기준은 실행 전에 기록하며, 미정인 수치를 임의로 확정하지 않는다.\n+\n+### ③ 시간 기준을 구분한다\n+\n+010은 최신 개정자료를 이용한 **역사 탐색**이다. 당시 의사결정 재현은 그 의사결정 시점에 공개된\n+자료·발표일·빈티지로 척도와 입력을 구성했는지 별도로 확인해야 한다(FR-027).\n+v2도 최신 개정값을 쓰는 동안 당시 재현을 보장하지 않는다. 이 구분은\n+[FRED·ALFRED의 자료 기준 설명](https://fred.stlouisfed.org/docs/api/fred/fred_vs_alfred.html)과도 일치한다.\n+\n+---\n+\n+## 5. v2가 감수하는 부담\n+\n+### ① 실제 수준과 산포 차이가 거리에서 제거된다\n+\n+현재 금리 3%와 과거 금리 10%가 각각 그 시대의 중앙값이면 둘 다 z=0이다.\n+산포 200원인 시기의 z=1과 산포 50원인 시기의 z=1도 같다. 상대 위치는 같지만 실제 조건은 다르다.\n+사용 목적에 적합한지는 아직 확인하지 않았다.\n+\n+### ② 후보 가용 범위가 줄 수 있다\n+\n+후보 c도 `c-122~c-3`에서 최소 60개월 연속 자료가 필요하다. 단순 연속 계열의 첫 자료월을 S라 하면\n+첫 가능한 후보 종료월은 **S+62개월**이다(척도 S~S+59, 관측 S+60~S+62).\n+실제 범위는 지표별 시작·결측·0 척도와 분야 결합에 따라 더 좁아질 수 있다. v1은 후보 직전 이력을\n+자격 조건으로 요구하지 않으며, 시대별 보조 설명만 제한한다(FR-012·FR-017).\n+\n+### ③ 기본 검색 이유가 바뀐다\n+\n+D21의 “당시 평소 대비 위치는 기본 검색 이유로 혼용하지 않는다”와 충돌한다.\n+원값을 함께 보여주는 것만으로 이 충돌이나 사용자 오해가 해소됐다고 할 수 없다.\n+\n+### ④ 아직 검증 결과가 없다\n+\n+이 문서에는 실제 자료 대조·U01 관찰·성능 실측 결과가 없다. v1 유지도 우월성 입증이 아니라\n+**현재 합의된 구현 기준의 유지**다. 문서 작성량과 체크리스트 완료는 모델 채택 근거가 아니다.\n+\n+---\n+\n+## 6. 채택한다면 무엇을 바꿔야 하나 (현재 미적용)\n+\n+### 6.1 기획서 D21 — 세 항목\n+\n+| 항목 | 현재 v1 | v2 채택 시 검토할 변경 |\n+|---|---|---|\n+| 결정 | 공통 척도를 질의·모든 후보에 동일 적용 | 질의는 t 직전, 후보는 c 직전 척도로 각각 표준화 |\n+| 화면·표시 | 실제 값·경로가 기본 검색 이유, 시대별 위치는 보조 | 상대 위치가 기본 검색 이유임을 밝히고 실제 수준·산포 차이도 함께 설명 |\n+| 검토한 대안 | 공통 척도를 기본으로 채택 | 검증 결과·채택 근거·감수하는 비용을 남기고 변경 여부 결정 |\n+\n+### 6.2 constitution 개정 — 영향 다섯\n+\n+| # | 위치 | v2 채택 시 필요한 검토 |\n+|---|---|---|\n+| C1 | 원칙 V의 공통 척도 | 질의·후보에 같은 척도를 적용하는 원칙 변경 |\n+| C2 | 용어 사전 | 공통 척도와 시점별 척도의 기본·대안 역할 변경 |\n+| C3 | 경제환경 검색 | 시대별 위치를 보조로만 제공하는 규칙 변경 |\n+| C4 | spec에 위임하는 모델 명세 목록 | 기본 모델·내부 대안의 표현 동기화 |\n+| C5 | 원칙 VI의 0 척도 처리 | 질의 척도 실패와 후보 척도 실패의 결과를 구분 |\n+\n+이 변경은 원칙 재정의이므로 채택 시 MAJOR 개정 대상이다. **기존 미승인 4.0.0 초안은 본문에서\n+분리했으며 효력이 없다.** 3.3.0 Git·Jira 초안은 별개이므로 내용과 미승인 상태를 유지했다.\n+실제 개정 버전은 채택 시점의 승인 버전에서 정하며, 검증 결과만으로 승인 절차를 대신하지 않는다.\n+\n+### 6.3 작성했던 v2 설계 보존\n+\n+v2 설계는 Git 커밋 `4d9cddc`의 `specs/010-economic-regime-search/`에 보존돼 있다.\n+질의·후보 척도 분리(`query_scale`/`case_scale`, `queryScale`/`caseScale`), 후보 척도 부족 제외와\n+태스크 설계를 다시 검토할 수 있다. **현재 파일은 v1 구현 계약**이며, 과거 설계를 그대로 적용하지 않는다.\n+\n+---\n+\n+## 7. 검증 뒤 고를 수 있는 길 넷\n+\n+| | 무엇 | 장점 | 확인할 비용 |\n+|---|---|---|---|\n+| **A (현재 구현 기준)** | D21 유지, v1 | 실제 입력값·경로의 차이를 같은 척도로 비교 | 시대별 분포 변화가 사용자 목적에 미치는 영향 |\n+| B | v2 전면 | 시대별 상대 위치를 직접 비교 | 실제 수준·산포 정보 손실, 후보 가용성 감소, D21·constitution 변경 |\n+| C | 수준 지표 5개만 시대별 척도 | 특정 지표에 한정해 상대 위치 비교 | 거리 해석이 섞이며 5개 선정 근거도 검증 필요. D21 변경 대상 |\n+| D | 008의 입력 변환 변경 | 지표 의미에 맞춘 변환을 검토할 수 있음 | 수준 정보 손실 가능성, 등록표·모델 버전 및 기획 결정과의 정합성 검토 |\n+\n+현재는 A로 개발한다. B~D는 선택지가 남아 있다는 뜻이며 이번 구현 태스크에 추가하지 않는다.\n+\n+---\n+\n+## 8. 지금의 결정과 재논의 조건\n+\n+1. **v1을 구현 기준으로 유지한다.** spec·plan·tasks·data-model·contracts·quickstart를 같은 기준으로 맞춘다.\n+2. **v2 제안은 검증 대기로 보존한다.** 실제 자료 비교와 사용자 이해 결과가 나오면 판단 근거를 추가한다.\n+3. **채택 시 별도로 확정한다.** D21 변경과 constitution 승인 절차를 거친 뒤 관련 spec·계약·태스크를 함께 갱신한다.\n+\n+M1~M9의 v1 구현은 v2 검증·승인을 기다리지 않는다. M10의 기본 사용성 관찰을 v2 비교 실험 결과로\n+간주하지 않으며, 실제 비교를 수행한 경우에만 그 조건과 결과를 별도로 기록한다.\n+\n+---\n+\n+## 9. 관련 문서 정합성\n+\n+| 대상 | 현재 정리 |\n+|---|---|\n+| [spec.md](spec.md) PD-08 | 구현 기준 v1 확정 / v2 변경 제안 검증 대기 |\n+| [plan.md](plan.md)·[tasks.md](tasks.md) | v1 계산·보조 설명·검증 경로 일치. 사용성 관찰 M10 유지 |\n+| [specs/README.md](../README.md) | 010·PD-08의 기존 모델 v1 기준 유지 |\n+| [008](../008-macro-indicator-registry/spec.md) FR-014 | 기존 공통 척도용 구간 계약 유지 |\n+| [009](../009-market-flow-overview/spec.md) FR-007 | 실제 값·단위로 표시하는 기존 D21 인용 유지 |\n+| constitution | v2 관련 미승인 본문을 제안 전 원칙으로 복원. 별도 3.3.0 초안은 보존 |\n+| Notion 기획서 D21·§6.4.4 | 변경하지 않음. 채택 시에만 영향 범위를 확인해 승인 절차로 변경 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/d21-amendment.md",
+          "old_path": "specs/010-economic-regime-search/d21-amendment.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,7 +47,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL\n | `field_id` | VARCHAR(32) | 분야 id. `COMPOSITE`이면 NULL |\n | `baseline_month` | DATE NOT NULL | 기준월 t. 월의 1일로 정규화 |\n | `revision` | INT NOT NULL | 같은 (모드·분야·기준월)에서 결과가 달라진 순번. 1부터 |\n-| `content_hash` | CHAR(64) NOT NULL | 결과 본문의 해시. 직전 revision과 같으면 새 행을 만들지 않는다 |\n+| `content_hash` | CHAR(64) NOT NULL | 공통 척도·사례·시대별 보조 설명을 포함한 결과 본문의 해시. 계산 시각은 제외하며 직전 revision과 같으면 새 행을 만들지 않는다 |\n | `data_version` | VARCHAR(40) NOT NULL | 이 내용을 **처음 낸** 008 자료 버전. **임시 대역이 계산한 행은 `FIXTURE-`로 시작한다** |\n | `registry_version` | VARCHAR(40) NOT NULL | 008 등록표 버전 |\n | `model_version` | VARCHAR(40) NOT NULL | 010 모델 버전 |\n@@ -125,7 +125,7 @@ data/ 파이프라인 (오프라인)                         PostgreSQL\n ### 2.3 전체 유효 후보 (`ranked_candidates`)\n \n ```json\n-[{\"endMonth\": \"2012-03\", \"distance\": \"0.412938571034\", \"rank\": 1}, ...]\n+[{\"endMonth\": \"2012-03\", \"distance\": \"0.412938571034\", \"rank\": 1}]\n ```\n \n 표시 후보 10개 **밖의** 후보까지 순위와 거리를 담는다(약 190개). **±6개월 건너뛰기는 적용하지 않은 원본 순위다**(spec FR-012) — 건너뛰기가 하나씩 담을 때마다 적용되는 순차 규칙이라, 걸러 둔 목록에 011이 가용성 필터를 얹으면 어느 후보가 걸러졌어야 하는지 다시 계산할 수 없다. [011](../011-regime-strategy-link/spec.md)\n@@ -178,7 +178,7 @@ T_g(*\"분야 지표들이 함께 확보된 최신월\"*, 008 FR-013)보다 뒤로\n | `distance` | JSONB NOT NULL | `{value, byField: {...}, contribution: {...}}` — 전부 문자열 decimal |\n | `indicator_values` | JSONB NOT NULL | 지표별 `{queryRaw, caseRaw, queryZ, caseZ, unit, e, nominalWeight, distanceShare}` |\n | `explanation` | JSONB NOT NULL | `{similar: [문장], different: [문장]}` (research R8 템플릿 조립) |\n-| `era_position` | JSONB | 시대별 평소 대비 위치(FR-017 보조). 지표별 `{sentence, method, windowStart, windowEnd, months}`. 이력이 부족한 지표는 키가 없고, 전부 부족하면 NULL |\n+| `era_position` | JSONB | 시대별 평소 대비 위치(FR-017 보조). 지표별 `{sentence, method, windowStart, windowEnd, months}`. 이력이 부족하거나 보조 척도가 0인 지표는 키가 없고, 전부 계산 불가이면 NULL |\n | `created_at` / `updated_at` | TIMESTAMP NOT NULL | |\n \n - `CONSTRAINT uk_regime_case_rank UNIQUE (snapshot_id, rank)`\n@@ -202,7 +202,7 @@ T_g(*\"분야 지표들이 함께 확보된 최신월\"*, 008 FR-013)보다 뒤로\n 유사도처럼 읽힌다(spec FR-017·FR-022). 수기 대조에 필요한 값은 `method`·`windowStart`·`windowEnd`·\n `months`로 충분하다 — 그 구간과 방법이 있으면 독립 계산으로 같은 판정을 다시 만들 수 있다.\n \n-**이 값은 기준월 t와 무관하다.** 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 같은 후보월이 여러\n+**이 값은 같은 자료·등록표·모델 버전에서 기준월 t와 무관하다.** 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 같은 후보월이 여러\n snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 질의 쪽(§2.3, research R3)과 반대 성질이며,\n 배치는 이 값을 **후보월마다 한 번만** 계산해 공유한다.\n \n@@ -249,7 +249,7 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 \n | 바뀌면 새 버전 | 근거 |\n |---|---|\n | 지표 집합·변환 | FR-004 |\n-| 척도 규칙(구간 길이, 연속 판정, 분위수 방법, 보정 상수) | FR-005·FR-006, research R5 |\n+| 척도 규칙(산출 구간, 구간 길이, 연속 판정, 분위수 방법, 보정 상수) | FR-005·FR-006, research R5 |\n | **비교 시점 규칙**(결측 달 제외, 지표 단위 적용) | FR-001 |\n | 거리식·가중 | FR-009·FR-010 |\n | **시대별 위치 판정 경계값**(문장이 '높은/낮은/비슷한'으로 갈리는 z 기준) | FR-017, research R8 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/data-model.md",
+          "old_path": "specs/010-economic-regime-search/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,8 @@\n \n **Input**: Feature specification from `specs/010-economic-regime-search/spec.md`\n \n+> **구현 기준**: D21의 모델 v1. v2는 [검증 대기 제안](d21-amendment.md)으로 분리했으며 이 계획의 선행 조건이 아니다. 사용성 관찰 M10은 구현 완료 뒤 별도 묶음으로 유지한다.\n+\n > **2026-09-16 개정**: spec Clarifications(Session 2026-09-16) 8건을 반영했다. 설계에서 바뀐 것은\n > ① **008 경계를 둘로 나눠 각각의 필요에 맞췄다** — Backend의 `MacroIndicatorPort`는 등록표(이름·\n > 단위·순서)만, 시계열은 `data/` 배치의 `MacroIndicatorSource`만. 기준월은 배치가 표에 기록,\n@@ -72,6 +74,8 @@ Phase 0에서 10건을 해소했고, 2026-09-16에 R1·R3을 개정했다. 상\n \n *GATE: Phase 0 이전 통과 필수. Phase 1 이후 재확인.*\n \n+판정 기준은 승인된 경제환경 검색 원칙이다. constitution의 미승인 3.3.0 Git·Jira 초안과 분리한 4.0.0 모델 변경안을 승인 근거로 쓰지 않는다.\n+\n | 원칙 | 판정 | 근거 |\n |---|---|---|\n | I. 중심 약속은 전략 진단 | PASS | 경제환경 검색은 전략 진단의 입구다. 사례 이후 전략 결과는 011이 붙이고 010은 후보만 정한다 |\n@@ -112,7 +116,10 @@ specs/010-economic-regime-search/\n ├── contracts/\n │   ├── regime-search-api.md           # HTTP 계약\n │   └── macro-indicator-port.md        # 008 경계 (포트·소스)\n-├── checklists/requirements.md\n+├── checklists/\n+│   ├── requirements.md                # spec 품질 검토\n+│   └── review.md                      # 요구 품질 검토 78항목\n+├── d21-amendment.md                   # v2 검증 대기 제안 (구현 계약 아님)\n └── tasks.md                           # /speckit-tasks 산출물\n ```\n \n@@ -125,6 +132,7 @@ data/\n │   │   ├── source.py                  # MacroIndicatorSource 프로토콜 (008 경계)\n │   │   ├── postgres.py                # 008 완성 후 구현체\n │   │   └── fixture/                   # ⚠ [임시] 008 대역 — 008 완성 시 통째 삭제\n+│   ├── rounding.py                    # 12자리 반올림 — 저장·비교 직전\n │   ├── scale.py                       # 연속 구간 판정, 중앙값·MAD·IQR, 보정 상수\n │   ├── comparison.py                  # 지표별 비교 시점 판정 (FR-001)\n │   ├── distance.py                    # z, E_i, D_g, 종합 거리, 지표·분야 기여\n@@ -144,6 +152,7 @@ backend/src/main/java/com/ssafy/thorp/regime/     # 계산하지 않는다. 008\n ├── domain/model|vo/                   # SearchStatus, StatusReason, SearchMode, SnapshotKey\n └── infrastructure/\n     ├── persistence/                    # snapshot·baseline-month·case 조회\n+    ├── config/RegimeProperties.java     # macro.source (fixture|macro) — 코드 기본값 없음\n     └── macro/\n         ├── MacroIndicatorAdapter.java  # 008 완성 후 작성\n         └── fixture/                    # ⚠ [임시] 008 대역 — 008 완성 시 통째 삭제\n@@ -172,7 +181,7 @@ frontend/src/\n \n | 묶음 | 파트 | 내용 | 끝났다고 말할 근거 |\n |---|---|---|---|\n-| **M1** | DE | 지표 소스 계약 + **격리된** 픽스처 대역 | 아홉 가지 모양이 다 들어 있고, 픽스처가 `macro/fixture/` 밖으로 나가지 않으며, 자료 버전이 `FIXTURE-`로 시작하고, `THORP_ENV=prod`에서 `--source fixture`면 적재 전에 실패한다 |\n+| **M1** | DE | 지표 소스 계약 + **격리된** 픽스처 대역 | 열 가지 모양이 다 들어 있고, 픽스처가 `macro/fixture/` 밖으로 나가지 않으며, 자료 버전이 `FIXTURE-`로 시작하고, `THORP_ENV=prod`에서 `--source fixture`면 적재 전에 실패한다 |\n | **M2** | DE | `scale.py`·`comparison.py` — 연속 구간, 중앙값·MAD·IQR, 지표별 비교 시점 | 구멍 뚫린 계열이 60개월 미만으로 판정된다. 상수 계열이 IQR로 넘어가고 완전 상수는 계산 불가다. 한 달 결측이 그 지표만 두 달로 줄이고, 세 달 결측이 분야를 계산 불가로 만든다 |\n | **M3** | DE | `distance.py`(z·E_i·D_g·종합·지표 기여·분야 기여) + `era.py`(시대별 위치) | 수기 계산과 일치(SC-003). 거리 0이면 기여 키가 없다. 명목 비중과 실제 기여가 함께 나온다 |\n | **M4** | DE | `candidates.py`·`explain.py` — 후보 제한·전체 순위·상위 10·설명 문장 | 12개월 이내 제외, ±6개월 건너뛰기, 동률 오래된 월 우선, 부족하면 부족한 대로. 전체 유효 후보 목록이 상위 10개 밖까지 나온다 |\n@@ -181,6 +190,7 @@ frontend/src/\n | **M7** | FE | 결과 목록·상태 표시·자료 기준 시점·비교 시점 표기·역사 비교 표시 | 배지·확률 표현 0건, 후보 부족 시 빈자리 없음, 빠진 지표·월과 역사 비교 표시가 보인다 |\n | **M8** | FE | 사례 상세(거리·기여·z·척도) + 종합 비교 전환 + 기준월 지정 | 모드 전환 시 한 문장 알림, 기준월 표시, 유지율 0건 |\n | **M9** | DOCS | quickstart 실행 기록·폐기 예행연습 | S1~S9 실행 기록이 남고, 픽스처 디렉터리를 지웠을 때 운영 코드가 깨지지 않음을 확인했다 |\n+| **M10** | DOCS | 사용성 관찰 6~8명 — M9까지 구현·검증을 마친 뒤 별도 티켓으로 수행(SC-008) | 참여자별 과제 수행·오해 여부·막힌 지점이 실제 관찰 기록으로 남는다. 구현 완료를 사용성 확인으로 보고하지 않는다 |\n \n **M2·M3·M4를 가장 먼저 두는 이유**: 이 셋이 010의 전부다. 화면과 API는 그 결과를 옮기는 일이고,\n 틀렸을 때 드러나는 곳도 여기다. 007이 화면부터 만들어 워커 없이 숫자를 주입하게 된 전철을 밟지\n@@ -221,7 +231,7 @@ frontend/src/\n 키·API 응답·기록에 전부 실려 다니므로 값이 어느 경로로 흘러가도 가짜임이 드러나고, 폐기가 조건\n 한 줄로 끝난다. 절차는 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §3.3.\n \n-**픽스처의 아홉 모양은 008이 와도 남긴다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수 있는데,\n+**픽스처의 열 모양은 008이 와도 남긴다.** 실제 자료에 상수 계열이나 정확한 동률이 없을 수 있는데,\n 그러면 `NOT_COMPUTABLE`·동률 경로가 검증 밖으로 나간다. 운영 대역(위 한 디렉터리)은 폐기하되 같은\n 모양을 담은 **단위 테스트 픽스처**는 `data/tests/regime/fixtures/`에 남는다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/plan.md",
+          "old_path": "specs/010-economic-regime-search/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -168,7 +168,7 @@ curl -s \"localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR\" |\n \n **보이면 안 되는 것**: `eraPosition` 안의 z 값·분위수·백분율 — **문장만** 온다.\n \n-**기준월을 바꿔도 같아야 한다** — 시대 척도는 기준월과 무관하다.\n+**같은 자료·등록표·모델 버전에서 기준월을 바꿔도 같아야 한다** — 시대별 보조 위치는 기준월과 무관하다. 비교할 두 응답의 버전이 다르면 이 확인의 대상으로 삼지 않는다.\n \n ```bash\n A=$(curl -s \"localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR&baselineMonth=2026-07\" | jq -S '.result.eraPosition')\n@@ -176,8 +176,8 @@ B=$(curl -s \"localhost:8080/regime-searches/cases/2012-03?mode=field&field=LABOR\n [ \"$A\" = \"$B\" ] && echo \"동일\"   # 다르면 SC-011 위반\n ```\n \n-직전 연속 60개월이 부족한 지표는 **키가 없어야** 하고, 전부 부족하면 `eraPosition`이 `null`이다 —\n-`0`이나 `\"-\"`로 채우면 원칙 VI 위반이다.\n+직전 연속 60개월이 부족하거나 보조 척도가 0인 지표는 **키가 없어야** 하고, 전부 계산 불가이면 `eraPosition`이 `null`이다 —\n+`0`이나 `\"-\"`로 채우면 원칙 VI 위반이다. 픽스처 모양 10의 후보는 비교 입력이 있으므로 전체 후보 목록에 남아야 한다. 보조 설명 부족을 후보 제외 사유로 쓰면 안 된다.\n \n ## S7. 같은 검색은 늘 같은 결과다 (SC-001, SC-002)\n \n@@ -279,6 +279,7 @@ THORP_ENV=prod .venv/Scripts/python scripts/precompute_regime.py --source fixtur\n | 사례 이후 시장·전략 결과 | 011 범위. `postPeriod.available`이 항상 `false` | 011 구현 후 |\n | 가용성 필터가 걸린 목록 | 010은 `candidates` 목록만 내준다. 필터는 011이 건다 | 011 구현 후 |\n | 지표별 최소 유효 척도에 의한 계산 불가 | PD-10(008 소유) 미확정. MAD→IQR→0 경로만 확인된다 | PD-10 확정 후 |\n-| 사용성 관찰(SC-008) | 이번 태스크 범위 밖 | 별도 티켓 |\n+| 사용성 관찰(SC-008) | **010 범위 안이며 구현이 끝난 뒤 수행**한다. 구현 완료와 사용성 확인을 구분한다 | **M10(T154)** 별도 티켓 |\n+| v1·v2 중 어느 유사성이 사용자 목적에 맞는가 | 실제 자료 비교와 사용자 관찰 전에는 우열을 확정할 수 없다. [변경 제안서](d21-amendment.md)의 검증 계획이며 v1 구현 차단 조건이 아니다 | 비교 검증 후 재논의 |\n \n **여기 나온 숫자를 성과로 인용하지 않는다.** 픽스처 위의 결과이며 경제에 대해 아무것도 말하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/quickstart.md",
+          "old_path": "specs/010-economic-regime-search/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -95,27 +95,28 @@ spec의 Technical Context에서 나온 미해결 항목을 결론까지 끌고 \n 다르면 m·s가 달라 z가 달라진다. 즉 **월별 z를 t와 무관하게 미리 계산해 둘 수 없다.** 이것을 놓치면\n 사전 계산 설계가 통째로 틀린다.\n \n-**시대별 위치(FR-017)는 정반대다.** 그 척도는 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 **t와\n+**시대별 위치(FR-017)는 정반대다.** 같은 자료·등록표·모델 버전에서 그 척도는 후보 종료월 c의 `c-122 ~ c-3`에서만 나오므로 **t와\n 무관**하고, 후보월마다 한 번 구해 모든 snapshot이 공유한다. 후보마다 따로 구하면 3,000 snapshot ×\n 10 사례 × 17 지표 = 510,000회지만, 월 단위로 묶으면 441개월 × 17 = 7,497회로 질의 척도(51,000회)보다\n-작다. **같은 문서 안의 두 값이 정반대 성질을 갖는다**는 점이 헷갈리기 쉬운 자리다.\n+작다. **검색 거리의 z와 보조 위치가 서로 다른 기준월 의존성을 갖는다**는 점이 헷갈리기 쉬운 자리다.\n \n-**범위가 `t ≥ M`인 이유**: M월 값이 새로 들어오거나 개정되면, M은 세 경로로만 계산에 들어간다.\n+**범위가 `t ≥ M`인 이유**: M월 값이 새로 들어오거나 개정되면, 순위 계산과 시대별 보조 설명을 포함해 M은 네 경로로 계산에 들어간다.\n \n | 경로 | 조건 | 영향받는 t |\n |---|---|---|\n | M이 질의 비교 시점에 들어감 | t ∈ {M, M+1, M+2} | t ≥ M |\n | M이 척도 구간 `[t-122, t-3]`에 들어감 | t ∈ [M+3, M+122] | t ≥ M |\n | M이 어느 후보의 관측 구간에 들어감 | 후보 종료월 ≥ M, 후보는 t-12 이전 → t ≥ M+13 | t ≥ M |\n+| M이 시대별 보조 척도 구간 `[c-122, c-3]`에 들어감 | c ∈ [M+3, M+122], t > c+12 → t ≥ M+16 | t ≥ M |\n \n-셋 다 같은 답이므로 **의존 그래프가 아니라 워터마크 하나**다. 등록표 버전·모델 버전이 바뀌면 M은\n+넷 다 같은 답이므로 **의존 그래프가 아니라 워터마크 하나**다. 등록표 버전·모델 버전이 바뀌면 M은\n 계열 시작월이 되어 자연히 전 구간이 된다 — 개편(008 FR-017)도 같은 규칙으로 덮인다.\n \n **저장이 변경분인 이유**: 008 FR-017이 새 발표분마다 자료를 다시 받으므로 자료 버전은 계속 오른다.\n 버전을 식별 키에 통째로 박고 매번 전 구간을 새 행으로 쓰면, **내용이 한 글자도 안 바뀐 항목이\n 버전 이름표만 달고 복제된다.** 같은 결과에 이름이 여럿 붙으면 재현이 또렷해지는 게 아니라 흐려지고,\n constitution \"기록·개인정보·보관\"의 *\"무기한 보관을 전제하지 않는다\"* 에도 걸린다.\n-`content_hash`가 직전 `revision`과 같으면 새 행을 만들지 않는다(data-model §2).\n+`content_hash`가 직전 `revision`과 같으면 새 행을 만들지 않는다(data-model §2). 시대별 보조 설명도 해시에 포함하므로 순위가 같아도 설명이 바뀌면 새 항목이다. 후보월 단위 보조 설명 재사용은 같은 자료·등록표·모델 버전 안에서만 한다.\n \n **규모** (자료가 1990-01부터라고 가정, T = 441개월):\n \n@@ -220,10 +221,15 @@ s = MAD / Φ⁻¹(0.75), IQR 대체 시 s = IQR / (2·Φ⁻¹(0.75)).\n \n ## R8. 비슷한 점·다른 점 문장 규칙\n \n-**결정**: 문장은 **템플릿 조립**이며 자유 생성하지 않는다. 지표별 `|z_질의 − z_후보|`가 큰 순으로\n+**결정**: 문장은 **템플릿 조립**이며 자유 생성하지 않는다. 비교 시점 평균인 지표 거리 `E_i`가 큰 순으로\n 정렬해 위에서 **다른 점 최대 2개**, 작은 순으로 **비슷한 점 최대 2개**를 뽑고, 각각 실제 값과\n 단위를 넣어 조립한다.\n \n+**`{질의값}`·`{후보값}`은 `monthly_series()`가 준 변환 후 값이다**(spec FR-015, D21 적용 세부).\n+증가율 지표면 `+3.2%`이지 지수 원수준 `112.4`가 아니다. `raw_series()`는 008이 원값을 보존하는지\n+확인하는 용도이며 **010의 표시·설명·기록 경로에서 쓰지 않는다** — 거리는 변환 후 값으로 재므로\n+설명만 원수준으로 말하면 순위와 설명이 서로 다른 값을 가리킨다.\n+\n ```\n 비슷한 점:      \"{지표명}은 {질의값}{단위}로 당시 {후보값}{단위}와 비슷합니다.\"\n 다른 점:        \"{지표명}은 지금이 {질의값}{단위}로 당시 {후보값}{단위}보다 {높습니다|낮습니다}.\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/research.md",
+          "old_path": "specs/010-economic-regime-search/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,7 @@\n \n **Input**: User description: \"기획서에 맞게 스펙을 작성하자\" (2026-09-10). 같은 날 스펙 단위 재조정 요청에 따라 기획서 전체를 담았던 `001-thorp-platform`을 기능 단위로 분리한 spec 중 하나다.\n \n-**근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §4.3, §4.4, §6.4.4, §6.5, §7.1, §7.3, §7.4와 결정 D07·D08·D09·D11·D21~D24·D27, 미확인 항목 U01~U04·U06, constitution v1.0.0 원칙 II~IX와 \"경제환경 검색\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n+**근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §4.3, §4.4, §6.4.4, §6.5, §7.1, §7.3, §7.4와 결정 D07·D08·D09·D11·D21~D24·D27, 미확인 항목 U01~U04·U06, constitution의 승인된 경제환경 검색 원칙(미승인 개정 제외) 중 원칙 II~IX와 \"경제환경 검색\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n \n **관련 spec**: 지표 값·등록표·기준월 산출값은 [008 경제지표 등록·수집](../008-macro-indicator-registry/spec.md)이 제공한다. 진입은 [009 시장 흐름 개요](../009-market-flow-overview/spec.md)의 '비슷했던 때 보기'와 [005 결과 이해·비교](../005-result-comparison/spec.md)의 '경제환경이 비슷했던 과거 보기'([011](../011-regime-strategy-link/spec.md) 경로)다. 사례 이후 전략 결과 연결은 [011](../011-regime-strategy-link/spec.md), 기록 보존은 [006](../006-my-records/spec.md), 과거 뉴스 연결은 [012](../012-market-news-digest/spec.md)가 맡는다.\n \n@@ -16,6 +16,8 @@\n \n 지금과 비슷했던 과거 구간을 경제환경 모델 v1로 찾는 기능이다. 분야별 검색이 기본이고 'Thorp 종합 비교'는 사용자가 선택해서 연다. 기준월 규칙(T_g/T_all/지정월), 공통 척도(중앙값·MAD, IQR 대체, 계산 불가), 거리·기여도, 후보 제한(12개월 초과 이전·±6개월 건너뛰기·동률 오래된 월 우선), 표시(처음 3개·최대 10개), 검색 상태 3구분과 문턱 교정 전 '최근접 참고 사례' 동작, 전략과 독립적인 후보 결정, 결과 식별·보존이 범위다. 거리·순위를 확률이나 추천으로 바꾸지 않는다. (§4.3, §6.4.4, D08, D09)\n \n+**구현 기준**: 현행 D21의 **모델 v1**이다. 실제 입력값과 최근 3개월 경로의 차이를 공통 척도로 비교하고, 시대별 상대 위치는 상세의 보조 설명으로만 제공한다. [v2 변경 제안](d21-amendment.md)은 **검증 대기**이며 이번 구현 계약·완료 조건에 포함하지 않는다.\n+\n ## Clarifications\n \n ### Session 2026-09-15\n@@ -30,7 +32,7 @@\n \n - Q: 전략 결과 경로에서 ETF 가용성으로 사례가 걸러질 때 010은 [011](../011-regime-strategy-link/spec.md)에게 무엇까지 내주나? → A: 검색 경로는 식별 키가 아니다(경로가 달라도 같은 계산이다). 사전 계산 집합은 표시 후보 최대 10개와 함께 전체 유효 후보의 순위·거리 목록을 보존하고, 가용성 필터는 011이 그 목록 위에서 적용한다. 010은 순위를 다시 매기지 않는다\n - Q: 기준월 t의 비교 대상 3개월(t-2·t-1·t) 중 한 달이 비면 어떻게 하나? → A: 그 달을 비교에서 뺀다. 질의와 후보 모두 남은 시점만 쓰고 E_i는 그 시점들의 평균이다. 값을 만들어 채우지 않는다. 비교에서 빠진 기간은 결과 옆에 별도로 표기한다. 세 달이 모두 비면 계산 불가다\n-- Q: 자료 버전이 오를 때 사전 계산을 전 구간 다시 하고 행도 전부 새로 만드나? → A: 아니다. 자료가 바뀐 가장 오래된 월 M부터 최신월까지만 다시 계산한다(세 경로 모두 t ≥ M이라 워터마크 하나로 정해진다). 결과가 실제로 달라진 (모드·기준월)만 새 항목이 되고, 조회는 그 조합의 가장 최신 항목을 읽는다. 어느 기록도 가리키지 않는 옛 항목은 정리한다\n+- Q: 자료 버전이 오를 때 사전 계산을 전 구간 다시 하고 행도 전부 새로 만드나? → A: 아니다. 자료가 바뀐 가장 오래된 월 M부터 최신월까지만 다시 계산한다(시대별 보조 설명을 포함한 네 경로 모두 t ≥ M이라 워터마크 하나로 정해진다). 결과가 실제로 달라진 (모드·기준월)만 새 항목이 되고, 조회는 그 조합의 가장 최신 항목을 읽는다. 어느 기록도 가리키지 않는 옛 항목은 정리한다\n - Q: 같은 월을 T_g로 얻은 검색과 사용자가 지정한 검색은 같은 결과인가? → A: 같은 검색이다. 기준월의 근거(T_g/T_all/지정월)는 결과의 성질이 아니라 요청의 성질이라 식별 키가 아니고, 조회한 쪽이 판단해 화면·기록에만 남긴다\n - Q: \"자료가 없는 달을 비교에서 뺀다\"는 지표별인가 분야 단위인가? → A: 지표별이다. 지표마다 비교 시점이 다를 수 있고 E_i는 그 지표의 비교 시점 평균이다. 어느 지표의 비교 시점이 하나도 없으면 그 지표가 속한 분야(종합이면 종합)를 '계산 불가'로 한다 — 지표를 몰래 빼지 않는다(FR-007). 표기는 지표·월 단위다\n - Q: FR-002의 '자료 갱신 기준'은 화면에 표시하나? → A: 표시하지 않는다. 화면에 구분해 두는 것은 대상월과 발표일 둘이다. 수집 시각은 008이 기록하되 화면에 쓰지 않는다 — 배치는 값이 그대로여도 돌기 때문에 새 정보가 들어온 것처럼 읽힌다(FR-031)\n@@ -45,7 +47,7 @@\n - Q: 확률·추천 표현을 무엇으로 막나? → A: **두 층으로 막는다.** ① 문자열로 잡히는 13가지를 **금지 표현 목록**으로 확정해 산출물과 고정 문구에 검사하고, ② 표현이 무한한 것(확률 변환·원인 단정·추천)은 **화면이 결과 문구를 지어내지 못하게** 막는다 — 결과 영역 문장은 전부 사전 계산 산출물이거나 계약 고정 문구이고 화면 하드코딩이 0건이다. 목록 하나로는 ②가 영원히 새고, 구조만으로는 ①의 회귀를 못 잡는다\n - Q: 후보가 표시 상한보다 많을 때 그 사실을 알리나? → A: 알린다. **\"가까운 순서로 10개까지 보입니다\"** 라는 사실만 보이고 **후보 수는 말하지 않는다** — 수를 보이면 \"그만큼 비슷했다\"로 읽히는데, 그 수에는 ±6개월로 접힐 같은 국면이 여러 번 들어 있다(FR-014). 표시 상한 10은 기획서 확정값이라 이번에 바꾸지 않는다\n - Q: 모든 분야가 멀쩡한데 종합만 계산 불가일 수 있나? → A: 있다. 신규·교체 지표 때문에 종합 후보가 0건이거나 T_all이 아예 없을 수 있다. **그때 분야 검색은 그대로 제공한다** — 종합이 안 된다고 분야까지 막지 않는다. 사유는 기존 넷(후보 없음 / 질의 입력 없음)을 쓴다\n-- Q: 사용성 관찰은 몇 명에게 언제 하나? → A: **6~8명**, 과제와 확인 질문은 constitution §7.2가 정한 것을 그대로 쓴다. 시점은 **010 구현이 끝난 뒤 한 번**(M9)이다. 이 인원은 오류 발견을 위한 규모이지 수요를 입증하는 표본이 아니다\n+- Q: 사용성 관찰은 몇 명에게 언제 하나? → A: **6~8명**, 과제와 확인 질문은 constitution §7.2가 정한 것을 그대로 쓴다. 시점은 **010 구현이 끝난 뒤 한 번**(M10, 별도 티켓)이다. 이 인원은 오류 발견을 위한 규모이지 수요를 입증하는 표본이 아니다\n - Q: 문턱 교정 뒤 충족 사례가 **있을** 때 화면은 어떻게 보이나? → A: **목록을 나눈다.** 충족 사례만 기본 목록에 보이고 미충족 참고 사례는 별도로 열 수 있게 한다 — 한 목록에 섞고 배지를 달면 나머지가 '덜 유사한 것'으로 읽혀 FR-018이 막으려던 등급 매기기가 생긴다. '충족 사례 없음' 동작(FR-021)과 같은 모양이다\n \n ## User Scenarios & Testing *(mandatory)*\n@@ -154,7 +156,7 @@\n \n #### 공통 척도 (§6.4.4, D21, D27, U06)\n \n-- **FR-005**: 공통 척도는 지표별로 현재 질의 구간 직전 t-122부터 t-3까지 최대 120개월(최소 60개월 연속 자료 필요)에서 중앙값 m과 산포 s를 구한다. **연속 구간은 t-3에서 과거로 거슬러 세어 처음 결측을 만나는 곳까지다.** 그 앞(더 오래된 쪽)에 자료가 더 있어도 구멍을 건너뛰어 끌어오지 않는다 — 통계 개편 전후처럼 성격이 다른 값이 한 분포에 섞이고, 척도를 \"질의 구간 직전\"에서 구하라는 규칙의 뜻이 사라진다. 이 연속 구간이 60개월 미만이면 그 지표가 속한 분야(종합이면 종합)를 '계산 불가'로 처리한다(FR-008). s는 MAD에 정규분포 보정 상수(1/Φ⁻¹(0.75), 근사값 1.4826이며 구현은 정확한 분위수 값을 쓴다)를 곱한 값이다. 질의와 모든 과거 후보에 같은 m·s를 적용한다. (§6.4.4, D21)\n+- **FR-005**: 공통 척도는 지표별로 현재 질의 구간 직전 t-122부터 t-3까지 최대 120개월(최소 60개월 연속 자료 필요)에서 중앙값 m과 산포 s를 구한다. **연속 구간은 t-3에서 과거로 거슬러 세어 처음 결측을 만나는 곳까지다.** 그 앞(더 오래된 쪽)에 자료가 더 있어도 구멍을 건너뛰어 끌어오지 않는다 — 통계 개편 전후처럼 성격이 다른 값이 한 분포에 섞이고, 척도를 \"질의 구간 직전\"에서 구하라는 규칙의 뜻이 사라진다. 이 연속 구간이 60개월 미만이면 그 지표가 속한 분야(종합이면 종합)를 '계산 불가'로 처리한다(FR-008). s는 MAD에 정규분포 보정 상수(1/Φ⁻¹(0.75), 근사값 1.4826이며 구현은 정확한 분위수 값을 쓴다)를 곱한 값이다. 질의와 모든 과거 후보에 같은 m·s를 적용한다. **t-122보다 오래된 후보에도 동일하게 적용하며**, 척도 산출 구간을 후보 탐색 범위로 사용하지 않는다. (§6.4.4, D21)\n - **FR-006**: MAD가 0이면 IQR을 정규분포 보정 상수(2×Φ⁻¹(0.75), 근사값 1.349)로 나눈 값을 쓴다. IQR은 선형 보간의 75백분위와 25백분위 차이다. 그것도 0이면 그 지표가 속한 분야(종합이면 종합)를 '계산 불가'로 처리한다. (§6.4.4, D27)\n - **FR-007**: 질의 기준 자료나 관측값의 결측을 임의 보간하지 않는다. 임의 epsilon을 넣거나 묵시적으로 클리핑해 순위를 만들지 않으며, 확인된 비정상 척도의 지표를 몰래 빼고 계산하지 않고 해당 지표가 속한 분야·종합 결과를 제한한다. 지표별 최소 유효 척도·예외 기준은 PD-10(U06, [008](../008-macro-indicator-registry/spec.md) 소유)이다. (§6.4.4, 원칙 VI)\n - **FR-039**: 계산 불가는 **분야 → 종합 방향만이 아니다.** 모든 분야가 정상인데 종합만 계산 불가일 수 있다 — ① 종합은 모든 분야가 유효한 후보만 쓰므로(FR-012) 시작 연도가 늦은 지표가 있으면 **종합 후보만 0건**이 될 수 있고, ② 지표 교체·개편으로 17개가 함께 확보된 달이 없으면 **T_all 자체가 없다**. 이때 **분야 검색은 그대로 제공한다** — 종합이 안 된다는 이유로 분야 검색을 막지 않는다. 사유는 기존 넷을 쓴다(①은 '유효 후보 0건', ②는 '어느 지표의 비교 시점이 하나도 없음'). (§4.4, FR-001·FR-012·FR-019)\n@@ -162,18 +164,18 @@\n \n #### 거리·가중·기여도 (§6.4.4, D21, D23)\n \n-- **FR-009**: 기본 거리는 다음과 같다. 지표 i의 비교 시점 k(최대 3개, FR-001) 표준화 값 z = (x − m)/s, 지표 거리 E_i는 **비교 시점들의** |z_A − z_B| 평균, d_i = E_i, 분야 거리 D_g는 분야 내 d_i의 산술평균, Thorp 종합 거리는 분야 D_g의 산술평균, **같은 기준월·분야의 D_g는 어느 모드에서 계산하든 같은 값이다**(FR-001), 분야 기여도는 D_g를 7개 D_g 합으로 나눈 값이다. 전체 거리가 0이면 기여도를 표시하지 않는다. **지표마다 비교 시점 수가 달라도 결합이 깨지지 않는다** — E_i가 합이 아니라 **평균**이라 시점 수로 나뉘어 같은 크기로 들어온다. **분야 검색에서는 분야 기여도를 만들지 않는다** — 분야가 하나라 값이 늘 1이고 화면에 뜻 없는 숫자가 하나 는다. 움직임 항목의 추가 가중은 기본 모델에 넣지 않는다. (§6.4.4)\n+- **FR-009**: 기본 거리는 다음과 같다. 지표 i의 비교 시점 k(최대 3개, FR-001) 표준화 값은 `z_질의 = (x_질의 − m_t)/s_t`, `z_후보 = (x_후보 − m_t)/s_t`로 **같은 공통 척도**를 쓴다. 즉 반올림 전 `|z_질의 − z_후보| = |x_질의 − x_후보|/s_t`이며, 여기서 x는 FR-004의 변환 후 입력값이다. 이에 따른 지표 거리 E_i는 **비교 시점들의** |z_A − z_B| 평균, d_i = E_i, 분야 거리 D_g는 분야 내 d_i의 산술평균, Thorp 종합 거리는 분야 D_g의 산술평균, **같은 기준월·분야의 D_g는 어느 모드에서 계산하든 같은 값이다**(FR-001), 분야 기여도는 D_g를 7개 D_g 합으로 나눈 값이다. 전체 거리가 0이면 기여도를 표시하지 않는다. **지표마다 비교 시점 수가 달라도 결합이 깨지지 않는다** — E_i가 합이 아니라 **평균**이라 시점 수로 나뉘어 같은 크기로 들어온다. **분야 검색에서는 분야 기여도를 만들지 않는다** — 분야가 하나라 값이 늘 1이고 화면에 뜻 없는 숫자가 하나 는다. 움직임 항목의 추가 가중은 기본 모델에 넣지 않는다. (§6.4.4)\n - **FR-010**: 분야 내부 지표 동일가중과 분야 간 동일가중(현재 분야 수가 7이면 1/7)을 초기 기본으로 쓰고, 개수는 [008](../008-macro-indicator-registry/spec.md) 등록표가 정하며 010이 상수로 갖지 않고, 이것이 Thorp의 설계 선택이며 경제적 중요성의 동일함이 아님을 화면에 표시한다. \"모든 지표의 중요성이 같다\"고 표현하지 않는다. 지표·분야별 **명목 비중**(분야 내부 `1/n`, 분야 간 `1/분야 수`)과 **실제 거리 기여**(분야 안 `E_i ÷ ΣE_i`, 분야 간 `D_g ÷ ΣD_g`)를 나란히 기록한다 — 둘의 차이가 U02 검증의 관측 대상이다. 분야 안 `ΣE_i`가 0이면 지표 기여도 분야 기여도와 마찬가지로 표시하지 않는다. (§6.4.4, D23, U02)\n - **FR-011**: 계산 가중은 [008](../008-macro-indicator-registry/spec.md)의 등록표 버전을 참조한다. 화면 분류 변경으로 가중이 바뀌지 않는다. (D23)\n \n #### 후보 제한과 표시 (§4.3, §6.4.4, D09, D24)\n \n-- **FR-012**: 후보는 질의 종료월 t보다 12개월 초과 이전의 종료월만 허용한다. **아래쪽 경계는 두지 않는다** — [008](../008-macro-indicator-registry/spec.md)이 확보한 자료가 있는 전 구간이 후보이고, 실제 범위는 자료 버전이 정한다. 고정 시작월이나 기준월 기준 최근 N년 이동창을 쓰지 않는다: 둘 다 \"어디부터\"를 근거 없이 정하는 것이고, 이동창은 기준월이 움직일 때마다 오래된 국면을 소리 없이 떨어뜨린다. 분야 검색은 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보를 D_g로, 종합 검색은 **모든 분야**가 유효한 후보를 Thorp 종합 거리로 정렬한다. 후보에게 질의보다 많은 시점을 요구하지 않는다 — 질의가 두 달로 비교하면 후보도 같은 두 달만 본다(원칙 IV). 과거 후보 자체의 60개월 이력은 요구하지 않는다. **제외한 후보는 사유를 **입력 결측 / 12개월 이내 / 인접 월 건너뜀** 셋으로 구분해 집계한다. **정확한 동률**(저장 자릿수까지 반올림한 거리가 같을 때)은 더 오래된 종료월을 우선한다 — 근사 동률을 동률로 보지 않는다. **±6개월 건너뛰기는 하나를 담을 때마다 적용한다** — 거리순 1위를 담고 그 종료월 ±6개월을 남은 후보에서 제외한 뒤, 남은 것 중 다시 1위를 담는 식으로 표시 개수까지 채운다. **상위 10개를 먼저 뽑아 거르지 않는다**: 그러면 같은 국면을 하나로 묶는 목적은 같은데 그 아래 순위의 관계없는 사례까지 함께 잃는다. FR-013의 '부족하면 부족한 대로'는 **유효 후보 자체가 없을 때**를 말하는 것이지 이 규칙이 만든 빈자리가 아니다. (§6.4.4, D09)\n+- **FR-012**: 후보는 질의 종료월 t보다 12개월 초과 이전의 종료월만 허용한다. **아래쪽 경계는 두지 않는다** — [008](../008-macro-indicator-registry/spec.md)이 확보한 자료가 있는 전 구간이 후보이고, 실제 범위는 자료 버전이 정한다. 고정 시작월이나 기준월 기준 최근 N년 이동창을 쓰지 않는다: 둘 다 \"어디부터\"를 근거 없이 정하는 것이고, 이동창은 기준월이 움직일 때마다 오래된 국면을 소리 없이 떨어뜨린다. 분야 검색은 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보를 D_g로, 종합 검색은 **모든 분야**가 유효한 후보를 Thorp 종합 거리로 정렬한다. 후보에게 질의보다 많은 시점을 요구하지 않는다 — 질의가 두 달로 비교하면 후보도 같은 두 달만 본다(원칙 IV). 과거 후보 자체의 60개월 이력은 요구하지 않는다. 제외한 후보는 **입력 결측 / 12개월 이내 / 인접 월 건너뜀** 셋으로 구분해 집계한다. **정확한 동률**(저장 자릿수까지 반올림한 거리가 같을 때)은 더 오래된 종료월을 우선한다 — 근사 동률을 동률로 보지 않는다. **±6개월 건너뛰기는 하나를 담을 때마다 적용한다** — 거리순 1위를 담고 그 종료월 ±6개월을 남은 후보에서 제외한 뒤, 남은 것 중 다시 1위를 담는 식으로 표시 개수까지 채운다. **상위 10개를 먼저 뽑아 거르지 않는다**: 그러면 같은 국면을 하나로 묶는 목적은 같은데 그 아래 순위의 관계없는 사례까지 함께 잃는다. FR-013의 '부족하면 부족한 대로'는 **유효 후보 자체가 없을 때**를 말하는 것이지 이 규칙이 만든 빈자리가 아니다. (§6.4.4, D09)\n - **FR-013**: 처음 3개, '더 보기'로 최대 10개를 제공하며 억지로 채우지 않는다. 후보가 부족하면 부족한 대로 보인다. **표시 상한에 걸렸을 때는 그 사실을 알린다** — *\"가까운 순서로 10개까지 보입니다\"* 처럼 **상한이 있다는 것만** 말하고 **남은 후보 수는 보이지 않는다**. 수를 보이면 \"그만큼 비슷한 때가 있었다\"로 읽히는데 그 수에는 ±6개월로 접힐 같은 국면이 여러 번 들어 있다(FR-014). 부족할 때만 정직하고 넘칠 때 침묵하면 사용자는 10개가 전부라고 읽는다. 상한 10은 기획서 확정값(PD-08)이라 010이 바꾸지 않는다. (§6.4.4, D09, 원칙 VI)\n - **FR-014**: 연속된 유사 날짜의 반복을 여러 독립 사례로 세지 않는다. 날짜 간격만으로 독립 사건이라고 간주하지 않는다. (§6.4.4, D09)\n-- **FR-015**: 각 사례는 관측 구간(3개월)·비슷한 점·다른 점을 먼저 제시하고, 이후 63거래일 시장·전략 결과는 별도 영역에 [011](../011-regime-strategy-link/spec.md)로 연결한다. 21거래일 결과·거리·기여도·자료 기준은 상세에 둔다. 현재 시장 상태와 비슷한 점·다른 점은 지표의 실제 값과 단위로 설명한다. (§4.3, §6.4.4)\n+- **FR-015**: 각 사례는 관측 구간(3개월)·비슷한 점·다른 점을 먼저 제시하고, 이후 63거래일 시장·전략 결과는 별도 영역에 [011](../011-regime-strategy-link/spec.md)로 연결한다. 21거래일 결과·거리·기여도·자료 기준은 상세에 둔다. 현재 시장 상태와 비슷한 점·다른 점은 지표의 실제 값과 단위로 설명한다 — **여기서 '실제 값'은 [008](../008-macro-indicator-registry/spec.md) FR-001이 정한 변환을 적용한 값이다. 증가율 지표의 실제 값은 증가율이며 지수 원수준이 아니다.** 008이 변환 전 원값도 보존하지만(008 FR-006) 010은 그것을 화면·설명·기록에 쓰지 않는다: 거리는 변환 후 값으로 재는데 설명만 원수준으로 말하면 순위와 설명이 서로 다른 값을 가리켜, D21이 막으려던 *\"검색 제목과 원값 설명이 서로 모순처럼 보이는\"* 일이 그대로 일어난다. (§4.3, §6.4.4, D21)\n - **FR-016**: 종합 사례는 분야 거리의 동일가중 평균과 분야별 거리·기여도를 함께 보이고, 닮은 점과 차이를 함께 설명한다 — **분야 거리 차이가 작은 쪽에서 최대 2개, 큰 쪽에서 최대 2개**로, 지표 단위 설명(Assumptions)과 같은 규칙을 분야 단위에 적용한다. 종합 사례 안의 분야별 설명은 기준월 T_all을 유지하고 분야별 최신 질의값을 섞지 않으며, 더 최신인 개별 발표는 **별도 정보로 표시한다** — 질의값과 같은 자리에 섞지 않고 구분된 영역에 두며, 그것이 검색에 쓰이지 않았음을 함께 밝힌다. (§4.4, D22)\n-- **FR-017**: 시대별 평소 대비 위치는 상세의 보조 설명으로만 제공하고 **기본 순위·거리와 결합하지 않는다**. 후보 종료월 c 직전 `c-122 ~ c-3`(최대 120·최소 60개월 연속)에서 그 시대의 중앙값·산포를 FR-005·FR-006과 **같은 규칙으로** 구하고, 후보 관측값을 그 자로 다시 재 **그 사례가 당시 기준으로 어땠는지를 문장으로** 서술한다(예: \"실업률 3.2%는 당시로서는 높은 편이었습니다\"). **z 값이나 분위수를 숫자로 내보내지 않는다** — 숫자로 놓이면 유사도처럼 읽혀 FR-022가 금지한 오독을 부른다. 문장은 비슷한 점·다른 점과 같은 방식의 템플릿 조립이며 자유 생성하지 않는다. 이 척도는 **기준월 t와 무관**하므로 후보월마다 한 번만 구한다. 해당 이력이 부족하면(연속 60개월 미만) 그 지표의 보조 설명만 제한하고 사례 자체는 그대로 둔다 — 순위·거리는 영향받지 않는다. (§6.4.4, D21)\n+- **FR-017**: 시대별 평소 대비 위치는 상세의 보조 설명으로만 제공하고 **기본 순위·거리와 결합하지 않는다**. 후보 종료월 c 직전 `c-122 ~ c-3`(최대 120·최소 60개월 연속)에서 그 시대의 중앙값·산포를 FR-005·FR-006과 **같은 규칙으로** 구하고, 후보 관측값을 그 자로 다시 재 **그 사례가 당시 기준으로 어땠는지를 문장으로** 서술한다(예: \"실업률 3.2%는 당시로서는 높은 편이었습니다\"). **z 값이나 분위수를 숫자로 내보내지 않는다** — 숫자로 놓이면 유사도처럼 읽혀 FR-022가 금지한 오독을 부른다. 문장은 비슷한 점·다른 점과 같은 방식의 템플릿 조립이며 자유 생성하지 않는다. 이 척도는 **같은 자료·등록표·모델 버전에서 기준월 t와 무관**하므로 후보월마다 한 번만 구한다. 해당 이력이 부족하거나(연속 60개월 미만) MAD·IQR 모두 0이면 그 지표의 보조 설명만 제한하고 사례 자체는 그대로 둔다 — 순위·거리는 영향받지 않는다. (§6.4.4, D21)\n - **FR-018**: 거리순 상위라는 이유로 '대표 유사국면' 배지를 붙이지 않는다. 이후 결과가 좋았다는 이유로 사례를 선택하지 않는다. (§4.3, D24, 원칙 III)\n \n #### 검색 상태와 문턱 (§4.3, §7.3, §7.4, D24, U04)\n@@ -224,7 +226,7 @@\n #### 식별·보존·재사용 (§5, §6.5, D14)\n \n - **FR-029**: 경제환경 검색 결과는 모드(분야 g/종합)·기준월·자료 버전·등록표 버전·모델 버전 단위로 식별되어 전략 실행과 독립적으로 보존·재사용된다. **검색 경로(시장 흐름/전략 결과)와 기준월의 근거(T_g/T_all/지정월)는 식별 키가 아니라 요청의 성질이다** — 경로가 달라도, 같은 월을 T_g로 얻었든 사용자가 지정했든 계산에 들어가는 값이 같아 결과가 같다. 키에 넣으면 같은 결과가 여러 벌 저장되어 SC-002의 \"같은 식별이면 같은 결과\"가 흐려지고, 요청을 모르는 사전 계산 배치는 근거를 정할 수도 없다. 둘 다 조회한 쪽이 판단해 화면에 표시하고 기록에 남긴다(FR-003·FR-032). 같은 식별로 다시 검색하면 저장된 결과를 재사용한다. 조회는 그 (모드·기준월) 조합의 **가장 최신 항목**을 읽고, [006](../006-my-records/spec.md) 기록은 특정 항목을 고정해 나중에도 그때 본 결과를 연다. **어느 기록도 가리키지 않는 옛 항목은 사전 계산 배치가 적재를 마친 뒤 같은 실행에서 정리한다** — 무기한 보관을 전제하지 않는다. 보존 대상은 각 (모드·기준월)의 **가장 최신 항목**과 **기록이 가리키는 항목** 둘뿐이고, 정리를 사람이 따로 돌리지 않는다. (§6.5, D14)\n-- **FR-030**: 검색은 **미리 계산해 둔 결과를 읽는 것**이다. 자료 범위 전체의 기준월마다 공통 척도·거리·순위를 사전에 계산해 두고, 사용자 요청 시점에는 척도나 거리를 계산하지 않으며 Job 큐를 쓰지 않는다. **사전 계산의 단위는 기준월 t다** — 척도 m·s가 t-122부터 t-3까지에서 나오므로(FR-005) 같은 후보월이라도 t가 다르면 z 값이 다르고, 월별 z를 t와 무관하게 미리 둘 수 없다. 사전 계산 집합은 표시 후보(FR-013)와 함께 **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 보존한다 — 그 크기의 상한은 따로 두지 않고 **자료가 있는 전 구간이 정한다**(FR-012와 같은 근거: 어디까지 볼지를 근거 없이 자르지 않는다) — 건너뛰기가 순차 규칙이라(FR-012) 걸러진 목록으로는 [011](../011-regime-strategy-link/spec.md)이 가용성 필터를 건 뒤 다시 적용할 수 없다 — 전략 결과 경로의 가용성 필터([011](../011-regime-strategy-link/spec.md) FR-003)가 표시 후보 밖의 사례를 필요로 하는데, 그때 010이 순위를 다시 매기면 같은 기준월에 순위가 두 벌 생긴다. 사전 계산 집합은 자료 버전·등록표 버전·모델 버전으로 식별한다. **다시 계산하는 범위는 자료가 바뀐(새로 들어왔거나 개정된) 가장 오래된 월 M부터 최신월까지다** — M은 질의 3개월·척도 구간·후보 관측 구간 어디로 들어가든 `t ≥ M`인 기준월만 건드리므로, 의존 관계를 따질 필요 없이 워터마크 하나로 정해진다. 등록표 버전이나 모델 버전이 바뀌면 M은 계열 시작월이 되어 전 구간이 된다. **결과가 실제로 달라진 (모드·기준월)만 새 항목이 되고, 내용이 같으면 새 항목을 만들지 않는다** — 여기서 '내용'은 사용자에게 나가는 산출물(검색 상태·비교 시점·척도·표시 후보·전체 후보 목록·후보 집계·설명 문장·자료 기준 시점)이며 **계산 시각처럼 매번 달라지는 값은 포함하지 않는다**(포함하면 같은 결과가 매번 새 항목이 된다) — 같은 결과에 버전 이름표만 다른 사본이 쌓이면 재현이 또렷해지는 게 아니라 흐려진다. 이전 항목은 덮어쓰지 않는다(FR-031). 검색 결과와 전략 실행은 사례 식별자·평가 날짜로 연결한다. (§6.5, 원칙 IX)\n+- **FR-030**: 검색은 **미리 계산해 둔 결과를 읽는 것**이다. 자료 범위 전체의 기준월마다 공통 척도·거리·순위를 사전에 계산해 두고, 사용자 요청 시점에는 척도나 거리를 계산하지 않으며 Job 큐를 쓰지 않는다. **사전 계산의 단위는 기준월 t다** — 척도 m·s가 t-122부터 t-3까지에서 나오므로(FR-005) 같은 후보월이라도 t가 다르면 z 값이 다르고, 월별 z를 t와 무관하게 미리 둘 수 없다. 사전 계산 집합은 표시 후보(FR-013)와 함께 **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 보존한다 — 그 크기의 상한은 따로 두지 않고 **자료가 있는 전 구간이 정한다**(FR-012와 같은 근거: 어디까지 볼지를 근거 없이 자르지 않는다) — 건너뛰기가 순차 규칙이라(FR-012) 걸러진 목록으로는 [011](../011-regime-strategy-link/spec.md)이 가용성 필터를 건 뒤 다시 적용할 수 없다 — 전략 결과 경로의 가용성 필터([011](../011-regime-strategy-link/spec.md) FR-003)가 표시 후보 밖의 사례를 필요로 하는데, 그때 010이 순위를 다시 매기면 같은 기준월에 순위가 두 벌 생긴다. 사전 계산 집합은 자료 버전·등록표 버전·모델 버전으로 식별한다. **다시 계산하는 범위는 자료가 바뀐(새로 들어왔거나 개정된) 가장 오래된 월 M부터 최신월까지다** — M은 질의 비교 시점·공통 척도 구간·후보 관측 구간·**시대별 보조 척도 구간** 어디로 들어가든 `t ≥ M`인 기준월만 건드리므로, 의존 관계를 따질 필요 없이 워터마크 하나로 정해진다. 등록표 버전이나 모델 버전이 바뀌면 M은 계열 시작월이 되어 전 구간이 된다. **결과가 실제로 달라진 (모드·기준월)만 새 항목이 되고, 내용이 같으면 새 항목을 만들지 않는다** — 여기서 '내용'은 사용자에게 나가는 산출물(검색 상태·비교 시점·척도·표시 후보·전체 후보 목록·후보 집계·설명 문장·시대별 보조 설명·자료 기준 시점)이며 **계산 시각처럼 매번 달라지는 값은 포함하지 않는다**(포함하면 같은 결과가 매번 새 항목이 된다) — 같은 결과에 버전 이름표만 다른 사본이 쌓이면 재현이 또렷해지는 게 아니라 흐려진다. 이전 항목은 덮어쓰지 않는다(FR-031). 검색 결과와 전략 실행은 사례 식별자·평가 날짜로 연결한다. (§6.5, 원칙 IX)\n - **FR-031**: 기준월이나 검색 모드가 바뀌어 후보가 달라지면 한 문장으로 알리고 별도 검색으로 기록한다. 이전 결과를 덮어쓰지 않는다. **유지율(이전 검색과 겹치는 사례 비율)을 화면에 보이지 않는다** — 검색 결과는 사용자 식별 없이 볼 수 있어 비교할 이전 검색이 대개 없고, 비율만 놓이면 '두 기준월이 얼마나 비슷한가'로 읽혀 FR-022가 금지한 오독을 부른다. 대신 결과 옆에 **자료 기준 시점**을 항상 표시한다: 그 결과가 반영한 대상월과 발표일(예: \"고용 지표는 2026년 8월분까지 반영되어 있습니다. 발표 2026-09-12\"). 값이 개정되어 이전과 달라진 경우에만 개정 안내를 한 줄 덧붙인다(예: \"실업률 2026년 6월 값이 2026-09-10에 개정되었습니다\"). 비교 시점에서 빠진 달이 있으면 **어느 지표의 어느 달인지**를 결과 옆에 함께 표기한다(예: \"2026년 6월은 취업자 수 자료가 없어 그 지표만 5월·7월로 비교했습니다\") — 남은 시점으로 계산했다는 사실이 보이지 않으면 세 달로 비교한 결과와 구분되지 않는다(FR-001, 원칙 VI). **수집 시각(자료 배치가 돈 시각)은 쓰지 않는다** — 배치는 값이 그대로여도 돌기 때문에 새 정보가 들어온 것처럼 읽힌다. constitution 원칙 VI가 요구하는 **'마지막 갱신 시각'의 역할은 대상월과 발표일이 한다** — 그 둘은 값이 실제로 바뀌었을 때만 움직이므로 \"이 결과가 언제 자료인가\"를 정확히 말하지만, 수집 시각은 값이 그대로여도 갱신되어 그 역할을 할 수 없다. 유지율과 변경 내용은 화면이 아니라 **자료 버전 간 사전 계산 집합을 직접 대조해** 산출하고 U01·U04 검증에 쓴다 — 사용자 검색 이력이 필요 없으므로 비로그인 사용자만 있어도 이 관측이 성립한다. (§4.3, §4.4, D22)\n - **FR-032**: **로그인 사용자의** 검색마다 [006 내 기록](../006-my-records/spec.md) FR-012의 항목(모드·기준월·비교 시점과 빠진 지표·월·전체 후보와 표시 후보·제외 이유·지표 원값과 표준화 값·분야별 거리·자료 개정 기준·모델 버전·당시 정보 재현 여부)을 남긴다. **가용성 필터 키와 전략 연결 정보는 010이 만들지 않는다** — 010은 필터를 적용하지 않고 전체 유효 후보 목록만 내주므로(FR-030), 그 두 항목은 [011](../011-regime-strategy-link/spec.md) FR-004·FR-023이 채운다. **비로그인 검색은 개인 기록을 남기지 않는다** — 기록을 붙일 주인이 없고, 결과 자체는 사전 계산 집합(FR-030)에 이미 있어 재사용(FR-029)이 개인 기록 없이 성립한다. 따라서 010은 [014](../014-user-auth/spec.md) 완성 전에도 동작한다. **[006](../006-my-records/spec.md)의 기록 대상은 로그인 검색이다** — 006 SC-001의 \"완료한 경제환경 탐색의 100%\"는 기록이 생기는 검색을 가리키며, 비로그인 검색은 그 모수에 들어가지 않는다. (§5, D14)\n - **FR-036**: 사용자 식별자는 **검색 기록에만** 두고 사전 계산 집합·사례에는 두지 않는다 — 계산 결과는 사용자와 무관하게 성립하고 **여러 사용자가 같은 항목을 공유한다**. 사용자가 기록을 지우거나 탈퇴하면 **그 기록 행만 지우고 사전 계산 집합은 그대로 둔다**; 공유 자원이라 함께 지우면 남의 검색까지 사라진다. 기록을 지운 뒤 같은 조건으로 다시 검색하면 **같은 결과가 나온다** — 재사용은 개인 기록 없이 성립한다(FR-029·FR-032). 보관 기간·연결 해제·공유 후 회수 정책은 [006](../006-my-records/spec.md)이 소유한다. (§5, D14, constitution \"기록·개인정보·보관\")\n@@ -237,7 +239,7 @@\n - **경제환경 검색(질의)**: 검색 경로(시장 흐름/전략 결과), 모드(분야 g/종합), 기준월 t와 근거(T_g/T_all/지정월), 비교 시점과 비교에서 빠진 기간, 공통 척도(지표별 m·s·대체 척도 사용 여부·기준 기간), 전체 후보와 표시 후보, 제외 이유, 지표 원값·표준화 값, 지표/분야/종합 거리와 기여도, 검색 상태, 모델 버전, 자료 버전, 등록표 버전이다. 가용성 필터 키는 010이 만들지 않고 [011](../011-regime-strategy-link/spec.md)이 전체 후보 목록 위에 필터를 걸 때 남긴다(FR-032). 유지율은 사용자 검색이 아니라 자료 버전 간 사전 계산 집합을 대조해 내부 검증용으로 산출한다(FR-031).\n - **경제환경 사례**: **식별자는 (검색 식별 키 + 종료월)이다** — [011](../011-regime-strategy-link/spec.md)이 이 둘과 평가 날짜로 전략 결과를 붙인다. 종료월과 관측 구간(3개월), 지표별 값과 z 값, 지표 거리 E_i와 **지표별 명목 비중·실제 거리 기여**(분야 안 E_i ÷ ΣE_i — FR-010이 기록하라는 값이며 U02 검증의 입력이다), 분야 거리·종합 거리·분야 기여도, 비슷한 점·다른 점 설명, 시대별 위치(보조), 사후 평가 구간(63거래일 주·21거래일 보조)의 식별자다. 전략 결과 연결은 [011](../011-regime-strategy-link/spec.md)이 사례 식별자·평가 날짜로 붙인다.\n - **검색 상태**: '계산 불가/후보 없음' / '가까운 순서만 제공·유사성 미판정' / '교정된 기준 충족 여부'와 그 근거(60개월 미만·척도 0·후보 없음·문턱 미교정 등)다.\n-- **모델 버전**: 지표 집합·변환·척도 규칙·**비교 시점 규칙**·거리식·가중·후보 제한·표시 개수·문턱·**시대별 위치 판정 경계값**·저장 자릿수를 식별하는 값이다. 변경은 새 버전이다.\n+- **모델 버전**: 지표 집합·변환·척도 산출 구간·척도 규칙·**비교 시점 규칙**·거리식·가중·후보 제한·표시 개수·문턱·**시대별 위치 판정 경계값**·저장 자릿수를 식별하는 값이다. 변경은 새 버전이다.\n - **사전 계산 집합**: 자료 버전·등록표 버전·모델 버전으로 식별되는, 기준월별 척도·거리·순위 묶음이다. 같은 (모드·기준월)에 여러 항목이 있으면 결과가 실제로 달라진 시점마다 하나씩이고, 조회는 가장 최신 항목을 읽는다(FR-029·FR-030). 개별 항목은 FR-029의 식별 키와 저장된 결과이며, 표시 후보(최대 10개)와 전체 유효 후보의 순위·거리 목록을 함께 갖는다(FR-030).\n \n ## Success Criteria *(mandatory)*\n@@ -258,14 +260,14 @@\n - **SC-014**: FR-037의 다섯 표시 각각에 대해 — 문구 없이 색·아이콘·호버로만 구별되는 사례가 0건, 키보드만으로 도달할 수 없는 사례가 0건, 보조기술이 읽을 수 없는 사례가 0건, 명암비 기준 미달이 0건, 좁은 폭에서 잘리거나 접힌 사례가 0건이다. (FR-037)\n - **SC-013**: 사전 계산 집합·사례에 사용자 식별자가 저장된 사례가 0건이고, 기록 삭제·탈퇴로 사전 계산 항목이 지워진 사례가 0건이다. (FR-036)\n - **SC-012**: 철회된 항목을 가리키는 기록의 100%가 '철회됨'으로 표시되고, 다른 결과가 대신 보이거나 빈 결과로 바뀐 사례가 0건이다. 철회 기록(식별 키·범위·사유·시각)이 남지 않은 철회가 0건이다. (FR-035)\n-- **SC-011**: 시대별 위치가 거리·순위에 반영된 사례가 0건이고, 화면에 z 값·분위수·백분율로 표시된 사례가 0건이다. 같은 후보월의 시대별 위치는 기준월이 달라도 100% 같다. (FR-017, 원칙 IV)\n+- **SC-011**: 시대별 보조 위치가 거리·순위에 반영된 사례가 0건이고, **시대별 보조 위치가** 화면에 z 값·분위수·백분율로 표시된 사례가 0건이다. 공통 척도로 계산한 검색 z의 상세 제공(FR-028)과 구분한다. 같은 자료·등록표·모델 버전과 후보월의 시대별 위치는 기준월이 달라도 100% 같다. 보조 척도가 부족하거나 0이라는 이유로 후보·순위·거리를 바꾼 사례가 0건이다. (FR-017, 원칙 IV)\n \n ## Assumptions\n \n 아래 항목은 각각 **검증 가능 여부**를 함께 적는다 — 검증할 수 없는 가정을 확인된 것처럼 두지 않기 위해서다(원칙 VI).\n \n - 기획서 §6.4.4가 확정한 모델 v1 수치(FR-005·FR-006·FR-009·FR-010·FR-012·FR-013·FR-017·FR-026)는 그대로 적용한다. U01~U06 검증 결과에 따른 변경은 새 모델 버전으로만 제안한다. (**검증 불가** — 기획서 결정이며 010이 판정할 대상이 아니다)\n-- 비슷한 점·다른 점 설명은 지표별 z 값 차이의 크기 순으로 실제 값과 단위를 붙여 서술한다. 문장 규칙은 plan에서 정하고 자유 생성 문장은 쓰지 않는다. (**검증 가능** — 산출된 문장이 템플릿 집합 안에 있는지로 확인)\n+- 비슷한 점·다른 점 설명은 공통 척도의 지표 거리 E_i를 기준으로 작은 순에서 비슷한 점 최대 2개, 큰 순에서 다른 점 최대 2개를 골라 실제 값과 단위를 붙여 서술한다. 문장 규칙은 plan에서 정하고 자유 생성 문장은 쓰지 않는다. (**검증 가능** — 산출된 문장이 템플릿 집합 안에 있는지로 확인)\n - 사후 평가 구간(63/21거래일)의 정의는 이 spec의 사례 식별자에 포함된다 — **시작점('관측 종료 후 첫 거래일')과 길이를 010이 정의**하고, 그 구간의 시장·전략 결과 계산과 표시는 [011](../011-regime-strategy-link/spec.md)이 맡는다. (검증 가능: 사례 식별자에 구간 정의가 담기는지로 확인)\n - 검색 결과 자체는 사용자 식별 없이 볼 수 있고, 비로그인 검색은 개인 기록을 남기지 않는다(FR-032). 기록 보존은 [006](../006-my-records/spec.md)의 식별 규칙을 따르며 010은 [014](../014-user-auth/spec.md) 완성을 기다리지 않는다. (**검증 가능** — 비로그인으로 전 화면이 도는지로 확인)\n - 한국어 웹 화면이며 **설계 우선순위는 데스크톱**이다. 다만 화면 폭이 좁아져도 FR-037의 다섯 표시는 유지된다 — '우선한다'는 어느 화면을 먼저 다듬느냐의 문제이지, 좁은 화면에서 신뢰 범위 표시를 접어도 된다는 뜻이 아니다. 그 밖의 반응형 세부(레이아웃 재배치·터치 조작)는 범위 밖이다.\n@@ -274,7 +276,7 @@\n \n | 번호 | 결정 항목 | 상태 | 출발안 / 기획서 확정값 | 근거 |\n |---|---|---|---|---|\n-| PD-08 | 경제환경 모델 v1: T_g/T_all 규칙, 공통 척도(최대 120·최소 60개월, 중앙값/MAD 정규 보정, IQR 대체), 기본 거리 E, 분야 내부·분야 간 동일가중, 후보 제한(12개월 초과 이전, ±6개월 건너뛰기, 동률 오래된 월 우선), 표시 3개·최대 10개, 사후 평가 63/21거래일, 내부 대안(0.7E+0.3M, 시대별 척도) | 기획서 확정 | FR-001·FR-005~FR-013·FR-017·FR-026에 반영. 17개 지표·변환·분야 배치는 [008](../008-macro-indicator-registry/spec.md) | §6.4.4, D21~D27 |\n+| PD-08 | 경제환경 모델 v1: T_g/T_all 규칙, 공통 척도(최대 120·최소 60개월, 중앙값/MAD 정규 보정, IQR 대체), 기본 거리 E, 분야 내부·분야 간 동일가중, 후보 제한(12개월 초과 이전, ±6개월 건너뛰기, 동률 오래된 월 우선), 표시 3개·최대 10개, 사후 평가 63/21거래일, 내부 대안(0.7E+0.3M, 시대별 척도) | **구현 기준 v1 확정 / v2 제안 검증 대기** | FR-001·FR-005~FR-013·FR-017·FR-026에 반영. v2는 [변경 제안서](d21-amendment.md)에서만 검토하며 v1 구현을 막지 않는다. 17개 지표·변환·분야 배치는 [008](../008-macro-indicator-registry/spec.md) | §6.4.4, D21~D27 |\n | PD-09 | 유사성 임계값·분야별 큰 차이 문턱·최소 근거량·경제적 설명력 판정 기준 | 미확정 (U04 교정 후) | 교정 전 '최근접 참고 사례' 동작 | §6.4.4, D24, U04 |\n | PD-10 | 지표별 최소 유효 척도·예외 기준 (소유: [008](../008-macro-indicator-registry/spec.md)) | 미확정 (U06) | MAD→IQR 대체, 0이면 계산 불가 | §6.4.4, D27, U06 |\n | PD-12 | 수기 대조 허용 오차 (소유: [007](../007-auto-parameter-search/spec.md), 004·010 공용) | 미확정 | 확정 전에는 정확 일치(오차 0)로 대조한다 | §7.1, SC-003 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/spec.md",
+          "old_path": "specs/010-economic-regime-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,8 +11,13 @@\n > 가장 크게 바뀐 것은 **M1이 DE 단독이 된 것**이다 — Backend의 `MacroIndicatorPort`(등록표 전용)를\n > 쓰는 곳이 `baseline-months` 엔드포인트 하나뿐이라 M6 안에서 끝난다.\n >\n+> **2026-09-16 기준 정리**: 구현 기준은 D21의 **모델 v1**이다. 공통 척도를 질의와 모든 후보에\n+> 동일하게 적용하고, `era.py`는 시대별 위치를 상세의 보조 설명으로만 만든다(FR-017).\n+> v2는 [d21-amendment.md](d21-amendment.md)의 **검증 대기 제안**이며 구현 선행 조건이 아니다.\n+> 기존 태스크 번호 T001~T155와 사용성 관찰 M10 분리는 유지한다.\n+>\n > **2026-09-16 2차**: `/speckit-analyze`가 잡은 두 가지를 고쳤다 — ① 번호가 중복된 태스크를 없애고\n-> 전체를 1부터 다시 매겼다(138개), ② spec FR-034(계산 실패·조회 실패)에 대응하는 태스크 넷을\n+> 당시 전체를 1부터 다시 매겼다(138개, 현재는 후속 보완을 포함해 154개), ② spec FR-034(계산 실패·조회 실패)에 대응하는 태스크 넷을\n > M5·M6·M7에 넣었다. 원칙 VI가 *\"계산 실패도 정상 화면 흐름으로 처리한다\"* 를 요구하는데 그 경로가\n > 비어 있었다.\n \n@@ -31,7 +36,7 @@\n | `(BE 테스트)` | JUnit·Testcontainers | `be` |\n | `(FE)` | 프론트엔드 React·TS | `fe` |\n | `(FE 테스트)` | Vitest | `fe` |\n-| `(DOCS)` | 문서·수동 확인 기록 | 없음 — 문서만 있는 묶음은 `docs/{티켓}-{설명}` (position 생략) |\n+| `(DOCS)` | 문서·수동 확인 기록 | `be` — 이 계획의 검증·관찰 문서 묶음 |\n \n Worker(`worker/`)는 **변경하지 않는다.** 브로커도 쓰지 않는다 — 010은 동기 조회다.\n \n@@ -40,37 +45,41 @@ Worker(`worker/`)는 **변경하지 않는다.** 브로커도 쓰지 않는다 \n ## 브랜치 묶음 — 이 표가 티켓·브랜치·MR 단위다\n \n **`T###`는 브랜치 단위가 아니다.** constitution \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로 정하므로\n-브랜치·MR·Jira Task 단위는 아래 **9개 묶음**이다.\n+브랜치·MR·Jira Task 단위는 아래 **10개 묶음**이다.\n \n | 묶음 | 브랜치 | 파트 | Jira 제목(안) | 태스크 | 검증 명령 |\n |---|---|---|---|---|---|\n | **M1** | `feat(de)/{티켓}-regime-macro-source` | DE | `[DE] 경제환경 지표 소스 계약과 격리된 임시 대역` | T001~T013 | `cd data && ruff check src scripts tests && pytest` |\n-| **M2** | `feat(de)/{티켓}-regime-scale` | DE | `[DE] 공통 척도와 지표별 비교 시점` | T014~T026 | 〃 |\n-| **M3** | `feat(de)/{티켓}-regime-distance` | DE | `[DE] 거리와 기여 계산` | T027~T039 | 〃 |\n-| **M4** | `feat(de)/{티켓}-regime-candidates` | DE | `[DE] 후보 제한·전체 순위와 설명 문장` | T040~T052 | 〃 |\n-| **M5** | `feat(de)/{티켓}-regime-precompute` | DE | `[DE] 재계산 범위 판정과 사전 계산 적재` | T053~T072 | 〃 |\n-| **M6** | `feat(be)/{티켓}-regime-search-api` | DB·BE | `[BE] 경제환경 지표 등록표 포트와 검색 조회 API` | T073~T101 | `cd backend && ./gradlew spotlessApply build` |\n-| **M7** | `feat(fe)/{티켓}-regime-result` | FE | `[FE] 분야 검색 결과와 검색 상태 표시` | T102~T122 | `cd frontend && npm test && npm run lint && npm run build` |\n-| **M8** | `feat(fe)/{티켓}-regime-detail-composite` | FE | `[FE] 사례 상세와 Thorp 종합 비교` | T123~T140 | 〃 |\n-| **M9** | `docs/{티켓}-regime-verification` | DOCS | `[DOCS] quickstart 실행 기록과 임시 대역 폐기 예행연습` | T141~T147 | 수동 — quickstart.md S1~S9 |\n+| **M2** | `feat(de)/{티켓}-regime-scale` | DE | `[DE] 척도와 지표별 비교 시점` | T014~T028 | 〃 |\n+| **M3** | `feat(de)/{티켓}-regime-distance` | DE | `[DE] 거리·기여 계산과 시대별 보조 설명` | T029~T042 | 〃 |\n+| **M4** | `feat(de)/{티켓}-regime-candidates` | DE | `[DE] 후보 제한·전체 순위와 설명 문장` | T043~T057 | 〃 |\n+| **M5** | `feat(de)/{티켓}-regime-precompute` | DE | `[DE] 재계산 범위 판정과 사전 계산 적재` | T058~T079 | 〃 |\n+| **M6** | `feat(be)/{티켓}-regime-search-api` | DB·BE | `[BE] 경제환경 지표 등록표 포트와 검색 조회 API` | T080~T109 | `cd backend && ./gradlew spotlessApply build` |\n+| **M7** | `feat(fe)/{티켓}-regime-result` | FE | `[FE] 분야 검색 결과와 검색 상태 표시` | T110~T130 | `cd frontend && npm test && npm run lint && npm run build` |\n+| **M8** | `feat(fe)/{티켓}-regime-detail-composite` | FE | `[FE] 사례 상세와 Thorp 종합 비교` | T131~T148 | 〃 |\n+| **M9** | `docs(be)/{티켓}-regime-verification` | DOCS | `[DOCS] quickstart 실행 기록과 임시 대역 폐기 예행연습` | T149~T154 | 수동 — quickstart.md S1~S9 |\n+| **M10** | `docs(be)/{티켓}-regime-usability` | DOCS | `[DOCS] 경제환경 검색 사용성 관찰 6~8명` | T155 | 수동 — 관찰 기록 |\n \n **묶음 순서는 M1 → M9 직렬이다.** M2~M5는 앞 묶음의 함수를 직접 부르고, M6은 M5가 적재한 행이\n 있어야 조회할 것이 있으며, M7·M8은 M6의 응답을 읽는다. 병렬로 딸 수 있는 묶음은 없다 —\n 묶음 **안에서만** `[P]`로 병렬화한다.\n \n+**M10은 M9와 같은 줄에 두지 않는다.** spec SC-008이 *\"010 구현이 끝난 뒤\"* 로 정해 **M9까지 끝나야 시작할 수 있고**, 사람 6~8명을 섭외·관찰·정리하는 일이라 기간이 주 단위다. M9에 넣으면 문서 작업이 끝난 뒤에도 관찰이 끝날 때까지 MR이 닫히지 않는다 — `1 티켓 = 1 브랜치 = 1 MR`이 깨진다. 그래서 **별도 티켓**이다.\n+\n ### 묶음별 MR 체크포인트\n \n | 묶음 | 머지 전에 이것이 참이어야 한다 |\n |---|---|\n-| M1 | 시계열 픽스처 **아홉** 모양이 다 있고, `macro/fixture/` 밖에서 픽스처를 이름으로 참조하는 코드가 0건, `THORP_ENV=prod` + `--source fixture`면 적재 전에 실패 |\n-| M2 | 구멍 뚫린 계열이 60개월 미만으로 판정된다. 상수 계열이 IQR로 넘어가고 완전 상수는 계산 불가다. 한 달 결측이 그 **지표만** 두 달로 줄이고, 세 달 결측이 분야를 `QUERY_INPUT_MISSING`으로 만든다. 보정 상수가 `Φ⁻¹(0.75)` 실계산값이다 |\n-| M3 | 수기 계산과 정확히 일치한다. 전체 거리 0이면 기여 **키가 없다**. 명목 비중과 실제 거리 기여가 함께 나온다. `mode=FIELD`에 분야 기여도가 없다. **시대별 위치가 기준월과 무관하고 거리·순위에 한 번도 들어가지 않는다** |\n+| M1 | 시계열 픽스처 **열** 모양이 다 있고, `macro/fixture/` 밖에서 픽스처를 이름으로 참조하는 코드가 0건, `THORP_ENV=prod` + `--source fixture`면 적재 전에 실패 |\n+| M2 | 구멍 뚫린 계열이 60개월 미만으로 판정된다. 상수 계열이 IQR로 넘어가고 완전 상수인 공통 척도는 해당 분야·종합을 계산 불가로 만든다. 시대별 보조 척도가 없으면 그 설명만 제한한다. 한 달 결측이 그 **지표만** 두 달로 줄이고, 세 달 결측이 분야를 `QUERY_INPUT_MISSING`으로 만든다. 보정 상수가 `Φ⁻¹(0.75)` 실계산값이다 |\n+| M3 | 수기 계산과 정확히 일치한다. 전체 거리 0이면 기여 **키가 없다**. 명목 비중과 실제 거리 기여가 함께 나온다. `mode=FIELD`에 분야 기여도가 없다. **질의와 모든 후보에 같은 m·s가 적용된다. 시대별 보조 위치가 순위·거리에 들어간 자리는 0건이다** |\n | M4 | 12개월 이내 제외·**순차** ±6개월 건너뛰기·동률 오래된 월 우선이 고정됐다. 걸러진 만큼 아래 순위가 올라와 표시 개수를 채운다. 후보 부족 시 채우지 않는다. **전체 유효 후보 목록에는 건너뛰기가 적용되지 않는다.** 설명 문장에 자유 생성이 없다 |\n | M5 | `t ≥ M`만 다시 돈다. 배치를 **두 번 돌려도 행 수가 늘지 않는다**(`content_hash`). 결과가 달라지면 `revision`이 오른다. `regime_baseline_month`가 함께 적재되고 자료 버전이 `FIXTURE-`로 시작한다. **중간에 죽여도 부분 적재가 남지 않고 이전 `revision`이 그대로 조회된다** |\n | M6 | 계약 예시와 응답이 일치한다. `NOT_COMPUTABLE`이 **200**이고 503을 쓰지 않는다. **조회 실패가 `NOT_COMPUTABLE`로 둔갑하지 않는다.** `regime` 패키지에 계산 코드도 지표 시계열 조회도 0건. prod 프로파일 + `source: fixture`면 기동 실패 |\n | M7 | 배지·확률 표현 0건. 후보 부족 시 빈자리가 없다. 예시 자료 표시·역사 비교 표시·빠진 지표/월 표기가 보인다. **조회 실패 화면이 빈 상태 화면과 다르다.** 다섯 표시가 문구를 동반하고 명암비를 만족한다 |\n-| M8 | 모드 전환 시 한 문장 알림이 뜨고 기준월이 늘 보인다. 유지율이 화면에 0건. 지표 id·지표명·분야 이름이 화면 코드에 0건. **시대별 위치가 문장으로만 보이고 거리 영역과 분리돼 있다. 키보드만으로 다섯 표시에 모두 도달하고 좁은 폭에서도 유지된다** |\n+| M8 | 모드 전환 시 한 문장 알림이 뜨고 기준월이 늘 보인다. 유지율이 화면에 0건. 지표 id·지표명·분야 이름이 화면 코드에 0건. **상세에 공통 척도가 보여 손계산이 되고, 시대별 위치는 보조 설명으로 구분된다. 키보드만으로 다섯 표시에 모두 도달하고 좁은 폭에서도 유지된다** |\n | M9 | quickstart S1~S9 실행 기록이 남고, 폐기 예행연습에서 운영 코드가 깨지지 않음을 확인했다 |\n+| M10 | 6~8명 관찰을 **실제로 수행**했고, 참여자별 두 질문의 답과 막힌 지점이 기록으로 남았다. 관찰하지 않은 것을 수행한 것처럼 적은 항목이 0건이다(SC-008) |\n \n ## Path Conventions\n \n@@ -89,7 +98,7 @@ Worker(`worker/`)는 **변경하지 않는다.** 브로커도 쓰지 않는다 \n \n **Purpose**: 패키지 골격과 진입점 자리 만들기 · **묶음 M1**\n \n-- [ ] T001 (DE) `data/src/data_pipeline/regime/__init__.py`와 하위 모듈 자리(`scale.py`·`comparison.py`·`distance.py`·`candidates.py`·`explain.py`·`snapshot.py`·`watermark.py`·`load.py`, 그리고 `macro/` 패키지)를 빈 파일로 만들고 각 모듈의 책임을 docstring에 적는다\n+- [ ] T001 (DE) `data/src/data_pipeline/regime/__init__.py`와 하위 모듈 자리(`rounding.py`·`scale.py`·`comparison.py`·`distance.py`·`era.py`·`candidates.py`·`explain.py`·`snapshot.py`·`watermark.py`·`load.py`, 그리고 `macro/` 패키지)를 빈 파일로 만들고 각 모듈의 책임을 docstring에 적는다\n - [ ] T002 [P] (DE) `data/scripts/precompute_regime.py` 진입점 골격을 argparse로 만든다 — `--source`(`fixture` 또는 `macro`, 기본 `macro`)·`--all`·`--since`·`--baseline-month`·`--dry-run` 플래그만 정의하고 본체는 M5에서 채운다\n \n **Checkpoint**: 골격이 서고 `ruff check`가 통과한다\n@@ -107,11 +116,11 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n - [ ] T003 (DE) `MacroIndicatorSource` 프로토콜을 `data/src/data_pipeline/regime/macro/source.py`에 작성 — `registry()`·`monthly_series()`·`raw_series()`·`baseline_months()`·`publication()`·`data_version()`·`changed_since()`·`is_sample_data()`. 시그니처와 뜻은 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §1\n - [ ] T004 [P] (DE) 소스가 돌려줄 값 타입을 `macro/types.py`에 dataclass로 작성 — `IndicatorRegistry`(분야 이름·순서 포함)·`MonthlyValue`·`BaselineMonths`·`Publication`. **결측월은 키가 없다**(0이나 직전 값으로 채우지 않는다)\n-- [ ] T005 (DE) ⚠ 픽스처 지표 시계열을 `macro/fixture/indicators.json`에 작성 — 17개 지표 × 월별 원값·변환값. [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §4.4의 **아홉 모양을 모두 담는다**(8·9번은 2026-09-16 추가분: 한 달만 결측 / 세 달 전부 결측)\n+- [ ] T005 (DE) ⚠ 픽스처 지표 시계열을 `macro/fixture/indicators.json`에 작성 — 17개 지표 × 월별 원값·변환값. [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §4.4의 **열 모양을 모두 담는다**. 모양 10은 관측 입력은 있지만 후보 직전 60개월은 없는 구간으로, **후보 유지·시대별 보조 설명 제한**을 검증한다(FR-012·FR-017)\n - [ ] T006 (DE) ⚠ `FixtureMacroIndicatorSource`를 `macro/fixture/source.py`에 작성 — `data_version()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고 `is_sample_data()`는 `True`, `changed_since()`는 `None`(전 구간)\n - [ ] T007 (DE) 구현체 선택을 `macro/__init__.py`의 팩터리 한 곳에 모은다 — `--source` 플래그만 보고 고른다. **운영 코드가 픽스처 클래스를 이름으로 참조하지 않는다**\n - [ ] T008 (DE) 운영 적재 가드를 `data/scripts/precompute_regime.py`에 구현 — `THORP_ENV=prod`인데 `--source fixture`면 **적재 전에 종료**한다. 설정 실수로 가짜 자료가 운영에 나가는 경로를 없앤다\n-- [ ] T009 [P] (DE 테스트) 픽스처 아홉 모양이 실제로 담겨 있는지 `data/tests/regime/test_fixture_shapes.py`에 고정 — 모양 하나가 빠지면 그 경로가 조용히 검증 밖으로 나간다\n+- [ ] T009 [P] (DE 테스트) 픽스처 **열** 모양이 실제로 담겨 있는지 `data/tests/regime/test_fixture_shapes.py`에 고정 — 모양 하나가 빠지면 그 경로가 조용히 검증 밖으로 나간다\n - [ ] T010 [P] (DE 테스트) 소스 계약 테스트를 `data/tests/regime/test_macro_source.py`에 작성 — 결측월이 키 없음으로 오는지, 원값·변환값이 둘 다 오는지, 버전 셋이 함께 오는지, `registry()`에 분야 이름·순서가 있는지. **008 구현체가 와도 같은 테스트가 돈다**\n - [ ] T011 [P] (DE 테스트) prod 가드를 `data/tests/regime/test_guard.py`에 고정 — `THORP_ENV=prod` + `--source fixture`가 실패한다\n - [ ] T012 [P] (DE 테스트) 픽스처 격리 검사를 `data/tests/regime/test_fixture_isolation.py`에 작성 — `regime` 운영 코드에서 `macro/fixture/` 밖이 픽스처를 이름으로 참조하면 실패한다. 대상 파일은 **손 목록이 아니라 디렉터리를 훑어** 모은다\n@@ -119,131 +128,139 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **Checkpoint**: 008 없이도 배치가 지표를 읽을 수 있고, 지울 곳이 `macro/fixture/` 하나로 모였다\n \n-## 묶음 M2 — 공통 척도와 비교 시점\n+## 묶음 M2 — 척도와 비교 시점\n \n-**Goal**: 질의와 모든 후보에 적용할 자(m·s)와, 어느 달을 비교할지를 정한다.\n+**Goal**: 질의 직전 자료로 공통 척도(m·s)를 만들고, 어느 달을 비교할지 정한다.\n+거리 계산에서는 모든 후보에 이 척도를 적용한다. 시대별 보조 설명만 같은 산출 함수를 후보월로 호출한다(FR-005·FR-017).\n \n - [ ] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)\n - [ ] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)\n-- [ ] T016 (DE) 척도 구간 연속성 판정을 `scale.py`에 구현 — `t-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)\n-- [ ] T017 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`\n-- [ ] T018 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)\n-- [ ] T019 (DE) 척도 계산 불가 사유를 `scale.py`에 구현 — `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`. **임의 epsilon·클리핑을 넣지 않는다**(spec FR-007)\n-- [ ] T020 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정한다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001, data-model §2.2)\n-- [ ] T021 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)\n-- [ ] T022 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 계산 불가다\n-- [ ] T023 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정\n-- [ ] T024 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다\n-- [ ] T025 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다\n-- [ ] T026 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정\n-\n-**Checkpoint**: 자를 만들 수 있고, 어느 달을 볼지 정해지며, 만들 수 없을 때 그 사실을 사유와 함께 말한다\n-\n-## 묶음 M3 — 거리와 기여\n-\n-**Goal**: 두 달이 얼마나 떨어져 있는지를 숫자로 만들고, 어느 지표가 얼마나 기여했는지 남긴다. 시대별 위치는 **같은 자리에서 만들되 순위와 섞지 않는다**.\n-\n-- [ ] T027 (DE) 표준화 z를 `distance.py`에 구현 — `z = (x − m) / s`. **질의와 모든 후보에 같은 m·s를 적용한다**(spec FR-005, 원칙 IV)\n-- [ ] T028 (DE) 지표 거리 `E_i`를 `distance.py`에 구현 — **그 지표의 비교 시점들**의 `|z_A − z_B|` 평균. 시점 수가 지표마다 달라도 평균이라 결합이 깨지지 않는다(spec FR-009)\n-- [ ] T029 (DE) 분야 거리 `D_g`(분야 내 `E_i` 산술평균)와 종합 거리(분야 `D_g`의 산술평균)를 `distance.py`에 구현 — **분야 개수를 상수로 박지 않고 `registry()`가 준 수를 쓴다**. **모드가 비교 시점을 바꾸지 않는다** — 같은 기준월·분야의 `D_g`는 분야 검색이든 종합이든 같은 값이어야 한다(spec FR-001·FR-009, SC-002)\n-- [ ] T030 (DE) 분야 기여도(`D_g` ÷ `ΣD_g`)를 `distance.py`에 구현 — **전체 거리가 0이면 키를 생략한다**(spec Edge Cases). `mode=FIELD`에서는 분야가 하나라 **아예 만들지 않는다**(data-model §4)\n-- [ ] T031 (DE) **지표별 명목 비중과 실제 거리 기여**를 `distance.py`에 구현 — `nominalWeight = 1/n`, `distanceShare = E_i ÷ 분야 안 ΣE_i`. 둘을 나란히 남기는 것이 U02 검증의 입력이다(spec FR-010)\n-- [ ] T032 (DE) 시대별 위치를 `data/src/data_pipeline/regime/era.py`에 구현 — 후보 종료월 c의 `c-122 ~ c-3`에서 `scale.py`의 **같은 규칙**(연속 구간·MAD·IQR)으로 시대 척도를 구하고 후보 관측값을 그 자로 재 판정한 뒤, **문장으로** 조립한다(예: \"실업률 3.2%는 당시로서는 높은 편이었습니다\"). **기준월 t를 입력으로 받지 않는다** — t와 무관하므로 후보월마다 한 번만 계산해 공유한다. z 값·분위수를 결과에 담지 않는다(spec FR-017, SC-011)\n-- [ ] T033 (DE) 모든 산출값에 T014의 12자리 반올림을 적용해 돌려준다 — 정렬 전에 고정해야 순위가 흔들리지 않는다\n-- [ ] T034 [P] (DE 테스트) z·E_i·D_g·종합이 수기 계산과 일치함을 `data/tests/regime/test_distance.py`에 고정\n-- [ ] T035 [P] (DE 테스트) 비교 시점이 두 달인 지표의 `E_i`가 두 값의 평균임을 `test_distance.py`에 고정하고, **같은 분야의 `D_g`가 분야 모드와 종합 모드에서 같음**을 함께 고정한다(SC-002)\n-- [ ] T036 [P] (DE 테스트) 전체 거리 0일 때 기여 **키가 없음**과 `mode=FIELD`에 분야 기여도가 없음을 `test_distance.py`에 고정\n-- [ ] T037 [P] (DE 테스트) 같은 후보라도 기준월이 다르면 z가 다름을 `test_distance.py`에 고정 — 월별 z를 미리 계산해 두는 잘못된 최적화를 막는다(research R3)\n-- [ ] T038 [P] (DE 테스트) 시대별 위치를 `data/tests/regime/test_era.py`에 고정 — 같은 후보월이면 **기준월이 달라도 값이 같고**(SC-011), 직전 연속 60개월이 부족한 지표는 **키가 없으며**, 거리·순위 산출물에 시대 척도가 **한 번도 들어가지 않는다**(FR-017 \"결합하지 않는다\")\n-- [ ] T039 [P] (DE 테스트) 수기 대조 픽스처 `data/tests/regime/fixtures/manual_reconciliation.json`을 만들고 허용 오차 **0(정확 일치)** 으로 비교한다 (PD-12 확정 전 임시)\n-\n-**Checkpoint**: 거리를 손으로 검산할 수 있고, 어느 지표가 얼마나 밀었는지 보인다\n-\n-## 묶음 M4 — 후보 제한·전체 순위와 설명 문장\n+- [ ] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)\n+- [ ] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)\n+- [ ] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`\n+- [ ] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)\n+- [ ] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)\n+- [ ] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)\n+- [ ] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)\n+- [ ] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다\n+- [ ] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정\n+- [ ] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다\n+- [ ] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)\n+- [ ] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다\n+- [ ] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정\n+\n+**Checkpoint**: 질의 직전 구간의 공통 척도를 만들고, 만들 수 없을 때 사유를 말한다\n+\n+## 묶음 M3 — 거리·기여와 시대별 보조 설명\n+\n+**Goal**: 두 달이 얼마나 떨어져 있는지를 숫자로 만든다. **질의와 모든 후보는 같은 자로 잰다**. 시대별 위치는 순위와 분리한다(spec FR-005·FR-017).\n+\n+- [ ] T029 (DE) 기준월 t의 공통 척도를 `distance.py`에서 받아 모든 후보에 재사용한다 — `scale_for(지표, t)`의 결과이며, **후보월 c의 척도를 거리 계산에 넣지 않는다**(FR-005, research R3)\n+- [ ] T030 (DE) 표준화 z를 `distance.py`에 구현 — `z_질의 = (x_질의 − m_t)/s_t`, `z_후보 = (x_후보 − m_t)/s_t`. 질의와 후보에 **같은 m_t·s_t**를 적용한다(FR-005·FR-009)\n+- [ ] T031 (DE) 지표 거리 `E_i`를 `distance.py`에 구현 — **그 지표의 비교 시점들**의 `|z_질의 − z_후보|` 평균. 시점 수가 지표마다 달라도 평균이라 결합이 깨지지 않는다(spec FR-009)\n+- [ ] T032 (DE) 분야 거리 `D_g`(분야 내 `E_i` 산술평균)와 종합 거리(분야 `D_g`의 산술평균)를 `distance.py`에 구현 — **분야 개수를 상수로 박지 않고 등록표가 준 수를 쓴다**. 같은 기준월·분야의 `D_g`는 어느 모드에서든 같아야 한다(spec FR-009, SC-002)\n+- [ ] T033 (DE) 분야 기여도(`D_g` ÷ `ΣD_g`)를 `distance.py`에 구현 — **전체 거리가 0이면 키를 생략한다**(spec Edge Cases). `mode=FIELD`에서는 분야가 하나라 **아예 만들지 않는다**\n+- [ ] T034 (DE) **지표별 명목 비중과 실제 거리 기여**를 `distance.py`에 구현 — `nominalWeight = 1/n`, `distanceShare = E_i ÷ 분야 안 ΣE_i`. 분야 안 `ΣE_i`가 0이면 키를 생략한다(spec FR-010)\n+- [ ] T035 (DE) 모든 산출값에 12자리 반올림을 적용해 돌려준다 — 정렬 전에 고정해야 순위가 흔들리지 않는다\n+- [ ] T036 [P] (DE 테스트) z·E_i·D_g·종합이 수기 계산과 일치함을 `data/tests/regime/test_distance.py`에 고정\n+- [ ] T037 [P] (DE 테스트) 공통 척도가 서로 다른 두 기준월의 픽스처로 **같은 후보의 caseZ도 기준월에 따라 다시 계산됨**을 `test_distance.py`에 고정 — 후보 z를 후보월만으로 캐시하지 않는다(FR-005, research R3)\n+- [ ] T038 (DE) 시대별 보조 위치를 `era.py`에 구현 — 후보월 c 직전 척도를 같은 규칙으로 구하고 research R8의 판정·문장 템플릿을 적용한다. 자료·등록표·모델 버전이 같은 동안 후보월별로 재사용한다. 연속 60개월 미만 또는 MAD·IQR 모두 0이면 **해당 지표 설명만 제한**하고 순위·거리·후보 자격은 바꾸지 않는다. 출력은 문장과 산출 구간·방법이며 시대별 z·분위수는 내보내지 않는다(FR-017·SC-011)\n+- [ ] T039 [P] (DE 테스트) 비교 시점이 두 달인 지표의 `E_i`가 두 값의 평균임을 `test_distance.py`에 고정\n+- [ ] T040 [P] (DE 테스트) 같은 분야의 `D_g`가 분야 모드와 종합 모드에서 같음을 `test_distance.py`에 고정(SC-002)\n+- [ ] T041 [P] (DE 테스트) 전체 거리 0일 때 기여 **키가 없음**과 `mode=FIELD`에 분야 기여도가 없음을 `test_distance.py`에 고정\n+- [ ] T042 [P] (DE 테스트) `data/tests/regime/fixtures/manual_reconciliation.json`에 공통 척도와 독립 계산값을 담아 `test_distance.py`에서 허용 오차 0으로 대조한다(SC-003). `test_era.py`에서는 보조 문장 판정, 이력 부족·0 척도, 같은 자료 버전의 기준월 간 보조 위치 동일성, 보조 설명 유무가 순위·거리에 영향을 주지 않음을 확인한다(FR-017·SC-011)\n+\n+**Checkpoint**: 공통 척도로 거리를 검산할 수 있고, 시대별 보조 위치는 기준월과 무관하며 순위에 영향을 주지 않는다\n+\n+## 묶음 M4 — 후보 제한·순위와 설명 문장\n \n **Goal**: 줄 세우고 솎아내고, 왜 비슷한지 사람 말로 적는다.\n \n-- [ ] T040 (DE) 후보 자격 판정을 `candidates.py`에 구현 — 분야 검색은 그 분야의 **지표별 비교 시점** 입력이 모두 있는 후보, 종합은 모든 분야가 유효한 후보만. **후보에게 질의보다 많은 시점을 요구하지 않는다**(spec FR-012)\n-- [ ] T041 (DE) 12개월 초과 이전 제한을 `candidates.py`에 구현. **아래쪽 경계는 두지 않는다** — 자료가 있는 전 구간이 후보다(spec FR-012)\n-- [ ] T042 (DE) 정렬과 동률 처리를 `candidates.py`에 구현 — 거리 오름차순, **정확한 동률이면 더 오래된 종료월 우선**. 동률은 T014의 반올림된 값이 같을 때다\n-- [ ] T043 (DE) ±6개월 건너뛰기를 `candidates.py`에 **순차로** 구현 — 1위를 담고 그 종료월 ±6개월을 **남은 후보에서 제외한 뒤 다시 1위를 담는** 식으로 표시 개수까지 채운다. 상위 10개를 먼저 뽑아 거르지 않는다(spec FR-012·FR-014)\n-- [ ] T044 (DE) **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 `candidates.py`에서 돌려준다 — `[{endMonth, distance, rank}]`. 건너뛰기는 순차 규칙이라 걸러 두면 011이 가용성 필터 뒤에 다시 적용할 수 없다(spec FR-012·FR-030, data-model §2.3)\n-- [ ] T045 (DE) 상위 10개 추출과 **부족하면 부족한 대로** 돌려주기를 `candidates.py`에 구현 — 빈자리를 먼 후보로 채우지 않는다(spec FR-013)\n-- [ ] T046 (DE) 제외 사유별 집계를 `candidates.py`에서 돌려준다 — `MISSING_INPUT` / `WITHIN_12_MONTHS` / `NEIGHBOR_SKIPPED`\n-- [ ] T047 (DE) 비슷한 점·다른 점 문장 조립을 `explain.py`에 구현 — `|z_질의 − z_후보|` 큰 순으로 **다른 점 최대 2개**, 작은 순으로 **비슷한 점 최대 2개**. 템플릿은 research R8. **자유 생성 문장을 쓰지 않는다**\n-- [ ] T048 [P] (DE 테스트) 12개월 제한과 ±6개월 건너뛰기를 `data/tests/regime/test_candidates.py`에 고정 — 인접 월이 가까운 픽스처 구간에서 하나만 남고, **걸러진 만큼 그 아래 순위가 올라와 표시 개수를 채우는지**(순차 적용), **전체 후보 목록에는 걸러지지 않은 순위가 그대로 있는지** 확인한다\n-- [ ] T049 [P] (DE 테스트) 동률이 오래된 월 우선으로 풀리는지 `test_candidates.py`에 고정\n-- [ ] T050 [P] (DE 테스트) 후보가 2개뿐일 때 **3개로 채우지 않음**을 `test_candidates.py`에 고정(SC-004)\n-- [ ] T051 [P] (DE 테스트) 전체 유효 후보 목록이 **상위 10개보다 길고** 순위가 연속임을 `test_candidates.py`에 고정\n-- [ ] T052 [P] (DE 테스트) 설명 문장에 원값과 단위가 들어가고 **확률·추천·원인 단정 낱말이 0건**이며 \"높다/낮다\"만 쓰고 \"좋다/나쁘다\"를 쓰지 않음을 `data/tests/regime/test_explain.py`에 고정. 금지 낱말은 **spec FR-022 ①의 13가지**를 그대로 쓴다 — 목록을 태스크나 구현이 지어내지 않는다\n+- [ ] T043 (DE) 후보 자격 판정을 `candidates.py`에 구현 — 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보만 쓴다. 후보에게 질의보다 많은 시점을 요구하지 않고, **후보 직전 60개월 이력이나 시대별 보조 척도를 자격 조건으로 쓰지 않는다**(FR-012·FR-017)\n+- [ ] T044 (DE) 12개월 초과 이전 제한을 `candidates.py`에 구현. **아래쪽 경계는 두지 않는다** — 자료가 있는 전 구간이 후보다(spec FR-012)\n+- [ ] T045 (DE) 정렬과 동률 처리를 `candidates.py`에 구현 — 거리 오름차순, **정확한 동률**(반올림된 값이 같을 때)이면 더 오래된 종료월 우선\n+- [ ] T046 (DE) ±6개월 건너뛰기를 `candidates.py`에 **순차로** 구현 — 1위를 담고 그 종료월 ±6개월을 **남은 후보에서 제외한 뒤 다시 1위를 담는** 식으로 표시 개수까지 채운다. 상위 10개를 먼저 뽑아 거르지 않는다(spec FR-012·FR-014)\n+- [ ] T047 (DE) **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 `candidates.py`에서 돌려준다 — `[{endMonth, distance, rank}]`. 건너뛰기는 순차 규칙이라 걸러 두면 011이 가용성 필터 뒤에 다시 적용할 수 없다(spec FR-030, data-model §2.3)\n+- [ ] T048 (DE) 상위 10개 추출과 **부족하면 부족한 대로** 돌려주기를 `candidates.py`에 구현 — 빈자리를 먼 후보로 채우지 않는다(spec FR-013)\n+- [ ] T049 (DE) 제외 사유별 집계를 `candidates.py`에서 돌려준다 — `MISSING_INPUT` / `WITHIN_12_MONTHS` / `NEIGHBOR_SKIPPED` 세 가지다. 시대별 보조 설명 부족은 후보 제외 사유가 아니다(FR-012·FR-017)\n+- [ ] T050 (DE) 설명 문장 조립을 `explain.py`에 구현 — 공통 척도로 계산한 지표 거리 큰 순으로 다른 점 최대 2개, 작은 순으로 비슷한 점 최대 2개를 골라 **실제 값과 단위**로 서술한다(research R8). **값은 `monthly_series()`의 변환 후 값이다 — 증가율 지표면 증가율이지 지수 원수준이 아니다**(spec FR-015). 시대별 위치는 `era.py`의 별도 보조 문장으로 두고 기본 검색 이유에 혼용하지 않는다. 자유 생성하지 않는다(FR-015·FR-017·FR-022)\n+- [ ] T051 [P] (DE 테스트) 12개월 제한과 **순차** ±6개월 건너뛰기를 `data/tests/regime/test_candidates.py`에 고정 — 인접 월이 가까운 픽스처 구간에서 하나만 남고, **걸러진 만큼 그 아래 순위가 올라와 표시 개수를 채운다**\n+- [ ] T052 [P] (DE 테스트) 동률이 오래된 월 우선으로 풀리는지 `test_candidates.py`에 고정\n+- [ ] T053 [P] (DE 테스트) 후보가 2개뿐일 때 **3개로 채우지 않음**을 `test_candidates.py`에 고정(SC-004)\n+- [ ] T054 [P] (DE 테스트) 전체 유효 후보 목록이 **상위 10개보다 길고 순위가 연속이며 건너뛰기가 적용되지 않았음**을 `test_candidates.py`에 고정\n+- [ ] T055 [P] (DE 테스트) **후보 직전 이력이 없어도 비교 입력이 있으면 후보로 남고 보조 설명만 제한됨**을 `test_candidates.py`에 고정 — 픽스처 모양 10을 쓴다. 보조 척도가 0인 경우도 후보 자격·순위·거리에 영향이 없음을 확인한다(FR-012·FR-017)\n+- [ ] T056 [P] (DE 테스트) 설명 문장에 실제 값과 단위가 들어가고 시대별 상대 위치를 기본 검색 이유로 섞지 않으며, **spec FR-022 ①의 13가지가 0건**임을 `data/tests/regime/test_explain.py`에 고정 — 금지 목록을 구현이나 태스크가 지어내지 않는다\n+- [ ] T057 [P] (DE 테스트) **증가율 지표의 문장 값이 변환 후 값임**을 `test_explain.py`에 고정 — 지수 원수준이 들어가면 실패한다. 더해 `regime` 패키지 전체에서 **`raw_series` 호출이 0건**임을 정적으로 확인한다(spec FR-015, 포트 계약 §1)\n \n **Checkpoint**: 사례 목록이 나오고, 왜 비슷한지 오해 없는 문장으로 설명된다\n \n-## 묶음 M5 — 재계산 범위 판정과 적재\n+## 묶음 M5 — 재계산 범위·상태 판정과 적재\n \n **Goal**: 바뀐 만큼만 다시 계산해 DB에 넣는다. 조회는 이 결과를 읽을 뿐이다.\n \n-- [ ] T053 (DE) **재계산 범위 판정**을 `watermark.py`에 구현 — `changed_since()`가 준 가장 오래된 월 M에 대해 `t ≥ M`인 기준월만 대상이다. `None`이면 계열 시작월을 M으로 삼아 전 구간(spec FR-030, research R3)\n-- [ ] T054 [P] (DE 테스트) `t ≥ M` 규칙을 `data/tests/regime/test_watermark.py`에 고정 — 질의·척도·후보 세 경로가 모두 `t ≥ M`으로 덮이는지 경계값으로 확인한다\n-- [ ] T055 (DE) 검색 상태 판정을 `snapshot.py`에 구현 — `NOT_COMPUTABLE` / `NEAREST_ONLY`와 사유 네 가지. **문턱 값을 코드에 두지 않는다**(PD-09 미확정, research R6)\n-- [ ] T056 (DE) 한 분야가 `NOT_COMPUTABLE`이면 **종합도 `NOT_COMPUTABLE`** 로 만드는 규칙을 `snapshot.py`에 구현 — 남은 분야로 계산하지 않는다(spec US3 시나리오 6). **반대 방향도 구현한다** — 종합 후보가 0건이거나 T_all이 없으면 **종합만** `NOT_COMPUTABLE`이고 분야 snapshot은 정상으로 남긴다(spec FR-039)\n-- [ ] T057 (DE) 기준월 하나의 snapshot 조립을 `snapshot.py`에 구현 — 척도·**비교 시점**·표시 후보·**전체 유효 후보 목록**·후보 집계·`data_asof`(대상월·발표일·개정 여부 **복사본**)·버전 셋. 계산 가중은 **등록표 버전을 참조해** 기록한다 — 화면 분류가 바뀌었다는 이유로 가중이 따라 바뀌지 않는다(spec FR-011)\n-- [ ] T058 (DE) `snapshot_key` 조립을 `snapshot.py`에 구현 — `{mode}:{fieldId|ALL}:{baselineMonth}:{dataVersion}:{registryVersion}:{modelVersion}`. **검색 경로와 `baseline_origin`은 키에 넣지 않는다**(data-model §2)\n-- [ ] T059 (DE) **`content_hash` 계산**을 `snapshot.py`에 구현 — 결과 본문만 해시한다. `computed_at` 같은 시각 값을 **넣지 않는다**(넣으면 같은 결과가 매번 새 revision이 된다)\n-- [ ] T060 (DE) 모델 버전 상수 `REGIME-V1`을 `snapshot.py`에 두고, 무엇이 바뀌면 올려야 하는지를 주석으로 적는다(data-model §6)\n-- [ ] T061 (DE) PostgreSQL 적재를 `load.py`에 구현 — 직전 `revision`과 `content_hash`가 같으면 **새 행을 만들지 않고**, 다르면 `revision + 1`로 넣는다(spec FR-030)\n-- [ ] T062 (DE) **기준월 기록**을 `load.py`에 구현 — `baseline_months()`가 준 분야별 T_g와 T_all, 사전 계산이 있는 가장 오래된 기준월을 `regime_baseline_month`에 **적재와 같은 트랜잭션에서** 쓴다. 화면이 고를 수 있는 달은 결과가 실제로 있는 달뿐이다(data-model §3, 포트 계약 §0.2)\n-- [ ] T063 (DE) **보관 정리**를 `load.py`에 구현 — **적재를 마친 뒤 같은 실행에서** 돌린다(spec FR-029, 별도 잡을 두지 않는다). 각 (모드·분야·기준월)의 최신 revision과 `regime_search_log`가 가리키는 revision만 남기고 나머지 옛 revision을 지운다(data-model §7)\n-- [ ] T064 (DE) **실패가 부분 적재를 남기지 않게** `load.py`에 구현 — 기준월 하나의 snapshot·사례·기준월 기록을 한 트랜잭션으로 쓰고, 실패하면 그 기준월은 **이전 `revision`이 그대로 남는다**. 실패한 범위와 사유를 기록한다(spec FR-034, SC-010)\n-- [ ] T065 (DE) **철회 명령**을 `data/scripts/precompute_regime.py`에 `--withdraw`로 구현 — 사람이 지정한 범위의 `revision`을 지워 이전 것이 다시 최신이 되게 하고, **철회한 식별 키·범위·사유·시각을 기록**한다. 배치 본체는 철회를 스스로 판단하지 않는다(spec FR-035, SC-012)\n-- [ ] T066 (DE) 순회를 `data/scripts/precompute_regime.py`에 구현 — T053이 정한 기준월 × 모드 8. **소요 시간과 다시 계산한 기준월 수를 출력한다**(spec FR-033 기록 대상, 목표로 제시하지 않는다)\n-- [ ] T067 (DE) 중간 산출을 `data/processed/`에 Parquet로 남긴다 — 파티션 규칙은 `data/CLAUDE.md`(임의 변경 금지)\n-- [ ] T068 [P] (DE 테스트) 배치를 두 번 돌려도 **행 수가 늘지 않음**을 `data/tests/regime/test_precompute.py`에 고정(멱등, SC-002)\n-- [ ] T069 [P] (DE 테스트) 어느 지표 값을 바꾸면 그 (모드·기준월)만 `revision`이 오르고 나머지는 그대로임을 `test_precompute.py`에 고정\n-- [ ] T070 [P] (DE 테스트) 자료 버전이 `FIXTURE-`로 시작함을 `test_precompute.py`에 고정 — 접두사가 빠지면 폐기 조건이 무너진다\n-- [ ] T071 [P] (DE 테스트) 한 분야 계산 불가가 종합으로 전파됨을 `test_precompute.py`에 고정. **반대 방향**(모든 분야 정상 + 종합만 불가)도 픽스처 모양 5로 고정한다(FR-039)\n-- [ ] T072 [P] (DE 테스트) `snapshot_key`에 검색 경로·`baseline_origin`이 들어가지 않음을 `test_precompute.py`에 고정 — 같은 월을 T_g로 얻든 지정하든 결과가 하나여야 한다\n+- [ ] T058 (DE) **재계산 범위 판정**을 `watermark.py`에 구현 — `changed_since()`가 준 가장 오래된 월 M에 대해 `t ≥ M`인 기준월만 대상이다. `None`이면 계열 시작월을 M으로 삼아 전 구간(spec FR-030, research R3)\n+- [ ] T059 [P] (DE 테스트) `t ≥ M` 규칙을 `data/tests/regime/test_watermark.py`에 고정 — 질의 비교 시점 / 공통 척도 구간 / 후보 관측 구간 / **시대별 보조 척도 구간** 네 경로의 경계값을 확인한다. 마지막 경로는 순위가 같아도 보조 설명이 바뀔 수 있다(FR-017·FR-030, research R3)\n+- [ ] T060 (DE) 검색 상태 판정을 `snapshot.py`에 구현 — `NOT_COMPUTABLE` / `NEAREST_ONLY`와 사유 네 가지. **문턱 값을 코드에 두지 않는다**(PD-09 미확정, research R6)\n+- [ ] T061 (DE) 한 분야가 `NOT_COMPUTABLE`이면 **종합도 `NOT_COMPUTABLE`** 로 만드는 규칙과 **반대 방향**(종합 후보 0건이나 T_all 없음 → 종합만 불가, 분야는 정상)을 `snapshot.py`에 구현(spec FR-039, US3 시나리오 6)\n+- [ ] T062 (DE) 기준월 하나의 snapshot 조립을 `snapshot.py`에 구현 — **공통 척도**·비교 시점·전체 유효 후보 목록·후보 집계·`data_asof`(대상월·발표일·개정 여부 복사본)·버전 셋(data-model §2)\n+- [ ] T063 (DE) 사례 행 조립을 `snapshot.py`에 구현 — 거리·분야 기여·지표별 원값과 공통 척도 z·지표 기여·설명 문장·**시대별 보조 위치(`era_position`)**. 보조 설명을 만들 수 없는 지표는 키를 생략하고 전부 없으면 NULL이다(data-model §4)\n+- [ ] T064 (DE) `snapshot_key` 조립을 `snapshot.py`에 구현 — `{mode}:{fieldId|ALL}:{baselineMonth}:{dataVersion}:{registryVersion}:{modelVersion}`. **검색 경로와 `baseline_origin`은 키에 넣지 않는다**(data-model §2)\n+- [ ] T065 (DE) `content_hash` 계산을 `snapshot.py`에 구현 — 결과 본문만 해시한다. **공통 척도와 시대별 보조 설명을 포함**하고, `computed_at` 같은 매번 바뀌는 시각 값은 넣지 않는다. 순위가 같아도 보조 설명이 바뀌면 새 결과다(FR-030)\n+- [ ] T066 (DE) 모델 버전 상수 `REGIME-V1`을 `snapshot.py`에 두고, 무엇이 바뀌면 올려야 하는지를 주석으로 적는다(data-model §6). v2 검증 제안을 기본 계산 경로에 넣지 않는다(PD-08)\n+- [ ] T067 (DE) PostgreSQL 적재를 `load.py`에 구현 — 직전 `revision`과 `content_hash`가 같으면 **새 행을 만들지 않고**, 다르면 `revision + 1`로 넣는다(spec FR-030)\n+- [ ] T068 (DE) **기준월 기록**을 `load.py`에 구현 — `baseline_months()`가 준 분야별 T_g와 T_all, 사전 계산이 있는 가장 오래된 기준월을 `regime_baseline_month`에 **적재와 같은 트랜잭션에서** 쓴다(data-model §3, 포트 계약 §0.2)\n+- [ ] T069 (DE) **보관 정리**를 `load.py`에 구현 — **적재를 마친 뒤 같은 실행에서** 돌린다(spec FR-029). 각 (모드·분야·기준월)의 최신 revision과 `regime_search_log`가 가리키는 revision만 남긴다(data-model §7)\n+- [ ] T070 (DE) **실패가 부분 적재를 남기지 않게** `load.py`에 구현 — 기준월 하나의 snapshot·사례·기준월 기록을 한 트랜잭션으로 쓰고, 실패하면 그 기준월은 **이전 `revision`이 그대로 남는다**. 실패한 범위와 사유를 기록한다(spec FR-034, SC-010)\n+- [ ] T071 (DE) **철회 명령**을 `data/scripts/precompute_regime.py`에 `--withdraw`로 구현 — 사람이 지정한 범위의 `revision`을 지워 이전 것이 다시 최신이 되게 하고, **철회한 식별 키·범위·사유·시각을 기록**한다. 배치 본체는 철회를 스스로 판단하지 않는다(spec FR-035, SC-012)\n+- [ ] T072 (DE) 순회를 `data/scripts/precompute_regime.py`에 구현 — 워터마크가 정한 기준월 × 모드 8. **소요 시간과 다시 계산한 기준월 수를 출력한다**(spec FR-033, 목표로 제시하지 않는다)\n+- [ ] T073 (DE) 중간 산출을 `data/processed/`에 Parquet로 남긴다 — 파티션 규칙은 `data/CLAUDE.md`(임의 변경 금지)\n+- [ ] T074 [P] (DE 테스트) 배치를 두 번 돌려도 **행 수가 늘지 않음**을 `data/tests/regime/test_precompute.py`에 고정(멱등, SC-002)\n+- [ ] T075 [P] (DE 테스트) M월 지표 값을 바꾸면 **t ≥ M만 재계산하고 결과 내용이 달라진 항목만 revision이 오름**을 `test_precompute.py`에 고정 — 내용이 같은 항목과 t < M 항목은 그대로다. 순위는 같고 시대별 보조 설명만 바뀌는 경우도 포함한다(FR-017·FR-030)\n+- [ ] T076 [P] (DE 테스트) `era_position`이 사례 행에 저장되고 같은 자료·등록표·모델 버전과 후보월이면 기준월이 달라도 같은 보조 문장임을 `test_precompute.py`에 고정. 설명 불가를 0으로 채우지 않는다(SC-011, data-model §4)\n+- [ ] T077 [P] (DE 테스트) 자료 버전이 `FIXTURE-`로 시작함을 `test_precompute.py`에 고정 — 접두사가 빠지면 폐기 조건이 무너진다\n+- [ ] T078 [P] (DE 테스트) 한 분야 계산 불가가 종합으로 전파되고, **반대 방향**(모든 분야 정상 + 종합만 불가)도 픽스처 모양 5로 성립함을 `test_precompute.py`에 고정(spec FR-039)\n+- [ ] T079 [P] (DE 테스트) `snapshot_key`에 검색 경로·`baseline_origin`이 들어가지 않음을 `test_precompute.py`에 고정 — 같은 월을 T_g로 얻든 지정하든 결과가 하나여야 한다\n \n **Checkpoint**: DB에 검색 결과가 들어 있고, 다시 돌려도 늘지 않으며, 바뀐 것만 새 행이 된다\n \n-## 묶음 M6 — 조회 API\n-\n-**Goal**: 적재된 행을 HTTP로 내준다. 008에서 읽는 것은 **표시용 등록표뿐**이고 계산 코드는 없다.\n-\n-- [ ] T073 (BE) `MacroIndicatorPort` 인터페이스를 `backend/src/main/java/com/ssafy/thorp/regime/application/port/MacroIndicatorPort.java`에 작성 — `registryVersion()`·`fields()`·`indicator(indicatorId)` **셋뿐**. 시계열 메서드를 두지 않는다(Backend는 계산하지 않는다). 시그니처는 [contracts/macro-indicator-port.md](contracts/macro-indicator-port.md) §2\n-- [ ] T074 [P] (BE) 포트가 돌려줄 값 타입을 `regime/application/port/`에 record로 작성 — `FieldRegistration`(id·이름·표시 순서)·`IndicatorRegistration`(이름·단위)\n-- [ ] T075 (BE) ⚠ `FixtureMacroIndicatorAdapter`를 `regime/infrastructure/macro/fixture/`에 작성 — `@ConditionalOnProperty(prefix=\"thorp.regime.macro\", name=\"source\", havingValue=\"fixture\")`. `registryVersion()`은 **`FIXTURE-`로 시작하는 값**을 돌려준다. 담는 것은 **이름·단위·순서뿐**이고 시계열·기준월이 없어 `data/` 픽스처와 겹치지 않는다\n-- [ ] T076 (BE) `RegimeProperties`(`macro.source`, `@NotNull`)를 `regime/infrastructure/config/`에 작성하고 `application-local.yml`에 `fixture`, `application-prod.yml`에 `macro`를 둔다. **코드에 기본값을 박지 않는다** — 미설정이면 기동을 실패시켜 설정으로 드러낸다\n-- [ ] T077 [P] (BE 테스트) 포트 계약 테스트를 `backend/src/test/java/com/ssafy/thorp/regime/MacroIndicatorPortContractTest.java`에 작성 — 등록되지 않은 지표가 empty로 오는지, 분야 순서가 오는지, 버전이 오는지. **008 구현체가 와도 같은 테스트가 돈다**. 조회 실패를 이름 없이 대체하지 않음도 함께 고정한다(포트 계약 §2)\n-- [ ] T078 [P] (BE 테스트) prod 프로파일 + `thorp.regime.macro.source=fixture`면 **기동에 실패**함을 `RegimeProfileGuardTest.java`에 고정하고, `regime` 운영 코드가 `macro/fixture/` 밖에서 픽스처 클래스를 이름으로 참조하지 않음을 `FixtureIsolationTest.java`에 고정\n-\n-- [ ] T079 (DB) Flyway 마이그레이션 `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__regime_search.sql` 작성 — `regime_search_snapshot`·`regime_baseline_month`·`regime_search_case`·`regime_search_log`. 컬럼·제약·인덱스는 [data-model.md](data-model.md) §2~§5. **decimal은 예외 없이 JSONB**, `snapshot_key`는 `VARCHAR(200)`. `regime_search_log`의 `snapshot_id`는 **ON DELETE SET NULL**이고 `snapshot_key` 사본 컬럼을 함께 둔다(철회 대비, spec FR-035)\n-- [ ] T080 [P] (BE) 도메인 모델을 `regime/domain/`에 작성 — `SearchStatus`·`StatusReason`·`SearchMode`(`FIELD`/`COMPOSITE`)·`BaselineOrigin` enum과 `SnapshotKey` VO. Spring·JPA·Jackson import 금지(ADR-0001)\n-- [ ] T081 [P] (BE) JPA 엔티티 `RegimeSnapshotJpaEntity`·`RegimeBaselineMonthJpaEntity`·`RegimeCaseJpaEntity`를 `regime/infrastructure/persistence/`에 작성 — JSONB 컬럼은 `@JdbcTypeCode(JSON)`\n-- [ ] T082 (BE) `*Mapper`(정적 `toDomain`)와 저장소 구현을 `regime/infrastructure/persistence/`에, 포트는 `regime/application/repository/`에 작성 — 조회 전용이라 저장 메서드를 두지 않는다\n-- [ ] T083 (BE) `RegimeSearchService`를 `regime/application/service/`에 작성 — (모드·분야·기준월)의 **최신 `revision`** 을 읽고 없으면 404. **척도·거리를 계산하는 코드가 없어야 하고**, 008에서 읽는 것은 T073 포트의 등록표뿐이어야 한다\n-- [ ] T084 (BE) `baselineOrigin`을 **요청을 보고 판단**하는 로직을 서비스에 구현 — `baselineMonth`가 오면 `USER_SPECIFIED`, 없으면 `mode`에 따라 `T_G`/`T_ALL`. 저장값을 읽지 않는다(계약 §1)\n-- [ ] T085 (BE) `GET /regime-searches`를 `regime/presentation/controller/RegimeSearchController.java`에 작성 — 계약 §1. `limit`은 3 또는 10만 허용\n-- [ ] T086 (BE) `GET /regime-searches/{searchId}`를 같은 컨트롤러에 작성 — 계약 §2. **006 기록이 고정한 항목을 그대로 연다**. 정리되어 없으면 404. **철회되어 없는 경우와 정리되어 없는 경우를 응답에서 구분**한다(spec FR-035)\n-- [ ] T087 (BE) `GET /regime-searches/cases/{endMonth}`를 같은 컨트롤러에 작성 — 계약 §3. `mode`·`field`·`baselineMonth` 또는 `searchId`를 함께 받는다\n-- [ ] T088 (BE) `GET /regime-searches/candidates`를 같은 컨트롤러에 작성 — 계약 §4. **010은 이 목록에 필터를 적용하지 않는다**\n-- [ ] T089 (BE) `GET /regime-searches/baseline-months`를 같은 컨트롤러에 작성 — 계약 §5. **분야 이름은 `MacroIndicatorPort`(T073)에서, 기준월·범위는 `regime_baseline_month` 표에서** 만든다. 기준월을 008에 직접 묻지 않는다 — 배치가 아직 안 돈 달을 제시하면 404가 난다(포트 계약 §0.2)\n-- [ ] T090 [P] (BE) 응답 DTO를 `regime/presentation/response/`에 record로 작성 — `comparisonMonths`·`basis`·`dataAsOf.newerReleases`·`counts{evaluated,eligible,stored,displayed}` 포함. decimal은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 **문자열**. 전역 등록하지 않는다\n-- [ ] T091 (BE) `NOT_COMPUTABLE`을 **200**으로 내보내는 경로를 구현하고, 그 응답에도 `dataAsOf`·`versions`·`basis`를 채운다 — 503·500을 쓰지 않는다(계약 §1, SC-007·SC-009). 자료 범위 밖 기준월만 404다\n-- [ ] T092 (BE) **조회 실패를 '계산 불가'와 구분해** 내보내는 경로를 구현 — 저장된 결과를 읽지 못하면 실패로 알리고 빈 결과나 `NOT_COMPUTABLE`로 바꾸지 않는다. **다시 와도 같은 것과 다시 오면 달라질 수 있는 것은 다른 응답이다**(spec FR-034, 계약 §1)\n-- [ ] T093 (BE) `sampleData`를 `data_version`의 `FIXTURE-` 접두사로 판정한다 — 008에 묻지 않는다. 등록표 버전도 `FIXTURE-`로 시작하면 함께 표시한다\n-- [ ] T094 [P] (BE 테스트) 계약 예시와 응답의 동치를 `backend/src/test/java/com/ssafy/thorp/regime/presentation/RegimeSearchApiIT.java`에 고정 — 다섯 엔드포인트 전부\n-- [ ] T095 [P] (BE 테스트) `NOT_COMPUTABLE`이 200이고 `cases`가 빈 배열이며 **`dataAsOf`·`basis`가 있음**을 `RegimeSearchApiIT`에 고정. **네 사유(`SCALE_WINDOW_TOO_SHORT`·`SCALE_ZERO`·`QUERY_INPUT_MISSING`·`NO_CANDIDATE`)가 각각 `statusReason`으로 구분돼 나오는지**를 함께 고정한다(SC-005·SC-007·SC-009)\n-- [ ] T096 [P] (BE 테스트) 조회 실패가 `NOT_COMPUTABLE`로 둔갑하지 않고, 중단된 배치가 남긴 부분 적재 항목이 조회되지 않음을 `RegimeSearchApiIT`에 고정(SC-010)\n-- [ ] T097 [P] (BE 테스트) 응답에 `retention`·유지율·`% 유사`·배지 낱말이 **0건**임을 `RegimeSearchApiIT`에 고정(FR-018·FR-022·FR-031). **요청 파라미터에 전략·성과 관련 항목이 0건**임도 함께 고정한다(spec FR-024, SC-001). 검사 대상은 **spec FR-022 ①의 13가지**다\n-- [ ] T098 [P] (BE 테스트) 마이그레이션 구조 검증을 `RegimeMigrationTest.java`에 작성 — 제약·인덱스 존재, `uk_regime_case_month`가 같은 월을 두 번 막고, `(mode, field_id, baseline_month, content_hash)` 유일성이 같은 내용의 중복 저장을 막는다. **`regime_search_snapshot`·`regime_search_case`에 사용자를 가리키는 컬럼이 0개**임을 함께 고정한다(spec FR-036, SC-013)\n-- [ ] T099 [P] (BE 테스트) 같은 요청을 두 번 보내면 응답이 **완전히 같음**을 `RegimeSearchApiIT`에 고정(SC-002)\n-- [ ] T100 [P] (BE 테스트) **`regime` 패키지에 계산 코드가 0건**임을 `RegimeNoComputationTest.java`에 정적 검사로 고정(SC-002a) — 산술 연산·`Math.`·`BigDecimal` 산술이 나오면 실패. 대상 파일은 디렉터리를 훑어 모은다\n-- [ ] T101 [P] (BE 테스트) **`regime` 패키지가 지표 시계열(`macro_indicator_value` 등)을 읽지 않음**을 같은 테스트에 고정 — Backend가 008에서 읽는 것은 T073 포트의 등록표뿐이다(포트 계약 §0.1)\n+## 묶음 M6 — 등록표 포트와 조회 API\n+\n+**Goal**: 적재된 행을 HTTP로 내준다. **계산 코드도 지표 시계열 조회도 이 묶음에 없다.**\n+\n+- [ ] T080 (BE) `MacroIndicatorPort` 인터페이스를 `backend/src/main/java/com/ssafy/thorp/regime/application/port/MacroIndicatorPort.java`에 작성 — `registryVersion()`·`fields()`·`indicator(indicatorId)` **셋뿐**. 시계열 메서드를 두지 않는다(포트 계약 §2)\n+- [ ] T081 [P] (BE) 포트가 돌려줄 값 타입을 `regime/application/port/`에 record로 작성 — `FieldRegistration`(id·이름·표시 순서)·`IndicatorRegistration`(이름·단위)\n+- [ ] T082 (BE) ⚠ `FixtureMacroIndicatorAdapter`를 `regime/infrastructure/macro/fixture/`에 작성 — `@ConditionalOnProperty(prefix=\"thorp.regime.macro\", name=\"source\", havingValue=\"fixture\")`. `registryVersion()`은 **`FIXTURE-`로 시작하는 값**을 돌려주고, 담는 것은 **이름·단위·순서뿐**이라 `data/` 픽스처와 겹치지 않는다\n+- [ ] T083 (BE) `RegimeProperties`(`macro.source`, `@NotNull`)를 `regime/infrastructure/config/`에 작성하고 `application-local.yml`에 `fixture`, `application-prod.yml`에 `macro`를 둔다. **코드에 기본값을 박지 않는다**\n+- [ ] T084 [P] (BE 테스트) 포트 계약 테스트를 `MacroIndicatorPortContractTest.java`에 작성 — 등록되지 않은 지표가 empty로 오는지, 분야 순서가 오는지, 버전이 오는지, 조회 실패를 이름 없이 대체하지 않는지. **008 구현체가 와도 같은 테스트가 돈다**\n+- [ ] T085 [P] (BE 테스트) prod 프로파일 + `thorp.regime.macro.source=fixture`면 **기동에 실패**함을 `RegimeProfileGuardTest.java`에, 운영 코드가 `macro/fixture/` 밖에서 픽스처를 이름으로 참조하지 않음을 `FixtureIsolationTest.java`에 고정\n+- [ ] T086 (DB) Flyway 마이그레이션 `backend/src/main/resources/db/migration/V{YYYYMMDDHHMMSS}__regime_search.sql` 작성 — `regime_search_snapshot`·`regime_baseline_month`·`regime_search_case`·`regime_search_log`. 컬럼·제약·인덱스는 [data-model.md](data-model.md) §2~§5. decimal은 JSONB, `snapshot_key`는 `VARCHAR(200)`, snapshot의 공통 `scale`과 사례의 nullable `era_position`을 두고, `regime_search_log.snapshot_id`는 **ON DELETE SET NULL** + `snapshot_key` 사본\n+- [ ] T087 [P] (BE) 도메인 모델을 `regime/domain/`에 작성 — `SearchStatus`·`StatusReason`·`SearchMode`(`FIELD`/`COMPOSITE`)·`BaselineOrigin` enum과 `SnapshotKey` VO. Spring·JPA·Jackson import 금지(ADR-0001)\n+- [ ] T088 [P] (BE) JPA 엔티티 `RegimeSnapshotJpaEntity`·`RegimeBaselineMonthJpaEntity`·`RegimeCaseJpaEntity`를 `regime/infrastructure/persistence/`에 작성 — JSONB 컬럼은 `@JdbcTypeCode(JSON)`\n+- [ ] T089 (BE) `*Mapper`(정적 `toDomain`)와 저장소 구현을 `regime/infrastructure/persistence/`에, 포트는 `regime/application/repository/`에 작성 — 조회 전용이라 저장 메서드를 두지 않는다\n+- [ ] T090 (BE) `RegimeSearchService`를 `regime/application/service/`에 작성 — (모드·분야·기준월)의 **최신 `revision`** 을 읽고 없으면 404. **척도·거리를 계산하는 코드가 없어야 하고**, 008에서 읽는 것은 포트의 등록표뿐이어야 한다\n+- [ ] T091 (BE) `baselineOrigin`을 **요청을 보고 판단**하는 로직을 서비스에 구현 — `baselineMonth`가 오면 `USER_SPECIFIED`, 없으면 `mode`에 따라 `T_G`/`T_ALL`. 저장값을 읽지 않는다(계약 §1)\n+- [ ] T092 (BE) `GET /regime-searches`를 `regime/presentation/controller/RegimeSearchController.java`에 작성 — 계약 §1. `limit`은 3 또는 10만 허용\n+- [ ] T093 (BE) `GET /regime-searches/{searchId}`를 같은 컨트롤러에 작성 — 계약 §2. **006 기록이 고정한 항목을 그대로 연다**. **철회되어 없는 경우와 정리되어 없는 경우를 응답에서 구분**한다(spec FR-035)\n+- [ ] T094 (BE) `GET /regime-searches/cases/{endMonth}`를 같은 컨트롤러에 작성 — 계약 §3. `mode`·`field`·`baselineMonth` 또는 `searchId`를 함께 받는다\n+- [ ] T095 (BE) `GET /regime-searches/candidates`를 같은 컨트롤러에 작성 — 계약 §4. **010은 이 목록에 필터도 ±6개월 건너뛰기도 적용하지 않는다**\n+- [ ] T096 (BE) `GET /regime-searches/baseline-months`를 같은 컨트롤러에 작성 — 계약 §5. **분야 이름은 포트에서, 기준월·범위는 `regime_baseline_month` 표에서** 만든다. 기준월을 008에 직접 묻지 않는다(포트 계약 §0.2)\n+- [ ] T097 [P] (BE) 응답 DTO를 `regime/presentation/response/`에 record로 작성 — `comparisonMonths`·`basis`·`dataAsOf.newerReleases`·`counts{evaluated,eligible,stored,displayed}`와 사례 상세의 공통 `scale`·보조 `eraPosition`을 포함한다. decimal은 `@JsonSerialize(using = PlainBigDecimalSerializer.class)`로 문자열. 전역 등록하지 않는다(계약 §3)\n+- [ ] T098 (BE) `NOT_COMPUTABLE`을 **200**으로 내보내는 경로를 구현하고, 그 응답에도 `dataAsOf`·`versions`·`basis`를 채운다 — 503·500을 쓰지 않는다(계약 §1, SC-007·SC-009). 자료 범위 밖 기준월만 404다\n+- [ ] T099 (BE) **조회 실패를 '계산 불가'와 구분해** 내보내는 경로를 구현 — 저장된 결과를 읽지 못하면 실패로 알리고 빈 결과나 `NOT_COMPUTABLE`로 바꾸지 않는다(spec FR-034, 계약 §1)\n+- [ ] T100 (BE) `sampleData`를 `data_version`의 `FIXTURE-` 접두사로 판정한다 — 008에 묻지 않는다. 등록표 버전도 `FIXTURE-`로 시작하면 함께 표시한다\n+- [ ] T101 [P] (BE 테스트) 계약 예시와 응답의 동치를 `RegimeSearchApiIT.java`에 고정 — 다섯 엔드포인트 전부\n+- [ ] T102 [P] (BE 테스트) 사례 상세의 **공통 scale로 queryZ·caseZ를 모두 대조할 수 있음**과 `eraPosition`이 별도 문장으로만 제공됨을 `RegimeSearchApiIT`에 고정 — 보조 위치의 z·분위수는 없고, 보조 설명을 계산할 수 없어도 사례가 조회된다(FR-017·SC-003·SC-011)\n+- [ ] T103 [P] (BE 테스트) `NOT_COMPUTABLE`이 200이고 `cases`가 빈 배열이며 `dataAsOf`·`basis`가 있음을 고정. **네 사유가 각각 `statusReason`으로 구분돼 나오는지**를 함께 고정한다(SC-005·SC-007·SC-009)\n+- [ ] T104 [P] (BE 테스트) 조회 실패가 `NOT_COMPUTABLE`로 둔갑하지 않고, 중단된 배치가 남긴 부분 적재 항목이 조회되지 않음을 `RegimeSearchApiIT`에 고정(SC-010)\n+- [ ] T105 [P] (BE 테스트) 응답에 **spec FR-022 ①의 13가지가 0건**이고 요청 파라미터에 전략·성과 항목이 0건임을 `RegimeSearchApiIT`에 고정(SC-006, FR-024·SC-001)\n+- [ ] T106 [P] (BE 테스트) 마이그레이션 구조 검증을 `RegimeMigrationTest.java`에 작성 — 제약·인덱스, `uk_regime_case_month`, 내용 중복 방지, 공통 `scale`과 nullable `era_position`을 확인한다. 사전 계산 snapshot·case·baseline 표에 개인 식별 컬럼이 없고, `regime_search_log.user_id`만 006·014가 관리하는 비식별 참조 키임을 확인한다(FR-036·SC-013, data-model §5)\n+- [ ] T107 [P] (BE 테스트) 같은 요청을 두 번 보내면 응답이 **완전히 같음**을 `RegimeSearchApiIT`에 고정(SC-002)\n+- [ ] T108 [P] (BE 테스트) **`regime` 패키지에 계산 코드가 0건**임을 `RegimeNoComputationTest.java`에 정적 검사로 고정(SC-002a) — 산술 연산·`Math.`·`BigDecimal` 산술이 나오면 실패\n+- [ ] T109 [P] (BE 테스트) **`regime` 패키지가 지표 시계열(`macro_indicator_value` 등)을 읽지 않음**을 같은 테스트에 고정 — 008에서 읽는 것은 포트의 등록표뿐이다(포트 계약 §0.1)\n \n **Checkpoint**: API가 계약대로 답한다. 여기까지가 Foundational이고, 이제 화면을 붙일 수 있다\n \n-**T073~T078가 먼저다** — T089(`baseline-months`)가 포트를 쓴다.\n+**포트(앞 여섯 태스크)가 먼저다** — `baseline-months`가 분야 이름을 포트에서 가져온다.\n \n ---\n \n@@ -256,15 +273,15 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **묶음 M7** · `feat(fe)/{티켓}-regime-result`\n \n-- [ ] T102 [P] [US1] (FE) 타입 정의를 `frontend/src/types/regime.ts`에 작성 — 계약 응답 그대로. decimal은 `string`\n-- [ ] T103 [P] [US1] (FE) API 클라이언트를 `frontend/src/api/regime.ts`에 작성 — 다섯 엔드포인트. 오류를 화면 문구로 바꾸지 않고 그대로 올린다\n-- [ ] T104 [US1] (FE) `useRegimeSearch` 훅을 `frontend/src/hooks/useRegimeSearch.ts`에 작성 — 늦게 온 응답이 최신 것을 덮지 않도록 순번으로 막는다(`useSearchCandidates`와 같은 방식)\n-- [ ] T105 [US1] (FE) 사례 목록을 `frontend/src/components/regime/CaseList.tsx`에 작성 — 관측 구간·비슷한 점·다른 점을 **먼저** 보이고 거리·기여는 상세로 넘긴다(spec FR-015)\n-- [ ] T106 [US1] (FE) '더 보기' 동작을 `CaseList.tsx`에 붙인다 — `limit=10`으로 다시 부른다. **버튼 노출은 `counts.stored > counts.displayed`로 정하고 10을 가정하지 않는다**. 후보가 부족하면 부족한 대로 보이고 빈자리를 만들지 않는다. **`eligible > stored`면 상한 안내**(*\\\"가까운 순서로 10개까지 보입니다\\\"*)를 보이고 **후보 수는 표시하지 않는다**(spec FR-013, SC-004)\n-- [ ] T107 [P] [US1] (FE) 검색 페이지를 `frontend/src/pages/RegimeSearchPage.tsx`에 작성 — 분야 선택(`baseline-months` 응답의 분야 목록)과 결과 영역. **거리 함수·척도·지표 조합을 고르는 항목을 두지 않는다**(US1 시나리오 5)\n-- [ ] T108 [P] [US1] (FE) CSS Module을 컴포넌트마다 작성 — `--thorp-*` 토큰만 쓴다(`frontend/docs/design-system.md`)\n-- [ ] T109 [P] [US1] (FE 테스트) 사례 3개 표시와 '더 보기' 10개를 `CaseList.test.tsx`에 고정. 상한에 걸린 경우 **안내가 보이고 `evaluated`·`eligible` 숫자가 화면에 0건**임을 함께 고정한다(SC-004)\n-- [ ] T110 [P] [US1] (FE 테스트) 후보 2개일 때 **빈자리가 렌더링되지 않고 '더 보기'가 없음**을 `CaseList.test.tsx`에 고정(SC-004)\n+- [ ] T110 [P] [US1] (FE) 타입 정의를 `frontend/src/types/regime.ts`에 작성 — 계약 응답 그대로. decimal은 `string`\n+- [ ] T111 [P] [US1] (FE) API 클라이언트를 `frontend/src/api/regime.ts`에 작성 — 다섯 엔드포인트. 오류를 화면 문구로 바꾸지 않고 그대로 올린다\n+- [ ] T112 [US1] (FE) `useRegimeSearch` 훅을 `frontend/src/hooks/useRegimeSearch.ts`에 작성 — 늦게 온 응답이 최신 것을 덮지 않도록 순번으로 막는다(`useSearchCandidates`와 같은 방식)\n+- [ ] T113 [US1] (FE) 사례 목록을 `frontend/src/components/regime/CaseList.tsx`에 작성 — 관측 구간·비슷한 점·다른 점을 **먼저** 보이고 거리·기여는 상세로 넘긴다(spec FR-015)\n+- [ ] T114 [US1] (FE) '더 보기' 동작을 `CaseList.tsx`에 붙인다 — `limit=10`으로 다시 부른다. **버튼 노출은 `counts.stored > counts.displayed`로 정하고 10을 가정하지 않는다**. 후보가 부족하면 부족한 대로 보이고 빈자리를 만들지 않는다. **`eligible > stored`면 상한 안내**(*\\\"가까운 순서로 10개까지 보입니다\\\"*)를 보이고 **후보 수는 표시하지 않는다**(spec FR-013, SC-004)\n+- [ ] T115 [P] [US1] (FE) 검색 페이지를 `frontend/src/pages/RegimeSearchPage.tsx`에 작성 — 분야 선택(`baseline-months` 응답의 분야 목록)과 결과 영역. **거리 함수·척도·지표 조합을 고르는 항목을 두지 않는다**(US1 시나리오 5)\n+- [ ] T116 [P] [US1] (FE) CSS Module을 컴포넌트마다 작성 — `--thorp-*` 토큰만 쓴다(`frontend/docs/design-system.md`)\n+- [ ] T117 [P] [US1] (FE 테스트) 사례 3개 표시와 '더 보기' 10개를 `CaseList.test.tsx`에 고정. 상한에 걸린 경우 **안내가 보이고 `evaluated`·`eligible` 숫자가 화면에 0건**임을 함께 고정한다(SC-004)\n+- [ ] T118 [P] [US1] (FE 테스트) 후보 2개일 때 **빈자리가 렌더링되지 않고 '더 보기'가 없음**을 `CaseList.test.tsx`에 고정(SC-004)\n \n **Checkpoint**: US1이 독립적으로 동작한다 — 분야를 고르면 사례가 보인다\n \n@@ -279,18 +296,18 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **묶음 M7 (이어서)** · 같은 브랜치\n \n-- [ ] T111 [US2] (FE) 검색 상태 표시를 `frontend/src/components/regime/SearchStatusBadge.tsx`에 작성 — 세 상태와 사유를 **첫 사례와 같은 화면에** 둔다(spec FR-019). 상태 문구는 응답의 `statusNote`를 쓰고 화면에서 지어내지 않는다\n-- [ ] T112 [US2] (FE) '최근접 참고 사례' 표시를 `CaseList.tsx`에 붙인다 — 응답의 `caseLabel`이 있을 때만(spec FR-020)\n-- [ ] T113 [US2] (FE) **조회 실패 안내**를 `frontend/src/components/regime/LoadError.tsx`에 작성 — 빈 상태(`EmptyResult`)와 **다른 화면**으로 그리고 다시 시도할 수 있게 한다. 실패를 빈 결과처럼 보이지 않는다(spec FR-034)\n-- [ ] T114 [US2] (FE) FR-037의 **다섯 표시에 공통 규약**을 `frontend/src/components/regime/Disclosure.tsx`로 묶는다 — 문구를 반드시 동반하고, 어느 결과에 대한 것인지 보조기술이 알 수 있게 연결하며, 상태가 바뀌면 그 사실이 전달된다. **접히는 영역에 넣지 않는다**(spec FR-037)\n-- [ ] T115 [US2] (FE) `NOT_COMPUTABLE`·후보 0건을 **정상 화면 + 한 문장 안내**로 그리는 빈 상태를 `frontend/src/components/regime/EmptyResult.tsx`에 작성 — **오류 화면을 쓰지 않는다**(US2 시나리오 4). 네 사유(`SCALE_WINDOW_TOO_SHORT`·`SCALE_ZERO`·`QUERY_INPUT_MISSING`·`NO_CANDIDATE`)를 모두 그린다\n-- [ ] T116 [US2] (FE) **빠진 지표·월 표기**를 `frontend/src/components/regime/ComparisonMonthsNotice.tsx`에 작성 — `comparisonMonths[].omitted`가 비어 있지 않으면 그 `note`를 **숨길 수 없는 자리에** 보인다(spec FR-031, SC-007)\n-- [ ] T117 [US2] (FE) **역사 비교 표시**를 `frontend/src/components/regime/BasisNotice.tsx`에 작성 — `basis.note`를 결과 옆에 상시 표시한다. *\"당시 재현\"* 으로 읽힐 문구를 화면에서 만들지 않는다(spec FR-027, SC-009)\n-- [ ] T118 [US2] (FE) 예시 자료 표시를 `RegimeSearchPage.tsx`에 붙인다 — `versions.sampleData`가 `true`면 **숨길 수 없는 자리에** 표시한다(008 FR-022)\n-- [ ] T119 [P] [US2] (FE 테스트) 세 상태의 표시와 `'% 유사'`·`'충분히 유사'`·`'대표 유사국면'` 낱말 **0건**을 `SearchStatusBadge.test.tsx`에 고정(SC-006)\n-- [ ] T120 [P] [US2] (FE 테스트) 다섯 표시가 **문구 없이 색·아이콘·호버로만 구별되지 않고**, 보조기술이 읽을 수 있으며, `--thorp-*` 토큰 조합이 **명암비 4.5:1**(굵은 큰 글자 3:1)을 만족함을 고정한다(SC-014). 토큰 기준은 `frontend/docs/design-system.md`\n-- [ ] T121 [P] [US2] (FE 테스트) 계산 불가에서 오류 화면이 뜨지 않고 네 사유가 각각 한 문장으로 그려짐을 `EmptyResult.test.tsx`에 고정(SC-005)\n-- [ ] T122 [P] [US2] (FE 테스트) 빠진 달이 있으면 표기가 보이고 없으면 안 보임, `basis` 표시는 **항상** 보임을 `ComparisonMonthsNotice.test.tsx`·`BasisNotice.test.tsx`에 고정(SC-007·SC-009)\n+- [ ] T119 [US2] (FE) 검색 상태 표시를 `frontend/src/components/regime/SearchStatusBadge.tsx`에 작성 — 세 상태와 사유를 **첫 사례와 같은 화면에** 둔다(spec FR-019). 상태 문구는 응답의 `statusNote`를 쓰고 화면에서 지어내지 않는다\n+- [ ] T120 [US2] (FE) '최근접 참고 사례' 표시를 `CaseList.tsx`에 붙인다 — 응답의 `caseLabel`이 있을 때만(spec FR-020)\n+- [ ] T121 [US2] (FE) **조회 실패 안내**를 `frontend/src/components/regime/LoadError.tsx`에 작성 — 빈 상태(`EmptyResult`)와 **다른 화면**으로 그리고 다시 시도할 수 있게 한다. 실패를 빈 결과처럼 보이지 않는다(spec FR-034)\n+- [ ] T122 [US2] (FE) FR-037의 **다섯 표시에 공통 규약**을 `frontend/src/components/regime/Disclosure.tsx`로 묶는다 — 문구를 반드시 동반하고, 어느 결과에 대한 것인지 보조기술이 알 수 있게 연결하며, 상태가 바뀌면 그 사실이 전달된다. **접히는 영역에 넣지 않는다**(spec FR-037)\n+- [ ] T123 [US2] (FE) `NOT_COMPUTABLE`·후보 0건을 **정상 화면 + 한 문장 안내**로 그리는 빈 상태를 `frontend/src/components/regime/EmptyResult.tsx`에 작성 — **오류 화면을 쓰지 않는다**(US2 시나리오 4). 네 사유(`SCALE_WINDOW_TOO_SHORT`·`SCALE_ZERO`·`QUERY_INPUT_MISSING`·`NO_CANDIDATE`)를 모두 그린다\n+- [ ] T124 [US2] (FE) **빠진 지표·월 표기**를 `frontend/src/components/regime/ComparisonMonthsNotice.tsx`에 작성 — `comparisonMonths[].omitted`가 비어 있지 않으면 그 `note`를 **숨길 수 없는 자리에** 보인다(spec FR-031, SC-007)\n+- [ ] T125 [US2] (FE) **역사 비교 표시**를 `frontend/src/components/regime/BasisNotice.tsx`에 작성 — `basis.note`를 결과 옆에 상시 표시한다. *\"당시 재현\"* 으로 읽힐 문구를 화면에서 만들지 않는다(spec FR-027, SC-009)\n+- [ ] T126 [US2] (FE) 예시 자료 표시를 `RegimeSearchPage.tsx`에 붙인다 — `versions.sampleData`가 `true`면 **숨길 수 없는 자리에** 표시한다(008 FR-022)\n+- [ ] T127 [P] [US2] (FE 테스트) 세 상태의 표시와 `'% 유사'`·`'충분히 유사'`·`'대표 유사국면'` 낱말 **0건**을 `SearchStatusBadge.test.tsx`에 고정(SC-006)\n+- [ ] T128 [P] [US2] (FE 테스트) 다섯 표시가 **문구 없이 색·아이콘·호버로만 구별되지 않고**, 보조기술이 읽을 수 있으며, `--thorp-*` 토큰 조합이 **명암비 4.5:1**(굵은 큰 글자 3:1)을 만족함을 고정한다(SC-014). 토큰 기준은 `frontend/docs/design-system.md`\n+- [ ] T129 [P] [US2] (FE 테스트) 계산 불가에서 오류 화면이 뜨지 않고 네 사유가 각각 한 문장으로 그려짐을 `EmptyResult.test.tsx`에 고정(SC-005)\n+- [ ] T130 [P] [US2] (FE 테스트) 빠진 달이 있으면 표기가 보이고 없으면 안 보임, `basis` 표시는 **항상** 보임을 `ComparisonMonthsNotice.test.tsx`·`BasisNotice.test.tsx`에 고정(SC-007·SC-009)\n \n **Checkpoint**: 결과를 과신할 수 없게 상태가 늘 함께 보인다\n \n@@ -305,13 +322,13 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **묶음 M8** · `feat(fe)/{티켓}-regime-detail-composite`\n \n-- [ ] T123 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다\n-- [ ] T124 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)\n-- [ ] T125 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)\n-- [ ] T126 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **\"Thorp의 설계 선택\"** 이라고 적고 *\"모든 지표의 중요성이 같다\"* 고 쓰지 않는다(FR-010, US3 시나리오 5)\n-- [ ] T127 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)\n-- [ ] T128 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)\n-- [ ] T129 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정\n+- [ ] T131 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다\n+- [ ] T132 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)\n+- [ ] T133 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)\n+- [ ] T134 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **\"Thorp의 설계 선택\"** 이라고 적고 *\"모든 지표의 중요성이 같다\"* 고 쓰지 않는다(FR-010, US3 시나리오 5)\n+- [ ] T135 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)\n+- [ ] T136 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)\n+- [ ] T137 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정\n \n ---\n \n@@ -324,31 +341,42 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **묶음 M8 (이어서)** · 같은 브랜치\n \n-- [ ] T130 [US4] (FE) 기준월 지정을 `RegimeSearchPage.tsx`에 붙인다 — 지정한 월을 유지하고 **화면에 항상 표시한다**(spec FR-003). 범위는 `baseline-months`의 `range`\n-- [ ] T131 [US4] (FE) 자료 기준 시점 표시를 `frontend/src/components/regime/DataAsOf.tsx`에 작성 — **지표별** 대상월 + 발표일. 값이 개정된 경우에만 개정 안내를 한 줄 덧붙인다. **수집 시각을 쓰지 않는다**(spec FR-002·FR-031)\n-- [ ] T132 [US4] (FE) 사례 상세를 `frontend/src/components/regime/CaseDetail.tsx`에 작성 — 거리·분야 기여·**지표별 명목 비중과 실제 거리 기여**·z·척도(중앙값·산포·방법·구간)·비교 시점. 손계산 대조가 가능해야 한다(spec FR-028)\n-- [ ] T133 [US4] (FE) 시대별 위치 문장을 `CaseDetail.tsx`의 **보조 설명 영역**에 표시 — 거리·기여·z와 **시각적으로 분리**한다(spec FR-017). 응답의 `sentence`를 그대로 쓰고 화면에서 숫자로 바꾸지 않는다\n-- [ ] T134 [US4] (FE) `eraPosition`이 `null`이면 **그 자리를 비운다** — `0`이나 `\"-\"`로 채우지 않는다(spec FR-017, 원칙 VI)\n-- [ ] T135 [P] [US4] (FE 테스트) 유지율·`retention`·겹침 비율이 화면에 **0건**임을 `DataAsOf.test.tsx`에 고정(FR-031, SC-007)\n-- [ ] T136 [P] [US4] (FE 테스트) 대상월·발표일이 늘 보이고, 개정이 없으면 개정 안내가 없으며, 수집 시각이 0건임을 `DataAsOf.test.tsx`에 고정\n-- [ ] T137 [P] [US4] (FE 테스트) 상세의 명목 비중·실제 거리 기여가 함께 보이고 손계산이 맞음을 `CaseDetail.test.tsx`에 고정(SC-003). **시대별 위치가 문장으로만 보이고 z 값·분위수·백분율이 0건**임을 함께 고정한다(SC-011)\n-- [ ] T138 (FE) 검색·더 보기·모드 전환·기준월 지정·상세 열기를 **키보드만으로** 할 수 있게 한다 — 포커스 순서가 화면 순서와 맞고, 다섯 표시가 그 경로에서 모두 도달 가능하다(spec FR-037)\n-- [ ] T139 [P] (FE 테스트) 키보드만으로 다섯 표시에 도달함과, **좁은 폭에서 잘리거나 접히지 않음**을 고정한다(SC-014)\n-- [ ] T140 [P] (FE 테스트) 010 화면 코드에 **지표 ID·지표명·분야 이름이 0건**임을 `frontend/src/components/regime/indicatorAgnostic.test.tsx`에 고정 — 007의 전략명 검사와 같은 방식이고, 대상 파일은 **손 목록이 아니라 `src`를 훑어** 모은다. **결과·상태·안내 영역에 하드코딩된 문구가 0건**임도 함께 고정한다 — 그 자리 문장은 전부 API 응답에서 와야 한다(spec FR-022 ②, SC-006)\n+- [ ] T138 [US4] (FE) 기준월 지정을 `RegimeSearchPage.tsx`에 붙인다 — 지정한 월을 유지하고 **화면에 항상 표시한다**(spec FR-003). 범위는 `baseline-months`의 `range`\n+- [ ] T139 [US4] (FE) 자료 기준 시점 표시를 `frontend/src/components/regime/DataAsOf.tsx`에 작성 — **지표별** 대상월 + 발표일. 값이 개정된 경우에만 개정 안내를 한 줄 덧붙인다. **수집 시각을 쓰지 않는다**(spec FR-002·FR-031)\n+- [ ] T140 [US4] (FE) 사례 상세를 `frontend/src/components/regime/CaseDetail.tsx`에 작성 — 거리·분야 기여·**지표별 명목 비중과 실제 거리 기여**·z·척도(중앙값·산포·방법·구간)·비교 시점. 손계산 대조가 가능해야 한다(spec FR-028)\n+- [ ] T141 [US4] (FE) 설명 문장을 `CaseList.tsx`·`CaseDetail.tsx`에 표시 — 응답의 `similar`·`different`를 그대로 쓴다. **실제 값과 단위**를 보여주고 시대별 상대 위치를 기본 검색 이유로 섞지 않는다(FR-015·FR-017)\n+- [ ] T142 [US4] (FE) 사례 상세에 `eraPosition`을 **당시 평소 대비 위치라는 별도 보조 설명**으로 표시한다 — 문장만 보이고 시대별 z·분위수·백분율로 바꾸지 않는다. 설명이 없는 지표는 보조 설명을 계산할 수 없다고 안내하되 사례와 순위는 유지한다(FR-017·SC-011)\n+- [ ] T143 [P] [US4] (FE 테스트) 유지율·`retention`·겹침 비율이 화면에 **0건**임을 `DataAsOf.test.tsx`에 고정(FR-031, SC-007)\n+- [ ] T144 [P] [US4] (FE 테스트) 대상월·발표일이 늘 보이고, 개정이 없으면 개정 안내가 없으며, 수집 시각이 0건임을 `DataAsOf.test.tsx`에 고정\n+- [ ] T145 [P] [US4] (FE 테스트) 상세에 명목 비중·실제 거리 기여와 공통 척도가 보여 손계산이 가능함을 `CaseDetail.test.tsx`에 고정(SC-003). 시대별 위치는 별도 보조 문장으로 표시되고, 그 영역의 z·분위수·백분율이 0건이며 보조 설명이 없어도 사례가 유지됨을 확인한다(SC-011)\n+- [ ] T146 (FE) 검색·더 보기·모드 전환·기준월 지정·상세 열기를 **키보드만으로** 할 수 있게 한다 — 포커스 순서가 화면 순서와 맞고, 다섯 표시가 그 경로에서 모두 도달 가능하다(spec FR-037)\n+- [ ] T147 [P] (FE 테스트) 키보드만으로 다섯 표시에 도달함과, **좁은 폭에서 잘리거나 접히지 않음**을 고정한다(SC-014)\n+- [ ] T148 [P] (FE 테스트) 010 화면 코드에 **지표 ID·지표명·분야 이름이 0건**임을 `frontend/src/components/regime/indicatorAgnostic.test.tsx`에 고정 — 007의 전략명 검사와 같은 방식이고, 대상 파일은 **손 목록이 아니라 `src`를 훑어** 모은다. **결과·상태·안내 영역에 하드코딩된 문구가 0건**임도 함께 고정한다 — 그 자리 문장은 전부 API 응답에서 와야 한다(spec FR-022 ②, SC-006)\n \n ---\n \n # Phase 7: Polish & 교차 관심사\n \n-**묶음 M9** · `docs/{티켓}-regime-verification`\n+**묶음 M9** · `docs(be)/{티켓}-regime-verification`\n \n-- [ ] T141 [P] (DOCS) quickstart S1~S9를 실제로 실행하고 결과를 [quickstart.md](quickstart.md) 하단 \"실행 기록\"에 남긴다 — 통과·실패·미실행을 그대로 적는다\n-- [ ] T142 (DOCS) **폐기 예행연습**: 임시 대역 **두 디렉터리**(`data/…/macro/fixture/`, `backend/…/macro/fixture/`)를 지워 보고 어디가 깨지는지 확인한 뒤 되돌린다. 픽스처를 쓰는 테스트만 깨져야 한다(quickstart S9). 결과를 실행 기록에 남긴다\n-- [ ] T143 [P] (DOCS) 사전 계산 배치 소요 시간·다시 계산한 기준월 수·새로 생긴 행 수를 실행 기록에 남긴다 — **목표로 제시하지 않고 측정값으로만 적는다**(spec FR-033, 원칙 IX)\n-- [ ] T144 [P] (DOCS) 조회 응답 시간·실패 건수를 실행 기록에 남긴다 — research R9의 p95 300ms는 **측정 목표이지 한도가 아니다**. 004 FR-007의 실행 유형 기록에 붙이는 일은 004 완성 후로 미루고 그 사실을 적는다\n-- [ ] T145 [P] (DOCS) 확인할 수 없었던 항목을 quickstart \"지금 확인할 수 없는 것\" 표와 대조해 갱신한다 — 008·011·PD-09·PD-10·`eraPosition`·FR-032(014 대기) 항목\n-- [ ] T146 (DOCS) **사용성 관찰**을 6~8명에게 수행하고 결과를 실행 기록에 남긴다 — 과제와 확인 질문은 spec SC-008. 참여자별로 ① 종합 비교를 열지 않고 끝냈는가 ② 분야 유사성을 경제 전체의 일치로 오해했는가를 적고, **막힌 지점을 그대로 적는다**(고쳤는지는 별도 판단)\n-- [ ] T147 (DOCS) `specs/README.md`의 010 행 상태를 갱신하고, 008에 요구하는 것(`MacroIndicatorSource` 계약)을 008 spec에서 다시 확인한다\n+- [ ] T149 [P] (DOCS) quickstart S1~S9를 실제로 실행하고 결과를 [quickstart.md](quickstart.md) 하단 \"실행 기록\"에 남긴다 — 통과·실패·미실행을 그대로 적는다\n+- [ ] T150 (DOCS) **폐기 예행연습**: 임시 대역 **두 디렉터리**(`data/…/macro/fixture/`, `backend/…/macro/fixture/`)를 지워 보고 어디가 깨지는지 확인한 뒤 되돌린다. 픽스처를 쓰는 테스트만 깨져야 한다(quickstart S9). 결과를 실행 기록에 남긴다\n+- [ ] T151 [P] (DOCS) 사전 계산 배치 소요 시간·다시 계산한 기준월 수·새로 생긴 행 수를 실행 기록에 남긴다 — **목표로 제시하지 않고 측정값으로만 적는다**(spec FR-033, 원칙 IX)\n+- [ ] T152 [P] (DOCS) 조회 응답 시간·실패 건수를 실행 기록에 남긴다 — research R9의 p95 300ms는 **측정 목표이지 한도가 아니다**. 004 FR-007의 실행 유형 기록에 붙이는 일은 004 완성 후로 미루고 그 사실을 적는다\n+- [ ] T153 [P] (DOCS) 확인할 수 없었던 항목을 quickstart \"지금 확인할 수 없는 것\" 표와 대조해 갱신한다 — 008·011·PD-09·PD-10·FR-032(014 대기)·실제 과거 자료 범위·v2 비교 실험. **v2 검증 대기는 v1 구현 차단 조건이 아니다**\n+- [ ] T154 (DOCS) `specs/README.md`의 010 행 상태를 실제 완료 범위에 맞게 갱신하고, 008에 요구하는 `MacroIndicatorSource` 계약을 다시 확인한다 — **010·PD-08의 모델 v1 기준을 유지**하며, 미확인 상태를 완료로 올리지 않는다\n+\n+---\n+\n+# Phase 8: 사용성 확인 — 구현이 끝나야 시작한다\n+\n+**묶음 M10** · `docs(be)/{티켓}-regime-usability`\n+\n+constitution \"완료의 정의\"는 **기능 단위** 완료를 `구현 완료 / 사용성 확인 / 효과 입증` 셋으로 나누고\n+*\"하나를 다른 것의 증거로 쓰지 않는다\"* 고 정한다. M9까지는 **구현 완료**일 뿐이며, 이 묶음이 끝나야\n+010을 **사용성 확인까지 된 기능**으로 보고할 수 있다.\n+\n+- [ ] T155 (DOCS) **사용성 관찰**을 6~8명에게 수행하고 결과를 실행 기록에 남긴다 — 과제와 확인 질문은 spec SC-008(constitution §7.2가 정한 경제환경 탐색 과제). 참여자별로 ① 종합 비교를 열지 않고 끝냈는가 ② 분야 유사성을 경제 전체의 일치로 오해했는가를 적고, **막힌 지점을 그대로 적는다**(고쳤는지는 별도 판단). 이 인원은 **오류 발견을 위한 규모이지 수요를 입증하는 표본이 아니다**\n \n ---\n \n@@ -366,6 +394,8 @@ Phase 5 US3 (M8) ──┐\n Phase 6 US4 (M8) ──┘ 같은 브랜치\n    ↓\n Phase 7 Polish (M9)\n+   ↓\n+Phase 8 사용성 확인 (M10)   ← 구현이 끝나야 시작한다. 별도 티켓\n ```\n \n **스토리 독립성**: US1이 MVP이고 혼자 성립한다. US2는 US1의 화면에 상태 표시를 얹으므로 US1에\n@@ -374,15 +404,16 @@ Phase 7 Polish (M9)\n \n **병렬 기회**: 묶음 안에서만 있다.\n \n-- M1: T004·T009~T013 병렬\n-- M2: T022~T026 병렬\n-- M3: T034~T039 병렬\n-- M4: T048~T052 병렬\n-- M5: T068~T072 병렬\n-- M6: T074·T077·T078 / T080·T081·T090 / T094~T101 병렬\n-- M7: T102·T103·T107·T108 / T109·T110 / T119~T122 병렬\n-- M8: T128·T129 / T135~T140 병렬\n-- M9: T141·T143·T144·T145 병렬\n+- M1: T002·T004·T009~T013 병렬\n+- M2: T023~T028 병렬\n+- M3: T036·T037·T039~T042 검증 파일별 병렬 가능. T042의 보조 설명 검증은 T038 구현 이후\n+- M4: T051~T057 병렬\n+- M5: T059 / T074~T079 병렬\n+- M6: T081·T084·T085 / T087·T088·T097 / T101~T109 병렬\n+- M7: T110·T111·T115·T116 / T117·T118 / T127~T130 병렬\n+- M8: T136·T137 / T143·T144·T145·T147·T148 병렬\n+- M9: T149·T151·T152·T153 병렬\n+- M10: 태스크 하나라 병렬 없음\n \n ## 요구사항 ↔ 태스크\n \n@@ -390,33 +421,36 @@ Phase 7 Polish (M9)\n \n | 요구 | 태스크 |\n |---|---|\n-| FR-001 비교 시점 | T020·T021·T025·T026 |\n-| FR-010 지표별 비중·기여 | T031·T132·T137 |\n-| FR-016 더 최신 개별 발표 | T127·T129 |\n-| FR-017 시대별 위치 | T032(계산·문장) · T038(테스트) · T133(표시) · T134(이력 부족 시 빈자리) |\n-| SC-011 시대별 위치가 순위에 안 섞임 | T038 |\n+| FR-001 비교 시점 | T021·T022·T027·T028 |\n+| FR-010 지표별 비중·기여 | T034·T140·T145 |\n+| FR-016 더 최신 개별 발표 | T135·T137 |\n+| FR-017 · SC-011 시대별 보조 설명과 순위 분리 | T038 · T042 · T055 · T063 · T076 · T102 · T142 · T145 |\n | FR-021 교정 후 안내 | PD-09 확정 후. 태스크 없음(quickstart에 명시) |\n | FR-025·FR-026 검증 분리·대안 유지 | 구현이 아니라 운영 규칙. 태스크 없음 |\n-| FR-027 역사 탐색 표시 | T091·T095·T117·T122 (SC-009) |\n-| FR-029 보관 | T063 |\n-| FR-030 재계산 범위·중복 방지 | T053·T054·T059·T061·T068·T069 |\n-| **FR-037 신뢰 범위 표시 전달** | T114(공통 규약) · T120(색·명암비·보조기술) · T138(키보드) · T139(키보드·좁은 폭) |\n-| SC-014 다섯 표시 접근성 | T120 · T139 |\n-| FR-008 60개월 미만 계산 불가 | T019 · T022 · T053 |\n-| FR-011 등록표 버전 참조 | T057 |\n-| FR-013 표시 상한 안내 | T106 · T109 |\n-| FR-039 종합만 계산 불가 | T056 · T071 · T128 |\n-| FR-022 금지 표현 두 층 | T052(산출물) · T097(응답) · T140(화면 하드코딩 0건) |\n-| FR-038 예시 자료 표시 | T109 · T092(`sampleData` 판정) |\n-| FR-023 U01~U06 검증 전 동작 | T053(`NEAREST_ONLY` 고정) · T019(MAD→IQR→계산 불가) · T105(최근접 참고 사례) — 표 전체를 덮는 단일 태스크는 없다 |\n-| FR-024 · SC-001 전략 독립성 | T097(요청 파라미터에 전략 항목 0건) · quickstart S7 |\n-| FR-036 개인정보 분리 | T098(컬럼 0개 검사) · 삭제 동작은 **006·014 구현 시점** |\n-| FR-032 로그인 기록 | 표만 만든다(T079). **쓰는 코드는 014 이후** — 그 사실을 T145에 적는다 |\n-| FR-033 측정 | T066·T143·T144 |\n-| **FR-034 실패 처리** | **T064**(부분 적재 금지) · **T092**(조회 실패 구분) · **T096**(테스트) · **T113**(실패 화면) |\n-| SC-010 실패와 계산 불가 구분 | T096 |\n-| SC-002a 요청 중 계산 0건 | T100 (정적 검사) |\n-| SC-008 사용성 관찰 | T146 (M9) |\n+| FR-027 역사 탐색 표시 | T098·T103·T125·T130 (SC-009) |\n+| FR-029 보관 | T069 |\n+| FR-030 재계산 범위·중복 방지 | T058 · T059(네 경로) · T065(`content_hash`) · T067 · T074 · T075 |\n+| **FR-037 신뢰 범위 표시 전달** | T122(공통 규약) · T128(색·명암비·보조기술) · T146(키보드) · T147(키보드·좁은 폭) |\n+| SC-014 다섯 표시 접근성 | T128 · T147 |\n+| FR-008 60개월 미만 계산 불가 | T017 · T020 · T023 · T060 |\n+| **FR-005 공통 척도** | T016·T017·T020 · T026(오래된 후보도 같은 척도) · T029·T030 · T036·T037·T042 · T062·T065 · T086·T097·T102 · T140·T145 |\n+| FR-011 등록표 버전 참조 | T062 · T064 |\n+| FR-013 표시 상한 안내 | T114 · T117 |\n+| FR-039 종합만 계산 불가 | T061 · T078 · T136 |\n+| FR-022 금지 표현 두 층 | T056(산출물) · T105(응답) · T148(화면 하드코딩 0건) |\n+| FR-038 예시 자료 표시 | T100(`sampleData` 판정) · T126(표시) · T128(숨길 수 없는 안내) |\n+| FR-023 U01~U06 검증 전 동작 | T060(`NEAREST_ONLY` 고정) · T019·T020(MAD→IQR→계산 불가) · T120(최근접 참고 사례) — 표 전체를 덮는 단일 태스크는 없다 |\n+| FR-024 · SC-001 전략 독립성 | T105(요청 파라미터에 전략 항목 0건) · quickstart S7 |\n+| FR-036 · SC-013 개인정보 분리 | T106(사전 계산 표의 개인 식별 컬럼 0개 검사) · 삭제 동작은 **006·014 구현 시점** |\n+| FR-032 로그인 기록 | 표만 만든다(T086). **쓰는 코드는 014 이후** — 그 사실을 T153에 적는다 |\n+| FR-033 측정 | T072·T151·T152 |\n+| **FR-034 실패 처리** | **T070**(부분 적재 금지) · **T099**(조회 실패 구분) · **T104**(테스트) · **T121**(실패 화면) |\n+| SC-010 실패와 계산 불가 구분 | T104 |\n+| **FR-035 철회** | T071(`--withdraw` + 기록) · T093(철회와 정리를 응답에서 구분) |\n+| FR-012 후보 제외 사유 셋 | T043~T049(자격·집계) · T051~T055(후보 직전 이력 불필요 포함) |\n+| FR-018 등급 매기기 금지 | 별도 태스크 없음 — 금지 낱말 검사 T056·T105·T148이 spec FR-022 ① 표(`대표 유사국면` → FR-018)로 덮는다 |\n+| SC-002a 요청 중 계산 0건 | T108 (정적 검사) · T109(시계열 미조회) |\n+| SC-008 사용성 관찰 | **T155 (M10 — 별도 티켓)**. M9까지는 '구현 완료'일 뿐이다 |\n \n ## Implementation Strategy\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/tasks.md",
+          "old_path": "specs/010-economic-regime-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2207983,
+      "head_commit_sha": "1ea4c8c2cea1903c5094f2067856950adf19c428",
+      "base_commit_sha": "c86988ab55552ca045b9e23a3b000130bafa181e",
+      "start_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "created_at": "2026-09-16T17:24:43.398+09:00",
+      "merge_request_id": 947273,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "805aba0de07c65edcd976bd46931f393e9bfac0c",
+      "commits": [
+        {
+          "id": "1ea4c8c2cea1903c5094f2067856950adf19c428",
+          "short_id": "1ea4c8c2",
+          "created_at": "2026-09-16T17:15:22.000+09:00",
+          "parent_ids": [
+            "c50f85ce740c336eeee9b6b993cbcd3cd922c89f"
+          ],
+          "title": "docs(be): D21 원본 대조 결과를 spec 010 에 반영한다 — 증가율 지표의 실제 값",
+          "message": "docs(be): D21 원본 대조 결과를 spec 010 에 반영한다 — 증가율 지표의 실제 값\n\nNotion 원본과 대조했다. 겹치는 항목(결정·목적)은 문구까지 일치했고, 두 판이\n존재한다는 것과 적용 세부 넷이 새로 확인됐다.\n\n적용 세부 넷 중 셋은 이미 맞았다\n- \"같은 단위의 입력값 차이\" → FR-005·FR-009\n- \"현재 기준 척도·비교 날짜·자료 버전 고정\" → snapshot_key 의 버전 셋\n- \"과거 자체 기준 자료가 부족하면 보조 설명만 제한하고 기본 검색에서 배제하지\n  않는다\" → FR-017·SC-011·T038 과 정확히 일치. **v2 의 NO_CASE_SCALE 후보 제외를\n  D21 이 명시적으로 금지하고 있었다**\n\n빠져 있던 하나를 채운다\n- \"**증가율 지표의 실제 값은 증가율이며 지수 원수준이 아니다**\". 008 은 원값과\n  변환값을 모두 보존하고 포트에 `raw_series()` 가 있어서, spec 이 \"실제 값\"만\n  말하면 지수 원수준을 표시해도 위반이 아니었다. 거리는 변환 후 값으로 재므로\n  설명만 원수준으로 말하면 순위와 설명이 다른 값을 가리킨다 — D21 이 막으려던\n  \"검색 제목과 원값 설명이 모순처럼 보이는\" 일이다\n- FR-015 본문, research R8 템플릿, 포트 계약 §1 에 명시하고 T050 조립에 반영\n- T057 신설: 증가율 지표 문장 값이 변환 후 값인지 + `regime` 패키지의\n  `raw_series` 호출 0건 정적 검사. 태스크 155개로 재번호(M4 T043~T057,\n  이후 묶음 한 칸씩 이동)\n\nd21-amendment §1 을 두 판으로 나눈다 — 1-A 적용 기준(원본 확인), 1-B 결정 기록.\nv1 유지 판단의 근거인 \"검토한 대안\" 줄은 1-B 에만 있다는 사실을 밝힌다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T17:15:22.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T17:15:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1ea4c8c2cea1903c5094f2067856950adf19c428"
+        },
+        {
+          "id": "c50f85ce740c336eeee9b6b993cbcd3cd922c89f",
+          "short_id": "c50f85ce",
+          "created_at": "2026-09-16T17:03:24.000+09:00",
+          "parent_ids": [
+            "4d9cddcb92cf0c674e28b5c022500c632d956091"
+          ],
+          "title": "docs(be): spec 010 을 구현 기준 v1 으로 되돌리고 v2 는 검증 대기 제안으로 분리한다",
+          "message": "docs(be): spec 010 을 구현 기준 v1 으로 되돌리고 v2 는 검증 대기 제안으로 분리한다\n\nD21 원문을 확인한 결과 시대별 척도는 D21 이 이미 비교해 기각한 대안이었고,\n앞선 제안은 실측 없는 가설을 근거로 삼았다. 구현 계약과 변경 제안을 분리한다.\n\n되돌린 것\n- constitution: 미승인 4.0.0 경제환경 모델 v2 개정안을 본문에서 분리하고 원칙\n  V·VI, 공통 척도 용어, 경제환경 검색 규칙, spec 위임 목록을 제안 전으로 복원.\n  새 버전을 부여하지 않으며 마지막 승인 표기는 3.2.0 이다. 별개인 3.3.0\n  Git·Jira 초안은 내용과 미승인 상태를 유지\n- spec: FR-017(시대별 보조 설명) 복원, FR-005 공통 척도, 제외 사유 셋,\n  SC-011 을 \"보조 위치가 순위에 들어가지 않음\" 으로 재정의. PD-08 은\n  \"구현 기준 v1 확정 / v2 제안 검증 대기\"\n- plan·research·data-model·contracts·quickstart·tasks: `era.py`, snapshot 의\n  공통 `scale`, 사례의 nullable `era_position`/`eraPosition` 기준으로 일치\n- d21-amendment.md: 앞선 주장 9건의 정정표(명목 가중치를 실제 거리 기여도로\n  잘못 표현한 것 포함)와 검증 계획·감수할 부담·선택지 A~D 를 담는다.\n  v2 설계는 커밋 4d9cddc 에 보존된다\n\n이번 라운드에서 함께 고친 것\n- 요구 품질 검토의 `78/78` 이 전면 재평가로 읽히지 않게 했다. v1 복귀 뒤\n  실제로 다시 본 것은 9항목이고 69항목은 이전 판정이 남아 있다는 사실을\n  머리말과 Notes 에 적는다 — 확인하지 않은 것을 확인한 것처럼 세지 않는다\n- tasks 병렬 기회 M1 행에 누락된 T002 를 넣는다\n\n막혀 있는 것은 없다. M1~M9 는 v1 기준으로 진행하고 v2 승인을 기다리지 않는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T17:03:24.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T17:03:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c50f85ce740c336eeee9b6b993cbcd3cd922c89f"
+        },
+        {
+          "id": "4d9cddcb92cf0c674e28b5c022500c632d956091",
+          "short_id": "4d9cddcb",
+          "created_at": "2026-09-16T16:24:48.000+09:00",
+          "parent_ids": [
+            "6b9c43787722c816b6916968e2667f4a14bf3a29"
+          ],
+          "title": "docs(be): D21 원문을 확인하고 제안서를 정직하게 다시 쓴다 + C5 추가",
+          "message": "docs(be): D21 원문을 확인하고 제안서를 정직하게 다시 쓴다 + C5 추가\n\n기획서 D21 원문을 받았다. 제안서 첫 판의 전제가 틀렸다.\n\n- **D21 은 시대별 척도를 이미 검토하고 기각했다** — \"공통 척도 기본 / 시대별\n  척도 기본을 비교해 전자를 채택\". 이 제안은 새 개선이 아니라 진 안을 되살리는\n  것이며, D21 의 기각 사유가 우리가 \"새로 찾았다\"고 적은 대가와 같다\n- **영향 범위를 과장했다** — 008 FR-001 을 세어 보니 17개 중 수준 지표는 5개뿐이고\n  (무역수지·실업률·두바이유·국고채·환율) 12개는 이미 증가율이라 드리프트를 안 받는다.\n  환율은 종합 거리의 약 4.8% 다. 차이가 크게 벌어지는 곳은 금융·주택 분야(3개 중 2개)\n- **D21 화면 규칙과도 충돌한다** — \"'당시 평소 대비 위치'는 기본 검색 이유로\n  혼용하지 않는다\". constitution C3 과 같은 내용이 기획서 쪽에도 있었다\n- **U01 전 번복이다** — D21 은 사용자 이해를 U01 에서 검증하겠다고 했다. 이 제안의\n  근거는 전부 논증이며 관찰이 아니다\n\n그럼에도 v2 를 제안하는 이유 셋(후보 집합 문제·원칙 V 취지·화면 규칙으로 막는 오해)과\n지는 부담 넷을 §4·§5 로 나눠 적고, 회의가 고를 수 있는 길 넷(A~D)을 §7 에 둔다.\n\n함께 고친 것\n- constitution C5: 원칙 VI \"척도가 0 → 분야·종합 제한\"이 v2 의 후보 척도 분기를\n  덮지 못했다. 질의면 분야 제한, 후보면 그 후보만 제외로 갈랐다 (spec FR-006)\n- Sync Impact Report 에 D21 기각 사실·U01 전 결정·영향 범위 5개 지표를 적었다\n- plan 구현 순서 표에 M10 행 추가, M2 행에 질의/후보 분기 반영\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T16:24:48.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T16:24:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4d9cddcb92cf0c674e28b5c022500c632d956091"
+        },
+        {
+          "id": "6b9c43787722c816b6916968e2667f4a14bf3a29",
+          "short_id": "6b9c4378",
+          "created_at": "2026-09-16T16:12:26.000+09:00",
+          "parent_ids": [
+            "bad2881ff598b62a6a6f6a03a48f044b6d58e323"
+          ],
+          "title": "docs(be): constitution 4.0.0 초안 — 척도를 재는 시점마다 따로 만든다",
+          "message": "docs(be): constitution 4.0.0 초안 — 척도를 재는 시점마다 따로 만든다\n\n모델 v2 가 constitution 네 문장과 부딪힌다. Governance \"우선순위\"가 이 문서를\n먼저 개정하라고 정하므로, 3.3.0 초안과 같은 방식으로 4.0.0 초안을 올린다.\n**전체 회의 승인 전까지 효력이 없다.**\n\n- C1 원칙 V: \"그 척도를 질의와 모든 과거 후보에 동일하게 적용한다\" → \"재는 시점\n  직전의 과거 자료로만 추정한다 — 후보 이후의 자료를 그 후보의 척도에 쓰지 않는다\"\n- C2 용어: `공통 척도` 한 줄을 둘로 나눈다. `시점별 척도`(현행 v2)를 새로 넣고\n  `공통 척도`는 모델 v1 = 내부 비교 기준으로 남긴다 (010 FR-026 이 v1 을 내부\n  기준으로 유지하므로 낱말이 둘 다 필요하다)\n- C3 경제환경 검색 절: \"시대별 위치는 보조 설명으로만\" → \"시대별 위치가 기본 거리다\"\n- C4 \"spec 에 쓰는 것\" 목록: 시대별 척도가 내부 대안에서 본 모델로 올라갔으므로\n  고정 척도와 자리를 맞바꾼다\n\n원칙 V 재정의이고 v1 로 계산한 결과와 호환되지 않으므로 MAJOR 다. Sync Impact\nReport 에 바꾼 이유와 **감수하는 대가**(산포의 시대 차이가 거리에서 지워진다)를\n함께 적었다. 008 FR-014·009 FR-007·specs/README.md 는 부결 가능성 때문에\n이번에 고치지 않고 d21-amendment §5 에 목록으로 남긴다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T16:12:26.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T16:12:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6b9c43787722c816b6916968e2667f4a14bf3a29"
+        },
+        {
+          "id": "bad2881ff598b62a6a6f6a03a48f044b6d58e323",
+          "short_id": "bad2881f",
+          "created_at": "2026-09-16T16:06:05.000+09:00",
+          "parent_ids": [
+            "d31e9dc8d7366480fb28b19c501171ed64172c24"
+          ],
+          "title": "docs(be): spec 010 의 사용성 관찰을 별도 묶음 M10 으로 떼어낸다",
+          "message": "docs(be): spec 010 의 사용성 관찰을 별도 묶음 M10 으로 떼어낸다\n\nquickstart 은 \"이번 범위 밖·별도 티켓\", tasks 는 \"M9 의 T153 에서 수행\"으로\n정반대였다. 둘 다 반쪽만 맞다 — 범위 안인 것은 tasks 가, 티켓이 따로여야 하는\n것은 quickstart 가 맞다.\n\n- SC-008 이 \"010 구현이 끝난 뒤\"로 정하는데 M9 가 구현의 마지막 묶음이라,\n  T153 은 자기 묶음이 끝나야 시작할 수 있는 순환이었다\n- 6~8명 섭외·관찰은 주 단위라 M9 에 두면 문서 작업이 끝난 뒤에도 MR 이 안 닫힌다\n  (1 티켓 = 1 브랜치 = 1 MR 위반)\n- T153/T154 를 맞바꿔 M9 = T148~T153, M10 = T154 로 나눈다. constitution\n  \"완료의 정의\"가 구현 완료와 사용성 확인을 나누는 근거를 M10 머리말에 적는다\n\n함께 고친 것\n- quickstart \"지금 확인할 수 없는 것\"에 가장 큰 차단 요인(D21·constitution\n  개정 미승인)이 빠져 있었다 — 행 추가, T152 대조 목록에도 반영\n- tasks 머리말이 \"기획서 D21 변경\"만 말하고 constitution 개정을 빠뜨렸다\n- plan 문서 트리에 checklists/review.md 와 d21-amendment.md 가 없었다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T16:06:05.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T16:06:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bad2881ff598b62a6a6f6a03a48f044b6d58e323"
+        },
+        {
+          "id": "d31e9dc8d7366480fb28b19c501171ed64172c24",
+          "short_id": "d31e9dc8",
+          "created_at": "2026-09-16T15:56:16.000+09:00",
+          "parent_ids": [
+            "42615ca1908465762cb7d235ddf393a0c2a2cd60"
+          ],
+          "title": "docs(be): spec 010 이 constitution 세 문장을 위반함을 드러내고 개정안을 낸다",
+          "message": "docs(be): spec 010 이 constitution 세 문장을 위반함을 드러내고 개정안을 낸다\n\n모델 v2 는 기획서 D21 만이 아니라 constitution 과도 부딪힌다. plan 의\nConstitution Check 가 이것을 원칙 IV \"재해석\" · V \"강화\"로 넘겼는데 회피였다.\nGovernance \"우선순위\"대로 개정으로 푼다.\n\n- 원칙 V \"그 척도를 질의와 모든 과거 후보에 동일하게 적용한다\"\n- 용어 사전 \"공통 척도 = 모든 과거 후보에 동일하게 적용하는 변환\"\n- 경제환경 검색 § \"시대별 평소 대비 위치는 보조 설명으로만 제공하고\n  기본 순위와 결합하지 않는다\"\n\n셋을 Complexity Tracking 에 FAIL 로 적고, d21-amendment.md 에 기획서 D21\n변경안과 constitution 개정안(MAJOR)을 담는다. 감수하는 대가와 되돌리는 비용도\n같이 적는다. 전체 회의 승인 전까지 효력이 없고 PD-08 이 구현 착수를 막는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:56:16.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:56:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d31e9dc8d7366480fb28b19c501171ed64172c24"
+        },
+        {
+          "id": "42615ca1908465762cb7d235ddf393a0c2a2cd60",
+          "short_id": "42615ca1",
+          "created_at": "2026-09-16T15:51:13.000+09:00",
+          "parent_ids": [
+            "24c46ff201d03be976acfc0d841e7aa26325d1fb"
+          ],
+          "title": "docs(be): spec 010 에 모델 v2 가 보지 못하는 것을 적는다",
+          "message": "docs(be): spec 010 에 모델 v2 가 보지 못하는 것을 적는다\n\nCHK007(서로 다른 자로 잰 z 를 비교해도 되는 이유)을 닫으면서, 그 논증이\n공짜가 아니라는 사실을 Assumptions 에 남긴다. z 는 산포가 시대마다 다르다는\n사실을 거리에서 지우므로 ① 같은 z 라도 실물 크기가 다르고 ② 격동기와\n평온기가 가까워질 수 있다. 고정 척도(v1)의 수준 드리프트와 맞바꾼 선택이며,\n완화는 두 척도를 상세에 나란히 보여 감추지 않는 것으로 한다(FR-028).\n\n요구 품질 검토 78/78.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:51:13.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:51:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42615ca1908465762cb7d235ddf393a0c2a2cd60"
+        },
+        {
+          "id": "24c46ff201d03be976acfc0d841e7aa26325d1fb",
+          "short_id": "24c46ff2",
+          "created_at": "2026-09-16T15:47:57.000+09:00",
+          "parent_ids": [
+            "fdd5e3851ed5db46dbe6a55f35efcbfdfd190eef"
+          ],
+          "title": "docs(be): spec 010 의 v1 잔재와 태스크 추적 누락을 닫는다",
+          "message": "docs(be): spec 010 의 v1 잔재와 태스크 추적 누락을 닫는다\n\n- plan.md 요약이 아직 \"모델 v1로 찾아\"였다 — v2로 고친다\n- PD-08 의 반영 목록이 폐지된 FR-017 을 가리키고 있었다\n- SC-013(개인 식별자 0건)을 덮는 태스크가 없었다 — T105 에 명시한다\n- plan 구조도에 `rounding.py` 와 `infrastructure/config/` 를 채운다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:47:57.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:47:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/24c46ff201d03be976acfc0d841e7aa26325d1fb"
+        },
+        {
+          "id": "fdd5e3851ed5db46dbe6a55f35efcbfdfd190eef",
+          "short_id": "fdd5e385",
+          "created_at": "2026-09-16T15:45:49.000+09:00",
+          "parent_ids": [
+            "3ae5dd629a111ebb4d075f2a30643f8f66ad2886"
+          ],
+          "title": "docs(be): spec 010 의 M2~M6 태스크를 모델 v2 설계에서 다시 도출한다",
+          "message": "docs(be): spec 010 의 M2~M6 태스크를 모델 v2 설계에서 다시 도출한다\n\nv1 잔재를 한 줄씩 고치는 대신 척도와 비교 시점(M2)부터 조회 API(M6)까지를\nv2 설계에서 다시 썼다. 후보 척도가 코드 경로로 드러나야 검증이 가능하다.\n\n- `scale_for(indicator_id, observation_end)` 공용 함수를 명시하고, 질의/후보\n  분기가 함수 안에 없음을 고정하는 테스트를 둔다\n- 후보 척도 실패를 `NO_CASE_SCALE` 제외 사유로 잇고 집계·테스트까지 연결한다\n- 재계산 범위 테스트가 네 경로(질의 비교 시점·질의 척도·후보 관측·후보 척도)를\n  모두 `t ≥ M`으로 덮는지 확인한다\n- 사례 행과 `content_hash`·마이그레이션·응답 DTO에 `case_scale`을 싣는다\n- 태스크를 154개로 renumber하고 묶음 범위표·병렬 기회·요구사항 대응표를 다시 맞춘다\n- FR-036 개인정보 컬럼 0개 검사를 마이그레이션 테스트로 되살리고 FR-018 대응을 적는다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:45:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:45:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fdd5e3851ed5db46dbe6a55f35efcbfdfd190eef"
+        },
+        {
+          "id": "3ae5dd629a111ebb4d075f2a30643f8f66ad2886",
+          "short_id": "3ae5dd62",
+          "created_at": "2026-09-16T15:31:51.000+09:00",
+          "parent_ids": [
+            "b0bf5d11bf1f897c5a1fdf85703d40e1d166e16c"
+          ],
+          "title": "docs(be): spec 010 모델 v2 의 후보 척도 분기를 검증 경로까지 잇는다",
+          "message": "docs(be): spec 010 모델 v2 의 후보 척도 분기를 검증 경로까지 잇는다\n\nFR-005·FR-006 본문은 \"질의면 계산 불가, 후보면 그 후보만 제외\"로 갈라\n놨는데, 그 분기를 인용하는 쪽이 아직 v1 의 \"척도는 하나\" 전제로 쓰여\n있었다.\n\n- 픽스처에 열째 모양(자료 시작 직후 구간)을 넣었다. 어제 만든\n  NO_CASE_SCALE 을 밟는 모양이 하나도 없어서, 그대로 두면 그 집계가\n  항상 0 이라 구현이 맞는지 틀린지 알 수 없었다. v2 가 치르는 유일한\n  실질 비용을 재는 값인데 검증 밖에 있었다.\n- 사유 코드 표(data-model, 계약)의 SCALE_WINDOW_TOO_SHORT 와 SCALE_ZERO 가\n  어느 척도인지 안 적혀 있었다. 둘 다 질의 척도임을 밝히고, 후보 척도가\n  같은 상태일 때는 검색이 계산 불가가 되는 게 아니라 그 후보만 빠진다는\n  것을 함께 적었다.\n- quickstart S3 와 M2 체크포인트가 질의/후보를 구별하지 않아 후보 쪽\n  분기를 한 번도 확인하지 않았다. 확인 절차를 붙였다.\n\nanalyze 3건(HIGH 1 / MEDIUM 1 / LOW 1) 반영.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:31:51.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:31:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3ae5dd629a111ebb4d075f2a30643f8f66ad2886"
+        },
+        {
+          "id": "b0bf5d11bf1f897c5a1fdf85703d40e1d166e16c",
+          "short_id": "b0bf5d11",
+          "created_at": "2026-09-16T15:27:46.000+09:00",
+          "parent_ids": [
+            "09caec27ebc62cac6606dc2f367b8446915b4e39"
+          ],
+          "title": "docs(be): spec 010 모델 v2 의 후보 제외 경로를 마저 채운다",
+          "message": "docs(be): spec 010 모델 v2 의 후보 제외 경로를 마저 채운다\n\nv2 는 후보도 자기 자가 필요해서 \"직전 60개월 연속 자료로 자를 만들 수\n있는 후보만\"이라는 제외 조건을 새로 만들었다. 그 조건이 만드는 결과를\n끝까지 따라가지 않아 두 곳이 비어 있었다.\n\n- 후보 제외 사유가 셋(입력 결측 / 12개월 이내 / 인접 월 건너뜀)뿐이라\n  \"자를 만들 수 없음\"이 어느 사유로도 세어지지 않았다. 그런데 이게\n  자료 초기 5년치가 통째로 빠지는 경로다 — v2 가 치르는 유일한 실질\n  비용인데 얼마나 빠졌는지 셀 자리가 없었다. NO_CASE_SCALE 을 넷째\n  사유로 넣었다.\n\n- FR-006(MAD 도 IQR 도 0) 이 질의 척도만 전제하고 있었다. 문장대로면\n  후보 하나의 척도가 0 일 때 분야 전체가 계산 불가가 된다. FR-005 가\n  60개월 미달에 대해 이미 \"질의면 계산 불가, 후보면 그 후보만 제외\"로\n  갈라 놨으므로 같은 분기를 넣었다. 분야 전체를 막지도, 그 후보를\n  사유 없이 빼지도 않는다(원칙 VI).\n\nanalyze 2건(HIGH 1 / MEDIUM 1) 반영.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:27:46.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:27:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b0bf5d11bf1f897c5a1fdf85703d40e1d166e16c"
+        },
+        {
+          "id": "09caec27ebc62cac6606dc2f367b8446915b4e39",
+          "short_id": "09caec27",
+          "created_at": "2026-09-16T15:23:35.000+09:00",
+          "parent_ids": [
+            "b4ccf5888700fa4f54822be171f5ef217fed8e6d"
+          ],
+          "title": "docs(be): spec 010 모델 v2 의 재계산 범위 논증을 완성한다",
+          "message": "docs(be): spec 010 모델 v2 의 재계산 범위 논증을 완성한다\n\nanalyze 가 v2 전환에서 남은 논증 구멍 셋을 잡았다.\n\n- FR-030 과 research R3 의 `t >= M` 워터마크 논증이 세 경로만 열거하고\n  있었다. v2 에서 생긴 네 번째 경로(후보 척도 구간 `c-122~c-3`)가 빠져\n  있어 넷째 줄을 더했다. 결론은 그대로 `t >= M` 이지만 — c 가 [M+3, M+122]\n  이고 그 후보를 쓰는 t 는 c+12 초과이므로 t >= M+15 다 — 근거가 반쪽이면\n  M5 를 구현하는 사람이 그 경로를 놓칠 수 있고, 후보 척도가 바뀌었는데\n  다시 계산하지 않는 버그는 결과가 틀렸는지 알아채기 어렵다.\n\n- plan 의 원칙 V 재확인에 v2 가 강화한 부분을 적었다. v1 은 2012년 후보를\n  2016~2026 자료로 만든 자로 쟀는데 그것은 그 후보 시점에서 보면 미래\n  자료다. v2 의 후보 척도는 c-122~c-3 라 후보 이후 자료를 전혀 쓰지 않는다.\n  최신 개정값을 쓴다는 점은 그대로여서 조건부 PASS 는 유지된다.\n\n- 요구 품질 체크리스트 CHK001 이 질의 척도 구간만 검사하고 있어 두 구간\n  모두로 고쳤다.\n\nanalyze 3건(CRITICAL 0 / HIGH 1 / MEDIUM 1 / LOW 1) 반영.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:23:35.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:23:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/09caec27ebc62cac6606dc2f367b8446915b4e39"
+        },
+        {
+          "id": "b4ccf5888700fa4f54822be171f5ef217fed8e6d",
+          "short_id": "b4ccf588",
+          "created_at": "2026-09-16T15:18:56.000+09:00",
+          "parent_ids": [
+            "c86988ab55552ca045b9e23a3b000130bafa181e"
+          ],
+          "title": "docs(be): spec 010 을 모델 v2 로 바꾼다 — 후보마다 그 시대의 자로 잰다",
+          "message": "docs(be): spec 010 을 모델 v2 로 바꾼다 — 후보마다 그 시대의 자로 잰다\n\n모델 v1 은 질의와 모든 후보를 하나의 자(질의 직전 10년)로 쟀다. 수준으로\n들어가는 지표에서 이게 무너진다.\n\n원/달러 환율 1995년 770원은 그 시절 평범한 값인데 최근 10년 자로 재면\nz = -5.9 다. 다른 후보들의 거리가 0.4~1.2 사이에 몰려 있으니 그 시기는\n상위 10개에 절대 못 든다. 반대로 1997년 1,700원은 z = +7.4 라 770원보다\n가깝게 나온다 — 1,700원이 770원보다 지금(1,350원)과 가깝다는 말인데\n말이 안 된다.\n\n즉 자료 30년을 본다고 해놓고 금융·주택 분야는 최근 10년과 수준이 비슷한\n구간만 실질 탐색하고 있었다. 17개 지표 중 5개(환율·국고채·두바이유·\n실업률·무역수지)가 수준으로 들어가 같은 문제를 갖는다.\n\n모델 v2 는 질의와 후보가 각자 자기 직전 10년의 자를 쓴다. 거리의 뜻이\n\"숫자가 비슷한가\"에서 \"각자의 시대에서 비슷한 자리에 있었나\"로 바뀐다.\n\n- FR-005 재작성 — 척도를 질의 t-122~t-3, 후보 c-122~c-3 에서 각각\n- FR-009 z 정의, FR-012 후보에 직전 60개월 조건, FR-015 설명 문장\n- FR-017 폐지 — 시대별 위치가 기본 거리에 흡수됐다. 번호는 재사용하지 않는다\n- FR-026 뒤집기 — 이제 고정 척도가 내부 비교 대안이다\n- SC-003·SC-011 재정의, PD-08 에 기획서 D21 변경 대기 표시\n- data-model: scale -> query_scale, era_position -> case_scale\n- contracts: eraPosition 삭제, queryScale·caseScale 나란히\n- plan: era.py 삭제, 원칙 IV 재해석(\"같은 자\"가 아니라 \"각자의 시대 기준\n  위치\"가 같은 조건이다)\n- research R3 에 두 척도의 정반대 성질, R8 문장 템플릿을 원값+위치+기준값으로\n\n잃는 것은 하나다. 후보도 자기 자가 필요하므로 탐색 시작이 각 지표\n자료 시작 + 5년으로 밀린다. 실제 손해는 008 이 과거 범위를 확인해야\n알 수 있어 quickstart 에 적었다.\n\n기획서 D21 변경이 선행되어야 구현을 시작한다. 계산량은 늘지 않는다 —\nv1 도 시대별 위치를 보조 설명으로 계산하고 있었고 그것을 본체로 옮긴 것이다.\n\nanalyze 6건(CRITICAL 1) 지적을 반영해 v1 잔재를 0으로 만들었다.\nFR 39 -> 38(017 폐지), 태스크 147 유지, 요구 품질 체크리스트 77/78.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-16T15:18:56.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-16T15:18:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b4ccf5888700fa4f54822be171f5ef217fed8e6d"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-16T17:31:56.909+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2818811": []
+  }
+}

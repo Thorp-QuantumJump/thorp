@@ -1,0 +1,555 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945710,
+    "iid": 133,
+    "project_id": 1444456,
+    "title": "feat(be): 뉴스 조회 및 수집 성능 검증 추가",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n뉴스 조회와 수집이 목표 데이터 규모에서도 성능 기준을 충족하는지 반복 검증할 수 있도록 Testcontainers 기반 성능 테스트를 추가했습니다.\n\n10만 건의 기사 데이터에서 현재 뉴스 조회 성능을 측정하는 과정에서 발견된 매체·토픽 조회 N+1 문제를 제거했으며, RSS 20개와 GDELT 1개가 동시에 수집 대상인 회차의 처리 시간도 검증했습니다.\n\n# 관련 티켓\n\n- ticket #S15P21E205-224\n- https://ssafy.atlassian.net/browse/S15P21E205-224\n\n# 주요 변경 사항\n\n- PostgreSQL 16 Testcontainers 기반 뉴스 성능 테스트를 추가했습니다.\n- `generate_series`를 이용해 기사 100,000건의 성능 검증 fixture를 구성했습니다.\n- 30회 워밍업 후 100회 현재 뉴스 조회를 실행하고 p95가 500ms 이하인지 검증했습니다.\n- RSS 20개와 GDELT 1개가 동시에 due인 수집 회차가 15분 이하인지 검증했습니다.\n- 성능 테스트가 다른 통합 테스트의 데이터에 영향을 주지 않도록 전용 PostgreSQL 컨테이너로 격리했습니다.\n- 공개 뉴스 조회 시 묶음별로 반복되던 매체 및 토픽 조회를 일괄 조회로 변경해 N+1 쿼리를 제거했습니다.\n- 측정 결과를 API 문서에 기록하고 T052를 완료 처리했습니다.\n\n# 테스트\n\n- [x] PostgreSQL 16 Testcontainers 성능 테스트 실행\n- [x] 기사 100,000건, 워밍업 30회, 측정 100회 조건 확인\n- [x] 현재 뉴스 조회 p95 `90.233ms` 확인 — 완료 기준 `500ms 이하`\n- [x] RSS 20개와 GDELT 1개 수집 회차 `299.448ms` 확인 — 완료 기준 `15분 이하`\n- [x] `NewsDigestQueryServiceTest` 통과\n- [x] `spotlessCheck` 통과\n- [x] `git diff --check` 통과\n- [x] 기본 테스트 실행에서는 opt-in 성능 테스트가 실행되지 않는지 확인\n\n# 리뷰 포인트\n\n- 성능 테스트는 일반 빌드 시간을 늘리지 않도록 `THORP_RUN_NEWS_PERFORMANCE=true`일 때만 실행됩니다.\n- Docker가 없는 환경에서 성능 검증이 조용히 생략되지 않도록 실제 측정 시 `THORP_REQUIRE_DOCKER=true`를 함께 사용합니다.\n- 성능 테스트 전용 PostgreSQL 컨테이너를 사용하므로 다른 통합 테스트의 공유 DB 상태를 변경하지 않습니다.\n- 공개 조회에서 허가된 매체 정보와 기사 토픽을 후보 묶음 전체에 대해 한 번에 조회하도록 변경했습니다. 공개 허가 필터와 요약 생성 결과가 기존 동작과 동일한지 중점적으로 확인 부탁드립니다.\n- 이번 MR은 T052 성능 검증 범위입니다. SC-002의 실제 뉴스 묶음 품질 보완과 PD-15 매체 표시 허가 회신은 포함하지 않습니다.\n- 정확한 성능 수치는 실행 장비와 Docker 상태에 따라 달라질 수 있으며, 고정된 완료 기준의 충족 여부를 검증하는 용도입니다.\n\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 — \"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId`로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null`이고, 화면은 그것을 \"0%\"가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED`이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T09:08:49.847+09:00",
+    "updated_at": "2026-09-16T11:15:01.697+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-16T09:17:06.785+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/224-news-performance",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+    "merge_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T09:08:54.618+09:00",
+    "reference": "!133",
+    "references": {
+      "short": "!133",
+      "relative": "!133",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!133"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/133",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 13,
+      "completed_count": 13
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945710,
+    "iid": 133,
+    "project_id": 1444456,
+    "title": "feat(be): 뉴스 조회 및 수집 성능 검증 추가",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n뉴스 조회와 수집이 목표 데이터 규모에서도 성능 기준을 충족하는지 반복 검증할 수 있도록 Testcontainers 기반 성능 테스트를 추가했습니다.\n\n10만 건의 기사 데이터에서 현재 뉴스 조회 성능을 측정하는 과정에서 발견된 매체·토픽 조회 N+1 문제를 제거했으며, RSS 20개와 GDELT 1개가 동시에 수집 대상인 회차의 처리 시간도 검증했습니다.\n\n# 관련 티켓\n\n- ticket #S15P21E205-224\n- https://ssafy.atlassian.net/browse/S15P21E205-224\n\n# 주요 변경 사항\n\n- PostgreSQL 16 Testcontainers 기반 뉴스 성능 테스트를 추가했습니다.\n- `generate_series`를 이용해 기사 100,000건의 성능 검증 fixture를 구성했습니다.\n- 30회 워밍업 후 100회 현재 뉴스 조회를 실행하고 p95가 500ms 이하인지 검증했습니다.\n- RSS 20개와 GDELT 1개가 동시에 due인 수집 회차가 15분 이하인지 검증했습니다.\n- 성능 테스트가 다른 통합 테스트의 데이터에 영향을 주지 않도록 전용 PostgreSQL 컨테이너로 격리했습니다.\n- 공개 뉴스 조회 시 묶음별로 반복되던 매체 및 토픽 조회를 일괄 조회로 변경해 N+1 쿼리를 제거했습니다.\n- 측정 결과를 API 문서에 기록하고 T052를 완료 처리했습니다.\n\n# 테스트\n\n- [x] PostgreSQL 16 Testcontainers 성능 테스트 실행\n- [x] 기사 100,000건, 워밍업 30회, 측정 100회 조건 확인\n- [x] 현재 뉴스 조회 p95 `90.233ms` 확인 — 완료 기준 `500ms 이하`\n- [x] RSS 20개와 GDELT 1개 수집 회차 `299.448ms` 확인 — 완료 기준 `15분 이하`\n- [x] `NewsDigestQueryServiceTest` 통과\n- [x] `spotlessCheck` 통과\n- [x] `git diff --check` 통과\n- [x] 기본 테스트 실행에서는 opt-in 성능 테스트가 실행되지 않는지 확인\n\n# 리뷰 포인트\n\n- 성능 테스트는 일반 빌드 시간을 늘리지 않도록 `THORP_RUN_NEWS_PERFORMANCE=true`일 때만 실행됩니다.\n- Docker가 없는 환경에서 성능 검증이 조용히 생략되지 않도록 실제 측정 시 `THORP_REQUIRE_DOCKER=true`를 함께 사용합니다.\n- 성능 테스트 전용 PostgreSQL 컨테이너를 사용하므로 다른 통합 테스트의 공유 DB 상태를 변경하지 않습니다.\n- 공개 조회에서 허가된 매체 정보와 기사 토픽을 후보 묶음 전체에 대해 한 번에 조회하도록 변경했습니다. 공개 허가 필터와 요약 생성 결과가 기존 동작과 동일한지 중점적으로 확인 부탁드립니다.\n- 이번 MR은 T052 성능 검증 범위입니다. SC-002의 실제 뉴스 묶음 품질 보완과 PD-15 매체 표시 허가 회신은 포함하지 않습니다.\n- 정확한 성능 수치는 실행 장비와 Docker 상태에 따라 달라질 수 있으며, 고정된 완료 기준의 충족 여부를 검증하는 용도입니다.\n\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 — \"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId`로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null`이고, 화면은 그것을 \"0%\"가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED`이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T09:08:49.847+09:00",
+    "updated_at": "2026-09-16T11:15:01.697+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-16T09:17:06.785+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/224-news-performance",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+    "merge_commit_sha": "532908d0868760ae4f9748f1b0b39f8f084f87eb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T09:08:54.618+09:00",
+    "reference": "!133",
+    "references": {
+      "short": "!133",
+      "relative": "!133",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!133"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/133",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 13,
+      "completed_count": 13
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "4",
+    "latest_build_started_at": "2026-09-16T09:09:05.711+09:00",
+    "latest_build_finished_at": "2026-09-16T09:15:29.182+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197376,
+      "iid": 49,
+      "project_id": 1444456,
+      "sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+      "ref": "feat(be)/224-news-performance",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T09:09:05.575+09:00",
+      "updated_at": "2026-09-16T09:15:29.188+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197376"
+    },
+    "head_pipeline": {
+      "id": 197376,
+      "iid": 49,
+      "project_id": 1444456,
+      "sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+      "ref": "feat(be)/224-news-performance",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T09:09:05.575+09:00",
+      "updated_at": "2026-09-16T09:15:29.188+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197376",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T09:09:05.711+09:00",
+      "finished_at": "2026-09-16T09:15:29.182+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197376",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "977d75c857680a0d2de66e08d8e166bd99dfc6a4",
+      "head_sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+      "start_sha": "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7726819b802f8da031d9b196c4986aca7f83c8c5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812407,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-16T09:08:50.433+09:00",
+          "updated_at": "2026-09-16T09:08:50.445+09:00",
+          "system": true,
+          "noteable_id": 945710,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 133,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "991b8439f35e3ba8d81cc6643aab8f73927ebe13",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812411,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [High] `backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java`: 파일 내용이 중간에 잘려 있으며(`long startedAt = System.nanoTime();` 및 `CollectionFixture fixture = collectionFixture();` 이후 코드가 누락됨), 테스트 클래스가 미완성 상태로 커밋되었습니다. 이 상태로는 컴파일 오류가 발생하여 빌드나 테스트 실행이 불가능합니다. 누락된 수집 회차 성능 측정 로직과 단언문, 클래스 닫는 브라켓(`}`)을 완성해야 합니다.\n\n### 테스트 제안\n- `NewsPerformanceIT` 클래스의 잘린 코드를 완전히 복구한 후, `THORP_RUN_NEWS_PERFORMANCE=true` 및 `THORP_REQUIRE_DOCKER=true` 환경 변수를 설정하여 성능 테스트를 단독 실행하고 p95 500ms 이하 및 15분 이하 기준을 만족하는지 검증합니다.\n- 일반 빌드(`gradlew test`) 시 해당 성능 테스트가 기본적으로 제외되어 실행되지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:94ada9cb660eee20a115349316eb63eb227c8c00 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T09:09:01.015+09:00",
+          "updated_at": "2026-09-16T09:09:01.015+09:00",
+          "system": false,
+          "noteable_id": 945710,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 133,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "12428eef6c02742f48b8a164daae0c4ddb4a8e4e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812421,
+          "type": null,
+          "body": "신규 파일의 diff가 리뷰 과정에서 중간에 잘려 발생한 오탐입니다.",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-16T09:10:05.952+09:00",
+          "updated_at": "2026-09-16T09:10:05.952+09:00",
+          "system": false,
+          "noteable_id": 945710,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 133,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "44ccae1c0e88a26e991838165a5ff82dc34f5cd0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2812521,
+          "type": null,
+          "body": "mentioned in commit 532908d0868760ae4f9748f1b0b39f8f084f87eb",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-16T09:17:06.903+09:00",
+          "updated_at": "2026-09-16T09:17:06.910+09:00",
+          "system": true,
+          "noteable_id": 945710,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 133,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2202576,
+      "head_commit_sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+      "base_commit_sha": "977d75c857680a0d2de66e08d8e166bd99dfc6a4",
+      "start_commit_sha": "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c",
+      "created_at": "2026-09-16T09:08:51.897+09:00",
+      "merge_request_id": 945710,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "7b5d7ec76451260a64f54b971a8afd2cba33ec2b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2202576,
+      "head_commit_sha": "94ada9cb660eee20a115349316eb63eb227c8c00",
+      "base_commit_sha": "977d75c857680a0d2de66e08d8e166bd99dfc6a4",
+      "start_commit_sha": "bb01f0f1e0bc1356659b218c9614d3e95fb09e0c",
+      "created_at": "2026-09-16T09:08:51.897+09:00",
+      "merge_request_id": 945710,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "7b5d7ec76451260a64f54b971a8afd2cba33ec2b",
+      "commits": [
+        {
+          "id": "94ada9cb660eee20a115349316eb63eb227c8c00",
+          "short_id": "94ada9cb",
+          "created_at": "2026-09-16T09:07:45.000+09:00",
+          "parent_ids": [
+            "977d75c857680a0d2de66e08d8e166bd99dfc6a4"
+          ],
+          "title": "feat(be): 뉴스 조회 및 수집 성능 검증 추가",
+          "message": "feat(be): 뉴스 조회 및 수집 성능 검증 추가\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T09:07:45.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T09:07:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/94ada9cb660eee20a115349316eb63eb227c8c00"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -154,9 +154,27 @@ public class NewsDigestQueryService {\n         visible.forEach(publisher -> byId.put(publisher.getId(), publisher));\n         Predicate<NewsArticle> permitted = article -> byId.containsKey(article.getPublisherId());\n \n+        List<NewsDigest> candidates = candidates(query, now);\n+        Map<Long, Set<String>> candidateTopics =\n+                mode.requiresPermissionFilter()\n+                        ? links.findTopicKeysByArticleIds(\n+                                candidates.stream()\n+                                        .flatMap(digest -> digest.getArticles().stream())\n+                                        .map(NewsArticle::getId)\n+                                        .distinct()\n+                                        .toList())\n+                        : Map.of();\n         List<NewsDigest.Projection> projections =\n-                candidates(query, now).stream()\n-                        .map(digest -> project(digest, permitted, query, mode))\n+                candidates.stream()\n+                        .map(\n+                                digest ->\n+                                        project(\n+                                                digest,\n+                                                permitted,\n+                                                query,\n+                                                mode,\n+                                                byId,\n+                                                candidateTopics))\n                         .flatMap(Optional::stream)\n                         .toList();\n \n@@ -203,12 +221,15 @@ public class NewsDigestQueryService {\n             NewsDigest digest,\n             Predicate<NewsArticle> permitted,\n             NewsDigestQuery query,\n-            NewsExposureMode mode) {\n+            NewsExposureMode mode,\n+            Map<Long, NewsPublisher> publishersById,\n+            Map<Long, Set<String>> topicsByArticle) {\n         Predicate<NewsArticle> filter = permitted;\n         if (query.isHistorical()) {\n             filter = filter.and(article -> withinRequestedRange(article, query));\n         }\n-        return digest.projectFor(filter, summaryRuleFor(digest, mode));\n+        return digest.projectFor(\n+                filter, summaryRuleFor(digest, mode, publishersById, topicsByArticle));\n     }\n \n     private static boolean withinRequestedRange(NewsArticle article, NewsDigestQuery query) {\n@@ -230,11 +251,16 @@ public class NewsDigestQueryService {\n      * <p><b>내부 모드에서는 저장된 값을 쓴다.</b> 그 값이 바로 검증 대상이다 — 수집이 무엇을 만들어 저장했는지 보려는 것인데 조회가 다시 만들어 버리면 저장된\n      * 문장을 영영 확인할 수 없다.\n      */\n-    private NewsDigest.SummaryRule summaryRuleFor(NewsDigest digest, NewsExposureMode mode) {\n+    private NewsDigest.SummaryRule summaryRuleFor(\n+            NewsDigest digest,\n+            NewsExposureMode mode,\n+            Map<Long, NewsPublisher> publishersById,\n+            Map<Long, Set<String>> topicsByArticle) {\n         if (!mode.requiresPermissionFilter()) {\n             return (representative, members) -> Optional.of(digest.getFactualSummary());\n         }\n-        return this::summarize;\n+        return (representative, members) ->\n+                summarize(representative, members, publishersById, topicsByArticle);\n     }\n \n     /**\n@@ -242,15 +268,16 @@ public class NewsDigestQueryService {\n      *\n      * <p>요약 근거가 부족하면 빈 값을 돌려주고, 그러면 그 묶음은 표시되지 않는다.\n      */\n-    private Optional<String> summarize(NewsArticle representative, List<NewsArticle> members) {\n+    private Optional<String> summarize(\n+            NewsArticle representative,\n+            List<NewsArticle> members,\n+            Map<Long, NewsPublisher> publishersById,\n+            Map<Long, Set<String>> topicsByArticle) {\n         String publisherName =\n-                publishers\n-                        .findById(representative.getPublisherId())\n+                Optional.ofNullable(publishersById.get(representative.getPublisherId()))\n                         .map(NewsPublisher::getDisplayName)\n                         .orElse(null);\n-        Set<String> topicKeys =\n-                links.findTopicKeysByArticleIds(List.of(representative.getId()))\n-                        .getOrDefault(representative.getId(), Set.of());\n+        Set<String> topicKeys = topicsByArticle.getOrDefault(representative.getId(), Set.of());\n         int distinctPublishers =\n                 (int) members.stream().map(NewsArticle::getPublisherId).distinct().count();\n         return summaries.summarize(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,335 @@\n+package com.ssafy.thorp.news.performance;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.news.application.command.NewsDigestQuery;\n+import com.ssafy.thorp.news.application.port.GdeltNewsSource;\n+import com.ssafy.thorp.news.application.port.NewsCollectionLease;\n+import com.ssafy.thorp.news.application.port.NewsMetrics;\n+import com.ssafy.thorp.news.application.port.NewsSourceClient;\n+import com.ssafy.thorp.news.application.port.NewsTopicCatalog;\n+import com.ssafy.thorp.news.application.port.RssNewsSource;\n+import com.ssafy.thorp.news.application.repository.NewsArticleLinkRepository;\n+import com.ssafy.thorp.news.application.repository.NewsArticleRepository;\n+import com.ssafy.thorp.news.application.repository.NewsCollectionStateRepository;\n+import com.ssafy.thorp.news.application.repository.NewsDigestRepository;\n+import com.ssafy.thorp.news.application.repository.NewsPublisherRepository;\n+import com.ssafy.thorp.news.application.result.NewsDigestListResult;\n+import com.ssafy.thorp.news.application.result.NewsFetchResult;\n+import com.ssafy.thorp.news.application.service.NewsDigestQueryService;\n+import com.ssafy.thorp.news.application.service.NewsGroupingPolicy;\n+import com.ssafy.thorp.news.application.service.NewsIngestionService;\n+import com.ssafy.thorp.news.application.service.NewsRelevanceClassifier;\n+import com.ssafy.thorp.news.application.service.NewsRetryPolicy;\n+import com.ssafy.thorp.news.application.service.NewsSectorLinkPolicy;\n+import com.ssafy.thorp.news.application.service.NewsSummaryPolicy;\n+import com.ssafy.thorp.news.application.service.NewsUrlNormalizer;\n+import com.ssafy.thorp.news.domain.model.NewsPublisher;\n+import com.ssafy.thorp.news.domain.vo.PermissionStatus;\n+import com.ssafy.thorp.news.infrastructure.config.NewsPublisherRegistry;\n+import com.ssafy.thorp.news.infrastructure.scheduling.NewsCollectionScheduler;\n+import java.time.Clock;\n+import java.time.Duration;\n+import java.time.Instant;\n+import java.time.ZoneOffset;\n+import java.util.ArrayList;\n+import java.util.Comparator;\n+import java.util.List;\n+import java.util.Optional;\n+import java.util.Set;\n+import java.util.concurrent.atomic.AtomicInteger;\n+import org.junit.jupiter.api.BeforeAll;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.TestInstance;\n+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.transaction.TransactionStatus;\n+import org.springframework.transaction.support.TransactionCallback;\n+import org.springframework.transaction.support.TransactionTemplate;\n+import org.testcontainers.containers.PostgreSQLContainer;\n+import org.testcontainers.junit.jupiter.Container;\n+import org.testcontainers.junit.jupiter.Testcontainers;\n+\n+/**\n+ * 뉴스 조회와 수집 회차의 계획 상한을 실제로 재는 opt-in 성능 시험(T052).\n+ *\n+ * <p>노트북 성능과 Docker 상태에 따라 시간이 크게 달라져 기본 {@code build}에는 넣지 않는다. 실행할 때는 {@code\n+ * THORP_RUN_NEWS_PERFORMANCE=true}와 {@code THORP_REQUIRE_DOCKER=true}를 함께 설정한다. 전자는 이 시험을 켜고, 후자는\n+ * Docker가 없어 Testcontainers 시험이 조용히 건너뛰는 것을 막는다.\n+ *\n+ * <p>조회 fixture는 PostgreSQL의 {@code generate_series}로 100,000개 기사 행을 만든다. 애플리케이션 객체를 10만 번 저장하면\n+ * 측정하려는 조회보다 fixture 준비 시간이 훨씬 길어지고, JPA 배치 설정에 따라 결과가 흔들린다. SQL로 만드는 것은 측정 대상이 조회이기 때문이다.\n+ *\n+ * <p>수집 fixture는 외부망 대신 메모리 응답을 돌려주는 {@link NewsSourceClient}를 사용한다. 스케줄러가 동시에 due인 RSS 20개와 GDELT\n+ * 1개를 실제 ingestion 경계까지 모두 호출하는지 확인하면서 한 회차의 벽시계 시간을 잰다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"thorp.news.collection-enabled=false\",\n+            \"spring.task.scheduling.enabled=false\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"spring.flyway.enabled=true\",\n+            \"spring.flyway.locations=classpath:db/migration\",\n+            \"spring.flyway.baseline-on-migrate=false\",\n+            \"spring.jpa.hibernate.ddl-auto=validate\",\n+            \"spring.datasource.hikari.maximum-pool-size=2\",\n+            \"spring.datasource.hikari.minimum-idle=0\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@EnabledIfEnvironmentVariable(named = \"THORP_RUN_NEWS_PERFORMANCE\", matches = \"true\")\n+@TestInstance(TestInstance.Lifecycle.PER_CLASS)\n+@Testcontainers(disabledWithoutDocker = true)\n+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)\n+class NewsPerformanceIT {\n+\n+    @Container @ServiceConnection\n+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(\"postgres:16-alpine\");\n+\n+    private static final int ARTICLE_COUNT = 100_000;\n+    private static final int WARM_UP_RUNS = 30;\n+    private static final int MEASURED_RUNS = 100;\n+    private static final Duration QUERY_P95_LIMIT = Duration.ofMillis(500);\n+    private static final Duration COLLECTION_CYCLE_LIMIT = Duration.ofMinutes(15);\n+    private static final Instant FIXED_NOW = Instant.parse(\"2026-09-16T03:00:00Z\");\n+\n+    @Autowired private JdbcTemplate jdbc;\n+    @Autowired private NewsDigestQueryService queryService;\n+\n+    @BeforeAll\n+    void seedPerformanceFixture() {\n+        jdbc.execute(\n+                \"TRUNCATE news_article_topic, news_article_sector, news_digest_article,\"\n+                        + \" news_digest, news_article, news_topic,\"\n+                        + \" news_publisher_permission_history, news_publisher,\"\n+                        + \" news_collection_state CASCADE\");\n+        jdbc.update(\n+                \"INSERT INTO news_publisher\"\n+                        + \" (id, publisher_key, display_name, language, registered_domain, rss_url,\"\n+                        + \" permission_status, permission_updated_at, enabled, created_at, updated_at)\"\n+                        + \" VALUES (?, 'performance', '성능 매체', 'ko', 'performance.example',\"\n+                        + \" 'https://performance.example/rss', 'ALLOWED', ?, TRUE, NOW(), NOW())\",\n+                9_900_001L,\n+                java.sql.Timestamp.from(FIXED_NOW));\n+        jdbc.update(\n+                \"INSERT INTO news_topic\"\n+                        + \" (id, topic_key, display_name, domestic_link, rule_version, created_at, updated_at)\"\n+                        + \" VALUES (9900001, 'markets', '시장', TRUE, 'news-link-v1', NOW(), NOW())\");\n+        jdbc.update(\n+                \"INSERT INTO news_collection_state\"\n+                        + \" (source_key, status, last_attempt_at, last_success_at, next_attempt_at,\"\n+                        + \" retry_count, created_at, updated_at)\"\n+                        + \" VALUES ('rss:performance', 'SUCCEEDED', ?, ?, ?, 0, NOW(), NOW())\",\n+                java.sql.Timestamp.from(FIXED_NOW),\n+                java.sql.Timestamp.from(FIXED_NOW),\n+                java.sql.Timestamp.from(FIXED_NOW.plus(Duration.ofMinutes(15))));\n+\n+        jdbc.execute(\n+                \"INSERT INTO news_article\"\n+                        + \" (id, article_id, source_type, publisher_id, source_item_id, original_url,\"\n+                        + \" canonical_url, title, language, published_at, published_at_status,\"\n+                        + \" collected_at, duplicate_key, source_payload_hash, ingest_run_id,\"\n+                        + \" display_eligible, created_at, updated_at)\"\n+                        + \" SELECT 1000000 + g,\"\n+                        + \" translate(md5('article-' || g), '0123456789', 'ghijklmnop'),\"\n+                        + \" 'RSS', 9900001, 'fixture-' || g,\"\n+                        + \" 'https://performance.example/articles/' || g,\"\n+                        + \" 'https://performance.example/articles/' || g, '시장 기사 ' || g, 'ko',\"\n+                        + \" TIMESTAMPTZ '2026-09-16T03:00:00Z' - (g % 100) * INTERVAL '1 day',\"\n+                        + \" 'VERIFIED', TIMESTAMPTZ '2026-09-16T03:00:00Z', md5('duplicate-' || g),\"\n+                        + \" md5('payload-' || g), 'performance-fixture', TRUE, NOW(), NOW()\"\n+                        + \" FROM generate_series(1, 100000) AS g\");\n+        jdbc.execute(\n+                \"INSERT INTO news_digest\"\n+                        + \" (id, digest_id, representative_article_id, representative_title,\"\n+                        + \" factual_summary, first_published_at, latest_published_at,\"\n+                        + \" distinct_publisher_count, grouping_rule_version, importance_rule_version,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" SELECT 2000000 + g,\"\n+                        + \" translate(md5('digest-' || g), '0123456789', 'ghijklmnop'),\"\n+                        + \" 1000000 + g, '시장 기사 ' || g,\"\n+                        + \" '성능 매체의 시장 기사 ' || g || ' 보도입니다.',\"\n+                        + \" TIMESTAMPTZ '2026-09-16T03:00:00Z' - (g % 100) * INTERVAL '1 day',\"\n+                        + \" TIMESTAMPTZ '2026-09-16T03:00:00Z' - (g % 100) * INTERVAL '1 day',\"\n+                        + \" 1, 'news-grouping-v1', 'news-importance-v1', NOW(), NOW()\"\n+                        + \" FROM generate_series(1, 100000) AS g WHERE g % 100 < 2\");\n+        jdbc.execute(\n+                \"INSERT INTO news_digest_article\"\n+                        + \" (digest_id, article_id, time_gap_seconds, title_similarity, shared_topic_key)\"\n+                        + \" SELECT 2000000 + g, 1000000 + g, 0, 1.0, 'markets'\"\n+                        + \" FROM generate_series(1, 100000) AS g WHERE g % 100 < 2\");\n+        jdbc.execute(\n+                \"INSERT INTO news_article_topic\"\n+                        + \" (article_id, topic_id, rule_version, match_evidence_key)\"\n+                        + \" SELECT 1000000 + g, 9900001, 'news-link-v1', 'markets'\"\n+                        + \" FROM generate_series(1, 100000) AS g WHERE g % 100 < 2\");\n+        jdbc.execute(\"ANALYZE news_article\");\n+        jdbc.execute(\"ANALYZE news_digest\");\n+        jdbc.execute(\"ANALYZE news_digest_article\");\n+        jdbc.execute(\"ANALYZE news_article_topic\");\n+\n+        assertThat(jdbc.queryForObject(\"SELECT COUNT(*) FROM news_article\", Integer.class))\n+                .isEqualTo(ARTICLE_COUNT);\n+    }\n+\n+    @Test\n+    @DisplayName(\"10만 기사에서 현재 뉴스 조회 p95가 500ms 이하다\")\n+    void digestQueryP95() {\n+        NewsDigestQuery query = NewsDigestQuery.current(null);\n+        for (int i = 0; i < WARM_UP_RUNS; i++) {\n+            queryService.query(query);\n+        }\n+\n+        List<Long> durations = new ArrayList<>(MEASURED_RUNS);\n+        for (int i = 0; i < MEASURED_RUNS; i++) {\n+            long startedAt = System.nanoTime();\n+            NewsDigestListResult result = queryService.query(query);\n+            durations.add(System.nanoTime() - startedAt);\n+            assertThat(result.digests()).isNotEmpty().hasSizeLessThanOrEqualTo(3);\n+        }\n+\n+        durations.sort(Comparator.naturalOrder());\n+        long p95Nanos = durations.get((int) Math.ceil(MEASURED_RUNS * 0.95) - 1);\n+        System.out.printf(\n+                java.util.Locale.ROOT,\n+                \"NEWS_PERFORMANCE queryP95Ms=%.3f articles=%d warmups=%d measurements=%d%n\",\n+                p95Nanos / 1_000_000.0,\n+                ARTICLE_COUNT,\n+                WARM_UP_RUNS,\n+                MEASURED_RUNS);\n+        assertThat(Duration.ofNanos(p95Nanos))\n+                .as(\"30회 준비 후 100회 측정한 현재 뉴스 조회 p95\")\n+                .isLessThanOrEqualTo(QUERY_P95_LIMIT);\n+    }\n+\n+    @Test\n+    @DisplayName(\"동시에 due인 RSS 20개와 GDELT 1개 수집 회차가 15분 안에 끝난다\")\n+    void collectionCycle() {\n+        CollectionFixture fixture = collectionFixture();\n+\n+        long startedAt = System.nanoTime();\n+        fixture.scheduler().collectDueSources();\n+        Duration elapsed = Duration.ofNanos(System.nanoTime() - startedAt);\n+\n+        assertThat(fixture.sourceClient().rssRequests()).isEqualTo(20);\n+        assertThat(fixture.sourceClient().gdeltRequests()).isEqualTo(1);\n+        System.out.printf(\n+                java.util.Locale.ROOT,\n+                \"NEWS_PERFORMANCE collectionCycleMs=%.3f rss=20 gdelt=1%n\",\n+                elapsed.toNanos() / 1_000_000.0);\n+        assertThat(elapsed).isLessThanOrEqualTo(COLLECTION_CYCLE_LIMIT);\n+    }\n+\n+    private static CollectionFixture collectionFixture() {\n+        List<NewsPublisher> publishers = new ArrayList<>();\n+        List<NewsPublisherRegistry.Publisher> registryEntries = new ArrayList<>();\n+        for (long i = 1; i <= 20; i++) {\n+            String key = \"fixture-\" + i;\n+            String domain = key + \".example\";\n+            String rssUrl = \"https://\" + domain + \"/rss\";\n+            publishers.add(\n+                    NewsPublisher.restore(\n+                            i,\n+                            key,\n+                            \"Fixture \" + i,\n+                            \"ko\",\n+                            domain,\n+                            rssUrl,\n+                            PermissionStatus.PENDING,\n+                            null,\n+                            true,\n+                            null,\n+                            null));\n+            registryEntries.add(\n+                    new NewsPublisherRegistry.Publisher(\n+                            key, \"Fixture \" + i, \"ko\", domain, rssUrl, true, List.of(\"markets\")));\n+        }\n+\n+        NewsPublisherRepository publisherRepository = mock(NewsPublisherRepository.class);\n+        when(publisherRepository.findEnabled()).thenReturn(publishers);\n+        NewsCollectionStateRepository states = mock(NewsCollectionStateRepository.class);\n+        when(states.findBySourceKey(any())).thenReturn(Optional.empty());\n+        when(states.findAll()).thenReturn(List.of());\n+        when(states.save(any())).thenAnswer(invocation -> invocation.getArgument(0));\n+        NewsCollectionLease lease = mock(NewsCollectionLease.class);\n+        when(lease.tryAcquire(any(), any(), any()))\n+                .thenReturn(Optional.of(FIXED_NOW.plus(Duration.ofMinutes(15))));\n+        NewsTopicCatalog topics = mock(NewsTopicCatalog.class);\n+        when(topics.domesticLinkTopicKeys()).thenReturn(Set.of(\"markets\"));\n+        NewsMetrics metrics = mock(NewsMetrics.class);\n+        FixtureSourceClient sourceClient = new FixtureSourceClient();\n+        TransactionTemplate transactions = mock(TransactionTemplate.class);\n+        when(transactions.execute(any()))\n+                .thenAnswer(\n+                        invocation -> {\n+                            TransactionCallback<?> callback = invocation.getArgument(0);\n+                            return callback.doInTransaction(mock(TransactionStatus.class));\n+                        });\n+        NewsIngestionService ingestion =\n+                new NewsIngestionService(\n+                        sourceClient,\n+                        mock(NewsArticleRepository.class),\n+                        mock(NewsArticleLinkRepository.class),\n+                        mock(NewsDigestRepository.class),\n+                        publisherRepository,\n+                        states,\n+                        mock(NewsUrlNormalizer.class),\n+                        mock(NewsRelevanceClassifier.class),\n+                        mock(NewsGroupingPolicy.class),\n+                        mock(NewsSummaryPolicy.class),\n+                        topics,\n+                        mock(NewsSectorLinkPolicy.class),\n+                        new NewsRetryPolicy(new java.util.Random(0)),\n+                        metrics,\n+                        transactions,\n+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));\n+\n+        NewsCollectionScheduler scheduler =\n+                new NewsCollectionScheduler(\n+                        publisherRepository,\n+                        states,\n+                        lease,\n+                        topics,\n+                        new NewsPublisherRegistry(\"performance-fixture-v1\", registryEntries),\n+                        ingestion,\n+                        metrics,\n+                        Clock.fixed(FIXED_NOW, ZoneOffset.UTC));\n+        return new CollectionFixture(scheduler, sourceClient);\n+    }\n+\n+    private record CollectionFixture(\n+            NewsCollectionScheduler scheduler, FixtureSourceClient sourceClient) {}\n+\n+    private static final class FixtureSourceClient implements NewsSourceClient {\n+        private final AtomicInteger rssRequests = new AtomicInteger();\n+        private final AtomicInteger gdeltRequests = new AtomicInteger();\n+\n+        @Override\n+        public NewsFetchResult fetch(RssNewsSource source) {\n+            rssRequests.incrementAndGet();\n+            return NewsFetchResult.complete(List.of(), null, null);\n+        }\n+\n+        @Override\n+        public NewsFetchResult fetch(GdeltNewsSource source) {\n+            gdeltRequests.incrementAndGet();\n+            return NewsFetchResult.complete(List.of(), null, null);\n+        }\n+\n+        int rssRequests() {\n+            return rssRequests.get();\n+        }\n+\n+        int gdeltRequests() {\n+            return gdeltRequests.get();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -128,8 +128,11 @@ spec 006의 기사 내보내기는 저장소를 직접 조회하지 않고 이 A\n - 뉴스 집중 테스트 322개와 Architecture/Flyway 집중 테스트 31개가 모두 성공했다. 이 테스트들이\n   quickstart 2~8·10의 로컬 fixture, MockMvc 응답 계약, 공개 허가 필터, cursor 내보내기, 장애 격리,\n   보관 종료 시점과 반복 삭제를 검증한다.\n-- 실제 외부 RSS/GDELT 호출은 opt-in 정책에 따라 수행하지 않았다. 100,000개 fixture 성능 측정과 수집\n-  회차 측정(quickstart 9)은 별도 작업 T052에서 수행한다.\n+- 실제 외부 RSS/GDELT 호출은 opt-in 정책에 따라 수행하지 않았다. 별도 작업 T052에서는 PostgreSQL 16에\n+  100,000개 기사 fixture를 적재해 30회 준비 후 100회 현재 뉴스 조회의 p95 90.233ms를 측정했고,\n+  외부망 대신 로컬 fixture를 사용한 RSS 20개와 GDELT 1개의 동시 due 수집 회차는 299.448ms였다.\n+  각각 500ms와 15분 기준을 충족한다. 이 성능 시험은 `THORP_RUN_NEWS_PERFORMANCE=true`일 때만\n+  실행한다. 수치는 2026-09-16 로컬 Docker 29.6.1의 PostgreSQL 16 Testcontainers 실행 결과다.\n \n 아직 기능 전체 완료를 선언할 수는 없다. 고정 검증 표본을 대신해 실제 수집분 345건을 조사했을 때 현재\n 한국어 어절 Jaccard 0.60 규칙은 같은 사건 후보를 한 쌍도 묶지 못해 SC-002의 분리율 기준을 충족하지\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/market-news-api.md",
+          "old_path": "docs/specs/market-news-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -165,7 +165,7 @@\n - [X] T049 Add daily news-domain cleanup activated on/after 2026-11-07 with cascade deletion and repeat zero-row no-op semantics, without a long-term audit table, in `backend/src/main/java/com/ssafy/thorp/news/application/service/NewsRetentionService.java`, `backend/src/main/java/com/ssafy/thorp/news/infrastructure/scheduling/NewsRetentionScheduler.java`, and `backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsRetentionIT.java`\n - [X] T050 [P] Add version-controlled grouping-quality fixtures that prove duplicate and wrong-event merges are 0 and same-event split rate is at most 10%, plus language-policy cases excluding forecast, judgment, investment implication, and return-causation language, in `backend/src/test/resources/news/grouping-quality.json`, `summary-policy.json`, `backend/src/test/java/com/ssafy/thorp/news/application/service/NewsGroupingQualityTest.java`, and `NewsSummaryLanguagePolicyTest.java`\n - [X] T051 Synchronize API documentation and all response examples with implementation in `docs/specs/market-news-api.md`, `specs/012-market-news-digest/contracts/openapi.yaml`, and `specs/012-market-news-digest/contracts/examples/current-ready.json`, `current-stale.json`, `public-preparing.json`, `historical-empty.json`, `export-allowed.json`\n-- [ ] T052 Add repeatable PostgreSQL Testcontainers performance tests with 100,000 article fixtures, 30 warm-up/100 measured digest queries at p95 ≤500ms, and a local 20-RSS-plus-one-GDELT collection cycle ≤15 minutes in `backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java`\n+- [X] T052 Add repeatable PostgreSQL Testcontainers performance tests with 100,000 article fixtures, 30 warm-up/100 measured digest queries at p95 ≤500ms, and a local 20-RSS-plus-one-GDELT collection cycle ≤15 minutes in `backend/src/test/java/com/ssafy/thorp/news/performance/NewsPerformanceIT.java`\n - [X] T053 Run and record `backend/.\\gradlew.bat spotlessApply build`, confirm PostgreSQL Testcontainers/Flyway tests were not skipped, execute the WB04 quickstart scenarios while excluding the T052 performance scenario tracked in its separate Jira Task/branch/MR, and document the verified scope, SC-002 shortfall, and remaining PD-15 limitation in `docs/specs/market-news-api.md`\n \n ---\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/012-market-news-digest/tasks.md",
+          "old_path": "specs/012-market-news-digest/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2812411": [],
+    "2812421": []
+  }
+}

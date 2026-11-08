@@ -1,0 +1,864 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947312,
+    "iid": 158,
+    "project_id": 1444456,
+    "title": "feat(be): 시장 흐름 분야 요약과 상세 조회 API구현",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n## 작업 내용 요약\n\n시장 흐름 화면이 쓸 읽기 전용 API를 만들었다. 분야별 변화 요약 문장을 만드는 규칙과 분야 상태 판정을 붙이고, /api/market-flow 두 엔드포인트로 계약대로 제공한다. tasks.md의 T007\\~T014에 해당한다.\n\n## 관련 티켓\n\nticket #272\n\n## 주요 변경 사항\n\n- NarrativeSubjectSelector — 분야 안에서 서술 대상 지표를 고른다. 방향 지속 길이, 같은 단위끼리의 변화 폭, 등록표 순서 순으로 가르고 최대 2개 (T007)\n- NarrativeFormatter — 고정된 문장 틀에 값만 채운다. 규칙 버전 market-flow-narrative-v1 (T008)\n- FieldStatusDecider — READY / EXAMPLE / EMPTY / COLLECTION_FAILED 판정 (T009)\n- FieldSummaryBuilder — 읽기 모델 행 생성과 적재 (T010)\n- MarketFlowController — GET /market-flow/fields, /fields/{fieldId} (T011, T012)\n- contracts/openapi.yaml — /fields에 400 응답과 그 근거를 추가\n- tasks.md — T011 문구를 실제 동작에 맞게 고치고 T030에 문서화 항목 추가\n\n## 테스트\n\n- [x] ./gradlew spotlessApply build 성공\n- [x] 1381 tests / 0 failures / 0 errors\n- [x] Testcontainers IT 3종 통과 (Controller, Repository, QueryPerformance)\n- [x] 로컬 실행 후 curl 확인 — 분야 7개 EXAMPLE, 첫 호출 0.87s 이후 0.04s\n\n## 리뷰 포인트\n\n- 분야 요약 조회가 쿼리 파라미터를 하나도 받지 않는다. 이름과 무관하게 붙으면 400이다. 012 뉴스 API는 sectorId를 실제로 받아 필터하므로 그 호출을 복사해 오면 조용히 무시되는 편이 더 위험하다고 봤다. sectorId라는 이름만 거부하면 sector, sectorCode가 통과하므로 허용 목록을 비워 뒀다. 섹터 기능 자체는 살아 있고, 분야를 고르는 것은 경로 변수라 영향이 없다.\n- 서술 대상 지표 선정에서 단위가 다른 지표의 변화 폭을 비교하지 않는다. 표준화 점수는 FR-007과 SC-003이 막고, 척도 선택은 010 PD-08의 몫이기 때문이다 (research R1).\n- 008이 아직 없어 예시 자료로 동작한다. 분야 상태가 전부 EXAMPLE인 것이 정상이다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T17:34:05.843+09:00",
+    "updated_at": "2026-09-16T17:58:31.860+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T17:58:31.178+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/272-market-flow-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+    "merge_commit_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T17:34:07.775+09:00",
+    "reference": "!158",
+    "references": {
+      "short": "!158",
+      "relative": "!158",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!158"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/158",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947312,
+    "iid": 158,
+    "project_id": 1444456,
+    "title": "feat(be): 시장 흐름 분야 요약과 상세 조회 API구현",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n## 작업 내용 요약\n\n시장 흐름 화면이 쓸 읽기 전용 API를 만들었다. 분야별 변화 요약 문장을 만드는 규칙과 분야 상태 판정을 붙이고, /api/market-flow 두 엔드포인트로 계약대로 제공한다. tasks.md의 T007\\~T014에 해당한다.\n\n## 관련 티켓\n\nticket #272\n\n## 주요 변경 사항\n\n- NarrativeSubjectSelector — 분야 안에서 서술 대상 지표를 고른다. 방향 지속 길이, 같은 단위끼리의 변화 폭, 등록표 순서 순으로 가르고 최대 2개 (T007)\n- NarrativeFormatter — 고정된 문장 틀에 값만 채운다. 규칙 버전 market-flow-narrative-v1 (T008)\n- FieldStatusDecider — READY / EXAMPLE / EMPTY / COLLECTION_FAILED 판정 (T009)\n- FieldSummaryBuilder — 읽기 모델 행 생성과 적재 (T010)\n- MarketFlowController — GET /market-flow/fields, /fields/{fieldId} (T011, T012)\n- contracts/openapi.yaml — /fields에 400 응답과 그 근거를 추가\n- tasks.md — T011 문구를 실제 동작에 맞게 고치고 T030에 문서화 항목 추가\n\n## 테스트\n\n- [x] ./gradlew spotlessApply build 성공\n- [x] 1381 tests / 0 failures / 0 errors\n- [x] Testcontainers IT 3종 통과 (Controller, Repository, QueryPerformance)\n- [x] 로컬 실행 후 curl 확인 — 분야 7개 EXAMPLE, 첫 호출 0.87s 이후 0.04s\n\n## 리뷰 포인트\n\n- 분야 요약 조회가 쿼리 파라미터를 하나도 받지 않는다. 이름과 무관하게 붙으면 400이다. 012 뉴스 API는 sectorId를 실제로 받아 필터하므로 그 호출을 복사해 오면 조용히 무시되는 편이 더 위험하다고 봤다. sectorId라는 이름만 거부하면 sector, sectorCode가 통과하므로 허용 목록을 비워 뒀다. 섹터 기능 자체는 살아 있고, 분야를 고르는 것은 경로 변수라 영향이 없다.\n- 서술 대상 지표 선정에서 단위가 다른 지표의 변화 폭을 비교하지 않는다. 표준화 점수는 FR-007과 SC-003이 막고, 척도 선택은 010 PD-08의 몫이기 때문이다 (research R1).\n- 008이 아직 없어 예시 자료로 동작한다. 분야 상태가 전부 EXAMPLE인 것이 정상이다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T17:34:05.843+09:00",
+    "updated_at": "2026-09-16T17:58:31.860+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T17:58:31.178+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/272-market-flow-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+    "merge_commit_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T17:34:07.775+09:00",
+    "reference": "!158",
+    "references": {
+      "short": "!158",
+      "relative": "!158",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!158"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/158",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "23",
+    "latest_build_started_at": "2026-09-16T17:51:00.323+09:00",
+    "latest_build_finished_at": "2026-09-16T17:58:24.582+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 199922,
+      "iid": 80,
+      "project_id": 1444456,
+      "sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+      "ref": "feat(be)/272-market-flow-api",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T17:51:00.188+09:00",
+      "updated_at": "2026-09-16T17:58:24.588+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199922"
+    },
+    "head_pipeline": {
+      "id": 199922,
+      "iid": 80,
+      "project_id": 1444456,
+      "sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+      "ref": "feat(be)/272-market-flow-api",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T17:51:00.188+09:00",
+      "updated_at": "2026-09-16T17:58:24.588+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199922",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T17:51:00.323+09:00",
+      "finished_at": "2026-09-16T17:58:24.582+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199922",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+      "head_sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+      "start_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "50405e4250143225e5c4ca670d920f47d1a8a3a3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818944,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T17:34:06.006+09:00",
+          "updated_at": "2026-09-16T17:34:06.030+09:00",
+          "system": true,
+          "noteable_id": 947312,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 158,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "54211e29a6e61d7608cddad9e15186fd9a6ffee8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2818953,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 정책 및 도메인 제약 준수**: 순위 배지, 추천/전망 표현, 전략 ID별 분기, 0 채우기 등을 철저히 배제하고, 단위가 다른 지표 간 비교를 방지하는 등 비즈니스 규칙과 헌법(Constitution)을 도메인 코드 및 단위 테스트에 훌륭하게 녹여냈습니다.\n- **방어적 설계 및 계약 명시성**: 분야 요약 조회 API에서 섹터 등 쿼리 파라미터가 유입될 여지를 원천 차단하기 위해 허용 목록을 비우고 400 에러를 반환하도록 설계한 점과, 성능 및 동시성(캐시 적재 중복 방지) 검증을 위한 테스트 케이스(`FieldSummaryBuilderTest`, `MarketFlowQueryPerformanceIT`)가 매우 견고하게 작성되었습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. 아키텍처 규칙, 예외 처리, 테스트 커버리지 및 OpenAPI 계약이 일관성 있게 잘 구현되었습니다.\n\n### 테스트 제안\n- **예외 파라미터 거부 시나리오 테스트**: `GET /market-flow/fields` 호출 시 다양한 조합의 유효하지 않은 쿼리 파라미터(예: 대소문자가 섞인 `?SECTORID=1`, 특수문자나 인코딩된 파라미터 등)가 입력되었을 때 항상 `400 Bad Request`와 명시된 에러 봉투를 반환하는지 검증합니다.\n- **동시성 스냅샷 생성 시 데이터베이스 무결성 테스트**: 여러 스레드가 동시에 `ensureCurrentSnapshot()`을 호출할 때 `market_flow_field_summary` 테이블의 unique 제약조건(또는 중복 적재 방지 로직)이 데이터베이스 레벨에서 안전하게 동작하는지 동시성 통합 테스트로 추가 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7f8651fb1e5140db278f4538f0f95ecebd36eb10 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T17:34:16.506+09:00",
+          "updated_at": "2026-09-16T17:50:55.838+09:00",
+          "system": false,
+          "noteable_id": 947312,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 158,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de7156b954fbdf695a30d7d47ddaee78b2d840d3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819177,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>7f8651fb - feat(be): ai리뷰 테스트 1차반영</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/158/diffs?diff_id=2208283&start_sha=a74367e6d8a9432094717f6b58291fd0671a3ad7)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T17:50:47.241+09:00",
+          "updated_at": "2026-09-16T17:50:47.244+09:00",
+          "system": true,
+          "noteable_id": 947312,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 158,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "24e96104c028959cd614d1b47dd82fd927a0ec92",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819271,
+          "type": null,
+          "body": "mentioned in commit f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T17:58:31.245+09:00",
+          "updated_at": "2026-09-16T17:58:31.261+09:00",
+          "system": true,
+          "noteable_id": 947312,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 158,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2208283,
+      "head_commit_sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+      "base_commit_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+      "start_commit_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+      "created_at": "2026-09-16T17:50:46.998+09:00",
+      "merge_request_id": 947312,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "97988bdfa29d2e92e7b960ea4400c9d388af475e"
+    },
+    {
+      "id": 2208094,
+      "head_commit_sha": "a74367e6d8a9432094717f6b58291fd0671a3ad7",
+      "base_commit_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+      "start_commit_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+      "created_at": "2026-09-16T17:34:06.529+09:00",
+      "merge_request_id": 947312,
+      "state": "without_files",
+      "real_size": "23",
+      "patch_id_sha": "c72d398e4343c21b44cd44257f76ce36b435832d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2208283,
+      "head_commit_sha": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+      "base_commit_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+      "start_commit_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+      "created_at": "2026-09-16T17:50:46.998+09:00",
+      "merge_request_id": 947312,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "97988bdfa29d2e92e7b960ea4400c9d388af475e",
+      "commits": [
+        {
+          "id": "7f8651fb1e5140db278f4538f0f95ecebd36eb10",
+          "short_id": "7f8651fb",
+          "created_at": "2026-09-16T17:50:40.000+09:00",
+          "parent_ids": [
+            "a74367e6d8a9432094717f6b58291fd0671a3ad7"
+          ],
+          "title": "feat(be): ai리뷰 테스트 1차반영",
+          "message": "feat(be): ai리뷰 테스트 1차반영\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-16T17:50:40.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-16T17:50:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7f8651fb1e5140db278f4538f0f95ecebd36eb10"
+        },
+        {
+          "id": "a74367e6d8a9432094717f6b58291fd0671a3ad7",
+          "short_id": "a74367e6",
+          "created_at": "2026-09-16T17:33:18.000+09:00",
+          "parent_ids": [
+            "39a897d432335f4970a0828a167cbe3b62c684cf"
+          ],
+          "title": "feat(be): 시장 흐름 분야 요약과 상세 조회 API구현",
+          "message": "feat(be): 시장 흐름 분야 요약과 상세 조회 API구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-16T17:33:18.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-16T17:33:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a74367e6d8a9432094717f6b58291fd0671a3ad7"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+package com.ssafy.thorp.marketflow.application.result;\n+\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import java.util.List;\n+\n+/** 한 등록표·자료 버전에서 고정된 일곱 분야 읽기 결과. */\n+public record MarketFlowSnapshot(\n+        String registryVersion, String datasetVersion, List<MarketFlowField> fields) {\n+    public MarketFlowSnapshot {\n+        fields = List.copyOf(fields);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/result/MarketFlowSnapshot.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/result/MarketFlowSnapshot.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,38 @@\n+package com.ssafy.thorp.marketflow.application.service;\n+\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.function.Function;\n+import java.util.stream.Collectors;\n+import org.springframework.stereotype.Component;\n+\n+/** 수집 결과 자체로만 분야 상태를 판정한다. 대상월의 오래됨은 상태 판정에 사용하지 않는다. */\n+@Component\n+public class FieldStatusDecider {\n+\n+    public FieldStatus decide(\n+            List<IndicatorMetadata> metadata, List<IndicatorCollectionState> collectionStates) {\n+        if (metadata.isEmpty()) {\n+            return FieldStatus.EMPTY;\n+        }\n+        Map<String, IndicatorCollectionState> states =\n+                collectionStates.stream()\n+                        .collect(\n+                                Collectors.toMap(\n+                                        IndicatorCollectionState::indicatorId,\n+                                        Function.identity(),\n+                                        (first, ignored) -> first));\n+        List<IndicatorCollectionState> relevant =\n+                metadata.stream().map(item -> states.get(item.indicatorId())).toList();\n+        if (relevant.stream().anyMatch(state -> state == null || !state.successful())) {\n+            return FieldStatus.COLLECTION_FAILED;\n+        }\n+        if (relevant.stream().anyMatch(IndicatorCollectionState::exampleData)) {\n+            return FieldStatus.EXAMPLE;\n+        }\n+        return FieldStatus.READY;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDecider.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDecider.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,138 @@\n+package com.ssafy.thorp.marketflow.application.service;\n+\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.application.repository.MarketFlowFieldSummaryRepository;\n+import com.ssafy.thorp.marketflow.application.result.MarketFlowSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot.FieldReferenceMonth;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorDisplay;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeFormatter;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.SelectedSubject;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.util.Comparator;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.function.Function;\n+import java.util.stream.Collectors;\n+import org.springframework.stereotype.Service;\n+\n+/** 현재 등록표·자료 버전의 분야 요약을 한 번 만들고 불변 읽기 모델로 보관한다. */\n+@Service\n+public class FieldSummaryBuilder {\n+\n+    private static final int FIELD_COUNT = 7;\n+\n+    private final MacroIndicatorSnapshotPort snapshotPort;\n+    private final MarketFlowFieldSummaryRepository repository;\n+    private final IndicatorDisplayAssembler indicatorAssembler;\n+    private final NarrativeSubjectSelector subjectSelector;\n+    private final NarrativeFormatter formatter;\n+    private final FieldStatusDecider statusDecider;\n+    private final Clock clock;\n+\n+    public FieldSummaryBuilder(\n+            MacroIndicatorSnapshotPort snapshotPort,\n+            MarketFlowFieldSummaryRepository repository,\n+            IndicatorDisplayAssembler indicatorAssembler,\n+            NarrativeSubjectSelector subjectSelector,\n+            NarrativeFormatter formatter,\n+            FieldStatusDecider statusDecider,\n+            Clock clock) {\n+        this.snapshotPort = snapshotPort;\n+        this.repository = repository;\n+        this.indicatorAssembler = indicatorAssembler;\n+        this.subjectSelector = subjectSelector;\n+        this.formatter = formatter;\n+        this.statusDecider = statusDecider;\n+        this.clock = clock;\n+    }\n+\n+    public synchronized MarketFlowSnapshot ensureCurrentSnapshot() {\n+        FieldReferenceSnapshot references = snapshotPort.loadFieldReferenceMonths();\n+        List<MarketFlowField> stored =\n+                repository.findAll(references.registryVersion(), references.datasetVersion());\n+        if (stored.size() == FIELD_COUNT) {\n+            return new MarketFlowSnapshot(\n+                    references.registryVersion(), references.datasetVersion(), stored);\n+        }\n+\n+        List<IndicatorMetadata> metadata =\n+                snapshotPort.loadIndicatorMeta(references.registryVersion());\n+        List<IndicatorCollectionState> collectionStates = snapshotPort.loadCollectionState();\n+        List<MarketFlowField> built =\n+                references.fields().stream()\n+                        .sorted(Comparator.comparingInt(FieldReferenceMonth::displayOrder))\n+                        .map(reference -> buildField(reference, metadata, collectionStates))\n+                        .toList();\n+        repository.saveIfAbsent(\n+                references.registryVersion(),\n+                references.datasetVersion(),\n+                built,\n+                Instant.now(clock));\n+        return new MarketFlowSnapshot(\n+                references.registryVersion(),\n+                references.datasetVersion(),\n+                repository.findAll(references.registryVersion(), references.datasetVersion()));\n+    }\n+\n+    private MarketFlowField buildField(\n+            FieldReferenceMonth reference,\n+            List<IndicatorMetadata> allMetadata,\n+            List<IndicatorCollectionState> allCollectionStates) {\n+        List<IndicatorMetadata> metadata =\n+                allMetadata.stream()\n+                        .filter(item -> item.fieldId() == reference.fieldId())\n+                        .sorted(Comparator.comparingInt(IndicatorMetadata::displayOrder))\n+                        .toList();\n+        Map<String, IndicatorCollectionState> statesById =\n+                allCollectionStates.stream()\n+                        .collect(\n+                                Collectors.toMap(\n+                                        IndicatorCollectionState::indicatorId,\n+                                        Function.identity(),\n+                                        (first, ignored) -> first));\n+        List<IndicatorCollectionState> states =\n+                metadata.stream()\n+                        .map(item -> statesById.get(item.indicatorId()))\n+                        .filter(java.util.Objects::nonNull)\n+                        .toList();\n+        FieldStatus status = statusDecider.decide(metadata, states);\n+        List<IndicatorDisplay> indicators = indicatorAssembler.assemble(reference, metadata);\n+        List<SelectedSubject> subjects = subjectSelector.select(indicators);\n+        boolean hasCompletePath =\n+                indicators.stream()\n+                        .anyMatch(\n+                                indicator ->\n+                                        indicator.path().stream()\n+                                                .allMatch(point -> point.value() != null));\n+        String narrative =\n+                status == FieldStatus.EMPTY || status == FieldStatus.COLLECTION_FAILED\n+                        ? null\n+                        : formatter.format(subjects, hasCompletePath);\n+        Instant lastUpdatedAt =\n+                states.stream()\n+                        .map(IndicatorCollectionState::lastUpdatedAt)\n+                        .filter(java.util.Objects::nonNull)\n+                        .max(Comparator.naturalOrder())\n+                        .orElse(null);\n+        return new MarketFlowField(\n+                reference.fieldId(),\n+                reference.displayName(),\n+                reference.displayOrder(),\n+                status,\n+                narrative,\n+                NarrativeFormatter.RULE_VERSION,\n+                subjects.stream().map(subject -> subject.indicator().indicatorId()).toList(),\n+                reference.referenceMonth(),\n+                reference.heldBackBy(),\n+                lastUpdatedAt,\n+                status == FieldStatus.EXAMPLE,\n+                indicators);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilder.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilder.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,67 @@\n+package com.ssafy.thorp.marketflow.application.service;\n+\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot.FieldReferenceMonth;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorDisplay;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.time.YearMonth;\n+import java.util.Comparator;\n+import java.util.List;\n+import org.springframework.stereotype.Component;\n+\n+/** 포트의 경로와 등록표 메타를 화면 표시 항목으로 합친다. 결측 경로는 null 세 점으로 유지한다. */\n+@Component\n+public class IndicatorDisplayAssembler {\n+\n+    private final MacroIndicatorSnapshotPort snapshotPort;\n+\n+    public IndicatorDisplayAssembler(MacroIndicatorSnapshotPort snapshotPort) {\n+        this.snapshotPort = snapshotPort;\n+    }\n+\n+    public List<IndicatorDisplay> assemble(\n+            FieldReferenceMonth reference, List<IndicatorMetadata> metadata) {\n+        return metadata.stream()\n+                .filter(item -> item.fieldId() == reference.fieldId())\n+                .sorted(Comparator.comparingInt(IndicatorMetadata::displayOrder))\n+                .map(item -> assembleOne(reference, item))\n+                .toList();\n+    }\n+\n+    private IndicatorDisplay assembleOne(\n+            FieldReferenceMonth reference, IndicatorMetadata metadata) {\n+        IndicatorPathSnapshot snapshot =\n+                snapshotPort\n+                        .loadRecentPath(metadata.indicatorId(), reference.referenceMonth())\n+                        .orElseGet(\n+                                () ->\n+                                        emptyPath(\n+                                                metadata.indicatorId(),\n+                                                reference.referenceMonth()));\n+        return new IndicatorDisplay(\n+                metadata.indicatorId(),\n+                metadata.name(),\n+                metadata.unit(),\n+                snapshot.path().getLast().value(),\n+                snapshot.path(),\n+                reference.referenceMonth(),\n+                snapshot.releaseDate(),\n+                metadata.source(),\n+                metadata.agency(),\n+                snapshot.afterReferenceMonthRelease());\n+    }\n+\n+    private static IndicatorPathSnapshot emptyPath(String indicatorId, YearMonth referenceMonth) {\n+        return new IndicatorPathSnapshot(\n+                indicatorId,\n+                referenceMonth,\n+                List.of(\n+                        new PathPoint(referenceMonth.minusMonths(2), null),\n+                        new PathPoint(referenceMonth.minusMonths(1), null),\n+                        new PathPoint(referenceMonth, null)),\n+                null,\n+                null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/IndicatorDisplayAssembler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/IndicatorDisplayAssembler.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,65 @@\n+package com.ssafy.thorp.marketflow.application.service;\n+\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.application.result.MarketFlowSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot.FieldReferenceMonth;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import java.util.Comparator;\n+import java.util.List;\n+import org.springframework.stereotype.Service;\n+\n+/** 현재 버전의 분야 요약과 한 분야의 실제 지표 표시 항목을 조회한다. */\n+@Service\n+public class MarketFlowQueryService {\n+\n+    private final FieldSummaryBuilder summaryBuilder;\n+    private final MacroIndicatorSnapshotPort snapshotPort;\n+    private final IndicatorDisplayAssembler indicatorAssembler;\n+\n+    public MarketFlowQueryService(\n+            FieldSummaryBuilder summaryBuilder,\n+            MacroIndicatorSnapshotPort snapshotPort,\n+            IndicatorDisplayAssembler indicatorAssembler) {\n+        this.summaryBuilder = summaryBuilder;\n+        this.snapshotPort = snapshotPort;\n+        this.indicatorAssembler = indicatorAssembler;\n+    }\n+\n+    public MarketFlowSnapshot getFields() {\n+        return summaryBuilder.ensureCurrentSnapshot();\n+    }\n+\n+    public MarketFlowField getField(FieldId fieldId) {\n+        MarketFlowSnapshot snapshot = summaryBuilder.ensureCurrentSnapshot();\n+        MarketFlowField summary =\n+                snapshot.fields().stream()\n+                        .filter(field -> field.fieldId() == fieldId)\n+                        .findFirst()\n+                        .orElseThrow(() -> new IllegalArgumentException(\"시장 흐름 분야를 찾을 수 없습니다.\"));\n+        FieldReferenceMonth reference =\n+                snapshotPort.loadFieldReferenceMonths().fields().stream()\n+                        .filter(field -> field.fieldId() == fieldId)\n+                        .findFirst()\n+                        .orElseThrow(() -> new IllegalArgumentException(\"시장 흐름 분야를 찾을 수 없습니다.\"));\n+        List<IndicatorMetadata> metadata =\n+                snapshotPort.loadIndicatorMeta(snapshot.registryVersion()).stream()\n+                        .filter(item -> item.fieldId() == fieldId)\n+                        .sorted(Comparator.comparingInt(IndicatorMetadata::displayOrder))\n+                        .toList();\n+        return new MarketFlowField(\n+                summary.fieldId(),\n+                summary.displayName(),\n+                summary.displayOrder(),\n+                summary.status(),\n+                summary.narrative(),\n+                summary.narrativeRuleVersion(),\n+                summary.narrativeSubjects(),\n+                summary.referenceMonth(),\n+                summary.referenceMonthHeldBackBy(),\n+                summary.lastUpdatedAt(),\n+                summary.exampleData(),\n+                indicatorAssembler.assemble(reference, metadata));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/MarketFlowQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/application/service/MarketFlowQueryService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.Direction;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.SelectedSubject;\n+import java.math.BigDecimal;\n+import java.util.List;\n+\n+/** 등록된 문장 틀만 사용해 실제 값의 방향과 지속 기간을 설명한다. */\n+public class NarrativeFormatter {\n+\n+    public static final String RULE_VERSION = \"market-flow-narrative-v1\";\n+\n+    private static final List<String> FORBIDDEN_TERMS =\n+            List.of(\"좋다\", \"나쁘다\", \"유망\", \"전망\", \"기대\", \"추천\", \"비중 확대\", \"매수\", \"매도\");\n+\n+    public String format(List<SelectedSubject> subjects, boolean hasCompletePath) {\n+        if (subjects.isEmpty()) {\n+            return hasCompletePath ? \"최근 3개월 동안 뚜렷한 방향 변화가 없었습니다.\" : \"최근 3개월 경로를 확인할 수 없습니다.\";\n+        }\n+        String narrative =\n+                subjects.stream()\n+                        .map(this::formatSubject)\n+                        .collect(java.util.stream.Collectors.joining(\" \"));\n+        List<String> forbidden = findForbiddenTerms(narrative);\n+        if (!forbidden.isEmpty()) {\n+            throw new IllegalStateException(\"변화 요약에 금지 어휘가 포함되었습니다: \" + forbidden);\n+        }\n+        return narrative;\n+    }\n+\n+    public static List<String> findForbiddenTerms(String narrative) {\n+        return FORBIDDEN_TERMS.stream().filter(narrative::contains).toList();\n+    }\n+\n+    private String formatSubject(SelectedSubject subject) {\n+        IndicatorDisplay indicator = subject.indicator();\n+        String movement = subject.direction() == Direction.UP ? \"높아졌습니다.\" : \"낮아졌습니다.\";\n+        String value = formatValue(indicator.value()) + indicator.unit();\n+        String subjectMarker = subjectMarker(indicator.name());\n+        if (subject.persistence() > 1) {\n+            return \"%s%s %s로 %d개월 연속 %s\"\n+                    .formatted(\n+                            indicator.name(),\n+                            subjectMarker,\n+                            value,\n+                            subject.persistence(),\n+                            movement);\n+        }\n+        return \"%s%s %s로 %d년 %d월에 %s\"\n+                .formatted(\n+                        indicator.name(),\n+                        subjectMarker,\n+                        value,\n+                        subject.movementMonth().getYear(),\n+                        subject.movementMonth().getMonthValue(),\n+                        movement);\n+    }\n+\n+    private static String formatValue(BigDecimal value) {\n+        return value == null ? \"값 없음 \" : value.stripTrailingZeros().toPlainString();\n+    }\n+\n+    private static String subjectMarker(String word) {\n+        char last = word.charAt(word.length() - 1);\n+        if (last < 0xAC00 || last > 0xD7A3) {\n+            return \"이\";\n+        }\n+        return (last - 0xAC00) % 28 == 0 ? \"가\" : \"이\";\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,120 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.math.BigDecimal;\n+import java.time.YearMonth;\n+import java.util.ArrayList;\n+import java.util.Comparator;\n+import java.util.HashMap;\n+import java.util.List;\n+import java.util.Map;\n+\n+/** 최근 세 점의 실제 값만으로 분야 변화 요약에 쓸 지표를 최대 두 개 고른다. */\n+public class NarrativeSubjectSelector {\n+\n+    public List<SelectedSubject> select(List<IndicatorDisplay> indicators) {\n+        List<Candidate> candidates = new ArrayList<>();\n+        for (int index = 0; index < indicators.size(); index++) {\n+            Candidate candidate = analyze(indicators.get(index), index);\n+            if (candidate != null && candidate.persistence() > 0) {\n+                candidates.add(candidate);\n+            }\n+        }\n+\n+        Map<Candidate, Integer> withinUnitRanks = rankMagnitudeWithinSameUnit(candidates);\n+        return candidates.stream()\n+                .sorted(\n+                        Comparator.comparingInt(Candidate::persistence)\n+                                .reversed()\n+                                .thenComparingInt(withinUnitRanks::get)\n+                                .thenComparingInt(Candidate::registryOrder))\n+                .limit(2)\n+                .map(Candidate::toSelectedSubject)\n+                .toList();\n+    }\n+\n+    private static Map<Candidate, Integer> rankMagnitudeWithinSameUnit(List<Candidate> candidates) {\n+        Map<Candidate, Integer> ranks = new HashMap<>();\n+        candidates.stream()\n+                .collect(java.util.stream.Collectors.groupingBy(Candidate::unit))\n+                .values()\n+                .forEach(\n+                        sameUnit -> {\n+                            List<Candidate> ordered =\n+                                    sameUnit.stream()\n+                                            .sorted(\n+                                                    Comparator.comparing(Candidate::magnitude)\n+                                                            .reversed()\n+                                                            .thenComparingInt(\n+                                                                    Candidate::registryOrder))\n+                                            .toList();\n+                            for (int index = 0; index < ordered.size(); index++) {\n+                                ranks.put(ordered.get(index), index);\n+                            }\n+                        });\n+        return ranks;\n+    }\n+\n+    private static Candidate analyze(IndicatorDisplay indicator, int registryOrder) {\n+        List<PathPoint> path = indicator.path();\n+        if (path.size() != 3 || path.stream().anyMatch(point -> point.value() == null)) {\n+            return null;\n+        }\n+\n+        int firstDirection = path.get(1).value().compareTo(path.get(0).value());\n+        int secondDirection = path.get(2).value().compareTo(path.get(1).value());\n+        int persistence;\n+        int direction;\n+        YearMonth movementMonth;\n+        if (firstDirection != 0\n+                && Integer.signum(firstDirection) == Integer.signum(secondDirection)) {\n+            persistence = 2;\n+            direction = Integer.signum(secondDirection);\n+            movementMonth = path.get(2).month();\n+        } else if (firstDirection == 0 && secondDirection != 0) {\n+            persistence = 1;\n+            direction = Integer.signum(secondDirection);\n+            movementMonth = path.get(2).month();\n+        } else if (firstDirection != 0 && secondDirection == 0) {\n+            persistence = 1;\n+            direction = Integer.signum(firstDirection);\n+            movementMonth = path.get(1).month();\n+        } else {\n+            return null;\n+        }\n+\n+        BigDecimal magnitude = path.get(2).value().subtract(path.get(0).value()).abs();\n+        return new Candidate(\n+                indicator,\n+                direction > 0 ? Direction.UP : Direction.DOWN,\n+                persistence,\n+                movementMonth,\n+                magnitude,\n+                registryOrder,\n+                indicator.unit());\n+    }\n+\n+    public enum Direction {\n+        UP,\n+        DOWN\n+    }\n+\n+    public record SelectedSubject(\n+            IndicatorDisplay indicator,\n+            Direction direction,\n+            int persistence,\n+            YearMonth movementMonth) {}\n+\n+    private record Candidate(\n+            IndicatorDisplay indicator,\n+            Direction direction,\n+            int persistence,\n+            YearMonth movementMonth,\n+            BigDecimal magnitude,\n+            int registryOrder,\n+            String unit) {\n+        SelectedSubject toSelectedSubject() {\n+            return new SelectedSubject(indicator, direction, persistence, movementMonth);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelector.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelector.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,21 @@\n+package com.ssafy.thorp.marketflow.infrastructure.config;\n+\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeFormatter;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Configuration;\n+\n+/** Spring을 모르는 서술 도메인 규칙을 애플리케이션 빈으로 연결한다. */\n+@Configuration\n+public class MarketFlowConfig {\n+\n+    @Bean\n+    NarrativeSubjectSelector narrativeSubjectSelector() {\n+        return new NarrativeSubjectSelector();\n+    }\n+\n+    @Bean\n+    NarrativeFormatter narrativeFormatter() {\n+        return new NarrativeFormatter();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/config/MarketFlowConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/config/MarketFlowConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+package com.ssafy.thorp.marketflow.presentation.controller;\n+\n+import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import com.ssafy.thorp.marketflow.application.service.MarketFlowQueryService;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.presentation.response.MarketFlowFieldDetailResponse;\n+import com.ssafy.thorp.marketflow.presentation.response.MarketFlowFieldsResponse;\n+import java.util.Map;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PathVariable;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RequestParam;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/** 로그인과 전략 선택 없이 시장 흐름의 일곱 분야 요약·상세를 조회하는 읽기 전용 API. */\n+@RestController\n+@RequestMapping(\"/market-flow\")\n+public class MarketFlowController {\n+\n+    private final MarketFlowQueryService queryService;\n+\n+    public MarketFlowController(MarketFlowQueryService queryService) {\n+        this.queryService = queryService;\n+    }\n+\n+    @GetMapping(\"/fields\")\n+    public HttpApiResponse<MarketFlowFieldsResponse> getFields(\n+            @RequestParam Map<String, String> queryParameters) {\n+        if (!queryParameters.isEmpty()) {\n+            throw new IllegalArgumentException(\"시장 흐름 분야 조회는 요청 파라미터를 받지 않습니다.\");\n+        }\n+        return HttpApiResponse.ok(MarketFlowFieldsResponse.from(queryService.getFields()));\n+    }\n+\n+    @GetMapping(\"/fields/{fieldId}\")\n+    public HttpApiResponse<MarketFlowFieldDetailResponse> getField(@PathVariable String fieldId) {\n+        return HttpApiResponse.ok(\n+                MarketFlowFieldDetailResponse.from(queryService.getField(FieldId.from(fieldId))));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,21 @@\n+package com.ssafy.thorp.marketflow.presentation.controller;\n+\n+import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import org.springframework.core.Ordered;\n+import org.springframework.core.annotation.Order;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.ExceptionHandler;\n+import org.springframework.web.bind.annotation.RestControllerAdvice;\n+\n+/** 시장 흐름 계약의 {@link HttpApiResponse} 실패 봉투를 유지한다. */\n+@RestControllerAdvice(assignableTypes = MarketFlowController.class)\n+@Order(Ordered.HIGHEST_PRECEDENCE)\n+public class MarketFlowExceptionHandler {\n+\n+    @ExceptionHandler(IllegalArgumentException.class)\n+    public ResponseEntity<HttpApiResponse<Void>> handleInvalidInput(IllegalArgumentException e) {\n+        return ResponseEntity.badRequest()\n+                .body(HttpApiResponse.fail(HttpStatus.BAD_REQUEST, e.getMessage()));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowExceptionHandler.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+package com.ssafy.thorp.marketflow.presentation.response;\n+\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import java.time.Instant;\n+import java.time.YearMonth;\n+import java.util.List;\n+\n+/** 시장 흐름 기본 화면의 분야 한 칸. null 필드도 계약에 명시적으로 남긴다. */\n+public record FieldSummaryResponse(\n+        String fieldId,\n+        String displayName,\n+        int displayOrder,\n+        FieldStatus status,\n+        String narrative,\n+        List<String> narrativeSubjects,\n+        YearMonth referenceMonth,\n+        List<String> referenceMonthHeldBackBy,\n+        Instant lastUpdatedAt,\n+        boolean isExampleData) {\n+\n+    public static FieldSummaryResponse from(MarketFlowField field) {\n+        return new FieldSummaryResponse(\n+                field.fieldId().value(),\n+                field.displayName(),\n+                field.displayOrder(),\n+                field.status(),\n+                field.narrative(),\n+                field.narrativeSubjects(),\n+                field.referenceMonth(),\n+                field.referenceMonthHeldBackBy(),\n+                field.lastUpdatedAt(),\n+                field.exampleData());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/response/FieldSummaryResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/response/FieldSummaryResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,90 @@\n+package com.ssafy.thorp.marketflow.presentation.response;\n+\n+import com.ssafy.thorp.marketflow.domain.model.AfterReferenceMonthRelease;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorDisplay;\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.List;\n+\n+/** 한 분야의 요약과 지표 실제 값·최근 경로를 함께 보내는 응답. */\n+public record MarketFlowFieldDetailResponse(\n+        String fieldId,\n+        String displayName,\n+        int displayOrder,\n+        FieldStatus status,\n+        String narrative,\n+        List<String> narrativeSubjects,\n+        YearMonth referenceMonth,\n+        List<String> referenceMonthHeldBackBy,\n+        Instant lastUpdatedAt,\n+        boolean isExampleData,\n+        String multipleReferenceMonthNotice,\n+        List<IndicatorResponse> indicators) {\n+\n+    public static final String MULTIPLE_REFERENCE_MONTH_NOTICE = \"분야마다 자료가 갖춰진 기준월이 다를 수 있습니다.\";\n+\n+    public static MarketFlowFieldDetailResponse from(MarketFlowField field) {\n+        return new MarketFlowFieldDetailResponse(\n+                field.fieldId().value(),\n+                field.displayName(),\n+                field.displayOrder(),\n+                field.status(),\n+                field.narrative(),\n+                field.narrativeSubjects(),\n+                field.referenceMonth(),\n+                field.referenceMonthHeldBackBy(),\n+                field.lastUpdatedAt(),\n+                field.exampleData(),\n+                MULTIPLE_REFERENCE_MONTH_NOTICE,\n+                field.indicators().stream().map(IndicatorResponse::from).toList());\n+    }\n+\n+    public record IndicatorResponse(\n+            String indicatorId,\n+            String name,\n+            String unit,\n+            BigDecimal value,\n+            List<PathPointResponse> path,\n+            YearMonth referenceMonth,\n+            LocalDate releaseDate,\n+            String source,\n+            String agency,\n+            AfterReferenceMonthReleaseResponse afterReferenceMonthRelease) {\n+\n+        static IndicatorResponse from(IndicatorDisplay indicator) {\n+            return new IndicatorResponse(\n+                    indicator.indicatorId(),\n+                    indicator.name(),\n+                    indicator.unit(),\n+                    indicator.value(),\n+                    indicator.path().stream().map(PathPointResponse::from).toList(),\n+                    indicator.referenceMonth(),\n+                    indicator.releaseDate(),\n+                    indicator.source(),\n+                    indicator.agency(),\n+                    AfterReferenceMonthReleaseResponse.from(\n+                            indicator.afterReferenceMonthRelease()));\n+        }\n+    }\n+\n+    public record PathPointResponse(YearMonth month, BigDecimal value) {\n+        static PathPointResponse from(PathPoint point) {\n+            return new PathPointResponse(point.month(), point.value());\n+        }\n+    }\n+\n+    public record AfterReferenceMonthReleaseResponse(\n+            YearMonth referenceMonth, BigDecimal value, String unit) {\n+        static AfterReferenceMonthReleaseResponse from(AfterReferenceMonthRelease release) {\n+            return release == null\n+                    ? null\n+                    : new AfterReferenceMonthReleaseResponse(\n+                            release.referenceMonth(), release.value(), release.unit());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/response/MarketFlowFieldDetailResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/response/MarketFlowFieldDetailResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.ssafy.thorp.marketflow.presentation.response;\n+\n+import com.ssafy.thorp.marketflow.application.result.MarketFlowSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeFormatter;\n+import java.util.List;\n+\n+/** 일곱 분야 요약 응답. 역사 비교가 최신 개정자료 기준임을 항상 함께 알린다. */\n+public record MarketFlowFieldsResponse(\n+        String registryVersion,\n+        String datasetVersion,\n+        String narrativeRuleVersion,\n+        String historicalComparisonNotice,\n+        List<FieldSummaryResponse> fields) {\n+\n+    public static final String HISTORICAL_COMPARISON_NOTICE =\n+            \"최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.\";\n+\n+    public static MarketFlowFieldsResponse from(MarketFlowSnapshot snapshot) {\n+        return new MarketFlowFieldsResponse(\n+                snapshot.registryVersion(),\n+                snapshot.datasetVersion(),\n+                NarrativeFormatter.RULE_VERSION,\n+                HISTORICAL_COMPARISON_NOTICE,\n+                snapshot.fields().stream().map(FieldSummaryResponse::from).toList());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/response/MarketFlowFieldsResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/presentation/response/MarketFlowFieldsResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,43 @@\n+package com.ssafy.thorp.marketflow.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import java.time.Instant;\n+import java.util.List;\n+import org.junit.jupiter.api.Test;\n+\n+class FieldStatusDeciderTest {\n+\n+    private final FieldStatusDecider decider = new FieldStatusDecider();\n+\n+    @Test\n+    void prioritizesEmptyFailureExampleAndReadyWithoutUsingAge() {\n+        var metadata = List.of(metadata(\"one\"));\n+        Instant veryOld = Instant.parse(\"2000-01-01T00:00:00Z\");\n+\n+        assertThat(decider.decide(List.of(), List.of())).isEqualTo(FieldStatus.EMPTY);\n+        assertThat(\n+                        decider.decide(\n+                                metadata,\n+                                List.of(new IndicatorCollectionState(\"one\", veryOld, false, true))))\n+                .isEqualTo(FieldStatus.COLLECTION_FAILED);\n+        assertThat(\n+                        decider.decide(\n+                                metadata,\n+                                List.of(new IndicatorCollectionState(\"one\", veryOld, true, true))))\n+                .isEqualTo(FieldStatus.EXAMPLE);\n+        assertThat(\n+                        decider.decide(\n+                                metadata,\n+                                List.of(new IndicatorCollectionState(\"one\", veryOld, true, false))))\n+                .isEqualTo(FieldStatus.READY);\n+    }\n+\n+    private static IndicatorMetadata metadata(String id) {\n+        return new IndicatorMetadata(id, FieldId.PRODUCTION, id, \"%\", \"변환\", \"출처\", \"기관\", \"0.1\", 1);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDeciderTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDeciderTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,140 @@\n+package com.ssafy.thorp.marketflow.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.fasterxml.jackson.databind.json.JsonMapper;\n+import com.ssafy.thorp.marketflow.application.repository.MarketFlowFieldSummaryRepository;\n+import com.ssafy.thorp.marketflow.application.result.MarketFlowSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeFormatter;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector;\n+import com.ssafy.thorp.marketflow.infrastructure.example.ExampleMacroIndicatorSnapshotAdapter;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.time.ZoneOffset;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.concurrent.CountDownLatch;\n+import java.util.concurrent.Executors;\n+import java.util.concurrent.Future;\n+import java.util.concurrent.TimeUnit;\n+import org.junit.jupiter.api.Test;\n+\n+class FieldSummaryBuilderTest {\n+\n+    @Test\n+    void sameVersionsProduceTheSameImmutableSevenFieldSnapshot() {\n+        var port = new ExampleMacroIndicatorSnapshotAdapter(JsonMapper.builder().build());\n+        var repository = new InMemoryRepository();\n+        var builder =\n+                new FieldSummaryBuilder(\n+                        port,\n+                        repository,\n+                        new IndicatorDisplayAssembler(port),\n+                        new NarrativeSubjectSelector(),\n+                        new NarrativeFormatter(),\n+                        new FieldStatusDecider(),\n+                        Clock.fixed(Instant.parse(\"2026-09-16T02:00:00Z\"), ZoneOffset.UTC));\n+\n+        var first = builder.ensureCurrentSnapshot();\n+        var second = builder.ensureCurrentSnapshot();\n+\n+        assertThat(first.fields()).hasSize(7).isEqualTo(second.fields());\n+        assertThat(first.fields())\n+                .allSatisfy(\n+                        field -> {\n+                            assertThat(field.status().name()).isEqualTo(\"EXAMPLE\");\n+                            assertThat(field.narrative()).doesNotContain(\"좋다\", \"나쁘다\", \"추천\", \"전망\");\n+                        });\n+        assertThat(first.fields())\n+                .filteredOn(field -> field.fieldId().value().equals(\"production\"))\n+                .singleElement()\n+                .extracting(MarketFlowField::referenceMonthHeldBackBy)\n+                .asList()\n+                .containsExactly(\"service_production\");\n+        assertThat(repository.saveAttempts).isEqualTo(1);\n+    }\n+\n+    /**\n+     * {@code ensureCurrentSnapshot()}의 synchronized가 실제로 한 번의 적재만 남기는지 본다.\n+     *\n+     * <p>이 경계가 풀리면 여러 요청이 같은 버전의 읽기 모델을 동시에 만들어 중복 적재하거나, 절반만 만들어진 목록을 서로 덮어쓴다. 같은 버전이면 같은 결과가 나와야\n+     * 한다는 원칙 VIII이 그 순간 깨진다.\n+     */\n+    @Test\n+    void concurrentCallsBuildAndPersistExactlyOneSnapshot() throws Exception {\n+        var port = new ExampleMacroIndicatorSnapshotAdapter(JsonMapper.builder().build());\n+        var repository = new InMemoryRepository();\n+        var builder =\n+                new FieldSummaryBuilder(\n+                        port,\n+                        repository,\n+                        new IndicatorDisplayAssembler(port),\n+                        new NarrativeSubjectSelector(),\n+                        new NarrativeFormatter(),\n+                        new FieldStatusDecider(),\n+                        Clock.fixed(Instant.parse(\"2026-09-16T02:00:00Z\"), ZoneOffset.UTC));\n+\n+        int threads = 16;\n+        var startTogether = new CountDownLatch(1);\n+        var executor = Executors.newFixedThreadPool(threads);\n+        try {\n+            List<Future<MarketFlowSnapshot>> futures = new ArrayList<>();\n+            for (int i = 0; i < threads; i++) {\n+                futures.add(\n+                        executor.submit(\n+                                () -> {\n+                                    startTogether.await();\n+                                    return builder.ensureCurrentSnapshot();\n+                                }));\n+            }\n+            startTogether.countDown();\n+\n+            List<MarketFlowSnapshot> snapshots = new ArrayList<>();\n+            for (Future<MarketFlowSnapshot> future : futures) {\n+                snapshots.add(future.get(30, TimeUnit.SECONDS));\n+            }\n+\n+            assertThat(snapshots).hasSize(threads);\n+            assertThat(snapshots)\n+                    .allSatisfy(\n+                            snapshot -> {\n+                                assertThat(snapshot.fields()).hasSize(7);\n+                                assertThat(snapshot.fields()).isEqualTo(snapshots.get(0).fields());\n+                            });\n+            assertThat(repository.saveAttempts).isEqualTo(1);\n+        } finally {\n+            executor.shutdownNow();\n+        }\n+    }\n+\n+    private static final class InMemoryRepository implements MarketFlowFieldSummaryRepository {\n+        private List<MarketFlowField> fields = List.of();\n+        private String registryVersion;\n+        private String datasetVersion;\n+        private int saveAttempts;\n+\n+        @Override\n+        public void saveIfAbsent(\n+                String registryVersion,\n+                String datasetVersion,\n+                List<MarketFlowField> fields,\n+                Instant builtAt) {\n+            saveAttempts++;\n+            if (this.fields.isEmpty()) {\n+                this.registryVersion = registryVersion;\n+                this.datasetVersion = datasetVersion;\n+                this.fields = new ArrayList<>(fields);\n+            }\n+        }\n+\n+        @Override\n+        public List<MarketFlowField> findAll(String registryVersion, String datasetVersion) {\n+            if (registryVersion.equals(this.registryVersion)\n+                    && datasetVersion.equals(this.datasetVersion)) {\n+                return List.copyOf(fields);\n+            }\n+            return List.of();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilderTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilderTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,69 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.math.BigDecimal;\n+import java.time.YearMonth;\n+import java.util.List;\n+import org.junit.jupiter.api.Test;\n+\n+class NarrativeFormatterTest {\n+\n+    private final NarrativeSubjectSelector selector = new NarrativeSubjectSelector();\n+    private final NarrativeFormatter formatter = new NarrativeFormatter();\n+\n+    @Test\n+    void formatsOnlyDirectionDurationNameValueAndUnit() {\n+        var indicator = indicator(\"수출 증가율\", \"%\", \"3.2\", \"4.0\", \"4.8\");\n+\n+        String narrative = formatter.format(selector.select(List.of(indicator)), true);\n+\n+        assertThat(narrative).contains(\"수출 증가율\", \"4.8\", \"%\", \"2개월 연속\", \"높아졌습니다\");\n+    }\n+\n+    @Test\n+    void returnsMissingPathSentenceWithoutInventingMovement() {\n+        assertThat(formatter.format(List.of(), false)).isEqualTo(\"최근 3개월 경로를 확인할 수 없습니다.\");\n+    }\n+\n+    @Test\n+    void returnsNeutralSentenceWhenNoDirectionalSubjectExists() {\n+        assertThat(formatter.format(List.of(), true)).isEqualTo(\"최근 3개월 동안 뚜렷한 방향 변화가 없었습니다.\");\n+    }\n+\n+    @Test\n+    void everyFormatterOutputExcludesJudgmentForecastAndRecommendationTerms() {\n+        var outputs =\n+                List.of(\n+                        formatter.format(\n+                                selector.select(List.of(indicator(\"고용\", \"%\", \"3\", \"2\", \"1\"))),\n+                                true),\n+                        formatter.format(List.of(), false),\n+                        formatter.format(List.of(), true));\n+\n+        assertThat(outputs)\n+                .allSatisfy(\n+                        output ->\n+                                assertThat(NarrativeFormatter.findForbiddenTerms(output))\n+                                        .isEmpty());\n+    }\n+\n+    private static IndicatorDisplay indicator(\n+            String name, String unit, String first, String second, String third) {\n+        return new IndicatorDisplay(\n+                name,\n+                name,\n+                unit,\n+                new BigDecimal(third),\n+                List.of(\n+                        new PathPoint(YearMonth.of(2026, 6), new BigDecimal(first)),\n+                        new PathPoint(YearMonth.of(2026, 7), new BigDecimal(second)),\n+                        new PathPoint(YearMonth.of(2026, 8), new BigDecimal(third))),\n+                YearMonth.of(2026, 8),\n+                null,\n+                \"source\",\n+                \"agency\",\n+                null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatterTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatterTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,94 @@\n+package com.ssafy.thorp.marketflow.domain.model;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.math.BigDecimal;\n+import java.time.YearMonth;\n+import java.util.List;\n+import org.junit.jupiter.api.Test;\n+\n+class NarrativeSubjectSelectorTest {\n+\n+    private final NarrativeSubjectSelector selector = new NarrativeSubjectSelector();\n+\n+    @Test\n+    void selectsAtMostTwoSubjectsDeterministicallyWithoutComparingDifferentUnits() {\n+        var percentageSmall = indicator(\"percentage-small\", \"%\", \"1.0\", \"2.0\", \"3.0\");\n+        var wonLarge = indicator(\"won-large\", \"원\", \"100\", \"200\", \"300\");\n+        var percentageLarge = indicator(\"percentage-large\", \"%\", \"1.0\", \"4.0\", \"8.0\");\n+\n+        assertThat(selector.select(List.of(percentageSmall, wonLarge, percentageLarge)))\n+                .extracting(subject -> subject.indicator().indicatorId())\n+                .containsExactly(\"won-large\", \"percentage-large\");\n+    }\n+\n+    @Test\n+    void returnsEmptyWhenEveryPathHasMissingValues() {\n+        var missing = indicator(\"missing\", \"%\", \"1.0\", null, \"2.0\");\n+\n+        assertThat(selector.select(List.of(missing))).isEmpty();\n+    }\n+\n+    @Test\n+    void usesRegistryOrderWhenPersistenceAndComparableMagnitudeAreTied() {\n+        var first = indicator(\"first\", \"%\", \"1.0\", \"2.0\", \"3.0\");\n+        var second = indicator(\"second\", \"%\", \"5.0\", \"6.0\", \"7.0\");\n+\n+        assertThat(selector.select(List.of(first, second)))\n+                .extracting(subject -> subject.indicator().indicatorId())\n+                .containsExactly(\"first\", \"second\");\n+    }\n+\n+    @Test\n+    void ignoresReleaseAfterReferenceMonthWhenSelectingSubjects() {\n+        var base = indicator(\"base\", \"%\", \"1.0\", \"2.0\", \"3.0\");\n+        var withLaterRelease =\n+                new IndicatorDisplay(\n+                        base.indicatorId(),\n+                        base.name(),\n+                        base.unit(),\n+                        base.value(),\n+                        base.path(),\n+                        base.referenceMonth(),\n+                        base.releaseDate(),\n+                        base.source(),\n+                        base.agency(),\n+                        new AfterReferenceMonthRelease(\n+                                YearMonth.of(2026, 9), new BigDecimal(\"9999\"), \"%\"));\n+\n+        var withoutRelease = selector.select(List.of(base)).getFirst();\n+        var afterReleaseExists = selector.select(List.of(withLaterRelease)).getFirst();\n+\n+        assertThat(afterReleaseExists.indicator().indicatorId())\n+                .isEqualTo(withoutRelease.indicator().indicatorId());\n+        assertThat(afterReleaseExists.direction()).isEqualTo(withoutRelease.direction());\n+        assertThat(afterReleaseExists.persistence()).isEqualTo(withoutRelease.persistence());\n+        assertThat(afterReleaseExists.movementMonth()).isEqualTo(withoutRelease.movementMonth());\n+        var formatter = new NarrativeFormatter();\n+        assertThat(formatter.format(List.of(afterReleaseExists), true))\n+                .isEqualTo(formatter.format(List.of(withoutRelease), true));\n+    }\n+\n+    private static IndicatorDisplay indicator(\n+            String id, String unit, String first, String second, String third) {\n+        return new IndicatorDisplay(\n+                id,\n+                id,\n+                unit,\n+                decimal(third),\n+                List.of(\n+                        new PathPoint(YearMonth.of(2026, 6), decimal(first)),\n+                        new PathPoint(YearMonth.of(2026, 7), decimal(second)),\n+                        new PathPoint(YearMonth.of(2026, 8), decimal(third))),\n+                YearMonth.of(2026, 8),\n+                null,\n+                \"source\",\n+                \"agency\",\n+                null);\n+    }\n+\n+    private static BigDecimal decimal(String value) {\n+        return value == null ? null : new BigDecimal(value);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelectorTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelectorTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,80 @@\n+package com.ssafy.thorp.marketflow.presentation;\n+\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.mockito.Mockito.when;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.common.config.SecurityConfig;\n+import com.ssafy.thorp.marketflow.application.result.MarketFlowSnapshot;\n+import com.ssafy.thorp.marketflow.application.service.MarketFlowQueryService;\n+import com.ssafy.thorp.marketflow.domain.model.MarketFlowField;\n+import com.ssafy.thorp.marketflow.domain.model.NarrativeFormatter;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldStatus;\n+import com.ssafy.thorp.marketflow.presentation.controller.MarketFlowController;\n+import com.ssafy.thorp.marketflow.presentation.controller.MarketFlowExceptionHandler;\n+import java.time.Instant;\n+import java.time.YearMonth;\n+import java.util.Arrays;\n+import java.util.List;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+@WebMvcTest(MarketFlowController.class)\n+@Import({SecurityConfig.class, MarketFlowExceptionHandler.class})\n+class MarketFlowControllerContractTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @MockitoBean private MarketFlowQueryService queryService;\n+\n+    @Test\n+    void emptyAndCollectionFailedRemainHttp200WithExplicitNullNarrative() throws Exception {\n+        List<MarketFlowField> fields =\n+                Arrays.stream(FieldId.values())\n+                        .map(\n+                                id -> {\n+                                    FieldStatus status =\n+                                            id == FieldId.PRODUCTION\n+                                                    ? FieldStatus.EMPTY\n+                                                    : id == FieldId.CONSUMPTION_INVESTMENT\n+                                                            ? FieldStatus.COLLECTION_FAILED\n+                                                            : FieldStatus.READY;\n+                                    return field(id, status);\n+                                })\n+                        .toList();\n+        when(queryService.getFields())\n+                .thenReturn(new MarketFlowSnapshot(\"registry-v1\", \"dataset-v1\", fields));\n+\n+        mockMvc.perform(get(\"/market-flow/fields\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.result.fields.length()\").value(7))\n+                .andExpect(jsonPath(\"$.result.fields[0].status\").value(\"EMPTY\"))\n+                .andExpect(jsonPath(\"$.result.fields[0].narrative\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.result.fields[1].status\").value(\"COLLECTION_FAILED\"))\n+                .andExpect(jsonPath(\"$.result.fields[1].narrative\").value(nullValue()));\n+    }\n+\n+    private static MarketFlowField field(FieldId id, FieldStatus status) {\n+        boolean unavailable =\n+                status == FieldStatus.EMPTY || status == FieldStatus.COLLECTION_FAILED;\n+        return new MarketFlowField(\n+                id,\n+                id.value(),\n+                id.ordinal() + 1,\n+                status,\n+                unavailable ? null : \"변화 요약\",\n+                NarrativeFormatter.RULE_VERSION,\n+                List.of(),\n+                unavailable ? null : YearMonth.of(2026, 8),\n+                List.of(),\n+                unavailable ? null : Instant.parse(\"2026-09-16T02:00:00Z\"),\n+                false,\n+                List.of());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/presentation/MarketFlowControllerContractTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/presentation/MarketFlowControllerContractTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,106 @@\n+package com.ssafy.thorp.marketflow.presentation;\n+\n+import static org.hamcrest.Matchers.emptyOrNullString;\n+import static org.hamcrest.Matchers.everyItem;\n+import static org.hamcrest.Matchers.not;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.ValueSource;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+@SpringBootTest(\n+        properties = {\n+            \"spring.mail.username=market-flow-test\",\n+            \"spring.mail.password=market-flow-test\"\n+        })\n+@AutoConfigureMockMvc\n+class MarketFlowControllerIT extends PostgresTestSupport {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbc;\n+\n+    @AfterEach\n+    void removeExampleReadModel() {\n+        jdbc.update(\n+                \"DELETE FROM market_flow_field_summary WHERE registry_version = ? AND dataset_version = ?\",\n+                \"macro-registry-example-v1\",\n+                \"macro-dataset-example-2026-09-16\");\n+    }\n+\n+    @Test\n+    void anonymousUserGetsAllSevenFieldsWithExplicitNullableKeys() throws Exception {\n+        mockMvc.perform(get(\"/market-flow/fields\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.httpStatus\").value(\"OK\"))\n+                .andExpect(jsonPath(\"$.isSuccess\").value(true))\n+                .andExpect(jsonPath(\"$.result.fields.length()\").value(7))\n+                .andExpect(jsonPath(\"$.result.fields[0].narrative\").exists())\n+                .andExpect(jsonPath(\"$.result.historicalComparisonNotice\").isNotEmpty());\n+    }\n+\n+    /**\n+     * 이 엔드포인트는 허용 목록이 비어 있다. 이름을 가리지 않고 거부하는 것이 의도다.\n+     *\n+     * <p>섹터가 경제환경 표시를 바꿀 수 없어야 하는데(FR-016, SC-004), 조용히 무시하면 호출자가 걸러진 줄 착각한다. 같은 화면이 함께 쓰는 012 뉴스\n+     * API는 {@code sectorId}를 실제로 받아 필터하므로 그 호출을 복사해 오기 쉽다. 그렇다고 {@code sectorId}라는 이름만 막으면 {@code\n+     * sector}·{@code sectorCode} 같은 다른 철자가 그대로 통과한다. 그래서 금지 목록이 아니라 빈 허용 목록으로 뒀다.\n+     */\n+    @ParameterizedTest\n+    @ValueSource(\n+            strings = {\n+                \"sectorId=semiconductor\",\n+                \"sector=semiconductor\",\n+                \"sectorCode=SEMI\",\n+                \"utm_source=test\",\n+                \"random=1\",\n+                \"_=1699\",\n+                \"sector=semiconductor&utm_source=test\",\n+                \"sectorId=semiconductor&random=1&_=1699\"\n+            })\n+    void listEndpointRejectsEveryQueryParameter(String queryString) throws Exception {\n+        mockMvc.perform(get(\"/market-flow/fields?\" + queryString))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.httpStatus\").value(\"BAD_REQUEST\"))\n+                .andExpect(jsonPath(\"$.isSuccess\").value(false))\n+                .andExpect(jsonPath(\"$.code\").value(400))\n+                .andExpect(jsonPath(\"$.message\").isNotEmpty())\n+                .andExpect(jsonPath(\"$.result\").isEmpty());\n+    }\n+\n+    @Test\n+    void detailContainsActualValuesSourcesAgencyAndSeparatedLaterRelease() throws Exception {\n+        mockMvc.perform(get(\"/market-flow/fields/labor\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.result.fieldId\").value(\"labor\"))\n+                .andExpect(jsonPath(\"$.result.indicators.length()\").value(2))\n+                .andExpect(jsonPath(\"$.result.indicators[0].value\").isNumber())\n+                .andExpect(jsonPath(\"$.result.indicators[0].source\").isNotEmpty())\n+                .andExpect(jsonPath(\"$.result.indicators[0].agency\").isNotEmpty())\n+                .andExpect(\n+                        jsonPath(\n+                                \"$.result.indicators[*].agency\",\n+                                everyItem(not(emptyOrNullString()))))\n+                .andExpect(\n+                        jsonPath(\"$.result.indicators[1].afterReferenceMonthRelease.referenceMonth\")\n+                                .value(\"2026-09\"))\n+                .andExpect(jsonPath(\"$.result.indicators[1].path[2].month\").value(\"2026-08\"));\n+    }\n+\n+    @Test\n+    void unknownFieldIsBadRequest() throws Exception {\n+        mockMvc.perform(get(\"/market-flow/fields/unknown\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.httpStatus\").value(\"BAD_REQUEST\"))\n+                .andExpect(jsonPath(\"$.isSuccess\").value(false));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/presentation/MarketFlowControllerIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/presentation/MarketFlowControllerIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,153 @@\n+package com.ssafy.thorp.marketflow;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import com.ssafy.thorp.marketflow.infrastructure.example.ExampleMacroIndicatorSnapshotAdapter;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.YearMonth;\n+import java.util.ArrayList;\n+import java.util.Collections;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.boot.test.context.TestConfiguration;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.context.annotation.Primary;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+@SpringBootTest(\n+        properties = {\n+            \"spring.mail.username=market-flow-test\",\n+            \"spring.mail.password=market-flow-test\"\n+        })\n+@AutoConfigureMockMvc\n+@Import(MarketFlowQueryPerformanceIT.LongHistoryFixtureConfig.class)\n+class MarketFlowQueryPerformanceIT extends PostgresTestSupport {\n+\n+    private static final int WARM_UP_COUNT = 30;\n+    private static final int MEASURE_COUNT = 100;\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbc;\n+    @Autowired private LongHistoryPort longHistoryPort;\n+\n+    @AfterEach\n+    void removeExampleReadModel() {\n+        jdbc.update(\n+                \"DELETE FROM market_flow_field_summary WHERE registry_version = ? AND dataset_version = ?\",\n+                \"macro-registry-example-v1\",\n+                \"macro-dataset-example-2026-09-16\");\n+    }\n+\n+    @Test\n+    void recordsP95ForSevenFieldSummaryReadModel() throws Exception {\n+        assertThat(longHistoryPort.observationCount()).isEqualTo(17 * 120);\n+        for (int index = 0; index < WARM_UP_COUNT; index++) {\n+            mockMvc.perform(get(\"/market-flow/fields\")).andExpect(status().isOk());\n+        }\n+\n+        List<Long> elapsedNanos = new ArrayList<>();\n+        for (int index = 0; index < MEASURE_COUNT; index++) {\n+            long startedAt = System.nanoTime();\n+            mockMvc.perform(get(\"/market-flow/fields\")).andExpect(status().isOk());\n+            elapsedNanos.add(System.nanoTime() - startedAt);\n+        }\n+\n+        Collections.sort(elapsedNanos);\n+        double p95Millis = elapsedNanos.get(94) / 1_000_000.0;\n+        System.out.printf(\"MARKET_FLOW_FIELDS_P95_MS=%.3f%n\", p95Millis);\n+        assertThat(p95Millis).isLessThan(2_000.0);\n+    }\n+\n+    @TestConfiguration(proxyBeanMethods = false)\n+    static class LongHistoryFixtureConfig {\n+\n+        @Bean\n+        @Primary\n+        LongHistoryPort longHistoryPort(ObjectMapper objectMapper) {\n+            return new LongHistoryPort(new ExampleMacroIndicatorSnapshotAdapter(objectMapper));\n+        }\n+    }\n+\n+    /** 17개 지표마다 120개월을 보유하되 포트 계약대로 기준월의 마지막 세 점만 노출하는 성능 fixture. */\n+    static final class LongHistoryPort implements MacroIndicatorSnapshotPort {\n+\n+        private static final int MONTH_COUNT = 120;\n+\n+        private final ExampleMacroIndicatorSnapshotAdapter delegate;\n+        private final Map<String, List<PathPoint>> historyByIndicator = new LinkedHashMap<>();\n+\n+        LongHistoryPort(ExampleMacroIndicatorSnapshotAdapter delegate) {\n+            this.delegate = delegate;\n+            FieldReferenceSnapshot references = delegate.loadFieldReferenceMonths();\n+            for (var field : references.fields()) {\n+                for (String indicatorId : field.indicatorIds()) {\n+                    List<PathPoint> history = new ArrayList<>();\n+                    YearMonth firstMonth = field.referenceMonth().minusMonths(MONTH_COUNT - 1L);\n+                    for (int index = 0; index < MONTH_COUNT; index++) {\n+                        history.add(\n+                                new PathPoint(\n+                                        firstMonth.plusMonths(index),\n+                                        BigDecimal.valueOf(index).movePointLeft(1)));\n+                    }\n+                    historyByIndicator.put(indicatorId, List.copyOf(history));\n+                }\n+            }\n+        }\n+\n+        int observationCount() {\n+            return historyByIndicator.values().stream().mapToInt(List::size).sum();\n+        }\n+\n+        @Override\n+        public FieldReferenceSnapshot loadFieldReferenceMonths() {\n+            return delegate.loadFieldReferenceMonths();\n+        }\n+\n+        @Override\n+        public Optional<IndicatorPathSnapshot> loadRecentPath(\n+                String indicatorId, YearMonth referenceMonth) {\n+            List<PathPoint> history = historyByIndicator.get(indicatorId);\n+            if (history == null || !history.getLast().month().equals(referenceMonth)) {\n+                return Optional.empty();\n+            }\n+            IndicatorPathSnapshot original =\n+                    delegate.loadRecentPath(indicatorId, referenceMonth).orElseThrow();\n+            return Optional.of(\n+                    new IndicatorPathSnapshot(\n+                            indicatorId,\n+                            referenceMonth,\n+                            history.subList(history.size() - 3, history.size()),\n+                            original.releaseDate(),\n+                            original.afterReferenceMonthRelease()));\n+        }\n+\n+        @Override\n+        public List<IndicatorMetadata> loadIndicatorMeta(String registryVersion) {\n+            return delegate.loadIndicatorMeta(registryVersion);\n+        }\n+\n+        @Override\n+        public List<IndicatorCollectionState> loadCollectionState() {\n+            return delegate.loadCollectionState();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/MarketFlowQueryPerformanceIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/MarketFlowQueryPerformanceIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,27 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.\n ./gradlew spotlessApply build\n ```\n \n+## 로컬 실행 (`./gradlew bootRun`)\n+\n+`backend/.env`가 필요하다. 없으면 `MAIL_USERNAME` 플레이스홀더를 풀지 못해 기동에 실패한다.\n+`application.yml`이 읽는 `optional:file:./.env`의 `./`는 `bootRun`의 작업 디렉터리인 `backend/`라서,\n+저장소 루트의 `.env`는 여기서 읽히지 않는다. 루트 `.env`는 docker-compose가 쓰는 파일이다.\n+\n+```bash\n+# backend/.env — gitignore 대상이라 각자 만든다. 항목은 루트 .env.example 참고.\n+MAIL_USERNAME=...\n+MAIL_PASSWORD=...\n+```\n+\n+메일 발송을 실제로 확인할 게 아니면 더미 값으로 충분하다. 값이 없을 때 기동이 실패하는 것은\n+의도된 동작이다 — 설정 누락을 조용히 넘기지 않는다.\n+\n+DB와 브로커는 저장소 루트에서 띄운다.\n+\n+```bash\n+docker compose -f docker-compose.dev.yml up -d postgres rabbitmq\n+```\n+\n ## 패키지 규칙 (`com.ssafy.thorp`)\n \n 근거: [ADR-0001](../docs/adr/0001-be-layered-package-architecture.md). 규칙은 `ArchitectureTest`(ArchUnit)가 검증하며, 위반 시 빌드가 실패한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,9 +9,15 @@ info:\n     이 계약에는 경제 전체를 하나의 점수·등급·신호등으로 요약한 필드가 없다(spec FR-003, SC-002, D08).\n     지표 값은 언제나 실제 값과 단위로 보내며 표준화 점수나 거리로 바꾸지 않는다(FR-007, SC-003).\n \n-    섹터는 요청 파라미터에 없다. 섹터 선택이 경제환경 표시를 바꿀 수 없어야 하므로(FR-016, SC-004,\n-    원칙 IV) 요청 단계에서 아예 받지 않는다. 섹터는 화면이 전략·상품·뉴스 범위를 좁힐 때만 쓰고\n-    브라우저 세션에 보관한다.\n+    분야 요약 조회는 쿼리 파라미터를 하나도 받지 않으며, 붙으면 400이다. 섹터 선택이 경제환경\n+    표시를 바꿀 수 없어야 하는데(FR-016, SC-004, 원칙 IV), 조용히 무시하면 호출자가 걸러진 줄\n+    착각할 수 있다. 특히 같은 화면이 함께 쓰는 012 뉴스 API는 `sectorId`를 실제로 받아 필터하므로\n+    그쪽 호출을 복사해 오기 쉽다. 이름 하나만 거부하면 `sector`·`sectorCode` 같은 다른 철자가\n+    그대로 통과하므로, 허용 목록을 비워 두는 쪽으로 정했다.\n+\n+    섹터 자체가 막히는 것은 아니다. 선택 섹터는 브라우저 세션에 보관하며 전략·대표 상품·뉴스\n+    범위를 좁히는 데 쓴다. 막는 것은 경제환경 표시를 섹터로 거르려는 시도 하나뿐이다.\n+    분야를 고르는 것은 경로 변수(`/market-flow/fields/{fieldId}`)이므로 이 규칙과 무관하다.\n \n     상태 집합에 STALE·DELAYED가 없는 것은 의도다. 2026-09-16 clarify가 지연 판정을 폐기했고,\n     대신 모든 항목이 대상월과 마지막 갱신 시각을 실어 사용자가 시점을 직접 판단한다(FR-011, SC-005).\n@@ -25,6 +31,9 @@ paths:\n       description: >-\n         기본 화면이 쓰는 목록이다. 인증이 필요하지 않다(FR-001, D02).\n         분야 순서는 008의 화면 분류 버전이 정하며 사용자 정렬 파라미터를 두지 않는다.\n+\n+        **쿼리 파라미터를 하나도 받지 않는다.** 이름과 무관하게 하나라도 붙으면 400이다\n+        (`?sectorId=`, `?sector=`, `?_=1699`, `?utm_source=` 모두 포함). 이유는 info의 설명을 본다.\n       responses:\n         '200':\n           description: READY, EXAMPLE, EMPTY, COLLECTION_FAILED를 포함한 정상 조회\n@@ -39,6 +48,14 @@ paths:\n                   externalValue: ./examples/fields-example-data.json\n                 collectionFailed:\n                   externalValue: ./examples/fields-collection-failed.json\n+        '400':\n+          description: >-\n+            쿼리 파라미터가 하나라도 붙은 요청. 이 엔드포인트는 입력을 받지 않는다.\n+            캐시 무력화 파라미터가 필요해지면 그 이름만 허용 목록에 더한다.\n+          content:\n+            application/json:\n+              schema:\n+                $ref: '#/components/schemas/ErrorEnvelope'\n   /market-flow/fields/{fieldId}:\n     get:\n       summary: 한 분야의 지표 실제 값과 최근 3개월 경로 조회\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/contracts/openapi.yaml",
+          "old_path": "specs/009-market-flow-overview/contracts/openapi.yaml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,7 +26,7 @@ T015가 이 문제를 먼저 막는다.\n | 묶음 | Jira Task 제목 | T항목 | 근거 요구사항 | Jira |\n |---|---|---|---|---|\n | WB01 | `[BE] 지표 스냅샷 포트와 예시 자료 어댑터` | T001~T006 | FR-007, FR-014, 008 FR-013·FR-014·FR-022, SC-004(재현 기반) | `S15P21E205-268` |\n-| WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | 미발급 |\n+| WB02 | `[BE] 변화 요약 규칙과 시장 흐름 조회 API` | T007~T014 | FR-002, FR-004, FR-008, FR-011, FR-012, FR-013, FR-015, SC-002, SC-005, SC-007 | `S15P21E205-272` |\n | WB03 | `[FE] 시장 흐름 화면 교체와 분야 요약·상세` | T015~T023 | FR-001, FR-003, FR-005, FR-006, FR-007, FR-008, FR-013, FR-014, SC-001, SC-002, SC-003, SC-005 | 미발급 |\n | WB04 | `[FE] 섹터 연결과 참고 정보·연계 진입점` | T024~T030 | FR-009, FR-010, FR-016, FR-017, FR-018, FR-019, SC-004 | 미발급 |\n \n@@ -100,42 +100,42 @@ T015가 이 문제를 먼저 막는다.\n **Independent Test**: 예시 자료를 넣고 `/market-flow/fields`와 `/market-flow/fields/{fieldId}`를 호출해\n [contracts/examples/](contracts/examples/)의 예시와 같은 모양이 오는지 확인한다.\n \n-- [ ] T007 [WB02] [P] [US1] [BE] 서술 대상 지표 선정 규칙 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelector.java`, 같은 경로의 테스트) · Jira 미발급\n+- [x] T007 [WB02] [P] [US1] [BE] 서술 대상 지표 선정 규칙 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeSubjectSelector.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`\n   - ① 방향 지속 길이 → ② 같은 단위끼리의 변화 폭 → ③ 등록표의 분야 내 고정 순서로 가른다. 최대 2개 ([research.md](research.md) R1, FR-004)\n   - **단위가 다른 지표의 변화 폭을 비교하지 않는다.** 대외거래(수출 %, 무역수지 억달러)나 금융·주택(금리 %, 환율 원)에서 성립하지 않기 때문이다\n   - **표준화 점수·거리를 계산에 쓰지 않는다.** 척도 선택은 010 PD-08의 몫이고, 009가 먼저 고르면 두 화면의 설명이 어긋난다\n   - 1단계 값이 전부 0이면 빈 목록을 돌려준다. 억지로 하나를 고르지 않는다\n   - 테스트: 단위가 섞인 분야에서 결과가 결정론적인지, 3개월 경로가 결측이면 빈 목록인지, 동률 입력에서 등록표 순서로 갈리는지\n-- [ ] T008 [WB02] [P] [US1] [BE] 변화 요약 문장 formatter와 금지 어휘 검사 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java`, 같은 경로의 테스트) · Jira 미발급\n+- [x] T008 [WB02] [P] [US1] [BE] 변화 요약 문장 formatter와 금지 어휘 검사 (`backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`\n   - (방향 × 지속 길이) 조합으로 고정된 문장 틀에 지표 이름·값·단위·기간만 채운다. 규칙 버전은 `market-flow-narrative-v1` ([research.md](research.md) R8)\n   - **자유 생성 문장과 LLM 호출을 쓰지 않는다** (spec Assumptions, 원칙 VI)\n   - 3개월 자료가 없으면 '최근 경로 없음'을 뜻하는 문장만 만들고 지어내지 않는다 (Edge Case)\n   - 테스트: 금지 어휘(좋다·나쁘다·유망·전망·기대·추천·비중 확대 등) 목록 전체에 대해 출력에 등장하지 않는지. **SC-002의 \"0건\"을 코드로 받는 자리다**\n-- [ ] T009 [WB02] [US3] [BE] 분야 상태 판정 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDecider.java`, 같은 경로의 테스트) · Jira 미발급\n+- [x] T009 [WB02] [US3] [BE] 분야 상태 판정 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldStatusDecider.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`\n   - 판정 순서는 [data-model.md](data-model.md) \"상태 전이\"를 따른다\n   - **시간 경과만으로 전이하지 않는다.** '얼마나 오래됐는지'로 지연을 판정하는 분기를 두지 않는다 (FR-011, 2026-09-16 clarify)\n   - 테스트: 수집 실패 기록이 있으면 `COLLECTION_FAILED`, 예시 자료면 `EXAMPLE`, 지표 메타가 없으면 `EMPTY`. 오래된 대상월만으로는 상태가 바뀌지 않는다\n-- [ ] T010 [WB02] [US1] [BE] 분야 요약 빌더 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilder.java`, 같은 경로의 테스트) · Jira 미발급\n+- [x] T010 [WB02] [US1] [BE] 분야 요약 빌더 (`backend/src/main/java/com/ssafy/thorp/marketflow/application/service/FieldSummaryBuilder.java`, 같은 경로의 테스트) · Jira `S15P21E205-272`\n   - T007·T008·T009를 조합해 읽기 모델 행을 만들고 T006으로 적재한다\n   - T_g를 물러나게 한 원인 지표를 `referenceMonthHeldBackBy`에 담는다 (Edge Case)\n   - 테스트: 같은 `(registryVersion, datasetVersion)`으로 두 번 만들면 문장·서술 대상 지표·기준월이 100% 같은지 (원칙 VIII)\n-- [ ] T011 [WB02] [US1] [BE] 분야 요약 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, `.../presentation/response/`, MockMvc 테스트) · Jira 미발급\n+- [x] T011 [WB02] [US1] [BE] 분야 요약 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, `.../presentation/response/`, MockMvc 테스트) · Jira `S15P21E205-272`\n   - `GET /market-flow/fields`. 외부 경로는 프록시가 `/api`를 제거하므로 `/market-flow`로 매핑한다 (docs/specs/market-api.md와 같은 규칙)\n   - 응답 봉투는 `HttpApiResponse` 형식(`{httpStatus, isSuccess, message, code, result}`)을 따른다\n-  - **섹터 파라미터를 받지 않는다.** 섹터가 경제환경 표시를 바꿀 수 없어야 하므로 요청 단계에서 차단한다 (FR-016, SC-004, 원칙 IV)\n+  - **쿼리 파라미터를 하나도 받지 않는다. 이름과 무관하게 하나라도 붙으면 400이다.** 섹터가 경제환경 표시를 바꿀 수 없어야 하는데(FR-016, SC-004, 원칙 IV), 조용히 무시하면 호출자가 걸러진 줄 착각한다. 같은 화면이 쓰는 012 뉴스 API가 `sectorId`를 실제로 받아 필터하므로 그 호출을 복사해 오기 쉽다. `sectorId`라는 이름만 거부하면 `sector`·`sectorCode`가 통과하므로 허용 목록을 비워 둔다. 분야를 고르는 것은 경로 변수라 이 규칙과 무관하다\n   - `historicalComparisonNotice`에 '최신 개정자료를 이용한 역사 비교' 고정 문구를 싣는다 (FR-012)\n   - 인증을 요구하지 않는다 (FR-001, D02)\n-  - 테스트: 7개 분야가 항상 오는지, `EMPTY`·`COLLECTION_FAILED`도 HTTP 200인지, 값이 없는 필드가 키 누락이 아니라 명시적 null인지\n-- [ ] T012 [WB02] [US2] [BE] 분야 상세 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, MockMvc 테스트) · Jira 미발급\n+  - 테스트: 7개 분야가 항상 오는지, `EMPTY`·`COLLECTION_FAILED`도 HTTP 200인지, 값이 없는 필드가 키 누락이 아니라 명시적 null인지, 임의의 쿼리 파라미터가 400인지\n+- [x] T012 [WB02] [US2] [BE] 분야 상세 조회 API (`backend/src/main/java/com/ssafy/thorp/marketflow/presentation/controller/MarketFlowController.java`, MockMvc 테스트) · Jira `S15P21E205-272`\n   - `GET /market-flow/fields/{fieldId}`. 7개 고정 분야 밖의 값은 400\n   - 지표마다 실제 값·단위·3개월 경로·대상월·발표일·출처·작성기관을 싣는다 (FR-007, FR-013, FR-015)\n   - **값을 표준화 점수나 거리로 바꾸지 않는다** (FR-007, SC-003)\n   - 테스트: 작성기관이 빠진 지표가 0개인지, 결측 값이 null로 오는지, 잘못된 `fieldId`가 400인지\n-- [ ] T013 [WB02] [US2] [BE] T_g 이후 발표 분리 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira 미발급\n+- [x] T013 [WB02] [US2] [BE] T_g 이후 발표 분리 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira `S15P21E205-272`\n   - `afterReferenceMonthRelease`가 있는 지표에서 그 값이 `path`의 t-2·t-1·t 어디에도 들어가지 않는지 검증한다 (FR-008, 2026-09-16 clarify)\n   - **그 값이 T007의 선정과 T008의 문장에도 쓰이지 않는지** 함께 검증한다. 경로에서만 빼고 서술에 쓰면 clarify 답을 절반만 지킨 것이 된다\n   - `referenceMonth`가 분야 T_g보다 반드시 뒤인지 검증한다\n-- [ ] T014 [WB02] [US1] [BE] 조회 성능 측정 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira 미발급\n+- [x] T014 [WB02] [US1] [BE] 조회 성능 측정 (`backend/src/test/java/com/ssafy/thorp/marketflow/`) · Jira `S15P21E205-272`\n   - 17개 지표 × 120개월 fixture와 Testcontainers PostgreSQL 16에서 30회 warm-up 후 100회 측정한 `/market-flow/fields` p95를 기록한다 ([quickstart.md](quickstart.md) S5)\n   - 측정값을 MR 본문에 남긴다. 목표를 못 맞추면 캐시를 더 얹기 전에 어디서 시간을 쓰는지부터 기록한다 (원칙 IX)\n \n@@ -232,6 +232,7 @@ T015가 이 문제를 먼저 막는다.\n - [ ] T030 [WB04] [FE] 외부 계약 문서 (`docs/specs/market-flow-api.md`) · Jira 미발급\n   - `docs/specs/market-api.md`·`market-news-api.md`와 같은 형식으로 경로·응답·상태를 정리한다\n   - 상태 집합에 `STALE`이 없는 이유(갱신 주기 차이)를 한 줄 적는다. 012 문서와 나란히 읽힐 문서라 다른 이유가 드러나 있어야 한다\n+  - **분야 요약 조회가 쿼리 파라미터를 하나도 받지 않고 붙으면 400이라는 점을 적는다.** 012는 `sectorId`를 받아 필터하므로, 두 문서가 나란히 읽힐 때 왜 다른지가 드러나야 한다\n \n ---\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/tasks.md",
+          "old_path": "specs/009-market-flow-overview/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2208094,
+      "head_commit_sha": "a74367e6d8a9432094717f6b58291fd0671a3ad7",
+      "base_commit_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+      "start_commit_sha": "882d7e12545657ec19afdc9fb7ab9f56ffbac179",
+      "created_at": "2026-09-16T17:34:06.529+09:00",
+      "merge_request_id": 947312,
+      "state": "without_files",
+      "real_size": "23",
+      "patch_id_sha": "c72d398e4343c21b44cd44257f76ce36b435832d",
+      "commits": [
+        {
+          "id": "a74367e6d8a9432094717f6b58291fd0671a3ad7",
+          "short_id": "a74367e6",
+          "created_at": "2026-09-16T17:33:18.000+09:00",
+          "parent_ids": [
+            "39a897d432335f4970a0828a167cbe3b62c684cf"
+          ],
+          "title": "feat(be): 시장 흐름 분야 요약과 상세 조회 API구현",
+          "message": "feat(be): 시장 흐름 분야 요약과 상세 조회 API구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-16T17:33:18.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-16T17:33:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a74367e6d8a9432094717f6b58291fd0671a3ad7"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2818953": []
+  }
+}

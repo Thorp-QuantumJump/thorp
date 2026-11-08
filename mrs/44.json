@@ -1,0 +1,525 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 940454,
+    "iid": 44,
+    "project_id": 1444456,
+    "title": "fix(be): 뉴스 마이그레이션 버전을 V4로 변경해 Flyway 중복 해소",
+    "description": "# 작업 내용 요약\n\n`dev`에 V3가 두 개라 Flyway가 기동하지 못해 DB 테스트가 전부 실패했다. 007 param_search와 012 뉴스가 각각 V3를 쓴 채로 14분 간격으로 머지된 결과다. 나중에 머지된 뉴스 마이그레이션을 V4로 옮겨 중복을 없앴다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket #171\n- link:\n\n# 주요 변경 사항\n\n- `V3__market_news_digest.sql` → `V4__market_news_digest.sql`\n- `FlywayMigrationTest`의 뉴스 단언을 V4로. V1·V2 단언과 param_search의 V3 단언은 그대로\n- `specs/012-market-news-digest`의 plan.md·tasks.md 파일명 참조 갱신\n\n# 테스트\n\n- [x] `./gradlew spotlessCheck` 통과\n- [x] 마이그레이션 관련 44개 통과, 실패 0, skip 0 (`FlywayMigrationTest` 19, `NewsPersistenceIT` 16, `ParamSearchMigrationTest` 9)\n- [ ] `./gradlew build` 전체는 아직 실패. 커넥션 수 초과이며 원인이 달라 별도 이슈로 분리\n\n# 리뷰 포인트\n\n- 전체 빌드 실패는 이 MR 범위가 아니다. `too many clients already`로, DB 테스트 컨텍스트가 늘면서 커넥션 풀이 한도를 넘긴 것이다. 별도 티켓에서 `PostgresTestSupport`에 풀 상한을 둔다.\n- V4는 임시 해소다. `specs/004`가 V4를 `cost_profile_strategy_rules`로 적어 둬서 그대로 두면 같은 충돌이 반복된다. 다음부터는 타임스탬프 방식으로 가기로 했고 컨벤션 문서화는 후속 작업이다.",
+    "state": "merged",
+    "created_at": "2026-09-11T10:30:51.671+09:00",
+    "updated_at": "2026-09-15T15:56:25.719+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-11T10:31:21.958+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/171-flyway-update",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🐞 Bug",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d05ec0f83bc09c808430457e05f57722865e8a83",
+    "merge_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T10:30:52.611+09:00",
+    "reference": "!44",
+    "references": {
+      "short": "!44",
+      "relative": "!44",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!44"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/44",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 940454,
+    "iid": 44,
+    "project_id": 1444456,
+    "title": "fix(be): 뉴스 마이그레이션 버전을 V4로 변경해 Flyway 중복 해소",
+    "description": "# 작업 내용 요약\n\n`dev`에 V3가 두 개라 Flyway가 기동하지 못해 DB 테스트가 전부 실패했다. 007 param_search와 012 뉴스가 각각 V3를 쓴 채로 14분 간격으로 머지된 결과다. 나중에 머지된 뉴스 마이그레이션을 V4로 옮겨 중복을 없앴다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket #171\n- link:\n\n# 주요 변경 사항\n\n- `V3__market_news_digest.sql` → `V4__market_news_digest.sql`\n- `FlywayMigrationTest`의 뉴스 단언을 V4로. V1·V2 단언과 param_search의 V3 단언은 그대로\n- `specs/012-market-news-digest`의 plan.md·tasks.md 파일명 참조 갱신\n\n# 테스트\n\n- [x] `./gradlew spotlessCheck` 통과\n- [x] 마이그레이션 관련 44개 통과, 실패 0, skip 0 (`FlywayMigrationTest` 19, `NewsPersistenceIT` 16, `ParamSearchMigrationTest` 9)\n- [ ] `./gradlew build` 전체는 아직 실패. 커넥션 수 초과이며 원인이 달라 별도 이슈로 분리\n\n# 리뷰 포인트\n\n- 전체 빌드 실패는 이 MR 범위가 아니다. `too many clients already`로, DB 테스트 컨텍스트가 늘면서 커넥션 풀이 한도를 넘긴 것이다. 별도 티켓에서 `PostgresTestSupport`에 풀 상한을 둔다.\n- V4는 임시 해소다. `specs/004`가 V4를 `cost_profile_strategy_rules`로 적어 둬서 그대로 두면 같은 충돌이 반복된다. 다음부터는 타임스탬프 방식으로 가기로 했고 컨벤션 문서화는 후속 작업이다.",
+    "state": "merged",
+    "created_at": "2026-09-11T10:30:51.671+09:00",
+    "updated_at": "2026-09-15T15:56:25.719+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-11T10:31:21.958+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/171-flyway-update",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🐞 Bug",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d05ec0f83bc09c808430457e05f57722865e8a83",
+    "merge_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T10:30:52.611+09:00",
+    "reference": "!44",
+    "references": {
+      "short": "!44",
+      "relative": "!44",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!44"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/44",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "4",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "5bbe0a8580d8a2176bd5ad7ad62373350b972061",
+      "head_sha": "d05ec0f83bc09c808430457e05f57722865e8a83",
+      "start_sha": "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0a352be28ca654e782a9e81e26000b58cb4766ac",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2790882,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. Flyway 마이그레이션 버전 충돌(`V3`)을 해결하기 위해 `012` 관련 마이그레이션 파일과 테스트, 스펙 문서를 `V4`로 깔끔하게 마이그레이션한 올바른 변경입니다.\n\n### 테스트 제안\n- **Flyway 마이그레이션 순차 적용 검증 시나리오**: `V1`, `V2`, `V3`(param_search), `V4`(market_news_digest)가 정의된 순서대로 에러 없이 마이그레이션되고, `flyway_schema_history` 테이블에 각 버전이 올바르게 기록되는지 확인하는 통합 테스트를 수행합니다.\n- **클린 DB 기동 테스트**: 기존 데이터가 없는 상태에서 애플리케이션을 최초 기동할 때 Flyway가 지연이나 충돌 없이 스키마를 정상 생성하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d05ec0f83bc09c808430457e05f57722865e8a83 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-11T10:30:59.240+09:00",
+          "updated_at": "2026-09-11T10:30:59.240+09:00",
+          "system": false,
+          "noteable_id": 940454,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 44,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5e448776e6397991371ebe78796af50da457ca97",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2790898,
+          "type": null,
+          "body": "mentioned in commit 38b32b7ec308449e03fc0453827a3f499b3d8597",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-11T10:31:21.984+09:00",
+          "updated_at": "2026-09-11T10:31:21.988+09:00",
+          "system": true,
+          "noteable_id": 940454,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 44,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7b853bbdb68c4c805ab3789827003f8bae5850ff",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801184,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:55:02.285+09:00",
+          "updated_at": "2026-09-14T12:55:02.293+09:00",
+          "system": true,
+          "noteable_id": 940454,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 44,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "22f91069434b040af2eb42d5111e5efbc3464ad0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801185,
+          "type": null,
+          "body": "requested review from @kendyjenny",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:55:07.333+09:00",
+          "updated_at": "2026-09-14T12:55:07.337+09:00",
+          "system": true,
+          "noteable_id": 940454,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 44,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2185270,
+      "head_commit_sha": "d05ec0f83bc09c808430457e05f57722865e8a83",
+      "base_commit_sha": "5bbe0a8580d8a2176bd5ad7ad62373350b972061",
+      "start_commit_sha": "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6",
+      "created_at": "2026-09-11T10:30:51.976+09:00",
+      "merge_request_id": 940454,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "a07747186ad01a333fb11763263c9031cd9a5ae9"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2185270,
+      "head_commit_sha": "d05ec0f83bc09c808430457e05f57722865e8a83",
+      "base_commit_sha": "5bbe0a8580d8a2176bd5ad7ad62373350b972061",
+      "start_commit_sha": "c9d40e615ffa50d2ebe317b3bce3035dd0c36de6",
+      "created_at": "2026-09-11T10:30:51.976+09:00",
+      "merge_request_id": 940454,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "a07747186ad01a333fb11763263c9031cd9a5ae9",
+      "commits": [
+        {
+          "id": "d05ec0f83bc09c808430457e05f57722865e8a83",
+          "short_id": "d05ec0f8",
+          "created_at": "2026-09-11T10:29:07.000+09:00",
+          "parent_ids": [
+            "5bbe0a8580d8a2176bd5ad7ad62373350b972061"
+          ],
+          "title": "fix(be): 뉴스 마이그레이션 버전을 V4로 변경해 Flyway 중복 해소",
+          "message": "fix(be): 뉴스 마이그레이션 버전을 V4로 변경해 Flyway 중복 해소\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-11T10:29:07.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-11T10:29:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d05ec0f83bc09c808430457e05f57722865e8a83"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V4__market_news_digest.sql",
+          "old_path": "backend/src/main/resources/db/migration/V3__market_news_digest.sql",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -205,20 +205,20 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 적용되어 flyway_schema_history에 성공으로 기록된다\")\n-    void v3IsApplied() {\n+    @DisplayName(\"V4가 적용되어 flyway_schema_history에 성공으로 기록된다\")\n+    void v4IsApplied() {\n         Integer applied =\n                 jdbcTemplate.queryForObject(\n                         \"SELECT COUNT(*) FROM flyway_schema_history\"\n-                                + \" WHERE version = '3' AND success = TRUE\",\n+                                + \" WHERE version = '4' AND success = TRUE\",\n                         Integer.class);\n \n         assertThat(applied).isEqualTo(1);\n     }\n \n     @Test\n-    @DisplayName(\"V3가 뉴스 기사 테이블을 만들고 본문 컬럼을 두지 않는다\")\n-    void v3CreatesNewsArticleWithoutBodyColumns() {\n+    @DisplayName(\"V4가 뉴스 기사 테이블을 만들고 본문 컬럼을 두지 않는다\")\n+    void v4CreatesNewsArticleWithoutBodyColumns() {\n         assertThat(columnsOf(\"news_article\"))\n                 .containsExactlyInAnyOrder(\n                         \"id\",\n@@ -243,8 +243,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3의 어떤 뉴스 테이블에도 본문·Tone 컬럼이 없다 (spec FR-002·SC-001)\")\n-    void v3HasNoBodyOrToneColumnAnywhere() {\n+    @DisplayName(\"V4의 어떤 뉴스 테이블에도 본문·Tone 컬럼이 없다 (spec FR-002·SC-001)\")\n+    void v4HasNoBodyOrToneColumnAnywhere() {\n         List<String> forbidden =\n                 jdbcTemplate.queryForList(\n                         \"SELECT LOWER(table_name) || '.' || LOWER(column_name)\"\n@@ -262,8 +262,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 매체의 등록 도메인과 현재 허가 상태를 둔다 (spec FR-009·FR-015)\")\n-    void v3CreatesPublisherColumns() {\n+    @DisplayName(\"V4가 매체의 등록 도메인과 현재 허가 상태를 둔다 (spec FR-009·FR-015)\")\n+    void v4CreatesPublisherColumns() {\n         assertThat(columnsOf(\"news_publisher\"))\n                 .containsExactlyInAnyOrder(\n                         \"id\",\n@@ -282,8 +282,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 허가 이력을 별도 테이블로 둔다 (spec FR-015)\")\n-    void v3CreatesPermissionHistory() {\n+    @DisplayName(\"V4가 허가 이력을 별도 테이블로 둔다 (spec FR-015)\")\n+    void v4CreatesPermissionHistory() {\n         assertThat(columnsOf(\"news_publisher_permission_history\"))\n                 .containsExactlyInAnyOrder(\n                         \"id\",\n@@ -298,8 +298,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 수집 상태에 INCOMPLETE와 점유 컬럼을 둔다 (spec FR-013·FR-022)\")\n-    void v3CreatesCollectionState() {\n+    @DisplayName(\"V4가 수집 상태에 INCOMPLETE와 점유 컬럼을 둔다 (spec FR-013·FR-022)\")\n+    void v4CreatesCollectionState() {\n         assertThat(columnsOf(\"news_collection_state\"))\n                 .containsExactlyInAnyOrder(\n                         \"source_key\",\n@@ -325,8 +325,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 정리 작업을 수집 뉴스원과 같은 점유 테이블에 seed한다 (spec FR-022)\")\n-    void v3SeedsRetentionCleanupLease() {\n+    @DisplayName(\"V4가 정리 작업을 수집 뉴스원과 같은 점유 테이블에 seed한다 (spec FR-022)\")\n+    void v4SeedsRetentionCleanupLease() {\n         Integer seeded =\n                 jdbcTemplate.queryForObject(\n                         \"SELECT COUNT(*) FROM news_collection_state\"\n@@ -337,8 +337,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 규칙 버전 네 개를 seed한다 (원칙 VIII)\")\n-    void v3SeedsRuleVersions() {\n+    @DisplayName(\"V4가 규칙 버전 네 개를 seed한다 (원칙 VIII)\")\n+    void v4SeedsRuleVersions() {\n         List<String> versions =\n                 jdbcTemplate.queryForList(\n                         \"SELECT rule_version FROM news_rule_version ORDER BY rule_version\",\n@@ -353,8 +353,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3가 canonical URL과 외부 식별자에 UNIQUE를 건다 (spec FR-011·FR-025)\")\n-    void v3CreatesUniqueKeys() {\n+    @DisplayName(\"V4가 canonical URL과 외부 식별자에 UNIQUE를 건다 (spec FR-011·FR-025)\")\n+    void v4CreatesUniqueKeys() {\n         List<String> uniques =\n                 jdbcTemplate.queryForList(\n                         \"SELECT LOWER(constraint_name) FROM information_schema.table_constraints\"\n@@ -371,8 +371,8 @@ class FlywayMigrationTest extends PostgresTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"V3는 섹터 마스터 테이블을 만들지 않는다 (spec FR-005)\")\n-    void v3DoesNotOwnSectorIdentifiers() {\n+    @DisplayName(\"V4는 섹터 마스터 테이블을 만들지 않는다 (spec FR-005)\")\n+    void v4DoesNotOwnSectorIdentifiers() {\n         List<String> sectorTables =\n                 jdbcTemplate.queryForList(\n                         \"SELECT LOWER(table_name) FROM information_schema.tables\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,7 +16,7 @@\n \n **Primary Dependencies**: Spring Boot 3.5.4, Spring Web, Validation, Data JPA, Actuator, Java HTTP client/XML parser, Jackson\n \n-**Storage**: PostgreSQL 16, Flyway migration `V3__market_news_digest.sql`; 기사 본문·HTML·이미지는 저장하지 않음\n+**Storage**: PostgreSQL 16, Flyway migration `V4__market_news_digest.sql`; 기사 본문·HTML·이미지는 저장하지 않음\n \n **Testing**: JUnit 5, Spring Boot Test, MockMvc, ArchUnit, Testcontainers PostgreSQL 16, 고정 `Clock`, RSS/GDELT 로컬 fixture\n \n@@ -93,7 +93,7 @@ backend/\n │       ├── persistence/\n │       └── scheduling/\n ├── src/main/resources/\n-│   └── db/migration/V3__market_news_digest.sql\n+│   └── db/migration/V4__market_news_digest.sql\n └── src/test/java/com/ssafy/thorp/news/\n     ├── presentation/\n     ├── application/\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/012-market-news-digest/plan.md",
+          "old_path": "specs/012-market-news-digest/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,7 +28,7 @@\n \n **⚠️ CRITICAL**: 이 단계가 끝나기 전에 사용자 스토리 구현을 시작하지 않는다.\n \n-- [X] T004 Add PostgreSQL tables, constraints, indexes, seed rule versions, publisher current permission state and registered domain, append-only permission history, collection state including the `INCOMPLETE` status, and a collection lease schema shared by ingestion sources and the `retention-cleanup` job in `backend/src/main/resources/db/migration/V3__market_news_digest.sql`, then extend schema expectations in `backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java`\n+- [X] T004 Add PostgreSQL tables, constraints, indexes, seed rule versions, publisher current permission state and registered domain, append-only permission history, collection state including the `INCOMPLETE` status, and a collection lease schema shared by ingestion sources and the `retention-cleanup` job in `backend/src/main/resources/db/migration/V4__market_news_digest.sql`, then extend schema expectations in `backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java`\n - [X] T005 Define pure Java enums and value objects for source type, permission event/status/allowed fields, publication-time certainty, collection status including `INCOMPLETE`, digest state, exposure mode, deterministically derived stable IDs, and normalized URLs in `backend/src/main/java/com/ssafy/thorp/news/domain/vo/NewsSourceType.java`, `PermissionEventType.java`, `PermissionStatus.java`, `NewsAllowedField.java`, `PublicationTimeStatus.java`, `NewsDigestState.java`, `NewsExposureMode.java`, `NewsArticleId.java`, `NewsDigestId.java`, and `CanonicalNewsUrl.java`\n - [X] T006 Define article, digest, publisher, append-only permission-history, collection-state, and rule-version domain models with body-free invariants, deterministic external ID derivation from business keys, and permission-aware digest projection helpers in `backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsArticle.java`, `NewsDigest.java`, `NewsPublisher.java`, `NewsPublisherPermissionHistory.java`, `NewsCollectionState.java`, and `NewsRuleVersion.java`, with invariant tests in `backend/src/test/java/com/ssafy/thorp/news/domain/model/NewsDomainModelTest.java`\n - [X] T007 [P] Define source records and application ports without Spring/JPA/Jackson dependencies in `backend/src/main/java/com/ssafy/thorp/news/application/port/NewsSourceClient.java`, `RssNewsSource.java`, `GdeltNewsSource.java`, `NewsCollectionLease.java`, and `backend/src/main/java/com/ssafy/thorp/news/application/result/CollectedNewsItem.java`\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/012-market-news-digest/tasks.md",
+          "old_path": "specs/012-market-news-digest/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2790882": []
+  }
+}

@@ -1,0 +1,754 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 964214,
+    "iid": 418,
+    "project_id": 1444456,
+    "title": "fix(fe): spec013개선-B12 review",
+    "description": "# 작업 내용 요약\n\nB12(글 기록·완료·확인 문제 화면) 병합 뒤 코드 리뷰의 지적 13건을 고친다. 바뀐 글의 기록 실패를 되풀이되는 '다시 시도' 대신 '다시 불러오기'로 안내하고, 로그인 확인 중의 알림·머문 시간 처리를 바로잡으며, 글 끝 그리기와 중복된 기록 통로를 한곳으로 모은다. B13 이후의 dev를 병합해 완료 카드의 '나의 학습' 후속 조회와 함께 동작하게 했다.\n\n# 주요 변경 사항\n\n- 글 기록 조회가 404 `LEARNING_ARTICLE_UNAVAILABLE`이면 '이 글이 바뀌었습니다'와 '다시 불러오기'를 보인다\n- 로그인 상태를 다시 확인하는 동안 알림 영역도 기록 자리와 함께 보조 기술에서 빼고, 그동안 온 알림은 같은 사용자로 확인된 뒤 한 번만 알린다(R33). dev의 완료 알림(`CompletionAnnouncement`)에는 `QuietNotice`의 선택 속성 `held`로 이었다\n- 글을 다시 불러와도 머문 시간을 처음부터 세지 않고 완료 판정만 다시 연다\n- 글 끝에 그릴 것은 기록 훅의 `endView`가 정한다. 완료 카드에 '나의 학습' 후속 조회(T204)와 방금 완료한 도장 움직임(`fresh`)을 잇는다\n- 완료·첫 답·다시 풀기 통로와 실패 줄, 본문 끝 선택자·세션 키, CSRF 쿠키·헤더 이름(keepalive 요청 포함)을 한곳으로 모은다\n- 완료 시각이 없으면 빈 날짜 대신 '완료'만 보인다. T189에 '읽은 정도' 막대를 적고, frontend/CLAUDE.md에 keepalive 예외와 navigation state 타입 자리를 적는다\n\n# 테스트\n\n- [x] `npm run lint` 오류 0, `npm run build` 통과, `npm test` 202파일 2,146건 통과(skipped 0)\n- [x] dev 병합의 충돌 해결을 세 관점(양쪽 의도 보존, 새 코드 경로, 파일 사이 상호작용)으로 AI 리뷰: 지적 0건\n\n# 리뷰 포인트\n\n- 공용 `QuietNotice`에 `held`를 더했다. 요약 패널·나의 학습 화면은 넘기지 않아 동작이 같다. 글 끝에서만 확인 중 알림을 미룬다\n- 완료 카드의 후속 조회는 `endView`가 카드일 때만 켠다(dev의 판정과 같은 조건)\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 기록·알림 처리만 바꿨다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 완료 시각이 없으면 빈 날짜를 만들지 않고 '완료'만 보인다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 기록되지 않았거나 바뀐 글은 실패로 보이고, 확인 중에는 기록 자리와 알림을 내보이지 않는다",
+    "state": "merged",
+    "created_at": "2026-10-12T19:19:20.757+09:00",
+    "updated_at": "2026-10-12T19:19:25.657+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-12T19:19:25.243+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/learning-article-records-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "08100e0c2430bf5b2e9ea96964e88b5695c961d6",
+    "merge_commit_sha": "513f8325408ee82a3ea09abc6d040fde50ecd2ba",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-12T19:19:24.563+09:00",
+    "reference": "!418",
+    "references": {
+      "short": "!418",
+      "relative": "!418",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!418"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/418",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 964214,
+    "iid": 418,
+    "project_id": 1444456,
+    "title": "fix(fe): spec013개선-B12 review",
+    "description": "# 작업 내용 요약\n\nB12(글 기록·완료·확인 문제 화면) 병합 뒤 코드 리뷰의 지적 13건을 고친다. 바뀐 글의 기록 실패를 되풀이되는 '다시 시도' 대신 '다시 불러오기'로 안내하고, 로그인 확인 중의 알림·머문 시간 처리를 바로잡으며, 글 끝 그리기와 중복된 기록 통로를 한곳으로 모은다. B13 이후의 dev를 병합해 완료 카드의 '나의 학습' 후속 조회와 함께 동작하게 했다.\n\n# 주요 변경 사항\n\n- 글 기록 조회가 404 `LEARNING_ARTICLE_UNAVAILABLE`이면 '이 글이 바뀌었습니다'와 '다시 불러오기'를 보인다\n- 로그인 상태를 다시 확인하는 동안 알림 영역도 기록 자리와 함께 보조 기술에서 빼고, 그동안 온 알림은 같은 사용자로 확인된 뒤 한 번만 알린다(R33). dev의 완료 알림(`CompletionAnnouncement`)에는 `QuietNotice`의 선택 속성 `held`로 이었다\n- 글을 다시 불러와도 머문 시간을 처음부터 세지 않고 완료 판정만 다시 연다\n- 글 끝에 그릴 것은 기록 훅의 `endView`가 정한다. 완료 카드에 '나의 학습' 후속 조회(T204)와 방금 완료한 도장 움직임(`fresh`)을 잇는다\n- 완료·첫 답·다시 풀기 통로와 실패 줄, 본문 끝 선택자·세션 키, CSRF 쿠키·헤더 이름(keepalive 요청 포함)을 한곳으로 모은다\n- 완료 시각이 없으면 빈 날짜 대신 '완료'만 보인다. T189에 '읽은 정도' 막대를 적고, frontend/CLAUDE.md에 keepalive 예외와 navigation state 타입 자리를 적는다\n\n# 테스트\n\n- [x] `npm run lint` 오류 0, `npm run build` 통과, `npm test` 202파일 2,146건 통과(skipped 0)\n- [x] dev 병합의 충돌 해결을 세 관점(양쪽 의도 보존, 새 코드 경로, 파일 사이 상호작용)으로 AI 리뷰: 지적 0건\n\n# 리뷰 포인트\n\n- 공용 `QuietNotice`에 `held`를 더했다. 요약 패널·나의 학습 화면은 넘기지 않아 동작이 같다. 글 끝에서만 확인 중 알림을 미룬다\n- 완료 카드의 후속 조회는 `endView`가 카드일 때만 켠다(dev의 판정과 같은 조건)\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 기록·알림 처리만 바꿨다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 완료 시각이 없으면 빈 날짜를 만들지 않고 '완료'만 보인다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 기록되지 않았거나 바뀐 글은 실패로 보이고, 확인 중에는 기록 자리와 알림을 내보이지 않는다",
+    "state": "merged",
+    "created_at": "2026-10-12T19:19:20.757+09:00",
+    "updated_at": "2026-10-12T19:19:25.657+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-12T19:19:25.243+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/learning-article-records-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "08100e0c2430bf5b2e9ea96964e88b5695c961d6",
+    "merge_commit_sha": "513f8325408ee82a3ea09abc6d040fde50ecd2ba",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-12T19:19:24.563+09:00",
+    "reference": "!418",
+    "references": {
+      "short": "!418",
+      "relative": "!418",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!418"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/418",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "18",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "383ce4b15f23f1464722226d59d2c3008cbd9abf",
+      "head_sha": "08100e0c2430bf5b2e9ea96964e88b5695c961d6",
+      "start_sha": "383ce4b15f23f1464722226d59d2c3008cbd9abf"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "eb933df53d56d29f1150a98e95fa555d830179b9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884295,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T19:19:20.862+09:00",
+          "updated_at": "2026-10-12T19:19:20.866+09:00",
+          "system": true,
+          "noteable_id": 964214,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 418,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "72d5fb87141a3e8bccc699d247bdb546f5532c4e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884296,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T19:19:20.905+09:00",
+          "updated_at": "2026-10-12T19:19:20.922+09:00",
+          "system": true,
+          "noteable_id": 964214,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 418,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "87010aed084f891961d0197c72366157bbbc3806",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884297,
+          "type": null,
+          "body": "mentioned in commit 513f8325408ee82a3ea09abc6d040fde50ecd2ba",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T19:19:24.898+09:00",
+          "updated_at": "2026-10-12T19:19:24.901+09:00",
+          "system": true,
+          "noteable_id": 964214,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 418,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "84f40916d2478430e05b0f514e71880e3d8aa9cc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884298,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Low] `frontend/src/api/learningMe.ts`: `post` 헬퍼 함수가 제네릭 파라미터 `F`를 사용하여 에러 타입을 유연하게 처리하도록 개선되었으나, 타입 시그니처와 구현부에서 `MeFailure` 타입과 `F`의 합집합 처리 시 잠재적인 타입 좁히기(type narrowing) 누락 가능성이 있습니다. 다만 컴파일 및 테스트를 통과하므로 실행 가능한 치명적 버그는 아닙니다.\n\n### 테스트 제안\n- 다른 곳에서 글이 수정되어 404 `LEARNING_ARTICLE_UNAVAILABLE` (또는 `stale`) 응답을 받았을 때, '다시 시도' 버튼 대신 '다시 불러오기' 버튼이 노출되는지와 해당 버튼 클릭 시 글이 정상적으로 재조회되는지 시나리오 테스트를 수행합니다.\n- 로그인 상태 재확인(`checking` / `error`) 중 발생한 알림이 `QuietNotice`의 `held` 속성에 의해 보류되었다가, 동일 사용자로 세션이 복원된 후 정확히 한 번만 읽히는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:08100e0c2430bf5b2e9ea96964e88b5695c961d6 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-12T19:19:32.305+09:00",
+          "updated_at": "2026-10-12T19:19:32.305+09:00",
+          "system": false,
+          "noteable_id": 964214,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 418,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "61413e46515a5815b5f4c9cabaaf4b07a9c0dc29",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884996,
+          "type": null,
+          "body": "mentioned in commit 58439de1f6e7b7168734d2de40d4a3511bb9d7fb",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:06.287+09:00",
+          "updated_at": "2026-10-13T15:16:06.402+09:00",
+          "system": true,
+          "noteable_id": 964214,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 418,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2264943,
+      "head_commit_sha": "08100e0c2430bf5b2e9ea96964e88b5695c961d6",
+      "base_commit_sha": "383ce4b15f23f1464722226d59d2c3008cbd9abf",
+      "start_commit_sha": "383ce4b15f23f1464722226d59d2c3008cbd9abf",
+      "created_at": "2026-10-12T19:19:21.246+09:00",
+      "merge_request_id": 964214,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "df478b388f9d6daadc18f52280a4f4510a488f9d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2264943,
+      "head_commit_sha": "08100e0c2430bf5b2e9ea96964e88b5695c961d6",
+      "base_commit_sha": "383ce4b15f23f1464722226d59d2c3008cbd9abf",
+      "start_commit_sha": "383ce4b15f23f1464722226d59d2c3008cbd9abf",
+      "created_at": "2026-10-12T19:19:21.246+09:00",
+      "merge_request_id": 964214,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "df478b388f9d6daadc18f52280a4f4510a488f9d",
+      "commits": [
+        {
+          "id": "08100e0c2430bf5b2e9ea96964e88b5695c961d6",
+          "short_id": "08100e0c",
+          "created_at": "2026-10-12T19:11:16.000+09:00",
+          "parent_ids": [
+            "ad9f7f09a2d575e1bf398a3f4431321c32a4c208",
+            "383ce4b15f23f1464722226d59d2c3008cbd9abf"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into fix(fe)/learning-article-records-review",
+          "message": "Merge remote-tracking branch 'origin/dev' into fix(fe)/learning-article-records-review\n\nB13(나의 학습 화면)과 B14·B15가 병합된 dev를 받는다. 글 끝은 B12 리뷰 수정의 endView 구조를\n그대로 두고 dev의 완료 뒤 '나의 학습' 다시 받기(useCompletionFollowUp)와 완료 카드의 새 속성을\n잇는다. endView 카드에 이 화면에서 방금 완료했는지(fresh)를 싣고, 확인하는 동안 온 알림을\n미뤘다가 한 번만 넣는 동작은 dev의 CompletionAnnouncement와 QuietNotice(held)로 옮긴다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-12T19:11:16.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-12T19:11:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/08100e0c2430bf5b2e9ea96964e88b5695c961d6"
+        },
+        {
+          "id": "ad9f7f09a2d575e1bf398a3f4431321c32a4c208",
+          "short_id": "ad9f7f09",
+          "created_at": "2026-10-07T18:06:36.000+09:00",
+          "parent_ids": [
+            "04b5838e29ab62a441f43f5e8ab9295ac6ede7e1"
+          ],
+          "title": "fix(fe): B12 리뷰 지적 13건을 고친다",
+          "message": "fix(fe): B12 리뷰 지적 13건을 고친다\n\n병합 뒤 두 축 코드 리뷰(기준 908039d0)의 지적을 모두 반영한다.\n\nspec 축\n- 글 기록 조회가 404 LEARNING_ARTICLE_UNAVAILABLE이면 같은 실패를 되풀이하는 '다시 시도'\n  대신 '이 글이 바뀌었습니다'와 '다시 불러오기'를 보인다\n- 확인하는 동안에는 알림 영역도 기록 자리와 함께 보조 기술에서 빼고, 그동안 온 알림은\n  같은 사용자로 확인된 뒤 한 번만 알린다(R33)\n- 글을 다시 불러와도 머문 시간을 처음부터 세지 않는다. 완료 판정만 다시 열어(rearmKey)\n  글 끝을 보고 있었다면 바로 다시 보낸다\n- '읽은 정도' 막대를 T189에 적어 추적되게 한다\n\n표준 축\n- 글 끝에 무엇을 그릴지는 기록 훅이 endView로 정하고, 글 끝은 그대로 그린다\n- 완료·첫 답·다시 풀기 통로, 실패 줄, 첫 답·다시 풀기 처리, 잠긴·답한 보기 목록의 중복을\n  한곳으로 모은다. '다른 곳에서 바뀜' 판정도 한 함수다\n- 본문 끝 선택자와 세션 키를 articleMarkers.ts로 모은다\n- CSRF 쿠키·헤더 이름을 client.ts 상수로 두고 keepalive 요청도 쓴다\n- 완료 시각이 없으면 빈 날짜 대신 '완료'만 보인다\n- frontend/CLAUDE.md에 keepalive fetch 예외와 navigation state 타입 자리를 적는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-07T18:06:36.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-07T18:06:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ad9f7f09a2d575e1bf398a3f4431321c32a4c208"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -2,13 +2,17 @@ import axios from 'axios'\n import type { ApiErrorCode, ServiceApiErrorCode } from '@/types/api'\n import type { AuthFieldError } from '@/types/auth'\n \n+/** CSRF 토큰을 담는 쿠키와 그 값을 싣는 헤더. `apiClient`를 거치지 않는 요청(keepalive 등)도 이 이름을 쓴다. */\n+export const XSRF_COOKIE_NAME = 'XSRF-TOKEN'\n+export const XSRF_HEADER_NAME = 'X-XSRF-TOKEN'\n+\n /** 공용 API 클라이언트. 개발 중에는 vite proxy(/api → localhost:8080)를 탄다. */\n export const apiClient = axios.create({\n   baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',\n   timeout: 10_000,\n   withCredentials: true,\n-  xsrfCookieName: 'XSRF-TOKEN',\n-  xsrfHeaderName: 'X-XSRF-TOKEN',\n+  xsrfCookieName: XSRF_COOKIE_NAME,\n+  xsrfHeaderName: XSRF_HEADER_NAME,\n })\n \n type AuthenticationRequiredListener = () => void\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/client.ts",
+          "old_path": "frontend/src/api/client.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -140,7 +140,7 @@ describe('나의 학습 통로', () => {\n     expect(get.mock.calls[0][0]).toBe('/auth/csrf')\n     expect(get.mock.invocationCallOrder[0]).toBeLessThan(post.mock.invocationCallOrder[0])\n     expect(post.mock.calls[0][0]).toBe('/learning/me/articles/swell-reading/completion')\n-    expect(post.mock.calls[0]).toHaveLength(1)\n+    expect(post.mock.calls[0][1]).toBeUndefined()\n     expect(result).toEqual({ status: 'ok', data: completionResult })\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/learningMe.test.ts",
+          "old_path": "frontend/src/api/learningMe.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n import {\n   ApiClientError,\n+  XSRF_COOKIE_NAME,\n+  XSRF_HEADER_NAME,\n   apiClient,\n   normalizeApiError,\n   prepareCsrfToken,\n@@ -557,69 +559,58 @@ export function fetchLearnerArticle(\n \n // ── 상태 변경 ────────────────────────────────────────────────────────────────\n \n-async function mutate<T>(\n-  request: () => Promise<{ data: ApiEnvelope<unknown> }>,\n+/**\n+ * CSRF로 감싼 POST를 보내고 응답을 읽는다. 실패는 던지지 않고 `toError`로 결과 합집합에 담는다. 완료·첫 답·다시\n+ * 풀기가 같은 모양이라 한곳에 둔다.\n+ */\n+async function post<T, F>(\n+  path: string,\n+  body: object | undefined,\n   read: (value: unknown) => T | null,\n-): Promise<T | null> {\n-  const response = await runCsrfProtectedMutation(request)\n-  return read(unwrap(response.data))\n-}\n-\n-/** 완료(계약 §4). 화면이 본문 끝과 최소 머문 시간이 함께 참이 되는 첫 순간에 한 번 보낸다. */\n-export async function completeArticle(\n-  articleId: string,\n-): Promise<LearningMeResult<CompletionResult>> {\n+  toError: (error: unknown) => F,\n+): Promise<{ status: 'ok'; data: T } | MeFailure | F> {\n   try {\n-    const data = await mutate(\n-      () => apiClient.post<ApiEnvelope<unknown>>(`${articlePath(articleId)}/completion`),\n-      readCompletion,\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ApiEnvelope<unknown>>(path, body),\n     )\n+    const data = read(unwrap(response.data))\n     return data ? { status: 'ok', data } : unreadable()\n   } catch (error) {\n-    return toFailure(error)\n+    return toError(error)\n   }\n }\n \n+/** 완료(계약 §4). 화면이 본문 끝과 최소 머문 시간이 함께 참이 되는 첫 순간에 한 번 보낸다. */\n+export function completeArticle(articleId: string): Promise<LearningMeResult<CompletionResult>> {\n+  return post(`${articlePath(articleId)}/completion`, undefined, readCompletion, toFailure)\n+}\n+\n /** 첫 답(계약 §5). 이미 답한 문제면 저장된 첫 답이 `alreadyAnswered`로 온다. */\n-export async function answerQuestion(\n+export function answerQuestion(\n   articleId: string,\n   questionId: string,\n   choiceId: string,\n ): Promise<LearningAnswerResult<AnswerResult>> {\n-  try {\n-    const data = await mutate(\n-      () =>\n-        apiClient.post<ApiEnvelope<unknown>>(`${articlePath(articleId)}/answers`, {\n-          questionId,\n-          choiceId,\n-        }),\n-      readAnswer,\n-    )\n-    return data ? { status: 'ok', data } : unreadable()\n-  } catch (error) {\n-    return toAnswerFailure(error)\n-  }\n+  return post(\n+    `${articlePath(articleId)}/answers`,\n+    { questionId, choiceId },\n+    readAnswer,\n+    toAnswerFailure,\n+  )\n }\n \n /** 다시 풀기(계약 §6). 답을 저장하지 않고, 맞히면 익힘만 준다. */\n-export async function retryAnswer(\n+export function retryAnswer(\n   articleId: string,\n   questionId: string,\n   choiceId: string,\n ): Promise<LearningAnswerResult<RetryResult>> {\n-  try {\n-    const data = await mutate(\n-      () =>\n-        apiClient.post<ApiEnvelope<unknown>>(`${articlePath(articleId)}/retry-answers`, {\n-          questionId,\n-          choiceId,\n-        }),\n-      readRetry,\n-    )\n-    return data ? { status: 'ok', data } : unreadable()\n-  } catch (error) {\n-    return toAnswerFailure(error)\n-  }\n+  return post(\n+    `${articlePath(articleId)}/retry-answers`,\n+    { questionId, choiceId },\n+    readRetry,\n+    toAnswerFailure,\n+  )\n }\n \n /** 학습 초기화(계약 §7). 회원정보 화면이 확인을 받은 뒤 부른다. */\n@@ -679,8 +670,8 @@ function readCookie(name: string): string | null {\n export function sendPositionOnLeave(articleId: string, percent: number): void {\n   const base = apiClient.defaults.baseURL ?? '/api'\n   const headers: Record<string, string> = { 'Content-Type': 'application/json' }\n-  const token = readCookie('XSRF-TOKEN')\n-  if (token) headers['X-XSRF-TOKEN'] = token\n+  const token = readCookie(XSRF_COOKIE_NAME)\n+  if (token) headers[XSRF_HEADER_NAME] = token\n   try {\n     void fetch(`${base}${articlePath(articleId)}/position`, {\n       method: 'PUT',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/learningMe.ts",
+          "old_path": "frontend/src/api/learningMe.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -69,7 +69,9 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article\n   const endRef = useRef<HTMLDivElement>(null)\n   useRestoreFocusAfterConceal(endRef, concealed)\n   const concealable = concealed ? styles.concealed : undefined\n+  const carried = learningReturn ? { learningReturn } : undefined\n   const unrecorded = mode.kind === 'guest' || mode.kind === 'expired'\n+  const view = mode.kind === 'record' ? mode.learner.endView : null\n \n   // 완료 카드의 다음 목표(레벨 길·다음 레벨까지·다음 배지)와 단계 완주 메달의 배지는 '나의 학습' 전체에서 읽는다(T204,\n   // US6 시나리오 8). 그 요청의 정산으로 생긴 것은 카드에 잇고 알린다. 받지 못해도 카드의 글자는 그대로다.\n@@ -77,32 +79,31 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article\n   const learner = mode.kind === 'record' ? mode.learner : null\n   const followUp = useCompletionFollowUp({\n     auth: settled,\n-    enabled: learner !== null && hasCompletionCard(learner),\n+    enabled: view?.kind === 'card',\n     articleRevision: learner?.articleRevision ?? 0,\n     gainedCount: learner?.gained.length ?? 0,\n   })\n \n-  const card = learner ? completionCard(article, learner, learningReturn, followUp) : null\n-\n   return (\n     <div ref={endRef} className={styles.end}>\n-      {/* 새 배지·레벨 알림 영역. 완료 카드보다 먼저, 비어 있는 채로 둔다. 미리 있어야 바뀐 글자가 읽힌다(FR-030). */}\n+      {/*\n+        새 배지·레벨 알림 영역. 완료 카드보다 먼저, 비어 있는 채로 둔다. 미리 있어야 바뀐 글자가 읽힌다(FR-030).\n+        확인하는 동안에는 기록 자리와 함께 보조 기술에서 빠진다(R33).\n+      */}\n       {mode.kind === 'record' ? (\n-        <CompletionAnnouncement\n-          announcement={mode.learner.announcement}\n-          notice={followUp.notice}\n-          ready={followUp.finished}\n-        />\n+        <div className={concealable}>\n+          <CompletionAnnouncement\n+            announcement={mode.learner.announcement}\n+            notice={followUp.notice}\n+            ready={followUp.finished}\n+            held={concealed}\n+          />\n+        </div>\n       ) : null}\n \n       {mode.kind === 'expired' && mode.rejected ? (\n         <div className={concealable}>\n-          <p className={styles.lineText} role=\"alert\">\n-            <span>기록되지 않았습니다.</span>\n-            <button type=\"button\" className={styles.inlineButton} onClick={mode.onRetry}>\n-              다시 시도\n-            </button>\n-          </p>\n+          <FailureLine message=\"기록되지 않았습니다.\" action=\"다시 시도\" onAction={mode.onRetry} />\n         </div>\n       ) : null}\n \n@@ -113,18 +114,25 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article\n         </div>\n       ) : null}\n \n-      {mode.kind === 'record' ? (\n-        <div className={concealable}>{card ?? <RecordFailureLine learner={mode.learner} />}</div>\n+      {mode.kind === 'record' && view ? (\n+        <div className={concealable}>\n+          <RecordPlace\n+            article={article}\n+            learner={mode.learner}\n+            learningReturn={learningReturn}\n+            followUp={followUp}\n+          />\n+        </div>\n       ) : null}\n \n       {/* 완료 카드가 있으면 다음 글 자리는 카드 안에 있다. */}\n-      {card ? null : (\n+      {view?.kind === 'card' ? null : (\n         <nav className={styles.next} aria-label=\"다음 읽을 글\">\n           {article.next ? (\n             <Link\n               className={styles.nextLink}\n               to={`/learn/${encodeURIComponent(article.next.articleId)}`}\n-              state={learningReturn ? { learningReturn } : undefined}\n+              state={carried}\n             >\n               <span className={styles.nextLabel}>다음 글</span>\n               <span className={styles.nextTitle}>\n@@ -134,11 +142,7 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article\n             </Link>\n           ) : (\n             <>\n-              <Link\n-                className={styles.listLink}\n-                to=\"/learn\"\n-                state={learningReturn ? { learningReturn } : undefined}\n-              >\n+              <Link className={styles.listLink} to=\"/learn\" state={carried}>\n                 배우기 목록으로\n               </Link>\n               {article.hasUnreleasedStages ? (\n@@ -167,38 +171,82 @@ export function ArticleEnd({ article, mode, concealed, learningReturn }: Article\n   )\n }\n \n-/** 완료 카드가 놓이는가. 기록을 받았고 완료한 글이다. */\n-function hasCompletionCard(learner: LearnerEnd): boolean {\n-  if (learner.load.status !== 'loaded') return false\n-  return learner.completion.status === 'done' || learner.load.record.state === 'COMPLETED'\n+/** 실패 한 줄과 그 행동. 화면 낭독기가 바로 읽도록 `role=\"alert\"`다(FR-019, R13). */\n+function FailureLine({\n+  message,\n+  action,\n+  onAction,\n+}: {\n+  message: string\n+  action: string\n+  onAction: () => void\n+}) {\n+  return (\n+    <p className={styles.lineText} role=\"alert\">\n+      <span>{message}</span>\n+      <button type=\"button\" className={styles.inlineButton} onClick={onAction}>\n+        {action}\n+      </button>\n+    </p>\n+  )\n }\n \n-/** 완료한 글이면 완료 카드를 짓는다. 기록을 받기 전이거나 아직 완료하지 않았으면 `null`이다. */\n-function completionCard(\n-  article: ArticleEndProps['article'],\n-  learner: LearnerEnd,\n-  learningReturn: LearningReturnState | undefined,\n-  followUp: CompletionFollowUp,\n-) {\n-  if (learner.load.status !== 'loaded' || !hasCompletionCard(learner)) return null\n-  const record = learner.load.record\n-  const done = learner.completion.status === 'done' ? learner.completion.completion : null\n+/**\n+ * 로그인 사용자의 기록 자리. 기록 훅이 정한 `endView`대로 완료 카드나 실패 한 줄을 그리고, 받는 중이거나 완료\n+ * 전이면 아무것도 그리지 않는다. 그동안 '안 읽음'처럼 보이는 것을 두지 않는다(FR-020, FR-021, 계약 §0).\n+ */\n+function RecordPlace({\n+  article,\n+  learner,\n+  learningReturn,\n+  followUp,\n+}: {\n+  article: ArticleEndProps['article']\n+  learner: LearnerEnd\n+  learningReturn: LearningReturnState | undefined\n+  followUp: CompletionFollowUp\n+}) {\n+  const view = learner.endView\n+  switch (view.kind) {\n+    case 'none':\n+      return null\n+    case 'loadFailed':\n+      return (\n+        <FailureLine\n+          message=\"학습 기록을 불러오지 못했습니다.\"\n+          action=\"다시 시도\"\n+          onAction={learner.reloadRecord}\n+        />\n+      )\n+    case 'notRecorded':\n+      return (\n+        <FailureLine message=\"기록되지 않았습니다.\" action=\"다시 시도\" onAction={learner.complete} />\n+      )\n+    case 'changed':\n+      return (\n+        <FailureLine\n+          message=\"이 글이 바뀌었습니다. 글을 다시 불러와 주세요.\"\n+          action=\"다시 불러오기\"\n+          onAction={learner.reloadArticle}\n+        />\n+      )\n+  }\n \n   const terms = article.blocks.flatMap((block) => (block.type === 'term' ? [block.label] : []))\n   return (\n     <CompletionCard\n-      completedAt={done?.completedAt ?? record.completedAt ?? ''}\n+      completedAt={view.completedAt}\n       stageKey={article.stage.stageKey}\n-      stageProgress={done?.stageProgress ?? record.stageProgress}\n-      continueReading={done?.continueReading ?? record.continueReading}\n+      stageProgress={view.stageProgress}\n+      continueReading={view.continueReading}\n       gained={[...learner.gained, ...followUp.extra]}\n       terms={terms}\n-      mastered={record.quiz.mastered}\n+      mastered={view.record.quiz.mastered}\n       next={article.next}\n       learningReturn={learningReturn}\n       overview={followUp.overview}\n       // 이 화면에서 방금 완료했으면 마지막 도장이 찍히는 움직임을 준다. 다시 연 완료 글은 최종 모습 그대로다.\n-      freshCompletion={done !== null && !done.alreadyCompleted}\n+      freshCompletion={view.fresh}\n       goalLateMs={followUp.lateMs}\n       quiz={\n         <QuizPanel\n@@ -206,8 +254,8 @@ function completionCard(\n           key={`${learner.articleRevision}:${learner.revision}`}\n           questions={article.quiz}\n           mode=\"record\"\n-          answers={record.answers}\n-          summary={record.quiz}\n+          answers={view.record.answers}\n+          summary={view.record.quiz}\n           hasTerms={terms.length > 0}\n           onAnswer={learner.answer}\n           onRetry={learner.retry}\n@@ -217,43 +265,3 @@ function completionCard(\n     />\n   )\n }\n-\n-/**\n- * 완료 카드 대신 놓이는 한 줄. 기록을 받지 못했으면 '학습 기록을 불러오지 못했습니다', 완료가 기록되지 않았으면\n- * '기록되지 않았습니다', 다른 곳에서 글이 바뀌었으면 글을 다시 불러오라는 문장이다(FR-020, FR-021, 계약 §0).\n- * 기록을 받는 중이거나 완료 전이면 아무것도 그리지 않는다. 그동안 '안 읽음'처럼 보이는 것을 두지 않는다.\n- */\n-function RecordFailureLine({ learner }: { learner: LearnerEnd }) {\n-  if (learner.load.status === 'failed') {\n-    return (\n-      <p className={styles.lineText} role=\"alert\">\n-        <span>학습 기록을 불러오지 못했습니다.</span>\n-        <button type=\"button\" className={styles.inlineButton} onClick={learner.reloadRecord}>\n-          다시 시도\n-        </button>\n-      </p>\n-    )\n-  }\n-  if (learner.load.status !== 'loaded') return null\n-  if (learner.completion.status === 'failed') {\n-    return (\n-      <p className={styles.lineText} role=\"alert\">\n-        <span>기록되지 않았습니다.</span>\n-        <button type=\"button\" className={styles.inlineButton} onClick={learner.complete}>\n-          다시 시도\n-        </button>\n-      </p>\n-    )\n-  }\n-  if (learner.completion.status === 'stale') {\n-    return (\n-      <p className={styles.lineText} role=\"alert\">\n-        <span>이 글이 바뀌었습니다. 글을 다시 불러와 주세요.</span>\n-        <button type=\"button\" className={styles.inlineButton} onClick={learner.reloadArticle}>\n-          다시 불러오기\n-        </button>\n-      </p>\n-    )\n-  }\n-  return null\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/ArticleEnd.tsx",
+          "old_path": "frontend/src/components/learning/article/ArticleEnd.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,15 +20,20 @@ export const SUFFIX_WAIT_MS = 4000\n  * <p>'나의 학습'의 정산으로 새로 생긴 배지·레벨은 덧붙일 알림이 없어도 알린다(계약 §4). 경험치만 받은 완료라 글 기록\n  * 응답의 알림이 없었거나, 응답이 기다림을 넘겨 왔을 때다. 그때는 그것과 다음 목표를 따로 한 번 알린다. 한 알림과 한\n  * 응답의 새 배지는 한 번만 읽힌다.\n+ *\n+ * <p>로그인 상태를 다시 확인하는 동안(`held`) 온 알림은 확인이 끝나 다시 보일 때 한 번만 넣는다(research R33).\n  */\n export function CompletionAnnouncement({\n   announcement,\n   notice,\n   ready,\n+  held = false,\n }: {\n   announcement: Announcement | null\n   notice: OverviewNotice | null\n   ready: boolean\n+  /** 로그인 상태를 다시 확인하는 중이라 알림 영역이 보조 기술에서 빠져 있는가 */\n+  held?: boolean\n }) {\n   const [message, setMessage] = useState('')\n   const [waited, setWaited] = useState<number | null>(null)\n@@ -65,5 +70,5 @@ export function CompletionAnnouncement({\n     setMessage([notice.news, notice.goal].filter(Boolean).join(' '))\n   }, [notice])\n \n-  return <QuietNotice text={message} />\n+  return <QuietNotice text={message} held={held} />\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/CompletionAnnouncement.tsx",
+          "old_path": "frontend/src/components/learning/article/CompletionAnnouncement.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -78,6 +78,13 @@ describe('CompletionCard', () => {\n     expect(within(card).getByText('2단계 · 4편 중 2편 읽음')).not.toBeNull()\n   })\n \n+  it('완료로 기록됐는데 시각이 없으면 빈 날짜 대신 완료만 보인다', () => {\n+    renderCard({ completedAt: null })\n+\n+    const heading = screen.getByRole('heading', { level: 2 })\n+    expect(heading.textContent).toBe('완료')\n+  })\n+\n   it('단계를 다 읽었으면 완주 · n편이다', () => {\n     renderCard({ stageProgress: completionResult.stageProgress })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/CompletionCard.test.tsx",
+          "old_path": "frontend/src/components/learning/article/CompletionCard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,8 +24,11 @@ import { BadgeHero, LevelGoal, LevelHero, NextBadgeLine, StageStampPath } from '\n import styles from './CompletionCard.module.css'\n \n interface CompletionCardProps {\n-  /** 완료 시각(ISO 8601). 서울 날짜로 보인다 */\n-  completedAt: string\n+  /**\n+   * 완료 시각(ISO 8601). 서울 날짜로 보인다. 완료로 기록됐는데 시각이 없으면 `null`이고, 빈 날짜 대신 '완료'만\n+   * 보인다(원칙 VI)\n+   */\n+  completedAt: string | null\n   /** 이 글이 놓인 단계의 키. 새 단계 완주 배지가 이 단계의 것인지 배지 키(`stage-{stageKey}`)로 가른다 */\n   stageKey: string\n   stageProgress: StageProgress\n@@ -132,7 +135,7 @@ export function CompletionCard({\n     <section className={styles.card} style={glow} aria-labelledby={titleId}>\n       <div className={`${styles.section} ${styles.head}`}>\n         <h2 id={titleId} className={styles.date}>\n-          완료 · {formatCompletedDate(completedAt)}\n+          {completedAt ? `완료 · ${formatCompletedDate(completedAt)}` : '완료'}\n         </h2>\n         <div className={styles.headScene}>\n           <StageStampPath\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/CompletionCard.tsx",
+          "old_path": "frontend/src/components/learning/article/CompletionCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -214,6 +214,20 @@ function RecordQuiz({\n   const retry = (questionId: string, choiceId: string) =>\n     void send('retry', questionId, choiceId, onRetry)\n \n+  /** 결과를 받았으면 답한 목록, 보내는 중이거나 실패했으면 잠긴 목록, 아니면 고를 수 있는 단추다. */\n+  const viewOf = (\n+    round: Pending['round'],\n+    questionId: string,\n+    chosen: string | undefined,\n+    choose: (questionId: string, choiceId: string) => void,\n+  ): ItemView => {\n+    if (chosen !== undefined) return { kind: 'answered', choiceId: chosen }\n+    if (pending?.round === round && pending.questionId === questionId) {\n+      return { kind: 'locked', choiceId: pending.choiceId }\n+    }\n+    return { kind: 'open', onChoose: (choiceId) => choose(questionId, choiceId) }\n+  }\n+\n   const pendingLine = (round: Pending['round'], questionId: string) =>\n     pending?.round === round && pending.questionId === questionId ? (\n       <PendingLine\n@@ -239,20 +253,13 @@ function RecordQuiz({\n     <PanelFrame embedded>\n       {shown.map(({ question, index }) => {\n         const answered = saved.get(question.questionId)\n-        const locked = pending?.round === 'first' && pending.questionId === question.questionId\n         return (\n           <QuizItem\n             key={question.questionId}\n             number={index + 1}\n             question={question}\n             firstAnswer\n-            view={\n-              answered\n-                ? { kind: 'answered', choiceId: answered.choiceId }\n-                : locked\n-                  ? { kind: 'locked', choiceId: pending.choiceId }\n-                  : { kind: 'open', onChoose: (choiceId) => answer(question.questionId, choiceId) }\n-            }\n+            view={viewOf('first', question.questionId, answered?.choiceId, answer)}\n             explanationRef={\n               justAnswered === `first:${question.questionId}` ? explanationRef : undefined\n             }\n@@ -283,23 +290,12 @@ function RecordQuiz({\n           </p>\n           {retryShown.map((question, index) => {\n             const done = retryAnswers[index]\n-            const locked =\n-              !done && pending?.round === 'retry' && pending.questionId === question.questionId\n             return (\n               <QuizItem\n                 key={question.questionId}\n                 number={index + 1}\n                 question={question}\n-                view={\n-                  done\n-                    ? { kind: 'answered', choiceId: done.choiceId }\n-                    : locked\n-                      ? { kind: 'locked', choiceId: pending.choiceId }\n-                      : {\n-                          kind: 'open',\n-                          onChoose: (choiceId) => retry(question.questionId, choiceId),\n-                        }\n-                }\n+                view={viewOf('retry', question.questionId, done?.choiceId, retry)}\n                 explanationRef={\n                   justAnswered === `retry:${question.questionId}` ? explanationRef : undefined\n                 }\n@@ -443,47 +439,33 @@ function QuizItem({ number, question, view, firstAnswer, explanationRef, childre\n         </>\n       ) : null}\n \n-      {view.kind === 'locked' ? (\n-        // 저장 응답 전에는 맞았는지를 드러내지 않는다. 고른 보기만 표시하고 바꿀 수 없다(FR-022).\n-        <ol className={styles.answered}>\n-          {question.choices.map((choice, index) => {\n-            const picked = choice.choiceId === view.choiceId\n-            return (\n-              <li key={choice.choiceId} className={styles.answer} data-picked={picked || undefined}>\n-                <span className={styles.choiceNumber} aria-hidden=\"true\">\n-                  {index + 1}\n-                </span>\n-                <span className={styles.choiceText}>\n-                  <span className=\"sr-only\">{index + 1}. </span>\n-                  {choice.text}\n-                </span>\n-                {picked ? (\n-                  <span className={styles.tags}>\n-                    <span className={styles.tagPicked}>고른 답</span>\n-                  </span>\n-                ) : null}\n-              </li>\n-            )\n-          })}\n-        </ol>\n-      ) : null}\n-\n-      {view.kind === 'answered' ? (\n-        <AnsweredChoices question={question} chosen={view.choiceId} explanationRef={explanationRef} />\n-      ) : null}\n+      {view.kind === 'open' ? null : (\n+        <ChosenChoices\n+          question={question}\n+          chosen={view.choiceId}\n+          revealed={view.kind === 'answered'}\n+          explanationRef={explanationRef}\n+        />\n+      )}\n \n       {children}\n     </div>\n   )\n }\n \n-function AnsweredChoices({\n+/**\n+ * 고른 뒤의 보기 목록. 저장 응답을 받기 전(`revealed`가 거짓)에는 고른 보기만 표시하고 맞았는지·정답·풀이를\n+ * 드러내지 않는다(FR-022). 받은 뒤에는 고른 답·맞음·정답·틀린 보기와 풀이를 보인다.\n+ */\n+function ChosenChoices({\n   question,\n   chosen,\n+  revealed,\n   explanationRef,\n }: {\n   question: QuizQuestion\n   chosen: string\n+  revealed: boolean\n   explanationRef?: RefObject<HTMLParagraphElement | null>\n }) {\n   const pickedIndex = question.choices.findIndex((choice) => choice.choiceId === chosen)\n@@ -493,7 +475,7 @@ function AnsweredChoices({\n       <ol className={styles.answered}>\n         {question.choices.map((choice, index) => {\n           const picked = choice.choiceId === chosen\n-          const correct = choice.choiceId === question.correctChoiceId\n+          const correct = revealed && choice.choiceId === question.correctChoiceId\n           return (\n             <li\n               key={choice.choiceId}\n@@ -508,25 +490,31 @@ function AnsweredChoices({\n                 <span className=\"sr-only\">{index + 1}. </span>\n                 {choice.text}\n               </span>\n-              <span className={styles.tags}>\n-                {picked ? <span className={styles.tagPicked}>고른 답</span> : null}\n-                {correct ? (\n-                  <span className={styles.tagCorrect}>{picked ? '맞음' : '정답'}</span>\n-                ) : (\n-                  <span className={styles.tagWrong}>틀린 보기</span>\n-                )}\n-              </span>\n+              {picked || revealed ? (\n+                <span className={styles.tags}>\n+                  {picked ? <span className={styles.tagPicked}>고른 답</span> : null}\n+                  {revealed ? (\n+                    correct ? (\n+                      <span className={styles.tagCorrect}>{picked ? '맞음' : '정답'}</span>\n+                    ) : (\n+                      <span className={styles.tagWrong}>틀린 보기</span>\n+                    )\n+                  ) : null}\n+                </span>\n+              ) : null}\n             </li>\n           )\n         })}\n       </ol>\n-      <p ref={explanationRef} className={styles.explanation} tabIndex={-1}>\n-        <span className=\"sr-only\">\n-          고른 답 {pickedIndex + 1}번, {pickedCorrect ? '맞음' : '틀린 보기'}.{' '}\n-        </span>\n-        {/* 이름표와 풀이 사이에 실제 띄어쓰기를 둔다. 여백만 두면 읽기·복사에서 '풀이합성…'처럼 붙는다. */}\n-        <b>풀이</b> {question.explanation}\n-      </p>\n+      {revealed ? (\n+        <p ref={explanationRef} className={styles.explanation} tabIndex={-1}>\n+          <span className=\"sr-only\">\n+            고른 답 {pickedIndex + 1}번, {pickedCorrect ? '맞음' : '틀린 보기'}.{' '}\n+          </span>\n+          {/* 이름표와 풀이 사이에 실제 띄어쓰기를 둔다. 여백만 두면 읽기·복사에서 '풀이합성…'처럼 붙는다. */}\n+          <b>풀이</b> {question.explanation}\n+        </p>\n+      ) : null}\n     </>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/QuizPanel.tsx",
+          "old_path": "frontend/src/components/learning/article/QuizPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,28 @@\n+/**\n+ * 글 화면의 기록 훅들이 함께 쓰는 표지와 단위(013 FR-020·FR-021, research R32·R33).\n+ *\n+ * <p>완료 판정(`useArticleCompletion`)과 읽은 위치(`useReadingPosition`)가 같은 본문 끝 표지를 찾고, 기록\n+ * (`useLearnerArticle`)과 두 훅이 같은 단위로 처음부터 한다. 한곳에 두어 셋이 어긋나지 않게 한다.\n+ */\n+\n+/** 본문 마지막 요소 바로 뒤의 표지(`ArticleBody`). 예시 블록 앞이다. */\n+const ARTICLE_END_SELECTOR = '[data-article-end]'\n+\n+/** 글 안의 본문 끝 표지. 없으면 `null`이다. */\n+export function articleEndOf(root: HTMLElement | null): Element | null {\n+  return root?.querySelector(ARTICLE_END_SELECTOR) ?? null\n+}\n+\n+/** 본문 끝 표지를 감싼 본문 요소. 읽은 비율은 이 요소의 높이로 잰다. */\n+export function articleBodyOf(root: HTMLElement | null): HTMLElement | null {\n+  return articleEndOf(root)?.parentElement ?? null\n+}\n+\n+/**\n+ * 글 하나를 확인된 로그인 상태 하나로 읽는 단위. 이 값이 바뀌면 기록·머문 시간·읽은 비율을 처음부터 한다.\n+ * `sessionKey`는 확인된 로그인 상태(로그인했으면 사용자까지)이고, 확인 중(`checking`)과 `error`는 바뀐 것으로\n+ * 보지 않는다(R33).\n+ */\n+export function articleSessionKey(articleId: string, sessionKey: string): string {\n+  return `${articleId}|${sessionKey}`\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/articleMarkers.ts",
+          "old_path": "frontend/src/components/learning/article/articleMarkers.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -228,4 +228,24 @@ describe('useArticleCompletion', () => {\n     // 앞 사용자의 70초로 다음 사용자를 완료하지 않는다.\n     expect(onReady).not.toHaveBeenCalled()\n   })\n+\n+  it('rearmKey가 바뀌면 센 시간을 이어 가면서 판정을 다시 연다', () => {\n+    const { onReady, rerender } = renderCompletion()\n+    setEndVisible(true)\n+    advance(80)\n+    expect(onReady).toHaveBeenCalledTimes(1)\n+\n+    // 다른 곳에서 글이 바뀌어 완료가 거절된 뒤 글을 다시 불러왔다. 머문 시간을 처음부터 세지 않는다(R33).\n+    rerender({ rearmKey: 1 })\n+    expect(onReady).toHaveBeenCalledTimes(2)\n+  })\n+\n+  it('처음 그릴 때의 rearmKey로는 판정을 다시 열지 않는다', () => {\n+    const { onReady } = renderCompletion({ rearmKey: 3 })\n+    setEndVisible(true)\n+    advance(80)\n+    advance(200)\n+\n+    expect(onReady).toHaveBeenCalledTimes(1)\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/useArticleCompletion.test.ts",
+          "old_path": "frontend/src/components/learning/article/useArticleCompletion.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'\n+import { articleEndOf } from './articleMarkers'\n \n interface ArticleCompletionOptions {\n   /** 글 전체. 그 안의 `data-article-end` 표지가 본문 끝이다(ArticleBody) */\n@@ -8,10 +9,15 @@ interface ArticleCompletionOptions {\n   /** 글의 최소 머문 시간(research R20) */\n   minDwellSeconds: number\n   /**\n-   * 머문 시간을 처음부터 셀 단위. 글과 확인된 로그인 상태(로그인했으면 사용자까지)로 짓는다. 확인 중(`checking`)과\n-   * `error`는 바뀐 것으로 보지 않으므로 이 값도 바뀌지 않는다(research R33)\n+   * 머문 시간을 처음부터 셀 단위(`articleSessionKey`). 글과 확인된 로그인 상태(로그인했으면 사용자까지)로 짓는다.\n+   * 확인 중(`checking`)과 `error`는 바뀐 것으로 보지 않으므로 이 값도 바뀌지 않는다(research R33)\n    */\n   sessionKey: string\n+  /**\n+   * 바뀌면 이미 부른 판정을 풀고 다시 판정한다. 센 시간은 이어 간다. 다른 곳에서 글이 바뀌어 완료가 거절된 뒤 글을\n+   * 다시 불러왔을 때 쓴다. 머문 시간을 처음부터 세는 것은 로그인 상태나 사용자가 바뀐 때뿐이다(R33)\n+   */\n+  rearmKey?: number\n   /**\n    * 로그인 상태를 다시 확인하는 중이다. 그동안 두 조건이 참이 되면 요청을 미뤘다가, 확인이 끝나 같은 상태로\n    * 돌아온 것을 안 뒤에 보낸다(R33)\n@@ -38,12 +44,14 @@ export function useArticleCompletion({\n   active,\n   minDwellSeconds,\n   sessionKey,\n+  rearmKey = 0,\n   held,\n   onReady,\n }: ArticleCompletionOptions): void {\n   const onReadyRef = useRef(onReady)\n   const gateRef = useRef({ active, held })\n   const evaluateRef = useRef<() => void>(() => {})\n+  const rearmRef = useRef<() => void>(() => {})\n \n   useLayoutEffect(() => {\n     onReadyRef.current = onReady\n@@ -80,6 +88,10 @@ export function useArticleCompletion({\n       onReadyRef.current()\n     }\n     evaluateRef.current = evaluate\n+    rearmRef.current = () => {\n+      fired = false\n+      evaluate()\n+    }\n \n     const handleVisibility = () => {\n       if (document.visibilityState === 'visible') {\n@@ -93,7 +105,7 @@ export function useArticleCompletion({\n     document.addEventListener('visibilitychange', handleVisibility)\n \n     let observer: IntersectionObserver | null = null\n-    const marker = root.current?.querySelector('[data-article-end]')\n+    const marker = articleEndOf(root.current)\n     if (marker && typeof IntersectionObserver !== 'undefined') {\n       observer = new IntersectionObserver((entries) => {\n         const last = entries[entries.length - 1]\n@@ -111,9 +123,18 @@ export function useArticleCompletion({\n       observer?.disconnect()\n       if (timer !== null) clearTimeout(timer)\n       evaluateRef.current = () => {}\n+      rearmRef.current = () => {}\n     }\n   }, [root, minDwellSeconds, sessionKey])\n \n+  // 처음 그릴 때는 건너뛴다. 값이 바뀔 때만 판정을 다시 연다.\n+  const lastRearmRef = useRef(rearmKey)\n+  useEffect(() => {\n+    if (lastRearmRef.current === rearmKey) return\n+    lastRearmRef.current = rearmKey\n+    rearmRef.current()\n+  }, [rearmKey])\n+\n   // 요청을 보내도 되는지가 바뀌면 다시 판정한다. 확인이 끝나 미뤄 둔 완료를 이때 보낸다.\n   useEffect(() => {\n     evaluateRef.current()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/useArticleCompletion.ts",
+          "old_path": "frontend/src/components/learning/article/useArticleCompletion.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,38 +10,65 @@ import {\n import type {\n   AnswerResult,\n   CompletionResult,\n+  ContinueReading,\n   Gained,\n   LearnerArticleRecord,\n   RetryResult,\n   StageProgress,\n } from '@/types/learningMe'\n+import { articleSessionKey } from './articleMarkers'\n import { gainedNotice, type GainedEntry } from './completionText'\n import type { QuizSubmitOutcome } from './QuizPanel'\n \n /** 글 기록 조회. 받기 전에는 완료 카드·확인 문제 자리를 비운다(FR-020). */\n-export type RecordLoad =\n+type RecordLoad =\n   | { status: 'loading' }\n   | { status: 'loaded'; record: LearnerArticleRecord }\n   | { status: 'failed' }\n+  /** 다른 곳에서 글이 바뀌었다(게시 취소). 다시 받아도 같으므로 글을 다시 불러오게 한다 */\n+  | { status: 'changed' }\n   /** 서버가 기록할 수 없는 글이라고 했다. 기록 자리를 그리지 않는다 */\n   | { status: 'notRecordable' }\n \n-/**\n- * 완료 요청. 실패하면 완료 카드와 확인 문제 대신 한 줄을 둔다(FR-021). `failed`는 같은 요청을 다시 보낼 수 있고,\n- * `stale`은 다른 곳에서 글이 바뀌어 글을 다시 불러와야 한다(게시 취소, 기록할 수 없는 글이 됨).\n- */\n-export type CompletionSend =\n+/** 완료 요청. `changed`는 다른 곳에서 글이 바뀌어 같은 요청을 다시 보내도 같은 실패라는 뜻이다. */\n+type CompletionSend =\n   | { status: 'idle' }\n   | { status: 'sending' }\n   | { status: 'failed' }\n-  | { status: 'stale' }\n+  | { status: 'changed' }\n   | { status: 'done'; completion: CompletionResult }\n \n+/**\n+ * 글 끝의 기록 자리에 그릴 것(FR-020, FR-021, 계약 §0). 글 끝은 이 값만 보고 그린다.\n+ *\n+ * - `none`: 기록을 받는 중이거나 아직 완료 전이거나 기록할 수 없는 글이다. 아무것도 그리지 않고, '안 읽음'처럼 보이는\n+ *   것을 두지 않는다\n+ * - `card`: 완료한 글. 완료 카드와 확인 문제를 그린다. `fresh`는 이 화면에서 방금 완료했는가다\n+ * - `loadFailed`: 기록을 받지 못했다. 다시 받을 수 있다\n+ * - `notRecorded`: 완료가 기록되지 않았다. 같은 요청을 다시 보낼 수 있다\n+ * - `changed`: 다른 곳에서 글이 바뀌었다. 글을 다시 불러와야 한다\n+ */\n+export type RecordEndView =\n+  | { kind: 'none' }\n+  | {\n+      kind: 'card'\n+      record: LearnerArticleRecord\n+      /** 완료 시각. 완료로 기록됐는데 서버가 시각을 보내지 않았으면 `null`이다 */\n+      completedAt: string | null\n+      stageProgress: StageProgress\n+      continueReading: ContinueReading\n+      /** 이 화면에서 방금 완료했는가. 다시 연 완료 글이나 이미 완료한 글의 완료 응답이면 `false`다 */\n+      fresh: boolean\n+    }\n+  | { kind: 'loadFailed' }\n+  | { kind: 'notRecorded' }\n+  | { kind: 'changed' }\n+\n /** 조용한 알림 하나. 같은 문장이 다시 와도 다시 읽히도록 번호를 붙인다. */\n export type Announcement = { id: number; text: string }\n \n type Snapshot = {\n-  /** 이 상태가 속한 글과 로그인 상태. 바뀌면 처음부터다 */\n+  /** 이 상태가 속한 글과 로그인 상태(`articleSessionKey`). 바뀌면 처음부터다 */\n   key: string\n   load: RecordLoad\n   completion: CompletionSend\n@@ -63,6 +90,45 @@ function initial(key: string): Snapshot {\n   }\n }\n \n+/**\n+ * 다른 곳에서 글이나 기록이 바뀌어 같은 요청을 다시 보내도 같은 실패인가. 통로의 `stale`과, 기록할 수 없는 글이 된\n+ * 경우(`notRecordable`)가 그렇다. 완료와 확인 문제가 같은 판정을 쓴다.\n+ */\n+function changedElsewhere(status: string): boolean {\n+  return status === 'stale' || status === 'notRecordable'\n+}\n+\n+function endViewOf(load: RecordLoad, completion: CompletionSend): RecordEndView {\n+  switch (load.status) {\n+    case 'failed':\n+      return { kind: 'loadFailed' }\n+    case 'changed':\n+      return { kind: 'changed' }\n+    case 'loading':\n+    case 'notRecordable':\n+      return { kind: 'none' }\n+  }\n+  const record = load.record\n+  if (completion.status === 'done') {\n+    const { completedAt, stageProgress, continueReading, alreadyCompleted } = completion.completion\n+    return {\n+      kind: 'card',\n+      record,\n+      completedAt,\n+      stageProgress,\n+      continueReading,\n+      fresh: !alreadyCompleted,\n+    }\n+  }\n+  if (record.state === 'COMPLETED') {\n+    const { completedAt, stageProgress, continueReading } = record\n+    return { kind: 'card', record, completedAt, stageProgress, continueReading, fresh: false }\n+  }\n+  if (completion.status === 'failed') return { kind: 'notRecorded' }\n+  if (completion.status === 'changed') return { kind: 'changed' }\n+  return { kind: 'none' }\n+}\n+\n function hasNews(gained: Gained): boolean {\n   return gained.exp.length > 0 || gained.badges.length > 0 || gained.levelAfter > gained.levelBefore\n }\n@@ -99,6 +165,8 @@ interface LearnerArticleOptions {\n  *\n  * <p><b>조용히 재시도하지 않는다.</b> 실패는 실패로 보이고, 다시 시도는 사용자가 누를 때 한다(계약 §0). 다시 불러올\n  * 때는 받아 둔 기록과 이번에 받은 경험치를 지우지 않고, 새 기록이 오면 바꿔 끼운다.\n+ *\n+ * <p>글 끝에 무엇을 그릴지는 `endView`로 정해 돌려준다. 글 끝이 응답 모양을 파고들지 않게 하려는 것이다.\n  */\n export function useLearnerArticle(\n   articleId: string,\n@@ -106,7 +174,7 @@ export function useLearnerArticle(\n   sessionKey: string,\n   { onUnauthenticated }: LearnerArticleOptions = {},\n ) {\n-  const key = `${articleId}|${sessionKey}`\n+  const key = articleSessionKey(articleId, sessionKey)\n   const [snapshot, setSnapshot] = useState<Snapshot>(() => initial(key))\n   const [attempt, setAttempt] = useState(0)\n   const keyRef = useRef(key)\n@@ -150,22 +218,25 @@ export function useLearnerArticle(\n         }\n         // 다시 받다가 실패했으면 받아 둔 기록을 지우지 않는다. 그 자리의 안내가 다시 시도를 그대로 준다.\n         if (previous.load.status === 'loaded') return previous\n-        return {\n-          ...previous,\n-          load: result.status === 'notRecordable' ? { status: 'notRecordable' } : { status: 'failed' },\n-        }\n+        const load: RecordLoad =\n+          result.status === 'notRecordable'\n+            ? { status: 'notRecordable' }\n+            : result.status === 'stale'\n+              ? { status: 'changed' }\n+              : { status: 'failed' }\n+        return { ...previous, load }\n       })\n     })\n     return () => controller.abort()\n   }, [articleId, enabled, key, attempt, update, noteUnauthenticated])\n \n-  /** 글 기록을 다시 받는다. 다른 곳에서 글이 바뀐 완료 실패(`stale`)는 이때 처음으로 되돌린다. */\n+  /** 글 기록을 다시 받는다. 다른 곳에서 글이 바뀐 완료 실패는 이때 처음으로 되돌린다. */\n   const reloadRecord = useCallback(() => {\n-    update(keyRef.current, (previous) =>\n-      previous.completion.status === 'stale'\n-        ? { ...previous, completion: { status: 'idle' } }\n-        : previous,\n-    )\n+    update(keyRef.current, (previous) => ({\n+      ...previous,\n+      load: previous.load.status === 'changed' ? { status: 'loading' } : previous.load,\n+      completion: previous.completion.status === 'changed' ? { status: 'idle' } : previous.completion,\n+    }))\n     setAttempt((count) => count + 1)\n   }, [update])\n \n@@ -182,46 +253,58 @@ export function useLearnerArticle(\n             result.data.stageProgress,\n           )\n         }\n-        const stale = result.status === 'stale' || result.status === 'notRecordable'\n-        return { ...previous, completion: { status: stale ? 'stale' : 'failed' } }\n+        const status = changedElsewhere(result.status) ? 'changed' : 'failed'\n+        return { ...previous, completion: { status } }\n       })\n     })\n   }, [articleId, update, noteUnauthenticated])\n \n-  const toOutcome = useCallback(\n-    (result: LearningAnswerResult<AnswerResult | RetryResult>): QuizSubmitOutcome => {\n+  /**\n+   * 첫 답·다시 풀기를 보내고, 성공하면 받은 기록을 고친 뒤 받은 것을 쌓는다. 두 행동이 고치는 기록만 다르다.\n+   */\n+  const submit = useCallback(\n+    async <T extends AnswerResult | RetryResult>(\n+      send: () => Promise<LearningAnswerResult<T>>,\n+      applyTo: (record: LearnerArticleRecord, saved: T) => LearnerArticleRecord,\n+    ): Promise<QuizSubmitOutcome> => {\n+      const forKey = keyRef.current\n+      const result = await send()\n       noteUnauthenticated(result)\n-      switch (result.status) {\n-        case 'ok':\n-          return {\n-            status: 'saved',\n-            choiceId: result.data.choiceId,\n-            correct: result.data.correct,\n-            alreadyAnswered: 'alreadyAnswered' in result.data && result.data.alreadyAnswered,\n-          }\n-        case 'questionNotFound':\n-          return { status: 'questionNotFound' }\n-        case 'stale':\n-        case 'notRecordable':\n-          return { status: 'stale' }\n-        default:\n-          return { status: 'failed' }\n+      if (result.status !== 'ok') {\n+        if (result.status === 'questionNotFound') return { status: 'questionNotFound' }\n+        return { status: changedElsewhere(result.status) ? 'stale' : 'failed' }\n+      }\n+      const saved = result.data\n+      update(forKey, (previous) =>\n+        previous.load.status === 'loaded'\n+          ? withGained(\n+              {\n+                ...previous,\n+                load: { status: 'loaded', record: applyTo(previous.load.record, saved) },\n+              },\n+              saved.gained,\n+              null,\n+            )\n+          : previous,\n+      )\n+      return {\n+        status: 'saved',\n+        choiceId: saved.choiceId,\n+        correct: saved.correct,\n+        alreadyAnswered: 'alreadyAnswered' in saved && saved.alreadyAnswered,\n       }\n     },\n-    [noteUnauthenticated],\n+    [update, noteUnauthenticated],\n   )\n \n   const answer = useCallback(\n-    async (questionId: string, choiceId: string): Promise<QuizSubmitOutcome> => {\n-      const forKey = keyRef.current\n-      const result = await answerQuestion(articleId, questionId, choiceId)\n-      if (result.status === 'ok') {\n-        const saved = result.data\n-        update(forKey, (previous) => {\n-          if (previous.load.status !== 'loaded') return previous\n-          const record = previous.load.record\n+    (questionId: string, choiceId: string) =>\n+      submit(\n+        () => answerQuestion(articleId, questionId, choiceId),\n+        (record, saved) => ({\n+          ...record,\n           // 서버가 돌려준 첫 답으로 둔다. 다른 탭에서 먼저 답했으면 고른 것과 다르다(계약 §5).\n-          const answers = [\n+          answers: [\n             ...record.answers.filter((item) => item.questionId !== saved.questionId),\n             {\n               questionId: saved.questionId,\n@@ -229,46 +312,35 @@ export function useLearnerArticle(\n               correct: saved.correct,\n               answeredAt: new Date().toISOString(),\n             },\n-          ]\n-          return withGained(\n-            {\n-              ...previous,\n-              load: { status: 'loaded', record: { ...record, answers, quiz: saved.quiz } },\n-            },\n-            saved.gained,\n-            null,\n-          )\n-        })\n-      }\n-      return toOutcome(result)\n-    },\n-    [articleId, update, toOutcome],\n+          ],\n+          quiz: saved.quiz,\n+        }),\n+      ),\n+    [articleId, submit],\n   )\n \n   const retry = useCallback(\n-    async (questionId: string, choiceId: string): Promise<QuizSubmitOutcome> => {\n-      const forKey = keyRef.current\n-      const result = await retryAnswer(articleId, questionId, choiceId)\n-      if (result.status === 'ok') {\n-        const saved = result.data\n-        update(forKey, (previous) => {\n-          if (previous.load.status !== 'loaded') return previous\n-          const record = previous.load.record\n-          return withGained(\n-            { ...previous, load: { status: 'loaded', record: { ...record, quiz: saved.quiz } } },\n-            saved.gained,\n-            null,\n-          )\n-        })\n-      }\n-      return toOutcome(result)\n-    },\n-    [articleId, update, toOutcome],\n+    (questionId: string, choiceId: string) =>\n+      submit(\n+        () => retryAnswer(articleId, questionId, choiceId),\n+        (record, saved) => ({ ...record, quiz: saved.quiz }),\n+      ),\n+    [articleId, submit],\n   )\n \n   return {\n-    load: current.load,\n-    completion: current.completion,\n+    /** 글 기록을 받았으면 그 기록이다. 진행 막대와 '이어서 읽기' 줄이 쓴다 */\n+    record: current.load.status === 'loaded' ? current.load.record : null,\n+    /** 완료가 기록되었는가(이번 화면에서 기록했거나 이미 완료한 글) */\n+    completed:\n+      current.completion.status === 'done' ||\n+      (current.load.status === 'loaded' && current.load.record.state === 'COMPLETED'),\n+    /** 완료 요청을 보낼 수 있는가. 기록을 받았고 아직 완료하지 않았으며 보내는 중이 아니다 */\n+    canComplete:\n+      current.load.status === 'loaded' &&\n+      current.load.record.state !== 'COMPLETED' &&\n+      current.completion.status === 'idle',\n+    endView: endViewOf(current.load, current.completion),\n     gained: current.gained,\n     announcement: current.announcement,\n     revision: current.revision,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/useLearnerArticle.ts",
+          "old_path": "frontend/src/components/learning/article/useLearnerArticle.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'\n import { prepareLeaveRecording, recordPosition, sendPositionOnLeave } from '@/api/learningMe'\n+import { articleBodyOf, articleEndOf, articleSessionKey } from './articleMarkers'\n \n interface ReadingPositionOptions {\n   /** 글 전체. 그 안의 `data-article-end` 표지를 감싼 요소가 본문이다(ArticleBody) */\n@@ -22,10 +23,6 @@ export function measureReadPercent(body: HTMLElement): number | null {\n   return Math.min(100, Math.max(0, Math.floor(ratio)))\n }\n \n-function bodyOf(root: HTMLElement | null): HTMLElement | null {\n-  return root?.querySelector('[data-article-end]')?.parentElement ?? null\n-}\n-\n /**\n  * 읽은 위치 기록(013 FR-020, research R32). 이 화면에서 잰 가장 큰 비율을 돌려준다. 글 머리의 '읽은 정도' 막대가\n  * 쓴다.\n@@ -70,7 +67,7 @@ export function useReadingPosition({\n \n   useEffect(() => {\n     const session = sessionKey\n-    const leaveKey = `${articleId}|${session}`\n+    const leaveKey = articleSessionKey(articleId, session)\n     const pendingLeave = pendingLeaveRef.current\n     if (pendingLeave?.key === leaveKey) {\n       clearTimeout(pendingLeave.timer)\n@@ -81,7 +78,7 @@ export function useReadingPosition({\n     setFurthest(0)\n \n     const measure = () => {\n-      const body = bodyOf(root.current)\n+      const body = articleBodyOf(root.current)\n       if (!body) return\n       const percent = measureReadPercent(body)\n       if (percent !== null && percent > max) {\n@@ -132,7 +129,7 @@ export function useReadingPosition({\n  * 하지 않는다(013 FR-020 '이어서 읽기').\n  */\n export function scrollToReadPercent(root: HTMLElement | null, percent: number): void {\n-  const body = bodyOf(root)\n+  const body = articleBodyOf(root)\n   if (!body) return\n   const rect = body.getBoundingClientRect()\n   const top = window.scrollY + rect.top + (rect.height * percent) / 100 - window.innerHeight\n@@ -145,13 +142,14 @@ export function scrollToReadPercent(root: HTMLElement | null, percent: number):\n  * 않는다.\n  */\n export function focusReadPosition(root: HTMLElement | null, percent: number): void {\n-  const body = bodyOf(root)\n+  const body = articleBodyOf(root)\n   if (!body) return\n   const bodyRect = body.getBoundingClientRect()\n   const line = bodyRect.top + (bodyRect.height * percent) / 100\n+  const end = articleEndOf(root)\n   let target: HTMLElement | null = null\n   for (const child of Array.from(body.children)) {\n-    if (!(child instanceof HTMLElement) || child.hasAttribute('data-article-end')) continue\n+    if (!(child instanceof HTMLElement) || child === end) continue\n     if (target !== null && child.getBoundingClientRect().top > line) break\n     target = child\n   }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/article/useReadingPosition.ts",
+          "old_path": "frontend/src/components/learning/article/useReadingPosition.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,17 +1,29 @@\n-import { useEffect, useState } from 'react'\n+import { useEffect, useRef, useState } from 'react'\n \n /**\n  * 새 배지·레벨의 조용한 알림(013 FR-030, design-notes §6). 처음부터 비어 있는 `role=\"status\"` 영역에 글자만 넣는다.\n  * 영역을 글자와 함께 한꺼번에 만들면 화면 낭독기가 읽지 않는 경우가 많아 잠깐 기다렸다가 넣는다. 초점을 옮기지 않는다.\n+ *\n+ * <p>`held`인 동안(로그인 상태를 다시 확인하는 동안, research R33)은 글자를 넣지 않고 미뤄 둔다. 다시 보이게 되면 아직\n+ * 넣지 못한 글자만 한 번 넣는다. 이미 넣은 글자는 다시 넣지 않으므로 탭을 오갈 때마다 같은 알림이 되풀이되지 않는다.\n  */\n-export function QuietNotice({ text }: { text: string }) {\n+export function QuietNotice({ text, held = false }: { text: string; held?: boolean }) {\n   const [shown, setShown] = useState('')\n+  // 아직 영역에 넣지 못한 글자가 있는가.\n+  const pending = useRef(false)\n   useEffect(() => {\n     setShown('')\n-    if (!text) return\n-    const timer = setTimeout(() => setShown(text), 250)\n-    return () => clearTimeout(timer)\n+    pending.current = text !== ''\n   }, [text])\n+  useEffect(() => {\n+    if (held || !pending.current) return\n+    // 글자를 넣는 순간에 넣은 것으로 적는다. 기다리는 사이 확인이 시작되면 타이머만 지워지고 다음에 다시 넣는다.\n+    const timer = setTimeout(() => {\n+      pending.current = false\n+      setShown(text)\n+    }, 250)\n+    return () => clearTimeout(timer)\n+  }, [text, held])\n   return (\n     <p className=\"sr-only\" role=\"status\" aria-live=\"polite\" aria-atomic=\"true\">\n       {shown}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/me/QuietNotice.tsx",
+          "old_path": "frontend/src/components/learning/me/QuietNotice.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1487,4 +1487,84 @@ describe('LearningArticlePage — 로그인 기록', () => {\n \n     expect(setItem).not.toHaveBeenCalled()\n   })\n+\n+  it('글 기록 조회가 다른 곳에서 바뀐 글이라고 하면 다시 시도 대신 다시 불러오기를 준다', async () => {\n+    const user = userEvent.setup()\n+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'stale' })\n+    meMocks.fetchLearnerArticle.mockResolvedValueOnce({ status: 'ok', data: completedRecord })\n+    loaded(currentArticle)\n+\n+    renderArticle('/learn/swell-reading', signedInAuth)\n+\n+    const alert = await screen.findByRole('alert')\n+    expect(within(alert).getByText('이 글이 바뀌었습니다. 글을 다시 불러와 주세요.')).not.toBeNull()\n+    // 같은 404를 되풀이하는 '다시 시도'를 주지 않는다.\n+    expect(screen.queryByRole('button', { name: '다시 시도' })).toBeNull()\n+\n+    await user.click(within(alert).getByRole('button', { name: '다시 불러오기' }))\n+\n+    await waitFor(() => expect(apiMocks.fetchLearningArticle).toHaveBeenCalledTimes(2))\n+    expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()\n+    expect(meMocks.fetchLearnerArticle).toHaveBeenCalledTimes(2)\n+  })\n+\n+  it('완료가 거절된 뒤 글을 다시 불러오면 머문 시간을 처음부터 세지 않고 바로 다시 보낸다', async () => {\n+    vi.useFakeTimers({ shouldAdvanceTime: true })\n+    try {\n+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })\n+      meMocks.completeArticle\n+        .mockResolvedValueOnce({ status: 'stale' })\n+        .mockResolvedValueOnce({ status: 'ok', data: completionResult })\n+      loaded(currentArticle)\n+\n+      renderArticle('/learn/swell-reading', signedInAuth)\n+      await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())\n+      await screen.findByRole('link', { name: /다음 글/ })\n+      reachArticleEnd()\n+      act(() => {\n+        vi.advanceTimersByTime(80_000)\n+      })\n+      await screen.findByText('이 글이 바뀌었습니다. 글을 다시 불러와 주세요.')\n+\n+      await user.click(screen.getByRole('button', { name: '다시 불러오기' }))\n+\n+      // 80초를 다시 기다리지 않는다.\n+      await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(2))\n+      expect(await screen.findByRole('region', { name: '완료 · 2026-11-20' })).not.toBeNull()\n+    } finally {\n+      vi.useRealTimers()\n+    }\n+  })\n+\n+  it('확인하는 동안 온 새 배지 알림은 숨겨 두었다가 같은 사용자로 확인되면 한 번만 알린다', async () => {\n+    let settle: (value: unknown) => void = () => {}\n+    meMocks.completeArticle.mockReturnValue(\n+      new Promise((resolve) => {\n+        settle = resolve\n+      }),\n+    )\n+    loaded(quickArticle)\n+\n+    const { setAuth } = renderArticle('/learn/swell-reading', signedInAuth)\n+    await waitFor(() => expect(meMocks.fetchLearnerArticle).toHaveBeenCalled())\n+    const status = await screen.findByRole('status')\n+    reachArticleEnd()\n+    await waitFor(() => expect(meMocks.completeArticle).toHaveBeenCalledTimes(1))\n+\n+    setAuth(checkingAuth)\n+    await act(async () => settle({ status: 'ok', data: completionResult }))\n+    // 확인하는 동안에는 알림 영역도 기록 자리와 함께 보조 기술에서 빠지고 글자를 넣지 않는다(R33).\n+    expect(status.parentElement?.className).toMatch(/concealed/)\n+    await new Promise((resolve) => setTimeout(resolve, 400))\n+    expect(status.textContent).toBe('')\n+\n+    setAuth(signedInAuth)\n+    await waitFor(() => expect(status.textContent).toMatch(/새 배지: 2단계 완주/))\n+\n+    // 탭을 다시 오가도 같은 알림을 되풀이하지 않는다.\n+    setAuth(checkingAuth)\n+    setAuth(signedInAuth)\n+    await new Promise((resolve) => setTimeout(resolve, 400))\n+    expect(status.textContent).toMatch(/새 배지: 2단계 완주/)\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LearningArticlePage.test.tsx",
+          "old_path": "frontend/src/pages/LearningArticlePage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,6 +9,7 @@ import { ArticleExample } from '@/components/learning/article/ArticleExample'\n import { ArticleSourceList } from '@/components/learning/article/ArticleSourceList'\n import { EditionNotice } from '@/components/learning/article/EditionNotice'\n import { ResumeLine } from '@/components/learning/article/ResumeLine'\n+import { articleSessionKey } from '@/components/learning/article/articleMarkers'\n import { useArticleCompletion } from '@/components/learning/article/useArticleCompletion'\n import { useLearnerArticle } from '@/components/learning/article/useLearnerArticle'\n import {\n@@ -213,7 +214,7 @@ function ArticleView({\n   const learner = useLearnerArticle(article.articleId, recording, sessionKey, {\n     onUnauthenticated: () => setRejected(true),\n   })\n-  const record = learner.load.status === 'loaded' ? learner.load.record : null\n+  const { record, completed } = learner\n   useRestoreFocusAfterConceal(resumeRef, concealed)\n \n   // 만료 뒤 다시 로그인했거나 비로그인으로 확인되면 앞선 거부를 잊는다. 거부 직후에 상태가 만료로 바뀌므로\n@@ -224,14 +225,11 @@ function ArticleView({\n \n   useArticleCompletion({\n     root: articleRef,\n-    active:\n-      recording &&\n-      record !== null &&\n-      record.state !== 'COMPLETED' &&\n-      learner.completion.status === 'idle',\n+    active: recording && learner.canComplete,\n     minDwellSeconds: article.edition === 'CURRENT' ? article.minDwellSeconds : 0,\n-    // 글을 다시 받으면 처음부터 센다. 다른 곳에서 글이 바뀐 뒤의 완료는 바뀐 글로 판정한다.\n-    sessionKey: `${article.articleId}|${sessionKey}|${revision}`,\n+    sessionKey: articleSessionKey(article.articleId, sessionKey),\n+    // 글을 다시 받으면 판정만 다시 연다. 센 시간은 이어 가므로 글 끝을 보고 있었다면 바로 다시 보낸다(R33).\n+    rearmKey: revision,\n     held: concealed,\n     onReady: learner.complete,\n   })\n@@ -270,7 +268,6 @@ function ArticleView({\n \n   // '읽은 정도' 막대(목업 '글 끝'의 `rbar`). 받은 기록과 이 화면에서 잰 가장 큰 비율 가운데 큰 쪽이고, 완료한 글은\n   // 다 찬다. 기록을 받지 못했으면 그리지 않는다. 그림이라 화면 낭독기는 읽지 않는다(design-notes §6).\n-  const completed = record?.state === 'COMPLETED' || learner.completion.status === 'done'\n   const readPercent =\n     recording && record !== null ? (completed ? 100 : Math.max(record.percent, furthest)) : null\n \n@@ -279,7 +276,7 @@ function ArticleView({\n     recording &&\n     record?.state === 'READING' &&\n     record.percent > 0 &&\n-    learner.completion.status !== 'done'\n+    !completed\n       ? record.percent\n       : null\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LearningArticlePage.tsx",
+          "old_path": "frontend/src/pages/LearningArticlePage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,8 +13,8 @@ npm run lint && npm run build && npm test\n ## 폴더 규칙\n \n - `src/pages/` 라우트 단위 화면, `src/components/` 재사용 컴포넌트\n-- `src/api/` 서버 통신 전용 — 컴포넌트에서 axios 직접 호출 금지, `apiClient` 경유\n-- `src/types/` 백엔드 DTO와 1:1 대응 타입 (`backtest.ts` 참고). 백엔드 스펙 변경 시 여기부터 갱신\n+- `src/api/` 서버 통신 전용 — 컴포넌트에서 axios 직접 호출 금지, `apiClient` 경유. 예외는 페이지가 사라지는 중에도 끝까지 가야 하는 요청 하나다. 탭을 숨기거나 닫을 때의 읽은 위치(`api/learningMe.ts`의 `sendPositionOnLeave`, 013 research R32)는 `fetch`의 `keepalive`로 보내고, 기준 주소는 `apiClient.defaults.baseURL`, CSRF 이름은 `client.ts`의 `XSRF_COOKIE_NAME`·`XSRF_HEADER_NAME`을 그대로 쓴다. `EventSource`로 받는 `api/progressStream.ts`도 `apiClient`를 쓰지 않는다\n+- `src/types/` 백엔드 DTO와 1:1 대응 타입 (`backtest.ts` 참고). 백엔드 스펙 변경 시 여기부터 갱신. 화면 사이에 싣는 navigation state의 모양(`LearningReturnState`·`LearningResumeState`, 013 data-model §15)도 그 도메인 타입 파일에 둔다\n - `src/hooks/` 커스텀 훅\n - `src/components/records/` 내 기록(spec 006) 목록 줄·펼침 층·더 보기 메뉴·대화상자. 성과 수치와 성과 정렬 선택지를 두지 않고(원칙 III), '설정 바꿔 비교'는 005의 `prefillStrategySettings`를 `reopenSettings.ts` 어댑터로 부를 뿐 인계 빌더를 따로 만들지 않는다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/CLAUDE.md",
+          "old_path": "frontend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -738,7 +738,7 @@ Task: \"T026\" / \"T027\" / \"T028\" / \"T029\"                        # 테스트 병\n - [X] T186 [US6] (FE) `frontend/src/components/learning/article/useArticleCompletion.ts`(`data-article-end` 표지의 `IntersectionObserver`와 탭이 보이는 동안만 세는 시간, `minDwellSeconds`, 두 조건이 함께 참인 첫 순간에 한 번)와 `useReadingPosition.ts`(가장 큰 비율, 떠날 때마다 한 번: 화면 이동은 `apiClient`, `pagehide`·`visibilitychange` hidden은 keepalive, 한 번 떠날 때 겹치면 한 번만). 로그인 상태나 `userId`가 바뀌면 둘 다 처음부터 한다. 재확인(`checking`)과 `error`는 바뀐 것으로 보지 않으므로 그 앞뒤가 같은 상태·같은 `userId`면 센 시간과 가장 큰 비율을 이어 가고, 그동안 두 조건이 참이 되면 완료 요청은 확인이 끝나 바뀌지 않은 것을 안 뒤에 보낸다(R33) ‹B12›\n - [X] T187 [US6] (FE) `frontend/src/components/learning/article/CompletionCard.tsx` — 완료 날짜, 익힐 용어(용어가 있는 글만), 확인 문제, 이번에 받은 경험치 목록과 새 배지·레벨의 조용한 알림(미리 있는 `role=\"status\"` 영역에 넣음, 초점을 옮기지 않음), 다음 글 카드 또는 `continueReading`에 따른 문구('이어서 읽기' / '지금 공개된 글을 모두 읽었습니다'와 '다음 단계는 준비 중입니다'), `continueReading.kind`가 `RESUME`일 때 '이어서 읽기'가 싣는 navigation state `learningResume`(T189가 받는다), 단계 진행('n편 중 m편 읽음', 다 읽었으면 '완주 · n편'). 그림 장면(단계 도장 줄과 단계 완주 메달, 레벨 표장과 레벨 길, 다음 배지 메달)과 그 움직임은 T193(B13)이 더한다. 레벨 길과 다음 목표의 값은 완료 응답에 없으므로 B13이 완료 뒤 `GET /learning/me`를 한 번 더 불러 그린다(T204). 이 묶음의 카드는 글자와 조용한 알림만으로 완결하고 빈 그림 자리를 두지 않는다. 폭죽·소리 없음([design-notes](design-notes.md) §3.4) ‹B12›\n - [X] T188 [US6] (FE) `QuizPanel.tsx` 로그인 모드 — 고른 보기를 잠그고 저장 응답 뒤에만 정답·풀이, 실패면 '기록되지 않았습니다'와 같은 보기를 다시 보내는 '다시 시도', `alreadyAnswered`면 저장된 답으로 표시, `LEARNING_QUESTION_NOT_FOUND`면 글을 다시 불러오라는 한 줄과 '다시 불러오기', 다시 들어오면 첫 답 결과와 풀이, 첫 답에서 하나도 못 맞히면 '다시 풀기'(한 문제씩, 경험치 없음, `persistence` 알림) ‹B12›\n-- [X] T189 [US6] (FE) `frontend/src/pages/LearningArticlePage.tsx` 로그인 연결 — `useAuth().status`별 표시(R33 표: 확인 중(`checking`)과 `error` 동안에는 자리를 둔 채 보이지 않게만 하고 고른 보기·잠근 답·받은 글 기록과 완료 응답을 버리지 않으며 앞뒤가 같은 상태·같은 `userId`면 그대로 다시 보임, 만료는 '기록되지 않았습니다'·'다시 시도'와 014 재로그인 안내, 로그아웃 시작 즉시 숨김), 글 기록 조회와 실패 줄, 완료 실패 시 완료 카드·확인 문제 대신 '기록되지 않았습니다'와 '다시 시도', `ResumeLine.tsx`('62%까지 읽었습니다 · 이어서 읽기' 한 줄, 완료한 글에는 없음), navigation state `learningResume`이면 기록된 위치로 스크롤, CURRENT 글에서만 기록 ‹B12›\n+- [X] T189 [US6] (FE) `frontend/src/pages/LearningArticlePage.tsx` 로그인 연결 — `useAuth().status`별 표시(R33 표: 확인 중(`checking`)과 `error` 동안에는 자리를 둔 채 보이지 않게만 하고 고른 보기·잠근 답·받은 글 기록과 완료 응답을 버리지 않으며 앞뒤가 같은 상태·같은 `userId`면 그대로 다시 보임, 만료는 '기록되지 않았습니다'·'다시 시도'와 014 재로그인 안내, 로그아웃 시작 즉시 숨김), 글 기록 조회와 실패 줄, 완료 실패 시 완료 카드·확인 문제 대신 '기록되지 않았습니다'와 '다시 시도', `ResumeLine.tsx`('62%까지 읽었습니다 · 이어서 읽기' 한 줄, 완료한 글에는 없음), navigation state `learningResume`이면 기록된 위치로 스크롤, CURRENT 글에서만 기록. B12 converge(2026-10-07)에서 목업 '글 끝'의 '읽은 정도' 막대(받은 비율과 이 화면에서 잰 가장 큰 비율 가운데 큰 쪽, 완료한 글은 100%, `aria-hidden`)를 이 태스크로 더했다([design-notes](design-notes.md) §3.4, FR-031) ‹B12›\n - [X] T190 [US6] (FE 테스트) `useArticleCompletion.test.ts`(가짜 시계·`IntersectionObserver` 대역, 숨긴 시간 제외, 두 조건 순서 무관, 한 번만, `checking`이나 `error`를 거쳐 같은 `userId`로 돌아오면 센 시간을 이어 가고 다른 `userId`나 `anonymous`면 처음부터), `useReadingPosition.test.ts`(비율이 그대로여도 전송, keepalive 요청의 `X-XSRF-TOKEN`, `checking`이나 `error`를 거쳐 같은 `userId`면 가장 큰 비율을 이어 감), `CompletionCard.test.tsx`(문구 분기, 상태 알림이 초점을 옮기지 않음), `QuizPanel.test.tsx` 로그인 경우(저장 전 정답 없음, 실패 시 같은 보기 재전송), `frontend/src/api/learningMe.test.ts`(keepalive 위치 기록의 실제 주소가 `apiClient.defaults.baseURL`(테스트 기본값 `/api`)을 앞에 붙인 `/learning/me/articles/{articleId}/position`이고 `Content-Type: application/json`과 `X-XSRF-TOKEN`이 실림), `LearningArticlePage.test.tsx`의 로그인 상태별 경우(완료 훅이 `IntersectionObserver`를 쓰므로 이 파일에도 대역을 파일 안에서 둔다. `src/test/setup.ts`에 전역으로 두면 `src/hooks/useNearViewport.test.tsx`의 '없는 환경' 경우가 깨진다. 재확인 동안 완료 카드·확인 문제를 숨겼다가 같은 `userId`면 글 기록을 다시 요청하지 않고 잠근 답과 완료 카드를 그대로 보임, 비로그인에서는 떠날 때 `fetch`도 `apiClient`도 부르지 않음)와 1판 '저장소에 쓰지 않음' 단언 갱신 (quickstart 10-1~10-4, 10-10) ‹B12›\n \n ### Frontend — 나의 학습 화면 (B13)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/tasks.md",
+          "old_path": "specs/013-learning-pages/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2884298": []
+  }
+}

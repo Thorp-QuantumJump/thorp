@@ -1,0 +1,595 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945478,
+    "iid": 130,
+    "project_id": 1444456,
+    "title": "docs(infra): 원칙 II에 화면당 버튼 두 개 예외 조항 개정 초안을 낸다 (v3.4.0)",
+    "description": "## 작업 내용 요약\n\nconstitution 원칙 II(\"화면마다 가장 중요한 행동 버튼을 하나만 정한다\")에 예외 조항을 추가하는 개정이다(v3.3.0 → v3.4.0). spec 003의 FR-002가 버튼 두 개를 요구해 이 원칙과 충돌했는데, 팀이 버튼 두 개를 유지하기로 정해 그 조건을 원칙 본문에 명시했다.\n\n## 관련 티켓\n\nS15P21E205-253\n\n## 주요 변경 사항\n\n- 원칙 II에 예외 조항 추가: \"설정 조합을 일괄 비교하는 보조 경로가 주된 사용 경로로 확인된 화면은 예외로 같은 크기의 버튼 두 개를 둘 수 있다.\" 조건 두 가지(대체 UI로 숨기면 쓰임이 실제로 줄어드는지, 그 경로가 없으면 반복 조작이 필요한지)를 spec에 적고 constitution 개정 절차로 확인받은 경우에만 적용된다고 못 박아, 화면 설계자가 임의로 버튼을 늘리지 못하게 했다\n- Sync Impact Report에 3.4.0 항목 추가 및 **(승인 완료)** 표기. 기존 미승인 3.3.0 초안(티켓·MR 역할 분리 규칙)은 별개 사안이라 손대지 않고 승인 대기로 남겨뒀다 — 이 때문에 footer Version은 여전히 `3.4.0 (초안 — 전체 회의 승인 전)`으로 남는다\n- spec 003 spec.md(FR-002, Requirements Quality Gate 표), plan.md(Constitution Check, \"미해결 위반\"→\"해제된 위반\"), tasks.md(Pre-Implementation Quality Gate, T038·T040의 \\[BLOCKED\\] 해제)를 승인 결과에 맞춰 갱신 — B05·B11 착수를 더 이상 막지 않는다\n\n## 테스트\n\n문서 변경이라 코드 테스트 없음. 대괄호 자리표시자 잔존 0건, 버전 표기 일치, 날짜 ISO 형식, spec 003 세 파일의 상호 참조 일치를 확인했다.\n\n## 리뷰 포인트\n\n- footer Version이 \"승인 완료\"인 3.4.0인데도 여전히 \"초안\" 표시인 것이 맞는지 — 3.3.0(별개 사안, 미승인)이 사이에 끼어 있어서 그렇다. 3.2.0 승인 때도 같은 처리였다\n- 원칙 II 예외 조항의 문구가 다른 화면의 버튼 확산을 막을 만큼 구체적인지\n- spec 003 세 파일(spec·plan·tasks)의 갱신이 서로 어긋나지 않는지",
+    "state": "merged",
+    "created_at": "2026-09-15T21:28:06.154+09:00",
+    "updated_at": "2026-09-15T21:29:08.885+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T21:29:08.343+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/253-constitution-button-exception",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+    "merge_commit_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T21:28:07.638+09:00",
+    "reference": "!130",
+    "references": {
+      "short": "!130",
+      "relative": "!130",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!130"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/130",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945478,
+    "iid": 130,
+    "project_id": 1444456,
+    "title": "docs(infra): 원칙 II에 화면당 버튼 두 개 예외 조항 개정 초안을 낸다 (v3.4.0)",
+    "description": "## 작업 내용 요약\n\nconstitution 원칙 II(\"화면마다 가장 중요한 행동 버튼을 하나만 정한다\")에 예외 조항을 추가하는 개정이다(v3.3.0 → v3.4.0). spec 003의 FR-002가 버튼 두 개를 요구해 이 원칙과 충돌했는데, 팀이 버튼 두 개를 유지하기로 정해 그 조건을 원칙 본문에 명시했다.\n\n## 관련 티켓\n\nS15P21E205-253\n\n## 주요 변경 사항\n\n- 원칙 II에 예외 조항 추가: \"설정 조합을 일괄 비교하는 보조 경로가 주된 사용 경로로 확인된 화면은 예외로 같은 크기의 버튼 두 개를 둘 수 있다.\" 조건 두 가지(대체 UI로 숨기면 쓰임이 실제로 줄어드는지, 그 경로가 없으면 반복 조작이 필요한지)를 spec에 적고 constitution 개정 절차로 확인받은 경우에만 적용된다고 못 박아, 화면 설계자가 임의로 버튼을 늘리지 못하게 했다\n- Sync Impact Report에 3.4.0 항목 추가 및 **(승인 완료)** 표기. 기존 미승인 3.3.0 초안(티켓·MR 역할 분리 규칙)은 별개 사안이라 손대지 않고 승인 대기로 남겨뒀다 — 이 때문에 footer Version은 여전히 `3.4.0 (초안 — 전체 회의 승인 전)`으로 남는다\n- spec 003 spec.md(FR-002, Requirements Quality Gate 표), plan.md(Constitution Check, \"미해결 위반\"→\"해제된 위반\"), tasks.md(Pre-Implementation Quality Gate, T038·T040의 \\[BLOCKED\\] 해제)를 승인 결과에 맞춰 갱신 — B05·B11 착수를 더 이상 막지 않는다\n\n## 테스트\n\n문서 변경이라 코드 테스트 없음. 대괄호 자리표시자 잔존 0건, 버전 표기 일치, 날짜 ISO 형식, spec 003 세 파일의 상호 참조 일치를 확인했다.\n\n## 리뷰 포인트\n\n- footer Version이 \"승인 완료\"인 3.4.0인데도 여전히 \"초안\" 표시인 것이 맞는지 — 3.3.0(별개 사안, 미승인)이 사이에 끼어 있어서 그렇다. 3.2.0 승인 때도 같은 처리였다\n- 원칙 II 예외 조항의 문구가 다른 화면의 버튼 확산을 막을 만큼 구체적인지\n- spec 003 세 파일(spec·plan·tasks)의 갱신이 서로 어긋나지 않는지",
+    "state": "merged",
+    "created_at": "2026-09-15T21:28:06.154+09:00",
+    "updated_at": "2026-09-15T21:29:08.885+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T21:29:08.343+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/253-constitution-button-exception",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+    "merge_commit_sha": "39b517bd7a8004936780766c4466acd190a8b9f7",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T21:28:07.638+09:00",
+    "reference": "!130",
+    "references": {
+      "short": "!130",
+      "relative": "!130",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!130"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/130",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "4",
+    "latest_build_started_at": "2026-09-15T21:28:17.636+09:00",
+    "latest_build_finished_at": "2026-09-15T21:28:20.959+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196950,
+      "iid": 46,
+      "project_id": 1444456,
+      "sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+      "ref": "docs(infra)/253-constitution-button-exception",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T21:28:17.511+09:00",
+      "updated_at": "2026-09-15T21:28:20.965+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196950"
+    },
+    "head_pipeline": {
+      "id": 196950,
+      "iid": 46,
+      "project_id": 1444456,
+      "sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+      "ref": "docs(infra)/253-constitution-button-exception",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T21:28:17.511+09:00",
+      "updated_at": "2026-09-15T21:28:20.965+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196950",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-15T21:28:17.636+09:00",
+      "finished_at": "2026-09-15T21:28:20.959+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196950",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "05ce05c9bce325167157106853248c5702abe822",
+      "head_sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+      "start_sha": "977d75c857680a0d2de66e08d8e166bd99dfc6a4"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "fb50f0c558ae2b32f8e45dbb713f0eea03b2ebf8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811545,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T21:28:06.243+09:00",
+          "updated_at": "2026-09-15T21:28:06.247+09:00",
+          "system": true,
+          "noteable_id": 945478,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 130,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cccb8a636af494fff0c3ff7cc036e1218b5ce03f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811546,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T21:28:06.264+09:00",
+          "updated_at": "2026-09-15T21:28:06.273+09:00",
+          "system": true,
+          "noteable_id": 945478,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 130,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ef2d428d11885b8fbd5cc4e157831326628041b2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811549,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 문서 개정 내용과 spec 003 문서 간의 상호 참조, 태스크 차단 해제(`[BLOCKED]` 제거), 버전 및 날짜 표기가 일관되게 잘 반영되었습니다.\n\n### 테스트 제안\n- 문서 린트 및 마크다운 검증:\n  - 대괄호 자리표시자 잔존 여부 확인 (`0건` 확인 필요)\n  - 버전 표기 일치 여부 확인 (`3.4.0` 및 `Ratified`, `Last Amended` 날짜 형식 확인)\n  - spec 003 세 파일(`spec.md`, `plan.md`, `tasks.md`) 간의 예외 조항 및 차단 해제 상태 상호 참조 일치 검증\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ec936db020f5b2b9e6473c69dfdc5762f9f1300a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T21:28:13.793+09:00",
+          "updated_at": "2026-09-15T21:28:13.793+09:00",
+          "system": false,
+          "noteable_id": 945478,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 130,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4140e05bb09bcdc94684efe4ea168eed161dbbdc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2811552,
+          "type": null,
+          "body": "mentioned in commit 39b517bd7a8004936780766c4466acd190a8b9f7",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T21:29:08.700+09:00",
+          "updated_at": "2026-09-15T21:29:08.713+09:00",
+          "system": true,
+          "noteable_id": 945478,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 130,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2201910,
+      "head_commit_sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+      "base_commit_sha": "05ce05c9bce325167157106853248c5702abe822",
+      "start_commit_sha": "977d75c857680a0d2de66e08d8e166bd99dfc6a4",
+      "created_at": "2026-09-15T21:28:06.755+09:00",
+      "merge_request_id": 945478,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "9c029ff6e51d997c8a38baba53ccea97da2e28f5"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2201910,
+      "head_commit_sha": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+      "base_commit_sha": "05ce05c9bce325167157106853248c5702abe822",
+      "start_commit_sha": "977d75c857680a0d2de66e08d8e166bd99dfc6a4",
+      "created_at": "2026-09-15T21:28:06.755+09:00",
+      "merge_request_id": 945478,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "9c029ff6e51d997c8a38baba53ccea97da2e28f5",
+      "commits": [
+        {
+          "id": "ec936db020f5b2b9e6473c69dfdc5762f9f1300a",
+          "short_id": "ec936db0",
+          "created_at": "2026-09-15T21:15:18.000+09:00",
+          "parent_ids": [
+            "2f824e156e57e83c967e7b0b39dab12af2234ba0"
+          ],
+          "title": "docs(infra): constitution 3.4.0(원칙 II 버튼 예외) 전체 회의 승인을 반영한다",
+          "message": "docs(infra): constitution 3.4.0(원칙 II 버튼 예외) 전체 회의 승인을 반영한다\n\n2026-09-15 전체 회의에서 원칙 II 예외 조항(설정 조합 일괄 비교 보조 경로가 주된\n사용 경로로 확인된 화면은 버튼 두 개 허용)이 승인됐다.\n\n- Sync Impact Report의 3.4.0 항목을 \"(초안, 미승인)\"에서 \"(승인 완료)\"로 갱신.\n  같은 파일에 남아 있는 3.3.0 초안(티켓·MR 역할 분리 규칙)은 별개 사안이라\n  손대지 않고 그대로 승인 대기로 둔다(3.2.0 승인 때와 같은 처리)\n- footer Version은 3.3.0이 아직 미승인이라 \"3.4.0 (초안 — 전체 회의 승인 전)\"을\n  그대로 둔다\n- spec 003 spec.md FR-002·Requirements Quality Gate 표, plan.md Constitution\n  Check·\"미해결 위반\"→\"해제된 위반\" 절, tasks.md Pre-Implementation Quality\n  Gate·T038·T040의 [BLOCKED] 표시를 승인 완료 상태로 갱신했다. B05·B11 착수를\n  더 이상 막지 않는다\n\n관련 티켓: S15P21E205-253\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T21:15:18.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T21:15:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ec936db020f5b2b9e6473c69dfdc5762f9f1300a"
+        },
+        {
+          "id": "2f824e156e57e83c967e7b0b39dab12af2234ba0",
+          "short_id": "2f824e15",
+          "created_at": "2026-09-15T20:40:19.000+09:00",
+          "parent_ids": [
+            "05ce05c9bce325167157106853248c5702abe822"
+          ],
+          "title": "docs(infra): 원칙 II에 화면당 버튼 두 개 예외 조항 개정 초안을 낸다 (v3.4.0, 미승인)",
+          "message": "docs(infra): 원칙 II에 화면당 버튼 두 개 예외 조항 개정 초안을 낸다 (v3.4.0, 미승인)\n\nspec 003(전략 선택·상세 설정)의 FR-002가 '분석하기'·'설정 조합 자동 비교' 두 버튼을\n요구하는데, 원칙 II \"화면마다 가장 중요한 행동 버튼을 하나만 정한다\"와 충돌한다.\nspeckit-analyze가 CRITICAL로 표시했고, 명료화 세션의 선택만으로는 원칙의 예외를\n승인할 수 없다(Governance 개정 절차).\n\n팀이 버튼 두 개를 유지하기로 정해 원칙 II 본문에 예외 조항을 추가한다 — \"설정 조합을\n일괄 비교하는 보조 경로가 주된 사용 경로로 확인된 화면은 예외로 같은 크기의 버튼 두\n개를 둘 수 있다.\" 조건을 원칙 본문에 명시해 다른 화면이 같은 근거 없이 버튼을 늘리는\n것을 막는다.\n\n- 기존 원칙 문장은 유지하고 예외를 덧붙이는 실질적 확대이며 기존 화면·구현을 무효화하지\n  않으므로 MINOR (3.3.0 → 3.4.0)\n- 이미 파일에 있던 미승인 3.3.0 초안(티켓·MR 역할 분리 규칙)은 그대로 두고, 이번 개정은\n  그 위에 얹는 후속 초안이다\n- 전체 회의 승인·merge 전까지 효력이 없다(Governance 개정 절차 그대로)\n- spec 003 spec.md의 Requirements Quality Gate 표와 plan.md의 \"미해결 위반\" 절을\n  \"개정 초안 제출, 승인 대기\" 상태로 갱신했다. B05·B11은 승인 전까지 계속 차단이고,\n  이 충돌과 무관한 B04는 먼저 진행할 수 있다\n\n관련 티켓: S15P21E205-253\n\nCo-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T20:40:19.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T20:40:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2f824e156e57e83c967e7b0b39dab12af2234ba0"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,17 @@\n <!--\n Sync Impact Report\n+- Version change: 3.3.0 → 3.4.0 (승인 완료). 원칙 II \"화면마다 가장 중요한 행동 버튼을\n+  하나만 정한다\"에 예외 조항을 추가했다. spec 003(전략 선택·상세 설정) FR-002가 '분석하기'와\n+  '설정 조합 자동 비교'를 같은 크기의 버튼 두 개로 두기로 정했는데, 자동 비교가 설정을 하나씩\n+  바꿔가며 여러 번 돌리는 수고를 대신하는 주된 사용 경로라 보조 링크로 숨기지 않는다는 판단이었다\n+  (S15P21E205-253). 기존 원칙 문장은 그대로 두고 예외 조건을 뒤에 덧붙이는 실질적 확대이며 기존\n+  화면·구현을 무효화하지 않으므로 MINOR다. 전체 회의 승인을 받았다(2026-09-15). spec 003\n+  spec.md의 \"Requirements Quality Gate\" 표와 plan.md의 \"미해결 위반\" 절을 이 결정에 맞춰\n+  갱신했다. 이번 3.3.0 초안(티켓·MR 역할 분리 규칙)은 그대로 승인 대기 상태로 둔다.\n+- 3.4.0의 근거: speckit-analyze가 이 충돌을 CRITICAL로 표시했고, 명료화 세션의 팀 선택만으로는\n+  원칙의 예외를 승인할 수 없다는 것이 Governance 절차의 요구다. 예외를 화면마다 개별 판단에 맡기면\n+  기준이 흐려지므로, 예외가 성립하는 조건(보조 경로가 주된 사용 경로로 확인된 경우)을 원칙 본문에\n+  명시해 다른 화면이 같은 근거로 버튼을 늘리는 것을 막는다.\n - **(초안, 미승인) Version change: 3.2.0 → 3.3.0.** 티켓과 MR이 각각 무엇을 담는지 나누는 규칙을\n   Git 절에 추가하고, MR 본문의 절 이름을 \"관련 티켓 번호 & 링크\"에서 \"관련 티켓\"으로 줄였다.\n   또 팀이 쓰지 않는 GitLab 이슈를 전제하던 두 대목을 지우고, 이슈 추적은 Jira에서만 한다는 문장을\n@@ -96,7 +108,12 @@ AI(Claude 등) 모두에게 적용된다.\n \n - 계산식·자료 공급원 선택·거리 함수·실험 식별자·서버/인프라 설정을 사용자 기본 입력으로 요구하지\n   않는다. (§4.1, §6.5)\n-- 화면마다 가장 중요한 행동 버튼을 하나만 정한다. (§4.1)\n+- 화면마다 가장 중요한 행동 버튼을 하나만 정한다. **다만 설정 조합을 일괄 비교하는 보조 경로가\n+  주된 사용 경로로 확인된 화면은 예외로 같은 크기의 버튼 두 개를 둘 수 있다.** 이 예외는 팀이\n+  spec 단계에서 근거(그 보조 경로를 대체 UI로 숨겼을 때 실제로 쓰임이 줄어드는지, 또는 그 경로가\n+  없으면 같은 결과를 얻기 위해 반복 조작이 필요한지)를 spec에 적고 constitution 개정 절차로\n+  확인받은 경우에만 적용되며, 화면 설계자가 임의로 늘릴 수 없다. (§4.1, spec 003 FR-002,\n+  S15P21E205-253)\n - 결과 첫 화면은 **핵심 숫자 3개(비용 차감 후 전체 수익률·가장 크게 줄었던 폭·거래비용), 비교\n   그래프 1개, 해석 요약 1문장**으로 구성한다. (§4.1, §4.2.3, D10, D25)\n - 분석 기간·비교 대상·비용 적용 여부는 요약 한 줄에 항상 보인다. 결과 의미를 바꾸는 자료 부족·근거\n@@ -113,7 +130,9 @@ AI(Claude 등) 모두에게 적용된다.\n - 첫 결과에서 여러 상세 패널을 반드시 열어야 핵심을 이해할 수 있다면 요약 화면을 수정한다. (§7.2)\n \n 왜: 기획서가 \"가장 중요한 설계 원칙\"으로 못 박았다. 많은 금융지표·설정·주의문을 읽어야만 결과를\n-볼 수 있는 구조는 복잡도를 사용자에게 그대로 넘기는 것이다. (§2)\n+볼 수 있는 구조는 복잡도를 사용자에게 그대로 넘기는 것이다. (§2) 버튼 두 개 예외는 이 원칙을\n+느슨하게 하는 것이 아니라, \"가장 중요한 행동\"이 화면마다 하나가 아니라 둘로 확인된 드문 경우를\n+숨기지 않고 명시해 임의 확산을 막기 위한 것이다. 근거 없이 버튼을 늘리면 이 원칙 자체가 무력화된다.\n \n ### III. 진단이지 추천이 아니다\n \n@@ -735,4 +754,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 3.3.0 (초안 — 전체 회의 승인 전) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-14 (초안)\n+**Version**: 3.4.0 (초안 — 전체 회의 승인 전) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-15 (초안)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,7 +50,7 @@ branch `docs(fe)/245-spec-003-quality-review` · [checklists/review.md](checklis\n | 원칙 | 이 기능에서의 의미 | 판정 |\n |---|---|---|\n | I. 중심 약속은 전략 진단이다 | 이 화면이 전략 진단의 두 번째 단계다 | 통과 |\n-| II. 첫 화면은 단순하게 | 입력은 전략 선택 하나뿐이고 상세 설정은 요청해야 열린다(SC-005). 다만 **행동 버튼이 '분석하기'와 '설정 조합 자동 비교' 둘이라 constitution의 '버튼 하나'와 어긋난다**(FR-002) | **차단** — spec 수정 또는 constitution 개정 필요 |\n+| II. 첫 화면은 단순하게 | 입력은 전략 선택 하나뿐이고 상세 설정은 요청해야 열린다(SC-005). 행동 버튼은 '분석하기'와 '설정 조합 자동 비교' 둘이다(FR-002) | **통과** — [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253) 원칙 II 예외 조항이 2026-09-15 전체 회의 승인을 받아(3.4.0) 이 구성을 허용한다 |\n | III. 진단이지 추천이 아니다 | 기본값을 편의용 출발점으로 표기하고 최적값·투자 권고로 쓰지 않는다(FR-004) | 통과 |\n | IV. 비교는 같은 조건에서만 | 분석 기간은 공통 평가 가능 범위에서만 고를 수 있고(FR-009), 수수료·세금·기간을 수익이 높아지는 방향으로 자동 최적화하는 선택지를 두지 않는다(FR-010) | 통과 |\n | V. 당시에 알 수 있던 정보만 | 워밍업을 채우지 못하는 전략은 고를 수 없게 막는다(FR-011). 워밍업 계산은 등록표의 산출 규칙이 담당한다 | 통과 |\n@@ -60,13 +60,15 @@ branch `docs(fe)/245-spec-003-quality-review` · [checklists/review.md](checklis\n | IX. 실행 한도는 실측으로 정한다 | 해당 없음 — 이 화면은 계산을 실행하지 않는다 | 해당 없음 |\n | X. 자료는 이용 조건 안에서만 쓴다 | 해당 없음 — 이 화면은 시장 자료를 직접 읽지 않는다 | 해당 없음 |\n \n-### 미해결 위반: 행동 버튼 두 개\n+### 해제된 위반: 행동 버튼 두 개 (constitution 3.4.0 승인 완료)\n \n constitution 원칙 II가 인용하는 기획서 §4.1은 화면의 행동 버튼을 하나로 두라고 한다. spec 003은 FR-002에서 '분석하기'와 '설정 조합 자동 비교'를 같은 크기의 버튼 두 개로 두기로 정했다.\n \n-명료화 과정에서 세 선택지(보조 링크로 두기 / 같은 크기 버튼 두 개 / 상세 설정 안에 넣기)를 놓고 두 번째를 골랐다. 그러나 constitution Governance는 spec·plan의 충돌을 허용하지 않고, constitution을 먼저 개정하도록 요구한다. 명료화 세션의 선택만으로 이 원칙의 예외를 승인할 수 없다.\n+명료화 과정에서 세 선택지(보조 링크로 두기 / 같은 크기 버튼 두 개 / 상세 설정 안에 넣기)를 놓고 두 번째를 골랐다. constitution Governance는 spec·plan의 충돌을 허용하지 않고 constitution을 먼저 개정하도록 요구했으므로, 명료화 세션의 선택만으로는 이 원칙의 예외를 승인할 수 없었다.\n \n-따라서 FR-002를 버튼 하나로 고치거나 constitution 개정이 승인·병합될 때까지 해당 화면 구현을 시작하지 않는다. 어느 쪽을 택할지는 이 plan에서 임의로 정하지 않는다.\n+팀은 버튼 두 개를 유지하는 쪽을 택했다. [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II에 \"설정 조합을 일괄 비교하는 보조 경로가 주된 사용 경로로 확인된 화면은 예외로 같은 크기의 버튼 두 개를 둘 수 있다\"는 예외 조항을 추가하는 개정(3.3.0 → 3.4.0)을 냈고, **2026-09-15 전체 회의 승인을 받았다.**\n+\n+이 충돌은 더 이상 구현을 막지 않는다. B05(카드 골라 분석 시작)·B11(자동 비교 진입)을 다른 선행 조건(B04 등)이 끝나는 대로 시작할 수 있다.\n \n ### 게이트 결과 (Phase 0 전)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/plan.md",
+          "old_path": "specs/003-strategy-settings/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,7 @@\n \n | 항목 | 현재 판정 | 영향과 해제 조건 |\n |---|---|---|\n-| FR-002 행동 버튼 두 개 | **constitution 위반** | 버튼을 구현하는 B05·B11 차단. 카드만 구현하는 B04는 이 충돌과 무관하다. FR-002를 버튼 하나로 고치거나 constitution 개정을 승인·병합한다. |\n+| FR-002 행동 버튼 두 개 | **해제 (constitution 3.4.0 승인 완료)** | [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II에 예외 조항을 추가하는 개정이 2026-09-15 전체 회의 승인을 받았다. FR-002의 버튼 두 개 구성은 이제 원칙과 충돌하지 않는다. B05·B11 착수를 막지 않는다. |\n | PD-02·PD-03·PD-04 전략 값과 규칙 | **미확정** | T017과 이에 의존하는 B02 완료를 차단한다. 007의 기존 `PROVISIONAL-` 값은 출처와 임시 상태를 유지한 채 이관할 수 있지만, 빈 축·범위를 새로 지어내지 않는다. |\n | 001 평가 기간 계약 | **교차 spec 미해결** | T042·B06 종단 연결을 차단한다. `warmupTradingDays`를 받는 방법과 워밍업 후 최소 평가 길이를 001·004에서 합의한다. |\n | 004 규칙·비용 버전 조회 | **조회 계약 없음** | B06·B10의 실제 연결을 차단한다. 004가 현재 버전을 내려 주는 계약을 정한다. PD-07 미확정 자체는 차단 사유가 아니다. 004가 이미 명시한 `PROVISIONAL-DEMO-1`을 쓰되 화면에 임시값임을 표시한다. |\n@@ -165,7 +165,7 @@\n   | 흐름을 따라 배분하기 | 섹터 모멘텀 | 과거 성과의 방향 또는 상대 강도를 규칙으로 삼아 섹터를 선택·배분한다. |\n   | 전체 변동성을 줄이도록 배분하기 | 최소분산 | 섹터들이 함께 움직이는 정도를 반영해 추정 포트폴리오 분산이 작아지는 비중을 계산한다. |\n \n-- **FR-002**: 기본 화면에는 선택 전략과 '기본 설정 사용' 표시, 분석 시작·종료일·비교 대상 섹터 수·적용할 비용 조건의 버전과 임시 여부를 한 줄로 보인다. '분석하기'와 '설정 조합 자동 비교' 두 버튼은 같은 크기로 나란히 두고, 그 밖의 행동은 이 화면에 두지 않는다. **다만 이 구성은 constitution 원칙 II와 충돌하므로 Requirements Quality Gate를 통과하기 전에는 구현하지 않는다.** '기본 설정 사용'은 사용자가 켜고 끄는 항목이 아니라 지금 설정이 등록표의 기본값 그대로인지를 알리는 표시다. 값을 하나라도 바꾸면 '설정을 바꿈'으로 바뀌고, 바꾼 값을 모두 기본값으로 되돌리면 다시 '기본 설정'으로 돌아온다. (§4.1, §4.2.2)\n+- **FR-002**: 기본 화면에는 선택 전략과 '기본 설정 사용' 표시, 분석 시작·종료일·비교 대상 섹터 수·적용할 비용 조건의 버전과 임시 여부를 한 줄로 보인다. '분석하기'와 '설정 조합 자동 비교' 두 버튼은 같은 크기로 나란히 두고, 그 밖의 행동은 이 화면에 두지 않는다. constitution 원칙 II의 예외 조항(3.4.0, [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253) 2026-09-15 승인)이 이 구성을 허용한다. '기본 설정 사용'은 사용자가 켜고 끄는 항목이 아니라 지금 설정이 등록표의 기본값 그대로인지를 알리는 표시다. 값을 하나라도 바꾸면 '설정을 바꿈'으로 바뀌고, 바꾼 값을 모두 기본값으로 되돌리면 다시 '기본 설정'으로 돌아온다. (§4.1, §4.2.2)\n - **FR-003**: '상세 설정'은 선택한 전략에 해당하는 항목만 열고, 각 항목의 의미·허용 범위·기본값 복원을 제공한다. '고정 목표 비중'의 목표 비중은 [002](../002-sector-weight-selection/spec.md)에서 확정한 섹터별 비중을 그대로 보여 주기만 하며 이 화면에서 고칠 수 없고, 고치려면 섹터·비중 단계로 돌아가야 한다는 안내를 함께 둔다. 전략별 항목은 다음과 같다. (§4.2.2)\n \n   | 전략 | 상세 설정 항목 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/spec.md",
+          "old_path": "specs/003-strategy-settings/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,7 +16,7 @@\n \n 아래 항목이 해결되기 전에는 적은 범위의 구현 묶음을 완료·병합하지 않는다. 값과 무관한 구조·계약·합성 테스트는 먼저 수행할 수 있다.\n \n-- FR-002의 행동 버튼 두 개와 constitution 원칙 II의 충돌: 버튼을 구현하는 B05·B11 차단(B04 카드 목록은 진행 가능)\n+- ~~FR-002의 행동 버튼 두 개와 constitution 원칙 II의 충돌~~ — [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253)에서 원칙 II 예외 조항이 2026-09-15 전체 회의 승인을 받아(3.4.0) 해제됐다. B05·B11 착수를 막지 않는다\n - PD-02·PD-03·PD-04 미확정: 기존 007 임시 등록표에 없는 제품 축·값·규칙을 만드는 T017과 B02 완료 차단\n - 001 평가 기간 입력 계약과 워밍업 후 최소 평가 길이 미확정: T042·B06 종단 연결 차단\n - 004 규칙·비용 버전 조회 수단 미확정: B06·B10 실제 연결 차단. PD-07 자체는 `PROVISIONAL-DEMO-1` 표시로 차단하지 않음\n@@ -145,9 +145,9 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [ ] T035 [P] [US1] (FE) `frontend/src/components/strategy/RegistryUnavailableNotice.tsx` — FR-018: \"전략 설정을 불러오지 못했습니다\" + '다시 시도' 버튼(`onRetry`). 오류를 `role=\"alert\"`로 알리고 재시도 성공 시 새 카드 영역, 실패 시 안내를 읽은 뒤 재시도 버튼으로 초점이 돌아오게 한다(NFR-001). 임시 값·예비 등록표로 대신 동작하는 경로를 두지 않는다\n - [ ] T036 [P] [US1] (FE) `frontend/src/components/strategy/SettingsStatusBadge.tsx` — `isDefault ? '기본 설정' : '설정을 바꿈'`. 누를 수 없는 상태 표시이며 토글이 아니다(FR-002). 옆에 \"기본값은 편의용 출발점이며 최적값이 아닙니다\"(FR-004, 원칙 III)\n - [ ] T037 [P] [US1] (FE) `frontend/src/components/strategy/ConditionSummaryLine.tsx` — 분석 기간·비교 대상(섹터 수)·비용 적용 여부 한 줄(FR-002). 값은 props로만 받는다\n-- [ ] T038 [P] [US1] (FE) **[BLOCKED: FR-002와 constitution 원칙 II]** `frontend/src/components/strategy/ActionButtons.tsx` — 게이트에서 확정된 행동 구조를 구현한다. 현재 spec의 두 버튼 안을 유지하도록 승인되면 '분석하기'·'설정 조합 자동 비교'를 같은 크기·같은 variant로 두고, 비활성 조건(등록표 없음·전략 미선택·규칙 위반·워밍업 미충족·분석 조건 버전 없음)을 의미 있는 `disabled` 상태와 사유로 전달한다(NFR-001). FR-002를 버튼 하나로 고치면 그 결정에 맞춰 태스크 설명도 먼저 갱신한다\n+- [ ] T038 [P] [US1] (FE) `frontend/src/components/strategy/ActionButtons.tsx` — constitution 3.4.0 승인([S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253), 2026-09-15)으로 spec의 두 버튼 안이 확정됐다. '분석하기'·'설정 조합 자동 비교'를 같은 크기·같은 variant로 두고, 비활성 조건(등록표 없음·전략 미선택·규칙 위반·워밍업 미충족·분석 조건 버전 없음)을 의미 있는 `disabled` 상태와 사유로 전달한다(NFR-001)\n - [ ] T039 [US1] (FE) `frontend/src/api/backtest.ts` — `createBacktest(request)` → `POST /backtests`(`docs/specs/backtest-api/README.md` §1). 003이 채우는 필드(계약 §2): `executionType: 'SINGLE'`, `sectorAllocation`(002 값; `targetWeight`는 `targetWeightSource === 'USER'`일 때만 실어 보낸다), `strategy.{strategyId, rulesVersion, registryVersion, parameters}`, `conditions.{start, end, initialCash(문자열), costProfileVersion, warmupTradingDays, scenario: 'FULL_PERIOD'}`. 거절 코드 400·409·422·503을 `BacktestRequestError`로 정규화. **`rulesVersion`(필수)과 `costProfileVersion`의 출처는 미결이다**(\"착수 전에 알아둘 것\" ②) — `frontend/src/api/analysisVersions.ts` 한 파일의 `fetchAnalysisVersions()`에서만 읽도록 격리하고, 결정 전에는 이 함수가 `null`을 돌려주며 화면은 '분석하기'를 \"분석 조건 버전을 확인할 수 없습니다\"로 막는다. 값을 지어내 보내지 않는다\n-- [ ] T040 [US1] (FE) **[BLOCKED: T038]** `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)\n+- [ ] T040 [US1] (FE) `frontend/src/pages/StrategySettingsPage.tsx`·`StrategySettingsPage.module.css` — 조립: `AppHeader` → 섹터 선택 확인(T030) → 등록표 조회(`universeSize` = 섹터 수) → `StrategyCardList` → 선택 시 `SettingsStatusBadge`·`ConditionSummaryLine`·`ActionButtons`. 상세 설정·기간금액조건 영역은 접힌 자리만 둔다(US2·US3에서 채운다). '분석하기'는 현재 값(처음엔 기본값)·`registryVersion`·현재 워밍업으로 요청을 조립해 `createBacktest` → 202면 `backtestId`와 상태를 보인다(결과 화면 이동은 005가 붙인다). `provisional:true`면 `frontend/src/components/paramsearch/ProvisionalBadge.tsx`를 재사용해 상시 표시하고 확정값으로 표현하지 않는다. 기본 화면의 입력은 전략 선택 하나다(SC-005) (T032~T039 의존)\n - [ ] T041 [US1] (FE) `frontend/src/App.tsx` — `/strategy` 경로에 lazy `StrategySettingsPage` 추가. 주석에 \"002 섹터·비중 → 003 전략 선택 → 004 분석 / 007 자동 비교\" 흐름을 적는다 (T040 의존)\n - [ ] T042 [US1] (FE) 워밍업 판정 연결(FR-011) — `frontend/src/api/sectors.ts`에 `fetchEvaluationWindow({sectors, strategy})` → `GET /sectors/evaluation-window`(001 계약 `specs/001-etf-market-data/contracts/sector-api.md`); `frontend/src/hooks/useEvaluationWindow.ts` — 카드 목록은 전략별로, 선택 전략은 현재 설정으로 조회. 판정: `evaluable:false` → 카드 선택 불가 + 이유 한 문장; `evaluable:true`이고 `commonStart`가 워밍업 없이 계산한 값보다 늦으면 `'reduced'` + 줄어든 기간과 `bindingCandidate` 안내. **이 엔드포인트는 아직 없다(001 `tasks.md` T017 보류 — 워밍업이 003에서 와야 해서 001이 만들 수 없었다)**. 404·미구현·실패면 카드에 \"공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다\"를 보이고 '분석하기'를 막는다. 값을 지어내지 않는다(원칙 IV·VI, \"착수 전에 알아둘 것\" ①) (T032·T034 의존)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2811549": []
+  }
+}

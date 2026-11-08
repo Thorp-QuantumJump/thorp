@@ -1,0 +1,795 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951096,
+    "iid": 223,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 013 문서 동기화와 최종 검증",
+    "description": "<h2>작업 내용 요약</h2><p>spec 013 B06 문서를 현재 구현과 맞추고 실제 통합·화면 검증 범위와 미확인 항목을 기록했습니다. 최신 dev를 병합한 상태에서 전체 빌드를 다시 검증했습니다.</p><h2>관련 티켓</h2><p><a href=\\https://ssafy.atlassian.net/browse/S15P21E205-302\\>S15P21E205-302</a></p><h2>주요 변경 사항</h2><ul><li>배우기 계약·데이터 모델·quickstart·파트 규칙을 구현 상태와 동기화했습니다.</li><li>B06 실행 결과와 수동 확인 범위를 validation 문서에 남겼습니다.</li><li>최신 dev를 병합해 현재 기준과 충돌을 해소했습니다.</li></ul><h2>테스트</h2><ul><li>backend: spotlessApply build 성공, 1,739개 중 1,735개 통과·조건부 건너뜀 4</li><li>frontend: lint 오류 0·기존 경고 20, build 성공, Vitest 1,097개와 Node 13개 통과</li><li>git diff --check 통과</li></ul><h2>리뷰 포인트</h2><p>T075/T097의 남은 실제 화면·스크린 리더 확인은 완료로 표시하지 않았습니다. validation.md의 수행·미수행 구분이 완료 기준에 맞는지 확인해 주세요.</p>",
+    "state": "merged",
+    "created_at": "2026-09-18T14:28:59.392+09:00",
+    "updated_at": "2026-09-18T15:30:22.654+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T14:40:08.721+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/302-spec-013-wrapup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+    "merge_commit_sha": "846bd17512e1872d408a81f7dde5e56aa884cb36",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T14:29:00.762+09:00",
+    "reference": "!223",
+    "references": {
+      "short": "!223",
+      "relative": "!223",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!223"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/223",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951096,
+    "iid": 223,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 013 문서 동기화와 최종 검증",
+    "description": "<h2>작업 내용 요약</h2><p>spec 013 B06 문서를 현재 구현과 맞추고 실제 통합·화면 검증 범위와 미확인 항목을 기록했습니다. 최신 dev를 병합한 상태에서 전체 빌드를 다시 검증했습니다.</p><h2>관련 티켓</h2><p><a href=\\https://ssafy.atlassian.net/browse/S15P21E205-302\\>S15P21E205-302</a></p><h2>주요 변경 사항</h2><ul><li>배우기 계약·데이터 모델·quickstart·파트 규칙을 구현 상태와 동기화했습니다.</li><li>B06 실행 결과와 수동 확인 범위를 validation 문서에 남겼습니다.</li><li>최신 dev를 병합해 현재 기준과 충돌을 해소했습니다.</li></ul><h2>테스트</h2><ul><li>backend: spotlessApply build 성공, 1,739개 중 1,735개 통과·조건부 건너뜀 4</li><li>frontend: lint 오류 0·기존 경고 20, build 성공, Vitest 1,097개와 Node 13개 통과</li><li>git diff --check 통과</li></ul><h2>리뷰 포인트</h2><p>T075/T097의 남은 실제 화면·스크린 리더 확인은 완료로 표시하지 않았습니다. validation.md의 수행·미수행 구분이 완료 기준에 맞는지 확인해 주세요.</p>",
+    "state": "merged",
+    "created_at": "2026-09-18T14:28:59.392+09:00",
+    "updated_at": "2026-09-18T15:30:22.654+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T14:40:08.721+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/302-spec-013-wrapup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+    "merge_commit_sha": "846bd17512e1872d408a81f7dde5e56aa884cb36",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T14:29:00.762+09:00",
+    "reference": "!223",
+    "references": {
+      "short": "!223",
+      "relative": "!223",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!223"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/223",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-18T14:29:12.337+09:00",
+    "latest_build_finished_at": "2026-09-18T14:40:07.981+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 206033,
+      "iid": 163,
+      "project_id": 1444456,
+      "sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+      "ref": "docs(fe)/302-spec-013-wrapup",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T14:29:12.205+09:00",
+      "updated_at": "2026-09-18T14:40:07.995+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/206033"
+    },
+    "head_pipeline": {
+      "id": 206033,
+      "iid": 163,
+      "project_id": 1444456,
+      "sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+      "ref": "docs(fe)/302-spec-013-wrapup",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T14:29:12.205+09:00",
+      "updated_at": "2026-09-18T14:40:07.995+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/206033",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T14:29:12.337+09:00",
+      "finished_at": "2026-09-18T14:40:07.981+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/206033",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "da929d3ff9eb77077fa242c24575a853f3db2a30",
+      "head_sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+      "start_sha": "da929d3ff9eb77077fa242c24575a853f3db2a30"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "62296cfaad93ba6c7f27ebd82494066e5eaba71c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2833992,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T14:28:59.512+09:00",
+          "updated_at": "2026-09-18T14:28:59.525+09:00",
+          "system": true,
+          "noteable_id": 951096,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 223,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "02ffdb34731e7c35fdb50c7064dec1fcb7428249",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2833998,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **문서화 및 추적성 확보**: `validation.md`를 신규 도입하여 수동 검증 항목과 자동 검증(Gradle, Vitest, Spotless) 결과를 투명하게 기록하였으며, 스프린트 계획(`plan.md`, `tasks.md`)과 실제 구현 상태를 정확히 동기화했습니다.\n- **예외 상황 및 상태 관리 정의**: `data-model.md`에 `draftVersion`의 역할과 `hasUnpublishedChanges` 판정 기준을 명확히 정의하여 분산된 도메인 간의 데이터 정합성을 높였습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (도큐멘테이션 및 스펙 동기화 중심의 변경으로, 런타임 코드나 보안에 영향을 미치는 결함은 확인되지 않았습니다.)\n\n### 테스트 제안\n- **브라우저 저장소 격리 테스트**: `sessionStorage`에 보관되는 `thorp.learning.adminDraft.{articleId}` 키가 저장 성공 시 정상적으로 삭제되는지, 그리고 일반 사용자(비관리자) 세션에서는 해당 스토리지에 접근하거나 쓰지 않는지 브라우저 개발자 도구를 통해 수동 확인합니다.\n- **권한 제어 최종 통합 테스트**: 일반 계정으로 로그인한 상태에서 `/admin/learning` 경로에 직접 접근하였을 때, 서버 측 `LearningAdminPolicy`와 연동되어 적절히 차단(403 또는 리다이렉트)되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:cec8668d0d9014b9e26c62c574b6d5bdecb82e20 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T14:29:08.697+09:00",
+          "updated_at": "2026-09-18T14:29:08.697+09:00",
+          "system": false,
+          "noteable_id": 951096,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 223,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d9cae75cc5b6c01c803cc1bf1368c0ad5ce0d697",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834030,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for cec8668d0d9014b9e26c62c574b6d5bdecb82e20 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T14:32:42.268+09:00",
+          "updated_at": "2026-09-18T14:32:42.271+09:00",
+          "system": true,
+          "noteable_id": 951096,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 223,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "76f75fac35f8a8e60c8f17756eb4dcf1a1d22fc3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834110,
+          "type": null,
+          "body": "mentioned in commit 846bd17512e1872d408a81f7dde5e56aa884cb36",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T14:40:11.539+09:00",
+          "updated_at": "2026-09-18T14:40:11.550+09:00",
+          "system": true,
+          "noteable_id": 951096,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 223,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3a972328e1b6f454afa4203e0adb6183e6b99535",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834858,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:30:22.618+09:00",
+          "updated_at": "2026-09-18T15:30:22.622+09:00",
+          "system": true,
+          "noteable_id": 951096,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 223,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a6975996ab1945118c1e89d76328708b6392df7e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885043,
+          "type": null,
+          "body": "mentioned in commit ef409e470f6ff8df9170a3bf07dade01252ef182",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.182+09:00",
+          "updated_at": "2026-10-13T15:16:11.185+09:00",
+          "system": true,
+          "noteable_id": 951096,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 223,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2221168,
+      "head_commit_sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+      "base_commit_sha": "da929d3ff9eb77077fa242c24575a853f3db2a30",
+      "start_commit_sha": "da929d3ff9eb77077fa242c24575a853f3db2a30",
+      "created_at": "2026-09-18T14:28:59.806+09:00",
+      "merge_request_id": 951096,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "ff3cd928ba8755b4bd6f6e6bbb2d78b77ce9e218"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2221168,
+      "head_commit_sha": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+      "base_commit_sha": "da929d3ff9eb77077fa242c24575a853f3db2a30",
+      "start_commit_sha": "da929d3ff9eb77077fa242c24575a853f3db2a30",
+      "created_at": "2026-09-18T14:28:59.806+09:00",
+      "merge_request_id": 951096,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "ff3cd928ba8755b4bd6f6e6bbb2d78b77ce9e218",
+      "commits": [
+        {
+          "id": "cec8668d0d9014b9e26c62c574b6d5bdecb82e20",
+          "short_id": "cec8668d",
+          "created_at": "2026-09-18T14:28:13.000+09:00",
+          "parent_ids": [
+            "347f3785167357f0414468582b7873dce6e57cdb"
+          ],
+          "title": "docs(fe): 최신 dev 검증 결과 반영",
+          "message": "docs(fe): 최신 dev 검증 결과 반영\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T14:28:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T14:28:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cec8668d0d9014b9e26c62c574b6d5bdecb82e20"
+        },
+        {
+          "id": "347f3785167357f0414468582b7873dce6e57cdb",
+          "short_id": "347f3785",
+          "created_at": "2026-09-18T14:16:38.000+09:00",
+          "parent_ids": [
+            "50738a7f8eb0cb8555acbd5ea8c79c60e514e83d",
+            "da929d3ff9eb77077fa242c24575a853f3db2a30"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(fe)/302-spec-013-wrapup",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(fe)/302-spec-013-wrapup\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T14:16:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T14:16:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/347f3785167357f0414468582b7873dce6e57cdb"
+        },
+        {
+          "id": "50738a7f8eb0cb8555acbd5ea8c79c60e514e83d",
+          "short_id": "50738a7f",
+          "created_at": "2026-09-18T13:25:49.000+09:00",
+          "parent_ids": [
+            "4261247fb823e0dfedfa572c0e4ec4365e5075dc"
+          ],
+          "title": "docs(fe): spec 013 B06 수렴 태스크 추가",
+          "message": "docs(fe): spec 013 B06 수렴 태스크 추가\n\n남은 quickstart 화면 및 스크린 리더 검증을 T097로 추적한다.\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T13:25:49.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T13:25:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/50738a7f8eb0cb8555acbd5ea8c79c60e514e83d"
+        },
+        {
+          "id": "4261247fb823e0dfedfa572c0e4ec4365e5075dc",
+          "short_id": "4261247f",
+          "created_at": "2026-09-18T13:21:02.000+09:00",
+          "parent_ids": [
+            "26ec510a40c15869980b6ab0b62a816f0f62e589"
+          ],
+          "title": "docs(fe): 배우기 문서 동기화와 최종 검증 기록",
+          "message": "docs(fe): 배우기 문서 동기화와 최종 검증 기록\n\nS15P21E205-302: T073, T074, T076-T078 완료. T075는 남은 수동 확인을 명시하고 열린 상태로 유지한다.\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T13:21:02.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T13:21:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4261247fb823e0dfedfa572c0e4ec4365e5075dc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+.git\n+.gradle\n+build\n+out\n+node_modules\n+coverage\n+.env*\n+*.log*\n+Dockerfile*\n+.dockerignore\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/.dockerignore",
+          "old_path": "backend/.dockerignore",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -73,6 +73,9 @@ common: 모든 계층에서 참조 가능\n \n ## 규칙\n \n+- 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다.\n+- 배우기 게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지운다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003).\n+- 배우기 관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고, 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다.\n - DTO는 record 우선, 요청 DTO에 `@Valid` 검증 필수\n - 포맷은 Spotless(google-java-format AOSP)가 강제 — CI에서 spotlessCheck 실패 시 빌드 실패\n - API JSON은 camelCase, 비동기 계약 준수: `POST /backtests` → 즉시 202 `{backtestId: \"BT-20260908-000001\", status: \"QUEUED\"}` 반환.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,6 +19,8 @@ npm run lint && npm run build && npm test\n \n ## 규칙\n \n+- 용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015).\n+- `sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`는 관리 화면의 저장하지 않은 편집 내용과 그 기반 `draftVersion`을 보관한다. 저장 성공 시 지우며, 복원할 때는 보관한 판 번호를 유지한다. 일반 사용자 배우기 화면은 저장소에 쓰지 않는다.\n - 컴포넌트는 함수형, 파일명 PascalCase(`BacktestForm.tsx`), 훅은 `use` 접두사\n - API 필드는 camelCase (백엔드와 동일)\n - 백엔드 호출은 `/api` 프록시 경유 (vite.config.ts에 설정됨) — URL 하드코딩 금지\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/CLAUDE.md",
+          "old_path": "frontend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'\n import tseslint from 'typescript-eslint'\n \n export default tseslint.config(\n-  { ignores: ['dist'] },\n+  { ignores: ['dist', 'build', 'coverage', '**/*.min.js'] },\n   {\n     extends: [js.configs.recommended, ...tseslint.configs.recommended],\n     files: ['**/*.{ts,tsx}'],\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/eslint.config.js",
+          "old_path": "frontend/eslint.config.js",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -108,7 +108,7 @@ navigate('/diagnosis/sectors', {\n | 화면 | 지금 상태 | 필요한 일 |\n |---|---|---|\n | [002](../../002-sector-weight-selection/spec.md) | spec에 013 도움말 참조가 없다 | 002 담당이 붙일 용어와 자리를 정한다 |\n-| [003](../../003-strategy-settings/spec.md) | FR-016·T057a가 013을 참조한다 | T057a가 `components/strategy/TermHelp.tsx` 대신 이 공용 컴포넌트를 쓰도록 003 tasks를 고친다 |\n+| [003](../../003-strategy-settings/spec.md) | T097에서 등록표 `axes[].termId`를 받아 `DetailSettingsPanel`이 이 공용 컴포넌트를 쓴다(2026-09-18 코드 확인) | T057a·T063의 옛 경로·실패 처리 문구를 현재 구현에 맞추는 것은 003 담당이다. 축 설명은 003 등록표가 계속 소유한다 |\n | [005](../../005-result-comparison/spec.md) | spec에 013 도움말 참조가 없다. 013 US3 시나리오 4가 '가장 크게 줄었던 폭' 도움말을 전제한다 | 005 담당이 붙일 용어와 자리를 정한다 |\n \n 쓸 수 있는 `termId` 목록은 [data-model](../data-model.md) §8이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/contracts/term-help-ui.md",
+          "old_path": "specs/013-learning-pages/contracts/term-help-ui.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -116,6 +116,7 @@ learning_published_term (게시 용어 색인)\n   \"title\": \"수익과 손실\",\n   \"question\": \"가장 크게 줄었던 폭은 왜 시작 금액 대비 손실과 다른가?\",\n   \"readingOrder\": 8,\n+  \"draftVersion\": 5,\n   \"bodyBlocks\": [\n     { \"type\": \"paragraph\", \"text\": \"...\" },\n     { \"type\": \"term\", \"termId\": \"max-drawdown\" },\n@@ -137,6 +138,12 @@ learning_published_term (게시 용어 색인)\n \n 위 문장과 섹터는 모양을 보이는 자리표시이며 원고나 추천 예시가 아니다.\n \n+`draftVersion`은 이 판을 게시할 때의 초안 번호다. `LearningAdminService`는 공개 중인 판의\n+`snapshot.draftVersion`과 현재 초안의 `draftVersion`이 다르면 관리 목록에\n+`hasUnpublishedChanges: true`를 보낸다. 공개 판이 없는 초안 글은 `false`다. 이 값은\n+게시 횟수인 `revisionNo`와 다르며, 다시 게시할 때 새 판에 당시 초안 번호를 기록한다.\n+필수 저장 필드이므로 키가 빠진 판을 0으로 대신하지 않고 읽기 실패로 처리한다.\n+\n ## 4. 본문 블록\n \n | `type` | 필드 | 저장 시 검사(400) | 화면 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/data-model.md",
+          "old_path": "specs/013-learning-pages/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@\n \n > 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 따로 만든다.\n > 이 plan 문서 작업은 [S15P21E205-273](https://ssafy.atlassian.net/browse/S15P21E205-273) · branch `docs(fe)/273-spec-013-plan`이다.\n+> B06 동기화·검증: [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302) · branch `docs(fe)/302-spec-013-wrapup`. 실행 결과와 남은 확인은 [validation.md](validation.md)에 둔다.\n \n **Input**: `specs/013-learning-pages/spec.md` (Clarifications 10건 + 002 대조 정정 1건, FR-001~FR-019, SC-001~SC-008)\n \n@@ -78,7 +79,8 @@\n | 대상 | 필요한 일 | 담당 | 막는 범위 |\n |---|---|---|---|\n | [014 사용자 인증](../014-user-auth/spec.md) | Out of Scope의 '사용자 역할별 권한 관리와 관리자 계정'을 범위 안으로 옮겨 관리 권한 소유를 받아들인다 | 014 담당 | 막지 않는다. 그전까지 설정 허용 목록으로 동작한다([research](research.md) R5) |\n-| [003 전략 선택](../003-strategy-settings/tasks.md) | T057a가 `components/strategy/TermHelp.tsx` 대신 013 공용 `components/learning/TermHelp.tsx`를 쓰도록 고친다. 함께 맞출 규칙 둘: ① T057a·T063은 조회 실패도 '설명 준비 중'으로 보이게 적었지만 013 FR-010은 실패를 '설명 준비 중'과 구분해 다시 시도 수단을 보인다([term-help-ui](contracts/term-help-ui.md) §1·§2). ② T057a는 축 `description` 옆에 013 원본을 붙이게 적었지만, 축의 의미·허용 범위 안내는 003 등록표가 소유하고 013 도움말은 그 안의 개념 용어에만 붙인다(013 FR-008, US3 시나리오 5). `fetchGlossaryEntry`의 인자는 표시 이름이 아니라 `termId`다 | 003 담당 | 003 T057a·T063의 자리만. 013 B04가 먼저 서면 된다 |\n+| [003 전략 선택](../003-strategy-settings/tasks.md) | T097에서 등록표 `axes[].termId`와 `DetailSettingsPanel`의 공용 `components/learning/TermHelp.tsx` 연결을 구현했다. 실제 API는 `termId`로 조회하며 설명 없음·조회 실패를 구분한다. 축 설명은 003 등록표가 계속 소유한다. T057a·T063에 남은 옛 경로·실패 처리 문구의 정리는 003 담당이 한다 | 003 담당 | 공용 부품 연결은 완료. 화면 왕복·입력 유지의 실행 결과는 [검증 기록](validation.md)에 적는다 |\n+| [002 예시 진입](../002-sector-weight-selection/tasks.md) | T020의 예시 수신·덮어쓰기 확인이 구현됐다(`diagnosis/learningExample.ts`, `SectorSelectionLearningEntry.test.tsx`) | 002 담당 | 미구현 대기가 아니다. quickstart 4-3에서 013 인계와 002 수신을 함께 확인한다 |\n | [002 섹터·비중](../002-sector-weight-selection/spec.md) | 도움말을 붙일 용어와 자리를 정한다. spec에 013 참조가 없다 | 002 담당 | 002의 도움말만. 013 구현은 막지 않는다 |\n | [005 결과 이해·비교](../005-result-comparison/spec.md) | 도움말을 붙일 용어와 자리를 정한다. 013 US3 시나리오 4가 '가장 크게 줄었던 폭' 도움말을 전제한다 | 005 담당 | 005의 도움말만 |\n | [001 대표 ETF 자료](../001-etf-market-data/contracts/sector-api.md) | 열린 대응표 조회. `SectorService.getSectors()`가 이미 있다 | — | 없음 |\n@@ -108,6 +110,7 @@ specs/013-learning-pages/\n ├── research.md          # Phase 0 산출물\n ├── data-model.md        # Phase 1 산출물\n ├── quickstart.md        # Phase 1 산출물\n+├── validation.md        # B06 실행 결과와 미실행 범위\n ├── contracts/           # Phase 1 산출물\n │   ├── README.md                  # 소유·비소유 계약, 새 오류 코드\n │   ├── learning-public-api.md     # 글 목록·글·용어 설명 공개 조회\n@@ -121,32 +124,37 @@ specs/013-learning-pages/\n ### Source Code (repository root)\n \n ```text\n-backend/src/main/java/com/ssafy/thorp/learning/          # 새 013 소유 도메인\n+backend/src/main/java/com/ssafy/thorp/learning/          # 013 소유 도메인\n ├── presentation/\n │   ├── controller/      # LearningController(공개), LearningAdminController(관리)\n │   ├── request/         # 글 만들기·초안 저장·게시 요청\n-│   └── response/\n+│   ├── response/\n+│   └── support/         # LearningAdminAccess, LearningAdminWebConfig, UniqueConstraintViolations\n ├── application/\n-│   ├── service/         # 공개 조회, 초안 저장, 게시·게시 취소 유스케이스\n+│   ├── service/         # LearningQueryService, LearningAdminService\n │   ├── command/ result/\n+│   ├── exception/       # 공개 조회·관리 유스케이스 예외\n │   ├── repository/      # 글·용어·판·기록·게시 용어 색인 저장소 인터페이스\n │   └── port/            # SectorMapPort, LearningAdminPolicy, PublishCheckRulesPort\n ├── domain/\n │   ├── model/           # LearningArticle, LearningTerm, ArticleBlock(sealed), ArticleRevision,\n-│   │                    # PublishCheck, PublishCheckRules, PublishCheckResult\n+│   │                    # ArticleSnapshot, PublicationEvent, PublishCheck,\n+│   │                    # PublishCheckRules, PublishCheckResult\n+│   ├── exception/       # DraftChangedException, PublishCheckFailedException\n │   └── vo/              # ArticleId, TermId, ExampleAllocation\n └── infrastructure/\n-    ├── persistence/     # *JpaEntity, *Mapper, *RepositoryImpl\n+    ├── persistence/     # *JpaEntity, *Mapper, *RepositoryImpl, LearningContentJson\n     ├── sector/          # SectorMapPort 구현 — SectorService를 부른다\n     ├── admin/           # ConfiguredLearningAdminPolicy — thorp.learning.admin-user-ids\n-    └── rules/           # publish-checks YAML 로더\n+    └── rules/           # YamlPublishCheckRulesLoader\n \n backend/src/main/java/com/ssafy/thorp/common/\n ├── config/SecurityConfig.java      # /admin/learning/** 를 authenticated() 로 묶는 한 줄\n-└── exception/ErrorCode.java        # spec 013 블록\n+├── exception/ErrorCode.java        # spec 013 블록\n+└── web/advice/GlobalExceptionHandler.java  # 검증 오류의 details.fields\n \n backend/src/main/resources/\n-├── db/migration/V{타임스탬프}__learning_content.sql   # 다섯 테이블 + 아홉 글·열네 용어 자리\n+├── db/migration/V20260917101000__learning_content.sql  # 다섯 테이블 + 아홉 글·열네 용어 자리\n └── learning/publish-checks-v1.yml\n \n docs/specs/learning-api/examples/   # 계약 픽스처\n@@ -154,9 +162,9 @@ docs/specs/learning-api/examples/   # 계약 픽스처\n frontend/src/\n ├── types/learning.ts, types/learningAdmin.ts\n ├── api/learning.ts                 # 공개 조회\n-├── api/learningGlossary.ts         # fetchGlossaryEntry — 003 T057a가 격리해 둔 자리\n+├── api/learningGlossary.ts         # fetchGlossaryEntry — 공개 용어 API, 세 상태 구분\n ├── api/learningAdmin.ts            # 관리\n-├── pages/LearningListPage.tsx      # /learn (지금 NotReadyPage 자리)\n+├── pages/LearningListPage.tsx      # /learn\n ├── pages/LearningArticlePage.tsx   # /learn/:articleId\n ├── pages/AdminLearningListPage.tsx # /admin/learning\n ├── pages/AdminLearningEditPage.tsx # /admin/learning/:articleId\n@@ -164,8 +172,14 @@ frontend/src/\n     ├── ArticleBlocks.tsx           # 블록을 텍스트 노드로 그린다\n     ├── ExampleEntry.tsx            # '이 예시로 비중 비교하기'와 연결 불가 안내\n     ├── ReturnToDiagnosisLink.tsx   # '하던 진단으로 돌아가기'\n+    ├── LearningLoadFailure.tsx     # 조회 실패와 명시적 다시 시도\n     ├── TermHelp.tsx                # 002·003·005 공용 도움말\n-    └── admin/                      # 블록 편집기, 예시 섹터 선택, 용어 목록, 게시 검사 결과\n+    └── admin/\n+        ├── BlockEditor.tsx\n+        ├── ExampleEditor.tsx\n+        ├── TermListEditor.tsx\n+        ├── PublishCheckResultList.tsx\n+        └── adminDraftStorage.ts    # 미저장 편집과 기반 draftVersion 보관\n ```\n \n **구조 선택 근거**: 이 저장소는 `backend/`와 `frontend/`가 나뉜 웹 애플리케이션이다. 백엔드는 도메인별 패키지 안에서 `presentation → application → domain/infrastructure` 계층을 ArchUnit으로 강제한다([ADR-0001](../../docs/adr/0001-be-layered-package-architecture.md)). 글·용어 설명의 소유자는 013이므로 새 `learning` 도메인에 둔다. 도움말 컴포넌트는 세 화면이 함께 쓰므로 특정 화면 폴더(`components/strategy`)가 아니라 `components/learning`에 둔다.\n@@ -185,7 +199,7 @@ constitution \"Jira 연계\"가 **작업 묶음 = 1 Branch = 1 MR**이고 **묶음\n | B03 | `[FE] 배우기 목록과 글을 보이고 예시로 진단을 시작한다` | `feat(fe)/{번호}-learning-pages` | 공개 타입·API, `/learn`·`/learn/:articleId`, 블록 그리기, 예시 002 진입과 연결 불가 안내, 빈 목록·볼 수 없는 글·불러오지 못함, 접근성 | US1·US2·US4 | B01 계약 |\n | B04 | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | `feat(fe)/{번호}-term-help` | `learningGlossary.ts`, 공용 `TermHelp`, 글 화면의 돌아가기 연결 | US3 | B03 |\n | B05 | `[FE] 관리 화면에서 글을 고치고 게시한다` | `feat(fe)/{번호}-learning-admin` | 권한 확인, 관리 목록, 편집기(블록·예시 섹터·용어), 게시 검사 결과 표시, 게시 취소, 편집 중 만료 보관, 409 처리 | US5 화면 | B02, B03 |\n-| B06 | `[DOCS] spec 013 문서 동기화와 최종 검증` | `docs(fe)/{번호}-spec-013-wrapup` | [quickstart](quickstart.md) 실행 기록, spec·plan과 구현 차이 반영, README 색인 확인 | — | 전부 |\n+| B06 · [302](https://ssafy.atlassian.net/browse/S15P21E205-302) | `[DOCS] spec 013 문서 동기화와 최종 검증` | `docs(fe)/302-spec-013-wrapup` | [quickstart](quickstart.md) 실행 기록, spec·plan과 구현 차이 반영, README 색인 확인 | — | 전부 |\n \n ```text\n B01 ─┬─▶ B02 ─────────────┐\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/plan.md",
+          "old_path": "specs/013-learning-pages/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,8 @@\n \n 구현이 spec을 만족하는지 재현하는 검증 가이드다. 계약·필드의 정의는 [contracts/](contracts/)와 [data-model.md](data-model.md)를 본다. 이 문서는 무엇을 실행하고 무엇이 나와야 하는지만 적는다.\n \n+B06 실행 결과·검증 환경·미실행 항목은 [validation.md](validation.md)에 따로 기록한다.\n+\n ## 0. 준비\n \n - Java 21, Node.js·npm, Docker(PostgreSQL Testcontainers와 로컬 DB)\n@@ -14,9 +16,13 @@\n **로컬 프로필 주의**: `application-local.yml`은 Flyway를 끄고 Hibernate가 스키마를 만든다. 이 상태에서는 마이그레이션이 넣는 **아홉 글·열네 용어 자리가 생기지 않는다.** 초기 자리를 확인하려면 아래처럼 Flyway를 켠다.\n \n ```bash\n-SPRING_PROFILES_ACTIVE=local SPRING_FLYWAY_ENABLED=true SPRING_JPA_HIBERNATE_DDL_AUTO=validate THORP_LEARNING_ADMIN_USER_IDS=1 ./gradlew bootRun\n+SPRING_PROFILES_ACTIVE=local SPRING_FLYWAY_ENABLED=true SPRING_JPA_HIBERNATE_DDL_AUTO=validate SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=never THORP_LEARNING_ADMIN_USER_IDS=1 ./gradlew bootRun\n ```\n \n+Flyway가 Spring Session 테이블도 만들므로 이 확인에서는 별도 세션 스키마 초기화를 끈다.\n+`backend/.env`의 메일 설정도 필요하다([backend/CLAUDE.md](../../backend/CLAUDE.md)). 메일을\n+보내지 않는 검증에는 더미 값을 쓴다. 아래의 게시·대응표 변경은 합성 자료 전용 로컬 DB에서 한다.\n+\n ## 1. 자동 검증\n \n ### 백엔드\n@@ -85,6 +91,10 @@ curl -s localhost:8080/learning/terms/max-drawdown\n \n `returns-and-losses`를 열어 아래처럼 저장한 뒤 게시한다.\n \n+먼저 제목·질문·설명 문단·예시 두 섹터를 채우고, 이 글의 두 용어(`max-drawdown`·\n+`net-total-return`)에 이름·문장을 넣어 각각 본문의 `term` 블록에 한 번씩 연결한다.\n+이 준비 없이 초기 초안을 바로 게시하면 아래 세 항목 외에 필수 항목 검사도 걸린다.\n+\n - 예시 섹터 두 개, 비중 50.0%·45.0%\n - `paragraph` 블록에 `추천 비중` 포함\n - 용어 `max-drawdown` 문장에 `-30%` 포함\n@@ -177,19 +187,22 @@ curl -s localhost:8080/learning/terms/max-drawdown\n \n ## 5. 진단 화면 도움말 (US3)\n \n-003의 도움말이 공용 `TermHelp`를 쓰는 상태에서 확인한다. 003 화면이 아직 붙지 않았으면 컴포넌트 테스트로만 확인한다.\n+003의 `DetailSettingsPanel`은 등록표 `axes[].termId`가 있는 축에 공용 `TermHelp`를 붙인다\n+(T097 구현). `/strategy`의 실제 도움말을 확인한다. 003에 없는 용어는 공용 컴포넌트 테스트로\n+확인하고, 그 결과를 화면 종단 확인과 구분해 기록한다.\n \n ### 5-1. 세 상태 (FR-010)\n \n | 준비 | 도움말을 열면 |\n |---|---|\n-| 게시된 `max-drawdown` | 이름·문장·글 연결 |\n-| 초안뿐인 `rebalancing` | '설명 준비 중', 연결 없음 |\n+| `weights-and-rebalancing`을 게시한 뒤 `rebalancing` 도움말 | 이름·문장·글 연결 |\n+| 같은 글을 게시 취소한 뒤 `rebalancing` 도움말 | '설명 준비 중', 연결 없음 |\n | `/api/learning/terms/*` 요청을 막음 | 불러오지 못했다는 문장과 다시 시도. 진단 입력·'분석하기'는 그대로 쓸 수 있다 |\n \n ### 5-2. 같은 탭 이동과 돌아가기 (FR-009)\n \n-`/strategy`에서 전략을 고르고 설정 하나를 바꾼 뒤, 도움말의 글 연결을 누른다.\n+요청 차단을 풀고 `weights-and-rebalancing`을 다시 게시한다. `/strategy`에서 전략을 고르고\n+설정 하나를 바꾼 뒤, 도움말의 글 연결을 누른다.\n \n **기대**:\n - 같은 탭에서 글이 열리고 '하던 진단으로 돌아가기'가 보인다\n@@ -198,7 +211,10 @@ curl -s localhost:8080/learning/terms/max-drawdown\n \n ### 5-3. 제목을 바꿔도 끊기지 않음 (US3 시나리오 7)\n \n-관리 화면에서 `returns-and-losses`의 제목과 `max-drawdown`의 문장을 고쳐 게시한다.\n+관리 화면에서 `weights-and-rebalancing`의 제목과 `rebalancing`의 문장을 고쳐 게시한다.\n+§5-1에서 게시 취소했으면 다시 게시한 상태로 확인한다. 이 글의 나머지 용어도 본문에 한 번씩\n+연결되어 있어야 한다. `max-drawdown`·`returns-and-losses`의 동일 식별자 재게시는 서버 계약\n+테스트에서도 확인한다.\n \n **기대**: 도움말의 글 연결이 같은 주소로 열리고 새 문장이 보인다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/quickstart.md",
+          "old_path": "specs/013-learning-pages/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -69,7 +69,7 @@ spec이 plan으로 넘긴 항목(저장 구조·조회 방식·게시 전 검사\n \n ## R5. 관리 계정인지 누가 어떻게 판정하는가\n \n-**결정**: 포트 `learning/application/port/LearningAdminPolicy`가 로그인한 사용자 식별자를 받아 관리 권한 여부를 답한다. 지금 구현은 설정값 `thorp.learning.admin-user-ids`(쉼표로 구분한 사용자 ID 목록)를 읽는 `ConfiguredLearningAdminPolicy`다. **운영 설정에는 기본값을 두지 않는다.** 값을 넣지 않으면 아무도 관리자가 아니다. [014](../014-user-auth/spec.md)가 역할을 제공하면 이 구현 한 클래스만 역할을 읽도록 바꾼다.\n+**결정**: 포트 `learning/application/port/LearningAdminPolicy`가 로그인한 사용자 식별자를 받아 관리 권한 여부를 답한다. 지금 구현은 설정값 `thorp.learning.admin-user-ids`(쉼표로 구분한 사용자 ID 목록)를 읽는 `ConfiguredLearningAdminPolicy`다. **운영 설정에는 기본값을 두지 않는다.** `THORP_LEARNING_ADMIN_USER_IDS`를 누락하면 운영 Compose가 배포를 멈추고, 빈 값으로 명시하면 아무도 관리자가 아니다. [014](../014-user-auth/spec.md)가 역할을 제공하면 이 구현 한 클래스만 역할을 읽도록 바꾼다.\n \n **근거**:\n - spec FR-016은 \"관리 계정으로 **로그인**한 운영자만\"을 요구한다. 설정 허용 목록은 014의 실제 로그인 세션(서버 세션, 주체 = 사용자 ID)을 그대로 쓰므로 이 요구를 지킨다.\n@@ -78,6 +78,11 @@ spec이 plan으로 넘긴 항목(저장 구조·조회 방식·게시 전 검사\n \n **남는 의존**: 014 spec의 Out of Scope를 고쳐 관리 권한의 소유를 받아들이는 개정이 필요하다. 그 개정은 014 담당의 몫이고 이 plan의 작업 묶음에 넣지 않는다. 개정 전에도 허용 목록으로 기능이 동작하므로 013 구현을 막지 않는다. [plan.md](plan.md) \"교차 의존\"에 이 사실을 남긴다.\n \n+**B06 코드 대조(2026-09-18)**: 014의 역할·관리자 계정 제외 항목은 그대로다. 관리 경로는\n+`LearningAdminAccess`가 로그인 주체를 읽고 `LearningAdminPolicy`로 판정한다. 허용 목록과\n+운영 환경 변수 전달은 구현되어 있다. 운영 계정 생성·권한 설정의 실제 완료 여부는 이 코드\n+확인으로 판단하지 않는다.\n+\n **기각한 대안**:\n - **`users.role` 컬럼 추가**: 014 소유 스키마·도메인을 013이 바꾼다. 역할 부여 절차까지 정해야 하는데 그것은 spec 013 Out of Scope다.\n - **`OperatorGate` 방식의 운영 토큰 헤더**: 로그인한 계정이 아니라 토큰을 가진 사람이 게시하게 된다. FR-016과 FR-018(게시한 관리 계정 기록)을 둘 다 어긴다.\n@@ -171,6 +176,14 @@ spec이 plan으로 넘긴 항목(저장 구조·조회 방식·게시 전 검사\n - 002 계약이 예시 인계에 같은 수단을 이미 쓴다.\n - 허용 목록과 경로 검사는 state 값을 조작해 임의 경로로 보내는 것을 막는다. 검사 함수는 014가 로그인 복귀에 이미 쓰는 것을 재사용한다.\n \n+**B06 코드 대조(2026-09-18)**: 002 T020의 `useLearningExampleEntry`·덮어쓰기 확인과\n+`SectorSelectionLearningEntry.test.tsx`가 구현되어 있다. 예시 인계는 T032만으로 대신하지 않고\n+002 수신 동작까지 확인한다. 003은 T097에서 등록표의 `axes[].termId`를 받아\n+`DetailSettingsPanel`에 공용 `components/learning/TermHelp.tsx`를 연결했다. 축의 설명은\n+003 등록표에 남고 개념 용어 조회는 013이 맡는다. `learningGlossary.ts`도 실제 공개 API를\n+부르며 '설명 준비 중'과 조회 실패를 구분한다. 003 T057a·T063에 남은 옛 경로·실패 처리\n+문구는 003 담당의 문서 동기화 대상이다. 검증 결과와 미실행 범위는 [검증 기록](validation.md)에 둔다.\n+\n **기각한 대안**:\n - **쿼리 문자열 `?from=`**: 공유 링크와 새로고침 뒤에도 남는다.\n - **`history.back()`만 쓰기**: 글에서 다른 글로 이동한 뒤 누르면 진단이 아니라 이전 글로 돌아간다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/research.md",
+          "old_path": "specs/013-learning-pages/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -38,8 +38,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n 013 혼자 닫을 수 없는 항목이다. 여기서 티켓을 만들지 않고 각 담당이 판단한다([plan](plan.md) \"교차 의존\").\n \n - ① **014 관리 권한** — 014에 역할이 아직 없어 관리 권한은 설정 허용 목록 `thorp.learning.admin-user-ids`로 판정한다([research](research.md) R5). 014 Out of Scope를 고치는 개정은 014 담당의 몫이며 013 구현을 막지 않는다. 014가 역할을 주면 `ConfiguredLearningAdminPolicy` 한 클래스만 바꾼다\n-- ② **002 T020 미구현** — 002 tasks.md의 T020(배우기 예시 진입과 덮어쓰기 확인, Jira 미발급)이 아직 없다. 013 US2는 navigation state `sectorSelectionExample`을 **싣는 데까지**(T030·T032)가 범위이고, 002 화면이 그 값을 받아 채우는 종단 확인(quickstart 4-3)은 002 T020 뒤에 한다\n-- ③ **003 T057a** — 003이 `components/strategy/TermHelp.tsx`로 계획한 자리를 013 공용 `components/learning/TermHelp.tsx`로 바꾸는 것은 003 담당의 몫이다. B04가 먼저 서면 된다. `frontend/src/api/learningGlossary.ts`의 실제 구현은 013이 소유하므로, 003이 그 파일에 대역을 먼저 두었으면 T036이 본문을 바꾼다. 003 T057a·T063에는 013과 다른 규칙이 둘 있다. 조회 실패를 '설명 준비 중'으로 보이는 것(013 FR-010은 둘을 구분한다)과 축 `description` 옆에 013 원본을 붙이는 것(축 안내는 003 등록표 소유, 013 FR-008)이다. 맞추는 일은 003 담당의 몫이며 [plan](plan.md) \"교차 의존\"에 적었다\n+- ② **002 T020 구현됨** — 예시 수신과 덮어쓰기 확인이 현재 코드에 있다. B06은 T032만으로 대신하지 않고 실제 002 화면에서 예시 적용·거절 시 입력 보존을 확인했다([검증 기록](validation.md) 4-3)\n+- ③ **003 공용 도움말 연결 구현됨** — T097이 등록표 `axes[].termId`를 공용 `components/learning/TermHelp.tsx`에 연결한다. 실제 API가 설명 없음과 조회 실패를 구분한다. 003 T057a·T063의 옛 경로·실패 처리 문구 정리는 003 담당의 문서 동기화 대상이다. 실제 왕복·입력 유지 확인은 [검증 기록](validation.md) 5-1~5-4에 둔다\n - ④ **002·005 도움말 자리** — 어느 화면의 어떤 용어에 도움말을 붙일지는 각 spec이 정한다(spec FR-008). 쓸 수 있는 `termId` 목록은 [data-model](data-model.md) §8이다\n - ⑤ **로컬 프로필은 Flyway가 꺼져 있다** — 마이그레이션이 넣는 아홉 글·열네 용어 자리가 `local`에서는 생기지 않는다. 확인하려면 [quickstart](quickstart.md) §0의 명령으로 Flyway를 켠다\n - ⑥ **PD-16 미확정** — [data-model](data-model.md) §8의 제목·순서·용어 구성은 출발안이다. 팀이 확정해 달라지면 관리 화면에서 고치거나 새 마이그레이션으로 자리를 더한다. 적용된 마이그레이션은 고치지 않는다(constitution \"스키마 변경 규칙\")\n@@ -262,18 +262,20 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### 문서\n \n-- [ ] T073 [P] (DOCS) `backend/CLAUDE.md` \"규칙\"에 세 줄 추가 — \"배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다\"; \"게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 재작성을 같은 트랜잭션에서 한다 — 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003)\"; \"관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다\". `frontend/CLAUDE.md` \"규칙\"에 두 줄 — \"용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015)\"; \"`sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`(관리 화면의 저장하지 않은 편집 내용, 저장 성공 시 지운다). 일반 사용자 배우기 화면은 저장소에 쓰지 않는다\"\n-- [ ] T074 [P] (DOCS) spec 문서 동기화 — `specs/013-learning-pages/data-model.md` §3-6 snapshot 예시에 `draftVersion`을 더하고 `hasUnpublishedChanges` 판정 근거임을 적는다(T009·T052); `plan.md` \"Source Code\" 트리의 파일 이름을 구현과 맞춘다(`presentation/support/LearningAdminAccess`, `LearningQueryService`·`LearningAdminService`, `admin/adminDraftStorage.ts` 등); `research.md` R5·R11에 \"착수 전에 알아둘 것\" ①~③의 현재 상태를 반영한다; `specs/README.md` 013 행은 바뀐 것이 없으면 그대로 둔다\n+- [X] T073 [P] (DOCS) `backend/CLAUDE.md` \"규칙\"에 세 줄 추가 — \"배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다\"; \"게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 재작성을 같은 트랜잭션에서 한다 — 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003)\"; \"관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다\". `frontend/CLAUDE.md` \"규칙\"에 두 줄 — \"용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015)\"; \"`sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`(관리 화면의 저장하지 않은 편집 내용, 저장 성공 시 지운다). 일반 사용자 배우기 화면은 저장소에 쓰지 않는다\"\n+- [X] T074 [P] (DOCS) spec 문서 동기화 — `specs/013-learning-pages/data-model.md` §3-6 snapshot 예시에 `draftVersion`을 더하고 `hasUnpublishedChanges` 판정 근거임을 적는다(T009·T052); `plan.md` \"Source Code\" 트리의 파일 이름을 구현과 맞춘다(`presentation/support/LearningAdminAccess`, `LearningQueryService`·`LearningAdminService`, `admin/adminDraftStorage.ts` 등); `research.md` R5·R11에 \"착수 전에 알아둘 것\" ①~③의 현재 상태를 반영한다; `specs/README.md` 013 행은 바뀐 것이 없으면 그대로 둔다\n - [ ] T075 (DOCS) [quickstart.md](quickstart.md) 0~5 수동 확인을 돌리고 결과를 MR 본문 \"테스트\" 절에 항목별로 적는다. 002 T020이 아직 없으면 4-3은 T032로 대신하고 그 사실을 적는다; 003 화면이 공용 `TermHelp`를 아직 쓰지 않으면 5-1~5-4는 T042로 대신한다(quickstart §5 머리말); 로컬 확인은 §0의 Flyway 켜기 명령으로 한다. SC-002는 검사 통과로 증명되지 않는다는 것을 그대로 적는다(quickstart §6). SC-005 사용성 관찰은 이 태스크가 수행하지 않으며, constitution \"완료의 정의\"에 따라 구현 완료와 구분해 \"사용성 확인: 미수행\"(또는 수행 결과)으로 따로 적는다\n \n+> B06 실행 기록: [validation.md](validation.md). T075는 HTTP·자동 검증과 일부 실제 화면 확인까지 수행했다. 남은 화면·스크린 리더 확인은 완료로 세지 않으며 T075를 열린 상태로 둔다.\n+\n ### 코드 정리\n \n-- [ ] T076 [P] (FE) 잔재·하드코딩 확인 — `grep -n \"NotReadyPage\" frontend/src/App.tsx`에서 `/learn` 경로가 0건; `grep -rn \"dangerouslySetInnerHTML\" frontend/src/components/learning frontend/src/pages/Learning*`가 0건(R3); `grep -rn \"components/strategy/TermHelp\" frontend/src`는 003 T057a의 몫이므로 결과만 MR에 적는다; `frontend/src/components/learning`·`frontend/src/pages/Learning*Page.tsx`에 [data-model](data-model.md) §8의 `termId`·제목 문자열이 상수로 없다(FR-015. 테스트·픽스처는 제외)\n+- [X] T076 [P] (FE) 잔재·하드코딩 확인 — `grep -n \"NotReadyPage\" frontend/src/App.tsx`에서 `/learn` 경로가 0건; `grep -rn \"dangerouslySetInnerHTML\" frontend/src/components/learning frontend/src/pages/Learning*`가 0건(R3); `grep -rn \"components/strategy/TermHelp\" frontend/src`는 003 T057a의 몫이므로 결과만 MR에 적는다; `frontend/src/components/learning`·`frontend/src/pages/Learning*Page.tsx`에 [data-model](data-model.md) §8의 `termId`·제목 문자열이 상수로 없다(FR-015. 테스트·픽스처는 제외)\n \n ### 전체 검증\n \n-- [ ] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 9 포함)·마이그레이션·계약·통합 테스트 전부. `skipped`가 Docker 부재 때문인지 확인하고 건너뛴 테스트를 통과로 세지 않는다([backend/CLAUDE.md](../../backend/CLAUDE.md), quickstart 1)\n-- [ ] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm test` — Vitest include에 새 `.test.ts` 셋(`learning`·`learningGlossary`·`learningAdmin`)이 들어갔는지 결과 목록에서 확인한다. 빠졌으면 `src/diagnosis/testCollection.guard.test.tsx`가 먼저 실패한다\n+- [X] T077 (BE 테스트) `cd backend && ./gradlew spotlessApply build` — ArchUnit(규칙 9 포함)·마이그레이션·계약·통합 테스트 전부. `skipped`가 Docker 부재 때문인지 확인하고 건너뛴 테스트를 통과로 세지 않는다([backend/CLAUDE.md](../../backend/CLAUDE.md), quickstart 1)\n+- [X] T078 (FE 테스트) `cd frontend && npm run lint && npm run build && npm test` — Vitest include에 새 `.test.ts` 셋(`learning`·`learningGlossary`·`learningAdmin`)이 들어갔는지 결과 목록에서 확인한다. 빠졌으면 `src/diagnosis/testCollection.guard.test.tsx`가 먼저 실패한다\n \n ---\n \n@@ -303,11 +305,11 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n | 묶음 · 티켓 | Jira Task 제목 | 포함 T### | 수 | position | 선행 |\n |---|---|---|---|---|---|\n | B01 · [S15P21E205-294](https://ssafy.atlassian.net/browse/S15P21E205-294) | `[BE] 배우기 글과 용어 설명을 보관하고 공개 조회한다` | T001~T003, T007~T019, T033~T035 | 19 | `be` | 없음 |\n-| B02 · 미발급 | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | T045~T059 | 15 | `be` | B01 |\n+| B02 · [S15P21E205-295](https://ssafy.atlassian.net/browse/S15P21E205-295) | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | T045~T059 | 15 | `be` | B01 |\n | B03 · [S15P21E205-321](https://ssafy.atlassian.net/browse/S15P21E205-321) | `[FE] 배우기 목록과 글을 보이고 예시로 진단을 시작한다` | T004, T006, T020~T032, T043, T044 | 17 | `fe` | B01의 계약(T003) |\n | B04 · [S15P21E205-328](https://ssafy.atlassian.net/browse/S15P21E205-328) | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | T036~T042 | 7 | `fe` | B03 |\n | B05 · [S15P21E205-299](https://ssafy.atlassian.net/browse/S15P21E205-299) | `[FE] 관리 화면에서 글을 고치고 게시한다` | T005, T060~T072 | 14 | `fe` | B02, B03 |\n-| B06 · 미발급 | `[DOCS] spec 013 문서 동기화와 최종 검증` | T073~T078 | 6 | `fe` | 전부 |\n+| B06 · [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302) | `[DOCS] spec 013 문서 동기화와 최종 검증` | T073~T078 | 6 | `fe` | 전부 |\n \n ```text\n B01 ─┬─▶ B02 ─────────────┐\n@@ -461,3 +463,7 @@ Task: \"T026\" / \"T027\" / \"T028\" / \"T029\"                        # 테스트 병\n ## Phase 16: Convergence\n \n - [X] T096 (FE) `frontend/src/components/learning/admin/ExampleEditor.tsx`에서 대응표가 `emptyCatalog`(발행됐지만 섹터가 0개)일 때도 새 섹터를 고를 수 없다는 한 문장을 보인다. 지금은 `canPickSector`가 거짓이라 '섹터 추가'와 기존 행의 `select`가 막히는데, 안내 문장은 `mapNotReady`·`failed`일 때만 나와 이유 없이 막힌다. `emptyCatalog`는 대응표가 없는 것과 다른 사실이므로 \"열린 대응표에 섹터가 없어 새로 고를 수 없습니다. 이미 넣은 행은 그대로 둡니다\"처럼 구분해 적는다. `ExampleEditor.test.tsx`에 `emptyCatalog` 응답에서 이 문장이 보이고 '섹터 추가'가 막히는지 더한다 per T063 (partial)\n+\n+## Phase 17: Convergence\n+\n+- [ ] T097 (DOCS) [validation.md](validation.md)에 남은 quickstart 0~5 수동 확인을 실제 화면에서 마친다 — 빈 목록·게시 취소 글 화면, 일반 계정의 관리 화면 차단, 관리 목록의 미게시 변경·갱신 필요 표시, 게시 취소 뒤 공개 목록·글·기록, 공개 화면의 브라우저 저장소 미사용, 실패 화면의 자동 재요청 없음, 대응표에서 사라진 예시의 대체 안내, 키보드 Tab 경로와 NVDA 또는 VoiceOver 읽기, 실제 003 도움말의 실패·재시도와 제목 변경 뒤 연결을 확인한다. 각 결과를 `validation.md`와 MR 본문 \"테스트\" 절에 성공·실패·미수행으로 구분해 기록하고 모두 확인된 뒤 T075와 이 태스크를 완료한다. SC-002 패턴 검사의 한계와 SC-005 사용성 확인 미수행 표시는 유지한다 per T075, FR-019, SC-008 (partial)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/tasks.md",
+          "old_path": "specs/013-learning-pages/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+# B06 검증 기록\n+\n+**기준일**: 2026-09-18 · **병합 기준**: `origin/dev` `da929d3f` · **티켓**: [S15P21E205-302](https://ssafy.atlassian.net/browse/S15P21E205-302)\n+\n+T073·T074·T076·T077·T078을 완료했다. **T075는 부분 수행**이며 아래 남은 수동 확인을 끝내기 전에는 B06 완료로 표시하지 않는다. 원래 작업 디렉터리의 미커밋 변경을 제외한 별도 worktree에서 확인했다.\n+\n+## 환경과 자료\n+\n+- Windows, Java 21, Node.js·npm, Docker Desktop. PostgreSQL 16 전용 임시 DB에 Flyway를 적용했다.\n+- `local` 프로필에서 `SPRING_FLYWAY_ENABLED=true`, `SPRING_JPA_HIBERNATE_DDL_AUTO=validate`, `SPRING_SESSION_JDBC_INITIALIZE_SCHEMA=never`를 사용했다.\n+- 관리 허용 계정 하나와 일반 계정 하나, 두 섹터의 합성 대응표 `FIXTURE-B06`, 검증용 글만 넣었다. 운영 원고·운영 권한 설정은 확인하지 않았다.\n+- 브라우저는 실제 Vite → Spring Boot → PostgreSQL 경로를 사용했다. HTTP 확인도 응답 대역 없이 실제 로그인 세션·CSRF로 실행했다.\n+- 가격 시계열은 넣지 않았다. 따라서 003의 공통 평가기간 계산과 분석 실행 성공은 이 결과에 포함하지 않는다.\n+\n+## 자동 검증\n+\n+| 명령 | 결과 |\n+|---|---|\n+| `cd backend && ./gradlew spotlessApply build` | 성공. XML 집계 1,739개 중 1,735개 통과, 실패 0, 오류 0, 조건부 건너뜀 4 |\n+| `cd frontend && npm run lint` | 성공. 오류 0, 기존 경고 20(React Hooks·Fast Refresh) |\n+| `cd frontend && npm run build` | 성공 |\n+| `cd frontend && npm test` | 성공. Vitest 110파일·1,097개 및 Node 테스트 13개 통과, 건너뜀 0 |\n+| `git diff --check` | 통과 |\n+\n+백엔드 건너뜀은 Docker 부재가 아니다. 실제 PostgreSQL·RabbitMQ Testcontainers가 실행됐다.\n+\n+| 건너뛴 범위 | 수 | 조건 |\n+|---|---:|---|\n+| 외부 시장 API 실호출 | 1 | `MARKET_LIVE_TEST=true`일 때만 실행 |\n+| 뉴스 성능 측정 | 2 | `THORP_RUN_NEWS_PERFORMANCE=true`일 때만 실행 |\n+| CI의 Docker 필수 가드 | 1 | `THORP_REQUIRE_DOCKER=true`일 때만 실행 |\n+\n+013의 ArchUnit·마이그레이션·계약·통합 테스트는 실행됐다. 프런트엔드의 `learning.test.ts`(13), `learningGlossary.test.ts`(11), `learningAdmin.test.ts`(15)가 실제 결과 목록에 포함됐다. `test.include`의 `src/api/*.test.ts`와 수집 가드도 확인했다.\n+\n+## Quickstart 0~5 실행 범위\n+\n+**HTTP**는 실제 서버 요청·DB 결과 대조, **화면**은 실제 브라우저 조작, **자동**은 위 전체 테스트를 뜻한다. HTTP나 자동 확인만 있는 행을 수동 화면 검증 완료로 세지 않는다.\n+\n+| 절 | 확인 방법과 결과 | 남은 수동 확인 |\n+|---|---|---|\n+| 0 | HTTP·DB: Flyway 적용 후 빈 본문의 초안 9개·용어 자리 14개. 로그인·허용 목록 적용 | 없음 |\n+| 1 | 위 자동 검증 완료 | 없음 |\n+| 2-1 | HTTP: 공개 목록 200·빈 배열 | 빈 목록 화면 |\n+| 2-2 | HTTP: 미게시·없는 글 404, 준비되지 않은 용어 `LEARNING_TERM_NOT_READY` | 아래 3-8의 비공개 글 화면 |\n+| 3-1 | HTTP: 비로그인 401·일반 계정 404·관리 계정 200·CSRF 누락 403. 화면: 비로그인은 로그인으로 이동, 관리 계정은 9개 글과 게시 사용자·판 기록 표시 | 일반 계정의 관리 화면 차단 |\n+| 3-2 | HTTP·화면: 비중 합계 95%, 금지 표현, 용어의 결과성 숫자로 검사 3개가 각각 위치와 함께 표시. 최초 실패 시 판 추가 없음 | 없음 |\n+| 3-3 | HTTP: 최초 게시 1판, 본문·용어 API 문장 일치. 화면: 수정 후 게시 성공과 판 번호·규칙·대응표 표시 | 없음 |\n+| 3-4 | HTTP: 열린 대응표가 없으면 `EXAMPLE_SECTOR_IN_MAP`으로 거절 | 없음 |\n+| 3-5 | HTTP: 저장만 하면 공개 응답 유지·`hasUnpublishedChanges=true`. 화면: 다른 탭 저장 후 초안 번호만 증가 | 관리 목록의 변경 표시 |\n+| 3-6 | HTTP: 옛 번호로 저장·게시하면 409. 화면: 두 탭에서 저장해 충돌 안내·서버 번호·새로 불러오기 표시, 입력 보존 | 없음 |\n+| 3-7 | HTTP: 로그아웃 후 저장 401. 화면: 서버 세션을 만료시키면 로그인 화면으로 이동, 재로그인 후 보관본 복원 질문, 복원 시 입력 보존. 보관본 6번·서버 7번의 차이도 안내 | 없음. 화면 시나리오는 다른 탭 로그아웃 대신 전용 DB에서 서버 세션을 만료시킴 |\n+| 3-8 | HTTP: 게시 취소 후 글·용어 404, 반복 취소 200·이벤트 증가 없음. 화면: 취소 전 확인창 표시 | 취소 확정 뒤 목록·비공개 글·관리 기록 화면 |\n+| 4-1 | 화면: 질문·본문·용어·가상의 계산 예·비권고 표시. 설문 없이 목록 진입. 자동: 공개 배우기의 저장소 미사용 | 브라우저 저장소 전후 대조 |\n+| 4-2 | 화면: 학습 API 차단 시 실패 안내·다시 시도·진단 진입 링크 표시. 차단 해제 뒤 Enter 재시도로 목록 복구. 자동: 명시적 재시도 전 재요청 없음 | 브라우저 요청 횟수 관찰 |\n+| 4-3 | 화면: 빈 입력에 예시 50.0%·50.0%와 예시 표시. 60.0%·40.0%로 고친 뒤 재진입하면 확인창, 거절 시 수정한 값 유지 | 없음. 002 T020의 실제 수신 화면으로 확인 |\n+| 4-4 | HTTP: 대응표에서 예시 섹터 하나를 빼면 `available=false`, `missingSectorCodes`, 관리 `needsUpdate=true` | 연결 대체 안내·빈 입력 링크·관리 갱신 표시 화면 |\n+| 4-5 | 화면: 키보드로 글 이동·예시 진입, Enter 재시도 | 다시 시도까지 Tab 도달 및 NVDA/VoiceOver 실제 읽기 |\n+| 5-1 | 화면: 실제 003의 리밸런싱 도움말에서 게시 문장·글 연결, 게시 취소 뒤 설명 준비 중·연결 없음. 자동: 실패 상태·명시적 재시도·입력 보존 | 실제 003 화면의 도움말 요청 실패·재시도 |\n+| 5-2 | 화면: 동일 비중 전략·분기말 설정에서 도움말 → 같은 탭 글 → 돌아오기 후 전략·분기말 유지. 메뉴 직접 진입에는 돌아가기 연결 없음 | 없음 |\n+| 5-3 | HTTP: 제목·문장 변경 후 같은 식별자 유지. 자동: 응답 제목·문장 표시와 식별자 기반 연결 | 제목을 바꿔 다시 게시한 리밸런싱 도움말의 화면 왕복 |\n+| 5-4 | 화면: 키보드 Enter로 열기, Esc로 닫기, 트리거 초점 복귀 | 없음 |\n+\n+게시 취소 확인창 이후 브라우저 제어가 응답하지 않아 남은 화면 확인을 끝내지 못했다. 제품의 게시 취소 실패로 판정하지 않았으며, HTTP 검증과 화면 검증을 구분했다. 스크린 리더는 이 세션에서 실행하지 않았다. 접근성 트리에 문장이 존재하는 것은 실제 읽기 확인을 대신하지 않는다.\n+\n+## 잔재·하드코딩 확인 (T076)\n+\n+- `/learn`·`/learn/:articleId`는 실제 배우기 화면으로 연결되며 `NotReadyPage` 참조가 없다.\n+- 배우기 컴포넌트·페이지의 `dangerouslySetInnerHTML`과 `src`의 `components/strategy/TermHelp` 참조가 각각 0건이다.\n+- 테스트·픽스처를 뺀 배우기 화면 11개에서 초기 용어 식별자·주제 제목의 정확한 문자열 리터럴이 0건이다. 일반 변수·타입 이름의 부분 문자열은 하드코딩으로 세지 않았다.\n+- 공용 도움말은 API 응답을 사용하고 003은 등록표의 `axes[].termId`로 연결한다.\n+\n+## 완료로 해석하지 않는 것\n+\n+- **SC-002**: 게시 전 패턴 검사를 통과해도 권고 표현이 없다는 충분한 증거는 아니다. 원고 검토를 대신하지 않는다.\n+- **사용성 확인: 미수행(SC-005)**. PD-14의 사용자 관찰과 구현 검증은 별개다.\n+- **T075 미완료**: 표의 남은 화면·스크린 리더 확인 후 이 기록과 MR 테스트 절을 갱신한다. 002·003이 구현되어 있으므로 T032·T042만으로 수동 확인을 대체하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/validation.md",
+          "old_path": "specs/013-learning-pages/validation.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2833998": []
+  }
+}

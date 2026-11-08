@@ -1,0 +1,882 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943581,
+    "iid": 91,
+    "project_id": 1444456,
+    "title": "feat(fe): 거부·부분 결과 표시와 검증 배지 (S15P21E205-163)",
+    "description": "# 작업 내용 요약\n\nspec 007 설정 조합 자동 비교의 묶음 M8 `[FE] 거부·부분 결과 표시와 검증 배지` 다. T104~~T107, T107a, T114~~T116 여덟 개를 전부 끝냈다. **007의 마지막 구현 묶음**이고, 이것으로 157개 task 중 152개가 닫힌다(남은 다섯은 전체 회귀 셋과 완료 불가 둘이다).\n\nM4가 접수, M6이 결과 읽기를 맡았다면 이 묶음은 **\"뜻대로 되지 않았을 때\"**를 맡는다 — 거부당했을 때, 도중에 멈췄을 때, 계산하지 않은 후보가 섞였을 때, 그리고 결과를 믿어도 되는지 말할 수 없을 때. 넷 다 화면이 잘못 말하기 쉬운 자리다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-163\n- link https://ssafy.atlassian.net/browse/S15P21E205-163\n\n# 주요 변경 사항\n\n- `api/paramSearch.ts`에 `cancelParamSearch`·`retryFailedCandidates` 추가\n- `ValidationBadge` 신설 — **라벨을 화면마다 직접 그리던 것을 한 곳으로 모았다.** 모양을 맞추려는 것이 아니라 빠뜨림을 셀 수 있게 하려는 것이다. 각자 그리면 어디에 안 붙었는지 알 방법이 없다\n- **실제로 빠져 있던 곳을 찾았다** — 전체 후보 표에 검증 열이 없었다. 카드·상세·확인 화면에는 있었는데 표만 없어서, 후보를 가장 많이 보는 화면이 검증 표시 없이 숫자만 보이고 있었다. `검증` 열을 추가했다\n- `ValidationNote` 신설 — FR-016의 세 낱말을 **그대로** 적는다: 미검증 · 개선 근거 없음 · 판단 보류. 셋은 다른 말이다. 확인하지 않았다는 것, 기준보다 나아졌다고 말할 수 없다는 것, 그래서 결론을 내지 않는다는 것. **기능은 막지 않는다**\n- `RejectionNotice` 신설 — 거부 다섯 가지를 한 문장으로. **오류 화면으로 만들지 않는다.** 거부는 고장이 아니라 \"이 조건으로는 돌리지 않았다\"는 결과다. 모르는 코드는 서버가 준 문장을 그대로 쓴다\n- **미등록 전략과 실행 미지원 전략을 다른 문장으로 갈랐다**(FR-026). 앞은 전략 등록을, 뒤는 실행 지원을 기다리는 것이라 사용자가 할 일이 다르다\n- `PartialResultNotice` 신설 — 완료한 범위를 숫자로 밝힌다(유효/완료/실패/미실행). 미실행은 실패와 따로 센다\n- `CandidateReason` 신설 — 카드·상세의 \"값 없음\" 자리를 대신한다. **\"계산하지 않았다는 뜻이며 수익이 낮았다는 뜻이 아닙니다\"**를 명시한다(FR-011)\n- `CancelButton` 신설 — 되돌릴 수 없어 한 번 더 묻는다. 성공 뒤 `skipped`와 `inFlight`를 함께 알린다\n- `RetryFailedButton` 신설 — 실패가 있을 때만 보인다. 발행 창을 넘겨 남은 수를 그대로 보이고 다시 누르게 한다\n- `ParamSearchPage`가 다섯을 조합한다. 접수 오류를 문자열이 아니라 `{code, message}`로 들고 있게 바꿔 어떤 거부인지 구분한다\n\n# 테스트\n\n- [x] `npm test` 135 passed (신규 25), `npm run lint` 0 errors, `npm run build` 성공, `git diff --check` 깨끗\n- [x] **T116 배지 누락 0건** — 표시 후보 집합·카드·상세·전체 표 각각에서 후보 수만큼 배지가 있는지 센다. 계산 전 제외 후보에도 붙는다\n- [x] **T116 정적 검사** — 후보를 그리는 화면 6개 파일이 `validationLabelText`를 직접 호출하지 않는다. 라벨을 각자 그리면 빠뜨림을 셀 수 없게 된다\n- [x] **검사가 실제로 무는지 확인** — 표에서 배지를 빼면 T116만 실패하고, 되돌리면 통과한다\n- [x] **거부 다섯 가지가 서로 다른 안내**를 낸다(문장 5개가 모두 다름)\n- [x] **미등록 :left_right_arrow: 실행 미지원 구분** — 각각 \"전략이 등록되면\" / \"실행 지원이 붙으면\"으로 기다릴 대상을 다르게 적는다\n- [x] 등록표 조회 실패가 \"지난 정보로 대신 실행하지는 않습니다\"를 밝힌다\n- [x] 부분 결과가 완료 범위를 숫자로 내고 미실행을 실패와 섞지 않는다. 멈추는 중에는 \"이미 실행에 들어간 후보는 끝까지 계산합니다\"를 알린다\n- [x] 취소는 **확인 전에 보내지 않는다**. 확인 후 `skipped`·`inFlight`를 함께 알리고 409는 서버 사유를 보인다\n- [x] 재시도는 실패 0이면 아무것도 그리지 않고, `remainingFailed`가 남으면\n- [ ] **취소·재시도를 실제 서버에 쏘지 않았다.** 아래 리뷰 포인트 참고\n- [ ] **거부 안내를 화면에서 본 적이 없다.** 아래 리뷰 포인트 참고\n\n# 리뷰 포인트\n\n- **거부 안내(`RejectionNotice`)는 화면에서 확인할 수 없었다.** 접수가 422·503으로 막혀야 뜨는데 현재 임시 등록표로는 그 상황을 만들 수 없다 — 유효성 규칙을 가진 전략은 `PENDING_DECISION`이고 실행 가능한 셋은 규칙이 없어 조합이 6개뿐이라 상한(ckstart 시나리오 2·3이 같은 이유로 막혀 있다. **그래서 이 컴포넌트는테스트로만 검증됐다** — 다섯 문장이 실제 응답과 맞는지는 백엔드 `ParamSearchRejectionIT`의 코드와 대조해 봐 달라 - **취소·재시도를 실제로 눌러 보지 않았다.** 워커가 없어 묶음들이 \\`RUNNING 로컬 DB의 그 묶음이 되돌릴 수 없게 멈춘다. API 계약(202 응답 모양, 409코드)은 M7에서 백엔드로 검증된 것이고 FE는 그 모양에 mock으로 맞췄다. **눌러 봐야 한다고 보면 말해 달라**\n- **취소에 확인 단계를 넣은 것이 맞는지** 봐 달라. 눌린 즉시 미실행이 확정되고 그 후보는 재시도 대상도 아니라 되돌릴 방법이 없어서 두 단계로 했는데, 진행 중 화면에서 클릭이 하나 늘어난다\n- **재시도 버튼을 실패가 있을 때만 보이게 했다.** 늘 떠 있으면 \"다시 돌려 볼 수 있다\"는 인상이 생기는데 이것은 같은 조건을 다시 계산하는 것이지 조건을 바꿔 다시 실험하는 것이 아니다(FR-013c). 다만 **버튼이 나타났다 사라지는 것이 혼란스러울 수 있다** - **검증 배지를 컴포넌트로 강제하는 정적 검사**를 넣었다(\\`validationLabelT 보를 그리는 화면을 추가할 때 이 목록에 파일을 더해야 한다 — 목록을갱신하지 않으면 새 화면은 검사 밖에 있다. **이 유지 비용이 감당할 만한지**\n- `RejectionNotice`가 `CANDIDATE_LIMIT_EXCEEDED`(오류 코드)와 `CANDIDATE_LIMIT`(멈춤 사유) 둘을 같은 문장에 매핑한다. 하나는 접수 거부, 하나는 실행 중 한도 도달이라 **문장을 갈라야 할 수도 있다**\n- 미검증 안내 상자가 진행 상태마다 뜬다. 지금은 모든 결과가 `UNVALIDATED`라 **항상 보인다** — 평가 분할이 등록되면 저절로 줄어들지만, 그전까지 화면이 시끄럽다고 보이면 접는 형태로 바꿀 수 있다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 이 묶음이 더한 화면(거부·부분 결과·사유·검증)에 순위·추천 표현이 없다. M6에서 넣은 렌더·소스 두 층 검사가 결과 화면 전체를 계속 지킨다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 거부 안내는 **사유 코드**로만 갈린다. 전략 이름이 필요한 곳은 없고, 어떤 전략이 미등록인지는 서버 문장이 말한다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — `CandidateReason`이 그 분 결과의 미실행 수도 실패와 따로 센다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 이 묶음의 중심이다. 배지를 한 곳으로 모아 빠뜨림을 셀 수 있게 했고, 실제로 빠져 있던 표를 찾아 채웠다. `UNVALIDATED`에 긍정색을 쓰지 않고 `HELD_OUT_RESULT`에도 쓰지 않는다 — 검증 구간 결과라고 좋은 값이라는 뜻은 아니다\n\n:warning: 티켓이 진행 중이라 머지 뒤 완료 전이가 필요합니다. MR 생성 링크는 앞서 드린 주소입니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T17:27:32.546+09:00",
+    "updated_at": "2026-09-15T15:50:21.026+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T17:30:33.084+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/163-paramsearch-notices-badge",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "76feae25c7fe3e3b76d535adc306eacb03ae6133",
+    "merge_commit_sha": "d305812fb5e7ea58db49c41e216c6147b3720898",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T17:27:35.178+09:00",
+    "reference": "!91",
+    "references": {
+      "short": "!91",
+      "relative": "!91",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!91"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/91",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 17,
+      "completed_count": 15
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943581,
+    "iid": 91,
+    "project_id": 1444456,
+    "title": "feat(fe): 거부·부분 결과 표시와 검증 배지 (S15P21E205-163)",
+    "description": "# 작업 내용 요약\n\nspec 007 설정 조합 자동 비교의 묶음 M8 `[FE] 거부·부분 결과 표시와 검증 배지` 다. T104~~T107, T107a, T114~~T116 여덟 개를 전부 끝냈다. **007의 마지막 구현 묶음**이고, 이것으로 157개 task 중 152개가 닫힌다(남은 다섯은 전체 회귀 셋과 완료 불가 둘이다).\n\nM4가 접수, M6이 결과 읽기를 맡았다면 이 묶음은 **\"뜻대로 되지 않았을 때\"**를 맡는다 — 거부당했을 때, 도중에 멈췄을 때, 계산하지 않은 후보가 섞였을 때, 그리고 결과를 믿어도 되는지 말할 수 없을 때. 넷 다 화면이 잘못 말하기 쉬운 자리다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-163\n- link https://ssafy.atlassian.net/browse/S15P21E205-163\n\n# 주요 변경 사항\n\n- `api/paramSearch.ts`에 `cancelParamSearch`·`retryFailedCandidates` 추가\n- `ValidationBadge` 신설 — **라벨을 화면마다 직접 그리던 것을 한 곳으로 모았다.** 모양을 맞추려는 것이 아니라 빠뜨림을 셀 수 있게 하려는 것이다. 각자 그리면 어디에 안 붙었는지 알 방법이 없다\n- **실제로 빠져 있던 곳을 찾았다** — 전체 후보 표에 검증 열이 없었다. 카드·상세·확인 화면에는 있었는데 표만 없어서, 후보를 가장 많이 보는 화면이 검증 표시 없이 숫자만 보이고 있었다. `검증` 열을 추가했다\n- `ValidationNote` 신설 — FR-016의 세 낱말을 **그대로** 적는다: 미검증 · 개선 근거 없음 · 판단 보류. 셋은 다른 말이다. 확인하지 않았다는 것, 기준보다 나아졌다고 말할 수 없다는 것, 그래서 결론을 내지 않는다는 것. **기능은 막지 않는다**\n- `RejectionNotice` 신설 — 거부 다섯 가지를 한 문장으로. **오류 화면으로 만들지 않는다.** 거부는 고장이 아니라 \"이 조건으로는 돌리지 않았다\"는 결과다. 모르는 코드는 서버가 준 문장을 그대로 쓴다\n- **미등록 전략과 실행 미지원 전략을 다른 문장으로 갈랐다**(FR-026). 앞은 전략 등록을, 뒤는 실행 지원을 기다리는 것이라 사용자가 할 일이 다르다\n- `PartialResultNotice` 신설 — 완료한 범위를 숫자로 밝힌다(유효/완료/실패/미실행). 미실행은 실패와 따로 센다\n- `CandidateReason` 신설 — 카드·상세의 \"값 없음\" 자리를 대신한다. **\"계산하지 않았다는 뜻이며 수익이 낮았다는 뜻이 아닙니다\"**를 명시한다(FR-011)\n- `CancelButton` 신설 — 되돌릴 수 없어 한 번 더 묻는다. 성공 뒤 `skipped`와 `inFlight`를 함께 알린다\n- `RetryFailedButton` 신설 — 실패가 있을 때만 보인다. 발행 창을 넘겨 남은 수를 그대로 보이고 다시 누르게 한다\n- `ParamSearchPage`가 다섯을 조합한다. 접수 오류를 문자열이 아니라 `{code, message}`로 들고 있게 바꿔 어떤 거부인지 구분한다\n\n# 테스트\n\n- [x] `npm test` 135 passed (신규 25), `npm run lint` 0 errors, `npm run build` 성공, `git diff --check` 깨끗\n- [x] **T116 배지 누락 0건** — 표시 후보 집합·카드·상세·전체 표 각각에서 후보 수만큼 배지가 있는지 센다. 계산 전 제외 후보에도 붙는다\n- [x] **T116 정적 검사** — 후보를 그리는 화면 6개 파일이 `validationLabelText`를 직접 호출하지 않는다. 라벨을 각자 그리면 빠뜨림을 셀 수 없게 된다\n- [x] **검사가 실제로 무는지 확인** — 표에서 배지를 빼면 T116만 실패하고, 되돌리면 통과한다\n- [x] **거부 다섯 가지가 서로 다른 안내**를 낸다(문장 5개가 모두 다름)\n- [x] **미등록 :left_right_arrow: 실행 미지원 구분** — 각각 \"전략이 등록되면\" / \"실행 지원이 붙으면\"으로 기다릴 대상을 다르게 적는다\n- [x] 등록표 조회 실패가 \"지난 정보로 대신 실행하지는 않습니다\"를 밝힌다\n- [x] 부분 결과가 완료 범위를 숫자로 내고 미실행을 실패와 섞지 않는다. 멈추는 중에는 \"이미 실행에 들어간 후보는 끝까지 계산합니다\"를 알린다\n- [x] 취소는 **확인 전에 보내지 않는다**. 확인 후 `skipped`·`inFlight`를 함께 알리고 409는 서버 사유를 보인다\n- [x] 재시도는 실패 0이면 아무것도 그리지 않고, `remainingFailed`가 남으면\n- [ ] **취소·재시도를 실제 서버에 쏘지 않았다.** 아래 리뷰 포인트 참고\n- [ ] **거부 안내를 화면에서 본 적이 없다.** 아래 리뷰 포인트 참고\n\n# 리뷰 포인트\n\n- **거부 안내(`RejectionNotice`)는 화면에서 확인할 수 없었다.** 접수가 422·503으로 막혀야 뜨는데 현재 임시 등록표로는 그 상황을 만들 수 없다 — 유효성 규칙을 가진 전략은 `PENDING_DECISION`이고 실행 가능한 셋은 규칙이 없어 조합이 6개뿐이라 상한(ckstart 시나리오 2·3이 같은 이유로 막혀 있다. **그래서 이 컴포넌트는테스트로만 검증됐다** — 다섯 문장이 실제 응답과 맞는지는 백엔드 `ParamSearchRejectionIT`의 코드와 대조해 봐 달라 - **취소·재시도를 실제로 눌러 보지 않았다.** 워커가 없어 묶음들이 \\`RUNNING 로컬 DB의 그 묶음이 되돌릴 수 없게 멈춘다. API 계약(202 응답 모양, 409코드)은 M7에서 백엔드로 검증된 것이고 FE는 그 모양에 mock으로 맞췄다. **눌러 봐야 한다고 보면 말해 달라**\n- **취소에 확인 단계를 넣은 것이 맞는지** 봐 달라. 눌린 즉시 미실행이 확정되고 그 후보는 재시도 대상도 아니라 되돌릴 방법이 없어서 두 단계로 했는데, 진행 중 화면에서 클릭이 하나 늘어난다\n- **재시도 버튼을 실패가 있을 때만 보이게 했다.** 늘 떠 있으면 \"다시 돌려 볼 수 있다\"는 인상이 생기는데 이것은 같은 조건을 다시 계산하는 것이지 조건을 바꿔 다시 실험하는 것이 아니다(FR-013c). 다만 **버튼이 나타났다 사라지는 것이 혼란스러울 수 있다** - **검증 배지를 컴포넌트로 강제하는 정적 검사**를 넣었다(\\`validationLabelT 보를 그리는 화면을 추가할 때 이 목록에 파일을 더해야 한다 — 목록을갱신하지 않으면 새 화면은 검사 밖에 있다. **이 유지 비용이 감당할 만한지**\n- `RejectionNotice`가 `CANDIDATE_LIMIT_EXCEEDED`(오류 코드)와 `CANDIDATE_LIMIT`(멈춤 사유) 둘을 같은 문장에 매핑한다. 하나는 접수 거부, 하나는 실행 중 한도 도달이라 **문장을 갈라야 할 수도 있다**\n- 미검증 안내 상자가 진행 상태마다 뜬다. 지금은 모든 결과가 `UNVALIDATED`라 **항상 보인다** — 평가 분할이 등록되면 저절로 줄어들지만, 그전까지 화면이 시끄럽다고 보이면 접는 형태로 바꿀 수 있다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 이 묶음이 더한 화면(거부·부분 결과·사유·검증)에 순위·추천 표현이 없다. M6에서 넣은 렌더·소스 두 층 검사가 결과 화면 전체를 계속 지킨다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 거부 안내는 **사유 코드**로만 갈린다. 전략 이름이 필요한 곳은 없고, 어떤 전략이 미등록인지는 서버 문장이 말한다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — `CandidateReason`이 그 분 결과의 미실행 수도 실패와 따로 센다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 이 묶음의 중심이다. 배지를 한 곳으로 모아 빠뜨림을 셀 수 있게 했고, 실제로 빠져 있던 표를 찾아 채웠다. `UNVALIDATED`에 긍정색을 쓰지 않고 `HELD_OUT_RESULT`에도 쓰지 않는다 — 검증 구간 결과라고 좋은 값이라는 뜻은 아니다\n\n:warning: 티켓이 진행 중이라 머지 뒤 완료 전이가 필요합니다. MR 생성 링크는 앞서 드린 주소입니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T17:27:32.546+09:00",
+    "updated_at": "2026-09-15T15:50:21.026+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T17:30:33.084+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/163-paramsearch-notices-badge",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "76feae25c7fe3e3b76d535adc306eacb03ae6133",
+    "merge_commit_sha": "d305812fb5e7ea58db49c41e216c6147b3720898",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T17:27:35.178+09:00",
+    "reference": "!91",
+    "references": {
+      "short": "!91",
+      "relative": "!91",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!91"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/91",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 17,
+      "completed_count": 15
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "28",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+      "head_sha": "76feae25c7fe3e3b76d535adc306eacb03ae6133",
+      "start_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f797ba05dd6f47dd02a04d1ab2f8f7cfe38e3506",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803849,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 단일화 및 정적 검사 강제**: `ValidationBadge`를 신설하여 여러 화면에 흩어져 있던 검증 라벨 표현을 일원화하고, `ValidationBadge.test.tsx` 내에서 파일 정적 분석(readFileSync)을 통해 후보 렌더링 화면에서의 직접 호출 누락 여부를 검증하도록 설계한 점이 돋보입니다.\n- **도메인 규칙을 반영한 UX 설계**: 거부 사유(`RejectionNotice`), 부분 결과(`PartialResultNotice`), 미검증 안내(`ValidationNote`), 성과 부재 사유(`CandidateReason`) 등 예외 상황 및 비정상 종료 상태를 단순히 에러 화면으로 처리하지 않고 사용자가 명확히 인지할 수 있도록 세심하게 문구를 분리하고 구현했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **취소(CancelButton) 시나리오 테스트**: 탐색 취소 요청 시 `202 Accepted` 응답과 함께 서버 상태가 여전히 `RUNNING`인 경우(`inFlight` > 0), UI가 `skipped`와 `inFlight` 카운트를 동시에 올바르게 렌더링하는지 시뮬레이션 테스트를 보강합니다.\n- **실패 재시도(RetryFailedButton) 페이지네이션 경계 테스트**: 실패한 후보의 수가 발행 창(Window size)보다 많을 때 `remainingFailed`가 남는 경우, 버튼이 올바르게 갱신된 카운트를 표시하고 사용자가 연속으로 재시도를 트리거할 수 있는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:76feae25c7fe3e3b76d535adc306eacb03ae6133 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T17:27:43.177+09:00",
+          "updated_at": "2026-09-14T17:27:43.177+09:00",
+          "system": false,
+          "noteable_id": 943581,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 91,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "945f58867b966053a1d917a9d7cac305319468b9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803879,
+          "type": null,
+          "body": "mentioned in commit d305812fb5e7ea58db49c41e216c6147b3720898",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T17:30:32.841+09:00",
+          "updated_at": "2026-09-14T17:30:32.845+09:00",
+          "system": true,
+          "noteable_id": 943581,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 91,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "282f826bfa8758c97bf46089f6020a95ce357737",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803880,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T17:30:33.110+09:00",
+          "updated_at": "2026-09-14T17:30:33.119+09:00",
+          "system": true,
+          "noteable_id": 943581,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 91,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "59281be4a7bc1dbdf93dca920388ba8c561f267a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809443,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:51:01.685+09:00",
+          "updated_at": "2026-09-15T15:51:01.688+09:00",
+          "system": true,
+          "noteable_id": 943581,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 91,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dece75086faef76b26d43774cde4b219d8baa0af",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809444,
+          "type": null,
+          "body": "left review comments",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:51:04.905+09:00",
+          "updated_at": "2026-09-15T15:51:04.907+09:00",
+          "system": true,
+          "noteable_id": 943581,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 91,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2195566,
+      "head_commit_sha": "76feae25c7fe3e3b76d535adc306eacb03ae6133",
+      "base_commit_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+      "start_commit_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+      "created_at": "2026-09-14T17:27:33.068+09:00",
+      "merge_request_id": 943581,
+      "state": "collected",
+      "real_size": "28",
+      "patch_id_sha": "0a0cb55aa840aaf2c6e02be016320d9aeb2f3ed0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2195566,
+      "head_commit_sha": "76feae25c7fe3e3b76d535adc306eacb03ae6133",
+      "base_commit_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+      "start_commit_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+      "created_at": "2026-09-14T17:27:33.068+09:00",
+      "merge_request_id": 943581,
+      "state": "collected",
+      "real_size": "28",
+      "patch_id_sha": "0a0cb55aa840aaf2c6e02be016320d9aeb2f3ed0",
+      "commits": [
+        {
+          "id": "76feae25c7fe3e3b76d535adc306eacb03ae6133",
+          "short_id": "76feae25",
+          "created_at": "2026-09-14T17:19:38.000+09:00",
+          "parent_ids": [
+            "91ea055fe72a76531e1f39aaa4429a1796383cf5"
+          ],
+          "title": "test(fe): 거부 구분과 취소·재시도 동작을 고정한다",
+          "message": "test(fe): 거부 구분과 취소·재시도 동작을 고정한다\n\n가장 조용히 깨지는 것은 미등록 전략과 실행 미지원 전략을 한 문장으로 합치는\n일이다. 화면은 멀쩡해 보이고 둘 다 \"안 되는 전략\" 이라 적혀 있지만 사용자가\n기다려야 할 대상이 달라진다. 다섯 사유가 서로 다른 문장인지, 그리고 그 둘이\n각각 무엇을 기다리라고 하는지를 본다.\n\n취소는 큐에 든 후보를 되부르지 못하고 재시도는 발행 창을 넘겨 보내지 못한다.\n둘 다 \"절반만 듣는\" 동작이라 화면이 무엇이 일어났는지 정확히 말해야 한다 —\n확인 전에는 보내지 않는지, 끝까지 도는 수를 알리는지, 남은 실패를 다시 누르라고\n하는지를 고정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T17:19:38.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T17:19:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/76feae25c7fe3e3b76d535adc306eacb03ae6133"
+        },
+        {
+          "id": "91ea055fe72a76531e1f39aaa4429a1796383cf5",
+          "short_id": "91ea055f",
+          "created_at": "2026-09-14T17:16:56.000+09:00",
+          "parent_ids": [
+            "22b982729a456d3ebf4a29e28748d9f49ff047fc"
+          ],
+          "title": "feat(fe): 거부·부분 결과 안내와 취소·재시도를 붙인다",
+          "message": "feat(fe): 거부·부분 결과 안내와 취소·재시도를 붙인다\n\nT104·T105·T106·T107·T107a.\n\nRejectionNotice 는 거부 다섯 가지를 한 문장으로 적고 **오류 화면으로 만들지\n않는다**. 거부는 고장이 아니라 \"이 조건으로는 돌리지 않았다\" 는 결과다. 빨간\n전체 화면으로 덮으면 사용자는 무엇을 잘못했는지 모른 채 되돌아간다.\n\n미등록과 실행 미지원을 다른 문장으로 갈랐다(FR-026). 둘은 사용자가 할 일이\n다르다 — 앞은 전략 등록을 기다리는 것이고 뒤는 실행 지원을 기다리는 것이다.\n\"안 되는 전략입니다\" 하나로 묶으면 그 차이가 사라진다. 모르는 코드는 서버가 준\n문장을 그대로 쓴다.\n\nPartialResultNotice 는 완료한 범위를 숫자로 밝힌다. 부분 결과라는 말만 하고 몇\n개까지 돌았는지 적지 않으면 지금 보는 것이 전체의 얼마인지 모른 채 비교하게\n된다. 미실행은 실패와 따로 센다 — 안 좋아서 빠진 것이 아니다.\n\nCandidateReason 은 낮은 수익과 구분하는 것이 전부다. 자리를 비우면 각자 상상하고\n0 으로 채우면 \"수익이 없었다\" 로 읽는다. 둘 다 사실이 아니다.\n\nCancelButton 은 한 번 더 묻는다. 눌린 즉시 미실행이 확정되고 그 후보는 재시도\n대상도 아니라 되돌릴 방법이 없다. 취소해도 이미 큐에 든 후보는 완주하므로 그\n사실을 결과 문장에 적는다 — 적지 않으면 취소가 안 먹은 것처럼 보인다.\n\nRetryFailedButton 은 실패가 있을 때만 보인다. 늘 떠 있으면 \"다시 돌려 볼 수\n있다\" 는 인상이 생기는데 이것은 같은 조건을 다시 계산하는 것이지 조건을 바꿔\n다시 실험하는 것이 아니다. 발행 창을 넘겨 보내지 않으므로 남은 수를 그대로\n보이고 다시 누르게 한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T17:16:56.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T17:16:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/91ea055fe72a76531e1f39aaa4429a1796383cf5"
+        },
+        {
+          "id": "22b982729a456d3ebf4a29e28748d9f49ff047fc",
+          "short_id": "22b98272",
+          "created_at": "2026-09-14T17:12:13.000+09:00",
+          "parent_ids": [
+            "d49bd0759815bd58740d78fea52a5145f73a6a88"
+          ],
+          "title": "feat(fe): 검증 배지를 한 곳으로 모으고 미검증 안내를 세운다",
+          "message": "feat(fe): 검증 배지를 한 곳으로 모으고 미검증 안내를 세운다\n\nT114·T115·T116.\n\n라벨을 화면마다 직접 그리던 것을 ValidationBadge 하나로 모았다. 이유는 모양을\n맞추려는 것이 아니라 **빠뜨림을 셀 수 있게** 하려는 것이다 — 각자 그리면 어디에\n안 붙었는지 알 방법이 없다.\n\n실제로 빠져 있던 곳을 찾았다. 전체 후보 표에 검증 열이 없었다. 카드·상세·확인\n화면에는 있었는데 표만 없어서, 후보를 가장 많이 보는 화면이 검증 표시 없이\n숫자만 보이고 있었다.\n\nValidationNote 는 FR-016 의 세 낱말을 그대로 적는다 — 미검증·개선 근거 없음·\n판단 보류. 셋은 다른 말이다. 확인하지 않았다는 것, 기준보다 나아졌다고 말할 수\n없다는 것, 그래서 결론을 내지 않는다는 것. **기능은 막지 않는다** — 결과를\n숨기거나 버튼을 잠그면 무엇이 있었는지도 모르게 된다.\n\nT116 은 \"배지가 잘 그려지는가\" 가 아니라 \"후보를 그리는 곳마다 하나씩 있는가\" 를\n센다. 빠짐은 조용해서 화면만 봐서는 멀쩡하다. 표에서 배지를 빼 보니 이 테스트만\n실패하는 것을 확인했다. 라벨을 직접 그리는 곳이 다시 생기지 않도록 정적 검사도\n함께 둔다.\n\n취소·재시도 API 도 함께 열었다. 취소 응답의 status 는 아직 RUNNING 일 수 있고\ninFlight 가 몇 개가 끝까지 도는지 알려 준다 — 발행된 메시지는 회수할 수 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T17:12:13.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T17:12:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/22b982729a456d3ebf4a29e28748d9f49ff047fc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -4,10 +4,12 @@ import type {\n   CandidatePage,\n   CandidateSort,\n   CandidateStatus,\n+  ParamSearchCancelResult,\n   ParamSearchDetail,\n   ParamSearchEnvelope,\n   ParamSearchPreview,\n   ParamSearchRequest,\n+  ParamSearchRetryResult,\n } from '@/types/paramSearch'\n \n /**\n@@ -219,3 +221,53 @@ export async function getParamSearchCandidates(\n     throw normalizeParamSearchError(error)\n   }\n }\n+\n+/**\n+ * 탐색 취소. `202`이고 **응답의 `status`는 아직 `RUNNING`일 수 있다**.\n+ *\n+ * <p>발행하지 않은 후보를 '미실행'으로 확정하고 더 발행하지 않지만, <b>이미 큐에 들어간 후보는\n+ * 완주한다</b> — 발행된 메시지는 회수할 수 없다. `inFlight`가 몇 개가 끝까지 도는지 알려 준다.\n+ *\n+ * <p>이미 끝난 묶음이면 `409 ALREADY_FINISHED`다.\n+ */\n+export async function cancelParamSearch(\n+  searchId: string,\n+  requesterId?: number | null,\n+): Promise<ParamSearchCancelResult> {\n+  try {\n+    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchCancelResult>>(\n+      `${basePath}/${encodeURIComponent(searchId)}/cancel`,\n+      null,\n+      { headers: requesterHeaders(requesterId) },\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeParamSearchError(error)\n+  }\n+}\n+\n+/**\n+ * 실패 후보 재시도. `FAILED`만 다시 발행하고 **새 묶음을 만들지 않는다**(FR-024).\n+ *\n+ * <p>`SKIPPED`는 대상이 아니다 — 취소·한도로 빠진 것을 되살리면 완료 범위 표시가 뜻을 잃는다.\n+ *\n+ * <p><b>발행 창을 넘겨 보내지 않는다.</b> 실패가 창보다 많으면 이번에 창만큼만 보내고 나머지는\n+ * `remainingFailed`로 알린다. 자동으로 이어 보내지 않으므로 화면이 그 수를 보고 다시 요청한다.\n+ *\n+ * <p>실패 후보가 없으면 `409 NOTHING_TO_RETRY`다.\n+ */\n+export async function retryFailedCandidates(\n+  searchId: string,\n+  requesterId?: number | null,\n+): Promise<ParamSearchRetryResult> {\n+  try {\n+    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchRetryResult>>(\n+      `${basePath}/${encodeURIComponent(searchId)}/retry-failed`,\n+      null,\n+      { headers: requesterHeaders(requesterId) },\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeParamSearchError(error)\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/paramSearch.ts",
+          "old_path": "frontend/src/api/paramSearch.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,94 @@\n+.wrap {\n+  display: grid;\n+  gap: 7px;\n+}\n+\n+.trigger {\n+  display: inline-flex;\n+  min-height: 36px;\n+  width: fit-content;\n+  align-items: center;\n+  gap: 7px;\n+  padding: 0 13px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: transparent;\n+  color: var(--thorp-copy);\n+  cursor: pointer;\n+  font-size: 0.75rem;\n+  font-weight: 700;\n+}\n+\n+.trigger:hover {\n+  border-color: var(--thorp-negative);\n+  color: var(--thorp-negative);\n+}\n+\n+.confirm {\n+  display: grid;\n+  gap: 9px;\n+  padding: 12px 14px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.confirmActions {\n+  display: flex;\n+  gap: 8px;\n+  flex-wrap: wrap;\n+}\n+\n+.danger,\n+.secondary {\n+  min-height: 36px;\n+  padding: 0 14px;\n+  border-radius: 5px;\n+  cursor: pointer;\n+  font-size: 0.75rem;\n+  font-weight: 700;\n+}\n+\n+.danger {\n+  border: 1px solid var(--thorp-negative);\n+  background: var(--thorp-negative);\n+  color: var(--thorp-background);\n+}\n+\n+.secondary {\n+  border: 1px solid var(--thorp-line-strong);\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+}\n+\n+.danger:disabled,\n+.secondary:disabled {\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+.trigger:focus-visible,\n+.danger:focus-visible,\n+.secondary:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.done {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.error {\n+  margin: 0;\n+  padding: 9px 11px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 5px;\n+  color: var(--thorp-negative);\n+  font-size: 0.74rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CancelButton.module.css",
+          "old_path": "frontend/src/components/paramsearch/CancelButton.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,151 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { CancelButton } from './CancelButton'\n+import { RetryFailedButton } from './RetryFailedButton'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  cancelParamSearch: vi.fn(),\n+  retryFailedCandidates: vi.fn(),\n+}))\n+\n+vi.mock('@/api/paramSearch', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/paramSearch')>('@/api/paramSearch')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+const searchId = 'PS-20260914-000011'\n+\n+/**\n+ * 취소와 재시도(T107·T107a, FR-009·FR-024).\n+ *\n+ * <p>둘 다 <b>되돌릴 수 없거나 부분적으로만 듣는</b> 동작이라 화면이 무엇이 일어났는지 정확히\n+ * 말해야 한다. 취소는 큐에 든 후보를 되부르지 못하고, 재시도는 발행 창을 넘겨 보내지 못한다.\n+ */\n+describe('CancelButton', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+  })\n+\n+  it('한 번 더 묻기 전에는 취소를 보내지 않는다', async () => {\n+    const user = userEvent.setup()\n+    render(<CancelButton searchId={searchId} onCancelled={vi.fn()} />)\n+\n+    await user.click(screen.getByRole('button', { name: /탐색 멈추기/ }))\n+\n+    expect(apiMocks.cancelParamSearch).not.toHaveBeenCalled()\n+    expect(screen.getByText(/되돌릴 수 없습니다/)).toBeTruthy()\n+  })\n+\n+  it('계속 실행을 고르면 아무 일도 일어나지 않는다', async () => {\n+    const user = userEvent.setup()\n+    render(<CancelButton searchId={searchId} onCancelled={vi.fn()} />)\n+\n+    await user.click(screen.getByRole('button', { name: /탐색 멈추기/ }))\n+    await user.click(screen.getByRole('button', { name: '계속 실행' }))\n+\n+    expect(apiMocks.cancelParamSearch).not.toHaveBeenCalled()\n+    expect(screen.getByRole('button', { name: /탐색 멈추기/ })).toBeTruthy()\n+  })\n+\n+  it('멈춘 뒤 미실행 수와 끝까지 도는 수를 함께 알린다', async () => {\n+    const user = userEvent.setup()\n+    const onCancelled = vi.fn()\n+    apiMocks.cancelParamSearch.mockResolvedValue({\n+      searchId,\n+      status: 'RUNNING',\n+      skipped: 1,\n+      inFlight: 4,\n+    })\n+    render(\n+      <CancelButton searchId={searchId} requesterId={7} onCancelled={onCancelled} />,\n+    )\n+\n+    await user.click(screen.getByRole('button', { name: /탐색 멈추기/ }))\n+    await user.click(screen.getByRole('button', { name: '멈추기' }))\n+\n+    await waitFor(() => expect(apiMocks.cancelParamSearch).toHaveBeenCalledWith(searchId, 7))\n+    // 발행된 메시지는 회수할 수 없다. 그 사실을 적지 않으면 취소가 안 먹은 것처럼 보인다.\n+    expect(await screen.findByText(/미실행 1개를 확정했습니다/)).toBeTruthy()\n+    expect(screen.getByText(/4개는 끝까지 계산합니다/)).toBeTruthy()\n+    expect(onCancelled).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('이미 끝난 묶음이면 서버가 준 사유를 보인다', async () => {\n+    const user = userEvent.setup()\n+    const { ParamSearchError } = await import('@/api/paramSearch')\n+    apiMocks.cancelParamSearch.mockRejectedValue(\n+      new ParamSearchError('이미 끝난 탐색입니다.', { code: 'ALREADY_FINISHED', status: 409 }),\n+    )\n+    render(<CancelButton searchId={searchId} onCancelled={vi.fn()} />)\n+\n+    await user.click(screen.getByRole('button', { name: /탐색 멈추기/ }))\n+    await user.click(screen.getByRole('button', { name: '멈추기' }))\n+\n+    expect((await screen.findByRole('alert')).textContent).toContain('이미 끝난 탐색입니다.')\n+  })\n+})\n+\n+describe('RetryFailedButton', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+  })\n+\n+  it('실패한 후보가 없으면 아무것도 그리지 않는다', () => {\n+    const { container } = render(\n+      <RetryFailedButton searchId={searchId} failedCount={0} onRetried={vi.fn()} />,\n+    )\n+\n+    expect(container.innerHTML).toBe('')\n+  })\n+\n+  it('실패가 있으면 그 수를 보이고 같은 조건으로 다시 돈다고 밝힌다', () => {\n+    const { container } = render(\n+      <RetryFailedButton searchId={searchId} failedCount={2} onRetried={vi.fn()} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('실패한 후보 2개')\n+    expect(text).toContain('새 묶음을 만들지 않습니다')\n+  })\n+\n+  it('발행 창을 넘겨 남은 실패가 있으면 다시 누르라고 알린다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.retryFailedCandidates.mockResolvedValue({\n+      searchId,\n+      status: 'RUNNING',\n+      retried: 4,\n+      remainingFailed: 2,\n+    })\n+    render(\n+      <RetryFailedButton\n+        searchId={searchId}\n+        failedCount={6}\n+        requesterId={7}\n+        onRetried={vi.fn()}\n+      />,\n+    )\n+\n+    await user.click(screen.getByRole('button', { name: /다시 시도/ }))\n+\n+    await waitFor(() => expect(apiMocks.retryFailedCandidates).toHaveBeenCalledWith(searchId, 7))\n+    expect(await screen.findByText(/4개를 다시 보냈습니다/)).toBeTruthy()\n+    // 자동으로 이어 보내지 않는다 — 사용자가 멈출 자리를 남긴다.\n+    expect(screen.getByText(/2개가 남았습니다. 다시 눌러 주세요/)).toBeTruthy()\n+  })\n+\n+  it('남은 실패가 없으면 그렇게 알린다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.retryFailedCandidates.mockResolvedValue({\n+      searchId,\n+      status: 'RUNNING',\n+      retried: 1,\n+      remainingFailed: 0,\n+    })\n+    render(<RetryFailedButton searchId={searchId} failedCount={1} onRetried={vi.fn()} />)\n+\n+    await user.click(screen.getByRole('button', { name: /다시 시도/ }))\n+\n+    expect(await screen.findByText(/남은 실패 후보는 없습니다/)).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CancelButton.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/CancelButton.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,95 @@\n+import { useState } from 'react'\n+import { Square } from 'lucide-react'\n+import { cancelParamSearch, normalizeParamSearchError } from '@/api/paramSearch'\n+import type { ParamSearchCancelResult } from '@/types/paramSearch'\n+import { formatCount } from '@/utils/paramSearchLabels'\n+import styles from './CancelButton.module.css'\n+\n+interface CancelButtonProps {\n+  searchId: string\n+  /** spec 014 이전의 임시 요청자 통로. 인증이 아니다. */\n+  requesterId?: number | null\n+  /** 취소가 받아들여진 뒤. 화면이 상태를 다시 읽도록 알린다. */\n+  onCancelled: (result: ParamSearchCancelResult) => void\n+}\n+\n+/**\n+ * 탐색 취소(T107, FR-009).\n+ *\n+ * <p><b>되돌릴 수 없으므로 한 번 더 묻는다.</b> 눌린 즉시 발행하지 않은 후보가 '미실행'으로\n+ * 확정되고, 그 후보들은 재시도 대상도 아니다 — 실수로 눌렀을 때 되돌릴 방법이 없다.\n+ *\n+ * <p>취소해도 <b>이미 큐에 들어간 후보는 완주한다</b>. 그래서 성공 응답의 상태가 아직 `RUNNING`일\n+ * 수 있고, 그 사실을 결과 문장에 적는다. 적지 않으면 취소가 안 먹은 것처럼 보인다.\n+ */\n+export function CancelButton({ searchId, requesterId, onCancelled }: CancelButtonProps) {\n+  const [confirming, setConfirming] = useState(false)\n+  const [pending, setPending] = useState(false)\n+  const [error, setError] = useState<string | null>(null)\n+  const [result, setResult] = useState<ParamSearchCancelResult | null>(null)\n+\n+  const submit = async () => {\n+    setPending(true)\n+    setError(null)\n+    try {\n+      const cancelled = await cancelParamSearch(searchId, requesterId)\n+      setResult(cancelled)\n+      setConfirming(false)\n+      onCancelled(cancelled)\n+    } catch (caught) {\n+      setError(normalizeParamSearchError(caught).message)\n+    } finally {\n+      setPending(false)\n+    }\n+  }\n+\n+  if (result) {\n+    return (\n+      <p className={styles.done} role=\"status\">\n+        {`미실행 ${formatCount(result.skipped)}개를 확정했습니다.`}\n+        {result.inFlight > 0\n+          ? ` 이미 실행에 들어간 ${formatCount(result.inFlight)}개는 끝까지 계산합니다.`\n+          : ' 남아서 도는 후보는 없습니다.'}\n+      </p>\n+    )\n+  }\n+\n+  return (\n+    <div className={styles.wrap}>\n+      {confirming ? (\n+        <div className={styles.confirm}>\n+          <span>멈추면 아직 실행하지 않은 후보는 계산하지 않습니다. 되돌릴 수 없습니다.</span>\n+          <div className={styles.confirmActions}>\n+            <button\n+              type=\"button\"\n+              className={styles.danger}\n+              onClick={() => void submit()}\n+              disabled={pending}\n+            >\n+              {pending ? '멈추는 중' : '멈추기'}\n+            </button>\n+            <button\n+              type=\"button\"\n+              className={styles.secondary}\n+              onClick={() => setConfirming(false)}\n+              disabled={pending}\n+            >\n+              계속 실행\n+            </button>\n+          </div>\n+        </div>\n+      ) : (\n+        <button type=\"button\" className={styles.trigger} onClick={() => setConfirming(true)}>\n+          <Square size={13} fill=\"currentColor\" aria-hidden=\"true\" />\n+          탐색 멈추기\n+        </button>\n+      )}\n+\n+      {error && (\n+        <p className={styles.error} role=\"alert\">\n+          {error}\n+        </p>\n+      )}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CancelButton.tsx",
+          "old_path": "frontend/src/components/paramsearch/CancelButton.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -72,7 +72,6 @@\n }\n \n .status,\n-.validation,\n .retry {\n   padding: 2px 7px;\n   border: 1px solid var(--thorp-line-strong);\n@@ -82,11 +81,6 @@\n   font-weight: 700;\n }\n \n-.validation {\n-  border-color: var(--thorp-warning);\n-  color: var(--thorp-warning);\n-}\n-\n .rows {\n   display: grid;\n   gap: 0;\n@@ -131,17 +125,6 @@\n   font-weight: 500;\n }\n \n-.missing {\n-  margin: 0;\n-  padding: 10px 12px;\n-  border: 1px solid var(--thorp-line);\n-  border-radius: 5px;\n-  background: var(--thorp-surface);\n-  color: var(--thorp-copy);\n-  font-size: 0.74rem;\n-  line-height: 1.55;\n-}\n-\n .reason {\n   display: grid;\n   gap: 6px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateDetail.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateDetail.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n import { useEffect, useRef } from 'react'\n import { X } from 'lucide-react'\n+import { CandidateReason } from './CandidateReason'\n+import { ValidationBadge } from './ValidationBadge'\n import type {\n   ParamSearchConfig,\n   SearchCandidateItem,\n@@ -12,11 +14,9 @@ import {\n   formatPercent,\n   formatStability,\n   formatWon,\n-  missingPerformanceReason,\n   selectionFilterText,\n   selectionOutcomeText,\n   sortMetricText,\n-  validationLabelText,\n } from '@/utils/paramSearchLabels'\n import styles from './CandidateDetail.module.css'\n \n@@ -93,9 +93,7 @@ export function CandidateDetail({\n \n         <div className={styles.badges}>\n           <span className={styles.status}>{candidateStatusText(candidate.status)}</span>\n-          <span className={styles.validation}>\n-            {validationLabelText(candidate.validationLabel)}\n-          </span>\n+          <ValidationBadge label={candidate.validationLabel} describes={strategyName} />\n           {candidate.retryCount > 0 && (\n             <span className={styles.retry}>{`재시도 ${formatCount(candidate.retryCount)}회`}</span>\n           )}\n@@ -128,7 +126,7 @@ export function CandidateDetail({\n         </dl>\n \n         {netReturn === null && maxDrawdown === null && tradingCost === null && (\n-          <p className={styles.missing}>{missingPerformanceReason(candidate)}</p>\n+          <CandidateReason candidate={candidate} />\n         )}\n \n         <section className={styles.reason} aria-labelledby=\"candidate-reason-title\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateDetail.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+.reason {\n+  display: grid;\n+  gap: 3px;\n+  margin: 0;\n+  padding: 10px 12px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 5px;\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.reason strong {\n+  color: var(--thorp-warning);\n+  font-size: 0.72rem;\n+  font-weight: 700;\n+}\n+\n+.reason[data-unmeasured='false'] strong {\n+  color: var(--thorp-muted);\n+}\n+\n+.distinction {\n+  color: var(--thorp-muted);\n+  font-size: 0.69rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateReason.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateReason.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+import type { SearchCandidateItem } from '@/types/paramSearch'\n+import { candidateStatusText, missingPerformanceReason } from '@/utils/paramSearchLabels'\n+import styles from './CandidateReason.module.css'\n+\n+interface CandidateReasonProps {\n+  candidate: SearchCandidateItem\n+}\n+\n+/** 성과가 아예 없는 상태들. 이 셋은 \"수익이 낮았다\"와 전혀 다른 이야기다. */\n+const unmeasured = ['EXCLUDED', 'FAILED', 'SKIPPED']\n+\n+/**\n+ * 후보별 제외·실패·미실행 사유(T106, FR-011, 원칙 VI).\n+ *\n+ * <p><b>낮은 수익과 구분하는 것이 이 컴포넌트의 전부다.</b> 숫자 자리를 비워 두기만 하면 사용자는\n+ * \"왜 비었지\"를 각자 상상하고, 0으로 채우면 \"수익이 없었다\"로 읽는다. 둘 다 사실이 아니다 —\n+ * 이 후보들은 <b>계산을 하지 않았다</b>.\n+ *\n+ * <p>사유 문장은 서버가 준 것을 먼저 쓴다. 유효성 규칙이 돌려준 문장이 화면이 지어낸 문장보다\n+ * 정확하고, 규칙이 늘어도 화면을 고치지 않아도 된다.\n+ */\n+export function CandidateReason({ candidate }: CandidateReasonProps) {\n+  const notMeasured = unmeasured.includes(candidate.status)\n+\n+  return (\n+    <p className={styles.reason} data-unmeasured={notMeasured}>\n+      <strong>{candidateStatusText(candidate.status)}</strong>\n+      <span>{missingPerformanceReason(candidate)}</span>\n+      {notMeasured && (\n+        <span className={styles.distinction}>\n+          계산하지 않았다는 뜻이며 수익이 낮았다는 뜻이 아닙니다.\n+        </span>\n+      )}\n+    </p>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateReason.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateReason.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,17 +32,6 @@\n   line-height: 1.5;\n }\n \n-.validation {\n-  flex: none;\n-  padding: 2px 7px;\n-  border: 1px solid var(--thorp-warning);\n-  border-radius: 3px;\n-  color: var(--thorp-warning);\n-  font-size: 0.62rem;\n-  font-weight: 700;\n-  white-space: nowrap;\n-}\n-\n .metrics {\n   display: grid;\n   grid-template-columns: repeat(3, minmax(0, 1fr));\n@@ -90,22 +79,6 @@\n   font-weight: 600;\n }\n \n-.missing {\n-  margin: 0;\n-  padding: 10px 12px;\n-  border: 1px solid var(--thorp-line);\n-  border-radius: 5px;\n-  background: var(--thorp-surface-muted);\n-  color: var(--thorp-copy);\n-  font-size: 0.74rem;\n-  line-height: 1.55;\n-}\n-\n-.missing strong {\n-  color: var(--thorp-warning);\n-  font-weight: 700;\n-}\n-\n .actions {\n   display: flex;\n   align-items: center;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateSummaryCard.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateSummaryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,7 @@\n+import { CandidateReason } from './CandidateReason'\n+import { ValidationBadge } from './ValidationBadge'\n import type { ParamSearchConfig, SearchCandidateItem } from '@/types/paramSearch'\n-import {\n-  candidateStatusText,\n-  describeCandidateSetting,\n-  formatPercent,\n-  formatWon,\n-  missingPerformanceReason,\n-  validationLabelText,\n-} from '@/utils/paramSearchLabels'\n+import { describeCandidateSetting, formatPercent, formatWon } from '@/utils/paramSearchLabels'\n import styles from './CandidateSummaryCard.module.css'\n \n interface CandidateSummaryCardProps {\n@@ -58,7 +53,10 @@ export function CandidateSummaryCard({\n           <span className={styles.strategy}>{strategyName}</span>\n           <span className={styles.parameters}>{parameterText}</span>\n         </div>\n-        <span className={styles.validation}>{validationLabelText(candidate.validationLabel)}</span>\n+        <ValidationBadge\n+          label={candidate.validationLabel}\n+          describes={`${strategyName} ${parameterText}`}\n+        />\n       </header>\n \n       {hasNumbers ? (\n@@ -82,10 +80,7 @@ export function CandidateSummaryCard({\n         </dl>\n       ) : (\n         // 세 숫자가 모두 없으면 표를 그리지 않는다. 빈 칸 세 개보다 사유 한 줄이 정확하다.\n-        <p className={styles.missing}>\n-          <strong>{candidateStatusText(candidate.status)}</strong>\n-          {` · ${missingPerformanceReason(candidate)}`}\n-        </p>\n+        <CandidateReason candidate={candidate} />\n       )}\n \n       {(showCompare || onOpenDetail) && (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateSummaryCard.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { useState } from 'react'\n import { useSearchCandidates } from '@/hooks/useSearchCandidates'\n+import { ValidationBadge } from './ValidationBadge'\n import type {\n   CandidateSort,\n   CandidateStatus,\n@@ -148,6 +149,7 @@ export function CandidateTable({\n                   <span className={styles.srOnly}>비교에 담기</span>\n                 </th>\n                 <th scope=\"col\">설정</th>\n+                <th scope=\"col\">검증</th>\n                 <th scope=\"col\">상태</th>\n                 {sortableColumns.map((column) => (\n                   <th key={column.key} scope=\"col\" aria-sort={ariaSortOf(column.key)}>\n@@ -208,6 +210,12 @@ export function CandidateTable({\n                       <span className={styles.strategy}>{strategyName}</span>\n                       <span className={styles.parameters}>{parameterText}</span>\n                     </td>\n+                    <td>\n+                      <ValidationBadge\n+                        label={candidate.validationLabel}\n+                        describes={`${strategyName} ${parameterText}`}\n+                      />\n+                    </td>\n                     <td>{candidateStatusText(candidate.status)}</td>\n                     <td className={styles.numeric}>{formatCount(candidate.candidateNo)}</td>\n                     <Numeric\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateTable.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateTable.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+.notice {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 10px;\n+  padding: 13px 15px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.notice > svg {\n+  flex: none;\n+  margin-top: 2px;\n+  color: var(--thorp-warning);\n+}\n+\n+.notice > div {\n+  display: grid;\n+  gap: 8px;\n+  min-width: 0;\n+}\n+\n+.headline {\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+  flex-wrap: wrap;\n+  margin: 0;\n+  color: var(--thorp-warning);\n+  font-size: 0.84rem;\n+  font-weight: 700;\n+}\n+\n+.reason {\n+  padding: 2px 7px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 3px;\n+  color: var(--thorp-copy);\n+  font-size: 0.66rem;\n+  font-weight: 650;\n+}\n+\n+.counts {\n+  display: grid;\n+  grid-template-columns: repeat(auto-fit, minmax(76px, 1fr));\n+  gap: 1px;\n+  margin: 0;\n+  background: var(--thorp-line);\n+}\n+\n+.counts div {\n+  display: grid;\n+  gap: 3px;\n+  padding: 8px 10px;\n+  background: var(--thorp-surface);\n+}\n+\n+.counts dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.66rem;\n+}\n+\n+.counts dd {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 0.92rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 700;\n+}\n+\n+.text {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.73rem;\n+  line-height: 1.6;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PartialResultNotice.module.css",
+          "old_path": "frontend/src/components/paramsearch/PartialResultNotice.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,73 @@\n+import { CircleAlert } from 'lucide-react'\n+import type { ParamSearchStopReason, SearchCounts } from '@/types/paramSearch'\n+import { formatCount, stopReasonText } from '@/utils/paramSearchLabels'\n+import styles from './PartialResultNotice.module.css'\n+\n+interface PartialResultNoticeProps {\n+  counts: SearchCounts | null\n+  stopReason: ParamSearchStopReason | null\n+  /** 서버가 준 한 문장. 있으면 그대로 쓴다. */\n+  partialNote?: string | null\n+  /** 아직 도는 후보가 있는가 — 취소를 눌렀지만 묶음이 끝나지 않은 상태. */\n+  stopping?: boolean\n+}\n+\n+/**\n+ * 부분 결과 안내(T105, FR-009).\n+ *\n+ * <p><b>\"완료한 범위\"를 숫자로 명시한다.</b> 부분 결과라는 말만 하고 몇 개까지 돌았는지 밝히지\n+ * 않으면, 사용자는 지금 보는 결과가 전체의 얼마인지 모른 채 비교하게 된다.\n+ *\n+ * <p>미실행은 <b>실패가 아니다</b>. 취소·한도로 발행하지 않은 것이라 \"안 좋아서 빠진 것\"이 아니고,\n+ * 그래서 실패 수와 따로 센다.\n+ *\n+ * <p>멈추는 중일 때도 그 사실을 적는다 — 이미 큐에 든 후보는 완주하므로 취소를 누른 뒤에도 숫자가\n+ * 잠시 더 움직인다. 모르면 취소가 안 먹은 것처럼 보인다.\n+ */\n+export function PartialResultNotice({\n+  counts,\n+  stopReason,\n+  partialNote,\n+  stopping = false,\n+}: PartialResultNoticeProps) {\n+  return (\n+    <section className={styles.notice} aria-labelledby=\"partial-title\">\n+      <CircleAlert size={16} aria-hidden=\"true\" />\n+      <div>\n+        <p id=\"partial-title\" className={styles.headline}>\n+          {stopping ? '멈추는 중입니다' : '부분 결과입니다'}\n+          {stopReason ? <span className={styles.reason}>{stopReasonText(stopReason)}</span> : null}\n+        </p>\n+\n+        {counts && (\n+          <dl className={styles.counts}>\n+            <div>\n+              <dt>유효 후보</dt>\n+              <dd>{formatCount(counts.valid)}</dd>\n+            </div>\n+            <div>\n+              <dt>완료</dt>\n+              <dd>{formatCount(counts.completed)}</dd>\n+            </div>\n+            <div>\n+              <dt>실패</dt>\n+              <dd>{formatCount(counts.failed)}</dd>\n+            </div>\n+            <div>\n+              <dt>미실행</dt>\n+              <dd>{formatCount(counts.skipped)}</dd>\n+            </div>\n+          </dl>\n+        )}\n+\n+        {partialNote && <p className={styles.text}>{partialNote}</p>}\n+\n+        <p className={styles.text}>\n+          {stopping\n+            ? '이미 실행에 들어간 후보는 끝까지 계산합니다. 그것이 끝나면 부분 결과로 마무리됩니다.'\n+            : '미실행 후보는 계산하지 않았을 뿐 성과가 나쁜 것이 아닙니다. 남은 범위는 새 탐색으로 이어서 볼 수 있습니다.'}\n+        </p>\n+      </div>\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PartialResultNotice.tsx",
+          "old_path": "frontend/src/components/paramsearch/PartialResultNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,8 @@\n import { Play, ShieldQuestion, TriangleAlert } from 'lucide-react'\n import { ProvisionalBadge } from './ProvisionalBadge'\n+import { ValidationBadge } from './ValidationBadge'\n import type { ParamSearchPreview } from '@/types/paramSearch'\n-import { formatCount, formatSeconds, validationLabelText } from '@/utils/paramSearchLabels'\n+import { formatCount, formatSeconds } from '@/utils/paramSearchLabels'\n import styles from './PreflightPanel.module.css'\n \n interface PreflightPanelProps {\n@@ -71,8 +72,8 @@ export function PreflightPanel({\n       <div className={styles.validation}>\n         <ShieldQuestion size={15} aria-hidden=\"true\" />\n         <span>\n-          <strong>{validationLabelText(preview.validationLabel)}</strong>\n-          {preview.validationNote ? ` · ${preview.validationNote}` : null}\n+          <ValidationBadge label={preview.validationLabel} describes=\"이번 탐색의 결과\" />\n+          {preview.validationNote ? ` ${preview.validationNote}` : null}\n         </span>\n       </div>\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PreflightPanel.tsx",
+          "old_path": "frontend/src/components/paramsearch/PreflightPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,44 @@\n+.notice {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 10px;\n+  padding: 14px 16px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.notice > svg {\n+  flex: none;\n+  margin-top: 2px;\n+  color: var(--thorp-negative);\n+}\n+\n+.notice > div {\n+  display: grid;\n+  gap: 5px;\n+  min-width: 0;\n+}\n+\n+.headline {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 0.84rem;\n+  font-weight: 700;\n+  line-height: 1.5;\n+}\n+\n+.detail,\n+.next {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.75rem;\n+  line-height: 1.6;\n+}\n+\n+.record {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.7rem;\n+  line-height: 1.55;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RejectionNotice.module.css",
+          "old_path": "frontend/src/components/paramsearch/RejectionNotice.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,128 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { PartialResultNotice } from './PartialResultNotice'\n+import { RejectionNotice } from './RejectionNotice'\n+\n+function sentenceFor(code: string) {\n+  const { container, unmount } = render(<RejectionNotice code={code} />)\n+  const text = container.textContent ?? ''\n+  unmount()\n+  return text\n+}\n+\n+/**\n+ * 거부 다섯 가지와 부분 결과 표시(T104·T105, FR-026·FR-009).\n+ *\n+ * <p>가장 조용히 깨지는 것은 <b>미등록과 실행 미지원을 한 문장으로 합치는 일</b>이다. 화면은\n+ * 멀쩡해 보이고 둘 다 \"안 되는 전략\"이라 적혀 있지만, 사용자가 기다려야 할 대상이 달라진다.\n+ */\n+describe('RejectionNotice', () => {\n+  it('다섯 가지 사유에 각각 다른 안내가 있다', () => {\n+    const sentences = [\n+      'CANDIDATE_LIMIT_EXCEEDED',\n+      'NO_VALID_COMBINATION',\n+      'STRATEGY_NOT_REGISTERED',\n+      'STRATEGY_NOT_EXECUTABLE',\n+      'REGISTRY_UNAVAILABLE',\n+    ].map(sentenceFor)\n+\n+    expect(new Set(sentences).size).toBe(5)\n+  })\n+\n+  it('미등록 전략과 실행 미지원 전략을 다른 문장으로 적는다', () => {\n+    const notRegistered = sentenceFor('STRATEGY_NOT_REGISTERED')\n+    const notExecutable = sentenceFor('STRATEGY_NOT_EXECUTABLE')\n+\n+    expect(notRegistered).toContain('등록표에 없는 전략')\n+    expect(notExecutable).toContain('실행을 지원하지 않는 전략')\n+    // 사용자가 기다려야 할 대상이 다르다.\n+    expect(notRegistered).toContain('전략이 등록되면')\n+    expect(notExecutable).toContain('실행 지원이 붙으면')\n+  })\n+\n+  it('상한 초과는 범위를 좁히라고, 유효 조합 0건은 범위를 바꾸라고 안내한다', () => {\n+    expect(sentenceFor('CANDIDATE_LIMIT_EXCEEDED')).toContain('후보값을 줄이면')\n+    expect(sentenceFor('NO_VALID_COMBINATION')).toContain('섹터를 늘리거나')\n+  })\n+\n+  it('등록표 조회 실패는 지난 정보로 대신 실행하지 않는다고 밝힌다', () => {\n+    const text = sentenceFor('REGISTRY_UNAVAILABLE')\n+\n+    expect(text).toContain('잠시 후 다시')\n+    expect(text).toContain('지난 정보로 대신 실행하지는 않습니다')\n+  })\n+\n+  it('모르는 사유는 서버가 준 문장을 그대로 보인다', () => {\n+    const { container } = render(\n+      <RejectionNotice code=\"RULES_NOT_REGISTERED\" message=\"전략 규칙이 등록되지 않았습니다.\" />,\n+    )\n+\n+    expect(container.textContent).toContain('전략 규칙이 등록되지 않았습니다.')\n+    expect(container.textContent).toContain('RULES_NOT_REGISTERED')\n+  })\n+\n+  it('범위를 자동으로 줄여 대신 실행하지 않는다고 적는다', () => {\n+    // 원칙 VII — 문턱을 낮춰 채우지 않는다. 거부도 같다.\n+    expect(sentenceFor('CANDIDATE_LIMIT_EXCEEDED')).toContain('자동으로 줄여 대신 실행하지는 않습니다')\n+  })\n+})\n+\n+describe('PartialResultNotice', () => {\n+  const counts = {\n+    expected: 5,\n+    valid: 5,\n+    completed: 3,\n+    failed: 1,\n+    excluded: 0,\n+    pending: 0,\n+    skipped: 1,\n+  }\n+\n+  it('완료한 범위를 숫자로 밝힌다', () => {\n+    const { container } = render(\n+      <PartialResultNotice counts={counts} stopReason=\"CANCELLED\" partialNote={null} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('부분 결과입니다')\n+    expect(text).toContain('사용자가 취소했습니다')\n+    expect(text).toContain('유효 후보')\n+    expect(text).toContain('미실행')\n+  })\n+\n+  it('미실행을 실패와 섞지 않는다', () => {\n+    render(<PartialResultNotice counts={counts} stopReason=\"TIME_LIMIT\" partialNote={null} />)\n+\n+    // 실패 1개와 미실행 1개가 각각 제 자리에 있다.\n+    expect(screen.getByText('실패')).toBeTruthy()\n+    expect(screen.getByText('미실행')).toBeTruthy()\n+    expect(screen.getByText('실행 시간 한도에 닿았습니다')).toBeTruthy()\n+  })\n+\n+  it('멈추는 중에는 남은 후보가 완주한다는 것을 알린다', () => {\n+    const { container } = render(\n+      <PartialResultNotice\n+        counts={counts}\n+        stopReason=\"CANCELLED\"\n+        partialNote={null}\n+        stopping\n+      />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('멈추는 중입니다')\n+    expect(text).toContain('이미 실행에 들어간 후보는 끝까지 계산합니다')\n+  })\n+\n+  it('서버가 준 문장이 있으면 함께 보인다', () => {\n+    const { container } = render(\n+      <PartialResultNotice\n+        counts={counts}\n+        stopReason=\"CANCELLED\"\n+        partialNote=\"유효 후보 5개 중 4개까지 계산했습니다\"\n+      />,\n+    )\n+\n+    expect(container.textContent).toContain('유효 후보 5개 중 4개까지 계산했습니다')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RejectionNotice.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/RejectionNotice.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,79 @@\n+import { TriangleAlert } from 'lucide-react'\n+import styles from './RejectionNotice.module.css'\n+\n+interface RejectionNoticeProps {\n+  /** 서버가 준 사유. 오류 코드(`STRATEGY_NOT_REGISTERED`)나 멈춤 사유(`CANDIDATE_LIMIT`) 그대로. */\n+  code: string\n+  /** 서버가 함께 준 문장. 우리가 아는 사유가 아니면 이것이 유일한 설명이다. */\n+  message?: string | null\n+}\n+\n+/** 한 문장 안내와, 사용자가 다음에 할 수 있는 일. */\n+type Guidance = { headline: string; next: string | null }\n+\n+/**\n+ * 접수 거부 다섯 가지. **미등록과 실행 미지원을 다른 문장으로 적는다**(FR-026).\n+ *\n+ * 둘은 사용자가 할 일이 다르다 — 앞의 것은 전략이 등록되기를 기다리는 것이고, 뒤의 것은 등록은\n+ * 됐으니 실행 지원을 기다리는 것이다. \"안 되는 전략입니다\" 하나로 묶으면 그 차이가 사라진다.\n+ */\n+const guidanceByCode: Record<string, Guidance> = {\n+  CANDIDATE_LIMIT_EXCEEDED: {\n+    headline: '설정 조합이 한 번에 돌릴 수 있는 수를 넘어 실행하지 않았습니다.',\n+    next: '상세 변경에서 후보값을 줄이면 바로 실행할 수 있습니다.',\n+  },\n+  CANDIDATE_LIMIT: {\n+    headline: '설정 조합이 한 번에 돌릴 수 있는 수를 넘어 실행하지 않았습니다.',\n+    next: '상세 변경에서 후보값을 줄이면 바로 실행할 수 있습니다.',\n+  },\n+  NO_VALID_COMBINATION: {\n+    headline: '고른 범위에서 돌릴 수 있는 조합이 하나도 없어 실행하지 않았습니다.',\n+    next: '섹터를 늘리거나 후보값을 바꿔 주세요.',\n+  },\n+  NO_VALID_CANDIDATE: {\n+    headline: '고른 범위에서 돌릴 수 있는 조합이 하나도 없어 실행하지 않았습니다.',\n+    next: '섹터를 늘리거나 후보값을 바꿔 주세요.',\n+  },\n+  STRATEGY_NOT_REGISTERED: {\n+    headline: '등록표에 없는 전략이라 실행하지 않았습니다.',\n+    next: '전략이 등록되면 화면을 고치지 않아도 그대로 탐색할 수 있습니다.',\n+  },\n+  STRATEGY_NOT_EXECUTABLE: {\n+    headline: '등록은 되어 있지만 아직 실행을 지원하지 않는 전략이라 실행하지 않았습니다.',\n+    next: '실행 지원이 붙으면 그대로 탐색할 수 있습니다.',\n+  },\n+  REGISTRY_UNAVAILABLE: {\n+    headline: '전략·파라미터 등록 정보를 불러오지 못해 실행하지 않았습니다.',\n+    next: '잠시 후 다시 시도해 주세요. 지난 정보로 대신 실행하지는 않습니다.',\n+  },\n+}\n+\n+/**\n+ * 접수 거부 안내(T104, FR-026).\n+ *\n+ * <p><b>오류 화면으로 만들지 않는다.</b> 거부는 고장이 아니라 \"이 조건으로는 돌리지 않았다\"는\n+ * 결과다. 빨간 전체 화면으로 덮으면 사용자는 자기가 무엇을 잘못했는지 모른 채 되돌아간다 —\n+ * 그래서 있던 화면을 그대로 두고 한 문장을 얹는다.\n+ *\n+ * <p>모르는 사유 코드는 서버가 준 문장을 그대로 보인다. 아는 코드로 접어서 잘못된 안내를 하느니\n+ * 덜 친절한 편이 낫다.\n+ */\n+export function RejectionNotice({ code, message }: RejectionNoticeProps) {\n+  const guidance = guidanceByCode[code] ?? null\n+\n+  return (\n+    <section className={styles.notice} role=\"alert\" aria-labelledby=\"rejection-title\">\n+      <TriangleAlert size={17} aria-hidden=\"true\" />\n+      <div>\n+        <p id=\"rejection-title\" className={styles.headline}>\n+          {guidance?.headline ?? message ?? '이 조건으로는 실행하지 않았습니다.'}\n+        </p>\n+        {guidance && message ? <p className={styles.detail}>{message}</p> : null}\n+        {guidance?.next ? <p className={styles.next}>{guidance.next}</p> : null}\n+        <p className={styles.record}>\n+          {`사유 ${code} 로 기록해 두었습니다. 범위를 자동으로 줄여 대신 실행하지는 않습니다.`}\n+        </p>\n+      </div>\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RejectionNotice.tsx",
+          "old_path": "frontend/src/components/paramsearch/RejectionNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+.wrap {\n+  display: grid;\n+  gap: 7px;\n+  padding: 13px 15px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.row {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 12px;\n+  flex-wrap: wrap;\n+}\n+\n+.count {\n+  color: var(--thorp-foreground);\n+  font-size: 0.8rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 700;\n+}\n+\n+.retry {\n+  display: inline-flex;\n+  min-height: 36px;\n+  align-items: center;\n+  gap: 7px;\n+  padding: 0 13px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+  cursor: pointer;\n+  font-size: 0.75rem;\n+  font-weight: 700;\n+}\n+\n+.retry:hover:not(:disabled) {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.retry:disabled {\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+.retry:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.note,\n+.done {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+  line-height: 1.55;\n+}\n+\n+.done {\n+  color: var(--thorp-copy);\n+}\n+\n+.error {\n+  margin: 0;\n+  color: var(--thorp-negative);\n+  font-size: 0.73rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RetryFailedButton.module.css",
+          "old_path": "frontend/src/components/paramsearch/RetryFailedButton.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,93 @@\n+import { useState } from 'react'\n+import { RotateCcw } from 'lucide-react'\n+import { normalizeParamSearchError, retryFailedCandidates } from '@/api/paramSearch'\n+import type { ParamSearchRetryResult } from '@/types/paramSearch'\n+import { formatCount } from '@/utils/paramSearchLabels'\n+import styles from './RetryFailedButton.module.css'\n+\n+interface RetryFailedButtonProps {\n+  searchId: string\n+  /** 지금 실패로 남은 후보 수. **0이면 아무것도 그리지 않는다.** */\n+  failedCount: number\n+  /** spec 014 이전의 임시 요청자 통로. 인증이 아니다. */\n+  requesterId?: number | null\n+  /** 재시도가 접수된 뒤. 화면이 상태를 다시 읽도록 알린다. */\n+  onRetried: (result: ParamSearchRetryResult) => void\n+}\n+\n+/**\n+ * 실패 후보 재시도(T107a, FR-024).\n+ *\n+ * <p><b>실패가 있을 때만 보인다.</b> 언제나 떠 있으면 \"다시 돌려 볼 수 있다\"는 인상이 생기는데,\n+ * 이것은 같은 조건을 다시 계산하는 것이지 조건을 바꿔 다시 실험하는 것이 아니다. 기준을 바꿔\n+ * 돌리는 것은 재시도가 아니라 새 탐색이다(FR-013c).\n+ *\n+ * <p><b>한 번에 다 보내지 않는다.</b> 발행 창을 넘겨 보내지 않으므로 실패가 창보다 많으면 남는다.\n+ * 그 수를 그대로 보이고 다시 누르게 한다 — 자동으로 이어 보내면 사용자가 멈출 자리가 없다.\n+ *\n+ * <p>미실행(`SKIPPED`) 후보는 대상이 아니다. 취소·한도로 빠진 것을 되살리면 \"어디까지 돌렸는가\"가\n+ * 뜻을 잃는다.\n+ */\n+export function RetryFailedButton({\n+  searchId,\n+  failedCount,\n+  requesterId,\n+  onRetried,\n+}: RetryFailedButtonProps) {\n+  const [pending, setPending] = useState(false)\n+  const [error, setError] = useState<string | null>(null)\n+  const [result, setResult] = useState<ParamSearchRetryResult | null>(null)\n+\n+  if (failedCount <= 0) return null\n+\n+  const submit = async () => {\n+    setPending(true)\n+    setError(null)\n+    try {\n+      const retried = await retryFailedCandidates(searchId, requesterId)\n+      setResult(retried)\n+      onRetried(retried)\n+    } catch (caught) {\n+      setError(normalizeParamSearchError(caught).message)\n+    } finally {\n+      setPending(false)\n+    }\n+  }\n+\n+  return (\n+    <div className={styles.wrap}>\n+      <div className={styles.row}>\n+        <span className={styles.count}>{`실패한 후보 ${formatCount(failedCount)}개`}</span>\n+        <button\n+          type=\"button\"\n+          className={styles.retry}\n+          onClick={() => void submit()}\n+          disabled={pending}\n+        >\n+          <RotateCcw size={14} aria-hidden=\"true\" />\n+          {pending ? '다시 보내는 중' : '실패한 후보 다시 시도'}\n+        </button>\n+      </div>\n+\n+      <p className={styles.note}>\n+        같은 조건으로 다시 계산합니다. 참조 버전·탐색 범위·선정 기준은 처음 그대로이고 새 묶음을\n+        만들지 않습니다.\n+      </p>\n+\n+      {result && (\n+        <p className={styles.done} role=\"status\">\n+          {`${formatCount(result.retried)}개를 다시 보냈습니다.`}\n+          {result.remainingFailed > 0\n+            ? ` 한 번에 보낼 수 있는 수를 넘어 ${formatCount(result.remainingFailed)}개가 남았습니다. 다시 눌러 주세요.`\n+            : ' 남은 실패 후보는 없습니다.'}\n+        </p>\n+      )}\n+\n+      {error && (\n+        <p className={styles.error} role=\"alert\">\n+          {error}\n+        </p>\n+      )}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RetryFailedButton.tsx",
+          "old_path": "frontend/src/components/paramsearch/RetryFailedButton.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+.badge {\n+  display: inline-flex;\n+  flex: none;\n+  align-items: center;\n+  padding: 2px 7px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 3px;\n+  color: var(--thorp-copy);\n+  font-size: 0.63rem;\n+  font-weight: 700;\n+  white-space: nowrap;\n+}\n+\n+/* 미검증은 \"통과\"가 아니라 \"말할 수 없음\"이다. 경고색을 쓰되 뜻은 글자가 진다. */\n+.badge[data-label='UNVALIDATED'] {\n+  border-color: var(--thorp-warning);\n+  color: var(--thorp-warning);\n+}\n+\n+.badge[data-label='SEARCH_RESULT'] {\n+  border-color: var(--thorp-line-strong);\n+  color: var(--thorp-muted);\n+}\n+\n+/* 검증 구간 결과라고 해서 좋은 값이라는 뜻은 아니다 — 긍정색을 쓰지 않는다. */\n+.badge[data-label='HELD_OUT_RESULT'] {\n+  border-color: var(--thorp-accent);\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.srOnly {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ValidationBadge.module.css",
+          "old_path": "frontend/src/components/paramsearch/ValidationBadge.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,158 @@\n+import { readFileSync } from 'node:fs'\n+import { render, screen, waitFor } from '@testing-library/react'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import {\n+  baselineFixture,\n+  completedCandidate,\n+  configFixture,\n+  excludedCandidate,\n+  noNeighborCandidate,\n+  notInDisplayCandidate,\n+  selectionFixture,\n+} from '@/test/paramSearchFixtures'\n+import type { CandidatePage } from '@/types/paramSearch'\n+import { CandidateDetail } from './CandidateDetail'\n+import { CandidateSummaryCard } from './CandidateSummaryCard'\n+import { CandidateTable } from './CandidateTable'\n+import { SelectionResult } from './SelectionResult'\n+import { ValidationBadge } from './ValidationBadge'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  getParamSearchCandidates: vi.fn(),\n+}))\n+\n+vi.mock('@/api/paramSearch', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/paramSearch')>('@/api/paramSearch')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+/** 후보가 보이는 007 화면. 여기 어디에도 배지 없이 후보를 그리는 곳이 있으면 안 된다. */\n+const candidateSurfaces = [\n+  'src/components/paramsearch/CandidateSummaryCard.tsx',\n+  'src/components/paramsearch/CandidateDetail.tsx',\n+  'src/components/paramsearch/CandidateTable.tsx',\n+  'src/components/paramsearch/SelectionResult.tsx',\n+  'src/components/paramsearch/PreflightPanel.tsx',\n+  'src/pages/ParamSearchPage.tsx',\n+]\n+\n+/** 배지는 `data-label`로 찾는다 — CSS Module은 클래스 이름을 바꾸지만 속성은 그대로다. */\n+function badges(container: HTMLElement) {\n+  return container.querySelectorAll('[data-label]')\n+}\n+\n+/**\n+ * 검증 배지가 빠진 곳이 없는지(T116, plan 설계 제약 2, FR-015).\n+ *\n+ * <p><b>빠짐은 조용하다.</b> 배지가 없어도 화면은 멀쩡해 보이고 숫자도 다 나온다. 그래서 이\n+ * 테스트는 \"배지가 잘 그려지는가\"가 아니라 <b>\"후보를 그리는 곳마다 배지가 하나씩 있는가\"</b>를\n+ * 센다.\n+ */\n+describe('ValidationBadge', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+  })\n+\n+  it('세 라벨을 각각 읽을 수 있는 말로 보인다', () => {\n+    const { container } = render(\n+      <>\n+        <ValidationBadge label=\"UNVALIDATED\" />\n+        <ValidationBadge label=\"SEARCH_RESULT\" />\n+        <ValidationBadge label=\"HELD_OUT_RESULT\" />\n+      </>,\n+    )\n+\n+    expect(container.textContent).toContain('미검증')\n+    expect(container.textContent).toContain('탐색 구간 결과')\n+    expect(container.textContent).toContain('검증 구간 결과')\n+    expect(badges(container)).toHaveLength(3)\n+  })\n+\n+  it('색이 아니라 글자가 뜻을 진다', () => {\n+    const { container } = render(<ValidationBadge label=\"UNVALIDATED\" />)\n+    const badge = container.querySelector('[data-label]')\n+\n+    // data-label 은 스타일을 가르는 열쇠일 뿐이고, 읽히는 것은 안의 글자다.\n+    expect(badge?.getAttribute('data-label')).toBe('UNVALIDATED')\n+    expect(badge?.textContent).toContain('미검증')\n+  })\n+\n+  it('무엇에 붙은 배지인지 보조기술에 알린다', () => {\n+    render(<ValidationBadge label=\"UNVALIDATED\" describes=\"알파 기울기 5거래일\" />)\n+\n+    expect(screen.getByText(/알파 기울기 5거래일/)).toBeTruthy()\n+  })\n+\n+  it('표시 후보 집합은 후보 수만큼 배지를 낸다', () => {\n+    const { container } = render(\n+      <SelectionResult\n+        selection={selectionFixture}\n+        selectionRule={configFixture.selectionRule}\n+        baseline={baselineFixture}\n+        config={configFixture}\n+        candidates={[completedCandidate, noNeighborCandidate]}\n+        onOpenDetail={vi.fn()}\n+        comparePicks={[]}\n+        onCompareToggle={vi.fn()}\n+      />,\n+    )\n+\n+    expect(badges(container)).toHaveLength(2)\n+  })\n+\n+  it('후보 카드와 상세에도 각각 하나씩 있다', () => {\n+    const card = render(\n+      <CandidateSummaryCard candidate={completedCandidate} config={configFixture} />,\n+    )\n+    expect(badges(card.container)).toHaveLength(1)\n+    card.unmount()\n+\n+    const detail = render(\n+      <CandidateDetail\n+        candidate={excludedCandidate}\n+        config={configFixture}\n+        selectionRule={configFixture.selectionRule}\n+        onClose={vi.fn()}\n+      />,\n+    )\n+    expect(badges(detail.container)).toHaveLength(1)\n+  })\n+\n+  it('전체 후보 표는 줄마다 배지를 낸다', async () => {\n+    const page: CandidatePage = {\n+      page: 0,\n+      size: 20,\n+      totalElements: 3,\n+      totalPages: 1,\n+      content: [completedCandidate, excludedCandidate, notInDisplayCandidate],\n+    }\n+    apiMocks.getParamSearchCandidates.mockResolvedValue(page)\n+\n+    const { container } = render(\n+      <CandidateTable\n+        searchId=\"PS-20260914-000001\"\n+        config={configFixture}\n+        onOpenDetail={vi.fn()}\n+        comparePicks={[]}\n+        onCompareToggle={vi.fn()}\n+      />,\n+    )\n+\n+    // 계산 전 제외 후보에도 붙는다 — 성과가 없는 것과 검증을 말할 수 없는 것은 다른 이야기다.\n+    await waitFor(() => expect(badges(container)).toHaveLength(3))\n+  })\n+\n+  it('후보를 그리는 화면이 라벨을 직접 그리지 않는다', () => {\n+    const violations: string[] = []\n+\n+    for (const source of candidateSurfaces) {\n+      const content = readFileSync(source, 'utf-8')\n+      if (content.includes('validationLabelText(')) {\n+        violations.push(`${source} → validationLabelText 직접 호출`)\n+      }\n+    }\n+\n+    // 라벨을 각자 그리면 어디에 빠졌는지 셀 수 없게 된다.\n+    expect(violations).toEqual([])\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ValidationBadge.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/ValidationBadge.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+import type { ValidationLabel } from '@/types/paramSearch'\n+import { validationLabelText } from '@/utils/paramSearchLabels'\n+import styles from './ValidationBadge.module.css'\n+\n+interface ValidationBadgeProps {\n+  label: ValidationLabel\n+  /** 무엇에 붙은 배지인지. 보조기술이 배지만 읽고 대상을 잃지 않게 한다. */\n+  describes?: string\n+}\n+\n+/**\n+ * 검증 상태 배지(T114, plan 설계 제약 2, FR-015).\n+ *\n+ * <p><b>결과가 보이는 곳마다 함께 보인다.</b> 배지를 결과와 떼어 놓으면 숫자만 읽고 넘어가는\n+ * 경로가 생기고, 그 순간 미검증 결과가 검증된 결과처럼 읽힌다.\n+ *\n+ * <p>라벨을 각 화면이 직접 그리지 않고 이 컴포넌트를 쓰는 이유는 <b>빠뜨림을 찾을 수 있게</b>\n+ * 하기 위해서다 — 한 곳에 모여 있어야 \"어디에 안 붙었는지\"를 검사할 수 있다.\n+ *\n+ * <p>색으로만 구분하지 않는다. 배지의 내용은 글자이고 색은 거들 뿐이다.\n+ */\n+export function ValidationBadge({ label, describes }: ValidationBadgeProps) {\n+  return (\n+    <span className={styles.badge} data-label={label}>\n+      {validationLabelText(label)}\n+      {describes ? <span className={styles.srOnly}>{` — ${describes}`}</span> : null}\n+    </span>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ValidationBadge.tsx",
+          "old_path": "frontend/src/components/paramsearch/ValidationBadge.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,52 @@\n+.note {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 8px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.note svg {\n+  flex: none;\n+  margin-top: 2px;\n+  color: var(--thorp-muted);\n+}\n+\n+.unvalidated {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 10px;\n+  padding: 12px 14px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.unvalidated > svg {\n+  flex: none;\n+  margin-top: 2px;\n+  color: var(--thorp-warning);\n+}\n+\n+.unvalidated > div {\n+  display: grid;\n+  gap: 5px;\n+  min-width: 0;\n+}\n+\n+.headline {\n+  margin: 0;\n+  color: var(--thorp-warning);\n+  font-size: 0.8rem;\n+  font-weight: 700;\n+  letter-spacing: -0.01em;\n+}\n+\n+.text {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.6;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ValidationNote.module.css",
+          "old_path": "frontend/src/components/paramsearch/ValidationNote.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,51 @@\n+import { ShieldQuestion } from 'lucide-react'\n+import { ValidationBadge } from './ValidationBadge'\n+import type { ValidationLabel } from '@/types/paramSearch'\n+import styles from './ValidationNote.module.css'\n+\n+interface ValidationNoteProps {\n+  label: ValidationLabel\n+  /** 서버가 준 한 문장. 있으면 그대로 쓴다 — 화면이 사유를 지어내지 않는다. */\n+  note?: string | null\n+}\n+\n+/**\n+ * 미검증 안내(T115, FR-016).\n+ *\n+ * <p>세 가지를 <b>그 낱말 그대로</b> 적는다 — <b>미검증 · 개선 근거 없음 · 판단 보류</b>. 셋은\n+ * 서로 다른 말이다. \"미검증\"은 확인하지 않았다는 것이고, \"개선 근거 없음\"은 기준보다 나아졌다고\n+ * 말할 수 없다는 것이며, \"판단 보류\"는 그래서 우리가 결론을 내지 않는다는 것이다.\n+ *\n+ * <p><b>기능을 막지는 않는다.</b> 결과를 숨기거나 버튼을 잠그면 사용자는 무엇이 있었는지도 모르게\n+ * 된다. 우리가 하는 일은 보이되 <b>무엇이라고 말할 수 없는지</b>를 함께 보이는 것이다(원칙 III).\n+ */\n+export function ValidationNote({ label, note }: ValidationNoteProps) {\n+  if (label !== 'UNVALIDATED') {\n+    return (\n+      <p className={styles.note}>\n+        <ShieldQuestion size={15} aria-hidden=\"true\" />\n+        <span>\n+          <ValidationBadge label={label} />\n+          {note ? <span className={styles.text}>{note}</span> : null}\n+        </span>\n+      </p>\n+    )\n+  }\n+\n+  return (\n+    <div className={styles.unvalidated}>\n+      <ShieldQuestion size={16} aria-hidden=\"true\" />\n+      <div>\n+        <p className={styles.headline}>미검증 · 개선 근거 없음 · 판단 보류</p>\n+        <p className={styles.text}>\n+          {note ??\n+            '평가 분할이 등록되지 않아 이 결과가 기준보다 나아졌다고 말할 수 없습니다.'}\n+        </p>\n+        <p className={styles.text}>\n+          결과는 그대로 보이고 다른 기능도 막지 않습니다. 다만 이 값을 우월한 설정의 근거로 쓰지\n+          말아 주세요.\n+        </p>\n+      </div>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ValidationNote.tsx",
+          "old_path": "frontend/src/components/paramsearch/ValidationNote.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -197,15 +197,6 @@\n   font-weight: 750;\n }\n \n-.validation {\n-  padding: 2px 7px;\n-  border: 1px solid var(--thorp-warning);\n-  border-radius: 3px;\n-  color: var(--thorp-warning);\n-  font-size: 0.64rem;\n-  font-weight: 700;\n-}\n-\n .counts {\n   display: grid;\n   grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.module.css",
+          "old_path": "frontend/src/pages/ParamSearchPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,12 +4,18 @@ import { Link, useSearchParams } from 'react-router-dom'\n import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'\n import { useAuth } from '@/auth/auth-context'\n import { AppHeader } from '@/components/navigation/AppHeader'\n+import { CancelButton } from '@/components/paramsearch/CancelButton'\n import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'\n import { CandidateTable } from '@/components/paramsearch/CandidateTable'\n import { CompareHandoff } from '@/components/paramsearch/CompareHandoff'\n+import { PartialResultNotice } from '@/components/paramsearch/PartialResultNotice'\n import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'\n+import { RejectionNotice } from '@/components/paramsearch/RejectionNotice'\n+import { RetryFailedButton } from '@/components/paramsearch/RetryFailedButton'\n import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'\n import { SelectionResult } from '@/components/paramsearch/SelectionResult'\n+import { ValidationBadge } from '@/components/paramsearch/ValidationBadge'\n+import { ValidationNote } from '@/components/paramsearch/ValidationNote'\n import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'\n import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'\n import { useSearchCandidates } from '@/hooks/useSearchCandidates'\n@@ -20,7 +26,7 @@ import type {\n   SearchSpaceSelection,\n   StrategySpaceSummary,\n } from '@/types/paramSearch'\n-import { formatCount, validationLabelText } from '@/utils/paramSearchLabels'\n+import { formatCount } from '@/utils/paramSearchLabels'\n import styles from './ParamSearchPage.module.css'\n \n /** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값과 중복은 버린다. */\n@@ -73,7 +79,7 @@ export function ParamSearchPage() {\n   const [showSpaceEditor, setShowSpaceEditor] = useState(false)\n \n   const [creating, setCreating] = useState(false)\n-  const [runError, setRunError] = useState<string | null>(null)\n+  const [runError, setRunError] = useState<{ code: string | null; message: string } | null>(null)\n \n   // 409를 받은 순간의 미리보기와, 그것을 대신할 새 미리보기. 확인 전에는 다시 보내지 않는다.\n   const [conflictBase, setConflictBase] = useState<ParamSearchPreview | null>(null)\n@@ -184,7 +190,7 @@ export function ParamSearchPage() {\n           return\n         }\n \n-        setRunError(failure.message)\n+        setRunError({ code: failure.code, message: failure.message })\n       } finally {\n         setCreating(false)\n       }\n@@ -353,14 +359,13 @@ export function ParamSearchPage() {\n                     <p className={styles.statusLine} aria-live=\"polite\">\n                       <strong>{statusText[detail.status] ?? detail.status}</strong>\n                       {detail.stopReason ? <span> · 멈추는 중</span> : null}\n-                      <span className={styles.validation}>\n-                        {validationLabelText(detail.validationLabel)}\n-                      </span>\n+                      <ValidationBadge label={detail.validationLabel} describes=\"이 탐색 묶음\" />\n                     </p>\n \n-                    {detail.validationNote && (\n-                      <p className={styles.note}>{detail.validationNote}</p>\n-                    )}\n+                    <ValidationNote\n+                      label={detail.validationLabel}\n+                      note={detail.validationNote}\n+                    />\n \n                     {detail.counts && (\n                       <dl className={styles.counts}>\n@@ -380,10 +385,35 @@ export function ParamSearchPage() {\n                       </dl>\n                     )}\n \n-                    {detail.partialNote && (\n-                      <p className={styles.note}>{detail.partialNote}</p>\n+                    {detail.status === 'REJECTED' && detail.stopReason && (\n+                      <RejectionNotice code={detail.stopReason} message={detail.partialNote} />\n+                    )}\n+\n+                    {(detail.partial || detail.stopReason !== null) &&\n+                      detail.status !== 'REJECTED' && (\n+                        <PartialResultNotice\n+                          counts={detail.counts}\n+                          stopReason={detail.stopReason}\n+                          partialNote={detail.partialNote}\n+                          stopping={status.isPolling && detail.stopReason !== null}\n+                        />\n+                      )}\n+\n+                    {status.isPolling && detail.stopReason === null && (\n+                      <CancelButton\n+                        searchId={searchId}\n+                        requesterId={user?.userId}\n+                        onCancelled={status.refetch}\n+                      />\n                     )}\n \n+                    <RetryFailedButton\n+                      searchId={searchId}\n+                      failedCount={detail.counts?.failed ?? 0}\n+                      requesterId={user?.userId}\n+                      onRetried={status.refetch}\n+                    />\n+\n                   </>\n                 )}\n               </section>\n@@ -448,11 +478,14 @@ export function ParamSearchPage() {\n                       blockedReason={user ? null : '실행하려면 로그인이 필요합니다.'}\n                     />\n \n-                    {runError && (\n-                      <p className={styles.error} role=\"alert\">\n-                        {runError}\n-                      </p>\n-                    )}\n+                    {runError &&\n+                      (runError.code ? (\n+                        <RejectionNotice code={runError.code} message={runError.message} />\n+                      ) : (\n+                        <p className={styles.error} role=\"alert\">\n+                          {runError.message}\n+                        </p>\n+                      ))}\n \n                     <section className={styles.details}>\n                       <button\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "old_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ import type {\n   CandidateStability,\n   CandidateStatus,\n   ParamSearchConfig,\n+  ParamSearchStopReason,\n   SearchCandidateItem,\n   SelectionFilter,\n   SelectionOutcome,\n@@ -211,3 +212,26 @@ export function describeCandidateSetting(\n     parameterText,\n   }\n }\n+\n+/**\n+ * 묶음이 멈춘 사유. **\"실패\"와 섞지 않는다** — 취소·한도는 실행을 멈춘 것이지 계산이 틀린 것이\n+ * 아니다.\n+ */\n+export function stopReasonText(reason: ParamSearchStopReason): string {\n+  switch (reason) {\n+    case 'CANCELLED':\n+      return '사용자가 취소했습니다'\n+    case 'CANDIDATE_LIMIT':\n+      return '후보 수 상한에 닿았습니다'\n+    case 'TIME_LIMIT':\n+      return '실행 시간 한도에 닿았습니다'\n+    case 'FAILURE_LIMIT':\n+      return '실패가 이어져 멈췄습니다'\n+    case 'NO_VALID_CANDIDATE':\n+      return '돌릴 수 있는 후보가 없었습니다'\n+    case 'STRATEGY_NOT_REGISTERED':\n+      return '등록표에 없는 전략이 있었습니다'\n+    case 'STRATEGY_NOT_EXECUTABLE':\n+      return '실행을 지원하지 않는 전략이 있었습니다'\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/paramSearchLabels.ts",
+          "old_path": "frontend/src/utils/paramSearchLabels.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -289,11 +289,11 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 3 — Frontend\n \n-- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내 **5종**(상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략·등록표 조회 실패)을 오류 화면 없이 한 문장으로. 미등록과 실행 미지원은 다른 문장으로 구분한다 (FR-026, 공통 성공 기준)\n-- [ ] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수\n-- [ ] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)\n-- [ ] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영\n-- [ ] T107a [P] [US3] (FE) `frontend/src/components/paramsearch/RetryFailedButton.tsx` — 실패 후보가 있을 때만 보이는 재시도 버튼과 재시도 후 상태 반영 (FR-024)\n+- [X] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내 **5종**(상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략·등록표 조회 실패)을 오류 화면 없이 한 문장으로. 미등록과 실행 미지원은 다른 문장으로 구분한다 (FR-026, 공통 성공 기준)\n+- [X] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수\n+- [X] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)\n+- [X] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영\n+- [X] T107a [P] [US3] (FE) `frontend/src/components/paramsearch/RetryFailedButton.tsx` — 실패 후보가 있을 때만 보이는 재시도 버튼과 재시도 후 상태 반영 (FR-024)\n \n **Checkpoint**: 계산 낭비와 중단 처리가 모두 동작한다\n \n@@ -321,9 +321,9 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 4 — Frontend\n \n-- [ ] T114 [P] [US4] (FE) `frontend/src/components/paramsearch/ValidationBadge.tsx` — 후보마다 검증 상태 상시 표시 (plan 설계 제약 2)\n-- [ ] T115 [US4] (FE) `frontend/src/components/paramsearch/ValidationNote.tsx` — 미검증 안내 문구. '미검증·개선 근거 없음·판단 보류'를 결과에 표시하고 기능을 막지 않는다 (FR-016)\n-- [ ] T116 [P] [US4] (FE 테스트) `frontend/src/components/paramsearch/ValidationBadge.test.tsx` — 검증 상태 배지 누락이 0건인지 검증\n+- [X] T114 [P] [US4] (FE) `frontend/src/components/paramsearch/ValidationBadge.tsx` — 후보마다 검증 상태 상시 표시 (plan 설계 제약 2)\n+- [X] T115 [US4] (FE) `frontend/src/components/paramsearch/ValidationNote.tsx` — 미검증 안내 문구. '미검증·개선 근거 없음·판단 보류'를 결과에 표시하고 기능을 막지 않는다 (FR-016)\n+- [X] T116 [P] [US4] (FE 테스트) `frontend/src/components/paramsearch/ValidationBadge.test.tsx` — 검증 상태 배지 누락이 0건인지 검증\n \n **Checkpoint**: 네 사용자 스토리가 모두 독립적으로 동작한다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-14T17:30:33.038+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2803849": []
+  }
+}

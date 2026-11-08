@@ -1,0 +1,803 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948313,
+    "iid": 176,
+    "project_id": 1444456,
+    "title": "feat(de): 공통 척도와 지표별 비교 시점을 만든다",
+    "description": "# 작업 내용 요약\n\n010 경제환경 검색의 묶음 M2다. 질의 기준월 직전 구간에서 지표별 **공통 척도(m·s)** 를 만들고, `t-2·t-1·t` 중 **자료가 있는 달만** 비교 시점으로 남긴다. 거리·순위·동률 판정은 M3\\~M4 몫이고, 이 MR은 그 계산이 딛고 설 척도와 입력 판정, 그리고 순위가 쓸 12자리 반올림 유틸까지다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-278 \\[DE\\] 척도와 지표별 비교 시점\n- link https://ssafy.atlassian.net/browse/S15P21E205-278\n- relates to S15P21E205-276 (분야별·종합 경제환경 검색 결과)\n\n# 주요 변경 사항\n\n- `regime/scale.py` — `continuous_window`(end-3에서 과거로, **처음 결측에서 멈춘다**), `scale_for`(60개월 미만이면 `SCALE_WINDOW_TOO_SHORT`), `Scale.standardize`, `ScaleUnavailable`. 산포는 `MAD ÷ Φ⁻¹(0.75)`, MAD가 0이면 `IQR ÷ (2·Φ⁻¹(0.75))`, 둘 다 0이면 `SCALE_ZERO`. 쓴 방법(`MAD`/`IQR`)과 **실제로 쓴 구간**을 결과에 남긴다.\n- `regime/comparison.py` — `comparison_months_for`(지표별로 따로, 빠진 달은 `omitted`에 보존), `comparison_for_scope`, `ScopeComparison.require_computable()`. 비교 시점이 하나도 없는 지표가 있으면 `QUERY_INPUT_MISSING`이고 **그 지표를 빼고 계산하는 경로를 예외로 막는다**.\n- `regime/rounding.py` — 저장 자릿수 12, `ROUND_HALF_UP`, `round_for_storage` / `to_storage_text` / `equal_at_storage`(정확한 동률). NaN·무한대·비수치는 거부한다.\n- `data/tests/regime/` — `test_scale.py` / `test_comparison.py` / `test_rounding.py` 신설, `conftest.py`에 단위 시험용 월별 계열 생성기 `make_series` 추가.\n- `data/requirements.txt` — `scipy>=1.14` 추가(보정 상수 실계산 전용).\n- `specs/010-economic-regime-search/tasks.md` — T014\\~T028 완료 표시.\n\n# 테스트\n\n- [x] `python -m pytest data/tests/regime -q` → **96 passed**\n- [x] `python -m ruff check src tests` → All checks passed\n- [x] 근사값 회귀 방지: 상수가 1.4826·1.349와 **다름**을, 그 차이가 저장 자릿수(12)보다 위에 있음까지 함께 고정했다. 근사값으로 되돌리면 테스트가 깨진다.\n- [x] 척도 구간보다 오래된 후보도 질의의 m·s로 표준화되는 것을 고정(FR-005·FR-012)\n\n# 리뷰 포인트\n\n- **실패를 예외로 던지지 않고 값으로 돌려준다(`ScaleUnavailable`).** 부르는 쪽이 둘로 갈리기 때문이다 — 공통 척도 실패는 그 분야·종합을 계산 불가로 만들지만(FR-005·FR-006), 시대별 보조 척도 실패는 그 지표의 설명만 제한한다(FR-017). 예외로 던지면 두 자리 중 한쪽이 반드시 삼키게 된다. 반대로 `comparison` 쪽은 `require_computable()`에 **예외로 막았다** — 여기는 \"빼고 계산\" 자체가 있어서는 안 되는 경로라서다.\n- **scipy 의존성이 늘었다.** 쓰는 곳은 `norm.ppf(0.75)` 한 줄이다. 상수를 적어두는 쪽이 가볍지만 근사값과 다섯째 자리에서 갈리고 그 자리가 순위에 닿아서(research R5) 실계산으로 뒀다. 무게가 문제면 값을 한 번 계산해 고정 + 검증 테스트로 바꿀 수 있다 — 의견 부탁한다.\n- **반올림을 여기서 부르지 않는다.** 적용 자리는 순위·동률 직전(M4)과 저장 직전(M5) 두 곳뿐이고, 중간마다 반올림하면 오차가 경계에서 누적된다. 지금 호출부가 없는 게 빠뜨린 게 아니다.\n- **구멍 건너편 자료를 끌어오지 않는다.** 60개월을 못 채우면 앞쪽에 자료가 아무리 많아도 계산 불가다. 통계 개편 전후처럼 성격이 다른 값이 한 분포에 섞이는 걸 막기 위 실제 지표에서 이 규칙에 걸리는 게 몇 개인지는 008 운영 소스가 붙어야 확인된다.\n- `comparison_for_scope`가 **검색 모드를 인자로 받지 않는다.** 받는 순간 분기가 같은 분야의 D_g가 모드에 따라 두 값이 된다(SC-002). 시그니처를 바꾸자는 제안은 여기부터 봐달라.\n- `Decimal(float)`을 `repr` 없이 그대로 쓴다 — 짧은 표기로 바꾸면 없던 반올림 경계가 생긴다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 계산 계층이라 표시 문구 자체가 없다. 순위· 두었고 \"1위\"·\"추천\"·\"최적\" 같은 표현은 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 경제환경 검색은 전략과 독립이며 \\`strat 검색 모드로도 분기하지 않는다(FR-001)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 임의 epsilon·클리핑·지표 몰래 제외 없음(FR-007). 못 만든 척도는 `SCALE_WINDOW_TOO_SHORT`/`SCALE_ZERO`, 질의 입력이 없으면 `QUERY_INPUT_MISSING` 사유로 돌려주고, NaN·무한대는 저장 경로에서 막는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할 라벨은 이 대신 척도가 **실제로 쓴 구간**과 산포 방법(MAD/IQR)을 결과에 남겨 대체가 일어난 사실이",
+    "state": "merged",
+    "created_at": "2026-09-17T11:34:16.473+09:00",
+    "updated_at": "2026-09-17T13:51:05.685+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-17T12:00:11.854+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/278-regime-scale",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+    "merge_commit_sha": "0855e5b599fb2edd05d949f763af6f281dc8ea6a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T11:34:19.068+09:00",
+    "reference": "!176",
+    "references": {
+      "short": "!176",
+      "relative": "!176",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!176"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/176",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948313,
+    "iid": 176,
+    "project_id": 1444456,
+    "title": "feat(de): 공통 척도와 지표별 비교 시점을 만든다",
+    "description": "# 작업 내용 요약\n\n010 경제환경 검색의 묶음 M2다. 질의 기준월 직전 구간에서 지표별 **공통 척도(m·s)** 를 만들고, `t-2·t-1·t` 중 **자료가 있는 달만** 비교 시점으로 남긴다. 거리·순위·동률 판정은 M3\\~M4 몫이고, 이 MR은 그 계산이 딛고 설 척도와 입력 판정, 그리고 순위가 쓸 12자리 반올림 유틸까지다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-278 \\[DE\\] 척도와 지표별 비교 시점\n- link https://ssafy.atlassian.net/browse/S15P21E205-278\n- relates to S15P21E205-276 (분야별·종합 경제환경 검색 결과)\n\n# 주요 변경 사항\n\n- `regime/scale.py` — `continuous_window`(end-3에서 과거로, **처음 결측에서 멈춘다**), `scale_for`(60개월 미만이면 `SCALE_WINDOW_TOO_SHORT`), `Scale.standardize`, `ScaleUnavailable`. 산포는 `MAD ÷ Φ⁻¹(0.75)`, MAD가 0이면 `IQR ÷ (2·Φ⁻¹(0.75))`, 둘 다 0이면 `SCALE_ZERO`. 쓴 방법(`MAD`/`IQR`)과 **실제로 쓴 구간**을 결과에 남긴다.\n- `regime/comparison.py` — `comparison_months_for`(지표별로 따로, 빠진 달은 `omitted`에 보존), `comparison_for_scope`, `ScopeComparison.require_computable()`. 비교 시점이 하나도 없는 지표가 있으면 `QUERY_INPUT_MISSING`이고 **그 지표를 빼고 계산하는 경로를 예외로 막는다**.\n- `regime/rounding.py` — 저장 자릿수 12, `ROUND_HALF_UP`, `round_for_storage` / `to_storage_text` / `equal_at_storage`(정확한 동률). NaN·무한대·비수치는 거부한다.\n- `data/tests/regime/` — `test_scale.py` / `test_comparison.py` / `test_rounding.py` 신설, `conftest.py`에 단위 시험용 월별 계열 생성기 `make_series` 추가.\n- `data/requirements.txt` — `scipy>=1.14` 추가(보정 상수 실계산 전용).\n- `specs/010-economic-regime-search/tasks.md` — T014\\~T028 완료 표시.\n\n# 테스트\n\n- [x] `python -m pytest data/tests/regime -q` → **96 passed**\n- [x] `python -m ruff check src tests` → All checks passed\n- [x] 근사값 회귀 방지: 상수가 1.4826·1.349와 **다름**을, 그 차이가 저장 자릿수(12)보다 위에 있음까지 함께 고정했다. 근사값으로 되돌리면 테스트가 깨진다.\n- [x] 척도 구간보다 오래된 후보도 질의의 m·s로 표준화되는 것을 고정(FR-005·FR-012)\n\n# 리뷰 포인트\n\n- **실패를 예외로 던지지 않고 값으로 돌려준다(`ScaleUnavailable`).** 부르는 쪽이 둘로 갈리기 때문이다 — 공통 척도 실패는 그 분야·종합을 계산 불가로 만들지만(FR-005·FR-006), 시대별 보조 척도 실패는 그 지표의 설명만 제한한다(FR-017). 예외로 던지면 두 자리 중 한쪽이 반드시 삼키게 된다. 반대로 `comparison` 쪽은 `require_computable()`에 **예외로 막았다** — 여기는 \"빼고 계산\" 자체가 있어서는 안 되는 경로라서다.\n- **scipy 의존성이 늘었다.** 쓰는 곳은 `norm.ppf(0.75)` 한 줄이다. 상수를 적어두는 쪽이 가볍지만 근사값과 다섯째 자리에서 갈리고 그 자리가 순위에 닿아서(research R5) 실계산으로 뒀다. 무게가 문제면 값을 한 번 계산해 고정 + 검증 테스트로 바꿀 수 있다 — 의견 부탁한다.\n- **반올림을 여기서 부르지 않는다.** 적용 자리는 순위·동률 직전(M4)과 저장 직전(M5) 두 곳뿐이고, 중간마다 반올림하면 오차가 경계에서 누적된다. 지금 호출부가 없는 게 빠뜨린 게 아니다.\n- **구멍 건너편 자료를 끌어오지 않는다.** 60개월을 못 채우면 앞쪽에 자료가 아무리 많아도 계산 불가다. 통계 개편 전후처럼 성격이 다른 값이 한 분포에 섞이는 걸 막기 위 실제 지표에서 이 규칙에 걸리는 게 몇 개인지는 008 운영 소스가 붙어야 확인된다.\n- `comparison_for_scope`가 **검색 모드를 인자로 받지 않는다.** 받는 순간 분기가 같은 분야의 D_g가 모드에 따라 두 값이 된다(SC-002). 시그니처를 바꾸자는 제안은 여기부터 봐달라.\n- `Decimal(float)`을 `repr` 없이 그대로 쓴다 — 짧은 표기로 바꾸면 없던 반올림 경계가 생긴다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 계산 계층이라 표시 문구 자체가 없다. 순위· 두었고 \"1위\"·\"추천\"·\"최적\" 같은 표현은 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 경제환경 검색은 전략과 독립이며 \\`strat 검색 모드로도 분기하지 않는다(FR-001)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 임의 epsilon·클리핑·지표 몰래 제외 없음(FR-007). 못 만든 척도는 `SCALE_WINDOW_TOO_SHORT`/`SCALE_ZERO`, 질의 입력이 없으면 `QUERY_INPUT_MISSING` 사유로 돌려주고, NaN·무한대는 저장 경로에서 막는다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할 라벨은 이 대신 척도가 **실제로 쓴 구간**과 산포 방법(MAD/IQR)을 결과에 남겨 대체가 일어난 사실이",
+    "state": "merged",
+    "created_at": "2026-09-17T11:34:16.473+09:00",
+    "updated_at": "2026-09-17T13:51:05.685+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-17T12:00:11.854+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/278-regime-scale",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+    "merge_commit_sha": "0855e5b599fb2edd05d949f763af6f281dc8ea6a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T11:34:19.068+09:00",
+    "reference": "!176",
+    "references": {
+      "short": "!176",
+      "relative": "!176",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!176"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/176",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "9",
+    "latest_build_started_at": "2026-09-17T11:58:52.531+09:00",
+    "latest_build_finished_at": "2026-09-17T11:59:39.301+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 201605,
+      "iid": 101,
+      "project_id": 1444456,
+      "sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+      "ref": "feat(de)/278-regime-scale",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T11:58:52.420+09:00",
+      "updated_at": "2026-09-17T14:11:38.689+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201605"
+    },
+    "head_pipeline": {
+      "id": 201605,
+      "iid": 101,
+      "project_id": 1444456,
+      "sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+      "ref": "feat(de)/278-regime-scale",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T11:58:52.420+09:00",
+      "updated_at": "2026-09-17T14:11:38.689+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201605",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T11:58:52.531+09:00",
+      "finished_at": "2026-09-17T14:11:38.681+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201605",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "head_sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+      "start_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e3d54a58f0933287309d454c6c1e71abdfb24943",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822782,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T11:34:16.627+09:00",
+          "updated_at": "2026-09-17T11:34:16.632+09:00",
+          "system": true,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cd43a04e27b4a31d23d91f5bbe9c79114adedc55",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822783,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T11:34:16.646+09:00",
+          "updated_at": "2026-09-17T11:34:16.653+09:00",
+          "system": true,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "46f58e7d198d8bdaa6cc2fee88adc9846581e97e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822784,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 요구사항 및 도메인 규칙 준수**: 결측치 임의 보완 방지(FR-007), 검색 모드에 따른 분기 방지(SC-002), 정확한 사사오입 반올림(`ROUND_HALF_UP`)과 12자리 정밀도 고정 등 비즈니스 로직의 핵심 제약 사항이 코드와 테스트에 매우 명확하게 반영되어 있습니다.\n- **방어적 프로그래밍과 예외 디자인**: `ScaleUnavailable`을 통해 제어 가능한 실패를 값으로 안전하게 반환하고, 반대로 예외 경로여야 하는 누락 지표 계산 시도는 `QueryInputMissingError`로 강하게 차단하여 안전성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n변경 사항에 대해 다음과 같은 시나리오로 추가 테스트를 검토해 볼 수 있습니다.\n- **경계값 월 이동 테스트 (`data/tests/regime/test_scale.py`)**: `shift_month` 함수 호출 시 연도 경계(예: 1월에서 과거로 이동할 때)에서 의도한 대로 정확한 월 연산이 수행되는지 검증하는 단위 테스트 추가\n- **특수 부동소수점 예외 테스트 (`data/tests/regime/test_rounding.py`)**: `_quantize` 함수가 아주 작은 값이나 정밀도 한계에 부딪히는 극단적인 부동소수점 입력값에서 예상치 못한 오버플로우나 언더플로우 없이 안전하게 `RoundingError`를 발생시키거나 정상 처리하는지 검증\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:82c1d2c7ab20610ccddcaecfa8750d615c7854e5 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T11:34:27.829+09:00",
+          "updated_at": "2026-09-17T11:34:27.829+09:00",
+          "system": false,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "820f57493e850cb4c6a36bc6bafd96eaa2171bb6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822945,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T12:00:09.109+09:00",
+          "updated_at": "2026-09-17T12:00:09.128+09:00",
+          "system": true,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1716b4dbdfc476a7ec0ebea86920da6b3e6e6acd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2822947,
+          "type": null,
+          "body": "mentioned in commit 0855e5b599fb2edd05d949f763af6f281dc8ea6a",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T12:00:12.110+09:00",
+          "updated_at": "2026-09-17T12:00:12.115+09:00",
+          "system": true,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "75fea47ea73ff23213b1cfe038c1a29593357b9d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2823924,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T13:29:56.189+09:00",
+          "updated_at": "2026-09-17T13:29:56.189+09:00",
+          "system": false,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "72793078643f7cd635524f4594cd27ae77a338e6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824198,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T13:51:05.654+09:00",
+          "updated_at": "2026-09-17T13:51:05.654+09:00",
+          "system": false,
+          "noteable_id": 948313,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 176,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2211389,
+      "head_commit_sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+      "base_commit_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "start_commit_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "created_at": "2026-09-17T11:34:17.037+09:00",
+      "merge_request_id": 948313,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "f088b5b564f3c988870faf9531c614dd37267299"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2211389,
+      "head_commit_sha": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+      "base_commit_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "start_commit_sha": "23725f1d8def17ad0276deb169ae93cb6ab827de",
+      "created_at": "2026-09-17T11:34:17.037+09:00",
+      "merge_request_id": 948313,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "f088b5b564f3c988870faf9531c614dd37267299",
+      "commits": [
+        {
+          "id": "82c1d2c7ab20610ccddcaecfa8750d615c7854e5",
+          "short_id": "82c1d2c7",
+          "created_at": "2026-09-17T11:25:54.000+09:00",
+          "parent_ids": [
+            "03843438baa0e580f8ee8f228172c721afaa5c93",
+            "23725f1d8def17ad0276deb169ae93cb6ab827de"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(de)/278-regime-scale",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(de)/278-regime-scale\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T11:25:54.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T11:25:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/82c1d2c7ab20610ccddcaecfa8750d615c7854e5"
+        },
+        {
+          "id": "03843438baa0e580f8ee8f228172c721afaa5c93",
+          "short_id": "03843438",
+          "created_at": "2026-09-17T11:22:01.000+09:00",
+          "parent_ids": [
+            "a2bae42001335c8461a9527933e7572587a1421e"
+          ],
+          "title": "docs(be): 묶음 M2 태스크 완료를 표시한다",
+          "message": "docs(be): 묶음 M2 태스크 완료를 표시한다\n\nT014~T028을 [X]로 바꾼다. 표시 전에 각 태스크가 요구한 것이 실제로 있는지 코드와 대조했고,\n묶음 체크포인트는 M1 픽스처의 심어 둔 달로 확인했다 — 구멍 계열 34개월 판정, 소비자물가\nIQR 대체, 주택가격 SCALE_ZERO, 전산업생산 한 달 결측이 그 지표만 두 달, 건설기성액 세 달\n결측이 분야를 QUERY_INPUT_MISSING으로.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T11:22:01.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T11:22:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/03843438baa0e580f8ee8f228172c721afaa5c93"
+        },
+        {
+          "id": "a2bae42001335c8461a9527933e7572587a1421e",
+          "short_id": "a2bae420",
+          "created_at": "2026-09-17T10:18:13.000+09:00",
+          "parent_ids": [
+            "dd847ee187f7066200edf7293017f723a8aef674"
+          ],
+          "title": "feat(de): 공통 척도와 지표별 비교 시점을 만든다",
+          "message": "feat(de): 공통 척도와 지표별 비교 시점을 만든다\n\n거리를 재기 전에 자와 비교할 달을 정한다. spec 010 묶음 M2 (T014~T028).\n\n- 척도 구간의 연속성은 t-3에서 과거로 거슬러 처음 결측을 만나는 곳까지다. 구멍 건너편에\n  자료가 더 있어도 끌어오지 않는다 — 통계 개편 전후처럼 성격이 다른 값이 한 분포에 섞이고,\n  척도를 \"질의 구간 직전\"에서 구하라는 규칙의 뜻이 사라진다\n- 보정 상수는 scipy.stats.norm.ppf(0.75) 실계산값이다. 근사값 1.4826과는 다섯째 자리에서\n  갈리는데, 그 자리는 저장 자릿수(12)보다 위라 순위에 닿는다\n- 척도를 못 만들면 예외가 아니라 값으로 돌려준다. 부르는 쪽이 둘로 갈리기 때문이다 —\n  공통 척도 실패는 그 분야·종합을 계산 불가로 만들지만, 시대별 보조 척도 실패는 그 지표의\n  설명만 제한하고 사례·순위·거리는 그대로 둔다(FR-017)\n- 비교 시점은 지표마다 따로 정하고 comparison_for_scope 는 모드를 인자로 받지 않는다.\n  받으면 언젠가 분기가 생기고, 그때 같은 분야의 D_g 가 모드에 따라 두 값이 된다\n- 어느 지표의 비교 시점이 하나도 없을 때 그 지표를 빼고 계산하는 경로를 require_computable()\n  로 막았다. 빼고 계산하면 답은 나오고 화면도 멀쩡해 보여서, 규칙을 주석으로만 두면 급할 때\n  한 줄 건너뛰는 것으로 어겨진다\n- 반올림은 사사오입이다. 내장 round() 는 짝수로 붙어 수기 대조(SC-003)에서 갈릴 수 있다\n\nscipy 를 requirements.txt 에 추가했다. plan.md 가 Primary Dependencies 에 넣어 뒀으나 M1 까지는\n쓰이지 않아 빠져 있었다.\n\n검증: cd data && ruff check src scripts tests && pytest → 679 passed\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T10:18:13.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T10:18:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a2bae42001335c8461a9527933e7572587a1421e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -4,11 +4,136 @@\n 직전 값으로 채우지 않는다(FR-007). 이렇게 남은 시점 묶음이 그 지표의 비교 시점이다.\n \n **비교 시점은 지표마다 따로 정한다.** 같은 분야 안에서도 결측 월이 다를 수 있고, 멀쩡한\n-지표의 자료를 다른 지표의 구멍 때문에 버리지 않는다. 검색 모드가 이 규칙을 바꾸지 않는다 —\n-종합 검색도 17개 공통 달로 좁히지 않는다. 좁히면 같은 분야의 D_g가 모드에 따라 두 값이 된다.\n+지표의 자료를 다른 지표의 구멍 때문에 버리지 않는다. **검색 모드가 이 규칙을 바꾸지 않는다** —\n+종합 검색도 17개 공통 달로 좁히지 않는다. 좁히면 지표 하나의 구멍이 전체의 그 달을 날리고,\n+같은 분야의 D_g가 모드에 따라 두 값이 되어 분야 검색과 종합 화면의 숫자가 어긋난다(SC-002).\n \n-어느 지표의 비교 시점이 하나도 남지 않으면 그 지표가 속한 분야(종합이면 종합)를 계산 불가로\n-처리한다. 그 지표를 빼고 나머지로 계산하지 않는다(FR-007·FR-008).\n+어느 지표의 비교 시점이 하나도 남지 않으면 그 지표가 속한 분야(종합이면 종합)를\n+`QUERY_INPUT_MISSING`으로 처리한다. **그 지표를 빼고 나머지로 계산하지 않는다**(FR-007·FR-008) —\n+빼고 계산하면 답은 나오지만 그 답이 무엇에 대한 것인지 아무도 말할 수 없다.\n \n-구현은 묶음 M2에서 채운다.\n+빠진 달은 버리지 않고 `omitted`에 남긴다. 화면이 지표·월 단위로 표기해야 하기 때문이다\n+(spec FR-031, SC-007).\n \"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Iterable, Mapping\n+from dataclasses import dataclass\n+from datetime import date\n+from typing import Final\n+\n+from data_pipeline.regime.macro.types import MonthlyValue, require_month\n+from data_pipeline.regime.scale import shift_month\n+\n+#: 비교 대상은 t-2·t-1·t다 (spec FR-001). 오래된 달이 앞이다.\n+COMPARISON_OFFSETS: Final[tuple[int, ...]] = (2, 1, 0)\n+\n+#: 질의 입력이 없다. 값은 data-model.md §2.1의 `status_reason` 어휘를 그대로 쓴다.\n+#:\n+#: 척도 사유와 따로 두는 이유는 **원인이 다르기 때문**이다. 질의 입력이 없는 것은 척도 문제도\n+#: 후보 문제도 아니라서, 다른 사유에 접어 넣으면 화면이 \"척도가 60개월이 안 된다\"고 잘못 말한다.\n+QUERY_INPUT_MISSING: Final[str] = \"QUERY_INPUT_MISSING\"\n+\n+\n+@dataclass(frozen=True)\n+class ComparisonMonths:\n+    \"\"\"지표 하나의 비교 시점.\n+\n+    ``months``가 비면 그 지표는 질의 입력이 없다 — 부르는 쪽이 그 분야를 계산 불가로 만든다.\n+    \"\"\"\n+\n+    indicator_id: str\n+    months: tuple[date, ...]\n+    omitted: tuple[date, ...]\n+\n+    @property\n+    def is_empty(self) -> bool:\n+        return not self.months\n+\n+    @property\n+    def is_partial(self) -> bool:\n+        \"\"\"일부만 남았는가 — 화면이 빠진 지표·월을 표기할 자리다 (spec FR-031).\"\"\"\n+        return bool(self.months) and bool(self.omitted)\n+\n+\n+@dataclass(frozen=True)\n+class ScopeComparison:\n+    \"\"\"한 분야(또는 종합)의 지표별 비교 시점을 모은 것.\n+\n+    **계산 가능 여부를 여기서 판정한다.** 판정을 부르는 쪽마다 하면 어딘가 한 곳이 비어 있는\n+    지표를 빼고 계산하게 되고, 그 자리는 통과하는 테스트만 남긴다.\n+    \"\"\"\n+\n+    by_indicator: dict[str, ComparisonMonths]\n+    baseline_month: date\n+\n+    @property\n+    def missing_indicators(self) -> tuple[str, ...]:\n+        \"\"\"비교 시점이 하나도 없는 지표. 하나라도 있으면 이 범위는 계산 불가다.\"\"\"\n+        return tuple(\n+            indicator_id\n+            for indicator_id, months in sorted(self.by_indicator.items())\n+            if months.is_empty\n+        )\n+\n+    @property\n+    def computable(self) -> bool:\n+        return not self.missing_indicators\n+\n+    @property\n+    def reason(self) -> str | None:\n+        \"\"\"계산 불가 사유. 계산할 수 있으면 ``None``.\"\"\"\n+        return None if self.computable else QUERY_INPUT_MISSING\n+\n+    def require_computable(self) -> None:\n+        \"\"\"계산할 수 없는데 계산하려 하면 여기서 멈춘다 (spec FR-007).\n+\n+        지표를 빼고 나머지로 계산하는 경로를 **코드 수준에서 막는다.** 규칙을 주석으로만 적어\n+        두면, 급할 때 한 줄 건너뛰는 것으로 어겨지고 결과는 멀쩡해 보인다.\n+        \"\"\"\n+        if not self.computable:\n+            raise QueryInputMissingError(\n+                f\"비교 시점이 하나도 없는 지표가 있다: {', '.join(self.missing_indicators)}. \"\n+                \"그 지표를 빼고 나머지로 계산하지 않는다 (spec FR-007)\"\n+            )\n+\n+\n+class QueryInputMissingError(RuntimeError):\n+    \"\"\"비교 시점이 없는 지표가 있는데 계산을 시도했다.\"\"\"\n+\n+\n+def comparison_months_for(\n+    indicator_id: str,\n+    baseline_month: date,\n+    series: Mapping[date, MonthlyValue],\n+) -> ComparisonMonths:\n+    \"\"\"지표 하나의 비교 시점 — t-2·t-1·t 중 자료가 있는 달만 (spec FR-001).\"\"\"\n+    require_month(baseline_month, \"기준월\")\n+    months: list[date] = []\n+    omitted: list[date] = []\n+    for offset in COMPARISON_OFFSETS:\n+        month = shift_month(baseline_month, offset)\n+        (months if month in series else omitted).append(month)\n+    return ComparisonMonths(\n+        indicator_id=indicator_id, months=tuple(months), omitted=tuple(omitted)\n+    )\n+\n+\n+def comparison_for_scope(\n+    indicator_ids: Iterable[str],\n+    baseline_month: date,\n+    series_by_indicator: Mapping[str, Mapping[date, MonthlyValue]],\n+) -> ScopeComparison:\n+    \"\"\"분야(또는 종합) 하나의 지표별 비교 시점.\n+\n+    **모드를 인자로 받지 않는다.** 규칙이 모드에 따라 달라지지 않기 때문이다(spec FR-001) —\n+    받으면 언젠가 분기가 생기고, 그때 같은 분야의 D_g가 두 값이 된다.\n+    \"\"\"\n+    by_indicator = {\n+        indicator_id: comparison_months_for(\n+            indicator_id, baseline_month, series_by_indicator[indicator_id]\n+        )\n+        for indicator_id in indicator_ids\n+    }\n+    return ScopeComparison(by_indicator=by_indicator, baseline_month=baseline_month)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/comparison.py",
+          "old_path": "data/src/data_pipeline/regime/comparison.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,5 +4,65 @@ double로 계산한 값을 그대로 정렬하면 같은 입력의 재검색이\n 순위를 낼 수 있다. 저장 자릿수까지 반올림한 값으로 순위와 **정확한 동률**을 판정한다\n (spec FR-012 — 근사 동률을 동률로 보지 않는다).\n \n-구현은 묶음 M3에서 채운다.\n+**한 번만 적용한다.** 중간 계산마다 반올림하면 오차가 반올림 경계에서 누적되고, 어느 단계의\n+값이 저장값인지도 흐려진다. 적용 자리는 두 곳뿐이다 — 순위·동률을 판정하기 직전(M4)과\n+저장하기 직전(M5)이다.\n+\n+12자리인 이유는 거리 값의 크기(z 차이의 평균, 대개 0~5)에 비해 충분히 아래이고 double의\n+유효자릿수(약 15~17자리) 안이기 때문이다(research R4).\n+\n+반올림 방식은 **사사오입**(`ROUND_HALF_UP`)이다. 파이썬 내장 `round()`는 짝수로 붙이는\n+방식이라 수기 대조(SC-003)에서 사람이 계산한 값과 갈릴 수 있다. 경계에 정확히 걸리는 일은\n+드물지만, 드문 일이 순위를 뒤집으면 원인을 찾기 어렵다.\n \"\"\"\n+\n+from __future__ import annotations\n+\n+import math\n+from decimal import ROUND_HALF_UP, Decimal\n+from typing import Final\n+\n+#: 저장 자릿수 (research R4). 바꾸면 순위·동률 판정이 달라지므로 **새 모델 버전**이다.\n+STORAGE_DECIMALS: Final[int] = 12\n+\n+_QUANTUM: Final[Decimal] = Decimal(1).scaleb(-STORAGE_DECIMALS)\n+\n+\n+class RoundingError(ValueError):\n+    \"\"\"반올림할 수 없는 값이다.\"\"\"\n+\n+\n+def _quantize(value: float) -> Decimal:\n+    if isinstance(value, bool) or not isinstance(value, (int, float)):\n+        raise RoundingError(f\"수가 아니다: {value!r}\")\n+    number = float(value)\n+    if math.isnan(number) or math.isinf(number):\n+        # 계산 실패를 값으로 바꾸지 않는다. 여기서 막지 않으면 NaN이 저장값이 되고,\n+        # 정렬에서 조용히 뒤로 밀려 \"후보가 있는데 안 보인다\"가 된다(원칙 VI).\n+        raise RoundingError(f\"NaN·무한대는 저장할 수 없다: {value!r}\")\n+    # Decimal(float)은 그 double의 정확한 2진 전개다. repr을 거치지 않는 이유는 경계 판정을\n+    # 실제 값으로 하기 위해서다 — 짧은 표기로 바꾸면 없던 경계가 생긴다.\n+    return Decimal(number).quantize(_QUANTUM, rounding=ROUND_HALF_UP)\n+\n+\n+def round_for_storage(value: float) -> float:\n+    \"\"\"순위·동률 판정에 쓸 12자리 반올림 값.\"\"\"\n+    return float(_quantize(value))\n+\n+\n+def to_storage_text(value: float) -> str:\n+    \"\"\"저장·응답에 실을 문자열 decimal (research R4).\n+\n+    `NUMERIC` 컬럼을 쓰지 않는 이유는 scale을 임의로 정하고 넘는 값을 조용히 반올림하기\n+    때문이다. 문자열로 두면 저장된 자릿수가 눈에 보인다.\n+    \"\"\"\n+    return str(_quantize(value))\n+\n+\n+def equal_at_storage(left: float, right: float) -> bool:\n+    \"\"\"저장 자릿수까지 같은가 — **정확한 동률** 판정 (spec FR-012).\n+\n+    근사 동률을 동률로 보지 않는다. 눈으로 같아 보이는 두 거리에 '오래된 월 우선'을 적용하면\n+    그 규칙이 언제 적용되는지 아무도 예측할 수 없다.\n+    \"\"\"\n+    return _quantize(left) == _quantize(right)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/rounding.py",
+          "old_path": "data/src/data_pipeline/regime/rounding.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,12 +4,194 @@\n 거슬러 세어 처음 결측을 만나는 곳까지다** — 구멍 건너편에 자료가 더 있어도 끌어오지 않는다.\n 그 구간이 60개월 미만이면 그 지표가 속한 분야(종합이면 종합)를 계산 불가로 처리한다.\n \n-산포 s는 MAD × 정규분포 보정 상수(1/Φ⁻¹(0.75))다. MAD가 0이면 IQR을 2×Φ⁻¹(0.75)로 나눈\n-값을 쓰고(IQR은 선형 보간의 75·25백분위 차이), 그것도 0이면 계산 불가다. 보정 상수는\n-근사값을 적지 않고 `scipy.stats.norm.ppf`로 실제 계산한다(research R5).\n+산포 s는 MAD ÷ Φ⁻¹(0.75)다. MAD가 0이면 IQR ÷ (2·Φ⁻¹(0.75))를 쓰고(IQR은 선형 보간의\n+75·25백분위 차이), 그것도 0이면 계산 불가다. 보정 상수는 근사값을 적지 않고 실제로 계산한다\n+(research R5).\n \n-임의 epsilon·묵시적 클리핑·지표 몰래 제외를 하지 않는다(FR-007).\n-질의와 모든 후보에 **같은 m·s**를 적용한다 — t-122보다 오래된 후보에도 마찬가지다.\n+**이 함수가 만든 척도 하나를 질의와 모든 후보에 똑같이 적용한다**(FR-005, 원칙 IV). t-122보다\n+오래된 후보에도 마찬가지다 — 후보마다 제 척도로 재면 서로 다른 자로 잰 값을 견주게 된다.\n+후보월로 이 함수를 부르는 곳은 `era.py`의 **보조 설명**뿐이고(FR-017), 그 결과는 순위·거리에\n+들어가지 않는다.\n+\n+**실패를 예외로 던지지 않고 값으로 돌려준다.** 부르는 쪽이 둘로 갈리기 때문이다 — 공통 척도\n+실패는 그 분야·종합을 계산 불가로 만들지만(FR-005·FR-006), 시대별 보조 척도 실패는 그 지표의\n+설명만 제한하고 사례·순위·거리는 그대로 둔다(FR-017, SC-011).\n \n-구현은 묶음 M2에서 채운다.\n+임의 epsilon·묵시적 클리핑·지표 몰래 제외를 하지 않는다(FR-007).\n \"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping\n+from dataclasses import dataclass\n+from datetime import date\n+from typing import Final\n+\n+import numpy as np\n+from scipy.stats import norm\n+\n+from data_pipeline.regime.macro.types import MonthlyValue, format_month, require_month\n+\n+#: 척도 구간은 관측 종료월 기준 `[end-122, end-3]`이다 (spec FR-005).\n+WINDOW_START_OFFSET: Final[int] = 122\n+WINDOW_END_OFFSET: Final[int] = 3\n+\n+#: 최대 120개월, 최소 60개월 연속 (spec FR-005).\n+WINDOW_MAX_MONTHS: Final[int] = 120\n+WINDOW_MINIMUM_MONTHS: Final[int] = 60\n+\n+#: Φ⁻¹(0.75). **근사값 1.4826·1.349를 적지 않는다**(spec FR-005, research R5).\n+#: 근사값과는 다섯째 자리에서 갈리는데, 그 자리는 저장 자릿수(12)보다 위라 순위에 닿는다.\n+NORMAL_QUARTILE: Final[float] = float(norm.ppf(0.75))\n+\n+#: 척도를 만들지 못한 사유. 값은 data-model.md §2.1의 `status_reason` 어휘를 그대로 쓴다.\n+SCALE_WINDOW_TOO_SHORT: Final[str] = \"SCALE_WINDOW_TOO_SHORT\"\n+SCALE_ZERO: Final[str] = \"SCALE_ZERO\"\n+\n+#: 산포를 무엇으로 구했는가. 대체가 일어난 사실은 화면·기록에 남는다(spec FR-028).\n+METHOD_MAD: Final[str] = \"MAD\"\n+METHOD_IQR: Final[str] = \"IQR\"\n+\n+\n+def shift_month(month: date, back: int) -> date:\n+    \"\"\"그 달에서 ``back``개월 전. 월은 그 달 1일로 나타낸다.\"\"\"\n+    total = month.year * 12 + (month.month - 1) - back\n+    if total < 0:\n+        raise ValueError(f\"달을 너무 많이 거슬렀다: {format_month(month)} - {back}\")\n+    return date(total // 12, total % 12 + 1, 1)\n+\n+\n+@dataclass(frozen=True)\n+class Scale:\n+    \"\"\"지표 하나의 공통 척도.\n+\n+    ``window_end``·``window_start``는 실제로 쓴 연속 구간이다. 요청한 구간이 아니라 **쓴**\n+    구간을 남기는 이유는, 구멍 때문에 짧아진 구간으로 계산했다는 사실이 기록에 있어야\n+    나중에 값을 대조할 수 있기 때문이다(spec FR-028).\n+    \"\"\"\n+\n+    indicator_id: str\n+    observation_end: date\n+    median: float\n+    spread: float\n+    method: str\n+    window_start: date\n+    window_end: date\n+    window_length: int\n+\n+    @property\n+    def available(self) -> bool:\n+        return True\n+\n+    def standardize(self, value: float) -> float:\n+        \"\"\"``(x − m) / s``. 질의와 모든 후보가 **이 하나의 척도**를 쓴다 (spec FR-005·FR-009).\n+\n+        후보의 관측월이 이 척도 구간 밖이어도 그대로 적용한다 — 구간은 척도를 만든 자리이지\n+        후보를 고르는 범위가 아니다(FR-012).\n+        \"\"\"\n+        return (value - self.median) / self.spread\n+\n+\n+@dataclass(frozen=True)\n+class ScaleUnavailable:\n+    \"\"\"척도를 만들지 못했다. ``reason``은 data-model §2.1의 사유다.\n+\n+    부르는 쪽이 이 값을 어떻게 다룰지는 자리마다 다르다 — 공통 척도면 그 분야·종합이 계산\n+    불가이고(FR-005·FR-006), 시대별 보조 척도면 그 지표의 설명만 빠진다(FR-017).\n+    \"\"\"\n+\n+    indicator_id: str\n+    observation_end: date\n+    reason: str\n+    window_length: int\n+\n+    @property\n+    def available(self) -> bool:\n+        return False\n+\n+\n+ScaleResult = Scale | ScaleUnavailable\n+\n+\n+def continuous_window(\n+    series: Mapping[date, MonthlyValue], observation_end: date\n+) -> list[tuple[date, float]]:\n+    \"\"\"``end-3``에서 과거로 거슬러 **처음 결측을 만나는 곳까지** (spec FR-005).\n+\n+    최대 120개월에서 멈춘다. 구멍 건너편에 자료가 더 있어도 끌어오지 않는다 — 통계 개편\n+    전후처럼 성격이 다른 값이 한 분포에 섞이고, 척도를 \"질의 구간 직전\"에서 구하라는 규칙의\n+    뜻이 사라진다.\n+\n+    오래된 달이 앞에 오도록 뒤집어 돌려준다. 중앙값·분위수는 순서와 무관하지만, 구간의\n+    시작·끝을 기록할 때 뒤집힌 목록을 다시 읽는 실수를 없앤다.\n+    \"\"\"\n+    require_month(observation_end, \"관측 종료월\")\n+    collected: list[tuple[date, float]] = []\n+    month = shift_month(observation_end, WINDOW_END_OFFSET)\n+    while len(collected) < WINDOW_MAX_MONTHS:\n+        entry = series.get(month)\n+        if entry is None:\n+            break\n+        collected.append((month, entry.value))\n+        month = shift_month(month, 1)\n+    collected.reverse()\n+    return collected\n+\n+\n+def _median_and_spread(values: list[float]) -> tuple[float, float, str]:\n+    \"\"\"중앙값 m과 산포 s, 그리고 s를 무엇으로 구했는지.\n+\n+    s가 0이면 대체할 것이 더 없다는 뜻이다 — 부르는 쪽이 `SCALE_ZERO`로 처리한다.\n+    \"\"\"\n+    array = np.asarray(values, dtype=float)\n+    median = float(np.median(array))\n+    mad = float(np.median(np.abs(array - median)))\n+    if mad != 0.0:\n+        return median, mad / NORMAL_QUARTILE, METHOD_MAD\n+    # MAD가 0이면 절반 넘는 값이 중앙값과 같다는 뜻이다. 그래도 사분위가 벌어져 있으면\n+    # 그 폭으로 잰다(spec FR-006). 선형 보간은 numpy 기본이며 research R5가 지정했다.\n+    q1, q3 = np.percentile(array, [25, 75])\n+    iqr = float(q3 - q1)\n+    return median, iqr / (2 * NORMAL_QUARTILE), METHOD_IQR\n+\n+\n+def scale_for(\n+    indicator_id: str,\n+    observation_end: date,\n+    series: Mapping[date, MonthlyValue],\n+) -> ScaleResult:\n+    \"\"\"지표 하나의 척도를 관측 종료월 직전 구간에서 만든다 (spec FR-005·FR-006).\n+\n+    거리 계산에는 **질의 기준월 t로 만든 척도만** 쓴다. 후보월 c로 부르는 것은 `era.py`의\n+    보조 설명에만 허용한다(FR-017).\n+    \"\"\"\n+    window = continuous_window(series, observation_end)\n+    if len(window) < WINDOW_MINIMUM_MONTHS:\n+        return ScaleUnavailable(\n+            indicator_id=indicator_id,\n+            observation_end=observation_end,\n+            reason=SCALE_WINDOW_TOO_SHORT,\n+            window_length=len(window),\n+        )\n+\n+    median, spread, method = _median_and_spread([value for _, value in window])\n+    if spread == 0.0:\n+        # MAD도 IQR도 0이다. 여기서 임의 epsilon을 넣으면 순위가 만들어지지만 그 순위는\n+        # 자료가 아니라 상수가 만든 것이다(spec FR-007).\n+        return ScaleUnavailable(\n+            indicator_id=indicator_id,\n+            observation_end=observation_end,\n+            reason=SCALE_ZERO,\n+            window_length=len(window),\n+        )\n+\n+    return Scale(\n+        indicator_id=indicator_id,\n+        observation_end=observation_end,\n+        median=median,\n+        spread=spread,\n+        method=method,\n+        window_start=window[0][0],\n+        window_end=window[-1][0],\n+        window_length=len(window),\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/scale.py",
+          "old_path": "data/src/data_pipeline/regime/scale.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,12 +7,15 @@\n \n from __future__ import annotations\n \n+from collections.abc import Sequence\n+from datetime import date\n from pathlib import Path\n \n import pytest\n \n from data_pipeline.regime.macro import SOURCE_FIXTURE, create_source\n from data_pipeline.regime.macro.source import MacroIndicatorSource\n+from data_pipeline.regime.macro.types import MonthlyValue\n \n #: 계약 시험을 돌릴 구현체. 008이 오면 `SOURCE_MACRO`를 더한다.\n SOURCE_NAMES: tuple[str, ...] = (SOURCE_FIXTURE,)\n@@ -37,3 +40,25 @@ def production_sources() -> list[Path]:\n @pytest.fixture(params=SOURCE_NAMES)\n def macro_source(request: pytest.FixtureRequest) -> MacroIndicatorSource:\n     return create_source(request.param)\n+\n+\n+def make_series(\n+    start: tuple[int, int], values: Sequence[float | None]\n+) -> dict[date, MonthlyValue]:\n+    \"\"\"단위 시험용 월별 계열 — ``None``인 달은 **키를 만들지 않는다**.\n+\n+    008 대역이 아니라 여기서 계열을 짓는 이유는 계약 §4.4가 정한 바다. 운영 픽스처는 008이\n+    오면 사라지지만 `SCALE_ZERO`·동률 같은 모양은 실제 자료에 없을 수 있어, 같은 모양을 담은\n+    **단위 시험 입력은 남겨야** 그 경로가 검증 밖으로 나가지 않는다.\n+\n+    원값은 변환값과 같게 둔다. 척도·비교 시점 판정은 변환값만 보므로(spec FR-009) 원값이\n+    무엇이든 결과가 달라지지 않고, 다르게 두면 읽는 사람이 그 차이에 뜻이 있다고 여긴다.\n+    \"\"\"\n+    series: dict[date, MonthlyValue] = {}\n+    year, month = start\n+    for value in values:\n+        current = date(year, month, 1)\n+        if value is not None:\n+            series[current] = MonthlyValue(month=current, value=value, raw=value)\n+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)\n+    return series\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/conftest.py",
+          "old_path": "data/tests/regime/conftest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,148 @@\n+\"\"\"지표별 비교 시점 (spec FR-001·FR-007, tasks.md T027~T028).\n+\n+두 가지를 고정한다 — 한 지표의 구멍이 **그 지표만** 줄이는가, 그리고 어느 지표의 세 달이\n+모두 비었을 때 **그 지표를 빼고 계산하는 경로가 막혀 있는가**.\n+\n+둘째가 중요한 이유는 어기기 쉬워서다. 빼고 계산하면 답이 나오고 화면도 멀쩡해 보인다.\n+틀렸다는 것을 아무도 알려 주지 않으므로 코드 쪽에서 막아야 한다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from datetime import date\n+\n+import pytest\n+from conftest import make_series\n+\n+from data_pipeline.regime.comparison import (\n+    COMPARISON_OFFSETS,\n+    QUERY_INPUT_MISSING,\n+    QueryInputMissingError,\n+    comparison_for_scope,\n+    comparison_months_for,\n+)\n+\n+BASELINE = date(2026, 6, 1)\n+MONTHS = (date(2026, 4, 1), date(2026, 5, 1), date(2026, 6, 1))\n+\n+\n+def full_series() -> dict[date, object]:\n+    return make_series((2026, 4), [1.0, 2.0, 3.0])\n+\n+\n+class TestPerIndicator:\n+    \"\"\"T027 — 비교 시점은 지표마다 따로 정한다 (spec FR-001).\"\"\"\n+\n+    def test_세_달이_다_있으면_셋_다_쓴다(self) -> None:\n+        result = comparison_months_for(\"A\", BASELINE, full_series())\n+        assert result.months == MONTHS\n+        assert result.omitted == ()\n+        assert not result.is_partial\n+\n+    def test_한_달이_비면_그_지표만_두_달이_된다(self) -> None:\n+        holed = make_series((2026, 4), [1.0, None, 3.0])\n+        scope = comparison_for_scope(\n+            [\"A\", \"B\"], BASELINE, {\"A\": holed, \"B\": full_series()}\n+        )\n+\n+        assert scope.by_indicator[\"A\"].months == (date(2026, 4, 1), date(2026, 6, 1))\n+        assert scope.by_indicator[\"A\"].omitted == (date(2026, 5, 1),)\n+        assert scope.by_indicator[\"B\"].months == MONTHS, \"다른 지표는 세 달 그대로다\"\n+        assert scope.computable, \"한 지표가 두 달이어도 분야는 계산할 수 있다\"\n+\n+    def test_빠진_달을_버리지_않고_남긴다(self) -> None:\n+        \"\"\"화면이 지표·월 단위로 표기해야 한다 (spec FR-031, SC-007).\"\"\"\n+        holed = make_series((2026, 4), [1.0, None, 3.0])\n+        result = comparison_months_for(\"A\", BASELINE, holed)\n+        assert result.is_partial\n+        assert result.omitted == (date(2026, 5, 1),)\n+\n+    def test_값을_채워_넣지_않는다(self) -> None:\n+        \"\"\"평균이나 직전 값으로 메우면 없는 관측이 있는 것처럼 계산에 들어간다 (spec FR-007).\"\"\"\n+        holed = make_series((2026, 4), [1.0, None, 3.0])\n+        result = comparison_months_for(\"A\", BASELINE, holed)\n+        assert date(2026, 5, 1) not in result.months\n+        assert len(result.months) == 2\n+\n+    def test_비교_대상은_t_2_t_1_t다(self) -> None:\n+        assert COMPARISON_OFFSETS == (2, 1, 0)\n+        result = comparison_months_for(\"A\", BASELINE, full_series())\n+        assert result.months == MONTHS\n+\n+    def test_모드를_인자로_받지_않는다(self) -> None:\n+        \"\"\"규칙이 모드에 따라 달라지지 않는다 (spec FR-001).\n+\n+        종합도 분야와 똑같이 지표별로 정한다. 17개 공통 달로 좁히면 지표 하나의 구멍이 전체의\n+        그 달을 날리고, 같은 분야의 D_g가 모드에 따라 두 값이 된다(SC-002).\n+        \"\"\"\n+        import inspect\n+\n+        for function in (comparison_months_for, comparison_for_scope):\n+            names = set(inspect.signature(function).parameters)\n+            assert not names & {\"mode\", \"search_mode\", \"scope_kind\"}, (\n+                f\"{function.__name__}이 모드를 받는다 — 분기가 생길 자리다\"\n+            )\n+\n+    def test_지표가_많아도_서로_영향을_주지_않는다(self) -> None:\n+        scope = comparison_for_scope(\n+            [\"A\", \"B\", \"C\"],\n+            BASELINE,\n+            {\n+                \"A\": make_series((2026, 4), [1.0, None, 3.0]),\n+                \"B\": make_series((2026, 4), [None, 2.0, 3.0]),\n+                \"C\": full_series(),\n+            },\n+        )\n+        assert len(scope.by_indicator[\"A\"].months) == 2\n+        assert len(scope.by_indicator[\"B\"].months) == 2\n+        assert len(scope.by_indicator[\"C\"].months) == 3\n+        assert scope.by_indicator[\"A\"].omitted != scope.by_indicator[\"B\"].omitted\n+\n+\n+class TestQueryInputMissing:\n+    \"\"\"T028 — 세 달이 모두 비면 그 분야가 계산 불가다 (spec FR-007·FR-008).\"\"\"\n+\n+    @staticmethod\n+    def _scope_with_empty_indicator():\n+        return comparison_for_scope(\n+            [\"A\", \"B\"],\n+            BASELINE,\n+            {\"A\": make_series((2026, 4), [None, None, None]), \"B\": full_series()},\n+        )\n+\n+    def test_세_달이_모두_비면_그_지표가_빈다(self) -> None:\n+        result = comparison_months_for(\"A\", BASELINE, make_series((2026, 4), [None, None, None]))\n+        assert result.is_empty\n+        assert result.omitted == MONTHS\n+\n+    def test_분야가_계산_불가가_된다(self) -> None:\n+        scope = self._scope_with_empty_indicator()\n+        assert not scope.computable\n+        assert scope.missing_indicators == (\"A\",)\n+\n+    def test_사유가_QUERY_INPUT_MISSING이다(self) -> None:\n+        \"\"\"척도 사유에 접어 넣지 않는다 — 화면이 \"척도가 60개월이 안 된다\"고 잘못 말한다.\"\"\"\n+        scope = self._scope_with_empty_indicator()\n+        assert scope.reason == QUERY_INPUT_MISSING\n+\n+    def test_그_지표를_빼고_계산하는_경로가_막혀_있다(self) -> None:\n+        \"\"\"**빼고 계산하면 답은 나온다.** 그 답이 무엇에 대한 것인지 말할 수 없을 뿐이라,\n+        규칙을 주석으로만 두면 급할 때 한 줄 건너뛰는 것으로 어겨진다 (spec FR-007).\n+        \"\"\"\n+        scope = self._scope_with_empty_indicator()\n+        with pytest.raises(QueryInputMissingError) as error:\n+            scope.require_computable()\n+        assert \"A\" in str(error.value)\n+\n+    def test_멀쩡한_지표가_남아_있어도_계산하지_않는다(self) -> None:\n+        scope = self._scope_with_empty_indicator()\n+        assert scope.by_indicator[\"B\"].months == MONTHS, \"B는 멀쩡하다\"\n+        assert not scope.computable, \"그래도 이 분야는 계산 불가다\"\n+\n+    def test_모두_멀쩡하면_통과한다(self) -> None:\n+        scope = comparison_for_scope(\n+            [\"A\", \"B\"], BASELINE, {\"A\": full_series(), \"B\": full_series()}\n+        )\n+        assert scope.computable\n+        assert scope.reason is None\n+        scope.require_computable()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_comparison.py",
+          "old_path": "data/tests/regime/test_comparison.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,78 @@\n+\"\"\"저장 자릿수 반올림과 정확한 동률 (research R4, tasks.md T014).\n+\n+tasks.md 머리말이 *\"테스트 또는 동작 확인 완료\"* 를 Task 완료 조건으로 못 박았다. 이 모듈은\n+M4의 순위·동률과 M5의 저장값을 결정하므로, 쓰이기 전에 규칙을 고정해 둔다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import math\n+\n+import pytest\n+\n+from data_pipeline.regime.rounding import (\n+    STORAGE_DECIMALS,\n+    RoundingError,\n+    equal_at_storage,\n+    round_for_storage,\n+    to_storage_text,\n+)\n+\n+\n+class TestRounding:\n+    def test_저장_자릿수는_12다(self) -> None:\n+        \"\"\"바꾸면 순위·동률 판정이 달라진다 — 새 모델 버전이다 (research R4).\"\"\"\n+        assert STORAGE_DECIMALS == 12\n+\n+    def test_12자리_아래를_버린다(self) -> None:\n+        assert round_for_storage(0.4129385710341234) == 0.412938571034\n+\n+    def test_사사오입이다(self) -> None:\n+        \"\"\"파이썬 내장 `round()`는 짝수로 붙인다. 수기 대조(SC-003)에서 갈릴 수 있다.\n+\n+        경계를 시험하려면 **double로 정확히 표현되는 경계값**이 필요하다. 십진수 0.0000000000005는\n+        2진수로 떨어지지 않아 실제 double은 경계보다 아주 조금 작고, 그러면 어느 방식으로 반올림해도\n+        내려가 두 방식을 구분하지 못한다. `2⁻¹³ = 0.0001220703125`는 소수 13자리에서 정확히 끝나\n+        진짜 경계다.\n+        \"\"\"\n+        boundary = 1 / 8192\n+\n+        assert to_storage_text(boundary) == \"0.000122070313\", \"사사오입이면 올라간다\"\n+        assert round(boundary, STORAGE_DECIMALS) == 0.000122070312, \"내장 round는 짝수로 내린다\"\n+\n+    def test_문자열로도_낼_수_있다(self) -> None:\n+        \"\"\"`NUMERIC` 컬럼은 scale을 임의로 정하고 넘는 값을 조용히 반올림한다 (research R4).\"\"\"\n+        assert to_storage_text(0.412938571034) == \"0.412938571034\"\n+        assert to_storage_text(1.0) == \"1.000000000000\"\n+\n+    def test_음수도_같은_규칙이다(self) -> None:\n+        assert round_for_storage(-0.4129385710341234) == -0.412938571034\n+\n+\n+class TestExactTie:\n+    \"\"\"spec FR-012 — 정확한 동률만 동률이다. 근사 동률을 동률로 보지 않는다.\"\"\"\n+\n+    def test_12자리까지_같으면_동률이다(self) -> None:\n+        assert equal_at_storage(0.4129385710341111, 0.4129385710342222)\n+\n+    def test_12자리_안에서_다르면_동률이_아니다(self) -> None:\n+        assert not equal_at_storage(0.412938571034, 0.412938571035)\n+\n+    def test_눈으로_같아_보여도_다르면_다르다(self) -> None:\n+        \"\"\"이 구분이 없으면 '오래된 월 우선'이 언제 적용되는지 아무도 예측할 수 없다.\"\"\"\n+        assert not equal_at_storage(1.0, 1.000000000001)\n+\n+\n+class TestRejects:\n+    def test_NaN은_저장할_수_없다(self) -> None:\n+        \"\"\"계산 실패를 값으로 바꾸지 않는다. NaN은 정렬에서 조용히 뒤로 밀린다(원칙 VI).\"\"\"\n+        with pytest.raises(RoundingError):\n+            round_for_storage(math.nan)\n+\n+    def test_무한대도_저장할_수_없다(self) -> None:\n+        with pytest.raises(RoundingError):\n+            round_for_storage(math.inf)\n+\n+    def test_수가_아니면_거부한다(self) -> None:\n+        with pytest.raises(RoundingError):\n+            round_for_storage(\"0.5\")  # type: ignore[arg-type]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_rounding.py",
+          "old_path": "data/tests/regime/test_rounding.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,211 @@\n+\"\"\"공통 척도 (spec FR-005·FR-006, research R5, tasks.md T023~T026).\n+\n+여기서 고정하는 것은 넷이다 — 연속 구간을 어디서 끊는가, MAD가 0일 때 어디로 넘어가는가,\n+보정 상수를 무엇으로 쓰는가, 그리고 **척도 구간 밖 후보에도 같은 자를 대는가**.\n+\n+입력은 008 대역이 아니라 이 파일이 짓는다. `SCALE_ZERO`나 정확한 동률은 실제 자료에 없을 수\n+있어서, 운영 픽스처가 폐기된 뒤에도 이 경로가 검증되려면 단위 시험이 제 입력을 가져야 한다\n+(contracts/macro-indicator-port.md §4.4).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from datetime import date\n+\n+import pytest\n+from conftest import make_series\n+\n+from data_pipeline.regime.scale import (\n+    METHOD_IQR,\n+    METHOD_MAD,\n+    NORMAL_QUARTILE,\n+    SCALE_WINDOW_TOO_SHORT,\n+    SCALE_ZERO,\n+    WINDOW_MAX_MONTHS,\n+    WINDOW_MINIMUM_MONTHS,\n+    Scale,\n+    ScaleUnavailable,\n+    continuous_window,\n+    scale_for,\n+)\n+\n+INDICATOR = \"TEST_INDICATOR\"\n+BASELINE = date(2026, 6, 1)\n+\n+\n+def rising(count: int, start: float = 1.0, step: float = 0.5) -> list[float]:\n+    \"\"\"서로 다른 값 ``count``개. MAD가 0이 아니게 두어 기본 경로를 탄다.\"\"\"\n+    return [start + step * i for i in range(count)]\n+\n+\n+class TestContinuousWindow:\n+    \"\"\"T023 — 연속 구간은 t-3에서 과거로 거슬러 처음 끊기는 곳까지다 (spec FR-005).\"\"\"\n+\n+    def test_구멍_뒤쪽이_짧으면_앞쪽_자료가_많아도_척도를_못_만든다(self) -> None:\n+        \"\"\"**이 시험이 M2의 핵심이다.** 구멍을 건너뛰어 끌어오면 통계 개편 전후처럼 성격이\n+        다른 값이 한 분포에 섞이고, 척도를 \"질의 구간 직전\"에서 구하라는 규칙의 뜻이 사라진다.\n+        \"\"\"\n+        # 오래된 쪽 100개월(2014-02~2022-05) → 구멍(2022-06) → 최근 45개월(2022-07~2026-03).\n+        # 최근 블록의 끝을 t-3에 맞춘다 — 여기서 과거로 거슬러 세기 시작하기 때문이다.\n+        values = rising(100) + [None] + rising(45, start=80.0)\n+        series = make_series((2014, 2), values)\n+\n+        result = scale_for(INDICATOR, BASELINE, series)\n+\n+        assert isinstance(result, ScaleUnavailable)\n+        assert result.reason == SCALE_WINDOW_TOO_SHORT\n+        assert result.window_length == 45\n+        assert len(series) == 145, \"앞쪽에 자료가 남아 있는데도 못 만들어야 한다\"\n+\n+    def test_연속_구간은_최대_120개월에서_멈춘다(self) -> None:\n+        series = make_series((2000, 1), rising(400))\n+        window = continuous_window(series, BASELINE)\n+\n+        assert len(window) == WINDOW_MAX_MONTHS\n+        assert window[-1][0] == date(2026, 3, 1), \"t-3에서 시작한다\"\n+        assert window[0][0] == date(2016, 4, 1), \"t-122까지다\"\n+\n+    def test_구간이_오래된_달부터_온다(self) -> None:\n+        series = make_series((2000, 1), rising(400))\n+        months = [month for month, _ in continuous_window(series, BASELINE)]\n+        assert months == sorted(months)\n+\n+    def test_정확히_60개월이면_만들어진다(self) -> None:\n+        \"\"\"경계는 60**이상**이다. 한쪽으로 치우쳐 읽으면 한 달 차이로 결과가 갈린다.\"\"\"\n+        series = make_series((2021, 4), rising(WINDOW_MINIMUM_MONTHS))\n+        result = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(result, Scale)\n+        assert result.window_length == WINDOW_MINIMUM_MONTHS\n+\n+    def test_59개월이면_만들어지지_않는다(self) -> None:\n+        series = make_series((2021, 5), rising(WINDOW_MINIMUM_MONTHS - 1))\n+        result = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(result, ScaleUnavailable)\n+        assert result.reason == SCALE_WINDOW_TOO_SHORT\n+\n+    def test_최근_세_달은_척도에_쓰이지_않는다(self) -> None:\n+        \"\"\"구간은 `[t-122, t-3]`이다. t-2·t-1·t는 **질의 쪽** 값이라 자를 만드는 데 쓰지 않는다.\"\"\"\n+        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n+        window = continuous_window(series, BASELINE)\n+        assert date(2026, 4, 1) not in [month for month, _ in window]\n+        assert len(window) == WINDOW_MAX_MONTHS\n+\n+\n+class TestSpread:\n+    \"\"\"T024 — MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우 (spec FR-006).\"\"\"\n+\n+    @staticmethod\n+    def _mad_zero_iqr_nonzero() -> list[float]:\n+        \"\"\"120개월 중 61개월이 같은 값, 30개월이 작고 29개월이 크다.\n+\n+        이러면 중앙값 편차의 중앙값은 0이고(MAD=0) 25백분위는 중앙값보다 작다(IQR≠0).\n+        \"\"\"\n+        below = [1.0 + 0.01 * i for i in range(30)]\n+        above = [3.0 + 0.01 * i for i in range(29)]\n+        return below + [2.0] * 61 + above\n+\n+    def test_보통은_MAD로_잰다(self) -> None:\n+        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n+        result = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(result, Scale)\n+        assert result.method == METHOD_MAD\n+\n+    def test_MAD가_0이면_IQR로_넘어간다(self) -> None:\n+        series = make_series((2016, 4), self._mad_zero_iqr_nonzero())\n+        result = scale_for(INDICATOR, BASELINE, series)\n+\n+        assert isinstance(result, Scale)\n+        assert result.method == METHOD_IQR\n+        assert result.spread > 0\n+        assert result.median == 2.0\n+\n+    def test_IQR도_0이면_계산_불가다(self) -> None:\n+        \"\"\"임의 epsilon을 넣으면 순위가 만들어지지만, 그 순위는 자료가 아니라 상수가 만든 것이다.\"\"\"\n+        series = make_series((2016, 4), [7.0] * WINDOW_MAX_MONTHS)\n+        result = scale_for(INDICATOR, BASELINE, series)\n+\n+        assert isinstance(result, ScaleUnavailable)\n+        assert result.reason == SCALE_ZERO\n+        assert result.window_length == WINDOW_MAX_MONTHS, \"구간은 충분했다 — 짧아서가 아니다\"\n+\n+    def test_산포가_0인_척도는_돌려주지_않는다(self) -> None:\n+        \"\"\"0으로 나누는 자리를 만들지 않는다. 표준화가 `inf`를 내면 순위는 조용히 망가진다.\"\"\"\n+        series = make_series((2016, 4), [7.0] * WINDOW_MAX_MONTHS)\n+        result = scale_for(INDICATOR, BASELINE, series)\n+        assert not result.available\n+\n+    def test_MAD_산포는_보정_상수로_나눈_값이다(self) -> None:\n+        values = [0.0] * 60 + [4.0] * 60  # 중앙값 2.0, 편차 2.0 → MAD 2.0\n+        series = make_series((2016, 4), values)\n+        result = scale_for(INDICATOR, BASELINE, series)\n+\n+        assert isinstance(result, Scale)\n+        assert result.method == METHOD_MAD\n+        assert result.spread == pytest.approx(2.0 / NORMAL_QUARTILE)\n+\n+\n+class TestNormalQuartile:\n+    \"\"\"T025 — 보정 상수는 근사값이 아니라 Φ⁻¹(0.75) 실계산값이다 (spec FR-005, research R5).\"\"\"\n+\n+    def test_근사값_1_4826과_다르다(self) -> None:\n+        \"\"\"근사값으로 되돌아가면 이 시험이 실패한다.\"\"\"\n+        assert 1 / NORMAL_QUARTILE != 1.4826\n+\n+    def test_차이가_저장_자릿수보다_위에_있다(self) -> None:\n+        \"\"\"**이것이 근사값을 배제한 이유다.** 12자리 반올림(research R4)보다 아래에서 갈린다면\n+        순위에 닿지 않아 신경 쓸 일이 아니다. 실제로는 다섯째 자리에서 갈린다.\n+        \"\"\"\n+        difference = abs(1 / NORMAL_QUARTILE - 1.4826)\n+        assert difference > 1e-12\n+        assert difference > 1e-6, f\"다섯째 자리에서 갈려야 한다: 차이 {difference}\"\n+\n+    def test_IQR_대체_상수도_근사값_1_349와_다르다(self) -> None:\n+        assert 2 * NORMAL_QUARTILE != 1.349\n+        assert abs(2 * NORMAL_QUARTILE - 1.349) > 1e-6\n+\n+    def test_상수가_scipy의_분위수다(self) -> None:\n+        from scipy.stats import norm\n+\n+        assert NORMAL_QUARTILE == float(norm.ppf(0.75))\n+\n+\n+class TestCommonScaleAppliesToAllCandidates:\n+    \"\"\"T026 — 질의의 m·s를 **모든** 후보에 적용한다 (spec FR-005·FR-009, 원칙 IV).\"\"\"\n+\n+    def test_척도_구간보다_오래된_후보도_질의_척도로_표준화된다(self) -> None:\n+        \"\"\"후보 직전 이력이 없어도 표준화는 된다.\n+\n+        척도 구간은 **자를 만든 자리**이지 후보를 고르는 범위가 아니다(FR-012). 구간 밖이라고\n+        표준화를 거부하면 오래된 국면이 통째로 후보에서 사라진다.\n+        \"\"\"\n+        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n+        scale = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(scale, Scale)\n+\n+        old_value = 3.25  # 1970년대 어느 달의 값이라고 하자 — 척도 구간 한참 밖이다\n+        assert scale.standardize(old_value) == (old_value - scale.median) / scale.spread\n+\n+    def test_질의와_후보가_같은_자를_쓴다(self) -> None:\n+        \"\"\"같은 값이면 같은 z다. 후보마다 제 척도로 재면 이 등식이 깨진다.\"\"\"\n+        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n+        scale = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(scale, Scale)\n+\n+        assert scale.standardize(12.0) == scale.standardize(12.0)\n+        assert scale.standardize(12.0) - scale.standardize(10.0) == pytest.approx(\n+            (12.0 - 10.0) / scale.spread\n+        )\n+\n+    def test_중앙값과_같은_값의_z는_0이다(self) -> None:\n+        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n+        scale = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(scale, Scale)\n+        assert scale.standardize(scale.median) == 0.0\n+\n+    def test_척도가_쓴_구간을_기록한다(self) -> None:\n+        \"\"\"구멍 때문에 짧아진 구간으로 계산했다는 사실이 기록에 있어야 값을 대조할 수 있다.\"\"\"\n+        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n+        scale = scale_for(INDICATOR, BASELINE, series)\n+        assert isinstance(scale, Scale)\n+        assert (scale.window_start, scale.window_end) == (date(2016, 4, 1), date(2026, 3, 1))\n+        assert scale.window_length == WINDOW_MAX_MONTHS\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_scale.py",
+          "old_path": "data/tests/regime/test_scale.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,3 +8,5 @@ pyarrow>=17.0\n SQLAlchemy>=2.0\n psycopg[binary]>=3.2\n python-dotenv>=1.0\n+# 정규분포 보정 상수 Φ⁻¹(0.75) 실계산 (010 FR-005, research R5 — 근사값 1.4826을 쓰지 않는다)\n+scipy>=1.14\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/requirements.txt",
+          "old_path": "data/requirements.txt",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -133,21 +133,21 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n **Goal**: 질의 직전 자료로 공통 척도(m·s)를 만들고, 어느 달을 비교할지 정한다.\n 거리 계산에서는 모든 후보에 이 척도를 적용한다. 시대별 보조 설명만 같은 산출 함수를 후보월로 호출한다(FR-005·FR-017).\n \n-- [ ] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)\n-- [ ] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)\n-- [ ] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)\n-- [ ] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)\n-- [ ] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`\n-- [ ] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)\n-- [ ] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)\n-- [ ] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)\n-- [ ] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)\n-- [ ] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다\n-- [ ] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정\n-- [ ] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다\n-- [ ] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)\n-- [ ] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다\n-- [ ] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정\n+- [X] T014 (DE) 12자리 반올림 유틸을 `data/src/data_pipeline/regime/rounding.py`에 작성 — 저장·비교 직전에 한 번 적용한다. **순위와 동률 판정은 반올림된 값으로 한다**(research R4)\n+- [X] T015 (DE) 정규분포 보정 상수를 `scale.py`에 `scipy.stats.norm.ppf(0.75)`로 계산해 둔다 — **1.4826·1.349 상수를 쓰지 않는다**(spec FR-005, research R5)\n+- [X] T016 (DE) 척도 산출 함수 `scale_for(indicator_id, observation_end)`를 `scale.py`에 만든다 — 구간은 `[observation_end-122, observation_end-3]`. **거리 계산은 질의 기준월 t로 만든 공통 척도만 쓴다**(FR-005). 후보월 c 호출은 `era.py`의 보조 설명에만 허용한다(FR-017)\n+- [X] T017 (DE) 척도 구간 연속성 판정을 `scale_for`에 구현 — `end-3`에서 과거로 거슬러 세어 **처음 결측을 만나는 곳까지**가 연속 구간이다. 구멍 건너편 자료를 끌어오지 않는다(spec FR-005)\n+- [X] T018 (DE) 중앙값 m과 MAD 기반 산포 s를 `scale.py`에 구현 — `s = MAD / Φ⁻¹(0.75)`\n+- [X] T019 (DE) MAD가 0일 때 IQR 대체를 `scale.py`에 구현 — IQR은 **선형 보간**의 75분위 − 25분위, `s = IQR / (2·Φ⁻¹(0.75))`. 방법을 바꾸면 새 모델 버전이다(spec FR-006)\n+- [X] T020 (DE) 척도를 못 만들 때 사유 `SCALE_WINDOW_TOO_SHORT` / `SCALE_ZERO`를 돌려주는 경로를 `scale.py`에 구현 — 공통 척도 실패는 해당 분야·종합의 계산 불가로 처리하고, 시대별 보조 척도 실패는 설명만 제한한다(FR-005·FR-006·FR-017). **임의 epsilon·클리핑을 넣지 않는다**(FR-007)\n+- [X] T021 (DE) **지표별 비교 시점 판정**을 `comparison.py`에 구현 — `t-2·t-1·t` 중 자료가 있는 달만 남긴다. **지표마다 따로 정하고 검색 모드가 이 규칙을 바꾸지 않는다**. 값을 평균이나 직전 값으로 채우지 않는다(spec FR-001)\n+- [X] T022 (DE) 어느 지표의 비교 시점이 **하나도 없으면** 그 분야(종합이면 종합)를 `QUERY_INPUT_MISSING`으로 만드는 경로를 `comparison.py`에 구현 — **그 지표를 빼고 나머지로 계산하지 않는다**(spec FR-007)\n+- [X] T023 [P] (DE 테스트) 연속 구간 판정을 `data/tests/regime/test_scale.py`에 고정 — 구멍 뒤쪽이 60개월 미만이면 앞쪽에 자료가 더 있어도 못 만든다\n+- [X] T024 [P] (DE 테스트) MAD에서 IQR로 넘어가는 전환과 둘 다 0인 경우를 `test_scale.py`에 고정\n+- [X] T025 [P] (DE 테스트) 보정 상수가 근사값 1.4826과 **다름**을 `test_scale.py`에 고정 — 근사값으로 되돌아가면 실패한다\n+- [X] T026 [P] (DE 테스트) 질의 척도 구간보다 오래된 후보도 **질의의 m·s로 표준화**됨을 `test_scale.py`에 고정 — 후보 직전 이력이 없어도 공통 척도 적용은 가능해야 한다(FR-005·FR-012)\n+- [X] T027 [P] (DE 테스트) 지표별 비교 시점을 `data/tests/regime/test_comparison.py`에 고정 — 한 지표만 한 달이 빠졌을 때 **그 지표만** 두 달이 되고 다른 지표는 세 달 그대로다\n+- [X] T028 [P] (DE 테스트) 어느 지표의 세 달이 전부 비면 `QUERY_INPUT_MISSING`이고, 그 지표를 제외한 계산 결과가 나오지 **않음**을 `test_comparison.py`에 고정\n \n **Checkpoint**: 질의 직전 구간의 공통 척도를 만들고, 만들 수 없을 때 사유를 말한다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/tasks.md",
+          "old_path": "specs/010-economic-regime-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-17T12:00:08.905+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2822784": [],
+    "2823924": [],
+    "2824198": []
+  }
+}

@@ -1,0 +1,731 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948989,
+    "iid": 189,
+    "project_id": 1444456,
+    "title": "docs(be): 대표 ETF 자료 확보 검증 기록을 남긴다",
+    "description": "# 작업 내용 요약\n\nspec 001이 확보한 자료가 어디까지 실제로 확인됐는지를 아무도 기록해 두지 않았고, 그 사이 문서에 적힌 값들이 실제와 갈라졌다. quickstart를 적힌 대로 따라 하면 없는 자료 버전을 가리키고 섹터 코드 하나는 404가 난다. README는 백테스트 접수가 검증용 임시 자료를 읽는다고 말하는데 실제로는 적재된 실자료를 읽는다.\n\n**검증 기록 문서를 만들고 낡은 값을 고쳤다.** 이 MR 뒤로는 001의 자료가 어디까지 확인됐는지, 그리고 무엇이 아직 확인되지 않았는지를 한 문서에서 읽을 수 있다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-188](https://ssafy.atlassian.net/browse/S15P21E205-188)\n- spec 001 `tasks.md` T016\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 001 자료가 어디까지 확인됐는지 묻는다 | 흩어진 작업 메모를 훑어야 한다 | 검증 기록 한 문서에 확인된 것과 확인되지 않은 것이 나뉘어 있다 |\n| quickstart를 따라 한다 | 없는 자료 버전과 없는 섹터 코드를 가리킨다 | 실제 적재된 값을 가리킨다 |\n| README로 자료 현황을 읽는다 | 접수가 임시 자료를 읽는다고 적혀 있다 | 실자료를 읽고, 기업행위가 비어 있다는 사실이 드러난다 |\n| quickstart 시나리오 실행 | | **하지 않았다.** 무엇을 왜 돌리지 않았는지 기록에 적었다 |\n| 코드 동작 | | 바뀌지 않는다. 문서만 고쳤다 |\n\n# 주요 변경 사항\n\n## 확인하지 않은 것을 확인한 것처럼 적지 않는다\n\nT016은 quickstart 여덟 시나리오를 실행하고 결과를 남기라고 한다. **돌리지 않았고, 그 사실을 기록의 맨 앞에 적었다.**\n\n돌리면 로컬 DB에 되돌릴 수 없는 행이 남는다. 첫 시나리오는 확정 대응표를 닫고 예시 대응표를 여는데 열린 대응표는 최대 하나다. 다른 셋은 새 자료 버전을 발행하는데 자료 버전과 시계열에는 UPDATE와 DELETE를 막는 장치가 걸려 있어 그 행을 지울 수 없다. 검증 전용 DB가 생기면 그곳에서 돌려야 한다.\n\n그래서 성공 기준 여섯 개가 이 기록으로 닫히지 않는다. 각각 왜 닫히지 않았는지를 표로 적었다.\n\n## 수기 대조를 할 수 없었던 까닭을 기록한다\n\nconstitution은 기능·계산 확인으로 수기 대조 한 건을 요구한다. 분배금 지급일을 골라 운용사 공시의 금액과 저장된 값을 눈으로 맞춰 보는 절차다.\n\n**저장된 값이 없다.** 기업행위와 공시 대조 기록이 모두 0건이다. 값을 만들어 두는 도구까지는 앞선 작업에서 만들었지만 적재는 하지 못했고, 같은 마감일로는 자료 버전을 다시 발행할 수 없다는 제약이 그 앞을 막고 있다. 대조는 그 제약이 풀린 뒤에 사람이 해야 한다.\n\n## 빌드가 빨갛다는 사실을 그대로 남긴다\n\n세 파트 검증 명령을 모두 돌렸다. 두 파트는 실패도 건너뜀도 없고, 백엔드에서 12건이 실패한다.\n\n**이 12건은 001이 만든 것도 아니고 001이 닫을 수도 없다.** 001의 평가 기간 조회가 병합되기 전 기준선에서 같은 명령을 돌려 **같은 이름의 12건이 실패하는 것을 확인했다.** 배우기와 결과 비교, 두 spec의 검사다.\n\n검증 기록은 통과한 것만 적는 문서가 아니다. 지금 `dev`의 빌드가 빨간 상태라는 것은 다음 사람이 알아야 할 사실이라 그대로 적었다. 곁가지마다 티켓을 세우지 않는다는 규칙에 따라 티켓은 만들지 않았다.\n\n## 자료가 판정된 구간보다 짧게 들어와 있다\n\n결정 항목 PD-01은 여덟 종목이 함께 상장해 있는 날을 2018년 9월부터로 판정했는데, 실제로 적재된 것은 2024년 9월부터인 2년치다. 공통 평가 기간 조회가 돌려주는 값은 판정된 구간이 아니라 **적재된 구간**을 따르므로, 화면이 안내하는 기간도 2년 안쪽이다. 검증 기록에 이 차이를 적었다.\n\n# 테스트\n\n문서만 고쳤으므로 코드 동작은 바뀌지 않는다. 아래는 T016이 요구한 세 파트 검증을 실제로 돌린 결과다(2026-09-17, `dev` `12fc23c` 기준).\n\n- [x] `data`: `ruff check src scripts tests && pytest` — 791건, 실패 0 · 건너뜀 0\n- [x] `worker`: `ruff check src tests scripts && ruff format --check ... && pytest` — 362건, 실패 0 · 건너뜀 0\n- [x] `backend`: `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` — 1,586건, 실패 12 · 건너뜀 3\n\n기준선은 같은 날 `dev` `33fb854`에서 1,566건에 실패 12 · 건너뜀 3이며 **실패한 검사의 이름이 같다.**\n\n건너뛴 3건은 외부 API를 실제로 호출하는 검사 하나와 성능 검사 둘이고 둘 다 명시적으로 켜야 돈다. **001이 쓰는 DB 검사는 모두 실행됐다** — `THORP_REQUIRE_DOCKER=true`로 돌려 Docker 때문의 건너뜀이 실패가 되게 했고 그런 건너뜀은 없었다.\n\n# 리뷰 포인트\n\n1. **T016을 완료로 닫지 않았다.** 시나리오 실행과 수기 대조가 남아 있어 항목을 열어 둔 채 남은 일과 선행 조건을 적었다. 티켓을 어떻게 다룰지는 판단이 필요하다. 남은 둘을 별도 작업으로 뺄지, 티켓을 열어 둘지 정해 주시면 좋겠다.\n2. **거래정지 규칙을 확정하지 않기로 한 결정을 기록에 반영했다.** 적재 구간에 정지 사례가 0건이라 길이 분포를 집계할 입력 자체가 없다. 임시 처리 표시는 남은 채로 둔다.\n3. **기업행위 적재가 여러 곳을 막고 있다.** 수기 대조, 공시 대조 기준, 기업행위 반영 시나리오가 모두 여기에 걸려 있다. 같은 마감일로 자료 버전을 다시 발행할 수 없다는 제약을 어떻게 풀지가 먼저다.\n4. **범위 밖에서 발견한 것**: 로컬 백엔드 컨테이너가 병합 전 이미지라 평가 기간 조회가 404로 응답한다. 나중에 시나리오를 돌리려면 컨테이너를 다시 띄워야 한다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T15:15:40.382+09:00",
+    "updated_at": "2026-09-17T15:29:53.131+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:29:52.858+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/188-verification-record",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+    "merge_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:17:09.312+09:00",
+    "reference": "!189",
+    "references": {
+      "short": "!189",
+      "relative": "!189",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!189"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/189",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948989,
+    "iid": 189,
+    "project_id": 1444456,
+    "title": "docs(be): 대표 ETF 자료 확보 검증 기록을 남긴다",
+    "description": "# 작업 내용 요약\n\nspec 001이 확보한 자료가 어디까지 실제로 확인됐는지를 아무도 기록해 두지 않았고, 그 사이 문서에 적힌 값들이 실제와 갈라졌다. quickstart를 적힌 대로 따라 하면 없는 자료 버전을 가리키고 섹터 코드 하나는 404가 난다. README는 백테스트 접수가 검증용 임시 자료를 읽는다고 말하는데 실제로는 적재된 실자료를 읽는다.\n\n**검증 기록 문서를 만들고 낡은 값을 고쳤다.** 이 MR 뒤로는 001의 자료가 어디까지 확인됐는지, 그리고 무엇이 아직 확인되지 않았는지를 한 문서에서 읽을 수 있다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-188](https://ssafy.atlassian.net/browse/S15P21E205-188)\n- spec 001 `tasks.md` T016\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 001 자료가 어디까지 확인됐는지 묻는다 | 흩어진 작업 메모를 훑어야 한다 | 검증 기록 한 문서에 확인된 것과 확인되지 않은 것이 나뉘어 있다 |\n| quickstart를 따라 한다 | 없는 자료 버전과 없는 섹터 코드를 가리킨다 | 실제 적재된 값을 가리킨다 |\n| README로 자료 현황을 읽는다 | 접수가 임시 자료를 읽는다고 적혀 있다 | 실자료를 읽고, 기업행위가 비어 있다는 사실이 드러난다 |\n| quickstart 시나리오 실행 | | **하지 않았다.** 무엇을 왜 돌리지 않았는지 기록에 적었다 |\n| 코드 동작 | | 바뀌지 않는다. 문서만 고쳤다 |\n\n# 주요 변경 사항\n\n## 확인하지 않은 것을 확인한 것처럼 적지 않는다\n\nT016은 quickstart 여덟 시나리오를 실행하고 결과를 남기라고 한다. **돌리지 않았고, 그 사실을 기록의 맨 앞에 적었다.**\n\n돌리면 로컬 DB에 되돌릴 수 없는 행이 남는다. 첫 시나리오는 확정 대응표를 닫고 예시 대응표를 여는데 열린 대응표는 최대 하나다. 다른 셋은 새 자료 버전을 발행하는데 자료 버전과 시계열에는 UPDATE와 DELETE를 막는 장치가 걸려 있어 그 행을 지울 수 없다. 검증 전용 DB가 생기면 그곳에서 돌려야 한다.\n\n그래서 성공 기준 여섯 개가 이 기록으로 닫히지 않는다. 각각 왜 닫히지 않았는지를 표로 적었다.\n\n## 수기 대조를 할 수 없었던 까닭을 기록한다\n\nconstitution은 기능·계산 확인으로 수기 대조 한 건을 요구한다. 분배금 지급일을 골라 운용사 공시의 금액과 저장된 값을 눈으로 맞춰 보는 절차다.\n\n**저장된 값이 없다.** 기업행위와 공시 대조 기록이 모두 0건이다. 값을 만들어 두는 도구까지는 앞선 작업에서 만들었지만 적재는 하지 못했고, 같은 마감일로는 자료 버전을 다시 발행할 수 없다는 제약이 그 앞을 막고 있다. 대조는 그 제약이 풀린 뒤에 사람이 해야 한다.\n\n## 빌드가 빨갛다는 사실을 그대로 남긴다\n\n세 파트 검증 명령을 모두 돌렸다. 두 파트는 실패도 건너뜀도 없고, 백엔드에서 12건이 실패한다.\n\n**이 12건은 001이 만든 것도 아니고 001이 닫을 수도 없다.** 001의 평가 기간 조회가 병합되기 전 기준선에서 같은 명령을 돌려 **같은 이름의 12건이 실패하는 것을 확인했다.** 배우기와 결과 비교, 두 spec의 검사다.\n\n검증 기록은 통과한 것만 적는 문서가 아니다. 지금 `dev`의 빌드가 빨간 상태라는 것은 다음 사람이 알아야 할 사실이라 그대로 적었다. 곁가지마다 티켓을 세우지 않는다는 규칙에 따라 티켓은 만들지 않았다.\n\n## 자료가 판정된 구간보다 짧게 들어와 있다\n\n결정 항목 PD-01은 여덟 종목이 함께 상장해 있는 날을 2018년 9월부터로 판정했는데, 실제로 적재된 것은 2024년 9월부터인 2년치다. 공통 평가 기간 조회가 돌려주는 값은 판정된 구간이 아니라 **적재된 구간**을 따르므로, 화면이 안내하는 기간도 2년 안쪽이다. 검증 기록에 이 차이를 적었다.\n\n# 테스트\n\n문서만 고쳤으므로 코드 동작은 바뀌지 않는다. 아래는 T016이 요구한 세 파트 검증을 실제로 돌린 결과다(2026-09-17, `dev` `12fc23c` 기준).\n\n- [x] `data`: `ruff check src scripts tests && pytest` — 791건, 실패 0 · 건너뜀 0\n- [x] `worker`: `ruff check src tests scripts && ruff format --check ... && pytest` — 362건, 실패 0 · 건너뜀 0\n- [x] `backend`: `THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` — 1,586건, 실패 12 · 건너뜀 3\n\n기준선은 같은 날 `dev` `33fb854`에서 1,566건에 실패 12 · 건너뜀 3이며 **실패한 검사의 이름이 같다.**\n\n건너뛴 3건은 외부 API를 실제로 호출하는 검사 하나와 성능 검사 둘이고 둘 다 명시적으로 켜야 돈다. **001이 쓰는 DB 검사는 모두 실행됐다** — `THORP_REQUIRE_DOCKER=true`로 돌려 Docker 때문의 건너뜀이 실패가 되게 했고 그런 건너뜀은 없었다.\n\n# 리뷰 포인트\n\n1. **T016을 완료로 닫지 않았다.** 시나리오 실행과 수기 대조가 남아 있어 항목을 열어 둔 채 남은 일과 선행 조건을 적었다. 티켓을 어떻게 다룰지는 판단이 필요하다. 남은 둘을 별도 작업으로 뺄지, 티켓을 열어 둘지 정해 주시면 좋겠다.\n2. **거래정지 규칙을 확정하지 않기로 한 결정을 기록에 반영했다.** 적재 구간에 정지 사례가 0건이라 길이 분포를 집계할 입력 자체가 없다. 임시 처리 표시는 남은 채로 둔다.\n3. **기업행위 적재가 여러 곳을 막고 있다.** 수기 대조, 공시 대조 기준, 기업행위 반영 시나리오가 모두 여기에 걸려 있다. 같은 마감일로 자료 버전을 다시 발행할 수 없다는 제약을 어떻게 풀지가 먼저다.\n4. **범위 밖에서 발견한 것**: 로컬 백엔드 컨테이너가 병합 전 이미지라 평가 기간 조회가 404로 응답한다. 나중에 시나리오를 돌리려면 컨테이너를 다시 띄워야 한다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T15:15:40.382+09:00",
+    "updated_at": "2026-09-17T15:29:53.131+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:29:52.858+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/188-verification-record",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+    "merge_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:17:09.312+09:00",
+    "reference": "!189",
+    "references": {
+      "short": "!189",
+      "relative": "!189",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!189"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/189",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "4",
+    "latest_build_started_at": "2026-09-17T15:17:24.065+09:00",
+    "latest_build_finished_at": "2026-09-17T15:17:26.955+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 202632,
+      "iid": 115,
+      "project_id": 1444456,
+      "sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "ref": "docs(be)/188-verification-record",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T15:17:22.746+09:00",
+      "updated_at": "2026-09-17T15:17:26.964+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202632"
+    },
+    "head_pipeline": {
+      "id": 202632,
+      "iid": 115,
+      "project_id": 1444456,
+      "sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "ref": "docs(be)/188-verification-record",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T15:17:22.746+09:00",
+      "updated_at": "2026-09-17T15:17:26.964+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202632",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T15:17:24.065+09:00",
+      "finished_at": "2026-09-17T15:17:26.955+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": 1,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202632",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "head_sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "start_sha": "4fa31841ec3720420761a8b6c534460797ac5c67"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "6ed5ac1136083f7fb0e94ffc2fe016f38b8c2eca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825570,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:15:40.534+09:00",
+          "updated_at": "2026-09-17T15:15:40.538+09:00",
+          "system": true,
+          "noteable_id": 948989,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 189,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a0f605dda9a339eb3b09814639a9aa3fcf638bab",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825576,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:16:46.176+09:00",
+          "updated_at": "2026-09-17T15:16:46.332+09:00",
+          "system": true,
+          "noteable_id": 948989,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 189,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "68bb38c901e463cf7e601dad46adb8ad890c8da5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825591,
+          "type": null,
+          "body": "restored source branch `docs(be)/188-verification-record`",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:17:13.251+09:00",
+          "updated_at": "2026-09-17T15:17:13.295+09:00",
+          "system": true,
+          "noteable_id": 948989,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 189,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c9e42b5b392fe3305ca27e5ef30e360033bd9a34",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825598,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **투명하고 상세한 검증 상태 기록**: 코드를 실행하지 못한 이유(데이터 불변성 제약, 기업행위 미적재 등)와 빌드 실패 12건의 원인 분석 결과를 문서(`docs/guides/etf-market-data-verification-2026-09.md` 및 `tasks.md`)에 가감 없이 솔직하게 기록하여 향후 유지보수성과 추적성을 크게 높였습니다.\n- **문서와 실제 코드의 정합성 개선**: 낡은 데이터 버전 및 섹터 코드(`BATTERY` -> `SECONDARY_BATTERY`)를 실제 적재된 값과 일치하도록 `quickstart.md`와 `README.md`에 정확히 반영했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (모든 변경사항이 문서, 가이드, 태스크 기록 갱신에 국한되어 있으며 실제 런타임 코드 로직을 수정하지 않았습니다.)\n\n### 테스트 제안\n문서 및 가이드 전용 변경이므로 자동화된 테스트 실행 대상은 아니지만, 문서 내 quickstart 시나리오를 추후 검증 전용 환경에서 수행할 때 다음 시나리오를 검증해야 합니다.\n\n1. **격리된 DB 환경에서의 Quickstart 시나리오 검증**:\n   - 격리된 테스트/검증 전용 PostgreSQL 컨테이너를 구성한 후, `quickstart.md`에 기술된 8개 시나리오를 순서대로 실행하여 데이터 버전 발행 및 불변성 트리거(FR-017) 동작 여부 확인\n2. **기업행위 적재 후 수기 대조 검증**:\n   - `corporate_action` 데이터 적재 제약이 해소된 시점에, 운용사 공식 공시 자료와 DB 내 저장된 분배금/분할 데이터를 수기 대조(`reconciliation_record`)하는 시나리오 수행\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:9814a3da49a27d3a18cbeb09eb006842c2f7e206 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T15:17:17.906+09:00",
+          "updated_at": "2026-09-17T15:17:17.906+09:00",
+          "system": false,
+          "noteable_id": 948989,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 189,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f3d3e4d9817470dc9e02d245dc57bee61b944843",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825809,
+          "type": null,
+          "body": "mentioned in commit c804006afc640788ddacff322332dcb97e0e2b27",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:29:52.776+09:00",
+          "updated_at": "2026-09-17T15:29:52.783+09:00",
+          "system": true,
+          "noteable_id": 948989,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 189,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2213875,
+      "head_commit_sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "created_at": "2026-09-17T15:16:50.570+09:00",
+      "merge_request_id": 948989,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "529ed5525795e2ca6db80a70b37476ff2346a52e"
+    },
+    {
+      "id": 2213866,
+      "head_commit_sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "created_at": "2026-09-17T15:16:46.559+09:00",
+      "merge_request_id": 948989,
+      "state": "without_files",
+      "real_size": "4",
+      "patch_id_sha": "529ed5525795e2ca6db80a70b37476ff2346a52e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2213875,
+      "head_commit_sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "created_at": "2026-09-17T15:16:50.570+09:00",
+      "merge_request_id": 948989,
+      "state": "collected",
+      "real_size": "4",
+      "patch_id_sha": "529ed5525795e2ca6db80a70b37476ff2346a52e",
+      "commits": [
+        {
+          "id": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+          "short_id": "9814a3da",
+          "created_at": "2026-09-17T15:14:39.000+09:00",
+          "parent_ids": [
+            "52e37c2b58a55d8596f1e095bfd4952ae0b68406"
+          ],
+          "title": "docs(be): T016에 무엇을 하고 무엇을 남겼는지 적는다",
+          "message": "docs(be): T016에 무엇을 하고 무엇을 남겼는지 적는다\n\n문서 마무리와 검증 명령은 끝냈고 시나리오 실행과 수기 대조가 남았다. 항목을\n닫지 않고 남은 일과 그 선행 조건을 적었다.\n\n거래정지 규칙은 확정하지 않기로 한 결정을 적었다. 적재 구간에 정지 사례가\n0건이라 길이 분포를 집계할 입력이 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:14:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:14:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9814a3da49a27d3a18cbeb09eb006842c2f7e206"
+        },
+        {
+          "id": "52e37c2b58a55d8596f1e095bfd4952ae0b68406",
+          "short_id": "52e37c2b",
+          "created_at": "2026-09-17T15:14:39.000+09:00",
+          "parent_ids": [
+            "181ccb8ac11bd1b1a0cf1d0ee8979a1268a991aa"
+          ],
+          "title": "docs(be): 자료 확보 검증 기록을 남기고 README의 자료 현황을 고친다",
+          "message": "docs(be): 자료 확보 검증 기록을 남기고 README의 자료 현황을 고친다\n\n무엇이 확인됐고 무엇이 확인되지 않았는지를 한 문서에 모았다. 세 파트 검증\n명령과 적재 현황은 실제로 돌리고 세어 적었다.\n\nquickstart 시나리오는 돌리지 않았다. 돌리면 로컬 DB에 되돌릴 수 없는 행이\n남기 때문이며, 그 사실과 까닭을 기록에 적었다. 확인하지 못한 것을 확인한\n것처럼 적지 않는다.\n\n수기 대조는 하지 못했다. 기업행위와 대조 기록이 0건이라 DB에 비교할 값이\n없다. 기업행위 적재가 선행 조건이다.\n\n백엔드 검증에서 실패 12건이 나오는데 001이 만든 것도 아니고 001이 닫을 수도\n없다. 001이 병합되기 전 기준선에서도 같은 이름의 12건이 실패한다는 것을 함께\n확인해 적었다.\n\nREADME의 자료 현황은 접수가 픽스처를 읽는다고 적고 있었다. 실자료를 읽도록\n바뀐 지 지났고, 기업행위가 비어 있다는 사실이 대신 빠져 있었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:14:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:14:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52e37c2b58a55d8596f1e095bfd4952ae0b68406"
+        },
+        {
+          "id": "181ccb8ac11bd1b1a0cf1d0ee8979a1268a991aa",
+          "short_id": "181ccb8a",
+          "created_at": "2026-09-17T15:14:39.000+09:00",
+          "parent_ids": [
+            "12fc23ce673167d1ceb99866eff0d527f15be544"
+          ],
+          "title": "docs(be): quickstart의 자료 식별자를 실제 값과 맞춘다",
+          "message": "docs(be): quickstart의 자료 식별자를 실제 값과 맞춘다\n\n자료 버전과 대응표 이름이 예시 적재 시절 값으로 남아 있었다. 적힌 대로 따라\n하면 없는 자료 버전을 가리키고, 섹터 코드 BATTERY는 지금 대응표에 없어\n404가 난다.\n\n시나리오 4에 평가 기간 조회의 재판정 재료를 확인하는 절차를 더했다. 전략을\n주는 경우와 상한만 주는 경우를 나눠, 화면이 목록으로 구한 시작일이 서버가\n직접 계산한 시작일과 같은 날인지 눈으로 볼 수 있게 했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:14:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:14:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/181ccb8ac11bd1b1a0cf1d0ee8979a1268a991aa"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,105 @@\n+# 대표 ETF 자료 확보 검증 기록 (spec 001, 2026-09-17)\n+\n+**대상**: [`specs/001-etf-market-data`](../../specs/001-etf-market-data/spec.md) · 티켓 `S15P21E205-188` (T016)\n+\n+**이 기록이 무엇인가**: spec 001이 확보한 자료가 어디까지 실제로 확인됐는지를 남긴다. constitution 「완료의 정의」가 가르는 세 층(구현 완료 · 사용성 확인 · 효과 입증) 가운데 **첫 층에 대한 기록**이며, 나머지 두 층의 근거로 쓰지 않는다.\n+\n+**먼저 읽을 것**: 이 기록은 **quickstart 시나리오를 실행하지 않았다.** 무엇을 왜 돌리지 않았는지는 아래 「이 기록이 보증하지 않는 것」에 있다. 실행 절차 자체는 [`quickstart.md`](../../specs/001-etf-market-data/quickstart.md)에 있다.\n+\n+## 환경\n+\n+| 항목 | 값 |\n+|---|---|\n+| 확인 시각 | 2026-09-17 |\n+| 저장소 기준 | `dev` `12fc23c` |\n+| DB | 로컬 `docker compose -f docker-compose.dev.yml` PostgreSQL 16 |\n+| 대응표 버전 | `SEM-2026-09-16-001` (`is_sample = false`) |\n+| 자료 버전 | `KRX_DAILY_20260915` (`complete = true`) |\n+\n+## 적재된 자료\n+\n+DB를 직접 조회해 센 값이다.\n+\n+| 표 | 건수 | 비고 |\n+|---|---|---|\n+| `daily_price` | 3,872행 | 2024-09-19 ~ 2026-09-15, 484거래일 × 여덟 종목 |\n+| `daily_index` (`KOSPI`) | 484일 | 거래일 달력의 출처다 |\n+| `data_gap` | 16건 | |\n+| `corporate_action` | **0건** | 분배금·분할이 아직 들어가지 않았다 |\n+| `reconciliation_record` | **0건** | 공시 대조 기록이 없다 |\n+| `suspension_period` | 0건 | 이 구간에 정지 사례가 없었다 |\n+\n+**적재 구간이 확보 가능 구간보다 짧다.** PD-01은 여덟 종목이 함께 상장해 있는 날을 2018-09-12부터로 판정했는데([`specs/README.md`](../../specs/README.md) PD-01), 실제 적재는 2024-09-19부터인 2년치다. 공통 평가 기간 조회가 돌려주는 값은 판정된 구간이 아니라 **적재된 구간**을 따른다.\n+\n+## 검증 명령\n+\n+세 파트 모두 각 `CLAUDE.md`가 정한 명령을 그대로 실행했다.\n+\n+- [x] `data`: `ruff check src scripts tests && pytest` — **791건 통과, 실패 0 · 건너뜀 0**\n+- [x] `worker`: `ruff check src tests scripts && ruff format --check src tests scripts && pytest` — **362건 통과, 실패 0 · 건너뜀 0**\n+- [x] `backend`: `./gradlew spotlessApply build` — **1,586건 실행, 실패 12 · 건너뜀 3**. 실패 12건은 001 밖의 기존 실패다(아래)\n+\n+`backend`의 DB 테스트는 Docker가 꺼져 있으면 조용히 건너뛴다. 이번 실행은 `THORP_REQUIRE_DOCKER=true`로 돌려 건너뜀이 실패가 되게 했다. **검증 결과를 읽을 때는 통과 수보다 건너뜀 수를 먼저 본다.**\n+\n+## 백엔드 검증\n+\n+**건너뛰어진 3건은 이 spec과 상관없다.** 외부 API를 실제로 호출하는 검사 하나와 뉴스 성능 검사 둘이며, 둘 다 명시적으로 켜야 돌아간다. **001이 쓰는 DB 검사는 모두 실행됐다** — `THORP_REQUIRE_DOCKER=true`로 돌려 Docker 때문의 건너뜀을 실패로 바꿔 두었고 그런 건너뜀은 없었다.\n+\n+**실패 12건은 001이 만든 것이 아니고 001이 닫을 수도 없다.** `dev`에 이미 있던 실패이며 모두 다른 spec의 검사다.\n+\n+| 검사 | 건수 | 소속 |\n+|---|---|---|\n+| `LearningPublicApiIT` | 9 | spec 013 배우기 |\n+| `ResultApiIT` | 3 | spec 005 결과 이해·비교 |\n+\n+**같은 실패가 001이 들어오기 전에도 있었다.** 2026-09-17에 `dev` `33fb854`(001의 평가 기간 조회가 병합되기 전)에서 같은 명령을 돌려 1,566건 중 **같은 이름의 12건이 실패하고 3건이 건너뛰어졌다.** 두 실행의 차이는 001이 더한 검사 20건이고 그 20건은 모두 통과한다.\n+\n+**이 사실 자체를 그대로 남긴다.** 검증 기록은 \"통과했다\"만 적는 문서가 아니고, 지금 `dev`의 빌드가 빨간 상태라는 것은 다음 사람이 알아야 할 사실이다. **어느 spec이 닫을지는 사람이 정한다** — 곁가지를 발견할 때마다 티켓을 세우면 스프린트 범위만 넓어진다(`AGENTS.md`).\n+\n+## 문서 대조\n+\n+T016이 대조하라고 지목한 두 문서를 001의 결정과 맞춰 읽었다. **001 범위에서 직접 고치지 않고 갱신 대상만 남긴다**(`specs/README.md`가 이미 갱신 대상으로 기록한 문서들이다).\n+\n+| 문서 | 판정 | 내용 |\n+|---|---|---|\n+| [`docs/specs/market-api.md`](../specs/market-api.md) | 어긋나지 않는다 | 주제가 다르다. 그 문서는 거시·시장 지표를 지표당 하나씩 조회하는 API이고, 001은 ETF 일봉·기업행위·섹터 대응표를 파이프라인으로 적재한다. 같은 KRX 원천을 두 경로가 읽지만 읽는 대상과 저장 위치가 달라 충돌하지 않는다 |\n+| [`docs/specs/market-api.md`](../specs/market-api.md) 「응답」 | **갱신 대상** | 시장 API는 `HttpApiResponse`(`{httpStatus, isSuccess, message, code, result}`)를 쓰고 001의 섹터 조회는 `ApiResponse`(`{success, data, error}`)를 쓴다. 그 문서가 \"전체 응답 통일은 별도 마이그레이션\"이라고 적어 둔 그 간극이며 001이 정할 것이 아니다 |\n+| [`docs/adr/0004`](../adr/0004-backtest-commission-model.md) | 어긋나지 않는다 | 거래비용 모델을 다루며 001의 자료 확보와 접점이 없다. 001이 내보내는 값 가운데 비용 계산에 들어가는 것은 없다 |\n+\n+## 이 기록이 보증하지 않는 것\n+\n+**quickstart 시나리오 여덟 개를 실행하지 않았다.** 실행하면 로컬 DB에 되돌릴 수 없는 행이 남기 때문이며, 2026-09-17에 그렇게 정했다. 구체적으로 이렇다.\n+\n+- 시나리오 1은 예시 대응표를 새로 연다. 지금 열려 있는 확정 대응표가 닫히고, 열린 대응표는 최대 하나라 되돌리려면 손으로 다시 열어야 한다\n+- 시나리오 2·7·8은 새 자료 버전을 발행한다. `dataset_version`과 시계열에는 UPDATE·DELETE를 막는 불변 트리거가 걸려 있어(FR-017) 그 행을 지울 수 없다\n+- 시나리오 5는 `corporate_action`이 비어 있어 대조할 대상 자체가 없다\n+\n+따라서 **아래 항목은 이 기록으로 확인되지 않았다.** 자료가 갖춰지고 검증 전용 DB를 쓸 수 있을 때 다시 해야 한다.\n+\n+| 항목 | 왜 확인되지 않았나 |\n+|---|---|\n+| SC-002 공시 대조 | `corporate_action`·`reconciliation_record`가 0건이다. **constitution 「기능·계산 확인」이 요구하는 수기 대조 한 건도 하지 못했다** — 분배금 지급일을 골라 운용사 공시와 맞춰 보려 해도 DB에 비교할 값이 없다. 이 항목은 사람이 공시를 눈으로 확인해야 한다 |\n+| SC-003 상장 전 자료 없음 | 검증 스크립트를 돌리지 않았다 |\n+| SC-004 재현성 | 워커의 재현 테스트는 통과했으나(위 `worker` 362건에 포함) 적재된 실자료로 두 번 읽어 비교하지는 않았다 |\n+| SC-007 공통 평가 기간 | 산식은 공유 픽스처로 양쪽 구현이 검증된다. **실자료 위에서 HTTP 조회를 호출해 보지는 않았다** — 로컬 백엔드 컨테이너가 머지 전 이미지라 그 엔드포인트가 없다 |\n+| SC-005 출처 표시 | 화면이 있어야 확인된다. 001은 값을 내보내는 데까지다 |\n+| PD-19·PD-20 거래정지 규칙 | **확정하지 않기로 정했다**(2026-09-17). 이 구간에 정지 사례가 0건이라 길이 분포를 집계할 입력이 없다. `gaps.py`의 `SUSPENDED_TOO_LONG` 기록은 꺼진 채로 두고 `provisionalSuspensionHandling` 표시도 남는다 |\n+| PD-21 추적 차이 | 계산 정의가 확정되지 않아 범위에서 뺐다 |\n+\n+**구현 완료를 사용성 확인이나 효과 입증의 근거로 쓰지 않는다.** 001에는 화면이 없어 사용성 확인을 할 대상이 없고, 효과 입증은 전략 선정과 경제환경 검색에 적용되는 절차라 자료를 확보하는 이 spec에는 해당하지 않는다.\n+\n+## 재현 명령\n+\n+```bash\n+# 적재 현황\n+docker exec thorp-postgres psql -U thorp -d thorp -c \"\n+  SELECT (SELECT count(*) FROM daily_price) AS price_rows,\n+         (SELECT count(DISTINCT date) FROM daily_index WHERE index_code='KOSPI') AS calendar_days,\n+         (SELECT count(*) FROM corporate_action) AS corporate_actions,\n+         (SELECT count(*) FROM reconciliation_record) AS reconciliations;\"\n+\n+# 세 파트 검증\n+cd data     && ruff check src scripts tests && pytest\n+cd ../worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest\n+cd ../backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build\n+```\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/guides/etf-market-data-verification-2026-09.md",
+          "old_path": "docs/guides/etf-market-data-verification-2026-09.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -44,7 +44,7 @@ curl -s localhost:8080/sectors | jq '[.sectors[] | select(.representativeEtf ==\n \n ```bash\n cd data\n-uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --until 2026-09-07\n+uv run scripts/ingest_krx.py --map-version SEM-2026-09-16-001 --until 2026-09-15\n uv run scripts/verify_listing_boundary.py     # 상장 전 행을 세는 검증 스크립트\n ```\n \n@@ -69,7 +69,7 @@ uv run pytest tests/test_repository_provider.py -k reproducible\n \n ```bash\n psql -h localhost -U thorp -d thorp -c \\\n-  \"UPDATE dataset_version SET data_deadline = now() WHERE dataset_id = 'KRX_DAILY_20260907';\"\n+  \"UPDATE dataset_version SET data_deadline = now() WHERE dataset_id = 'KRX_DAILY_20260915';\"\n ```\n \n **기대 결과**: 갱신이 거부된다. 발행된 버전을 고치는 경로가 없어야 한다(FR-017).\n@@ -87,17 +87,31 @@ cd ../backend && ./gradlew test --tests '*EvaluationWindowTest'\n \n **기대 결과**: 양쪽이 같은 픽스처(`contracts/fixtures/evaluation-window-cases.json`)를 읽어 같은 값을 낸다. 한쪽만 고치면 실패한다.\n \n-이어서 HTTP 표면을 확인한다.\n+이어서 HTTP 표면을 확인한다. 계약은 [contracts/sector-api.md](./contracts/sector-api.md)의 「GET /sectors/evaluation-window」 절이 기준이다.\n \n ```bash\n-curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,BATTERY&strategy=SECTOR_MOMENTUM' | jq\n+# ① 전략을 주면 그 전략의 기본 설정 워밍업을 반영해 판정한다\n+curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,SECONDARY_BATTERY&strategy=SECTOR_MOMENTUM' | jq\n+\n+# ② 전략을 생략하고 상한만 주면 화면이 직접 재판정할 재료를 받는다\n+curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,SECONDARY_BATTERY&maxWarmupTradingDays=200' | jq\n ```\n \n-**기대 결과**\n+**기대 결과 (①)**\n \n-- 상장일이 늦은 쪽이 `bindingCandidate`로 나온다\n+- 상장일이 늦은 쪽이 `bindingCandidate`로 나오고 그 섬터 코드가 `bindingSector`다\n - `commonStart`가 그 후보의 상장일에서 워밍업 거래일만큼 뒤다\n - **잠금 구간이 빠지지 않은 전체 범위**가 나온다 (FR-008)\n+- 상한을 주지 않았으므로 `tradingDaysFromBase`·`maxWarmupTradingDays`·`excludedRangesFromBase`는 **키 자체가 없다**\n+\n+**기대 결과 (②)**\n+\n+- `warmupTradingDays`가 0이고 `commonStart`가 `warmupBaseDate`와 같다\n+- `tradingDaysFromBase`의 길이가 `maxWarmupTradingDays + 1`이고 목록 끝이 `commonEnd`를 넘지 않는다\n+- 워밍업 N을 넣었을 때의 시작일은 `tradingDaysFromBase[N]`이다. ①의 `commonStart`와 같은 날을 가리킨다\n+- 달력이 상한에 모자라면 오류가 아니라 `maxWarmupTradingDays`가 실제 길이 − 1로 줄어든다\n+\n+조합을 평가할 수 없으면 오류가 아니라 `evaluable: false`인 200이다. 자료가 아직 없으면 409 `EVALUATION_WINDOW_NOT_READY`로 갈라, 화면이 \"잠시 후 다시\"와 \"이 조합은 안 됩니다\"를 구분할 수 있다.\n \n ## 시나리오 5 — 기업행위가 반영되고 중복 차감되지 않는다\n \n@@ -105,7 +119,7 @@ curl -s 'localhost:8080/sectors/evaluation-window?sectors=SEMICONDUCTOR,BATTERY&\n \n ```bash\n cd data\n-uv run scripts/reconcile.py --dataset KRX_DAILY_20260907\n+uv run scripts/reconcile.py --dataset KRX_DAILY_20260915\n ```\n \n **기대 결과**\n@@ -137,7 +151,7 @@ cd worker && uv run pytest tests/test_repository_provider.py -k \"suspended or ga\n \n ```bash\n cd data\n-uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --simulate-quota-exhausted\n+uv run scripts/ingest_krx.py --map-version SEM-2026-09-16-001 --simulate-quota-exhausted\n ```\n \n **기대 결과**\n@@ -154,7 +168,7 @@ uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --simulate-quota-e\n \n ```bash\n cd data\n-uv run scripts/ingest_krx.py --map-version SEM-2026-09-10-001 --until 2026-09-07 \\\n+uv run scripts/ingest_krx.py --map-version SEM-2026-09-16-001 --until 2026-09-15 \\\n     --instrument-profiles raw/instrument-profiles.json\n ```\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/quickstart.md",
+          "old_path": "specs/001-etf-market-data/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -191,6 +191,11 @@\n   - `README.md`의 \"현재 구현 상태\"에서 자료 원천이 바뀐 사실을 반영한다\n   - `docs/specs/market-api.md`와 `docs/adr/0004`가 001의 결정과 어긋나는 부분을 확인해 갱신 대상 목록을 남긴다. `specs/README.md`가 이미 갱신 대상으로 기록했으므로 001 범위에서 직접 고치지는 않는다\n   - 세 파트 검증 명령을 모두 실행한다. `backend`의 DB 테스트는 Docker가 꺼져 있으면 skip되므로 `skipped` 수를 확인한다\n+  - **2026-09-17: 문서와 검증 명령까지 마쳤고 시나리오 실행과 수기 대조가 남았다.** 기록은 `docs/guides/etf-market-data-verification-2026-09.md`다\n+  - **시나리오를 돌리지 않았다.** 돌리면 로컬 DB에 되돌릴 수 없는 행이 남기 때문이다 — 시나리오 1은 확정 대응표를 닫고 예시 대응표를 열며(열린 버전은 최대 하나다), 2·7·8은 새 자료 버전을 발행하는데 불변 트리거가 그 행의 DELETE를 거부한다(FR-017). **검증 전용 DB가 생기면 그곳에서 돌린다**\n+  - **수기 대조는 할 수 없었다.** `corporate_action`과 `reconciliation_record`가 0건이라 비교할 값이 DB에 없다. T014가 만들어 둔 `data/config/corporate-actions-2026-09.json`을 적재하는 것이 선행이고, 그랬면 같은 마감일로 자료 버전을 다시 발행할 수 없다는 T014의 미해결 항목을 먼저 풀어야 한다\n+  - **PD-19·PD-20은 확정하지 않기로 정했다(2026-09-17).** 적재 구간에 정지 사례가 0건이라 길이 분포를 집계할 입력이 없다. T015는 열린 채로 두고 검증 기록에도 미확정으로 남겼다\n+  - **quickstart의 낡은 값을 고쳤다.** 자료 버전 `KRX_DAILY_20260907` → `KRX_DAILY_20260915`, 대응표 `SEM-2026-09-10-001` → `SEM-2026-09-16-001`, 섬터 코드 `BATTERY` → `SECONDARY_BATTERY`다. 시나리오 4에는 T017이 더한 재판정 재료를 확인하는 절차를 넣었다\n \n ---\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/tasks.md",
+          "old_path": "specs/001-etf-market-data/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -66,7 +66,7 @@ Thorp는 다음 세 가지 질문에 답할 수 있는 분석 흐름을 만듭\n | 배분 엔진 | **일부 전략 구현** | 고정 비중·동일 비중·역변동성은 실행됩니다. 섹터 모멘텀·최소분산은 계산 규칙 확정 전이라 접수에서 거절합니다. |\n | 백테스트 화면 | **UI 프로토타입** | `/backtest`의 차트와 비교 화면은 예시 데이터를 사용하며 실제 백테스트 API와 아직 연결되지 않았습니다. |\n | 자동 설정 비교 | **Backend·Frontend 구현** | 확인·접수·진행·선정·취소·재시도 화면과 API가 있습니다. 평가 분할이 미등록이라 결과는 현재 모두 `UNVALIDATED`입니다. |\n-| ETF·시장 자료 | **파이프라인·조회 API 구현, 연동 보완 중** | KRX 수집과 조회 기능이 있으나 백테스트 접수의 데이터 버전은 아직 로컬 검증용 픽스처를 가리킵니다. 외부 지표는 API 키와 제공기관 상태에 의존합니다. |\n+| ETF·시장 자료 | **실자료 적재, 기업행위 미적재** | 여덟 섬터의 대표 ETF를 확정해 대응표를 발행했고(`SEM-2026-09-16-001`), 2024-09-19~2026-09-15의 484거래일 일봉을 적재했습니다. 섬터 목록·대표 상품 정보·공통 평가 가능 기간 조회가 열려 있고 백테스트 접수도 이 자료를 읽습니다. **분배금·분할 기업행위는 아직 넣지 않았고** 공시 대조 기록도 비어 있습니다. 거래정지 처리 규칙은 미확정입니다. 외부 거시 지표는 API 키와 제공기관 상태에 의존합니다. |\n | 시장 흐름 | **API·일부 화면 구현** | 시장 지표 조회와 화면 구성이 있습니다. 분야별 경제환경 유사 구간 검색과 전략 비교 연결은 후속 범위입니다. |\n | 뉴스 | **Backend API 구현** | 수집·필터·묶음·조회와 실패 격리를 검증했습니다. 사용자 화면 통합은 후속 범위입니다. |\n | 사용자 인증 | **일부 흐름 구현** | 회원가입, 이메일 인증, 로그인, 세션 복원과 화면 접근 보호가 있습니다. Backend 로그아웃 API와 백테스트의 개발용 사용자 헤더를 세션으로 교체하는 작업은 남아 있습니다. |\n@@ -74,7 +74,9 @@ Thorp는 다음 세 가지 질문에 답할 수 있는 분석 흐름을 만듭\n | 배우기 | **명세 단계** | 입문자를 위한 학습 페이지와 진단 연결은 제품 범위에 포함되지만 아직 화면으로 구현되지 않았습니다. |\n \n 백테스트 실제 실행 검증 범위와 제약은\n-[`backtest-execution-verification-2026-09.md`](docs/guides/backtest-execution-verification-2026-09.md)에서 확인할 수\n+[`backtest-execution-verification-2026-09.md`](docs/guides/backtest-execution-verification-2026-09.md)에서, ETF·시장 자료의\n+검증 범위와 보증하지 않는 것은\n+[`etf-market-data-verification-2026-09.md`](docs/guides/etf-market-data-verification-2026-09.md)에서 확인할 수\n 있습니다. 전체 기능의 범위·우선순위·미확정 항목은 [`specs/README.md`](specs/README.md)가 기준입니다.\n \n ## 백테스트 서비스 실행 구조\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "README.md",
+          "old_path": "README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2213866,
+      "head_commit_sha": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "created_at": "2026-09-17T15:16:46.559+09:00",
+      "merge_request_id": 948989,
+      "state": "without_files",
+      "real_size": "4",
+      "patch_id_sha": "529ed5525795e2ca6db80a70b37476ff2346a52e",
+      "commits": [
+        {
+          "id": "9814a3da49a27d3a18cbeb09eb006842c2f7e206",
+          "short_id": "9814a3da",
+          "created_at": "2026-09-17T15:14:39.000+09:00",
+          "parent_ids": [
+            "52e37c2b58a55d8596f1e095bfd4952ae0b68406"
+          ],
+          "title": "docs(be): T016에 무엇을 하고 무엇을 남겼는지 적는다",
+          "message": "docs(be): T016에 무엇을 하고 무엇을 남겼는지 적는다\n\n문서 마무리와 검증 명령은 끝냈고 시나리오 실행과 수기 대조가 남았다. 항목을\n닫지 않고 남은 일과 그 선행 조건을 적었다.\n\n거래정지 규칙은 확정하지 않기로 한 결정을 적었다. 적재 구간에 정지 사례가\n0건이라 길이 분포를 집계할 입력이 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:14:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:14:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9814a3da49a27d3a18cbeb09eb006842c2f7e206"
+        },
+        {
+          "id": "52e37c2b58a55d8596f1e095bfd4952ae0b68406",
+          "short_id": "52e37c2b",
+          "created_at": "2026-09-17T15:14:39.000+09:00",
+          "parent_ids": [
+            "181ccb8ac11bd1b1a0cf1d0ee8979a1268a991aa"
+          ],
+          "title": "docs(be): 자료 확보 검증 기록을 남기고 README의 자료 현황을 고친다",
+          "message": "docs(be): 자료 확보 검증 기록을 남기고 README의 자료 현황을 고친다\n\n무엇이 확인됐고 무엇이 확인되지 않았는지를 한 문서에 모았다. 세 파트 검증\n명령과 적재 현황은 실제로 돌리고 세어 적었다.\n\nquickstart 시나리오는 돌리지 않았다. 돌리면 로컬 DB에 되돌릴 수 없는 행이\n남기 때문이며, 그 사실과 까닭을 기록에 적었다. 확인하지 못한 것을 확인한\n것처럼 적지 않는다.\n\n수기 대조는 하지 못했다. 기업행위와 대조 기록이 0건이라 DB에 비교할 값이\n없다. 기업행위 적재가 선행 조건이다.\n\n백엔드 검증에서 실패 12건이 나오는데 001이 만든 것도 아니고 001이 닫을 수도\n없다. 001이 병합되기 전 기준선에서도 같은 이름의 12건이 실패한다는 것을 함께\n확인해 적었다.\n\nREADME의 자료 현황은 접수가 픽스처를 읽는다고 적고 있었다. 실자료를 읽도록\n바뀐 지 지났고, 기업행위가 비어 있다는 사실이 대신 빠져 있었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:14:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:14:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52e37c2b58a55d8596f1e095bfd4952ae0b68406"
+        },
+        {
+          "id": "181ccb8ac11bd1b1a0cf1d0ee8979a1268a991aa",
+          "short_id": "181ccb8a",
+          "created_at": "2026-09-17T15:14:39.000+09:00",
+          "parent_ids": [
+            "12fc23ce673167d1ceb99866eff0d527f15be544"
+          ],
+          "title": "docs(be): quickstart의 자료 식별자를 실제 값과 맞춘다",
+          "message": "docs(be): quickstart의 자료 식별자를 실제 값과 맞춘다\n\n자료 버전과 대응표 이름이 예시 적재 시절 값으로 남아 있었다. 적힌 대로 따라\n하면 없는 자료 버전을 가리키고, 섹터 코드 BATTERY는 지금 대응표에 없어\n404가 난다.\n\n시나리오 4에 평가 기간 조회의 재판정 재료를 확인하는 절차를 더했다. 전략을\n주는 경우와 상한만 주는 경우를 나눠, 화면이 목록으로 구한 시작일이 서버가\n직접 계산한 시작일과 같은 날인지 눈으로 볼 수 있게 했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:14:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:14:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/181ccb8ac11bd1b1a0cf1d0ee8979a1268a991aa"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2825598": []
+  }
+}

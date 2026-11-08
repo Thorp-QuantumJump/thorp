@@ -1,0 +1,949 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949758,
+    "iid": 204,
+    "project_id": 1444456,
+    "title": "feat(fe): 사례 상세와 Thorp 종합 비교",
+    "description": "## 작업 내용 요약\n\n경제환경 검색 화면에 Thorp 종합 비교 전환, 사례 상세, 자료 기준 시점, 과거 기준월 지정을 붙였다. 결과·상태·안내 영역의 문장은 전부 API 응답에서 오고, 응답이 주지 않는 고정 문구만 `fixedCopy.ts` 한 곳에 둔다. 다섯 신뢰 범위 표시는 키보드만으로 도달할 수 있고 좁은 폭에서도 접히지 않는다.\n\n## 관련 티켓\n\nS15P21E205-284\n\n## 주요 변경 사항\n\n- 종합 비교 전환과 분야별 거리·기여 표시. 동일가중은 \"Thorp의 설계 선택\"으로 적는다\n- 사례 상세에 지표별 명목 비중·실제 거리 기여·z·공통 척도를 실어 손계산 대조가 된다. 시대별 위치는 문장만 있는 별도 보조 설명이고 z·분위수로 바꾸지 않는다\n- 과거 기준월 지정. 범위는 `baseline-months`의 `range`이고, 모드별 최신월보다 뒤인 달은 그 모드의 최신월로 되돌린다\n- 기준월·검색 방식 변경 안내 문구를 계약(`regime-search-api.md` §5)에 고정하고, 화면의 고정 문구를 `fixedCopy.ts`로 모았다. 010 렌더 파일의 한국어 문장 리터럴은 0건\n\n## 테스트\n\n`npm run lint && npm run build && npm test` — lint 0 errors(경고 20건은 전부 기존 charts/ui 파일), 빌드 통과, vitest 94 files / 881 tests passed, skipped 0, legacy 13 passed.\n\n자동 테스트 밖: 없음. 백엔드 조회는 모두 mock이고 실제 응답 대조는 M9 quickstart 실행에서 한다.\n\n## 리뷰 포인트\n\n- **기준월 변경 안내 문구의 출처.** 사용자가 기준월을 직접 바꾼 경우는 `baseline-months`의 `note`가 말하는 상황(모드 전환에 따른 기준월 정렬)과 달라 그 문구를 쓸 수 없다. FR-022 ②가 허용하는 \"계약이 고정한 문구\"로 처리하고 계약에 문구를 적었다. 백엔드가 내려주는 쪽이 낫다고 보면 별도 티켓으로 뺄 수 있다.\n- **`fixedCopy.ts`의 경계 판정.** `indicatorAgnostic.test.tsx`가 010 렌더 파일의 한국어 문장 리터럴을 0건으로 막는다. 로딩·조회 실패 문구처럼 결과를 서술하지 않는 문장도 같이 옮겼는데, 이 범위가 적절한지 봐달라.",
+    "state": "merged",
+    "created_at": "2026-09-17T21:52:07.054+09:00",
+    "updated_at": "2026-09-17T22:11:15.195+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-17T22:11:14.857+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/284-regime-detail-composite",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+    "merge_commit_sha": "ce337aa54cd1063f39d47e219cdc55617982fb65",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T21:52:08.839+09:00",
+    "reference": "!204",
+    "references": {
+      "short": "!204",
+      "relative": "!204",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!204"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/204",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949758,
+    "iid": 204,
+    "project_id": 1444456,
+    "title": "feat(fe): 사례 상세와 Thorp 종합 비교",
+    "description": "## 작업 내용 요약\n\n경제환경 검색 화면에 Thorp 종합 비교 전환, 사례 상세, 자료 기준 시점, 과거 기준월 지정을 붙였다. 결과·상태·안내 영역의 문장은 전부 API 응답에서 오고, 응답이 주지 않는 고정 문구만 `fixedCopy.ts` 한 곳에 둔다. 다섯 신뢰 범위 표시는 키보드만으로 도달할 수 있고 좁은 폭에서도 접히지 않는다.\n\n## 관련 티켓\n\nS15P21E205-284\n\n## 주요 변경 사항\n\n- 종합 비교 전환과 분야별 거리·기여 표시. 동일가중은 \"Thorp의 설계 선택\"으로 적는다\n- 사례 상세에 지표별 명목 비중·실제 거리 기여·z·공통 척도를 실어 손계산 대조가 된다. 시대별 위치는 문장만 있는 별도 보조 설명이고 z·분위수로 바꾸지 않는다\n- 과거 기준월 지정. 범위는 `baseline-months`의 `range`이고, 모드별 최신월보다 뒤인 달은 그 모드의 최신월로 되돌린다\n- 기준월·검색 방식 변경 안내 문구를 계약(`regime-search-api.md` §5)에 고정하고, 화면의 고정 문구를 `fixedCopy.ts`로 모았다. 010 렌더 파일의 한국어 문장 리터럴은 0건\n\n## 테스트\n\n`npm run lint && npm run build && npm test` — lint 0 errors(경고 20건은 전부 기존 charts/ui 파일), 빌드 통과, vitest 94 files / 881 tests passed, skipped 0, legacy 13 passed.\n\n자동 테스트 밖: 없음. 백엔드 조회는 모두 mock이고 실제 응답 대조는 M9 quickstart 실행에서 한다.\n\n## 리뷰 포인트\n\n- **기준월 변경 안내 문구의 출처.** 사용자가 기준월을 직접 바꾼 경우는 `baseline-months`의 `note`가 말하는 상황(모드 전환에 따른 기준월 정렬)과 달라 그 문구를 쓸 수 없다. FR-022 ②가 허용하는 \"계약이 고정한 문구\"로 처리하고 계약에 문구를 적었다. 백엔드가 내려주는 쪽이 낫다고 보면 별도 티켓으로 뺄 수 있다.\n- **`fixedCopy.ts`의 경계 판정.** `indicatorAgnostic.test.tsx`가 010 렌더 파일의 한국어 문장 리터럴을 0건으로 막는다. 로딩·조회 실패 문구처럼 결과를 서술하지 않는 문장도 같이 옮겼는데, 이 범위가 적절한지 봐달라.",
+    "state": "merged",
+    "created_at": "2026-09-17T21:52:07.054+09:00",
+    "updated_at": "2026-09-17T22:11:15.195+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-17T22:11:14.857+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/284-regime-detail-composite",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+    "merge_commit_sha": "ce337aa54cd1063f39d47e219cdc55617982fb65",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T21:52:08.839+09:00",
+    "reference": "!204",
+    "references": {
+      "short": "!204",
+      "relative": "!204",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!204"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/204",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "26",
+    "latest_build_started_at": "2026-09-17T21:52:17.122+09:00",
+    "latest_build_finished_at": "2026-09-17T21:56:05.394+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 203786,
+      "iid": 133,
+      "project_id": 1444456,
+      "sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+      "ref": "feat(fe)/284-regime-detail-composite",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T21:52:17.019+09:00",
+      "updated_at": "2026-09-17T22:24:03.489+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203786"
+    },
+    "head_pipeline": {
+      "id": 203786,
+      "iid": 133,
+      "project_id": 1444456,
+      "sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+      "ref": "feat(fe)/284-regime-detail-composite",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T21:52:17.019+09:00",
+      "updated_at": "2026-09-17T22:24:03.489+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203786",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T21:52:17.122+09:00",
+      "finished_at": "2026-09-17T22:24:03.482+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/203786",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f",
+      "head_sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+      "start_sha": "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "8d0a4264b68be7f4e7309070411e319c55c2c88d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828510,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T21:52:07.141+09:00",
+          "updated_at": "2026-09-17T21:52:07.145+09:00",
+          "system": true,
+          "noteable_id": 949758,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 204,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2c42debe20805432d32c41406ff814df8970ba9e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828511,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T21:52:07.162+09:00",
+          "updated_at": "2026-09-17T21:52:07.171+09:00",
+          "system": true,
+          "noteable_id": 949758,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 204,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "03c4d58e210fb29abb059e42922978527070c45e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828522,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 아키텍처 및 문자열 가드(Agnostic Test):** `indicatorAgnostic.test.tsx`를 통해 컴포넌트 내부에 도메인 리터럴(지표 ID, 이름, 분야명)이나 결과 서술 문구가 하드코딩되는 것을 정적 분석 및 테스트로 원천 차단한 설계가 매우 훌륭합니다.\n- **접근성 및 반응형 레이아웃 검증:** 키보드 네비게이션 경로(`tab`)와 좁은 폭에서의 레이아웃 깨짐 방지를 테스트 코드(`NarrowDisclosure.test.tsx`, `RegimeSearchPage.test.tsx`)로 엄격하게 고정하여 UI 품질을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- 사용자가 `baseline-months`에 정의된 범위를 벗어난 잘못된 과거 기준월을 직접 입력하거나 선택했을 때, UI가 모드의 최신월로 올바르게 강제 정렬하고 사용자에게 안내 문구를 노출하는지 시나리오 테스트로 검증하세요.\n- 사례 상세(`CaseDetail`) 로딩 중 네트워크 에러가 발생했을 때, `LoadError` 컴포넌트가 올바르게 렌더링되며 재시도(`onRetry`) 동작이 정상 수행되는지 확인하는 테스트를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7da3ccc2614f08f0acb68488f289a24939cc24b9 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T21:52:16.374+09:00",
+          "updated_at": "2026-09-17T21:52:16.374+09:00",
+          "system": false,
+          "noteable_id": 949758,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 204,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1a39ddfeaf61404006a5116a17ff59bc9cc3f917",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828583,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T22:11:13.119+09:00",
+          "updated_at": "2026-09-17T22:11:13.127+09:00",
+          "system": true,
+          "noteable_id": 949758,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 204,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5e26d4a7788f8b18919b2cea248103f6fc39315e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2828584,
+          "type": null,
+          "body": "mentioned in commit ce337aa54cd1063f39d47e219cdc55617982fb65",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T22:11:14.828+09:00",
+          "updated_at": "2026-09-17T22:11:14.833+09:00",
+          "system": true,
+          "noteable_id": 949758,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 204,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2216458,
+      "head_commit_sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+      "base_commit_sha": "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f",
+      "start_commit_sha": "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f",
+      "created_at": "2026-09-17T21:52:07.557+09:00",
+      "merge_request_id": 949758,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "814a7df53827255c8ee4f4de5df3e1ac5706c441"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2216458,
+      "head_commit_sha": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+      "base_commit_sha": "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f",
+      "start_commit_sha": "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f",
+      "created_at": "2026-09-17T21:52:07.557+09:00",
+      "merge_request_id": 949758,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "814a7df53827255c8ee4f4de5df3e1ac5706c441",
+      "commits": [
+        {
+          "id": "7da3ccc2614f08f0acb68488f289a24939cc24b9",
+          "short_id": "7da3ccc2",
+          "created_at": "2026-09-17T21:50:48.000+09:00",
+          "parent_ids": [
+            "c7ae2c35e655bedca9738a93c97dcff59e6b43b4"
+          ],
+          "title": "feat(fe): 과거 기준월 지정과 키보드 도달 경로",
+          "message": "feat(fe): 과거 기준월 지정과 키보드 도달 경로\n\n기준월을 직접 골라 검색할 수 있게 하고, 그때 뜨는 안내를 포함해 결과·상태·안내\n영역의 고정 문구를 fixedCopy.ts 한 곳으로 모았다. 화면 파일에서 문장을 조립할\n자리를 없애 FR-022 ②를 테스트로 고정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T21:50:48.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T21:50:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7da3ccc2614f08f0acb68488f289a24939cc24b9"
+        },
+        {
+          "id": "c7ae2c35e655bedca9738a93c97dcff59e6b43b4",
+          "short_id": "c7ae2c35",
+          "created_at": "2026-09-17T21:31:52.000+09:00",
+          "parent_ids": [
+            "a5932c482871c22546d405ae16049c84b79f62dc"
+          ],
+          "title": "feat(fe): 사례 상세 계산 근거와 자료 기준 시점 표시",
+          "message": "feat(fe): 사례 상세 계산 근거와 자료 기준 시점 표시\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T21:31:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T21:31:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c7ae2c35e655bedca9738a93c97dcff59e6b43b4"
+        },
+        {
+          "id": "a5932c482871c22546d405ae16049c84b79f62dc",
+          "short_id": "a5932c48",
+          "created_at": "2026-09-17T21:27:57.000+09:00",
+          "parent_ids": [
+            "0e2ca2addc2e3592d69ff9a860396ebf4cf7be2f"
+          ],
+          "title": "feat(fe): 종합 비교 전환과 기준월 변경 안내 연결",
+          "message": "feat(fe): 종합 비교 전환과 기준월 변경 안내 연결\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T21:27:57.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T21:27:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a5932c482871c22546d405ae16049c84b79f62dc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,8 @@\n+import { Disclosure } from './Disclosure'\n+\n+interface Props { note: string; context: string }\n+\n+/** 모드 전환으로 기준월이 달라졌을 때 서버가 정한 한 문장만 보인다. */\n+export function BaselineChangeNotice({ note, context }: Props) {\n+  return <Disclosure label=\"기준월 변경\" context={context}><p>{note}</p></Disclosure>\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/BaselineChangeNotice.tsx",
+          "old_path": "frontend/src/components/regime/BaselineChangeNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+.detail { min-width: 0; grid-column: 1 / -1; padding: 18px; border: 1px solid var(--thorp-line-strong); border-radius: 6px; background: var(--thorp-surface); overflow-wrap: anywhere; }\n+.detail h4 { margin: 0 0 10px; font-size: 1.05rem; }\n+.detail h5 { margin: 18px 0 8px; font-size: .9rem; }\n+.detail p { margin: 6px 0; color: var(--thorp-copy); font-size: .8rem; }\n+.detail strong { color: var(--thorp-foreground); }\n+.reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }\n+.reasons ul { padding-left: 18px; }\n+.indicator { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--thorp-line); }\n+.indicator h6 { margin: 0 0 8px; font-size: .85rem; }\n+.tableScroll { max-width: 100%; overflow-x: auto; }\n+.tableScroll table { min-width: 650px; border-collapse: collapse; font-size: .72rem; }\n+.tableScroll caption { text-align: left; padding: 8px 0; color: var(--thorp-copy); }\n+.tableScroll th, .tableScroll td { padding: 7px 10px; border-bottom: 1px solid var(--thorp-line); text-align: left; }\n+.era { margin-top: 14px; padding: 10px 12px; border-left: 2px solid var(--thorp-accent-soft); background: var(--thorp-background); }\n+@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } .detail { padding: 12px; } }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.module.css",
+          "old_path": "frontend/src/components/regime/CaseDetail.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,30 @@\n+import { render, screen, within } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { regimeDetail, regimeResult } from '@/test/regimeFixtures'\n+import { CaseDetail } from './CaseDetail'\n+\n+const summary = regimeResult().cases[0]\n+\n+describe('사례 상세', () => {\n+  it('명목 비중·거리 기여와 공통 척도, 시점별 원값·z를 손계산 입력으로 보인다', () => {\n+    render(<CaseDetail detail={regimeDetail()} summary={summary} mode=\"FIELD\" fieldNames={{ 'field-1': '시험 분야' }} />)\n+    const detail = screen.getByRole('region', { name: '2012-03 사례 상세' })\n+    expect(detail.textContent).toContain('명목 비중 0.500000000000')\n+    expect(detail.textContent).toContain('실제 거리 기여 0.204173755344')\n+    expect(detail.textContent).toContain('중앙값 3.45 · 산포 0.593040887402')\n+    expect(detail.textContent).toContain('2016-05~2026-04 (120개월)')\n+    expect(detail.textContent).toContain('-0.590178531422')\n+    expect(detail.textContent).toContain('3.1 %')\n+    expect(detail.textContent).toContain(summary.similar[0])\n+    expect(detail.textContent).toContain(summary.different[0])\n+  })\n+\n+  it('시대별 위치는 별도 문장만 보이고 설명이 없어도 사례는 유지한다', () => {\n+    render(<CaseDetail detail={regimeDetail({ eraPosition: null })} summary={summary} mode=\"FIELD\" fieldNames={{}} />)\n+    const era = screen.getByLabelText('시험 지표 당시 평소 대비 위치')\n+    expect(era.textContent).toContain('계산할 수 없습니다')\n+    expect(era.textContent).not.toMatch(/z\\s*값|분위수|백분율/)\n+    expect(screen.getByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()\n+    expect(within(screen.getByRole('region', { name: '2012-03 사례 상세' })).getByText('전체 거리', { exact: false })).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetail.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,60 @@\n+import type { RegimeCaseDetail, RegimeCaseSummary, RegimeMode } from '@/types/regime'\n+import { FieldBreakdown } from './FieldBreakdown'\n+import * as copy from './fixedCopy'\n+import styles from './CaseDetail.module.css'\n+\n+interface Props {\n+  detail: RegimeCaseDetail\n+  summary: RegimeCaseSummary\n+  mode: RegimeMode\n+  fieldNames: Record<string, string>\n+}\n+\n+/** 저장된 계산 입력과 척도를 그대로 보여 손계산 대조가 가능하게 한다. */\n+export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {\n+  return (\n+    <section className={styles.detail} aria-label={`${detail.endMonth} 사례 상세`}>\n+      <h4>사례 상세 · {detail.endMonth}</h4>\n+      <p>관측 구간 {detail.observationMonths.join(' · ')}</p>\n+      <p>전체 거리 <strong>{detail.distance}</strong></p>\n+      {mode === 'COMPOSITE' ? (\n+        <FieldBreakdown detail={detail} summary={summary} fieldNames={fieldNames} />\n+      ) : (\n+        <div className={styles.reasons}>\n+          <section><h5>비슷한 점</h5><ul>{summary.similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul></section>\n+          <section><h5>다른 점</h5><ul>{summary.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul></section>\n+        </div>\n+      )}\n+      <h5>지표별 계산 근거</h5>\n+      {detail.indicators.map((indicator) => (\n+        <section key={indicator.id} className={styles.indicator} aria-label={`${indicator.name} 계산 근거`}>\n+          <h6>{indicator.name}</h6>\n+          <p>지표 거리 Eᵢ {indicator.e} · 명목 비중 {indicator.nominalWeight}\n+            {indicator.distanceShare != null && <> · 실제 거리 기여 {indicator.distanceShare}</>}\n+          </p>\n+          {indicator.scale ? (\n+            <p>공통 척도 · {indicator.scale.method} · 중앙값 {indicator.scale.median} · 산포 {indicator.scale.spread} · 구간 {indicator.scale.windowStart}~{indicator.scale.windowEnd} ({indicator.scale.months}개월)</p>\n+          ) : <p>{copy.scaleMissingNote}</p>}\n+          <div className={styles.tableScroll}>\n+            <table>\n+              <caption>비교 시점별 실제 값과 공통 척도 z</caption>\n+              <thead><tr><th scope=\"col\">질의 시점</th><th scope=\"col\">사례 시점</th><th scope=\"col\">질의값</th><th scope=\"col\">사례값</th><th scope=\"col\">질의 z</th><th scope=\"col\">사례 z</th></tr></thead>\n+              <tbody>{indicator.comparisonMonths.map((month, index) => (\n+                <tr key={`${month}-${index}`}>\n+                  <td>{month}</td><td>{indicator.caseMonths[index]}</td>\n+                  <td>{indicator.queryRaw[index]} {indicator.unit}</td><td>{indicator.caseRaw[index]} {indicator.unit}</td>\n+                  <td>{indicator.queryZ[index]}</td><td>{indicator.caseZ[index]}</td>\n+                </tr>\n+              ))}</tbody>\n+            </table>\n+          </div>\n+          <div className={styles.era} aria-label={`${indicator.name} 당시 평소 대비 위치`}>\n+            <strong>당시 평소 대비 위치 · 보조 설명</strong>\n+            <p>{detail.eraPosition?.[indicator.id]?.sentence ?? copy.eraPositionMissingNote}</p>\n+          </div>\n+        </section>\n+      ))}\n+      <p>{detail.postPeriod.note}</p>\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetail.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+import { useEffect, useState } from 'react'\n+import { getRegimeCaseDetail } from '@/api/regime'\n+import type { RegimeCaseDetail as Detail, RegimeCaseSummary, RegimeMode } from '@/types/regime'\n+import { CaseDetail } from './CaseDetail'\n+import * as copy from './fixedCopy'\n+import { LoadError } from './LoadError'\n+\n+interface Props { searchId: string; summary: RegimeCaseSummary; mode: RegimeMode; fieldNames: Record<string, string> }\n+\n+/** 상세 요청은 검색 식별자에 고정해 다른 기준월의 같은 사례를 섞지 않는다. */\n+export function CaseDetailLoader({ searchId, summary, mode, fieldNames }: Props) {\n+  const [detail, setDetail] = useState<Detail | null>(null)\n+  const [error, setError] = useState<unknown>(null)\n+  const [retry, setRetry] = useState(0)\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    getRegimeCaseDetail(summary.endMonth, { searchId }, controller.signal)\n+      .then((next) => {\n+        if (controller.signal.aborted) return\n+        if (next.searchId !== searchId || next.endMonth !== summary.endMonth) {\n+          setError(new Error(copy.detailMismatchMessage))\n+          return\n+        }\n+        setDetail(next)\n+        setError(null)\n+      })\n+      .catch((caught: unknown) => { if (!controller.signal.aborted) setError(caught) })\n+    return () => controller.abort()\n+  }, [searchId, summary.endMonth, retry])\n+\n+  if (error) return <LoadError error={error} onRetry={() => setRetry((value) => value + 1)} />\n+  if (!detail) return <p role=\"status\">{copy.loadingCaseDetail}</p>\n+  return <CaseDetail detail={detail} summary={summary} mode={mode} fieldNames={fieldNames} />\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetailLoader.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetailLoader.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,9 @@\n .reasons h4 { margin: 0 0 8px; color: var(--thorp-copy); font-size: .76rem; font-weight: 600; }\n .reasons ul { margin: 0; padding-left: 17px; color: var(--thorp-foreground); font-size: .84rem; line-height: 1.6; }\n .reasons li + li { margin-top: 4px; }\n+.detailButton { grid-column: 2; justify-self: start; min-height: 40px; padding: 6px 14px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }\n+.detailButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+.detailSlot { grid-column: 1 / -1; min-width: 0; }\n .more { display: block; width: 100%; min-height: 44px; border: 1px solid var(--thorp-line-strong); margin-top: 12px; background: var(--thorp-surface); color: var(--thorp-foreground); cursor: pointer; }\n .more:hover { border-color: var(--thorp-accent-soft); }\n .more:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n@@ -19,6 +22,6 @@\n .limitNote { margin: 14px 0 0; color: var(--thorp-copy); font-size: .78rem; }\n @media (max-width: 640px) {\n   .case { grid-template-columns: 1fr; gap: 10px; }\n-  .months, .reasons { grid-column: 1; }\n+  .months, .reasons, .detailButton { grid-column: 1; }\n   .reasons { grid-template-columns: 1fr; gap: 14px; }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.module.css",
+          "old_path": "frontend/src/components/regime/CaseList.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,14 +32,14 @@ function result(displayed: number, stored = 10, eligible = 12): RegimeSearchResu\n describe('사례 목록', () => {\n   it('처음 세 개를 보이고 저장된 사례가 더 있을 때만 더 보기를 요청한다', () => {\n     const onShowMore = vi.fn()\n-    const { rerender } = render(<CaseList result={result(3)} onShowMore={onShowMore} isLoading={false} context=\"시험 검색\" />)\n+    const { rerender } = render(<CaseList result={result(3)} onShowMore={onShowMore} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)\n     expect(screen.getByText('2012-03')).toBeTruthy()\n     expect(screen.queryByText('01')).toBeNull()\n     expect(screen.queryByText('0.412938571034')).toBeNull()\n     fireEvent.click(screen.getByRole('button', { name: '더 보기' }))\n     expect(onShowMore).toHaveBeenCalledOnce()\n-    rerender(<CaseList result={result(10)} onShowMore={onShowMore} isLoading={false} context=\"시험 검색\" />)\n+    rerender(<CaseList result={result(10)} onShowMore={onShowMore} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(10)\n     expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()\n     expect(screen.getByText('가까운 순서로 10개까지 보입니다.')).toBeTruthy()\n@@ -48,7 +48,7 @@ describe('사례 목록', () => {\n   })\n \n   it('후보가 둘이면 빈자리를 만들거나 더 보기를 표시하지 않는다', () => {\n-    render(<CaseList result={result(2, 2, 2)} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" />)\n+    render(<CaseList result={result(2, 2, 2)} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2)\n     expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()\n     expect(screen.queryByText('가까운 순서로 10개까지 보입니다.')).toBeNull()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,6 @@\n+import { useState } from 'react'\n import type { RegimeSearchResult } from '@/types/regime'\n+import { CaseDetailLoader } from './CaseDetailLoader'\n import { Disclosure } from './Disclosure'\n import styles from './CaseList.module.css'\n \n@@ -7,10 +9,12 @@ interface CaseListProps {\n   onShowMore: () => void\n   isLoading: boolean\n   context: string\n+  fieldNames: Record<string, string>\n }\n \n /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */\n-export function CaseList({ result, onShowMore, isLoading, context }: CaseListProps) {\n+export function CaseList({ result, onShowMore, isLoading, context, fieldNames }: CaseListProps) {\n+  const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)\n   return (\n     <section aria-labelledby=\"regime-cases-title\" className={styles.list}>\n       <div className={styles.heading}>\n@@ -43,6 +47,21 @@ export function CaseList({ result, onShowMore, isLoading, context }: CaseListPro\n                 <ul>{item.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul>\n               </section>\n             </div>\n+            {item.detailAvailable && (\n+              <button\n+                type=\"button\" className={styles.detailButton}\n+                aria-expanded={selectedEndMonth === item.endMonth}\n+                aria-controls={`regime-detail-${item.endMonth}`}\n+                onClick={() => setSelectedEndMonth((current) => current === item.endMonth ? null : item.endMonth)}\n+              >\n+                {selectedEndMonth === item.endMonth ? '상세 닫기' : '상세 보기'}\n+              </button>\n+            )}\n+            {selectedEndMonth === item.endMonth && (\n+              <div id={`regime-detail-${item.endMonth}`} className={styles.detailSlot}>\n+                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} />\n+              </div>\n+            )}\n           </li>\n         ))}\n       </ul>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,7 @@\n+.section { border-top: 1px solid var(--thorp-line); padding: 18px 0 24px; color: var(--thorp-copy); font-size: .78rem; line-height: 1.6; }\n+.section h3 { margin: 0 0 8px; color: var(--thorp-foreground); font-size: .95rem; }\n+.section p { margin: 0 0 8px; }\n+.section dl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }\n+.section dl > div { display: flex; flex-wrap: wrap; gap: 4px 8px; }\n+.section dt { color: var(--thorp-foreground); }\n+.section dd { margin: 0; }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/DataAsOf.module.css",
+          "old_path": "frontend/src/components/regime/DataAsOf.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { regimeResult } from '@/test/regimeFixtures'\n+import { DataAsOf } from './DataAsOf'\n+\n+describe('자료 기준 시점', () => {\n+  it('지표별 대상월과 발표일을 보이고 수집 시각이나 유지율은 보이지 않는다', () => {\n+    const data = regimeResult().dataAsOf\n+    render(<DataAsOf data={data} context=\"시험 검색\" />)\n+    expect(screen.getByText(/대상월 2026-07 · 발표일 2026-09-12/)).toBeTruthy()\n+    expect(screen.queryByText(/수집 시각|retention|유지율|겹침 비율/)).toBeNull()\n+    expect(screen.queryByText(/개정 ·/)).toBeNull()\n+  })\n+\n+  it('개정 정보가 실제로 있을 때만 한 줄을 더한다', () => {\n+    const data = { ...regimeResult().dataAsOf, revisions: [{ indicatorId: 'indicator-1', indicator: '시험 지표', month: '2026-06', revisedAt: '2026-09-10' }] }\n+    render(<DataAsOf data={data} context=\"시험 검색\" />)\n+    expect(screen.getByText('개정 · 시험 지표 2026-06 · 2026-09-10')).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/DataAsOf.test.tsx",
+          "old_path": "frontend/src/components/regime/DataAsOf.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+import type { RegimeDataAsOf } from '@/types/regime'\n+import styles from './DataAsOf.module.css'\n+\n+/** 결과에 실제로 반영된 대상월과 발표일만 표시한다. */\n+export function DataAsOf({ data, context }: { data: RegimeDataAsOf; context: string }) {\n+  return (\n+    <section className={styles.section} aria-label={`${context}: 자료 기준 시점`}>\n+      <h3>자료 기준 시점</h3>\n+      {data.note && <p>{data.note}</p>}\n+      <dl>\n+        {data.indicators.map((item) => (\n+          <div key={item.indicatorId}>\n+            <dt>{item.indicator}</dt>\n+            <dd>대상월 {item.targetMonth ?? '—'} · 발표일 {item.publishedAt ?? '—'}</dd>\n+          </div>\n+        ))}\n+      </dl>\n+      {data.revisions.map((item) => (\n+        <p key={`${item.indicatorId}-${item.month}`}>\n+          개정 · {item.indicator} {item.month} · {item.revisedAt}\n+        </p>\n+      ))}\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/DataAsOf.tsx",
+          "old_path": "frontend/src/components/regime/DataAsOf.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+.breakdown { min-width: 0; border-top: 1px solid var(--thorp-line); padding-top: 16px; }\n+.breakdown h4, .breakdown h5 { margin: 0 0 8px; }\n+.breakdown p { color: var(--thorp-copy); }\n+.breakdown > ul { list-style: none; padding: 0; }\n+.breakdown > ul li { display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 8px 0; border-bottom: 1px solid var(--thorp-line); }\n+.breakdown > ul strong { min-width: 100px; }\n+.reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }\n+.reasons ul { padding-left: 18px; overflow-wrap: anywhere; }\n+@media (max-width: 640px) { .reasons { grid-template-columns: 1fr; } }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/FieldBreakdown.module.css",
+          "old_path": "frontend/src/components/regime/FieldBreakdown.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,24 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { regimeDetail, regimeResult } from '@/test/regimeFixtures'\n+import { FieldBreakdown } from './FieldBreakdown'\n+\n+const summary = regimeResult().cases[0]\n+\n+describe('종합 분야 내역', () => {\n+  it('거리·기여와 닮은 점·차이를 함께 보이고 동일가중을 설계 선택으로 말한다', () => {\n+    render(<FieldBreakdown detail={regimeDetail({ byField: { 'field-1': '0.4', 'field-2': '0.8' }, contribution: { 'field-1': '0.25', 'field-2': '0.75' } })} summary={summary} fieldNames={{ 'field-1': '시험 분야', 'field-2': '다른 분야' }} />)\n+    expect(screen.getByText(/Thorp의 설계 선택/)).toBeTruthy()\n+    expect(screen.queryByText(/모든 지표의 중요성이 같다/)).toBeNull()\n+    expect(screen.getByText('시험 분야')).toBeTruthy()\n+    expect(screen.getByText('다른 분야')).toBeTruthy()\n+    expect(screen.getByText('실제 거리 기여 0.75')).toBeTruthy()\n+    expect(screen.getByText(summary.similar[0])).toBeTruthy()\n+    expect(screen.getByText(summary.different[0])).toBeTruthy()\n+  })\n+\n+  it('총 거리가 0이어서 기여 키가 없으면 가짜 0을 표시하지 않는다', () => {\n+    render(<FieldBreakdown detail={regimeDetail({ distance: '0', contribution: undefined })} summary={summary} fieldNames={{ 'field-1': '시험 분야' }} />)\n+    expect(screen.queryByText(/실제 거리 기여/)).toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/FieldBreakdown.test.tsx",
+          "old_path": "frontend/src/components/regime/FieldBreakdown.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+import type { RegimeCaseDetail, RegimeCaseSummary } from '@/types/regime'\n+import * as copy from './fixedCopy'\n+import styles from './FieldBreakdown.module.css'\n+\n+interface Props {\n+  detail: RegimeCaseDetail\n+  summary: RegimeCaseSummary\n+  fieldNames: Record<string, string>\n+}\n+\n+/** 종합 상세에서 서버의 분야 거리와 실제 기여를 함께 보여 준다. */\n+export function FieldBreakdown({ detail, summary, fieldNames }: Props) {\n+  return (\n+    <section className={styles.breakdown} aria-label=\"분야별 비교\">\n+      <h4>분야별 거리와 기여</h4>\n+      <p>{copy.equalWeightNote}</p>\n+      <ul>\n+        {Object.entries(detail.byField).map(([id, distance]) => (\n+          <li key={id}>\n+            <strong>{fieldNames[id] ?? id}</strong>\n+            <span>거리 {distance}</span>\n+            {detail.contribution?.[id] != null && <span>실제 거리 기여 {detail.contribution[id]}</span>}\n+          </li>\n+        ))}\n+      </ul>\n+      <div className={styles.reasons}>\n+        <section><h5>비슷한 점</h5><ul>{summary.similar.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul></section>\n+        <section><h5>다른 점</h5><ul>{summary.different.map((sentence, index) => <li key={index}>{sentence}</li>)}</ul></section>\n+      </div>\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/FieldBreakdown.tsx",
+          "old_path": "frontend/src/components/regime/FieldBreakdown.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import axios from 'axios'\n import { normalizeApiError } from '@/api/client'\n+import * as copy from './fixedCopy'\n import styles from './LoadError.module.css'\n \n interface Props { error: unknown; onRetry: () => void }\n@@ -12,7 +13,7 @@ export function LoadError({ error, onRetry }: Props) {\n     : normalizeApiError(error).message\n   return (\n     <section className={styles.error} role=\"alert\">\n-      <h2>조회에 실패했습니다</h2>\n+      <h2>{copy.loadErrorTitle}</h2>\n       <p>{message}</p>\n       <button type=\"button\" onClick={onRetry}>다시 시도</button>\n     </section>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/LoadError.tsx",
+          "old_path": "frontend/src/components/regime/LoadError.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,21 @@\n+import { readFileSync } from 'node:fs'\n+import { resolve } from 'node:path'\n+import { describe, expect, it } from 'vitest'\n+\n+describe('좁은 화면의 신뢰 범위 표시', () => {\n+  it('다섯 표시를 접거나 자르지 않고 한 열로 재배치한다', () => {\n+    const css = readFileSync(resolve(process.cwd(), 'src/components/regime/Disclosure.module.css'), 'utf8')\n+    expect(css).toMatch(/@media\\s*\\(max-width:\\s*520px\\)\\s*\\{\\s*\\.disclosure\\s*\\{\\s*grid-template-columns:\\s*1fr/)\n+    expect(css).toMatch(/overflow-wrap:\\s*anywhere/)\n+    expect(css).not.toMatch(/display:\\s*none|visibility:\\s*hidden|overflow:\\s*hidden/)\n+  })\n+\n+  it('다섯 표시를 담는 자리도 좁아졌다고 감추지 않는다', () => {\n+    const css = readFileSync(resolve(process.cwd(), 'src/pages/RegimeSearchPage.module.css'), 'utf8')\n+    const container = css.match(/\\.disclosures\\s*\\{[^}]*\\}/g) ?? []\n+    expect(container.length).toBeGreaterThan(0)\n+    for (const rule of container) {\n+      expect(rule).not.toMatch(/display:\\s*none|visibility:\\s*hidden|overflow:\\s*hidden|max-height/)\n+    }\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/NarrowDisclosure.test.tsx",
+          "old_path": "frontend/src/components/regime/NarrowDisclosure.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import { NewerReleases } from './NewerReleases'\n+\n+describe('최신 개별 발표', () => {\n+  it('기준월과 분리된 안내로 대상월과 발표일을 표시한다', () => {\n+    render(<NewerReleases context=\"종합 2026-05 검색 결과\" releases={[{ indicatorId: 'i', indicator: '시험 지표', month: '2026-07', publishedAt: '2026-09-12' }]} />)\n+    const notice = screen.getByRole('status', { name: '종합 2026-05 검색 결과: 더 최신인 개별 발표' })\n+    expect(notice.textContent).toContain('대상월 2026-07 · 발표일 2026-09-12')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/NewerReleases.test.tsx",
+          "old_path": "frontend/src/components/regime/NewerReleases.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+import type { RegimeDataAsOf } from '@/types/regime'\n+import { Disclosure } from './Disclosure'\n+\n+interface Props { releases: RegimeDataAsOf['newerReleases']; context: string }\n+\n+/** 종합 기준월 뒤에 발표된 자료는 검색 입력과 분리해 알린다. */\n+export function NewerReleases({ releases, context }: Props) {\n+  if (releases.length === 0) return null\n+  return (\n+    <Disclosure label=\"더 최신인 개별 발표\" context={context}>\n+      <ul>\n+        {releases.map((item) => (\n+          <li key={`${item.indicatorId}-${item.month}-${item.publishedAt}`}>\n+            {item.indicator} · 대상월 {item.month ?? '—'} · 발표일 {item.publishedAt ?? '—'}\n+          </li>\n+        ))}\n+      </ul>\n+    </Disclosure>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/NewerReleases.tsx",
+          "old_path": "frontend/src/components/regime/NewerReleases.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,46 @@\n+/**\n+ * 010 화면이 쓰는 고정 문구를 한곳에 모은다.\n+ *\n+ * <p>spec FR-022 ②는 사례·검색 상태·안내 영역의 문장이 <b>전부</b> 사전 계산 산출물이거나\n+ * 계약이 고정한 문구여야 하고, 화면 코드에 하드코딩된 결과 문구가 0건이어야 한다고 정한다.\n+ * 확률 변환·원인 단정·추천은 표현이 무한해 목록으로 막을 수 없으므로 <b>지어낼 자리를 없애는</b>\n+ * 쪽으로 막는다 — 그래서 결과 문장은 API 응답에서만 오고, 응답이 주지 않는 나머지 문장은\n+ * 화면 파일이 아니라 이 파일에만 둔다. 검사는 `indicatorAgnostic.test.tsx`가 한다.\n+ */\n+\n+/** 기준월을 직접 바꿔 이전 검색과 달라졌을 때(contracts/regime-search-api.md §5, spec FR-031). */\n+export const baselineMonthChangedNote = (baselineMonth: string) =>\n+    `기준월을 ${baselineMonth}로 바꾸어 새 검색을 열었습니다.`\n+\n+/** 기준월은 같고 검색 방식만 바뀌었을 때(contracts/regime-search-api.md §5, spec FR-031). */\n+export const searchModeChangedNote = '검색 방식을 바꾸어 새 검색을 열었습니다.'\n+\n+/** 008이 예시 자료로 도는 동안 모든 검색 결과에 붙는다(spec FR-038, 008 FR-022). */\n+export const sampleDataNote = '이 결과는 아직 확정되지 않은 예시 자료로 계산되었습니다.'\n+\n+/** 동일가중이 설계 선택임을 밝힌다(spec FR-010). 중요성이 같다는 뜻으로 적지 않는다. */\n+export const equalWeightNote = '분야별 거리를 같은 비중으로 합치는 것은 Thorp의 설계 선택입니다.'\n+\n+/** 저장된 척도가 없어 손계산 대조를 할 수 없는 지표에 붙는다(spec FR-028). */\n+export const scaleMissingNote = '공통 척도 정보를 확인할 수 없습니다.'\n+\n+/** 시대별 보조 설명이 없는 지표에 붙는다 — 사례와 순위는 그대로다(spec FR-017). */\n+export const eraPositionMissingNote = '당시 평소 대비 위치를 계산할 수 없습니다.'\n+\n+/** 무엇을 고르면 무엇을 볼 수 있는지 안내한다 — 결과를 서술하지 않는다. */\n+export const pageLead = '경제 분야를 고르면 과거의 가까운 관측 구간을 살펴볼 수 있습니다.'\n+\n+/** 분야 목록을 불러오는 동안 화면이 자기 상태를 말한다. */\n+export const loadingFields = '검색할 분야를 불러오는 중입니다.'\n+\n+/** 검색 결과를 불러오는 동안 화면이 자기 상태를 말한다. */\n+export const loadingCases = '과거 사례를 불러오는 중입니다.'\n+\n+/** 사례 상세를 불러오는 동안 화면이 자기 상태를 말한다. */\n+export const loadingCaseDetail = '사례 상세를 불러오는 중입니다.'\n+\n+/** 조회 실패는 빈 결과가 아니다 — 빈 상태와 다른 화면으로 알린다(spec FR-034). */\n+export const loadErrorTitle = '조회에 실패했습니다'\n+\n+/** 다른 검색의 사례 상세를 섞어 보이지 않는다(spec FR-029). */\n+export const detailMismatchMessage = '요청한 사례 상세와 응답이 일치하지 않습니다.'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/fixedCopy.ts",
+          "old_path": "frontend/src/components/regime/fixedCopy.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+import { readdirSync, readFileSync } from 'node:fs'\n+import { describe, expect, it } from 'vitest'\n+\n+function walk(directory: string): string[] {\n+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {\n+    const path = `${directory}/${entry.name}`\n+    if (entry.isDirectory()) return walk(path)\n+    return /\\.tsx?$/.test(entry.name) ? [path] : []\n+  })\n+}\n+\n+/** 010 운영 파일을 손 목록 없이 모은다. */\n+const sources = walk('src').filter((path) =>\n+  !/\\.test\\.tsx?$|^src\\/test\\//.test(path) &&\n+  (/^src\\/components\\/regime\\//.test(path) || /^(src\\/(api|types)\\/regime\\.ts|src\\/hooks\\/useRegimeSearch\\.ts|src\\/pages\\/RegimeSearchPage\\.tsx)$/.test(path)),\n+)\n+\n+// 임시 등록표의 이름·ID. 검사는 화면의 도메인 상수 유입을 막는다.\n+const registryWords = [\n+  'PRODUCTION', 'CONSUMPTION_INVESTMENT', 'EXTERNAL_TRADE', 'LABOR',\n+  'PRICES_COMMODITIES', 'FINANCE_HOUSING', 'GLOBAL_ECONOMY',\n+  'UNEMPLOYMENT_RATE', 'CONSUMER_PRICES', 'USD_KRW',\n+  '소비·투자', '대외 거래', '물가·원자재', '금융·주택', '세계 경제',\n+  '실업률', '소비자물가 상승률', '원/달러 환율',\n+]\n+\n+describe('010 화면의 등록표 경계', () => {\n+  it('src를 훑어 API·타입·훅·화면·컴포넌트를 빠짐없이 검사한다', () => {\n+    expect(sources).toContain('src/pages/RegimeSearchPage.tsx')\n+    expect(sources).toContain('src/components/regime/CaseDetail.tsx')\n+    expect(sources).toContain('src/api/regime.ts')\n+    expect(sources.length).toBeGreaterThan(10)\n+  })\n+\n+  it('지표와 분야의 등록표 ID·이름을 코드에 박지 않는다', () => {\n+    const found = sources.flatMap((path) => registryWords\n+      .filter((word) => readFileSync(path, 'utf8').includes(word))\n+      .map((word) => `${path}: ${word}`))\n+    expect(found).toEqual([])\n+  })\n+\n+  it('결과 설명이나 추천 판단 문구를 화면에서 만들지 않는다', () => {\n+    const forbidden = [/\\d+%\\s*유사/, /충분히 유사/, /대표 유사국면/, /경제환경이 좋아서/, /투자 성공 확률/]\n+    const found = sources.flatMap((path) => forbidden\n+      .filter((pattern) => pattern.test(readFileSync(path, 'utf8')))\n+      .map((pattern) => `${path}: ${pattern}`))\n+    expect(found).toEqual([])\n+  })\n+})\n+\n+/** 주석은 검사 대상이 아니다 — 화면에 나가는 문자열만 본다. */\n+function stripComments(source: string): string {\n+  return source.replace(/\\/\\*[\\s\\S]*?\\*\\//g, '').replace(/^[ \\t]*\\/\\/.*$/gm, '')\n+}\n+\n+const koreanSentence = /[가-힣][^'\"`<>{}]*(습니다|입니다|합니다|됩니다)/g\n+\n+describe('010 화면의 고정 문구 경계', () => {\n+  const screens = sources.filter((path) => path.endsWith('.tsx'))\n+\n+  it('결과·상태·안내 영역의 문장을 화면 파일에서 만들지 않는다', () => {\n+    // 그 자리 문장은 API 응답에서 오고, 응답이 주지 않는 고정 문구는 fixedCopy.ts에만 둔다.\n+    const found = screens.flatMap((path) =>\n+      (stripComments(readFileSync(path, 'utf8')).match(koreanSentence) ?? []).map((text) => `${path}: ${text}`))\n+    expect(found).toEqual([])\n+  })\n+\n+  it('고정 문구는 계약 근거와 함께 한 파일에 모인다', () => {\n+    const copy = readFileSync('src/components/regime/fixedCopy.ts', 'utf8')\n+    expect(copy.match(koreanSentence)?.length).toBeGreaterThan(5)\n+    // 근거 없는 문구가 조용히 늘지 않게 export마다 주석을 요구한다.\n+    const exports = copy.match(/^export const /gm) ?? []\n+    const documented = copy.match(/\\*\\/\\nexport const /g) ?? []\n+    expect(documented.length).toBe(exports.length)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/indicatorAgnostic.test.tsx",
+          "old_path": "frontend/src/components/regime/indicatorAgnostic.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,9 +7,13 @@\n .searchForm { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; padding: 26px 0; }\n .searchForm label { width: 100%; color: var(--thorp-copy); font-size: .8rem; }\n .searchForm select { min-width: min(100%, 280px); min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }\n+.monthControl { display: grid; gap: 6px; }\n+.monthControl label { width: auto; }\n+.monthControl input { min-height: 46px; padding: 8px 12px; border: 1px solid var(--thorp-line-strong); border-radius: 5px; color: var(--thorp-foreground); background: var(--thorp-surface); font: inherit; }\n .searchForm button { min-height: 46px; padding: 8px 20px; border: 1px solid var(--thorp-accent); border-radius: 5px; color: var(--thorp-action-foreground); background: var(--thorp-accent); font: 600 .85rem/1.3 var(--thorp-font-body); cursor: pointer; }\n .searchForm button:disabled { opacity: .55; cursor: not-allowed; }\n-.searchForm select:focus-visible, .searchForm button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+.searchForm .compositeButton { color: var(--thorp-foreground); background: var(--thorp-surface); border-color: var(--thorp-line-strong); }\n+.searchForm select:focus-visible, .searchForm button:focus-visible, .monthControl input:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .loading { margin: 24px 0; color: var(--thorp-copy); font-size: .85rem; }\n .results { min-width: 0; }\n .resultHeading { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--thorp-line-strong); padding: 22px 0; }\n@@ -17,11 +21,5 @@\n .resultHeading > p { margin: 0; color: var(--thorp-copy); font-size: .82rem; }\n .resultHeading strong { color: var(--thorp-foreground); font-variant-numeric: tabular-nums; }\n .disclosures { display: grid; gap: 8px; margin-bottom: 20px; }\n-.dataAsOf { border-top: 1px solid var(--thorp-line); padding: 18px 0 24px; color: var(--thorp-copy); font-size: .78rem; line-height: 1.6; }\n-.dataAsOf > p { margin: 0 0 8px; }\n-.dataAsOf dl { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0; }\n-.dataAsOf dl > div { display: flex; flex-wrap: wrap; gap: 4px 8px; }\n-.dataAsOf dt { color: var(--thorp-foreground); }\n-.dataAsOf dd { margin: 0; }\n @media (max-width: 800px) { .main { width: calc(100% - 32px); padding-top: 18px; } }\n-@media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button { width: 100%; } }\n+@media (max-width: 420px) { .main { width: calc(100% - 28px); } .searchForm select, .searchForm button, .monthControl, .monthControl input { width: 100%; } }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.module.css",
+          "old_path": "frontend/src/pages/RegimeSearchPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,11 @@\n import { fireEvent, render, screen, waitFor } from '@testing-library/react'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n-import { getRegimeBaselineMonths, getRegimeSearch } from '@/api/regime'\n-import { regimeResult } from '@/test/regimeFixtures'\n+import userEvent from '@testing-library/user-event'\n+import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'\n+import { regimeDetail, regimeResult } from '@/test/regimeFixtures'\n import { RegimeSearchPage } from './RegimeSearchPage'\n \n-vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn() }))\n+vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))\n vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => null }))\n \n const baseline = {\n@@ -65,4 +66,120 @@ describe('경제환경 검색 화면', () => {\n     expect(screen.getByRole('button', { name: '다시 시도' })).toBeTruthy()\n     expect(screen.queryByRole('heading', { name: '비교할 수 있는 과거 시점이 없습니다.' })).toBeNull()\n   })\n+\n+  it('종합으로 전환하며 기준월이 달라질 때 API 문구를 알리고 종합 계산 불가는 그대로 둔다', async () => {\n+    vi.mocked(getRegimeSearch).mockImplementation(async (query) => query.mode === 'composite'\n+      ? regimeResult({ mode: 'COMPOSITE', field: null, baselineMonth: '2026-05', baselineOrigin: 'T_ALL', status: 'NOT_COMPUTABLE', statusNote: '종합 비교를 계산할 수 없습니다.', cases: [] })\n+      : regimeResult())\n+    await search()\n+    await screen.findByText('2012-03')\n+    fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))\n+    expect(await screen.findByRole('heading', { name: '종합 비교를 계산할 수 없습니다.' })).toBeTruthy()\n+    expect(screen.getByRole('status', { name: '종합 2026-05 검색 결과: 기준월 변경' }).textContent).toContain('전환 안내')\n+    expect(screen.queryByText('2012-03')).toBeNull()\n+    fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))\n+    expect(await screen.findByText('2012-03')).toBeTruthy()\n+  })\n+\n+  it('사례 상세를 검색 식별자에 고정해 조회하고 종합 분야 내역을 표시한다', async () => {\n+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({ mode: 'COMPOSITE', field: null }))\n+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail({ contribution: { 'field-1': '1.000000000000' } }))\n+    await search()\n+    await screen.findByText('2012-03')\n+    fireEvent.click(screen.getByRole('button', { name: '상세 보기' }))\n+    expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()\n+    expect(vi.mocked(getRegimeCaseDetail)).toHaveBeenCalledWith('2012-03', { searchId: 'search-1' }, expect.any(AbortSignal))\n+    expect(screen.getByText('실제 거리 기여 1.000000000000')).toBeTruthy()\n+  })\n+\n+  it('과거 기준월을 지정하면 요청과 입력, 결과 제목에 그 월을 유지한다', async () => {\n+    vi.mocked(getRegimeSearch).mockImplementation(async (query) => regimeResult({\n+      baselineMonth: query.baselineMonth ?? '2026-07',\n+      baselineOrigin: query.baselineMonth ? 'USER_SPECIFIED' : 'T_G',\n+    }))\n+    await search()\n+    await screen.findByText('2012-03')\n+    const month = screen.getByLabelText('기준월 지정') as HTMLInputElement\n+    expect(month.min).toBe('1995-04')\n+    expect(month.max).toBe('2026-07')\n+    fireEvent.change(month, { target: { value: '2020-04' } })\n+    fireEvent.click(screen.getByRole('button', { name: '과거 사례 찾기' }))\n+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(\n+      { mode: 'field', field: 'field-1', baselineMonth: '2020-04', limit: 3 },\n+      expect.any(AbortSignal),\n+    ))\n+    expect(month.value).toBe('2020-04')\n+    expect(await screen.findByText('2020-04')).toBeTruthy()\n+    expect(screen.getByRole('status', { name: '시험 분야 2020-04 검색 결과: 기준월 변경' }).textContent).toContain('기준월을 2020-04로')\n+    fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))\n+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(\n+      { mode: 'composite', field: undefined, baselineMonth: '2020-04', limit: 3 },\n+      expect.any(AbortSignal),\n+    ))\n+  })\n+\n+  it('선택한 월이 종합 최신월보다 뒤이면 종합 모드의 최신월로 전환한다', async () => {\n+    vi.mocked(getRegimeSearch).mockImplementation(async (query) => regimeResult({\n+      mode: query.mode === 'composite' ? 'COMPOSITE' : 'FIELD',\n+      field: query.mode === 'composite' ? null : { id: 'field-1', name: '시험 분야' },\n+      baselineMonth: query.mode === 'composite' ? '2026-05' : '2026-07',\n+    }))\n+    await search()\n+    await screen.findByText('2012-03')\n+    fireEvent.change(screen.getByLabelText('기준월 지정'), { target: { value: '2026-07' } })\n+    fireEvent.click(screen.getByRole('button', { name: 'Thorp 종합 비교' }))\n+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(\n+      { mode: 'composite', field: undefined, baselineMonth: undefined, limit: 3 },\n+      expect.any(AbortSignal),\n+    ))\n+    expect((screen.getByLabelText('기준월 지정') as HTMLInputElement).value).toBe('')\n+    expect(screen.getByRole('status', { name: '종합 2026-05 검색 결과: 기준월 변경' }).textContent).toContain('전환 안내')\n+  })\n+\n+  it('키보드로 검색·기준월·모드 전환·더 보기·상세 열기와 다섯 표시에 도달한다', async () => {\n+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult({\n+      comparisonMonths: [{ indicatorId: 'indicator-1', indicator: '시험 지표', months: ['2026-05'], omitted: ['2026-06'], note: '빠진 달 안내' }],\n+      counts: { evaluated: 10, eligible: 10, stored: 10, displayed: 1 },\n+    }))\n+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail())\n+    await search()\n+    await screen.findByText('2012-03')\n+    const user = userEvent.setup()\n+    screen.getByLabelText('경제 분야').focus()\n+    await user.tab()\n+    expect(document.activeElement).toBe(screen.getByLabelText('기준월 지정'))\n+    await user.tab()\n+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '과거 사례 찾기' }))\n+    await user.tab()\n+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Thorp 종합 비교' }))\n+    const reached: string[] = []\n+    for (let index = 0; index < 5; index += 1) {\n+      await user.tab()\n+      reached.push(document.activeElement?.getAttribute('aria-label') ?? '')\n+    }\n+    // 접어 두는 자리에 넣지 않는다 — 펼치기 전에 이미 탭 순서에 있다(FR-037 ⑤).\n+    for (const element of screen.getAllByRole('status')) {\n+      expect(element.closest('details,[aria-expanded]')).toBeNull()\n+    }\n+    expect(reached).toEqual([\n+      '시험 분야 2026-07 검색 결과: 검색 상태',\n+      '시험 분야 2026-07 검색 결과: 예시 자료',\n+      '시험 분야 2026-07 검색 결과: 빠진 비교 시점',\n+      '시험 분야 2026-07 검색 결과: 역사 비교',\n+      '시험 분야 2026-07 검색 결과: 사례 구분',\n+    ])\n+    await user.tab()\n+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '상세 보기' }))\n+    await user.tab()\n+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '더 보기' }))\n+    await user.keyboard('{Enter}')\n+    await waitFor(() => expect(vi.mocked(getRegimeSearch)).toHaveBeenLastCalledWith(\n+      expect.objectContaining({ limit: 10 }),\n+      expect.any(AbortSignal),\n+    ))\n+    await user.tab({ shift: true })\n+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '상세 보기' }))\n+    await user.keyboard('{Enter}')\n+    expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,11 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react'\n import { getRegimeBaselineMonths } from '@/api/regime'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { BasisNotice } from '@/components/regime/BasisNotice'\n+import { BaselineChangeNotice } from '@/components/regime/BaselineChangeNotice'\n import { CaseList } from '@/components/regime/CaseList'\n import { ComparisonMonthsNotice } from '@/components/regime/ComparisonMonthsNotice'\n+import { DataAsOf } from '@/components/regime/DataAsOf'\n import { Disclosure } from '@/components/regime/Disclosure'\n import { EmptyResult } from '@/components/regime/EmptyResult'\n+import * as copy from '@/components/regime/fixedCopy'\n import { LoadError } from '@/components/regime/LoadError'\n+import { NewerReleases } from '@/components/regime/NewerReleases'\n import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'\n import { useRegimeSearch } from '@/hooks/useRegimeSearch'\n import type { RegimeBaselineMonths, RegimeSearchQuery } from '@/types/regime'\n@@ -17,7 +21,9 @@ export function RegimeSearchPage() {\n   const [baselineError, setBaselineError] = useState<unknown>(null)\n   const [baselineRetry, setBaselineRetry] = useState(0)\n   const [fieldId, setFieldId] = useState('')\n+  const [selectedMonth, setSelectedMonth] = useState('')\n   const [query, setQuery] = useState<RegimeSearchQuery | null>(null)\n+  const [baselineChangeNote, setBaselineChangeNote] = useState<string | null>(null)\n   const { result, error, isLoading, showMore, retry } = useRegimeSearch(query)\n \n   useEffect(() => {\n@@ -35,14 +41,36 @@ export function RegimeSearchPage() {\n     return () => controller.abort()\n   }, [baselineRetry])\n \n+  /**\n+   * 기준월이나 검색 방식이 바뀌어 후보가 달라지면 한 문장으로 알린다(spec FR-031).\n+   * 문장은 계약이 고정한 것만 쓰고 화면에서 조립하지 않는다(spec FR-022 ②).\n+   */\n+  const changeNote = (mode: 'FIELD' | 'COMPOSITE', month: string | null, userSpecified: boolean) => {\n+    if (!result || !month) return null\n+    if (result.baselineMonth !== month) {\n+      return userSpecified ? copy.baselineMonthChangedNote(month) : baselines?.note ?? null\n+    }\n+    return result.mode === mode ? null : copy.searchModeChangedNote\n+  }\n+\n+  /** 화면이 고를 수 있는 달은 결과가 실제로 있는 달뿐이다(계약 §5). 뒤면 그 모드의 최신월로 돌아간다. */\n+  const openSearch = (next: RegimeSearchQuery, latest: string | null | undefined) => {\n+    const month = selectedMonth && latest && selectedMonth <= latest ? selectedMonth : undefined\n+    if (selectedMonth && !month) setSelectedMonth('')\n+    const mode = next.mode === 'composite' ? 'COMPOSITE' : 'FIELD'\n+    setBaselineChangeNote(changeNote(mode, month ?? latest ?? null, month != null))\n+    if (query?.mode === next.mode && query.field === next.field && query.baselineMonth === month) retry()\n+    else setQuery({ ...next, baselineMonth: month })\n+  }\n+\n   const submit = (event: FormEvent<HTMLFormElement>) => {\n     event.preventDefault()\n     if (!fieldId) return\n-    if (query?.field === fieldId) {\n-      retry()\n-    } else {\n-      setQuery({ mode: 'field', field: fieldId })\n-    }\n+    openSearch({ mode: 'field', field: fieldId }, baselines?.byField.find((field) => field.id === fieldId)?.baselineMonth)\n+  }\n+\n+  const openComposite = () => {\n+    if (baselines?.composite) openSearch({ mode: 'composite' }, baselines.composite)\n   }\n \n   const context = result\n@@ -56,13 +84,13 @@ export function RegimeSearchPage() {\n         <header className={styles.hero}>\n           <p className={styles.eyebrow}>ECONOMIC REGIME SEARCH</p>\n           <h1>비슷했던 때 보기</h1>\n-          <p>경제 분야를 고르면 과거의 가까운 관측 구간을 살펴볼 수 있습니다.</p>\n+          <p>{copy.pageLead}</p>\n         </header>\n \n         {baselineError ? (\n           <LoadError error={baselineError} onRetry={() => setBaselineRetry((value) => value + 1)} />\n         ) : !baselines ? (\n-          <p role=\"status\" className={styles.loading}>검색할 분야를 불러오는 중입니다.</p>\n+          <p role=\"status\" className={styles.loading}>{copy.loadingFields}</p>\n         ) : (\n           <form onSubmit={submit} className={styles.searchForm}>\n             <label htmlFor=\"regime-field\">경제 분야</label>\n@@ -72,13 +100,23 @@ export function RegimeSearchPage() {\n                 <option key={field.id} value={field.id}>{field.name}</option>\n               ))}\n             </select>\n+            {baselines.range?.earliest && baselines.range.latest && (\n+              <div className={styles.monthControl}>\n+                <label htmlFor=\"regime-month\">기준월 지정</label>\n+                <input id=\"regime-month\" type=\"month\" min={baselines.range.earliest} max={baselines.range.latest}\n+                  value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} />\n+              </div>\n+            )}\n             <button type=\"submit\" disabled={!fieldId || isLoading}>과거 사례 찾기</button>\n+            <button type=\"button\" disabled={!baselines.composite || isLoading} onClick={openComposite} className={styles.compositeButton}>\n+              Thorp 종합 비교\n+            </button>\n           </form>\n         )}\n \n         {query && (\n           <section className={styles.results} aria-label=\"경제환경 검색 결과\" aria-busy={isLoading}>\n-            {isLoading && !result && <p role=\"status\" className={styles.loading}>과거 사례를 불러오는 중입니다.</p>}\n+            {isLoading && !result && <p role=\"status\" className={styles.loading}>{copy.loadingCases}</p>}\n             {error ? <LoadError error={error} onRetry={retry} /> : result && (\n               <>\n                 <div className={styles.resultHeading}>\n@@ -89,35 +127,22 @@ export function RegimeSearchPage() {\n                   <p>기준월 <strong>{result.baselineMonth}</strong></p>\n                 </div>\n                 <div className={styles.disclosures}>\n+                  {baselineChangeNote && <BaselineChangeNotice note={baselineChangeNote} context={context} />}\n                   <SearchStatusBadge result={result} context={context} />\n                   {result.versions.sampleData && (\n                     <Disclosure label=\"예시 자료\" context={context} tone=\"warning\">\n-                      <p>예시 자료</p>\n+                      <p>{copy.sampleDataNote}</p>\n                     </Disclosure>\n                   )}\n                   <ComparisonMonthsNotice comparisonMonths={result.comparisonMonths} context={context} />\n                   <BasisNotice basis={result.basis} context={context} />\n+                  <NewerReleases releases={result.dataAsOf.newerReleases} context={context} />\n                 </div>\n-                <section className={styles.dataAsOf} aria-label={`${context}: 자료 기준 시점`}>\n-                  {result.dataAsOf.note && <p>{result.dataAsOf.note}</p>}\n-                  <dl>\n-                    {result.dataAsOf.indicators.map((indicator) => (\n-                      <div key={indicator.indicatorId}>\n-                        <dt>{indicator.indicator}</dt>\n-                        <dd>대상월 {indicator.targetMonth ?? '—'} · 발표일 {indicator.publishedAt ?? '—'}</dd>\n-                      </div>\n-                    ))}\n-                  </dl>\n-                  {result.dataAsOf.revisions.map((revision) => (\n-                    <p key={`${revision.indicatorId}-${revision.month}`}>\n-                      개정 · {revision.indicator} {revision.month} · {revision.revisedAt}\n-                    </p>\n-                  ))}\n-                </section>\n+                <DataAsOf data={result.dataAsOf} context={context} />\n                 {result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (\n                   <EmptyResult result={result} />\n                 ) : (\n-                  <CaseList result={result} onShowMore={showMore} isLoading={isLoading} context={context} />\n+                  <CaseList key={result.searchId} result={result} onShowMore={showMore} isLoading={isLoading} context={context} fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])} />\n                 )}\n               </>\n             )}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import type { RegimeSearchResult } from '@/types/regime'\n+import type { RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'\n \n export function regimeResult(overrides: Partial<RegimeSearchResult> = {}): RegimeSearchResult {\n   return {\n@@ -23,3 +23,20 @@ export function regimeResult(overrides: Partial<RegimeSearchResult> = {}): Regim\n     ...overrides,\n   }\n }\n+\n+export function regimeDetail(overrides: Partial<RegimeCaseDetail> = {}): RegimeCaseDetail {\n+  return {\n+    searchId: 'search-1', endMonth: '2012-03', observationMonths: ['2012-01', '2012-02', '2012-03'],\n+    distance: '0.412938571034', byField: { 'field-1': '0.412938571034' },\n+    indicators: [{\n+      id: 'indicator-1', name: '시험 지표', unit: '%',\n+      comparisonMonths: ['2026-05'], caseMonths: ['2012-01'],\n+      queryRaw: ['3.1'], caseRaw: ['3.2'], queryZ: ['-0.590178531422'], caseZ: ['-0.421556093873'],\n+      e: '0.168622437549', nominalWeight: '0.500000000000', distanceShare: '0.204173755344',\n+      scale: { median: '3.45', spread: '0.593040887402', method: 'MAD', windowStart: '2016-05', windowEnd: '2026-04', months: 120 },\n+    }],\n+    eraPosition: { 'indicator-1': { sentence: '시험 지표는 당시 평소보다 높은 편이었습니다.', method: 'MAD', windowStart: '2002-01', windowEnd: '2011-12', months: 120 } },\n+    postPeriod: { endMonth: '2012-03', available: false, note: '사례 이후 결과는 아직 연결되지 않았습니다.' },\n+    ...overrides,\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/regimeFixtures.ts",
+          "old_path": "frontend/src/test/regimeFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -266,6 +266,11 @@ constitution 원칙 VI가 금지한 *\"가용성 필터 결과로 전체 경제\n `composite`가 `byField`의 어느 값보다 이를 수 있다 — 발표 시차가 가장 긴 지표를 따르기 때문이다\n (008 Assumptions). `note`는 모드 전환 시 한 문장 알림의 고정 문구다(spec US3 시나리오 1).\n \n+기준월을 직접 바꾸어 이전 검색과 달라졌다면 화면은 \"기준월을 {YYYY-MM}로 바꾸어 새 검색을 열었습니다.\"를\n+표시한다. 기준월은 같아도 검색 모드만 바뀌었다면 \"검색 방식을 바꾸어 새 검색을 열었습니다.\"를 표시한다.\n+이는 검색 변경 안내의 고정 문구이며 사례의 유사성이나 결과 상태를 화면이 판정하는 문구가 아니다\n+(spec US4 시나리오 2, FR-031).\n+\n **값의 출처가 둘이다**: 분야 **이름**은 `MacroIndicatorPort`가(008 등록표), **기준월과 범위**는\n `regime_baseline_month` 표가 준다. 기준월을 008에서 직접 읽지 않는 이유는\n [contracts/macro-indicator-port.md](macro-indicator-port.md) §0.2 — 008이 올린 최신 T_g는 배치가 아직\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/contracts/regime-search-api.md",
+          "old_path": "specs/010-economic-regime-search/contracts/regime-search-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -322,13 +322,13 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **묶음 M8** · `feat(fe)/{티켓}-regime-detail-composite`\n \n-- [ ] T131 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다\n-- [ ] T132 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)\n-- [ ] T133 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)\n-- [ ] T134 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **\"Thorp의 설계 선택\"** 이라고 적고 *\"모든 지표의 중요성이 같다\"* 고 쓰지 않는다(FR-010, US3 시나리오 5)\n-- [ ] T135 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)\n-- [ ] T136 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)\n-- [ ] T137 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정\n+- [X] T131 [US3] (FE) 모드 전환을 `RegimeSearchPage.tsx`에 붙인다 — 'Thorp 종합 비교'를 누르면 `mode=composite`로 다시 부른다\n+- [X] T132 [US3] (FE) 기준월 변경 한 문장 알림을 `frontend/src/components/regime/BaselineChangeNotice.tsx`에 작성 — 문구는 `baseline-months` 응답의 `note`를 쓴다(US3 시나리오 1)\n+- [X] T133 [US3] (FE) 종합 사례의 분야별 거리·기여도 표시를 `frontend/src/components/regime/FieldBreakdown.tsx`에 작성 — 닮은 점과 차이를 **함께** 보인다(US3 시나리오 2)\n+- [X] T134 [US3] (FE) 동일가중 설명을 `FieldBreakdown.tsx`에 붙인다 — **\"Thorp의 설계 선택\"** 이라고 적고 *\"모든 지표의 중요성이 같다\"* 고 쓰지 않는다(FR-010, US3 시나리오 5)\n+- [X] T135 [US3] (FE) **더 최신인 개별 발표 표시**를 `frontend/src/components/regime/NewerReleases.tsx`에 작성 — `dataAsOf.newerReleases`를 **별도 정보로** 보이고 질의값에 섞지 않는다(spec FR-016, US3 시나리오 3)\n+- [X] T136 [P] [US3] (FE 테스트) 종합이 `NOT_COMPUTABLE`일 때 남은 분야로 그리지 않음을 `FieldBreakdown.test.tsx`에 고정(US3 시나리오 6). **종합만 불가일 때 분야 검색이 막히지 않음**도 함께 고정한다(FR-039)\n+- [X] T137 [P] [US3] (FE 테스트) 동일가중 문구와 금지 문구, `newerReleases`가 질의값과 분리돼 보임을 `FieldBreakdown.test.tsx`·`NewerReleases.test.tsx`에 고정\n \n ---\n \n@@ -341,17 +341,17 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **묶음 M8 (이어서)** · 같은 브랜치\n \n-- [ ] T138 [US4] (FE) 기준월 지정을 `RegimeSearchPage.tsx`에 붙인다 — 지정한 월을 유지하고 **화면에 항상 표시한다**(spec FR-003). 범위는 `baseline-months`의 `range`\n-- [ ] T139 [US4] (FE) 자료 기준 시점 표시를 `frontend/src/components/regime/DataAsOf.tsx`에 작성 — **지표별** 대상월 + 발표일. 값이 개정된 경우에만 개정 안내를 한 줄 덧붙인다. **수집 시각을 쓰지 않는다**(spec FR-002·FR-031)\n-- [ ] T140 [US4] (FE) 사례 상세를 `frontend/src/components/regime/CaseDetail.tsx`에 작성 — 거리·분야 기여·**지표별 명목 비중과 실제 거리 기여**·z·척도(중앙값·산포·방법·구간)·비교 시점. 손계산 대조가 가능해야 한다(spec FR-028)\n-- [ ] T141 [US4] (FE) 설명 문장을 `CaseList.tsx`·`CaseDetail.tsx`에 표시 — 응답의 `similar`·`different`를 그대로 쓴다. **실제 값과 단위**를 보여주고 시대별 상대 위치를 기본 검색 이유로 섞지 않는다(FR-015·FR-017)\n-- [ ] T142 [US4] (FE) 사례 상세에 `eraPosition`을 **당시 평소 대비 위치라는 별도 보조 설명**으로 표시한다 — 문장만 보이고 시대별 z·분위수·백분율로 바꾸지 않는다. 설명이 없는 지표는 보조 설명을 계산할 수 없다고 안내하되 사례와 순위는 유지한다(FR-017·SC-011)\n-- [ ] T143 [P] [US4] (FE 테스트) 유지율·`retention`·겹침 비율이 화면에 **0건**임을 `DataAsOf.test.tsx`에 고정(FR-031, SC-007)\n-- [ ] T144 [P] [US4] (FE 테스트) 대상월·발표일이 늘 보이고, 개정이 없으면 개정 안내가 없으며, 수집 시각이 0건임을 `DataAsOf.test.tsx`에 고정\n-- [ ] T145 [P] [US4] (FE 테스트) 상세에 명목 비중·실제 거리 기여와 공통 척도가 보여 손계산이 가능함을 `CaseDetail.test.tsx`에 고정(SC-003). 시대별 위치는 별도 보조 문장으로 표시되고, 그 영역의 z·분위수·백분율이 0건이며 보조 설명이 없어도 사례가 유지됨을 확인한다(SC-011)\n-- [ ] T146 (FE) 검색·더 보기·모드 전환·기준월 지정·상세 열기를 **키보드만으로** 할 수 있게 한다 — 포커스 순서가 화면 순서와 맞고, 다섯 표시가 그 경로에서 모두 도달 가능하다(spec FR-037)\n-- [ ] T147 [P] (FE 테스트) 키보드만으로 다섯 표시에 도달함과, **좁은 폭에서 잘리거나 접히지 않음**을 고정한다(SC-014)\n-- [ ] T148 [P] (FE 테스트) 010 화면 코드에 **지표 ID·지표명·분야 이름이 0건**임을 `frontend/src/components/regime/indicatorAgnostic.test.tsx`에 고정 — 007의 전략명 검사와 같은 방식이고, 대상 파일은 **손 목록이 아니라 `src`를 훑어** 모은다. **결과·상태·안내 영역에 하드코딩된 문구가 0건**임도 함께 고정한다 — 그 자리 문장은 전부 API 응답에서 와야 한다(spec FR-022 ②, SC-006)\n+- [X] T138 [US4] (FE) 기준월 지정을 `RegimeSearchPage.tsx`에 붙인다 — 지정한 월을 유지하고 **화면에 항상 표시한다**(spec FR-003). 범위는 `baseline-months`의 `range`\n+- [X] T139 [US4] (FE) 자료 기준 시점 표시를 `frontend/src/components/regime/DataAsOf.tsx`에 작성 — **지표별** 대상월 + 발표일. 값이 개정된 경우에만 개정 안내를 한 줄 덧붙인다. **수집 시각을 쓰지 않는다**(spec FR-002·FR-031)\n+- [X] T140 [US4] (FE) 사례 상세를 `frontend/src/components/regime/CaseDetail.tsx`에 작성 — 거리·분야 기여·**지표별 명목 비중과 실제 거리 기여**·z·척도(중앙값·산포·방법·구간)·비교 시점. 손계산 대조가 가능해야 한다(spec FR-028)\n+- [X] T141 [US4] (FE) 설명 문장을 `CaseList.tsx`·`CaseDetail.tsx`에 표시 — 응답의 `similar`·`different`를 그대로 쓴다. **실제 값과 단위**를 보여주고 시대별 상대 위치를 기본 검색 이유로 섞지 않는다(FR-015·FR-017)\n+- [X] T142 [US4] (FE) 사례 상세에 `eraPosition`을 **당시 평소 대비 위치라는 별도 보조 설명**으로 표시한다 — 문장만 보이고 시대별 z·분위수·백분율로 바꾸지 않는다. 설명이 없는 지표는 보조 설명을 계산할 수 없다고 안내하되 사례와 순위는 유지한다(FR-017·SC-011)\n+- [X] T143 [P] [US4] (FE 테스트) 유지율·`retention`·겹침 비율이 화면에 **0건**임을 `DataAsOf.test.tsx`에 고정(FR-031, SC-007)\n+- [X] T144 [P] [US4] (FE 테스트) 대상월·발표일이 늘 보이고, 개정이 없으면 개정 안내가 없으며, 수집 시각이 0건임을 `DataAsOf.test.tsx`에 고정\n+- [X] T145 [P] [US4] (FE 테스트) 상세에 명목 비중·실제 거리 기여와 공통 척도가 보여 손계산이 가능함을 `CaseDetail.test.tsx`에 고정(SC-003). 시대별 위치는 별도 보조 문장으로 표시되고, 그 영역의 z·분위수·백분율이 0건이며 보조 설명이 없어도 사례가 유지됨을 확인한다(SC-011)\n+- [X] T146 (FE) 검색·더 보기·모드 전환·기준월 지정·상세 열기를 **키보드만으로** 할 수 있게 한다 — 포커스 순서가 화면 순서와 맞고, 다섯 표시가 그 경로에서 모두 도달 가능하다(spec FR-037)\n+- [X] T147 [P] (FE 테스트) 키보드만으로 다섯 표시에 도달함과, **좁은 폭에서 잘리거나 접히지 않음**을 고정한다(SC-014)\n+- [X] T148 [P] (FE 테스트) 010 화면 코드에 **지표 ID·지표명·분야 이름이 0건**임을 `frontend/src/components/regime/indicatorAgnostic.test.tsx`에 고정 — 007의 전략명 검사와 같은 방식이고, 대상 파일은 **손 목록이 아니라 `src`를 훑어** 모은다. **결과·상태·안내 영역에 하드코딩된 문구가 0건**임도 함께 고정한다 — 그 자리 문장은 전부 API 응답에서 와야 한다(spec FR-022 ②, SC-006)\n \n ---\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/tasks.md",
+          "old_path": "specs/010-economic-regime-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-17T22:11:13.066+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2828522": []
+  }
+}

@@ -1,0 +1,671 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944896,
+    "iid": 117,
+    "project_id": 1444456,
+    "title": "fix(infra): CI가 끝나기 전에 MR 머지 버튼이 열리는 것을 막는다",
+    "description": "# 작업 내용 요약\n\nCI가 아직 도는 중인데 MR 화면의 파이프라인이 통과로 표시되어 머지 버튼이 열리는 문제를 고친다.\n이번 빌드에서 실제로 돌 검사를 시작 시점에 미리 등록하고, 결과가 나오면 그 등록을 결과로 닫는다.\n\n# 관련 티켓\n- ticket # S15P21E205-232\n- link https://ssafy.atlassian.net/browse/S15P21E205-232\n\n# 주요 변경 사항\n- `openCheck(name, state)` / `finishCheck(name, state)` 두 함수를 추가했다. 전자는 아직 결과가 없는 검사를 GitLab 에 올리면서 이름을 `env.PENDING_CHECKS` 에 쌓고, 후자는 확정된 결과를 보고하면서 그 이름을 뺀다. 스테이지의 `post` 블록은 이제 `finishCheck` 만 부른다.\n- `Merge with dev` 진입 시 자기 자신을 `running` 으로, 항상 뒤따르는 `Migration version` 을 `pending` 으로 올린다.\n- 변경 파트를 확정한 직후, 이번 빌드에서 돌 파트만 `pending` 으로 올린다. 건너뛰는 파트는 올리지 않는다.\n- 각 파트의 첫 스테이지에 진입하면 그 파트를 `running` 으로 올린다.\n- 파이프라인 `post { always }` 에서 아직 닫히지 않은 검사를 `canceled` 로 닫는다.\n\n# 테스트\n- [x] Groovy 3.0 파서(`CompilationUnit`, `Phases.CONVERSION`)로 Jenkinsfile 문법을 검증했다. 검증기가 실제로 오류를 잡는지 일부러 깨뜨린 파일로 확인했다.\n- [ ] 실제 동작(파트가 도는 동안 머지 버튼이 잠기는지, 건너뛴 파트가 미결로 남지 않는지)은 이 MR 의 CI 실행으로 확인한다. Jenkins 서버 없이 로컬에서 재현할 방법이 없다.\n\n# 리뷰 포인트\n- **왜 이렇게 됐는가.** GitLab 은 커밋에 달린 상태들을 모아 MR 화면의 파이프라인 하나로 집계하는데, 그 집계는 그때까지 보고된 것만 센다. 보고하지 않은 검사는 \"대기 중\"이 아니라 아예 없는 것으로 친다. 그래서 결과 확정 후에만 보고하던 기존 방식에서는, 앞의 두 스테이지가 통과한 순간 파이프라인 전체가 초록불이 되었다. 파트 검증은 그때부터 시작인데도 그랬다.\n- **버린 선택지 — `gitlabBuilds` 로 여섯 개를 한꺼번에 등록.** 플러그인이 제공하는 방법이지만 이 파이프라인은 변경된 파트만 돌린다. 건너뛴 파트가 영원히 미결로 남아 머지가 아예 막힌다. 그래서 파트 선별이 끝난 뒤 실제로 돌 것만 등록하는 쪽을 택했다.\n- **미결 목록을 `env` 문자열로 둔 이유.** 파이프라인 최상위에 선언한 변수는 CPS 변환을 거친 스테이지 안에서 보이지 않을 수 있다. `env` 는 스테이지 경계를 넘어 살아남는다. 같은 이유로 클로저 `each` 대신 `for` 루프를 썼다.\n- **이름이 어긋나면 멀쩡한 빌드가 취소로 보인다.** `openCheck` 로 올리는 이름과 각 파트 `post` 가 보고하는 이름이 글자 하나라도 다르면 올린 상태가 결과로 덮이지 않는다. 그 경우 파이프라인 `post` 가 `canceled` 로 닫으므로 영구히 굳지는 않지만, 파트를 추가할 때 주의할 지점이다.\n- **이 MR 자체가 검증 대상이다.** 이 MR 의 CI 는 `dev` 의 Jenkinsfile 이 아니라 이 브랜치의 Jenkinsfile 로 돈다. 파이프라인이 도는 동안 MR 화면에서 머지 버튼이 잠겨 있는지 확인해 주면 좋겠다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n변경 파일은 `Jenkinsfile` 하나이므로 위 다섯 항목은 모두 해당 사항 없음으로 확인했다. 다만 마지막 항목의 정신은 이 변경의 동기 그 자체다. 돌지 않은 검증이 통과로 세어지던 것을 막는 변경이다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-15T15:37:56.436+09:00",
+    "updated_at": "2026-09-15T15:45:59.516+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T15:45:59.070+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/232-ci-pending-status",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+    "merge_commit_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T15:37:57.240+09:00",
+    "reference": "!117",
+    "references": {
+      "short": "!117",
+      "relative": "!117",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!117"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/117",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944896,
+    "iid": 117,
+    "project_id": 1444456,
+    "title": "fix(infra): CI가 끝나기 전에 MR 머지 버튼이 열리는 것을 막는다",
+    "description": "# 작업 내용 요약\n\nCI가 아직 도는 중인데 MR 화면의 파이프라인이 통과로 표시되어 머지 버튼이 열리는 문제를 고친다.\n이번 빌드에서 실제로 돌 검사를 시작 시점에 미리 등록하고, 결과가 나오면 그 등록을 결과로 닫는다.\n\n# 관련 티켓\n- ticket # S15P21E205-232\n- link https://ssafy.atlassian.net/browse/S15P21E205-232\n\n# 주요 변경 사항\n- `openCheck(name, state)` / `finishCheck(name, state)` 두 함수를 추가했다. 전자는 아직 결과가 없는 검사를 GitLab 에 올리면서 이름을 `env.PENDING_CHECKS` 에 쌓고, 후자는 확정된 결과를 보고하면서 그 이름을 뺀다. 스테이지의 `post` 블록은 이제 `finishCheck` 만 부른다.\n- `Merge with dev` 진입 시 자기 자신을 `running` 으로, 항상 뒤따르는 `Migration version` 을 `pending` 으로 올린다.\n- 변경 파트를 확정한 직후, 이번 빌드에서 돌 파트만 `pending` 으로 올린다. 건너뛰는 파트는 올리지 않는다.\n- 각 파트의 첫 스테이지에 진입하면 그 파트를 `running` 으로 올린다.\n- 파이프라인 `post { always }` 에서 아직 닫히지 않은 검사를 `canceled` 로 닫는다.\n\n# 테스트\n- [x] Groovy 3.0 파서(`CompilationUnit`, `Phases.CONVERSION`)로 Jenkinsfile 문법을 검증했다. 검증기가 실제로 오류를 잡는지 일부러 깨뜨린 파일로 확인했다.\n- [ ] 실제 동작(파트가 도는 동안 머지 버튼이 잠기는지, 건너뛴 파트가 미결로 남지 않는지)은 이 MR 의 CI 실행으로 확인한다. Jenkins 서버 없이 로컬에서 재현할 방법이 없다.\n\n# 리뷰 포인트\n- **왜 이렇게 됐는가.** GitLab 은 커밋에 달린 상태들을 모아 MR 화면의 파이프라인 하나로 집계하는데, 그 집계는 그때까지 보고된 것만 센다. 보고하지 않은 검사는 \"대기 중\"이 아니라 아예 없는 것으로 친다. 그래서 결과 확정 후에만 보고하던 기존 방식에서는, 앞의 두 스테이지가 통과한 순간 파이프라인 전체가 초록불이 되었다. 파트 검증은 그때부터 시작인데도 그랬다.\n- **버린 선택지 — `gitlabBuilds` 로 여섯 개를 한꺼번에 등록.** 플러그인이 제공하는 방법이지만 이 파이프라인은 변경된 파트만 돌린다. 건너뛴 파트가 영원히 미결로 남아 머지가 아예 막힌다. 그래서 파트 선별이 끝난 뒤 실제로 돌 것만 등록하는 쪽을 택했다.\n- **미결 목록을 `env` 문자열로 둔 이유.** 파이프라인 최상위에 선언한 변수는 CPS 변환을 거친 스테이지 안에서 보이지 않을 수 있다. `env` 는 스테이지 경계를 넘어 살아남는다. 같은 이유로 클로저 `each` 대신 `for` 루프를 썼다.\n- **이름이 어긋나면 멀쩡한 빌드가 취소로 보인다.** `openCheck` 로 올리는 이름과 각 파트 `post` 가 보고하는 이름이 글자 하나라도 다르면 올린 상태가 결과로 덮이지 않는다. 그 경우 파이프라인 `post` 가 `canceled` 로 닫으므로 영구히 굳지는 않지만, 파트를 추가할 때 주의할 지점이다.\n- **이 MR 자체가 검증 대상이다.** 이 MR 의 CI 는 `dev` 의 Jenkinsfile 이 아니라 이 브랜치의 Jenkinsfile 로 돈다. 파이프라인이 도는 동안 MR 화면에서 머지 버튼이 잠겨 있는지 확인해 주면 좋겠다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n변경 파일은 `Jenkinsfile` 하나이므로 위 다섯 항목은 모두 해당 사항 없음으로 확인했다. 다만 마지막 항목의 정신은 이 변경의 동기 그 자체다. 돌지 않은 검증이 통과로 세어지던 것을 막는 변경이다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-15T15:37:56.436+09:00",
+    "updated_at": "2026-09-15T15:45:59.516+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T15:45:59.070+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/232-ci-pending-status",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+    "merge_commit_sha": "1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T15:37:57.240+09:00",
+    "reference": "!117",
+    "references": {
+      "short": "!117",
+      "relative": "!117",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!117"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/117",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-15T15:41:55.843+09:00",
+    "latest_build_finished_at": "2026-09-15T15:41:59.287+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196057,
+      "iid": 30,
+      "project_id": 1444456,
+      "sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+      "ref": "fix(infra)/232-ci-pending-status",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T15:41:55.743+09:00",
+      "updated_at": "2026-09-15T15:41:59.295+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196057"
+    },
+    "head_pipeline": {
+      "id": 196057,
+      "iid": 30,
+      "project_id": 1444456,
+      "sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+      "ref": "fix(infra)/232-ci-pending-status",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T15:41:55.743+09:00",
+      "updated_at": "2026-09-15T15:41:59.295+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196057",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-15T15:41:55.843+09:00",
+      "finished_at": "2026-09-15T15:41:59.287+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196057",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "head_sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+      "start_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e44977c58436125d707a2c69b4ddb7071a9a9f02",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809216,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **CI 상태 불일치 문제 해결 설계**: 파이프라인 시작 시점에 실행 예정인 검사를 `pending` 또는 `running` 상태로 미리 등록하여, 결과가 보고되기 전에 GitLab MR의 머지 버튼이 조기 활성화되는 구조적 문제를 효과적으로 해결했습니다.\n- **예외 상황 대비 안전장치**: 파이프라인이 도중 실패하거나 중단되어 미처 닫히지 못한 검사들을 파이프라인 `always` 블록에서 `canceled` 상태로 일괄 정리하여, MR이 영구적으로 대기 상태에 갇히는 현상을 방지했습니다.\n\n### 발견 사항\n- [Medium] `Jenkinsfile`\n  - `finishCheck` 함수 내에서 토큰 제거 연산 시 공백 처리에 대한 주의가 필요합니다. `((env.PENDING_CHECKS ?: '').tokenize(',') - name).join(',')` 구조에서 쉼표로 분리된 토큰 목록 중 정확히 일치하는 문자열을 제거하므로 단일 항목 처리에는 동작하나, 만약 검사 이름에 공백이 포함되거나 토큰화 과정에서 공백이 남을 경우 `tokenize(',')` 가 공백을 별도 항목으로 남겨 `PENDING_CHECKS` 문자열에 불필요한 빈 콤마(`,,`)가 누적될 수 있습니다. 현재 검사 이름이 고정 문자열('Frontend', 'Backend' 등)이라 당장은 안전하지만, 추후 이름이 동적으로 생성될 경우 정합성 문제가 생길 수 있으므로 `tokenize(',').findAll { it })` 등으로 빈 문자열을 필터링하는 방안을 고려해야 합니다.\n\n### 테스트 제안\n1. **정상 경로 테스트**: 모든 변경 파트(`frontend`, `backend`, `worker`, `data`)가 포함된 커밋을 푸시하여, 빌드 시작 직후 GitLab MR 화면에서 해당 파트들의 상태가 `pending` 또는 `running`으로 표시되는지, 그리고 머지 버튼이 비활성화 상태를 유지하는지 확인합니다.\n2. **선택적 파트 변경 테스트**: 특정 파트(예: `frontend`)만 수정한 커밋을 푸시하여, 변경되지 않은 다른 파트들의 검사 상태가 GitLab에 등록되지 않아 머지 블로커로 작용하지 않는지 확인합니다.\n3. **실패 및 중단 시나리오 테스트**: 파이프라인 도중 의도적으로 빌드를 실패시키거나 중단시켰을 때, `always` 블록이 정상적으로 실행되어 남아 있는 `PENDING_CHECKS` 항목들이 `canceled` 상태로 잘 닫히고 MR이 영구 대기 상태에 빠지지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:63ca29d800cac046292f2dd5fc68df8054cbe0d9 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T15:38:01.941+09:00",
+          "updated_at": "2026-09-15T15:41:53.225+09:00",
+          "system": false,
+          "noteable_id": 944896,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 117,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "763e17aee353068c94888625ce9c0725641de07d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809234,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:39:20.677+09:00",
+          "updated_at": "2026-09-15T15:39:20.684+09:00",
+          "system": true,
+          "noteable_id": 944896,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 117,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0bcaa7da483608417d57b68d72292e135fb6457d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809235,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:39:21.316+09:00",
+          "updated_at": "2026-09-15T15:39:21.320+09:00",
+          "system": true,
+          "noteable_id": 944896,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 117,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "27e8795eecc1849de4d4679fdf1ca4ccf4bc19fe",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809281,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>63ca29d8 - fix(infra): 미결 목록을 깨뜨리는 검사 이름을 빌드에서 막는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/117/diffs?diff_id=2200043&start_sha=ee6afce9609aefbf4bb1b7d7a44645d4f4263764)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:41:47.400+09:00",
+          "updated_at": "2026-09-15T15:41:47.404+09:00",
+          "system": true,
+          "noteable_id": 944896,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 117,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5ad14eed19af16c279be812864628dfb55e861db",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809358,
+          "type": null,
+          "body": "틀린지적입니다.\n\n* `tokenize`는 빈 토큰을 버립니다\n* 공백은 구분자가 아닙니다\n* 제안하신 `findAll { it }`은 결과가 동일합니다. 걸러낼 빈 문자열이 `tokenize` 단계에서 이미 없기 때문.\n* 이름이 동적으로 생성될 때 실제로 깨지는 것은 빈 문자열이 아니라 **구분자 충돌**입니다. (이름에 쉼표가 들어갈때 이름이 둘로 쪼개지는 문제)\n  * 이 문제는 openCheck 에서 error검사로 막아두었습니다.",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:45:56.112+09:00",
+          "updated_at": "2026-09-15T15:45:56.112+09:00",
+          "system": false,
+          "noteable_id": 944896,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 117,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "531ce423351811eb0bf30b0712d45c964aca159b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809361,
+          "type": null,
+          "body": "mentioned in commit 1337f9ad73afe9465ed1b79b488b7ae0d1f2b48c",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:45:59.214+09:00",
+          "updated_at": "2026-09-15T15:45:59.226+09:00",
+          "system": true,
+          "noteable_id": 944896,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 117,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2200043,
+      "head_commit_sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "created_at": "2026-09-15T15:41:47.175+09:00",
+      "merge_request_id": 944896,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "103a2bbdedda01850eece680a3514257c35e225c"
+    },
+    {
+      "id": 2199989,
+      "head_commit_sha": "ee6afce9609aefbf4bb1b7d7a44645d4f4263764",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "created_at": "2026-09-15T15:37:56.719+09:00",
+      "merge_request_id": 944896,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "86c0db2a5bae22718611cb21b2929566e56f868d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2200043,
+      "head_commit_sha": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "created_at": "2026-09-15T15:41:47.175+09:00",
+      "merge_request_id": 944896,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "103a2bbdedda01850eece680a3514257c35e225c",
+      "commits": [
+        {
+          "id": "63ca29d800cac046292f2dd5fc68df8054cbe0d9",
+          "short_id": "63ca29d8",
+          "created_at": "2026-09-15T15:41:41.000+09:00",
+          "parent_ids": [
+            "ee6afce9609aefbf4bb1b7d7a44645d4f4263764"
+          ],
+          "title": "fix(infra): 미결 목록을 깨뜨리는 검사 이름을 빌드에서 막는다",
+          "message": "fix(infra): 미결 목록을 깨뜨리는 검사 이름을 빌드에서 막는다\n\n미결 목록을 쉼표로 이어 붙이므로 이름에 쉼표가 있으면 한 이름이 둘로 쪼개진다. 그러면\nfinishCheck 가 그 이름을 지우지 못하고, 끝난 검사가 미결로 남아 파이프라인 post 에서\n취소로 덮인다. 통과한 빌드가 MR 에서 취소로 보인다. 지금 쓰는 여섯 이름에는 쉼표가\n없지만 파트를 추가할 때 생길 수 있으므로, 그런 이름을 만나면 빌드를 세운다.\n\n미결 목록의 읽고 고쳐 쓰기가 원자적이지 않다는 제약도 주석에 적었다. 지금은 모든\n스테이지가 순차로 돌아 문제가 없고, 파트를 parallel 로 묶을 때 다시 볼 지점이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T15:41:41.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T15:41:41.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/63ca29d800cac046292f2dd5fc68df8054cbe0d9"
+        },
+        {
+          "id": "ee6afce9609aefbf4bb1b7d7a44645d4f4263764",
+          "short_id": "ee6afce9",
+          "created_at": "2026-09-15T15:33:00.000+09:00",
+          "parent_ids": [
+            "331eb727a356bbcbf08dd282328ea6e36055fe83"
+          ],
+          "title": "fix(infra): CI가 끝나기 전에 MR 머지 버튼이 열리는 것을 막는다",
+          "message": "fix(infra): CI가 끝나기 전에 MR 머지 버튼이 열리는 것을 막는다\n\n각 스테이지의 post 에서 결과가 확정된 뒤에만 커밋 상태를 보고했다. GitLab 은 그\n시점까지 보고된 상태만 모아 파이프라인 전체를 집계하므로, Merge with dev 와\nMigration version 두 개가 올라온 순간 파이프라인이 통과로 보이고 머지 버튼이 열렸다.\n뒤이어 도는 파트 검증은 보고되지 않아 집계에 들어가지 않았다.\n\n이번 빌드에서 실제로 돌 검사를 미리 pending 으로 등록하고, 스테이지에 진입하면\nrunning 으로 올린다. 끝나지 않은 검사가 하나라도 있으면 GitLab 이 파이프라인을 진행\n중으로 보아 머지를 막는다. 변경되지 않아 건너뛰는 파트는 등록하지 않으므로 끝나지 않은\n검사로 남지 않는다. 앞 스테이지가 실패해 뒤가 돌지 못한 경우에는 파이프라인 post 에서\n남은 검사를 취소로 닫아, MR 이 실패도 성공도 아닌 채로 굳지 않게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T15:33:00.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T15:33:00.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ee6afce9609aefbf4bb1b7d7a44645d4f4263764"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -43,6 +43,42 @@ def partChanged(String part) {\n     return changed.split('\\n').any { it.startsWith(part + '/') }\n }\n \n+// 아직 결과가 나오지 않은 검사를 GitLab 에 미리 알린다.\n+//\n+// GitLab 은 커밋에 달린 상태들을 모아 MR 화면의 파이프라인 하나로 집계하는데, 그 집계는\n+// 그때까지 보고된 것만 센다. 보고하지 않은 검사는 '대기 중'이 아니라 아예 없는 것으로 친다.\n+// 그래서 결과가 확정된 뒤에만 보고하면, 앞선 두 스테이지가 통과한 순간 파이프라인 전체가\n+// 초록불이 되어 머지 버튼이 열린다. 파트 검증은 그때부터 시작인데도 그렇다.\n+//\n+// 돌 검사를 미리 올려 두면 GitLab 은 그것이 끝날 때까지 파이프라인을 진행 중으로 보고\n+// 머지를 막는다. state 는 아직 시작하지 않았으면 pending, 지금 도는 중이면 running 을 준다.\n+// 같은 검사를 다시 불러도 미결 목록에는 한 번만 남는다.\n+//\n+// 미결 목록을 env 에 문자열로 두는 이유는, 파이프라인 최상위에 선언한 변수가 CPS 변환을 거친\n+// 스테이지 안에서는 보이지 않을 수 있기 때문이다. env 는 스테이지 경계를 넘어 살아남는다.\n+//\n+// 목록은 쉼표로 이어 붙인다. 그래서 이름에 쉼표가 있으면 한 이름이 둘로 쪼개져 finishCheck 가\n+// 그것을 지우지 못하고, 끝난 검사가 미결로 남아 아래 post 에서 취소로 덮인다. 통과한 빌드가\n+// MR 에서 취소로 보이는 셈이다. 이름은 코드에 박힌 상수이므로 그런 이름을 만나면 빌드를 세운다.\n+// 조용히 어긋나는 것보다 그 이름을 넣은 사람이 개발 중에 걸리는 편이 낫다.\n+//\n+// 이 목록은 읽고 고쳐 쓰는 과정이 원자적이지 않다. 지금은 모든 스테이지가 순차로 돌아 문제가\n+// 없다. 파트를 parallel 로 묶는다면 동시에 끝난 둘이 서로의 갱신을 지우므로, 그때는 이 방식을\n+// 그대로 두면 안 된다.\n+def openCheck(String name, String state) {\n+    if (name.contains(',')) {\n+        error(\"검사 이름에는 쉼표를 쓸 수 없다: ${name}\")\n+    }\n+    updateGitlabCommitStatus(name: name, state: state)\n+    env.PENDING_CHECKS = ((env.PENDING_CHECKS ?: '').tokenize(',') + name).unique().join(',')\n+}\n+\n+// 확정된 결과를 보고하고 미결 목록에서 뺀다. 스테이지의 post 블록은 이 함수만 부른다.\n+def finishCheck(String name, String state) {\n+    updateGitlabCommitStatus(name: name, state: state)\n+    env.PENDING_CHECKS = ((env.PENDING_CHECKS ?: '').tokenize(',') - name).join(',')\n+}\n+\n pipeline {\n     agent any\n \n@@ -89,6 +125,13 @@ pipeline {\n         // 못한 것이 그 경우다. 이후 단계는 dev를 합친 결과 위에서 돈다.\n         stage('Merge with dev') {\n             steps {\n+                // 이 빌드에서 반드시 도는 두 검사를 먼저 등록한다. 파트 스테이지는 무엇이\n+                // 바뀌었는지 알아낸 뒤에야 등록할 수 있으므로 이 스테이지의 끝에서 올린다.\n+                script {\n+                    openCheck('Merge with dev', 'running')\n+                    openCheck('Migration version', 'pending')\n+                }\n+\n                 // checkout 스텝은 GIT_ASKPASS 로 자격을 주입하지만, sh 스텝은 별개 프로세스라\n                 // 그것을 물려받지 못한다. 자격 없이 fetch 하면 사용자명을 묻다가\n                 // \"could not read Username for ...\" 로 끝난다.\n@@ -168,32 +211,52 @@ pipeline {\n                         printf '%s' \"$changed\"\n                     ''').trim()\n                 }\n+\n+                // 이제 어느 파트가 도는지 확정되었으므로 그 파트들을 미리 등록한다.\n+                // 건너뛰는 파트는 등록하지 않는다. 등록해 놓고 돌지 않으면 그 상태가 끝내\n+                // 확정되지 않아 MR 이 영영 머지되지 않는다.\n+                //\n+                // 왼쪽은 파트 폴더 이름, 오른쪽은 스테이지 이름이다. 오른쪽은 아래 파트\n+                // 스테이지의 post 가 보고하는 이름과 글자 하나까지 같아야 한다. 다르면 여기서\n+                // 올린 상태를 결과가 덮지 못하고 남아 머지가 막힌다.\n+                script {\n+                    for (List part : [['frontend', 'Frontend'], ['backend', 'Backend'],\n+                                      ['worker', 'Worker'], ['data', 'Data']]) {\n+                        if (partChanged(part[0])) {\n+                            openCheck(part[1], 'pending')\n+                        }\n+                    }\n+                }\n             }\n \n             // GitLab MR 화면에 이 파트의 결과를 되돌려준다. 여섯 파트가 각각 한 줄로 나열되어,\n             // Jenkins 에 들어가지 않고도 어느 파트가 깨졌는지 MR 에서 바로 보인다.\n-            // 보고가 쌓이면 GitLab 의 Merge checks 가 빨간불일 때 머지 버튼을 막는다.\n+            // 빨간불이 하나라도 있으면 GitLab 의 Merge checks 가 머지 버튼을 막고, 위에서 미리\n+            // 올려 둔 검사가 아직 끝나지 않았어도 막는다.\n             //\n             // when 조건에 걸려 건너뛴 파트는 post 가 돌지 않아 아예 표시되지 않는다.\n-            // 돌지 않은 것을 성공으로 보고하는 것보다 낫다.\n+            // 돌지 않은 것을 성공으로 보고하는 것보다 낫다. 그런 파트는 위에서 등록도 하지\n+            // 않으므로 끝나지 않은 검사로 남지도 않는다.\n             post {\n-                success { updateGitlabCommitStatus(name: 'Merge with dev', state: 'success') }\n-                failure { updateGitlabCommitStatus(name: 'Merge with dev', state: 'failed') }\n-                unstable { updateGitlabCommitStatus(name: 'Merge with dev', state: 'failed') }\n+                success { script { finishCheck('Merge with dev', 'success') } }\n+                failure { script { finishCheck('Merge with dev', 'failed') } }\n+                unstable { script { finishCheck('Merge with dev', 'failed') } }\n             }\n         }\n \n         stage('Migration version') {\n             steps {\n+                script { openCheck('Migration version', 'running') }\n+\n                 // Merge with dev 가 확정한 기준을 그대로 쓴다. 이름 origin/dev 를 다시 쓰면\n                 // 검사 기준과 병합 기준이 서로 다른 커밋이 될 수 있다.\n                 sh 'bash infra/scripts/check-migration-version.sh \"$DEV_BASE\"'\n             }\n \n             post {\n-                success { updateGitlabCommitStatus(name: 'Migration version', state: 'success') }\n-                failure { updateGitlabCommitStatus(name: 'Migration version', state: 'failed') }\n-                unstable { updateGitlabCommitStatus(name: 'Migration version', state: 'failed') }\n+                success { script { finishCheck('Migration version', 'success') } }\n+                failure { script { finishCheck('Migration version', 'failed') } }\n+                unstable { script { finishCheck('Migration version', 'failed') } }\n             }\n         }\n \n@@ -204,6 +267,8 @@ pipeline {\n             stages {\n                 stage('FE Install') {\n                     steps {\n+                        script { openCheck('Frontend', 'running') }\n+\n                         dir('frontend') {\n                             sh 'npm ci'\n                         }\n@@ -251,9 +316,9 @@ pipeline {\n             }\n \n             post {\n-                success { updateGitlabCommitStatus(name: 'Frontend', state: 'success') }\n-                failure { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }\n-                unstable { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }\n+                success { script { finishCheck('Frontend', 'success') } }\n+                failure { script { finishCheck('Frontend', 'failed') } }\n+                unstable { script { finishCheck('Frontend', 'failed') } }\n             }\n         }\n \n@@ -264,6 +329,8 @@ pipeline {\n             stages {\n                 stage('BE Format') {\n                     steps {\n+                        script { openCheck('Backend', 'running') }\n+\n                         dir('backend') {\n                             // clean 은 백엔드 단계 전체에서 여기 한 번만 수행한다.\n                             // 뒤따르는 스테이지가 같은 build 디렉토리를 이어서 쓴다.\n@@ -304,9 +371,9 @@ pipeline {\n             }\n \n             post {\n-                success { updateGitlabCommitStatus(name: 'Backend', state: 'success') }\n-                failure { updateGitlabCommitStatus(name: 'Backend', state: 'failed') }\n-                unstable { updateGitlabCommitStatus(name: 'Backend', state: 'failed') }\n+                success { script { finishCheck('Backend', 'success') } }\n+                failure { script { finishCheck('Backend', 'failed') } }\n+                unstable { script { finishCheck('Backend', 'failed') } }\n             }\n         }\n \n@@ -317,6 +384,8 @@ pipeline {\n             stages {\n                 stage('Worker Setup') {\n                     steps {\n+                        script { openCheck('Worker', 'running') }\n+\n                         dir('worker') {\n                             sh 'python3 -m venv .venv'\n                             sh '. .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt'\n@@ -353,9 +422,9 @@ pipeline {\n             }\n \n             post {\n-                success { updateGitlabCommitStatus(name: 'Worker', state: 'success') }\n-                failure { updateGitlabCommitStatus(name: 'Worker', state: 'failed') }\n-                unstable { updateGitlabCommitStatus(name: 'Worker', state: 'failed') }\n+                success { script { finishCheck('Worker', 'success') } }\n+                failure { script { finishCheck('Worker', 'failed') } }\n+                unstable { script { finishCheck('Worker', 'failed') } }\n             }\n         }\n \n@@ -366,6 +435,8 @@ pipeline {\n             stages {\n                 stage('Data Setup') {\n                     steps {\n+                        script { openCheck('Data', 'running') }\n+\n                         dir('data') {\n                             sh 'python3 -m venv .venv'\n                             sh '. .venv/bin/activate && pip install -r requirements.txt -r requirements-dev.txt'\n@@ -401,9 +472,9 @@ pipeline {\n             }\n \n             post {\n-                success { updateGitlabCommitStatus(name: 'Data', state: 'success') }\n-                failure { updateGitlabCommitStatus(name: 'Data', state: 'failed') }\n-                unstable { updateGitlabCommitStatus(name: 'Data', state: 'failed') }\n+                success { script { finishCheck('Data', 'success') } }\n+                failure { script { finishCheck('Data', 'failed') } }\n+                unstable { script { finishCheck('Data', 'failed') } }\n             }\n         }\n     }\n@@ -412,7 +483,21 @@ pipeline {\n         always {\n             // 병합 상태를 되돌려 다음 빌드의 checkout 이 꼬이지 않게 한다.\n             // 병합하지 않았으면 abort 할 것이 없어 실패하므로 결과를 무시한다.\n+            //\n+            // 워크스페이스 정리를 GitLab 보고보다 먼저 한다. 보고가 어떤 이유로 멈추더라도\n+            // 다음 빌드가 병합이 걸린 워크스페이스를 물려받지 않게 하기 위함이다.\n             sh 'git merge --abort >/dev/null 2>&1 || true'\n+\n+            // 앞 스테이지가 실패해 뒤가 아예 돌지 못하면 그 검사는 미리 올린 상태 그대로\n+            // 남는다. GitLab 은 끝나지 않은 검사를 계속 기다리므로 MR 이 실패도 성공도 아닌\n+            // 채로 굳는다. 돌지 못한 것은 취소로 닫는다. 실패한 검사는 이미 failed 로\n+            // 보고되어 목록에서 빠졌으니 파이프라인 전체 결과는 그대로 실패로 남는다.\n+            script {\n+                for (String name : (env.PENDING_CHECKS ?: '').tokenize(',')) {\n+                    updateGitlabCommitStatus(name: name, state: 'canceled')\n+                }\n+                env.PENDING_CHECKS = ''\n+            }\n         }\n \n         // 채널은 지정하지 않는다. Jenkins 전역 Mattermost 설정의 기본 채널로 가며,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2199989,
+      "head_commit_sha": "ee6afce9609aefbf4bb1b7d7a44645d4f4263764",
+      "base_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "start_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+      "created_at": "2026-09-15T15:37:56.719+09:00",
+      "merge_request_id": 944896,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "86c0db2a5bae22718611cb21b2929566e56f868d",
+      "commits": [
+        {
+          "id": "ee6afce9609aefbf4bb1b7d7a44645d4f4263764",
+          "short_id": "ee6afce9",
+          "created_at": "2026-09-15T15:33:00.000+09:00",
+          "parent_ids": [
+            "331eb727a356bbcbf08dd282328ea6e36055fe83"
+          ],
+          "title": "fix(infra): CI가 끝나기 전에 MR 머지 버튼이 열리는 것을 막는다",
+          "message": "fix(infra): CI가 끝나기 전에 MR 머지 버튼이 열리는 것을 막는다\n\n각 스테이지의 post 에서 결과가 확정된 뒤에만 커밋 상태를 보고했다. GitLab 은 그\n시점까지 보고된 상태만 모아 파이프라인 전체를 집계하므로, Merge with dev 와\nMigration version 두 개가 올라온 순간 파이프라인이 통과로 보이고 머지 버튼이 열렸다.\n뒤이어 도는 파트 검증은 보고되지 않아 집계에 들어가지 않았다.\n\n이번 빌드에서 실제로 돌 검사를 미리 pending 으로 등록하고, 스테이지에 진입하면\nrunning 으로 올린다. 끝나지 않은 검사가 하나라도 있으면 GitLab 이 파이프라인을 진행\n중으로 보아 머지를 막는다. 변경되지 않아 건너뛰는 파트는 등록하지 않으므로 끝나지 않은\n검사로 남지 않는다. 앞 스테이지가 실패해 뒤가 돌지 못한 경우에는 파이프라인 post 에서\n남은 검사를 취소로 닫아, MR 이 실패도 성공도 아닌 채로 굳지 않게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T15:33:00.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T15:33:00.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ee6afce9609aefbf4bb1b7d7a44645d4f4263764"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2809216": [],
+    "2809358": []
+  }
+}

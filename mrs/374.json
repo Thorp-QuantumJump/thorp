@@ -1,0 +1,750 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963464,
+    "iid": 374,
+    "project_id": 1444456,
+    "title": "chore(de): 데이터 테스트 정리",
+    "description": "## 작업 내용 요약\n\n테스트 감사에서 확인된 데이터 테스트를 정리한다. 항등식·중복 테스트를 지우고, 실패할 수 없던 테스트가 운영 경로와 실제 결함을 보게 고친다. 운영 코드는 바꾸지 않는다.\n\n## 주요 변경 사항\n\n- 다음 테스트를 지운다.\n  - 같은 인자로 두 번 불러 비교하던 테스트\n  - 기본 소스 상수의 순서만 보던 테스트\n  - import 성공만 보던 스모크 테스트\n  - '17개다'·정밀도·변환 유형처럼 다른 파일이 같은 등식으로 이미 보는 중복 테스트\n  - 운영이 부르지 않는 `is_published` 검사\n  - 역할이 끝난 `.gitkeep`과 쓰이지 않는 상수\n- 워터마크의 네 경로는 구성상 늘 참이던 `covers` 대신, 운영 계산에 경계 기준월을 넣어 확인한다.\n- 값 규칙이 바뀔 때의 전 구간 요구, 키 비노출, 빈 `DATABASE_URL`, 브랜드명 이름 맞추기 실패, 종합 비교 v3 경로를 실제로 실패할 수 있게 바꾼다.\n\n## 테스트\n\n- `ruff check src scripts tests`: 통과\n- `THORP_REQUIRE_DOCKER=true pytest`: 1,244건 통과(지운 22건만큼 줄었다), 건너뜀·실패 0\n- 고친 테스트는 운영 코드를 일부러 바꿨을 때 실패하는 것을 확인했다.\n\n## 리뷰 포인트\n\n- 테스트를 지우거나 옮기면서 아무도 부르지 않게 된 운영 코드가 남았다(`era_positions_for`, `format_phase_value`, `WINDOW_START_OFFSET`, `SnapshotBuilder.build`의 v1 종합 분기). 지울지 정해야 한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:36:27.925+09:00",
+    "updated_at": "2026-10-04T18:36:32.183+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:36:31.957+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(de)/unused-test-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3d9df64f64f40d0adfbee25e94c75b3251bbf91a",
+    "merge_commit_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:36:30.754+09:00",
+    "reference": "!374",
+    "references": {
+      "short": "!374",
+      "relative": "!374",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!374"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/374",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963464,
+    "iid": 374,
+    "project_id": 1444456,
+    "title": "chore(de): 데이터 테스트 정리",
+    "description": "## 작업 내용 요약\n\n테스트 감사에서 확인된 데이터 테스트를 정리한다. 항등식·중복 테스트를 지우고, 실패할 수 없던 테스트가 운영 경로와 실제 결함을 보게 고친다. 운영 코드는 바꾸지 않는다.\n\n## 주요 변경 사항\n\n- 다음 테스트를 지운다.\n  - 같은 인자로 두 번 불러 비교하던 테스트\n  - 기본 소스 상수의 순서만 보던 테스트\n  - import 성공만 보던 스모크 테스트\n  - '17개다'·정밀도·변환 유형처럼 다른 파일이 같은 등식으로 이미 보는 중복 테스트\n  - 운영이 부르지 않는 `is_published` 검사\n  - 역할이 끝난 `.gitkeep`과 쓰이지 않는 상수\n- 워터마크의 네 경로는 구성상 늘 참이던 `covers` 대신, 운영 계산에 경계 기준월을 넣어 확인한다.\n- 값 규칙이 바뀔 때의 전 구간 요구, 키 비노출, 빈 `DATABASE_URL`, 브랜드명 이름 맞추기 실패, 종합 비교 v3 경로를 실제로 실패할 수 있게 바꾼다.\n\n## 테스트\n\n- `ruff check src scripts tests`: 통과\n- `THORP_REQUIRE_DOCKER=true pytest`: 1,244건 통과(지운 22건만큼 줄었다), 건너뜀·실패 0\n- 고친 테스트는 운영 코드를 일부러 바꿨을 때 실패하는 것을 확인했다.\n\n## 리뷰 포인트\n\n- 테스트를 지우거나 옮기면서 아무도 부르지 않게 된 운영 코드가 남았다(`era_positions_for`, `format_phase_value`, `WINDOW_START_OFFSET`, `SnapshotBuilder.build`의 v1 종합 분기). 지울지 정해야 한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:36:27.925+09:00",
+    "updated_at": "2026-10-04T18:36:32.183+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:36:31.957+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(de)/unused-test-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3d9df64f64f40d0adfbee25e94c75b3251bbf91a",
+    "merge_commit_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:36:30.754+09:00",
+    "reference": "!374",
+    "references": {
+      "short": "!374",
+      "relative": "!374",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!374"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/374",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "head_sha": "3d9df64f64f40d0adfbee25e94c75b3251bbf91a",
+      "start_sha": "46e76a61b343d38438ae30f57331b91a5b838504"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c6850091162936250109249c4e8cc68d41092b38",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881359,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:36:28.028+09:00",
+          "updated_at": "2026-10-04T18:36:28.031+09:00",
+          "system": true,
+          "noteable_id": 963464,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 374,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b55a0d42e8c39521b932ca351e0bdc3ba42dd333",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881360,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:36:28.047+09:00",
+          "updated_at": "2026-10-04T18:36:28.054+09:00",
+          "system": true,
+          "noteable_id": 963464,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 374,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "882b45e753ec19977bc35a8f8384b18413e3174d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881361,
+          "type": null,
+          "body": "mentioned in commit fa122817274790c2f0a0737d0e364d1b63b0809f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:36:31.999+09:00",
+          "updated_at": "2026-10-04T18:36:32.002+09:00",
+          "system": true,
+          "noteable_id": 963464,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 374,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "688a99fa8bf5d9a7be2b608a468da2e2ef0c158e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881362,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **테스트 품질 개선**: 단순히 통과만 하거나 항등식을 검증하던 중복/무의미한 테스트(22건)를 과감히 제거하고, 운영 경로의 실제 결함이나 경계 조건을 엄격하게 검증하도록 테스트 로직을 현실적으로 재작성했습니다.\n- **환경 변수 격리 강화**: `test_repository.py`에서 `DATABASE_URL`이 비어 있는 경우를 테스트할 때 `monkeypatch`를 활용하여 안전하고 격리된 상태에서 결함 상황을 정확히 재현하도록 개선했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (MR 설명에서 언급된 죽은 코드(`era_positions_for` 등)는 이번 변경 범위에서 제외되었으나, 추후 별도 이슈로 정리가 필요합니다.)\n\n### 테스트 제안\n- `data/tests/test_macro_publish_atomic.py`에서 값 규칙 변경 시 전체 구간 요구 조건이 `ValueError(\"빠진 월\")`와 함께 정확히 실패하는지 다양한 누락 구간 시나리오로 검증합니다.\n- `data/tests/regime/test_watermark.py`의 4가지 경로(질의 비교, 공통 척도, 후보 관측, 시대별 보조 척도)가 경계 조건 변경 시 의도대로 트리거되는지 파라미터화된 테스트를 통해 추가로 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3d9df64f64f40d0adfbee25e94c75b3251bbf91a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T18:36:38.413+09:00",
+          "updated_at": "2026-10-04T18:36:38.413+09:00",
+          "system": false,
+          "noteable_id": 963464,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 374,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262314,
+      "head_commit_sha": "3d9df64f64f40d0adfbee25e94c75b3251bbf91a",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "46e76a61b343d38438ae30f57331b91a5b838504",
+      "created_at": "2026-10-04T18:36:28.442+09:00",
+      "merge_request_id": 963464,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "2c5460a454ae5b7ae744cefd882f8a23526e04da"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262314,
+      "head_commit_sha": "3d9df64f64f40d0adfbee25e94c75b3251bbf91a",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "46e76a61b343d38438ae30f57331b91a5b838504",
+      "created_at": "2026-10-04T18:36:28.442+09:00",
+      "merge_request_id": 963464,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "2c5460a454ae5b7ae744cefd882f8a23526e04da",
+      "commits": [
+        {
+          "id": "3d9df64f64f40d0adfbee25e94c75b3251bbf91a",
+          "short_id": "3d9df64f",
+          "created_at": "2026-10-04T17:45:55.000+09:00",
+          "parent_ids": [
+            "461e6e851dab8c4fb99679f619e8885fee61bbe4"
+          ],
+          "title": "chore(de): 실패할 수 없던 데이터 테스트가 운영 경로와 실제 결함을 보도록 고친다",
+          "message": "chore(de): 실패할 수 없던 데이터 테스트가 운영 경로와 실제 결함을 보도록 고친다\n\n보조 위치 키 빠짐은 운영 캐시로, 재계산 경계는 운영 계산이 M을 처음 읽는 기준월로,\n종합 전파는 v3 설정을 넣은 빌더로 본다. 빈 DATABASE_URL·환경변수 키·값 규칙 변경·\n브랜드명 이름 맞추기·changed_since도 그 분기에 실제로 닿게 고친다.\n값 표기 고유 사례는 format_value 테스트로 옮기고 쓰이지 않던 접수번호 상수를 쓴다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:45:55.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:45:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d9df64f64f40d0adfbee25e94c75b3251bbf91a"
+        },
+        {
+          "id": "461e6e851dab8c4fb99679f619e8885fee61bbe4",
+          "short_id": "461e6e85",
+          "created_at": "2026-10-04T17:30:59.000+09:00",
+          "parent_ids": [
+            "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+          ],
+          "title": "chore(de): 실패할 수 없거나 다른 테스트와 겹치는 데이터 테스트를 지운다",
+          "message": "chore(de): 실패할 수 없거나 다른 테스트와 겹치는 데이터 테스트를 지운다\n\n같은 인자로 두 번 부르는 항등식, 상수를 다시 적은 단언, 다른 테스트의 진부분집합인\n단언, 쓰이지 않는 모듈 상수, 역할이 끝난 픽스처 .gitkeep 다섯 개를 지운다.\n지운 테스트가 보던 동작은 남은 테스트가 그대로 확인한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:30:59.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:30:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/461e6e851dab8c4fb99679f619e8885fee61bbe4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/customs/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/customs/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/ecos/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/ecos/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/housing/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/housing/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/kosis/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/kosis/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/oecd/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/oecd/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,7 +26,6 @@ from data_pipeline.regime.era import (\n     EraPosition,\n     EraPositionCache,\n     era_position_for,\n-    era_positions_for,\n )\n from data_pipeline.regime.explain import format_value\n from data_pipeline.regime.macro.types import IndicatorEntry\n@@ -115,6 +114,10 @@ class TestSentence:\n         assert format_value(-0.25) == \"-0.3\"  # 사사오입\n         assert format_value(4.346167) == \"4.3\"\n         assert format_value(-0.04) == \"0\"\n+        # 12.35는 부동소수 표현(12.3499…) 그대로 반올림하면 12.3이 된다.\n+        # 0.1+0.2의 꼬리도 문장에 남지 않는다.\n+        assert format_value(12.35) == \"12.4\"\n+        assert format_value(0.30000000000000004) == \"0.3\"\n \n     def test_지수_표기가_문장에_실리지_않는다(self) -> None:\n         position = era_position_for(indicator(), END_MONTH, series_with(0.00005))\n@@ -177,6 +180,7 @@ class TestLimitedOnly:\n         assert era_position_for(indicator(), END_MONTH, series_with(None)) is None\n \n     def test_못_만든_지표는_키가_없다(self) -> None:\n+        \"\"\"운영 배치가 쓰는 캐시로 본다 — snapshot은 이 캐시에서 보조 위치를 받는다.\"\"\"\n         good = indicator()\n         bad = IndicatorEntry(\n             id=\"OTHER\",\n@@ -186,11 +190,8 @@ class TestLimitedOnly:\n             transform=\"LEVEL\",\n             display_order=2,\n         )\n-        positions = era_positions_for(\n-            [good, bad],\n-            END_MONTH,\n-            {good.id: series_with(20.0), bad.id: series_with(None)},\n-        )\n+        cache = EraPositionCache({good.id: series_with(20.0), bad.id: series_with(None)})\n+        positions = cache.positions_for([good, bad], END_MONTH)\n         assert set(positions) == {good.id}\n \n \n@@ -202,12 +203,6 @@ class TestBaselineIndependent:\n         assert names == [\"indicator\", \"end_month\", \"series\"]\n         assert not any(\"baseline\" in name for name in names)\n \n-    def test_같은_후보월이면_같은_값이다(self) -> None:\n-        series = series_with(20.0)\n-        assert era_position_for(indicator(), END_MONTH, series) == era_position_for(\n-            indicator(), END_MONTH, series\n-        )\n-\n     def test_후보월이_다르면_제_시대로_잰다(self) -> None:\n         series = series_with(20.0)\n         other = date(2016, 6, 1)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_era.py",
+          "old_path": "data/tests/regime/test_era.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,7 +13,6 @@ from datetime import date\n import pytest\n \n from data_pipeline.regime.macro import (\n-    SOURCE_CHOICES,\n     UnknownMacroSourceError,\n     create_source,\n )\n@@ -177,17 +176,14 @@ class TestPublicationAndVersions:\n     def test_모르면_None을_돌려준다(self, macro_source: MacroIndicatorSource) -> None:\n         \"\"\"`changed_since()`가 답할 수 없으면 `None`이고 배치는 전 구간으로 물러난다 (계약 §1).\n \n-        '바뀐 것 없음'을 뜻하는 값을 돌려주면 낡은 결과가 남는다.\n+        '바뀐 것 없음'을 뜻하는 값을 돌려주면 낡은 결과가 남는다. 발행한 적 없는 버전 뒤에 무엇이\n+        바뀌었는지는 어느 구현체도 알 수 없다 — 개정 이력이 있다고 달을 짐작해 돌려주면 배치가\n+        일부만 다시 계산하고 나머지는 낡은 채로 남는다.\n         \"\"\"\n-        changed = macro_source.changed_since(macro_source.data_version())\n-        assert changed is None or isinstance(changed, date)\n+        assert macro_source.changed_since(\"발행한-적-없는-자료-버전\") is None\n \n \n class TestFactory:\n     def test_모르는_소스는_거부한다(self) -> None:\n         with pytest.raises(UnknownMacroSourceError):\n             create_source(\"no-such-source\")\n-\n-    def test_기본_소스가_임시_대역이_아니다(self) -> None:\n-        \"\"\"플래그 없이 돌린 배치가 가짜 자료를 적재하면 안 된다 (계약 §4.1).\"\"\"\n-        assert SOURCE_CHOICES[0] == \"macro\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_macro_source.py",
+          "old_path": "data/tests/regime/test_macro_source.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -27,7 +27,6 @@ from data_pipeline.regime.phase import (\n )\n from data_pipeline.regime.scale import shift_month\n \n-START = date(2000, 1, 1)\n MONTHS = 240\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_phase.py",
+          "old_path": "data/tests/regime/test_phase.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,12 +16,11 @@ from conftest import make_registry, make_series, write_phase_config\n \n from data_pipeline.macro.registry import INDICATORS\n from data_pipeline.regime.context import ContextEvent, events_within\n-from data_pipeline.regime.explain import format_pair\n+from data_pipeline.regime.explain import format_pair, format_value\n from data_pipeline.regime.macro.types import format_month\n from data_pipeline.regime.phase import DEFAULT_CONFIG, build_phase_model, load_config, phase_inputs\n from data_pipeline.regime.phase_snapshot import (\n     CASE_UNUSUAL_SENTENCE,\n-    format_phase_value,\n     residual_threshold,\n     subject_of,\n )\n@@ -178,19 +177,6 @@ class TestPair:\n \n \n class TestFormat:\n-    @pytest.mark.parametrize(\n-        (\"value\", \"text\"),\n-        [\n-            (0.30000000000000004, \"0.3\"),\n-            (12.3456, \"12.3\"),\n-            (12.35, \"12.4\"),\n-            (-0.04, \"0\"),\n-            (2.0, \"2\"),\n-        ],\n-    )\n-    def test_값은_소수_첫째_자리까지다(self, value: float, text: str) -> None:\n-        assert format_phase_value(value) == text\n-\n     @pytest.mark.parametrize(\n         (\"name\", \"label\", \"subject\"),\n         [\n@@ -268,7 +254,7 @@ class TestDisplay:\n         config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])\n         value, unit = config.display_of(\"trade_balance\", 24_137_983_294.0)\n         assert unit == \"억 달러\"\n-        assert format_phase_value(value) == \"241.4\"\n+        assert format_value(value) == \"241.4\"\n \n \n class TestThreshold:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_phase_snapshot.py",
+          "old_path": "data/tests/regime/test_phase_snapshot.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,6 +35,7 @@ from data_pipeline.regime.macro.types import (\n     Publication,\n     format_month,\n )\n+from data_pipeline.regime.phase import load_config as load_phase_config\n from data_pipeline.regime.snapshot import (\n     COMPOSITE_SCOPE,\n     MODEL_VERSION,\n@@ -465,9 +466,28 @@ class TestEraPositionReuse:\n \n \n class TestCompositePropagation:\n-    \"\"\"T078 — 계산 불가가 분야 → 종합으로 전파되고, 반대 방향도 있다 (spec FR-039).\"\"\"\n+    \"\"\"T078 — 계산 불가가 분야 → 종합으로 전파되고, 반대 방향도 있다 (spec FR-039).\n \n-    def test_한_분야가_계산_불가면_종합도_계산_불가다(self) -> None:\n+    배치처럼 v3 설정을 넣어 빌더를 만든다. 운영 배치는 늘 설정을 넘기므로(`_precompute`) 종합은\n+    v3 국면 모델로 간다 — 설정 없이 만들면 운영이 타지 않는 v1 종합 경로만 보게 된다.\n+    \"\"\"\n+\n+    @staticmethod\n+    def _builder(\n+        registry: IndicatorRegistry, source: StubMacroSource, tmp_path: Path\n+    ) -> SnapshotBuilder:\n+        return SnapshotBuilder(\n+            registry,\n+            {entry.id: source.monthly_series(entry.id) for entry in registry.indicators},\n+            source.publication,\n+            Versions(data=source.data_version(), registry=registry.version),\n+            phase_config=load_phase_config(\n+                write_phase_config(tmp_path, registry),\n+                indicator_ids=[entry.id for entry in registry.indicators],\n+            ),\n+        )\n+\n+    def test_한_분야가_계산_불가면_종합도_계산_불가다(self, tmp_path: Path) -> None:\n         \"\"\"한 분야의 지표가 그 달에 비면 그 분야도, 종합도 계산할 수 없다.\n \n         모양을 여기서 만든다. 예전에는 임시 대역의 실제 자료에서 그런 달을 골라 썼는데,\n@@ -486,21 +506,17 @@ class TestCompositePropagation:\n         )\n         # A 는 끝까지 차 있고 B 는 마지막 달이 비었다. 그 마지막 달이 시험할 기준월이다.\n         baseline_month = max(source.monthly_series(\"A1\"))\n-        builder = SnapshotBuilder(\n-            registry,\n-            {entry.id: source.monthly_series(entry.id) for entry in registry.indicators},\n-            source.publication,\n-            Versions(data=source.data_version(), registry=registry.version),\n-        )\n+        builder = self._builder(registry, source, tmp_path)\n         broken = builder.build(SearchScope.field(\"B\"), baseline_month)\n         composite = builder.build(SearchScope.composite(), baseline_month)\n+        assert composite.versions.model == \"REGIME-V3-TEST\", \"종합이 v3 경로를 타지 않았다\"\n         assert broken.status.status == STATUS_NOT_COMPUTABLE\n         assert composite.status.status == STATUS_NOT_COMPUTABLE\n         # 사유는 분야가 낸 것을 그대로 쓴다 — 새 어휘를 만들지 않는다.\n         assert composite.status.reason == broken.status.reason\n         assert composite.cases == ()\n \n-    def test_모든_분야가_정상인데_종합만_계산_불가일_수_있다(self) -> None:\n+    def test_모든_분야가_정상인데_종합만_계산_불가일_수_있다(self, tmp_path: Path) -> None:\n         \"\"\"반대 방향 — T_all 자체가 없는 경우다 (FR-039 ②).\n \n         지표 교체로 두 계열이 겹치는 달이 하나도 없으면 종합 기준월이 서지 않는다. 그때 분야\n@@ -515,12 +531,7 @@ class TestCompositePropagation:\n         source = StubMacroSource(registry, series)\n         assert source.baseline_months().composite is None\n \n-        builder = SnapshotBuilder(\n-            registry,\n-            {key: source.monthly_series(key) for key in series},\n-            source.publication,\n-            Versions(data=source.data_version(), registry=registry.version),\n-        )\n+        builder = self._builder(registry, source, tmp_path)\n         for field_id, latest in source.baseline_months().by_field.items():\n             snapshot = builder.build(SearchScope.field(field_id), latest)\n             assert snapshot.status.status != STATUS_NOT_COMPUTABLE, field_id\n@@ -528,6 +539,7 @@ class TestCompositePropagation:\n         composite_scope = SearchScope.composite()\n         horizon = builder.observable_months(composite_scope)[-1]\n         composite = builder.build(composite_scope, horizon)\n+        assert composite.versions.model == \"REGIME-V3-TEST\", \"종합이 v3 경로를 타지 않았다\"\n         assert composite.status.status == STATUS_NOT_COMPUTABLE\n         assert composite.cases == ()\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_precompute.py",
+          "old_path": "data/tests/regime/test_precompute.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -185,17 +185,6 @@ class TestCommonScaleAppliesToAllCandidates:\n         old_value = 3.25  # 1970년대 어느 달의 값이라고 하자 — 척도 구간 한참 밖이다\n         assert scale.standardize(old_value) == (old_value - scale.median) / scale.spread\n \n-    def test_질의와_후보가_같은_자를_쓴다(self) -> None:\n-        \"\"\"같은 값이면 같은 z다. 후보마다 제 척도로 재면 이 등식이 깨진다.\"\"\"\n-        series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n-        scale = scale_for(INDICATOR, BASELINE, series)\n-        assert isinstance(scale, Scale)\n-\n-        assert scale.standardize(12.0) == scale.standardize(12.0)\n-        assert scale.standardize(12.0) - scale.standardize(10.0) == pytest.approx(\n-            (12.0 - 10.0) / scale.spread\n-        )\n-\n     def test_중앙값과_같은_값의_z는_0이다(self) -> None:\n         series = make_series((2016, 4), rising(WINDOW_MAX_MONTHS))\n         scale = scale_for(INDICATOR, BASELINE, series)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_scale.py",
+          "old_path": "data/tests/regime/test_scale.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,19 +11,18 @@\n \n from __future__ import annotations\n \n+from collections.abc import Callable\n from datetime import date\n+from functools import cache\n \n import pytest\n from conftest import make_registry, make_series\n \n-from data_pipeline.regime.candidates import MINIMUM_GAP_MONTHS\n-from data_pipeline.regime.comparison import COMPARISON_OFFSETS\n+from data_pipeline.regime.candidates import MINIMUM_GAP_MONTHS, is_far_enough\n+from data_pipeline.regime.distance import DistanceModel, build_model\n+from data_pipeline.regime.era import era_position_for\n from data_pipeline.regime.macro.types import MacroSourceError\n-from data_pipeline.regime.scale import (\n-    WINDOW_END_OFFSET,\n-    WINDOW_START_OFFSET,\n-    shift_month,\n-)\n+from data_pipeline.regime.scale import WINDOW_END_OFFSET, shift_month\n from data_pipeline.regime.watermark import (\n     ORIGIN_CHANGED_SINCE,\n     ORIGIN_REQUESTED,\n@@ -41,6 +40,68 @@ def months_after(month: date, count: int) -> date:\n     return shift_month(month, -count)\n \n \n+#: 네 경로를 따라갈 계열. 값이 달마다 달라 척도가 선다 — 아래 `series` 픽스처처럼 값이 한결같으면\n+#: MAD·IQR이 0이라 공통 척도와 시대별 보조 척도 경로를 탈 수 없다.\n+PATH_REGISTRY = make_registry({\"A\": [\"A1\"]})\n+PATH_ENTRY = PATH_REGISTRY.indicators[0]\n+PATH_SERIES = {PATH_ENTRY.id: make_series((1994, 1), [float(index % 7) for index in range(400)])}\n+\n+#: M 앞뒤 2년의 기준월. 네 경로의 첫 경계(M ~ M+16)를 담고, M보다 이른 달도 그만큼 본다.\n+SCAN = tuple(months_after(CHANGED, offset) for offset in range(-24, 25))\n+\n+\n+@cache\n+def model_at(baseline_month: date) -> DistanceModel:\n+    model = build_model(PATH_REGISTRY, baseline_month, PATH_SERIES)\n+    assert isinstance(model, DistanceModel), f\"{baseline_month}에서 계산 준비물이 서지 않았다\"\n+    return model\n+\n+\n+def candidate_ends(baseline_month: date) -> list[date]:\n+    return [end for end in PATH_SERIES[PATH_ENTRY.id] if is_far_enough(baseline_month, end)]\n+\n+\n+def query_reaches(baseline_month: date) -> bool:\n+    \"\"\"질의 비교 시점이 M을 읽는가.\"\"\"\n+    return CHANGED in model_at(baseline_month).comparison.by_indicator[PATH_ENTRY.id].months\n+\n+\n+def scale_reaches(baseline_month: date) -> bool:\n+    \"\"\"공통 척도가 M을 구간에 넣었는가.\"\"\"\n+    scale = model_at(baseline_month).scales[PATH_ENTRY.id]\n+    return scale.window_start <= CHANGED <= scale.window_end\n+\n+\n+def case_reaches(baseline_month: date) -> bool:\n+    \"\"\"어느 후보의 관측 구간이 M을 읽는가.\"\"\"\n+    model = model_at(baseline_month)\n+    return any(\n+        CHANGED in model.case_months_for(PATH_ENTRY.id, end)\n+        for end in candidate_ends(baseline_month)\n+    )\n+\n+\n+@cache\n+def era_ends_reaching() -> tuple[date, ...]:\n+    \"\"\"시대별 보조 척도 구간에 M이 들어가는 후보 종료월. 기준월과 무관하다(SC-011).\"\"\"\n+    series = PATH_SERIES[PATH_ENTRY.id]\n+    ends: list[date] = []\n+    for end in series:\n+        position = era_position_for(PATH_ENTRY, end, series)\n+        if position is not None and position.window_start <= CHANGED <= position.window_end:\n+            ends.append(end)\n+    return tuple(ends)\n+\n+\n+def era_reaches(baseline_month: date) -> bool:\n+    \"\"\"후보가 된 종료월 중 보조 척도 구간에 M을 넣은 것이 있는가.\"\"\"\n+    return any(is_far_enough(baseline_month, end) for end in era_ends_reaching())\n+\n+\n+def first_reached(reaches: Callable[[date], bool]) -> date:\n+    return next(month for month in SCAN if reaches(month))\n+\n+\n class StubSource:\n     \"\"\"`changed_since()`만 흉내 내는 소스. 워터마크 판정에 쓰는 것이 그 하나다.\"\"\"\n \n@@ -60,29 +121,23 @@ def series() -> dict[str, dict[date, float]]:\n \n \n class TestFourPaths:\n-    \"\"\"M이 닿는 네 경로의 경계가 모두 `t ≥ M` 안에 있는가 (research R3).\"\"\"\n+    \"\"\"M이 닿는 네 경로의 경계가 모두 `t ≥ M` 안에 있는가 (research R3).\n+\n+    경계는 운영 계산에 기준월을 하나씩 넣어 **M을 실제로 읽는 첫 t**로 찾는다. 경계를 여기서\n+    셈으로만 적으면 계산이 다른 경계를 써도 시험은 늘 참이 된다.\n+    \"\"\"\n \n     def test_질의_비교_시점_경계(self) -> None:\n         \"\"\"M이 `t-2 ~ t`에 들어가는 가장 이른 t는 M 자신이다 — 네 경로 중 가장 넓다.\"\"\"\n-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)\n-        earliest = CHANGED  # t = M 일 때 M 이 비교 시점의 마지막 달이다\n-        assert watermark.covers(earliest)\n-        assert max(COMPARISON_OFFSETS) == 2\n-        for offset in COMPARISON_OFFSETS:\n-            assert watermark.covers(months_after(CHANGED, offset))\n+        assert first_reached(query_reaches) == CHANGED\n \n     def test_공통_척도_구간_경계(self) -> None:\n-        \"\"\"M이 `[t-122, t-3]`에 처음 들어가는 t는 M+3이고, 마지막은 M+122다.\"\"\"\n-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)\n-        first = months_after(CHANGED, WINDOW_END_OFFSET)\n-        last = months_after(CHANGED, WINDOW_START_OFFSET)\n-        assert watermark.covers(first)\n-        assert watermark.covers(last)\n+        \"\"\"M이 `[t-122, t-3]`에 처음 들어가는 t는 M+3이다.\"\"\"\n+        assert first_reached(scale_reaches) == months_after(CHANGED, WINDOW_END_OFFSET)\n \n     def test_후보_관측_구간_경계(self) -> None:\n         \"\"\"후보는 t보다 12개월 **초과** 이전이므로 M이 후보에 닿는 가장 이른 t는 M+13이다.\"\"\"\n-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)\n-        assert watermark.covers(months_after(CHANGED, MINIMUM_GAP_MONTHS + 1))\n+        assert first_reached(case_reaches) == months_after(CHANGED, MINIMUM_GAP_MONTHS + 1)\n \n     def test_시대별_보조_척도_구간_경계(self) -> None:\n         \"\"\"가장 늦게 닿는 경로다 — `c ≥ M+3`이고 `t > c+12`라 t는 M+16부터다.\n@@ -90,19 +145,17 @@ class TestFourPaths:\n         순위가 같아도 이 경로 하나 때문에 결과가 달라질 수 있다. 보조 설명이 바뀌면 화면에\n         나가는 것이 달라지므로 새 결과다(FR-017·FR-030).\n         \"\"\"\n-        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)\n-        earliest = months_after(CHANGED, WINDOW_END_OFFSET + MINIMUM_GAP_MONTHS + 1)\n-        assert watermark.covers(earliest)\n+        assert first_reached(era_reaches) == months_after(\n+            CHANGED, WINDOW_END_OFFSET + MINIMUM_GAP_MONTHS + 1\n+        )\n \n     def test_가장_넓은_경로가_나머지를_덮는다(self) -> None:\n-        \"\"\"네 경계 중 가장 이른 것이 `t = M`이라 규칙이 한 줄이다 (research R3).\"\"\"\n-        boundaries = (\n-            CHANGED,\n-            months_after(CHANGED, WINDOW_END_OFFSET),\n-            months_after(CHANGED, MINIMUM_GAP_MONTHS + 1),\n-            months_after(CHANGED, WINDOW_END_OFFSET + MINIMUM_GAP_MONTHS + 1),\n-        )\n-        assert min(boundaries) == CHANGED\n+        \"\"\"네 경로 어디로든 M이 닿는 t는 모두 `t ≥ M`이라 규칙이 한 줄이다 (research R3).\"\"\"\n+        watermark = Watermark(month=CHANGED, origin=ORIGIN_CHANGED_SINCE)\n+        for reaches in (query_reaches, scale_reaches, case_reaches, era_reaches):\n+            reached = [month for month in SCAN if reaches(month)]\n+            assert reached, reaches.__name__\n+            assert all(watermark.covers(month) for month in reached), reaches.__name__\n \n     def test_M_직전_달은_대상이_아니다(self) -> None:\n         \"\"\"`t < M`은 네 경로 어디로도 M이 들어가지 않는다 — 다시 계산하면 낭비다.\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_watermark.py",
+          "old_path": "data/tests/regime/test_watermark.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -519,13 +519,13 @@ def test_다른_종목은_걸러진다() -> None:\n def test_ISIN을_못_붙이는_공시는_결과에_드러난다() -> None:\n     \"\"\"빈 결과와 「읽지 못했다」를 가르지 못하면 없는 분배를 없다고 잘못 말하게 된다.\"\"\"\n     source = ScriptedSource(\n-        [ref(\"20110427000489\", date(2011, 4, 27))],\n-        {\"20110427000489\": fixture(\"body_legacy_20110427001051.html\")},\n+        [ref(LEGACY_ACPT, date(2011, 4, 27))],\n+        {LEGACY_ACPT: fixture(\"body_legacy_20110427001051.html\")},\n     )\n     history = collect_distribution_history(source, TARGET_ISIN, date(2011, 4, 1), date(2011, 5, 31))\n     assert history.records == ()\n     assert len(history.unkeyed) == 1\n-    assert history.unkeyed[0].acpt_no == \"20110427000489\"\n+    assert history.unkeyed[0].acpt_no == LEGACY_ACPT\n     assert history.is_complete is False\n \n \n@@ -727,7 +727,10 @@ def test_브랜드명을_이어붙인_이름으로는_찾을_수_없다() -> Non\n     \"\"\"\n     (row,) = parse_distribution_rows(fixture(f\"body_legacy_acpt{KODEX_SECURITIES_ACPT}.html\"))\n     assert row.short_name == \"삼성 KODEX 증권주증권상장지수투자신탁(주식)\"\n-    assert \"KODEX 증권증권상장지수투자신탁\" not in row.short_name\n+    made = build_fund_name_index(\n+        {\"삼성 KODEX 증권증권상장지수투자신탁(주식)\": KODEX_SECURITIES_ISIN}\n+    )\n+    assert match_fund_name(row.short_name, made) is None\n \n \n # --- 갈래 가르기 -------------------------------------------------------------\n@@ -925,18 +928,6 @@ def test_대응표_파일은_여덟_종목을_모두_담는다() -> None:\n     assert set(names.values()) == EIGHT_ISINS\n \n \n-def test_대응표의_모든_이름이_제_종목을_가리킨다() -> None:\n-    \"\"\"이름 수와 열쇠 수는 다를 수 있다 — 띄어쓰기만 다른 표기는 같은 열쇠가 된다.\n-\n-    걸어야 할 것은 개수가 아니라 **어긋남이 없다**는 것이다. 이름 하나가 엉뚱한 ISIN을\n-    가리키면 그 종목의 분배가 남의 것으로 붙는다.\n-    \"\"\"\n-    names = load_fund_names(FUND_NAMES_PATH)\n-    index = build_fund_name_index(names)\n-    for name, isin in names.items():\n-        assert match_fund_name(name, index) == isin\n-\n-\n def test_대응표가_2019년_본문의_정식명을_맞춘다() -> None:\n     \"\"\"픽스처는 2019-04-26에 실제로 공시된 본문이다. 대응표가 이것을 못 맞추면 헛것이다.\"\"\"\n     index = build_fund_name_index(load_fund_names(FUND_NAMES_PATH))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_kind_distributions.py",
+          "old_path": "data/tests/test_kind_distributions.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,7 +7,6 @@\n \n from __future__ import annotations\n \n-import os\n import traceback\n from dataclasses import replace\n from datetime import date\n@@ -76,12 +75,6 @@ class TestRecordedTerms:\n         for indicator in INDICATORS:\n             assert \"출처\" in indicator.export_notice, indicator.indicator_id\n \n-    def test_작성기관과_제공기관이_다른_지표가_있다(self) -> None:\n-        \"\"\"이용 조건은 작성기관 쪽을 먼저 본다 (FR-016). 둘이 같다고 전제하면 안 된다.\"\"\"\n-        assert BY_ID[\"dubai_crude\"].agency == \"국제통화기금(IMF)\"\n-        assert \"한국은행\" in BY_ID[\"dubai_crude\"].attribution\n-        assert BY_ID[\"housing_sale_price\"].agency == \"한국부동산원\"\n-\n \n class TestPendingRights:\n     \"\"\"권리 확인 대기와 미확인은 다른 상태다 (FR-016a).\"\"\"\n@@ -419,12 +412,15 @@ class TestKeySecrecy:\n \n         assert redact(\"아무 문자열\") == \"아무 문자열\"\n \n-    def test_등록표와_설정이_키_값을_들고_있지_않다(self) -> None:\n+    def test_등록표와_설정이_키_값을_들고_있지_않다(self, monkeypatch) -> None:\n         \"\"\"설정 객체를 로그에 그대로 찍는 일이 흔한데 거기 키가 있으면 안 된다.\"\"\"\n         from data_pipeline.macro.config import load_source_config\n \n+        # CI에는 키가 없다. 직접 넣어 두지 않으면 자리표시 문자열만 견주게 되어 이 검사가\n+        # 실패할 수 없다.\n+        for name in API_KEY_ENV_NAMES:\n+            monkeypatch.setenv(name, self.KEY)\n+\n         for source_id in registry.used_sources():\n             config = load_source_config(source_id)\n-            rendered = repr(config)\n-            for name in API_KEY_ENV_NAMES:\n-                assert os.environ.get(name, \"___없음___\") not in rendered\n+            assert self.KEY not in repr(config), source_id\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_compliance.py",
+          "old_path": "data/tests/test_macro_compliance.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,7 +13,6 @@ import pytest\n from data_pipeline.macro import publish\n from data_pipeline.macro.normalize import NormalizedObservation\n from data_pipeline.macro.registry import (\n-    EXPECTED_INDICATOR_COUNT,\n     FIELD_IDS,\n     INDICATORS,\n     REVIEW_PENDING_RIGHTS,\n@@ -297,6 +296,3 @@ class TestDecisionLookup:\n         assert decision.baseline_for(publish.SCOPE_ALL) is not None\n         assert decision.baseline_for(\"production\") is not None\n         assert decision.baseline_for(\"없는_분야\") is None\n-\n-    def test_등록표가_열일곱개다(self) -> None:\n-        assert len(INDICATORS) == EXPECTED_INDICATOR_COUNT == 17\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish.py",
+          "old_path": "data/tests/test_macro_publish.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -335,17 +335,32 @@ def test_value_rule_change_requires_the_whole_range(publishing_fixture) -> None:\n     first = replace(request, observations=_observations((\"2026-07\", \"2026-08\")))\n     dataset_id = publish_atomically(engine, first)\n \n-    # 단위를 바꾸면 값 규칙 지문이 달라진다.\n+    # 단위를 바꾸면 값 규칙 지문이 달라진다. 새 규칙의 등록표를 먼저 올려 두어야 지문 대조가\n+    # 아니라 이어받기 판정에서 걸리는지를 볼 수 있다.\n     changed = tuple(\n         replace(i, transformed_unit=f\"{i.transformed_unit} (개정)\")\n         for i in request.indicators\n     )\n+    with engine.begin() as connection:\n+        connection.execute(\n+            text(\"INSERT INTO macro_calculation_registry_version VALUES \"\n+                 \"(2, :fingerprint, 'PUBLISHED')\"),\n+            {\"fingerprint\": value_rule_fingerprint(changed)},\n+        )\n+        connection.execute(\n+            text(\"INSERT INTO macro_indicator_definition \"\n+                 \"SELECT 2, indicator_id, field_id, nominal_weight \"\n+                 \"FROM macro_indicator_definition WHERE registry_version_id=1\")\n+        )\n+    # 정기 수집처럼 2026-08 만 받았다. 규칙이 같았다면 2026-07 을 이어받아 발행된다.\n     second = replace(\n         request, version_key=\"macro-3\", attempt_key=\"attempt-3\",\n         indicators=changed,\n+        observations=_observations((\"2026-08\",)),\n         pointer=PublicationPointer(dataset_id, 1, 1),\n+        target_registry_id=2,\n     )\n-    with pytest.raises(ValueError):\n+    with pytest.raises(ValueError, match=\"빠진 월\"):\n         publish_atomically(engine, second)\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish_atomic.py",
+          "old_path": "data/tests/test_macro_publish_atomic.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -130,12 +130,6 @@ def test_등록표의_공표_정밀도가_원천_응답과_같다(indicator) ->\n     )\n \n \n-def test_열일곱_모두에_공표_정밀도가_있다() -> None:\n-    \"\"\"빈 칸을 남기면 010 이 척도를 판정할 때 그 지표만 다른 규칙으로 간다 (FR-015).\"\"\"\n-    missing = [i.indicator_id for i in INDICATORS if i.published_precision is None]\n-    assert missing == []\n-\n-\n def test_주택가격은_원천이_여덟_자리로_준다() -> None:\n     \"\"\"눈에 띄는 값이라 따로 고정한다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_published_precision.py",
+          "old_path": "data/tests/test_macro_published_precision.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -208,32 +208,6 @@ def test_표본_세_달이_손계산과_정확히_일치한다(indicator: Indica\n         )\n \n \n-@pytest.mark.parametrize(\n-    \"rule\",\n-    [\n-        TRANSFORM_YOY,\n-        TRANSFORM_MOM,\n-        TRANSFORM_MONTH_END,\n-        TRANSFORM_MONTH_AVERAGE,\n-        TRANSFORM_OFFICIAL_AMOUNT,\n-        TRANSFORM_SEASONAL_RATE,\n-    ],\n-)\n-def test_여섯_변환_유형이_모두_대조에_든다(rule: str) -> None:\n-    \"\"\"SC-007 은 여섯 유형을 모두 표본에 넣으라고 한다. 하나라도 빠지면 그 경로가 대조 밖이다.\"\"\"\n-    assert [i.indicator_id for i in INDICATORS if i.transform_rule == rule]\n-\n-\n-def test_실업률은_원천_계절조정값을_그대로_둔다() -> None:\n-    \"\"\"우리가 다시 계절조정하지 않는다 (FR-001, T072).\"\"\"\n-    indicator = BY_ID[\"unemployment_rate\"]\n-    observations = _observations(indicator)\n-    produced = _produced(indicator, observations)\n-    values = _by_period(observations)\n-    for period in _sample_months(produced):\n-        assert produced[period].value == values[period]\n-\n-\n def test_결측_직후_달도_비교_대상을_옮기지_않는다() -> None:\n     \"\"\"결측 뒤의 달이 가까운 달로 물러나 계산되지 않는다 (FR-006, T072).\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_value_crosscheck.py",
+          "old_path": "data/tests/test_macro_value_crosscheck.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n \"\"\"수집 환경 스모크 테스트.\n \n-T001에서 정비한 패키지 경로와 저장 디렉터리가 갖춰졌는지만 확인한다.\n+T001에서 정비한 저장 디렉터리가 갖춰졌는지만 확인한다.\n 실제 KRX OPEN API 호출은 인증키가 필요하므로 여기서 하지 않는다.\n \"\"\"\n \n@@ -9,12 +9,6 @@ from pathlib import Path\n DATA_ROOT = Path(__file__).resolve().parents[1]\n \n \n-def test_data_pipeline_package_is_importable() -> None:\n-    import data_pipeline\n-\n-    assert data_pipeline.__name__ == \"data_pipeline\"\n-\n-\n def test_storage_directories_exist() -> None:\n     assert (DATA_ROOT / \"raw\").is_dir()\n     assert (DATA_ROOT / \"scripts\").is_dir()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_pipeline_smoke.py",
+          "old_path": "data/tests/test_pipeline_smoke.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,6 @@ from data_pipeline.dataset_version import (\n     DatasetNotPublishedError,\n     DatasetVersion,\n     DatasetVersionError,\n-    InvalidDatasetIdError,\n     dataset_deadline_date,\n )\n from data_pipeline.repository import (\n@@ -144,9 +143,6 @@ class TestPublish:\n         assert repository.is_published(DATASET_ID) is True\n         assert count_rows(repository, dataset_version_table) == 1\n \n-    def test_unknown_dataset_is_not_published(self, repository: MarketDataRepository) -> None:\n-        assert repository.is_published(DATASET_ID) is False\n-\n     def test_republishing_same_dataset_id_is_rejected(\n         self, published: MarketDataRepository\n     ) -> None:\n@@ -173,12 +169,6 @@ class TestPublish:\n         assert bool(stored.complete) is False\n         assert stored.failure_reason == \"이용 한도 도달\"\n \n-    def test_bad_dataset_id_never_reaches_the_database(\n-        self, repository: MarketDataRepository\n-    ) -> None:\n-        with pytest.raises(InvalidDatasetIdError):\n-            repository.is_published(\"KRX_DAILY_V1\")\n-\n \n class TestLoadOrder:\n     def test_timeseries_without_dataset_version_is_rejected(\n@@ -496,9 +486,13 @@ class TestConnection:\n         assert database_url_from_env(env_file).startswith(\"postgresql+psycopg://\")\n \n     def test_missing_url_is_reported(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:\n-        monkeypatch.delenv(\"DATABASE_URL\", raising=False)\n-        with pytest.raises(RepositoryError):\n-            database_url_from_env(tmp_path / \"absent.env\")\n+        # 없는 파일을 넘기면 파일 검사에서 먼저 걸린다. 있는 파일에 값만 비워 둔다.\n+        # setenv로 먼저 기록해 두면 load_dotenv가 환경을 바꿔도 테스트가 끝날 때 되돌아온다.\n+        monkeypatch.setenv(\"DATABASE_URL\", \"postgresql://공용:x@shared:5432/thorp\")\n+        env_file = tmp_path / \".env\"\n+        env_file.write_text(\"DATABASE_URL=\\n\", encoding=\"utf-8\")\n+        with pytest.raises(RepositoryError, match=\"DATABASE_URL이 비어 있다\"):\n+            database_url_from_env(env_file)\n \n     def test_no_credentials_are_hardcoded(self) -> None:\n         source = (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_repository.py",
+          "old_path": "data/tests/test_repository.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881362": []
+  }
+}

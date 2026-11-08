@@ -1,0 +1,570 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948946,
+    "iid": 188,
+    "project_id": 1444456,
+    "title": "docs(de): spec 001의 남은 항목 셋을 정하고 까닭을 남긴다",
+    "description": "# 작업 내용 요약\n\nspec 001의 작업 목록에 판단이 나지 않은 항목 셋이 열린 채로 남아 있었다. 셋 다 코드를 쓰면 끝나는 일이 아니라 **\"할 근거가 있는가\"와 \"누가 맡는가\"** 를 정해야 하는 일이었고, 정하지 않으면 spec이 영영 닫히지 않는 상태였다.\n\n셋을 정하고 그 까닭을 작업 목록에 남긴다. 이 MR에는 코드 변경이 없다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-323](https://ssafy.atlassian.net/browse/S15P21E205-323) [DE] 대조 표본에 가격을 더한다 — 착수했다가 폐기한 티켓이며 그 판단이 이 MR에 담긴다\n- [S15P21E205-187](https://ssafy.atlassian.net/browse/S15P21E205-187) [DE] PD-19·PD-20 거래정지 규칙 확정 — 함께 폐기한다\n- speckit 기준으로는 T015·T020·T021이다\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| spec 001의 남은 작업 | 다섯 | **하나** (T016 검증 기록) |\n| 거래정지 규칙 | 미확정인 채 열려 있음 | 폐기. 다시 열 조건을 적어 둠 |\n| 가격·지수 대조 | 미착수인 채 열려 있음 | 폐기. 대안을 적어 둠 |\n| 자료 메타데이터 전달 | 어느 spec 소유인지 미정 | spec 004가 이어받음 |\n| 코드·계약·픽스처 | — | **바뀌지 않는다** |\n\n# 주요 변경 사항\n\n## 거래정지 규칙을 폐기한다\n\n길게 이어진 거래정지 구간을 어떻게 다룰지 정하는 일이었다. **그런데 정할 근거가 없다.** 여덟 종목 2년(2024-09-19~2026-09-15, 484거래일)에서 거래정지가 **0건**이고 최소 일평균 거래대금이 9,760만 원이다. 길이 분포를 집계할 입력 자체가 비어 있다.\n\n근거 없이 정한 규칙은 나중에 실제 사례가 생겼을 때 맞을 이유가 없다. 지금 정하면 \"정했다\"는 사실만 남는다.\n\n**검사 장치는 켜 둔 채로 둔다.** 정지 구간을 기록하는 쪽은 계속 돌므로 사례가 생기면 드러난다. 새 ETF를 도입하거나 자료 구간을 넓혀 사례가 나오면 그때 다시 연다는 조건도 함께 적었다. 임시 처리 중임을 알리는 표시도 그대로 둔다 — 그것이 지금 상태에 맞는 설명이다.\n\n## 가격·지수 대조를 폐기한다\n\n착수한 뒤에 **대조 상대가 없다**는 것이 드러났다.\n\n대조가 공신력을 만드는 것은 **서로 다른 두 출처가 같은 값을 말할 때**다. 분배금은 그 조건을 만족한다. 가격에서 되살린 값과 운용사 공시는 서로 다른 출처이고, 실제로 어긋남을 찾아냈다 — 공시 59원인데 관측 55원이었다. 상장일도 같다.\n\n**가격은 그 조건을 만족하지 않는다.** 시장 가격을 만드는 곳이 거래소이고 우리가 받아오는 곳도 거래소다. 대조해도 언제나 같으므로 **언제나 통과하는 검사**가 된다. 운용사가 매일 내는 기준가격은 시장 가격과 정의가 다른 값이라 대조하면 언제나 \"정의 차이\"로 분류된다.\n\n지수는 여기에 더해 대조 기록 표가 담지 못한다. 종목 식별자가 필수이고 표본 사유가 세 값으로 못 박혀 있어 스키마를 넓혀야 한다.\n\n**되살릴 만한 대안을 함께 적었다.** 원천 응답과 적재된 값을 견주는 무결성 검사다. 보관해 둔 응답 원본이 진짜 서로 다른 두 지점이 되고, 수집에서 적재 사이에 값이 뭉개졌는지 잡는다. 사람이 옮겨 적을 것이 없어 자동으로 돈다.\n\n## 자료 메타데이터 전달을 spec 004로 넘긴다\n\n워커가 자료를 읽으면서 파악한 사정(전날 종가로 채운 날, 자료 부족 구간, 자료 마감 시각, 예시 자료 여부)이 결과까지 닿지 않는 문제다.\n\n**기술 문제가 아니라 소유 문제였다.** 값을 만드는 쪽은 001이고 결과에 싣는 쪽은 004이며, 막힌 곳은 그 사이를 잇는 자리다. 공급자가 값을 빠짐없이 채우는 데까지가 001의 몫이고 그것은 이미 되어 있다.\n\n# 테스트\n\n**코드 변경이 없어 검사 결과가 달라지지 않는다.** 바뀐 파일은 `specs/001-etf-market-data/tasks.md` 하나다.\n\n- [x] 변경 범위 확인 — `git diff --stat` 결과가 작업 목록 파일 한 개다\n\n참고로 이 판단들의 근거가 된 숫자는 2026-09-17에 잰 것이다. 거래정지 0건과 최소 거래대금 9,760만 원은 484거래일 실측이고, 분배금 공시 59원 대 관측 55원은 2026-04-30 기준일 여덟 건을 대조해 확인했다.\n\n# 리뷰 포인트\n\n1. **폐기한 둘을 정말 접어도 되는지 봐 주십시오.** 요구사항 문서(FR-016·SC-002)는 여전히 \"가격과 지수도 대조하라\"고 적고 있고, PD-19·PD-20도 미확정으로 남습니다. **요구사항을 고치지 않고 작업만 접은 상태**입니다. 요구사항 쪽 문구를 어떻게 할지는 따로 정해야 합니다.\n\n2. **T016이 다른 세션에서 진행 중이라 같은 파일이 겹칠 수 있습니다.** 이 MR이 고치는 것은 작업 목록 파일 하나인데, T016도 그 파일의 자기 항목을 닫을 것입니다. 서로 다른 줄이라 내용이 부딪히지는 않지만 병합 순서를 맞춰야 합니다.\n\n3. **spec 001을 닫는 데 남은 것은 T016 하나입니다.** 다만 그 작업의 알맹이가 \"실제 자료로 돌려 보고 기록을 남기는 것\"인데, **서버 DB에 자료를 넣는 절차가 아직 없습니다.** `data/` 수집 파이프라인은 배포 대상이 아니고 서버 워커는 서버 DB에서 자료를 읽습니다. 발표 전에 이 길을 정해야 합니다.",
+    "state": "merged",
+    "created_at": "2026-09-17T15:06:58.324+09:00",
+    "updated_at": "2026-09-17T15:08:09.703+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:08:09.324+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(de)/323-spec001-remaining-decisions",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ce51410e215053faa5379de9c051fa345a76a949",
+    "merge_commit_sha": "00546a34ec5d6990f9909ef40634f5aa246c9e6c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:06:59.490+09:00",
+    "reference": "!188",
+    "references": {
+      "short": "!188",
+      "relative": "!188",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!188"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/188",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948946,
+    "iid": 188,
+    "project_id": 1444456,
+    "title": "docs(de): spec 001의 남은 항목 셋을 정하고 까닭을 남긴다",
+    "description": "# 작업 내용 요약\n\nspec 001의 작업 목록에 판단이 나지 않은 항목 셋이 열린 채로 남아 있었다. 셋 다 코드를 쓰면 끝나는 일이 아니라 **\"할 근거가 있는가\"와 \"누가 맡는가\"** 를 정해야 하는 일이었고, 정하지 않으면 spec이 영영 닫히지 않는 상태였다.\n\n셋을 정하고 그 까닭을 작업 목록에 남긴다. 이 MR에는 코드 변경이 없다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-323](https://ssafy.atlassian.net/browse/S15P21E205-323) [DE] 대조 표본에 가격을 더한다 — 착수했다가 폐기한 티켓이며 그 판단이 이 MR에 담긴다\n- [S15P21E205-187](https://ssafy.atlassian.net/browse/S15P21E205-187) [DE] PD-19·PD-20 거래정지 규칙 확정 — 함께 폐기한다\n- speckit 기준으로는 T015·T020·T021이다\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| spec 001의 남은 작업 | 다섯 | **하나** (T016 검증 기록) |\n| 거래정지 규칙 | 미확정인 채 열려 있음 | 폐기. 다시 열 조건을 적어 둠 |\n| 가격·지수 대조 | 미착수인 채 열려 있음 | 폐기. 대안을 적어 둠 |\n| 자료 메타데이터 전달 | 어느 spec 소유인지 미정 | spec 004가 이어받음 |\n| 코드·계약·픽스처 | — | **바뀌지 않는다** |\n\n# 주요 변경 사항\n\n## 거래정지 규칙을 폐기한다\n\n길게 이어진 거래정지 구간을 어떻게 다룰지 정하는 일이었다. **그런데 정할 근거가 없다.** 여덟 종목 2년(2024-09-19~2026-09-15, 484거래일)에서 거래정지가 **0건**이고 최소 일평균 거래대금이 9,760만 원이다. 길이 분포를 집계할 입력 자체가 비어 있다.\n\n근거 없이 정한 규칙은 나중에 실제 사례가 생겼을 때 맞을 이유가 없다. 지금 정하면 \"정했다\"는 사실만 남는다.\n\n**검사 장치는 켜 둔 채로 둔다.** 정지 구간을 기록하는 쪽은 계속 돌므로 사례가 생기면 드러난다. 새 ETF를 도입하거나 자료 구간을 넓혀 사례가 나오면 그때 다시 연다는 조건도 함께 적었다. 임시 처리 중임을 알리는 표시도 그대로 둔다 — 그것이 지금 상태에 맞는 설명이다.\n\n## 가격·지수 대조를 폐기한다\n\n착수한 뒤에 **대조 상대가 없다**는 것이 드러났다.\n\n대조가 공신력을 만드는 것은 **서로 다른 두 출처가 같은 값을 말할 때**다. 분배금은 그 조건을 만족한다. 가격에서 되살린 값과 운용사 공시는 서로 다른 출처이고, 실제로 어긋남을 찾아냈다 — 공시 59원인데 관측 55원이었다. 상장일도 같다.\n\n**가격은 그 조건을 만족하지 않는다.** 시장 가격을 만드는 곳이 거래소이고 우리가 받아오는 곳도 거래소다. 대조해도 언제나 같으므로 **언제나 통과하는 검사**가 된다. 운용사가 매일 내는 기준가격은 시장 가격과 정의가 다른 값이라 대조하면 언제나 \"정의 차이\"로 분류된다.\n\n지수는 여기에 더해 대조 기록 표가 담지 못한다. 종목 식별자가 필수이고 표본 사유가 세 값으로 못 박혀 있어 스키마를 넓혀야 한다.\n\n**되살릴 만한 대안을 함께 적었다.** 원천 응답과 적재된 값을 견주는 무결성 검사다. 보관해 둔 응답 원본이 진짜 서로 다른 두 지점이 되고, 수집에서 적재 사이에 값이 뭉개졌는지 잡는다. 사람이 옮겨 적을 것이 없어 자동으로 돈다.\n\n## 자료 메타데이터 전달을 spec 004로 넘긴다\n\n워커가 자료를 읽으면서 파악한 사정(전날 종가로 채운 날, 자료 부족 구간, 자료 마감 시각, 예시 자료 여부)이 결과까지 닿지 않는 문제다.\n\n**기술 문제가 아니라 소유 문제였다.** 값을 만드는 쪽은 001이고 결과에 싣는 쪽은 004이며, 막힌 곳은 그 사이를 잇는 자리다. 공급자가 값을 빠짐없이 채우는 데까지가 001의 몫이고 그것은 이미 되어 있다.\n\n# 테스트\n\n**코드 변경이 없어 검사 결과가 달라지지 않는다.** 바뀐 파일은 `specs/001-etf-market-data/tasks.md` 하나다.\n\n- [x] 변경 범위 확인 — `git diff --stat` 결과가 작업 목록 파일 한 개다\n\n참고로 이 판단들의 근거가 된 숫자는 2026-09-17에 잰 것이다. 거래정지 0건과 최소 거래대금 9,760만 원은 484거래일 실측이고, 분배금 공시 59원 대 관측 55원은 2026-04-30 기준일 여덟 건을 대조해 확인했다.\n\n# 리뷰 포인트\n\n1. **폐기한 둘을 정말 접어도 되는지 봐 주십시오.** 요구사항 문서(FR-016·SC-002)는 여전히 \"가격과 지수도 대조하라\"고 적고 있고, PD-19·PD-20도 미확정으로 남습니다. **요구사항을 고치지 않고 작업만 접은 상태**입니다. 요구사항 쪽 문구를 어떻게 할지는 따로 정해야 합니다.\n\n2. **T016이 다른 세션에서 진행 중이라 같은 파일이 겹칠 수 있습니다.** 이 MR이 고치는 것은 작업 목록 파일 하나인데, T016도 그 파일의 자기 항목을 닫을 것입니다. 서로 다른 줄이라 내용이 부딪히지는 않지만 병합 순서를 맞춰야 합니다.\n\n3. **spec 001을 닫는 데 남은 것은 T016 하나입니다.** 다만 그 작업의 알맹이가 \"실제 자료로 돌려 보고 기록을 남기는 것\"인데, **서버 DB에 자료를 넣는 절차가 아직 없습니다.** `data/` 수집 파이프라인은 배포 대상이 아니고 서버 워커는 서버 DB에서 자료를 읽습니다. 발표 전에 이 길을 정해야 합니다.",
+    "state": "merged",
+    "created_at": "2026-09-17T15:06:58.324+09:00",
+    "updated_at": "2026-09-17T15:08:09.703+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:08:09.324+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(de)/323-spec001-remaining-decisions",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ce51410e215053faa5379de9c051fa345a76a949",
+    "merge_commit_sha": "00546a34ec5d6990f9909ef40634f5aa246c9e6c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:06:59.490+09:00",
+    "reference": "!188",
+    "references": {
+      "short": "!188",
+      "relative": "!188",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!188"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/188",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-17T15:07:12.743+09:00",
+    "latest_build_finished_at": "2026-09-17T15:07:16.452+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 202572,
+      "iid": 113,
+      "project_id": 1444456,
+      "sha": "ce51410e215053faa5379de9c051fa345a76a949",
+      "ref": "docs(de)/323-spec001-remaining-decisions",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T15:07:12.638+09:00",
+      "updated_at": "2026-09-17T15:07:16.462+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202572"
+    },
+    "head_pipeline": {
+      "id": 202572,
+      "iid": 113,
+      "project_id": 1444456,
+      "sha": "ce51410e215053faa5379de9c051fa345a76a949",
+      "ref": "docs(de)/323-spec001-remaining-decisions",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T15:07:12.638+09:00",
+      "updated_at": "2026-09-17T15:07:16.462+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202572",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T15:07:12.743+09:00",
+      "finished_at": "2026-09-17T15:07:16.452+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202572",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "head_sha": "ce51410e215053faa5379de9c051fa345a76a949",
+      "start_sha": "12fc23ce673167d1ceb99866eff0d527f15be544"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b8be4861bd148a911a973d849e758f9c11ca429f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825430,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:06:58.442+09:00",
+          "updated_at": "2026-09-17T15:06:58.447+09:00",
+          "system": true,
+          "noteable_id": 948946,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 188,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "afd8022906fd857f88a0ac4b390d9c032983f0b4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825431,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:06:58.460+09:00",
+          "updated_at": "2026-09-17T15:06:58.466+09:00",
+          "system": true,
+          "noteable_id": 948946,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 188,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "93ba7db643cc1f2cabd6029f752ff9e682a06211",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825436,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 근거 기반의 스펙 조정**: 실측 데이터(2년 동안 거래정지 0건, 거래소 가격 데이터의 단일 출처 특성 등)를 바탕으로 불필요하거나 실효성 없는 요구사항을 과감히 폐기하고 그 이유를 작업 문서에 상세히 기록했습니다. 이는 불필요한 구현 공수와 오버엔지니어링을 방지하는 모범적인 문서화 프로세스입니다.\n- **책임 소재 분리**: 기술적 한계가 아닌 '소유권(Ownership)'의 문제로 파악하여, 메타데이터 전달 책임을 `spec 004`로 깔끔하게 이관하고 경계를 명확히 하였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (코드 변경 없이 마크다운 문서 내 태스크 정의와 상태값만 변경된 건으로, 시스템 동작에 직접적인 영향을 주는 코드가 없습니다.)\n\n### 테스트 제안\n문서 변경 사항이므로 별도의 코드 테스트는 필요하지 않습니다. 다만 후속 작업을 위해 다음 시나리오를 점검할 것을 제안합니다.\n- **시나리오 1**: `spec 004` 티켓 생성 및 메타데이터 이관 여부 확인 (`carriedForwardDates`, `dataGaps`, `dataDeadline` 등이 `spec 004`의 결과물에 정상적으로 포함되는지 추후 검증)\n- **시나리오 2**: 제안된 대안인 원천 응답(`raw/`)과 적재된 값 간의 무결성 검증 프로세스가 향후 백로그에 올바르게 등록되었는지 확인\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ce51410e215053faa5379de9c051fa345a76a949 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T15:07:23.316+09:00",
+          "updated_at": "2026-09-17T15:07:23.316+09:00",
+          "system": false,
+          "noteable_id": 948946,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 188,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "edd6103e6266cde952d1f9cf57665a9ccea679de",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825450,
+          "type": null,
+          "body": "mentioned in commit 00546a34ec5d6990f9909ef40634f5aa246c9e6c",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:08:10.133+09:00",
+          "updated_at": "2026-09-17T15:08:10.171+09:00",
+          "system": true,
+          "noteable_id": 948946,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 188,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5cf483ea0a33c6546ecc539806b7cd4c7c53f321",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829978,
+          "type": null,
+          "body": "mentioned in merge request !211",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-18T09:07:25.596+09:00",
+          "updated_at": "2026-09-18T09:07:25.611+09:00",
+          "system": true,
+          "noteable_id": 948946,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 188,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2213741,
+      "head_commit_sha": "ce51410e215053faa5379de9c051fa345a76a949",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "created_at": "2026-09-17T15:06:58.827+09:00",
+      "merge_request_id": 948946,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "fcbeeff803375546d452f6a354355c4c586da09a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2213741,
+      "head_commit_sha": "ce51410e215053faa5379de9c051fa345a76a949",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "created_at": "2026-09-17T15:06:58.827+09:00",
+      "merge_request_id": 948946,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "fcbeeff803375546d452f6a354355c4c586da09a",
+      "commits": [
+        {
+          "id": "ce51410e215053faa5379de9c051fa345a76a949",
+          "short_id": "ce51410e",
+          "created_at": "2026-09-17T15:02:26.000+09:00",
+          "parent_ids": [
+            "12fc23ce673167d1ceb99866eff0d527f15be544"
+          ],
+          "title": "docs(be): spec 001의 남은 항목 셋을 정하고 까닭을 남긴다",
+          "message": "docs(be): spec 001의 남은 항목 셋을 정하고 까닭을 남긴다\n\n작업 목록에 열려 있던 항목 셋의 판단을 적는다. 셋 다 코드 문제가 아니라\n\"할 근거가 있는가\"와 \"누가 맡는가\"의 문제였다.\n\nT015 거래정지 규칙 — 폐기. 여덟 종목 2년 484거래일에서 정지가 0건이라 길이\n분포를 집계할 입력 자체가 없다. 근거 없이 정한 규칙은 나중에 사례가 생겼을 때\n맞을 이유가 없다. 검사 장치는 켜 둔 상태라 정지가 생기면 드러나고, 그때 다시\n연다.\n\nT020 대조 표본에 가격·지수 추가 — 폐기. 대조가 공신력을 만드는 것은 서로 다른\n두 출처가 같은 값을 말할 때다. 분배금은 그 조건을 만족해 실제로 어긋남을\n찾아냈다(공시 59원, 관측 55원). 가격은 만족하지 않는다 — 시장 가격을 만드는\n곳이 거래소이고 받아오는 곳도 거래소라 언제나 같다. 언제나 통과하는 검사는\n공신력을 만들지 않는다. 되살릴 만한 대안(원천 응답과 적재값의 무결성 검사)을\n함께 적어 둔다.\n\nT021 자료 메타데이터 전달 — spec 004로 넘긴다. 값을 만드는 쪽은 001이고 결과에\n싣는 쪽은 004이며, 막힌 곳은 그 사이다. 공급자가 값을 빠짐없이 채우는 데까지가\n001의 몫이고 그것은 이미 되어 있다.\n\n이로써 spec 001에 남은 것은 T016 하나다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:02:26.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:02:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ce51410e215053faa5379de9c051fa345a76a949"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -174,12 +174,14 @@\n   - **적재할 때 「담을 수 없는 종목코드」 줄이 나오는지 확인한다.** 나오지 않으면 T031이 남긴 한계(304종 전부가 영숫자 여섯 글자인지 확인하지 못했다)도 함께 닫힌다\n   - **2026-09-16 완료.** 대응표 `SEM-2026-09-16-001`을 `is_sample=false`로 발행하고 2024-09-19~2026-09-15 484거래일을 `KRX_DAILY_20260915`로 적재했다(`daily_price` 3,872행). 「담을 수 없는 종목코드」 줄은 나오지 않았다. `specs/README.md`의 PD-01과 위 결정 항목 표를 갱신했다\n   - **분배 기업행위 입력 파일을 손으로 적지 않는다.** `data/scripts/build_distributions.py`가 일봉에서 락일·금액을 되살리고 KIND 공시에서 지급일을 받아 `ingest_krx.py --corporate-actions`가 먹는 JSON을 만든다. 2년 구간 44건이 빠짐없이 붙었고 결과는 `data/config/corporate-actions-2026-09.json`이다. **아직 DB에는 넣지 않았다** — 같은 마감일로는 자료 버전을 다시 발행할 수 없다(아래 Phase 7의 미해결 항목)\n-- [ ] T015 [DE] PD-19·PD-20 거래정지 규칙 확정 (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — S15P21E205-187\n+- [x] ~~T015 [DE] PD-19·PD-20 거래정지 규칙 확정~~ **폐기** (`data/scripts/suspension_stats.py`, `data/src/data_pipeline/gaps.py`, `specs/README.md`, `specs/001-etf-market-data/{spec.md,contracts/market-dataset.md}`, `worker/src/worker/market_data.py`) — S15P21E205-187\n   - **선행 조건은 T008이다.** 본선이 쌓아 둔 `suspension_period` 기록이 입력이다\n   - 정지 사례의 길이 분포를 집계한다: 건수, 중앙값, 최댓값, ETF별 분포\n   - 처리 방식 B(정지 이후만)·C(정지 이전만)·D(후보 제외) 각각이 공통 평가 기간을 얼마나 줄이는지 계산한다. 손실 규모를 수치로 비교한다 (research.md 「PD-19·PD-20을 나중에 정하기 위한 준비」)\n   - 확정한 규칙을 FR-006과 계약에 반영하고 `gaps.py`의 `SUSPENDED_TOO_LONG` 기록을 켠다. `provisionalSuspensionHandling` 표시를 걷는다\n   - 정지 구간을 빼고 앞뒤를 이어 붙이는 방식은 후보에서 제외된 상태다 (원칙 VI)\n+  - **2026-09-17 폐기.** **분석할 사례가 없다.** 여덟 종목 2년(2024-09-19~2026-09-15, 484거래일)에서 거래정지가 **0건**이고 최소 일평균 거래대금이 9,760만 원이다. 길이 분포를 집계할 입력 자체가 비어 있어 규칙을 정할 근거가 없다. 근거 없이 정한 규칙은 나중에 사례가 생겼을 때 맞을 이유가 없다.\n+  - **검사 장치는 켜 둔 상태다.** `gaps.py`가 정지 구간을 계속 기록하므로 정지가 생기면 드러난다. **새 ETF를 도입하거나 자료 구간을 넓혀 사례가 나오면 그때 이 항목을 다시 연다.** `provisionalSuspensionHandling` 표시도 그때까지 그대로 둔다 — 임시 처리 중임을 알리는 것이 지금 상태에 맞다\n \n ---\n \n@@ -282,14 +284,17 @@ T003의 스키마가 두 파트의 접점이므로 먼저 합의하고 고정한\n   - T011이 적어 둔 대로 **004 연동에서 푼다.** 상수에 날짜를 박으면 내일부터 거짓말이 되고, 올바른 해결은 백엔드가 `dataset_version`에서 현재 유효한 묶음을 읽는 것이다. 값 규칙 자체는 `dataset_version.build_dataset_id`가 이미 세우고 검증한다\n   - **2026-09-17 완료 (S15P21E205-203).** 시장 메타데이터 구현을 픽스처 상수에서 DB 조회로 바꿨다. 포트는 그대로 두고 구현체만 갈아끼웠으므로 부르는 쪽(접수·기간 산출·자동 탐색)은 바뀌지 않는다. **자료 버전·대응표 버전·종목 상장일·거래일 달력 넷을 함께 옮겼다** — 하나만 옮기면 결과에 찍힌 딱지는 실제 자료를 가리키는데 접수 검사는 그 자료에 없는 종목을 통과시킨다. 옛 자리 표시 `KRX_DAILY_V1`을 걷어내고 `datasetId`와 `dataVersion`에 같은 값을 싣는다(결정 4가 둘을 같은 것으로 정했다). 픽스처 구현은 지우지 않고 검사 소스로 옮겼다 — 단위 검사는 매번 같은 답을 요구하므로 결정적인 대역이 필요하다. **T030·T033·T036도 같은 변경으로 닫혔다.**\n   - **함께 정한 것: 자료 버전 이름에 판 번호를 더했다.** 같은 마감일의 자료를 내용만 바꿔 다시 발행할 수 없던 것을 풀었다. 규칙과 까닭은 research.md 결정 4의 2026-09-17 보완이다\n-- [ ] T020 [DE] 대조 표본에 가격과 지수를 더한다 per FR-016·SC-002 (partial)\n+- [x] ~~T020 [DE] 대조 표본에 가격과 지수를 더한다~~ **폐기** per FR-016·SC-002\n   - FR-016은 \"대표 ETF**와 지수**의 조회값\"을, SC-002는 \"**가격**·분배금·분할·상장일\"을 공시와 대조하라고 한다. 지금 `build_queried_values`는 `listed_on`·`amount`·`pay_date`·`ex_date`만 채우고, 자기 docstring이 \"여기서는 가격을 채우지 않고, 가격까지 대조하려면 부르는 쪽이 그 항목을 더한다\"고 적어 두었는데 `reconcile.py`가 더하지 않는다\n   - 지수 표본은 아예 없다. `build_samples`는 `ListingWindow`와 `CorporateAction`만 받는다\n-  - **실자료가 있어야 뜻이 생긴다.** 공시값은 사람이 옮긴 `--disclosure` 파일이고, 대조할 가격·지수 원본은 T014가 대표 ETF를 확정한 뒤에야 쌓인다. 배관(가격 입력 인자 추가)만 먼저 놓을지, T014·T016과 함께 닫을지 정해야 한다\n-- [ ] T021 [BE] 공급자가 만든 자료 메타데이터를 결과까지 전달한다 per FR-006·FR-013·FR-014 (partial)\n+  - **2026-09-17 폐기 (S15P21E205-323).** 착수 직후 **대조 상대가 없다**는 것이 드러났다. 대조가 공신력을 만드는 것은 서로 다른 두 출처가 같은 값을 말할 때다. 분배금은 그 조건을 만족하고(가격에서 되살린 값 ↔ 운용사 공시) 실제로 어긋남을 찾아냈다 — 공시 59원, 관측 55원. **가격은 만족하지 않는다.** 시장 가격을 만드는 곳이 거래소이고 우리가 받아오는 곳도 거래소라 언제나 같다. 운용사가 내는 기준가격(순자산가치)은 정의가 다른 값이라 대조하면 언제나 \"정의 차이\"로 분류된다(FR-017이 그 경우를 따로 적은 까닭이다). **언제나 통과하는 검사는 공신력을 만들지 않는다.**\n+  - 지수는 여기에 더해 `reconciliation_record`가 담지 못한다. `etf_id`가 NOT NULL이고 `sample_reason` CHECK가 세 값뿐이라 스키마를 넓혀야 한다\n+  - **되살릴 만한 대안**: 원천 응답과 적재된 값을 견주는 무결성 검사. `raw/`에 거래소 응답 원본이 그대로 있어 진짜 서로 다른 두 지점이 되고, `raw → processed → PostgreSQL` 사이에서 값이 뭉개졌는지 잡는다. 사람이 옮겨 적을 것이 없어 자동으로 돈다. 필요해지면 그때 세운다\n+- [x] T021 [BE] 공급자가 만든 자료 메타데이터를 결과까지 전달한다 — **spec 004로 넘김** per FR-006·FR-013·FR-014 (partial)\n   - `PostgresMarketDataProvider.load`가 `carriedForwardDates`·`dataGaps`·`dataDeadline`·`mapVersion`·`provisionalSuspensionHandling`·`notRealMarketData`를 빠짐없이 채운다. 그런데 `engine_runner`와 `artifacts`가 `market.metadata`를 읽지 않아 `datasetId` 말고는 `EngineOutput`에 닿지 않는다\n   - FR-006의 \"결과에 정지 일수와 임시 처리 중임을 함께 표시한다\"와 FR-014의 \"내보내는 모든 자료에 데이터 마감 시각을 붙인다\"가 공급자 경계에서 멈춘다\n   - **결과 표면은 004·005 소유다.** 001의 자체 검증(quickstart 시나리오 6)은 공급자 수준에서 확인하도록 쓰여 있어 통과한다. 어느 spec이 이 전달을 맡을지 정해야 한다\n+  - **2026-09-17 결정: spec 004로 넘긴다.** 기술 문제가 아니라 소유 문제였다. 값을 만드는 쪽은 001이고 결과에 싣는 쪽은 004이며, 막힌 곳은 그 사이를 잇는 자리다. **공급자가 값을 빠짐없이 채우는 데까지가 001의 몫이고 그것은 이미 되어 있다.** 001에서는 이 항목을 닫고, FR-006·FR-014가 요구하는 \"결과에 함께 표시한다\"는 004가 이어받는다. 004에 티켓을 세울지는 그쪽에서 정한다\n - [X] T022 [DOCS] quickstart에 대표 상품 정보 시나리오를 더한다 per US3/AC1~AC4·FR-015 (missing)\n   - 시나리오 1~7 어디에도 `GET /sectors/{code}/instrument-profile`을 실행해 보는 절차가 없다. 사용자 스토리 3만 실행 가능한 검증 절차가 비어 있다\n   - 필수 항목 존재, `asOfCurrentComposition` 표시, `sourceAttribution`, 추적 차이 필드 부재, 409 구분을 확인한다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/001-etf-market-data/tasks.md",
+          "old_path": "specs/001-etf-market-data/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2825436": []
+  }
+}

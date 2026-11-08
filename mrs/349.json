@@ -1,0 +1,1002 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 962459,
+    "iid": 349,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름을 위 분야 메뉴와 아래 상세로 나누고 지표 칸을 가로로 나란히 둔다",
+    "description": "# 작업 내용 요약\n시장 흐름을 위 분야 메뉴와 아래 상세로 나누고, 상세의 지표 칸을 가로로 나란히 둔다. 분야 번호와 목록 속 요약 문장을 걷어 메뉴를 하나씩 고르는 버튼으로 만들고, 요약은 버튼을 가리키거나 초점을 줄 때 말풍선으로 보인다.\n\n# 주요 변경 사항\n- 분야 7개를 번호(01~07) 없이 따로 고르는 메뉴 버튼으로 둔다. 좌우·위아래 화살표로 옮겨 다닌다\n- 변화 요약·대상월은 버튼을 가리키거나 키보드 초점을 줄 때 말풍선으로 뜬다. 도움말(InlineHelp)과 같은 Radix Popover라 화면 끝에서 안쪽으로 비켜 서고, Esc로 닫히며, 말풍선 위로 마우스를 옮겨도 닫히지 않는다. 여닫기 규칙은 두 곳이 함께 쓰는 `useHoverOpen` 훅으로 옮긴다\n- 보조기기는 말풍선을 열지 않아도 요약을 버튼 설명으로 읽고, 수집 실패·예시 자료 표는 버튼 위에 늘 보이며 버튼 이름에도 들어간다(009 FR-011·FR-014)\n- 상세: 지표 칸을 왼쪽·가운데·오른쪽으로 나란히 두고 좁아지면 두 칸, 한 칸으로 접는다. 출처는 칸 오른쪽 아래, 세로축 범위 '?'는 왼쪽 아래로 옮긴다. 'FIELD / 01' 번호, '소속 지표 N', 정상 공급 '자료 확인' 표를 지운다\n- 옆 칸으로 가던 '선택한 분야 상세 보기' 버튼을 지운다. 상세가 메뉴 바로 아래에 있다\n- spec 009 FR-002와 Session 2026-09-29에 이 배치를 적는다\n\n# 테스트\n- [x] `npm run lint` 오류 0건, `npm run build` 성공, `npm test` 통과\n- [x] 운영 덤프(9/28)를 복원한 로컬 백엔드로 확인: 1440px 메뉴 한 줄·지표 칸 세 개, 700px 메뉴 두 줄·칸 두 개, 375px 가로 스크롤 없음. 말풍선은 호버·초점으로 열리고 말풍선 위로 옮겨도 유지, Esc로 닫힘\n\n# 리뷰 포인트\n- **!348(첫 화면·투자 대상 고르기)을 먼저 병합한다.** 두 브랜치가 `InlineHelp.tsx`·`MarketFlowPage.module.css`에서 겹쳐 이 브랜치에 앞 브랜치를 병합해 충돌을 풀어 두었다. 앞 MR이 병합되기 전에는 이 MR diff에 앞 MR의 변경이 함께 보인다\n- FR-002의 '분야별 짧은 변화 요약'을 말풍선으로 내렸다(spec 009 수정). 고른 분야의 요약은 상세 머리에 늘 보인다. 이 조정이 맞는지\n- 분야 메뉴 모양은 classic 디자인에도 함께 적용된다. classic에서 예전 세로 목록을 지킬지\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-29T15:25:31.199+09:00",
+    "updated_at": "2026-09-29T15:32:40.501+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T15:32:40.122+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-layout",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+    "merge_commit_sha": "9fcb300f25e98cb16db45a6c43de448e2ec6f8a8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-29T15:25:35.534+09:00",
+    "reference": "!349",
+    "references": {
+      "short": "!349",
+      "relative": "!349",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!349"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/349",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 962459,
+    "iid": 349,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름을 위 분야 메뉴와 아래 상세로 나누고 지표 칸을 가로로 나란히 둔다",
+    "description": "# 작업 내용 요약\n시장 흐름을 위 분야 메뉴와 아래 상세로 나누고, 상세의 지표 칸을 가로로 나란히 둔다. 분야 번호와 목록 속 요약 문장을 걷어 메뉴를 하나씩 고르는 버튼으로 만들고, 요약은 버튼을 가리키거나 초점을 줄 때 말풍선으로 보인다.\n\n# 주요 변경 사항\n- 분야 7개를 번호(01~07) 없이 따로 고르는 메뉴 버튼으로 둔다. 좌우·위아래 화살표로 옮겨 다닌다\n- 변화 요약·대상월은 버튼을 가리키거나 키보드 초점을 줄 때 말풍선으로 뜬다. 도움말(InlineHelp)과 같은 Radix Popover라 화면 끝에서 안쪽으로 비켜 서고, Esc로 닫히며, 말풍선 위로 마우스를 옮겨도 닫히지 않는다. 여닫기 규칙은 두 곳이 함께 쓰는 `useHoverOpen` 훅으로 옮긴다\n- 보조기기는 말풍선을 열지 않아도 요약을 버튼 설명으로 읽고, 수집 실패·예시 자료 표는 버튼 위에 늘 보이며 버튼 이름에도 들어간다(009 FR-011·FR-014)\n- 상세: 지표 칸을 왼쪽·가운데·오른쪽으로 나란히 두고 좁아지면 두 칸, 한 칸으로 접는다. 출처는 칸 오른쪽 아래, 세로축 범위 '?'는 왼쪽 아래로 옮긴다. 'FIELD / 01' 번호, '소속 지표 N', 정상 공급 '자료 확인' 표를 지운다\n- 옆 칸으로 가던 '선택한 분야 상세 보기' 버튼을 지운다. 상세가 메뉴 바로 아래에 있다\n- spec 009 FR-002와 Session 2026-09-29에 이 배치를 적는다\n\n# 테스트\n- [x] `npm run lint` 오류 0건, `npm run build` 성공, `npm test` 통과\n- [x] 운영 덤프(9/28)를 복원한 로컬 백엔드로 확인: 1440px 메뉴 한 줄·지표 칸 세 개, 700px 메뉴 두 줄·칸 두 개, 375px 가로 스크롤 없음. 말풍선은 호버·초점으로 열리고 말풍선 위로 옮겨도 유지, Esc로 닫힘\n\n# 리뷰 포인트\n- **!348(첫 화면·투자 대상 고르기)을 먼저 병합한다.** 두 브랜치가 `InlineHelp.tsx`·`MarketFlowPage.module.css`에서 겹쳐 이 브랜치에 앞 브랜치를 병합해 충돌을 풀어 두었다. 앞 MR이 병합되기 전에는 이 MR diff에 앞 MR의 변경이 함께 보인다\n- FR-002의 '분야별 짧은 변화 요약'을 말풍선으로 내렸다(spec 009 수정). 고른 분야의 요약은 상세 머리에 늘 보인다. 이 조정이 맞는지\n- 분야 메뉴 모양은 classic 디자인에도 함께 적용된다. classic에서 예전 세로 목록을 지킬지\n\n<!--\n아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n-->\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-29T15:25:31.199+09:00",
+    "updated_at": "2026-09-29T15:32:40.501+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T15:32:40.122+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-layout",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+    "merge_commit_sha": "9fcb300f25e98cb16db45a6c43de448e2ec6f8a8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-29T15:25:35.534+09:00",
+    "reference": "!349",
+    "references": {
+      "short": "!349",
+      "relative": "!349",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!349"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/349",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "13",
+    "latest_build_started_at": "2026-09-29T15:25:44.217+09:00",
+    "latest_build_finished_at": "2026-09-29T15:32:17.525+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 226937,
+      "iid": 377,
+      "project_id": 1444456,
+      "sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "ref": "feat(fe)/market-flow-layout",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T15:25:44.105+09:00",
+      "updated_at": "2026-09-29T15:32:17.579+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226937"
+    },
+    "head_pipeline": {
+      "id": 226937,
+      "iid": 377,
+      "project_id": 1444456,
+      "sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "ref": "feat(fe)/market-flow-layout",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T15:25:44.105+09:00",
+      "updated_at": "2026-09-29T15:32:17.579+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226937",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-29T15:25:44.217+09:00",
+      "finished_at": "2026-09-29T15:32:17.525+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226937",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "head_sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "start_sha": "0b69d616e20d86a4fcf77d8ea276f477a5037e8b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ffb55a300bf0b5e1af8c1d185d4d325c28bb2bab",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877962,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 재사용성 강화**: `useHoverOpen` 커스텀 훅을 분리하여 `InlineHelp`와 `FieldSummaryCard` 간의 마우스 호버 및 포커스 지연/여닫기 로직을 깔끔하게 통일하고 중복을 제거했습니다.\n- **접근성(Accessibility) 세심한 고려**: Popover 컴포넌트 사용 시 보조기기(스크린 리더)를 위해 `aria-describedby`와 숨은 설명(`.sr-only`)을 활용하여 호버하지 않아도 필요한 요약 정보를 안정적으로 읽을 수 있도록 설계한 점이 돋보입니다.\n\n### 발견 사항\n- [Low] `frontend/src/pages/MarketFlowPage.module.css`: `.workspace` 그리드 레이아웃 변경(`minmax(0, 1fr)`)으로 인해 기존 좌우 분할 구조에서 상하 분할 구조로 개편되었습니다. 이 과정에서 `.detailPanel`의 `border-left`를 제거하고 `border-top`을 추가했는데, 반응형 미디어 쿼리(`.workspace` 관련 규칙들) 내에서 중복 정의되거나 누락된 스타일이 없는지 실제 렌더링 화면을 통해 최종 확인하는 것을 권장합니다.\n\n### 테스트 제안\n- **키보드 네비게이션 및 포커스 테스트**:\n  - `MarketFlowPage`에서 분야 메뉴 버튼들에 차례대로 포커스를 이동(`Tab`)시키고, 좌우/상하 화살표 키(`ArrowRight`, `ArrowLeft`, `ArrowDown`, `ArrowUp`)를 눌러 포커스와 선택이 올바르게 순환하는지 검증합니다.\n- **말풍선(Popover) 상호작용 테스트**:\n  - 분야 메뉴 버튼에 마우스를 올리거나 포커스를 주었을 때 말풍선이 지정된 딜레이(`80ms`) 후에 정상적으로 뜨는지 확인합니다.\n  - 트리거에서 말풍선 영역으로 마우스 커서를 이동했을 때 말풍선이 닫히지 않고 유지되는지, `Esc` 키를 눌렀을 때 즉시 닫히는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:798859a8d8865edab22290cd7d6094a52f3bb308 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-29T15:25:44.195+09:00",
+          "updated_at": "2026-09-29T15:25:44.195+09:00",
+          "system": false,
+          "noteable_id": 962459,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 349,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4b74e0342faa947f32a4e5049988e4ea14f5ac06",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877970,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:32:28.349+09:00",
+          "updated_at": "2026-09-29T15:32:28.357+09:00",
+          "system": true,
+          "noteable_id": 962459,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 349,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1a502ea88398fcbff6c3945ed299b7e6f459dfe3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877971,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:32:28.957+09:00",
+          "updated_at": "2026-09-29T15:32:28.960+09:00",
+          "system": true,
+          "noteable_id": 962459,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 349,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b7b14fa16207871d84447f90fc7b80cc5d831172",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877972,
+          "type": null,
+          "body": "mentioned in commit 9fcb300f25e98cb16db45a6c43de448e2ec6f8a8",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:32:40.142+09:00",
+          "updated_at": "2026-09-29T15:32:40.155+09:00",
+          "system": true,
+          "noteable_id": 962459,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 349,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e7bda784c45b1e20ca09f81cf7e76c7dc733e39b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885080,
+          "type": null,
+          "body": "mentioned in commit 677773893d70eb5230f5773268a33896cc31be10",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.807+09:00",
+          "updated_at": "2026-10-13T15:16:16.830+09:00",
+          "system": true,
+          "noteable_id": 962459,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 349,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2259503,
+      "head_commit_sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "base_commit_sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "start_commit_sha": "0b69d616e20d86a4fcf77d8ea276f477a5037e8b",
+      "created_at": "2026-09-29T15:32:17.574+09:00",
+      "merge_request_id": 962459,
+      "state": "collected",
+      "real_size": "13",
+      "patch_id_sha": "c0c31ecb7acad501f4591f450ed852f45fca5d26"
+    },
+    {
+      "id": 2259497,
+      "head_commit_sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "base_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "start_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "created_at": "2026-09-29T15:25:31.584+09:00",
+      "merge_request_id": 962459,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "4794fd2ac8c5997bb870c135f3877dc978bd101b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2259503,
+      "head_commit_sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "base_commit_sha": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+      "start_commit_sha": "0b69d616e20d86a4fcf77d8ea276f477a5037e8b",
+      "created_at": "2026-09-29T15:32:17.574+09:00",
+      "merge_request_id": 962459,
+      "state": "collected",
+      "real_size": "13",
+      "patch_id_sha": "c0c31ecb7acad501f4591f450ed852f45fca5d26",
+      "commits": [
+        {
+          "id": "798859a8d8865edab22290cd7d6094a52f3bb308",
+          "short_id": "798859a8",
+          "created_at": "2026-09-29T15:24:39.000+09:00",
+          "parent_ids": [
+            "8d5c2dbafacc0768f5ecc623bcc0d32c71e18ce5",
+            "cfae6787a8b96b52814b60eabc70d182ee458c78"
+          ],
+          "title": "Merge remote-tracking branch 'origin/feat(fe)/landing-diagnosis-ui-refresh' into feat(fe)/market-flow-layout",
+          "message": "Merge remote-tracking branch 'origin/feat(fe)/landing-diagnosis-ui-refresh' into feat(fe)/market-flow-layout\n\n# Conflicts:\n#\tfrontend/src/components/common/InlineHelp.tsx\n#\tfrontend/src/pages/MarketFlowPage.module.css\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T15:24:39.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T15:24:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/798859a8d8865edab22290cd7d6094a52f3bb308"
+        },
+        {
+          "id": "8d5c2dbafacc0768f5ecc623bcc0d32c71e18ce5",
+          "short_id": "8d5c2dba",
+          "created_at": "2026-09-29T15:05:32.000+09:00",
+          "parent_ids": [
+            "011a58eb25d3e8b674bb9cf46066dfb84f3bea0d"
+          ],
+          "title": "fix(fe): 시장 흐름 분야 말풍선을 도움말과 같은 Popover로 바꿔 잘림·Esc·보조기기 문제를 고친다",
+          "message": "fix(fe): 시장 흐름 분야 말풍선을 도움말과 같은 Popover로 바꿔 잘림·Esc·보조기기 문제를 고친다\n\n- 분야 말풍선을 Radix Popover로 그려 화면 끝에서 안쪽으로 비켜 서게 하고, Esc로 닫히며 말풍선 위로\n  마우스를 옮겨도 닫히지 않게 한다. 여닫는 규칙은 InlineHelp와 함께 쓰는 useHoverOpen 훅으로 옮긴다\n- 수집 실패·예시 자료 표를 버튼 이름에 넣고, 요약은 늘 있는 숨은 설명으로 버튼에 잇는다\n- 새 배치와 어긋난 레이아웃 주석을 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T15:05:32.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T15:05:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8d5c2dbafacc0768f5ecc623bcc0d32c71e18ce5"
+        },
+        {
+          "id": "011a58eb25d3e8b674bb9cf46066dfb84f3bea0d",
+          "short_id": "011a58eb",
+          "created_at": "2026-09-29T14:33:19.000+09:00",
+          "parent_ids": [
+            "6aed3682bd856950976070c06329a60f32be8cca"
+          ],
+          "title": "feat(fe): 시장 흐름을 위 분야 메뉴와 아래 상세로 나누고 지표 칸을 가로로 나란히 둔다",
+          "message": "feat(fe): 시장 흐름을 위 분야 메뉴와 아래 상세로 나누고 지표 칸을 가로로 나란히 둔다\n\n- 분야 7개를 번호 없이 따로 고르는 메뉴 버튼으로 두고, 변화 요약·대상월은 가리키거나 초점을 줄 때\n  팝오버로 보인다. 수집 실패·예시 자료 표는 버튼에 늘 보인다\n- 상세의 지표 칸을 왼쪽·가운데·오른쪽으로 나란히 두고, 출처를 칸 오른쪽 아래로 옮긴다\n- 상세 머리의 '소속 지표 수'와 정상 공급 '자료 확인' 표를 지운다\n- spec 009 FR-002와 Session 2026-09-29에 이 배치를 적는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:33:19.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:33:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/011a58eb25d3e8b674bb9cf46066dfb84f3bea0d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { Popover } from \"radix-ui\";\n-import { useCallback, useEffect, useRef, useState, type ReactNode } from \"react\";\n+import type { ReactNode } from \"react\";\n+import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from \"./useHoverOpen\";\n import styles from \"./InlineHelp.module.css\";\n \n interface InlineHelpProps {\n@@ -23,11 +24,6 @@ interface InlineHelpProps {\n   mark?: ReactNode;\n }\n \n-/** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */\n-const OPEN_DELAY_MS = 80;\n-/** 트리거에서 말풍선으로 마우스를 옮기는 동안 닫히지 않도록 두는 틈 */\n-const CLOSE_DELAY_MS = 80;\n-\n /**\n  * 화면이 가진 설명을 물음표 뒤로 내리는 도움말.\n  *\n@@ -50,38 +46,7 @@ const CLOSE_DELAY_MS = 80;\n  * 있고(005 FR-022), 트리거를 떠날 때 닫는 판단도 그대로 산다.\n  */\n export function InlineHelp({ label, children, on = \"hover\", side = \"top\", mark = \"?\" }: InlineHelpProps) {\n-  const [open, setOpen] = useState(false);\n-  const timerRef = useRef<number | undefined>(undefined);\n-\n-  const clearPending = useCallback(() => {\n-    if (timerRef.current !== undefined) {\n-      window.clearTimeout(timerRef.current);\n-      timerRef.current = undefined;\n-    }\n-  }, []);\n-\n-  /** 예약된 것을 지우고 곧바로 정한다. 닫기 신호가 예약된 열기를 반드시 이긴다. */\n-  const settle = useCallback(\n-    (next: boolean) => {\n-      clearPending();\n-      setOpen(next);\n-    },\n-    [clearPending],\n-  );\n-\n-  const schedule = useCallback(\n-    (next: boolean, delay: number) => {\n-      clearPending();\n-      timerRef.current = window.setTimeout(() => {\n-        timerRef.current = undefined;\n-        setOpen(next);\n-      }, delay);\n-    },\n-    [clearPending],\n-  );\n-\n-  // 화면을 떠난 뒤 타이머가 깨어나 없는 컴포넌트를 건드리지 않게 한다.\n-  useEffect(() => clearPending, [clearPending]);\n+  const { open, settle, schedule } = useHoverOpen();\n \n   if (on === \"hover\") {\n     return (\n@@ -96,8 +61,8 @@ export function InlineHelp({ label, children, on = \"hover\", side = \"top\", mark =\n             className={styles.trigger}\n             aria-label={`${label} 도움말`}\n             aria-expanded={open}\n-            onPointerEnter={() => schedule(true, OPEN_DELAY_MS)}\n-            onPointerLeave={() => schedule(false, CLOSE_DELAY_MS)}\n+            onPointerEnter={() => schedule(true, HOVER_OPEN_DELAY_MS)}\n+            onPointerLeave={() => schedule(false, HOVER_CLOSE_DELAY_MS)}\n             onFocus={() => settle(true)}\n             onBlur={() => settle(false)}\n             onClick={() => settle(!open)}\n@@ -121,7 +86,7 @@ export function InlineHelp({ label, children, on = \"hover\", side = \"top\", mark =\n             onCloseAutoFocus={(event) => event.preventDefault()}\n             // 트리거에서 말풍선으로 마우스를 옮기는 동안 닫히지 않게 한다.\n             onPointerEnter={() => settle(true)}\n-            onPointerLeave={() => schedule(false, CLOSE_DELAY_MS)}\n+            onPointerLeave={() => schedule(false, HOVER_CLOSE_DELAY_MS)}\n           >\n             <p className={styles.term}>{label}</p>\n             <div className={styles.body}>{children}</div>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.tsx",
+          "old_path": "frontend/src/components/common/InlineHelp.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,50 @@\n+import { useCallback, useEffect, useRef, useState } from 'react'\n+\n+/** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */\n+export const HOVER_OPEN_DELAY_MS = 80\n+/** 트리거에서 말풍선으로 마우스를 옮기는 동안 닫히지 않도록 두는 틈 */\n+export const HOVER_CLOSE_DELAY_MS = 80\n+\n+/**\n+ * 얹어서 여는 말풍선의 열림 상태. 여닫는 주체를 하나로 둔다.\n+ *\n+ * <p>지연은 우리가 걸고 <b>상태가 바뀔 때마다 반드시 지운다</b> — 닫으라는 신호가 오면 예약된 열기가 남아\n+ * 있을 수 없다. HoverCard 처럼 자기 타이머를 가진 부품은 초점 직후 Esc 를 누르면 닫힌 뒤 저절로 다시\n+ * 열렸다(S15P21E205-422). 얹기는 {@link schedule}로 틈을 두고, 초점·누르기·Esc 는 {@link settle}로 곧바로 정한다.\n+ */\n+export function useHoverOpen() {\n+  const [open, setOpen] = useState(false)\n+  const timerRef = useRef<number | undefined>(undefined)\n+\n+  const clearPending = useCallback(() => {\n+    if (timerRef.current !== undefined) {\n+      window.clearTimeout(timerRef.current)\n+      timerRef.current = undefined\n+    }\n+  }, [])\n+\n+  /** 예약된 것을 지우고 곧바로 정한다. 닫기 신호가 예약된 열기를 반드시 이긴다. */\n+  const settle = useCallback(\n+    (next: boolean) => {\n+      clearPending()\n+      setOpen(next)\n+    },\n+    [clearPending],\n+  )\n+\n+  const schedule = useCallback(\n+    (next: boolean, delay: number) => {\n+      clearPending()\n+      timerRef.current = window.setTimeout(() => {\n+        timerRef.current = undefined\n+        setOpen(next)\n+      }, delay)\n+    },\n+    [clearPending],\n+  )\n+\n+  // 화면을 떠난 뒤 타이머가 깨어나 없는 컴포넌트를 건드리지 않게 한다.\n+  useEffect(() => clearPending, [clearPending])\n+\n+  return { open, settle, schedule }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/useHoverOpen.ts",
+          "old_path": "frontend/src/components/common/useHoverOpen.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,17 +15,18 @@ describe('DataStateNotice', () => {\n })\n \n describe('DataStateFacts', () => {\n-  it('확인된 자료는 자료 확인, 수집 실패·자료 없음은 확인 중입니다로 보인다', () => {\n-    const { rerender } = render(<DataStateFacts indicatorCount={2} status=\"READY\" />)\n-    expect(screen.getByText('자료 확인').getAttribute('data-tone')).toBe('confirmed')\n-    rerender(<DataStateFacts indicatorCount={2} status=\"COLLECTION_FAILED\" />)\n+  it('정상 공급이면 표를 달지 않고, 수집 실패·자료 없음은 확인 중입니다로 보인다', () => {\n+    const { container, rerender } = render(<DataStateFacts status=\"READY\" />)\n+    // '자료 확인'·소속 지표 수는 적지 않는다(2026-09-29).\n+    expect(container.textContent).toBe('')\n+    rerender(<DataStateFacts status=\"COLLECTION_FAILED\" />)\n     expect(screen.getByText('확인 중입니다').getAttribute('data-tone')).toBe('pending')\n     // 까닭은 보조기기에 읽힌다.\n     expect(screen.getByText(/최근 수집 실패/)).toBeTruthy()\n   })\n \n   it('예시 자료는 늘 예시임을 밝힌다', () => {\n-    render(<DataStateFacts indicatorCount={2} status=\"EXAMPLE\" />)\n+    render(<DataStateFacts status=\"EXAMPLE\" />)\n     expect(screen.getByText('예시 자료')).toBeTruthy()\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,13 +1,7 @@\n import type { FieldStatus } from '@/types/marketFlow'\n-import { formatUpdatedAt } from './marketFlowFormat'\n+import { fieldStateLabels as stateLabels, formatUpdatedAt, stateLineLabels } from './marketFlowFormat'\n import styles from './MarketFlow.module.css'\n \n-const stateLabels: Record<FieldStatus, string> = {\n-  READY: '자료 확인',\n-  EXAMPLE: '예시 자료',\n-  EMPTY: '표시할 자료 없음',\n-  COLLECTION_FAILED: '최근 수집 실패',\n-}\n \n interface DataStateNoticeProps {\n   status: FieldStatus\n@@ -23,7 +17,7 @@ interface DataStateNoticeProps {\n  * 없고, FR-011은 수집 실패·자료 없음만 상태로 보이라고 한다. 예시 자료는 늘 밝힌다(FR-014).\n  */\n export function DataStateLine({\n-  status, referenceMonth, lastUpdatedAt, listUpdatedAt, isExampleData = false,\n+  status, referenceMonth, lastUpdatedAt, listUpdatedAt, isExampleData = false, showLabels = true,\n }: {\n   status: FieldStatus\n   referenceMonth: string | null\n@@ -31,11 +25,10 @@ export function DataStateLine({\n   /** 목록 머리에 적은 마지막 갱신 시각 */\n   listUpdatedAt: string | null\n   isExampleData?: boolean\n+  /** 상태 표를 이 줄에 달지. 표를 다른 자리(분야 메뉴 버튼)에 이미 달았으면 끈다 */\n+  showLabels?: boolean\n }) {\n-  const labels = [\n-    status === 'READY' ? null : stateLabels[status],\n-    isExampleData && status !== 'EXAMPLE' ? stateLabels.EXAMPLE : null,\n-  ].filter((label): label is string => label !== null)\n+  const labels = showLabels ? stateLineLabels(status, isExampleData) : []\n   return (\n     <p className={styles.stateLine} data-status={status}>\n       {labels.map((label) => <span key={label} className={styles.stateLabel}>{label}</span>)}\n@@ -46,31 +39,23 @@ export function DataStateLine({\n }\n \n /**\n- * 열린 분야 제목 줄 오른쪽. 소속 지표 수와 그 밑의 공급 상태 표만 둔다 — 표 글자가 곧 상태라 '자료 상태' 같은\n- * 이름을 따로 달지 않는다. 대상월·마지막 갱신은 분야 설명 밑 한 줄에 적는다(009 FR-011·013·014).\n- * 예시 자료는 늘 '예시 자료' 표를 함께 단다(FR-014).\n+ * 열린 분야 제목 줄 오른쪽의 공급 상태 표. 정상 공급이면 아무것도 달지 않는다 — 지표 칸이 그대로 보이는 것이\n+ * 곧 정상이라 '자료 확인'·'소속 지표 수'를 따로 적지 않는다(2026-09-29). 수집 실패·자료 없음은 빨간 '확인 중입니다',\n+ * 예시 자료는 늘 '예시 자료' 표를 단다(009 FR-011·FR-014).\n  */\n-export function DataStateFacts({\n-  indicatorCount, status, isExampleData = false,\n-}: {\n-  indicatorCount: number\n-  status: FieldStatus\n-  isExampleData?: boolean\n-}) {\n+export function DataStateFacts({ status, isExampleData = false }: { status: FieldStatus; isExampleData?: boolean }) {\n+  const pending = status !== 'READY' && status !== 'EXAMPLE'\n+  const example = status === 'EXAMPLE' || isExampleData\n+  if (!pending && !example) return null\n   return (\n     <div className={styles.detailFacts} data-status={status}>\n-      <span className={styles.detailCount}>소속 지표 <b>{indicatorCount}</b></span>\n       <span className={styles.detailStates}>\n-        {/* 정상 공급이면 '자료 확인'(파랑), 수집 실패·자료 없음이면 '확인 중입니다'(빨강). 까닭은 읽을 수 있게 남긴다. */}\n-        {status === 'READY' || status === 'EXAMPLE' ? (\n-          <span className={styles.stateLabel} data-tone=\"confirmed\">{stateLabels.READY}</span>\n-        ) : (\n+        {pending ? (\n           <span className={styles.stateLabel} data-tone=\"pending\" title={stateLabels[status]}>\n             확인 중입니다<span className={styles.srOnly}> ({stateLabels[status]})</span>\n           </span>\n-        )}\n-        {status === 'EXAMPLE' ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}\n-        {isExampleData && status !== 'EXAMPLE' ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}\n+        ) : null}\n+        {example ? <span className={styles.stateLabel}>{stateLabels.EXAMPLE}</span> : null}\n       </span>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,15 +25,10 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {\n       transition={{ duration: reducedMotion ? 0 : 0.2 }}\n     >\n       <header className={styles.detailHeader}>\n-        <span className={styles.detailEyebrow}>FIELD / {String(detail.displayOrder).padStart(2, '0')}</span>\n-        {/* 소속 지표 수와 상태 표는 분야 제목 줄에 맞춰 오른쪽에 선다. */}\n+        {/* 상태 표(수집 실패·예시 자료일 때만)는 분야 제목 줄에 맞춰 오른쪽에 선다. */}\n         <div className={styles.detailTitle}>\n           <h2 id={titleId}>{detail.displayName}</h2>\n-          <DataStateFacts\n-            indicatorCount={detail.indicators.length}\n-            status={detail.status}\n-            isExampleData={detail.isExampleData}\n-          />\n+          <DataStateFacts status={detail.status} isExampleData={detail.isExampleData} />\n         </div>\n         <p className={styles.detailNarrative}>{detail.narrative ?? '아래 기준 시점과 자료 상태를 확인해 주세요.'}</p>\n         <p className={styles.detailTiming}>\n@@ -63,13 +58,13 @@ export function FieldDetail({ detail }: { detail: FieldDetailResult }) {\n                 출처와 작성기관을 이름을 붙여 한 줄로 잇는다(FR-015). 발표일은 실제 자료가 주지 않아 적지 않는다(2026-09-24).\n                 대상월은 분야 머리와 다를 때만 적고, 마지막 갱신은 분야마다 하나라 머리에만 둔다(FR-011).\n               */}\n+              {/* 출처는 카드 오른쪽 아래, 세로축 범위 물음표는 왼쪽 아래에 둔다. 그래프 위에 두면 제목 줄과 겹쳐 읽힌다. */}\n               <div className={styles.indicatorFooter}>\n+                <InlineHelp label=\"세로축 범위\" side=\"top\"><p>{describeAxis(indicator)}</p></InlineHelp>\n                 <p className={styles.indicatorSource}>\n                   {indicator.referenceMonth !== detail.referenceMonth ? <span>대상월 {indicator.referenceMonth}</span> : null}\n                   {sourceParts(indicator.agency, indicator.source).map((part) => <span key={part}>{part}</span>)}\n                 </p>\n-                {/* 세로축 범위 설명은 카드 오른쪽 아래 물음표 뒤에 둔다. 그래프 위에 두면 제목 줄과 겹쳐 읽힌다. */}\n-                <InlineHelp label=\"세로축 범위\" side=\"top\"><p>{describeAxis(indicator)}</p></InlineHelp>\n               </div>\n             </article>\n           ))}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { render, screen } from '@testing-library/react'\n+import { fireEvent, render, screen, waitFor } from '@testing-library/react'\n import { describe, expect, it, vi } from 'vitest'\n import { FieldSummaryCard } from './FieldSummaryCard'\n \n@@ -23,4 +23,25 @@ describe('FieldSummaryCard', () => {\n     expect(screen.getByText('예시 자료')).toBeTruthy()\n     expect(screen.getByText(/갱신 2026-09-16 06:10 KST/)).toBeTruthy()\n   })\n+\n+  it('상태 표는 버튼 이름에 들어가고, 요약은 설명으로 늘 연결된다 (009 FR-002·FR-011·FR-014)', () => {\n+    render(<FieldSummaryCard onOpen={vi.fn()} field={{ ...ready, status: 'COLLECTION_FAILED' }} />)\n+    const button = screen.getByRole('button', { name: '노동 분야 열기 (최근 수집 실패)' })\n+    const description = document.getElementById(button.getAttribute('aria-describedby') ?? '')\n+    expect(description?.textContent).toContain('실업률이 올랐습니다.')\n+    expect(description?.textContent).toContain('대상월 2026-08')\n+  })\n+\n+  it('초점을 주면 요약 말풍선이 열리고 Esc로 닫힌다', async () => {\n+    render(<FieldSummaryCard onOpen={vi.fn()} field={ready} />)\n+    const button = screen.getByRole('button', { name: '노동 분야 열기' })\n+    // 닫혀 있을 때 요약은 숨은 설명 한 곳에만 있다.\n+    expect(screen.getAllByText('실업률이 올랐습니다.')).toHaveLength(1)\n+\n+    fireEvent.focus(button)\n+    await waitFor(() => expect(screen.getAllByText('실업률이 올랐습니다.')).toHaveLength(2))\n+\n+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' })\n+    await waitFor(() => expect(screen.getAllByText('실업률이 올랐습니다.')).toHaveLength(1))\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldSummaryCard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,10 @@\n-import { ArrowUpRight } from 'lucide-react'\n import { motion, useReducedMotion } from 'motion/react'\n+import { Popover } from 'radix-ui'\n+import { useId } from 'react'\n+import { HOVER_CLOSE_DELAY_MS, HOVER_OPEN_DELAY_MS, useHoverOpen } from '@/components/common/useHoverOpen'\n import type { FieldSummary } from '@/types/marketFlow'\n import { DataStateLine } from './DataStateNotice'\n+import { stateLineLabels } from './marketFlowFormat'\n import styles from './MarketFlow.module.css'\n \n interface FieldSummaryCardProps {\n@@ -12,9 +15,33 @@ interface FieldSummaryCardProps {\n   listUpdatedAt?: string | null\n }\n \n-/** 기존 호출부 이름은 유지하되, 카드를 얇은 선택 행으로 표현한다. */\n+/**\n+ * 분야 하나를 여는 메뉴 버튼. 일곱 개가 한 줄에 따로따로 선다.\n+ *\n+ * 변화 요약과 대상월은 버튼을 가리키거나 키보드 초점을 줄 때 그 아래 말풍선으로 뜬다. 여닫기는 도움말\n+ * (InlineHelp)과 같은 규칙이다 — Esc 로 닫히고, 마우스를 말풍선 위로 옮겨도 닫히지 않으며, 화면 끝에서는\n+ * 안쪽으로 비켜 선다. 고른 분야의 요약은 아래 상세 머리에 늘 펼쳐 있다(009 FR-002).\n+ *\n+ * 보조기기는 말풍선을 열지 않아도 같은 문장을 버튼의 설명으로 읽는다. 말풍선은 닫히면 문서에서 빠지므로\n+ * 설명은 늘 있는 숨은 칸이 맡는다. 수집 실패·자료 없음·예시 자료 표는 버튼 위에 늘 보이고 버튼 이름에도\n+ * 들어간다(FR-011·FR-014).\n+ */\n export function FieldSummaryCard({ field, selected = false, onOpen, listUpdatedAt = null }: FieldSummaryCardProps) {\n   const reducedMotion = useReducedMotion()\n+  const tipId = useId()\n+  const labels = stateLineLabels(field.status, field.isExampleData)\n+  const { open, settle, schedule } = useHoverOpen()\n+  const summaryText = field.narrative ?? '변화 요약 대신 자료 상태를 확인해 주세요.'\n+  const stateLine = (\n+    <DataStateLine\n+      status={field.status}\n+      referenceMonth={field.referenceMonth}\n+      lastUpdatedAt={field.lastUpdatedAt}\n+      listUpdatedAt={listUpdatedAt}\n+      isExampleData={field.isExampleData}\n+      showLabels={false}\n+    />\n+  )\n   return (\n     <motion.article\n       className={styles.summaryCard}\n@@ -31,28 +58,52 @@ export function FieldSummaryCard({ field, selected = false, onOpen, listUpdatedA\n           aria-hidden=\"true\"\n         />\n       ) : null}\n-      <h3 className={styles.summaryHeading}>\n-        <button\n-          type=\"button\"\n-          className={styles.openButton}\n-          aria-label={`${field.displayName} 분야 열기`}\n-          aria-pressed={selected}\n-          aria-controls=\"market-flow-detail\"\n-          onClick={() => onOpen(field)}\n-        >\n-          <span className={styles.fieldNumber} aria-hidden=\"true\">{String(field.displayOrder).padStart(2, '0')}</span>\n-          <span>{field.displayName}</span>\n-          <ArrowUpRight size={16} aria-hidden=\"true\" />\n-        </button>\n-      </h3>\n-      <p className={styles.narrative}>{field.narrative ?? '변화 요약 대신 아래 자료 상태를 확인해 주세요.'}</p>\n-      <DataStateLine\n-        status={field.status}\n-        referenceMonth={field.referenceMonth}\n-        lastUpdatedAt={field.lastUpdatedAt}\n-        listUpdatedAt={listUpdatedAt}\n-        isExampleData={field.isExampleData}\n-      />\n+      <Popover.Root open={open} onOpenChange={settle}>\n+        <h3 className={styles.summaryHeading}>\n+          <Popover.Anchor asChild>\n+            <button\n+              type=\"button\"\n+              className={styles.openButton}\n+              aria-label={`${field.displayName} 분야 열기${labels.length > 0 ? ` (${labels.join(', ')})` : ''}`}\n+              aria-pressed={selected}\n+              aria-controls=\"market-flow-detail\"\n+              aria-describedby={tipId}\n+              onPointerEnter={() => schedule(true, HOVER_OPEN_DELAY_MS)}\n+              onPointerLeave={() => schedule(false, HOVER_CLOSE_DELAY_MS)}\n+              onFocus={() => settle(true)}\n+              onBlur={() => settle(false)}\n+              onClick={() => onOpen(field)}\n+            >\n+              <span>{field.displayName}</span>\n+              {labels.map((label) => <span key={label} className={styles.stateLabel}>{label}</span>)}\n+            </button>\n+          </Popover.Anchor>\n+        </h3>\n+        <div id={tipId} className={styles.srOnly}>\n+          <p>{summaryText}</p>\n+          {stateLine}\n+        </div>\n+        <Popover.Portal>\n+          <Popover.Content\n+            // 보조기기에는 위의 숨은 설명이 같은 문장을 읽어 주므로 말풍선은 한 번 더 읽히지 않게 한다.\n+            aria-hidden=\"true\"\n+            className={styles.fieldTip}\n+            side=\"bottom\"\n+            align=\"start\"\n+            sideOffset={8}\n+            collisionPadding={16}\n+            // 초점은 버튼에 그대로 둔다. 옮기면 버튼이 흐려져 곧바로 닫힌다.\n+            onOpenAutoFocus={(event) => event.preventDefault()}\n+            onCloseAutoFocus={(event) => event.preventDefault()}\n+            // 버튼에서 말풍선으로 마우스를 옮기는 동안, 그리고 말풍선 위에 있는 동안 닫히지 않는다.\n+            onPointerEnter={() => settle(true)}\n+            onPointerLeave={() => schedule(false, HOVER_CLOSE_DELAY_MS)}\n+          >\n+            <p className={styles.narrative}>{summaryText}</p>\n+            {stateLine}\n+          </Popover.Content>\n+        </Popover.Portal>\n+      </Popover.Root>\n     </motion.article>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,17 +1,17 @@\n-.summaryCard { position: relative; padding: 10px 10px 10px 15px; border-bottom: 1px solid var(--thorp-line); transition: background 180ms ease; }\n-.summaryCard:last-child { border-bottom: 0; }\n-.summaryCard:hover, .summaryCard:focus-within { background: var(--thorp-surface); }\n-.summaryCard[data-selected='true'] { background: linear-gradient(90deg, var(--thorp-accent-muted), transparent); }\n-.selectionLine { position: absolute; inset: 10px auto 10px 0; width: 2px; background: var(--thorp-accent); }\n-.summaryHeading { margin: 0; font-size: var(--thorp-text-body, .92rem); }\n-.openButton { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 28px; padding: 0; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }\n-.openButton::after { position: absolute; inset: 0; content: ''; }\n-.openButton svg { margin-left: auto; color: var(--thorp-copy); transition: transform 180ms ease, color 180ms ease; flex-shrink: 0; }\n-.openButton:hover svg, .openButton:focus-visible svg { transform: translate(2px, -2px); color: var(--thorp-accent-soft); }\n-.fieldNumber { color: var(--thorp-copy); font: 500 var(--thorp-text-label, .67rem)/1 var(--thorp-font-display); }\n-.summaryCard[data-selected='true'] .fieldNumber, .summaryCard[data-selected='true'] .openButton svg { color: var(--thorp-accent-soft); }\n-.openButton:focus-visible { outline: none; }\n-.openButton:focus-visible::after { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n+/* 분야 메뉴 버튼 하나. 일곱 개가 한 줄에 따로 선다. 고른 버튼만 초록 테두리와 바탕을 얻는다. */\n+.summaryCard { position: relative; border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-control, 6px); transition: border-color 160ms ease, background 160ms ease; }\n+.summaryCard:hover, .summaryCard:focus-within { border-color: var(--thorp-line-control-hover, var(--thorp-copy)); }\n+.summaryCard[data-selected='true'] { border-color: var(--thorp-accent-soft); background: var(--thorp-accent-muted); }\n+.selectionLine { position: absolute; right: 10px; bottom: -1px; left: 10px; height: 2px; border-radius: 2px; background: var(--thorp-accent); }\n+.summaryHeading { margin: 0; font-size: var(--thorp-text-small, .82rem); }\n+.openButton { display: flex; align-items: center; gap: 8px; min-height: var(--thorp-control, 40px); padding: 0 16px; border: 0; background: transparent; color: var(--thorp-foreground); font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }\n+.openButton:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); border-radius: var(--thorp-radius-control, 6px); }\n+/*\n+  변화 요약 말풍선. 문서 끝(Portal)에 그려지고 자리는 Radix Popover 가 버튼 아래로 잡으며, 화면 끝에서는 안쪽으로\n+  비켜 선다. 여닫기는 FieldSummaryCard 가 도움말과 같은 규칙으로 정한다.\n+*/\n+.fieldTip { z-index: 80; width: max-content; max-width: min(300px, calc(100vw - 32px)); padding: var(--thorp-pad-notice, 12px 14px); border: 1px solid var(--thorp-line-strong); border-radius: var(--thorp-radius-inset, 8px); background: var(--thorp-surface-raised); box-shadow: 0 12px 32px rgb(0 0 0 / 40%); color: var(--thorp-foreground); font-family: var(--thorp-font-page, inherit); }\n+.fieldTip .narrative { margin: 0 0 6px; color: var(--thorp-foreground); }\n .narrative { margin: 2px 0 7px; color: var(--thorp-copy); font-size: var(--thorp-text-caption, .76rem); line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }\n .stateLine { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.45; font-variant-numeric: tabular-nums; }\n .dataState { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; color: var(--thorp-copy); }\n@@ -38,6 +38,7 @@\n .detailTiming span + span::before { margin: 0 8px; opacity: .5; content: '·'; }\n /* 카드 바닥: 왼쪽 출처 줄, 오른쪽 아래 물음표. */\n .indicatorFooter { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 14px; }\n+.indicatorFooter > button { margin-inline-start: 0; }\n .referenceNotes { display: grid; justify-items: end; gap: 2px; margin-top: 10px; text-align: right; }\n .referenceNotes .referenceNote { margin: 0; }\n .referenceNote { margin: 7px 0 0; color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); line-height: 1.5; }\n@@ -60,7 +61,7 @@\n .chartNote { color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); margin: -6px 0 14px; }\n .afterRelease { display: flex; flex-wrap: wrap; gap: 4px 12px; border-left: 2px solid var(--thorp-line-strong); padding: 4px 10px; margin: 0 0 14px; color: var(--thorp-foreground); font-size: var(--thorp-text-caption, .73rem); line-height: 1.5; }\n .afterRelease span { color: var(--thorp-copy); font-size: var(--thorp-text-label, .68rem); }\n-.indicatorSource { display: flex; flex-wrap: wrap; gap: 2px 0; margin: 0; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.5; font-variant-numeric: tabular-nums; }\n+.indicatorSource { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 2px 0; margin: 0 0 0 auto; text-align: right; color: var(--thorp-muted); font-size: var(--thorp-text-label, .66rem); line-height: 1.5; font-variant-numeric: tabular-nums; }\n .indicatorSource span + span::before { margin: 0 6px; opacity: .5; content: '·'; }\n .emptyDetail { display: grid; justify-items: start; align-content: center; min-height: 240px; color: var(--thorp-copy); }\n .emptyDetail p { margin: 16px 0 8px; color: var(--thorp-foreground); }\n@@ -76,13 +77,8 @@\n /* 찾을 기준월이 정해지지 않은 분야다. 못 누른다는 것이 커서에도 보여야 한다. */\n .similarButton:disabled { color: var(--thorp-muted); cursor: not-allowed; }\n .similarButton:disabled:hover svg { transform: none; color: var(--thorp-copy); }\n-@media (max-width: 1100px) {\n-  .summaryCard { padding-left: 12px; padding-right: 7px; }\n-}\n @media (max-width: 800px) {\n-  .summaryCard { padding: 12px 14px; }\n-  .openButton { min-height: 30px; }\n-  .narrative { font-size: var(--thorp-text-small, .8rem); }\n+  .openButton { padding: 0 12px; }\n   .chartGrid text { font-size: 19px; }\n }\n @media (max-width: 480px) {\n@@ -92,8 +88,7 @@\n   .similarButton { width: 100%; }\n }\n @media (prefers-reduced-motion: reduce) {\n-  .summaryCard, .openButton svg { transition: none; }\n-  .openButton:hover svg, .openButton:focus-visible svg { transform: none; }\n+  .summaryCard { transition: none; }\n }\n \n /* 섹터 선택. FR-005가 요구하는 하나뿐인 주요 행동(분야 열기)과 경쟁하지 않도록 낮은 무게로 둔다. */\n@@ -113,26 +108,20 @@\n .newsMeta { float: right; margin: 2px 0 0 12px; font-size: var(--thorp-text-caption, .72rem); line-height: calc(1em + 4px); color: var(--thorp-copy); white-space: nowrap; }\n \n /*\n-  디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 분야 목록을\n-  카드 안 선택 목록으로, 상세를 머리·지표 칸·바닥으로 나뉜 카드로, 지표를 두 열 칸으로 묶는다.\n-  상세의 바깥 카드와 안쪽 여백(24px)은 MarketFlowPage의 .detailPanel이 정한다.\n+  디자인 개편 카드 층(S15P21E205-425). classic 디자인은 위 규칙 그대로이고, 새 디자인에서만 상세를 머리·지표\n+  칸·바닥으로 나뉜 카드로, 지표를 가로로 나란히 선 칸으로 묶는다. 분야 메뉴 버튼 모양은 위 기본 규칙이 두\n+  디자인에 함께 정한다(2026-09-29). 상세의 바깥 카드와 안쪽 여백(24px)은 MarketFlowPage의 .detailPanel이 정한다.\n */\n-:global(:root:not([data-design='classic'])) .summaryCard {\n-  padding: 12px 14px 12px 16px;\n-  border-bottom: 0;\n-  border-radius: var(--thorp-radius-inset);\n-}\n-:global(:root:not([data-design='classic'])) .summaryCard:hover,\n-:global(:root:not([data-design='classic'])) .summaryCard:focus-within { background: var(--thorp-surface-muted); }\n-:global(:root:not([data-design='classic'])) .summaryCard[data-selected='true'] { background: var(--thorp-accent-muted); }\n-:global(:root:not([data-design='classic'])) .selectionLine { inset: 12px auto 12px 0; width: 3px; border-radius: 0 2px 2px 0; }\n-:global(:root:not([data-design='classic'])) .openButton::after { border-radius: var(--thorp-radius-inset); }\n :global(:root:not([data-design='classic'])) .stateLabel { padding: 1px 7px; border-radius: 999px; }\n \n /* 상세 머리는 카드 안쪽 여백을 넘어 가로 끝까지 선을 긋는다. */\n :global(:root:not([data-design='classic'])) .detailHeader { margin: -24px -24px 20px; padding: 24px 24px 20px; border-bottom: 1px solid var(--thorp-line); }\n :global(:root:not([data-design='classic'])) .detailTitle h2 { font-size: 1.6rem; }\n-:global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }\n+/*\n+  지표 칸은 가로로 나란히 선다. 보통 세 개라 넓은 화면에서 왼쪽·가운데·오른쪽 세 칸이고, 칸이 240px보다 좁아지면\n+  두 칸, 한 칸으로 접힌다. 개수가 적으면 남는 폭을 나눠 갖는다.\n+*/\n+:global(:root:not([data-design='classic'])) .indicatorList { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }\n :global(:root:not([data-design='classic'])) .indicator {\n   display: flex;\n   flex-direction: column;\n@@ -142,8 +131,6 @@\n   border-radius: var(--thorp-radius-inset);\n   background: var(--thorp-surface-muted);\n }\n-/* 지표가 홀수면 마지막 칸이 혼자 남아 옆이 비므로 가로를 채운다. */\n-:global(:root:not([data-design='classic'])) .indicator:last-child:nth-child(odd) { grid-column: 1 / -1; }\n :global(:root:not([data-design='classic'])) .indicatorHeading { align-items: flex-start; }\n :global(:root:not([data-design='classic'])) .observation { font-size: clamp(1.35rem, 1.9vw, 1.7rem); }\n :global(:root:not([data-design='classic'])) .chartBlock { margin-top: 12px; }\n@@ -164,16 +151,11 @@\n /* --thorp-ink·--thorp-paper는 정의된 적이 없어 선택이 드러나지 않았다. 좋고 나쁨이 없는 밝기 반전으로 보인다(FR-003). */\n \n /* 참고 지표는 값이 먼저 읽히게 키운다. 등락은 응답에 없어 색으로 칠하지 않는다. */\n-:global(:root:not([data-design='classic'])) .openButton svg { color: var(--thorp-accent-soft); }\n :global(:root:not([data-design='classic'])) .newsList { gap: 0; }\n :global(:root:not([data-design='classic'])) .newsList li { padding: 12px 0; border-bottom: 1px solid var(--thorp-line); }\n :global(:root:not([data-design='classic'])) .newsList li:first-child { padding-top: 0; }\n :global(:root:not([data-design='classic'])) .newsList li:last-child { padding-bottom: 0; border-bottom: 0; }\n \n-/* 상세 칸이 좁아지면 지표를 한 열로 둔다. 두 열이면 3개월 경로 칸이 읽기 어려워진다. */\n-@media (max-width: 1180px) {\n-  :global(:root:not([data-design='classic'])) .indicatorList { grid-template-columns: 1fr; }\n-}\n @media (max-width: 1100px) {\n   :global(:root:not([data-design='classic'])) .detailHeader { margin: -20px -20px 18px; padding: 20px 20px 18px; }\n   :global(:root:not([data-design='classic'])) .similarEntry { margin: 18px -20px -20px; padding: 14px 20px; }\n@@ -191,7 +173,6 @@\n :global(:root:not([data-design='classic'])) .openButton { color: var(--thorp-copy); }\n :global(:root:not([data-design='classic'])) .summaryCard[data-selected='true'] .openButton,\n :global(:root:not([data-design='classic'])) .summaryCard:hover .openButton { color: var(--thorp-foreground); }\n-:global(:root:not([data-design='classic'])) .summaryCard:not([data-selected='true']) .narrative { color: var(--thorp-muted); }\n :global(:root:not([data-design='classic'])) .detailNarrative { color: var(--thorp-copy); }\n :global(:root:not([data-design='classic'])) .chartValue { fill: var(--thorp-copy); }\n :global(:root:not([data-design='classic'])) .chartCaption,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "old_path": "frontend/src/components/marketflow/MarketFlow.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import type { IndicatorDisplay } from '@/types/marketFlow'\n+import type { FieldStatus, IndicatorDisplay } from '@/types/marketFlow'\n \n /**\n  * 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다.\n@@ -111,3 +111,19 @@ export function describeAxis(indicator: IndicatorDisplay): string {\n     ? '세로축이 0을 포함합니다.'\n     : `세로축은 ${formatObservation(axis.domain[0])}~${formatObservation(axis.domain[1])}${indicator.unit}입니다. 0을 빼고 값에 맞춰 그렸으니 기울기가 실제보다 커 보일 수 있습니다.`\n }\n+\n+/** 분야 자료 공급 상태의 표 글자. */\n+export const fieldStateLabels: Record<FieldStatus, string> = {\n+  READY: '자료 확인',\n+  EXAMPLE: '예시 자료',\n+  EMPTY: '표시할 자료 없음',\n+  COLLECTION_FAILED: '최근 수집 실패',\n+}\n+\n+/** 목록 한 줄에 다는 상태 표. 정상 공급이면 없고, 수집 실패·자료 없음과 예시 자료만 단다. */\n+export function stateLineLabels(status: FieldStatus, isExampleData = false): string[] {\n+  return [\n+    status === 'READY' ? null : fieldStateLabels[status],\n+    isExampleData && status !== 'EXAMPLE' ? fieldStateLabels.EXAMPLE : null,\n+  ].filter((label): label is string => label !== null)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,12 +25,12 @@\n .workspaceHeading h2 span { font: 500 var(--thorp-text-caption, .74rem)/1.5 var(--thorp-font-display); color: var(--thorp-ornament, var(--thorp-accent-soft)); }\n .workspaceHeading > span { color: var(--thorp-copy); font: 400 var(--thorp-text-caption, .72rem)/1.4 var(--thorp-font-page, var(--thorp-font-body)); }\n .workspaceHeading i { margin: 0 8px; color: var(--thorp-muted); font-style: normal; }\n-.workspace { display: grid; grid-template-columns: minmax(340px, .92fr) minmax(0, 1.65fr); align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }\n+/* 분야 메뉴를 위에, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 옆으로 나누면 상세의 지표 칸이 좁아진다. */\n+.workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; border-bottom: 1px solid var(--thorp-line-strong); }\n .fieldRail { min-width: 0; }\n-.fieldList { padding-right: 24px; }\n-.detailPanel { min-width: 0; min-height: 490px; border-left: 1px solid var(--thorp-line-strong); padding: 24px 0 0 28px; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }\n-.detailPanel:focus-visible, .detailJump:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n-.detailJump { display: none; }\n+.fieldList { display: flex; flex-wrap: wrap; gap: 8px; }\n+.detailPanel { min-width: 0; min-height: 490px; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; scroll-margin-top: calc(var(--thorp-header-height, 82px) + 23px); }\n+.detailPanel:focus-visible, .loadFailure button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }\n .loading { min-height: 280px; padding: 24px 0; color: var(--thorp-copy); font-size: var(--thorp-text-small, .82rem); }\n .loadingTrack { display: block; width: 100%; height: 2px; overflow: hidden; background: var(--thorp-line); }\n .loadingTrack::after { display: block; content: ''; width: 28%; height: 100%; background: var(--thorp-accent); animation: data-flow 1.4s ease-in-out infinite alternate; }\n@@ -43,9 +43,6 @@\n .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }\n @media (max-width: 1100px) {\n   .main { width: calc(100% - 48px); }\n-  .workspace { grid-template-columns: minmax(310px, .95fr) minmax(0, 1.5fr); }\n-  .fieldList { padding-right: 18px; }\n-  .detailPanel { padding-left: 20px; }\n }\n @media (max-width: 800px) {\n   .main { width: calc(100% - 32px); padding-top: 16px; }\n@@ -53,10 +50,6 @@\n   .heroAside { border: 0; padding: 0; max-width: 540px; }\n   .heroAside > span { display: none; }\n   .heroAside p { margin: 0; }\n-  .workspace { grid-template-columns: 1fr; }\n-  .fieldList { padding: 0; }\n-  .detailPanel { border-left: 0; border-top: 1px solid var(--thorp-line-strong); padding: 24px 0 0; }\n-  .detailJump { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: var(--thorp-control, 48px); padding: var(--thorp-control-pad-block, 10px) 14px; margin: 14px 0 24px; border: 1px solid var(--thorp-line-strong); background: var(--thorp-surface); color: var(--thorp-accent-soft); font: 500 var(--thorp-text-small, .8rem)/1.5 var(--thorp-font-page, var(--thorp-font-body)); cursor: pointer; }\n }\n @media (max-width: 420px) {\n   .main { width: calc(100% - 28px); }\n@@ -75,33 +68,28 @@\n \n /*\n   디자인 개편 카드 층(S15P21E205-425). 위의 선 나눔 규칙은 classic 디자인 그대로 두고, 새 디자인에서만\n-  구역을 카드 면으로 묶는다. 배치(순서·열)는 바꾸지 않는다. classic을 걷어낼 때 이 층을 위 규칙에\n-  합치고 접두 선택자를 지운다.\n+  구역을 카드 면으로 묶는다. 배치(위 분야 메뉴·아래 상세)는 위 기본 규칙이 두 디자인에 함께 정한다.\n+  classic을 걷어낼 때 이 층을 위 규칙에 합치고 접두 선택자를 지운다.\n */\n :global(:root:not([data-design='classic'])) .workspaceHeading { border: 0; padding: 4px 2px 14px; }\n-:global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; grid-template-columns: minmax(320px, .85fr) minmax(0, 1.65fr); }\n-:global(:root:not([data-design='classic'])) .fieldRail, :global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {\n+:global(:root:not([data-design='classic'])) .workspace { gap: 16px; border-bottom: 0; }\n+/* 분야 메뉴는 카드로 묶지 않는다. 버튼 하나하나가 따로 고르는 메뉴로 읽혀야 한다. */\n+:global(:root:not([data-design='classic'])) .detailPanel, :global(:root:not([data-design='classic'])) .main > .loadFailure {\n   border: 1px solid var(--thorp-line);\n   border-radius: var(--thorp-radius-card);\n   background: var(--thorp-surface);\n }\n-:global(:root:not([data-design='classic'])) .fieldRail { padding: 8px; }\n-:global(:root:not([data-design='classic'])) .fieldList { display: grid; gap: 4px; padding: 0; }\n :global(:root:not([data-design='classic'])) .detailPanel { padding: 24px; }\n :global(:root:not([data-design='classic'])) .main > .loadFailure { padding: 24px; }\n-:global(:root:not([data-design='classic'])) .loadFailure button,\n-:global(:root:not([data-design='classic'])) .detailJump { border-radius: var(--thorp-radius-control); }\n+:global(:root:not([data-design='classic'])) .loadFailure button { border-radius: var(--thorp-radius-control); }\n :global(:root:not([data-design='classic'])) .loading { padding: 8px 0; }\n :global(:root:not([data-design='classic'])) .historyNotice { padding: 14px 2px; }\n /* 이동 링크는 카드 바닥에 붙여 세 카드의 끝선을 맞춘다. */\n @media (max-width: 1100px) {\n-  :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: minmax(290px, .95fr) minmax(0, 1.5fr); }\n   :global(:root:not([data-design='classic'])) .detailPanel { padding: 20px; }\n }\n @media (max-width: 800px) {\n-  :global(:root:not([data-design='classic'])) .workspace { grid-template-columns: 1fr; }\n   :global(:root:not([data-design='classic'])) .detailPanel { border: 1px solid var(--thorp-line); padding: 20px; }\n-  :global(:root:not([data-design='classic'])) .detailJump { margin: 8px 0 0; }\n }\n \n /* 글자 밝기 세 단(MarketFlow.module.css와 같은 규칙). 목록 머리의 시점, 역사 비교 안내는 회색이다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "old_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -92,6 +92,9 @@ describe('MarketFlowPage', () => {\n     it.each([\n       ['ArrowDown', 0, 1, 'consumption_investment'],\n       ['ArrowUp', 2, 1, 'consumption_investment'],\n+      // 메뉴가 가로 한 줄이라 좌우 화살표도 같은 일을 한다.\n+      ['ArrowRight', 0, 1, 'consumption_investment'],\n+      ['ArrowLeft', 2, 1, 'consumption_investment'],\n       ['Home', 4, 0, 'production'],\n       ['End', 0, 6, 'overseas'],\n     ])('%s는 %i번에서 %i번 분야로 포커스와 선택을 함께 옮긴다', async (key, from, to, expectedId) => {\n@@ -123,7 +126,7 @@ describe('MarketFlowPage', () => {\n \n       // Tab·Enter는 브라우저와 button 기본 동작에 맡긴다. 여기서 preventDefault하면\n       // 키보드 사용자가 목록 밖으로 나가지 못한다.\n-      for (const key of ['Tab', 'Enter', 'ArrowLeft']) {\n+      for (const key of ['Tab', 'Enter', 'a']) {\n         const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })\n         buttons[2].dispatchEvent(event)\n         expect(event.defaultPrevented).toBe(false)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n-import { Activity, ArrowDown, RefreshCw } from 'lucide-react'\n+import { Activity, RefreshCw } from 'lucide-react'\n import { LayoutGroup, motion, useReducedMotion } from 'motion/react'\n-import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'\n+import { useCallback, useEffect, useId, useState, type KeyboardEvent } from 'react'\n import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n import { FieldDetail } from '@/components/marketflow/FieldDetail'\n import { FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'\n@@ -22,7 +22,6 @@ function LoadingNotice({ children }: { children: string }) {\n export function MarketFlowPage() {\n   const reducedMotion = useReducedMotion()\n   const selectionGroup = useId()\n-  const detailPanel = useRef<HTMLDivElement>(null)\n   const [summary, setSummary] = useState<FieldSummaryResult | null>(null)\n   const [summaryError, setSummaryError] = useState(false)\n   const [summaryRequest, setSummaryRequest] = useState(0)\n@@ -76,8 +75,9 @@ export function MarketFlowPage() {\n     if (!target.closest('button[aria-controls=\"market-flow-detail\"]')) return\n     const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[aria-controls=\"market-flow-detail\"]'))\n     const index = buttons.indexOf(target.closest('button') as HTMLButtonElement)\n-    const nextIndex = event.key === 'ArrowDown' ? (index + 1) % buttons.length\n-      : event.key === 'ArrowUp' ? (index - 1 + buttons.length) % buttons.length\n+    // 분야 메뉴는 가로 한 줄이지만 좁은 화면에서는 여러 줄로 접히므로 두 방향 화살표를 모두 받는다.\n+    const nextIndex = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? (index + 1) % buttons.length\n+      : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? (index - 1 + buttons.length) % buttons.length\n       : event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : null\n     if (nextIndex === null) return\n     event.preventDefault()\n@@ -129,12 +129,8 @@ export function MarketFlowPage() {\n                     {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} listUpdatedAt={listUpdatedAt} />)}\n                   </LayoutGroup>\n                 </div>\n-                <button type=\"button\" className={styles.detailJump} onClick={() => {\n-                  detailPanel.current?.focus({ preventScroll: true })\n-                  detailPanel.current?.scrollIntoView({ behavior: reducedMotion ? 'instant' : 'smooth', block: 'start' })\n-                }}>선택한 분야 상세 보기 <ArrowDown size={16} aria-hidden=\"true\" /></button>\n               </section>\n-              <div id=\"market-flow-detail\" className={styles.detailPanel} ref={detailPanel} tabIndex={-1} aria-label=\"선택한 분야 상세\">\n+              <div id=\"market-flow-detail\" className={styles.detailPanel} tabIndex={-1} aria-label=\"선택한 분야 상세\">\n                 <p className={styles.srOnly} role=\"status\">{displayedDetail?.status === 'success' ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>\n                 {displayedDetail?.status === 'success' ? (\n                   // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,13 @@\n - Q: 사용자가 고른 섹터는 화면을 떠났다 돌아왔을 때 어디까지 유지되나요? → A: 브라우저 세션 동안 유지한다. 새로고침·다른 메뉴 왕복에도 남고 탭을 닫으면 풀리며, 로그인은 필요하지 않다.\n - Q: 기본 화면이 7개 분야 요약을 다 보여주기까지의 시간 목표는 무엇인가요? → A: 2초 이내에 7개 분야 요약을 표시한다. 뉴스·국내 시장 참고 정보는 늦게 채워져도 요약 표시를 막지 않는다.\n \n+### Session 2026-09-29 (분야 메뉴와 상세 배치)\n+\n+- Q: 분야 목록과 상세를 좌우로 나눠야 하나요? → A: 아니다. 분야 7개를 위쪽에 따로따로 고르는 메뉴 버튼으로 두고, 고른 분야의 상세를 그 아래 전체 폭으로 둔다. 좌우로 나누면 상세의 지표 칸이 좁아진다. 분야 번호(01~07)는 적지 않는다.\n+- Q: 분야별 짧은 변화 요약은 어디에 보이나요? → A: 분야 메뉴 버튼을 가리키거나 키보드 초점을 줄 때 그 버튼 아래 팝오버로 대상월과 함께 보인다. 버튼이 설명으로 연결되어 보조기기는 팝오버를 열지 않아도 읽는다. 고른 분야의 요약은 상세 머리에 늘 펼쳐 있다(FR-002). 수집 실패·자료 없음·예시 자료 표는 메뉴 버튼 위에 늘 보인다(FR-011·FR-014).\n+- Q: 열린 분야 제목 줄의 '소속 지표 수'와 정상 공급 '자료 확인' 표는 두나요? → A: 두지 않는다. 지표 칸이 그대로 보이는 것이 곧 정상 공급이다. 수집 실패·자료 없음의 빨간 '확인 중입니다'와 '예시 자료' 표만 남긴다. 아래 2026-09-24 기록의 해당 답을 대신한다.\n+- Q: 지표 칸은 어떻게 놓나요? → A: 가로로 나란히 둔다. 보통 세 개라 넓은 화면에서 왼쪽·가운데·오른쪽 세 칸이고, 좁아지면 두 칸, 한 칸으로 접힌다. 출처·작성기관은 칸의 오른쪽 아래, 세로축 범위 물음표는 왼쪽 아래에 둔다(FR-007).\n+\n ### Session 2026-09-25 (S15P21E205-447 숫자 표기)\n \n - Q: 지표 값·차트·요약 문장의 숫자를 몇 자리까지 보이나? → A: 소수 첫째 자리까지다(사사오입, 꼬리 0은 덜어 낸다). 원천 값의 자릿수가 제각각이라(증가율 `4.346167` 등) 그대로 두면 읽을 수 없었다. 응답 값은 그대로이고 표기만 바꾼다 — 변화 방향과 축 범위는 반올림 전 값으로 정한다.\n@@ -132,7 +139,7 @@\n #### 기본 화면 (§4.1, §4.4, D08)\n \n - **FR-001**: 시장 흐름은 주요 메뉴이며 전략을 만들지 않아도 들어갈 수 있다. 시작 절차로 설문·숙련도 분류·전략 선택을 요구하지 않는다. (§3.2, §4.4, D02)\n-- **FR-002**: 기본 화면은 생산·소비/투자·대외거래·노동·물가/원자재·금융/주택·해외 경기 7개 분야 이름과 분야별 짧은 변화 요약을 보인다. 분야 이름·배치는 [008](../008-macro-indicator-registry/spec.md)의 화면 분류 버전을 따른다. (§4.4, D07)\n+- **FR-002**: 기본 화면은 생산·소비/투자·대외거래·노동·물가/원자재·금융/주택·해외 경기 7개 분야 이름과 분야별 짧은 변화 요약을 보인다. 분야는 따로 고르는 메뉴 버튼으로 두고, 짧은 변화 요약은 버튼을 가리키거나 초점을 줄 때 펼쳐지며 고른 분야의 요약은 상세 머리에 늘 보인다(Session 2026-09-29). 분야 이름·배치는 [008](../008-macro-indicator-registry/spec.md)의 화면 분류 버전을 따른다. (§4.4, D07)\n - **FR-003**: 경제 전체를 하나의 좋고 나쁜 점수·등급·신호등으로 요약한 표시를 만들지 않는다. (§4.4, D08, 원칙 II)\n - **FR-004**: 변화 요약은 그 분야에서 최근 3개월 경로 변화가 가장 큰 지표 1~2개를 골라, 그 지표의 이름과 실제 값 변화(방향·크기·지속 기간)를 지표의 말로 설명한다. 분야에 속한 지표의 방향을 세거나 합쳐 분야 단위 신호·개수 요약으로 바꾸지 않는다. 확보한 자료에만 근거하고, 좋다·나쁘다 판정·전망·투자 시사점을 담지 않는다. 요약 문장의 생성 규칙은 등록된 서술 규칙을 따르며 확인할 수 없는 내용을 만들지 않는다. (§4.4, §6.3, 원칙 II·III·VI, D08)\n - **FR-005**: 화면마다 가장 중요한 행동 버튼을 하나만 둔다. 기본 화면은 분야 열기, 열린 분야에서는 '비슷했던 때 보기'다. (§4.1)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/spec.md",
+          "old_path": "specs/009-market-flow-overview/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2259497,
+      "head_commit_sha": "798859a8d8865edab22290cd7d6094a52f3bb308",
+      "base_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "start_commit_sha": "6aed3682bd856950976070c06329a60f32be8cca",
+      "created_at": "2026-09-29T15:25:31.584+09:00",
+      "merge_request_id": 962459,
+      "state": "without_files",
+      "real_size": "36",
+      "patch_id_sha": "4794fd2ac8c5997bb870c135f3877dc978bd101b",
+      "commits": [
+        {
+          "id": "798859a8d8865edab22290cd7d6094a52f3bb308",
+          "short_id": "798859a8",
+          "created_at": "2026-09-29T15:24:39.000+09:00",
+          "parent_ids": [
+            "8d5c2dbafacc0768f5ecc623bcc0d32c71e18ce5",
+            "cfae6787a8b96b52814b60eabc70d182ee458c78"
+          ],
+          "title": "Merge remote-tracking branch 'origin/feat(fe)/landing-diagnosis-ui-refresh' into feat(fe)/market-flow-layout",
+          "message": "Merge remote-tracking branch 'origin/feat(fe)/landing-diagnosis-ui-refresh' into feat(fe)/market-flow-layout\n\n# Conflicts:\n#\tfrontend/src/components/common/InlineHelp.tsx\n#\tfrontend/src/pages/MarketFlowPage.module.css\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T15:24:39.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T15:24:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/798859a8d8865edab22290cd7d6094a52f3bb308"
+        },
+        {
+          "id": "8d5c2dbafacc0768f5ecc623bcc0d32c71e18ce5",
+          "short_id": "8d5c2dba",
+          "created_at": "2026-09-29T15:05:32.000+09:00",
+          "parent_ids": [
+            "011a58eb25d3e8b674bb9cf46066dfb84f3bea0d"
+          ],
+          "title": "fix(fe): 시장 흐름 분야 말풍선을 도움말과 같은 Popover로 바꿔 잘림·Esc·보조기기 문제를 고친다",
+          "message": "fix(fe): 시장 흐름 분야 말풍선을 도움말과 같은 Popover로 바꿔 잘림·Esc·보조기기 문제를 고친다\n\n- 분야 말풍선을 Radix Popover로 그려 화면 끝에서 안쪽으로 비켜 서게 하고, Esc로 닫히며 말풍선 위로\n  마우스를 옮겨도 닫히지 않게 한다. 여닫는 규칙은 InlineHelp와 함께 쓰는 useHoverOpen 훅으로 옮긴다\n- 수집 실패·예시 자료 표를 버튼 이름에 넣고, 요약은 늘 있는 숨은 설명으로 버튼에 잇는다\n- 새 배치와 어긋난 레이아웃 주석을 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T15:05:32.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T15:05:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8d5c2dbafacc0768f5ecc623bcc0d32c71e18ce5"
+        },
+        {
+          "id": "011a58eb25d3e8b674bb9cf46066dfb84f3bea0d",
+          "short_id": "011a58eb",
+          "created_at": "2026-09-29T14:33:19.000+09:00",
+          "parent_ids": [
+            "6aed3682bd856950976070c06329a60f32be8cca"
+          ],
+          "title": "feat(fe): 시장 흐름을 위 분야 메뉴와 아래 상세로 나누고 지표 칸을 가로로 나란히 둔다",
+          "message": "feat(fe): 시장 흐름을 위 분야 메뉴와 아래 상세로 나누고 지표 칸을 가로로 나란히 둔다\n\n- 분야 7개를 번호 없이 따로 고르는 메뉴 버튼으로 두고, 변화 요약·대상월은 가리키거나 초점을 줄 때\n  팝오버로 보인다. 수집 실패·예시 자료 표는 버튼에 늘 보인다\n- 상세의 지표 칸을 왼쪽·가운데·오른쪽으로 나란히 두고, 출처를 칸 오른쪽 아래로 옮긴다\n- 상세 머리의 '소속 지표 수'와 정상 공급 '자료 확인' 표를 지운다\n- spec 009 FR-002와 Session 2026-09-29에 이 배치를 적는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:33:19.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:33:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/011a58eb25d3e8b674bb9cf46066dfb84f3bea0d"
+        },
+        {
+          "id": "cfae6787a8b96b52814b60eabc70d182ee458c78",
+          "short_id": "cfae6787",
+          "created_at": "2026-09-29T14:13:24.000+09:00",
+          "parent_ids": [
+            "c661b8ec1c30c82657fe49208e4f67774bb87a7b"
+          ],
+          "title": "feat(fe): 첫 화면 제목을 판정하는 말 대신 같은 산업에서 나누는 방식에 따라 결과가 달라진다는 사실로 바꾼다",
+          "message": "feat(fe): 첫 화면 제목을 판정하는 말 대신 같은 산업에서 나누는 방식에 따라 결과가 달라진다는 사실로 바꾼다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:13:24.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:13:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cfae6787a8b96b52814b60eabc70d182ee458c78"
+        },
+        {
+          "id": "c661b8ec1c30c82657fe49208e4f67774bb87a7b",
+          "short_id": "c661b8ec",
+          "created_at": "2026-09-29T14:09:01.000+09:00",
+          "parent_ids": [
+            "d78a43ca3071605b9e1479e380fd6b68aea77009"
+          ],
+          "title": "fix(fe): 좁은 화면에서 첫 화면 칸의 글과 버튼이 옆으로 밀려 잘리지 않게 스크롤 연출의 좌우 이동을 뺀다",
+          "message": "fix(fe): 좁은 화면에서 첫 화면 칸의 글과 버튼이 옆으로 밀려 잘리지 않게 스크롤 연출의 좌우 이동을 뺀다\n\n한 열로 접히는 폭(760px 이하)에서는 칸이 화면을 채우지 않아 가운데 서는 순간이 거의 없고, 글이\n옆으로 밀린 채 멈춰 화면 밖으로 잘렸다. 미디어 쿼리 훅(useMediaQuery)을 hooks에 둔다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:09:01.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:09:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c661b8ec1c30c82657fe49208e4f67774bb87a7b"
+        },
+        {
+          "id": "d78a43ca3071605b9e1479e380fd6b68aea77009",
+          "short_id": "d78a43ca",
+          "created_at": "2026-09-29T14:05:03.000+09:00",
+          "parent_ids": [
+            "98194cf39db479cffec941142eb68ca652ed0c36"
+          ],
+          "title": "feat(fe): 첫 화면 스크롤바를 화면 오른쪽 끝에 붙이고 미리보기 주소창에 계산 해시 결과 주소 예시를 넣는다",
+          "message": "feat(fe): 첫 화면 스크롤바를 화면 오른쪽 끝에 붙이고 미리보기 주소창에 계산 해시 결과 주소 예시를 넣는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T14:05:03.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T14:05:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d78a43ca3071605b9e1479e380fd6b68aea77009"
+        },
+        {
+          "id": "98194cf39db479cffec941142eb68ca652ed0c36",
+          "short_id": "98194cf3",
+          "created_at": "2026-09-29T13:56:38.000+09:00",
+          "parent_ids": [
+            "525c31bbc474d105075f9448e32e05249d6dd711"
+          ],
+          "title": "feat(fe): 뉴스 섹터 칩을 기술·제조·산업·금융·소비·헬스케어·시장·경제 분류로 묶고 분류를 누를 때 펼친다",
+          "message": "feat(fe): 뉴스 섹터 칩을 기술·제조·산업·금융·소비·헬스케어·시장·경제 분류로 묶고 분류를 누를 때 펼친다\n\n분류 이름과 섹터 배정은 화면이 갖고 섹터 목록·이름은 계속 GET /market-news/sectors가 준다.\n배정에 없는 섹터는 '기타'로 보이고, 분류만 눌러서는 뉴스가 좁혀지지 않는다. spec 002 FR-019와\n012 FR-005에 이 규칙을 적는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:56:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:56:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/98194cf39db479cffec941142eb68ca652ed0c36"
+        },
+        {
+          "id": "525c31bbc474d105075f9448e32e05249d6dd711",
+          "short_id": "525c31bb",
+          "created_at": "2026-09-29T13:49:04.000+09:00",
+          "parent_ids": [
+            "a0549ae5af30c897d1333cdc956ced1f3662247e"
+          ],
+          "title": "refactor(fe): 뉴스의 매체·날짜를 요약 마지막 줄 끝에 띄워 붙여 요약 폭을 되찾는다",
+          "message": "refactor(fe): 뉴스의 매체·날짜를 요약 마지막 줄 끝에 띄워 붙여 요약 폭을 되찾는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:49:04.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:49:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/525c31bbc474d105075f9448e32e05249d6dd711"
+        },
+        {
+          "id": "a0549ae5af30c897d1333cdc956ced1f3662247e",
+          "short_id": "a0549ae5",
+          "created_at": "2026-09-29T13:47:04.000+09:00",
+          "parent_ids": [
+            "83ad99f172ac4371bb02452e001ce1a92f6f97a0"
+          ],
+          "title": "refactor(fe): 과거 시장 카드의 검색 상태를 i 표시 뒤로 내리고 비슷한 점·다른 점 설명에 이름표 색을 입힌다",
+          "message": "refactor(fe): 과거 시장 카드의 검색 상태를 i 표시 뒤로 내리고 비슷한 점·다른 점 설명에 이름표 색을 입힌다\n\n검색 상태와 사례 구분은 가리키거나 키보드 초점을 줄 때 그 자리에 펼쳐지고, 보조기기에는 펼치지\n않아도 알림으로 읽힌다. 도움말(InlineHelp)에 트리거 글자를 바꾸는 mark를 더했다. spec 002·010과\nconstitution 6.0.1 초안에 요약 카드에서는 이 형태를 쓸 수 있다는 조건을 적는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:47:04.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:47:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a0549ae5af30c897d1333cdc956ced1f3662247e"
+        },
+        {
+          "id": "83ad99f172ac4371bb02452e001ce1a92f6f97a0",
+          "short_id": "83ad99f1",
+          "created_at": "2026-09-29T13:44:05.000+09:00",
+          "parent_ids": [
+            "7a99d6d02d609a5a364f2706b34d407e67eb52bc"
+          ],
+          "title": "refactor(fe): 투자 대상 고르기의 출처를 탐색 카드 안 오른쪽 아래로 옮긴다",
+          "message": "refactor(fe): 투자 대상 고르기의 출처를 탐색 카드 안 오른쪽 아래로 옮긴다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:44:05.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:44:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/83ad99f172ac4371bb02452e001ce1a92f6f97a0"
+        },
+        {
+          "id": "7a99d6d02d609a5a364f2706b34d407e67eb52bc",
+          "short_id": "7a99d6d0",
+          "created_at": "2026-09-29T13:41:49.000+09:00",
+          "parent_ids": [
+            "6aed3682bd856950976070c06329a60f32be8cca"
+          ],
+          "title": "refactor(fe): 화면 다듬기 리뷰에서 나온 호버·좁은 폭·접근성·토큰 폴백 문제를 고친다",
+          "message": "refactor(fe): 화면 다듬기 리뷰에서 나온 호버·좁은 폭·접근성·토큰 폴백 문제를 고친다\n\n- 눌린 종합 비교 버튼이 가리킬 때 채움을 잃지 않게 한다\n- 뉴스 목록이 좁으면 매체·날짜를 요약 아래로 내리고, 아주 좁은 폭에서는 시장 흐름 제목 뒷부분도 낱말 사이에서 끊는다\n- 새 창으로 열리는 뉴스 링크에 보조기기용 안내를 붙이고, 과거 시장 상태 한 줄의 FR-037 테스트를 더한다\n- 헤더 높이 토큰의 폴백을 예전 값 82px로 두고 classic에서 비운다(frontend/CLAUDE.md 토큰 규칙)\n- 화면 읽기 전용 숨김은 공용 sr-only를 쓰고, 옛 카드 이름이 남은 주석을 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-29T13:41:49.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-29T13:41:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a99d6d02d609a5a364f2706b34d407e67eb52bc"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2877962": []
+  }
+}

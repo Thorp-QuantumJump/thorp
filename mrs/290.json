@@ -1,0 +1,814 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 955982,
+    "iid": 290,
+    "project_id": 1444456,
+    "title": "fix(be): 설정 조합 자동 비교가 끝까지 돌지 않던 네 자리를 고친다",
+    "description": "## 작업 내용 요약\n\n설정 조합 자동 비교가 후보를 하나도 완료하지 못하던 원인 넷을 고친다. 접수(CSRF), 공통 구간의 끝일 기본값, 워커의 역변동성 파라미터 계약, 완료된 실행 재사용 시의 진행 알림이다. 같은 조건의 탐색이 12/12 완료로 끝난다.\n\n## 관련 티켓\n\nS15P21E205-396\n\n## 주요 변경 사항\n\n- **FE 접수**: 자동 비교 요청에 CSRF 토큰을 싣는다. 없으면 403이라 접수 자체가 되지 않았다.\n- **007 공통 구간**: 끝일을 받지 않으면 오늘이 아니라 자료 마감일까지 본다. 수집은 늘 과거 어느 날까지만 끝나 있어, 주말이거나 수집이 하루만 밀려도 요청 구간이 자료 밖으로 나가 워커가 후보를 전부 `DATA_INSUFFICIENT`로 거절했다. `MarketMetadataPort.lastTradingDay()` 가 그 값을 준다.\n- **워커 계약**: 역변동성이 003 축 `lookbackDays`를 받고 계산에도 쓴다. 축이 계약에 없어 후보가 전부 DLQ로 갔다. 축을 선언한 전략이 셋이라 필드를 상위 클래스 하나에 두고 역변동성·최소분산·섹터 모멘텀이 공유한다.\n- **004 재사용**: 완료된 실행을 재사용하면 `BacktestFinished`를 발행한다. 재사용된 접수에는 워커의 `FINISHED`가 다시 오지 않아, 이미 답이 나와 있는 후보가 발행 창을 막고 묶음 전체가 멈춰 있었다.\n\n## 테스트\n\n- `worker`: `ruff check && ruff format --check && pytest` → 518 passed\n- `backend`: `./gradlew build` → BUILD SUCCESSFUL (spotlessCheck 포함)\n- 로컬 실행: 같은 조건으로 새 탐색 → `COMPLETED 12/12`, 실패 0, 건너뜀 0. 실행 6건이 `REUSED`로 기록됐으므로 재사용 경로도 탔다. 수정 전 같은 요청은 후보 6개 전부 `SYSTEM_FAILURE`(DLQ) 또는 `RUNNING 0/12` 무한 정지였다.\n\n## 리뷰 포인트\n\n- **재사용 알림을 004에 둔 것.** 007 `CandidateJobLauncherImpl` 주석이 \"재사용은 004의 판단이고 007이 관여하지 않는다\"고 적고 있어 그 전제를 지키는 자리로 골랐다. 007 디스패처가 즉시 완료 처리하는 길도 있었지만 `candidateFinished`가 `REQUIRES_NEW`라 디스패처가 잡은 묶음 락과 엉킨다. `JOINED`에는 발행하지 않는다 — 그 실행은 아직 돌고 있고 제 `FINISHED`가 걸린 후보를 전부 전진시킨다.\n- **이미 갇힌 묶음은 되살리지 않는다.** 수정 전에 물린 `PS-20260922-000007`은 스스로 풀리지 않는다. 복구 로직을 넣을지는 따로 정할 일로 본다.\n- **FE 티켓 브랜치에 BE·워커 변경이 섞여 있다.** 396은 CSRF 티켓이고 나머지 셋은 같은 증상을 쫓다 드러난 원인이다. 나눌지 이대로 갈지 판단 바란다.",
+    "state": "merged",
+    "created_at": "2026-09-22T10:56:16.096+09:00",
+    "updated_at": "2026-09-22T11:09:12.342+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-22T11:09:11.910+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/396-param-search-csrf",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+    "merge_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T10:56:19.178+09:00",
+    "reference": "!290",
+    "references": {
+      "short": "!290",
+      "relative": "!290",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!290"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/290",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 955982,
+    "iid": 290,
+    "project_id": 1444456,
+    "title": "fix(be): 설정 조합 자동 비교가 끝까지 돌지 않던 네 자리를 고친다",
+    "description": "## 작업 내용 요약\n\n설정 조합 자동 비교가 후보를 하나도 완료하지 못하던 원인 넷을 고친다. 접수(CSRF), 공통 구간의 끝일 기본값, 워커의 역변동성 파라미터 계약, 완료된 실행 재사용 시의 진행 알림이다. 같은 조건의 탐색이 12/12 완료로 끝난다.\n\n## 관련 티켓\n\nS15P21E205-396\n\n## 주요 변경 사항\n\n- **FE 접수**: 자동 비교 요청에 CSRF 토큰을 싣는다. 없으면 403이라 접수 자체가 되지 않았다.\n- **007 공통 구간**: 끝일을 받지 않으면 오늘이 아니라 자료 마감일까지 본다. 수집은 늘 과거 어느 날까지만 끝나 있어, 주말이거나 수집이 하루만 밀려도 요청 구간이 자료 밖으로 나가 워커가 후보를 전부 `DATA_INSUFFICIENT`로 거절했다. `MarketMetadataPort.lastTradingDay()` 가 그 값을 준다.\n- **워커 계약**: 역변동성이 003 축 `lookbackDays`를 받고 계산에도 쓴다. 축이 계약에 없어 후보가 전부 DLQ로 갔다. 축을 선언한 전략이 셋이라 필드를 상위 클래스 하나에 두고 역변동성·최소분산·섹터 모멘텀이 공유한다.\n- **004 재사용**: 완료된 실행을 재사용하면 `BacktestFinished`를 발행한다. 재사용된 접수에는 워커의 `FINISHED`가 다시 오지 않아, 이미 답이 나와 있는 후보가 발행 창을 막고 묶음 전체가 멈춰 있었다.\n\n## 테스트\n\n- `worker`: `ruff check && ruff format --check && pytest` → 518 passed\n- `backend`: `./gradlew build` → BUILD SUCCESSFUL (spotlessCheck 포함)\n- 로컬 실행: 같은 조건으로 새 탐색 → `COMPLETED 12/12`, 실패 0, 건너뜀 0. 실행 6건이 `REUSED`로 기록됐으므로 재사용 경로도 탔다. 수정 전 같은 요청은 후보 6개 전부 `SYSTEM_FAILURE`(DLQ) 또는 `RUNNING 0/12` 무한 정지였다.\n\n## 리뷰 포인트\n\n- **재사용 알림을 004에 둔 것.** 007 `CandidateJobLauncherImpl` 주석이 \"재사용은 004의 판단이고 007이 관여하지 않는다\"고 적고 있어 그 전제를 지키는 자리로 골랐다. 007 디스패처가 즉시 완료 처리하는 길도 있었지만 `candidateFinished`가 `REQUIRES_NEW`라 디스패처가 잡은 묶음 락과 엉킨다. `JOINED`에는 발행하지 않는다 — 그 실행은 아직 돌고 있고 제 `FINISHED`가 걸린 후보를 전부 전진시킨다.\n- **이미 갇힌 묶음은 되살리지 않는다.** 수정 전에 물린 `PS-20260922-000007`은 스스로 풀리지 않는다. 복구 로직을 넣을지는 따로 정할 일로 본다.\n- **FE 티켓 브랜치에 BE·워커 변경이 섞여 있다.** 396은 CSRF 티켓이고 나머지 셋은 같은 증상을 쫓다 드러난 원인이다. 나눌지 이대로 갈지 판단 바란다.",
+    "state": "merged",
+    "created_at": "2026-09-22T10:56:16.096+09:00",
+    "updated_at": "2026-09-22T11:09:12.342+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-22T11:09:11.910+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/396-param-search-csrf",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+    "merge_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T10:56:19.178+09:00",
+    "reference": "!290",
+    "references": {
+      "short": "!290",
+      "relative": "!290",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!290"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/290",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "14",
+    "latest_build_started_at": "2026-09-22T10:56:31.497+09:00",
+    "latest_build_finished_at": "2026-09-22T11:09:08.199+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 215150,
+      "iid": 296,
+      "project_id": 1444456,
+      "sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+      "ref": "fix(fe)/396-param-search-csrf",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T10:56:31.355+09:00",
+      "updated_at": "2026-09-22T11:09:08.207+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215150"
+    },
+    "head_pipeline": {
+      "id": 215150,
+      "iid": 296,
+      "project_id": 1444456,
+      "sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+      "ref": "fix(fe)/396-param-search-csrf",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T10:56:31.355+09:00",
+      "updated_at": "2026-09-22T11:09:08.207+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215150",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T10:56:31.497+09:00",
+      "finished_at": "2026-09-22T11:09:08.199+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215150",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3",
+      "head_sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+      "start_sha": "ff89b1ffb974a7e4572b248f801a685cf655ad96"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "08968dac5930041b8fa755feb74b8aad39023751",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853273,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-22T10:56:16.207+09:00",
+          "updated_at": "2026-09-22T10:56:16.212+09:00",
+          "system": true,
+          "noteable_id": 955982,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 290,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "548e687ae15a7e62d363b7b43ca116f2568e708c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853274,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-22T10:56:16.224+09:00",
+          "updated_at": "2026-09-22T10:56:16.231+09:00",
+          "system": true,
+          "noteable_id": 955982,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 290,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "966f6482118a5f3e6f5ee6791a8c05e8082686de",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853275,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-22T10:56:21.657+09:00",
+          "updated_at": "2026-09-22T10:56:21.670+09:00",
+          "system": true,
+          "noteable_id": 955982,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 290,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2ebfac38586bcb9203fdd67023d44ab60075a8d4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853278,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 전체적으로 파라미터 탐색 기능이 끝까지 완료되지 못하던 4가지 원인(FE CSRF, 종료일 기본값 산정, 워커 역변동성 파라미터 계약, 재사용 실행 완료 이벤트 누락)을 매우 명확하게 분석하고 꼼꼼하게 수정하였습니다. 테스트 코드와 주석을 통해 의도와 배경을 상세히 남긴 점도 인상적입니다.\n\n### 테스트 제안\n- **역변동성 파라미터 계약 테스트**: `INVERSE_VOLATILITY` 전략에 `lookbackDays` 및 `maxWeight`를 포함한 파라미터를 전송했을 때 워커가 에러 없이 정상적으로 파싱하고 계산하는지 통합 테스트로 검증합니다.\n- **007 자동 탐색 종료일 테스트**: `CommonPeriodResolver`에서 `requestedEnd`가 `null`일 때 `MarketMetadataPort.lastTradingDay()`가 정상적으로 조회되는지, 그리고 거래일 달력이 비어 있는 예외 상황에서 `LocalDate.now(clock)`로 안전하게 폴백되는지 시나리오별로 테스트합니다.\n- **결과 재사용 이벤트 발행 테스트**: 동일한 조건의 백테스트를 두 번 수행하여 `ResultSource.REUSED` 경로를 탈 때, `BacktestFinished` 이벤트가 올바르게 발행되어 007 후보가 무한 대기 상태에 빠지지 않고 정상 종료(`COMPLETED`)되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:cfc099461f102524c5c8e427a7f303644468ca80 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T10:56:27.142+09:00",
+          "updated_at": "2026-09-22T10:56:27.142+09:00",
+          "system": false,
+          "noteable_id": 955982,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 290,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e6dad34d47e6f82f59ff77ff6fc6cf370772c13e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853461,
+          "type": null,
+          "body": "mentioned in commit bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-22T11:09:11.929+09:00",
+          "updated_at": "2026-09-22T11:09:11.942+09:00",
+          "system": true,
+          "noteable_id": 955982,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 290,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2237321,
+      "head_commit_sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+      "base_commit_sha": "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3",
+      "start_commit_sha": "ff89b1ffb974a7e4572b248f801a685cf655ad96",
+      "created_at": "2026-09-22T10:56:17.846+09:00",
+      "merge_request_id": 955982,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "15b24d8e2cf1db1abc3547b0e13134920405915f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2237321,
+      "head_commit_sha": "cfc099461f102524c5c8e427a7f303644468ca80",
+      "base_commit_sha": "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3",
+      "start_commit_sha": "ff89b1ffb974a7e4572b248f801a685cf655ad96",
+      "created_at": "2026-09-22T10:56:17.846+09:00",
+      "merge_request_id": 955982,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "15b24d8e2cf1db1abc3547b0e13134920405915f",
+      "commits": [
+        {
+          "id": "cfc099461f102524c5c8e427a7f303644468ca80",
+          "short_id": "cfc09946",
+          "created_at": "2026-09-22T10:46:07.000+09:00",
+          "parent_ids": [
+            "600db6d7b4053e1932155ad2a30ff63831a14c49"
+          ],
+          "title": "fix(be): 완료된 실행을 재사용하면 끝났다는 것을 알린다",
+          "message": "fix(be): 완료된 실행을 재사용하면 끝났다는 것을 알린다\n\n재사용된 접수에는 워커의 FINISHED 가 다시 오지 않는다. 007 후보는 그 이벤트 하나로만\nDISPATCHED 를 벗어나므로(BacktestFinishedListener), 이미 답이 나와 있는 후보가 발행 창을\n막고 묶음 전체가 멈췄다. 한도 가드는 다음 발행 직전에만 보기 때문에 제한시간조차 발동하지\n않았다 — 같은 조합을 두 번째로 돌리는 순간 걸리는 자리다.\n\njoinExisting 의 REUSED 갈래에서 BacktestFinished 를 발행한다. 리스너가 AFTER_COMMIT 이라\n디스패처가 잡은 묶음 락 밖에서 돈다. JOINED 는 알리지 않는다 — 그 실행은 아직 돌고 있고,\n끝나면 제 FINISHED 하나가 걸린 후보를 전부 전진시킨다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-22T10:46:07.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-22T10:46:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cfc099461f102524c5c8e427a7f303644468ca80"
+        },
+        {
+          "id": "600db6d7b4053e1932155ad2a30ff63831a14c49",
+          "short_id": "600db6d7",
+          "created_at": "2026-09-22T10:45:52.000+09:00",
+          "parent_ids": [
+            "b885ba3ef79954003c114fdf0354111a41868231"
+          ],
+          "title": "fix(be): 역변동성이 관측 기간 축을 받아 계산에 쓴다",
+          "message": "fix(be): 역변동성이 관측 기간 축을 받아 계산에 쓴다\n\n003 등록표는 역변동성에 lookbackDays 축을 선언하는데(기본 63, 선택 21·63·126·252)\nSTRATEGY_PARAMETERS 가 CappedRebalanceParameters 를 걸어 두어 그 키가 extra=\"forbid\"\n에 막혔다. 007 자동 탐색이 보낸 후보가 전부 계약 위반으로 DLQ 에 버려졌고 묶음은 연속 실패\n한도까지 가서 나머지를 건너뛰었다.\n\n축을 선언한 전략이 셋이라 필드를 LookbackRebalanceParameters 한 곳에 두고 역변동성·\n최소분산·섹터 모멘텀이 함께 쓴다. 전략마다 따로 적으면 한 곳을 빠뜨렸을 때 그 전략만 조용히\n규칙표 기본값으로 도는데, 역변동성이 실제로 그렇게 빠져 있었다.\n\ninverse_vol 은 받은 축을 계산에도 쓴다. 받아 놓고 쓰지 않으면 21거래일을 고른 사용자가\n63거래일짜리 결과를 받는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-22T10:45:52.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-22T10:45:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/600db6d7b4053e1932155ad2a30ff63831a14c49"
+        },
+        {
+          "id": "b885ba3ef79954003c114fdf0354111a41868231",
+          "short_id": "b885ba3e",
+          "created_at": "2026-09-22T10:45:37.000+09:00",
+          "parent_ids": [
+            "38e3d16bccf4256b24b9b4db6a35168f2ae47854"
+          ],
+          "title": "fix(be): 끝일 없는 탐색은 오늘 대신 자료 마감일까지 본다",
+          "message": "fix(be): 끝일 없는 탐색은 오늘 대신 자료 마감일까지 본다\n\n007 자동 탐색이 끝일을 받지 않으면 LocalDate.now() 를 기본값으로 썼다. 수집은 늘 과거\n어느 날까지만 끝나 있어서 주말·공휴일이거나 수집이 하루만 밀려도 요청 구간이 자료 밖으로\n나갔고, 워커가 후보를 전부 DATA_INSUFFICIENT 로 거절했다. 004 단일 실행은 001\nevaluation-window 의 commonEnd 를 실어 보내 이미 자료 안에 머물고 있었다 — 007 만\n기준이 달랐다.\n\nMarketMetadataPort 에 lastTradingDay() 를 두고 그것을 기본값으로 쓴다. 달력이 비어\n있으면 오늘로 물러난다 — 그때는 이어지는 evaluationStart 조회가 비어 INSUFFICIENT_HISTORY\n로 끝나므로 판정을 한 곳에 모은다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-22T10:45:37.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-22T10:45:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b885ba3ef79954003c114fdf0354111a41868231"
+        },
+        {
+          "id": "38e3d16bccf4256b24b9b4db6a35168f2ae47854",
+          "short_id": "38e3d16b",
+          "created_at": "2026-09-21T17:13:36.000+09:00",
+          "parent_ids": [
+            "36fa60463c4cb97db12ebbbaf70546c4bd3b61f3"
+          ],
+          "title": "fix(fe): 설정 조합 자동 비교 요청에 CSRF 토큰을 싣는다",
+          "message": "fix(fe): 설정 조합 자동 비교 요청에 CSRF 토큰을 싣는다\n\n미리보기·실행·취소·실패 재시도가 공용 CSRF 준비 절차를 건너뛰어 모두 403으로 거절됐다.\n다른 API 모듈과 같이 runCsrfProtectedMutation으로 감싼다. 그 절차가 실패를 ApiClientError로\n한 겹 덮으므로, 오류 정규화가 원래 응답을 풀어 서버가 준 오류 이름과 상태를 지키게 했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-21T17:13:36.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-21T17:13:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/38e3d16bccf4256b24b9b4db6a35168f2ae47854"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -64,4 +64,17 @@ public interface MarketMetadataPort {\n      * 거래일이 하나도 없으면 비어 있다.\n      */\n     Optional<LocalDate> firstTradingDayOnOrAfter(LocalDate date);\n+\n+    /**\n+     * 지금 자료 버전이 담은 <b>마지막 거래일</b>. 달력이 비어 있으면 비어 있다.\n+     *\n+     * <p>끝일을 받지 않는 경로(spec 007 자동 탐색)가 기본값으로 쓴다. <b>오늘을 쓰면 안 된다</b> — 수집은 늘 과거 어느 날까지만 완료돼 있고, 오늘이\n+     * 그보다 뒤인 날(주말·공휴일이거나 수집이 하루라도 밀린 날)에는 요청 구간이 자료 밖으로 나가 워커가 후보를 전부 {@code DATA_INSUFFICIENT}로\n+     * 거절한다. 004 단일 실행은 001 {@code evaluation-window}의 {@code commonEnd}를 실어 보내 같은 자리를 이미 피하고 있다.\n+     *\n+     * <p>기본 구현이 비어 있는 것은 시험용 대역을 위해서다. 실제 조회는 {@code DatabaseMarketMetadataAdapter}가 한다.\n+     */\n+    default Optional<LocalDate> lastTradingDay() {\n+        return Optional.empty();\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/MarketMetadataPort.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/MarketMetadataPort.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ package com.ssafy.thorp.backtest.application.service;\n \n import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n import com.ssafy.thorp.backtest.application.command.PinnedVersions;\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.application.event.BacktestRequestAccepted;\n import com.ssafy.thorp.backtest.application.port.MarketMetadataPort;\n import com.ssafy.thorp.backtest.application.port.message.Scenario;\n@@ -311,6 +312,18 @@ public class BacktestService {\n                         source,\n                         command.executionType(),\n                         clock.instant()));\n+        if (source == ResultSource.REUSED) {\n+            // **끝난 실행을 재사용하면 이 접수에는 FINISHED 가 다시 오지 않는다.** 007 후보는 그 이벤트\n+            // 하나로만 DISPATCHED 를 벗어나므로(BacktestFinishedListener), 알리지 않으면 이미 답이 나와\n+            // 있는 후보가 영원히 '실행 중'으로 남고 발행 창이 막혀 묶음 전체가 제한시간까지 멈춘다.\n+            // 같은 조합을 두 번째로 돌리는 순간 바로 걸리는 자리다.\n+            //\n+            // JOINED 는 여기서 알리지 않는다 — 그 실행은 아직 돌고 있고, 끝나면 제 FINISHED 하나가\n+            // 걸린 후보를 전부 전진시킨다. 미리 보내면 아직 없는 결과를 완료로 읽는다.\n+            events.publishEvent(\n+                    new BacktestFinished(\n+                            run.getId(), run.getBacktestId().value(), run.getStatus(), null));\n+        }\n         return Optional.of(BacktestJobResult.of(request, run));\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -83,6 +83,15 @@ public class DatabaseMarketMetadataAdapter implements MarketMetadataPort {\n              WHERE instrument_id = :instrumentId\n             \"\"\";\n \n+    /** 지금 자료 버전 달력의 마지막 거래일. 곧 이 자료로 평가할 수 있는 마지막 날이다. */\n+    private static final String LAST_TRADING_DAY_SQL =\n+            \"\"\"\n+            SELECT max(date)\n+              FROM daily_index\n+             WHERE dataset_id = :datasetId\n+               AND index_code = :indexCode\n+            \"\"\";\n+\n     /**\n      * 달력에서 {@code notBefore} 이후 {@code offset} 번째 거래일(0부터 센다).\n      *\n@@ -169,6 +178,18 @@ public class DatabaseMarketMetadataAdapter implements MarketMetadataPort {\n         return nthTradingDayOnOrAfter(date, 0);\n     }\n \n+    @Override\n+    @Transactional(readOnly = true)\n+    public Optional<LocalDate> lastTradingDay() {\n+        Query query =\n+                entityManager\n+                        .createNativeQuery(LAST_TRADING_DAY_SQL)\n+                        .setParameter(\"datasetId\", currentDataVersion())\n+                        .setParameter(\"indexCode\", CALENDAR_INDEX_CODE);\n+        // max() 는 행이 없어도 한 행을 NULL 로 돌려준다. single() 이 그 NULL 을 빈 값으로 옮긴다.\n+        return single(query, java.sql.Date.class).map(java.sql.Date::toLocalDate);\n+    }\n+\n     /** 달력에서 {@code notBefore} 이후 {@code offset} 번째 거래일(0부터 센다). */\n     private Optional<LocalDate> nthTradingDayOnOrAfter(LocalDate notBefore, int offset) {\n         Query query =\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/marketdata/DatabaseMarketMetadataAdapter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/marketdata/DatabaseMarketMetadataAdapter.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -57,7 +57,7 @@ public class CommonPeriodResolver {\n      * @param space 탐색 공간. 워밍업은 여기 담긴 후보값에서 나온다 — 범위를 좁히면 워밍업도 줄어든다\n      * @param requestedStart 사용자가 고른 시작일. 있으면 <b>그날 또는 그 뒤 첫 거래일</b>이고 워밍업만큼 늦추지 않는다. 없으면 상장일 기준으로\n      *     서버가 제시한다\n-     * @param requestedEnd 사용자가 고른 끝일. 없으면 오늘\n+     * @param requestedEnd 사용자가 고른 끝일. 없으면 지금 자료 버전의 마지막 거래일\n      */\n     public CommonPeriod resolve(\n             List<String> instrumentIds,\n@@ -66,7 +66,18 @@ public class CommonPeriodResolver {\n             LocalDate requestedStart,\n             LocalDate requestedEnd) {\n         LocalDate listedFrom = latestListingDate(instrumentIds);\n-        LocalDate end = requestedEnd == null ? LocalDate.now(clock) : requestedEnd;\n+        // 끝일을 받지 않으면 **자료 마감일**을 쓴다. 오늘을 쓰면 수집이 거기까지 끝난 날이 아닌 한\n+        // 요청 구간이 자료 밖으로 나가고, 워커가 후보를 전부 DATA_INSUFFICIENT 로 거절한다\n+        // (\"Requested window ends ... but ... is only complete through ...\"). 주말·공휴일이거나\n+        // 수집이 하루만 밀려도 탐색 전체가 전멸하던 자리다. 004 단일 실행은 001 evaluation-window 의\n+        // commonEnd 를 실어 보내 이미 자료 안에 머문다 — 007 만 기준이 달랐다.\n+        //\n+        // 달력이 비어 있으면 오늘로 물러난다. 그때는 어차피 이어지는 evaluationStart 조회가 비어\n+        // INSUFFICIENT_HISTORY 로 끝나므로, 여기서 기본값을 두고 판정을 한 곳에 모은다.\n+        LocalDate end =\n+                requestedEnd == null\n+                        ? marketMetadata.lastTradingDay().orElseGet(() -> LocalDate.now(clock))\n+                        : requestedEnd;\n \n         WarmupRequirement warmup = warmupOf(space, targets);\n         // 워밍업 기준점은 상장일 하나다(001 contracts/evaluation-window.md). 요청 시작일은 여기\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolver.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolver.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;\n \n import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n import com.ssafy.thorp.backtest.application.command.PinnedVersions;\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n import com.ssafy.thorp.backtest.application.port.message.Scenario;\n import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n import com.ssafy.thorp.backtest.application.repository.BacktestReuseEventRepository;\n@@ -581,6 +582,24 @@ class BacktestServiceTest {\n         assertThat(recordedReuse().kind()).isEqualTo(ResultSource.REUSED);\n     }\n \n+    @Test\n+    @DisplayName(\"완료된 실행을 재사용하면 끝났다는 것을 알린다 — 그러지 않으면 007 후보가 영원히 '실행 중'이다\")\n+    void announcesThatAReusedRunIsAlreadyFinished() {\n+        // 재사용된 접수에는 워커의 FINISHED 가 다시 오지 않는다. 007 후보는 그 이벤트 하나로만\n+        // DISPATCHED 를 벗어나므로, 알리지 않으면 이미 답이 나와 있는 후보가 발행 창을 막고 묶음이\n+        // 제한시간까지 멈춘다 — 같은 조합을 두 번째로 돌리는 순간 걸린다.\n+        BacktestRun completed = saved(runningRun(), 11L).markCompleted();\n+        when(runRepository.findActiveByDedupKey(any())).thenReturn(Optional.of(completed));\n+        when(runRepository.findByIdForUpdate(11L)).thenReturn(Optional.of(completed));\n+\n+        service.create(fixedWeight());\n+\n+        verify(events)\n+                .publishEvent(\n+                        new BacktestFinished(\n+                                11L, completed.getBacktestId().value(), RunStatus.COMPLETED, null));\n+    }\n+\n     @Test\n     @DisplayName(\"새로 계산하는 요청은 재사용 기록을 남기지 않는다 — 실행 행 자체가 기록이다\")\n     void doesNotRecordReuseForANewRun() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -56,6 +56,16 @@ public class FixtureMarketMetadataAdapter implements MarketMetadataPort {\n         return MAPPING_VERSION;\n     }\n \n+    /** 달력 상한 당일 또는 그 앞의 마지막 평일. 이 대역의 달력은 주말만 빼므로 판정이 그것과 같다. */\n+    @Override\n+    public Optional<LocalDate> lastTradingDay() {\n+        LocalDate day = calendarEnd;\n+        while (day.getDayOfWeek() == DayOfWeek.SATURDAY || day.getDayOfWeek() == DayOfWeek.SUNDAY) {\n+            day = day.minusDays(1);\n+        }\n+        return Optional.of(day);\n+    }\n+\n     @Override\n     public Optional<String> sectorOf(String mappingVersion, String instrumentId) {\n         if (!MAPPING_VERSION.equals(mappingVersion)) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/marketdata/FixtureMarketMetadataAdapter.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/marketdata/FixtureMarketMetadataAdapter.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -136,6 +136,17 @@ class CommonPeriodResolverTest {\n         assertThat(searchStart).isEqualTo(intakeStart);\n     }\n \n+    @Test\n+    @DisplayName(\"끝일이 없으면 오늘이 아니라 자료 마감일을 쓴다\")\n+    void withoutARequestedEndTheDataDeadlineIsUsed() {\n+        // 오늘(고정 시계 2026-09-15)을 쓰면 수집이 그날까지 끝난 날이 아닌 한 요청 구간이 자료 밖으로\n+        // 나가고, 워커가 후보를 전부 DATA_INSUFFICIENT 로 거절한다. 달력 상한은 2026-12-31 이다.\n+        CommonPeriodResolver.CommonPeriod period = resolve(List.of(SEMICONDUCTOR), null, null);\n+\n+        assertThat(period.end()).isEqualTo(LocalDate.of(2026, 12, 31));\n+        assertThat(period.end()).isNotEqualTo(LocalDate.of(2026, 9, 15));\n+    }\n+\n     @Test\n     @DisplayName(\"요청 시작일이 없으면 상장일 기준값을 서버가 제시한다\")\n     void withoutARequestedStartTheListingBasedValueIsUsed() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolverTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/application/service/CommonPeriodResolverTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+import { AxiosError, AxiosHeaders } from 'axios'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+\n+/**\n+ * 007 상태 변경 요청의 CSRF 처리(S15P21E205-396).\n+ *\n+ * 이 모듈만 공용 CSRF 준비 절차를 건너뛰어 미리보기·실행·취소·실패 재시도가 모두 403\n+ * `CSRF_TOKEN_INVALID`로 거절됐다. 네 경로가 준비 절차를 거치는지와, 그 절차가 오류를 한 겹\n+ * 덮어 던져도 서버가 준 오류 이름이 남는지를 고정한다.\n+ */\n+\n+const clientMocks = vi.hoisted(() => ({\n+  get: vi.fn(),\n+  post: vi.fn(),\n+  runCsrfProtectedMutation: vi.fn(),\n+}))\n+\n+vi.mock('./client', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('./client')>()\n+  return {\n+    ...actual,\n+    apiClient: { get: clientMocks.get, post: clientMocks.post },\n+    runCsrfProtectedMutation: clientMocks.runCsrfProtectedMutation,\n+  }\n+})\n+\n+const {\n+  cancelParamSearch,\n+  createParamSearch,\n+  previewParamSearch,\n+  retryFailedCandidates,\n+} = await import('./paramSearch')\n+const { ApiClientError } = await import('./client')\n+\n+function ok<T>(data: T) {\n+  return { data: { success: true, data, error: null } }\n+}\n+\n+function axiosFailure(status: number, body: unknown): AxiosError {\n+  const headers = new AxiosHeaders()\n+  return new AxiosError('failed', String(status), { headers }, null, {\n+    status,\n+    statusText: '',\n+    headers,\n+    config: { headers },\n+    data: body,\n+  })\n+}\n+\n+const request = {\n+  universe: { instrumentIds: ['091160.XKRX', '091170.XKRX'] },\n+  strategy: { strategyIds: ['EQUAL_WEIGHT'] },\n+}\n+\n+describe('api/paramSearch', () => {\n+  beforeEach(() => {\n+    clientMocks.get.mockReset()\n+    clientMocks.post.mockReset()\n+    clientMocks.runCsrfProtectedMutation.mockReset()\n+    clientMocks.runCsrfProtectedMutation.mockImplementation((send: () => Promise<unknown>) =>\n+      send(),\n+    )\n+  })\n+\n+  it('미리보기·실행·취소·실패 재시도가 모두 CSRF 보호 mutation을 거친다', async () => {\n+    clientMocks.post.mockResolvedValue(ok({ searchId: 'PS-1', status: 'QUEUED' }))\n+\n+    await previewParamSearch(request)\n+    await createParamSearch({ ...request, registryVersion: 'REG-1' })\n+    await cancelParamSearch('PS-1')\n+    await retryFailedCandidates('PS-1')\n+\n+    expect(clientMocks.runCsrfProtectedMutation).toHaveBeenCalledTimes(4)\n+    expect(clientMocks.post.mock.calls.map((call) => call[0])).toEqual([\n+      '/param-searches/preview',\n+      '/param-searches',\n+      '/param-searches/PS-1/cancel',\n+      '/param-searches/PS-1/retry-failed',\n+    ])\n+  })\n+\n+  it('CSRF 층이 덮어 던져도 서버가 준 오류 이름을 잃지 않는다', async () => {\n+    // 공용 mutation은 실패를 ApiClientError로 감싼다. 409 분기는 원래 오류에서 읽어야 산다.\n+    const changed = axiosFailure(409, {\n+      success: false,\n+      data: null,\n+      error: { code: 'REGISTRY_VERSION_CHANGED', message: '등록표가 바뀌었습니다' },\n+    })\n+    clientMocks.runCsrfProtectedMutation.mockRejectedValueOnce(\n+      new ApiClientError('api', '등록표가 바뀌었습니다', {\n+        code: 'REGISTRY_VERSION_CHANGED',\n+        cause: changed,\n+      }),\n+    )\n+\n+    await expect(\n+      createParamSearch({ ...request, registryVersion: 'REG-1' }),\n+    ).rejects.toMatchObject({ code: 'REGISTRY_VERSION_CHANGED', status: 409 })\n+  })\n+\n+  it('원래 오류가 남아 있지 않아도 이름과 문장은 지킨다', async () => {\n+    clientMocks.runCsrfProtectedMutation.mockRejectedValueOnce(\n+      new ApiClientError('api', '요청 확인 정보가 만료되었습니다.', {\n+        code: 'CSRF_TOKEN_INVALID',\n+      }),\n+    )\n+\n+    await expect(previewParamSearch(request)).rejects.toMatchObject({\n+      code: 'CSRF_TOKEN_INVALID',\n+      message: '요청 확인 정보가 만료되었습니다.',\n+    })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/paramSearch.test.ts",
+          "old_path": "frontend/src/api/paramSearch.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n import axios from 'axios'\n-import { apiClient } from './client'\n+import { ApiClientError, apiClient, runCsrfProtectedMutation } from './client'\n import type {\n   CandidatePage,\n   CandidateSort,\n@@ -90,6 +90,18 @@ function readErrorBody(\n export function normalizeParamSearchError(error: unknown): ParamSearchError {\n   if (error instanceof ParamSearchError) return error\n \n+  /*\n+    CSRF 준비 층(`runCsrfProtectedMutation`)은 실패를 `ApiClientError`로 한 겹 덮어 던진다. 덮개만\n+    보면 서버가 준 `code`·`status`·`details`가 사라져 409 분기(등록표 변경·이미 끝남·재시도할 것\n+    없음)가 모두 일반 실패로 떨어진다. 원래 응답이 `cause`에 남아 있으면 그것을 읽는다.\n+  */\n+  if (error instanceof ApiClientError) {\n+    if (error.cause !== undefined && error.cause !== null) {\n+      return normalizeParamSearchError(error.cause)\n+    }\n+    return new ParamSearchError(error.message, { code: error.code ?? null, cause: error })\n+  }\n+\n   if (axios.isAxiosError(error)) {\n     if (!error.response) {\n       return new ParamSearchError(\n@@ -149,9 +161,8 @@ export async function previewParamSearch(\n   request: ParamSearchRequest,\n ): Promise<ParamSearchPreview> {\n   try {\n-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchPreview>>(\n-      `${basePath}/preview`,\n-      request,\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ParamSearchEnvelope<ParamSearchPreview>>(`${basePath}/preview`, request),\n     )\n     return unwrap(response.data)\n   } catch (error) {\n@@ -170,10 +181,10 @@ export async function createParamSearch(\n   requesterId?: number | null,\n ): Promise<ParamSearchDetail> {\n   try {\n-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchDetail>>(\n-      basePath,\n-      request,\n-      { headers: requesterHeaders(requesterId) },\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ParamSearchEnvelope<ParamSearchDetail>>(basePath, request, {\n+        headers: requesterHeaders(requesterId),\n+      }),\n     )\n     return unwrap(response.data)\n   } catch (error) {\n@@ -252,10 +263,12 @@ export async function cancelParamSearch(\n   requesterId?: number | null,\n ): Promise<ParamSearchCancelResult> {\n   try {\n-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchCancelResult>>(\n-      `${basePath}/${encodeURIComponent(searchId)}/cancel`,\n-      null,\n-      { headers: requesterHeaders(requesterId) },\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ParamSearchEnvelope<ParamSearchCancelResult>>(\n+        `${basePath}/${encodeURIComponent(searchId)}/cancel`,\n+        null,\n+        { headers: requesterHeaders(requesterId) },\n+      ),\n     )\n     return unwrap(response.data)\n   } catch (error) {\n@@ -278,10 +291,12 @@ export async function retryFailedCandidates(\n   requesterId?: number | null,\n ): Promise<ParamSearchRetryResult> {\n   try {\n-    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchRetryResult>>(\n-      `${basePath}/${encodeURIComponent(searchId)}/retry-failed`,\n-      null,\n-      { headers: requesterHeaders(requesterId) },\n+    const response = await runCsrfProtectedMutation(() =>\n+      apiClient.post<ParamSearchEnvelope<ParamSearchRetryResult>>(\n+        `${basePath}/${encodeURIComponent(searchId)}/retry-failed`,\n+        null,\n+        { headers: requesterHeaders(requesterId) },\n+      ),\n     )\n     return unwrap(response.data)\n   } catch (error) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/paramSearch.ts",
+          "old_path": "frontend/src/api/paramSearch.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,9 @@\n 정했지만 0 변동성 처리·비중 상한·투자 비중 합계는 아직 팀 결정이 아니다. 그래서 이 모듈은 값을\n 하나도 갖고 있지 않고 전부 `allocation.rules` 에서 읽는다 — 값이 정해지면 등록표 행만 고치면 되고\n 코드는 그대로다.\n+\n+다만 `lookbackDays` 와 `maxWeight` 는 003 등록표가 **사용자가 고르는 축**으로도 선언하므로,\n+`parameters` 에 오면 그것이 이기고 규칙표 값은 고르지 않은 요청의 기본값이다(PD-03 ⑥).\n \"\"\"\n \n from __future__ import annotations\n@@ -24,6 +27,7 @@ from worker.allocation.base import (\n     apply_cap,\n     decimal_rule,\n     effective_cap,\n+    int_parameter,\n     int_rule,\n     normalise,\n     quantise,\n@@ -46,7 +50,14 @@ def compute(\n     rules: Mapping[str, Any],\n     as_of: date,\n ) -> AllocationResult:\n-    lookback = int_rule(rules, \"lookbackDays\", STRATEGY_ID)\n+    # 003 축이 오면 그것이 사용자가 고른 값이고, 없으면 규칙표 값이 기본값이다\n+    # (최소분산과 같은 규칙).\n+    # 받아 놓고 쓰지 않으면 21거래일을 고른 사용자가 63거래일짜리 결과를 받는다.\n+    lookback = (\n+        int_parameter(parameters, \"lookbackDays\")\n+        if parameters.get(\"lookbackDays\") is not None\n+        else int_rule(rules, \"lookbackDays\", STRATEGY_ID)\n+    )\n     zero_policy = require_rule_value(rules, \"zeroVolatility\", STRATEGY_ID)\n     cap = effective_cap(parameters, rules, STRATEGY_ID)\n     invested = decimal_rule(rules, \"investedFraction\", STRATEGY_ID)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/allocation/inverse_vol.py",
+          "old_path": "worker/src/worker/allocation/inverse_vol.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,6 +16,7 @@\n from worker.contracts.base import ContractModel\n from worker.contracts.strategy_params.rebalance import (\n     CappedRebalanceParameters,\n+    LookbackRebalanceParameters,\n     MinimumVarianceParameters,\n     RebalanceParameters,\n     SectorMomentumParameters,\n@@ -26,7 +27,7 @@ from worker.contracts.strategy_params.rebalance import (\n STRATEGY_PARAMETERS: dict[str, type[ContractModel]] = {\n     \"FIXED_WEIGHT\": CappedRebalanceParameters,\n     \"EQUAL_WEIGHT\": RebalanceParameters,\n-    \"INVERSE_VOLATILITY\": CappedRebalanceParameters,\n+    \"INVERSE_VOLATILITY\": LookbackRebalanceParameters,\n     \"MINIMUM_VARIANCE\": MinimumVarianceParameters,\n     \"SECTOR_MOMENTUM\": SectorMomentumParameters,\n }\n@@ -34,6 +35,7 @@ STRATEGY_PARAMETERS: dict[str, type[ContractModel]] = {\n __all__ = [\n     \"STRATEGY_PARAMETERS\",\n     \"CappedRebalanceParameters\",\n+    \"LookbackRebalanceParameters\",\n     \"MinimumVarianceParameters\",\n     \"RebalanceParameters\",\n     \"SectorMomentumParameters\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/contracts/strategy_params/__init__.py",
+          "old_path": "worker/src/worker/contracts/strategy_params/__init__.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -44,21 +44,30 @@ class CappedRebalanceParameters(RebalanceParameters):\n     max_weight: int | None = Field(default=None, gt=0, le=100)\n \n \n-class MinimumVarianceParameters(CappedRebalanceParameters):\n-    \"\"\"최소분산(PD-04). 003 축 ``lookbackDays``·``estimationMethod`` 를 더 받는다.\n+class LookbackRebalanceParameters(CappedRebalanceParameters):\n+    \"\"\"관측 기간 축을 가진 전략(역변동성·최소분산·섹터 모멘텀).\n \n     **여기서 받지 않으면 화면이 고른 관측 기간이 조용히 무시된다** — 사용자가 250거래일을 골라도\n     규칙표 기본값 120으로 계산한 결과가 250의 결과인 척 저장된다. 계약이 키를 거절하는 편이\n     낫고(그러면 요청이 실패한다), 받아서 계산에 쓰는 편이 더 낫다.\n+\n+    축을 선언한 전략이 셋이라 필드를 여기 한 번만 둔다. 전략마다 따로 적으면 한 곳을 빠뜨렸을 때\n+    그 전략만 조용히 규칙표 기본값으로 돈다 — 역변동성이 실제로 그렇게 빠져 있었다.\n     \"\"\"\n \n-    # None = 미지정. 그때는 규칙표의 lookbackDays·estimationMethod 를 쓴다.\n+    # None = 미지정. 그때는 규칙표의 lookbackDays 를 쓴다.\n     lookback_days: int | None = Field(default=None, gt=0)\n+\n+\n+class MinimumVarianceParameters(LookbackRebalanceParameters):\n+    \"\"\"최소분산(PD-04). 003 축 ``estimationMethod`` 를 더 받는다.\"\"\"\n+\n+    # None = 미지정. 그때는 규칙표의 estimationMethod 를 쓴다.\n     estimation_method: str | None = None\n \n \n-class SectorMomentumParameters(CappedRebalanceParameters):\n-    \"\"\"섹터 모멘텀(PD-03). 003 축 여섯을 더 받는다.\n+class SectorMomentumParameters(LookbackRebalanceParameters):\n+    \"\"\"섹터 모멘텀(PD-03). 003 축 다섯을 ``lookbackDays`` 위에 더 받는다.\n \n     ``topN``·``threshold``·``topPercent`` 는 003 등록표에서 ``selectionMode`` 에 딸린 축이라\n     (``appliesWhen``) 고른 방식의 것 하나만 온다. 계약이 셋을 다 선택으로 두는 이유는 어느 것이\n@@ -69,7 +78,6 @@ class SectorMomentumParameters(CappedRebalanceParameters):\n     \"\"\"\n \n     # None = 미지정. 그때는 규칙표 값이 기본값이다.\n-    lookback_days: int | None = Field(default=None, gt=0)\n     skip_recent_days: int | None = Field(default=None, ge=0)\n     selection_mode: Literal[\"TOP_N\", \"THRESHOLD\", \"TOP_PERCENT\", \"ALL\"] | None = None\n     top_n: int | None = Field(default=None, gt=0)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/contracts/strategy_params/rebalance.py",
+          "old_path": "worker/src/worker/contracts/strategy_params/rebalance.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -228,6 +228,43 @@ def test_one_day_short_is_excluded_and_the_rest_renormalises():\n     ]\n \n \n+def inverse_volatility(parameters: dict | None = None, **rule_overrides) -> AllocationSpec:\n+    return AllocationSpec.model_validate(\n+        {\n+            \"strategyId\": \"INVERSE_VOLATILITY\",\n+            \"rulesVersion\": \"1\",\n+            \"rules\": {**INVERSE_RULES, **rule_overrides},\n+            \"parameters\": {\"rebalance\": \"MONTH_END\", **(parameters or {})},\n+        }\n+    )\n+\n+\n+def test_inverse_user_lookback_beats_the_registry_default():\n+    \"\"\"003 축이 오면 그 값으로 변동성을 잰다.\n+\n+    규칙표 값만 읽던 동안 21거래일을 고른 사용자가 63거래일짜리 결과를 받았다 — 계약이 축을\n+    거절해 요청이 통째로 죽던 자리와 같은 뿌리다.\n+    \"\"\"\n+    prices = {\n+        SEMI: [100.0, 101.0, 100.0, 102.0, 101.0, 103.0],\n+        BATTERY: [100.0, 99.0, 101.0, 98.0, 102.0, 97.0],\n+    }\n+    universe = [item(SEMI), item(BATTERY)]\n+\n+    chosen = compute_weights(\n+        inverse_volatility({\"lookbackDays\": 3}), universe, history(**prices), AS_OF\n+    )\n+    same_by_rule = compute_weights(\n+        inverse_volatility(**{\"lookbackDays\": 3}), universe, history(**prices), AS_OF\n+    )\n+    longer = compute_weights(\n+        inverse_volatility({\"lookbackDays\": 5}), universe, history(**prices), AS_OF\n+    )\n+\n+    assert chosen.weights == same_by_rule.weights, \"축이 규칙표 기본값과 같으면 결과도 같다\"\n+    assert chosen.weights != longer.weights, \"관측 기간을 바꾸면 결과가 바뀌어야 한다\"\n+\n+\n def test_weight_cap_is_enforced():\n     calm = [100.0, 100.1, 100.2, 100.3]\n     wild = [100.0, 110.0, 95.0, 115.0]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_allocation.py",
+          "old_path": "worker/tests/test_allocation.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,7 @@ from worker.contracts.engine_input import AllocationSpec, EngineInput\n from worker.contracts.strategy_params import (\n     STRATEGY_PARAMETERS,\n     CappedRebalanceParameters,\n+    LookbackRebalanceParameters,\n     MinimumVarianceParameters,\n     RebalanceParameters,\n     SectorMomentumParameters,\n@@ -44,7 +45,7 @@ def test_registry_covers_the_registered_allocation_strategies() -> None:\n     assert STRATEGY_PARAMETERS == {\n         \"FIXED_WEIGHT\": CappedRebalanceParameters,\n         \"EQUAL_WEIGHT\": RebalanceParameters,\n-        \"INVERSE_VOLATILITY\": CappedRebalanceParameters,\n+        \"INVERSE_VOLATILITY\": LookbackRebalanceParameters,\n         \"MINIMUM_VARIANCE\": MinimumVarianceParameters,\n         \"SECTOR_MOMENTUM\": SectorMomentumParameters,\n     }\n@@ -99,16 +100,38 @@ def test_minimum_variance_takes_the_003_axes_it_offers() -> None:\n     assert (typed.lookback_days, typed.estimation_method) == (250, \"SAMPLE_COV\")\n \n \n+def test_inverse_volatility_takes_the_003_axes_it_offers() -> None:\n+    \"\"\"003이 역변동성에 두는 축은 ``lookbackDays``·``maxWeight`` 둘이다.\n+\n+    ``lookbackDays`` 를 받지 못하던 동안 007 자동 탐색이 보낸 후보가 **전부** 계약 위반으로 DLQ 에\n+    버려졌다(``allocation.lookbackDays``: extra inputs are not permitted). 축을 규칙표 전용 값으로\n+    착각한 자리라, 등록표가 축으로 선언하는 한 계약도 받아야 한다.\n+    \"\"\"\n+    typed = AllocationSpec.model_validate(\n+        spec(\"INVERSE_VOLATILITY\", {\"rebalance\": \"MONTH_END\", \"maxWeight\": 40, \"lookbackDays\": 21})\n+    ).typed_parameters\n+\n+    assert isinstance(typed, LookbackRebalanceParameters)\n+    assert (typed.lookback_days, typed.max_weight) == (21, 40)\n+    # 고르지 않으면 규칙표 기본값이 쓰이도록 비워 둔다.\n+    assert (\n+        AllocationSpec.model_validate(\n+            spec(\"INVERSE_VOLATILITY\", {\"rebalance\": \"MONTH_END\"})\n+        ).typed_parameters.lookback_days\n+        is None\n+    )\n+\n+\n def test_misspelled_or_extra_parameter_key_is_rejected() -> None:\n-    \"\"\"오타는 기본값으로 조용히 넘어가지 않고 검증 오류가 된다. 규칙 값은 parameters 에 오지 않는다.\n+    \"\"\"오타는 기본값으로 조용히 넘어가지 않고 검증 오류가 된다.\n \n-    규칙 값(lookbackDays 등)은 ``allocation.rules`` 의 몫이다.\n+    축이 없는 전략에 축 이름을 실어 보내는 것도 같다 — 고정 비중에는 003 관측 기간 축이 없다.\n     \"\"\"\n     with pytest.raises(ValidationError, match=\"rebalance\"):\n         AllocationSpec.model_validate(spec(\"FIXED_WEIGHT\", {\"rebalanse\": \"MONTH_END\"}))\n     with pytest.raises(ValidationError, match=\"lookbackDays\"):\n         AllocationSpec.model_validate(\n-            spec(\"INVERSE_VOLATILITY\", {\"rebalance\": \"MONTH_END\", \"lookbackDays\": 63})\n+            spec(\"FIXED_WEIGHT\", {\"rebalance\": \"MONTH_END\", \"lookbackDays\": 63})\n         )\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_strategy_params.py",
+          "old_path": "worker/tests/test_strategy_params.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-22T10:56:21.594+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2853278": []
+  }
+}

@@ -1,0 +1,854 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951960,
+    "iid": 232,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 005 문서와 최종 검증 동기화",
+    "description": "## 작업 내용 요약\n\nspec 005 문서를 현재 공개 결과 조회 구현과 B01\\~B09 작업 상태에 맞췄습니다. 결과 화면의 경로·응답 계약·패키지 경계와 최종 검증 결과를 동기화했습니다.\n\n## 관련 티켓\n\n- S15P21E205-313\n\n## 주요 변경 사항\n\n- 공개 결과 계약에 `search` 비교 인자, `strategyName`·`weightsSource`·`exceptionKinds`, 거래 기간 필터와 익명 실행 상한을 반영했습니다.\n- 프런트 결과 구성 요소 경로와 문장 틀 소유 위치를 실제 구조에 맞추고, 공개 결과와 백테스트 패키지의 의존 경계를 문서화했습니다.\n- B01\\~B09의 Jira 티켓·브랜치 대응과 B09 완료 항목을 최신 상태로 갱신했습니다.\n\n## 테스트\n\n- `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build`\n  - 성공, 1,743 tests, failures 0, errors 0\n  - 외부 연동 opt-in 테스트 3건 제외\n- `cd frontend && npm run lint`\n  - 오류 0, 기존 경고 20\n- `cd frontend && npm run build`\n  - 성공\n- `cd frontend && npm test`\n  - DOM 118 files, 1,169 tests 통과, skipped 0\n  - legacy 13 tests 통과, skipped 0\n- `infra/scripts/check-migration-version.sh`\n  - 마이그레이션 28개, 중복·버전 역전 없음\n- `quickstart.md` 1\\~10 수동 확인\n  - 비교·취소·만료 410·변조 토큰 404·회색조·360px 화면 확인\n- `git diff --check`\n  - 통과\n\n## 리뷰 포인트\n\n- 004가 아직 제공하지 않는 최대 하락 구간과 일부 분석 지표는 값을 추정하지 않고 현재의 제한 표시를 유지했습니다.\n- T083a 사용성 관찰은 PD-14 회차에서 진행하는 비차단 절차로 남겨 두었습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T21:09:43.637+09:00",
+    "updated_at": "2026-09-18T21:27:08.896+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T21:27:08.935+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/313-spec-005-wrapup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+    "merge_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T21:09:44.869+09:00",
+    "reference": "!232",
+    "references": {
+      "short": "!232",
+      "relative": "!232",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!232"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/232",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951960,
+    "iid": 232,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 005 문서와 최종 검증 동기화",
+    "description": "## 작업 내용 요약\n\nspec 005 문서를 현재 공개 결과 조회 구현과 B01\\~B09 작업 상태에 맞췄습니다. 결과 화면의 경로·응답 계약·패키지 경계와 최종 검증 결과를 동기화했습니다.\n\n## 관련 티켓\n\n- S15P21E205-313\n\n## 주요 변경 사항\n\n- 공개 결과 계약에 `search` 비교 인자, `strategyName`·`weightsSource`·`exceptionKinds`, 거래 기간 필터와 익명 실행 상한을 반영했습니다.\n- 프런트 결과 구성 요소 경로와 문장 틀 소유 위치를 실제 구조에 맞추고, 공개 결과와 백테스트 패키지의 의존 경계를 문서화했습니다.\n- B01\\~B09의 Jira 티켓·브랜치 대응과 B09 완료 항목을 최신 상태로 갱신했습니다.\n\n## 테스트\n\n- `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build`\n  - 성공, 1,743 tests, failures 0, errors 0\n  - 외부 연동 opt-in 테스트 3건 제외\n- `cd frontend && npm run lint`\n  - 오류 0, 기존 경고 20\n- `cd frontend && npm run build`\n  - 성공\n- `cd frontend && npm test`\n  - DOM 118 files, 1,169 tests 통과, skipped 0\n  - legacy 13 tests 통과, skipped 0\n- `infra/scripts/check-migration-version.sh`\n  - 마이그레이션 28개, 중복·버전 역전 없음\n- `quickstart.md` 1\\~10 수동 확인\n  - 비교·취소·만료 410·변조 토큰 404·회색조·360px 화면 확인\n- `git diff --check`\n  - 통과\n\n## 리뷰 포인트\n\n- 004가 아직 제공하지 않는 최대 하락 구간과 일부 분석 지표는 값을 추정하지 않고 현재의 제한 표시를 유지했습니다.\n- T083a 사용성 관찰은 PD-14 회차에서 진행하는 비차단 절차로 남겨 두었습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T21:09:43.637+09:00",
+    "updated_at": "2026-09-18T21:27:08.896+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T21:27:08.935+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/313-spec-005-wrapup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+    "merge_commit_sha": "3791e73d0e06992238f2c9df6d92262246bf69f1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T21:09:44.869+09:00",
+    "reference": "!232",
+    "references": {
+      "short": "!232",
+      "relative": "!232",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!232"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/232",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "7",
+    "latest_build_started_at": "2026-09-18T21:14:18.775+09:00",
+    "latest_build_finished_at": "2026-09-18T21:27:08.015+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 207458,
+      "iid": 177,
+      "project_id": 1444456,
+      "sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+      "ref": "docs(fe)/313-spec-005-wrapup",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T21:14:18.632+09:00",
+      "updated_at": "2026-09-18T21:27:08.021+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207458"
+    },
+    "head_pipeline": {
+      "id": 207458,
+      "iid": 177,
+      "project_id": 1444456,
+      "sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+      "ref": "docs(fe)/313-spec-005-wrapup",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T21:14:18.632+09:00",
+      "updated_at": "2026-09-18T21:27:08.021+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207458",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T21:14:18.775+09:00",
+      "finished_at": "2026-09-18T21:27:08.015+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207458",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+      "head_sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+      "start_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c8ea44768df6ed0305a02439d0e75f70ac7feab5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837268,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:09:43.752+09:00",
+          "updated_at": "2026-09-18T21:09:43.756+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "425192b4c690a1cbc975c14ed1db9be04ffbafec",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837269,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:09:43.780+09:00",
+          "updated_at": "2026-09-18T21:09:43.790+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d9434e85f7efcfa28dd10e3cfbab17c16f975eaf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837270,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n\n- 중대한 문제를 발견하지 못했습니다. \n  - 이번 변경은 주로 `spec 005` 문서와 최종 검증 결과 동기화를 다루는 문서 및 설정 파일(`CLAUDE.md`, `specs/`) 위주의 갱신입니다. \n  - 백엔드 아키텍처 규칙(`backend/CLAUDE.md`)과 프런트엔드 컴포넌트 구조 원칙(`frontend/CLAUDE.md`)이 명확하게 문서화되었으며, `specs/` 내의 데이터 모델, 계획, 리서치 문서 간의 정합성이 잘 유지되어 있습니다.\n  - 소스 코드 로직 변경이 포함된 diff가 아니므로, 잠재적인 런타임 버그, 보안 취약점, 성능 문제 등은 식별되지 않았습니다.\n\n### 테스트 제안\n\n- 문서 내용 동기화 작업이므로 별도의 코드 단위/통합 테스트 추가는 불필요합니다.\n- 다만, 개발 환경에서 다음 문서 검증 및 정적 분석 명령어가 정상 수행되는지 수동으로 확인하는 것을 권장합니다.\n  - `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` (외부 연동 opt-in 테스트 제외 성공 여부 확인)\n  - `cd frontend && npm run lint && npm run build && npm test` (린트 오류 0건 및 빌드·테스트 통과 여부 확인)\n  - `infra/scripts/check-migration-version.sh` (마이그레이션 버전 중복·역전 없음 확인)\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:a3c17067df3e771b5ab0f41730bee01c1cd74bc3 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T21:09:53.276+09:00",
+          "updated_at": "2026-09-18T21:14:09.867+09:00",
+          "system": false,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1fa2a651414866459ec47f5020f61b8a60f12286",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837271,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for b99475352638f05dcaf14ad1a569c9c94fa4cf50 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:10:00.213+09:00",
+          "updated_at": "2026-09-18T21:10:00.216+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c3013aaaf0f4023127e6651054938a27a26792b7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837280,
+          "type": null,
+          "body": "aborted the automatic merge because the source branch was updated. [Learn more](https://lab.ssafy.com/help/ci/pipelines/merge_trains.md#merge-request-dropped-from-the-merge-train).",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:14:01.361+09:00",
+          "updated_at": "2026-09-18T21:14:01.364+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ddd754978c68e4d10ebf29a31ed9a8bbedfd6faa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837281,
+          "type": null,
+          "body": "added 3 commits\n\n<ul><li>b9947535...f241c0c0 - 2 commits from branch <code>dev</code></li><li>a3c17067 - Merge remote-tracking branch &#39;origin/dev&#39; into docs(fe)/313-spec-005-wrapup</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/232/diffs?diff_id=2224091&start_sha=b99475352638f05dcaf14ad1a569c9c94fa4cf50)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:14:01.458+09:00",
+          "updated_at": "2026-09-18T21:14:01.461+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8ff0d251deb49040feb89db8c772edeac556810b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837283,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for a3c17067df3e771b5ab0f41730bee01c1cd74bc3 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:15:54.511+09:00",
+          "updated_at": "2026-09-18T21:15:54.515+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "971da48bf81051bdae0282c446b6b10c7fdc8b32",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837295,
+          "type": null,
+          "body": "mentioned in commit 3791e73d0e06992238f2c9df6d92262246bf69f1",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:27:08.898+09:00",
+          "updated_at": "2026-09-18T21:27:08.905+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b6f506bb4a1f16bdafcb2916eb96cec9948acb8a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885054,
+          "type": null,
+          "body": "mentioned in commit d3f25360613d9259342d44e37d805d28145528df",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.729+09:00",
+          "updated_at": "2026-10-13T15:16:11.801+09:00",
+          "system": true,
+          "noteable_id": 951960,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 232,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2224091,
+      "head_commit_sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+      "base_commit_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+      "start_commit_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+      "created_at": "2026-09-18T21:14:01.093+09:00",
+      "merge_request_id": 951960,
+      "state": "collected",
+      "real_size": "7",
+      "patch_id_sha": "833f7821cc46b09ae7073fbd52a795e0e260746c"
+    },
+    {
+      "id": 2224080,
+      "head_commit_sha": "b99475352638f05dcaf14ad1a569c9c94fa4cf50",
+      "base_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "start_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "created_at": "2026-09-18T21:09:44.052+09:00",
+      "merge_request_id": 951960,
+      "state": "without_files",
+      "real_size": "7",
+      "patch_id_sha": "833f7821cc46b09ae7073fbd52a795e0e260746c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2224091,
+      "head_commit_sha": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+      "base_commit_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+      "start_commit_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+      "created_at": "2026-09-18T21:14:01.093+09:00",
+      "merge_request_id": 951960,
+      "state": "collected",
+      "real_size": "7",
+      "patch_id_sha": "833f7821cc46b09ae7073fbd52a795e0e260746c",
+      "commits": [
+        {
+          "id": "a3c17067df3e771b5ab0f41730bee01c1cd74bc3",
+          "short_id": "a3c17067",
+          "created_at": "2026-09-18T21:13:34.000+09:00",
+          "parent_ids": [
+            "b99475352638f05dcaf14ad1a569c9c94fa4cf50",
+            "f241c0c0315b8bf2d758995d1d90e0c4feca475b"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(fe)/313-spec-005-wrapup",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(fe)/313-spec-005-wrapup\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T21:13:34.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T21:13:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a3c17067df3e771b5ab0f41730bee01c1cd74bc3"
+        },
+        {
+          "id": "b99475352638f05dcaf14ad1a569c9c94fa4cf50",
+          "short_id": "b9947535",
+          "created_at": "2026-09-18T20:49:37.000+09:00",
+          "parent_ids": [
+            "d21e704b7f910a4cae869f985cf1011f5db031d1"
+          ],
+          "title": "docs(fe): spec 005 문서와 최종 검증 동기화",
+          "message": "docs(fe): spec 005 문서와 최종 검증 동기화\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T20:49:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T20:49:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b99475352638f05dcaf14ad1a569c9c94fa4cf50"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -73,6 +73,7 @@ common: 모든 계층에서 참조 가능\n \n ## 규칙\n \n+- `result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 9). 비로그인 요청은 `requester_id`가 NULL이고 `public_token_expires_at`이 필수다.\n - 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다.\n - 배우기 게시·게시 취소는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지운다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003).\n - 배우기 관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고, 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,6 +19,8 @@ npm run lint && npm run build && npm test\n \n ## 규칙\n \n+- 결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009).\n+- 해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(spec 005 SC-004). 문장을 컴포넌트에서 짓지 않는다.\n - 용어 도움말은 `components/learning/TermHelp.tsx`(`termId`·`label`·`returnTo`) 하나를 쓴다. 글 본문·용어 문장을 화면 코드에 상수로 두지 않는다(013 FR-015).\n - `sessionStorage` 키 `thorp.learning.adminDraft.{articleId}`는 관리 화면의 저장하지 않은 편집 내용과 그 기반 `draftVersion`을 보관한다. 저장 성공 시 지우며, 복원할 때는 보관한 판 번호를 유지한다. 일반 사용자 배우기 화면은 저장소에 쓰지 않는다.\n - 컴포넌트는 함수형, 파일명 PascalCase(`BacktestForm.tsx`), 훅은 `use` 접두사\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/CLAUDE.md",
+          "old_path": "frontend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,6 +41,7 @@\n | publicToken | 32자 16진 문자열 | 주소에 노출된다. 004의 `backtestId`는 노출하지 않는다 |\n | expiresAt | 시각 또는 없음 | 비로그인 결과에만 있다 |\n | compareToken | 32자 16진 문자열 또는 없음 | 질의 문자열 `?compare=`로 싣는다 (R-04) |\n+| searchId | 문자열 또는 없음 | 질의 문자열 `?search=`로 싣고 자동 탐색 후보 표시와 007 복귀에 쓴다. 서버는 읽지 않는다 (R-04) |\n \n **상태 전이**\n \n@@ -67,6 +68,9 @@\n | conditionLine | `config` + `versions` | 분석 기간·비교 대상·비용 적용 여부 한 줄 |\n | interpretation | 문장 틀 선택 결과 | §3-5 |\n | liquidation | `summary.liquidation{markToMarket, liquidated}` | 종료 시 시가평가와 청산 비용 포함을 구분 (FR-015) |\n+| strategyName | 003 등록표가 준 이름 또는 없음 | 첫 화면에서 등록표를 다시 조회하거나 이름을 지어내지 않는다 |\n+| weightsSource | `USER`·`COMPUTED` 또는 없음 | 사용자 입력 비중과 규칙 계산 비중을 구분한다. 결과가 없으면 비어 있다 |\n+| exceptionKinds | 예외 종류 목록 또는 없음 | 결과 옆 상태 문장의 원천. 빈 목록은 예외 없음, 없음은 결과를 볼 수 없는 상태다 |\n \n 숫자 세 개 중 하나라도 `summaryUnavailable`로 비어 있으면 그 자리에 0이나 대체값을 넣지 않는다(FR-013, 원칙 VI).\n \n@@ -111,7 +115,7 @@\n \n ### 3-5. 해석 요약 문장 틀 (FR-006, R-07)\n \n-문장 틀은 `frontend/src/features/result/summarySentences.ts`가 소유한다. 선택 기준은 세 가지다.\n+문장 틀은 `frontend/src/components/result/summarySentences.ts`가 소유한다. 선택 기준은 세 가지다. 상태 문장은 같은 폴더의 `statusSentences.ts`만 소유한다.\n \n | 조건 | 틀의 성격 |\n |---|---|\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/data-model.md",
+          "old_path": "specs/005-result-comparison/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -89,6 +89,8 @@\n | `analytics`의 상관관계·위험 기여·손실 기여 노출 | FR-007이 상세 패널에 요구하는데 계산·저장만 되고 API 밖으로 나오지 않는다. 그때까지 해당 항목은 제공되지 않음으로 둔다 |\n | 참조하는 요청이 없는 계산·결과의 정리 | FR-021 만료 삭제가 004 FR-003의 결과 공유와 부딪히지 않으려면, 만료된 요청이 가리키던 계산은 다른 요청이 참조하지 않을 때만 지워야 한다. 그 판정은 계산 기록을 소유한 004의 일이다. 없으면 005는 요청 행과 토큰만 지우고 계산은 남긴다 |\n | `backtest_reuse_event.request_id` nullable 완화 | 만료 정리가 요청 행을 지울 때 재사용·합류 기록까지 지워야 한다. 그러면 `backtest_run_metric`의 `reuse_count`가 줄어 원칙 IX의 동일 결과 재조회 기록이 사라진다. 기록은 남기고 요청과의 연결만 끊는다(spec FR-021) |\n+| 거래 내역 질의에 `from`·`to` 추가 | 상세 패널이 선택한 손실 구간의 거래만 서버에서 조회해야 한다. 화면에서 전체 페이지를 받아 거르는 방식은 페이지 경계에서 누락을 만든다. 004 공개 래퍼가 기간 질의를 그대로 전달한다 |\n+| 비로그인 실행 상한 적용 | 익명 요청도 서버 전체 대기·실행 상한에 포함하고 `429 EXECUTION_LIMIT`을 그대로 돌려야 한다. 사용자별 상한은 요청자가 없으므로 적용하지 않고, 화면은 `retryAfterSeconds`와 명시적 재시도를 보인다 |\n \n ## 미해결 위반\n \n@@ -136,10 +138,11 @@ backend/src/main/resources/db/migration/   # public_token·만료·requester_id\n frontend/src/\n ├── pages/\n │   └── ResultPage.tsx                 # /results/:token\n-├── features/result/                   # 신규\n+├── components/result/                 # 결과 화면 구성 요소\n │   ├── summarySentences.ts            #   해석 요약 문장 틀 (검수 대상)\n+│   ├── statusSentences.ts             #   상태 문장 틀 (검수 대상)\n │   ├── ResultSummaryCard.tsx          #   핵심 숫자 3개 + 조건 한 줄\n-│   ├── ComparisonChart.tsx            #   곡선 2개 + 하락 구간 음영\n+│   ├── EquityChart.tsx                #   곡선 2개 + 하락 구간 음영\n │   ├── ResultStatusLine.tsx           #   결과 옆 한 문장\n │   ├── DetailPanel.tsx                #   '자세히 보기'\n │   └── CompareTargetPicker.tsx        #   비교 대상 선택·실행 요청\n@@ -147,21 +150,25 @@ frontend/src/\n └── components/charts/                 # 기존 차트 시스템 재사용\n ```\n \n-**Structure Decision**: 백엔드는 004의 `backtest` 패키지를 그대로 두고 공개 열람을 담당하는 `result` 패키지를 새로 둔다. 004는 인증된 소유자 경로를, `result`는 토큰 기반 공개 경로를 맡는다. 두 경계를 나누는 이유는 004가 이미 구현·검증을 마쳤고 그 계약을 쓰는 곳이 여럿이라, 공개 열람 규칙을 그 안에 섞으면 004의 권한 판정이 복잡해지기 때문이다. 프런트는 화면 하나가 여러 구성 요소로 갈리므로 `features/result/`에 모은다.\n+**Structure Decision**: 백엔드는 004의 `backtest` 패키지를 그대로 두고 공개 열람을 담당하는 `result` 패키지를 새로 둔다. 004는 인증된 소유자 경로를, `result`는 토큰 기반 공개 경로를 맡는다. 두 경계를 나누는 이유는 004가 이미 구현·검증을 마쳤고 그 계약을 쓰는 곳이 여럿이라, 공개 열람 규칙을 그 안에 섞으면 004의 권한 판정이 복잡해지기 때문이다. `PublicResultToken`은 요청을 소유한 `backtest/domain/model`에 두어 `backtest → result` 역참조를 만들지 않는다. 프런트는 기존 구조 규칙에 맞춰 화면 구성 요소를 `components/result/`에 모은다.\n \n ## 작업 묶음 구성\n \n-constitution이 작업 묶음을 plan에 두라고 요구한다. 아래는 제안이며 티켓 번호는 tasks 단계에서 채운다. 묶음마다 브랜치 하나, MR 하나다.\n+constitution이 작업 묶음을 plan에 두라고 요구한다. 묶음마다 Jira Task 하나, 브랜치 하나, MR 하나다.\n \n-| 묶음 | 내용 | 파트 | 선행 |\n+| 묶음 · 티켓 | 내용 | 파트 | 선행 |\n |---|---|---|---|\n-| A. 공개 열람 경계 | `requester_id` 완화, `public_token`·만료 컬럼과 마이그레이션, `GET /results/{token}` 및 하위 자원, 410 만료 응답 | BE | 없음 |\n-| B. 결과 첫 화면 | `/results/:token` 라우트, 핵심 숫자 3개·조건 한 줄·해석 요약 문장 틀, 상태 한 문장 | FE | A |\n-| C. 비교 그래프 | 곡선 2개·하락 구간 음영·색 비의존 구분·좁은 화면 배치 | FE | B |\n-| D. 비교 대상 선택과 실행 요청 | 대상 선택, 결과 없으면 실행 요청, 기간 불일치 확인, 실패·한도(429) 표시, 비교 주소 | FE | C |\n-| E. 상세 패널 | '자세히 보기', 거래 내역 페이지 조회, 001 대표 상품 정보 펼치기, 계산 제한 표시 | FE | B |\n-\n-A가 없으면 나머지가 화면을 띄울 수 없다. B~E는 A 뒤에서 병렬로 갈 수 있으나 C는 B의 화면 골격을 쓴다.\n+| B01 · [291](https://ssafy.atlassian.net/browse/S15P21E205-291) | 비로그인 접수·공개 토큰 발급 | BE | 없음 |\n+| B02 · [318](https://ssafy.atlassian.net/browse/S15P21E205-318) | 공개 열람·만료·정리 | BE | B01 |\n+| B03 · [307](https://ssafy.atlassian.net/browse/S15P21E205-307) | 핵심 숫자·조건·해석 요약이 있는 첫 화면 | FE | B02 계약 |\n+| B04 · [308](https://ssafy.atlassian.net/browse/S15P21E205-308) | 비교 곡선·하락 구간·색 비의존 구분 | FE | B03 |\n+| B05 · [309](https://ssafy.atlassian.net/browse/S15P21E205-309) | 비교 대상 선택·같은 조건의 실행 요청 | FE | B04 |\n+| B06 · [346](https://ssafy.atlassian.net/browse/S15P21E205-346) | 결과 의미를 바꾸는 상태 한 문장 | FE | B03 |\n+| B07 · [311](https://ssafy.atlassian.net/browse/S15P21E205-311) | 화면 안 상세 패널과 근거 조회 | FE | B03 |\n+| B08 · [312](https://ssafy.atlassian.net/browse/S15P21E205-312) | 지수·목표 위험 보조 보기와 다음 탐색 | FE | B05, B07 |\n+| B09 · [313](https://ssafy.atlassian.net/browse/S15P21E205-313) | 문서 동기화·금지 검사·전체 검증 | DOCS | B01~B08 |\n+\n+B01이 공개 토큰을 만들고 B02가 열람 경계를 완성해야 프런트가 실제 서버와 붙는다. B06·B07은 B03 뒤에서 B04·B05와 병렬로 갈 수 있고, B08은 비교 요청과 상세 패널을 재사용한다. B09는 모든 구현 묶음이 병합된 뒤 최종 상태를 검증한다.\n \n ## B05 구현 경계 보정 (2026-09-18, S15P21E205-309)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/plan.md",
+          "old_path": "specs/005-result-comparison/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,7 @@\n - 백엔드·워커·PostgreSQL·RabbitMQ가 떠 있어야 한다(저장소 루트 README의 개발 환경 구성).\n - 001의 KRX 자료가 적재되어 있어야 결과가 나온다.\n - 004의 백테스트 실행 경로가 동작해야 한다. `POST /backtests`가 `202`를 돌려주고 잠시 뒤 `COMPLETED`가 되는지 먼저 확인한다.\n-- **공개 열람 경계(plan의 묶음 A)가 병합되기 전에는 결과 화면이 뜨지 않는다.** 현재 `CurrentRequester.requireRequesterId`가 인증 없이는 예외를 던지기 때문이다.\n+- 공개 열람 경계(B01·B02)가 병합되어 있어야 한다. 비로그인 요청은 `requester_id` 없이 공개 토큰과 만료 시각을 받고, 결과 화면은 토큰만으로 조회한다.\n \n ## 실행\n \n@@ -43,7 +43,7 @@ cd frontend && npm run dev\n \n ### 4. 추천으로 읽힐 표현이 없다 (SC-004)\n \n-`frontend/src/features/result/summarySentences.ts`의 틀 목록을 전부 읽는다. 금지 어휘 단위 테스트가 이를 자동으로 막지만, 목록 자체를 사람이 한 번 읽는 것이 이 기준의 취지다.\n+`frontend/src/components/result/summarySentences.ts`의 틀 목록을 전부 읽는다. 금지 어휘 단위 테스트가 이를 자동으로 막지만, 목록 자체를 사람이 한 번 읽는 것이 이 기준의 취지다.\n \n ```bash\n cd frontend && npm run test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/quickstart.md",
+          "old_path": "specs/005-result-comparison/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,7 +16,7 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n - **Decision**: `backtest_request.requester_id`를 nullable로 완화하고, 요청자가 없는 요청은 `public_token`만으로 식별한다. 취소·재시도 권한은 \"로그인 사용자는 `requester_id` 일치, 비로그인은 `public_token` 소지\"로 판정한다. `CurrentRequester`는 요청자를 못 찾아도 예외를 던지지 않는 경로(`findRequesterId`)를 쓰고, 소유자 필터가 필요한 자리에서만 토큰을 확인한다.\n - **Rationale**: 004 research R-12가 이 경우를 미리 열어 두었다. 그 문서의 Alternatives에 \"인증·006 spec에서 익명을 허용하기로 하면 컬럼을 nullable로 완화한다\"고 적혀 있다. 005가 비로그인 실행·열람을 택했으므로 그 조건이 성립한다. 014 SC-005(\"로그인하지 않은 사용자가 전략 진단을 이용하는 시험 100%에서 인증이 강제되지 않는다\")와도 이 방향이라야 맞는다.\n-- ~~**주의**: 현재 `CurrentRequester.requireRequesterId`는 `thorp.auth.trust-user-id-header`가 꺼져 있으면 무조건 `INTERNAL_ERROR`를 던진다.~~ **해소됨(004 T017, 2026-09-16).** 요청자는 spec 014 로그인 세션에서 읽고, 로그인하지 않은 요청은 `401 AUTHENTICATION_REQUIRED`다. 005 화면은 로그인 세션으로 결과를 조회한다.\n+- **구현 결과(B01·B02)**: 접수 경로는 로그인 세션이 있으면 요청자를 기록하고, 없으면 `requester_id`를 비운 채 공개 토큰 만료 시각을 반드시 기록한다. 공개 결과 경로는 로그인 세션 없이 토큰으로 조회·재시도할 수 있고 공개 취소 경로는 두지 않는다.\n - **Alternatives**: 비로그인 요청에 시스템 사용자 id를 부여하기 — 여러 사람의 요청이 한 사용자 아래 섞여 취소 권한을 판정할 수 없고, 원칙 VIII(개인 식별정보와 계산 기록 분리)의 취지와도 어긋난다.\n \n ## R-03 비로그인 결과의 만료\n@@ -29,13 +29,13 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n ## R-04 비교 상태의 주소 표현\n \n-- **Decision**: `/results/{publicToken}?compare={comparePublicToken}` 형태로 질의 문자열에 비교 대상 토큰을 싣는다. 서버에 비교 자원을 만들지 않는다. 비교 대상이 만료·삭제되었으면 기준만 그리고 비교 자리에 안내를 보인다.\n+- **Decision**: `/results/{publicToken}?compare={comparePublicToken}&search={searchId}` 형태로 질의 문자열에 비교 대상 토큰과 선택적인 자동 탐색 식별자를 싣는다. 서버에 비교 자원을 만들지 않는다. `search`가 있으면 화면은 자동 탐색 후보임을 표시하고 007 상세로 돌아갈 진입점을 둔다. 비교 대상이 만료·삭제되었으면 기준만 그리고 비교 자리에 안내를 보인다.\n - **Rationale**: spec Clarification이 \"기준 결과 주소에 비교 대상 식별자를 덧붙인다\"로 정했다. 경로 세그먼트가 아니라 질의 문자열을 쓰는 이유는, 비교 대상을 바꾸거나 해제해도 기준 결과의 주소가 그대로 남아 뒤로 가기가 자연스럽기 때문이다.\n - **주의**: 토큰이 주소에 노출되므로 비교 링크를 건넨 상대는 두 결과를 모두 본다. 결과에 개인 식별 정보를 담지 않는다는 FR-019 조건이 여기서도 전제다.\n \n ## R-05 최대 하락 구간을 어디서 얻는가\n \n-- **Decision**: 당장은 `GET /backtests/{id}/timeseries`가 주는 일자별 `drawdown` 계열에서 최솟값 지점(저점)과 그 직전 고점을 찾아 음영 구간으로 쓴다. 다만 이 값이 `summary.maxDrawdown`과 어긋나면 그리지 않고 음영을 생략한다. **동시에 004에 `summary.maxDrawdownWindow{peakDate, troughDate, recoveredDate}` 추가를 요청 사항으로 남긴다.**\n+- **Decision**: 당장은 공개 경로 `GET /results/{publicToken}/timeseries`가 감싸서 주는 일자별 `drawdown` 계열에서 최솟값 지점(저점)과 그 직전 고점을 찾아 음영 구간으로 쓴다. 다만 이 값이 `summary.maxDrawdown`과 어긋나면 그리지 않고 음영을 생략한다. **동시에 004에 `summary.maxDrawdownWindow{peakDate, troughDate, recoveredDate}` 추가를 요청 사항으로 남긴다.**\n - **Rationale**: spec FR-001이 최대 하락 구간을 음영으로 겹쳐 그리라고 정했는데, 004의 `summary`는 `maxDrawdown` 숫자만 준다(`contracts/rest-api.md:64`). 구간을 계산하는 것은 005 Assumptions(\"이 spec은 값을 계산하지 않는다\")에 어긋나므로 004가 내려주는 것이 옳다. 그러나 004 계약 변경은 이 티켓 범위 밖이라, 값이 이미 계산되어 있는 `drawdown` 계열을 읽는 선에서 시작하고 일치 검증으로 안전장치를 둔다.\n - **Alternatives**: 004 변경이 끝날 때까지 음영을 만들지 않기 — SC-002(상세를 열지 않고 고점 대비 하락과 시작 금액 대비 손실을 구분)를 첫 화면만으로 통과하기 어려워진다.\n \n@@ -51,7 +51,7 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n   | 조건 한 줄 | `config`(기간·금액·비용 적용 여부) + `versions` |\n   | 비교 그래프 | `/timeseries`의 `equity`, 음영은 `drawdown`(R-05) |\n   | 종료 시 평가 구분 | `summary.liquidation{markToMarket, liquidated}` (FR-015) |\n-  | 결과 옆 한 문장 | `/exceptions` 요약 + `summaryUnavailable` + `partial` (FR-013) |\n+  | 결과 옆 한 문장 | 공개 상세의 `exceptionKinds` + `summaryUnavailable` + `partial` (FR-013). 첫 화면에서 `/exceptions`를 따로 부르지 않는다 |\n   | 회복 기간·회전율 | `summary.analytics{recoveryDays, turnover}` |\n   | 상관관계·위험 기여·손실 기여 | 저장은 되지만 **조회 경로가 없다** — 아래 확인 결과 참고 |\n   | 구성종목 중복·대표 ETF 구성·출처 | `GET /sectors/{code}/instrument-profile` (R-10) |\n@@ -60,7 +60,7 @@ spec의 Clarifications 13개는 \"무엇을 보일지\"를 정했다. 이 문서\n \n ## R-07 해석 요약 1문장의 문장 틀\n \n-- **Decision**: 문장 틀을 서버가 아니라 화면이 가지며, 틀 목록을 `frontend/src/features/result/summarySentences.ts` 한 파일에 모아 검수 대상으로 둔다. 조건 분기는 (비교 대상 유무) × (두 결과의 차이 방향) × (부분 결과 여부)로 제한하고, 각 틀은 값 자리만 비운다. 금지 표현이 섞이지 않았는지 확인하는 단위 테스트를 같은 폴더에 둔다.\n+- **Decision**: 문장 틀을 서버가 아니라 화면이 가지며, 틀 목록을 `frontend/src/components/result/summarySentences.ts` 한 파일에 모아 검수 대상으로 둔다. 조건 분기는 (비교 대상 유무) × (두 결과의 차이 방향) × (부분 결과 여부)로 제한하고, 각 틀은 값 자리만 비운다. 금지 표현이 섞이지 않았는지 확인하는 단위 테스트를 같은 폴더에 둔다.\n - **Rationale**: spec FR-006이 고정 틀에서 골라 채우도록 정했고 SC-004가 \"0건\"을 요구한다. 틀이 한 파일에 모여 있어야 사람이 전부 읽고 검수할 수 있다. 서버에 두면 004·005의 역할이 섞이고, 문구를 고칠 때마다 배포가 필요하다.\n - **금지 어휘 목록**: '추천', '최적', '승자', '우승', '유리하다', '좋다', '~할 것이다', 확률·유사도 표현. 테스트가 틀 문자열에 이 어휘가 없음을 확인한다(원칙 III, FR-016).\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/research.md",
+          "old_path": "specs/005-result-comparison/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,7 +39,7 @@\n \n ⑤ **미확정 결정과 유보**: PD-22(AI 해설)는 만들지 않는다. PD-23(유효 시간)은 값을 설정 파일에만 두고 문서에 수치를 적지 않는다(T004). PD-12 확정 전 `validationTier`는 항상 `UNVALIDATED`다(T020·T073). 응답 시간 목표와 거래 내역 페이지 크기는 유보하되 임시 상한을 설정으로 둔다(R-11, T004·T021).\n \n-⑥ **plan과 다르게 정한 것 셋**: (a) 프론트엔드 위치는 plan의 `features/result/`가 아니라 `components/result/`다. `frontend/CLAUDE.md` 폴더 규칙에 `features/`가 없고, 003(`components/strategy/`)·007(`components/paramsearch/`)이 같은 상황을 그렇게 풀었다. (b) `PublicResultToken` 값 타입은 plan의 `result/domain`이 아니라 `backtest/domain/model`에 둔다. 발급 시점이 004의 접수(`BacktestService.create`)라 `result/domain`에 두면 `backtest → result` 의존이 생겨 `result → backtest`와 순환한다. (c) 공개 토큰 유효 시간은 `thorp.result.public-token-ttl` 키에 두되, 발급하는 `BacktestService`는 `ResultProperties` 클래스를 주입받지 않고 `@Value`로 키만 읽는다. 클래스를 주입하면 `backtest → result` 의존이 생겨 ArchUnit 규칙 8(T017)을 어기기 때문이다(B01 구현을 따른다). (a)·(b)는 T081이 plan·research·data-model·quickstart에 반영한다.\n+⑥ **plan과 다르게 정한 것 셋**: (a) 프론트엔드 위치는 plan의 `features/result/`가 아니라 `components/result/`다. `frontend/CLAUDE.md` 폴더 규칙에 `features/`가 없고, 003(`components/strategy/`)·007(`components/paramsearch/`)이 같은 상황을 그렇게 풀었다. (b) `PublicResultToken` 값 타입은 plan의 `result/domain`이 아니라 `backtest/domain/model`에 둔다. 발급 시점이 004의 접수(`BacktestService.create`)라 `result/domain`에 두면 `backtest → result` 의존이 생겨 `result → backtest`와 순환한다. (c) 공개 토큰 유효 시간은 `thorp.result.public-token-ttl` 키에 두되, 발급하는 `BacktestService`는 `ResultProperties` 클래스를 주입받지 않고 `@Value`로 키만 읽는다. 클래스를 주입하면 `backtest → result` 의존이 생겨 ArchUnit 규칙 9(T017)을 어기기 때문이다(B01 구현을 따른다). (a)·(b)는 T081이 plan·research·data-model·quickstart에 반영한다.\n \n ⑦ 기존 `frontend/src/pages/BacktestPage.tsx`(목 데이터 DEMO)는 대체하지 않는다(plan Summary).\n \n@@ -105,7 +105,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [X] T014 (BE) `backtest/application/service/BacktestResultQueryService.java`에 요청 기준 오버로드 — `getDetail(BacktestRequest)`, `getTimeseries(BacktestRequest)`, `getWeights(BacktestRequest)`, `getExceptions(BacktestRequest)`, `getTrades(BacktestRequest, FindBacktestTradesQuery)`, `getPositions(BacktestRequest, LocalDate)`. 기존 `(String backtestId, long requesterId)` 메서드(`:86`·`:119`·`:142`·`:153`·`:173`·`:202`)는 `requireOwned` 뒤 이 오버로드로 위임한다. Javadoc: \"접근 판정은 호출자가 끝냈다. 공개 토큰 경로(`result`)와 소유자 경로가 같은 읽기를 쓴다\"\n - [X] T015 (BE) `/trades` 기간 필터 — `backtest/presentation/request/TradePageQuery.java`에 `LocalDate from`·`LocalDate to`(선택, `from ≤ to` 아니면 400)를 더하고 `FindBacktestTradesQuery`·거래 리포지토리 질의에 반영한다. `docs/specs/backtest-api/README.md` §2.3과 `specs/004-backtest-execution/contracts/rest-api.md`의 같은 자리를 갱신한다. 004 소유 영역이라 리뷰어에 004 담당을 지정한다(착수 전에 알아둘 것 ①)\n - [X] T016 (DOCS) 004 계약 갱신 — `docs/specs/backtest-api/README.md`의 접수·재시도 응답에 `publicToken`, `docs/specs/backtest-api/examples/backtest-accepted.json`에 값 추가, `specs/004-backtest-execution/contracts/rest-api.md`의 `POST /backtests`·`/retry` 절에 같은 내용. `backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestResultApiIT.java`가 픽스처와 계속 맞는지 확인한다\n-- [X] T017 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java`에 규칙 8 추가 — `noClasses().that().resideInAPackage(\"com.ssafy.thorp.backtest..\").should().dependOnClassesThat().resideInAPackage(\"com.ssafy.thorp.result..\")`. Javadoc에 \"공개 열람 경계 `result`는 `backtest`를 읽고, 방향은 `result → backtest` 하나다\"를 적는다. **규칙이 동작하는지 일부러 어겨 확인한다**(003 T012 방식): `backtest` 안 클래스에 `result` 타입 import 한 줄을 넣어 실패를 본 뒤 지우고, 그 결과를 MR 본문 \"테스트\" 절에 적는다\n+- [X] T017 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java`에 규칙 9 추가 — `noClasses().that().resideInAPackage(\"com.ssafy.thorp.backtest..\").should().dependOnClassesThat().resideInAPackage(\"com.ssafy.thorp.result..\")`. Javadoc에 \"공개 열람 경계 `result`는 `backtest`를 읽고, 방향은 `result → backtest` 하나다\"를 적는다. **규칙이 동작하는지 일부러 어겨 확인한다**(003 T012 방식): `backtest` 안 클래스에 `result` 타입 import 한 줄을 넣어 실패를 본 뒤 지우고, 그 결과를 MR 본문 \"테스트\" 절에 적는다\n - [X] T018 (BE 테스트) B01 검증 — `backend/src/test/java/com/ssafy/thorp/backtest/domain/model/BacktestRequestTest.java`(익명이면 만료 시각 필수 불변식, `isPublicExpired` 경계), `backtest/application/service/BacktestServiceTest.java` 확장(익명 접수 202·`publicToken` 32자·`expiresAt` = 생성 시각 + TTL, 로그인 요청은 `expiresAt` null, NEW·JOINED·REUSED 모두 토큰이 있음, 재시도도 새 토큰), `backtest/presentation/controller/BacktestSessionAuthIT.java` 확장(익명 `POST /backtests` 202, 익명 `GET /backtests/{id}` 401 유지), `backtest/application/service/ExecutionLimitApiIT.java` 확장(익명은 전체 상한만 세고 사용자별 상한에 걸리지 않는다), `common/persistence/FlywayMigrationTest.java`·`MigrationFileConventionTest.java` 통과. quickstart \"전제\"의 \"공개 열람 경계가 병합되기 전에는 결과 화면이 뜨지 않는다\"가 이 묶음으로 풀린다\n \n **Checkpoint**: 비로그인으로도 `POST /backtests`가 202와 `publicToken`을 돌려주고, 로그인 요청은 만료가 없다. `backtest`는 `result`를 모른다.\n@@ -120,7 +120,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Backend — 공개 열람 경로\n \n-- [X] T019 [US1] (BE) `backend/src/main/java/com/ssafy/thorp/result/package-info.java` — 계층 규약(ADR-0001)과 \"004의 결과를 공개 토큰으로 읽는 경계다. 값을 계산하지 않고 필드를 고른다. `backtest`를 읽되 `backtest`는 `result`를 모른다(ArchUnit 규칙 8)\"를 명시. 하위 패키지 `presentation/{controller,response}`, `application/{service,result}`, `infrastructure/config`(T004)\n+- [X] T019 [US1] (BE) `backend/src/main/java/com/ssafy/thorp/result/package-info.java` — 계층 규약(ADR-0001)과 \"004의 결과를 공개 토큰으로 읽는 경계다. 값을 계산하지 않고 필드를 고른다. `backtest`를 읽되 `backtest`는 `result`를 모른다(ArchUnit 규칙 9)\"를 명시. 하위 패키지 `presentation/{controller,response}`, `application/{service,result}`, `infrastructure/config`(T004)\n - [X] T020 [US1] (BE) `result/application/service/PublicResultService.java` — `resolve(String token)`: `PublicResultToken.of` 실패 → `INVALID_INPUT`(400), `findByPublicToken` 없음 → `RESOURCE_NOT_FOUND`(404), 익명이고 `isPublicExpired(now)` → `RESULT_EXPIRED`(410), 아니면 `BacktestRequest`. `getDetail`·`getTimeseries`·`getTrades`·`getPositions`·`getWeights`·`getExceptions`는 T014 오버로드에, `retry(token)`은 `BacktestRetryService`에 위임한다. 상세는 `result/application/result/PublicResultDetail.java`로 옮겨 담으며 `publicToken`·`expiresAt`(로그인 결과는 null)·`validationTier = UNVALIDATED`(PD-12 확정 전 고정)·`strategyName`(`strategy/application/port/ParameterRegistryPort`에서 읽고 없으면 null)·`weightsSource`(저장 결과에서)·`exceptionKinds`(종결 상태일 때 `getExceptions`의 `kind` 중복 제거)를 더하고 `backtestId`를 담지 않는다. 재시도 결과의 `retryOf`는 원 요청의 공개 토큰(`retryOfToken`)으로 바꿔 담는다\n - [X] T021 [US1] (BE) `result/presentation/controller/ResultController.java` `@RequestMapping(\"/results\")` — `GET /{token}`, `/{token}/timeseries`, `/{token}/trades`(T015의 질의 + `size` 기본값과 상한을 `ResultProperties.tradesPageSize()`로 고정. 원칙 IX의 임시 상한, R-11), `/{token}/positions?date=`, `/{token}/weights`, `/{token}/exceptions`, `POST /{token}/retry`. `result/presentation/response/PublicResultDetailResponse.java`(`backtestId`·`runId`·`worker` 없음. `config` 사본에는 요청자가 원래 없다 — `RequestSpecCodec` 주석), `PublicResultRetryResponse{publicToken, status, resultSource, retryOfToken}`. 시계열·거래·보유·비중·예외는 004 response record에 `backtestId` 필드가 없으면 재사용하고, 있으면 공개용 record로 감싼다(contracts \"공개 응답에서 버리는 필드\"). SecurityConfig는 `/auth/me` 외 전부 `permitAll`이라 고치지 않는다. CSRF 쿠키 규약은 그대로 적용된다\n - [X] T022 [US1] (BE) 만료 정리 `result/application/service/PublicResultExpirySweeper.java` — `@Scheduled(fixedDelayString = \"${thorp.result.expiry-sweep-interval:PT10M}\")`(`news/infrastructure/scheduling/NewsRetentionScheduler.java` 선례, `common/config/SchedulingConfig.java`로 이미 활성). `findExpiredAnonymous(now, batchSize)`로 찾아 건마다 트랜잭션(`RunLivenessSweeper` 방식)으로 `backtest_reuse_event`의 참조 행은 지우지 않고 `request_id`만 NULL로 끊음(새 마이그레이션 `ALTER TABLE backtest_reuse_event ALTER COLUMN request_id DROP NOT NULL`과 `BacktestReuseEvent`·`BacktestReuseEventJpaEntity`의 `requestId` nullable을 같은 MR에 담는다. `uk_backtest_reuse_event_request`는 NULL 여러 개를 허용하므로 그대로 둔다. 원칙 IX의 동일 결과 재조회 기록 보존, `backtest_run_metric`의 `reuse_count`) → 자식 요청의 `retry_of_request_id`를 NULL → 요청 행 삭제. `backtest_run`·결과는 지우지 않는다(착수 전에 알아둘 것 ① 다섯째). 로그에는 건수만 남긴다(개인 식별 정보·토큰을 적지 않는다)\n@@ -270,19 +270,19 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### 문서\n \n-- [ ] T081 [P] (DOCS) `specs/005-result-comparison/{plan.md,research.md,data-model.md,quickstart.md}` 동기화 — `features/result/` → `components/result/`(plan Project Structure, research R-07, data-model §3-5, quickstart 4), `PublicResultToken` 위치(`backtest/domain/model`, 순환 회피), 공개 상세 응답의 추가 필드(`strategyName`·`weightsSource`·`exceptionKinds`)와 `?search=` 인자·`/trades`의 `from`·`to`·재시도 응답(T001에서 contracts에 이미 적었다), plan \"004에 필요한 변경\"에 이 tasks가 찾은 접점 둘(거래 기간 필터, 익명 실행 상한)과 그 처리를 추가, plan \"작업 묶음 구성\"을 B01~B09로 갱신. 004가 `maxDrawdownWindow`·`analytics` 노출을 넣었으면 T040·T064의 임시 처리를 지웠는지 함께 확인한다\n-- [ ] T082 [P] (DOCS) `frontend/CLAUDE.md` \"규칙\"에 두 줄 — \"결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009)\"와 \"해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(SC-004). 문장을 컴포넌트에서 짓지 않는다\". `backend/CLAUDE.md` \"규칙\"에 한 줄 — \"`result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 8). 비로그인 요청은 `requester_id` NULL이고 `public_token_expires_at`이 필수다\"\n-- [ ] T083 (DOCS) [quickstart.md](quickstart.md) 1~10 수동 확인을 돌리고 결과를 MR 본문 \"테스트\" 절에 항목별로 적는다. 004 변경 ③·④가 아직이면 2(음영 생략)와 상세 3항목(제공되지 않음)을 기대 동작으로 적는다. 007 연결이 아직이면 3의 자동 탐색 후보 부분은 `?search=`를 직접 넣어 확인하고 그 사실을 적는다\n+- [X] T081 [P] (DOCS) `specs/005-result-comparison/{plan.md,research.md,data-model.md,quickstart.md}` 동기화 — `features/result/` → `components/result/`(plan Project Structure, research R-07, data-model §3-5, quickstart 4), `PublicResultToken` 위치(`backtest/domain/model`, 순환 회피), 공개 상세 응답의 추가 필드(`strategyName`·`weightsSource`·`exceptionKinds`)와 `?search=` 인자·`/trades`의 `from`·`to`·재시도 응답(T001에서 contracts에 이미 적었다), plan \"004에 필요한 변경\"에 이 tasks가 찾은 접점 둘(거래 기간 필터, 익명 실행 상한)과 그 처리를 추가, plan \"작업 묶음 구성\"을 B01~B09로 갱신. 004가 `maxDrawdownWindow`·`analytics` 노출을 넣었으면 T040·T064의 임시 처리를 지웠는지 함께 확인한다\n+- [X] T082 [P] (DOCS) `frontend/CLAUDE.md` \"규칙\"에 두 줄 — \"결과 화면(`/results/:token`)은 `backtestId`(`BT-…`)를 받지도 보이지도 않는다(spec 005 SC-009)\"와 \"해석 요약·상태 문장은 `components/result/{summarySentences,statusSentences}.ts`의 틀에서만 나온다(SC-004). 문장을 컴포넌트에서 짓지 않는다\". `backend/CLAUDE.md` \"규칙\"에 한 줄 — \"`result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 9). 비로그인 요청은 `requester_id` NULL이고 `public_token_expires_at`이 필수다\"\n+- [X] T083 (DOCS) [quickstart.md](quickstart.md) 1~10 수동 확인을 돌리고 결과를 MR 본문 \"테스트\" 절에 항목별로 적는다. 004 변경 ③·④가 아직이면 2(음영 생략)와 상세 3항목(제공되지 않음)을 기대 동작으로 적는다. 007 연결이 아직이면 3의 자동 탐색 후보 부분은 `?search=`를 직접 넣어 확인하고 그 사실을 적는다\n - [ ] T083a (DOCS) 사용성 관찰 항목(SC-002·SC-007·SC-010) — PD-14 회차에 과제 셋(상세를 열지 않고 세 숫자의 뜻을 말하기, 진행자 도움 없이 손실이 커진 때·거래 내역·비용 가정 찾기, 회색조 인쇄물에서 기준과 비교 대상 구분하기)을 넣고, 관찰 기록과 조치 내역을 `specs/005-result-comparison/` 아래 결과 문서로 남긴 뒤 MR 본문에 요약한다. 두 명 이상이 같은 지점에서 오해하면 요약 화면을 고친다(SC-002). **코드 구현이 아니라 관찰 절차이므로 B09 병합을 막지 않으며, 회차 일정은 002·003과 함께 잡는다**(003 T074a 방식)\n \n ### 코드 정리·금지 검사\n \n-- [ ] T084 [P] (FE) 잔재·금지 검사 — `grep -rn \"BT-\\|backtestId\" frontend/src/components/result frontend/src/pages/ResultPage.tsx frontend/src/api/result.ts frontend/src/types/result.ts frontend/src/hooks/useResult.ts frontend/src/hooks/useCompareTarget.ts`가 0건(테스트·픽스처 제외, SC-009); `grep -rn \"decimate\" frontend/src/components/result` 0건(R-08); 전략 ID 문자열 리터럴(`FIXED_WEIGHT` 등) 0건(003 T076과 같은 검사, 화면은 `strategyName`·`weightsSource`·`executionType`으로만 분기); `<ul>`로 나열한 경고 목록이 `ResultStatusLine`에 없다\n-- [ ] T085 [P] (BE) 잔재 검사 — `grep -rn \"requireRequesterId\" backend/src/main/java/com/ssafy/thorp/result` 0건(공개 경로에 인증 요구 없음); `result/presentation/response/` record에 `backtestId`·`runId`·`requesterId` 컴포넌트 0건; `PublicResultToken`이 로그 문자열에 찍히지 않는다(`grep -rn \"publicToken\" backend/src/main/java --include=*.java | grep -i \"log\\.\"` 0건)\n+- [X] T084 [P] (FE) 잔재·금지 검사 — 결과 코드의 문자열·프로퍼티·타입에 `BT-`·`backtestId`가 0건(테스트·픽스처와 금지 이유를 설명하는 주석 제외, SC-009); `EquityChart`는 `decimate={false}`이고 `decimate={true}`가 0건(R-08); 전략 ID 문자열 리터럴(`FIXED_WEIGHT` 등) 0건(003 T076과 같은 검사, 화면은 `strategyName`·`weightsSource`·`executionType`으로만 분기); `<ul>`로 나열한 경고 목록이 `ResultStatusLine`에 없다\n+- [X] T085 [P] (BE) 잔재 검사 — `grep -rn \"requireRequesterId\" backend/src/main/java/com/ssafy/thorp/result` 0건(공개 경로에 인증 요구 없음); `result/presentation/response/` record에 `backtestId`·`runId`·`requesterId` 컴포넌트 0건; `PublicResultToken`이 로그 문자열에 찍히지 않는다(`grep -rn \"publicToken\" backend/src/main/java --include=*.java | grep -i \"log\\.\"` 0건)\n \n ### 전체 검증\n \n-- [ ] T086 (DOCS) 전체 검증 — `cd backend && ./gradlew spotlessApply build`(ArchUnit 규칙 8·`FlywayMigrationTest` 포함), `cd frontend && npm run lint && npm run build && npm test`(`skipped` 0 확인), `infra/scripts/check-migration-version.sh`(버전 역전 없음). 결과를 MR 본문 \"테스트\" 절에 적는다\n+- [X] T086 (DOCS) 전체 검증 — `cd backend && ./gradlew spotlessApply build`(ArchUnit 규칙 9·`FlywayMigrationTest` 포함), `cd frontend && npm run lint && npm run build && npm test`(`skipped` 0 확인), `infra/scripts/check-migration-version.sh`(버전 역전 없음). 결과를 MR 본문 \"테스트\" 절에 적는다\n \n ---\n \n@@ -307,7 +307,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n **`T###`는 티켓 단위가 아니다.** constitution \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로 정한다. 아래 아홉이 Jira Task·브랜치·MR의 단위이고, 89개 태스크는 그 안에서 실행 지시의 최소 단위로 남는다.\n \n-**묶음 티켓은 아직 만들지 않았다.** AGENTS.md가 \"곧 브랜치를 딸 작업 묶음이 아니면 티켓을 세우지 않는다\"고 정한다. 각 묶음에 착수할 때 Jira Task를 먼저 만들고(제목은 아래 표의 것, 에픽 `S15P21E205-30 백테스트`, 구현 대상 Story와 `relates to`, 담당·스프린트·포인트), 그 번호로 브랜치를 만든 뒤 이 표의 티켓 열을 채운다.\n+모든 묶음은 착수할 때 Jira Task를 먼저 만들고(에픽 `S15P21E205-30 백테스트`, 구현 대상 Story와 `relates to`, 담당·스프린트·포인트), 그 번호로 브랜치를 만들었다. 아래 표가 실제 티켓·브랜치 대응의 기준이다.\n \n **묶음 이름은 계층이 아니라 목적으로 붙였다**(003과 같은 방식). 이름이 그대로 Jira Task 제목이 된다.\n \n@@ -315,13 +315,13 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n |---|---|---|---|---|---|\n | B01 · [S15P21E205-291](https://ssafy.atlassian.net/browse/S15P21E205-291) `feat(be)/291-public-result-token` | `[BE] 비로그인 요청을 받고 결과마다 공개 토큰을 발급한다` | T004, T008~T018 | 12 | `be` · `feat` | 없음 |\n | B02 · [S15P21E205-318](https://ssafy.atlassian.net/browse/S15P21E205-318) `feat(be)/318-public-result-read` | `[BE] 공개 토큰으로 결과를 열고 만료되면 닫는다` | T001, T002, T003, T019~T026 | 11 | `be` · `feat` | B01 |\n-| B03 · 미발급 | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |\n-| B04 · 미발급 | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |\n+| B03 · [S15P21E205-307](https://ssafy.atlassian.net/browse/S15P21E205-307) `feat(fe)/307-result-first-screen` | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |\n+| B04 · [S15P21E205-308](https://ssafy.atlassian.net/browse/S15P21E205-308) `feat(fe)/308-result-equity-chart` | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |\n | B05 · [S15P21E205-309](https://ssafy.atlassian.net/browse/S15P21E205-309) · `feat(fe)/309-result-comparison` | `[FE] 비교 대상을 골라 같은 조건으로 요청한다` | T045~T054, T057~T061 | 15 | `fe` · `feat` | B04 (+ 003 B06과 파일 조율) |\n | B06 · [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346) `feat(fe)/346-result-status-line` | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |\n | B07 · [S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311) `feat(fe)/311-result-detail-panel` | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |\n-| B08 · S15P21E205-312 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat(fe)/312-result-auxiliary-views` | B05, B07 (+ 001 소유 조회 리뷰) |\n-| B09 · 미발급 | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |\n+| B08 · [S15P21E205-312](https://ssafy.atlassian.net/browse/S15P21E205-312) `feat(fe)/312-result-auxiliary-views` | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat` | B05, B07 (+ 001 소유 조회 리뷰) |\n+| B09 · [S15P21E205-313](https://ssafy.atlassian.net/browse/S15P21E205-313) `docs(fe)/313-spec-005-wrapup` | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |\n \n ```text\n B01 ─▶ B02 ─▶ B03 ─┬─▶ B04 ─▶ B05 ─┬─▶ B08 ─┐\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2224080,
+      "head_commit_sha": "b99475352638f05dcaf14ad1a569c9c94fa4cf50",
+      "base_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "start_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "created_at": "2026-09-18T21:09:44.052+09:00",
+      "merge_request_id": 951960,
+      "state": "without_files",
+      "real_size": "7",
+      "patch_id_sha": "833f7821cc46b09ae7073fbd52a795e0e260746c",
+      "commits": [
+        {
+          "id": "b99475352638f05dcaf14ad1a569c9c94fa4cf50",
+          "short_id": "b9947535",
+          "created_at": "2026-09-18T20:49:37.000+09:00",
+          "parent_ids": [
+            "d21e704b7f910a4cae869f985cf1011f5db031d1"
+          ],
+          "title": "docs(fe): spec 005 문서와 최종 검증 동기화",
+          "message": "docs(fe): spec 005 문서와 최종 검증 동기화\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T20:49:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T20:49:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b99475352638f05dcaf14ad1a569c9c94fa4cf50"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2837270": []
+  }
+}

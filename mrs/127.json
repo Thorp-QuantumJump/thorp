@@ -1,0 +1,708 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945211,
+    "iid": 127,
+    "project_id": 1444456,
+    "title": "feat(be): 로그아웃 및 세션 생명주기 구현",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n로그아웃과 세션 만료·보안 생명주기를 구현했습니다.\n\n# 관련 티켓\n\n* ticket #248\n* https://ssafy.atlassian.net/browse/S15P21E205-248\n\n# 주요 변경 사항\n\n* 현재 세션 로그아웃 및 세션 쿠키 삭제\n* 비로그인 상태에서도 안전한 멱등 로그아웃 지원\n* 로그인·로그아웃 시 CSRF 토큰 갱신\n* 30분 비활성 세션 만료 및 운영 쿠키 설정\n* 세션·CSRF·보안 로그 통합 테스트 추가\n\n# 테스트\n\n* Backend 테스트 1,188개 통과, 실패 0개\n* 로그아웃·세션 만료·CSRF·세션 고정 공격 방지 검증\n* Spotless 및 Build 통과\n\n# 리뷰 포인트\n\n* 로그아웃은 비로그인 상태에서도 `204`를 반환하지만 CSRF 검증은 유지합니다.\n* 운영 환경에서 Secure 쿠키가 적용되도록 프록시의 Forwarded Header 설정이 필요합니다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-15T17:08:25.019+09:00",
+    "updated_at": "2026-09-15T17:28:48.505+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T17:28:48.195+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/248-logout-session-lifecycle",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b352257f715314e987ac6415aabd09a162d8383a",
+    "merge_commit_sha": "20feed977d02f2f3a8cf2d2ca82af78fc23f8efc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T17:08:26.158+09:00",
+    "reference": "!127",
+    "references": {
+      "short": "!127",
+      "relative": "!127",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!127"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/127",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945211,
+    "iid": 127,
+    "project_id": 1444456,
+    "title": "feat(be): 로그아웃 및 세션 생명주기 구현",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n로그아웃과 세션 만료·보안 생명주기를 구현했습니다.\n\n# 관련 티켓\n\n* ticket #248\n* https://ssafy.atlassian.net/browse/S15P21E205-248\n\n# 주요 변경 사항\n\n* 현재 세션 로그아웃 및 세션 쿠키 삭제\n* 비로그인 상태에서도 안전한 멱등 로그아웃 지원\n* 로그인·로그아웃 시 CSRF 토큰 갱신\n* 30분 비활성 세션 만료 및 운영 쿠키 설정\n* 세션·CSRF·보안 로그 통합 테스트 추가\n\n# 테스트\n\n* Backend 테스트 1,188개 통과, 실패 0개\n* 로그아웃·세션 만료·CSRF·세션 고정 공격 방지 검증\n* Spotless 및 Build 통과\n\n# 리뷰 포인트\n\n* 로그아웃은 비로그인 상태에서도 `204`를 반환하지만 CSRF 검증은 유지합니다.\n* 운영 환경에서 Secure 쿠키가 적용되도록 프록시의 Forwarded Header 설정이 필요합니다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-15T17:08:25.019+09:00",
+    "updated_at": "2026-09-15T17:28:48.505+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T17:28:48.195+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/248-logout-session-lifecycle",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b352257f715314e987ac6415aabd09a162d8383a",
+    "merge_commit_sha": "20feed977d02f2f3a8cf2d2ca82af78fc23f8efc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T17:08:26.158+09:00",
+    "reference": "!127",
+    "references": {
+      "short": "!127",
+      "relative": "!127",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!127"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/127",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-15T17:20:07.358+09:00",
+    "latest_build_finished_at": "2026-09-15T17:26:43.882+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196574,
+      "iid": 43,
+      "project_id": 1444456,
+      "sha": "b352257f715314e987ac6415aabd09a162d8383a",
+      "ref": "feat(be)/248-logout-session-lifecycle",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T17:20:07.242+09:00",
+      "updated_at": "2026-09-15T17:26:43.889+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196574"
+    },
+    "head_pipeline": {
+      "id": 196574,
+      "iid": 43,
+      "project_id": 1444456,
+      "sha": "b352257f715314e987ac6415aabd09a162d8383a",
+      "ref": "feat(be)/248-logout-session-lifecycle",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T17:20:07.242+09:00",
+      "updated_at": "2026-09-15T17:26:43.889+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196574",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-15T17:20:07.358+09:00",
+      "finished_at": "2026-09-15T17:26:43.882+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196574",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "head_sha": "b352257f715314e987ac6415aabd09a162d8383a",
+      "start_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "60d6451f11310bb29fded633e5cc848ca5995528",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810519,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T17:08:25.138+09:00",
+          "updated_at": "2026-09-15T17:08:25.146+09:00",
+          "system": true,
+          "noteable_id": 945211,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 127,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c4bae083192333fd77d54b7f96b3d57c66a602f8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810521,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 보안 생명주기 검증**: 로그아웃 시 멱등성을 보장하면서도 `SecurityContextLogoutHandler`와 CSRF 토큰 갱신(`rotateCsrfToken`)을 올바르게 연동했습니다. 또한 리버스 프록시 환경에서 `Secure` 쿠키 발급 문제를 방지하기 위해 `forward-headers-strategy: framework` 설정을 추가하고 이를 통합 테스트(`ProxySecureCookieIntegrationTest`)로 검증한 설계가 돋보입니다.\n- **풍부한 테스트 커버리지**: 세션 만료, 멱등 로그아웃, 세션 고정 방지, 민감 정보가 배제된 로그 포맷팅 등을 실제 데이터베이스 환경(PostgreSQL) 기반의 통합 테스트로 촘촘하게 작성하여 변경 사항의 신뢰성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **프록시 헤더 조작 테스트**: `ProxySecureCookieIntegrationTest`에서 `X-Forwarded-Proto: https` 헤더가 전달되지 않았을 때(또는 잘못된 값이 전달되었을 때) `Secure` 쿠키가 의도대로 누락되거나 반영되는지 경계값 테스트를 추가하여 프록시 환경 변화에 대비할 수 있습니다.\n- **동시 다중 세션 로그아웃 테스트**: 한 계정으로 여러 브라우저(또는 기기)에서 로그인한 상태에서 특정 세션만 로그아웃했을 때, 다른 세션이 정상적으로 유지되는지 확인하는 시나리오를 자동화 테스트로 보강하는 것을 권장합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b352257f715314e987ac6415aabd09a162d8383a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T17:08:30.774+09:00",
+          "updated_at": "2026-09-15T17:19:01.900+09:00",
+          "system": false,
+          "noteable_id": 945211,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 127,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "38d5418ff93e2aa3f39d0f6da4197908be5696d1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810688,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>b352257f - fix(be): ai리뷰 1차수정</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/127/diffs?diff_id=2201166&start_sha=988572c3cad9daee149fb4864a7fe3817d3b736e)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T17:18:57.848+09:00",
+          "updated_at": "2026-09-15T17:18:57.853+09:00",
+          "system": true,
+          "noteable_id": 945211,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 127,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e98fd956967c66087602d7ea0c99f68ace2c34e2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810814,
+          "type": null,
+          "body": "mentioned in commit 20feed977d02f2f3a8cf2d2ca82af78fc23f8efc",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T17:28:48.230+09:00",
+          "updated_at": "2026-09-15T17:28:48.237+09:00",
+          "system": true,
+          "noteable_id": 945211,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 127,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2201166,
+      "head_commit_sha": "b352257f715314e987ac6415aabd09a162d8383a",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:18:57.613+09:00",
+      "merge_request_id": 945211,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "67fd9f3bd746a65f9734384fc88fe11fefca50cc"
+    },
+    {
+      "id": 2201044,
+      "head_commit_sha": "988572c3cad9daee149fb4864a7fe3817d3b736e",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:08:25.341+09:00",
+      "merge_request_id": 945211,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "333bd2e0cd005f6ea0f63c6243533229c1368d40"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2201166,
+      "head_commit_sha": "b352257f715314e987ac6415aabd09a162d8383a",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:18:57.613+09:00",
+      "merge_request_id": 945211,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "67fd9f3bd746a65f9734384fc88fe11fefca50cc",
+      "commits": [
+        {
+          "id": "b352257f715314e987ac6415aabd09a162d8383a",
+          "short_id": "b352257f",
+          "created_at": "2026-09-15T17:18:50.000+09:00",
+          "parent_ids": [
+            "988572c3cad9daee149fb4864a7fe3817d3b736e"
+          ],
+          "title": "fix(be): ai리뷰 1차수정",
+          "message": "fix(be): ai리뷰 1차수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T17:18:50.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T17:18:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b352257f715314e987ac6415aabd09a162d8383a"
+        },
+        {
+          "id": "988572c3cad9daee149fb4864a7fe3817d3b736e",
+          "short_id": "988572c3",
+          "created_at": "2026-09-15T16:56:13.000+09:00",
+          "parent_ids": [
+            "7accca2725a28309749a1e65e6ec9358f825e7d9"
+          ],
+          "title": "feat(be): 로그아웃 및 세션 생명주기 구현",
+          "message": "feat(be): 로그아웃 및 세션 생명주기 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T16:56:13.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T16:56:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/988572c3cad9daee149fb4864a7fe3817d3b736e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -21,8 +21,10 @@ import org.springframework.security.core.Authentication;\n import org.springframework.security.core.context.SecurityContext;\n import org.springframework.security.core.context.SecurityContextHolder;\n import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;\n import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;\n import org.springframework.security.web.context.SecurityContextRepository;\n+import org.springframework.security.web.csrf.CsrfTokenRepository;\n import org.springframework.stereotype.Service;\n import org.springframework.transaction.annotation.Transactional;\n \n@@ -50,8 +52,12 @@ public class AuthenticationService {\n     private final PasswordEncoder passwordEncoder;\n     private final SecurityContextRepository securityContextRepository;\n     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;\n+    private final CsrfTokenRepository csrfTokenRepository;\n     private final Clock clock;\n \n+    /** 세션 무효화와 {@code SecurityContext} 비우기. 세션이 없으면 아무 일도 하지 않으므로 로그아웃의 멱등성이 여기서 나온다. */\n+    private final SecurityContextLogoutHandler logoutHandler = new SecurityContextLogoutHandler();\n+\n     /**\n      * 계정을 찾지 못했을 때 대조할 버리는 해시.\n      *\n@@ -65,11 +71,13 @@ public class AuthenticationService {\n             PasswordEncoder passwordEncoder,\n             SecurityContextRepository securityContextRepository,\n             SessionAuthenticationStrategy sessionAuthenticationStrategy,\n+            CsrfTokenRepository csrfTokenRepository,\n             Clock clock) {\n         this.userRepository = userRepository;\n         this.passwordEncoder = passwordEncoder;\n         this.securityContextRepository = securityContextRepository;\n         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;\n+        this.csrfTokenRepository = csrfTokenRepository;\n         this.clock = clock;\n         this.absentAccountPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());\n     }\n@@ -95,9 +103,50 @@ public class AuthenticationService {\n         SecurityContextHolder.setContext(context);\n         securityContextRepository.saveContext(context, request, response);\n \n+        rotateCsrfToken(request, response);\n+\n         return projectionOf(user);\n     }\n \n+    /**\n+     * 현재 요청의 세션을 끝낸다.\n+     *\n+     * <p><b>이미 비로그인이어도 같은 결과로 끝난다.</b> 로그아웃은 \"이 브라우저에 인증 세션이 없게 만든다\"는 뜻이고, 처음부터 없었다면 그 상태가 이미 참이다.\n+     * 여기서 401이나 404를 돌려주면 FE는 세션이 정말 끝났는지 확인하지 못한 채 '로그아웃 미확인'에 머문다(FR-009).\n+     *\n+     * <p><b>끝내는 것은 이 세션 하나다.</b> 같은 계정으로 다른 브라우저에서 연 세션은 건드리지 않는다 — 한 기기에서 나간 것이 다른 기기에서 쫓겨날 이유가 되지\n+     * 않는다. 전체 세션 종료가 필요해지면 그때 별도 동작으로 만든다.\n+     *\n+     * <p>세션 무효화는 Spring Session이 {@code spring_session} 행을 지우게 하고, 같은 응답에 만료된 {@code THORP_SESSION}\n+     * 쿠키를 실어 보낸다.\n+     */\n+    public void logout(HttpServletRequest request, HttpServletResponse response) {\n+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();\n+\n+        // 세션 식별자는 남기지 않는다. 로그에 남으면 그 줄을 본 사람이 세션을 그대로 흉내 낼 수 있다.\n+        userId(authentication).ifPresent(id -> log.info(\"Logout: userId={}\", id));\n+\n+        logoutHandler.logout(request, response, authentication);\n+\n+        rotateCsrfToken(request, response);\n+    }\n+\n+    /**\n+     * CSRF 토큰을 새 값으로 바꾼다.\n+     *\n+     * <p>토큰은 세션이 아니라 쿠키에 있다. 그래서 로그인 전에 브라우저에 자리 잡은 값이 로그인한 뒤에도, 로그아웃한 뒤에도 같은 값으로 남는다. 인증 경계가 바뀌는 두\n+     * 지점에서 값을 갈아 브라우저가 들고 있는 토큰의 수명을 한 로그인 안으로 끊는다(research D3).\n+     *\n+     * <p><b>서버가 옛 값을 거절하지는 못한다.</b> 이중 제출 방식이라 쿠키와 헤더가 서로 맞기만 하면 통과하고, 저장소에 대조할 원본이 없다. 갈아 주는 효과는\n+     * 브라우저에 남아 있던 값이 덮여 사라지는 데 있다.\n+     *\n+     * <p>새 값은 이 응답의 쿠키로 나가므로 SPA는 {@code /auth/csrf}를 다시 부르지 않고 다음 요청을 보낼 수 있다.\n+     */\n+    private void rotateCsrfToken(HttpServletRequest request, HttpServletResponse response) {\n+        csrfTokenRepository.saveToken(\n+                csrfTokenRepository.generateToken(request), request, response);\n+    }\n+\n     /**\n      * 세션에 남아 있는 인증 주체로 현재 사용자를 다시 읽는다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;\n import org.springframework.http.ResponseEntity;\n import org.springframework.security.core.Authentication;\n import org.springframework.security.web.csrf.CsrfToken;\n+import org.springframework.web.bind.annotation.DeleteMapping;\n import org.springframework.web.bind.annotation.GetMapping;\n import org.springframework.web.bind.annotation.PostMapping;\n import org.springframework.web.bind.annotation.RequestBody;\n@@ -20,11 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;\n import org.springframework.web.bind.annotation.ResponseStatus;\n import org.springframework.web.bind.annotation.RestController;\n \n-/**\n- * 인증 API. 외부 경로는 프록시가 {@code /api}를 떼고 넘긴 {@code /auth/*}다.\n- *\n- * <p>로그아웃({@code DELETE /auth/sessions/current})은 이 spec의 다음 작업 묶음(T044)에서 같은 컨트롤러에 붙는다.\n- */\n+/** 인증 API. 외부 경로는 프록시가 {@code /api}를 떼고 넘긴 {@code /auth/*}다. */\n @RestController\n @RequestMapping(\"/auth\")\n public class AuthenticationController {\n@@ -61,6 +58,18 @@ public class AuthenticationController {\n         return ResponseEntity.ok(ApiResponse.ok(AuthenticatedUserResponse.from(result)));\n     }\n \n+    /**\n+     * 현재 세션을 끝낸다. 결과는 언제나 204다.\n+     *\n+     * <p>본문이 없는 이유는 돌려줄 것이 없어서다 — 로그아웃 뒤의 사용자 정보는 존재하지 않고, 실패 사유를 알려 줄 실패도 없다. FE는 이 204 하나로 '로그아웃\n+     * 완료'를 판정한다(FR-009). 이미 비로그인이어도 204이므로 재시도가 안전하다.\n+     */\n+    @DeleteMapping(\"/sessions/current\")\n+    @ResponseStatus(HttpStatus.NO_CONTENT)\n+    public void logout(HttpServletRequest httpRequest, HttpServletResponse httpResponse) {\n+        authenticationService.logout(httpRequest, httpResponse);\n+    }\n+\n     /** 비로그인 요청은 여기 닿기 전에 {@code SecurityConfig}의 진입점이 401로 끊는다. */\n     @GetMapping(\"/me\")\n     public ResponseEntity<ApiResponse<AuthenticatedUserResponse>> currentUser(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,7 @@ import org.springframework.security.web.context.SecurityContextRepository;\n import org.springframework.security.web.csrf.CookieCsrfTokenRepository;\n import org.springframework.security.web.csrf.CsrfException;\n import org.springframework.security.web.csrf.CsrfToken;\n+import org.springframework.security.web.csrf.CsrfTokenRepository;\n import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;\n import org.springframework.security.web.csrf.CsrfTokenRequestHandler;\n import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;\n@@ -38,13 +39,16 @@ public class SecurityConfig {\n     SecurityFilterChain securityFilterChain(\n             HttpSecurity http,\n             ObjectMapper objectMapper,\n+            CsrfTokenRepository csrfTokenRepository,\n             SecurityContextRepository securityContextRepository,\n             SessionAuthenticationStrategy sessionAuthenticationStrategy)\n             throws Exception {\n         return http.csrf(\n                         csrf ->\n-                                csrf.csrfTokenRepository(csrfTokenRepository())\n+                                csrf.csrfTokenRepository(csrfTokenRepository)\n                                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))\n+                // 로그아웃(DELETE /auth/sessions/current)은 인증을 요구하지 않는다. 비로그인 요청까지 401로 끊으면\n+                // FE는 세션이 정말 끝났는지 확인하지 못한 채 '로그아웃 미확인'에 머문다(FR-009). CSRF 검사는 그대로 받는다.\n                 .authorizeHttpRequests(\n                         authorize ->\n                                 authorize\n@@ -94,7 +98,17 @@ public class SecurityConfig {\n         return new ChangeSessionIdAuthenticationStrategy();\n     }\n \n-    private static CookieCsrfTokenRepository csrfTokenRepository() {\n+    /**\n+     * CSRF 토큰 저장소. 토큰은 세션이 아니라 쿠키에 있다.\n+     *\n+     * <p>그래서 세션이 바뀌어도 토큰은 그대로 살아남는다 — 로그인·로그아웃에서 값을 갈아 주는 일은 {@code AuthenticationService}가 맡는다. 이\n+     * 저장소를 빈으로 두는 이유가 그것이다.\n+     *\n+     * <p>{@code Secure}는 지정하지 않는다. {@link CookieCsrfTokenRepository}는 값이 없으면 요청이 HTTPS인지 보고 정한다.\n+     * 운영은 nginx가 TLS를 끝내고 평문으로 넘기므로 {@code server.forward-headers-strategy}가 있어야 그 판정이 맞는다.\n+     */\n+    @Bean\n+    CsrfTokenRepository csrfTokenRepository() {\n         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();\n         repository.setCookieName(\"XSRF-TOKEN\");\n         repository.setHeaderName(\"X-XSRF-TOKEN\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -43,6 +43,10 @@ spring:\n     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}\n \n server:\n+  # nginx가 TLS를 끝내고 평문 HTTP로 넘긴다. 이 값이 없으면 request.isSecure()가 false라\n+  # 코드에서 만드는 XSRF-TOKEN 쿠키에 Secure가 붙지 않는다 — 세션 쿠키는 아래에서 직접 지정하지만\n+  # CSRF 쿠키는 요청이 HTTPS인지 보고 정하기 때문이다(SecurityConfig.csrfTokenRepository).\n+  forward-headers-strategy: framework\n   servlet:\n     session:\n       cookie:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-prod.yml",
+          "old_path": "backend/src/main/resources/application-prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,9 @@ spring:\n \n   # 인증 상태는 서버가 관리하고 PostgreSQL에 저장한다. 테이블 초기화 방식은 프로필별로 정한다.\n   session:\n-    timeout: 30m\n+    # 마지막 요청에서 이만큼 지나면 세션이 만료된다. 로그인 유지 선택지는 제공하지 않으므로 이 값이 유일한 기준이고,\n+    # FE는 남은 시간을 추정하지 않는다(plan Constraints). 만료된 세션의 요청은 401 AUTHENTICATION_REQUIRED다.\n+    timeout: ${SPRING_SESSION_TIMEOUT:30m}\n \n   # 스키마 관리 정책은 프로필별로 갈린다.\n   #  - local: Hibernate ddl-auto=update (Flyway 비활성)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -38,6 +38,7 @@ import org.springframework.security.core.context.SecurityContext;\n import org.springframework.security.crypto.password.PasswordEncoder;\n import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;\n import org.springframework.security.web.context.SecurityContextRepository;\n+import org.springframework.security.web.csrf.CsrfTokenRepository;\n \n /**\n  * 로그인 유스케이스의 판정 규칙을 단위로 고정한다.\n@@ -62,6 +63,7 @@ class AuthenticationServiceTest {\n             mock(SecurityContextRepository.class);\n     private final SessionAuthenticationStrategy sessionAuthenticationStrategy =\n             mock(SessionAuthenticationStrategy.class);\n+    private final CsrfTokenRepository csrfTokenRepository = mock(CsrfTokenRepository.class);\n \n     private final MockHttpServletRequest request = new MockHttpServletRequest();\n     private final MockHttpServletResponse response = new MockHttpServletResponse();\n@@ -78,6 +80,7 @@ class AuthenticationServiceTest {\n                         passwordEncoder,\n                         securityContextRepository,\n                         sessionAuthenticationStrategy,\n+                        csrfTokenRepository,\n                         Clock.fixed(NOW, ZoneOffset.UTC));\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,233 @@\n+package com.ssafy.thorp.account.presentation;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import jakarta.servlet.http.Cookie;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.MvcResult;\n+\n+/**\n+ * 로그아웃({@code DELETE /auth/sessions/current})을 실제 PostgreSQL 세션 저장소 위에서 호출한다.\n+ *\n+ * <p>여기서 확인하려는 것은 \"화면에서 사라졌다\"가 아니라 <b>서버 세션이 정말 없어졌다</b>는 것이다. 응답만 204로 만들고 세션 행을 남겨 두면, 쿠키를 보관한\n+ * 누군가가 로그아웃한 사용자로 계속 요청할 수 있다. 그래서 매번 {@code spring_session} 행과 {@code /auth/me} 재요청으로 확인한다.\n+ *\n+ * <p>브라우저가 하는 일을 그대로 따라 한다 — {@code GET /auth/csrf}로 받은 쿠키를 헤더로 돌려보내고 로그인 응답의 세션 쿠키를 다음 요청에 싣는다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class LogoutIntegrationTest extends PostgresTestSupport {\n+\n+    private static final String EMAIL = \"logout-it-member@example.com\";\n+    private static final String OTHER_EMAIL = \"logout-it-other@example.com\";\n+    private static final String PASSWORD = \"password123\";\n+    private static final String NICKNAME = \"로그아웃회원\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private UserRepository userRepository;\n+    @Autowired private PasswordEncoder passwordEncoder;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @BeforeEach\n+    void setUp() {\n+        jdbcTemplate.update(\"delete from spring_session\");\n+        jdbcTemplate.update(\"delete from users where email like 'logout-it-%'\");\n+        // 전화번호도 고유 제약이라 다른 테스트 클래스가 남긴 행과 겹치지 않는 대역을 쓴다.\n+        saveUser(EMAIL, \"01044440001\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그아웃은 204로 끝나고 서버 세션과 세션 쿠키를 함께 없앤다\")\n+    void logoutEndsTheCurrentSession() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+        assertThat(sessionCount()).isEqualTo(1);\n+\n+        MvcResult result =\n+                mockMvc.perform(logout(session))\n+                        .andExpect(status().isNoContent())\n+                        .andExpect(content().string(\"\"))\n+                        .andReturn();\n+\n+        assertThat(sessionCount()).isZero();\n+\n+        Cookie expired = result.getResponse().getCookie(\"THORP_SESSION\");\n+        assertThat(expired).isNotNull();\n+        assertThat(expired.getMaxAge()).isZero();\n+        assertThat(expired.getValue()).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그아웃한 세션 쿠키로는 현재 사용자를 더 이상 조회할 수 없다\")\n+    void currentUserIsUnauthorizedAfterLogout() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+        mockMvc.perform(get(\"/auth/me\").cookie(session)).andExpect(status().isOk());\n+\n+        mockMvc.perform(logout(session)).andExpect(status().isNoContent());\n+\n+        mockMvc.perform(get(\"/auth/me\").cookie(session))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"))\n+                .andExpect(jsonPath(\"$.data\").doesNotExist());\n+    }\n+\n+    @Test\n+    @DisplayName(\"비로그인 상태의 로그아웃도 같은 204로 끝난다\")\n+    void anonymousLogoutIsAlsoNoContent() throws Exception {\n+        mockMvc.perform(logout(null))\n+                .andExpect(status().isNoContent())\n+                .andExpect(content().string(\"\"));\n+\n+        assertThat(sessionCount()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 세션 쿠키로 로그아웃을 되풀이해도 결과가 달라지지 않는다\")\n+    void logoutIsIdempotent() throws Exception {\n+        // 네트워크 오류로 응답을 확인하지 못한 FE는 같은 요청을 다시 보낸다(FR-009).\n+        // 두 번째 요청이 404나 401이 되면 FE는 '로그아웃 미확인'에서 빠져나올 방법이 없다.\n+        Cookie session = loginAndGetSessionCookie();\n+\n+        mockMvc.perform(logout(session)).andExpect(status().isNoContent());\n+        mockMvc.perform(logout(session)).andExpect(status().isNoContent());\n+        mockMvc.perform(logout(session)).andExpect(status().isNoContent());\n+\n+        assertThat(sessionCount()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그아웃은 요청한 세션만 끝내고 같은 계정의 다른 세션은 남긴다\")\n+    void logoutOnlyEndsTheRequestingSession() throws Exception {\n+        Cookie phone = loginAndGetSessionCookie();\n+        Cookie laptop = loginAndGetSessionCookie();\n+        assertThat(sessionCount()).isEqualTo(2);\n+\n+        mockMvc.perform(logout(phone)).andExpect(status().isNoContent());\n+\n+        assertThat(sessionCount()).isEqualTo(1);\n+        mockMvc.perform(get(\"/auth/me\").cookie(phone)).andExpect(status().isUnauthorized());\n+        mockMvc.perform(get(\"/auth/me\").cookie(laptop)).andExpect(status().isOk());\n+    }\n+\n+    @Test\n+    @DisplayName(\"다른 사용자의 로그아웃은 내 세션에 영향을 주지 않는다\")\n+    void logoutDoesNotTouchOtherUsersSessions() throws Exception {\n+        saveUser(OTHER_EMAIL, \"01044440002\");\n+        Cookie mine = loginAndGetSessionCookie(EMAIL);\n+        Cookie theirs = loginAndGetSessionCookie(OTHER_EMAIL);\n+\n+        mockMvc.perform(logout(theirs)).andExpect(status().isNoContent());\n+\n+        mockMvc.perform(get(\"/auth/me\").cookie(mine))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.email\").value(EMAIL));\n+    }\n+\n+    @Test\n+    @DisplayName(\"CSRF 토큰 없는 로그아웃은 403으로 끝나고 세션을 남겨 둔다\")\n+    void logoutWithoutCsrfTokenIsRejected() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+\n+        mockMvc.perform(delete(\"/auth/sessions/current\").cookie(session))\n+                .andExpect(status().isForbidden())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"CSRF_TOKEN_INVALID\"));\n+\n+        assertThat(sessionCount()).isEqualTo(1);\n+        mockMvc.perform(get(\"/auth/me\").cookie(session)).andExpect(status().isOk());\n+    }\n+\n+    /** 브라우저처럼 CSRF 쿠키를 먼저 받아 헤더로 돌려보내는 로그아웃 요청을 만든다. 세션 쿠키가 {@code null}이면 비로그인 요청이다. */\n+    private org.springframework.test.web.servlet.RequestBuilder logout(Cookie session)\n+            throws Exception {\n+        Cookie csrf = freshCsrfToken();\n+        var request =\n+                delete(\"/auth/sessions/current\")\n+                        .cookie(csrf)\n+                        .header(\"X-XSRF-TOKEN\", csrf.getValue());\n+        return session == null ? request : request.cookie(session);\n+    }\n+\n+    private Cookie freshCsrfToken() throws Exception {\n+        Cookie csrf =\n+                mockMvc.perform(get(\"/auth/csrf\"))\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"XSRF-TOKEN\");\n+        assertThat(csrf).isNotNull();\n+        return csrf;\n+    }\n+\n+    private Cookie loginAndGetSessionCookie() throws Exception {\n+        return loginAndGetSessionCookie(EMAIL);\n+    }\n+\n+    private Cookie loginAndGetSessionCookie(String email) throws Exception {\n+        Cookie csrf = freshCsrfToken();\n+        Cookie session =\n+                mockMvc.perform(\n+                                post(\"/auth/sessions\")\n+                                        .cookie(csrf)\n+                                        .header(\"X-XSRF-TOKEN\", csrf.getValue())\n+                                        .contentType(MediaType.APPLICATION_JSON)\n+                                        .content(\n+                                                \"{\\\"email\\\":\\\"%s\\\",\\\"password\\\":\\\"%s\\\"}\"\n+                                                        .formatted(email, PASSWORD)))\n+                        .andExpect(status().isOk())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"THORP_SESSION\");\n+        assertThat(session).isNotNull();\n+        return session;\n+    }\n+\n+    private Integer sessionCount() {\n+        return jdbcTemplate.queryForObject(\"select count(*) from spring_session\", Integer.class);\n+    }\n+\n+    private User saveUser(String email, String phoneNumber) {\n+        return userRepository.save(\n+                new User(\n+                        null,\n+                        email,\n+                        passwordEncoder.encode(PASSWORD),\n+                        NICKNAME,\n+                        phoneNumber,\n+                        null,\n+                        UserStatus.ACTIVE,\n+                        false,\n+                        false,\n+                        false,\n+                        null,\n+                        null,\n+                        null,\n+                        null));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,379 @@\n+package com.ssafy.thorp.account.security;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import ch.qos.logback.classic.Logger;\n+import ch.qos.logback.classic.spi.ILoggingEvent;\n+import ch.qos.logback.core.read.ListAppender;\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import jakarta.servlet.http.Cookie;\n+import java.io.IOException;\n+import java.io.InputStream;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Duration;\n+import java.time.Instant;\n+import java.util.ArrayList;\n+import java.util.LinkedHashSet;\n+import java.util.List;\n+import java.util.Locale;\n+import java.util.Set;\n+import java.util.regex.Matcher;\n+import java.util.regex.Pattern;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.MvcResult;\n+import org.springframework.test.web.servlet.RequestBuilder;\n+\n+/**\n+ * 세션이 언제 사라지고 무엇이 남는지를 실제 저장소 위에서 고정한다.\n+ *\n+ * <p>로그인·로그아웃은 각자의 테스트가 지키고, 여기서는 그 사이의 생명주기를 본다 — 아무 요청이 없을 때의 만료, 인증 경계에서의 CSRF 토큰 교체, 로그인 시 식별자\n+ * 폐기, 로그에 남는 것, 그리고 이 모든 것이 올라탄 마이그레이션 스키마다.\n+ *\n+ * <p>만료는 30분을 기다려 확인할 수 없으므로 세션 행의 마지막 접근 시각을 과거로 밀어 재현한다. Spring Session은 세션을 읽을 때마다 그 값으로 만료를\n+ * 판정하므로, 시간을 앞당기는 것과 같은 경로를 지난다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class AuthSessionLifecycleIntegrationTest extends PostgresTestSupport {\n+\n+    /** Spring Session JDBC가 직접 들고 다니는 공식 PostgreSQL 스키마. 마이그레이션은 이것과 같은 모양이어야 한다. */\n+    private static final String OFFICIAL_SCHEMA_SCRIPT =\n+            \"org/springframework/session/jdbc/schema-postgresql.sql\";\n+\n+    private static final Duration EXPECTED_TIMEOUT = Duration.ofMinutes(30);\n+\n+    private static final String EMAIL = \"lifecycle-it-member@example.com\";\n+    private static final String PASSWORD = \"password123\";\n+    private static final String NICKNAME = \"생명주기회원\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private UserRepository userRepository;\n+    @Autowired private PasswordEncoder passwordEncoder;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private Long userId;\n+\n+    @BeforeEach\n+    void setUp() {\n+        jdbcTemplate.update(\"delete from spring_session\");\n+        jdbcTemplate.update(\"delete from users where email like 'lifecycle-it-%'\");\n+        userId = saveUser().getId();\n+    }\n+\n+    @Test\n+    @DisplayName(\"세션은 마지막 요청으로부터 30분 동안만 유효하다\")\n+    void sessionCarriesTheThirtyMinuteInactivityWindow() throws Exception {\n+        loginAndGetSessionCookie();\n+\n+        Integer maxInactiveInterval =\n+                jdbcTemplate.queryForObject(\n+                        \"select max_inactive_interval from spring_session\", Integer.class);\n+\n+        assertThat(maxInactiveInterval).isEqualTo((int) EXPECTED_TIMEOUT.toSeconds());\n+    }\n+\n+    @Test\n+    @DisplayName(\"30분 넘게 요청이 없던 세션은 만료되어 401이 되고 저장소에서도 사라진다\")\n+    void idleSessionExpiresAndIsRemoved() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+        mockMvc.perform(get(\"/auth/me\").cookie(session)).andExpect(status().isOk());\n+\n+        idleFor(EXPECTED_TIMEOUT.plusMinutes(1));\n+\n+        mockMvc.perform(get(\"/auth/me\").cookie(session))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"));\n+\n+        assertThat(sessionCount()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"만료 직전까지 쉬었던 세션은 아직 살아 있고, 그 요청이 만료 시계를 다시 감는다\")\n+    void requestBeforeTheDeadlineKeepsTheSessionAlive() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+\n+        idleFor(EXPECTED_TIMEOUT.minusMinutes(1));\n+        mockMvc.perform(get(\"/auth/me\").cookie(session)).andExpect(status().isOk());\n+\n+        // 방금 요청으로 마지막 접근 시각이 갱신됐으므로 29분을 더 쉬어도 아직 만료가 아니다.\n+        idleFor(EXPECTED_TIMEOUT.minusMinutes(1));\n+        mockMvc.perform(get(\"/auth/me\").cookie(session)).andExpect(status().isOk());\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그인은 브라우저가 들고 있던 CSRF 토큰을 새 값으로 바꾼다\")\n+    void loginReplacesTheCsrfTokenTheBrowserHeld() throws Exception {\n+        Cookie before = freshCsrfToken();\n+\n+        MvcResult result = mockMvc.perform(login(before)).andExpect(status().isOk()).andReturn();\n+\n+        Cookie after = result.getResponse().getCookie(\"XSRF-TOKEN\");\n+        assertThat(after).isNotNull();\n+        assertThat(after.getValue()).isNotBlank().isNotEqualTo(before.getValue());\n+        assertThat(after.isHttpOnly()).isFalse();\n+        assertThat(after.getPath()).isEqualTo(\"/\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그아웃도 새 CSRF 토큰을 함께 내려 다음 요청이 바로 가능하다\")\n+    void logoutIssuesAFreshCsrfToken() throws Exception {\n+        Cookie session = loginAndGetSessionCookie();\n+        Cookie before = freshCsrfToken();\n+\n+        MvcResult result =\n+                mockMvc.perform(\n+                                delete(\"/auth/sessions/current\")\n+                                        .cookie(session, before)\n+                                        .header(\"X-XSRF-TOKEN\", before.getValue()))\n+                        .andExpect(status().isNoContent())\n+                        .andReturn();\n+\n+        Cookie after = result.getResponse().getCookie(\"XSRF-TOKEN\");\n+        assertThat(after).isNotNull();\n+        assertThat(after.getValue()).isNotBlank().isNotEqualTo(before.getValue());\n+\n+        // 새 토큰만으로 다음 상태 변경 요청이 통과한다 — FE가 /auth/csrf를 다시 부르지 않아도 된다.\n+        mockMvc.perform(\n+                        delete(\"/auth/sessions/current\")\n+                                .cookie(after)\n+                                .header(\"X-XSRF-TOKEN\", after.getValue()))\n+                .andExpect(status().isNoContent());\n+    }\n+\n+    @Test\n+    @DisplayName(\"로그인은 그때까지 쓰던 세션 식별자를 폐기하고 행도 남기지 않는다\")\n+    void loginDiscardsThePreviousSessionIdentifier() throws Exception {\n+        Cookie first = loginAndGetSessionCookie();\n+\n+        Cookie rotated =\n+                mockMvc.perform(login(freshCsrfToken()).cookie(first))\n+                        .andExpect(status().isOk())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"THORP_SESSION\");\n+\n+        assertThat(rotated).isNotNull();\n+        assertThat(rotated.getValue()).isNotEqualTo(first.getValue());\n+        assertThat(sessionCount()).isEqualTo(1);\n+        assertThat(sessionRowsFor(first.getValue())).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"인증 로그에는 이메일·비밀번호·세션 식별자가 남지 않는다\")\n+    void authenticationLogsCarryNoCredentialsOrSessionIdentifiers() throws Exception {\n+        List<String> messages = new ArrayList<>();\n+        Logger root = (Logger) LoggerFactory.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);\n+        ListAppender<ILoggingEvent> appender = new ListAppender<>();\n+        appender.start();\n+        root.addAppender(appender);\n+\n+        Cookie session;\n+        try {\n+            // 로그가 실제로 쓰이는 경로를 모두 지난다. 거절 경로가 특히 중요하다 — 사유를 남기면서\n+            // 무엇을 함께 남기는지가 여기서 갈린다.\n+            mockMvc.perform(login(freshCsrfToken(), EMAIL, \"wrong-password\"))\n+                    .andExpect(status().isUnauthorized());\n+            mockMvc.perform(login(freshCsrfToken(), \"lifecycle-it-nobody@example.com\", PASSWORD))\n+                    .andExpect(status().isUnauthorized());\n+            session = loginAndGetSessionCookie();\n+            mockMvc.perform(logout(session)).andExpect(status().isNoContent());\n+        } finally {\n+            root.detachAppender(appender);\n+            appender.stop();\n+        }\n+\n+        appender.list.forEach(event -> messages.add(event.getFormattedMessage()));\n+\n+        assertThat(messages).isNotEmpty();\n+        assertThat(messages).noneMatch(message -> message.contains(session.getValue()));\n+        assertThat(messages).noneMatch(message -> message.contains(EMAIL));\n+        assertThat(messages).noneMatch(message -> message.contains(PASSWORD));\n+        assertThat(messages).noneMatch(message -> message.contains(\"wrong-password\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"마이그레이션이 만든 세션 스키마는 Spring Session이 요구하는 표와 열을 모두 갖는다\")\n+    void migrationMatchesTheSchemaSpringSessionExpects() throws Exception {\n+        // 운영은 Flyway만 스키마를 만든다(initialize-schema: never). Spring Session을 올릴 때 열이\n+        // 하나 늘면 운영에서만 조용히 깨지므로, 라이브러리가 들고 있는 공식 스크립트와 대조한다.\n+        var expected = expectedSessionSchema();\n+        assertThat(expected).containsKeys(\"spring_session\", \"spring_session_attributes\");\n+\n+        expected.forEach(\n+                (table, columns) ->\n+                        assertThat(liveColumnsOf(table))\n+                                .as(\"마이그레이션의 %s 열\", table)\n+                                .containsAll(columns));\n+    }\n+\n+    @Test\n+    @DisplayName(\"세션 저장소는 마이그레이션이 만든 표에 인증 상태를 그대로 쓴다\")\n+    void sessionRepositoryWritesIntoTheMigratedTables() throws Exception {\n+        // 위 대조가 통과해도 앱이 다른 표를 쓰고 있으면 의미가 없다. 로그인 한 번으로 실제 기록을 확인한다.\n+        loginAndGetSessionCookie();\n+\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select principal_name from spring_session\", String.class))\n+                .isEqualTo(String.valueOf(userId));\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"select count(*) from spring_session_attributes\"\n+                                        + \" where attribute_name = ?\",\n+                                Integer.class,\n+                                \"SPRING_SECURITY_CONTEXT\"))\n+                .isEqualTo(1);\n+    }\n+\n+    /** 세션이 마지막으로 쓰인 시각을 과거로 민다. Spring Session은 이 값으로 만료를 판정한다. */\n+    private void idleFor(Duration idle) {\n+        long lastAccess = Instant.now().minus(idle).toEpochMilli();\n+        jdbcTemplate.update(\n+                \"update spring_session set last_access_time = ?,\"\n+                        + \" expiry_time = ? + max_inactive_interval * 1000\",\n+                lastAccess,\n+                lastAccess);\n+    }\n+\n+    /** {@value #OFFICIAL_SCHEMA_SCRIPT}의 {@code CREATE TABLE}에서 표 이름과 열 이름을 읽는다. */\n+    private static java.util.Map<String, Set<String>> expectedSessionSchema() throws IOException {\n+        java.util.Map<String, Set<String>> schema = new java.util.LinkedHashMap<>();\n+        String script = readOfficialSchemaScript();\n+\n+        Matcher tables =\n+                Pattern.compile(\n+                                \"CREATE TABLE\\\\s+(\\\\w+)\\\\s*\\\\((.*?)\\\\n\\\\s*\\\\)\",\n+                                Pattern.DOTALL | Pattern.CASE_INSENSITIVE)\n+                        .matcher(script);\n+\n+        while (tables.find()) {\n+            Set<String> columns = new LinkedHashSet<>();\n+            for (String line : tables.group(2).split(\",\\\\s*\\\\n\")) {\n+                String first = line.strip().split(\"\\\\s+\")[0].toLowerCase(Locale.ROOT);\n+                if (!first.isEmpty() && !\"constraint\".equals(first)) {\n+                    columns.add(first);\n+                }\n+            }\n+            schema.put(tables.group(1).toLowerCase(Locale.ROOT), columns);\n+        }\n+        return schema;\n+    }\n+\n+    private static String readOfficialSchemaScript() throws IOException {\n+        try (InputStream script =\n+                JdbcIndexedSessionRepository.class\n+                        .getClassLoader()\n+                        .getResourceAsStream(OFFICIAL_SCHEMA_SCRIPT)) {\n+            assertThat(script).as(\"Spring Session의 %s\", OFFICIAL_SCHEMA_SCRIPT).isNotNull();\n+            return new String(script.readAllBytes(), StandardCharsets.UTF_8);\n+        }\n+    }\n+\n+    private List<String> liveColumnsOf(String table) {\n+        return jdbcTemplate.queryForList(\n+                \"select column_name from information_schema.columns\"\n+                        + \" where table_schema = current_schema() and table_name = ?\",\n+                String.class,\n+                table);\n+    }\n+\n+    private RequestBuilder logout(Cookie session) throws Exception {\n+        Cookie csrf = freshCsrfToken();\n+        return delete(\"/auth/sessions/current\")\n+                .cookie(session, csrf)\n+                .header(\"X-XSRF-TOKEN\", csrf.getValue());\n+    }\n+\n+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder login(\n+            Cookie csrf) {\n+        return login(csrf, EMAIL, PASSWORD);\n+    }\n+\n+    private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder login(\n+            Cookie csrf, String email, String password) {\n+        return post(\"/auth/sessions\")\n+                .cookie(csrf)\n+                .header(\"X-XSRF-TOKEN\", csrf.getValue())\n+                .contentType(MediaType.APPLICATION_JSON)\n+                .content(\"{\\\"email\\\":\\\"%s\\\",\\\"password\\\":\\\"%s\\\"}\".formatted(email, password));\n+    }\n+\n+    private Cookie freshCsrfToken() throws Exception {\n+        Cookie csrf =\n+                mockMvc.perform(get(\"/auth/csrf\"))\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"XSRF-TOKEN\");\n+        assertThat(csrf).isNotNull();\n+        return csrf;\n+    }\n+\n+    private Cookie loginAndGetSessionCookie() throws Exception {\n+        Cookie session =\n+                mockMvc.perform(login(freshCsrfToken()))\n+                        .andExpect(status().isOk())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"THORP_SESSION\");\n+        assertThat(session).isNotNull();\n+        return session;\n+    }\n+\n+    private Integer sessionCount() {\n+        return jdbcTemplate.queryForObject(\"select count(*) from spring_session\", Integer.class);\n+    }\n+\n+    private Integer sessionRowsFor(String sessionId) {\n+        return jdbcTemplate.queryForObject(\n+                \"select count(*) from spring_session where session_id = ?\",\n+                Integer.class,\n+                sessionId);\n+    }\n+\n+    private User saveUser() {\n+        return userRepository.save(\n+                new User(\n+                        null,\n+                        EMAIL,\n+                        passwordEncoder.encode(PASSWORD),\n+                        NICKNAME,\n+                        \"01011112222\",\n+                        null,\n+                        UserStatus.ACTIVE,\n+                        false,\n+                        false,\n+                        false,\n+                        null,\n+                        null,\n+                        null,\n+                        null));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,145 @@\n+package com.ssafy.thorp.account.security;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.account.domain.model.UserStatus;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import jakarta.servlet.http.Cookie;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * 프록시 뒤에서 인증 쿠키에 {@code Secure}가 붙는지 확인한다.\n+ *\n+ * <p>운영은 nginx가 TLS를 끝내고 <b>평문 HTTP</b>로 백엔드에 넘긴다. 그래서 톰캣이 보는 요청은 그냥 http이고, 아무 설정이 없으면 {@code\n+ * request.isSecure()}가 false다. 세션 쿠키는 {@code server.servlet.session.cookie.secure=true}로 못 박아 두었지만\n+ * <b>XSRF-TOKEN 쿠키는 그 값을 요청이 HTTPS인지 보고 정한다</b>({@code CookieCsrfTokenRepository}). 즉 {@code\n+ * forward-headers-strategy}가 없으면 운영에서만 조용히 {@code Secure} 없는 CSRF 쿠키가 나간다.\n+ *\n+ * <p>이 테스트가 운영과 같은 두 설정을 켜고 {@code X-Forwarded-Proto}를 직접 보내는 이유가 그것이다 — 배포해 봐야 드러나는 종류의 사고라서 여기서\n+ * 잡는다. 실제 값이 프로필에 들어 있는지는 {@code ApplicationProfileConfigTest}가 따로 지킨다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            // 운영(application-prod.yml)과 같은 구성.\n+            \"server.forward-headers-strategy=framework\",\n+            \"server.servlet.session.cookie.secure=true\",\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class ProxySecureCookieIntegrationTest extends PostgresTestSupport {\n+\n+    private static final String FORWARDED_PROTO = \"X-Forwarded-Proto\";\n+\n+    private static final String EMAIL = \"proxy-it-member@example.com\";\n+    private static final String PASSWORD = \"password123\";\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private UserRepository userRepository;\n+    @Autowired private PasswordEncoder passwordEncoder;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @BeforeEach\n+    void setUp() {\n+        jdbcTemplate.update(\"delete from spring_session\");\n+        jdbcTemplate.update(\"delete from users where email like 'proxy-it-%'\");\n+        saveUser();\n+    }\n+\n+    @Test\n+    @DisplayName(\"HTTPS 프록시 뒤에서 발급된 CSRF 쿠키에는 Secure가 붙는다\")\n+    void csrfCookieIsSecureBehindAnHttpsProxy() throws Exception {\n+        Cookie csrf = csrfToken(true);\n+\n+        assertThat(csrf.getSecure()).isTrue();\n+        // Secure가 붙어도 SPA는 읽을 수 있어야 한다 — 읽어서 헤더로 되돌려 보내는 것이 이 방식의 전부다.\n+        assertThat(csrf.isHttpOnly()).isFalse();\n+    }\n+\n+    @Test\n+    @DisplayName(\"HTTPS 프록시 뒤에서 발급된 세션 쿠키에는 Secure와 HttpOnly가 함께 붙는다\")\n+    void sessionCookieIsSecureBehindAnHttpsProxy() throws Exception {\n+        Cookie csrf = csrfToken(true);\n+\n+        Cookie session =\n+                mockMvc.perform(\n+                                post(\"/auth/sessions\")\n+                                        .header(FORWARDED_PROTO, \"https\")\n+                                        .cookie(csrf)\n+                                        .header(\"X-XSRF-TOKEN\", csrf.getValue())\n+                                        .contentType(MediaType.APPLICATION_JSON)\n+                                        .content(\n+                                                \"{\\\"email\\\":\\\"%s\\\",\\\"password\\\":\\\"%s\\\"}\"\n+                                                        .formatted(EMAIL, PASSWORD)))\n+                        .andExpect(status().isOk())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"THORP_SESSION\");\n+\n+        assertThat(session).isNotNull();\n+        assertThat(session.getSecure()).isTrue();\n+        assertThat(session.isHttpOnly()).isTrue();\n+    }\n+\n+    @Test\n+    @DisplayName(\"전달 헤더가 없는 평문 요청의 CSRF 쿠키에는 Secure를 붙이지 않는다\")\n+    void csrfCookieIsNotSecureOnPlainHttp() throws Exception {\n+        // 붙이면 브라우저가 http 로컬 개발 환경에서 쿠키를 버려 로그인 자체가 되지 않는다.\n+        // Secure 판정이 프록시 헤더에서 온다는 것을 확인하는 반대편 근거이기도 하다.\n+        assertThat(csrfToken(false).getSecure()).isFalse();\n+    }\n+\n+    private Cookie csrfToken(boolean behindHttpsProxy) throws Exception {\n+        var request = get(\"/auth/csrf\");\n+        if (behindHttpsProxy) {\n+            request = request.header(FORWARDED_PROTO, \"https\");\n+        }\n+\n+        Cookie csrf =\n+                mockMvc.perform(request)\n+                        .andExpect(status().isNoContent())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getCookie(\"XSRF-TOKEN\");\n+        assertThat(csrf).isNotNull();\n+        return csrf;\n+    }\n+\n+    private User saveUser() {\n+        return userRepository.save(\n+                new User(\n+                        null,\n+                        EMAIL,\n+                        passwordEncoder.encode(PASSWORD),\n+                        \"프록시회원\",\n+                        \"01055550001\",\n+                        null,\n+                        UserStatus.ACTIVE,\n+                        false,\n+                        false,\n+                        false,\n+                        null,\n+                        null,\n+                        null,\n+                        null));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/security/ProxySecureCookieIntegrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/security/ProxySecureCookieIntegrationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -154,6 +154,25 @@ class ApplicationProfileConfigTest {\n                         });\n     }\n \n+    /**\n+     * 운영은 nginx가 TLS를 끝내고 평문으로 넘기므로 이 값이 없으면 {@code request.isSecure()}가 false다.\n+     *\n+     * <p>세션 쿠키는 위에서 {@code secure: true}로 못 박지만 XSRF-TOKEN 쿠키는 요청이 HTTPS인지 보고 정하기 때문에, 이 값이 빠지면\n+     * 운영에서만 {@code Secure} 없는 CSRF 쿠키가 나간다. 동작 자체는 {@code ProxySecureCookieIntegrationTest}가 지킨다.\n+     */\n+    @Test\n+    void prodProfileTrustsTheReverseProxyForwardedHeaders() {\n+        prodContextRunner()\n+                .run(\n+                        context -> {\n+                            assertThat(context).hasNotFailed();\n+                            assertThat(\n+                                            context.getEnvironment()\n+                                                    .getProperty(\"server.forward-headers-strategy\"))\n+                                    .isEqualTo(\"framework\");\n+                        });\n+    }\n+\n     private ApplicationContextRunner prodContextRunner() {\n         return contextRunner.withPropertyValues(\n                 \"spring.profiles.active=prod\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -134,12 +134,12 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n ### Tests for User Story 4\n \n-- [ ] T042 [P] [US4] Add failing integration tests for current-session invalidation, idempotent anonymous logout, cookie expiry, and post-logout 401 in `backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java`\n+- [x] T042 [P] [US4] Add failing integration tests for current-session invalidation, idempotent anonymous logout, cookie expiry, and post-logout 401 in `backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java`\n - [x] T043 [P] [US4] Add failing provider and header tests for logout start, 204 completion, network uncertainty, retry, recheck, and immediate data removal in `frontend/src/auth/LogoutFlow.test.tsx`\n \n ### Implementation for User Story 4\n \n-- [ ] T044 [US4] Implement idempotent current-session logout and JSON security behavior in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java` and `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T042\n+- [x] T044 [US4] Implement idempotent current-session logout and JSON security behavior in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java` and `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T042\n - [x] T045 [P] [US4] Add current-session logout operation to `frontend/src/api/auth.ts`\n - [x] T046 [US4] Implement `logoutUnconfirmed`, retry, and current-user recheck transitions with immediate credential-free state clearing in `frontend/src/auth/AuthProvider.tsx` after T043 and T045\n - [x] T047 [US4] Add accessible logout, retry, and status UI without blocking public navigation in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n@@ -156,14 +156,14 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n ### Tests for User Story 5\n \n-- [ ] T048 [P] [US5] Add failing Backend tests for 30-minute inactivity expiry, CSRF refresh, session fixation, sanitized logs, and migration compatibility in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java`\n+- [x] T048 [P] [US5] Add failing Backend tests for 30-minute inactivity expiry, CSRF refresh, session fixation, sanitized logs, and migration compatibility in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java`\n - [x] T049 [P] [US5] Add failing FE tests for authenticated 401 expiry, CSRF refresh without automatic mutation replay, stale-response rejection, and public-page availability in `frontend/src/auth/AuthRecovery.test.tsx`\n - [x] T050 [P] [US5] Add failing browser-state tests for tab reactivation, protected-entry recheck, back-forward cache restoration, and stale protected-data clearing in `frontend/src/auth/AuthRevalidation.test.tsx`\n - [x] T051 [P] [US5] Add failing accessibility and 360px responsive tests for pending, error, expired, and logout-unconfirmed states in `frontend/src/pages/AuthAccessibility.test.tsx`\n \n ### Implementation for User Story 5\n \n-- [ ] T052 [US5] Complete session expiry, CSRF refresh, safe security logging, and production cookie behavior in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/resources/application-prod.yml` to satisfy T048\n+- [x] T052 [US5] Complete session expiry, CSRF refresh, safe security logging, and production cookie behavior in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/resources/application-prod.yml` to satisfy T048\n - [x] T053 [US5] Implement request identity/abort handling, authenticated 401 expiry, one-time CSRF refresh, and user-driven retry without automatic mutation replay in `frontend/src/api/client.ts` and `frontend/src/auth/AuthProvider.tsx`\n - [x] T054 [US5] Revalidate authentication on tab activation, protected-route entry, and page-cache restoration while leaving public screens available in `frontend/src/auth/AuthProvider.tsx` and `frontend/src/auth/ProtectedRoute.tsx`\n - [x] T055 [US5] Complete focus movement, live status announcements, reduced-motion-safe feedback, and 360px auth layouts in `frontend/src/components/auth/AuthStatus.tsx`, `frontend/src/pages/LoginPage.module.css`, and `frontend/src/pages/SignupPage.module.css`\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2201044,
+      "head_commit_sha": "988572c3cad9daee149fb4864a7fe3817d3b736e",
+      "base_commit_sha": "7accca2725a28309749a1e65e6ec9358f825e7d9",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:08:25.341+09:00",
+      "merge_request_id": 945211,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "333bd2e0cd005f6ea0f63c6243533229c1368d40",
+      "commits": [
+        {
+          "id": "988572c3cad9daee149fb4864a7fe3817d3b736e",
+          "short_id": "988572c3",
+          "created_at": "2026-09-15T16:56:13.000+09:00",
+          "parent_ids": [
+            "7accca2725a28309749a1e65e6ec9358f825e7d9"
+          ],
+          "title": "feat(be): 로그아웃 및 세션 생명주기 구현",
+          "message": "feat(be): 로그아웃 및 세션 생명주기 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T16:56:13.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T16:56:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/988572c3cad9daee149fb4864a7fe3817d3b736e"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2810521": []
+  }
+}

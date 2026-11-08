@@ -1,0 +1,923 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959245,
+    "iid": 318,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 기간의 KOSPI를 시작 금액으로 환산해 지수 비교로 내려준다",
+    "description": "## 작업 내용 요약\n\n결과 화면의 KOSPI 비교는 BE가 항상 `unavailable`을 돌려주는 스텁이라 비어 있었다. 이제 결과 기간의 KOSPI 종가를 읽어, 시작 금액으로 첫 거래일에 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치 계열을 내려준다. 계약 모양과 FE는 그대로다.\n\n## 관련 티켓\n\n- S15P21E205-428 (Story 300 relates, Epic 30)\n- spec 005 FR-017 · T087/T088\n\n## 주요 변경 사항\n\n- **001** `IndexSeriesRepository.findCloses(datasetId, indexCode, from, to)` — `daily_index` 기간 종가를 날짜 오름차순으로 읽는다. 읽기 전용이며 빠진 날은 채우지 않는다.\n- **005** `GET /results/{token}/index-comparison`\n  - 결과가 계산에 쓴 자료 버전(`versions.data`)의 KOSPI를 `effectiveStart~effectiveEnd`(양끝 포함)에서 읽는다.\n  - `value = initialCash × 종가 / 첫 종가`, 소수 둘째 자리(HALF_EVEN) 문자열. 첫 종가는 범위 안 첫 관측치.\n  - 기간·시작 금액·자료 버전 중 하나라도 없거나 관측치가 없으면 `available:false, reason:INDEX_SERIES_UNAVAILABLE` (종전과 같음).\n- 계약 문서: `specs/005-result-comparison/contracts/result-api.md`, `docs/specs/result-api/README.md` §5, tasks B08 메모.\n\n## 테스트\n\n- `./gradlew spotlessApply build` 통과 — 2031 tests, failures 0. skipped 4는 라이브·성능·Docker 필수 옵트인 검사(무관).\n- 환산·결측 첫날·관측치 없음·자료 버전/금액 없음(단위), SQL 범위·정렬·다른 지수 제외(IT), 공개 경로 응답(`ResultApiIT`, 씨앗 KOSPI가 상수라 전 구간 = 시작 금액).\n\n## 리뷰 포인트\n\n- **자료 버전을 \"지금 판\"이 아니라 결과의 `versions.data`로 고정했다.** 자료가 다시 적재돼도 같은 결과 주소가 같은 지수 선을 보이게 하려는 것(원칙 VIII). 옛 판에 KOSPI 행이 없으면 비활성이 된다.\n- 가격지수라 배당·거래 비용이 없다. 화면의 \"참고\" 표지로 충분한지.\n- `result → sector` 저장소 의존이 새로 생겼다(ArchitectureTest 통과). 001 담당 리뷰 부탁.\n\n## 전달만 하는 것\n\n- 다음 FE 티켓에서 KOSPI를 하단 탭이 아니라 '비교 대상 고르기' 팝오버의 참고선(`?index=KOSPI`, 비교 3개 한도와 별도)으로 옮긴다. spec 005 FR-017·T077·T080 문구를 그 MR에서 고친다.\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T17:39:09.207+09:00",
+    "updated_at": "2026-09-24T17:50:00.755+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T17:50:00.419+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/428-index-comparison",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+    "merge_commit_sha": "5fb99267be2e4443cee710669186729024638450",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T17:39:10.720+09:00",
+    "reference": "!318",
+    "references": {
+      "short": "!318",
+      "relative": "!318",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!318"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/318",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959245,
+    "iid": 318,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 기간의 KOSPI를 시작 금액으로 환산해 지수 비교로 내려준다",
+    "description": "## 작업 내용 요약\n\n결과 화면의 KOSPI 비교는 BE가 항상 `unavailable`을 돌려주는 스텁이라 비어 있었다. 이제 결과 기간의 KOSPI 종가를 읽어, 시작 금액으로 첫 거래일에 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치 계열을 내려준다. 계약 모양과 FE는 그대로다.\n\n## 관련 티켓\n\n- S15P21E205-428 (Story 300 relates, Epic 30)\n- spec 005 FR-017 · T087/T088\n\n## 주요 변경 사항\n\n- **001** `IndexSeriesRepository.findCloses(datasetId, indexCode, from, to)` — `daily_index` 기간 종가를 날짜 오름차순으로 읽는다. 읽기 전용이며 빠진 날은 채우지 않는다.\n- **005** `GET /results/{token}/index-comparison`\n  - 결과가 계산에 쓴 자료 버전(`versions.data`)의 KOSPI를 `effectiveStart~effectiveEnd`(양끝 포함)에서 읽는다.\n  - `value = initialCash × 종가 / 첫 종가`, 소수 둘째 자리(HALF_EVEN) 문자열. 첫 종가는 범위 안 첫 관측치.\n  - 기간·시작 금액·자료 버전 중 하나라도 없거나 관측치가 없으면 `available:false, reason:INDEX_SERIES_UNAVAILABLE` (종전과 같음).\n- 계약 문서: `specs/005-result-comparison/contracts/result-api.md`, `docs/specs/result-api/README.md` §5, tasks B08 메모.\n\n## 테스트\n\n- `./gradlew spotlessApply build` 통과 — 2031 tests, failures 0. skipped 4는 라이브·성능·Docker 필수 옵트인 검사(무관).\n- 환산·결측 첫날·관측치 없음·자료 버전/금액 없음(단위), SQL 범위·정렬·다른 지수 제외(IT), 공개 경로 응답(`ResultApiIT`, 씨앗 KOSPI가 상수라 전 구간 = 시작 금액).\n\n## 리뷰 포인트\n\n- **자료 버전을 \"지금 판\"이 아니라 결과의 `versions.data`로 고정했다.** 자료가 다시 적재돼도 같은 결과 주소가 같은 지수 선을 보이게 하려는 것(원칙 VIII). 옛 판에 KOSPI 행이 없으면 비활성이 된다.\n- 가격지수라 배당·거래 비용이 없다. 화면의 \"참고\" 표지로 충분한지.\n- `result → sector` 저장소 의존이 새로 생겼다(ArchitectureTest 통과). 001 담당 리뷰 부탁.\n\n## 전달만 하는 것\n\n- 다음 FE 티켓에서 KOSPI를 하단 탭이 아니라 '비교 대상 고르기' 팝오버의 참고선(`?index=KOSPI`, 비교 3개 한도와 별도)으로 옮긴다. spec 005 FR-017·T077·T080 문구를 그 MR에서 고친다.\n\n## 남은 것\n\n- 없음.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T17:39:09.207+09:00",
+    "updated_at": "2026-09-24T17:50:00.755+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T17:50:00.419+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/428-index-comparison",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+    "merge_commit_sha": "5fb99267be2e4443cee710669186729024638450",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T17:39:10.720+09:00",
+    "reference": "!318",
+    "references": {
+      "short": "!318",
+      "relative": "!318",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!318"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/318",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-24T17:41:10.211+09:00",
+    "latest_build_finished_at": "2026-09-24T17:47:19.178+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221024,
+      "iid": 344,
+      "project_id": 1444456,
+      "sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+      "ref": "feat(be)/428-index-comparison",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T17:41:10.101+09:00",
+      "updated_at": "2026-09-24T17:47:19.185+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221024"
+    },
+    "head_pipeline": {
+      "id": 221024,
+      "iid": 344,
+      "project_id": 1444456,
+      "sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+      "ref": "feat(be)/428-index-comparison",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-24T17:41:10.101+09:00",
+      "updated_at": "2026-09-24T17:47:19.185+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221024",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-24T17:41:10.211+09:00",
+      "finished_at": "2026-09-24T17:47:19.178+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221024",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "head_sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+      "start_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e205bf0584bb07ba64f733619f059a8b0cdcff2b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866052,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T17:39:09.309+09:00",
+          "updated_at": "2026-09-24T17:39:09.313+09:00",
+          "system": true,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b205f04a80d533ffca6647c411224397336de859",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866053,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T17:39:09.328+09:00",
+          "updated_at": "2026-09-24T17:39:09.335+09:00",
+          "system": true,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5b82142ec7c86329cf20f8ed80648e75dc288a3b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866054,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T17:39:13.978+09:00",
+          "updated_at": "2026-09-24T17:39:13.990+09:00",
+          "system": true,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "952b70b42b881638cba02676b1e0e9a74a97f2f9",
+      "individual_note": false,
+      "resolvable": true,
+      "resolved": false,
+      "notes": [
+        {
+          "id": 2866055,
+          "type": "DiscussionNote",
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **재현성 및 원칙 준수 (`versions.data` 고정)**: 결과 계산에 사용된 데이터 버전(`versions.data`)을 명시적으로 고정하여, 이후 데이터가 재적재되더라도 과거 결과가 변하지 않도록 설계한 점이 돋보입니다 (원칙 VIII 훌륭한 반영).\n- **견고한 단위 및 통합 테스트**: `IndexSeriesRepositoryImplIT`와 `PublicResultServiceTest`를 통해 데이터 버전 분리, 날짜 범위 정렬, 결측치 처리, 예외 상황에 대한 검증이 구체적이고 꼼꼼하게 작성되어 있습니다.\n\n### 발견 사항\n\n- [Medium] `backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultService.java`\n  - **잠재적 `NullPointerException` 위험**: `detail.config()`에서 꺼낸 `effectiveStart`, `effectiveEnd`, `initialCash` 등이 문자열이 아닐 경우(예: 잘못된 타입으로 파싱되었거나 비정상 데이터) `toString()` 호출 시 문제가 없더라도, 이후 `LocalDate.parse(start.toString())`에서 `DateTimeParseException`이나 `null` 관련 예외가 발생할 수 있습니다. 타입 안정성을 위해 방어 로직이나 형 변환 검증을 강화하는 것을 권장합니다.\n\n- [Low] `backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/IndexSeriesRepositoryImpl.java`\n  - **네이티브 쿼리 매핑 안전성**: `entityManager.createNativeQuery(CLOSES_SQL)` 결과 객체 배열(`Object[]`) 매핑 시, DB 컬럼 순서 변경에 취약할 수 있습니다. `SELECT date, close` 순서가 명시되어 있어 현재는 안전하지만, 추후 유지보수 시 컬럼 추가로 인한 인덱스 오정렬 위험을 방지하기 위해 DTO 생성자 매핑이나 `Tuple` 사용을 고려해볼 수 있습니다.\n\n### 테스트 제안\n- **데이터 형식 오류 시나리오**: `effectiveStart` 또는 `effectiveEnd`의 날짜 포맷이 잘못되었거나(`yyyy-MM-dd` 형식이 아님), `initialCash`가 숫자가 아닌 문자열일 때 API가 내부 서버 오류(500) 대신 적절히 `INDEX_SERIES_UNAVAILABLE` 또는 잘못된 요청으로 처리하는지 검증하는 테스트 추가를 제안합니다.\n- **단일 관측치 시나리오**: `effectiveStart`와 `effectiveEnd` 기간 내에 KOSPI 관측치가 단 하루만 존재할 때, 첫 종가 기준 환산(`cash * close / first`)이 정상적으로 `initialCash` 값과 동일하게 떨어지는지 확인하는 테스트를 추가합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:9246ecca5611bf20c47cd50842e4c33a797e4585 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-24T17:39:20.015+09:00",
+          "updated_at": "2026-09-24T17:49:57.598+09:00",
+          "system": false,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        },
+        {
+          "id": 2866076,
+          "type": "DiscussionNote",
+          "body": "\\[Medium\\] 타입이나 형식이 틀릴 때 예외가 날 수 있다 → 고치지 않음\n\n- null은 이미 막혀 있어요. 네 값 중 하나라도 없으면 toString()을 부르기 전에 unavailable로 돌아가요.\n- 이 값들은 사용자가 보낸 원문이 아니라 서버가 저장한 값이에요.\n  - effectiveStart와 effectiveEnd는 서버가 LocalDate.toString()으로 직접 쓴 값이라 형식이 늘 yyyy-MM-dd예요(BacktestDetailResult.config).\n  - initialCash는 접수할 때 @Positive @Digits(integer=17, fraction=2) BigDecimal로 검증한 뒤 저장돼요(BacktestJobRequest:73).\n- 그래서 여기서 형식 오류가 난다면 저장 데이터가 깨졌다는 뜻이에요. 이걸 INDEX_SERIES_UNAVAILABLE로 바꾸면 \"그 기간에 지수 자료가 없다\"는 정상 응답으로 둔갑해서 데이터 손상이 조용히 묻혀요.\n- backend 규칙도 같은 방향이에요. \"최종 상태인데 결과 행이 없으면 500(불변식 위반)\"처럼, 불변식이 깨지면 숨기지 않고 500을 내요. 게다가 같은 config를 읽는 상세 API도 그 경우엔 이미 깨져 있을 거예요.\n\n\\[Low\\] 네이티브 쿼리의 Object\\[\\] 인덱스 매핑 → 고치지 않음\n\n- 바로 옆 PriceSeriesRepositoryImpl과 같은 패턴이에요. daily_index에 엔티티 매핑이 없어서 이렇게 읽어요.\n- SELECT 문(SELECT date, close)이 매핑 코드 바로 위 상수로 있어서, 열 순서는 DB 표가 아니라 이 SQL이 정해요. 표에 컬럼이 추가돼도 영향이 없어요.\n- 누가 SELECT 순서를 바꾸면 IndexSeriesRepositoryImplIT가 바로 깨져요. Tuple로 바꾸면 이 파일만 다른 패턴이 되는 게 오히려 비용이에요.\n\n테스트 제안\n\n- 형식 오류일 때 테스트 → 넣지 않아요. 위와 같은 이유로, 500이 맞는 동작이에요.\n- 관측치가 하루만 있을 때 → 이미 확인되고 있어요. 환산식에서 첫 점은 항상 cash × first / first라서, 하루짜리 계열은 결국 \"첫 점 = 시작 금액\"을 확인하는 셈이에요.\n  - 단위 테스트 indexComparisonScalesKospiToInitialCash에서 첫 점이 \"10000000.00\"인지 봐요.\n  - ResultApiIT에서는 전 구간이 \"11110000.00\"인지 봐요.",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T17:49:57.533+09:00",
+          "updated_at": "2026-09-24T17:49:57.533+09:00",
+          "system": false,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d7063fae370fcebd8e63fd9791bd4c6ffd4c00f0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866060,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>9246ecca - test(be): 지수 기간 조회가 다른 자료 버전의 행을 섞지 않는지 확인한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/318/diffs?diff_id=2248276&start_sha=8b940c69e9b4591354159c139649ef0477e0db3e)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T17:40:51.954+09:00",
+          "updated_at": "2026-09-24T17:40:51.957+09:00",
+          "system": true,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "907399a0f8697da0b283110f0e0bf92476304f68",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866077,
+          "type": null,
+          "body": "mentioned in commit 5fb99267be2e4443cee710669186729024638450",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T17:50:00.417+09:00",
+          "updated_at": "2026-09-24T17:50:00.422+09:00",
+          "system": true,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3749aa4e4a93ed4884007b558e5d7ddb1d5681d4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885014,
+          "type": null,
+          "body": "mentioned in commit 144f98e8d143dd47f3cd3e51b64f34047e7523bd",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.303+09:00",
+          "updated_at": "2026-10-13T15:16:08.309+09:00",
+          "system": true,
+          "noteable_id": 959245,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 318,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248276,
+      "head_commit_sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+      "base_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "start_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "created_at": "2026-09-24T17:40:51.713+09:00",
+      "merge_request_id": 959245,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "cbc630f19a1d135a0125482b11d33300dc4b7e81"
+    },
+    {
+      "id": 2248274,
+      "head_commit_sha": "8b940c69e9b4591354159c139649ef0477e0db3e",
+      "base_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "start_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "created_at": "2026-09-24T17:39:09.608+09:00",
+      "merge_request_id": 959245,
+      "state": "without_files",
+      "real_size": "11",
+      "patch_id_sha": "ae8305110c2df97a264a1d1d11413de2c58635fd"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248276,
+      "head_commit_sha": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+      "base_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "start_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "created_at": "2026-09-24T17:40:51.713+09:00",
+      "merge_request_id": 959245,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "cbc630f19a1d135a0125482b11d33300dc4b7e81",
+      "commits": [
+        {
+          "id": "9246ecca5611bf20c47cd50842e4c33a797e4585",
+          "short_id": "9246ecca",
+          "created_at": "2026-09-24T17:40:48.000+09:00",
+          "parent_ids": [
+            "8b940c69e9b4591354159c139649ef0477e0db3e"
+          ],
+          "title": "test(be): 지수 기간 조회가 다른 자료 버전의 행을 섞지 않는지 확인한다",
+          "message": "test(be): 지수 기간 조회가 다른 자료 버전의 행을 섞지 않는지 확인한다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:40:48.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:40:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9246ecca5611bf20c47cd50842e4c33a797e4585"
+        },
+        {
+          "id": "8b940c69e9b4591354159c139649ef0477e0db3e",
+          "short_id": "8b940c69",
+          "created_at": "2026-09-24T17:03:01.000+09:00",
+          "parent_ids": [
+            "8cb681b8f20705f6dbb60ee4e273964d026d1e7e"
+          ],
+          "title": "docs(be): 지수 비교 계약에 환산 규칙과 자료 버전 기준을 적는다",
+          "message": "docs(be): 지수 비교 계약에 환산 규칙과 자료 버전 기준을 적는다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:03:01.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:03:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8b940c69e9b4591354159c139649ef0477e0db3e"
+        },
+        {
+          "id": "8cb681b8f20705f6dbb60ee4e273964d026d1e7e",
+          "short_id": "8cb681b8",
+          "created_at": "2026-09-24T17:03:01.000+09:00",
+          "parent_ids": [
+            "067f9feebfebe163e0816961bf3750eb419f1cfc"
+          ],
+          "title": "feat(be): 결과 기간의 KOSPI를 시작 금액으로 환산해 지수 비교로 내려준다",
+          "message": "feat(be): 결과 기간의 KOSPI를 시작 금액으로 환산해 지수 비교로 내려준다\n\n001에 daily_index 기간 종가 조회(IndexSeriesRepository)를 두고, 공개 결과의\nindex-comparison이 결과의 자료 버전·effectiveStart~End로 KOSPI를 읽어\ninitialCash × 종가 / 첫 종가로 환산한다. 관측치가 없거나 기간·금액·자료 버전을\n모르면 지금처럼 INDEX_SERIES_UNAVAILABLE이다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:03:01.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:03:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8cb681b8f20705f6dbb60ee4e273964d026d1e7e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -6,8 +6,8 @@ import java.util.List;\n /**\n  * 공개 결과와 같은 시작 금액으로 환산한 시장 지수 계열.\n  *\n- * <p>현재 001에는 기간 KOSPI 계열 조회 포트가 없다. 그동안은 빈 계열을 성공처럼 돌려주지 않고 {@code available=false}와 이유를 함께 보낸다.\n- * 포트가 생기면 {@link Point}에 서버가 환산한 값을 채운다.\n+ * <p>계열을 만들 수 없으면(기간·금액·자료 버전이 없거나 그 범위에 지수 관측치가 없으면) 빈 계열을 성공처럼 돌려주지 않고 {@code available=false}와\n+ * 이유를 함께 보낸다.\n  */\n public record PublicResultIndexComparison(boolean available, String reason, List<Point> series) {\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/application/result/PublicResultIndexComparison.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/application/result/PublicResultIndexComparison.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,8 +25,12 @@ import com.ssafy.thorp.result.application.result.PublicResultDetail;\n import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;\n import com.ssafy.thorp.result.application.result.PublicResultRetry;\n import com.ssafy.thorp.result.application.result.ValidationTier;\n+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository;\n+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository.IndexClose;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import java.math.BigDecimal;\n+import java.math.RoundingMode;\n import java.time.Clock;\n import java.time.LocalDate;\n import java.util.LinkedHashMap;\n@@ -57,11 +61,18 @@ public class PublicResultService {\n     private static final Logger log = LoggerFactory.getLogger(PublicResultService.class);\n     private static final String INDEX_SERIES_UNAVAILABLE = \"INDEX_SERIES_UNAVAILABLE\";\n \n+    /** 보조 비교에 쓰는 광범위 국내 주가지수(spec FR-017). */\n+    private static final String COMPARISON_INDEX_CODE = \"KOSPI\";\n+\n+    /** 환산 금액의 소수 자릿수. 결과 시계열의 {@code equity}와 표기를 맞춘다. */\n+    private static final int MONEY_SCALE = 2;\n+\n     private final BacktestRequestRepository requestRepository;\n     private final BacktestResultQueryService queryService;\n     private final BacktestRetryService retryService;\n     private final ParameterRegistryPort registry;\n     private final ExpiredPublicTokenRepository expiredTokens;\n+    private final IndexSeriesRepository indexSeries;\n     private final Clock clock;\n \n     public PublicResultService(\n@@ -70,12 +81,14 @@ public class PublicResultService {\n             BacktestRetryService retryService,\n             ParameterRegistryPort registry,\n             ExpiredPublicTokenRepository expiredTokens,\n+            IndexSeriesRepository indexSeries,\n             Clock clock) {\n         this.requestRepository = requestRepository;\n         this.queryService = queryService;\n         this.retryService = retryService;\n         this.registry = registry;\n         this.expiredTokens = expiredTokens;\n+        this.indexSeries = indexSeries;\n         this.clock = clock;\n     }\n \n@@ -187,15 +200,51 @@ public class PublicResultService {\n     }\n \n     /**\n-     * KOSPI 보조 비교 계열.\n+     * KOSPI 보조 비교 계열. 결과의 시작 금액으로 첫 거래일에 KOSPI를 사서 끝까지 들고 있었을 때의 자산가치다.\n      *\n-     * <p>토큰의 형식·존재·만료는 다른 공개 자원과 똑같이 먼저 판정한다. 현재 001은 최신 KOSPI 관측치만 제공하고 기간 계열 조회 포트는 제공하지 않는다. 한\n-     * 점이나 다른 계열을 KOSPI처럼 꾸미지 않고, 화면이 이유와 함께 비활성 상태를 보이도록 명시적으로 unavailable을 반환한다. 포트가 생기면 {@code\n-     * config.effectiveStart~effectiveEnd}를 조회해 {@code config.initialCash}로 서버에서 환산한다(T087).\n+     * <p>토큰의 형식·존재·만료는 다른 공개 자원과 똑같이 먼저 판정한다. 결과의 {@code config.effectiveStart~effectiveEnd} 종가를\n+     * {@code initialCash × 종가 / 첫 종가}로 환산한다(T087). 첫 종가는 그 범위에서 처음 관측된 값이다. 빠진 날은 채우지 않는다.\n+     *\n+     * <p><b>지수는 결과가 계산에 쓴 자료 버전({@code versions.data})에서 읽는다.</b> 이유는 {@link\n+     * IndexSeriesRepository}에 있다. 기간·금액·자료 버전 중 하나라도 없거나 그 범위에 관측치가 없으면 값을 지어내지 않고 이유와 함께\n+     * unavailable이다.\n      */\n     public PublicResultIndexComparison getIndexComparison(String token) {\n-        resolve(token);\n-        return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);\n+        BacktestRequest request = resolve(token);\n+        BacktestDetailResult detail = publicly(() -> queryService.getDetail(request));\n+        Object start = detail.config().get(\"effectiveStart\");\n+        Object end = detail.config().get(\"effectiveEnd\");\n+        Object initialCash = detail.config().get(\"initialCash\");\n+        Object dataVersion = detail.versions() == null ? null : detail.versions().get(\"data\");\n+        if (start == null || end == null || initialCash == null || dataVersion == null) {\n+            return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);\n+        }\n+        List<IndexClose> closes =\n+                indexSeries.findCloses(\n+                        dataVersion.toString(),\n+                        COMPARISON_INDEX_CODE,\n+                        LocalDate.parse(start.toString()),\n+                        LocalDate.parse(end.toString()));\n+        if (closes.isEmpty()) {\n+            return PublicResultIndexComparison.unavailable(INDEX_SERIES_UNAVAILABLE);\n+        }\n+        BigDecimal cash = new BigDecimal(initialCash.toString());\n+        BigDecimal first = closes.get(0).close();\n+        return new PublicResultIndexComparison(\n+                true,\n+                null,\n+                closes.stream()\n+                        .map(\n+                                close ->\n+                                        new PublicResultIndexComparison.Point(\n+                                                close.date(),\n+                                                cash.multiply(close.close())\n+                                                        .divide(\n+                                                                first,\n+                                                                MONEY_SCALE,\n+                                                                RoundingMode.HALF_EVEN)\n+                                                        .toPlainString()))\n+                        .toList());\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/application/service/PublicResultService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -213,7 +213,7 @@ public class ResultController {\n                 ApiResponse.ok(PublicResultExceptionsResponse.from(service.getExceptions(token))));\n     }\n \n-    /** KOSPI를 같은 시작 금액으로 환산한 보조 비교 계열. 기간 계열 포트가 없으면 이유와 함께 비활성이다. */\n+    /** KOSPI를 같은 시작 금액으로 환산한 보조 비교 계열. 그 기간의 지수 관측치가 없으면 이유와 함께 비활성이다. */\n     @GetMapping(\"/{token}/index-comparison\")\n     public ResponseEntity<ApiResponse<PublicResultIndexComparisonResponse>> getIndexComparison(\n             @PathVariable String token) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/result/presentation/controller/ResultController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/result/presentation/controller/ResultController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.ssafy.thorp.sector.application.repository;\n+\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * 시장 지수의 기간 종가 조회. <b>읽기 전용이다.</b>\n+ *\n+ * <p>{@link PriceSeriesRepository}와 같은 예외다 — 저장된 값을 날짜 순서로 읽어 내보낼 뿐 계산하지 않는다. 첫 소비자는 005 결과 화면의\n+ * KOSPI 보조 비교(T087)다.\n+ *\n+ * <p><b>자료 버전을 부르는 쪽이 정한다.</b> 결과와 나란히 그리는 지수는 그 결과가 계산에 쓴 자료 버전({@code versions.data})의 것이어야 한다.\n+ * 여기서 \"지금 판\"을 고르면 자료가 다시 적재된 뒤 같은 결과 주소가 다른 지수 선을 보인다(원칙 VIII).\n+ */\n+public interface IndexSeriesRepository {\n+\n+    /**\n+     * {@code from}~{@code to}(양끝 포함)의 종가. 날짜 오름차순이다. 행이 없는 날은 건너뛰며 채우지 않는다.\n+     *\n+     * @return 그 범위에 행이 하나도 없으면 빈 목록\n+     */\n+    List<IndexClose> findCloses(String datasetId, String indexCode, LocalDate from, LocalDate to);\n+\n+    record IndexClose(LocalDate date, BigDecimal close) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/IndexSeriesRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/application/repository/IndexSeriesRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,54 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository;\n+import jakarta.persistence.EntityManager;\n+import jakarta.persistence.PersistenceContext;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import org.springframework.stereotype.Repository;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * {@link IndexSeriesRepository}의 구현. {@code daily_index}에는 엔티티 매핑이 없어 {@link\n+ * PriceSeriesRepositoryImpl}처럼 SQL로 읽는다.\n+ */\n+@Repository\n+public class IndexSeriesRepositoryImpl implements IndexSeriesRepository {\n+\n+    private static final String CLOSES_SQL =\n+            \"\"\"\n+            SELECT date, close\n+              FROM daily_index\n+             WHERE dataset_id = :datasetId\n+               AND index_code = :indexCode\n+               AND date BETWEEN :from AND :to\n+             ORDER BY date ASC\n+            \"\"\";\n+\n+    @PersistenceContext private EntityManager entityManager;\n+\n+    @Override\n+    @Transactional(readOnly = true)\n+    public List<IndexClose> findCloses(\n+            String datasetId, String indexCode, LocalDate from, LocalDate to) {\n+        List<?> rows =\n+                entityManager\n+                        .createNativeQuery(CLOSES_SQL)\n+                        .setParameter(\"datasetId\", datasetId)\n+                        .setParameter(\"indexCode\", indexCode)\n+                        .setParameter(\"from\", from)\n+                        .setParameter(\"to\", to)\n+                        .getResultList();\n+        return rows.stream()\n+                .map(row -> (Object[]) row)\n+                .map(row -> new IndexClose(toLocalDate(row[0]), (BigDecimal) row[1]))\n+                .toList();\n+    }\n+\n+    /** 드라이버가 {@link java.sql.Date}로 줄 때와 {@link LocalDate}로 줄 때를 함께 받는다. */\n+    private static LocalDate toLocalDate(Object value) {\n+        if (value instanceof LocalDate date) return date;\n+        return ((java.sql.Date) value).toLocalDate();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/IndexSeriesRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/infrastructure/persistence/IndexSeriesRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,10 +30,14 @@ import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n import com.ssafy.thorp.result.application.repository.ExpiredPublicTokenRepository;\n import com.ssafy.thorp.result.application.result.PublicResultDetail;\n+import com.ssafy.thorp.result.application.result.PublicResultIndexComparison;\n import com.ssafy.thorp.result.application.result.PublicResultRetry;\n import com.ssafy.thorp.result.application.result.ValidationTier;\n+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository;\n+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository.IndexClose;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import java.math.BigDecimal;\n import java.time.Clock;\n import java.time.Instant;\n import java.time.LocalDate;\n@@ -63,6 +67,7 @@ class PublicResultServiceTest {\n     private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);\n     private final ExpiredPublicTokenRepository expiredTokens =\n             mock(ExpiredPublicTokenRepository.class);\n+    private final IndexSeriesRepository indexSeries = mock(IndexSeriesRepository.class);\n \n     private final PublicResultService service =\n             new PublicResultService(\n@@ -71,6 +76,7 @@ class PublicResultServiceTest {\n                     retryService,\n                     registry,\n                     expiredTokens,\n+                    indexSeries,\n                     Clock.fixed(NOW, ZoneOffset.UTC));\n \n     private static BacktestRequest request(Long requesterId, Instant expiresAt) {\n@@ -172,10 +178,68 @@ class PublicResultServiceTest {\n         verify(queryService, never()).getTimeseries(any(BacktestRequest.class));\n     }\n \n+    /** 지수 비교가 읽는 칸만 채운 완료 상세. {@code null}을 넘기면 그 칸이 없다. */\n+    private static BacktestDetailResult completed(String initialCash, String dataVersion) {\n+        Map<String, Object> config = new LinkedHashMap<>();\n+        config.put(\"effectiveStart\", \"2025-01-02\");\n+        config.put(\"effectiveEnd\", \"2025-01-07\");\n+        if (initialCash != null) config.put(\"initialCash\", initialCash);\n+        Map<String, Object> versions = new LinkedHashMap<>();\n+        if (dataVersion != null) versions.put(\"data\", dataVersion);\n+        return new BacktestDetailResult(\n+                BACKTEST_ID,\n+                RunStatus.COMPLETED,\n+                ResultSource.NEW,\n+                false,\n+                false,\n+                null,\n+                NOW,\n+                NOW,\n+                NOW,\n+                0L,\n+                config,\n+                versions,\n+                null,\n+                null,\n+                null);\n+    }\n+\n     @Test\n-    @DisplayName(\"기간 KOSPI 조회 포트가 없으면 이유가 있는 비활성 응답이고 계열을 지어내지 않는다\")\n-    void indexComparisonIsExplicitlyUnavailableWithoutSeriesPort() {\n+    @DisplayName(\"지수 비교는 결과의 자료 버전·기간에서 KOSPI 를 읽어 첫 종가를 시작 금액에 맞춰 환산한다\")\n+    void indexComparisonScalesKospiToInitialCash() {\n         stored(request(null, NOW.plusSeconds(3600)));\n+        when(queryService.getDetail(any(BacktestRequest.class)))\n+                .thenReturn(completed(\"10000000\", \"DS-1\"));\n+        when(indexSeries.findCloses(\n+                        \"DS-1\", \"KOSPI\", LocalDate.of(2025, 1, 2), LocalDate.of(2025, 1, 7)))\n+                .thenReturn(\n+                        List.of(\n+                                new IndexClose(LocalDate.of(2025, 1, 3), new BigDecimal(\"2500\")),\n+                                new IndexClose(LocalDate.of(2025, 1, 6), new BigDecimal(\"2750\")),\n+                                new IndexClose(LocalDate.of(2025, 1, 7), new BigDecimal(\"2400\"))));\n+\n+        var result = service.getIndexComparison(TOKEN);\n+\n+        assertThat(result.available()).isTrue();\n+        assertThat(result.reason()).isNull();\n+        // 첫날(1/2)이 비어 있으면 처음 관측된 1/3 이 기준이다. 날짜는 받은 그대로이고 채우지 않는다.\n+        assertThat(result.series())\n+                .containsExactly(\n+                        new PublicResultIndexComparison.Point(\n+                                LocalDate.of(2025, 1, 3), \"10000000.00\"),\n+                        new PublicResultIndexComparison.Point(\n+                                LocalDate.of(2025, 1, 6), \"11000000.00\"),\n+                        new PublicResultIndexComparison.Point(\n+                                LocalDate.of(2025, 1, 7), \"9600000.00\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"그 기간에 지수 관측치가 없으면 이유가 있는 비활성 응답이고 계열을 지어내지 않는다\")\n+    void indexComparisonIsUnavailableWithoutObservations() {\n+        stored(request(null, NOW.plusSeconds(3600)));\n+        when(queryService.getDetail(any(BacktestRequest.class)))\n+                .thenReturn(completed(\"10000000\", \"DS-1\"));\n+        when(indexSeries.findCloses(any(), any(), any(), any())).thenReturn(List.of());\n \n         var result = service.getIndexComparison(TOKEN);\n \n@@ -184,6 +248,18 @@ class PublicResultServiceTest {\n         assertThat(result.series()).isEmpty();\n     }\n \n+    @Test\n+    @DisplayName(\"자료 버전이나 시작 금액을 모르면 지수를 읽지 않고 비활성이다 — 다른 판의 지수를 대신 그리지 않는다\")\n+    void indexComparisonNeedsDataVersionAndCash() {\n+        stored(request(null, NOW.plusSeconds(3600)));\n+        when(queryService.getDetail(any(BacktestRequest.class)))\n+                .thenReturn(completed(\"10000000\", null), completed(null, \"DS-1\"));\n+\n+        assertThat(service.getIndexComparison(TOKEN).available()).isFalse();\n+        assertThat(service.getIndexComparison(TOKEN).available()).isFalse();\n+        verify(indexSeries, never()).findCloses(any(), any(), any(), any());\n+    }\n+\n     @Test\n     @DisplayName(\"지수 비교도 만료한 공개 토큰이면 410 이다\")\n     void expiredIndexComparisonIsGone() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/result/application/service/PublicResultServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/result/application/service/PublicResultServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -278,6 +278,18 @@ class ResultApiIT extends PortMockedIntegrationTestSupport {\n         JsonNode timeseries =\n                 objectMapper.readTree(body(get(\"/results/\" + token + \"/timeseries\"), 200));\n         assertThat(timeseries).isEqualTo(example(\"result-timeseries.json\"));\n+\n+        // 씨앗의 KOSPI 종가는 모두 같다 — 환산값은 날마다 시작 금액이고, 범위는 결과의 effectiveStart~End 다 (T087).\n+        JsonNode index =\n+                objectMapper.readTree(body(get(\"/results/\" + token + \"/index-comparison\"), 200));\n+        assertThat(index.at(\"/data/available\").asBoolean()).isTrue();\n+        assertThat(index.at(\"/data/reason\").isNull()).isTrue();\n+        JsonNode series = index.at(\"/data/series\");\n+        assertThat(series.get(0).get(\"date\").asText())\n+                .isEqualTo(detail.at(\"/data/config/effectiveStart\").asText());\n+        assertThat(series.get(series.size() - 1).get(\"date\").asText())\n+                .isEqualTo(detail.at(\"/data/config/effectiveEnd\").asText());\n+        assertThat(series.findValuesAsText(\"value\")).containsOnly(\"11110000.00\");\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/result/presentation/controller/ResultApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/result/presentation/controller/ResultApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,123 @@\n+package com.ssafy.thorp.sector.infrastructure.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.sector.application.repository.IndexSeriesRepository.IndexClose;\n+import com.ssafy.thorp.support.IntegrationTestSupport;\n+import com.ssafy.thorp.support.MarketCatalogSeed;\n+import java.time.LocalDate;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * {@link IndexSeriesRepositoryImpl}의 SQL이 실제 {@code daily_index}와 맞는지 본다.\n+ *\n+ * <p>씨앗의 KOSPI 달력은 종가가 모두 같아 순서·범위를 가릴 수 없다. 그래서 검사용 지수 코드에 값이 다른 행을 넣고 롤백한다.\n+ */\n+@DisplayName(\"지수 기간 종가 조회\")\n+@Transactional\n+class IndexSeriesRepositoryImplIT extends IntegrationTestSupport {\n+\n+    private static final String CODE = \"TEST_IDX\";\n+\n+    @Autowired private IndexSeriesRepositoryImpl repository;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private void close(String indexCode, String date, int close) {\n+        close(MarketCatalogSeed.DATA_VERSION, indexCode, date, close);\n+    }\n+\n+    private void close(String datasetId, String indexCode, String date, int close) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO daily_index\"\n+                        + \" (dataset_id, index_code, date, open, high, low, close, volume, value)\"\n+                        + \" VALUES (?, ?, ?::date, ?, ?, ?, ?, 0, 0)\",\n+                datasetId,\n+                indexCode,\n+                date,\n+                close,\n+                close,\n+                close,\n+                close);\n+    }\n+\n+    /** 씨앗과 같은 대응표를 가리키는 다른 자료 버전. 트랜잭션 롤백으로 지워진다. */\n+    private void otherDataset(String datasetId) {\n+        jdbcTemplate.update(\n+                \"\"\"\n+                INSERT INTO dataset_version\n+                    (dataset_id, data_deadline, collected_at, last_success_at,\n+                     complete, is_sample, source, map_version_id)\n+                SELECT ?, TIMESTAMPTZ '2027-01-31 15:30:00+09',\n+                       TIMESTAMPTZ '2027-01-31 18:00:00+09',\n+                       TIMESTAMPTZ '2027-01-31 18:00:00+09',\n+                       TRUE, TRUE, 'FIXED_TEST_DATA', v.id\n+                  FROM sector_etf_map_version v\n+                 WHERE v.version = ?\n+                \"\"\",\n+                datasetId,\n+                MarketCatalogSeed.MAP_VERSION);\n+    }\n+\n+    @Test\n+    @DisplayName(\"자료 버전·지수 코드·기간(양끝 포함)의 종가를 날짜 오름차순으로 읽고, 빠진 날은 채우지 않는다\")\n+    void readsClosesInRange() {\n+        close(CODE, \"2025-01-07\", 2400);\n+        close(CODE, \"2025-01-02\", 2500);\n+        close(CODE, \"2025-01-06\", 2750);\n+        close(CODE, \"2025-01-08\", 9999); // 기간 밖\n+        close(\"OTHER_IDX\", \"2025-01-03\", 1111); // 다른 지수\n+\n+        var closes =\n+                repository.findCloses(\n+                        MarketCatalogSeed.DATA_VERSION,\n+                        CODE,\n+                        LocalDate.of(2025, 1, 2),\n+                        LocalDate.of(2025, 1, 7));\n+\n+        assertThat(closes)\n+                .extracting(IndexClose::date)\n+                .containsExactly(\n+                        LocalDate.of(2025, 1, 2),\n+                        LocalDate.of(2025, 1, 6),\n+                        LocalDate.of(2025, 1, 7));\n+        assertThat(closes)\n+                .extracting(c -> c.close().intValueExact())\n+                .containsExactly(2500, 2750, 2400);\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 지수·날짜라도 다른 자료 버전의 행은 섞이지 않는다\")\n+    void isolatesDatasetVersions() {\n+        otherDataset(\"TEST-DS-R2\");\n+        close(CODE, \"2025-01-02\", 2500);\n+        close(\"TEST-DS-R2\", CODE, \"2025-01-02\", 3000);\n+        close(\"TEST-DS-R2\", CODE, \"2025-01-03\", 3100);\n+\n+        var from = LocalDate.of(2025, 1, 1);\n+        var to = LocalDate.of(2025, 1, 31);\n+        assertThat(repository.findCloses(MarketCatalogSeed.DATA_VERSION, CODE, from, to))\n+                .extracting(c -> c.close().intValueExact())\n+                .containsExactly(2500);\n+        assertThat(repository.findCloses(\"TEST-DS-R2\", CODE, from, to))\n+                .extracting(c -> c.close().intValueExact())\n+                .containsExactly(3000, 3100);\n+    }\n+\n+    @Test\n+    @DisplayName(\"행이 없는 기간이면 빈 목록이다\")\n+    void emptyWhenNothingInRange() {\n+        close(CODE, \"2025-01-02\", 2500);\n+\n+        assertThat(\n+                        repository.findCloses(\n+                                MarketCatalogSeed.DATA_VERSION,\n+                                CODE,\n+                                LocalDate.of(2024, 1, 1),\n+                                LocalDate.of(2024, 12, 31)))\n+                .isEmpty();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/sector/infrastructure/persistence/IndexSeriesRepositoryImplIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/sector/infrastructure/persistence/IndexSeriesRepositoryImplIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -59,12 +59,13 @@ spec 005 결과 화면이 쓰는 공개 경로의 요약이다. 원본은 [`spec\n \n ## 5. 지수 보조 비교 — `GET /results/{token}/index-comparison`\n \n-토큰 판정을 먼저 거친 뒤, 기간 KOSPI 조회 포트가 있으면 결과의 `effectiveStart`~`effectiveEnd` 범위와\n-`initialCash`로 서버가 환산한 `{available: true, reason: null, series: [{date, value}]}`를 돌려준다.\n-금액은 문자열이고 화면은 다시 계산하지 않는다.\n+토큰 판정을 먼저 거친 뒤, 결과가 쓴 자료 버전(`versions.data`)의 KOSPI 종가를 `effectiveStart`~`effectiveEnd`\n+범위에서 읽어 `initialCash × 종가 / 첫 종가`로 환산한 `{available: true, reason: null, series: [{date, value}]}`를\n+돌려준다. 시작 금액으로 첫 거래일에 KOSPI를 사서 들고 있었을 때의 자산가치다(배당·비용 없음). 금액은 소수\n+둘째 자리 문자열이고, 관측치가 없는 날은 채우지 않으며, 화면은 다시 계산하지 않는다.\n \n-현재 001에는 기간 계열 포트가 없으므로 `{available: false, reason: \"INDEX_SERIES_UNAVAILABLE\",\n-series: []}`다. 최신 관측치 한 점으로 기간 계열을 꾸미지 않는다.\n+기간·금액·자료 버전이 없거나 그 범위에 관측치가 없으면 `{available: false, reason: \"INDEX_SERIES_UNAVAILABLE\",\n+series: []}`다. 다른 판이나 최신 관측치 한 점으로 계열을 꾸미지 않는다.\n \n ## 5.1. 진행 시계열 구독 — `GET /results/{token}/progress`\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/result-api/README.md",
+          "old_path": "docs/specs/result-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -85,13 +85,15 @@\n \n ## GET /results/{publicToken}/index-comparison\n \n-`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 기간 KOSPI 조회 포트가 있으면 결과의\n-`effectiveStart`~`effectiveEnd` 범위에서 첫 지수 종가를 `config.initialCash`와 맞춘 환산 계열을 서버가\n-만들어 `{available: true, reason: null, series: [{date, value}]}`로 돌려준다. `value`는 다른 금액처럼 decimal\n-문자열이고, 화면은 다시 계산하지 않는다.\n-\n-현재 001에는 기간 KOSPI 계열 조회 포트가 없으므로 `{available: false,\n-reason: \"INDEX_SERIES_UNAVAILABLE\", series: []}`를 돌려준다. 최신 관측치 한 점이나 다른 계열로 값을\n+`200`. 공개 토큰의 형식·존재·만료 판정을 먼저 거친다. 결과가 계산에 쓴 자료 버전(`versions.data`)의\n+KOSPI 종가를 `effectiveStart`~`effectiveEnd`(양끝 포함) 범위에서 읽어, 시작 금액으로 첫 거래일에 KOSPI를\n+사서 끝까지 들고 있었을 때의 자산가치로 환산한다 — `value = initialCash × 종가 / 첫 종가`. 첫 종가는 그\n+범위에서 처음 관측된 값이고, 관측치가 없는 날은 채우지 않는다. 응답은 `{available: true, reason: null,\n+series: [{date, value}]}`이며 `value`는 다른 금액처럼 소수 둘째 자리 decimal 문자열이다. 화면은 다시\n+계산하지 않는다. 가격지수라 배당과 거래 비용은 들어 있지 않다.\n+\n+기간·시작 금액·자료 버전 중 하나라도 없거나 그 범위에 KOSPI 관측치가 없으면 `{available: false,\n+reason: \"INDEX_SERIES_UNAVAILABLE\", series: []}`다. 다른 자료 버전이나 최신 관측치 한 점으로 값을\n 만들지 않는다. 어느 응답에도 `backtestId`는 없다.\n \n ## 오류\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/contracts/result-api.md",
+          "old_path": "specs/005-result-comparison/contracts/result-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -258,7 +258,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [X] T079 [US5] (FE) `frontend/src/components/result/NextStepLinks.tsx` — '경제환경이 비슷했던 과거 보기'(FR-018): 넘길 값(섹터 후보 집합·전략·설정값·분석 기간·금액)을 `config`에서 준비하되, 011의 진입 계약과 라우트가 없으면 버튼을 누를 수 없게 두고 이유를 적는다(007 `CompareHandoff`가 005 없이 한 방식). '설정 바꿔 비교'는 T068을 재사용하고, '내보내기'는 006 소유라 006 화면이 없으면 같은 방식으로 닫아 둔다(FR-019). 돌아오는 길은 브라우저 뒤로 가기다. 로그인 여부와 무관하게 결과 화면은 열린다\n - [X] T080 [US5] (FE 테스트) `frontend/src/pages/ResultPage.auxiliary.test.tsx` — 보조 보기는 열기 전 API 호출 0회(SC-001); 지수 보기는 `fetchResultIndexComparison`의 값을 그대로 그리고 화면에서 환산하지 않는다(응답 값과 렌더 값이 같다), `available: false`면 이유와 함께 비활성; 지수 보기를 열어도 `?compare=`가 바뀌지 않는다; 목표 위험 요청 본문에 `scenario`와 `targetVolatility`가 있고 별도 시나리오 표지가 보인다; 추정 실패면 계산 제한 표시; 011·006이 없으면 비활성 문구가 있고 다른 버튼 동작에 영향이 없다\n \n-**B08 구현 메모**: 현재 001에는 기간 KOSPI 조회 포트가 없어 T087·T088은 계약이 정한 비활성 갈래(`INDEX_SERIES_UNAVAILABLE`)를 구현·검증했다. 첫 값 환산과 기간 경계 검증은 001이 기간 계열 포트를 제공할 때 그 포트 연결과 함께 활성화한다. 최신 관측치 한 점으로 성공 계열을 만들지는 않는다.\n+**B08 구현 메모**: 처음에는 001에 기간 KOSPI 조회 포트가 없어 T087·T088은 계약이 정한 비활성 갈래(`INDEX_SERIES_UNAVAILABLE`)만 구현·검증했다. 이후 001에 `IndexSeriesRepository`(`daily_index` 기간 종가 읽기)를 두고 첫 값 환산을 활성화했다(Jira 428). 지수는 결과의 자료 버전(`versions.data`)에서 읽고, 첫 종가는 범위 안 첫 관측치이며, 빠진 날은 채우지 않는다. 최신 관측치 한 점으로 성공 계열을 만들지는 않는다.\n \n **Checkpoint**: 다섯 스토리가 모두 독립적으로 동작한다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2248274,
+      "head_commit_sha": "8b940c69e9b4591354159c139649ef0477e0db3e",
+      "base_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "start_commit_sha": "067f9feebfebe163e0816961bf3750eb419f1cfc",
+      "created_at": "2026-09-24T17:39:09.608+09:00",
+      "merge_request_id": 959245,
+      "state": "without_files",
+      "real_size": "11",
+      "patch_id_sha": "ae8305110c2df97a264a1d1d11413de2c58635fd",
+      "commits": [
+        {
+          "id": "8b940c69e9b4591354159c139649ef0477e0db3e",
+          "short_id": "8b940c69",
+          "created_at": "2026-09-24T17:03:01.000+09:00",
+          "parent_ids": [
+            "8cb681b8f20705f6dbb60ee4e273964d026d1e7e"
+          ],
+          "title": "docs(be): 지수 비교 계약에 환산 규칙과 자료 버전 기준을 적는다",
+          "message": "docs(be): 지수 비교 계약에 환산 규칙과 자료 버전 기준을 적는다\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:03:01.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:03:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8b940c69e9b4591354159c139649ef0477e0db3e"
+        },
+        {
+          "id": "8cb681b8f20705f6dbb60ee4e273964d026d1e7e",
+          "short_id": "8cb681b8",
+          "created_at": "2026-09-24T17:03:01.000+09:00",
+          "parent_ids": [
+            "067f9feebfebe163e0816961bf3750eb419f1cfc"
+          ],
+          "title": "feat(be): 결과 기간의 KOSPI를 시작 금액으로 환산해 지수 비교로 내려준다",
+          "message": "feat(be): 결과 기간의 KOSPI를 시작 금액으로 환산해 지수 비교로 내려준다\n\n001에 daily_index 기간 종가 조회(IndexSeriesRepository)를 두고, 공개 결과의\nindex-comparison이 결과의 자료 버전·effectiveStart~End로 KOSPI를 읽어\ninitialCash × 종가 / 첫 종가로 환산한다. 관측치가 없거나 기간·금액·자료 버전을\n모르면 지금처럼 INDEX_SERIES_UNAVAILABLE이다.\n\nCo-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T17:03:01.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T17:03:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8cb681b8f20705f6dbb60ee4e273964d026d1e7e"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T17:39:13.852+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2866055": [],
+    "2866076": []
+  }
+}

@@ -1,0 +1,803 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 961266,
+    "iid": 340,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록 필터를 분석 기간·정렬만 두고 나머지는 접어 둔다",
+    "description": "## 작업 내용 요약\n\n내 기록 필터 카드가 종류·상태·섹터·전략까지 모두 펼쳐져 목록보다 필터가 먼저 눈에 들었다. 기본으로는 분석 기간과 정렬만 보이고, 나머지는 \"상세 필터\" 아래 접혀 있다가 펼치면 나온다. 접혀 있어도 켜진 필터 개수가 보이고, 상태는 종류별 두 줄로 나누어 값이 아홉 개인 이유가 읽히게 했다.\n\n## 관련 티켓\n\n- S15P21E205-453 (Story S15P21E205-378 relates, Epic S15P21E205-377 내 기록)\n\n## 주요 변경 사항\n\n- **첫 줄**: 분석 기간(시작·끝) 2, 정렬 1 너비. 좁으면 정렬이 아래로 내려간다. 정렬 선택지 이름은 \"최신순·오래된순·이름순\"(서버 값 불변).\n- **상세 필터**: 종류·상태·섹터·전략은 네이티브 `<details>` 안. JS 상태 없이 키보드·보조기기 그대로 동작하고 여닫기 표식(::marker)이 보인다. 접혀 있어도 켜진 개수(\"3개 적용\")가 summary에 붙는다. 들어올 때 접힌 쪽 필터가 켜져 있으면 펼친 채 시작하고, 그 뒤로는 사용자만 여닫는다.\n- **상태 두 줄**: \"분석·탐색 묶음\"(완료·진행 중·부분 완료·실패·취소)과 \"경제환경\"(기준 충족 판정·가까운 순서만·계산 불가·더 볼 수 없음). `THRESHOLD_APPLIED`의 표시 이름을 \"문턱 적용\"에서 \"기준 충족 판정\"으로 바꿨다. 값·기본 보기(완료+기준 충족 판정)는 그대로다(006 FR-004).\n- \"아무것도 고르지 않으면 완료한 항목만 보입니다\" 안내는 상태 제목 옆 한 단 작은 글자로 옮겼다.\n- classic 디자인은 배치 그대로, details 안 묶음만 바깥 `.filters`와 같은 간격으로 흐른다.\n- 질의 타입·API·페이지 상태 관리는 손대지 않았다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm run test:dom` 통과(154파일 1452개, skipped 0). `test:legacy`는 이 PC의 Node 22.15 환경 문제(`ERR_UNKNOWN_FILE_EXTENSION`)로만 실패하고 `--experimental-strip-types`로는 6/6 통과.\n- 로컬(thorp_dev, 기록 4건)에서 접힘·펼침·개수 표시·두 줄 상태·정렬 이름을 확인. classic 디자인(`?design=classic`)은 눈으로 보지 않았다 — 리뷰 때 한 번 봐 달라.\n\n## 리뷰 포인트\n\n- **\"선택된 필터가 있으면 펼친 채 시작\"은 지금 도달하지 않는 경로다.** 내 기록 화면이 항상 빈 질의로 시작하고 URL에서 필터를 복원하지 않기 때문이다. 팀 결정으로 두었고, URL 필터 복원이 붙으면 그때 살아난다. 빼는 게 낫다고 보면 말해 달라.\n- **상태 값 아홉 개를 줄이지 않았다.** 넷(완료·진행 중·실패·취소)으로 줄이려면 006·010 스펙을 먼저 고쳐야 한다. 이번에는 화면에서 두 줄로 나누고 라벨만 바꿨다.\n- **곁가지**: 목록 API의 `resultToken`은 LEFT JOIN이라 실행 요청이 없으면 null이 될 수 있는데, 프론트 타입은 문자열이고 링크가 `/results/null`이 된다. 실제 흐름에서는 기록이 항상 실행 요청에서 나와 생기지 않는다. 손대지 않았고 티켓 여부는 판단 바란다.",
+    "state": "merged",
+    "created_at": "2026-09-27T20:28:04.153+09:00",
+    "updated_at": "2026-09-27T20:33:39.970+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-27T20:33:40.006+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/453-records-filter-collapse",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+    "merge_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-27T20:28:05.769+09:00",
+    "reference": "!340",
+    "references": {
+      "short": "!340",
+      "relative": "!340",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!340"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/340",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 961266,
+    "iid": 340,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록 필터를 분석 기간·정렬만 두고 나머지는 접어 둔다",
+    "description": "## 작업 내용 요약\n\n내 기록 필터 카드가 종류·상태·섹터·전략까지 모두 펼쳐져 목록보다 필터가 먼저 눈에 들었다. 기본으로는 분석 기간과 정렬만 보이고, 나머지는 \"상세 필터\" 아래 접혀 있다가 펼치면 나온다. 접혀 있어도 켜진 필터 개수가 보이고, 상태는 종류별 두 줄로 나누어 값이 아홉 개인 이유가 읽히게 했다.\n\n## 관련 티켓\n\n- S15P21E205-453 (Story S15P21E205-378 relates, Epic S15P21E205-377 내 기록)\n\n## 주요 변경 사항\n\n- **첫 줄**: 분석 기간(시작·끝) 2, 정렬 1 너비. 좁으면 정렬이 아래로 내려간다. 정렬 선택지 이름은 \"최신순·오래된순·이름순\"(서버 값 불변).\n- **상세 필터**: 종류·상태·섹터·전략은 네이티브 `<details>` 안. JS 상태 없이 키보드·보조기기 그대로 동작하고 여닫기 표식(::marker)이 보인다. 접혀 있어도 켜진 개수(\"3개 적용\")가 summary에 붙는다. 들어올 때 접힌 쪽 필터가 켜져 있으면 펼친 채 시작하고, 그 뒤로는 사용자만 여닫는다.\n- **상태 두 줄**: \"분석·탐색 묶음\"(완료·진행 중·부분 완료·실패·취소)과 \"경제환경\"(기준 충족 판정·가까운 순서만·계산 불가·더 볼 수 없음). `THRESHOLD_APPLIED`의 표시 이름을 \"문턱 적용\"에서 \"기준 충족 판정\"으로 바꿨다. 값·기본 보기(완료+기준 충족 판정)는 그대로다(006 FR-004).\n- \"아무것도 고르지 않으면 완료한 항목만 보입니다\" 안내는 상태 제목 옆 한 단 작은 글자로 옮겼다.\n- classic 디자인은 배치 그대로, details 안 묶음만 바깥 `.filters`와 같은 간격으로 흐른다.\n- 질의 타입·API·페이지 상태 관리는 손대지 않았다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm run test:dom` 통과(154파일 1452개, skipped 0). `test:legacy`는 이 PC의 Node 22.15 환경 문제(`ERR_UNKNOWN_FILE_EXTENSION`)로만 실패하고 `--experimental-strip-types`로는 6/6 통과.\n- 로컬(thorp_dev, 기록 4건)에서 접힘·펼침·개수 표시·두 줄 상태·정렬 이름을 확인. classic 디자인(`?design=classic`)은 눈으로 보지 않았다 — 리뷰 때 한 번 봐 달라.\n\n## 리뷰 포인트\n\n- **\"선택된 필터가 있으면 펼친 채 시작\"은 지금 도달하지 않는 경로다.** 내 기록 화면이 항상 빈 질의로 시작하고 URL에서 필터를 복원하지 않기 때문이다. 팀 결정으로 두었고, URL 필터 복원이 붙으면 그때 살아난다. 빼는 게 낫다고 보면 말해 달라.\n- **상태 값 아홉 개를 줄이지 않았다.** 넷(완료·진행 중·실패·취소)으로 줄이려면 006·010 스펙을 먼저 고쳐야 한다. 이번에는 화면에서 두 줄로 나누고 라벨만 바꿨다.\n- **곁가지**: 목록 API의 `resultToken`은 LEFT JOIN이라 실행 요청이 없으면 null이 될 수 있는데, 프론트 타입은 문자열이고 링크가 `/results/null`이 된다. 실제 흐름에서는 기록이 항상 실행 요청에서 나와 생기지 않는다. 손대지 않았고 티켓 여부는 판단 바란다.",
+    "state": "merged",
+    "created_at": "2026-09-27T20:28:04.153+09:00",
+    "updated_at": "2026-09-27T20:33:39.970+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-27T20:33:40.006+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/453-records-filter-collapse",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+    "merge_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-27T20:28:05.769+09:00",
+    "reference": "!340",
+    "references": {
+      "short": "!340",
+      "relative": "!340",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!340"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/340",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "5",
+    "latest_build_started_at": "2026-09-27T20:28:17.069+09:00",
+    "latest_build_finished_at": "2026-09-27T20:33:39.085+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 225529,
+      "iid": 370,
+      "project_id": 1444456,
+      "sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+      "ref": "feat(fe)/453-records-filter-collapse",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-27T20:28:16.956+09:00",
+      "updated_at": "2026-09-27T20:33:39.092+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225529"
+    },
+    "head_pipeline": {
+      "id": 225529,
+      "iid": 370,
+      "project_id": 1444456,
+      "sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+      "ref": "feat(fe)/453-records-filter-collapse",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-27T20:28:16.956+09:00",
+      "updated_at": "2026-09-27T20:33:39.092+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225529",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-27T20:28:17.069+09:00",
+      "finished_at": "2026-09-27T20:33:39.085+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/225529",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+      "head_sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+      "start_sha": "d1803ceac361606e26ced773cba8683e3b714f1b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "07af4c296dd8b4eb042aa35170fbfd5be20d9f53",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874956,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-27T20:28:04.259+09:00",
+          "updated_at": "2026-09-27T20:28:04.264+09:00",
+          "system": true,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a6bdfd0b024bd56241e1d05a22689ad63c5afda4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874957,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-27T20:28:04.278+09:00",
+          "updated_at": "2026-09-27T20:28:04.286+09:00",
+          "system": true,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "604661ec362b25aeb51b3b30f388a7267f4ef1fa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874960,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `<details>`와 `<summary>` 네이티브 HTML 요소를 활용하여 자바스크립트 상태 관리 없이 접근성(키보드 및 보조기기)을 유지하면서 UI 접힘/펼침 기능을 깔끔하게 구현했습니다.\n- 기존 테스트 코드를 꼼꼼하게 수정하고, `RecordFilters.test.tsx`에 새로운 컴포넌트 동작(기본 접힘 상태, 필터 적용 시 자동 펼침 및 개수 표시)에 대한 단위 테스트를 충실히 작성했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (접힘 상태 판정에 사용되는 `initiallyOpen`이 초기 렌더링 시점에만 계산되도록 `useState` 초기화 인자로 올바르게 처리되어 있으며, 상태 및 정렬 라벨 변경 사항도 테스트 코드에 적절히 반영되었습니다.)\n\n### 테스트 제안\n- **Classic 디자인 모드 시각적 검증**: MR 설명에 언급된 대로 `?design=classic` 쿼리 파라미터를 붙여 접속했을 때, CSS `.filters` 그리드 변경 및 `.details` 내부 요소들이 기존 레이아웃을 깨트리지 않고 올바르게 흐르는지 브라우저에서 직접 시각적으로 확인하는 것을 권장합니다.\n- **상세 필터 내 칩 토글 및 개수 업데이트 테스트**: 상세 필터를 펼친 상태에서 체크박스를 동적으로 조작할 때, 요약(summary) 영역에 표시되는 \"N개 적용\" 텍스트가 실시간으로 올바르게 증감하는지 확인하는 인터랙션 테스트를 추가하면 더 견고해집니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:85d6f1e7662362286570baf6a179037eb195d74a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-27T20:28:13.726+09:00",
+          "updated_at": "2026-09-27T20:28:13.726+09:00",
+          "system": false,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0bc0bbdf5c695371e6f5723329eb74d6004b2929",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874961,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-27T20:28:13.838+09:00",
+          "updated_at": "2026-09-27T20:28:13.848+09:00",
+          "system": true,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c55546a5f998ed54f96734373c5c77ca09d462dc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874963,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 85d6f1e7662362286570baf6a179037eb195d74a pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-27T20:28:26.751+09:00",
+          "updated_at": "2026-09-27T20:28:26.754+09:00",
+          "system": true,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5d294f35e76c8bfc04b5a1ef8377cfe0fc179225",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2874972,
+          "type": null,
+          "body": "mentioned in commit 077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-27T20:33:40.014+09:00",
+          "updated_at": "2026-09-27T20:33:40.018+09:00",
+          "system": true,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "df5ae6da93e5e158b2b58194967bc68f0b4c8a22",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885038,
+          "type": null,
+          "body": "mentioned in commit 5ad5b4f19c0369794570aa9696e2f26e0ab8f66a",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:10.245+09:00",
+          "updated_at": "2026-10-13T15:16:10.277+09:00",
+          "system": true,
+          "noteable_id": 961266,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 340,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2255785,
+      "head_commit_sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+      "base_commit_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+      "start_commit_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+      "created_at": "2026-09-27T20:28:04.560+09:00",
+      "merge_request_id": 961266,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "17fb2e511c141739349d09ed0a0da12ff61419a4"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2255785,
+      "head_commit_sha": "85d6f1e7662362286570baf6a179037eb195d74a",
+      "base_commit_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+      "start_commit_sha": "d1803ceac361606e26ced773cba8683e3b714f1b",
+      "created_at": "2026-09-27T20:28:04.560+09:00",
+      "merge_request_id": 961266,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "17fb2e511c141739349d09ed0a0da12ff61419a4",
+      "commits": [
+        {
+          "id": "85d6f1e7662362286570baf6a179037eb195d74a",
+          "short_id": "85d6f1e7",
+          "created_at": "2026-09-27T20:24:22.000+09:00",
+          "parent_ids": [
+            "d853adbb81d7b0db38a2a0a240b7803af8dbe8a5"
+          ],
+          "title": "feat(fe): 상태 필터를 분석·탐색 묶음과 경제환경 두 줄로 나누고 문턱 적용을 기준 충족 판정으로 부른다",
+          "message": "feat(fe): 상태 필터를 분석·탐색 묶음과 경제환경 두 줄로 나누고 문턱 적용을 기준 충족 판정으로 부른다\n\n상태 값 아홉 개는 종류에 따라 뜻이 달라(실행 상태 vs 010 판정 상태)\n줄 이름으로 그 이유가 읽히게 나눈다. THRESHOLD_APPLIED 의 표시 이름은\n값 그대로의 번역 대신 뜻(교정된 기준으로 사례를 판정한 정상 완료)을 쓴다.\n서버 값과 기본 보기는 그대로다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-27T20:24:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-27T20:24:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/85d6f1e7662362286570baf6a179037eb195d74a"
+        },
+        {
+          "id": "d853adbb81d7b0db38a2a0a240b7803af8dbe8a5",
+          "short_id": "d853adbb",
+          "created_at": "2026-09-27T20:05:07.000+09:00",
+          "parent_ids": [
+            "915b9c3f46b6ef484437708e52cb6cbc1f02f5e2"
+          ],
+          "title": "fix(fe): 완료 항목 안내를 상태 제목 옆 작은 글자로 옮기고 정렬 이름을 최신순·오래된순으로 줄인다",
+          "message": "fix(fe): 완료 항목 안내를 상태 제목 옆 작은 글자로 옮기고 정렬 이름을 최신순·오래된순으로 줄인다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-27T20:05:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-27T20:05:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d853adbb81d7b0db38a2a0a240b7803af8dbe8a5"
+        },
+        {
+          "id": "915b9c3f46b6ef484437708e52cb6cbc1f02f5e2",
+          "short_id": "915b9c3f",
+          "created_at": "2026-09-27T20:00:52.000+09:00",
+          "parent_ids": [
+            "bf98f654c7154ad6dc45a435eb1fed728f4fc5fb"
+          ],
+          "title": "fix(fe): 상세 필터 테스트가 접힌 소속과 안내 문장을 확인하고 사용자처럼 먼저 펼친다",
+          "message": "fix(fe): 상세 필터 테스트가 접힌 소속과 안내 문장을 확인하고 사용자처럼 먼저 펼친다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-27T20:00:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-27T20:00:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/915b9c3f46b6ef484437708e52cb6cbc1f02f5e2"
+        },
+        {
+          "id": "bf98f654c7154ad6dc45a435eb1fed728f4fc5fb",
+          "short_id": "bf98f654",
+          "created_at": "2026-09-27T20:00:52.000+09:00",
+          "parent_ids": [
+            "82b4fd56692a9fc3b78b959bb8b27043eeca7e55"
+          ],
+          "title": "fix(fe): 상세 필터의 펼침 표식·classic 간격·안내 문장 위치를 바로잡는다",
+          "message": "fix(fe): 상세 필터의 펼침 표식·classic 간격·안내 문장 위치를 바로잡는다\n\nsummary 를 list-item 으로 되돌려 여닫기 표식이 보이게 하고, classic 에서\ndetails 안 묶음이 붙지 않게 바깥과 같은 간격을 준다. \"완료한 항목만\n보입니다\" 안내는 접혀 있어도 읽히도록 summary 로 옮긴다. 첫 줄 너비는\n태그 대신 .side 클래스로 정한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-27T20:00:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-27T20:00:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bf98f654c7154ad6dc45a435eb1fed728f4fc5fb"
+        },
+        {
+          "id": "82b4fd56692a9fc3b78b959bb8b27043eeca7e55",
+          "short_id": "82b4fd56",
+          "created_at": "2026-09-27T19:51:03.000+09:00",
+          "parent_ids": [
+            "9842f236c59611dc309b3432974c81bd5a5ff896"
+          ],
+          "title": "feat(fe): 상세 필터의 기본 접힘·펼친 채 시작·개수 표시를 테스트로 고정한다",
+          "message": "feat(fe): 상세 필터의 기본 접힘·펼친 채 시작·개수 표시를 테스트로 고정한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-27T19:51:03.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-27T19:51:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/82b4fd56692a9fc3b78b959bb8b27043eeca7e55"
+        },
+        {
+          "id": "9842f236c59611dc309b3432974c81bd5a5ff896",
+          "short_id": "9842f236",
+          "created_at": "2026-09-27T19:51:03.000+09:00",
+          "parent_ids": [
+            "d1803ceac361606e26ced773cba8683e3b714f1b"
+          ],
+          "title": "feat(fe): 내 기록 필터를 분석 기간·정렬만 두고 나머지는 접어 둔다",
+          "message": "feat(fe): 내 기록 필터를 분석 기간·정렬만 두고 나머지는 접어 둔다\n\n필터 카드 첫 줄에 분석 기간과 정렬만 보이고, 종류·상태·섹터·전략은\n네이티브 details \"상세 필터\" 아래 접힌다. 들어올 때 그중 하나라도\n켜져 있으면 펼친 채 시작하고, 접혀 있어도 켜진 개수를 보인다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-27T19:51:03.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-27T19:51:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9842f236c59611dc309b3432974c81bd5a5ff896"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,66 @@\n+import { render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { describe, expect, it, vi } from 'vitest'\n+import { RecordFilters } from './RecordFilters'\n+\n+function detailsOf(summary: HTMLElement): HTMLDetailsElement {\n+  return summary.closest('details') as HTMLDetailsElement\n+}\n+\n+describe('RecordFilters', () => {\n+  it('기본은 분석 기간·정렬만 보이고 종류·상태·섹터·전략은 접혀 있다. 펼치면 나온다', async () => {\n+    const user = userEvent.setup()\n+    render(<RecordFilters query={{}} onChange={vi.fn()} catalog={null} strategies={null} />)\n+\n+    expect(screen.getByRole('group', { name: '분석 기간' })).toBeTruthy()\n+    expect(screen.getByRole('combobox', { name: '정렬' })).toBeTruthy()\n+\n+    const summary = screen.getByText('상세 필터')\n+    const details = detailsOf(summary)\n+    expect(details.open).toBe(false)\n+    expect(screen.queryByText(/개 적용/)).toBeNull()\n+    // 기본 보기가 완료한 항목만임은 상태 제목 옆에 있고, 상태는 종류별 두 줄이다.\n+    const statusGroup = screen.getByRole('group', { name: /^상태/ })\n+    expect(statusGroup.textContent).toContain('완료한 항목만 보입니다')\n+    expect(statusGroup.textContent).toContain('분석·탐색 묶음')\n+    expect(statusGroup.textContent).toContain('경제환경')\n+    expect(screen.getByRole('checkbox', { name: '기준 충족 판정' })).toBeTruthy()\n+    // 종류·상태 체크박스는 접힌 details 안에 있다(jsdom 은 닫힌 details 의 내용을 숨기지 않으므로 소속으로 확인한다).\n+    expect(details.contains(screen.getByRole('checkbox', { name: '실패' }))).toBe(true)\n+    expect(details.contains(screen.getByRole('checkbox', { name: '분석' }))).toBe(true)\n+\n+    await user.click(summary)\n+    expect(details.open).toBe(true)\n+  })\n+\n+  it('들어올 때 접힌 쪽의 필터가 켜져 있으면 펼친 채 시작하고 개수를 보인다', () => {\n+    render(\n+      <RecordFilters\n+        query={{ kind: ['ANALYSIS'], status: ['FAILED', 'CANCELLED'] }}\n+        onChange={vi.fn()}\n+        catalog={null}\n+        strategies={null}\n+      />,\n+    )\n+\n+    const summary = screen.getByText('상세 필터')\n+    expect(detailsOf(summary).open).toBe(true)\n+    expect(summary.textContent).toContain('3개 적용')\n+  })\n+\n+  it('펼친 뒤 필터를 모두 끄더라도 저절로 접히지 않는다', async () => {\n+    const user = userEvent.setup()\n+    const { rerender } = render(\n+      <RecordFilters query={{ status: ['FAILED'] }} onChange={vi.fn()} catalog={null} strategies={null} />,\n+    )\n+    const summary = screen.getByText('상세 필터')\n+    expect(detailsOf(summary).open).toBe(true)\n+\n+    rerender(<RecordFilters query={{}} onChange={vi.fn()} catalog={null} strategies={null} />)\n+    expect(detailsOf(summary).open).toBe(true)\n+    expect(screen.queryByText(/개 적용/)).toBeNull()\n+\n+    await user.click(summary)\n+    expect(detailsOf(summary).open).toBe(false)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordFilters.test.tsx",
+          "old_path": "frontend/src/components/records/RecordFilters.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,8 @@\n-import { useId } from 'react'\n+import { useId, useState } from 'react'\n import type { MyRecordKind, MyRecordListQuery, MyRecordSort, MyRecordStatus } from '@/types/myRecords'\n import type { SectorCatalog } from '@/types/sector'\n import type { StrategyView } from '@/types/strategyRegistry'\n-import { KIND_LABEL, SORT_OPTIONS, STATUS_LABEL, STATUS_OPTIONS } from './recordLabels'\n+import { KIND_LABEL, SORT_OPTIONS, STATUS_GROUPS, STATUS_LABEL } from './recordLabels'\n import styles from './records.module.css'\n import { DateField } from '@/components/common/DateField'\n \n@@ -26,6 +26,9 @@ function toggle<T>(list: T[] | undefined, value: T, on: boolean): T[] | undefine\n /**\n  * 목록 필터와 정렬(FR-004). 모든 조작이 라벨 있는 표준 컨트롤이라 키보드로 다룰 수 있다(FR-021).\n  *\n+ * <p>기본으로 보이는 것은 분석 기간과 정렬뿐이다. 종류·상태·섹터·전략은 \"상세 필터\" details 안에 접혀 있고,\n+ * 들어올 때 그중 하나라도 켜져 있으면 펼친 채 시작한다. 접혀 있어도 켜진 개수는 보인다.\n+ *\n  * <p><b>정렬 선택지에 성과가 없다.</b> 수익률·하락 폭·비용으로 늘어놓으면 순위 화면이 된다(원칙 III, R7).\n  * 섹터·전략 선택지는 001·003에서 받은 것이고 코드에 상수로 두지 않는다.\n  */\n@@ -33,83 +36,20 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {\n   const sortId = useId()\n   const fromId = useId()\n   const toId = useId()\n+  // 접힌 쪽(종류·상태·섹터·전략)에 켜진 것의 수. 접혀 있어도 무엇인가 걸러지고 있음이 보여야 한다.\n+  const detailCount =\n+    (query.kind?.length ?? 0) +\n+    (query.status?.length ?? 0) +\n+    (query.sector?.length ?? 0) +\n+    (query.strategy?.length ?? 0)\n+  // 들어올 때 이미 고른 것이 있으면 펼친 채 시작한다. 그 뒤로는 사용자만 여닫는다 — 값이 바뀌어도\n+  // 건드리지 않으므로 prop 을 처음 한 번만 정한다(React 는 바뀌지 않은 prop 을 다시 쓰지 않는다).\n+  const [initiallyOpen] = useState(detailCount > 0)\n \n   return (\n     <form className={styles.filters} aria-label=\"기록 필터\" onSubmit={(event) => event.preventDefault()}>\n-      {/* 왼쪽 반은 고르기 칩, 오른쪽 반은 분석 기간과 정렬이다. classic에서는 두 묶음이 없는 것처럼 흐른다. */}\n-      <div className={styles.filterColumn}>\n-        <fieldset className={styles.group}>\n-          <legend>종류</legend>\n-          {KINDS.map((kind) => (\n-            <label key={kind} className={styles.check}>\n-              <input\n-                type=\"checkbox\"\n-                checked={query.kind?.includes(kind) ?? false}\n-                onChange={(event) => onChange({ ...query, kind: toggle(query.kind, kind, event.target.checked) })}\n-              />\n-              {KIND_LABEL[kind]}\n-            </label>\n-          ))}\n-        </fieldset>\n-\n-        <fieldset className={styles.group}>\n-          <legend>상태</legend>\n-          {STATUS_OPTIONS.map((status) => (\n-            <label key={status} className={styles.check}>\n-              <input\n-                type=\"checkbox\"\n-                checked={query.status?.includes(status) ?? false}\n-                onChange={(event) =>\n-                  onChange({ ...query, status: toggle<MyRecordStatus>(query.status, status, event.target.checked) })\n-                }\n-              />\n-              {STATUS_LABEL[status]}\n-            </label>\n-          ))}\n-          <p className={styles.hint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</p>\n-        </fieldset>\n-\n-        {catalog ? (\n-          <fieldset className={styles.group}>\n-            <legend>섹터</legend>\n-            {catalog.sectors.map((sector) => (\n-              <label key={sector.code} className={styles.check}>\n-                <input\n-                  type=\"checkbox\"\n-                  checked={query.sector?.includes(sector.code) ?? false}\n-                  onChange={(event) =>\n-                    onChange({ ...query, sector: toggle(query.sector, sector.code, event.target.checked) })\n-                  }\n-                />\n-                {sector.name}\n-              </label>\n-            ))}\n-          </fieldset>\n-        ) : null}\n-\n-        {strategies ? (\n-          <fieldset className={styles.group}>\n-            <legend>전략</legend>\n-            {strategies.map((strategy) => (\n-              <label key={strategy.strategyId} className={styles.check}>\n-                <input\n-                  type=\"checkbox\"\n-                  checked={query.strategy?.includes(strategy.strategyId) ?? false}\n-                  onChange={(event) =>\n-                    onChange({\n-                      ...query,\n-                      strategy: toggle(query.strategy, strategy.strategyId, event.target.checked),\n-                    })\n-                  }\n-                />\n-                {strategy.name}\n-              </label>\n-            ))}\n-          </fieldset>\n-        ) : null}\n-      </div>\n-\n-      <div className={styles.filterColumn}>\n+      {/* 첫 줄은 분석 기간과 정렬, 그 아래 접이식 상세 필터다. classic에서는 묶음이 없는 것처럼 흐른다. */}\n+      <div className={`${styles.filterColumn} ${styles.primary}`}>\n         <fieldset className={`${styles.group} ${styles.side}`}>\n           <legend>분석 기간</legend>\n           <span className={styles.dateBox}>\n@@ -149,6 +89,95 @@ export function RecordFilters({ query, onChange, catalog, strategies }: Props) {\n           </select>\n         </div>\n       </div>\n+\n+      <details className={styles.details} open={initiallyOpen}>\n+        <summary>\n+          상세 필터\n+          {detailCount > 0 ? <span className={styles.count}>{detailCount}개 적용</span> : null}\n+        </summary>\n+        <div className={styles.filterColumn}>\n+          <fieldset className={styles.group}>\n+            <legend>종류</legend>\n+            {KINDS.map((kind) => (\n+              <label key={kind} className={styles.check}>\n+                <input\n+                  type=\"checkbox\"\n+                  checked={query.kind?.includes(kind) ?? false}\n+                  onChange={(event) => onChange({ ...query, kind: toggle(query.kind, kind, event.target.checked) })}\n+                />\n+                {KIND_LABEL[kind]}\n+              </label>\n+            ))}\n+          </fieldset>\n+\n+          <fieldset className={styles.group}>\n+            <legend>\n+              상태\n+              {/* 기본 보기는 완료 항목뿐이다 — 실패·취소는 상태 필터로 본다(006 FR-004). */}\n+              <span className={styles.legendHint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</span>\n+            </legend>\n+            {STATUS_GROUPS.map((group) => (\n+              <div key={group.label} className={styles.statusRow}>\n+                <span className={styles.rowLabel}>{group.label}</span>\n+                {group.statuses.map((status) => (\n+                  <label key={status} className={styles.check}>\n+                    <input\n+                      type=\"checkbox\"\n+                      checked={query.status?.includes(status) ?? false}\n+                      onChange={(event) =>\n+                        onChange({\n+                          ...query,\n+                          status: toggle<MyRecordStatus>(query.status, status, event.target.checked),\n+                        })\n+                      }\n+                    />\n+                    {STATUS_LABEL[status]}\n+                  </label>\n+                ))}\n+              </div>\n+            ))}\n+          </fieldset>\n+\n+          {catalog ? (\n+            <fieldset className={styles.group}>\n+              <legend>섹터</legend>\n+              {catalog.sectors.map((sector) => (\n+                <label key={sector.code} className={styles.check}>\n+                  <input\n+                    type=\"checkbox\"\n+                    checked={query.sector?.includes(sector.code) ?? false}\n+                    onChange={(event) =>\n+                      onChange({ ...query, sector: toggle(query.sector, sector.code, event.target.checked) })\n+                    }\n+                  />\n+                  {sector.name}\n+                </label>\n+              ))}\n+            </fieldset>\n+          ) : null}\n+\n+          {strategies ? (\n+            <fieldset className={styles.group}>\n+              <legend>전략</legend>\n+              {strategies.map((strategy) => (\n+                <label key={strategy.strategyId} className={styles.check}>\n+                  <input\n+                    type=\"checkbox\"\n+                    checked={query.strategy?.includes(strategy.strategyId) ?? false}\n+                    onChange={(event) =>\n+                      onChange({\n+                        ...query,\n+                        strategy: toggle(query.strategy, strategy.strategyId, event.target.checked),\n+                      })\n+                    }\n+                  />\n+                  {strategy.name}\n+                </label>\n+              ))}\n+            </fieldset>\n+          ) : null}\n+        </div>\n+      </details>\n     </form>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordFilters.tsx",
+          "old_path": "frontend/src/components/records/RecordFilters.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,27 +21,24 @@ export const STATUS_LABEL: Record<MyRecordStatus, string> = {\n   PARTIAL: '부분 완료',\n   NOT_COMPUTABLE: '계산 불가',\n   NEAREST_ONLY: '가까운 순서만',\n-  THRESHOLD_APPLIED: '문턱 적용',\n+  // 010 의 THRESHOLD_APPLIED. 교정된 유사성 기준으로 사례를 판정한 정상 완료 상태라 그 뜻을 이름으로 쓴다.\n+  THRESHOLD_APPLIED: '기준 충족 판정',\n   WITHDRAWN: '더 볼 수 없음',\n }\n \n-/** 상태 필터 선택지. 기본 보기(완료·문턱 적용)가 앞이다. */\n-export const STATUS_OPTIONS: MyRecordStatus[] = [\n-  'COMPLETED',\n-  'THRESHOLD_APPLIED',\n-  'RUNNING',\n-  'PARTIAL',\n-  'FAILED',\n-  'CANCELLED',\n-  'NEAREST_ONLY',\n-  'NOT_COMPUTABLE',\n-  'WITHDRAWN',\n+/**\n+ * 상태 필터 선택지. 값이 다른 이유가 종류라서 두 줄로 나눈다 — 분석·탐색 묶음은 실행 상태, 경제환경은 010 이 정한\n+ * 판정 상태다(FR-004). 각 줄은 기본 보기(완료·기준 충족 판정)가 앞이다.\n+ */\n+export const STATUS_GROUPS: readonly { label: string; statuses: readonly MyRecordStatus[] }[] = [\n+  { label: '분석·탐색 묶음', statuses: ['COMPLETED', 'RUNNING', 'PARTIAL', 'FAILED', 'CANCELLED'] },\n+  { label: '경제환경', statuses: ['THRESHOLD_APPLIED', 'NEAREST_ONLY', 'NOT_COMPUTABLE', 'WITHDRAWN'] },\n ]\n \n /** 정렬 선택지. 수익률·하락 폭·비용은 없다(research R7, quickstart S13-4). */\n export const SORT_OPTIONS = [\n-  { value: 'SAVED_AT_DESC', label: '저장일 최신순' },\n-  { value: 'SAVED_AT_ASC', label: '저장일 오래된순' },\n+  { value: 'SAVED_AT_DESC', label: '최신순' },\n+  { value: 'SAVED_AT_ASC', label: '오래된순' },\n   { value: 'NAME_ASC', label: '이름순' },\n ] as const\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/recordLabels.ts",
+          "old_path": "frontend/src/components/records/recordLabels.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -61,6 +61,70 @@\n   line-height: 1.6;\n }\n \n+/* 접이식 상세 필터(종류·상태·섹터·전략). 기본은 접혀 있고 여닫기는 브라우저의 details 가 한다. */\n+.details {\n+  width: 100%;\n+  min-width: 0;\n+}\n+\n+/* summary 는 list-item 그대로 둔다 — display 를 바꾸면 여닫기 표식(::marker)이 사라진다. */\n+.details > summary {\n+  width: fit-content;\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  cursor: pointer;\n+}\n+\n+/* classic 은 .filterColumn 이 contents 라 details 안에서 묶음이 붙어 버린다. 바깥 .filters 와 같은 간격으로 흘린다. */\n+.details > .filterColumn {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 14px 28px;\n+}\n+\n+/* 상태는 분석·탐색 묶음 한 줄, 경제환경 한 줄이다. 값이 다른 이유가 줄 이름으로 읽힌다. */\n+.statusRow {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  gap: 6px 12px;\n+  width: 100%;\n+}\n+\n+.statusRow > .rowLabel {\n+  min-width: 6.5em;\n+  color: var(--thorp-muted);\n+  font-size: var(--thorp-text-caption, 0.72rem);\n+}\n+\n+/* 묶음 제목 옆의 짧은 안내. 제목보다 한 단 작고 가늘다. */\n+.legendHint {\n+  margin-left: 6px;\n+  color: var(--thorp-muted);\n+  font-size: 0.88em;\n+  font-weight: 400;\n+}\n+\n+.details > summary:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.details[open] > summary {\n+  margin-bottom: 12px;\n+}\n+\n+/* 접혀 있어도 그 안에 켜진 것이 있음을 알린다. */\n+.count {\n+  margin-left: 8px;\n+  padding: 1px 8px;\n+  border-radius: 999px;\n+  color: var(--thorp-foreground);\n+  background: var(--thorp-accent-muted);\n+  font-size: var(--thorp-text-caption, 0.72rem);\n+  font-weight: 600;\n+}\n+\n .list {\n   display: flex;\n   flex-direction: column;\n@@ -432,7 +496,7 @@\n /*\n   새 디자인 카드 층. 배치는 classic 그대로 두고 새 디자인에서만 바꾼다.\n \n-  - 필터 카드: 왼쪽 반은 종류·상태·섹터·전략 고르기 칩, 오른쪽 반은 분석 기간과 정렬이다.\n+  - 필터 카드: 첫 줄은 분석 기간과 정렬, 그 아래 접이식 \"상세 필터\"에 종류·상태·섹터·전략 고르기 칩이다.\n   - 칩과 입력칸: 둥근 알약 대신 버튼·입력칸과 같은 6px 모서리다. 날짜·정렬 칸은 브라우저 기본 모양을 걷어\n     다른 화면의 입력칸(40px, 조작 테두리, 본문 글자)과 맞춘다.\n   - 기록 카드: 왼쪽 반은 이름과 사실, 오른쪽 반은 다시 보기·설정 바꿔 비교·자세히다. 이름은 흰색 굵게, 사실은\n@@ -440,9 +504,9 @@\n */\n :global(:root:not([data-design='classic'])) .filters {\n   display: grid;\n-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);\n+  grid-template-columns: minmax(0, 1fr);\n   align-items: start;\n-  gap: 20px 40px;\n+  gap: 20px;\n   margin-top: 20px;\n   padding: var(--thorp-pad-card);\n   border: 1px solid var(--thorp-line);\n@@ -458,6 +522,17 @@\n   min-width: 0;\n }\n \n+/* 첫 줄: 분석 기간(시작·끝)이 2, 정렬이 1 의 너비로 한 줄에 선다. 좁으면 정렬이 아래로 내려간다. */\n+:global(:root:not([data-design='classic'])) .primary {\n+  flex-direction: row;\n+  flex-wrap: wrap;\n+  align-items: flex-end;\n+  gap: 16px 24px;\n+}\n+\n+:global(:root:not([data-design='classic'])) .primary > .side { flex: 2 1 320px; }\n+:global(:root:not([data-design='classic'])) .primary > .side:has(select) { flex: 1 1 160px; }\n+\n /* 시작·끝 날짜는 한 줄에 반씩 선다. */\n :global(:root:not([data-design='classic'])) .dateBox {\n   display: flex;\n@@ -583,7 +658,7 @@\n :global(:root:not([data-design='classic'])) .chips { gap: 6px; }\n :global(:root:not([data-design='classic'])) .chips li { padding: 1px 8px; border-color: var(--thorp-line-strong); border-radius: var(--thorp-radius-control); color: var(--thorp-copy); }\n \n-/* 상태 표: 알약 대신 6px 모서리. 끝난 기록(완료·문턱 적용)은 파랑으로 확인됨을 알린다. */\n+/* 상태 표: 알약 대신 6px 모서리. 끝난 기록(완료·기준 충족 판정)은 파랑으로 확인됨을 알린다. */\n :global(:root:not([data-design='classic'])) .status { padding: 2px 8px; border-radius: var(--thorp-radius-control); font-weight: 600; }\n :global(:root:not([data-design='classic'])) .status[data-status='COMPLETED'],\n :global(:root:not([data-design='classic'])) .status[data-status='THRESHOLD_APPLIED'] {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/records.module.css",
+          "old_path": "frontend/src/components/records/records.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -265,14 +265,14 @@ describe('MyRecordsPage', () => {\n     await screen.findByRole('list', { name: '내 기록' })\n \n     expect(apiMocks.fetchMyRecords).toHaveBeenCalledWith({}, expect.any(AbortSignal))\n-    for (const status of ['완료', '문턱 적용', '실패', '취소']) {\n+    for (const status of ['완료', '기준 충족 판정', '실패', '취소']) {\n       expect((screen.getByRole('checkbox', { name: status }) as HTMLInputElement).checked).toBe(false)\n     }\n     const sort = screen.getByRole('combobox', { name: '정렬' })\n     const options = within(sort)\n       .getAllByRole('option')\n       .map((option) => option.textContent)\n-    expect(options).toEqual(['저장일 최신순', '저장일 오래된순', '이름순'])\n+    expect(options).toEqual(['최신순', '오래된순', '이름순'])\n     expect(options.join(' ')).not.toMatch(performanceWords)\n   })\n \n@@ -283,6 +283,8 @@ describe('MyRecordsPage', () => {\n     renderPage()\n     await screen.findByRole('list', { name: '내 기록' })\n \n+    // 상태는 접힌 상세 필터 안에 있다. 사용자처럼 먼저 펼친다.\n+    await user.click(screen.getByText('상세 필터'))\n     await user.click(screen.getByRole('checkbox', { name: '실패' }))\n \n     expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith(\n@@ -499,6 +501,7 @@ describe('MyRecordsPage', () => {\n \n     // 다음 조회는 응답하지 않게 두어 불러오는 중 상태를 붙잡는다.\n     apiMocks.fetchMyRecords.mockReturnValue(new Promise(() => {}))\n+    await user.click(screen.getByText('상세 필터'))\n     await user.click(screen.getByRole('checkbox', { name: '경제환경' }))\n \n     await waitFor(() =>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-27T20:28:13.758+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2874960": []
+  }
+}

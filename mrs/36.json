@@ -1,0 +1,616 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 939768,
+    "iid": 36,
+    "project_id": 1444456,
+    "title": "docs(infra): 014서류작업 -로그인,로그아웃,회원가입(BE,FE모두포함)",
+    "description": "# 작업 내용 요약\n\n# 관련 티켓 번호 & 링크\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-",
+    "state": "merged",
+    "created_at": "2026-09-10T16:42:58.170+09:00",
+    "updated_at": "2026-09-10T16:50:48.012+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-10T16:46:21.146+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/121-user-auth-spec",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "389c497b3b5f283cf56c8617936a2032963d3fa3",
+    "merge_commit_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T16:42:59.902+09:00",
+    "reference": "!36",
+    "references": {
+      "short": "!36",
+      "relative": "!36",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!36"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/36",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 939768,
+    "iid": 36,
+    "project_id": 1444456,
+    "title": "docs(infra): 014서류작업 -로그인,로그아웃,회원가입(BE,FE모두포함)",
+    "description": "# 작업 내용 요약\n\n# 관련 티켓 번호 & 링크\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-",
+    "state": "merged",
+    "created_at": "2026-09-10T16:42:58.170+09:00",
+    "updated_at": "2026-09-10T16:50:48.012+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-10T16:46:21.146+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/121-user-auth-spec",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "389c497b3b5f283cf56c8617936a2032963d3fa3",
+    "merge_commit_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T16:42:59.902+09:00",
+    "reference": "!36",
+    "references": {
+      "short": "!36",
+      "relative": "!36",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!36"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/36",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "head_sha": "389c497b3b5f283cf56c8617936a2032963d3fa3",
+      "start_sha": "78720d18c496d00fd9468667c804b70e0996752b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "43885cbecb4db810761ce309daadcc4f6e1c8a1a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787913,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T16:42:58.309+09:00",
+          "updated_at": "2026-09-10T16:42:58.321+09:00",
+          "system": true,
+          "noteable_id": 939768,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 36,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "507d03844d3158dc09f2d3b14c914918328625ed",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787916,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서화와 명세 정의**: `specs/014-user-auth/` 하위에 요구사항 품질 체크리스트, 스펙 체크리스트, OpenAPI 계약 파일(`auth-api.yaml`), 데이터 모델, 아키텍처 결정을 담은 `research.md`가 매우 체계적이고 구체적으로 작성되어 있습니다.\n- **보안 및 아키텍처 설계**: 비밀번호와 세션 식별자를 브라우저 저장소에 노출하지 않고, `HttpOnly` 쿠키 및 Spring Session JDBC를 통한 세션 관리와 CSRF 보호(`XSRF-TOKEN`)를 명확히 설계했습니다.\n\n### 발견 사항\n- [High] `specs/014-user-auth/spec.md` 파일이 빈 파일(`size: 0`)로 생성되어 있습니다. 이 기능의 루트 명세 문서이므로 사용자 스토리, 기능 요구사항, 수락 기준 등이 반드시 채워져야 후속 구현 작업(`tasks.md`)에 차질이 없습니다.\n- [High] `specs/014-user-auth/tasks.md` 파일 역시 빈 파일(`size: 0`)로 제출되었습니다. 구현 계획(`plan.md`)에서 언급된 작업 묶음들을 바탕으로 구체적인 실행 태스크가 작성되어야 합니다.\n\n### 테스트 제안\n- **서버 세션 및 쿠키 보안 테스트**: 로그인 성공 시 기존 익명 세션 ID가 교체(Session Fixation 방지)되는지, 발급된 `THORP_SESSION` 쿠키가 `HttpOnly`, `SameSite=Lax`, 운영 환경 `Secure` 속성을 올바르게 가지는지 통합 테스트로 검증합니다.\n- **이메일 정규화 및 중복 검증**: 대소문자나 앞뒤 공백이 포함된 이메일 입력 시, FE와 BE 양쪽에서 동일하게 정규화되어 중복 가입 및 로그인/인증번호 확인이 정상 동작하는지 테스트합니다.\n- **CSRF 및 인증 만료 시나리오**: 인증되지 않은 상태에서 상태 변경 요청 시 403(`CSRF_TOKEN_INVALID`) 및 보호 경로 접근 시 401(`AUTHENTICATION_REQUIRED`) 응답과 함께 적절한 전이가 일어나는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:389c497b3b5f283cf56c8617936a2032963d3fa3 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-10T16:43:04.922+09:00",
+          "updated_at": "2026-09-10T16:43:04.922+09:00",
+          "system": false,
+          "noteable_id": 939768,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 36,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8ac40543294e200e87067ee3d6df4a03bb4cbca6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787954,
+          "type": null,
+          "body": "오탐이라네요. MR 수고",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T16:46:07.889+09:00",
+          "updated_at": "2026-09-10T16:46:07.889+09:00",
+          "system": false,
+          "noteable_id": 939768,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 36,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3791d689e02ec97bb26d3465fcc3a5580e754742",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787957,
+          "type": null,
+          "body": "mentioned in commit e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T16:46:21.244+09:00",
+          "updated_at": "2026-09-10T16:46:21.248+09:00",
+          "system": true,
+          "noteable_id": 939768,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 36,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "28fd28fe4403d29b36f8b6ba11599696a165f38d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788000,
+          "type": null,
+          "body": "MR 템플릿에 내용 채워주세요",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T16:50:47.987+09:00",
+          "updated_at": "2026-09-10T16:50:47.987+09:00",
+          "system": false,
+          "noteable_id": 939768,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 36,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2183056,
+      "head_commit_sha": "389c497b3b5f283cf56c8617936a2032963d3fa3",
+      "base_commit_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "start_commit_sha": "78720d18c496d00fd9468667c804b70e0996752b",
+      "created_at": "2026-09-10T16:42:59.071+09:00",
+      "merge_request_id": 939768,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "afd851b0890548f53021ff771b0f9cb1a7fb151b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2183056,
+      "head_commit_sha": "389c497b3b5f283cf56c8617936a2032963d3fa3",
+      "base_commit_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "start_commit_sha": "78720d18c496d00fd9468667c804b70e0996752b",
+      "created_at": "2026-09-10T16:42:59.071+09:00",
+      "merge_request_id": 939768,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "afd851b0890548f53021ff771b0f9cb1a7fb151b",
+      "commits": [
+        {
+          "id": "389c497b3b5f283cf56c8617936a2032963d3fa3",
+          "short_id": "389c497b",
+          "created_at": "2026-09-10T16:41:49.000+09:00",
+          "parent_ids": [
+            "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20"
+          ],
+          "title": "docs: 014서류작업",
+          "message": "docs: 014서류작업\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-10T16:41:49.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-10T16:41:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/389c497b3b5f283cf56c8617936a2032963d3fa3"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,86 @@\n+# Authentication Requirements Quality Checklist: 사용자 인증\n+\n+**Purpose**: 회원가입·이메일 인증·세션 인증·보호 경로에 관한 요구사항이 구현 작업으로 분리되기 전에 완전하고 명확하며 일관되고 측정 가능하게 작성되었는지 검토한다.\n+**Created**: 2026-09-10\n+**Feature**: [014-user-auth specification](../spec.md)\n+\n+**Note**: 이 체크리스트는 `/speckit-checklist` 명령으로 생성한 요구사항 품질 검토 문서이며, 구현 동작을 시험하는 테스트 목록이 아니다.\n+**Review Ownership**: 이 체크리스트는 리뷰어가 소유한다. 요구사항 품질 기준이 충족되었다고 리뷰어가 판단한 항목만 `[x]`로 표시한다.\n+**Marker Semantics**: `[x]`는 요구사항의 품질 검토가 완료되었다는 뜻이며 구현 작업의 완료를 뜻하지 않는다.\n+\n+## Requirement Completeness\n+\n+- [x] CHK001 회원가입 입력값, 정규화 기준, 검증 제한 및 고유성 조건이 spec·data model·API contract 전반에 빠짐없이 정의되어 있는가? [Completeness, Spec §FR-001–FR-003]\n+- [x] CHK002 인증번호 발송·재발송·확인·만료·이미 확인됨·요청 없음의 전체 이메일 인증 생명주기 요구사항이 정의되어 있는가? [Completeness, Spec §FR-004]\n+- [x] CHK003 회원가입 성공 후 이메일만 로그인 화면에 전달하고 비밀번호를 폐기해야 한다는 요구사항이 모든 관련 흐름에 적용되도록 정의되어 있는가? [Completeness, Spec §FR-005, §FR-015]\n+- [x] CHK004 로그인, 현재 사용자 조회, 로그아웃 및 CSRF 준비에 필요한 서버 기능과 각 기능의 구현 상태가 명시되어 있는가? [Completeness, Spec §FR-014, Contract §paths]\n+- [x] CHK005 인증 상태의 여섯 상태(확인 중·로그인됨·비로그인·만료·확인 실패·로그아웃 미확인)에 각각 진입·이탈 조건과 허용 동작이 정의되어 있는가? [Completeness, Spec §Key Entities, Plan §Frontend state and routing]\n+- [x] CHK006 공개 기능과 보호 기능의 범위가 모든 관련 화면 및 진입점에 대해 정의되어 있는가? [Completeness, Spec §FR-010–FR-012]\n+- [x] CHK007 회원가입·로그인뿐 아니라 이메일 인증, 상태 확인, 로그아웃 및 CSRF 실패에도 네트워크 오류와 복구 요구사항이 정의되어 있는가? [Coverage, Spec §FR-006, §FR-009, §FR-013]\n+\n+## Requirement Clarity\n+\n+- [x] CHK008 이메일의 공백 제거·대소문자 처리와 전화번호 정규화 주체 및 판정 규칙이 FE와 BE에서 동일하게 해석될 만큼 구체적인가? [Ambiguity, Spec §Edge Cases, §FR-001–FR-003]\n+- [x] CHK009 이메일 인증의 “3분”이 시작되는 시점, 만료 판정 주체 및 재발송 후 기존 번호 무효화 시점이 명확한가? [Clarity, Spec §FR-004]\n+- [x] CHK010 “동일 동작의 중복 제출”이 어떤 요청과 시간 구간을 뜻하는지, 늦게 도착한 응답의 우선순위까지 명확히 정의되어 있는가? [Ambiguity, Spec §FR-006, §Edge Cases]\n+- [x] CHK011 “서버에서 로그아웃 완료를 확인”하는 조건과 `logoutUnconfirmed`에서 상태 확인·재시도 후 가능한 결과가 명확한가? [Clarity, Spec §FR-009, Contract §/auth/sessions/current]\n+- [x] CHK012 최초 비로그인과 기존 로그인 세션 만료를 같은 401 응답에서 구분하는 기준이 문서 간 동일하고 명확한가? [Clarity, Spec §FR-008, §FR-012, Contract §AuthenticationRequired]\n+- [x] CHK013 안전한 복귀 위치의 허용 형식, 제외 경로, 기본 목적지 및 일회성 소비 시점이 명확하게 정의되어 있는가? [Clarity, Spec §FR-011–FR-012, Plan §Frontend state and routing]\n+- [x] CHK014 여러 탭의 인증 상태가 달라졌을 때 “보호 기능 이용 전 재확인”이 일어나는 구체적인 조건이 정의되어 있는가? [Ambiguity, Spec §Edge Cases]\n+- [x] CHK015 사용자에게 보여줄 수 있는 오류와 숨겨야 하는 내부 오류·민감정보의 경계가 안정된 오류 코드 수준으로 정의되어 있는가? [Clarity, Spec §FR-003, §FR-013, Contract §ApiError]\n+\n+## Requirement Consistency\n+\n+- [x] CHK016 spec의 서버 지정 유효기간과 plan의 기본 30분 비활성 만료가 충돌 없이 “설정 가능한 기본값”으로 일관되게 표현되어 있는가? [Consistency, Spec §FR-008, Plan §Authentication and session]\n+- [x] CHK017 비영구 세션 쿠키 정책이 별도 로그인 유지 옵션을 제공하지 않는다는 결정과 일치하는가? [Consistency, Spec §Clarifications, Plan §Authentication and session]\n+- [x] CHK018 spec에서 구분 가능한 가입 거절 사유를 요구하면서 contract가 이를 단일 `INVALID_INPUT`으로 표현하는 부분에 FE가 구분할 수 있는 명확한 계약이 있는가? [Conflict, Spec §FR-003–FR-004, Contract §InvalidInput]\n+- [x] CHK019 로그인 실패 시 계정 존재·비밀번호 불일치·계정 상태를 외부에서 구분하지 않는 원칙이 spec·plan·contract에 일관되게 반영되어 있는가? [Consistency, Spec §FR-007, Plan §Validation and error mapping, Contract §InvalidCredentials]\n+- [x] CHK020 외부 `/api` 경로와 Backend 내부 매핑 경로의 책임 및 기존 Account API 경로 보정 필요성이 plan과 contract에서 일치하는가? [Consistency, Plan §CSRF and request boundary, Contract §implementation status]\n+- [x] CHK021 현재 사용자 응답과 회원가입 응답에서 노출 가능한 필드 및 `ACTIVE` 상태의 의미가 data model과 contract에서 일치하는가? [Consistency, Spec §Key Entities, Contract §SignupResponse, §AuthenticatedUser]\n+- [x] CHK022 `내 기록`만 보호하고 전략 진단·시장 흐름·배우기는 공개한다는 경계가 관련 006 spec 및 프로젝트 공통 가정과 일치하는가? [Consistency, Spec §FR-010–FR-012, Spec §Dependencies]\n+\n+## Acceptance Criteria Quality\n+\n+- [x] CHK023 회원가입 완료 3분 기준의 시작·종료점과 “메일 도착 대기 제외” 측정 방식이 객관적으로 판정 가능하게 정의되어 있는가? [Measurability, Spec §SC-001]\n+- [x] CHK024 오류 표본 100%에서 “다음 조치를 알 수 있는 안내”를 판정할 수 있도록 필요한 안내 내용 또는 판정 기준이 정의되어 있는가? [Measurability, Spec §SC-002]\n+- [x] CHK025 중복 요청 0건 기준에 반복 횟수, 요청 종류 및 관찰 범위가 정의되어 있는가? [Measurability, Spec §SC-003]\n+- [x] CHK026 인증 복원·보호 정보 비노출·원래 위치 복귀 기준이 각 인증 상태와 직접 대응되어 객관적으로 판정 가능한가? [Acceptance Criteria, Spec §SC-004, §SC-006–SC-007]\n+- [x] CHK027 키보드와 보조 기술에 전달되어야 할 주요 상태 변경 및 완료 기준이 구체적으로 열거되어 있는가? [Measurability, Spec §SC-009, §FR-016]\n+- [x] CHK028 세션·CSRF·민감정보 비노출과 같은 핵심 보안 요구사항에 대응하는 측정 가능한 성공 기준이 정의되어 있는가? [Gap, Acceptance Criteria]\n+\n+## Scenario and Recovery Coverage\n+\n+- [x] CHK029 앱 최초 진입의 현재 사용자 조회가 성공·비로그인·네트워크 실패·서버 실패로 끝나는 각 경우의 요구사항이 정의되어 있는가? [Coverage, Spec §FR-008, §User Story 5]\n+- [x] CHK030 로그인 상태가 보호 API 요청 도중 만료되는 경우와 화면 진입 전에 만료되는 경우 모두에 보호 정보 제거·복귀 위치 보존 요구사항이 정의되어 있는가? [Coverage, Spec §FR-012]\n+- [x] CHK031 CSRF 토큰 누락·불일치·만료 시 토큰 갱신, 사용자 안내 및 재시도 책임이 정의되어 있는가? [Coverage, Plan §CSRF and request boundary, Contract §InvalidCsrf]\n+- [x] CHK032 CSRF 갱신 후 상태 변경 요청을 자동 재전송할지 사용자 동작으로 재시도할지 모든 요청 종류에 대해 일관되게 정의되어 있는가? [Clarity, Plan §Validation and error mapping]\n+- [x] CHK033 로그아웃 응답 미수신 후 재확인 결과가 로그인됨·비로그인·계속 확인 실패인 각 경우의 다음 상태가 정의되어 있는가? [Recovery, Spec §FR-009, Plan §Frontend state and routing]\n+- [x] CHK034 화면 이탈 뒤 늦게 도착한 로그인·회원가입·이메일 인증 응답이 현재 인증 상태를 덮어쓰지 않도록 요구되는 우선순위 규칙이 정의되어 있는가? [Coverage, Spec §Edge Cases]\n+- [x] CHK035 이미 로그인한 사용자가 로그인·회원가입 화면에 직접 접근하는 경우의 기대 흐름이 정의되어 있는가? [Gap, Alternate Flow]\n+- [x] CHK036 로그아웃 또는 세션 만료 뒤 브라우저 뒤로가기·캐시 복원으로 이전 보호 정보가 보일 수 있는 상황의 요구사항이 정의되어 있는가? [Gap, Edge Case]\n+\n+## Security, Privacy, and Accessibility Requirements\n+\n+- [x] CHK037 세션 쿠키의 `HttpOnly`, 운영 `Secure`, `SameSite=Lax`, `Path=/`, 비영구 속성과 적용 환경이 계약 또는 계획에 명확히 정의되어 있는가? [Completeness, Plan §Authentication and session]\n+- [x] CHK038 로그인 성공 시 세션 고정 공격을 막기 위한 세션 식별자 교체 요구사항이 정의되었거나 의도적으로 제외되었는가? [Gap, Security]\n+- [x] CHK039 비밀번호·세션 식별자·인증번호를 URL, 브라우저 영구 저장소, 사용자 응답 및 로그에 남기지 않는 요구사항이 각 데이터 경계별로 정의되어 있는가? [Completeness, Spec §FR-005, §FR-015, Plan §Authentication and session]\n+- [x] CHK040 반복 로그인·인증번호 요청에 대한 남용 방지, 시도 제한 또는 해당 범위의 명시적 제외가 정의되어 있는가? [Gap, Security]\n+- [x] CHK041 현재 세션만 로그아웃한다는 범위와 동시 로그인 세션을 제한하지 않는다는 결정이 사용자 기대 및 계약에 명시되어 있는가? [Clarity, Contract §/auth/sessions/current, Data Model §AuthenticationSession]\n+- [x] CHK042 오류·처리 중·만료·로그아웃 미확인 상태의 보조 기술 알림과 키보드 포커스 요구사항이 각 인증 흐름에 대해 정의되어 있는가? [Coverage, Spec §FR-016]\n+- [x] CHK043 데스크톱 우선과 모바일 대응 범위가 계획 단계에서 결정되어 반응형 인증 화면 요구사항으로 명확히 남아 있는가? [Ambiguity, Spec §Assumptions]\n+\n+## Dependencies and Responsibility Boundaries\n+\n+- [x] CHK044 기존 회원가입·이메일 인증 구현에서 재사용할 요청값·응답값·거절 규칙과 변경이 필요한 경로가 검증된 사실로 구분되어 있는가? [Dependency, Spec §Dependencies, Contract §implementation status]\n+- [x] CHK045 신규 로그인·현재 사용자 조회·로그아웃·CSRF 기능이 미구현 서버 의존성으로 표시되고 FE가 이를 구현 완료로 가정하지 않도록 정의되어 있는가? [Dependency, Spec §FR-014, Contract §implementation status]\n+- [x] CHK046 FE의 인증 상태·화면·복귀 위치 책임과 BE의 자격 증명 검증·세션·CSRF·계정 상태 책임이 겹치거나 빠짐없이 구분되어 있는가? [Completeness, Plan §Work Partition for Task Generation]\n+- [x] CHK047 API별 성공·입력 오류·인증 오류·CSRF 오류·서버 오류·응답 없는 네트워크 실패의 형식과 담당 주체가 필요한 범위에서 정의되어 있는가? [Completeness, Contract §paths, Contract §responses]\n+- [x] CHK048 세션 테이블, 계정 상태, 이메일 인증 저장소 및 `내 기록` 식별 연결에 필요한 데이터 소유권과 개인정보 분리 요구사항이 정의되어 있는가? [Dependency, Data Model §Data ownership and privacy, Constitution §기록·개인정보·보관]\n+\n+## Notes\n+\n+- 요구사항 품질 기준이 충족되었다고 리뷰어가 판단한 항목만 `[x]`로 표시한다.\n+- 명확화·수정·리뷰가 더 필요한 항목은 `[ ]` 상태로 남기고 발견 내용을 항목 아래에 기록한다.\n+- `/speckit-implement`는 체크박스 상태를 게이트로 읽을 수 있지만 표시를 변경하지 않는다.\n+- `checklists/requirements.md`는 `/speckit-specify`와 `/speckit-clarify`가 관리하는 별도 기본 체크리스트다.\n+- 항목의 `[Gap]`, `[Ambiguity]`, `[Conflict]`, `[Dependency]` 표시는 우선 검토해야 할 요구사항 품질 위험을 나타낸다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/checklists/auth.md",
+          "old_path": "specs/014-user-auth/checklists/auth.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+# Specification Quality Checklist: 사용자 인증\n+\n+**Purpose**: Validate specification completeness and quality before proceeding to planning\n+**Created**: 2026-09-10\n+**Feature**: [spec.md](../spec.md)\n+\n+## Content Quality\n+\n+- [x] No implementation details (languages, frameworks, APIs)\n+- [x] Focused on user value and business needs\n+- [x] Written for non-technical stakeholders\n+- [x] All mandatory sections completed\n+\n+## Requirement Completeness\n+\n+- [x] No [NEEDS CLARIFICATION] markers remain\n+- [x] Requirements are testable and unambiguous\n+- [x] Success criteria are measurable\n+- [x] Success criteria are technology-agnostic (no implementation details)\n+- [x] All acceptance scenarios are defined\n+- [x] Edge cases are identified\n+- [x] Scope is clearly bounded\n+- [x] Dependencies and assumptions identified\n+\n+## Feature Readiness\n+\n+- [x] All functional requirements have clear acceptance criteria\n+- [x] User scenarios cover primary flows\n+- [x] Feature meets measurable outcomes defined in Success Criteria\n+- [x] No implementation details leak into specification\n+\n+## Notes\n+\n+- The user selected option A: email verification is included in 014 so the account-creation flow matches the existing signup prerequisite.\n+- FR-004 and User Story 1 cover verification-code request, confirmation, expiry, resend, failure, and duplicate-submission behavior.\n+- Existing backend inspection confirmed signup and email verification capabilities; login, logout, and current-user lookup were not found and are recorded as dependencies rather than assumed features.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/checklists/requirements.md",
+          "old_path": "specs/014-user-auth/checklists/requirements.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,42 @@\n+# Authentication API Contract\n+\n+[auth-api.yaml](auth-api.yaml)은 브라우저와 nginx가 보는 **외부 경로**를 정의한다. 개발 Vite proxy와 운영 nginx는 `/api` 접두사를 제거한 뒤 Spring Boot에 전달한다.\n+\n+## 구현 상태\n+\n+| External API | Backend internal path | 상태 |\n+|---|---|---|\n+| `POST /api/accounts/email-verifications` | `POST /accounts/email-verifications` | 기존 기능 재사용, controller mapping 정규화 필요 |\n+| `POST /api/accounts/email-verifications/confirm` | `POST /accounts/email-verifications/confirm` | 기존 기능 재사용, controller mapping 정규화 필요 |\n+| `POST /api/accounts` | `POST /accounts` | 기존 기능 재사용, controller mapping 정규화 필요 |\n+| `GET /api/auth/csrf` | `GET /auth/csrf` | 신규 필요 |\n+| `POST /api/auth/sessions` | `POST /auth/sessions` | 신규 필요 |\n+| `GET /api/auth/me` | `GET /auth/me` | 신규 필요 |\n+| `DELETE /api/auth/sessions/current` | `DELETE /auth/sessions/current` | 신규 필요 |\n+\n+현재 Account controller는 내부 경로에도 `/api`를 포함하지만 proxy가 이미 접두사를 제거한다. 구현 단계에서 proxy를 바꾸지 않고 Account controller를 `/accounts` 기준으로 맞춘다.\n+\n+## Cookie and CSRF\n+\n+- session cookie: `THORP_SESSION`, `HttpOnly`, `Path=/`, `SameSite=Lax`, production `Secure`, persistent `Max-Age` 없음\n+- session timeout: 서버 비활성 30분 기본값, 환경 설정 가능\n+- CSRF cookie/header: `XSRF-TOKEN` / `X-XSRF-TOKEN`\n+- FE는 첫 unsafe 요청 전 CSRF를 준비하고 로그인·로그아웃 성공 후 다음 unsafe 요청 전에 다시 준비한다.\n+- 로그인 성공 시 기존 익명 session id를 교체하고 새 `THORP_SESSION`만 인증 상태에 연결한다.\n+\n+## Input normalization\n+\n+- 이메일은 FE와 BE 모두 앞뒤 공백을 제거하고 소문자로 변환한다. BE의 정규형이 이메일 인증·중복 조회·로그인·저장의 기준이다.\n+- 전화번호는 하이픈·공백 없는 국내 휴대폰 숫자 형식만 허용하며 자동으로 다른 국가 형식으로 변환하지 않는다.\n+- FE는 session cookie를 읽거나 `localStorage`에 인증 token을 저장하지 않는다.\n+\n+## Error handling\n+\n+- JSON 응답은 기존 account의 `ApiResponse<T>` 구조를 따른다.\n+- 로그인 정보 오류, 사용자 없음, 비활성 계정은 외부에 `INVALID_CREDENTIALS` 하나로 응답한다.\n+- 형식 오류는 `INVALID_INPUT`, 가입·이메일 인증의 사용자 조치가 다른 사유는 `DUPLICATE_EMAIL`, `DUPLICATE_PHONE`, `EMAIL_VERIFICATION_REQUIRED`, `EMAIL_VERIFICATION_NOT_FOUND`, `EMAIL_VERIFICATION_INVALID`, `EMAIL_VERIFICATION_EXPIRED`로 구분한다.\n+- `/auth/me`의 401은 `AUTHENTICATION_REQUIRED`다. FE는 이전 상태를 기준으로 최초 비로그인과 로그인 만료를 구분한다.\n+- CSRF 검증 실패는 403 `CSRF_TOKEN_INVALID` envelope로 변환한다.\n+- 모든 operation의 예상하지 못한 서버 실패는 500 `INTERNAL_ERROR` envelope로 변환한다.\n+- 네트워크 실패에는 서버 body가 없으므로 FE가 별도의 연결 오류로 처리한다.\n+- 로그아웃 DELETE는 이미 비로그인인 경우에도 204로 idempotent하게 처리한다. 응답 자체를 받지 못한 경우에만 FE가 `logoutUnconfirmed`를 유지한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/contracts/README.md",
+          "old_path": "specs/014-user-auth/contracts/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,454 @@\n+openapi: 3.1.0\n+info:\n+  title: Thorp Account and Authentication API\n+  version: 0.1.0\n+  description: >-\n+    014-user-auth의 외부 /api 계약이다. x-implementation-status가 existing인\n+    operation은 현재 account 구현을 재사용하되 proxy 경로 정규화가 필요하다.\n+servers:\n+  - url: /api\n+paths:\n+  /accounts/email-verifications:\n+    post:\n+      operationId: requestEmailVerification\n+      summary: 이메일 인증번호 발송\n+      x-implementation-status: existing-path-fix-required\n+      security:\n+        - csrfToken: []\n+      requestBody:\n+        required: true\n+        content:\n+          application/json:\n+            schema:\n+              $ref: '#/components/schemas/EmailVerificationRequest'\n+      responses:\n+        '204':\n+          description: 발송 요청 완료\n+        '400':\n+          $ref: '#/components/responses/EmailVerificationRequestRejected'\n+        '403':\n+          $ref: '#/components/responses/InvalidCsrf'\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+  /accounts/email-verifications/confirm:\n+    post:\n+      operationId: confirmEmailVerification\n+      summary: 이메일 인증번호 확인\n+      x-implementation-status: existing-path-fix-required\n+      security:\n+        - csrfToken: []\n+      requestBody:\n+        required: true\n+        content:\n+          application/json:\n+            schema:\n+              $ref: '#/components/schemas/EmailVerificationConfirmRequest'\n+      responses:\n+        '204':\n+          description: 인증 완료. 이미 인증된 최신 요청도 성공으로 처리한다.\n+        '400':\n+          $ref: '#/components/responses/EmailVerificationConfirmRejected'\n+        '403':\n+          $ref: '#/components/responses/InvalidCsrf'\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+  /accounts:\n+    post:\n+      operationId: signup\n+      summary: 회원가입\n+      x-implementation-status: existing-path-fix-required\n+      security:\n+        - csrfToken: []\n+      requestBody:\n+        required: true\n+        content:\n+          application/json:\n+            schema:\n+              $ref: '#/components/schemas/SignupRequest'\n+      responses:\n+        '201':\n+          description: 계정 생성 완료\n+          content:\n+            application/json:\n+              schema:\n+                $ref: '#/components/schemas/SignupSuccessEnvelope'\n+        '400':\n+          $ref: '#/components/responses/SignupRejected'\n+        '403':\n+          $ref: '#/components/responses/InvalidCsrf'\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+  /auth/csrf:\n+    get:\n+      operationId: prepareCsrfToken\n+      summary: SPA 상태 변경 요청용 CSRF token 준비\n+      x-implementation-status: required\n+      responses:\n+        '204':\n+          description: XSRF-TOKEN cookie가 준비됨\n+          headers:\n+            Set-Cookie:\n+              description: XSRF-TOKEN cookie\n+              schema:\n+                type: string\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+  /auth/sessions:\n+    post:\n+      operationId: login\n+      summary: 이메일·비밀번호 로그인\n+      x-implementation-status: required\n+      security:\n+        - csrfToken: []\n+      requestBody:\n+        required: true\n+        content:\n+          application/json:\n+            schema:\n+              $ref: '#/components/schemas/LoginRequest'\n+      responses:\n+        '200':\n+          description: 로그인 완료 및 server session 생성\n+          headers:\n+            Set-Cookie:\n+              description: HttpOnly THORP_SESSION cookie\n+              schema:\n+                type: string\n+          content:\n+            application/json:\n+              schema:\n+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'\n+        '400':\n+          $ref: '#/components/responses/InvalidInput'\n+        '401':\n+          $ref: '#/components/responses/InvalidCredentials'\n+        '403':\n+          $ref: '#/components/responses/InvalidCsrf'\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+  /auth/me:\n+    get:\n+      operationId: getCurrentUser\n+      summary: 현재 로그인한 사용자 조회\n+      x-implementation-status: required\n+      responses:\n+        '200':\n+          description: 유효한 로그인 상태\n+          content:\n+            application/json:\n+              schema:\n+                $ref: '#/components/schemas/AuthenticatedUserSuccessEnvelope'\n+        '401':\n+          $ref: '#/components/responses/AuthenticationRequired'\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+  /auth/sessions/current:\n+    delete:\n+      operationId: logout\n+      summary: 현재 server session 종료\n+      x-implementation-status: required\n+      security:\n+        - sessionCookie: []\n+          csrfToken: []\n+      responses:\n+        '204':\n+          description: 세션 종료. 이미 비로그인인 경우에도 같은 결과를 반환한다.\n+          headers:\n+            Set-Cookie:\n+              description: 만료된 THORP_SESSION cookie\n+              schema:\n+                type: string\n+        '403':\n+          $ref: '#/components/responses/InvalidCsrf'\n+        '500':\n+          $ref: '#/components/responses/InternalError'\n+components:\n+  securitySchemes:\n+    sessionCookie:\n+      type: apiKey\n+      in: cookie\n+      name: THORP_SESSION\n+    csrfToken:\n+      type: apiKey\n+      in: header\n+      name: X-XSRF-TOKEN\n+  schemas:\n+    EmailVerificationRequest:\n+      type: object\n+      additionalProperties: false\n+      required: [email]\n+      properties:\n+        email:\n+          type: string\n+          format: email\n+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형\n+    EmailVerificationConfirmRequest:\n+      type: object\n+      additionalProperties: false\n+      required: [email, verificationCode]\n+      properties:\n+        email:\n+          type: string\n+          format: email\n+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형\n+        verificationCode:\n+          type: string\n+          pattern: '^\\d{6}$'\n+    SignupRequest:\n+      type: object\n+      additionalProperties: false\n+      required: [email, password, nickname, phoneNumber]\n+      properties:\n+        email:\n+          type: string\n+          format: email\n+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형\n+        password:\n+          type: string\n+          minLength: 8\n+          maxLength: 25\n+          writeOnly: true\n+        nickname:\n+          type: string\n+          minLength: 2\n+          maxLength: 20\n+        phoneNumber:\n+          type: string\n+          pattern: '^01[016789]\\d{7,8}$'\n+          description: 하이픈·공백 없는 국내 휴대폰 번호\n+    LoginRequest:\n+      type: object\n+      additionalProperties: false\n+      required: [email, password]\n+      properties:\n+        email:\n+          type: string\n+          format: email\n+          description: 앞뒤 공백 제거 후 소문자로 변환한 정규형\n+        password:\n+          type: string\n+          writeOnly: true\n+    SignupResponse:\n+      type: object\n+      additionalProperties: false\n+      required: [userId, email, nickname, status]\n+      properties:\n+        userId:\n+          type: integer\n+          format: int64\n+        email:\n+          type: string\n+          format: email\n+        nickname:\n+          type: string\n+        status:\n+          type: string\n+          enum: [ACTIVE]\n+    AuthenticatedUser:\n+      type: object\n+      additionalProperties: false\n+      required: [userId, email, nickname, status]\n+      properties:\n+        userId:\n+          type: integer\n+          format: int64\n+        email:\n+          type: string\n+          format: email\n+        nickname:\n+          type: string\n+        status:\n+          type: string\n+          enum: [ACTIVE]\n+    ApiError:\n+      type: object\n+      additionalProperties: false\n+      required: [code, message]\n+      properties:\n+        code:\n+          type: string\n+          enum:\n+            - INVALID_INPUT\n+            - DUPLICATE_EMAIL\n+            - DUPLICATE_PHONE\n+            - EMAIL_VERIFICATION_REQUIRED\n+            - EMAIL_VERIFICATION_NOT_FOUND\n+            - EMAIL_VERIFICATION_INVALID\n+            - EMAIL_VERIFICATION_EXPIRED\n+            - INVALID_CREDENTIALS\n+            - AUTHENTICATION_REQUIRED\n+            - CSRF_TOKEN_INVALID\n+            - INTERNAL_ERROR\n+        message:\n+          type: string\n+    SignupSuccessEnvelope:\n+      type: object\n+      additionalProperties: false\n+      required: [success, data, error]\n+      properties:\n+        success:\n+          const: true\n+        data:\n+          $ref: '#/components/schemas/SignupResponse'\n+        error:\n+          type: 'null'\n+    AuthenticatedUserSuccessEnvelope:\n+      type: object\n+      additionalProperties: false\n+      required: [success, data, error]\n+      properties:\n+        success:\n+          const: true\n+        data:\n+          $ref: '#/components/schemas/AuthenticatedUser'\n+        error:\n+          type: 'null'\n+    ErrorEnvelope:\n+      type: object\n+      additionalProperties: false\n+      required: [success, data, error]\n+      properties:\n+        success:\n+          const: false\n+        data:\n+          type: 'null'\n+        error:\n+          $ref: '#/components/schemas/ApiError'\n+  responses:\n+    EmailVerificationRequestRejected:\n+      description: 입력 형식 오류 또는 이미 가입된 이메일\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          examples:\n+            invalidInput:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: INVALID_INPUT\n+                  message: 이메일 형식을 확인해 주세요.\n+            duplicateEmail:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: DUPLICATE_EMAIL\n+                  message: 이미 가입된 이메일입니다.\n+    EmailVerificationConfirmRejected:\n+      description: 입력 형식, 인증 요청, 인증번호 또는 만료 오류\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          examples:\n+            notFound:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: EMAIL_VERIFICATION_NOT_FOUND\n+                  message: 인증 요청을 찾을 수 없습니다. 인증번호를 다시 요청해 주세요.\n+            invalidCode:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: EMAIL_VERIFICATION_INVALID\n+                  message: 인증번호를 다시 확인해 주세요.\n+            expired:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: EMAIL_VERIFICATION_EXPIRED\n+                  message: 인증번호가 만료되었습니다. 인증번호를 다시 요청해 주세요.\n+    SignupRejected:\n+      description: 입력 형식, 중복 계정 또는 이메일 인증 조건 오류\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          examples:\n+            duplicateEmail:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: DUPLICATE_EMAIL\n+                  message: 이미 가입된 이메일입니다.\n+            duplicatePhone:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: DUPLICATE_PHONE\n+                  message: 이미 가입된 전화번호입니다.\n+            verificationRequired:\n+              value:\n+                success: false\n+                data: null\n+                error:\n+                  code: EMAIL_VERIFICATION_REQUIRED\n+                  message: 이메일 인증을 완료해 주세요.\n+    InvalidInput:\n+      description: 입력 형식, 중복 계정, 인증번호 상태 또는 이메일 인증 조건 오류\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          example:\n+            success: false\n+            data: null\n+            error:\n+              code: INVALID_INPUT\n+              message: 입력값이 올바르지 않습니다.\n+    InvalidCredentials:\n+      description: 이메일·비밀번호 또는 계정 상태로 인증할 수 없음\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          example:\n+            success: false\n+            data: null\n+            error:\n+              code: INVALID_CREDENTIALS\n+              message: 이메일 또는 비밀번호를 확인해 주세요.\n+    AuthenticationRequired:\n+      description: 유효한 로그인 상태 없음\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          example:\n+            success: false\n+            data: null\n+            error:\n+              code: AUTHENTICATION_REQUIRED\n+              message: 로그인이 필요합니다.\n+    InvalidCsrf:\n+      description: CSRF token 누락 또는 불일치\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          example:\n+            success: false\n+            data: null\n+            error:\n+              code: CSRF_TOKEN_INVALID\n+              message: 요청 확인 정보가 만료되었습니다. 다시 시도해 주세요.\n+    InternalError:\n+      description: 예상하지 못한 서버 오류\n+      content:\n+        application/json:\n+          schema:\n+            $ref: '#/components/schemas/ErrorEnvelope'\n+          example:\n+            success: false\n+            data: null\n+            error:\n+              code: INTERNAL_ERROR\n+              message: 서버 내부 오류가 발생했습니다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/contracts/auth-api.yaml",
+          "old_path": "specs/014-user-auth/contracts/auth-api.yaml",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,171 @@\n+# Data Model: 사용자 인증\n+\n+## 개요\n+\n+사용자 계정과 이메일 인증은 기존 모델을 재사용한다. 로그인 상태는 Spring Session JDBC가 PostgreSQL에 보관하며 FE에는 현재 사용자 요약과 인증 상태만 존재한다. 비밀번호 원문, 인증번호 원문, session id는 FE 상태나 브라우저 저장소에 보관하지 않는다.\n+\n+## Server Entities\n+\n+### UserAccount (기존 `users`)\n+\n+| Field | Type | 규칙 |\n+|---|---|---|\n+| id | Long | DB 생성 PK |\n+| email | String | 필수, 유효한 이메일, 고유 |\n+| passwordHash | String | 필수, `PasswordEncoder` 결과만 저장 |\n+| nickname | String | 필수, 가입 요청 기준 2~20자 |\n+| phoneNumber | String | 필수, `^01[016789]\\d{7,8}$`, 고유 |\n+| profileImageUrl | String? | 선택 |\n+| status | UserStatus | `ACTIVE`, `SUSPENDED`, `WITHDRAWN`; 기존 enum의 `PENDING_VERIFICATION`은 현재 가입 흐름에서 생성되지 않음 |\n+| lastLoginAt | Instant? | 로그인 성공 시 갱신 |\n+| createdAt | Instant | 생성 시각 |\n+| updatedAt | Instant | 수정 시각 |\n+| withdrawnAt | Instant? | 탈퇴 시각, 이번 범위에서는 변경하지 않음 |\n+\n+**Identity rule**: 이메일과 전화번호는 각각 고유하다. 이메일 정규형은 앞뒤 공백을 제거하고 소문자로 변환한 값이며 이메일 인증·중복 조회·로그인·저장에 같은 값을 사용한다. FE는 편의를 위해 먼저 정규화하지만 BE가 최종 판정 전에 같은 정규화를 반드시 반복한다. 전화번호는 `^01[016789]\\d{7,8}$`에 맞는 하이픈·공백 없는 숫자만 사용한다.\n+\n+**Security rule**: 로그인 실패 응답은 사용자 없음, 비밀번호 불일치, 비활성 계정을 외부에서 구분하지 않는다.\n+\n+### EmailVerification (기존 `email_verifications`)\n+\n+| Field | Type | 규칙 |\n+|---|---|---|\n+| id | Long | DB 생성 PK |\n+| email | String | 인증 대상 이메일 |\n+| verificationCodeHash | String | 6자리 원문이 아닌 hash |\n+| expiresAt | Instant | 발급 후 3분 |\n+| verifiedAt | Instant? | 확인 성공 시 최초 한 번 설정 |\n+| createdAt | Instant | 발급 시각 |\n+\n+**Lifecycle**:\n+\n+```text\n+none ──request──> issued ──correct code before expiry──> verified ──signup──> deleted\n+                    ├──resend──> old deleted + new issued\n+                    ├──wrong code──> issued\n+                    └──time elapsed──> expired\n+```\n+\n+확인 완료 요청을 다시 확인하는 동작은 성공으로 처리한다. 가입 성공 후 같은 인증 기록은 재사용하지 못하게 삭제한다.\n+\n+### AuthenticationSession (신규, Spring Session JDBC)\n+\n+논리 모델이며 물리 필드와 index는 Spring Session PostgreSQL schema를 따른다.\n+\n+| Field | Type | 규칙 |\n+|---|---|---|\n+| primaryId | String | 내부 PK, 외부 노출 금지 |\n+| sessionId | String | cookie가 참조하는 opaque id, 로그에 원문 기록 금지 |\n+| userId | Long | 인증된 UserAccount 식별자와 논리적으로 연결 |\n+| creationTime | Instant | 세션 생성 시각 |\n+| lastAccessedTime | Instant | 유효 요청 시 갱신 |\n+| maxInactiveInterval | Duration | 기본 30분, 서버 설정 기준 |\n+| expiryTime | Instant | 서버가 계산하는 만료 기준 |\n+| securityContext | Serialized attribute | 인증 principal; 비밀번호·credentials 제외 |\n+\n+**Relationship**: UserAccount 1 : N AuthenticationSession. 동시 로그인 제한은 이번 범위에서 추가하지 않는다.\n+\n+**Lifecycle**:\n+\n+```text\n+absent ──valid login──> active ──authenticated request──> active\n+ active ──idle timeout──> expired\n+ active ──logout confirmed──> invalidated\n+ active ──account unavailable──> invalidated/denied\n+```\n+\n+로그인 성공 시 익명 세션에서 사용하던 식별자는 폐기·교체하고 새 세션 식별자에만 인증 상태를 연결한다.\n+\n+## API Value Objects\n+\n+### LoginInput\n+\n+| Field | Type | Validation |\n+|---|---|---|\n+| email | String | 필수, 앞뒤 공백 제거·소문자 변환 후 이메일 형식과 서버 기준 적용 |\n+| password | String | 필수; 로그인 화면은 가입 규칙과 다른 추가 제약으로 요청을 막지 않음 |\n+\n+비밀번호는 요청 직후 컴포넌트가 보유한 값 이외의 상태·URL·navigation state·storage에 복제하지 않는다.\n+\n+### AuthenticatedUser\n+\n+| Field | Type | Source |\n+|---|---|---|\n+| userId | Long | UserAccount.id |\n+| email | String | UserAccount.email |\n+| nickname | String | UserAccount.nickname |\n+| status | String | UserAccount.status, 정상 인증 응답은 `ACTIVE` |\n+\n+전화번호, passwordHash, sessionId는 응답하지 않는다.\n+\n+### ApiError\n+\n+| Field | Type | Description |\n+|---|---|---|\n+| code | String | FE 분기용 안정된 오류 코드 |\n+| message | String | 사용자에게 표시 가능한 일반 메시지 |\n+\n+주요 코드: `INVALID_INPUT`, `INVALID_CREDENTIALS`, `AUTHENTICATION_REQUIRED`, `CSRF_TOKEN_INVALID`, `INTERNAL_ERROR`.\n+\n+## Frontend State\n+\n+### AuthState\n+\n+| State | User | 보호 화면 | 다음 동작 |\n+|---|---|---|---|\n+| checking | null | 숨김 | `/auth/me` 완료 대기 |\n+| authenticated | AuthenticatedUser | 허용 | 정상 이용 |\n+| anonymous | null | 차단 | 로그인 안내 |\n+| expired | null | 차단 | 복귀 위치 보존 후 재로그인 |\n+| error | null | 차단 | 공개 기능 허용, 상태 재확인 제공 |\n+| logoutUnconfirmed | null | 차단 | 로그아웃 재시도 또는 현재 상태 확인 |\n+\n+### AuthState transitions\n+\n+```text\n+boot ──> checking\n+checking ──200──> authenticated\n+checking ──401──> anonymous\n+checking ──network──> error\n+\n+anonymous/error/expired ──login 200──> authenticated\n+authenticated ──API 401──> expired\n+authenticated ──logout start──> logoutUnconfirmed\n+logoutUnconfirmed ──logout 204 or /me 401──> anonymous\n+logoutUnconfirmed ──/me 200──> authenticated\n+logoutUnconfirmed ──network──> logoutUnconfirmed\n+```\n+\n+늦게 도착한 과거 요청이 최신 state를 덮어쓰지 않도록 각 mutation은 현재 요청 식별자 또는 abort signal로 유효성을 확인한다.\n+\n+`/auth/me` 재확인은 앱 최초 진입, 숨겨졌던 탭의 재활성화, `내 기록` 진입 직전에 수행한다. 로그아웃 시작·API 401·페이지 캐시 복원 뒤에는 메모리의 사용자와 보호 데이터를 먼저 제거하며, 확인 중에는 보호 화면을 복원하지 않는다. `authenticated` 상태에서 로그인·회원가입 route에 접근하면 `/home`으로 이동한다.\n+\n+### SignupDraft\n+\n+| Field | Storage | Rule |\n+|---|---|---|\n+| email | component state | 앞뒤 공백 제거·소문자 변환; 가입 성공 뒤 로그인 navigation state로 한 번 전달 가능 |\n+| password | component state | 화면 이탈·성공 시 폐기, 다른 화면으로 전달 금지 |\n+| nickname | component state | 가입 요청에만 사용 |\n+| phoneNumber | component state | 숫자만 서버로 전송 |\n+| verificationCode | component state | 6자리, 확인 완료·이탈 시 폐기 |\n+| verificationState | component state | idle/sending/sent/verifying/verified/error/expired |\n+\n+### ReturnTarget\n+\n+| Field | Type | Rule |\n+|---|---|---|\n+| path | String | same-origin 내부 path만 허용, 기본 `/home` |\n+| search | String | 선택, path와 함께 검증 |\n+| hash | String | 선택 |\n+| consumed | Boolean | 로그인 성공 시 한 번 사용 후 제거 |\n+\n+`sessionStorage`에는 결합된 내부 상대 경로만 저장한다. scheme/host를 포함한 URL, `//` prefix, 로그인·회원가입 자체 경로는 저장하지 않는다.\n+\n+## Data ownership and privacy\n+\n+- Backend가 계정·세션 유효성의 기준 저장소다.\n+- FE cache는 `AuthenticatedUser`의 비민감 요약만 메모리에 보유하고 로그아웃 시작 시 즉시 제거한다.\n+- 브라우저가 보유하는 session cookie는 JavaScript에서 읽을 수 없다.\n+- CSRF token은 비밀 인증정보가 아니며 header 전송을 위해 cookie에서 읽되 session id와 분리한다.\n+- 인증 실패 로그에 비밀번호, 인증번호, session id, 전체 cookie/header를 남기지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/data-model.md",
+          "old_path": "specs/014-user-auth/data-model.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,159 @@\n+# Implementation Plan: 사용자 인증\n+\n+**Branch**: `014-user-auth` | **Date**: 2026-09-10 | **Spec**: [spec.md](spec.md)\n+\n+**Input**: `specs/014-user-auth/spec.md`의 로그인·회원가입·로그아웃 및 보호 경로 요구사항\n+\n+## Summary\n+\n+기존 Spring Boot의 회원가입·이메일 인증 기능을 보존하고, 누락된 로그인·현재 사용자 조회·로그아웃을 서버 관리 세션으로 추가한다. 인증 상태는 PostgreSQL-backed HTTP session과 `HttpOnly` 쿠키로 유지하며 SPA의 상태 변경 요청은 CSRF 토큰으로 보호한다. React는 공용 Axios 클라이언트와 단일 인증 Provider를 통해 `확인 중 / 로그인됨 / 비로그인 / 만료 / 확인 실패 / 로그아웃 미확인` 상태를 표현하고, `내 기록`만 보호한다. 실제 구현은 이후 FE·BE·통합 작업 묶음으로 나누며 이 PLAN은 문서만 생성한다.\n+\n+## Technical Context\n+\n+**Language/Version**: Frontend TypeScript 5.8·React 19.1, Backend Java 21·Spring Boot 3.5.4\n+\n+**Primary Dependencies**: React Router DOM 7.1, Axios 1.7, Motion 13; Spring MVC, Validation, Data JPA, Spring Security, Spring Session JDBC, Flyway\n+\n+**Storage**: 기존 PostgreSQL `users`, `email_verifications`; 신규 Spring Session JDBC 세션 테이블. 비밀번호·세션 식별자는 브라우저 저장소에 보관하지 않는다.\n+\n+**Testing**: Frontend 기존 Node test에 Vitest·React Testing Library를 추가해 폼·Provider·보호 경로를 검증한다. Backend는 JUnit 5·Spring Boot Test·MockMvc·PostgreSQL Testcontainers로 계약과 세션 생명주기를 검증한다.\n+\n+**Target Platform**: nginx 뒤의 동일 출처 React SPA와 Linux Spring Boot 서버. 최신 evergreen 데스크톱 브라우저를 우선하고 기존 반응형 기준을 유지해 360px 이상 모바일에서도 인증 흐름을 완료할 수 있게 한다.\n+\n+**Project Type**: React SPA + Spring Boot web API\n+\n+**Performance Goals**: 인증 확인 중 보호 정보를 먼저 보여주지 않고 즉시 진행 상태를 표시한다. 제품 수준의 고정 SLO는 이 spec에서 새로 만들지 않으며, 이메일 발송을 제외한 인증 API는 기존 10초 클라이언트 타임아웃 안에 완료되는지 통합 검증한다.\n+\n+**Constraints**: 외부 `/api/*`는 Vite·nginx가 `/api`를 제거해 Backend에 전달한다. 인증 쿠키는 `HttpOnly`, 운영 `Secure`, `SameSite=Lax`, `Path=/`를 사용한다. 로그인 유지 선택지는 제공하지 않고 서버가 정한 30분 비활성 세션 만료를 기본값으로 두되 FE는 남은 시간을 추정하지 않는다. 이메일은 FE와 BE에서 앞뒤 공백 제거와 소문자 변환을 동일하게 적용하고, 전화번호는 하이픈·공백 없는 국내 휴대폰 숫자 형식만 허용한다. 공개 화면은 인증 장애로 막지 않는다.\n+\n+**Scale/Scope**: 기존 계정 API 3개 재사용, 인증 API 4개(CSRF 발급·로그인·현재 사용자·로그아웃) 추가, 인증 화면 2개와 단일 보호 경로 경계. 별도 인증 서비스나 Redis는 도입하지 않는다.\n+\n+## Constitution Check\n+\n+*GATE: Phase 0 전과 Phase 1 설계 후 모두 통과했다.*\n+\n+| Gate | 판정 | 설계 반영 |\n+|---|---|---|\n+| I. 전략 진단 중심 | PASS | 전략 진단·시장 흐름·배우기는 공개로 유지하고 `내 기록`만 보호한다. |\n+| II. 첫 화면 단순성 | PASS | 로그인은 이메일·비밀번호, 가입은 서버가 요구하는 필드와 이메일 인증만 노출한다. 유지 옵션을 추가하지 않는다. |\n+| VI. 없는 결과를 만들지 않음 | PASS | 인증 확인 실패와 로그아웃 미확인을 로그인 성공·완료로 대체하지 않는다. |\n+| VIII. 개인정보와 기록 분리 | PASS | 사용자·세션은 Backend에 두고 비밀번호나 세션 토큰을 FE 저장소·URL에 기록하지 않는다. |\n+| 기능 검증과 완료 기준 | PASS | FE 단위/컴포넌트, BE 계약/통합, 전체 사용자 흐름을 각각 검증한다. |\n+| Git·Jira 작업 묶음 | PASS | 하나의 plan에서 FE·BE·통합 task를 만들고 독립 검증·롤백 가능한 묶음으로 Jira/Branch/MR을 나눈다. |\n+| 미합의 인증·인가 영역 | PASS | plan에서 서버 세션·쿠키·CSRF 방식을 근거와 함께 결정하고 [research.md](research.md)에 대안을 기록한다. |\n+\n+설계 후 재검사에서도 위반은 없다. 인증 기능이 공개 핵심 흐름을 차단하지 않으며, 구현 단계의 신규 의존성과 DB 변경은 각각 독립 작업 묶음과 테스트를 가져야 한다.\n+\n+## Project Structure\n+\n+### Documentation (this feature)\n+\n+```text\n+specs/014-user-auth/\n+├── spec.md\n+├── plan.md\n+├── research.md\n+├── data-model.md\n+├── quickstart.md\n+├── contracts/\n+│   ├── README.md\n+│   └── auth-api.yaml\n+└── tasks.md                 # $speckit-tasks에서 생성\n+```\n+\n+### Source Code (implementation targets)\n+\n+```text\n+frontend/\n+├── src/\n+│   ├── api/\n+│   │   ├── client.ts        # 쿠키·CSRF 및 공통 오류 처리 확장\n+│   │   └── auth.ts\n+│   ├── auth/\n+│   │   ├── AuthProvider.tsx\n+│   │   ├── ProtectedRoute.tsx\n+│   │   └── returnTarget.ts\n+│   ├── components/auth/\n+│   ├── pages/\n+│   │   ├── LoginPage.tsx\n+│   │   └── SignupPage.tsx\n+│   ├── types/auth.ts\n+│   ├── App.tsx              # 인증 Provider·라우트 연결\n+│   └── main.tsx\n+└── package.json\n+\n+backend/\n+├── src/main/java/com/ssafy/thorp/\n+│   ├── account/\n+│   │   ├── application/     # 기존 가입 재사용, 세션 유스케이스 추가\n+│   │   ├── domain/\n+│   │   ├── infrastructure/\n+│   │   └── presentation/    # 계정 경로 정규화와 인증 API\n+│   └── common/\n+│       ├── config/          # SecurityFilterChain·session·CSRF 설정\n+│       └── web/             # 인증 실패 공통 응답\n+├── src/main/resources/\n+│   ├── application.yml\n+│   └── db/migration/        # Spring Session 테이블 마이그레이션\n+└── src/test/java/com/ssafy/thorp/account/\n+```\n+\n+**Structure Decision**: 현재의 FE `pages/api/types` 구조와 BE account 계층 구조를 확장한다. 인증 전용 FE 상태만 `src/auth`에 모으고 화면·API 타입은 기존 위치 규칙을 따른다. BE는 별도 서비스로 분리하지 않고 기존 account bounded context와 공통 보안 설정을 사용한다.\n+\n+## Design Decisions\n+\n+### Authentication and session\n+\n+- 이메일·비밀번호 인증 성공 시 Spring Security `SecurityContext`를 서버 세션에 명시적으로 저장한다.\n+- 로그인 성공 시 Spring Security session fixation protection을 적용해 기존 익명 세션 식별자를 교체하고 새 식별자만 인증 세션으로 사용한다.\n+- Spring Session JDBC가 PostgreSQL에 세션을 저장해 Backend 프로세스 재시작이나 향후 다중 인스턴스에서 메모리 세션에 묶이지 않게 한다.\n+- 세션 쿠키는 스크립트에서 읽을 수 없으며 FE는 로그인 여부를 `/api/auth/me` 결과로만 판정한다.\n+- 기본 비활성 만료는 30분이며 환경 설정으로 조정한다. remember-me와 영구 쿠키는 범위 밖이다.\n+- 로그인 실패는 이메일 존재 여부·계정 상태를 추측하지 못하도록 동일한 `INVALID_CREDENTIALS` 응답을 사용한다. 정지·탈퇴 계정의 사용자 메시지는 로그인 실패와 구분하지 않고 서버 감사 로그에서만 원인을 구분한다.\n+\n+### CSRF and request boundary\n+\n+- 동일 출처 쿠키 인증을 사용하므로 Spring Security의 CSRF 보호를 유지한다.\n+- FE는 앱 초기화 및 인증 성공·로그아웃 성공 뒤 `/api/auth/csrf`에서 토큰 쿠키를 갱신하고 Axios가 `X-XSRF-TOKEN` 헤더로 전송하게 한다.\n+- 운영 외부 경로는 `/api/*`, Backend 내부 컨트롤러 경로는 `/accounts/*`, `/auth/*`로 통일한다. 현재 Account 컨트롤러의 `/api/accounts` 매핑은 프록시가 접두사를 제거하는 구조와 맞지 않으므로 BE 작업에서 내부 `/accounts`로 정규화한다.\n+- 기존 account API의 `{ success, data, error }` envelope를 인증 API에도 적용한다. 204 응답에는 본문을 두지 않는다.\n+\n+### Frontend state and routing\n+\n+- 앱 루트의 단일 `AuthProvider`가 사용자와 인증 상태를 소유한다. 개별 페이지가 쿠키나 서버 상태를 직접 추측하지 않는다.\n+- `AuthProvider`는 앱 최초 진입, document가 숨김 상태에서 다시 활성화된 시점, `내 기록` 진입 직전에 `/auth/me`를 재확인한다. 공개 화면은 백그라운드 재확인 때문에 막지 않으며 보호 화면은 확인이 끝나기 전 표시하지 않는다.\n+- 초기 상태는 `checking`이며 `/api/auth/me`가 끝나기 전에 보호 화면을 렌더링하지 않는다. 401은 `anonymous`, 네트워크 실패는 `error`로 분리한다.\n+- `ProtectedRoute`는 `내 기록` 경로만 막고 로그인 화면으로 이동할 때 내부 복귀 위치를 저장한다.\n+- 복귀 위치는 같은 origin의 `/`로 시작하고 `//`로 시작하지 않는 path/query/hash만 허용한다. 세션 탭 안에서 새로고침해도 보존하도록 `sessionStorage`에 한 번만 저장하며 로그인 성공 후 제거한다. 비밀번호와 사용자 객체는 저장하지 않는다.\n+- 가입 성공 시 로그인 화면으로 이동해 이메일만 navigation state로 전달한다. 비밀번호는 즉시 폐기한다.\n+- 이미 인증된 사용자가 로그인·회원가입 route에 접근하면 인증 폼을 표시하지 않고 `/home`으로 이동한다.\n+- 로그아웃 요청을 시작하면 사용자 표시와 보호 데이터를 숨긴다. 서버 확인 실패 시 `logoutUnconfirmed`로 두고 `/me` 재확인 또는 재시도 전까지 보호 경로를 막는다.\n+- 로그아웃 시작, 인증 401 또는 페이지 캐시 복원 시 메모리의 사용자·보호 데이터를 제거하고 현재 사용자 확인 전에는 방문 기록에서 복원된 보호 화면도 렌더링하지 않는다.\n+\n+### Validation and error mapping\n+\n+- FE 검증은 현재 BE 규칙(이메일, 비밀번호 8~25자, 닉네임 2~20자, 하이픈 없는 국내 휴대폰 10~11자리, 인증번호 6자리)과 동일하게 유지한다.\n+- FE는 이메일을 앞뒤 공백 제거·소문자 변환한 뒤 전송하고 BE가 동일 정규화를 다시 적용해 이메일 인증·중복 조회·로그인·저장에 같은 값을 사용한다. 전화번호는 양쪽에서 동일한 국내 휴대폰 숫자 정규식으로 검증한다.\n+- Bean Validation의 필드 메시지와 비즈니스 오류 envelope를 하나의 사용자 오류 모델로 변환하되 서버 내부 예외 문자열은 표시하지 않는다. 가입·이메일 인증은 `DUPLICATE_EMAIL`, `DUPLICATE_PHONE`, `EMAIL_VERIFICATION_REQUIRED`, `EMAIL_VERIFICATION_NOT_FOUND`, `EMAIL_VERIFICATION_INVALID`, `EMAIL_VERIFICATION_EXPIRED`를 안정된 분기 코드로 사용하고 일반 형식 오류만 `INVALID_INPUT`으로 남긴다.\n+- 401은 이전에 인증된 상태였는지에 따라 `로그인이 필요합니다` 또는 `로그인이 만료되었습니다`로 표현한다. 403 CSRF 오류는 토큰을 한 번 갱신한 뒤 사용자 동작으로 재시도하게 하며 요청을 자동 중복 전송하지 않는다.\n+- 네트워크 실패에는 서버 body가 없으므로 FE가 연결 오류로 처리한다. 계약에 정의된 모든 operation은 예상하지 못한 서버 실패에 동일한 `INTERNAL_ERROR` envelope를 사용한다.\n+- 처리 상태는 보조 기술에 상태 알림으로 전달하고, 폼 제출 실패 시 첫 번째 잘못된 입력으로 초점을 이동한다. route 전환 뒤에는 화면 제목부터 읽기 흐름을 이어간다.\n+\n+### Deferred security policy\n+\n+- 반복 로그인·인증번호 발송의 횟수 제한, 관측 구간, 계정 잠금 여부는 현재 팀 정책과 Backend 구현에서 확인되지 않아 이 feature에서 임의의 수치로 정하지 않는다.\n+- 운영 배포 전 별도 BE 보안 Task에서 정책·429 오류 계약·로그 및 지표를 합의한다. 014의 FE는 해당 정책이 추가되더라도 공통 오류 envelope를 사용자 조치 가능 안내로 표시할 수 있어야 한다.\n+- 이메일 발송은 외부 SMTP 지연을 포함하므로 별도 pending 상태와 재시도 동작을 가진다.\n+\n+## Work Partition for Task Generation\n+\n+`$speckit-tasks`는 다음 작업 묶음을 더 작은 실행 task로 나눈다.\n+\n+1. **[BE] 인증 기반과 계약**: account 경로 정규화, Spring Security·Session JDBC·CSRF, 오류 코드와 DB migration.\n+2. **[BE] 세션 API**: 로그인·현재 사용자·로그아웃 구현 및 계약/통합 테스트.\n+3. **[FE] 인증 API와 상태**: 타입, Axios CSRF/쿠키 설정, AuthProvider, 오류 매핑과 단위 테스트.\n+4. **[FE] 인증 화면**: 로그인·회원가입·이메일 인증, 접근성·반응형·중복 제출 테스트.\n+5. **[FE] 보호 경로와 공통 탐색**: `내 기록` 보호, 원래 위치 복귀, 헤더 로그인 상태.\n+6. **[통합] 사용자 흐름 검증**: 가입→로그인→새로고침→보호 경로→만료/로그아웃 및 실패 시나리오.\n+\n+각 묶음은 독립적으로 구현·검증·리뷰·롤백할 수 있어야 하며, 해당 Jira Task를 만든 뒤 팀 Git 규칙의 브랜치와 MR을 연결한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/plan.md",
+          "old_path": "specs/014-user-auth/plan.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,146 @@\n+# Quickstart: 사용자 인증 구현 검증\n+\n+이 문서는 [plan.md](plan.md)와 [API contract](contracts/auth-api.yaml)를 구현한 뒤 FE·BE·통합 동작을 재현하는 검증 가이드다. 현재 PLAN 단계에서는 아래 명령을 실행하거나 구현 코드를 변경하지 않는다.\n+\n+## Prerequisites\n+\n+- Java 21\n+- Node.js와 npm\n+- PostgreSQL(Testcontainers 사용 시 Docker)\n+- Backend 이메일 발송용 `MAIL_USERNAME`, `MAIL_PASSWORD`\n+- 로컬 DB 기본 연결: `localhost:5432/thorp`\n+\n+## 1. Contract와 경로 확인\n+\n+1. 외부 호출 경로가 `/api/accounts/*`, `/api/auth/*`인지 확인한다.\n+2. Vite/nginx가 `/api`를 제거한 뒤 Backend의 `/accounts/*`, `/auth/*`로 전달하는지 확인한다.\n+3. Account controller가 내부 경로에 `/api`를 중복 포함하지 않는지 확인한다.\n+4. 성공 JSON이 `{ success, data, error }` envelope를 따르고 204에는 body가 없는지 확인한다.\n+\n+기준 문서: [contracts/README.md](contracts/README.md), [contracts/auth-api.yaml](contracts/auth-api.yaml)\n+\n+## 2. Backend automated checks\n+\n+```powershell\n+cd backend\n+.\\gradlew.bat spotlessCheck\n+.\\gradlew.bat test\n+```\n+\n+필수 검증:\n+\n+- 기존 회원가입·이메일 인증 회귀 tests\n+- 공백·대소문자가 다른 이메일도 같은 정규형으로 인증·중복 조회·로그인·저장되는지\n+- 가입·이메일 인증의 사용자 조치가 다른 실패가 contract의 세부 오류 코드로 구분되는지\n+- 올바른 이메일·비밀번호 로그인과 password mismatch\n+- 존재하지 않는 이메일·비활성 계정이 같은 `INVALID_CREDENTIALS` 외부 응답을 사용하는지\n+- 로그인 성공 때 session id가 교체되고 PostgreSQL session row가 생성되는지\n+- `/auth/me`의 200/401과 응답에 전화번호·password hash·session id가 없는지\n+- 로그아웃 뒤 server session 무효화와 재접근 401\n+- 이미 비로그인인 DELETE logout의 204 idempotency\n+- CSRF 누락/불일치 403 envelope\n+- 모든 인증 operation의 예상하지 못한 실패가 500 `INTERNAL_ERROR` envelope를 사용하는지\n+- 30분 비활성 만료와 만료 session 정리\n+- PostgreSQL migration이 빈 DB에 적용되고 기존 `users` data를 보존하는지\n+\n+## 3. Frontend automated checks\n+\n+```powershell\n+cd frontend\n+npm install\n+npm run lint\n+npm run test\n+npm run build\n+```\n+\n+필수 검증:\n+\n+- 가입 필드와 인증번호 검증이 [data-model.md](data-model.md)의 규칙과 일치\n+- 발송·확인·가입·로그인 중 같은 submit이 두 번 호출되지 않음\n+- 가입 성공 후 login으로 이동하고 이메일만 prefill됨\n+- boot `checking` 중 보호 화면이 렌더링되지 않음\n+- `/auth/me` 200/401/network failure가 각각 authenticated/anonymous/error로 전이\n+- 숨겨졌던 탭의 재활성화와 `내 기록` 진입 직전에 `/auth/me`를 재확인하고 공개 화면은 막지 않는지\n+- 로그인된 상태에서 API 401을 받으면 expired로 전이\n+- `logoutUnconfirmed`에서 사용자·내 기록이 숨겨지고 재확인/재시도 가능\n+- 외부 URL, `//host`, auth 화면 자체를 return target으로 사용하지 않음\n+- 로그인 사용자의 로그인·회원가입 직접 접근은 `/home`으로 이동\n+- 로그아웃·만료 뒤 브라우저 방문 기록 또는 page cache로 돌아가도 이전 보호 정보가 복원되지 않음\n+- 키보드만으로 모든 입력·발송·확인·가입·로그인·로그아웃 가능\n+- pending/error/success/expired/logoutUnconfirmed 상태가 `role=status` 또는 `aria-live`로 전달되고 제출 실패 시 첫 오류 입력으로 초점이 이동함\n+- 360px 이상 viewport에서 가로 overflow 없이 흐름 완료\n+\n+## 4. Local integration run\n+\n+Backend:\n+\n+```powershell\n+cd backend\n+.\\gradlew.bat bootRun\n+```\n+\n+Frontend:\n+\n+```powershell\n+cd frontend\n+npm run dev\n+```\n+\n+브라우저는 `http://localhost:5173`을 사용한다. FE는 `/api`를 `localhost:8080`으로 proxy하고 Backend에는 접두사가 제거된 경로가 전달된다.\n+\n+## 5. End-to-end scenarios\n+\n+### Scenario A: 회원가입\n+\n+1. 회원가입 화면에서 잘못된 이메일·짧은 비밀번호·잘못된 전화번호를 각각 입력한다.\n+2. 요청 없이 항목 가까이에 오류가 표시되는지 확인한다.\n+3. 가입되지 않은 이메일로 인증번호를 요청한다.\n+4. 잘못된 번호와 만료된 번호가 가입을 허용하지 않고 재입력/재발송을 안내하는지 확인한다.\n+5. 재발송 후 이전 번호가 실패하고 최신 번호가 성공하는지 확인한다.\n+6. 가입을 연속 클릭해 서버 요청이 한 건인지 확인한다.\n+7. 성공 후 로그인 화면에서 이메일만 채워지고 비밀번호는 비어 있는지 확인한다.\n+\n+### Scenario B: 로그인과 복원\n+\n+1. 잘못된 이메일 또는 비밀번호로 로그인하고 같은 일반 오류가 표시되는지 확인한다.\n+2. 올바른 계정으로 로그인한다.\n+3. 새로고침 후 같은 사용자 표시가 복원되는지 확인한다.\n+4. browser storage에 password나 session id가 없는지 확인한다.\n+5. Network panel에서 session cookie가 `HttpOnly`, `SameSite=Lax`이고 unsafe 요청에 CSRF header가 있는지 확인한다.\n+6. 로그인 전후 session id가 달라지는지 확인한다.\n+\n+### Scenario C: 보호 경로와 복귀\n+\n+1. 로그아웃 상태에서 `내 기록`의 하위 위치에 직접 접근한다.\n+2. 보호 내용이 잠깐도 보이지 않고 로그인 화면으로 이동하는지 확인한다.\n+3. 로그인한 뒤 정확한 내부 위치로 돌아가는지 확인한다.\n+4. 로그인 화면을 새로고침한 뒤에도 복귀하는지 확인한다.\n+5. 외부 URL을 복귀 위치로 주입하면 `/home`으로 이동하는지 확인한다.\n+6. 로그인하지 않은 상태에서 전략 진단·시장 흐름·배우기는 계속 이용 가능한지 확인한다.\n+\n+### Scenario D: 만료와 로그아웃\n+\n+1. `내 기록` 이용 중 server session을 만료시킨다.\n+2. 보호 정보를 숨기고 로그인 만료 안내를 표시하는지 확인한다.\n+3. 재로그인 후 만료 전 내부 위치로 돌아가는지 확인한다.\n+4. 로그아웃 요청을 network error로 실패시킨다.\n+5. 사용자·보호 정보가 즉시 숨겨지고 “로그아웃 미확인”과 재시도가 표시되는지 확인한다.\n+6. 재시도 성공 후 `/auth/me`가 401이고 공개 기능은 계속 이용 가능한지 확인한다.\n+\n+### Scenario E: 다중 탭과 캐시 복원\n+\n+1. 두 탭을 열고 한 탭에서 로그인 또는 로그아웃한다.\n+2. 다른 탭을 다시 활성화하거나 `내 기록`으로 진입할 때 현재 사용자를 재확인하는지 확인한다.\n+3. 확인 중 공개 화면은 이용할 수 있고 보호 화면은 노출되지 않는지 확인한다.\n+4. 로그아웃·만료 뒤 브라우저 뒤로가기와 페이지 캐시 복원으로 이전 사용자 정보가 나타나지 않는지 확인한다.\n+\n+## 6. Completion evidence\n+\n+- FE lint/test/build 결과\n+- BE spotless/test 결과\n+- API contract 7개 operation별 성공·실패 결과\n+- desktop과 360px mobile의 인증 흐름 캡처\n+- network failure·session expiry·CSRF 실패 검증 기록\n+- 구현 완료, 사용성 확인, MR 병합을 서로 구분한 Jira/MR 기록\n+\n+Task 완료는 constitution의 구현·테스트·리뷰·MR 병합·문서 수정 다섯 조건을 모두 충족해야 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/quickstart.md",
+          "old_path": "specs/014-user-auth/quickstart.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,178 @@\n+# Research: 사용자 인증\n+\n+## 조사 범위\n+\n+- Frontend: React 19, React Router의 선언형 라우팅, 공용 Axios client, 기존 Node test 구조\n+- Backend: account 계층, 회원가입·이메일 인증 controller/service/repository, 공통 응답·예외, PostgreSQL·Flyway 설정\n+- 운영 경계: Vite와 nginx의 `/api` proxy 규칙\n+- 공식 참고: Spring Security 인증 유지·CSRF, Spring Session JDBC, React Router navigation, Axios XSRF 설정\n+\n+## Decision 1: 서버 관리 세션을 사용한다\n+\n+**Decision**: Spring Security의 `SecurityContext`를 HTTP session에 저장하고 Spring Session JDBC로 PostgreSQL에 보존한다. 브라우저에는 opaque session cookie만 전달한다.\n+\n+**Rationale**:\n+\n+- 현재 서비스는 nginx 뒤에서 같은 출처로 React와 Spring Boot가 통신하고 PostgreSQL을 이미 운영한다.\n+- 세션 식별자를 `HttpOnly` 쿠키로 두면 FE JavaScript와 `localStorage`에 인증 토큰을 노출하지 않는다.\n+- Spring Security는 `SecurityContextRepository`를 통해 후속 요청의 인증을 복원하며, Spring Session JDBC는 기존 relational database에 `HttpSession`을 보관한다.\n+- 로그아웃 시 서버 세션을 실제로 무효화할 수 있어 spec의 “서버에서 완료를 확인한 경우에만 완료 표시”와 맞는다.\n+\n+**Alternatives considered**:\n+\n+- JWT access token을 `localStorage`에 저장: XSS 노출 위험과 로그아웃 무효화 문제 때문에 제외했다.\n+- JWT를 `HttpOnly` cookie에 저장: refresh/rotation/revocation 저장소가 추가되고 현재 단일 서비스 범위에 비해 복잡하다.\n+- 기본 인메모리 `HttpSession`: 서버 재시작과 다중 인스턴스에서 인증 상태가 끊겨 PostgreSQL 세션보다 약하다.\n+\n+**Sources**:\n+\n+- [Spring Security — Persisting Authentication](https://docs.spring.io/spring-security/reference/servlet/authentication/persistence.html)\n+- [Spring Session — JDBC](https://docs.spring.io/spring-session/reference/configuration/jdbc.html)\n+\n+## Decision 2: session cookie는 비영구이며 서버 비활성 만료를 따른다\n+\n+**Decision**: cookie에는 `HttpOnly`, 운영 `Secure`, `SameSite=Lax`, `Path=/`를 적용하고 영구 `Max-Age`를 두지 않는다. 서버 비활성 만료 기본값은 30분으로 설정 가능하게 두며 FE는 만료 시각을 추정하지 않는다.\n+\n+**Rationale**:\n+\n+- clarify에서 별도 로그인 유지 선택지를 제공하지 않기로 확정했다.\n+- 비영구 cookie는 remember-me 기능을 만들지 않으면서 같은 브라우저 세션의 새로고침·재진입을 지원한다.\n+- 서버가 세션 유효성의 기준 저장소가 되어 FE와 실제 만료 상태가 어긋나지 않는다.\n+\n+**Alternatives considered**:\n+\n+- 영구 cookie: 명시적인 로그인 유지 선택이 없는 현재 범위보다 긴 인증을 만들 수 있어 제외했다.\n+- FE 타이머로 만료 예측: 네트워크·서버 연장 상태와 어긋나므로 제외했다.\n+\n+## Decision 3: cookie 인증과 함께 SPA CSRF 보호를 유지한다\n+\n+**Decision**: Spring Security CSRF를 활성화하고 `/api/auth/csrf`가 `XSRF-TOKEN` cookie를 준비한다. Axios는 unsafe method에 `X-XSRF-TOKEN` header를 보낸다. 인증 성공·로그아웃 성공 뒤에는 다음 unsafe 요청 전에 토큰을 다시 준비한다.\n+\n+**Rationale**:\n+\n+- 브라우저가 session cookie를 자동 전송하므로 POST/DELETE 요청은 CSRF 방어가 필요하다.\n+- Spring Security는 unsafe method의 CSRF 보호와 SPA용 cookie token repository를 지원한다.\n+- Axios의 표준 XSRF cookie/header 이름을 그대로 사용하면 별도 토큰 저장소가 필요 없다.\n+\n+**Alternatives considered**:\n+\n+- CSRF 비활성화 + SameSite만 사용: 방어 계층이 줄고 Spring Security 기본 보호를 버리므로 제외했다.\n+- 인증 endpoint만 CSRF 제외: 로그인·이메일 발송 같은 상태 변경 요청을 예외로 만들 이유가 부족하다.\n+\n+**Sources**:\n+\n+- [Spring Security — CSRF](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html)\n+- [Axios — Request Config](https://axios-http.com/docs/req_config)\n+\n+## Decision 4: 외부 `/api`와 Backend 내부 경로를 분리한다\n+\n+**Decision**: 사용자·FE가 보는 계약은 `/api/accounts/*`, `/api/auth/*`로 정의하고, Backend controller는 proxy가 `/api`를 제거한 뒤 받는 `/accounts/*`, `/auth/*`를 사용한다.\n+\n+**Rationale**:\n+\n+- `frontend/vite.config.ts`와 `infra/nginx/templates/default.conf.template` 모두 외부 `/api` 접두사를 제거한다.\n+- Market controller는 이미 내부 `/markets`를 사용하지만 현재 Account controller는 `/api/accounts`를 사용한다. 이 상태에서 외부 `/api/accounts`는 내부 `/accounts`가 되어 account endpoint와 맞지 않는다.\n+- proxy 규칙을 바꾸면 기존 market/backtest API 전체에 영향을 주므로 account mapping을 기존 운영 규칙에 맞추는 변경이 가장 작다.\n+\n+**Alternatives considered**:\n+\n+- proxy가 `/api`를 유지하도록 변경: 이미 동작하는 다른 API의 controller 경로를 모두 바꿔야 하므로 제외했다.\n+- FE에서 `/api/api/accounts` 호출: 환경별 경로가 드러나고 공개 계약이 일관되지 않아 제외했다.\n+\n+## Decision 5: 기존 account 응답 envelope를 인증 계약에 사용한다\n+\n+**Decision**: 인증 API는 `{ \"success\": boolean, \"data\": ..., \"error\": ... }` 구조를 사용한다. 인증 전용 오류로 `INVALID_CREDENTIALS`, `AUTHENTICATION_REQUIRED`, `CSRF_TOKEN_INVALID`를 추가한다. 가입·이메일 인증은 사용자 조치가 다른 실패를 `DUPLICATE_EMAIL`, `DUPLICATE_PHONE`, `EMAIL_VERIFICATION_REQUIRED`, `EMAIL_VERIFICATION_NOT_FOUND`, `EMAIL_VERIFICATION_INVALID`, `EMAIL_VERIFICATION_EXPIRED`로 구분하고, 예상하지 못한 오류는 기존 `INTERNAL_ERROR`를 사용한다.\n+\n+**Rationale**:\n+\n+- 기존 Signup controller와 `GlobalExceptionHandler`가 `ApiResponse<T>`를 사용한다.\n+- 로그인 실패를 이메일 없음·비밀번호 불일치·계정 상태별로 외부에 구분하지 않으면 계정 존재 여부 노출을 줄인다.\n+- 현재 `INVALID_INPUT`만으로는 폼 오류와 인증 실패, 로그인 필요 상태를 FE가 안정적으로 구분하기 어렵다.\n+- 기존 Account 구현은 사용자 조치가 다른 가입·인증 실패도 모두 `INVALID_INPUT`으로 반환하므로 새 계약에 맞춘 BE 변경이 필요하다.\n+\n+**Alternatives considered**:\n+\n+- HTTP status만 사용: 사용자 조치와 FE 상태 전이를 안정적으로 구분하기 어렵다.\n+- 서버 메시지 문자열을 분기 키로 사용: 문구 변경에 취약하므로 제외했다.\n+- Market의 별도 `HttpApiResponse` 형태 사용: account의 현재 계약과 맞지 않아 이번 범위에서 통합하지 않는다.\n+\n+## Decision 6: FE 인증 상태는 단일 Provider가 소유한다\n+\n+**Decision**: `AuthProvider`가 앱 시작 시 CSRF 준비와 현재 사용자 조회를 수행하고 인증 상태·사용자·로그인·로그아웃·재확인 동작을 제공한다. 보호 경로와 Header는 이 상태를 소비한다.\n+\n+**Rationale**:\n+\n+- 현재 앱은 React Router 선언형 mode와 route-level lazy loading을 사용한다. Provider를 Router 내부·Routes 외부에 두면 모든 route가 동일 상태를 본다.\n+- 페이지마다 `/me`를 호출하거나 cookie 존재를 추측하는 중복을 막는다.\n+- 보호 화면은 `checking` 동안 렌더링하지 않고 공개 화면은 확인 실패에도 계속 이용할 수 있다.\n+\n+**Alternatives considered**:\n+\n+- 전역 상태 라이브러리 신규 도입: 인증 상태 하나를 위해 추가 의존성이 필요하지 않다.\n+- 각 페이지 local state: 상태 불일치와 중복 요청이 생겨 제외했다.\n+\n+**Sources**:\n+\n+- [React Router — Routing](https://reactrouter.com/start/declarative/routing)\n+- [React Router — Navigating](https://reactrouter.com/start/declarative/navigating)\n+\n+## Decision 7: 복귀 위치는 검증된 내부 경로만 탭 단위로 보관한다\n+\n+**Decision**: `pathname + search + hash`를 same-origin 내부 경로로 검증한 후 `sessionStorage`에 저장하고 로그인 성공 뒤 한 번 사용해 제거한다. `/`로 시작하지 않거나 `//`로 시작하는 값, 절대 URL은 기본 `/home`으로 바꾼다.\n+\n+**Rationale**:\n+\n+- Router navigation state만 사용하면 로그인 화면 새로고침 때 원래 목적지가 사라진다.\n+- 탭 단위 저장은 사용자의 목적을 보존하면서 다른 브라우저 세션까지 불필요하게 남기지 않는다.\n+- 세션 cookie·비밀번호·사용자 객체는 저장하지 않아 민감정보 노출을 만들지 않는다.\n+\n+**Alternatives considered**:\n+\n+- query string에 return URL 저장: 외부 URL 주입과 로그 노출 위험이 커진다.\n+- `localStorage`: 다른 탭·이후 브라우저 세션까지 남으므로 범위가 넓다.\n+\n+## Decision 8: 인증 UI 테스트를 위해 Vitest와 Testing Library를 추가한다\n+\n+**Decision**: 기존 순수 함수/API Node tests는 유지하고, DOM·키보드·라우팅 상태가 필요한 인증 tests에는 Vitest, jsdom, React Testing Library, user-event를 사용한다. Backend 계약은 MockMvc와 PostgreSQL Testcontainers로 검증한다.\n+\n+**Rationale**:\n+\n+- 현재 FE test command는 Node test만 사용해 React 폼의 초점, 오류 전달, 중복 제출, 보호 route를 검증하기 어렵다.\n+- Testing Library는 사용자 동작과 접근성 이름을 중심으로 검증할 수 있다.\n+- 실제 세션 저장과 DB schema는 운영과 같은 PostgreSQL 통합 test가 필요하다.\n+\n+**Alternatives considered**:\n+\n+- 수동 브라우저 확인만 수행: 회귀 검증과 Task 완료 증거가 약해 제외했다.\n+- 즉시 E2E framework까지 추가: 이번 기능에서는 component/router integration tests와 API integration tests로 핵심 계약을 검증할 수 있어 보류했다.\n+\n+## Decision 9: 이메일 정규형은 양쪽에서 적용한다\n+\n+**Decision**: 이메일은 앞뒤 공백을 제거하고 소문자로 변환한 값을 인증·중복 조회·로그인·저장에 사용한다. FE는 제출 전에 같은 변환을 적용하고 BE가 신뢰 경계에서 다시 적용한다. 전화번호는 현재 Backend 계약대로 하이픈·공백 없는 국내 휴대폰 숫자 형식만 허용한다.\n+\n+**Rationale**:\n+\n+- 현재 Backend는 이메일 원문을 그대로 조회·저장하므로 공백이나 대소문자 차이로 인증 기록·중복 조회·로그인이 어긋날 수 있다.\n+- FE만 정규화하면 다른 client가 규칙을 우회할 수 있으므로 BE가 기준 저장소의 정규형을 보장해야 한다.\n+\n+**Alternatives considered**:\n+\n+- 현재의 원문 비교 유지: 같은 사용자가 대소문자만 다른 계정을 만들거나 인증 기록을 찾지 못할 수 있어 제외했다.\n+- FE에서만 정규화: 서버 고유성 조건을 보장하지 못해 제외했다.\n+\n+## 확인된 기존 기능과 부족한 기능\n+\n+| 구분 | 상태 | 근거/후속 조치 |\n+|---|---|---|\n+| 회원가입 | 일부 보완 필요 | 이메일·비밀번호·닉네임·전화번호, 201 `ApiResponse<SignupResponse>` 재사용. 이메일 정규화와 사유별 오류 코드 추가 필요 |\n+| 인증번호 발송 | 구현됨 | 6자리·3분, 재발송 시 이전 기록 삭제, 204 응답 |\n+| 인증번호 확인 | 구현됨 | 잘못됨·만료·요청 없음 처리, 이미 확인된 요청은 idempotent, 204 응답 |\n+| 비밀번호 저장 | 구현됨 | `PasswordEncoder` hash 사용. 원문 저장 없음 |\n+| 로그인 | 없음 | 신규 세션 API·서비스·Security 설정 필요 |\n+| 현재 사용자 조회 | 없음 | 새로고침 복원과 보호 route 판정용 API 필요 |\n+| 로그아웃 | 없음 | 서버 세션 무효화 API 필요 |\n+| CSRF SPA 계약 | 없음 | token 발급·refresh와 공통 403 envelope 필요 |\n+| Account proxy 경로 | 불일치 | 내부 controller의 `/api` 접두사를 제거해야 함 |\n+| Account 테스트 | 없음 | 기존 가입·인증 회귀 test와 신규 auth 계약 test 필요 |\n+\n+014 구현에 필요한 사용자 흐름과 FE/BE 계약은 위 결정으로 해소했다. 반복 로그인·인증번호 발송의 운영 제한 수치와 계정 잠금 정책은 근거 없이 확정하지 않고 별도 BE 보안 Task로 명시적으로 이관한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/research.md",
+          "old_path": "specs/014-user-auth/research.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,203 @@\n+# Feature Specification: 사용자 인증\n+\n+**Feature Branch**: `014-user-auth` (spec 디렉터리 식별자다. 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 만든다.)\n+\n+**Created**: 2026-09-10\n+\n+**Status**: Draft\n+\n+**Input**: User description: \"Thorp의 로그인·회원가입·로그아웃 사용자 기능을 정의하고, 기존 회원가입 기능은 재사용하되 로그인·로그아웃·현재 사용자 확인에 필요한 서버 기능이 없으면 의존성으로 남긴다. 전략 진단·시장 흐름·배우기는 비로그인 이용을 허용하고 내 기록은 로그인 사용자만 이용하게 한다.\"\n+\n+**근거 문서**: [constitution v1.0.0](../../.specify/memory/constitution.md)의 화면 단순성·없는 결과를 만들지 않는 원칙, 기록·개인정보·보관 규칙과 합의되지 않은 인증·인가 영역. 기존 서버의 회원가입·이메일 소유 확인 구현은 현재 동작 확인에만 사용했으며 이 spec이 구현 방식을 확정하지 않는다.\n+\n+**관련 spec**: [006 내 기록](../006-my-records/spec.md)은 저장·재조회를 식별된 사용자 단위로 제공하며, 이 spec은 그 식별 진입과 종료 흐름을 맡는다. 전략 진단·시장 흐름·배우기는 로그인 없이 이용할 수 있다는 [공통 가정](../README.md#공통-가정)을 유지한다.\n+\n+## 범위 요약\n+\n+사용자가 이메일 소유 확인을 거쳐 계정을 만들고 로그인 상태를 시작·확인·복원·종료하며, 로그인해야 하는 '내 기록'에 안전하게 접근하는 기능이다. 로그인하지 않은 사용자는 공개 기능을 그대로 이용할 수 있고, '내 기록'에 접근할 때만 로그인 안내를 받는다. 인증이 끝나면 원래 목적지로 돌아간다. 입력 오류·요청 실패·처리 중·로그인 만료를 사용자가 이해할 수 있는 상태로 처리하며, 서버에 없는 기능은 구현된 것으로 가정하지 않는다.\n+\n+## Clarifications\n+\n+### Session 2026-09-10\n+\n+- Q: 사용자는 어떤 계정 정보로 로그인해야 하나요? → A: 이메일과 비밀번호로 로그인한다.\n+- Q: 회원가입을 완료한 사용자는 다음으로 어디로 이동해야 하나요? → A: 로그인 화면으로 이동하고 가입한 이메일을 미리 입력한다.\n+- Q: 로그인 화면에 사용자가 선택하는 ‘로그인 상태 유지’ 옵션을 제공해야 하나요? → A: 별도 옵션 없이 서버가 정한 유효기간을 따른다.\n+- Q: ‘내 기록’을 이용하던 중 로그인 상태가 만료되어 재로그인한 사용자는 어디로 돌아가야 하나요? → A: 만료 전에 이용하던 ‘내 기록’ 위치로 복귀한다.\n+- Q: 로그아웃 요청 중 네트워크 오류가 발생하면 화면을 어떤 상태로 처리해야 하나요? → A: 보호 정보를 숨기고 ‘로그아웃 미확인’ 상태에서 재시도를 제공한다.\n+\n+## User Scenarios & Testing *(mandatory)*\n+\n+### User Story 1 - 새 사용자가 계정을 만든다 (Priority: P1)\n+\n+새 사용자는 자신의 이메일로 받은 인증번호를 확인한 뒤 필수 정보를 입력해 계정을 만들고, 성공 여부 또는 고쳐야 할 항목을 확인할 수 있다.\n+\n+**Why this priority**: 계정이 없으면 로그인과 사용자별 내 기록 이용을 시작할 수 없다. 기존 서버가 제공하는 가입 기능을 실제 사용자 흐름으로 연결하는 출발점이다.\n+\n+**Independent Test**: 가입되지 않은 이메일로 인증번호를 받아 제한 시간 안에 확인한 뒤 유효한 정보로 가입을 완료한다. 잘못되거나 만료된 인증번호, 미인증 이메일, 잘못된 입력·중복 이메일·중복 전화번호도 각각 시험한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 가입되지 않은 이메일을 입력한 사용자, **When** 인증번호 발송을 요청하면, **Then** 시스템은 요청 처리 상태와 발송 결과를 알려주고 인증번호 입력 단계로 진행할 수 있게 한다.\n+2. **Given** 유효시간 안에 올바른 인증번호를 입력한 사용자, **When** 인증번호 확인을 요청하면, **Then** 시스템은 이메일 소유 확인 완료를 표시하고 회원가입을 계속할 수 있게 한다.\n+3. **Given** 잘못되거나 만료된 인증번호를 입력한 사용자, **When** 인증번호 확인을 요청하면, **Then** 시스템은 계정 생성을 허용하지 않고 오류 원인과 재입력 또는 재발송 방법을 알려준다.\n+4. **Given** 이메일 소유 확인과 유효한 정보 입력을 완료한 사용자, **When** 회원가입을 제출하면, **Then** 시스템은 한 번의 가입 요청만 처리하고 로그인 화면으로 이동해 가입한 이메일만 미리 입력하며 비밀번호는 전달하지 않는다.\n+5. **Given** 필수 항목이 비었거나 허용 형식·길이를 벗어난 사용자, **When** 회원가입을 제출하려 하면, **Then** 시스템은 잘못된 항목과 수정 방법을 표시하고 요청을 시작하지 않는다.\n+6. **Given** 이미 사용 중인 이메일 또는 전화번호를 입력한 사용자, **When** 인증 또는 회원가입을 요청하면, **Then** 시스템은 해당 정보를 사용할 수 없음을 알리고 중복 계정을 만들지 않는다.\n+7. **Given** 인증번호 발송·확인 또는 회원가입 요청을 처리 중인 사용자, **When** 같은 제출 동작을 반복하면, **Then** 시스템은 동일 요청을 중복으로 시작하지 않는다.\n+\n+---\n+\n+### User Story 2 - 기존 사용자가 로그인하고 상태를 복원한다 (Priority: P1)\n+\n+기존 사용자는 이메일과 비밀번호로 로그인하고, 페이지를 새로 열거나 새로고침해도 유효한 로그인 상태라면 사용자로 인식된다.\n+\n+**Why this priority**: 로그인과 상태 복원이 없으면 내 기록을 사용자별로 제공하거나 보호할 수 없다.\n+\n+**Independent Test**: 유효한 계정으로 로그인한 뒤 공개 화면을 이동하고 새로고침해 로그인 표시가 유지되는지 확인한다. 잘못된 계정 정보와 네트워크 실패도 별도로 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 유효한 계정을 가진 사용자, **When** 올바른 이메일과 비밀번호를 제출하면, **Then** 시스템은 로그인 완료를 알리고 사용자에게 허용된 기능을 사용할 수 있게 한다.\n+2. **Given** 올바르지 않은 로그인 정보를 입력한 사용자, **When** 로그인을 제출하면, **Then** 시스템은 로그인하지 않은 상태를 유지하고 다시 시도할 수 있는 안내를 보여준다.\n+3. **Given** 로그인 요청을 처리 중인 사용자, **When** 제출 동작을 반복하면, **Then** 시스템은 동일 로그인 요청을 중복으로 시작하지 않는다.\n+4. **Given** 유효한 로그인 상태의 사용자, **When** 페이지를 새로 열거나 새로고침하면, **Then** 시스템은 상태 확인이 끝난 뒤 같은 사용자를 로그인 상태로 복원한다.\n+5. **Given** 로그인 상태 확인이 진행 중인 사용자, **When** 화면이 표시되면, **Then** 시스템은 확인 완료 전까지 로그인 여부를 단정하거나 보호된 정보를 잠시 노출하지 않는다.\n+\n+---\n+\n+### User Story 3 - 로그인 후 원래 내 기록으로 돌아간다 (Priority: P1)\n+\n+로그인하지 않은 사용자가 '내 기록'을 선택하면 로그인 안내를 받고, 로그인에 성공한 뒤 다시 '내 기록'으로 돌아간다.\n+\n+**Why this priority**: 사용자의 원래 목적을 보존하면서 사용자별 기록을 보호해야 한다. [006 내 기록](../006-my-records/spec.md)의 식별 조건을 충족하는 연결 기능이다.\n+\n+**Independent Test**: 로그아웃 상태에서 '내 기록'에 접근해 로그인 화면으로 이동하는지 확인하고, 로그인 완료 후 별도의 탐색 없이 원래 '내 기록'으로 복귀하는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 로그인하지 않은 사용자, **When** '내 기록'에 접근하면, **Then** 시스템은 보호된 내용을 표시하지 않고 로그인이 필요하다는 안내와 로그인 진입을 제공한다.\n+2. **Given** '내 기록'에서 로그인 화면으로 이동한 사용자, **When** 로그인에 성공하면, **Then** 시스템은 원래 접근하려던 '내 기록'으로 돌아간다.\n+3. **Given** 로그인하지 않은 사용자, **When** 전략 진단·시장 흐름·배우기를 이용하면, **Then** 시스템은 가입이나 로그인을 강제하지 않는다.\n+4. **Given** 외부 또는 유효하지 않은 복귀 위치가 전달된 사용자, **When** 로그인에 성공하면, **Then** 시스템은 안전한 기본 화면으로 이동하고 외부 위치로 보내지 않는다.\n+\n+---\n+\n+### User Story 4 - 사용자가 로그아웃한다 (Priority: P2)\n+\n+로그인한 사용자는 어느 사용자 화면에서든 로그아웃하고, 이후 사용자 전용 정보에 접근할 수 없는 상태가 되었음을 확인할 수 있다.\n+\n+**Why this priority**: 공용 기기나 사용 종료 상황에서 사용자별 기록을 계속 노출하지 않도록 로그인 상태를 명시적으로 끝낼 수 있어야 한다.\n+\n+**Independent Test**: 로그인 상태에서 로그아웃한 뒤 공개 기능은 계속 사용할 수 있고, '내 기록' 재접근 시 로그인 안내가 나타나는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 로그인한 사용자, **When** 로그아웃을 선택하면, **Then** 시스템은 로그인 상태를 종료하고 완료 상태를 명확히 표시한다.\n+2. **Given** 로그아웃을 완료한 사용자, **When** '내 기록'에 다시 접근하면, **Then** 시스템은 이전 사용자 정보나 기록을 표시하지 않고 로그인 안내를 제공한다.\n+3. **Given** 로그아웃을 완료한 사용자, **When** 공개 기능으로 이동하면, **Then** 시스템은 로그인 없이 정상 이용을 허용한다.\n+4. **Given** 로그아웃 요청 중 네트워크 오류가 발생한 사용자, **When** 서버의 로그아웃 완료를 확인할 수 없으면, **Then** 시스템은 보호 정보를 즉시 숨기고 로그아웃 완료로 표시하지 않으며 상태 확인 또는 재시도를 제공한다.\n+\n+---\n+\n+### User Story 5 - 만료와 일시적인 실패에서 안전하게 이어간다 (Priority: P2)\n+\n+사용자는 로그인 만료와 네트워크 오류를 일반 오류 화면이 아닌 이해 가능한 상태로 보고, 입력을 다시 준비하지 않고 적절한 다음 행동을 선택할 수 있다.\n+\n+**Why this priority**: 인증 상태가 불확실할 때 보호된 정보를 노출하거나 성공한 것처럼 표시하면 안 되며, 일시적인 연결 실패가 전체 공개 기능 이용을 막아서도 안 된다.\n+\n+**Independent Test**: 로그인 상태를 만료시키거나 각 인증 요청의 연결을 실패시켜 보호 정보가 숨겨지고 재로그인·재시도 안내가 나타나는지, 공개 화면은 계속 이용 가능한지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 로그인 상태가 만료된 사용자, **When** 보호된 기능을 이용하려 하면, **Then** 시스템은 보호 정보를 숨기고 로그인 만료와 재로그인 필요를 알린다.\n+2. **Given** 회원가입 또는 로그인 중 네트워크 오류가 발생한 사용자, **When** 실패 응답을 받으면, **Then** 시스템은 완료로 표시하지 않고 안전하게 재시도할 수 있게 한다.\n+3. **Given** 로그인 상태 확인이 실패한 사용자, **When** 공개 기능을 이용하면, **Then** 시스템은 공개 기능을 막지 않으며 로그인 상태를 확인되지 않은 것으로 처리한다.\n+4. **Given** '내 기록' 이용 중 로그인 상태가 만료되어 로그인 화면으로 이동한 사용자, **When** 재로그인에 성공하면, **Then** 시스템은 만료 전에 이용하던 유효한 서비스 내부 위치로 돌아간다.\n+\n+### Edge Cases\n+\n+- 이메일은 FE와 BE 모두 앞뒤 공백을 제거하고 소문자로 변환한 동일한 정규형으로 검증·인증·중복 조회·로그인·저장한다. 전화번호는 하이픈·공백 없는 국내 휴대폰 숫자 형식만 허용하며 FE와 BE가 같은 정규식을 사용한다. 현재 Backend에는 이메일 정규화가 없으므로 구현 완료가 아니라 필요한 BE 변경으로 취급한다.\n+- 회원가입 요청이 성공했으나 사용자의 화면 전환 전에 응답이 지연되거나 다시 전달돼도 계정을 두 번 만들지 않는다.\n+- 로그인 도중 사용자가 다른 화면으로 이동하거나 요청을 다시 시작해도 늦게 도착한 이전 결과가 최신 로그인 상태를 덮어쓰지 않는다.\n+- 로그아웃 요청 결과를 확인하지 못한 동안에는 이전 사용자의 보호 정보를 다시 노출하지 않고, 상태를 재확인하기 전까지 보호 기능 접근을 허용하지 않는다.\n+- 여러 탭에서 로그인 또는 로그아웃 상태가 달라질 수 있으므로 앱 최초 진입, 숨겨졌던 탭이 다시 활성화된 시점, '내 기록' 진입 직전에 현재 사용자를 다시 확인한다. 재확인 중에는 보호 정보를 표시하지 않되 공개 기능은 막지 않는다.\n+- 로그인 만료 직전에 '내 기록'을 열었으면 보호된 내용이 계속 남아 있지 않도록 만료 상태로 전환한다.\n+- 사용자가 로그인 화면과 회원가입 화면 사이를 이동해도 이전 화면의 비밀번호를 다른 화면에 자동으로 노출하지 않는다.\n+- 이미 로그인한 사용자가 로그인 또는 회원가입 화면에 직접 접근하면 인증 입력 화면을 표시하지 않고 안전한 기본 화면 `/home`으로 이동한다.\n+- 로그아웃 시작 또는 인증 만료 뒤 브라우저의 뒤로가기·앞으로가기·페이지 캐시 복원으로 보호 화면이 다시 나타나더라도 현재 사용자 확인 전에는 이전 사용자의 정보와 기록을 표시하지 않는다.\n+- 서버가 사용자에게 보여줄 수 없는 내부 오류를 반환하면 내부 세부정보 대신 재시도 가능한 일반 안내를 표시한다.\n+\n+## Requirements *(mandatory)*\n+\n+### Functional Requirements\n+\n+- **FR-001**: 서비스는 사용자가 이메일·비밀번호·닉네임·국내 휴대폰 번호를 입력해 계정을 만들 수 있게 한다. 이메일은 앞뒤 공백을 제거하고 소문자로 변환한 뒤 검증·인증·중복 조회·로그인·저장에 동일하게 사용한다. 현재 확인된 나머지 입력 기준은 유효한 이메일, 8~25자의 비밀번호, 2~20자의 닉네임, `^01[016789]\\d{7,8}$`에 맞는 하이픈·공백 없는 국내 휴대폰 번호다. 정규형의 최종 판정과 저장은 Backend가 맡고 FE는 같은 규칙으로 사전 안내한다.\n+- **FR-002**: 서비스는 필수 입력 누락과 형식·길이 위반을 제출 전에 항목 가까이에 표시하고, 서버 판정과 다른 임의 기준으로 유효한 요청을 차단하지 않는다.\n+- **FR-003**: 서비스는 이미 가입된 이메일·전화번호, 이메일 인증 요청 없음·잘못된 번호·만료·미완료, 그 밖의 입력 거절 사유를 안정된 오류 코드로 구분해 안내하며 중복 계정을 성공으로 표시하지 않는다. 기존 Backend가 이 사유를 모두 `INVALID_INPUT`으로 반환하는 상태는 요구사항 충족으로 간주하지 않고 공통 계약을 보완해야 한다.\n+- **FR-004**: 서비스는 회원가입에 이메일 소유 확인 단계를 포함한다. 사용자는 가입되지 않은 이메일로 6자리 인증번호 발송을 요청하고 3분 안에 번호를 확인해야 회원가입을 완료할 수 있다. 재발송하면 앞서 발급된 번호는 더 이상 사용할 수 없으며, 발송 실패·요청 없음·잘못된 번호·만료·미확인 상태를 각각 다음 행동이 드러나는 안내로 처리한다.\n+- **FR-005**: 회원가입 성공 시 서비스는 로그인 화면으로 이동해 가입한 이메일만 미리 입력한다. 생성된 사용자의 식별자·이메일·닉네임·상태처럼 비민감한 결과만 표시 또는 후속 흐름에 사용하고, 비밀번호를 화면 간 전달값·응답 표시·완료 상태에 노출하지 않는다.\n+- **FR-006**: 서비스는 이메일 인증번호 발송·확인, 회원가입, 로그인, 로그아웃 요청을 처리하는 동안 같은 동작의 추가 제출을 막는다. 각 요청은 현재 처리 중인 요청 식별자 또는 취소 상태를 기준으로 최신 요청의 결과만 반영하며, 성공·실패·네트워크 오류 중 하나가 확인되기 전에 완료로 표시하지 않는다.\n+- **FR-007**: 서비스는 기존 사용자가 이메일과 비밀번호로 로그인하고 성공 또는 실패 여부를 알 수 있게 한다. 로그인 실패는 로그인 상태로 전환하지 않고 재시도를 허용한다.\n+- **FR-008**: 서비스는 별도의 '로그인 상태 유지' 선택지를 제공하지 않고 서버가 정한 유효기간을 따른다. 유효한 로그인 상태는 새로고침과 페이지 재진입 후 확인·복원하며, 앱 최초 진입·숨겨졌던 탭의 재활성화·'내 기록' 진입 직전에 현재 사용자를 확인한다. 확인 중에는 로그인 여부를 단정하거나 사용자 전용 정보를 노출하지 않고 공개 기능은 계속 이용할 수 있게 한다.\n+- **FR-009**: 서비스는 로그인한 사용자가 로그아웃할 수 있게 한다. 요청을 시작하면 이전 사용자의 표시 정보와 보호된 내용을 즉시 숨기며, 서버에서 완료를 확인한 경우에만 로그아웃 완료로 표시한다. 완료를 확인하지 못하면 '로그아웃 미확인' 상태로 보호 기능 접근을 차단하고 상태 확인 또는 재시도를 제공한다.\n+- **FR-010**: 서비스는 로그인하지 않은 사용자가 전략 진단·시장 흐름·배우기를 이용할 수 있게 하며, 이 기능 진입에 회원가입이나 로그인을 요구하지 않는다.\n+- **FR-011**: 서비스는 로그인하지 않은 사용자의 '내 기록' 접근을 제한하고 로그인 필요 안내를 제공한다. 로그인 성공 후에는 사용자가 원래 접근하려던 서비스 내부 위치로 돌아가며, 유효하지 않거나 외부인 복귀 위치는 안전한 기본 화면으로 대체한다.\n+- **FR-012**: 서비스는 로그인 상태가 만료되면 보호된 정보를 숨기고 재로그인을 안내한다. 재로그인 성공 후에는 만료 전에 이용하던 유효한 '내 기록' 내부 위치로 돌아가며, 유효하지 않거나 외부인 위치는 안전한 기본 화면으로 대체한다. 만료 또는 상태 확인 실패를 로그인 성공이나 빈 기록으로 표시하지 않는다.\n+- **FR-013**: 서비스는 인증 요청 실패 시 공통 계약의 안정된 오류 코드와 사용자에게 공개 가능한 메시지를 사용한다. 가입·이메일 인증의 사유별 오류, 잘못된 로그인 정보, 로그인 필요, CSRF 오류, 예상하지 못한 서버 오류를 구분하되 내부 구현 정보나 민감한 값을 노출하지 않는다. 응답 없는 네트워크 실패는 FE가 별도의 연결 오류로 처리한다.\n+- **FR-014**: 로그인·로그아웃·현재 사용자 확인에 필요한 서버 기능이 현재 존재하지 않거나 확인되지 않았다면 이를 구현 완료로 가정하지 않고 계획 단계의 서버 의존성으로 기록한다. 이 spec 작성 과정에서는 서버 코드를 생성하거나 수정하지 않는다.\n+- **FR-015**: 로그인과 회원가입 화면은 서로 이동할 수 있으며, 이동·실패·재시도 과정에서 비밀번호를 URL·나 화면 간 전달값으로 노출하지 않는다.\n+- **FR-016**: 이메일 인증·회원가입·로그인·로그아웃·상태 확인의 처리 중·성공·실패·만료·로그아웃 미확인 상태는 화면을 보지 않는 사용자도 알 수 있도록 상태 알림 영역으로 전달한다. 입력 오류는 해당 입력과 연결하고 제출 실패 시 첫 번째 잘못된 입력으로 초점을 이동하며, 화면 전환 뒤에는 새 화면의 제목부터 흐름을 이어갈 수 있게 한다. 모든 입력과 주요 동작은 키보드만으로 완료할 수 있어야 한다.\n+- **FR-017**: 인증 상태나 요청 상태가 바뀌어도 전략 진단·시장 흐름·배우기의 사용 중인 입력을 이유 없이 초기화하지 않는다.\n+- **FR-018**: 로그인 성공 시 서비스는 로그인 전 세션 식별자를 그대로 재사용하지 않고 새 식별자로 교체한다. 비밀번호·인증번호·세션 식별자·전체 쿠키 또는 인증 헤더는 URL, 사용자 응답, FE 영구 저장소 및 인증 실패 로그에 기록하지 않는다.\n+- **FR-019**: 이미 로그인한 사용자가 로그인·회원가입 화면에 접근하면 `/home`으로 이동한다. 로그아웃 시작·로그인 만료·상태 확인 실패 후에는 현재 사용자 확인이 완료되기 전까지 브라우저 방문 기록이나 페이지 캐시에서 복원된 보호 정보를 표시하지 않는다.\n+\n+### Key Entities\n+\n+- **사용자 계정**: 사용자별 기록 접근의 주체다. 현재 회원가입 결과에서 식별자·이메일·닉네임·계정 상태를 확인할 수 있으며, 전화번호와 비밀번호는 완료 화면에 노출하지 않는다.\n+- **회원가입 입력**: 이메일·비밀번호·닉네임·국내 휴대폰 번호와 유효성 상태를 포함한다. 비밀번호는 계정 결과로 보존하거나 표시하지 않는다.\n+- **로그인 입력**: 가입된 이메일과 비밀번호로 구성하며, 로그인 성공 여부를 확인하는 동안 민감한 값을 화면 간 전달값이나 주소에 노출하지 않는다.\n+- **인증 상태**: 확인 중·로그인됨·로그인되지 않음·만료·확인 실패·로그아웃 미확인을 구분하며, 로그인된 경우 현재 사용자와 연결된다. 로그아웃 미확인 중에는 보호 정보를 노출하지 않는다.\n+- **복귀 위치**: 보호 기능에 접근하기 전 사용자가 원래 가려던 서비스 내부 위치다. 로그인 성공 뒤 한 번 사용하고 외부 위치로 이동시키지 않는다.\n+\n+## Success Criteria *(mandatory)*\n+\n+### Measurable Outcomes\n+\n+- **SC-001**: 유효한 가입 정보를 미리 준비한 사용자는 인증 메일을 확인해 인증번호 입력을 시작한 시점부터 회원가입 성공 응답까지 3분 이내에 흐름을 완료할 수 있다. 발송 요청 성공부터 메일을 실제로 확인하기까지의 외부 메일 전달 시간은 측정에서 제외한다.\n+- **SC-002**: 필수 입력 누락·형식 위반·중복 이메일·중복 전화번호·인증 요청 없음·잘못된 인증번호·만료·미확인 표본의 100%에서 계정이 생성되지 않고, 안내에 실패 원인과 사용자가 선택할 수 있는 다음 행동(입력 수정·재입력·재발송·재시도 중 해당 항목)이 함께 표시된다.\n+- **SC-003**: 인증번호 발송·확인, 회원가입, 로그인, 로그아웃 각각에 대해 처리 중 1초 안에 같은 제출 동작을 5회 연속 수행한 시험에서 서버 요청은 종류별 한 건만 시작되고 늦은 이전 응답이 최신 상태를 덮어쓴 사례는 0건이다.\n+- **SC-004**: 로그인하지 않은 사용자의 '내 기록' 접근 시험 100%에서 보호된 기록이 노출되지 않고, 로그인 성공 후 원래 '내 기록'으로 복귀한다.\n+- **SC-005**: 로그인하지 않은 사용자가 전략 진단·시장 흐름·배우기를 이용하는 시험 100%에서 인증이 강제되지 않는다.\n+- **SC-006**: 유효한 로그인 상태의 새로고침·재진입 표본 100%에서 상태 확인 후 같은 사용자로 복원되고, 확인 중 보호 정보가 먼저 노출된 사례가 0건이다.\n+- **SC-007**: 로그아웃 또는 로그인 만료 후 보호 기능에 접근한 시험 100%에서 이전 사용자 정보가 노출되지 않고 로그인 안내가 표시된다.\n+- **SC-008**: 잘못된 입력·인증 실패·네트워크 오류 표본의 100%가 전체 서비스 오류 화면으로 끝나지 않고 해당 흐름 안에서 수정 또는 재시도 가능한 상태로 처리된다.\n+- **SC-009**: 키보드만 사용하는 검증에서 회원가입·로그인·로그아웃과 오류 확인을 모두 완료할 수 있고, 주요 상태 변경 중 보조 기술에 전달되지 않는 상태가 0건이다.\n+- **SC-010**: 로그인 성공 표본 100%에서 로그인 전후 세션 식별자가 다르고, 비밀번호·인증번호·세션 식별자가 URL·사용자 응답·FE 영구 저장소·인증 실패 로그에 나타난 사례가 0건이며, CSRF 토큰이 없거나 일치하지 않는 상태 변경 요청은 상태 변경 없이 403 공통 오류로 끝난다.\n+- **SC-011**: 로그인된 사용자의 인증 화면 직접 접근과 로그아웃·만료 후 브라우저 방문 기록 및 페이지 캐시 복원 표본 100%에서 인증 입력 또는 이전 보호 정보가 노출되지 않는다.\n+\n+## Assumptions\n+\n+- 전략 진단·시장 흐름·배우기는 사용자 식별 없이 이용하고, '내 기록' 저장·재조회만 식별된 사용자 단위로 제공한다.\n+- 현재 서버에는 회원가입과 이메일 인증번호 발급·확인 기능이 존재한다. 회원가입은 이메일·비밀번호·닉네임·국내 휴대폰 번호를 받고 이메일 소유 확인 완료를 전제로 한다.\n+- 현재 저장소에서 로그인·로그아웃·현재 사용자 조회 기능은 확인되지 않았다. 이 기능들은 plan에서 기존 구현 여부를 다시 검증하고, 없으면 서버 담당 작업으로 분리한다.\n+- 인증·인가 방식과 로그인 상태의 구체적인 유효기간은 constitution에서 합의되지 않은 영역이다. 사용자는 유지 기간을 따로 선택하지 않으며 서버가 정한 유효기간을 따른다. 구체적인 구현 선택과 기간은 plan에서 서버 계약 의존성으로 확인한다.\n+- 사용자는 최신 상태의 일반적인 데스크톱 브라우저를 우선 사용하며, 기존 반응형 기준에 따라 360px 이상 모바일에서도 같은 인증 흐름을 완료할 수 있어야 한다.\n+\n+## Dependencies\n+\n+- 기존 회원가입 기능과 그 입력·거절 규칙을 재사용한다. 기존 동작을 바꾸어야 한다면 별도 서버 작업과 계약 합의가 필요하다.\n+- 로그인·로그아웃·현재 사용자 확인을 실제로 제공할 서버 기능과 FE/BE 공통 계약이 필요하다.\n+- '내 기록' 화면 또는 진입점은 인증 상태를 확인하고 원래 목적지를 복원할 수 있어야 한다.\n+- 반복 로그인과 인증번호 발송의 서버측 남용 방지 수치·잠금 정책은 현재 Backend와 팀 정책에서 확인되지 않았다. 임의의 횟수를 확정하지 않으며 운영 배포 전 별도 보안 Task에서 정책·오류 계약·관측 기준을 합의해야 한다.\n+\n+## Out of Scope\n+\n+- 비밀번호 찾기·재설정\n+- 소셜 로그인과 외부 계정 연동\n+- 이메일 인증번호 방식 외 추가 본인확인 절차\n+- 회원 탈퇴\n+- 사용자 역할별 권한 관리와 관리자 계정\n+- 인증과 무관한 '내 기록' 조회·저장·비교 기능 자체 ([006](../006-my-records/spec.md))\n+- 서버 인증 기능의 구현 코드와 구체적인 통신 경로·메서드·응답 형식\n+- 반복 로그인·인증번호 요청의 운영 제한 횟수와 계정 잠금 정책(별도 보안 Task에서 확정)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/spec.md",
+          "old_path": "specs/014-user-auth/spec.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,303 @@\n+---\n+\n+description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 작업 목록\"\n+---\n+\n+# Tasks: 사용자 인증\n+\n+**Input**: `specs/014-user-auth/`의 spec.md, plan.md, research.md, data-model.md, contracts/, quickstart.md\n+\n+**Tests**: spec의 독립 검증 시나리오와 plan의 FE·BE·통합 검증 방침에 따라 자동화 테스트 작업을 포함한다.\n+\n+**Organization**: 작업은 사용자 스토리별로 구성한다. 개별 T번호는 실행 지시이며, 하단의 작업 묶음 하나가 Jira Task·Branch·MR 하나에 대응한다.\n+\n+## Format: `[ID] [P?] [Story] Description`\n+\n+- **[P]**: 선행 작업이 끝난 뒤 다른 파일에서 병렬 진행 가능\n+- **[Story]**: spec.md의 User Story 추적 라벨\n+- 모든 경로는 저장소 루트 기준\n+\n+## Phase 1: Setup (Shared Infrastructure)\n+\n+**Purpose**: 인증 구현과 자동화 검증에 필요한 FE·BE 공통 기반을 준비한다.\n+\n+- [ ] T001 [P] Add Vitest, jsdom, React Testing Library, and user-event dependencies and test scripts in `frontend/package.json` and `frontend/package-lock.json`\n+- [ ] T002 Configure Vitest DOM environment, aliases, and shared cleanup in `frontend/vite.config.ts` and `frontend/src/test/setup.ts` after T001\n+- [ ] T003 [P] Replace crypto-only security dependency with Spring Security starter and add Spring Session JDBC in `backend/build.gradle`\n+- [ ] T004 [P] Add PostgreSQL Spring Session tables and indexes without changing existing user data in `backend/src/main/resources/db/migration/V3__spring_session.sql`\n+- [ ] T005 Configure 30-minute inactive session timeout and `THORP_SESSION` cookie defaults per environment in `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-local.yml`, and `backend/src/main/resources/application-prod.yml`\n+\n+**Checkpoint**: FE component tests and BE session-backed security code can be implemented.\n+\n+---\n+\n+## Phase 2: Foundational (Blocking Prerequisites)\n+\n+**Purpose**: 모든 인증 사용자 스토리가 공유하는 보안 경계, 오류 계약, FE 타입과 요청 기반을 만든다.\n+\n+**⚠️ CRITICAL**: 이 단계가 끝나기 전에는 사용자 스토리 구현을 병합하지 않는다.\n+\n+- [ ] T006 [P] Add failing contract tests for the common authentication error envelope, CSRF 403, and sanitized 500 responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java`\n+- [ ] T007 [P] Add failing integration tests for public routes, protected authentication routes, CSRF bootstrap, cookie attributes, and session-id rotation in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java`\n+- [ ] T008 [P] Define auth request, response, user, state, and stable error-code types from `contracts/auth-api.yaml` in `frontend/src/types/auth.ts`\n+- [ ] T009 Add stable account/auth error codes and security exception envelope handling in `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` and `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java` to satisfy T006\n+- [ ] T010 Add Spring Security session persistence, session-fixation protection, CSRF cookie repository, and JSON authentication handlers in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T007\n+- [ ] T011 Extend Axios credentials, XSRF cookie/header names, CSRF bootstrap, and normalized API/network error handling in `frontend/src/api/client.ts`\n+- [ ] T012 [P] Add reusable auth API and provider test fixtures without storing credentials in `frontend/src/test/authFixtures.ts` and `frontend/src/test/renderWithRouter.tsx`\n+\n+**Checkpoint**: Foundation ready. US1 and the BE/FE portions of later stories can proceed according to their dependencies.\n+\n+---\n+\n+## Phase 3: User Story 1 - 새 사용자가 계정을 만든다 (Priority: P1) 🎯 MVP\n+\n+**Goal**: 이메일 소유 확인 후 계정을 만들고 가입 이메일만 채워진 로그인 화면으로 이동한다.\n+\n+**Independent Test**: 신규 이메일의 발송·확인·가입 성공과 형식 오류, 중복 이메일·전화번호, 인증 요청 없음·잘못됨·만료·미확인을 각각 재현해 계정 중복 없이 다음 행동 안내를 확인한다.\n+\n+### Tests for User Story 1\n+\n+- [ ] T013 [P] [US1] Add failing service tests for canonical email use, phone validation, verification lifecycle, and detailed account error codes in `backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java`\n+- [ ] T014 [P] [US1] Add failing controller tests for the three existing account operations, internal proxy paths, CSRF, and contract responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java`\n+- [ ] T015 [P] [US1] Add failing component tests for validation, send/confirm/signup pending states, duplicate submission, accessible errors, and email-only handoff in `frontend/src/pages/SignupPage.test.tsx`\n+- [ ] T016 [P] [US1] Add failing auth client tests for email verification and signup success/error envelopes in `frontend/src/api/auth.test.ts`\n+\n+### Implementation for User Story 1\n+\n+- [ ] T017 [US1] Implement trim-and-lowercase email normalization at the Backend trust boundary in `backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java`, `backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java`\n+- [ ] T018 [US1] Normalize Account controller mappings to internal `/accounts`, return the stable rejection codes, and preserve 204/201 success contracts in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java` and `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java`\n+- [ ] T019 [P] [US1] Implement CSRF-aware email verification and signup client functions in `frontend/src/api/auth.ts`\n+- [ ] T020 [P] [US1] Implement reusable labeled auth fields, status announcements, first-error focus, and submit controls in `frontend/src/components/auth/AuthField.tsx`, `frontend/src/components/auth/AuthStatus.tsx`, and `frontend/src/components/auth/AuthForm.module.css`\n+- [ ] T021 [US1] Implement the responsive email verification and signup flow with request identity guards in `frontend/src/pages/SignupPage.tsx` and `frontend/src/pages/SignupPage.module.css` after T019 and T020\n+- [ ] T022 [US1] Register `/signup` and a lazy `/login` route shell, then pass only the canonical email through navigation state after signup in `frontend/src/App.tsx` and `frontend/src/pages/LoginPage.tsx`\n+\n+**Checkpoint**: 이메일 인증과 회원가입은 로그인 세션 구현 없이도 계약 수준에서 독립 검증 가능하다.\n+\n+---\n+\n+## Phase 4: User Story 2 - 기존 사용자가 로그인하고 상태를 복원한다 (Priority: P1)\n+\n+**Goal**: 이메일·비밀번호로 로그인하고 새로고침·재진입 뒤 서버 세션 기준으로 같은 사용자를 복원한다.\n+\n+**Independent Test**: 정상·잘못된·비활성 계정 로그인과 `/auth/me`의 200·401·네트워크 실패를 재현해 인증 상태 전이와 확인 중 보호 정보 비노출을 확인한다.\n+\n+### Tests for User Story 2\n+\n+- [ ] T023 [P] [US2] Add failing repository and service tests for normalized-email lookup, password verification, inactive-account concealment, and last-login update in `backend/src/test/java/com/ssafy/thorp/account/application/AuthenticationServiceTest.java`\n+- [ ] T024 [P] [US2] Add failing MockMvc and PostgreSQL session tests for login and current-user contracts in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthenticationControllerIntegrationTest.java`\n+- [ ] T025 [P] [US2] Add failing tests for checking/authenticated/anonymous/error transitions and bootstrap deduplication in `frontend/src/auth/AuthProvider.test.tsx`\n+- [ ] T026 [P] [US2] Add failing login page tests for canonical email, generic credential failure, pending submission, signup-email prefill, and authenticated redirect in `frontend/src/pages/LoginPage.test.tsx`\n+\n+### Implementation for User Story 2\n+\n+- [ ] T027 [US2] Add normalized-email lookup and authenticated account projection in `backend/src/main/java/com/ssafy/thorp/account/application/repository/UserRepository.java`, `backend/src/main/java/com/ssafy/thorp/account/infrastructure/persistence/UserRepositoryImpl.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/result/AuthenticatedUserResult.java`\n+- [ ] T028 [US2] Implement credential validation, account-state concealment, last-login update, and explicit SecurityContext persistence in `backend/src/main/java/com/ssafy/thorp/account/application/service/AuthenticationService.java` and `backend/src/main/java/com/ssafy/thorp/account/application/command/LoginCommand.java`\n+- [ ] T029 [US2] Implement login, current-user, and CSRF endpoints plus request/response DTOs in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java`, `backend/src/main/java/com/ssafy/thorp/account/presentation/request/LoginRequest.java`, and `backend/src/main/java/com/ssafy/thorp/account/presentation/response/AuthenticatedUserResponse.java`\n+- [ ] T030 [P] [US2] Add login and current-user operations to `frontend/src/api/auth.ts`\n+- [ ] T031 [US2] Implement the single-owner authentication state machine and startup restoration in `frontend/src/auth/AuthProvider.tsx` after T025 and T030\n+- [ ] T032 [US2] Complete the login form, signup navigation, generic credential error, status announcement, and `/home` redirect for authenticated users in `frontend/src/pages/LoginPage.tsx` and `frontend/src/pages/LoginPage.module.css`\n+- [ ] T033 [US2] Mount `AuthProvider`, connect lazy auth routes, and expose authenticated user/login state in `frontend/src/App.tsx`, `frontend/src/main.tsx`, and `frontend/src/components/navigation/AppHeader.tsx`\n+\n+**Checkpoint**: 로그인과 현재 사용자 복원은 내 기록·로그아웃 화면 없이 독립 검증 가능하다.\n+\n+---\n+\n+## Phase 5: User Story 3 - 로그인 후 원래 내 기록으로 돌아간다 (Priority: P1)\n+\n+**Goal**: 비로그인 사용자의 내 기록을 보호하고 로그인 후 검증된 원래 내부 위치로 복귀시킨다.\n+\n+**Independent Test**: 로그아웃 상태로 `/records` 하위 경로에 직접 접근하고 로그인한 뒤 query/hash를 포함한 원래 위치로 돌아가며 외부·이중 슬래시·인증 화면 경로는 `/home`으로 대체되는지 확인한다.\n+\n+### Tests for User Story 3\n+\n+- [ ] T034 [P] [US3] Add failing unit tests for same-origin return-target validation, one-time consumption, reload persistence, and unsafe fallback in `frontend/src/auth/returnTarget.test.ts`\n+- [ ] T035 [P] [US3] Add failing router tests for checking, anonymous, authenticated, expired, and invalid-return-target access in `frontend/src/auth/ProtectedRoute.test.tsx`\n+- [ ] T036 [P] [US3] Add failing navigation tests proving public routes remain available and only the records entry is protected in `frontend/src/App.auth.test.tsx`\n+\n+### Implementation for User Story 3\n+\n+- [ ] T037 [US3] Implement validated tab-scoped return-target storage and one-time consumption in `frontend/src/auth/returnTarget.ts` to satisfy T034\n+- [ ] T038 [US3] Implement the records-only authentication boundary and loading/login-required states in `frontend/src/auth/ProtectedRoute.tsx` to satisfy T035\n+- [ ] T039 [US3] Add an authentication-only `/records/*` entry boundary without implementing record content in `frontend/src/pages/MyRecordsEntryPage.tsx` and `frontend/src/pages/MyRecordsEntryPage.module.css`\n+- [ ] T040 [US3] Wire the protected records route, post-login return, and public route exemptions in `frontend/src/App.tsx` after T037–T039\n+- [ ] T041 [US3] Add the secondary “내 기록” navigation entry and authenticated/anonymous destination behavior in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n+\n+**Checkpoint**: US3 protects only the records boundary and remains independent from the record list implementation in spec 006.\n+\n+---\n+\n+## Phase 6: User Story 4 - 사용자가 로그아웃한다 (Priority: P2)\n+\n+**Goal**: 현재 서버 세션을 종료하고 응답을 확인하지 못하면 보호 정보를 숨긴 `logoutUnconfirmed` 상태를 유지한다.\n+\n+**Independent Test**: 로그인 상태의 로그아웃 204, 이미 비로그인인 로그아웃 204, 네트워크 실패, 재시도 및 `/auth/me` 재확인을 각각 재현해 이전 사용자 정보가 노출되지 않는지 확인한다.\n+\n+### Tests for User Story 4\n+\n+- [ ] T042 [P] [US4] Add failing integration tests for current-session invalidation, idempotent anonymous logout, cookie expiry, and post-logout 401 in `backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java`\n+- [ ] T043 [P] [US4] Add failing provider and header tests for logout start, 204 completion, network uncertainty, retry, recheck, and immediate data removal in `frontend/src/auth/LogoutFlow.test.tsx`\n+\n+### Implementation for User Story 4\n+\n+- [ ] T044 [US4] Implement idempotent current-session logout and JSON security behavior in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java` and `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T042\n+- [ ] T045 [P] [US4] Add current-session logout operation to `frontend/src/api/auth.ts`\n+- [ ] T046 [US4] Implement `logoutUnconfirmed`, retry, and current-user recheck transitions with immediate credential-free state clearing in `frontend/src/auth/AuthProvider.tsx` after T043 and T045\n+- [ ] T047 [US4] Add accessible logout, retry, and status UI without blocking public navigation in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n+\n+**Checkpoint**: 로그아웃 성공과 미확인 복구 흐름을 독립적으로 검증할 수 있다.\n+\n+---\n+\n+## Phase 7: User Story 5 - 만료와 일시적인 실패에서 안전하게 이어간다 (Priority: P2)\n+\n+**Goal**: 세션 만료·CSRF 오류·네트워크 실패·다중 탭·페이지 캐시 복원에서도 보호 정보를 숨기고 안전하게 이어간다.\n+\n+**Independent Test**: 보호 API 401, CSRF 403, 현재 사용자 조회 실패, 탭 재활성화, 뒤로가기와 page cache 복원을 재현해 공개 기능은 유지되고 보호 정보는 재확인 전 노출되지 않는지 확인한다.\n+\n+### Tests for User Story 5\n+\n+- [ ] T048 [P] [US5] Add failing Backend tests for 30-minute inactivity expiry, CSRF refresh, session fixation, sanitized logs, and migration compatibility in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java`\n+- [ ] T049 [P] [US5] Add failing FE tests for authenticated 401 expiry, CSRF refresh without automatic mutation replay, stale-response rejection, and public-page availability in `frontend/src/auth/AuthRecovery.test.tsx`\n+- [ ] T050 [P] [US5] Add failing browser-state tests for tab reactivation, protected-entry recheck, back-forward cache restoration, and stale protected-data clearing in `frontend/src/auth/AuthRevalidation.test.tsx`\n+- [ ] T051 [P] [US5] Add failing accessibility and 360px responsive tests for pending, error, expired, and logout-unconfirmed states in `frontend/src/pages/AuthAccessibility.test.tsx`\n+\n+### Implementation for User Story 5\n+\n+- [ ] T052 [US5] Complete session expiry, CSRF refresh, safe security logging, and production cookie behavior in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/resources/application-prod.yml` to satisfy T048\n+- [ ] T053 [US5] Implement request identity/abort handling, authenticated 401 expiry, one-time CSRF refresh, and user-driven retry without automatic mutation replay in `frontend/src/api/client.ts` and `frontend/src/auth/AuthProvider.tsx`\n+- [ ] T054 [US5] Revalidate authentication on tab activation, protected-route entry, and page-cache restoration while leaving public screens available in `frontend/src/auth/AuthProvider.tsx` and `frontend/src/auth/ProtectedRoute.tsx`\n+- [ ] T055 [US5] Complete focus movement, live status announcements, reduced-motion-safe feedback, and 360px auth layouts in `frontend/src/components/auth/AuthStatus.tsx`, `frontend/src/pages/LoginPage.module.css`, and `frontend/src/pages/SignupPage.module.css`\n+\n+**Checkpoint**: 모든 인증 상태와 복구 흐름이 독립적으로 검증 가능하다.\n+\n+---\n+\n+## Phase 8: Polish & Cross-Cutting Verification\n+\n+**Purpose**: 전체 계약·회귀·문서 증거를 확인하고 MR 단위로 마무리한다.\n+\n+- [ ] T056 [P] Run and record FE lint, unit/component tests, and production build results in `specs/014-user-auth/verification/frontend.md`\n+- [ ] T057 [P] Run and record BE spotless and PostgreSQL-backed test results in `specs/014-user-auth/verification/backend.md`\n+- [ ] T058 Validate all seven operations and success/error examples against `specs/014-user-auth/contracts/auth-api.yaml` and record results in `specs/014-user-auth/verification/contract.md`\n+- [ ] T059 Execute the signup→login→restore→records→expiry/logout scenarios and record desktop/360px evidence in `specs/014-user-auth/verification/integration.md`\n+- [ ] T060 Update implementation status, deviations, and the deferred rate-limit security follow-up in `specs/014-user-auth/plan.md`, `specs/014-user-auth/contracts/README.md`, and `specs/014-user-auth/quickstart.md`\n+\n+---\n+\n+## Dependencies & Execution Order\n+\n+### Phase Dependencies\n+\n+- **Phase 1 → Phase 2**: test/runtime dependencies and session storage configuration precede shared security code.\n+- **Phase 2 → US1–US5**: common envelope, CSRF/session boundary, FE auth types/client are blocking prerequisites.\n+- **US1**: starts after Phase 2 and delivers the first independently demonstrable user value.\n+- **US2**: starts after Phase 2; T033 reuses the `/login` shell from T022.\n+- **US3**: depends on US2 authentication restoration and login completion.\n+- **US4**: Backend logout can start after Phase 2; FE logout depends on US2 provider state.\n+- **US5**: depends on US2 state restoration, US3 protection, and US4 uncertain-logout state.\n+- **Phase 8**: runs after the work batches included in the release are complete.\n+\n+### User Story Dependency Graph\n+\n+```text\n+Setup → Foundation → US1\n+                   └→ US2 → US3\n+                          └→ US4 → US5\n+US1 + US2 + US3 + US4 + US5 → Cross-cutting verification\n+```\n+\n+### Within Each User Story\n+\n+- Failing tests precede implementation.\n+- Backend persistence/repository changes precede services; services precede controllers.\n+- FE types/client functions precede Provider and pages; shared fields precede composed forms.\n+- A story checkpoint must pass before its work batch is offered for review.\n+\n+### Parallel Opportunities\n+\n+- T001, T003, T004 can run in parallel; T002 follows T001 and T005 follows the session dependency decision.\n+- T006, T007, T008, and T012 touch separate test/type files and can run in parallel.\n+- Within US1, T013–T016 can be authored in parallel; after contracts stabilize, BE T017–T018 and FE T019–T021 can run in parallel.\n+- Within US2, T023–T026 can run in parallel; Backend T027–T029 and Frontend T030–T032 can then run in parallel.\n+- US3 test tasks T034–T036 and US5 test tasks T048–T051 are parallel within their phases.\n+- T056 and T057 can run in parallel; T058–T060 consume their results.\n+\n+---\n+\n+## Parallel Execution Examples\n+\n+### User Story 1\n+\n+```text\n+BE: T013 → T017 → T018\n+FE: T015 + T016 → T019 + T020 → T021 → T022\n+```\n+\n+### User Story 2\n+\n+```text\n+BE: T023 + T024 → T027 → T028 → T029\n+FE: T025 + T026 → T030 → T031 + T032 → T033\n+```\n+\n+### User Stories 3–5\n+\n+```text\n+US3: T034 + T035 + T036 → T037 + T038 → T039 → T040 + T041\n+US4: T042 + T043 → T044 + T045 → T046 → T047\n+US5: T048 + T049 + T050 + T051 → T052 + T053 → T054 + T055\n+```\n+\n+---\n+\n+## Recommended Work Batches and Jira Tasks\n+\n+개별 T번호가 아니라 아래 묶음 하나를 Jira Task·Branch·MR 하나로 사용한다. 실제 Jira 번호를 받은 뒤 constitution의 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 브랜치를 만든다.\n+\n+| Work Batch | Recommended Jira Task | Included Tasks | Depends On |\n+|---|---|---|---|\n+| WB-BE-1 | `[BE] 인증 보안 기반과 계정 계약 정비` | T003–T007, T009–T010, T013–T014, T017–T018 | 없음 |\n+| WB-FE-1 | `[FE] 회원가입과 이메일 인증 화면 구현` | T001–T002, T008, T011–T012, T015–T016, T019–T022 | WB-BE-1의 계약 확정 |\n+| WB-BE-2 | `[BE] 로그인과 현재 사용자 세션 API 구현` | T023–T024, T027–T029 | WB-BE-1 |\n+| WB-FE-2 | `[FE] 로그인과 인증 상태 복원 구현` | T025–T026, T030–T033 | WB-FE-1, WB-BE-2 계약 |\n+| WB-FE-3 | `[FE] 내 기록 보호와 로그인 복귀 구현` | T034–T041 | WB-FE-2 |\n+| WB-BE-3 | `[BE] 로그아웃과 세션 생명주기 구현` | T042, T044, T048, T052 | WB-BE-2 |\n+| WB-FE-4 | `[FE] 로그아웃·만료·인증 복구 구현` | T043, T045–T047, T049–T051, T053–T055 | WB-FE-2, WB-FE-3, WB-BE-3 계약 |\n+| WB-DOCS-1 | `[DOCS] 사용자 인증 통합 검증 결과 정리` | T056–T060 | 선택한 구현 묶음 완료 |\n+\n+**Deferred follow-up**: 반복 로그인·인증번호 발송의 제한 수치와 계정 잠금 정책은 별도 Jira Task `[BE] 인증 요청 남용 방지 정책 수립 및 적용`으로 만든다. 014 작업에 임의 수치를 섞지 않는다.\n+\n+---\n+\n+## Implementation Strategy\n+\n+### MVP First\n+\n+1. Phase 1과 Phase 2를 완료한다.\n+2. WB-BE-1과 WB-FE-1로 US1 회원가입·이메일 인증을 완성한다.\n+3. US1 독립 검증을 통과한 뒤 데모하고 로그인 세션 묶음으로 확장한다.\n+\n+### Incremental Delivery\n+\n+1. Setup + Foundation → 인증 계약과 보안 경계 준비\n+2. US1 → 회원가입·이메일 인증\n+3. US2 → 로그인·현재 사용자 복원\n+4. US3 → 내 기록 보호·원래 위치 복귀\n+5. US4 → 로그아웃·미확인 복구\n+6. US5 → 만료·다중 탭·CSRF·캐시 복구\n+7. Phase 8 → 전체 통합 증거와 문서 상태 갱신\n+\n+### Team Execution\n+\n+- FE와 BE는 같은 contract를 기준으로 서로 다른 work batch에서 병렬 작업한다.\n+- 한 개발자가 여러 T번호를 수행해도 동일 목적의 work batch 안에서만 한 브랜치로 묶는다.\n+- Backend 계약이 바뀌면 해당 FE work batch를 시작하기 전에 `contracts/auth-api.yaml`을 먼저 갱신한다.\n+- rate-limit 수치 정책은 별도 보안 Task가 확정되기 전까지 014에 구현 완료로 표시하지 않는다.\n+\n+## Notes\n+\n+- 모든 T번호는 구현·테스트·리뷰가 가능한 구체적인 실행 지시다.\n+- `[P]`는 동일 파일 충돌과 미완료 선행 의존성이 없는 경우에만 표시했다.\n+- 각 work batch는 독립적으로 리뷰·검증·롤백 가능해야 하며 Jira Task 하나, Branch 하나, MR 하나에 대응한다.\n+- Backend나 Frontend 실제 코드는 `$speckit-implement` 또는 승인된 작업 묶음 구현 단계에서만 수정한다.\n+- 완료 표시는 기능 구현, 테스트 또는 동작 확인, 코드 리뷰, MR 병합, 필요한 문서 수정이 모두 끝난 뒤에만 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2787916": [],
+    "2787954": [],
+    "2788000": []
+  }
+}

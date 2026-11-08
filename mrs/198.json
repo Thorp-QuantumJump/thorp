@@ -1,0 +1,607 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949403,
+    "iid": 198,
+    "project_id": 1444456,
+    "title": "feat(fe): 도움말에서 간 글이 하던 진단으로 돌아가는 연결을 보인다",
+    "description": "## 작업 내용 요약\n\n도움말에서 배우기 글로 간 사용자가 하던 진단 화면으로 돌아갈 수 있습니다. 003이 먼저 둔 공용 도움말 부품은 013 계약 기준으로 테스트를 보강했습니다.\n\n## 관련 티켓\n\nS15P21E205-328 (spec 013 B04, T036\\~T042)\n\n## 주요 변경 사항\n\n- 글 화면: 돌아갈 경로가 허용 목록(`/diagnosis/sectors`, `/strategy`, `/results/…`)에 있고 `normalizeReturnTarget`이 경로를 바꾸지 않을 때만 '하던 진단으로 돌아가기' 연결을 보인다. 이동은 `history.back()`이 아니라 경로로 한다\n- 도움말 트리거는 지금처럼 '?' 버튼에 `${label} 도움말` 이름을 둔다. 계약 term-help-ui §2와 T038 문구를 이에 맞게 정정했다\n\n## 테스트\n\n- `npm run lint`(오류 0) · `npm run build` · 배우기 관련 Vitest 52개 · `test:legacy` 13개 통과\n- 정규화 검사를 일부러 빼면 돌아가기 판정 테스트 2개가 실패한다\n- 전체 Vitest에서 `SignupPage.test.tsx` 2개가 병렬 실행 부하로 5초 제한에 걸린다. 이번 변경과 무관하며 단독으로 돌리면 통과한다\n\n## 리뷰 포인트\n\n- 트리거를 '?'로 두었다. 003 상세 설정이 축 이름을 옆에 이미 보이기 때문이다. 002·005가 이름 없는 자리에 붙이면 다시 판단해야 한다\n- 질의 문자열이 붙은 돌아갈 경로(`/strategy?…`)는 허용하지 않는다\n-",
+    "state": "merged",
+    "created_at": "2026-09-17T17:09:32.076+09:00",
+    "updated_at": "2026-09-17T17:09:36.710+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T17:09:36.461+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/328-term-help",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa",
+    "merge_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:09:33.845+09:00",
+    "reference": "!198",
+    "references": {
+      "short": "!198",
+      "relative": "!198",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!198"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/198",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949403,
+    "iid": 198,
+    "project_id": 1444456,
+    "title": "feat(fe): 도움말에서 간 글이 하던 진단으로 돌아가는 연결을 보인다",
+    "description": "## 작업 내용 요약\n\n도움말에서 배우기 글로 간 사용자가 하던 진단 화면으로 돌아갈 수 있습니다. 003이 먼저 둔 공용 도움말 부품은 013 계약 기준으로 테스트를 보강했습니다.\n\n## 관련 티켓\n\nS15P21E205-328 (spec 013 B04, T036\\~T042)\n\n## 주요 변경 사항\n\n- 글 화면: 돌아갈 경로가 허용 목록(`/diagnosis/sectors`, `/strategy`, `/results/…`)에 있고 `normalizeReturnTarget`이 경로를 바꾸지 않을 때만 '하던 진단으로 돌아가기' 연결을 보인다. 이동은 `history.back()`이 아니라 경로로 한다\n- 도움말 트리거는 지금처럼 '?' 버튼에 `${label} 도움말` 이름을 둔다. 계약 term-help-ui §2와 T038 문구를 이에 맞게 정정했다\n\n## 테스트\n\n- `npm run lint`(오류 0) · `npm run build` · 배우기 관련 Vitest 52개 · `test:legacy` 13개 통과\n- 정규화 검사를 일부러 빼면 돌아가기 판정 테스트 2개가 실패한다\n- 전체 Vitest에서 `SignupPage.test.tsx` 2개가 병렬 실행 부하로 5초 제한에 걸린다. 이번 변경과 무관하며 단독으로 돌리면 통과한다\n\n## 리뷰 포인트\n\n- 트리거를 '?'로 두었다. 003 상세 설정이 축 이름을 옆에 이미 보이기 때문이다. 002·005가 이름 없는 자리에 붙이면 다시 판단해야 한다\n- 질의 문자열이 붙은 돌아갈 경로(`/strategy?…`)는 허용하지 않는다\n-",
+    "state": "merged",
+    "created_at": "2026-09-17T17:09:32.076+09:00",
+    "updated_at": "2026-09-17T17:09:36.710+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T17:09:36.461+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/328-term-help",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa",
+    "merge_commit_sha": "e44299091945d12e29d9e279f9463ff5adbd261c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:09:33.845+09:00",
+    "reference": "!198",
+    "references": {
+      "short": "!198",
+      "relative": "!198",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!198"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/198",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "9",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "head_sha": "b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa",
+      "start_sha": "412b572ce8256feaf64d830b027478afc0eebde2"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "46d7faededbfc65d69d38f8af951639b1e73fc88",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827155,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:09:32.173+09:00",
+          "updated_at": "2026-09-17T17:09:32.178+09:00",
+          "system": true,
+          "noteable_id": 949403,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 198,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f4bc1386ad61eb5b5bedef54c9c697960342c134",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827156,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:09:32.195+09:00",
+          "updated_at": "2026-09-17T17:09:32.204+09:00",
+          "system": true,
+          "noteable_id": 949403,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 198,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9d40e6882cd9bf7291d158dfe84775f05361dc1d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827160,
+          "type": null,
+          "body": "mentioned in commit e44299091945d12e29d9e279f9463ff5adbd261c",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T17:09:36.564+09:00",
+          "updated_at": "2026-09-17T17:09:36.569+09:00",
+          "system": true,
+          "noteable_id": 949403,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 198,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c246fae95ff4ca7d1d5757478dd394e93e372281",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827161,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 유효성 검증**: `resolveLearningReturn` 함수에서 화이트리스트 기반 경로 검증과 `normalizeTarget`을 조합하여 외부로의 리다이렉트나 Open Redirect 취약점을 효과적으로 방어했습니다.\n- **철저한 테스트 작성**: API 클라이언트의 엣지 케이스(다양한 404 코드 및 네트워크 에러)와 컴포넌트의 사용자 인터랙션(`userEvent`)에 대한 테스트가 명세(spec) 요구사항에 맞춰 꼼꼼하게 구현되었습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- 허용된 경로 접두사(`/results/`) 뒤에 식별자가 없는 경우(`/results/` 또는 `/results//`)에 대한 `resolveLearningReturn` 검증 테스트 추가\n- 쿼리 스트링이나 해시가 포함된 경로가 전달되었을 때 (`/strategy?query=1` 등) 정상적으로 차단되는지 확인하는 테스트 시나리오 보강\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T17:09:40.850+09:00",
+          "updated_at": "2026-09-17T17:09:40.850+09:00",
+          "system": false,
+          "noteable_id": 949403,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 198,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2215271,
+      "head_commit_sha": "b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa",
+      "base_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "start_commit_sha": "412b572ce8256feaf64d830b027478afc0eebde2",
+      "created_at": "2026-09-17T17:09:32.673+09:00",
+      "merge_request_id": 949403,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "c9fb185add46fa157bd1ae458be79fd65f5b6ab2"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2215271,
+      "head_commit_sha": "b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa",
+      "base_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "start_commit_sha": "412b572ce8256feaf64d830b027478afc0eebde2",
+      "created_at": "2026-09-17T17:09:32.673+09:00",
+      "merge_request_id": 949403,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "c9fb185add46fa157bd1ae458be79fd65f5b6ab2",
+      "commits": [
+        {
+          "id": "b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa",
+          "short_id": "b8e5ce17",
+          "created_at": "2026-09-17T17:08:14.000+09:00",
+          "parent_ids": [
+            "15fb5f4d85c2e2319b485d7b216f5524ed2c86bd"
+          ],
+          "title": "fix(fe): 돌아가기 연결의 안내와 화면 이름이 붙어 읽히지 않게 한다",
+          "message": "fix(fe): 돌아가기 연결의 안내와 화면 이름이 붙어 읽히지 않게 한다\n\n화살표는 스크린 리더에서 숨기고, 안내 문장과 돌아갈 화면 이름 사이에 공백과 괄호를 둔다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T17:08:14.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T17:08:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b8e5ce17f3fb3e4bd5aa58f15fd3363378e881fa"
+        },
+        {
+          "id": "15fb5f4d85c2e2319b485d7b216f5524ed2c86bd",
+          "short_id": "15fb5f4d",
+          "created_at": "2026-09-17T15:57:35.000+09:00",
+          "parent_ids": [
+            "c804006afc640788ddacff322332dcb97e0e2b27"
+          ],
+          "title": "feat(fe): 도움말에서 간 글이 하던 진단으로 돌아가는 연결을 보인다",
+          "message": "feat(fe): 도움말에서 간 글이 하던 진단으로 돌아가는 연결을 보인다\n\n- ReturnToDiagnosisLink: 허용 목록과 normalizeReturnTarget을 모두 통과한 learningReturn만 연결로 보인다\n- 글 화면 머리에 연결을 붙인다\n- 003이 먼저 둔 learningGlossary·TermHelp 테스트에 다른 404 코드·시간 초과·입력 보존 확인을 더한다\n- term-help-ui §2와 T038의 트리거 문구를 '?' 버튼과 접근 가능한 이름으로 정정한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T15:57:35.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T15:57:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/15fb5f4d85c2e2319b485d7b216f5524ed2c86bd"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -41,6 +41,7 @@ describe('fetchGlossaryEntry', () => {\n     const get = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(entry))\n \n     await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'ready', entry })\n+    expect(get).toHaveBeenCalledTimes(1)\n     expect(get).toHaveBeenCalledWith('/learning/terms/synthetic-term', { signal: undefined })\n   })\n \n@@ -51,6 +52,13 @@ describe('fetchGlossaryEntry', () => {\n     await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'ready', entry })\n   })\n \n+  it('봉투에 싸인 404 LEARNING_TERM_NOT_READY도 설명 준비 중이다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(404, { success: false, data: null, error: { code: 'LEARNING_TERM_NOT_READY' } }),\n+    )\n+    await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'notReady' })\n+  })\n+\n   it('404 LEARNING_TERM_NOT_READY만 설명 준비 중이다', async () => {\n     vi.spyOn(apiClient, 'get').mockRejectedValue(\n       axiosFailure(404, { code: 'LEARNING_TERM_NOT_READY', message: '설명을 준비하고 있습니다.' }),\n@@ -60,12 +68,15 @@ describe('fetchGlossaryEntry', () => {\n \n   it.each([\n     ['코드 없는 404', axiosFailure(404, {})],\n+    ['다른 코드의 404', axiosFailure(404, { error: { code: 'LEARNING_ARTICLE_UNAVAILABLE' } })],\n     ['서버 오류', axiosFailure(500, { code: 'LEARNING_TERM_NOT_READY' })],\n     ['연결 실패', new AxiosError('network')],\n+    ['시간 초과', new AxiosError('timeout of 10000ms exceeded', AxiosError.ECONNABORTED)],\n     ['취소', new CanceledError()],\n-  ])('%s는 불러오지 못함이다', async (_, error) => {\n-    vi.spyOn(apiClient, 'get').mockRejectedValue(error)\n+  ])('%s는 불러오지 못함이고 다시 부르지 않는다', async (_, error) => {\n+    const get = vi.spyOn(apiClient, 'get').mockRejectedValue(error)\n     await expect(fetchGlossaryEntry('synthetic-term')).resolves.toEqual({ status: 'failed' })\n+    expect(get).toHaveBeenCalledTimes(1)\n   })\n \n   it('모양이 계약과 다른 응답을 빈 글로 채우지 않는다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/learningGlossary.test.ts",
+          "old_path": "frontend/src/api/learningGlossary.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,20 @@\n+/* 보조 연결이다. 글 화면의 행동 버튼('이 예시로 비중 비교하기')과 같은 모양으로 두지 않는다(원칙 II). */\n+.link {\n+  display: inline-flex;\n+  flex-wrap: wrap;\n+  align-items: baseline;\n+  gap: 8px;\n+  margin-bottom: 20px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.9rem;\n+}\n+\n+.link:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.label {\n+  color: var(--thorp-copy);\n+  font-size: 0.82rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/ReturnToDiagnosisLink.module.css",
+          "old_path": "frontend/src/components/learning/ReturnToDiagnosisLink.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,80 @@\n+import { render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n+import { describe, expect, it } from 'vitest'\n+import { resolveLearningReturn, ReturnToDiagnosisLink } from './ReturnToDiagnosisLink'\n+\n+/** 013 T041. term-help-ui §3의 세 조건, FR-009. */\n+\n+function withReturn(path: unknown, label: unknown = '돌아갈 화면') {\n+  return { learningReturn: { path, label } }\n+}\n+\n+describe('resolveLearningReturn', () => {\n+  it.each([['/strategy'], ['/diagnosis/sectors'], ['/results/BT-1']])(\n+    '허용 목록의 경로 %s는 돌아갈 자리다',\n+    (path) => {\n+      expect(resolveLearningReturn(withReturn(path))).toEqual({\n+        path,\n+        label: '돌아갈 화면',\n+      })\n+    },\n+  )\n+\n+  it.each([\n+    ['state 없음', undefined],\n+    ['learningReturn 없음', { other: true }],\n+    ['경로가 문자열이 아님', withReturn(42)],\n+    ['이름이 문자열이 아님', withReturn('/strategy', null)],\n+    ['인증 화면', withReturn('/login')],\n+    ['허용 목록 밖', withReturn('/learn')],\n+    ['프로토콜 상대 주소', withReturn('//evil.example')],\n+    ['외부 주소', withReturn('https://evil.example/strategy')],\n+    ['역슬래시', withReturn('/results/\\\\evil.example')],\n+    ['결과 번호 없음', withReturn('/results/')],\n+    ['정규화하면 달라지는 경로', withReturn('/results/../login')],\n+    ['질의가 붙은 경로', withReturn('/strategy?next=/login')],\n+  ])('%s면 돌아갈 자리가 없다', (_, state) => {\n+    expect(resolveLearningReturn(state)).toBeNull()\n+  })\n+})\n+\n+function Destination() {\n+  return <p>돌아온 화면 {useLocation().pathname}</p>\n+}\n+\n+function renderLink(state: unknown) {\n+  return render(\n+    <MemoryRouter initialEntries={[{ pathname: '/learn/synthetic-article', state }]}>\n+      <Routes>\n+        <Route path=\"/learn/:articleId\" element={<ReturnToDiagnosisLink state={state} />} />\n+        <Route path=\"*\" element={<Destination />} />\n+      </Routes>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('ReturnToDiagnosisLink', () => {\n+  it('돌아갈 자리가 없으면 아무것도 그리지 않는다', () => {\n+    const { container } = renderLink(withReturn('/login'))\n+    expect(container.textContent).toBe('')\n+    expect(screen.queryByRole('link')).toBeNull()\n+  })\n+\n+  it('버튼이 아닌 연결로 보이고 누르면 그 경로로 이동한다', async () => {\n+    const user = userEvent.setup()\n+    renderLink(withReturn('/strategy', '전략 선택'))\n+\n+    const link = screen.getByRole('link', { name: /하던 진단으로 돌아가기/ })\n+    expect(link.tagName).toBe('A')\n+    expect(link.getAttribute('href')).toBe('/strategy')\n+    // 안내와 돌아갈 화면 이름이 붙어 한 낱말로 읽히지 않는다(FR-019).\n+    expect(link.textContent).toBe('← 하던 진단으로 돌아가기 (전략 선택)')\n+    expect(link.querySelector('[aria-hidden=\"true\"]')?.textContent).toBe('←')\n+    expect(screen.queryByRole('button')).toBeNull()\n+\n+    await user.click(link)\n+\n+    expect(await screen.findByText('돌아온 화면 /strategy')).not.toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/ReturnToDiagnosisLink.test.tsx",
+          "old_path": "frontend/src/components/learning/ReturnToDiagnosisLink.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,64 @@\n+import { Link } from 'react-router-dom'\n+import { normalizeReturnTarget } from '@/auth/returnTarget'\n+import type { LearningReturnState } from '@/types/learning'\n+import styles from './ReturnToDiagnosisLink.module.css'\n+\n+/** 도움말을 붙이는 진단 화면. 이 밖의 경로로는 돌아가기 연결을 만들지 않는다(013 term-help-ui §3). */\n+const RETURN_PATHS = ['/diagnosis/sectors', '/strategy']\n+const RETURN_PATH_PREFIXES = ['/results/']\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+function isAllowedPath(path: string): boolean {\n+  return (\n+    RETURN_PATHS.includes(path) ||\n+    RETURN_PATH_PREFIXES.some((prefix) => path.startsWith(prefix) && path.length > prefix.length)\n+  )\n+}\n+\n+/**\n+ * 글 화면이 받은 navigation state에서 돌아갈 자리를 꺼낸다(013 term-help-ui §3, research R11).\n+ *\n+ * <p><b>세 조건을 모두 만족할 때만 값을 돌려준다.</b> state 모양이 맞고, 경로가 허용 목록에 들고,\n+ * 014의 `normalizeReturnTarget`이 경로를 바꾸지 않아야 한다. state는 누구나 실어 보낼 수 있으므로\n+ * 받은 경로를 그대로 믿으면 앱 밖이나 인증 화면으로 보내는 연결이 생긴다.\n+ */\n+export function resolveLearningReturn(state: unknown): LearningReturnState | null {\n+  if (!isRecord(state) || !isRecord(state.learningReturn)) return null\n+  const { path, label } = state.learningReturn\n+  if (typeof path !== 'string' || typeof label !== 'string') return null\n+  if (!isAllowedPath(path) || normalizeReturnTarget(path) !== path) return null\n+  return { path, label }\n+}\n+\n+interface ReturnToDiagnosisLinkProps {\n+  /** 글 화면의 `location.state`. 모양을 믿지 않고 `resolveLearningReturn`이 판정한다 */\n+  state: unknown\n+}\n+\n+/**\n+ * '하던 진단으로 돌아가기'(013 FR-009, term-help-ui §3).\n+ *\n+ * <p><b>보조 연결이다.</b> 글 화면의 행동 버튼은 '이 예시로 비중 비교하기' 하나라서(원칙 II) 같은 크기의\n+ * 버튼으로 두지 않는다.\n+ *\n+ * <p><b>경로로 이동한다.</b> `history.back()`에 맡기면 글 안에서 다른 글로 옮겨 다닌 만큼 뒤로 가야 하고,\n+ * 바깥에서 들어온 탭이면 앱을 떠난다. 입력값은 싣지 않는다 — 진단 화면이 각자의 탭 세션 규칙으로\n+ * 되살린다.\n+ *\n+ * <p>배우기 메뉴로 직접 들어오거나 새로고침해 state가 없으면 아무것도 그리지 않는다(spec Edge Cases).\n+ */\n+export function ReturnToDiagnosisLink({ state }: ReturnToDiagnosisLinkProps) {\n+  const target = resolveLearningReturn(state)\n+  if (!target) return null\n+\n+  return (\n+    <Link className={styles.link} to={target.path}>\n+      <span aria-hidden=\"true\">←</span>\n+      {' 하던 진단으로 돌아가기 '}\n+      <span className={styles.label}>({target.label})</span>\n+    </Link>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/ReturnToDiagnosisLink.tsx",
+          "old_path": "frontend/src/components/learning/ReturnToDiagnosisLink.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n-import { act, render, screen } from '@testing-library/react'\n+import { act, fireEvent, render, screen } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n+import { useState } from 'react'\n import { Route, Routes, useLocation } from 'react-router-dom'\n import { MemoryRouter } from 'react-router-dom'\n import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'\n@@ -75,10 +76,51 @@ function renderHelp() {\n   return { user, trigger: screen.getByRole('button', { name: '합성 용어 도움말' }) }\n }\n \n+/** 도움말을 붙인 진단 화면 대역. 입력 하나와 도움말 하나를 가진다. */\n+function HostForm() {\n+  const [value, setValue] = useState('')\n+  return (\n+    <form>\n+      <label>\n+        합성 입력\n+        <input value={value} onChange={(event) => setValue(event.target.value)} />\n+      </label>\n+      <TermHelp\n+        termId=\"synthetic-term\"\n+        label=\"합성 용어\"\n+        returnTo={{ path: '/strategy', label: '전략 선택' }}\n+      />\n+    </form>\n+  )\n+}\n+\n describe('TermHelp', () => {\n-  it('열기 전에는 설명을 요청하지 않는다', () => {\n-    renderHelp()\n+  it('열기 전에는 설명을 요청하지 않고 트리거는 button이다', () => {\n+    const { trigger } = renderHelp()\n     expect(fetchGlossaryEntry).not.toHaveBeenCalled()\n+    expect(trigger.tagName).toBe('BUTTON')\n+    expect(trigger.getAttribute('type')).toBe('button')\n+  })\n+\n+  it('열고 닫는 동안 호출한 화면의 입력이 그대로다', async () => {\n+    fetchGlossaryEntry.mockResolvedValue({ status: 'notReady' })\n+    const user = userEvent.setup()\n+    render(\n+      <MemoryRouter initialEntries={['/strategy']}>\n+        <HostForm />\n+      </MemoryRouter>,\n+    )\n+    const input = screen.getByRole('textbox', { name: '합성 입력' })\n+    fireEvent.change(input, { target: { value: '12.5' } })\n+\n+    await user.click(screen.getByRole('button', { name: '합성 용어 도움말' }))\n+    expect(await screen.findByText('설명 준비 중')).not.toBeNull()\n+    await user.keyboard('{Escape}')\n+    await act(async () => {})\n+\n+    expect((screen.getByRole('textbox', { name: '합성 입력' }) as HTMLInputElement).value).toBe(\n+      '12.5',\n+    )\n   })\n \n   it('열면 받은 문장을 그대로 보이고 글로 가는 연결은 돌아올 자리만 싣는다', async () => {\n@@ -90,7 +132,10 @@ describe('TermHelp', () => {\n     expect(fetchGlossaryEntry).toHaveBeenCalledWith('synthetic-term', expect.any(AbortSignal))\n     expect(await screen.findByText('합성 용어를 설명하는 한 문장이다.')).not.toBeNull()\n \n-    await user.click(screen.getByRole('link', { name: /합성 글/ }))\n+    const articleLink = screen.getByRole('link', { name: /합성 글/ })\n+    expect(articleLink.getAttribute('href')).toBe('/learn/synthetic-article')\n+    expect(articleLink.getAttribute('target')).toBeNull()\n+    await user.click(articleLink)\n \n     const location = screen.getByTestId('location').textContent ?? ''\n     expect(location).toContain('/learn/synthetic-article')\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/learning/TermHelp.test.tsx",
+          "old_path": "frontend/src/components/learning/TermHelp.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -152,6 +152,38 @@ describe('LearningArticlePage', () => {\n     expect(listState).toEqual(received)\n   })\n \n+  it('도움말에서 온 글에만 하던 진단으로 돌아가는 연결을 보인다', async () => {\n+    apiMocks.fetchLearningArticle.mockResolvedValue({ status: 'loaded', article: tideArticle })\n+\n+    renderArticle({\n+      pathname: '/learn/tide-reading',\n+      state: { learningReturn: { path: '/strategy', label: '전략 선택' } },\n+    })\n+\n+    const back = await screen.findByRole('link', { name: /하던 진단으로 돌아가기/ })\n+    expect(back.getAttribute('href')).toBe('/strategy')\n+    // 글 화면의 행동 버튼은 예시 진입 하나다(원칙 II).\n+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([\n+      '이 예시로 비중 비교하기',\n+    ])\n+  })\n+\n+  it('배우기 메뉴로 직접 들어오거나 허용 목록 밖에서 온 글에는 돌아가기 연결이 없다', async () => {\n+    apiMocks.fetchLearningArticle.mockResolvedValue({ status: 'loaded', article: tideArticle })\n+\n+    const { unmount } = renderArticle('/learn/tide-reading')\n+    await screen.findByRole('heading', { level: 1, name: '물때 읽기' })\n+    expect(screen.queryByRole('link', { name: /하던 진단으로 돌아가기/ })).toBeNull()\n+    unmount()\n+\n+    renderArticle({\n+      pathname: '/learn/tide-reading',\n+      state: { learningReturn: { path: '//evil.example', label: '밖' } },\n+    })\n+    await screen.findByRole('heading', { level: 1, name: '물때 읽기' })\n+    expect(screen.queryByRole('link', { name: /하던 진단으로 돌아가기/ })).toBeNull()\n+  })\n+\n   it('글을 열고 닫는 동안 브라우저 저장소에 쓰지 않는다', async () => {\n     const setItem = vi.spyOn(Storage.prototype, 'setItem')\n     apiMocks.fetchLearningArticle.mockResolvedValue({ status: 'loaded', article: tideArticle })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LearningArticlePage.test.tsx",
+          "old_path": "frontend/src/pages/LearningArticlePage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import { fetchLearningArticle, type LearningArticleResult } from '@/api/learning\n import { ArticleBlocks } from '@/components/learning/ArticleBlocks'\n import { ExampleEntry } from '@/components/learning/ExampleEntry'\n import { LearningLoadFailure } from '@/components/learning/LearningLoadFailure'\n+import { ReturnToDiagnosisLink } from '@/components/learning/ReturnToDiagnosisLink'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import type { LearningArticle } from '@/types/learning'\n import styles from './LearningArticlePage.module.css'\n@@ -52,7 +53,7 @@ export function LearningArticlePage() {\n     <div className={styles.page}>\n       <AppHeader />\n       <main className={styles.main}>\n-        {/* B04: '하던 진단으로 돌아가기'(ReturnToDiagnosisLink)가 이 자리에 온다. */}\n+        <ReturnToDiagnosisLink state={location.state} />\n \n         {state.status === 'loading' ? (\n           <p className={styles.loading} role=\"status\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LearningArticlePage.tsx",
+          "old_path": "frontend/src/pages/LearningArticlePage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -31,7 +31,7 @@ export function fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promis\n | 이름 | 형 | 필수 | 뜻 |\n |---|---|---|---|\n | `termId` | `string` | ✓ | 가리킬 용어 |\n-| `label` | `string` | ✓ | 트리거 버튼에 보일 이름. 화면이 이미 보이는 이름을 넘긴다. 설명을 불러오기 전에도 버튼이 이름을 가져야 한다 |\n+| `label` | `string` | ✓ | 트리거 버튼의 접근 가능한 이름(`${label} 도움말`)에 쓴다. 화면이 이미 보이는 이름을 넘긴다. 설명을 불러오기 전에도 버튼이 이름을 가져야 한다 |\n | `returnTo` | `{ path: string; label: string }` | ✓ | 글로 이동했다가 돌아올 자리. 보통 현재 화면의 경로와 이름이다(§3) |\n \n ### 상태와 표시\n@@ -50,7 +50,7 @@ export function fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promis\n \n ### 접근성 (FR-019)\n \n-- `radix-ui` Popover로 만든다. 트리거는 `button`이다.\n+- `radix-ui` Popover로 만든다. 트리거는 '?'를 보이는 `button`이고 이름은 `${label} 도움말`이다. 붙이는 화면이 용어 이름을 옆에 이미 보이므로 버튼 글자로 한 번 더 보이지 않는다.\n - 키보드로 열고, Esc로 닫고, 닫으면 초점이 트리거로 돌아온다.\n - 글 연결과 다시 시도는 Tab으로 닿는 `a`·`button`이다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/contracts/term-help-ui.md",
+          "old_path": "specs/013-learning-pages/contracts/term-help-ui.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -162,16 +162,16 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Frontend — 공용 도움말 (B04)\n \n-- [ ] T036 [P] [US3] (FE) `frontend/src/api/learningGlossary.ts` — `fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promise<GlossaryLookup>`, `GlossaryLookup = { status: 'ready'; entry: LearningTermEntry } | { status: 'notReady' } | { status: 'failed' }`([term-help-ui](contracts/term-help-ui.md) §1). 404 `LEARNING_TERM_NOT_READY`만 `notReady`이고 그 밖의 모든 실패(다른 404 코드 포함)는 `failed`다. 예외를 던지지 않고 재시도하지 않는다. `apiClient` 경유. 003 T057a가 이 파일에 대역을 먼저 두었으면 **본문만 바꾸고 export 이름을 유지한다**(위 ③)\n-- [ ] T037 [P] [US3] (FE) `frontend/src/components/learning/ReturnToDiagnosisLink.tsx`와 순수 함수 `resolveLearningReturn(state: unknown): LearningReturnState | null` — 세 조건을 모두 만족할 때만 값을 돌려준다([term-help-ui](contracts/term-help-ui.md) §3): `state.learningReturn`이 있고 `path`·`label`이 문자열; `path`가 `/diagnosis/sectors`·`/strategy`이거나 `/results/`로 시작; `normalizeReturnTarget(path) === path`(`frontend/src/auth/returnTarget.ts`, 014 소유 — 고치지 않는다). 컴포넌트는 값이 있을 때만 보조 연결 `a`(React Router `Link`)를 그리고 누르면 `navigate(path)`한다. `history.back()`을 쓰지 않는다. '이 예시로 비중 비교하기'와 같은 크기의 버튼 스타일을 쓰지 않는다(FR-009, 원칙 II)\n-- [ ] T038 [US3] (FE) `frontend/src/components/learning/TermHelp.tsx`·`TermHelp.module.css` — props `termId`·`label`·`returnTo`(모두 필수). `radix-ui` 패키지의 `Popover`(`import { Popover } from 'radix-ui'`, 새 라이브러리 없음)로 만들고 트리거는 `label`을 보이는 `button`이다. **여는 행동이 요청을 시작한다**(마운트 때 부르지 않는다). 상태별 표시([term-help-ui](contracts/term-help-ui.md) §2): 여는 중은 짧은 텍스트; `ready`는 이름·문장(받은 그대로)·`Link`(`/learn/${articleId}`, `state: { learningReturn: returnTo }`, 같은 탭); `notReady`는 '설명 준비 중' 일반 텍스트, 연결 없음; `failed`는 `role=\"alert\"` 한 문장과 '다시 시도' `button`(누를 때만 다시 부른다). Esc로 닫히고 닫으면 초점이 트리거로 돌아온다(radix 기본). 호출한 화면의 상태를 바꾸는 prop·callback을 두지 않는다(FR-009·FR-010) (T036 의존)\n-- [ ] T039 [US3] (FE) `frontend/src/pages/LearningArticlePage.tsx`의 머리 자리(T024)에 `ReturnToDiagnosisLink`를 넣고, 글 안의 `/learn` 링크가 `location.state`를 그대로 넘기는지 확인한다. 배우기 메뉴로 직접 들어오면 state가 없어 연결이 보이지 않는다(spec Edge Cases) (T037 의존)\n+- [X] T036 [P] [US3] (FE) `frontend/src/api/learningGlossary.ts` — `fetchGlossaryEntry(termId: string, signal?: AbortSignal): Promise<GlossaryLookup>`, `GlossaryLookup = { status: 'ready'; entry: LearningTermEntry } | { status: 'notReady' } | { status: 'failed' }`([term-help-ui](contracts/term-help-ui.md) §1). 404 `LEARNING_TERM_NOT_READY`만 `notReady`이고 그 밖의 모든 실패(다른 404 코드 포함)는 `failed`다. 예외를 던지지 않고 재시도하지 않는다. `apiClient` 경유. 003 T057a가 이 파일에 대역을 먼저 두었으면 **본문만 바꾸고 export 이름을 유지한다**(위 ③)\n+- [X] T037 [P] [US3] (FE) `frontend/src/components/learning/ReturnToDiagnosisLink.tsx`와 순수 함수 `resolveLearningReturn(state: unknown): LearningReturnState | null` — 세 조건을 모두 만족할 때만 값을 돌려준다([term-help-ui](contracts/term-help-ui.md) §3): `state.learningReturn`이 있고 `path`·`label`이 문자열; `path`가 `/diagnosis/sectors`·`/strategy`이거나 `/results/`로 시작; `normalizeReturnTarget(path) === path`(`frontend/src/auth/returnTarget.ts`, 014 소유 — 고치지 않는다). 컴포넌트는 값이 있을 때만 보조 연결 `a`(React Router `Link`)를 그리고 누르면 `navigate(path)`한다. `history.back()`을 쓰지 않는다. '이 예시로 비중 비교하기'와 같은 크기의 버튼 스타일을 쓰지 않는다(FR-009, 원칙 II)\n+- [X] T038 [US3] (FE) `frontend/src/components/learning/TermHelp.tsx`·`TermHelp.module.css` — props `termId`·`label`·`returnTo`(모두 필수). `radix-ui` 패키지의 `Popover`(`import { Popover } from 'radix-ui'`, 새 라이브러리 없음)로 만들고 트리거는 `button`이다. 버튼 글자는 '?'이고 접근 가능한 이름이 `${label} 도움말`이다 — 붙이는 화면이 용어 이름을 이미 옆에 보이므로 이름을 두 번 보이지 않는다. **여는 행동이 요청을 시작한다**(마운트 때 부르지 않는다). 상태별 표시([term-help-ui](contracts/term-help-ui.md) §2): 여는 중은 짧은 텍스트; `ready`는 이름·문장(받은 그대로)·`Link`(`/learn/${articleId}`, `state: { learningReturn: returnTo }`, 같은 탭); `notReady`는 '설명 준비 중' 일반 텍스트, 연결 없음; `failed`는 `role=\"alert\"` 한 문장과 '다시 시도' `button`(누를 때만 다시 부른다). Esc로 닫히고 닫으면 초점이 트리거로 돌아온다(radix 기본). 호출한 화면의 상태를 바꾸는 prop·callback을 두지 않는다(FR-009·FR-010) (T036 의존)\n+- [X] T039 [US3] (FE) `frontend/src/pages/LearningArticlePage.tsx`의 머리 자리(T024)에 `ReturnToDiagnosisLink`를 넣고, 글 안의 `/learn` 링크가 `location.state`를 그대로 넘기는지 확인한다. 배우기 메뉴로 직접 들어오면 state가 없어 연결이 보이지 않는다(spec Edge Cases) (T037 의존)\n \n ### Frontend 테스트\n \n-- [ ] T040 [P] [US3] (FE 테스트) `frontend/src/api/learningGlossary.test.ts` — 200 → `ready`; 404 `LEARNING_TERM_NOT_READY` → `notReady`; 404 다른 코드·5xx·네트워크·시간 초과 → `failed`; 어느 경우에도 reject되지 않는다; 요청은 호출당 한 번. `test.include`에 `'src/api/learningGlossary.test.ts'` 추가 (T036 의존)\n-- [ ] T041 [P] [US3] (FE 테스트) `frontend/src/components/learning/ReturnToDiagnosisLink.test.tsx` — `resolveLearningReturn`: state 없음 → null; `path: '/login'` → null; `'//evil.example'` → null; `'/strategy'`·`'/diagnosis/sectors'`·`'/results/BT-1'` → 값; 컴포넌트는 값이 있을 때만 링크를 그리고 누르면 `navigate`가 그 `path`로 불린다; 요소가 `a`다 (T037 의존)\n-- [ ] T042 [US3] (FE 테스트) `frontend/src/components/learning/TermHelp.test.tsx`(`@testing-library/user-event`) — 열기 전에는 요청이 0건; 트리거를 누르면 한 번 부른다; `ready`면 문장이 받은 그대로 보이고 링크 `href`가 `/learn/{articleId}`이며 `navigate` state에 `learningReturn`이 실린다; `notReady`면 '설명 준비 중'과 링크 없음; `failed`면 `alert`와 다시 시도이고 누르기 전에는 두 번째 요청이 없다; `Escape`로 닫히고 초점이 트리거로 돌아온다(quickstart 5-4); 트리거는 `button`; 부모 컴포넌트의 입력 상태가 열고 닫는 동안 그대로다(US3 시나리오 3) (T038 의존)\n+- [X] T040 [P] [US3] (FE 테스트) `frontend/src/api/learningGlossary.test.ts` — 200 → `ready`; 404 `LEARNING_TERM_NOT_READY` → `notReady`; 404 다른 코드·5xx·네트워크·시간 초과 → `failed`; 어느 경우에도 reject되지 않는다; 요청은 호출당 한 번. `test.include`에 `'src/api/learningGlossary.test.ts'` 추가 (T036 의존)\n+- [X] T041 [P] [US3] (FE 테스트) `frontend/src/components/learning/ReturnToDiagnosisLink.test.tsx` — `resolveLearningReturn`: state 없음 → null; `path: '/login'` → null; `'//evil.example'` → null; `'/strategy'`·`'/diagnosis/sectors'`·`'/results/BT-1'` → 값; 컴포넌트는 값이 있을 때만 링크를 그리고 누르면 `navigate`가 그 `path`로 불린다; 요소가 `a`다 (T037 의존)\n+- [X] T042 [US3] (FE 테스트) `frontend/src/components/learning/TermHelp.test.tsx`(`@testing-library/user-event`) — 열기 전에는 요청이 0건; 트리거를 누르면 한 번 부른다; `ready`면 문장이 받은 그대로 보이고 링크 `href`가 `/learn/{articleId}`이며 `navigate` state에 `learningReturn`이 실린다; `notReady`면 '설명 준비 중'과 링크 없음; `failed`면 `alert`와 다시 시도이고 누르기 전에는 두 번째 요청이 없다; `Escape`로 닫히고 초점이 트리거로 돌아온다(quickstart 5-4); 트리거는 `button`; 부모 컴포넌트의 입력 상태가 열고 닫는 동안 그대로다(US3 시나리오 3) (T038 의존)\n \n **Checkpoint**: 도움말이 세 상태를 코드로 가르고, 글로 갔다가 돌아오는 길이 허용 목록 안에서만 열린다\n \n@@ -305,7 +305,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n | B01 · [S15P21E205-294](https://ssafy.atlassian.net/browse/S15P21E205-294) | `[BE] 배우기 글과 용어 설명을 보관하고 공개 조회한다` | T001~T003, T007~T019, T033~T035 | 19 | `be` | 없음 |\n | B02 · 미발급 | `[BE] 관리 계정이 초안을 저장하고 게시·게시 취소한다` | T045~T059 | 15 | `be` | B01 |\n | B03 · [S15P21E205-321](https://ssafy.atlassian.net/browse/S15P21E205-321) | `[FE] 배우기 목록과 글을 보이고 예시로 진단을 시작한다` | T004, T006, T020~T032, T043, T044 | 17 | `fe` | B01의 계약(T003) |\n-| B04 · 미발급 | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | T036~T042 | 7 | `fe` | B03 |\n+| B04 · [S15P21E205-328](https://ssafy.atlassian.net/browse/S15P21E205-328) | `[FE] 진단 화면이 함께 쓰는 용어 도움말을 만든다` | T036~T042 | 7 | `fe` | B03 |\n | B05 · 미발급 | `[FE] 관리 화면에서 글을 고치고 게시한다` | T005, T060~T072 | 14 | `fe` | B02, B03 |\n | B06 · 미발급 | `[DOCS] spec 013 문서 동기화와 최종 검증` | T073~T078 | 6 | `fe` | 전부 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/tasks.md",
+          "old_path": "specs/013-learning-pages/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2827161": []
+  }
+}

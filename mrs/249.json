@@ -1,0 +1,1010 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952928,
+    "iid": 249,
+    "project_id": 1444456,
+    "title": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다",
+    "description": "## 작업 내용 요약\n\n009·010이 소비할 거시지표 조회가 열린다. 17개 지표·7개 분야·수집 상태를 하나의 자료 버전에서 한 응답으로 내보내며, 완결 자료 버전이 아직 없어도 등록 정보와 자료 없음 상태를 준다. 009 연동(묶음 H)이 기다리던 계약이 이 MR로 고정된다.\n\n## 관련 티켓\n\n* ticket # S15P21E205-371\n* link https://ssafy.atlassian.net/browse/S15P21E205-371\n\n## 주요 변경 사항\n\n* `GET /macro-indicators/snapshot` 신설. 응답은 `specs/008-macro-indicator-registry/contracts/openapi.yaml`, 봉투는 `HttpApiResponse`\n* 자료·계산 등록표·화면 분류 세 버전을 먼저 고정한 뒤 한 읽기 트랜잭션에서 조립한다\n* 수집 상태(마지막 갱신 시각·성공/실패·한도 도달)를 자료 상태와 구분해 싣는다\n* 스키마 변경 없음. `macro_*` 읽기만 추가한다\n* 작업 목록: T050을 묶음 F에서 D로 옮기고, 재조회 구간 확정(T073)을 묶음 K로 옮겼으며, Phase 9에 T080\\~T082를 더했다\n\n## 테스트\n\n* [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — 1802 tests, 0 failures, skipped 3\n* [x] skip 3건이 실제 원천 호출·성능 시험 게이트이며 Docker와 무관함을 확인\n* [ ] 애플리케이션을 띄워 실제 호출한 확인은 하지 않았다\n* [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — 1805 tests, 0 failures, skipped 3\n\n## 리뷰 포인트\n\n* JPA Entity 없이 `JdbcTemplate`으로 읽는다. 이 표들은 Backend가 쓰지 않아 매핑할 쓰기 모델이 없고 `validate` 때문에 안 쓰는 컬럼까지 매핑해야 한다. 다른 도메인과 결이 달라 합의가 필요하다\n* 값을 JSON number로 내보낸다. 저장소 규약은 응답 decimal을 문자열로 두지만 008 계약이 `number`라 그쪽을 따랐다\n* 저장된 결측 사유 12종을 계약의 4종으로 좁혔다. 세분을 그대로 내보내면 계약에 없는 값이 화면에 닿는다\n* T050을 묶음 F에서 D로 옮겼다. 같은 컨트롤러·같은 응답이라 나누면 두 MR이 한 파일을 건드린다\n* Phase 9의 T080은 CRITICAL이다. 원본을 저장하는 코드가 없어 원칙 VIII 재현성이 코드로 성립하지 않는다 — 이 MR 범위는 아니지만 우선순위 판단이 필요하다\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 응답의 `displayOrder`는 등록표의 표시 순서이지 순위가 아니다. 추천·최적·1위 표현 없음\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음(전략을 다루지 않는다). 지표·분야 목록도 코드에 두지 않고 등록표에서 읽으므로 지표가 늘어도 이 코드를 고치지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 결측은 `null`과 사유로 나가고, 빠진 달도 배열에서 지우지 않는다. 자료 버전이 없으면 값·기준월은 `null`, 경로는 빈 배열이다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 지표 상태로 `NO_DATA`·`COLLECTION_FAILED`·`EXAMPLE`을 구분하고, 응답에 \"최신 개정자료를 이용한 역사 비교이며 당시 발표값 재현이 아니다\"를 항상 함께 싣는다",
+    "state": "merged",
+    "created_at": "2026-09-20T16:38:59.210+09:00",
+    "updated_at": "2026-09-20T18:30:15.878+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-20T18:30:15.161+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/371-macro-snapshot-api",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+    "merge_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T16:39:00.444+09:00",
+    "reference": "!249",
+    "references": {
+      "short": "!249",
+      "relative": "!249",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!249"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/249",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952928,
+    "iid": 249,
+    "project_id": 1444456,
+    "title": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다",
+    "description": "## 작업 내용 요약\n\n009·010이 소비할 거시지표 조회가 열린다. 17개 지표·7개 분야·수집 상태를 하나의 자료 버전에서 한 응답으로 내보내며, 완결 자료 버전이 아직 없어도 등록 정보와 자료 없음 상태를 준다. 009 연동(묶음 H)이 기다리던 계약이 이 MR로 고정된다.\n\n## 관련 티켓\n\n* ticket # S15P21E205-371\n* link https://ssafy.atlassian.net/browse/S15P21E205-371\n\n## 주요 변경 사항\n\n* `GET /macro-indicators/snapshot` 신설. 응답은 `specs/008-macro-indicator-registry/contracts/openapi.yaml`, 봉투는 `HttpApiResponse`\n* 자료·계산 등록표·화면 분류 세 버전을 먼저 고정한 뒤 한 읽기 트랜잭션에서 조립한다\n* 수집 상태(마지막 갱신 시각·성공/실패·한도 도달)를 자료 상태와 구분해 싣는다\n* 스키마 변경 없음. `macro_*` 읽기만 추가한다\n* 작업 목록: T050을 묶음 F에서 D로 옮기고, 재조회 구간 확정(T073)을 묶음 K로 옮겼으며, Phase 9에 T080\\~T082를 더했다\n\n## 테스트\n\n* [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — 1802 tests, 0 failures, skipped 3\n* [x] skip 3건이 실제 원천 호출·성능 시험 게이트이며 Docker와 무관함을 확인\n* [ ] 애플리케이션을 띄워 실제 호출한 확인은 하지 않았다\n* [x] `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — 1805 tests, 0 failures, skipped 3\n\n## 리뷰 포인트\n\n* JPA Entity 없이 `JdbcTemplate`으로 읽는다. 이 표들은 Backend가 쓰지 않아 매핑할 쓰기 모델이 없고 `validate` 때문에 안 쓰는 컬럼까지 매핑해야 한다. 다른 도메인과 결이 달라 합의가 필요하다\n* 값을 JSON number로 내보낸다. 저장소 규약은 응답 decimal을 문자열로 두지만 008 계약이 `number`라 그쪽을 따랐다\n* 저장된 결측 사유 12종을 계약의 4종으로 좁혔다. 세분을 그대로 내보내면 계약에 없는 값이 화면에 닿는다\n* T050을 묶음 F에서 D로 옮겼다. 같은 컨트롤러·같은 응답이라 나누면 두 MR이 한 파일을 건드린다\n* Phase 9의 T080은 CRITICAL이다. 원본을 저장하는 코드가 없어 원칙 VIII 재현성이 코드로 성립하지 않는다 — 이 MR 범위는 아니지만 우선순위 판단이 필요하다\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 응답의 `displayOrder`는 등록표의 표시 순서이지 순위가 아니다. 추천·최적·1위 표현 없음\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음(전략을 다루지 않는다). 지표·분야 목록도 코드에 두지 않고 등록표에서 읽으므로 지표가 늘어도 이 코드를 고치지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 결측은 `null`과 사유로 나가고, 빠진 달도 배열에서 지우지 않는다. 자료 버전이 없으면 값·기준월은 `null`, 경로는 빈 배열이다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 지표 상태로 `NO_DATA`·`COLLECTION_FAILED`·`EXAMPLE`을 구분하고, 응답에 \"최신 개정자료를 이용한 역사 비교이며 당시 발표값 재현이 아니다\"를 항상 함께 싣는다",
+    "state": "merged",
+    "created_at": "2026-09-20T16:38:59.210+09:00",
+    "updated_at": "2026-09-20T18:30:15.878+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-20T18:30:15.161+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/371-macro-snapshot-api",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+    "merge_commit_sha": "a7383cf39f00e223096794b840bea4a264634021",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T16:39:00.444+09:00",
+    "reference": "!249",
+    "references": {
+      "short": "!249",
+      "relative": "!249",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!249"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/249",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-20T18:23:45.817+09:00",
+    "latest_build_finished_at": "2026-09-20T18:28:48.779+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 209729,
+      "iid": 215,
+      "project_id": 1444456,
+      "sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+      "ref": "feat(be)/371-macro-snapshot-api",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T18:23:45.709+09:00",
+      "updated_at": "2026-09-20T18:28:48.786+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209729"
+    },
+    "head_pipeline": {
+      "id": 209729,
+      "iid": 215,
+      "project_id": 1444456,
+      "sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+      "ref": "feat(be)/371-macro-snapshot-api",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T18:23:45.709+09:00",
+      "updated_at": "2026-09-20T18:28:48.786+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209729",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-20T18:23:45.817+09:00",
+      "finished_at": "2026-09-20T18:28:48.779+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209729",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "head_sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+      "start_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "bd25bbefcf94258c573f8accb5b0ae19285d1e4d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841398,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T16:38:59.422+09:00",
+          "updated_at": "2026-09-20T16:38:59.429+09:00",
+          "system": true,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f36fcdbbb1fd0c5fcdc5fda3270c3111ccdd61ab",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841400,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n* [Medium] `backend/src/infrastructure/persistence/MacroSnapshotRepositoryImpl.java`: `readStringList` 메서드 구현부가 중간에 잘려 있어 컴파일 오류가 발생하거나 런타임 시 예외가 발생할 수 있습니다. 해당 메서드의 JSON 파싱 및 예외 처리를 온전하게 완성해야 합니다.\n* [Low] `backend/src/infrastructure/persistence/MacroSnapshotRepositoryImpl.java`: `findCurrentPointer()` 쿼리에서 `dataset_version_id`가 `NULL`일 수 있는 설계(첫 수집 전 등)인데, `rs.getObject(\"dataset_id\", Long.class)` 대신 캐스팅(`(Long) rs.getObject(\"dataset_id\")`)을 사용하고 있습니다. JDBC 드라이버나 데이터베이스 종류에 따라 타입 캐스팅 예외(`ClassCastException`)가 발생할 우려가 있으므로 `rs.getObject(..., Long.class)` 형태로 안전하게 형변환하는 것을 권장합니다.\n\n### 테스트 제안\n* **등록표 미발행 시나리오**: `macro_current_publication` 테이블이 완전히 비어 있는 상태에서 `GET /macro-indicators/snapshot`을 호출했을 때, 기존 전역 예외 핸들러에 의해 가로채이지 않고 `MacroRegistryNotPublishedException`이 발생하여 올바른 에러 봉투(500 Internal Server Error)로 응답되는지 검증합니다.\n* **부분 수집 실패 및 예시 데이터 시나리오**: 17개 지표 중 일부가 `COLLECTION_FAILED` 상태이거나 `is_sample_data = true`일 때, 각 상태 우선순위(예시 데이터 > 수집 실패 > 정상)에 맞게 `status` 필드가 정확히 직렬화되는지 테스트합니다.\n* **결측치 경로(Path) 보존 시나리오**: 특정 대상월의 `transformed_value`가 `null`일 때, 응답 JSON 배열에서 해당 월 데이터가 누락되지 않고 `missingReason` 필드와 함께 유지되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:49eddd1096eae29d84a1d68e0d661c2c7a308484 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T16:39:03.930+09:00",
+          "updated_at": "2026-09-20T18:23:42.625+09:00",
+          "system": false,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "757593a7fd7c5025b02272851a16bcee4cf07445",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841470,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>c64d6914 - test(be): 스냅샷 지표 상태의 나머지 분기를 고정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/249/diffs?diff_id=2227283&start_sha=a96c4981c9765757a4a0c31d0f19710a01b258e8)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T16:59:59.407+09:00",
+          "updated_at": "2026-09-20T16:59:59.411+09:00",
+          "system": true,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0658df964534bd1aa8b9816c5d472411b6388a55",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841471,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T17:00:36.296+09:00",
+          "updated_at": "2026-09-20T17:00:36.301+09:00",
+          "system": true,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e62f3201fc8c542c8b5d5e9a0404e8eb6f10bb9f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841718,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>49eddd10 - fix(be): 스냅샷 조회의 실패 응답을 계약의 봉투로 되돌린다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/249/diffs?diff_id=2227478&start_sha=c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T18:23:32.985+09:00",
+          "updated_at": "2026-09-20T18:23:32.988+09:00",
+          "system": true,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "33726c3046d461902d5f0c64767d77e8465bc928",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841737,
+          "type": null,
+          "body": "mentioned in commit a7383cf39f00e223096794b840bea4a264634021",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T18:30:15.235+09:00",
+          "updated_at": "2026-09-20T18:30:15.250+09:00",
+          "system": true,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "373a0ef7be2494256d4c50e2c151759594481744",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841741,
+          "type": null,
+          "body": "diff로 인한오탐입니다.",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T18:30:33.240+09:00",
+          "updated_at": "2026-09-20T18:30:33.240+09:00",
+          "system": false,
+          "noteable_id": 952928,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 249,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2227478,
+      "head_commit_sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T18:23:32.724+09:00",
+      "merge_request_id": 952928,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "438a5d891d4b515e8849cec5ae326e66ab547f52"
+    },
+    {
+      "id": 2227283,
+      "head_commit_sha": "c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:59:59.125+09:00",
+      "merge_request_id": 952928,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "ad6dff6c5b73849fc0f5a4410c42a3aadaa30c3b"
+    },
+    {
+      "id": 2227225,
+      "head_commit_sha": "a96c4981c9765757a4a0c31d0f19710a01b258e8",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:38:59.545+09:00",
+      "merge_request_id": 952928,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "a31293272b990be2ebae3789f051dbb7714ff68f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2227478,
+      "head_commit_sha": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T18:23:32.724+09:00",
+      "merge_request_id": 952928,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "438a5d891d4b515e8849cec5ae326e66ab547f52",
+      "commits": [
+        {
+          "id": "49eddd1096eae29d84a1d68e0d661c2c7a308484",
+          "short_id": "49eddd10",
+          "created_at": "2026-09-20T17:08:56.000+09:00",
+          "parent_ids": [
+            "c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3"
+          ],
+          "title": "fix(be): 스냅샷 조회의 실패 응답을 계약의 봉투로 되돌린다",
+          "message": "fix(be): 스냅샷 조회의 실패 응답을 계약의 봉투로 되돌린다\n\n애플리케이션을 띄워 부르니 500 이 구형 ApiResponse(success/data/error)로\n나갔다. GlobalExceptionHandler 가 같은 예외를 먼저 잡고 있었고, 우선순위를\n주지 않은 이쪽 핸들러는 한 번도 불리지 않았다. 계약의 ErrorEnvelope 는\nhttpStatus·isSuccess·message·code·result 다.\n\n서비스를 직접 부르는 계약 테스트로는 보이지 않는 자리라 MVC 경계 테스트를\n함께 넣는다. 봉투는 컨트롤러와 예외 처리 순서가 정하고 그 순서는 요청이\n필터를 지나야 드러난다. @Order 를 빼면 그 테스트만 실패하는 것을 확인했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T17:08:56.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T17:08:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/49eddd1096eae29d84a1d68e0d661c2c7a308484"
+        },
+        {
+          "id": "c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3",
+          "short_id": "c64d6914",
+          "created_at": "2026-09-20T16:59:35.000+09:00",
+          "parent_ids": [
+            "a96c4981c9765757a4a0c31d0f19710a01b258e8"
+          ],
+          "title": "test(be): 스냅샷 지표 상태의 나머지 분기를 고정한다",
+          "message": "test(be): 스냅샷 지표 상태의 나머지 분기를 고정한다\n\nREADY 와 NO_DATA 만 검증하고 있어 수집 실패와 예시 자료 분기는 고쳐도\n아무도 알려주지 않는 상태였다.\n\n실패한 지표는 값이 남아 있어도 실패로 나가는지 함께 본다 — 실패가 자료를\n지우지 않는다는 것이 이 분기의 요점이다. 예시 표시가 실패보다 앞선다는\n순서도 고정했다. 순서가 뒤집히면 개발 대역이 운영처럼 보인다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:59:35.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:59:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3"
+        },
+        {
+          "id": "a96c4981c9765757a4a0c31d0f19710a01b258e8",
+          "short_id": "a96c4981",
+          "created_at": "2026-09-20T16:14:12.000+09:00",
+          "parent_ids": [
+            "e65ed3a99c1b3fb431ba718c260615ab7116dc88"
+          ],
+          "title": "docs(de): 아무 작업도 맡지 않은 구멍 셋을 작업 목록에 세운다",
+          "message": "docs(de): 아무 작업도 맡지 않은 구멍 셋을 작업 목록에 세운다\n\n라이브러리는 있는데 그것을 부르거나 결과를 남기는 자리가 없는 곳들이다.\n원본 응답을 저장하는 코드가 없어 값이 달라졌을 때 원천 개정인지 우리 변환이\n바뀐 것인지 판정할 근거가 없고, 어댑터·변환·발행을 순서대로 잇는 실행 경로가\n없어 전 구간 수집이 한 번도 연속으로 돌아본 적이 없다. 지표별 수집 상태를\n쓰는 코드도 없어 조회의 실패 지표 목록이 늘 비어 나간다.\n\n기존 작업 34개가 덮는 일은 중복이라 뺐다. 세 건 모두 열려 있는 어느 작업도\n맡고 있지 않다 — T048·T049 는 ingest.py 가 있다고 전제하고, T052 는 개정을\n테스트할 뿐 기록하는 코드를 만들지 않는다.\n\nPhase 8 이 이미 Convergence 라 Phase 9 로 따로 붙이고 기존 작업은 건드리지\n않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:14:12.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:14:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a96c4981c9765757a4a0c31d0f19710a01b258e8"
+        },
+        {
+          "id": "e65ed3a99c1b3fb431ba718c260615ab7116dc88",
+          "short_id": "e65ed3a9",
+          "created_at": "2026-09-20T16:01:45.000+09:00",
+          "parent_ids": [
+            "631fd4919db11fefe16729af6425586c19492e1e"
+          ],
+          "title": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다",
+          "message": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다\n\n세 버전을 먼저 고정한 뒤 한 읽기 트랜잭션에서 조립한다. 조회 도중 포인터가\n바뀌면 분야 기준월은 새 자료 버전에서, 값은 옛 버전에서 오는 응답이 만들어지고\n그 화면이 어느 시점인지 아무도 말할 수 없다.\n\nJPA Entity 를 두지 않았다. 이 표들은 Backend 가 쓰지 않아 매핑할 쓰기 모델이\n없고, Entity 를 만들면 validate 때문에 배치가 쓰는 컬럼까지 전부 매핑해야 하는데\n대부분은 이 응답에 쓰이지도 않는다.\n\n필요한 (지표, 대상월) 쌍만 읽는다. 전 구간을 끌어와 자바에서 고르면 요청마다\n수천 행이 오간다. 값은 계약대로 숫자로 내보내되 double 을 거치지 않는다 —\n주택가격 지수는 소수 여러 자리라 한 번 거치면 같은 자료로 다시 조회해도 값이\n달라진다.\n\n저장된 결측 사유 열두 가지를 계약의 네 가지로 좁힌다. 저장 쪽은 고치는 방법이\n달라 세분하지만, 세분을 그대로 내보내면 계약에 없는 값이 화면에 닿는다.\n\nT050(수집 상태)을 이 묶음에 넣었다. 같은 컨트롤러·같은 응답이라 나누면 두 MR이\n한 파일을 건드린다. 묶음 표도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:01:45.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:01:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e65ed3a99c1b3fb431ba718c260615ab7116dc88"
+        },
+        {
+          "id": "631fd4919db11fefe16729af6425586c19492e1e",
+          "short_id": "631fd491",
+          "created_at": "2026-09-20T15:46:31.000+09:00",
+          "parent_ids": [
+            "d718603dacb0aa87b1a5413a8799fc41654a71af"
+          ],
+          "title": "docs(de): 재조회 구간 확정을 이번 범위에서 닫을 수 있게 바꾼다",
+          "message": "docs(de): 재조회 구간 확정을 이번 범위에서 닫을 수 있게 바꾼다\n\nT073은 \"정기 수집을 몇 달 돌린 뒤\"로 시작해 남은 기간 안에는 끝날 수 없는\n작업이었다. 관행 관찰은 범위 밖으로 두고 미확인 항목으로 닫되, 잠정값 3개월과\n그 근거를 등록표에 남기게 했다. 짧게 잡으면 정정을 놓치고 길면 호출만 낭비하니\n의심스러우면 늘린다는 판단도 함께 적는다.\n\n묶음 J를 K로 바꿨다. T073은 T075~T079와 같은 registry.py 를 건드리므로 따로\n둘 이유가 없다. K는 I보다 앞서야 한다 — 거래일 달력이 비어 있는 동안 월 평균\n경로는 계속 결측이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T15:46:31.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T15:46:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/631fd4919db11fefe16729af6425586c19492e1e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.macro.application.exception;\n+\n+/**\n+ * 등록표가 아직 한 번도 발행되지 않았다 — {@code macro_current_publication} 에 행이 없다.\n+ *\n+ * <p><b>자료 없음과 다르다.</b> 자료 버전이 없는 것은 정상적인 조회 상태라 200 으로 17개 등록 정보와 빈 값을 내보내지만, 등록표 자체가 없으면 17개가\n+ * 무엇인지조차 말할 수 없어 내보낼 응답이 만들어지지 않는다. 그래서 이것만 장애로 다룬다.\n+ */\n+public class MacroRegistryNotPublishedException extends RuntimeException {\n+\n+    public MacroRegistryNotPublishedException() {\n+        super(\"지표 등록표가 아직 발행되지 않았습니다. data/ 배치가 계산 등록표와 화면 분류를 먼저 적재해야 합니다\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/exception/MacroRegistryNotPublishedException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/exception/MacroRegistryNotPublishedException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,88 @@\n+package com.ssafy.thorp.macro.application.repository;\n+\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.Collection;\n+import java.util.List;\n+import java.util.Optional;\n+\n+/**\n+ * {@code macro_*} 를 읽는 유일한 통로. <b>쓰기 메서드를 두지 않는다.</b>\n+ *\n+ * <p>이 표들을 채우는 것은 {@code data/src/data_pipeline/macro/} 배치다. Backend 에 쓰기 자리를 하나라도 열면 배치가 만든 불변\n+ * 스냅샷을 조회 경로가 고칠 수 있게 되고, 그 순간 \"같은 버전이면 같은 값\"이 깨진다(FR-011a).\n+ *\n+ * <p>메서드가 여럿인 이유는 조립이 여러 표에 걸쳐 있어서다. <b>호출자는 이것들을 한 트랜잭션 안에서 부른다</b> — 중간에 포인터가 바뀌면 한 응답에 서로 다른 자료\n+ * 버전의 값이 섞인다(FR-023).\n+ */\n+public interface MacroSnapshotRepository {\n+\n+    /** 현재 공개 중인 세 버전. 아직 아무것도 발행하지 않았으면 비어 있다. */\n+    Optional<CurrentPointer> findCurrentPointer();\n+\n+    List<IndicatorDefinitionRow> findDefinitions(long registryVersionId);\n+\n+    List<DisplayFieldRow> findDisplayFields(long displayVersionId);\n+\n+    List<DisplayIndicatorRow> findDisplayIndicators(long displayVersionId);\n+\n+    /** 분야별 T_g 와 전체 T_all. {@code scopeId} 는 7개 분야 id 또는 {@code ALL} 이다. */\n+    List<BaselineRow> findBaselines(long datasetVersionId, long registryVersionId);\n+\n+    /** 지표별 최신 <b>유효 변환값</b> 대상월. 원값만 있는 달은 세지 않는다. */\n+    List<LatestMonthRow> findLatestValidMonths(long datasetVersionId);\n+\n+    /** 필요한 (지표, 대상월)만 읽는다. 전 구간을 끌어오지 않는다. */\n+    List<ObservationRow> findObservations(long datasetVersionId, Collection<MonthKey> keys);\n+\n+    /** 가장 최근 수집 시도의 상태. 시도가 한 번도 없었으면 비어 있다. */\n+    Optional<CollectionStateRow> findLatestCollectionState();\n+\n+    record CurrentPointer(\n+            Long datasetVersionId,\n+            String datasetVersionKey,\n+            long registryVersionId,\n+            String registryVersionKey,\n+            long displayVersionId,\n+            String displayVersionKey,\n+            boolean sampleData) {}\n+\n+    record IndicatorDefinitionRow(\n+            String indicatorId,\n+            String fieldId,\n+            String attribution,\n+            String agency,\n+            String rawUnit,\n+            String transformedUnit,\n+            String transformRule,\n+            String licenseReviewStatus) {}\n+\n+    record DisplayFieldRow(\n+            String fieldId, String displayName, int displayOrder, String description) {}\n+\n+    record DisplayIndicatorRow(String indicatorId, String displayName, int displayOrder) {}\n+\n+    record BaselineRow(String scopeId, LocalDate referenceMonth, List<String> heldBackBy) {}\n+\n+    record LatestMonthRow(String indicatorId, LocalDate targetMonth) {}\n+\n+    /** 조회할 (지표, 대상월) 한 쌍. */\n+    record MonthKey(String indicatorId, LocalDate targetMonth) {}\n+\n+    record ObservationRow(\n+            String indicatorId,\n+            LocalDate targetMonth,\n+            BigDecimal rawValue,\n+            BigDecimal transformedValue,\n+            LocalDate releaseDate,\n+            Instant receivedAt,\n+            String missingReason) {}\n+\n+    record CollectionStateRow(\n+            String status,\n+            Instant lastSuccessfulAt,\n+            Instant lastAttemptAt,\n+            List<String> failedIndicatorIds,\n+            boolean quotaLimited) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/repository/MacroSnapshotRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/repository/MacroSnapshotRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,85 @@\n+package com.ssafy.thorp.macro.application.result;\n+\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * 17개 지표·7개 분야를 한 자료 버전에서 읽은 결과 (spec 008 FR-023).\n+ *\n+ * <p><b>세 버전은 조립 전에 고정된다.</b> 자료 버전이 없을 수 있고({@code dataVersion == null}) 그때도 등록표와 표시 버전은 있다 — 첫 수집\n+ * 전에도 화면은 17개가 무엇인지 보여줄 수 있어야 한다.\n+ */\n+public record MacroSnapshotResult(\n+        String dataVersion,\n+        String calculationRegistryVersion,\n+        String displayVersion,\n+        boolean exampleData,\n+        LocalDate overallReferenceMonth,\n+        CollectionState collection,\n+        List<FieldSummary> fields,\n+        List<IndicatorSummary> indicators) {\n+\n+    /**\n+     * 수집 시도 상태. <b>공개 자료 버전의 상태와 별개다.</b>\n+     *\n+     * <p>어제 발행한 자료가 멀쩡히 있는데 오늘 새벽 수집이 실패할 수 있다. 둘을 한 값으로 합치면 화면이 \"자료가 없다\"와 \"자료는 있는데 갱신이 멈췄다\"를 구분하지\n+     * 못한다(FR-011).\n+     */\n+    public record CollectionState(\n+            String status,\n+            List<String> licenseUnverifiedIndicatorIds,\n+            Instant lastSuccessfulAt,\n+            Instant lastAttemptAt,\n+            List<String> failedIndicatorIds,\n+            boolean quotaLimited) {}\n+\n+    /** 분야 하나. {@code referenceMonth} 는 그 분야의 T_g 이며 교집합이 비면 null 이다. */\n+    public record FieldSummary(\n+            String fieldId,\n+            String displayName,\n+            int displayOrder,\n+            String description,\n+            LocalDate referenceMonth,\n+            List<String> referenceMonthHeldBackBy,\n+            List<String> indicatorIds) {}\n+\n+    /** 지표 하나. */\n+    public record IndicatorSummary(\n+            String indicatorId,\n+            String fieldId,\n+            String displayName,\n+            int displayOrder,\n+            String source,\n+            String agency,\n+            String rawUnit,\n+            String transformedUnit,\n+            String transform,\n+            String status,\n+            LocalDate referenceMonth,\n+            ObservationValue referenceValue,\n+            ObservationValue latest,\n+            List<PathPoint> path,\n+            List<PathPoint> latestPath,\n+            Instant lastUpdatedAt) {}\n+\n+    /** 값이 있는 관측. {@code transformedValue} 는 null 이 아니다 — null 이면 {@link PathPoint} 쪽이다. */\n+    public record ObservationValue(\n+            LocalDate targetMonth,\n+            BigDecimal rawValue,\n+            BigDecimal transformedValue,\n+            LocalDate releaseDate) {}\n+\n+    /**\n+     * 경로 한 점. 값이 없으면 <b>왜 없는지가 함께 온다</b>.\n+     *\n+     * <p>빠진 달을 배열에서 지우지 않고 값 null 로 남기는 이유는, 지우면 세 달이 두 달로 보이고 어느 달이 빠졌는지 알 수 없기 때문이다(원칙 VI).\n+     */\n+    public record PathPoint(\n+            LocalDate targetMonth,\n+            BigDecimal rawValue,\n+            BigDecimal transformedValue,\n+            LocalDate releaseDate,\n+            String missingReason) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/result/MacroSnapshotResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/result/MacroSnapshotResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,327 @@\n+package com.ssafy.thorp.macro.application.service;\n+\n+import com.ssafy.thorp.macro.application.exception.MacroRegistryNotPublishedException;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.BaselineRow;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.CollectionStateRow;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.CurrentPointer;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.DisplayFieldRow;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.DisplayIndicatorRow;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.IndicatorDefinitionRow;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.MonthKey;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository.ObservationRow;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.CollectionState;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.FieldSummary;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.IndicatorSummary;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.ObservationValue;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.PathPoint;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.Comparator;\n+import java.util.LinkedHashMap;\n+import java.util.LinkedHashSet;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import java.util.Set;\n+import java.util.function.Function;\n+import java.util.stream.Collectors;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 17개 지표의 표시 정보를 한 응답으로 조립한다 (spec 008 FR-023).\n+ *\n+ * <p><b>계산하지 않는다.</b> 값·기준월·결측 사유는 모두 {@code data/} 배치가 적재해 둔 것이고 여기서는 읽어 모으기만 한다(루트 {@code\n+ * AGENTS.md}).\n+ *\n+ * <p><b>세 버전을 먼저 고정한 뒤 조립한다.</b> 메서드 전체가 한 읽기 트랜잭션이라 조회 도중 포인터가 바뀌어도 이 응답은 처음 읽은 세 버전만 본다. 고정하지 않으면\n+ * 분야 기준월은 새 자료 버전에서, 값은 옛 버전에서 오는 응답이 만들어지고 그 화면이 어느 시점인지 아무도 말할 수 없다.\n+ */\n+@Service\n+public class MacroSnapshotQueryService {\n+\n+    /** 경로는 t-2·t-1·t 세 달이다. */\n+    private static final int PATH_MONTHS = 3;\n+\n+    private static final String SCOPE_ALL = \"ALL\";\n+\n+    private final MacroSnapshotRepository repository;\n+\n+    public MacroSnapshotQueryService(MacroSnapshotRepository repository) {\n+        this.repository = repository;\n+    }\n+\n+    @Transactional(readOnly = true)\n+    public MacroSnapshotResult getSnapshot() {\n+        CurrentPointer pointer =\n+                repository\n+                        .findCurrentPointer()\n+                        .orElseThrow(MacroRegistryNotPublishedException::new);\n+\n+        List<IndicatorDefinitionRow> definitions =\n+                repository.findDefinitions(pointer.registryVersionId());\n+        List<DisplayFieldRow> displayFields =\n+                repository.findDisplayFields(pointer.displayVersionId());\n+        Map<String, DisplayIndicatorRow> displayIndicators =\n+                repository.findDisplayIndicators(pointer.displayVersionId()).stream()\n+                        .collect(\n+                                Collectors.toMap(\n+                                        DisplayIndicatorRow::indicatorId, Function.identity()));\n+\n+        Long datasetVersionId = pointer.datasetVersionId();\n+        Map<String, BaselineRow> baselines =\n+                datasetVersionId == null\n+                        ? Map.of()\n+                        : repository\n+                                .findBaselines(datasetVersionId, pointer.registryVersionId())\n+                                .stream()\n+                                .collect(\n+                                        Collectors.toMap(\n+                                                BaselineRow::scopeId, Function.identity()));\n+        Map<String, LocalDate> latestMonths =\n+                datasetVersionId == null\n+                        ? Map.of()\n+                        : repository.findLatestValidMonths(datasetVersionId).stream()\n+                                .collect(\n+                                        Collectors.toMap(\n+                                                MacroSnapshotRepository.LatestMonthRow::indicatorId,\n+                                                MacroSnapshotRepository.LatestMonthRow\n+                                                        ::targetMonth));\n+\n+        Map<String, Map<LocalDate, ObservationRow>> observations =\n+                loadObservations(datasetVersionId, definitions, baselines, latestMonths);\n+\n+        CollectionState collection = toCollectionState(repository.findLatestCollectionState());\n+        Set<String> failed = Set.copyOf(collection.failedIndicatorIds());\n+\n+        List<IndicatorSummary> indicators =\n+                definitions.stream()\n+                        .map(\n+                                definition ->\n+                                        toIndicator(\n+                                                definition,\n+                                                displayIndicators.get(definition.indicatorId()),\n+                                                baselines.get(definition.fieldId()),\n+                                                latestMonths.get(definition.indicatorId()),\n+                                                observations.getOrDefault(\n+                                                        definition.indicatorId(), Map.of()),\n+                                                pointer.sampleData(),\n+                                                failed))\n+                        .sorted(Comparator.comparingInt(IndicatorSummary::displayOrder))\n+                        .toList();\n+\n+        return new MacroSnapshotResult(\n+                pointer.datasetVersionKey(),\n+                pointer.registryVersionKey(),\n+                pointer.displayVersionKey(),\n+                pointer.sampleData(),\n+                Optional.ofNullable(baselines.get(SCOPE_ALL))\n+                        .map(BaselineRow::referenceMonth)\n+                        .orElse(null),\n+                collection,\n+                toFields(displayFields, definitions, baselines),\n+                indicators);\n+    }\n+\n+    /**\n+     * 필요한 (지표, 대상월)만 모아 한 번에 읽는다.\n+     *\n+     * <p>전 구간을 끌어와 자바에서 고르지 않는 이유는 17개 × 수백 달이면 매 요청마다 수천 행을 옮기게 되어서다. 필요한 달은 분야 T_g 세 달과 지표 최신월 세\n+     * 달뿐이라 미리 셀 수 있다.\n+     */\n+    private Map<String, Map<LocalDate, ObservationRow>> loadObservations(\n+            Long datasetVersionId,\n+            List<IndicatorDefinitionRow> definitions,\n+            Map<String, BaselineRow> baselines,\n+            Map<String, LocalDate> latestMonths) {\n+        if (datasetVersionId == null) {\n+            return Map.of();\n+        }\n+        Set<MonthKey> keys = new LinkedHashSet<>();\n+        for (IndicatorDefinitionRow definition : definitions) {\n+            BaselineRow baseline = baselines.get(definition.fieldId());\n+            if (baseline != null && baseline.referenceMonth() != null) {\n+                addPathKeys(keys, definition.indicatorId(), baseline.referenceMonth());\n+            }\n+            LocalDate latest = latestMonths.get(definition.indicatorId());\n+            if (latest != null) {\n+                addPathKeys(keys, definition.indicatorId(), latest);\n+            }\n+        }\n+        if (keys.isEmpty()) {\n+            return Map.of();\n+        }\n+        Map<String, Map<LocalDate, ObservationRow>> byIndicator = new LinkedHashMap<>();\n+        for (ObservationRow row : repository.findObservations(datasetVersionId, keys)) {\n+            byIndicator\n+                    .computeIfAbsent(row.indicatorId(), key -> new LinkedHashMap<>())\n+                    .put(row.targetMonth(), row);\n+        }\n+        return byIndicator;\n+    }\n+\n+    private void addPathKeys(Set<MonthKey> keys, String indicatorId, LocalDate anchor) {\n+        for (int back = PATH_MONTHS - 1; back >= 0; back--) {\n+            keys.add(new MonthKey(indicatorId, anchor.minusMonths(back)));\n+        }\n+    }\n+\n+    private List<FieldSummary> toFields(\n+            List<DisplayFieldRow> displayFields,\n+            List<IndicatorDefinitionRow> definitions,\n+            Map<String, BaselineRow> baselines) {\n+        Map<String, List<String>> membersByField = new LinkedHashMap<>();\n+        for (IndicatorDefinitionRow definition : definitions) {\n+            membersByField\n+                    .computeIfAbsent(definition.fieldId(), key -> new ArrayList<>())\n+                    .add(definition.indicatorId());\n+        }\n+        return displayFields.stream()\n+                .sorted(Comparator.comparingInt(DisplayFieldRow::displayOrder))\n+                .map(\n+                        field -> {\n+                            BaselineRow baseline = baselines.get(field.fieldId());\n+                            return new FieldSummary(\n+                                    field.fieldId(),\n+                                    field.displayName(),\n+                                    field.displayOrder(),\n+                                    field.description(),\n+                                    baseline == null ? null : baseline.referenceMonth(),\n+                                    baseline == null ? List.of() : baseline.heldBackBy(),\n+                                    membersByField.getOrDefault(field.fieldId(), List.of()));\n+                        })\n+                .toList();\n+    }\n+\n+    private IndicatorSummary toIndicator(\n+            IndicatorDefinitionRow definition,\n+            DisplayIndicatorRow display,\n+            BaselineRow fieldBaseline,\n+            LocalDate latestMonth,\n+            Map<LocalDate, ObservationRow> observations,\n+            boolean sampleData,\n+            Set<String> failedIndicatorIds) {\n+        LocalDate fieldReferenceMonth =\n+                fieldBaseline == null ? null : fieldBaseline.referenceMonth();\n+        ObservationRow referenceRow =\n+                fieldReferenceMonth == null ? null : observations.get(fieldReferenceMonth);\n+        ObservationRow latestRow = latestMonth == null ? null : observations.get(latestMonth);\n+\n+        return new IndicatorSummary(\n+                definition.indicatorId(),\n+                definition.fieldId(),\n+                display == null ? definition.indicatorId() : display.displayName(),\n+                display == null ? Integer.MAX_VALUE : display.displayOrder(),\n+                definition.attribution(),\n+                definition.agency(),\n+                definition.rawUnit(),\n+                definition.transformedUnit(),\n+                definition.transformRule(),\n+                resolveStatus(definition, latestMonth, sampleData, failedIndicatorIds),\n+                fieldReferenceMonth,\n+                toValue(referenceRow),\n+                toValue(latestRow),\n+                toPath(fieldReferenceMonth, observations),\n+                toPath(latestMonth, observations),\n+                latestRow == null ? null : latestRow.receivedAt());\n+    }\n+\n+    /**\n+     * 지표 상태. <b>예시 자료가 가장 먼저다</b> — 개발 대역으로 만든 값이 READY 로 보이면 운영과 구분되지 않는다(FR-022).\n+     *\n+     * <p>수집 실패는 값이 있어도 표시한다. 어제 자료가 남아 있어도 오늘 못 받았다는 사실은 숨기지 않는다(FR-011).\n+     */\n+    private String resolveStatus(\n+            IndicatorDefinitionRow definition,\n+            LocalDate latestMonth,\n+            boolean sampleData,\n+            Set<String> failedIndicatorIds) {\n+        if (sampleData) {\n+            return \"EXAMPLE\";\n+        }\n+        if (failedIndicatorIds.contains(definition.indicatorId())) {\n+            return \"COLLECTION_FAILED\";\n+        }\n+        return latestMonth == null ? \"NO_DATA\" : \"READY\";\n+    }\n+\n+    private ObservationValue toValue(ObservationRow row) {\n+        if (row == null || row.transformedValue() == null) {\n+            return null;\n+        }\n+        return new ObservationValue(\n+                row.targetMonth(), row.rawValue(), row.transformedValue(), row.releaseDate());\n+    }\n+\n+    /**\n+     * 기준월에서 t-2·t-1·t 세 달. 기준월이 없으면 빈 배열이다.\n+     *\n+     * <p><b>빠진 달을 배열에서 지우지 않는다.</b> 값이 없는 달도 자리를 지키고 사유를 달아 보낸다 — 지우면 세 달이 두 달로 보이고 화면은 어느 달이 비었는지\n+     * 알 수 없다(원칙 VI).\n+     */\n+    private List<PathPoint> toPath(LocalDate anchor, Map<LocalDate, ObservationRow> observations) {\n+        if (anchor == null) {\n+            return List.of();\n+        }\n+        List<PathPoint> points = new ArrayList<>(PATH_MONTHS);\n+        for (int back = PATH_MONTHS - 1; back >= 0; back--) {\n+            LocalDate month = anchor.minusMonths(back);\n+            ObservationRow row = observations.get(month);\n+            if (row == null) {\n+                points.add(new PathPoint(month, null, null, null, \"NOT_RELEASED\"));\n+            } else {\n+                points.add(\n+                        new PathPoint(\n+                                month,\n+                                row.rawValue(),\n+                                row.transformedValue(),\n+                                row.releaseDate(),\n+                                row.transformedValue() == null\n+                                        ? toPublicReason(row.missingReason())\n+                                        : null));\n+            }\n+        }\n+        return points;\n+    }\n+\n+    /**\n+     * 저장된 결측 사유를 계약이 정한 네 가지로 좁힌다.\n+     *\n+     * <p>저장 쪽은 왜 못 만들었는지를 열 가지 넘게 구분한다 — 분모가 결측인 것과 0인 것, 계열 시작 이전, 월 평균 표본 미완성처럼 고치는 방법이 저마다 다르기\n+     * 때문이다. 화면이 알아야 하는 것은 그보다 거칠다. <b>세분을 그대로 내보내면 계약에 없는 값이 화면에 닿는다.</b>\n+     */\n+    private String toPublicReason(String storedReason) {\n+        if (storedReason == null) {\n+            return \"NOT_TRANSFORMABLE\";\n+        }\n+        return switch (storedReason) {\n+            case \"SOURCE_NOT_RELEASED\", \"SOURCE_MISSING\" -> \"NOT_RELEASED\";\n+            case \"COLLECTION_FAILED\" -> \"COLLECTION_FAILED\";\n+            case \"BREAK_SEGMENT_EXCLUDED\" -> \"BREAK_EXCLUDED\";\n+            default -> \"NOT_TRANSFORMABLE\";\n+        };\n+    }\n+\n+    private CollectionState toCollectionState(Optional<CollectionStateRow> row) {\n+        return row.map(\n+                        state ->\n+                                new CollectionState(\n+                                        state.status(),\n+                                        List.of(),\n+                                        state.lastSuccessfulAt(),\n+                                        state.lastAttemptAt(),\n+                                        state.failedIndicatorIds(),\n+                                        state.quotaLimited()))\n+                .orElseGet(\n+                        () ->\n+                                new CollectionState(\n+                                        \"NEVER_COLLECTED\",\n+                                        List.of(),\n+                                        null,\n+                                        null,\n+                                        List.of(),\n+                                        false));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/application/service/MacroSnapshotQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/application/service/MacroSnapshotQueryService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,288 @@\n+package com.ssafy.thorp.macro.infrastructure.persistence;\n+\n+import com.fasterxml.jackson.core.type.TypeReference;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository;\n+import java.math.BigDecimal;\n+import java.sql.Timestamp;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.Collection;\n+import java.util.List;\n+import java.util.Optional;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.jdbc.core.RowMapper;\n+import org.springframework.stereotype.Repository;\n+\n+/**\n+ * {@code macro_*} 읽기 구현. JPA Entity 를 두지 않는다.\n+ *\n+ * <p>이 표들은 Backend 가 쓰지 않으므로 매핑할 쓰기 모델이 없고, 조회는 여덟 표를 가로지르는 투영 하나뿐이다. Entity 를 만들면 {@code\n+ * ddl-auto=validate} 를 위해 배치가 쓰는 컬럼까지 전부 매핑해야 하는데 그중 대부분은 이 응답에 쓰이지도 않는다.\n+ *\n+ * <p><b>decimal 은 JSONB 문자열로 저장돼 있다</b>(V2 규약). 읽을 때 {@link BigDecimal} 로 되돌리며 double 을 거치지 않는다 —\n+ * 주택가격 지수는 소수 여러 자리라 double 을 한 번 거치면 끝자리가 흔들리고, 같은 자료로 다시 조회해도 값이 달라진다(SC-004).\n+ */\n+@Repository\n+public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {\n+\n+    private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};\n+\n+    private final JdbcTemplate jdbc;\n+    private final ObjectMapper objectMapper;\n+\n+    public MacroSnapshotRepositoryImpl(JdbcTemplate jdbc, ObjectMapper objectMapper) {\n+        this.jdbc = jdbc;\n+        this.objectMapper = objectMapper;\n+    }\n+\n+    @Override\n+    public Optional<CurrentPointer> findCurrentPointer() {\n+        List<CurrentPointer> rows =\n+                jdbc.query(\n+                        \"\"\"\n+                        SELECT p.dataset_version_id   AS dataset_id,\n+                               d.version_key          AS dataset_key,\n+                               p.registry_version_id  AS registry_id,\n+                               r.version_key          AS registry_key,\n+                               p.display_version_id   AS display_id,\n+                               s.version_key          AS display_key,\n+                               COALESCE(d.is_sample_data, FALSE) AS sample_data\n+                        FROM macro_current_publication p\n+                        JOIN macro_calculation_registry_version r ON r.id = p.registry_version_id\n+                        JOIN macro_display_version s ON s.id = p.display_version_id\n+                        LEFT JOIN macro_dataset_version d ON d.id = p.dataset_version_id\n+                        \"\"\",\n+                        (rs, rowNum) ->\n+                                new CurrentPointer(\n+                                        (Long) rs.getObject(\"dataset_id\"),\n+                                        rs.getString(\"dataset_key\"),\n+                                        rs.getLong(\"registry_id\"),\n+                                        rs.getString(\"registry_key\"),\n+                                        rs.getLong(\"display_id\"),\n+                                        rs.getString(\"display_key\"),\n+                                        rs.getBoolean(\"sample_data\")));\n+        return rows.stream().findFirst();\n+    }\n+\n+    @Override\n+    public List<IndicatorDefinitionRow> findDefinitions(long registryVersionId) {\n+        return jdbc.query(\n+                \"\"\"\n+                SELECT indicator_id, field_id, attribution, agency, raw_unit,\n+                       transformed_unit, transform_rule, license_review_status\n+                FROM macro_indicator_definition\n+                WHERE registry_version_id = ?\n+                ORDER BY indicator_id\n+                \"\"\",\n+                (rs, rowNum) ->\n+                        new IndicatorDefinitionRow(\n+                                rs.getString(\"indicator_id\"),\n+                                rs.getString(\"field_id\"),\n+                                rs.getString(\"attribution\"),\n+                                rs.getString(\"agency\"),\n+                                rs.getString(\"raw_unit\"),\n+                                rs.getString(\"transformed_unit\"),\n+                                rs.getString(\"transform_rule\"),\n+                                rs.getString(\"license_review_status\")),\n+                registryVersionId);\n+    }\n+\n+    @Override\n+    public List<DisplayFieldRow> findDisplayFields(long displayVersionId) {\n+        return jdbc.query(\n+                \"\"\"\n+                SELECT field_id, display_name, display_order, description\n+                FROM macro_display_field\n+                WHERE display_version_id = ?\n+                ORDER BY display_order\n+                \"\"\",\n+                (rs, rowNum) ->\n+                        new DisplayFieldRow(\n+                                rs.getString(\"field_id\"),\n+                                rs.getString(\"display_name\"),\n+                                rs.getInt(\"display_order\"),\n+                                rs.getString(\"description\")),\n+                displayVersionId);\n+    }\n+\n+    @Override\n+    public List<DisplayIndicatorRow> findDisplayIndicators(long displayVersionId) {\n+        return jdbc.query(\n+                \"\"\"\n+                SELECT indicator_id, display_name, display_order\n+                FROM macro_display_indicator\n+                WHERE display_version_id = ?\n+                ORDER BY display_order\n+                \"\"\",\n+                (rs, rowNum) ->\n+                        new DisplayIndicatorRow(\n+                                rs.getString(\"indicator_id\"),\n+                                rs.getString(\"display_name\"),\n+                                rs.getInt(\"display_order\")),\n+                displayVersionId);\n+    }\n+\n+    @Override\n+    public List<BaselineRow> findBaselines(long datasetVersionId, long registryVersionId) {\n+        return jdbc.query(\n+                \"\"\"\n+                SELECT scope_id, reference_month, reference_month_held_back_by\n+                FROM macro_baseline\n+                WHERE dataset_version_id = ? AND registry_version_id = ?\n+                \"\"\",\n+                (rs, rowNum) ->\n+                        new BaselineRow(\n+                                rs.getString(\"scope_id\"),\n+                                toLocalDate(rs.getDate(\"reference_month\")),\n+                                readStringList(rs.getString(\"reference_month_held_back_by\"))),\n+                datasetVersionId,\n+                registryVersionId);\n+    }\n+\n+    @Override\n+    public List<LatestMonthRow> findLatestValidMonths(long datasetVersionId) {\n+        return jdbc.query(\n+                \"\"\"\n+                SELECT indicator_id, MAX(target_month) AS target_month\n+                FROM macro_observation\n+                WHERE dataset_version_id = ? AND transformed_value IS NOT NULL\n+                GROUP BY indicator_id\n+                \"\"\",\n+                (rs, rowNum) ->\n+                        new LatestMonthRow(\n+                                rs.getString(\"indicator_id\"),\n+                                toLocalDate(rs.getDate(\"target_month\"))),\n+                datasetVersionId);\n+    }\n+\n+    @Override\n+    public List<ObservationRow> findObservations(long datasetVersionId, Collection<MonthKey> keys) {\n+        if (keys.isEmpty()) {\n+            return List.of();\n+        }\n+        // (지표, 대상월) 쌍을 그대로 대조한다. 지표 목록과 월 범위를 각각 IN 으로 주면 두 집합의\n+        // 곱이 되어 필요 없는 행까지 읽는다 — 지표마다 최신월이 다르므로 그 곱은 실제로 크다.\n+        String placeholders =\n+                String.join(\", \", java.util.Collections.nCopies(keys.size(), \"(?, ?)\"));\n+        List<Object> args = new ArrayList<>();\n+        args.add(datasetVersionId);\n+        for (MonthKey key : keys) {\n+            args.add(key.indicatorId());\n+            args.add(java.sql.Date.valueOf(key.targetMonth()));\n+        }\n+        return jdbc.query(\n+                \"\"\"\n+                SELECT indicator_id, target_month, raw_value, transformed_value,\n+                       released_at, received_at, missing_reason\n+                FROM macro_observation\n+                WHERE dataset_version_id = ?\n+                  AND (indicator_id, target_month) IN (%s)\n+                \"\"\"\n+                        .formatted(placeholders),\n+                observationMapper(),\n+                args.toArray());\n+    }\n+\n+    @Override\n+    public Optional<CollectionStateRow> findLatestCollectionState() {\n+        List<CollectionStateRow> rows =\n+                jdbc.query(\n+                        \"\"\"\n+                        SELECT a.status                                         AS status,\n+                               MAX(i.last_success_at)                           AS last_success_at,\n+                               a.started_at                                     AS last_attempt_at,\n+                               COALESCE(BOOL_OR(i.quota_exhausted), FALSE)      AS quota_limited\n+                        FROM macro_collection_attempt a\n+                        LEFT JOIN macro_collection_item_status i ON i.attempt_id = a.id\n+                        WHERE a.id = (SELECT MAX(id) FROM macro_collection_attempt)\n+                        GROUP BY a.id, a.status, a.started_at\n+                        \"\"\",\n+                        (rs, rowNum) ->\n+                                new CollectionStateRow(\n+                                        rs.getString(\"status\"),\n+                                        toInstant(rs.getTimestamp(\"last_success_at\")),\n+                                        toInstant(rs.getTimestamp(\"last_attempt_at\")),\n+                                        List.of(),\n+                                        rs.getBoolean(\"quota_limited\")));\n+        return rows.stream().findFirst().map(this::withFailedIndicators);\n+    }\n+\n+    /** 실패한 지표 id 는 별도 조회다. 위 집계와 한 문장에 넣으면 상태 행이 지표 수만큼 늘어난다. */\n+    private CollectionStateRow withFailedIndicators(CollectionStateRow state) {\n+        List<String> failed =\n+                jdbc.queryForList(\n+                        \"\"\"\n+                        SELECT indicator_id\n+                        FROM macro_collection_item_status\n+                        WHERE attempt_id = (SELECT MAX(id) FROM macro_collection_attempt)\n+                          AND status NOT IN ('SUCCEEDED', 'SKIPPED')\n+                        ORDER BY indicator_id\n+                        \"\"\",\n+                        String.class);\n+        return new CollectionStateRow(\n+                state.status(),\n+                state.lastSuccessfulAt(),\n+                state.lastAttemptAt(),\n+                failed,\n+                state.quotaLimited());\n+    }\n+\n+    private RowMapper<ObservationRow> observationMapper() {\n+        return (rs, rowNum) ->\n+                new ObservationRow(\n+                        rs.getString(\"indicator_id\"),\n+                        toLocalDate(rs.getDate(\"target_month\")),\n+                        readDecimal(rs.getString(\"raw_value\")),\n+                        readDecimal(rs.getString(\"transformed_value\")),\n+                        toLocalDate(rs.getTimestamp(\"released_at\")),\n+                        toInstant(rs.getTimestamp(\"received_at\")),\n+                        rs.getString(\"missing_reason\"));\n+    }\n+\n+    /**\n+     * JSONB 에 담긴 decimal 을 되돌린다. 값이 없으면 null 이다.\n+     *\n+     * <p>배치는 자릿수를 지키려고 문자열로 넣는다. 그래서 {@code \"101.20\"} 처럼 따옴표가 붙어 오고, 여기서 그것을 벗겨 {@link BigDecimal}\n+     * 로 만든다. 숫자로 들어온 경우도 같은 경로로 받는다.\n+     */\n+    private BigDecimal readDecimal(String json) {\n+        if (json == null || json.isBlank() || \"null\".equals(json)) {\n+            return null;\n+        }\n+        String text = json.trim();\n+        if (text.startsWith(\"\\\"\") && text.endsWith(\"\\\"\") && text.length() >= 2) {\n+            text = text.substring(1, text.length() - 1);\n+        }\n+        return text.isBlank() ? null : new BigDecimal(text);\n+    }\n+\n+    private List<String> readStringList(String json) {\n+        if (json == null || json.isBlank()) {\n+            return List.of();\n+        }\n+        try {\n+            List<String> values = objectMapper.readValue(json, STRING_LIST);\n+            return values == null ? List.of() : List.copyOf(values);\n+        } catch (Exception error) {\n+            // 조용히 빈 배열로 넘기지 않는다 — 기준월을 물러나게 한 지표가 사라지면 화면은\n+            // 왜 T_g 가 뒤로 갔는지 설명할 수 없다.\n+            throw new IllegalStateException(\"기준월 지연 지표 목록을 읽지 못했습니다: \" + json, error);\n+        }\n+    }\n+\n+    private LocalDate toLocalDate(java.sql.Date value) {\n+        return value == null ? null : value.toLocalDate();\n+    }\n+\n+    private LocalDate toLocalDate(Timestamp value) {\n+        return value == null\n+                ? null\n+                : value.toInstant().atZone(java.time.ZoneOffset.UTC).toLocalDate();\n+    }\n+\n+    private Instant toInstant(Timestamp value) {\n+        return value == null ? null : value.toInstant();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/infrastructure/persistence/MacroSnapshotRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/infrastructure/persistence/MacroSnapshotRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.macro.presentation.controller;\n+\n+import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;\n+import com.ssafy.thorp.macro.presentation.response.MacroSnapshotResponse;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 17개 지표·7개 분야의 현재 공개 스냅샷 (contracts/openapi.yaml).\n+ *\n+ * <p><b>인증도 원천 키도 요구하지 않는다</b>(FR-021). 적재된 자료를 읽어 내보낼 뿐이라 사용자에게 공급원을 고르게 하거나 키를 받을 이유가 없다.\n+ *\n+ * <p><b>자료가 없어도 200 이다.</b> 완결 자료 버전이 아직 없거나 최근 수집이 실패한 것은 모두 정상적인 조회 상태이고, 그때도 17개 등록 정보와 수집 상태는\n+ * 내보낸다 — 화면이 \"무엇을 보여줄 수 없는지\"를 말할 수 있어야 한다(원칙 VI).\n+ */\n+@RestController\n+@RequestMapping(\"/macro-indicators\")\n+public class MacroSnapshotController {\n+\n+    private final MacroSnapshotQueryService queryService;\n+\n+    public MacroSnapshotController(MacroSnapshotQueryService queryService) {\n+        this.queryService = queryService;\n+    }\n+\n+    @GetMapping(\"/snapshot\")\n+    public HttpApiResponse<MacroSnapshotResponse> getSnapshot() {\n+        return HttpApiResponse.ok(MacroSnapshotResponse.from(queryService.getSnapshot()));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/controller/MacroSnapshotController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/controller/MacroSnapshotController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.ssafy.thorp.macro.presentation.controller;\n+\n+import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import com.ssafy.thorp.macro.application.exception.MacroRegistryNotPublishedException;\n+import org.springframework.core.Ordered;\n+import org.springframework.core.annotation.Order;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.ExceptionHandler;\n+import org.springframework.web.bind.annotation.RestControllerAdvice;\n+\n+/**\n+ * 008 조회의 실패 응답을 계약의 봉투로 맞춘다 (contracts/openapi.yaml ErrorEnvelope).\n+ *\n+ * <p>계약이 정의하는 실패는 500 하나뿐이다. 자료 없음·수집 실패는 200 으로 나가므로 여기로 오지 않는다.\n+ *\n+ * <p><b>{@code @Order} 가 없으면 이 핸들러가 밀린다.</b> {@code GlobalExceptionHandler} 도 같은 예외를 잡는데 그쪽은 구형\n+ * {@code ApiResponse} 봉투({@code success/data/error})를 쓴다. 우선순위를 주지 않으면 계약이 정한 봉투 대신 그것이 나가고, 그 차이는\n+ * 컨트롤러를 지나는 요청에서만 드러난다 — 서비스를 직접 부르는 테스트로는 보이지 않는다.\n+ */\n+@RestControllerAdvice(assignableTypes = MacroSnapshotController.class)\n+@Order(Ordered.HIGHEST_PRECEDENCE)\n+public class MacroSnapshotExceptionHandler {\n+\n+    @ExceptionHandler(MacroRegistryNotPublishedException.class)\n+    public ResponseEntity<HttpApiResponse<Void>> handleRegistryNotPublished(\n+            MacroRegistryNotPublishedException error) {\n+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)\n+                .body(HttpApiResponse.fail(HttpStatus.INTERNAL_SERVER_ERROR, error.getMessage()));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/controller/MacroSnapshotExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/controller/MacroSnapshotExceptionHandler.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,177 @@\n+package com.ssafy.thorp.macro.presentation.response;\n+\n+import com.fasterxml.jackson.annotation.JsonInclude;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.List;\n+\n+/**\n+ * {@code GET /macro-indicators/snapshot} 응답 (contracts/openapi.yaml).\n+ *\n+ * <p><b>월·날짜·시각은 문자열로 직접 만든다.</b> Jackson 시간 모듈 설정에 맡기면 그 설정이 바뀐 날 이 계약이 조용히 달라지고, 그 변화는 다른 도메인\n+ * 응답까지 함께 건드린다(regime 이 같은 이유로 같은 방식을 쓴다).\n+ *\n+ * <p><b>값은 숫자로 나간다.</b> 저장은 자릿수를 지키려 JSONB 문자열이지만 계약이 {@code number} 라 {@link BigDecimal} 로 내보낸다 —\n+ * 문자열로 바꾸면 009 가 계약대로 읽던 자리가 깨진다.\n+ */\n+public record MacroSnapshotResponse(\n+        String dataVersion,\n+        String calculationRegistryVersion,\n+        String displayVersion,\n+        boolean isExampleData,\n+        String historicalComparisonNotice,\n+        String overallReferenceMonth,\n+        CollectionStateResponse collection,\n+        List<FieldResponse> fields,\n+        List<IndicatorResponse> indicators) {\n+\n+    /** 계약이 문구까지 고정한다. 화면이 이 문장을 그대로 띄울 수 있어야 한다(FR-012, 원칙 V). */\n+    public static final String HISTORICAL_COMPARISON_NOTICE =\n+            \"최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.\";\n+\n+    public static MacroSnapshotResponse from(MacroSnapshotResult result) {\n+        return new MacroSnapshotResponse(\n+                result.dataVersion(),\n+                result.calculationRegistryVersion(),\n+                result.displayVersion(),\n+                result.exampleData(),\n+                HISTORICAL_COMPARISON_NOTICE,\n+                month(result.overallReferenceMonth()),\n+                CollectionStateResponse.from(result.collection()),\n+                result.fields().stream().map(FieldResponse::from).toList(),\n+                result.indicators().stream().map(IndicatorResponse::from).toList());\n+    }\n+\n+    public record CollectionStateResponse(\n+            String status,\n+            List<String> licenseUnverifiedIndicatorIds,\n+            String lastSuccessfulAt,\n+            String lastAttemptAt,\n+            List<String> failedIndicatorIds,\n+            boolean quotaLimited) {\n+\n+        static CollectionStateResponse from(MacroSnapshotResult.CollectionState state) {\n+            return new CollectionStateResponse(\n+                    state.status(),\n+                    state.licenseUnverifiedIndicatorIds(),\n+                    instant(state.lastSuccessfulAt()),\n+                    instant(state.lastAttemptAt()),\n+                    state.failedIndicatorIds(),\n+                    state.quotaLimited());\n+        }\n+    }\n+\n+    public record FieldResponse(\n+            String fieldId,\n+            String displayName,\n+            int displayOrder,\n+            String description,\n+            String referenceMonth,\n+            List<String> referenceMonthHeldBackBy,\n+            List<String> indicatorIds) {\n+\n+        static FieldResponse from(MacroSnapshotResult.FieldSummary field) {\n+            return new FieldResponse(\n+                    field.fieldId(),\n+                    field.displayName(),\n+                    field.displayOrder(),\n+                    field.description(),\n+                    month(field.referenceMonth()),\n+                    field.referenceMonthHeldBackBy(),\n+                    field.indicatorIds());\n+        }\n+    }\n+\n+    public record IndicatorResponse(\n+            String indicatorId,\n+            String fieldId,\n+            String displayName,\n+            int displayOrder,\n+            String source,\n+            String agency,\n+            String rawUnit,\n+            String transformedUnit,\n+            String transform,\n+            String status,\n+            String referenceMonth,\n+            ObservationValueResponse referenceValue,\n+            ObservationValueResponse latest,\n+            List<PathPointResponse> path,\n+            List<PathPointResponse> latestPath,\n+            String lastUpdatedAt) {\n+\n+        static IndicatorResponse from(MacroSnapshotResult.IndicatorSummary indicator) {\n+            return new IndicatorResponse(\n+                    indicator.indicatorId(),\n+                    indicator.fieldId(),\n+                    indicator.displayName(),\n+                    indicator.displayOrder(),\n+                    indicator.source(),\n+                    indicator.agency(),\n+                    indicator.rawUnit(),\n+                    indicator.transformedUnit(),\n+                    indicator.transform(),\n+                    indicator.status(),\n+                    month(indicator.referenceMonth()),\n+                    ObservationValueResponse.from(indicator.referenceValue()),\n+                    ObservationValueResponse.from(indicator.latest()),\n+                    indicator.path().stream().map(PathPointResponse::from).toList(),\n+                    indicator.latestPath().stream().map(PathPointResponse::from).toList(),\n+                    instant(indicator.lastUpdatedAt()));\n+        }\n+    }\n+\n+    public record ObservationValueResponse(\n+            String targetMonth,\n+            BigDecimal rawValue,\n+            BigDecimal transformedValue,\n+            String releaseDate) {\n+\n+        static ObservationValueResponse from(MacroSnapshotResult.ObservationValue value) {\n+            return value == null\n+                    ? null\n+                    : new ObservationValueResponse(\n+                            month(value.targetMonth()),\n+                            value.rawValue(),\n+                            value.transformedValue(),\n+                            date(value.releaseDate()));\n+        }\n+    }\n+\n+    /**\n+     * 경로 한 점.\n+     *\n+     * <p>{@code missingReason} 만 값이 있을 때 키를 생략한다(계약). 나머지 넷은 <b>null 이어도 키를 남긴다</b> — 계약이 필수로 두었고,\n+     * 키가 사라지면 화면은 값이 없는 달과 아예 오지 않은 달을 구분하지 못한다.\n+     */\n+    public record PathPointResponse(\n+            String targetMonth,\n+            BigDecimal rawValue,\n+            BigDecimal transformedValue,\n+            String releaseDate,\n+            @JsonInclude(JsonInclude.Include.NON_NULL) String missingReason) {\n+\n+        static PathPointResponse from(MacroSnapshotResult.PathPoint point) {\n+            return new PathPointResponse(\n+                    month(point.targetMonth()),\n+                    point.rawValue(),\n+                    point.transformedValue(),\n+                    date(point.releaseDate()),\n+                    point.missingReason());\n+        }\n+    }\n+\n+    private static String month(LocalDate value) {\n+        return value == null ? null : \"%04d-%02d\".formatted(value.getYear(), value.getMonthValue());\n+    }\n+\n+    private static String date(LocalDate value) {\n+        return value == null ? null : value.toString();\n+    }\n+\n+    private static String instant(Instant value) {\n+        return value == null ? null : value.toString();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/response/MacroSnapshotResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/presentation/response/MacroSnapshotResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,91 @@\n+package com.ssafy.thorp.macro.presentation.controller;\n+\n+import static org.mockito.Mockito.when;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.common.config.SecurityConfig;\n+import com.ssafy.thorp.macro.application.exception.MacroRegistryNotPublishedException;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;\n+import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;\n+import java.util.List;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * HTTP 경계만 본다 — 계약이 정한 <b>응답 봉투</b>가 실제로 그 모양으로 나가는지다 (tasks.md T032·T034).\n+ *\n+ * <p><b>서비스를 직접 부르는 테스트로는 이 자리가 보이지 않는다.</b> 봉투는 컨트롤러와 예외 처리 순서가 정하고, 그 순서는 MVC 를 지나야 드러난다. 실제로\n+ * {@code @Order} 없이 올렸을 때 {@code GlobalExceptionHandler} 가 먼저 잡아 구형 {@code ApiResponse}({@code\n+ * success/data/error})가 나갔는데, 계약 테스트는 초록이었고 애플리케이션을 띄워 부른 뒤에야 드러났다.\n+ */\n+@WebMvcTest(MacroSnapshotController.class)\n+@Import(SecurityConfig.class)\n+@DisplayName(\"거시지표 스냅샷 HTTP 경계\")\n+class MacroSnapshotControllerTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+\n+    @MockitoBean private MacroSnapshotQueryService queryService;\n+\n+    @Test\n+    @DisplayName(\"성공 응답은 HttpApiResponse 봉투로 나간다\")\n+    void wrapsSuccessInHttpApiResponse() throws Exception {\n+        when(queryService.getSnapshot()).thenReturn(emptySnapshot());\n+\n+        mockMvc.perform(get(\"/macro-indicators/snapshot\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.httpStatus\").value(\"OK\"))\n+                .andExpect(jsonPath(\"$.isSuccess\").value(true))\n+                .andExpect(jsonPath(\"$.code\").value(200))\n+                .andExpect(jsonPath(\"$.result.calculationRegistryVersion\").value(\"REG-1\"))\n+                .andExpect(\n+                        jsonPath(\"$.result.historicalComparisonNotice\")\n+                                .value(\"최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.\"))\n+                // 자료가 없어도 200 이다. 없음을 말하는 것도 정상적인 조회 상태다(원칙 VI).\n+                .andExpect(jsonPath(\"$.result.dataVersion\").doesNotExist())\n+                .andExpect(jsonPath(\"$.result.overallReferenceMonth\").doesNotExist());\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표 미발행 500도 계약의 봉투로 나간다 — 구형 success/data/error 가 아니다\")\n+    void wrapsFailureInContractEnvelope() throws Exception {\n+        when(queryService.getSnapshot()).thenThrow(new MacroRegistryNotPublishedException());\n+\n+        mockMvc.perform(get(\"/macro-indicators/snapshot\"))\n+                .andExpect(status().isInternalServerError())\n+                .andExpect(jsonPath(\"$.httpStatus\").value(\"INTERNAL_SERVER_ERROR\"))\n+                .andExpect(jsonPath(\"$.isSuccess\").value(false))\n+                .andExpect(jsonPath(\"$.code\").value(500))\n+                .andExpect(jsonPath(\"$.result\").doesNotExist())\n+                .andExpect(jsonPath(\"$.success\").doesNotExist())\n+                .andExpect(jsonPath(\"$.error\").doesNotExist());\n+    }\n+\n+    @Test\n+    @DisplayName(\"인증 없이 열린다 — 사용자에게 원천 키를 요구하지 않는다\")\n+    void requiresNoAuthentication() throws Exception {\n+        when(queryService.getSnapshot()).thenReturn(emptySnapshot());\n+\n+        mockMvc.perform(get(\"/macro-indicators/snapshot\")).andExpect(status().isOk());\n+    }\n+\n+    private MacroSnapshotResult emptySnapshot() {\n+        return new MacroSnapshotResult(\n+                null,\n+                \"REG-1\",\n+                \"DSP-1\",\n+                false,\n+                null,\n+                new MacroSnapshotResult.CollectionState(\n+                        \"NEVER_COLLECTED\", List.of(), null, null, List.of(), false),\n+                List.of(),\n+                List.of());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/presentation/controller/MacroSnapshotControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/presentation/controller/MacroSnapshotControllerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,381 @@\n+package com.ssafy.thorp.macro;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.common.config.JpaAuditingConfig;\n+import com.ssafy.thorp.macro.application.exception.MacroRegistryNotPublishedException;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;\n+import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;\n+import com.ssafy.thorp.macro.infrastructure.persistence.MacroSnapshotRepositoryImpl;\n+import com.ssafy.thorp.macro.presentation.response.MacroSnapshotResponse;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/**\n+ * 008 조회 계약을 고정한다 (tasks.md T034, SC-008).\n+ *\n+ * <p>스프링 배선 없이 저장소와 서비스를 직접 엮는다. 이 조회는 Entity 가 없고 {@link JdbcTemplate} 하나만 쓰므로 컨텍스트를 더 얹어도 검증되는 것이\n+ * 늘지 않는다.\n+ *\n+ * <p>확인하는 것은 <b>빈 지표가 0개</b>라는 한 가지다(SC-008). 17개가 오는지만 보면 이름이나 단위가 비어도 통과하고, 그 화면은 값만 있고 그것이 무엇인지\n+ * 말하지 못한다.\n+ */\n+@DataJpaTest\n+@Import(JpaAuditingConfig.class)\n+@DisplayName(\"거시지표 스냅샷 조회 계약\")\n+class MacroSnapshotContractTest extends PostgresTestSupport {\n+\n+    /** 분야별 지표 수 — 등록표의 실제 분포다(FR-001). 합이 17이다. */\n+    private static final Map<String, Integer> FIELD_SIZES =\n+            Map.of(\n+                    \"production\", 3,\n+                    \"consumption_investment\", 3,\n+                    \"external_trade\", 3,\n+                    \"labor\", 2,\n+                    \"prices_commodities\", 2,\n+                    \"finance_housing\", 3,\n+                    \"overseas\", 1);\n+\n+    private static final List<String> FIELD_ORDER =\n+            List.of(\n+                    \"production\",\n+                    \"consumption_investment\",\n+                    \"external_trade\",\n+                    \"labor\",\n+                    \"prices_commodities\",\n+                    \"finance_housing\",\n+                    \"overseas\");\n+\n+    @Autowired private JdbcTemplate jdbc;\n+\n+    private MacroSnapshotQueryService service;\n+\n+    @BeforeEach\n+    void setUp() {\n+        service =\n+                new MacroSnapshotQueryService(\n+                        new MacroSnapshotRepositoryImpl(jdbc, new ObjectMapper()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표가 한 번도 발행되지 않았으면 조회가 실패한다 — 자료 없음과 다르다\")\n+    void failsWhenRegistryNeverPublished() {\n+        assertThatThrownBy(() -> service.getSnapshot())\n+                .isInstanceOf(MacroRegistryNotPublishedException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개다\")\n+    void everyIndicatorCarriesItsRegistration() {\n+        seedRegistry();\n+        seedPublishedDataset();\n+\n+        MacroSnapshotResult snapshot = service.getSnapshot();\n+\n+        assertThat(snapshot.indicators()).hasSize(17);\n+        assertThat(snapshot.fields()).hasSize(7);\n+        for (MacroSnapshotResult.IndicatorSummary indicator : snapshot.indicators()) {\n+            assertThat(indicator.displayName()).as(indicator.indicatorId()).isNotBlank();\n+            assertThat(indicator.source()).as(indicator.indicatorId()).isNotBlank();\n+            assertThat(indicator.agency()).as(indicator.indicatorId()).isNotBlank();\n+            assertThat(indicator.rawUnit()).as(indicator.indicatorId()).isNotBlank();\n+            assertThat(indicator.transformedUnit()).as(indicator.indicatorId()).isNotBlank();\n+            assertThat(indicator.transform()).as(indicator.indicatorId()).isNotBlank();\n+            assertThat(indicator.referenceMonth()).as(indicator.indicatorId()).isNotNull();\n+            assertThat(indicator.latest()).as(indicator.indicatorId()).isNotNull();\n+            assertThat(indicator.status()).as(indicator.indicatorId()).isEqualTo(\"READY\");\n+        }\n+    }\n+\n+    @Test\n+    @DisplayName(\"작성기관이 제공기관과 다른 지표를 구분해 내보낸다\")\n+    void separatesAgencyFromProvider() {\n+        seedRegistry();\n+        seedPublishedDataset();\n+\n+        Map<String, MacroSnapshotResult.IndicatorSummary> byId =\n+                service.getSnapshot().indicators().stream()\n+                        .collect(\n+                                java.util.stream.Collectors.toMap(\n+                                        MacroSnapshotResult.IndicatorSummary::indicatorId, i -> i));\n+\n+        assertThat(byId.get(\"prices_commodities_2\").agency()).isEqualTo(\"국제통화기금(IMF)\");\n+        assertThat(byId.get(\"prices_commodities_2\").source()).contains(\"한국은행\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"경로는 세 달을 유지하고 빠진 달은 사유와 함께 남는다\")\n+    void pathKeepsMissingMonths() {\n+        seedRegistry();\n+        seedPublishedDataset();\n+        // 한 지표의 가운데 달을 결측으로 바꾼다.\n+        jdbc.update(\n+                \"\"\"\n+                UPDATE macro_observation SET transformed_value = NULL, missing_reason = 'SOURCE_NOT_RELEASED'\n+                WHERE indicator_id = 'production_1' AND target_month = '2026-06-01'::date\n+                \"\"\");\n+\n+        MacroSnapshotResult.IndicatorSummary indicator =\n+                service.getSnapshot().indicators().stream()\n+                        .filter(i -> i.indicatorId().equals(\"production_1\"))\n+                        .findFirst()\n+                        .orElseThrow();\n+\n+        assertThat(indicator.path()).hasSize(3);\n+        assertThat(indicator.path().get(1).transformedValue()).isNull();\n+        assertThat(indicator.path().get(1).missingReason()).isEqualTo(\"NOT_RELEASED\");\n+        assertThat(indicator.path().get(2).transformedValue()).isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"수집이 실패한 지표는 값이 남아 있어도 실패 상태로 나간다\")\n+    void marksIndicatorsWhoseCollectionFailed() {\n+        seedRegistry();\n+        seedPublishedDataset();\n+        seedFailedCollection(\"production_2\");\n+\n+        MacroSnapshotResult snapshot = service.getSnapshot();\n+\n+        assertThat(snapshot.collection().failedIndicatorIds()).containsExactly(\"production_2\");\n+        assertThat(statusOf(snapshot, \"production_2\")).isEqualTo(\"COLLECTION_FAILED\");\n+        // 어제 발행한 자료는 그대로 있다. 실패는 자료를 지우지 않는다(FR-011).\n+        assertThat(valueOf(snapshot, \"production_2\")).isNotNull();\n+        assertThat(statusOf(snapshot, \"production_1\")).isEqualTo(\"READY\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"예시 자료는 값이 멀쩡해도 모든 지표가 예시로 나간다\")\n+    void marksEveryIndicatorAsExampleData() {\n+        seedRegistry();\n+        seedPublishedDataset();\n+        jdbc.update(\"UPDATE macro_dataset_version SET is_sample_data = TRUE\");\n+\n+        MacroSnapshotResult snapshot = service.getSnapshot();\n+\n+        assertThat(snapshot.exampleData()).isTrue();\n+        assertThat(snapshot.indicators()).allMatch(i -> \"EXAMPLE\".equals(i.status()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"예시 표시가 수집 실패보다 앞선다 — 개발 대역이 운영처럼 보이지 않는다\")\n+    void exampleDataWinsOverCollectionFailure() {\n+        seedRegistry();\n+        seedPublishedDataset();\n+        seedFailedCollection(\"production_2\");\n+        jdbc.update(\"UPDATE macro_dataset_version SET is_sample_data = TRUE\");\n+\n+        assertThat(statusOf(service.getSnapshot(), \"production_2\")).isEqualTo(\"EXAMPLE\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"완결 자료 버전이 없어도 17개 등록 정보와 자료 없음 상태를 내보낸다\")\n+    void servesRegistrationsWithoutDataset() {\n+        seedRegistry();\n+\n+        MacroSnapshotResult snapshot = service.getSnapshot();\n+\n+        assertThat(snapshot.dataVersion()).isNull();\n+        assertThat(snapshot.overallReferenceMonth()).isNull();\n+        assertThat(snapshot.indicators()).hasSize(17);\n+        assertThat(snapshot.indicators()).allMatch(i -> \"NO_DATA\".equals(i.status()));\n+        assertThat(snapshot.indicators()).allMatch(i -> i.path().isEmpty());\n+        assertThat(snapshot.collection().status()).isEqualTo(\"NEVER_COLLECTED\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"응답 봉투의 역사 비교 문구는 계약이 정한 문장 그대로다\")\n+    void carriesHistoricalComparisonNotice() {\n+        seedRegistry();\n+\n+        MacroSnapshotResponse response = MacroSnapshotResponse.from(service.getSnapshot());\n+\n+        assertThat(response.historicalComparisonNotice())\n+                .isEqualTo(\"최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.\");\n+        assertThat(response.overallReferenceMonth()).isNull();\n+    }\n+\n+    // ------------------------------------------------------------------\n+    // 준비\n+    // ------------------------------------------------------------------\n+\n+    private void seedRegistry() {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_calculation_registry_version (\n+                    version_key, value_rule_fingerprint, change_reason, status, created_at)\n+                VALUES ('REG-1', repeat('a', 64), '최초 등록', 'PUBLISHED', now())\n+                \"\"\");\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_display_version (version_key, change_reason, created_at)\n+                VALUES ('DSP-1', '최초', now())\n+                \"\"\");\n+        long registryId = idOf(\"macro_calculation_registry_version\", \"REG-1\");\n+        long displayId = idOf(\"macro_display_version\", \"DSP-1\");\n+\n+        int order = 0;\n+        int fieldOrder = 0;\n+        for (String fieldId : FIELD_ORDER) {\n+            fieldOrder++;\n+            jdbc.update(\n+                    \"\"\"\n+                    INSERT INTO macro_display_field (\n+                        display_version_id, field_id, display_name, display_order, description)\n+                    VALUES (?, ?, ?, ?, ?)\n+                    \"\"\",\n+                    displayId,\n+                    fieldId,\n+                    \"분야 \" + fieldOrder,\n+                    fieldOrder,\n+                    fieldId + \" 설명\");\n+            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {\n+                order++;\n+                String indicatorId = fieldId + \"_\" + n;\n+                boolean foreignAgency = indicatorId.equals(\"prices_commodities_2\");\n+                jdbc.update(\n+                        \"\"\"\n+                        INSERT INTO macro_indicator_definition (\n+                            registry_version_id, indicator_id, field_id, primary_source,\n+                            raw_unit, transformed_unit, transform_rule, agency, attribution,\n+                            license_status, license_review_status, refresh_months_n,\n+                            nominal_weight, revision_history_available)\n+                        VALUES (?, ?, ?, 'kosis', '2020=100', '%', 'YOY_GROWTH', ?, ?,\n+                                'ALLOWED', 'VERIFIED', 3, '\"0.0476\"'::jsonb, true)\n+                        \"\"\",\n+                        registryId,\n+                        indicatorId,\n+                        fieldId,\n+                        foreignAgency ? \"국제통화기금(IMF)\" : \"통계청\",\n+                        foreignAgency ? \"한국은행 경제통계시스템(ECOS)\" : \"국가통계포털(KOSIS)\");\n+                jdbc.update(\n+                        \"\"\"\n+                        INSERT INTO macro_display_indicator (\n+                            display_version_id, indicator_id, display_name, display_order)\n+                        VALUES (?, ?, ?, ?)\n+                        \"\"\",\n+                        displayId,\n+                        indicatorId,\n+                        \"지표 \" + order,\n+                        order);\n+            }\n+        }\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_current_publication (\n+                    dataset_version_id, registry_version_id, display_version_id, switched_at)\n+                VALUES (NULL, ?, ?, now())\n+                \"\"\",\n+                registryId,\n+                displayId);\n+    }\n+\n+    private void seedPublishedDataset() {\n+        long registryId = idOf(\"macro_calculation_registry_version\", \"REG-1\");\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_dataset_version (\n+                    version_key, processing_registry_version_id, value_rule_fingerprint,\n+                    status, complete_indicator_count, published_at, created_at)\n+                VALUES ('DS-1', ?, repeat('a', 64), 'PUBLISHED', 17, now(), now())\n+                \"\"\",\n+                registryId);\n+        long datasetId = idOf(\"macro_dataset_version\", \"DS-1\");\n+\n+        for (String fieldId : FIELD_ORDER) {\n+            for (int n = 1; n <= FIELD_SIZES.get(fieldId); n++) {\n+                String indicatorId = fieldId + \"_\" + n;\n+                for (String month : List.of(\"2026-05-01\", \"2026-06-01\", \"2026-07-01\")) {\n+                    jdbc.update(\n+                            \"\"\"\n+                            INSERT INTO macro_observation (\n+                                dataset_version_id, indicator_id, target_month,\n+                                raw_value, transformed_value, released_at, received_at)\n+                            VALUES (?, ?, ?::date, '\"101.2\"'::jsonb, '\"1.4\"'::jsonb, now(), now())\n+                            \"\"\",\n+                            datasetId,\n+                            indicatorId,\n+                            month);\n+                }\n+            }\n+            jdbc.update(\n+                    \"\"\"\n+                    INSERT INTO macro_baseline (\n+                        dataset_version_id, registry_version_id, scope_id,\n+                        reference_month, reference_month_held_back_by, computed_at)\n+                    VALUES (?, ?, ?, '2026-07-01'::date, '[]'::jsonb, now())\n+                    \"\"\",\n+                    datasetId,\n+                    registryId,\n+                    fieldId);\n+        }\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_baseline (\n+                    dataset_version_id, registry_version_id, scope_id,\n+                    reference_month, reference_month_held_back_by, computed_at)\n+                VALUES (?, ?, 'ALL', '2026-07-01'::date, '[]'::jsonb, now())\n+                \"\"\",\n+                datasetId,\n+                registryId);\n+        jdbc.update(\"UPDATE macro_current_publication SET dataset_version_id = ?\", datasetId);\n+    }\n+\n+    private void seedFailedCollection(String failedIndicatorId) {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_collection_attempt (attempt_key, mode, started_at, status)\n+                VALUES ('ATT-1', 'REGULAR', now(), 'PARTIAL')\n+                \"\"\");\n+        Long attemptId =\n+                jdbc.queryForObject(\n+                        \"SELECT id FROM macro_collection_attempt WHERE attempt_key = 'ATT-1'\",\n+                        Long.class);\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_collection_item_status (\n+                    attempt_id, indicator_id, source, status, last_error_at, error_class)\n+                VALUES (?, ?, 'kosis', 'FAILED', now(), 'ReadTimeout')\n+                \"\"\",\n+                attemptId,\n+                failedIndicatorId);\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_collection_item_status (\n+                    attempt_id, indicator_id, source, status, last_success_at)\n+                VALUES (?, 'production_1', 'kosis', 'SUCCEEDED', now())\n+                \"\"\",\n+                attemptId);\n+    }\n+\n+    private String statusOf(MacroSnapshotResult snapshot, String indicatorId) {\n+        return snapshot.indicators().stream()\n+                .filter(i -> i.indicatorId().equals(indicatorId))\n+                .findFirst()\n+                .orElseThrow()\n+                .status();\n+    }\n+\n+    private MacroSnapshotResult.ObservationValue valueOf(\n+            MacroSnapshotResult snapshot, String indicatorId) {\n+        return snapshot.indicators().stream()\n+                .filter(i -> i.indicatorId().equals(indicatorId))\n+                .findFirst()\n+                .orElseThrow()\n+                .latest();\n+    }\n+\n+    private long idOf(String table, String versionKey) {\n+        return jdbc.queryForObject(\n+                \"SELECT id FROM \" + table + \" WHERE version_key = ?\", Long.class, versionKey);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -109,9 +109,9 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [X] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다\n - [X] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)\n - [X] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)\n-- [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)\n-- [ ] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016, FR-016c)\n-- [ ] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)\n+- [X] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)\n+- [X] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016, FR-016c)\n+- [X] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)\n - [X] T035 [US1] `data/tests/test_macro_publish.py`에 발행 테스트를 둔다. 17개 중 하나라도 유효 변환값이 0건이면 발행이 보류되는지 확인한다\n \n **Checkpoint**: 17개 지표를 받아 변환하고 한 응답으로 조회할 수 있다. 여기까지가 최소 완성본이다\n@@ -149,7 +149,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [ ] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다\n - [ ] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다\n - [ ] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다\n-- [ ] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)\n+- [X] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)\n - [ ] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)\n - [ ] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)\n \n@@ -192,7 +192,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다\n - [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)\n - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)\n-- [ ] T073 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)\n+- [ ] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)\n \n ---\n \n@@ -246,13 +246,13 @@ T032 → T033 → T034·T035\n | A. 스키마와 등록표 | T001~T017 | DE | 마이그레이션과 그것을 쓰는 코드·검증은 같은 병합 요청에 둔다(헌장 스키마 변경 규칙). 17개 등록값이 여기서 확정된다 |\n | B. 원천 수집과 변환 | T018~T029 | DE | 어댑터 넷과 연결기와 변환기. 저장에 붙기 전이라 표본 응답만으로 검증된다 |\n | C. 발행과 기준월 | T030·T031·T035 | DE | 불변 스냅샷과 `T_g`·`T_all`. 앞 묶음의 변환값이 있어야 의미가 있다 |\n-| D. 008 조회 | T032·T033·T034 | BE | 백엔드 단일 스냅샷 응답. 009가 소비할 계약이 여기서 고정된다 |\n+| D. 008 조회 | T032·T033·T050·T034 | BE | 백엔드 단일 스냅샷 응답. 009가 소비할 계약이 여기서 고정된다 |\n | E. 버전 독립 | T036~T043 | DE·BE | US2 전체. 세 버전 분리와 원자적 발행 |\n-| F. 상태 드러내기 | T044~T052 | DE·BE | US3 전체. 지연·실패·결측·개정 |\n+| F. 상태 드러내기 | T044~T049·T051·T052 | DE | US3 전체. 지연·실패·결측·개정. T050(조회 응답의 수집 상태)은 같은 컨트롤러를 건드려 묶음 D로 옮겼다 |\n | G. 이용 조건 | T053~T063 | DE·BE | US4 전체. 한도 준수와 권리 철회 대응과 예시 자료 격리 |\n | H. 009 연동 | T064~T067 | BE | 009의 코드와 문서를 함께 고친다. 008 단독으로 끝나지 않으므로 009 담당자와 먼저 합의하고 연다 |\n | I. 010 연동과 마무리 | T068~T072 | DE·BE | 시계열 읽기와 구현체 교체와 임시 대역 폐기와 최종 검증 |\n-| J. 재조회 구간 확정 | T073 | DE | 정기 수집을 몇 달 관찰해야 정해진다. 묶음 I에 두면 I가 그동안 병합되지 못한다 |\n+| K. 남은 구멍 메우기 | T073·T075~T079 | DE | 묶음 B·C 뒤에 드러난 등록표·변환의 빈 칸. 모두 `registry.py`와 그것을 읽는 자리라 한 묶음이다. T074는 앞선 묶음에서 끝났다 |\n \n 열 묶음이다. 단계가 일곱인데 묶음이 더 많은 이유는 US1이 작업 18개로 너무 커서다. 어댑터 넷과 변환과 발행과 조회를 한 병합 요청에 담으면 리뷰가 되지 않아 B·C·D로 나눴다.\n \n@@ -262,7 +262,7 @@ B는 어댑터별로 넷(T022·T023·T024·T025)으로 더 나눠도 각각 표\n \n ### 순서\n \n-A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다. J는 정기 수집이 몇 달 돌아간 뒤라 나머지와 같은 릴리즈에 들어가지 않는다.\n+A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다. K는 앞선 묶음이 드러낸 빈 칸이라 B·C 뒤면 언제든 할 수 있고, 값이 실제로 나오려면 I보다 앞서야 한다 — 거래일 달력이 비어 있는 동안 월 평균 경로는 계속 결측이다.\n \n ---\n \n@@ -292,3 +292,13 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기\n - [ ] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)\n - [ ] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)\n - [ ] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)\n+\n+---\n+\n+## Phase 9: Convergence\n+\n+**Purpose**: 열려 있는 작업 어느 것도 맡지 않은 구멍을 메운다. 라이브러리는 있는데 그것을 부르거나 결과를 남기는 자리가 없는 곳들이다\n+\n+- [ ] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)\n+- [ ] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)\n+- [ ] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2227283,
+      "head_commit_sha": "c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:59:59.125+09:00",
+      "merge_request_id": 952928,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "ad6dff6c5b73849fc0f5a4410c42a3aadaa30c3b",
+      "commits": [
+        {
+          "id": "c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3",
+          "short_id": "c64d6914",
+          "created_at": "2026-09-20T16:59:35.000+09:00",
+          "parent_ids": [
+            "a96c4981c9765757a4a0c31d0f19710a01b258e8"
+          ],
+          "title": "test(be): 스냅샷 지표 상태의 나머지 분기를 고정한다",
+          "message": "test(be): 스냅샷 지표 상태의 나머지 분기를 고정한다\n\nREADY 와 NO_DATA 만 검증하고 있어 수집 실패와 예시 자료 분기는 고쳐도\n아무도 알려주지 않는 상태였다.\n\n실패한 지표는 값이 남아 있어도 실패로 나가는지 함께 본다 — 실패가 자료를\n지우지 않는다는 것이 이 분기의 요점이다. 예시 표시가 실패보다 앞선다는\n순서도 고정했다. 순서가 뒤집히면 개발 대역이 운영처럼 보인다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:59:35.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:59:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c64d6914fb7bd8ef3e7594e76e0ac0a6e5ad02a3"
+        },
+        {
+          "id": "a96c4981c9765757a4a0c31d0f19710a01b258e8",
+          "short_id": "a96c4981",
+          "created_at": "2026-09-20T16:14:12.000+09:00",
+          "parent_ids": [
+            "e65ed3a99c1b3fb431ba718c260615ab7116dc88"
+          ],
+          "title": "docs(de): 아무 작업도 맡지 않은 구멍 셋을 작업 목록에 세운다",
+          "message": "docs(de): 아무 작업도 맡지 않은 구멍 셋을 작업 목록에 세운다\n\n라이브러리는 있는데 그것을 부르거나 결과를 남기는 자리가 없는 곳들이다.\n원본 응답을 저장하는 코드가 없어 값이 달라졌을 때 원천 개정인지 우리 변환이\n바뀐 것인지 판정할 근거가 없고, 어댑터·변환·발행을 순서대로 잇는 실행 경로가\n없어 전 구간 수집이 한 번도 연속으로 돌아본 적이 없다. 지표별 수집 상태를\n쓰는 코드도 없어 조회의 실패 지표 목록이 늘 비어 나간다.\n\n기존 작업 34개가 덮는 일은 중복이라 뺐다. 세 건 모두 열려 있는 어느 작업도\n맡고 있지 않다 — T048·T049 는 ingest.py 가 있다고 전제하고, T052 는 개정을\n테스트할 뿐 기록하는 코드를 만들지 않는다.\n\nPhase 8 이 이미 Convergence 라 Phase 9 로 따로 붙이고 기존 작업은 건드리지\n않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:14:12.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:14:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a96c4981c9765757a4a0c31d0f19710a01b258e8"
+        },
+        {
+          "id": "e65ed3a99c1b3fb431ba718c260615ab7116dc88",
+          "short_id": "e65ed3a9",
+          "created_at": "2026-09-20T16:01:45.000+09:00",
+          "parent_ids": [
+            "631fd4919db11fefe16729af6425586c19492e1e"
+          ],
+          "title": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다",
+          "message": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다\n\n세 버전을 먼저 고정한 뒤 한 읽기 트랜잭션에서 조립한다. 조회 도중 포인터가\n바뀌면 분야 기준월은 새 자료 버전에서, 값은 옛 버전에서 오는 응답이 만들어지고\n그 화면이 어느 시점인지 아무도 말할 수 없다.\n\nJPA Entity 를 두지 않았다. 이 표들은 Backend 가 쓰지 않아 매핑할 쓰기 모델이\n없고, Entity 를 만들면 validate 때문에 배치가 쓰는 컬럼까지 전부 매핑해야 하는데\n대부분은 이 응답에 쓰이지도 않는다.\n\n필요한 (지표, 대상월) 쌍만 읽는다. 전 구간을 끌어와 자바에서 고르면 요청마다\n수천 행이 오간다. 값은 계약대로 숫자로 내보내되 double 을 거치지 않는다 —\n주택가격 지수는 소수 여러 자리라 한 번 거치면 같은 자료로 다시 조회해도 값이\n달라진다.\n\n저장된 결측 사유 열두 가지를 계약의 네 가지로 좁힌다. 저장 쪽은 고치는 방법이\n달라 세분하지만, 세분을 그대로 내보내면 계약에 없는 값이 화면에 닿는다.\n\nT050(수집 상태)을 이 묶음에 넣었다. 같은 컨트롤러·같은 응답이라 나누면 두 MR이\n한 파일을 건드린다. 묶음 표도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:01:45.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:01:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e65ed3a99c1b3fb431ba718c260615ab7116dc88"
+        },
+        {
+          "id": "631fd4919db11fefe16729af6425586c19492e1e",
+          "short_id": "631fd491",
+          "created_at": "2026-09-20T15:46:31.000+09:00",
+          "parent_ids": [
+            "d718603dacb0aa87b1a5413a8799fc41654a71af"
+          ],
+          "title": "docs(de): 재조회 구간 확정을 이번 범위에서 닫을 수 있게 바꾼다",
+          "message": "docs(de): 재조회 구간 확정을 이번 범위에서 닫을 수 있게 바꾼다\n\nT073은 \"정기 수집을 몇 달 돌린 뒤\"로 시작해 남은 기간 안에는 끝날 수 없는\n작업이었다. 관행 관찰은 범위 밖으로 두고 미확인 항목으로 닫되, 잠정값 3개월과\n그 근거를 등록표에 남기게 했다. 짧게 잡으면 정정을 놓치고 길면 호출만 낭비하니\n의심스러우면 늘린다는 판단도 함께 적는다.\n\n묶음 J를 K로 바꿨다. T073은 T075~T079와 같은 registry.py 를 건드리므로 따로\n둘 이유가 없다. K는 I보다 앞서야 한다 — 거래일 달력이 비어 있는 동안 월 평균\n경로는 계속 결측이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T15:46:31.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T15:46:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/631fd4919db11fefe16729af6425586c19492e1e"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2227225,
+      "head_commit_sha": "a96c4981c9765757a4a0c31d0f19710a01b258e8",
+      "base_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:38:59.545+09:00",
+      "merge_request_id": 952928,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "a31293272b990be2ebae3789f051dbb7714ff68f",
+      "commits": [
+        {
+          "id": "a96c4981c9765757a4a0c31d0f19710a01b258e8",
+          "short_id": "a96c4981",
+          "created_at": "2026-09-20T16:14:12.000+09:00",
+          "parent_ids": [
+            "e65ed3a99c1b3fb431ba718c260615ab7116dc88"
+          ],
+          "title": "docs(de): 아무 작업도 맡지 않은 구멍 셋을 작업 목록에 세운다",
+          "message": "docs(de): 아무 작업도 맡지 않은 구멍 셋을 작업 목록에 세운다\n\n라이브러리는 있는데 그것을 부르거나 결과를 남기는 자리가 없는 곳들이다.\n원본 응답을 저장하는 코드가 없어 값이 달라졌을 때 원천 개정인지 우리 변환이\n바뀐 것인지 판정할 근거가 없고, 어댑터·변환·발행을 순서대로 잇는 실행 경로가\n없어 전 구간 수집이 한 번도 연속으로 돌아본 적이 없다. 지표별 수집 상태를\n쓰는 코드도 없어 조회의 실패 지표 목록이 늘 비어 나간다.\n\n기존 작업 34개가 덮는 일은 중복이라 뺐다. 세 건 모두 열려 있는 어느 작업도\n맡고 있지 않다 — T048·T049 는 ingest.py 가 있다고 전제하고, T052 는 개정을\n테스트할 뿐 기록하는 코드를 만들지 않는다.\n\nPhase 8 이 이미 Convergence 라 Phase 9 로 따로 붙이고 기존 작업은 건드리지\n않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:14:12.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:14:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a96c4981c9765757a4a0c31d0f19710a01b258e8"
+        },
+        {
+          "id": "e65ed3a99c1b3fb431ba718c260615ab7116dc88",
+          "short_id": "e65ed3a9",
+          "created_at": "2026-09-20T16:01:45.000+09:00",
+          "parent_ids": [
+            "631fd4919db11fefe16729af6425586c19492e1e"
+          ],
+          "title": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다",
+          "message": "feat(be): 거시지표 17개를 단일 스냅샷으로 조회한다\n\n세 버전을 먼저 고정한 뒤 한 읽기 트랜잭션에서 조립한다. 조회 도중 포인터가\n바뀌면 분야 기준월은 새 자료 버전에서, 값은 옛 버전에서 오는 응답이 만들어지고\n그 화면이 어느 시점인지 아무도 말할 수 없다.\n\nJPA Entity 를 두지 않았다. 이 표들은 Backend 가 쓰지 않아 매핑할 쓰기 모델이\n없고, Entity 를 만들면 validate 때문에 배치가 쓰는 컬럼까지 전부 매핑해야 하는데\n대부분은 이 응답에 쓰이지도 않는다.\n\n필요한 (지표, 대상월) 쌍만 읽는다. 전 구간을 끌어와 자바에서 고르면 요청마다\n수천 행이 오간다. 값은 계약대로 숫자로 내보내되 double 을 거치지 않는다 —\n주택가격 지수는 소수 여러 자리라 한 번 거치면 같은 자료로 다시 조회해도 값이\n달라진다.\n\n저장된 결측 사유 열두 가지를 계약의 네 가지로 좁힌다. 저장 쪽은 고치는 방법이\n달라 세분하지만, 세분을 그대로 내보내면 계약에 없는 값이 화면에 닿는다.\n\nT050(수집 상태)을 이 묶음에 넣었다. 같은 컨트롤러·같은 응답이라 나누면 두 MR이\n한 파일을 건드린다. 묶음 표도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T16:01:45.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T16:01:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e65ed3a99c1b3fb431ba718c260615ab7116dc88"
+        },
+        {
+          "id": "631fd4919db11fefe16729af6425586c19492e1e",
+          "short_id": "631fd491",
+          "created_at": "2026-09-20T15:46:31.000+09:00",
+          "parent_ids": [
+            "d718603dacb0aa87b1a5413a8799fc41654a71af"
+          ],
+          "title": "docs(de): 재조회 구간 확정을 이번 범위에서 닫을 수 있게 바꾼다",
+          "message": "docs(de): 재조회 구간 확정을 이번 범위에서 닫을 수 있게 바꾼다\n\nT073은 \"정기 수집을 몇 달 돌린 뒤\"로 시작해 남은 기간 안에는 끝날 수 없는\n작업이었다. 관행 관찰은 범위 밖으로 두고 미확인 항목으로 닫되, 잠정값 3개월과\n그 근거를 등록표에 남기게 했다. 짧게 잡으면 정정을 놓치고 길면 호출만 낭비하니\n의심스러우면 늘린다는 판단도 함께 적는다.\n\n묶음 J를 K로 바꿨다. T073은 T075~T079와 같은 registry.py 를 건드리므로 따로\n둘 이유가 없다. K는 I보다 앞서야 한다 — 거래일 달력이 비어 있는 동안 월 평균\n경로는 계속 결측이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T15:46:31.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T15:46:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/631fd4919db11fefe16729af6425586c19492e1e"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2841400": [],
+    "2841741": []
+  }
+}

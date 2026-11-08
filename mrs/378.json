@@ -1,0 +1,1057 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963468,
+    "iid": 378,
+    "project_id": 1444456,
+    "title": "docs(fe): 배우기 관련 문서 / 규칙 수정",
+    "description": "spec 013에 나의 학습과 확인 문제, 커리큘럼·목록 보기를 더하고 진도를 남기지 않는다는 규칙을 고친다\n\n# 작업 내용 요약\n\n배우기를 여섯 단계 27편 커리큘럼으로 넓히고, 로그인 사용자의 읽은 글·확인 문제·경험치·배지를 보이는 '나의 학습'을 더한다. 콘텐츠가 적고 어디까지 읽었는지 알 수 없다는 문제를 풀려는 개정이며, 진단 전에 학습을 요구하지 않는다는 D02는 그대로다. 경험치·배지 규칙은 학습 앱·운동 앱·교육 게임화 연구·금융 게임화 규제 조사를 근거로 정했다.\n\n# 주요 변경 사항\n\n- 나의 학습(FR-020\\~FR-025): 로그인 사용자만 서버에 기록한다. 비로그인 사용자는 글과 확인 문제를 쓰되 기록이 없다. 글별 되돌리기는 없고, 전체 삭제는 마이페이지 '학습 초기화'로 한다.\n- 확인 문제(FR-022): 글마다 두세 개, 한 번만 답하고 저장된 뒤 정답·풀이를 보인다. 하나 이상 맞히면 익힘이다.\n- 경험치·레벨·배지(FR-024, FR-028\\~FR-030): 글당 최대 100, 닿을 수 있는 레벨까지 보이기, 일곱 갈래 배지 31개. 진단·백테스트 행동에는 보상하지 않는다.\n- 커리큘럼과 글(FR-001\\~FR-009, FR-026, FR-027, FR-031): 여섯 단계 27편을 단계 단위로 공개한다. 글 최소 구성, 본문 요소, 용어 세 문장과 다른 이름, '(\\*출처)' 표시를 정했고, 예시는 글마다 고르며 단계는 spec이 고정한다.\n- 게시와 운영(FR-016, FR-017): 최소 구성·확인 문제 검사를 더하고, 오해 칸과 틀린 보기는 금지 표현 검사에서 뺀다. '예:'를 붙인 숫자를 허용하고, 관리 화면 미리 보기와 저장소 MR 팀원 확인을 둔다.\n- 근거 메모 gamification-research.md를 더했다.\n\n# 테스트\n\n- [x] 문서 변경만 있다. `git diff --check` 통과\n- [x] spec 요구사항 체크리스트 16/16 유지\n\n# 리뷰 포인트\n\n- 학습 배지·경험치가 constitution \"하지 않는 것\"(사용자 간 랭킹, 상시 추적)에 해당하지 않는다는 판단(FR-024, FR-028)\n- 27편 목록(PD-16)과 constitution 6.2.0 초안(예시 선택)은 팀 승인이 필요하다\n- 아직 공개되지 않은 단계를 화면에 어떻게 보일지(FR-031)는 디자인 조사 뒤 정한다\n- 별도 MR이 필요한 후속: 003 설정 도움말 연결, 014·README 공통 가정, 015 버튼 위치 코드, 게시 전 검사 규칙 파일. plan·data-model·tasks는 plan 단계에서 다시 쓴다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**: 학습 배지는 본인의 읽기 기록 표시이며 전략·결과·사용자 간 순위가 아니다. 배지 이름에 실력·수익·순위 낱말을 쓰지 않는다(FR-024)\n- [x] **결제·포인트·상품 선택 단계 0건**: 경험치를 사거나 돈·혜택으로 바꾸지 않는다(Out of Scope)\n- [x] **전략 ID 상수·전략별 분기 0건**: 해당 없음(문서 변경)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다**: 저장 실패를 완료나 정답으로 보이지 않는다(FR-022, SC-010)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다**: Thorp 동작 설명은 실제 동작과 맞춘다(FR-027)",
+    "state": "merged",
+    "created_at": "2026-10-04T19:36:30.445+09:00",
+    "updated_at": "2026-10-04T20:24:25.115+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T20:24:14.886+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/spec-013-clarify",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e374541fbd58f4feec68d760862169a0671bdc69",
+    "merge_commit_sha": "2405cbdf410524a1db4267598dc5122e981bbfdd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T19:36:31.722+09:00",
+    "reference": "!378",
+    "references": {
+      "short": "!378",
+      "relative": "!378",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!378"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/378",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963468,
+    "iid": 378,
+    "project_id": 1444456,
+    "title": "docs(fe): 배우기 관련 문서 / 규칙 수정",
+    "description": "spec 013에 나의 학습과 확인 문제, 커리큘럼·목록 보기를 더하고 진도를 남기지 않는다는 규칙을 고친다\n\n# 작업 내용 요약\n\n배우기를 여섯 단계 27편 커리큘럼으로 넓히고, 로그인 사용자의 읽은 글·확인 문제·경험치·배지를 보이는 '나의 학습'을 더한다. 콘텐츠가 적고 어디까지 읽었는지 알 수 없다는 문제를 풀려는 개정이며, 진단 전에 학습을 요구하지 않는다는 D02는 그대로다. 경험치·배지 규칙은 학습 앱·운동 앱·교육 게임화 연구·금융 게임화 규제 조사를 근거로 정했다.\n\n# 주요 변경 사항\n\n- 나의 학습(FR-020\\~FR-025): 로그인 사용자만 서버에 기록한다. 비로그인 사용자는 글과 확인 문제를 쓰되 기록이 없다. 글별 되돌리기는 없고, 전체 삭제는 마이페이지 '학습 초기화'로 한다.\n- 확인 문제(FR-022): 글마다 두세 개, 한 번만 답하고 저장된 뒤 정답·풀이를 보인다. 하나 이상 맞히면 익힘이다.\n- 경험치·레벨·배지(FR-024, FR-028\\~FR-030): 글당 최대 100, 닿을 수 있는 레벨까지 보이기, 일곱 갈래 배지 31개. 진단·백테스트 행동에는 보상하지 않는다.\n- 커리큘럼과 글(FR-001\\~FR-009, FR-026, FR-027, FR-031): 여섯 단계 27편을 단계 단위로 공개한다. 글 최소 구성, 본문 요소, 용어 세 문장과 다른 이름, '(\\*출처)' 표시를 정했고, 예시는 글마다 고르며 단계는 spec이 고정한다.\n- 게시와 운영(FR-016, FR-017): 최소 구성·확인 문제 검사를 더하고, 오해 칸과 틀린 보기는 금지 표현 검사에서 뺀다. '예:'를 붙인 숫자를 허용하고, 관리 화면 미리 보기와 저장소 MR 팀원 확인을 둔다.\n- 근거 메모 gamification-research.md를 더했다.\n\n# 테스트\n\n- [x] 문서 변경만 있다. `git diff --check` 통과\n- [x] spec 요구사항 체크리스트 16/16 유지\n\n# 리뷰 포인트\n\n- 학습 배지·경험치가 constitution \"하지 않는 것\"(사용자 간 랭킹, 상시 추적)에 해당하지 않는다는 판단(FR-024, FR-028)\n- 27편 목록(PD-16)과 constitution 6.2.0 초안(예시 선택)은 팀 승인이 필요하다\n- 아직 공개되지 않은 단계를 화면에 어떻게 보일지(FR-031)는 디자인 조사 뒤 정한다\n- 별도 MR이 필요한 후속: 003 설정 도움말 연결, 014·README 공통 가정, 015 버튼 위치 코드, 게시 전 검사 규칙 파일. plan·data-model·tasks는 plan 단계에서 다시 쓴다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**: 학습 배지는 본인의 읽기 기록 표시이며 전략·결과·사용자 간 순위가 아니다. 배지 이름에 실력·수익·순위 낱말을 쓰지 않는다(FR-024)\n- [x] **결제·포인트·상품 선택 단계 0건**: 경험치를 사거나 돈·혜택으로 바꾸지 않는다(Out of Scope)\n- [x] **전략 ID 상수·전략별 분기 0건**: 해당 없음(문서 변경)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다**: 저장 실패를 완료나 정답으로 보이지 않는다(FR-022, SC-010)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다**: Thorp 동작 설명은 실제 동작과 맞춘다(FR-027)",
+    "state": "merged",
+    "created_at": "2026-10-04T19:36:30.445+09:00",
+    "updated_at": "2026-10-04T20:24:25.115+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T20:24:14.886+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/spec-013-clarify",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e374541fbd58f4feec68d760862169a0671bdc69",
+    "merge_commit_sha": "2405cbdf410524a1db4267598dc5122e981bbfdd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T19:36:31.722+09:00",
+    "reference": "!378",
+    "references": {
+      "short": "!378",
+      "relative": "!378",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!378"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/378",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "head_sha": "e374541fbd58f4feec68d760862169a0671bdc69",
+      "start_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0b722b12eeb40690ac062e849e125fbd75da546b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881375,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:36:30.578+09:00",
+          "updated_at": "2026-10-04T19:36:30.583+09:00",
+          "system": true,
+          "noteable_id": 963468,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 378,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "715e12be2b55891e995772890d844a42ae8217b5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881376,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:36:30.618+09:00",
+          "updated_at": "2026-10-04T19:36:30.658+09:00",
+          "system": true,
+          "noteable_id": 963468,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 378,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "395f2f901fc94b6d7b3259efb18a1e81e70f4f56",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881383,
+          "type": null,
+          "body": "marked this merge request as **ready**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:03:56.413+09:00",
+          "updated_at": "2026-10-04T20:03:56.419+09:00",
+          "system": true,
+          "noteable_id": 963468,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 378,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "30427e39465a8193f1d958c02d67ccbd832e2520",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881389,
+          "type": null,
+          "body": "mentioned in commit 2405cbdf410524a1db4267598dc5122e981bbfdd",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:24:14.900+09:00",
+          "updated_at": "2026-10-04T20:24:14.916+09:00",
+          "system": true,
+          "noteable_id": 963468,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 378,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3275927514d0f5ae21c9ebc2b81288135b92be99",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881390,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T20:24:25.230+09:00",
+          "updated_at": "2026-10-04T20:24:25.234+09:00",
+          "system": true,
+          "noteable_id": 963468,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 378,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262323,
+      "head_commit_sha": "e374541fbd58f4feec68d760862169a0671bdc69",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad",
+      "created_at": "2026-10-04T19:36:31.000+09:00",
+      "merge_request_id": 963468,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "8d532ac2b3ba8cfbec4f7c403ba6e9511d52a9ea"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262323,
+      "head_commit_sha": "e374541fbd58f4feec68d760862169a0671bdc69",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad",
+      "created_at": "2026-10-04T19:36:31.000+09:00",
+      "merge_request_id": 963468,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "8d532ac2b3ba8cfbec4f7c403ba6e9511d52a9ea",
+      "commits": [
+        {
+          "id": "e374541fbd58f4feec68d760862169a0671bdc69",
+          "short_id": "e374541f",
+          "created_at": "2026-10-04T19:35:33.000+09:00",
+          "parent_ids": [
+            "93a60286e9cab293722aa8403a483a0b941bf459"
+          ],
+          "title": "docs(fe): spec 013 단순화 반영의 교차 확인에서 나온 누락 한 곳과 문장 두 곳을 고친다",
+          "message": "docs(fe): spec 013 단순화 반영의 교차 확인에서 나온 누락 한 곳과 문장 두 곳을 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T19:35:33.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T19:35:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e374541fbd58f4feec68d760862169a0671bdc69"
+        },
+        {
+          "id": "93a60286e9cab293722aa8403a483a0b941bf459",
+          "short_id": "93a60286",
+          "created_at": "2026-10-04T19:33:03.000+09:00",
+          "parent_ids": [
+            "b627d9b5f3c7ba17b09f297b8761a7934b90852c"
+          ],
+          "title": "docs(fe): spec 013의 나의 학습을 로그인 사용자만 기록하고 글별 되돌리기를 없애 단순하게 한다",
+          "message": "docs(fe): spec 013의 나의 학습을 로그인 사용자만 기록하고 글별 되돌리기를 없애 단순하게 한다\n\n담당자의 단순화 지시(2026-10-04)를 반영했다.\n- 나의 학습 기록은 로그인 사용자에게만 남긴다. 비로그인 사용자는 모든 글과 확인 문제를\n  쓰되 기록이 없고, 탭 단위 기록과 로그인 때 합치기 규칙을 지웠다.\n- 글별 '안 읽음으로 되돌리기'를 없앴다. 기록 전체는 마이페이지의 '학습 초기화'로만 지운다.\n- 경험치 계산, 닿을 수 있는 레벨까지 보이기, 배지 31개는 그대로 둔다.\n\n같은 라운드의 결정도 함께 적었다.\n- 글 끝 순서: 본문, 예시와 진단 버튼, 완료 카드. 완료는 예시 블록 앞에서 판단한다.\n- '읽는 중' 글은 맨 위에서 열고 '이어서 읽기' 한 줄을 보인다.\n- 새 배지·레벨의 '새' 표시는 7일 동안 붙인다.\n- 나의 학습 화면 순서: 레벨, 단계별 진행, 익힌 용어 목록, 배지.\n- 커리큘럼·목록 보기 선택은 탭이 열려 있는 동안 기억한다.\n- 관리 화면 미리 보기와 저장소 MR의 팀원 확인을 둔다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T19:33:03.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T19:33:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/93a60286e9cab293722aa8403a483a0b941bf459"
+        },
+        {
+          "id": "b627d9b5f3c7ba17b09f297b8761a7934b90852c",
+          "short_id": "b627d9b5",
+          "created_at": "2026-10-04T19:04:58.000+09:00",
+          "parent_ids": [
+            "8340c982b1b773ff8a93d9178f2de5ef6b4ed43f"
+          ],
+          "title": "docs(fe): spec 013에서 공개 전에 용어를 그 개념을 처음 설명하는 글로 정리한다",
+          "message": "docs(fe): spec 013에서 공개 전에 용어를 그 개념을 처음 설명하는 글로 정리한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T19:04:58.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T19:04:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b627d9b5f3c7ba17b09f297b8761a7934b90852c"
+        },
+        {
+          "id": "8340c982b1b773ff8a93d9178f2de5ef6b4ed43f",
+          "short_id": "8340c982",
+          "created_at": "2026-10-04T18:52:06.000+09:00",
+          "parent_ids": [
+            "6470b52192fbacb927953283af676deb359fa63e"
+          ],
+          "title": "docs(fe): spec 013에서 본문 숫자는 '예:'를 붙여 쓸 수 있게 한다",
+          "message": "docs(fe): spec 013에서 본문 숫자는 '예:'를 붙여 쓸 수 있게 한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:52:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:52:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8340c982b1b773ff8a93d9178f2de5ef6b4ed43f"
+        },
+        {
+          "id": "6470b52192fbacb927953283af676deb359fa63e",
+          "short_id": "6470b521",
+          "created_at": "2026-10-04T18:45:42.000+09:00",
+          "parent_ids": [
+            "38d1743d325209023c563a078df97846270ed8ba"
+          ],
+          "title": "docs(fe): spec 013의 FR-031 자리를 FR-030 뒤로 옮긴다",
+          "message": "docs(fe): spec 013의 FR-031 자리를 FR-030 뒤로 옮긴다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:45:42.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:45:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6470b52192fbacb927953283af676deb359fa63e"
+        },
+        {
+          "id": "38d1743d325209023c563a078df97846270ed8ba",
+          "short_id": "38d1743d",
+          "created_at": "2026-10-04T18:44:39.000+09:00",
+          "parent_ids": [
+            "0172a6e10f4e0e0091ae7f1d8d793f0d51419021"
+          ],
+          "title": "docs(fe): spec 013에서 새 글과 나의 학습을 단계 단위로 공개한다",
+          "message": "docs(fe): spec 013에서 새 글과 나의 학습을 단계 단위로 공개한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:44:39.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:44:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/38d1743d325209023c563a078df97846270ed8ba"
+        },
+        {
+          "id": "0172a6e10f4e0e0091ae7f1d8d793f0d51419021",
+          "short_id": "0172a6e1",
+          "created_at": "2026-10-04T18:41:51.000+09:00",
+          "parent_ids": [
+            "48eed60e94be64512787934347ba439ab0e75a13"
+          ],
+          "title": "docs(fe): spec 013에서 읽는 순서를 단계 순서와 단계 안 순서로만 정한다",
+          "message": "docs(fe): spec 013에서 읽는 순서를 단계 순서와 단계 안 순서로만 정한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:41:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:41:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0172a6e10f4e0e0091ae7f1d8d793f0d51419021"
+        },
+        {
+          "id": "48eed60e94be64512787934347ba439ab0e75a13",
+          "short_id": "48eed60e",
+          "created_at": "2026-10-04T18:40:12.000+09:00",
+          "parent_ids": [
+            "7408df526e354f8ff73e042ca7b414716cb40b93"
+          ],
+          "title": "docs(fe): spec 013에서 단계는 spec이 정하고 관리 화면에서 바꾸지 않는다",
+          "message": "docs(fe): spec 013에서 단계는 spec이 정하고 관리 화면에서 바꾸지 않는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:40:12.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:40:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/48eed60e94be64512787934347ba439ab0e75a13"
+        },
+        {
+          "id": "7408df526e354f8ff73e042ca7b414716cb40b93",
+          "short_id": "7408df52",
+          "created_at": "2026-10-04T18:37:50.000+09:00",
+          "parent_ids": [
+            "74af0c9b542b69cfdb14110a9964d8af2e64837b"
+          ],
+          "title": "docs(fe): spec 013에 예시 선택 규칙이 constitution 화면 구조 개정을 전제한다고 적는다",
+          "message": "docs(fe): spec 013에 예시 선택 규칙이 constitution 화면 구조 개정을 전제한다고 적는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:37:50.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:37:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7408df526e354f8ff73e042ca7b414716cb40b93"
+        },
+        {
+          "id": "74af0c9b542b69cfdb14110a9964d8af2e64837b",
+          "short_id": "74af0c9b",
+          "created_at": "2026-10-04T18:00:41.000+09:00",
+          "parent_ids": [
+            "32aaea1b688b1204a43f155d4cbc6ca9b41fc62b",
+            "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(fe)/spec-013-clarify",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(fe)/spec-013-clarify\n\n# Conflicts:\n#\tspecs/README.md\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:00:41.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:00:41.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/74af0c9b542b69cfdb14110a9964d8af2e64837b"
+        },
+        {
+          "id": "32aaea1b688b1204a43f155d4cbc6ca9b41fc62b",
+          "short_id": "32aaea1b",
+          "created_at": "2026-10-04T17:59:24.000+09:00",
+          "parent_ids": [
+            "edf3dbf5bcbdf64bd644baee450e4f95af6ed1d9"
+          ],
+          "title": "docs(fe): spec 013에서 경험치·레벨이 줄지 않는다는 규칙에 학습 초기화 예외를 단다",
+          "message": "docs(fe): spec 013에서 경험치·레벨이 줄지 않는다는 규칙에 학습 초기화 예외를 단다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:59:24.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:59:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/32aaea1b688b1204a43f155d4cbc6ca9b41fc62b"
+        },
+        {
+          "id": "edf3dbf5bcbdf64bd644baee450e4f95af6ed1d9",
+          "short_id": "edf3dbf5",
+          "created_at": "2026-10-04T17:59:12.000+09:00",
+          "parent_ids": [
+            "fa18bd5149fb0a5abf548b845d40de39c86840b0"
+          ],
+          "title": "docs(fe): spec 013에 로그인 사용자가 마이페이지에서 쓰는 학습 초기화를 둔다",
+          "message": "docs(fe): spec 013에 로그인 사용자가 마이페이지에서 쓰는 학습 초기화를 둔다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:59:12.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:59:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/edf3dbf5bcbdf64bd644baee450e4f95af6ed1d9"
+        },
+        {
+          "id": "fa18bd5149fb0a5abf548b845d40de39c86840b0",
+          "short_id": "fa18bd51",
+          "created_at": "2026-10-04T17:56:17.000+09:00",
+          "parent_ids": [
+            "d68e45ab2b06b1428184e503323d49e975c119b5"
+          ],
+          "title": "docs(fe): spec 013에서 로그인을 알아차린 탭마다 자기 기록을 계정에 합친다",
+          "message": "docs(fe): spec 013에서 로그인을 알아차린 탭마다 자기 기록을 계정에 합친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:56:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:56:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fa18bd5149fb0a5abf548b845d40de39c86840b0"
+        },
+        {
+          "id": "d68e45ab2b06b1428184e503323d49e975c119b5",
+          "short_id": "d68e45ab",
+          "created_at": "2026-10-02T17:57:36.000+09:00",
+          "parent_ids": [
+            "c99c928de1c077ee5645567b5292455d3da62b66"
+          ],
+          "title": "docs(fe): spec 013에서 글 하나의 경험치가 문제 추가로 100을 넘지 않게 한다",
+          "message": "docs(fe): spec 013에서 글 하나의 경험치가 문제 추가로 100을 넘지 않게 한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T17:57:36.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T17:57:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d68e45ab2b06b1428184e503323d49e975c119b5"
+        },
+        {
+          "id": "c99c928de1c077ee5645567b5292455d3da62b66",
+          "short_id": "c99c928d",
+          "created_at": "2026-10-02T17:49:51.000+09:00",
+          "parent_ids": [
+            "4b013c41a9640fe6cfc1364d6946fa21e01995fd"
+          ],
+          "title": "docs(fe): spec 013에서 확인 문제 정답은 답이 저장된 뒤에만 보인다",
+          "message": "docs(fe): spec 013에서 확인 문제 정답은 답이 저장된 뒤에만 보인다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T17:49:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T17:49:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c99c928de1c077ee5645567b5292455d3da62b66"
+        },
+        {
+          "id": "4b013c41a9640fe6cfc1364d6946fa21e01995fd",
+          "short_id": "4b013c41",
+          "created_at": "2026-10-02T17:44:17.000+09:00",
+          "parent_ids": [
+            "30c617e373108167a989a127ceaaeec1aebf4ff6"
+          ],
+          "title": "docs(fe): spec 013에서 합칠 때 같은 문제의 첫 답은 계정 쪽을 남긴다",
+          "message": "docs(fe): spec 013에서 합칠 때 같은 문제의 첫 답은 계정 쪽을 남긴다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T17:44:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T17:44:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4b013c41a9640fe6cfc1364d6946fa21e01995fd"
+        },
+        {
+          "id": "30c617e373108167a989a127ceaaeec1aebf4ff6",
+          "short_id": "30c617e3",
+          "created_at": "2026-10-02T17:28:27.000+09:00",
+          "parent_ids": [
+            "12881a5b60bbff525c7a34a599f8995c96f870a8"
+          ],
+          "title": "docs(fe): spec 013에서 되돌리기 직후 같은 화면에서는 다시 완료하지 않는다",
+          "message": "docs(fe): spec 013에서 되돌리기 직후 같은 화면에서는 다시 완료하지 않는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T17:28:27.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T17:28:27.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/30c617e373108167a989a127ceaaeec1aebf4ff6"
+        },
+        {
+          "id": "12881a5b60bbff525c7a34a599f8995c96f870a8",
+          "short_id": "12881a5b",
+          "created_at": "2026-10-02T17:18:56.000+09:00",
+          "parent_ids": [
+            "5ec0fd9630965259ae161ee699909301e70b3a85"
+          ],
+          "title": "docs(fe): spec 013에서 로그인 합치기 때 경험치·배지는 서버가 합친 사실로 다시 계산한다",
+          "message": "docs(fe): spec 013에서 로그인 합치기 때 경험치·배지는 서버가 합친 사실로 다시 계산한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T17:18:56.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T17:18:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/12881a5b60bbff525c7a34a599f8995c96f870a8"
+        },
+        {
+          "id": "5ec0fd9630965259ae161ee699909301e70b3a85",
+          "short_id": "5ec0fd96",
+          "created_at": "2026-10-02T16:27:52.000+09:00",
+          "parent_ids": [
+            "4bc19c27f5446e37ccbbebd5887a0176a2798c5a"
+          ],
+          "title": "docs(fe): spec 013에서 운영자 변경으로 채워진 배지 기준은 나의 학습을 열 때 판정한다",
+          "message": "docs(fe): spec 013에서 운영자 변경으로 채워진 배지 기준은 나의 학습을 열 때 판정한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T16:27:52.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T16:27:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5ec0fd9630965259ae161ee699909301e70b3a85"
+        },
+        {
+          "id": "4bc19c27f5446e37ccbbebd5887a0176a2798c5a",
+          "short_id": "4bc19c27",
+          "created_at": "2026-10-02T16:26:03.000+09:00",
+          "parent_ids": [
+            "3ff629ae28abf3ecb1aafa2e8e5c0e8884636d90"
+          ],
+          "title": "docs(fe): spec 013에서 설정 항목 도움말을 3단계 설정 글로 잇는다",
+          "message": "docs(fe): spec 013에서 설정 항목 도움말을 3단계 설정 글로 잇는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T16:26:03.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T16:26:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4bc19c27f5446e37ccbbebd5887a0176a2798c5a"
+        },
+        {
+          "id": "3ff629ae28abf3ecb1aafa2e8e5c0e8884636d90",
+          "short_id": "3ff629ae",
+          "created_at": "2026-10-02T16:21:08.000+09:00",
+          "parent_ids": [
+            "d67fe41893bd473b9b73fec77c1a94affcdfefcc"
+          ],
+          "title": "docs(fe): spec 013에서 오해·비교 표·확인 문제에 가상 숫자를 허용한다",
+          "message": "docs(fe): spec 013에서 오해·비교 표·확인 문제에 가상 숫자를 허용한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T16:21:08.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T16:21:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3ff629ae28abf3ecb1aafa2e8e5c0e8884636d90"
+        },
+        {
+          "id": "d67fe41893bd473b9b73fec77c1a94affcdfefcc",
+          "short_id": "d67fe418",
+          "created_at": "2026-10-02T16:17:20.000+09:00",
+          "parent_ids": [
+            "8c0bd04dbb06e49bcb9f97ff7ac28cf9a1fd8ac2"
+          ],
+          "title": "docs(fe): spec 013에서 오해 칸과 틀린 보기는 금지 표현 검사에서 뺀다",
+          "message": "docs(fe): spec 013에서 오해 칸과 틀린 보기는 금지 표현 검사에서 뺀다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T16:17:20.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T16:17:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d67fe41893bd473b9b73fec77c1a94affcdfefcc"
+        },
+        {
+          "id": "8c0bd04dbb06e49bcb9f97ff7ac28cf9a1fd8ac2",
+          "short_id": "8c0bd04d",
+          "created_at": "2026-10-02T16:00:30.000+09:00",
+          "parent_ids": [
+            "2b1cebe52773e63003d825cc8fdade4d2f34fc3f"
+          ],
+          "title": "docs(fe): spec 013에서 섹터 예시와 진단 연결을 글마다 고를 수 있게 한다",
+          "message": "docs(fe): spec 013에서 섹터 예시와 진단 연결을 글마다 고를 수 있게 한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T16:00:30.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T16:00:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c0bd04dbb06e49bcb9f97ff7ac28cf9a1fd8ac2"
+        },
+        {
+          "id": "2b1cebe52773e63003d825cc8fdade4d2f34fc3f",
+          "short_id": "2b1cebe5",
+          "created_at": "2026-10-02T14:53:13.000+09:00",
+          "parent_ids": [
+            "ea42962c58eaadac0fd73508d0efd62a0e240e22"
+          ],
+          "title": "docs(fe): spec 013의 앞뒤 안 맞는 문구와 낡은 표현 18곳을 고친다",
+          "message": "docs(fe): spec 013의 앞뒤 안 맞는 문구와 낡은 표현 18곳을 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T14:53:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T14:53:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2b1cebe52773e63003d825cc8fdade4d2f34fc3f"
+        },
+        {
+          "id": "ea42962c58eaadac0fd73508d0efd62a0e240e22",
+          "short_id": "ea42962c",
+          "created_at": "2026-10-02T14:32:00.000+09:00",
+          "parent_ids": [
+            "5bff4d7c3265917539d6c4efd5c7e887b4091562"
+          ],
+          "title": "docs(fe): spec 013에서 한 번 얻은 배지는 되돌리기로도 지우지 않는다고 고친다",
+          "message": "docs(fe): spec 013에서 한 번 얻은 배지는 되돌리기로도 지우지 않는다고 고친다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T14:32:00.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T14:32:00.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ea42962c58eaadac0fd73508d0efd62a0e240e22"
+        },
+        {
+          "id": "5bff4d7c3265917539d6c4efd5c7e887b4091562",
+          "short_id": "5bff4d7c",
+          "created_at": "2026-10-02T14:29:13.000+09:00",
+          "parent_ids": [
+            "145cc28172e1efb3472df2ccf93f418f1a0739ae"
+          ],
+          "title": "docs(fe): spec 013에 경험치·레벨과 일곱 갈래 배지 규칙을 조사 근거와 함께 적는다",
+          "message": "docs(fe): spec 013에 경험치·레벨과 일곱 갈래 배지 규칙을 조사 근거와 함께 적는다\n\n담당자가 경험치와 배지 갈래를 넓게 조사해 정하라고 맡긴 결과다.\n- 경험치는 글 완료 20, 첫 답 정답은 글마다 합 60, 모두 맞힘 20, 단계 완주 50이다.\n  같은 일로 한 번만 주고 줄지 않으며, 다시 풀기와 진단·백테스트 행동에는 주지 않는다(FR-028).\n- 레벨은 경험치로만 정하고 문턱 간격을 100씩 늘린다. 닿을 수 있는 레벨까지만 보인다(FR-029).\n- 배지는 레벨·읽은 글·정답·모두 맞힘·단계·용어·특별의 일곱 갈래 31개다. 이름은 무엇을\n  익혔는지만 말하고 기준을 모두 공개한다(FR-024).\n- 새 배지·레벨은 배우기 안에서만 조용히 알린다(FR-030).\n- 조사 근거와 출처는 gamification-research.md에 남겼다.\n- 비로그인 기록은 탭 단위 세션 저장소에 둔다는 결정과 보기 수(O/X 허용)도 반영했다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T14:29:13.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T14:29:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5bff4d7c3265917539d6c4efd5c7e887b4091562"
+        },
+        {
+          "id": "145cc28172e1efb3472df2ccf93f418f1a0739ae",
+          "short_id": "145cc281",
+          "created_at": "2026-10-02T14:18:56.000+09:00",
+          "parent_ids": [
+            "979fdb21bb0ad3bd392db51f5bc4a6fc576f6092"
+          ],
+          "title": "docs(fe): spec 013에 27편 단계 커리큘럼과 글 구성, 확인 문제 흐름, 비로그인 탭 단위 기록을 적는다",
+          "message": "docs(fe): spec 013에 27편 단계 커리큘럼과 글 구성, 확인 문제 흐름, 비로그인 탭 단위 기록을 적는다\n\n2차 clarify 결과다.\n- 글 최소 구성(핵심 요약 세 줄, 소제목 셋 이상, 가상 계산 예, 자주 하는 오해, 4~7분)과\n  본문 요소(목록, 비교 표, 가상 도식, 제도 안내)를 더했다(FR-002, FR-026).\n- 커리큘럼 확장 조사를 근거로 여섯 단계 27편을 출발안으로 하고, 묶음을 단계로 바꿨다(FR-001, PD-16).\n- 제도 수치는 기준 시점과 출처를 단 제도 안내에만 두고, Thorp 동작 설명은 실제 동작과 맞춘다(FR-005, FR-027).\n- 출처는 세 경우에만 글자 옆 '(*출처)'로 표시하고 글 끝 목록은 없앴다(FR-007).\n- 용어 설명은 뜻·읽는 법·한계(⚠️) 세 문장, 다른 이름은 글마다 처음 한 번,\n  진단 화면 도움말은 뜻 한 문장만 보인다(FR-006, FR-008, FR-009).\n- 확인 문제는 글마다 두세 개, 한 번만 답하고 바로 풀이를 보이며, 하나 이상 맞히면 익힘이다(FR-022).\n- 비로그인 나의 학습 기록은 탭 단위 세션 저장소에 두고 탭을 닫으면 지운다(FR-020, FR-025).\n- 경험치와 배지 갈래는 조사 뒤 채운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T14:18:56.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T14:18:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/145cc28172e1efb3472df2ccf93f418f1a0739ae"
+        },
+        {
+          "id": "979fdb21bb0ad3bd392db51f5bc4a6fc576f6092",
+          "short_id": "979fdb21",
+          "created_at": "2026-10-02T12:32:45.000+09:00",
+          "parent_ids": [
+            "26a3c2ac45a253669c70296046922624d9c2dd7d"
+          ],
+          "title": "docs(fe): spec 013에 나의 학습과 확인 문제, 커리큘럼·목록 보기를 더하고 진도를 남기지 않는다는 규칙을 고친다",
+          "message": "docs(fe): spec 013에 나의 학습과 확인 문제, 커리큘럼·목록 보기를 더하고 진도를 남기지 않는다는 규칙을 고친다\n\n배우기에 읽은 글·확인 문제·배지를 보이는 '나의 학습'을 더한다(US6, FR-020~FR-025).\n로그인 사용자는 서버에, 비로그인 사용자는 그 브라우저에 기록하고, 로그인 때 합집합으로 합친다.\n본문 끝 도달과 최소 머문 시간으로 자동 완료하고, 읽은 위치를 비율로 남겨 이어서 읽기에 쓴다.\n배지는 획득 날짜와 함께 남기고 사용자의 되돌리기로만 지운다.\n용어 없는 글도 허용하므로 익힘은 글별 확인 문제 맞힘에서 정한다.\nFR-012·US4 시나리오 3·Out of Scope·Assumptions의 진도 금지 문구를 고치고,\nFR-017 게시 전 검사에 확인 문제를 더했다. specs/README.md의 013 요약과 PD-13 행을 맞췄다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T12:32:45.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T12:32:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/979fdb21bb0ad3bd392db51f5bc4a6fc576f6092"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,137 @@\n+# 배우기 경험치·레벨·배지 조사 (2026-10-02)\n+\n+**상태**: spec 013 2026-10-02 명료화의 근거 메모다. FR-024·FR-028~FR-030의 수치와 규칙이 왜 그렇게\n+정해졌는지 남긴다. 코드와 원고는 바꾸지 않았다.\n+\n+**요청**: 담당자는 확인 문제를 글마다 두세 개 두고 하나만 맞혀도 익힘으로 하되 맞힌 개수가 적으면\n+경험치를 덜 주라고 정했다. 배지는 Garmin처럼 경험치·읽은 글 수·확인 문제 정답 수 등 여러 갈래로 나누라고\n+했고, 구체 규칙은 넓게 조사해 정하라고 맡겼다.\n+\n+**조사 범위**: 세 갈래로 나눠 조사했다.\n+\n+1. 운동 기록 앱의 배지 구조: Garmin Connect, Apple Watch, Fitbit, Strava, Nike Run Club.\n+2. 학습 앱의 경험치 규칙: Duolingo, Khan Academy, Microsoft Learn, DataCamp, Codecademy, Sololearn, Brilliant.\n+3. 교육 게임화의 학술 근거와 금융 서비스 게임화 규제: 메타분석, 배지 연구, 자기결정성 이론, 미국 SEC·FINRA,\n+   매사추세츠 주 Robinhood 동의 명령, 영국 FCA, ESMA, 국내 금융위원회·금융감독원 자료.\n+\n+공식 문서를 열지 못해 검색 요약이나 커뮤니티 글로만 확인한 내용은 '미확인'으로 적었다.\n+\n+## 1. 조사에서 확인한 것\n+\n+### 1.1 운동 기록 앱\n+\n+- Garmin은 배지마다 1·2·4·8점을 주고, 점수 합계로 레벨 1~10을 정한다. 레벨 문턱은 공식 발표가 없고,\n+  커뮤니티에 올라온 값은 두 배씩 커져 레벨 10에 10,220점이 필요하다(미확인). 처음에는 레벨 5까지만\n+  있어서 상한에 닿은 사용자들이 항의했고, 그 뒤 레벨 10까지 늘었다.\n+- 사용자 반발이 가장 컸던 일은 이미 얻은 것을 없앤 경우(Fitbit의 챌린지 폐지, Google Health 전환 때\n+  배지 삭제)와 점수를 돈으로 팔게 한 경우(Garmin 유료 등급의 두 배 점수)였다.\n+- Apple Watch와 Fitbit은 누적형 배지의 단계 간격을 점점 넓히고, 아직 얻지 못한 배지를 회색 윤곽으로\n+  보인다. Apple은 1,000일 뒤로는 250일마다 같은 간격으로 이어 가서 배지가 끝나지 않게 한다.\n+- Strava의 왕관·지역 전설처럼 다른 사람과 견주는 배지는 순위 기능이다. Thorp는 사용자 간 순위를 두지\n+  않으므로(constitution \"하지 않는 것\") 이 갈래는 쓰지 않는다.\n+\n+### 1.2 학습 앱\n+\n+- **같은 일로는 한 번만 준다.** DataCamp와 Codecademy는 끝낸 내용을 반복해도 경험치를 다시 주지 않는다.\n+  Duolingo는 끝낸 내용을 복습하면 새 학습보다 훨씬 적게 준다.\n+- **첫 시도로 점수를 매긴다.** Khan Academy의 공개 코드는 힌트 없이 첫 시도에 맞혔을 때만 점수를 줬다.\n+  Microsoft Learn은 확인 문제를 처음에 모두 맞히면 경험치를 더 준다.\n+- **글 단위 학습의 가장 가까운 사례는 Microsoft Learn이다.** 단원·모듈·학습 경로마다 경험치를 주고,\n+  모듈마다 배지, 경로마다 트로피를 준다.\n+- **진도를 초기화해도 경험치는 남기는 쪽이 늘었다.** DataCamp, Khan Academy, 2022년 이후 Sololearn이\n+  그렇다. Sololearn은 2018년에 초기화하면 경험치를 빼앗았다가 바꿨다.\n+- **레벨 곡선**: 일정 비율로 커지는 곡선(예: 레벨마다 1.4배)은 뒤쪽 레벨에 닿지 못하게 만든다. 레벨\n+  사이 간격을 일정하게 조금씩 늘리는 곡선이 중간 해법으로 권해진다.\n+\n+### 1.3 학술 근거\n+\n+- 교육 게임화의 효과는 양(+)이지만 크지 않다. 메타분석 세 편의 효과 크기는 0.25~0.50 사이다\n+  (Sailer & Homner 2020, Bai·Hew·Huang 2020, Huang 외 2020).\n+- 배지는 자기가 세는 행동을 늘린다. 문제 풀이에 배지를 붙인 1,000명 넘는 실험에서 답한 문제 수가 22%\n+  늘었고 정확도는 떨어지지 않았다(Denny 2013). Stack Overflow 연구에서는 사용자가 배지 직전에 그 행동을\n+  늘렸다가 받은 뒤 원래대로 돌아갔다(Anderson 외 2013).\n+- 점수·레벨·순위표는 양을 늘리지만 질이나 내적 동기를 늘리지는 않았다(Mekler 외 2017). 한 학기 동안\n+  배지와 순위표를 쓴 수업은 내적 동기와 시험 점수가 오히려 낮았다(Hanus & Fox 2015).\n+- 자기결정성 이론에 따르면 통제하는 보상과 압박은 내적 동기를 깎고, 유능감을 알려 주는 정보형\n+  피드백은 북돋운다(Deci·Koestner·Ryan 1999, Ryan & Deci 2000).\n+- 새로움의 효과는 시간이 지나면 줄어든다(Koivisto & Hamari 2014). 14주 연구에서는 4주쯤 효과가 떨어졌다가\n+  6~10주에 일부 돌아왔다(Rodrigues 외 2022).\n+\n+### 1.4 금융 서비스 게임화 규제\n+\n+- 미국 SEC는 2021년 의견 수렴에서 연속 기록, 점수·배지·순위표, 알림, 주문 때 폭죽 같은 축하 효과를\n+  들어, 잦은 거래와 위험한 전략을 부추길 수 있다고 물었다. 관련 규칙안은 2025년에 철회되어 지금은 규칙이 없다.\n+- 매사추세츠 주는 Robinhood와 2024년 1월 동의 명령을 맺었다. Robinhood는 거래 빈도와 바로 연결된 폭죽 같은\n+  축하 이미지를 영구히 쓰지 않기로 했고, 벌금은 750만 달러였다.\n+- 영국 FCA의 2024년 실험(9,000명 넘게 참여)에서는 알림이 거래 수를 11%, 점수와 추첨이 12% 늘렸다.\n+- ESMA는 2023년 토론 문서에서 축하는 개별 거래가 아니라 장기 목표 달성이나 분산 같은 일에 하라고 했고,\n+  게임화 기법은 중립적인 교육 내용에 쓰라고 권했다. 무작위 보상은 도박과 비슷한 기법으로 봤다.\n+- 국내에서는 금융위원회·금융감독원의 다크패턴 가이드라인(2025년 12월 발표, 2026년 4월 시행)이 반복 간섭,\n+  감정적 언어 사용 같은 유형을 정했다. 게임화만 따로 다룬 국내 감독 당국의 문서는 찾지 못했다(미확인).\n+  증권사가 '수익금 상위 1%' 같은 배지를 쓴 사례가 보도된 적이 있다.\n+\n+규제가 문제로 보는 것은 거래와 그 빈도에 묶인 보상과 축하, 연속 출석과 매일 접속 보상, 무작위 보상,\n+성과 순위, 위험한 종목 목록으로 이끄는 알림이다. 사용자의 장기 이익을 위한 중립적인 교육은 받아들인다.\n+\n+## 2. 정한 규칙과 근거\n+\n+| 정한 것 | 근거 | spec |\n+|---|---|---|\n+| 경험치는 이해를 활동보다 크게 준다. 글 하나 최대 100 가운데 80이 확인 문제에서 나온다 | 점수는 양을 늘리고 질은 늘리지 않는다(1.3). 첫 시도 정답으로 점수를 매긴다(1.2) | FR-028 |\n+| 같은 글·같은 문제로는 한 번만 주고, 다시 풀기는 경험치를 주지 않는다 | 학습 앱의 반복 보상 차단(1.2) | FR-028 |\n+| 경험치·레벨·배지는 줄지 않는다. 글별 되돌리기는 두지 않는다(2026-10-04 단순화) | 얻은 것을 없앨 때 반발이 가장 컸다(1.1). 초기화해도 경험치를 남기는 쪽이 늘었다(1.2) | FR-028, FR-029 |\n+| 레벨 문턱은 레벨 사이 간격을 일정하게 늘리고(100·200·300…), 10 뒤로는 같은 간격으로 잇는다 | 배수 곡선은 뒤쪽 레벨에 닿지 못한다(1.1, 1.2) | FR-029 |\n+| 지금 게시된 글로 닿을 수 있는 레벨까지만 보이고 '최고 레벨' 끝을 두지 않는다 | Garmin의 레벨 상한 항의, Apple의 끝나지 않는 사다리(1.1) | FR-029 |\n+| 배지는 일곱 갈래 사다리로 두고 첫 단계는 쉽게 닿게 한다 | 운동 앱의 갈래·단계 구조(1.1), 배지 직전에 행동이 는다(1.3) | FR-024 |\n+| 배지는 점수를 주지 않고, 레벨은 경험치로만 정한다 | 레벨의 원천을 하나로 두라는 권고(1.1) | FR-024, FR-029 |\n+| 배지 기준을 모두 공개하고 숨긴 배지·무작위 보상·기간 한정 배지를 두지 않는다 | 무작위 보상은 도박과 비슷한 기법(1.4) | FR-024 |\n+| 배지·레벨 이름은 무엇을 익혔는지만 말하고 투자 실력·수익·순위를 뜻하는 낱말을 쓰지 않는다 | '수익금 상위 1%' 같은 배지 사례와 중립성 요구(1.4) | FR-024, FR-029 |\n+| 진단·백테스트·결과 보기·'이 예시로 전략 진단하기'에는 경험치와 배지를 주지 않는다 | 보상은 그 행동을 늘린다(1.3). 규제는 거래와 묶인 보상을 문제로 본다(1.4). 설정 조합을 많이 시도하게 만들면 과최적화를 부추긴다 | FR-028 |\n+| 새 배지와 레벨은 배우기 안에서만 조용히 알린다. 폭죽·소리를 쓰지 않고 움직임 줄이기 설정을 따른다 | 축하 효과에 대한 규제(1.4), WCAG 2.2의 2.3.3·4.1.3 | FR-030, FR-019 |\n+\n+## 3. 쓰지 않기로 한 것\n+\n+| 쓰지 않은 것 | 이유 |\n+|---|---|\n+| 리그·순위표, 다른 사용자와 견주는 배지 | constitution \"하지 않는 것\"(사용자 간 순위). 순위표는 내적 동기와 성적을 떨어뜨린 연구가 있다 |\n+| 연속 출석, 매일 과제, 경험치 두 배 | spec 013 Out of Scope(연속 출석·학습 알림). 이해가 아니라 속도와 빈도를 보상한다 |\n+| 경험치를 사거나 돈·혜택으로 바꾸는 것 | Garmin 유료 등급의 '돈으로 사는 점수' 반발(1.1). 기대된 실물 보상은 내적 동기를 깎는다(1.3) |\n+| Garmin식 두 배 레벨 곡선 | 뒤쪽 레벨에 사실상 닿지 못한다는 불만(1.1) |\n+| 배지마다 점수를 주어 레벨을 정하는 방식 | 경험치와 겹쳐 같은 활동을 두 번 세게 된다 |\n+\n+## 4. 남은 판단\n+\n+- 되돌리기 때 배지를 다시 판정할지는 담당자의 첫 결정과 조사 권고가 달랐다. 담당자가 조사 권고를 받아들여\n+  한 번 얻은 배지는 지우지 않기로 정했다(FR-024). 2026-10-04 단순화로 글별 되돌리기를 없앴으므로\n+  이 판단은 더는 필요 없다.\n+- 경험치를 사용자가 숨길 수 있게 하자는 권고(새로움 효과 대응)는 이번에 넣지 않았다.\n+- 도입 효과는 클릭 수가 아니라 확인 문제 첫 답 정답률과 단계 완주율로 보는 것이 맞다는 권고가 있다. 측정\n+  방법은 plan에서 정한다.\n+\n+## 출처\n+\n+- Garmin 배지와 레벨: https://www.garmin.com/en-US/blog/?p=33716, https://the5krunner.com/2023/09/04/garwin-the-garmin-badges-calendar-and-database/,\n+  https://forums.garmin.com/apps-software/mobile-apps-web/f/garmin-connect-web/287826/what-are-the-number-of-points-needed-for-levels-from-challenges-badges/1616289 (커뮤니티),\n+  https://gadgetsandwearables.com/2025/03/28/garmin-badge-pay/\n+- Apple Watch: https://support.apple.com/108359\n+- Fitbit·Google Health: https://9to5google.com/2023/03/27/fitbit-challenges-groups-removed/, https://support.google.com/googlehealth/answer/17068213\n+- Strava: https://support.strava.com/hc/en-us/articles/216917137\n+- Duolingo: https://blog.duolingo.com/achievement-badges, https://blog.duolingo.com/ways-to-practice-in-duolingo\n+- Khan Academy: https://support.khanacademy.org/hc/en-us/articles/202487710, https://raw.githubusercontent.com/avh4/khan-academy/master/exercises.py (과거 공개 코드)\n+- Microsoft Learn: https://learn.microsoft.com/en-us/training/support/org-reporting-developer-reference\n+- DataCamp: https://support.datacamp.com/hc/en-us/articles/360005357414\n+- Codecademy: https://www.codecademy.com/resources/blog/introducing-codecademy-skill-xp\n+- Sololearn: https://www.sololearn.com/en/Discuss/3045063/about-the-new-xp-table/\n+- 레벨 곡선: https://www.gamedeveloper.com/design/quantitative-design---how-to-define-xp-thresholds-\n+- Sailer & Homner (2020): https://link.springer.com/article/10.1007/s10648-019-09498-w\n+- Denny (2013): https://peerwise.cs.auckland.ac.nz/docs/community/do_badges_work\n+- Anderson 외 (2013): https://archives.iw3c2.org/www2013/proceedings/p95.pdf\n+- Mekler 외 (2017): https://glassmanlab.seas.harvard.edu/annotated_works/mekler17.pdf\n+- Ryan & Deci (2000): https://selfdeterminationtheory.org/SDT/documents/2000_RyanDeci_SDT.pdf\n+- Rodrigues 외 (2022): https://doi.org/10.1186/s41239-021-00314-6\n+- SEC Release 34-92766 (2021): https://www.sec.gov/rules/other/2021/34-92766.pdf\n+- 매사추세츠 주 Robinhood 동의 명령: https://www.sec.state.ma.us/divisions/securities/download/RH-Consent-Order.pdf\n+- FCA (2024): https://www.fca.org.uk/news/press-releases/fca-keeps-trading-apps-under-review-over-gaming-concerns\n+- ESMA35-43-3682 (2023): https://www.esma.europa.eu/sites/default/files/2023-12/ESMA35-43-3682_Discussion_Paper_on_MiFID_II_investor_protection_topics_linked_to_digitalisation.pdf\n+- 금융위원회 다크패턴 가이드라인: https://fsc.go.kr/no010101/85942\n+- WCAG 2.2: https://www.w3.org/TR/WCAG22/\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/gamification-research.md",
+          "old_path": "specs/013-learning-pages/gamification-research.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n # Feature Specification: 배우기\n \n-**Feature Branch**: `013-learning-pages` (spec 디렉터리 식별자다. 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 만든다.)\n+**Feature Branch**: `013-learning-pages` (spec 디렉터리 식별자다. 구현 Task의 Git 브랜치는 `{type}({position})/{description}` 형식으로 만든다.)\n \n **Created**: 2026-09-10\n \n@@ -8,22 +8,74 @@\n \n **Input**: User description: \"기획서에 맞게 스펙을 작성하자\" (2026-09-10). 같은 날 스펙 단위 재조정 요청에 따라 기획서 전체를 담았던 `001-thorp-platform`을 기능 단위로 분리한 spec 중 하나다.\n \n-**근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §3.2, §4.1, §4.5, §7.2와 결정 D01·D02·D20, constitution v1.0.0 원칙 I·II·III과 \"화면 구조\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n+**근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판) §3.2, §4.1, §4.5, §7.2와 결정 D01·D02·D20, constitution v6.0.0 원칙 I·II·III과 \"화면 구조\". 전체 범위·우선순위·결정 항목 표는 [specs/README.md](../README.md)에 있다.\n \n **관련 spec**: '이 예시로 전략 진단하기'는 [002 섹터·비중 선택](../002-sector-weight-selection/spec.md) 화면을 예시가 채워진 상태로 연다. 진단 화면의 용어 도움말([003](../003-strategy-settings/spec.md)·[005](../005-result-comparison/spec.md))은 이 spec의 개념 용어 설명을 재사용한다. 설정 항목의 의미·허용 범위를 알리는 축 도움말은 003 등록표가 소유한다. 예시 섹터는 [001](../001-etf-market-data/spec.md)의 대표 ETF 대응표에 있는 섹터여야 한다. 편집·게시에 쓰는 관리 계정은 [014 사용자 인증](../014-user-auth/spec.md)이 소유한다.\n \n ## 범위 요약\n \n-주요 메뉴 '배우기'다. 완전 입문자가 전략 진단을 시작하기 전에 필요한 개념을 익힐 수 있도록 주제별 글(블로그 글 형식 커리큘럼)을 제공하고, 각 주제는 질문 하나·예시 하나를 중심으로 구성해 '이 예시로 전략 진단하기'로 예시가 채워진 진단에 바로 연결한다. 진단 화면의 용어 도움말은 같은 설명을 재사용한다(개념 용어에 한하며, 설정 항목의 축 도움말은 003 등록표가 소유한다). 글은 실제 과거 자료로 계산한 결과 숫자·그래프를 담지 않고, 실제 결과는 연결된 진단 화면에서 보게 한다. 글과 용어 설명은 서버가 보관하고, 서비스 운영자가 관리 계정으로 로그인한 경우에만 관리 화면에서 편집·게시·게시 취소한다. 진단 전에 학습 수강을 요구하지 않으며, 숙련 퀀트 전용 연구 화면이나 자유 코드 입력은 만들지 않는다. (§4.5, D01, D02)\n+주요 메뉴 '배우기'다. 완전 입문자가 전략 진단을 시작하기 전에 필요한 개념을 익힐 수 있도록 주제별 글(블로그 글 형식 커리큘럼)을 제공하고, 각 주제는 질문 하나·예시 하나를 중심으로 구성해 '이 예시로 전략 진단하기'로 예시가 채워진 진단에 바로 연결한다. 진단 화면의 용어 도움말은 같은 설명을 재사용한다(개념 용어에 한하며, 설정 항목의 축 도움말은 003 등록표가 소유한다). 글은 실제 과거 자료로 계산한 결과 숫자·그래프를 담지 않고, 실제 결과는 연결된 진단 화면에서 보게 한다. 글과 용어 설명은 서버가 보관하고, 서비스 운영자가 관리 계정으로 로그인한 경우에만 관리 화면에서 편집·게시·게시 취소한다. 로그인 사용자의 읽은 글·익힌 용어·배지를 '나의 학습'으로 보여 주어 다시 들어온 사용자가 어디까지 읽었는지 알 수 있게 하되, 진단 전에 학습 수강을 요구하지 않으며, 숙련 퀀트 전용 연구 화면이나 자유 코드 입력은 만들지 않는다. (§4.5, D01, D02. 나의 학습은 2026-10-02 개정)\n \n ## Clarifications\n \n+### Session 2026-10-02\n+\n+- 결정(개정 입력): 배우기에 읽기 진행도·확인 문제·커리큘럼/목록 보기를 더한다. 진행도를 보이는 영역의 이름은 '나의 학습'이다. 로그인 사용자의 기록은 서버에, 비로그인 사용자의 기록은 그 브라우저에만 둔다. 글마다 확인 문제를 하나 두고 맞히면 그 글의 용어가 '익힘'이 된다. 목록은 커리큘럼 보기와 목록 보기를 전환할 수 있고, 아홉 주제를 세 묶음(기초·전략·결과 읽기)으로 나누며 묶음 배지와 용어 배지를 둔다. 글을 끝까지 내리면 자동 완료되고 '안 읽음으로 되돌리기'를 둔다. 이에 따라 FR-012·US4 시나리오 3·Out of Scope '학습 진도·수료·퀴즈·인증'·Assumptions '진도 기록은 두지 않는다'를 고쳤다(FR-012, FR-020~FR-025, US6). 진단 전에 학습 완료를 요구하지 않는다는 D02는 그대로이며, 나의 학습은 진단의 조건이 아니라 배우기 안의 표시다. 이 결정의 확인 문제 수·묶음·배지 구성은 같은 날 아래 결정(글마다 두세 문제, 여섯 단계 27편, 일곱 갈래 배지)으로 바뀌었고, 비로그인 기록의 저장 범위는 아래 '탭을 닫으면 모두 지워진다' 결정으로 바뀌었다. 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 비로그인 상태에서 이 브라우저에 쌓인 나의 학습 기록은 로그인하면 서버 기록과 어떻게 합치나요? → A: 합집합으로 합친다. 어느 한쪽에 완료·익힘 기록이 있으면 완료·익힘으로 두고, 합친 뒤 브라우저 기록은 지운다. 어느 쪽 기록도 잃지 않고 사용자 기록을 말없이 바꾸지 않는다(원칙 VI). (FR-020) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 글이 짧아 처음 열 때부터 본문 끝이 보이거나 빠르게 끝까지 내려 버린 경우에도 바로 완료로 기록하나요? → A: 아니다. 본문 끝이 화면에 들어와 있고, 글을 연 뒤 최소 머문 시간이 지났을 때 완료한다. 최소 머문 시간은 그 글의 예상 읽기 시간에 비례하되 아래 한도를 두며(출발안: 예상 읽기 시간의 1/3, 최소 30초), 구체 값은 plan에서 정한다. 훑어보기만으로 '읽은 글' 숫자가 올라가지 않게 하면서 누를 버튼을 하나 더 요구하지 않는다. (FR-021)\n+- Q: 열어 봤지만 아직 완료하지 않은 글은 목록에 어떻게 보이고, '이어서 읽기'를 누르면 글의 어디부터 여나요? → A: 가장 멀리 읽은 위치를 본문 길이에 대한 비율로 기록해 '62% 읽는 중'처럼 보이고, '이어서 읽기'는 그 위치에서 연다. 위치는 글을 떠날 때 한 번 기록하며, 로그인 때 합칠 때는 더 큰 비율을 남긴다. 이미 이만큼 읽었다는 표시가 이어 읽기를 끌어내고, 떠날 때 한 번만 기록하면 저장 부담이 작다. (FR-020) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 운영자가 새 글이나 새 용어를 게시해서 이미 받은 배지의 기준을 다시 못 채우게 되면, 사용자가 이미 받은 배지는 어떻게 되나요? → A: 한 번 열린 배지는 획득 날짜와 함께 기록해 남긴다. 배지가 사라지는 경우는 사용자가 직접 '안 읽음으로 되돌리기'를 해 기준을 못 채울 때뿐이다. 진행 수치(예: 2/3)는 새 글을 포함해 다시 보인다. 사용자가 아무것도 하지 않았는데 운영자의 글 추가로 배지를 잃으면 자기 기록이 몰래 바뀐 것이 된다(원칙 VI). (FR-024) 이 답의 '되돌리기로 기준을 못 채우면 배지가 사라진다'는 같은 날 아래 결정(한 번 얻은 배지는 지우지 않는다)으로 바뀌었다. 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: '과거가 미래를 보장하지 않는 이유'처럼 연결된 용어가 하나도 없는 글을 게시해도 되나요? → A: 된다. 그 글은 확인 문제를 맞혀도 익힐 용어가 없고, 목록과 완료 카드에 용어 수·익힐 용어를 보이지 않는다. 용어가 없는 글도 확인 문제를 맞혔는지는 다시 들어왔을 때 보여야 하므로, 나의 학습 기록은 용어별 익힘 대신 글별 확인 문제 맞힘 여부를 남기고, 용어의 익힘은 그 용어가 연결된 글의 확인 문제를 맞혔는지로 정한다(용어 하나는 글 하나에만 연결된다, FR-008). (FR-020, FR-022) 이 답의 '글별 확인 문제 맞힘 여부로 익힘을 정한다'는 같은 날 아래 확인 문제 결정 뒤 '글별 익힘 여부'(FR-020)로 바뀌었다.\n+- Q: 배우기 글 한 편의 분량과 구성 기준을 어떻게 정하나요? → A: 최소 구성을 정한다. 맨 위 핵심 요약 세 줄, 소제목 세 개 이상, 가상 계산 예 하나 이상, '자주 하는 오해' 하나, 예상 읽기 4~7분이다. 게시 전 검사가 구성 요소가 있는지 확인한다. 2026-10-02 기준 아홉 편은 본문 약 600~950자(1~2분)에 소제목이 하나뿐이라 '양이 적고 부실하다'는 지적을 받았다. '질문 하나·예시 하나'라는 초점은 유지한다. (FR-002, FR-017)\n+- Q: 글 본문에 글자 문단 말고 어떤 표현 요소를 더 쓸 수 있게 하나요? → A: 소제목·문단·용어·가상 계산 예에 핵심 요약·자주 하는 오해·목록·비교 표를 더하고, 가상 수치로 화면이 그리는 간단한 도식(막대·선)도 둔다. 도식에는 '가상의 예' 표시가 붙고 실제 과거 자료는 쓰지 않는다. 리밸런싱이나 가장 크게 줄었던 폭은 그림 하나가 문단 여러 개보다 빠르고, 화면에 이미 결과 차트 도구가 있다. (FR-005, FR-026)\n+- Q: 배우기 주제를 지금 아홉 편에서 늘리나요? → A: 대폭 늘린다. 2026-10-02 커리큘럼 확장 조사(영미권 교육과정·국내 입문서·학술 근거·유사 플랫폼·국내 ETF 제도 조사)를 근거로, 결과 숫자 읽기 → 분산과 배분 규칙 → 백테스트와 비용 → 함정과 검증 → 경제환경 순서의 단계 구성을 따른다. 개발 출발안은 여섯 단계 27편(기존 아홉 편 보강, 신규 18편)이고, 나머지 후보 약 25편은 PD-16 후보로 남긴다. 이에 따라 세 묶음(기초·전략·결과 읽기)을 단계로 바꾸고, 제도·규정 수치를 쓰는 규칙(FR-005·FR-026)과 Thorp 동작을 설명하는 문장의 정확성 규칙(FR-027)을 더했다. 조사 문서의 제목 가운데 숫자가 든 것('같은 10%인데…')은 게시 전 숫자 검사에 걸리므로 숫자 없는 제목으로 바꿨고, 실제 자료 기간이 든 것('자료가 2년뿐이면…')은 자료가 늘면 낡으므로 기간 없는 제목으로 바꿨다. (FR-001, FR-023, FR-024, PD-16)\n+- 결정(사용자 지시): 외부 자료는 본문 글자 자체에 하이퍼링크를 다는 방식으로 잇는다. 링크는 글자 범위와 주소를 구조로 보관하고, 화면은 서버가 보낸 문장을 마크업으로 해석하지 않는다는 규칙(FR-026)을 그대로 둔다. 주소는 http·https만 받는다. (FR-007, FR-026) 이 방식은 같은 날 아래 결정에서 글자 옆 '(*출처)' 표시로 바뀌었다.\n+- Q: 용어 설명을 모두 '뜻·읽는 법·한계' 세 문장으로 맞추나요? → A: 맞춘다. 다만 화면에서 세 번째 문장 앞에는 '한계'라는 글자 대신 적절한 이모지를 붙인다. 이모지는 주의를 뜻하는 ⚠️로 하고, 스크린 리더는 '주의'로 읽게 한다. 용어마다 '그래서 어떻게 읽으라는 건지'가 빠지지 않게 하려는 것이다. (FR-008, FR-019)\n+- Q: 용어 이름 옆에 책이나 강의에서 흔히 쓰는 이름을 함께 적나요? → A: 통용어·약어·영어 이름까지 함께 적는다(예: 가장 크게 줄었던 폭 (최대 낙폭, MDD, maximum drawdown)). 다만 글마다 그 용어가 처음 나오는 자리 한 번에만 적고, 같은 글의 뒤쪽에서는 진단 화면 이름만 쓴다. 사용자가 외부 책·강의에서 같은 개념을 찾을 수 있게 하면서 글이 긴 이름으로 어지러워지지 않게 한다. (FR-006)\n+- Q: 배우기에서 늘린 세 문장을 진단 화면의 도움말 창에도 모두 보이나요? → A: 아니다. 도움말 창에는 첫 문장(뜻)만 보이고 '더 보기'는 두지 않는다. 나머지 두 문장은 도움말의 '해당 주제 글로 이동'으로 글에서 본다. 도움말 창은 설정을 고르는 도중에 여는 창이라 짧게 둔다(원칙 II). 이에 따라 뜻 문장은 그 문장만으로 오해 없이 읽히게 쓰고, 진단 화면 spec이 요구하는 구분(예: [005](../005-result-comparison/spec.md) FR-002의 '가장 크게 줄었던 폭'과 시작 금액 대비 손실의 구분)은 뜻 문장에 넣는다. 다른 이름(FR-006)도 도움말 창에는 보이지 않는다. (FR-008, US3)\n+- Q: 출처는 어떤 경우에 달고 어떻게 표시하나요? → A: 일반 지식에는 출처를 달지 않는다. 출처는 제도·규정 수치, 연구 결과나 특정 주장, 다른 저작물의 표현·예시를 빌려 온 경우에만 단다. 인용한 글자 자체에는 링크를 걸지 않고, 그 글자 바로 옆에 '(*출처)' 표시를 두어 누르면 자료가 열리게 한다. 웹 주소가 없는 책은 문장 안에 이름을 적는다. 글 끝의 출처 목록은 없앤다. (FR-007, FR-026)\n+- Q: 글을 읽다가 다른 배우기 글에서 설명한 용어가 나오면, 그 자리에서 뜻을 볼 수 있게 하나요? → A: 그렇다. 그 용어 옆에 진단 화면과 같은 도움말 표시를 두어, 누르면 뜻 한 문장과 '해당 주제 글로 이동'이 작은 창으로 보인다. 용어 글자 자체는 누를 수 없다. 표시는 다른 이름(FR-006)과 같이 글마다 그 용어가 처음 나오는 자리 한 번에만 둔다. 글이 27편으로 늘면 다른 글의 용어가 자주 나오는데, 사용자가 앞 글을 찾아 돌아가지 않게 한다. (FR-009)\n+- Q: 글 끝 확인 문제는 글마다 몇 개 두나요? → A: 글마다 두세 문제를 둔다. 하나만 맞혀도 그 글의 용어가 익힘이 되지만, 맞힌 개수가 적으면 경험치(EXP)를 덜 준다. 배지는 Garmin처럼 경험치·읽은 글 수·확인 문제 정답 수 등 여러 갈래로 나누어 동기를 높인다. 경험치와 배지 갈래의 구체 규칙은 조사 뒤 정한다. (FR-022, FR-024, FR-028)\n+- Q: 확인 문제를 틀렸을 때 바로 정답과 풀이를 보여 주나요, 아니면 정답을 숨기고 다시 고르게 하나요? → A: 바로 정답과 풀이를 보여 주고 다음 문제로 넘어간다. 한 문제에는 한 번만 답하며 이 첫 답으로 맞힌 개수를 센다. 첫 답에서 하나 이상 맞히면 익힘이고, 하나도 못 맞혔으면 나중에 '다시 풀기'로 익힘만 얻는다. 틀린 직후 풀이를 읽는 쪽이 보기를 지워 가며 맞히는 것보다 배우는 효과가 크다. (FR-022)\n+- Q: 레벨과 배지를 모아 보는 화면을 어디에 두나요? → A: 배우기 안에 '나의 학습' 화면을 따로 둔다. 배우기 목록 위의 '나의 학습' 요약 패널에서 '모두 보기'로 열고, 로그인하지 않아도 볼 수 있다. 비로그인 사용자도 이 브라우저에 기록이 쌓이므로 자기 배지를 보는 곳도 로그인 없이 열려야 한다. (FR-020) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 비로그인 사용자의 학습 기록을 이 브라우저에 어떻게, 얼마 동안 두나요? → A: 쿠키나 세션 저장소가 아니라 브라우저의 로컬 저장 공간에 둔다. 쿠키는 요청마다 서버로 전송되어 '로그인 전에는 서버로 보내지 않는다'와 어긋나고, 세션 저장소는 탭을 닫으면 사라진다. 보관 기간은 두지 않고 브라우저가 지울 때까지 둔다. 브라우저에 따라 더 일찍 지워질 수 있다는 점(Safari는 7일 동안 사이트를 쓰지 않으면 지운다)과 로그인하면 계정에 보관된다는 점을 안내하고, '나의 학습' 화면에 '이 브라우저의 학습 기록 지우기'를 둔다. 이 기록은 서비스가 보관하지 않으므로 constitution의 '무기한 보관을 전제하지 않는다'는 서비스가 보관하는 로그인 기록(FR-025)에 적용한다고 본다. (FR-020, FR-025) 이 결정은 같은 날 아래 사용자 지시(탭을 닫으면 비로그인 기록을 모두 지운다)로 바뀌었다. 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 확인 문제의 보기는 몇 개로 하나요? → A: 두 개 이상에서 자유롭게 정하고 O/X 문제도 허용한다. (FR-022)\n+- 결정(사용자 지시): 비로그인 사용자와 관련된 브라우저 쪽 기록은 constitution부터 모든 spec에서 '브라우저 탭을 닫으면 모두 지워진다'를 원칙으로 한다. 013의 비로그인 나의 학습 기록도 탭을 닫으면 지워지고, 새로고침과 로그인 왕복은 버틴다([002](../002-sector-weight-selection/spec.md) FR-014와 같은 범위). 앞의 '로컬 저장 공간, 보관 기간 없음' 결정과 그에 딸린 '이 브라우저의 학습 기록 지우기'·Safari 안내는 필요 없어져 뺐다. 사용자는 저장 수단으로 쿠키를 지시했으나 쿠키는 탭 단위로 지울 수 없어, 저장 수단은 따로 확인한다. constitution과 다른 spec의 개정은 작업 묶음 규칙에 따라 별도 MR로 한다. (FR-020, FR-025) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 비로그인 기록의 저장 수단을 세션 저장소와 쿠키 가운데 무엇으로 하나요? → A: 탭 단위 세션 저장소로 한다. 쿠키는 같은 브라우저의 모든 탭이 함께 쓰고 브라우저를 모두 닫아야 지워지며(세션 복원이 켜져 있으면 남는다) 요청마다 서버로 전송되므로, '탭을 닫으면 모두 지워진다'는 원칙을 지킬 수 없다. 세션 저장소는 [002](../002-sector-weight-selection/spec.md)·[003](../003-strategy-settings/spec.md)·[009](../009-market-flow-overview/spec.md)가 이미 쓰는 방식이다. (FR-020) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- 결정(조사 반영): 담당자가 경험치와 배지 갈래의 구체 규칙을 '넓게 조사해 최선의 방법으로 정하라'고 맡겼다. 운동 기록 앱(Garmin·Apple Watch·Fitbit·Strava·Nike Run Club), 학습 앱(Duolingo·Khan Academy·Microsoft Learn·DataCamp·Codecademy·Sololearn), 교육 게임화 연구, 금융 서비스 게임화 규제(SEC·FINRA·매사추세츠 주 Robinhood 동의 명령·FCA·ESMA·국내 다크패턴 가이드라인)를 조사해 FR-024와 FR-028~FR-030을 정했다. 근거와 출처는 [gamification-research.md](gamification-research.md)에 있다. 경험치는 이해를 활동보다 크게, 같은 일로 한 번만, 줄지 않게 준다. 배지는 일곱 갈래의 사다리이고 첫 단계는 쉽게 닿으며 기준을 모두 공개한다. 이름은 무엇을 익혔는지만 말한다. 진단·백테스트 행동에는 보상하지 않고, 축하는 배우기 안에서 조용히 한다. (FR-024, FR-028, FR-029, FR-030)\n+- Q: '안 읽음으로 되돌리기'를 하면 이미 얻은 배지도 다시 판정해 지우나요? → A: 지우지 않는다. 한 번 얻은 배지는 모두 남고, 되돌리기는 읽기 상태와 익힘만 바꾼다. 같은 날 첫 명료화의 '되돌리기로 기준을 못 채우면 배지를 지운다'를 대체한다. 조사한 앱들에서 얻은 것을 없앨 때 반발이 가장 컸고, 경험치와 첫 답으로 정해지는 배지는 원래 줄지 않아 갈래마다 규칙이 달라지는 것을 피한다. (FR-024) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 27편 모두가 섹터·비중 예시와 '이 예시로 전략 진단하기' 버튼을 반드시 가져야 하나요? → A: 아니다. 예시는 글마다 넣을지 고른다. 예시가 없는 글에는 진단 버튼이 없고 진단으로 가는 길은 상단 메뉴의 '전략 진단'이 맡는다. 예시 검사(FR-004)와 SC-001의 예시 조건은 예시가 있는 글에만 적용한다. 분배금·보수·시장 흐름 같은 새 글에 억지 섹터 예시를 만들지 않게 하려는 것이며, 행동 버튼이 하나뿐이라는 원칙 II는 그대로다. (FR-002, FR-003, FR-004, SC-001)\n+- Q: 오해를 바로잡으려고 틀린 생각을 그대로 적은 문장은 금지 표현 검사를 어떻게 하나요? → A: '자주 하는 오해'의 틀린 생각 칸과 확인 문제의 틀린 보기는 금지 표현 검사를 하지 않고, 화면이 그 자리에 '오해'·'틀린 보기' 표시를 자동으로 붙인다. 나머지 자리는 지금처럼 검사한다. 운영자가 따로 승인하거나 기록할 일이 없도록, 검사를 빼는 자리를 글 요소의 종류로만 정한다. 일반 문단의 부정문(예: '거리는 확률이 아니다')은 계속 걸리므로 다른 표현으로 쓴다. (FR-005, FR-017, FR-022, FR-026)\n+- Q: 가상의 숫자를 '가상의 계산 예'와 '가상 도식' 말고 다른 요소에도 쓸 수 있나요? → A: 쓸 수 있다. '자주 하는 오해', 비교 표, 확인 문제에도 가상의 숫자를 쓰고, 화면이 이 요소들에 '가상의 예' 표시를 자동으로 붙인다. 제목·질문·소제목·핵심 요약·일반 문단은 지금처럼 숫자를 검사한다. 계산형 오해와 문제를 쓰게 하면서, 허용하는 자리를 요소 종류로만 정해 운영자가 따로 판단할 일을 만들지 않는다. (FR-005, FR-022, FR-026)\n+- Q: 설정 화면의 항목 도움말에서 그 항목을 설명하는 배우기 글로 바로 갈 수 있게 할까요? → A: 잇는다. 3단계의 설정 항목 글 네 편('관측 기간', '최근 구간 제외', '선정 방식', '비중 상한')은 그 설정 이름을 013 용어로 가진다. 전략 설정 화면의 해당 항목 도움말은 뜻을 013 용어 문장(뜻 한 문장)으로 보이고 '이 설정을 설명하는 글 보기'로 글에 잇는다. 허용 범위·기본값·상한 처리 안내는 지금처럼 003 등록표가 보이며, 같은 도움말 창에 뜻 문장이 둘 보이지 않게 그 항목에서는 등록표의 뜻 문장을 뺀다. 003 수정은 작업 묶음 규칙에 따라 별도 MR로 한다. (FR-008)\n+- Q: 운영자가 글을 게시 취소하거나 다른 단계로 옮겨, 사용자가 아무것도 하지 않았는데 배지 조건이 채워지면 배지를 주나요? → A: 준다. 사용자가 다음에 '나의 학습'(요약 패널 포함)을 열 때 확인해서 주고, 단계 완주 경험치도 그때 준다. 진행 막대는 다 찼는데 배지가 없는 어긋남을 막고, 운영자 변경 때마다 모든 사용자를 한꺼번에 다시 계산하지 않게 한다. (FR-024, FR-028)\n+- Q: 로그인해서 이 탭의 기록을 계정에 합칠 때, 배지와 경험치를 서버가 다시 계산하나요? → A: 서버가 다시 계산한다. 탭은 사실(어떤 글을 언제 완료했는지, 읽은 위치, 문제별 첫 답의 맞음·틀림과 답한 시각, 다시 풀기로 얻은 익힘, 마지막으로 연 시각)만 보내고, 탭이 계산한 경험치·배지·레벨은 보내지 않는다. 서버는 합친 사실로 경험치 장부와 배지를 계산한다. 그래서 두 쪽을 합쳐야 채워지는 기준(예: 계정의 3편과 탭의 1편으로 채워지는 단계 완주)도 빠지지 않는다. 맞음·틀림은 탭이 보낸 값을 그대로 믿는다. 사용자끼리 비교하는 기능이 없어 조작되어도 그 사용자의 화면에만 영향이 가므로, 정답과 다시 대조하지 않는다. (FR-020, FR-028) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 글 끝에서 '안 읽음으로 되돌리기'를 누른 직후, 그 글이 바로 다시 '완료'가 되지 않게 하려면 어떻게 하나요? → A: 화면은 그대로 두고, 그 화면에 머무는 동안에는 자동 완료를 멈춘다. 떠날 때 읽은 위치도 기록하지 않아 글은 '안 읽음'으로 남고, 되돌리기는 '마지막으로 연 시각'도 지운다. 글을 다시 열면 머문 시간과 본문 끝 도달을 처음부터 센다. 단추가 완료 카드에 있어 누르는 순간 완료 조건이 이미 채워져 있으므로, 이 규칙이 없으면 누르자마자 다시 완료된다. (FR-021) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 같은 문제를 계정과 로그인 전 탭에서 각각 처음 풀었다면, 합칠 때 어느 답을 남기나요? → A: 계정의 답을 남긴다. 계정에서 이미 답한 문제는 탭의 답과 그에 따른 경험치를 버리고, 계정에서 아직 답하지 않은 문제만 탭의 답으로 채운다. 로그아웃해서 다시 풀고 로그인해 경험치를 더 받는 길을 막고, 첫 답 결과와 경험치·배지가 늘 맞게 한다. 같은 날 앞선 '먼저 답한 쪽' 규칙을 대체한다. (FR-020, FR-028) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 확인 문제를 풀었는데 기록 저장이 실패하면, 정답과 풀이를 보여 주나요? → A: 저장된 뒤에 보인다. 고른 보기를 잠그고 저장을 보낸 뒤, 저장되면 맞았는지와 정답·풀이를 보인다. 저장에 실패하면 '기록되지 않았습니다'와 '다시 시도'만 보이고, 다시 시도는 고른 보기를 그대로 다시 보낸다. 같은 원칙으로 완료가 기록되지 않은 글은 완료 카드와 확인 문제 대신 그 한 문장과 '다시 시도'를 보이고, 탭 단위 저장소를 쓸 수 없는 비로그인 브라우저에서는 확인 문제를 보이지 않는다. 화면은 기록된 것만 보이고 첫 답은 늘 한 번으로 남는다(원칙 VI). (FR-021, FR-022) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 운영자가 이미 푼 글에 문제를 더하면, 그 글에서 받는 경험치가 100을 넘어도 되나요? → A: 넘지 않는다. 한 사용자가 한 글의 확인 문제로 받는 경험치는 처음 그 글의 문제에 모두 답한 때의 문제 수로 한 번만 정한다(정답 몫 최대 60, 모두 맞힘 20). 그 뒤에 더해진 문제는 첫 답을 받고 익힘과 정답 배지 개수에는 들어가지만 경험치는 주지 않는다. 글 하나 최대 100, 출발안 합계 3,000이 그대로 지켜져 레벨 문턱이 흔들리지 않는다. (FR-028)\n+- Q: 로그인 전 탭이 두 개 열려 있고 그중 한 탭에서 로그인하면, 다른 탭의 기록도 계정에 합치나요? → A: 합친다. 각 탭은 로그인 확인([014](../014-user-auth/spec.md) FR-008) 때 로그인된 것을 알아차리는 순간 자기 탭의 기록을 계정에 합친다. 다른 탭에서 한 로그인과 만료 뒤 재로그인도 같게 다룬다. 로그인이 만료된 동안 읽은 기록은 그 탭에 비로그인 기록으로 쌓았다가 다음 로그인 때 합친다. 로그아웃할 때 아직 합치지 못한 탭 기록은 지운다. 어느 쪽 기록도 잃지 않는다는 앞선 결정과 맞추며, 만료 뒤 같은 탭에서 다른 사람이 로그인하면 앞 사람의 탭 기록이 그 계정에 합쳐질 수 있다는 점은 감수한다. (FR-020) 이 결정은 2026-10-04 단순화(기록은 로그인 사용자만, 글별 되돌리기 없음)로 바뀌었다.\n+- Q: 로그인 사용자가 '나의 학습' 기록 전체를 직접 지울 수 있게 지금 단추를 두나요? → A: 지금 둔다. 이름은 '학습 초기화'이고, '나의 학습'이 아니라 마이페이지(헤더의 닉네임으로 여는 회원정보 화면)에 둔다. 확인을 받은 뒤 그 사용자의 완료·읽은 위치·첫 답 결과·익힘·경험치 장부·배지를 모두 지운다. 내 기록(006)처럼 사용자가 직접 지우는 수단을 두어 constitution의 '무기한 보관을 전제하지 않는다'를 지금 지키고, 처음부터 다시 배우고 싶은 사용자도 쓸 수 있게 한다. 마이페이지는 로그인한 사용자만 들어가며, 비로그인 사용자는 탭을 닫으면 기록이 지워지므로 이 단추가 필요 없다. 마이페이지를 소유한 spec이 없어 013이 이 단추의 동작을 정한다. (FR-024, FR-025, FR-028)\n+- Q: 예시를 글마다 선택으로 바꾼 결정에 맞춰 constitution 문장도 고칠까요? → A: 고친다. constitution '화면 구조'의 \"각 주제는 질문 하나·예시 하나·'이 예시로 비중 비교하기' 연결로 구성한다\"를 \"예시와 '이 예시로 전략 진단하기' 연결은 글마다 넣을지 고른다\"로 바꾸는 초안을 별도 MR로 올린다. 비로그인 원칙(6.1.0 초안)과 같은 방식이며 팀 승인이 필요하다. 승인 전까지 013의 예시 선택(FR-003)은 이 초안을 앞서 적용한 것이다. (FR-003)\n+- Q: 여섯 단계를 운영자가 관리 화면에서 늘리거나 이름을 바꿀 수 있게 하나요? → A: 아니다. 단계는 spec이 정하고 고정한다. 단계마다 바뀌지 않는 고정 식별자가 있고, 운영자는 글을 어느 단계에 넣을지만 고르며 그 변경은 글을 다시 게시할 때 공개된다. 단계를 더하거나 이름·순서·수준 표시를 바꾸려면 spec(PD-16)을 고친다. 새 단계는 뒤에 붙이고 이미 쓴 번호는 다시 쓰지 않는다. 단계 수와 번호가 배지·경험치 합계·27편 목록과 묶여 있어, 이미 받은 '1단계 완주' 같은 배지가 다른 단계를 가리키게 되는 일을 막는다. (FR-016, FR-023, FR-024)\n+- Q: 단계 순서와 따로 '전체 읽는 순서'를 남겨 두나요? → A: 따로 두지 않는다. 읽는 순서는 '단계 순서 → 단계 안에서의 글 순서'로만 정하고, 운영자는 단계 안의 글 순서만 정한다. 목록의 글 번호는 지금 게시된 글로 화면이 매긴다. 순서를 정하는 곳이 하나라 단계 묶음이 깨지지 않고, '이어서 읽기'·'다음 글'·목록이 같은 순서를 따른다. (FR-020, FR-021, FR-023)\n+- Q: 새 글 27편과 나의 학습(경험치·배지)을 어떤 단위로 공개하나요? → A: 단계별로 공개한다. 한 단계의 글(새 글과 다시 쓴 글)이 모두 준비되면 그 단계를 함께 공개하고, 나의 학습은 첫 단계를 공개할 때 켠다. 단계 배지와 단계 진행이 늘 완성된 단계를 기준으로 하게 하고, 27편을 다 쓰기 전에도 새 내용을 먼저 낸다. 아직 공개되지 않은 단계를 화면에 어떻게 보일지는 담당자 지시에 따라 여러 서비스의 레퍼런스를 조사해 설계한다. (FR-023, FR-024, SC-001, SC-011)\n+- Q: 글에 Thorp 자신의 실제 숫자(비용 가정, 지표 수, 자료 기간 등)를 적어도 되나요? → A: 예시로 간단히 적는다. 본문 문단에서도 숫자는 '(예: 왕복 약 0.19%)'처럼 '예:'를 붙여 쓸 수 있고, 게시 전 숫자 검사는 '예:' 뒤의 숫자를 걸러 내지 않는다. Thorp의 실제 값을 예로 들 때도 FR-027에 따라 게시 시점의 실제 동작과 맞아야 한다. 새 요소나 별도 표시 없이 간단하게 쓰려는 것이다. (FR-005, FR-017, FR-027)\n+- Q: 용어 '변동성'을 새로 생기는 2단계 글로 옮길까요? → A: 옮긴다. 첫 단계를 공개하기 전에 용어마다 그 개념을 처음 설명하는 글(읽는 순서상 가장 앞 글)로 한 번 정리한다. 아직 학습 기록이 없어 옮겨도 잃는 것이 없고, 도움말의 '해당 주제 글로 이동'이 그 개념을 처음 설명하는 글로 간다. 공개 뒤에 용어를 다른 글로 옮기는 일은 Edge Cases의 규칙(옮겨 간 글의 익힘을 따른다)을 따른다. (FR-008, FR-031)\n+- 결정(사용자 지시, 2026-10-04 단순화): \"설계를 단순하게 하자\"는 지시에 따라 두 가지를 줄였다. 나의 학습 기록(완료·읽은 위치·첫 답·익힘·경험치·배지)은 로그인 사용자에게만 남긴다. 비로그인 사용자는 모든 글을 읽고 확인 문제를 풀 수 있지만 기록은 남지 않으며, 탭 단위 기록과 로그인 때 합치기를 없앴다. 글마다 '안 읽음으로 되돌리기'도 없앴고, 기록 전체는 마이페이지의 '학습 초기화'로만 지운다. 경험치 계산(정답 몫·모두 맞힘·글당 100 상한), 닿을 수 있는 레벨까지 보이기, 배지 일곱 갈래 31개는 재미 요소라 그대로 둔다. (FR-012, FR-020~FR-022, FR-024, FR-025, FR-028)\n+- Q: 글 끝에서 진단 버튼과 완료 카드의 순서를 어떻게 놓을까요? → A: 본문 → 예시와 '이 예시로 전략 진단하기'(예시가 있는 글) → 완료 카드 순서로 놓는다. 완료를 판단하는 본문 끝은 본문 마지막 요소의 끝이며 예시 블록 앞이다. 배우기의 목적은 진단으로 이어지는 것이라 진단 버튼을 본문 바로 뒤에 두고, 완료를 받으려고 버튼 아래까지 내려가지 않게 한다. (FR-003, FR-021)\n+- Q: 목록에서 '62% 읽는 중'인 글을 누르면 어디서부터 열까요? → A: 맨 위에서 열고, 맨 위에 '62%까지 읽었습니다 · 이어서 읽기' 한 줄을 보인다. 그 줄을 누르면 읽던 곳으로 간다. '이어서 읽기' 단추로 열면 지금처럼 읽던 곳에서 바로 연다. (FR-020)\n+- Q: 새 배지·레벨 알림의 '새' 표시는 언제까지 보일까요? → A: 얻은 날부터 7일 동안 '나의 학습' 요약 패널과 화면에 붙인다. 닫는 단추나 '봤음' 기록은 두지 않아, 새로 저장할 것이 없고 어느 기기에서나 같게 보인다. (FR-030)\n+- Q: '나의 학습' 화면에 무엇을 어떤 순서로 보일까요? → A: 위에서부터 레벨과 다음 레벨까지 남은 경험치, 단계별 진행(예: 1단계 2/4), 익힌 용어 목록(누르면 그 용어의 글로 이동), 배지 순서로 보인다. 경험치를 언제 무엇으로 받았는지의 내역은 숫자 모으기를 부추길 수 있어 보이지 않는다. (FR-020, FR-024)\n+- Q: 커리큘럼 보기와 목록 보기 중 고른 보기를 기억할까요? → A: 로그인 여부와 관계없이 그 탭이 열려 있는 동안 기억하고, 새 탭에서는 커리큘럼 보기로 시작한다. 학습 기록이 아니라 화면 상태이므로 서버에 저장하지 않는다. (FR-023)\n+- Q: 글을 공개하기 전에 실제 화면 모습으로 미리 보고 다른 팀원이 확인하나요? → A: 관리 화면에 독자 화면과 똑같이 그리는 '미리 보기'를 두고, 원고는 저장소 MR로 다른 팀원 한 명이 확인한 뒤 관리 화면에 입력한다. 게시 상태는 초안·게시 두 가지 그대로다. 게시 전 검사가 잡지 못하는 문장의 뜻, Thorp 동작 설명의 정확성, 도식 표시를 사람이 보게 하면서 관리 화면에 승인 단계를 더하지 않는다. (FR-016, FR-017)\n+\n ### Session 2026-09-16\n \n - Q: 배우기 글 안에 실제 과거 자료로 계산한 결과(수익률·가장 크게 줄었던 폭 같은 숫자나 그래프)를 넣나요, 넣는다면 그 값은 어디에서 오나요? → A: 넣지 않는다. 설명에 필요한 숫자는 가상의 계산 예(100만 원이 80만 원이 되면 20% 줄어든 것과 같은 식)로만 쓰고 가상의 예라는 표시를 붙이며, 실제 결과는 '이 예시로 전략 진단하기'로 연결된 진단 화면에서 본다. 배우기는 진단을 시작하도록 돕는 보조 기능(원칙 I)이고 예시는 이미 진단에 연결되어 있으므로, 글에 적어 둔 실제 숫자가 자료 갱신으로 낡거나 유리한 기간만 고른 것으로 읽힐 위험(원칙 III)을 들이지 않는다. 글을 열 때 백테스트를 실행하는 방식은 013을 [004](../004-backtest-execution/spec.md)의 실행과 실행 한도(원칙 IX)에 묶어 보조 기능의 크기를 넘어선다. 이에 따라 '과거 성과를 예시로 들 때는 기간·조건을 함께 쓴다'는 문장과 글 자체의 KRX 출처 표시 요구를 뺀다.\n - Q: 배우기 글과 용어 설명은 누가 어떤 경로로 게시하고 고치나요? → A: 서버가 글과 용어 설명을 보관하고, 서비스 운영자가 관리 계정으로 로그인한 경우에만 관리 화면에서 편집·게시할 수 있다. 게시 전 검사(예시 섹터 존재·비중 합계·금지 표현·실제 계산 결과 포함 여부)는 게시 시점에 서버가 수행하고, 검사에 걸리면 게시하지 않고 항목별 이유를 보인다. 초안은 일반 사용자에게 보이지 않는다. 관리 계정의 식별과 권한 부여는 [014](../014-user-auth/spec.md)가 소유하는데, 014의 Out of Scope에 '사용자 역할별 권한 관리와 관리자 계정'이 있어 그 항목을 범위 안으로 옮기는 014 갱신이 선행되어야 한다. 읽는 쪽은 여전히 사용자 식별 없이 이용한다(FR-012).\n - Q: 배우기 주제 목록의 출발안을 기획서 다섯 개에서 어디까지 넓혀 spec에 적을까요? (PD-16) → A: 아홉 주제로 넓힌다. 기획서 §4.5의 다섯 주제에 자동 배분 전략 세 개('변동성에 따라 나누기'·'섹터 모멘텀'·'최소분산')와 '거래비용'을 더하고, 읽는 순서는 ① '섹터와 ETF' → ② '비중과 리밸런싱' → ③ '변동성에 따라 나누기' → ④ '섹터 모멘텀' → ⑤ '최소분산' → ⑥ '백테스트' → ⑦ '거래비용' → ⑧ '수익과 손실' → ⑨ '과거가 미래를 보장하지 않는 이유'다. 근거는 도움말 규칙이다. 진단 화면의 용어 도움말은 해당 주제 글로 이동하는 연결을 가져야 하고(FR-009) 대응하는 글이 없으면 '설명 준비 중'으로 남는데(FR-010), 다섯 주제만으로는 [003](../003-strategy-settings/spec.md) 전략 카드의 자동 배분 전략 세 개와 [005](../005-result-comparison/spec.md) 결과 첫 화면 핵심 숫자 3개 중 하나인 거래비용에 대응하는 글이 없다. 기획서 §4.5도 다섯 주제를 '등'으로 열어 두었다. '준비 기간(워밍업)과 관측 기간'·'같은 조건에서 비교하기'는 후보로만 남기고 이번 출발안에 넣지 않는다. PD-16은 팀 확정 항목이므로 표에는 미확정으로 두고 출발안만 바꾼다.\n-- Q: 진단 화면에 있는 설명 문구 가운데 013의 용어 설명(단일 원본)이 소유하는 범위는 어디까지이고, 도움말이 보여 주는 단위는 무엇인가요? → A: 013은 개념 용어(섹터·대표 ETF·비중·리밸런싱·변동성·모멘텀·최소분산·백테스트·거래비용·비용 차감 후 전체 수익률·가장 크게 줄었던 폭 등)의 설명을 용어마다 한두 문장으로 소유하고, 그 문장은 연결된 주제 글 본문에 그대로 들어간다. 설정 항목의 의미·허용 범위·기본값·상한 처리 안내(축 도움말)는 [003](../003-strategy-settings/spec.md) 등록표가 소유하고(003 FR-005, 2026-09-15 확정) 013을 참조하지 않는다. 축 도움말 안에 나오는 개념 용어에는 013 도움말 연결을 붙일 수 있다. 같은 화면에 설명 원본이 둘 있어도 서로 다른 것을 설명하도록 경계를 긋는 것이며, 003의 확정을 다시 열지 않는다. 이에 따라 SC-003은 '도움말 문장이 연결된 글 본문에 그대로 있는가'로 센다.\n+- Q: 진단 화면에 있는 설명 문구 가운데 013의 용어 설명(단일 원본)이 소유하는 범위는 어디까지이고, 도움말이 보여 주는 단위는 무엇인가요? → A: 013은 개념 용어(섹터·대표 ETF·비중·리밸런싱·변동성·모멘텀·최소분산·백테스트·거래비용·비용 차감 후 전체 수익률·가장 크게 줄었던 폭 등)의 설명을 용어마다 한두 문장으로 소유하고, 그 문장은 연결된 주제 글 본문에 그대로 들어간다. 설정 항목의 의미·허용 범위·기본값·상한 처리 안내(축 도움말)는 [003](../003-strategy-settings/spec.md) 등록표가 소유하고(003 FR-005, 2026-09-15 확정) 013을 참조하지 않는다. 축 도움말 안에 나오는 개념 용어에는 013 도움말 연결을 붙일 수 있다. 같은 화면에 설명 원본이 둘 있어도 서로 다른 것을 설명하도록 경계를 긋는 것이며, 003의 확정을 다시 열지 않는다. 이에 따라 SC-003은 '도움말 문장이 연결된 글 본문에 그대로 있는가'로 센다. 용어마다 '한두 문장'은 2026-10-02 결정으로 '뜻·읽는 법·한계 세 문장'(FR-008)으로 바뀌었다.\n - Q: 서버에서 배우기 글 목록이나 용어 설명을 불러오지 못하면(오류·지연) 배우기 화면과 진단 화면 도움말은 각각 어떻게 동작해야 하나요? → A: 배우기 목록·글을 불러오지 못하면 불러오지 못했다는 한 문장과 다시 시도 수단을 보이고 진단으로 가는 길은 막지 않는다(2026-09-29부터 그 길은 화면 안 버튼이 아니라 상단 메뉴가 맡는다). 진단 화면 도움말을 불러오지 못하면 '설명 준비 중'(대응하는 설명이 없음)과 구분되는 '불러오지 못했다' 문장과 다시 시도 수단을 보이고, 진단의 입력·진행은 막지 않는다. 화면이 조용히 재시도하지 않는다. 서버 오류를 빈 목록이나 '설명 준비 중'과 같게 보이면 실패를 자료 없음으로 대체하는 것이라 원칙 VI에 어긋난다. [003](../003-strategy-settings/spec.md)이 등록표를 불러오지 못할 때 안내와 다시 시도 수단을 보이기로 한 선례와 같되, 배우기는 보조 기능(원칙 I)이므로 003과 달리 진단을 막지 않는다.\n - Q: 이미 게시한 글을 내려야 할 때(예시 섹터가 사라졌거나 내용 오류) 어떤 상태 전이를 두고, 그 글에 연결된 용어 설명과 진단 화면 도움말은 어떻게 되나요? → A: 운영자가 '게시 취소'로 글을 게시 → 초안으로 되돌릴 수 있고, 삭제는 두지 않는다. 글을 게시 취소하면 그 글에 연결된 용어 설명도 함께 초안이 되어 진단 화면 도움말은 '설명 준비 중'을 보인다. 게시 취소도 시각과 관리 계정을 기록한다. 상태를 초안·게시 둘로 유지해 단순하고, 도움말 문장이 게시된 글 본문에 그대로 있어야 한다는 단일 원본 규칙(FR-008, SC-003)이 게시 취소 뒤에도 깨지지 않는다.\n - Q: 진단 화면(002·003·005)이 도움말을 붙일 때 013의 용어 설명을 무엇으로 가리키고, 어느 화면에서 어떤 용어에 도움말을 붙일지는 누가 정하나요? → A: 용어 설명과 글마다 제목과 별개인 고정 식별자를 두고, 진단 화면은 그 식별자로 설명을 요청한다. 제목·문장을 바꿔도 식별자는 바뀌지 않으며 글 주소도 식별자를 따른다. 어느 화면의 어떤 용어에 도움말을 붙일지는 그 화면의 spec(002·003·005)이 정하고, 013은 요청받은 식별자의 게시된 설명을 주거나 없으면 '설명 준비 중'을 돌려준다. 표시 이름으로 찾으면 운영자가 제목을 고치는 순간 연결이 끊겨 FR-008('수정하면 두 곳이 함께 바뀐다')이 깨지고, 화면별 대상 목록까지 013이 소유하면 다른 화면의 구성을 013이 대신 정하게 된다.\n@@ -36,7 +88,7 @@\n \n ### User Story 1 - 주제 목록에서 글을 골라 질문과 예시를 읽는다 (Priority: P1)\n \n-[완전 입문자]는 전략 진단에 필요한 개념을 익히기 위하여 '배우기'에서 주제 목록을 보고 글 하나를 열어 한 가지 질문과 한 가지 예시를 중심으로 한 짧은 설명을 읽을 수 있다. (§4.5, D02)\n+[완전 입문자]는 전략 진단에 필요한 개념을 익히기 위하여 '배우기'에서 주제 목록을 보고 글 하나를 열어 한 가지 질문과 한 가지 예시를 중심으로 한 설명을 읽을 수 있다. (§4.5, D02)\n \n **Why this priority**: 배우기의 기본 화면이다. 입문자 지원은 보조 기능(원칙 I)이므로 전체 우선순위는 P4지만, 이 spec 안에서는 다른 스토리의 전제다.\n \n@@ -44,14 +96,17 @@\n \n **Acceptance Scenarios**:\n \n-1. **Given** 배우기에 진입하면, **Then** FR-001의 아홉 주제가 그 읽는 순서('섹터와 ETF'부터 '과거가 미래를 보장하지 않는 이유'까지)로 블로그 글 형식의 커리큘럼(읽는 순서 제안)으로 보인다.\n-2. **Given** 주제 하나를 열면, **Then** 한 가지 질문과 한 가지 예시를 중심으로 짧은 설명이 보이고 여러 개념을 한 글에 나열하지 않는다.\n-3. **Given** 글 안에서, **Then** 추천 비중·투자 권고·확률 표현·특정 전략의 우월성 주장이 없다.\n-4. **Given** 어느 글에서도, **Then** 예시 비중은 설명을 위한 예시이며 투자 권고가 아니라는 표시가 있다.\n+1. **Given** 배우기에 진입하면, **Then** FR-001의 글이 단계별 읽는 순서(1단계 '섹터와 ETF'부터)로 보인다. 기본은 단계별로 나뉜 커리큘럼 보기이며, 모든 글을 한 표로 보는 목록 보기로 전환할 수 있다(FR-023). 어느 보기에서도 글은 잠기지 않고 어느 글부터 열어도 된다.\n+2. **Given** 주제 하나를 열면, **Then** 한 가지 질문(예시가 있는 글은 한 가지 예시도)을 중심으로 한 설명이 보이고 여러 개념을 한 글에 나열하지 않는다. 글 맨 위에 핵심 요약 세 줄이 있고, 본문은 소제목 세 개 이상으로 나뉘며 가상의 계산 예와 '자주 하는 오해'가 들어 있다(FR-002).\n+3. **Given** 글 안에서, **Then** 추천 비중·투자 권고·확률 표현·특정 전략의 우월성 주장이 없다. '자주 하는 오해'의 틀린 생각과 확인 문제의 틀린 보기는 예외이며, 그 자리에는 '오해'·'틀린 보기' 표시와 바로잡는 설명이 함께 보인다(FR-017).\n+4. **Given** 예시가 있는 글에서, **Then** 예시 비중은 설명을 위한 예시이며 투자 권고가 아니라는 표시가 있다. 예시가 없는 글에는 '이 예시로 전략 진단하기'가 없다(FR-003).\n 5. **Given** 처음 방문한 사용자가 배우기에 들어오면, **Then** 설문·숙련도 분류 없이 바로 목록이 보인다.\n-6. **Given** 어느 글에서도, **Then** 실제 과거 자료로 계산한 결과 숫자·그래프가 없고, 설명에 쓴 숫자에는 가상의 계산 예라는 표시가 있다.\n+6. **Given** 어느 글에서도, **Then** 실제 과거 자료로 계산한 결과 숫자·그래프가 없고, 설명에 쓴 숫자에는 가상의 계산 예라는 표시가 있다. 글 안의 도식은 가상의 수치로 그린 것이며 '가상의 예' 표시와 설명 문장이 함께 보인다(FR-026).\n 7. **Given** 주제 목록이나 글을 서버에서 불러오지 못하면, **Then** 불러오지 못했다는 한 문장과 다시 시도 수단이 보이고 상단 메뉴의 '전략 진단'이 진단으로 가는 길을 늘 남긴다(화면 안에 따로 진입 버튼을 두지 않는다, 2026-09-29). 빈 목록(초기 상태)과 같게 보이지 않는다.\n 8. **Given** 스크린 리더나 키보드만 쓰는 사용자가 글을 열면, **Then** 본문·예시·안내 문장이 텍스트로 읽히고 '이 예시로 전략 진단하기'와 다시 시도를 키보드만으로 누를 수 있다.\n+9. **Given** 세율이나 공시 기준 같은 제도 수치를 다룬 글에서, **Then** 그 수치는 제도 안내 안에 기준 시점·출처와 함께 보이고, 결과 숫자처럼 본문 문단에 섞여 있지 않다(FR-005, FR-026).\n+10. **Given** 연구 결과를 인용한 문장에서, **Then** 인용한 글자 바로 옆에 '(*출처)'가 있고 누르면 자료가 새 탭에서 열린다. 인용한 글자 자체는 링크가 아니며, 일반 설명에는 출처 표시가 없고 글 끝에 출처 목록이 없다(FR-007).\n+11. **Given** 다른 글에서 설명한 용어가 처음 나오는 자리에서, **When** 그 옆의 도움말 표시를 누르면, **Then** 뜻 한 문장과 '해당 주제 글로 이동'이 작은 창으로 보인다. 같은 글에서 그 용어가 다시 나오는 자리에는 표시가 없고, 용어 글자 자체는 누를 수 없다(FR-009).\n \n ---\n \n@@ -82,10 +137,10 @@\n \n **Acceptance Scenarios**:\n \n-1. **Given** 진단 화면에서, **When** 용어 도움말을 열면, **Then** 배우기의 해당 설명과 같은 문장이 보이고 해당 주제 글로 이동하는 연결이 있다.\n+1. **Given** 진단 화면에서, **When** 용어 도움말을 열면, **Then** 배우기 용어 설명의 첫 문장(뜻)과 같은 문장이 보이고 해당 주제 글로 이동하는 연결이 있다. 읽는 법과 ⚠️ 문장, 다른 이름은 도움말 창에 보이지 않고 글에서 본다(FR-008).\n 2. **Given** 배우기의 설명을 수정하면, **Then** 진단 화면 도움말도 같은 내용으로 바뀐다. 두 곳에 다른 설명이 남지 않는다.\n 3. **Given** 도움말을 열어도, **Then** 진단 화면의 입력 상태는 유지되고 설정 화면으로 되돌아가지 않는다.\n-4. **Given** 결과 화면의 '가장 크게 줄었던 폭' 도움말은, **Then** 운용 중 고점 대비 최대 하락이며 시작 금액 대비 손실과 다르다는 배우기 설명을 그대로 보인다.\n+4. **Given** 결과 화면의 '가장 크게 줄었던 폭' 도움말은, **Then** 운용 중 고점 대비 최대 하락이며 시작 금액 대비 손실과 다르다는 배우기 용어 설명의 뜻 문장을 그대로 보인다.\n 5. **Given** 전략 선택 화면의 설정 항목(예: 리밸런싱 주기)의 의미·허용 범위 안내는, **Then** 003 등록표의 축 도움말이 보이고 013의 용어 설명이 그 자리를 대신하지 않는다. 그 안내 안의 '리밸런싱' 같은 개념 용어에는 013 도움말 연결이 있을 수 있다.\n 6. **Given** 도움말의 설명을 서버에서 불러오지 못하면, **Then** '설명 준비 중'과 구분되는 불러오지 못했다는 문장과 다시 시도 수단이 보이고, 진단의 입력·진행은 막히지 않는다.\n 7. **Given** 운영자가 용어의 제목이나 설명 문장, 글의 제목을 고쳐 게시하면, **Then** 진단 화면의 도움말 연결과 글 주소는 끊기지 않고 새 내용을 보인다.\n@@ -106,7 +161,7 @@\n \n 1. **Given** 어느 진입 경로에서도, **Then** 진단 전에 학습 수강·완료 표시를 요구하지 않는다.\n 2. **Given** 진단 도중 배우기로 이동한 뒤, **When** 진단으로 돌아오면, **Then** 이전 입력(섹터·비중·전략·설정)이 유지된다.\n-3. **Given** 배우기에 진입해도, **Then** 진도·완료 여부를 기록하거나 표시하지 않는다.\n+3. **Given** 배우기에 진입해도, **Then** 로그인 사용자의 나의 학습(읽은 글·익힌 용어·배지)과 비로그인 사용자에게 보이는 '로그인하면 학습 기록이 남습니다' 한 줄은 배우기 안에서만 보이고, 진단 화면 어디에서도 학습 완료를 조건으로 걸거나 완료하라고 권하지 않는다.\n \n ---\n \n@@ -122,13 +177,37 @@\n \n 1. **Given** 관리 계정으로 로그인하지 않은 상태에서, **When** 관리 화면이나 편집·게시 요청에 접근하면, **Then** 거부되고 일반 사용자 화면에는 편집 수단이 보이지 않는다.\n 2. **Given** 관리 계정으로 로그인한 운영자가, **When** 글을 고쳐 게시하면, **Then** 서버가 게시 전 검사를 수행하고 통과한 글만 게시되어 일반 사용자에게 보인다.\n-3. **Given** 검사에 걸리는 글(예시 섹터가 대응표에 없음·비중 합계가 100%가 아님·금지 표현·실제 계산 결과 포함)을, **When** 게시하려 하면, **Then** 게시되지 않고 어느 검사에 걸렸는지 항목별로 보인다.\n+3. **Given** 검사에 걸리는 글(최소 구성 미달·예시 섹터가 대응표에 없음·비중 합계가 100%가 아님·금지 표현·실제 계산 결과 포함·확인 문제가 두세 개가 아니거나 정답이 하나가 아닌 문제가 있음)을, **When** 게시하려 하면, **Then** 게시되지 않고 어느 검사에 걸렸는지 항목별로 보인다.\n 4. **Given** 초안 상태의 글과 용어 설명은, **Then** 일반 사용자의 주제 목록·도움말·'이 예시로 전략 진단하기' 어디에도 나타나지 않는다.\n 5. **Given** 용어 설명을 고쳐 게시하면, **Then** 배우기 글과 진단 화면 도움말이 함께 바뀐다.\n 6. **Given** 게시된 글을, **When** 운영자가 게시 취소하면, **Then** 글과 그 글에 연결된 용어 설명이 초안이 되어 일반 사용자의 목록·연결에서 사라지고, 진단 화면 도움말은 '설명 준비 중'을 보인다.\n \n ---\n \n+### User Story 6 - 나의 학습으로 어디까지 읽었는지 보고 이어서 읽는다 (Priority: P2)\n+\n+[완전 입문자]는 다음에 들어왔을 때 같은 화면을 처음부터 다시 읽지 않기 위하여 로그인한 뒤 '나의 학습'에서 읽은 글·익힌 용어·배지를 보고, 읽던 글을 이어서 열고, 글 끝의 확인 문제를 풀어 용어를 익힘으로 바꿀 수 있다. (2026-10-02 개정)\n+\n+**Why this priority**: 글 목록이 늘 같은 모양으로 보이면 두 번째 방문부터 어디까지 읽었는지 알 수 없다. 기록은 로그인 사용자에게만 남고, 비로그인 사용자는 글을 읽고 확인 문제를 풀 수 있지만 기록은 남지 않는다. US1·US2 없이는 쌓일 기록이 없으므로 P1이 아니다.\n+\n+**Independent Test**: 로그인한 사용자로 글 하나를 끝까지 내려 완료 표시가 붙고 확인 문제를 맞혀 용어가 익힘이 되는지, 목록으로 돌아왔을 때 완료와 '이어서 읽기'가 보이는지, 다른 기기에서 같은 계정으로 들어와도 같은 기록이 보이는지 확인한다. 로그인하지 않고는 글을 읽고 확인 문제를 풀 수 있지만 아무 기록도 남지 않고 '로그인하면 학습 기록이 남습니다' 한 줄이 보이는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 로그인 사용자가 글을 열어 본문 끝까지 내리고 최소 머문 시간이 지나면, **Then** 그 글이 완료로 기록되고 글 끝에 완료 카드(완료 날짜·이 글에서 익힐 용어(용어가 있는 글만)·확인 문제·다음 글·단계 진행)가 보인다. 완료는 사용자가 누르지 않아도 기록되고, 글마다 완료를 되돌리는 수단은 없다(FR-021).\n+2. **Given** 로그인 사용자가 글을 열자마자 본문 끝까지 내리면, **Then** 최소 머문 시간이 지나기 전에는 완료로 기록·표시되지 않는다. 본문 끝을 보고 있는 동안 그 시간이 지나면 그때 완료된다(FR-021).\n+3. **Given** 완료 카드의 확인 문제 두세 개를, **When** 한 문제씩 답하면, **Then** 답할 때마다 맞았는지와 정답·풀이가 바로 보이고 다음 문제로 넘어간다. 첫 답에서 하나 이상 맞혔으면 그 글의 용어가 모두 익힘이 되고, 맞힌 개수가 적을수록 경험치가 적다. 첫 답에서 하나도 맞히지 못했으면 '다시 풀기'가 보이고, 다시 풀어 하나 이상 맞히면 익힘이 되지만 경험치는 없다. 다시 들어오면 첫 답의 결과와 풀이가 그대로 보인다(FR-022, FR-028).\n+4. **Given** 로그인 사용자의 배우기 목록에서, **Then** '나의 학습' 요약 패널에 레벨과 다음 레벨까지 남은 경험치·읽은 글 수(예: 3/27)·익힌 용어 수(익힌 수/게시된 용어 수)·'이어서 읽기'가 보이고, '모두 보기'로 연 '나의 학습' 화면에 일곱 갈래 배지가 기준·진행과 함께 보이며, 글마다 완료·읽는 중(읽은 비율, 예: 62%)·안 읽음과 예상 읽기 시간, 용어가 있는 글이면 익힌 용어 수(예: 용어 1/2)가 보이며, 단계마다 완료 수(예: 1/4)가 보인다(FR-020, FR-023, FR-024, FR-029).\n+5. **Given** 로그인 사용자가 글을 중간까지 읽고 떠난 뒤 배우기 목록으로 돌아오면, **When** '이어서 읽기'를 누르면, **Then** 그 글이 떠날 때 읽던 위치에서 열린다. 다른 기기에서 같은 계정으로 들어와도 같은 나의 학습이 보인다(FR-020).\n+6. **Given** 로그인하지 않은 사용자가 글을 끝까지 읽으면, **Then** 글 끝에 완료 카드 대신 확인 문제와 다음 글로 가는 연결, '로그인하면 학습 기록이 남습니다' 한 줄이 보인다. 확인 문제는 답할 때마다 맞았는지와 정답·풀이가 바로 보이지만 완료·첫 답·익힘·경험치·배지는 어디에도 기록되지 않는다. 배우기 목록에는 '나의 학습' 요약 패널 대신 같은 한 줄이 보이며, 로그인한 뒤에도 로그인 전에 읽거나 답한 것은 계정에 더해지지 않는다(FR-020, FR-021, FR-022).\n+7. **Given** 어느 글이든, **Then** 앞 글을 읽지 않아도 열 수 있고 완료·확인 문제 맞힘·익힘은 진단 어디에서도 조건이 아니다(FR-011).\n+8. **Given** 단계 배지를 받은 뒤 그 단계에 새 글이 게시되면, **Then** 배지는 획득 날짜와 함께 남고 단계 진행은 새 글을 포함해(예: 2/3) 보인다(FR-024).\n+9. **Given** 나의 학습을 기록하는 서버 요청이 실패하면, **Then** 글 읽기와 진단 진입은 막히지 않고, 기록되지 않았다는 한 문장과 다시 시도 수단이 보인다. 화면이 완료된 것처럼 꾸미지 않고, 확인 문제의 답 저장이 실패한 경우에는 정답·풀이를 보이지 않는다(FR-022, 원칙 VI).\n+10. **Given** 글을 완료하고 확인 문제를 풀어 새 배지나 레벨을 얻으면, **Then** 완료 카드에 이번에 받은 경험치와 새 배지·레벨이 조용한 알림으로 보이고, 폭죽·소리 같은 효과는 없다. 그 뒤 전략 진단 화면으로 옮겨도 경험치·배지 알림은 나타나지 않는다(FR-028, FR-030).\n+11. **Given** 로그인 사용자가 마이페이지에서 '학습 초기화'를 누르면, **Then** 지워지는 것(완료·읽은 위치·첫 답·익힘·경험치·배지)과 되살릴 수 없다는 안내로 확인을 받고, 확인하면 모든 글이 '안 읽음', 레벨 1, 배지 없음으로 돌아간다. '나의 학습' 화면에는 이 단추가 없다(FR-025).\n+\n+---\n+\n ### Edge Cases\n \n - 글의 예시 섹터가 대표 ETF 대응표 버전 변경으로 사라지면 연결 버튼 대신 안내를 보이고, 관리 화면에 갱신이 필요한 글로 표시한다. 운영자는 글을 고쳐 다시 게시하거나 게시 취소한다.\n@@ -144,6 +223,23 @@\n - 진단 도중 배우기로 이동한 뒤 브라우저를 새로 열어 돌아오면 입력 유지 범위는 [002](../002-sector-weight-selection/spec.md)·[003](../003-strategy-settings/spec.md)의 상태 유지 규칙을 따른다.\n - 글에 외부 자료를 인용하면 출처를 표시한다. 글은 KRX 시세 자료를 쓰지 않으므로 글 자체에는 '한국거래소 통계정보' 표시가 붙지 않고, '이 예시로 전략 진단하기'로 연 진단 화면의 출처 표시는 그 화면의 spec([002](../002-sector-weight-selection/spec.md)·[005](../005-result-comparison/spec.md))이 소유한다.\n - 글에 실제 과거 자료로 계산한 결과 숫자·그래프가 들어 있으면 게시 전 검사에서 걸러내고 게시하지 않는다. 설명에 쓴 가상의 숫자에는 가상의 계산 예라는 표시가 있어야 한다.\n+- 진단 화면에서 온 사용자가 글 안의 도움말로 다른 글로 옮겨 가도 '하던 진단으로 돌아가기'는 남고 처음 떠난 진단 화면으로 돌아간다(FR-009).\n+- 글 안 도움말이 가리키는 용어의 글이 게시 취소되어 있으면, 도움말 창은 '설명 준비 중'을 보이고 글로 이동하는 연결을 두지 않는다(FR-010).\n+- '(*출처)'가 가리키는 페이지의 내용은 Thorp가 보증하지 않는다. 출처는 제도·개념을 설명하는 자료(거래소·협회 안내, 운용사의 교육 자료, 논문 등)를 가리키며, 특정 상품의 매수를 권하는 페이지로 잇지 않는다(원칙 III). 링크한 페이지가 사라져도 글은 그대로 보이며, 끊긴 링크를 찾아 고치는 일은 운영자가 맡는다.\n+- 가상 도식에 '가상의 예' 표시나 설명 문장이 없으면 게시 전 검사에서 걸러낸다. 화면이 도식을 그리지 못하면(수치 형식 오류·표시 실패) 빈자리나 깨진 그림 대신 설명 문장을 보인다(FR-026).\n+- 자동 완료(FR-021)가 사용자의 뜻과 달리 기록되어도 그 글은 완료로 남는다. 글마다 완료를 되돌리는 수단은 없고, 기록을 처음부터 다시 쌓으려면 마이페이지의 '학습 초기화'(FR-025)로 기록 전체를 지운다.\n+- 게시 취소·문제 삭제는 경험치와 레벨을 줄이지 않는다(FR-028).\n+- 운영자가 글을 게시 취소하거나 다른 단계로 옮겨 사용자가 아무것도 하지 않았는데 단계 완주나 용어 전체 같은 기준이 채워지면, 사용자가 다음에 '나의 학습'을 열 때 배지와 단계 완주 경험치를 준다(FR-024).\n+- 출시 기준으로 모든 경험치를 받으면 레벨 8에 이르고, 그 위 레벨은 '새 글이 게시되면 열립니다'로 보인다. 새 글이 게시되어 닿을 수 있는 경험치가 늘면 다음 레벨이 열린다(FR-029).\n+- 단계 배지나 용어 배지를 받은 뒤 운영자가 그 단계에 새 글을 게시하거나 용어를 더하면, 배지는 획득 날짜와 함께 남고 진행 수치만 새 기준(예: 1단계 2/5)으로 보인다. 게시 취소로 글이 줄어도 배지와 그 글의 기록은 지우지 않는다.\n+- 읽은 위치는 비율이라 글이 고쳐져 다시 게시되면 정확히 같은 문단을 가리키지 않을 수 있다. 이어서 읽기는 그 비율 근처에서 열며, 고친 글이라는 이유로 완료나 읽은 위치를 지우지 않는다.\n+- 본문이 짧아 글을 열 때부터 본문 끝이 화면에 보여도 최소 머문 시간이 지나기 전에는 완료하지 않는다(FR-021). 그 시간 전에 다른 글로 옮기면 그 글은 완료되지 않은 채로 남는다.\n+- 로그인 상태를 확인하는 동안에는 확인이 끝날 때까지 나의 학습 기록과 글 끝의 완료 카드·확인 문제를 보이지 않는다([014](../014-user-auth/spec.md) FR-008). 로그아웃을 시작하면 그 사용자의 나의 학습을 즉시 숨기고(014 FR-009) 브라우저에 남겨 두지 않는다. 같은 브라우저를 다음에 쓰는 사람에게 앞 사용자의 기록이 보이지 않게 하기 위해서다.\n+- 로그인하지 않은 동안(로그인 전이나 로그인 만료 뒤) 읽은 글과 확인 문제의 답은 기록되지 않고, 로그인한 뒤에도 계정에 더해지지 않는다. 로그인한 뒤 계정에 완료가 없는 글을 다시 열어 조건을 채우면 그때 완료되고, 계정에서 아직 답하지 않은 확인 문제는 답하지 않은 문제로 보여 첫 답을 받는다. 로그인 만료로 기록 요청이 거부되면 다른 기록 실패와 같이 '기록되지 않았습니다'와 '다시 시도'를 보이고, 다시 로그인하라는 안내는 [014](../014-user-auth/spec.md) FR-012를 따른다(FR-020, FR-022).\n+- 최소 구성(FR-002)과 확인 문제(FR-022) 기준이 생기기 전에 게시된 글은 게시 상태를 그대로 유지하고, 운영자가 고쳐 다시 게시할 때 검사를 받는다. 기준을 소급해 게시를 말없이 내리지 않는다(원칙 VI). 확인 문제가 아직 없는 글은 완료 카드에 확인 문제 자리를 보이지 않고, 그 글의 용어는 확인 문제가 생길 때까지 익힘이 될 수 없다.\n+- 확인 문제가 두세 개가 아니거나 정답이 하나로 정해지지 않은 문제가 있는 글은 게시 전 검사에서 걸러낸다(FR-017). 이미 게시된 글의 확인 문제를 고쳐 다시 게시해도 사용자의 완료·익힘·첫 답 결과·경험치는 지우지 않는다. 새로 생긴 문제는 아직 답하지 않은 문제로 보이고 첫 답을 받을 수 있지만, 그 글의 문제에 이미 모두 답했던 사용자에게는 경험치를 주지 않는다(FR-028). 지운 문제의 첫 답 결과와 경험치는 남는다.\n+- 연결된 용어가 없는 글(출발안의 5단계 '과거가 미래를 보장하지 않는 이유')은 확인 문제를 맞혀도 익힐 용어가 없고, 목록과 완료 카드에 용어 수·익힐 용어를 보이지 않는다. 이 글의 완료와 맞힘은 읽은 글 수와 단계 배지에는 들어가고 용어 배지에는 영향이 없다(FR-022).\n+- 운영자가 이미 맞힌 글에 용어를 더해 다시 게시하면, 그 용어는 그 글의 익힘 여부(FR-020)에 따라 바로 익힘으로 보인다. 다른 글로 연결을 옮긴 용어는 옮겨 간 글의 익힘 여부를 따른다.\n \n ## Requirements *(mandatory)*\n \n@@ -151,81 +247,124 @@\n \n #### 커리큘럼과 글 (§4.5)\n \n-- **FR-001**: 배우기는 주요 메뉴이며 주제별 커리큘럼(블로그 글 형식, 읽는 순서 제안)으로 구성한다. 출발안은 아홉 주제이며 읽는 순서는 ① '섹터와 ETF' → ② '비중과 리밸런싱' → ③ '변동성에 따라 나누기' → ④ '섹터 모멘텀' → ⑤ '최소분산' → ⑥ '백테스트' → ⑦ '거래비용' → ⑧ '수익과 손실' → ⑨ '과거가 미래를 보장하지 않는 이유'다. 기획서 §4.5의 다섯 주제에 [003](../003-strategy-settings/spec.md) 전략 카드의 자동 배분 전략 세 개와 [005](../005-result-comparison/spec.md) 핵심 숫자인 거래비용을 더해 진단 화면 도움말(FR-008~FR-010)에 대응하는 글이 비지 않게 한 것이다. 최종 주제 목록과 순서는 결정 항목 PD-16이며, 확정 전에는 이 아홉 주제로 개발한다. (§4.5)\n-- **FR-002**: 각 주제는 한 가지 질문과 한 가지 예시를 중심으로 짧게 구성한다. 여러 개념을 한 글에 나열하지 않는다. 이는 글이 답하는 질문과 예시가 하나라는 뜻이며, 서로 붙어 다니는 용어 설명을 한 글이 여러 개 담는 것(예: '섹터와 ETF'의 섹터·대표 ETF)은 허용한다. (§4.5)\n-- **FR-003**: 각 주제에 '이 예시로 전략 진단하기' 연결을 둔다. 연결은 예시의 섹터·비중을 [002](../002-sector-weight-selection/spec.md) 화면에 넘겨 예시가 채워진 상태로 열고, 채워진 값이 예시라는 표시를 붙인다. 사용자는 값을 바꿀 수 있다. 이미 입력해 둔 값이 있을 때 예시로 덮어쓰기 전에 묻고 없으면 묻지 않고 채우는 규칙은 002 FR-012가 소유하며, 013은 그 규칙을 따른다. (§4.5, 원칙 III·VI)\n-- **FR-004**: 예시 섹터는 [001](../001-etf-market-data/spec.md)의 대표 ETF 대응표 현재 버전에 있는 섹터여야 하고 예시 비중 합계는 100%여야 한다. 게시 전에 검사한다. 예시 섹터가 대응표에서 사라지면 연결 대신 안내를 보인다.\n-- **FR-005**: 글과 예시에 추천 비중·투자 권고·확률 표현·특정 전략의 우월성 주장·'지금도 유효하다'는 표현을 담지 않는다. 실제 과거 자료로 계산한 결과 숫자·그래프(수익률·가장 크게 줄었던 폭·거래비용 등)도 글에 넣지 않는다. 설명에 필요한 숫자는 가상의 계산 예로만 쓰고 가상의 예라는 표시를 붙이며, 실제 결과는 FR-003의 연결로 연 진단 화면에서 본다. 글을 열 때 백테스트를 실행하지 않는다. (§4.5, 원칙 I·III·VI)\n-- **FR-006**: 글의 용어와 화면 이름은 진단 화면과 같은 이름('내가 정한 비중'·'똑같이 나누기'·'가장 크게 줄었던 폭' 등)을 쓴다. (§4.2.2, §4.2.3)\n-- **FR-007**: 글에 외부 자료를 인용하면 출처를 표시한다. 글은 KRX 시세 자료를 쓰지 않으므로(FR-005) 글 자체에 '한국거래소 통계정보' 표시를 두지 않으며, 연결된 진단 화면의 출처 표시는 [002](../002-sector-weight-selection/spec.md)·[005](../005-result-comparison/spec.md)가 소유한다. (§6.2, 원칙 X)\n+- **FR-001**: 배우기는 주요 메뉴이며 단계별 커리큘럼(블로그 글 형식, 읽는 순서 제안)으로 구성한다. 단계는 외부 교육과정이 공통으로 따르는 ETF와 시장 기초 → 결과 숫자 읽기 → 분산과 배분 규칙 → 백테스트와 비용 → 함정과 검증 → 경제환경 순서이며, 각 단계는 번호·이름·수준 표시(입문·입문~초급·초급)를 가진다. 개발 출발안은 아래 여섯 단계 27편이고, 기존 아홉 편은 보강하며 나머지 18편은 새로 쓴다. 글 제목은 질문 형태를 우선한다. 진단 화면 도움말(FR-008~FR-010)과 설정 항목(관측 기간·최근 구간 제외·선정 방식·비중 상한), 결과 숫자(회복 기간·회전율·상관관계), 자동 탐색과 경제환경 화면에 대응하는 글이 비지 않게 한 구성이다. 최종 주제 목록과 순서는 결정 항목 PD-16이며, 확정 전에는 이 27편으로 개발한다. (§4.5, 2026-10-02 개정)\n+  - 1단계 ETF와 국내 시장 기초(입문): 섹터와 ETF · ETF 가격은 왜 지수와 똑같이 움직이지 않을까? · 분배금을 받으면 돈이 늘어난 걸까? · ETF 보수는 어디로 빠져나갈까?\n+  - 2단계 수익과 위험 읽기(입문): 수익과 손실 · 같은 수익률인데 왜 느낌이 다를까? · 떨어진 뒤 얼마나 걸려 돌아왔을까? · 변동성은 손실일까?\n+  - 3단계 배분 규칙과 설정(입문~초급): 비중과 리밸런싱 · 나누기만 하면 분산일까? · 변동성에 따라 나누기 · 섹터 모멘텀 · 최소분산 · 관측 기간은 왜 고르는 항목일까? · 왜 최근 한 달을 빼고 볼까? · 상위 몇 개와 기준 수익률 이상은 어떻게 다를까? · 비중 상한은 왜 둘까?\n+  - 4단계 백테스트와 비용(초급): 백테스트 · 같은 조건에서 비교하기란 무엇일까? · 거래비용 · 회전율이 높으면 왜 결과가 뒤집힐까? · 자료 기간이 짧으면 무엇을 알 수 없을까?\n+  - 5단계 함정과 검증(초급): 과거가 미래를 보장하지 않는 이유 · 50개 설정 중 1등은 왜 믿기 어려울까? · 이웃 설정도 좋은가?\n+  - 6단계 경제환경과 국면(초급): 시장 흐름의 7개 분야는 무엇을 보여줄까? · '비슷했던 때'는 어떻게 찾을까?\n+- **FR-002**: 각 주제는 한 가지 질문을 중심으로 구성하고, 예시(FR-003)를 넣는 글은 예시도 하나만 둔다. 여러 개념을 한 글에 나열하지 않는다. 이는 글이 답하는 질문과 예시가 하나라는 뜻이며, 서로 붙어 다니는 용어 설명을 한 글이 여러 개 담는 것(예: '섹터와 ETF'의 섹터·대표 ETF)은 허용한다. 게시 글은 최소 구성을 갖춘다. 맨 위에 핵심 요약 세 줄, 본문에 소제목 세 개 이상, 가상의 계산 예(FR-005) 하나 이상, 흔한 잘못된 이해(틀린 생각 칸)와 바로잡는 설명을 짝지은 '자주 하는 오해' 하나 이상을 두고, 예상 읽기 시간은 4~7분이다. 핵심 요약과 '자주 하는 오해'는 본문의 다른 부분과 구분되는 요소로 두어 게시 전 검사(FR-017)가 있는지 확인할 수 있게 한다. 예상 읽기 시간의 계산 방식과 검사의 허용 오차는 plan에서 정한다. (§4.5, 2026-10-02 개정)\n+- **FR-003**: 예시(섹터·비중)는 글마다 넣을지 운영자가 고른다. 예시가 있는 글에는 '이 예시로 전략 진단하기' 연결을 둔다. 예시가 없는 글에는 이 연결을 두지 않고, 진단으로 가는 길은 상단 메뉴의 '전략 진단'이 맡는다(2026-10-02 개정). 연결은 예시의 섹터·비중을 [002](../002-sector-weight-selection/spec.md) 화면에 넘겨 예시가 채워진 상태로 열고, 채워진 값이 예시라는 표시를 붙인다. 사용자는 값을 바꿀 수 있다. 이미 입력해 둔 값이 있을 때 예시로 덮어쓰기 전에 묻고 없으면 묻지 않고 채우는 규칙은 002 FR-012가 소유하며, 013은 그 규칙을 따른다. (§4.5, 원칙 III·VI)\n+- **FR-004**: 예시가 있는 글의 예시 섹터는 [001](../001-etf-market-data/spec.md)의 대표 ETF 대응표 현재 버전에 있는 섹터여야 하고 예시 비중 합계는 100%여야 한다. 게시 전에 검사한다. 예시 섹터가 대응표에서 사라지면 연결 대신 안내를 보인다.\n+- **FR-005**: 글과 예시에 추천 비중·투자 권고·확률 표현·특정 전략의 우월성 주장·'지금도 유효하다'는 표현을 담지 않는다. 실제 과거 자료로 계산한 결과 숫자·그래프(수익률·가장 크게 줄었던 폭·거래비용 등)도 글에 넣지 않는다. 설명에 필요한 숫자는 가상의 계산 예, 가상 도식, '자주 하는 오해', 비교 표, 확인 문제(FR-022·FR-026)에만 쓰고, 화면이 이 요소들에 가상의 예라는 표시를 자동으로 붙이며, 실제 결과는 FR-003의 연결로 연 진단 화면에서 본다. 세율·공시 기준·상장 요건 같은 제도·규정 수치는 과거 성과가 아니므로 쓸 수 있되, 기준 시점과 출처를 붙인 제도 안내 요소(FR-026)에만 둔다. 게시 전 검사의 숫자 검사는 제도 안내를 결과 숫자로 보지 않는다. 글을 열 때 백테스트를 실행하지 않는다. (§4.5, 원칙 I·III·VI)\n+- **FR-006**: 글의 용어와 화면 이름은 진단 화면과 같은 이름('내가 정한 비중'·'똑같이 나누기'·'가장 크게 줄었던 폭' 등)을 쓴다. 다만 글마다 그 용어가 처음 나오는 자리 한 번에는 진단 화면 이름 뒤 괄호에 통용어·약어·영어 이름을 함께 적는다(예: 가장 크게 줄었던 폭 (최대 낙폭, MDD, maximum drawdown)). 같은 글의 뒤쪽에서는 진단 화면 이름만 쓴다. 다른 이름은 용어 설명(FR-008)에 함께 보관하고, 해당하는 이름이 없으면(Thorp 고유 이름 등) 비워 두며 있는 것만 적는다. 처음 나오는 자리를 정하는 방식은 plan에서 정한다. (§4.2.2, §4.2.3, 2026-10-02 개정)\n+- **FR-007**: 출처는 제도·규정 수치(FR-005), 연구 결과나 특정 주장, 다른 저작물의 표현·예시를 빌려 온 경우에만 표시하고, 일반 지식에는 달지 않는다. 출처는 인용한 글자 바로 옆의 '(*출처)' 표시로 보이며, 표시를 누르면 그 자료가 새 탭에서 열린다. 인용한 글자 자체에는 링크를 걸지 않는다. 웹 주소가 없는 책·논문은 문장 안에 이름을 적는다(예: 『퀀트투자 처음공부』에 따르면). 글 끝에 출처 목록을 따로 두지 않는다(2026-10-02 개정). 글은 KRX 시세 자료를 쓰지 않으므로(FR-005) 글 자체에 '한국거래소 통계정보' 표시를 두지 않으며, 연결된 진단 화면의 출처 표시는 [002](../002-sector-weight-selection/spec.md)·[005](../005-result-comparison/spec.md)가 소유한다. (§6.2, 원칙 X)\n+- **FR-026**: 글 본문은 소제목, 문단, 용어 설명(FR-008), 가상의 계산 예, 핵심 요약, 자주 하는 오해, 목록, 비교 표, 가상 도식, 제도 안내로 구성한다. 제도 안내는 제도·규정 수치(FR-005)를 담는 요소이며 기준 시점과 출처를 반드시 함께 둔다. 문단·목록·비교 표·핵심 요약·자주 하는 오해·제도 안내에는 인용한 글자 바로 옆에 '(*출처)' 표시(FR-007)를 둘 수 있다. 표시는 놓인 자리, 출처 이름, 주소를 구조로 보관하고 화면이 링크로 그리며, 주소는 http·https만 받는다. 표시를 누르면 새 탭에서 열린다. 마우스를 올리거나 초점을 두면 출처 이름이 보인다. 제도 안내의 출처도 같은 표시로 보인다. 모든 요소는 글자와 숫자 값으로만 보관하고, 화면은 서버가 보낸 문장을 마크업으로 해석하지 않고 글자로만 보인다. 목록과 비교 표는 그림이나 링크 없이 글자와 '(*출처)' 표시만 담는다. 가상의 숫자는 가상의 계산 예·가상 도식·'자주 하는 오해'·비교 표·확인 문제에만 쓸 수 있고, 화면이 이 요소들에 '가상의 예' 표시를 자동으로 붙인다. 제목·질문·소제목·핵심 요약·일반 문단·목록에서는 게시 전 숫자 검사가 계속 걸러 낸다. 다만 본문 문단과 목록에서 '(예: 왕복 약 0.19%)'처럼 '예:'를 붙인 숫자는 걸러 내지 않는다. Thorp의 실제 값을 이렇게 예로 들 때는 FR-027에 따라 게시 시점의 실제 동작과 맞아야 한다. 가상 도식은 막대나 선으로 그리는 간단한 그림이며, 운영자가 입력한 가상의 수치로 화면이 그린다. 가상 도식에는 '가상의 예' 표시와, 그림이 말하는 바를 글로 적은 설명 문장을 함께 둔다. 실제 과거 자료나 진단 결과를 도식에 넣지 않는다(FR-005). 화면이 도식을 그리지 못하면 빈자리 대신 설명 문장을 보인다. 요소별 세부 형식(도식의 계열 수·점 수 상한, 표의 크기 상한)은 plan에서 정한다. (2026-10-02 개정, 원칙 III·VI)\n+- **FR-027**: 글이 Thorp의 동작(비용 가정, 분배금 반영, 신호와 체결에 쓰는 가격, 자료 기간, 후보 상태 표시 등)을 설명하면 그 설명은 게시 시점의 실제 동작과 같아야 하고, 기준 시점을 함께 적는다. 실제 동작을 확인하지 못한 내용은 쓰지 않는다. 계산 방식이나 자료 범위를 바꾸는 변경은 그 동작을 설명하는 글을 함께 고친다. (2026-10-02 개정, 원칙 VI)\n \n #### 용어 도움말 재사용 (§4.5)\n \n-- **FR-008**: 진단 화면([002](../002-sector-weight-selection/spec.md)·[003](../003-strategy-settings/spec.md)·[005](../005-result-comparison/spec.md))의 용어 도움말은 배우기와 같은 설명을 단일 원본에서 재사용한다. 설명을 수정하면 두 곳이 함께 바뀐다. 013이 소유하는 것은 개념 용어(섹터·대표 ETF·비중·리밸런싱·변동성·모멘텀·최소분산·백테스트·거래비용·비용 차감 후 전체 수익률·가장 크게 줄었던 폭 등)의 설명이며, 용어마다 한두 문장을 두고 그 문장은 연결된 주제 글 본문에 그대로 들어간다. 용어 설명 하나는 글 하나에만 연결되고, 글 하나는 용어 설명을 여러 개 가질 수 있다. 설정 항목의 의미·허용 범위·기본값·상한 처리 안내(축 도움말)는 003 등록표가 소유하고(003 FR-005) 013을 참조하지 않는다. 축 도움말 안의 개념 용어에는 013 도움말 연결을 붙일 수 있다. 용어 설명과 글은 제목과 별개인 고정 식별자를 가지며, 진단 화면은 그 식별자로 설명을 요청한다. 제목·문장을 바꿔도 식별자는 바뀌지 않는다. 어느 화면의 어떤 용어에 도움말을 붙일지는 그 화면의 spec이 정하고, 013은 요청받은 식별자의 게시된 설명을 주거나 없으면 FR-010의 '설명 준비 중'을 돌려준다. (§4.5)\n-- **FR-009**: 도움말에는 해당 주제 글로 이동하는 연결을 둔다. 글 주소는 글의 고정 식별자를 따르며 제목이 바뀌어도 유지된다. 도움말을 열어도 진단 화면의 입력 상태는 유지되고 설정 화면으로 되돌아가지 않는다. 글로 이동은 같은 탭에서 한다. 진단 화면에서 온 경우 글 화면에 '하던 진단으로 돌아가기' 연결을 두어 떠난 화면(002·003·005)으로 돌아가고, 입력 유지는 FR-013의 탭 세션 규칙이 보장한다. 배우기 메뉴로 직접 들어온 경우에는 이 연결을 보이지 않는다. 이 연결은 보조 연결이며 글의 행동 버튼('이 예시로 전략 진단하기')과 같은 크기의 버튼으로 두지 않는다. (§4.1, 원칙 II)\n+- **FR-008**: 진단 화면([002](../002-sector-weight-selection/spec.md)·[003](../003-strategy-settings/spec.md)·[005](../005-result-comparison/spec.md))의 용어 도움말은 배우기와 같은 설명을 단일 원본에서 재사용한다. 설명을 수정하면 두 곳이 함께 바뀐다. 013이 소유하는 것은 개념 용어(섹터·대표 ETF·비중·리밸런싱·변동성·모멘텀·최소분산·백테스트·거래비용·비용 차감 후 전체 수익률·가장 크게 줄었던 폭 등)의 설명이며, 용어마다 뜻·읽는 법·한계 세 문장을 두고, 그 세 문장은 연결된 주제 글 본문에 그대로 들어간다. 화면은 앞의 두 문장에 '뜻'·'읽는 법' 이름표를 붙이고, 세 번째 문장(한계)에는 글자 이름표 대신 ⚠️ 이모지를 붙인다. 진단 화면의 용어 도움말 창은 세 문장 가운데 첫 문장(뜻)만 보이고 '더 보기'를 두지 않으며, 읽는 법과 한계는 FR-009의 '해당 주제 글로 이동'으로 글에서 본다. 다른 이름(FR-006)도 도움말 창에는 보이지 않는다. 그래서 뜻 문장은 그 문장만으로 오해 없이 읽히게 쓰고, 진단 화면 spec이 요구하는 구분(예: [005](../005-result-comparison/spec.md) FR-002의 '가장 크게 줄었던 폭'과 시작 금액 대비 손실의 구분)은 뜻 문장에 넣는다(2026-10-02 개정). 용어 설명 하나는 글 하나에만 연결되고, 글 하나는 용어 설명을 여러 개 가질 수 있다. 설정 항목의 허용 범위·기본값·상한 처리 안내(축 도움말)는 003 등록표가 소유한다(003 FR-005). 다만 3단계 글이 설명하는 설정 항목('관측 기간', '최근 구간 제외', '선정 방식', '비중 상한')은 013이 그 이름을 용어로 가지며, 전략 설정 화면의 그 항목 도움말은 뜻을 013 용어의 뜻 문장으로 보이고 '이 설정을 설명하는 글 보기'로 글에 잇는다. 그 항목에서는 같은 도움말 창에 뜻 문장이 둘 보이지 않게 등록표의 뜻 문장을 쓰지 않는다. 이에 맞춘 003 수정은 별도 MR로 한다(2026-10-02 개정). 축 도움말 안의 개념 용어에는 013 도움말 연결을 붙일 수 있다. 용어 설명과 글은 제목과 별개인 고정 식별자를 가지며, 진단 화면은 그 식별자로 설명을 요청한다. 제목·문장을 바꿔도 식별자는 바뀌지 않는다. 어느 화면의 어떤 용어에 도움말을 붙일지는 그 화면의 spec이 정하고, 013은 요청받은 식별자의 게시된 설명을 주거나 없으면 FR-010의 '설명 준비 중'을 돌려준다. (§4.5)\n+- **FR-009**: 도움말에는 해당 주제 글로 이동하는 연결을 둔다. 글 주소는 글의 고정 식별자를 따르며 제목이 바뀌어도 유지된다. 도움말을 열어도 진단 화면의 입력 상태는 유지되고 설정 화면으로 되돌아가지 않는다. 글로 이동은 같은 탭에서 한다. 진단 화면에서 온 경우 글 화면에 '하던 진단으로 돌아가기' 연결을 두어 떠난 화면(002·003·005)으로 돌아가고, 입력 유지는 FR-013의 탭 세션 규칙이 보장한다. 배우기 메뉴로 직접 들어온 경우에는 이 연결을 보이지 않는다. 이 연결은 보조 연결이며 글의 행동 버튼('이 예시로 전략 진단하기')과 같은 크기의 버튼으로 두지 않는다. 배우기 글 본문에서도 다른 글이 소유한 용어가 나오면, 글마다 그 용어가 처음 나오는 자리 한 번에 진단 화면과 같은 도움말 표시를 둔다. 표시를 누르면 뜻 한 문장과 '해당 주제 글로 이동'이 작은 창으로 보이고(FR-008), 용어 글자 자체는 누를 수 없다. 그 용어를 소유한 글 안에서는 용어 설명이 본문에 있으므로 이 표시를 두지 않는다. (§4.1, 원칙 II, 2026-10-02 개정)\n - **FR-010**: 대응하는 배우기 설명이 없는 용어의 도움말은 '설명 준비 중'으로 표시하고 즉석 문장을 만들지 않는다. 설명을 서버에서 불러오지 못한 경우(오류·지연)는 이와 구분해 불러오지 못했다는 문장과 다시 시도 수단을 보이며, 진단의 입력·진행은 막지 않는다. 화면이 조용히 재시도하지 않는다. (원칙 VI)\n \n #### 진입과 학습 요구 (§3.2, §4.5, D02)\n \n - **FR-011**: 어느 진입 경로에서도 진단 전에 학습 수강·완료를 요구하지 않는다. 시작 절차로 고객군 선택 설문·숙련도 분류를 요구하지 않는다. (§3.2, §4.5, D02)\n-- **FR-012**: 배우기는 진도·완료 여부·학습 이력을 기록하거나 표시하지 않는다. 읽기는 사용자 식별 없이 이용할 수 있고, 관리 계정을 요구하는 것은 편집·게시(FR-016)만이다.\n+- **FR-012**: 읽기는 사용자 식별 없이 이용할 수 있고, 관리 계정을 요구하는 것은 편집·게시(FR-016)만이다. 나의 학습 기록(FR-020)은 로그인 사용자에게만 남기고, 로그인하지 않아도 모든 글을 읽고 확인 문제를 풀 수 있다. 기록이 없거나 기록에 실패해도 읽기와 진단 진입은 막히지 않는다. 학습 완료를 진단의 조건으로 쓰지 않는다(FR-011). (2026-10-02 개정. 종전 '진도·완료 여부·학습 이력을 기록하거나 표시하지 않는다'를 대체한다)\n - **FR-013**: 진단 도중 배우기로 이동한 뒤 돌아오면 이전 입력이 유지된다. 유지 범위는 [002](../002-sector-weight-selection/spec.md)·[003](../003-strategy-settings/spec.md)의 상태 유지 규칙을 따른다. (§4.1)\n - **FR-014**: 숙련 퀀트 전용 연구 화면이나 자유 코드 입력을 만들지 않는다. (§8.2, D02)\n \n+#### 나의 학습 (2026-10-02 개정)\n+\n+- **FR-020**: 배우기는 로그인 사용자별 '나의 학습' 기록을 둔다. 기록은 글별 완료 여부와 완료 시각, 글별 가장 멀리 읽은 위치(본문 길이에 대한 비율)와 마지막으로 연 시각, 확인 문제별 첫 답의 결과(맞음·틀림)와 답한 시각, 글별 익힘 여부(첫 답이나 다시 풀기에서 하나 이상 맞힘), 경험치(FR-028), 획득한 배지(FR-024)와 획득 날짜로 이루어진다. 용어의 익힘은 따로 기록하지 않고, 그 용어가 연결된 글(FR-008)의 익힘 여부로 정한다. 글의 상태는 세 가지다. 연 적이 없으면 '안 읽음', 열었지만 완료하지 않았으면 '읽는 중'(가장 멀리 읽은 비율을 함께 보인다, 예: 62% 읽는 중), 완료(FR-021)했으면 '완료'다. 읽은 위치는 글을 떠날 때(다른 화면으로 옮김·탭을 닫거나 숨김) 기록하며, 이 기록이 실패해도 완료 기록에는 영향이 없다. 읽은 글 수·익힌 용어 수·단계별 완료 수·'이어서 읽기'는 이 기록에서 계산해 보이며, 지금 게시된 글과 용어만 센다. 게시 취소된 글의 기록은 지우지 않고 남기되 숫자에 넣지 않으며, 다시 게시되면 다시 센다. '이어서 읽기'는 마지막으로 연 '읽는 중' 글을 기록된 위치에서 열고, '읽는 중' 글이 없으면 읽는 순서상 첫 번째 '안 읽음' 글을 맨 위에서 연다. 목록·도움말·주소로 '읽는 중' 글을 열면 맨 위에서 열고, 맨 위에 '62%까지 읽었습니다 · 이어서 읽기' 한 줄을 보인다. 그 줄을 누르면 기록된 위치로 간다. 완료한 글은 맨 위에서 열고 이 줄을 보이지 않는다. 모든 글을 완료했으면 '이어서 읽기' 대신 모두 읽었다는 표시를 보인다. 로그인 사용자의 기록은 서버가 사용자 단위로 보관하고 어느 기기에서든 같은 기록을 보인다. 비로그인 사용자의 기록은 남기지 않는다. 비로그인 사용자도 모든 글을 읽고 확인 문제를 풀 수 있지만, 완료·읽은 위치·첫 답·익힘·경험치·배지를 서버에도 브라우저에도 남기지 않으며, 로그인한 뒤에도 로그인 전에 읽거나 답한 것을 계정에 더하지 않는다. 기록을 보이는 영역의 이름은 '나의 학습'이다. 기록은 배우기 목록 위의 '나의 학습' 요약 패널과, 그 패널의 '모두 보기'로 여는 배우기 안의 '나의 학습' 화면에서 보인다. 요약 패널은 레벨과 다음 레벨까지 남은 경험치(FR-029), 읽은 글 수, 익힌 용어 수, '이어서 읽기'를 보인다. '나의 학습' 화면은 위에서부터 레벨과 다음 레벨까지 남은 경험치, 단계별 진행(예: 1단계 2/4), 익힌 용어 목록(용어 이름을 누르면 그 용어의 글로 이동), 갈래별 배지(FR-024, 기준·진행과 함께) 순서로 보인다. 경험치를 언제 무엇으로 받았는지의 내역은 보이지 않는다. 두 곳 모두 로그인 사용자에게만 보인다. 비로그인 사용자에게는 요약 패널 자리에 '로그인하면 학습 기록이 남습니다' 한 줄을 보이고, '나의 학습' 화면 주소로 들어와도 같은 한 줄을 보인다. (원칙 VI·VIII)\n+- **FR-021**: 글의 본문 끝이 화면에 들어와 있고 글을 연 뒤 최소 머문 시간이 지났으면 그 글을 완료로 기록한다. 두 조건은 어느 쪽이 먼저 채워져도 되며, 둘이 함께 참이 되는 첫 순간에 완료한다. 최소 머문 시간은 그 글의 예상 읽기 시간(본문 길이로 계산)에 비례하고 아래 한도를 둔다(출발안: 예상 읽기 시간의 1/3, 최소 30초. 구체 값은 plan에서 정한다). 조건을 채우기 전에는 완료로 기록하거나 표시하지 않는다. 글 끝은 위에서부터 본문, 예시와 '이 예시로 전략 진단하기'(예시가 있는 글, FR-003), 완료 카드 순서로 놓는다. 완료를 판단하는 본문 끝은 본문 마지막 요소의 끝이며 예시 블록 앞이므로, 완료를 받으려고 진단 버튼 아래까지 내려가지 않아도 된다. 완료는 사용자가 따로 누르지 않아도 기록되고 글마다 되돌리지 않으며, 사용자의 뜻과 달리 기록된 완료도 그대로 남는다. 기록을 지우려면 마이페이지의 '학습 초기화'(FR-025)로 기록 전체를 지운다. 완료 카드에는 완료 날짜, 이 글에서 익힐 용어(용어가 있는 글만), 확인 문제(FR-022), 이번에 받은 경험치와 새로 얻은 배지·레벨(FR-028~FR-030), 다음 글로 가는 연결, 단계 진행(예: 2/3)이 들어간다. 완료가 기록되지 않아도(서버 실패) 글은 끝까지 읽을 수 있다. 로그인 사용자의 완료가 기록되지 않은 글은 완료 카드와 확인 문제 대신 '기록되지 않았습니다'와 '다시 시도'를 보인다. 비로그인 사용자의 완료는 기록하지 않으며, 글 끝에는 완료 카드 대신 확인 문제(FR-022)와 다음 글로 가는 연결, '로그인하면 학습 기록이 남습니다' 한 줄을 보인다.\n+- **FR-022**: 게시 글마다 확인 문제를 두세 개 둔다. 문제마다 질문 하나, 보기 두 개 이상(O/X 문제도 허용한다), 정답 하나, 풀이 한두 문장이 있고 글과 함께 서버가 보관·게시한다(FR-015·FR-017). 사용자는 한 문제씩 답하며, 한 문제에는 한 번만 답한다(첫 답). 로그인 사용자가 답하면 고른 보기를 잠그고 기록을 저장한 뒤, 저장되면 맞았는지와 정답·풀이를 보이고 다음 문제로 넘어간다. 저장에 실패하면 정답·풀이를 보이지 않고 '기록되지 않았습니다'와 '다시 시도'만 보이며, 다시 시도는 고른 보기를 그대로 다시 보낸다. 사용자는 고른 보기를 바꿀 수 없다. 모든 문제에 답하면 맞힌 개수(예: 3문제 중 2개)를 보인다. 첫 답에서 하나 이상 맞히면 그 글에 연결된 용어가 모두 익힘이 된다. 모든 문제에 답했는데 첫 답에서 하나도 맞히지 못한 글은 익힘이 될 때까지 '다시 풀기'로 다시 풀 수 있고, 다시 풀기에서 하나 이상 맞히면 익힘이 된다. 다시 풀기는 익힘만 주고 경험치(FR-028)는 주지 않는다. 연결된 용어가 없는 글도 게시할 수 있으며, 그 글은 맞힌 개수와 경험치만 기록된다. 다시 들어왔을 때 이미 답한 문제는 첫 답의 결과와 풀이로 보인다. 로그인 사용자에게 확인 문제는 완료 뒤에 보이며 완료의 조건이 아니다. 비로그인 사용자에게 확인 문제는 글 끝에 보이며(FR-021), 저장할 기록이 없으므로 답하면 바로 맞았는지와 정답·풀이를 보이고 다음 문제로 넘어간다. 비로그인 사용자의 답은 기록하지 않아 익힘·경험치·배지가 생기지 않으며, 글을 다시 열면 문제는 답하지 않은 상태로 보인다. 문제와 풀이의 문장도 FR-005의 금지 표현 규칙을 따르되, 틀린 보기는 검사하지 않고 답한 뒤 '틀린 보기' 표시를 붙인다(FR-017). (2026-10-02 개정)\n+- **FR-023**: 배우기 목록은 커리큘럼 보기와 목록 보기를 전환할 수 있고 기본은 커리큘럼 보기다. 고른 보기는 로그인 여부와 관계없이 그 탭이 열려 있는 동안 기억하고(constitution '기록·개인정보·보관'의 탭 단위 범위), 새 탭에서는 커리큘럼 보기로 시작한다. 학습 기록이 아니라 화면 상태이므로 서버에 저장하지 않는다. 커리큘럼 보기는 FR-001의 단계(이전 이름: 묶음)별로 글을 나누어 읽는 순서대로 보이고, 단계마다 이름·수준 표시·완료 수를 보인다. 목록 보기는 모든 글을 한 표에 읽는 순서대로 번호·제목·질문·상태를 보이고, 단계는 표 안의 구분 줄(단계 이름과 완료 수)로만 보인다. 두 보기 모두 글마다 FR-020의 세 상태(완료·읽는 중과 읽은 비율·안 읽음)와 예상 읽기 시간, 용어가 있는 글이면 익힌 용어 수(예: 용어 1/2)를 보이고, 어느 글도 잠그지 않는다. 용어가 없는 글에는 용어 수를 보이지 않는다. 비로그인 사용자에게는 기록이 없으므로 글의 상태·익힌 용어 수·단계별 완료 수를 보이지 않고, 글마다 예상 읽기 시간은 보인다. 글이 어느 단계에 속하는지는 글의 속성이며, 단계의 번호·이름·수준 표시와 함께 서버가 보관한다(FR-015). 단계 자체는 spec(FR-001, PD-16)이 정하고 고정한다. 단계마다 바뀌지 않는 고정 식별자가 있으며, 관리 화면에서는 단계를 만들거나 이름·순서·수준 표시를 바꾸거나 지울 수 없다. 운영자는 글을 어느 단계에 넣을지와 그 단계 안의 글 순서만 정하고, 그 변경은 글을 다시 게시할 때 공개된다. 읽는 순서는 '단계 순서 → 단계 안에서의 글 순서'로만 정하며 글마다 따로 매기는 전체 읽는 순서는 두지 않는다. 목록 보기의 번호, '이어서 읽기'(FR-020)와 완료 카드의 '다음 글'(FR-021)은 모두 이 순서를 따른다. 단계를 더하려면 spec을 고치며, 새 단계는 뒤 번호로 붙이고 이미 쓴 번호를 다시 쓰지 않는다. 배지와 경험치 장부는 단계의 고정 식별자로 단계를 가리킨다. 게시된 글이 하나도 없는 단계는 커리큘럼 보기에 보이지 않고, 단계 배지·단계 경험치·'탐험' 배지 계산에서 뺀다.\n+- **FR-024**: 배지는 Garmin처럼 여러 갈래로 나누고, 갈래마다 첫 단계는 쉽게 닿도록 사다리 모양의 단계를 둔다. 출발안은 일곱 갈래 31개다. 레벨 배지는 레벨 2부터 레벨이 오를 때마다 하나다(출시 기준 레벨 2~8의 7개, FR-029). 읽은 글 배지는 완료한 글이 1·5·10·20·27편에 이를 때다(5개). 정답 배지는 확인 문제를 첫 답에서 맞힌 수가 1·10·25·50개에 이를 때다(4개). 모두 맞힘 배지는 한 글의 확인 문제를 첫 답에서 모두 맞힌 글이 1·5·15편에 이를 때다(3개). 단계 배지는 단계의 글을 모두 완료하면 단계마다 하나다(6개). 용어 배지는 익힌 용어가 1·10·25개, 그리고 그때 게시된 용어 전체에 이를 때다(4개). 특별 배지는 '끈기'(첫 답에서 하나도 맞히지 못한 글을 다시 풀기로 익힘으로 바꿈)와 '탐험'(모든 단계에서 한 편 이상씩 완료) 두 개다. 배지 이름은 무엇을 익혔는지만 말하고(예: '첫 답 정답 25개', '1단계 완주'), 투자 실력·수익·순위로 읽히는 낱말('고수', '전문가', '상위 %' 등)을 쓰지 않는다. 기준은 모두 '나의 학습' 화면에 공개하며, 숨긴 배지·무작위 보상·기간 한정 배지·연속 출석 배지·시간대 배지를 두지 않는다. 배지는 점수를 주지 않고, 레벨은 경험치로만 정한다(FR-029). 배지는 기준을 처음 채운 순간 열리고 획득 날짜와 함께 FR-020의 기록에 남는다. 배지와 단계 완주 경험치의 기준은 사용자의 학습 행동(글 완료·첫 답·다시 풀기) 때와 사용자가 '나의 학습'(요약 패널 포함)을 열 때 판정한다. 그래서 운영자의 게시 취소나 단계 이동으로 사용자의 기준이 채워지면, 다음에 '나의 학습'을 열 때 배지와 경험치를 주고 그때를 획득 날짜로 한다. 운영자가 새 글이나 용어를 게시해 기준을 다시 못 채우게 되어도 이미 연 배지는 남고 진행 수치(예: 2/3, 14/16)만 새 기준으로 보인다. 글이 늘면 사다리에 단계를 더하되 이미 정한 단계의 기준은 바꾸지 않는다. 배지는 한 번 얻으면 콘텐츠 변경으로 지우지 않는다. 기록 전체를 지우는 '학습 초기화'와 회원 탈퇴는 FR-025를 따른다. '나의 학습' 화면은 얻은 배지를 색과 획득 날짜로, 아직 얻지 못한 배지를 회색 윤곽과 기준·진행(예: 3/5)으로 보인다. 배지는 배우기 안의 표시이며 사용자 간에 비교하거나 순위를 매기거나 공개하지 않는다(constitution \"하지 않는 것\"). (2026-10-02 개정)\n+- **FR-025**: 로그인 사용자의 나의 학습 기록의 보관 기간은 [006](../006-my-records/spec.md)과 같은 결정 항목 PD-13을 따르며 무기한 보관을 전제하지 않는다. PD-13 확정 전에는 시간 기반 자동 삭제를 두지 않는다. 글마다 기록을 지우는 수단은 두지 않고, 경험치와 배지까지 포함한 기록 전체를 마이페이지(헤더의 닉네임으로 여는 회원정보 화면)의 '학습 초기화'로 지운다. '나의 학습' 화면에는 이 단추를 두지 않는다. 마이페이지는 로그인한 사용자만 들어가며, 확인을 받은 뒤 그 사용자의 완료·읽은 위치·첫 답 결과·익힘·경험치 장부·배지를 모두 지우고 되살리지 않는다. 초기화 뒤에는 모든 글이 '안 읽음'이 되고, 같은 글과 문제로 경험치와 배지를 처음부터 다시 받을 수 있다. 보관 기간 자체는 PD-13을 따른다. 회원 탈퇴는 [014](../014-user-auth/spec.md)의 범위 밖이며, 탈퇴가 생기면 그 사용자의 나의 학습 기록도 함께 지운다. 비로그인 사용자의 기록은 남기지 않으므로(FR-020) 보관 기간을 두지 않는다. (constitution '기록·개인정보·보관', 2026-10-02 개정)\n+- **FR-028**: 배우기는 경험치(EXP)를 둔다. 경험치는 이해를 활동보다 크게 보상하고, 같은 글·같은 문제로는 한 번만 준다. 글을 완료(FR-021)하면 그 글마다 한 번 20을 준다. 확인 문제를 첫 답에서 맞히면 문제마다 60을 그 글의 문제 수로 나눈 값(두 문제면 30, 세 문제면 20)을 주고, 한 글의 문제를 첫 답에서 모두 맞히면 20을 더 준다. 단계의 글을 모두 완료하면 그 단계마다 한 번 50을 준다. 그래서 글 하나에서 받을 수 있는 경험치는 최대 100이고, 첫 답에서 하나만 맞혀 익힘이 되면 40~50, 하나도 맞히지 못하면 20이다. 다시 풀기(FR-022)는 경험치를 주지 않는다. 출발안 27편과 여섯 단계의 경험치 합계는 3,000이다. 경험치는 받은 일과 시각을 장부처럼 쌓아 계산하며, 사용자가 '학습 초기화'(FR-025)를 하지 않는 한 줄지 않는다. 게시 취소된 글이나 지운 문제로 받은 경험치도 남는다. 한 사용자가 한 글의 확인 문제로 받는 경험치(정답 몫과 모두 맞힘)는 그 사용자가 처음 그 글의 문제에 모두 답한 때의 문제 수로 한 번만 정한다. 그 뒤 운영자가 더하거나 바꾼 문제는 첫 답을 받아 익힘과 정답 배지 개수에는 들어가지만 경험치를 주지 않으며, '모두 맞힘'도 다시 판정하지 않는다. 그래서 한 사용자가 글 하나에서 받는 경험치는 100을 넘지 않는다. 아직 그 글의 문제에 모두 답하지 않은 사용자에게는 답할 때의 문제 수로 계산한다. 경험치는 로그인 사용자의 기록(FR-020)에만 쌓고 서버가 계산한다. 비로그인으로 읽거나 답한 것은 로그인한 뒤에도 경험치로 더하지 않는다. 경험치와 배지는 배우기 안의 글 읽기와 확인 문제로만 받는다. 전략 진단, 백테스트 실행, 자동 탐색, 결과 보기, '이 예시로 전략 진단하기', 접속 일수, 머문 시간, 답한 속도로는 경험치와 배지를 주지 않는다. 경험치를 사거나 몇 배로 받는 장치를 두지 않는다. (원칙 I·III, 2026-10-02 개정)\n+- **FR-029**: 레벨은 경험치 합계로만 정한다. 레벨 문턱은 레벨 1이 0, 레벨 2가 100, 3이 300, 4가 600, 5가 1,000, 6이 1,500, 7이 2,100, 8이 2,800, 9가 3,600, 10이 4,500이고, 그 위는 900씩 늘린다. 한 번 정한 문턱은 바꾸지 않는다. '나의 학습'은 지금 게시된 글로 닿을 수 있는 레벨까지만 보이고(출시 기준 레벨 8), 그 위는 '새 글이 게시되면 열립니다'로 보이며, 최고 레벨에 닿아 끝났다는 표시를 두지 않는다. 현재 레벨과 다음 레벨까지 남은 경험치(예: 레벨 5, 다음 레벨까지 420)를 보인다. 레벨은 숫자로만 부르고 투자 실력을 뜻하는 이름을 붙이지 않는다. 레벨은 사용자가 '학습 초기화'(FR-025)를 하지 않는 한 줄지 않는다. (2026-10-02 개정)\n+- **FR-030**: 새 배지나 새 레벨을 얻으면 완료 카드와 '나의 학습'에 조용한 알림(예: '새 배지: 첫 답 정답 10개')을 보인다. 새 배지와 새 레벨에는 얻은 날부터 7일 동안 '나의 학습' 요약 패널과 화면에서 '새' 표시를 붙인다. 닫는 단추나 '봤음' 기록은 두지 않는다. 완료 카드의 알림은 얻은 그 순간에 보인다. 폭죽·소리 같은 축하 효과를 쓰지 않고, 사용자의 움직임 줄이기 설정을 따른다. 배우기 밖의 화면(전략 진단·결과·시장 흐름 등)에는 경험치·배지 알림을 보이지 않는다. 알림은 무엇을 익혔는지와 다음 목표(예: '다음 배지까지 3편')만 알리고, 서두르게 하거나 놓치면 잃는다는 식의 문장을 쓰지 않는다. (원칙 I·III, 2026-10-02 개정)\n+- **FR-031**: 새 글과 다시 쓴 글은 단계 단위로 공개한다. 한 단계에 속한 글이 모두 FR-002·FR-022 기준을 통과해야 그 단계의 글을 함께 게시하며, 단계의 일부만 새 기준으로 게시하지 않는다. 나의 학습(FR-020~FR-030)은 첫 단계를 공개할 때 켠다. 그 전까지 아직 다시 쓰지 않은 기존 글은 지금 모습 그대로 보이며, 이 글들은 Edge Cases의 '최소 구성과 확인 문제 기준이 생기기 전에 게시된 글' 규칙을 따른다. 아직 공개되지 않은 단계를 커리큘럼 보기와 '나의 학습'에 어떻게 보일지는 레퍼런스 조사를 거쳐 정한다. (2026-10-02 개정)\n+\n #### 콘텐츠 보관과 게시 (§4.5)\n \n - **FR-015**: 글과 용어 설명은 서버가 단일 원본으로 보관한다. 배우기와 진단 화면 도움말은 게시된 내용을 조회해 보이며, 글 본문이나 013이 소유하는 용어 설명 문장을 화면 코드에 따로 적어 두지 않는다. 013이 소유하지 않는 설명(지표 계산식, 그 화면에서만 쓰는 구분, 조작 안내)은 화면이 직접 가질 수 있고 용어 도움말이 아닌 별도 장치로 보인다. 013이 나중에 그 용어를 소유하면 설명을 단일 원본으로 옮기고 화면에서 지운다. 조회에 실패하면(오류·지연) 배우기는 불러오지 못했다는 한 문장과 다시 시도 수단을 보이고 진단으로 가는 길(상단 메뉴의 '전략 진단')을 막지 않으며, 도움말은 FR-010의 처리를 따른다. 빈 목록이나 '설명 준비 중'과 같게 보이지 않고, 화면이 조용히 재시도하지 않는다. 저장 구조와 조회 방식은 plan에서 정한다. (§4.5, 원칙 VI·VIII)\n-- **FR-016**: 편집·게시는 관리 계정으로 로그인한 서비스 운영자만 할 수 있다. 관리 계정의 식별·로그인·권한 부여는 [014](../014-user-auth/spec.md)가 소유하고, 013은 요청한 사용자에게 관리 권한이 있는지만 확인한다. 로그인하지 않았거나 관리 권한이 없는 편집·게시 요청은 거부하고, 일반 사용자 화면에는 편집 수단을 보이지 않는다.\n-- **FR-017**: 글과 용어 설명의 게시 상태는 초안과 게시 두 가지다. 게시 시점에 서버가 FR-004·FR-005의 검사(예시 섹터 존재·비중 합계·금지 표현·실제 계산 결과 포함 여부)를 수행하고, 하나라도 걸리면 게시하지 않고 항목별 이유를 보인다. 초안은 일반 사용자에게 보이지 않는다. 운영자는 '게시 취소'로 게시된 글을 초안으로 되돌릴 수 있고, 삭제는 두지 않는다. 글을 게시 취소하면 그 글에 연결된 용어 설명도 함께 초안이 되어 진단 화면 도움말은 FR-010의 '설명 준비 중'을 보인다. 용어 설명은 따로 게시하지 않고 연결된 글을 게시할 때 함께 게시되므로, 용어 설명을 고친 내용은 그 글을 다시 게시해야 공개된다. 위 네 검사는 최소 범위이며, 이를 뒷받침하는 세부 검사(필수 항목, 002가 요구하는 예시 섹터 개수, 용어 설명과 본문 용어 블록의 대응 등)와 검사 규칙의 구현 방식은 plan([research](research.md) R7)에서 정한다. (원칙 VI)\n+- **FR-016**: 편집·게시는 관리 계정으로 로그인한 서비스 운영자만 할 수 있다. 관리 계정의 식별·로그인·권한 부여는 [014](../014-user-auth/spec.md)가 소유하고, 013은 요청한 사용자에게 관리 권한이 있는지만 확인한다. 로그인하지 않았거나 관리 권한이 없는 편집·게시 요청은 거부하고, 일반 사용자 화면에는 편집 수단을 보이지 않는다. 관리 화면에는 독자 화면과 똑같이 그리는 '미리 보기'(학습 기록 없이)를 둔다. 원고는 저장소 MR로 다른 팀원 한 명이 확인한 뒤 관리 화면에 입력하며, 저장소의 원고는 검토용이고 원본은 서버다(FR-015). 게시 상태는 초안·게시 두 가지 그대로다(FR-017). (2026-10-04 개정)\n+- **FR-017**: 글과 용어 설명의 게시 상태는 초안과 게시 두 가지다. 게시 시점에 서버가 FR-002·FR-004·FR-005·FR-022의 검사(최소 구성·예시 섹터 존재·비중 합계·금지 표현·실제 계산 결과 포함 여부·확인 문제 두세 개와 문제마다 정답 하나)를 수행하고, 하나라도 걸리면 게시하지 않고 항목별 이유를 보인다. 초안은 일반 사용자에게 보이지 않는다. 운영자는 '게시 취소'로 게시된 글을 초안으로 되돌릴 수 있고, 삭제는 두지 않는다. 글을 게시 취소하면 그 글에 연결된 용어 설명도 함께 초안이 되어 진단 화면 도움말은 FR-010의 '설명 준비 중'을 보인다. 용어 설명은 따로 게시하지 않고 연결된 글을 게시할 때 함께 게시되므로, 용어 설명을 고친 내용은 그 글을 다시 게시해야 공개된다. 금지 표현 검사는 '자주 하는 오해'의 틀린 생각 칸과 확인 문제의 틀린 보기에는 하지 않는다. 이 두 자리는 틀린 생각을 그대로 적어야 바로잡을 수 있기 때문이며, 화면은 그 자리에 '오해'·'틀린 보기' 표시를 자동으로 붙인다. 위 여섯 검사는 최소 범위이며, 이를 뒷받침하는 세부 검사(필수 항목, 002가 요구하는 예시 섹터 개수, 용어 설명과 본문 용어 블록의 대응, 가상 도식의 '가상의 예' 표시와 설명 문장, 제도 안내의 기준 시점과 출처, '(*출처)' 표시의 출처 이름과 주소 형식, 용어 설명의 세 문장 등)와 검사 규칙의 구현 방식은 plan([research](research.md) R7)에서 정한다. (원칙 VI)\n - **FR-018**: 게시와 게시 취소 때마다 시각과 수행한 관리 계정을 기록한다. (원칙 VIII)\n \n #### 접근성 최소 요건\n \n-- **FR-019**: 배우기 목록·글과 진단 화면 도움말에서 글 본문·용어 설명·안내 문장은 텍스트로 존재해 스크린 리더가 읽을 수 있고, 도움말 열기·닫기, 글로 이동, '이 예시로 전략 진단하기', 다시 시도는 키보드만으로 조작할 수 있다. 이번 범위에서 확인할 수 있는 최소 요건이며 [005](../005-result-comparison/spec.md) FR-022와 같은 취지다. 관리 화면(편집·게시·게시 취소)은 이번 범위의 요건에서 빼고 필요하면 plan에서 더한다. (원칙 II)\n+- **FR-019**: 배우기 목록·글과 진단 화면 도움말에서 글 본문·용어 설명·안내 문장은 텍스트로 존재해 스크린 리더가 읽을 수 있고, 도움말 열기·닫기, 글로 이동, '이 예시로 전략 진단하기', 다시 시도, 커리큘럼·목록 보기 전환, 확인 문제 답하기는 키보드만으로 조작할 수 있다. 완료·읽는 중·안 읽음과 배지 상태는 색만으로 구분하지 않고 글자로도 읽힌다. 가상 도식은 설명 문장(FR-026)으로 스크린 리더가 같은 내용을 읽을 수 있고, 비교 표는 머리 칸으로 행과 열의 뜻을 알린다. '(*출처)' 표시는 스크린 리더가 출처 이름과 외부로 나가는 링크라는 것을 함께 읽는다. 용어 설명의 ⚠️ 이모지는 스크린 리더가 '주의'로 읽는다. 배지는 이름과 기준이 글자로 있어 스크린 리더가 읽을 수 있고, 얻었는지 여부를 색만으로 구분하지 않는다. 새 배지·레벨 알림(FR-030)은 초점을 옮기지 않는 상태 알림으로 전한다. 이번 범위에서 확인할 수 있는 최소 요건이며 [005](../005-result-comparison/spec.md) FR-022와 같은 취지다. 관리 화면(편집·게시·게시 취소)은 이번 범위의 요건에서 빼고 필요하면 plan에서 더한다. (원칙 II)\n \n ### Key Entities *(include if feature involves data)*\n \n-- **학습 주제(글)**: 고정 식별자(제목과 별개이며 글 주소의 기준)·제목·질문 하나·예시 하나(섹터·비중)·짧은 설명·읽는 순서·출처·게시 상태(초안/게시, 게시 취소로 초안에 되돌릴 수 있다)·갱신일·게시와 게시 취소의 기록(시각·관리 계정)이다. 용어 설명을 여러 개 가질 수 있다. 서버가 보관한다.\n+- **학습 주제(글)**: 고정 식별자(제목과 별개이며 글 주소의 기준)·제목·질문 하나·예시(섹터·비중, 넣을지 고른다)·핵심 요약 세 줄·본문(FR-026의 요소로 이루어지며 FR-002의 최소 구성을 갖춘다)·읽는 순서·단계(FR-001)·확인 문제 두세 개(FR-022)·본문 안의 '(*출처)' 표시(FR-007)·게시 상태(초안/게시, 게시 취소로 초안에 되돌릴 수 있다)·갱신일·게시와 게시 취소의 기록(시각·관리 계정)이다. 용어 설명을 여러 개 가질 수 있다. 서버가 보관한다.\n - **예시 진단 연결**: 글의 예시 섹터·비중과 [002](../002-sector-weight-selection/spec.md) 화면으로 넘기는 값, 대응표 버전 확인 결과다.\n-- **용어 설명(단일 원본)**: 고정 식별자(제목과 별개이며 진단 화면이 도움말을 요청하는 기준)·용어·설명 문장(한두 문장)·연결된 주제 글(하나)·게시 상태(초안/게시)다. 설명 문장은 연결된 글 본문에 그대로 들어가고, 게시 상태는 연결된 글을 따라 글이 게시될 때 함께 게시되고, 연결된 글이 게시 취소되면 함께 초안이 된다. 개념 용어만 다루며 설정 항목의 축 도움말은 003 등록표가 소유한다. 서버가 보관하고 진단 화면 도움말과 배우기가 함께 참조한다.\n-- **커리큘럼 순서**: 주제 목록의 읽는 순서 제안이다. 강제 순서가 아니다.\n+- **용어 설명(단일 원본)**: 고정 식별자(제목과 별개이며 진단 화면이 도움말을 요청하는 기준)·용어(진단 화면 이름)·다른 이름(통용어·약어·영어 이름, 없으면 비움)·설명 문장(뜻·읽는 법·한계 세 문장)·연결된 주제 글(하나)·게시 상태(초안/게시)다. 설명 문장은 연결된 글 본문에 그대로 들어가고, 게시 상태는 연결된 글을 따라 글이 게시될 때 함께 게시되고, 연결된 글이 게시 취소되면 함께 초안이 된다. 개념 용어만 다루며 설정 항목의 축 도움말은 003 등록표가 소유한다. 서버가 보관하고 진단 화면 도움말과 배우기가 함께 참조한다.\n+- **커리큘럼 순서**: 주제 목록의 읽는 순서 제안이다. 강제 순서가 아니다. '단계 순서 → 단계 안에서의 글 순서'로만 정하며, 글마다 따로 매기는 전체 읽는 순서는 두지 않는다. 운영자는 단계 안의 글 순서만 정하고, 목록의 글 번호는 지금 게시된 글로 화면이 매긴다.\n+- **학습 단계**: 고정 식별자·번호·이름·수준 표시(입문·입문~초급·초급)·순서를 가진 글의 상위 단위다. spec이 정하고 관리 화면에서는 바꾸지 않는다. 글은 단계 하나에 속하고, 단계 배지는 단계의 글을 모두 완료하면 열린다. 서버가 보관한다.\n+- **확인 문제**: 글마다 두세 개다. 문제마다 질문·보기 두 개 이상·정답 하나·풀이로 이루어지고 글과 함께 게시된다. 한 문제에는 한 번만 답하며(첫 답), 첫 답에서 하나 이상 맞히면 그 글의 용어가 익힘이 된다. 용어가 없는 글에도 둔다.\n+- **나의 학습 기록**: 로그인 사용자 단위로 서버가 보관하는(비로그인 사용자의 기록은 두지 않는다) 글별 완료 여부·완료 시각·가장 멀리 읽은 위치(비율)·마지막으로 연 시각, 확인 문제별 첫 답 결과와 답한 시각, 글별 익힘 여부, 경험치 장부, 획득한 배지·획득 날짜다. 용어의 익힘은 그 용어가 연결된 글의 익힘 여부로 정해진다. 글의 상태(안 읽음·읽는 중·완료)도 여기서 정해진다. 읽은 글 수·익힌 용어 수·단계별 완료 수·'이어서 읽기'는 여기서 계산한다.\n+- **배지**: 레벨·읽은 글·정답·모두 맞힘·단계·용어·특별의 일곱 갈래 사다리다(출발안 31개). 기준을 처음 채운 순간 열리고 획득 날짜와 함께 나의 학습 기록에 남는다. 한 번 얻으면 새 콘텐츠 게시로 사라지지 않는다. 점수를 주지 않고 사용자 간에 비교하지 않는다.\n+- **경험치 장부**: 사용자 단위로 받은 일(글 완료, 문제의 첫 답 정답, 한 글 모두 맞힘, 단계 완주)과 받은 경험치·시각을 쌓은 기록이다. 같은 일은 한 번만 있고 줄지 않는다. 레벨은 이 장부의 합계로 정한다. 장부는 로그인 사용자에게만 두고 서버만 계산한다.\n - **관리 계정(서비스 운영자)**: [014](../014-user-auth/spec.md)가 소유하는 사용자 식별에 관리 권한이 붙은 것이다. 013은 권한 여부만 참조하고 계정을 만들거나 권한을 부여하지 않는다.\n \n ## Success Criteria *(mandatory)*\n \n ### Measurable Outcomes\n \n-- **SC-001**: 모든 게시 글이 질문 하나·예시 하나·'이 예시로 전략 진단하기' 연결을 갖고, 예시 섹터가 대응표에 없거나 비중 합계가 100%가 아닌 게시 글이 0개다.\n-- **SC-002**: 글과 도움말에 추천 비중·투자 권고·확률 표현·우월성 주장이 0건이고, 실제 과거 자료로 계산한 결과 숫자·그래프가 들어 있는 게시 글이 0개다.\n+- **SC-001**: 모든 게시 글이 질문 하나를 갖고, 예시가 있는 게시 글은 모두 '이 예시로 전략 진단하기' 연결을 가지며, 예시 섹터가 대응표에 없거나 비중 합계가 100%가 아닌 게시 글이 0개다. 이 개정을 구현해 27편을 게시한 뒤, FR-002의 최소 구성(핵심 요약 세 줄·소제목 세 개 이상·가상 계산 예·자주 하는 오해·예상 읽기 4~7분)을 갖추지 못한 게시 글이 0개다.\n+- **SC-002**: 글과 도움말에서 '자주 하는 오해'의 틀린 생각 칸과 확인 문제의 틀린 보기를 뺀 자리에 추천 비중·투자 권고·확률 표현·우월성 주장이 0건이고, 그 두 자리에 '오해'·'틀린 보기' 표시가 빠진 사례가 0건이며, 실제 과거 자료로 계산한 결과 숫자·그래프가 들어 있는 게시 글이 0개다. '가상의 예' 표시나 설명 문장이 없는 가상 도식이 0개이고, 기준 시점이나 출처 없이 제도·규정 수치를 담은 게시 글이 0개다.\n - **SC-003**: 진단 화면의 용어 도움말에 보이는 설명 문장이 연결된 주제 글 본문에 그대로 들어 있지 않은 사례가 0건이고, 설정 항목의 축 도움말 자리에 013 용어 설명이 대신 나온 사례가 0건이며, 용어나 글의 제목·문장을 고친 뒤 도움말 연결이나 글 주소가 끊긴 사례가 0건이다.\n - **SC-004**: 새 사용자가 배우기를 열지 않고 첫 화면에서 진단을 시작할 수 있고, 학습 수강을 요구하는 화면이 0개다.\n - **SC-005**: 사용성 관찰에서 입문자의 학습 → 진단 이동을 관찰해 '이 예시로 전략 진단하기'로 첫 분석을 설명 없이 마치는지 기록하고, 두 명 이상이 막히면 글 구성이나 연결을 수정한다. (§7.2, D20)\n - **SC-006**: 관리 계정으로 로그인하지 않은 편집·게시 요청이 성공한 사례가 0건이고, 게시 전 검사에 걸린 글이나 초안 상태의 글·용어 설명이 일반 사용자의 목록·도움말·연결에 나타난 사례가 0건이다.\n - **SC-007**: 서버에서 불러오지 못한 상태가 빈 목록이나 '설명 준비 중'으로 표시된 사례가 0건이고, 그 상태에서 진단 진입이나 진단의 입력·진행이 막힌 사례가 0건이다.\n-- **SC-008**: 배우기 목록·글·도움말에서 키보드만으로 도움말 열기·닫기, 글 이동, '이 예시로 전략 진단하기', 다시 시도를 마치지 못한 사례가 0건이고, 텍스트가 아닌 형태로만 있어 스크린 리더가 읽지 못하는 글 본문·용어 설명·안내 문장이 0건이다(FR-019).\n+- **SC-008**: 배우기 목록·글·도움말에서 키보드만으로 도움말 열기·닫기, 글 이동, '이 예시로 전략 진단하기', 다시 시도, 보기 전환, 확인 문제 답하기를 마치지 못한 사례가 0건이고, 텍스트가 아닌 형태로만 있어 스크린 리더가 읽지 못하는 글 본문·용어 설명·안내 문장이 0건이다(FR-019).\n+- **SC-009**: 글의 본문 끝까지 내리고 최소 머문 시간이 지난 뒤, 로그인 사용자가 다시 들어왔을 때 그 글이 완료로 보이지 않은 사례가 0건이고, 최소 머문 시간 전에 완료로 기록된 사례가 0건이며, '이어서 읽기'가 기록된 위치가 아닌 곳에서 열린 사례가 0건이다. 비로그인 사용자의 완료·읽은 위치·첫 답·익힘이 서버나 브라우저에 기록된 사례와 로그인한 뒤 계정 기록에 더해진 사례가 0건이다. 로그인 사용자가 확인 문제의 첫 답이나 다시 풀기에서 하나 이상 맞힌 뒤 그 글의 용어 중 익힘이 아닌 것이 0개이고, 한 문제의 첫 답이 두 번 이상 기록된 사례가 0건이다. 새 글·용어 게시로 이미 받은 배지가 사라진 사례가 0건이다.\n+- **SC-010**: 나의 학습 기록 저장이 실패한 상태에서 글 읽기나 진단 진입이 막힌 사례가 0건이고, 저장 실패가 완료로 표시된 사례가 0건이다. 로그인하지 않은 상태에서 글 읽기·확인 문제 풀기·진단 진입이 막힌 사례가 0건이고, 비로그인 사용자의 배우기 목록에 '로그인하면 학습 기록이 남습니다' 한 줄이 빠진 사례가 0건이다. 진단 화면에 학습 완료를 조건으로 거는 요소가 0개다.\n+- **SC-011**: 이 개정을 구현해 단계를 공개할 때마다 그 단계의 글에서, 그리고 27편을 모두 게시한 뒤 전체에서, 확인 문제가 두세 개가 아니거나 정답이 하나가 아닌 문제가 있는 게시 글이 0개다.\n+- **SC-012**: 게시 글이 설명하는 Thorp 동작(비용 가정·분배금 반영·체결 가격·자료 기간 등)이 게시 시점의 실제 동작과 다른 사례가 0건이다(FR-027).\n+- **SC-013**: 다른 이름이 보관된 용어가 어느 글에서 처음 나올 때 다른 이름이 빠진 사례가 0건이고, 같은 글에서 다른 이름이 두 번 이상 붙은 사례가 0건이다(FR-006). 다른 글이 소유한 용어가 어느 글에서 처음 나오는 자리에 도움말 표시가 빠진 사례가 0건이다(FR-009).\n+- **SC-014**: 출처가 필요한 세 경우(제도·규정 수치, 연구 결과나 특정 주장, 빌려 온 표현·예시)에 '(*출처)' 표시나 문장 안 책 이름이 빠진 게시 글이 0개이고, 인용한 글자 자체에 링크가 걸린 사례가 0건이다(FR-007).\n+- **SC-015**: '학습 초기화' 뒤 그 사용자의 완료·첫 답·경험치·배지가 하나라도 남은 사례, 한 사용자가 글 하나에서 100을 넘는 경험치를 받은 사례, 같은 글이나 같은 문제로 경험치를 두 번 받은 사례, 다시 풀기로 경험치를 받은 사례, 비로그인으로 읽거나 답한 것으로 경험치나 배지가 생긴 사례, '학습 초기화' 없이 경험치나 레벨이 줄어든 사례가 모두 0건이다(FR-028, FR-029).\n+- **SC-016**: 전략 진단·백테스트·자동 탐색·결과 화면의 행동으로 경험치나 배지를 받은 사례, 배우기 밖 화면에 경험치·배지 알림이 나타난 사례, 배지·레벨 이름에 투자 실력·수익·순위로 읽히는 낱말이 들어간 사례가 모두 0건이다(FR-024, FR-028, FR-030).\n \n ## Assumptions\n \n-- 글은 서비스 운영자(팀)가 관리 화면에서 작성·게시하는 한국어 텍스트이며, 게시 시점에 서버가 검사(예시 섹터 존재·비중 합계·금지 표현·실제 계산 결과 포함 여부)한다. 검사 규칙의 구현 방식은 plan에서 정한다.\n-- 커리큘럼 순서는 제안이며 강제하지 않는다. 진도 기록은 두지 않는다.\n+- 글은 서비스 운영자(팀)가 관리 화면에서 작성·게시하는 한국어 텍스트이며, 게시 시점에 서버가 검사(최소 구성·예시 섹터 존재·비중 합계·금지 표현·실제 계산 결과 포함 여부·확인 문제)한다. 검사 규칙의 구현 방식은 plan에서 정한다. 2026-10-02 기준 게시된 아홉 편은 FR-002의 최소 구성에 못 미치므로, 이 개정을 구현할 때 기존 아홉 편을 보강하고 신규 18편을 써서 27편 모두를 그 기준과 확인 문제(FR-022, 글마다 두세 개라 모두 54~81개)에 맞추고, 기존 용어 14개도 세 문장 틀(FR-008)로 다시 쓰고 다른 이름(FR-006)을 채운다. Thorp 동작을 설명하는 문장(FR-027)은 쓰기 전에 실제 동작을 확인한다. 예를 들어 분배금 반영 여부는 [001](../001-etf-market-data/spec.md) 적재 자료의 현재 상태를 확인한 뒤 적는다.\n+- 첫 단계를 공개하기 전에 용어마다 그 개념을 처음 설명하는 글(읽는 순서상 가장 앞 글)을 소유 글로 정한다. 예를 들어 '변동성'은 3단계 '변동성에 따라 나누기'에서 2단계 '변동성은 손실일까?'로 옮긴다. 용어와 소유 글의 대응표는 콘텐츠 작성 때 함께 만든다(FR-008).\n+- 배지 사다리의 단계(FR-024)는 출발안 27편과 그 용어 수를 전제한다. 출시 때 게시 용어가 25개보다 적으면 용어 배지의 25개 단계는 닿을 수 없으므로 plan에서 단계를 고친다. 경험치 합계 3,000과 레벨 8까지의 공개(FR-028·FR-029)도 같은 전제다.\n+- 커리큘럼 순서는 제안이며 강제하지 않는다. 나의 학습 기록(FR-020)은 두되 어느 글도 잠그지 않고 진단의 조건으로 쓰지 않는다. 단계 구성(FR-001)은 PD-16 출발안을 전제하며, 주제가 바뀌면 단계도 함께 정한다.\n+- 예시를 글마다 선택하는 규칙(FR-003)은 constitution '화면 구조'의 '각 주제는 질문 하나·예시 하나·연결로 구성한다'를 고치는 초안(별도 MR, 팀 승인 필요)을 전제한다. 승인되지 않으면 모든 글이 예시와 연결을 가지도록 FR-003을 되돌린다.\n+- 3단계 설정 항목 글과 전략 설정 화면 도움말의 연결(FR-008)은 [003](../003-strategy-settings/spec.md) 등록표와 도움말 계약의 수정을 전제한다. 그 수정은 별도 MR로 하며 013의 다른 구현을 막지 않는다.\n+- 로그인 사용자의 나의 학습(FR-020)은 [014](../014-user-auth/spec.md)의 로그인·현재 사용자 확인·로그아웃을 전제하고, 보관 기간은 [006](../006-my-records/spec.md)의 PD-13 확정을 따른다. 최소 머문 시간·예상 읽기 시간 계산·확인 문제의 보기 수 상한 같은 구체 값과 기록의 저장 구조는 plan에서 정한다. 로그인 사용자의 나의 학습(FR-020)은 '내 기록' 밖에서 식별된 사용자 단위로 저장하는 두 번째 기능이다. [014](../014-user-auth/spec.md) Assumptions와 [specs/README.md](../README.md) 공통 가정의 \"'내 기록' 저장·재조회만 식별된 사용자 단위\" 문장을 '내 기록과 배우기의 나의 학습'으로 고치는 갱신이 필요하며, 작업 묶음 규칙에 따라 별도 MR로 한다. 그 갱신은 013 구현을 막지 않는다. 나의 학습 기록 요청(글을 떠날 때의 위치 기록 포함)은 014의 세션 인증과 CSRF 규칙(014 SC-010)을 그대로 따른다.\n - 어느 화면의 어떤 용어에 도움말을 붙일지는 [002](../002-sector-weight-selection/spec.md)·[003](../003-strategy-settings/spec.md)·[005](../005-result-comparison/spec.md) 각 spec이 정한다. 003은 FR-016으로 013을 참조하고 있고, 002·005에는 같은 참조가 아직 없다.\n - 글과 용어 설명은 서버가 보관하고 관리 화면으로 갱신한다(FR-015~FR-018). 저장 구조와 조회 방식은 plan에서 정한다.\n - 관리 계정은 [014](../014-user-auth/spec.md)가 제공한다. 014의 Out of Scope에 '사용자 역할별 권한 관리와 관리자 계정'이 있어 그 항목을 범위 안으로 옮기는 014 갱신이 필요하다. 그 갱신은 013 구현을 막지 않는다. 014가 역할을 제공하기 전까지 013은 014의 로그인 세션 위에서 설정에 적은 관리 사용자 목록으로 관리 권한을 판정하고, 014가 역할을 제공하면 판정 방식만 바꾼다(plan [research](research.md) R5).\n-- 출발안은 기획서의 다섯 주제에 '변동성에 따라 나누기'·'섹터 모멘텀'·'최소분산'·'거래비용'을 더한 아홉 주제(FR-001)이며, PD-16 확정 전에는 이 아홉 주제와 읽는 순서로 개발한다. '준비 기간(워밍업)과 관측 기간'·'같은 조건에서 비교하기'는 PD-16 확정 때 더할 수 있는 후보로 남긴다.\n+- 출발안은 2026-10-02 커리큘럼 확장 조사를 근거로 한 여섯 단계 27편(FR-001)이며, PD-16 확정 전에는 이 27편과 읽는 순서로 개발한다. 종전 후보였던 '준비 기간(워밍업)과 관측 기간'·'같은 조건에서 비교하기'는 3단계·4단계 글로 들어갔다. 나머지 후보는 PD-16 후보로 남긴다. 0단계 '왜 감이 아니라 규칙으로 비교할까?', 1단계 종목당 비중 상한·섹터와 테마 ETF·세금·상장폐지·장 마감 전 호가·레버리지 ETF, 2단계 KOSPI 참고선·수익을 위험으로 나눈 지표, 3단계 다섯 규칙이 믿는 것·변동성 제한·모멘텀이 무너질 때, 4단계 종가와 NAV 수익률·휴장일과 가격제한폭, 5단계 미사용 검증 구간·생존 편향·미래참조·사후 설명, 6단계 비슷한 과거의 표본 수·사후 구간·경기 사계절·뉴스, 7단계 Thorp가 하지 않는 것·다음에 읽을 자료·백테스트 가정 FAQ다.\n - 한국어 웹 화면이며 데스크톱 브라우저를 우선한다.\n \n ## Pre-Implementation Decisions *(팀 확정 필요)*\n \n | 번호 | 결정 항목 | 상태 | 출발안 | 근거 |\n |---|---|---|---|---|\n-| PD-16 | 배우기 최종 주제 목록과 읽는 순서 | 미확정 | 아홉 주제(FR-001 순서): 기획서 5개 + '변동성에 따라 나누기'·'섹터 모멘텀'·'최소분산'·'거래비용'. 2026-09-16 명료화에서 출발안을 넓혔고, '준비 기간(워밍업)과 관측 기간'·'같은 조건에서 비교하기'는 후보 | §4.5 |\n+| PD-16 | 배우기 최종 주제 목록과 읽는 순서 | 미확정 | 여섯 단계 27편(FR-001 순서, 기존 아홉 편 보강 + 신규 18편). 2026-09-16 명료화에서 아홉 주제로, 2026-10-02 명료화에서 커리큘럼 확장 조사를 근거로 넓혔다. 0·7단계와 각 단계의 나머지 후보 약 25편은 후보(Assumptions) | §4.5 |\n \n ## Out of Scope\n \n - 숙련 퀀트 전용 연구 화면·자유 코드 입력 (D02, constitution \"하지 않는 것\")\n-- 학습 진도·수료·퀴즈·인증\n+- 수료증·인증서, 사용자 간 학습 순위나 리더보드, 연속 출석(스트릭) 기록, 학습 알림 (constitution \"하지 않는 것\"의 상시 추적·알림과 사용자 간 랭킹). 나의 학습 기록·확인 문제·배지·경험치·레벨은 2026-10-02 개정으로 범위 안에 들어왔다(FR-020~FR-025, FR-028~FR-030).\n+- 경험치·배지를 다른 사용자와 비교하거나 공개하는 것, 돈·혜택·포인트로 바꾸거나 사는 것, 무작위·기간 한정 보상, 폭죽·소리 같은 축하 효과, 전략 진단·백테스트·결과 화면의 행동에 대한 보상([gamification-research.md](gamification-research.md) §3)\n+- 비로그인 사용자의 나의 학습 기록(탭 단위 저장, 로그인 때 계정에 합치기). 비로그인 사용자도 모든 글을 읽고 확인 문제를 풀 수 있지만 기록은 로그인 사용자에게만 남긴다(2026-10-04 단순화, FR-020).\n - 진단 전 필수 학습 요구 (D02)\n - 전략 공유 커뮤니티·댓글 (D16)\n+- 글마다 완료·읽은 위치·익힘을 지우는 '안 읽음으로 되돌리기'. 기록은 마이페이지의 '학습 초기화'(FR-025)로 전체만 지운다(2026-10-04 단순화).\n+- 글 안에서 사용자가 값을 바꿔 보는 조작형 도식(슬라이더 등). 2026-10-02 개정의 가상 도식은 보기만 하는 그림이다(FR-026).\n - 섹터·비중 선택 화면의 동작 ([002](../002-sector-weight-selection/spec.md))\n - 관리 계정의 생성·권한 부여·역할 관리 자체 ([014](../014-user-auth/spec.md))\n - 글 삭제(게시 취소로 대신한다)·글의 이전 판 되돌리기·게시 예약·여러 운영자가 같은 글을 동시에 편집할 때의 충돌 처리\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/spec.md",
+          "old_path": "specs/013-learning-pages/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,7 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n | 010 | [경제환경 검색](010-economic-regime-search/spec.md) | 모델 v1 척도·거리·후보 제한·표시, 검색 상태 3구분, 분야별 검색과 Thorp 종합 비교, 전략 독립성 | 4 | P3 | §4.3, §6.4.4, D08, D09, D21~D27 |\n | 011 | [경제환경 사례와 전략 비교 연결](011-regime-strategy-link/spec.md) | 두 진입 경로, 사후 63/21거래일 평가, 같은 조건 전략 비교, 자료 부족 처리, 비교 묶음 변경 | 4 | P3 | §4.3, D06, D25, D26 |\n | 012 | [시장 흐름 뉴스 묶음](012-market-news-digest/spec.md) | 투자 대상 고르기 하단 뉴스 구역(주요·고른 섹터·분류별), RSS·GDELT 수집·필터·묶음, 당시 뉴스 연결, 매체 허가 확인 | 5 | P4 | §4.4, §6.3, §10.1 |\n-| 013 | [배우기](013-learning-pages/spec.md) | 주제별 글(질문 하나·예시 하나), 예시로 진단 시작, 용어 도움말 재사용 | 5 | P4 | §4.5, D01, D02 |\n+| 013 | [배우기](013-learning-pages/spec.md) | 여섯 단계 커리큘럼 글(질문 하나, 예시는 글마다 선택), 예시로 진단 시작, 용어 도움말 재사용, 나의 학습(읽은 글·확인 문제·경험치·배지, 2026-10-02 개정) | 5 | P4 | §4.5, D01, D02 |\n | 014 | [사용자 인증](014-user-auth/spec.md) | 회원가입·이메일 인증, 로그인과 상태 복원, '내 기록' 보호와 원래 위치 복귀, 로그아웃·만료 복구 | 기반 (§8.1 항목 아님) | P2 (006과 함께) | §5, 원칙 VIII, constitution 미합의 인증·인가 영역 |\n | 015 | [화면 맥락 도우미](015-context-assistant/spec.md) | 결과 화면의 플로팅 버튼·말풍선으로 그 결과의 값을 자연어로 묻고, 서버가 읽은 근거로 채운 답을 받는다. 1차는 결과 화면만 | 보조 (§8.1 항목 아님, 2026-09-24 추가) | P3 (005 뒤) | 원칙 II·III·VI, [ADR-0008](../docs/adr/0008-external-llm-via-gms.md) |\n | 016 | [투자 대상 그래프의 당시 뉴스](016-historical-news/spec.md) | 투자 대상 가격 그래프를 가리키면 그 달·그 섹터의 당시 뉴스, 과거 뉴스 원천 등록·월 단위 적재·수집 상태 기록. **향후 확장, 착수 미정**(과거 원천 PD-24 확정 후) | 확장 (§8.1 항목 아님, 2026-10-02 추가) | 미정 | 2026-10-02 사용자 결정, 012 FR-006·FR-010 |\n@@ -79,10 +79,10 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n | PD-10 | 지표별 공표 정밀도·최소 유효 척도·예외 처리 등록표 | 미확정 (U06) | [008](008-macro-indicator-registry/spec.md) | §6.4.4, D27, U06 |\n | PD-11 | 지표 등록표 실제 값: 통계표 코드·항목 코드·단위·개편 연결·과거 범위·작성기관별 이용 조건 | 미확정 (인증키 발급 후) | [008](008-macro-indicator-registry/spec.md) | §6.2, §10.1 |\n | PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 (출발안: 마지막 12개월 잠금). 2026-09-14 현재 007 구현은 분할을 등록하지 않아 전 후보가 `UNVALIDATED` 이며, 이는 검증 통과가 아니라 '말할 수 없음'이다 | [007](007-auto-parameter-search/spec.md) (허용 오차는 004·010의 계산 대조에도 적용) | §7.3, D11 |\n-| PD-13 | 기록 정책: 보관 기간·삭제·연결 해제·공유 후 회수·탐색 묶음 저장 상한 | 미확정 | [006](006-my-records/spec.md) | §5, D14 |\n+| PD-13 | 기록 정책: 보관 기간·삭제·연결 해제·공유 후 회수·탐색 묶음 저장 상한 | 미확정. [013](013-learning-pages/spec.md) 나의 학습 기록의 보관 기간도 이 결정을 따른다(013 FR-025) | [006](006-my-records/spec.md) | §5, D14 |\n | PD-14 | 사용성 관찰: 참여자·과제·일정·관찰 기준 | 미확정 (출발안: 전략을 검증하려는 개인 6~8명, 경제환경 과제 포함. 2026-09-16 추가: [005](005-result-comparison/spec.md) SC-010 회색조에서 두 결과 구분 확인 과제 포함) | 이 문서 \"공통 검증·완료 규칙\" | §7.2, D20 |\n | PD-15 | 뉴스 표시 허가: 제목·매체·발행 시각·원문 링크 표시 방식의 매체 허가 여부 | 미확인 (매체 회신 대기) | [012](012-market-news-digest/spec.md) | §6.3, §10.1 |\n-| PD-16 | 배우기 최종 주제 목록과 읽는 순서 | 미확정 (출발안: 기획서 5개 + 자동 배분 전략 3개 + 거래비용 = 9개 주제, 2026-09-16 013 명료화에서 확장) | [013](013-learning-pages/spec.md) | §4.5 |\n+| PD-16 | 배우기 최종 주제 목록과 읽는 순서 | 미확정 (출발안: 여섯 단계 27편 = 기존 9개 주제 보강 + 신규 18편, 2026-10-02 013 명료화에서 커리큘럼 확장 조사를 근거로 확장. 0·7단계 등 나머지 후보 약 25편은 013 Assumptions) | [013](013-learning-pages/spec.md) | §4.5 |\n | PD-17 | 담당·일정·자원 | 미확정 | 이 문서 (plan·Jira에서 관리) | §8.1, D17 |\n | PD-18 | 목표 위험 맞춤 시나리오: 목표 변동성 기본값·범위(사용자 입력, 003 등록표)·추정 기간·조절 주기·상한 처리 | 확정 (2026-09-10: 연 10%, 5~20%, 1% 간격 / 63거래일 / 월말 / 초과 시에만 현금으로 낮춤) | [004](004-backtest-execution/spec.md) (등록표 항목은 [003](003-strategy-settings/spec.md)) | §6.4.1 |\n | PD-19 | 길게 이어진 거래정지 구간의 처리 방식 (정지 이후만 / 정지 이전만 / 후보 제외). 구간을 빼고 앞뒤를 이어 붙이는 방식은 채택하지 않는다 | 미확정 (실제 정지 사례 확인 후) | [001](001-etf-market-data/spec.md) | §6.1, 원칙 IV·VI |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

@@ -1,0 +1,633 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947520,
+    "iid": 160,
+    "project_id": 1444456,
+    "title": "fix(infra): Jenkins 메모리와 CI·CD 실행 슬롯 조정",
+    "description": "<h2>작업 내용 요약</h2><p>Jenkins 본체와 CI 빌드가 2GiB를 공유하며 swap을 사용하는 문제를 완화한다. CPU 2개·RAM 4GiB, built-in executor 1개로 현재 CI와 CD를 직렬 실행한다.</p><h2>관련 티켓</h2><p><a href=\"https://ssafy.atlassian.net/browse/S15P21E205-288\">S15P21E205-288</a> · <a href=\"https://app.notion.com/p/3dd61b3dc08f81d0900df3c010ea6d9e\">Notion 트러블슈팅</a></p><h2>주요 변경 사항</h2><ul><li>Compose RAM 4G, RAM+swap 6G로 기존 swap 허용량 2G 유지.</li><li>기존 Jenkins 볼륨에도 시작 시 executor=1을 저장하는 Groovy 스크립트 마운트.</li><li>CI 내부 실행과 CD Docker 외부 실행의 경계, 적용·검증·롤백 절차 기록.</li></ul><h2>테스트</h2><ul><li>[x] Docker Compose config --quiet, git diff --check.</li><li>[x] 실제 Jenkins 초기화 로그와 numExecutors=1 확인.</li><li>[x] Docker inspect: Memory=4294967296, MemorySwap=6442450944, NanoCpus=2000000000.</li><li>[x] Jenkins 로그인 HTTP 200, 서비스 컨테이너 기동 시간 유지.</li><li>[ ] 동일 커밋·부하 조건의 전후 시간 비교. 단축 수치는 아직 주장하지 않는다.</li></ul><h2>리뷰 포인트</h2><p>현재 두 Pipeline의 최상위 agent any가 built-in 슬롯 하나를 공유한다. 별도 에이전트·Pipeline 내부 병렬화·수동 SSH 빌드는 범위 밖이다. 실제 자원 상한과 executor는 서버에 먼저 적용했으며 이 MR은 재생성 설정을 일치시킨다. 병합 전 기존 dev Compose로 재생성하면 이전 RAM 상한으로 돌아갈 수 있다. AI 자체 리뷰로 단위·swap 합계·기존 볼륨 초기화·실행 경계를 확인했다. 테스트 내부의 30초 대기와 실제 sleep은 변경하지 않았다.</p>",
+    "state": "merged",
+    "created_at": "2026-09-16T20:43:34.193+09:00",
+    "updated_at": "2026-09-16T21:36:57.468+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T21:36:57.061+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/288-jenkins-resources",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+    "merge_commit_sha": "219bd9e934596217f2b24b712bbac701f15ba44f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T20:43:36.632+09:00",
+    "reference": "!160",
+    "references": {
+      "short": "!160",
+      "relative": "!160",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!160"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/160",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947520,
+    "iid": 160,
+    "project_id": 1444456,
+    "title": "fix(infra): Jenkins 메모리와 CI·CD 실행 슬롯 조정",
+    "description": "<h2>작업 내용 요약</h2><p>Jenkins 본체와 CI 빌드가 2GiB를 공유하며 swap을 사용하는 문제를 완화한다. CPU 2개·RAM 4GiB, built-in executor 1개로 현재 CI와 CD를 직렬 실행한다.</p><h2>관련 티켓</h2><p><a href=\"https://ssafy.atlassian.net/browse/S15P21E205-288\">S15P21E205-288</a> · <a href=\"https://app.notion.com/p/3dd61b3dc08f81d0900df3c010ea6d9e\">Notion 트러블슈팅</a></p><h2>주요 변경 사항</h2><ul><li>Compose RAM 4G, RAM+swap 6G로 기존 swap 허용량 2G 유지.</li><li>기존 Jenkins 볼륨에도 시작 시 executor=1을 저장하는 Groovy 스크립트 마운트.</li><li>CI 내부 실행과 CD Docker 외부 실행의 경계, 적용·검증·롤백 절차 기록.</li></ul><h2>테스트</h2><ul><li>[x] Docker Compose config --quiet, git diff --check.</li><li>[x] 실제 Jenkins 초기화 로그와 numExecutors=1 확인.</li><li>[x] Docker inspect: Memory=4294967296, MemorySwap=6442450944, NanoCpus=2000000000.</li><li>[x] Jenkins 로그인 HTTP 200, 서비스 컨테이너 기동 시간 유지.</li><li>[ ] 동일 커밋·부하 조건의 전후 시간 비교. 단축 수치는 아직 주장하지 않는다.</li></ul><h2>리뷰 포인트</h2><p>현재 두 Pipeline의 최상위 agent any가 built-in 슬롯 하나를 공유한다. 별도 에이전트·Pipeline 내부 병렬화·수동 SSH 빌드는 범위 밖이다. 실제 자원 상한과 executor는 서버에 먼저 적용했으며 이 MR은 재생성 설정을 일치시킨다. 병합 전 기존 dev Compose로 재생성하면 이전 RAM 상한으로 돌아갈 수 있다. AI 자체 리뷰로 단위·swap 합계·기존 볼륨 초기화·실행 경계를 확인했다. 테스트 내부의 30초 대기와 실제 sleep은 변경하지 않았다.</p>",
+    "state": "merged",
+    "created_at": "2026-09-16T20:43:34.193+09:00",
+    "updated_at": "2026-09-16T21:36:57.468+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T21:36:57.061+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/288-jenkins-resources",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+    "merge_commit_sha": "219bd9e934596217f2b24b712bbac701f15ba44f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T20:43:36.632+09:00",
+    "reference": "!160",
+    "references": {
+      "short": "!160",
+      "relative": "!160",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!160"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/160",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": "2026-09-16T21:01:46.951+09:00",
+    "latest_build_finished_at": "2026-09-16T21:01:50.406+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 200213,
+      "iid": 83,
+      "project_id": 1444456,
+      "sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+      "ref": "fix(infra)/288-jenkins-resources",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T21:01:46.818+09:00",
+      "updated_at": "2026-09-16T21:01:50.412+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200213"
+    },
+    "head_pipeline": {
+      "id": 200213,
+      "iid": 83,
+      "project_id": 1444456,
+      "sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+      "ref": "fix(infra)/288-jenkins-resources",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T21:01:46.818+09:00",
+      "updated_at": "2026-09-16T21:01:50.412+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200213",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T21:01:46.951+09:00",
+      "finished_at": "2026-09-16T21:01:50.406+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200213",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+      "head_sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+      "start_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "93a489a901bcb5dc513cd8bd825e45b4dc0430cf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819732,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T20:43:34.296+09:00",
+          "updated_at": "2026-09-16T20:43:34.303+09:00",
+          "system": true,
+          "noteable_id": 947520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 160,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f8f1b4138cb978e223653839e29c7752bff4edec",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819735,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 문서화 및 운영 가이드 제공**: 인프라 변경 사항과 그 배경(RAM 4GiB, Swap 6GiB, Executor 1개 설정 등)을 `README.md`에 상세히 기록하여 팀 내 지식 공유와 향후 롤백/검증 절차를 잘 마련했습니다.\n- **안전한 구성 설정**: Groovy 초기화 스크립트를 읽기 전용(`:ro`)으로 마운트하여 컨테이너 내부에서 스크립트가 임의로 수정되는 위험을 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (도커 Compose 설정, Groovy 초기화 스크립트, 문서화 모두 목적에 부합하게 잘 작성되었습니다.)\n\n### 테스트 제안\n- **초기화 스크립트 적용 테스트**: \n  1. 기존 `jenkins-home` 볼륨이 존재하는 상태에서 `docker compose -f docker-compose.ci.yml up -d --no-deps jenkins`를 실행합니다.\n  2. Jenkins 로그(`docker logs`)에서 `Thorp: built-in executors=1` 메시지가 정상 출력되는지 확인합니다.\n  3. Jenkins 관리 화면(Manage Jenkins -> Nodes -> Built-In Node)에서 Executor 수가 실제로 `1`로 설정되었는지 검증합니다.\n- **리소스 제한 검증**: \n  1. `docker inspect thorp-jenkins` 명령어를 실행하여 `Memory`(4294967296), `MemorySwap`(6442450944), `NanoCpus`(2000000000) 값이 기대치와 정확히 일치하는지 확인합니다.\n- **직렬 실행(Concurrency) 테스트**: \n  1. CI 빌드와 CD 배포를 동시에 트리거하여, 한 작업이 실행 중일 때 다른 작업이 큐에서 대기(Serial Execution)하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:a25aca52d7417e49eeea92034a00dbe7c080ae92 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T20:43:45.024+09:00",
+          "updated_at": "2026-09-16T20:47:32.514+09:00",
+          "system": false,
+          "noteable_id": 947520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 160,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "59c4d0921d6bc9fe6a9570031f38e35ffb512460",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819767,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T20:47:23.932+09:00",
+          "updated_at": "2026-09-16T20:47:23.935+09:00",
+          "system": true,
+          "noteable_id": 947520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 160,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cf120bed48750da85a039c51a8d90b067eaf8ec2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819768,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>a25aca52 - docs(infra): Jenkins 자원 조정의 조사 근거 연결</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/160/diffs?diff_id=2208757&start_sha=52bb9da92946cdf696a6361382677c0221a359d9)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T20:47:24.367+09:00",
+          "updated_at": "2026-09-16T20:47:24.370+09:00",
+          "system": true,
+          "noteable_id": 947520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 160,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7c3bde050afb9fab0dca6f5699518b673c4fe63f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819909,
+          "type": null,
+          "body": "mentioned in commit 219bd9e934596217f2b24b712bbac701f15ba44f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T21:36:57.042+09:00",
+          "updated_at": "2026-09-16T21:36:57.047+09:00",
+          "system": true,
+          "noteable_id": 947520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 160,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2208757,
+      "head_commit_sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+      "base_commit_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+      "start_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "created_at": "2026-09-16T20:47:24.138+09:00",
+      "merge_request_id": 947520,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "7b18862e873b87d0e064d8649e494669a4e671ad"
+    },
+    {
+      "id": 2208749,
+      "head_commit_sha": "52bb9da92946cdf696a6361382677c0221a359d9",
+      "base_commit_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+      "start_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "created_at": "2026-09-16T20:43:34.503+09:00",
+      "merge_request_id": 947520,
+      "state": "without_files",
+      "real_size": "3",
+      "patch_id_sha": "abad819089e4264c8aab43e5897528d7cc4ea4cf"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2208757,
+      "head_commit_sha": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+      "base_commit_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+      "start_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "created_at": "2026-09-16T20:47:24.138+09:00",
+      "merge_request_id": 947520,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "7b18862e873b87d0e064d8649e494669a4e671ad",
+      "commits": [
+        {
+          "id": "a25aca52d7417e49eeea92034a00dbe7c080ae92",
+          "short_id": "a25aca52",
+          "created_at": "2026-09-16T20:47:19.000+09:00",
+          "parent_ids": [
+            "52bb9da92946cdf696a6361382677c0221a359d9"
+          ],
+          "title": "docs(infra): Jenkins 자원 조정의 조사 근거 연결",
+          "message": "docs(infra): Jenkins 자원 조정의 조사 근거 연결\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T20:47:19.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T20:47:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a25aca52d7417e49eeea92034a00dbe7c080ae92"
+        },
+        {
+          "id": "52bb9da92946cdf696a6361382677c0221a359d9",
+          "short_id": "52bb9da9",
+          "created_at": "2026-09-16T20:43:28.000+09:00",
+          "parent_ids": [
+            "f2429e65fb41e40c4508b519ca56e9c86e6887bc"
+          ],
+          "title": "fix(infra): Jenkins 메모리와 CI·CD 실행 슬롯 조정",
+          "message": "fix(infra): Jenkins 메모리와 CI·CD 실행 슬롯 조정\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T20:43:28.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T20:43:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52bb9da92946cdf696a6361382677c0221a359d9"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+import jenkins.model.Jenkins\n+\n+// 4 vCPU 호스트를 서비스와 공유한다. CI와 CD 모두 built-in 노드에서\n+// agent any로 실행하므로 executor 하나로 두 Job의 무거운 작업을 직렬화한다.\n+// 별도 에이전트나 Pipeline parallel을 추가하면 이 정책도 함께 재검토한다.\n+def controller = Jenkins.get()\n+controller.setNumExecutors(1)\n+controller.save()\n+println('Thorp: built-in executors=1; CI and CD share one build slot.')\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/init.groovy.d/10-build-executors.groovy",
+          "old_path": "infra/jenkins/init.groovy.d/10-build-executors.groovy",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+# Jenkins 자원과 동시 실행\n+\n+4 vCPU·16GB 호스트를 Backend·Worker 2개·PostgreSQL·RabbitMQ와 공유한다.\n+\n+- Jenkins 컨테이너 상한: CPU 2개, RAM 4GiB. 예약 자원이 아니다.\n+- `memswap_limit: 6G`는 RAM과 swap의 합이다. swap 허용량은 기존과 같은 2GiB다.\n+- Jenkins 본체의 Java heap은 1GiB다. 컨테이너 메모리를 늘렸다고 heap도 함께 늘리지 않는다.\n+- built-in executor는 1개다. 현재 두 Job 모두 최상위 `agent any`를 사용하므로\n+  CI와 CD는 실행 슬롯 하나를 공유하고, 뒤에 들어온 작업은 큐에서 기다린다.\n+  `disableConcurrentBuilds()`는 같은 Job의 중복만 막으므로 이것만으로는 부족하다.\n+- CI의 Gradle·Java 테스트·Node는 Jenkins 컨테이너 안에서 실행된다.\n+  CD의 Node 컨테이너·Docker 이미지 빌드와 Testcontainers DB·브로커는 별도 자원을 쓴다.\n+  이 설정은 수동 SSH 빌드나 별도 에이전트, Pipeline 내부 병렬 실행까지 제한하지 않는다.\n+\n+## 적용\n+\n+`docker-compose.ci.yml`은 `init.groovy.d/10-build-executors.groovy`를 읽기 전용으로\n+마운트한다. 기존 Jenkins 볼륨에도 시작할 때 executor=1을 저장한다. 향후 빌드 에이전트를\n+분리할 때는 이 스크립트와 두 Pipeline의 실행 노드 정책을 함께 변경한다.\n+\n+진행 중인 빌드가 끝났고 실행 대기 중인 작업도 없는 것을 Jenkins 화면에서 확인한 뒤,\n+호스트의 `infra/jenkins`에서 기존 배포 환경값을 사용해 적용한다.\n+\n+```bash\n+docker compose -f docker-compose.ci.yml --env-file ../.env.prod config --quiet\n+docker compose -f docker-compose.ci.yml --env-file ../.env.prod up -d --no-deps jenkins\n+docker inspect thorp-jenkins --format 'RAM={{.HostConfig.Memory}} RAM_SWAP={{.HostConfig.MemorySwap}} CPU={{.HostConfig.NanoCpus}}'\n+docker logs --since 5m thorp-jenkins 2>&1 | grep 'Thorp: built-in executors=1'\n+```\n+\n+기대값은 RAM=4294967296, RAM_SWAP=6442450944, CPU=2000000000이다.\n+Jenkins의 Manage Jenkins → Nodes → Built-In Node에서도 executor=1을 확인한다.\n+Jenkins 재생성 동안 관리 화면과 웹훅 수신에 짧은 중단이 생긴다. 서비스 컨테이너는 재시작하지 않는다.\n+\n+## 검증과 되돌리기\n+\n+- 설정 적용과 테스트 속도 개선은 별개다. 동일 커밋의 완료된 실행끼리 비교하고,\n+  실행 도중 메모리를 바꾼 빌드는 전후 비교에서 제외한다.\n+- 같은 조건에서 CI만 실행, Worker 2개 계산, 계산과 CI 동시 실행을 구분해\n+  소요 시간·메모리 최고값·swap 입출력·API 응답을 기록한다.\n+- 상한 합계가 호스트 RAM에 가까우므로 순간 유휴 사용량으로 서비스의 최대 부하를 판단하지 않는다.\n+- 되돌릴 때는 빌드 종료 후 Compose RAM=2G, `memswap_limit: 4G`, 초기화 스크립트의\n+  executor=2를 함께 복원하고 Jenkins만 재생성한다. 사용 중인 메모리보다 낮게 즉시 축소하지 않는다.\n+\n+관련 티켓: [S15P21E205-288](https://ssafy.atlassian.net/browse/S15P21E205-288)\n+\n+조사 근거와 적용 결과: [Notion 트러블슈팅](https://app.notion.com/p/3dd61b3dc08f81d0900df3c010ea6d9e)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/README.md",
+          "old_path": "infra/jenkins/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,8 @@ services:\n     image: thorp-jenkins:lts\n     container_name: thorp-jenkins\n     restart: unless-stopped\n+    # RAM 4G + swap 2G. 메모리를 늘려도 기존 swap 허용량(2G)은 늘리지 않는다.\n+    memswap_limit: 6G\n     # 이미지 기본 사용자(jenkins, uid 1000)로 돈다. 호스트 ubuntu와 uid가 같아\n     # DEPLOY_DIR에 root 소유 파일이 생기지 않는다.\n     #\n@@ -25,6 +27,8 @@ services:\n     volumes:\n       - jenkins-home:/var/jenkins_home\n       - /var/run/docker.sock:/var/run/docker.sock\n+      # 기존 jenkins-home에도 재기동 때 적용한다. CI와 CD가 같은 실행 슬롯 하나를 쓴다.\n+      - ./init.groovy.d/10-build-executors.groovy:/var/jenkins_home/init.groovy.d/10-build-executors.groovy:ro\n       # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는\n       # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.\n       - ${DEPLOY_DIR}:${DEPLOY_DIR}\n@@ -34,8 +38,9 @@ services:\n     deploy:\n       resources:\n         limits:\n-          # Jenkins 자체는 JVM만 돈다. 빌드는 별도 컨테이너에서 일어나 여기 포함되지 않는다.\n-          memory: 2G\n+          # CI의 Gradle·Java 테스트·Node는 Jenkins 내부에서 실행된다.\n+          # CD의 별도 Docker 빌드와 Testcontainers는 이 상한 밖이므로 호스트 자원도 확인한다.\n+          memory: 4G\n           cpus: \"2.0\"\n \n volumes:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/docker-compose.ci.yml",
+          "old_path": "infra/jenkins/docker-compose.ci.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2208749,
+      "head_commit_sha": "52bb9da92946cdf696a6361382677c0221a359d9",
+      "base_commit_sha": "f2429e65fb41e40c4508b519ca56e9c86e6887bc",
+      "start_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "created_at": "2026-09-16T20:43:34.503+09:00",
+      "merge_request_id": 947520,
+      "state": "without_files",
+      "real_size": "3",
+      "patch_id_sha": "abad819089e4264c8aab43e5897528d7cc4ea4cf",
+      "commits": [
+        {
+          "id": "52bb9da92946cdf696a6361382677c0221a359d9",
+          "short_id": "52bb9da9",
+          "created_at": "2026-09-16T20:43:28.000+09:00",
+          "parent_ids": [
+            "f2429e65fb41e40c4508b519ca56e9c86e6887bc"
+          ],
+          "title": "fix(infra): Jenkins 메모리와 CI·CD 실행 슬롯 조정",
+          "message": "fix(infra): Jenkins 메모리와 CI·CD 실행 슬롯 조정\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T20:43:28.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T20:43:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52bb9da92946cdf696a6361382677c0221a359d9"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2819735": []
+  }
+}

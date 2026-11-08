@@ -1,0 +1,822 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 956054,
+    "iid": 291,
+    "project_id": 1444456,
+    "title": "fix(de): 원값 대조를 마치고 진행 중인 달과 계보 읽기 결함을 고친다",
+    "description": "## 작업 내용 요약\n\n수출·수입 원값 대조를 마쳐 지표 열일곱 개 전부가 SC-007 대조를 받는다. 그 과정에서 두 결함이 드러나 함께 고쳤다 — 진행 중인 달을 완결된 달로 발행하던 것과, 조회가 원값 계보를 숫자 하나로 읽어 시장 흐름 화면을 400 으로 세우던 것이다.\n\n## 관련 티켓\n\n* S15P21E205-407\n* https://ssafy.atlassian.net/browse/S15P21E205-407\n\n## 주요 변경 사항\n\n* 관세청 표본을 두 해(2025·2026)로 두고 시험이 잇는다. 수출·수입은 전년동월 대비라 한 해만 읽으면 t-12 가 없다. `SAMPLE_TOO_SHORT` 가 비었고 비어 있음을 시험이 고정한다.\n* **월별 원천의 끝나지 않은 달을 값으로 만들지 않는다.** `INCOMPLETE_MONTH` 사유와 함께 내보낸다. 일별 계열은 `fold_month_end` 가 이미 막고 있었고, 달이 끝났는지는 원천 주기와 무관한 사실이라 월별에도 같은 규칙을 건다.\n* 관세청 세 지표의 공표 지연 0 → 1. 0 이면 `expected_end_month` 가 진행 중인 달을 \"와 있어야 할 달\"로 계산해 부분 달이 완결 판정을 통과하고 분야 기준월까지 그 달로 올라간다.\n* **조회가 `raw_value` 계보에서 대상월의 값을 고른다.** 배열을 통째로 `BigDecimal` 에 넘겨 400 이 나던 것을 고친다. 마지막 원소를 고르지 않는다 — 증가율은 마침 마지막이 대상월이지만 규칙을 \"마지막\"으로 두면 순서가 다른 변환에서 조용히 틀린다.\n* 통합 시험 시딩을 운영과 같은 계보 배열 모양으로 바꾼다.\n\n## 테스트\n\n- [x] `data`: `ruff check .` 통과\n- [x] `data`: `pytest` 1210 통과 / 건너뜀 0건 (직전 1203 통과 + 2 건너뜀)\n- [x] `backend`: `./gradlew spotlessCheck test` 통과\n- [x] 원값 대조: 원천 21개월(2025-01\\~2026-09), 수출·수입의 전년동월 대비가 손계산과 정확히 일치(오차 0)\n- [x] 표본 파일에 인증키가 섞이지 않은 것을 확인\n\n## 리뷰 포인트\n\n* **배포가 멈춰 있던 원인이 이 MR 에 들어 있다.** 시장 흐름 화면이 \"분야 자료를 불러오지 못했습니다\"로 서 있었고, 응답은 400 `Character array is missing \"e\" notation exponential mark.` 였다. 머지 후 재배포하면 화면이 살아난다.\n* **머지 후 적재를 다시 돌려야 한다**(`--mode initial`). 운영 DB 에 진행 중인 2026-09 가 이미 들어가 있어, 재적재 전까지는 화면이 살아나도 수출·수입 증가율이 계속 흔들린다.\n* 시딩이 운영과 다른 모양이라 008 표를 읽는 시험이 전부 초록인 채 운영만 멈췄다. 같은 자리가 또 있는지 볼 값어치가 있다.\n* T073 의 N 은 여전히 미확정이다. 두 판을 견줘 닫힌 달 여덟이 안 바뀐 것을 관측했지만, 5일 창 하나는 관세청의 매월 정정 시점을 건너뛰지 못한다. 등록표에 \"왜 확정할 수 없는가\"를 고쳐 적었다 — 전 구간을 넓게 받아도 판은 하나이고, 판을 쌓는 일은 정기 수집이 한다.\n* 티켓 하나에 세 덩어리가 섞였다. 배포가 멈춘 상태여서 급히 얹은 것이고, 규칙에서 벗어난 것을 알고 한 선택이다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건\n- [x] 결제·포인트·상품 선택 단계 0건\n- [x] 전략 ID 상수·전략별 분기 0건 — 이번 범위에 전략 코드가 없다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 끝나지 않은 달은 값이 `null` 이고 사유가 함께 간다. 대상월이 계보에 없으면 다른 달 값으로 메우지 않고 `null` 이다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 대조하지 못한 지표를 사유와 함께 두는 구조를 유지했고 지금은 비어 있다. T073 은 관측 한 창을 적되 미확인으로 닫은 것을 유지한다",
+    "state": "merged",
+    "created_at": "2026-09-22T11:20:32.687+09:00",
+    "updated_at": "2026-09-22T12:06:01.829+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T12:06:01.595+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/407-customs-value-crosscheck",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🐲 Test",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+    "merge_commit_sha": "496a184387074e22490e9133e64e6d833acb5bbe",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T11:20:34.076+09:00",
+    "reference": "!291",
+    "references": {
+      "short": "!291",
+      "relative": "!291",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!291"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/291",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 956054,
+    "iid": 291,
+    "project_id": 1444456,
+    "title": "fix(de): 원값 대조를 마치고 진행 중인 달과 계보 읽기 결함을 고친다",
+    "description": "## 작업 내용 요약\n\n수출·수입 원값 대조를 마쳐 지표 열일곱 개 전부가 SC-007 대조를 받는다. 그 과정에서 두 결함이 드러나 함께 고쳤다 — 진행 중인 달을 완결된 달로 발행하던 것과, 조회가 원값 계보를 숫자 하나로 읽어 시장 흐름 화면을 400 으로 세우던 것이다.\n\n## 관련 티켓\n\n* S15P21E205-407\n* https://ssafy.atlassian.net/browse/S15P21E205-407\n\n## 주요 변경 사항\n\n* 관세청 표본을 두 해(2025·2026)로 두고 시험이 잇는다. 수출·수입은 전년동월 대비라 한 해만 읽으면 t-12 가 없다. `SAMPLE_TOO_SHORT` 가 비었고 비어 있음을 시험이 고정한다.\n* **월별 원천의 끝나지 않은 달을 값으로 만들지 않는다.** `INCOMPLETE_MONTH` 사유와 함께 내보낸다. 일별 계열은 `fold_month_end` 가 이미 막고 있었고, 달이 끝났는지는 원천 주기와 무관한 사실이라 월별에도 같은 규칙을 건다.\n* 관세청 세 지표의 공표 지연 0 → 1. 0 이면 `expected_end_month` 가 진행 중인 달을 \"와 있어야 할 달\"로 계산해 부분 달이 완결 판정을 통과하고 분야 기준월까지 그 달로 올라간다.\n* **조회가 `raw_value` 계보에서 대상월의 값을 고른다.** 배열을 통째로 `BigDecimal` 에 넘겨 400 이 나던 것을 고친다. 마지막 원소를 고르지 않는다 — 증가율은 마침 마지막이 대상월이지만 규칙을 \"마지막\"으로 두면 순서가 다른 변환에서 조용히 틀린다.\n* 통합 시험 시딩을 운영과 같은 계보 배열 모양으로 바꾼다.\n\n## 테스트\n\n- [x] `data`: `ruff check .` 통과\n- [x] `data`: `pytest` 1210 통과 / 건너뜀 0건 (직전 1203 통과 + 2 건너뜀)\n- [x] `backend`: `./gradlew spotlessCheck test` 통과\n- [x] 원값 대조: 원천 21개월(2025-01\\~2026-09), 수출·수입의 전년동월 대비가 손계산과 정확히 일치(오차 0)\n- [x] 표본 파일에 인증키가 섞이지 않은 것을 확인\n\n## 리뷰 포인트\n\n* **배포가 멈춰 있던 원인이 이 MR 에 들어 있다.** 시장 흐름 화면이 \"분야 자료를 불러오지 못했습니다\"로 서 있었고, 응답은 400 `Character array is missing \"e\" notation exponential mark.` 였다. 머지 후 재배포하면 화면이 살아난다.\n* **머지 후 적재를 다시 돌려야 한다**(`--mode initial`). 운영 DB 에 진행 중인 2026-09 가 이미 들어가 있어, 재적재 전까지는 화면이 살아나도 수출·수입 증가율이 계속 흔들린다.\n* 시딩이 운영과 다른 모양이라 008 표를 읽는 시험이 전부 초록인 채 운영만 멈췄다. 같은 자리가 또 있는지 볼 값어치가 있다.\n* T073 의 N 은 여전히 미확정이다. 두 판을 견줘 닫힌 달 여덟이 안 바뀐 것을 관측했지만, 5일 창 하나는 관세청의 매월 정정 시점을 건너뛰지 못한다. 등록표에 \"왜 확정할 수 없는가\"를 고쳐 적었다 — 전 구간을 넓게 받아도 판은 하나이고, 판을 쌓는 일은 정기 수집이 한다.\n* 티켓 하나에 세 덩어리가 섞였다. 배포가 멈춘 상태여서 급히 얹은 것이고, 규칙에서 벗어난 것을 알고 한 선택이다.\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건\n- [x] 결제·포인트·상품 선택 단계 0건\n- [x] 전략 ID 상수·전략별 분기 0건 — 이번 범위에 전략 코드가 없다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 끝나지 않은 달은 값이 `null` 이고 사유가 함께 간다. 대상월이 계보에 없으면 다른 달 값으로 메우지 않고 `null` 이다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 대조하지 못한 지표를 사유와 함께 두는 구조를 유지했고 지금은 비어 있다. T073 은 관측 한 창을 적되 미확인으로 닫은 것을 유지한다",
+    "state": "merged",
+    "created_at": "2026-09-22T11:20:32.687+09:00",
+    "updated_at": "2026-09-22T12:06:01.829+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-22T12:06:01.595+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/407-customs-value-crosscheck",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🐲 Test",
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+    "merge_commit_sha": "496a184387074e22490e9133e64e6d833acb5bbe",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T11:20:34.076+09:00",
+    "reference": "!291",
+    "references": {
+      "short": "!291",
+      "relative": "!291",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!291"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/291",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": "2026-09-22T11:55:46.838+09:00",
+    "latest_build_finished_at": "2026-09-22T12:05:24.324+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 215416,
+      "iid": 298,
+      "project_id": 1444456,
+      "sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+      "ref": "feat(de)/407-customs-value-crosscheck",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T11:55:46.736+09:00",
+      "updated_at": "2026-09-22T12:05:24.331+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215416"
+    },
+    "head_pipeline": {
+      "id": 215416,
+      "iid": 298,
+      "project_id": 1444456,
+      "sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+      "ref": "feat(de)/407-customs-value-crosscheck",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T11:55:46.736+09:00",
+      "updated_at": "2026-09-22T12:05:24.331+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215416",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T11:55:46.838+09:00",
+      "finished_at": "2026-09-22T12:05:24.324+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215416",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1abb052374ac686d5e6b835545565f40fbf2217c",
+      "head_sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+      "start_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0b1bd2b7af213acfd5e6565dd32c5e2879bde14a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853620,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T11:20:32.853+09:00",
+          "updated_at": "2026-09-22T11:20:32.875+09:00",
+          "system": true,
+          "noteable_id": 956054,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 291,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "01a3b176591a4ec4ae0b719cd60d23c4c2f65c5e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853621,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 관세청 2025년 표본을 추가하여 2년치 데이터로 수출·수입 지표의 전년동월 대비(t-12) 대조를 완성한 점, 그리고 다중 원값(lineage) 배열 구조에서 대상월과 일치하는 값을 안전하게 추출하도록 `MacroSnapshotRepositoryImpl`을 개선한 점 모두 완성도 높게 잘 구현되었습니다.\n\n### 테스트 제안\n- **다중 연도 관세청 데이터 결합 시나리오**: `newtrade_2025.xml`과 `newtrade_2026.xml`의 경계 시점(예: 2025년 12월과 2026년 1월) 데이터 연속성과 중복 기간이 있을 때 `_customs_two_years` 함수가 `AssertionError(\"표본 두 해가 같은 달을 겹쳐 담았다\")`를 정확히 발생시키는지 테스트합니다.\n- **대상월 불일치 원값 조회 시나리오**: `MacroSnapshotRepositoryImpl`에서 계보(lineage) 내에 `target_month`와 일치하는 쌍이 존재하지 않을 때, `null`을 안전하게 반환하고 예외 없이 동작하는지 검증합니다.\n- **진행 중인 달(Incomplete Month) 필터링 시나리오**: `as_of` 기준일보다 미래이거나 당일인 월별 관측치가 `MISSING_INCOMPLETE_MONTH` 사유와 함께 결과에 포함되되 `value`는 `null`로 처리되는지 `TestIncompleteMonthFromMonthlySource`를 통해 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f4fbe9c03f276f298f8957d0491070248eb4f229 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T11:20:42.464+09:00",
+          "updated_at": "2026-09-22T11:55:42.736+09:00",
+          "system": false,
+          "noteable_id": 956054,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 291,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ab17f4513ecfa49c1b6f3ccee79dafa8b667fdfa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853902,
+          "type": null,
+          "body": "added 2 commits\n\n<ul><li>1bb26155 - fix(be): 원값 계보를 숫자 하나로 읽어 시장 흐름이 멈추던 것을 고친다</li><li>f4fbe9c0 - fix(de): 진행 중인 달을 완결된 달로 싣지 않는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/291/diffs?diff_id=2237827&start_sha=802517119ee3f95c6606bf4133aa6d3b7d253578)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T11:55:34.332+09:00",
+          "updated_at": "2026-09-22T11:55:34.337+09:00",
+          "system": true,
+          "noteable_id": 956054,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 291,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "666e6b99decd0b7f943302763199a7c2419a8030",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853908,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\"><span class=\"idiff left deletion\">test</span>(de): <span class=\"idiff right deletion\">수출·수입 원값 대조로 열일곱 지표 전부를 견준</span>다</code> to <code class=\"idiff\"><span class=\"idiff left addition\">fix</span>(de): <span class=\"idiff right addition\">원값 대조를 마치고 진행 중인 달과 계보 읽기 결함을 고친</span>다</code></p>",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T11:56:36.230+09:00",
+          "updated_at": "2026-09-22T11:56:36.235+09:00",
+          "system": true,
+          "noteable_id": 956054,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 291,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4015d600a5beb9699c41c3b1f17fadca0b3aaa2d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853909,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T11:56:36.271+09:00",
+          "updated_at": "2026-09-22T11:56:36.275+09:00",
+          "system": true,
+          "noteable_id": 956054,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 291,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6cc919e24d75c53d5860623e41a447afbe6a6bce",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2853976,
+          "type": null,
+          "body": "mentioned in commit 496a184387074e22490e9133e64e6d833acb5bbe",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-22T12:06:01.611+09:00",
+          "updated_at": "2026-09-22T12:06:01.614+09:00",
+          "system": true,
+          "noteable_id": 956054,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 291,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2237827,
+      "head_commit_sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+      "base_commit_sha": "1abb052374ac686d5e6b835545565f40fbf2217c",
+      "start_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "created_at": "2026-09-22T11:55:33.928+09:00",
+      "merge_request_id": 956054,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "34262be06ca4f7c52c2c9ce090eacc5ae1932727"
+    },
+    {
+      "id": 2237606,
+      "head_commit_sha": "802517119ee3f95c6606bf4133aa6d3b7d253578",
+      "base_commit_sha": "1abb052374ac686d5e6b835545565f40fbf2217c",
+      "start_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "created_at": "2026-09-22T11:20:33.244+09:00",
+      "merge_request_id": 956054,
+      "state": "without_files",
+      "real_size": "4",
+      "patch_id_sha": "c7d9ddd50206eb21daa9bcfcd5f239ed196f80f0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2237827,
+      "head_commit_sha": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+      "base_commit_sha": "1abb052374ac686d5e6b835545565f40fbf2217c",
+      "start_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "created_at": "2026-09-22T11:55:33.928+09:00",
+      "merge_request_id": 956054,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "34262be06ca4f7c52c2c9ce090eacc5ae1932727",
+      "commits": [
+        {
+          "id": "f4fbe9c03f276f298f8957d0491070248eb4f229",
+          "short_id": "f4fbe9c0",
+          "created_at": "2026-09-22T11:55:30.000+09:00",
+          "parent_ids": [
+            "1bb26155fd93bbcce096518831df7511c249445a"
+          ],
+          "title": "fix(de): 진행 중인 달을 완결된 달로 싣지 않는다",
+          "message": "fix(de): 진행 중인 달을 완결된 달로 싣지 않는다\n\n관세청은 이번 달 누적치를 그날까지 더해 준다. 달이 끝나기 전에 받은 값은 그 달의 값이 아니라\n그 시점까지의 조각인데, 파이프라인이 그것을 완결된 달로 발행하고 있었다. 2026-09 수출을\n09-17 과 09-22 에 받아 보니 148억 달러 차이였고 전년동월 대비로는 -5.07% 와 +17.37% 다 —\n같은 이름을 달고 22%p 를 움직인다. 운영 DB 에도 그 달이 들어가 있어 화면이 \"9월 수출이 줄었다\"를\n보여주고 있었다.\n\n월별 원천의 끝나지 않은 달을 INCOMPLETE_MONTH 사유와 함께 내보낸다. 일별 계열은\nfold_month_end 가 as_of 로 이미 막고 있었고, 달이 끝났는지는 원천 주기와 무관한 사실이라\n월별에도 같은 규칙을 건다. 버리지 않고 사유를 남기는 이유는 조용히 빼면 원래 없는 달인지\n아직 안 끝난 달인지 구분되지 않아서다.\n\n관세청 세 지표의 공표 지연을 0 에서 1 로 올린다. 0 이면 expected_end_month 가 진행 중인 달을\n\"값이 와 있어야 할 달\"로 계산해, 부분 달이 완결 판정을 통과하고 분야 기준월까지 그 달로\n올라간다 — 대외거래 분야 전체가 조각 위에 선다. 1 은 관세청이 매월 15일경 전월까지를 정정한다고\n안내한 것과 맞는다.\n\nT073 의 관측을 한 창 기록한다. 위 두 판을 견준 결과 닫힌 달 여덟은 한 건도 바뀌지 않았다.\n5일 창 하나로는 N 이 정해지지 않으므로 미확인으로 닫은 것은 그대로 두되, \"왜 확정할 수 없는가\"를\n고쳐 적었다 — 전 구간을 아무리 넓게 받아도 판은 하나이고, 과거에 본 값은 원천이 주지 않는다.\n판을 쌓는 일은 정기 수집이 하므로 이 값은 시간이 답한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T11:55:30.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T11:55:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f4fbe9c03f276f298f8957d0491070248eb4f229"
+        },
+        {
+          "id": "1bb26155fd93bbcce096518831df7511c249445a",
+          "short_id": "1bb26155",
+          "created_at": "2026-09-22T11:55:11.000+09:00",
+          "parent_ids": [
+            "802517119ee3f95c6606bf4133aa6d3b7d253578"
+          ],
+          "title": "fix(be): 원값 계보를 숫자 하나로 읽어 시장 흐름이 멈추던 것을 고친다",
+          "message": "fix(be): 원값 계보를 숫자 하나로 읽어 시장 흐름이 멈추던 것을 고친다\n\n008 의 raw_value 는 값 하나가 아니라 그 변환값을 만든 원본들이다 — 전년동월 대비는\n[[t-12, 값], [t, 값]] 로 오고 월 평균은 그 달 거래일 전부가 온다. 조회가 이 배열을 통째로\nBigDecimal 에 넘겨 400 이 났고, 대외거래 지표 하나가 걸리면 요약 전체가 떨어져 화면이\n\"분야 자료를 불러오지 못했습니다\"로 섰다.\n\n계보에서 대상월과 같은 달을 찾는다. 마지막 원소를 고르지 않는다 — 증가율은 마침 마지막이\n대상월이지만, 규칙을 \"마지막\"으로 두면 순서가 다른 변환에서 조용히 틀린다. 대상월이 계보에\n없으면 값이 없는 것이다. 다른 달 값을 대신 내놓으면 화면의 숫자가 제목과 다른 달을 말한다.\n\n**시딩이 운영과 다른 모양이라 시험이 이것을 놓쳤다.** raw_value 를 스칼라로 심어 두어,\n008 표를 읽는 계약·통합 시험이 전부 초록인 채 운영만 멈췄다. 시딩을 계보 배열로 바꾼다.\n\n새 시험은 대상월을 계보의 앞에 둔다. 실제 자료 순서대로 두면 \"마지막을 고른다\"로 구현해도\n통과해 규칙을 가리지 못한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T11:55:11.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T11:55:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1bb26155fd93bbcce096518831df7511c249445a"
+        },
+        {
+          "id": "802517119ee3f95c6606bf4133aa6d3b7d253578",
+          "short_id": "80251711",
+          "created_at": "2026-09-22T11:17:47.000+09:00",
+          "parent_ids": [
+            "116b1abc21feb185096b08333608561e78248687"
+          ],
+          "title": "test(de): 대조 범위를 지키는 검사를 실제 검사로 되돌린다",
+          "message": "test(de): 대조 범위를 지키는 검사를 실제 검사로 되돌린다\n\n코드리뷰에서 나온 셋을 고친다. 동작은 그대로다.\n\n건너뛴 목록이 비었는지만 보던 자리에서, 지표 열일곱 개가 표본에서 관측을 실제로 읽는지 본다.\n앞선 커밋이 이 자리에 등록표 크기를 세는 단언을 뒀는데 그것은 `registry.validate` 가 이미\n강제하는 것이라 늘 초록이었다 — 겁장이 선 척하는 자리는 없는 자리보다 나쁘다.\n\n검증 문서의 표본 조회일을 실제대로 적는다. 관세청 2025년분만 닷새 뒤에 받은 것이라, 한 날짜로\n적어 두면 대조 결과를 다시 재현하려는 사람이 어떤 응답을 받아야 하는지 알 수 없다.\n\n`SAMPLE_TOO_SHORT` 주석이 항목이 차 있는 상황을 설명한 채 남아 있었다. 비어 있는 것이 올바른\n상태임을 적는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T11:17:47.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T11:17:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/802517119ee3f95c6606bf4133aa6d3b7d253578"
+        },
+        {
+          "id": "116b1abc21feb185096b08333608561e78248687",
+          "short_id": "116b1abc",
+          "created_at": "2026-09-22T11:08:36.000+09:00",
+          "parent_ids": [
+            "1abb052374ac686d5e6b835545565f40fbf2217c"
+          ],
+          "title": "test(de): 수출·수입 원값 대조로 열일곱 지표 전부를 견준다",
+          "message": "test(de): 수출·수입 원값 대조로 열일곱 지표 전부를 견준다\n\n저장된 관세청 표본이 2026년 아홉 달뿐이라 전년동월이 없어, 수출·수입 둘만 SC-007 의 대조를\n받지 못했다. 대조되지 않은 지표가 남아 있으면 그 지표의 화면 값이 맞는지 말할 수 없다.\n\n관세청 2025년 응답을 표본에 넣고 두 해를 이어 읽는다. 원천이 조회 기간을 1년으로 제한하므로\n(FR-017a) 표본도 해마다 따로 두고 시험이 잇는다. 같은 달을 겹쳐 담으면 거기서 걸린다.\n\n2026-01·05·09 의 전년동월 대비가 원천 숫자로 다시 계산한 값과 정확히 일치했다(오차 0).\n\n`SAMPLE_TOO_SHORT` 가 비었고, 시험이 비어 있다는 사실을 고정한다 — 표본 한계로 건너뛴 지표가\n다시 생기면 그 목록에서 걸린다. 건너뛰기가 조용히 늘면 대조 범위는 줄어드는데 스위트는 초록으로\n남는다.\n\n이로써 T072 가 닫히고 검증 문서의 \"확인하지 못함\"이 0이 된다. `N` 개월 밖 개정의 탐지는 008 이\n자동으로 알 방법이 없어 T073 에서 미확인으로 닫은 그대로다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T11:08:36.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T11:08:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/116b1abc21feb185096b08333608561e78248687"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.macro.infrastructure.persistence;\n \n+import com.fasterxml.jackson.core.JsonProcessingException;\n import com.fasterxml.jackson.core.type.TypeReference;\n import com.fasterxml.jackson.databind.ObjectMapper;\n import com.ssafy.thorp.macro.application.repository.MacroSnapshotRepository;\n@@ -7,9 +8,11 @@ import java.math.BigDecimal;\n import java.sql.Timestamp;\n import java.time.Instant;\n import java.time.LocalDate;\n+import java.time.YearMonth;\n import java.util.ArrayList;\n import java.util.Collection;\n import java.util.List;\n+import java.util.Objects;\n import java.util.Optional;\n import org.springframework.jdbc.core.JdbcTemplate;\n import org.springframework.jdbc.core.RowMapper;\n@@ -29,6 +32,9 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {\n \n     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {};\n \n+    /** 008 의 원값 계보: {@code [[대상월, 값], ...]}. 값은 자릿수를 지키려고 문자열이다. */\n+    private static final TypeReference<List<List<String>>> LINEAGE = new TypeReference<>() {};\n+\n     private final JdbcTemplate jdbc;\n     private final ObjectMapper objectMapper;\n \n@@ -237,13 +243,50 @@ public class MacroSnapshotRepositoryImpl implements MacroSnapshotRepository {\n                 new ObservationRow(\n                         rs.getString(\"indicator_id\"),\n                         toLocalDate(rs.getDate(\"target_month\")),\n-                        readDecimal(rs.getString(\"raw_value\")),\n+                        readRawValue(\n+                                rs.getString(\"raw_value\"), toLocalDate(rs.getDate(\"target_month\"))),\n                         readDecimal(rs.getString(\"transformed_value\")),\n                         toLocalDate(rs.getTimestamp(\"released_at\")),\n                         toInstant(rs.getTimestamp(\"received_at\")),\n                         rs.getString(\"missing_reason\"));\n     }\n \n+    /**\n+     * 계보에서 <b>대상월의</b> 원값을 고른다 (008 FR-008).\n+     *\n+     * <p>008 의 {@code raw_value} 는 값 하나가 아니라 그 변환값을 만든 원본들이다 — 전년동월 대비는 {@code [[t-12, 값], [t, 값]]}\n+     * 처럼 둘이 오고, 월 평균은 그 달 거래일 전부가 온다. 배열을 통째로 {@link BigDecimal} 에 넘기면 요청이 400 으로 떨어진다.\n+     *\n+     * <p><b>마지막 원소를 고르지 않는다.</b> 증가율은 마침 마지막이 대상월이지만, 규칙을 \"마지막\"으로 두면 순서가 다른 변환에서 조용히 틀린다. 대상월과 같은\n+     * 달을 찾는 것이 규칙이다.\n+     *\n+     * <p>스칼라로 들어온 값도 그대로 받는다 — 옛 자료 버전이 그 모양이다.\n+     */\n+    private BigDecimal readRawValue(String json, LocalDate targetMonth) {\n+        if (json == null || json.isBlank() || \"null\".equals(json)) {\n+            return null;\n+        }\n+        String text = json.trim();\n+        if (!text.startsWith(\"[\")) {\n+            return readDecimal(text);\n+        }\n+        List<List<String>> lineage;\n+        try {\n+            lineage = objectMapper.readValue(text, LINEAGE);\n+        } catch (JsonProcessingException error) {\n+            throw new IllegalStateException(\"원값 계보를 읽지 못했다: \" + text, error);\n+        }\n+        String wanted = targetMonth == null ? null : YearMonth.from(targetMonth).toString();\n+        for (List<String> pair : lineage) {\n+            if (pair != null && pair.size() == 2 && Objects.equals(pair.get(0), wanted)) {\n+                return readDecimal(pair.get(1));\n+            }\n+        }\n+        // 대상월이 계보에 없으면 원값이 없는 것이다. 다른 달 값을 대신 내놓으면 화면의 숫자가\n+        // 제목과 다른 달을 말한다.\n+        return null;\n+    }\n+\n     /**\n      * JSONB 에 담긴 decimal 을 되돌린다. 값이 없으면 null 이다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/infrastructure/persistence/MacroSnapshotRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/infrastructure/persistence/MacroSnapshotRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -212,11 +212,14 @@ public final class MacroRegistrySeed {\n                             INSERT INTO macro_observation (\n                                 dataset_version_id, indicator_id, target_month,\n                                 raw_value, transformed_value, released_at, received_at)\n-                            VALUES (?, ?, ?::date, '\"101.2\"'::jsonb, '\"1.4\"'::jsonb, now(), now())\n+                            VALUES (?, ?, ?::date,\n+                                    jsonb_build_array(jsonb_build_array(?, '101.2')),\n+                                    '\"1.4\"'::jsonb, now(), now())\n                             \"\"\",\n                             datasetId,\n                             indicatorId,\n-                            month);\n+                            month,\n+                            month.substring(0, 7));\n                 }\n             }\n             jdbc.update(\n@@ -249,17 +252,22 @@ public final class MacroRegistrySeed {\n      * 보는 시험이 이것을 쓴다. 기본 시딩에 넣지 않는 이유는 관측 수를 세는 다른 시험이 있어서다.\n      */\n     public static void seedLaterRelease(JdbcTemplate jdbc, String indicatorId, String month) {\n+        // raw_value 는 008 이 쓰는 계보 배열 모양이어야 한다. 스칼라로 심으면 이 시험은\n+        // 통과하면서 운영만 400 으로 떨어진다 — 2026-09-22 에 실제로 그렇게 멈췄다.\n         long datasetId = idOf(jdbc, \"macro_dataset_version\", DATASET_VERSION);\n         jdbc.update(\n                 \"\"\"\n                 INSERT INTO macro_observation (\n                     dataset_version_id, indicator_id, target_month,\n                     raw_value, transformed_value, released_at, received_at)\n-                VALUES (?, ?, ?::date, '\"102.9\"'::jsonb, '\"2.1\"'::jsonb, now(), now())\n+                VALUES (?, ?, ?::date,\n+                        jsonb_build_array(jsonb_build_array(?, '102.9')),\n+                        '\"2.1\"'::jsonb, now(), now())\n                 \"\"\",\n                 datasetId,\n                 indicatorId,\n-                month);\n+                month,\n+                month.substring(0, 7));\n     }\n \n     private static long idOf(JdbcTemplate jdbc, String table, String versionKey) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/support/MacroRegistrySeed.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/support/MacroRegistrySeed.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,6 +47,42 @@ class MacroSnapshotContractTest extends PostgresTestSupport {\n                         new MacroSnapshotRepositoryImpl(jdbc, new ObjectMapper()));\n     }\n \n+    @Test\n+    @DisplayName(\"원값 계보에서 대상월의 값을 고른다 — 배열을 숫자 하나로 읽지 않는다\")\n+    void rawValueComesFromTheTargetMonthOfTheLineage() {\n+        // 008 의 raw_value 는 값 하나가 아니라 그 변환값을 만든 원본들이다. 전년동월 대비는\n+        // [[t-12, 값], [t, 값]] 로 오고, 이것을 통째로 BigDecimal 에 넘기면 조회가 400 으로\n+        // 떨어진다 — 2026-09-22 에 시장 흐름 화면이 그렇게 멈췄다.\n+        seedRegistry();\n+        seedPublishedDataset();\n+        String latest = MacroRegistrySeed.MONTHS.get(MacroRegistrySeed.MONTHS.size() - 1);\n+        jdbc.update(\n+                \"\"\"\n+                UPDATE macro_observation\n+                SET raw_value = jsonb_build_array(\n+                        jsonb_build_array(?, '110.5'),\n+                        jsonb_build_array('2025-07', '90.0'))\n+                WHERE indicator_id = 'exports' AND target_month = ?::date\n+                \"\"\",\n+                latest.substring(0, 7),\n+                latest);\n+\n+        MacroSnapshotResult snapshot = service.getSnapshot();\n+\n+        MacroSnapshotResult.IndicatorSummary exports =\n+                snapshot.indicators().stream()\n+                        .filter(indicator -> \"exports\".equals(indicator.indicatorId()))\n+                        .findFirst()\n+                        .orElseThrow();\n+        // 비교월(90.0)이 아니라 대상월(110.5)이다. 비교월을 고르면 화면의 원값이 열두 달 전\n+        // 값이 되고, 숫자가 제목과 다른 달을 말한다.\n+        //\n+        // **대상월을 일부러 계보의 앞에 두었다.** 실제 자료는 [t-12, t] 순서라 \"마지막을\n+        // 고른다\"로 구현해도 통과해 버린다. 순서를 뒤집어야 규칙이 대상월 찾기인지 마지막\n+        // 고르기인지 갈린다.\n+        assertThat(exports.latest().rawValue()).isEqualByComparingTo(\"110.5\");\n+    }\n+\n     @Test\n     @DisplayName(\"등록표가 한 번도 발행되지 않았으면 조회가 실패한다 — 자료 없음과 다르다\")\n     void failsWhenRegistryNeverPublished() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -393,6 +393,45 @@ def _require_declared_cycle(\n     return indicator.source_cycle == CYCLE_MONTHLY\n \n \n+def _with_incomplete(\n+    values: list[MonthlyValue], incomplete: Sequence[MonthlyValue]\n+) -> list[MonthlyValue]:\n+    \"\"\"끝나지 않은 달을 사유와 함께 결과에 되돌린다. 순서는 대상월 순이다.\"\"\"\n+    if not incomplete:\n+        return values\n+    return sorted([*values, *incomplete], key=lambda value: value.period)\n+\n+\n+def _split_incomplete(\n+    observations: Sequence[SourceObservation], as_of: date\n+) -> tuple[list[SourceObservation], list[MonthlyValue]]:\n+    \"\"\"아직 끝나지 않은 대상월을 떼어 낸다 (FR-006a).\n+\n+    **원천이 진행 중인 달을 함께 준다.** 관세청은 이번 달 누적치를 그날까지 더해 내보내므로,\n+    달이 끝나기 전에 받은 값은 그 달의 값이 아니라 그 시점까지의 조각이다. 2026-09-17 과\n+    2026-09-22 에 받은 2026-09 수출이 148억 달러 차이였고, 전년동월 대비로 옮기면 -5.07% 와\n+    +17.37% 가 된다 — 같은 이름을 달고 22%p 를 움직인다. 화면은 그중 하나를 \"9월 수출\"로\n+    보여주고 사용자는 수출이 줄었다고 읽는다(2026-09-22 관측).\n+\n+    **버리지 않고 사유와 함께 남긴다.** 조용히 빼면 그 달이 원래 없는 달인지 아직 안 끝난\n+    달인지 구분되지 않는다(원칙 VI).\n+\n+    :data:`fold_month_end` 가 일별 계열에 이미 같은 규칙을 건다. 월별 원천에만 이 규칙이\n+    없었던 것이고, 달이 안 끝났다는 사실은 원천 주기와 무관하다.\n+    \"\"\"\n+    kept: list[SourceObservation] = []\n+    incomplete: list[MonthlyValue] = []\n+    for observation in observations:\n+        period = month_of(observation.period)\n+        if _last_day(period) >= as_of:\n+            incomplete.append(\n+                _missing(observation.indicator_id, period, MISSING_INCOMPLETE_MONTH)\n+            )\n+            continue\n+        kept.append(observation)\n+    return kept, incomplete\n+\n+\n def apply(\n     indicator: IndicatorDefinition,\n     observations: Sequence[SourceObservation],\n@@ -410,12 +449,18 @@ def apply(\n     rule = indicator.transform_rule\n     monthly_source = _require_declared_cycle(indicator, observations)\n \n+    # 월별 원천이 진행 중인 달을 함께 줄 때 그 달을 값으로 만들지 않는다. 일별 계열은\n+    # `fold_month_end` 가 as_of 로 이미 막고 있어 여기서 다시 걸지 않는다.\n+    incomplete: list[MonthlyValue] = []\n+    if monthly_source and as_of is not None:\n+        observations, incomplete = _split_incomplete(observations, as_of)\n+\n     if rule in (TRANSFORM_OFFICIAL_AMOUNT, TRANSFORM_SEASONAL_RATE):\n-        return passthrough(observations)\n+        return _with_incomplete(passthrough(observations), incomplete)\n \n     if rule == TRANSFORM_MONTH_END:\n         if monthly_source:\n-            return passthrough(observations)\n+            return _with_incomplete(passthrough(observations), incomplete)\n         if as_of is None:\n             raise ValueError(\n                 f\"{indicator.indicator_id}: 월 기말을 접으려면 as_of 가 필요하다.\"\n@@ -425,7 +470,7 @@ def apply(\n \n     if rule == TRANSFORM_MONTH_AVERAGE:\n         if monthly_source:\n-            return passthrough(observations)\n+            return _with_incomplete(passthrough(observations), incomplete)\n         return fold_month_average(observations, trading_days=trading_days or {})\n \n     if rule in (TRANSFORM_YOY, TRANSFORM_MOM):\n@@ -441,11 +486,14 @@ def apply(\n             )\n         levels = passthrough(observations)\n         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month\n-        return growth(\n-            levels,\n-            series_start=indicator.series_start,\n-            break_segments=break_segments,\n-            linked_segments=linked_segments,\n+        return _with_incomplete(\n+            growth(\n+                levels,\n+                series_start=indicator.series_start,\n+                break_segments=break_segments,\n+                linked_segments=linked_segments,\n+            ),\n+            incomplete,\n         )\n \n     raise ValueError(f\"{indicator.indicator_id}: 모르는 변환 규칙이다({rule})\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/transform/monthly.py",
+          "old_path": "data/src/data_pipeline/macro/transform/monthly.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -109,16 +109,35 @@ COMMERCIAL_USE_STATES: Final[tuple[str, ...]] = (\n     COMMERCIAL_UNKNOWN,\n )\n \n+#: 관세청 세 지표의 공표 지연 (FR-011b(3), 2026-09-22 관측).\n+#:\n+#: **0 이면 진행 중인 달을 완결된 달로 센다.** 관세청은 이번 달 누적치를 그날까지 더해 주므로\n+#: 달이 끝나기 전에 받은 값은 그 달의 값이 아니다. 지연을 0 으로 두면 `expected_end_month` 가\n+#: 진행 중인 달을 \"값이 와 있어야 할 달\"로 계산해, 부분 달이 완결 판정을 통과하고 분야 기준월\n+#: 까지 그 달로 올라간다 — 대외거래 분야 전체가 조각 위에 선다.\n+#:\n+#: 1 은 관세청이 매월 15일경 전월까지를 정정한다고 안내한 것과 맞는다(pd11 §4). 그날을 넘겨\n+#: 부르면 전월 값이 이미 있다.\n+CUSTOMS_PUBLICATION_LAG_MONTHS: Final[int] = 1\n+\n #: 정기 재조회 구간 N (FR-017). **잠정값이며 미확인으로 닫는다** — 근거는 아래에 있다.\n DEFAULT_REFRESH_MONTHS_N: Final[int] = 3\n \n #: N 을 왜 3으로 두고 왜 여기서 확정하지 않는지 (T073, FR-017, constitution 미확인 항목 처리).\n #:\n #: **확정하지 못한 이유.** N 은 \"원천이 과거 몇 달치를 함께 정정하는가\"를 묻는 값이고, 그것은\n-#: 정기 수집을 여러 달 돌려 같은 달의 값이 언제 바뀌는지 세어야 비로소 보인다. 지금 가진 것은\n-#: 한 시점의 전 구간 한 벌뿐이라 개정을 한 건도 관측하지 못했다. 관측 없이 지표마다 다른 수를\n-#: 적으면 그것은 확정이 아니라 추측이고, 등록표에 추측을 적으면 나중에 그 칸이 근거 있는 값처럼\n-#: 읽힌다.\n+#: 같은 달을 여러 판(vintage)으로 받아 값이 언제 바뀌는지 세어야 보인다. 전 구간을 아무리 넓게\n+#: 받아도 판은 하나뿐이다 — 1989-01 부터 받아도 그것은 \"오늘 본 1989-01\"이고, \"2024-04 에 본\n+#: 2024-03\"과 \"2024-07 에 본 2024-03\"이 달랐는지는 그 안에 없다. 원천이 과거 판을 주지 않으므로\n+#: 판을 쌓는 수밖에 없고, 그것이 `macro_raw_revision` 이 하는 일이다. 관측 없이 지표마다 다른\n+#: 수를 적으면 그것은 확정이 아니라 추측이고, 등록표에 추측을 적으면 나중에 그 칸이 근거 있는\n+#: 값처럼 읽힌다.\n+#:\n+#: **지금까지의 관측(1창).** 관세청 2026년분을 2026-09-17 과 2026-09-22 두 판으로 받아 견줬다.\n+#: 닫힌 달 여덟(2026-01~08)은 세 금액 모두 한 건도 바뀌지 않았다. 바뀐 것은 진행 중이던 2026-09\n+#: 하나였고 그것은 개정이 아니라 달이 채워진 것이다 — 이 관측이 `CUSTOMS_PUBLICATION_LAG_MONTHS`\n+#: 를 0 에서 1 로 올린 근거다. **5일 창 하나로는 N 이 정해지지 않는다**: 관세청이 매월 15일경에\n+#: 정정한다면 그 날을 건너뛴 두 판을 견줘야 개정이 보인다.\n #:\n #: **왜 3인가.** 관세청은 매월 15일경 전월까지의 자료를 정정한다고 안내한다(pd11 §4). 3개월은\n #: 그 주기보다 짧지 않다. 국가통계포털·한국은행·경제협력개발기구는 정정 주기를 수치로 밝히지\n@@ -126,14 +145,17 @@ DEFAULT_REFRESH_MONTHS_N: Final[int] = 3\n #:\n #: **확정에 필요한 것.** 정기 수집을 최소 N+3 개월 돌린 뒤, `macro_raw_revision` 에서 지표별로\n #: (a) N 안에서 잡힌 개정과 (b) N 밖에서 뒤늦게 발견된 개정을 센다. (b) 가 이어지는 지표는 N 을\n-#: 늘린다(FR-017).\n+#: 늘린다(FR-017). 정기 수집이 매달 판을 쌓으므로 이 값은 사람이 다시 재는 것이 아니라 시간이\n+#: 지나면서 답해진다.\n #:\n #: **의심스러우면 늘린다.** 틀리는 방향이 대칭이 아니다 — N 이 길면 이미 확정된 달을 몇 번 더\n #: 받을 뿐이고 그 비용은 호출 몇 번이다. N 이 짧으면 정정을 통째로 놓치고, 놓친 값은 다음 전\n #: 구간 재적재까지 틀린 채로 남으며 그 사실이 어디에도 드러나지 않는다.\n REFRESH_MONTHS_BASIS: Final[str] = (\n     \"잠정값 3개월. 관세청의 매월 정정 안내(pd11 §4)보다 짧지 않게 잡은 값이며, 나머지 세 원천은\"\n-    \" 정정 주기를 수치로 밝히지 않아 같은 값을 쓴다. 실제 개정 관행은 정기 수집을 여러 달 돌려\"\n+    \" 정정 주기를 수치로 밝히지 않아 같은 값을 쓴다. 2026-09-17·09-22 두 판을 견준 관측에서\"\n+    \" 닫힌 달 여덟은 바뀌지 않았으나, 5일 창 하나는 관세청의 매월 정정 시점을 건너뛰지 못해\"\n+    \" N 의 근거가 되지 못한다. 실제 개정 관행은 정기 수집이 판을 여러 달 쌓아\"\n     \" macro_raw_revision 에서 N 밖 개정을 세어야 확정되므로 이번 범위에서는 미확인으로 닫는다.\"\n     \" 조정 방향은 한쪽으로만 연다 — 의심스러우면 늘린다. N 이 길면 이미 확정된 달을 다시 받는\"\n     \" 호출 몇 번이 비용이지만, N 이 짧으면 정정을 놓치고 놓친 사실조차 드러나지 않는다.\"\n@@ -572,7 +594,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         license_reverify_by=ANNUAL_REVERIFY_BY,\n         series_start=\"1989-01\",\n         revision_history_available=False,\n-        publication_lag_months=0,\n+        publication_lag_months=CUSTOMS_PUBLICATION_LAG_MONTHS,\n         published_precision=0,\n         release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n@@ -590,7 +612,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         license_reverify_by=ANNUAL_REVERIFY_BY,\n         series_start=\"1989-01\",\n         revision_history_available=False,\n-        publication_lag_months=0,\n+        publication_lag_months=CUSTOMS_PUBLICATION_LAG_MONTHS,\n         published_precision=0,\n         release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n@@ -610,7 +632,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         license_reverify_by=ANNUAL_REVERIFY_BY,\n         series_start=\"1989-01\",\n         revision_history_available=False,\n-        publication_lag_months=0,\n+        publication_lag_months=CUSTOMS_PUBLICATION_LAG_MONTHS,\n         published_precision=0,\n         release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"원천 제공값이다. 수출에서 수입을 빼 만들지 않는다\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1 @@\n+<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><response><header><resultCode>00</resultCode><resultMsg>정상서비스.</resultMsg></header><body><items><item><balPayments>-1995307804</balPayments><expCnt>924441</expCnt><expDlr>49176984042</expDlr><impCnt>3847092</impCnt><impDlr>51172291846</impDlr><year>2025.01</year></item><item><balPayments>3963560068</balPayments><expCnt>1014431</expCnt><expDlr>52292301495</expDlr><impCnt>3982365</impCnt><impDlr>48328741427</impDlr><year>2025.02</year></item><item><balPayments>4723529826</balPayments><expCnt>1236266</expCnt><expDlr>58064561820</expDlr><impCnt>4558238</impCnt><impDlr>53341031994</impDlr><year>2025.03</year></item><item><balPayments>4803029011</balPayments><expCnt>1088160</expCnt><expDlr>58035745123</expDlr><impCnt>4601632</impCnt><impDlr>53232716112</impDlr><year>2025.04</year></item><item><balPayments>6915946445</balPayments><expCnt>1034785</expCnt><expDlr>57261062502</expDlr><impCnt>4586252</impCnt><impDlr>50345116057</impDlr><year>2025.05</year></item><item><balPayments>9008050648</balPayments><expCnt>1328545</expCnt><expDlr>59833796879</expDlr><impCnt>4272361</impCnt><impDlr>50825746231</impDlr><year>2025.06</year></item><item><balPayments>6513951126</balPayments><expCnt>1177196</expCnt><expDlr>60724322143</expDlr><impCnt>4754616</impCnt><impDlr>54210371017</impDlr><year>2025.07</year></item><item><balPayments>6402708370</balPayments><expCnt>1058881</expCnt><expDlr>58259331990</expDlr><impCnt>4524180</impCnt><impDlr>51856623620</impDlr><year>2025.08</year></item><item><balPayments>9484504329</balPayments><expCnt>1451822</expCnt><expDlr>65904118036</expDlr><impCnt>4986893</impCnt><impDlr>56419613707</impDlr><year>2025.09</year></item><item><balPayments>6000750955</balPayments><expCnt>1040165</expCnt><expDlr>59511577956</expDlr><impCnt>4655160</impCnt><impDlr>53510827001</impDlr><year>2025.10</year></item><item><balPayments>9468013461</balPayments><expCnt>1152460</expCnt><expDlr>60752618324</expDlr><impCnt>4883281</impCnt><impDlr>51284604863</impDlr><year>2025.11</year></item><item><balPayments>12145940701</balPayments><expCnt>1275309</expCnt><expDlr>69513624492</expDlr><impCnt>4883706</impCnt><impDlr>57367683791</impDlr><year>2025.12</year></item><item><balPayments>77434677136</balPayments><expCnt>13782461</expCnt><expDlr>709330044802</expDlr><impCnt>54535776</impCnt><impDlr>631895367666</impDlr><year>총계</year></item></items></body></response>\n\\ No newline at end of file\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/customs/newtrade_2025.xml",
+          "old_path": "data/tests/fixtures/macro/customs/newtrade_2025.xml",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -337,6 +337,63 @@ class TestApply:\n             monthly.apply(broken, [obs(\"exports\", \"2026-08\", \"1\")])\n \n \n+class TestIncompleteMonthFromMonthlySource:\n+    \"\"\"월별 원천이 진행 중인 달을 함께 줄 때 (FR-006a, 2026-09-22 관측).\n+\n+    관세청은 이번 달 누적치를 그날까지 더해 준다. 2026-09-17 과 2026-09-22 에 받은 2026-09\n+    수출이 148억 달러 차이였고, 전년동월 대비로 옮기면 -5.07% 와 +17.37% 다 — 같은 이름을\n+    달고 22%p 를 움직인다. 화면은 그중 하나를 \"9월 수출\"로 보여준다.\n+    \"\"\"\n+\n+    def test_끝나지_않은_달은_공식_금액도_내지_않는다(self) -> None:\n+        result = monthly.apply(\n+            BY_ID[\"trade_balance\"],\n+            [obs(\"trade_balance\", \"2026-08\", \"34785482585\"),\n+             obs(\"trade_balance\", \"2026-09\", \"24666472806\")],\n+            as_of=date(2026, 9, 22),\n+        )\n+\n+        by_period = {value.period: value for value in result}\n+        assert by_period[\"2026-08\"].value == Decimal(\"34785482585\")\n+        assert by_period[\"2026-09\"].value is None\n+        assert by_period[\"2026-09\"].missing_reason == monthly.MISSING_INCOMPLETE_MONTH\n+\n+    def test_끝나지_않은_달로_증가율을_만들지_않는다(self) -> None:\n+        \"\"\"분자가 조각이면 증가율은 달의 증가율이 아니다.\"\"\"\n+        given = [obs(\"exports\", \"2025-09\", \"65904118036\"),\n+                 obs(\"exports\", \"2026-09\", \"77353632466\")]\n+\n+        result = monthly.apply(BY_ID[\"exports\"], given, as_of=date(2026, 9, 22))\n+\n+        by_period = {value.period: value for value in result}\n+        assert by_period[\"2026-09\"].value is None\n+        assert by_period[\"2026-09\"].missing_reason == monthly.MISSING_INCOMPLETE_MONTH\n+\n+    def test_달이_끝나면_값을_낸다(self) -> None:\n+        given = [obs(\"exports\", \"2025-09\", \"100\"), obs(\"exports\", \"2026-09\", \"110\")]\n+\n+        result = monthly.apply(BY_ID[\"exports\"], given, as_of=date(2026, 10, 1))\n+\n+        assert {v.period: v.value for v in result}[\"2026-09\"] == Decimal(\"10.000000\")\n+\n+    def test_빠뜨리지_않고_사유와_함께_남긴다(self) -> None:\n+        \"\"\"조용히 빼면 원래 없는 달인지 아직 안 끝난 달인지 구분되지 않는다 (원칙 VI).\"\"\"\n+        given = [obs(\"exports\", \"2025-08\", \"100\"), obs(\"exports\", \"2026-08\", \"110\"),\n+                 obs(\"exports\", \"2026-09\", \"50\")]\n+\n+        result = monthly.apply(BY_ID[\"exports\"], given, as_of=date(2026, 9, 22))\n+\n+        assert [value.period for value in result] == [\"2025-08\", \"2026-08\", \"2026-09\"]\n+\n+    def test_as_of_가_없으면_거르지_않는다(self) -> None:\n+        \"\"\"달이 끝났는지 알 수 없으면 판단하지 않는다. 옛 호출자의 동작을 바꾸지 않는다.\"\"\"\n+        result = monthly.apply(\n+            BY_ID[\"trade_balance\"], [obs(\"trade_balance\", \"2026-09\", \"24666472806\")]\n+        )\n+\n+        assert result[0].value == Decimal(\"24666472806\")\n+\n+\n class TestShiftMonths:\n     @pytest.mark.parametrize(\n         (\"period\", \"months_\", \"expected\"),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_transform.py",
+          "old_path": "data/tests/test_macro_transform.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -62,12 +62,10 @@ _ECOS_FILES: Final[dict[str, str]] = {\n \n #: 저장된 표본만으로는 대조할 수 없는 지표와 그 이유.\n #:\n-#: **비어 있지 않은 것이 문제다.** 여기 있는 지표는 SC-007 의 대조를 받지 못하므로, 표본이 갖춰지면\n-#: 지워야 한다. 조용히 건너뛰지 않도록 아래 시험이 이 목록을 그대로 고정한다.\n-SAMPLE_TOO_SHORT: Final[dict[str, str]] = {\n-    \"exports\": \"관세청 표본이 2026년 9개월뿐이라 전년동월(t-12)이 없다. 2년치 응답이 필요하다\",\n-    \"imports\": \"관세청 표본이 2026년 9개월뿐이라 전년동월(t-12)이 없다. 2년치 응답이 필요하다\",\n-}\n+#: **지금은 비어 있고, 비어 있는 것이 올바른 상태다.** 여기 지표를 넣으면 그 지표는 SC-007 의\n+#: 대조를 받지 못한다 — 넣어야 할 상황이면 이유를 함께 적고, 표본이 갖춰지는 대로 지운다.\n+#: 아래 시험이 이 목록이 비었음을 고정해, 건너뛰기가 조용히 늘지 않게 한다.\n+SAMPLE_TOO_SHORT: Final[dict[str, str]] = {}\n \n \n def _linked_housing(indicator: IndicatorDefinition) -> list[SourceObservation]:\n@@ -95,14 +93,32 @@ def _linked_housing(indicator: IndicatorDefinition) -> list[SourceObservation]:\n     ]\n \n \n+#: 관세청 표본이 담은 해들. 조회 기간이 1년으로 제한돼 해마다 따로 받는다.\n+_CUSTOMS_YEARS: Final[tuple[str, ...]] = (\"newtrade_2025.xml\", \"newtrade_2026.xml\")\n+\n+\n+def _customs_two_years(indicator: IndicatorDefinition) -> list[SourceObservation]:\n+    \"\"\"관세청 표본 두 해를 이어 하나의 계열로 만든다 (T072).\n+\n+    수출·수입은 전년동월 대비라 한 해만 읽으면 t-12 가 없어 대조할 달이 하나도 없다. 원천이\n+    조회 기간을 1년으로 제한하므로(FR-017a) 표본도 해마다 따로 받아 여기서 잇는다.\n+    \"\"\"\n+    observations: list[SourceObservation] = []\n+    for name in _CUSTOMS_YEARS:\n+        payload = (FIXTURES / \"customs\" / name).read_text(encoding=\"utf-8\")\n+        observations.extend(customs.parse(indicator, payload))\n+    periods = [o.period for o in observations]\n+    assert len(periods) == len(set(periods)), \"표본 두 해가 같은 달을 겹쳐 담았다\"\n+    return sorted(observations, key=lambda o: o.period)\n+\n+\n def _observations(indicator: IndicatorDefinition):\n     \"\"\"등록표가 고른 원천에서 그 지표의 관측을 읽는다. 어댑터는 파싱만 하고 변환하지 않는다.\"\"\"\n     name = indicator.indicator_id\n     if indicator.link_chain:\n         return _linked_housing(indicator)\n     if indicator.primary_source == \"customs\":\n-        payload = (FIXTURES / \"customs\" / \"newtrade_2026.xml\").read_text(encoding=\"utf-8\")\n-        return customs.parse(indicator, payload)\n+        return _customs_two_years(indicator)\n     if indicator.primary_source == \"ecos\":\n         payload = json.loads(\n             (FIXTURES / \"ecos\" / _ECOS_FILES[name]).read_text(encoding=\"utf-8\")\n@@ -242,6 +258,10 @@ def test_대조하지_못한_지표가_늘지_않는다() -> None:\n     건너뛰기를 조용히 늘리면 SC-007 의 대조 범위가 줄어드는데 스위트는 초록으로 남는다. 줄어든\n     것을 보이게 하려고 목록 자체를 시험한다 — 지표가 늘면 여기서 걸린다.\n     \"\"\"\n-    assert sorted(SAMPLE_TOO_SHORT) == [\"exports\", \"imports\"]\n-    # 무역수지는 같은 응답에서 오지만 변환이 공식 금액이라 t-12 가 필요 없다 — 대조된다.\n-    assert \"trade_balance\" not in SAMPLE_TOO_SHORT\n+    assert SAMPLE_TOO_SHORT == {}, \"표본 한계로 대조를 건너뛴 지표가 생겼다\"\n+    # 건너뛴 목록이 비었다는 것만으로는 부족하다 — 이 시험 파일이 지표마다 표본을 실제로\n+    # 찾아 주는지도 본다. 표본이 없는 지표는 여기서 걸리고, 대조 시험이 빠뜨린 채 초록으로\n+    # 남지 않는다.\n+    for indicator in INDICATORS:\n+        observations = _observations(indicator)\n+        assert observations, f\"{indicator.indicator_id}: 표본에서 관측을 읽지 못했다\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_value_crosscheck.py",
+          "old_path": "data/tests/test_macro_value_crosscheck.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -191,7 +191,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [X] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)\n - [X] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다\n - [X] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)\n-- [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)\n+- [X] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)\n - [X] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)\n \n ---\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,9 +9,11 @@\n \n | | 수 |\n |---|---|\n-| 자동 검증으로 확인 | 22 |\n+| 자동 검증으로 확인 | 23 |\n | 운영 실행으로 확인 | 3 |\n-| **확인하지 못함** | **1** (수출·수입 원값 대조 — 위 SQL 한 번이면 닫힌다) |\n+| **확인하지 못함** | **0** |\n+\n+수출·수입 원값 대조는 2026-09-22 에 관세청 2025년 응답을 표본에 넣어 닫았다(S15P21E205-407).\n \n ## 1. 원값 대조 (SC-007)\n \n@@ -19,7 +21,9 @@\n 0이다(PD-12 확정 전까지 정확 일치).\n \n - 검증: `data/tests/test_macro_value_crosscheck.py`\n-- 표본: 2026-09-17 실조회 응답 (`data/tests/fixtures/macro/`)\n+- 표본: 실조회 응답 (`data/tests/fixtures/macro/`). 2026-09-17 에 받은 것이고,\n+  관세청 2025년분(`customs/newtrade_2025.xml`)만 2026-09-22 에 따로 받았다 —\n+  수출·수입의 전년동월 대비에 t-12 가 필요해서다\n - 대조 방식: 변환 모듈을 쓰지 않고 시험 파일 안에서 다시 계산한다. 같은 모듈로 다시 계산하면\n   그 모듈이 틀렸을 때 둘이 똑같이 틀린다\n \n@@ -29,10 +33,10 @@\n | 주택가격: 이어 붙인 이음매를 넘는 전월 대비 | 확인 (표 셋을 `housing.link()`로 이은 계열에서 대조) |\n | 실업률: 원천 계절조정값을 그대로 둔다 | 확인 |\n | 결측 직후 달이 가까운 달로 물러나지 않는다 | 확인 |\n-| **수출·수입** | **대조 못 함** — 관세청 표본이 2026년 9개월뿐이라 전년동월(t-12)이 없다. 2년치 응답을 받아 표본에 넣으면 대조된다. 무역수지는 변환이 공식 금액이라 같은 표본으로 대조됐다 |\n+| 수출·수입 | 확인 (관세청 2025·2026 표본 21개월을 이어 2026-01·05·09 의 전년동월 대비를 대조) |\n \n-건너뛴 지표는 `SAMPLE_TOO_SHORT`에 이유와 함께 적혀 있고, 그 목록이 늘어나면 시험이 걸린다 —\n-건너뛰기가 조용히 늘면 대조 범위가 줄어드는데 스위트는 초록으로 남는다.\n+`SAMPLE_TOO_SHORT`는 비어 있고, 시험이 그 사실을 고정한다 — 표본 한계로 건너뛴 지표가 다시\n+생기면 거기서 걸린다. 건너뛰기가 조용히 늘면 대조 범위가 줄어드는데 스위트는 초록으로 남는다.\n \n ## 2. 계약·자료 시나리오\n \n@@ -68,41 +72,15 @@\n | 기준월 | 분야 7 + 전체 1 = 8행 |\n | 등록표 빈 칸 | 공표 지연·이용 조건 문구 모두 0 |\n \n-## 4. 확인하지 못한 것\n-\n-### 4.1 수출·수입의 원값 대조 — 운영 자료로 한 번 돌리면 닫힌다\n-\n-저장된 표본이 2026년 아홉 달뿐이라 자동 시험에서는 전년동월이 없다. **운영 DB에는 1989-01부터\n-453개월이 있으므로** 실제 발행 자료로 대조할 수 있다. 아래를 한 번 돌린다.\n-\n-```sql\n-SELECT o.indicator_id, o.target_month,\n-       (o.raw_value->0->>1)::numeric                AS 기준월값,\n-       (o.raw_value->1->>1)::numeric                AS 대상월값,\n-       round(((o.raw_value->1->>1)::numeric\n-              / (o.raw_value->0->>1)::numeric - 1) * 100, 6) AS 손계산,\n-       (o.transformed_value #>> '{}')::numeric      AS 파이프라인\n-FROM macro_observation o\n-JOIN macro_current_publication p ON p.dataset_version_id = o.dataset_version_id\n-WHERE o.indicator_id IN ('exports', 'imports')\n-  AND o.transformed_value IS NOT NULL\n-ORDER BY o.indicator_id, o.target_month DESC\n-LIMIT 6;\n-```\n-\n-`손계산`과 `파이프라인`이 같아야 한다. 끝자리 하나가 다르면 반올림 방식 차이이고(파이썬은 짝수\n-반올림, PostgreSQL은 올림), 그보다 크게 벌어지면 실제 문제다.\n+## 4. 닫은 것과 열린 것\n \n-**영구히 닫으려면** 관세청 2년치 응답을 표본에 넣는다. 그러면 자동 시험이 매번 대조한다.\n+### 4.1 수출·수입의 원값 대조 — 2026-09-22 닫음\n \n-```bash\n-# 서버에서. 키는 .env.prod 에 있다\n-curl -s \"https://apis.data.go.kr/1220000/Newtrade/getNewtradeList?serviceKey=$DATA_GO_KR_SERVICE_KEY&strtYymm=202501&endYymm=202512\" \\\n-  -o data/tests/fixtures/macro/customs/newtrade_2025.xml\n-```\n+저장된 표본이 2026년 아홉 달뿐이라 전년동월이 없었다. 관세청 2025년 응답을 받아 표본에 넣고\n+두 해를 이어 읽게 했다. 원천이 조회 기간을 1년으로 제한하므로(FR-017a) 표본도 해마다 따로\n+두고 시험이 잇는다.\n \n-넣은 뒤 `test_macro_value_crosscheck.py` 의 `SAMPLE_TOO_SHORT` 에서 두 줄을 지우고 두 파일을\n-합쳐 읽게 고치면 된다.\n+2026-01·05·09 의 전년동월 대비가 원천 숫자로 다시 계산한 값과 정확히 일치했다(오차 0).\n \n ### 4.2 증분 수집 보존·과거 개정 — 2026-09-22 확인, 결함을 찾아 고쳤다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/verification-2026-09-22.md",
+          "old_path": "specs/008-macro-indicator-registry/verification-2026-09-22.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2237606,
+      "head_commit_sha": "802517119ee3f95c6606bf4133aa6d3b7d253578",
+      "base_commit_sha": "1abb052374ac686d5e6b835545565f40fbf2217c",
+      "start_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "created_at": "2026-09-22T11:20:33.244+09:00",
+      "merge_request_id": 956054,
+      "state": "without_files",
+      "real_size": "4",
+      "patch_id_sha": "c7d9ddd50206eb21daa9bcfcd5f239ed196f80f0",
+      "commits": [
+        {
+          "id": "802517119ee3f95c6606bf4133aa6d3b7d253578",
+          "short_id": "80251711",
+          "created_at": "2026-09-22T11:17:47.000+09:00",
+          "parent_ids": [
+            "116b1abc21feb185096b08333608561e78248687"
+          ],
+          "title": "test(de): 대조 범위를 지키는 검사를 실제 검사로 되돌린다",
+          "message": "test(de): 대조 범위를 지키는 검사를 실제 검사로 되돌린다\n\n코드리뷰에서 나온 셋을 고친다. 동작은 그대로다.\n\n건너뛴 목록이 비었는지만 보던 자리에서, 지표 열일곱 개가 표본에서 관측을 실제로 읽는지 본다.\n앞선 커밋이 이 자리에 등록표 크기를 세는 단언을 뒀는데 그것은 `registry.validate` 가 이미\n강제하는 것이라 늘 초록이었다 — 겁장이 선 척하는 자리는 없는 자리보다 나쁘다.\n\n검증 문서의 표본 조회일을 실제대로 적는다. 관세청 2025년분만 닷새 뒤에 받은 것이라, 한 날짜로\n적어 두면 대조 결과를 다시 재현하려는 사람이 어떤 응답을 받아야 하는지 알 수 없다.\n\n`SAMPLE_TOO_SHORT` 주석이 항목이 차 있는 상황을 설명한 채 남아 있었다. 비어 있는 것이 올바른\n상태임을 적는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T11:17:47.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T11:17:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/802517119ee3f95c6606bf4133aa6d3b7d253578"
+        },
+        {
+          "id": "116b1abc21feb185096b08333608561e78248687",
+          "short_id": "116b1abc",
+          "created_at": "2026-09-22T11:08:36.000+09:00",
+          "parent_ids": [
+            "1abb052374ac686d5e6b835545565f40fbf2217c"
+          ],
+          "title": "test(de): 수출·수입 원값 대조로 열일곱 지표 전부를 견준다",
+          "message": "test(de): 수출·수입 원값 대조로 열일곱 지표 전부를 견준다\n\n저장된 관세청 표본이 2026년 아홉 달뿐이라 전년동월이 없어, 수출·수입 둘만 SC-007 의 대조를\n받지 못했다. 대조되지 않은 지표가 남아 있으면 그 지표의 화면 값이 맞는지 말할 수 없다.\n\n관세청 2025년 응답을 표본에 넣고 두 해를 이어 읽는다. 원천이 조회 기간을 1년으로 제한하므로\n(FR-017a) 표본도 해마다 따로 두고 시험이 잇는다. 같은 달을 겹쳐 담으면 거기서 걸린다.\n\n2026-01·05·09 의 전년동월 대비가 원천 숫자로 다시 계산한 값과 정확히 일치했다(오차 0).\n\n`SAMPLE_TOO_SHORT` 가 비었고, 시험이 비어 있다는 사실을 고정한다 — 표본 한계로 건너뛴 지표가\n다시 생기면 그 목록에서 걸린다. 건너뛰기가 조용히 늘면 대조 범위는 줄어드는데 스위트는 초록으로\n남는다.\n\n이로써 T072 가 닫히고 검증 문서의 \"확인하지 못함\"이 0이 된다. `N` 개월 밖 개정의 탐지는 008 이\n자동으로 알 방법이 없어 T073 에서 미확인으로 닫은 그대로다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-22T11:08:36.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-22T11:08:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/116b1abc21feb185096b08333608561e78248687"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2853621": []
+  }
+}

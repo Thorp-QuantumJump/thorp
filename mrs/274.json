@@ -1,0 +1,1151 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954344,
+    "iid": 274,
+    "project_id": 1444456,
+    "title": "feat(be): 내 기록 이름 변경·삭제를 만든다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US5의 서버 몫입니다. `PATCH /my-records/{recordId}`(이름 변경)와 `DELETE /my-records/{recordId}`(삭제)를 만듭니다.\n\n**삭제는 `my_record` 행만 건드립니다.** 다른 표에 DELETE를 보내지 않습니다 — 기록은 공용 계산 결과를 *가리킬 뿐*이고 지우는 것은 그 사용자의 소유 기록입니다(research R6). 같은 결과를 가리키는 다른 사용자의 항목은 그대로 열리고 그 공개 토큰도 살아 있습니다(SC-007).\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-390 `[BE] 내 기록 이름 변경·삭제`\n- Story: -378 / Epic: -377 · 선행: -383(BE-2, dev 머지)\n\n# 주요 변경 사항\n\n- **`MyRecordCommandService`**(`myrecord/application/service`). `rename(ownerId, recordId, name)`과 `delete(ownerId, recordId)` 둘뿐입니다. 남의 것·없는 것·이미 지운 것을 **한 가지 404**로 답합니다 — 403은 그 식별자가 존재한다는 사실을 알려 줍니다(읽기 경로와 같은 규칙).\n- **저장소에 경로별 갱신 메서드 둘**(`renameTo`·`softDelete`). 도메인 객체를 통째로 저장하지 않는 것은 `markViewed`와 같은 이유입니다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 씁니다(backend/CLAUDE.md \"컬럼 소유를 가른다\"). `softDelete`는 `deleted_at IS NULL` 조건을 걸어 두 번째 요청이 시각을 덮어쓰지 않게 합니다.\n- **이름 검증은 `RecordName`이 합니다.** 앞뒤 공백을 지운 뒤 1~120자이며, 요청 DTO에 같은 규칙을 한 번 더 적지 않았습니다. 빈 이름은 400이고 **자동 이름으로 되돌리지 않습니다** — 사용자가 지운 이름을 서버가 되살리면 그 값은 사용자의 뜻이 아닙니다.\n- **`name` 외의 키는 400입니다.** `@JsonIgnoreProperties(ignoreUnknown = false)`로는 강제되지 않습니다(아래 리뷰 포인트). `@JsonAnySetter`로 모르는 키를 받아 이 요청에서만 거절합니다.\n- **`PATCH` 응답은 갱신된 상세**(`GET`과 같은 본문)이되 **열람 표시를 남기지 않습니다**. `MyRecordQueryService`를 `detail()`(표시함)과 `current()`(표시 안 함)로 갈랐습니다 — `last_viewed_at`은 \"'다시 보기'로 열었다\"는 뜻이고 보관 기간 판단(PD-13)에 쓰는 값이라 이름 변경이 섞이면 그 판단이 조용히 어긋납니다. BE-4의 `item(...)`과 같은 규칙입니다.\n- **`DELETE` 응답은 `{recordId, deletedAt}`뿐입니다.** 되돌리는 열쇠를 주지 않습니다 — 복구 경로를 만들지 않기로 했고, 응답에 그런 값이 있으면 언젠가 만들게 됩니다.\n- 스키마 변경 없음. 도메인의 `ownedBy`·`isDeleted`는 BE-1이 만들어 둔 것을 그대로 씁니다. **`MyRecord.rename`·`MyRecord.delete`는 지웠습니다** — 만든 사본이 저장되지 않고 버려져 호출자가 0이 됐고, 남기면 계약이 아니라 죽은 코드입니다(BE-4에서 `findActive`·`touch`를 지운 것과 같은 자리).\n\n# 테스트\n\n- `./gradlew spotlessApply build` — **1907건 통과, 실패 0, skip 4**(Docker 켜고 실행). skip 4는 환경 변수로 켜는 옵트인 검사입니다(`MARKET_LIVE_TEST`·`THORP_RUN_NEWS_PERFORMANCE`·`THORP_REQUIRE_DOCKER`). 이 브랜치의 IT는 `skipped=0`으로 실제 실행됐습니다.\n- `MyRecordCommandIT` 8건:\n  - 이름만 바뀌고 **`backtest_result` 행 지문이 그대로**(SC-001). 앞뒤 공백은 지운 뒤 저장.\n  - 빈 이름 400이고 기존 이름이 그대로.\n  - `name` 외의 키가 섞이면 400이고 **이름도 바뀌지 않음**(조용히 일부만 반영하지 않음).\n  - 삭제 → 200 + `deletedAt`, 행은 남고 시각만 참, 목록 비고, `GET` 404, 두 번째 `DELETE` 404.\n  - **SC-007**: 같은 실행을 공유하는 두 사용자 중 하나가 지워도 남의 항목은 그대로 열리고 `resultToken`도 그대로이며 공용 결과 행이 남아 있음.\n  - 남의 기록은 `PATCH`·`DELETE` 모두 404이고 실제로 지워지지 않음.\n  - **이름 변경은 열람 시각을 올리지 않음** — `current()`를 `detail()`로 되돌려 이 테스트만 터지는 것을 확인하고 원복했습니다.\n  - 비로그인 401.\n- 기간은 `2024-06-03~09-27`로 두어 다른 IT와 겹치지 않게 했습니다 — 본문이 같으면 동일 버전 키가 같아 다른 IT의 실행에 합류합니다.\n\n# 리뷰 포인트\n\n- **`@JsonIgnoreProperties(ignoreUnknown = false)`가 듣지 않았습니다.** 그 값은 \"전역 `FAIL_ON_UNKNOWN_PROPERTIES` 설정을 따른다\"는 뜻이고 Spring Boot는 그 설정을 꺼 둡니다. 처음에 그걸로 썼다가 테스트가 200을 받아 드러났습니다. 전역을 켜면 다른 도메인의 요청 DTO가 함께 바뀌므로 `@JsonAnySetter`로 이 요청에서만 거절합니다. 전역을 켜는 쪽이 낫다고 보시면 그 영향 범위를 먼저 확인하겠습니다.\n- **동시 삭제는 `softDelete`의 갱신 건수로 가릅니다.** 동시에 들어온 두 요청은 각자 자기 스냅샷을 읽어 둘 다 `require(...)`를 지납니다 — 도메인의 `record.delete(now)`를 불러도 둘 다 통과하므로 그것은 안전망이 아니었고(게다가 `IllegalStateException`은 전역 매핑이 없어 500이 됩니다), 그 줄을 지웠습니다. 실제로 막는 것은 `deleted_at IS NULL` 조건이고, 바꾼 행이 0이면 404로 답합니다.\n- **`rename`이 도메인 사본을 만들지 않습니다.** `MyRecord.rename(...)`이 만드는 복사본은 저장되지 않고 버려졌고 실제로 일하는 것은 `RecordName`의 검증뿐이라, `RecordName.of(name).value()`만 씁니다.\n- **시계는 서비스에서만 읽습니다.** `renameTo`가 저장소 안에서 `clock.instant()`를 읽고 있었는데 이웃인 `markViewed`·`softDelete`는 시각을 인자로 받습니다. 두 층으로 갈리면 고정 시계를 물린 테스트가 이 경로만 놓칩니다 — `renameTo(id, name, at)`로 맞췄습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **FE-4 담당**: `PATCH /my-records/{recordId} { name }` → 갱신된 상세, `DELETE /my-records/{recordId}` → `{recordId, deletedAt}`입니다. 빈 이름·모르는 키는 400 `INVALID_INPUT`이고 `error.details.fields`에 위치가 실립니다. 삭제는 되돌릴 수 없으니 확인 문구는 화면이 받습니다(T048).\n- **005·011 담당**: 내 기록을 선택 목록으로 쓰게 되면 `my_record.deleted_at IS NULL`을 따라야 합니다(spec FR-017). 지운 항목이 비교 대상이나 경제환경 연결 대상에 남으면 안 됩니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE 쪽 US5(T048~T049, FE-4)와 내보내기(BE-5, T041~T044).\n- `tasks.md`의 T046·T047 체크박스는 머지 뒤에 표시합니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T14:10:27.654+09:00",
+    "updated_at": "2026-09-21T14:49:57.321+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T14:49:56.990+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/390-my-record-rename-delete",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+    "merge_commit_sha": "dcf17cae91b49842ca09e41ef2303c6ec4e383f4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T14:10:29.549+09:00",
+    "reference": "!274",
+    "references": {
+      "short": "!274",
+      "relative": "!274",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!274"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/274",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954344,
+    "iid": 274,
+    "project_id": 1444456,
+    "title": "feat(be): 내 기록 이름 변경·삭제를 만든다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US5의 서버 몫입니다. `PATCH /my-records/{recordId}`(이름 변경)와 `DELETE /my-records/{recordId}`(삭제)를 만듭니다.\n\n**삭제는 `my_record` 행만 건드립니다.** 다른 표에 DELETE를 보내지 않습니다 — 기록은 공용 계산 결과를 *가리킬 뿐*이고 지우는 것은 그 사용자의 소유 기록입니다(research R6). 같은 결과를 가리키는 다른 사용자의 항목은 그대로 열리고 그 공개 토큰도 살아 있습니다(SC-007).\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-390 `[BE] 내 기록 이름 변경·삭제`\n- Story: -378 / Epic: -377 · 선행: -383(BE-2, dev 머지)\n\n# 주요 변경 사항\n\n- **`MyRecordCommandService`**(`myrecord/application/service`). `rename(ownerId, recordId, name)`과 `delete(ownerId, recordId)` 둘뿐입니다. 남의 것·없는 것·이미 지운 것을 **한 가지 404**로 답합니다 — 403은 그 식별자가 존재한다는 사실을 알려 줍니다(읽기 경로와 같은 규칙).\n- **저장소에 경로별 갱신 메서드 둘**(`renameTo`·`softDelete`). 도메인 객체를 통째로 저장하지 않는 것은 `markViewed`와 같은 이유입니다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 씁니다(backend/CLAUDE.md \"컬럼 소유를 가른다\"). `softDelete`는 `deleted_at IS NULL` 조건을 걸어 두 번째 요청이 시각을 덮어쓰지 않게 합니다.\n- **이름 검증은 `RecordName`이 합니다.** 앞뒤 공백을 지운 뒤 1~120자이며, 요청 DTO에 같은 규칙을 한 번 더 적지 않았습니다. 빈 이름은 400이고 **자동 이름으로 되돌리지 않습니다** — 사용자가 지운 이름을 서버가 되살리면 그 값은 사용자의 뜻이 아닙니다.\n- **`name` 외의 키는 400입니다.** `@JsonIgnoreProperties(ignoreUnknown = false)`로는 강제되지 않습니다(아래 리뷰 포인트). `@JsonAnySetter`로 모르는 키를 받아 이 요청에서만 거절합니다.\n- **`PATCH` 응답은 갱신된 상세**(`GET`과 같은 본문)이되 **열람 표시를 남기지 않습니다**. `MyRecordQueryService`를 `detail()`(표시함)과 `current()`(표시 안 함)로 갈랐습니다 — `last_viewed_at`은 \"'다시 보기'로 열었다\"는 뜻이고 보관 기간 판단(PD-13)에 쓰는 값이라 이름 변경이 섞이면 그 판단이 조용히 어긋납니다. BE-4의 `item(...)`과 같은 규칙입니다.\n- **`DELETE` 응답은 `{recordId, deletedAt}`뿐입니다.** 되돌리는 열쇠를 주지 않습니다 — 복구 경로를 만들지 않기로 했고, 응답에 그런 값이 있으면 언젠가 만들게 됩니다.\n- 스키마 변경 없음. 도메인의 `ownedBy`·`isDeleted`는 BE-1이 만들어 둔 것을 그대로 씁니다. **`MyRecord.rename`·`MyRecord.delete`는 지웠습니다** — 만든 사본이 저장되지 않고 버려져 호출자가 0이 됐고, 남기면 계약이 아니라 죽은 코드입니다(BE-4에서 `findActive`·`touch`를 지운 것과 같은 자리).\n\n# 테스트\n\n- `./gradlew spotlessApply build` — **1907건 통과, 실패 0, skip 4**(Docker 켜고 실행). skip 4는 환경 변수로 켜는 옵트인 검사입니다(`MARKET_LIVE_TEST`·`THORP_RUN_NEWS_PERFORMANCE`·`THORP_REQUIRE_DOCKER`). 이 브랜치의 IT는 `skipped=0`으로 실제 실행됐습니다.\n- `MyRecordCommandIT` 8건:\n  - 이름만 바뀌고 **`backtest_result` 행 지문이 그대로**(SC-001). 앞뒤 공백은 지운 뒤 저장.\n  - 빈 이름 400이고 기존 이름이 그대로.\n  - `name` 외의 키가 섞이면 400이고 **이름도 바뀌지 않음**(조용히 일부만 반영하지 않음).\n  - 삭제 → 200 + `deletedAt`, 행은 남고 시각만 참, 목록 비고, `GET` 404, 두 번째 `DELETE` 404.\n  - **SC-007**: 같은 실행을 공유하는 두 사용자 중 하나가 지워도 남의 항목은 그대로 열리고 `resultToken`도 그대로이며 공용 결과 행이 남아 있음.\n  - 남의 기록은 `PATCH`·`DELETE` 모두 404이고 실제로 지워지지 않음.\n  - **이름 변경은 열람 시각을 올리지 않음** — `current()`를 `detail()`로 되돌려 이 테스트만 터지는 것을 확인하고 원복했습니다.\n  - 비로그인 401.\n- 기간은 `2024-06-03~09-27`로 두어 다른 IT와 겹치지 않게 했습니다 — 본문이 같으면 동일 버전 키가 같아 다른 IT의 실행에 합류합니다.\n\n# 리뷰 포인트\n\n- **`@JsonIgnoreProperties(ignoreUnknown = false)`가 듣지 않았습니다.** 그 값은 \"전역 `FAIL_ON_UNKNOWN_PROPERTIES` 설정을 따른다\"는 뜻이고 Spring Boot는 그 설정을 꺼 둡니다. 처음에 그걸로 썼다가 테스트가 200을 받아 드러났습니다. 전역을 켜면 다른 도메인의 요청 DTO가 함께 바뀌므로 `@JsonAnySetter`로 이 요청에서만 거절합니다. 전역을 켜는 쪽이 낫다고 보시면 그 영향 범위를 먼저 확인하겠습니다.\n- **동시 삭제는 `softDelete`의 갱신 건수로 가릅니다.** 동시에 들어온 두 요청은 각자 자기 스냅샷을 읽어 둘 다 `require(...)`를 지납니다 — 도메인의 `record.delete(now)`를 불러도 둘 다 통과하므로 그것은 안전망이 아니었고(게다가 `IllegalStateException`은 전역 매핑이 없어 500이 됩니다), 그 줄을 지웠습니다. 실제로 막는 것은 `deleted_at IS NULL` 조건이고, 바꾼 행이 0이면 404로 답합니다.\n- **`rename`이 도메인 사본을 만들지 않습니다.** `MyRecord.rename(...)`이 만드는 복사본은 저장되지 않고 버려졌고 실제로 일하는 것은 `RecordName`의 검증뿐이라, `RecordName.of(name).value()`만 씁니다.\n- **시계는 서비스에서만 읽습니다.** `renameTo`가 저장소 안에서 `clock.instant()`를 읽고 있었는데 이웃인 `markViewed`·`softDelete`는 시각을 인자로 받습니다. 두 층으로 갈리면 고정 시계를 물린 테스트가 이 경로만 놓칩니다 — `renameTo(id, name, at)`로 맞췄습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **FE-4 담당**: `PATCH /my-records/{recordId} { name }` → 갱신된 상세, `DELETE /my-records/{recordId}` → `{recordId, deletedAt}`입니다. 빈 이름·모르는 키는 400 `INVALID_INPUT`이고 `error.details.fields`에 위치가 실립니다. 삭제는 되돌릴 수 없으니 확인 문구는 화면이 받습니다(T048).\n- **005·011 담당**: 내 기록을 선택 목록으로 쓰게 되면 `my_record.deleted_at IS NULL`을 따라야 합니다(spec FR-017). 지운 항목이 비교 대상이나 경제환경 연결 대상에 남으면 안 됩니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE 쪽 US5(T048~T049, FE-4)와 내보내기(BE-5, T041~T044).\n- `tasks.md`의 T046·T047 체크박스는 머지 뒤에 표시합니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T14:10:27.654+09:00",
+    "updated_at": "2026-09-21T14:49:57.321+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T14:49:56.990+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/390-my-record-rename-delete",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+    "merge_commit_sha": "dcf17cae91b49842ca09e41ef2303c6ec4e383f4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T14:10:29.549+09:00",
+    "reference": "!274",
+    "references": {
+      "short": "!274",
+      "relative": "!274",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!274"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/274",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": "2026-09-21T14:32:29.102+09:00",
+    "latest_build_finished_at": "2026-09-21T14:49:18.500+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 212338,
+      "iid": 272,
+      "project_id": 1444456,
+      "sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+      "ref": "feat(be)/390-my-record-rename-delete",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T14:32:28.975+09:00",
+      "updated_at": "2026-09-21T14:49:18.509+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212338"
+    },
+    "head_pipeline": {
+      "id": 212338,
+      "iid": 272,
+      "project_id": 1444456,
+      "sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+      "ref": "feat(be)/390-my-record-rename-delete",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T14:32:28.975+09:00",
+      "updated_at": "2026-09-21T14:49:18.509+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212338",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T14:32:29.102+09:00",
+      "finished_at": "2026-09-21T14:49:18.500+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212338",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "head_sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+      "start_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5132b990b3013bf97162fe86106779c9ef603363",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846797,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:10:27.789+09:00",
+          "updated_at": "2026-09-21T14:10:27.793+09:00",
+          "system": true,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "897a6352139673c0a738c3a0891d92a6f8b9d37e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846798,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:10:27.856+09:00",
+          "updated_at": "2026-09-21T14:10:27.897+09:00",
+          "system": true,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bda77b7e4e65f0d6f62b6c9b38f4065b30227718",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846800,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 예외 및 보안 설계**: 소유권 검증 실패, 존재하지 않는 리소스, 이미 삭제된 리소스에 대해 모두 일괄적으로 `404 Not Found`를 반환하도록 설계하여 정보 노출(권한 유출 가능성)을 훌륭하게 방지했습니다.\n- **동시성 제어 및 낙관적 갱신 방지**: `softDelete` 메서드에서 `WHERE deleted_at IS NULL` 조건을 활용하여 동시 요청 상황에서 중복 삭제 시도를 안전하게 차단하고 영향받은 행 수(affected rows)를 기반으로 예외 처리를 수행한 점이 매우 견고합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **동시 삭제 경쟁 상태(Race Condition) 테스트**: 여러 스레드가 동시에 동일한 `recordId`에 대해 `DELETE` 요청을 보냈을 때, 단 하나의 요청만 성공(`200 OK`)하고 나머지는 모두 `404 Not Found`를 반환하는지 동시성(Concurrency) 통합 테스트를 추가할 것을 제안합니다.\n- **알 수 없는 필드(Unknown Properties) 예외 처리 검증**: `RenameMyRecordRequest`에 정의되지 않은 필드(예: `name` 외의 임의의 JSON 필드)가 포함된 요청이 전송되었을 때, `@JsonAnySetter` 로직에 의해 `IllegalArgumentException`이 발생하고 최종적으로 전역 예외 처리기에 의해 `400 Bad Request (INVALID_INPUT)`로 정확히 변환되는지 테스트 시나리오를 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T14:10:37.305+09:00",
+          "updated_at": "2026-09-21T14:32:28.938+09:00",
+          "system": false,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "61fcaa1a861f26f06c166dd3793587b1e617f674",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846962,
+          "type": null,
+          "body": "added 9 commits\n\n<ul><li>92a46c07...935b2243 - 8 commits from branch <code>dev</code></li><li>a933445c - Merge remote-tracking branch &#39;origin/dev&#39; into feat(be)/390-my-record-rename-delete</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/274/diffs?diff_id=2231997&start_sha=92a46c07f8a5e282bf5e38f46e10e55b26184490)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:21:35.918+09:00",
+          "updated_at": "2026-09-21T14:21:35.926+09:00",
+          "system": true,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "da96b29ec66a7cce15915f948f38b8c56e2b8e43",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847080,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>2d76ec71 - test(be): 두 번째 삭제가 아무것도 바꾸지 않는 것을 저장소에서 단언한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/274/diffs?diff_id=2232120&start_sha=a933445cd85a2371963355910149333af89c422e)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:32:21.142+09:00",
+          "updated_at": "2026-09-21T14:32:21.146+09:00",
+          "system": true,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "21e32dadc66af87f3d574dbc7e305891432e401a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847195,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:39:19.331+09:00",
+          "updated_at": "2026-09-21T14:39:19.355+09:00",
+          "system": true,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d64ce5f0da3ec379f1f496879e74f6aa097bfae7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847340,
+          "type": null,
+          "body": "mentioned in commit dcf17cae91b49842ca09e41ef2303c6ec4e383f4",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T14:49:57.479+09:00",
+          "updated_at": "2026-09-21T14:49:57.497+09:00",
+          "system": true,
+          "noteable_id": 954344,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 274,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2232120,
+      "head_commit_sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+      "base_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "start_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "created_at": "2026-09-21T14:32:20.898+09:00",
+      "merge_request_id": 954344,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "912f864dfd9cbd843d60887146e09090258189ec"
+    },
+    {
+      "id": 2231997,
+      "head_commit_sha": "a933445cd85a2371963355910149333af89c422e",
+      "base_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "start_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "created_at": "2026-09-21T14:21:35.619+09:00",
+      "merge_request_id": 954344,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "05de41a270c811c7777a109436649f825a3b285f"
+    },
+    {
+      "id": 2231864,
+      "head_commit_sha": "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+      "base_commit_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "start_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "created_at": "2026-09-21T14:10:28.723+09:00",
+      "merge_request_id": 954344,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "282ebea62c7e51e087b1505d5cc45354dff81438"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2232120,
+      "head_commit_sha": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+      "base_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "start_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "created_at": "2026-09-21T14:32:20.898+09:00",
+      "merge_request_id": 954344,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "912f864dfd9cbd843d60887146e09090258189ec",
+      "commits": [
+        {
+          "id": "2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85",
+          "short_id": "2d76ec71",
+          "created_at": "2026-09-21T14:32:17.000+09:00",
+          "parent_ids": [
+            "a933445cd85a2371963355910149333af89c422e"
+          ],
+          "title": "test(be): 두 번째 삭제가 아무것도 바꾸지 않는 것을 저장소에서 단언한다",
+          "message": "test(be): 두 번째 삭제가 아무것도 바꾸지 않는 것을 저장소에서 단언한다\n\nAI 리뷰가 동시 삭제 경쟁 테스트를 제안해 MockMvc + 스레드 둘로 넣어 봤는데, softDelete 의\ndeleted_at IS NULL 조건을 빼도 그대로 통과했다. 두 요청이 실제로 겹치지 않아(늦은 쪽이 앞선\n커밋 뒤에 시작해 require 에서 이미 404) 경합을 재현하지 못한 것이다. 검출력 없는 느린 검사라\n빼고, 같은 계약을 저장소에서 본다.\n\nsoftDelete 를 두 번 불러 첫 번째가 1, 두 번째가 0 이고 처음 지운 시각이 덮이지 않는 것을\n단언한다. 조건을 빼면 이 검사가 터지는 것을 확인했다 — 늦은 요청이 1 을 받으면 지우지도\n않고 지웠다고 답하게 된다. renameTo 가 이름과 갱신 시각만 건드리는 것도 함께 둔다(JDBC 로\n쓰고 JPA 로 읽으므로 1차 캐시를 비운 뒤 본다).\n\nMyRecordCommandService javadoc 에 식별자가 둘이라는 것을 적는다 — 바깥의 recordId 는 사용자에게\n보이는 문자열이고 저장소에 넘기는 record.id() 는 DB PK 다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:32:17.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:32:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2d76ec71b01fa03ec2ef9863c6aa7b655b3a0f85"
+        },
+        {
+          "id": "a933445cd85a2371963355910149333af89c422e",
+          "short_id": "a933445c",
+          "created_at": "2026-09-21T14:20:08.000+09:00",
+          "parent_ids": [
+            "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+            "935b224328315dd0dfce173c01e7c7ad25c441c1"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete\n\n# Conflicts:\n#\tspecs/006-my-records/tasks.md\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:20:08.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:20:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a933445cd85a2371963355910149333af89c422e"
+        },
+        {
+          "id": "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+          "short_id": "92a46c07",
+          "created_at": "2026-09-21T14:04:08.000+09:00",
+          "parent_ids": [
+            "963a56aa7c1359ac23384b49fac6c6699bb9d5d7"
+          ],
+          "title": "docs(be): 떨어져 나간 javadoc 을 붙이고 죽은 도메인 메서드를 지운다",
+          "message": "docs(be): 떨어져 나간 javadoc 을 붙이고 죽은 도메인 메서드를 지운다\n\n리뷰 반영이다.\n\nsoftDelete 에 @return 을 더하면서 블록을 따로 열어, 선언에 붙는 것이 뒤 블록뿐이 됐다. 앞\n블록의 \"이 표만 건드린다 — 결과·거래 내역·실행 행에는 아무것도 보내지 않는다\"가 어디에도\n붙지 않는 주석이 됐다. research R6 의 핵심 문장이라 한 블록으로 합친다.\n\nrecord.delete(now) 를 지우면서 MyRecord.delete(Instant) 가 main·test 통틀어 호출자를 잃었다.\n부르는 곳이 없으면 계약이 아니라 주석 달린 죽은 코드이고 그 안의 분기는 아무도 밟지 않는다\n— BE-4 에서 findActive·touch 를 지운 것과 같은 자리다. 복구 경로를 만들 계획이 없다는 것은\nDeletedMyRecordResponse 가 이미 못 박았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:04:08.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:04:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92a46c07f8a5e282bf5e38f46e10e55b26184490"
+        },
+        {
+          "id": "963a56aa7c1359ac23384b49fac6c6699bb9d5d7",
+          "short_id": "963a56aa",
+          "created_at": "2026-09-21T13:52:05.000+09:00",
+          "parent_ids": [
+            "770fd526f722943b38281930da56702910dfbdf6"
+          ],
+          "title": "refactor(be): 이름 변경을 열람으로 세지 않고 죽은 분기를 지운다",
+          "message": "refactor(be): 이름 변경을 열람으로 세지 않고 죽은 분기를 지운다\n\n리뷰 반영이다.\n\nPATCH 응답이 detail()을 불러 last_viewed_at 이 올랐다. 그 값은 \"'다시 보기'로 열었다\"는 뜻이고\n보관 기간 판단(PD-13)에 쓰려고 남겨 둔 것이라, 이름을 고친 기록이 열람한 것으로 세어지면 그\n판단이 조용히 어긋난다. 읽기를 detail()(표시함)과 current()(표시 안 함)로 가른다 — BE-4 가\nitem(...)에 적어 둔 규칙이 그대로 여기 해당한다. 되돌리면 터지는 검사를 함께 둔다.\n\nrecord.delete(now)는 도달 불가능했다. require(...)가 바로 위에서 지운 항목을 거르고, 동시에\n들어온 두 요청은 각자 스냅샷을 읽어 둘 다 통과하므로 주석이 말한 \"동시에 두 번\" 보호도\n아니었다. IllegalStateException 은 전역 매핑이 없어 터지면 500 이라 안전망 구실도 못 한다.\n실제로 막는 것은 softDelete 의 deleted_at IS NULL 이므로 그 갱신 건수를 돌려받아 0 이면\n404 로 답한다.\n\nrename 이 MyRecord.rename 으로 사본을 만들고 버렸다. 실제로 일하는 것은 RecordName 의 검증뿐이라\n그것만 남긴다. renameTo 만 저장소 안에서 시계를 읽던 것도 인자로 받게 맞춘다 — 시각을 읽는\n자리가 두 층으로 갈리면 고정 시계를 물린 테스트가 이 경로만 놓친다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:52:05.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:52:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/963a56aa7c1359ac23384b49fac6c6699bb9d5d7"
+        },
+        {
+          "id": "770fd526f722943b38281930da56702910dfbdf6",
+          "short_id": "770fd526",
+          "created_at": "2026-09-21T13:34:26.000+09:00",
+          "parent_ids": [
+            "52f68b7ca5d30297b163522b0f54931e94e49cd8"
+          ],
+          "title": "docs(be): dev 머지분 체크박스를 표시한다",
+          "message": "docs(be): dev 머지분 체크박스를 표시한다\n\nBE-3(389)·FE-3(388)이 dev 에 들어가 T027·T028·T032·T037~T040(T039a 포함)을 표시한다.\n체크는 머지 뒤에 한다는 규칙대로 다음 브랜치에서 표시한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:34:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:34:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/770fd526f722943b38281930da56702910dfbdf6"
+        },
+        {
+          "id": "52f68b7ca5d30297b163522b0f54931e94e49cd8",
+          "short_id": "52f68b7c",
+          "created_at": "2026-09-21T13:32:40.000+09:00",
+          "parent_ids": [
+            "6f620da679c2fa4a61a5477152ec435563891b93",
+            "86c50debc354907aded62cf2b0a715aee93db69e"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:32:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:32:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52f68b7ca5d30297b163522b0f54931e94e49cd8"
+        },
+        {
+          "id": "6f620da679c2fa4a61a5477152ec435563891b93",
+          "short_id": "6f620da6",
+          "created_at": "2026-09-21T12:47:35.000+09:00",
+          "parent_ids": [
+            "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4"
+          ],
+          "title": "feat(be): 내 기록 이름 변경·삭제를 만든다",
+          "message": "feat(be): 내 기록 이름 변경·삭제를 만든다\n\nPATCH /my-records/{recordId} 와 DELETE /my-records/{recordId} 를 더한다(spec 006 T046·T047).\n\n삭제는 my_record 행만 건드린다. 다른 표에 DELETE 를 보내지 않는다 — 기록은 공용 계산 결과를\n가리킬 뿐이고 지우는 것은 그 사용자의 소유 기록이다(research R6). 같은 결과를 가리키는 다른\n사용자의 항목은 그대로 열리고 공개 토큰도 살아 있다(SC-007). deleted_at 을 채울 뿐이라\n되돌리는 경로가 없고, 응답에도 되돌릴 열쇠를 담지 않는다.\n\n저장소에는 경로별 갱신 메서드(renameTo·softDelete)를 둔다. 도메인 객체를 통째로 저장하지\n않는 것은 markViewed 와 같은 이유다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 쓴다.\nsoftDelete 는 deleted_at IS NULL 조건을 걸어 두 번째 요청이 처음 지운 시각을 덮지 않게 한다.\n\n이름 검증은 RecordName 한 곳이다. 빈 이름은 400 이고 자동 이름으로 되돌리지 않는다 —\n사용자가 지운 이름을 서버가 되살리면 그 값은 사용자의 뜻이 아니다.\n\nname 외의 키를 400 으로 막는 데 @JsonIgnoreProperties(ignoreUnknown = false)는 듣지 않는다.\n그 값은 전역 FAIL_ON_UNKNOWN_PROPERTIES 를 따른다는 뜻이고 Spring Boot 는 그것을 꺼 둔다\n(테스트가 200 을 받아 드러났다). 전역을 켜면 다른 도메인의 요청 DTO 가 함께 바뀌므로\n@JsonAnySetter 로 모르는 키를 받아 이 요청에서만 거절한다.\n\n남의 것·없는 것·이미 지운 것은 한 가지 404 다. 403 은 그 식별자가 존재한다는 사실을 알린다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T12:47:35.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T12:47:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6f620da679c2fa4a61a5477152ec435563891b93"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -68,4 +68,21 @@ public interface MyRecordRepository {\n \n     /** '다시 보기'로 열었다. 보관 기간(PD-13)을 나중에 도입할 수 있게 시각만 남긴다 — <b>시간 기반 자동 삭제는 만들지 않는다.</b> */\n     void markViewed(long id, Instant at);\n+\n+    /**\n+     * 이름만 바꾼다(FR-017).\n+     *\n+     * <p>도메인 객체를 통째로 저장하지 않는 이유는 {@link #markViewed}와 같다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 쓴다. 통째로 저장하면\n+     * 늦게 저장한 쪽이 상대의 갱신을 되돌린다.\n+     */\n+    void renameTo(long id, String name, Instant at);\n+\n+    /**\n+     * 지운 시각을 채운다. <b>행을 지우지 않는다</b> — 지운 항목도 남아야 상한·재사용 판정이 그 사실을 볼 수 있다(research R6).\n+     *\n+     * <p>이 표만 건드린다. 결과·거래 내역·실행 행에는 아무것도 보내지 않는다.\n+     *\n+     * @return 바꾼 행 수. 0이면 그 사이 다른 요청이 먼저 지웠다는 뜻이고, 부른 쪽이 404로 답한다\n+     */\n+    int softDelete(long id, Instant at);\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/repository/MyRecordRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/repository/MyRecordRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,81 @@\n+package com.ssafy.thorp.myrecord.application.service;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.myrecord.application.repository.MyRecordRepository;\n+import com.ssafy.thorp.myrecord.domain.model.MyRecord;\n+import com.ssafy.thorp.myrecord.domain.vo.RecordName;\n+import java.time.Clock;\n+import java.time.Instant;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 내 기록 정리(spec 006 US5, FR-017).\n+ *\n+ * <p><b>삭제는 {@code my_record} 행만 건드린다.</b> 다른 표에 DELETE를 보내지 않는다 — 기록은 공용 계산 결과를 <b>가리킬 뿐</b>이고,\n+ * 지우는 것은 그 사용자의 소유 기록이다(research R6). 같은 결과를 가리키는 다른 사용자의 항목은 그대로 열리고 그 공개 토큰도 살아 있다(SC-007).\n+ *\n+ * <p><b>되돌리는 경로를 만들지 않는다.</b> 복구 기능은 만들지 않기로 했고(data-model §5), 그래서 지운 뒤 상태는 하나뿐이다.\n+ *\n+ * <p>남의 것·없는 것·이미 지운 것을 <b>한 가지 404</b>로 답한다. 403은 그 식별자가 존재한다는 사실을 알려 준다 — 읽기 경로({@code\n+ * MyRecordQueryService})와 같은 규칙이다.\n+ *\n+ * <p><b>식별자가 둘이다.</b> 바깥에서 받는 {@code recordId}는 사용자에게 보이는 문자열({@code MR-20260921-000001})이고, 저장소에\n+ * 넘기는 {@code record.id()}는 DB PK 다. PK 는 응답에 나가지 않는다 — 두 값을 섞으면 내부 번호가 주소에 실린다.\n+ */\n+@Service\n+public class MyRecordCommandService {\n+\n+    private final MyRecordRepository records;\n+    private final Clock clock;\n+\n+    public MyRecordCommandService(MyRecordRepository records, Clock clock) {\n+        this.records = records;\n+        this.clock = clock;\n+    }\n+\n+    /**\n+     * 이름을 바꾼다. <b>이름만</b> 바뀌고 저장된 결과·참조 버전은 그대로다(FR-017, SC-001).\n+     *\n+     * <p>같은 이름이 여럿 있어도 막지 않는다(research R12) — 이름은 찾기 위한 표시이고 식별은 {@code recordId}가 한다.\n+     *\n+     * @throws IllegalArgumentException 앞뒤 공백을 지운 뒤 비었거나 120자를 넘으면. 전역 처리기가 400으로 옮긴다. 자동 이름으로 되돌리지\n+     *     않는다 — 사용자가 지운 이름을 서버가 되살리면 그 값은 사용자의 뜻이 아니다\n+     */\n+    @Transactional\n+    public void rename(long ownerId, String recordId, String name) {\n+        MyRecord record = require(ownerId, recordId);\n+        records.renameTo(record.id(), RecordName.of(name).value(), clock.instant());\n+    }\n+\n+    /**\n+     * 지운다. {@code deleted_at}을 채우는 것이 전부다.\n+     *\n+     * <p>동시에 두 번 들어온 요청은 둘 다 {@link #require}를 지난다 — 각자 자기 스냅샷을 읽어 둘 다 \"아직 살아 있다\"를 본다. 먼저 커밋한 쪽만 행을\n+     * 바꾸는 것은 {@code softDelete}의 {@code deleted_at IS NULL}이고, 늦은 쪽은 바꾼 행이 없어 여기서 404가 된다.\n+     *\n+     * @return 지운 시각. 화면이 그대로 보인다\n+     */\n+    @Transactional\n+    public Instant delete(long ownerId, String recordId) {\n+        MyRecord record = require(ownerId, recordId);\n+        Instant now = clock.instant();\n+        if (records.softDelete(record.id(), now) == 0) {\n+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, \"기록을 찾을 수 없습니다: \" + recordId);\n+        }\n+        return now;\n+    }\n+\n+    /** 없는 것·남의 것·이미 지운 것이 모두 여기서 같은 404가 된다. */\n+    private MyRecord require(long ownerId, String recordId) {\n+        return records.findByRecordId(recordId)\n+                .filter(record -> record.ownedBy(ownerId))\n+                .filter(record -> !record.isDeleted())\n+                .orElseThrow(\n+                        () ->\n+                                new BusinessException(\n+                                        ErrorCode.RESOURCE_NOT_FOUND,\n+                                        \"기록을 찾을 수 없습니다: \" + recordId));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordCommandService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordCommandService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -81,10 +81,26 @@ public class MyRecordQueryService {\n         MyRecordView view = requireView(ownerId, recordId);\n         Instant now = clock.instant();\n         records.markViewed(view.id(), now);\n+        return detailOf(view.viewedAt(now));\n+    }\n+\n+    /**\n+     * 갱신한 항목을 그대로 돌려줄 때(이름 변경 응답). <b>열람 표시를 남기지 않는다.</b>\n+     *\n+     * <p>{@code last_viewed_at}은 \"'다시 보기'로 열었다\"는 뜻이고 보관 기간 판단(PD-13)에 쓰려고 남겨 둔 값이다. 이름을 고친 기록이 열람한\n+     * 것으로 세어지면 그 판단이 조용히 어긋난다 — {@link #item}과 같은 규칙이다.\n+     */\n+    @Transactional(readOnly = true)\n+    public MyRecordDetail current(long ownerId, String recordId) {\n+        return detailOf(requireView(ownerId, recordId));\n+    }\n+\n+    /** 펼쳐 보는 층을 조립한다. 열람 표시 여부는 부른 쪽이 정한다. */\n+    private MyRecordDetail detailOf(MyRecordView view) {\n         Map<String, Object> referenceVersions = referenceVersions(view);\n         Map<String, Object> reopenPayload = reopenPayload(view);\n         return new MyRecordDetail(\n-                view.viewedAt(now),\n+                view,\n                 referenceVersions,\n                 driftChecker\n                         .check(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -93,30 +93,6 @@ public record MyRecord(\n                 isCopy);\n     }\n \n-    /**\n-     * 개인 항목만 지운다. 공용 계산 결과는 건드리지 않는다(FR-017).\n-     *\n-     * <p>되돌리는 경로를 두지 않는다 — 복구 기능은 만들지 않기로 했다(research R6).\n-     */\n-    public MyRecord delete(Instant at) {\n-        if (isDeleted()) {\n-            throw new IllegalStateException(\"record already deleted: \" + recordId);\n-        }\n-        return new MyRecord(\n-                id,\n-                recordId,\n-                ownerId,\n-                ref,\n-                name,\n-                sectorCodes,\n-                strategyIds,\n-                period,\n-                savedAt,\n-                lastViewedAt,\n-                Objects.requireNonNull(at, \"deletedAt must not be null\"),\n-                isCopy);\n-    }\n-\n     /** '다시 보기'로 열었다. 보관 기간을 나중에 도입할 수 있게 시각만 남긴다. */\n     public MyRecord markViewed(Instant at) {\n         return new MyRecord(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/domain/model/MyRecord.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/domain/model/MyRecord.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -143,4 +143,24 @@ public class MyRecordRepositoryImpl implements MyRecordRepository {\n                 Timestamp.from(at),\n                 id);\n     }\n+\n+    @Override\n+    public void renameTo(long id, String name, Instant at) {\n+        jdbcTemplate.update(\n+                \"UPDATE my_record SET name = ?, updated_at = ? WHERE id = ?\",\n+                name,\n+                Timestamp.from(at),\n+                id);\n+    }\n+\n+    /** {@code deleted_at IS NULL} 조건을 걸어 두 번째 요청이 시각을 덮어쓰지 않게 한다. */\n+    @Override\n+    public int softDelete(long id, Instant at) {\n+        return jdbcTemplate.update(\n+                \"UPDATE my_record SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at\"\n+                        + \" IS NULL\",\n+                Timestamp.from(at),\n+                Timestamp.from(at),\n+                id);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,11 +4,14 @@ import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordCommandService;\n import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;\n import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;\n import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n import com.ssafy.thorp.myrecord.presentation.request.RecordRegimeSearchRequest;\n+import com.ssafy.thorp.myrecord.presentation.request.RenameMyRecordRequest;\n+import com.ssafy.thorp.myrecord.presentation.response.DeletedMyRecordResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;\n import jakarta.validation.Valid;\n@@ -18,7 +21,9 @@ import java.util.Set;\n import org.springframework.format.annotation.DateTimeFormat;\n import org.springframework.http.HttpStatus;\n import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.DeleteMapping;\n import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PatchMapping;\n import org.springframework.web.bind.annotation.PathVariable;\n import org.springframework.web.bind.annotation.PostMapping;\n import org.springframework.web.bind.annotation.RequestBody;\n@@ -40,14 +45,17 @@ import org.springframework.web.bind.annotation.RestController;\n public class MyRecordController {\n \n     private final MyRecordQueryService queryService;\n+    private final MyRecordCommandService commandService;\n     private final MyRecordRegistrar registrar;\n     private final CurrentRequester currentRequester;\n \n     public MyRecordController(\n             MyRecordQueryService queryService,\n+            MyRecordCommandService commandService,\n             MyRecordRegistrar registrar,\n             CurrentRequester currentRequester) {\n         this.queryService = queryService;\n+        this.commandService = commandService;\n         this.registrar = registrar;\n         this.currentRequester = currentRequester;\n     }\n@@ -104,6 +112,39 @@ public class MyRecordController {\n                                         queryService.item(ownerId, outcome.recordId()))));\n     }\n \n+    /**\n+     * 이름 변경(FR-017). <b>이름만</b> 바뀌고 저장된 결과·참조 버전은 그대로다.\n+     *\n+     * <p>{@code name} 외의 키는 무시하지 않고 400이다({@link RenameMyRecordRequest}). 응답은 갱신된 상세이며 {@code GET}과\n+     * 같은 본문이다 — 화면이 바뀐 값을 다시 읽으려고 한 번 더 부르지 않아도 된다.\n+     */\n+    @PatchMapping(\"/{recordId}\")\n+    public ResponseEntity<ApiResponse<MyRecordDetailResponse>> rename(\n+            @PathVariable String recordId, @Valid @RequestBody RenameMyRecordRequest request) {\n+        long ownerId = currentRequester.requireRequesterId();\n+        commandService.rename(ownerId, recordId, request.name());\n+        // 이름을 바꾼 항목을 돌려줄 뿐이라 '다시 보기'로 세지 않는다 — current(...)는 열람 표시를\n+        // 남기지 않는다.\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(\n+                        MyRecordDetailResponse.from(queryService.current(ownerId, recordId))));\n+    }\n+\n+    /**\n+     * 삭제(FR-017). <b>개인 기록만 사라지고 공용 계산 결과는 남는다</b>(research R6).\n+     *\n+     * <p>확인은 화면이 받는다 — 서버는 이 요청을 받으면 바로 수행한다. 되돌리는 경로는 없다. 이미 지운 항목은 없는 항목과 같은 404다.\n+     */\n+    @DeleteMapping(\"/{recordId}\")\n+    public ResponseEntity<ApiResponse<DeletedMyRecordResponse>> delete(\n+            @PathVariable String recordId) {\n+        long ownerId = currentRequester.requireRequesterId();\n+        return ResponseEntity.ok(\n+                ApiResponse.ok(\n+                        new DeletedMyRecordResponse(\n+                                recordId, commandService.delete(ownerId, recordId))));\n+    }\n+\n     /** 상세. 남의 것·없는 것·지운 것은 모두 404 {@code RESOURCE_NOT_FOUND}다. */\n     @GetMapping(\"/{recordId}\")\n     public ResponseEntity<ApiResponse<MyRecordDetailResponse>> detail(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+package com.ssafy.thorp.myrecord.presentation.request;\n+\n+import com.fasterxml.jackson.annotation.JsonAnySetter;\n+import jakarta.validation.constraints.NotNull;\n+import java.util.Map;\n+\n+/**\n+ * {@code PATCH /my-records/{recordId}} 요청(contracts).\n+ *\n+ * <p><b>이 요청으로 바꿀 수 있는 것은 이름뿐이다.</b> {@code name} 외의 키는 무시하지 않고 거절한다 — 조용히 버리면 사용자는 바꾼 줄 알고 화면은 안\n+ * 바뀐 값을 계속 보인다.\n+ *\n+ * <p>{@code @JsonIgnoreProperties(ignoreUnknown = false)}로는 이것을 강제할 수 없다. 그 값은 \"전역 {@code\n+ * FAIL_ON_UNKNOWN_PROPERTIES} 설정을 따른다\"는 뜻이고 Spring Boot 는 그 설정을 꺼 둔다. 전역을 켜면 다른 도메인의 요청 DTO 가 함께\n+ * 바뀌므로, 모르는 키를 여기서 받아 두고 이 요청에서만 거절한다.\n+ *\n+ * <p>길이·공백 판정은 {@code RecordName}이 한다. 여기서 한 번 더 적으면 규칙이 두 곳이 된다.\n+ */\n+public record RenameMyRecordRequest(\n+        @NotNull(message = \"name 은 필수입니다\") String name, @JsonAnySetter Map<String, Object> extra) {\n+\n+    public RenameMyRecordRequest {\n+        if (extra != null && !extra.isEmpty()) {\n+            throw new IllegalArgumentException(\"이 요청으로 바꿀 수 있는 것은 name 뿐입니다: \" + extra.keySet());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RenameMyRecordRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RenameMyRecordRequest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+package com.ssafy.thorp.myrecord.presentation.response;\n+\n+import java.time.Instant;\n+\n+/**\n+ * {@code DELETE /my-records/{recordId}} 응답(contracts).\n+ *\n+ * <p>지운 시각만 돌려준다. <b>되돌리는 열쇠를 주지 않는다</b> — 복구 경로를 만들지 않기로 했고(research R6), 응답에 그런 값이 있으면 언젠가 만들게\n+ * 된다.\n+ */\n+public record DeletedMyRecordResponse(String recordId, Instant deletedAt) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/DeletedMyRecordResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/DeletedMyRecordResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -280,6 +280,50 @@ class MyRecordRepositoryIT extends RepositoryTestSupport {\n                 .isEqualTo(later);\n     }\n \n+    @Test\n+    @DisplayName(\"두 번째 삭제는 바꾼 행이 없고 처음 지운 시각이 남는다\")\n+    void 두_번째_삭제는_아무것도_바꾸지_않는다() {\n+        long owner = newUser();\n+        MyRecord saved = records.save(analysisOf(owner, newRun(), false));\n+        entityManager.flush();\n+        Instant first = SAVED_AT.plusSeconds(60);\n+\n+        assertThat(records.softDelete(saved.id(), first)).isEqualTo(1);\n+\n+        // 서비스의 \"이미 지웠나\" 검사만으로는 동시에 들어온 두 요청이 갈리지 않는다 — 각자 자기\n+        // 스냅샷을 읽어 둘 다 살아 있다고 본다. 늦은 쪽을 막는 것은 이 조건뿐이고, 여기서 0 이\n+        // 나와야 부른 쪽이 404 로 답한다.\n+        assertThat(records.softDelete(saved.id(), first.plusSeconds(3600)))\n+                .as(\"두 번째 요청이 1 을 받으면 지우지도 않고 지웠다고 답하게 된다\")\n+                .isZero();\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT deleted_at FROM my_record WHERE id = ?\",\n+                                Instant.class,\n+                                saved.id()))\n+                .as(\"처음 지운 시각이 덮이지 않는다\")\n+                .isEqualTo(first);\n+    }\n+\n+    @Test\n+    @DisplayName(\"이름 변경은 이름과 갱신 시각만 건드린다\")\n+    void 이름만_바꾼다() {\n+        long owner = newUser();\n+        MyRecord saved = records.save(analysisOf(owner, newRun(), false));\n+        entityManager.flush();\n+\n+        records.renameTo(saved.id(), \"바꾼 이름\", SAVED_AT.plusSeconds(120));\n+        // JDBC 로 쓴 것을 JPA 로 읽으므로 1차 캐시를 비운다 — 비우지 않으면 옛 값이 돌아와\n+        // 이 검사가 갱신을 보지 못한다.\n+        entityManager.clear();\n+\n+        MyRecord found = records.findByRecordId(saved.recordId().value()).orElseThrow();\n+        assertThat(found.name().value()).isEqualTo(\"바꾼 이름\");\n+        assertThat(found.savedAt()).isEqualTo(saved.savedAt());\n+        assertThat(found.deletedAt()).isNull();\n+        assertThat(found.lastViewedAt()).isNull();\n+    }\n+\n     private static MyRecord analysisOf(long owner, long runId, boolean isCopy) {\n         return new MyRecord(\n                 null,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordRepositoryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordRepositoryIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,303 @@\n+package com.ssafy.thorp.myrecord;\n+\n+import static com.ssafy.thorp.support.Requesters.as;\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.application.service.BacktestService;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.support.IntegrationTestSupport;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;\n+\n+/**\n+ * 내 기록 이름 변경·삭제(spec 006 T047, FR-017·SC-001·SC-007, quickstart S9).\n+ *\n+ * <p>여기서 보는 것은 <b>무엇이 남는가</b>다. 이름을 바꿔도 계산 결과는 그대로여야 하고, 지워도 사라지는 것은 그 사용자의 소유 기록뿐이어야 한다 — 같은 공용\n+ * 결과를 가리키는 다른 사용자의 항목이 함께 사라지면 SC-007 위반이다.\n+ *\n+ * <p><b>기간을 다른 IT와 겹치지 않게 둔다.</b> PostgreSQL 컨테이너를 스위트가 공유하므로 본문이 같으면 동일 버전 키도 같아 다른 IT가 만든 실행에\n+ * 합류한다.\n+ */\n+class MyRecordCommandIT extends IntegrationTestSupport {\n+\n+    private static final LocalDate[] PERIOD = {LocalDate.of(2024, 6, 3), LocalDate.of(2024, 9, 27)};\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private JdbcTemplate jdbc;\n+\n+    @Test\n+    @DisplayName(\"이름만 바뀌고 저장된 계산 결과는 그대로다(SC-001)\")\n+    void 이름만_바뀐다() throws Exception {\n+        long owner = newUser(\"rename\");\n+        BacktestJobResult accepted = backtestService.create(request(owner));\n+        long runId = runIdOf(accepted);\n+        insertResult(runId);\n+        String before = resultDigest(runId);\n+        String recordId = recordIdOf(owner);\n+\n+        mockMvc.perform(rename(owner, recordId, \"  반도체 비중 높인 안  \"))\n+                .andExpect(status().isOk())\n+                // 앞뒤 공백은 지운 뒤 저장한다.\n+                .andExpect(jsonPath(\"$.data.name\").value(\"반도체 비중 높인 안\"))\n+                .andExpect(jsonPath(\"$.data.recordId\").value(recordId));\n+\n+        assertThat(resultDigest(runId)).as(\"이름을 바꿨다고 계산 결과가 달라지면 SC-001 위반이다\").isEqualTo(before);\n+    }\n+\n+    @Test\n+    @DisplayName(\"이름 변경은 '다시 보기'가 아니다 — 열람 시각이 오르지 않는다\")\n+    void 이름_변경은_열람이_아니다() throws Exception {\n+        long owner = newUser(\"viewed\");\n+        backtestService.create(request(owner));\n+        String recordId = recordIdOf(owner);\n+        // 상세를 한 번 열어 열람 시각을 만들어 둔다. 그래야 \"오르지 않았다\"를 볼 수 있다.\n+        mockMvc.perform(get(\"/my-records/{recordId}\", recordId).with(as(owner)))\n+                .andExpect(status().isOk());\n+        java.sql.Timestamp before = lastViewedAtOf(owner);\n+        assertThat(before).isNotNull();\n+\n+        mockMvc.perform(rename(owner, recordId, \"이름만 바꾼다\")).andExpect(status().isOk());\n+\n+        assertThat(lastViewedAtOf(owner))\n+                .as(\"last_viewed_at 은 보관 기간 판단(PD-13)에 쓰는 값이라 이름 변경이 섞이면 안 된다\")\n+                .isEqualTo(before);\n+    }\n+\n+    @Test\n+    @DisplayName(\"빈 이름은 400이고 자동 이름으로 되돌리지 않는다\")\n+    void 빈_이름은_거절한다() throws Exception {\n+        long owner = newUser(\"blank\");\n+        backtestService.create(request(owner));\n+        String recordId = recordIdOf(owner);\n+        String before = nameOf(owner);\n+\n+        mockMvc.perform(rename(owner, recordId, \"   \"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+\n+        assertThat(nameOf(owner)).isEqualTo(before);\n+    }\n+\n+    @Test\n+    @DisplayName(\"name 외의 키는 무시하지 않고 400이다\")\n+    void 모르는_키는_거절한다() throws Exception {\n+        long owner = newUser(\"unknown\");\n+        backtestService.create(request(owner));\n+        String recordId = recordIdOf(owner);\n+\n+        mockMvc.perform(\n+                        patch(\"/my-records/{recordId}\", recordId)\n+                                .with(csrf())\n+                                .with(as(owner))\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\n+                                        \"{\\\"name\\\": \\\"새 이름\\\", \\\"savedAt\\\": \\\"2020-01-01T00:00:00Z\\\"}\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+\n+        assertThat(nameOf(owner)).as(\"조용히 이름만 바꾸고 나머지를 버리지 않는다\").doesNotContain(\"새 이름\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"삭제하면 목록·상세에서 사라지고 두 번째 삭제는 404다\")\n+    void 삭제는_한_번뿐이다() throws Exception {\n+        long owner = newUser(\"delete\");\n+        backtestService.create(request(owner));\n+        String recordId = recordIdOf(owner);\n+\n+        mockMvc.perform(delete(\"/my-records/{recordId}\", recordId).with(csrf()).with(as(owner)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.recordId\").value(recordId))\n+                .andExpect(jsonPath(\"$.data.deletedAt\").exists());\n+\n+        assertThat(deletedAtOf(owner)).as(\"행은 남고 시각만 채워진다\").isNotNull();\n+        mockMvc.perform(get(\"/my-records\").with(as(owner)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.items\").isEmpty());\n+        mockMvc.perform(get(\"/my-records/{recordId}\", recordId).with(as(owner)))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+        mockMvc.perform(delete(\"/my-records/{recordId}\", recordId).with(csrf()).with(as(owner)))\n+                .andExpect(status().isNotFound());\n+    }\n+\n+    @Test\n+    @DisplayName(\"지워도 같은 실행을 가리키는 남의 항목은 그대로 열린다(SC-007)\")\n+    void 남의_기록은_함께_사라지지_않는다() throws Exception {\n+        long mine = newUser(\"sc007-a\");\n+        long theirs = newUser(\"sc007-b\");\n+        BacktestJobResult first = backtestService.create(request(mine));\n+        BacktestJobResult second = backtestService.create(request(theirs));\n+        // 같은 조건이라 실행을 공유한다 — 한쪽을 지울 때 공용 결과가 함께 사라지면 안 된다.\n+        long runId = runIdOf(first);\n+        assertThat(runIdOf(second)).isEqualTo(runId);\n+        insertResult(runId);\n+\n+        mockMvc.perform(\n+                        delete(\"/my-records/{recordId}\", recordIdOf(mine))\n+                                .with(csrf())\n+                                .with(as(mine)))\n+                .andExpect(status().isOk());\n+\n+        String theirRecord = recordIdOf(theirs);\n+        mockMvc.perform(get(\"/my-records/{recordId}\", theirRecord).with(as(theirs)))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.recordId\").value(theirRecord))\n+                // 공개 토큰이 살아 있어야 그 결과를 계속 열 수 있다.\n+                .andExpect(jsonPath(\"$.data.resultToken\").value(second.publicToken()));\n+        assertThat(resultDigest(runId)).as(\"공용 계산 결과는 지우지 않는다\").isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"남의 기록은 403이 아니라 404다 — 식별자의 존재를 알리지 않는다\")\n+    void 남의_기록은_404다() throws Exception {\n+        long owner = newUser(\"owner\");\n+        long stranger = newUser(\"stranger\");\n+        backtestService.create(request(owner));\n+        String recordId = recordIdOf(owner);\n+\n+        mockMvc.perform(rename(stranger, recordId, \"남의 것\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+        mockMvc.perform(delete(\"/my-records/{recordId}\", recordId).with(csrf()).with(as(stranger)))\n+                .andExpect(status().isNotFound());\n+\n+        assertThat(deletedAtOf(owner)).as(\"남이 눌러도 지워지지 않는다\").isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"비로그인은 401이다\")\n+    void 비로그인은_거절한다() throws Exception {\n+        mockMvc.perform(\n+                        patch(\"/my-records/{recordId}\", \"MR-20260921-000001\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\"{\\\"name\\\": \\\"이름\\\"}\"))\n+                .andExpect(status().isUnauthorized());\n+        mockMvc.perform(delete(\"/my-records/{recordId}\", \"MR-20260921-000001\").with(csrf()))\n+                .andExpect(status().isUnauthorized());\n+    }\n+\n+    private MockHttpServletRequestBuilder rename(long owner, String recordId, String name) {\n+        return patch(\"/my-records/{recordId}\", recordId)\n+                .with(csrf())\n+                .with(as(owner))\n+                .contentType(MediaType.APPLICATION_JSON)\n+                .content(\"{\\\"name\\\": \\\"\" + name + \"\\\"}\");\n+    }\n+\n+    private String recordIdOf(long owner) {\n+        return jdbc.queryForObject(\n+                \"SELECT record_id FROM my_record WHERE owner_id = ?\", String.class, owner);\n+    }\n+\n+    private String nameOf(long owner) {\n+        return jdbc.queryForObject(\n+                \"SELECT name FROM my_record WHERE owner_id = ?\", String.class, owner);\n+    }\n+\n+    private java.sql.Timestamp lastViewedAtOf(long owner) {\n+        return jdbc.queryForObject(\n+                \"SELECT last_viewed_at FROM my_record WHERE owner_id = ?\",\n+                java.sql.Timestamp.class,\n+                owner);\n+    }\n+\n+    private java.sql.Timestamp deletedAtOf(long owner) {\n+        return jdbc.queryForObject(\n+                \"SELECT deleted_at FROM my_record WHERE owner_id = ?\",\n+                java.sql.Timestamp.class,\n+                owner);\n+    }\n+\n+    private long runIdOf(BacktestJobResult result) {\n+        return jdbc.queryForObject(\n+                \"SELECT run_id FROM backtest_request WHERE backtest_id = ?\",\n+                Long.class,\n+                result.backtestId());\n+    }\n+\n+    /** 결과 행이 그대로인지 보는 지문. 없으면 null 이라 \"지워졌다\"도 여기서 드러난다. */\n+    private String resultDigest(long runId) {\n+        List<String> rows =\n+                jdbc.queryForList(\n+                        \"SELECT performance::text || '|' || updated_at FROM backtest_result WHERE\"\n+                                + \" run_id = ?\",\n+                        String.class,\n+                        runId);\n+        return rows.isEmpty() ? null : rows.get(0);\n+    }\n+\n+    private void insertResult(long runId) {\n+        jdbc.update(\n+                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n+                        + \" finished_at, portfolio_series, diagnostics, performance, created_at,\"\n+                        + \" updated_at)\"\n+                        + \" VALUES (?, ?, ?, NOW(), NOW(), '[]'::jsonb, '{}'::jsonb, ?::jsonb,\"\n+                        + \" NOW(), NOW())\"\n+                        + \" ON CONFLICT (run_id) DO NOTHING\",\n+                runId,\n+                \"EXEC-CMD-\" + runId,\n+                \"EVT-CMD-\" + runId,\n+                \"\"\"\n+                {\"netTotalReturn\": \"0.0900\", \"maxDrawdown\": \"-0.0600\", \"totalTradingCost\": \"0.0040\"}\n+                \"\"\");\n+    }\n+\n+    private long newUser(String tag) {\n+        String suffix = tag + (System.nanoTime() % 1_000_000_000L);\n+        String email = \"my-record-cmd-\" + suffix + \"@t.test\";\n+        jdbc.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"u\" + suffix,\n+                suffix);\n+        return jdbc.queryForObject(\"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    private static CreateBacktestCommand request(Long requesterId) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                null,\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                PERIOD[0],\n+                PERIOD[1],\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordCommandIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordCommandIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2231997,
+      "head_commit_sha": "a933445cd85a2371963355910149333af89c422e",
+      "base_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "start_commit_sha": "935b224328315dd0dfce173c01e7c7ad25c441c1",
+      "created_at": "2026-09-21T14:21:35.619+09:00",
+      "merge_request_id": 954344,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "05de41a270c811c7777a109436649f825a3b285f",
+      "commits": [
+        {
+          "id": "a933445cd85a2371963355910149333af89c422e",
+          "short_id": "a933445c",
+          "created_at": "2026-09-21T14:20:08.000+09:00",
+          "parent_ids": [
+            "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+            "935b224328315dd0dfce173c01e7c7ad25c441c1"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete\n\n# Conflicts:\n#\tspecs/006-my-records/tasks.md\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:20:08.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:20:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a933445cd85a2371963355910149333af89c422e"
+        },
+        {
+          "id": "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+          "short_id": "92a46c07",
+          "created_at": "2026-09-21T14:04:08.000+09:00",
+          "parent_ids": [
+            "963a56aa7c1359ac23384b49fac6c6699bb9d5d7"
+          ],
+          "title": "docs(be): 떨어져 나간 javadoc 을 붙이고 죽은 도메인 메서드를 지운다",
+          "message": "docs(be): 떨어져 나간 javadoc 을 붙이고 죽은 도메인 메서드를 지운다\n\n리뷰 반영이다.\n\nsoftDelete 에 @return 을 더하면서 블록을 따로 열어, 선언에 붙는 것이 뒤 블록뿐이 됐다. 앞\n블록의 \"이 표만 건드린다 — 결과·거래 내역·실행 행에는 아무것도 보내지 않는다\"가 어디에도\n붙지 않는 주석이 됐다. research R6 의 핵심 문장이라 한 블록으로 합친다.\n\nrecord.delete(now) 를 지우면서 MyRecord.delete(Instant) 가 main·test 통틀어 호출자를 잃었다.\n부르는 곳이 없으면 계약이 아니라 주석 달린 죽은 코드이고 그 안의 분기는 아무도 밟지 않는다\n— BE-4 에서 findActive·touch 를 지운 것과 같은 자리다. 복구 경로를 만들 계획이 없다는 것은\nDeletedMyRecordResponse 가 이미 못 박았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:04:08.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:04:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92a46c07f8a5e282bf5e38f46e10e55b26184490"
+        },
+        {
+          "id": "963a56aa7c1359ac23384b49fac6c6699bb9d5d7",
+          "short_id": "963a56aa",
+          "created_at": "2026-09-21T13:52:05.000+09:00",
+          "parent_ids": [
+            "770fd526f722943b38281930da56702910dfbdf6"
+          ],
+          "title": "refactor(be): 이름 변경을 열람으로 세지 않고 죽은 분기를 지운다",
+          "message": "refactor(be): 이름 변경을 열람으로 세지 않고 죽은 분기를 지운다\n\n리뷰 반영이다.\n\nPATCH 응답이 detail()을 불러 last_viewed_at 이 올랐다. 그 값은 \"'다시 보기'로 열었다\"는 뜻이고\n보관 기간 판단(PD-13)에 쓰려고 남겨 둔 것이라, 이름을 고친 기록이 열람한 것으로 세어지면 그\n판단이 조용히 어긋난다. 읽기를 detail()(표시함)과 current()(표시 안 함)로 가른다 — BE-4 가\nitem(...)에 적어 둔 규칙이 그대로 여기 해당한다. 되돌리면 터지는 검사를 함께 둔다.\n\nrecord.delete(now)는 도달 불가능했다. require(...)가 바로 위에서 지운 항목을 거르고, 동시에\n들어온 두 요청은 각자 스냅샷을 읽어 둘 다 통과하므로 주석이 말한 \"동시에 두 번\" 보호도\n아니었다. IllegalStateException 은 전역 매핑이 없어 터지면 500 이라 안전망 구실도 못 한다.\n실제로 막는 것은 softDelete 의 deleted_at IS NULL 이므로 그 갱신 건수를 돌려받아 0 이면\n404 로 답한다.\n\nrename 이 MyRecord.rename 으로 사본을 만들고 버렸다. 실제로 일하는 것은 RecordName 의 검증뿐이라\n그것만 남긴다. renameTo 만 저장소 안에서 시계를 읽던 것도 인자로 받게 맞춘다 — 시각을 읽는\n자리가 두 층으로 갈리면 고정 시계를 물린 테스트가 이 경로만 놓친다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:52:05.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:52:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/963a56aa7c1359ac23384b49fac6c6699bb9d5d7"
+        },
+        {
+          "id": "770fd526f722943b38281930da56702910dfbdf6",
+          "short_id": "770fd526",
+          "created_at": "2026-09-21T13:34:26.000+09:00",
+          "parent_ids": [
+            "52f68b7ca5d30297b163522b0f54931e94e49cd8"
+          ],
+          "title": "docs(be): dev 머지분 체크박스를 표시한다",
+          "message": "docs(be): dev 머지분 체크박스를 표시한다\n\nBE-3(389)·FE-3(388)이 dev 에 들어가 T027·T028·T032·T037~T040(T039a 포함)을 표시한다.\n체크는 머지 뒤에 한다는 규칙대로 다음 브랜치에서 표시한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:34:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:34:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/770fd526f722943b38281930da56702910dfbdf6"
+        },
+        {
+          "id": "52f68b7ca5d30297b163522b0f54931e94e49cd8",
+          "short_id": "52f68b7c",
+          "created_at": "2026-09-21T13:32:40.000+09:00",
+          "parent_ids": [
+            "6f620da679c2fa4a61a5477152ec435563891b93",
+            "86c50debc354907aded62cf2b0a715aee93db69e"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:32:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:32:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52f68b7ca5d30297b163522b0f54931e94e49cd8"
+        },
+        {
+          "id": "6f620da679c2fa4a61a5477152ec435563891b93",
+          "short_id": "6f620da6",
+          "created_at": "2026-09-21T12:47:35.000+09:00",
+          "parent_ids": [
+            "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4"
+          ],
+          "title": "feat(be): 내 기록 이름 변경·삭제를 만든다",
+          "message": "feat(be): 내 기록 이름 변경·삭제를 만든다\n\nPATCH /my-records/{recordId} 와 DELETE /my-records/{recordId} 를 더한다(spec 006 T046·T047).\n\n삭제는 my_record 행만 건드린다. 다른 표에 DELETE 를 보내지 않는다 — 기록은 공용 계산 결과를\n가리킬 뿐이고 지우는 것은 그 사용자의 소유 기록이다(research R6). 같은 결과를 가리키는 다른\n사용자의 항목은 그대로 열리고 공개 토큰도 살아 있다(SC-007). deleted_at 을 채울 뿐이라\n되돌리는 경로가 없고, 응답에도 되돌릴 열쇠를 담지 않는다.\n\n저장소에는 경로별 갱신 메서드(renameTo·softDelete)를 둔다. 도메인 객체를 통째로 저장하지\n않는 것은 markViewed 와 같은 이유다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 쓴다.\nsoftDelete 는 deleted_at IS NULL 조건을 걸어 두 번째 요청이 처음 지운 시각을 덮지 않게 한다.\n\n이름 검증은 RecordName 한 곳이다. 빈 이름은 400 이고 자동 이름으로 되돌리지 않는다 —\n사용자가 지운 이름을 서버가 되살리면 그 값은 사용자의 뜻이 아니다.\n\nname 외의 키를 400 으로 막는 데 @JsonIgnoreProperties(ignoreUnknown = false)는 듣지 않는다.\n그 값은 전역 FAIL_ON_UNKNOWN_PROPERTIES 를 따른다는 뜻이고 Spring Boot 는 그것을 꺼 둔다\n(테스트가 200 을 받아 드러났다). 전역을 켜면 다른 도메인의 요청 DTO 가 함께 바뀌므로\n@JsonAnySetter 로 모르는 키를 받아 이 요청에서만 거절한다.\n\n남의 것·없는 것·이미 지운 것은 한 가지 404 다. 403 은 그 식별자가 존재한다는 사실을 알린다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T12:47:35.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T12:47:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6f620da679c2fa4a61a5477152ec435563891b93"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2231864,
+      "head_commit_sha": "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+      "base_commit_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "start_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "created_at": "2026-09-21T14:10:28.723+09:00",
+      "merge_request_id": 954344,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "282ebea62c7e51e087b1505d5cc45354dff81438",
+      "commits": [
+        {
+          "id": "92a46c07f8a5e282bf5e38f46e10e55b26184490",
+          "short_id": "92a46c07",
+          "created_at": "2026-09-21T14:04:08.000+09:00",
+          "parent_ids": [
+            "963a56aa7c1359ac23384b49fac6c6699bb9d5d7"
+          ],
+          "title": "docs(be): 떨어져 나간 javadoc 을 붙이고 죽은 도메인 메서드를 지운다",
+          "message": "docs(be): 떨어져 나간 javadoc 을 붙이고 죽은 도메인 메서드를 지운다\n\n리뷰 반영이다.\n\nsoftDelete 에 @return 을 더하면서 블록을 따로 열어, 선언에 붙는 것이 뒤 블록뿐이 됐다. 앞\n블록의 \"이 표만 건드린다 — 결과·거래 내역·실행 행에는 아무것도 보내지 않는다\"가 어디에도\n붙지 않는 주석이 됐다. research R6 의 핵심 문장이라 한 블록으로 합친다.\n\nrecord.delete(now) 를 지우면서 MyRecord.delete(Instant) 가 main·test 통틀어 호출자를 잃었다.\n부르는 곳이 없으면 계약이 아니라 주석 달린 죽은 코드이고 그 안의 분기는 아무도 밟지 않는다\n— BE-4 에서 findActive·touch 를 지운 것과 같은 자리다. 복구 경로를 만들 계획이 없다는 것은\nDeletedMyRecordResponse 가 이미 못 박았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:04:08.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:04:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92a46c07f8a5e282bf5e38f46e10e55b26184490"
+        },
+        {
+          "id": "963a56aa7c1359ac23384b49fac6c6699bb9d5d7",
+          "short_id": "963a56aa",
+          "created_at": "2026-09-21T13:52:05.000+09:00",
+          "parent_ids": [
+            "770fd526f722943b38281930da56702910dfbdf6"
+          ],
+          "title": "refactor(be): 이름 변경을 열람으로 세지 않고 죽은 분기를 지운다",
+          "message": "refactor(be): 이름 변경을 열람으로 세지 않고 죽은 분기를 지운다\n\n리뷰 반영이다.\n\nPATCH 응답이 detail()을 불러 last_viewed_at 이 올랐다. 그 값은 \"'다시 보기'로 열었다\"는 뜻이고\n보관 기간 판단(PD-13)에 쓰려고 남겨 둔 것이라, 이름을 고친 기록이 열람한 것으로 세어지면 그\n판단이 조용히 어긋난다. 읽기를 detail()(표시함)과 current()(표시 안 함)로 가른다 — BE-4 가\nitem(...)에 적어 둔 규칙이 그대로 여기 해당한다. 되돌리면 터지는 검사를 함께 둔다.\n\nrecord.delete(now)는 도달 불가능했다. require(...)가 바로 위에서 지운 항목을 거르고, 동시에\n들어온 두 요청은 각자 스냅샷을 읽어 둘 다 통과하므로 주석이 말한 \"동시에 두 번\" 보호도\n아니었다. IllegalStateException 은 전역 매핑이 없어 터지면 500 이라 안전망 구실도 못 한다.\n실제로 막는 것은 softDelete 의 deleted_at IS NULL 이므로 그 갱신 건수를 돌려받아 0 이면\n404 로 답한다.\n\nrename 이 MyRecord.rename 으로 사본을 만들고 버렸다. 실제로 일하는 것은 RecordName 의 검증뿐이라\n그것만 남긴다. renameTo 만 저장소 안에서 시계를 읽던 것도 인자로 받게 맞춘다 — 시각을 읽는\n자리가 두 층으로 갈리면 고정 시계를 물린 테스트가 이 경로만 놓친다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:52:05.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:52:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/963a56aa7c1359ac23384b49fac6c6699bb9d5d7"
+        },
+        {
+          "id": "770fd526f722943b38281930da56702910dfbdf6",
+          "short_id": "770fd526",
+          "created_at": "2026-09-21T13:34:26.000+09:00",
+          "parent_ids": [
+            "52f68b7ca5d30297b163522b0f54931e94e49cd8"
+          ],
+          "title": "docs(be): dev 머지분 체크박스를 표시한다",
+          "message": "docs(be): dev 머지분 체크박스를 표시한다\n\nBE-3(389)·FE-3(388)이 dev 에 들어가 T027·T028·T032·T037~T040(T039a 포함)을 표시한다.\n체크는 머지 뒤에 한다는 규칙대로 다음 브랜치에서 표시한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:34:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:34:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/770fd526f722943b38281930da56702910dfbdf6"
+        },
+        {
+          "id": "52f68b7ca5d30297b163522b0f54931e94e49cd8",
+          "short_id": "52f68b7c",
+          "created_at": "2026-09-21T13:32:40.000+09:00",
+          "parent_ids": [
+            "6f620da679c2fa4a61a5477152ec435563891b93",
+            "86c50debc354907aded62cf2b0a715aee93db69e"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/390-my-record-rename-delete\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T13:32:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T13:32:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52f68b7ca5d30297b163522b0f54931e94e49cd8"
+        },
+        {
+          "id": "6f620da679c2fa4a61a5477152ec435563891b93",
+          "short_id": "6f620da6",
+          "created_at": "2026-09-21T12:47:35.000+09:00",
+          "parent_ids": [
+            "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4"
+          ],
+          "title": "feat(be): 내 기록 이름 변경·삭제를 만든다",
+          "message": "feat(be): 내 기록 이름 변경·삭제를 만든다\n\nPATCH /my-records/{recordId} 와 DELETE /my-records/{recordId} 를 더한다(spec 006 T046·T047).\n\n삭제는 my_record 행만 건드린다. 다른 표에 DELETE 를 보내지 않는다 — 기록은 공용 계산 결과를\n가리킬 뿐이고 지우는 것은 그 사용자의 소유 기록이다(research R6). 같은 결과를 가리키는 다른\n사용자의 항목은 그대로 열리고 공개 토큰도 살아 있다(SC-007). deleted_at 을 채울 뿐이라\n되돌리는 경로가 없고, 응답에도 되돌릴 열쇠를 담지 않는다.\n\n저장소에는 경로별 갱신 메서드(renameTo·softDelete)를 둔다. 도메인 객체를 통째로 저장하지\n않는 것은 markViewed 와 같은 이유다 — 한 행을 여러 경로가 갱신하므로 각자 자기 컬럼만 쓴다.\nsoftDelete 는 deleted_at IS NULL 조건을 걸어 두 번째 요청이 처음 지운 시각을 덮지 않게 한다.\n\n이름 검증은 RecordName 한 곳이다. 빈 이름은 400 이고 자동 이름으로 되돌리지 않는다 —\n사용자가 지운 이름을 서버가 되살리면 그 값은 사용자의 뜻이 아니다.\n\nname 외의 키를 400 으로 막는 데 @JsonIgnoreProperties(ignoreUnknown = false)는 듣지 않는다.\n그 값은 전역 FAIL_ON_UNKNOWN_PROPERTIES 를 따른다는 뜻이고 Spring Boot 는 그것을 꺼 둔다\n(테스트가 200 을 받아 드러났다). 전역을 켜면 다른 도메인의 요청 DTO 가 함께 바뀌므로\n@JsonAnySetter 로 모르는 키를 받아 이 요청에서만 거절한다.\n\n남의 것·없는 것·이미 지운 것은 한 가지 404 다. 403 은 그 식별자가 존재한다는 사실을 알린다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T12:47:35.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T12:47:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6f620da679c2fa4a61a5477152ec435563891b93"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T14:39:19.235+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2846800": []
+  }
+}

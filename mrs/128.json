@@ -1,0 +1,1000 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 945271,
+    "iid": 128,
+    "project_id": 1444456,
+    "title": "feat(be): 백테스트 versions 를 data-model 정의에 맞춘다 — rules.provisional·mapping·evaluationSplit·worker",
+    "description": "# 작업 내용 요약\n\nspec 004 **T018**(Phase 8 Convergence)입니다. 접수(202)·상세 응답의 `versions`가 `costProfile{version, provisional}`·`rules`(문자열 `\"1\"`)·`data`·`engine` 넷만\n채워서, **역변동성 규칙이 PD-02 확정 전 임시(`strategy_rules.provisional=true`)라는 사실이 어디에도 나가지 않았습니다.** 팀 확정 규칙으로 계산한 결과와 임시 규칙 결과를\n사용자가 구분할 수 없었던 것이고, T008 결정 ③·T009 결정 ⑦이 \"별도 티켓\"으로 미룬 후속입니다.\n\n이제 `versions`는 data-model 정의 그대로입니다.\n\n```json\n{ \"mapping\": \"SECTOR-ETF-2026-09\",\n  \"rules\": { \"version\": \"1\", \"provisional\": true },\n  \"scenarioRules\": \"TARGET_RISK_OVERLAY/1\",          // TARGET_RISK 일 때만\n  \"costProfile\": { \"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true },\n  \"data\": \"FIXTURE-three_etf_24m\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.1.0\",\n  \"evaluationSplit\": \"SPLIT-1\",\n  \"worker\": \"thorp-worker 0.2.0\" }                    // 결과가 저장된 뒤 상세에만\n```\n\n**커밋 셋.**\n\n| 커밋 | 내용 |\n|---|---|\n| `05ccd84` | 접수 `versions` 조립(`BacktestService.versions`), 규칙 사본에 `provisional` 동봉(`EngineInputAssembler.rulesCopy`), 상세가 결과 행의 `worker`를 얹음(요약 프로젝션 한 열 + `BacktestDetailResult.withWorker`), 테스트 |\n| `730ae49` | API README §2.1·§2.5, 접수·상세 예시(`backtest-detail.json`의 `\"versions\": null` 정정), spec `contracts/rest-api.md`, 메시징 README 규칙 사본 설명, 워커 docstring, tasks T018 `[x]` |\n| `d89a34e` | **첫 전체 빌드에서 발견**: 007 launcher가 `evaluationSplitVersion`을 비워 보내는데 `RunPlan`이 `Map.copyOf`로 사본을 떠서 null 값이 NPE(`ParamSearchLaunchIT` 4건). 요청이 주지 않은 `mapping`·`evaluationSplit`은 키를 만들지 않는다 + 회귀 테스트 |\n\n**2차 리뷰(P2) 반영 — 커밋 하나.**\n\n| 커밋 | 내용 |\n|---|---|\n| `a9e43fb` | **결과 행 `backtest_result.versions`에 `evaluationSplit`이 저장되지 않았다.** 결과 행은 워커 출력 그대로인데 워커 `Versions` 계약에 그 필드가 없었고, 상세가 실행 행 값을 써서 테스트가 가렸다. 워커 계약(Python·Java 레코드·픽스처 3종·README §4.3)에 `evaluationSplit`(요청 `evaluation.splitVersion` 사본)을 더하고, `BacktestResultRepositoryImplTest`가 DB JSONB 키를 직접 단언한다 |\n\n- 두 갈래 중 **워커가 되돌려 주는 쪽**을 택했습니다. `evaluationSplit`은 `worker`·`engine`처럼 실측값이 아니라 요청값 사본이라 워커가 그대로 돌려주면 되고, 백엔드가 저장 때 실행 행 값을 합치면 결과 행 `versions`가 두 원천(워커 출력 + 실행 행)을 갖게 됩니다 — \"결과 행 = 워커 출력\"이라는 지금 규칙이 깨집니다.\n\n**3차 리뷰(P2) 반영 — 커밋 하나.**\n\n| 커밋 | 내용 |\n|---|---|\n| `25e2e4d` | **픽스처 생성기(`generate_fixtures.py`)에 `evaluationSplit`이 없어 재생성하면 사라졌다.** `VERSIONS`에 넣고 재생성해 `examples/`가 바이트 단위로 같음을 확인. 같은 상태였던 T012의 `resource.queue`·`role`(손으로 넣음)도 `SERVED`로 생성기에 올렸다 — 이제 생성기 출력 = 커밋된 예시 |\n\n# 관련 티켓\n\n- S15P21E205-250 `[BE] 백테스트 versions를 data-model 정의에 맞춘다: rules.provisional·mapping·evaluationSplit·worker` (T018)\n- 관련: -246(Phase 8 Convergence, 병합됨) — 이 Task를 만든 수렴 평가\n\n# 주요 변경 사항\n\n- **`BacktestService.versions()` 한 곳**이 계획 `versions`를 만듭니다. 이미 손에 있는 `StrategyRules`·오버레이·`CostProfile`·명령에서 옮기기만 하므로 조회가 늘지\n  않습니다. `scenarioRules`는 오버레이가 있을 때만 키를 둡니다(null 채우지 않음).\n- **`worker`는 접수가 아니라 조회가 채웁니다.** 어느 워커가 계산할지는 접수 시점에 모릅니다. 결과 행 `versions ->> 'worker'`를 요약 프로젝션(`BacktestResultSummary.workerVersion`)에\n  한 열 더 읽어 `BacktestDetailResult.of`가 계획 위에 얹습니다. 결과가 없으면(대기·실행 중·결과 없는 실패) 키가 없습니다. `backtest_run.versions`는 접수 소유 컬럼이라 종결 때\n  UPDATE 하지 않습니다(컬럼 소유 규칙).\n- **규칙 사본에 `provisional`을 합칩니다**(`EngineInputAssembler.rulesCopy`). 워커 `reference_versions`는 이미 사본의 그 키를 읽어 `versions.rules.provisional`로 되돌려\n  주고 있었습니다(T008) — 보내는 쪽만 없었습니다. 배분 모듈은 자기가 아는 키만 읽으므로 계산이 바뀌지 않고, 결정성 픽스처는 그대로입니다.\n- **`DedupKeyCalculator`는 손대지 않았습니다.** 키는 버전 문자열만 봅니다. 기존 실행의 키가 바뀌지 않습니다.\n- **요청이 주지 않은 버전은 키가 없습니다.** `mapping`·`evaluationSplit`은 요청값이라 007 launcher처럼 비워 보내면 키를 만들지 않습니다. null로 채우면 \"없다\"와\n  \"모른다\"가 섞이고, 실제로는 `RunPlan`의 `Map.copyOf`가 null 값을 거부해 NPE였습니다(아래 테스트 절).\n- **워커도 바뀝니다**(2차 리뷰 뒤): `Versions` 계약에 `evaluationSplit`, `reference_versions`가 요청 `evaluation.splitVersion`을 되돌려 줍니다. 계산 경로는 건드리지 않았습니다.\n\n# 테스트\n\n- 백엔드 전체: `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — **BUILD_FINAL**. 첫 전체 빌드는 `ParamSearchLaunchIT` 4건이 NPE로 깨졌고(위 `d89a34e`),\n  대상 테스트만 돌린 뒤였다면 놓쳤을 결함입니다 — 접수 경로를 건드린 변경은 전체 빌드 뒤에만 푸시합니다\n- 워커: `ruff check && ruff format --check && pytest` — 354 passed(계약 필드 추가 + `test_versions_carry_the_requested_evaluation_split`)\n- 새로 추가·고친 테스트\n  - `BacktestVersionsApiIT`(신설, 실제 등록표): 역변동성 접수 → 202·상세 `versions.rules.provisional=true`, `mapping`·`evaluationSplit`, `worker` 없음 / 고정 비중 → `false`\n  - `BacktestServiceTest`: 새 모양 단언, 임시 규칙 `true`, `TARGET_RISK` → `scenarioRules`\n  - `BacktestResultQueryServiceTest`: 완료 상세에 `worker` 얹기, 결과 전엔 없음\n  - `EngineInputAssemblerTest`: 규칙 사본에 `provisional`\n  - `BacktestResultApiIT`: 상세 예시 대조가 `versions`까지 보게 됐습니다(seed 실행에 계획 `versions` 부착, 예시 `worker`는 메시징 픽스처 값 `2.0.0`)\n\n# 리뷰 포인트\n\n- **`versions.rules`가 문자열 → 객체로 바뀝니다.** 계약 변경입니다. 프론트는 `versions`를 아직 읽지 않고(005 미착수, `frontend/src` grep 결과 CSS 클래스명만), 백엔드 안에서는\n  `BacktestJobResult`·`BacktestDetailResult`가 그대로 통과시킵니다. 007은 자기 `referenceVersions`를 따로 만들어 영향이 없습니다. **기존 DB의 실행 행**은 옛 모양(`\"rules\": \"1\"`)을\n  그대로 갖고 있고 조회는 저장된 맵을 그대로 돌려주므로 옛 실행 상세는 옛 모양입니다 — 마이그레이션으로 바꾸지 않았습니다(재현 기록은 고치지 않는다, 원칙 VIII). 로컬 검증 DB는\n  픽스처뿐이고 운영은 이 경로로 실행이 아직 없습니다.\n- **`worker`를 결과 행에서 합치는 것 vs 종결 때 실행 행에 쓰는 것.** 뒤쪽이 더 단순해 보이지만 `backtest_run.versions`는 접수 소유 컬럼이고, 종결 경로가 그 JSONB를 다시 쓰면\n  `@DynamicUpdate` 컬럼 소유 규칙(T005 리뷰 ②)이 깨집니다. 한 열 프로젝션이 더 작습니다.\n- **`backtest-detail.json` 예시의 `config`는 아직 v1(MA_CROSSOVER)입니다.** `versions`만 고쳤습니다. 예시 전체를 v2로 바꾸는 건 `BacktestResultApiIT`의 seed 실행을 통째로\n  바꾸는 일이라 이 Task 밖입니다(tasks.md T018 결정 ⑥).\n- `engine` 문자열(백엔드 설정 `\"nautilus_trader 1.219.0 / worker 2.1.0\"`)과 워커 자기 보고(`thorp-worker 0.2.0`)는 **서로 다른 것**입니다. 앞은 접수가 키에 넣는 선언값, 뒤는\n  실제로 계산한 프로세스의 패키지 버전입니다. 둘을 한 값으로 합치지 않았습니다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 해당 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 테스트 입력의 `INVERSE_VOLATILITY`·`FIXED_WEIGHT`는 등록표 행을 고르는 값\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — `worker`·`scenarioRules`는 모르면 키 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `provisional=true`가 바로 이 표시다",
+    "state": "merged",
+    "created_at": "2026-09-15T17:25:56.099+09:00",
+    "updated_at": "2026-09-15T17:35:20.002+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-15T17:35:19.640+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/250-versions-provisional",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+    "merge_commit_sha": "05ce05c9bce325167157106853248c5702abe822",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T17:25:59.312+09:00",
+    "reference": "!128",
+    "references": {
+      "short": "!128",
+      "relative": "!128",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!128"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/128",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 945271,
+    "iid": 128,
+    "project_id": 1444456,
+    "title": "feat(be): 백테스트 versions 를 data-model 정의에 맞춘다 — rules.provisional·mapping·evaluationSplit·worker",
+    "description": "# 작업 내용 요약\n\nspec 004 **T018**(Phase 8 Convergence)입니다. 접수(202)·상세 응답의 `versions`가 `costProfile{version, provisional}`·`rules`(문자열 `\"1\"`)·`data`·`engine` 넷만\n채워서, **역변동성 규칙이 PD-02 확정 전 임시(`strategy_rules.provisional=true`)라는 사실이 어디에도 나가지 않았습니다.** 팀 확정 규칙으로 계산한 결과와 임시 규칙 결과를\n사용자가 구분할 수 없었던 것이고, T008 결정 ③·T009 결정 ⑦이 \"별도 티켓\"으로 미룬 후속입니다.\n\n이제 `versions`는 data-model 정의 그대로입니다.\n\n```json\n{ \"mapping\": \"SECTOR-ETF-2026-09\",\n  \"rules\": { \"version\": \"1\", \"provisional\": true },\n  \"scenarioRules\": \"TARGET_RISK_OVERLAY/1\",          // TARGET_RISK 일 때만\n  \"costProfile\": { \"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true },\n  \"data\": \"FIXTURE-three_etf_24m\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.1.0\",\n  \"evaluationSplit\": \"SPLIT-1\",\n  \"worker\": \"thorp-worker 0.2.0\" }                    // 결과가 저장된 뒤 상세에만\n```\n\n**커밋 셋.**\n\n| 커밋 | 내용 |\n|---|---|\n| `05ccd84` | 접수 `versions` 조립(`BacktestService.versions`), 규칙 사본에 `provisional` 동봉(`EngineInputAssembler.rulesCopy`), 상세가 결과 행의 `worker`를 얹음(요약 프로젝션 한 열 + `BacktestDetailResult.withWorker`), 테스트 |\n| `730ae49` | API README §2.1·§2.5, 접수·상세 예시(`backtest-detail.json`의 `\"versions\": null` 정정), spec `contracts/rest-api.md`, 메시징 README 규칙 사본 설명, 워커 docstring, tasks T018 `[x]` |\n| `d89a34e` | **첫 전체 빌드에서 발견**: 007 launcher가 `evaluationSplitVersion`을 비워 보내는데 `RunPlan`이 `Map.copyOf`로 사본을 떠서 null 값이 NPE(`ParamSearchLaunchIT` 4건). 요청이 주지 않은 `mapping`·`evaluationSplit`은 키를 만들지 않는다 + 회귀 테스트 |\n\n**2차 리뷰(P2) 반영 — 커밋 하나.**\n\n| 커밋 | 내용 |\n|---|---|\n| `a9e43fb` | **결과 행 `backtest_result.versions`에 `evaluationSplit`이 저장되지 않았다.** 결과 행은 워커 출력 그대로인데 워커 `Versions` 계약에 그 필드가 없었고, 상세가 실행 행 값을 써서 테스트가 가렸다. 워커 계약(Python·Java 레코드·픽스처 3종·README §4.3)에 `evaluationSplit`(요청 `evaluation.splitVersion` 사본)을 더하고, `BacktestResultRepositoryImplTest`가 DB JSONB 키를 직접 단언한다 |\n\n- 두 갈래 중 **워커가 되돌려 주는 쪽**을 택했습니다. `evaluationSplit`은 `worker`·`engine`처럼 실측값이 아니라 요청값 사본이라 워커가 그대로 돌려주면 되고, 백엔드가 저장 때 실행 행 값을 합치면 결과 행 `versions`가 두 원천(워커 출력 + 실행 행)을 갖게 됩니다 — \"결과 행 = 워커 출력\"이라는 지금 규칙이 깨집니다.\n\n**3차 리뷰(P2) 반영 — 커밋 하나.**\n\n| 커밋 | 내용 |\n|---|---|\n| `25e2e4d` | **픽스처 생성기(`generate_fixtures.py`)에 `evaluationSplit`이 없어 재생성하면 사라졌다.** `VERSIONS`에 넣고 재생성해 `examples/`가 바이트 단위로 같음을 확인. 같은 상태였던 T012의 `resource.queue`·`role`(손으로 넣음)도 `SERVED`로 생성기에 올렸다 — 이제 생성기 출력 = 커밋된 예시 |\n\n# 관련 티켓\n\n- S15P21E205-250 `[BE] 백테스트 versions를 data-model 정의에 맞춘다: rules.provisional·mapping·evaluationSplit·worker` (T018)\n- 관련: -246(Phase 8 Convergence, 병합됨) — 이 Task를 만든 수렴 평가\n\n# 주요 변경 사항\n\n- **`BacktestService.versions()` 한 곳**이 계획 `versions`를 만듭니다. 이미 손에 있는 `StrategyRules`·오버레이·`CostProfile`·명령에서 옮기기만 하므로 조회가 늘지\n  않습니다. `scenarioRules`는 오버레이가 있을 때만 키를 둡니다(null 채우지 않음).\n- **`worker`는 접수가 아니라 조회가 채웁니다.** 어느 워커가 계산할지는 접수 시점에 모릅니다. 결과 행 `versions ->> 'worker'`를 요약 프로젝션(`BacktestResultSummary.workerVersion`)에\n  한 열 더 읽어 `BacktestDetailResult.of`가 계획 위에 얹습니다. 결과가 없으면(대기·실행 중·결과 없는 실패) 키가 없습니다. `backtest_run.versions`는 접수 소유 컬럼이라 종결 때\n  UPDATE 하지 않습니다(컬럼 소유 규칙).\n- **규칙 사본에 `provisional`을 합칩니다**(`EngineInputAssembler.rulesCopy`). 워커 `reference_versions`는 이미 사본의 그 키를 읽어 `versions.rules.provisional`로 되돌려\n  주고 있었습니다(T008) — 보내는 쪽만 없었습니다. 배분 모듈은 자기가 아는 키만 읽으므로 계산이 바뀌지 않고, 결정성 픽스처는 그대로입니다.\n- **`DedupKeyCalculator`는 손대지 않았습니다.** 키는 버전 문자열만 봅니다. 기존 실행의 키가 바뀌지 않습니다.\n- **요청이 주지 않은 버전은 키가 없습니다.** `mapping`·`evaluationSplit`은 요청값이라 007 launcher처럼 비워 보내면 키를 만들지 않습니다. null로 채우면 \"없다\"와\n  \"모른다\"가 섞이고, 실제로는 `RunPlan`의 `Map.copyOf`가 null 값을 거부해 NPE였습니다(아래 테스트 절).\n- **워커도 바뀝니다**(2차 리뷰 뒤): `Versions` 계약에 `evaluationSplit`, `reference_versions`가 요청 `evaluation.splitVersion`을 되돌려 줍니다. 계산 경로는 건드리지 않았습니다.\n\n# 테스트\n\n- 백엔드 전체: `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — **BUILD_FINAL**. 첫 전체 빌드는 `ParamSearchLaunchIT` 4건이 NPE로 깨졌고(위 `d89a34e`),\n  대상 테스트만 돌린 뒤였다면 놓쳤을 결함입니다 — 접수 경로를 건드린 변경은 전체 빌드 뒤에만 푸시합니다\n- 워커: `ruff check && ruff format --check && pytest` — 354 passed(계약 필드 추가 + `test_versions_carry_the_requested_evaluation_split`)\n- 새로 추가·고친 테스트\n  - `BacktestVersionsApiIT`(신설, 실제 등록표): 역변동성 접수 → 202·상세 `versions.rules.provisional=true`, `mapping`·`evaluationSplit`, `worker` 없음 / 고정 비중 → `false`\n  - `BacktestServiceTest`: 새 모양 단언, 임시 규칙 `true`, `TARGET_RISK` → `scenarioRules`\n  - `BacktestResultQueryServiceTest`: 완료 상세에 `worker` 얹기, 결과 전엔 없음\n  - `EngineInputAssemblerTest`: 규칙 사본에 `provisional`\n  - `BacktestResultApiIT`: 상세 예시 대조가 `versions`까지 보게 됐습니다(seed 실행에 계획 `versions` 부착, 예시 `worker`는 메시징 픽스처 값 `2.0.0`)\n\n# 리뷰 포인트\n\n- **`versions.rules`가 문자열 → 객체로 바뀝니다.** 계약 변경입니다. 프론트는 `versions`를 아직 읽지 않고(005 미착수, `frontend/src` grep 결과 CSS 클래스명만), 백엔드 안에서는\n  `BacktestJobResult`·`BacktestDetailResult`가 그대로 통과시킵니다. 007은 자기 `referenceVersions`를 따로 만들어 영향이 없습니다. **기존 DB의 실행 행**은 옛 모양(`\"rules\": \"1\"`)을\n  그대로 갖고 있고 조회는 저장된 맵을 그대로 돌려주므로 옛 실행 상세는 옛 모양입니다 — 마이그레이션으로 바꾸지 않았습니다(재현 기록은 고치지 않는다, 원칙 VIII). 로컬 검증 DB는\n  픽스처뿐이고 운영은 이 경로로 실행이 아직 없습니다.\n- **`worker`를 결과 행에서 합치는 것 vs 종결 때 실행 행에 쓰는 것.** 뒤쪽이 더 단순해 보이지만 `backtest_run.versions`는 접수 소유 컬럼이고, 종결 경로가 그 JSONB를 다시 쓰면\n  `@DynamicUpdate` 컬럼 소유 규칙(T005 리뷰 ②)이 깨집니다. 한 열 프로젝션이 더 작습니다.\n- **`backtest-detail.json` 예시의 `config`는 아직 v1(MA_CROSSOVER)입니다.** `versions`만 고쳤습니다. 예시 전체를 v2로 바꾸는 건 `BacktestResultApiIT`의 seed 실행을 통째로\n  바꾸는 일이라 이 Task 밖입니다(tasks.md T018 결정 ⑥).\n- `engine` 문자열(백엔드 설정 `\"nautilus_trader 1.219.0 / worker 2.1.0\"`)과 워커 자기 보고(`thorp-worker 0.2.0`)는 **서로 다른 것**입니다. 앞은 접수가 키에 넣는 선언값, 뒤는\n  실제로 계산한 프로세스의 패키지 버전입니다. 둘을 한 값으로 합치지 않았습니다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 해당 없음\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 테스트 입력의 `INVERSE_VOLATILITY`·`FIXED_WEIGHT`는 등록표 행을 고르는 값\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — `worker`·`scenarioRules`는 모르면 키 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `provisional=true`가 바로 이 표시다",
+    "state": "merged",
+    "created_at": "2026-09-15T17:25:56.099+09:00",
+    "updated_at": "2026-09-15T17:35:20.002+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-15T17:35:19.640+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/250-versions-provisional",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+    "merge_commit_sha": "05ce05c9bce325167157106853248c5702abe822",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T17:25:59.312+09:00",
+    "reference": "!128",
+    "references": {
+      "short": "!128",
+      "relative": "!128",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!128"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/128",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "27",
+    "latest_build_started_at": "2026-09-15T17:26:49.619+09:00",
+    "latest_build_finished_at": "2026-09-15T17:34:38.000+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 196607,
+      "iid": 44,
+      "project_id": 1444456,
+      "sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+      "ref": "feat(be)/250-versions-provisional",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T17:26:49.452+09:00",
+      "updated_at": "2026-09-15T17:34:38.007+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196607"
+    },
+    "head_pipeline": {
+      "id": 196607,
+      "iid": 44,
+      "project_id": 1444456,
+      "sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+      "ref": "feat(be)/250-versions-provisional",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T17:26:49.452+09:00",
+      "updated_at": "2026-09-15T17:34:38.007+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196607",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-15T17:26:49.619+09:00",
+      "finished_at": "2026-09-15T17:34:38.000+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/196607",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "head_sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+      "start_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "08b8da461d6b83a461b3a679d8d34e383652c841",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810769,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-15T17:25:56.306+09:00",
+          "updated_at": "2026-09-15T17:25:56.310+09:00",
+          "system": true,
+          "noteable_id": 945271,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 128,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "aba09eba0dc64f6db7548057cab1b67bd99f092f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810770,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-15T17:25:56.325+09:00",
+          "updated_at": "2026-09-15T17:25:56.331+09:00",
+          "system": true,
+          "noteable_id": 945271,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 128,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3efb28f54a48101c1c7923567be3289e11d14004",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810774,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 영향도 분석과 아키텍처 일관성**: 백테스트 버전(`versions`) 정보를 데이터 모델 규격에 맞추기 위해 백엔드, 워커(Python), 메시징 계약, API 문서 및 예시 JSON까지 일관되게 업데이트했습니다. 특히 `EngineInputAssembler`를 통한 `provisional` 플래그 전달과 워커의 `evaluation_split` 반환 구조가 명확합니다.\n- **방어적 프로그래밍과 회귀 방지**: 요청에서 제공되지 않은 버전 정보(예: `mapping`, `evaluationSplit`)에 대해 `null`을 강제로 채워 넣는 대신 키 자체를 누락하도록 구현하여 `Map.copyOf`에서의 `NPE` 발생 가능성을 사전에 차단하고 실제 통합 테스트(`BacktestVersionsApiIT`, `BacktestResultRepositoryImplTest`)로 검증한 점이 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **선택적 버전 필드 누락 시나리오 테스트**: `mapping`이나 `evaluationSplit` 값이 완전히 누락된 `CreateBacktestCommand`로 백테스트를 생성할 때, 202 응답 및 상세 조회 결과의 `versions` JSON 내부에 해당 키가 실제로 존재하지 않는지(Does Not Exist) 검증하는 테스트를 추가합니다.\n- **워커 버전(`worker`) 분기 테스트**: 결과가 아직 생성되지 않은 상태(예: `QUEUED` 또는 `RUNNING` 상태)의 백테스트 상세 조회 시, `versions` 객체 내부에 `worker` 키가 포함되지 않으며, 작업 완료 후 `COMPLETED` 상태로 전환되었을 때만 `worker` 키와 버전 문자열이 정상적으로 노출되는지 확인하는 통합 테스트를 보완합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:25e2e4ddf321bbc4afae6f0de8f764711ac97c47 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T17:26:07.588+09:00",
+          "updated_at": "2026-09-15T17:26:07.588+09:00",
+          "system": false,
+          "noteable_id": 945271,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 128,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1a4d21f2d5ece99eaf2cf2208f9b07a0e8799590",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810783,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-15T17:26:23.685+09:00",
+          "updated_at": "2026-09-15T17:26:23.696+09:00",
+          "system": true,
+          "noteable_id": 945271,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 128,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6cc7497b576a5a012a5c4c2d59c4d3ff17c40582",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2810891,
+          "type": null,
+          "body": "mentioned in commit 05ce05c9bce325167157106853248c5702abe822",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-15T17:35:19.659+09:00",
+          "updated_at": "2026-09-15T17:35:19.683+09:00",
+          "system": true,
+          "noteable_id": 945271,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 128,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2201239,
+      "head_commit_sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+      "base_commit_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:25:56.768+09:00",
+      "merge_request_id": 945271,
+      "state": "collected",
+      "real_size": "27",
+      "patch_id_sha": "ce4e94f4c9e3c17c1862479a7b397725a3245a2f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2201239,
+      "head_commit_sha": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+      "base_commit_sha": "850f57e86f61413ec5fcec6b9e5e00acb06d21d5",
+      "start_commit_sha": "5c370b554ee18bee5b19db3af0c1cb32fe3c0115",
+      "created_at": "2026-09-15T17:25:56.768+09:00",
+      "merge_request_id": 945271,
+      "state": "collected",
+      "real_size": "27",
+      "patch_id_sha": "ce4e94f4c9e3c17c1862479a7b397725a3245a2f",
+      "commits": [
+        {
+          "id": "25e2e4ddf321bbc4afae6f0de8f764711ac97c47",
+          "short_id": "25e2e4dd",
+          "created_at": "2026-09-15T17:19:13.000+09:00",
+          "parent_ids": [
+            "a9e43fb141dabf88a2619006a7fecc74dbc3d395"
+          ],
+          "title": "docs(be): 픽스처 생성기에 evaluationSplit 과 queue·role 을 넣어 재생성이 예시와 같게 한다",
+          "message": "docs(be): 픽스처 생성기에 evaluationSplit 과 queue·role 을 넣어 재생성이 예시와 같게 한다\n\n세 FINISHED 예시에 evaluationSplit 을 손으로 넣어 생성기를 다시 돌리면 사라졌다\n(3차 리뷰 P2). T012 가 손으로 넣은 resource.queue·role 도 같은 상태였다. 둘을\nVERSIONS·SERVED 로 생성기에 두고 재생성해 examples/ 가 바이트 단위로 같음을 확인했다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T17:19:13.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T17:19:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/25e2e4ddf321bbc4afae6f0de8f764711ac97c47"
+        },
+        {
+          "id": "a9e43fb141dabf88a2619006a7fecc74dbc3d395",
+          "short_id": "a9e43fb1",
+          "created_at": "2026-09-15T17:09:56.000+09:00",
+          "parent_ids": [
+            "d89a34e46e7700ae0a273fc9a659dc927c3b5410"
+          ],
+          "title": "fix(be): 결과 행 versions 에도 evaluationSplit 이 남게 워커 계약에 필드를 더한다",
+          "message": "fix(be): 결과 행 versions 에도 evaluationSplit 이 남게 워커 계약에 필드를 더한다\n\nbacktest_result.versions 는 워커 출력 그대로인데 Versions 계약에 evaluationSplit 이\n없어 실행 행에만 남았다(2차 리뷰 P2). 상세가 실행 행 값을 써서 테스트가 가렸다.\n요청 evaluation.splitVersion 의 사본을 워커가 되돌려 주고(Python·Java 레코드·픽스처\n3종·README §4.3), BacktestResultRepositoryImplTest 가 DB JSONB 키를 직접 본다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T17:09:56.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T17:09:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a9e43fb141dabf88a2619006a7fecc74dbc3d395"
+        },
+        {
+          "id": "d89a34e46e7700ae0a273fc9a659dc927c3b5410",
+          "short_id": "d89a34e4",
+          "created_at": "2026-09-15T16:48:31.000+09:00",
+          "parent_ids": [
+            "730ae4930cb47cba1b1fa7c6f77f9e514edd1e6f"
+          ],
+          "title": "fix(be): 요청이 주지 않은 버전은 versions 에 키를 만들지 않는다",
+          "message": "fix(be): 요청이 주지 않은 버전은 versions 에 키를 만들지 않는다\n\n첫 전체 빌드에서 ParamSearchLaunchIT 4건이 NPE 로 깨졌다. 007 launcher 가\nevaluationSplitVersion 을 비워 보내고 RunPlan 이 Map.copyOf 로 사본을 뜨므로\nnull 값이 곧 NPE 다. mapping·evaluationSplit 은 있을 때만 넣는다 — \"없다\"와\n\"모른다\"를 null 로 섞지 않는 규칙과도 같다. 회귀 테스트와 API README·tasks 결정 ⑦.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T16:48:31.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T16:48:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d89a34e46e7700ae0a273fc9a659dc927c3b5410"
+        },
+        {
+          "id": "730ae4930cb47cba1b1fa7c6f77f9e514edd1e6f",
+          "short_id": "730ae493",
+          "created_at": "2026-09-15T16:38:34.000+09:00",
+          "parent_ids": [
+            "05ccd848f86c59a93212590178c6b187f65a90e4"
+          ],
+          "title": "docs(be): versions 계약 문서·예시를 새 모양으로 맞추고 T018 을 닫는다",
+          "message": "docs(be): versions 계약 문서·예시를 새 모양으로 맞추고 T018 을 닫는다\n\nbacktest-detail.json 의 \"versions\": null 은 README \"202 와 같은 값\" 과 어긋났다.\nAPI README §2.1·§2.5, 접수·상세 예시, spec contracts/rest-api.md, 메시징 README 의\n규칙 사본 설명(provisional 동봉), 워커 reference_versions docstring, tasks T018 [x].\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T16:38:34.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T16:38:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/730ae4930cb47cba1b1fa7c6f77f9e514edd1e6f"
+        },
+        {
+          "id": "05ccd848f86c59a93212590178c6b187f65a90e4",
+          "short_id": "05ccd848",
+          "created_at": "2026-09-15T16:38:34.000+09:00",
+          "parent_ids": [
+            "850f57e86f61413ec5fcec6b9e5e00acb06d21d5"
+          ],
+          "title": "feat(be): 참조 버전에 규칙 임시 표시·대응표·평가 분할·워커 보고를 싣는다",
+          "message": "feat(be): 참조 버전에 규칙 임시 표시·대응표·평가 분할·워커 보고를 싣는다\n\nversions 가 costProfile{version, provisional}·rules(문자열)·data·engine 넷뿐이라\nstrategy_rules.provisional(역변동성 PD-02 임시)이 어디에도 나가지 않았다. 접수가\ndata-model 모양 {mapping, rules{version, provisional}, scenarioRules?, costProfile,\ndata, engine, evaluationSplit} 으로 만들고, 조립기가 규칙 사본에 provisional 을\n합쳐 워커 결과 versions.rules.provisional 이 저장되게 하며, 상세는 결과 행의\nversions.worker 를 계획 위에 얹는다(접수 시점엔 어느 워커가 계산할지 모른다).\nDedupKeyCalculator 는 손대지 않았다 — 키는 버전 문자열만 본다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T16:38:34.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T16:38:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/05ccd848f86c59a93212590178c6b187f65a90e4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -204,6 +204,9 @@ public record EngineOutput(\n      *\n      * @param mapping 섹터-ETF 대응표 버전. null = 없음\n      * @param scenarioRules 시나리오 규칙 버전. null = 주 분석\n+     * @param evaluationSplit 요청의 {@code evaluation.splitVersion} 사본. null = 미지정. 결과 행이 실행 행 없이도 재현\n+     *     기준을 다 갖도록 워커가 되돌려 준다(data-model {@code backtest_result.versions} = {@code run.versions}\n+     *     사본, T018)\n      */\n     public record Versions(\n             String mapping,\n@@ -212,6 +215,7 @@ public record EngineOutput(\n             RuleVersion costProfile,\n             String data,\n             String engine,\n+            String evaluationSplit,\n             String worker) {}\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/message/EngineOutput.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/message/EngineOutput.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -140,7 +140,28 @@ public record BacktestDetailResult(\n                         : run.getFailureCode() == null\n                                 ? null\n                                 : new Failure(run.getFailureCode(), run.getFailureMessage());\n-        return build(request, run, currency, now, summary, null, failure);\n+        return build(\n+                request,\n+                run,\n+                currency,\n+                now,\n+                summary,\n+                null,\n+                failure,\n+                withWorker(run.getPlan().versions(), result.workerVersion()));\n+    }\n+\n+    /**\n+     * 접수가 확정한 참조 버전에 결과를 낸 워커의 자기 보고({@code versions.worker})를 얹는다. 접수 시점에는 어느 워커가 계산할지 모르므로 이 값만\n+     * 결과 행에서 온다. 보고가 없으면 키를 만들지 않는다 — 모르는 값을 채우지 않는다.\n+     */\n+    private static Map<String, Object> withWorker(Map<String, Object> versions, String worker) {\n+        if (worker == null || versions == null) {\n+            return versions;\n+        }\n+        Map<String, Object> merged = new LinkedHashMap<>(versions);\n+        merged.put(\"worker\", worker);\n+        return merged;\n     }\n \n     private static BacktestDetailResult build(\n@@ -151,6 +172,26 @@ public record BacktestDetailResult(\n             Summary summary,\n             String unavailableReason,\n             Failure failure) {\n+        return build(\n+                request,\n+                run,\n+                currency,\n+                now,\n+                summary,\n+                unavailableReason,\n+                failure,\n+                run.getPlan().versions());\n+    }\n+\n+    private static BacktestDetailResult build(\n+            BacktestRequest request,\n+            BacktestRun run,\n+            String currency,\n+            Instant now,\n+            Summary summary,\n+            String unavailableReason,\n+            Failure failure,\n+            Map<String, Object> versions) {\n         boolean cancelledRequest = request.isCancelled();\n         RunStatus status = cancelledRequest ? RunStatus.CANCELLED : run.getStatus();\n         // 먼저 취소해 실행이 계속 도는 요청은 진행 수치가 실행의 최신 값이 아니라 자기 스냅샷 기준이다.\n@@ -178,7 +219,7 @@ public record BacktestDetailResult(\n                 run.getLifecycle().finishedAt(),\n                 queueWaitSeconds(run, now),\n                 config(run, currency),\n-                run.getPlan().versions(),\n+                versions,\n                 visibleSummary,\n                 summaryUnavailable,\n                 failure);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestDetailResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,6 +19,7 @@ import java.time.Instant;\n  * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끄거나 실패\n  * @param analytics 파생 지표(FR-027). null = 실패 또는 v2 이전 결과\n  * @param exceptionCount 예외 처리 기록 건수. 본문은 {@code /exceptions}가 따로 읽는다\n+ * @param workerVersion 결과를 낸 워커가 보고한 자기 버전({@code versions.worker}). null = 미보고(v2 이전·결과 없는 실패)\n  */\n public record BacktestResultSummary(\n         String errorCode,\n@@ -32,7 +33,8 @@ public record BacktestResultSummary(\n         EngineOutput.Costs costs,\n         EngineOutput.Liquidation liquidation,\n         EngineOutput.Analytics analytics,\n-        int exceptionCount) {\n+        int exceptionCount,\n+        String workerVersion) {\n \n     /** 벤치마크 스칼라 둘이 모두 있을 때만 벤치마크가 산출된 것으로 본다. */\n     public boolean hasBenchmark() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultSummary.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultSummary.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -179,7 +179,7 @@ public class BacktestService {\n         // 여기까지 왔으면 새 계산을 만든다. 합류·재사용은 위에서 끝났으므로 한도에 세지 않는다(R-19).\n         executionLimitPolicy.requireAdmission(command.requesterId(), command.executionType());\n \n-        Map<String, Object> versions = versions(costProfile, command.rulesVersion(), dataVersion);\n+        Map<String, Object> versions = versions(command, rules, overlay, costProfile, dataVersion);\n         RunPlan plan =\n                 new RunPlan(\n                         dedupKey,\n@@ -433,21 +433,46 @@ public class BacktestService {\n     // --- 저장할 사본 ---------------------------------------------------------\n \n     /**\n-     * 조회 {@code config}가 그대로 돌려줄 요청 사본.\n+     * 결과에 표시할 참조 버전(FR-028, data-model {@code backtest_run.versions}).\n      *\n-     * <p>{@code warmupTradingDays}는 요청값이 아니라 <b>서버가 확정한 값</b>을 넣는다. 요청이 null 이었다고 null 을 돌려주면 \"그래서\n-     * 몇 거래일을 썼나\"라는 질문에 답할 수 없다.\n+     * <p>모양은 워커가 결과에 싣는 {@code versions}와 같다 — {@code rules}·{@code costProfile}은 {@code {version,\n+     * provisional}}이고 {@code provisional=true}는 팀 결정(PD-02·PD-07) 전 임시값으로 계산했다는 뜻이다. 사용자가 확정 규칙 결과와\n+     * 임시 규칙 결과를 구분할 수 있어야 하므로 접수 시점에 등록표 값을 그대로 옮긴다. {@code scenarioRules}는 오버레이가 있을 때만, {@code\n+     * worker}는 계산을 마친 워커가 보고하는 값이라 여기 없고 조회가 결과 행에서 합친다({@code BacktestDetailResult}).\n+     *\n+     * <p>동일 버전 키({@code DedupKeyCalculator})는 이 맵을 보지 않는다 — 키는 버전 문자열만 쓴다.\n      */\n     private Map<String, Object> versions(\n-            CostProfile costProfile, String rulesVersion, String dataVersion) {\n-        Map<String, Object> costs = new LinkedHashMap<>();\n-        costs.put(\"version\", costProfile.version());\n-        costs.put(\"provisional\", costProfile.provisional());\n+            CreateBacktestCommand command,\n+            StrategyRules rules,\n+            StrategyRules overlay,\n+            CostProfile costProfile,\n+            String dataVersion) {\n         Map<String, Object> versions = new LinkedHashMap<>();\n-        versions.put(\"costProfile\", costs);\n-        versions.put(\"rules\", rulesVersion);\n+        // 요청이 주지 않은 버전은 키를 만들지 않는다 — null 을 채우면 \"없다\"와 \"모른다\"가 섞이고,\n+        // RunPlan 이 Map.copyOf 로 사본을 뜨므로 null 값은 NPE 다(007 launcher 가 평가 분할을 비운다).\n+        putIfPresent(versions, \"mapping\", command.mappingVersion());\n+        versions.put(\"rules\", versionOf(rules.rulesVersion(), rules.provisional()));\n+        if (overlay != null) {\n+            versions.put(\"scenarioRules\", overlay.strategyId() + \"/\" + overlay.rulesVersion());\n+        }\n+        versions.put(\"costProfile\", versionOf(costProfile.version(), costProfile.provisional()));\n         versions.put(\"data\", dataVersion);\n         versions.put(\"engine\", engineVersion);\n+        putIfPresent(versions, \"evaluationSplit\", command.evaluationSplitVersion());\n         return versions;\n     }\n+\n+    private static void putIfPresent(Map<String, Object> target, String key, Object value) {\n+        if (value != null) {\n+            target.put(key, value);\n+        }\n+    }\n+\n+    private static Map<String, Object> versionOf(String version, boolean provisional) {\n+        Map<String, Object> value = new LinkedHashMap<>();\n+        value.put(\"version\", version);\n+        value.put(\"provisional\", provisional);\n+        return value;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -98,13 +98,24 @@ public class EngineInputAssembler {\n         Map<String, Object> rules =\n                 plan.rulesVersion() == null\n                         ? null\n-                        : strategyRulesService\n-                                .requireRegistered(run.getStrategyId(), plan.rulesVersion())\n-                                .spec();\n+                        : rulesCopy(\n+                                strategyRulesService.requireRegistered(\n+                                        run.getStrategyId(), plan.rulesVersion()));\n         return new EngineInput.AllocationSpec(\n                 run.getStrategyId(), rulesVersion, rules, run.getParameters());\n     }\n \n+    /**\n+     * 규칙 사본에 등록표의 {@code provisional} 을 함께 싣는다. 워커는 이 값을 결과 {@code versions.rules.provisional} 로\n+     * 되돌려 주고, 그 값이 있어야 저장된 결과만 보고도 임시 규칙(PD-02)으로 계산했는지 알 수 있다(T008 결정 ③ 후속). 배분 모듈은 자기가 아는 키만 읽으므로\n+     * 이 키가 계산을 바꾸지 않는다.\n+     */\n+    private static Map<String, Object> rulesCopy(StrategyRules registered) {\n+        Map<String, Object> copy = new LinkedHashMap<>(registered.spec());\n+        copy.put(\"provisional\", registered.provisional());\n+        return copy;\n+    }\n+\n     /** 비용은 실행이 고른 버전의 등록표 값을 그대로 싣는다. 값이 바뀌면 새 버전이 생기므로 옛 실행은 옛 값을 계속 본다. */\n     private EngineInput.ExecutionSpec execution(RunPlan plan) {\n         EngineInput.ExecutionSpec fixed = ExecutionPolicy.EXECUTION;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/EngineInputAssembler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/EngineInputAssembler.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,8 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt\n                            costs::text       AS \"costs\",\n                            liquidation::text AS \"liquidation\",\n                            analytics::text   AS \"analytics\",\n-                           COALESCE(jsonb_array_length(exceptions), 0) AS \"exceptionCount\"\n+                           COALESCE(jsonb_array_length(exceptions), 0) AS \"exceptionCount\",\n+                           versions ->> 'worker' AS \"workerVersion\"\n                       FROM backtest_result\n                      WHERE run_id = :jobId\n                     \"\"\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -100,7 +100,8 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {\n                                         read(row.getCosts(), EngineOutput.Costs.class),\n                                         read(row.getLiquidation(), EngineOutput.Liquidation.class),\n                                         read(row.getAnalytics(), EngineOutput.Analytics.class),\n-                                        row.getExceptionCount()));\n+                                        row.getExceptionCount(),\n+                                        row.getWorkerVersion()));\n     }\n \n     @Override\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -45,4 +45,7 @@ interface BacktestResultSummaryRow {\n \n     /** {@code jsonb_array_length(exceptions)}. 본문은 읽지 않는다. 컬럼이 null 이면 0 */\n     Integer getExceptionCount();\n+\n+    /** {@code versions ->> 'worker'}. 결과를 낸 워커가 보고한 자기 버전. v2 이전 결과·실패 결과는 null */\n+    String getWorkerVersion();\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultSummaryRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultSummaryRow.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,6 +32,7 @@ import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n import com.ssafy.thorp.backtest.domain.model.ProgressStage;\n import com.ssafy.thorp.backtest.domain.model.ResultSource;\n import com.ssafy.thorp.backtest.domain.model.RunLifecycle;\n+import com.ssafy.thorp.backtest.domain.model.RunPlan;\n import com.ssafy.thorp.backtest.domain.model.RunProgress;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n@@ -149,7 +150,8 @@ class BacktestResultQueryServiceTest {\n                 errorCode == null ? costs() : null,\n                 errorCode == null ? liquidation() : null,\n                 errorCode == null ? analytics() : null,\n-                errorCode == null ? 1 : 0);\n+                errorCode == null ? 1 : 0,\n+                errorCode == null ? \"thorp-worker 0.2.0\" : null);\n     }\n \n     private static EngineOutput.Costs costs() {\n@@ -254,6 +256,49 @@ class BacktestResultQueryServiceTest {\n         assertThat(summary.exceptionCount()).isEqualTo(1);\n     }\n \n+    @Test\n+    @DisplayName(\"완료 상세의 versions 는 접수가 확정한 값에 결과를 낸 워커의 자기 보고(worker)를 얹은 것이다\")\n+    void detailVersionsCarryTheReportingWorker() {\n+        when(requestRepository.findByBacktestId(BACKTEST_ID))\n+                .thenReturn(Optional.of(requestFor(REQUESTER)));\n+        when(jobRepository.findById(JOB_ID))\n+                .thenReturn(Optional.of(jobIn(RunStatus.COMPLETED).withPlan(plannedVersions())));\n+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));\n+\n+        Map<String, Object> versions = service.getDetail(BACKTEST_ID, REQUESTER).versions();\n+\n+        assertThat(versions)\n+                .containsEntry(\"rules\", Map.of(\"version\", \"1\", \"provisional\", true))\n+                .containsEntry(\"worker\", \"thorp-worker 0.2.0\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"결과 전에는 worker 를 채우지 않는다 — 어느 워커가 계산할지 아직 모른다\")\n+    void detailBeforeResultHasNoWorkerVersion() {\n+        when(requestRepository.findByBacktestId(BACKTEST_ID))\n+                .thenReturn(Optional.of(requestFor(REQUESTER)));\n+        when(jobRepository.findById(JOB_ID))\n+                .thenReturn(Optional.of(jobIn(RunStatus.RUNNING).withPlan(plannedVersions())));\n+\n+        assertThat(service.getDetail(BACKTEST_ID, REQUESTER).versions())\n+                .containsKey(\"rules\")\n+                .doesNotContainKey(\"worker\");\n+    }\n+\n+    private static RunPlan plannedVersions() {\n+        return new RunPlan(\n+                \"a\".repeat(64),\n+                \"1\",\n+                \"PROVISIONAL-DEMO-1\",\n+                \"FIXTURE-three_etf_24m\",\n+                LocalDate.of(2025, 1, 2),\n+                LocalDate.of(2025, 6, 30),\n+                0,\n+                Map.of(\"mappingVersion\", \"SECTOR-ETF-2026-09\"),\n+                Map.of(\"rules\", Map.of(\"version\", \"1\", \"provisional\", true)),\n+                ExecutionType.SINGLE);\n+    }\n+\n     // ---------- 취소 실행의 상세(T011) ----------\n \n     private static BacktestRequest stoppedRequest() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -85,8 +85,16 @@ class BacktestServiceTest {\n     void stubRegistries() {\n         when(strategyRulesService.requireRegistered(\"FIXED_WEIGHT\", \"1\"))\n                 .thenReturn(rules(\"FIXED_WEIGHT\", Map.of()));\n+        // 등록표 초기 행과 같다 — 역변동성 규칙은 PD-02 확정 전 임시(provisional=true)다.\n         when(strategyRulesService.requireRegistered(\"INVERSE_VOLATILITY\", \"1\"))\n-                .thenReturn(rules(\"INVERSE_VOLATILITY\", Map.of(\"lookbackDays\", 63)));\n+                .thenReturn(\n+                        new StrategyRules(\n+                                \"INVERSE_VOLATILITY\",\n+                                \"1\",\n+                                RulesStatus.REGISTERED,\n+                                true,\n+                                Map.of(\"lookbackDays\", 63),\n+                                \"PD-02\"));\n         when(strategyRulesService.requireRegistered(\"TARGET_RISK_OVERLAY\", \"1\"))\n                 .thenReturn(rules(\"TARGET_RISK_OVERLAY\", Map.of(\"lookbackDays\", 63)));\n         when(costProfileService.resolve(any()))\n@@ -192,13 +200,71 @@ class BacktestServiceTest {\n         assertThat(result.effectiveStart()).isEqualTo(LocalDate.of(2024, 1, 2));\n         assertThat(result.effectiveEnd()).isEqualTo(LocalDate.of(2024, 12, 31));\n         assertThat(result.versions())\n-                .containsEntry(\"rules\", \"1\")\n+                .containsEntry(\"mapping\", \"SECTOR-ETF-2026-09\")\n                 .containsEntry(\"data\", \"FIXTURE-three_etf_24m\")\n-                .containsEntry(\"engine\", \"nautilus_trader 1.219.0 / worker 2.1.0\");\n+                .containsEntry(\"engine\", \"nautilus_trader 1.219.0 / worker 2.1.0\")\n+                .containsEntry(\"evaluationSplit\", \"SPLIT-1\")\n+                .doesNotContainKeys(\"scenarioRules\", \"worker\");\n+        assertThat(result.versions().get(\"rules\"))\n+                .isEqualTo(Map.of(\"version\", \"1\", \"provisional\", false));\n         assertThat(result.versions().get(\"costProfile\"))\n                 .isEqualTo(Map.of(\"version\", \"PROVISIONAL-DEMO-1\", \"provisional\", true));\n     }\n \n+    @Test\n+    @DisplayName(\"임시 규칙(PD-02)으로 계산하는 실행은 versions.rules.provisional=true 로 표시된다\")\n+    void provisionalRulesAreVisibleInVersions() {\n+        BacktestJobResult result =\n+                service.create(\n+                        command(\"INVERSE_VOLATILITY\", null, null, Scenario.FULL_PERIOD, null));\n+\n+        assertThat(result.versions().get(\"rules\"))\n+                .isEqualTo(Map.of(\"version\", \"1\", \"provisional\", true));\n+    }\n+\n+    @Test\n+    @DisplayName(\"요청이 주지 않은 버전(평가 분할 등)은 versions 에 키를 만들지 않는다 — 007 launcher 가 비워 보낸다\")\n+    void absentVersionsAreOmittedNotNulled() {\n+        CreateBacktestCommand base = fixedWeight();\n+        CreateBacktestCommand withoutSplit =\n+                new CreateBacktestCommand(\n+                        base.requesterId(),\n+                        base.executionType(),\n+                        base.mappingVersion(),\n+                        base.items(),\n+                        base.strategyId(),\n+                        base.rulesVersion(),\n+                        base.registryVersion(),\n+                        base.parameters(),\n+                        base.start(),\n+                        base.end(),\n+                        base.initialCash(),\n+                        base.costProfileVersion(),\n+                        null,\n+                        base.warmupTradingDays(),\n+                        base.scenario(),\n+                        base.scenarioParams());\n+\n+        BacktestJobResult result = service.create(withoutSplit);\n+\n+        assertThat(result.versions()).doesNotContainKey(\"evaluationSplit\").containsKey(\"rules\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"목표 위험 시나리오는 오버레이 규칙 버전을 versions.scenarioRules 로 남긴다\")\n+    void targetRiskRecordsTheOverlayVersion() {\n+        BacktestJobResult result =\n+                service.create(\n+                        command(\n+                                \"FIXED_WEIGHT\",\n+                                new BigDecimal(\"0.4000\"),\n+                                null,\n+                                Scenario.TARGET_RISK,\n+                                Map.of(\"targetVolatility\", \"0.1000\")));\n+\n+        assertThat(result.versions()).containsEntry(\"scenarioRules\", \"TARGET_RISK_OVERLAY/1\");\n+    }\n+\n     @Test\n     @DisplayName(\"저장하는 실행에 동일 버전 키·발행 시도 1·접수 시각이 붙는다 (R-18)\")\n     void savedRunCarriesPlanAndFirstPublishAttempt() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,143 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+/**\n+ * 참조 버전 표시(spec 004 T018, data-model {@code backtest_run.versions}). <b>실제 등록표</b>(Flyway 초기 행)로 임시\n+ * 규칙 표시가 202 와 상세에 그대로 나가는지 고정한다.\n+ *\n+ * <p>목으로는 잡히지 않는 것을 본다 — 등록표의 {@code provisional} 열 값이 실제로 무엇인지(역변동성 true, 고정 비중 false)와 그 값이 JSON\n+ * 으로 어떻게 나가는지다.\n+ */\n+@SpringBootTest(\n+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.backtest.liveness.interval=PT1H\",\n+            \"thorp.backtest.limits.max-queued-per-user=1000\",\n+            \"thorp.backtest.limits.max-queued-total=1000\",\n+            \"thorp.backtest.limits.max-run-seconds=1800\",\n+            \"thorp.backtest.limits.stale-run-seconds=300\",\n+            \"thorp.backtest.limits.cancel-grace-seconds=1\",\n+            \"thorp.backtest.limits.provisional=true\",\n+            \"thorp.auth.trust-user-id-header=true\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class BacktestVersionsApiIT extends PostgresTestSupport {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private long newUser() {\n+        String suffix = \"ver\" + (System.nanoTime() % 1_000_000_000L);\n+        String email = suffix + \"@example.com\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    /** 다른 IT 와 기간을 겹치지 않게 둔다 — 본문이 같으면 동일 버전 키가 같아 저쪽 실행에 합류한다. */\n+    private static CreateBacktestCommand request(\n+            long requesterId, String strategyId, BigDecimal weight, int day) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", weight),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\",\n+                                \"305720.XKRX\",\n+                                weight == null ? null : BigDecimal.ONE.subtract(weight))),\n+                strategyId,\n+                \"1\",\n+                \"PARAM-2026-09\",\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                LocalDate.of(2024, 5, day),\n+                LocalDate.of(2024, 10, 31),\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+\n+    @Test\n+    @DisplayName(\"임시 규칙(역변동성, PD-02)으로 접수한 실행은 202 와 상세 모두 versions.rules.provisional=true 다\")\n+    void provisionalRulesAreFlaggedInAcceptanceAndDetail() throws Exception {\n+        long user = newUser();\n+\n+        BacktestJobResult accepted =\n+                backtestService.create(request(user, \"INVERSE_VOLATILITY\", null, 2));\n+\n+        assertThat(accepted.versions().get(\"rules\"))\n+                .isEqualTo(Map.of(\"version\", \"1\", \"provisional\", true));\n+        assertThat(accepted.versions())\n+                .containsEntry(\"mapping\", \"SECTOR-ETF-2026-09\")\n+                .containsEntry(\"evaluationSplit\", \"SPLIT-1\");\n+\n+        mockMvc.perform(\n+                        get(\"/backtests/{id}\", accepted.backtestId())\n+                                .header(CurrentRequester.DEV_HEADER, user))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.versions.rules.version\").value(\"1\"))\n+                .andExpect(jsonPath(\"$.data.versions.rules.provisional\").value(true))\n+                .andExpect(jsonPath(\"$.data.versions.costProfile.provisional\").value(true))\n+                .andExpect(jsonPath(\"$.data.versions.mapping\").value(\"SECTOR-ETF-2026-09\"))\n+                .andExpect(jsonPath(\"$.data.versions.worker\").doesNotExist());\n+    }\n+\n+    @Test\n+    @DisplayName(\"확정 규칙(고정 비중)으로 접수한 실행은 versions.rules.provisional=false 다\")\n+    void registeredRulesAreNotFlagged() throws Exception {\n+        long user = newUser();\n+\n+        BacktestJobResult accepted =\n+                backtestService.create(request(user, \"FIXED_WEIGHT\", new BigDecimal(\"0.4000\"), 3));\n+\n+        assertThat(accepted.versions().get(\"rules\"))\n+                .isEqualTo(Map.of(\"version\", \"1\", \"provisional\", false));\n+        mockMvc.perform(\n+                        get(\"/backtests/{id}\", accepted.backtestId())\n+                                .header(CurrentRequester.DEV_HEADER, user))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.versions.rules.provisional\").value(false));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestVersionsApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestVersionsApiIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -145,7 +145,10 @@ class EngineInputAssemblerTest {\n                 .containsExactly(\"SEMICONDUCTOR\", \"BATTERY\");\n         assertThat(input.universe().items().get(0).targetWeight()).isEqualByComparingTo(\"0.4000\");\n         assertThat(input.allocation().rulesVersion()).isEqualTo(\"1\");\n-        assertThat(input.allocation().rules()).containsEntry(\"lookbackDays\", 63);\n+        assertThat(input.allocation().rules())\n+                .containsEntry(\"lookbackDays\", 63)\n+                // 등록표의 임시 표시가 사본에 실려 워커 결과 versions.rules.provisional 로 되돌아온다\n+                .containsEntry(\"provisional\", true);\n         assertThat(input.marketData().dataVersion()).isEqualTo(\"FIXTURE-three_etf_24m\");\n         assertThat(input.execution().costProfile().version()).isEqualTo(\"PROVISIONAL-DEMO-1\");\n         assertThat(input.execution().costProfile().provisional()).isTrue();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/EngineInputAssemblerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/EngineInputAssemblerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -121,6 +121,17 @@ class BacktestResultRepositoryImplTest extends PostgresTestSupport {\n         assertThat(result.getExceptions()).isEqualTo(output.exceptions());\n         assertThat(result.getVersions()).isEqualTo(output.versions());\n         assertThat(result.getCreatedAt()).isNotNull();\n+        // 결과 행은 실행 행 없이도 재현 기준을 다 가져야 한다(data-model: run.versions 사본, T018).\n+        // 엔티티 equals 는 필드가 빠져도 양쪽이 같이 빠지면 통과하므로 DB 의 JSONB 키를 직접 본다.\n+        assertThat(\n+                        entityManager\n+                                .getEntityManager()\n+                                .createNativeQuery(\n+                                        \"SELECT versions ->> 'evaluationSplit' FROM backtest_result\"\n+                                                + \" WHERE run_id = :runId\")\n+                                .setParameter(\"runId\", jobId)\n+                                .getSingleResult())\n+                .isEqualTo(\"SPLIT-1\");\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,6 +18,7 @@ import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.backtest.domain.model.RunPlan;\n import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;\n@@ -27,6 +28,7 @@ import java.math.BigDecimal;\n import java.nio.file.Files;\n import java.nio.file.Path;\n import java.time.LocalDate;\n+import java.util.LinkedHashMap;\n import java.util.List;\n import java.util.Map;\n import org.junit.jupiter.api.BeforeEach;\n@@ -100,16 +102,36 @@ class BacktestResultApiIT extends PostgresTestSupport {\n     private BacktestRun newJob() {\n         return jobRepository.save(\n                 BacktestRun.create(\n-                        \"MA_CROSSOVER\",\n-                        \"1.0.0\",\n-                        Map.of(\"shortWindow\", 20, \"longWindow\", 60, \"threshold\", 0.05),\n-                        List.of(new InstrumentId(\"005930.XKRX\"), new InstrumentId(\"000660.XKRX\")),\n-                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n-                        new BigDecimal(\"10000000\"),\n-                        PositionSizingMode.STRATEGY_DEFINED,\n-                        new BigDecimal(\"0.50\"),\n-                        new InstrumentId(\"069500.XKRX\"),\n-                        42));\n+                                \"MA_CROSSOVER\",\n+                                \"1.0.0\",\n+                                Map.of(\"shortWindow\", 20, \"longWindow\", 60, \"threshold\", 0.05),\n+                                List.of(\n+                                        new InstrumentId(\"005930.XKRX\"),\n+                                        new InstrumentId(\"000660.XKRX\")),\n+                                new BacktestPeriod(\n+                                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n+                                new BigDecimal(\"10000000\"),\n+                                PositionSizingMode.STRATEGY_DEFINED,\n+                                new BigDecimal(\"0.50\"),\n+                                new InstrumentId(\"069500.XKRX\"),\n+                                42)\n+                        .withPlan(plannedVersions()));\n+    }\n+\n+    /**\n+     * 접수가 남기는 참조 버전(T018)만 있는 계획. 예시 {@code backtest-detail.json}의 {@code versions}와 같아야 하고, 상세는\n+     * 여기에 결과 행의 {@code worker}(메시징 픽스처 {@code event-finished-completed.json}의 값)를 얹는다. 동일 버전 키는 두지\n+     * 않는다 — 부분 유니크 인덱스가 COMPLETED 를 포함해서 테스트마다 같은 키로 완료 실행을 만들면 부딪힌다.\n+     */\n+    private static RunPlan plannedVersions() {\n+        Map<String, Object> versions = new LinkedHashMap<>();\n+        versions.put(\"mapping\", \"SECTOR-ETF-2026-09\");\n+        versions.put(\"rules\", Map.of(\"version\", \"1\", \"provisional\", false));\n+        versions.put(\"costProfile\", Map.of(\"version\", \"PROVISIONAL-DEMO-1\", \"provisional\", true));\n+        versions.put(\"data\", \"FIXTURE-three_etf_24m\");\n+        versions.put(\"engine\", \"nautilus_trader 1.219.0 / worker 2.1.0\");\n+        versions.put(\"evaluationSplit\", \"SPLIT-1\");\n+        return new RunPlan(null, null, null, null, null, null, null, null, versions, null);\n     }\n \n     /** 사용자가 호출하는 식별자는 <b>요청</b>의 것이다(R-02). 실행을 만들고 그것을 가리키는 요청을 붙여 그 식별자를 돌려준다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestResultApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestResultApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,13 +7,18 @@\n     \"effectiveStart\": \"2023-07-03\",\n     \"effectiveEnd\": \"2024-12-31\",\n     \"versions\": {\n+      \"mapping\": \"SECTOR-ETF-2026-09\",\n+      \"rules\": {\n+        \"version\": \"1\",\n+        \"provisional\": false\n+      },\n       \"costProfile\": {\n         \"version\": \"PROVISIONAL-DEMO-1\",\n         \"provisional\": true\n       },\n-      \"rules\": \"1\",\n       \"data\": \"FIXTURE-three_etf_24m\",\n-      \"engine\": \"nautilus_trader 1.219.0 / worker 2.0.0\"\n+      \"engine\": \"nautilus_trader 1.219.0 / worker 2.1.0\",\n+      \"evaluationSplit\": \"SPLIT-1\"\n     }\n   },\n   \"error\": null\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-accepted.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-accepted.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,7 +28,21 @@\n       \"initialCash\": \"10000000.00\",\n       \"currency\": \"KRW\"\n     },\n-    \"versions\": null,\n+    \"versions\": {\n+      \"mapping\": \"SECTOR-ETF-2026-09\",\n+      \"rules\": {\n+        \"version\": \"1\",\n+        \"provisional\": false\n+      },\n+      \"costProfile\": {\n+        \"version\": \"PROVISIONAL-DEMO-1\",\n+        \"provisional\": true\n+      },\n+      \"data\": \"FIXTURE-three_etf_24m\",\n+      \"engine\": \"nautilus_trader 1.219.0 / worker 2.1.0\",\n+      \"evaluationSplit\": \"SPLIT-1\",\n+      \"worker\": \"2.0.0\"\n+    },\n     \"summary\": {\n       \"initialEquity\": \"10000000.00\",\n       \"finalEquity\": \"11666521.51\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-detail.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-detail.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -59,7 +59,10 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n - `resultSource`: `NEW` 새 계산 / `JOINED` 진행 중인 같은 조건 실행에 합류 / `REUSED` 완료 결과 재사용. **`REUSED`면 `status`가\n   이미 `COMPLETED`이고 결과를 바로 조회할 수 있다** — 상태만 보고 폴링을 시작하지 말 것.\n - `effectiveStart`는 워밍업과 상장일을 반영한 실제 평가 시작일이라 요청 시작일보다 뒤일 수 있다.\n-- `versions`는 결과 재현의 기준(비용 조건·규칙·자료·엔진)이고 `costProfile.provisional=true`는 팀 확정 전 임시값이라는 뜻이다.\n+- `versions`는 결과 재현의 기준이다: `{ mapping, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit }`.\n+  `provisional=true`는 **팀 확정 전 임시값**으로 계산했다는 뜻이다 — 비용은 PD-07, 역변동성 규칙은 PD-02. `scenarioRules`는 `TARGET_RISK`일 때만\n+  (`TARGET_RISK_OVERLAY/1`). `mapping`·`evaluationSplit`은 요청이 준 값이라 비워 보낸 요청(007 launcher 등)에는 키가 없다 — null 로 채우지 않는다.\n+  계산을 마친 워커가 보고하는 자기 버전 `worker`는 결과가 저장된 뒤 상세에만 붙는다(§2.5).\n - 오류: 400 `INVALID_INPUT`, 422 `RULES_NOT_REGISTERED`, 422 `INSUFFICIENT_HISTORY`, 429 `EXECUTION_LIMIT`(T014), 503 `BROKER_UNAVAILABLE`.\n \n **발행은 커밋 뒤에 한다**(spec 004 R-18). 브로커에 닿지 못해도 접수는 202로 성공하고, 실행은 `QUEUED`로 남아 재발행 대상이 된다.\n@@ -242,7 +245,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 \n   `CANCEL_UNANSWERED`는 T014.\n - 실행을 실제로 멈춘 취소(마지막 활성 요청의 취소)는 `CANCELLED`·`partial=true`이고 `summary`는 **부분 구간 기준** 값이다. `progress.lastTradingDate`는\n   워커가 실제로 멈춘 거래일이며 취소를 누른 시점의 진행보다 며칠 뒤일 수 있다.\n-- `versions`는 202 응답과 같은 값이다.\n+- `versions`는 202 응답과 같은 값에 결과를 낸 워커의 자기 보고 `worker`(워커 패키지 버전)를 얹은 것이다. 결과가 없으면(대기·실행 중·결과 없는 실패) `worker` 키가 없다.\n - `failure.code`는 엔진이 준 값(`SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION`\n   `EXECUTION_LIMIT`)이며 HTTP 오류 코드와 다른 집합이다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -778,6 +778,7 @@\n         },\n         \"data\": \"FIXTURE-2026-09-07\",\n         \"engine\": \"nautilus_trader 1.219.0\",\n+        \"evaluationSplit\": \"SPLIT-1\",\n         \"worker\": \"2.0.0\"\n       },\n       \"diagnostics\": {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/event-finished-cancelled.json",
+          "old_path": "docs/specs/backtest-messaging/examples/event-finished-cancelled.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1436,6 +1436,7 @@\n         },\n         \"data\": \"FIXTURE-2026-09-07\",\n         \"engine\": \"nautilus_trader 1.219.0\",\n+        \"evaluationSplit\": \"SPLIT-1\",\n         \"worker\": \"2.0.0\"\n       },\n       \"diagnostics\": {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/event-finished-completed.json",
+          "old_path": "docs/specs/backtest-messaging/examples/event-finished-completed.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -34,6 +34,7 @@\n         },\n         \"data\": \"FIXTURE-2026-09-07\",\n         \"engine\": \"nautilus_trader 1.219.0\",\n+        \"evaluationSplit\": \"SPLIT-1\",\n         \"worker\": \"2.0.0\"\n       },\n       \"diagnostics\": {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/event-finished-failed.json",
+          "old_path": "docs/specs/backtest-messaging/examples/event-finished-failed.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -119,7 +119,8 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 \n \n `allocation.parameters`는 전략별 자유 형식 객체 — **정수는 정수, 소수는 JSON 숫자로 그대로 통과**시키고 문자열로 바꾸지 않는다(금액·비율 문자열 규칙은\n 선언된 decimal 필드에만 적용). 픽스처의 `threshold: 0.05`가 이 규칙의 round-trip 검사용이다. `allocation.rules`는 전략 규칙 등록표의 사본이며\n-없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터).\n+없으면(null) 엔진은 자체 기본값을 두지 않고 거절한다(T006부터). 사본에는 등록표의 `provisional`(팀 결정 전 임시 규칙, PD-02)이 함께 실리고 워커는 그 값을\n+결과 `versions.rules.provisional`로 되돌려 준다(T018) — 배분 모듈은 자기가 아는 키만 읽으므로 이 키는 계산을 바꾸지 않는다.\n \n ### 4.2 이벤트 envelope — `event-*.json` 공통\n \n@@ -164,7 +165,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 \n   정의는 워커 `performance.calculate_analytics` docstring(T008 결정)이 원본이고 `method=\"sample-covariance-daily\"`. 계산 불가 항목은 키 생략.\n - `exceptions[] { date, instrumentId?, kind, rule, action }` 예외 처리 기록(FR-020·FR-030). `kind`는 `ZERO_VOLATILITY`, `NO_SELECTION`, `ESTIMATION_FAILED`,\n   `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING` 등 개방 집합.\n-- `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, worker }` 참조 버전(FR-028).\n+- `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, evaluationSplit?, worker }` 참조 버전(FR-028). `evaluationSplit`은 요청 `evaluation.splitVersion`의 사본이다 — 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).\n - 계산 불가 성과 지표(설계 OUTPUT Spec 규칙): 변동성 0 → `sharpeRatio`만 null. 관측치 2개 미만 → `volatility`·`sharpeRatio` null.\n   CLOSED 거래 0건 → `winRate` null. `initialEquity ≤ 0` → `totalReturn`·`cagr` null. 기간이 1년 미만이라는 이유로 `cagr`을 null로 만들지 않는다.\n - **체결가 의미**: 계약상 `trades[].entryPrice`/`exitPrice`는 슬리피지가 반영된 실제 평균 체결가다. **현재 픽스처는 기준가를 그대로 넣고 슬리피지를\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/README.md",
+          "old_path": "docs/specs/backtest-messaging/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,7 +48,9 @@ COST_PROFILE = {\n     \"taxBps\": \"0\",\n     \"provisional\": True,\n }\n-RESOURCE = {\"peakRssMb\": \"512.5\", \"cpuSeconds\": \"3.210\", \"wallSeconds\": \"4.000\"}\n+# queue·role 은 어느 큐에서 어느 역할의 워커가 집었나(spec 004 T012·T015). STARTED·FINISHED 모두 싣는다.\n+SERVED = {\"queue\": \"backtest.jobs\", \"role\": \"single\"}\n+RESOURCE = {\"peakRssMb\": \"512.5\", \"cpuSeconds\": \"3.210\", \"wallSeconds\": \"4.000\", **SERVED}\n \n \n def money(x: Decimal) -> str:\n@@ -393,6 +395,8 @@ VERSIONS = {\n     \"costProfile\": {\"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": True},\n     \"data\": \"FIXTURE-2026-09-07\",\n     \"engine\": ENGINE_VERSION,\n+    # 요청 evaluation.splitVersion 의 사본. 결과 행이 실행 행 없이도 재현 기준을 다 갖는다(T018).\n+    \"evaluationSplit\": \"SPLIT-1\",\n     \"worker\": WORKER_VERSION,\n }\n \n@@ -556,7 +560,7 @@ started = envelope(\n     {\n         \"startedAt\": \"2026-09-07T01:00:00Z\",\n         \"stage\": \"PREPARING_DATA\",\n-        \"resource\": {\"pid\": 4242, \"hostname\": \"worker-1\"},\n+        \"resource\": {\"pid\": 4242, \"hostname\": \"worker-1\", **SERVED},\n     },\n )\n \n@@ -619,7 +623,7 @@ finished_failed = envelope(\n             \"versions\": VERSIONS,\n             \"diagnostics\": {\"warnings\": []},\n         },\n-        \"resource\": {\"peakRssMb\": \"128.0\", \"cpuSeconds\": \"0.210\", \"wallSeconds\": \"0.900\"},\n+        \"resource\": {\"peakRssMb\": \"128.0\", \"cpuSeconds\": \"0.210\", \"wallSeconds\": \"0.900\", **SERVED},\n     },\n )\n \n@@ -634,7 +638,7 @@ finished_cancelled = envelope(\n         \"partial\": True,\n         \"lastTradingDate\": partial[\"lastTradingDate\"],\n         \"engineOutput\": engine_output(partial, \"CANCELLED\", True, \"2026-09-07T01:00:03Z\"),\n-        \"resource\": {\"peakRssMb\": \"400.0\", \"cpuSeconds\": \"1.500\", \"wallSeconds\": \"2.100\"},\n+        \"resource\": {\"peakRssMb\": \"400.0\", \"cpuSeconds\": \"1.500\", \"wallSeconds\": \"2.100\", **SERVED},\n     },\n )\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/generate_fixtures.py",
+          "old_path": "docs/specs/backtest-messaging/generate_fixtures.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,10 +35,11 @@\n 응답 `202 Accepted`:\n \n ```json\n-{\"backtestId\": \"BT-20260910-000123\", \"status\": \"QUEUED\", \"resultSource\": \"NEW\", \"effectiveStart\": \"2018-04-02\", \"effectiveEnd\": \"2025-12-30\", \"versions\": {\"costProfile\": {\"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true}, \"rules\": \"1\", \"data\": \"KRX-2026-09-09\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.0.0\"}}\n+{\"backtestId\": \"BT-20260910-000123\", \"status\": \"QUEUED\", \"resultSource\": \"NEW\", \"effectiveStart\": \"2018-04-02\", \"effectiveEnd\": \"2025-12-30\", \"versions\": {\"mapping\": \"SECTOR-ETF-2026-09\", \"rules\": {\"version\": \"1\", \"provisional\": false}, \"costProfile\": {\"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true}, \"data\": \"KRX-2026-09-09\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.1.0\", \"evaluationSplit\": \"SPLIT-1\"}}\n ```\n \n - `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).\n+- `versions`(FR-028, data-model `backtest_run.versions`): `rules`·`costProfile`은 `{version, provisional}`이고 `provisional=true`는 팀 결정(PD-02·PD-07) 전 임시값으로 계산했다는 표시다. `scenarioRules`는 `TARGET_RISK`일 때만(`TARGET_RISK_OVERLAY/1`). 결과를 낸 워커의 자기 보고 `worker`는 결과가 저장된 뒤 상세에만 붙는다(T018).\n - 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(사용자별·전체 대기열 상한, 접수 트랜잭션에서 원자적으로 검사. 본문에 사유·현재 대기 수·`retryAfterSeconds`. 값은 PD-06, 장치는 T014/R-19. JOINED·REUSED는 세지 않는다. 동시 실행 상한은 워커 배치가 강제하므로 접수에서 검사하지 않는다), 503 `BROKER_UNAVAILABLE`(현행).\n \n ## GET /backtests/{backtestId} — 상태·요약\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/rest-api.md",
+          "old_path": "specs/004-backtest-execution/contracts/rest-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -247,10 +247,11 @@\n   - `CurrentRequester`는 `thorp.auth.trust-user-id-header`가 켜진 환경에서만 동작하고 운영은 fail-closed(500)다. 014의 `SecurityConfig`·세션·CSRF는 병합됐지만 로그인 엔드포인트(`AuthenticationController`)와 `SecurityContext` 저장(014 T028·T029)은 아직 `[ ]`라 읽을 주체가 없다\n   - 할 일: 014 T029 병합 뒤 `CurrentRequester`가 `SecurityContextHolder`의 주체에서 `users.id`를 읽고, 미인증은 014의 401 봉투로 나가게 한다. 헤더 경로는 local 프로필 전용으로 남기거나 제거한다(R-12 \"이 클래스 하나만 바꾼다\"). `OperatorGate`(`X-Ops-Token`)의 역할 검사 전환은 014가 운영자 역할을 정한 뒤 별도\n   - 완료 기준: 운영 프로필에서 `POST /backtests`가 로그인 세션으로 접수되고 `X-User-Id`는 무시된다. quickstart 준비 절의 헤더 안내를 세션 로그인으로 바꾼다\n-- [ ] T018 [BE] 상세·202 응답과 저장 결과의 `versions`를 data-model 정의(`{mapping, rules{version, provisional}, scenarioRules, costProfile{version, provisional}, data, engine, evaluationSplit, worker}`)에 맞춘다 per data-model `backtest_run.versions`·plan \"AI 작업 방식(임시값은 provisional=true로 표시)\"·FR-028 (partial) — MEDIUM\n+- [x] T018 [BE] 상세·202 응답과 저장 결과의 `versions`를 data-model 정의(`{mapping, rules{version, provisional}, scenarioRules, costProfile{version, provisional}, data, engine, evaluationSplit, worker}`)에 맞춘다 per data-model `backtest_run.versions`·plan \"AI 작업 방식(임시값은 provisional=true로 표시)\"·FR-028 (partial) — MEDIUM\n   - 지금 `BacktestService.versions()`는 `costProfile{version, provisional}`·`rules`(문자열 \"1\")·`data`·`engine` 넷만 채운다. `strategy_rules.provisional`(INVERSE_VOLATILITY/1 = true, PD-02) 표시가 어디에도 나가지 않는다 — T008 결정 ③·T009 결정 ⑦이 \"별도 티켓\"으로 남긴 후속\n   - 할 일: ① 계획 `versions.rules`를 `{version, provisional}`로, `mapping`·`evaluationSplit`·`worker`(FINISHED 뒤 채움)를 추가 ② `EngineInputAssembler`가 규칙 사본에 `provisional`을 합쳐 워커 `versions.rules.provisional`이 저장 결과에도 남게 한다 ③ API README §2.1과 예시(`backtest-detail.json`의 `\"versions\": null`은 README \"202와 같은 값\"과 어긋난다)를 함께 고친다. `DedupKeyCalculator` 입력은 바꾸지 않는다(키는 버전 문자열만 본다)\n   - 완료 기준: `BacktestResultApiIT`가 상세 `versions.rules.provisional=true`(역변동성)와 `false`(고정 비중)를 단언, 예시 JSON round-trip 통과\n+  - 구현 시 결정(T018, 2026-09-15, Jira `S15P21E205-250`): ① 계획 `versions`는 `BacktestService.versions()` 한 곳에서 `{mapping, rules{version, provisional}, scenarioRules?, costProfile{version, provisional}, data, engine, evaluationSplit}`로 만든다 — 워커 결과의 `versions`와 같은 모양이라 두 값을 나란히 놓고 비교할 수 있다. `scenarioRules`는 오버레이가 있을 때만 키를 둔다(null 채우지 않음) ② **`worker`는 접수가 아니라 조회가 채운다.** 어느 워커가 계산할지는 접수 시점에 모르므로 결과 행 `versions ->> 'worker'`를 요약 프로젝션(`BacktestResultSummary.workerVersion`)에 한 열 더 읽어 `BacktestDetailResult.of`가 계획 위에 얹는다. 결과가 없으면 키가 없다 — 실행 행(`backtest_run.versions`)은 접수 소유 컬럼이라 종결 때 UPDATE 하지 않는다 ③ 규칙 사본에 `provisional`을 합치는 자리는 `EngineInputAssembler.rulesCopy` 하나. 배분 모듈은 아는 키만 읽어 계산이 바뀌지 않고, 결정성 픽스처(`tests/fixtures/engine-input-three-etf-*.json`)는 그대로다(키 없으면 워커가 생략) ④ `DedupKeyCalculator`는 손대지 않았다 — 키는 버전 문자열만 본다 ⑤ 실제 등록표로 확인하는 IT `BacktestVersionsApiIT`(역변동성 true·고정 비중 false, 202와 상세 JSON 경로). 프론트는 `versions`를 읽지 않아(005 미착수) 모양 변경 통지 대상이 없다 ⑥ `backtest-detail.json` 예시의 `config`가 아직 v1(MA_CROSSOVER)이다 — `versions`만 고쳤고 나머지는 이 Task 범위 밖 ⑦ **요청이 주지 않은 버전은 키를 만들지 않는다.** 첫 전체 빌드에서 `ParamSearchLaunchIT` 4건이 NPE 로 깨졌다 — 007 launcher 가 `evaluationSplitVersion` 을 비워 보내고 `RunPlan` 이 `Map.copyOf` 로 사본을 뜨므로 null 값이 곧 NPE 다. 대상 테스트만 돌린 뒤 전체 빌드를 건너뛰었으면 놓쳤을 결함이라, 접수 경로를 건드린 MR 은 전체 빌드가 통과한 뒤에만 푸시한다 ⑧ **결과 행 `backtest_result.versions`에도 `evaluationSplit`이 남는다**(2차 리뷰 P2): 결과 행은 워커 출력 그대로라 워커 `Versions` 계약에 `evaluationSplit`(요청 `evaluation.splitVersion` 사본)을 더했다 — 상세가 실행 행 값을 쓰는 탓에 테스트가 이 누락을 가렸다. `BacktestResultRepositoryImplTest`가 DB JSONB 키(`versions ->> 'evaluationSplit'`)를 직접 본다. `worker`·`engine`(실측)과 달리 요청값 사본이라 워커가 되돌려 주는 것이 맞고, 백엔드가 저장 때 합치면 결과 행이 두 원천을 갖게 돼 택하지 않았다\n - [ ] T019 [BE] 실행 측정에 데이터 원가(읽은 가격·기업행위 행 수와 바이트)를 더한다 per FR-008·constitution IX \"계산·데이터·저장 원가\" (partial) — LOW\n   - `backtest_run_metric`은 계산(`cpu_seconds`·`peak_rss_mb`)과 저장(`result_bytes`)만 있고 데이터 원가 칸이 없다. R-10·data-model이 열을 정할 때 빠졌다\n   - 할 일: 워커 `MarketDataProvider.load` 결과의 행 수(가격·지수·기업행위)와 대략 바이트를 FINISHED `resource.dataRows`·`dataBytes`(선택 필드, 계약 v2 안)에 실어 `backtest_run_metric.data_rows`·`data_bytes`로 기록하고 뷰에 `data_rows_p50`을 더한다. 금액 단가는 넣지 않는다(PD-06·D19)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -216,6 +216,7 @@ class Versions(ContractModel):\n     cost_profile: RuleVersion | None = None\n     data: str | None = None\n     engine: str | None = None\n+    evaluation_split: str | None = None  # 요청의 evaluation.splitVersion 사본. None = 미지정\n     worker: str | None = None\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/contracts/engine_output.py",
+          "old_path": "worker/src/worker/contracts/engine_output.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -263,8 +263,9 @@ def assemble_output(\n def reference_versions(request: EngineInput, market: MarketData | None) -> Versions:\n     \"\"\"참조 버전(FR-028). 거절 결과에도 붙으므로 검증하지 않고 있는 값만 읽는다.\n \n-    ``rules.provisional`` 은 규칙 사본에 ``provisional`` 키가 있을 때만 싣는다 — 등록표 열은\n-    백엔드에 있고 조립기가 아직 사본에 넣지 않으므로, 없으면 모른다고(키 생략) 둔다.\n+    ``rules.provisional`` 은 규칙 사본의 ``provisional`` 키를 그대로 옮긴다 — 백엔드 조립기가\n+    등록표 열을 사본에 합쳐 보낸다(spec 004 T018). 키가 없는 사본(옛 픽스처·직접 만든 입력)은\n+    모른다고(키 생략) 둔다. 워커가 등록표를 갖고 있지 않으므로 지어내지 않는다.\n     \"\"\"\n     cost = request.execution.cost_profile\n     overlay_version = (request.run.scenario_rules or {}).get(\"version\")\n@@ -284,6 +285,7 @@ def reference_versions(request: EngineInput, market: MarketData | None) -> Versi\n         cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),\n         data=market.dataset_id if market is not None else None,\n         engine=f\"nautilus_trader {nautilus_trader.__version__}\",\n+        evaluation_split=request.evaluation.split_version,\n         worker=f\"thorp-worker {worker_version}\",\n     )\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/engine_runner.py",
+          "old_path": "worker/src/worker/engine_runner.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -201,3 +201,9 @@ def test_failed_run_carries_no_warnings() -> None:\n     output = run(run={\"runId\": \"EMPTY\", \"start\": \"2030-01-01\", \"end\": \"2030-01-02\"})\n     assert output.run.status is RunStatus.FAILED\n     assert output.diagnostics.warnings == []\n+\n+\n+def test_versions_carry_the_requested_evaluation_split() -> None:\n+    # 결과 행은 실행 행 없이도 재현 기준을 다 가져야 한다(data-model: run.versions 사본, T018).\n+    assert run(evaluation={\"splitVersion\": \"SPLIT-1\"}).versions.evaluation_split == \"SPLIT-1\"\n+    assert run().versions.evaluation_split is None\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_engine_support.py",
+          "old_path": "worker/tests/test_engine_support.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-15T17:26:23.609+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2810774": []
+  }
+}

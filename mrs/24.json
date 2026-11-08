@@ -1,0 +1,1040 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 937154,
+    "iid": 24,
+    "project_id": 1444456,
+    "title": "feat(be): RabbitMQ 백테스트 결과 이벤트 Consumer 및 DB 저장 구현",
+    "description": "# 작업 내용 요약\n\n워커가 `backtest.events` 큐로 보내는 STARTED / PROGRESS / FINISHED 이벤트를 백엔드가 소비합니다.\n\n- STARTED가 오면 Job이 `RUNNING`이 됩니다.\n- FINISHED가 오면 결과(`backtest_result`)와 거래(`backtest_trade`)를 저장하고 Job이 `COMPLETED` 또는 `FAILED`가 됩니다. 저장과 상태 변경은 한 트랜잭션이고, 커밋된 뒤에 ACK합니다.\n- PROGRESS는 DB에 저장하지 않고 전달 포트(`BacktestProgressNotifier`)로 넘깁니다. SSE가 붙기 전까지는 로그만 남깁니다.\n\n지금까지는 `POST /backtests`가 큐에 작업을 넣기만 하고 받는 쪽이 없어 Job이 영원히 `QUEUED`였습니다. 이 MR 뒤로 결과 조회 API와 진행 상황 SSE가 이 저장 구조와 포트를 전제로 진행됩니다.\n\n# 관련 이슈\n\n- close #\n\n# 주요 변경 사항\n\n- **상태 전이를 도메인 메서드로**: `BacktestJob.markRunning()` / `markCompleted()` / `markFailed()`. 불변 객체라 새 인스턴스를 돌려주고, 허용되지 않는 전이는 예외를 던집니다. `BacktestJobRepository.update()`로 상태 변경만 저장합니다(`save`는 신규 전용 그대로).\n- **결과 저장 스키마 추가 (V2 마이그레이션)**: `backtest_result`(Job과 1:1), `backtest_trade`(Job과 1:N), 시퀀스·인덱스·FK·UNIQUE. prod는 Flyway가 적용하고 local은 `ddl-auto: update`가 같은 스키마를 만듭니다. 기존 테이블은 건드리지 않습니다.\n- **성과·시계열·거래 상세는 JSONB에 저장**: 필터·정렬에 쓰는 값(종목, 상태, 진입 시각, 오류 코드)만 컬럼입니다. 소수 값은 `NUMERIC` 컬럼에 두지 않습니다. 계약에 자릿수 상한이 없어서 어떤 scale을 골라도 근거가 없고, `NUMERIC`은 넘치는 자릿수를 조용히 반올림하기 때문입니다.\n- **JSON 컬럼 직렬화를 메시지 ObjectMapper에 연결**: 소수가 문자열로 저장되어 PostgreSQL `jsonb`의 숫자 정규화를 피하고, DB 안의 JSON이 메시지 JSON과 같은 표기를 갖습니다.\n- **이벤트 처리 서비스**: 모르는 `backtestId`는 경고 로그 후 버립니다(ACK). 이미 끝난 Job의 늦은 이벤트는 무시합니다. STARTED가 유실돼 `QUEUED`인 채로 FINISHED가 와도 결과를 받습니다. 같은 이벤트가 두 번 와도 상태 조건에서 걸러지므로 별도 처리 이력 테이블은 없습니다.\n- **리스너와 계약 검증**: 워커가 `__TypeId__` 헤더를 보내지 않으므로 본문의 `type`을 먼저 읽고 payload 타입을 정합니다. 역직렬화 직후 중첩 구조 전체를 명시 검증하고, 위반 시 필드 경로를 메시지에 담아 DLQ에서 원인을 바로 찾을 수 있게 했습니다. 계약 오류는 재큐 없이 재시도 3회 뒤 DLQ, DB 장애 같은 일시 오류도 재시도 뒤 DLQ입니다.\n- **필수 필드는 기본값으로 보정하지 않습니다**: `trades`가 빠진 COMPLETED를 빈 리스트로 저장하면 \"거래가 없었다\"는 거짓 결과가 확정됩니다. DLQ로 보내고 워커를 고친 뒤 재투입합니다. 계약이 생략을 허용한 필드(성과 지표 개별 null, `benchmark`, `positions`, OPEN 거래의 청산 값)만 그대로 받습니다.\n- **리스너 설정**: `prefetch 1`(FINISHED 한 건이 수백 KB), `default-requeue-rejected: false`(무한 재큐 방지), in-process 재시도 3회.\n- **`instrumentId` 형식 검증**: trade·position·benchmark의 종목 식별자를 도메인 VO와 같은 `{6자리}.XKRX` 패턴으로 검증합니다(ADR-0002 D4). 저장 컬럼이 32자라 형식 검증 없이는 긴 값이 DB 오류로 재시도됩니다.\n- **JDBC 배칭**: `hibernate.jdbc.batch_size 50` + `order_inserts`. 거래 행이 한 결과에 수백 건씩 들어오는데 건마다 왕복하지 않게 합니다. SEQUENCE PK 엔티티에만 효과가 있고 IDENTITY PK(회원 테이블)는 원래 배칭되지 않습니다.\n- **코드리뷰 반영(마지막 커밋)**: 위 `instrumentId` 검증·JDBC 배칭에 더해, PROGRESS 처리에서 트랜잭션 제거(SSE 전환 시 네트워크 I/O 동안 DB 커넥션 점유 방지), 리스너 `switch`에 default reject(이벤트 타입이 추가되고 case가 빠지면 조용히 ACK되는 경로 차단), 전체 컨텍스트에서도 decimal이 문자열로 저장되는지 통합 테스트로 확인.\n- **계약 문서 갱신**: 메시징 README에 결과 Consumer 구현됨 표기, 식별자(`eventId`·`executionId`·`tradeId`·`error.code`) **255자 상한** 추가, 검증 책임 표 보강. backend CLAUDE.md에 결과 저장·Consumer 규칙 추가.\n\n# 테스트\n\n- [x] `gradlew.bat spotlessApply build` 통과. 테스트 245개 중 244 성공, 1 skip(`MarketLiveApiTest`, 이 MR과 무관). Docker Desktop을 켜고 돌려 PostgreSQL·RabbitMQ 컨테이너 테스트가 실제로 실행됐습니다(skip 0).\n- [x] 상태 전이 규칙: `QUEUED`에서만 RUNNING, 비최종 상태에서만 최종 전이, 최종 상태에서는 모두 거부, 전이 후 나머지 필드 보존\n- [x] 저장: 계약 픽스처를 그대로 저장하고 다시 읽어 소수 자릿수까지 같은지 확인. FAILED 결과, `trade_id` 중복, 없는 Job(FK), 같은 Job에 결과 2번 저장 시 실패\n- [x] 정밀도: 소수 20자리·후행 0·지수 표기 값이 실제 PostgreSQL `jsonb`를 왕복해도 scale까지 같고, `jsonb` 안에 문자열로 저장됨. 음수 scale(`1E+2`)은 계약의 plain 표기 `\"100\"`으로 정규화되어 값은 같고 scale만 0이 되는 것을 별도 케이스로 고정(계약 JSON은 plain 표기만 쓰므로 실제 메시지에서는 생기지 않음)\n- [x] 마이그레이션: V2가 적용되고 컬럼·시퀀스·FK·UNIQUE가 엔티티와 일치(`FlywayMigrationTest` 확장)\n- [x] 서비스(Mockito): 상태별 적용·무시, 모르는 id, PROGRESS 전달 조건\n- [x] 리스너: type 분기, 깨진 JSON·모르는 type·계약 위반 reject, 서비스 예외는 그대로 전파\n- [x] 검증기: 위반 50건이 정확한 필드 경로를 짚어내는지, 허용 생략 6종 통과, ID 255자 통과·256자 실패\n- [x] 통합(브로커 없음): 실제 트랜잭션에서 Job 생성 → STARTED → FINISHED, FINISHED 두 번 → 두 번째 무시, STARTED 없는 FINISHED, 모르는 id\n- [x] 통합(PostgreSQL + RabbitMQ 컨테이너): 픽스처를 실제 발행 → 소비 → DB 반영. 계약 오류가 재시도 뒤 `backtest.events.dlq`에 도착(x-death 헤더 확인). 모르는 id는 ACK되고 DLQ로 가지 않음. 늦은 FINISHED는 결과를 덮어쓰지 않음\n- [x] ArchUnit 계층 규칙 유지\n- [ ] 수동: 컨테이너 기동 → POST로 Job 생성 → 관리 UI에서 픽스처를 `backtest.events`에 발행 → `backtest_job.status`·`backtest_result`·`backtest_trade` 확인 (리뷰어 선택)\n\n# 리뷰 포인트\n\n- **결과 도메인 모델을 두지 않은 것.** 저장 포트가 계약 DTO(`EngineOutput`, `BenchmarkResult`)를 그대로 받고 엔티티에 담습니다. 결과는 엔진이 계산한 값의 보관이고 지킬 불변식이 없어서 `BacktestJob`과 달리 도메인 모델이 필요 없다고 봤습니다. ADR-0001 예외로 인정할 수 있는지 판단 부탁드립니다. 두기로 하면 record 10여 개와 매퍼가 늘어납니다.\n- **식별자 255자 계약.** 메시징 README에 명시했고 검증기가 초과를 계약 오류로 판정합니다. 워커 담당자 동의가 필요합니다. DB만 `VARCHAR(255)`로 두고 계약에 안 쓰면, 초과 메시지가 DB 제약 오류로 재시도 뒤 DLQ에 가서 원인이 스택트레이스에 묻힙니다.\n- **소수가 `jsonb` 안에 문자열입니다.** `performance->>'totalReturn'`은 문자열이라 SQL에서 숫자 비교·정렬을 하려면 캐스팅이 필요합니다. 현재 범위에 그런 질의가 없어 받아들였습니다. 반대로 숫자로 두면 `jsonb` 정규화로 scale이 바뀝니다.\n- **`QUEUED`에서 바로 `COMPLETED`/`FAILED`로 가는 것을 허용했습니다.** STARTED 유실 시 결과를 버리지 않기 위해서입니다. RUNNING을 거치지 않은 Job이 화면에서 이상하게 보일 수 있는지 FE 관점 의견이 있으면 좋겠습니다.\n- **JSON 직렬화 설정이 전역입니다.** `MessageJsonPersistenceConfig`가 Hibernate의 JSON 포맷 매퍼를 메시지 ObjectMapper로 바꿉니다. 앞으로 다른 도메인이 JSON 컬럼을 추가하면 그 컬럼도 같은 규칙(NON_NULL, decimal 문자열, ISO 날짜)으로 직렬화됩니다. 대부분 원하는 동작이지만 알고 있어야 합니다.\n- **단일 인스턴스 전제.** `prefetch 1` + `concurrency 1`은 한 인스턴스 안에서만 같은 Job의 이벤트 처리를 직렬로 만듭니다. 백엔드를 2개 이상 띄우기 전에 낙관적 락 또는 상태 조건부 UPDATE가 필요합니다. `application.yml` 주석과 서비스 javadoc에 적어 뒀습니다.",
+    "state": "merged",
+    "created_at": "2026-09-08T23:50:33.534+09:00",
+    "updated_at": "2026-09-09T10:03:45.555+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-09T10:03:45.273+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/110-backtest-result-consumer",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0f64d6e589521105696ab98b545c92880de97286",
+    "merge_commit_sha": "e21387b674247447b8d5219d8e05fef7e9f7af35",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T23:50:36.394+09:00",
+    "reference": "!24",
+    "references": {
+      "short": "!24",
+      "relative": "!24",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!24"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/24",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 12,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 937154,
+    "iid": 24,
+    "project_id": 1444456,
+    "title": "feat(be): RabbitMQ 백테스트 결과 이벤트 Consumer 및 DB 저장 구현",
+    "description": "# 작업 내용 요약\n\n워커가 `backtest.events` 큐로 보내는 STARTED / PROGRESS / FINISHED 이벤트를 백엔드가 소비합니다.\n\n- STARTED가 오면 Job이 `RUNNING`이 됩니다.\n- FINISHED가 오면 결과(`backtest_result`)와 거래(`backtest_trade`)를 저장하고 Job이 `COMPLETED` 또는 `FAILED`가 됩니다. 저장과 상태 변경은 한 트랜잭션이고, 커밋된 뒤에 ACK합니다.\n- PROGRESS는 DB에 저장하지 않고 전달 포트(`BacktestProgressNotifier`)로 넘깁니다. SSE가 붙기 전까지는 로그만 남깁니다.\n\n지금까지는 `POST /backtests`가 큐에 작업을 넣기만 하고 받는 쪽이 없어 Job이 영원히 `QUEUED`였습니다. 이 MR 뒤로 결과 조회 API와 진행 상황 SSE가 이 저장 구조와 포트를 전제로 진행됩니다.\n\n# 관련 이슈\n\n- close #\n\n# 주요 변경 사항\n\n- **상태 전이를 도메인 메서드로**: `BacktestJob.markRunning()` / `markCompleted()` / `markFailed()`. 불변 객체라 새 인스턴스를 돌려주고, 허용되지 않는 전이는 예외를 던집니다. `BacktestJobRepository.update()`로 상태 변경만 저장합니다(`save`는 신규 전용 그대로).\n- **결과 저장 스키마 추가 (V2 마이그레이션)**: `backtest_result`(Job과 1:1), `backtest_trade`(Job과 1:N), 시퀀스·인덱스·FK·UNIQUE. prod는 Flyway가 적용하고 local은 `ddl-auto: update`가 같은 스키마를 만듭니다. 기존 테이블은 건드리지 않습니다.\n- **성과·시계열·거래 상세는 JSONB에 저장**: 필터·정렬에 쓰는 값(종목, 상태, 진입 시각, 오류 코드)만 컬럼입니다. 소수 값은 `NUMERIC` 컬럼에 두지 않습니다. 계약에 자릿수 상한이 없어서 어떤 scale을 골라도 근거가 없고, `NUMERIC`은 넘치는 자릿수를 조용히 반올림하기 때문입니다.\n- **JSON 컬럼 직렬화를 메시지 ObjectMapper에 연결**: 소수가 문자열로 저장되어 PostgreSQL `jsonb`의 숫자 정규화를 피하고, DB 안의 JSON이 메시지 JSON과 같은 표기를 갖습니다.\n- **이벤트 처리 서비스**: 모르는 `backtestId`는 경고 로그 후 버립니다(ACK). 이미 끝난 Job의 늦은 이벤트는 무시합니다. STARTED가 유실돼 `QUEUED`인 채로 FINISHED가 와도 결과를 받습니다. 같은 이벤트가 두 번 와도 상태 조건에서 걸러지므로 별도 처리 이력 테이블은 없습니다.\n- **리스너와 계약 검증**: 워커가 `__TypeId__` 헤더를 보내지 않으므로 본문의 `type`을 먼저 읽고 payload 타입을 정합니다. 역직렬화 직후 중첩 구조 전체를 명시 검증하고, 위반 시 필드 경로를 메시지에 담아 DLQ에서 원인을 바로 찾을 수 있게 했습니다. 계약 오류는 재큐 없이 재시도 3회 뒤 DLQ, DB 장애 같은 일시 오류도 재시도 뒤 DLQ입니다.\n- **필수 필드는 기본값으로 보정하지 않습니다**: `trades`가 빠진 COMPLETED를 빈 리스트로 저장하면 \"거래가 없었다\"는 거짓 결과가 확정됩니다. DLQ로 보내고 워커를 고친 뒤 재투입합니다. 계약이 생략을 허용한 필드(성과 지표 개별 null, `benchmark`, `positions`, OPEN 거래의 청산 값)만 그대로 받습니다.\n- **리스너 설정**: `prefetch 1`(FINISHED 한 건이 수백 KB), `default-requeue-rejected: false`(무한 재큐 방지), in-process 재시도 3회.\n- **`instrumentId` 형식 검증**: trade·position·benchmark의 종목 식별자를 도메인 VO와 같은 `{6자리}.XKRX` 패턴으로 검증합니다(ADR-0002 D4). 저장 컬럼이 32자라 형식 검증 없이는 긴 값이 DB 오류로 재시도됩니다.\n- **JDBC 배칭**: `hibernate.jdbc.batch_size 50` + `order_inserts`. 거래 행이 한 결과에 수백 건씩 들어오는데 건마다 왕복하지 않게 합니다. SEQUENCE PK 엔티티에만 효과가 있고 IDENTITY PK(회원 테이블)는 원래 배칭되지 않습니다.\n- **코드리뷰 반영(마지막 커밋)**: 위 `instrumentId` 검증·JDBC 배칭에 더해, PROGRESS 처리에서 트랜잭션 제거(SSE 전환 시 네트워크 I/O 동안 DB 커넥션 점유 방지), 리스너 `switch`에 default reject(이벤트 타입이 추가되고 case가 빠지면 조용히 ACK되는 경로 차단), 전체 컨텍스트에서도 decimal이 문자열로 저장되는지 통합 테스트로 확인.\n- **계약 문서 갱신**: 메시징 README에 결과 Consumer 구현됨 표기, 식별자(`eventId`·`executionId`·`tradeId`·`error.code`) **255자 상한** 추가, 검증 책임 표 보강. backend CLAUDE.md에 결과 저장·Consumer 규칙 추가.\n\n# 테스트\n\n- [x] `gradlew.bat spotlessApply build` 통과. 테스트 245개 중 244 성공, 1 skip(`MarketLiveApiTest`, 이 MR과 무관). Docker Desktop을 켜고 돌려 PostgreSQL·RabbitMQ 컨테이너 테스트가 실제로 실행됐습니다(skip 0).\n- [x] 상태 전이 규칙: `QUEUED`에서만 RUNNING, 비최종 상태에서만 최종 전이, 최종 상태에서는 모두 거부, 전이 후 나머지 필드 보존\n- [x] 저장: 계약 픽스처를 그대로 저장하고 다시 읽어 소수 자릿수까지 같은지 확인. FAILED 결과, `trade_id` 중복, 없는 Job(FK), 같은 Job에 결과 2번 저장 시 실패\n- [x] 정밀도: 소수 20자리·후행 0·지수 표기 값이 실제 PostgreSQL `jsonb`를 왕복해도 scale까지 같고, `jsonb` 안에 문자열로 저장됨. 음수 scale(`1E+2`)은 계약의 plain 표기 `\"100\"`으로 정규화되어 값은 같고 scale만 0이 되는 것을 별도 케이스로 고정(계약 JSON은 plain 표기만 쓰므로 실제 메시지에서는 생기지 않음)\n- [x] 마이그레이션: V2가 적용되고 컬럼·시퀀스·FK·UNIQUE가 엔티티와 일치(`FlywayMigrationTest` 확장)\n- [x] 서비스(Mockito): 상태별 적용·무시, 모르는 id, PROGRESS 전달 조건\n- [x] 리스너: type 분기, 깨진 JSON·모르는 type·계약 위반 reject, 서비스 예외는 그대로 전파\n- [x] 검증기: 위반 50건이 정확한 필드 경로를 짚어내는지, 허용 생략 6종 통과, ID 255자 통과·256자 실패\n- [x] 통합(브로커 없음): 실제 트랜잭션에서 Job 생성 → STARTED → FINISHED, FINISHED 두 번 → 두 번째 무시, STARTED 없는 FINISHED, 모르는 id\n- [x] 통합(PostgreSQL + RabbitMQ 컨테이너): 픽스처를 실제 발행 → 소비 → DB 반영. 계약 오류가 재시도 뒤 `backtest.events.dlq`에 도착(x-death 헤더 확인). 모르는 id는 ACK되고 DLQ로 가지 않음. 늦은 FINISHED는 결과를 덮어쓰지 않음\n- [x] ArchUnit 계층 규칙 유지\n- [ ] 수동: 컨테이너 기동 → POST로 Job 생성 → 관리 UI에서 픽스처를 `backtest.events`에 발행 → `backtest_job.status`·`backtest_result`·`backtest_trade` 확인 (리뷰어 선택)\n\n# 리뷰 포인트\n\n- **결과 도메인 모델을 두지 않은 것.** 저장 포트가 계약 DTO(`EngineOutput`, `BenchmarkResult`)를 그대로 받고 엔티티에 담습니다. 결과는 엔진이 계산한 값의 보관이고 지킬 불변식이 없어서 `BacktestJob`과 달리 도메인 모델이 필요 없다고 봤습니다. ADR-0001 예외로 인정할 수 있는지 판단 부탁드립니다. 두기로 하면 record 10여 개와 매퍼가 늘어납니다.\n- **식별자 255자 계약.** 메시징 README에 명시했고 검증기가 초과를 계약 오류로 판정합니다. 워커 담당자 동의가 필요합니다. DB만 `VARCHAR(255)`로 두고 계약에 안 쓰면, 초과 메시지가 DB 제약 오류로 재시도 뒤 DLQ에 가서 원인이 스택트레이스에 묻힙니다.\n- **소수가 `jsonb` 안에 문자열입니다.** `performance->>'totalReturn'`은 문자열이라 SQL에서 숫자 비교·정렬을 하려면 캐스팅이 필요합니다. 현재 범위에 그런 질의가 없어 받아들였습니다. 반대로 숫자로 두면 `jsonb` 정규화로 scale이 바뀝니다.\n- **`QUEUED`에서 바로 `COMPLETED`/`FAILED`로 가는 것을 허용했습니다.** STARTED 유실 시 결과를 버리지 않기 위해서입니다. RUNNING을 거치지 않은 Job이 화면에서 이상하게 보일 수 있는지 FE 관점 의견이 있으면 좋겠습니다.\n- **JSON 직렬화 설정이 전역입니다.** `MessageJsonPersistenceConfig`가 Hibernate의 JSON 포맷 매퍼를 메시지 ObjectMapper로 바꿉니다. 앞으로 다른 도메인이 JSON 컬럼을 추가하면 그 컬럼도 같은 규칙(NON_NULL, decimal 문자열, ISO 날짜)으로 직렬화됩니다. 대부분 원하는 동작이지만 알고 있어야 합니다.\n- **단일 인스턴스 전제.** `prefetch 1` + `concurrency 1`은 한 인스턴스 안에서만 같은 Job의 이벤트 처리를 직렬로 만듭니다. 백엔드를 2개 이상 띄우기 전에 낙관적 락 또는 상태 조건부 UPDATE가 필요합니다. `application.yml` 주석과 서비스 javadoc에 적어 뒀습니다.",
+    "state": "merged",
+    "created_at": "2026-09-08T23:50:33.534+09:00",
+    "updated_at": "2026-09-09T10:03:45.555+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-09T10:03:45.273+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/110-backtest-result-consumer",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0f64d6e589521105696ab98b545c92880de97286",
+    "merge_commit_sha": "e21387b674247447b8d5219d8e05fef7e9f7af35",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T23:50:36.394+09:00",
+    "reference": "!24",
+    "references": {
+      "short": "!24",
+      "relative": "!24",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!24"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/24",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 12,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "35",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "head_sha": "0f64d6e589521105696ab98b545c92880de97286",
+      "start_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2851b8f1cdfe743a587621c1f29322d185b158f6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2776672,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-08T23:50:33.679+09:00",
+          "updated_at": "2026-09-08T23:50:33.688+09:00",
+          "system": true,
+          "noteable_id": 937154,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 24,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0cf3bc782044b5ce0045dc8b3814fcf7406f7ff3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2776673,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-08T23:50:38.281+09:00",
+          "updated_at": "2026-09-08T23:50:38.285+09:00",
+          "system": true,
+          "noteable_id": 937154,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 24,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e01a821f832b52a4951e88279a42183afc677d3a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2776674,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 계약 검증 및 오류 처리**: `BacktestEventValidator`에서 중첩 그래프 전체를 재귀적으로 검증하고 정확한 필드 경로를 예외 메시지에 포함하여 DLQ 분석 용이성을 높였습니다. 또한 계약 위반은 재큐 없이 거부(`default-requeue-rejected: false`)하고, 일시적 DB 장애는 재시도 후 DLQ로 보내는 전략이 명확히 구현되었습니다.\n- **정밀도 유지 설계**: PostgreSQL `jsonb`의 숫자 정규화로 인한 소수 자릿수(scale) 유실 문제를 방지하기 위해 `HibernatePropertiesCustomizer`를 통해 메시지 `ObjectMapper`와 동일한 `JacksonJsonFormatMapper`를 설정하고, `NUMERIC` 대신 `JSONB` 컬럼을 채택한 점이 돋보입니다.\n\n### 발견 사항\n- [Low] `backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventValidatorTest.java` 파일에서 `failedViolations()` 내부에 `violatio`라는 오타가 포함된 불완전한 라인(`violatio`)이 존재하여 컴파일 오류가 발생할 수 있습니다.\n\n### 테스트 제안\n- **중복 FINISHED 이벤트 처리 시나리오**: 동일한 `backtestId`에 대해 `FINISHED(COMPLETED)` 이벤트가 처리된 이후, 다른 `executionId`나 `FAILED` 상태를 가진 중복/지연 FINISHED 이벤트가 유입되었을 때 기존 COMPLETED 상태와 결과 데이터가 정확히 보존되는지 검증하는 통합 테스트 시나리오를 추가하세요.\n- **대량 거래 데이터 JDBC 배칭 성능 시나리오**: 수백 건 이상의 거래 내역(`trades`)을 포함하는 FINISHED 이벤트를 수신하여 `backtest_trade` 테이블에 일괄 저장할 때, 설정된 `batch_size: 50`과 `order_inserts`가 정상적으로 동작하며 쿼리 횟수가 최적화되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0f64d6e589521105696ab98b545c92880de97286 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-08T23:50:44.334+09:00",
+          "updated_at": "2026-09-08T23:50:44.334+09:00",
+          "system": false,
+          "noteable_id": 937154,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 24,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9965f0eb006b95d408f7ba4c960c379ab8041095",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2777615,
+          "type": null,
+          "body": "mentioned in commit e21387b674247447b8d5219d8e05fef7e9f7af35",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-09T10:03:45.256+09:00",
+          "updated_at": "2026-09-09T10:03:45.259+09:00",
+          "system": true,
+          "noteable_id": 937154,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 24,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2174343,
+      "head_commit_sha": "0f64d6e589521105696ab98b545c92880de97286",
+      "base_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "start_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "created_at": "2026-09-08T23:50:34.007+09:00",
+      "merge_request_id": 937154,
+      "state": "collected",
+      "real_size": "35",
+      "patch_id_sha": "59959054768ff554dc4befc3437ca71e5e462ca1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2174343,
+      "head_commit_sha": "0f64d6e589521105696ab98b545c92880de97286",
+      "base_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "start_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "created_at": "2026-09-08T23:50:34.007+09:00",
+      "merge_request_id": 937154,
+      "state": "collected",
+      "real_size": "35",
+      "patch_id_sha": "59959054768ff554dc4befc3437ca71e5e462ca1",
+      "commits": [
+        {
+          "id": "0f64d6e589521105696ab98b545c92880de97286",
+          "short_id": "0f64d6e5",
+          "created_at": "2026-09-08T23:42:51.000+09:00",
+          "parent_ids": [
+            "a5684a8d64230d543f055103efd82071ba8f4341"
+          ],
+          "title": "fix(be): 코드리뷰 반영 — instrumentId 형식 검증, 정밀도 계약 정리, 리스너·서비스 보강",
+          "message": "fix(be): 코드리뷰 반영 — instrumentId 형식 검증, 정밀도 계약 정리, 리스너·서비스 보강\n\n- 검증기가 trade·position·benchmark의 instrumentId를 InstrumentId.REGEX({6자리}.XKRX)로\n  검증한다. 저장 컬럼이 VARCHAR(32)라 형식 검증 없이는 초과 값이 DB 오류로 재시도됐다\n- 음수 scale(1E+2)은 계약의 plain 표기 \"100\"으로 정규화되어 값은 같고 scale만 0이 된다.\n  README §5에 \"plain 표기만\"을 명시하고 정밀도 테스트에 이 동작을 고정하는 케이스 추가\n- handleProgress의 읽기 전용 트랜잭션 제거: notifier가 SSE로 바뀌면 네트워크 I/O 동안\n  DB 커넥션을 쥐게 되므로\n- 리스너 switch에 default reject: 이벤트 타입이 추가되고 case가 빠지면 메시지가 조용히\n  ACK되는 경로를 막는다\n- hibernate.jdbc.batch_size 50 + order_inserts: 거래 행 수백 건이 건마다 왕복하지 않게\n- BacktestEventFlowIT가 전체 컨텍스트에서도 decimal이 jsonb 문자열로 저장되는지 확인\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:42:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:42:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0f64d6e589521105696ab98b545c92880de97286"
+        },
+        {
+          "id": "a5684a8d64230d543f055103efd82071ba8f4341",
+          "short_id": "a5684a8d",
+          "created_at": "2026-09-08T23:24:07.000+09:00",
+          "parent_ids": [
+            "07756087b5b919401c346a5e1f224e19d6f0a3e2"
+          ],
+          "title": "docs(be): 결과 저장 규칙과 계약 문서 상태 갱신",
+          "message": "docs(be): 결과 저장 규칙과 계약 문서 상태 갱신\n\n- backend CLAUDE.md: 결과 저장 규칙(질의 값만 컬럼, decimal은 JSONB 문자열),\n  결과 Consumer 오류 분기·멱등 규칙, 마이그레이션·DB 테스트 규칙\n- 메시징 README: §1 결과 Consumer 구현됨, §5 식별자 문자열 255자 상한 추가,\n  §7 결과 Consumer 저장 규칙을 구현(eventId는 결과 행 컬럼, 처리 이력 테이블 없음)에 맞게 정리,\n  §8 검증 책임에 ID 길이·sequence·상태별 nullable 규칙·허용 생략 추가\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:24:07.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:24:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a5684a8d64230d543f055103efd82071ba8f4341"
+        },
+        {
+          "id": "07756087b5b919401c346a5e1f224e19d6f0a3e2",
+          "short_id": "07756087",
+          "created_at": "2026-09-08T23:22:42.000+09:00",
+          "parent_ids": [
+            "a5c4a8cd8bc9d822e55db21b6f9eebefbf465042"
+          ],
+          "title": "test(be): 백테스트 이벤트 흐름 통합 테스트 추가",
+          "message": "test(be): 백테스트 이벤트 흐름 통합 테스트 추가\n\n- BacktestEventFlowIT: 브로커 없이(리스너 off, 죽은 포트) 서비스 계층을 직접 호출해\n  실제 트랜잭션에서 Job 생성 → STARTED → FINISHED 전이·저장, FINISHED 재수신 무시(멱등),\n  STARTED 없는 FINISHED 적용, RUNNING일 때만 PROGRESS 전달, 모르는 backtestId 무시 확인\n- BacktestEventListenerIT: PostgreSQL + RabbitMQ 컨테이너. 픽스처를 backtest.events에 실제\n  발행 → 리스너 소비 → DB 반영. 계약 오류는 재시도 뒤 backtest.events.dlq 도착(x-death),\n  모르는 backtestId는 ACK되고 DLQ로 가지 않음, 늦은 FINISHED는 결과를 덮어쓰지 않음\n- MessageFixtures.withBacktestId: 픽스처의 backtestId를 실제 생성한 Job으로 바꾼다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:22:42.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:22:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/07756087b5b919401c346a5e1f224e19d6f0a3e2"
+        },
+        {
+          "id": "a5c4a8cd8bc9d822e55db21b6f9eebefbf465042",
+          "short_id": "a5c4a8cd",
+          "created_at": "2026-09-08T23:18:34.000+09:00",
+          "parent_ids": [
+            "59e85828f7ffe521cded3abc23c69a08bf547e69"
+          ],
+          "title": "feat(be): backtest.events 리스너와 계약 검증 추가",
+          "message": "feat(be): backtest.events 리스너와 계약 검증 추가\n\n- BacktestEventListener: raw Message를 받아 본문 type으로 payload 타입을 정해 역직렬화\n  (워커는 __TypeId__를 보내지 않음). 역직렬화·검증 실패는 AmqpRejectAndDontRequeueException,\n  서비스 예외(일시 오류)는 그대로 전파해 재시도 대상\n- BacktestEventValidator: 역직렬화 직후 중첩 그래프 전체를 명시 검증. 상태별 nullable 규칙\n  (COMPLETED는 성과·집계 필수, FAILED는 오류 필수·나머지 비어야 함), ID 255자 상한,\n  PROGRESS·FINISHED의 sequence >= 1. 위반 메시지에 필드 경로를 담는다.\n  계약이 nullable로 정한 생략(성과 개별 null, benchmark, positions, OPEN 청산 필드)은 통과\n- 리스너 설정: prefetch 1, default-requeue-rejected false, in-process 재시도 3회 후 DLQ\n- BacktestCreateRollbackIT는 죽은 브로커 포트를 쓰므로 리스너 auto-startup을 끈다\n- 테스트: type 분기·오류 분기(리스너), 위반 50여 건과 허용 생략(검증기)\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:18:34.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:18:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a5c4a8cd8bc9d822e55db21b6f9eebefbf465042"
+        },
+        {
+          "id": "59e85828f7ffe521cded3abc23c69a08bf547e69",
+          "short_id": "59e85828",
+          "created_at": "2026-09-08T23:10:12.000+09:00",
+          "parent_ids": [
+            "8095d4c75d42e422fe6bebb77b70c9c65c638873"
+          ],
+          "title": "feat(be): 백테스트 이벤트 처리 서비스와 PROGRESS 전달 포트 추가",
+          "message": "feat(be): 백테스트 이벤트 처리 서비스와 PROGRESS 전달 포트 추가\n\n- BacktestEventService: STARTED → RUNNING, FINISHED → 결과 저장 + COMPLETED|FAILED를\n  한 트랜잭션으로, PROGRESS → notifier 전달(읽기 전용)\n- 멱등성은 상태 전이로 보장한다. 늦은 이벤트(이미 최종)는 무시하고 첫 최종 상태를 채택,\n  모르는 backtestId는 경고 후 버린다(고아 메시지는 계약 오류가 아니라 DLQ로 보내지 않음)\n- QUEUED 상태의 FINISHED도 적용한다(STARTED 유실·DLQ 시 결과가 확정되도록)\n- BacktestProgressNotifier 포트는 envelope을 통째로 받는다(SSE가 eventId·sequence를 씀).\n  LoggingBacktestProgressNotifier는 SSE 구현 전까지의 임시 구현\n- Mockito 테스트로 상태별 적용·무시 판단 고정\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:10:12.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:10:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/59e85828f7ffe521cded3abc23c69a08bf547e69"
+        },
+        {
+          "id": "8095d4c75d42e422fe6bebb77b70c9c65c638873",
+          "short_id": "8095d4c7",
+          "created_at": "2026-09-08T23:07:48.000+09:00",
+          "parent_ids": [
+            "34ad1d4159cc06d596714cd283a7d89ba3ab1b13"
+          ],
+          "title": "feat(be): 백테스트 결과 저장 스키마와 리포지토리 구현",
+          "message": "feat(be): 백테스트 결과 저장 스키마와 리포지토리 구현\n\n- backtest_result(Job과 1:1, PK=FK)·backtest_trade(1:N) 엔티티와 V2 마이그레이션.\n  질의에 쓰는 값만 컬럼, 성과·집계·시계열·벤치마크·진단과 거래 상세는 JSONB\n- decimal은 NUMERIC 컬럼에 두지 않는다. 계약이 자릿수를 정하지 않아 어떤 scale도\n  근거가 없고, NUMERIC은 그 자릿수를 넘는 값을 조용히 반올림한다\n- JSON 컬럼 직렬화를 메시지 ObjectMapper에 연결(HibernatePropertiesCustomizer).\n  decimal이 문자열로 저장되어 jsonb 숫자 정규화를 타지 않고 scale이 보존된다\n- SaveBacktestResultCommand·BacktestResultRepository 포트. 결과 도메인 모델은 두지 않고\n  계약 DTO를 그대로 저장한다(지킬 불변식이 없음)\n- FAILED 결과도 저장한다(오류 코드·메시지만, 성과·집계는 null)\n- 테스트: 픽스처 그대로 저장·조회(scale 포함 동등), FAILED, trade_id UNIQUE, FK,\n  결과 중복 PK, 소수 20자리·후행 0·지수 표기 왕복, jsonb 문자열 저장 확인,\n  FlywayMigrationTest에 V2 컬럼·시퀀스·제약 단언 추가. MessageFixtures 헬퍼\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:07:48.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:07:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8095d4c75d42e422fe6bebb77b70c9c65c638873"
+        },
+        {
+          "id": "34ad1d4159cc06d596714cd283a7d89ba3ab1b13",
+          "short_id": "34ad1d41",
+          "created_at": "2026-09-08T23:00:51.000+09:00",
+          "parent_ids": [
+            "2be44f6a135426ff1cf83605600a2aa3b19ae81b"
+          ],
+          "title": "feat(be): 백테스트 Job 상태 전이 도메인 메서드와 리포지토리 갱신 경로 추가",
+          "message": "feat(be): 백테스트 Job 상태 전이 도메인 메서드와 리포지토리 갱신 경로 추가\n\n- BacktestStatus.isFinal(): COMPLETED·FAILED 판별\n- BacktestJob.markRunning/markCompleted/markFailed: 불변 객체라 새 인스턴스 반환,\n  불법 전이는 IllegalStateException. 최종 전이는 QUEUED에서도 허용\n  (STARTED 유실 시 FINISHED가 QUEUED 상태로 도착해도 결과를 받기 위해)\n- BacktestJobRepository.update(): save(신규 전용)와 분리한 상태 갱신 경로.\n  관리 엔티티의 status만 바꿔 createdAt을 건드리지 않음\n- 단위 테스트(전이 규칙·필드 보존)와 PostgreSQL 저장 테스트 추가\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-08T23:00:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-08T23:00:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/34ad1d4159cc06d596714cd283a7d89ba3ab1b13"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.ssafy.thorp.backtest.application.command;\n+\n+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import java.util.Objects;\n+\n+/**\n+ * FINISHED 이벤트의 결과를 저장하라는 명령.\n+ *\n+ * <p>결과에는 지킬 불변식이 없고 계약 검증은 수신 측이 이미 끝냈으므로 결과 도메인 모델을 두지 않는다. 계약 DTO({@link EngineOutput}, {@link\n+ * BenchmarkResult})를 그대로 넘기고 저장소 구현이 엔티티로 매핑한다.\n+ *\n+ * @param backtestJobId Job PK\n+ * @param executionId 어느 실행 시도의 결과인지\n+ * @param eventId 처리한 FINISHED 이벤트. 추적용\n+ * @param benchmark null = 벤치마크 미지정\n+ */\n+public record SaveBacktestResultCommand(\n+        Long backtestJobId,\n+        String executionId,\n+        String eventId,\n+        EngineOutput engineOutput,\n+        BenchmarkResult benchmark) {\n+\n+    public SaveBacktestResultCommand {\n+        Objects.requireNonNull(backtestJobId, \"backtestJobId must not be null\");\n+        Objects.requireNonNull(executionId, \"executionId must not be null\");\n+        Objects.requireNonNull(eventId, \"eventId must not be null\");\n+        Objects.requireNonNull(engineOutput, \"engineOutput must not be null\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/command/SaveBacktestResultCommand.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/command/SaveBacktestResultCommand.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,16 @@\n+package com.ssafy.thorp.backtest.application.port;\n+\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+\n+/**\n+ * PROGRESS 이벤트를 구독자에게 전달하는 포트. DB에 저장하지 않는다.\n+ *\n+ * <p>envelope을 통째로 받는다. 실시간 전달(SSE)은 {@code eventId}(중복 감지)·{@code executionId}·{@code sequence}(누락\n+ * 감지)를 모두 필요로 하므로 payload만 넘기면 구현 시점에 포트를 다시 고쳐야 한다.\n+ */\n+public interface BacktestProgressNotifier {\n+\n+    /** RUNNING 상태인 Job의 진행 이벤트만 들어온다. 모르는 Job·끝난 Job의 늦은 PROGRESS는 서비스가 먼저 걸러낸다. */\n+    void notifyProgress(BacktestEvent<ProgressPayload> event);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/BacktestProgressNotifier.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/BacktestProgressNotifier.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,10 +9,17 @@ public interface BacktestJobRepository {\n     /**\n      * 신규 Job 생성 전용. 저장하면서 외부 식별자 {@code backtestId}를 부여하고, id와 backtestId가 채워진 Job을 돌려준다.\n      *\n-     * <p>id가 이미 있는 Job이면 {@link IllegalArgumentException}. 상태 변경은 별도 메서드로 추가한다.\n+     * <p>id가 이미 있는 Job이면 {@link IllegalArgumentException}. 상태 변경은 {@link #update(BacktestJob)}.\n      */\n     BacktestJob save(BacktestJob job);\n \n+    /**\n+     * 저장된 Job의 상태 전이를 반영한다. 도메인에서 바뀔 수 있는 값은 {@code status}뿐이므로 그것만 갱신하고, 갱신된 Job을 돌려준다.\n+     *\n+     * <p>id가 없는 Job이거나 저장소에 없는 id면 {@link IllegalArgumentException}.\n+     */\n+    BacktestJob update(BacktestJob job);\n+\n     Optional<BacktestJob> findById(Long id);\n \n     Optional<BacktestJob> findByBacktestId(String backtestId);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestJobRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestJobRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.ssafy.thorp.backtest.application.repository;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+\n+/** 백테스트 결과 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다. 조회는 결과 조회 API 작업에서 추가한다. */\n+public interface BacktestResultRepository {\n+\n+    /**\n+     * 결과 행 1개와 거래 행 N개를 저장한다. 실패한 실행도 저장한다(오류 정보만 채워지고 성과·집계는 null).\n+     *\n+     * <p>같은 Job에 결과가 이미 있으면 PK 충돌로 실패한다. 호출자가 Job 상태(최종 여부)로 먼저 걸러낸다.\n+     */\n+    void save(SaveBacktestResultCommand command);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,143 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.port.message.RunStatus;\n+import com.ssafy.thorp.backtest.application.port.message.StartedPayload;\n+import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import com.ssafy.thorp.backtest.domain.model.BacktestJob;\n+import com.ssafy.thorp.backtest.domain.model.BacktestStatus;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 워커 이벤트(STARTED / PROGRESS / FINISHED)로 Job 상태를 움직이고 결과를 저장한다.\n+ *\n+ * <p>계약 검증은 수신 측(리스너)이 끝낸 뒤 호출한다. 여기서는 Job 상태에 따라 적용·무시만 결정한다.\n+ *\n+ * <p>멱등성은 상태 전이가 보장한다. STARTED는 QUEUED에서만, FINISHED는 비최종 상태에서만 적용되므로 같은 이벤트가 두 번 와도 두 번째는 걸러진다. 별도\n+ * 처리 이력 테이블을 두지 않는다. 재실행(다른 {@code executionId})의 결과도 첫 최종 상태를 채택하고 이후는 무시한다.\n+ *\n+ * <p>모르는 {@code backtestId}는 경고 로그 후 버린다. 발행 성공 뒤 Job 생성 트랜잭션이 실패해 생긴 고아 메시지가 여기로 온다. 계약을 지킨 정상\n+ * 메시지이므로 DLQ로 보내지 않는다.\n+ *\n+ * <p>조회 → 판단 → 갱신 사이의 경쟁은 다루지 않는다. 같은 Job의 이벤트는 큐 순서대로 오고 리스너가 prefetch 1·단일 Consumer이므로 한 인스턴스\n+ * 안에서는 직렬이다. 백엔드를 다중 인스턴스로 띄우기 전에 낙관적 락 또는 상태 조건부 UPDATE를 넣어야 한다.\n+ */\n+@Service\n+public class BacktestEventService {\n+\n+    private static final Logger log = LoggerFactory.getLogger(BacktestEventService.class);\n+\n+    private final BacktestJobRepository jobRepository;\n+    private final BacktestResultRepository resultRepository;\n+    private final BacktestProgressNotifier progressNotifier;\n+\n+    public BacktestEventService(\n+            BacktestJobRepository jobRepository,\n+            BacktestResultRepository resultRepository,\n+            BacktestProgressNotifier progressNotifier) {\n+        this.jobRepository = jobRepository;\n+        this.resultRepository = resultRepository;\n+        this.progressNotifier = progressNotifier;\n+    }\n+\n+    /** QUEUED → RUNNING. 이미 RUNNING이거나 끝난 Job이면 무시한다. */\n+    @Transactional\n+    public void handleStarted(BacktestEvent<StartedPayload> event) {\n+        BacktestJob job = findJob(event);\n+        if (job == null) {\n+            return;\n+        }\n+        if (job.getStatus() != BacktestStatus.QUEUED) {\n+            log.info(\n+                    \"late STARTED ignored: backtestId={} status={} eventId={}\",\n+                    event.backtestId(),\n+                    job.getStatus(),\n+                    event.eventId());\n+            return;\n+        }\n+        jobRepository.update(job.markRunning());\n+    }\n+\n+    /**\n+     * 결과 저장 + 상태 전이(COMPLETED | FAILED)를 한 트랜잭션으로. 둘 중 하나만 반영된 상태를 만들지 않는다.\n+     *\n+     * <p>QUEUED 상태의 FINISHED도 받는다. STARTED가 유실됐거나 DLQ에 가 있어도 결과는 확정된다.\n+     */\n+    @Transactional\n+    public void handleFinished(BacktestEvent<FinishedPayload> event) {\n+        BacktestJob job = findJob(event);\n+        if (job == null) {\n+            return;\n+        }\n+        if (job.getStatus().isFinal()) {\n+            log.info(\n+                    \"late FINISHED ignored: backtestId={} status={} eventId={} executionId={}\",\n+                    event.backtestId(),\n+                    job.getStatus(),\n+                    event.eventId(),\n+                    event.executionId());\n+            return;\n+        }\n+\n+        EngineOutput output = event.payload().engineOutput();\n+        resultRepository.save(\n+                new SaveBacktestResultCommand(\n+                        job.getId(),\n+                        event.executionId(),\n+                        event.eventId(),\n+                        output,\n+                        event.payload().benchmark()));\n+        jobRepository.update(\n+                output.run().status() == RunStatus.COMPLETED\n+                        ? job.markCompleted()\n+                        : job.markFailed());\n+    }\n+\n+    /**\n+     * RUNNING 상태인 Job의 진행만 전달한다. DB에는 아무것도 남기지 않는다.\n+     *\n+     * <p>Job을 조회하는 이유: 모르는 {@code backtestId}와 끝난 Job의 늦은 PROGRESS가 그대로 구독자에게 흘러가면 클라이언트 차트가 뒤로 간다.\n+     * QUEUED의 PROGRESS도 무시한다 — STARTED가 아직 안 온 상태에서 진행률만 먼저 보내면 상태가 어긋난다.\n+     *\n+     * <p>트랜잭션을 열지 않는다. 조회 한 번뿐이고, notifier가 SSE로 바뀌면 클라이언트 네트워크 I/O를 하는 동안 DB 커넥션을 쥐고 있지 않기 위해서다.\n+     */\n+    public void handleProgress(BacktestEvent<ProgressPayload> event) {\n+        BacktestJob job = findJob(event);\n+        if (job == null) {\n+            return;\n+        }\n+        if (job.getStatus() != BacktestStatus.RUNNING) {\n+            log.info(\n+                    \"PROGRESS for non-running job ignored: backtestId={} status={} eventId={}\",\n+                    event.backtestId(),\n+                    job.getStatus(),\n+                    event.eventId());\n+            return;\n+        }\n+        progressNotifier.notifyProgress(event);\n+    }\n+\n+    private BacktestJob findJob(BacktestEvent<?> event) {\n+        return jobRepository\n+                .findByBacktestId(event.backtestId())\n+                .orElseGet(\n+                        () -> {\n+                            log.warn(\n+                                    \"event for unknown backtestId dropped: backtestId={} type={}\"\n+                                            + \" eventId={}\",\n+                                    event.backtestId(),\n+                                    event.type(),\n+                                    event.eventId());\n+                            return null;\n+                        });\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestEventService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestEventService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -162,6 +162,47 @@ public class BacktestJob {\n                 status);\n     }\n \n+    /** 워커가 실행을 시작했다(STARTED). QUEUED에서만 허용한다. */\n+    public BacktestJob markRunning() {\n+        return transitionTo(BacktestStatus.RUNNING, status == BacktestStatus.QUEUED);\n+    }\n+\n+    /**\n+     * 실행이 성공으로 끝났다(FINISHED, COMPLETED). 최종 상태가 아니면 허용한다.\n+     *\n+     * <p>RUNNING으로 제한하지 않는다. STARTED가 유실되거나 계약 오류로 DLQ에 가면 FINISHED가 QUEUED 상태로 도착하는데, 그때 거부하면 결과가\n+     * 있는데도 Job이 영원히 QUEUED다. FINISHED는 실행의 최종 결과이므로 STARTED 수신 여부와 무관하게 받는다.\n+     */\n+    public BacktestJob markCompleted() {\n+        return transitionTo(BacktestStatus.COMPLETED, !status.isFinal());\n+    }\n+\n+    /** 실행이 실패로 끝났다(FINISHED, FAILED). 허용 범위는 {@link #markCompleted()}와 같다. 실패 원인은 결과 저장소가 가진다. */\n+    public BacktestJob markFailed() {\n+        return transitionTo(BacktestStatus.FAILED, !status.isFinal());\n+    }\n+\n+    /** 불변 객체이므로 상태만 바뀐 새 인스턴스를 돌려준다. 호출자가 상태를 먼저 걸러내므로 여기의 예외는 최후 방어선이다. */\n+    private BacktestJob transitionTo(BacktestStatus next, boolean allowed) {\n+        if (!allowed) {\n+            throw new IllegalStateException(\"illegal status transition: \" + status + \" -> \" + next);\n+        }\n+        return new BacktestJob(\n+                id,\n+                backtestId,\n+                strategyId,\n+                strategyVersion,\n+                parameters,\n+                instrumentIds,\n+                period,\n+                initialCash,\n+                positionSizingType,\n+                maxPositionPct,\n+                benchmarkInstrumentId,\n+                randomSeed,\n+                next);\n+    }\n+\n     public Long getId() {\n         return id;\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestJob.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestJob.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,19 @@\n package com.ssafy.thorp.backtest.domain.model;\n \n-/** 백테스트 Job 상태. 흐름: QUEUED → RUNNING → COMPLETED | FAILED (RUNNING 이후는 Worker가 갱신). */\n+/**\n+ * 백테스트 Job 상태. 흐름: QUEUED → RUNNING → COMPLETED | FAILED. RUNNING 이후는 워커 이벤트(STARTED/FINISHED)로\n+ * 갱신된다.\n+ *\n+ * <p>전이 규칙은 {@link BacktestJob#markRunning()} 등 도메인 메서드가 지킨다.\n+ */\n public enum BacktestStatus {\n     QUEUED,\n     RUNNING,\n     COMPLETED,\n-    FAILED\n+    FAILED;\n+\n+    /** 더 이상 바뀌지 않는 상태인가. 최종 상태의 Job에 온 이벤트는 무시된다. */\n+    public boolean isFinal() {\n+        return this == COMPLETED || this == FAILED;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestStatus.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,121 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import com.fasterxml.jackson.core.type.TypeReference;\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEventType;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.port.message.StartedPayload;\n+import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import java.io.IOException;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.amqp.AmqpRejectAndDontRequeueException;\n+import org.springframework.amqp.core.Message;\n+import org.springframework.amqp.rabbit.annotation.RabbitListener;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * {@code backtest.events} 큐의 Consumer. 본문 {@code type}으로 payload 타입을 정해 역직렬화·검증한 뒤 서비스에 넘긴다.\n+ *\n+ * <p>raw {@link Message}를 받는다. 계약대로 워커는 {@code __TypeId__} 헤더를 보내지 않으므로 컨버터에 맡기면 payload 타입을 정할 수\n+ * 없다. {@code type}만 먼저 읽고(1차 파싱) 그 타입으로 다시 읽는다. 두 번 파싱하지만 FINISHED 한 건에 한 번뿐이다.\n+ *\n+ * <p>오류 분기:\n+ *\n+ * <ul>\n+ *   <li>역직렬화 실패·계약 검증 실패 → {@link AmqpRejectAndDontRequeueException}. 브로커 재큐 없이 같은 delivery 안에서 리스너\n+ *       재시도 후 DLQ\n+ *   <li>DB 저장 실패 등 일시 오류 → 예외 그대로 전파. 재시도 후 DLQ\n+ *   <li>모르는 {@code backtestId}·늦은 이벤트 → 서비스가 로그만 남기고 정상 반환. ACK\n+ * </ul>\n+ *\n+ * <p>{@code @Transactional}은 서비스 메서드에 있다. ACK 모드가 AUTO이므로 서비스가 정상 반환(커밋)한 뒤에 ACK된다. 설정은 {@code\n+ * spring.rabbitmq.listener.simple.*}.\n+ */\n+@Component\n+public class BacktestEventListener {\n+\n+    private static final Logger log = LoggerFactory.getLogger(BacktestEventListener.class);\n+\n+    private static final TypeReference<BacktestEvent<StartedPayload>> STARTED_TYPE =\n+            new TypeReference<>() {};\n+    private static final TypeReference<BacktestEvent<ProgressPayload>> PROGRESS_TYPE =\n+            new TypeReference<>() {};\n+    private static final TypeReference<BacktestEvent<FinishedPayload>> FINISHED_TYPE =\n+            new TypeReference<>() {};\n+\n+    private final ObjectMapper mapper = BacktestRabbitConfig.messageObjectMapper();\n+    private final BacktestEventService service;\n+\n+    public BacktestEventListener(BacktestEventService service) {\n+        this.service = service;\n+    }\n+\n+    @RabbitListener(queues = BacktestRabbitConfig.EVENTS_QUEUE)\n+    public void onEvent(Message message) {\n+        byte[] body = message.getBody();\n+        BacktestEventType type = readType(body);\n+        switch (type) {\n+            case STARTED -> {\n+                BacktestEvent<StartedPayload> event =\n+                        parse(body, STARTED_TYPE, BacktestEventValidator::validateStarted);\n+                service.handleStarted(event);\n+            }\n+            case PROGRESS -> {\n+                BacktestEvent<ProgressPayload> event =\n+                        parse(body, PROGRESS_TYPE, BacktestEventValidator::validateProgress);\n+                service.handleProgress(event);\n+            }\n+            case FINISHED -> {\n+                BacktestEvent<FinishedPayload> event =\n+                        parse(body, FINISHED_TYPE, BacktestEventValidator::validateFinished);\n+                service.handleFinished(event);\n+            }\n+            // enum에 값이 추가되고 여기에 case가 빠지면 메시지가 조용히 ACK되어 사라진다. 그 경로를 막는다.\n+            default -> throw reject(\"type\", \"no handler for \" + type);\n+        }\n+    }\n+\n+    private BacktestEventType readType(byte[] body) {\n+        try {\n+            JsonNode type = mapper.readTree(body).path(\"type\");\n+            if (!type.isTextual()) {\n+                throw reject(\"type\", \"missing or not a string\");\n+            }\n+            return BacktestEventType.valueOf(type.asText());\n+        } catch (IOException | IllegalArgumentException e) {\n+            throw reject(\"type\", e.getMessage());\n+        }\n+    }\n+\n+    /** 역직렬화와 검증만 여기서 잡는다. 서비스의 예외(일시 오류)는 재시도 대상이므로 감싸지 않는다. */\n+    private <P> BacktestEvent<P> parse(\n+            byte[] body, TypeReference<BacktestEvent<P>> type, Validator<P> validator) {\n+        BacktestEvent<P> event;\n+        try {\n+            event = mapper.readValue(body, type);\n+        } catch (IOException e) {\n+            throw reject(\"body\", e.getMessage());\n+        }\n+        try {\n+            validator.validate(event);\n+        } catch (IllegalArgumentException e) {\n+            throw reject(event.eventId(), e.getMessage());\n+        }\n+        return event;\n+    }\n+\n+    private static AmqpRejectAndDontRequeueException reject(String where, String reason) {\n+        String message = \"backtest event rejected (\" + where + \"): \" + reason;\n+        log.warn(message);\n+        return new AmqpRejectAndDontRequeueException(message);\n+    }\n+\n+    @FunctionalInterface\n+    private interface Validator<P> {\n+        void validate(BacktestEvent<P> event);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListener.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListener.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,278 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.port.message.StartedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import java.util.List;\n+import java.util.regex.Pattern;\n+\n+/**\n+ * 역직렬화 직후의 명시 검증. 계약 기준: {@code docs/specs/backtest-messaging/README.md} §4.2·§4.3·§5·§8.\n+ *\n+ * <p>Java record는 참조형 필드가 누락돼도 null로 역직렬화된다. 메시지 ObjectMapper가 잡는 것은 미지의 enum과 필수 정수(primitive)\n+ * 누락뿐이므로 나머지는 여기서 본다. 중첩 그래프 전체를 훑는다 — 최상위만 보면 {@code performance.initialEquity}가 null인 메시지가 통과해 저장\n+ * 중 NPE가 나고, 계약 오류가 일시 오류로 오인돼 재시도된다.\n+ *\n+ * <p>구조와 상태별 nullable 규칙만 본다. 회계 항등식({@code equity = cash + positionValue} 등)은 재계산하지 않는다 — 그것은 엔진의\n+ * 책임이다. 계약이 nullable로 정한 필드(성과 지표 개별 null, benchmark null, snapshot의 positions 없음, OPEN 거래의 청산 필드)는\n+ * 그대로 받는다. 반대로 필수 필드는 기본값으로 보정하지 않는다 — {@code trades}가 누락된 COMPLETED를 {@code []}로 저장하면 \"거래가 없었다\"는\n+ * 거짓 결과를 확정한다.\n+ *\n+ * <p>위반 시 {@link IllegalArgumentException}에 필드 경로({@code\n+ * payload.engineOutput.trades[3].entryPrice})를 담아 DLQ에서 원인을 바로 찾을 수 있게 한다.\n+ */\n+final class BacktestEventValidator {\n+\n+    /**\n+     * 계약 §5: ID 문자열({@code eventId}·{@code executionId}·{@code tradeId}·{@code error.code})의 최대 길이.\n+     * 저장 컬럼 폭과 같다.\n+     */\n+    static final int MAX_ID_LENGTH = 255;\n+\n+    static final int SCHEMA_VERSION = 1;\n+\n+    /** 종목 식별자 형식은 도메인 VO와 같은 계약(ADR-0002 D4)이다. 저장 컬럼 `VARCHAR(32)`보다 훨씬 짧아 길이 문제도 여기서 걸러진다. */\n+    private static final Pattern INSTRUMENT_ID = Pattern.compile(InstrumentId.REGEX);\n+\n+    private BacktestEventValidator() {}\n+\n+    static void validateStarted(BacktestEvent<StartedPayload> event) {\n+        envelope(event);\n+        if (event.sequence() != 0) {\n+            fail(\"sequence\", \"STARTED must have sequence 0 but was \" + event.sequence());\n+        }\n+        require(event.payload().startedAt(), \"payload.startedAt\");\n+    }\n+\n+    static void validateProgress(BacktestEvent<ProgressPayload> event) {\n+        envelope(event);\n+        subsequent(event);\n+        ProgressPayload payload = event.payload();\n+        if (payload.completedTradingDays() < 0) {\n+            fail(\"payload.completedTradingDays\", \"must be >= 0\");\n+        }\n+        if (payload.totalTradingDays() <= 0) {\n+            fail(\"payload.totalTradingDays\", \"must be > 0\");\n+        }\n+        if (payload.completedTradingDays() > payload.totalTradingDays()) {\n+            fail(\n+                    \"payload.completedTradingDays\",\n+                    payload.completedTradingDays()\n+                            + \" exceeds totalTradingDays \"\n+                            + payload.totalTradingDays());\n+        }\n+        List<ProgressPayload.ProgressPoint> series =\n+                require(payload.portfolioSeries(), \"payload.portfolioSeries\");\n+        for (int i = 0; i < series.size(); i++) {\n+            String path = \"payload.portfolioSeries[\" + i + \"]\";\n+            ProgressPayload.ProgressPoint point = require(series.get(i), path);\n+            require(point.date(), path + \".date\");\n+            require(point.equity(), path + \".equity\");\n+            require(point.cumulativeReturn(), path + \".cumulativeReturn\");\n+            require(point.drawdown(), path + \".drawdown\");\n+        }\n+    }\n+\n+    static void validateFinished(BacktestEvent<FinishedPayload> event) {\n+        envelope(event);\n+        subsequent(event);\n+        String base = \"payload.engineOutput\";\n+        EngineOutput output = require(event.payload().engineOutput(), base);\n+        run(output.run(), event.backtestId(), base + \".run\");\n+\n+        List<EngineOutput.PortfolioSnapshot> series =\n+                require(output.portfolioSeries(), base + \".portfolioSeries\");\n+        List<EngineOutput.TradeResult> trades = require(output.trades(), base + \".trades\");\n+        EngineOutput.Diagnostics diagnostics = require(output.diagnostics(), base + \".diagnostics\");\n+        List<EngineOutput.Warning> warnings =\n+                require(diagnostics.warnings(), base + \".diagnostics.warnings\");\n+        snapshots(series, base + \".portfolioSeries\");\n+        trades(trades, base + \".trades\");\n+        warnings(warnings, base + \".diagnostics.warnings\");\n+\n+        BenchmarkResult benchmark = event.payload().benchmark();\n+        switch (output.run().status()) {\n+            case COMPLETED -> completed(output, base);\n+            case FAILED -> failed(output, benchmark, base);\n+        }\n+        if (benchmark != null) {\n+            benchmark(benchmark, \"payload.benchmark\");\n+        }\n+    }\n+\n+    private static void envelope(BacktestEvent<?> event) {\n+        if (event.schemaVersion() != SCHEMA_VERSION) {\n+            fail(\"schemaVersion\", \"unsupported version \" + event.schemaVersion());\n+        }\n+        requireId(event.eventId(), \"eventId\");\n+        requireNotBlank(event.backtestId(), \"backtestId\");\n+        requireId(event.executionId(), \"executionId\");\n+        require(event.type(), \"type\");\n+        if (event.sequence() < 0) {\n+            fail(\"sequence\", \"must be >= 0\");\n+        }\n+        require(event.occurredAt(), \"occurredAt\");\n+        require(event.payload(), \"payload\");\n+    }\n+\n+    /** STARTED만 0이다. 이후 이벤트는 1부터. 연속성은 검증하지 않는다. */\n+    private static void subsequent(BacktestEvent<?> event) {\n+        if (event.sequence() < 1) {\n+            fail(\"sequence\", event.type() + \" must have sequence >= 1 but was \" + event.sequence());\n+        }\n+    }\n+\n+    private static void run(EngineOutput.RunResult run, String backtestId, String path) {\n+        require(run, path);\n+        require(run.status(), path + \".status\");\n+        require(run.startedAt(), path + \".startedAt\");\n+        require(run.finishedAt(), path + \".finishedAt\");\n+        if (!backtestId.equals(run.backtestId())) {\n+            fail(path + \".backtestId\", run.backtestId() + \" differs from envelope \" + backtestId);\n+        }\n+        if (run.finishedAt().isBefore(run.startedAt())) {\n+            fail(path + \".finishedAt\", \"before startedAt\");\n+        }\n+    }\n+\n+    private static void completed(EngineOutput output, String base) {\n+        if (output.run().error() != null) {\n+            fail(base + \".run.error\", \"must be absent when status is COMPLETED\");\n+        }\n+        EngineOutput.PerformanceResult performance =\n+                require(output.performance(), base + \".performance\");\n+        require(performance.initialEquity(), base + \".performance.initialEquity\");\n+        require(performance.finalEquity(), base + \".performance.finalEquity\");\n+        require(performance.currency(), base + \".performance.currency\");\n+        require(performance.maxDrawdown(), base + \".performance.maxDrawdown\");\n+        EngineOutput.ExecutionResult execution = require(output.execution(), base + \".execution\");\n+        require(execution.totalCommission(), base + \".execution.totalCommission\");\n+        require(execution.totalSlippageCost(), base + \".execution.totalSlippageCost\");\n+    }\n+\n+    private static void failed(EngineOutput output, BenchmarkResult benchmark, String base) {\n+        EngineOutput.EngineError error = require(output.run().error(), base + \".run.error\");\n+        requireId(error.code(), base + \".run.error.code\");\n+        requireNotBlank(error.message(), base + \".run.error.message\");\n+        if (output.performance() != null) {\n+            fail(base + \".performance\", \"must be absent when status is FAILED\");\n+        }\n+        if (output.execution() != null) {\n+            fail(base + \".execution\", \"must be absent when status is FAILED\");\n+        }\n+        if (benchmark != null) {\n+            fail(\"payload.benchmark\", \"must be absent when status is FAILED\");\n+        }\n+        if (!output.portfolioSeries().isEmpty()) {\n+            fail(base + \".portfolioSeries\", \"must be empty when status is FAILED\");\n+        }\n+        if (!output.trades().isEmpty()) {\n+            fail(base + \".trades\", \"must be empty when status is FAILED\");\n+        }\n+    }\n+\n+    private static void snapshots(List<EngineOutput.PortfolioSnapshot> series, String base) {\n+        for (int i = 0; i < series.size(); i++) {\n+            String path = base + \"[\" + i + \"]\";\n+            EngineOutput.PortfolioSnapshot snapshot = require(series.get(i), path);\n+            require(snapshot.date(), path + \".date\");\n+            require(snapshot.equity(), path + \".equity\");\n+            require(snapshot.cash(), path + \".cash\");\n+            require(snapshot.positionValue(), path + \".positionValue\");\n+            require(snapshot.cumulativeReturn(), path + \".cumulativeReturn\");\n+            require(snapshot.drawdown(), path + \".drawdown\");\n+            if (snapshot.positions() == null) {\n+                continue; // 보유 구성 변경이 없는 날. 정상\n+            }\n+            for (int j = 0; j < snapshot.positions().size(); j++) {\n+                String positionPath = path + \".positions[\" + j + \"]\";\n+                EngineOutput.PositionSnapshot position =\n+                        require(snapshot.positions().get(j), positionPath);\n+                requireInstrumentId(position.instrumentId(), positionPath + \".instrumentId\");\n+                require(position.quantity(), positionPath + \".quantity\");\n+                require(position.marketValue(), positionPath + \".marketValue\");\n+            }\n+        }\n+    }\n+\n+    private static void trades(List<EngineOutput.TradeResult> trades, String base) {\n+        for (int i = 0; i < trades.size(); i++) {\n+            String path = base + \"[\" + i + \"]\";\n+            EngineOutput.TradeResult trade = require(trades.get(i), path);\n+            requireId(trade.tradeId(), path + \".tradeId\");\n+            requireInstrumentId(trade.instrumentId(), path + \".instrumentId\");\n+            require(trade.side(), path + \".side\");\n+            require(trade.status(), path + \".status\");\n+            require(trade.entryTime(), path + \".entryTime\");\n+            require(trade.entryPrice(), path + \".entryPrice\");\n+            require(trade.quantity(), path + \".quantity\");\n+            require(trade.commission(), path + \".commission\");\n+            require(trade.slippageCost(), path + \".slippageCost\");\n+            if (trade.status() == TradeStatus.CLOSED) {\n+                require(trade.exitTime(), path + \".exitTime\");\n+                require(trade.exitPrice(), path + \".exitPrice\");\n+                require(trade.grossPnl(), path + \".grossPnl\");\n+                require(trade.realizedPnl(), path + \".realizedPnl\");\n+                require(trade.returnRate(), path + \".returnRate\");\n+            }\n+        }\n+    }\n+\n+    private static void warnings(List<EngineOutput.Warning> warnings, String base) {\n+        for (int i = 0; i < warnings.size(); i++) {\n+            String path = base + \"[\" + i + \"]\";\n+            EngineOutput.Warning warning = require(warnings.get(i), path);\n+            requireNotBlank(warning.code(), path + \".code\");\n+        }\n+    }\n+\n+    private static void benchmark(BenchmarkResult benchmark, String base) {\n+        requireInstrumentId(benchmark.instrumentId(), base + \".instrumentId\");\n+        require(benchmark.totalReturn(), base + \".totalReturn\");\n+        List<BenchmarkResult.BenchmarkPoint> series =\n+                require(benchmark.timeseries(), base + \".timeseries\");\n+        for (int i = 0; i < series.size(); i++) {\n+            String path = base + \".timeseries[\" + i + \"]\";\n+            BenchmarkResult.BenchmarkPoint point = require(series.get(i), path);\n+            require(point.date(), path + \".date\");\n+            require(point.equity(), path + \".equity\");\n+            require(point.cumulativeReturn(), path + \".cumulativeReturn\");\n+        }\n+    }\n+\n+    private static <T> T require(T value, String path) {\n+        if (value == null) {\n+            fail(path, \"is required\");\n+        }\n+        return value;\n+    }\n+\n+    private static void requireNotBlank(String value, String path) {\n+        if (value == null || value.isBlank()) {\n+            fail(path, \"must not be blank\");\n+        }\n+    }\n+\n+    private static void requireId(String value, String path) {\n+        requireNotBlank(value, path);\n+        if (value.length() > MAX_ID_LENGTH) {\n+            fail(path, \"length \" + value.length() + \" exceeds \" + MAX_ID_LENGTH);\n+        }\n+    }\n+\n+    private static void requireInstrumentId(String value, String path) {\n+        requireNotBlank(value, path);\n+        if (!INSTRUMENT_ID.matcher(value).matches()) {\n+            fail(path, \"must match \" + InstrumentId.REGEX + \" but was \" + value);\n+        }\n+    }\n+\n+    private static void fail(String path, String message) {\n+        throw new IllegalArgumentException(\"contract violation at \" + path + \": \" + message);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventValidator.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventValidator.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,33 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 임시 구현. 진행 이벤트를 로그로만 남긴다.\n+ *\n+ * <p>TODO(진행 상황 SSE 작업): SSE 전파 구현으로 교체하고 이 클래스를 삭제한다. 그 작업의 완료 조건에 이 클래스 삭제를 포함한다.\n+ *\n+ * <p>정상 동작이고 20거래일마다 한 번 오므로 로그 레벨은 debug다.\n+ */\n+@Component\n+class LoggingBacktestProgressNotifier implements BacktestProgressNotifier {\n+\n+    private static final Logger log =\n+            LoggerFactory.getLogger(LoggingBacktestProgressNotifier.class);\n+\n+    @Override\n+    public void notifyProgress(BacktestEvent<ProgressPayload> event) {\n+        log.debug(\n+                \"backtest progress: backtestId={} executionId={} sequence={} {}/{} trading days\",\n+                event.backtestId(),\n+                event.executionId(),\n+                event.sequence(),\n+                event.payload().completedTradingDays(),\n+                event.payload().totalTradingDays());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/LoggingBacktestProgressNotifier.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/LoggingBacktestProgressNotifier.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import org.hibernate.cfg.AvailableSettings;\n+import org.hibernate.type.format.jackson.JacksonJsonFormatMapper;\n+import org.springframework.boot.autoconfigure.orm.jpa.HibernatePropertiesCustomizer;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Configuration;\n+\n+/**\n+ * JSON 컬럼({@code @JdbcTypeCode(SqlTypes.JSON)})의 직렬화를 메시지 ObjectMapper에 맡긴다.\n+ *\n+ * <p>결과 저장소는 계약 DTO({@code EngineOutput} 등)를 그대로 JSON 컬럼에 담는다. Hibernate 기본 ObjectMapper를 쓰면\n+ * decimal이 JSON 숫자로 쓰이고, PostgreSQL {@code jsonb}는 숫자를 정규화해 지수 표기·scale이 바뀔 수 있다. 메시지 ObjectMapper는\n+ * decimal을 plain 문자열로 쓰므로 저장된 값이 계약이 준 문자열과 같고 scale이 보존된다. 날짜도 ISO 문자열이 되어 DB 안의 JSON이 메시지 JSON과\n+ * 같은 표기를 갖는다.\n+ *\n+ * <p>ObjectMapper 자체는 package-private로 둔다. 이 설정은 그것을 Hibernate에 연결만 하고 다른 코드에 노출하지 않는다.\n+ */\n+@Configuration\n+public class MessageJsonPersistenceConfig {\n+\n+    @Bean\n+    public HibernatePropertiesCustomizer messageJsonFormatMapper() {\n+        return properties ->\n+                properties.put(\n+                        AvailableSettings.JSON_FORMAT_MAPPER,\n+                        new JacksonJsonFormatMapper(BacktestRabbitConfig.messageObjectMapper()));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/MessageJsonPersistenceConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/messaging/MessageJsonPersistenceConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -134,6 +134,11 @@ public class BacktestJobJpaEntity extends BaseEntity {\n         this.backtestIdDate = date;\n     }\n \n+    /** 상태 전이 결과를 반영한다. 전이 규칙은 도메인이 이미 검증했으므로 여기서는 값만 바꾼다. */\n+    void changeStatus(BacktestStatus status) {\n+        this.status = status;\n+    }\n+\n     @PrePersist\n     void fillBacktestId() {\n         if (backtestId == null) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestJobJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestJobJpaEntity.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,6 +35,26 @@ public class BacktestJobRepositoryImpl implements BacktestJobRepository {\n         return BacktestJobMapper.toDomain(jpaRepository.save(entity));\n     }\n \n+    /**\n+     * 관리 엔티티를 읽어 상태만 바꾼다. 도메인 객체를 새 엔티티로 merge하면 {@code createdAt}(updatable=false)이 null인 사본이 관리\n+     * 상태를 덮어 쓰므로 그 방식은 피한다. {@code save()}는 트랜잭션 밖에서 불려도 UPDATE가 나가도록 한 번 명시한다.\n+     */\n+    @Override\n+    public BacktestJob update(BacktestJob job) {\n+        if (job.getId() == null) {\n+            throw new IllegalArgumentException(\"update is for persisted jobs only: id is null\");\n+        }\n+        BacktestJobJpaEntity entity =\n+                jpaRepository\n+                        .findById(job.getId())\n+                        .orElseThrow(\n+                                () ->\n+                                        new IllegalArgumentException(\n+                                                \"job not found: id=\" + job.getId()));\n+        entity.changeStatus(job.getStatus());\n+        return BacktestJobMapper.toDomain(jpaRepository.save(entity));\n+    }\n+\n     @Override\n     public Optional<BacktestJob> findById(Long id) {\n         return jpaRepository.findById(id).map(BacktestJobMapper::toDomain);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestJobRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestJobRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,153 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.common.persistence.BaseEntity;\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.FetchType;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.JoinColumn;\n+import jakarta.persistence.MapsId;\n+import jakarta.persistence.OneToOne;\n+import jakarta.persistence.Table;\n+import java.time.Instant;\n+import java.util.List;\n+import org.hibernate.annotations.JdbcTypeCode;\n+import org.hibernate.type.SqlTypes;\n+\n+/**\n+ * {@code backtest_result} 테이블 매핑. Job과 1:1이며 PK가 곧 FK다({@code @MapsId}).\n+ *\n+ * <p>저장 규칙: 질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSON. decimal은 전부 JSON에 둔다 — {@code NUMERIC} 컬럼은 scale을\n+ * 임의로 정해야 하고 그 자릿수를 넘는 값을 조용히 반올림하지만, JSON은 계약이 준 값과 scale을 그대로 보존한다. JSON 직렬화는 메시지 ObjectMapper가\n+ * 맡아 decimal을 문자열로 쓰므로 jsonb의 숫자 정규화도 일어나지 않는다.\n+ *\n+ * <p>실패한 실행({@code run.status=FAILED})은 {@code errorCode}·{@code errorMessage}만 채워지고 {@code\n+ * performance}·{@code execution}·{@code benchmark}는 null, {@code portfolioSeries}는 빈 리스트다. 없는 성과를\n+ * 0으로 채우지 않는다.\n+ */\n+@Entity\n+@Table(name = \"backtest_result\")\n+public class BacktestResultJpaEntity extends BaseEntity {\n+\n+    @Id private Long backtestJobId;\n+\n+    @OneToOne(fetch = FetchType.LAZY)\n+    @MapsId\n+    @JoinColumn(name = \"backtest_job_id\")\n+    private BacktestJobJpaEntity job;\n+\n+    @Column(nullable = false, length = 255)\n+    private String executionId;\n+\n+    @Column(nullable = false, length = 255)\n+    private String finishedEventId;\n+\n+    @Column(nullable = false)\n+    private Instant startedAt;\n+\n+    @Column(nullable = false)\n+    private Instant finishedAt;\n+\n+    @Column(length = 255)\n+    private String errorCode;\n+\n+    @Column(columnDefinition = \"TEXT\")\n+    private String errorMessage;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private EngineOutput.PerformanceResult performance;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private EngineOutput.ExecutionResult execution;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    @Column(nullable = false)\n+    private List<EngineOutput.PortfolioSnapshot> portfolioSeries;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    private BenchmarkResult benchmark;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    @Column(nullable = false)\n+    private EngineOutput.Diagnostics diagnostics;\n+\n+    protected BacktestResultJpaEntity() {}\n+\n+    private BacktestResultJpaEntity(BacktestJobJpaEntity job, SaveBacktestResultCommand command) {\n+        EngineOutput output = command.engineOutput();\n+        EngineOutput.RunResult run = output.run();\n+        this.job = job;\n+        this.executionId = command.executionId();\n+        this.finishedEventId = command.eventId();\n+        this.startedAt = run.startedAt();\n+        this.finishedAt = run.finishedAt();\n+        this.errorCode = run.error() == null ? null : run.error().code();\n+        this.errorMessage = run.error() == null ? null : run.error().message();\n+        this.performance = output.performance();\n+        this.execution = output.execution();\n+        this.portfolioSeries = output.portfolioSeries();\n+        this.benchmark = command.benchmark();\n+        this.diagnostics = output.diagnostics();\n+    }\n+\n+    /** 계약 DTO → 엔티티. 결과 도메인 모델이 없으므로 별도 Mapper 없이 여기서 매핑한다. */\n+    static BacktestResultJpaEntity from(\n+            BacktestJobJpaEntity job, SaveBacktestResultCommand command) {\n+        return new BacktestResultJpaEntity(job, command);\n+    }\n+\n+    public Long getBacktestJobId() {\n+        return backtestJobId;\n+    }\n+\n+    public String getExecutionId() {\n+        return executionId;\n+    }\n+\n+    public String getFinishedEventId() {\n+        return finishedEventId;\n+    }\n+\n+    public Instant getStartedAt() {\n+        return startedAt;\n+    }\n+\n+    public Instant getFinishedAt() {\n+        return finishedAt;\n+    }\n+\n+    /** null = 성공. */\n+    public String getErrorCode() {\n+        return errorCode;\n+    }\n+\n+    public String getErrorMessage() {\n+        return errorMessage;\n+    }\n+\n+    /** null = 실패로 계산 불가. */\n+    public EngineOutput.PerformanceResult getPerformance() {\n+        return performance;\n+    }\n+\n+    /** null = 실패로 계산 불가. */\n+    public EngineOutput.ExecutionResult getExecution() {\n+        return execution;\n+    }\n+\n+    public List<EngineOutput.PortfolioSnapshot> getPortfolioSeries() {\n+        return portfolioSeries;\n+    }\n+\n+    /** null = 벤치마크 미지정 또는 실패. */\n+    public BenchmarkResult getBenchmark() {\n+        return benchmark;\n+    }\n+\n+    public EngineOutput.Diagnostics getDiagnostics() {\n+        return diagnostics;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,5 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import org.springframework.data.jpa.repository.JpaRepository;\n+\n+interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEntity, Long> {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,38 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import org.springframework.stereotype.Repository;\n+\n+/**\n+ * 결과 행과 거래 행을 저장한다.\n+ *\n+ * <p>Job은 {@code getReferenceById} 프록시로 참조한다. 연관을 채우는 데 PK만 필요하므로 추가 SELECT가 없고, 없는 Job이면 flush 시점에\n+ * FK 위반으로 드러난다. 결과와 거래를 한 트랜잭션에 넣는 것은 호출자(서비스)의 책임이다.\n+ */\n+@Repository\n+public class BacktestResultRepositoryImpl implements BacktestResultRepository {\n+\n+    private final BacktestJobJpaRepository jobRepository;\n+    private final BacktestResultJpaRepository resultRepository;\n+    private final BacktestTradeJpaRepository tradeRepository;\n+\n+    public BacktestResultRepositoryImpl(\n+            BacktestJobJpaRepository jobRepository,\n+            BacktestResultJpaRepository resultRepository,\n+            BacktestTradeJpaRepository tradeRepository) {\n+        this.jobRepository = jobRepository;\n+        this.resultRepository = resultRepository;\n+        this.tradeRepository = tradeRepository;\n+    }\n+\n+    @Override\n+    public void save(SaveBacktestResultCommand command) {\n+        BacktestJobJpaEntity job = jobRepository.getReferenceById(command.backtestJobId());\n+        resultRepository.save(BacktestResultJpaEntity.from(job, command));\n+        tradeRepository.saveAll(\n+                command.engineOutput().trades().stream()\n+                        .map(trade -> BacktestTradeJpaEntity.from(job, trade))\n+                        .toList());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,138 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.TradeSide;\n+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.EnumType;\n+import jakarta.persistence.Enumerated;\n+import jakarta.persistence.FetchType;\n+import jakarta.persistence.GeneratedValue;\n+import jakarta.persistence.GenerationType;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.Index;\n+import jakarta.persistence.JoinColumn;\n+import jakarta.persistence.ManyToOne;\n+import jakarta.persistence.SequenceGenerator;\n+import jakarta.persistence.Table;\n+import jakarta.persistence.UniqueConstraint;\n+import java.time.Instant;\n+import org.hibernate.annotations.JdbcTypeCode;\n+import org.hibernate.type.SqlTypes;\n+\n+/**\n+ * {@code backtest_trade} 테이블 매핑. Job과 1:N. 거래는 페이징·필터 대상이라 행으로 둔다.\n+ *\n+ * <p>필터·정렬 키({@code instrument_id}, {@code status}, {@code entry_time})만 컬럼으로 꺼내고, 체결가·수량·손익 같은 숫자는\n+ * 계약 DTO({@link EngineOutput.TradeResult}) 그대로 {@code detail} JSON에 담는다. 결과 엔티티와 같은 이유(decimal\n+ * scale 보존)다. 컬럼과 JSON에 같은 값이 일부 중복되지만, 조회 측이 {@code detail} 하나만 역직렬화하면 계약 형태의 거래를 그대로 얻는다.\n+ *\n+ * <p>정렬은 {@code (backtest_job_id, entry_time, id)}로 고정한다. {@code entry_time}만으로는 같은 시각의 거래 순서가 불안정해\n+ * 페이징에서 행이 중복·누락된다. 거래 행은 한 번 쓰고 바뀌지 않아 생성·수정 시각을 두지 않는다.\n+ */\n+@Entity\n+@Table(\n+        name = \"backtest_trade\",\n+        uniqueConstraints =\n+                @UniqueConstraint(\n+                        name = \"uk_backtest_trade_job_trade\",\n+                        columnNames = {\"backtest_job_id\", \"trade_id\"}),\n+        indexes =\n+                @Index(\n+                        name = \"idx_backtest_trade_job_entry\",\n+                        columnList = \"backtest_job_id, entry_time, id\"))\n+public class BacktestTradeJpaEntity {\n+\n+    /** 시퀀스 증분과 같은 값. 거래는 한 결과에 수백 건씩 들어오므로 1로 두면 건마다 시퀀스를 조회한다. */\n+    static final int SEQUENCE_ALLOCATION_SIZE = 50;\n+\n+    @Id\n+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = \"backtest_trade_seq_generator\")\n+    @SequenceGenerator(\n+            name = \"backtest_trade_seq_generator\",\n+            sequenceName = \"backtest_trade_seq\",\n+            allocationSize = SEQUENCE_ALLOCATION_SIZE)\n+    private Long id;\n+\n+    @ManyToOne(fetch = FetchType.LAZY)\n+    @JoinColumn(name = \"backtest_job_id\", nullable = false)\n+    private BacktestJobJpaEntity job;\n+\n+    @Column(nullable = false, length = 255)\n+    private String tradeId;\n+\n+    @Column(nullable = false, length = 32)\n+    private String instrumentId;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(nullable = false, length = 8)\n+    private TradeSide side;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(nullable = false, length = 8)\n+    private TradeStatus status;\n+\n+    @Column(nullable = false)\n+    private Instant entryTime;\n+\n+    /** OPEN 거래는 null. */\n+    private Instant exitTime;\n+\n+    @JdbcTypeCode(SqlTypes.JSON)\n+    @Column(nullable = false)\n+    private EngineOutput.TradeResult detail;\n+\n+    protected BacktestTradeJpaEntity() {}\n+\n+    private BacktestTradeJpaEntity(BacktestJobJpaEntity job, EngineOutput.TradeResult trade) {\n+        this.job = job;\n+        this.tradeId = trade.tradeId();\n+        this.instrumentId = trade.instrumentId();\n+        this.side = trade.side();\n+        this.status = trade.status();\n+        this.entryTime = trade.entryTime();\n+        this.exitTime = trade.exitTime();\n+        this.detail = trade;\n+    }\n+\n+    static BacktestTradeJpaEntity from(BacktestJobJpaEntity job, EngineOutput.TradeResult trade) {\n+        return new BacktestTradeJpaEntity(job, trade);\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public BacktestJobJpaEntity getJob() {\n+        return job;\n+    }\n+\n+    public String getTradeId() {\n+        return tradeId;\n+    }\n+\n+    public String getInstrumentId() {\n+        return instrumentId;\n+    }\n+\n+    public TradeSide getSide() {\n+        return side;\n+    }\n+\n+    public TradeStatus getStatus() {\n+        return status;\n+    }\n+\n+    public Instant getEntryTime() {\n+        return entryTime;\n+    }\n+\n+    public Instant getExitTime() {\n+        return exitTime;\n+    }\n+\n+    public EngineOutput.TradeResult getDetail() {\n+        return detail;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import java.util.List;\n+import org.springframework.data.jpa.repository.JpaRepository;\n+\n+interface BacktestTradeJpaRepository extends JpaRepository<BacktestTradeJpaEntity, Long> {\n+\n+    /** 조회 API의 기본 정렬과 같다. 인덱스 {@code (backtest_job_id, entry_time, id)}를 그대로 탄다. */\n+    List<BacktestTradeJpaEntity> findByJobIdOrderByEntryTimeAscIdAsc(Long jobId);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestTradeJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,44 @@\n+-- 백테스트 결과. BacktestResultJpaEntity / BacktestTradeJpaEntity 기준.\n+-- V1과 같이 PostgreSQL 문법을 그대로 쓴다(운영·로컬·테스트 모두 PostgreSQL).\n+--\n+-- 저장 규칙: 질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB.\n+-- decimal은 예외 없이 JSONB다. NUMERIC 컬럼은 scale을 임의로 정해야 하고 그 자릿수를 넘는 값을\n+-- 조용히 반올림하지만, JSON은 계약이 준 값과 scale을 그대로 보존한다.\n+\n+-- 결과. Job과 1:1이며 PK가 곧 FK다.\n+CREATE TABLE backtest_result (\n+    backtest_job_id   BIGINT                   NOT NULL PRIMARY KEY REFERENCES backtest_job (id),\n+    execution_id      VARCHAR(255)             NOT NULL,\n+    finished_event_id VARCHAR(255)             NOT NULL,\n+    started_at        TIMESTAMP WITH TIME ZONE NOT NULL,\n+    finished_at       TIMESTAMP WITH TIME ZONE NOT NULL,\n+    error_code        VARCHAR(255),\n+    error_message     TEXT,\n+    performance       JSONB,\n+    execution         JSONB,\n+    portfolio_series  JSONB                    NOT NULL,\n+    benchmark         JSONB,\n+    diagnostics       JSONB                    NOT NULL,\n+    created_at        TIMESTAMP                NOT NULL,\n+    updated_at        TIMESTAMP                NOT NULL\n+);\n+\n+-- 거래. Job과 1:N. 페이징·필터 대상이라 행으로 둔다.\n+-- 시퀀스 증분은 엔티티의 allocationSize(50)와 같아야 한다. 거래는 한 결과에 수백 건씩 들어온다.\n+CREATE SEQUENCE backtest_trade_seq START WITH 1 INCREMENT BY 50;\n+\n+CREATE TABLE backtest_trade (\n+    id              BIGINT                   NOT NULL PRIMARY KEY,\n+    backtest_job_id BIGINT                   NOT NULL REFERENCES backtest_job (id),\n+    trade_id        VARCHAR(255)             NOT NULL,\n+    instrument_id   VARCHAR(32)              NOT NULL,\n+    side            VARCHAR(8)               NOT NULL,\n+    status          VARCHAR(8)               NOT NULL,\n+    entry_time      TIMESTAMP WITH TIME ZONE NOT NULL,\n+    exit_time       TIMESTAMP WITH TIME ZONE,\n+    detail          JSONB                    NOT NULL,\n+    CONSTRAINT uk_backtest_trade_job_trade UNIQUE (backtest_job_id, trade_id)\n+);\n+\n+-- 조회 API의 기본 정렬 (entry_time, id). entry_time만으로는 같은 시각의 거래 순서가 불안정해 페이징에서 행이 중복·누락된다.\n+CREATE INDEX idx_backtest_trade_job_entry ON backtest_trade (backtest_job_id, entry_time, id);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V2__backtest_result.sql",
+          "old_path": "backend/src/main/resources/db/migration/V2__backtest_result.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,9 +21,14 @@ spring:\n     properties:\n       hibernate:\n         format_sql: true\n+        # 백테스트 결과의 거래 행은 한 번에 수백 건씩 INSERT된다. 배칭이 없으면 건마다 왕복한다.\n+        # SEQUENCE PK 엔티티(backtest_trade·backtest_job)에만 효과가 있고, IDENTITY PK(회원 테이블)는 원래 배칭되지 않는다.\n+        jdbc:\n+          batch_size: 50\n+        order_inserts: true\n \n   # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.\n-  # confirm·returns·listener 설정은 발행·결과 Consumer 구현 시 추가.\n+  # confirm·returns 설정은 발행 신뢰성(outbox) 작업에서 추가.\n   rabbitmq:\n     host: ${SPRING_RABBITMQ_HOST:localhost}\n     port: ${SPRING_RABBITMQ_PORT:5672}\n@@ -33,6 +38,23 @@ spring:\n     # 발행은 Job 생성 트랜잭션 안에서 일어난다. 브로커가 응답하지 않을 때 클라이언트 기본값(60초)만큼 기다리면\n     # 그동안 DB 커넥션을 잡고 있게 되므로 짧게 끊는다. 발행이 트랜잭션 밖(outbox relay)으로 나가면 재검토한다.\n     connection-timeout: 5s\n+    # 결과 이벤트 Consumer(BacktestEventListener). ACK 모드는 기본값 AUTO: 리스너(→ @Transactional 서비스)가\n+    # 정상 반환하면, 즉 커밋 뒤에 ACK된다.\n+    listener:\n+      simple:\n+        # FINISHED 한 건이 크다(6개월 시계열 픽스처 56KB, 5년이면 수백 KB). 여러 건을 미리 받아 힙에 쌓지 않는다.\n+        # prefetch 1 + concurrency 1(기본값)은 한 인스턴스 안에서만 같은 Job의 이벤트 처리를 직렬로 만든다.\n+        # 백엔드를 다중 인스턴스로 띄우기 전에 서비스에 낙관적 락 또는 상태 조건부 UPDATE를 넣어야 한다.\n+        prefetch: 1\n+        # 기본값(true)이면 예외가 난 메시지가 즉시 다시 들어와 무한 루프가 된다. 재시도는 아래 retry가\n+        # 같은 delivery 안에서 in-process로 하고, 소진되면 reject → DLX → backtest.events.dlq로 간다.\n+        default-requeue-rejected: false\n+        retry:\n+          enabled: true\n+          max-attempts: 3\n+          initial-interval: 1s\n+          multiplier: 2\n+          max-interval: 5s\n \n   # Job 전달에는 사용하지 않는다. 브로커는 RabbitMQ(spring.rabbitmq). Kafka는 설치만 해둔 상태이며\n   # 전환·병행은 실측 후 결정한다 (루트 CLAUDE.md). 브로커 없이도 지연 연결이라 기동에 영향 없음.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,202 @@\n+package com.ssafy.thorp.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.verifyNoInteractions;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import com.ssafy.thorp.backtest.domain.model.BacktestJob;\n+import com.ssafy.thorp.backtest.domain.model.BacktestStatus;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.extension.ExtendWith;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.EnumSource;\n+import org.mockito.ArgumentCaptor;\n+import org.mockito.InjectMocks;\n+import org.mockito.Mock;\n+import org.mockito.junit.jupiter.MockitoExtension;\n+\n+/** 상태에 따른 적용·무시 판단을 고정한다. 픽스처의 backtestId는 {@code BT-20260907-000001}이다. */\n+@ExtendWith(MockitoExtension.class)\n+class BacktestEventServiceTest {\n+\n+    private static final String BACKTEST_ID = \"BT-20260907-000001\";\n+\n+    @Mock private BacktestJobRepository jobRepository;\n+    @Mock private BacktestResultRepository resultRepository;\n+    @Mock private BacktestProgressNotifier progressNotifier;\n+    @InjectMocks private BacktestEventService service;\n+\n+    private static BacktestJob jobIn(BacktestStatus status) {\n+        return BacktestJob.restore(\n+                1L,\n+                BacktestId.from(BACKTEST_ID),\n+                \"MA_CROSSOVER\",\n+                \"1.0.0\",\n+                Map.of(),\n+                List.of(new InstrumentId(\"005930.XKRX\")),\n+                new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n+                new BigDecimal(\"10000000.00\"),\n+                PositionSizingMode.STRATEGY_DEFINED,\n+                null,\n+                null,\n+                42,\n+                status);\n+    }\n+\n+    private void givenJob(BacktestStatus status) {\n+        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.of(jobIn(status)));\n+    }\n+\n+    private void givenUnknownJob() {\n+        when(jobRepository.findByBacktestId(BACKTEST_ID)).thenReturn(Optional.empty());\n+    }\n+\n+    private BacktestJob updatedJob() {\n+        ArgumentCaptor<BacktestJob> captor = ArgumentCaptor.forClass(BacktestJob.class);\n+        verify(jobRepository).update(captor.capture());\n+        return captor.getValue();\n+    }\n+\n+    @Test\n+    @DisplayName(\"STARTED: QUEUED Job을 RUNNING으로 갱신한다\")\n+    void startedMovesQueuedToRunning() {\n+        givenJob(BacktestStatus.QUEUED);\n+\n+        service.handleStarted(MessageFixtures.started());\n+\n+        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.RUNNING);\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = BacktestStatus.class,\n+            names = {\"RUNNING\", \"COMPLETED\", \"FAILED\"})\n+    @DisplayName(\"STARTED: QUEUED가 아닌 Job이면 갱신하지 않는다(늦은 이벤트·중복)\")\n+    void lateStartedIsIgnored(BacktestStatus status) {\n+        givenJob(status);\n+\n+        service.handleStarted(MessageFixtures.started());\n+\n+        verify(jobRepository, never()).update(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"FINISHED(COMPLETED): 결과를 저장하고 Job을 COMPLETED로 갱신한다\")\n+    void finishedCompletedSavesResultAndCompletes() {\n+        givenJob(BacktestStatus.RUNNING);\n+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();\n+\n+        service.handleFinished(event);\n+\n+        ArgumentCaptor<SaveBacktestResultCommand> captor =\n+                ArgumentCaptor.forClass(SaveBacktestResultCommand.class);\n+        verify(resultRepository).save(captor.capture());\n+        SaveBacktestResultCommand command = captor.getValue();\n+        assertThat(command.backtestJobId()).isEqualTo(1L);\n+        assertThat(command.executionId()).isEqualTo(event.executionId());\n+        assertThat(command.eventId()).isEqualTo(event.eventId());\n+        assertThat(command.engineOutput()).isSameAs(event.payload().engineOutput());\n+        assertThat(command.benchmark()).isSameAs(event.payload().benchmark());\n+        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.COMPLETED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"FINISHED(FAILED): 결과(오류 포함)를 저장하고 Job을 FAILED로 갱신한다\")\n+    void finishedFailedSavesResultAndFails() {\n+        givenJob(BacktestStatus.RUNNING);\n+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedFailed();\n+\n+        service.handleFinished(event);\n+\n+        ArgumentCaptor<SaveBacktestResultCommand> captor =\n+                ArgumentCaptor.forClass(SaveBacktestResultCommand.class);\n+        verify(resultRepository).save(captor.capture());\n+        assertThat(captor.getValue().engineOutput().run().error().code())\n+                .isEqualTo(\"NO_MARKET_DATA\");\n+        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.FAILED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"FINISHED: STARTED가 유실돼 QUEUED인 Job도 저장하고 최종화한다\")\n+    void finishedOnQueuedJobIsApplied() {\n+        givenJob(BacktestStatus.QUEUED);\n+\n+        service.handleFinished(MessageFixtures.finishedCompleted());\n+\n+        verify(resultRepository).save(any());\n+        assertThat(updatedJob().getStatus()).isEqualTo(BacktestStatus.COMPLETED);\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = BacktestStatus.class,\n+            names = {\"COMPLETED\", \"FAILED\"})\n+    @DisplayName(\"FINISHED: 이미 최종 상태면 저장도 갱신도 하지 않는다(멱등·첫 결과 채택)\")\n+    void finishedOnFinalJobIsIgnored(BacktestStatus status) {\n+        givenJob(status);\n+\n+        service.handleFinished(MessageFixtures.finishedCompleted());\n+\n+        verifyNoInteractions(resultRepository);\n+        verify(jobRepository, never()).update(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"모르는 backtestId의 이벤트는 아무것도 하지 않는다(버림)\")\n+    void unknownBacktestIdIsDropped() {\n+        givenUnknownJob();\n+\n+        service.handleStarted(MessageFixtures.started());\n+        service.handleFinished(MessageFixtures.finishedCompleted());\n+        service.handleProgress(MessageFixtures.progress());\n+\n+        verify(jobRepository, never()).update(any());\n+        verifyNoInteractions(resultRepository, progressNotifier);\n+    }\n+\n+    @Test\n+    @DisplayName(\"PROGRESS: RUNNING Job의 진행은 notifier로 전달한다\")\n+    void progressOnRunningJobIsNotified() {\n+        givenJob(BacktestStatus.RUNNING);\n+        BacktestEvent<ProgressPayload> event = MessageFixtures.progress();\n+\n+        service.handleProgress(event);\n+\n+        verify(progressNotifier).notifyProgress(event);\n+        verify(jobRepository, never()).update(any());\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = BacktestStatus.class,\n+            names = {\"QUEUED\", \"COMPLETED\", \"FAILED\"})\n+    @DisplayName(\"PROGRESS: RUNNING이 아닌 Job의 진행은 전달하지 않는다\")\n+    void progressOnNonRunningJobIsIgnored(BacktestStatus status) {\n+        givenJob(status);\n+\n+        service.handleProgress(MessageFixtures.progress());\n+\n+        verifyNoInteractions(progressNotifier);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,8 @@ import java.util.List;\n import java.util.Map;\n import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.EnumSource;\n \n class BacktestJobTest {\n \n@@ -173,6 +175,80 @@ class BacktestJobTest {\n                 .isInstanceOf(UnsupportedOperationException.class);\n     }\n \n+    private static BacktestJob restoreWith(BacktestStatus status) {\n+        return BacktestJob.restore(\n+                7L,\n+                BacktestId.from(\"BT-20260907-000007\"),\n+                \"MA_CROSSOVER\",\n+                \"1.0.0\",\n+                Map.of(\"shortWindow\", 20),\n+                List.of(SAMSUNG),\n+                PERIOD,\n+                CASH,\n+                PositionSizingMode.STRATEGY_DEFINED,\n+                new BigDecimal(\"0.50\"),\n+                SK,\n+                42,\n+                status);\n+    }\n+\n+    @Test\n+    @DisplayName(\"markRunning은 QUEUED에서 RUNNING으로 바꾸고 나머지 필드는 그대로 둔다\")\n+    void markRunningFromQueued() {\n+        BacktestJob queued = restoreWith(BacktestStatus.QUEUED);\n+\n+        BacktestJob running = queued.markRunning();\n+\n+        assertThat(running.getStatus()).isEqualTo(BacktestStatus.RUNNING);\n+        assertThat(queued.getStatus()).as(\"원본은 불변\").isEqualTo(BacktestStatus.QUEUED);\n+        assertThat(running.getId()).isEqualTo(7L);\n+        assertThat(running.getBacktestId()).isEqualTo(BacktestId.from(\"BT-20260907-000007\"));\n+        assertThat(running.getStrategyId()).isEqualTo(\"MA_CROSSOVER\");\n+        assertThat(running.getStrategyVersion()).isEqualTo(\"1.0.0\");\n+        assertThat(running.getParameters()).containsEntry(\"shortWindow\", 20);\n+        assertThat(running.getInstrumentIds()).containsExactly(SAMSUNG);\n+        assertThat(running.getPeriod()).isEqualTo(PERIOD);\n+        assertThat(running.getInitialCash()).isEqualTo(CASH);\n+        assertThat(running.getPositionSizingType()).isEqualTo(PositionSizingMode.STRATEGY_DEFINED);\n+        assertThat(running.getMaxPositionPct()).isEqualTo(new BigDecimal(\"0.50\"));\n+        assertThat(running.getBenchmarkInstrumentId()).isEqualTo(SK);\n+        assertThat(running.getRandomSeed()).isEqualTo(42);\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = BacktestStatus.class,\n+            names = {\"RUNNING\", \"COMPLETED\", \"FAILED\"})\n+    @DisplayName(\"markRunning은 QUEUED가 아닌 상태에서 거부한다\")\n+    void markRunningRejectsNonQueued(BacktestStatus status) {\n+        assertThatThrownBy(() -> restoreWith(status).markRunning())\n+                .isInstanceOf(IllegalStateException.class);\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = BacktestStatus.class,\n+            names = {\"QUEUED\", \"RUNNING\"})\n+    @DisplayName(\"markCompleted·markFailed는 비최종 상태(QUEUED 포함)에서 허용한다\")\n+    void finalTransitionsAllowedFromNonFinal(BacktestStatus status) {\n+        assertThat(restoreWith(status).markCompleted().getStatus())\n+                .isEqualTo(BacktestStatus.COMPLETED);\n+        assertThat(restoreWith(status).markFailed().getStatus()).isEqualTo(BacktestStatus.FAILED);\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(\n+            value = BacktestStatus.class,\n+            names = {\"COMPLETED\", \"FAILED\"})\n+    @DisplayName(\"최종 상태에서는 어떤 전이도 거부한다\")\n+    void finalStateRejectsAllTransitions(BacktestStatus status) {\n+        BacktestJob job = restoreWith(status);\n+\n+        assertThatThrownBy(job::markRunning).isInstanceOf(IllegalStateException.class);\n+        assertThatThrownBy(job::markCompleted).isInstanceOf(IllegalStateException.class);\n+        assertThatThrownBy(job::markFailed).isInstanceOf(IllegalStateException.class);\n+    }\n+\n     @Test\n     @DisplayName(\"restore는 저장된 id·backtestId와 상태를 그대로 복원한다\")\n     void restoreKeepsIdAndStatus() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/domain/model/BacktestJobTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/domain/model/BacktestJobTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.ssafy.thorp.backtest.domain.model;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+class BacktestStatusTest {\n+\n+    @Test\n+    @DisplayName(\"COMPLETED와 FAILED만 최종 상태다\")\n+    void onlyCompletedAndFailedAreFinal() {\n+        assertThat(BacktestStatus.QUEUED.isFinal()).isFalse();\n+        assertThat(BacktestStatus.RUNNING.isFinal()).isFalse();\n+        assertThat(BacktestStatus.COMPLETED.isFinal()).isTrue();\n+        assertThat(BacktestStatus.FAILED.isFinal()).isTrue();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/domain/model/BacktestStatusTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/domain/model/BacktestStatusTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,6 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;\n             \"spring.rabbitmq.host=localhost\",\n             \"spring.rabbitmq.port=1\",\n             \"spring.rabbitmq.connection-timeout=1s\",\n+            // 결과 이벤트 리스너가 죽은 브로커에 계속 재연결을 시도하지 않도록 끈다. 이 테스트는 발행 실패만 본다.\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n             // 메일 자격 증명은 운영에서만 주입된다. 전체 컨텍스트를 띄우는 테스트라\n             // 값이 없으면 메일 발송 빈 생성 단계에서 플레이스홀더 해석이 실패한다.\n             \"spring.mail.username=test@example.com\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestCreateRollbackIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestCreateRollbackIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,199 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatCode;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.verifyNoInteractions;\n+\n+import com.ssafy.thorp.backtest.application.port.BacktestProgressNotifier;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.port.message.StartedPayload;\n+import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;\n+import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import com.ssafy.thorp.backtest.domain.model.BacktestJob;\n+import com.ssafy.thorp.backtest.domain.model.BacktestStatus;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+\n+/**\n+ * 서비스 계층을 직접 호출해 실제 트랜잭션 경계에서 Job 생성 → STARTED → FINISHED 전이와 저장, 멱등성을 확인한다.\n+ *\n+ * <p>브로커 컨테이너는 띄우지 않는다. 죽은 포트를 브로커로 지정하고 리스너를 끈다. DB는 {@link PostgresTestSupport}의 PostgreSQL\n+ * 컨테이너다. 브로커를 경유하는 확인은 {@code BacktestEventListenerIT}가 한다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            // 전체 컨텍스트라 메일 발송 빈이 만들어진다. 운영에서만 주입되는 값이므로 더미를 넣는다.\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class BacktestEventFlowIT extends PostgresTestSupport {\n+\n+    @Autowired private BacktestEventService service;\n+    @Autowired private BacktestJobRepository jobRepository;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @MockitoBean private BacktestProgressNotifier progressNotifier;\n+\n+    private BacktestJob newJob() {\n+        return jobRepository.save(\n+                BacktestJob.create(\n+                        \"MA_CROSSOVER\",\n+                        \"1.0.0\",\n+                        Map.of(\"shortWindow\", 20),\n+                        List.of(new InstrumentId(\"005930.XKRX\")),\n+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n+                        new BigDecimal(\"10000000.00\"),\n+                        PositionSizingMode.STRATEGY_DEFINED,\n+                        null,\n+                        new InstrumentId(\"069500.XKRX\"),\n+                        42));\n+    }\n+\n+    private static BacktestEvent<StartedPayload> started(BacktestJob job) {\n+        return MessageFixtures.parse(\n+                MessageFixtures.withBacktestId(\n+                        MessageFixtures.STARTED, job.getBacktestId().value()),\n+                MessageFixtures.STARTED_EVENT);\n+    }\n+\n+    private static BacktestEvent<ProgressPayload> progress(BacktestJob job) {\n+        return MessageFixtures.parse(\n+                MessageFixtures.withBacktestId(\n+                        MessageFixtures.PROGRESS, job.getBacktestId().value()),\n+                MessageFixtures.PROGRESS_EVENT);\n+    }\n+\n+    private static BacktestEvent<FinishedPayload> finished(BacktestJob job, String file) {\n+        return MessageFixtures.parse(\n+                MessageFixtures.withBacktestId(file, job.getBacktestId().value()),\n+                MessageFixtures.FINISHED_EVENT);\n+    }\n+\n+    private BacktestStatus statusOf(BacktestJob job) {\n+        return jobRepository\n+                .findByBacktestId(job.getBacktestId().value())\n+                .orElseThrow()\n+                .getStatus();\n+    }\n+\n+    private Integer count(String table, Long jobId) {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT COUNT(*) FROM \" + table + \" WHERE backtest_job_id = ?\",\n+                Integer.class,\n+                jobId);\n+    }\n+\n+    private String resultColumn(String column, Long jobId) {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT \" + column + \" FROM backtest_result WHERE backtest_job_id = ?\",\n+                String.class,\n+                jobId);\n+    }\n+\n+    @Test\n+    @DisplayName(\"Job 생성 → STARTED → FINISHED(COMPLETED): 상태가 움직이고 결과·거래가 저장된다\")\n+    void fullFlow() {\n+        BacktestJob job = newJob();\n+        assertThat(statusOf(job)).isEqualTo(BacktestStatus.QUEUED);\n+\n+        service.handleStarted(started(job));\n+        assertThat(statusOf(job)).isEqualTo(BacktestStatus.RUNNING);\n+\n+        service.handleFinished(finished(job, MessageFixtures.FINISHED_COMPLETED));\n+        assertThat(statusOf(job)).isEqualTo(BacktestStatus.COMPLETED);\n+        assertThat(count(\"backtest_result\", job.getId())).isEqualTo(1);\n+        assertThat(count(\"backtest_trade\", job.getId())).isEqualTo(3);\n+        assertThat(resultColumn(\"finished_event_id\", job.getId())).isEqualTo(\"EVT-000009\");\n+        assertThat(resultColumn(\"error_code\", job.getId())).isNull();\n+        // 슬라이스 테스트가 아닌 전체 컨텍스트에서도 JSON 직렬화 설정이 살아 있어 decimal이 문자열로 저장된다\n+        assertThat(resultColumn(\"jsonb_typeof(performance -> 'initialEquity')\", job.getId()))\n+                .isEqualTo(\"string\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"FINISHED가 두 번 오면 두 번째는 무시된다(멱등·첫 결과 채택)\")\n+    void secondFinishedIsIgnored() {\n+        BacktestJob job = newJob();\n+        service.handleStarted(started(job));\n+        service.handleFinished(finished(job, MessageFixtures.FINISHED_COMPLETED));\n+\n+        // 다른 eventId·다른 결과(FAILED)로 다시 와도 첫 결과가 남는다\n+        service.handleFinished(finished(job, MessageFixtures.FINISHED_FAILED));\n+\n+        assertThat(statusOf(job)).isEqualTo(BacktestStatus.COMPLETED);\n+        assertThat(count(\"backtest_result\", job.getId())).isEqualTo(1);\n+        assertThat(count(\"backtest_trade\", job.getId())).isEqualTo(3);\n+        assertThat(resultColumn(\"finished_event_id\", job.getId())).isEqualTo(\"EVT-000009\");\n+        assertThat(resultColumn(\"error_code\", job.getId())).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"STARTED 없이 FINISHED(FAILED)가 와도 결과가 저장되고 FAILED가 된다\")\n+    void finishedWithoutStarted() {\n+        BacktestJob job = newJob();\n+\n+        service.handleFinished(finished(job, MessageFixtures.FINISHED_FAILED));\n+\n+        assertThat(statusOf(job)).isEqualTo(BacktestStatus.FAILED);\n+        assertThat(count(\"backtest_result\", job.getId())).isEqualTo(1);\n+        assertThat(count(\"backtest_trade\", job.getId())).isZero();\n+        assertThat(resultColumn(\"error_code\", job.getId())).isEqualTo(\"NO_MARKET_DATA\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"PROGRESS는 RUNNING일 때만 notifier로 가고 최종 상태 이후에는 가지 않는다\")\n+    void progressOnlyWhileRunning() {\n+        BacktestJob job = newJob();\n+        service.handleProgress(progress(job)); // QUEUED: 무시\n+        verifyNoInteractions(progressNotifier);\n+\n+        service.handleStarted(started(job));\n+        BacktestEvent<ProgressPayload> running = progress(job);\n+        service.handleProgress(running);\n+        verify(progressNotifier).notifyProgress(running);\n+\n+        service.handleFinished(finished(job, MessageFixtures.FINISHED_COMPLETED));\n+        service.handleProgress(progress(job)); // COMPLETED: 무시\n+        verify(progressNotifier).notifyProgress(running); // 여전히 1회\n+    }\n+\n+    @Test\n+    @DisplayName(\"모르는 backtestId의 이벤트는 예외 없이 버려진다\")\n+    void unknownBacktestIdIsDropped() {\n+        String unknown = \"BT-20991231-999999\";\n+\n+        assertThatCode(\n+                        () -> {\n+                            service.handleStarted(\n+                                    MessageFixtures.parse(\n+                                            MessageFixtures.withBacktestId(\n+                                                    MessageFixtures.STARTED, unknown),\n+                                            MessageFixtures.STARTED_EVENT));\n+                            service.handleFinished(\n+                                    MessageFixtures.parse(\n+                                            MessageFixtures.withBacktestId(\n+                                                    MessageFixtures.FINISHED_COMPLETED, unknown),\n+                                            MessageFixtures.FINISHED_EVENT));\n+                        })\n+                .doesNotThrowAnyException();\n+        assertThat(jobRepository.findByBacktestId(unknown)).isEmpty();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventFlowIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventFlowIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,190 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import static java.nio.charset.StandardCharsets.UTF_8;\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.awaitility.Awaitility.await;\n+\n+import com.fasterxml.jackson.databind.node.ObjectNode;\n+import com.ssafy.thorp.backtest.application.repository.BacktestJobRepository;\n+import com.ssafy.thorp.backtest.domain.model.BacktestJob;\n+import com.ssafy.thorp.backtest.domain.model.BacktestStatus;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.Duration;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.amqp.core.AmqpAdmin;\n+import org.springframework.amqp.core.Message;\n+import org.springframework.amqp.core.MessageBuilder;\n+import org.springframework.amqp.core.MessageProperties;\n+import org.springframework.amqp.rabbit.core.RabbitTemplate;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.testcontainers.containers.RabbitMQContainer;\n+import org.testcontainers.junit.jupiter.Container;\n+\n+/**\n+ * 계약 픽스처를 실제 브로커의 {@code backtest.events}에 발행하고 리스너가 소비해 DB에 반영하는지, 계약 오류가 DLQ로 가는지 확인한다.\n+ *\n+ * <p>워커 실행 Consumer가 아직 없어도 픽스처 발행으로 검증한다. 리스너 처리가 비동기이므로 {@code Awaitility}로 기다린다. 계약 오류는 리스너\n+ * 재시도(1s·2s 백오프) 뒤에 DLQ로 가므로 몇 초 걸린다. PostgreSQL·RabbitMQ 컨테이너를 모두 띄운다. Docker가 없으면 건너뛴다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            // 전체 컨텍스트라 메일 발송 빈이 만들어진다. 운영에서만 주입되는 값이므로 더미를 넣는다.\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class BacktestEventListenerIT extends PostgresTestSupport {\n+\n+    @Container @ServiceConnection\n+    static RabbitMQContainer rabbitmq = new RabbitMQContainer(\"rabbitmq:3.13-management-alpine\");\n+\n+    private static final Duration TIMEOUT = Duration.ofSeconds(20);\n+\n+    @Autowired private RabbitTemplate rabbitTemplate;\n+    @Autowired private AmqpAdmin amqpAdmin;\n+    @Autowired private BacktestJobRepository jobRepository;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @BeforeEach\n+    void purgeQueues() {\n+        amqpAdmin.initialize(); // 토폴로지가 아직 선언되지 않았어도 purge가 실패하지 않게 한 번 선언한다\n+        amqpAdmin.purgeQueue(BacktestRabbitConfig.EVENTS_QUEUE, false);\n+        amqpAdmin.purgeQueue(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE, false);\n+    }\n+\n+    private BacktestJob newJob() {\n+        return jobRepository.save(\n+                BacktestJob.create(\n+                        \"MA_CROSSOVER\",\n+                        \"1.0.0\",\n+                        Map.of(\"shortWindow\", 20),\n+                        List.of(new InstrumentId(\"005930.XKRX\")),\n+                        new BacktestPeriod(LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n+                        new BigDecimal(\"10000000.00\"),\n+                        PositionSizingMode.STRATEGY_DEFINED,\n+                        null,\n+                        new InstrumentId(\"069500.XKRX\"),\n+                        42));\n+    }\n+\n+    /** 워커처럼 raw JSON을 그대로 발행한다. 컨버터를 거치면 문자열이 JSON 문자열로 한 번 더 감싸진다. */\n+    private void publish(String json) {\n+        rabbitTemplate.send(\n+                BacktestRabbitConfig.EXCHANGE,\n+                BacktestRabbitConfig.EVENTS_ROUTING_KEY,\n+                MessageBuilder.withBody(json.getBytes(UTF_8))\n+                        .setContentType(MessageProperties.CONTENT_TYPE_JSON)\n+                        .build());\n+    }\n+\n+    private void publish(String fixture, BacktestJob job) {\n+        publish(MessageFixtures.withBacktestId(fixture, job.getBacktestId().value()));\n+    }\n+\n+    private BacktestStatus statusOf(BacktestJob job) {\n+        return jobRepository\n+                .findByBacktestId(job.getBacktestId().value())\n+                .orElseThrow()\n+                .getStatus();\n+    }\n+\n+    private int messageCount(String queue) {\n+        return amqpAdmin.getQueueInfo(queue).getMessageCount();\n+    }\n+\n+    private Integer count(String table, Long jobId) {\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT COUNT(*) FROM \" + table + \" WHERE backtest_job_id = ?\",\n+                Integer.class,\n+                jobId);\n+    }\n+\n+    @Test\n+    @DisplayName(\"STARTED → FINISHED를 발행하면 리스너가 소비해 Job이 COMPLETED가 되고 결과가 저장된다\")\n+    void consumesStartedAndFinished() {\n+        BacktestJob job = newJob();\n+\n+        publish(MessageFixtures.STARTED, job);\n+        await().atMost(TIMEOUT).until(() -> statusOf(job) == BacktestStatus.RUNNING);\n+\n+        publish(MessageFixtures.FINISHED_COMPLETED, job);\n+        await().atMost(TIMEOUT).until(() -> statusOf(job) == BacktestStatus.COMPLETED);\n+\n+        assertThat(count(\"backtest_result\", job.getId())).isEqualTo(1);\n+        assertThat(count(\"backtest_trade\", job.getId())).isEqualTo(3);\n+        assertThat(messageCount(BacktestRabbitConfig.EVENTS_QUEUE)).isZero();\n+        assertThat(messageCount(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE)).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"계약을 어긴 메시지는 재시도 뒤 backtest.events.dlq로 가고 Job은 그대로다\")\n+    void contractViolationGoesToDeadLetterQueue() throws Exception {\n+        BacktestJob job = newJob();\n+        ObjectNode broken =\n+                (ObjectNode)\n+                        MessageFixtures.mapper()\n+                                .readTree(\n+                                        MessageFixtures.withBacktestId(\n+                                                MessageFixtures.FINISHED_COMPLETED,\n+                                                job.getBacktestId().value()));\n+        broken.put(\"schemaVersion\", 2);\n+\n+        publish(MessageFixtures.mapper().writeValueAsString(broken));\n+\n+        await().atMost(TIMEOUT)\n+                .until(() -> messageCount(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE) == 1);\n+        Message dead = rabbitTemplate.receive(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE, 5000);\n+        assertThat(dead).isNotNull();\n+        assertThat(dead.getMessageProperties().getXDeathHeader()).isNotEmpty();\n+        assertThat(new String(dead.getBody(), UTF_8)).contains(\"\\\"schemaVersion\\\":2\");\n+        assertThat(messageCount(BacktestRabbitConfig.EVENTS_QUEUE)).isZero();\n+        assertThat(statusOf(job)).isEqualTo(BacktestStatus.QUEUED);\n+        assertThat(count(\"backtest_result\", job.getId())).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"모르는 backtestId의 정상 메시지는 ACK되어 버려지고 DLQ로 가지 않는다\")\n+    void unknownBacktestIdIsAckedNotDeadLettered() {\n+        publish(MessageFixtures.withBacktestId(MessageFixtures.STARTED, \"BT-20991231-999999\"));\n+\n+        await().atMost(TIMEOUT).until(() -> messageCount(BacktestRabbitConfig.EVENTS_QUEUE) == 0);\n+        // 계약 오류였다면 재시도(약 3초) 뒤 DLQ에 나타난다. 그 시간 동안 DLQ가 비어 있어야 한다.\n+        await().during(Duration.ofSeconds(4))\n+                .atMost(TIMEOUT)\n+                .until(() -> messageCount(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE) == 0);\n+    }\n+\n+    @Test\n+    @DisplayName(\"이미 끝난 Job의 늦은 FINISHED는 무시된다(결과를 덮어쓰지 않음)\")\n+    void lateFinishedIsIgnored() {\n+        BacktestJob job = newJob();\n+        publish(MessageFixtures.FINISHED_COMPLETED, job);\n+        await().atMost(TIMEOUT).until(() -> statusOf(job) == BacktestStatus.COMPLETED);\n+\n+        publish(MessageFixtures.FINISHED_FAILED, job);\n+\n+        await().atMost(TIMEOUT).until(() -> messageCount(BacktestRabbitConfig.EVENTS_QUEUE) == 0);\n+        await().during(Duration.ofSeconds(2))\n+                .atMost(TIMEOUT)\n+                .until(() -> statusOf(job) == BacktestStatus.COMPLETED);\n+        assertThat(count(\"backtest_result\", job.getId())).isEqualTo(1);\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT error_code FROM backtest_result WHERE backtest_job_id = ?\",\n+                                String.class,\n+                                job.getId()))\n+                .isNull();\n+        assertThat(messageCount(BacktestRabbitConfig.EVENTS_DEAD_LETTER_QUEUE)).isZero();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListenerIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListenerIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,175 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import static java.nio.charset.StandardCharsets.UTF_8;\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.doThrow;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.verifyNoInteractions;\n+import static org.mockito.Mockito.verifyNoMoreInteractions;\n+\n+import com.fasterxml.jackson.core.JsonProcessingException;\n+import com.fasterxml.jackson.databind.node.ObjectNode;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.port.message.RunStatus;\n+import com.ssafy.thorp.backtest.application.port.message.StartedPayload;\n+import com.ssafy.thorp.backtest.application.service.BacktestEventService;\n+import java.io.UncheckedIOException;\n+import java.util.function.Consumer;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.extension.ExtendWith;\n+import org.mockito.ArgumentCaptor;\n+import org.mockito.InjectMocks;\n+import org.mockito.Mock;\n+import org.mockito.junit.jupiter.MockitoExtension;\n+import org.springframework.amqp.AmqpRejectAndDontRequeueException;\n+import org.springframework.amqp.core.Message;\n+\n+/**\n+ * 본문 {@code type} 분기와 오류 분기(계약 오류 → reject, 일시 오류 → 그대로 전파)를 고정한다. 브로커 없이 {@link Message}를 직접 만든다.\n+ */\n+@ExtendWith(MockitoExtension.class)\n+class BacktestEventListenerTest {\n+\n+    @Mock private BacktestEventService service;\n+    @InjectMocks private BacktestEventListener listener;\n+\n+    private static Message message(String body) {\n+        return new Message(body.getBytes(UTF_8));\n+    }\n+\n+    private static Message fixture(String file) {\n+        return message(MessageFixtures.raw(file));\n+    }\n+\n+    private static Message mutated(String file, Consumer<ObjectNode> mutation) {\n+        try {\n+            ObjectNode node =\n+                    (ObjectNode) MessageFixtures.mapper().readTree(MessageFixtures.raw(file));\n+            mutation.accept(node);\n+            return message(MessageFixtures.mapper().writeValueAsString(node));\n+        } catch (JsonProcessingException e) {\n+            throw new UncheckedIOException(e);\n+        }\n+    }\n+\n+    @Test\n+    @DisplayName(\"STARTED 본문은 StartedPayload로 읽어 handleStarted에 넘긴다\")\n+    void dispatchesStarted() {\n+        listener.onEvent(fixture(MessageFixtures.STARTED));\n+\n+        ArgumentCaptor<BacktestEvent<StartedPayload>> captor = ArgumentCaptor.captor();\n+        verify(service).handleStarted(captor.capture());\n+        assertThat(captor.getValue().eventId()).isEqualTo(\"EVT-000001\");\n+        assertThat(captor.getValue().payload().startedAt()).isNotNull();\n+        verifyNoMoreInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"PROGRESS 본문은 ProgressPayload로 읽어 handleProgress에 넘긴다\")\n+    void dispatchesProgress() {\n+        listener.onEvent(fixture(MessageFixtures.PROGRESS));\n+\n+        ArgumentCaptor<BacktestEvent<ProgressPayload>> captor = ArgumentCaptor.captor();\n+        verify(service).handleProgress(captor.capture());\n+        assertThat(captor.getValue().payload().completedTradingDays()).isEqualTo(20);\n+        assertThat(captor.getValue().payload().portfolioSeries()).hasSize(20);\n+        verifyNoMoreInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"FINISHED 본문(COMPLETED·FAILED)은 FinishedPayload로 읽어 handleFinished에 넘긴다\")\n+    void dispatchesFinished() {\n+        listener.onEvent(fixture(MessageFixtures.FINISHED_COMPLETED));\n+        listener.onEvent(fixture(MessageFixtures.FINISHED_FAILED));\n+\n+        ArgumentCaptor<BacktestEvent<FinishedPayload>> captor = ArgumentCaptor.captor();\n+        verify(service, org.mockito.Mockito.times(2)).handleFinished(captor.capture());\n+        assertThat(captor.getAllValues())\n+                .extracting(e -> e.payload().engineOutput().run().status())\n+                .containsExactly(RunStatus.COMPLETED, RunStatus.FAILED);\n+        assertThat(captor.getAllValues().get(0).payload().engineOutput().trades()).hasSize(3);\n+        verifyNoMoreInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"JSON이 아닌 본문은 재큐 없이 reject한다\")\n+    void rejectsMalformedJson() {\n+        assertThatThrownBy(() -> listener.onEvent(message(\"{ this is not json\")))\n+                .isInstanceOf(AmqpRejectAndDontRequeueException.class);\n+        verifyNoInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"type이 없거나 모르는 값이면 reject한다\")\n+    void rejectsMissingOrUnknownType() {\n+        assertThatThrownBy(\n+                        () ->\n+                                listener.onEvent(\n+                                        mutated(MessageFixtures.STARTED, n -> n.remove(\"type\"))))\n+                .isInstanceOf(AmqpRejectAndDontRequeueException.class);\n+        assertThatThrownBy(\n+                        () ->\n+                                listener.onEvent(\n+                                        mutated(\n+                                                MessageFixtures.STARTED,\n+                                                n -> n.put(\"type\", \"CANCELLED\"))))\n+                .isInstanceOf(AmqpRejectAndDontRequeueException.class);\n+        verifyNoInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"역직렬화는 되지만 계약을 어긴 본문(schemaVersion=2)은 경로를 담아 reject한다\")\n+    void rejectsContractViolation() {\n+        assertThatThrownBy(\n+                        () ->\n+                                listener.onEvent(\n+                                        mutated(\n+                                                MessageFixtures.FINISHED_COMPLETED,\n+                                                n -> n.put(\"schemaVersion\", 2))))\n+                .isInstanceOf(AmqpRejectAndDontRequeueException.class)\n+                .hasMessageContaining(\"schemaVersion\");\n+        verifyNoInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"type과 payload 모양이 어긋나면(FINISHED인데 STARTED payload) reject한다\")\n+    void rejectsPayloadShapeMismatch() {\n+        assertThatThrownBy(\n+                        () ->\n+                                listener.onEvent(\n+                                        mutated(\n+                                                MessageFixtures.STARTED,\n+                                                n -> n.put(\"type\", \"FINISHED\").put(\"sequence\", 1))))\n+                .isInstanceOf(AmqpRejectAndDontRequeueException.class)\n+                .hasMessageContaining(\"payload.engineOutput\");\n+        verifyNoInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"필수 정수(sequence)가 없으면 역직렬화 단계에서 reject한다\")\n+    void rejectsMissingPrimitive() {\n+        assertThatThrownBy(\n+                        () ->\n+                                listener.onEvent(\n+                                        mutated(\n+                                                MessageFixtures.STARTED,\n+                                                n -> n.remove(\"sequence\"))))\n+                .isInstanceOf(AmqpRejectAndDontRequeueException.class);\n+        verifyNoInteractions(service);\n+    }\n+\n+    @Test\n+    @DisplayName(\"서비스의 예외(일시 오류)는 감싸지 않고 그대로 전파해 재시도 대상이 된다\")\n+    void propagatesServiceFailure() {\n+        doThrow(new IllegalStateException(\"db down\")).when(service).handleStarted(any());\n+\n+        assertThatThrownBy(() -> listener.onEvent(fixture(MessageFixtures.STARTED)))\n+                .isInstanceOf(IllegalStateException.class)\n+                .isNotInstanceOf(AmqpRejectAndDontRequeueException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListenerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventListenerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,364 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import static org.assertj.core.api.Assertions.assertThatCode;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.fasterxml.jackson.core.JsonProcessingException;\n+import com.fasterxml.jackson.core.type.TypeReference;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.node.ObjectNode;\n+import java.io.UncheckedIOException;\n+import java.util.function.Consumer;\n+import java.util.stream.Stream;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.Arguments;\n+import org.junit.jupiter.params.provider.MethodSource;\n+\n+/**\n+ * 계약 픽스처를 한 군데씩 깨뜨려 검증기가 그 경로를 짚어내는지 본다. 픽스처 원본과 계약이 허용하는 생략은 통과해야 한다.\n+ *\n+ * <p>위반 케이스는 (기대 경로, 픽스처 변형)의 쌍이다. 경로가 예외 메시지에 들어 있어야 DLQ에서 원인을 바로 찾을 수 있다.\n+ */\n+class BacktestEventValidatorTest {\n+\n+    private static final ObjectMapper MAPPER = MessageFixtures.mapper();\n+    private static final String LONG_ID = \"X\".repeat(BacktestEventValidator.MAX_ID_LENGTH + 1);\n+    private static final String MAX_ID = \"X\".repeat(BacktestEventValidator.MAX_ID_LENGTH);\n+\n+    private static ObjectNode fixture(String file) {\n+        try {\n+            return (ObjectNode) MAPPER.readTree(MessageFixtures.raw(file));\n+        } catch (JsonProcessingException e) {\n+            throw new UncheckedIOException(e);\n+        }\n+    }\n+\n+    private static ObjectNode at(ObjectNode root, String pointer) {\n+        return (ObjectNode) root.at(pointer);\n+    }\n+\n+    private static <T> T convert(ObjectNode node, TypeReference<T> type) {\n+        return MAPPER.convertValue(node, type);\n+    }\n+\n+    private static Arguments violation(String expectedPath, Consumer<ObjectNode> mutation) {\n+        return Arguments.of(expectedPath, mutation);\n+    }\n+\n+    // ---------- envelope · STARTED ----------\n+\n+    static Stream<Arguments> startedViolations() {\n+        return Stream.of(\n+                violation(\"schemaVersion\", n -> n.put(\"schemaVersion\", 2)),\n+                violation(\"eventId\", n -> n.put(\"eventId\", \" \")),\n+                violation(\"eventId\", n -> n.put(\"eventId\", LONG_ID)),\n+                violation(\"backtestId\", n -> n.remove(\"backtestId\")),\n+                violation(\"executionId\", n -> n.remove(\"executionId\")),\n+                violation(\"executionId\", n -> n.put(\"executionId\", LONG_ID)),\n+                violation(\"sequence\", n -> n.put(\"sequence\", -1)),\n+                violation(\"sequence\", n -> n.put(\"sequence\", 1)),\n+                violation(\"occurredAt\", n -> n.remove(\"occurredAt\")),\n+                violation(\"payload\", n -> n.remove(\"payload\")),\n+                violation(\"payload.startedAt\", n -> at(n, \"/payload\").remove(\"startedAt\")));\n+    }\n+\n+    @ParameterizedTest(name = \"{0}\")\n+    @MethodSource(\"startedViolations\")\n+    @DisplayName(\"envelope·STARTED 위반은 경로를 담은 계약 오류다\")\n+    void rejectsStartedViolation(String path, Consumer<ObjectNode> mutation) {\n+        ObjectNode node = fixture(MessageFixtures.STARTED);\n+        mutation.accept(node);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                BacktestEventValidator.validateStarted(\n+                                        convert(node, MessageFixtures.STARTED_EVENT)))\n+                .isInstanceOf(IllegalArgumentException.class)\n+                .hasMessageContaining(path);\n+    }\n+\n+    // ---------- PROGRESS ----------\n+\n+    static Stream<Arguments> progressViolations() {\n+        return Stream.of(\n+                violation(\"sequence\", n -> n.put(\"sequence\", 0)),\n+                violation(\n+                        \"payload.completedTradingDays\",\n+                        n -> at(n, \"/payload\").put(\"completedTradingDays\", -1)),\n+                violation(\n+                        \"payload.totalTradingDays\",\n+                        n -> at(n, \"/payload\").put(\"totalTradingDays\", 0)),\n+                violation(\n+                        \"payload.completedTradingDays\",\n+                        n -> at(n, \"/payload\").put(\"completedTradingDays\", 1_000)),\n+                violation(\n+                        \"payload.portfolioSeries\",\n+                        n -> at(n, \"/payload\").remove(\"portfolioSeries\")),\n+                violation(\n+                        \"payload.portfolioSeries[0].equity\",\n+                        n -> at(n, \"/payload/portfolioSeries/0\").remove(\"equity\")),\n+                violation(\n+                        \"payload.portfolioSeries[1].drawdown\",\n+                        n -> at(n, \"/payload/portfolioSeries/1\").remove(\"drawdown\")));\n+    }\n+\n+    @ParameterizedTest(name = \"{0}\")\n+    @MethodSource(\"progressViolations\")\n+    @DisplayName(\"PROGRESS 위반은 경로를 담은 계약 오류다\")\n+    void rejectsProgressViolation(String path, Consumer<ObjectNode> mutation) {\n+        ObjectNode node = fixture(MessageFixtures.PROGRESS);\n+        mutation.accept(node);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                BacktestEventValidator.validateProgress(\n+                                        convert(node, MessageFixtures.PROGRESS_EVENT)))\n+                .isInstanceOf(IllegalArgumentException.class)\n+                .hasMessageContaining(path);\n+    }\n+\n+    // ---------- FINISHED (COMPLETED) ----------\n+\n+    private static final String EO = \"/payload/engineOutput\";\n+\n+    static Stream<Arguments> completedViolations() {\n+        return Stream.of(\n+                violation(\"sequence\", n -> n.put(\"sequence\", 0)),\n+                violation(\"payload.engineOutput\", n -> at(n, \"/payload\").remove(\"engineOutput\")),\n+                violation(\"payload.engineOutput.run\", n -> at(n, EO).remove(\"run\")),\n+                violation(\n+                        \"payload.engineOutput.run.status\",\n+                        n -> at(n, EO + \"/run\").remove(\"status\")),\n+                violation(\n+                        \"payload.engineOutput.run.backtestId\",\n+                        n -> at(n, EO + \"/run\").put(\"backtestId\", \"BT-20260907-000999\")),\n+                violation(\n+                        \"payload.engineOutput.run.finishedAt\",\n+                        n -> at(n, EO + \"/run\").put(\"finishedAt\", \"2020-01-01T00:00:00Z\")),\n+                violation(\n+                        \"payload.engineOutput.portfolioSeries\",\n+                        n -> at(n, EO).remove(\"portfolioSeries\")),\n+                violation(\"payload.engineOutput.trades\", n -> at(n, EO).remove(\"trades\")),\n+                violation(\"payload.engineOutput.diagnostics\", n -> at(n, EO).remove(\"diagnostics\")),\n+                violation(\n+                        \"payload.engineOutput.diagnostics.warnings\",\n+                        n -> at(n, EO + \"/diagnostics\").remove(\"warnings\")),\n+                violation(\n+                        \"payload.engineOutput.portfolioSeries[0].cash\",\n+                        n -> at(n, EO + \"/portfolioSeries/0\").remove(\"cash\")),\n+                violation(\n+                        \"payload.engineOutput.portfolioSeries[0].positions[0].quantity\",\n+                        n ->\n+                                at(n, EO + \"/portfolioSeries/0\")\n+                                        .putArray(\"positions\")\n+                                        .addObject()\n+                                        .put(\"instrumentId\", \"005930.XKRX\")\n+                                        .put(\"marketValue\", \"1.00\")),\n+                violation(\n+                        \"payload.engineOutput.trades[0].instrumentId\",\n+                        n -> at(n, EO + \"/trades/0\").put(\"instrumentId\", \"SAMSUNG\")),\n+                violation(\n+                        \"payload.engineOutput.portfolioSeries[0].positions[0].instrumentId\",\n+                        n ->\n+                                at(n, EO + \"/portfolioSeries/0\")\n+                                        .putArray(\"positions\")\n+                                        .addObject()\n+                                        .put(\"instrumentId\", \"005930\")\n+                                        .put(\"quantity\", \"1\")\n+                                        .put(\"marketValue\", \"1.00\")),\n+                violation(\n+                        \"payload.benchmark.instrumentId\",\n+                        n -> at(n, \"/payload/benchmark\").put(\"instrumentId\", \"X\".repeat(40))),\n+                violation(\n+                        \"payload.engineOutput.trades[0].entryPrice\",\n+                        n -> at(n, EO + \"/trades/0\").remove(\"entryPrice\")),\n+                violation(\n+                        \"payload.engineOutput.trades[0].exitPrice\",\n+                        n -> at(n, EO + \"/trades/0\").remove(\"exitPrice\")),\n+                violation(\n+                        \"payload.engineOutput.trades[0].tradeId\",\n+                        n -> at(n, EO + \"/trades/0\").put(\"tradeId\", LONG_ID)),\n+                violation(\n+                        \"payload.engineOutput.diagnostics.warnings[0].code\",\n+                        n -> at(n, EO + \"/diagnostics/warnings/0\").put(\"code\", \"\")),\n+                violation(\n+                        \"payload.engineOutput.run.error\",\n+                        n ->\n+                                at(n, EO + \"/run\")\n+                                        .putObject(\"error\")\n+                                        .put(\"code\", \"ENGINE_ERROR\")\n+                                        .put(\"message\", \"boom\")),\n+                violation(\"payload.engineOutput.performance\", n -> at(n, EO).remove(\"performance\")),\n+                violation(\n+                        \"payload.engineOutput.performance.initialEquity\",\n+                        n -> at(n, EO + \"/performance\").remove(\"initialEquity\")),\n+                violation(\"payload.engineOutput.execution\", n -> at(n, EO).remove(\"execution\")),\n+                violation(\n+                        \"payload.benchmark.instrumentId\",\n+                        n -> at(n, \"/payload/benchmark\").remove(\"instrumentId\")),\n+                violation(\n+                        \"payload.benchmark.timeseries[0].equity\",\n+                        n -> at(n, \"/payload/benchmark/timeseries/0\").remove(\"equity\")));\n+    }\n+\n+    @ParameterizedTest(name = \"{0}\")\n+    @MethodSource(\"completedViolations\")\n+    @DisplayName(\"FINISHED(COMPLETED) 위반은 경로를 담은 계약 오류다\")\n+    void rejectsCompletedViolation(String path, Consumer<ObjectNode> mutation) {\n+        ObjectNode node = fixture(MessageFixtures.FINISHED_COMPLETED);\n+        mutation.accept(node);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                BacktestEventValidator.validateFinished(\n+                                        convert(node, MessageFixtures.FINISHED_EVENT)))\n+                .isInstanceOf(IllegalArgumentException.class)\n+                .hasMessageContaining(path);\n+    }\n+\n+    // ---------- FINISHED (FAILED) ----------\n+\n+    static Stream<Arguments> failedViolations() {\n+        ObjectNode completed = fixture(MessageFixtures.FINISHED_COMPLETED);\n+        return Stream.of(\n+                violation(\n+                        \"payload.engineOutput.run.error\", n -> at(n, EO + \"/run\").remove(\"error\")),\n+                violation(\n+                        \"payload.engineOutput.run.error.code\",\n+                        n -> at(n, EO + \"/run/error\").put(\"code\", \" \")),\n+                violation(\n+                        \"payload.engineOutput.run.error.code\",\n+                        n -> at(n, EO + \"/run/error\").put(\"code\", LONG_ID)),\n+                violation(\n+                        \"payload.engineOutput.run.error.message\",\n+                        n -> at(n, EO + \"/run/error\").remove(\"message\")),\n+                violation(\n+                        \"payload.engineOutput.performance\",\n+                        n -> at(n, EO).set(\"performance\", at(completed, EO + \"/performance\"))),\n+                violation(\n+                        \"payload.engineOutput.execution\",\n+                        n -> at(n, EO).set(\"execution\", at(completed, EO + \"/execution\"))),\n+                violation(\n+                        \"payload.engineOutput.trades\",\n+                        n -> at(n, EO).set(\"trades\", completed.at(EO + \"/trades\"))),\n+                violation(\n+                        \"payload.engineOutput.portfolioSeries\",\n+                        n ->\n+                                at(n, EO)\n+                                        .set(\n+                                                \"portfolioSeries\",\n+                                                completed.at(EO + \"/portfolioSeries\"))),\n+                violation(\n+                        \"payload.benchmark\",\n+                        n ->\n+                                at(n, \"/payload\")\n+                                        .set(\"benchmark\", completed.at(\"/payload/benchmark\"))));\n+    }\n+\n+    @ParameterizedTest(name = \"{0}\")\n+    @MethodSource(\"failedViolations\")\n+    @DisplayName(\"FINISHED(FAILED) 위반은 경로를 담은 계약 오류다\")\n+    void rejectsFailedViolation(String path, Consumer<ObjectNode> mutation) {\n+        ObjectNode node = fixture(MessageFixtures.FINISHED_FAILED);\n+        mutation.accept(node);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                BacktestEventValidator.validateFinished(\n+                                        convert(node, MessageFixtures.FINISHED_EVENT)))\n+                .isInstanceOf(IllegalArgumentException.class)\n+                .hasMessageContaining(path);\n+    }\n+\n+    // ---------- 통과해야 하는 것 ----------\n+\n+    @Test\n+    @DisplayName(\"계약 픽스처 4종은 그대로 통과한다\")\n+    void acceptsFixtures() {\n+        assertThatCode(() -> BacktestEventValidator.validateStarted(MessageFixtures.started()))\n+                .doesNotThrowAnyException();\n+        assertThatCode(() -> BacktestEventValidator.validateProgress(MessageFixtures.progress()))\n+                .doesNotThrowAnyException();\n+        assertThatCode(\n+                        () ->\n+                                BacktestEventValidator.validateFinished(\n+                                        MessageFixtures.finishedCompleted()))\n+                .doesNotThrowAnyException();\n+        assertThatCode(\n+                        () ->\n+                                BacktestEventValidator.validateFinished(\n+                                        MessageFixtures.finishedFailed()))\n+                .doesNotThrowAnyException();\n+    }\n+\n+    static Stream<Arguments> allowedOmissions() {\n+        return Stream.of(\n+                Arguments.of(\n+                        \"성과 지표 개별 null(sharpeRatio·winRate)\",\n+                        (Consumer<ObjectNode>)\n+                                n -> {\n+                                    at(n, EO + \"/performance\").remove(\"sharpeRatio\");\n+                                    at(n, EO + \"/performance\").remove(\"winRate\");\n+                                }),\n+                Arguments.of(\n+                        \"benchmark 없음\",\n+                        (Consumer<ObjectNode>) n -> at(n, \"/payload\").remove(\"benchmark\")),\n+                Arguments.of(\n+                        \"snapshot의 positions 없음\",\n+                        (Consumer<ObjectNode>)\n+                                n -> at(n, EO + \"/portfolioSeries/0\").remove(\"positions\")),\n+                Arguments.of(\n+                        \"OPEN 거래의 청산 필드 없음\",\n+                        (Consumer<ObjectNode>)\n+                                n -> {\n+                                    ObjectNode trade = at(n, EO + \"/trades/0\");\n+                                    trade.put(\"status\", \"OPEN\");\n+                                    trade.remove(\"exitTime\");\n+                                    trade.remove(\"exitPrice\");\n+                                    trade.remove(\"grossPnl\");\n+                                    trade.remove(\"realizedPnl\");\n+                                    trade.remove(\"returnRate\");\n+                                }),\n+                Arguments.of(\n+                        \"ID가 정확히 255자\",\n+                        (Consumer<ObjectNode>)\n+                                n -> {\n+                                    n.put(\"eventId\", MAX_ID);\n+                                    n.put(\"executionId\", MAX_ID);\n+                                    at(n, EO + \"/trades/0\").put(\"tradeId\", MAX_ID);\n+                                }),\n+                Arguments.of(\n+                        \"snapshot의 dailyReturn 없음(nullable)\",\n+                        (Consumer<ObjectNode>)\n+                                n -> at(n, EO + \"/portfolioSeries/0\").remove(\"dailyReturn\")));\n+    }\n+\n+    @ParameterizedTest(name = \"{0}\")\n+    @MethodSource(\"allowedOmissions\")\n+    @DisplayName(\"계약이 nullable로 정한 생략은 통과한다\")\n+    void acceptsAllowedOmissions(String name, Consumer<ObjectNode> mutation) {\n+        ObjectNode node = fixture(MessageFixtures.FINISHED_COMPLETED);\n+        mutation.accept(node);\n+\n+        assertThatCode(\n+                        () ->\n+                                BacktestEventValidator.validateFinished(\n+                                        convert(node, MessageFixtures.FINISHED_EVENT)))\n+                .doesNotThrowAnyException();\n+    }\n+\n+    @Test\n+    @DisplayName(\"FAILED의 error.code가 정확히 255자면 통과한다\")\n+    void acceptsMaxLengthErrorCode() {\n+        ObjectNode node = fixture(MessageFixtures.FINISHED_FAILED);\n+        at(node, EO + \"/run/error\").put(\"code\", MAX_ID);\n+\n+        assertThatCode(\n+                        () ->\n+                                BacktestEventValidator.validateFinished(\n+                                        convert(node, MessageFixtures.FINISHED_EVENT)))\n+                .doesNotThrowAnyException();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventValidatorTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestEventValidatorTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,100 @@\n+package com.ssafy.thorp.backtest.infrastructure.messaging;\n+\n+import com.fasterxml.jackson.core.type.TypeReference;\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.node.ObjectNode;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.ProgressPayload;\n+import com.ssafy.thorp.backtest.application.port.message.StartedPayload;\n+import java.io.IOException;\n+import java.io.UncheckedIOException;\n+import java.nio.file.Files;\n+import java.nio.file.Path;\n+\n+/**\n+ * 계약 픽스처({@code docs/specs/backtest-messaging/examples})를 메시지 ObjectMapper로 읽는 테스트 헬퍼.\n+ *\n+ * <p>{@code messageObjectMapper()}는 package-private라 다른 패키지의 테스트(persistence·service)는 이 클래스를 통해\n+ * 픽스처를 얻는다. gradle 테스트의 작업 디렉터리는 {@code backend/}이므로 경로는 리포 루트 기준으로 한 단계 올라간다.\n+ */\n+public final class MessageFixtures {\n+\n+    public static final Path DIR = Path.of(\"..\", \"docs\", \"specs\", \"backtest-messaging\", \"examples\");\n+\n+    public static final String STARTED = \"event-started.json\";\n+    public static final String PROGRESS = \"event-progress.json\";\n+    public static final String FINISHED_COMPLETED = \"event-finished-completed.json\";\n+    public static final String FINISHED_FAILED = \"event-finished-failed.json\";\n+\n+    public static final TypeReference<BacktestEvent<StartedPayload>> STARTED_EVENT =\n+            new TypeReference<>() {};\n+    public static final TypeReference<BacktestEvent<ProgressPayload>> PROGRESS_EVENT =\n+            new TypeReference<>() {};\n+    public static final TypeReference<BacktestEvent<FinishedPayload>> FINISHED_EVENT =\n+            new TypeReference<>() {};\n+\n+    private static final ObjectMapper MAPPER = BacktestRabbitConfig.messageObjectMapper();\n+\n+    private MessageFixtures() {}\n+\n+    /** 메시지 ObjectMapper. 테스트에서 픽스처를 변형하거나 깨진 본문을 만들 때 쓴다. */\n+    public static ObjectMapper mapper() {\n+        return MAPPER;\n+    }\n+\n+    public static String raw(String file) {\n+        try {\n+            return Files.readString(DIR.resolve(file));\n+        } catch (IOException e) {\n+            throw new UncheckedIOException(e);\n+        }\n+    }\n+\n+    public static <T> T read(String file, TypeReference<T> type) {\n+        return parse(raw(file), type);\n+    }\n+\n+    public static <T> T parse(String json, TypeReference<T> type) {\n+        try {\n+            return MAPPER.readValue(json, type);\n+        } catch (IOException e) {\n+            throw new UncheckedIOException(e);\n+        }\n+    }\n+\n+    /**\n+     * 픽스처의 {@code backtestId}(envelope와 {@code engineOutput.run})를 바꾼 JSON. 통합 테스트가 실제로 만든 Job에\n+     * 이벤트를 붙일 때 쓴다. 픽스처의 나머지는 그대로다.\n+     */\n+    public static String withBacktestId(String file, String backtestId) {\n+        try {\n+            ObjectNode node = (ObjectNode) MAPPER.readTree(raw(file));\n+            node.put(\"backtestId\", backtestId);\n+            JsonNode run = node.at(\"/payload/engineOutput/run\");\n+            if (run.isObject()) {\n+                ((ObjectNode) run).put(\"backtestId\", backtestId);\n+            }\n+            return MAPPER.writeValueAsString(node);\n+        } catch (IOException e) {\n+            throw new UncheckedIOException(e);\n+        }\n+    }\n+\n+    public static BacktestEvent<StartedPayload> started() {\n+        return read(STARTED, STARTED_EVENT);\n+    }\n+\n+    public static BacktestEvent<ProgressPayload> progress() {\n+        return read(PROGRESS, PROGRESS_EVENT);\n+    }\n+\n+    public static BacktestEvent<FinishedPayload> finishedCompleted() {\n+        return read(FINISHED_COMPLETED, FINISHED_EVENT);\n+    }\n+\n+    public static BacktestEvent<FinishedPayload> finishedFailed() {\n+        return read(FINISHED_FAILED, FINISHED_EVENT);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/MessageFixtures.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/MessageFixtures.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -124,6 +124,56 @@ class BacktestJobRepositoryImplTest extends PostgresTestSupport {\n         assertThat(found.get().getId()).isEqualTo(saved.getId());\n     }\n \n+    @Test\n+    @DisplayName(\"update는 상태 전이를 저장하고 나머지 컬럼은 그대로 둔다\")\n+    void updatePersistsStatusTransition() {\n+        BacktestJob saved = repository.save(newJob());\n+        entityManager.flush();\n+        entityManager.clear();\n+\n+        BacktestJob updated = repository.update(saved.markRunning());\n+        entityManager.flush();\n+        entityManager.clear();\n+\n+        assertThat(updated.getStatus()).isEqualTo(BacktestStatus.RUNNING);\n+        Optional<BacktestJob> found = repository.findById(saved.getId());\n+        assertThat(found).isPresent();\n+        BacktestJob job = found.get();\n+        assertThat(job.getStatus()).isEqualTo(BacktestStatus.RUNNING);\n+        assertThat(job.getBacktestId()).isEqualTo(saved.getBacktestId());\n+        assertThat(job.getParameters()).isEqualTo(PARAMETERS);\n+        assertThat(job.getInstrumentIds()).isEqualTo(INSTRUMENTS);\n+        assertThat(job.getInitialCash()).isEqualByComparingTo(CASH);\n+\n+        BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());\n+        assertThat(entity.getCreatedAt()).as(\"createdAt은 갱신되지 않는다\").isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"update는 저장된 Job 전용이라 id가 없거나 없는 id면 거부한다\")\n+    void updateRejectsUnknownJob() {\n+        assertThatThrownBy(() -> repository.update(newJob()))\n+                .isInstanceOf(IllegalArgumentException.class);\n+\n+        BacktestJob missing =\n+                BacktestJob.restore(\n+                        999_999L,\n+                        BacktestId.from(\"BT-20260907-999999\"),\n+                        \"MA_CROSSOVER\",\n+                        \"1.0.0\",\n+                        PARAMETERS,\n+                        INSTRUMENTS,\n+                        PERIOD,\n+                        CASH,\n+                        PositionSizingMode.STRATEGY_DEFINED,\n+                        null,\n+                        null,\n+                        42,\n+                        BacktestStatus.RUNNING);\n+        assertThatThrownBy(() -> repository.update(missing))\n+                .isInstanceOf(IllegalArgumentException.class);\n+    }\n+\n     @Test\n     @DisplayName(\"없는 식별자는 빈 Optional을 돌려준다\")\n     void findReturnsEmptyWhenMissing() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestJobRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestJobRepositoryImplTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,241 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.port.message.BenchmarkResult;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.RunStatus;\n+import com.ssafy.thorp.backtest.application.port.message.TradeSide;\n+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import com.ssafy.thorp.backtest.domain.model.BacktestJob;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;\n+import com.ssafy.thorp.common.config.JpaAuditingConfig;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;\n+import org.springframework.boot.test.context.TestConfiguration;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/**\n+ * decimal이 어디서도 반올림·정규화되지 않는지 실제 PostgreSQL {@code jsonb}에서 확인한다.\n+ *\n+ * <p>계약은 최대 자릿수를 정하지 않았다. 그래서 어떤 컬럼 scale도 근거가 없고, 값과 scale을 그대로 보존하는 것만이 맞다. 여기서 반올림이 일어나면 그것을\n+ * 정상으로 고정하지 않고 저장 방식을 고친다.\n+ *\n+ * <p>{@code jsonb}는 JSON 숫자를 {@code numeric}으로 정규화한다(지수 표기가 사라지는 등). 메시지 ObjectMapper가 decimal을\n+ * 문자열로 쓰기 때문에 그 경로를 타지 않는다 — 저장된 값이 JSON 문자열인지도 함께 확인한다.\n+ *\n+ * <p>유일한 예외는 음수 scale({@code 1E+2})이다. 계약 표기가 plain 문자열이라 {@code \"100\"}으로 저장되고 다시 읽으면 scale이 0이 된다.\n+ * 값은 같다. 계약 JSON은 plain 표기만 쓰므로 실제 메시지에서 음수 scale이 생기는 일은 없다. 이 동작을 테스트로 고정해 둔다.\n+ */\n+@DataJpaTest\n+@Import({\n+    JpaAuditingConfig.class,\n+    MessageJsonPersistenceConfig.class,\n+    BacktestJobRepositoryImpl.class,\n+    BacktestResultRepositoryImpl.class\n+})\n+class BacktestResultPrecisionTest extends PostgresTestSupport {\n+\n+    /** 소수 20자리. NUMERIC(28,10)·(38,18) 모두 반올림하는 값이다. */\n+    private static final BigDecimal LONG_SCALE = new BigDecimal(\"53726.85123456789012345678\");\n+\n+    /** 후행 0. scale 2가 유지돼야 한다. */\n+    private static final BigDecimal TRAILING_ZERO = new BigDecimal(\"1.50\");\n+\n+    /** {@code toString()}이 지수 표기(\"1E-7\")가 되는 값. plain 문자열로 저장돼야 한다. */\n+    private static final BigDecimal TINY = new BigDecimal(\"0.0000001\");\n+\n+    /** 음수 scale(-2). 계약의 plain 표기로는 표현할 수 없어 {@code 100}(scale 0)으로 정규화된다. */\n+    private static final BigDecimal NEGATIVE_SCALE = new BigDecimal(\"1E+2\");\n+\n+    private static final Instant T0 = Instant.parse(\"2025-01-02T00:00:00Z\");\n+    private static final LocalDate D0 = LocalDate.of(2025, 1, 2);\n+\n+    @TestConfiguration\n+    static class FixedClockConfig {\n+        @Bean\n+        Clock clock() {\n+            return Clock.fixed(Instant.parse(\"2026-09-07T03:00:00Z\"), ZoneId.of(\"Asia/Seoul\"));\n+        }\n+    }\n+\n+    @Autowired private BacktestJobRepositoryImpl jobRepository;\n+    @Autowired private BacktestResultRepositoryImpl resultRepository;\n+    @Autowired private BacktestTradeJpaRepository tradeRepository;\n+    @Autowired private TestEntityManager entityManager;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    private Long newJobId() {\n+        return jobRepository\n+                .save(\n+                        BacktestJob.create(\n+                                \"MA_CROSSOVER\",\n+                                \"1.0.0\",\n+                                Map.of(),\n+                                List.of(new InstrumentId(\"005930.XKRX\")),\n+                                new BacktestPeriod(D0, D0.plusMonths(1)),\n+                                LONG_SCALE,\n+                                PositionSizingMode.STRATEGY_DEFINED,\n+                                null,\n+                                null,\n+                                0))\n+                .getId();\n+    }\n+\n+    private static EngineOutput output() {\n+        return output(LONG_SCALE);\n+    }\n+\n+    /** 모든 decimal 자리에 극단값을 넣는다. {@code totalCommission}만 인자로 받아 개별 케이스를 만든다. */\n+    private static EngineOutput output(BigDecimal totalCommission) {\n+        var performance =\n+                new EngineOutput.PerformanceResult(\n+                        LONG_SCALE,\n+                        TRAILING_ZERO,\n+                        \"KRW\",\n+                        TINY,\n+                        LONG_SCALE.negate(),\n+                        TINY.negate(),\n+                        null,\n+                        new BigDecimal(\"0.000000\"),\n+                        1,\n+                        null);\n+        var position =\n+                new EngineOutput.PositionSnapshot(\n+                        \"005930.XKRX\", TRAILING_ZERO, LONG_SCALE, TINY, LONG_SCALE.negate());\n+        var snapshot =\n+                new EngineOutput.PortfolioSnapshot(\n+                        D0,\n+                        LONG_SCALE,\n+                        TRAILING_ZERO,\n+                        TINY,\n+                        null,\n+                        TRAILING_ZERO,\n+                        LONG_SCALE.negate(),\n+                        List.of(position));\n+        var trade =\n+                new EngineOutput.TradeResult(\n+                        \"TRD-1\",\n+                        \"005930.XKRX\",\n+                        TradeSide.LONG,\n+                        TradeStatus.CLOSED,\n+                        T0,\n+                        T0.plusSeconds(86_400),\n+                        LONG_SCALE,\n+                        TRAILING_ZERO,\n+                        TINY,\n+                        LONG_SCALE,\n+                        TRAILING_ZERO,\n+                        TINY,\n+                        LONG_SCALE.negate(),\n+                        TINY.negate());\n+        var execution = new EngineOutput.ExecutionResult(1, 1, 0, totalCommission, TINY);\n+        return new EngineOutput(\n+                new EngineOutput.RunResult(\n+                        \"BT-1\", RunStatus.COMPLETED, T0, T0.plusSeconds(1), null),\n+                performance,\n+                List.of(snapshot),\n+                List.of(trade),\n+                execution,\n+                new EngineOutput.Diagnostics(List.of()));\n+    }\n+\n+    private static BenchmarkResult benchmark() {\n+        return new BenchmarkResult(\n+                \"069500.XKRX\",\n+                TINY,\n+                List.of(new BenchmarkResult.BenchmarkPoint(D0, LONG_SCALE, TRAILING_ZERO)));\n+    }\n+\n+    private BacktestResultJpaEntity saveAndReload(Long jobId, EngineOutput output) {\n+        resultRepository.save(\n+                new SaveBacktestResultCommand(jobId, \"EXEC-1\", \"EVT-1\", output, benchmark()));\n+        entityManager.flush();\n+        entityManager.clear();\n+        return entityManager.find(BacktestResultJpaEntity.class, jobId);\n+    }\n+\n+    @Test\n+    @DisplayName(\"소수 20자리·후행 0·지수 표기 값이 모든 JSON 컬럼에서 scale까지 그대로 왕복한다\")\n+    void decimalsRoundTripExactly() {\n+        Long jobId = newJobId();\n+        EngineOutput output = output();\n+\n+        BacktestResultJpaEntity result = saveAndReload(jobId, output);\n+\n+        // record equals → BigDecimal.equals → scale까지 같아야 통과\n+        assertThat(result.getPerformance()).isEqualTo(output.performance());\n+        assertThat(result.getExecution()).isEqualTo(output.execution());\n+        assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());\n+        assertThat(result.getBenchmark()).isEqualTo(benchmark());\n+        assertThat(tradeRepository.findByJobIdOrderByEntryTimeAscIdAsc(jobId))\n+                .extracting(BacktestTradeJpaEntity::getDetail)\n+                .containsExactly(output.trades().get(0));\n+    }\n+\n+    @Test\n+    @DisplayName(\"decimal은 jsonb 안에 문자열로 저장되어 숫자 정규화를 타지 않는다\")\n+    void decimalsAreStoredAsJsonStrings() {\n+        Long jobId = newJobId();\n+        saveAndReload(jobId, output());\n+\n+        String type =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT jsonb_typeof(performance -> 'initialEquity') FROM backtest_result\"\n+                                + \" WHERE backtest_job_id = ?\",\n+                        String.class,\n+                        jobId);\n+        String stored =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT performance ->> 'initialEquity' FROM backtest_result\"\n+                                + \" WHERE backtest_job_id = ?\",\n+                        String.class,\n+                        jobId);\n+        String tiny =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT detail ->> 'quantity' FROM backtest_trade WHERE backtest_job_id = ?\",\n+                        String.class,\n+                        jobId);\n+\n+        assertThat(type).isEqualTo(\"string\");\n+        assertThat(stored).isEqualTo(\"53726.85123456789012345678\");\n+        assertThat(tiny).as(\"지수 표기가 아니라 plain 문자열\").isEqualTo(\"0.0000001\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"음수 scale(1E+2)은 계약의 plain 표기로 정규화된다 — 값은 같고 scale은 0\")\n+    void negativeScaleIsNormalizedToPlainNotation() {\n+        Long jobId = newJobId();\n+\n+        BacktestResultJpaEntity result = saveAndReload(jobId, output(NEGATIVE_SCALE));\n+\n+        BigDecimal reloaded = result.getExecution().totalCommission();\n+        assertThat(reloaded).isEqualByComparingTo(NEGATIVE_SCALE);\n+        assertThat(reloaded.scale()).isZero();\n+        assertThat(reloaded).as(\"BigDecimal.equals는 scale이 달라 false\").isNotEqualTo(NEGATIVE_SCALE);\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT execution ->> 'totalCommission' FROM backtest_result\"\n+                                        + \" WHERE backtest_job_id = ?\",\n+                                String.class,\n+                                jobId))\n+                .isEqualTo(\"100\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultPrecisionTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultPrecisionTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,212 @@\n+package com.ssafy.thorp.backtest.infrastructure.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.port.message.BacktestEvent;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.FinishedPayload;\n+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import com.ssafy.thorp.backtest.domain.model.BacktestJob;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;\n+import com.ssafy.thorp.common.config.JpaAuditingConfig;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.math.BigDecimal;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;\n+import org.springframework.boot.test.context.TestConfiguration;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Import;\n+\n+/**\n+ * 계약 픽스처를 그대로 저장하고 읽는다. 저장 구조가 계약과 어긋나면 여기서 깨진다.\n+ *\n+ * <p>JSON 컬럼의 단언은 record {@code equals}로 한다. record 안의 {@code BigDecimal.equals}는 scale까지 비교하므로 소수\n+ * 자릿수가 하나라도 바뀌면 실패한다. Flyway가 만든 스키마 위에서 {@code validate}로 돌기 때문에 마이그레이션과 엔티티가 어긋나도 여기서 깨진다.\n+ */\n+@DataJpaTest\n+@Import({\n+    JpaAuditingConfig.class,\n+    MessageJsonPersistenceConfig.class,\n+    BacktestJobRepositoryImpl.class,\n+    BacktestResultRepositoryImpl.class\n+})\n+class BacktestResultRepositoryImplTest extends PostgresTestSupport {\n+\n+    @TestConfiguration\n+    static class FixedClockConfig {\n+        @Bean\n+        Clock clock() {\n+            return Clock.fixed(Instant.parse(\"2026-09-07T03:00:00Z\"), ZoneId.of(\"Asia/Seoul\"));\n+        }\n+    }\n+\n+    @Autowired private BacktestJobRepositoryImpl jobRepository;\n+    @Autowired private BacktestResultRepositoryImpl resultRepository;\n+    @Autowired private BacktestTradeJpaRepository tradeRepository;\n+    @Autowired private TestEntityManager entityManager;\n+\n+    private Long newJobId() {\n+        return jobRepository\n+                .save(\n+                        BacktestJob.create(\n+                                \"MA_CROSSOVER\",\n+                                \"1.0.0\",\n+                                Map.of(\"shortWindow\", 20),\n+                                List.of(new InstrumentId(\"005930.XKRX\")),\n+                                new BacktestPeriod(\n+                                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n+                                new BigDecimal(\"10000000.00\"),\n+                                PositionSizingMode.STRATEGY_DEFINED,\n+                                null,\n+                                new InstrumentId(\"069500.XKRX\"),\n+                                42))\n+                .getId();\n+    }\n+\n+    private static SaveBacktestResultCommand command(\n+            Long jobId, BacktestEvent<FinishedPayload> event) {\n+        return new SaveBacktestResultCommand(\n+                jobId,\n+                event.executionId(),\n+                event.eventId(),\n+                event.payload().engineOutput(),\n+                event.payload().benchmark());\n+    }\n+\n+    private void saveAndClear(SaveBacktestResultCommand command) {\n+        resultRepository.save(command);\n+        entityManager.flush();\n+        entityManager.clear();\n+    }\n+\n+    @Test\n+    @DisplayName(\"COMPLETED 픽스처를 저장하면 결과 행의 JSON 컬럼이 계약 값과 scale까지 같다\")\n+    void savesCompletedFixture() {\n+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();\n+        EngineOutput output = event.payload().engineOutput();\n+        Long jobId = newJobId();\n+\n+        saveAndClear(command(jobId, event));\n+\n+        BacktestResultJpaEntity result = entityManager.find(BacktestResultJpaEntity.class, jobId);\n+        assertThat(result).isNotNull();\n+        assertThat(result.getExecutionId()).isEqualTo(\"EXEC-000001\");\n+        assertThat(result.getFinishedEventId()).isEqualTo(\"EVT-000009\");\n+        assertThat(result.getStartedAt()).isEqualTo(output.run().startedAt());\n+        assertThat(result.getFinishedAt()).isEqualTo(output.run().finishedAt());\n+        assertThat(result.getErrorCode()).isNull();\n+        assertThat(result.getErrorMessage()).isNull();\n+        assertThat(result.getPerformance()).isEqualTo(output.performance());\n+        assertThat(result.getExecution()).isEqualTo(output.execution());\n+        assertThat(result.getPortfolioSeries()).isEqualTo(output.portfolioSeries());\n+        assertThat(result.getBenchmark()).isEqualTo(event.payload().benchmark());\n+        assertThat(result.getDiagnostics()).isEqualTo(output.diagnostics());\n+        assertThat(result.getCreatedAt()).isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"거래는 행으로 저장되고 detail JSON이 계약의 거래와 같다\")\n+    void savesTradesAsRows() {\n+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();\n+        List<EngineOutput.TradeResult> trades = event.payload().engineOutput().trades();\n+        Long jobId = newJobId();\n+\n+        saveAndClear(command(jobId, event));\n+\n+        List<BacktestTradeJpaEntity> saved =\n+                tradeRepository.findByJobIdOrderByEntryTimeAscIdAsc(jobId);\n+        assertThat(saved).hasSameSizeAs(trades);\n+        assertThat(saved)\n+                .extracting(BacktestTradeJpaEntity::getDetail)\n+                .containsExactlyElementsOf(trades);\n+        for (int i = 0; i < trades.size(); i++) {\n+            EngineOutput.TradeResult expected = trades.get(i);\n+            BacktestTradeJpaEntity actual = saved.get(i);\n+            assertThat(actual.getTradeId()).isEqualTo(expected.tradeId());\n+            assertThat(actual.getInstrumentId()).isEqualTo(expected.instrumentId());\n+            assertThat(actual.getSide()).isEqualTo(expected.side());\n+            assertThat(actual.getStatus()).isEqualTo(expected.status());\n+            assertThat(actual.getEntryTime()).isEqualTo(expected.entryTime());\n+            assertThat(actual.getExitTime()).isEqualTo(expected.exitTime());\n+        }\n+        assertThat(saved)\n+                .filteredOn(trade -> trade.getStatus() == TradeStatus.OPEN)\n+                .allSatisfy(trade -> assertThat(trade.getExitTime()).isNull());\n+    }\n+\n+    @Test\n+    @DisplayName(\"FAILED 픽스처는 오류 정보만 채우고 성과·집계·벤치마크는 null, 거래는 0건이다\")\n+    void savesFailedFixture() {\n+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedFailed();\n+        Long jobId = newJobId();\n+\n+        saveAndClear(command(jobId, event));\n+\n+        BacktestResultJpaEntity result = entityManager.find(BacktestResultJpaEntity.class, jobId);\n+        assertThat(result.getErrorCode()).isEqualTo(\"NO_MARKET_DATA\");\n+        assertThat(result.getErrorMessage()).contains(\"000660.XKRX\");\n+        assertThat(result.getPerformance()).isNull();\n+        assertThat(result.getExecution()).isNull();\n+        assertThat(result.getBenchmark()).isNull();\n+        assertThat(result.getPortfolioSeries()).isEmpty();\n+        assertThat(result.getDiagnostics().warnings()).isEmpty();\n+        assertThat(tradeRepository.findByJobIdOrderByEntryTimeAscIdAsc(jobId)).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 Job에 같은 tradeId가 두 번 오면 UNIQUE 제약에 걸린다\")\n+    void rejectsDuplicateTradeId() {\n+        BacktestEvent<FinishedPayload> event = MessageFixtures.finishedCompleted();\n+        EngineOutput output = event.payload().engineOutput();\n+        EngineOutput.TradeResult first = output.trades().get(0);\n+        EngineOutput duplicated =\n+                new EngineOutput(\n+                        output.run(),\n+                        output.performance(),\n+                        output.portfolioSeries(),\n+                        List.of(first, first),\n+                        output.execution(),\n+                        output.diagnostics());\n+        Long jobId = newJobId();\n+\n+        resultRepository.save(\n+                new SaveBacktestResultCommand(\n+                        jobId, event.executionId(), event.eventId(), duplicated, null));\n+\n+        assertThatThrownBy(() -> entityManager.flush()).isInstanceOf(Exception.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 Job을 가리키면 FK 제약에 걸린다\")\n+    void rejectsUnknownJob() {\n+        resultRepository.save(command(999_999L, MessageFixtures.finishedFailed()));\n+\n+        assertThatThrownBy(() -> entityManager.flush()).isInstanceOf(Exception.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 Job에 결과를 두 번 저장하면 PK 충돌로 실패한다 — 호출자가 상태로 먼저 걸러낸다\")\n+    void rejectsSecondResultForSameJob() {\n+        Long jobId = newJobId();\n+        saveAndClear(command(jobId, MessageFixtures.finishedFailed()));\n+\n+        resultRepository.save(command(jobId, MessageFixtures.finishedCompleted()));\n+\n+        assertThatThrownBy(() -> entityManager.flush()).isInstanceOf(Exception.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,8 +28,8 @@ import org.springframework.context.annotation.Import;\n import org.springframework.jdbc.core.JdbcTemplate;\n \n /**\n- * 운영(prod)과 같은 조건으로 V1 마이그레이션을 검증한다. Flyway·validate 설정과 PostgreSQL 컨테이너는 {@link\n- * PostgresTestSupport}가 제공하므로, 마이그레이션과 Entity 매핑이 어긋나면 컨텍스트 로딩 자체가 실패한다.\n+ * 운영(prod)과 같은 조건으로 마이그레이션을 검증한다. Flyway·validate 설정과 PostgreSQL 컨테이너는 {@link PostgresTestSupport}가\n+ * 제공하므로, 마이그레이션과 Entity 매핑이 어긋나면 컨텍스트 로딩 자체가 실패한다.\n  *\n  * <p>여기서 확인하는 것은 컬럼과 시퀀스의 존재다. 타입 불일치는 Hibernate가 경고로만 남기고 통과시키기 때문에, 컬럼 목록을 눈으로 맞춰 두는 이 단언이 필요하다.\n  */\n@@ -129,6 +129,81 @@ class FlywayMigrationTest extends PostgresTestSupport {\n                         \"created_at\");\n     }\n \n+    @Test\n+    @DisplayName(\"V2가 적용되어 flyway_schema_history에 성공으로 기록된다\")\n+    void v2IsApplied() {\n+        Integer applied =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT COUNT(*) FROM flyway_schema_history\"\n+                                + \" WHERE version = '2' AND success = TRUE\",\n+                        Integer.class);\n+\n+        assertThat(applied).isEqualTo(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"V2가 backtest_result를 Entity 매핑과 같은 컬럼으로 만든다\")\n+    void v2CreatesBacktestResultColumns() {\n+        assertThat(columnsOf(\"backtest_result\"))\n+                .containsExactlyInAnyOrder(\n+                        \"backtest_job_id\",\n+                        \"execution_id\",\n+                        \"finished_event_id\",\n+                        \"started_at\",\n+                        \"finished_at\",\n+                        \"error_code\",\n+                        \"error_message\",\n+                        \"performance\",\n+                        \"execution\",\n+                        \"portfolio_series\",\n+                        \"benchmark\",\n+                        \"diagnostics\",\n+                        \"created_at\",\n+                        \"updated_at\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"V2가 backtest_trade를 Entity 매핑과 같은 컬럼으로 만들고 PK용 시퀀스를 둔다\")\n+    void v2CreatesBacktestTradeColumnsAndSequence() {\n+        assertThat(columnsOf(\"backtest_trade\"))\n+                .containsExactlyInAnyOrder(\n+                        \"id\",\n+                        \"backtest_job_id\",\n+                        \"trade_id\",\n+                        \"instrument_id\",\n+                        \"side\",\n+                        \"status\",\n+                        \"entry_time\",\n+                        \"exit_time\",\n+                        \"detail\");\n+\n+        Integer sequences =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT COUNT(*) FROM information_schema.sequences\"\n+                                + \" WHERE LOWER(sequence_name) = 'backtest_trade_seq'\",\n+                        Integer.class);\n+        assertThat(sequences).isEqualTo(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"V2가 결과·거래 테이블에 backtest_job FK와 거래 UNIQUE 제약을 만든다\")\n+    void v2CreatesConstraints() {\n+        List<String> foreignKeyTables =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT LOWER(table_name) FROM information_schema.table_constraints\"\n+                                + \" WHERE constraint_type = 'FOREIGN KEY'\"\n+                                + \" AND LOWER(table_name) IN ('backtest_result', 'backtest_trade')\",\n+                        String.class);\n+        assertThat(foreignKeyTables).containsExactlyInAnyOrder(\"backtest_result\", \"backtest_trade\");\n+\n+        Integer unique =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT COUNT(*) FROM information_schema.table_constraints\"\n+                                + \" WHERE LOWER(constraint_name) = 'uk_backtest_trade_job_trade'\",\n+                        Integer.class);\n+        assertThat(unique).isEqualTo(1);\n+    }\n+\n     @Test\n     @DisplayName(\"V1 스키마에 Entity를 저장하고 다시 읽을 수 있다\")\n     void entityRoundTripsOnMigratedSchema() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -60,6 +60,9 @@ common: 모든 계층에서 참조 가능\n - 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다\n - 큐·exchange·routing key 이름은 `BacktestRabbitConfig` 상수(워커와 합의한 계약값). 프로퍼티로 빼지 않는다\n - 메시지 JSON 규칙: 금액·비율은 문자열, null 값은 키 생략(수신은 \"키 없음 == null\"), `strategy.parameters`의 숫자는 그대로 통과. 직렬화는 `BacktestRabbitConfig.messageObjectMapper()`만 쓴다(웹 MVC ObjectMapper와 분리)\n+- 결과 저장 규칙(`backtest_result`·`backtest_trade`): **질의(필터·정렬·조인)에 쓰는 값만 컬럼, 표시용 값은 JSONB**. decimal은 예외 없이 JSONB — `NUMERIC` 컬럼은 scale을 임의로 정해야 하고 넘는 값을 조용히 반올림한다. JSON 컬럼 직렬화는 메시지 ObjectMapper가 맡아(`MessageJsonPersistenceConfig`) decimal이 문자열로 저장된다. 결과 도메인 모델은 두지 않고 계약 DTO(`EngineOutput` 등)를 그대로 저장한다\n+- 결과 Consumer(`BacktestEventListener`): 역직렬화 직후 `BacktestEventValidator`로 계약을 명시 검증한다. 계약 오류는 `AmqpRejectAndDontRequeueException`(재시도 후 DLQ), 일시 오류는 그대로 전파(재시도), 모르는 `backtestId`·늦은 이벤트는 로그 후 정상 반환(ACK). 멱등성은 상태 전이(`BacktestJob.markRunning/markCompleted/markFailed`)로 보장하며 별도 처리 이력 테이블을 두지 않는다\n+- 스키마 변경은 `db/migration/V{N}__*.sql`(PostgreSQL 문법)로 한다. prod는 Flyway + `ddl-auto: validate`, local은 `ddl-auto: update`. DB 테스트는 `support/PostgresTestSupport`를 상속한다(PostgreSQL 컨테이너 + Flyway + validate). Docker가 꺼져 있으면 조용히 skip되므로 테스트 결과의 `skipped`를 확인한다\n \n ## 도메인 용어\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,12 +14,12 @@\n | RabbitMQ | 작업·이벤트 메시지 보관·전달 |\n | Worker (실행 Consumer) | 작업 수신, `BacktestEngine.run()` 호출, 벤치마크 계산, STARTED / PROGRESS / FINISHED 발행, ACK |\n | 엔진 (`BacktestEngine` 구현) | `EngineInput` → `EngineOutput`. 진행 콜백 제공. **DB·브로커를 모른다** |\n-| Backend 결과 Consumer | 이벤트 검증, Job 상태 갱신, 최종 결과 저장, SSE 전달 |\n+| Backend 결과 Consumer | 이벤트 검증, Job 상태 갱신, 최종 결과 저장, SSE 전달. **구현됨**: `BacktestEventListener` → `BacktestEventValidator` → `BacktestEventService` (SSE 전달은 로깅 임시 구현) |\n \n ```\n Frontend → POST /backtests → Job 저장(QUEUED) → [backtest.jobs] ← 202 + backtestId\n [backtest.jobs] → Worker → engine.run() → STARTED / PROGRESS… / FINISHED → [backtest.events]\n-[backtest.events] → Backend 결과 Consumer → RUNNING / SSE progress / 결과 저장 + COMPLETED|FAILED\n+[backtest.events] → Backend 결과 Consumer → RUNNING / SSE progress / 결과 저장 + COMPLETED|FAILED   (구현됨)\n ```\n \n 워커와 엔진은 결과 DB에 직접 쓰지 않는다. 성과 지표는 엔진이 계산하고 백엔드는 저장·조회만 한다.\n@@ -112,13 +112,15 @@ DLQ로 간 메시지는 자동 재투입하지 않고 원인 수정 후 운영\n \n | 설계 표기 | JSON | Java | Python |\n |---|---|---|---|\n-| 금액·비율 (`decimal/string`) | **문자열** `\"10000000.00\"`, `\"0.166652\"` | `BigDecimal` (문자열로 직렬화, 숫자도 수용) | `Decimal` |\n+| 금액·비율 (`decimal/string`) | **문자열** `\"10000000.00\"`, `\"0.166652\"`. **plain 표기만** — 지수 표기(`\"1E+2\"`)는 쓰지 않는다. 수신 측은 plain으로 정규화해 저장하므로 값은 같고 음수 scale만 0이 된다 | `BigDecimal` (`toPlainString`으로 직렬화, 숫자도 수용) | `Decimal` |\n | 거래일 (`date`) | `\"2025-01-03\"` 타임존 없음, 거래소 현지 거래일 | `LocalDate` | `date` |\n | 실행 시각 (`datetime`) | `\"2026-09-07T01:00:00Z\"` UTC | `Instant` | aware `datetime` |\n | 정수 | JSON number | `int` / `Integer` | `int` |\n | enum | 대문자 스네이크 문자열. 미지의 값은 역직렬화 실패 → 계약 오류 → DLQ | enum | `Literal` / `StrEnum` |\n | 계산 불가 · 미지정 | **키 자체를 쓰지 않는다** (`null`도 쓰지 않음, 0·NaN 금지). 수신 측은 \"키 없음 == null\"로 읽고, 명시 `null`이 와도 같은 뜻으로 수용한다 | 래퍼 타입, 직렬화는 `NON_NULL` | `T \\| None = None`, 덤프는 `exclude_none=True` |\n | 수익률 | 비율 (`0.125` = 12.5%). MDD·drawdown은 0 또는 음수 | | |\n+| 식별자 문자열 (`eventId`·`executionId`·`tradeId`·`run.error.code`) | **255자 이하**. 초과는 계약 오류 → DLQ. 형식은 정하지 않는다(UUID·`EVT-000001` 모두 가능) | `String`, 저장 컬럼 `VARCHAR(255)` | `str` |\n+| 종목 식별자 (`instrumentId` — trade·position·benchmark) | `{6자리 종목코드}.XKRX` (ADR-0002 D4). 형식 위반은 계약 오류 → DLQ | `InstrumentId` VO의 패턴으로 검증, 저장 컬럼 `VARCHAR(32)` | `str` |\n \n 지표 계산 규약(연환산 252, ddof=1, riskFreeRate 0.0, CAGR 달력일 기준, `tradeCount`는 CLOSED만)은 설계 문서를 따른다.\n 이 규약을 바꾸면 `schemaVersion`이 아니라 결과 저장소의 지표 버전을 올린다.\n@@ -151,7 +153,7 @@ python3 docs/specs/backtest-messaging/generate_fixtures.py docs/specs/backtest-m\n \n - 작업 발행: Job + outbox 같은 트랜잭션. publisher confirm·라우팅 실패 확인 후 발행 완료 기록. 202는 \"접수\".\n - 실행 Consumer: manual ACK, prefetch 1. FINISHED 발행이 브로커에서 확인된 뒤 작업 메시지 ACK.\n-- 결과 Consumer: 결과 저장 + Job 최종 상태 + 처리된 `eventId` 기록을 한 트랜잭션으로 커밋 후 ACK. 이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK.\n+- 결과 Consumer: 결과 저장 + Job 최종 상태를 한 트랜잭션으로 커밋 후 ACK. 처리한 `eventId`·`executionId`는 결과 행에 컬럼으로 남긴다(별도 처리 이력 테이블 없음 — 멱등성은 상태 전이가 보장한다: STARTED는 QUEUED에서만, FINISHED는 비최종 상태에서만 적용). 이미 최종 상태인 Job의 늦은 이벤트는 덮어쓰지 않고 ACK. 모르는 `backtestId`는 경고 로그 후 ACK(DLQ로 보내지 않음). STARTED가 유실돼 QUEUED인 Job에 온 FINISHED도 적용한다.\n - PROGRESS는 DB에 저장하지 않고 SSE 경로에 넘긴 뒤 ACK(접속자 없어도 ACK).\n - JSON 파싱·계약 오류는 requeue 없이 reject → DLQ. 일시 장애는 제한적 재시도.\n \n@@ -169,6 +171,11 @@ DTO(Java record / pydantic 모델)는 구조만 표현한다. 필수 필드 검\n | 지원하지 않는 `schemaVersion` | 명시 검증 | 명시 검증 |\n | `type`과 `payload` 형태 불일치 | `type`을 먼저 읽고 payload 타입을 선택해 변환, 실패 시 거부 | 동일 |\n | `FINISHED`의 `engineOutput.run.status`가 COMPLETED/FAILED 외 | 명시 검증 | — (엔진 반환 시점에 확인) |\n+| 식별자 길이 255자 초과 (§5) | 명시 검증 | — |\n+| `instrumentId` 형식 (§5, trade·position·benchmark) | 명시 검증 (`InstrumentId.REGEX`) | — (엔진 입력의 종목이 그대로 나감) |\n+| `sequence` 규칙 (STARTED=0, PROGRESS·FINISHED ≥ 1. 연속성은 검증하지 않음) | 명시 검증 | — |\n+| 상태별 nullable 규칙 (COMPLETED: `performance`·`execution` 필수, `error` 없음. FAILED: `error` 필수, `performance`·`execution`·`benchmark` 없음, `portfolioSeries`·`trades` 비어야 함) | 명시 검증 (중첩 그래프 전체, 위반 필드 경로를 메시지에 포함) | — |\n+| 계약이 nullable로 정한 생략 (성과 지표 개별 null, `benchmark`, snapshot의 `positions`, OPEN 거래의 청산 필드) | 그대로 수용. **기본값으로 보정하지 않는다** — `trades` 누락을 `[]`로 저장하면 거짓 결과가 확정된다 | — |\n | 알 수 없는 필드 | 무시(`FAIL_ON_UNKNOWN_PROPERTIES=false`) — 상대가 필드를 먼저 추가해도 깨지지 않게 | 무시(`extra=\"ignore\"`) |\n \n 검증 실패는 계약 오류로 보고 requeue 없이 reject → DLQ(§7). 픽스처 round-trip 테스트는 DTO 구조가 계약과 맞는지 확인하는 것이며 실제 수신 메시지 검증을 대신하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/README.md",
+          "old_path": "docs/specs/backtest-messaging/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2776674": []
+  }
+}

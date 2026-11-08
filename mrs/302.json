@@ -1,0 +1,557 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 957889,
+    "iid": 302,
+    "project_id": 1444456,
+    "title": "fix(fe): 도움말을 Esc로 닫으면 닫힌 채로 있게 한다",
+    "description": "# 작업 내용 요약\n\n화면 곳곳에서 설명을 물음표 뒤로 접어 두는 도움말이 있다. 키보드로 그 물음표에 초점을 주면 설명이\n열리는데, 곧바로 Esc를 눌러 닫아도 잠시 뒤 저절로 다시 열렸다. 같은 현상이 검사에서 드러나\n`dev`의 Frontend 단계를 실패로 만들었고, 그 뒤 Backend·Worker·Data 단계가 취소되어 배포 검증이\n막혔다.\n\n이 MR 이후로는 어떤 경로로 닫든 닫힌 채로 있고, `dev` CI가 다시 통과한다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-422](https://ssafy.atlassian.net/browse/S15P21E205-422)\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 초점을 준 직후 Esc로 닫기 | 잠시 뒤 저절로 다시 열린다 | 닫힌 채로 있다 |\n| 초점을 주고 한참 뒤 Esc로 닫기 | 닫힌 채로 있다 | 같다 |\n| 마우스를 얹어 열기·스쳐 지나가기 | 잠깐 머물러야 열린다 | 같다 |\n| 검사 결과 | 전체 실행에서만 실패한다 | 전체·단독이 같고 되풀이해도 갈리지 않는다 |\n| 눌러서 여는 방식의 도움말 | 그대로 | 그대로. 손대지 않았다 |\n\n# 주요 변경 사항\n\n## 여닫는 주체를 하나로 줄인다\n\n원인은 여는 쪽이 둘이었다는 것이다. 쓰고 있던 얹기 전용 부품은 트리거가 초점을 받으면 **자기 지연\n타이머**로 열도록 예약하는데, 그 예약은 닫을 때 지워지지 않는다. 그래서 예약이 살아 있는 동안 Esc로\n닫으면 닫힌 뒤에 예약이 깨어나 다시 열었다.\n\n같은 라이브러리의 말풍선 부품으로 바꾸고 트리거는 위치를 잡는 용도로만 붙였다. **그 부품에는 내부\n타이머가 하나도 없다.** 마우스를 스쳐 지나갈 때 열리지 않게 하는 틈은 우리가 직접 걸되, 열림 상태가\n바뀔 때마다 예약을 반드시 지운다. 닫으라는 신호가 오면 예약된 열기가 남아 있을 수 없다. 타이밍을\n조절한 것이 아니라 구조로 막았다.\n\nEsc와 바깥 누르기는 라이브러리가 맡고 결과는 한 자리로 돌아와 처리된다. 경로가 늘어도 같은 곳을\n지나므로 이 사고가 되살아나지 않는다.\n\n## 말풍선의 역할 이름을 바로잡는다\n\n바꾼 부품은 기본 역할이 대화 상자다. 이 도움말은 초점을 옮기지 않으므로 그대로 두면 화면 낭독기에\n\"열렸는데 갈 수 없는 대화 상자\"로 읽힌다. 얹어서 읽는 설명에 맞는 이름으로 덮었다.\n\n## 검사가 이 사고를 볼 수 있게 한다\n\n기존 검사는 Esc 직후 한 번만 보고 끝나서 예약이 남아 있는지 확인하지 않았다. 그래서 같은 코드가\n기계 사정에 따라 통과하기도 실패하기도 했다. 예약이 깨어날 시간을 지나고도 닫혀 있는지 보는 검사를\n더했다.\n\n**더한 검사가 제 일을 하는지 확인했다.** 고치기 전 코드로 되돌려 돌리면 새 검사 한 건만 실패한다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint && npm run build && npm test` — 142파일 1363건, 실패 0·**건너뜀 0**\n- [x] 같은 명령을 한 번 더 — 결과 같음(갈리지 않는 것을 확인하는 것이 이 작업의 목적이라 두 번 돌렸다)\n- [x] 새 검사만 고치기 전 코드로 돌려 실패 재현 — 4건 중 1건 실패\n- [x] 브라우저에서 직접 확인(2026-09-23)\n\n모두 2026-09-23 기준이다. 기준선은 같은 날 `dev`(`ef1123ce`)의 1362건 중 **1건 실패**다.\n\n`npm test`의 `skipped` 수를 함께 적는다. 수집 목록이 허용 목록이라 목록에 걸리지 않는 검사 파일은\n실패하지 않고 조용히 빠진다. 이번에는 파일을 새로 만들지 않았고 건너뜀은 0이다.\n\n# 리뷰 포인트\n\n1. **마우스를 트리거에서 말풍선으로 옮기는 동안 닫히지 않게 하는 처리를 봐 달라.** 전에는 라이브러리가\n   하던 일을 이제 우리 코드가 한다. 이번 변경에서 새로 쓴 부분이라 가장 깨지기 쉽다. 두 곳 사이에\n   빈틈이 있어 그 위를 지날 때 닫히면 이 처리의 틈이 짧은 것이다.\n\n2. **얹기 모드의 부품이 바뀌었으므로 말풍선의 겉모습을 봐 달라.** 스타일 파일은 건드리지 않았지만\n   라이브러리가 붙이는 속성이 달라졌다. 그림자·모서리·나타나는 방향이 전과 다르게 보이는 화면이\n   있는지 확인이 필요하다. 도움말은 전략 설정·설정 조합 자동 비교·결과 세 화면에 흩어져 있다.\n\n3. **눌러서 여는 방식은 손대지 않았다.** 원래 이번에 바꾼 부품을 쓰고 있었고 이 사고와 무관하다.\n   지금 저장소에서 그 방식을 쓰는 화면은 없다.\n\n4. **이 실패는 이번 스프린트의 다른 작업에서 들어왔다.** 도움말을 초점으로도 열리게 넓힌 변경\n   (S15P21E205-408)이 예약과 부딪혔다. 그 변경 자체는 접근성을 위해 필요한 것이라 되돌리지 않고,\n   부딪히지 않는 구조로 바꿨다.",
+    "state": "merged",
+    "created_at": "2026-09-23T10:21:05.221+09:00",
+    "updated_at": "2026-09-23T10:27:22.187+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-23T10:27:22.212+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/422-inline-help-close",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+    "merge_commit_sha": "95738b1a92241a70b7c7b030073d9bdd6f9c3270",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T10:21:06.205+09:00",
+    "reference": "!302",
+    "references": {
+      "short": "!302",
+      "relative": "!302",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!302"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/302",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 957889,
+    "iid": 302,
+    "project_id": 1444456,
+    "title": "fix(fe): 도움말을 Esc로 닫으면 닫힌 채로 있게 한다",
+    "description": "# 작업 내용 요약\n\n화면 곳곳에서 설명을 물음표 뒤로 접어 두는 도움말이 있다. 키보드로 그 물음표에 초점을 주면 설명이\n열리는데, 곧바로 Esc를 눌러 닫아도 잠시 뒤 저절로 다시 열렸다. 같은 현상이 검사에서 드러나\n`dev`의 Frontend 단계를 실패로 만들었고, 그 뒤 Backend·Worker·Data 단계가 취소되어 배포 검증이\n막혔다.\n\n이 MR 이후로는 어떤 경로로 닫든 닫힌 채로 있고, `dev` CI가 다시 통과한다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-422](https://ssafy.atlassian.net/browse/S15P21E205-422)\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 초점을 준 직후 Esc로 닫기 | 잠시 뒤 저절로 다시 열린다 | 닫힌 채로 있다 |\n| 초점을 주고 한참 뒤 Esc로 닫기 | 닫힌 채로 있다 | 같다 |\n| 마우스를 얹어 열기·스쳐 지나가기 | 잠깐 머물러야 열린다 | 같다 |\n| 검사 결과 | 전체 실행에서만 실패한다 | 전체·단독이 같고 되풀이해도 갈리지 않는다 |\n| 눌러서 여는 방식의 도움말 | 그대로 | 그대로. 손대지 않았다 |\n\n# 주요 변경 사항\n\n## 여닫는 주체를 하나로 줄인다\n\n원인은 여는 쪽이 둘이었다는 것이다. 쓰고 있던 얹기 전용 부품은 트리거가 초점을 받으면 **자기 지연\n타이머**로 열도록 예약하는데, 그 예약은 닫을 때 지워지지 않는다. 그래서 예약이 살아 있는 동안 Esc로\n닫으면 닫힌 뒤에 예약이 깨어나 다시 열었다.\n\n같은 라이브러리의 말풍선 부품으로 바꾸고 트리거는 위치를 잡는 용도로만 붙였다. **그 부품에는 내부\n타이머가 하나도 없다.** 마우스를 스쳐 지나갈 때 열리지 않게 하는 틈은 우리가 직접 걸되, 열림 상태가\n바뀔 때마다 예약을 반드시 지운다. 닫으라는 신호가 오면 예약된 열기가 남아 있을 수 없다. 타이밍을\n조절한 것이 아니라 구조로 막았다.\n\nEsc와 바깥 누르기는 라이브러리가 맡고 결과는 한 자리로 돌아와 처리된다. 경로가 늘어도 같은 곳을\n지나므로 이 사고가 되살아나지 않는다.\n\n## 말풍선의 역할 이름을 바로잡는다\n\n바꾼 부품은 기본 역할이 대화 상자다. 이 도움말은 초점을 옮기지 않으므로 그대로 두면 화면 낭독기에\n\"열렸는데 갈 수 없는 대화 상자\"로 읽힌다. 얹어서 읽는 설명에 맞는 이름으로 덮었다.\n\n## 검사가 이 사고를 볼 수 있게 한다\n\n기존 검사는 Esc 직후 한 번만 보고 끝나서 예약이 남아 있는지 확인하지 않았다. 그래서 같은 코드가\n기계 사정에 따라 통과하기도 실패하기도 했다. 예약이 깨어날 시간을 지나고도 닫혀 있는지 보는 검사를\n더했다.\n\n**더한 검사가 제 일을 하는지 확인했다.** 고치기 전 코드로 되돌려 돌리면 새 검사 한 건만 실패한다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint && npm run build && npm test` — 142파일 1363건, 실패 0·**건너뜀 0**\n- [x] 같은 명령을 한 번 더 — 결과 같음(갈리지 않는 것을 확인하는 것이 이 작업의 목적이라 두 번 돌렸다)\n- [x] 새 검사만 고치기 전 코드로 돌려 실패 재현 — 4건 중 1건 실패\n- [x] 브라우저에서 직접 확인(2026-09-23)\n\n모두 2026-09-23 기준이다. 기준선은 같은 날 `dev`(`ef1123ce`)의 1362건 중 **1건 실패**다.\n\n`npm test`의 `skipped` 수를 함께 적는다. 수집 목록이 허용 목록이라 목록에 걸리지 않는 검사 파일은\n실패하지 않고 조용히 빠진다. 이번에는 파일을 새로 만들지 않았고 건너뜀은 0이다.\n\n# 리뷰 포인트\n\n1. **마우스를 트리거에서 말풍선으로 옮기는 동안 닫히지 않게 하는 처리를 봐 달라.** 전에는 라이브러리가\n   하던 일을 이제 우리 코드가 한다. 이번 변경에서 새로 쓴 부분이라 가장 깨지기 쉽다. 두 곳 사이에\n   빈틈이 있어 그 위를 지날 때 닫히면 이 처리의 틈이 짧은 것이다.\n\n2. **얹기 모드의 부품이 바뀌었으므로 말풍선의 겉모습을 봐 달라.** 스타일 파일은 건드리지 않았지만\n   라이브러리가 붙이는 속성이 달라졌다. 그림자·모서리·나타나는 방향이 전과 다르게 보이는 화면이\n   있는지 확인이 필요하다. 도움말은 전략 설정·설정 조합 자동 비교·결과 세 화면에 흩어져 있다.\n\n3. **눌러서 여는 방식은 손대지 않았다.** 원래 이번에 바꾼 부품을 쓰고 있었고 이 사고와 무관하다.\n   지금 저장소에서 그 방식을 쓰는 화면은 없다.\n\n4. **이 실패는 이번 스프린트의 다른 작업에서 들어왔다.** 도움말을 초점으로도 열리게 넓힌 변경\n   (S15P21E205-408)이 예약과 부딪혔다. 그 변경 자체는 접근성을 위해 필요한 것이라 되돌리지 않고,\n   부딪히지 않는 구조로 바꿨다.",
+    "state": "merged",
+    "created_at": "2026-09-23T10:21:05.221+09:00",
+    "updated_at": "2026-09-23T10:27:22.187+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-23T10:27:22.212+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/422-inline-help-close",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+    "merge_commit_sha": "95738b1a92241a70b7c7b030073d9bdd6f9c3270",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T10:21:06.205+09:00",
+    "reference": "!302",
+    "references": {
+      "short": "!302",
+      "relative": "!302",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!302"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/302",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": "2026-09-23T10:21:21.561+09:00",
+    "latest_build_finished_at": "2026-09-23T10:27:29.642+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 218542,
+      "iid": 318,
+      "project_id": 1444456,
+      "sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+      "ref": "fix(fe)/422-inline-help-close",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T10:21:21.313+09:00",
+      "updated_at": "2026-09-23T10:27:29.649+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/218542"
+    },
+    "head_pipeline": {
+      "id": 218542,
+      "iid": 318,
+      "project_id": 1444456,
+      "sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+      "ref": "fix(fe)/422-inline-help-close",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T10:21:21.313+09:00",
+      "updated_at": "2026-09-23T10:27:29.649+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/218542",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T10:21:21.561+09:00",
+      "finished_at": "2026-09-23T10:27:29.642+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/218542",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "head_sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+      "start_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "97e58e4b17ba18123cbb4e5d51e8a298b86a7647",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2860790,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-23T10:21:12.052+09:00",
+          "updated_at": "2026-09-23T10:21:12.059+09:00",
+          "system": true,
+          "noteable_id": 957889,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 302,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "897594bf76af6241f51100e722c46ee461b7a328",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2860791,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Medium] `frontend/src/components/common/InlineHelp.tsx`: 브라우저 환경 외(예: SSR 테스트 등)에서 `window.setTimeout`의 반환 타입은 숫자(`number`)가 아니라 `NodeJS.Timeout` 객체일 수 있습니다. 타입 안정성을 위해 반환 타입을 `number | NodeJS.Timeout | undefined` 또는 `ReturnType<typeof setTimeout> | undefined`로 지정하는 것을 권장합니다.\n\n### 테스트 제안\n1. **키보드 접근성 및 Esc 닫기 테스트**: 마우스를 사용하지 않고 `Tab` 키로 트리거에 초점을 맞추었을 때 도움말이 즉시 열리는지, 그 상태에서 즉시 `Esc` 키를 눌렀을 때 도움말이 닫히고 300ms 이상 경과한 뒤에도 저절로 다시 열리지 않는지 시나리오를 검증합니다.\n2. **마우스 인터랙션 및 타이머 지연 테스트**: 트리거에 마우스를 올렸을 때 `OPEN_DELAY_MS`(80ms) 후에 도움말이 열리는지, 트리거에서 말풍선 콘텐츠 영역으로 마우스를 이동할 때 `CLOSE_DELAY_MS`(80ms) 이내에 닫히지 않고 유지되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:61731a7bb371c6beabb45593a74b3020075df2fc -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T10:21:13.195+09:00",
+          "updated_at": "2026-09-23T10:21:13.195+09:00",
+          "system": false,
+          "noteable_id": 957889,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 302,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5aa527295efe0c277fc8c010c00b7dd6fd5980af",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2860820,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 61731a7bb371c6beabb45593a74b3020075df2fc pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-23T10:26:03.923+09:00",
+          "updated_at": "2026-09-23T10:26:03.926+09:00",
+          "system": true,
+          "noteable_id": 957889,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 302,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "57ac70b60eadf18471591f172a6b7df595bb0642",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2860832,
+          "type": null,
+          "body": "mentioned in commit 95738b1a92241a70b7c7b030073d9bdd6f9c3270",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-23T10:27:23.066+09:00",
+          "updated_at": "2026-09-23T10:27:23.080+09:00",
+          "system": true,
+          "noteable_id": 957889,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 302,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a16369d4a3b749ba4e4fb4b4efbf65ebc2b43ade",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885066,
+          "type": null,
+          "body": "mentioned in commit 8e9deae09aa52e2072d66b55f255c1a8e1410ce0",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:12.556+09:00",
+          "updated_at": "2026-10-13T15:16:12.597+09:00",
+          "system": true,
+          "noteable_id": 957889,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 302,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2243746,
+      "head_commit_sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "created_at": "2026-09-23T10:21:05.698+09:00",
+      "merge_request_id": 957889,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "e73dbe92e176d9aff5de39bc48127273506b90b4"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2243746,
+      "head_commit_sha": "61731a7bb371c6beabb45593a74b3020075df2fc",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "created_at": "2026-09-23T10:21:05.698+09:00",
+      "merge_request_id": 957889,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "e73dbe92e176d9aff5de39bc48127273506b90b4",
+      "commits": [
+        {
+          "id": "61731a7bb371c6beabb45593a74b3020075df2fc",
+          "short_id": "61731a7b",
+          "created_at": "2026-09-23T10:19:20.000+09:00",
+          "parent_ids": [
+            "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+          ],
+          "title": "fix(fe): 도움말을 Esc로 닫으면 닫힌 채로 있게 한다",
+          "message": "fix(fe): 도움말을 Esc로 닫으면 닫힌 채로 있게 한다\n\n얹기 모드의 여닫는 주체가 둘이었다. HoverCard 트리거는 초점을 받으면 자기\n지연 타이머로 여는데 그 타이머가 닫을 때 지워지지 않아, 닫은 뒤 지연 시간만큼\n지나면 저절로 다시 열렸다.\n\nPopover 로 바꾸고 트리거를 앵커로만 붙였다. Popover 에는 내부 타이머가 없다.\n지연은 우리가 걸되 상태가 바뀔 때마다 반드시 지운다 — 닫으라는 신호가 오면\n예약된 열기가 남아 있을 수 없다. 타이밍이 아니라 구조로 막았다.\n\n검사는 Esc 직후만 보아 이 사고를 지나쳤다. 기계가 느려질 때만 타이머가 먼저\n깨어나 같은 코드가 전체 실행에서만 실패했고, 그것이 dev CI 를 막았다. 예약된\n열기가 깨어난 뒤에도 닫혀 있는지 보는 검사를 더한다.\n\n말풍선의 role 은 tooltip 으로 둔다. 초점을 옮기지 않으므로 dialog 로 두면\n화면 낭독기에 갈 수 없는 대화 상자로 읽힌다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-23T10:19:20.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-23T10:19:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/61731a7bb371c6beabb45593a74b3020075df2fc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -58,4 +58,28 @@ describe('InlineHelp', () => {\n     expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()\n     expect(document.activeElement).toBe(trigger)\n   })\n+\n+  /**\n+   * 닫은 뒤에도 계속 닫혀 있어야 한다.\n+   *\n+   * <p>예약된 열기가 남아 있으면 Esc 로 닫은 도움말이 잠시 뒤 저절로 다시 열린다. 앞 검사는 Esc 직후\n+   * 한 번만 보므로 그 사고를 지나친다 — 실제로 지나쳤고, 전체 실행에서는 기계가 느려져 타이머가 먼저\n+   * 깨어나는 바람에 같은 코드가 어떤 때는 통과하고 어떤 때는 실패했다(S15P21E205-422).\n+   *\n+   * <p>그래서 여는 틈보다 넉넉히 기다린 뒤에 다시 본다. 실제 시간을 쓴다 — 가짜 시계로 바꾸면 라이브러리가\n+   * 쓰는 다른 시간까지 함께 멈춰 이 검사가 무엇을 지키는지 흐려진다.\n+   */\n+  it('Esc로 닫은 뒤에는 예약된 열기가 남아 저절로 다시 열리지 않는다', async () => {\n+    const { user } = renderHelp()\n+\n+    await user.tab()\n+    expect(await screen.findByText('합성 지표를 설명하는 한 문장이다.')).not.toBeNull()\n+    await user.keyboard('{Escape}')\n+\n+    await act(async () => {\n+      await new Promise((resolve) => setTimeout(resolve, 300))\n+    })\n+\n+    expect(screen.queryByText('합성 지표를 설명하는 한 문장이다.')).toBeNull()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.test.tsx",
+          "old_path": "frontend/src/components/common/InlineHelp.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n-import { HoverCard, Popover } from \"radix-ui\";\n-import { useState, type ReactNode } from \"react\";\n+import { Popover } from \"radix-ui\";\n+import { useCallback, useEffect, useRef, useState, type ReactNode } from \"react\";\n import styles from \"./InlineHelp.module.css\";\n \n interface InlineHelpProps {\n@@ -19,6 +19,11 @@ interface InlineHelpProps {\n   on?: \"click\" | \"hover\";\n }\n \n+/** 마우스가 지나가기만 할 때 열리지 않도록 두는 틈 */\n+const OPEN_DELAY_MS = 80;\n+/** 트리거에서 말풍선으로 마우스를 옮기는 동안 닫히지 않도록 두는 틈 */\n+const CLOSE_DELAY_MS = 80;\n+\n /**\n  * 화면이 가진 설명을 물음표 뒤로 내리는 도움말.\n  *\n@@ -30,49 +35,94 @@ interface InlineHelpProps {\n  * <p><b>설명을 지우는 대신 층을 내린다.</b> 본문에 늘 펼쳐 두면 읽지 않고 지나치고, 아예 없애면\n  * 알아야 할 사람이 알 수 없다. 처음에 보이는 것과 요청하면 펼치는 것을 나눈다(원칙 II).\n  *\n- * <p>기본은 HoverCard가 얹어서 열기를 맡고 초점·누르기는 트리거에서 직접 잇는다. `on=\"click\"`에서는\n- * Popover가 키보드 열기·Esc 닫기·닫은 뒤 트리거로 초점 되돌리기를 맡는다(005 FR-022).\n+ * <p><b>여닫는 주체를 하나로 둔다.</b> 얹기 모드에서도 HoverCard 가 아니라 Popover 를 쓰고 트리거를\n+ * 앵커로만 붙인다. HoverCard 의 트리거는 초점을 받으면 <b>자기 지연 타이머</b>로 여는데, 그 타이머는\n+ * 닫을 때 지워지지 않는다. 그래서 초점 직후 Esc 를 누르면 닫힌 뒤 지연 시간만큼 지나 저절로 다시\n+ * 열렸다(S15P21E205-422). 여기서는 지연을 우리가 걸고 <b>상태가 바뀔 때마다 반드시 지운다</b> —\n+ * 닫으라는 신호가 오면 예약된 열기가 남아 있을 수 없다. Popover 에는 내부 타이머가 없다.\n+ *\n+ * <p>Esc 닫기와 바깥 누르기는 Popover 가 맡고, 결과는 {@code onOpenChange} 로 돌아와 같은 자리에서\n+ * 처리된다. 말풍선에는 초점을 옮기지 않는다 — 초점이 트리거에 남아야 Esc 를 누른 사람이 제자리에\n+ * 있고(005 FR-022), 트리거를 떠날 때 닫는 판단도 그대로 산다.\n  */\n export function InlineHelp({ label, children, on = \"hover\" }: InlineHelpProps) {\n   const [open, setOpen] = useState(false);\n+  const timerRef = useRef<number | undefined>(undefined);\n+\n+  const clearPending = useCallback(() => {\n+    if (timerRef.current !== undefined) {\n+      window.clearTimeout(timerRef.current);\n+      timerRef.current = undefined;\n+    }\n+  }, []);\n+\n+  /** 예약된 것을 지우고 곧바로 정한다. 닫기 신호가 예약된 열기를 반드시 이긴다. */\n+  const settle = useCallback(\n+    (next: boolean) => {\n+      clearPending();\n+      setOpen(next);\n+    },\n+    [clearPending],\n+  );\n+\n+  const schedule = useCallback(\n+    (next: boolean, delay: number) => {\n+      clearPending();\n+      timerRef.current = window.setTimeout(() => {\n+        timerRef.current = undefined;\n+        setOpen(next);\n+      }, delay);\n+    },\n+    [clearPending],\n+  );\n+\n+  // 화면을 떠난 뒤 타이머가 깨어나 없는 컴포넌트를 건드리지 않게 한다.\n+  useEffect(() => clearPending, [clearPending]);\n+\n   if (on === \"hover\") {\n     return (\n-      <HoverCard.Root\n-        open={open}\n-        onOpenChange={setOpen}\n-        openDelay={80}\n-        closeDelay={80}\n-      >\n-        <HoverCard.Trigger asChild>\n+      <Popover.Root open={open} onOpenChange={settle}>\n+        <Popover.Anchor asChild>\n           {/*\n-            여는 조건을 우리가 쥔다. HoverCard 는 마우스를 얹을 때만 열고 초점·누르기에는 반응하지\n-            않는다 — 그대로 두면 키보드와 터치에서 읽을 방법이 없다(확인: 2026-09-22).\n+            여는 조건을 우리가 쥔다. 얹기는 틈을 두고, 초점과 누르기는 곧바로 반영한다 — 키보드와\n+            터치에서는 기다릴 이유가 없고, 기다리면 그 틈이 곧 위 주석의 사고로 돌아온다.\n           */}\n           <button\n             type=\"button\"\n             className={styles.trigger}\n             aria-label={`${label} 도움말`}\n             aria-expanded={open}\n-            onFocus={() => setOpen(true)}\n-            onBlur={() => setOpen(false)}\n-            onClick={() => setOpen((current) => !current)}\n+            onPointerEnter={() => schedule(true, OPEN_DELAY_MS)}\n+            onPointerLeave={() => schedule(false, CLOSE_DELAY_MS)}\n+            onFocus={() => settle(true)}\n+            onBlur={() => settle(false)}\n+            onClick={() => settle(!open)}\n           >\n             ?\n           </button>\n-        </HoverCard.Trigger>\n-        <HoverCard.Portal>\n-          <HoverCard.Content\n+        </Popover.Anchor>\n+        <Popover.Portal>\n+          <Popover.Content\n+            // 얹어서 읽는 설명이라 대화 상자가 아니다. 초점을 옮기지 않으므로 dialog 로 두면\n+            // 화면 낭독기에 \"열렸는데 갈 수 없는 대화 상자\"로 읽힌다.\n+            role=\"tooltip\"\n             className={styles.content}\n             side=\"top\"\n             sideOffset={6}\n             collisionPadding={12}\n             aria-label={`${label} 도움말`}\n+            // 초점은 트리거에 그대로 둔다. 옮기면 트리거가 흐려져 곧바로 닫힌다.\n+            onOpenAutoFocus={(event) => event.preventDefault()}\n+            onCloseAutoFocus={(event) => event.preventDefault()}\n+            // 트리거에서 말풍선으로 마우스를 옮기는 동안 닫히지 않게 한다.\n+            onPointerEnter={() => settle(true)}\n+            onPointerLeave={() => schedule(false, CLOSE_DELAY_MS)}\n           >\n             <p className={styles.term}>{label}</p>\n             <div className={styles.body}>{children}</div>\n-          </HoverCard.Content>\n-        </HoverCard.Portal>\n-      </HoverCard.Root>\n+          </Popover.Content>\n+        </Popover.Portal>\n+      </Popover.Root>\n     );\n   }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/InlineHelp.tsx",
+          "old_path": "frontend/src/components/common/InlineHelp.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2860791": []
+  }
+}

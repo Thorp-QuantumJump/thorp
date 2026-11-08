@@ -1,7 +1,0 @@
-{
-  "articles": [
-    { "url": "https://press.overseas.example.com/c/1", "title": "One", "seendate": "20260910T040000Z", "domain": "press.overseas.example.com", "language": "English" },
-    { "url": "https://press.overseas.example.com/c/2", "title": "Two", "seendate": "20260910T040100Z", "domain": "press.overseas.example.com", "language": "English" },
-    { "url": "https://press.overseas.example.com/c/3", "title": "Three", "seendate": "20260910T040200Z", "domain": "press.overseas.example.com", "language": "English" }
-  ]
-}

@@ -1,0 +1,1400 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952832,
+    "iid": 247,
+    "project_id": 1444456,
+    "title": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가",
+    "description": "## 작업 내용 요약\n\nspec 011 묶음 M1을 골격(M1a)과 메시지 계약(M1b)으로 나누고 골격 쪽을 먼저 낸다. 가용성 판정 줄(M4)이 구간 입력 대조(T000)를 기다리지 않고 바로 시작할 수 있게 하려는 것이다. 동작하는 코드는 없고 패키지·모듈 자리와 REST 계약 예시만 추가한다.\n\n## 관련 티켓\n\nS15P21E205-362\n\n## 주요 변경 사항\n\n- 백엔드에 `regimelink` 도메인의 4계층 패키지와 계층별 `package-info.java`를 둔다.\n- 워커에 `regime_link` 모듈 자리 다섯과 별도 엔트리포인트 `regime_link_main.py` 자리를 둔다. 백테스트 소비자·발행자·엔트리포인트 파일은 바뀌지 않는다.\n- `docs/specs/regime-link-api/`에 계약 요약과 응답 예시 여섯을 둔다. 가용성 두 경로, 링크 상태 세 가지, 확인 요구 응답 하나다.\n- 예시만 정하고 있던 셋을 REST 계약 §1·§3에 적는다 — `instruments[].delistedOn`, 시장 흐름 경로에 `availableRange`가 없다는 것, 계산 작업이 없던 판정의 시각 필드.\n- REST·메시징 계약의 예시가 같은 문서의 규칙과 어긋나던 곳을 맞춘다 — 손익 기여의 섹터 셋, 회전율 연환산, `null` 키 생략, 시계열·목록이 구간 전체라는 것.\n- `tasks.md` 묶음 표를 M1a·M1b로 나누고 Convergence T092\\~T094를 M5·M7에 배치한다.\n\n## 테스트\n\n- `cd backend && ./gradlew spotlessApply build` — 성공. `ArchitectureTest` 9개 규칙 통과.\n- `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` — 425 passed. 백테스트 관련 테스트 수와 결과는 변경 전과 같다.\n- 예시 JSON 여섯의 문법, `trades` 개수와 `window63.tradeCount`의 일치, 거래별 비용 합과 구간 비용의 일치, 손익 기여 몫의 합이 1인지를 손으로 확인했다.\n\n## 리뷰 포인트\n\n- 예시가 정하고 있던 세 가지를 REST 계약으로 확정했다. M4·M5가 이 응답을 구현하므로 세 결정이 맞는지 봐 주면 좋겠다.\n- 메시징 계약도 함께 고쳤다. 그 파일은 묶음 표상 M1b의 것이지만, 예시가 자기 문서의 규칙과 어긋난 채로 두면 T001이 그대로 픽스처로 옮긴다.\n- `link-completed.json`의 `holdings`만 63행 대신 세 행으로 줄여 실었다. 그 구간의 거래일 달력을 확인할 수 없어 날짜를 지어내지 않았고, 축약 사실은 README와 계약에 적었다.",
+    "state": "merged",
+    "created_at": "2026-09-20T14:27:10.352+09:00",
+    "updated_at": "2026-09-20T22:37:35.495+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T22:37:35.517+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/362-regime-link-skeleton",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+    "merge_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T14:27:11.490+09:00",
+    "reference": "!247",
+    "references": {
+      "short": "!247",
+      "relative": "!247",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!247"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/247",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952832,
+    "iid": 247,
+    "project_id": 1444456,
+    "title": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가",
+    "description": "## 작업 내용 요약\n\nspec 011 묶음 M1을 골격(M1a)과 메시지 계약(M1b)으로 나누고 골격 쪽을 먼저 낸다. 가용성 판정 줄(M4)이 구간 입력 대조(T000)를 기다리지 않고 바로 시작할 수 있게 하려는 것이다. 동작하는 코드는 없고 패키지·모듈 자리와 REST 계약 예시만 추가한다.\n\n## 관련 티켓\n\nS15P21E205-362\n\n## 주요 변경 사항\n\n- 백엔드에 `regimelink` 도메인의 4계층 패키지와 계층별 `package-info.java`를 둔다.\n- 워커에 `regime_link` 모듈 자리 다섯과 별도 엔트리포인트 `regime_link_main.py` 자리를 둔다. 백테스트 소비자·발행자·엔트리포인트 파일은 바뀌지 않는다.\n- `docs/specs/regime-link-api/`에 계약 요약과 응답 예시 여섯을 둔다. 가용성 두 경로, 링크 상태 세 가지, 확인 요구 응답 하나다.\n- 예시만 정하고 있던 셋을 REST 계약 §1·§3에 적는다 — `instruments[].delistedOn`, 시장 흐름 경로에 `availableRange`가 없다는 것, 계산 작업이 없던 판정의 시각 필드.\n- REST·메시징 계약의 예시가 같은 문서의 규칙과 어긋나던 곳을 맞춘다 — 손익 기여의 섹터 셋, 회전율 연환산, `null` 키 생략, 시계열·목록이 구간 전체라는 것.\n- `tasks.md` 묶음 표를 M1a·M1b로 나누고 Convergence T092\\~T094를 M5·M7에 배치한다.\n\n## 테스트\n\n- `cd backend && ./gradlew spotlessApply build` — 성공. `ArchitectureTest` 9개 규칙 통과.\n- `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` — 425 passed. 백테스트 관련 테스트 수와 결과는 변경 전과 같다.\n- 예시 JSON 여섯의 문법, `trades` 개수와 `window63.tradeCount`의 일치, 거래별 비용 합과 구간 비용의 일치, 손익 기여 몫의 합이 1인지를 손으로 확인했다.\n\n## 리뷰 포인트\n\n- 예시가 정하고 있던 세 가지를 REST 계약으로 확정했다. M4·M5가 이 응답을 구현하므로 세 결정이 맞는지 봐 주면 좋겠다.\n- 메시징 계약도 함께 고쳤다. 그 파일은 묶음 표상 M1b의 것이지만, 예시가 자기 문서의 규칙과 어긋난 채로 두면 T001이 그대로 픽스처로 옮긴다.\n- `link-completed.json`의 `holdings`만 63행 대신 세 행으로 줄여 실었다. 그 구간의 거래일 달력을 확인할 수 없어 날짜를 지어내지 않았고, 축약 사실은 README와 계약에 적었다.",
+    "state": "merged",
+    "created_at": "2026-09-20T14:27:10.352+09:00",
+    "updated_at": "2026-09-20T22:37:35.495+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T22:37:35.517+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/362-regime-link-skeleton",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+    "merge_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T14:27:11.490+09:00",
+    "reference": "!247",
+    "references": {
+      "short": "!247",
+      "relative": "!247",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!247"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/247",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "21",
+    "latest_build_started_at": "2026-09-20T16:47:09.216+09:00",
+    "latest_build_finished_at": "2026-09-20T22:38:09.346+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 209585,
+      "iid": 213,
+      "project_id": 1444456,
+      "sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+      "ref": "feat(be)/362-regime-link-skeleton",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T16:47:09.105+09:00",
+      "updated_at": "2026-09-20T22:38:09.353+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209585"
+    },
+    "head_pipeline": {
+      "id": 209585,
+      "iid": 213,
+      "project_id": 1444456,
+      "sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+      "ref": "feat(be)/362-regime-link-skeleton",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T16:47:09.105+09:00",
+      "updated_at": "2026-09-20T22:38:09.353+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209585",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-20T16:47:09.216+09:00",
+      "finished_at": "2026-09-20T22:38:09.346+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209585",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "head_sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+      "start_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "13d942f08d34ab35a65f5345302c2fdb25841b57",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840984,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T14:27:10.462+09:00",
+          "updated_at": "2026-09-20T14:27:10.470+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a486885a75e083e9a2071828912a64f9eb0be3e4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840985,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T14:27:10.482+09:00",
+          "updated_at": "2026-09-20T14:27:10.490+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "65b9f8c3eb022394814ecbc1df746890f5862937",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840987,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **아키텍처 및 계층 분리**: 백엔드와 워커 모두에 `regimelink` / `regime_link` 도메인 패키지 구조와 모듈 자리를 명확히 잡았으며, 각 패키지의 책임과 제약 사항을 `package-info.java`와 모듈 docstring에 충실히 문서화했습니다.\n- **철저한 문서화와 계약 정의**: API 스펙과 메시징 계약에 대한 JSON 예시 파일(`docs/specs/regime-link-api/examples/`)을 세분화하여 추가함으로써, 백엔드와 프론트엔드/워커 간의 인터페이스 계약을 코드가 구현되기 전에 명확히 고정했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (이번 변경은 골격(Skeleton)과 REST 계약 예시 및 패키지 구조 추가에 한정되어 있으며, 실제 로직 코드가 포함되지 않아 실행 가능한 버그나 보안 취약점은 존재하지 않습니다.)\n\n### 테스트 제안\n- 본 PR은 골격 추가 단계이므로 별도의 기능 테스트는 불필요하나, 향후 기능 구현 시 다음 시나리오에 대한 테스트 코드가 작성되어야 합니다:\n  1. **가용성 조회 테스트**: 익명 사용자가 `GET /regime-links/availability`를 호출했을 때 010 후보 목록과 판정 결과(`NORMAL`, `DATA_INSUFFICIENT`, `POST_INCOMPLETE`, `OUT_OF_PERIOD`)가 올바르게 매핑되는지 검증\n  2. **인증 경계 테스트**: 계산 작업을 생성하는 `POST /regime-links` 요청 시, 인증된 요청자와 익명 요청자에 따라 각각 정상 처리 및 `401 AUTHENTICATION_REQUIRED` 응답이 반환되는지 검증\n  3. **워커 메시지 계약 검증**: `regime-link.job` 메시지 수신 시 `schemaVersion` 불일치나 필수 필드 누락(`extra=\"forbid\"`) 발생 시 의도대로 Reject 및 DLQ 처리로 이어지는지 검증\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:2f02aed19ed3aebbd5fcaad541b2a137badd62b3 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T14:27:39.800+09:00",
+          "updated_at": "2026-09-20T16:40:30.637+09:00",
+          "system": false,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ea3c6dec223a123111b9a091af2f14b4153f7249",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841348,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>55627fe3 - docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/247/diffs?diff_id=2227192&start_sha=c83e5553b9f4b6c978dff265da7e90f55d9e64eb)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:29:12.207+09:00",
+          "updated_at": "2026-09-20T16:29:12.217+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "30752c95f45829277d1266dc06437ec641d83a30",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841387,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:36:01.788+09:00",
+          "updated_at": "2026-09-20T16:36:01.792+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6c77546f117de545c4c800a5cbb9d8611e1916e7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841396,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>8e74525a - docs(be): 사례 연결 계약 §3 예시의 손익 기여에 빠진 섹터를 채움</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/247/diffs?diff_id=2227221&start_sha=55627fe32264d9440d9e4f2d6c3fbb2dcd039b55)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:38:43.976+09:00",
+          "updated_at": "2026-09-20T16:38:43.980+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fb26a8663526b14c7fb4faef6e2d61e5e8f25bd4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841407,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>2f02aed1 - docs(be): 메시징 계약 예시를 같은 문서의 규칙과 맞춤</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/247/diffs?diff_id=2227231&start_sha=8e74525a55a563db5ef3c4ecbabd615dfcee10af)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:40:25.156+09:00",
+          "updated_at": "2026-09-20T16:40:25.160+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "336b50a170d972f37be4978ad2209283e4d554f3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2841410,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T16:41:05.315+09:00",
+          "updated_at": "2026-09-20T16:41:05.319+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "55d077dd477d430fdf67193d93215d3f78d8b169",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842514,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:28:51.879+09:00",
+          "updated_at": "2026-09-20T22:28:51.879+09:00",
+          "system": false,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "98586c8b15bc71a43fc95d228024fc5ab52674a5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842516,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:29:21.537+09:00",
+          "updated_at": "2026-09-20T22:29:21.540+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b55bf0021f8dc3b877b8ce18b55c4deed4750000",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842518,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 2f02aed19ed3aebbd5fcaad541b2a137badd62b3 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:29:30.256+09:00",
+          "updated_at": "2026-09-20T22:29:30.260+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a429ca3fd6e064cdf00ecf6d05d7682db7502b1d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842544,
+          "type": null,
+          "body": "mentioned in commit aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T22:37:35.606+09:00",
+          "updated_at": "2026-09-20T22:37:35.615+09:00",
+          "system": true,
+          "noteable_id": 952832,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 247,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2227231,
+      "head_commit_sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:40:24.840+09:00",
+      "merge_request_id": 952832,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "b35d1b647e4226d2a9047caefba3c6a345a17353"
+    },
+    {
+      "id": 2227221,
+      "head_commit_sha": "8e74525a55a563db5ef3c4ecbabd615dfcee10af",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:38:43.706+09:00",
+      "merge_request_id": 952832,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "5abdb9d80dc4bd23749dc1cc2e0fa702931739bc"
+    },
+    {
+      "id": 2227192,
+      "head_commit_sha": "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:29:11.717+09:00",
+      "merge_request_id": 952832,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "d5a58cbd34659b7d27ac02ddd0d4b81b9588cbdd"
+    },
+    {
+      "id": 2226940,
+      "head_commit_sha": "c83e5553b9f4b6c978dff265da7e90f55d9e64eb",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T14:27:10.792+09:00",
+      "merge_request_id": 952832,
+      "state": "without_files",
+      "real_size": "19",
+      "patch_id_sha": "5df07d5545b7a989c0cae949d70b9ad222eed737"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2227231,
+      "head_commit_sha": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:40:24.840+09:00",
+      "merge_request_id": 952832,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "b35d1b647e4226d2a9047caefba3c6a345a17353",
+      "commits": [
+        {
+          "id": "2f02aed19ed3aebbd5fcaad541b2a137badd62b3",
+          "short_id": "2f02aed1",
+          "created_at": "2026-09-20T16:40:21.000+09:00",
+          "parent_ids": [
+            "8e74525a55a563db5ef3c4ecbabd615dfcee10af"
+          ],
+          "title": "docs(be): 메시징 계약 예시를 같은 문서의 규칙과 맞춤",
+          "message": "docs(be): 메시징 계약 예시를 같은 문서의 규칙과 맞춤\n\n예시가 자기 문서의 규칙과 어긋나 있어, 그대로 픽스처(T001)로 옮기면 값이 틀어진다.\n\n- `universe.items`가 `inputs.weightsSeries`의 종목 셋을 덮고, 상장 유지 종목의 `delistedOn`은\n  \"null은 키 생략\" 규칙대로 뺀다.\n- `FINISHED.result`의 손익 기여와 보유 비중이 같은 종목 셋을 쓴다. 전에는 손익 기여에만 BIO가\n  있었고 보유 비중에는 없었다.\n- 시계열·목록이 구간 전체를 담는다는 것과 예시가 한 행씩만 실린 축약본이라는 것을 적는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:40:21.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:40:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2f02aed19ed3aebbd5fcaad541b2a137badd62b3"
+        },
+        {
+          "id": "8e74525a55a563db5ef3c4ecbabd615dfcee10af",
+          "short_id": "8e74525a",
+          "created_at": "2026-09-20T16:38:40.000+09:00",
+          "parent_ids": [
+            "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55"
+          ],
+          "title": "docs(be): 사례 연결 계약 §3 예시의 손익 기여에 빠진 섹터를 채움",
+          "message": "docs(be): 사례 연결 계약 §3 예시의 손익 기여에 빠진 섹터를 채움\n\n`window63.lossContribution`이 보유 섹터 셋 중 둘만 담아, 같은 예시의 `holdings`·`window21`과\n바로 아래 적힌 규칙(\"이익 종목도 뺀 것 없이 들어간다\")에 어긋나 있었다. 값은 예시 파일과 맞춘다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:38:40.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:38:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8e74525a55a563db5ef3c4ecbabd615dfcee10af"
+        },
+        {
+          "id": "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55",
+          "short_id": "55627fe3",
+          "created_at": "2026-09-20T16:29:06.000+09:00",
+          "parent_ids": [
+            "c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+          ],
+          "title": "docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤",
+          "message": "docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤\n\nAI 코드리뷰에서 나온 두 건과 예시가 계약을 넓힌 문제를 함께 정리한다.\n\n- `trades`가 구간의 모든 거래(여섯 건)를 담고 거래별 비용 합이 구간 비용과 같아진다. 전에는\n  `tradeCount`가 6인데 두 건만 실려 있었다.\n- `window21.turnover`가 연환산 값이 된다. 전에는 `ANNUALIZED_252` 이름표를 단 채\n  `window63`의 정확히 1/3이라 환산이 빠진 값으로 읽혔다.\n- 예시만 정하고 있던 셋을 계약에 적는다 — `instruments[].delistedOn`, 시장 흐름 경로에서\n  `availableRange`가 없다는 것, 계산 작업이 없던 판정의 시각 필드.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:29:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:29:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/55627fe32264d9440d9e4f2d6c3fbb2dcd039b55"
+        },
+        {
+          "id": "c83e5553b9f4b6c978dff265da7e90f55d9e64eb",
+          "short_id": "c83e5553",
+          "created_at": "2026-09-20T14:26:20.000+09:00",
+          "parent_ids": [
+            "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+          ],
+          "title": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음",
+          "message": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음\n\nREADME가 \"손실이 없는 섹터는 키가 없다\"로 적었으나, research R3와 메시징 계약은 종목 구간 손익을\n전체 구간 손익으로 나눈 몫이라 이익 종목도 포함하고 합이 1이며 전체 손익이 0일 때만 생략한다고\n정한다. 설명과 예시 값을 그 정의로 맞춘다.\n\n- 예시의 `lossContribution`에 비교 묶음 종목 셋을 모두 담고 합을 1로, 반대로 움직인 종목을 음수 몫으로\n- tasks.md 머리말·Phase 의존 절에 남아 있던 옛 묶음 이름 M1을 M1a·M1b로\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:26:20.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:26:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+        },
+        {
+          "id": "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5",
+          "short_id": "3a03e85e",
+          "created_at": "2026-09-20T13:45:46.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가",
+          "message": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가\n\n가용성 판정 줄(M4)이 구간 입력 대조를 기다리지 않고 시작할 수 있도록 spec 011 M1을\n골격(M1a)과 메시지 계약(M1b)으로 나누고, 골격 쪽을 먼저 낸다.\n\n- 백엔드 `regimelink` 4계층 패키지와 계층별 package-info\n- 워커 `regime_link` 모듈 자리와 별도 엔트리포인트 자리. 백테스트 소비자는 건드리지 않는다\n- `docs/specs/regime-link-api/` 계약 요약과 응답 예시 여섯\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T13:45:46.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T13:45:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+/**\n+ * 경제환경 사례와 전략 비교 연결의 유스케이스 계층. 사례별 가용성 판정, 잘라내기 작업 조립·발행, 워커 이벤트 반영, 검색 기록과 트랜잭션 경계를 담당하고, 저장소와 외부\n+ * 도메인은 이 계층의 인터페이스로만 참조한다.\n+ *\n+ * <p>이 계층은 시계열 산술을 하지 않는다 — 잘라낼 범위만 정해 메시지에 담고 구간 요약은 워커가 계산한다(plan Constraints, research R1·R2).\n+ *\n+ * <p>010 경제환경 검색·004 백테스트·005 공개 열람의 도메인 코드는 고치지 않고 {@code repository}·{@code port} 인터페이스로 읽기만\n+ * 한다(plan 교차 의존).\n+ *\n+ * <p>사례 목록은 010 표시 후보(≤10) 안에서만 다루고 순위를 다시 매기거나 아래 순위에서 채우지 않는다(spec FR-004·FR-017).\n+ *\n+ * <p>근거: specs/011-regime-strategy-link/plan.md, research.md.\n+ */\n+package com.ssafy.thorp.regimelink.application;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/package-info.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/application/package-info.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+/**\n+ * 경제환경 사례와 전략 비교 연결의 순수 도메인 계층. 링크·검색 식별자, 사례 참조 {@code (snapshotKey, endMonth)}, 사후 구간, 가용성 판정,\n+ * 시나리오와 링크 상태의 모델과 불변식을 둔다. Spring·JPA·Jackson에 의존하지 않는다.\n+ *\n+ * <p>사례 식별자는 {@code snapshotKey}와 {@code endMonth}를 {@code ~}로 이은 한 값이고 011은 {@code snapshotKey}를\n+ * 분해하지 않는다(research R6).\n+ *\n+ * <p>유지율·초과 수익·승패·연율화 수익률에 해당하는 필드는 어떤 모델에도 두지 않는다(spec FR-013·FR-021, 계약 §6).\n+ *\n+ * <p>근거: specs/011-regime-strategy-link/data-model.md, plan.md.\n+ */\n+package com.ssafy.thorp.regimelink.domain;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/domain/package-info.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/domain/package-info.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+/**\n+ * 경제환경 사례와 전략 비교 연결의 기술 구현 계층. {@code application} 인터페이스의 구현으로 영속화·브로커 메시징·주기 작업·설정을 둔다.\n+ *\n+ * <p>{@code regime-link} exchange와 큐의 토폴로지 선언은 백엔드 책임이다. 워커는 선언하지 않고 큐가 없으면 종료하므로 이 계층의 {@code\n+ * Declarables}가 유일한 선언 자리다(계약 regime-link-messaging §2).\n+ *\n+ * <p>큐·exchange·routing key와 {@code schemaVersion}은 설정이 아니라 계약 상수로 두어 워커 {@code\n+ * worker.regime_link.messaging}과 같은 값을 유지한다.\n+ *\n+ * <p>근거: specs/011-regime-strategy-link/contracts/regime-link-messaging.md, plan.md.\n+ */\n+package com.ssafy.thorp.regimelink.infrastructure;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/infrastructure/package-info.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/infrastructure/package-info.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+/**\n+ * 경제환경 사례와 전략 비교 연결의 HTTP 입출력 계층. 가용성 조회·사례 구간 조회·검색 기록 생성·링크 생성·링크 조회·재시도 응답을 담당한다.\n+ *\n+ * <p>공개 토큰으로 여는 {@code GET}은 익명이 호출할 수 있고, 계산을 만드는 {@code POST}는 요청자가 없으면 계산을 시작하지 않고 {@code 401\n+ * AUTHENTICATION_REQUIRED}다(spec FR-025, research R7).\n+ *\n+ * <p>응답 스키마에 내부 PK·요청자 식별자·유지율·전략과 지수의 차이 값을 두지 않는다(계약 regime-link-api.md §6).\n+ *\n+ * <p>계약은 specs/011-regime-strategy-link/contracts/regime-link-api.md이고 요약본은\n+ * docs/specs/regime-link-api/README.md다.\n+ */\n+package com.ssafy.thorp.regimelink.presentation;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/regimelink/presentation/package-info.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/regimelink/presentation/package-info.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,126 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"basis\": {\n+      \"kind\": \"HISTORICAL_REVISION\"\n+    },\n+    \"search\": {\n+      \"snapshotKey\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1\",\n+      \"mode\": \"field\",\n+      \"field\": \"LABOR\",\n+      \"baselineMonth\": \"2026-07\",\n+      \"status\": \"NEAREST_ONLY\"\n+    },\n+    \"bundle\": {\n+      \"runs\": [\n+        {\n+          \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+          \"role\": \"BASE\",\n+          \"strategyId\": \"FIXED_WEIGHT\",\n+          \"strategyName\": \"내가 정한 비중\",\n+          \"period\": {\n+            \"start\": \"2011-12-01\",\n+            \"end\": \"2012-12-28\",\n+            \"effectiveStart\": \"2012-03-02\"\n+          },\n+          \"warmupTradingDays\": 63\n+        }\n+      ],\n+      \"instruments\": [\n+        {\n+          \"sectorId\": \"SEMICONDUCTOR\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"listedOn\": \"2006-06-27\"\n+        },\n+        {\n+          \"sectorId\": \"BATTERY\",\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"listedOn\": \"2006-06-27\"\n+        }\n+      ]\n+    },\n+    \"filter\": {\n+      \"applied\": false,\n+      \"minPostTradingDays\": 21\n+    },\n+    \"cases\": [\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03\",\n+        \"endMonth\": \"2012-03\",\n+        \"rank\": 1,\n+        \"distance\": \"0.412938571034\",\n+        \"postWindow\": {\n+          \"d0\": \"2012-04-02\",\n+          \"d21\": \"2012-05-02\",\n+          \"d63\": \"2012-07-03\",\n+          \"completedTradingDays\": 63,\n+          \"complete21\": true,\n+          \"complete63\": true\n+        },\n+        \"availability\": {\n+          \"state\": \"NORMAL\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"NORMAL\",\n+            \"completedTradingDays\": 63\n+          }\n+        ],\n+        \"shownInFiltered\": true\n+      },\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2005-11\",\n+        \"endMonth\": \"2005-11\",\n+        \"rank\": 2,\n+        \"distance\": \"0.455192083761\",\n+        \"postWindow\": {\n+          \"d0\": \"2005-12-01\",\n+          \"d21\": \"2005-12-29\",\n+          \"d63\": \"2006-03-06\",\n+          \"completedTradingDays\": 63,\n+          \"complete21\": true,\n+          \"complete63\": true\n+        },\n+        \"availability\": {\n+          \"state\": \"DATA_INSUFFICIENT\",\n+          \"reason\": \"UNLISTED\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"DATA_INSUFFICIENT\",\n+            \"reason\": \"UNLISTED\",\n+            \"completedTradingDays\": 0\n+          }\n+        ],\n+        \"shownInFiltered\": true\n+      },\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2026-05\",\n+        \"endMonth\": \"2026-05\",\n+        \"rank\": 3,\n+        \"distance\": \"0.470336118942\",\n+        \"postWindow\": {\n+          \"d0\": \"2026-06-01\",\n+          \"d21\": \"2026-06-30\",\n+          \"d63\": null,\n+          \"completedTradingDays\": 34,\n+          \"complete21\": true,\n+          \"complete63\": false\n+        },\n+        \"availability\": {\n+          \"state\": \"OUT_OF_PERIOD\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"OUT_OF_PERIOD\",\n+            \"completedTradingDays\": 34\n+          }\n+        ],\n+        \"shownInFiltered\": true\n+      }\n+    ]\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/availability-market-flow.json",
+          "old_path": "docs/specs/regime-link-api/examples/availability-market-flow.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,235 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"basis\": {\n+      \"kind\": \"HISTORICAL_REVISION\"\n+    },\n+    \"search\": {\n+      \"snapshotKey\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1\",\n+      \"mode\": \"field\",\n+      \"field\": \"LABOR\",\n+      \"baselineMonth\": \"2026-07\",\n+      \"status\": \"NEAREST_ONLY\"\n+    },\n+    \"bundle\": {\n+      \"runs\": [\n+        {\n+          \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+          \"role\": \"BASE\",\n+          \"strategyId\": \"FIXED_WEIGHT\",\n+          \"strategyName\": \"내가 정한 비중\",\n+          \"period\": {\n+            \"start\": \"2010-01-04\",\n+            \"end\": \"2025-12-30\",\n+            \"effectiveStart\": \"2010-04-02\"\n+          },\n+          \"warmupTradingDays\": 63\n+        },\n+        {\n+          \"publicToken\": \"b41e7d0925c6438af10e5b2c96d47831\",\n+          \"role\": \"COMPARE\",\n+          \"strategyId\": \"INVERSE_VOLATILITY\",\n+          \"strategyName\": \"흐름을 따라 배분하기\",\n+          \"period\": {\n+            \"start\": \"2010-01-04\",\n+            \"end\": \"2025-12-30\",\n+            \"effectiveStart\": \"2010-04-02\"\n+          },\n+          \"warmupTradingDays\": 63\n+        }\n+      ],\n+      \"instruments\": [\n+        {\n+          \"sectorId\": \"SEMICONDUCTOR\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"listedOn\": \"2006-06-27\"\n+        },\n+        {\n+          \"sectorId\": \"BATTERY\",\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"listedOn\": \"2006-06-27\"\n+        },\n+        {\n+          \"sectorId\": \"BIO\",\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"listedOn\": \"2006-06-27\",\n+          \"delistedOn\": \"2018-11-15\"\n+        }\n+      ]\n+    },\n+    \"filter\": {\n+      \"applied\": true,\n+      \"filterKey\": \"3a9f18c2d0e64b7f5a83c1904e27db6035f8ac1e92b40d7368ca5f1e0b9d4277\",\n+      \"availableRange\": {\n+        \"firstCaseEndMonth\": \"2006-09\",\n+        \"lastCaseEndMonth\": \"2026-05\"\n+      },\n+      \"excludedCount\": 2,\n+      \"minPostTradingDays\": 21\n+    },\n+    \"cases\": [\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03\",\n+        \"endMonth\": \"2012-03\",\n+        \"rank\": 1,\n+        \"distance\": \"0.412938571034\",\n+        \"postWindow\": {\n+          \"d0\": \"2012-04-02\",\n+          \"d21\": \"2012-05-02\",\n+          \"d63\": \"2012-07-03\",\n+          \"completedTradingDays\": 63,\n+          \"complete21\": true,\n+          \"complete63\": true\n+        },\n+        \"availability\": {\n+          \"state\": \"NORMAL\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"NORMAL\",\n+            \"completedTradingDays\": 63\n+          },\n+          {\n+            \"publicToken\": \"b41e7d0925c6438af10e5b2c96d47831\",\n+            \"state\": \"NORMAL\",\n+            \"completedTradingDays\": 63\n+          }\n+        ],\n+        \"shownInFiltered\": true\n+      },\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2005-11\",\n+        \"endMonth\": \"2005-11\",\n+        \"rank\": 2,\n+        \"distance\": \"0.455192083761\",\n+        \"postWindow\": {\n+          \"d0\": \"2005-12-01\",\n+          \"d21\": \"2005-12-29\",\n+          \"d63\": \"2006-03-06\",\n+          \"completedTradingDays\": 63,\n+          \"complete21\": true,\n+          \"complete63\": true\n+        },\n+        \"availability\": {\n+          \"state\": \"DATA_INSUFFICIENT\",\n+          \"reason\": \"UNLISTED\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"DATA_INSUFFICIENT\",\n+            \"reason\": \"UNLISTED\",\n+            \"completedTradingDays\": 0\n+          },\n+          {\n+            \"publicToken\": \"b41e7d0925c6438af10e5b2c96d47831\",\n+            \"state\": \"DATA_INSUFFICIENT\",\n+            \"reason\": \"UNLISTED\",\n+            \"completedTradingDays\": 0\n+          }\n+        ],\n+        \"shownInFiltered\": false\n+      },\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2026-05\",\n+        \"endMonth\": \"2026-05\",\n+        \"rank\": 3,\n+        \"distance\": \"0.470336118942\",\n+        \"postWindow\": {\n+          \"d0\": \"2026-06-01\",\n+          \"d21\": \"2026-06-30\",\n+          \"d63\": null,\n+          \"completedTradingDays\": 34,\n+          \"complete21\": true,\n+          \"complete63\": false\n+        },\n+        \"availability\": {\n+          \"state\": \"OUT_OF_PERIOD\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"OUT_OF_PERIOD\",\n+            \"completedTradingDays\": 34\n+          },\n+          {\n+            \"publicToken\": \"b41e7d0925c6438af10e5b2c96d47831\",\n+            \"state\": \"OUT_OF_PERIOD\",\n+            \"completedTradingDays\": 34\n+          }\n+        ],\n+        \"shownInFiltered\": true\n+      },\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2018-08\",\n+        \"endMonth\": \"2018-08\",\n+        \"rank\": 4,\n+        \"distance\": \"0.488204517630\",\n+        \"postWindow\": {\n+          \"d0\": \"2018-09-03\",\n+          \"d21\": \"2018-10-02\",\n+          \"d63\": \"2018-12-03\",\n+          \"completedTradingDays\": 63,\n+          \"complete21\": true,\n+          \"complete63\": true\n+        },\n+        \"availability\": {\n+          \"state\": \"NORMAL\",\n+          \"partial\": true,\n+          \"delistedOn\": \"2018-11-15\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"NORMAL\",\n+            \"partial\": true,\n+            \"delistedOn\": \"2018-11-15\",\n+            \"completedTradingDays\": 49\n+          },\n+          {\n+            \"publicToken\": \"b41e7d0925c6438af10e5b2c96d47831\",\n+            \"state\": \"NORMAL\",\n+            \"partial\": true,\n+            \"delistedOn\": \"2018-11-15\",\n+            \"completedTradingDays\": 49\n+          }\n+        ],\n+        \"shownInFiltered\": true\n+      },\n+      {\n+        \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2026-06\",\n+        \"endMonth\": \"2026-06\",\n+        \"rank\": 5,\n+        \"distance\": \"0.501847226094\",\n+        \"postWindow\": {\n+          \"d0\": \"2026-07-01\",\n+          \"d21\": null,\n+          \"d63\": null,\n+          \"completedTradingDays\": 14,\n+          \"complete21\": false,\n+          \"complete63\": false\n+        },\n+        \"availability\": {\n+          \"state\": \"POST_INCOMPLETE\",\n+          \"reason\": \"RECENT\"\n+        },\n+        \"perRun\": [\n+          {\n+            \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+            \"state\": \"POST_INCOMPLETE\",\n+            \"reason\": \"RECENT\",\n+            \"completedTradingDays\": 14\n+          },\n+          {\n+            \"publicToken\": \"b41e7d0925c6438af10e5b2c96d47831\",\n+            \"state\": \"POST_INCOMPLETE\",\n+            \"reason\": \"RECENT\",\n+            \"completedTradingDays\": 14\n+          }\n+        ],\n+        \"shownInFiltered\": false\n+      }\n+    ]\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/availability-strategy-result.json",
+          "old_path": "docs/specs/regime-link-api/examples/availability-strategy-result.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,22 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"basis\": {\n+      \"kind\": \"HISTORICAL_REVISION\"\n+    },\n+    \"outcome\": \"OUT_OF_PERIOD_CONFIRM_REQUIRED\",\n+    \"requiredRange\": {\n+      \"start\": \"2006-10-02\",\n+      \"end\": \"2025-12-30\"\n+    },\n+    \"affected\": [\n+      {\n+        \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+        \"period\": {\n+          \"start\": \"2022-01-03\",\n+          \"end\": \"2025-12-30\"\n+        }\n+      }\n+    ]\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/create-confirm-required.json",
+          "old_path": "docs/specs/regime-link-api/examples/create-confirm-required.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,168 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"basis\": {\n+      \"kind\": \"HISTORICAL_REVISION\",\n+      \"dataVersion\": \"KRX-2026-07-20\"\n+    },\n+    \"linkId\": \"RL-20260918-000101\",\n+    \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+    \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03\",\n+    \"scenario\": \"CONTINUOUS\",\n+    \"status\": \"COMPLETED\",\n+    \"postWindow\": {\n+      \"d0\": \"2012-04-02\",\n+      \"d21\": \"2012-05-02\",\n+      \"d63\": \"2012-07-03\",\n+      \"completedTradingDays\": 63,\n+      \"complete21\": true,\n+      \"complete63\": true\n+    },\n+    \"availability\": {\n+      \"state\": \"NORMAL\"\n+    },\n+    \"runProgress\": null,\n+    \"failure\": null,\n+    \"queuedAt\": \"2026-09-18T02:14:07Z\",\n+    \"startedAt\": \"2026-09-18T02:14:09Z\",\n+    \"finishedAt\": \"2026-09-18T02:14:11Z\",\n+    \"result\": {\n+      \"window63\": {\n+        \"tradingDays\": 63,\n+        \"return\": \"0.0421\",\n+        \"maxDrawdown\": \"-0.0587\",\n+        \"tradeCount\": 6,\n+        \"tradesPerMonth\": \"2.00\",\n+        \"turnover\": \"0.3125\",\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {\n+          \"commission\": \"1830.00\",\n+          \"spread\": \"2440.00\",\n+          \"slippage\": \"1523.00\",\n+          \"tax\": \"3120.00\",\n+          \"total\": \"8913.00\"\n+        },\n+        \"lossContribution\": {\n+          \"SEMICONDUCTOR\": \"1.20000000\",\n+          \"BATTERY\": \"0.32000000\",\n+          \"BIO\": \"-0.52000000\"\n+        },\n+        \"complete\": true\n+      },\n+      \"window21\": {\n+        \"tradingDays\": 21,\n+        \"return\": \"0.0110\",\n+        \"maxDrawdown\": \"-0.0210\",\n+        \"tradeCount\": 2,\n+        \"tradesPerMonth\": \"2.00\",\n+        \"turnover\": \"0.4211\",\n+        \"turnoverBasis\": \"ANNUALIZED_252\",\n+        \"costs\": {\n+          \"commission\": \"610.00\",\n+          \"spread\": \"813.00\",\n+          \"slippage\": \"507.00\",\n+          \"tax\": \"1040.00\",\n+          \"total\": \"2970.00\"\n+        },\n+        \"lossContribution\": {\n+          \"SEMICONDUCTOR\": \"0.84000000\",\n+          \"BATTERY\": \"0.38000000\",\n+          \"BIO\": \"-0.22000000\"\n+        },\n+        \"complete\": true\n+      },\n+      \"holdings\": [\n+        {\n+          \"date\": \"2012-04-02\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.3980\",\n+            \"305720.XKRX\": \"0.3010\",\n+            \"244580.XKRX\": \"0.3010\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-05-02\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.4012\",\n+            \"305720.XKRX\": \"0.2994\",\n+            \"244580.XKRX\": \"0.2994\"\n+          }\n+        },\n+        {\n+          \"date\": \"2012-07-03\",\n+          \"actual\": {\n+            \"091160.XKRX\": \"0.4034\",\n+            \"305720.XKRX\": \"0.2981\",\n+            \"244580.XKRX\": \"0.2985\"\n+          }\n+        }\n+      ],\n+      \"trades\": [\n+        {\n+          \"date\": \"2012-05-02\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 120,\n+          \"price\": \"23150\",\n+          \"cost\": \"1720.00\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-05-02\",\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 90,\n+          \"price\": \"30480\",\n+          \"cost\": \"1250.00\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-06-01\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 80,\n+          \"price\": \"22980\",\n+          \"cost\": \"1580.00\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-06-01\",\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 60,\n+          \"price\": \"30210\",\n+          \"cost\": \"1490.00\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-07-02\",\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"side\": \"SELL\",\n+          \"quantity\": 50,\n+          \"price\": \"31040\",\n+          \"cost\": \"1503.00\",\n+          \"reason\": \"REBALANCE\"\n+        },\n+        {\n+          \"date\": \"2012-07-02\",\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"side\": \"BUY\",\n+          \"quantity\": 70,\n+          \"price\": \"22410\",\n+          \"cost\": \"1370.00\",\n+          \"reason\": \"REBALANCE\"\n+        }\n+      ],\n+      \"kospi\": {\n+        \"window63\": {\n+          \"return\": \"0.0180\",\n+          \"maxDrawdown\": \"-0.0420\"\n+        },\n+        \"window21\": {\n+          \"return\": \"0.0050\",\n+          \"maxDrawdown\": \"-0.0150\"\n+        }\n+      }\n+    }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/link-completed.json",
+          "old_path": "docs/specs/regime-link-api/examples/link-completed.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"basis\": {\n+      \"kind\": \"HISTORICAL_REVISION\",\n+      \"dataVersion\": \"KRX-2026-07-20\"\n+    },\n+    \"linkId\": \"RL-20260918-000107\",\n+    \"publicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+    \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2005-11\",\n+    \"scenario\": \"CONTINUOUS\",\n+    \"status\": \"COMPLETED\",\n+    \"postWindow\": {\n+      \"d0\": \"2005-12-01\",\n+      \"d21\": \"2005-12-29\",\n+      \"d63\": \"2006-03-06\",\n+      \"completedTradingDays\": 63,\n+      \"complete21\": true,\n+      \"complete63\": true\n+    },\n+    \"availability\": {\n+      \"state\": \"DATA_INSUFFICIENT\",\n+      \"reason\": \"UNLISTED\"\n+    },\n+    \"runProgress\": null,\n+    \"failure\": null,\n+    \"queuedAt\": null,\n+    \"startedAt\": null,\n+    \"finishedAt\": \"2026-09-18T02:14:07Z\",\n+    \"result\": null\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/link-data-insufficient.json",
+          "old_path": "docs/specs/regime-link-api/examples/link-data-insufficient.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"basis\": {\n+      \"kind\": \"HISTORICAL_REVISION\",\n+      \"dataVersion\": \"KRX-2026-07-20\"\n+    },\n+    \"linkId\": \"RL-20260918-000103\",\n+    \"publicToken\": \"c07d5b8e1a934627fd20a8c341eb9750\",\n+    \"originPublicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n+    \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03\",\n+    \"scenario\": \"FRESH_CASH\",\n+    \"status\": \"PENDING_RUN\",\n+    \"postWindow\": {\n+      \"d0\": \"2012-04-02\",\n+      \"d21\": \"2012-05-02\",\n+      \"d63\": \"2012-07-03\",\n+      \"completedTradingDays\": 63,\n+      \"complete21\": true,\n+      \"complete63\": true\n+    },\n+    \"availability\": {\n+      \"state\": \"NORMAL\"\n+    },\n+    \"runProgress\": {\n+      \"status\": \"RUNNING\",\n+      \"progress\": {\n+        \"stage\": \"COMPUTING\",\n+        \"lastTradingDate\": \"2012-05-18\",\n+        \"completedTradingDays\": 94,\n+        \"totalTradingDays\": 126\n+      },\n+      \"queueWaitSeconds\": 4\n+    },\n+    \"failure\": null,\n+    \"queuedAt\": null,\n+    \"startedAt\": null,\n+    \"finishedAt\": null,\n+    \"result\": null\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/link-pending-run.json",
+          "old_path": "docs/specs/regime-link-api/examples/link-pending-run.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,137 @@\n+# 사례 연결 HTTP 계약 (Backend ↔ Frontend)\n+\n+spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은\n+[`specs/011-regime-strategy-link/contracts/regime-link-api.md`](../../../specs/011-regime-strategy-link/contracts/regime-link-api.md)이고,\n+둘이 어긋나면 원본을 따르고 이 문서를 고친다. 진입 주소와 화면 사이 인계는\n+[`contracts/entry-handoff.md`](../../../specs/011-regime-strategy-link/contracts/entry-handoff.md),\n+백엔드와 워커가 주고받는 메시지 계약은 `../regime-link-messaging/`에 따로 둔다(spec 011 묶음 M1b에서 추가한다).\n+\n+예시 파일이 계약의 기준이다. 백엔드 통합 테스트가 실제 응답과 필드 단위로 대조하고, 프론트엔드 사례\n+연결 화면 테스트가 같은 파일을 픽스처로 읽는다. 한 곳만 예외인데, `link-completed.json`의 `holdings`는\n+63거래일 전부가 아니라 앞·중간·끝 세 행으로 줄여 실었다. `trades`는 줄이지 않았고 개수가\n+`window63.tradeCount`와 같다.\n+\n+| 파일 | 내용 |\n+|---|---|\n+| [`examples/availability-strategy-result.json`](examples/availability-strategy-result.json) | 진단 결과에서 들어온 가용성 조회. 필터가 걸리고 다섯 판정이 모두 나온다 |\n+| [`examples/availability-market-flow.json`](examples/availability-market-flow.json) | 시장 흐름에서 들어온 가용성 조회. 필터를 걸지 않고 판정만 붙는다 |\n+| [`examples/link-completed.json`](examples/link-completed.json) | 완료된 링크의 구간 요약 |\n+| [`examples/link-pending-run.json`](examples/link-pending-run.json) | 현금 시작으로 새 실행을 기다리는 링크. `runProgress`가 있다 |\n+| [`examples/link-data-insufficient.json`](examples/link-data-insufficient.json) | 자료가 없어 계산하지 않은 링크. 실패가 아니다 |\n+| [`examples/create-confirm-required.json`](examples/create-confirm-required.json) | 분석 기간이 사례를 덮지 않아 확인을 요구하는 응답 |\n+\n+사례 구간 조회(§1a)와 검색 기록 생성(§1b)의 예시는 그 경로를 구현하는 묶음에서 함께 추가한다.\n+\n+## 1. 공통 규칙\n+\n+- 외부 경로는 `/api/regime-links`이고 프록시가 `/api`를 뗀다. 응답 봉투는 `ApiResponse`(`success`·`data`·`error`)다.\n+- 소수는 전부 문자열이고, 날짜는 거래일 `YYYY-MM-DD`, 월은 `YYYY-MM`, 시각은 UTC ISO-8601이다.\n+- **사례 식별자** `caseId`는 `{snapshotKey}~{endMonth}`다. `snapshotKey`는 010의 여섯 조각 키이고 011은\n+  분해하지 않고 문자열로만 다룬다. 서버는 **마지막** `~`로 나눈다. 형식이 틀리면 `400 INVALID_INPUT`이다.\n+  경로 변수로 쓰지 않고 항상 질의 인자나 본문으로 보낸다.\n+- **검색 식별자가 둘이라 이름이 다르다.** 010의 `searchId`는 snapshot 키(= `snapshotKey`)이고, 011의\n+  `linkSearchId`(`RLS-…`)는 이 spec이 만드는 연결 기록이다.\n+- **비교 묶음**은 `base`(필수)와 `compare`(선택) 두 공개 토큰이다. 005와 같은 규칙(형식 → 존재 → 만료)으로\n+  풀고, 만료는 `410 RESULT_EXPIRED`, 없는 토큰은 `404`다.\n+- 모든 응답에 `basis: {kind: \"HISTORICAL_REVISION\"}`가 있다. 화면은 이 값을 읽어 \"최신 개정자료를 이용한\n+  역사 탐색\"을 표시한다.\n+- **로그인**: 공개 주소로 여는 `GET`은 익명이 호출할 수 있다. 계산이나 기록을 만드는 `POST`는 요청자가\n+  없으면 `401 AUTHENTICATION_REQUIRED`이고 계산은 시작되지 않는다.\n+- 링크를 돌려주는 `GET`은 그 링크가 붙은 분석의 공개 토큰을 함께 받는다. 토큰이 없으면 `400`, 만료면\n+  `410`, 토큰과 링크가 맞지 않으면 `404`다. 응답에는 제시된 토큰 외의 토큰을 싣지 않는다.\n+\n+## 2. 경로\n+\n+| 경로 | 로그인 | 하는 일 |\n+|---|---|---|\n+| `GET /regime-links/availability` | 익명 가능 | 010 표시 후보에 비교 묶음의 가용성 판정을 붙인다 |\n+| `GET /regime-links/case-window?caseId=` | 익명 가능 | 실행 없이 사례의 사후 구간 날짜만 돌려준다. 003 기간 제약이 쓴다 |\n+| `POST /regime-link-searches` | 필요 | 사용자가 본 목록을 확정해 기록하고 변경을 알린다 |\n+| `POST /regime-links` | 필요 | 사례의 전략 결과를 연다. 계산 작업을 만든다 |\n+| `GET /regime-links/{linkId}?token=` | 익명 가능 | 링크 하나의 상태와 구간 요약 |\n+| `GET /regime-links?base=&compare=&caseId=` | 익명 가능 | 사례 하나에 붙은 링크 묶음을 기준 → 비교 대상 순서로 |\n+| `POST /regime-links/{linkId}/retry` | 필요 | 실패한 링크를 다시 시도한다 |\n+\n+## 3. 가용성 판정 — `GET /regime-links/availability`\n+\n+`cases[]`는 **010 표시 후보(≤10) 전부**를 010 순위 그대로 담는다. 필터로 빠진 사례도 담되\n+`shownInFiltered=false`다. 아래 순위에서 채우지 않으므로 응답에 010 표시 후보 밖의 사례는 없다.\n+\n+| 상태 | 뜻 | 사유 | 기본 목록 |\n+|---|---|---|---|\n+| `NORMAL` | 계산할 수 있다 | — | 보인다 |\n+| `DATA_INSUFFICIENT` | 계산 작업을 만들지 않는다 | `UNLISTED`·`WARMUP_SHORT`·`SECTOR_UNMAPPED` | 빠진다 |\n+| `POST_INCOMPLETE` | 확보 거래일이 21 미만이다 | `RECENT`·`DELISTED` | 빠진다 |\n+| `OUT_OF_PERIOD` | 분석 기간이 사례 구간을 덮지 않는다 | — | **보인다** |\n+\n+- `availability`는 비교 묶음 전체의 판정(가장 나쁜 실행)이고 `perRun[]`이 실행별이다. 우선순위는\n+  `DATA_INSUFFICIENT` > `POST_INCOMPLETE` > `OUT_OF_PERIOD` > `NORMAL`이다.\n+- `OUT_OF_PERIOD`는 **필터 조건이 아니다.** `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다.\n+- `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이고, 화면이 `UNLISTED`·\n+  `DELISTED` 사유를 설명할 근거다. `delistedOn`은 폐지된 종목에만 있다. 사례별 `availability.delistedOn`은\n+  그 사례의 사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.\n+- `postWindow`는 시장 달력 기준이라 미완성이면 `d21`·`d63`이 `null`이고 `completedTradingDays`가 진짜\n+  길이다. 실행별로 실제 확보한 거래일 수는 `perRun[].completedTradingDays`이며, 구간 안 상장폐지면\n+  폐지 전날까지로 줄어든다. 21거래일 이상이고 구간 안 폐지면 `state=NORMAL`·`partial=true`·`delistedOn`이다.\n+- `entryPath=MARKET_FLOW`면 필터를 계산하지 않는다. `filter.applied=false`이고 `filterKey`·\n+  `availableRange`·`excludedCount`가 없으며 모든 사례가 `shownInFiltered=true`다. 판정은 그대로 붙어\n+  결과 자리에 '자료 부족'을 보이게 한다.\n+- 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(`200`). 필터 후 0건도 `200`이다.\n+\n+## 4. 링크 상태 — `GET /regime-links/{linkId}?token=`\n+\n+| `status` | `result` | 함께 있는 것 |\n+|---|---|---|\n+| `PENDING_RUN` | 없다 | `runProgress`에 004의 `status`·`progress`·`queueWaitSeconds`를 그대로 싣는다 |\n+| `QUEUED`·`RUNNING` | 없다 | `queuedAt`·`startedAt` |\n+| `COMPLETED` | 있다 | `finishedAt` |\n+| `FAILED` | 없다 | `failure: {code, message, retryable}` |\n+\n+- `availability.state`가 `DATA_INSUFFICIENT`·`POST_INCOMPLETE`면 `status=COMPLETED`이고 `result`가\n+  `null`이다. **실패와 구분한다** — 화면은 '자료 부족'으로 보이고 '다시 시도'를 두지 않는다. 계산 작업을\n+  만들지 않았으므로 `queuedAt`·`startedAt`이 없고 판정 시각만 `finishedAt`에 남는다.\n+- `retryable=false`면 '다시 시도'를 두지 않는다. `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이\n+  `attempt ≥ 2`에서 다시 나오면 `retryable=false`다.\n+- `lossContribution`은 **종목 구간 손익 ÷ 전체 구간 손익**을 섹터별로 합산한 몫이고 합이 1이다.\n+  이름이 '손실'이지만 **이익 종목도 뺀 것 없이 들어간다** — 전체 손익과 반대로 움직인 섹터가 음수\n+  몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략한다.\n+- `turnover`는 값만으로 뜻이 정해지지 않으므로 `turnoverBasis`(`ANNUALIZED_252`)를 함께 싣는다.\n+  **두 구간 모두 연환산한 값이라** 구간이 짧다고 작아지지 않고, `window21`과 `window63`을 같은 단위로\n+  나란히 놓을 수 있다. 수익률과 최대 하락 폭은 연환산하지 않는다.\n+- `holdings`는 구간의 모든 거래일을, `trades`는 구간의 모든 거래를 담는다. 화면이 보유 비중 시계열과\n+  거래 목록을 그리려면 둘 다 빠짐없이 있어야 한다.\n+- `tradesPerMonth`는 `tradeCount ÷ (tradingDays ÷ 21)`을 소수 둘째 자리로 맞춘 값이다.\n+- `scenario=FRESH_CASH`의 결과는 시작 금액 기준이고 `originPublicToken`으로 기준 실행을 가리킨다.\n+\n+## 5. 사례 열기 — `POST /regime-links`\n+\n+- 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만들고, 이 검색이 그 계산을 열었다는 이용\n+  기록을 남긴다. 링크 행은 여러 사용자가 공유하므로 이미 `COMPLETED`면 작업을 만들지 않고 즉시\n+  결과를 돌려준다.\n+- 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는데 `confirmFullPeriod=false`면 **계산을 만들지 않고**\n+  `200 OUT_OF_PERIOD_CONFIRM_REQUIRED`를 돌려준다. 확인하면 `confirmFullPeriod=true`로 다시 보내고,\n+  서버가 004에 전체 기간 실행을 **요청한 사용자 본인의 분석 요청으로** 접수하며 링크는 `PENDING_RUN`이다.\n+- `scenario=FRESH_CASH`도 004 접수를 거친다. 사용자가 토글을 켤 때만 만들어진다.\n+\n+## 6. 오류\n+\n+| code | HTTP | 뜻 |\n+|---|---|---|\n+| `AUTHENTICATION_REQUIRED` | 401 | 익명 쓰기 요청. 행도 메시지도 만들지 않는다 |\n+| `INVALID_INPUT` | 400 | 토큰 형식·`caseId` 형식·알 수 없는 `scenario`·비교 묶음 조건 불일치 |\n+| `RESOURCE_NOT_FOUND` | 404 | 010 표시 후보에 없는 사례, 다른 사용자의 검색 기록, 링크와 맞지 않는 토큰 |\n+| `RESULT_EXPIRED` | 410 | 비로그인 결과 토큰 만료(005 코드 재사용) |\n+| `RESULT_NOT_READY` | 409 | 기준·비교 실행이 아직 `COMPLETED`가 아니다 |\n+| `NOT_RETRYABLE` | 409 | 재시도할 수 없는 링크에 재시도를 요청했다 |\n+| `EXECUTION_LIMIT` | 429 | 004 대기열 상한. 본문 `retryAfterSeconds`를 그대로 전달한다 |\n+\n+## 7. 내보내지 않는 것\n+\n+| 값 | 왜 |\n+|---|---|\n+| 유지율(`retention`) | 기록 전용이다. 응답에 넣으면 신뢰도처럼 읽힌다 |\n+| 전략과 지수의 차이, 초과 수익, 승패 | 타입에 필드를 두지 않아 화면이 만들 수 없게 한다 |\n+| 사후 성과순 정렬 키·점수 | 비교 묶음은 005 순서 그대로이고 순위는 010 것만 쓴다 |\n+| 연율화 수익률 | 63거래일 값을 네 배로 늘리면 \"더 벌 수 있다\"로 읽힌다 |\n+| 내부 PK(실행·snapshot 식별자), 요청자 식별자 | 외부 식별자는 공개 토큰과 `RL-`·`RLS-` 뿐이다 |\n+| \"지금과 같은 여건\"·\"지금도 잘될\"·\"추천\" 문구 | 서버 고정 문구에도 두지 않는다 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/README.md",
+          "old_path": "docs/specs/regime-link-api/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,7 +51,8 @@\n       {\"publicToken\": \"b41e…\", \"role\": \"COMPARE\", \"strategyId\": \"INVERSE_VOLATILITY\", \"strategyName\": \"흐름을 따라 배분하기\",\n        \"period\": {\"start\": \"2010-01-04\", \"end\": \"2025-12-30\", \"effectiveStart\": \"2010-04-02\"}, \"warmupTradingDays\": 63}\n     ],\n-    \"instruments\": [{\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\", \"listedOn\": \"2006-06-27\"}]\n+    \"instruments\": [{\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\", \"listedOn\": \"2006-06-27\"},\n+                    {\"sectorId\": \"BIO\", \"instrumentId\": \"244580.XKRX\", \"listedOn\": \"2006-06-27\", \"delistedOn\": \"2018-11-15\"}]\n   },\n   \"filter\": {\n     \"applied\": true,\n@@ -91,10 +92,14 @@\n   실행별 실제 확보 거래일 수는 `perRun[].completedTradingDays`다 — 구간 안 상장폐지면 폐지 전날까지로 줄고\n   `reason`이 `DELISTED`(최근 사례는 `RECENT`)다. 21 이상이고 구간 안 폐지면 `state=NORMAL`·`partial=true`·\n   `delistedOn`이다. 기준월이 자료 마감월보다 과거면 완성 판정 기준일은 그 기준월의 마지막 거래일이다(research R4).\n+- `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이자 화면이 사유를 설명할 근거다.\n+  `delistedOn`은 폐지된 종목에만 있다(키 생략 = 상장 유지). 사례별 `availability.delistedOn`은 그 사례의\n+  사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.\n - 사유 값: `DATA_INSUFFICIENT` → `UNLISTED`\\|`WARMUP_SHORT`\\|`SECTOR_UNMAPPED`, `POST_INCOMPLETE` →\n   `RECENT`\\|`DELISTED`. 이 둘은 계산 작업을 만들지 않는 판정이며 '다시 시도'가 없다(research R13).\n-- `entryPath=MARKET_FLOW`면 `filter.applied=false`, `filterKey`·`excludedCount` 없음, 모든 사례가\n-  `shownInFiltered=true`. 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.\n+- `entryPath=MARKET_FLOW`면 필터를 계산하지 않으므로 `filter.applied=false`이고 `filterKey`·\n+  `availableRange`·`excludedCount`가 **없다**(`minPostTradingDays`만 남는다). 모든 사례가\n+  `shownInFiltered=true`이며, 판정(`availability`)은 그대로 붙어 결과 자리에 '자료 부족'을 보이게 한다.\n - 010 검색이 `NOT_COMPUTABLE`이면 `cases: []`와 `search.status`를 그대로 내보낸다(200). 빈 공통 가용\n   범위도 200이다(FR-019).\n \n@@ -196,9 +201,9 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 \n   \"result\": {\n     \"window63\": {\"tradingDays\": 63, \"return\": \"0.0421\", \"maxDrawdown\": \"-0.0587\", \"tradeCount\": 6, \"tradesPerMonth\": \"2.00\",\n                  \"turnover\": \"0.3125\", \"turnoverBasis\": \"ANNUALIZED_252\", \"costs\": {\"commission\": \"0\", \"spread\": \"0\", \"slippage\": \"1523.00\", \"tax\": \"0\", \"total\": \"1523.00\"},\n-                 \"lossContribution\": {\"SEMICONDUCTOR\": \"1.20000000\", \"BIO\": \"-0.20000000\"}, \"complete\": true},\n+                 \"lossContribution\": {\"SEMICONDUCTOR\": \"1.20000000\", \"BATTERY\": \"0.32000000\", \"BIO\": \"-0.52000000\"}, \"complete\": true},\n     \"window21\": {\"tradingDays\": 21, \"return\": \"0.0110\", \"maxDrawdown\": \"-0.0210\", \"tradeCount\": 2, \"tradesPerMonth\": \"2.00\",\n-                 \"turnover\": \"0.1040\", \"turnoverBasis\": \"ANNUALIZED_252\", \"costs\": {\"…\": \"…\"}, \"lossContribution\": {\"SEMICONDUCTOR\": \"1.00000000\"}, \"complete\": true},\n+                 \"turnover\": \"0.4211\", \"turnoverBasis\": \"ANNUALIZED_252\", \"costs\": {\"…\": \"…\"}, \"lossContribution\": {\"SEMICONDUCTOR\": \"0.84000000\", \"BATTERY\": \"0.38000000\", \"BIO\": \"-0.22000000\"}, \"complete\": true},\n     \"holdings\": [{\"date\": \"2012-04-02\", \"actual\": {\"091160.XKRX\": \"0.3980\", \"305720.XKRX\": \"0.3010\", \"244580.XKRX\": \"0.3010\"}}],\n     \"trades\": [{\"date\": \"2012-05-02\", \"instrumentId\": \"091160.XKRX\", \"side\": \"SELL\", \"quantity\": 12, \"price\": \"23150\", \"cost\": \"254.00\", \"reason\": \"REBALANCE\"}],\n     \"kospi\": {\"window63\": {\"return\": \"0.0180\", \"maxDrawdown\": \"-0.0420\"}, \"window21\": {\"return\": \"0.0050\", \"maxDrawdown\": \"-0.0150\"}}\n@@ -211,6 +216,13 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 \n - `status=PENDING_RUN`이면 `runProgress`에 004 `GET /backtests/{id}`의 `status`·`progress`·\n   `queueWaitSeconds`를 그대로 싣는다(화면은 005 비교 대상과 같은 진행 표시).\n - `status=QUEUED|RUNNING`이면 `result=null`, `queuedAt`·`startedAt`.\n+- 계산 작업을 만들지 않은 판정(`DATA_INSUFFICIENT`·`POST_INCOMPLETE`)은 `status=COMPLETED`이지만 큐에\n+  들어간 적이 없으므로 `queuedAt`·`startedAt`이 `null`이고 판정 시각만 `finishedAt`에 있다.\n+- `turnover`는 두 구간 모두 `ANNUALIZED_252`로 환산한 값이다. 구간이 짧다고 값이 작아지지 않으므로\n+  `window21`과 `window63`을 같은 단위로 나란히 놓을 수 있다.\n+- `holdings`는 구간의 **모든 거래일**을, `trades`는 구간의 **모든 거래**를 담는다 — `trades`의 개수는\n+  `window63.tradeCount`와 같다. **위 예시는 지면 때문에 둘 다 한 행만 싣는다.** 전체 모양은\n+  `docs/specs/regime-link-api/examples/link-completed.json`을 본다(그 파일은 `trades`를 줄이지 않는다).\n - `status=FAILED`면 `failure: {code, message, retryable}`. 화면은 그 자리에 한 문장을 보이고 `retryable=true`일\n   때만 '다시 시도'를 둔다. `INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`이 `attempt ≥ 2`에서 다시 나오면\n   `retryable=false`다. 실패 문구는 사용자의 조건을 원인으로 말하지 않는다(research R13).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/contracts/regime-link-api.md",
+          "old_path": "specs/011-regime-strategy-link/contracts/regime-link-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,7 +32,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n   \"run\": {\"runId\": \"RUN-000123\", \"effectiveStart\": \"2010-04-02\", \"initialCash\": \"10000000.00\",\n           \"analyticsMethod\": \"ANALYTICS-1\"},\n   \"universe\": {\"mappingVersion\": \"SECTOR-ETF-2026-09\",\n-               \"items\": [{\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\", \"delistedOn\": null}]},\n+               \"items\": [{\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\"},\n+                         {\"sectorId\": \"BATTERY\", \"instrumentId\": \"305720.XKRX\"},\n+                         {\"sectorId\": \"BIO\", \"instrumentId\": \"244580.XKRX\"}]},\n   \"marketData\": {\"datasetId\": \"KRX_DAILY_20260915\", \"dataVersion\": \"KRX-2026-09-09\",\n                  \"benchmarkInstrumentId\": \"KOSPI\"},\n   \"inputs\": {\n@@ -77,9 +79,9 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n {\n   \"window63\": {\"tradingDays\": 63, \"return\": \"0.0421\", \"maxDrawdown\": \"-0.0587\", \"tradeCount\": 6, \"tradesPerMonth\": \"2.00\",\n                \"turnover\": \"0.3125\", \"turnoverBasis\": \"ANNUALIZED_252\", \"costs\": {\"commission\": \"0\", \"spread\": \"0\", \"slippage\": \"1523.00\", \"tax\": \"0\", \"total\": \"1523.00\"},\n-               \"lossContribution\": {\"SEMICONDUCTOR\": \"1.20000000\", \"BIO\": \"-0.20000000\"}, \"complete\": true},\n+               \"lossContribution\": {\"SEMICONDUCTOR\": \"1.20000000\", \"BATTERY\": \"0.32000000\", \"BIO\": \"-0.52000000\"}, \"complete\": true},\n   \"window21\": {\"…같은 모양…\": \"…\", \"complete\": true},\n-  \"holdings\": [{\"date\": \"2012-04-02\", \"actual\": {\"091160.XKRX\": \"0.3980\"}}],\n+  \"holdings\": [{\"date\": \"2012-04-02\", \"actual\": {\"091160.XKRX\": \"0.3980\", \"305720.XKRX\": \"0.3010\", \"244580.XKRX\": \"0.3010\"}}],\n   \"trades\": [{\"date\": \"2012-05-02\", \"instrumentId\": \"091160.XKRX\", \"side\": \"SELL\", \"quantity\": 12, \"price\": \"23150\", \"cost\": \"254.00\", \"reason\": \"REBALANCE\"}],\n   \"kospi\": {\"window63\": {\"return\": \"0.0180\", \"maxDrawdown\": \"-0.0420\"}, \"window21\": {\"return\": \"0.0050\", \"maxDrawdown\": \"-0.0150\"}},\n   \"basis\": {\"kind\": \"HISTORICAL_REVISION\", \"dataVersion\": \"KRX-2026-09-09\", \"datasetId\": \"KRX_DAILY_20260915\", \"analyticsMethod\": \"ANALYTICS-1\"},\n@@ -90,6 +92,10 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n - `window21`은 `d0`~`d21`, `window63`은 `d0`~`min(d63, lastAvailable)`. `tradingDays`가 실제 길이고\n   `complete`가 63(또는 21)을 다 채웠는지다. 수익률·낙폭은 연환산하지 않으며 회전율은 ANNUALIZED_252다.\n - `tradesPerMonth = tradeCount ÷ (tradingDays ÷ 21)`, 소수 둘째 자리.\n+- 시계열과 목록은 **구간 전체**를 담는다 — 작업의 `inputs.portfolioSeries`·`weightsSeries`는 `baselineDate`\n+  부터 `lastAvailable`까지 모든 거래일을, 결과의 `holdings`는 구간의 모든 거래일을, 양쪽 `trades`는 구간의\n+  모든 거래를 담는다(결과 `trades`의 개수 = `window63.tradeCount`). **위 예시는 지면 때문에 한 행씩만\n+  싣는다** — 픽스처를 만들 때 예시의 길이를 그대로 옮기지 않는다.\n - `turnover`·`lossContribution`은 research R3의 구간 전용 산식이다. 누적 손익 함수에 조각을 그대로 넣지 않는다. 회전율은 `turnoverBasis=ANNUALIZED_252`이며 수익률·최대 낙폭은 연환산하지 않는다. 전체 구간 손익이 0일 때만 `lossContribution`을 생략하고 이익 종목도 포함한다.\n - `kospi`는 `marketData.benchmarkInstrumentId`의 같은 날짜 종가로 두 값만. 전략과의 차이는 계산하지\n   않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/contracts/regime-link-messaging.md",
+          "old_path": "specs/011-regime-strategy-link/contracts/regime-link-messaging.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,7 @@\n 워커 수기 대조(S2)와 백엔드 판정(S4·S5)에 있다.\n \n **Organization**: Phase는 spec의 사용자 스토리(US1~US5) 순서다. 브랜치·MR·Jira Task 단위는 아래\n-**묶음 표(M1~M8)** 이며 스토리와 1:1이 아니다 — 011은 파트가 셋(BE·WK·FE)이라 같은 스토리 안에서도\n+**묶음 표(M1a~M8)** 이며 스토리와 1:1이 아니다 — 011은 파트가 셋(BE·WK·FE)이라 같은 스토리 안에서도\n 브랜치가 갈린다. 묶음마다 태스크 번호를 명시한다.\n \n ## Format: `[ID] [P?] [Story] (파트) Description`\n@@ -34,23 +34,25 @@\n ## 브랜치 묶음 — 이 표가 티켓·브랜치·MR 단위다\n \n **`T###`는 브랜치 단위가 아니다.** constitution \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로 정하므로\n-브랜치·MR·Jira Task 단위는 아래 **8개 묶음**이다.\n+브랜치·MR·Jira Task 단위는 아래 **9개 묶음**이다. M1은 골격(M1a)과 메시지 계약(M1b)으로 나눈다 —\n+가용성 판정 줄(M4)이 구간 입력 대조(T000)를 기다리지 않고 먼저 갈 수 있게 하려는 것이다.\n \n | 묶음 | 브랜치 | 파트 | Jira 제목(안) | 태스크 | 검증 명령 |\n |---|---|---|---|---|---|\n-| **M1** | `feat(be)/{티켓}-regime-link-contract` | DOCS·BE·WK | `[BE] 사례 연결 메시지 계약 v1과 양쪽 골격` | T000~T007 | `cd backend && ./gradlew spotlessApply build` · `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` |\n+| **M1a** | `feat(be)/{티켓}-regime-link-skeleton` | DOCS·BE·WK | `[BE] 사례 연결 백엔드·워커 골격과 REST 계약 예시` | T002~T004 | `cd backend && ./gradlew spotlessApply build` · `cd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest` |\n+| **M1b** | `feat(be)/{티켓}-regime-link-contract` | DOCS·BE·WK | `[BE] 사례 연결 메시지 계약 v1과 구간 입력 대조` | T000~T001, T005~T007 | 〃 |\n | **M2** | `feat(be)/{티켓}-regime-link-slicer` | WK | `[BE] 사후 구간 잘라내기·요약 계산` | T008~T015 | `cd worker && ruff check … && pytest` |\n | **M3** | `feat(be)/{티켓}-regime-link-consumer` | WK | `[BE] 사례 연결 워커 소비자와 엔트리포인트` | T016~T021 | 〃 |\n | **M4** | `feat(be)/{티켓}-regime-link-availability` | DB·BE | `[BE] 사례 연결 표와 가용성 판정 조회` | T022~T029, T034, T045, T050, T052, T090 | `cd backend && ./gradlew spotlessApply build` |\n-| **M5** | `feat(be)/{티켓}-regime-link-api` | BE | `[BE] 사례 연결 생성·시나리오·재계산 API` | T030~T033, T035~T036, T038~T040, T051, T058~T060, T067~T070, T075~T076, T080 | 〃 |\n+| **M5** | `feat(be)/{티켓}-regime-link-api` | BE | `[BE] 사례 연결 생성·시나리오·재계산 API` | T030~T033, T035~T036, T038~T040, T051, T058~T060, T067~T070, T075~T076, T080, T092(백엔드 몫), T093 | 〃 |\n | **M6** | `feat(fe)/{티켓}-regime-link-start` | FE | `[FE] 시장 흐름 진입과 003 분석 기간 제약` | T041~T044, T046~T049, T087 | `cd frontend && npm run lint && npm run build && npm test` |\n-| **M7** | `feat(fe)/{티켓}-regime-link-page` | FE | `[FE] 사례 검색 가용성과 전략 결과 영역` | T053~T057, T061~T066, T071~T074, T077~T079, T081, T086, T088, T091 | 〃 |\n+| **M7** | `feat(fe)/{티켓}-regime-link-page` | FE | `[FE] 사례 검색 가용성과 전략 결과 영역` | T053~T057, T061~T066, T071~T074, T077~T079, T081, T086, T088, T091, T092(화면 몫), T094 | 〃 |\n | **M8** | `docs(be)/{티켓}-regime-link-verification` | DOCS | `[DOCS] quickstart 실행 기록과 교차 spec 후속` | T082~T084, T089 | 수동 — quickstart.md S1~S10 |\n \n-**묶음 순서**: M1 → (M2 → M3) ∥ (M4 → M5) → M6 → M7 → M8. **M2·M3(워커)와 M4·M5(백엔드)는 M1의\n-계약 픽스처만 공유하므로 병렬로 딸 수 있다.** M6·M7은 M5의 응답을 읽고, M7은 dev에 있는 010 결과 목록\n-컴포넌트(`components/regime/`)를 재사용한다(research R8). M4는 dev의 010 표에 FK를 바로 걸고 010\n-리포지토리를 읽는다 — 대역을 두지 않는다. 조회 API(T045·T050·T052)는 판정과 같은 컨트롤러·같은 MR이라\n+**묶음 순서**: M1a → M1b → (M2 → M3) ∥ (M4 → M5) → M6 → M7 → M8. **M4·M5(백엔드)는 M1a 뒤 바로\n+갈 수 있고 M2·M3(워커)는 M1b의 계약 픽스처만 공유하므로, 두 줄은 병렬로 딸 수 있다.** M6·M7은 M5의\n+응답을 읽고, M7은 dev에 있는 010 결과 목록 컴포넌트(`components/regime/`)를 재사용한다(research R8).\n+M4는 dev의 010 표에 FK를 바로 걸고 010 리포지토리를 읽는다 — 대역을 두지 않는다. 조회 API(T045·T050·T052)는 판정과 같은 컨트롤러·같은 MR이라\n 스토리 태스크이지만 M4에 둔다.\n \n ### 묶음 의존 그래프 (2026-09-20)\n@@ -62,13 +64,13 @@\n flowchart LR\n   G0[\"G0 입력 확보 관문<br/>T000 · 미충족이면 004 저장 항목 확장(004 소유)\"]\n   M1a[\"M1a 골격·REST 예시<br/>T002~T004\"]\n-  M1b[\"M1b 메시지 계약 v1<br/>T001 · T005~T007\"]\n+  M1b[\"M1b 메시지 계약 v1<br/>T000 · T001 · T005~T007\"]\n   M2[\"M2 워커 구간 계산<br/>T008~T015\"]\n   M3[\"M3 워커 소비자<br/>T016~T021\"]\n   M4[\"M4 표·판정·조회<br/>T022~T029 · T034 · T045 · T050 · T052 · T090\"]\n-  M5[\"M5 연결 API·메시징<br/>T030~T033 · T035~T036 · T038~T040 · T051 · T058~T060 · T067~T070 · T075~T076 · T080\"]\n+  M5[\"M5 연결 API·메시징<br/>T030~T033 · T035~T036 · T038~T040 · T051 · T058~T060 · T067~T070 · T075~T076 · T080 · T092(백엔드 몫) · T093\"]\n   M6[\"M6 시장 흐름 진입<br/>T041~T044 · T046~T049 · T087\"]\n-  M7[\"M7 결과 화면<br/>T053~T057 · T061~T066 · T071~T074 · T077~T079 · T081 · T086 · T088 · T091\"]\n+  M7[\"M7 결과 화면<br/>T053~T057 · T061~T066 · T071~T074 · T077~T079 · T081 · T086 · T088 · T091 · T092(화면 몫) · T094\"]\n   M8[\"M8 검증 기록<br/>T082~T084 · T089\"]\n   G0 --> M1b --> M2 --> M3\n   M1a --> M1b\n@@ -99,13 +101,14 @@ flowchart LR\n \n | 묶음 | 머지 전에 이것이 참이어야 한다 |\n |---|---|\n-| M1 | 픽스처 7개가 백엔드·워커 양쪽 계약 테스트를 round-trip으로 통과. 토폴로지 상수는 계약 문서와 대조하고 Java 파일 대조는 T030이 있는 M5에서 통과. `regimelink` 패키지가 `ArchitectureTest`를 통과 |\n+| M1a | `regimelink` 4계층 패키지가 `ArchitectureTest`를 통과. REST 예시 파일 여섯이 계약 §1~§3과 같고 어디에도 내부 PK가 없다. 워커 `regime_link` 모듈 자리가 있고 백테스트 소비자(`worker/consumer.py`·`worker/rabbitmq.py`·`worker/main.py`)는 바뀌지 않았다 |\n+| M1b | 구간 입력 독립 대조(T000) 근거가 research R3에 남았다. 픽스처 7개가 백엔드·워커 양쪽 계약 테스트를 round-trip으로 통과. 토폴로지 상수는 계약 문서와 대조하고 Java 파일 대조는 T030이 있는 M5에서 통과 |\n | M2 | 수기 대조(`manual_reconciliation.json`)와 `window63`·`window21`·`kospi`가 일치. 미완성 입력(34거래일)에서 `tradingDays=34`·`complete=false`. 수익률·낙폭 연환산 없음. 회전율 단위 명시. 전체 손익 0이면 손실 기여 생략. `FRESH_CASH`는 `initialCash` 기준 |\n | M3 | 계약 오류 → DLQ, 계산 실패 → `FINISHED(FAILED)` + ACK, 발행 실패 → requeue. `FINISHED` 확인 전 ACK 경로 없음. **백테스트 소비자 테스트 수·통과·skipped가 변경 전과 같다** |\n | M4 | 계약 §1 예시와 응답 일치. `cases[]`가 010 표시 후보 전부이고 순위 그대로. 21 미만이 `POST_INCOMPLETE`로 제외 수에 듦. `OUT_OF_PERIOD`는 `shownInFiltered`에 영향 없음. 같은 묶음 재호출에 같은 `filterKey`. `snapshot_id` FK가 010 표에 걸려 있다. 구간 안 상장폐지로 21 미만이면 `POST_INCOMPLETE(DELISTED)`로 제외 수에 듦. 과거 기준월에서 판정 기준일이 그 달의 마지막 거래일 |\n-| M5 | 익명 `POST`가 401이고 행·메시지 0. 같은 (실행×사례×시나리오) 재요청에 메시지 0. T007 Java 토폴로지 대조 통과. `confirmFullPeriod=false`로 기간 밖이면 계산 0. 토큰 없는 링크 조회 400·다른 실행의 토큰 404·만료 410. 두 사용자가 같은 계산을 공유해도 링크 행 1개·`regime_link_use` 2개. `FRESH_CASH` 접수 본문이 계약 §2와 같다. DLQ → `FAILED(SYSTEM_FAILURE)`. 유지율이 응답에 0건 |\n+| M5 | 익명 `POST`가 401이고 행·메시지 0. 같은 (실행×사례×시나리오) 재요청에 메시지 0. T007 Java 토폴로지 대조 통과. `confirmFullPeriod=false`로 기간 밖이면 계산 0. 토큰 없는 링크 조회 400·다른 실행의 토큰 404·만료 410. 두 사용자가 같은 계산을 공유해도 링크 행 1개·`regime_link_use` 2개. `FRESH_CASH` 접수 본문이 계약 §2와 같다. DLQ → `FAILED(SYSTEM_FAILURE)`. 유지율이 응답에 0건. 체결 기록이 없는 실행은 확인 전 계산 0건(T092). 조건이 어긋난 비교 묶음은 기록 없이 400(T093) |\n | M6 | 010 사례 상세에서 011 시작 주소로 이동. `/regime-link/start`가 익명이면 로그인 안내 뒤 같은 주소 복귀. `case`가 002·003 주소에 유지. 003에서 하한 밖 기간 선택 불가와 한 문장. 분석 **접수 즉시** `/regime-link?base&case`로 이동해 기준 실행 진행 상태가 보인다 |\n-| M7 | 분야 선택이 먼저이고 종합은 기본이 아님. 기본 목록에 `shownInFiltered=true`만. 금지 표현 정적 검사(T081) 0건. 유지율 DOM 0건. 사례를 열지 않아도 목록 변경 알림·기록, 필터 결과 0건 검증. 네 상태(자료 부족·미완성·기간 밖·실패)가 서로 다른 표시. KOSPI 두 값만. 005 진입 버튼으로 들어온다. 비교 대상을 바꾸고 돌아오면 분야를 다시 묻지 않는다. 당시 뉴스 영역의 빈 상태·실패 격리. 결정적 실패의 두 번째 실패에서 '다시 시도'가 사라진다 |\n+| M7 | 분야 선택이 먼저이고 종합은 기본이 아님. 기본 목록에 `shownInFiltered=true`만. 금지 표현 정적 검사(T081) 0건. 유지율 DOM 0건. 사례를 열지 않아도 목록 변경 알림·기록, 필터 결과 0건 검증. 네 상태(자료 부족·미완성·기간 밖·실패)가 서로 다른 표시. KOSPI 두 값만. 005 진입 버튼으로 들어온다. 비교 대상을 바꾸고 돌아오면 분야를 다시 묻지 않는다. 당시 뉴스 영역의 빈 상태·실패 격리. 결정적 실패의 두 번째 실패에서 '다시 시도'가 사라진다. 체결 기록이 없는 실행의 재계산 확인 문구가 보인다(T092). `base` 누락·만료·없는 사례의 세 안내가 있다(T094) |\n | M8 | quickstart S1~S10 실행·측정 기록과 skipped 수가 남고, 교차 spec의 결정 완료·미해결 상태가 구분되어 있다 |\n \n ## Path Conventions\n@@ -119,15 +122,18 @@ flowchart LR\n \n ---\n \n-# Phase 1: Setup (계약과 골격) · **묶음 M1**\n+# Phase 1: Setup (계약과 골격) · **묶음 M1a · M1b**\n \n-**Purpose**: 백엔드와 워커가 같은 픽스처로 따로 진행할 수 있게 메시지 계약을 먼저 고정한다.\n+**Purpose**: 백엔드와 워커가 같은 픽스처로 따로 진행할 수 있게 골격을 세우고 메시지 계약을 고정한다.\n+\n+**묶음 경계**: 골격과 REST 예시(T002~T004)가 **M1a**, 구간 입력 대조와 메시지 계약(T000·T001·T005~T007)이\n+**M1b**다. M4는 M1a만 있으면 시작한다 — 판정은 메시지 계약을 읽지 않는다.\n \n - [ ] T000 (BE·WK 검증) research R3 DEP-004-011의 **필드 대응은 확정됐다**(부족했던 개별 체결을 004 `fills[]`·`backtest_fill`로 추가, S15P21E205-359). 남은 일은 독립 계산 대조다 — 시작 전 매수·구간 내 일부 매도·분배금·미청산 잔고·청산 비용을 004 픽스처에서 손으로 세어 R3 산식과 맞춘다. 대조가 끝나기 전 T001·T005·T006의 계산 픽스처와 M2는 동결하지 않는다. 값을 임의 복원하지 않고, 체결 기록이 없는 실행(`fills_recorded=false`)은 계산하지 않는다. 검증 근거를 research R3에 기록\n - [ ] T001 (DOCS) `docs/specs/regime-link-messaging/README.md`와 `examples/` 픽스처 7개(`job-continuous.json`·`job-fresh-cash.json`·`job-partial-delisted.json`·`event-started.json`·`event-finished-completed.json`·`event-finished-incomplete63.json`·`event-finished-failed.json`)를 [contracts/regime-link-messaging.md](contracts/regime-link-messaging.md)대로 작성. 소수는 문자열, null은 키 생략, `schemaVersion: 1` 헤더 규칙을 README에 적는다. 작업 픽스처의 `inputs`는 T000 통과 뒤 계약 \"구간 입력 확장\" 절의 모양(`openingPositions`·`dailyPositions`·개별 `trades`·`cashFlows`)으로 만들고, 본문 축약 예시의 모양으로 만들지 않는다\n-- [ ] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·\"내보내지 않는 것\")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다\n-- [ ] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)\n-- [ ] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다\n+- [X] T002 [P] (DOCS) `docs/specs/regime-link-api/README.md`(계약 요약·오류표·\"내보내지 않는 것\")와 `examples/{availability-strategy-result,availability-market-flow,link-completed,link-pending-run,link-data-insufficient,create-confirm-required}.json`을 [contracts/regime-link-api.md](contracts/regime-link-api.md) 예시로 작성. 어디에도 `RUN-`·`BT-`·내부 PK가 없다\n+- [X] T003 [P] (BE) `backend/src/main/java/com/ssafy/thorp/regimelink/{presentation,application,domain,infrastructure}` 4계층 패키지와 `package-info.java`를 만들고 `./gradlew test --tests '*ArchitectureTest*'`가 통과함을 확인. 계층별 상위 폴더를 만들지 않는다(`backend/CLAUDE.md`)\n+- [X] T004 [P] (WK) `worker/src/worker/regime_link/__init__.py`와 모듈 자리(`contracts.py`·`messaging.py`·`slicer.py`·`consumer.py`·`rabbitmq.py`), `worker/src/worker/regime_link_main.py` 골격을 만들고 각 모듈 책임을 docstring에 적는다. 백테스트 소비자(`worker/consumer.py`) 파일은 건드리지 않는다\n - [ ] T005 (BE) `regimelink/application/port/message/`에 `RegimeLinkJob`·`RegimeLinkEvent`·`RegimeLinkFinishedPayload`·`RegimeLinkResultPayload`(holdings는 dailyPositions로 산출, turnoverBasis 포함) record(Jackson, camelCase)와 `RegimeLinkJobPublisher` 포트 인터페이스를 작성. `backend/src/test/java/com/ssafy/thorp/regimelink/contract/RegimeLinkMessageContractTest.java`가 T001 픽스처 7개를 읽어 역직렬화→직렬화 round-trip을 검증\n - [ ] T006 (WK) `worker/src/worker/regime_link/contracts.py`에 `ContractModel` 기반 pydantic 모델(`RegimeLinkJob`·`RegimeLinkEvent`·payload, `extra=\"forbid\"`, 기본값 금지)을 작성. `worker/tests/regime_link/test_contracts.py`가 같은 픽스처 7개로 round-trip. `worker/contracts/`(백테스트 계약)에 넣지 않는다\n - [ ] T007 (WK) `worker/src/worker/regime_link/messaging.py`에 exchange·queue·routing key·`SCHEMA_VERSION`·prefetch 상수와 `EventPublisher`·`JobAcknowledger` Protocol을 작성(pika import 금지). `worker/tests/regime_link/test_messaging.py`가 백엔드 `RegimeLinkRabbitConfig.java`(T030)를 읽어 상수 일치를 대조 — T030 전까지는 계약 문서의 값과 대조한다\n@@ -307,8 +313,8 @@ flowchart LR\n \n ### Phase Dependencies\n \n-- **Setup (Phase 1, M1)**: T000 입력 대응·독립 대조 선행(계산 픽스처 T001·T005·T006만 막는다. 골격 T002~T004와 M4는 T000과 무관하게 시작한다). 미충족이면 004 계약 확장 합의·구현 뒤 계산 계약을 동결한다\n-- **Foundational (Phase 2)**: M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 **병렬**. M4는 dev의 010 표·리포지토리를 읽는다(대역 없음)\n+- **Setup (Phase 1, M1a·M1b)**: T000 입력 대응·독립 대조 선행(계산 픽스처 T001·T005·T006만 막는다. 골격 T002~T004와 M4는 T000과 무관하게 시작한다). 미충족이면 004 계약 확장 합의·구현 뒤 계산 계약을 동결한다\n+- **Foundational (Phase 2)**: M2·M3(워커)는 M1b 뒤, M4·M5(백엔드)는 M1a 뒤라 두 줄이 **병렬**이다. M4는 dev의 010 표·리포지토리를 읽는다(대역 없음)\n - **US1 (Phase 3)**: Phase 2 전체 필요(잘라내기 결과가 붙어야 시험이 성립). FE는 M5 응답이 있어야 함\n - **US2 (Phase 4)**: Phase 2 + T038~T040. FE(T054)는 dev의 010 결과 목록 컴포넌트(`components/regime/`)를 재사용\n - **US3 (Phase 5)**: US1의 결과 영역(T048) 위에 얹는다\n@@ -366,8 +372,25 @@ flowchart LR\n - 태스크 설명에 적힌 값(21·63·65행·상한)은 spec·contracts가 정한 값이다. 코드에 다른 값을 두면 문서를\n   먼저 고친다\n \n-## Phase 9: Convergence\n+## Phase 9: Convergence · **묶음 M5(T092 백엔드 몫·T093) · M7(T092 화면 몫·T094)**\n+\n+T092는 백엔드 접수 판정과 화면 확인 문구가 모두 필요해 두 묶음에 걸친다. 백엔드 몫이 먼저 머지되고\n+화면 몫이 M7에서 이어진다.\n \n - [ ] T092 체결 기록이 없는 실행(`backtest_result.fills_recorded=false`, S15P21E205-359 이전에 끝난 실행·옛 워커의 결과)을 '분석 기간 밖'과 같은 확인 흐름으로 다룬다 — 계약 §2에 확인 요구 `outcome`(재계산 사유 구분)을 더하고, `POST /regime-links`가 확인 전에는 링크·메시지를 만들지 않고 확인 뒤 같은 조건의 새 실행을 004에 요청하며, `FullPeriodConfirm`·`ResultSlotState`가 \"이 결과는 사후 구간을 보려면 다시 계산합니다\"를 보인다. 값을 추정해 채우지 않는다. `OutOfPeriodFlowTest`·`FullPeriodConfirm.test.tsx`에 이 경우를 더한다 per FR-010·research R3 DEP-004-011·plan 위험 표 (missing)\n - [ ] T093 비교 묶음의 두 실행이 같은 조건인지 서버가 검증한다 — `base`·`compare` 토큰은 주소로 직접 들어올 수 있으므로 `AvailabilityService`·`POST /regime-link-searches`가 섹터 후보 집합·대응표 버전·시작 금액·비용 버전·자료 버전이 같은지 확인하고, 다르면 계산·기록 없이 `400 INVALID_INPUT`과 어긋난 항목을 돌려준다(005는 이 판정을 화면에서만 한다). `AvailabilityControllerIT`·`BundleChangeTest`에 어긋난 묶음 거절을 더한다 per SC-003·FR-011·Constitution IV (missing)\n - [ ] T094 `/regime-link` 주소 오류 처리 — `base`가 없거나 형식이 틀리면 빈 화면 대신 진단 시작(`/diagnosis/sectors`)으로 안내하고, 만료된 토큰(`410 RESULT_EXPIRED`)은 005의 만료 안내를 그대로 보이며, `snapshot`·`case`가 그 검색에 없으면(`404`) 분야 선택으로 되돌리고 이유 한 문장을 보인다. `RegimeLinkPage` 테스트에 세 경우를 더한다 per contracts/entry-handoff §5·FR-025 (missing)\n+\n+## Phase 10: Convergence\n+\n+- [X] T095 `docs/specs/regime-link-api/README.md` §4의 `lossContribution` 설명을 산식 정의와 맞춘다 — \"손실이 없는 섹터는 키가 없다\"를 지우고, 종목 구간 손익 ÷ 전체 구간 손익이라 이익 종목도 들어가고 섹터별 몫의 합이 1이며 전체 구간 손익이 0일 때만 생략한다고 적는다. 이름이 '손실'이지만 이익 종목을 빼지 않는다는 점을 함께 밝힌다 per research R3·contracts/regime-link-messaging.md `FINISHED.result`·T011 (contradicts)\n+- [X] T096 `docs/specs/regime-link-api/examples/link-completed.json`의 `lossContribution`을 규칙이 드러나는 값으로 바꾼다 — 비교 묶음의 종목이 모두 들어가고 몫의 합이 1이며, 전체 손익과 반대로 움직인 종목이 음수 몫으로 들어가는 모양을 `window63`에 둔다. `window21`도 종목 하나만 남기지 않는다. 이 파일은 T034·T052가 응답과 대조하는 기준이다 per research R3·T011 (partial)\n+- [X] T097 `tasks.md`에서 묶음을 옛 이름으로 부르는 세 곳을 M1a·M1b 분할에 맞춘다 — Organization 머리말의 `묶음 표(M1~M8)`, \"Dependencies & Execution Order\"의 `Setup (Phase 1, M1)`과 `M2·M3(워커)와 M4·M5(백엔드)는 M1 뒤 병렬`이다. 묶음 표·MR 체크포인트·의존 그래프는 이미 분할을 반영했다 per tasks 묶음 표 M1a·M1b 분할(M1a 완료 기준) (partial)\n+\n+## Phase 11: Convergence\n+\n+- [X] T098 `docs/specs/regime-link-api/examples/`가 계약에 없는 결정 셋을 응답 기준으로 못 박았다 — ① `bundle.instruments[].delistedOn`(계약 §1 예시에 없고 사례별 `availability.delistedOn`과 겹친다) ② `entryPath=MARKET_FLOW`의 `filter`에서 `availableRange` 생략(계약은 `filterKey`·`excludedCount`만 없다고 적는다) ③ 자료 부족 링크에 `queuedAt`·`startedAt`이 없고 `finishedAt`만 있는 규칙(계약 §3이 정하지 않는다). T038·T040·T050·T052가 이 파일과 응답을 대조하므로 M4 착수 전에 셋을 `contracts/regime-link-api.md` §1·§3에 적거나 예시에서 뺀다. 예시가 계약을 조용히 넓히게 두지 않는다 per contracts/regime-link-api.md §1·§3 (unrequested)\n+\n+## Phase 12: Convergence\n+\n+- [X] T099 `contracts/regime-link-api.md` §3 예시의 `window63.lossContribution`이 보유 섹터 셋 중 둘(`SEMICONDUCTOR`·`BIO`)만 담아 바로 아래에 적은 규칙(\"이익 종목도 뺀 것 없이 들어가고 전체 구간 손익이 0일 때만 생략\")과 어긋난다 — 같은 `result`의 `holdings`는 종목 셋을 보이고 `window21.lossContribution`도 섹터 셋을 담는다. `BATTERY`를 더해 두 구간이 같은 섹터 셋을 쓰고 합이 1이 되게 고친다. 값은 `docs/specs/regime-link-api/examples/link-completed.json`과 맞춘다 per contracts/regime-link-api.md §3·research R3 (contradicts)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+\"\"\"사례 연결(spec 011) 구간 계산 워커.\n+\n+010이 찾은 경제환경 사례의 직후 63거래일(보조 21거래일)에서, 백엔드가 메시지에 담아 보낸 004\n+실행 사본을 잘라 요약한다. 백테스트 워커(``worker.consumer``·``worker.main``)와 큐·엔트리포인트를\n+공유하지 않는다. 작업은 ``regime-link.jobs``로 오고 실행은\n+``python -m worker.regime_link_main``이다.\n+\n+백테스트 워커와 같은 3층 분리를 따른다(``worker/CLAUDE.md`` \"브로커 연동\").\n+\n+* ``contracts`` 백엔드와 공유하는 메시지 모델\n+* ``messaging`` 계약 상수와 경계 Protocol (pika 없음)\n+* ``slicer`` 구간 잘라내기·요약 계산\n+* ``consumer`` 수신·검증·계산 호출·발행 순서·ACK 판단\n+* ``rabbitmq`` pika 구현체\n+\n+이 묶음(M1a)은 자리만 만든다. 각 모듈의 내용은 M1b~M3에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/__init__.py",
+          "old_path": "worker/src/worker/regime_link/__init__.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+\"\"\"사례 연결 작업 소비자.\n+\n+헤더 ``schemaVersion`` 확인 → 작업 파싱 → ``STARTED`` 발행 → ``slicer`` 호출 → ``FINISHED`` 발행 →\n+브로커 확인 뒤 ACK. 브로커 기술을 모르고 ``messaging``의 Protocol로만 말한다.\n+\n+오류는 세 갈래다(백테스트 소비자와 같은 규칙, ``worker/CLAUDE.md``). ① 계약 오류는 requeue 없이\n+reject해 DLQ로 보내고 ② 계산 실패는 ``FINISHED(FAILED)``를 발행한 뒤 ACK하며 ③ 발행 실패와 시장\n+자료 적재 중 일시 장애는 ACK하지 않고 재전달 경로로 넘긴다.\n+\n+백테스트 소비자(``worker.consumer``)는 건드리지 않는다.\n+\n+내용은 T016(묶음 M3)에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/consumer.py",
+          "old_path": "worker/src/worker/regime_link/consumer.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+\"\"\"사례 연결 작업·이벤트 메시지 계약(pydantic).\n+\n+기준은 ``docs/specs/regime-link-messaging/``(README + ``examples/*.json``)이고 백엔드\n+``com.ssafy.thorp.regimelink.application.port.message``의 record와 같은 모양이다. 백테스트 계약인\n+``worker.contracts``에 넣지 않는다 — 큐도 스키마도 다르다.\n+\n+``ContractModel``을 따라 JSON camelCase ↔ 내부 snake_case는 alias로, null은 키 생략으로 다루고\n+``extra=\"forbid\"``에 기본값을 두지 않는다. 값이 없으면 지어내지 말고 계약 오류로 멈춘다.\n+\n+내용은 T006(묶음 M1b)에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/contracts.py",
+          "old_path": "worker/src/worker/regime_link/contracts.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+\"\"\"사례 연결 브로커 계약 상수와 경계 Protocol.\n+\n+exchange·queue·routing key·``SCHEMA_VERSION``·prefetch를 둔다. 이 값들은 설정이 아니라 계약이라\n+``worker.config``(환경변수)로 빼지 않고, 백엔드 ``RegimeLinkRabbitConfig``의 ``public static final\n+String``과 같은 값을 유지한다. **pika를 import하지 않는다.**\n+\n+발행과 ACK의 경계는 ``EventPublisher``·``JobAcknowledger`` Protocol이며 구현은 ``rabbitmq``에 있다.\n+\n+내용은 T007(묶음 M1b)에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/messaging.py",
+          "old_path": "worker/src/worker/regime_link/messaging.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+\"\"\"사례 연결 소비·발행의 pika 구현체.\n+\n+소비 prefetch 1, 발행 confirm과 제한적 재시도, ACK/reject 매핑을 담당한다. 토폴로지(exchange·queue·\n+binding)를 **선언하지 않는다** — 선언은 백엔드 책임이라 큐가 없으면 만들지 않고 \"백엔드를 먼저\n+띄워라\"라는 오류로 종료한다. 속성이 어긋난 큐를 워커가 만들면 백엔드 선언과 충돌한다.\n+\n+백테스트 워커의 ``worker.rabbitmq``는 수정하지 않는다.\n+\n+내용은 T017(묶음 M3)에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/rabbitmq.py",
+          "old_path": "worker/src/worker/regime_link/rabbitmq.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+\"\"\"사후 구간 잘라내기와 요약 계산.\n+\n+011 화면의 숫자는 전부 여기서 나온다. 작업 메시지의 ``window``와 004 실행 사본에서 63·21거래일\n+구간을 잘라 수익률·최대 하락 폭·거래와 비용·월당 거래횟수·회전율·구간 손익 기여를 내고, 시장\n+자료에서 KOSPI 참고 값 두 개를 더한다.\n+\n+정의는 research R3의 구간 전용 산식이다. **수익률·최대 하락 폭을 연환산하지 않고**(63거래일 값을\n+4배 확대하면 \"더 벌 수 있다\"로 읽힌다), 회전율만 연환산 단위를 값과 함께 밝힌다. 입력이 모자라면\n+0으로 채우지 않고 ``INPUT_INCOMPLETE``로 실패한다(원칙 VI).\n+\n+지표 정의는 ``worker.performance.calculate_analytics``를 구간 자료에 그대로 적용해 공유하고\n+``performance.py``를 수정하지 않는다.\n+\n+내용은 T008~T013(묶음 M2)에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/slicer.py",
+          "old_path": "worker/src/worker/regime_link/slicer.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+\"\"\"사례 연결 워커 엔트리포인트: ``python -m worker.regime_link_main``.\n+\n+``regime-link.jobs``를 소비해 사례의 사후 구간을 잘라 요약하고 ``regime-link.events``로 ``STARTED``·\n+``FINISHED``를 발행한다. 백테스트 워커(``python -m worker.main``)와 **다른 프로세스**이며\n+같은 코드를 여러 개 띄워 수평 확장한다.\n+\n+접속 정보는 환경변수 ``RABBITMQ_URL``(브로커)·``MARKET_DATA_URL``(시장 자료 DB, 읽기 전용)로만\n+주입하고 **기본값을 두지 않는다** — 값이 없으면 조용히 다른 DB를 읽는 대신 시작하지 않는다.\n+\n+내용은 T018(묶음 M3)에서 채운다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link_main.py",
+          "old_path": "worker/src/worker/regime_link_main.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2227221,
+      "head_commit_sha": "8e74525a55a563db5ef3c4ecbabd615dfcee10af",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:38:43.706+09:00",
+      "merge_request_id": 952832,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "5abdb9d80dc4bd23749dc1cc2e0fa702931739bc",
+      "commits": [
+        {
+          "id": "8e74525a55a563db5ef3c4ecbabd615dfcee10af",
+          "short_id": "8e74525a",
+          "created_at": "2026-09-20T16:38:40.000+09:00",
+          "parent_ids": [
+            "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55"
+          ],
+          "title": "docs(be): 사례 연결 계약 §3 예시의 손익 기여에 빠진 섹터를 채움",
+          "message": "docs(be): 사례 연결 계약 §3 예시의 손익 기여에 빠진 섹터를 채움\n\n`window63.lossContribution`이 보유 섹터 셋 중 둘만 담아, 같은 예시의 `holdings`·`window21`과\n바로 아래 적힌 규칙(\"이익 종목도 뺀 것 없이 들어간다\")에 어긋나 있었다. 값은 예시 파일과 맞춘다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:38:40.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:38:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8e74525a55a563db5ef3c4ecbabd615dfcee10af"
+        },
+        {
+          "id": "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55",
+          "short_id": "55627fe3",
+          "created_at": "2026-09-20T16:29:06.000+09:00",
+          "parent_ids": [
+            "c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+          ],
+          "title": "docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤",
+          "message": "docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤\n\nAI 코드리뷰에서 나온 두 건과 예시가 계약을 넓힌 문제를 함께 정리한다.\n\n- `trades`가 구간의 모든 거래(여섯 건)를 담고 거래별 비용 합이 구간 비용과 같아진다. 전에는\n  `tradeCount`가 6인데 두 건만 실려 있었다.\n- `window21.turnover`가 연환산 값이 된다. 전에는 `ANNUALIZED_252` 이름표를 단 채\n  `window63`의 정확히 1/3이라 환산이 빠진 값으로 읽혔다.\n- 예시만 정하고 있던 셋을 계약에 적는다 — `instruments[].delistedOn`, 시장 흐름 경로에서\n  `availableRange`가 없다는 것, 계산 작업이 없던 판정의 시각 필드.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:29:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:29:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/55627fe32264d9440d9e4f2d6c3fbb2dcd039b55"
+        },
+        {
+          "id": "c83e5553b9f4b6c978dff265da7e90f55d9e64eb",
+          "short_id": "c83e5553",
+          "created_at": "2026-09-20T14:26:20.000+09:00",
+          "parent_ids": [
+            "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+          ],
+          "title": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음",
+          "message": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음\n\nREADME가 \"손실이 없는 섹터는 키가 없다\"로 적었으나, research R3와 메시징 계약은 종목 구간 손익을\n전체 구간 손익으로 나눈 몫이라 이익 종목도 포함하고 합이 1이며 전체 손익이 0일 때만 생략한다고\n정한다. 설명과 예시 값을 그 정의로 맞춘다.\n\n- 예시의 `lossContribution`에 비교 묶음 종목 셋을 모두 담고 합을 1로, 반대로 움직인 종목을 음수 몫으로\n- tasks.md 머리말·Phase 의존 절에 남아 있던 옛 묶음 이름 M1을 M1a·M1b로\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:26:20.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:26:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+        },
+        {
+          "id": "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5",
+          "short_id": "3a03e85e",
+          "created_at": "2026-09-20T13:45:46.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가",
+          "message": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가\n\n가용성 판정 줄(M4)이 구간 입력 대조를 기다리지 않고 시작할 수 있도록 spec 011 M1을\n골격(M1a)과 메시지 계약(M1b)으로 나누고, 골격 쪽을 먼저 낸다.\n\n- 백엔드 `regimelink` 4계층 패키지와 계층별 package-info\n- 워커 `regime_link` 모듈 자리와 별도 엔트리포인트 자리. 백테스트 소비자는 건드리지 않는다\n- `docs/specs/regime-link-api/` 계약 요약과 응답 예시 여섯\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T13:45:46.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T13:45:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2227192,
+      "head_commit_sha": "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T16:29:11.717+09:00",
+      "merge_request_id": 952832,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "d5a58cbd34659b7d27ac02ddd0d4b81b9588cbdd",
+      "commits": [
+        {
+          "id": "55627fe32264d9440d9e4f2d6c3fbb2dcd039b55",
+          "short_id": "55627fe3",
+          "created_at": "2026-09-20T16:29:06.000+09:00",
+          "parent_ids": [
+            "c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+          ],
+          "title": "docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤",
+          "message": "docs(be): 사례 연결 응답 예시의 거래 목록·회전율을 계약과 맞춤\n\nAI 코드리뷰에서 나온 두 건과 예시가 계약을 넓힌 문제를 함께 정리한다.\n\n- `trades`가 구간의 모든 거래(여섯 건)를 담고 거래별 비용 합이 구간 비용과 같아진다. 전에는\n  `tradeCount`가 6인데 두 건만 실려 있었다.\n- `window21.turnover`가 연환산 값이 된다. 전에는 `ANNUALIZED_252` 이름표를 단 채\n  `window63`의 정확히 1/3이라 환산이 빠진 값으로 읽혔다.\n- 예시만 정하고 있던 셋을 계약에 적는다 — `instruments[].delistedOn`, 시장 흐름 경로에서\n  `availableRange`가 없다는 것, 계산 작업이 없던 판정의 시각 필드.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T16:29:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T16:29:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/55627fe32264d9440d9e4f2d6c3fbb2dcd039b55"
+        },
+        {
+          "id": "c83e5553b9f4b6c978dff265da7e90f55d9e64eb",
+          "short_id": "c83e5553",
+          "created_at": "2026-09-20T14:26:20.000+09:00",
+          "parent_ids": [
+            "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+          ],
+          "title": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음",
+          "message": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음\n\nREADME가 \"손실이 없는 섹터는 키가 없다\"로 적었으나, research R3와 메시징 계약은 종목 구간 손익을\n전체 구간 손익으로 나눈 몫이라 이익 종목도 포함하고 합이 1이며 전체 손익이 0일 때만 생략한다고\n정한다. 설명과 예시 값을 그 정의로 맞춘다.\n\n- 예시의 `lossContribution`에 비교 묶음 종목 셋을 모두 담고 합을 1로, 반대로 움직인 종목을 음수 몫으로\n- tasks.md 머리말·Phase 의존 절에 남아 있던 옛 묶음 이름 M1을 M1a·M1b로\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:26:20.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:26:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+        },
+        {
+          "id": "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5",
+          "short_id": "3a03e85e",
+          "created_at": "2026-09-20T13:45:46.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가",
+          "message": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가\n\n가용성 판정 줄(M4)이 구간 입력 대조를 기다리지 않고 시작할 수 있도록 spec 011 M1을\n골격(M1a)과 메시지 계약(M1b)으로 나누고, 골격 쪽을 먼저 낸다.\n\n- 백엔드 `regimelink` 4계층 패키지와 계층별 package-info\n- 워커 `regime_link` 모듈 자리와 별도 엔트리포인트 자리. 백테스트 소비자는 건드리지 않는다\n- `docs/specs/regime-link-api/` 계약 요약과 응답 예시 여섯\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T13:45:46.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T13:45:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2226940,
+      "head_commit_sha": "c83e5553b9f4b6c978dff265da7e90f55d9e64eb",
+      "base_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "start_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+      "created_at": "2026-09-20T14:27:10.792+09:00",
+      "merge_request_id": 952832,
+      "state": "without_files",
+      "real_size": "19",
+      "patch_id_sha": "5df07d5545b7a989c0cae949d70b9ad222eed737",
+      "commits": [
+        {
+          "id": "c83e5553b9f4b6c978dff265da7e90f55d9e64eb",
+          "short_id": "c83e5553",
+          "created_at": "2026-09-20T14:26:20.000+09:00",
+          "parent_ids": [
+            "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+          ],
+          "title": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음",
+          "message": "docs(be): 사례 연결 계약 요약의 구간 손익 기여 정의를 바로잡음\n\nREADME가 \"손실이 없는 섹터는 키가 없다\"로 적었으나, research R3와 메시징 계약은 종목 구간 손익을\n전체 구간 손익으로 나눈 몫이라 이익 종목도 포함하고 합이 1이며 전체 손익이 0일 때만 생략한다고\n정한다. 설명과 예시 값을 그 정의로 맞춘다.\n\n- 예시의 `lossContribution`에 비교 묶음 종목 셋을 모두 담고 합을 1로, 반대로 움직인 종목을 음수 몫으로\n- tasks.md 머리말·Phase 의존 절에 남아 있던 옛 묶음 이름 M1을 M1a·M1b로\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T14:26:20.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T14:26:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c83e5553b9f4b6c978dff265da7e90f55d9e64eb"
+        },
+        {
+          "id": "3a03e85eaaaa34b5b5350ff35123ac4a30459ed5",
+          "short_id": "3a03e85e",
+          "created_at": "2026-09-20T13:45:46.000+09:00",
+          "parent_ids": [
+            "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+          ],
+          "title": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가",
+          "message": "feat(be): 사례 연결 백엔드·워커 골격과 REST 계약 예시를 추가\n\n가용성 판정 줄(M4)이 구간 입력 대조를 기다리지 않고 시작할 수 있도록 spec 011 M1을\n골격(M1a)과 메시지 계약(M1b)으로 나누고, 골격 쪽을 먼저 낸다.\n\n- 백엔드 `regimelink` 4계층 패키지와 계층별 package-info\n- 워커 `regime_link` 모듈 자리와 별도 엔트리포인트 자리. 백테스트 소비자는 건드리지 않는다\n- `docs/specs/regime-link-api/` 계약 요약과 응답 예시 여섯\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T13:45:46.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T13:45:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3a03e85eaaaa34b5b5350ff35123ac4a30459ed5"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2840987": [],
+    "2842514": []
+  }
+}

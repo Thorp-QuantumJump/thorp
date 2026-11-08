@@ -1,0 +1,732 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 939759,
+    "iid": 35,
+    "project_id": 1444456,
+    "title": "docs(infra): spec 004 백테스트 실행 문서 작업",
+    "description": "# 작업 내용 요약\n\nspec 004 \"백테스트 실행\"의 Spec Kit 문서 단계를 끝냈습니다. 티켓 제목은 clarify이지만 같은 브랜치에서 plan·tasks·analyze까지 이어서 진행해 구현 착수 전 문서가 모두 들어 있습니다.\n\n- **clarify**: 5문항을 spec에 반영했습니다. 실행 상태에 '취소' 종결 상태 추가, 동일 버전 결과는 서비스 전체 공유, 진행 중인 동일 버전 요청은 새 계산 없이 합류(요청:실행 = 다대일), 진행 정도는 단계 이름 + 처리한 마지막 거래일·비율, 시스템 장애 시 1회 자동 재시도 후 실패.\n- **plan**: 기존 DEMO 파이프라인(Spring → RabbitMQ → Nautilus 워커 → PostgreSQL)을 유지하고 확장하는 설계입니다. Constitution Check 전 항목 PASS.\n- **tasks**: 한 사람이 전담하는 전제로 MR 단위 Task 13개. Jira 이슈까지 발급해 각 Task 끝에 키를 적었습니다.\n- **analyze**: CRITICAL 1건(역변동성 규칙 provisional 표시)과 HIGH 1건(목표 위험 맞춤 시나리오 → PD-18 확정)은 문서에 반영했습니다. 남은 HIGH 1건(임시 실행 한도 값)은 팀 결정 항목으로 아래 리뷰 포인트에 올립니다.\n\n# 관련 이슈\n- close #117\n- Epic S15P21E205-30 백테스트 / Story -21·-38(기존), -125·-126·-127(신규) / Task -128 -129 -130 -134 -135 -137 -140 -142 -146 -148 -149 -153 -154\n\n# 주요 변경 사항\n\n- **spec.md**: `## Clarifications` 절 신설(5건). User Story 1·3, Edge Cases, FR-001·002·003·005·007, Key Entities, SC-006에 위 결정을 반영.\n- **plan.md**: Technical Context(Java 21·Python 3.11·NautilusTrader 1.219·PostgreSQL 16·RabbitMQ 3.13), Constitution Check 12항목 PASS, 소스 배치, Complexity Tracking(요청/실행 분리·제어 채널 2건).\n- **research.md R-01~R-16**: Nautilus 유지 / `backtest_job`을 `backtest_request` + `backtest_run` 다대일로 분리 / SHA-256 동일 버전 키 / fanout `backtest.control`로 거래일 단위 협력 취소 / `backtest.jobs`를 quorum 큐 `x-delivery-limit=1`로 바꿔 1회 자동 재시도 후 DLQ / 비용·전략 규칙을 버전 등록표로 관리하되 PD-03·04 미확정 전략은 422로 거부 / 실행 측정 테이블과 p50·p95 뷰.\n- **data-model.md**: 테이블 8개(`backtest_request`, `backtest_run`, `backtest_result`, `backtest_trade`, `cost_profile`, `strategy_rules`, `backtest_run_metric`, `backtest_reuse_event`)와 뷰 1개, 상태 전이, 부분 유니크 인덱스, V3 마이그레이션 요약.\n- **contracts/**: REST v2(cancel·retry·weights·exceptions·execution-metrics, `resultSource`, 오류 코드 4종), 메시징 schemaVersion 2(run 식별자 기준, FINISHED CANCELLED, 제어 메시지), 001 자료 계층에 요구하는 시장 자료 입력 계약.\n- **quickstart.md**: 검증 시나리오 S1~S10.\n- **tasks.md**: 13개 Task, 각 항목에 Jira 키. 워커(Python) 작업도 `[BE]` 표기(팀 확정).\n- **analyze C1 반영**: 역변동성의 0 변동성 처리·비중 상한은 spec이 PD-02 계열 결정 항목으로 둔 값이라, `strategy_rules`에 `provisional` 열을 두고 임시 등록으로 표시(비용 프로필과 같은 방식). research R-08·data-model·tasks T003에 일관되게 적음.\n- **목표 위험 맞춤 시나리오 확정(PD-18, analyze H2)**: FR-016의 \"목표 위험 맞춤\"에 값과 규칙을 정했습니다. 목표 변동성은 사용자 입력(기본 연 10%, 5~20%, 1% 간격, 003 등록표 항목), 방식은 전략 공통 오버레이(63거래일 추정·월말 조절·목표 초과 시에만 현금으로 하향, 레버리지 금지). spec Clarifications·FR-016·PD 표, `specs/README.md` PD-18 행, research R-17, data-model `strategy_rules` `TARGET_RISK_OVERLAY/1`, contracts `scenarioParams`/`scenarioRules`, quickstart S11, tasks T001·T003·T005·T006·T008에 반영. Task 수는 13개 유지.\n- **Jira**: Story 3개 신규, Task 25개 발급 후 13개로 재편. 흡수된 12개는 `[병합→…]` 제목·코멘트 후 종결(삭제 아님).\n\n# 테스트\n\n- [x] `/speckit-clarify` 후 spec 품질 체크리스트 16/16 유지\n- [x] `/speckit-analyze` 실행: 커버리지 32/38(유보 3은 PD-03·04, 미충족 1은 H1, 부분 2), CRITICAL 1건 문서 반영 완료\n- [x] tasks.md 13개 항목 모두 체크리스트 형식(`- [ ] T### [P?] [US?] [분야] … — Jira 키`) 통과, Jira 키 13개 일치\n- [x] plan·research·data-model·contracts·quickstart에 템플릿 플레이스홀더·NEEDS CLARIFICATION 잔존 0건\n- [ ] 리뷰어: contracts/rest-api.md의 응답 변화(`CANCELLED`, `progress`, `resultSource`, `partial`)가 FE 담당자에게 전달됐는지 확인 (진행 정도는 SSE가 아니라 폴링 + DB 저장으로 결정)\n\n# 리뷰 포인트\n\n- **임시 실행 한도(analyze H1).** spec FR-006은 \"상한을 정하기 전에 무제한 실행을 허용하지 않는다\"인데, PD-06 임시 상한 값은 팀이 명시해야 합니다. 값을 주시면 Task 하나(`[BE] 실행 한도 설정값과 429 EXECUTION_LIMIT 적용`)를 추가합니다. 값이 없으면 대기열 길이만 표시하고 상한은 두지 않는 현재 plan대로 갑니다.\n- **`TARGET_RISK` 시나리오(analyze H2 → PD-18로 확정).** spec 004 FR-016·005 FR-017의 \"목표 위험 맞춤\"은 이름만 있었는데, 2026-09-10에 다음으로 정했습니다. 목표 변동성은 사용자 입력(기본 연 10%, 5~20%, 1% 간격, 003 등록표 항목), 방식은 전략 공통 오버레이(63거래일 변동성 추정, 월말 리밸런싱 때 조절, 레버리지 금지라 목표 초과 시에만 현금으로 낮춤). spec Clarifications·FR-016·PD-18, README PD 표, research R-17, data-model(`TARGET_RISK_OVERLAY/1`), contracts, quickstart S11, tasks T001·T003·T005·T006·T008에 반영했습니다. 별도 Task는 늘리지 않았습니다. 이 결정에 이견이 있으면 알려주세요. **003 등록표에 목표 변동성 항목을 넣는 일은 003 spec 작업으로 남아 있습니다.**\n- **요청/실행 두 테이블 분리(research R-02).** 단일 테이블 self-reference 대안을 버린 이유는 plan Complexity Tracking에 있습니다. 기존 `backtest_result`가 Job과 1:1이던 구조가 run 기준으로 바뀌고, DEMO 데이터는 V3에서 삭제를 전제합니다.\n- **quorum 큐 전환(research R-06).** classic → quorum은 큐 삭제가 필요합니다. 운영 배포 절차에 1회 실행 단계가 들어갑니다(T002).\n- **PD-03·PD-04 미확정 전략의 422 거부.** 모멘텀·최소분산은 팀 확정 전까지 요청이 거부됩니다. MVP는 고정·동일·역변동성 세 전략입니다. 이 방식이 맞는지, 아니면 출발안을 임시 등록하는 쪽이 나은지 의견 부탁드립니다.\n- **인증 필수 가정(research R-12).** 요청·취소·재시도는 인증 사용자만 가능하다고 가정했습니다. 익명 허용이면 `requester_id`를 nullable로 바꿔야 합니다.",
+    "state": "merged",
+    "created_at": "2026-09-10T16:40:30.431+09:00",
+    "updated_at": "2026-09-14T13:23:01.671+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-10T16:40:52.019+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/117-spec-004-backtest-execution-clarify",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3807038b48e774c780509f34b0b579a66ac799d0",
+    "merge_commit_sha": "78720d18c496d00fd9468667c804b70e0996752b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T16:40:32.321+09:00",
+    "reference": "!35",
+    "references": {
+      "short": "!35",
+      "relative": "!35",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!35"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/35",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 939759,
+    "iid": 35,
+    "project_id": 1444456,
+    "title": "docs(infra): spec 004 백테스트 실행 문서 작업",
+    "description": "# 작업 내용 요약\n\nspec 004 \"백테스트 실행\"의 Spec Kit 문서 단계를 끝냈습니다. 티켓 제목은 clarify이지만 같은 브랜치에서 plan·tasks·analyze까지 이어서 진행해 구현 착수 전 문서가 모두 들어 있습니다.\n\n- **clarify**: 5문항을 spec에 반영했습니다. 실행 상태에 '취소' 종결 상태 추가, 동일 버전 결과는 서비스 전체 공유, 진행 중인 동일 버전 요청은 새 계산 없이 합류(요청:실행 = 다대일), 진행 정도는 단계 이름 + 처리한 마지막 거래일·비율, 시스템 장애 시 1회 자동 재시도 후 실패.\n- **plan**: 기존 DEMO 파이프라인(Spring → RabbitMQ → Nautilus 워커 → PostgreSQL)을 유지하고 확장하는 설계입니다. Constitution Check 전 항목 PASS.\n- **tasks**: 한 사람이 전담하는 전제로 MR 단위 Task 13개. Jira 이슈까지 발급해 각 Task 끝에 키를 적었습니다.\n- **analyze**: CRITICAL 1건(역변동성 규칙 provisional 표시)과 HIGH 1건(목표 위험 맞춤 시나리오 → PD-18 확정)은 문서에 반영했습니다. 남은 HIGH 1건(임시 실행 한도 값)은 팀 결정 항목으로 아래 리뷰 포인트에 올립니다.\n\n# 관련 이슈\n- close #117\n- Epic S15P21E205-30 백테스트 / Story -21·-38(기존), -125·-126·-127(신규) / Task -128 -129 -130 -134 -135 -137 -140 -142 -146 -148 -149 -153 -154\n\n# 주요 변경 사항\n\n- **spec.md**: `## Clarifications` 절 신설(5건). User Story 1·3, Edge Cases, FR-001·002·003·005·007, Key Entities, SC-006에 위 결정을 반영.\n- **plan.md**: Technical Context(Java 21·Python 3.11·NautilusTrader 1.219·PostgreSQL 16·RabbitMQ 3.13), Constitution Check 12항목 PASS, 소스 배치, Complexity Tracking(요청/실행 분리·제어 채널 2건).\n- **research.md R-01~R-16**: Nautilus 유지 / `backtest_job`을 `backtest_request` + `backtest_run` 다대일로 분리 / SHA-256 동일 버전 키 / fanout `backtest.control`로 거래일 단위 협력 취소 / `backtest.jobs`를 quorum 큐 `x-delivery-limit=1`로 바꿔 1회 자동 재시도 후 DLQ / 비용·전략 규칙을 버전 등록표로 관리하되 PD-03·04 미확정 전략은 422로 거부 / 실행 측정 테이블과 p50·p95 뷰.\n- **data-model.md**: 테이블 8개(`backtest_request`, `backtest_run`, `backtest_result`, `backtest_trade`, `cost_profile`, `strategy_rules`, `backtest_run_metric`, `backtest_reuse_event`)와 뷰 1개, 상태 전이, 부분 유니크 인덱스, V3 마이그레이션 요약.\n- **contracts/**: REST v2(cancel·retry·weights·exceptions·execution-metrics, `resultSource`, 오류 코드 4종), 메시징 schemaVersion 2(run 식별자 기준, FINISHED CANCELLED, 제어 메시지), 001 자료 계층에 요구하는 시장 자료 입력 계약.\n- **quickstart.md**: 검증 시나리오 S1~S10.\n- **tasks.md**: 13개 Task, 각 항목에 Jira 키. 워커(Python) 작업도 `[BE]` 표기(팀 확정).\n- **analyze C1 반영**: 역변동성의 0 변동성 처리·비중 상한은 spec이 PD-02 계열 결정 항목으로 둔 값이라, `strategy_rules`에 `provisional` 열을 두고 임시 등록으로 표시(비용 프로필과 같은 방식). research R-08·data-model·tasks T003에 일관되게 적음.\n- **목표 위험 맞춤 시나리오 확정(PD-18, analyze H2)**: FR-016의 \"목표 위험 맞춤\"에 값과 규칙을 정했습니다. 목표 변동성은 사용자 입력(기본 연 10%, 5~20%, 1% 간격, 003 등록표 항목), 방식은 전략 공통 오버레이(63거래일 추정·월말 조절·목표 초과 시에만 현금으로 하향, 레버리지 금지). spec Clarifications·FR-016·PD 표, `specs/README.md` PD-18 행, research R-17, data-model `strategy_rules` `TARGET_RISK_OVERLAY/1`, contracts `scenarioParams`/`scenarioRules`, quickstart S11, tasks T001·T003·T005·T006·T008에 반영. Task 수는 13개 유지.\n- **Jira**: Story 3개 신규, Task 25개 발급 후 13개로 재편. 흡수된 12개는 `[병합→…]` 제목·코멘트 후 종결(삭제 아님).\n\n# 테스트\n\n- [x] `/speckit-clarify` 후 spec 품질 체크리스트 16/16 유지\n- [x] `/speckit-analyze` 실행: 커버리지 32/38(유보 3은 PD-03·04, 미충족 1은 H1, 부분 2), CRITICAL 1건 문서 반영 완료\n- [x] tasks.md 13개 항목 모두 체크리스트 형식(`- [ ] T### [P?] [US?] [분야] … — Jira 키`) 통과, Jira 키 13개 일치\n- [x] plan·research·data-model·contracts·quickstart에 템플릿 플레이스홀더·NEEDS CLARIFICATION 잔존 0건\n- [ ] 리뷰어: contracts/rest-api.md의 응답 변화(`CANCELLED`, `progress`, `resultSource`, `partial`)가 FE 담당자에게 전달됐는지 확인 (진행 정도는 SSE가 아니라 폴링 + DB 저장으로 결정)\n\n# 리뷰 포인트\n\n- **임시 실행 한도(analyze H1).** spec FR-006은 \"상한을 정하기 전에 무제한 실행을 허용하지 않는다\"인데, PD-06 임시 상한 값은 팀이 명시해야 합니다. 값을 주시면 Task 하나(`[BE] 실행 한도 설정값과 429 EXECUTION_LIMIT 적용`)를 추가합니다. 값이 없으면 대기열 길이만 표시하고 상한은 두지 않는 현재 plan대로 갑니다.\n- **`TARGET_RISK` 시나리오(analyze H2 → PD-18로 확정).** spec 004 FR-016·005 FR-017의 \"목표 위험 맞춤\"은 이름만 있었는데, 2026-09-10에 다음으로 정했습니다. 목표 변동성은 사용자 입력(기본 연 10%, 5~20%, 1% 간격, 003 등록표 항목), 방식은 전략 공통 오버레이(63거래일 변동성 추정, 월말 리밸런싱 때 조절, 레버리지 금지라 목표 초과 시에만 현금으로 낮춤). spec Clarifications·FR-016·PD-18, README PD 표, research R-17, data-model(`TARGET_RISK_OVERLAY/1`), contracts, quickstart S11, tasks T001·T003·T005·T006·T008에 반영했습니다. 별도 Task는 늘리지 않았습니다. 이 결정에 이견이 있으면 알려주세요. **003 등록표에 목표 변동성 항목을 넣는 일은 003 spec 작업으로 남아 있습니다.**\n- **요청/실행 두 테이블 분리(research R-02).** 단일 테이블 self-reference 대안을 버린 이유는 plan Complexity Tracking에 있습니다. 기존 `backtest_result`가 Job과 1:1이던 구조가 run 기준으로 바뀌고, DEMO 데이터는 V3에서 삭제를 전제합니다.\n- **quorum 큐 전환(research R-06).** classic → quorum은 큐 삭제가 필요합니다. 운영 배포 절차에 1회 실행 단계가 들어갑니다(T002).\n- **PD-03·PD-04 미확정 전략의 422 거부.** 모멘텀·최소분산은 팀 확정 전까지 요청이 거부됩니다. MVP는 고정·동일·역변동성 세 전략입니다. 이 방식이 맞는지, 아니면 출발안을 임시 등록하는 쪽이 나은지 의견 부탁드립니다.\n- **인증 필수 가정(research R-12).** 요청·취소·재시도는 인증 사용자만 가능하다고 가정했습니다. 익명 허용이면 `requester_id`를 nullable로 바꿔야 합니다.",
+    "state": "merged",
+    "created_at": "2026-09-10T16:40:30.431+09:00",
+    "updated_at": "2026-09-14T13:23:01.671+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-10T16:40:52.019+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/117-spec-004-backtest-execution-clarify",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3807038b48e774c780509f34b0b579a66ac799d0",
+    "merge_commit_sha": "78720d18c496d00fd9468667c804b70e0996752b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T16:40:32.321+09:00",
+    "reference": "!35",
+    "references": {
+      "short": "!35",
+      "relative": "!35",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!35"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/35",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+      "head_sha": "3807038b48e774c780509f34b0b579a66ac799d0",
+      "start_sha": "fa966e5054ccc106c91e3de9427066ced163efa6"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "8ae16cbafa94aa82806ec00d77558a783f811562",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787880,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-10T16:40:30.813+09:00",
+          "updated_at": "2026-09-10T16:40:30.844+09:00",
+          "system": true,
+          "noteable_id": 939759,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 35,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ebc80a51ff98111e8fa75e4d356422964f21bca5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787881,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Low] `specs/004-backtest-execution/tasks.md` 파일이 빈 파일(`size: 0`)로 포함되어 있습니다. 설명에서 \"13개 Task, 각 항목에 Jira 키\"를 완료했다고 밝혔으나, 해당 태스크 문서 내용이 누락되어 있어 구현 단계에서 추적이 어려울 수 있습니다.\n\n### 테스트 제안\n- **동일 버전 합류(S3) 동시성 테스트**: 여러 사용자가 동시에 동일한 버전의 백테스트를 요청할 때, 새로운 계산이 중복 생성되지 않고 하나의 `backtest_run`에 올바르게 합류하는지 검증합니다.\n- **시스템 장애 자동 재시도(S6) 시나리오 테스트**: 워커 실행 중 프로세스가 강제 종료(`kill -9`)되었을 때, `attempt` 카운터가 증가하며 1회 자동 재시도가 정상 동작하는지, 2회 연속 실패 시 DLQ를 통해 `SYSTEM_FAILURE` 상태로 올바르게 종결되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3807038b48e774c780509f34b0b579a66ac799d0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-10T16:40:39.485+09:00",
+          "updated_at": "2026-09-10T16:40:39.485+09:00",
+          "system": false,
+          "noteable_id": 939759,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 35,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "518a2178fc4db4aee1aea59df7a206d341fd6818",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2787887,
+          "type": null,
+          "body": "mentioned in commit 78720d18c496d00fd9468667c804b70e0996752b",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-10T16:40:52.562+09:00",
+          "updated_at": "2026-09-10T16:40:52.593+09:00",
+          "system": true,
+          "noteable_id": 939759,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 35,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "491005260e0a0f7e8ac9bb856b072ad69740b7c5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801426,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T13:23:01.636+09:00",
+          "updated_at": "2026-09-14T13:23:01.639+09:00",
+          "system": true,
+          "noteable_id": 939759,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 35,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2183029,
+      "head_commit_sha": "3807038b48e774c780509f34b0b579a66ac799d0",
+      "base_commit_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+      "start_commit_sha": "fa966e5054ccc106c91e3de9427066ced163efa6",
+      "created_at": "2026-09-10T16:40:31.410+09:00",
+      "merge_request_id": 939759,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "5e60bf839d14e73a790ead173044fa3079c309a5"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2183029,
+      "head_commit_sha": "3807038b48e774c780509f34b0b579a66ac799d0",
+      "base_commit_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+      "start_commit_sha": "fa966e5054ccc106c91e3de9427066ced163efa6",
+      "created_at": "2026-09-10T16:40:31.410+09:00",
+      "merge_request_id": 939759,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "5e60bf839d14e73a790ead173044fa3079c309a5",
+      "commits": [
+        {
+          "id": "3807038b48e774c780509f34b0b579a66ac799d0",
+          "short_id": "3807038b",
+          "created_at": "2026-09-10T16:35:45.000+09:00",
+          "parent_ids": [
+            "9ad5aa2243c5f0e6f915f60cc53110a0b2026413"
+          ],
+          "title": "docs(infra): spec 004 목표 위험 맞춤 시나리오 규칙 확정(PD-18) 반영",
+          "message": "docs(infra): spec 004 목표 위험 맞춤 시나리오 규칙 확정(PD-18) 반영\n\n- 목표 변동성: 사용자 입력, 기본 연 10%(5~20%, 1% 간격), 003 등록표 항목\n- 방식: 전략 공통 오버레이, 63거래일 추정·월말 조절·목표 초과 시에만 현금으로 낮춤\n- spec Clarifications·FR-016·PD-18, README PD 표, research R-17, data-model TARGET_RISK_OVERLAY/1,\n  contracts scenarioParams/scenarioRules, quickstart S11, tasks T001·T003·T005·T006·T008\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T16:35:45.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T16:35:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3807038b48e774c780509f34b0b579a66ac799d0"
+        },
+        {
+          "id": "9ad5aa2243c5f0e6f915f60cc53110a0b2026413",
+          "short_id": "9ad5aa22",
+          "created_at": "2026-09-10T16:15:32.000+09:00",
+          "parent_ids": [
+            "6bf7206b3d879cd767065b370c0c15997e927b92"
+          ],
+          "title": "docs(infra): spec 004 analyze C1 반영 — 역변동성 규칙을 provisional로 등록",
+          "message": "docs(infra): spec 004 analyze C1 반영 — 역변동성 규칙을 provisional로 등록\n\n- research R-08·data-model strategy_rules에 provisional 열과 PD-02 참조 추가\n- tasks T003·Jira -130 설명과 일치시킴\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T16:15:32.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T16:15:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9ad5aa2243c5f0e6f915f60cc53110a0b2026413"
+        },
+        {
+          "id": "6bf7206b3d879cd767065b370c0c15997e927b92",
+          "short_id": "6bf7206b",
+          "created_at": "2026-09-10T16:06:37.000+09:00",
+          "parent_ids": [
+            "228674a7ca44ac72761a6701714c7a7dd8ae514c"
+          ],
+          "title": "docs(infra): spec 004 tasks 25개를 13개 MR 단위로 재편, Jira 병합 반영",
+          "message": "docs(infra): spec 004 tasks 25개를 13개 MR 단위로 재편, Jira 병합 반영\n\n- 한 사람이 전담하는 전제로 같은 파트 연속 작업·반쪽 병합 방지·문서 묶음 기준으로 통합\n- 살린 Jira: 128 129 130 134 135 137 140 142 146 148 149 153 154\n- 흡수 종결: 131 132 133 136 139 141 144 150 151 152 155 156\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T16:06:37.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T16:06:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6bf7206b3d879cd767065b370c0c15997e927b92"
+        },
+        {
+          "id": "228674a7ca44ac72761a6701714c7a7dd8ae514c",
+          "short_id": "228674a7",
+          "created_at": "2026-09-10T15:45:48.000+09:00",
+          "parent_ids": [
+            "542c488c877c4b9d9ee5dccacf4246ea463c3ca8"
+          ],
+          "title": "docs(infra): spec 004 tasks에 발급된 Jira 키 기록",
+          "message": "docs(infra): spec 004 tasks에 발급된 Jira 키 기록\n\n- Epic S15P21E205-30, Story -21/-38(기존)·-125/-126/-127(신규)\n- T001~T025 → S15P21E205-128~156\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T15:45:48.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T15:45:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/228674a7ca44ac72761a6701714c7a7dd8ae514c"
+        },
+        {
+          "id": "542c488c877c4b9d9ee5dccacf4246ea463c3ca8",
+          "short_id": "542c488c",
+          "created_at": "2026-09-10T15:19:19.000+09:00",
+          "parent_ids": [
+            "293834dd44fabe9eedd5652855dc87e388b79be1"
+          ],
+          "title": "docs(infra): spec 004 tasks 워커 Task 분야 표기를 [DE]에서 [BE]로 변경",
+          "message": "docs(infra): spec 004 tasks 워커 Task 분야 표기를 [DE]에서 [BE]로 변경\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T15:19:19.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T15:19:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/542c488c877c4b9d9ee5dccacf4246ea463c3ca8"
+        },
+        {
+          "id": "293834dd44fabe9eedd5652855dc87e388b79be1",
+          "short_id": "293834dd",
+          "created_at": "2026-09-10T15:00:17.000+09:00",
+          "parent_ids": [
+            "92c66e03e24d8f1e7d0982bf7b28c95252742a17"
+          ],
+          "title": "docs(infra): spec 004 백테스트 실행 tasks.md 작성",
+          "message": "docs(infra): spec 004 백테스트 실행 tasks.md 작성\n\n- Jira Task 1개 = 브랜치 1개 = MR 1개 단위로 25개 Task\n- Setup 2, Foundational 5, US1 3, US2 6, US3 5, US4 1, Polish 3\n- PD-03·04·06·07 값은 어느 Task에서도 확정하지 않음\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T15:00:17.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T15:00:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/293834dd44fabe9eedd5652855dc87e388b79be1"
+        },
+        {
+          "id": "92c66e03e24d8f1e7d0982bf7b28c95252742a17",
+          "short_id": "92c66e03",
+          "created_at": "2026-09-10T14:16:09.000+09:00",
+          "parent_ids": [
+            "9e2c6eefd36e19010b7d3747088c29812b5de1f6"
+          ],
+          "title": "docs(infra): spec 004 백테스트 실행 plan·research·data-model·contracts·quickstart 작성",
+          "message": "docs(infra): spec 004 백테스트 실행 plan·research·data-model·contracts·quickstart 작성\n\n- Technical Context·Constitution Check(전 항목 PASS) 채운 plan.md\n- research.md R-01~R-16: Nautilus 유지, 요청/실행 다대일 분리, SHA-256 동일 버전 키,\n  fanout 제어 채널 취소, quorum queue delivery-limit=1로 1회 자동 재시도,\n  비용·전략 규칙 버전 등록표(PD 미확정 규칙은 실행 거부), 측정 기록 뷰\n- data-model.md: backtest_request/run 분리, 부분 유니크 인덱스, 상태 전이, V3 마이그레이션\n- contracts: REST v2(cancel/retry/weights/exceptions/metrics), messaging schemaVersion 2,\n  001에 요구하는 시장 자료 입력 계약\n- quickstart.md: S1~S10 검증 시나리오\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T14:16:09.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T14:16:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92c66e03e24d8f1e7d0982bf7b28c95252742a17"
+        },
+        {
+          "id": "9e2c6eefd36e19010b7d3747088c29812b5de1f6",
+          "short_id": "9e2c6eef",
+          "created_at": "2026-09-10T12:38:51.000+09:00",
+          "parent_ids": [
+            "f117cd4fb7ac50fceedd3f783bb5296dc80ef186"
+          ],
+          "title": "docs(infra): spec 004 백테스트 실행 clarify 세션 반영",
+          "message": "docs(infra): spec 004 백테스트 실행 clarify 세션 반영\n\n- 실행 상태에 '취소' 종결 상태 추가, 부분 결과는 취소에 귀속·재사용 제외\n- 동일 버전 결과는 서비스 전체 공유, 요청자 연결은 006 기록이 담당\n- 진행 중 동일 버전 요청은 새 계산 없이 합류(요청:실행 = 다대일)\n- 진행 정도 = 단계 이름 + 처리한 마지막 거래일·비율, 취소 완료 범위도 동일\n- 시스템 장애 시 1회 자동 재시도 후 실패, 자동 재시도 여부를 측정 기록에 포함\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-10T12:38:51.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-10T12:38:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9e2c6eefd36e19010b7d3747088c29812b5de1f6"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+# Contract: 시장 자료 입력 (004 → 001에 대한 요구)\n+\n+004 워커의 `PostgresMarketDataProvider`(R-09)가 읽는 최소 계약이다. 001 plan이 저장 형식(PostgreSQL 테이블·Parquet)을 정할 때 이 열과 의미를 만족해야 한다. 열 이름은 제안이며 의미가 우선한다. 001이 다른 이름을 쓰면 provider 매핑만 바꾼다.\n+\n+## 필요한 자료\n+\n+| 자료 | 열 | 용도 |\n+|---|---|---|\n+| 일별 원시 가격 | `instrument_id, trade_date, open, high, low, close, volume, halted BOOL, data_version` | 체결(다음 거래일 원시 시가), 거래 불가 판정(`halted` 또는 volume 0) |\n+| 일별 조정 종가 | `instrument_id, trade_date, adj_close, data_version` | 신호·성과(분할·분배 일관 반영) |\n+| 분배금 이벤트 | `instrument_id, ex_date, pay_date, amount_per_share, data_version` | 지급일 현금 반영(한 번만) |\n+| 분할 이벤트 | `instrument_id, effective_date, ratio, data_version` | 원시 수량 조정 |\n+| 상품 정보 | `instrument_id, listing_date, delisting_date NULL, name, benchmark_index` | 가용 기간, 상장 전 자료 금지 |\n+| 섹터-ETF 대응표 | `mapping_version, sector_id, instrument_id, effective_from, effective_to NULL` | 요청 검증·키 계산 |\n+| 자료 버전 | `data_version, cutoff_at, source, note` | 실행 키·결과 기록 |\n+\n+## 불변 조건 (004가 의존)\n+\n+- 같은 `(instrument_id, trade_date, data_version)`에 행이 하나다. 날짜는 KRX 거래일만 있고 오름차순 조회가 가능하다.\n+- 상장일 이전 행이 없다. 합성·백필 값이 없다(원칙 V).\n+- `data_version`이 바뀌어도 이전 버전 행은 유지된다(이전 실행의 재현, spec Edge Case).\n+- 조정 종가는 해당 `data_version` 기준으로 전체 기간에 일관되게 계산되어 있다. 원시 가격은 조정하지 않는다.\n+- 결측은 행 부재로 표현하고 0이나 보간값을 넣지 않는다(원칙 VI). 워커는 결측 거래일을 만나면 `DATA_INSUFFICIENT`로 실패한다.\n+\n+## 조회 패턴\n+\n+실행마다 종목 ≤ 50개, 기간 ≤ 16년(≈4,000거래일)을 한 번에 읽는다. `(instrument_id, data_version, trade_date)` 인덱스가 있으면 충분하다. 워커는 읽기 전용 접속만 쓴다.\n+\n+## 001 미완성 시\n+\n+같은 열을 가진 CSV(`worker/examples/`)로 테스트하고, 결과 `versions.data`에 `FIXTURE-…`를 기록한다. 픽스처로 만든 결과는 사용자에게 제공하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/market-data-input.md",
+          "old_path": "specs/004-backtest-execution/contracts/market-data-input.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,75 @@\n+# Contract: Backtest Messaging v2 (Backend ↔ Worker, RabbitMQ)\n+\n+`docs/specs/backtest-messaging/README.md`를 이 내용으로 갱신하고 `examples/`에 schemaVersion 2 픽스처를 둔다. 표기 규칙(소수 plain string, 날짜는 거래일, 시각 UTC, 누락 키 = null, 식별자 ≤255자, `{6자리}.XKRX`), 백엔드가 토폴로지를 선언하고 워커는 passive declare만 하는 규칙, ACK 규칙(계약 위반 → reject/DLQ, 발행 실패 → requeue)은 현행 유지.\n+\n+## 토폴로지\n+\n+| 이름 | 종류 | 변경 |\n+|---|---|---|\n+| `backtest` (direct, durable) | exchange | 유지 |\n+| `backtest.jobs` | queue | **quorum**, `x-delivery-limit=1`, DLX `backtest.dlx` → `backtest.jobs.dlq`. 전환 시 기존 classic 큐 삭제 필요 |\n+| `backtest.events` | queue | 유지 |\n+| `backtest.control` (fanout, durable) | exchange | **신규**. 워커마다 exclusive·auto-delete 큐를 바인딩 |\n+| `backtest.jobs.dlq` | queue | 유지. **백엔드가 소비**해 run을 FAILED(SYSTEM_FAILURE)로 종결 |\n+\n+메시지 속성: `content_type=application/json`, `delivery_mode=2`, header `schemaVersion: 2`. 작업 메시지 `message_id = \"JOB-\" + runId`, `correlation_id = runId`. **식별자는 사용자용 backtestId가 아니라 run 식별자(`RUN-{id}`)다.** 여러 요청이 한 run에 합류하므로 워커는 요청을 알지 못한다.\n+\n+## 작업 메시지: EngineInput v2 (`backtest.job.requested`)\n+\n+```json\n+{\n+  \"run\": {\"runId\": \"RUN-000123\", \"effectiveStart\": \"2018-04-02\", \"start\": \"2018-01-02\", \"end\": \"2025-12-30\", \"randomSeed\": 42, \"scenario\": \"FULL_PERIOD\", \"scenarioParams\": null, \"scenarioRules\": null},\n+  \"universe\": {\"mappingVersion\": \"SECTOR-ETF-2026-09\", \"items\": [{\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\", \"targetWeight\": \"0.4000\"}]},\n+  \"marketData\": {\"datasetId\": \"KRX_DAILY_V1\", \"dataVersion\": \"KRX-2026-09-09\", \"interval\": \"1D\", \"fillPrice\": \"RAW\", \"signalPrice\": \"ADJUSTED\", \"distributions\": \"CASH_ON_PAY_DATE\"},\n+  \"allocation\": {\"strategyId\": \"INVERSE_VOLATILITY\", \"rulesVersion\": \"1\", \"rules\": {\"lookbackDays\": 63, \"zeroVolatility\": \"EXCLUDE_THEN_ALLOCATE\", \"weightCap\": \"1.0000\", \"investedFraction\": \"1.0000\"}, \"parameters\": {\"rebalance\": \"MONTH_END\"}},\n+  \"portfolio\": {\"initialCash\": \"10000000.00\", \"currency\": \"KRW\", \"integerLots\": true, \"shortSelling\": false, \"leverage\": \"1.0\"},\n+  \"execution\": {\"signalTiming\": \"BAR_CLOSE\", \"executionTiming\": \"NEXT_BAR_OPEN\", \"orderTypes\": [\"MARKET\"], \"costProfile\": {\"version\": \"PROVISIONAL-DEMO-1\", \"commissionBps\": \"0\", \"spreadBps\": \"0\", \"slippageBps\": \"5\", \"taxBps\": \"0\", \"provisional\": true}, \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\", \"delisting\": \"CAUSE_BASED\"},\n+  \"evaluation\": {\"splitVersion\": \"SPLIT-1\", \"warmupTradingDays\": 63, \"liquidationAtEnd\": true},\n+  \"progress\": {\"batchTradingDays\": 20}\n+}\n+```\n+\n+- `allocation.rules`는 `strategy_rules.spec` 사본이다. 워커는 여기 없는 기본값을 쓰지 않는다. `strategyId`가 규칙 없이 오면 `INVALID_REQUEST`.\n+- `run.scenario=TARGET_RISK`면 `run.scenarioParams={\"targetVolatility\": \"0.1000\"}`와 `run.scenarioRules={\"version\": \"TARGET_RISK_OVERLAY/1\", \"lookbackDays\": 63, \"adjustAt\": \"REBALANCE\", \"scaleDownOnly\": true}`가 함께 온다(둘 다 백엔드가 채움). 워커는 리밸런싱 판단일마다 최근 `lookbackDays` 포트폴리오 일별 수익률 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱한다. `weightsSeries[]`에 `riskScale`·`estimatedVolatility`를 기록한다. `FRESH_CASH_FROM`이면 `run.scenarioParams={\"startDate\": \"…\"}`. 규칙이 빠진 `TARGET_RISK`는 `INVALID_REQUEST`.\n+- `marketData.fillPrice=RAW`, `signalPrice=ADJUSTED`는 FR-013을 고정한 값이며 다른 값은 거부.\n+- `benchmark` 블록은 v2에서 제거(005 보조 보기는 별도 spec).\n+\n+## 이벤트 봉투 (`backtest.event`)\n+\n+`{schemaVersion: 2, eventId, runId, executionId, type, sequence, occurredAt, payload}`. `executionId`는 전달(delivery)마다 새 UUID(현행). 같은 runId에 다른 executionId의 STARTED가 오면 백엔드는 자동 재시도로 해석해 `attempt`를 올린다.\n+\n+| type | payload |\n+|---|---|\n+| `STARTED` | `{startedAt, stage: \"PREPARING_DATA\", resource: {pid, hostname}}` |\n+| `PROGRESS` | `{stage: \"COMPUTING\", completedTradingDays, totalTradingDays, lastTradingDate, points: [{date, equity, cumulativeReturn, drawdown}]}` (20거래일 배치 + 마지막 잔여) |\n+| `FINISHED` | `{status: \"COMPLETED\"|\"FAILED\"|\"CANCELLED\", partial, lastTradingDate, engineOutput, resource: {peakRssMb, cpuSeconds, wallSeconds}}` |\n+\n+- `FINISHED.status=CANCELLED`: `partial=true`, `engineOutput`은 `lastTradingDate`까지의 부분 결과(성과·시계열·거래·비중 모두 그 구간 기준). \n+- `FINISHED.status=FAILED`: `engineOutput.run.error = {code, message}`, code ∈ `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION` `ESTIMATION_FAILED` `ENGINE_ERROR`. 결정적 오류는 워커가 이 이벤트로 응답하고 ACK한다(재시도 없음).\n+\n+## 제어 메시지 (`backtest.control`, fanout)\n+\n+```json\n+{\"schemaVersion\": 2, \"type\": \"CANCEL\", \"runId\": \"RUN-000123\", \"requestedAt\": \"2026-09-10T02:31:00Z\"}\n+```\n+\n+- 워커는 자기 프로세스가 실행 중인 runId면 다음 `on_bar`에서 정지하고 FINISHED(CANCELLED)를 보낸다. 모르는 runId는 무시(다른 워커의 run 또는 이미 끝난 run).\n+- 백엔드는 (a) 마지막 활성 요청이 취소되어 run이 RUNNING일 때, (b) CANCELLED 상태의 run에 STARTED가 도착했을 때 발행한다.\n+\n+## EngineOutput v2 추가 필드\n+\n+`run{runId, status, partial, lastTradingDate, effectiveStart, effectiveEnd, error}`, `performance{…현행 + netTotalReturn, maxDrawdown, totalTradingCost}`, `portfolioSeries[{date, equity, cash, positions, cashFlows[{type: DISTRIBUTION, instrumentId, amount}]}]`, `weightsSeries[…]`, `weightsSource`, `trades[{…현행 + reason, plannedDate}]`, `costs{commission, spread, slippage, tax, total}`, `liquidation{markToMarket, liquidated}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method}`, `exceptions[{date, instrumentId, kind, rule, action}]`, `versions{mapping, rules, costProfile, data, engine, evaluationSplit, worker}`, `diagnostics{…현행 + resource}`.\n+\n+## 검증 책임 (§8 갱신)\n+\n+| 항목 | 백엔드(발행 전) | 워커(수신 후) |\n+|---|---|---|\n+| 규칙 등록 여부(PD 미확정) | 422 거부 | `rules` 없으면 INVALID_REQUEST |\n+| 비중 합·상한 합계 | 400 거부 | 재검증 후 CONSTRAINT_VIOLATION |\n+| 워밍업·가용 기간 | 422 거부 | 자료 로드 후 재검증 → DATA_INSUFFICIENT |\n+| 자료 정합(OHLC·중복·비단조) | — | `validate_prices` fail-closed |\n+| fillPrice/signalPrice 고정값 | 고정 | 다르면 INVALID_REQUEST |\n+\n+## 픽스처 (`docs/specs/backtest-messaging/examples/`)\n+\n+`engine-input.json`(v2), `event-started.json`, `event-progress.json`, `event-finished-completed.json`, `event-finished-failed.json`, `event-finished-cancelled.json`, `control-cancel.json`. 양쪽 테스트(`BacktestMessageRoundTripTest`, `worker/tests/test_contracts.py`)가 모두 읽는다. v1 픽스처는 삭제한다(호환 유지 대상 아님, DEMO 데이터 폐기 전제).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/messaging.md",
+          "old_path": "specs/004-backtest-execution/contracts/messaging.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,96 @@\n+# Contract: Backtest REST API v2 (Backend ↔ Frontend)\n+\n+`docs/specs/backtest-api/README.md`를 이 문서 내용으로 갱신한다. 봉투 `ApiResponse`, 외부 경로 `/api/backtests`(프록시가 `/api` 제거), 소수는 plain string, 날짜는 거래일 `YYYY-MM-DD`, 시각은 UTC ISO-8601 — 현행 규칙 유지. 모든 엔드포인트는 인증 필요(R-12). 다른 사용자의 요청은 404.\n+\n+## 상태 값\n+\n+`QUEUED` `RUNNING` `COMPLETED` `FAILED` `CANCELLED`. 종결: 뒤 셋. 프론트 표시 이름은 대기·실행·완료·실패·취소.\n+\n+## POST /backtests — 분석 요청 접수\n+\n+요청 본문(003이 만든 분석 요청):\n+\n+```json\n+{\n+  \"executionType\": \"SINGLE\",\n+  \"sectorAllocation\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\", \"targetWeight\": \"0.4000\"},\n+      {\"sectorId\": \"BATTERY\", \"instrumentId\": \"305720.XKRX\", \"targetWeight\": \"0.3000\"},\n+      {\"sectorId\": \"BIO\", \"instrumentId\": \"244580.XKRX\", \"targetWeight\": \"0.3000\"}\n+    ]\n+  },\n+  \"strategy\": {\"strategyId\": \"FIXED_WEIGHT\", \"rulesVersion\": \"1\", \"registryVersion\": \"PARAM-2026-09\", \"parameters\": {\"rebalance\": \"MONTH_END\"}},\n+  \"conditions\": {\"start\": \"2018-01-02\", \"end\": \"2025-12-30\", \"initialCash\": \"10000000.00\", \"costProfileVersion\": null, \"evaluationSplitVersion\": \"SPLIT-1\", \"scenario\": \"FULL_PERIOD\", \"scenarioParams\": null}\n+}\n+```\n+\n+- `targetWeight`는 `FIXED_WEIGHT`에서만 필수, 다른 전략에서는 금지(400).\n+- `costProfileVersion` null → 서버 기본(현재 `PROVISIONAL-DEMO-1`).\n+- `scenario`: `FULL_PERIOD`(주 분석) · `FRESH_CASH_FROM` · `COST_ESCALATION` · `TARGET_RISK` (FR-016, 별도 실행으로 기록).\n+- `scenarioParams`: `TARGET_RISK`면 `{\"targetVolatility\": \"0.1000\"}` 필수(연환산, 0.0500~0.2000, 0.0100 간격, 기본값은 003 등록표가 제공). `FRESH_CASH_FROM`이면 `{\"startDate\": \"2020-03-02\"}`. `FULL_PERIOD`·`COST_ESCALATION`에서는 null. 규칙(63거래일 추정·월말 조절·하향만)은 서버가 `strategy_rules` `TARGET_RISK_OVERLAY/1`에서 채우며 사용자 입력이 아니다(PD-18).\n+\n+응답 `202 Accepted`:\n+\n+```json\n+{\"backtestId\": \"BT-20260910-000123\", \"status\": \"QUEUED\", \"resultSource\": \"NEW\", \"effectiveStart\": \"2018-04-02\", \"effectiveEnd\": \"2025-12-30\", \"versions\": {\"costProfile\": {\"version\": \"PROVISIONAL-DEMO-1\", \"provisional\": true}, \"rules\": \"1\", \"data\": \"KRX-2026-09-09\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.0.0\"}}\n+```\n+\n+- `resultSource`: `NEW` 새 실행 / `JOINED` 진행 중 동일 버전 실행에 합류(status는 그 실행의 현재 상태) / `REUSED` 완료 결과 재사용(status `COMPLETED`, 결과 즉시 조회 가능).\n+- 오류: 400 `INVALID_INPUT`(비중 합·상한 합계·식별자), 422 `RULES_NOT_REGISTERED`(PD-03·04 미확정 전략), 422 `INSUFFICIENT_HISTORY`(워밍업 부족, 본문에 필요 시작일), 429 `EXECUTION_LIMIT`(대기열·동시 실행 상한, 본문에 사유), 503 `BROKER_UNAVAILABLE`(현행).\n+\n+## GET /backtests/{backtestId} — 상태·요약\n+\n+`200` 항상(종결 여부 무관, 현행 규칙).\n+\n+```json\n+{\n+  \"backtestId\": \"BT-20260910-000123\", \"status\": \"RUNNING\", \"resultSource\": \"NEW\", \"partial\": false,\n+  \"progress\": {\"stage\": \"COMPUTING\", \"lastTradingDate\": \"2021-06-30\", \"completedTradingDays\": 860, \"totalTradingDays\": 1905},\n+  \"queuedAt\": \"…\", \"startedAt\": \"…\", \"finishedAt\": null, \"queueWaitSeconds\": 4,\n+  \"config\": {…요청 원문 + effectiveStart/End…},\n+  \"versions\": {…},\n+  \"summary\": null,\n+  \"failure\": null\n+}\n+```\n+\n+- `progress.stage`: `PREPARING_DATA` `COMPUTING` `SAVING`. QUEUED에서는 `progress` null, `queueWaitSeconds`만 채움.\n+- `CANCELLED`: `partial=true`, `progress.lastTradingDate`가 완료 범위. `summary`는 부분 구간 기준 값.\n+- `FAILED`: `failure: {code, message}`. code는 `SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION` `EXECUTION_LIMIT`. 낮은 수익으로 표현하지 않는다.\n+- `summary`(COMPLETED·CANCELLED): 핵심 숫자 3개(`netTotalReturn`, `maxDrawdown`, `totalTradingCost`) + `liquidation{markToMarket, liquidated}` + `costs{…}` + `analytics{recoveryDays, turnover}` + `exceptionCount`.\n+\n+## POST /backtests/{backtestId}/cancel\n+\n+`202` `{backtestId, status}`. 이 요청만 취소한다(다른 합류 요청은 영향 없음, 마지막이면 실행 정지). 종결 상태면 `409 NOT_CANCELLABLE`. 취소 반영은 다음 진행 배치 이내이며 그동안 `status`는 `RUNNING`, `cancelRequested: true`로 보인다.\n+\n+## POST /backtests/{backtestId}/retry\n+\n+`202` 새 `{backtestId, status: QUEUED, resultSource, retryOf}`. 원 요청이 `FAILED` 또는 `CANCELLED`일 때만. 아니면 `409 NOT_RETRYABLE`. 같은 조건이므로 동일 버전 규칙이 그대로 적용된다(다른 사용자가 이미 완료했으면 `REUSED`).\n+\n+## GET /backtests/{backtestId}/timeseries · /trades · /positions · /weights\n+\n+- 현행 세 개 유지. `409 RESULT_NOT_READY`(QUEUED·RUNNING), `409 BACKTEST_FAILED`(FAILED). `CANCELLED`는 `200`에 부분 구간 데이터 + `partial=true`.\n+- 신규 `GET /backtests/{backtestId}/weights`: `[{date, target:{instrumentId: weight}, actual:{…}, weightError}]`, `weightsSource: USER|COMPUTED`.\n+- `/trades` 항목에 `reason`(`REBALANCE` `HALT_DEFERRED` `LIQUIDATION`)·`plannedDate` 추가. `/timeseries` 항목에 `cashFlows[{type: DISTRIBUTION, instrumentId, amount}]` 추가.\n+- `GET /backtests/{backtestId}/exceptions`: `[{date, instrumentId, kind, rule, action}]` — 005가 \"결과 옆 한 문장\"에 쓰는 원천.\n+\n+## GET /internal/execution-metrics?type=&from=&to= (운영자)\n+\n+`v_run_metric_summary` 행을 그대로 반환: `executionType, count, failRate, cancelRate, autoRetryRate, waitP50Ms, waitP95Ms, runP50Ms, runP95Ms, peakRssP95Mb, reuseCount`. 운영자 권한 필요. 사용자 화면에 노출하지 않는다.\n+\n+## 오류 코드 추가분\n+\n+| code | HTTP | 뜻 |\n+|---|---|---|\n+| RULES_NOT_REGISTERED | 422 | 전략 규칙 팀 미확정(PD-03·04) |\n+| INSUFFICIENT_HISTORY | 422 | 가용 기간이 워밍업보다 짧음 |\n+| EXECUTION_LIMIT | 429 | 대기열·동시 실행 상한 |\n+| NOT_CANCELLABLE / NOT_RETRYABLE | 409 | 상태 전이 불가 |\n+\n+기존 `INVALID_INPUT` `RESOURCE_NOT_FOUND` `RESULT_NOT_READY` `BACKTEST_FAILED` `BROKER_UNAVAILABLE` `INTERNAL_ERROR` 유지.\n+\n+## 예시 파일\n+\n+`docs/specs/backtest-api/examples/`에 `backtest-request.json`(v2), `backtest-accepted-joined.json`, `backtest-accepted-reused.json`, `backtest-detail-running.json`, `backtest-detail-cancelled.json`, `backtest-weights.json`, `backtest-exceptions.json`, `execution-metrics.json`을 추가·교체한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/contracts/rest-api.md",
+          "old_path": "specs/004-backtest-execution/contracts/rest-api.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,169 @@\n+# Data Model: 백테스트 실행 (Phase 1)\n+\n+**Spec**: [spec.md](spec.md) Key Entities | **Decisions**: [research.md](research.md) R-02·03·05·06·07·08·10·11\n+\n+저장 규칙(backend/CLAUDE.md 유지): 조회·필터·조인에 쓰는 값만 컬럼, 소수·시계열·구조는 JSONB. 시각은 TIMESTAMPTZ, 거래일은 DATE. 기존 `backtest_job` → `backtest_run` 개명은 V3 마이그레이션에서 한다.\n+\n+## 엔티티 대응\n+\n+| spec Key Entity | 테이블 |\n+|---|---|\n+| 분석 요청 | `backtest_request` (+ 요청 원문은 `backtest_run.request_spec`) |\n+| 실행 상태 | `backtest_run.status/progress_*` + `backtest_request.cancelled_at` |\n+| 동일 결과 식별 키 | `backtest_run.dedup_key` |\n+| 백테스트 결과 | `backtest_result` |\n+| 거래 내역 | `backtest_trade` |\n+| 비용 조건(버전) | `cost_profile` |\n+| 전략 규칙(버전) | `strategy_rules` |\n+| 예외 처리 기록 | `backtest_result.exceptions` |\n+| 실행 측정 기록 | `backtest_run_metric`, `backtest_reuse_event`, 뷰 `v_run_metric_summary` |\n+\n+## backtest_request (분석 요청)\n+\n+| 컬럼 | 타입 | 규칙 |\n+|---|---|---|\n+| id | BIGINT PK (seq) | |\n+| backtest_id | VARCHAR(32) UNIQUE NOT NULL | `BT-{yyyyMMdd}-{id %06d}` (현행 규칙 유지, 사용자에게 보이는 식별자) |\n+| run_id | BIGINT FK → backtest_run NOT NULL | 합류·재사용 시 기존 run |\n+| requester_id | BIGINT FK → users NOT NULL | 취소·재시도 권한 주체. 계산 기록에는 복사하지 않는다 |\n+| execution_type | VARCHAR(20) NOT NULL | `SINGLE` · `SEARCH_BUNDLE` · `REGIME_SECTOR` · `REGIME_TOTAL` (007·010이 지정) |\n+| result_source | VARCHAR(10) NOT NULL | `NEW` · `JOINED` · `REUSED` |\n+| retry_of_request_id | BIGINT FK → backtest_request NULL | 재시도 원본 |\n+| cancelled_at | TIMESTAMPTZ NULL | 이 요청의 취소 시각 |\n+| created_at | TIMESTAMPTZ NOT NULL | |\n+\n+**파생 상태**: `cancelled_at IS NOT NULL` → `CANCELLED`, 그 외 `run.status`. 진행 정도·부분 완료 범위는 run에서 읽는다.\n+\n+**인덱스**: `(requester_id, created_at DESC)`, `(run_id)`.\n+\n+## backtest_run (실행)\n+\n+| 컬럼 | 타입 | 규칙 |\n+|---|---|---|\n+| id | BIGINT PK (seq, 기존 `backtest_job_seq` 재사용) | |\n+| dedup_key | CHAR(64) NOT NULL | SHA-256 hex (R-03) |\n+| status | VARCHAR(20) NOT NULL | `QUEUED` `RUNNING` `COMPLETED` `FAILED` `CANCELLED` |\n+| execution_type | VARCHAR(20) NOT NULL | 첫 요청의 유형. 측정 분류에 사용 |\n+| strategy_id | VARCHAR(32) NOT NULL | `FIXED_WEIGHT` `EQUAL_WEIGHT` `INVERSE_VOLATILITY` `SECTOR_MOMENTUM` `MINIMUM_VARIANCE` |\n+| rules_version | VARCHAR(32) NOT NULL FK → strategy_rules | |\n+| cost_profile_version | VARCHAR(32) NOT NULL FK → cost_profile | |\n+| data_version | VARCHAR(64) NOT NULL | 001 자료 마감/버전 문자열 |\n+| request_spec | JSONB NOT NULL | canonical 요청(섹터 배분·파라미터·기간·금액·시나리오). 키 계산 입력과 동일 |\n+| versions | JSONB NOT NULL | `{mapping, rules, costProfile, data, engine, evaluationSplit, worker}` + provisional 플래그 |\n+| effective_start / effective_end | DATE NOT NULL | 워밍업 이후 시작일, 평가 종료일 (R-15) |\n+| progress_stage | VARCHAR(20) NULL | `PREPARING_DATA` `COMPUTING` `SAVING` |\n+| progress_last_trading_date | DATE NULL | 처리한 마지막 거래일 = 취소·한도 시 완료 범위 |\n+| progress_completed_days / progress_total_days | INTEGER NULL | 비율 산출용 |\n+| attempt | SMALLINT NOT NULL DEFAULT 0 | STARTED마다 +1. `> 1`이면 자동 재시도 발생 |\n+| current_execution_id | VARCHAR(255) NULL | 마지막 STARTED의 executionId |\n+| partial | BOOLEAN NOT NULL DEFAULT false | CANCELLED·한도 도달로 끊긴 결과 |\n+| failure_code / failure_message | VARCHAR(64) / TEXT NULL | `SYSTEM_FAILURE` `INVALID_REQUEST` `DATA_INSUFFICIENT` `CONSTRAINT_VIOLATION` `EXECUTION_LIMIT` … |\n+| cancel_requested_at | TIMESTAMPTZ NULL | 마지막 활성 요청 취소로 run 취소를 요청한 시각 |\n+| queued_at / started_at / finished_at | TIMESTAMPTZ | 측정 기록 원천 |\n+| random_seed | INTEGER NOT NULL | 42 고정(현행) |\n+| created_at / updated_at | TIMESTAMPTZ NOT NULL | |\n+\n+**인덱스**: `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')` (부분 유니크, R-02). `(status, queued_at)` 대기열 조회용.\n+\n+**상태 전이**\n+\n+```text\n+QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLETED\n+  │                    │\n+  │                    ├──FINISHED(FAILED) / DLQ──▶ FAILED\n+  │                    └──FINISHED(CANCELLED)────▶ CANCELLED (partial=true)\n+  └──마지막 활성 요청 취소──▶ CANCELLED\n+```\n+\n+- `RUNNING`은 `QUEUED`에서만 진입한다. 재시도로 두 번째 STARTED가 오면 상태는 그대로 두고 `attempt`만 올린다.\n+- 종결 상태(`COMPLETED` `FAILED` `CANCELLED`)에서 오는 이벤트는 기록만 하고 무시한다(현행 규칙 유지).\n+- 대기 중(`QUEUED`) run이 `CANCELLED`가 된 뒤 STARTED가 도착하면 백엔드가 CANCEL 제어 메시지를 보낸다(R-04).\n+\n+**취소 규칙(Edge Cases)**: 요청 취소는 해당 `backtest_request.cancelled_at`만 기록한다. 같은 run에 `cancelled_at IS NULL`인 요청이 하나도 남지 않을 때만 run에 `cancel_requested_at`을 기록하고 QUEUED면 즉시 `CANCELLED`, RUNNING이면 제어 메시지를 보낸다. run이 `FAILED`면 합류한 모든 요청이 FAILED로 보이고 각각 재시도할 수 있다.\n+\n+## backtest_result (결과)\n+\n+기존 열 유지(`performance`, `execution`, `portfolio_series`, `benchmark`, `diagnostics`, `error_*`, `started_at`, `finished_at`, `execution_id`, `finished_event_id`). PK/FK를 `run_id`로 바꾸고 아래를 추가한다(모두 JSONB, FR-027).\n+\n+| 컬럼 | 내용 |\n+|---|---|\n+| weights_series | `[{date, target:{instrumentId: w}, actual:{…}, weightError}]`, `weightsSource: USER|COMPUTED` |\n+| costs | `{commission, spread, slippage, tax, total}` (plain string 소수) |\n+| liquidation | `{markToMarket:{finalEquity,totalReturn}, liquidated:{finalEquity,totalReturn,liquidationCost}}` |\n+| analytics | `{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, method}` |\n+| exceptions | `[{date, instrumentId?, kind: ZERO_VOLATILITY|NO_SELECTION|ESTIMATION_FAILED|CONSTRAINT_VIOLATION|HALT_DEFERRED|WEIGHT_ROUNDING, rule, action}]` |\n+| versions | run.versions 사본(결과 단독 조회용) |\n+\n+부분 결과(CANCELLED)는 `portfolio_series`·`weights_series`·거래가 `progress_last_trading_date`까지만 채워지고 `performance`는 그 구간 기준으로 계산된 값이 들어간다. 005는 `partial=true`와 함께 표시한다.\n+\n+## backtest_trade (거래 내역)\n+\n+기존 열 유지, FK를 `run_id`로. `detail` JSONB에 `reason: REBALANCE | HALT_DEFERRED | LIQUIDATION`과 `plannedDate`(거래 불가로 미룬 경우 원래 체결 예정일)를 추가한다. 분배금은 거래가 아니라 `portfolio_series[].cashFlows`에 `DISTRIBUTION`으로 기록한다(FR-013, 한 번만 반영).\n+\n+## cost_profile (비용 조건 버전)\n+\n+| 컬럼 | 타입 | 규칙 |\n+|---|---|---|\n+| version | VARCHAR(32) PK | 예: `PROVISIONAL-DEMO-1` |\n+| commission_bps / spread_bps / slippage_bps / tax_bps | NUMERIC(8,4) NOT NULL | |\n+| escalation | JSONB NULL | 비용 상승 시나리오 정의(PD-07) |\n+| provisional | BOOLEAN NOT NULL | true면 결과에 \"임시 비용\" 표시 |\n+| note | TEXT | 근거(ADR-0004, 팀 결정 링크) |\n+| created_at | TIMESTAMPTZ | |\n+\n+초기 행: `PROVISIONAL-DEMO-1 (0, 0, 5, 0, null, true, 'ADR-0004 데모 값 재사용, PD-07 확정 전')`.\n+\n+## strategy_rules (전략 규칙 버전)\n+\n+| 컬럼 | 타입 | 규칙 |\n+|---|---|---|\n+| strategy_id | VARCHAR(32) | PK 일부 |\n+| rules_version | VARCHAR(32) | PK 일부 |\n+| status | VARCHAR(20) NOT NULL | `REGISTERED` · `PENDING_DECISION` |\n+| provisional | BOOLEAN NOT NULL DEFAULT false | true면 팀 결정(PD) 전 임시 규칙. 결과 `versions.rules.provisional`로 노출 |\n+| spec | JSONB NULL | 규칙 명세(관측 길이·예외 처리·선정·배분·동점 등). PENDING이면 null |\n+| decision_ref | TEXT | PD 번호·회의 기록 |\n+| created_at | TIMESTAMPTZ | |\n+\n+초기 행: `FIXED_WEIGHT/1`, `EQUAL_WEIGHT/1` REGISTERED(provisional=false); `INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:\"EXCLUDE_THEN_ALLOCATE\", weightCap:\"1.0000\", investedFraction:\"1.0000\"}` REGISTERED **provisional=true, decision_ref PD-02**(관측 길이는 spec FR-023 값, 나머지는 spec Edge Case가 PD-02 계열 결정 항목으로 둔 값. analyze C1); `SECTOR_MOMENTUM/PENDING`, `MINIMUM_VARIANCE/PENDING` PENDING_DECISION(decision_ref PD-03·PD-04); `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:\"REBALANCE\", scaleDownOnly:true, targetVolatility:{default:\"0.1000\", min:\"0.0500\", max:\"0.2000\", step:\"0.0100\"}}` REGISTERED provisional=false(decision_ref PD-18, 2026-09-10 팀 확정. 전략이 아닌 시나리오 오버레이 규칙이지만 같은 표로 버전 관리). 파라미터 후보·범위(PD-02)는 003 등록표 소관이며 이 테이블은 계산 규칙만 담는다.\n+\n+## backtest_run_metric (실행 측정 기록)\n+\n+| 컬럼 | 타입 |\n+|---|---|\n+| id | BIGINT PK |\n+| run_id | BIGINT FK NOT NULL |\n+| execution_type | VARCHAR(20) NOT NULL |\n+| status | VARCHAR(20) NOT NULL (종결 상태) |\n+| queued_at / started_at / finished_at | TIMESTAMPTZ |\n+| wait_ms / run_ms | BIGINT (started-queued, finished-started) |\n+| concurrent_running | INTEGER (종결 시점의 RUNNING run 수) |\n+| peak_rss_mb / cpu_seconds | NUMERIC (워커 diagnostics.resource) |\n+| auto_retried | BOOLEAN (attempt > 1) |\n+| result_bytes | BIGINT (JSONB 합계 길이) |\n+| recorded_at | TIMESTAMPTZ |\n+\n+## backtest_reuse_event (재조회 기록)\n+\n+`id, run_id FK, request_id FK, kind VARCHAR(10) (JOINED | REUSED), at TIMESTAMPTZ`. 원가 기록에서 새 계산과 구분한다(FR-008).\n+\n+## v_run_metric_summary (뷰)\n+\n+`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, reuse_count`(reuse_event 조인). `percentile_cont` 사용. 이 뷰가 PD-06 상한 결정의 근거 자료다.\n+\n+## 검증 규칙 (요청 접수 시, 백엔드)\n+\n+- 섹터 배분: 대응표 버전 존재, 섹터 중복 없음, `FIXED_WEIGHT`면 목표 비중 합 = 1(허용 오차 없이 plain string 비교), 그 외 전략은 목표 비중 미지정.\n+- 비중 상한 합계 ≥ 고정 투자 비중 합계(아니면 400 `INVALID_INPUT`, Edge Case).\n+- `strategy_rules.status = REGISTERED`(아니면 422 `RULES_NOT_REGISTERED`).\n+- 가용 기간 ≥ 워밍업(아니면 422 `INSUFFICIENT_HISTORY`).\n+- 시작 금액 > 0, NUMERIC(19,2) 범위(현행).\n+- `scenario=TARGET_RISK`면 `scenarioParams.targetVolatility` 필수, 0.0500~0.2000 범위·0.0100 간격(아니면 400 `INVALID_INPUT`). 다른 시나리오에서는 `scenarioParams` 금지. `FRESH_CASH_FROM`은 `scenarioParams.startDate` 필수.\n+- 종목 식별자 `^\\d{6}\\.XKRX$`(현행), 최대 50개(현행).\n+\n+## 마이그레이션 V3 요약\n+\n+1. `backtest_job` → `backtest_run` 개명, 새 컬럼 추가(`dedup_key`는 기존 행에 대해 request_spec 기반으로 계산하거나 `LEGACY-{id}`를 채움), `status` CHECK에 `CANCELLED` 추가.\n+2. `backtest_request` 생성, 기존 run마다 `result_source=NEW`, `requester_id`는 기존 행에 없으므로 마이그레이션용 시스템 사용자 또는 데모 데이터 삭제 중 택일(데모 데이터라 삭제를 권장하며 tasks에서 확정).\n+3. `backtest_result.backtest_job_id` → `run_id`, `backtest_trade.backtest_job_id` → `run_id` 개명, 새 JSONB 열 추가.\n+4. `cost_profile`, `strategy_rules`, `backtest_run_metric`, `backtest_reuse_event`, 뷰 생성과 초기 행 삽입.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/data-model.md",
+          "old_path": "specs/004-backtest-execution/data-model.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,114 @@\n+# Implementation Plan: 백테스트 실행\n+\n+**Branch**: `004-backtest-execution` (spec 디렉터리 식별자. 구현 브랜치는 Jira Task마다 `{type}({position})/{JIRA}-{desc}`) | **Date**: 2026-09-10 | **Spec**: [spec.md](spec.md)\n+\n+**Input**: Feature specification from `specs/004-backtest-execution/spec.md` (Clarifications 2026-09-10 5건 반영판)\n+\n+## Summary\n+\n+'분석하기' 이후의 실행 관리(즉시 접수·상태·진행 정도·취소·재시도·동일 버전 재사용·합류·측정)와 다섯 배분 전략의 공통 거래·평가 규칙, 재현 가능한 결과 산출을 구현한다. 기존 DEMO 파이프라인(Spring Backend → RabbitMQ → Nautilus Worker → PostgreSQL 이벤트 저장)을 유지하고 확장한다. 핵심 변경은 (1) 분석 요청과 실행을 다대일로 분리하고 동일 버전 키로 실행을 공유, (2) 워커에 취소 제어 채널과 다종목 포트폴리오 리밸런싱 전략·배분 모듈 추가, (3) 비용 조건·전략 규칙을 버전 등록표로 관리하되 팀 미확정 규칙(PD-03·04)은 실행을 거부, (4) 실행 유형별 측정 기록을 먼저 만들어 실행 한도(PD-06)를 실측으로 정할 근거를 확보하는 것이다. 세부 결정은 [research.md](research.md)에 있다.\n+\n+## Technical Context\n+\n+**Language/Version**: Backend Java 21 (Spring Boot 3.5.4, Gradle) / Worker Python 3.11. 프론트엔드 변경은 이 spec 범위가 아니다(결과 표시는 005).\n+\n+**Primary Dependencies**: Backend: Spring Web·Data JPA·AMQP·Flyway, Jackson, ArchUnit. Worker: `nautilus_trader==1.219.0`(constitution이 정한 기준 엔진), pandas, numpy, pydantic v2, pika. 최소분산 솔버 라이브러리는 PD-04 확정 시 결정한다(후보 scipy SLSQP). 새 의존성은 그 전에 추가하지 않는다.\n+\n+**Storage**: PostgreSQL 16 (스칼라 조회 열만 컬럼, 소수·시계열은 JSONB — backend/CLAUDE.md 규칙 유지), RabbitMQ 3.13 (`backtest.jobs`를 quorum queue로 전환, 제어용 fanout exchange 추가). Parquet 친화 저장은 001 자료 계층의 책임이며 004는 읽기만 한다.\n+\n+**Testing**: Backend JUnit 5 + Testcontainers(PostgreSQL, RabbitMQ) + ArchUnit, `./gradlew spotlessApply build`. Worker pytest + ruff, `ruff check src tests && ruff format --check src tests && pytest`. 메시지 계약 픽스처(`docs/specs/backtest-messaging/examples/*.json`)를 양쪽 테스트가 공유하는 방식을 유지하고 schemaVersion 2 픽스처를 추가한다.\n+\n+**Target Platform**: Linux 컨테이너(docker compose). 운영 워커는 4 vCPU에서 최대 2 replica, 1 CPU·2.5 GB 제한, 수치 라이브러리 단일 스레드.\n+\n+**Project Type**: web-service (REST API 백엔드 + 메시지 소비 워커). 모노레포 `backend/`, `worker/`, `docs/specs/` 갱신.\n+\n+**Performance Goals**: PD-06(실측 후 고정). 이 spec은 목표치를 정하지 않고 측정 장치(실행 유형별 대기 포함 p50/p95·동시성·메모리·실패·자동 재시도·원가)를 먼저 만든다. 실측 전 임시 상한은 팀이 명시하기 전까지 현행 값(워커 replica 2, prefetch 1, 대기열 상한 없음 대신 접수 시점 대기열 길이 표시)을 유지하고 결과에 임시임을 표시한다.\n+\n+**Constraints**: Backend는 계산하지 않는다. 동일 버전 재계산은 100% 동일해야 한다(시드 고정, 정렬 고정, 단일 스레드 수치 연산). 판단은 bar-close 자료, 체결은 다음 거래일 시가(현행 엔진 규칙 유지). 워커는 DB에 쓰지 않고 이벤트로만 상태를 전달한다(현행 계약 유지).\n+\n+**Scale/Scope**: 섹터-ETF 대응표 크기(수십 종목) × 일봉 2010년 이후(≈4,000거래일) × 전략 5종. 단일 실행은 수 초~수십 초로 예상하지만 미측정이며, 측정 기록이 쌓이기 전에는 처리량을 제시하지 않는다(원칙 IX).\n+\n+## Constitution Check\n+\n+*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*\n+\n+| 원칙/규칙 | 판정 | 근거 |\n+|---|---|---|\n+| II 서버·인프라 설정을 사용자 입력으로 요구하지 않음 | PASS | API 요청에 큐·워커·엔진 설정 항목이 없다. 엔진·비용·자료 버전은 서버가 채운다. |\n+| III 진단이지 추천 아님 | PASS | 004는 결과 산출만 하며 승자·추천 비중을 만들지 않는다. 자동 배분 비중은 `weightsSource=COMPUTED`로 사용자 입력과 구분한다(FR-026). |\n+| IV 같은 조건에서만 비교 | PASS | 공통 워밍업·공통 평가 기간을 서버가 산출해 실행에 고정하고, 비용 버전을 실행 키에 넣는다. |\n+| V 당시 정보만 사용 | PASS | 신호는 판단일까지의 조정 자료, 체결은 다음 거래일 원시 시가(현행 Nautilus 경계 유지). 상장 전 합성·미래 채움 없음. |\n+| VI 없는 결과를 만들지 않음 | PASS | 취소·실패·제약 위반·자료 부족을 별도 상태·코드로 기록. 미등록 규칙(PD-03·04)의 전략은 실행을 거부하고 사유를 돌려준다. 0 대체 없음. |\n+| VII 탐색·검증 구분 | PASS | 평가 분할 버전을 실행 키에 포함해 잠금 구간 결과가 다른 버전으로 남는다. 검증 절차 자체는 007 소관. |\n+| VIII 재현 기록 | PASS | 실행마다 전략·파라미터·대응표·자료·비용·엔진·규칙·분할 버전을 `versions` JSONB로 남기고, 캐시 키는 constitution \"실행·캐시\" 항목을 모두 포함한다. |\n+| IX 실측으로 한도 결정 | PASS | 단일 서버 작업 큐 유지, 분산 미도입. 측정 테이블·집계 뷰를 먼저 만든다. 재조회와 새 계산을 구분 기록한다. |\n+| X 자료 이용 조건 | PASS(조건부) | 실행 경로의 가격 원천은 001이 확보한 자료만 쓴다. 현행 yfinance 경로는 개발 도구로만 남기고 실행 경로에서 제외한다. |\n+| 계산·데이터 규칙 \"Nautilus 기준 엔진\" | PASS | Nautilus 유지. 배분 규칙은 순수 함수 모듈로 분리하되 체결·회계는 Nautilus가 한다. |\n+| AI 작업 방식 \"실행 전 결정 임의 확정 금지\" | PASS | PD-03·04·06·07 값을 정하지 않는다. 등록표에 `PENDING_DECISION`으로 두고 확정 시 행만 추가한다. 비용 임시값은 현행 데모 값을 `provisional=true`로 재사용하며 결과에 표시한다. |\n+| Git·Jira 규칙 | 참고 | tasks.md의 작업 단위를 `[BE]/[DE]/[INFRA]/[DOCS] 작업 내용` 형식, 1 Task = 1 Branch = 1 MR로 맞춘다. |\n+| \"넣지 않은 영역\"(API 규약·DB 명명·테스트 기준) | 기록 | 이 영역에서 내린 선택은 research.md R-13·R-16에 근거를 남긴다. |\n+\n+**Post-design re-check (Phase 1 후)**: data-model·contracts를 검토한 결과 위 판정 변동 없음. 추가 확인: 요청 테이블에 개인 식별정보는 `requester_id`(FK)만 두고 계산 기록(`backtest_run`)에는 요청자를 넣지 않아 원칙 VIII \"개인 식별정보는 계산 기록과 분리\"를 만족한다.\n+\n+## Project Structure\n+\n+### Documentation (this feature)\n+\n+```text\n+specs/004-backtest-execution/\n+├── plan.md              # 이 문서\n+├── research.md          # Phase 0: 결정 R-01~R-16\n+├── data-model.md        # Phase 1: 테이블·상태 전이·검증 규칙\n+├── quickstart.md        # Phase 1: 검증 시나리오\n+├── contracts/\n+│   ├── rest-api.md          # Backend ↔ Frontend (docs/specs/backtest-api 갱신 원본)\n+│   ├── messaging.md         # Backend ↔ Worker schemaVersion 2 (docs/specs/backtest-messaging 갱신 원본)\n+│   └── market-data-input.md # 004가 001 자료 계층에 요구하는 입력 계약\n+└── tasks.md             # Phase 2 (/speckit-tasks)\n+```\n+\n+### Source Code (repository root)\n+\n+```text\n+backend/src/main/java/com/ssafy/thorp/backtest/\n+├── presentation/controller/BacktestController.java        # cancel·retry·weights 추가\n+├── presentation/request/BacktestJobRequest.java            # 섹터 배분·전략 설정·조건 구조로 개편\n+├── presentation/response/…                                 # CANCELLED·progress·resultSource·versions\n+├── application/service/BacktestService.java                # 동일 버전 조회 → 합류/재사용/신규 분기\n+├── application/service/BacktestEventService.java           # PROGRESS 저장, CANCELLED 처리, attempt\n+├── application/service/DedupKeyCalculator.java             # 신규: canonical JSON → SHA-256\n+├── application/service/ExecutionMetricRecorder.java        # 신규: 측정 기록\n+├── application/port/message/…                              # EngineInput v2, ControlMessage\n+├── domain/model/{BacktestRequest,BacktestRun,RunStatus,…}  # Job → Run/Request 분리\n+├── infrastructure/persistence/…                            # JPA 엔티티·매퍼·리포지토리\n+├── infrastructure/messaging/BacktestRabbitConfig.java      # quorum queue, backtest.control\n+├── infrastructure/messaging/BacktestDeadLetterListener.java# 신규: DLQ → FAILED(SYSTEM_FAILURE)\n+└── …/operations/ExecutionMetricsController.java            # 신규: GET /internal/execution-metrics\n+backend/src/main/resources/db/migration/V3__backtest_run_request.sql  # 신규 마이그레이션\n+\n+worker/src/worker/\n+├── consumer.py                 # 제어 채널 구독, 취소 플래그, FINISHED(CANCELLED) 발행\n+├── rabbitmq.py                 # control exchange exclusive queue 구독 스레드\n+├── nautilus_engine.py          # PortfolioRebalanceExecution(다종목 월말 리밸런싱, 취소 확인)\n+├── allocation/                 # 신규: fixed.py equal.py inverse_vol.py momentum.py min_variance.py\n+├── rules_registry.py           # 신규: 등록 규칙 버전 로드, PENDING이면 INVALID_REQUEST\n+├── costs.py                    # 신규: 비용 프로필 적용(수수료·호가차·슬리피지·세금)\n+├── corporate_actions.py        # 신규: 분배금 현금 반영(중복 금지)\n+├── market_data.py              # PostgresMarketDataProvider 추가(001 계약)\n+├── performance.py              # 비용 합계·회복기간·회전율·상관·위험/손실 기여·청산 결과\n+└── contracts/                  # EngineInput/EngineOutput/Events v2, ControlMessage\n+\n+docs/specs/backtest-api/, docs/specs/backtest-messaging/   # contracts/ 확정 후 갱신 + examples v2\n+docs/adr/0005-backtest-request-run-split.md               # 신규 ADR(요청/실행 분리·quorum queue·제어 채널)\n+```\n+\n+**Structure Decision**: 기존 모노레포 배치와 ADR-0001 계층 구조를 유지한다. 새 개념(요청/실행 분리, 배분 모듈, 등록표)은 기존 패키지 안에 추가하고 새 프로젝트를 만들지 않는다. 프론트엔드 파일은 건드리지 않는다.\n+\n+## Complexity Tracking\n+\n+Constitution 위반은 없다. 단순한 대안을 버린 선택 두 가지만 기록한다.\n+\n+| 선택 | 왜 필요한가 | 더 단순한 대안을 버린 이유 |\n+|---|---|---|\n+| `backtest_job` 하나를 `backtest_request` + `backtest_run` 둘로 분리 | Clarify Q2·Q3: 요청과 실행이 다대일이고 결과는 요청자와 독립 저장 | 한 테이블에 self-reference로 합류를 표현하면 취소·상태 전파 규칙이 행마다 갈라져 SC-006 검증이 어렵다 |\n+| 워커 제어용 fanout exchange 추가 | Clarify Q1: 실행 중 취소가 계산을 실제로 멈춰야 함(원칙 IX 자원) | 백엔드가 상태만 CANCELLED로 바꾸고 워커는 끝까지 계산하는 방식은 대기열 자원을 낭비하고 부분 결과 산출 시점을 정할 수 없다 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/plan.md",
+          "old_path": "specs/004-backtest-execution/plan.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,67 @@\n+# Quickstart: 백테스트 실행 검증 시나리오\n+\n+spec의 User Story·SC를 끝에서 끝까지 확인하는 절차다. 구현 코드는 tasks.md와 구현 단계에 있다. 계약은 [contracts/](contracts/), 테이블은 [data-model.md](data-model.md)를 본다.\n+\n+## 준비\n+\n+```bash\n+docker compose -f docker-compose.dev.yml up -d postgres rabbitmq\n+# quorum 큐 전환(최초 1회, 미ACK 메시지가 없을 때만)\n+docker compose -f docker-compose.dev.yml exec rabbitmq rabbitmqctl delete_queue backtest.jobs\n+cd backend && ./gradlew spotlessApply build && ./gradlew bootRun --args='--spring.profiles.active=local'\n+cd worker && ruff check src tests && ruff format --check src tests && pytest && python -m worker.main\n+```\n+\n+인증 토큰 `$TOKEN`(사용자 A), `$TOKEN_B`(사용자 B)를 준비한다. 요청 본문 예시는 `docs/specs/backtest-api/examples/backtest-request.json`.\n+\n+## S1. 접수·상태·완료 (US1, SC-001)\n+\n+```bash\n+curl -s -X POST localhost:8080/backtests -H \"Authorization: Bearer $TOKEN\" -H 'Content-Type: application/json' -d @req.json\n+```\n+\n+기대: 즉시 `202`, `status=QUEUED`, `resultSource=NEW`, `effectiveStart`가 요청 시작일보다 뒤(워밍업). 이어서 `GET /backtests/{id}`를 몇 초 간격으로 조회하면 `progress.stage`가 `PREPARING_DATA → COMPUTING`으로, `lastTradingDate`가 증가하며 `COMPLETED`에서 `summary`·`versions`가 채워진다. `versions.costProfile.provisional=true`가 보인다.\n+\n+## S2. 동일 버전 재사용 (US3-1, FR-003)\n+\n+S1 완료 뒤 같은 본문을 사용자 B 토큰으로 다시 보낸다. 기대: `202`, `status=COMPLETED`, `resultSource=REUSED`, 새 `backtestId`. `backtest_run` 행 수는 늘지 않고 `backtest_reuse_event`에 `REUSED` 1건.\n+\n+## S3. 진행 중 합류 (Clarify Q3)\n+\n+긴 기간 요청을 보낸 직후(RUNNING 중) 같은 본문을 사용자 B로 보낸다. 기대: `resultSource=JOINED`, 두 backtestId의 `GET`이 같은 `progress`를 보이고 완료 시 같은 `summary`. run은 하나.\n+\n+## S4. 취소와 부분 결과 (US3-4, SC-006)\n+\n+S3 상태에서 사용자 A가 `POST /backtests/{A}/cancel`. 기대: A는 `CANCELLED`, B는 계속 `RUNNING`(마지막 요청이 아니므로 계산 유지). 이어 B도 취소하면 다음 진행 배치 안에 워커가 `FINISHED(CANCELLED)`를 보내고 B는 `CANCELLED, partial=true, progress.lastTradingDate`가 채워지며 `/timeseries`가 그 날짜까지의 데이터를 `200`으로 돌려준다. 이후 같은 본문 재요청은 `resultSource=NEW`(취소 결과는 재사용 안 함).\n+\n+## S5. 실패와 재시도 (US3-5, FR-010)\n+\n+존재하지 않는 거래일 구간이 생기도록 픽스처에서 한 종목의 일부 행을 지운 자료 버전으로 요청한다. 기대: `FAILED`, `failure.code=DATA_INSUFFICIENT`, `summary=null`(0으로 채우지 않음). `POST /backtests/{id}/retry` → `202` 새 id, `retryOf` 원 id. 자료를 복구한 새 `data_version`으로 요청하면 다른 키의 새 실행.\n+\n+## S6. 시스템 장애 자동 재시도 1회 (Clarify Q5)\n+\n+RUNNING 중 워커 프로세스를 `kill -9`한다. 기대: 브로커 재전달로 다른 워커(또는 재시작한 워커)가 다시 실행, `GET`에 상태 변화 없이 `attempt=2`가 DB에 기록되고 완료된다. 두 번째 실행 중 다시 `kill -9`하면 메시지가 DLQ로 가고 백엔드가 `FAILED, failure.code=SYSTEM_FAILURE`로 종결한다. `backtest_run_metric.auto_retried=true`.\n+\n+## S7. 결정성 (SC-002, FR-004)\n+\n+pytest `test_determinism.py`: 같은 EngineInput 픽스처를 두 번 실행해 EngineOutput JSON이 바이트 단위로 같다. 통합: S1 결과와 강제 재계산(테스트용 내부 플래그 또는 다른 `data_version` 라벨로 같은 데이터) 결과의 `summary`·`/trades`·`/weights`가 완전히 같다.\n+\n+## S8. 수기 대조 (US2, SC-003, SC-004)\n+\n+`worker/examples/three_etf_24m/`(3개 ETF, 24개월, 분배금 2건, 거래 정지 1일 포함) 픽스처로 `FIXED_WEIGHT`·`EQUAL_WEIGHT`·`INVERSE_VOLATILITY`를 실행한다. pytest `test_manual_reconciliation.py`가 `fixtures/manual_reconciliation.json`(스프레드시트로 계산한 대표 거래일 3개의 체결일·수량·현금·비용·분배금)과 정확히 일치하는지 확인한다. 확인 항목: 모든 체결일 = 판단일 다음 거래일, 정수 수량, 거래 정지일 체결이 다음 거래 가능일로 이월되고 `reason=HALT_DEFERRED`, 분배금이 `cashFlows`에 한 번만, 결과 시작일 = 워밍업 이후.\n+\n+## S9. 미확정 규칙 거부 (FR-010, PD-03·04)\n+\n+`strategyId=SECTOR_MOMENTUM`으로 요청. 기대: `422 RULES_NOT_REGISTERED`, 실행 생성 없음. `MINIMUM_VARIANCE`도 같다. 팀이 규칙을 등록하면 이 시나리오는 실행 시나리오로 바뀐다.\n+\n+## S10. 측정 기록 (US4, SC-007)\n+\n+S1~S6을 마친 뒤 `GET /internal/execution-metrics?type=SINGLE`(운영자 토큰). 기대: `count ≥ 6`, `failRate`·`cancelRate`·`autoRetryRate`가 0보다 크고, `waitP50Ms ≤ waitP95Ms`, `reuseCount ≥ 1`. `psql -c 'select * from v_run_metric_summary'`와 값이 같다.\n+\n+## S11. 목표 위험 맞춤 시나리오 (FR-016, PD-18)\n+\n+S1과 같은 본문에 `\"scenario\": \"TARGET_RISK\", \"scenarioParams\": {\"targetVolatility\": \"0.0500\"}`만 바꿔 요청한다. 기대: 별도 실행(새 `resultSource=NEW`, 동일 버전 키가 S1과 다름), `/weights`의 각 리밸런싱 항목에 `estimatedVolatility`·`riskScale`이 있고, 추정 변동성이 5%를 넘는 달은 `riskScale < 1`·현금 비중 증가, 넘지 않는 달은 `riskScale = 1`. `targetVolatility: \"0.2500\"`(범위 밖)은 `400 INVALID_INPUT`, `scenario=FULL_PERIOD`에 `scenarioParams`를 넣으면 `400`. 픽스처 3종목·24개월에서 세 전략 모두 실행되고 결과 `versions.rules`에 `TARGET_RISK_OVERLAY/1`이 기록된다.\n+\n+## 완료 판정\n+\n+S1~S11이 모두 기대대로 나오면 \"구현 완료\"다. 사용성 확인·효과 입증은 별도 보고한다(constitution 완료의 정의).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/quickstart.md",
+          "old_path": "specs/004-backtest-execution/quickstart.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,105 @@\n+# Research: 백테스트 실행 (Phase 0)\n+\n+**Date**: 2026-09-10 | **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)\n+\n+Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한다. 팀 결정 항목(PD-03·04·06·07)은 값을 정하지 않고 \"값이 들어올 자리\"만 정한다. 형식: Decision / Rationale / Alternatives.\n+\n+## R-01 기준 엔진과 전략 구현 방식\n+\n+- **Decision**: NautilusTrader 1.219.0을 유지한다. 다섯 전략을 Nautilus `Strategy` 하나(`PortfolioRebalanceExecution`)로 실행하고, 목표 비중 계산은 `worker/src/worker/allocation/` 아래 순수 함수(`compute_weights(history, params, rules) -> AllocationResult`)로 분리한다. 리밸런싱 판단일 bar-close에 목표 비중을 받아 정수 수량 주문을 만들고, 체결은 다음 거래일 시가 QuoteTick(현행 방식)로 한다.\n+- **Rationale**: constitution \"계산·데이터 규칙\"이 Nautilus를 기준 엔진으로 정했다. 체결·현금·수수료 회계를 Nautilus에 맡기고 배분 규칙만 순수 함수로 두면 수기 대조(SC-003)와 규칙 버전 교체(PD-03·04)가 쉽다.\n+- **Alternatives**: pandas 벡터화 엔진(빠르지만 constitution 위반, 별도 엔진은 Nautilus와 대조 후에만 허용) / 전략마다 Nautilus Strategy 분리(체결 코드 5중 복제).\n+\n+## R-02 분석 요청과 실행의 분리\n+\n+- **Decision**: `backtest_request`(사용자 식별자 `BT-…`, 요청자, 취소 시각, 결과 출처)와 `backtest_run`(동일 버전 키, 상태, 진행, 결과)을 다대일로 둔다. 기존 `backtest_job`은 V3 마이그레이션에서 `backtest_run`으로 개명·확장하고 기존 행마다 request 1개를 생성한다. `backtest_result`·`backtest_trade`의 FK는 run을 가리킨다. 동일 버전 중복 방지는 부분 유니크 인덱스 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`로 한다.\n+- **Rationale**: Clarify Q2·Q3. 완료 결과만 재사용하고 실패·취소 실행은 같은 키로 새 실행을 허용해야 하므로 전체 유니크가 아니라 부분 유니크가 맞다.\n+- **Alternatives**: 단일 테이블 self-reference(plan Complexity Tracking 참고) / 애플리케이션 락으로 중복 방지(경합 시 두 실행이 생김).\n+\n+## R-03 동일 버전 키\n+\n+- **Decision**: FR-003 항목을 canonical JSON(키 사전순 정렬, 소수는 plain string, null 키 제거)으로 직렬화해 SHA-256 hex 64자를 `dedup_key`로 저장한다. 포함 항목: strategyId, rulesVersion, parameters, sector→ETF 대응(대응표 버전 + 정렬된 (sectorId, instrumentId, targetWeight) 목록), dataVersion, evaluationSplitVersion, costProfileVersion, engineVersion(`nautilus_trader` 버전 + 워커 엔진 버전 문자열), scenario, 분석 기간·시작 금액. 요청자·executionType은 제외한다.\n+- **Rationale**: constitution \"실행·캐시\" 캐시 키 항목과 일치. Jackson `ORDER_MAP_ENTRIES_BY_KEYS` + 기존 `messageObjectMapper`(BigDecimal plain string)로 구현 가능해 새 라이브러리가 필요 없다.\n+- **Alternatives**: DB에서 컬럼 조합 유니크(JSONB 파라미터 비교 불안정) / UUIDv5(결국 canonical 문자열이 필요).\n+\n+## R-04 취소 채널\n+\n+- **Decision**: fanout exchange `backtest.control`을 추가한다. 워커는 시작 시 exclusive·auto-delete 큐를 바인딩하고 별도 스레드에서 `{type: CANCEL, runId}`를 받아 `cancel_requested` 집합에 넣는다. 전략은 `on_bar`(거래일마다 호출)에서 집합을 확인해 자기 run이면 즉시 정지하고, 소비자는 `FINISHED(status=CANCELLED, partial=true, lastTradingDate)`와 부분 EngineOutput을 발행한 뒤 ACK한다. 대기 중 취소는 백엔드가 run을 CANCELLED로 바꾸는 것으로 끝내고, 그 run의 STARTED가 나중에 도착하면 백엔드가 CANCEL 제어 메시지를 보낸다.\n+- **Rationale**: Clarify Q1·Q3. 취소 확인 지점을 거래일 단위로 두면 완료 범위가 \"처리한 마지막 거래일\"과 정확히 일치한다(Q4). 큐 재정렬이나 메시지 삭제는 RabbitMQ에서 불가능하므로 소비 시점 확인이 유일한 실용적 방법이다.\n+- **Alternatives**: 상태만 바꾸고 워커는 끝까지 계산(자원 낭비, 부분 결과 시점 불명) / 워커가 DB 플래그 폴링(워커 DB 접근 금지 계약 위반).\n+\n+## R-05 진행 정도 저장과 조회\n+\n+- **Decision**: 백엔드가 PROGRESS 이벤트(20거래일 배치, 현행)를 받아 `backtest_run.progress_stage / progress_last_trading_date / progress_completed_days / progress_total_days`에 저장한다. 조회는 기존 `GET /backtests/{id}` 폴링으로 한다. 단계 값은 `PREPARING_DATA`(STARTED 수신) → `COMPUTING`(첫 PROGRESS) → `SAVING`(FINISHED 처리 중) → 종결. SSE는 이번 범위에서 만들지 않고 `LoggingBacktestProgressNotifier`는 삭제한다.\n+- **Rationale**: Clarify Q4. 20거래일 배치 저장은 실행당 수백 번 UPDATE 이하라 부담이 없고, 폴링 API가 이미 있다. SSE는 사용성 관찰에서 필요가 확인되면 추가한다.\n+- **Alternatives**: SSE 즉시 도입(프론트 변경 필요, 005 범위) / 진행 미저장(다른 화면에서 돌아왔을 때 SC-001 위반).\n+\n+## R-06 시스템 장애 1회 자동 재시도\n+\n+- **Decision**: `backtest.jobs`를 quorum queue(`x-queue-type=quorum`, `x-delivery-limit=1`, 기존 DLX 유지)로 선언한다. 워커 프로세스가 죽어 unacked 메시지가 재전달되면 한 번만 재실행되고, 두 번째도 끊기면 브로커가 DLQ로 보낸다. 백엔드에 `backtest.jobs.dlq` 리스너를 추가해 run을 `FAILED(failureCode=SYSTEM_FAILURE)`로 종결한다. STARTED 이벤트의 새 executionId를 받으면 `attempt`를 1 올리고, 측정 기록의 `autoRetried = attempt > 1`로 남긴다. 워커가 스스로 판정한 결정적 오류(INVALID_REQUEST·자료 부족·제약 위반)는 FINISHED(FAILED)로 응답하고 ACK하므로 재시도되지 않는다.\n+- **Rationale**: Clarify Q5. 브로커가 재시도 횟수를 세므로 워커·백엔드에 카운터 경합이 없다. 기존 DLX·DLQ 토폴로지를 그대로 쓴다.\n+- **Alternatives**: `redelivered` 플래그로 워커 판단(2회째와 3회째 구분 불가) / 백엔드가 STARTED 횟수로 CANCEL 발행(경합, 계산 낭비).\n+- **주의**: classic → quorum 전환은 인자 변경이라 기존 큐를 삭제해야 한다. 개발 환경은 `rabbitmqctl delete_queue backtest.jobs`(quickstart), 운영은 배포 절차에 넣는다. 미ACK 메시지가 없을 때만 삭제한다.\n+\n+## R-07 비용 조건 버전\n+\n+- **Decision**: `cost_profile(version PK, commission_bps, spread_bps, slippage_bps, tax_bps, escalation JSONB, provisional BOOL, note)` 테이블을 둔다. PD-07 확정 전에는 현행 데모 값(수수료 ZERO, 슬리피지 5bps, 세금·호가차 0)을 `PROVISIONAL-DEMO-1`, `provisional=true`로 등록하고 요청이 버전을 지정하지 않으면 이 값을 쓴다. 결과 `versions.costProfile`에 버전과 provisional 여부를 담아 005가 \"임시 비용\" 한 문장을 표시할 수 있게 한다.\n+- **Rationale**: spec Assumptions(\"확정 전 임시값을 쓰고 임시임을 표시\"). 값을 새로 정하지 않고 이미 코드에 있는 값을 재사용하므로 AI가 결정 항목을 확정하는 것이 아니다.\n+- **Alternatives**: 비용 미확정 시 실행 거부(모든 전략이 막혀 개발이 멈춤).\n+\n+## R-08 전략 규칙 등록표와 미확정 규칙 처리\n+\n+- **Decision**: `strategy_rules(strategy_id, rules_version, spec JSONB, status, provisional BOOL, decision_ref)` 테이블을 둔다. `FIXED_WEIGHT`, `EQUAL_WEIGHT`는 spec FR-021·022의 문장 그대로 `REGISTERED`로 넣는다. `INVERSE_VOLATILITY`는 FR-023의 관측 63거래일은 spec이 정한 값이지만, 0 변동성 처리(`EXCLUDE_THEN_ALLOCATE`)·비중 상한·투자 비중 합계는 spec Edge Case가 \"PD-02·PD-03 계열 결정 항목\"으로 둔 값이므로 `REGISTERED`이되 **`provisional=true`, `decision_ref=PD-02`**로 등록한다(R-07 비용 처리와 같은 방식). 결과 `versions.rules.provisional`로 노출해 005가 임시 규칙임을 표시한다. `SECTOR_MOMENTUM`(PD-03), `MINIMUM_VARIANCE`(PD-04)는 `PENDING_DECISION` 행만 두고 요청 시 백엔드가 422 `RULES_NOT_REGISTERED`로 거부한다. 확정되면 행을 `REGISTERED`로 바꾸고 `spec`을 채운다. 워커의 `rules_registry.py`는 EngineInput에 담긴 규칙 명세만 신뢰하고 자체 기본값을 두지 않는다.\n+- **Rationale**: FR-010(낮은 수익으로 위장 금지)과 constitution \"AI 작업 방식\". 미확정 규칙을 임의 구현하면 나중에 결과 버전이 갈라진다. 역변동성의 0 변동성 규칙을 `provisional` 없이 등록하면 AI가 PD-02 계열 값을 확정한 것이 되므로(analyze C1) 임시 표시를 붙인다.\n+- **Alternatives**: 출발안을 임의로 코드에 넣기(금지) / 두 전략을 spec에서 제외(범위 축소는 팀 결정).\n+- **역변동성 0 변동성 규칙**: spec Edge Case의 예시 중 \"그 섹터 제외 후 나머지 배분\"을 임시 등록 값(`provisional=true`)으로 쓴다. PD-02가 확정되면 그 값으로 행을 갱신하고 `provisional=false`로 바꾼다.\n+\n+## R-09 시장 자료 입력 경로\n+\n+- **Decision**: 워커 `DataProvider`에 `PostgresMarketDataProvider`를 추가하고 [contracts/market-data-input.md](contracts/market-data-input.md)의 테이블·컬럼을 읽는다. 체결에는 원시 OHLC, 신호·성과에는 조정 종가, 분배금 이벤트는 지급일 현금 반영, 상장·폐지일로 가용 기간을 자른다. 001이 자료를 넣기 전까지는 같은 스키마의 CSV 픽스처(`worker/examples/`)로 테스트한다. 현행 yfinance 경로는 실행 경로에서 제거하고 개발 스크립트로만 남긴다.\n+- **Rationale**: 원칙 X(개발·검증 원천만 허용, 재배포 금지)와 001과의 경계. 워커의 `validate_prices()` fail-closed 검증은 그대로 재사용한다.\n+- **Alternatives**: 워커가 Parquet 직접 읽기(001이 저장 형식을 정하기 전이라 미정; provider 인터페이스로 열어둔다).\n+\n+## R-10 실행 측정 기록과 원가\n+\n+- **Decision**: 백엔드가 종결 이벤트마다 `backtest_run_metric`(run_id, execution_type, status, queued_at, started_at, finished_at, wait_ms, run_ms, peak_rss_mb, cpu_seconds, auto_retried, result_bytes)을 기록한다. 자원 사용량은 워커가 FINISHED `diagnostics.resource`에 실어 보낸다(`resource.getrusage`). 재조회는 `backtest_reuse_event(run_id, request_id, kind JOINED|REUSED, at)`로 따로 기록한다. 집계는 SQL 뷰 `v_run_metric_summary`(유형별 `percentile_cont(0.5/0.95)` 대기·소요, 실패율, 자동 재시도율)와 `GET /internal/execution-metrics`로 제공한다. 원가는 cpu_seconds·peak_rss_mb·result_bytes 원단위로만 기록하고 금액 환산 단가는 정하지 않는다.\n+- **Rationale**: 원칙 IX와 US4. 뷰 하나면 운영자가 볼 수 있고 대시보드는 필요가 확인되면 만든다.\n+- **Alternatives**: Micrometer 히스토그램(프로세스 재시작 시 소실, 실행 유형별 원가 기록 불가) / 별도 시계열 DB(미측정 병목에 인프라 추가).\n+\n+## R-11 결과 산출 항목 확장\n+\n+- **Decision**: EngineOutput에 `weightsSeries`(리밸런싱일별 목표·실제 비중, `weightsSource: USER|COMPUTED`), `costs`(commission·spread·slippage·tax·total), `liquidation`(markToMarket·liquidated 두 결과), `analytics`(recoveryDays·turnover·correlationMatrix·riskContribution·lossContribution·weightError), `exceptions[]`(시점·종목·규칙·처리), `versions{}`를 추가한다. 계산은 `performance.py`를 확장한다. 상관관계·위험 기여는 평가 기간 일별 수익률의 표본 공분산으로 계산하고 방법을 `analytics.method`에 적는다(PD-04 공분산 방법과는 별개 표기).\n+- **Rationale**: FR-017·027·029·030과 005가 그대로 표시할 항목 목록.\n+- **Alternatives**: 백엔드에서 파생 지표 계산(원칙 \"Backend는 계산하지 않는다\" 위반).\n+\n+## R-12 요청자와 권한\n+\n+- **Decision**: `backtest_request.requester_id`는 `users.id` FK로 필수다. 취소·재시도는 요청자 본인만 할 수 있고 타인 요청은 404로 숨긴다. 계산 기록(`backtest_run`·result)에는 요청자를 넣지 않는다.\n+- **Rationale**: Clarify Q2·Q3 뒤 남은 저영향 항목. 저장소에 `users`·`email_verifications`가 있어 인증이 전제다. 원칙 VIII \"개인 식별정보는 계산 기록과 분리\".\n+- **Alternatives**: 익명 요청 허용(취소 권한 판정 불가). 인증·006 spec에서 익명을 허용하기로 하면 컬럼을 nullable로 완화한다.\n+\n+## R-13 API 규약 선택 (constitution \"넣지 않은 영역\")\n+\n+- **Decision**: 기존 `ApiResponse` 봉투·202/200/409 패턴을 유지한다. 신규: `POST /backtests/{id}/cancel`(202, 종결 상태면 409 `NOT_CANCELLABLE`), `POST /backtests/{id}/retry`(202 새 backtestId, FAILED·CANCELLED에서만, 아니면 409 `NOT_RETRYABLE`), `GET /backtests/{id}/weights`. `POST /backtests`의 202 본문에 `resultSource: NEW|JOINED|REUSED`와 `effectiveStart`를 추가한다. 오류 코드 추가: `RULES_NOT_REGISTERED`(422), `INSUFFICIENT_HISTORY`(422), `EXECUTION_LIMIT`(429), `NOT_CANCELLABLE`/`NOT_RETRYABLE`(409). 상태 문자열은 `CANCELLED`.\n+- **Rationale**: 기존 계약과의 일관성. 세부는 [contracts/rest-api.md](contracts/rest-api.md).\n+\n+## R-14 결정성 보장\n+\n+- **Decision**: 시드 42 고정(현행), 종목·날짜 정렬 고정, numpy·numba·BLAS 단일 스레드(운영 compose에 이미 설정, 개발 compose에도 추가), 부동소수 누적 순서 고정. CI에 \"같은 EngineInput 두 번 실행 → EngineOutput JSON 완전 일치\" 테스트를 둔다.\n+- **Rationale**: SC-002. 재사용의 정당성은 재계산이 같다는 사실에서 온다.\n+\n+## R-15 공통 워밍업과 실행 가능 기간\n+\n+- **Decision**: 백엔드가 요청 시 001의 공통 평가 기간(가장 늦은 상장일 이후)과 선택 전략의 최대 관측 길이(+최근 제외 구간)를 합해 `effectiveStart`를 계산해 run에 고정하고 202 응답에 돌려준다. 가용 기간이 관측 길이보다 짧으면 422 `INSUFFICIENT_HISTORY`. 상한 합계가 투자 비중을 채울 수 없는 설정은 400 `INVALID_INPUT`으로 실행 전에 거부한다.\n+- **Rationale**: FR-018, Edge Case, 원칙 IV \"공통 평가 구간이 줄면 실행 전에 알린다\". 날짜 산술은 계산이 아니라 검증이므로 백엔드에서 해도 원칙 1에 어긋나지 않는다.\n+\n+## R-16 테스트·검증 기준 선택 (constitution \"넣지 않은 영역\")\n+\n+- **Decision**: Task 완료 조건 2의 \"테스트\"는 backend `./gradlew spotlessApply build`, worker `ruff check src tests && ruff format --check src tests && pytest`로 한다. 계약 변경은 양쪽 픽스처 테스트가 같은 `examples/*.json`을 읽어 통과해야 한다. 수기 대조(SC-003)는 3개 ETF·24개월 CSV 픽스처에 대해 스프레드시트 계산 결과를 `worker/tests/fixtures/manual_reconciliation.json`으로 고정하고 pytest가 허용 오차(PD-12 확정 전 임시 0, 즉 정확 일치) 안에서 비교한다.\n+- **Rationale**: 현행 검증 명령을 그대로 쓴다. 허용 오차 0은 정수 수량·원 단위 회계에서 가능하고 PD-12가 정해지면 바꾼다.\n+\n+## R-17 목표 위험 맞춤 시나리오 (PD-18, 2026-09-10 팀 확정)\n+\n+- **Decision**: `scenario=TARGET_RISK`는 전략 위에 얹는 공통 오버레이로 구현한다. 요청 `conditions.scenarioParams.targetVolatility`(연환산, plain string, 기본 `\"0.1000\"`, 허용 0.05~0.20, 0.01 간격)를 받고, 규칙은 `strategy_rules`의 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:\"REBALANCE\", scaleDownOnly:true}`(REGISTERED, provisional=false)로 버전 관리한다. 워커는 리밸런싱 판단일마다 최근 63거래일 포트폴리오 일별 수익률(전략 목표 비중 기준)의 표준편차 × √252로 변동성을 추정하고, 추정치 > 목표이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로 두며, 추정치 ≤ 목표이면 조절하지 않는다. 조절 비율·추정 변동성을 `weightsSeries[].riskScale`·`estimatedVolatility`에 기록한다. 이 값들은 동일 버전 키(R-03)에 포함된다(scenario·scenarioParams·규칙 버전).\n+- **Rationale**: 005 FR-017이 \"별도 시나리오 보조 보기\"로 요구한다. 레버리지 금지(FR-012)라 상향 조절은 불가능하므로 하향만 한다. 관측 63거래일·월말 조절은 역변동성(FR-023)·기본 리밸런싱(FR-011)과 같은 값을 써서 새 결정을 만들지 않는다. 목표 수준은 결과 의미를 바꾸는 사용자 선택이므로 003 등록표 항목(기본값 표기는 \"예시·출발점\")으로 둔다.\n+- **Alternatives**: 전략별로 다른 규칙(공통 오버레이면 충분, 비교 조건이 같아짐) / 004 범위 제외(005 보조 보기가 빈 화면이 됨) / 상향 조절 허용(레버리지 금지 위반).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/research.md",
+          "old_path": "specs/004-backtest-execution/research.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,11 +16,22 @@\n \n '분석하기' 이후의 모든 일을 다룬다. 요청을 즉시 접수하고 진행 상태를 알리며 취소·재시도·동일 결과 재사용을 제공하는 실행 관리와, 다섯 전략이 공통으로 따르는 거래·평가 규칙과 전략별 계산 규칙, 그리고 재현·대조할 수 있는 결과 산출이 범위다. 실행 한도는 실측으로 정하고 결제와 구분한다. (§6.4.1, §6.4.2, §6.5)\n \n+## Clarifications\n+\n+### Session 2026-09-10\n+\n+- Q: 사용자가 실행 중에 취소하면 그 요청은 어떤 최종 상태로 남아야 하나? → A: 별도 종결 상태 '취소'를 추가한다(대기·실행·완료·실패·취소). 부분 결과는 '취소' 상태에 붙고 동일 버전 재사용 대상에서 제외한다.\n+- Q: 동일 버전 요청의 결과 재사용은 어느 범위까지 허용하나? → A: 서비스 전체에서 공유한다. 누가 요청했든 동일 버전이면 같은 저장 결과를 돌려주고, 요청자별 참조 기록은 006이 따로 남긴다.\n+- Q: 동일 버전 실행이 아직 대기·실행 중일 때 같은 조건의 요청이 또 들어오면 어떻게 처리하나? → A: 새 요청은 접수해 식별자를 주되 새 계산을 만들지 않고 진행 중인 실행에 합류한다. 그 실행이 끝나면 같은 결과를 공유하고 '동일 버전 조회'로 표시한다.\n+- Q: 상태 조회 때 보여주는 '진행 정도'는 어떤 단위로 표현하나? → A: 현재 단계 이름(자료 준비·계산·결과 저장)과 함께, 계산 단계에서는 처리한 마지막 거래일과 전체 기간 대비 비율을 보여준다. 취소 시 완료 범위도 이 거래일로 표시한다.\n+- Q: 사용자 조작이 아닌 시스템 장애(계산 프로세스 중단·재기동 등)로 실행이 끊기면 어떻게 처리하나? → A: 처음부터 한 번 자동 재시도하고, 그래도 끊기면 '실패'로 종결한다. 자동 재시도 발생 사실을 실행 측정 기록에 남긴다.\n+- Q: '목표 위험 맞춤' 시나리오(FR-016)의 값과 계산 방식은 무엇인가? → A: 목표 변동성 수준은 사용자가 분석 조건으로 입력한다(기본 연 10%, 허용 5~20%, 1% 간격, 003 파라미터 등록표 항목). 맞추는 방식은 다섯 전략 공통 규칙 하나다. 최근 63거래일 일별 수익률로 포트폴리오 변동성을 추정하고, 월말 리밸런싱 때 함께 조절하며, 추정 변동성이 목표보다 높으면 투자 비중을 비례해 낮춰 현금으로 두고, 낮으면 그대로 둔다(레버리지 금지). 2026-09-10 팀 결정(PD-18).\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 분석을 요청하면 즉시 접수되고 진행 상태가 보인다 (Priority: P1)\n \n-[전략을 검증하려는 개인]은 화면을 붙잡고 기다리지 않고 결과를 받기 위하여 '분석하기' 뒤 요청이 즉시 접수되고 대기·실행·완료·실패 상태를 확인하며 완료되면 결과를 볼 수 있다. (§4.2.2, D18)\n+[전략을 검증하려는 개인]은 화면을 붙잡고 기다리지 않고 결과를 받기 위하여 '분석하기' 뒤 요청이 즉시 접수되고 대기·실행·완료·실패·취소 상태를 확인하며 완료되면 결과를 볼 수 있다. (§4.2.2, D18)\n \n **Why this priority**: 모든 결과 화면의 전제다. 요청이 접수되지 않으면 어떤 진단도 없다.\n \n@@ -29,7 +40,7 @@\n **Acceptance Scenarios**:\n \n 1. **Given** 유효한 분석 요청이 있을 때, **When** '분석하기'를 누르면, **Then** 요청이 즉시 접수되어 식별자와 '대기' 상태가 돌아오고 사용자는 계산이 끝나기를 화면에서 기다리지 않아도 된다.\n-2. **Given** 접수된 요청에 대해, **When** 상태를 조회하면, **Then** 대기·실행·완료·실패 중 하나와 진행 정도가 보인다.\n+2. **Given** 접수된 요청에 대해, **When** 상태를 조회하면, **Then** 대기·실행·완료·실패·취소 중 하나와 진행 정도(현재 단계 이름, 계산 단계에서는 처리한 마지막 거래일과 전체 기간 대비 비율)가 보인다.\n 3. **Given** 실행이 완료되면, **Then** 결과가 조회되고 결과에는 참조한 자료 버전·등록표 버전·비용 조건 버전이 기록되어 있다.\n 4. **Given** 실행이 실패하면, **Then** 상태가 '실패'로 바뀌고 이유가 짧게 표시되며 낮은 수익으로 위장되지 않는다.\n \n@@ -65,11 +76,13 @@\n \n **Acceptance Scenarios**:\n \n-1. **Given** 이미 완료된 요청과 동일 버전(전략·파라미터·섹터/ETF 대응·데이터 마감/버전·평가 분할·비용·엔진·검색 설정이 모두 같음)의 요청이 들어오면, **Then** 새 계산 없이 저장된 결과를 재사용하고 '동일 버전 조회'임을 표시한다.\n+1. **Given** 이미 완료된 요청과 동일 버전(전략·파라미터·섹터/ETF 대응·데이터 마감/버전·평가 분할·비용·엔진·검색 설정이 모두 같음)의 요청이 들어오면, **Then** 요청자가 누구든 새 계산 없이 저장된 결과를 재사용하고 '동일 버전 조회'임을 표시한다.\n 2. **Given** 동일 버전을 강제로 다시 계산하면, **Then** 결과가 이전과 100% 같다.\n-3. **Given** 실행 중인 요청에서, **When** 사용자가 취소하면, **Then** 실행이 멈추고 완료한 범위와 부분 결과임이 표시된다.\n-4. **Given** 실패한 요청에서, **When** 재시도하면, **Then** 같은 조건으로 새 실행이 접수된다.\n-5. **Given** 실행 한도(실행시간·대기열·자원)에 도달하면, **Then** 이유를 짧게 알리고 완료한 범위를 명시한다.\n+3. **Given** 동일 버전 실행이 대기·실행 중일 때 같은 조건의 요청이 들어오면, **Then** 새 식별자를 받되 새 계산은 만들어지지 않고, 진행 중 실행이 완료되면 두 요청 모두 같은 결과를 받으며 뒤의 요청은 '동일 버전 조회'로 표시된다.\n+4. **Given** 실행 중인 요청에서, **When** 사용자가 취소하면, **Then** 실행이 멈추고 상태가 '취소'로 바뀌며 완료한 범위(처리한 마지막 거래일)와 부분 결과임이 표시된다. 취소된 요청의 부분 결과는 동일 버전 재사용 대상이 아니다.\n+5. **Given** 실패한 요청에서, **When** 재시도하면, **Then** 같은 조건으로 새 실행이 접수된다.\n+6. **Given** 실행 중 계산 프로세스가 중단·재기동되면, **Then** 사용자 조작 없이 처음부터 한 번 자동으로 다시 실행되고, 두 번째도 끊기면 '실패'로 종결되며 사유가 '시스템 장애'로 기록된다.\n+7. **Given** 실행 한도(실행시간·대기열·자원)에 도달하면, **Then** 이유를 짧게 알리고 완료한 범위를 명시한다.\n \n ---\n \n@@ -99,6 +112,8 @@\n - 상한들의 합계로 투자 비중을 채울 수 없는 설정은 실행 전에 거부한다. 실행 도중 발견되면 제약 위반으로 기록하고 낮은 수익과 구분한다.\n - 자료 버전이 갱신되면 새 요청은 새 버전으로 계산되고 이전 결과는 이전 버전으로 유지된다.\n - 요청이 대기열에 오래 머무르면 대기 시간이 상태에 표시되고, 대기열 상한을 넘으면 접수 시점에 이유를 알린다.\n+- 합류 요청이 붙은 실행을 어느 요청자가 취소하면 그 요청자의 요청만 '취소'로 종결하고, 남은 요청이 하나라도 있으면 계산은 계속된다. 마지막 남은 요청이 취소될 때만 실행을 멈춘다.\n+- 합류 요청이 붙은 실행이 실패하면 모든 합류 요청이 '실패'로 종결되고 각각 재시도할 수 있다.\n \n ## Requirements *(mandatory)*\n \n@@ -106,13 +121,13 @@\n \n #### 실행 관리 (§4.2.2, §6.5, D18, D19)\n \n-- **FR-001**: '분석하기' 요청은 즉시 접수되어 식별자를 받고, 사용자는 대기·실행·완료·실패 상태와 진행 정도를 조회할 수 있다.\n-- **FR-002**: 실행 중 취소와 실패 후 재시도를 제공한다. 취소하면 완료한 범위와 부분 결과임을 표시한다.\n-- **FR-003**: 동일 버전은 전략·파라미터·섹터/ETF 대응·데이터 마감/버전·평가 분할·비용·엔진·검색 설정이 모두 같은 요청으로 정의한다. 동일 버전 요청은 새 계산 없이 저장된 결과를 재사용하고, 동일 버전 조회와 새 계산을 구분해 표시한다.\n+- **FR-001**: '분석하기' 요청은 즉시 접수되어 식별자를 받고, 사용자는 대기·실행·완료·실패·취소 상태와 진행 정도를 조회할 수 있다. 완료·실패·취소는 종결 상태다. 진행 정도는 현재 단계 이름(자료 준비·계산·결과 저장)이며, 계산 단계에서는 처리한 마지막 거래일과 전체 기간 대비 비율을 함께 보여준다.\n+- **FR-002**: 실행 중 취소와 실패 후 재시도를 제공한다. 취소하면 상태를 '취소'로 바꾸고 완료한 범위(처리한 마지막 거래일)와 부분 결과임을 표시한다. 취소는 실패와 구분해 기록하며 실패율(FR-007)에 넣지 않는다. 시스템 장애(계산 프로세스 중단·재기동 등)로 실행이 끊기면 처음부터 한 번 자동 재시도하고, 다시 끊기면 사유 '시스템 장애'로 '실패' 종결한다. 자료 부족·제약 위반 같은 결정적 오류는 자동 재시도하지 않고 즉시 실패로 종결한다.\n+- **FR-003**: 동일 버전은 전략·파라미터·섹터/ETF 대응·데이터 마감/버전·평가 분할·비용·엔진·검색 설정이 모두 같은 요청으로 정의한다. 동일 버전 요청은 요청자와 무관하게 서비스 전체에서 '완료' 상태의 저장된 결과만 재사용하고, 동일 버전 조회와 새 계산을 구분해 표시한다. 취소·실패 요청의 부분 결과는 재사용하지 않는다. 동일 버전 실행이 대기·실행 중이면 새 요청은 식별자를 받고 그 실행에 합류하며 새 계산을 만들지 않는다. 합류 요청은 원 실행의 상태를 따라가고 완료 시 같은 결과를 '동일 버전 조회'로 받는다. 누가 어느 결과를 참조했는지는 [006 내 기록](../006-my-records/spec.md)이 요청자별로 남긴다.\n - **FR-004**: 동일 버전을 다시 계산하면 결과가 이전과 같다.\n-- **FR-005**: 한도 초과·부분 완료·제약 위반은 이유를 짧게 알리고 완료한 범위를 명시한다.\n+- **FR-005**: 한도 초과·부분 완료·제약 위반은 이유를 짧게 알리고 완료한 범위(처리한 마지막 거래일)를 명시한다.\n - **FR-006**: 실행시간·대기열·동시 실행·자원 사용의 상한은 실측 뒤 고정한다. 상한을 정하기 전에 무제한 실행을 허용하지 않으며, 실측 전 임시 상한은 결정 항목 PD-06이다.\n-- **FR-007**: 실행 유형(전략 단일 실행·자동 탐색 묶음·분야별 검색·종합 검색)별로 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·건당 원가를 기록하고, 대기 시간 분포(중앙값·95백분위)와 실패율을 유형별로 볼 수 있게 한다.\n+- **FR-007**: 실행 유형(전략 단일 실행·자동 탐색 묶음·분야별 검색·종합 검색)별로 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·자동 재시도 발생 여부·건당 원가를 기록하고, 대기 시간 분포(중앙값·95백분위)와 실패율을 유형별로 볼 수 있게 한다.\n - **FR-008**: 계산·데이터·저장 원가와 동일 결과 재조회를 구분해 기록한다. 진단 화면에 포인트·상품 선택·결제 단계를 넣지 않는다.\n - **FR-009**: 사용자에게 서버·인프라 설정을 요구하거나 노출하지 않는다.\n - **FR-010**: 계산 실패·자료 부족·제약 위반은 낮은 수익과 구분해 기록·표시한다. 결과를 만들 수 없을 때 0이나 확신 있는 요약으로 대체하지 않는다.\n@@ -124,7 +139,7 @@\n - **FR-013**: 체결에는 원시 가격을, 신호·성과에는 기업행위를 일관되게 반영한 자료를 쓴다. 분배금과 ETF 내부 보수를 중복 반영하지 않는다.\n - **FR-014**: 상장 전 합성 이력이나 미래 자료로 빈 값을 채우지 않는다.\n - **FR-015**: 포트폴리오 하나는 공유 현금·비중을 가진 한 실행 단위다. 내부 섹터를 독립 자본처럼 병렬 합산하지 않는다.\n-- **FR-016**: 주 분석은 전체 가용 기간 연속 운용이다. 신규 현금 시작·비용 상승·목표 위험 맞춤은 별도 시나리오로 구분해 실행·기록한다.\n+- **FR-016**: 주 분석은 전체 가용 기간 연속 운용이다. 신규 현금 시작·비용 상승·목표 위험 맞춤은 별도 시나리오로 구분해 실행·기록한다. 목표 위험 맞춤은 사용자가 입력한 목표 변동성(기본 연 10%, 5~20%, 1% 간격)에 대해 전략 공통 규칙으로 적용한다: 최근 63거래일 일별 수익률로 포트폴리오 변동성을 추정하고, 월말 리밸런싱 때 함께 조절하며, 추정치가 목표보다 높을 때만 투자 비중을 목표/추정치 비율로 낮춰 현금으로 두고 낮을 때는 그대로 둔다(레버리지 금지). 조절 비율과 추정 변동성은 결과의 비중 시계열에 기록한다(PD-18 확정).\n - **FR-017**: 종료 시 시가평가 결과와 청산 비용을 포함한 결과를 구분해 산출한다.\n - **FR-018**: 후보 중 가장 긴 관측 기간과 최근 제외 구간을 감안한 공통 워밍업을 확보하고, 워밍업 구간은 성과에서 제외한다.\n - **FR-019**: 수수료·호가 차이·슬리피지·세금·비용 상승 조건은 결정한 뒤 버전으로 기록하고 모든 실행이 어느 버전을 썼는지 참조한다. 구체 수치는 결정 항목 PD-07이다.\n@@ -149,13 +164,13 @@\n ### Key Entities *(include if feature involves data)*\n \n - **분석 요청**: 섹터·비중, 전략 설정값, 분석 조건, 시나리오, 참조 버전(대응표·등록표·자료·비용·엔진)이다.\n-- **실행 상태**: 대기·실행·완료·실패와 진행 정도, 접수·시작·종료 시각, 취소 여부, 부분 완료 범위다.\n-- **동일 결과 식별 키**: FR-003의 항목 조합이다.\n-- **백테스트 결과**: FR-027의 산출 항목 묶음이며 결과 버전을 가진다.\n+- **실행 상태**: 대기·실행·완료·실패·취소와 진행 정도(현재 단계, 처리한 마지막 거래일, 전체 기간 대비 비율), 접수·시작·종료 시각, 부분 완료 범위(처리한 마지막 거래일)다. 완료·실패·취소는 종결 상태이며 부분 결과는 '취소' 상태에 붙는다. 분석 요청(식별자)과 실제 계산(실행)은 다대일이다. 여러 동일 버전 요청이 한 실행에 합류할 수 있고, 요청은 자기 실행의 상태를 따라간다.\n+- **동일 결과 식별 키**: FR-003의 항목 조합이다. 요청자를 포함하지 않는다.\n+- **백테스트 결과**: FR-027의 산출 항목 묶음이며 결과 버전을 가진다. 요청자와 독립적으로 저장되어 동일 버전 요청이 공유하고, 요청자와의 연결은 006의 기록이 맡는다.\n - **거래 내역**: 날짜·종목·수량·가격·비용·사유(리밸런싱·거래 불가 이월·청산)다.\n - **비용 조건(버전)**: 수수료·호가 차이·슬리피지·세금·비용 상승 조건이다.\n - **예외 처리 기록**: 0 변동성·선정 대상 없음·추정 실패·제약 위반의 발생 시점과 적용 규칙이다.\n-- **실행 측정 기록**: 실행 유형별 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·건당 원가·재조회 구분이다.\n+- **실행 측정 기록**: 실행 유형별 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·자동 재시도 발생 여부·건당 원가·재조회 구분이다.\n \n ## Success Criteria *(mandatory)*\n \n@@ -166,7 +181,7 @@\n - **SC-003**: 팀이 정한 대표 거래일 표본에서 체결 날짜·수량·현금·비용·분배금이 수기 또는 독립 계산과 사전 고정한 허용 오차 안에서 일치한다. 허용 오차는 PD-12에서 정한다.\n - **SC-004**: 판단 시점 이후 자료가 판단에 쓰인 사례와 상장 전·미래 자료로 채운 값이 0건이다. 모든 체결은 판단일 다음 거래일 이후다.\n - **SC-005**: 계산 실패·제약 위반·자료 부족이 낮은 수익으로 표시된 사례가 0건이다.\n-- **SC-006**: 취소·한도 도달의 100%에서 부분 결과임과 완료 범위가 표시된다.\n+- **SC-006**: 취소·한도 도달의 100%에서 부분 결과임과 완료 범위(처리한 마지막 거래일)가 표시된다.\n - **SC-007**: 실행 유형별 측정 기록이 존재하고, 실행 상한은 그 기록을 근거로 고정된다.\n - **SC-008**: 최소분산 산출 비중의 100%가 비음수·상한·투자 비중 합계 제약을 만족한다.\n \n@@ -186,6 +201,7 @@\n | PD-04 | 최소분산: 공분산 관측 기간·추정 방법(표본/축소)·해법·추정 불안정·수치 오차·해 없음 처리 | 미확정 | 없음 | §6.4.2, D04 |\n | PD-06 | 실행 한도: 실행시간·대기열·동시 실행·자원 상한과 응답 목표, 실측 전 임시 상한 | 실측 후 고정 | 없음 | §6.5, D18 |\n | PD-07 | 비용 수치: 수수료·호가 차이·슬리피지·세금·비용 상승 조건 | 미확정 | 없음 | §6.4.2, D05 |\n+| PD-18 | 목표 위험 맞춤 시나리오: 목표 변동성 기본값·범위, 추정 기간, 조절 주기, 상한 처리 | 확정 (2026-09-10) | 기본 연 10%(5~20%, 1% 간격, 003 등록표 항목) · 63거래일 추정 · 월말 조절 · 목표 초과 시에만 현금으로 낮춤 | §6.4.1, FR-016, 005 FR-017 |\n \n ## Out of Scope\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/spec.md",
+          "old_path": "specs/004-backtest-execution/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,195 @@\n+# Tasks: 백테스트 실행\n+\n+**Input**: `specs/004-backtest-execution/` — plan.md, spec.md(Clarifications 5건), research.md(R-01~R-16), data-model.md, contracts/{rest-api,messaging,market-data-input}.md, quickstart.md(S1~S10)\n+\n+**작업 단위 규칙** (constitution \"문서 역할\"·Jira 규칙): 아래 T항목 하나 = Jira Task 하나 = 브랜치 하나 = MR 하나. 제목은 `[분야] 작업 내용` 형식이며 분야는 BE/FE/AI/DE/INFRA/DOCS. **워커(Python, `worker/`) 작업도 백엔드 파트 소관이므로 `[BE]`로 표기한다(2026-09-10 확정). 파일 경로가 `worker/`인 Task가 워커 작업이다.** 한 사람이 전부 맡는 전제로 2026-09-10에 25개를 13개로 재편했다(같은 파트가 연속으로 하는 작업, 한쪽만 병합하면 반쪽이 되는 작업, 합쳐도 하루치인 문서 작업을 묶음). Jira 이슈는 발급되어 있다(Epic `S15P21E205-30 백테스트`; Story: US1→`-38`, Setup·Foundational·Polish→`-21`, US2→`-125`, US3→`-126`, US4→`-127`). 병합으로 흡수된 12개 이슈(131·132·133·136·139·141·144·150·151·152·155·156)는 `[병합→…]` 제목과 코멘트를 남기고 종결했다. 브랜치는 `{type}({position})/{JIRA_NUMBER}-{desc}`(예: `feat(be)/130-backtest-schema-v3-v4`)로 만든다. 각 항목 아래 들여쓴 체크리스트는 구현 메모이며 Jira에 올리지 않는다. 각 Task의 완료 조건은 constitution \"완료의 정의\" 다섯 가지(구현·테스트/동작 확인·리뷰·MR 병합·문서)다.\n+\n+**Tests**: 각 MR은 자기 변경의 테스트를 포함한다(R-16 검증 명령). 결정성(SC-002)·수기 대조(SC-003) 테스트는 T008에 명시했다.\n+\n+**Format**: `- [ ] [ID] [P?] [Story?] [분야] 설명 (파일 경로) — Jira 키` — `[P]` = 다른 파일·의존 없음, 병렬 가능.\n+\n+## Path Conventions\n+\n+- Backend: `backend/src/main/java/com/ssafy/thorp/backtest/`(이하 `backtest/`), 마이그레이션 `backend/src/main/resources/db/migration/`, 테스트 `backend/src/test/java/com/ssafy/thorp/backtest/`\n+- Worker: `worker/src/worker/`, 테스트 `worker/tests/`, 픽스처 `worker/examples/`\n+- 계약 문서·픽스처: `docs/specs/backtest-api/`, `docs/specs/backtest-messaging/`\n+- 인프라: `docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/`\n+\n+---\n+\n+## Phase 1: Setup (계약·환경)\n+\n+**Purpose**: 양쪽(Java·Python)이 같은 계약 v2 위에서 시작하고, 실행 환경이 준비된다.\n+\n+- [ ] T001 [P] [BE] 메시지·API 계약 v2: 문서·픽스처·Java 레코드·quorum 토폴로지·pydantic 모델 (`docs/specs/backtest-api/{README.md,examples/*.json}`, `docs/specs/backtest-messaging/{README.md,examples/*.json}`, `backtest/application/port/message/*.java`, `backtest/infrastructure/messaging/{BacktestRabbitConfig,RabbitBacktestJobPublisher,RabbitBacktestControlPublisher}.java`, `backend/src/test/.../BacktestMessageRoundTripTest.java`, `worker/src/worker/contracts/{engine_input,engine_output,events,control}.py`, `worker/src/worker/messaging.py`, `worker/tests/{test_contracts,test_rabbitmq}.py`) — Jira `S15P21E205-128`\n+  - 문서: `specs/004-backtest-execution/contracts/rest-api.md`·`messaging.md`를 두 README에 반영, \"같은 조건이면 항상 새 Job\" 문장 제거. API 예시 8종(request v2, accepted-joined/reused, detail-running/cancelled, weights, exceptions, execution-metrics)·메시징 예시 v2 7종(engine-input, started, progress, finished-{completed,failed,cancelled}, control-cancel) 추가, v1 삭제. 픽스처 불변 조건 갱신(run 식별자 `RUN-…`, schemaVersion 2). `conditions.scenarioParams`(REST)와 `run.scenarioParams`·`run.scenarioRules`(메시징) 필드 포함, `engine-input-target-risk.json` 예시 추가(PD-18)\n+  - Java: `EngineInput` v2(run·universe.items·marketData.dataVersion/fillPrice/signalPrice·allocation{strategyId,rulesVersion,rules,parameters}·execution.costProfile·evaluation·progress, benchmark 제거), `BacktestEvent` v2 payload(stage·lastTradingDate·status/partial·resource), `ControlMessage{type,runId,requestedAt}`. `BacktestRabbitConfig`: `backtest.jobs` quorum + `x-delivery-limit=1` + 기존 DLX, fanout `backtest.control` 추가. 작업 메시지 `message_id=\"JOB-\"+runId`\n+  - Python: 같은 필드의 pydantic v2 모델, `SCHEMA_VERSION=2`, `CONTROL_EXCHANGE`. `EngineOutput` v2 필드(weightsSeries·weightsSource·costs·liquidation·analytics·exceptions·versions·run.partial/lastTradingDate·diagnostics.resource). `strategy_params/` MA_CROSSOVER 삭제, 다섯 전략 파라미터 모델 추가\n+  - 양쪽 라운드트립 테스트가 같은 examples 픽스처로 통과, `test_rabbitmq.py`가 Java 상수와 동일함을 검증\n+- [ ] T002 [P] [INFRA] quorum 큐 전환 절차·워커 실행 환경·장애 시나리오 확인 (`docker-compose.dev.yml`, `infra/docker-compose.prod.yml`, `infra/scripts/migrate-jobs-queue.sh`, `infra/scripts/deploy.sh`, `infra/.env.prod.example`, `docs/guides/backtest-queue-migration.md`) — Jira `S15P21E205-129`\n+  - dev compose 워커에 `NUMBA_NUM_THREADS=OMP_NUM_THREADS=OPENBLAS_NUM_THREADS=MKL_NUM_THREADS=1`(R-14), 워커용 읽기 전용 DB 접속 `MARKET_DATA_URL`(R-09)\n+  - `migrate-jobs-queue.sh`: 미ACK 0 확인 → `rabbitmqctl delete_queue backtest.jobs` → 백엔드 재시작으로 quorum 재선언. `deploy.sh`에 1회 실행 안내\n+  - (T010 병합 뒤) 전환 실행, `rabbitmqctl list_queues name type arguments`로 quorum·delivery-limit 확인. quickstart S6: 워커 2 replica에서 RUNNING 중 `kill -9` 1회 → 재실행·완료, 2회 → DLQ → FAILED(SYSTEM_FAILURE). 가이드에 기록, 운영 배포 절차에 1회 실행 단계 추가\n+\n+---\n+\n+## Phase 2: Foundational (모든 스토리가 의존)\n+\n+**Purpose**: 요청/실행 분리 스키마·등록표, 자료 입력 경로.\n+\n+- [ ] T003 [BE] 스키마 V3·V4: 요청/실행 분리와 비용·규칙 등록표 (`backend/src/main/resources/db/migration/{V3__backtest_run_request,V4__cost_profile_strategy_rules}.sql`, `backtest/domain/model/{BacktestRequest,BacktestRun,RunStatus,ResultSource,ExecutionType,CostProfile,StrategyRules,RulesStatus}.java`, `backtest/application/service/{CostProfileService,StrategyRulesService}.java`, `backtest/infrastructure/persistence/*`, `common/exception/ErrorCode.java`) — Jira `S15P21E205-130`\n+  - V3(data-model.md 요약): `backtest_job`→`backtest_run` 개명·컬럼 추가(dedup_key, CANCELLED, progress_*, attempt, versions JSONB), `backtest_request` 생성, `backtest_result`/`backtest_trade` FK→`run_id`, JSONB 열(weights_series, costs, liquidation, analytics, exceptions, versions). 부분 유니크 `UNIQUE (dedup_key) WHERE status IN ('QUEUED','RUNNING','COMPLETED')`. 기존 DEMO 데이터는 `requester_id NOT NULL` 때문에 삭제 권장(MR 리뷰에서 확정)\n+  - 도메인: `RunStatus.CANCELLED`·`isFinal()`, `BacktestRun.markRunning(executionId)`(attempt+1)/`markCompleted`/`markFailed`/`markCancelled`/`recordProgress`, `BacktestRequest.cancel()`\n+  - V4: `cost_profile` 초기 행 `PROVISIONAL-DEMO-1`(수수료 0·호가차 0·슬리피지 5bps·세금 0, provisional=true, 'ADR-0004 데모 값 재사용, PD-07 확정 전'); `strategy_rules`(provisional 열 포함): FIXED_WEIGHT/1·EQUAL_WEIGHT/1 REGISTERED, INVERSE_VOLATILITY/1 {lookbackDays:63, zeroVolatility:\"EXCLUDE_THEN_ALLOCATE\", weightCap, investedFraction} **provisional=true, decision_ref PD-02**(analyze C1), SECTOR_MOMENTUM·MINIMUM_VARIANCE PENDING_DECISION(PD-03·04)\n+  - `strategy_rules`에 `TARGET_RISK_OVERLAY/1 {lookbackDays:63, adjustAt:\"REBALANCE\", scaleDownOnly:true, targetVolatility:{default:\"0.1000\", min:\"0.0500\", max:\"0.2000\", step:\"0.0100\"}}` REGISTERED provisional=false(PD-18 확정) 행 추가\n+  - `StrategyRulesService.requireRegistered()` → PENDING이면 422 `RULES_NOT_REGISTERED`. `ErrorCode` 추가: RULES_NOT_REGISTERED, INSUFFICIENT_HISTORY, EXECUTION_LIMIT, NOT_CANCELLABLE, NOT_RETRYABLE\n+  - 기존 `BacktestJob*Test`를 Run/Request 테스트로 교체, `FlywayMigrationTest`·`ArchitectureTest` 통과\n+- [ ] T004 [P] [BE] 시장 자료 공급자와 3종목 24개월 CSV 픽스처 (`worker/src/worker/market_data.py`, `worker/src/worker/config.py`, `worker/examples/three_etf_24m/{prices_raw,prices_adjusted,distributions,splits,instruments,mapping}.csv`, `worker/tests/test_market_data.py`) — Jira `S15P21E205-134`\n+  - `PostgresMarketDataProvider(url)`: contracts/market-data-input.md의 열을 읽어 원시 OHLC·조정 종가·분배금·분할·상장/폐지일·data_version 반환. 읽기 전용, 종목 ≤50·기간 한 번에 조회\n+  - `CsvMarketDataProvider`가 같은 스키마의 픽스처 디렉터리를 읽음(`versions.data=\"FIXTURE-three_etf_24m\"`). 픽스처에 분배금 2건·거래 정지 1일·상장일 다른 종목 1개 포함(quickstart S8)\n+  - 결측 거래일 → `DataInsufficientError`(보간 금지), 기존 `validate_prices()` 재사용. `YFinanceDataProvider`는 `worker/scripts/`로 이동해 실행 경로에서 제외(원칙 X)\n+\n+**Checkpoint**: 계약 v2·스키마·등록표·자료 경로가 준비되어 스토리 구현을 시작할 수 있다.\n+\n+---\n+\n+## Phase 3: User Story 1 - 분석을 요청하면 즉시 접수되고 진행 상태가 보인다 (Priority: P1) 🎯 MVP\n+\n+**Goal**: v2 요청을 접수해 식별자·대기 상태를 즉시 돌려주고, 대기·실행·완료·실패·취소 상태와 진행 정도(단계·처리한 마지막 거래일·비율)를 조회할 수 있다.\n+\n+**Independent Test**: quickstart S1. `POST /backtests` 직후 `202 {backtestId, status: QUEUED, resultSource: NEW, effectiveStart}`, 폴링하면 `progress.stage`·`lastTradingDate`가 바뀌고 `COMPLETED`에서 `versions`가 채워진다. 실패 시 `failure.code`가 보이고 `summary=null`.\n+\n+- [ ] T005 [US1] [BE] 접수·상태 API v2와 이벤트 처리(동일 버전 키·진행 저장·attempt) (`backtest/presentation/{request/BacktestJobRequest,response/BacktestJobResponse,response/BacktestDetailResponse,controller/BacktestController}.java`, `backtest/application/service/{BacktestService,DedupKeyCalculator,EffectivePeriodCalculator,EngineInputAssembler,BacktestEventService,BacktestResultQueryService}.java`, `backtest/infrastructure/messaging/BacktestEventListener.java`, 테스트 `{DedupKeyCalculatorTest,EffectivePeriodCalculatorTest,BacktestServiceTest,BacktestControllerTest,BacktestEventServiceTest,BacktestEventFlowIT,BacktestResultApiIT}`) — Jira `S15P21E205-135`\n+  - 접수: 요청 본문 contracts/rest-api.md 구조(executionType·sectorAllocation·strategy·conditions). 검증: targetWeight는 FIXED_WEIGHT만·합=1, 상한 합계 ≥ 투자 비중, 식별자 패턴, 규칙 REGISTERED, 워밍업 가용 기간(422 INSUFFICIENT_HISTORY). 대응표·자료 버전·상장일 읽기 포트가 없으면 이 Task에서 픽스처 기반으로 만든다(analyze M1)\n+  - `DedupKeyCalculator`: canonical JSON(키 정렬·BigDecimal plain string·null 제거) → SHA-256. 요청자·executionType 제외를 테스트로 고정\n+  - `BacktestService.create()`: NEW 경로(키 조회 → 없으면 run+request 생성+발행, 한 트랜잭션). JOINED/REUSED는 T010\n+  - 시나리오 검증: `TARGET_RISK`면 `scenarioParams.targetVolatility` 필수·0.0500~0.2000·0.0100 간격, `FRESH_CASH_FROM`이면 `startDate` 필수, 그 외 `scenarioParams` 금지(400). scenario·scenarioParams·오버레이 규칙 버전을 동일 버전 키에 포함\n+  - `EngineInputAssembler` v2: 대응표·규칙 사본·비용 프로필·dataVersion·effectiveStart·seed 42. `TARGET_RISK`면 `run.scenarioRules`에 `TARGET_RISK_OVERLAY/1` 사본을 채움. 202 응답에 resultSource·effectiveStart/End·versions\n+  - 조회 `GET /backtests/{id}`: 파생 상태(cancelled_at→CANCELLED), progress{stage,lastTradingDate,completed/totalTradingDays}, queueWaitSeconds, partial, resultSource, versions, failure{code,message}, summary. 타인 요청 404\n+  - 이벤트: `handleStarted` QUEUED→RUNNING·attempt+1·stage=PREPARING_DATA(RUNNING 중 다른 executionId면 attempt만 +1); `handleProgress` 트랜잭션 저장(`LoggingBacktestProgressNotifier` 삭제); `handleFinished(COMPLETED|FAILED)` 결과·versions·failure_code 저장. CANCELLED는 T011. 종결 후 이벤트 무시 유지\n+- [ ] T006 [P] [US1] [BE] 워커 소비자 v2와 다종목 리밸런싱 Nautilus 전략 (`worker/src/worker/{consumer,rabbitmq,engine_runner,nautilus_engine,portfolio_execution,engine_support}.py`, `worker/tests/{test_consumer,test_portfolio_execution}.py`) — Jira `S15P21E205-137`\n+  - 소비자 v2: STARTED{stage: PREPARING_DATA, resource{pid,hostname}}, PROGRESS{stage: COMPUTING, lastTradingDate,…} 20거래일 배치, FINISHED{status, partial, lastTradingDate, engineOutput, resource{peakRssMb,cpuSeconds,wallSeconds}}(`resource.getrusage`). INVALID_REQUEST·DATA_INSUFFICIENT·CONSTRAINT_VIOLATION·ESTIMATION_FAILED는 FINISHED(FAILED) 후 ACK(재시도 없음); 프로세스 예외는 전파해 unacked로 죽게 둔다. `engine_support.py` 제한을 v2 기준(fillPrice=RAW, signalPrice=ADJUSTED, 규칙 사본 필수)으로 교체\n+  - `PortfolioRebalanceExecution(NautilusStrategy)`: 월말 판단일 `on_bar`(마지막 종목 bar 뒤)에서 배분 모듈(T007)에 조정 종가 이력 전달 → 목표 비중 → 현금·현재가 기준 정수 수량 주문 → 다음 거래일 시가 QuoteTick 시장가 체결. 공매도·레버리지 불가, 매도→매수 순서 고정\n+  - 거래 정지·거래 불가(halted 또는 volume 0) → 다음 거래 가능일로 이월, `reason=HALT_DEFERRED, plannedDate`\n+  - 워밍업: `evaluation.warmupTradingDays` 소비 후 `effectiveStart`부터 성과 집계. 종료일: 시가평가·청산(전량 매도, 비용 포함) 두 결과(`liquidation`)\n+  - 비중 오차·잔여 현금을 `weightsSeries[].weightError`·`portfolioSeries[].cash`로 기록(재정규화 금지). `scenario=FRESH_CASH_FROM`(시작일·시작 현금 재지정) 지원\n+  - `scenario=TARGET_RISK` 오버레이(PD-18): 리밸런싱 판단일마다 최근 `scenarioRules.lookbackDays`(63) 포트폴리오 일별 수익률 표준편차 × √252로 변동성 추정, 추정치 > `scenarioParams.targetVolatility`이면 투자 비중 합계에 `target/estimate`를 곱해 나머지를 현금으로, 아니면 그대로(하향만, 레버리지 금지). `weightsSeries[].riskScale`·`estimatedVolatility` 기록. 규칙 없이 오면 INVALID_REQUEST\n+\n+**Checkpoint**: 접수·상태 흐름과 워커 실행 경로가 연결된다. 전략 계산 검증은 US2 뒤에 S1로 재확인한다.\n+\n+---\n+\n+## Phase 4: User Story 2 - 다섯 전략이 당시 실행 가능한 규칙으로 계산된다 (Priority: P1)\n+\n+**Goal**: 등록된 세 배분 규칙(고정·동일·역변동성)을 공통 거래 규칙 위에서 계산하고 FR-027 결과 항목을 모두 산출한다. 미등록 두 전략(PD-03·04)은 거부한다.\n+\n+**Independent Test**: quickstart S8·S9·S7. 3종목 24개월 픽스처로 세 전략을 실행해 대표 거래일 3개의 체결일·수량·현금·비용·분배금이 `manual_reconciliation.json`과 정확히 일치, 모든 체결일 = 판단일 다음 거래일, 거래 정지일 이월 `reason=HALT_DEFERRED`, 결과 시작일 = 워밍업 이후. `SECTOR_MOMENTUM` 요청은 422. 같은 입력 두 번 실행 시 EngineOutput 바이트 동일.\n+\n+- [ ] T007 [P] [US2] [BE] 기업행위·비용 프로필·배분 규칙 모듈(고정·동일·역변동성) (`worker/src/worker/{corporate_actions,costs,rules_registry}.py`, `worker/src/worker/allocation/{__init__,base,fixed,equal,inverse_vol}.py`, `worker/tests/{test_corporate_actions,test_costs,test_allocation}.py`) — Jira `S15P21E205-140`\n+  - 분배금: 보유 중 `pay_date`에 `amount_per_share × 보유 수량` 현금 유입 1회, `portfolioSeries[].cashFlows[{type: DISTRIBUTION}]`. ETF 내부 보수 미차감(FR-013). 분할은 수량 조정\n+  - 비용: `costProfile`의 commission·spread·slippage·tax bps를 체결마다 적용해 `trades[].detail`과 `costs{…,total}`. 하드코딩 `SLIPPAGE_BPS=5` 제거. `escalation`은 `scenario=COST_ESCALATION`일 때만, 미정의면 INVALID_REQUEST\n+  - `compute_weights(history, params, rules) -> AllocationResult{weights, source: USER|COMPUTED, exceptions[]}` 순수 함수. FIXED_WEIGHT(source=USER), EQUAL_WEIGHT(1/N), INVERSE_VOLATILITY(`rules.lookbackDays` 63 표준편차 역수, 0 변동성은 `rules.zeroVolatility`대로 + `exceptions[{kind: ZERO_VOLATILITY}]`, `weightCap` 초과 재분배 불가 시 CONSTRAINT_VIOLATION). 규칙 값은 EngineInput `allocation.rules`에서만 읽고 자체 기본값 없음(provisional, PD-02)\n+  - `rules_registry.py`: SECTOR_MOMENTUM·MINIMUM_VARIANCE 또는 rules 없음 → INVALID_REQUEST(\"RULES_NOT_REGISTERED\"). 두 전략 모듈 파일은 만들지 않음(PD-03·04 확정 후 별도 Task)\n+- [ ] T008 [US2] [BE] 성과 지표 확장과 결정성·수기 대조 테스트(SC-002·SC-003) (`worker/src/worker/{performance,engine_runner}.py`, `worker/tests/{test_performance,test_determinism,test_manual_reconciliation}.py`, `worker/tests/fixtures/{manual_reconciliation.json,engine-input-three-etf-{fixed,equal,inverse_vol}.json}`, `docs/specs/backtest-messaging/examples/reconciliation/*.csv`) — Jira `S15P21E205-142`\n+  - `performance{…, netTotalReturn, maxDrawdown, totalTradingCost}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method:\"sample-covariance-daily\"}`, `exceptions[]` 집계, `versions{mapping, rules(provisional), scenarioRules(TARGET_RISK_OVERLAY/1, 해당 시), costProfile(provisional), data, engine:\"nautilus_trader 1.219.0\", worker}`. 결정성·수기 대조 테스트에 `TARGET_RISK` 픽스처 1건 추가(quickstart S11). 부분 결과(취소·한도)는 `lastTradingDate`까지의 시계열로 같은 함수가 계산\n+  - 결정성: 같은 EngineInput 두 번 실행 → `EngineOutput.to_json()` 바이트 동일(세 전략)\n+  - 수기 대조: 스프레드시트로 계산한 대표 거래일 3개(첫 리밸런싱·분배금 지급일·거래 정지 이월일)의 체결일·수량·현금·비용·분배금을 JSON으로 고정, `PROVISIONAL_TOLERANCE = 0`(PD-12 확정 시 상수만 변경). 스프레드시트 원본 CSV 보관\n+  - 검증: 모든 체결일 = 판단일 다음 거래일(SC-004), 정수 수량, 결과 시작일 = effectiveStart\n+- [ ] T009 [US2] [BE] 결과 v2 저장·조회 API(비중·예외·거래 사유·현금 흐름) (`backtest/application/service/BacktestResultQueryService.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/response/{BacktestWeightsResponse,BacktestExceptionsResponse,BacktestTimeseriesResponse,BacktestTradePageResponse}.java`, `backtest/infrastructure/persistence/BacktestResultJpaEntity.java`, `backend/src/test/.../BacktestResultApiIT.java`) — Jira `S15P21E205-146`\n+  - FINISHED payload의 v2 필드를 `backtest_result` JSONB 열에 저장(T005 저장 경로 확장)\n+  - `GET /backtests/{id}/weights`(weightsSource 포함), `GET /backtests/{id}/exceptions`, `/trades` 항목 reason·plannedDate, `/timeseries` 항목 cashFlows\n+  - 409 규칙 유지(RESULT_NOT_READY, BACKTEST_FAILED); CANCELLED는 200 + partial=true(T011 이후 활성)\n+\n+**Checkpoint**: 세 전략이 픽스처에서 수기 계산과 일치하고 결정적이다. S1을 실제 전략으로 재검증한다.\n+\n+---\n+\n+## Phase 5: User Story 3 - 같은 조건은 재사용하고, 실패는 재시도하며, 오래 걸리면 취소한다 (Priority: P2)\n+\n+**Goal**: 동일 버전 재사용(REUSED)·진행 중 합류(JOINED), 요청 단위 취소와 마지막 요청 취소 시 실행 정지·부분 결과, 실패·취소 후 재시도, 시스템 장애 1회 자동 재시도.\n+\n+**Independent Test**: quickstart S2~S6. 같은 본문 재요청이 `REUSED`, RUNNING 중 재요청이 `JOINED`, A 취소 후 B 유지, B 취소 시 `CANCELLED partial=true`와 부분 시계열 200, FAILED 후 retry 202, 워커 `kill -9` 1회는 완료·2회는 `SYSTEM_FAILURE`.\n+\n+- [ ] T010 [US3] [BE] 동일 버전 재사용·합류·재시도와 DLQ 처리 (`backtest/application/service/{BacktestService,BacktestRetryService}.java`, `backtest/domain/model/BacktestReuseEvent.java`, `backtest/infrastructure/persistence/{BacktestReuseEventJpaEntity,…}.java`, `backtest/infrastructure/messaging/BacktestDeadLetterListener.java`, `backtest/presentation/controller/BacktestController.java`, `backend/src/main/resources/db/migration/V5__backtest_reuse_event.sql`, 테스트 `{BacktestServiceTest,BacktestDedupIT,BacktestRetryServiceTest,BacktestDeadLetterListenerIT}`) — Jira `S15P21E205-148`\n+  - `create()`: 키로 활성 run 조회 → COMPLETED면 REUSED(발행 없음) / QUEUED·RUNNING이면 JOINED(발행 없음) / 없으면 NEW. 부분 유니크 위반(동시 접수 경합) 시 재조회해 JOINED로 전환\n+  - `backtest_reuse_event(run_id, request_id, kind, request_execution_type, at)` 기록(FR-008, analyze M2). IT: 두 사용자·같은 본문 → run 1·request 2·reuse_event 1\n+  - `POST /backtests/{id}/retry`: FAILED·CANCELLED에서만(아니면 409 NOT_RETRYABLE), 같은 canonical 요청으로 `create()` 재호출, `retry_of_request_id`, 202 {backtestId, status, resultSource, retryOf}\n+  - `@RabbitListener(queues=\"backtest.jobs.dlq\")`: runId로 run을 FAILED(SYSTEM_FAILURE) 종결(이미 종결이면 무시). IT(Testcontainers RabbitMQ): quorum `x-delivery-limit=1` 확인, nack-requeue 2회 → DLQ → FAILED\n+- [ ] T011 [US3] [BE] 취소: API·마지막 활성 요청 규칙·워커 제어 채널·부분 결과 (`backtest/presentation/controller/BacktestController.java`, `backtest/application/service/{BacktestCancelService,BacktestEventService}.java`, `backtest/infrastructure/messaging/RabbitBacktestControlPublisher.java`, 테스트 `{BacktestCancelServiceTest,BacktestCancelFlowIT}`, `worker/src/worker/{control,rabbitmq,consumer,portfolio_execution}.py`, `worker/tests/test_control.py`) — Jira `S15P21E205-149`\n+  - `POST /backtests/{id}/cancel`: 요청자 본인만, 종결이면 409 NOT_CANCELLABLE. `request.cancelled_at` 기록 → 같은 run에 활성 요청이 없으면 `run.cancel_requested_at`, QUEUED면 즉시 CANCELLED, RUNNING이면 `backtest.control`에 CANCEL{runId} 발행. 응답 `cancelRequested: true`\n+  - `handleFinished(CANCELLED)`: run CANCELLED·partial=true·progress_last_trading_date, 부분 결과 저장. `handleStarted`에서 run이 이미 CANCELLED면 CANCEL 재발행(대기 중 취소)\n+  - 워커: 시작 시 `backtest.control` exclusive·auto-delete 큐 바인딩, 별도 스레드가 CANCEL{runId}를 `threading.Event` 맵에 표시. `PortfolioRebalanceExecution.on_bar`에서 취소 확인 시 `self.stop()`; 소비자는 `lastTradingDate`까지의 부분 EngineOutput(T008 함수)으로 FINISHED{status: CANCELLED, partial: true} 발행 후 ACK. 모르는·끝난 runId 무시\n+\n+**Checkpoint**: S2~S6 통과.\n+\n+---\n+\n+## Phase 6: User Story 4 - 실행 한도를 실측 근거로 정한다 (Priority: P2)\n+\n+**Goal**: 실행 유형별 대기 포함 소요·동시 처리 수·자원 사용·실패·자동 재시도·건당 원가(원단위)를 기록하고 p50/p95·실패율을 운영자가 조회한다. 상한 값은 정하지 않는다(PD-06).\n+\n+**Independent Test**: quickstart S10. S1~S6 뒤 `GET /internal/execution-metrics?type=SINGLE`이 `count ≥ 6`, 0보다 큰 `failRate`·`cancelRate`·`autoRetryRate`, `waitP50Ms ≤ waitP95Ms`, `reuseCount ≥ 1`을 돌려주고 `v_run_metric_summary`와 값이 같다.\n+\n+- [ ] T012 [US4] [BE] 실행 측정 기록·집계 뷰·운영자 조회 API (`backend/src/main/resources/db/migration/V6__backtest_run_metric.sql`, `backtest/application/service/{ExecutionMetricRecorder,BacktestEventService}.java`, `backtest/presentation/controller/ExecutionMetricsController.java`, `backtest/presentation/response/ExecutionMetricsResponse.java`, 테스트 `{ExecutionMetricRecorderTest,ExecutionMetricsApiIT}`) — Jira `S15P21E205-153`\n+  - `backtest_run_metric` 테이블과 뷰 `v_run_metric_summary`(`percentile_cont(0.5/0.95)` 대기·소요, fail/cancel/auto-retry rate, reuse_count는 `backtest_reuse_event` 조인)\n+  - 종결 이벤트(COMPLETED·FAILED·CANCELLED·DLQ)마다 `ExecutionMetricRecorder.record(run)`: wait_ms, run_ms, concurrent_running, peak_rss_mb·cpu_seconds, auto_retried = attempt > 1, result_bytes. 유형은 `run.execution_type`\n+  - `GET /internal/execution-metrics?type=&from=&to=` 운영자 권한, 뷰 행 반환. 사용자 화면 노출 없음\n+  - 원가는 원단위(cpu·메모리·바이트)만. 금액 단가·상한 값은 넣지 않는다(PD-06·D19)\n+\n+**Checkpoint**: 측정 기록이 쌓이고 PD-06 결정에 쓸 뷰가 있다.\n+\n+---\n+\n+## Phase 7: Polish\n+\n+- [ ] T013 [BE] 마무리: 워커 레거시 제거·ADR-0005·README·quickstart 검증 기록 (`docs/adr/0005-backtest-request-run-split.md`, `README.md`, `worker/CLAUDE.md`, `backend/CLAUDE.md`, `docs/specs/101-nautilus-momentum.md`, `docs/guides/backtest-execution-verification-2026-09.md`, `specs/004-backtest-execution/quickstart.md`, `worker/src/worker/strategies/*`, `worker/src/worker/engine_support.py`, `worker/examples/momentum_fixture.csv`, `worker/tests/{test_momentum_engine,test_engine_support}.py`, `worker/pyproject.toml`) — Jira `S15P21E205-154`\n+  - 레거시 제거: 단일 종목 `MomentumStrategy`·`STRATEGIES` 레지스트리·`yfinance` 의존·v1 전용 테스트 삭제. `psycopg` 유지, `SQLAlchemy` 미사용이면 제거\n+  - ADR-0005: research R-02(요청/실행 분리)·R-04(제어 채널)·R-06(quorum 큐) 결정과 버린 대안. README \"현재 구현 상태\"를 다종목·다섯 전략(세 개 실행 가능, 두 개 PD 대기)로 갱신. `101-nautilus-momentum.md` 개정 또는 폐기 표시(진행 정도는 폴링+DB 저장)\n+  - quickstart S1~S10 전체 실행, 실제 응답·DB 값·소요 시간 기록. 실패 항목은 실패로 남기고 원인 Task를 연다. \"구현 완료\"만 보고하고 사용성·효과 입증은 별도임을 명시\n+\n+---\n+\n+## Dependencies & Execution Order\n+\n+### Phase Dependencies\n+\n+- **Phase 1**: T001 ∥ T002(환경 반영 부분). T002의 전환 실행·장애 시나리오는 T010 뒤.\n+- **Phase 2**: T003은 T001 뒤. T004는 독립.\n+- **Phase 3**: T005는 T001·T003 뒤. T006은 T001·T004 뒤. T005 ∥ T006.\n+- **Phase 4**: T007은 T001 뒤(T006과 병렬 가능). T008은 T006·T007 뒤. T009는 T005 뒤, T008 뒤 병합 권장.\n+- **Phase 5**: T010은 T005 뒤. T011은 T005·T006·T008 뒤. T010 ∥ T011.\n+- **Phase 6**: T012는 T005·T010·T011 뒤.\n+- **Phase 7**: T013은 모든 Task 뒤.\n+\n+### User Story Dependencies\n+\n+- **US1**: Foundational 뒤 시작. 실제 전략 실행 검증은 US2 뒤에 다시 한다.\n+- **US2**: T006(워커 엔진)에 의존. 백엔드 T005와 병렬 진행 가능.\n+- **US3**: US1(접수·이벤트)과 US2(부분 결과 계산)에 의존.\n+- **US4**: US1·US3의 종결 경로에 의존.\n+\n+### Parallel Opportunities\n+\n+- T001 ∥ T002 → T003 ∥ T004 → T005 ∥ T006 ∥ T007 → T008 → T009 ∥ T010 ∥ T011 → T012 → T013\n+- 한 사람이 할 때는 위 순서를 그대로 직렬로 진행하면 된다. 병렬 표시는 리뷰 대기 중 다음 Task를 시작할 수 있는 지점이다.\n+\n+## Implementation Strategy\n+\n+### MVP First (US1 + 등록된 세 전략)\n+\n+1. T001~T004(계약·환경·스키마·자료) → T005·T006(접수·워커) → T007~T009(전략·지표·결과 API).\n+2. quickstart S1·S7·S8·S9로 검증 후 데모. 세 전략은 접수·실행·조회되고, 두 전략은 \"팀 결정 대기\"로 거부된다.\n+\n+### Incremental Delivery\n+\n+1. T010·T011(재사용·재시도·취소) → S2~S6. T002의 큐 전환 실행·장애 시나리오도 이때 마무리.\n+2. T012(측정) → S10. 이 뷰가 PD-06 결정 자료다.\n+3. T013 마무리.\n+4. PD-03·PD-04가 확정되면 별도 Task로 `allocation/momentum.py`·`allocation/min_variance.py`와 `strategy_rules` 행 갱신을 추가한다(이 tasks.md 범위 밖).\n+\n+## Notes\n+\n+- PD-03·04·06·07 값은 어느 Task에서도 정하지 않는다. 등록표 행·상수 자리만 만든다.\n+- 각 Task 병합 전 AI 코드리뷰(CLAUDE.md 규칙)와 R-16 검증 명령 통과가 필요하다.\n+- 기존 DEMO 데이터는 V3에서 폐기 전제다. 보존이 필요하면 T003 리뷰에서 마이그레이션 방식을 바꾼다.\n+- analyze H1(임시 실행 한도 적용)은 팀이 PD-06 임시값을 주면 Task를 추가한다. H2(`TARGET_RISK`)는 2026-09-10 PD-18로 확정해 T001·T003·T005·T006·T008에 나눠 넣었다. 목표 변동성 항목(기본 10%, 5~20%, 1%)을 003 파라미터 등록표에 올리는 일은 003 spec 쪽 작업이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -74,6 +74,7 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n | PD-15 | 뉴스 표시 허가: 제목·매체·발행 시각·원문 링크 표시 방식의 매체 허가 여부 | 미확인 (매체 회신 대기) | [012](012-market-news-digest/spec.md) | §6.3, §10.1 |\n | PD-16 | 배우기 최종 주제 목록 | 미확정 (출발안: 기획서 예시 5개 주제) | [013](013-learning-pages/spec.md) | §4.5 |\n | PD-17 | 담당·일정·자원 | 미확정 | 이 문서 (plan·Jira에서 관리) | §8.1, D17 |\n+| PD-18 | 목표 위험 맞춤 시나리오: 목표 변동성 기본값·범위(사용자 입력, 003 등록표)·추정 기간·조절 주기·상한 처리 | 확정 (2026-09-10: 연 10%, 5~20%, 1% 간격 / 63거래일 / 월말 / 초과 시에만 현금으로 낮춤) | [004](004-backtest-execution/spec.md) (등록표 항목은 [003](003-strategy-settings/spec.md)) | §6.4.1 |\n \n ## 미확인 검증 항목 (U01~U06)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2787881": []
+  }
+}

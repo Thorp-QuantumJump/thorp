@@ -1,0 +1,784 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 946053,
+    "iid": 139,
+    "project_id": 1444456,
+    "title": "feat(be): 접수 시점에 등록표로 설정을 다시 검증한다",
+    "description": "**작업 내용 요약**\n\n분석 요청을 접수할 때 003 등록표로 설정을 다시 판정한다. 화면의 안내는 사용자를 돕기 위한 것이고, 실행 직전의 판정은 서버가 해야 한다. 화면 검증을 우회한 요청이 통과하면 허용 범위 밖 설정으로 분석이 시작되고, 그 결과가 정상적인 결과와 구별되지 않은 채 기록에 남는다.\n\n## **관련 티켓**\n\n* S15P21E205-239 (묶음 B07, spec 003) / 포함 태스크 T002, T047\\~T051\n\n## **주요 변경 사항**\n\n* **T002** `ErrorCode`에 spec 003 블록과 `VALIDATION_RULE_VIOLATED`(422)를 연다. 나머지 넷(`UNREGISTERED_PARAMETER_VALUE`·`STRATEGY_NOT_REGISTERED`·`REGISTRY_VERSION_CHANGED`·`REGISTRY_UNAVAILABLE`)은 007 블록의 것을 그대로 쓴다 — 같은 등록표가 내는 같은 거절이라 두 벌로 두면 화면이 코드로 분기할 때 갈라진다.\n* **T047** `StrategySettingsRejectedException` — 거절 사유별 정적 팩터리. 사유마다 사용자가 다음에 할 일이 달라 `details`에 담는 것도 다르다.\n* **T048** `StrategySettingsValidator` — 버전 409 → 활성 전략 422 → 축 구성 400 → 값 범위 400 → 등록표 규칙 422 → 시작 금액 400 순서로 판정하고 워밍업을 산출한다.\n* **T049** `BacktestService.create()`에 조건부 연결. `BacktestJobRequest`·`docs/specs/backtest-api/README.md`·`backend/CLAUDE.md`에 현재 상태를 적었다.\n* **T050** `StrategySettingsValidatorTest` 9건 (합성 등록표)\n* **T051** `BacktestIntakeRegistryIT` 6건 (실제 등록표, PostgreSQL 컨테이너)\n\n## **판단 근거와 버린 선택지**\n\n**순서에 뜻이 있다.** 버전이 다르면 나머지 판정의 근거가 이미 바뀐 것이라 먼저 보고, 전략이 없으면 축을 볼 수 없어 그다음이며, 축 구성이 맞아야 값을 판정할 수 있고, 값이 범위 안이어야 조합 규칙을 물을 수 있다. 순서를 섞으면 사용자가 앞선 원인을 모른 채 뒤의 사유만 받는다.\n\n**고쳐서 통과시키는 경로를 두지 않았다**(constitution 원칙 VI). 범위 밖 값을 경계로 자르거나 빠진 축을 기본값으로 채우는 쪽이 친절해 보이지만, 그러면 사용자가 요청한 것과 다른 조건의 결과가 그 조건의 결과로 저장된다. 단위 테스트가 \"거절했다\"뿐 아니라 \"요청 맵이 그대로다\"까지 단언한다.\n\n**위반 문구를 서버가 다시 쓰지 않는다.** 등록표가 준 `detail`을 그대로 옮긴다. 서버가 자기 말로 바꾸면 같은 위반이 화면과 서버에서 다른 문장으로 보이고, 사용자는 두 안내가 같은 것을 뜻하는지 알 수 없다.\n\n**등록표 워밍업이 004 규칙의 요구값보다 짧으면 `max()`로 올리지 않고 422다.** 004가 같은 이유로 그렇게 하고 있다 — 두 값이 어긋났다는 것은 등록표와 규칙 중 하나가 틀렸다는 신호이고, 고쳐 통과시키면 어긋난 채로 계속 간다.\n\n## **티켓 범위 밖이지만 함께 고친 것**\n\n**`StrategySettingsErrorResponseTest`를 따로 만들었다.** T051이 `VALIDATION_RULE_VIOLATED`의 응답 매핑도 보라고 했는데 통합 테스트로는 그 경로에 닿을 수 없다 — 지금 유효성 규칙을 가진 전략은 `SECTOR_MOMENTUM` 하나뿐인데 004 규칙 등록표에서 `PENDING_DECISION`이라, 접수가 등록표 판정보다 먼저 422 `RULES_NOT_REGISTERED`로 거절한다. `ParamSearchErrorResponseTest`가 접수 엔드포인트 이전에 쓰던 방식으로 매핑만 고정했다. 004가 그 전략 규칙을 확정하면 실제 경로로 한 번 더 확인한다.\n\n**004 픽스처 여덟 곳과 계약 예시(`examples/backtest-request.json`)의 `registryVersion`을 비웠다.** 이 요청들은 `\"PARAM-2026-09\"`라는 실제 등록표 버전이 아닌 값을 실으면서 `parameters`에는 워커가 읽는 `rebalance` 문자열을 담고 있어, 새 관문에 409로 걸렸다. 두 값은 함께 바뀌어야 하므로 버전을 비우는 쪽이 정직하다.\n\n## **미완료 — 이 MR로 FR-006이 닫히지 않는다**\n\n**관문은 `registryVersion`이 실린 요청에만 건다.** 워커는 아직 `parameters.rebalance` 문자열과 `rules.lookbackDays`만 읽고, 003 등록표의 `rebalancePeriod` 객체값이나 `maxWeight`·`topN`·`skipRecentDays`는 `docs/specs/backtest-messaging/`의 메시지 계약에 자리가 없다. 그 계약은 004가 소유한다. 전부에 걸면 004·007의 기존 접수가 그 자리에서 막힌다.\n\n**그래서 FR-006과 SC-003은 충족되지 않았다.** 화면을 우회한 요청이 `registryVersion`을 빼면 판정을 건너뛸 수 있다. 004가 워커 메시지 계약을 등록표 축 이름에 맞춘 뒤, 이 필드를 필수로 바꾸고 모든 요청에 검증을 거는 후속 변경까지 끝나야 닫힌다.\n\n그 사실을 네 곳에 남겼다: `BacktestService.verifyRegistrySettings` 주석, `backend/CLAUDE.md`, `docs/specs/backtest-api/README.md`의 \"등록표 검증의 과도기 상태\" 절, `BacktestIntakeRegistryIT`의 테스트 이름(`[미완료·과도기]`).\n\n**FR-011a(최소 평가 기간)의 서버 재검증도 넣지 않았다.** 004의 요청 계약에 `minEvaluationYears` 필드가 없고, 그 스키마는 003이 단독으로 고칠 문서가 아니다(tasks.md \"착수 전에 알아둘 것\" ⑧).\n\n## **테스트**\n\n* `./gradlew build` 통과 — 1323건 성공, 4건 skip(Docker 없는 환경용), 실패 0\n* 새 테스트 18건: 검증기 단위 9, 접수 통합 6, 응답 매핑 3\n* Spotless 적용 완료\n\n## **리뷰 포인트**\n\n1. **과도기 관문의 범위**가 적절한지. `registryVersion` 유무로 가르는 것 말고 다른 기준이 나은지.\n2. **004 픽스처의 `registryVersion`을 비운 결정.** 대안은 픽스처를 등록표 축 이름으로 전부 바꾸는 것인데, 워커가 그 이름을 읽지 못해 004 계약 변경이 선행되어야 한다.\n3. **계약 예시 파일 변경**이 004 쪽에 영향을 주는지. `BacktestResultApiIT`가 이 파일을 읽지만 요청 예시가 아니라 응답 예시를 대조하므로 영향은 없었다.\n4. **거절이 쓰기보다 먼저 일어나는 순서**가 유지되는지. 검증기 호출을 `requireRegistered` 직후, 저장소 접근 앞에 두었다. `BacktestService`의 `noRollbackFor`가 그 순서를 전제한다.",
+    "state": "merged",
+    "created_at": "2026-09-16T10:55:08.181+09:00",
+    "updated_at": "2026-09-16T11:05:20.720+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T11:05:20.451+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/239-settings-revalidation",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+    "merge_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T10:55:10.877+09:00",
+    "reference": "!139",
+    "references": {
+      "short": "!139",
+      "relative": "!139",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!139"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/139",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 946053,
+    "iid": 139,
+    "project_id": 1444456,
+    "title": "feat(be): 접수 시점에 등록표로 설정을 다시 검증한다",
+    "description": "**작업 내용 요약**\n\n분석 요청을 접수할 때 003 등록표로 설정을 다시 판정한다. 화면의 안내는 사용자를 돕기 위한 것이고, 실행 직전의 판정은 서버가 해야 한다. 화면 검증을 우회한 요청이 통과하면 허용 범위 밖 설정으로 분석이 시작되고, 그 결과가 정상적인 결과와 구별되지 않은 채 기록에 남는다.\n\n## **관련 티켓**\n\n* S15P21E205-239 (묶음 B07, spec 003) / 포함 태스크 T002, T047\\~T051\n\n## **주요 변경 사항**\n\n* **T002** `ErrorCode`에 spec 003 블록과 `VALIDATION_RULE_VIOLATED`(422)를 연다. 나머지 넷(`UNREGISTERED_PARAMETER_VALUE`·`STRATEGY_NOT_REGISTERED`·`REGISTRY_VERSION_CHANGED`·`REGISTRY_UNAVAILABLE`)은 007 블록의 것을 그대로 쓴다 — 같은 등록표가 내는 같은 거절이라 두 벌로 두면 화면이 코드로 분기할 때 갈라진다.\n* **T047** `StrategySettingsRejectedException` — 거절 사유별 정적 팩터리. 사유마다 사용자가 다음에 할 일이 달라 `details`에 담는 것도 다르다.\n* **T048** `StrategySettingsValidator` — 버전 409 → 활성 전략 422 → 축 구성 400 → 값 범위 400 → 등록표 규칙 422 → 시작 금액 400 순서로 판정하고 워밍업을 산출한다.\n* **T049** `BacktestService.create()`에 조건부 연결. `BacktestJobRequest`·`docs/specs/backtest-api/README.md`·`backend/CLAUDE.md`에 현재 상태를 적었다.\n* **T050** `StrategySettingsValidatorTest` 9건 (합성 등록표)\n* **T051** `BacktestIntakeRegistryIT` 6건 (실제 등록표, PostgreSQL 컨테이너)\n\n## **판단 근거와 버린 선택지**\n\n**순서에 뜻이 있다.** 버전이 다르면 나머지 판정의 근거가 이미 바뀐 것이라 먼저 보고, 전략이 없으면 축을 볼 수 없어 그다음이며, 축 구성이 맞아야 값을 판정할 수 있고, 값이 범위 안이어야 조합 규칙을 물을 수 있다. 순서를 섞으면 사용자가 앞선 원인을 모른 채 뒤의 사유만 받는다.\n\n**고쳐서 통과시키는 경로를 두지 않았다**(constitution 원칙 VI). 범위 밖 값을 경계로 자르거나 빠진 축을 기본값으로 채우는 쪽이 친절해 보이지만, 그러면 사용자가 요청한 것과 다른 조건의 결과가 그 조건의 결과로 저장된다. 단위 테스트가 \"거절했다\"뿐 아니라 \"요청 맵이 그대로다\"까지 단언한다.\n\n**위반 문구를 서버가 다시 쓰지 않는다.** 등록표가 준 `detail`을 그대로 옮긴다. 서버가 자기 말로 바꾸면 같은 위반이 화면과 서버에서 다른 문장으로 보이고, 사용자는 두 안내가 같은 것을 뜻하는지 알 수 없다.\n\n**등록표 워밍업이 004 규칙의 요구값보다 짧으면 `max()`로 올리지 않고 422다.** 004가 같은 이유로 그렇게 하고 있다 — 두 값이 어긋났다는 것은 등록표와 규칙 중 하나가 틀렸다는 신호이고, 고쳐 통과시키면 어긋난 채로 계속 간다.\n\n## **티켓 범위 밖이지만 함께 고친 것**\n\n**`StrategySettingsErrorResponseTest`를 따로 만들었다.** T051이 `VALIDATION_RULE_VIOLATED`의 응답 매핑도 보라고 했는데 통합 테스트로는 그 경로에 닿을 수 없다 — 지금 유효성 규칙을 가진 전략은 `SECTOR_MOMENTUM` 하나뿐인데 004 규칙 등록표에서 `PENDING_DECISION`이라, 접수가 등록표 판정보다 먼저 422 `RULES_NOT_REGISTERED`로 거절한다. `ParamSearchErrorResponseTest`가 접수 엔드포인트 이전에 쓰던 방식으로 매핑만 고정했다. 004가 그 전략 규칙을 확정하면 실제 경로로 한 번 더 확인한다.\n\n**004 픽스처 여덟 곳과 계약 예시(`examples/backtest-request.json`)의 `registryVersion`을 비웠다.** 이 요청들은 `\"PARAM-2026-09\"`라는 실제 등록표 버전이 아닌 값을 실으면서 `parameters`에는 워커가 읽는 `rebalance` 문자열을 담고 있어, 새 관문에 409로 걸렸다. 두 값은 함께 바뀌어야 하므로 버전을 비우는 쪽이 정직하다.\n\n## **미완료 — 이 MR로 FR-006이 닫히지 않는다**\n\n**관문은 `registryVersion`이 실린 요청에만 건다.** 워커는 아직 `parameters.rebalance` 문자열과 `rules.lookbackDays`만 읽고, 003 등록표의 `rebalancePeriod` 객체값이나 `maxWeight`·`topN`·`skipRecentDays`는 `docs/specs/backtest-messaging/`의 메시지 계약에 자리가 없다. 그 계약은 004가 소유한다. 전부에 걸면 004·007의 기존 접수가 그 자리에서 막힌다.\n\n**그래서 FR-006과 SC-003은 충족되지 않았다.** 화면을 우회한 요청이 `registryVersion`을 빼면 판정을 건너뛸 수 있다. 004가 워커 메시지 계약을 등록표 축 이름에 맞춘 뒤, 이 필드를 필수로 바꾸고 모든 요청에 검증을 거는 후속 변경까지 끝나야 닫힌다.\n\n그 사실을 네 곳에 남겼다: `BacktestService.verifyRegistrySettings` 주석, `backend/CLAUDE.md`, `docs/specs/backtest-api/README.md`의 \"등록표 검증의 과도기 상태\" 절, `BacktestIntakeRegistryIT`의 테스트 이름(`[미완료·과도기]`).\n\n**FR-011a(최소 평가 기간)의 서버 재검증도 넣지 않았다.** 004의 요청 계약에 `minEvaluationYears` 필드가 없고, 그 스키마는 003이 단독으로 고칠 문서가 아니다(tasks.md \"착수 전에 알아둘 것\" ⑧).\n\n## **테스트**\n\n* `./gradlew build` 통과 — 1323건 성공, 4건 skip(Docker 없는 환경용), 실패 0\n* 새 테스트 18건: 검증기 단위 9, 접수 통합 6, 응답 매핑 3\n* Spotless 적용 완료\n\n## **리뷰 포인트**\n\n1. **과도기 관문의 범위**가 적절한지. `registryVersion` 유무로 가르는 것 말고 다른 기준이 나은지.\n2. **004 픽스처의 `registryVersion`을 비운 결정.** 대안은 픽스처를 등록표 축 이름으로 전부 바꾸는 것인데, 워커가 그 이름을 읽지 못해 004 계약 변경이 선행되어야 한다.\n3. **계약 예시 파일 변경**이 004 쪽에 영향을 주는지. `BacktestResultApiIT`가 이 파일을 읽지만 요청 예시가 아니라 응답 예시를 대조하므로 영향은 없었다.\n4. **거절이 쓰기보다 먼저 일어나는 순서**가 유지되는지. 검증기 호출을 `requireRegistered` 직후, 저장소 접근 앞에 두었다. `BacktestService`의 `noRollbackFor`가 그 순서를 전제한다.",
+    "state": "merged",
+    "created_at": "2026-09-16T10:55:08.181+09:00",
+    "updated_at": "2026-09-16T11:05:20.720+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-16T11:05:20.451+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/239-settings-revalidation",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+    "merge_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T10:55:10.877+09:00",
+    "reference": "!139",
+    "references": {
+      "short": "!139",
+      "relative": "!139",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!139"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/139",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": "2026-09-16T10:57:21.572+09:00",
+    "latest_build_finished_at": "2026-09-16T11:05:08.036+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 197895,
+      "iid": 57,
+      "project_id": 1444456,
+      "sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+      "ref": "feat(be)/239-settings-revalidation",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T10:57:21.425+09:00",
+      "updated_at": "2026-09-16T11:05:08.045+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197895"
+    },
+    "head_pipeline": {
+      "id": 197895,
+      "iid": 57,
+      "project_id": 1444456,
+      "sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+      "ref": "feat(be)/239-settings-revalidation",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T10:57:21.425+09:00",
+      "updated_at": "2026-09-16T11:05:08.045+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197895",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T10:57:21.572+09:00",
+      "finished_at": "2026-09-16T11:05:08.036+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/197895",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "head_sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+      "start_sha": "a44fc2bf826853e015fffe43fa9e989747d29155"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7c1f52222e6c2a66a04e40083347faf6ae70b56c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813869,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:55:08.350+09:00",
+          "updated_at": "2026-09-16T10:55:08.354+09:00",
+          "system": true,
+          "noteable_id": 946053,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 139,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ccdf4005fd2cd8be603f5977589819ff63e303fb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813870,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T10:55:08.377+09:00",
+          "updated_at": "2026-09-16T10:55:08.384+09:00",
+          "system": true,
+          "noteable_id": 946053,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 139,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "41a452504182575f03905899102fae4e86cc42cc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813873,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 방어적 설계와 원칙 준수**: `StrategySettingsValidator`에서 입력값을 자동으로 보정(fallback/sanitization)하지 않고 명시적으로 거절(`BusinessException`)하도록 구현하여, 클라이언트와 서버 간의 상태 불일치를 원천 차단했습니다.\n- **상세하고 투명한 문서화**: 과도기적 상태(`registryVersion` 조건부 검증), 순서가 중요한 이유, 픽스처 변경 배경 등을 코드 주석, 커밋 설명, CLAUDE.md에 상세히 기록하여 향후 기술 부채 해소를 돕고 있습니다.\n- **풍부한 테스트 커버리지**: 단위 테스트(`StrategySettingsValidatorTest`)와 PostgreSQL 컨테이너를 활용한 통합 테스트(`BacktestIntakeRegistryIT`), 그리고 예외 매핑 테스트를 모두 구축하여 검증 로직의 신뢰성을 높였습니다.\n\n---\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 아키텍처 의존성 방향(`backtest → strategy`), 트랜잭션 롤백 순서, 예외 처리 매핑 등이 요구사항과 설계 원칙에 맞게 잘 구현되어 있습니다.\n\n---\n\n### 테스트 제안\n1. **과도기 호환성 테스트 (`registryVersion == null`)**:\n   - `registryVersion`이 없는 기존 요청이 정상적으로 접수(202)되면서, 로그에 의도된 경고 메시지가 올바르게 출력되는지 확인하는 시나리오.\n2. **검증 순서 검증 테스트**:\n   - `registryVersion` 불일치와 동시에 허용 범위 밖의 파라미터가 전달된 요청을 전송하여, 범위 오류(400)가 아닌 버전 불일치(409) 응답이 먼저 반환되는지 확인하는 시나리오 (순서의 정당성 확인).\n3. **초기 자금 경계값 테스트**:\n   - 등록표에서 정의한 최소/최대 시작 금액 경계값(`initialAmount`)의 직내/직외 값을 각각 전송하여 정상 접수 및 400 거절이 올바르게 동작하는지 확인하는 시나리오.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e0bc491fc89b8c9db8c6290e96833814a5bb243a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T10:55:14.943+09:00",
+          "updated_at": "2026-09-16T10:55:14.943+09:00",
+          "system": false,
+          "noteable_id": 946053,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 139,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "736eeb6b895a02a20222312525587cc84e7b0425",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2813993,
+          "type": null,
+          "body": "mentioned in commit b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-16T11:05:20.928+09:00",
+          "updated_at": "2026-09-16T11:05:20.934+09:00",
+          "system": true,
+          "noteable_id": 946053,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 139,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2203821,
+      "head_commit_sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+      "base_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "start_commit_sha": "a44fc2bf826853e015fffe43fa9e989747d29155",
+      "created_at": "2026-09-16T10:55:08.769+09:00",
+      "merge_request_id": 946053,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "42bd5865831b8551ba8b63ce792cc0c8a596c594"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2203821,
+      "head_commit_sha": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+      "base_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "start_commit_sha": "a44fc2bf826853e015fffe43fa9e989747d29155",
+      "created_at": "2026-09-16T10:55:08.769+09:00",
+      "merge_request_id": 946053,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "42bd5865831b8551ba8b63ce792cc0c8a596c594",
+      "commits": [
+        {
+          "id": "e0bc491fc89b8c9db8c6290e96833814a5bb243a",
+          "short_id": "e0bc491f",
+          "created_at": "2026-09-16T10:47:42.000+09:00",
+          "parent_ids": [
+            "bcf6585181485b8c449e03b8ad8f0b9750732f5e"
+          ],
+          "title": "feat(be): 접수 시점에 등록표로 설정을 다시 검증한다",
+          "message": "feat(be): 접수 시점에 등록표로 설정을 다시 검증한다\n\n화면의 안내는 사용자를 돕기 위한 것이고 실행 직전의 판정은 서버가 해야 한다. 화면 검증을\n우회한 요청이 통과하면 허용 범위 밖 설정으로 분석이 시작된다.\n\nStrategySettingsValidator 가 버전 → 활성 전략 → 축 구성 → 값 범위 → 등록표 규칙 →\n시작 금액 순으로 판정한다. 어느 단계에서도 값을 잘라 넣거나 빠진 축을 기본값으로 채워\n통과시키지 않는다. 위반 문구는 등록표가 준 것을 그대로 쓴다.\n\n[미완료] 관문은 registryVersion 이 실린 요청에만 건다. 워커가 아직 등록표 축 이름을\n읽지 못해 전부에 걸면 004·007 의 기존 접수가 막힌다. 그래서 FR-006·SC-003 은 닫히지\n않았고, 004 가 워커 메시지 계약을 맞춘 뒤 이 필드를 필수화해야 닫힌다.\n\n004 픽스처와 계약 예시의 registryVersion 을 비운다 — 그 요청들의 parameters 는 워커가\n읽는 이름이라 등록표 버전과 함께 실리면 모순이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-16T10:47:42.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-16T10:47:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e0bc491fc89b8c9db8c6290e96833814a5bb243a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -22,6 +22,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;\n import java.math.BigDecimal;\n import java.time.Clock;\n import java.util.LinkedHashMap;\n@@ -29,6 +30,8 @@ import java.util.LinkedHashSet;\n import java.util.List;\n import java.util.Map;\n import java.util.Optional;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n import org.springframework.beans.factory.annotation.Value;\n import org.springframework.context.ApplicationEventPublisher;\n import org.springframework.stereotype.Service;\n@@ -54,11 +57,14 @@ import org.springframework.transaction.annotation.Transactional;\n @Service\n public class BacktestService {\n \n+    private static final Logger log = LoggerFactory.getLogger(BacktestService.class);\n+\n     private final BacktestRunRepository runRepository;\n     private final BacktestRequestRepository requestRepository;\n     private final BacktestReuseEventRepository reuseEventRepository;\n     private final ExecutionLimitPolicy executionLimitPolicy;\n     private final StrategyRulesService strategyRulesService;\n+    private final StrategySettingsValidator strategySettingsValidator;\n     private final CostProfileService costProfileService;\n     private final EffectivePeriodCalculator effectivePeriodCalculator;\n     private final DedupKeyCalculator dedupKeyCalculator;\n@@ -73,6 +79,7 @@ public class BacktestService {\n             BacktestReuseEventRepository reuseEventRepository,\n             ExecutionLimitPolicy executionLimitPolicy,\n             StrategyRulesService strategyRulesService,\n+            StrategySettingsValidator strategySettingsValidator,\n             CostProfileService costProfileService,\n             EffectivePeriodCalculator effectivePeriodCalculator,\n             DedupKeyCalculator dedupKeyCalculator,\n@@ -85,6 +92,7 @@ public class BacktestService {\n         this.reuseEventRepository = reuseEventRepository;\n         this.executionLimitPolicy = executionLimitPolicy;\n         this.strategyRulesService = strategyRulesService;\n+        this.strategySettingsValidator = strategySettingsValidator;\n         this.costProfileService = costProfileService;\n         this.effectivePeriodCalculator = effectivePeriodCalculator;\n         this.dedupKeyCalculator = dedupKeyCalculator;\n@@ -122,6 +130,7 @@ public class BacktestService {\n                 strategyRulesService.requireRegistered(\n                         command.strategyId(), command.rulesVersion());\n         validateWeights(command, rules);\n+        Integer warmupTradingDays = verifyRegistrySettings(command);\n         StrategyRules overlay = scenario == Scenario.TARGET_RISK ? targetRiskOverlay() : null;\n         CostProfile costProfile = costProfileService.resolve(command.costProfileVersion());\n \n@@ -132,7 +141,7 @@ public class BacktestService {\n                         command.instrumentIds(),\n                         command.start(),\n                         command.end(),\n-                        command.warmupTradingDays());\n+                        warmupTradingDays);\n \n         String dataVersion = marketMetadata.currentDataVersion();\n         String dedupKey =\n@@ -292,6 +301,48 @@ public class BacktestService {\n \n     // --- 검증 ---------------------------------------------------------------\n \n+    /**\n+     * 003 등록표로 설정을 다시 판정한다(FR-006). <b>지금은 {@code registryVersion}이 실린 요청에만 건다.</b>\n+     *\n+     * <p><b>[미완료: 004 워커 메시지 정합 전]</b> 관문을 모든 요청에 걸면 004·007의 기존 접수가 막힌다. 워커는 아직 {@code\n+     * parameters.rebalance} 문자열과 {@code rules.lookbackDays}만 읽고, 003 등록표의 {@code rebalancePeriod}\n+     * 객체값이나 {@code maxWeight}·{@code topN} 같은 축 이름이 메시지 계약에 자리가 없다({@code\n+     * docs/specs/backtest-messaging/}). 그 계약은 004가 소유한다.\n+     *\n+     * <p>그래서 {@code registryVersion}이 없는 요청은 종전처럼 통과시키고 경고만 남긴다. <b>이 호환 경로가 남아 있는 동안 FR-006과\n+     * SC-003은 닫히지 않는다</b> — 화면을 우회한 요청이 {@code registryVersion}을 빼면 판정을 건너뛸 수 있기 때문이다. 004가 워커 계약을\n+     * 맞춘 뒤 모든 요청에 {@code registryVersion}과 등록표 검증을 필수화하는 후속 변경까지 끝나야 요구사항이 닫힌다.\n+     *\n+     * <p>등록표가 산출한 워밍업이 004 규칙이 요구하는 관측 길이보다 짧으면 {@link EffectivePeriodCalculator}가 422 {@code\n+     * INSUFFICIENT_HISTORY}로 거절한다. 그 자리에서 큰 쪽으로 올리지 않는 이유는 004와 같다 — 두 값이 어긋났다는 것은 등록표와 규칙 중 하나가\n+     * 틀렸다는 신호이고, 고쳐 통과시키면 어긋난 채로 계속 간다.\n+     *\n+     * @return 실행에 쓸 워밍업 거래일 수. 요청이 값을 보냈으면 그대로 두고(004의 기존 규칙이 판정한다), 보내지 않았고 등록표 판정을 거쳤으면 등록표가 산출한\n+     *     값이다\n+     */\n+    private Integer verifyRegistrySettings(CreateBacktestCommand command) {\n+        if (command.registryVersion() == null) {\n+            log.warn(\n+                    \"등록표 검증을 건너뛴 접수다(과도기 호환): strategyId={}, requesterId={}.\"\n+                            + \" registryVersion 이 없는 요청이라 003 FR-006 관문을 걸지 않았다.\",\n+                    command.strategyId(),\n+                    command.requesterId());\n+            return command.warmupTradingDays();\n+        }\n+        StrategySettingsValidator.Verified verified =\n+                strategySettingsValidator.verify(\n+                        command.strategyId(),\n+                        command.parameters(),\n+                        command.registryVersion(),\n+                        command.items().size(),\n+                        command.initialCash());\n+        // 요청이 워밍업을 실어 보냈으면 그것이 비교 묶음이 계산한 공통 워밍업이다(R-15).\n+        // 전략 요구값보다 작으면 EffectivePeriodCalculator 가 422 INSUFFICIENT_HISTORY 로 거절한다.\n+        return command.warmupTradingDays() == null\n+                ? verified.warmupTradingDays()\n+                : command.warmupTradingDays();\n+    }\n+\n     /**\n      * 시나리오와 그 입력값이 서로 맞는지. 맞지 않는 조합은 조용히 무시하지 않고 거절한다 — 무시하면 사용자가 고른 것과 다른 조건의 결과가 그 조건의 결과로 저장된다.\n      */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,7 +48,10 @@ public record BacktestJobRequest(\n             @Digits(integer = 1, fraction = 4) BigDecimal targetWeight) {}\n \n     /**\n-     * @param registryVersion 003 파라미터 등록표 버전. 지금은 기록만 하고 검증하지 않는다(003 미구현)\n+     * @param registryVersion 003 파라미터 등록표 버전. <b>이 값이 실린 요청만</b> 접수 시점에 등록표로 설정을 다시 판정한다(003\n+     *     FR-006, {@code StrategySettingsValidator}) — 버전이 다르면 409, 미등록·비활성 전략은 422, 축이나 값이 등록표와\n+     *     어긋나면 400, 등록표 규칙 위반은 422다. <b>[미완료]</b> 값을 빼고 보내면 종전처럼 검증 없이 통과하고 경고 로그만 남는다. 004 워커가 아직\n+     *     등록표 축 이름을 읽지 못해 관문을 전부에 걸 수 없기 때문이며, 워커 계약 정합 뒤 이 필드를 필수로 바꾼다\n      */\n     public record StrategyRequest(\n             @NotBlank @Size(max = BacktestRun.MAX_STRATEGY_ID_LENGTH) String strategyId,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/request/BacktestJobRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/request/BacktestJobRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -36,6 +36,14 @@ public enum ErrorCode {\n     NO_PARTIAL_RESULT(HttpStatus.CONFLICT, \"취소 시점까지 완료한 구간이 없어 보여드릴 결과가 없습니다.\"),\n     CANCEL_PENDING(HttpStatus.CONFLICT, \"같은 조건의 실행이 취소 처리 중입니다. 잠시 후 다시 요청해 주세요.\"),\n \n+    // spec 003 전략 선택·상세 설정. 계약은\n+    // specs/003-strategy-settings/contracts/strategy-registry-api.md §2.\n+    // 나머지 넷(UNREGISTERED_PARAMETER_VALUE·STRATEGY_NOT_REGISTERED·REGISTRY_VERSION_CHANGED·\n+    // REGISTRY_UNAVAILABLE)은 아래 007 블록의 것을 그대로 쓴다 — 같은 등록표가 내는 같은 거절이라\n+    // 두 벌로 두면 화면이 코드로 분기할 때 갈라진다.\n+    VALIDATION_RULE_VIOLATED(\n+            HttpStatus.UNPROCESSABLE_ENTITY, \"선택한 설정 조합은 실행할 수 없습니다. 안내를 확인해 주세요.\"),\n+\n     // spec 007 자동 파라미터 탐색. 계약은 specs/007-auto-parameter-search/contracts/param-search-api.md §6.\n     CANDIDATE_LIMIT_EXCEEDED(\n             HttpStatus.UNPROCESSABLE_ENTITY, \"탐색할 후보가 한 번에 실행할 수 있는 수를 넘습니다. 범위를 좁혀 주세요.\"),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,115 @@\n+package com.ssafy.thorp.strategy.application.exception;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * 접수 시점 설정 재검증이 요청을 거절할 때 던진다(FR-006, contracts/strategy-registry-api.md §2).\n+ *\n+ * <p><b>문장을 여기서 지어내지 않는다.</b> 규칙 위반의 문구는 등록표가 소유하고 화면은 {@code detail}을 그대로 보인다. 서버가 자기 말로 다시 쓰면 같은\n+ * 위반이 화면과 서버에서 다른 문장으로 보이고, 사용자는 두 안내가 같은 것을 뜻하는지 알 수 없다.\n+ *\n+ * <p>거절 사유마다 사용자가 다음에 할 일이 다르므로 {@code details}에 담는 것도 다르다 — 버전이 바뀌었으면 다시 확인할 거리를, 범위를 벗어났으면 어디까지\n+ * 허용되는지를, 규칙을 어겼으면 어느 규칙인지를 준다.\n+ */\n+public class StrategySettingsRejectedException extends BusinessException {\n+\n+    private StrategySettingsRejectedException(\n+            ErrorCode errorCode, String message, Map<String, Object> details) {\n+        super(errorCode, message, details);\n+    }\n+\n+    /** 화면이 읽은 등록표와 접수 시점의 등록표가 다르다. 409 — 사용자가 확인한 것과 실행될 것이 달라진다. */\n+    public static StrategySettingsRejectedException versionChanged(\n+            String requestedVersion, String currentVersion) {\n+        return new StrategySettingsRejectedException(\n+                ErrorCode.REGISTRY_VERSION_CHANGED,\n+                ErrorCode.REGISTRY_VERSION_CHANGED.getMessage(),\n+                details(\n+                        \"requestedRegistryVersion\", requestedVersion,\n+                        \"currentRegistryVersion\", currentVersion));\n+    }\n+\n+    /** 활성 전략에 없다. 422 — 요청 형식은 옳고 지금 실행할 수 없는 것이다. */\n+    public static StrategySettingsRejectedException strategyNotRegistered(String strategyId) {\n+        return new StrategySettingsRejectedException(\n+                ErrorCode.STRATEGY_NOT_REGISTERED,\n+                ErrorCode.STRATEGY_NOT_REGISTERED.getMessage(),\n+                details(\"strategyId\", strategyId));\n+    }\n+\n+    /** 등록표에 없는 축 이름이 왔거나 등록된 축이 빠졌다. 400 — 요청 자체가 등록표와 맞지 않는다. */\n+    public static StrategySettingsRejectedException axisMismatch(\n+            String strategyId, List<String> unknownAxes, List<String> missingAxes) {\n+        Map<String, Object> details = new LinkedHashMap<>();\n+        details.put(\"strategyId\", strategyId);\n+        if (!unknownAxes.isEmpty()) {\n+            details.put(\"unknownAxes\", unknownAxes);\n+        }\n+        if (!missingAxes.isEmpty()) {\n+            details.put(\"missingAxes\", missingAxes);\n+        }\n+        return new StrategySettingsRejectedException(\n+                ErrorCode.UNREGISTERED_PARAMETER_VALUE,\n+                \"요청한 설정 항목이 등록표와 다릅니다: strategyId=%s, 등록되지 않은 항목=%s, 빠진 항목=%s\"\n+                        .formatted(strategyId, unknownAxes, missingAxes),\n+                details);\n+    }\n+\n+    /**\n+     * 값이 허용 범위 밖이다. 400.\n+     *\n+     * <p>허용 범위를 함께 담는 이유: 어디까지 되는지 모르면 사용자가 다시 시도할 때 같은 거절을 또 받는다. <b>값을 잘라 통과시키지 않는다</b> — 그러면\n+     * 사용자가 고른 것과 다른 조건의 결과가 그 조건의 결과로 저장된다.\n+     */\n+    public static StrategySettingsRejectedException valueOutOfRange(\n+            String strategyId, String axisName, Object value, Object allowedRange) {\n+        return new StrategySettingsRejectedException(\n+                ErrorCode.UNREGISTERED_PARAMETER_VALUE,\n+                \"허용 범위를 벗어난 값입니다: strategyId=%s, 항목=%s, 값=%s, 허용 범위=%s\"\n+                        .formatted(strategyId, axisName, value, allowedRange),\n+                details(\n+                        \"strategyId\", strategyId,\n+                        \"axis\", axisName,\n+                        \"value\", value,\n+                        \"allowedRange\", allowedRange));\n+    }\n+\n+    /** 등록표의 유효성 규칙을 어겼다. 422 — 문장은 등록표가 준 것을 그대로 쓴다. */\n+    public static StrategySettingsRejectedException ruleViolated(\n+            String strategyId, String reasonCode, String reasonDetail) {\n+        return new StrategySettingsRejectedException(\n+                ErrorCode.VALIDATION_RULE_VIOLATED,\n+                reasonDetail == null || reasonDetail.isBlank()\n+                        ? ErrorCode.VALIDATION_RULE_VIOLATED.getMessage()\n+                        : reasonDetail,\n+                details(\n+                        \"strategyId\", strategyId,\n+                        \"code\", reasonCode,\n+                        \"detail\", reasonDetail));\n+    }\n+\n+    /** 시작 금액이 공통 분석 조건의 허용 범위 밖이다. 400. */\n+    public static StrategySettingsRejectedException initialAmountOutOfRange(\n+            Object value, Object allowedRange) {\n+        return new StrategySettingsRejectedException(\n+                ErrorCode.UNREGISTERED_PARAMETER_VALUE,\n+                \"허용 범위를 벗어난 시작 금액입니다: 값=%s, 허용 범위=%s\".formatted(value, allowedRange),\n+                details(\"value\", value, \"allowedRange\", allowedRange));\n+    }\n+\n+    /** {@code details}에 null 값을 담지 않는다 — {@code Map.copyOf}가 NPE 다. */\n+    private static Map<String, Object> details(Object... keyValues) {\n+        Map<String, Object> details = new LinkedHashMap<>();\n+        for (int i = 0; i < keyValues.length; i += 2) {\n+            Object value = keyValues[i + 1];\n+            if (value != null) {\n+                details.put(String.valueOf(keyValues[i]), value);\n+            }\n+        }\n+        return details;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/exception/StrategySettingsRejectedException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/exception/StrategySettingsRejectedException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,162 @@\n+package com.ssafy.thorp.strategy.application.service;\n+\n+import com.ssafy.thorp.strategy.application.exception.StrategySettingsRejectedException;\n+import com.ssafy.thorp.strategy.application.port.AnalysisCondition;\n+import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.strategy.application.port.SearchContext;\n+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import com.ssafy.thorp.strategy.application.port.ValidationVerdict;\n+import com.ssafy.thorp.strategy.application.port.WarmupRule;\n+import java.math.BigDecimal;\n+import java.util.ArrayList;\n+import java.util.LinkedHashSet;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Objects;\n+import java.util.Set;\n+import org.springframework.stereotype.Service;\n+\n+/**\n+ * 분석 요청을 접수할 때 등록표로 설정을 다시 판정한다(FR-006, quickstart 5-1).\n+ *\n+ * <p><b>화면의 안내와 서버의 판정은 목적이 다르다.</b> 화면은 사용자가 고르는 동안 돕기 위해 판정하고, 서버는 실행 직전에 거절하기 위해 판정한다. 화면 검증을\n+ * 우회한 요청이 그대로 통과하면 허용 범위 밖 설정으로 분석이 시작되고, 그 결과가 정상적인 결과와 구별되지 않은 채 기록에 남는다.\n+ *\n+ * <p><b>고쳐서 통과시키는 경로를 두지 않는다</b>(constitution 원칙 VI). 범위를 벗어난 값을 경계로 자르거나 빠진 축을 기본값으로 채우면, 사용자가 요청한\n+ * 것과 다른 조건의 결과가 그 조건의 결과로 저장된다. 판정은 통과 아니면 거절 둘뿐이다.\n+ *\n+ * <p><b>거절하는 순서에 뜻이 있다.</b> 버전이 다르면 나머지 판정의 근거가 이미 바뀐 것이라 먼저 보고, 전략이 없으면 축을 볼 수 없어 그다음이며, 축 구성이 맞아야\n+ * 값을 판정할 수 있고, 값이 범위 안이어야 조합 규칙을 물을 수 있다. 순서를 섞으면 사용자가 앞선 원인을 모른 채 뒤의 사유만 받는다.\n+ *\n+ * <p>이 클래스는 {@code backtest}를 참조하지 않는다 — 의존은 {@code backtest → strategy} 한 방향이다(내부 계약 §4, {@code\n+ * ArchitectureTest}).\n+ */\n+@Service\n+public class StrategySettingsValidator {\n+\n+    private final ParameterRegistryPort registry;\n+\n+    public StrategySettingsValidator(ParameterRegistryPort registry) {\n+        this.registry = registry;\n+    }\n+\n+    /**\n+     * 판정을 통과한 설정에서 서버가 계산해 낸 값.\n+     *\n+     * <p>워밍업을 여기서 돌려주는 이유: 같은 규칙을 화면과 서버가 각자 계산하는데, 요청이 실어 보낸 값을 그대로 믿으면 화면을 거치지 않은 요청이 워밍업을 0으로 보내\n+     * 평가 구간을 실제보다 길게 잡을 수 있다.\n+     *\n+     * @param warmupTradingDays 등록표의 워밍업 규칙으로 산출한 거래일 수. 규칙이 없는 전략은 0이다\n+     * @param registryVersion 판정에 쓴 등록표 버전. 접수가 이 값을 기록에 남긴다\n+     */\n+    public record Verified(int warmupTradingDays, String registryVersion) {}\n+\n+    /**\n+     * @param parameters 축 이름 → 값. 등록표에 등록된 축과 정확히 같은 집합이어야 한다\n+     * @param registryVersion 화면이 읽은 등록표 버전\n+     * @param universeSize 이 요청이 고정한 섹터 후보 집합의 크기. 등록표 규칙이 쓴다\n+     * @param initialAmount 시작 금액\n+     * @throws StrategySettingsRejectedException 판정을 통과하지 못했다\n+     */\n+    public Verified verify(\n+            String strategyId,\n+            Map<String, Object> parameters,\n+            String registryVersion,\n+            int universeSize,\n+            BigDecimal initialAmount) {\n+        Objects.requireNonNull(strategyId, \"strategyId must not be null\");\n+        Map<String, Object> settings = parameters == null ? Map.of() : parameters;\n+\n+        String currentVersion = registry.version();\n+        if (!Objects.equals(registryVersion, currentVersion)) {\n+            throw StrategySettingsRejectedException.versionChanged(registryVersion, currentVersion);\n+        }\n+\n+        StrategyRegistration registration = requireActive(strategyId);\n+        requireSameAxes(registration, settings);\n+        requireValuesInRange(registration, settings);\n+        requireRulesSatisfied(strategyId, settings, universeSize);\n+        requireInitialAmountInRange(initialAmount);\n+\n+        return new Verified(warmupOf(registration, settings), currentVersion);\n+    }\n+\n+    /**\n+     * 활성 전략만 새 실행을 받는다.\n+     *\n+     * <p>{@code find}로는 찾히지만 비활성인 전략도 여기서 걸린다 — 비활성 전략을 등록표에서 지우지 않는 것은 과거 기록을 해석하기 위한 것이고(내부 계약\n+     * §2.3), 새로 실행해도 된다는 뜻이 아니다.\n+     */\n+    private StrategyRegistration requireActive(String strategyId) {\n+        return registry.activeStrategies().stream()\n+                .filter(strategy -> strategy.strategyId().equals(strategyId))\n+                .findFirst()\n+                .orElseThrow(\n+                        () -> StrategySettingsRejectedException.strategyNotRegistered(strategyId));\n+    }\n+\n+    /**\n+     * 요청의 축 집합이 등록표의 축 집합과 같은가.\n+     *\n+     * <p><b>빠진 축을 기본값으로 채우지 않는다.</b> 채우면 사용자가 정하지 않은 값으로 실행한 결과가 사용자가 정한 결과처럼 보인다. 없는 축을 무시하지도 않는다\n+     * — 오타 난 축 이름이 조용히 버려지면 사용자는 자기가 바꾼 설정이 반영된 줄 안다.\n+     */\n+    private void requireSameAxes(StrategyRegistration registration, Map<String, Object> settings) {\n+        Set<String> registered = new LinkedHashSet<>(registration.axisNames());\n+        List<String> unknown = new ArrayList<>();\n+        for (String name : settings.keySet()) {\n+            if (!registered.contains(name)) {\n+                unknown.add(name);\n+            }\n+        }\n+        List<String> missing = new ArrayList<>();\n+        for (String name : registered) {\n+            if (!settings.containsKey(name)) {\n+                missing.add(name);\n+            }\n+        }\n+        if (!unknown.isEmpty() || !missing.isEmpty()) {\n+            throw StrategySettingsRejectedException.axisMismatch(\n+                    registration.strategyId(), unknown, missing);\n+        }\n+    }\n+\n+    /** 축마다 값이 허용 범위 안인가. 판정은 등록표의 {@code allowedRange}가 하고 여기서 범위를 다시 적지 않는다. */\n+    private void requireValuesInRange(\n+            StrategyRegistration registration, Map<String, Object> settings) {\n+        for (ParameterAxis axis : registration.axes()) {\n+            Object value = settings.get(axis.name());\n+            if (axis.allowedRange() == null || !axis.allowedRange().contains(value)) {\n+                throw StrategySettingsRejectedException.valueOutOfRange(\n+                        registration.strategyId(), axis.name(), value, axis.allowedRange());\n+            }\n+        }\n+    }\n+\n+    /** 조합이 등록표의 유효성 규칙을 만족하는가. 위반 문구는 등록표가 준 것을 그대로 옮긴다. */\n+    private void requireRulesSatisfied(\n+            String strategyId, Map<String, Object> settings, int universeSize) {\n+        ValidationVerdict verdict =\n+                registry.validate(strategyId, settings, new SearchContext(universeSize));\n+        if (!verdict.valid()) {\n+            throw StrategySettingsRejectedException.ruleViolated(\n+                    strategyId, verdict.reasonCode(), verdict.reasonDetail());\n+        }\n+    }\n+\n+    /** 시작 금액은 전략과 무관한 공통 조건이라 등록표 최상위의 범위를 쓴다(data-model §7). */\n+    private void requireInitialAmountInRange(BigDecimal initialAmount) {\n+        AnalysisCondition condition = registry.analysisConditions().initialAmount();\n+        if (!condition.range().contains(initialAmount)) {\n+            throw StrategySettingsRejectedException.initialAmountOutOfRange(\n+                    initialAmount, condition.range());\n+        }\n+    }\n+\n+    /** 워밍업 규칙이 없는 전략은 0이다 — 빈 규칙과 \"규칙 없음\"을 등록표가 그렇게 구분한다(data-model §6). */\n+    private static int warmupOf(StrategyRegistration registration, Map<String, Object> settings) {\n+        WarmupRule warmup = registration.warmup();\n+        return warmup == null ? 0 : warmup.evaluate(settings);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidator.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidator.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -183,7 +183,9 @@ class BacktestCancelFlowIT extends PostgresTestSupport {\n                                 \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n                 \"FIXED_WEIGHT\",\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 1, 2),\n                 LocalDate.of(2024, 12, 31),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestCancelFlowIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestCancelFlowIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -91,7 +91,9 @@ class BacktestDedupIT extends PostgresTestSupport {\n                                 \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n                 \"FIXED_WEIGHT\",\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 start,\n                 end,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestDedupIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestDedupIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -81,7 +81,9 @@ class BacktestRetryIT extends PostgresTestSupport {\n                                 \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n                 \"FIXED_WEIGHT\",\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 5, 2),\n                 LocalDate.of(2024, 8, 30),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -69,7 +69,9 @@ class BacktestRetryServiceTest {\n                                 \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n                 \"FIXED_WEIGHT\",\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 1, 2),\n                 LocalDate.of(2024, 12, 31),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestRetryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,6 +28,7 @@ import com.ssafy.thorp.backtest.domain.vo.BacktestId;\n import com.ssafy.thorp.backtest.infrastructure.marketdata.FixtureMarketMetadataAdapter;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.strategy.application.service.StrategySettingsValidator;\n import java.math.BigDecimal;\n import java.time.Clock;\n import java.time.Instant;\n@@ -61,6 +62,15 @@ class BacktestServiceTest {\n     // 한도는 ExecutionLimitPolicyTest 가 따로 본다. 여기서는 통과하는 것으로 둔다.\n     private final ExecutionLimitPolicy limitPolicy = mock(ExecutionLimitPolicy.class);\n     private final StrategyRulesService strategyRulesService = mock(StrategyRulesService.class);\n+\n+    /**\n+     * 이 테스트의 요청들은 {@code registryVersion}을 싣지 않아 등록표 판정을 타지 않는다(003 과도기 경로). 목만 두고 상호작용을 단언하지 않는\n+     * 이유는, 여기서 보는 것이 004 접수 규칙이고 등록표 판정은 {@code StrategySettingsValidatorTest}와 {@code\n+     * BacktestIntakeRegistryIT}가 보기 때문이다.\n+     */\n+    private final StrategySettingsValidator strategySettingsValidator =\n+            mock(StrategySettingsValidator.class);\n+\n     private final CostProfileService costProfileService = mock(CostProfileService.class);\n     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);\n     private final FixtureMarketMetadataAdapter marketMetadata =\n@@ -73,6 +83,7 @@ class BacktestServiceTest {\n                     reuseEventRepository,\n                     limitPolicy,\n                     strategyRulesService,\n+                    strategySettingsValidator,\n                     costProfileService,\n                     new EffectivePeriodCalculator(marketMetadata),\n                     new DedupKeyCalculator(),\n@@ -173,7 +184,9 @@ class BacktestServiceTest {\n                                 weight == null ? null : BigDecimal.ONE.subtract(weight))),\n                 strategyId,\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 1, 2),\n                 LocalDate.of(2024, 12, 31),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -87,7 +87,9 @@ class BacktestVersionsApiIT extends PostgresTestSupport {\n                                 weight == null ? null : BigDecimal.ONE.subtract(weight))),\n                 strategyId,\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 5, day),\n                 LocalDate.of(2024, 10, 31),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestVersionsApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestVersionsApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,7 +105,9 @@ class ExecutionLimitApiIT extends PostgresTestSupport {\n                                 \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n                 \"FIXED_WEIGHT\",\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 2, day),\n                 LocalDate.of(2024, 11, 29),\n@@ -256,7 +258,9 @@ class ExecutionLimitApiIT extends PostgresTestSupport {\n                                         \"BATTERY\", \"305720.XKRX\", null)),\n                         \"SECTOR_MOMENTUM\",\n                         \"PENDING\",\n-                        \"PARAM-2026-09\",\n+                        // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                        // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                        null,\n                         Map.of(\"rebalance\", \"MONTH_END\"),\n                         LocalDate.of(2024, 2, 1),\n                         LocalDate.of(2024, 11, 29),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionLimitApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionLimitApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,7 +79,9 @@ class ExecutionLimitFullQueueIT extends PostgresTestSupport {\n                                 \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n                 \"FIXED_WEIGHT\",\n                 \"1\",\n-                \"PARAM-2026-09\",\n+                // registryVersion 을 싣지 않는다 — 이 픽스처의 parameters 는 워커가 읽는 이름이고\n+                // 003 등록표의 축 이름이 아니다. 값을 실으면 접수가 등록표 판정을 걸어 409 다.\n+                null,\n                 Map.of(\"rebalance\", \"MONTH_END\"),\n                 LocalDate.of(2024, 6, day),\n                 LocalDate.of(2024, 11, 29),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionLimitFullQueueIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionLimitFullQueueIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,219 @@\n+package com.ssafy.thorp.backtest.presentation.controller;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.http.MediaType;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.ResultActions;\n+\n+/**\n+ * 화면을 우회한 요청도 서버가 막는지(T049·T051, FR-006, quickstart 5-1).\n+ *\n+ * <p><b>거절한 요청이 행을 남기지 않는 것까지 본다.</b> 상태 코드만 보면 \"거절했지만 실행은 만들어진\" 경우를 놓친다 — 접수는 거절을 쓰기보다 먼저 하기로 되어\n+ * 있고({@code BacktestService}의 {@code noRollbackFor}), 그 순서가 깨지면 절반만 쓰인 접수가 커밋된다.\n+ *\n+ * <p><b>[미완료] {@code registryVersion} 없는 요청의 202는 FR-006·SC-003 통과가 아니다.</b> 워커가 아직 등록표 축 이름을 읽지 못해\n+ * 관문을 전부에 걸 수 없어 남긴 과도기 경로이고, 그 사실을 여기서도 테스트 이름과 주석으로 붙박아 둔다. 004가 워커 계약을 맞춘 뒤 이 경로는 사라진다.\n+ *\n+ * <p>브로커 컨테이너는 띄우지 않는다({@code BacktestResultApiIT}와 같은 방식). 발행은 커밋 뒤라 접수 응답에 영향을 주지 않는다.\n+ */\n+@SpringBootTest(\n+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,\n+        properties = {\n+            \"spring.rabbitmq.host=localhost\",\n+            \"spring.rabbitmq.port=1\",\n+            \"spring.rabbitmq.connection-timeout=1s\",\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.auth.trust-user-id-header=true\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+@AutoConfigureMockMvc\n+class BacktestIntakeRegistryIT extends PostgresTestSupport {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ParameterRegistryPort registry;\n+\n+    private long newUser(String tag) {\n+        String suffix = tag + (System.nanoTime() % 1_000_000_000L);\n+        String email = \"intake-\" + suffix + \"@example.com\";\n+        jdbcTemplate.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"u\" + suffix,\n+                suffix);\n+        return jdbcTemplate.queryForObject(\n+                \"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    private long countRequests() {\n+        return jdbcTemplate.queryForObject(\"SELECT count(*) FROM backtest_request\", Long.class);\n+    }\n+\n+    private long countRuns() {\n+        return jdbcTemplate.queryForObject(\"SELECT count(*) FROM backtest_run\", Long.class);\n+    }\n+\n+    /**\n+     * {@code EQUAL_WEIGHT}을 쓰는 이유: 004 등록표에 {@code REGISTERED}이고 003 등록표에 활성이며 축이 {@code\n+     * rebalancePeriod} 하나뿐이라, 거절 사유를 하나씩 따로 낼 수 있다. 목표 비중은 {@code FIXED_WEIGHT}에서만 보낼 수 있으므로 여기서는\n+     * 싣지 않는다.\n+     *\n+     * @param registryVersionJson `\"1.0.0\"` 같은 JSON 조각. {@code null}이면 필드를 통째로 생략한다\n+     */\n+    private String body(\n+            String registryVersionJson, String parametersJson, String initialCash, int day) {\n+        String registryLine =\n+                registryVersionJson == null\n+                        ? \"\"\n+                        : \"    \\\"registryVersion\\\": \" + registryVersionJson + \",\\n\";\n+        return \"\"\"\n+                {\n+                  \"executionType\": \"SINGLE\",\n+                  \"sectorAllocation\": {\n+                    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+                    \"items\": [\n+                      {\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\"},\n+                      {\"sectorId\": \"BATTERY\", \"instrumentId\": \"305720.XKRX\"}\n+                    ]\n+                  },\n+                  \"strategy\": {\n+                    \"strategyId\": \"EQUAL_WEIGHT\",\n+                    \"rulesVersion\": \"1\",\n+                %s    \"parameters\": %s\n+                  },\n+                  \"conditions\": {\n+                    \"start\": \"2024-02-%02d\",\n+                    \"end\": \"2024-11-29\",\n+                    \"initialCash\": \"%s\"\n+                  }\n+                }\n+                \"\"\"\n+                .formatted(registryLine, parametersJson, day, initialCash);\n+    }\n+\n+    private ResultActions submit(long user, String requestBody) throws Exception {\n+        return mockMvc.perform(\n+                post(\"/backtests\")\n+                        .with(csrf())\n+                        .header(\"X-User-Id\", user)\n+                        .contentType(MediaType.APPLICATION_JSON)\n+                        .content(requestBody));\n+    }\n+\n+    /** 등록표가 준 유일한 선택지. 값을 여기 적지 않고 포트에서 읽는다 — 버전을 올리면 이 테스트도 따라간다. */\n+    private static final String VALID_REBALANCE =\n+            \"{\\\"mode\\\": \\\"CALENDAR\\\", \\\"unit\\\": \\\"MONTH_END\\\"}\";\n+\n+    private static final String VALID_PARAMETERS = \"{\\\"rebalancePeriod\\\": \" + VALID_REBALANCE + \"}\";\n+    private static final String VALID_CASH = \"10000000.00\";\n+\n+    @Test\n+    @DisplayName(\"등록표 버전이 다르면 409이고 실행·요청 행이 생기지 않는다\")\n+    void 버전_불일치는_409이고_행을_남기지_않는다() throws Exception {\n+        long user = newUser(\"v\");\n+        long requestsBefore = countRequests();\n+        long runsBefore = countRuns();\n+\n+        submit(user, body(\"\\\"0.0.0\\\"\", VALID_PARAMETERS, VALID_CASH, 1))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"REGISTRY_VERSION_CHANGED\"));\n+\n+        assertThat(countRequests()).isEqualTo(requestsBefore);\n+        assertThat(countRuns()).isEqualTo(runsBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표에 없는 값은 400이고 잘라 넣어 통과시키지 않는다\")\n+    void 범위_밖_값은_400이다() throws Exception {\n+        long user = newUser(\"r\");\n+        long runsBefore = countRuns();\n+\n+        submit(\n+                        user,\n+                        body(\n+                                \"\\\"\" + registry.version() + \"\\\"\",\n+                                \"{\\\"rebalancePeriod\\\": {\\\"mode\\\": \\\"TRADING_DAYS\\\", \\\"days\\\": 7}}\",\n+                                VALID_CASH,\n+                                2))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"UNREGISTERED_PARAMETER_VALUE\"));\n+\n+        assertThat(countRuns()).isEqualTo(runsBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록된 축이 빠지면 400이다 — 기본값으로 채워 통과시키지 않는다\")\n+    void 빠진_축은_400이다() throws Exception {\n+        long user = newUser(\"m\");\n+        long runsBefore = countRuns();\n+\n+        submit(user, body(\"\\\"\" + registry.version() + \"\\\"\", \"{}\", VALID_CASH, 3))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"UNREGISTERED_PARAMETER_VALUE\"))\n+                .andExpect(\n+                        jsonPath(\"$.error.details.missingAxes\")\n+                                .value(org.hamcrest.Matchers.hasItem(\"rebalancePeriod\")));\n+\n+        assertThat(countRuns()).isEqualTo(runsBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"시작 금액이 등록표의 공통 조건 범위 밖이면 400이다\")\n+    void 시작_금액_범위_밖은_400이다() throws Exception {\n+        long user = newUser(\"c\");\n+        long runsBefore = countRuns();\n+\n+        // 등록표의 최소 시작 금액은 백만 원이다. 형식은 옳고 값이 범위 밖인 요청이라 400이다.\n+        submit(user, body(\"\\\"\" + registry.version() + \"\\\"\", VALID_PARAMETERS, \"1000.00\", 4))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"UNREGISTERED_PARAMETER_VALUE\"));\n+\n+        assertThat(countRuns()).isEqualTo(runsBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표와 맞는 요청은 202로 접수된다\")\n+    void 등록표와_맞으면_202다() throws Exception {\n+        long user = newUser(\"o\");\n+\n+        submit(user, body(\"\\\"\" + registry.version() + \"\\\"\", VALID_PARAMETERS, VALID_CASH, 5))\n+                .andExpect(status().isAccepted())\n+                .andExpect(jsonPath(\"$.data.status\").value(\"QUEUED\"));\n+    }\n+\n+    /**\n+     * <b>[미완료] 이 202를 FR-006·SC-003 통과로 보고하지 않는다.</b>\n+     *\n+     * <p>004 픽스처와 워커가 아직 등록표 축 이름을 쓰지 않아 관문을 전부에 걸 수 없어 남긴 과도기 경로다. 여기서 보내는 {@code parameters}는\n+     * 등록표의 {@code rebalancePeriod}가 아니라 워커가 읽는 {@code rebalance} 문자열이라, 관문을 전부에 걸면 이 요청은 400이 된다.\n+     * 워커 계약이 등록표 축 이름에 맞춰지면 이 테스트는 \"거절한다\"로 바뀐다.\n+     */\n+    @Test\n+    @DisplayName(\"[미완료·과도기] registryVersion 없는 요청은 검증을 건너뛰고 202다\")\n+    void registryVersion이_없으면_과도기_호환으로_통과한다() throws Exception {\n+        long user = newUser(\"l\");\n+\n+        submit(user, body(null, \"{\\\"rebalance\\\": \\\"MONTH_END\\\"}\", VALID_CASH, 6))\n+                .andExpect(status().isAccepted())\n+                .andExpect(jsonPath(\"$.data.status\").value(\"QUEUED\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestIntakeRegistryIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestIntakeRegistryIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,265 @@\n+package com.ssafy.thorp.strategy.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.paramsearch.registry.RegistryFixtures;\n+import com.ssafy.thorp.strategy.application.exception.StrategySettingsRejectedException;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import java.math.BigDecimal;\n+import java.util.LinkedHashMap;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 접수 시점 설정 재검증(T048, FR-006, quickstart 5-1).\n+ *\n+ * <p>합성 등록표를 쓴다 — 실제 전략 이름을 쓰면 \"그 전략이라서 되는 것\"과 \"어떤 전략이든 되는 것\"을 구분할 수 없다({@link RegistryFixtures}와\n+ * 같은 이유).\n+ *\n+ * <p>거절을 단언할 때 <b>상태 코드와 함께 값이 고쳐지지 않았다는 것도 본다.</b> 이 검증기의 핵심은 판정 자체가 아니라 \"고쳐서 통과시키는 경로가 없다\"는\n+ * 것이고(원칙 VI), 그것은 거절했다는 사실만으로는 증명되지 않는다.\n+ */\n+class StrategySettingsValidatorTest {\n+\n+    private static final String VERSION = \"FIXTURE-1\";\n+    private static final String STRATEGY = \"SYNTHETIC-A\";\n+    private static final BigDecimal VALID_AMOUNT = new BigDecimal(\"10\");\n+\n+    /** 시작 금액은 fixture가 {@code 1~100} 범위로 고정해 둔다. 전략과 무관한 공통 조건이다. */\n+    private static StrategySettingsValidator validatorOf(ParameterRegistryPort registry) {\n+        return new StrategySettingsValidator(registry);\n+    }\n+\n+    private static Map<String, Object> settings(Object... keyValues) {\n+        Map<String, Object> settings = new LinkedHashMap<>();\n+        for (int i = 0; i < keyValues.length; i += 2) {\n+            settings.put(String.valueOf(keyValues[i]), keyValues[i + 1]);\n+        }\n+        return settings;\n+    }\n+\n+    /** 축 하나짜리 기본 등록표. 허용값은 {@code [21, 63, 126]}이다. */\n+    private static ParameterRegistryPort simpleRegistry() {\n+        return RegistryFixtures.registry(VERSION)\n+                .strategy(\n+                        STRATEGY,\n+                        RegistryFixtures.axis(\"lookbackDays\", java.util.List.of(21, 63, 126)))\n+                .build();\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표 버전이 다르면 409로 거절하고 현재 버전을 알려 준다\")\n+    void 버전이_다르면_409() {\n+        StrategySettingsValidator validator = validatorOf(simpleRegistry());\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                validator.verify(\n+                                        STRATEGY,\n+                                        settings(\"lookbackDays\", 63),\n+                                        \"FIXTURE-0\",\n+                                        3,\n+                                        VALID_AMOUNT))\n+                .isInstanceOf(StrategySettingsRejectedException.class)\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.REGISTRY_VERSION_CHANGED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"find로는 찾히지만 비활성인 전략은 422 STRATEGY_NOT_REGISTERED다\")\n+    void 비활성_전략은_422() {\n+        ParameterRegistryPort registry =\n+                RegistryFixtures.registry(VERSION)\n+                        .strategy(\n+                                STRATEGY,\n+                                RegistryFixtures.axis(\"lookbackDays\", java.util.List.of(21, 63)))\n+                        .active(STRATEGY, false)\n+                        .build();\n+        // 등록표에서 사라진 것이 아니라 비활성일 뿐이다 — 과거 기록 해석에는 여전히 쓰인다(내부 계약 §2.3).\n+        assertThat(registry.find(STRATEGY)).isPresent();\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                validatorOf(registry)\n+                                        .verify(\n+                                                STRATEGY,\n+                                                settings(\"lookbackDays\", 21),\n+                                                VERSION,\n+                                                3,\n+                                                VALID_AMOUNT))\n+                .isInstanceOf(StrategySettingsRejectedException.class)\n+                .extracting(exc -> ((BusinessException) exc).getErrorCode())\n+                .isEqualTo(ErrorCode.STRATEGY_NOT_REGISTERED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"허용 범위 밖 값은 400이고 예외가 허용 범위를 담으며 값이 고쳐지지 않는다\")\n+    void 범위_밖_값은_400이고_고치지_않는다() {\n+        Map<String, Object> requested = settings(\"lookbackDays\", 999);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                validatorOf(simpleRegistry())\n+                                        .verify(STRATEGY, requested, VERSION, 3, VALID_AMOUNT))\n+                .isInstanceOfSatisfying(\n+                        StrategySettingsRejectedException.class,\n+                        exc -> {\n+                            assertThat(exc.getErrorCode())\n+                                    .isEqualTo(ErrorCode.UNREGISTERED_PARAMETER_VALUE);\n+                            assertThat(exc.getDetails())\n+                                    .containsEntry(\"axis\", \"lookbackDays\")\n+                                    .containsEntry(\"value\", 999)\n+                                    .containsKey(\"allowedRange\");\n+                        });\n+        // 경계로 잘라 통과시키는 경로가 없다는 것은 \"요청 맵이 그대로다\"로만 확인된다.\n+        assertThat(requested).containsExactlyEntriesOf(settings(\"lookbackDays\", 999));\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록되지 않은 축 이름은 400이다\")\n+    void 미등록_축은_400() {\n+        assertThatThrownBy(\n+                        () ->\n+                                validatorOf(simpleRegistry())\n+                                        .verify(\n+                                                STRATEGY,\n+                                                settings(\"lookbackDays\", 63, \"unknownAxis\", 1),\n+                                                VERSION,\n+                                                3,\n+                                                VALID_AMOUNT))\n+                .isInstanceOfSatisfying(\n+                        StrategySettingsRejectedException.class,\n+                        exc -> {\n+                            assertThat(exc.getErrorCode())\n+                                    .isEqualTo(ErrorCode.UNREGISTERED_PARAMETER_VALUE);\n+                            assertThat(exc.getDetails())\n+                                    .containsEntry(\"unknownAxes\", java.util.List.of(\"unknownAxis\"));\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"빠진 축은 기본값으로 채우지 않고 400으로 거절한다\")\n+    void 빠진_축은_400() {\n+        assertThatThrownBy(\n+                        () ->\n+                                validatorOf(simpleRegistry())\n+                                        .verify(STRATEGY, settings(), VERSION, 3, VALID_AMOUNT))\n+                .isInstanceOfSatisfying(\n+                        StrategySettingsRejectedException.class,\n+                        exc -> {\n+                            assertThat(exc.getErrorCode())\n+                                    .isEqualTo(ErrorCode.UNREGISTERED_PARAMETER_VALUE);\n+                            assertThat(exc.getDetails())\n+                                    .containsEntry(\n+                                            \"missingAxes\", java.util.List.of(\"lookbackDays\"));\n+                        });\n+    }\n+\n+    /**\n+     * quickstart 5-1: 비중 상한 30%에 섹터 후보가 셋이면 상한 합이 90%라 투자 비중 100%를 채울 수 없다. 34%면 102%라 채울 수 있다.\n+     *\n+     * <p>이 규칙이 {@link com.ssafy.thorp.strategy.application.port.SearchContext}의 {@code\n+     * universeSize}를 쓰므로, 같은 값이라도 후보 수가 달라지면 판정이 달라진다.\n+     */\n+    private static ParameterRegistryPort maxWeightRegistry() {\n+        return RegistryFixtures.registry(VERSION)\n+                .strategy(\n+                        STRATEGY, RegistryFixtures.axis(\"maxWeight\", java.util.List.of(30, 34, 50)))\n+                .rule(\n+                        STRATEGY,\n+                        \"MAX_WEIGHT_TOO_LOW\",\n+                        (parameters, context) ->\n+                                new BigDecimal(String.valueOf(parameters.get(\"maxWeight\")))\n+                                                .multiply(\n+                                                        BigDecimal.valueOf(context.universeSize()))\n+                                                .compareTo(BigDecimal.valueOf(100))\n+                                        < 0)\n+                .build();\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표 규칙 위반은 422이고 detail이 등록표 문장 그대로다\")\n+    void 규칙_위반은_422() {\n+        assertThatThrownBy(\n+                        () ->\n+                                validatorOf(maxWeightRegistry())\n+                                        .verify(\n+                                                STRATEGY,\n+                                                settings(\"maxWeight\", 30),\n+                                                VERSION,\n+                                                3,\n+                                                VALID_AMOUNT))\n+                .isInstanceOfSatisfying(\n+                        StrategySettingsRejectedException.class,\n+                        exc -> {\n+                            assertThat(exc.getErrorCode())\n+                                    .isEqualTo(ErrorCode.VALIDATION_RULE_VIOLATED);\n+                            assertThat(exc.getDetails())\n+                                    .containsEntry(\"code\", \"MAX_WEIGHT_TOO_LOW\")\n+                                    .containsEntry(\"detail\", \"MAX_WEIGHT_TOO_LOW 위반입니다\");\n+                            // 화면이 그대로 보이는 문장이라 서버가 자기 말로 바꿔 쓰지 않는다.\n+                            assertThat(exc.getMessage()).isEqualTo(\"MAX_WEIGHT_TOO_LOW 위반입니다\");\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 축 값이라도 후보 수가 넉넉하면 통과한다 — 34 × 3 = 102\")\n+    void 규칙을_만족하면_통과() {\n+        StrategySettingsValidator.Verified verified =\n+                validatorOf(maxWeightRegistry())\n+                        .verify(STRATEGY, settings(\"maxWeight\", 34), VERSION, 3, VALID_AMOUNT);\n+\n+        assertThat(verified.registryVersion()).isEqualTo(VERSION);\n+        // 워밍업 규칙이 없는 전략은 0이다.\n+        assertThat(verified.warmupTradingDays()).isZero();\n+    }\n+\n+    @Test\n+    @DisplayName(\"시작 금액이 공통 조건의 허용 범위 밖이면 400이다\")\n+    void 시작_금액_범위_밖은_400() {\n+        assertThatThrownBy(\n+                        () ->\n+                                validatorOf(simpleRegistry())\n+                                        .verify(\n+                                                STRATEGY,\n+                                                settings(\"lookbackDays\", 63),\n+                                                VERSION,\n+                                                3,\n+                                                new BigDecimal(\"1000\")))\n+                .isInstanceOfSatisfying(\n+                        StrategySettingsRejectedException.class,\n+                        exc -> {\n+                            assertThat(exc.getErrorCode())\n+                                    .isEqualTo(ErrorCode.UNREGISTERED_PARAMETER_VALUE);\n+                            assertThat(exc.getDetails()).containsKey(\"allowedRange\");\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"워밍업은 등록표 규칙으로 산출한다 — 축 둘을 더하면 81이다\")\n+    void 워밍업은_축_둘을_더한다() {\n+        ParameterRegistryPort registry =\n+                RegistryFixtures.registry(VERSION)\n+                        .strategy(\n+                                STRATEGY,\n+                                RegistryFixtures.axis(\"lookbackDays\", java.util.List.of(63, 126)),\n+                                RegistryFixtures.axis(\"skipRecentDays\", java.util.List.of(0, 18)))\n+                        .warmup(STRATEGY, java.util.List.of(\"lookbackDays\", \"skipRecentDays\"))\n+                        .build();\n+\n+        StrategySettingsValidator.Verified verified =\n+                validatorOf(registry)\n+                        .verify(\n+                                STRATEGY,\n+                                settings(\"lookbackDays\", 63, \"skipRecentDays\", 18),\n+                                VERSION,\n+                                3,\n+                                VALID_AMOUNT);\n+\n+        assertThat(verified.warmupTradingDays()).isEqualTo(81);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidatorTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidatorTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,89 @@\n+package com.ssafy.thorp.strategy.presentation;\n+\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.common.config.SecurityConfig;\n+import com.ssafy.thorp.strategy.application.exception.StrategySettingsRejectedException;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 003 접수 거절이 계약에 적힌 HTTP 상태와 코드로 나가는지 본다(contracts/strategy-registry-api.md §2).\n+ *\n+ * <p>상태가 틀리면 화면이 잘못 반응한다 — 409는 \"등록표를 다시 읽어라\", 422는 \"고른 조합을 바꿔라\", 400은 \"보낸 값이 틀렸다\"다.\n+ *\n+ * <p><b>규칙 위반(422)은 접수 통합 테스트에서 낼 수 없어 여기서 고정한다.</b> 지금 등록표에서 유효성 규칙을 가진 전략은 {@code\n+ * SECTOR_MOMENTUM} 하나인데 004 규칙 등록표에서 {@code PENDING_DECISION}이라, 접수는 등록표 판정에 닿기 전에 422 {@code\n+ * RULES_NOT_REGISTERED}로 먼저 거절한다. 004가 그 전략의 규칙을 확정하면 {@code BacktestIntakeRegistryIT}에서 실제 경로로 한 번\n+ * 더 확인한다({@code ParamSearchErrorResponseTest}가 접수 엔드포인트 이전에 쓰던 방식과 같다).\n+ */\n+@WebMvcTest(controllers = StrategySettingsErrorResponseTest.ThrowingController.class)\n+@Import({SecurityConfig.class, StrategySettingsErrorResponseTest.ThrowingController.class})\n+class StrategySettingsErrorResponseTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+\n+    @Test\n+    @DisplayName(\"등록표 규칙 위반은 422 VALIDATION_RULE_VIOLATED이고 등록표 문장을 그대로 싣는다\")\n+    void ruleViolationIsUnprocessable() throws Exception {\n+        mockMvc.perform(get(\"/test/strategy/rule-violated\"))\n+                .andExpect(status().isUnprocessableEntity())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"VALIDATION_RULE_VIOLATED\"))\n+                // 화면이 이 문장을 그대로 보인다. 서버가 자기 말로 바꿔 쓰면 같은 위반이 두 문장으로 보인다.\n+                .andExpect(jsonPath(\"$.error.message\").value(\"선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.\"))\n+                .andExpect(jsonPath(\"$.error.details.code\").value(\"TOP_N_EXCEEDS_UNIVERSE\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표 버전이 바뀌면 409이고 요청 버전과 현재 버전을 함께 알려 준다\")\n+    void versionChangedIsConflict() throws Exception {\n+        mockMvc.perform(get(\"/test/strategy/version-changed\"))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"REGISTRY_VERSION_CHANGED\"))\n+                .andExpect(jsonPath(\"$.error.details.requestedRegistryVersion\").value(\"1.0.0\"))\n+                .andExpect(jsonPath(\"$.error.details.currentRegistryVersion\").value(\"1.1.0\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"허용 범위 밖 값은 400이고 허용 범위를 함께 알려 준다\")\n+    void valueOutOfRangeIsBadRequest() throws Exception {\n+        mockMvc.perform(get(\"/test/strategy/out-of-range\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"UNREGISTERED_PARAMETER_VALUE\"))\n+                .andExpect(jsonPath(\"$.error.details.axis\").value(\"maxWeight\"))\n+                .andExpect(jsonPath(\"$.error.details.allowedRange\").exists());\n+    }\n+\n+    /** 접수 경로를 거치지 않고 응답 매핑만 고정하는 더미 컨트롤러. */\n+    @RestController\n+    @RequestMapping(\"/test/strategy\")\n+    static class ThrowingController {\n+\n+        @GetMapping(\"/rule-violated\")\n+        void ruleViolated() {\n+            throw StrategySettingsRejectedException.ruleViolated(\n+                    \"SECTOR_MOMENTUM\", \"TOP_N_EXCEEDS_UNIVERSE\", \"선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.\");\n+        }\n+\n+        @GetMapping(\"/version-changed\")\n+        void versionChanged() {\n+            throw StrategySettingsRejectedException.versionChanged(\"1.0.0\", \"1.1.0\");\n+        }\n+\n+        @GetMapping(\"/out-of-range\")\n+        void outOfRange() {\n+            throw StrategySettingsRejectedException.valueOutOfRange(\n+                    \"INVERSE_VOLATILITY\", \"maxWeight\", 7, \"10~100, 5 간격\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/strategy/presentation/StrategySettingsErrorResponseTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/strategy/presentation/StrategySettingsErrorResponseTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -59,6 +59,8 @@ common: 모든 계층에서 참조 가능\n - 상태 흐름: `QUEUED → RUNNING → COMPLETED | FAILED | CANCELLED` (Worker 이벤트가 갱신, backend는 조회 제공). `CANCELLED`는 취소·실행 시간 한도로 끊긴 실행이며 부분 결과가 붙는다(`partial=true`). **요청(`backtest_request`)과 실행(`backtest_run`)은 다대일이다** — 같은 조건의 요청은 진행 중 실행에 합류하거나 완료 결과를 재사용한다(spec 004 R-02). 접수 경로는 T005에서 그 모델로 바뀌었다 — 사용자가 보는 `backtestId`는 **요청**의 것이고, 이벤트 envelope의 `runId`는 **실행**의 것이라 값이 다르다\n - 브로커 메시지 계약의 기준은 `docs/specs/backtest-messaging/`(README + `examples/*.json`)이다. 스키마 변경은 픽스처 → `backtest/application/port/message` → `worker/src/worker/contracts/` 순서로 같은 MR에서 함께 고친다. 양쪽 round-trip 테스트가 같은 픽스처를 읽으므로 한쪽만 고치면 빌드가 실패한다\n - 전략·파라미터 등록표(`registry/parameter-registry.yml`)는 `strategy` 도메인이 소유하고 `paramsearch`는 `ParameterRegistryPort`로만 읽는다. 값이 바뀌면 행을 고치지 말고 버전을 올린다(`cost_profile`·`strategy_rules`와 같은 규칙)\n+- **접수 시점 등록표 재검증(`StrategySettingsValidator`)은 아직 `strategy.registryVersion`이 실린 요청에만 건다**(003 FR-006, 미완료). 판정 순서는 버전 불일치 409 → 미등록·비활성 전략 422 → 축 불일치 400 → 값 범위 밖 400 → 등록표 규칙 위반 422 → 시작 금액 범위 밖 400이고, 어느 단계에서도 **값을 잘라 넣거나 빠진 축을 기본값으로 채워 통과시키지 않는다**(원칙 VI). 위반 문구는 등록표가 준 `detail`을 그대로 쓴다.\n+  **관문을 전부에 걸지 않은 이유**: 워커가 아직 `parameters.rebalance`와 `rules.lookbackDays`만 읽어 003의 축 이름(`rebalancePeriod`·`maxWeight`·`topN` 등)이 `docs/specs/backtest-messaging/` 계약에 없다 — 전부에 걸면 004·007의 기존 접수가 막힌다. **`registryVersion`이 없는 요청이 202를 받는 것은 FR-006·SC-003 통과가 아니다.** 004가 워커 계약을 맞춘 뒤 이 필드를 필수화하는 후속 변경까지 끝나야 닫힌다. 의존 방향은 `backtest → strategy` 한 방향이고 `strategy`는 `backtest`를 참조하지 않는다\n - 비용 조건(`cost_profile`)·전략 규칙(`strategy_rules`)은 **마이그레이션이 채우는 읽기 전용 등록표**다. 실행은 버전 문자열만 들고 다니고 값은 등록표에서 읽는다. 값이 바뀌면 행을 고치지 말고 새 버전을 넣는다 — 끝난 실행을 나중 값으로 재해석하면 재현이 깨진다. 팀 미확정 전략은 `PENDING_DECISION` 행만 두고 접수에서 422 `RULES_NOT_REGISTERED`\n - `BacktestRunJpaEntity`는 마이그레이션이 만든 컬럼 전부를 매핑하지 않는다. 접수·재사용·취소·측정이 쓰는 컬럼은 그 코드와 같은 MR에서 매핑을 붙인다. `ddl-auto=validate`는 매핑된 컬럼만 보므로 **미매핑 컬럼의 존재는 `FlywayMigrationTest`가 지킨다**\n - **`AFTER_COMMIT` 안에서 DB를 건드릴 때는 새 트랜잭션(`REQUIRES_NEW`)을 연다.** 그 시점의 원래 트랜잭션은 커밋됐지만 자원이 아직 묶여 있어서, 기본 전파로 열면 끝난 트랜잭션에 참여해 **변경이 다시 커밋되지 않는다**. 조용히 사라지므로 테스트가 없으면 알아채지 못한다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,7 +23,7 @@\n   \"strategy\": {\n     \"strategyId\": \"FIXED_WEIGHT\",\n     \"rulesVersion\": \"1\",\n-    \"registryVersion\": \"PARAM-2026-09\",\n+    \"registryVersion\": null,\n     \"parameters\": {\n       \"rebalance\": \"MONTH_END\"\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/examples/backtest-request.json",
+          "old_path": "docs/specs/backtest-api/examples/backtest-request.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -31,7 +31,7 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n | `sectorAllocation.items[].targetWeight` | `string` (decimal) | 조건부 | **`FIXED_WEIGHT`에서만 필수이고 다른 전략에서는 금지**(400). 합이 1이어야 한다 |\n | `strategy.strategyId` | `string` | 필수 | 등록표에 `REGISTERED`인 전략만. 팀 미확정 전략은 422 `RULES_NOT_REGISTERED` |\n | `strategy.rulesVersion` | `string` | 필수 | 전략 규칙 버전. 결과 재현의 기준이다 |\n-| `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. 지금은 기록만 한다 |\n+| `strategy.registryVersion` | `string` | 선택 | 003 파라미터 등록표 버전. **이 값이 실린 요청만** 접수 시점에 등록표로 설정을 다시 판정한다(003 FR-006) — 버전 불일치 409 `REGISTRY_VERSION_CHANGED`, 미등록·비활성 전략 422 `STRATEGY_NOT_REGISTERED`, 축·값이 등록표와 어긋나면 400 `UNREGISTERED_PARAMETER_VALUE`, 등록표 규칙 위반 422 `VALIDATION_RULE_VIOLATED`. **[미완료]** 값을 생략하면 종전처럼 검증 없이 통과한다(아래 \"등록표 검증의 과도기 상태\") |\n | `strategy.parameters` | `object` | 필수 | 전략별 자유 형식. 빈 객체 허용, 값에 `null` 금지 |\n | `conditions.start` / `end` | `date` | 필수 | `start`가 `end`보다 늦을 수 없다 |\n | `conditions.initialCash` | `string` (decimal) | 필수 | 0보다 큼. 소수점 2자리까지 |\n@@ -43,6 +43,22 @@ v1과 모양이 다르다. 종목 목록 대신 **섹터 배분**을 받고, 전\n \n 금액과 비율은 **문자열**로 보낸다(부동소수 오차 방지).\n \n+#### 등록표 검증의 과도기 상태 (003 FR-006, 미완료)\n+\n+`strategy.registryVersion`이 실린 요청만 003 등록표로 설정을 다시 판정한다. 값이 없는 요청은 종전처럼 통과하고\n+경고 로그만 남는다.\n+\n+**관문을 모든 요청에 걸지 않은 이유**: 워커는 아직 `parameters.rebalance` 문자열과 `rules.lookbackDays`만 읽고,\n+003 등록표의 `rebalancePeriod` 객체값이나 `maxWeight`·`topN`·`skipRecentDays` 같은 축 이름은\n+`docs/specs/backtest-messaging/`의 메시지 계약에 자리가 없다. 전부에 걸면 004·007의 기존 접수가 그 자리에서 막힌다.\n+\n+`examples/backtest-request.json`의 `registryVersion`이 `null`인 것은 그래서다. 이 예시의 `parameters`는 워커가 읽는\n+`rebalance` 문자열이라 등록표 축 이름과 맞지 않고, 버전을 실으면 판정에 걸려 400이 된다. 두 값은 함께 바뀐다.\n+\n+**그래서 FR-006과 SC-003은 아직 닫히지 않았다.** 화면을 우회한 요청이 `registryVersion`을 빼면 판정을 건너뛸 수 있다.\n+004가 워커 메시지 계약을 등록표 축 이름에 맞춘 뒤, 이 필드를 필수로 바꾸고 모든 요청에 검증을 거는 후속 변경까지\n+끝나야 요구사항이 닫힌다. 그때 위 표의 \"선택\"도 \"필수\"로 바뀐다.\n+\n **인증**: 모든 엔드포인트가 요청자를 요구한다(spec 004 R-12). 남의 요청은 403이 아니라 **404**로 숨긴다 — 403은 그 식별자가\n 존재한다는 사실을 알려 준다. 이 저장소에는 아직 로그인이 없어서, 개발 환경에서만 `thorp.auth.trust-user-id-header=true`와\n `X-User-Id` 헤더로 대신한다. **헤더를 믿는 것은 인증이 아니다** — spec 014가 들어오면 `CurrentRequester` 하나만 바뀐다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -61,7 +61,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n **Purpose**: 003 소유 패키지 골격, 오류 코드, 계약 픽스처, 프론트엔드 타입 자리\n \n - [X] T001 (BE) `strategy` 도메인 패키지 골격 생성 — `backend/src/main/java/com/ssafy/thorp/strategy/package-info.java`에 계층 규약(ADR-0001)과 \"등록표의 소유자는 003이고 `paramsearch`는 포트로 읽는다\"를 명시. 하위 패키지는 `application/{port,exception,result,service}`, `infrastructure/registry`, `presentation/{controller,response}`. **`domain/model`은 만들지 않는다** — 값 타입은 `application/port`에 둔다(plan.md \"`domain/model`을 두지 않는다\")\n-- [ ] T002 [P] (BE) `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`에 spec 003 블록을 열고 `VALIDATION_RULE_VIOLATED(HttpStatus.UNPROCESSABLE_ENTITY, \"선택한 설정 조합은 실행할 수 없습니다. 안내를 확인해 주세요.\")` 추가. 주석에 계약 위치(`specs/003-strategy-settings/contracts/strategy-registry-api.md` §2)를 적는다. 다른 넷(`UNREGISTERED_PARAMETER_VALUE`·`STRATEGY_NOT_REGISTERED`·`REGISTRY_VERSION_CHANGED`·`REGISTRY_UNAVAILABLE`)은 007 블록에 이미 있어 재사용한다\n+- [X] T002 [P] (BE) `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java`에 spec 003 블록을 열고 `VALIDATION_RULE_VIOLATED(HttpStatus.UNPROCESSABLE_ENTITY, \"선택한 설정 조합은 실행할 수 없습니다. 안내를 확인해 주세요.\")` 추가. 주석에 계약 위치(`specs/003-strategy-settings/contracts/strategy-registry-api.md` §2)를 적는다. 다른 넷(`UNREGISTERED_PARAMETER_VALUE`·`STRATEGY_NOT_REGISTERED`·`REGISTRY_VERSION_CHANGED`·`REGISTRY_UNAVAILABLE`)은 007 블록에 이미 있어 재사용한다\n - [ ] T003 [P] (DOCS) 계약에 두 필드를 더한다 — `specs/003-strategy-settings/contracts/strategy-registry-api.md` §1 필드 표와 `specs/003-strategy-settings/data-model.md` §2·§3에 `axes[].description`(항목의 의미 한 문장. FR-003의 '의미'와 FR-019의 상한 재배분 안내 문장이 이 자리에 온다)과 `strategies[].targetWeightSource`(`USER` | `EQUAL` | `COMPUTED`. `USER`면 화면이 002 비중을 읽기 전용으로 보이고, `COMPUTED`면 FR-012의 자동 배분 설명을 보인다)를 추가. **이유**: 화면이 축 이름·전략 ID로 분기하지 않으려면(research R7-1) 그 문장과 구분이 등록표에서 와야 한다. 계약 §1 예시의 \"둘째 전략은 `axes`가 비어 있다\" 주석은 지우고 예시를 완전한 응답으로 고친다(T004의 픽스처와 같게)\n - [ ] T004 [P] (DOCS) `docs/specs/strategy-registry-api/README.md`(계약 요약과 원본 위치 링크, `docs/specs/backtest-api/README.md`와 같은 역할)와 `docs/specs/strategy-registry-api/examples/registry-response.json` 생성 — 계약 §1 예시를 바탕으로 두 전략 모두 `axes`를 채운 **완전한 200 응답**. T003의 두 필드를 포함한다. 이 파일을 T026의 계약 테스트가 읽는다. 여기 담는 전략·축 값은 실제 등록표와 같을 필요가 없다(테스트가 같은 내용의 합성 등록표를 만든다)\n - [ ] T005 [P] (FE) `frontend/src/types/strategyRegistry.ts` — 계약 §1 응답과 1:1 타입. `RegistryResponse`·`StrategyView`(`selectable`·`unselectableReason`·`warmupTradingDays`·`warmupRule`·`validationRules`·`targetWeightSource`)·`AxisView`(`inputType: 'CHOICE' | 'NUMBER'`, `choices?`·`range?`·`defaultValue`·`description`)·`ChoiceView`·`RangeView`·`ValidationRule`·`Operand`·`RuleOperator`·`WarmupRule`·`AnalysisConditions`. 파일 머리 주석에 \"전략 이름·축·기본값을 이 파일에 상수로 두지 않는다(FR-005)\"를 적는다(`frontend/src/types/paramSearch.ts` 머리 주석과 같은 방식)\n@@ -174,14 +174,14 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Backend — 접수 시점 재검증 (FR-006, 계약 §2)\n \n-- [ ] T047 [P] [US2] (BE) `backend/src/main/java/com/ssafy/thorp/strategy/application/exception/StrategySettingsRejectedException.java` — `BusinessException` 파생. `ErrorCode` 넷(`UNREGISTERED_PARAMETER_VALUE`·`STRATEGY_NOT_REGISTERED`·`VALIDATION_RULE_VIOLATED`·`REGISTRY_VERSION_CHANGED`) 중 하나와 상세(위반 규칙 `code`·`detail`, 또는 축 이름·허용 범위, 또는 요청 버전·현재 버전)를 담는다. 화면이 `detail`을 그대로 보이므로 문장은 등록표 것을 쓴다\n-- [ ] T048 [US2] (BE) `backend/src/main/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidator.java` — `Verified verify(String strategyId, Map<String, Object> parameters, String registryVersion, int universeSize, BigDecimal initialAmount)`. 순서: 요청 `registryVersion` ≠ `port.version()`이면 409 → 활성 전략에 없으면 422 `STRATEGY_NOT_REGISTERED` → 등록되지 않은 축 이름이 있거나 등록된 축이 빠져 있으면 400(빠진 축을 기본값으로 채우지 않는다 — 원칙 VI) → 각 값 `allowedRange.contains` 아니면 400(예외에 허용 범위를 담는다) → `port.validate(strategyId, parameters, new SearchContext(universeSize))`가 위반이면 422 `VALIDATION_RULE_VIOLATED` + `reasonCode`·`reasonDetail` → `initialAmount`가 `analysisConditions().initialAmount().range().contains` 아니면 400 → `Verified(int warmupTradingDays, String registryVersion)` 반환(`WarmupRule.evaluate`, 규칙 없으면 0). 잘라 넣거나 고쳐 통과시키는 경로는 없다 (T047 의존)\n-- [ ] T049 [US2] (BE) **[PARTIAL: 004 워커 메시지 정합 전]** `backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java`의 `create()`에 검증기 호출을 연결 — `strategyRulesService.requireRegistered(...)` 직후, `command.registryVersion()`이 **있는 요청에만** `validator.verify(command.strategyId(), command.parameters(), command.registryVersion(), command.items().size(), command.initialCash())`를 부르고, 돌려받은 워밍업을 `command.warmupTradingDays()`가 `null`일 때 대신 넘긴다(요청값이 있으면 004 기존 규칙대로 — 작으면 422 `INSUFFICIENT_HISTORY`). **`registryVersion`이 없는 요청은 종전처럼 통과시키고 접수 로그에 남긴다** — 004 픽스처와 워커가 아직 등록표 축 이름을 쓰지 않아 관문을 전부에 걸면 기존 접수가 막힌다(\"착수 전에 알아둘 것\" ③). 이 호환 경로는 FR-006·SC-003 완료로 계산하지 않는다. 004가 워커 계약을 맞춘 뒤 모든 요청에 `registryVersion`과 등록표 검증을 필수화하는 후속 변경까지 끝나야 요구사항이 닫힌다. 의존 방향은 `backtest → strategy` 한 방향이고 `strategy`는 `backtest`를 참조하지 않는다. `BacktestJobRequest.java`와 `docs/specs/backtest-api/README.md`에도 현재의 조건부 검증과 미완료 상태를 그대로 적는다 (T048 의존)\n+- [X] T047 [P] [US2] (BE) `backend/src/main/java/com/ssafy/thorp/strategy/application/exception/StrategySettingsRejectedException.java` — `BusinessException` 파생. `ErrorCode` 넷(`UNREGISTERED_PARAMETER_VALUE`·`STRATEGY_NOT_REGISTERED`·`VALIDATION_RULE_VIOLATED`·`REGISTRY_VERSION_CHANGED`) 중 하나와 상세(위반 규칙 `code`·`detail`, 또는 축 이름·허용 범위, 또는 요청 버전·현재 버전)를 담는다. 화면이 `detail`을 그대로 보이므로 문장은 등록표 것을 쓴다\n+- [X] T048 [US2] (BE) `backend/src/main/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidator.java` — `Verified verify(String strategyId, Map<String, Object> parameters, String registryVersion, int universeSize, BigDecimal initialAmount)`. 순서: 요청 `registryVersion` ≠ `port.version()`이면 409 → 활성 전략에 없으면 422 `STRATEGY_NOT_REGISTERED` → 등록되지 않은 축 이름이 있거나 등록된 축이 빠져 있으면 400(빠진 축을 기본값으로 채우지 않는다 — 원칙 VI) → 각 값 `allowedRange.contains` 아니면 400(예외에 허용 범위를 담는다) → `port.validate(strategyId, parameters, new SearchContext(universeSize))`가 위반이면 422 `VALIDATION_RULE_VIOLATED` + `reasonCode`·`reasonDetail` → `initialAmount`가 `analysisConditions().initialAmount().range().contains` 아니면 400 → `Verified(int warmupTradingDays, String registryVersion)` 반환(`WarmupRule.evaluate`, 규칙 없으면 0). 잘라 넣거나 고쳐 통과시키는 경로는 없다 (T047 의존)\n+- [X] T049 [US2] (BE) **[PARTIAL: 004 워커 메시지 정합 전]** `backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestService.java`의 `create()`에 검증기 호출을 연결 — `strategyRulesService.requireRegistered(...)` 직후, `command.registryVersion()`이 **있는 요청에만** `validator.verify(command.strategyId(), command.parameters(), command.registryVersion(), command.items().size(), command.initialCash())`를 부르고, 돌려받은 워밍업을 `command.warmupTradingDays()`가 `null`일 때 대신 넘긴다(요청값이 있으면 004 기존 규칙대로 — 작으면 422 `INSUFFICIENT_HISTORY`). **`registryVersion`이 없는 요청은 종전처럼 통과시키고 접수 로그에 남긴다** — 004 픽스처와 워커가 아직 등록표 축 이름을 쓰지 않아 관문을 전부에 걸면 기존 접수가 막힌다(\"착수 전에 알아둘 것\" ③). 이 호환 경로는 FR-006·SC-003 완료로 계산하지 않는다. 004가 워커 계약을 맞춘 뒤 모든 요청에 `registryVersion`과 등록표 검증을 필수화하는 후속 변경까지 끝나야 요구사항이 닫힌다. 의존 방향은 `backtest → strategy` 한 방향이고 `strategy`는 `backtest`를 참조하지 않는다. `BacktestJobRequest.java`와 `docs/specs/backtest-api/README.md`에도 현재의 조건부 검증과 미완료 상태를 그대로 적는다 (T048 의존)\n \n ### Backend 테스트\n \n-- [ ] T050 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidatorTest.java` — `RegistryFixtures` 합성 등록표로: 버전 불일치 409; 비활성 전략 422 `STRATEGY_NOT_REGISTERED`(`find`로는 찾히는 전략); 범위 밖 400이고 예외 메시지에 허용 범위가 있으며 값이 고쳐지지 않는다; 미등록 축·빠진 축 400; `maxWeight 30 × universeSize 3 < 100` 위반 422 `VALIDATION_RULE_VIOLATED`이고 `detail`이 규칙 문장 그대로, `34`는 통과(quickstart 5-1); 시작 금액 범위 밖 400; 워밍업 `sum` 둘짜리 81 (T048 의존)\n-- [ ] T051 [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestIntakeRegistryIT.java`(`PostgresTestSupport`) — `registryVersion`을 실은 요청이 400/409/422로 거절되고 `backtest_request`·`backtest_run` 행이 생기지 않는다; `registryVersion` 없는 기존 픽스처는 과도기 호환을 명시한 채 202이고 경고 로그가 남는다. 이 202를 FR-006·SC-003 통과로 보고하지 않는다. 응답 매핑은 `ParamSearchErrorResponseTest` 방식으로 `VALIDATION_RULE_VIOLATED`가 422 `$.error.code`로 나가는지 함께 본다(quickstart 5-1 \"서버도 막는지\") (T049 의존)\n+- [X] T050 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/strategy/application/service/StrategySettingsValidatorTest.java` — `RegistryFixtures` 합성 등록표로: 버전 불일치 409; 비활성 전략 422 `STRATEGY_NOT_REGISTERED`(`find`로는 찾히는 전략); 범위 밖 400이고 예외 메시지에 허용 범위가 있으며 값이 고쳐지지 않는다; 미등록 축·빠진 축 400; `maxWeight 30 × universeSize 3 < 100` 위반 422 `VALIDATION_RULE_VIOLATED`이고 `detail`이 규칙 문장 그대로, `34`는 통과(quickstart 5-1); 시작 금액 범위 밖 400; 워밍업 `sum` 둘짜리 81 (T048 의존)\n+- [X] T051 [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestIntakeRegistryIT.java`(`PostgresTestSupport`) — `registryVersion`을 실은 요청이 400/409/422로 거절되고 `backtest_request`·`backtest_run` 행이 생기지 않는다; `registryVersion` 없는 기존 픽스처는 과도기 호환을 명시한 채 202이고 경고 로그가 남는다. 이 202를 FR-006·SC-003 통과로 보고하지 않는다. 응답 매핑은 `ParamSearchErrorResponseTest` 방식으로 `VALIDATION_RULE_VIOLATED`가 422 `$.error.code`로 나가는지 함께 본다(quickstart 5-1 \"서버도 막는지\") (T049 의존)\n \n ### Frontend — 규칙 평가기와 입력 컴포넌트\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2813873": []
+  }
+}

@@ -1,0 +1,556 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 961588,
+    "iid": 341,
+    "project_id": 1444456,
+    "title": "feat(be): 전략 이름을 담는 기준을 말하는 쉬운 말로 바꾸고 한 줄 설명 앞에 원래 용어를 남긴다",
+    "description": "## 작업 내용 요약\n\n'역변동성'·'최소분산' 같은 용어만으로는 무엇을 하는 전략인지 읽히지 않는다는 피드백을 반영해, 다섯 전략의 화면 이름을 무엇을 기준으로 담는지 말하는 쉬운 이름으로 바꿉니다. 한 줄 설명은 '원래 용어 · 쉬운 설명' 형태라, 배우기·결과 화면에서 만날 용어도 함께 보입니다.\n\n## 관련 티켓\n\nS15P21E205-452\n\n## 주요 변경 사항\n\n- 등록표(`parameter-registry.yml`) 다섯 전략의 `name`·`description`\n  - 고정 비중 → 내가 정한 비율대로\n  - 동일 비중 → 똑같이 나눠 담기\n  - 역변동성 → 덜 흔들린 곳에 더 담기\n  - 섹터 모멘텀 → 최근 잘 오른 업종 따라가기\n  - 최소분산 → 전체 흔들림 가장 줄이기\n- 전략 선택·결과·내 기록·경제환경 연결 화면은 모두 등록표에서 이름을 읽으므로 코드 변경 없이 새 이름이 보입니다.\n- 화면 문구에 직접 적혀 있던 옛 이름(섹터 고르기 안내, 목표 비중 안내, 랜딩 미리보기)을 새 이름으로 맞췄습니다.\n- spec 003 FR-001 전략 표를 갱신하고 406(9/22)에서 반대로 바꿨던 결정을 되돌리는 이유를 적었습니다.\n\n## 테스트\n\n- frontend `npm run lint && npm run build && npm test`: 154 files · 1452 tests 통과, 건너뛴 테스트 0\n- backend `./gradlew spotlessCheck`와 strategy·myrecord·paramsearch application 테스트 통과\n\n## 리뷰 포인트\n\n- **등록표 `version`을 올리지 않았습니다.** 이름·설명은 요청 검증과 계산에 쓰이지 않습니다. 버전을 올리면 옛 버전으로 온 요청이 409가 되고, 저장된 기록도 모두 '등록표 바뀜'으로 표시됩니다. 표시 문구만 바꿀 때 버전을 올려야 한다고 보시면 알려 주세요.\n- **이미 저장된 기록 이름은 옛 전략 이름 그대로입니다.** 기록 이름은 저장할 때 한 번 지어져 저장되므로 새 기록부터 새 이름이 들어갑니다.\n- **랜딩 미리보기 창의 길어진 이름이 잘리지 않는지 화면으로 확인하지 않았습니다.**",
+    "state": "closed",
+    "created_at": "2026-09-28T06:13:51.172+09:00",
+    "updated_at": "2026-09-28T07:41:56.706+09:00",
+    "merged_by": null,
+    "merge_user": null,
+    "merged_at": null,
+    "closed_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "closed_at": "2026-09-28T07:41:56.590+09:00",
+    "target_branch": "dev",
+    "source_branch": "feat(be)/452-plain-strategy-names",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c443d6a941379866ef77436e270ed46f33876315",
+    "merge_commit_sha": null,
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-28T06:13:52.498+09:00",
+    "reference": "!341",
+    "references": {
+      "short": "!341",
+      "relative": "!341",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!341"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/341",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 961588,
+    "iid": 341,
+    "project_id": 1444456,
+    "title": "feat(be): 전략 이름을 담는 기준을 말하는 쉬운 말로 바꾸고 한 줄 설명 앞에 원래 용어를 남긴다",
+    "description": "## 작업 내용 요약\n\n'역변동성'·'최소분산' 같은 용어만으로는 무엇을 하는 전략인지 읽히지 않는다는 피드백을 반영해, 다섯 전략의 화면 이름을 무엇을 기준으로 담는지 말하는 쉬운 이름으로 바꿉니다. 한 줄 설명은 '원래 용어 · 쉬운 설명' 형태라, 배우기·결과 화면에서 만날 용어도 함께 보입니다.\n\n## 관련 티켓\n\nS15P21E205-452\n\n## 주요 변경 사항\n\n- 등록표(`parameter-registry.yml`) 다섯 전략의 `name`·`description`\n  - 고정 비중 → 내가 정한 비율대로\n  - 동일 비중 → 똑같이 나눠 담기\n  - 역변동성 → 덜 흔들린 곳에 더 담기\n  - 섹터 모멘텀 → 최근 잘 오른 업종 따라가기\n  - 최소분산 → 전체 흔들림 가장 줄이기\n- 전략 선택·결과·내 기록·경제환경 연결 화면은 모두 등록표에서 이름을 읽으므로 코드 변경 없이 새 이름이 보입니다.\n- 화면 문구에 직접 적혀 있던 옛 이름(섹터 고르기 안내, 목표 비중 안내, 랜딩 미리보기)을 새 이름으로 맞췄습니다.\n- spec 003 FR-001 전략 표를 갱신하고 406(9/22)에서 반대로 바꿨던 결정을 되돌리는 이유를 적었습니다.\n\n## 테스트\n\n- frontend `npm run lint && npm run build && npm test`: 154 files · 1452 tests 통과, 건너뛴 테스트 0\n- backend `./gradlew spotlessCheck`와 strategy·myrecord·paramsearch application 테스트 통과\n\n## 리뷰 포인트\n\n- **등록표 `version`을 올리지 않았습니다.** 이름·설명은 요청 검증과 계산에 쓰이지 않습니다. 버전을 올리면 옛 버전으로 온 요청이 409가 되고, 저장된 기록도 모두 '등록표 바뀜'으로 표시됩니다. 표시 문구만 바꿀 때 버전을 올려야 한다고 보시면 알려 주세요.\n- **이미 저장된 기록 이름은 옛 전략 이름 그대로입니다.** 기록 이름은 저장할 때 한 번 지어져 저장되므로 새 기록부터 새 이름이 들어갑니다.\n- **랜딩 미리보기 창의 길어진 이름이 잘리지 않는지 화면으로 확인하지 않았습니다.**",
+    "state": "closed",
+    "created_at": "2026-09-28T06:13:51.172+09:00",
+    "updated_at": "2026-09-28T07:41:56.706+09:00",
+    "merged_by": null,
+    "merge_user": null,
+    "merged_at": null,
+    "closed_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "closed_at": "2026-09-28T07:41:56.590+09:00",
+    "target_branch": "dev",
+    "source_branch": "feat(be)/452-plain-strategy-names",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c443d6a941379866ef77436e270ed46f33876315",
+    "merge_commit_sha": null,
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-28T06:13:52.498+09:00",
+    "reference": "!341",
+    "references": {
+      "short": "!341",
+      "relative": "!341",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!341"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/341",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "6",
+    "latest_build_started_at": "2026-09-28T06:14:02.259+09:00",
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 226185,
+      "iid": 371,
+      "project_id": 1444456,
+      "sha": "c443d6a941379866ef77436e270ed46f33876315",
+      "ref": "feat(be)/452-plain-strategy-names",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-28T06:14:02.149+09:00",
+      "updated_at": "2026-09-28T06:26:38.088+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226185"
+    },
+    "head_pipeline": {
+      "id": 226185,
+      "iid": 371,
+      "project_id": 1444456,
+      "sha": "c443d6a941379866ef77436e270ed46f33876315",
+      "ref": "feat(be)/452-plain-strategy-names",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-28T06:14:02.149+09:00",
+      "updated_at": "2026-09-28T06:26:38.088+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226185",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-28T06:14:02.259+09:00",
+      "finished_at": "2026-09-28T06:26:38.074+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226185",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "head_sha": "c443d6a941379866ef77436e270ed46f33876315",
+      "start_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b15e282fc8bddeda5b2a6b941b3d16e0c5962fec",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2876133,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-28T06:13:51.280+09:00",
+          "updated_at": "2026-09-28T06:13:51.288+09:00",
+          "system": true,
+          "noteable_id": 961588,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 341,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e3caa7dbe05c6064b765ee241f743011950e9517",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2876134,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n레지스트리 YAML 파일의 전략 이름 및 설명 변경과, 이에 맞춰 연동된 프론트엔드 테스트 및 스펙 문서가 깔끔하게 수정되었습니다. 리뷰 포인트에 언급하신 대로 해당 설정값들은 요청 검증이나 계산 로직에 직접 관여하지 않고 표시용으로만 사용되므로 버전 번호(version)를 올리지 않은 판단은 적절합니다.\n\n### 테스트 제안\n- **UI 텍스트 검증**: 전략 선택 화면 및 결과 화면에서 변경된 사용자 친화적 전략 이름(`내가 정한 비율대로`, `똑같이 나눠 담기`, `덜 흔들린 곳에 더 담기` 등)과 한 줄 설명(`원래 용어 · 쉬운 설명`)이 UI 상에서 레이아웃 깨짐이나 잘림 현상 없이 올바르게 출력되는지 수동 또는 시각적 테스트를 진행하세요.\n- **기존 기록 호환성 검증**: 이미 저장된 과거 분석 기록의 상세 화면을 열었을 때, 기존 전략 이름이 정상적으로 유지되어 표시되는지 확인하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c443d6a941379866ef77436e270ed46f33876315 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-28T06:13:59.499+09:00",
+          "updated_at": "2026-09-28T06:13:59.499+09:00",
+          "system": false,
+          "noteable_id": 961588,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 341,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "41afa1e5b37bce4c0ca90be3bf121e01a1cdc66d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2876135,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for c443d6a941379866ef77436e270ed46f33876315 pass",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-28T06:14:58.822+09:00",
+          "updated_at": "2026-09-28T06:14:58.826+09:00",
+          "system": true,
+          "noteable_id": 961588,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 341,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "577ca9e0f9e677f4b594b929247be996be1d7e19",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2876147,
+          "type": null,
+          "body": "canceled the automatic merge",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-28T07:41:44.955+09:00",
+          "updated_at": "2026-09-28T07:41:44.958+09:00",
+          "system": true,
+          "noteable_id": 961588,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 341,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2256715,
+      "head_commit_sha": "c443d6a941379866ef77436e270ed46f33876315",
+      "base_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "start_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "created_at": "2026-09-28T06:13:51.455+09:00",
+      "merge_request_id": 961588,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "6fe4278f490754786739579f8eb62bf1b6664e6c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2256715,
+      "head_commit_sha": "c443d6a941379866ef77436e270ed46f33876315",
+      "base_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "start_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "created_at": "2026-09-28T06:13:51.455+09:00",
+      "merge_request_id": 961588,
+      "state": "collected",
+      "real_size": "6",
+      "patch_id_sha": "6fe4278f490754786739579f8eb62bf1b6664e6c",
+      "commits": [
+        {
+          "id": "c443d6a941379866ef77436e270ed46f33876315",
+          "short_id": "c443d6a9",
+          "created_at": "2026-09-28T06:04:55.000+09:00",
+          "parent_ids": [
+            "077cb0c4850b9d62c6b01b52d640221c7ef588e2"
+          ],
+          "title": "feat(be): 전략 이름을 담는 기준을 말하는 쉬운 말로 바꾸고 한 줄 설명 앞에 원래 용어를 남긴다",
+          "message": "feat(be): 전략 이름을 담는 기준을 말하는 쉬운 말로 바꾸고 한 줄 설명 앞에 원래 용어를 남긴다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-28T06:04:55.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-28T06:04:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c443d6a941379866ef77436e270ed46f33876315"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -102,8 +102,8 @@ analysisConditions:\n # 전략 순서는 spec FR-001 표의 순서다. 화면이 이 순서를 그대로 쓴다.\n strategies:\n   - id: FIXED_WEIGHT\n-    name: 고정 비중\n-    description: 내가 정한 비중을 그대로 유지한다.\n+    name: 내가 정한 비율대로\n+    description: 고정 비중 · 내가 정한 비율을 그대로 유지해요\n     active: true\n     # 목표 비중은 002가 확정한 값을 읽기만 한다. 화면은 이 값을 읽기 전용으로 보인다.\n     targetWeightSource: USER\n@@ -152,8 +152,8 @@ strategies:\n           value: 100\n \n   - id: EQUAL_WEIGHT\n-    name: 동일 비중\n-    description: 투자 가능한 섹터에 같은 금액을 배분한다.\n+    name: 똑같이 나눠 담기\n+    description: 동일 비중 · 고른 업종에 같은 금액씩 나눠 담아요\n     active: true\n     targetWeightSource: EQUAL\n     axes:\n@@ -176,8 +176,8 @@ strategies:\n               label: 63거래일\n \n   - id: INVERSE_VOLATILITY\n-    name: 역변동성\n-    description: 변동이 작았던 섹터에 더 많이 배분한다.\n+    name: 덜 흔들린 곳에 더 담기\n+    description: 역변동성 · 최근 가격이 덜 흔들린 업종일수록 많이 담아요\n     active: true\n     targetWeightSource: COMPUTED\n     warmup:\n@@ -236,8 +236,8 @@ strategies:\n           value: 100\n \n   - id: SECTOR_MOMENTUM\n-    name: 섹터 모멘텀\n-    description: 최근 상승 폭이 큰 섹터를 골라 배분한다.\n+    name: 최근 잘 오른 업종 따라가기\n+    description: 섹터 모멘텀 · 최근 많이 오른 업종을 골라 담아요\n     active: true\n     targetWeightSource: COMPUTED\n     # 관측 기간과 최근 제외 구간을 모두 감안한다(004 FR-018). 둘 다 사용자가 고르는 축이므로\n@@ -379,8 +379,8 @@ strategies:\n           value: 100\n \n   - id: MINIMUM_VARIANCE\n-    name: 최소분산\n-    description: 전체 변동이 가장 작아지는 비중을 찾는다.\n+    name: 전체 흔들림 가장 줄이기\n+    description: 최소분산 · 전체 가격 흔들림이 가장 작아지도록 비중을 정해요\n     active: true\n     targetWeightSource: COMPUTED\n     warmup:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/registry/parameter-registry.yml",
+          "old_path": "backend/src/main/resources/registry/parameter-registry.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,7 +24,7 @@ describe('후보 집합의 뜻 안내', () => {\n     // 고른 대상을 매번 모두 보유한다는 뜻이 아니라는 사실이 문장에 있어야 한다.\n     expect(text).toMatch(/모두 보유한다는 뜻이\\s*아니며/)\n     // 비중을 어디서 정하는지 알린다. 이 화면에는 그 입력이 없다.\n-    expect(text).toContain('고정 비중')\n+    expect(text).toContain('내가 정한 비율대로')\n     expect(text).toContain('다음 단계')\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SelectionMeaningNotice.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/SelectionMeaningNotice.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,7 @@\n  * 고른 투자 대상이 무엇을 뜻하는지 선택 요약 옆에서 알린다(FR-009).\n  *\n  * 하나라도 고른 뒤에는 **언제나** 보인다. 이 화면의 '선택'이 두 가지 뜻을 동시에 갖기\n- * 때문이다. 자동 배분 전략에서는 투자 후보 집합이고, '고정 비중' 전략에서는 다음 단계에서\n+ * 때문이다. 자동 배분 전략에서는 투자 후보 집합이고, '내가 정한 비율대로' 전략에서는 다음 단계에서\n  * 정할 비중이 붙는 대상이다. 구분해 두지 않으면 사용자는 고른 대상을 매번 모두 보유한다는\n  * 뜻으로 읽는다.\n  *\n@@ -28,7 +28,7 @@ export function SelectionMeaningNotice({\n     <div className={className} data-slot=\"selection-meaning\">\n       <p data-slot=\"candidate-meaning\">\n         고른 투자 대상은 자동 배분 전략이 고를 수 있는 후보 집합입니다. 매번 모두 보유한다는 뜻이\n-        아니며, '고정 비중' 전략에 쓰이는 비중은 다음 단계에서 정합니다.\n+        아니며, '내가 정한 비율대로' 전략에 쓰이는 비중은 다음 단계에서 정합니다.\n       </p>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SelectionMeaningNotice.tsx",
+          "old_path": "frontend/src/components/diagnosis/SelectionMeaningNotice.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -428,9 +428,9 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })\n \n /** 시장 흐름에서 전략 비교로 이어지는 자리. 값은 예시다. */\n const EXAMPLE_RULES = [\n-  { name: '역변동성', net: '+24.6%', drawdown: '−12.1%', cost: '84,200원', selected: true },\n-  { name: '동일 비중', net: '+13.2%', drawdown: '−18.7%', cost: '61,000원' },\n-  { name: '최소분산', net: '+9.8%', drawdown: '−9.4%', cost: '72,500원' },\n+  { name: '덜 흔들린 곳에 더 담기', net: '+24.6%', drawdown: '−12.1%', cost: '84,200원', selected: true },\n+  { name: '똑같이 나눠 담기', net: '+13.2%', drawdown: '−18.7%', cost: '61,000원' },\n+  { name: '전체 흔들림 가장 줄이기', net: '+9.8%', drawdown: '−9.4%', cost: '72,500원' },\n ] as const\n \n function RuleComparison() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "old_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,7 @@ interface TargetWeightEditorProps {\n  * 화면은 그 대상에 붙는 값만 다룬다. 두 가지를 한자리에서 다루면 사용자가 무엇을 하는 중인지\n  * 흐려진다 — 앞 단계가 \"무엇을\", 이 화면이 \"얼마나\"다.\n  *\n- * <p><b>비중은 '고정 비중' 전략에만 쓰인다.</b> 자동 배분 전략은 이 값을 읽지 않으므로 그\n+ * <p><b>비중은 '내가 정한 비율대로' 전략에만 쓰인다.</b> 자동 배분 전략은 이 값을 읽지 않으므로 그\n  * 전략을 고른 사용자에게는 이 영역 자체가 나타나지 않는다. 그 판정은 등록표가 내려 준\n  * `targetWeightSource`가 하며 이 컴포넌트는 알지 못한다.\n  *\n@@ -84,7 +84,7 @@ export function TargetWeightEditor({\n           */}\n           {summary.hasZeroWeight ? (\n             <p className={styles.note}>\n-              비중이 0%인 대상은 '고정 비중'에는 담기지 않지만, 자동 배분 전략의 후보 집합에는\n+              비중이 0%인 대상은 '내가 정한 비율대로'에는 담기지 않지만, 자동 배분 전략의 후보 집합에는\n               그대로 남습니다.\n             </p>\n           ) : null}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/TargetWeightEditor.tsx",
+          "old_path": "frontend/src/components/strategy/TargetWeightEditor.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -174,16 +174,18 @@\n \n   | 화면 이름 | 전략 | 한 줄 설명 |\n   |---|---|---|\n-  | 고정 비중 | 고정 목표 비중 | 지정한 비중으로 주기적으로 맞춘다. |\n-  | 동일 비중 | 동일 비중 | 선택 섹터에 같은 목표 비중을 둔다. |\n-  | 역변동성 | 역변동성 | 최근 변동성이 낮은 섹터에 더 큰 비중을 둔다. |\n-  | 섹터 모멘텀 | 섹터 모멘텀 | 과거 성과의 방향 또는 상대 강도를 규칙으로 삼아 섹터를 선택·배분한다. |\n-  | 최소분산 | 최소분산 | 섹터들이 함께 움직이는 정도를 반영해 추정 포트폴리오 분산이 작아지는 비중을 계산한다. |\n-\n-  2026-09-22에 화면 이름을 전략 표기로 통일했다(`S15P21E205-406`). 처음에는 설명형 이름('변동성에 따라\n-  나누기')을 카드 제목에 두었으나, 제목 바로 아래 한 줄 설명이 같은 말을 되풀이했고 카드 목록의 단 제목이\n-  이미 '전략'이라 제목이 길어질수록 구별이 어려워졌다. 뜻은 한 줄 설명과 [013](../013-learning-pages/spec.md)\n-  용어 도움말이 맡는다. 두 열을 남겨 두는 것은 둘이 갈릴 수 있는 자리임을 표시하기 위해서다.\n+  | 내가 정한 비율대로 | 고정 목표 비중 | 고정 비중 · 내가 정한 비율을 그대로 유지해요 |\n+  | 똑같이 나눠 담기 | 동일 비중 | 동일 비중 · 고른 업종에 같은 금액씩 나눠 담아요 |\n+  | 덜 흔들린 곳에 더 담기 | 역변동성 | 역변동성 · 최근 가격이 덜 흔들린 업종일수록 많이 담아요 |\n+  | 최근 잘 오른 업종 따라가기 | 섹터 모멘텀 | 섹터 모멘텀 · 최근 많이 오른 업종을 골라 담아요 |\n+  | 전체 흔들림 가장 줄이기 | 최소분산 | 최소분산 · 전체 가격 흔들림이 가장 작아지도록 비중을 정해요 |\n+\n+  2026-09-27에 화면 이름을 무엇을 기준으로 담는지 말하는 쉬운 이름으로 바꿨다(`S15P21E205-452`). 2026-09-22에\n+  전략 표기로 통일했으나(`S15P21E205-406`) '역변동성'·'최소분산' 같은 용어만으로는 무엇을 하는 전략인지 읽히지\n+  않는다는 피드백을 받았다. 406이 겪은 되풀이는 한 줄 설명을 '원래 용어 · 쉬운 설명'으로 적어 피한다 — 제목은\n+  하는 일을, 설명 앞머리는 배우기·결과 화면에서 다시 만날 용어를 알린다. 뜻은 한 줄 설명과\n+  [013](../013-learning-pages/spec.md) 용어 도움말이 맡는다. 두 열을 남겨 두는 것은 둘이 갈릴 수 있는 자리임을\n+  표시하기 위해서다.\n \n - **FR-002**: 기본 화면에는 선택 전략과, 분석 시작·종료일·비교 대상 섹터 수·시작 금액·적용할 비용 조건의 버전과 임시 여부를 한 줄로 보인다. 시작 금액은 분석 요청에 실리는 값과 같은 값을 보여, 사용자가 보지 못한 금액으로 분석이 접수되지 않게 한다. '분석하기'는 이 화면의 주된 행동으로 두고 '설정 조합 자동 비교'는 그 옆에 무게를 낮춰 늘 보이게 두며, 그 밖의 행동은 이 화면에 두지 않는다. 한때 두 버튼을 같은 크기로 두었으나(constitution 원칙 II의 예외 조항, 3.4.0, [S15P21E205-253](https://ssafy.atlassian.net/browse/S15P21E205-253) 2026-09-15 승인) 어느 쪽을 눌러야 하는지 화면이 말해 주지 않아 되돌린다. 그 예외는 같은 크기를 허용할 뿐 요구하지 않으므로 원칙 II 본문(\"화면마다 가장 중요한 행동 버튼을 하나만 정한다\")으로 돌아가는 것이며 constitution 개정이 따르지 않는다. 자동 비교를 접거나 감추지는 않는다 — 그 경로가 없으면 같은 결과를 얻으려 설정을 하나씩 바꿔 반복 실행해야 하고, 예외 조항이 지키려던 것이 그 사실이다. 2026-09-22에 '기본 설정 사용' 상태 표시를 없앴다(`S15P21E205-406`). 누를 수 없는 표시인데 낱말이 선택지처럼 읽혀 무엇을 하는 자리인지 물음을 샀고, 표시가 지키려던 것(기본값은 편의용 출발점이며 최적값이 아니다, FR-004)은 값을 바꾸는 자리인 전략 설정 패널이 첫 문장으로 이미 말하고 있어 같은 말이 두 곳에 있었다. (§4.1, §4.2.2)\n - **FR-003**: '전략 설정'(2026-09-22까지 '상세 설정', `S15P21E205-406`)은 선택한 전략에 해당하는 항목만 열고, 각 항목의 의미·허용 범위·기본값 복원을 제공한다. 항목의 <b>의미</b>는 2026-09-22부터 이름 옆 도움말에서 펼쳐 본다 — 열아홉 축의 설명을 모두 펼쳐 두면 값을 고르는 자리가 글에 묻힌다. <b>한 항목에 도움말은 하나다</b>: 013이 소유한 용어가 있는 축은 그 도움말 안에 등록표의 축 설명을 함께 싣고, 없는 축은 축 설명만 담는다. 허용 범위와 기본값 복원은 접지 않고 그대로 보인다 — 값을 고르는 동안 늘 필요한 정보다. 워밍업을 이루는 축(등록표 `warmupRule.sum`)은 지금 값으로 평가할 수 있는 범위를 값 아래에 함께 적고, 그 축의 도움말이 값을 바꾸면 범위가 달라진다는 사실을 말한다 — 늘리면 무엇을 잃는지가 값을 고르는 자리에서 보여야 한다. '고정 목표 비중'의 목표 비중은 [002](../002-sector-weight-selection/spec.md)에서 확정한 섹터별 비중을 그대로 보여 주기만 하며 이 화면에서 고칠 수 없고, 고치려면 섹터·비중 단계로 돌아가야 한다는 안내를 함께 둔다. 전략별 항목은 다음과 같다. 옆의 '분석 조건'과 형제로 나란히 두며, 분석 조건은 요약을 머리줄에 싣고 열면 그 자리가 편집 폼이다 — 요약·제목·여는 버튼을 따로 두던 것을 하나로 합쳤다. 전략을 고르기 전에도 분석 조건은 열 수 있어야 한다(최소 평가 기간이 모든 카드를 막을 수 있다, FR-011a). (§4.2.2)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/spec.md",
+          "old_path": "specs/003-strategy-settings/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2876134": []
+  }
+}

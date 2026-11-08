@@ -1,0 +1,727 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948941,
+    "iid": 187,
+    "project_id": 1444456,
+    "title": "feat(fe): 대표 상품에 담긴 종목을 그 자리에서 펼쳐 본다",
+    "description": "# 작업 내용 요약\n\n섹터를 고르는 사람이 그 섹터에 실제로 무엇이 담겨 있는지 알 수 없었다. 목록은 섹터 이름과 대표\nETF 이름까지만 보여 주고, 그 상품이 어떤 종목을 얼마나 담는지는 어디에도 없었다. 무엇을 사는지\n모른 채 비중부터 정하는 셈이다.\n\n이 MR 이후로 목록 항목에서 대표 상품의 보유 구성을 그 자리에서 펼쳐 볼 수 있다. 화면을 떠나지\n않으며, 자료를 아직 받을 수 없어도 빈 자리가 아니라 한 문장이 보인다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-320](https://ssafy.atlassian.net/browse/S15P21E205-320) `[FE] 대표 상품 정보 패널`\n- 근거: spec 002의 FR-010, SC-012\n- 작업 단위: `specs/002-sector-weight-selection/tasks.md`의 묶음 M5 (T021~T023)\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 섹터가 무엇을 담는지 알고 싶다 | 알 방법이 없다 | 항목에서 펼쳐 상위 종목과 비중을 본다 |\n| 상품 정보 자료가 아직 없다 | 해당 없음 | 빈 패널이 아니라 한 문장과 다시 불러오기 |\n| 목록만 보고 지나간다 | 해당 없음 | 같다. 펼치기 전에는 조회하지 않는다 |\n| 서버 자료가 망가졌다 | 해당 없음 | 없는 섹터와 **다른 문장**으로 알린다 |\n| 섹터를 고르고 비중을 넣는다 | 지금과 같다 | 같다. 펼침은 선택을 건드리지 않는다 |\n\n# 주요 변경 사항\n\n## 무엇을 사는지 먼저 보이는 것\n\n이 패널이 답하는 질문은 하나다. \"이 섹터를 고르면 실제로 무엇을 사는가.\" 그래서 상위 보유 종목과\n**'그 외'까지** 한 줄 막대로 이어 붙이고, 그 아래에 정확한 숫자를 둔다. 이름과 숫자만 줄지어\n놓으면 한 종목이 전체의 4분의 1이라는 사실이 읽히지 않는다. 막대와 숫자는 같은 값을 쓴다. 따로\n계산하면 눈에 보이는 크기와 적힌 숫자가 갈라진다.\n\n'그 외'를 빼놓지 않는 까닭은 상위 몇 개만 보이면 사용자가 그것을 전부라고 읽기 때문이다.\n\n운용사와 기준 지수는 조사 없는 목록으로 옮겼다. **상품 이름 뒤에 조사를 붙이는 문장을 두지\n않는다.** 받침이 있는지에 따라 은/는이 갈리는데 이름은 서버가 주는 값이라 미리 알 수 없고, 한쪽으로\n고정하면 절반은 틀린 문장이 된다.\n\n## 지금 시점의 구성이라는 사실을 함께 알리는 것\n\n보유 구성이 현재 시점의 것이면 그 사실을 구성 바로 아래에 둔다. 이 문장이 없으면 사용자는 과거\n수익이 이 종목들로 만들어졌다고 읽는다. 결과의 뜻을 바꾸는 사실이라 접어 두지 않는다.\n\n## 읽는 쪽이 계약의 불변식을 실제로 지키는 것\n\n응답의 비중이 문자열인지만 보지 않고 숫자로 읽히는지와 범위까지 본다. 문자열 검사만 하면 `\"N/A\"`\n같은 값이 통과하는데, 그대로 두면 그 종목이 0%로 그려지고 실제 몫은 '그 외'에 슬그머니 섞인다.\n합이 맞지 않는 구성이 사실처럼 보이는 것이 가장 나쁜 실패다. 보유 목록이 비어 있는 응답도 받지\n않는다. 받으면 '그 외 100%' 막대 하나가 \"무엇을 담았는지 모른다\"를 자료인 것처럼 보이게 한다.\n\n범위는 서버 도메인이 지키는 것과 같은 `(0, 1]`이다. 필드 하나라도 계약과 다르면 일부만 그리지 않고\n응답 전체를 읽지 못한 것으로 다룬다.\n\n## 자료 식별자를 화면에 두지 않는 것\n\n계약이 주는 자료 버전 식별자를 화면에 날것으로 보이지 않는다. 사용자가 알아야 하는 것은 \"언제까지의\n자료인가\"이지 그 자료에 붙은 이름이 아니다(FR-011). 대신 자료 마감 시점을 한국 날짜로 보인다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19 (모두 기존 차트·UI 파일)\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npx vitest run --no-file-parallelism` — 65파일 670건 통과, **건너뜀 0**\n- [x] `frontend`: `npm run test:legacy` — 13건 통과, **건너뜀 0**\n\n기준선은 2026-09-17 `origin/dev` 기준 65파일 660건, 건너뜀 0이다.\n\n**T023 전체 흐름 검증을 사람 손으로 밟았다.** quickstart 시나리오 0~11을 병합된 상태에서 처음부터\n끝까지 확인했고, 코드를 고칠 어긋남은 나오지 않아 `quickstart.md`를 고치지 않았다. 시나리오 0에서는\n일부러 틀린 단언을 넣어 그 파일이 실제로 수집되어 도는지 확인한 뒤 되돌렸다. 넘긴 값이 다음 단계에\n그대로 남는지는 세션 보관 항목을 직접 열어 보았고, 0%인 섹터가 빠지지 않은 것까지 확인했다.\n\n**테스트를 병렬로 돌리면 이 MR과 무관한 파일이 간헐적으로 실패한다.** 화면이 뜨기를 기다리는 시간이\n부하 상황에서 기본 1초를 넘기는 것이며, 위처럼 직렬로 돌리면 전체가 통과한다.\n\n# 리뷰 포인트\n\n1. **자료 식별자를 보이지 않기로 한 판단을 봐 주시기 바란다.** tasks.md는 \"값을 가공하지 않고 그대로\n   표시한다\"고 적었고, 계약은 그 식별자의 쓰임을 \"화면이 어느 시점 자료인지 판단하는 근거\"로 적었다.\n   판단에 쓰는 것과 사용자에게 보이는 것은 다르다고 보아 자료 마감 날짜만 보였다.\n\n2. **펼침을 고른 섹터에만 두지 않았다.** 고르기 전에 무엇을 사는지 보고 정하는 것이 이 패널의\n   목적이라, 고른 뒤에만 열리면 순서가 뒤집힌다. 그래서 모든 항목에서 열린다.\n\n3. **닫으면 패널이 사라지고 다시 열면 다시 조회한다.** 열어 둔 것을 숨기는 대신 걷어내는 쪽을\n   골랐다. 자료가 낡지 않고 구현이 단순하다. 왕복이 늘어나는 것이 문제가 되면 그때 캐시를 둔다.\n\n4. **범위 밖에서 발견한 것.** 첫 화면 소개 섹션이 헤더 메뉴에서 뺀 `/dashboard`·`/backtest`를 계속\n   가리킨다. 이미 T024로 추적되고 있으며 어디를 가리킬지는 사람이 정할 일이라 이 MR에서 고치지\n   않았다. 카드 안의 글자를 세 번 눌러 선택하려 하면 섹터가 골라지거나 풀리는데, 카드 전체를 고르는\n   자리로 둔 M2의 설계에서 따라오는 동작이라 역시 손대지 않았다.\n\n**이 MR로 spec 002의 M1~M5가 모두 끝난다.** SC-004(사용성 관찰)를 뺀 열두 개 성공 기준이 성립한다.",
+    "state": "merged",
+    "created_at": "2026-09-17T15:05:45.295+09:00",
+    "updated_at": "2026-09-17T15:09:18.347+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:09:18.385+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/320-instrument-profile-panel",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+    "merge_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:05:47.564+09:00",
+    "reference": "!187",
+    "references": {
+      "short": "!187",
+      "relative": "!187",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!187"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/187",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948941,
+    "iid": 187,
+    "project_id": 1444456,
+    "title": "feat(fe): 대표 상품에 담긴 종목을 그 자리에서 펼쳐 본다",
+    "description": "# 작업 내용 요약\n\n섹터를 고르는 사람이 그 섹터에 실제로 무엇이 담겨 있는지 알 수 없었다. 목록은 섹터 이름과 대표\nETF 이름까지만 보여 주고, 그 상품이 어떤 종목을 얼마나 담는지는 어디에도 없었다. 무엇을 사는지\n모른 채 비중부터 정하는 셈이다.\n\n이 MR 이후로 목록 항목에서 대표 상품의 보유 구성을 그 자리에서 펼쳐 볼 수 있다. 화면을 떠나지\n않으며, 자료를 아직 받을 수 없어도 빈 자리가 아니라 한 문장이 보인다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-320](https://ssafy.atlassian.net/browse/S15P21E205-320) `[FE] 대표 상품 정보 패널`\n- 근거: spec 002의 FR-010, SC-012\n- 작업 단위: `specs/002-sector-weight-selection/tasks.md`의 묶음 M5 (T021~T023)\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 섹터가 무엇을 담는지 알고 싶다 | 알 방법이 없다 | 항목에서 펼쳐 상위 종목과 비중을 본다 |\n| 상품 정보 자료가 아직 없다 | 해당 없음 | 빈 패널이 아니라 한 문장과 다시 불러오기 |\n| 목록만 보고 지나간다 | 해당 없음 | 같다. 펼치기 전에는 조회하지 않는다 |\n| 서버 자료가 망가졌다 | 해당 없음 | 없는 섹터와 **다른 문장**으로 알린다 |\n| 섹터를 고르고 비중을 넣는다 | 지금과 같다 | 같다. 펼침은 선택을 건드리지 않는다 |\n\n# 주요 변경 사항\n\n## 무엇을 사는지 먼저 보이는 것\n\n이 패널이 답하는 질문은 하나다. \"이 섹터를 고르면 실제로 무엇을 사는가.\" 그래서 상위 보유 종목과\n**'그 외'까지** 한 줄 막대로 이어 붙이고, 그 아래에 정확한 숫자를 둔다. 이름과 숫자만 줄지어\n놓으면 한 종목이 전체의 4분의 1이라는 사실이 읽히지 않는다. 막대와 숫자는 같은 값을 쓴다. 따로\n계산하면 눈에 보이는 크기와 적힌 숫자가 갈라진다.\n\n'그 외'를 빼놓지 않는 까닭은 상위 몇 개만 보이면 사용자가 그것을 전부라고 읽기 때문이다.\n\n운용사와 기준 지수는 조사 없는 목록으로 옮겼다. **상품 이름 뒤에 조사를 붙이는 문장을 두지\n않는다.** 받침이 있는지에 따라 은/는이 갈리는데 이름은 서버가 주는 값이라 미리 알 수 없고, 한쪽으로\n고정하면 절반은 틀린 문장이 된다.\n\n## 지금 시점의 구성이라는 사실을 함께 알리는 것\n\n보유 구성이 현재 시점의 것이면 그 사실을 구성 바로 아래에 둔다. 이 문장이 없으면 사용자는 과거\n수익이 이 종목들로 만들어졌다고 읽는다. 결과의 뜻을 바꾸는 사실이라 접어 두지 않는다.\n\n## 읽는 쪽이 계약의 불변식을 실제로 지키는 것\n\n응답의 비중이 문자열인지만 보지 않고 숫자로 읽히는지와 범위까지 본다. 문자열 검사만 하면 `\"N/A\"`\n같은 값이 통과하는데, 그대로 두면 그 종목이 0%로 그려지고 실제 몫은 '그 외'에 슬그머니 섞인다.\n합이 맞지 않는 구성이 사실처럼 보이는 것이 가장 나쁜 실패다. 보유 목록이 비어 있는 응답도 받지\n않는다. 받으면 '그 외 100%' 막대 하나가 \"무엇을 담았는지 모른다\"를 자료인 것처럼 보이게 한다.\n\n범위는 서버 도메인이 지키는 것과 같은 `(0, 1]`이다. 필드 하나라도 계약과 다르면 일부만 그리지 않고\n응답 전체를 읽지 못한 것으로 다룬다.\n\n## 자료 식별자를 화면에 두지 않는 것\n\n계약이 주는 자료 버전 식별자를 화면에 날것으로 보이지 않는다. 사용자가 알아야 하는 것은 \"언제까지의\n자료인가\"이지 그 자료에 붙은 이름이 아니다(FR-011). 대신 자료 마감 시점을 한국 날짜로 보인다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19 (모두 기존 차트·UI 파일)\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npx vitest run --no-file-parallelism` — 65파일 670건 통과, **건너뜀 0**\n- [x] `frontend`: `npm run test:legacy` — 13건 통과, **건너뜀 0**\n\n기준선은 2026-09-17 `origin/dev` 기준 65파일 660건, 건너뜀 0이다.\n\n**T023 전체 흐름 검증을 사람 손으로 밟았다.** quickstart 시나리오 0~11을 병합된 상태에서 처음부터\n끝까지 확인했고, 코드를 고칠 어긋남은 나오지 않아 `quickstart.md`를 고치지 않았다. 시나리오 0에서는\n일부러 틀린 단언을 넣어 그 파일이 실제로 수집되어 도는지 확인한 뒤 되돌렸다. 넘긴 값이 다음 단계에\n그대로 남는지는 세션 보관 항목을 직접 열어 보았고, 0%인 섹터가 빠지지 않은 것까지 확인했다.\n\n**테스트를 병렬로 돌리면 이 MR과 무관한 파일이 간헐적으로 실패한다.** 화면이 뜨기를 기다리는 시간이\n부하 상황에서 기본 1초를 넘기는 것이며, 위처럼 직렬로 돌리면 전체가 통과한다.\n\n# 리뷰 포인트\n\n1. **자료 식별자를 보이지 않기로 한 판단을 봐 주시기 바란다.** tasks.md는 \"값을 가공하지 않고 그대로\n   표시한다\"고 적었고, 계약은 그 식별자의 쓰임을 \"화면이 어느 시점 자료인지 판단하는 근거\"로 적었다.\n   판단에 쓰는 것과 사용자에게 보이는 것은 다르다고 보아 자료 마감 날짜만 보였다.\n\n2. **펼침을 고른 섹터에만 두지 않았다.** 고르기 전에 무엇을 사는지 보고 정하는 것이 이 패널의\n   목적이라, 고른 뒤에만 열리면 순서가 뒤집힌다. 그래서 모든 항목에서 열린다.\n\n3. **닫으면 패널이 사라지고 다시 열면 다시 조회한다.** 열어 둔 것을 숨기는 대신 걷어내는 쪽을\n   골랐다. 자료가 낡지 않고 구현이 단순하다. 왕복이 늘어나는 것이 문제가 되면 그때 캐시를 둔다.\n\n4. **범위 밖에서 발견한 것.** 첫 화면 소개 섹션이 헤더 메뉴에서 뺀 `/dashboard`·`/backtest`를 계속\n   가리킨다. 이미 T024로 추적되고 있으며 어디를 가리킬지는 사람이 정할 일이라 이 MR에서 고치지\n   않았다. 카드 안의 글자를 세 번 눌러 선택하려 하면 섹터가 골라지거나 풀리는데, 카드 전체를 고르는\n   자리로 둔 M2의 설계에서 따라오는 동작이라 역시 손대지 않았다.\n\n**이 MR로 spec 002의 M1~M5가 모두 끝난다.** SC-004(사용성 관찰)를 뺀 열두 개 성공 기준이 성립한다.",
+    "state": "merged",
+    "created_at": "2026-09-17T15:05:45.295+09:00",
+    "updated_at": "2026-09-17T15:09:18.347+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:09:18.385+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/320-instrument-profile-panel",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+    "merge_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:05:47.564+09:00",
+    "reference": "!187",
+    "references": {
+      "short": "!187",
+      "relative": "!187",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!187"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/187",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": "2026-09-17T15:05:57.119+09:00",
+    "latest_build_finished_at": "2026-09-17T15:09:17.409+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 202567,
+      "iid": 112,
+      "project_id": 1444456,
+      "sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+      "ref": "feat(fe)/320-instrument-profile-panel",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T15:05:56.990+09:00",
+      "updated_at": "2026-09-17T15:09:17.415+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202567"
+    },
+    "head_pipeline": {
+      "id": 202567,
+      "iid": 112,
+      "project_id": 1444456,
+      "sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+      "ref": "feat(fe)/320-instrument-profile-panel",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T15:05:56.990+09:00",
+      "updated_at": "2026-09-17T15:09:17.415+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202567",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T15:05:57.119+09:00",
+      "finished_at": "2026-09-17T15:09:17.409+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202567",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "head_sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+      "start_sha": "12fc23ce673167d1ceb99866eff0d527f15be544"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "d56fb691011d98496c6b2320e7b9fee01420b171",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825406,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:05:45.443+09:00",
+          "updated_at": "2026-09-17T15:05:45.448+09:00",
+          "system": true,
+          "noteable_id": 948941,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 187,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "57f9699e71dba55d86557d2576707eb05638aeb2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825407,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:05:45.466+09:00",
+          "updated_at": "2026-09-17T15:05:45.474+09:00",
+          "system": true,
+          "noteable_id": 948941,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 187,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "16c6014dda5e8294125c589daacebf877ec06d4f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825416,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **방어적 데이터 파싱 및 불변식 검증:** `frontend/src/api/sectors.ts`의 `readInstrumentProfile` 및 `readHolding` 함수에서 백엔드 응답을 단순 타입 체크를 넘어 값의 범위(`(0, 1]`)와 유효성까지 철저히 검증합니다. 잘못된 데이터(빈 목록, 비정상적인 비중 값 등)가 UI로 흘러 들어가 왜곡된 정보를 보여주는 것을 원천 차단한 설계가 매우 돋보입니다.\n- **접근성(Accessibility) 및 키보드 네비게이션 고려:** `SectorListItem.tsx`와 `InstrumentProfilePanel.tsx`에서 `aria-expanded`, `aria-controls`를 적절히 활용하고, 패널 내부에서 `Escape` 키 입력 시 초점을 토글 버튼으로 돌려주는 등 키보드 사용자를 위한 세심한 인터랙션이 잘 구현되었습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **네트워크 에러 및 재시도 시나리오:** API 호출 중 네트워크 연결이 끊기거나(단절) 500 에러가 발생했을 때, `다시 불러오기` 버튼을 눌렀을 때 상태가 올바르게 초기화되고 재요청이 정상적으로 이루어지는지 테스트합니다.\n- **아보트 컨트롤러(AbortController) 동작 검증:** 사용자가 패널을 빠르게 열고 닫거나 다른 섹터의 펼침 버튼을 연달아 클릭할 때, 진행 중이던 이전 `fetch` 요청이 정상적으로 취소(`abort`)되어 경쟁 상태(Race Condition)가 발생하지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T15:06:03.164+09:00",
+          "updated_at": "2026-09-17T15:06:03.164+09:00",
+          "system": false,
+          "noteable_id": 948941,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 187,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "72284a12e24f2981693b3f0ad88d195f05f09330",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825437,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:07:23.531+09:00",
+          "updated_at": "2026-09-17T15:07:23.535+09:00",
+          "system": true,
+          "noteable_id": 948941,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 187,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0721f375eb565b00b923ab05afb32a1cae915c50",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2825462,
+          "type": null,
+          "body": "mentioned in commit 4fa31841ec3720420761a8b6c534460797ac5c67",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:09:18.753+09:00",
+          "updated_at": "2026-09-17T15:09:18.758+09:00",
+          "system": true,
+          "noteable_id": 948941,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 187,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2213726,
+      "head_commit_sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "created_at": "2026-09-17T15:05:45.778+09:00",
+      "merge_request_id": 948941,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "b847afb6b0f6abef40f5b765b4f73d159f7e22cd"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2213726,
+      "head_commit_sha": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+      "base_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "start_commit_sha": "12fc23ce673167d1ceb99866eff0d527f15be544",
+      "created_at": "2026-09-17T15:05:45.778+09:00",
+      "merge_request_id": 948941,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "b847afb6b0f6abef40f5b765b4f73d159f7e22cd",
+      "commits": [
+        {
+          "id": "9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc",
+          "short_id": "9e0828ae",
+          "created_at": "2026-09-17T15:04:41.000+09:00",
+          "parent_ids": [
+            "e892f05d8e6ac535a4fe90d23631d8086cc5fea1"
+          ],
+          "title": "fix(fe): 읽는 쪽이 보유 구성의 불변식을 실제로 지키게 한다",
+          "message": "fix(fe): 읽는 쪽이 보유 구성의 불변식을 실제로 지키게 한다\n\nAI 코드리뷰가 찾은 것을 고친다.\n\n- 비중이 숫자로 읽히는지와 (0, 1] 범위인지까지 검사한다. 문자열 검사만 하면\n  \"N/A\" 같은 값이 통과해 그 종목이 0%로 그려지고 실제 몫은 '그 외'에 섞인다\n- 보유 종목이 빈 목록이면 받지 않는다. 받으면 '그 외 100%' 막대 하나가\n  모른다는 사실을 자료처럼 보이게 한다\n- 없는 섹터와 망가진 서버 자료를 다른 문장으로 알린다. 둘 다 다시 눌러도\n  달라지지 않지만 사용자가 해야 할 일이 다르다\n- 자료 시점을 UTC가 아니라 한국 날짜로 옮긴다\n- 접혀 있을 때는 없는 패널을 aria-controls로 가리키지 않는다\n- 준비 중 검사가 서버 문장과 화면 문장을 구별하게 고친다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:04:41.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:04:41.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9e0828ae61fd6d1bd8c628ef25ac912f7f9789dc"
+        },
+        {
+          "id": "e892f05d8e6ac535a4fe90d23631d8086cc5fea1",
+          "short_id": "e892f05d",
+          "created_at": "2026-09-17T14:49:22.000+09:00",
+          "parent_ids": [
+            "d83e131f4ffc84b8acf4aeb17fb9a3f6da9647fe"
+          ],
+          "title": "docs(fe): M5 전체 흐름 검증을 마친 것으로 표시한다",
+          "message": "docs(fe): M5 전체 흐름 검증을 마친 것으로 표시한다\n\nquickstart 시나리오 0~11을 병합된 상태에서 처음부터 끝까지 밟았다. 코드를 고칠\n어긋남은 나오지 않았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:27:20.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:49:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e892f05d8e6ac535a4fe90d23631d8086cc5fea1"
+        },
+        {
+          "id": "d83e131f4ffc84b8acf4aeb17fb9a3f6da9647fe",
+          "short_id": "d83e131f",
+          "created_at": "2026-09-17T14:49:22.000+09:00",
+          "parent_ids": [
+            "12fc23ce673167d1ceb99866eff0d527f15be544"
+          ],
+          "title": "feat(fe): 대표 상품에 담긴 종목을 그 자리에서 펼쳐 본다",
+          "message": "feat(fe): 대표 상품에 담긴 종목을 그 자리에서 펼쳐 본다\n\n섹터만 보고 고르면 실제로 무엇에 투자하는지 알 수 없었다. 대표 ETF가 담고 있는 종목과\n그 비중을 목록 항목에서 바로 펼쳐 보이고, 자료를 아직 받을 수 없어도 빈 자리가 아니라\n한 문장이 보이게 한다.\n\n- T021 대표 상품 정보 조회 (api/sectors.ts, types/sector.ts)\n- T022 대표 상품 정보 패널과 목록 연결 (InstrumentProfilePanel.tsx, SectorListItem.tsx)\n\n상위 보유 종목과 '그 외'를 한 줄 막대로 이어 붙여 크기가 숫자보다 먼저 읽히게 했다.\n이름과 숫자만 줄지어 놓으면 한 종목이 전체의 4분의 1이라는 사실이 드러나지 않는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T14:11:59.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T14:49:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d83e131f4ffc84b8acf4aeb17fb9a3f6da9647fe"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,9 +1,9 @@\n import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'\n-import type { SectorCatalog } from '@/types/sector'\n+import type { InstrumentProfile, SectorCatalog } from '@/types/sector'\n import { apiClient } from './client'\n-import { fetchSectorCatalog } from './sectors'\n+import { fetchInstrumentProfile, fetchSectorCatalog } from './sectors'\n \n function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {\n   return {\n@@ -195,3 +195,181 @@ describe('섹터 목록 조회', () => {\n     expect(result).toEqual({ status: 'mapNotReady', message: '준비 중' })\n   })\n })\n+\n+const profile: InstrumentProfile = {\n+  instrumentId: '091160.XKRX',\n+  name: 'KODEX 반도체',\n+  benchmarkIndex: 'KRX 반도체',\n+  indexMethodologySummary: 'KRX 반도체 지수를 추종하며 시가총액 가중으로 담는다.',\n+  listedOn: '2006-06-27',\n+  manager: '삼성자산운용',\n+  holdingsOverlap: {\n+    asOfCurrentComposition: true,\n+    topHoldings: [\n+      { name: '삼성전자', weight: '0.2431' },\n+      { name: 'SK하이닉스', weight: '0.2107' },\n+    ],\n+  },\n+  avgDailyValue3m: '1240000000',\n+  sourceAttribution: '한국거래소 통계정보',\n+  survivorshipNote: '현재 상장되어 있는 상품만 다룹니다.',\n+  datasetId: 'KRX_DAILY_20260907',\n+  dataDeadline: '2026-09-07T09:00:00Z',\n+  isSample: true,\n+}\n+\n+const profileSuccess: ApiSuccessEnvelope<InstrumentProfile> = {\n+  success: true,\n+  data: profile,\n+  error: null,\n+}\n+\n+describe('대표 상품 정보 조회', () => {\n+  beforeEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('공용 apiClient로 해당 섹터의 경로를 부른다', async () => {\n+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(profileSuccess))\n+\n+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')\n+\n+    expect(getSpy).toHaveBeenCalledWith('/sectors/SEMICONDUCTOR/instrument-profile', {\n+      signal: undefined,\n+    })\n+    expect(result).toEqual({ status: 'loaded', profile })\n+  })\n+\n+  it('섹터 코드를 주소에 안전하게 싣는다', async () => {\n+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(profileSuccess))\n+\n+    await fetchInstrumentProfile('A/B?C')\n+\n+    expect(getSpy).toHaveBeenCalledWith('/sectors/A%2FB%3FC/instrument-profile', {\n+      signal: undefined,\n+    })\n+  })\n+\n+  it('409는 예외가 아니라 화면이 분기할 상태 값으로 돌려준다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(409, errorEnvelope('INSTRUMENT_PROFILE_NOT_READY', '상품 정보 준비 중')),\n+    )\n+\n+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')\n+\n+    expect(result).toEqual({ status: 'notReady', message: '상품 정보 준비 중' })\n+  })\n+\n+  it('없는 섹터는 다시 물어도 달라지지 않으므로 행동을 주지 않는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(404, errorEnvelope('SECTOR_NOT_FOUND', '섹터를 찾지 못했습니다')),\n+    )\n+\n+    const result = await fetchInstrumentProfile('GONE')\n+\n+    expect(result).toMatchObject({ status: 'failed', retryable: false })\n+  })\n+\n+  it('연결 실패는 다시 눌러 달라질 수 있는 상태로 둔다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(new AxiosError('Network Error'))\n+\n+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')\n+\n+    expect(result).toMatchObject({ status: 'failed', kind: 'network', retryable: true })\n+  })\n+\n+  it('보유 종목 항목이 깨져 있으면 나머지만 그리지 않고 전체를 읽지 못한 것으로 다룬다', async () => {\n+    // 하나를 빼고 나머지만 보이면 합이 맞지 않는 구성이 사실처럼 보인다.\n+    const broken = {\n+      ...profile,\n+      holdingsOverlap: {\n+        asOfCurrentComposition: true,\n+        topHoldings: [{ name: '삼성전자', weight: 0.2431 }],\n+      },\n+    }\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      axiosResponse({ success: true, data: broken, error: null }),\n+    )\n+\n+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')\n+\n+    expect(result).toMatchObject({ status: 'failed', kind: 'unexpected' })\n+  })\n+\n+  it('비중과 거래대금을 숫자로 바꾸지 않고 문자열 그대로 둔다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(profileSuccess))\n+\n+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')\n+\n+    // 소수로 옮겨 두면 표시 단계에서 부동소수 오차가 섞인다.\n+    expect(result).toMatchObject({\n+      status: 'loaded',\n+      profile: { avgDailyValue3m: '1240000000' },\n+    })\n+    if (result.status !== 'loaded') throw new Error('loaded가 아니다')\n+    expect(result.profile.holdingsOverlap.topHoldings[0]?.weight).toBe('0.2431')\n+  })\n+})\n+\n+describe('보유 종목 불변식', () => {\n+  beforeEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  function withHoldings(topHoldings: unknown): ApiSuccessEnvelope<InstrumentProfile> {\n+    return {\n+      success: true,\n+      data: { ...profile, holdingsOverlap: { asOfCurrentComposition: true, topHoldings } },\n+      error: null,\n+    } as ApiSuccessEnvelope<InstrumentProfile>\n+  }\n+\n+  it.each([['빈 문자열', ''], ['숫자가 아닌 값', 'N/A'], ['0', '0'], ['음수', '-0.1'], ['1 초과', '1.5']])(\n+    '비중이 %s이면 그 항목만 0%%로 그리지 않고 전체를 읽지 못한 것으로 다룬다',\n+    async (_label, weight) => {\n+      /*\n+        문자열인지만 보면 통과하는 값들이다. 그대로 두면 그 종목이 0.00%로 그려지고 실제 몫은\n+        '그 외'에 섞여, 합이 맞지 않는 구성이 사실처럼 보인다.\n+      */\n+      vi.spyOn(apiClient, 'get').mockResolvedValue(\n+        axiosResponse(withHoldings([{ name: '삼성전자', weight }])),\n+      )\n+\n+      expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({\n+        status: 'failed',\n+        kind: 'unexpected',\n+      })\n+    },\n+  )\n+\n+  it('보유 종목이 하나도 없으면 받지 않는다', async () => {\n+    // 빈 목록을 받아들이면 화면이 '그 외 100%' 막대 하나를 그려, 모른다는 사실을 자료처럼 보인다.\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(withHoldings([])))\n+\n+    expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({\n+      status: 'failed',\n+      kind: 'unexpected',\n+    })\n+  })\n+\n+  it('범위 안의 비중은 문자열 그대로 통과한다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      axiosResponse(withHoldings([{ name: '삼성전자', weight: '1' }])),\n+    )\n+\n+    const result = await fetchInstrumentProfile('SEMICONDUCTOR')\n+    expect(result.status).toBe('loaded')\n+  })\n+\n+  it('망가진 대응표의 500은 다시 눌러도 달라지지 않는 상태로 둔다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(500, errorEnvelope('SECTOR_MAP_UNUSABLE', '대응표가 망가졌습니다')),\n+    )\n+\n+    expect(await fetchInstrumentProfile('SEMICONDUCTOR')).toMatchObject({\n+      status: 'failed',\n+      code: 'SECTOR_MAP_UNUSABLE',\n+      retryable: false,\n+    })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/sectors.test.ts",
+          "old_path": "frontend/src/api/sectors.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,13 @@\n import { ApiClientError, apiClient, normalizeApiError } from './client'\n import type { ApiEnvelope, ApiErrorCode, ServiceApiErrorCode } from '@/types/api'\n-import type { SectorCatalog, SectorClassification, SectorSummary } from '@/types/sector'\n+import type {\n+  HoldingsOverlap,\n+  InstrumentHolding,\n+  InstrumentProfile,\n+  SectorCatalog,\n+  SectorClassification,\n+  SectorSummary,\n+} from '@/types/sector'\n \n /**\n  * 섹터 목록 조회의 결과다.\n@@ -163,3 +170,166 @@ export async function fetchSectorCatalog(signal?: AbortSignal): Promise<SectorCa\n     return toFailureResult(normalizeApiError(error))\n   }\n }\n+\n+/**\n+ * 대표 상품 정보 조회의 결과다.\n+ *\n+ * 목록 조회와 같은 방식으로 **\"아직 줄 것이 없다\"를 예외가 아니라 상태로** 돌려준다\n+ * (research.md 결정 6). 그래야 화면이 빈 패널 대신 한 문장 안내를 낼 수 있다.\n+ */\n+export type InstrumentProfileResult =\n+  | { status: 'loaded'; profile: InstrumentProfile }\n+  /** 상품 정보를 만들 자료가 아직 없다(409 `INSTRUMENT_PROFILE_NOT_READY`). */\n+  | { status: 'notReady'; message: string }\n+  | {\n+      status: 'failed'\n+      kind: 'api' | 'network' | 'unexpected'\n+      code: ApiErrorCode | null\n+      message: string\n+      /** 다시 눌러 달라질 수 있는가. 판정은 오류 이름을 아는 이 층에서 한다. */\n+      retryable: boolean\n+    }\n+\n+const UNREADABLE_PROFILE_MESSAGE = '대표 상품 정보를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'\n+\n+/**\n+ * 보유 종목 하나를 읽는다.\n+ *\n+ * **문자열인지만 보지 않고 숫자로 읽히는지까지 본다.** `\"N/A\"`나 빈 문자열은 문자열 검사만으로는\n+ * 통과하는데, 그대로 두면 화면이 그 종목을 `0.00%`로 그리고 실제 몫은 '그 외'에 슬그머니 섞인다.\n+ * 합이 맞지 않는 구성이 사실처럼 보이는 것이 바로 이 함수가 막으려는 것이다.\n+ *\n+ * 범위는 백엔드 도메인의 불변식과 같은 `(0, 1]`이다(`InstrumentProfile.Holding`). 0이나 음수가\n+ * 오면 계약 위반이므로 받지 않는다.\n+ */\n+function readHolding(value: unknown): InstrumentHolding | null {\n+  if (!isRecord(value)) return null\n+  if (typeof value.name !== 'string' || typeof value.weight !== 'string') return null\n+\n+  const weight = Number(value.weight)\n+  if (!Number.isFinite(weight) || weight <= 0 || weight > 1) return null\n+\n+  return { name: value.name, weight: value.weight }\n+}\n+\n+function readHoldingsOverlap(value: unknown): HoldingsOverlap | null {\n+  if (!isRecord(value)) return null\n+  if (typeof value.asOfCurrentComposition !== 'boolean') return null\n+  if (!Array.isArray(value.topHoldings)) return null\n+\n+  // 백엔드 도메인이 빈 목록을 금지한다. 빈 목록을 받아들이면 화면이 '그 외 100%' 막대 하나를\n+  // 그려, \"무엇을 담았는지 모른다\"를 자료인 것처럼 보이게 한다.\n+  if (value.topHoldings.length === 0) return null\n+\n+  const topHoldings: InstrumentHolding[] = []\n+  for (const item of value.topHoldings) {\n+    const holding = readHolding(item)\n+    // 항목 하나가 깨졌는데 나머지만 그리면 합이 맞지 않는 구성이 사실처럼 보인다.\n+    if (!holding) return null\n+    topHoldings.push(holding)\n+  }\n+\n+  return { asOfCurrentComposition: value.asOfCurrentComposition, topHoldings }\n+}\n+\n+/**\n+ * 응답을 읽어 타입으로 옮긴다. 필드 하나라도 계약과 다르면 전체를 읽지 못한 것으로 다룬다.\n+ *\n+ * 일부만 그리지 않는 까닭은 이 패널이 \"무엇을 사는 것인가\"를 답하는 자리이기 때문이다. 구성이나\n+ * 출처가 빠진 채로 나머지를 보이면 사용자가 빠진 것을 모르고 판단한다(원칙 VI).\n+ */\n+function readInstrumentProfile(value: unknown): InstrumentProfile | null {\n+  if (!isRecord(value)) return null\n+\n+  const holdingsOverlap = readHoldingsOverlap(value.holdingsOverlap)\n+  if (!holdingsOverlap) return null\n+\n+  if (\n+    typeof value.instrumentId !== 'string' ||\n+    typeof value.name !== 'string' ||\n+    typeof value.benchmarkIndex !== 'string' ||\n+    typeof value.indexMethodologySummary !== 'string' ||\n+    typeof value.listedOn !== 'string' ||\n+    typeof value.manager !== 'string' ||\n+    typeof value.avgDailyValue3m !== 'string' ||\n+    typeof value.sourceAttribution !== 'string' ||\n+    typeof value.survivorshipNote !== 'string' ||\n+    typeof value.datasetId !== 'string' ||\n+    typeof value.dataDeadline !== 'string' ||\n+    typeof value.isSample !== 'boolean'\n+  ) {\n+    return null\n+  }\n+\n+  return {\n+    instrumentId: value.instrumentId,\n+    name: value.name,\n+    benchmarkIndex: value.benchmarkIndex,\n+    indexMethodologySummary: value.indexMethodologySummary,\n+    listedOn: value.listedOn,\n+    manager: value.manager,\n+    holdingsOverlap,\n+    avgDailyValue3m: value.avgDailyValue3m,\n+    sourceAttribution: value.sourceAttribution,\n+    survivorshipNote: value.survivorshipNote,\n+    datasetId: value.datasetId,\n+    dataDeadline: value.dataDeadline,\n+    isSample: value.isSample,\n+  }\n+}\n+\n+/** 서버가 보낸 오류를 화면이 분기할 상태 값으로 옮긴다. */\n+function toProfileFailure(error: ApiClientError): InstrumentProfileResult {\n+  if (error.kind === 'api' && error.is('INSTRUMENT_PROFILE_NOT_READY')) {\n+    return { status: 'notReady', message: error.message }\n+  }\n+\n+  return {\n+    status: 'failed',\n+    kind: error.kind,\n+    code: error.code,\n+    message: error.message,\n+    // 없는 섹터를 다시 물어도 답이 달라지지 않는다. 대응표가 망가진 경우도 같다.\n+    retryable: !error.is('SECTOR_NOT_FOUND') && !error.is('SECTOR_MAP_UNUSABLE'),\n+  }\n+}\n+\n+/**\n+ * 한 섹터의 대표 상품 정보를 받아 온다.\n+ *\n+ * 목록 조회와 **같은 `apiClient` 경로**를 쓴다. 화면이 열릴 때가 아니라 사용자가 펼칠 때 부르므로,\n+ * 목록만 보는 사용자는 이 왕복을 치르지 않는다.\n+ */\n+export async function fetchInstrumentProfile(\n+  code: string,\n+  signal?: AbortSignal,\n+): Promise<InstrumentProfileResult> {\n+  try {\n+    const response = await apiClient.get<ApiEnvelope<InstrumentProfile>>(\n+      `/sectors/${encodeURIComponent(code)}/instrument-profile`,\n+      { signal },\n+    )\n+    const body = response.data\n+\n+    if (!body.success) {\n+      return toProfileFailure(\n+        new ApiClientError('api', body.error.message, { code: body.error.code }),\n+      )\n+    }\n+\n+    const profile = readInstrumentProfile(body.data)\n+    if (!profile) {\n+      return {\n+        status: 'failed',\n+        kind: 'unexpected',\n+        code: null,\n+        message: UNREADABLE_PROFILE_MESSAGE,\n+        retryable: true,\n+      }\n+    }\n+\n+    return { status: 'loaded', profile }\n+  } catch (error) {\n+    return toProfileFailure(normalizeApiError(error))\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/sectors.ts",
+          "old_path": "frontend/src/api/sectors.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,431 @@\n+import { render, screen, waitFor, within } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import type { InstrumentProfileResult, SectorCatalogResult } from '@/api/sectors'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import { SectorSelectionPage } from '@/pages/SectorSelectionPage'\n+import type { InstrumentProfile, SectorCatalog, SectorSummary } from '@/types/sector'\n+\n+/**\n+ * SC-012를 이 검사가 받는다. quickstart에 그 시나리오가 없기 때문이다\n+ * (tasks.md 「SC-012와 SC-013에는 quickstart 시나리오가 없다」).\n+ *\n+ * 패널만 떼어 보지 않고 목록 화면째로 연다. SC-012가 묻는 것이 \"목록의 **모든 항목**에서 열리는가\"와\n+ * \"여는 동안 화면을 떠나지 않는가\"라, 목록과 경로가 함께 있어야 확인할 수 있다.\n+ */\n+\n+const apiMocks = vi.hoisted(() => ({\n+  fetchSectorCatalog: vi.fn(),\n+  fetchInstrumentProfile: vi.fn(),\n+}))\n+\n+vi.mock('@/api/sectors', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/sectors')>('@/api/sectors')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+function sector(\n+  code: string,\n+  name: string,\n+  classification: SectorSummary['classification'],\n+): SectorSummary {\n+  return {\n+    code,\n+    name,\n+    classification,\n+    representativeEtf: {\n+      instrumentId: `${code}.XKRX`,\n+      name: `KODEX ${name}`,\n+      listedOn: '2018-09-12',\n+      benchmarkIndex: `KRX ${name}`,\n+    },\n+  }\n+}\n+\n+const catalog: SectorCatalog = {\n+  mapVersion: 'SEM-2026-09-10-001',\n+  isSample: false,\n+  sectors: [\n+    sector('BATTERY', '2차전지', 'THEME'),\n+    sector('SHIPBUILDING', '조선', 'INDUSTRY'),\n+    sector('SEMICONDUCTOR', '반도체', 'INDUSTRY'),\n+  ],\n+}\n+\n+const loaded: SectorCatalogResult = { status: 'loaded', catalog }\n+\n+const profile: InstrumentProfile = {\n+  instrumentId: '091160.XKRX',\n+  name: 'KODEX 반도체',\n+  benchmarkIndex: 'KRX 반도체',\n+  indexMethodologySummary: 'KRX 반도체 지수를 시가총액 가중으로 따라갑니다.',\n+  listedOn: '2006-06-27',\n+  manager: '삼성자산운용',\n+  holdingsOverlap: {\n+    asOfCurrentComposition: true,\n+    topHoldings: [\n+      { name: '삼성전자', weight: '0.2431' },\n+      { name: 'SK하이닉스', weight: '0.2107' },\n+    ],\n+  },\n+  avgDailyValue3m: '1240000000',\n+  sourceAttribution: '한국거래소 통계정보',\n+  survivorshipNote: '현재 상장되어 있는 상품만 다룹니다.',\n+  datasetId: 'KRX_DAILY_20260907',\n+  dataDeadline: '2026-09-07T09:00:00Z',\n+  isSample: false,\n+}\n+\n+const profileLoaded: InstrumentProfileResult = { status: 'loaded', profile }\n+\n+/** 지금 경로를 화면에 드러내 값으로 확인한다. */\n+function PathProbe() {\n+  const location = useLocation()\n+  return <output data-testid=\"path\">{location.pathname}</output>\n+}\n+\n+async function openPage() {\n+  apiMocks.fetchSectorCatalog.mockResolvedValue(loaded)\n+\n+  const authValue: AuthContextValue = {\n+    status: 'anonymous',\n+    user: null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+\n+  const result = render(\n+    <MemoryRouter initialEntries={['/diagnosis/sectors']}>\n+      <AuthContext.Provider value={authValue}>\n+        <PathProbe />\n+        <Routes>\n+          <Route path=\"/diagnosis/sectors\" element={<SectorSelectionPage />} />\n+        </Routes>\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+\n+  await screen.findAllByRole('listitem')\n+  return result\n+}\n+\n+type User = ReturnType<typeof userEvent.setup>\n+\n+function toggleFor(sectorName: string): HTMLButtonElement {\n+  return screen.getByRole('button', { name: `${sectorName}에 담긴 종목 보기` }) as HTMLButtonElement\n+}\n+\n+function panelFor(sectorCode: string): HTMLElement | null {\n+  const card = document.querySelector(`[data-sector-code=\"${sectorCode}\"]`)\n+  return card?.querySelector('[data-slot=\"profile-panel\"]') ?? null\n+}\n+\n+async function openProfile(user: User, sectorName: string, sectorCode: string) {\n+  await user.click(toggleFor(sectorName))\n+  await waitFor(() => {\n+    expect(panelFor(sectorCode)?.querySelector('[data-slot=\"profile-body\"]')).not.toBeNull()\n+  })\n+}\n+\n+function currentPath(): string {\n+  return screen.getByTestId('path').textContent ?? ''\n+}\n+\n+describe('대표 상품 정보 패널', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+    window.sessionStorage.clear()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue(profileLoaded)\n+  })\n+\n+  afterEach(() => {\n+    window.sessionStorage.clear()\n+  })\n+\n+  it('펼치기 전에는 조회하지 않는다', async () => {\n+    await openPage()\n+\n+    // 목록만 보는 사용자는 이 왕복을 치르지 않는다.\n+    expect(apiMocks.fetchInstrumentProfile).not.toHaveBeenCalled()\n+    expect(panelFor('SEMICONDUCTOR')).toBeNull()\n+  })\n+\n+  it('SC-012. 목록의 모든 항목에서 열린다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+\n+    for (const [name, code] of [\n+      ['반도체', 'SEMICONDUCTOR'],\n+      ['조선', 'SHIPBUILDING'],\n+      ['2차전지', 'BATTERY'],\n+    ] as const) {\n+      await openProfile(user, name, code)\n+      expect(panelFor(code)).not.toBeNull()\n+    }\n+  })\n+\n+  it('SC-012. 여는 동안 화면을 떠나지 않는다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    // 상세를 보려고 다른 화면으로 이동시키지 않는다(FR-010, 원칙 II).\n+    expect(currentPath()).toBe('/diagnosis/sectors')\n+    expect(screen.queryByRole('link', { name: /상품|상세/ })).toBeNull()\n+  })\n+\n+  it('SC-012. 409에서 빈 자리가 아니라 한 문장과 다시 불러오기가 보인다', async () => {\n+    const user = userEvent.setup()\n+    /*\n+      서버 문장과 화면 문장이 겹치지 않는 값을 쓴다. 겹치면 화면이 어느 쪽을 보였는지 이 검사가\n+      구별하지 못해, 둘 중 무엇이 바뀌어도 통과한다.\n+    */\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'notReady',\n+      message: '서버가 보낸 문장',\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+\n+    await user.click(toggleFor('반도체'))\n+\n+    const panel = await waitFor(() => {\n+      const found = panelFor('SEMICONDUCTOR')\n+      expect(found?.textContent).toContain('대표 상품 정보가 아직 준비 중입니다')\n+      return found as HTMLElement\n+    })\n+    expect(within(panel).getByRole('button', { name: '다시 불러오기' })).toBeTruthy()\n+    // 문구는 화면이 정한다(research.md 결정 6). 서버 문장을 그대로 내보내지 않는다.\n+    expect(panel.textContent).not.toContain('서버가 보낸 문장')\n+  })\n+\n+  it('없는 섹터에는 행동을 두지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'failed',\n+      kind: 'api',\n+      code: 'SECTOR_NOT_FOUND',\n+      message: '없는 섹터',\n+      retryable: false,\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+\n+    await user.click(toggleFor('반도체'))\n+\n+    const panel = await waitFor(() => {\n+      const found = panelFor('SEMICONDUCTOR')\n+      expect(found?.textContent).toContain('찾을 수 없습니다')\n+      return found as HTMLElement\n+    })\n+    expect(within(panel).queryByRole('button', { name: '다시 불러오기' })).toBeNull()\n+  })\n+\n+  it('서버 자료가 망가진 경우를 없는 섹터와 같은 문장으로 알리지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'failed',\n+      kind: 'api',\n+      code: 'SECTOR_MAP_UNUSABLE',\n+      message: '대응표가 망가졌습니다',\n+      retryable: false,\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+\n+    await user.click(toggleFor('반도체'))\n+\n+    const panel = await waitFor(() => {\n+      const found = panelFor('SEMICONDUCTOR')\n+      expect(found?.textContent).toContain('서버에 저장된 상품 자료에 문제가 있어')\n+      return found as HTMLElement\n+    })\n+    /*\n+      목록에 멀쩡히 보이는 섹터를 두고 \"찾을 수 없습니다\"라고 하면, 사용자는 자기가 잘못 눌렀다고\n+      읽는다. 둘 다 다시 눌러 달라지지 않지만 해야 할 일이 다르다.\n+    */\n+    expect(panel.textContent).not.toContain('찾을 수 없습니다')\n+    expect(within(panel).queryByRole('button', { name: '다시 불러오기' })).toBeNull()\n+  })\n+\n+  it('보유 구성을 상위 종목과 나머지로 나눠 보인다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    const panel = panelFor('SEMICONDUCTOR') as HTMLElement\n+    const holdings = [...panel.querySelectorAll('[data-slot=\"holding\"]')].map(\n+      (node) => node.textContent ?? '',\n+    )\n+\n+    expect(holdings[0]).toContain('삼성전자')\n+    expect(holdings[0]).toContain('24.31%')\n+    expect(holdings[1]).toContain('21.07%')\n+    // 상위 몇 개만 보이면 사용자는 그것이 전부라고 읽는다. 나머지를 빼놓지 않는다.\n+    expect(holdings.at(-1)).toContain('그 외')\n+    expect(holdings.at(-1)).toContain('54.62%')\n+  })\n+\n+  it('지금 시점의 구성이면 과거를 이 구성으로 설명하지 않는다 (원칙 V)', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    const panel = panelFor('SEMICONDUCTOR') as HTMLElement\n+    const caveat = panel.querySelector('[data-slot=\"composition-caveat\"]')\n+\n+    expect(caveat?.textContent).toMatch(/과거 수익을 이\\s*종목들로 설명할 수 없습니다/)\n+  })\n+\n+  it('과거 구성을 재현한 자료면 그 경고를 붙이지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'loaded',\n+      profile: {\n+        ...profile,\n+        holdingsOverlap: { ...profile.holdingsOverlap, asOfCurrentComposition: false },\n+      },\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    const panel = panelFor('SEMICONDUCTOR') as HTMLElement\n+    expect(panel.querySelector('[data-slot=\"composition-caveat\"]')).toBeNull()\n+  })\n+\n+  it('출처는 목록 화면의 상수가 아니라 응답이 준 값을 쓴다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'loaded',\n+      profile: { ...profile, sourceAttribution: '다른 출처 표기' },\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    const source = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot=\"profile-source\"]')\n+    expect(source?.textContent).toContain('다른 출처 표기')\n+    // 어느 시점까지의 자료인지는 보이되 자료 식별자는 날것으로 두지 않는다(FR-011).\n+    expect(source?.textContent).toContain('2026-09-07')\n+    expect(panelFor('SEMICONDUCTOR')?.textContent).not.toContain('KRX_DAILY_20260907')\n+  })\n+\n+  it('상품 정보의 예시 표시는 자료 버전 기준이며 목록의 예시 표시와 별개다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'loaded',\n+      profile: { ...profile, isSample: true },\n+    } satisfies InstrumentProfileResult)\n+    // 목록 쪽 대응표는 확정된 상태다. 한쪽 값으로 다른 쪽을 짐작하지 않는다.\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    expect(\n+      panelFor('SEMICONDUCTOR')?.querySelector('[data-slot=\"profile-sample\"]'),\n+    ).not.toBeNull()\n+    expect(screen.queryByText(/이 섹터 목록은 아직 확정되지 않은/)).toBeNull()\n+  })\n+\n+  it('거래대금을 자릿수 대신 읽을 수 있는 단위로 보인다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    expect(panelFor('SEMICONDUCTOR')?.textContent).toContain('12.4억 원')\n+  })\n+\n+  it('떨어지는 거래대금에 없는 소수 자리를 붙이지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'loaded',\n+      profile: { ...profile, avgDailyValue3m: '357400000000' },\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    // `3,574억`이지 `3574.0억`이 아니다. 소수 한 자리까지 잰 값처럼 보이면 안 된다.\n+    const text = panelFor('SEMICONDUCTOR')?.textContent ?? ''\n+    expect(text).toContain('3,574억 원')\n+    expect(text).not.toContain('.0억')\n+  })\n+\n+  it('상품 이름 뒤에 조사를 붙이는 문장을 두지 않는다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    /*\n+      받침이 있는지에 따라 은/는이 갈리는데 상품 이름은 서버가 주는 값이라 미리 알 수 없다.\n+      한쪽으로 고정하면 절반은 틀린 문장이 된다. 사실은 조사 없는 목록으로 보인다.\n+    */\n+    const text = panelFor('SEMICONDUCTOR')?.textContent ?? ''\n+    expect(text).not.toContain('KODEX 반도체은')\n+    expect(text).not.toContain('KODEX 반도체는')\n+\n+    const facts = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot=\"profile-facts\"]')\n+    expect(facts?.textContent).toContain('KRX 반도체')\n+    expect(facts?.textContent).toContain('삼성자산운용')\n+  })\n+\n+  it('키보드만으로 열고 닫을 수 있다 (CHK005, CHK033)', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+\n+    const toggle = toggleFor('반도체')\n+    toggle.focus()\n+    await user.keyboard('{Enter}')\n+    await waitFor(() => expect(panelFor('SEMICONDUCTOR')).not.toBeNull())\n+    expect(toggle.getAttribute('aria-expanded')).toBe('true')\n+\n+    await user.keyboard('{Escape}')\n+    expect(panelFor('SEMICONDUCTOR')).toBeNull()\n+    expect(toggle.getAttribute('aria-expanded')).toBe('false')\n+    // 닫은 뒤 초점을 두고 오면 목록의 처음부터 다시 찾아 내려와야 한다.\n+    expect(document.activeElement).toBe(toggle)\n+  })\n+\n+  it('펼침 버튼이 어느 패널을 여는지 보조 기술에 알린다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+\n+    // 접혀 있을 때는 패널이 없다. 없는 id를 가리키면 보조 기술이 그 관계를 버릴 수 있다.\n+    expect(toggleFor('반도체').getAttribute('aria-controls')).toBeNull()\n+\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    const toggle = toggleFor('반도체')\n+    const controlled = toggle.getAttribute('aria-controls')\n+    expect(controlled).toBeTruthy()\n+    expect(panelFor('SEMICONDUCTOR')?.id).toBe(controlled)\n+  })\n+\n+  it('자료 시점을 한국 날짜로 보인다', async () => {\n+    const user = userEvent.setup()\n+    /*\n+      한국 시각으로는 2026-09-07 오전 8시이고 UTC로는 전날이다. 앞 열 글자를 자르면 하루 앞선\n+      날짜가 나온다.\n+    */\n+    apiMocks.fetchInstrumentProfile.mockResolvedValue({\n+      status: 'loaded',\n+      profile: { ...profile, dataDeadline: '2026-09-06T23:00:00Z' },\n+    } satisfies InstrumentProfileResult)\n+    await openPage()\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    const source = panelFor('SEMICONDUCTOR')?.querySelector('[data-slot=\"profile-source\"]')\n+    expect(source?.textContent).toContain('2026-09-07')\n+    expect(source?.textContent).not.toContain('2026-09-06')\n+  })\n+\n+  it('펼치는 것과 섹터를 고르는 것이 서로 섞이지 않는다', async () => {\n+    const user = userEvent.setup()\n+    await openPage()\n+\n+    const checkbox = screen.getByRole('checkbox', { name: '반도체' }) as HTMLInputElement\n+    expect(checkbox.checked).toBe(false)\n+\n+    await openProfile(user, '반도체', 'SEMICONDUCTOR')\n+\n+    // 펼침이 label 안에 있으면 살펴보려다 섹터가 골라진다.\n+    expect(checkbox.checked).toBe(false)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,301 @@\n+import { useEffect, useState } from 'react'\n+import { fetchInstrumentProfile, type InstrumentProfileResult } from '@/api/sectors'\n+import { NotReadyNotice } from '@/components/common/NotReadyNotice'\n+import type { InstrumentHolding, InstrumentProfile } from '@/types/sector'\n+\n+/**\n+ * 대표 ETF가 어떤 상품인지 **같은 화면 그 자리에서** 펼쳐 본다(FR-010).\n+ *\n+ * 상세를 보려고 다른 화면으로 이동시키지 않는다. 섹터를 고르는 도중에 화면을 떠나면 고르던\n+ * 맥락이 끊기고, 돌아왔을 때 어디까지 봤는지 다시 찾아야 한다(원칙 II).\n+ *\n+ * **이 패널의 주인공은 보유 구성이다.** 사용자가 여기서 답을 얻으려는 질문은 \"이 섹터를 고르면\n+ * 실제로 무엇을 사는가\" 하나다. 운용사·기준 지수 같은 사실은 그 답을 뒷받침하는 자리로 두고,\n+ * 상위 보유 종목이 전체에서 차지하는 몫을 먼저 눈에 보이게 한다. 이름과 숫자를 줄지어 놓기만\n+ * 하면 \"삼성전자 하나가 4분의 1\"이라는 사실이 읽히지 않는다.\n+ *\n+ * 값을 가공하지 않는다. 출처 표시도 목록 화면의 상수가 아니라 **응답이 준 값**을 쓴다. 여기서는\n+ * 계약이 `sourceAttribution`을 주기 때문이다.\n+ *\n+ * 화면 문구는 이 작업이 확정하지 않는다. 문장이 놓일 자리와 나타나는 조건까지만 만들었고 문구는\n+ * UI 결정 항목이 정해질 때 채운다.\n+ */\n+\n+type InstrumentProfilePanelProps = {\n+  /** 어느 섹터의 대표 상품을 보는가. */\n+  sectorCode: string\n+  /** 패널을 가리키는 id다. 펼침 버튼이 `aria-controls`로 이 값을 쓴다. */\n+  id: string\n+  className?: string\n+}\n+\n+/**\n+ * 비중 문자열을 0과 1 사이 숫자로 옮긴다. 읽을 수 없으면 0으로 본다.\n+ *\n+ * 막대 너비와 표시 비중이 **같은 값**을 쓰도록 여기 한 번만 옮긴다. 둘이 따로 계산하면 눈에\n+ * 보이는 크기와 적힌 숫자가 갈라진다.\n+ */\n+function toFraction(weight: string): number {\n+  const value = Number(weight)\n+  if (!Number.isFinite(value) || value < 0) return 0\n+  return Math.min(value, 1)\n+}\n+\n+/**\n+ * 거래대금을 사람이 읽는 단위로 줄여 보인다.\n+ *\n+ * `357400000000`처럼 0이 열 개 넘게 붙은 숫자는 자릿수를 세어야 크기를 알 수 있다. 억과 조로\n+ * 줄이고 천 단위를 끊어 준다.\n+ *\n+ * **떨어지는 값에 `.0`을 붙이지 않는다.** `3574.0억`은 소수 한 자리까지 잰 값처럼 보이지만\n+ * 실제로는 그냥 3574억이다. 없는 정밀도를 흉내 내지 않는다.\n+ */\n+function formatWon(amount: string): string | null {\n+  const value = Number(amount)\n+  if (!Number.isFinite(value)) return null\n+\n+  const trillion = 1_000_000_000_000\n+  const hundredMillion = 100_000_000\n+\n+  const scaled = (unit: number, suffix: string) => {\n+    // 소수 한 자리까지 남기되 떨어지면 그 자리를 아예 쓰지 않는다. 천 단위는 끊어 준다.\n+    const text = (value / unit).toLocaleString('ko-KR', { maximumFractionDigits: 1 })\n+    return `${text}${suffix} 원`\n+  }\n+\n+  if (Math.abs(value) >= trillion) return scaled(trillion, '조')\n+  if (Math.abs(value) >= hundredMillion) return scaled(hundredMillion, '억')\n+  return `${Math.round(value).toLocaleString('ko-KR')}원`\n+}\n+\n+/**\n+ * ISO 시각을 한국 날짜로 옮긴다. 시각까지 보일 만큼 정밀한 자료가 아니다.\n+ *\n+ * **앞 열 글자를 자르지 않는다.** 그렇게 하면 UTC 날짜가 나온다. 지금은 수집이 한국 시각\n+ * 15:30에 찍혀 두 날짜가 같지만, 마감이 09:00 이전으로 바뀌면 사용자에게 하루 앞선 날짜를\n+ * 보이게 된다. 이 저장소의 다른 화면도 시간대를 명시해 옮긴다.\n+ */\n+function toDateText(isoInstant: string): string {\n+  const at = new Date(isoInstant)\n+  if (Number.isNaN(at.getTime())) return isoInstant\n+\n+  return new Intl.DateTimeFormat('ko-KR', {\n+    timeZone: 'Asia/Seoul',\n+    year: 'numeric',\n+    month: '2-digit',\n+    day: '2-digit',\n+  })\n+    .format(at)\n+    .replace(/\\.\\s*$/, '')\n+    .replace(/\\.\\s*/g, '-')\n+}\n+\n+/**\n+ * 실패한 까닭을 화면 문장으로 옮긴다.\n+ *\n+ * 화면 문구는 이 작업이 확정하지 않는다. 갈래와 나타나는 조건까지가 이 함수의 몫이다.\n+ */\n+function failureMessage(result: Extract<InstrumentProfileResult, { status: 'failed' }>): string {\n+  if (result.retryable) return '대표 상품 정보를 불러오지 못했습니다.'\n+  if (result.code === 'SECTOR_NOT_FOUND') return '이 섹터의 대표 상품 정보를 찾을 수 없습니다.'\n+\n+  // 서버에 저장된 자료를 고쳐야 풀린다. 사용자가 다시 눌러서 될 일이 아니다.\n+  return '서버에 저장된 상품 자료에 문제가 있어 지금은 보여드릴 수 없습니다.'\n+}\n+\n+type CompositionSegment = {\n+  key: string\n+  label: string\n+  /** 0과 1 사이다. 막대 너비와 표시 비중이 같은 값을 쓴다. */\n+  fraction: number\n+  /** 상위 종목이 아니라 \"그 외\"인가. */\n+  isRest: boolean\n+}\n+\n+/**\n+ * 상위 보유 종목과 나머지를 한 줄로 잇는다.\n+ *\n+ * **나머지를 빼놓지 않는다.** 상위 몇 개만 보이면 사용자는 그것이 전부라고 읽는다. 합이 1을\n+ * 넘는 자료가 오면 나머지를 만들지 않는다. 없는 여유를 지어내는 것보다 그 자리를 비우는 편이 낫다.\n+ */\n+function buildComposition(holdings: readonly InstrumentHolding[]): CompositionSegment[] {\n+  const segments: CompositionSegment[] = holdings.map((holding, index) => ({\n+    key: `${holding.name}-${index}`,\n+    label: holding.name,\n+    fraction: toFraction(holding.weight),\n+    isRest: false,\n+  }))\n+\n+  const covered = segments.reduce((sum, segment) => sum + segment.fraction, 0)\n+  const rest = 1 - covered\n+  if (rest > 0.0001) {\n+    segments.push({ key: '__rest__', label: '그 외', fraction: rest, isRest: true })\n+  }\n+\n+  return segments\n+}\n+\n+/** 펼친 뒤 실제로 보이는 내용이다. */\n+function ProfileBody({ profile }: { profile: InstrumentProfile }) {\n+  const composition = buildComposition(profile.holdingsOverlap.topHoldings)\n+\n+  return (\n+    <div data-slot=\"profile-body\">\n+      {/*\n+        상품 이름을 여기서 되풀이하지 않는다. 카드 머리가 이미 보이고 있고, 아래 방법론 문단이\n+        기준 지수를 다시 설명한다.\n+\n+        **이름 뒤에 조사를 붙이는 문장을 두지 않는다.** 받침이 있는지에 따라 은/는과 이/가가\n+        갈리는데, 상품 이름은 서버가 주는 값이라 어느 쪽이 맞는지 미리 알 수 없다. 한쪽으로\n+        고정하면 절반은 틀린 문장이 된다. 사실은 아래 목록으로 옮겨 조사 없이 보인다.\n+      */}\n+\n+      {/*\n+        구성 막대와 아래 목록은 **같은 값**을 쓴다. 막대는 크기를 한눈에 보이고 목록은 정확한\n+        숫자를 준다. 막대만 두면 몇 퍼센트인지 알 수 없고, 목록만 두면 한 종목이 얼마나 큰지가\n+        읽히지 않는다. 막대는 목록이 이미 읽어 주는 값이라 보조 기술에서 숨긴다.\n+      */}\n+      {composition.length > 0 ? (\n+        <>\n+          <span data-slot=\"composition-bar\" aria-hidden=\"true\">\n+            {composition.map((segment) => (\n+              <span\n+                key={segment.key}\n+                data-slot=\"composition-segment\"\n+                data-rest={segment.isRest}\n+                style={{ width: `${segment.fraction * 100}%` }}\n+              />\n+            ))}\n+          </span>\n+\n+          <ul data-slot=\"holdings\" role=\"list\">\n+            {composition.map((segment) => (\n+              <li key={segment.key} data-slot=\"holding\" data-rest={segment.isRest}>\n+                <span data-slot=\"holding-name\">{segment.label}</span>\n+                <span data-slot=\"holding-weight\">{(segment.fraction * 100).toFixed(2)}%</span>\n+              </li>\n+            ))}\n+          </ul>\n+        </>\n+      ) : null}\n+\n+      {/*\n+        구성이 지금 시점의 것이면 과거를 이 구성으로 설명하지 않는다. 이 문장이 없으면 사용자는\n+        과거 성과가 이 종목들로 만들어졌다고 읽는다(원칙 V).\n+      */}\n+      {profile.holdingsOverlap.asOfCurrentComposition ? (\n+        <p data-slot=\"composition-caveat\">\n+          지금 시점의 보유 구성입니다. 과거 어느 날의 구성을 되살린 것이 아니므로, 과거 수익을 이\n+          종목들로 설명할 수 없습니다.\n+        </p>\n+      ) : null}\n+\n+      <dl data-slot=\"profile-facts\">\n+        <div>\n+          <dt>기준 지수</dt>\n+          <dd>{profile.benchmarkIndex}</dd>\n+        </div>\n+        <div>\n+          <dt>운용사</dt>\n+          <dd>{profile.manager}</dd>\n+        </div>\n+        <div>\n+          <dt>상장일</dt>\n+          <dd>{profile.listedOn}</dd>\n+        </div>\n+        <div>\n+          <dt>3개월 일평균 거래대금</dt>\n+          <dd>{formatWon(profile.avgDailyValue3m) ?? '확인하지 못했습니다'}</dd>\n+        </div>\n+      </dl>\n+\n+      <p data-slot=\"profile-methodology\">{profile.indexMethodologySummary}</p>\n+\n+      {/*\n+        이 상품 정보를 만든 **자료 버전**이 예시라는 뜻이다. 섹터 목록의 예시 표시(대응표 기준)와\n+        다른 것을 가리키므로 한 문장으로 합치지 않는다.\n+      */}\n+      {profile.isSample ? (\n+        <p data-slot=\"profile-sample\">\n+          이 상품 정보는 아직 확정되지 않은 예시 자료로 채워져 있습니다.\n+        </p>\n+      ) : null}\n+\n+      <p data-slot=\"profile-survivorship\">{profile.survivorshipNote}</p>\n+\n+      {/*\n+        자료 식별자는 화면에 날것으로 두지 않는다(FR-011). 사용자가 알아야 하는 것은 \"언제까지의\n+        자료인가\"이지 그 자료에 붙은 이름이 아니다.\n+      */}\n+      <p data-slot=\"profile-source\">\n+        출처: {profile.sourceAttribution} · {toDateText(profile.dataDeadline)}까지의 자료\n+      </p>\n+    </div>\n+  )\n+}\n+\n+export function InstrumentProfilePanel({\n+  sectorCode,\n+  id,\n+  className,\n+}: InstrumentProfilePanelProps) {\n+  // null은 아직 결과가 없는 상태, 곧 불러오는 중이다. 목록 화면이 쓰는 표현과 같다.\n+  const [result, setResult] = useState<InstrumentProfileResult | null>(null)\n+  const [reloadCount, setReloadCount] = useState(0)\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    let isCurrent = true\n+\n+    setResult(null)\n+    void fetchInstrumentProfile(sectorCode, controller.signal).then((next) => {\n+      if (isCurrent) setResult(next)\n+    })\n+\n+    return () => {\n+      isCurrent = false\n+      controller.abort()\n+    }\n+  }, [sectorCode, reloadCount])\n+\n+  const reload = () => setReloadCount((count) => count + 1)\n+\n+  return (\n+    <div className={className} id={id} data-slot=\"profile-panel\">\n+      {result === null ? (\n+        <p data-slot=\"profile-loading\" role=\"status\">\n+          대표 상품 정보를 불러오는 중입니다.\n+        </p>\n+      ) : null}\n+\n+      {/*\n+        자료가 아직 없는 상태다. **빈 패널을 보이지 않는다.** 빈 자리는 사용자에게 고장으로\n+        읽힌다. 파이프라인이 자료를 채우면 달라지는 상태라 다시 불러오기를 준다.\n+      */}\n+      {result?.status === 'notReady' ? (\n+        <NotReadyNotice\n+          message=\"대표 상품 정보가 아직 준비 중입니다.\"\n+          action={{ label: '다시 불러오기', onAction: reload }}\n+        />\n+      ) : null}\n+\n+      {/*\n+        실패는 세 갈래다. 다시 눌러 달라질 수 있으면 행동을 주고, 달라지지 않는 두 경우는 행동\n+        없이 문장만 둔다(research.md 결정 6).\n+\n+        **없는 섹터와 망가진 자료를 같은 문장으로 알리지 않는다.** 둘 다 다시 눌러도 달라지지\n+        않지만 사용자가 해야 할 일이 다르다. 목록에 멀쩡히 보이는 섹터를 펼쳤는데 \"찾을 수\n+        없습니다\"라고 하면, 실제로는 서버 자료가 망가진 것인데 사용자는 자기가 잘못 눌렀다고\n+        읽는다. 이 엔드포인트는 저장된 대응표가 불변식을 어길 때 500을 낸다.\n+      */}\n+      {result?.status === 'failed' ? (\n+        <NotReadyNotice\n+          message={failureMessage(result)}\n+          action={result.retryable ? { label: '다시 불러오기', onAction: reload } : undefined}\n+        />\n+      ) : null}\n+\n+      {result?.status === 'loaded' ? <ProfileBody profile={result.profile} /> : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/InstrumentProfilePanel.tsx",
+          "old_path": "frontend/src/components/diagnosis/InstrumentProfilePanel.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,15 +76,21 @@ describe('SectorListItem', () => {\n   })\n \n   it('섹터 이름으로 읽히는 체크박스 하나로 고른다', async () => {\n-    // M2는 이 자리에 \"고르는 수단을 두지 않는다\"를 고정해 두었다. M3이 체크박스를 더하면서\n-    // 그 검사를 함께 뒤집는다. 대표 상품 정보 펼침 버튼은 아직 없으므로 버튼은 여전히 0개다.\n+    /*\n+      M2는 이 자리에 \"고르는 수단을 두지 않는다\"를 고정해 두었고 M3이 체크박스를 더하면서 그\n+      검사를 뒤집었다. M5가 대표 상품 정보 펼침 버튼을 더하므로 버튼이 0개라는 부분도 함께\n+      고친다. 지키려는 것은 **고르는 수단이 하나뿐**이라는 사실이지 버튼이 없다는 사실이 아니다.\n+    */\n     const onSelectedChange = vi.fn()\n     renderItem(semiconductor, { onSelectedChange })\n     const item = screen.getByRole('listitem')\n \n     const checkbox = within(item).getByRole('checkbox', { name: '반도체' })\n     expect(within(item).queryAllByRole('checkbox')).toHaveLength(1)\n-    expect(within(item).queryAllByRole('button')).toHaveLength(0)\n+\n+    // 버튼은 펼침 하나뿐이고, 그것은 고르는 수단이 아니다.\n+    const buttons = within(item).queryAllByRole('button')\n+    expect(buttons.map((button) => button.textContent)).toEqual(['담긴 종목 보기'])\n \n     await userEvent.click(checkbox)\n     expect(onSelectedChange).toHaveBeenCalledWith(true)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorListItem.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorListItem.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n-import { useId } from 'react'\n+import { useId, useRef, useState } from 'react'\n+import { InstrumentProfilePanel } from './InstrumentProfilePanel'\n import { WeightInput } from './WeightInput'\n import type { SectorClassification, SectorSummary } from '@/types/sector'\n \n@@ -51,6 +52,16 @@ export function SectorListItem({\n   className,\n }: SectorListItemProps) {\n   const nameId = useId()\n+  const panelId = useId()\n+\n+  /**\n+   * 대표 상품 정보를 펼쳤는가.\n+   *\n+   * 고른 섹터에만 두지 않는다. 고르기 **전에** 무엇을 사는지 보고 정하는 것이 이 패널의 목적이라,\n+   * 고른 뒤에만 열 수 있으면 순서가 뒤집힌다(FR-010).\n+   */\n+  const [profileOpen, setProfileOpen] = useState(false)\n+  const toggleRef = useRef<HTMLButtonElement>(null)\n \n   return (\n     <li className={className} data-sector-code={sector.code} data-selected={selected}>\n@@ -83,6 +94,51 @@ export function SectorListItem({\n           onCommit={weight.onCommit}\n         />\n       ) : null}\n+\n+      {/*\n+        대표 상품 정보를 펼치는 자리다. 이것도 `label` 밖이다 — 안에 두면 펼치려다 섹터가 고쳐진다.\n+\n+        `button` 하나로 여닫으므로 Enter와 Space가 그대로 동작한다. 직접 만든 펼침 장치를 쓰면\n+        키보드 조작을 손으로 다시 구현해야 하고, 그러다 빠뜨린 부분만큼 못 쓰는 사람이 생긴다.\n+        `aria-expanded`와 `aria-controls`가 지금 상태와 여는 대상을 보조 기술에 알린다.\n+      */}\n+      <div\n+        data-slot=\"profile\"\n+        onKeyDown={(event) => {\n+          // 펼친 안쪽에서 Esc로 닫고 초점을 버튼으로 돌려준다. 초점을 두고 오면 키보드만 쓰는\n+          // 사용자가 목록의 처음부터 다시 찾아 내려와야 한다.\n+          if (event.key !== 'Escape' || !profileOpen) return\n+          event.stopPropagation()\n+          setProfileOpen(false)\n+          toggleRef.current?.focus()\n+        }}\n+      >\n+        {/*\n+          이름을 카드에 이미 한 번 적었으므로 버튼에서 되풀이하지 않는다. 대신 보조 기술에는\n+          어느 섹터의 것인지 실어 준다 — 항목마다 버튼 이름이 똑같으면 목록에서 셋째 버튼이\n+          무엇을 여는 것인지 소리만 듣고는 알 수 없다.\n+        */}\n+        <button\n+          ref={toggleRef}\n+          type=\"button\"\n+          data-slot=\"profile-toggle\"\n+          aria-expanded={profileOpen}\n+          /*\n+            접혀 있을 때는 패널이 아예 없으므로 가리키지 않는다. 없는 id를 가리키면 보조 기술에\n+            따라 그 관계를 통째로 버리는 것이 있어, 펼친 뒤에도 무엇을 여는 버튼인지 전해지지\n+            않는다.\n+          */\n+          aria-controls={profileOpen ? panelId : undefined}\n+          aria-label={`${sector.name}에 담긴 종목 보기`}\n+          onClick={() => setProfileOpen((open) => !open)}\n+        >\n+          담긴 종목 보기\n+        </button>\n+\n+        {profileOpen ? (\n+          <InstrumentProfilePanel sectorCode={sector.code} id={panelId} />\n+        ) : null}\n+      </div>\n     </li>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorListItem.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorListItem.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -275,6 +275,222 @@\n   line-height: 1.5;\n }\n \n+/* 대표 상품 정보를 펼치는 층이다. 카드 안에서 한 단 아래로 내려간다. */\n+.item [data-slot='profile'] {\n+  margin: 0 16px;\n+  padding-bottom: 14px;\n+  border-top: 1px dashed var(--thorp-line);\n+}\n+\n+.item [data-slot='profile-toggle'] {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 6px;\n+  margin-top: 10px;\n+  padding: 5px 0;\n+  border: 0;\n+  background: none;\n+  color: var(--thorp-copy);\n+  font: inherit;\n+  font-size: 0.8rem;\n+  text-decoration: underline;\n+  text-decoration-color: var(--thorp-line-strong);\n+  text-underline-offset: 4px;\n+  cursor: pointer;\n+}\n+\n+.item [data-slot='profile-toggle']:hover {\n+  color: var(--thorp-foreground);\n+  text-decoration-color: currentColor;\n+}\n+\n+/* 펼쳤는지를 글자 말고도 드러낸다. 삼각형이 돌아가는 방향이 곧 상태다. */\n+.item [data-slot='profile-toggle']::before {\n+  content: '';\n+  width: 0;\n+  height: 0;\n+  border-top: 4px solid transparent;\n+  border-bottom: 4px solid transparent;\n+  border-left: 5px solid currentColor;\n+  transition: transform 0.15s ease;\n+}\n+\n+.item [data-slot='profile-toggle'][aria-expanded='true']::before {\n+  transform: rotate(90deg);\n+}\n+\n+.item [data-slot='profile-panel'] {\n+  padding: 12px 0 2px;\n+}\n+\n+.item [data-slot='profile-loading'] {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.84rem;\n+  line-height: 1.7;\n+}\n+\n+/*\n+  이 패널에서 가장 먼저 읽혀야 하는 것이 구성이다. 상위 종목이 전체에서 차지하는 몫을 한 줄로\n+  이어 붙여, 이름과 숫자를 읽기 전에 크기가 먼저 보이게 한다.\n+*/\n+.item [data-slot='composition-bar'] {\n+  display: flex;\n+  width: 100%;\n+  height: 10px;\n+  margin: 12px 0 10px;\n+  overflow: hidden;\n+  border-radius: 3px;\n+  background: var(--thorp-surface-muted);\n+}\n+\n+.item [data-slot='composition-segment'] {\n+  flex: none;\n+  border-right: 1px solid var(--thorp-surface);\n+  background: var(--thorp-accent);\n+}\n+\n+/* 뒤로 갈수록 옅어져 순서가 색으로도 읽힌다. */\n+.item [data-slot='composition-segment']:nth-child(2) {\n+  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 28%);\n+}\n+\n+.item [data-slot='composition-segment']:nth-child(3) {\n+  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 48%);\n+}\n+\n+.item [data-slot='composition-segment']:nth-child(n + 4) {\n+  background: color-mix(in oklch, var(--thorp-accent), var(--thorp-surface) 64%);\n+}\n+\n+/* '그 외'는 상위 종목과 성격이 달라 강조 색을 쓰지 않는다. */\n+.item [data-slot='composition-segment'][data-rest='true'] {\n+  background: var(--thorp-line-strong);\n+}\n+\n+.item [data-slot='holdings'] {\n+  display: grid;\n+  gap: 2px;\n+  margin: 0 0 12px;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+/*\n+  이름과 비중 사이를 점선으로 이어 눈이 줄을 건너뛰지 않게 한다. 숫자는 등폭 자리를 잡아\n+  자릿수가 달라도 소수점이 한 줄로 선다.\n+*/\n+.item [data-slot='holding'] {\n+  display: grid;\n+  grid-template-columns: auto 1fr auto;\n+  align-items: baseline;\n+  gap: 8px;\n+  font-size: 0.82rem;\n+}\n+\n+.item [data-slot='holding']::after {\n+  content: '';\n+  grid-column: 2;\n+  border-bottom: 1px dotted var(--thorp-line);\n+  transform: translateY(-3px);\n+}\n+\n+.item [data-slot='holding'][data-rest='true'] {\n+  color: var(--thorp-muted);\n+}\n+\n+.item [data-slot='holding-name'] {\n+  grid-column: 1;\n+  overflow-wrap: anywhere;\n+}\n+\n+.item [data-slot='holding-weight'] {\n+  grid-column: 3;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+/* 결과의 뜻을 바꾸는 사실이라 상세 안에 접어 두지 않고 구성 바로 아래에 둔다. */\n+.item [data-slot='composition-caveat'] {\n+  margin: 0 0 12px;\n+  padding-left: 10px;\n+  border-left: 2px solid var(--thorp-warning);\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.6;\n+}\n+\n+.item [data-slot='profile-facts'] {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 6px 28px;\n+  margin: 0 0 12px;\n+}\n+\n+.item [data-slot='profile-facts'] dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+}\n+\n+.item [data-slot='profile-facts'] dd {\n+  margin: 2px 0 0;\n+  font-size: 0.86rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.item [data-slot='profile-methodology'],\n+.item [data-slot='profile-survivorship'],\n+.item [data-slot='profile-sample'] {\n+  margin: 0 0 8px;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.7;\n+}\n+\n+.item [data-slot='profile-sample'] {\n+  padding: 8px 12px;\n+  border: 1px dashed var(--thorp-line);\n+  border-radius: 8px;\n+}\n+\n+.item [data-slot='profile-source'] {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+}\n+\n+/* 패널 안의 '아직 줄 것이 없다' 표시는 카드 안이라 목록 화면의 것보다 여백을 줄인다. */\n+.item [data-slot='profile-panel'] > div:not([data-slot='profile-body']) {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n+  gap: 10px;\n+  padding: 14px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 10px;\n+}\n+\n+.item [data-slot='profile-panel'] > div:not([data-slot='profile-body']) p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.82rem;\n+  line-height: 1.6;\n+}\n+\n+.item [data-slot='profile-panel'] > div:not([data-slot='profile-body']) button {\n+  padding: 6px 14px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 999px;\n+  background: transparent;\n+  color: inherit;\n+  font: inherit;\n+  font-size: 0.8rem;\n+  cursor: pointer;\n+}\n+\n+.item [data-slot='profile-panel'] > div:not([data-slot='profile-body']) button:hover {\n+  border-color: currentColor;\n+}\n+\n /* 합계와 남은 비중이 놓이는 자리다. 별도 알림 영역으로 빼지 않는다. */\n .total {\n   display: grid;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -441,9 +441,15 @@ describe('섹터 선택 화면의 비중 규칙', () => {\n \n     /*\n       값을 바꾸는 수단은 사용자가 스스로 누르는 '동일하게 나누기' 하나뿐이다. 누르기 전에는 값이\n-      바뀌지 않는다. M4가 더한 '전략 고르러 가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다.\n+      바뀌지 않는다.\n+\n+      목록 항목 안의 버튼은 세지 않는다. M5의 대표 상품 정보 펼침은 항목마다 하나씩 있고 비중을\n+      건드리지 않으므로, 그것까지 세면 이 검사가 무엇을 지키는지 흐려진다. M4가 더한 '전략 고르러\n+      가기'는 값을 손대지 않고 넘기기만 하므로 함께 둔다.\n     */\n-    const buttons = within(screen.getByRole('main')).getAllByRole('button')\n+    const buttons = within(screen.getByRole('main'))\n+      .getAllByRole('button')\n+      .filter((button) => button.closest('[data-slot=\"profile\"]') === null)\n     expect(buttons.map((button) => button.textContent)).toEqual([\n       '동일하게 나누기',\n       '전략 고르러 가기',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionWeights.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionWeights.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,6 +37,61 @@ export type SectorCatalog = {\n   sectors: SectorSummary[]\n }\n \n+/**\n+ * 대표 ETF가 담고 있는 종목 하나다.\n+ *\n+ * `weight`가 숫자가 아니라 문자열인 까닭은 계약이 그렇게 주기 때문이다. `0.2431`처럼 소수로\n+ * 받아 두면 표시 단계에서 부동소수 오차가 섞인다. 화면이 보일 때만 옮긴다.\n+ */\n+export type InstrumentHolding = {\n+  name: string\n+  /** `\"0.2431\"` 같은 소수 문자열이다. 1이 100%다. */\n+  weight: string\n+}\n+\n+/** 대표 ETF의 보유 종목 구성이다. */\n+export type HoldingsOverlap = {\n+  /**\n+   * 이 구성이 **지금 시점**의 것인가.\n+   *\n+   * true면 화면은 당시 구성을 재현했다고 표현하지 않는다. 과거 어느 날의 구성이 아니라 오늘의\n+   * 구성을 보고 있는 것이므로, 과거 성과를 이 구성으로 설명하면 사실과 다른 말이 된다\n+   * (원칙 V, 001 계약 FR-015).\n+   */\n+  asOfCurrentComposition: boolean\n+  topHoldings: InstrumentHolding[]\n+}\n+\n+/**\n+ * `GET /sectors/{code}/instrument-profile` 응답을 camelCase로 1:1 옮긴 타입이다.\n+ *\n+ * **`isSample`은 자료 버전 기준이다.** `GET /sectors`의 `isSample`(대응표 기준)과 다른 것을\n+ * 가리킨다. 대표 ETF는 확정됐지만 상품 정보를 만든 자료가 아직 예시인 상태가 있을 수 있으므로,\n+ * 한쪽 값으로 다른 쪽을 짐작하지 않는다(001 계약).\n+ */\n+export type InstrumentProfile = {\n+  instrumentId: string\n+  name: string\n+  benchmarkIndex: string\n+  /** 이 상품이 무엇을 어떻게 담는지 한 문단으로 적은 설명이다. */\n+  indexMethodologySummary: string\n+  /** ISO 날짜 문자열(`YYYY-MM-DD`). */\n+  listedOn: string\n+  manager: string\n+  holdingsOverlap: HoldingsOverlap\n+  /** 최근 3개월 일평균 거래대금(원). 자릿수가 커 문자열로 온다. */\n+  avgDailyValue3m: string\n+  /** 한국거래소 자료를 쓴다는 표시다. 목록 화면의 상수와 달리 여기서는 계약이 값을 준다. */\n+  sourceAttribution: string\n+  /** 상장폐지된 상품이 빠져 있다는 사실을 알리는 한 문장이다. */\n+  survivorshipNote: string\n+  /** 자료 버전 식별자다. 화면에 날것으로 보이지 않는다(FR-011). */\n+  datasetId: string\n+  /** ISO 시각 문자열. 이 자료가 어느 시점까지를 담는지다. */\n+  dataDeadline: string\n+  isSample: boolean\n+}\n+\n /**\n  * 섹터 도메인이 내보내는 서버 오류 신호 이름이다.\n  *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/sector.ts",
+          "old_path": "frontend/src/types/sector.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -285,12 +285,12 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n \n **Independent Test**: 목록의 모든 항목에서 대표 상품 정보를 열 수 있는지, 여는 동안 화면을 떠나지 않는지, `409 INSTRUMENT_PROFILE_NOT_READY`에서 빈 패널이 아니라 한 문장이 보이는지 확인한다.\n \n-- [ ] T021 [M5] [US1] [FE] 대표 상품 정보 조회 (`frontend/src/api/sectors.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급\n+- [X] T021 [M5] [US1] [FE] 대표 상품 정보 조회 (`frontend/src/api/sectors.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급\n   - `GET /sectors/{code}/instrument-profile`을 T007과 같은 `apiClient` 경로로 더한다\n   - `409 INSTRUMENT_PROFILE_NOT_READY`를 예외가 아니라 화면이 분기할 수 있는 상태 값으로 돌려준다 (research.md 결정 6)\n   - 응답의 `isSample`은 **자료 버전 기준**이며 `GET /sectors`의 `isSample`(대응표 기준)과 다른 것을 가리킨다. 한쪽 값으로 다른 쪽을 짐작하지 않는다 (data-model.md)\n   - M2가 만든 두 파일을 다시 고치므로 M2와 병행하지 않는다\n-- [ ] T022 [M5] [US1] [FE] 대표 상품 정보 패널과 목록 연결 (`frontend/src/components/diagnosis/InstrumentProfilePanel.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx`) · Jira 미발급\n+- [X] T022 [M5] [US1] [FE] 대표 상품 정보 패널과 목록 연결 (`frontend/src/components/diagnosis/InstrumentProfilePanel.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/InstrumentProfilePanel.test.tsx`) · Jira 미발급\n   - **같은 화면에서 펼친다.** 상세를 보려고 다른 화면으로 이동시키지 않는다 (FR-010, 원칙 II)\n   - 값을 가공하지 않고 그대로 표시한다. `sourceAttribution`도 응답 값을 쓴다(목록 화면의 상수와 달리 여기서는 계약이 값을 준다)\n   - `holdingsOverlap.asOfCurrentComposition`이 true면 당시 구성을 재현했다고 표현하지 않는다 (원칙 V, 001 계약)\n@@ -298,7 +298,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n   - 여는 방법·닫는 방법을 키보드로도 쓸 수 있게 한다 (`checklists/ux.md` CHK005·CHK033)\n   - **테스트가 SC-012를 받는다.** quickstart에 SC-012 시나리오가 없기 때문이다. 목록의 모든 항목에서 열리는지, 여는 동안 경로가 `/diagnosis/sectors`에서 바뀌지 않는지, 409에서 빈 자리가 아니라 한 문장이 보이는지 확인한다\n   - 선행: T021, T015(같은 `SectorListItem.tsx`를 고친다)\n-- [ ] T023 [M5] [FE] 전체 흐름 검증 (`specs/002-sector-weight-selection/quickstart.md`의 시나리오 0~11 수행, 코드 수정은 발견된 어긋남에 한한다) · Jira 미발급\n+- [X] T023 [M5] [FE] 전체 흐름 검증 (`specs/002-sector-weight-selection/quickstart.md`의 시나리오 0~11 수행, 코드 수정은 발견된 어긋남에 한한다) · Jira 미발급\n   - 각 묶음은 자기 몫의 시나리오를 이미 그 묶음 안에서 돌렸다. 여기서는 모두 병합된 상태로 처음부터 끝까지 한 번 더 밟는다\n   - **시나리오 0을 먼저 한다.** `npm test`의 수집된 파일 수와 `skipped` 수를 보고, `src/diagnosis/`의 테스트가 목록에 있는지 확인한다. T005의 가드가 통과하는지도 함께 본다\n   - `npm run lint && npm run build`와 `npm test`를 모두 돌린다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/tasks.md",
+          "old_path": "specs/002-sector-weight-selection/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2825416": []
+  }
+}

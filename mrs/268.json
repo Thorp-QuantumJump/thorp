@@ -1,0 +1,796 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954234,
+    "iid": 268,
+    "project_id": 1444456,
+    "title": "feat(be): 사례 연결 워커 소비자와 엔트리포인트",
+    "description": "## 작업 내용 요약\n\n`regime-link.jobs`를 소비해 구간 계산을 부르고 `STARTED`·`FINISHED`를 발행하는 워커를 넣는다. 백테스트 워커와 다른 프로세스이며 개발용 compose에 두 번째 소비자로 등록했다.\n\n> 이 MR은 `feat(be)/364-regime-link-slicer`를 기반으로 한다. 364가 먼저 머지되어야 한다.\n\n## 관련 티켓\n\nS15P21E205-365\n\n## 주요 변경 사항\n\n- `consumer.py`에 `RegimeLinkJobConsumer`. 헤더 `schemaVersion` 확인 → 파싱 → `STARTED` → 종가 적재 → `slice_window` → `FINISHED` → ACK 순서다. pika를 import하지 않고 Protocol로만 말하므로 브로커 없이 전체 흐름을 시험한다.\n- `rabbitmq.py`에 pika 구현(prefetch 1, confirm·재시도, ACK/reject 매핑). **토폴로지를 선언하지 않고** 큐가 없으면 만들지 않고 종료한다.\n- `market_data.py`(신규)로 `daily_price.close`와 벤치마크 지수 종가를 구간만 읽어 넘긴다. 없는 날은 채우지 않는다.\n- `regime_link_main.py` 엔트리포인트. `RABBITMQ_URL`·`MARKET_DATA_URL`이 없으면 시작하지 않는다.\n- `docker-compose.dev.yml`에 `worker-regime-link` 서비스. 같은 이미지에 실행 명령만 다르다.\n\n## 테스트\n\n```\ncd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest\nAll checks passed!\n516 passed, 0 skipped\n```\n\n백테스트 소비자 불변 대조:\n```\npytest tests/test_consumer.py tests/test_rabbitmq.py -q\n51 passed  (변경 전과 같다)\n```\n\n`docker compose -f docker-compose.dev.yml --profile app config`로 서비스 정의와 환경변수 해석을 확인했다. 실제 기동은 하지 않았다.\n\n## 리뷰 포인트\n\n- **헤더 `schemaVersion`이 없으면 계약 오류로 보고 requeue 없이 DLQ로 보낸다.** 011은 본문에 버전 자리가 없어 헤더가 유일한 선언이라 fail-closed로 했다. 백엔드 발행부가 이 헤더를 반드시 실어야 한다(367에서 실었다).\n- **`eventId`를 `uuid5(네임스페이스, \"linkId:attempt:type\")`로 결정적으로 만든다.** 재전달에서 같은 값이 나와야 백엔드 중복 방어가 동작한다. 계약 픽스처의 `EVT-RL-000001`과 모양이 다르지만 계약상 자유 문자열이다.\n- **`worker/config.py`의 `rabbitmq_url` 기본값이 비어 있지 않아 엔트리포인트의 빈 값 검사가 걸리지 않는다.** 죽은 검사다. 두 워커가 공유하는 파일이라 이번에 손대지 않았고 370에 미해결로 적었다.\n- 백엔드에 healthcheck가 없어 기동 순서가 `restart: on-failure` 재시도에 기댄다.",
+    "state": "merged",
+    "created_at": "2026-09-21T13:30:51.897+09:00",
+    "updated_at": "2026-09-21T14:36:20.105+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T14:36:19.810+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/365-regime-link-consumer",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+    "merge_commit_sha": "b1e435eb296e8ee0d5bce7cd67685df0f298d704",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T13:30:53.312+09:00",
+    "reference": "!268",
+    "references": {
+      "short": "!268",
+      "relative": "!268",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!268"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/268",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954234,
+    "iid": 268,
+    "project_id": 1444456,
+    "title": "feat(be): 사례 연결 워커 소비자와 엔트리포인트",
+    "description": "## 작업 내용 요약\n\n`regime-link.jobs`를 소비해 구간 계산을 부르고 `STARTED`·`FINISHED`를 발행하는 워커를 넣는다. 백테스트 워커와 다른 프로세스이며 개발용 compose에 두 번째 소비자로 등록했다.\n\n> 이 MR은 `feat(be)/364-regime-link-slicer`를 기반으로 한다. 364가 먼저 머지되어야 한다.\n\n## 관련 티켓\n\nS15P21E205-365\n\n## 주요 변경 사항\n\n- `consumer.py`에 `RegimeLinkJobConsumer`. 헤더 `schemaVersion` 확인 → 파싱 → `STARTED` → 종가 적재 → `slice_window` → `FINISHED` → ACK 순서다. pika를 import하지 않고 Protocol로만 말하므로 브로커 없이 전체 흐름을 시험한다.\n- `rabbitmq.py`에 pika 구현(prefetch 1, confirm·재시도, ACK/reject 매핑). **토폴로지를 선언하지 않고** 큐가 없으면 만들지 않고 종료한다.\n- `market_data.py`(신규)로 `daily_price.close`와 벤치마크 지수 종가를 구간만 읽어 넘긴다. 없는 날은 채우지 않는다.\n- `regime_link_main.py` 엔트리포인트. `RABBITMQ_URL`·`MARKET_DATA_URL`이 없으면 시작하지 않는다.\n- `docker-compose.dev.yml`에 `worker-regime-link` 서비스. 같은 이미지에 실행 명령만 다르다.\n\n## 테스트\n\n```\ncd worker && ruff check src tests scripts && ruff format --check src tests scripts && pytest\nAll checks passed!\n516 passed, 0 skipped\n```\n\n백테스트 소비자 불변 대조:\n```\npytest tests/test_consumer.py tests/test_rabbitmq.py -q\n51 passed  (변경 전과 같다)\n```\n\n`docker compose -f docker-compose.dev.yml --profile app config`로 서비스 정의와 환경변수 해석을 확인했다. 실제 기동은 하지 않았다.\n\n## 리뷰 포인트\n\n- **헤더 `schemaVersion`이 없으면 계약 오류로 보고 requeue 없이 DLQ로 보낸다.** 011은 본문에 버전 자리가 없어 헤더가 유일한 선언이라 fail-closed로 했다. 백엔드 발행부가 이 헤더를 반드시 실어야 한다(367에서 실었다).\n- **`eventId`를 `uuid5(네임스페이스, \"linkId:attempt:type\")`로 결정적으로 만든다.** 재전달에서 같은 값이 나와야 백엔드 중복 방어가 동작한다. 계약 픽스처의 `EVT-RL-000001`과 모양이 다르지만 계약상 자유 문자열이다.\n- **`worker/config.py`의 `rabbitmq_url` 기본값이 비어 있지 않아 엔트리포인트의 빈 값 검사가 걸리지 않는다.** 죽은 검사다. 두 워커가 공유하는 파일이라 이번에 손대지 않았고 370에 미해결로 적었다.\n- 백엔드에 healthcheck가 없어 기동 순서가 `restart: on-failure` 재시도에 기댄다.",
+    "state": "merged",
+    "created_at": "2026-09-21T13:30:51.897+09:00",
+    "updated_at": "2026-09-21T14:36:20.105+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T14:36:19.810+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/365-regime-link-consumer",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+    "merge_commit_sha": "b1e435eb296e8ee0d5bce7cd67685df0f298d704",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T13:30:53.312+09:00",
+    "reference": "!268",
+    "references": {
+      "short": "!268",
+      "relative": "!268",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!268"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/268",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "9",
+    "latest_build_started_at": "2026-09-21T13:52:36.477+09:00",
+    "latest_build_finished_at": "2026-09-21T14:35:20.685+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 212109,
+      "iid": 264,
+      "project_id": 1444456,
+      "sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "ref": "feat(be)/365-regime-link-consumer",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T13:52:36.344+09:00",
+      "updated_at": "2026-09-21T14:35:20.691+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212109"
+    },
+    "head_pipeline": {
+      "id": 212109,
+      "iid": 264,
+      "project_id": 1444456,
+      "sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "ref": "feat(be)/365-regime-link-consumer",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T13:52:36.344+09:00",
+      "updated_at": "2026-09-21T14:35:20.691+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212109",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T13:52:36.477+09:00",
+      "finished_at": "2026-09-21T14:35:20.685+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212109",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "head_sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "start_sha": "18d1a75a043746a18e5f9c6377a479b3df6eb44a"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "4cb12c9d7ff3ed24b4a7f1721a72f43ccafe3852",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846398,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:38:03.967+09:00",
+          "updated_at": "2026-09-21T13:38:03.971+09:00",
+          "system": true,
+          "noteable_id": 954234,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 268,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3b1d12b562fe304e276dee1787efcda8a33c510b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846399,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:38:03.990+09:00",
+          "updated_at": "2026-09-21T13:38:03.997+09:00",
+          "system": true,
+          "noteable_id": 954234,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 268,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1d470aa185e8c255b838a31053f23437c057ea8f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846563,
+          "type": null,
+          "body": "added 38 commits\n\n<ul><li>5fd6e264...a1121af9 - 37 commits from branch <code>feat(be)/364-regime-link-slicer</code></li><li>c56979b4 - Merge branch &#39;feat(be)/364-regime-link-slicer&#39; into feat(be)/365-regime-link-consumer</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/268/diffs?diff_id=2231676&start_sha=5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:52:26.940+09:00",
+          "updated_at": "2026-09-21T13:52:26.944+09:00",
+          "system": true,
+          "noteable_id": 954234,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 268,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7bf62d9f54dc2869c247347e8ba261601dda9817",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847104,
+          "type": null,
+          "body": "deleted the `feat(be)/364-regime-link-slicer` branch. This merge request now targets the `dev` branch",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T14:33:46.767+09:00",
+          "updated_at": "2026-09-21T14:33:46.772+09:00",
+          "system": true,
+          "noteable_id": 954234,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 268,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1a46f8b7c37aa3439bd0b3a1b9e155151eb4366f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847136,
+          "type": null,
+          "body": "mentioned in commit b1e435eb296e8ee0d5bce7cd67685df0f298d704",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T14:36:19.757+09:00",
+          "updated_at": "2026-09-21T14:36:19.764+09:00",
+          "system": true,
+          "noteable_id": 954234,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 268,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2232138,
+      "head_commit_sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "base_commit_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "start_commit_sha": "18d1a75a043746a18e5f9c6377a479b3df6eb44a",
+      "created_at": "2026-09-21T14:33:46.660+09:00",
+      "merge_request_id": 954234,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "4429cd486cf5954a86aa9158b9c6d022968ce258"
+    },
+    {
+      "id": 2231676,
+      "head_commit_sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "base_commit_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "start_commit_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "created_at": "2026-09-21T13:52:26.688+09:00",
+      "merge_request_id": 954234,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "4429cd486cf5954a86aa9158b9c6d022968ce258"
+    },
+    {
+      "id": 2231462,
+      "head_commit_sha": "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+      "base_commit_sha": "26e25f8cda23ca7fd2c493ec2694a63389440089",
+      "start_commit_sha": "26e25f8cda23ca7fd2c493ec2694a63389440089",
+      "created_at": "2026-09-21T13:30:52.223+09:00",
+      "merge_request_id": 954234,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "4429cd486cf5954a86aa9158b9c6d022968ce258"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2232138,
+      "head_commit_sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "base_commit_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "start_commit_sha": "18d1a75a043746a18e5f9c6377a479b3df6eb44a",
+      "created_at": "2026-09-21T14:33:46.660+09:00",
+      "merge_request_id": 954234,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "4429cd486cf5954a86aa9158b9c6d022968ce258",
+      "commits": [
+        {
+          "id": "c56979b49d0523d47f2f43afabd9168151256cad",
+          "short_id": "c56979b4",
+          "created_at": "2026-09-21T13:50:58.000+09:00",
+          "parent_ids": [
+            "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+            "a1121af9d2e46829001acbb778452775b489a37f"
+          ],
+          "title": "Merge branch 'feat(be)/364-regime-link-slicer' into feat(be)/365-regime-link-consumer",
+          "message": "Merge branch 'feat(be)/364-regime-link-slicer' into feat(be)/365-regime-link-consumer\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:50:58.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:50:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c56979b49d0523d47f2f43afabd9168151256cad"
+        },
+        {
+          "id": "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+          "short_id": "5fd6e264",
+          "created_at": "2026-09-21T12:46:43.000+09:00",
+          "parent_ids": [
+            "26e25f8cda23ca7fd2c493ec2694a63389440089"
+          ],
+          "title": "feat(be): 사례 연결 워커 소비자와 엔트리포인트",
+          "message": "feat(be): 사례 연결 워커 소비자와 엔트리포인트\n\nregime-link.jobs 를 소비해 STARTED 발행 → 구간 계산 → FINISHED 발행 → ACK 하는\n소비자를 넣고, 백테스트 워커와 다른 프로세스로 띄우는 엔트리포인트를 더한다.\n개발용 compose 에 worker-regime-link 서비스를 등록했다.\n\n오류는 세 갈래다. 계약 오류는 requeue 없이 reject 해 DLQ 로 보내고, 계산 실패는\nFINISHED(FAILED) 를 발행한 뒤 ACK 하며, 발행 실패와 자료 적재 장애는 ACK 하지\n않는다. FINISHED 를 확인하기 전에 ACK 하는 경로는 두지 않았다.\n\n토폴로지는 선언하지 않는다. 큐가 없으면 만들지 않고 종료하므로 백엔드가 먼저\n떠서 선언해야 한다. eventId 는 linkId·attempt·type 으로 결정적으로 만들어\n재전달에서 같은 값이 나온다.\n\n백테스트 소비자 시험 51건은 변경 전후가 같다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:46:43.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:46:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -161,12 +161,12 @@ flowchart LR\n \n ## 워커 — 소비자·엔트리포인트 (M3)\n \n-- [ ] T016 (WK) `consumer.py`에 `RegimeLinkJobConsumer`: 헤더 `schemaVersion` 확인 → `RegimeLinkJob` 파싱 → `STARTED` 발행 → `slicer` 호출 → `FINISHED` 발행 → 브로커 확인 뒤 ACK. 오류 세 갈래(계약 오류 reject/DLQ · 계산 실패는 `FINISHED(FAILED)`+ACK · 발행 실패는 requeue). 시장 자료 적재 중 일시 장애만 전파(`worker/CLAUDE.md`)\n-- [ ] T017 (WK) `rabbitmq.py`에 pika 구현(소비 prefetch 1, 발행 confirm·재시도, ACK/reject 매핑). 토폴로지를 **선언하지 않고** 큐가 없으면 \"백엔드를 먼저 띄워라\"로 종료. `worker/rabbitmq.py`는 수정하지 않는다\n-- [ ] T018 (WK) `regime_link_main.py` 엔트리포인트: `MARKET_DATA_URL`·`RABBITMQ_URL` 필수(기본값 없음), `python -m worker.regime_link_main`으로 실행. `worker/README.md`에 두 번째 소비자 실행법 추가\n-- [ ] T019 (WK 테스트) `worker/tests/regime_link/test_consumer.py`: 깨진 JSON → reject, `ValidationError` → reject, 계산 실패 → `FINISHED(FAILED)` 후 ACK, 발행 실패 → ACK 없음, `FINISHED` 확인 전 ACK 경로 없음, 같은 `linkId`·`attempt` 재전달에 `eventId` 유지\n-- [ ] T020 (WK 테스트) `worker/tests/regime_link/test_main.py`: 환경변수 누락 시 시작 실패, 큐 부재 시 선언 없이 종료\n-- [ ] T021 (WK 테스트) 전체 `pytest` 실행 결과(수·통과·skipped)를 변경 전과 대조해 MR 본문에 적는다. 백테스트 소비자 테스트가 하나도 바뀌지 않았음을 근거로 남긴다\n+- [X] T016 (WK) `consumer.py`에 `RegimeLinkJobConsumer`: 헤더 `schemaVersion` 확인 → `RegimeLinkJob` 파싱 → `STARTED` 발행 → `slicer` 호출 → `FINISHED` 발행 → 브로커 확인 뒤 ACK. 오류 세 갈래(계약 오류 reject/DLQ · 계산 실패는 `FINISHED(FAILED)`+ACK · 발행 실패는 requeue). 시장 자료 적재 중 일시 장애만 전파(`worker/CLAUDE.md`)\n+- [X] T017 (WK) `rabbitmq.py`에 pika 구현(소비 prefetch 1, 발행 confirm·재시도, ACK/reject 매핑). 토폴로지를 **선언하지 않고** 큐가 없으면 \"백엔드를 먼저 띄워라\"로 종료. `worker/rabbitmq.py`는 수정하지 않는다\n+- [X] T018 (WK) `regime_link_main.py` 엔트리포인트: `MARKET_DATA_URL`·`RABBITMQ_URL` 필수(기본값 없음), `python -m worker.regime_link_main`으로 실행. `worker/README.md`에 두 번째 소비자 실행법 추가\n+- [X] T019 (WK 테스트) `worker/tests/regime_link/test_consumer.py`: 깨진 JSON → reject, `ValidationError` → reject, 계산 실패 → `FINISHED(FAILED)` 후 ACK, 발행 실패 → ACK 없음, `FINISHED` 확인 전 ACK 경로 없음, 같은 `linkId`·`attempt` 재전달에 `eventId` 유지\n+- [X] T020 (WK 테스트) `worker/tests/regime_link/test_main.py`: 환경변수 누락 시 시작 실패, 큐 부재 시 선언 없이 종료\n+- [X] T021 (WK 테스트) 전체 `pytest` 실행 결과(수·통과·skipped)를 변경 전과 대조해 MR 본문에 적는다. 백테스트 소비자 테스트가 하나도 바뀌지 않았음을 근거로 남긴다\n \n ## 백엔드 — 표·도메인·판정 (M4)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,7 +7,241 @@\n reject해 DLQ로 보내고 ② 계산 실패는 ``FINISHED(FAILED)``를 발행한 뒤 ACK하며 ③ 발행 실패와 시장\n 자료 적재 중 일시 장애는 ACK하지 않고 재전달 경로로 넘긴다.\n \n-백테스트 소비자(``worker.consumer``)는 건드리지 않는다.\n+**``eventId``는 ``linkId``·``attempt``·이벤트 종류에서 결정적으로 만든다.** 백테스트 경로는\n+실행마다 새 ``executionId``를 발급해 그 밑에서 ``eventId``를 새로 뽑지만, 011에는 그런 실행\n+식별자가 없고 재전달은 같은 작업을 그대로 다시 하는 것이다. 매번 새 값을 뽑으면 백엔드의 중복\n+방어 키(``eventId``)가 재전달마다 달라져 같은 결과가 두 번 기록된다.\n \n-내용은 T016(묶음 M3)에서 채운다.\n+백테스트 소비자(``worker.consumer``)는 건드리지 않는다.\n \"\"\"\n+\n+import json\n+import logging\n+import os\n+import socket\n+import time\n+import uuid\n+from collections.abc import Callable, Mapping\n+from datetime import datetime\n+from decimal import Decimal\n+from typing import Any\n+\n+from pydantic import ValidationError\n+\n+from worker.contracts.base import utc_now\n+from worker.regime_link.contracts import (\n+    ErrorDetail,\n+    ProcessInfo,\n+    RegimeLinkErrorCode,\n+    RegimeLinkEvent,\n+    RegimeLinkEventType,\n+    RegimeLinkFinishedPayload,\n+    RegimeLinkJob,\n+    RegimeLinkStartedPayload,\n+    RegimeLinkStatus,\n+    ResourceUsage,\n+)\n+from worker.regime_link.market_data import ClosePriceLoader\n+from worker.regime_link.messaging import (\n+    SCHEMA_VERSION,\n+    EventPublisher,\n+    JobAcknowledger,\n+    RegimeLinkContractViolation,\n+    RegimeLinkPublishError,\n+)\n+from worker.regime_link.slicer import ClosePrices, SliceError, slice_window\n+\n+logger = logging.getLogger(__name__)\n+\n+Clock = Callable[[], datetime]\n+\n+#: ``eventId`` 를 결정적으로 뽑는 이름공간. 값 자체에 뜻은 없고 다른 uuid5 용도와 섞이지 않게\n+#: 고정한다. **이 값을 바꾸면 이미 발행한 이벤트와 다른 ``eventId`` 가 나오므로 바꾸지 않는다.**\n+EVENT_NAMESPACE = uuid.UUID(\"6f1c0f8a-2f1e-5a3d-9d6e-0b0f0d5a7c11\")\n+\n+\n+def event_id_for(link_id: str, attempt: int, event_type: RegimeLinkEventType) -> str:\n+    \"\"\"같은 작업의 같은 이벤트면 언제 불러도 같은 값. 재전달의 중복 방어 키다.\"\"\"\n+    return str(uuid.uuid5(EVENT_NAMESPACE, f\"{link_id}:{attempt}:{event_type.value}\"))\n+\n+\n+def verify_schema_version(headers: Mapping[str, Any] | None) -> None:\n+    \"\"\"작업 헤더의 ``schemaVersion`` 확인(계약 \"메시지 속성과 토폴로지\").\n+\n+    작업 본문에는 ``schemaVersion`` 이 없다 — 011은 버전을 AMQP 헤더로만 싣는다. 그래서\n+    헤더가 없으면 통과시키지 않고 계약 오류로 본다. 백테스트 경로는 본문이 ``EngineInput``\n+    전체라 \"아무 데도 표시하지 않은\" 경우를 통과시키지만, 여기서는 표시할 자리가 하나뿐이라\n+    비어 있다는 것은 곧 보낸 쪽이 계약을 지키지 않았다는 뜻이다. 모르는 버전을 아는 버전인 척\n+    계산하면 요청과 다른 숫자가 저장된다.\n+    \"\"\"\n+    value = (headers or {}).get(\"schemaVersion\")\n+    if value is None:\n+        raise RegimeLinkContractViolation(\n+            f\"job header 'schemaVersion' is missing (this worker speaks {SCHEMA_VERSION})\"\n+        )\n+    if isinstance(value, bool) or not isinstance(value, int) or value != SCHEMA_VERSION:\n+        raise RegimeLinkContractViolation(\n+            f\"unsupported schemaVersion in header: {value!r} (this worker speaks {SCHEMA_VERSION})\"\n+        )\n+\n+\n+def parse_job(body: bytes | str, headers: Mapping[str, Any] | None) -> RegimeLinkJob:\n+    \"\"\"작업 메시지를 계약 모델로 바꾼다. 계약 위반은 :class:`RegimeLinkContractViolation`.\"\"\"\n+    verify_schema_version(headers)\n+    try:\n+        decoded = json.loads(body)\n+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:\n+        raise RegimeLinkContractViolation(f\"job body is not valid JSON: {exc}\") from exc\n+    if not isinstance(decoded, dict):\n+        raise RegimeLinkContractViolation(\n+            f\"job body must be a JSON object, got {type(decoded).__name__}\"\n+        )\n+    try:\n+        return RegimeLinkJob.model_validate(decoded)\n+    except ValidationError as exc:\n+        raise RegimeLinkContractViolation(\n+            f\"job body violates the RegimeLinkJob contract: {exc}\"\n+        ) from exc\n+\n+\n+def _seconds(value: float) -> Decimal:\n+    return Decimal(f\"{value:.3f}\")\n+\n+\n+class RegimeLinkJobConsumer:\n+    \"\"\"``regime-link.jobs`` 한 건을 처리한다. 브로커 런타임(pika)과 분리돼 있다.\"\"\"\n+\n+    def __init__(\n+        self,\n+        prices: ClosePriceLoader,\n+        publisher: EventPublisher,\n+        *,\n+        clock: Clock = utc_now,\n+    ) -> None:\n+        self._prices = prices\n+        self._publisher = publisher\n+        self._clock = clock\n+\n+    def handle(\n+        self,\n+        body: bytes | str,\n+        headers: Mapping[str, Any] | None,\n+        acknowledger: JobAcknowledger,\n+    ) -> None:\n+        \"\"\"수신 → 파싱 → 발행 → ACK. 오류 세 갈래가 여기서 갈린다.\n+\n+        같은 ``linkId``·``attempt`` 가 재전달되면 그냥 다시 계산한다. 워커는 DB에 쓰지 않아\n+        처리 이력을 남길 곳이 없고, 구간 계산은 고정 입력에 대해 결정적이라 재실행이 안전하다.\n+        중복 방어는 백엔드 몫이며 그 키인 ``eventId`` 는 재전달에도 같은 값이다.\n+        \"\"\"\n+        try:\n+            job = parse_job(body, headers)\n+        except RegimeLinkContractViolation as exc:\n+            # 재전달해도 결과가 같으므로 되돌리지 않는다. 이벤트도 발행하지 않는다 —\n+            # linkId 를 신뢰할 수 없다.\n+            logger.error(\"contract violation; rejecting to DLQ without requeue: %s\", exc)\n+            acknowledger.reject()\n+            return\n+\n+        link_id = job.job.link_id\n+        attempt = job.job.attempt\n+        started = time.monotonic()\n+        try:\n+            self._publish(job, RegimeLinkEventType.STARTED, self._started_payload())\n+            # 자료 적재만 try 안에서 결과로 바뀌지 않는다 — 접속 실패 같은 일시 장애를\n+            # FINISHED(FAILED) 로 바꾸면 발행·ACK 되어 최종 실패로 굳는다.\n+            prices = self._prices.load(job)\n+            payload = self._compute(job, prices, started)\n+            self._publish(job, RegimeLinkEventType.FINISHED, payload)\n+        except RegimeLinkPublishError as exc:\n+            logger.error(\n+                \"event publication failed for linkId=%s attempt=%d; not acking: %s\",\n+                link_id,\n+                attempt,\n+                exc,\n+            )\n+            acknowledger.requeue()\n+            return\n+        except Exception:\n+            # 계산 오류는 FINISHED(FAILED) 로 돌아오는 것이 계약이므로 여기까지 오는 예외는\n+            # 자료 적재의 일시 장애이거나 워커 버그다. 어느 쪽이든 결과를 잃은 상태를 완료로\n+            # 숨기지 않는다.\n+            logger.exception(\n+                \"unexpected failure for linkId=%s attempt=%d; not acking\", link_id, attempt\n+            )\n+            acknowledger.requeue()\n+            return\n+\n+        # 여기 도달하면 FINISHED 발행이 브로커에서 확인된 것이다(publish 는 확인 후 반환).\n+        # 그 뒤에만 ACK 한다.\n+        acknowledger.ack()\n+        logger.info(\n+            \"regime link done: linkId=%s attempt=%d status=%s\",\n+            link_id,\n+            attempt,\n+            payload.status.value,\n+        )\n+\n+    # --- 이벤트 조립 ---------------------------------------------------------------\n+\n+    def _started_payload(self) -> RegimeLinkStartedPayload:\n+        return RegimeLinkStartedPayload(\n+            started_at=self._clock(),\n+            resource=ProcessInfo(pid=os.getpid(), hostname=socket.gethostname()),\n+        )\n+\n+    def _failed(\n+        self, code: RegimeLinkErrorCode, message: str, started: float\n+    ) -> RegimeLinkFinishedPayload:\n+        return RegimeLinkFinishedPayload(\n+            status=RegimeLinkStatus.FAILED,\n+            # 실패에는 잘라낸 구간이 없다. 상장폐지 표시는 결과가 있을 때만 뜻이 있다.\n+            partial=False,\n+            error=ErrorDetail(code=code, message=message),\n+            resource=ResourceUsage(wall_seconds=_seconds(time.monotonic() - started)),\n+        )\n+\n+    def _compute(\n+        self, job: RegimeLinkJob, prices: ClosePrices, started: float\n+    ) -> RegimeLinkFinishedPayload:\n+        \"\"\"구간 계산. 여기서 난 오류는 전부 정상 결과(``FINISHED(FAILED)``)로 바뀐다.\n+\n+        자료가 메모리에 오른 뒤의 예외는 결정적이다 — 같은 입력이면 다시 난다. 전파해\n+        재전달시키면 같은 자리에서 또 죽어 DLQ 로 가는데 그건 장애가 아니라 결함이다.\n+        \"\"\"\n+        try:\n+            outcome = slice_window(job, prices)\n+        except SliceError as exc:\n+            logger.warning(\n+                \"slice failed for linkId=%s: %s %s\", job.job.link_id, exc.code.value, exc.message\n+            )\n+            return self._failed(exc.code, exc.message, started)\n+        except Exception as exc:\n+            logger.exception(\"slice raised unexpectedly for linkId=%s\", job.job.link_id)\n+            return self._failed(\n+                RegimeLinkErrorCode.ENGINE_ERROR, f\"{type(exc).__name__}: {exc}\", started\n+            )\n+        return RegimeLinkFinishedPayload(\n+            status=RegimeLinkStatus.COMPLETED,\n+            partial=outcome.partial,\n+            delisted_on=outcome.delisted_on,\n+            result=outcome.result,\n+            resource=ResourceUsage(wall_seconds=_seconds(time.monotonic() - started)),\n+        )\n+\n+    def _publish(\n+        self,\n+        job: RegimeLinkJob,\n+        event_type: RegimeLinkEventType,\n+        payload: RegimeLinkStartedPayload | RegimeLinkFinishedPayload,\n+    ) -> None:\n+        event: RegimeLinkEvent[Any] = RegimeLinkEvent(\n+            schema_version=SCHEMA_VERSION,\n+            event_id=event_id_for(job.job.link_id, job.job.attempt, event_type),\n+            link_id=job.job.link_id,\n+            attempt=job.job.attempt,\n+            type=event_type,\n+            occurred_at=self._clock(),\n+            payload=payload,\n+        )\n+        self._publisher.publish(event)  # 확인되지 않으면 RegimeLinkPublishError\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/consumer.py",
+          "old_path": "worker/src/worker/regime_link/consumer.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,111 @@\n+\"\"\"구간 계산이 쓰는 원시 종가 읽기(spec 011 T016).\n+\n+**시장 자료는 작업 메시지에 없다.** 백엔드는 004 실행 사본(자산·보유·체결)만 싣고, 평가액과\n+참고 지수에 필요한 원시 종가는 워커가 001이 적재한 표에서 직접 읽는다. 읽은 값은\n+``slicer.ClosePrices`` 모양으로 계산 쪽에 넘긴다 — ``slicer``는 pandas도 DB도 모른다.\n+\n+백테스트 경로의 ``worker.market_data``를 부르지 않는다. 그쪽은 워밍업·달력·결측 검사까지 붙은\n+실행용 적재라 011이 필요로 하는 것(구간 며칠치 종가와 지수 종가)보다 훨씬 넓고, 지수 종가는\n+아예 돌려주지 않는다(달력으로 쓰고 버린다). 대신 표와 열 이름은 같은 곳\n+(``V20260911114500__etf_market_data.sql``)을 본다.\n+\n+**없는 날을 채우지 않는다.** 행이 없으면 값이 없는 채로 넘기고, 필요한 날이 비었다는 판정은\n+``slicer``가 ``MARKET_DATA_MISSING``으로 한다(원칙 VI). 접속 실패 같은 일시 장애는 여기서\n+그대로 올라가 소비자가 ACK하지 않는 경로로 간다 — 결과로 바꾸면 일시 장애가 최종 실패로 굳는다.\n+\"\"\"\n+\n+from collections.abc import Sequence\n+from datetime import date\n+from decimal import Decimal\n+from typing import Any, Protocol\n+\n+from worker.regime_link.contracts import RegimeLinkJob\n+from worker.regime_link.slicer import ClosePrices, MappingClosePrices\n+\n+\n+class ClosePriceLoader(Protocol):\n+    \"\"\"작업 하나가 필요로 하는 종가를 모아 온다. 소비자는 이 경계로만 자료를 만난다.\"\"\"\n+\n+    def load(self, job: RegimeLinkJob) -> ClosePrices: ...\n+\n+\n+def _as_decimal(value: Any) -> Decimal:\n+    \"\"\"DB NUMERIC 은 이미 ``Decimal`` 이다. 다른 구현(가짜 커서·SQLite)이 float 을 주면\n+    문자열을 거쳐 바꾼다 — ``Decimal(float)`` 은 이진 오차를 그대로 끌고 온다.\"\"\"\n+    if isinstance(value, Decimal):\n+        return value\n+    return Decimal(str(value))\n+\n+\n+class PostgresClosePriceLoader:\n+    \"\"\"001이 적재한 ``daily_price``·``daily_index`` 를 읽는 운영 구현(읽기 전용).\n+\n+    종목 종가는 ``daily_price.close`` 다 — 수정 종가가 아니다. 011의 평가액은 그날 실제 가격 ×\n+    그날 수량이고 수량 이월이 분할을 이미 반영하므로(``dailyPositions`` 덮어쓰기), 여기서\n+    수정 종가를 쓰면 분할일 앞뒤 평가액이 두 번 조정된다.\n+\n+    참고 지수는 종목 표에 없다. ``benchmarkInstrumentId``(예: ``KOSPI``)는 ``daily_index`` 의\n+    ``index_code`` 이며, 같은 사전에 그 이름 그대로 담아 ``slicer`` 가 종목과 같은 방식으로\n+    읽게 한다.\n+    \"\"\"\n+\n+    def __init__(self, url: str, *, connect: Any = None) -> None:\n+        self.url = url\n+        # psycopg 를 생성자에서 import 하지 않는다(테스트가 가짜 접속을 주입한다).\n+        self._connect = connect\n+\n+    def _open(self) -> Any:\n+        if self._connect is not None:\n+            return self._connect(self.url)\n+        import psycopg\n+\n+        connection = psycopg.connect(self.url)\n+        connection.read_only = True\n+        return connection\n+\n+    def _instrument_closes(\n+        self,\n+        cursor: Any,\n+        dataset_id: str,\n+        instrument_ids: Sequence[str],\n+        first: date,\n+        last: date,\n+    ) -> dict[str, dict[date, Decimal]]:\n+        cursor.execute(\n+            \"SELECT instrument_id, date, close FROM daily_price\"\n+            \" WHERE dataset_id = %s AND instrument_id = ANY(%s)\"\n+            \" AND date BETWEEN %s AND %s\"\n+            \" ORDER BY instrument_id, date\",\n+            (dataset_id, list(instrument_ids), first, last),\n+        )\n+        closes: dict[str, dict[date, Decimal]] = {iid: {} for iid in instrument_ids}\n+        for record in cursor.fetchall():\n+            closes.setdefault(record[0], {})[record[1]] = _as_decimal(record[2])\n+        return closes\n+\n+    def _index_closes(\n+        self, cursor: Any, dataset_id: str, index_code: str, first: date, last: date\n+    ) -> dict[date, Decimal]:\n+        cursor.execute(\n+            \"SELECT date, close FROM daily_index\"\n+            \" WHERE dataset_id = %s AND index_code = %s AND date BETWEEN %s AND %s\"\n+            \" ORDER BY date\",\n+            (dataset_id, index_code, first, last),\n+        )\n+        return {record[0]: _as_decimal(record[1]) for record in cursor.fetchall()}\n+\n+    def load(self, job: RegimeLinkJob) -> MappingClosePrices:\n+        \"\"\"``baselineDate`` ~ ``lastAvailable`` 의 종가를 한 번에 읽는다.\n+\n+        구간 계산이 보는 가장 이른 날이 ``baselineDate``(연속 운용의 기준 평가액·지수 기준값)이고\n+        가장 늦은 날이 ``lastAvailable`` 이다. ``d63`` 이 더 뒤여도 그 뒤는 읽지 않는다 —\n+        백엔드가 폐지·미완성을 이미 ``lastAvailable`` 로 줄여 보냈다.\n+        \"\"\"\n+        instrument_ids = sorted({item.instrument_id for item in job.universe.items})\n+        dataset_id = job.market_data.dataset_id\n+        first, last = job.window.baseline_date, job.window.last_available\n+        benchmark = job.market_data.benchmark_instrument_id\n+        with self._open() as connection, connection.cursor() as cursor:\n+            closes = self._instrument_closes(cursor, dataset_id, instrument_ids, first, last)\n+            closes[benchmark] = self._index_closes(cursor, dataset_id, benchmark, first, last)\n+        return MappingClosePrices(closes)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/market_data.py",
+          "old_path": "worker/src/worker/regime_link/market_data.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,7 +4,182 @@\n binding)를 **선언하지 않는다** — 선언은 백엔드 책임이라 큐가 없으면 만들지 않고 \"백엔드를 먼저\n 띄워라\"라는 오류로 종료한다. 속성이 어긋난 큐를 워커가 만들면 백엔드 선언과 충돌한다.\n \n-백테스트 워커의 ``worker.rabbitmq``는 수정하지 않는다.\n+pika 는 이 모듈에만 있다. 소비자 로직(``worker.regime_link.consumer``)은 Protocol 만 알기 때문에\n+브로커 없이 테스트된다.\n \n-내용은 T017(묶음 M3)에서 채운다.\n+백테스트 워커의 ``worker.rabbitmq``는 수정하지 않는다. 상수·예외를 그쪽에서 가져다 쓰지도\n+않는다 — 큐 이름도 스키마 버전도 다른 별개의 계약이다.\n \"\"\"\n+\n+import logging\n+import time\n+from collections.abc import Callable\n+from typing import Any\n+\n+import pika\n+from pika.adapters.blocking_connection import BlockingChannel, BlockingConnection\n+from pika.exceptions import AMQPError, ChannelClosedByBroker, NackError, UnroutableError\n+\n+from worker.regime_link.consumer import RegimeLinkJobConsumer\n+from worker.regime_link.contracts import RegimeLinkEvent\n+from worker.regime_link.market_data import ClosePriceLoader\n+from worker.regime_link.messaging import (\n+    EVENTS_ROUTING_KEY,\n+    EXCHANGE,\n+    JOBS_QUEUE,\n+    PREFETCH_COUNT,\n+    SCHEMA_VERSION,\n+    RegimeLinkPublishError,\n+)\n+\n+logger = logging.getLogger(__name__)\n+\n+#: 발행 재시도(일시 장애는 제한적 재시도). 소진하면 PublishError → ACK 하지 않는다.\n+PUBLISH_ATTEMPTS = 3\n+PUBLISH_RETRY_SECONDS = 1.0\n+\n+\n+def queue_missing_message(queue: str) -> str:\n+    return (\n+        f\"queue '{queue}' does not exist on the broker. Declaring the regime-link topology \"\n+        \"(exchanges, queues, bindings) is the backend's job (Spring Declarables; see \"\n+        \"docs/specs/regime-link-messaging/README.md) and the worker must not create it: a queue \"\n+        \"with mismatched arguments would collide with the backend declaration. Start the backend \"\n+        \"once against this broker so the topology is declared, then start the worker again.\"\n+    )\n+\n+\n+class QueueMissingError(RuntimeError):\n+    \"\"\"작업 큐가 없다. 백엔드를 한 번 띄워 토폴로지를 선언해야 한다.\"\"\"\n+\n+\n+class PikaEventPublisher:\n+    \"\"\"``regime-link.events`` 발행. publisher confirm + ``mandatory`` 로 확인 후 반환한다.\"\"\"\n+\n+    def __init__(\n+        self,\n+        channel: BlockingChannel,\n+        *,\n+        attempts: int = PUBLISH_ATTEMPTS,\n+        retry_seconds: float = PUBLISH_RETRY_SECONDS,\n+        sleep: Callable[[float], None] = time.sleep,\n+    ) -> None:\n+        self._channel = channel\n+        self._attempts = attempts\n+        self._retry_seconds = retry_seconds\n+        self._sleep = sleep\n+\n+    def publish(self, event: RegimeLinkEvent[Any]) -> None:\n+        # 직렬화는 계약 규약 그대로(camelCase + 값 없는 키 생략). json.dumps 로 만들지 않는다.\n+        body = event.to_json().encode(\"utf-8\")\n+        properties = pika.BasicProperties(\n+            content_type=\"application/json\",\n+            delivery_mode=2,  # persistent\n+            message_id=event.event_id,  # 본문 eventId 와 같은 값\n+            correlation_id=event.link_id,\n+            headers={\"schemaVersion\": SCHEMA_VERSION},\n+            # Spring 의 __TypeId__ 헤더는 보내지 않는다.\n+        )\n+        last_error: Exception | None = None\n+        for attempt in range(1, self._attempts + 1):\n+            try:\n+                self._channel.basic_publish(\n+                    exchange=EXCHANGE,\n+                    routing_key=EVENTS_ROUTING_KEY,\n+                    body=body,\n+                    properties=properties,\n+                    mandatory=True,  # 라우팅 실패를 조용히 버리지 않는다\n+                )\n+                return\n+            except UnroutableError as exc:\n+                # binding 이 없다는 뜻이라 재시도해도 같다. 즉시 실패로 올린다.\n+                raise RegimeLinkPublishError(\n+                    f\"event {event.type} (eventId={event.event_id}) was returned as unroutable \"\n+                    f\"from exchange '{EXCHANGE}' with routing key '{EVENTS_ROUTING_KEY}'\"\n+                ) from exc\n+            except (NackError, AMQPError) as exc:\n+                last_error = exc\n+                logger.warning(\n+                    \"publish attempt %d/%d failed for event %s (eventId=%s): %s\",\n+                    attempt,\n+                    self._attempts,\n+                    event.type,\n+                    event.event_id,\n+                    exc,\n+                )\n+                if attempt < self._attempts:\n+                    self._sleep(self._retry_seconds)\n+        raise RegimeLinkPublishError(\n+            f\"event {event.type} (eventId={event.event_id}) was not confirmed after \"\n+            f\"{self._attempts} attempts: {last_error}\"\n+        ) from last_error\n+\n+\n+class PikaJobAcknowledger:\n+    \"\"\"작업 메시지 한 건의 ACK/reject. delivery tag 를 들고 있다.\"\"\"\n+\n+    def __init__(self, channel: BlockingChannel, delivery_tag: int) -> None:\n+        self._channel = channel\n+        self._delivery_tag = delivery_tag\n+\n+    def ack(self) -> None:\n+        self._channel.basic_ack(delivery_tag=self._delivery_tag)\n+\n+    def reject(self) -> None:\n+        # requeue=False → 큐의 DLX(regime-link.dlx)를 타고 regime-link.jobs.dlq 로 간다.\n+        self._channel.basic_reject(delivery_tag=self._delivery_tag, requeue=False)\n+\n+    def requeue(self) -> None:\n+        self._channel.basic_nack(delivery_tag=self._delivery_tag, requeue=True)\n+\n+\n+def require_jobs_queue(connection: BlockingConnection, queue: str = JOBS_QUEUE) -> None:\n+    \"\"\"소비할 큐의 존재만 확인한다. 없으면 :class:`QueueMissingError`.\n+\n+    passive declare 는 큐를 만들지 않고 없으면 404 로 채널을 닫으므로 임시 채널에서 확인한다\n+    (닫힌 채널은 다시 쓸 수 없다).\n+    \"\"\"\n+    probe = connection.channel()\n+    try:\n+        probe.queue_declare(queue=queue, passive=True)\n+    except ChannelClosedByBroker as exc:\n+        if exc.reply_code == 404:\n+            raise QueueMissingError(queue_missing_message(queue)) from exc\n+        raise\n+    probe.close()\n+\n+\n+def _connect(url: str) -> BlockingConnection:\n+    return pika.BlockingConnection(pika.URLParameters(url))\n+\n+\n+def run_consumer(\n+    url: str,\n+    prices: ClosePriceLoader,\n+    *,\n+    connect: Callable[[str], BlockingConnection] = _connect,\n+) -> None:\n+    \"\"\"``regime-link.jobs`` 를 manual ACK · 한 번에 한 건으로 소비한다.\n+\n+    한 연결·한 채널에서 소비와 발행을 함께 한다. BlockingConnection 은 단일 스레드이므로 계산\n+    중에는 다음 작업을 받지 않는다. 백테스트 워커와 달리 제어(CANCEL) 채널이 없다 — 63거래일\n+    계산은 취소를 기다릴 만큼 길지 않다.\n+    \"\"\"\n+    connection = connect(url)\n+    try:\n+        require_jobs_queue(connection)\n+        channel = connection.channel()\n+        channel.confirm_delivery()  # publisher confirm: 발행 확인 후에만 반환한다\n+        channel.basic_qos(prefetch_count=PREFETCH_COUNT)\n+        consumer = RegimeLinkJobConsumer(prices, PikaEventPublisher(channel))\n+        logger.info(\"regime link worker consuming queue=%s prefetch=%d\", JOBS_QUEUE, PREFETCH_COUNT)\n+        for method, properties, body in channel.consume(JOBS_QUEUE, auto_ack=False):\n+            logger.info(\"received regime link job delivery_tag=%s\", method.delivery_tag)\n+            consumer.handle(\n+                body,\n+                properties.headers if properties is not None else None,\n+                PikaJobAcknowledger(channel, method.delivery_tag),\n+            )\n+    finally:\n+        if connection.is_open:\n+            connection.close()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link/rabbitmq.py",
+          "old_path": "worker/src/worker/regime_link/rabbitmq.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,51 @@\n \"\"\"사례 연결 워커 엔트리포인트: ``python -m worker.regime_link_main``.\n \n-``regime-link.jobs``를 소비해 사례의 사후 구간을 잘라 요약하고 ``regime-link.events``로 ``STARTED``·\n-``FINISHED``를 발행한다. 백테스트 워커(``python -m worker.main``)와 **다른 프로세스**이며\n-같은 코드를 여러 개 띄워 수평 확장한다.\n+``regime-link.jobs`` 를 소비해 사후 구간을 계산하고 ``regime-link.events`` 로 STARTED / FINISHED 를\n+발행한다. 백테스트 워커(``python -m worker.main``)와 **다른 프로세스**다 — 큐도 스키마도 다르고,\n+한쪽이 긴 백테스트로 막혀 있는 동안 다른 쪽이 멈추지 않아야 한다. 같은 코드를 여러 개 실행해\n+수평 확장하는 것(competing consumers, 한 번에 한 건)은 같다.\n \n-접속 정보는 환경변수 ``RABBITMQ_URL``(브로커)·``MARKET_DATA_URL``(시장 자료 DB, 읽기 전용)로만\n-주입하고 **기본값을 두지 않는다** — 값이 없으면 조용히 다른 DB를 읽는 대신 시작하지 않는다.\n-\n-내용은 T018(묶음 M3)에서 채운다.\n+토폴로지 선언은 백엔드 책임이므로 큐가 없으면 만들지 않고 종료한다. 접속 정보는 환경변수\n+``RABBITMQ_URL``(브로커)·``MARKET_DATA_URL``(시장 자료 DB, 읽기 전용)로만 주입한다.\n \"\"\"\n+\n+import logging\n+\n+from pika.exceptions import AMQPError\n+\n+from worker.config import settings\n+from worker.regime_link.market_data import PostgresClosePriceLoader\n+from worker.regime_link.rabbitmq import QueueMissingError, run_consumer\n+\n+logging.basicConfig(level=logging.INFO, format=\"%(asctime)s %(levelname)s %(name)s %(message)s\")\n+# pika 는 연결·채널 단계마다 INFO 로그를 남겨 워커 로그를 덮는다. 경고 이상만 본다.\n+logging.getLogger(\"pika\").setLevel(logging.WARNING)\n+logger = logging.getLogger(\"worker.regime_link\")\n+\n+\n+def main() -> int:\n+    if not settings.market_data_url:\n+        # 기본값을 두지 않는다 — 조용히 다른 DB 를 읽는 대신 여기서 멈춘다(원칙 X).\n+        logger.error(\"MARKET_DATA_URL is not set; the worker reads market data only from 001's DB\")\n+        return 1\n+    if not settings.rabbitmq_url:\n+        logger.error(\"RABBITMQ_URL is not set; the worker has no broker to consume jobs from\")\n+        return 1\n+    # 적재기는 여러 작업에서 재사용한다. 생성자는 접속하지 않는다(작업마다 읽기 전용 접속).\n+    prices = PostgresClosePriceLoader(settings.market_data_url)\n+    try:\n+        run_consumer(settings.rabbitmq_url, prices)\n+    except QueueMissingError as exc:\n+        logger.error(\"%s\", exc)\n+        return 1\n+    except AMQPError as exc:\n+        # 접속 정보에 비밀번호가 들어 있으므로 URL 은 로그에 남기지 않는다.\n+        logger.error(\"RabbitMQ connection failed (check RABBITMQ_URL): %s\", exc)\n+        return 1\n+    except KeyboardInterrupt:\n+        logger.info(\"regime link worker stopped\")\n+    return 0\n+\n+\n+if __name__ == \"__main__\":\n+    raise SystemExit(main())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/regime_link_main.py",
+          "old_path": "worker/src/worker/regime_link_main.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,322 @@\n+\"\"\"사례 연결 소비자: 발행 순서·ACK 순서·오류 세 갈래·``eventId`` 멱등성(spec 011 T019).\n+\n+브로커 없이 전체 흐름을 검증한다. 발행·ACK 는 ``regime_link.messaging`` 의 Protocol 뒤에 있으므로\n+fake 로 갈아끼우고, **발행과 ACK 를 같은 로그 리스트에 기록해 순서를 직접 단언한다** —\n+\"FINISHED 발행이 확인된 뒤에만 ACK\" 는 순서 규칙이라 호출 여부만으로는 지켜졌는지 알 수 없다.\n+\n+계산은 진짜 ``slicer`` 와 T014 픽스처(``fixtures/*.job.json`` + ``*.closes.json``)로 돌린다. 시장\n+자료만 가짜 적재기로 넣는다 — DB 는 소비자의 관심사가 아니다.\n+\"\"\"\n+\n+import json\n+from copy import deepcopy\n+from datetime import date\n+from decimal import Decimal\n+from pathlib import Path\n+from typing import Any\n+\n+import pytest\n+\n+from worker.regime_link.consumer import RegimeLinkJobConsumer, event_id_for\n+from worker.regime_link.contracts import (\n+    RegimeLinkErrorCode,\n+    RegimeLinkEvent,\n+    RegimeLinkEventType,\n+    RegimeLinkJob,\n+    RegimeLinkStatus,\n+)\n+from worker.regime_link.messaging import SCHEMA_VERSION, RegimeLinkPublishError\n+from worker.regime_link.slicer import MappingClosePrices\n+\n+FIXTURE_DIR = Path(__file__).resolve().parent / \"fixtures\"\n+\n+HEADERS: dict[str, Any] = {\"schemaVersion\": SCHEMA_VERSION}\n+\n+\n+def job_body(name: str) -> dict[str, Any]:\n+    return json.loads((FIXTURE_DIR / f\"{name}.job.json\").read_text(encoding=\"utf-8\"))\n+\n+\n+def load_prices(name: str) -> MappingClosePrices:\n+    raw = json.loads((FIXTURE_DIR / f\"{name}.closes.json\").read_text(encoding=\"utf-8\"))\n+    return MappingClosePrices(\n+        {\n+            iid: {date.fromisoformat(day): Decimal(price) for day, price in series.items()}\n+            for iid, series in raw.items()\n+        }\n+    )\n+\n+\n+class FakePublisher:\n+    \"\"\"``publish`` 가 정상 반환하면 \"브로커가 확인했다\"는 뜻. 실패는 PublishError.\"\"\"\n+\n+    def __init__(self, call_log: list[str], fail_on: tuple[RegimeLinkEventType, ...] = ()) -> None:\n+        self.call_log = call_log\n+        self.fail_on = set(fail_on)\n+        self.events: list[RegimeLinkEvent[Any]] = []\n+\n+    def publish(self, event: RegimeLinkEvent[Any]) -> None:\n+        if event.type in self.fail_on:\n+            self.call_log.append(f\"publish-failed:{event.type.value}\")\n+            raise RegimeLinkPublishError(f\"fake broker refused {event.type.value}\")\n+        self.events.append(event)\n+        self.call_log.append(f\"publish:{event.type.value}\")\n+\n+    def of_type(self, event_type: RegimeLinkEventType) -> list[RegimeLinkEvent[Any]]:\n+        return [event for event in self.events if event.type is event_type]\n+\n+    def finished(self) -> RegimeLinkEvent[Any]:\n+        events = self.of_type(RegimeLinkEventType.FINISHED)\n+        assert len(events) == 1\n+        return events[0]\n+\n+\n+class FakeAcknowledger:\n+    def __init__(self, call_log: list[str]) -> None:\n+        self.call_log = call_log\n+\n+    def ack(self) -> None:\n+        self.call_log.append(\"ack\")\n+\n+    def reject(self) -> None:\n+        self.call_log.append(\"reject\")\n+\n+    def requeue(self) -> None:\n+        self.call_log.append(\"requeue\")\n+\n+\n+class FixturePrices:\n+    \"\"\"픽스처 종가를 그대로 돌려주는 적재기. 부른 작업을 기록한다.\"\"\"\n+\n+    def __init__(self, prices: MappingClosePrices) -> None:\n+        self.prices = prices\n+        self.jobs: list[RegimeLinkJob] = []\n+\n+    def load(self, job: RegimeLinkJob) -> MappingClosePrices:\n+        self.jobs.append(job)\n+        return self.prices\n+\n+\n+class BrokenPrices:\n+    \"\"\"DB 접속 실패 같은 일시 장애. 결과로 바꾸지 않고 그대로 올린다.\"\"\"\n+\n+    def load(self, job: RegimeLinkJob) -> MappingClosePrices:\n+        raise ConnectionError(\"market data DB is unreachable\")\n+\n+\n+def run(\n+    name: str = \"continuous_63\",\n+    *,\n+    body: Any = None,\n+    headers: Any = HEADERS,\n+    prices: Any = None,\n+    fail_on: tuple[RegimeLinkEventType, ...] = (),\n+) -> tuple[list[str], FakePublisher, Any]:\n+    call_log: list[str] = []\n+    publisher = FakePublisher(call_log, fail_on=fail_on)\n+    loader = FixturePrices(load_prices(name)) if prices is None else prices\n+    consumer = RegimeLinkJobConsumer(loader, publisher)\n+    raw = json.dumps(job_body(name)) if body is None else body\n+    consumer.handle(raw, headers, FakeAcknowledger(call_log))\n+    return call_log, publisher, loader\n+\n+\n+# --- 정상 흐름 -----------------------------------------------------------------------\n+\n+\n+def test_publishes_started_then_finished_then_acks() -> None:\n+    call_log, publisher, _ = run()\n+\n+    assert call_log == [\"publish:STARTED\", \"publish:FINISHED\", \"ack\"]\n+    finished = publisher.finished()\n+    assert finished.payload.status is RegimeLinkStatus.COMPLETED\n+    assert finished.payload.result is not None\n+    assert finished.payload.error is None\n+    assert finished.schema_version == SCHEMA_VERSION\n+\n+\n+def test_finished_carries_partial_and_delisted_on_from_the_slicer() -> None:\n+    _, publisher, _ = run(\"partial_delisted\")\n+\n+    payload = publisher.finished().payload\n+    assert payload.partial is True\n+    assert payload.delisted_on is not None\n+    assert payload.result is not None\n+    assert payload.result.window63.complete is False\n+\n+\n+def test_started_event_names_the_link_and_the_process() -> None:\n+    _, publisher, _ = run()\n+\n+    started = publisher.of_type(RegimeLinkEventType.STARTED)[0]\n+    assert started.link_id == \"RL-T014-continuous_63\"\n+    assert started.attempt == 1\n+    assert started.payload.resource is not None\n+    assert started.payload.resource.pid is not None\n+\n+\n+# --- ① 계약 오류 → reject (DLQ) ------------------------------------------------------\n+\n+\n+def test_broken_json_is_rejected_without_publishing() -> None:\n+    call_log, publisher, _ = run(body=\"{ this is not json\")\n+\n+    assert call_log == [\"reject\"]\n+    assert publisher.events == []\n+\n+\n+def test_validation_error_is_rejected() -> None:\n+    broken = job_body(\"continuous_63\")\n+    del broken[\"window\"][\"d21\"]\n+\n+    call_log, publisher, _ = run(body=json.dumps(broken))\n+\n+    assert call_log == [\"reject\"]\n+    assert publisher.events == []\n+\n+\n+def test_unknown_field_is_rejected() -> None:\n+    \"\"\"계약에 없는 키는 양쪽이 어긋났다는 신호라 조용히 무시하지 않는다.\"\"\"\n+    broken = job_body(\"continuous_63\")\n+    broken[\"window\"][\"d99\"] = \"2012-06-27\"\n+\n+    call_log, _, _ = run(body=json.dumps(broken))\n+\n+    assert call_log == [\"reject\"]\n+\n+\n+@pytest.mark.parametrize(\"headers\", [None, {}, {\"schemaVersion\": 2}, {\"schemaVersion\": \"1\"}])\n+def test_missing_or_unsupported_schema_version_is_rejected(headers: Any) -> None:\n+    call_log, publisher, _ = run(headers=headers)\n+\n+    assert call_log == [\"reject\"]\n+    assert publisher.events == []\n+\n+\n+# --- ② 계산 실패 → FINISHED(FAILED) 후 ACK -------------------------------------------\n+\n+\n+def test_incomplete_input_finishes_failed_and_acks() -> None:\n+    broken = job_body(\"continuous_63\")\n+    # baselineDate 행을 빼면 연속 운용의 기준 평가액이 없다.\n+    broken[\"inputs\"][\"portfolioSeries\"] = broken[\"inputs\"][\"portfolioSeries\"][1:]\n+\n+    call_log, publisher, _ = run(body=json.dumps(broken))\n+\n+    assert call_log == [\"publish:STARTED\", \"publish:FINISHED\", \"ack\"]\n+    payload = publisher.finished().payload\n+    assert payload.status is RegimeLinkStatus.FAILED\n+    assert payload.error is not None\n+    assert payload.error.code is RegimeLinkErrorCode.INPUT_INCOMPLETE\n+    assert payload.result is None\n+    assert payload.partial is False\n+\n+\n+def test_missing_market_data_finishes_failed_and_acks() -> None:\n+    empty = MappingClosePrices({})\n+\n+    call_log, publisher, _ = run(prices=FixturePrices(empty))\n+\n+    assert call_log == [\"publish:STARTED\", \"publish:FINISHED\", \"ack\"]\n+    payload = publisher.finished().payload\n+    assert payload.error is not None\n+    assert payload.error.code is RegimeLinkErrorCode.MARKET_DATA_MISSING\n+\n+\n+def test_unexpected_slice_failure_becomes_engine_error(monkeypatch: pytest.MonkeyPatch) -> None:\n+    \"\"\"자료가 메모리에 오른 뒤의 예외는 결정적이다 — 재전달시키지 않고 결과로 답한다.\"\"\"\n+\n+    def boom(job: Any, prices: Any) -> Any:\n+        raise ZeroDivisionError(\"slicer bug\")\n+\n+    monkeypatch.setattr(\"worker.regime_link.consumer.slice_window\", boom)\n+\n+    call_log, publisher, _ = run()\n+\n+    assert call_log == [\"publish:STARTED\", \"publish:FINISHED\", \"ack\"]\n+    payload = publisher.finished().payload\n+    assert payload.error is not None\n+    assert payload.error.code is RegimeLinkErrorCode.ENGINE_ERROR\n+    assert \"ZeroDivisionError\" in payload.error.message\n+\n+\n+def test_failed_event_reports_wall_seconds() -> None:\n+    broken = job_body(\"continuous_63\")\n+    broken[\"inputs\"][\"portfolioSeries\"] = broken[\"inputs\"][\"portfolioSeries\"][1:]\n+\n+    _, publisher, _ = run(body=json.dumps(broken))\n+\n+    resource = publisher.finished().payload.resource\n+    assert resource is not None\n+    assert resource.wall_seconds >= 0\n+\n+\n+# --- ③ 발행 실패·일시 장애 → ACK 없음 -------------------------------------------------\n+\n+\n+def test_finished_publish_failure_does_not_ack() -> None:\n+    call_log, publisher, _ = run(fail_on=(RegimeLinkEventType.FINISHED,))\n+\n+    assert call_log == [\"publish:STARTED\", \"publish-failed:FINISHED\", \"requeue\"]\n+    assert \"ack\" not in call_log\n+\n+\n+def test_started_publish_failure_does_not_compute_or_ack() -> None:\n+    call_log, publisher, loader = run(fail_on=(RegimeLinkEventType.STARTED,))\n+\n+    assert call_log == [\"publish-failed:STARTED\", \"requeue\"]\n+    assert loader.jobs == []  # 발행되지 않은 실행을 계산하지 않는다\n+    assert publisher.events == []\n+\n+\n+def test_market_data_outage_is_not_turned_into_a_result() -> None:\n+    call_log, publisher, _ = run(prices=BrokenPrices())\n+\n+    assert call_log == [\"publish:STARTED\", \"requeue\"]\n+    assert publisher.of_type(RegimeLinkEventType.FINISHED) == []\n+\n+\n+def test_no_path_acks_before_the_finished_event_is_confirmed() -> None:\n+    \"\"\"ACK 가 있는 모든 경로에서 바로 앞이 FINISHED 발행 확인이다.\"\"\"\n+    cases = [\n+        run(),\n+        run(\"fresh_cash\"),\n+        run(\"partial_delisted\"),\n+        run(prices=FixturePrices(MappingClosePrices({}))),\n+        run(fail_on=(RegimeLinkEventType.FINISHED,)),\n+        run(body=\"{ this is not json\"),\n+    ]\n+    for call_log, _, _ in cases:\n+        if \"ack\" in call_log:\n+            assert call_log[call_log.index(\"ack\") - 1] == \"publish:FINISHED\"\n+\n+\n+# --- 멱등성 -------------------------------------------------------------------------\n+\n+\n+def test_redelivery_of_the_same_link_and_attempt_keeps_event_ids() -> None:\n+    _, first, _ = run()\n+    _, second, _ = run()\n+\n+    first_ids = [event.event_id for event in first.events]\n+    assert first_ids == [event.event_id for event in second.events]\n+\n+\n+def test_event_ids_differ_by_type_attempt_and_link() -> None:\n+    base = event_id_for(\"RL-1\", 1, RegimeLinkEventType.STARTED)\n+    assert base != event_id_for(\"RL-1\", 1, RegimeLinkEventType.FINISHED)\n+    assert base != event_id_for(\"RL-1\", 2, RegimeLinkEventType.STARTED)\n+    assert base != event_id_for(\"RL-2\", 1, RegimeLinkEventType.STARTED)\n+\n+\n+def test_a_second_attempt_gets_new_event_ids() -> None:\n+    retried = deepcopy(job_body(\"continuous_63\"))\n+    retried[\"job\"][\"attempt\"] = 2\n+\n+    _, first, _ = run()\n+    _, second, _ = run(body=json.dumps(retried))\n+\n+    assert {event.event_id for event in first.events}.isdisjoint(\n+        event.event_id for event in second.events\n+    )\n+    assert all(event.attempt == 2 for event in second.events)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/test_consumer.py",
+          "old_path": "worker/tests/regime_link/test_consumer.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,338 @@\n+\"\"\"사례 연결 엔트리포인트와 pika 층(spec 011 T020).\n+\n+브로커도 DB 도 없이 확인한다. ``pika`` 객체는 가짜로 갈아끼우고 **워커가 무엇을 하지 않는지**를\n+함께 단언한다 — 토폴로지를 선언하지 않는다는 규칙은 \"선언 호출이 없다\"로만 증명된다.\n+\"\"\"\n+\n+from datetime import date\n+from decimal import Decimal\n+from typing import Any\n+\n+import pytest\n+from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker, UnroutableError\n+\n+from worker import regime_link_main\n+from worker.regime_link import rabbitmq\n+from worker.regime_link.contracts import (\n+    ProcessInfo,\n+    RegimeLinkEvent,\n+    RegimeLinkEventType,\n+    RegimeLinkJob,\n+    RegimeLinkStartedPayload,\n+)\n+from worker.regime_link.market_data import PostgresClosePriceLoader\n+from worker.regime_link.messaging import EVENTS_ROUTING_KEY, EXCHANGE, JOBS_QUEUE\n+from worker.regime_link.rabbitmq import (\n+    PikaEventPublisher,\n+    PikaJobAcknowledger,\n+    QueueMissingError,\n+    require_jobs_queue,\n+    run_consumer,\n+)\n+\n+from .test_consumer import job_body  # 같은 T014 픽스처를 읽는다\n+\n+# --- 엔트리포인트 --------------------------------------------------------------------\n+\n+\n+def test_main_refuses_to_start_without_market_data_url(monkeypatch: pytest.MonkeyPatch) -> None:\n+    monkeypatch.setattr(regime_link_main.settings, \"market_data_url\", None)\n+    monkeypatch.setattr(\n+        regime_link_main, \"run_consumer\", lambda *a, **k: pytest.fail(\"must not consume\")\n+    )\n+\n+    assert regime_link_main.main() == 1\n+\n+\n+def test_main_refuses_to_start_without_rabbitmq_url(monkeypatch: pytest.MonkeyPatch) -> None:\n+    monkeypatch.setattr(regime_link_main.settings, \"market_data_url\", \"postgresql://x/y\")\n+    monkeypatch.setattr(regime_link_main.settings, \"rabbitmq_url\", \"\")\n+    monkeypatch.setattr(\n+        regime_link_main, \"run_consumer\", lambda *a, **k: pytest.fail(\"must not consume\")\n+    )\n+\n+    assert regime_link_main.main() == 1\n+\n+\n+def test_main_exits_with_1_when_the_queue_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:\n+    def missing(*args: Any, **kwargs: Any) -> None:\n+        raise QueueMissingError(rabbitmq.queue_missing_message(JOBS_QUEUE))\n+\n+    monkeypatch.setattr(regime_link_main.settings, \"market_data_url\", \"postgresql://x/y\")\n+    monkeypatch.setattr(regime_link_main.settings, \"rabbitmq_url\", \"amqp://x/\")\n+    monkeypatch.setattr(regime_link_main, \"run_consumer\", missing)\n+\n+    assert regime_link_main.main() == 1\n+\n+\n+def test_main_exits_with_1_when_the_broker_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:\n+    def down(*args: Any, **kwargs: Any) -> None:\n+        raise AMQPConnectionError(\"no broker\")\n+\n+    monkeypatch.setattr(regime_link_main.settings, \"market_data_url\", \"postgresql://x/y\")\n+    monkeypatch.setattr(regime_link_main.settings, \"rabbitmq_url\", \"amqp://x/\")\n+    monkeypatch.setattr(regime_link_main, \"run_consumer\", down)\n+\n+    assert regime_link_main.main() == 1\n+\n+\n+# --- 큐 확인: 선언하지 않는다 ---------------------------------------------------------\n+\n+\n+class FakeChannel:\n+    \"\"\"passive declare 로 404 를 내는 채널. 모든 호출을 기록한다.\"\"\"\n+\n+    def __init__(self, exists: bool) -> None:\n+        self.exists = exists\n+        self.calls: list[tuple[str, dict[str, Any]]] = []\n+\n+    def queue_declare(self, **kwargs: Any) -> Any:\n+        self.calls.append((\"queue_declare\", kwargs))\n+        if not self.exists:\n+            raise ChannelClosedByBroker(404, f\"NOT_FOUND - no queue '{kwargs.get('queue')}'\")\n+        return object()\n+\n+    def exchange_declare(self, **kwargs: Any) -> None:\n+        self.calls.append((\"exchange_declare\", kwargs))\n+\n+    def queue_bind(self, **kwargs: Any) -> None:\n+        self.calls.append((\"queue_bind\", kwargs))\n+\n+    def close(self) -> None:\n+        self.calls.append((\"close\", {}))\n+\n+    def confirm_delivery(self) -> None:\n+        self.calls.append((\"confirm_delivery\", {}))\n+\n+    def basic_qos(self, **kwargs: Any) -> None:\n+        self.calls.append((\"basic_qos\", kwargs))\n+\n+    def consume(self, queue: str, **kwargs: Any) -> Any:\n+        self.calls.append((\"consume\", {\"queue\": queue, **kwargs}))\n+        return iter(())\n+\n+\n+class FakeConnection:\n+    def __init__(self, exists: bool = True) -> None:\n+        self.channels: list[FakeChannel] = []\n+        self.exists = exists\n+        self.is_open = True\n+        self.closed = False\n+\n+    def channel(self) -> FakeChannel:\n+        channel = FakeChannel(self.exists)\n+        self.channels.append(channel)\n+        return channel\n+\n+    def close(self) -> None:\n+        self.closed = True\n+        self.is_open = False\n+\n+\n+def test_missing_queue_is_reported_and_not_created() -> None:\n+    connection = FakeConnection(exists=False)\n+\n+    with pytest.raises(QueueMissingError) as caught:\n+        require_jobs_queue(connection)  # type: ignore[arg-type]\n+\n+    assert JOBS_QUEUE in str(caught.value)\n+    calls = [name for channel in connection.channels for name, _ in channel.calls]\n+    assert calls == [\"queue_declare\"]\n+    assert connection.channels[0].calls[0][1][\"passive\"] is True\n+\n+\n+def test_run_consumer_stops_before_consuming_when_the_queue_is_missing() -> None:\n+    connection = FakeConnection(exists=False)\n+\n+    with pytest.raises(QueueMissingError):\n+        run_consumer(\"amqp://x/\", object(), connect=lambda url: connection)  # type: ignore[arg-type]\n+\n+    names = [name for channel in connection.channels for name, _ in channel.calls]\n+    assert \"consume\" not in names\n+    assert \"queue_bind\" not in names\n+    assert \"exchange_declare\" not in names\n+    assert connection.closed is True\n+\n+\n+def test_run_consumer_sets_confirm_and_prefetch_before_consuming() -> None:\n+    connection = FakeConnection(exists=True)\n+\n+    run_consumer(\"amqp://x/\", object(), connect=lambda url: connection)  # type: ignore[arg-type]\n+\n+    work = connection.channels[-1]\n+    names = [name for name, _ in work.calls]\n+    assert names == [\"confirm_delivery\", \"basic_qos\", \"consume\"]\n+    assert work.calls[1][1][\"prefetch_count\"] == 1\n+    assert work.calls[2][1][\"queue\"] == JOBS_QUEUE\n+    assert work.calls[2][1][\"auto_ack\"] is False\n+\n+\n+# --- 발행·ACK 매핑 -------------------------------------------------------------------\n+\n+\n+def started_event() -> RegimeLinkEvent[RegimeLinkStartedPayload]:\n+    return RegimeLinkEvent(\n+        schema_version=1,\n+        event_id=\"EVT-1\",\n+        link_id=\"RL-1\",\n+        attempt=1,\n+        type=RegimeLinkEventType.STARTED,\n+        occurred_at=\"2026-09-18T02:00:00Z\",\n+        payload=RegimeLinkStartedPayload(\n+            started_at=\"2026-09-18T02:00:00Z\", resource=ProcessInfo(pid=1)\n+        ),\n+    )\n+\n+\n+class PublishChannel:\n+    def __init__(self, failures: int = 0, unroutable: bool = False) -> None:\n+        self.failures = failures\n+        self.unroutable = unroutable\n+        self.published: list[dict[str, Any]] = []\n+\n+    def basic_publish(self, **kwargs: Any) -> None:\n+        if self.unroutable:\n+            raise UnroutableError([])\n+        if self.failures:\n+            self.failures -= 1\n+            raise AMQPConnectionError(\"flaky broker\")\n+        self.published.append(kwargs)\n+\n+\n+def test_publish_uses_the_contract_exchange_routing_key_and_properties() -> None:\n+    channel = PublishChannel()\n+\n+    PikaEventPublisher(channel).publish(started_event())  # type: ignore[arg-type]\n+\n+    sent = channel.published[0]\n+    assert sent[\"exchange\"] == EXCHANGE\n+    assert sent[\"routing_key\"] == EVENTS_ROUTING_KEY\n+    assert sent[\"mandatory\"] is True\n+    properties = sent[\"properties\"]\n+    assert properties.message_id == \"EVT-1\"\n+    assert properties.correlation_id == \"RL-1\"\n+    assert properties.headers == {\"schemaVersion\": 1}\n+    assert properties.delivery_mode == 2\n+\n+\n+def test_publish_retries_a_flaky_broker_then_succeeds() -> None:\n+    channel = PublishChannel(failures=2)\n+    slept: list[float] = []\n+\n+    PikaEventPublisher(channel, sleep=slept.append).publish(started_event())  # type: ignore[arg-type]\n+\n+    assert len(channel.published) == 1\n+    assert len(slept) == 2\n+\n+\n+def test_publish_gives_up_after_the_attempt_limit() -> None:\n+    channel = PublishChannel(failures=99)\n+\n+    with pytest.raises(rabbitmq.RegimeLinkPublishError):\n+        PikaEventPublisher(channel, attempts=3, sleep=lambda s: None).publish(  # type: ignore[arg-type]\n+            started_event()\n+        )\n+\n+\n+def test_unroutable_event_fails_immediately() -> None:\n+    channel = PublishChannel(unroutable=True)\n+    slept: list[float] = []\n+\n+    with pytest.raises(rabbitmq.RegimeLinkPublishError):\n+        PikaEventPublisher(channel, sleep=slept.append).publish(started_event())  # type: ignore[arg-type]\n+\n+    assert slept == []  # binding 이 없으면 재시도해도 같다\n+\n+\n+class AckChannel:\n+    def __init__(self) -> None:\n+        self.calls: list[tuple[str, dict[str, Any]]] = []\n+\n+    def basic_ack(self, **kwargs: Any) -> None:\n+        self.calls.append((\"ack\", kwargs))\n+\n+    def basic_reject(self, **kwargs: Any) -> None:\n+        self.calls.append((\"reject\", kwargs))\n+\n+    def basic_nack(self, **kwargs: Any) -> None:\n+        self.calls.append((\"nack\", kwargs))\n+\n+\n+def test_reject_does_not_requeue_but_nack_does() -> None:\n+    channel = AckChannel()\n+    acknowledger = PikaJobAcknowledger(channel, 7)  # type: ignore[arg-type]\n+\n+    acknowledger.ack()\n+    acknowledger.reject()\n+    acknowledger.requeue()\n+\n+    assert channel.calls == [\n+        (\"ack\", {\"delivery_tag\": 7}),\n+        (\"reject\", {\"delivery_tag\": 7, \"requeue\": False}),\n+        (\"nack\", {\"delivery_tag\": 7, \"requeue\": True}),\n+    ]\n+\n+\n+# --- 시장 자료 적재 ------------------------------------------------------------------\n+\n+\n+class FakeCursor:\n+    def __init__(self, rows: dict[str, list[tuple[Any, ...]]]) -> None:\n+        self.rows = rows\n+        self.queries: list[tuple[str, tuple[Any, ...]]] = []\n+        self._result: list[tuple[Any, ...]] = []\n+\n+    def execute(self, sql: str, params: tuple[Any, ...]) -> None:\n+        self.queries.append((sql, params))\n+        self._result = self.rows[\"daily_index\" if \"daily_index\" in sql else \"daily_price\"]\n+\n+    def fetchall(self) -> list[tuple[Any, ...]]:\n+        return self._result\n+\n+    def __enter__(self) -> \"FakeCursor\":\n+        return self\n+\n+    def __exit__(self, *args: Any) -> None:\n+        return None\n+\n+\n+class FakeDbConnection:\n+    def __init__(self, cursor: FakeCursor) -> None:\n+        self._cursor = cursor\n+\n+    def cursor(self) -> FakeCursor:\n+        return self._cursor\n+\n+    def __enter__(self) -> \"FakeDbConnection\":\n+        return self\n+\n+    def __exit__(self, *args: Any) -> None:\n+        return None\n+\n+\n+def test_loader_reads_raw_closes_for_the_universe_and_the_benchmark() -> None:\n+    job = RegimeLinkJob.model_validate(job_body(\"continuous_63\"))\n+    cursor = FakeCursor(\n+        {\n+            \"daily_price\": [(\"091160.XKRX\", date(2012, 4, 2), Decimal(\"17500\"))],\n+            \"daily_index\": [(date(2012, 4, 2), Decimal(\"2020.50\"))],\n+        }\n+    )\n+    loader = PostgresClosePriceLoader(\n+        \"postgresql://x/y\", connect=lambda url: FakeDbConnection(cursor)\n+    )\n+\n+    prices = loader.load(job)\n+\n+    assert prices.close(\"091160.XKRX\", date(2012, 4, 2)) == Decimal(\"17500\")\n+    assert prices.close(\"KOSPI\", date(2012, 4, 2)) == Decimal(\"2020.50\")\n+    # 없는 날은 채우지 않는다 — 판정은 slicer 가 MARKET_DATA_MISSING 으로 한다.\n+    assert prices.close(\"091160.XKRX\", date(2012, 4, 3)) is None\n+    price_sql, price_params = cursor.queries[0]\n+    assert \"daily_price\" in price_sql and \"close\" in price_sql\n+    assert \"adjusted_close\" not in price_sql  # 평가액은 실제 가격으로 낸다\n+    assert price_params[0] == job.market_data.dataset_id\n+    assert price_params[2:] == (job.window.baseline_date, job.window.last_available)\n+    index_sql, index_params = cursor.queries[1]\n+    assert \"daily_index\" in index_sql\n+    assert index_params[1] == \"KOSPI\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/regime_link/test_main.py",
+          "old_path": "worker/tests/regime_link/test_main.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -390,3 +390,63 @@ uv run ruff check src tests scripts && uv run ruff format --check src tests scri\n   `CsvMarketDataProvider`(3종목 픽스처, 네트워크 없음)를 쓴다.\n - `tests/test_rabbitmq.py` 메시지 속성, 발행 확인·재시도, ACK/reject 매핑, 큐 부재 처리,\n   그리고 큐·routing key 상수가 백엔드 `BacktestRabbitConfig.java`와 같은지 대조.\n+\n+## 사례 연결 Consumer (spec 011)\n+\n+백테스트 소비자와 **다른 프로세스**다. `regime-link.jobs`에서 사례 연결 작업을 받아 004 실행\n+사본을 63(보조 21)거래일 구간으로 잘라 요약하고 `regime-link.events`로 `STARTED` / `FINISHED`를\n+발행한다. 큐도 스키마 버전(`SCHEMA_VERSION = 1`)도 백테스트와 별개이며, 한쪽이 긴 백테스트로\n+막혀 있는 동안 다른 쪽이 멈추지 않도록 엔트리포인트를 나눴다. 계약은\n+[`docs/specs/regime-link-messaging/README.md`](../docs/specs/regime-link-messaging/README.md)다.\n+\n+```bash\n+# 백테스트 워커와 같은 환경변수를 쓰고, 둘 다 기본값이 없다.\n+export RABBITMQ_URL=amqp://thorp:thorp@localhost:5672/\n+export MARKET_DATA_URL=postgresql://thorp_ro:...@localhost:5432/thorp\n+uv run python -m worker.regime_link_main\n+```\n+\n+개발용 compose 로 띄우려면 `worker-regime-link` 서비스를 쓴다. 백테스트 워커와 **같은 이미지에\n+실행 명령만 다르다**.\n+\n+```bash\n+docker compose -f docker-compose.dev.yml --profile app up -d backend worker-regime-link\n+```\n+\n+**백엔드가 먼저 떠야 한다.** 이 워커는 exchange·queue 를 선언하지 않으므로 `regime-link.jobs` 가\n+없으면 만들지 않고 종료한다. compose 정의는 `depends_on: backend` 로 순서를 잡고\n+`restart: on-failure` 로 백엔드가 토폴로지를 선언할 때까지 다시 붙게 해 두었다 — 백엔드에\n+healthcheck 가 없어 순서만으로는 \"선언이 끝났다\"가 보장되지 않기 때문이다. 큐가 끝내 없으면\n+로그에 그 사실이 남고 컨테이너가 재시작을 반복하므로 `docker compose logs worker-regime-link`\n+로 확인한다.\n+\n+| 파일 | 역할 |\n+|---|---|\n+| `regime_link/messaging.py` | 계약 상수(exchange·queue·routing key, `SCHEMA_VERSION=1`, prefetch 1)와 경계 Protocol, 오류 분류. **pika 없음** |\n+| `regime_link/contracts.py` | 작업·이벤트 메시지 모델(pydantic, `extra=\"forbid\"`) |\n+| `regime_link/slicer.py` | 구간 잘라내기·요약 계산. pandas도 DB도 모르고 종가는 주입받는다 |\n+| `regime_link/market_data.py` | `daily_price`·`daily_index`에서 구간 원시 종가를 읽어 `slicer`에 넘긴다 |\n+| `regime_link/consumer.py` | `RegimeLinkJobConsumer` — 검증 → 계산 호출 → 발행 순서 → ACK 판단 |\n+| `regime_link/rabbitmq.py` | pika 구현: publisher confirm + `mandatory` 발행, ACK/reject 매핑, 소비 루프 |\n+| `regime_link_main.py` | 엔트리포인트(`python -m worker.regime_link_main`) |\n+\n+동작 규칙(백테스트와 같은 것은 줄이고 다른 것만 적는다):\n+\n+- **`PROGRESS`가 없다.** 63거래일은 한 번에 끝나므로 이벤트는 `STARTED`와 `FINISHED` 둘뿐이고\n+  `sequence`도 없다.\n+- **`schemaVersion`은 작업 AMQP 헤더로만 온다**(본문에는 없다). 그래서 헤더가 없으면 통과시키지\n+  않고 계약 오류로 거절한다 — 표시할 자리가 하나뿐이라 비어 있다는 것은 보낸 쪽이 계약을 지키지\n+  않았다는 뜻이다.\n+- **`eventId`는 `linkId`·`attempt`·이벤트 종류에서 결정적으로 만든다.** 011에는 `executionId`가\n+  없고 재전달은 같은 작업을 그대로 다시 하는 것이라, 매번 새 값을 뽑으면 백엔드의 중복 방어 키가\n+  재전달마다 달라져 같은 결과가 두 번 기록된다.\n+- **시장 자료는 메시지에 없다.** 원시 종가(`daily_price.close`)와 참고 지수(`daily_index.close`)를\n+  워커가 `baselineDate`~`lastAvailable` 구간만 읽는다. 수정 종가를 쓰지 않는다 — 수량 이월이\n+  분할을 이미 반영해서 두 번 조정된다. 없는 날은 채우지 않고 `MARKET_DATA_MISSING`으로 실패한다.\n+- 오류 세 갈래는 백테스트와 같다: 계약 오류(JSON·`ValidationError`·`schemaVersion`) → requeue 없이\n+  reject → `regime-link.jobs.dlq`, 계산 실패(`INPUT_INCOMPLETE`·`MARKET_DATA_MISSING`·\n+  `ENGINE_ERROR`) → `FINISHED(FAILED)` 발행 후 ACK, 발행 실패와 자료 적재 중 일시 장애 → ACK 없음.\n+- **토폴로지를 선언하지 않는다.** 시작할 때 `regime-link.jobs` 존재만 passive로 확인하고 없으면\n+  \"백엔드를 먼저 띄워 토폴로지를 선언하라\"는 오류를 남기고 종료한다(exit code 1).\n+- 테스트는 `tests/regime_link/test_consumer.py`(발행·ACK 순서, 오류 세 갈래, `eventId` 멱등성)와\n+  `tests/regime_link/test_main.py`(엔트리포인트 종료 코드, 큐 부재, 메시지 속성·재시도, 종가 조회).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/README.md",
+          "old_path": "worker/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -124,6 +124,33 @@ services:\n     deploy:\n       replicas: 1\n \n+  # 사례 연결 워커(spec 011): 같은 이미지에 엔트리포인트만 다르다(`python -m worker.regime_link_main`).\n+  # 백테스트 워커와 다른 프로세스로 띄우는 이유는 큐가 다르고, 한쪽이 긴 백테스트로 막혀 있어도\n+  # 다른 쪽이 멈추지 않아야 하기 때문이다(worker/README.md \"사례 연결 Consumer\").\n+  #\n+  # **토폴로지는 백엔드가 선언한다.** 이 워커는 exchange·queue 를 만들지 않고 `regime-link.jobs` 가\n+  # 없으면 \"백엔드를 먼저 띄워라\"라는 뜻으로 즉시 종료한다. 그래서 백엔드 뒤에 두고\n+  # `restart: on-failure` 로 선언이 끝날 때까지 다시 붙게 한다 — 백엔드에 healthcheck 가 없어\n+  # `depends_on` 만으로는 \"떴다\"까지만 보장되고 \"선언이 끝났다\"는 보장되지 않는다.\n+  worker-regime-link:\n+    profiles: [\"app\"]\n+    extends:\n+      service: worker\n+    command: [\"python\", \"-m\", \"worker.regime_link_main\"]\n+    # WORKER_ROLE 은 백테스트 큐 선택용이라 이 워커는 읽지 않는다. 오해를 줄이려 비운다.\n+    environment:\n+      WORKER_ROLE: \"\"\n+    restart: on-failure\n+    depends_on:\n+      postgres:\n+        condition: service_healthy\n+      rabbitmq:\n+        condition: service_healthy\n+      backend:\n+        condition: service_started\n+    deploy:\n+      replicas: 1\n+\n volumes:\n   postgres-data:\n   kafka-data:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docker-compose.dev.yml",
+          "old_path": "docker-compose.dev.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2231676,
+      "head_commit_sha": "c56979b49d0523d47f2f43afabd9168151256cad",
+      "base_commit_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "start_commit_sha": "a1121af9d2e46829001acbb778452775b489a37f",
+      "created_at": "2026-09-21T13:52:26.688+09:00",
+      "merge_request_id": 954234,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "4429cd486cf5954a86aa9158b9c6d022968ce258",
+      "commits": [
+        {
+          "id": "c56979b49d0523d47f2f43afabd9168151256cad",
+          "short_id": "c56979b4",
+          "created_at": "2026-09-21T13:50:58.000+09:00",
+          "parent_ids": [
+            "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+            "a1121af9d2e46829001acbb778452775b489a37f"
+          ],
+          "title": "Merge branch 'feat(be)/364-regime-link-slicer' into feat(be)/365-regime-link-consumer",
+          "message": "Merge branch 'feat(be)/364-regime-link-slicer' into feat(be)/365-regime-link-consumer\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:50:58.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:50:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c56979b49d0523d47f2f43afabd9168151256cad"
+        },
+        {
+          "id": "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+          "short_id": "5fd6e264",
+          "created_at": "2026-09-21T12:46:43.000+09:00",
+          "parent_ids": [
+            "26e25f8cda23ca7fd2c493ec2694a63389440089"
+          ],
+          "title": "feat(be): 사례 연결 워커 소비자와 엔트리포인트",
+          "message": "feat(be): 사례 연결 워커 소비자와 엔트리포인트\n\nregime-link.jobs 를 소비해 STARTED 발행 → 구간 계산 → FINISHED 발행 → ACK 하는\n소비자를 넣고, 백테스트 워커와 다른 프로세스로 띄우는 엔트리포인트를 더한다.\n개발용 compose 에 worker-regime-link 서비스를 등록했다.\n\n오류는 세 갈래다. 계약 오류는 requeue 없이 reject 해 DLQ 로 보내고, 계산 실패는\nFINISHED(FAILED) 를 발행한 뒤 ACK 하며, 발행 실패와 자료 적재 장애는 ACK 하지\n않는다. FINISHED 를 확인하기 전에 ACK 하는 경로는 두지 않았다.\n\n토폴로지는 선언하지 않는다. 큐가 없으면 만들지 않고 종료하므로 백엔드가 먼저\n떠서 선언해야 한다. eventId 는 linkId·attempt·type 으로 결정적으로 만들어\n재전달에서 같은 값이 나온다.\n\n백테스트 소비자 시험 51건은 변경 전후가 같다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:46:43.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:46:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2231462,
+      "head_commit_sha": "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+      "base_commit_sha": "26e25f8cda23ca7fd2c493ec2694a63389440089",
+      "start_commit_sha": "26e25f8cda23ca7fd2c493ec2694a63389440089",
+      "created_at": "2026-09-21T13:30:52.223+09:00",
+      "merge_request_id": 954234,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "4429cd486cf5954a86aa9158b9c6d022968ce258",
+      "commits": [
+        {
+          "id": "5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc",
+          "short_id": "5fd6e264",
+          "created_at": "2026-09-21T12:46:43.000+09:00",
+          "parent_ids": [
+            "26e25f8cda23ca7fd2c493ec2694a63389440089"
+          ],
+          "title": "feat(be): 사례 연결 워커 소비자와 엔트리포인트",
+          "message": "feat(be): 사례 연결 워커 소비자와 엔트리포인트\n\nregime-link.jobs 를 소비해 STARTED 발행 → 구간 계산 → FINISHED 발행 → ACK 하는\n소비자를 넣고, 백테스트 워커와 다른 프로세스로 띄우는 엔트리포인트를 더한다.\n개발용 compose 에 worker-regime-link 서비스를 등록했다.\n\n오류는 세 갈래다. 계약 오류는 requeue 없이 reject 해 DLQ 로 보내고, 계산 실패는\nFINISHED(FAILED) 를 발행한 뒤 ACK 하며, 발행 실패와 자료 적재 장애는 ACK 하지\n않는다. FINISHED 를 확인하기 전에 ACK 하는 경로는 두지 않았다.\n\n토폴로지는 선언하지 않는다. 큐가 없으면 만들지 않고 종료하므로 백엔드가 먼저\n떠서 선언해야 한다. eventId 는 linkId·attempt·type 으로 결정적으로 만들어\n재전달에서 같은 값이 나온다.\n\n백테스트 소비자 시험 51건은 변경 전후가 같다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:46:43.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:46:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5fd6e26488c2d4e82b16cdcb4463c0d9c4d86bfc"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

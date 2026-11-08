@@ -1,0 +1,1048 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 936108,
+    "iid": 15,
+    "project_id": 1444456,
+    "title": "feat(be): 거시경제 지표 6개 + 주가지수 5개 openapi 연결 구현",
+    "description": "## 작업 내용 요약\n\n공식 외부 API에서 시장 지표 5개와 거시 지표 6개의 최신값을 조회하는 API를 구현했습니다.\n\n지표별로 독립된 조회 API를 제공하여 특정 기관의 응답 지연이나 장애가 다른 지표 조회에 영향을 주지 않도록 구성했습니다.\n\n## 관련 이슈\n\nclose #90\n\n## 주요 변경 사항\n\n- `market` 도메인을 기존 `backtest`와 동일한 4계층 구조로 구성\n- 지표별 GET API 11개 구현\n  - KRX: KOSPI, KOSDAQ, V-KOSPI 200\n  - ECOS: 원/달러 환율, 국고채 3년 금리, ESI 순환변동치, M2\n  - KOSIS: 동행·선행지수 순환변동치, 근원물가 전년동월비\n  - 관세청: 월간 수출액\n- 최신 관측값·단위·기준일/기준월·출처·수집 시각 반환\n- 지표별 6시간 캐시 및 갱신 실패 시 수집 후 최대 24시간 이내 이전 값 제공\n- 요청 시간 제한과 실패 후 30초 재호출 억제 적용\n- 원천 인증 실패·결측·응답 오류 처리 및 API 키 노출 방지\n- 관세청 Encoding/Decoding 키 지원, KOSIS 근원물가 단위 누락 처리\n- `market` 전용 설정에서 환경변수 및 로컬 `.env` 로딩\n- `.env.example`과 API 명세 문서 추가·보완\n\n## 테스트 체크리스트\n\n- [x] `spotlessApply build` 통과\n- [x] 계층 의존성 검증 통과\n- [x] 11개 개별 API 경로 및 응답 형식 검증\n- [x] 캐시 만료·이전 값 반환·실패 격리·동시 요청 검증\n- [x] 키 인코딩·원천 오류·응답 파싱 검증\n- [x] 로컬 실제 호출에서 11개 API 모두 HTTP 200 및 관측값 반환 확인\n\n## 리뷰 포인트\n\n- 시장 API는 신규 응답 형식인 `httpStatus`, `isSuccess`, `message`, `code`, `result`를 사용합니다.\n- 기존 공통 핸들러에서 처리하는 405 등의 오류는 기존 응답 형식을 유지합니다.\n- 배포 시 백엔드에 `ECOS_API_KEY`, `KRX_API_KEY`, `KOSIS_API_KEY`, `DATA_GO_KR_SERVICE_KEY` 주입이 필요합니다.\n- 메모리 캐시는 서버 재시작 시 초기화됩니다.",
+    "state": "merged",
+    "created_at": "2026-09-08T11:08:14.079+09:00",
+    "updated_at": "2026-09-15T15:56:47.511+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-08T11:32:07.030+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/90-openapi-connect",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2a309d9a5efaa1d4c530ad162d0703a189373279",
+    "merge_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T11:08:15.914+09:00",
+    "reference": "!15",
+    "references": {
+      "short": "!15",
+      "relative": "!15",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!15"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/15",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 936108,
+    "iid": 15,
+    "project_id": 1444456,
+    "title": "feat(be): 거시경제 지표 6개 + 주가지수 5개 openapi 연결 구현",
+    "description": "## 작업 내용 요약\n\n공식 외부 API에서 시장 지표 5개와 거시 지표 6개의 최신값을 조회하는 API를 구현했습니다.\n\n지표별로 독립된 조회 API를 제공하여 특정 기관의 응답 지연이나 장애가 다른 지표 조회에 영향을 주지 않도록 구성했습니다.\n\n## 관련 이슈\n\nclose #90\n\n## 주요 변경 사항\n\n- `market` 도메인을 기존 `backtest`와 동일한 4계층 구조로 구성\n- 지표별 GET API 11개 구현\n  - KRX: KOSPI, KOSDAQ, V-KOSPI 200\n  - ECOS: 원/달러 환율, 국고채 3년 금리, ESI 순환변동치, M2\n  - KOSIS: 동행·선행지수 순환변동치, 근원물가 전년동월비\n  - 관세청: 월간 수출액\n- 최신 관측값·단위·기준일/기준월·출처·수집 시각 반환\n- 지표별 6시간 캐시 및 갱신 실패 시 수집 후 최대 24시간 이내 이전 값 제공\n- 요청 시간 제한과 실패 후 30초 재호출 억제 적용\n- 원천 인증 실패·결측·응답 오류 처리 및 API 키 노출 방지\n- 관세청 Encoding/Decoding 키 지원, KOSIS 근원물가 단위 누락 처리\n- `market` 전용 설정에서 환경변수 및 로컬 `.env` 로딩\n- `.env.example`과 API 명세 문서 추가·보완\n\n## 테스트 체크리스트\n\n- [x] `spotlessApply build` 통과\n- [x] 계층 의존성 검증 통과\n- [x] 11개 개별 API 경로 및 응답 형식 검증\n- [x] 캐시 만료·이전 값 반환·실패 격리·동시 요청 검증\n- [x] 키 인코딩·원천 오류·응답 파싱 검증\n- [x] 로컬 실제 호출에서 11개 API 모두 HTTP 200 및 관측값 반환 확인\n\n## 리뷰 포인트\n\n- 시장 API는 신규 응답 형식인 `httpStatus`, `isSuccess`, `message`, `code`, `result`를 사용합니다.\n- 기존 공통 핸들러에서 처리하는 405 등의 오류는 기존 응답 형식을 유지합니다.\n- 배포 시 백엔드에 `ECOS_API_KEY`, `KRX_API_KEY`, `KOSIS_API_KEY`, `DATA_GO_KR_SERVICE_KEY` 주입이 필요합니다.\n- 메모리 캐시는 서버 재시작 시 초기화됩니다.",
+    "state": "merged",
+    "created_at": "2026-09-08T11:08:14.079+09:00",
+    "updated_at": "2026-09-15T15:56:47.511+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-08T11:32:07.030+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/90-openapi-connect",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "2a309d9a5efaa1d4c530ad162d0703a189373279",
+    "merge_commit_sha": "e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T11:08:15.914+09:00",
+    "reference": "!15",
+    "references": {
+      "short": "!15",
+      "relative": "!15",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!15"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/15",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "33",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "head_sha": "2a309d9a5efaa1d4c530ad162d0703a189373279",
+      "start_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee"
+    },
+    "merge_error": null,
+    "first_contribution": true,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f219147d70d9536eecba5675fe00615fcbc62410",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2772734,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **아키텍처 설계와 장애 격리**: 외부 오픈API 연동 시 발생할 수 있는 지연이나 장애가 다른 지표 조회에 영향을 주지 않도록 지표별 슬롯(`Slot`)과 `ReentrantLock`을 통한 동시성 제어, 캐시 및 Fallback 메커니즘을 훌륭하게 설계했습니다.\n- **보안 및 예외 처리**: XXE 공격 방지 설정(`secureDocumentBuilder`), 민감한 API 키나 원본 URL이 예외 메시지에 노출되지 않도록 처리한 점, 그리고 Base64 키 인코딩/디코딩 호환성을 꼼꼼하게 챙긴 부분이 매우 인상적입니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. 전반적으로 코드 품질, 보안, 예외 처리 및 단위 테스트 커버리지 수준이 매우 높습니다.\n\n### 테스트 제안\n- **외부 API 타임아웃 시나리오 테스트**: 설정된 `requestBudget` 또는 `readTimeout`을 초과하여 외부 API 응답이 지연될 때, `MarketDeadline`과 `MarketHttpClient`가 정상적으로 `TIMEOUT` 예외를 발생시키고 캐시된 Fallback 값을 올바르게 반환하거나 실패 처리하는지 검증합니다.\n- **동시성 및 레이스 컨디션 테스트**: 동일한 만료된 캐시를 가진 지표에 대해 다수의 스레드가 동시에 요청을 보낼 때, 원천 API가 단 한 번만 호출되고 나머지 요청은 락을 대기한 뒤 갱신된 값을 올바르게 공유받는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:2a309d9a5efaa1d4c530ad162d0703a189373279 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-08T11:08:24.564+09:00",
+          "updated_at": "2026-09-08T11:20:58.994+09:00",
+          "system": false,
+          "noteable_id": 936108,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 15,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "97996ed90a425a62080e842b348cc6acca628fd0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2772809,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>2a309d9a - fix(be): 관세청 XML 파서 초기화 예외 처리</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/15/diffs?diff_id=2171006&start_sha=50dc5ba969bfb0aa3f3bd94f23ba827002596aa4)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-08T11:20:51.024+09:00",
+          "updated_at": "2026-09-08T11:20:51.027+09:00",
+          "system": true,
+          "noteable_id": 936108,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 15,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "da6cd9ec296e33af53983224e6280b93c891b740",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2772832,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-08T11:24:15.674+09:00",
+          "updated_at": "2026-09-08T11:24:15.677+09:00",
+          "system": true,
+          "noteable_id": 936108,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 15,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4a7681353a39ba5a2347b918ed18c073345d018c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2772867,
+          "type": null,
+          "body": "훌륭합니다",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T11:29:04.947+09:00",
+          "updated_at": "2026-09-08T11:29:04.947+09:00",
+          "system": false,
+          "noteable_id": 936108,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 15,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "987e15df9cef72653b0c67db99c98e28d662d4f6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2772868,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-08T11:29:08.744+09:00",
+          "updated_at": "2026-09-08T11:29:08.761+09:00",
+          "system": true,
+          "noteable_id": 936108,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 15,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "81b1739cbd4a3fd80b7e6ce2bee6d6169a770f05",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2772880,
+          "type": null,
+          "body": "mentioned in commit e1b9cffbdc3fb9c611bc2147d0fc9a84a67f0fc3",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-08T11:32:06.996+09:00",
+          "updated_at": "2026-09-08T11:32:07.002+09:00",
+          "system": true,
+          "noteable_id": 936108,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 15,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2171006,
+      "head_commit_sha": "2a309d9a5efaa1d4c530ad162d0703a189373279",
+      "base_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "start_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "created_at": "2026-09-08T11:20:50.633+09:00",
+      "merge_request_id": 936108,
+      "state": "collected",
+      "real_size": "33",
+      "patch_id_sha": "cb4f31ad0acc2650285f8c274e5b75ba8e8dc91e"
+    },
+    {
+      "id": 2170917,
+      "head_commit_sha": "50dc5ba969bfb0aa3f3bd94f23ba827002596aa4",
+      "base_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "start_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "created_at": "2026-09-08T11:08:14.601+09:00",
+      "merge_request_id": 936108,
+      "state": "without_files",
+      "real_size": "33",
+      "patch_id_sha": "c5feb52a3f1211e3ac9fee6f77a13dad4fd71b43"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2171006,
+      "head_commit_sha": "2a309d9a5efaa1d4c530ad162d0703a189373279",
+      "base_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "start_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "created_at": "2026-09-08T11:20:50.633+09:00",
+      "merge_request_id": 936108,
+      "state": "collected",
+      "real_size": "33",
+      "patch_id_sha": "cb4f31ad0acc2650285f8c274e5b75ba8e8dc91e",
+      "commits": [
+        {
+          "id": "2a309d9a5efaa1d4c530ad162d0703a189373279",
+          "short_id": "2a309d9a",
+          "created_at": "2026-09-08T11:20:46.000+09:00",
+          "parent_ids": [
+            "50dc5ba969bfb0aa3f3bd94f23ba827002596aa4"
+          ],
+          "title": "fix(be): 관세청 XML 파서 초기화 예외 처리",
+          "message": "fix(be): 관세청 XML 파서 초기화 예외 처리\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-08T11:20:46.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-08T11:20:46.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2a309d9a5efaa1d4c530ad162d0703a189373279"
+        },
+        {
+          "id": "50dc5ba969bfb0aa3f3bd94f23ba827002596aa4",
+          "short_id": "50dc5ba9",
+          "created_at": "2026-09-08T11:02:47.000+09:00",
+          "parent_ids": [
+            "e476234a74fade14482663dd18e78757e66e9835",
+            "9ec3ec295b5ced540a2d2d621123db7ee95bedee"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/90-openapi-connect",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/90-openapi-connect\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-08T11:02:47.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-08T11:02:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/50dc5ba969bfb0aa3f3bd94f23ba827002596aa4"
+        },
+        {
+          "id": "e476234a74fade14482663dd18e78757e66e9835",
+          "short_id": "e476234a",
+          "created_at": "2026-09-07T18:00:23.000+09:00",
+          "parent_ids": [
+            "00c4968959bd0ec5c56183d2a0cc6da39b3666f7"
+          ],
+          "title": "feat(be):시장/거시 지표 11개 외부 API 연동",
+          "message": "feat(be):시장/거시 지표 11개 외부 API 연동\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-07T18:00:23.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-07T18:00:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e476234a74fade14482663dd18e78757e66e9835"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+package com.ssafy.thorp.common.web.response;\n+\n+import org.springframework.http.HttpStatus;\n+\n+/** 신규 API 명세의 응답 형식. 기존 ApiResponse 사용처는 별도 마이그레이션 대상이다. */\n+public record HttpApiResponse<T>(\n+        String httpStatus, boolean isSuccess, String message, int code, T result) {\n+    public static <T> HttpApiResponse<T> ok(T result) {\n+        return new HttpApiResponse<>(\"OK\", true, \"요청이 성공적으로 처리되었습니다.\", 200, result);\n+    }\n+\n+    public static <T> HttpApiResponse<T> fail(HttpStatus status, String message) {\n+        return new HttpApiResponse<>(status.name(), false, message, status.value(), null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/web/response/HttpApiResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/web/response/HttpApiResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1 @@\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/command/.gitkeep",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/command/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+package com.ssafy.thorp.market.application.port;\n+\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import java.time.Duration;\n+\n+/** 여러 날짜를 조회해도 한 요청의 전체 시간 예산을 넘기지 않는다. */\n+public final class MarketDeadline {\n+    private final long endNanos;\n+\n+    public MarketDeadline(Duration budget) {\n+        endNanos = System.nanoTime() + budget.toNanos();\n+    }\n+\n+    public Duration remaining() {\n+        long nanos = endNanos - System.nanoTime();\n+        if (nanos <= 0) throw new MarketDataException(MarketDataException.Reason.TIMEOUT);\n+        return Duration.ofNanos(nanos);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/port/MarketDeadline.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/port/MarketDeadline.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+package com.ssafy.thorp.market.application.port;\n+\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+\n+public interface MarketProvider {\n+    boolean supports(MarketCode code);\n+\n+    MarketObservation fetch(MarketCode code, MarketDeadline deadline);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/port/MarketProvider.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/port/MarketProvider.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1 @@\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/repository/.gitkeep",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/repository/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,8 @@\n+package com.ssafy.thorp.market.application.result;\n+\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.time.Instant;\n+\n+public record MarketResult(\n+        MarketCode code, MarketObservation observation, Instant retrievedAt, boolean stale) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/result/MarketResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/result/MarketResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.ssafy.thorp.market.application.service;\n+\n+import java.time.Duration;\n+\n+public record MarketCachePolicy(\n+        Duration ttl, Duration maxAge, Duration failureCooldown, Duration requestBudget) {\n+    public MarketCachePolicy {\n+        if (ttl.isNegative()\n+                || ttl.isZero()\n+                || maxAge.compareTo(ttl) < 0\n+                || failureCooldown.isNegative()\n+                || requestBudget.isNegative()\n+                || requestBudget.isZero()) {\n+            throw new IllegalArgumentException(\"시장 데이터 캐시·시간 제한 설정이 올바르지 않습니다.\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketCachePolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketCachePolicy.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,89 @@\n+package com.ssafy.thorp.market.application.service;\n+\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.application.result.MarketResult;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.util.EnumMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.TimeUnit;\n+import java.util.concurrent.locks.ReentrantLock;\n+import org.springframework.beans.factory.annotation.Qualifier;\n+import org.springframework.stereotype.Service;\n+\n+@Service\n+public class MarketService {\n+    private final List<MarketProvider> providers;\n+    private final Clock clock;\n+    private final MarketCachePolicy policy;\n+    private final Map<MarketCode, Slot> slots = new EnumMap<>(MarketCode.class);\n+\n+    public MarketService(\n+            List<MarketProvider> providers,\n+            @Qualifier(\"marketClock\") Clock clock,\n+            MarketCachePolicy policy) {\n+        this.providers = List.copyOf(providers);\n+        this.clock = clock;\n+        this.policy = policy;\n+        for (MarketCode code : MarketCode.values()) slots.put(code, new Slot());\n+    }\n+\n+    public MarketResult get(MarketCode code) {\n+        MarketDeadline deadline = new MarketDeadline(policy.requestBudget());\n+        Slot slot = slots.get(code);\n+        boolean locked = false;\n+        try {\n+            locked = slot.lock.tryLock(deadline.remaining().toNanos(), TimeUnit.NANOSECONDS);\n+            if (!locked) throw new MarketDataException(MarketDataException.Reason.TIMEOUT);\n+            Instant now = clock.instant();\n+            if (slot.value != null && now.isBefore(slot.retrievedAt.plus(policy.ttl())))\n+                return new MarketResult(code, slot.value, slot.retrievedAt, false);\n+            if (slot.failure != null && now.isBefore(slot.retryAfter))\n+                return fallback(code, slot, now);\n+            MarketProvider provider =\n+                    providers.stream()\n+                            .filter(p -> p.supports(code))\n+                            .findFirst()\n+                            .orElseThrow(\n+                                    () ->\n+                                            new MarketDataException(\n+                                                    MarketDataException.Reason.NOT_CONFIGURED));\n+            try {\n+                MarketObservation observation = provider.fetch(code, deadline);\n+                slot.value = observation;\n+                slot.retrievedAt = clock.instant();\n+                slot.failure = null;\n+                return new MarketResult(code, observation, slot.retrievedAt, false);\n+            } catch (MarketDataException e) {\n+                slot.failure = e;\n+                slot.retryAfter = clock.instant().plus(policy.failureCooldown());\n+                return fallback(code, slot, clock.instant());\n+            }\n+        } catch (InterruptedException e) {\n+            Thread.currentThread().interrupt();\n+            throw new MarketDataException(MarketDataException.Reason.TIMEOUT);\n+        } finally {\n+            if (locked) slot.lock.unlock();\n+        }\n+    }\n+\n+    private MarketResult fallback(MarketCode code, Slot slot, Instant now) {\n+        if (slot.value != null && now.isBefore(slot.retrievedAt.plus(policy.maxAge())))\n+            return new MarketResult(code, slot.value, slot.retrievedAt, true);\n+        slot.value = null;\n+        throw slot.failure;\n+    }\n+\n+    private static final class Slot {\n+        final ReentrantLock lock = new ReentrantLock();\n+        MarketObservation value;\n+        Instant retrievedAt;\n+        Instant retryAfter;\n+        MarketDataException failure;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+package com.ssafy.thorp.market.domain.exception;\n+\n+/** 원천 URL·키·응답 본문·원인 예외를 저장하지 않는 안전한 오류. */\n+public class MarketDataException extends RuntimeException {\n+    public enum Reason {\n+        NOT_CONFIGURED,\n+        AUTHENTICATION,\n+        NO_DATA,\n+        TIMEOUT,\n+        INVALID_RESPONSE,\n+        UPSTREAM_ERROR\n+    }\n+\n+    private final Reason reason;\n+\n+    public MarketDataException(Reason reason) {\n+        super(\n+                switch (reason) {\n+                    case NOT_CONFIGURED -> \"데이터 제공 설정을 준비 중입니다.\";\n+                    case AUTHENTICATION -> \"외부 데이터 서비스 인증 또는 이용 승인을 확인해야 합니다.\";\n+                    case NO_DATA -> \"현재 제공 가능한 관측값이 없습니다.\";\n+                    case TIMEOUT -> \"외부 데이터 조회 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.\";\n+                    case INVALID_RESPONSE -> \"외부 데이터 응답을 확인할 수 없습니다.\";\n+                    case UPSTREAM_ERROR -> \"외부 데이터 서비스에 일시적인 문제가 있습니다.\";\n+                });\n+        this.reason = reason;\n+    }\n+\n+    public Reason reason() {\n+        return reason;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/domain/exception/MarketDataException.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/domain/exception/MarketDataException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.ssafy.thorp.market.domain.model;\n+\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.Objects;\n+\n+/** 원천에서 확인한 관측값. 월 자료를 임의의 일자로 변환하지 않는다. */\n+public record MarketObservation(BigDecimal value, String unit, String observationDate) {\n+    public MarketObservation {\n+        Objects.requireNonNull(value);\n+        if (unit == null || unit.isBlank()) throw new IllegalArgumentException(\"단위가 필요합니다.\");\n+        if (observationDate != null && observationDate.length() == 7)\n+            YearMonth.parse(observationDate);\n+        else LocalDate.parse(Objects.requireNonNull(observationDate));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/domain/model/MarketObservation.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/domain/model/MarketObservation.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,54 @@\n+package com.ssafy.thorp.market.domain.vo;\n+\n+public enum MarketCode {\n+    KOSPI(\"KOSPI 지수\", \"market\", \"daily\", \"KRX\", \"KOSPI 시리즈 일별시세정보\"),\n+    KOSDAQ(\"KOSDAQ 지수\", \"market\", \"daily\", \"KRX\", \"KOSDAQ 시리즈 일별시세정보\"),\n+    USD_KRW(\"원/달러 환율\", \"market\", \"daily\", \"한국은행 ECOS\", \"원/미국달러(매매기준율)\"),\n+    VKOSPI200(\"V-KOSPI 200\", \"market\", \"daily\", \"KRX\", \"파생상품지수 시세정보\"),\n+    KTB_3Y(\"국고채 3년 금리\", \"market\", \"daily\", \"한국은행 ECOS\", \"국고채(3년)\"),\n+    COINCIDENT_CYCLE(\"동행지수 순환변동치\", \"macro\", \"monthly\", \"KOSIS\", \"경기종합지수\"),\n+    LEADING_CYCLE(\"선행지수 순환변동치\", \"macro\", \"monthly\", \"KOSIS\", \"경기종합지수\"),\n+    ESI_CYCLE(\"경제심리지수 순환변동치\", \"macro\", \"monthly\", \"한국은행 ECOS\", \"경제심리지수(순환변동치)\"),\n+    CORE_CPI_YOY(\"근원 소비자물가 상승률\", \"macro\", \"monthly\", \"KOSIS\", \"월별 소비자물가 등락률(식료품및에너지제외지수)\"),\n+    EXPORTS_USD(\"월간 수출액\", \"macro\", \"monthly\", \"관세청\", \"수출입총괄\"),\n+    M2(\"광의통화 M2\", \"macro\", \"monthly\", \"한국은행 ECOS\", \"M2(평잔, 원계열)\");\n+\n+    private final String displayName;\n+    private final String group;\n+    private final String frequency;\n+    private final String provider;\n+    private final String datasetName;\n+\n+    MarketCode(\n+            String displayName,\n+            String group,\n+            String frequency,\n+            String provider,\n+            String datasetName) {\n+        this.displayName = displayName;\n+        this.group = group;\n+        this.frequency = frequency;\n+        this.provider = provider;\n+        this.datasetName = datasetName;\n+    }\n+\n+    public String displayName() {\n+        return displayName;\n+    }\n+\n+    public String group() {\n+        return group;\n+    }\n+\n+    public String frequency() {\n+        return frequency;\n+    }\n+\n+    public String provider() {\n+        return provider;\n+    }\n+\n+    public String datasetName() {\n+        return datasetName;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/domain/vo/MarketCode.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/domain/vo/MarketCode.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,141 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.io.StringReader;\n+import java.net.URLDecoder;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Clock;\n+import java.time.YearMonth;\n+import java.time.ZoneId;\n+import java.time.format.DateTimeFormatter;\n+import java.util.Map;\n+import javax.xml.XMLConstants;\n+import javax.xml.parsers.DocumentBuilder;\n+import javax.xml.parsers.DocumentBuilderFactory;\n+import javax.xml.parsers.ParserConfigurationException;\n+import org.springframework.beans.factory.annotation.Qualifier;\n+import org.springframework.stereotype.Component;\n+import org.w3c.dom.Element;\n+import org.xml.sax.InputSource;\n+import org.xml.sax.helpers.DefaultHandler;\n+\n+@Component\n+public class CustomsMarketClient implements MarketProvider {\n+    private final MarketHttpClient http;\n+    private final MarketApiProperties.Customs config;\n+    private final Clock clock;\n+\n+    public CustomsMarketClient(\n+            MarketHttpClient http,\n+            MarketApiProperties properties,\n+            @Qualifier(\"marketClock\") Clock clock) {\n+        this.http = http;\n+        this.config = properties.getCustoms();\n+        this.clock = clock;\n+    }\n+\n+    @Override\n+    public boolean supports(MarketCode code) {\n+        return code == MarketCode.EXPORTS_USD;\n+    }\n+\n+    @Override\n+    public MarketObservation fetch(MarketCode code, MarketDeadline deadline) {\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        // 공공데이터포털의 Encoding/Decoding 키를 모두 허용한다.\n+        // 원래 Base64의 +는 공백으로 바뀌지 않도록 보존한다.\n+        if (key.contains(\"%\")) {\n+            try {\n+                key = URLDecoder.decode(key.replace(\"+\", \"%2B\"), StandardCharsets.UTF_8);\n+            } catch (IllegalArgumentException e) {\n+                throw new MarketDataException(Reason.NOT_CONFIGURED);\n+            }\n+        }\n+        // 진행 중인 달의 부분 수출액은 월간 확정 자료로 표시하지 않는다.\n+        YearMonth end = YearMonth.now(clock.withZone(ZoneId.of(\"Asia/Seoul\"))).minusMonths(1);\n+        var formatter = DateTimeFormatter.ofPattern(\"uuuuMM\");\n+        String startMonth = end.minusMonths(11).format(formatter);\n+        String endMonth = end.format(formatter);\n+        String body =\n+                http.text(\n+                        MarketHttpClient.query(\n+                                config.getBaseUrl(),\n+                                Map.of(\n+                                        \"serviceKey\",\n+                                        key,\n+                                        \"strtYymm\",\n+                                        startMonth,\n+                                        \"endYymm\",\n+                                        endMonth)),\n+                        Map.of(),\n+                        deadline);\n+        return parse(body, startMonth, endMonth);\n+    }\n+\n+    static MarketObservation parse(String body, String startMonth, String endMonth) {\n+        try {\n+            var builder = secureDocumentBuilder();\n+            Element root =\n+                    builder.parse(new InputSource(new StringReader(body))).getDocumentElement();\n+            String status = field(root, \"resultCode\");\n+            if (status.isEmpty()) status = field(root, \"returnReasonCode\");\n+            if (status.equals(\"20\") || status.equals(\"30\") || status.equals(\"31\"))\n+                throw new MarketDataException(Reason.AUTHENTICATION);\n+            if (!status.equals(\"00\")) throw new MarketDataException(Reason.UPSTREAM_ERROR);\n+            var rows = root.getElementsByTagName(\"item\");\n+            MarketObservation latest = null;\n+            for (int i = 0; i < rows.getLength(); i++) {\n+                Element row = (Element) rows.item(i);\n+                String period = field(row, \"year\").replace(\".\", \"\").replace(\"-\", \"\").trim();\n+                if (period.equals(\"총계\") || period.equals(\"합계\")) continue;\n+                MarketValues.require(\n+                        period.matches(\"[0-9]{6}\")\n+                                && period.compareTo(startMonth) >= 0\n+                                && period.compareTo(endMonth) <= 0);\n+                var observation =\n+                        MarketValues.observation(field(row, \"expDlr\"), \"USD\", period, true);\n+                if (observation.isPresent()\n+                        && (latest == null\n+                                || observation\n+                                                .get()\n+                                                .observationDate()\n+                                                .compareTo(latest.observationDate())\n+                                        > 0)) latest = observation.get();\n+            }\n+            if (latest == null) throw new MarketDataException(Reason.NO_DATA);\n+            return latest;\n+        } catch (MarketDataException e) {\n+            throw e;\n+        } catch (Exception e) {\n+            throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        }\n+    }\n+\n+    private static DocumentBuilder secureDocumentBuilder() {\n+        try {\n+            var factory = DocumentBuilderFactory.newInstance();\n+            factory.setFeature(\"http://apache.org/xml/features/disallow-doctype-decl\", true);\n+            factory.setFeature(\"http://xml.org/sax/features/external-general-entities\", false);\n+            factory.setFeature(\"http://xml.org/sax/features/external-parameter-entities\", false);\n+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, \"\");\n+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, \"\");\n+            var builder = factory.newDocumentBuilder();\n+            builder.setErrorHandler(new DefaultHandler());\n+            return builder;\n+        } catch (ParserConfigurationException | IllegalArgumentException e) {\n+            // 필수 보안 설정을 지원하지 않는 환경에서는 보호되지 않은 XML 파싱을 중단한다.\n+            throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        }\n+    }\n+\n+    private static String field(Element element, String name) {\n+        var nodes = element.getElementsByTagName(name);\n+        return nodes.getLength() == 0 ? \"\" : nodes.item(0).getTextContent().trim();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/CustomsMarketClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/CustomsMarketClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,115 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.time.Clock;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.time.format.DateTimeFormatter;\n+import java.util.Map;\n+import org.springframework.beans.factory.annotation.Qualifier;\n+import org.springframework.stereotype.Component;\n+import org.springframework.web.util.UriComponentsBuilder;\n+\n+@Component\n+public class EcosMarketClient implements MarketProvider {\n+    private final MarketHttpClient http;\n+    private final MarketApiProperties.Ecos config;\n+    private final Clock clock;\n+\n+    public EcosMarketClient(\n+            MarketHttpClient http,\n+            MarketApiProperties properties,\n+            @Qualifier(\"marketClock\") Clock clock) {\n+        this.http = http;\n+        this.config = properties.getEcos();\n+        this.clock = clock;\n+    }\n+\n+    @Override\n+    public boolean supports(MarketCode code) {\n+        return code == MarketCode.USD_KRW\n+                || code == MarketCode.KTB_3Y\n+                || code == MarketCode.ESI_CYCLE\n+                || code == MarketCode.M2;\n+    }\n+\n+    @Override\n+    public MarketObservation fetch(MarketCode code, MarketDeadline deadline) {\n+        Series series =\n+                switch (code) {\n+                    case USD_KRW -> new Series(\"731Y001\", \"0000001\", \"D\", \"원\", \"원/USD\");\n+                    case KTB_3Y -> new Series(\"817Y002\", \"010200000\", \"D\", \"연%\", \"%\");\n+                    case ESI_CYCLE -> new Series(\"513Y001\", \"E2000\", \"M\", \"\", \"지수\");\n+                    case M2 ->\n+                            new Series(config.getM2Table(), config.getM2Item(), \"M\", \"십억원\", \"십억원\");\n+                    default -> throw new IllegalArgumentException(\"ECOS 지원 코드가 아닙니다.\");\n+                };\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        boolean monthly = series.cycle().equals(\"M\");\n+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(\"Asia/Seoul\")));\n+        DateTimeFormatter format = DateTimeFormatter.ofPattern(monthly ? \"uuuuMM\" : \"uuuuMMdd\");\n+        String start = (monthly ? today.minusMonths(24) : today.minusDays(60)).format(format);\n+        String end = today.format(format);\n+        // 이 범위에는 일별 61건/월별 25건 이하만 존재한다. 100행으로 전체를 읽는다.\n+        var uri =\n+                UriComponentsBuilder.fromUriString(config.getBaseUrl())\n+                        .pathSegment(\n+                                \"StatisticSearch\",\n+                                \"{key}\",\n+                                \"json\",\n+                                \"kr\",\n+                                \"1\",\n+                                \"100\",\n+                                series.table(),\n+                                series.cycle(),\n+                                start,\n+                                end,\n+                                series.item())\n+                        .encode()\n+                        .buildAndExpand(Map.of(\"key\", key))\n+                        .toUri();\n+        JsonNode root = http.json(uri, Map.of(), deadline);\n+        if (root == null) throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        if (root.has(\"RESULT\")) {\n+            String error = root.path(\"RESULT\").path(\"CODE\").asText();\n+            if (error.equals(\"INFO-200\")) throw new MarketDataException(Reason.NO_DATA);\n+            if (error.equals(\"INFO-100\")) throw new MarketDataException(Reason.AUTHENTICATION);\n+            throw new MarketDataException(Reason.UPSTREAM_ERROR);\n+        }\n+        JsonNode data = root.path(\"StatisticSearch\");\n+        JsonNode rows = data.path(\"row\");\n+        MarketValues.require(rows.isArray() && data.path(\"list_total_count\").asInt() <= 100);\n+        MarketObservation latest = null;\n+        for (JsonNode row : rows) {\n+            MarketValues.require(\n+                    series.table().equals(row.path(\"STAT_CODE\").asText())\n+                            && series.item().equals(row.path(\"ITEM_CODE1\").asText()));\n+            String period = row.path(\"TIME\").asText();\n+            MarketValues.require(period.compareTo(start) >= 0 && period.compareTo(end) <= 0);\n+            if (!series.sourceUnit().isEmpty())\n+                MarketValues.require(series.sourceUnit().equals(row.path(\"UNIT_NAME\").asText()));\n+            var observation =\n+                    MarketValues.observation(\n+                            row.path(\"DATA_VALUE\").asText(), series.unit(), period, monthly);\n+            if (observation.isPresent()\n+                    && (latest == null\n+                            || observation\n+                                            .get()\n+                                            .observationDate()\n+                                            .compareTo(latest.observationDate())\n+                                    > 0)) latest = observation.get();\n+        }\n+        if (latest == null) throw new MarketDataException(Reason.NO_DATA);\n+        return latest;\n+    }\n+\n+    private record Series(\n+            String table, String item, String cycle, String sourceUnit, String unit) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/EcosMarketClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/EcosMarketClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,126 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.time.Clock;\n+import java.time.YearMonth;\n+import java.time.ZoneId;\n+import java.time.format.DateTimeFormatter;\n+import java.util.Map;\n+import org.springframework.beans.factory.annotation.Qualifier;\n+import org.springframework.stereotype.Component;\n+\n+@Component\n+public class KosisMarketClient implements MarketProvider {\n+    private final MarketHttpClient http;\n+    private final MarketApiProperties.Kosis config;\n+    private final Clock clock;\n+\n+    public KosisMarketClient(\n+            MarketHttpClient http,\n+            MarketApiProperties properties,\n+            @Qualifier(\"marketClock\") Clock clock) {\n+        this.http = http;\n+        this.config = properties.getKosis();\n+        this.clock = clock;\n+    }\n+\n+    @Override\n+    public boolean supports(MarketCode code) {\n+        return code == MarketCode.COINCIDENT_CYCLE\n+                || code == MarketCode.LEADING_CYCLE\n+                || code == MarketCode.CORE_CPI_YOY;\n+    }\n+\n+    @Override\n+    public MarketObservation fetch(MarketCode code, MarketDeadline deadline) {\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        String table =\n+                code == MarketCode.CORE_CPI_YOY ? config.getCoreCpiTable() : config.getCycleTable();\n+        String item = code == MarketCode.CORE_CPI_YOY ? \"T03\" : \"T1\";\n+        String classification =\n+                switch (code) {\n+                    case COINCIDENT_CYCLE -> \"B03\";\n+                    case LEADING_CYCLE -> \"A03\";\n+                    case CORE_CPI_YOY -> \"4\";\n+                    default -> throw new IllegalArgumentException(\"KOSIS 지원 코드가 아닙니다.\");\n+                };\n+        var uri =\n+                MarketHttpClient.query(\n+                        config.getBaseUrl(),\n+                        Map.of(\n+                                \"method\",\n+                                \"getList\",\n+                                \"apiKey\",\n+                                key,\n+                                \"format\",\n+                                \"json\",\n+                                \"jsonVD\",\n+                                \"Y\",\n+                                \"orgId\",\n+                                \"101\",\n+                                \"tblId\",\n+                                table,\n+                                \"itmId\",\n+                                item,\n+                                \"objL1\",\n+                                classification,\n+                                \"prdSe\",\n+                                \"M\",\n+                                \"newEstPrdCnt\",\n+                                \"3\"));\n+        JsonNode root = http.json(uri, Map.of(), deadline);\n+        if (root == null) throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        if (root.has(\"err\")) {\n+            String error = root.path(\"err\").asText();\n+            if (error.equals(\"11\")) throw new MarketDataException(Reason.AUTHENTICATION);\n+            if (error.equals(\"30\")) throw new MarketDataException(Reason.NO_DATA);\n+            throw new MarketDataException(Reason.UPSTREAM_ERROR);\n+        }\n+        MarketValues.require(root.isArray());\n+        String currentMonth =\n+                YearMonth.now(clock.withZone(ZoneId.of(\"Asia/Seoul\")))\n+                        .format(DateTimeFormatter.ofPattern(\"uuuuMM\"));\n+        MarketObservation latest = null;\n+        for (JsonNode row : root) {\n+            MarketValues.require(\n+                    \"101\".equals(row.path(\"ORG_ID\").asText())\n+                            && table.equals(row.path(\"TBL_ID\").asText())\n+                            && item.equals(row.path(\"ITM_ID\").asText())\n+                            && classification.equals(row.path(\"C1\").asText())\n+                            && \"M\".equals(row.path(\"PRD_SE\").asText()));\n+            String period = row.path(\"PRD_DE\").asText();\n+            MarketValues.require(period.compareTo(currentMonth) <= 0);\n+            if (code == MarketCode.CORE_CPI_YOY) {\n+                String sourceUnit = row.path(\"UNIT_NM\").asText(\"\");\n+                // 이 표의 T03은 UNIT_NM을 생략한다. 정확한 항목명·분류명으로 % YoY를 확인한다.\n+                MarketValues.require(\n+                        \"%\".equals(sourceUnit)\n+                                || (sourceUnit.isBlank()\n+                                        && \"전년동월비(%)\".equals(row.path(\"ITM_NM\").asText())\n+                                        && \"식료품및에너지제외지수\".equals(row.path(\"C1_NM\").asText())));\n+            }\n+            var observation =\n+                    MarketValues.observation(\n+                            row.path(\"DT\").asText(),\n+                            code == MarketCode.CORE_CPI_YOY ? \"% YoY\" : \"지수\",\n+                            period,\n+                            true);\n+            if (observation.isPresent()\n+                    && (latest == null\n+                            || observation\n+                                            .get()\n+                                            .observationDate()\n+                                            .compareTo(latest.observationDate())\n+                                    > 0)) latest = observation.get();\n+        }\n+        if (latest == null) throw new MarketDataException(Reason.NO_DATA);\n+        return latest;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/KosisMarketClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/KosisMarketClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,89 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.time.Clock;\n+import java.time.DayOfWeek;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.time.format.DateTimeFormatter;\n+import java.util.Map;\n+import org.springframework.beans.factory.annotation.Qualifier;\n+import org.springframework.stereotype.Component;\n+\n+@Component\n+public class KrxMarketClient implements MarketProvider {\n+    private final MarketHttpClient http;\n+    private final MarketApiProperties.Krx config;\n+    private final Clock clock;\n+\n+    public KrxMarketClient(\n+            MarketHttpClient http,\n+            MarketApiProperties properties,\n+            @Qualifier(\"marketClock\") Clock clock) {\n+        this.http = http;\n+        this.config = properties.getKrx();\n+        this.clock = clock;\n+    }\n+\n+    @Override\n+    public boolean supports(MarketCode code) {\n+        return code == MarketCode.KOSPI\n+                || code == MarketCode.KOSDAQ\n+                || code == MarketCode.VKOSPI200;\n+    }\n+\n+    @Override\n+    public MarketObservation fetch(MarketCode code, MarketDeadline deadline) {\n+        String endpoint =\n+                switch (code) {\n+                    case KOSPI -> \"kospi_dd_trd\";\n+                    case KOSDAQ -> \"kosdaq_dd_trd\";\n+                    case VKOSPI200 -> \"drvprod_dd_trd\";\n+                    default -> throw new IllegalArgumentException(\"KRX 지원 코드가 아닙니다.\");\n+                };\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(\"Asia/Seoul\")));\n+        for (int offset = 0; offset < config.getLookbackDays(); offset++) {\n+            LocalDate date = today.minusDays(offset);\n+            if (date.getDayOfWeek() == DayOfWeek.SATURDAY\n+                    || date.getDayOfWeek() == DayOfWeek.SUNDAY) continue;\n+            String day = date.format(DateTimeFormatter.BASIC_ISO_DATE);\n+            JsonNode root =\n+                    http.json(\n+                            MarketHttpClient.query(\n+                                    config.getBaseUrl() + \"/\" + endpoint, Map.of(\"basDd\", day)),\n+                            Map.of(\"AUTH_KEY\", key),\n+                            deadline);\n+            if (root == null) throw new MarketDataException(Reason.INVALID_RESPONSE);\n+            JsonNode rows = root.path(\"OutBlock_1\");\n+            MarketValues.require(rows.isArray());\n+            for (JsonNode row : rows) {\n+                if (!matches(code, row.path(\"IDX_NM\").asText())) continue;\n+                MarketValues.require(day.equals(row.path(\"BAS_DD\").asText()));\n+                var observation =\n+                        MarketValues.observation(row.path(\"CLSPRC_IDX\").asText(), \"pt\", day, false);\n+                if (observation.isPresent()) return observation.get();\n+            }\n+            // 휴일/당일 미게시인 빈 응답만 이전 날짜로 이동한다. 잘못된 식별자는 숨기지 않는다.\n+            if (!rows.isEmpty()) throw new MarketDataException(Reason.NO_DATA);\n+        }\n+        throw new MarketDataException(Reason.NO_DATA);\n+    }\n+\n+    private boolean matches(MarketCode code, String name) {\n+        return switch (code) {\n+            case KOSPI -> name.equals(\"코스피\") || name.equals(\"KOSPI\");\n+            case KOSDAQ -> name.equals(\"코스닥\") || name.equals(\"KOSDAQ\");\n+            case VKOSPI200 ->\n+                    name.equals(config.getVolatilityIndexName()) || name.equals(\"V-KOSPI 200\");\n+            default -> false;\n+        };\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/KrxMarketClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/KrxMarketClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,95 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.io.IOException;\n+import java.net.URI;\n+import java.net.http.HttpClient;\n+import java.net.http.HttpRequest;\n+import java.net.http.HttpResponse;\n+import java.net.http.HttpTimeoutException;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Duration;\n+import java.util.LinkedHashMap;\n+import java.util.Map;\n+import org.springframework.stereotype.Component;\n+import org.springframework.web.util.UriComponentsBuilder;\n+\n+/** 원천 요청은 리다이렉트하지 않으며 인증 URL과 원문 예외를 외부에 전달하지 않는다. */\n+@Component\n+public class MarketHttpClient {\n+    private final HttpClient client;\n+    private final ObjectMapper mapper;\n+    private final Duration readTimeout;\n+\n+    public MarketHttpClient(MarketApiProperties properties, ObjectMapper mapper) {\n+        this.client =\n+                HttpClient.newBuilder()\n+                        .connectTimeout(properties.getConnectTimeout())\n+                        .followRedirects(HttpClient.Redirect.NEVER)\n+                        .build();\n+        this.readTimeout = properties.getReadTimeout();\n+        this.mapper = mapper;\n+    }\n+\n+    public JsonNode json(URI uri, Map<String, String> headers, MarketDeadline deadline) {\n+        String body = text(uri, headers, deadline);\n+        try {\n+            return mapper.readTree(body);\n+        } catch (IOException | IllegalArgumentException e) {\n+            throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        }\n+    }\n+\n+    public String text(URI uri, Map<String, String> headers, MarketDeadline deadline) {\n+        Duration remaining = deadline.remaining();\n+        Duration timeout = remaining.compareTo(readTimeout) < 0 ? remaining : readTimeout;\n+        try {\n+            HttpRequest.Builder builder = HttpRequest.newBuilder(uri).GET().timeout(timeout);\n+            headers.forEach(builder::header);\n+            HttpResponse<String> response =\n+                    client.send(\n+                            builder.build(),\n+                            HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));\n+            int status = response.statusCode();\n+            if (status == 401 || status == 403)\n+                throw new MarketDataException(Reason.AUTHENTICATION);\n+            if (status < 200 || status >= 300) throw new MarketDataException(Reason.UPSTREAM_ERROR);\n+            return response.body();\n+        } catch (HttpTimeoutException e) {\n+            throw new MarketDataException(Reason.TIMEOUT);\n+        } catch (InterruptedException e) {\n+            Thread.currentThread().interrupt();\n+            throw new MarketDataException(Reason.TIMEOUT);\n+        } catch (IOException | IllegalArgumentException e) {\n+            throw new MarketDataException(Reason.UPSTREAM_ERROR);\n+        }\n+    }\n+\n+    public static URI query(String baseUrl, Map<String, String> parameters) {\n+        var builder = UriComponentsBuilder.fromUriString(baseUrl);\n+        Map<String, String> variables = new LinkedHashMap<>();\n+        parameters.forEach(\n+                (name, value) -> {\n+                    String variable = \"p\" + variables.size();\n+                    builder.queryParam(name, \"{\" + variable + \"}\");\n+                    variables.put(variable, value);\n+                });\n+        // URI 변수로 엄격히 인코딩해 Base64의 +, /, =를 그대로 전달한다.\n+        return builder.encode().buildAndExpand(variables).toUri();\n+    }\n+\n+    public static String key(String value) {\n+        String key = value == null ? \"\" : value.trim();\n+        if (key.length() >= 2\n+                && ((key.startsWith(\"\\\"\") && key.endsWith(\"\\\"\"))\n+                        || (key.startsWith(\"'\") && key.endsWith(\"'\"))))\n+            key = key.substring(1, key.length() - 1);\n+        if (key.isBlank()) throw new MarketDataException(Reason.NOT_CONFIGURED);\n+        return key;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/MarketHttpClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/MarketHttpClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.time.format.DateTimeFormatter;\n+import java.time.format.DateTimeParseException;\n+import java.util.Optional;\n+\n+final class MarketValues {\n+    private MarketValues() {}\n+\n+    static Optional<MarketObservation> observation(\n+            String value, String unit, String period, boolean monthly) {\n+        if (value == null\n+                || value.isBlank()\n+                || value.equals(\"-\")\n+                || value.equals(\".\")\n+                || value.equals(\"...\")) return Optional.empty();\n+        try {\n+            String date =\n+                    monthly\n+                            ? YearMonth.parse(period, DateTimeFormatter.ofPattern(\"uuuuMM\"))\n+                                    .toString()\n+                            : LocalDate.parse(period, DateTimeFormatter.BASIC_ISO_DATE).toString();\n+            return Optional.of(\n+                    new MarketObservation(\n+                            new BigDecimal(value.replace(\",\", \"\").trim()), unit, date));\n+        } catch (NumberFormatException | DateTimeParseException e) {\n+            throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        }\n+    }\n+\n+    static void require(boolean condition) {\n+        if (!condition) throw new MarketDataException(Reason.INVALID_RESPONSE);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/MarketValues.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/MarketValues.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,57 @@\n+package com.ssafy.thorp.market.infrastructure.config;\n+\n+import java.time.Duration;\n+import lombok.Getter;\n+import lombok.Setter;\n+import org.springframework.boot.context.properties.ConfigurationProperties;\n+\n+/** 비밀 키가 toString에 포함되지 않도록 @Data를 사용하지 않는다. */\n+@Getter\n+@Setter\n+@ConfigurationProperties(prefix = \"market\")\n+public class MarketApiProperties {\n+    private Duration cacheTtl = Duration.ofHours(6);\n+    private Duration cacheMaxAge = Duration.ofHours(24);\n+    private Duration failureCooldown = Duration.ofSeconds(30);\n+    private Duration requestBudget = Duration.ofSeconds(8);\n+    private Duration connectTimeout = Duration.ofSeconds(2);\n+    private Duration readTimeout = Duration.ofSeconds(3);\n+    private final Ecos ecos = new Ecos();\n+    private final Krx krx = new Krx();\n+    private final Kosis kosis = new Kosis();\n+    private final Customs customs = new Customs();\n+\n+    @Getter\n+    @Setter\n+    public static class Ecos {\n+        private String apiKey = \"\";\n+        private String baseUrl = \"https://ecos.bok.or.kr/api\";\n+        private String m2Table = \"161Y006\";\n+        private String m2Item = \"BBHA00\";\n+    }\n+\n+    @Getter\n+    @Setter\n+    public static class Krx {\n+        private String apiKey = \"\";\n+        private String baseUrl = \"https://data-dbg.krx.co.kr/svc/apis/idx\";\n+        private int lookbackDays = 14;\n+        private String volatilityIndexName = \"코스피 200 변동성지수\";\n+    }\n+\n+    @Getter\n+    @Setter\n+    public static class Kosis {\n+        private String apiKey = \"\";\n+        private String baseUrl = \"https://kosis.kr/openapi/Param/statisticsParameterData.do\";\n+        private String cycleTable = \"DT_1C8015\";\n+        private String coreCpiTable = \"DT_1J22042\";\n+    }\n+\n+    @Getter\n+    @Setter\n+    public static class Customs {\n+        private String apiKey = \"\";\n+        private String baseUrl = \"https://apis.data.go.kr/1220000/Newtrade/getNewtradeList\";\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketApiProperties.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketApiProperties.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+package com.ssafy.thorp.market.infrastructure.config;\n+\n+import com.ssafy.thorp.market.application.service.MarketCachePolicy;\n+import java.time.Clock;\n+import org.springframework.boot.context.properties.ConfigurationProperties;\n+import org.springframework.boot.convert.DurationStyle;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.context.annotation.PropertySource;\n+import org.springframework.core.env.Environment;\n+\n+@Configuration\n+@PropertySource(\n+        value = {\"file:../.env\", \"file:.env\"},\n+        ignoreResourceNotFound = true,\n+        encoding = \"UTF-8\")\n+public class MarketConfig {\n+    /** 외부 기관 키의 기존 환경변수 이름을 market 설정에 연결한다. */\n+    @Bean\n+    @ConfigurationProperties(prefix = \"market\")\n+    public MarketApiProperties marketApiProperties(Environment environment) {\n+        var properties = new MarketApiProperties();\n+        properties.getEcos().setApiKey(environment.getProperty(\"ECOS_API_KEY\", \"\"));\n+        properties.getKrx().setApiKey(environment.getProperty(\"KRX_API_KEY\", \"\"));\n+        properties.getKosis().setApiKey(environment.getProperty(\"KOSIS_API_KEY\", \"\"));\n+        properties.getCustoms().setApiKey(environment.getProperty(\"DATA_GO_KR_SERVICE_KEY\", \"\"));\n+        properties\n+                .getEcos()\n+                .setM2Table(\n+                        environment.getProperty(\n+                                \"ECOS_M2_TABLE\", properties.getEcos().getM2Table()));\n+        properties\n+                .getEcos()\n+                .setM2Item(\n+                        environment.getProperty(\"ECOS_M2_ITEM\", properties.getEcos().getM2Item()));\n+        properties\n+                .getKrx()\n+                .setVolatilityIndexName(\n+                        environment.getProperty(\n+                                \"KRX_VOLATILITY_INDEX_NAME\",\n+                                properties.getKrx().getVolatilityIndexName()));\n+        properties.setCacheTtl(\n+                DurationStyle.detectAndParse(\n+                        environment.getProperty(\n+                                \"MARKET_CACHE_TTL\", properties.getCacheTtl().toString())));\n+        properties.setCacheMaxAge(\n+                DurationStyle.detectAndParse(\n+                        environment.getProperty(\n+                                \"MARKET_CACHE_MAX_AGE\", properties.getCacheMaxAge().toString())));\n+        properties.setFailureCooldown(\n+                DurationStyle.detectAndParse(\n+                        environment.getProperty(\n+                                \"MARKET_FAILURE_COOLDOWN\",\n+                                properties.getFailureCooldown().toString())));\n+        properties.setRequestBudget(\n+                DurationStyle.detectAndParse(\n+                        environment.getProperty(\n+                                \"MARKET_REQUEST_BUDGET\",\n+                                properties.getRequestBudget().toString())));\n+        return properties;\n+    }\n+\n+    @Bean(\"marketClock\")\n+    public Clock marketClock() {\n+        return Clock.systemUTC();\n+    }\n+\n+    @Bean\n+    public MarketCachePolicy marketCachePolicy(MarketApiProperties properties) {\n+        return new MarketCachePolicy(\n+                properties.getCacheTtl(),\n+                properties.getCacheMaxAge(),\n+                properties.getFailureCooldown(),\n+                properties.getRequestBudget());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1 @@\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/messaging/.gitkeep",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/messaging/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1 @@\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/persistence/.gitkeep",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/persistence/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,79 @@\n+package com.ssafy.thorp.market.presentation.controller;\n+\n+import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import com.ssafy.thorp.market.application.service.MarketService;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.presentation.response.MarketResponse;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/** 외부 /api/markets 경로의 /api 접두사는 프록시에서 제거한다. */\n+@RestController\n+@RequestMapping(\"/markets\")\n+public class MarketController {\n+    private final MarketService service;\n+\n+    public MarketController(MarketService service) {\n+        this.service = service;\n+    }\n+\n+    @GetMapping(\"/kospi\")\n+    public HttpApiResponse<MarketResponse> kospi() {\n+        return get(MarketCode.KOSPI);\n+    }\n+\n+    @GetMapping(\"/kosdaq\")\n+    public HttpApiResponse<MarketResponse> kosdaq() {\n+        return get(MarketCode.KOSDAQ);\n+    }\n+\n+    @GetMapping(\"/usd-krw\")\n+    public HttpApiResponse<MarketResponse> usd_krw() {\n+        return get(MarketCode.USD_KRW);\n+    }\n+\n+    @GetMapping(\"/vkospi200\")\n+    public HttpApiResponse<MarketResponse> vkospi200() {\n+        return get(MarketCode.VKOSPI200);\n+    }\n+\n+    @GetMapping(\"/ktb-3y\")\n+    public HttpApiResponse<MarketResponse> ktb_3y() {\n+        return get(MarketCode.KTB_3Y);\n+    }\n+\n+    @GetMapping(\"/coincident-cycle\")\n+    public HttpApiResponse<MarketResponse> coincident_cycle() {\n+        return get(MarketCode.COINCIDENT_CYCLE);\n+    }\n+\n+    @GetMapping(\"/leading-cycle\")\n+    public HttpApiResponse<MarketResponse> leading_cycle() {\n+        return get(MarketCode.LEADING_CYCLE);\n+    }\n+\n+    @GetMapping(\"/esi-cycle\")\n+    public HttpApiResponse<MarketResponse> esi_cycle() {\n+        return get(MarketCode.ESI_CYCLE);\n+    }\n+\n+    @GetMapping(\"/core-cpi-yoy\")\n+    public HttpApiResponse<MarketResponse> core_cpi_yoy() {\n+        return get(MarketCode.CORE_CPI_YOY);\n+    }\n+\n+    @GetMapping(\"/exports-usd\")\n+    public HttpApiResponse<MarketResponse> exports_usd() {\n+        return get(MarketCode.EXPORTS_USD);\n+    }\n+\n+    @GetMapping(\"/m2\")\n+    public HttpApiResponse<MarketResponse> m2() {\n+        return get(MarketCode.M2);\n+    }\n+\n+    private HttpApiResponse<MarketResponse> get(MarketCode code) {\n+        return HttpApiResponse.ok(MarketResponse.from(service.get(code)));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/controller/MarketController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/controller/MarketController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,43 @@\n+package com.ssafy.thorp.market.presentation.controller;\n+\n+import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import org.springframework.core.Ordered;\n+import org.springframework.core.annotation.Order;\n+import org.springframework.http.HttpHeaders;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.HttpStatusCode;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.ExceptionHandler;\n+import org.springframework.web.bind.annotation.RestControllerAdvice;\n+import org.springframework.web.context.request.WebRequest;\n+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;\n+\n+@RestControllerAdvice(assignableTypes = MarketController.class)\n+@Order(Ordered.HIGHEST_PRECEDENCE)\n+public class MarketExceptionHandler extends ResponseEntityExceptionHandler {\n+    @ExceptionHandler(MarketDataException.class)\n+    public ResponseEntity<HttpApiResponse<Void>> handleMarket(MarketDataException e) {\n+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)\n+                .body(HttpApiResponse.fail(HttpStatus.SERVICE_UNAVAILABLE, e.getMessage()));\n+    }\n+\n+    @ExceptionHandler(Exception.class)\n+    public ResponseEntity<HttpApiResponse<Void>> handleUnexpected(Exception e) {\n+        // HTTP 라이브러리 예외에는 인증 URL이 포함될 수 있으므로 원문을 로깅하지 않는다.\n+        return ResponseEntity.internalServerError()\n+                .body(HttpApiResponse.fail(HttpStatus.INTERNAL_SERVER_ERROR, \"서버 오류가 발생했습니다.\"));\n+    }\n+\n+    @Override\n+    protected ResponseEntity<Object> handleExceptionInternal(\n+            Exception ex,\n+            Object body,\n+            HttpHeaders headers,\n+            HttpStatusCode status,\n+            WebRequest request) {\n+        return ResponseEntity.status(status)\n+                .headers(headers)\n+                .body(HttpApiResponse.fail(HttpStatus.valueOf(status.value()), \"요청을 처리할 수 없습니다.\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/controller/MarketExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/controller/MarketExceptionHandler.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1 @@\n+\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/request/.gitkeep",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/request/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+package com.ssafy.thorp.market.presentation.response;\n+\n+import com.ssafy.thorp.market.application.result.MarketResult;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+\n+public record MarketResponse(\n+        String code,\n+        String name,\n+        String group,\n+        BigDecimal value,\n+        String unit,\n+        String frequency,\n+        String observationDate,\n+        Instant retrievedAt,\n+        Source source,\n+        String status,\n+        String statusMessage) {\n+    public record Source(String provider, String datasetName) {}\n+\n+    public static MarketResponse from(MarketResult result) {\n+        var code = result.code();\n+        var value = result.observation();\n+        return new MarketResponse(\n+                code.name(),\n+                code.displayName(),\n+                code.group(),\n+                value.value(),\n+                value.unit(),\n+                code.frequency(),\n+                value.observationDate(),\n+                result.retrievedAt(),\n+                new Source(code.provider(), code.datasetName()),\n+                result.stale() ? \"stale\" : \"ok\",\n+                result.stale() ? \"최신값 갱신에 실패하여 이전 수집값을 표시합니다.\" : null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/response/MarketResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/response/MarketResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,116 @@\n+package com.ssafy.thorp.market.application.service;\n+\n+import static org.assertj.core.api.Assertions.*;\n+import static org.mockito.ArgumentMatchers.*;\n+import static org.mockito.Mockito.*;\n+\n+import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.math.BigDecimal;\n+import java.time.*;\n+import java.util.List;\n+import java.util.concurrent.*;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.Test;\n+\n+class MarketServiceTest {\n+    private final Instant collected = Instant.parse(\"2026-09-07T00:00:00Z\");\n+    private final Clock clock = mock(Clock.class);\n+    private final MarketProvider provider = mock(MarketProvider.class);\n+    private final MarketObservation value =\n+            new MarketObservation(new BigDecimal(\"1355.2\"), \"원/USD\", \"2026-09-07\");\n+    private MarketService service;\n+\n+    @BeforeEach\n+    void setUp() {\n+        when(clock.instant()).thenReturn(collected);\n+        when(provider.supports(any())).thenReturn(true);\n+        when(provider.fetch(any(), any())).thenReturn(value);\n+        service =\n+                new MarketService(\n+                        List.of(provider),\n+                        clock,\n+                        new MarketCachePolicy(\n+                                Duration.ofHours(6),\n+                                Duration.ofHours(24),\n+                                Duration.ofSeconds(30),\n+                                Duration.ofSeconds(8)));\n+    }\n+\n+    @Test\n+    void validCacheDoesNotCallProviderAgain() {\n+        service.get(MarketCode.USD_KRW);\n+        when(clock.instant()).thenReturn(collected.plusSeconds(21599));\n+        assertThat(service.get(MarketCode.USD_KRW).stale()).isFalse();\n+        verify(provider, times(1)).fetch(any(), any());\n+    }\n+\n+    @Test\n+    void expiredCacheFallsBackWithoutChangingCollectionDate() {\n+        service.get(MarketCode.USD_KRW);\n+        when(clock.instant()).thenReturn(collected.plus(Duration.ofHours(6)));\n+        when(provider.fetch(any(), any()))\n+                .thenThrow(new MarketDataException(Reason.AUTHENTICATION));\n+        var result = service.get(MarketCode.USD_KRW);\n+        assertThat(result.stale()).isTrue();\n+        assertThat(result.retrievedAt()).isEqualTo(collected);\n+        assertThat(result.observation()).isEqualTo(value);\n+        service.get(MarketCode.USD_KRW);\n+        verify(provider, times(2)).fetch(any(), any());\n+    }\n+\n+    @Test\n+    void oldValueIsNeverReturnedAtMaxAge() {\n+        service.get(MarketCode.USD_KRW);\n+        when(clock.instant()).thenReturn(collected.plus(Duration.ofHours(24)));\n+        when(provider.fetch(any(), any())).thenThrow(new MarketDataException(Reason.TIMEOUT));\n+        assertThatThrownBy(() -> service.get(MarketCode.USD_KRW))\n+                .isInstanceOf(MarketDataException.class);\n+    }\n+\n+    @Test\n+    void failureIsIsolatedByCodeAndHasCooldown() {\n+        when(provider.fetch(eq(MarketCode.KOSPI), any()))\n+                .thenThrow(new MarketDataException(Reason.AUTHENTICATION));\n+        assertThatThrownBy(() -> service.get(MarketCode.KOSPI))\n+                .isInstanceOf(MarketDataException.class);\n+        assertThatThrownBy(() -> service.get(MarketCode.KOSPI))\n+                .isInstanceOf(MarketDataException.class);\n+        assertThat(service.get(MarketCode.USD_KRW).observation()).isEqualTo(value);\n+        verify(provider, times(1)).fetch(eq(MarketCode.KOSPI), any());\n+        when(clock.instant()).thenReturn(collected.plusSeconds(30));\n+        when(provider.fetch(eq(MarketCode.KOSPI), any())).thenReturn(value);\n+        assertThat(service.get(MarketCode.KOSPI).stale()).isFalse();\n+    }\n+\n+    @Test\n+    void slowCodeDoesNotBlockAnotherCodeAndSameCodeSharesRefresh() throws Exception {\n+        CountDownLatch started = new CountDownLatch(1);\n+        CountDownLatch release = new CountDownLatch(1);\n+        when(provider.fetch(eq(MarketCode.KOSPI), any()))\n+                .thenAnswer(\n+                        call -> {\n+                            started.countDown();\n+                            if (!release.await(3, TimeUnit.SECONDS))\n+                                throw new AssertionError(\"test latch timed out\");\n+                            return value;\n+                        });\n+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {\n+            var first = executor.submit(() -> service.get(MarketCode.KOSPI));\n+            assertThat(started.await(1, TimeUnit.SECONDS)).isTrue();\n+            var second = executor.submit(() -> service.get(MarketCode.KOSPI));\n+            var independent = executor.submit(() -> service.get(MarketCode.USD_KRW));\n+            try {\n+                assertThat(independent.get(1, TimeUnit.SECONDS).observation()).isEqualTo(value);\n+            } finally {\n+                release.countDown();\n+            }\n+            first.get(2, TimeUnit.SECONDS);\n+            second.get(2, TimeUnit.SECONDS);\n+            verify(provider, times(1)).fetch(eq(MarketCode.KOSPI), any());\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/application/service/MarketServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/application/service/MarketServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,222 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import static org.assertj.core.api.Assertions.*;\n+import static org.mockito.ArgumentMatchers.*;\n+import static org.mockito.Mockito.*;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.net.URI;\n+import java.time.*;\n+import java.util.Map;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentCaptor;\n+\n+class MarketClientsTest {\n+    private final MarketHttpClient http = mock(MarketHttpClient.class);\n+    private final MarketApiProperties config = new MarketApiProperties();\n+    private final ObjectMapper mapper = new ObjectMapper();\n+    private final Clock clock = Clock.fixed(Instant.parse(\"2026-09-07T00:00:00Z\"), ZoneOffset.UTC);\n+\n+    private MarketDeadline deadline() {\n+        return new MarketDeadline(Duration.ofSeconds(8));\n+    }\n+\n+    @Test\n+    void ecosUsesLatestValidObservationAndPreservesMonthlyUnit() throws Exception {\n+        config.getEcos().setApiKey(\"test-key\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+            {\"StatisticSearch\":{\"list_total_count\":3,\"row\":[\n+             {\"STAT_CODE\":\"161Y006\",\"ITEM_CODE1\":\"BBHA00\",\"UNIT_NAME\":\"십억원\",\"TIME\":\"202605\",\"DATA_VALUE\":\"4,000\"},\n+             {\"STAT_CODE\":\"161Y006\",\"ITEM_CODE1\":\"BBHA00\",\"UNIT_NAME\":\"십억원\",\"TIME\":\"202607\",\"DATA_VALUE\":\"-\"},\n+             {\"STAT_CODE\":\"161Y006\",\"ITEM_CODE1\":\"BBHA00\",\"UNIT_NAME\":\"십억원\",\"TIME\":\"202606\",\"DATA_VALUE\":\"4,100.5\"}]}}\n+            \"\"\"));\n+        var result = new EcosMarketClient(http, config, clock).fetch(MarketCode.M2, deadline());\n+        assertThat(result.value()).isEqualByComparingTo(\"4100.5\");\n+        assertThat(result.observationDate()).isEqualTo(\"2026-06\");\n+        assertThat(result.unit()).isEqualTo(\"십억원\");\n+        var uri = ArgumentCaptor.forClass(URI.class);\n+        verify(http).json(uri.capture(), anyMap(), any());\n+        assertThat(uri.getValue().getPath()).contains(\"/161Y006/M/\").endsWith(\"/BBHA00\");\n+    }\n+\n+    @Test\n+    void ecosRejectsWrongUnitAndHttp200ErrorBody() throws Exception {\n+        config.getEcos().setApiKey(\"test-key\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+            {\"StatisticSearch\":{\"list_total_count\":1,\"row\":[\n+             {\"STAT_CODE\":\"731Y001\",\"ITEM_CODE1\":\"0000001\",\"UNIT_NAME\":\"%\",\"TIME\":\"20260904\",\"DATA_VALUE\":\"3\"}]}}\n+            \"\"\"));\n+        var client = new EcosMarketClient(http, config, clock);\n+        assertThatThrownBy(() -> client.fetch(MarketCode.USD_KRW, deadline()))\n+                .isInstanceOf(MarketDataException.class);\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+{\"RESULT\":{\"CODE\":\"INFO-100\"}}\n+\"\"\"));\n+        assertThatThrownBy(() -> client.fetch(MarketCode.USD_KRW, deadline()))\n+                .isInstanceOfSatisfying(\n+                        MarketDataException.class,\n+                        e -> assertThat(e.reason()).isEqualTo(Reason.AUTHENTICATION));\n+    }\n+\n+    @Test\n+    void krxFindsExactIndexAndSkipsWeekendAfterEmptyMonday() throws Exception {\n+        config.getKrx().setApiKey(\"test-key\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+{\"OutBlock_1\":[]}\n+\"\"\"),\n+                        mapper.readTree(\n+                                \"\"\"\n+            {\"OutBlock_1\":[\n+              {\"IDX_NM\":\"코스피 200\",\"BAS_DD\":\"20260904\",\"CLSPRC_IDX\":\"300\"},\n+              {\"IDX_NM\":\"코스피\",\"BAS_DD\":\"20260904\",\"CLSPRC_IDX\":\"2,500.2\"}]}\n+            \"\"\"));\n+        var result = new KrxMarketClient(http, config, clock).fetch(MarketCode.KOSPI, deadline());\n+        assertThat(result.value()).isEqualByComparingTo(\"2500.2\");\n+        assertThat(result.observationDate()).isEqualTo(\"2026-09-04\");\n+        var uri = ArgumentCaptor.forClass(URI.class);\n+        verify(http, times(2)).json(uri.capture(), eq(Map.of(\"AUTH_KEY\", \"test-key\")), any());\n+        assertThat(uri.getAllValues().get(1).getQuery()).contains(\"basDd=20260904\");\n+    }\n+\n+    @Test\n+    void kosisUsesYoyClassificationAndEncodesPadding() throws Exception {\n+        config.getKosis().setApiKey(\"ab+c/=\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+            [{\"ORG_ID\":\"101\",\"TBL_ID\":\"DT_1J22042\",\"ITM_ID\":\"T03\",\"C1\":\"4\",\n+              \"PRD_SE\":\"M\",\"PRD_DE\":\"202608\",\"UNIT_NM\":\"%\",\"DT\":\"2.1\"}]\n+            \"\"\"));\n+        var result =\n+                new KosisMarketClient(http, config, clock)\n+                        .fetch(MarketCode.CORE_CPI_YOY, deadline());\n+        assertThat(result.unit()).isEqualTo(\"% YoY\");\n+        var uri = ArgumentCaptor.forClass(URI.class);\n+        verify(http).json(uri.capture(), anyMap(), any());\n+        assertThat(uri.getValue().getRawQuery())\n+                .contains(\"apiKey=ab%2Bc%2F%3D\", \"itmId=T03\", \"objL1=4\");\n+    }\n+\n+    @Test\n+    void kosisRecognizesInvalidKeyBody() throws Exception {\n+        config.getKosis().setApiKey(\"test=\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+{\"err\":\"11\",\"errMsg\":\"secret\"}\n+\"\"\"));\n+        assertThatThrownBy(\n+                        () ->\n+                                new KosisMarketClient(http, config, clock)\n+                                        .fetch(MarketCode.COINCIDENT_CYCLE, deadline()))\n+                .isInstanceOfSatisfying(\n+                        MarketDataException.class,\n+                        e -> {\n+                            assertThat(e.reason()).isEqualTo(Reason.AUTHENTICATION);\n+                            assertThat(e.getMessage()).doesNotContain(\"secret\");\n+                            assertThat(e.getCause()).isNull();\n+                        });\n+    }\n+\n+    @Test\n+    void missingKeyMakesNoNetworkCall() {\n+        assertThatThrownBy(\n+                        () ->\n+                                new CustomsMarketClient(http, config, clock)\n+                                        .fetch(MarketCode.EXPORTS_USD, deadline()))\n+                .isInstanceOfSatisfying(\n+                        MarketDataException.class,\n+                        e -> assertThat(e.reason()).isEqualTo(Reason.NOT_CONFIGURED));\n+        verifyNoInteractions(http);\n+    }\n+\n+    @Test\n+    void customsIgnoresTotalAndUsesDollarValueWithoutScaling() {\n+        var result =\n+                CustomsMarketClient.parse(\n+                        \"\"\"\n+            <response><header><resultCode>00</resultCode></header><body><items>\n+            <item><year>2026.07</year><expDlr>123456789</expDlr></item>\n+            <item><year>총계</year><expDlr>999999999</expDlr></item>\n+            <item><year>2026.08</year><expDlr>234567890</expDlr></item>\n+            </items></body></response>\n+            \"\"\",\n+                        \"202509\",\n+                        \"202608\");\n+        assertThat(result.value()).isEqualByComparingTo(\"234567890\");\n+        assertThat(result.unit()).isEqualTo(\"USD\");\n+        assertThat(result.observationDate()).isEqualTo(\"2026-08\");\n+    }\n+\n+    @Test\n+    void customsRejectsExternalEntities() {\n+        assertThatThrownBy(\n+                        () ->\n+                                CustomsMarketClient.parse(\n+                                        \"\"\"\n+            <!DOCTYPE x [<!ENTITY secret SYSTEM \"file:///etc/passwd\">]>\n+            <response><resultCode>00</resultCode><item><year>202608</year><expDlr>&secret;</expDlr></item></response>\n+            \"\"\",\n+                                        \"202601\",\n+                                        \"202608\"))\n+                .isInstanceOf(MarketDataException.class);\n+    }\n+\n+    @org.junit.jupiter.params.ParameterizedTest\n+    @org.junit.jupiter.params.provider.ValueSource(strings = {\"ab+c/=\", \"ab%2Bc%2F%3D\"})\n+    void customsAcceptsBothEncodedAndDecodedKeys(String key) throws Exception {\n+        config.getCustoms().setApiKey(key);\n+        when(http.text(any(), anyMap(), any()))\n+                .thenReturn(\n+                        \"\"\"\n+            <response><header><resultCode>00</resultCode></header><body><items>\n+            <item><year>2026.08</year><expDlr>123</expDlr></item>\n+            </items></body></response>\n+            \"\"\");\n+        new CustomsMarketClient(http, config, clock).fetch(MarketCode.EXPORTS_USD, deadline());\n+        var uri = ArgumentCaptor.forClass(URI.class);\n+        verify(http).text(uri.capture(), anyMap(), any());\n+        assertThat(uri.getValue().getRawQuery())\n+                .contains(\"serviceKey=ab%2Bc%2F%3D\")\n+                .doesNotContain(\"%25\");\n+    }\n+\n+    @Test\n+    void kosisCoreCpiAllowsMissingUnitOnlyForVerifiedYoyItem() throws Exception {\n+        config.getKosis().setApiKey(\"test=\");\n+        var data =\n+                mapper.readTree(\n+                        \"\"\"\n+            [{\"ORG_ID\":\"101\",\"TBL_ID\":\"DT_1J22042\",\"ITM_ID\":\"T03\",\"C1\":\"4\",\n+              \"ITM_NM\":\"전년동월비(%)\",\"C1_NM\":\"식료품및에너지제외지수\",\n+              \"PRD_SE\":\"M\",\"PRD_DE\":\"202608\",\"UNIT_NM\":null,\"DT\":\"3.4\"}]\n+            \"\"\");\n+        when(http.json(any(), anyMap(), any())).thenReturn(data);\n+        var client = new KosisMarketClient(http, config, clock);\n+        var result = client.fetch(MarketCode.CORE_CPI_YOY, deadline());\n+        assertThat(result.value()).isEqualByComparingTo(\"3.4\");\n+        assertThat(result.unit()).isEqualTo(\"% YoY\");\n+        ((com.fasterxml.jackson.databind.node.ObjectNode) data.get(0)).put(\"ITM_NM\", \"전월비\");\n+        assertThatThrownBy(() -> client.fetch(MarketCode.CORE_CPI_YOY, deadline()))\n+                .isInstanceOf(MarketDataException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/client/MarketClientsTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/client/MarketClientsTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,55 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import static org.assertj.core.api.Assertions.*;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import com.sun.net.httpserver.HttpServer;\n+import java.net.*;\n+import java.time.Duration;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicReference;\n+import org.junit.jupiter.api.Test;\n+\n+class MarketHttpClientTest {\n+    @Test\n+    void actualHttpQueryPreservesBase64AndRedactsFailure() throws Exception {\n+        var received = new AtomicReference<String>();\n+        var server = HttpServer.create(new InetSocketAddress(\"127.0.0.1\", 0), 0);\n+        server.createContext(\n+                \"/\",\n+                exchange -> {\n+                    received.set(exchange.getRequestURI().getRawQuery());\n+                    exchange.sendResponseHeaders(401, -1);\n+                    exchange.close();\n+                });\n+        server.start();\n+        try {\n+            var uri =\n+                    MarketHttpClient.query(\n+                            \"http://127.0.0.1:\" + server.getAddress().getPort() + \"/\",\n+                            Map.of(\"apiKey\", \"ab+c/=\"));\n+            var client = new MarketHttpClient(new MarketApiProperties(), new ObjectMapper());\n+            assertThatThrownBy(\n+                            () ->\n+                                    client.json(\n+                                            uri,\n+                                            Map.of(),\n+                                            new MarketDeadline(Duration.ofSeconds(2))))\n+                    .isInstanceOfSatisfying(\n+                            MarketDataException.class,\n+                            e -> {\n+                                assertThat(e.reason()).isEqualTo(Reason.AUTHENTICATION);\n+                                assertThat(e.getMessage()).doesNotContain(\"ab+c\", \"http\");\n+                                assertThat(e.getCause()).isNull();\n+                            });\n+            assertThat(URLDecoder.decode(received.get(), java.nio.charset.StandardCharsets.UTF_8))\n+                    .isEqualTo(\"apiKey=ab+c/=\");\n+        } finally {\n+            server.stop(0);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/client/MarketHttpClientTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/client/MarketHttpClientTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.ssafy.thorp.market.infrastructure.config;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import java.time.Duration;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.mock.env.MockEnvironment;\n+\n+class MarketConfigTest {\n+    @Test\n+    void existingEnvironmentNamesWorkWithoutApplicationYaml() {\n+        var env =\n+                new MockEnvironment()\n+                        .withProperty(\"KOSIS_API_KEY\", \"key=\")\n+                        .withProperty(\"MARKET_CACHE_TTL\", \"2h\")\n+                        .withProperty(\"MARKET_CACHE_MAX_AGE\", \"12h\")\n+                        .withProperty(\"MARKET_FAILURE_COOLDOWN\", \"10s\")\n+                        .withProperty(\"MARKET_REQUEST_BUDGET\", \"5s\");\n+        var properties = new MarketConfig().marketApiProperties(env);\n+        assertThat(properties.getKosis().getApiKey()).isEqualTo(\"key=\");\n+        assertThat(properties.getCacheTtl()).isEqualTo(Duration.ofHours(2));\n+        assertThat(properties.getCacheMaxAge()).isEqualTo(Duration.ofHours(12));\n+        assertThat(properties.getFailureCooldown()).isEqualTo(Duration.ofSeconds(10));\n+        assertThat(properties.getRequestBudget()).isEqualTo(Duration.ofSeconds(5));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/config/MarketConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/config/MarketConfigTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,90 @@\n+package com.ssafy.thorp.market.presentation.controller;\n+\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.*;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;\n+\n+import com.ssafy.thorp.market.application.result.MarketResult;\n+import com.ssafy.thorp.market.application.service.MarketService;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.EnumSource;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.setup.MockMvcBuilders;\n+\n+class MarketControllerTest {\n+    private final MarketService service = mock(MarketService.class);\n+    private MockMvc mvc;\n+\n+    @BeforeEach\n+    void setUp() {\n+        mvc =\n+                MockMvcBuilders.standaloneSetup(new MarketController(service))\n+                        .setControllerAdvice(\n+                                new MarketExceptionHandler(),\n+                                new com.ssafy.thorp.common.web.advice.GlobalExceptionHandler())\n+                        .build();\n+    }\n+\n+    @ParameterizedTest\n+    @EnumSource(MarketCode.class)\n+    void allElevenRoutesReturnOneObject(MarketCode code) throws Exception {\n+        when(service.get(code))\n+                .thenReturn(\n+                        new MarketResult(\n+                                code,\n+                                new MarketObservation(\n+                                        BigDecimal.ONE,\n+                                        \"지수\",\n+                                        code.frequency().equals(\"monthly\")\n+                                                ? \"2026-08\"\n+                                                : \"2026-09-04\"),\n+                                Instant.parse(\"2026-09-07T00:00:00Z\"),\n+                                false));\n+        mvc.perform(get(\"/markets/\" + code.name().toLowerCase().replace('_', '-')))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.isSuccess\").value(true))\n+                .andExpect(jsonPath(\"$.httpStatus\").value(\"OK\"))\n+                .andExpect(jsonPath(\"$.code\").value(200))\n+                .andExpect(jsonPath(\"$.result.code\").value(code.name()))\n+                .andExpect(jsonPath(\"$.result.status\").value(\"ok\"))\n+                .andExpect(jsonPath(\"$.result.markets\").doesNotExist());\n+        verify(service).get(code);\n+    }\n+\n+    @Test\n+    void upstreamAuthFailureIs503AndNotCaller401() throws Exception {\n+        when(service.get(any()))\n+                .thenThrow(new MarketDataException(MarketDataException.Reason.AUTHENTICATION));\n+        mvc.perform(get(\"/markets/kospi\"))\n+                .andExpect(status().isServiceUnavailable())\n+                .andExpect(jsonPath(\"$.isSuccess\").value(false))\n+                .andExpect(jsonPath(\"$.code\").value(503))\n+                .andExpect(jsonPath(\"$.result\").value(nullValue()));\n+    }\n+\n+    @Test\n+    void methodErrorUsesExistingCommonEnvelope() throws Exception {\n+        mvc.perform(post(\"/markets/kospi\"))\n+                .andExpect(status().isMethodNotAllowed())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.error\").exists());\n+    }\n+\n+    @Test\n+    void unexpectedExceptionDoesNotExposeSecret() throws Exception {\n+        when(service.get(any())).thenThrow(new RuntimeException(\"secret-key-in-url\"));\n+        mvc.perform(get(\"/markets/kospi\"))\n+                .andExpect(status().isInternalServerError())\n+                .andExpect(jsonPath(\"$.message\").value(\"서버 오류가 발생했습니다.\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/presentation/controller/MarketControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/presentation/controller/MarketControllerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,104 @@\n+package com.ssafy.thorp.market;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.market.application.service.MarketService;\n+import com.ssafy.thorp.market.infrastructure.client.*;\n+import com.ssafy.thorp.market.infrastructure.config.MarketConfig;\n+import com.ssafy.thorp.market.presentation.controller.MarketController;\n+import com.ssafy.thorp.market.presentation.controller.MarketExceptionHandler;\n+import java.net.URI;\n+import java.net.http.*;\n+import java.nio.file.*;\n+import java.time.Duration;\n+import java.util.*;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;\n+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;\n+import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration;\n+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.boot.test.web.server.LocalServerPort;\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.context.annotation.Import;\n+\n+/** 명시적으로 활성화한 경우에만 실제 키로 원천 API를 호출한다. DB는 필요 없다. */\n+@EnabledIfEnvironmentVariable(named = \"MARKET_LIVE_TEST\", matches = \"true\")\n+@SpringBootTest(\n+        classes = MarketLiveApiTest.LiveConfig.class,\n+        webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)\n+class MarketLiveApiTest {\n+    @Configuration\n+    @EnableAutoConfiguration(\n+            exclude = {\n+                DataSourceAutoConfiguration.class,\n+                HibernateJpaAutoConfiguration.class,\n+                KafkaAutoConfiguration.class\n+            })\n+    @Import({\n+        MarketConfig.class,\n+        MarketHttpClient.class,\n+        EcosMarketClient.class,\n+        KrxMarketClient.class,\n+        KosisMarketClient.class,\n+        CustomsMarketClient.class,\n+        MarketService.class,\n+        MarketController.class,\n+        MarketExceptionHandler.class,\n+        com.ssafy.thorp.common.web.advice.GlobalExceptionHandler.class\n+    })\n+    static class LiveConfig {}\n+\n+    @LocalServerPort int port;\n+    @Autowired ObjectMapper mapper;\n+\n+    @Test\n+    void realEndpointsProduceSanitizedResults() throws Exception {\n+        var summaries = new ArrayList<Map<String, Object>>();\n+        var client = HttpClient.newHttpClient();\n+        List<String> slugs =\n+                List.of(\n+                        \"usd-krw\",\n+                        \"ktb-3y\",\n+                        \"esi-cycle\",\n+                        \"m2\",\n+                        \"kospi\",\n+                        \"kosdaq\",\n+                        \"vkospi200\",\n+                        \"coincident-cycle\",\n+                        \"leading-cycle\",\n+                        \"core-cpi-yoy\",\n+                        \"exports-usd\");\n+        for (String slug : slugs) {\n+            var request =\n+                    HttpRequest.newBuilder(\n+                                    URI.create(\"http://localhost:\" + port + \"/markets/\" + slug))\n+                            .timeout(Duration.ofSeconds(12))\n+                            .GET()\n+                            .build();\n+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());\n+            var json = mapper.readTree(response.body());\n+            var summary = new LinkedHashMap<String, Object>();\n+            summary.put(\"endpoint\", slug);\n+            summary.put(\"http\", response.statusCode());\n+            summary.put(\"message\", json.path(\"message\").asText());\n+            if (json.path(\"result\").isObject()) {\n+                summary.put(\"value\", json.path(\"result\").path(\"value\").decimalValue());\n+                summary.put(\"unit\", json.path(\"result\").path(\"unit\").asText());\n+                summary.put(\n+                        \"observationDate\", json.path(\"result\").path(\"observationDate\").asText());\n+            }\n+            summaries.add(summary);\n+        }\n+        Path report = Path.of(\"build/reports/market-live.json\");\n+        Files.createDirectories(report.getParent());\n+        mapper.writerWithDefaultPrettyPrinter().writeValue(report.toFile(), summaries);\n+        assertThat(summaries).allSatisfy(row -> assertThat(row.get(\"http\")).isIn(200, 503));\n+        // 이미 키가 검증된 ECOS 4개는 실제 성공까지 확인한다.\n+        assertThat(summaries.subList(0, 4))\n+                .allSatisfy(row -> assertThat(row.get(\"http\")).isEqualTo(200));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/MarketLiveApiTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/MarketLiveApiTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,147 @@\n+# 시장·거시 지표 개별 조회 API\n+\n+## 범위\n+\n+지표 하나당 독립된 GET API로 최신값을 조회한다. 인증 불필요, 요청 파라미터·본문 없음.\n+외부 경로는 `/api/markets/{slug}`, 현재 Vite/운영 프록시가 `/api`를 제거하므로 Spring 매핑은 `/markets/{slug}`이다.\n+프론트는 카드별로 호출·로딩·오류·재시도를 관리한다. 이번 변경은 백엔드 연동이며 기존 목업 UI 연결은 별도 작업이다.\n+\n+| slug | code | 원천 / 조회 조건 |\n+|---|---|---|\n+| kospi | KOSPI | KRX kospi_dd_trd / 코스피 |\n+| kosdaq | KOSDAQ | KRX kosdaq_dd_trd / 코스닥 |\n+| usd-krw | USD_KRW | ECOS 731Y001 / 0000001 / D |\n+| vkospi200 | VKOSPI200 | KRX drvprod_dd_trd / IDX_NM 설정값, 승인 후 검증 필요 |\n+| ktb-3y | KTB_3Y | ECOS 817Y002 / 010200000 / D |\n+| coincident-cycle | COINCIDENT_CYCLE | KOSIS 101 / DT_1C8015 / T1 / B03 / M |\n+| leading-cycle | LEADING_CYCLE | KOSIS 101 / DT_1C8015 / T1 / A03 / M |\n+| esi-cycle | ESI_CYCLE | ECOS 513Y001 / E2000 / M |\n+| core-cpi-yoy | CORE_CPI_YOY | KOSIS 101 / DT_1J22042 / T03 / 4 / M |\n+| exports-usd | EXPORTS_USD | 관세청 Newtrade/getNewtradeList / expDlr(달러) |\n+| m2 | M2 | ECOS 161Y006 / BBHA00 / M / 십억원, 평잔·원계열 |\n+\n+KOSIS 코드는 공식 메타데이터로 확인했다. 사용자의 키로 데이터 조회 성공 여부는 별도 검증한다.\n+ECOS 과거 101Y003은 현재 M2 평잔·원계열 정의와 다르므로 사용하지 않는다.\n+\n+## 응답\n+\n+시장 API는 `HttpApiResponse`로 `{httpStatus, isSuccess, message, code, result}`를 반환한다.\n+기존 backtest의 `ApiResponse`는 기존 클라이언트 호환성을 위해 유지한다. 전체 응답 통일은 별도 마이그레이션이다.\n+\n+성공 HTTP 200, result는 배열이 아닌 지표 객체 하나다.\n+\n+```json\n+{\n+  \"httpStatus\": \"OK\",\n+  \"isSuccess\": true,\n+  \"message\": \"요청이 성공적으로 처리되었습니다.\",\n+  \"code\": 200,\n+  \"result\": {\n+    \"code\": \"USD_KRW\",\n+    \"name\": \"원/달러 환율\",\n+    \"group\": \"market\",\n+    \"value\": 1355.2,\n+    \"unit\": \"원/USD\",\n+    \"frequency\": \"daily\",\n+    \"observationDate\": \"2026-09-07\",\n+    \"retrievedAt\": \"2026-09-07T08:00:00Z\",\n+    \"source\": {\"provider\": \"한국은행 ECOS\", \"datasetName\": \"원/미국달러(매매기준율)\"},\n+    \"status\": \"ok\",\n+    \"statusMessage\": null\n+  }\n+}\n+```\n+\n+위 응답은 형식 설명용 예시다. 월 자료는 YYYY-MM, 일 자료는 YYYY-MM-DD, 수집 시각은 UTC ISO 8601.\n+갱신 실패 후 유효한 이전 값이 있으면 200 + status=stale, 원래 retrievedAt과 관측일을 유지한다.\n+키 미설정·원천 인증 실패·결측·타임아웃 등으로 사용할 값이 없으면 503, result=null.\n+내부 오류는 500. 허용되지 않는 HTTP 메서드(405) 등 컨트롤러 매칭 전 공통 오류는 기존 ApiResponse 형식을 사용한다. 외부 인증 실패를 호출자의 401로 전달하지 않는다.\n+실패 시 키·원천 URL·오류 원문을 응답 또는 로그에 남기지 않는다.\n+\n+## 조회·캐시 정책\n+\n+- 지표별 6시간 메모리 캐시, 수집 후 총 24시간 미만의 이전 값만 stale로 허용한다.\n+- 같은 지표의 동시 갱신을 직렬화하고 서로 다른 지표는 독립적으로 실행한다.\n+- 실패 후 30초 동안 외부 재호출을 억제한다. 실패 쿨다운은 설정 가능하다.\n+- 전체 시간 예산은 8초. 연결 2초, 개별 HTTP 요청 3초, 여러 날짜를 조회해도 남은 예산 내에서만 호출한다.\n+- ECOS는 최근 일별 60일/월별 24개월에서 최신 유효값을 찾는다. 조회 범위는 100행을 넘지 않는다.\n+- KRX는 최근 14일 이내 평일을 역순으로 조회한다. 빈 자료만 이전 날짜로 이동하며 인증 실패는 즉시 반환한다.\n+- KOSIS는 해당 항목의 최근 3개 수록시점에서 최신값을 고른다. CPI 전년동월비를 직접 사용한다.\n+- 관세청은 완료된 최근 12개월을 조회하며 총계 행은 제외한다. expDlr은 달러 단위이다.\n+- 결측·숫자 파싱 실패를 0으로 바꾸지 않는다. 목업 값으로 대체하지 않는다.\n+\n+## 실행\n+\n+저장소 루트 `.env`에 ECOS_API_KEY, KRX_API_KEY, KOSIS_API_KEY, DATA_GO_KR_SERVICE_KEY를 설정한다.\n+KOSIS 키 끝의 `=`는 그대로 보존한다. KRX 키는 AUTH_KEY 헤더, 나머지 키는 기관이 요구하는 경로·쿼리에 전달된다.\n+MarketConfig가 로컬 `.env`를 로딩하며 환경변수가 우선한다. 공통 application.yml과 Docker Compose는 수정하지 않는다. Docker 실행 시 키를 컨테이너 환경변수로 별도 전달해야 한다.\n+\n+```powershell\n+cd backend\n+.\\gradlew.bat bootRun\n+Invoke-RestMethod http://localhost:8080/markets/usd-krw\n+```\n+\n+전체 앱 실행에는 기존 PostgreSQL 환경이 필요하다.\n+단위·컨트롤러·아키텍처 검증: `.\\gradlew.bat spotlessApply build`.\n+실제 기관 호출 검증은 opt-in 테스트로 수행하며 키와 원문 URL은 출력하지 않는다.\n+\n+## 공식 근거\n+\n+- [ECOS API](https://ecos.bok.or.kr/api/): StatisticTableList, StatisticItemList, StatisticSearch 실제 응답 확인\n+- [KRX 이용방법](https://openapi.krx.co.kr/contents/OPP/INFO/OPPINFO003.jsp): 인증키 및 서비스별 활용 승인\n+- [KOSIS 통계자료](https://kosis.kr/openapi/devGuide/devGuide_0201List.do): Param/statisticsParameterData.do\n+- [KOSIS 통계표설명](https://kosis.kr/openapi/devGuide/devGuide_060101List.do): getMeta/type=ITM 코드 확인\n+- [관세청 수출입총괄(GW)](https://www.data.go.kr/data/15102108/openapi.do): 페이지 내 Swagger의 Newtrade/getNewtradeList, expDlr\n+\n+## 실제 호출 검증 (2026-09-07)\n+\n+현재 `.env`를 로딩한 Spring 웹 서버의 11개 경로를 HTTP로 호출했다.\n+일반 테스트/아키텍처/Spotless/빌드 통과, opt-in 실제 호출 테스트도 통과했다.\n+실제 호출 테스트는 성공과 예상된 503 처리를 모두 검사하며, 11개 원천 수집이 모두 성공했다는 의미는 아니다.\n+\n+| 코드 | 내부 HTTP | 확인 결과 |\n+|---|---|---|\n+| USD_KRW | 200 | 1355.2 원/USD, 2026-09-07 |\n+| KTB_3Y | 200 | 3.9 %, 2026-09-07 |\n+| ESI_CYCLE | 200 | 96.9 지수, 2026-08 |\n+| M2 | 200 | 4209874 십억원, 2026-06 |\n+| KOSPI / KOSDAQ / VKOSPI200 | 503 | 원천 인증 거부. KRX 키·서비스별 활용 승인 확인 필요 |\n+| COINCIDENT_CYCLE / LEADING_CYCLE / CORE_CPI_YOY | 503 | KOSIS 키 인증 거부. 끝의 =는 인코딩하여 보존됨 |\n+| EXPORTS_USD | 503 | DATA_GO_KR_SERVICE_KEY 미설정 |\n+\n+KRX의 V-KOSPI 200 식별자는 승인 후 실데이터로 최종 확인해야 한다.\n+관세청 파서는 공식 Swagger에 근거한 구현이며 현재 키가 없어 실제 수집 성공은 검증하지 못했다.\n+키 변경 후에는 백엔드를 재시작한다. 승인만 변경된 경우 실패 쿨다운 30초 뒤 재호출한다.\n+\n+```powershell\n+# backend 디렉터리, 실제 외부 API 호출을 명시적으로 활성화\n+$env:MARKET_LIVE_TEST='true'\n+.\\gradlew.bat test --tests 'com.ssafy.thorp.market.MarketLiveApiTest' --rerun-tasks\n+Remove-Item Env:MARKET_LIVE_TEST\n+```\n+\n+키를 포함하지 않는 결과는 backend/build/reports/market-live.json에 기록한다.\n+\n+## 인증 문제 재검증 (2026-09-07 17:43 KST)\n+\n+KRX 3개는 모두 실제 호출 성공. 관세청 실패는 `.env`의 Encoding 키를 다시 URL 인코딩하는 것이 원인이었다.\n+CustomsMarketClient에서 퍼센트 인코딩된 키를 한 번 정규화해 Encoding/Decoding 형식을 모두 지원하도록 수정했다.\n+회귀 테스트 2개와 전체 빌드, 실제 호출 검증 통과. 수출액은 HTTP 200, 2026-08 기준 98254664934 USD를 반환했다.\n+현재 11개 중 8개 성공이며 KOSIS 3개만 실패한다. KOSIS는 자료·메타데이터 모두 원천 오류 11(유효하지 않은 인증KEY)을 반환한다.\n+KOSIS 키 끝의 =는 보존되며 이중 인코딩도 발견되지 않았다. 발급된 키 전체와 활성 상태 확인이 필요하다.\n+\n+## 최종 연결 확인 (2026-09-07 17:47 KST)\n+\n+현재 키로 11개 API 모두 HTTP 200 및 실제 관측값 반환을 확인했다.\n+KOSIS 동행 101.2(2026-07), 선행 104.2(2026-07), 근원물가 3.4 % YoY(2026-08).\n+근원물가는 원천 UNIT_NM이 null이라 기존 단위 검증에 실패했다.\n+정확한 통계표·항목 코드·분류 코드와 항목명 전년동월비(%) 및 분류명 식료품및에너지제외지수를 확인한 경우에만 % YoY로 정규화하도록 수정했다.\n+잘못된 항목명을 거부하는 회귀 테스트와 전체 빌드·실제 호출 테스트가 통과했다.\n+위의 승인 대기·인증 실패 기록은 이전 검증 시점의 상태이며 현재는 해소되었다.\n+\n+## 공통 파일 원복\n+\n+application.yml, docker-compose.dev.yml, GlobalExceptionHandler.java의 변경을 원복했다.\n+.env 읽기와 ECOS_API_KEY 등 기존 키 이름의 연결은 market/infrastructure/config/MarketConfig에서 처리한다.\n+시장 API의 성공·원천 오류 응답은 유지하고, 컨트롤러 매칭 전 405 등은 기존 공통 응답을 사용한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/market-api.md",
+          "old_path": "docs/specs/market-api.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,5 +16,19 @@ KAFKA_BOOTSTRAP_SERVERS=localhost:9092\n BACKTEST_JOB_TOPIC=backtest.jobs\n \n # --- KRX / 외부 데이터 API ---\n-# data/ 파이프라인에서 사용. 발급받은 키를 넣는다.\n+# 백엔드 market API에서 사용. KRX는 인증키 및 서비스별 활용 승인이 필요하다.\n KRX_API_KEY=\n+\n+ECOS_API_KEY=\n+# 끝의 =를 포함한 발급 키 전체를 입력한다. 임의로 URL 인코딩하지 않는다.\n+KOSIS_API_KEY=\n+# 관세청 수출입총괄(GW) 활용신청 후 발급받은 일반 인증키(Decoding)\n+DATA_GO_KR_SERVICE_KEY=\n+\n+# --- Market 조회 정책 (선택) ---\n+MARKET_CACHE_TTL=6h\n+MARKET_CACHE_MAX_AGE=24h\n+MARKET_FAILURE_COOLDOWN=30s\n+MARKET_REQUEST_BUDGET=8s\n+# KRX 승인 후 실제 IDX_NM이 다르면 수정\n+KRX_VOLATILITY_INDEX_NAME=코스피 200 변동성지수\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".env.example",
+          "old_path": ".env.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2170917,
+      "head_commit_sha": "50dc5ba969bfb0aa3f3bd94f23ba827002596aa4",
+      "base_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "start_commit_sha": "9ec3ec295b5ced540a2d2d621123db7ee95bedee",
+      "created_at": "2026-09-08T11:08:14.601+09:00",
+      "merge_request_id": 936108,
+      "state": "without_files",
+      "real_size": "33",
+      "patch_id_sha": "c5feb52a3f1211e3ac9fee6f77a13dad4fd71b43",
+      "commits": [
+        {
+          "id": "50dc5ba969bfb0aa3f3bd94f23ba827002596aa4",
+          "short_id": "50dc5ba9",
+          "created_at": "2026-09-08T11:02:47.000+09:00",
+          "parent_ids": [
+            "e476234a74fade14482663dd18e78757e66e9835",
+            "9ec3ec295b5ced540a2d2d621123db7ee95bedee"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/90-openapi-connect",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/90-openapi-connect\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-08T11:02:47.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-08T11:02:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/50dc5ba969bfb0aa3f3bd94f23ba827002596aa4"
+        },
+        {
+          "id": "e476234a74fade14482663dd18e78757e66e9835",
+          "short_id": "e476234a",
+          "created_at": "2026-09-07T18:00:23.000+09:00",
+          "parent_ids": [
+            "00c4968959bd0ec5c56183d2a0cc6da39b3666f7"
+          ],
+          "title": "feat(be):시장/거시 지표 11개 외부 API 연동",
+          "message": "feat(be):시장/거시 지표 11개 외부 API 연동\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-07T18:00:23.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-07T18:00:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e476234a74fade14482663dd18e78757e66e9835"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-08T11:29:08.661+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2772734": [],
+    "2772867": []
+  }
+}

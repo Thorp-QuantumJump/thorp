@@ -1,0 +1,633 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944374,
+    "iid": 106,
+    "project_id": 1444456,
+    "title": "fix(infra): 배포 실패 원인을 콘솔에서 바로 읽게 한다",
+    "description": "# **작업 내용 요약**\n\n배포가 실패했을 때 Jenkins 콘솔만으로 원인을 알 수 있게 하고, 배포 로그의 단계와 실패 지점이 눈에 들어오게 한다.\n\n2026-09-15 dev 배포가 Smoke test 에서 실패했을 때(백엔드 기동 실패로 curl exit 7) 콘솔에 원인이 한 줄도 남지 않아 원인 파악이 서버 접속에 묶였다. 그 로그를 읽는 과정에서 색과 출력량 문제도 함께 드러나 한 티켓으로 묶었다.\n\n# **관련 티켓**\n\n* ticket #220\n* link https://ssafy.atlassian.net/browse/S15P21E205-220\n\n# **주요 변경 사항**\n\n* `Jenkinsfile.deploy` post failure 에 백엔드 로그 200줄 출력을 추가했다. 기존 `docker compose ps` 와 ssh 안내는 남겼다.\n* `Jenkinsfile.deploy` options 에 `ansiColor('xterm')` 를 넣었다. 루트 Jenkinsfile 에는 이미 있고 플러그인도 설치되어 있었으나, 배포 파이프라인에만 빠져 있었다.\n* `deploy.sh` 의 단계 표시를 `step()` 으로 바꿔 색을 넣고, `COMPOSE` 에 `--ansi always` 를 붙였다.\n* `backend.Dockerfile` 의 `gradlew dependencies` 출력을 버렸다. 단계 자체는 남겼다.\n\n# **테스트**\n\n* 완료`bash -n infra/scripts/deploy.sh` 문법 검사 통과\n* 완료`step()` 이 실제로 ANSI SGR(`ESC[1;36m` ... `ESC[0m`)을 출력하는지 확인\n* 완료`Jenkinsfile.deploy` 중괄호 26쌍 균형 확인\n* 미완료배포 1회 실행으로 콘솔에 색과 백엔드 로그가 실제로 나오는지 확인 (머지 후)\n\n# **리뷰 포인트**\n\n* **`dependencies` 단계를 지우지 않고 출력만 버린 이유**: 이 단계는 소스를 COPY 하기 전에 의존성 레이어를 굳히는 캐싱 장치다. 지우면 소스만 바뀐 빌드도 의존성을 매번 다시 받는다. stdout 만 버려서 경고·오류는 stderr 로 그대로 보인다.\n* **Gradle 빌드 출력에는 색을 넣지 않았다**: `bootJar` 는 Docker 빌드 안에서 돌기 때문에 Jenkins 쪽 환경변수가 닿지 않는다. 그리고 `--console=rich` 는 커서 제어 문자를 써서 AnsiColor 가 온전히 처리하지 못해 잔상이 남는다.\n* **실패 로그를 백엔드로 한정했다**: Smoke test 가 확인하는 대상이 백엔드이고, 다른 서비스는 안내 문구로 경로만 남겼다. 모든 서비스 로그를 쏟으면 콘솔을 덮는 문제를 다시 만든다.\n* `logs` 호출은 바깥 `sh` 가 `returnStatus: true` 로 감싸져 있어, 백엔드 컨테이너가 없는 단계에서 실패해도 Mattermost 알림을 막지 않는다.\n\n# **공통 확인**\n\n* **순위 배지·추천 표현 0건** — 인프라 스크립트 변경이라 표시 요소가 없다\n* **결제·포인트·상품 선택 단계 0건** — 해당 없음\n* **전략 ID 상수·전략별 분기 0건** — 해당 없음\n* **계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n* **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-09-15T12:27:05.475+09:00",
+    "updated_at": "2026-09-15T15:49:29.201+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T12:29:03.223+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/220-deploy-log-readability",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+    "merge_commit_sha": "f869a61a1e8f211214a60b31d9766ead6e8cbea6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T12:27:06.259+09:00",
+    "reference": "!106",
+    "references": {
+      "short": "!106",
+      "relative": "!106",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!106"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/106",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944374,
+    "iid": 106,
+    "project_id": 1444456,
+    "title": "fix(infra): 배포 실패 원인을 콘솔에서 바로 읽게 한다",
+    "description": "# **작업 내용 요약**\n\n배포가 실패했을 때 Jenkins 콘솔만으로 원인을 알 수 있게 하고, 배포 로그의 단계와 실패 지점이 눈에 들어오게 한다.\n\n2026-09-15 dev 배포가 Smoke test 에서 실패했을 때(백엔드 기동 실패로 curl exit 7) 콘솔에 원인이 한 줄도 남지 않아 원인 파악이 서버 접속에 묶였다. 그 로그를 읽는 과정에서 색과 출력량 문제도 함께 드러나 한 티켓으로 묶었다.\n\n# **관련 티켓**\n\n* ticket #220\n* link https://ssafy.atlassian.net/browse/S15P21E205-220\n\n# **주요 변경 사항**\n\n* `Jenkinsfile.deploy` post failure 에 백엔드 로그 200줄 출력을 추가했다. 기존 `docker compose ps` 와 ssh 안내는 남겼다.\n* `Jenkinsfile.deploy` options 에 `ansiColor('xterm')` 를 넣었다. 루트 Jenkinsfile 에는 이미 있고 플러그인도 설치되어 있었으나, 배포 파이프라인에만 빠져 있었다.\n* `deploy.sh` 의 단계 표시를 `step()` 으로 바꿔 색을 넣고, `COMPOSE` 에 `--ansi always` 를 붙였다.\n* `backend.Dockerfile` 의 `gradlew dependencies` 출력을 버렸다. 단계 자체는 남겼다.\n\n# **테스트**\n\n* 완료`bash -n infra/scripts/deploy.sh` 문법 검사 통과\n* 완료`step()` 이 실제로 ANSI SGR(`ESC[1;36m` ... `ESC[0m`)을 출력하는지 확인\n* 완료`Jenkinsfile.deploy` 중괄호 26쌍 균형 확인\n* 미완료배포 1회 실행으로 콘솔에 색과 백엔드 로그가 실제로 나오는지 확인 (머지 후)\n\n# **리뷰 포인트**\n\n* **`dependencies` 단계를 지우지 않고 출력만 버린 이유**: 이 단계는 소스를 COPY 하기 전에 의존성 레이어를 굳히는 캐싱 장치다. 지우면 소스만 바뀐 빌드도 의존성을 매번 다시 받는다. stdout 만 버려서 경고·오류는 stderr 로 그대로 보인다.\n* **Gradle 빌드 출력에는 색을 넣지 않았다**: `bootJar` 는 Docker 빌드 안에서 돌기 때문에 Jenkins 쪽 환경변수가 닿지 않는다. 그리고 `--console=rich` 는 커서 제어 문자를 써서 AnsiColor 가 온전히 처리하지 못해 잔상이 남는다.\n* **실패 로그를 백엔드로 한정했다**: Smoke test 가 확인하는 대상이 백엔드이고, 다른 서비스는 안내 문구로 경로만 남겼다. 모든 서비스 로그를 쏟으면 콘솔을 덮는 문제를 다시 만든다.\n* `logs` 호출은 바깥 `sh` 가 `returnStatus: true` 로 감싸져 있어, 백엔드 컨테이너가 없는 단계에서 실패해도 Mattermost 알림을 막지 않는다.\n\n# **공통 확인**\n\n* **순위 배지·추천 표현 0건** — 인프라 스크립트 변경이라 표시 요소가 없다\n* **결제·포인트·상품 선택 단계 0건** — 해당 없음\n* **전략 ID 상수·전략별 분기 0건** — 해당 없음\n* **계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n* **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-09-15T12:27:05.475+09:00",
+    "updated_at": "2026-09-15T15:49:29.201+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-15T12:29:03.223+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/220-deploy-log-readability",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+    "merge_commit_sha": "f869a61a1e8f211214a60b31d9766ead6e8cbea6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T12:27:06.259+09:00",
+    "reference": "!106",
+    "references": {
+      "short": "!106",
+      "relative": "!106",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!106"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/106",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T12:27:18.772+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 195194,
+      "iid": 16,
+      "project_id": 1444456,
+      "sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+      "ref": "fix(infra)/220-deploy-log-readability",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T12:27:18.071+09:00",
+      "updated_at": "2026-09-15T12:27:18.773+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195194"
+    },
+    "head_pipeline": {
+      "id": 195194,
+      "iid": 16,
+      "project_id": 1444456,
+      "sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+      "ref": "fix(infra)/220-deploy-log-readability",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T12:27:18.071+09:00",
+      "updated_at": "2026-09-15T12:27:18.773+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195194",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T12:27:18.772+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195194",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "5b5281c0eae34e718cbba0e621a789aa311846e2",
+      "head_sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+      "start_sha": "315456a11f9129f3e3f880443723a5f5731e4a48"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "1dffac39d2a74a58e8effb46cf821b0c705aae29",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807057,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T12:27:05.581+09:00",
+          "updated_at": "2026-09-15T12:27:05.588+09:00",
+          "system": true,
+          "noteable_id": 944374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 106,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "16bac6188d160e53c083d4315350c952f8f22622",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807059,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **가독성 향상**: Docker 빌드 시 과도한 의존성 다운로드 로그를 리다이렉트(`> /dev/null`)하여 차단하고, Jenkins 및 배포 스크립트에 ANSI 색상 출력을 도입하여 CI/CD 콘솔 가독성을 크게 개선했습니다.\n- **디버깅 편의성**: 배포 실패 시 서버에 직접 SSH로 접속하지 않고도 Jenkins 콘솔에서 백엔드 컨테이너의 최근 로그(200줄)를 바로 확인할 수 있도록 구성하여 장애 대응 속도를 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **Jenkins 컬러 및 로그 출력 테스트**: Jenkins 파이프라인 수동 실행 후, `ansiColor('xterm')` 및 `step` 함수의 ANSI 코드가 깨지지 않고 색상으로 잘 표현되는지, 백엔드 기동 실패 시 최근 200줄 로그가 콘솔에 정상 출력되는지 확인합니다.\n- **Docker 빌드 레이어 캐시 테스트**: `backend.Dockerfile`에서 `RUN ./gradlew dependencies ... > /dev/null` 변경 후 소스코드 변경 없는 상태에서 빌드 시 해당 레이어가 정상적으로 캐시되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:98696a26ad08624e662db541bf66dfe3ee76c1b4 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T12:27:12.999+09:00",
+          "updated_at": "2026-09-15T12:27:12.999+09:00",
+          "system": false,
+          "noteable_id": 944374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 106,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ed608ebc981f9243398464d42b6fccfc0eadc3fc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807065,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T12:28:38.740+09:00",
+          "updated_at": "2026-09-15T12:28:38.744+09:00",
+          "system": true,
+          "noteable_id": 944374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 106,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de44b6721d1312e0033ba2b14b40e4709e7e4be7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807066,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T12:28:38.773+09:00",
+          "updated_at": "2026-09-15T12:28:38.777+09:00",
+          "system": true,
+          "noteable_id": 944374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 106,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5dcc052902461b8079b5174e104941bcd1660383",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807076,
+          "type": null,
+          "body": "mentioned in commit f869a61a1e8f211214a60b31d9766ead6e8cbea6",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T12:29:03.326+09:00",
+          "updated_at": "2026-09-15T12:29:03.331+09:00",
+          "system": true,
+          "noteable_id": 944374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 106,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "efa2b883a585ed0b6ccbc5c9542ee65522d0911d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2807411,
+          "type": null,
+          "body": "mentioned in merge request !108",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T13:02:35.997+09:00",
+          "updated_at": "2026-09-15T13:02:36.000+09:00",
+          "system": true,
+          "noteable_id": 944374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 106,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2198145,
+      "head_commit_sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+      "base_commit_sha": "5b5281c0eae34e718cbba0e621a789aa311846e2",
+      "start_commit_sha": "315456a11f9129f3e3f880443723a5f5731e4a48",
+      "created_at": "2026-09-15T12:27:05.773+09:00",
+      "merge_request_id": 944374,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "f528bd417023560e70200047a0065d6c17ebaf14"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2198145,
+      "head_commit_sha": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+      "base_commit_sha": "5b5281c0eae34e718cbba0e621a789aa311846e2",
+      "start_commit_sha": "315456a11f9129f3e3f880443723a5f5731e4a48",
+      "created_at": "2026-09-15T12:27:05.773+09:00",
+      "merge_request_id": 944374,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "f528bd417023560e70200047a0065d6c17ebaf14",
+      "commits": [
+        {
+          "id": "98696a26ad08624e662db541bf66dfe3ee76c1b4",
+          "short_id": "98696a26",
+          "created_at": "2026-09-15T12:25:24.000+09:00",
+          "parent_ids": [
+            "5b5281c0eae34e718cbba0e621a789aa311846e2"
+          ],
+          "title": "fix(infra): 배포 실패 원인을 콘솔에서 바로 읽게 한다",
+          "message": "fix(infra): 배포 실패 원인을 콘솔에서 바로 읽게 한다\n\n배포가 실패해도 Jenkins 콘솔에는 컨테이너 목록과 \"ssh 접속 후 보라\"는 안내만\n남았다. 원인을 아는 경로가 서버 접속뿐이라, 배포를 기다리는 사람이 복구를\n시작하지 못한다. 실패 시 백엔드 로그 200줄을 콘솔에 함께 남긴다.\n\n같은 로그에서 드러난 가독성 문제도 함께 고친다.\n\n배포 파이프라인 options 에 ansiColor 가 빠져 있어 출력이 전부 흑백이었다\n(루트 Jenkinsfile 에는 있다. 플러그인도 이미 설치되어 있다). 지시어를 넣고,\ndeploy.sh 의 단계 표시와 docker compose 출력이 실제로 색을 내도록 켠다 —\nJenkins 의 sh 는 TTY 가 아니라 두 도구 모두 색을 스스로 끄기 때문이다.\n\n의존성 트리가 1000줄 가까이 콘솔을 덮던 것은 출력만 버린다. 그 단계는 소스를\n넣기 전에 의존성 레이어를 굳히는 캐싱 장치이므로 지우지 않는다. 지우면 소스만\n바뀐 빌드도 의존성을 매번 다시 받는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-15T12:25:24.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-15T12:25:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/98696a26ad08624e662db541bf66dfe3ee76c1b4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -5,7 +5,10 @@ ENV GRADLE_OPTS=\"-Xmx1g\"\n WORKDIR /app\n COPY gradlew settings.gradle build.gradle ./\n COPY gradle ./gradle\n-RUN ./gradlew dependencies --no-daemon || true\n+# 소스를 넣기 전에 의존성만 받아 레이어로 굳힌다. 소스만 바뀐 빌드는 이 레이어를 재사용한다.\n+# 출력은 버린다 — 의존성 트리는 1000줄 가까이 배포 로그를 덮는데 읽을 일이 없고, 캐시를\n+# 채우는 효과는 출력과 무관하다. 경고·오류는 stderr 로 남으므로 그대로 보인다.\n+RUN ./gradlew dependencies --no-daemon --console=plain > /dev/null || true\n COPY src ./src\n RUN ./gradlew bootJar --no-daemon\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker/backend.Dockerfile",
+          "old_path": "infra/docker/backend.Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,14 @@ pipeline {\n         timestamps()\n         disableConcurrentBuilds()\n         timeout(time: 30, unit: 'MINUTES')\n+\n+        // deploy.sh 의 단계 표시와 docker compose 의 서비스 접두사에 색을 입힌다. 배포 로그는\n+        // 이미지 빌드 출력이 수백 줄씩 흐르기 때문에, 색이 없으면 어디서 멈췄는지 찾느라\n+        // 콘솔을 처음부터 훑어야 한다.\n+        //\n+        // ansicolor 플러그인이 설치되어 있어야 하며, 없으면 파이프라인 자체가 기동에\n+        // 실패한다. 플러그인 목록은 infra/jenkins/Dockerfile 에 있다.\n+        ansiColor('xterm')\n     }\n \n     parameters {\n@@ -113,12 +121,24 @@ pipeline {\n             returnStatus: true,\n             script: '''\n                 cd \"$DEPLOY_DIR/infra\"\n-                docker compose \\\n-                    -f docker-compose.prod.yml \\\n-                    --env-file .env.prod \\\n-                    ps\n-\n-                echo \"로그 확인: ssh 접속 후 cd $DEPLOY_DIR/infra && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 200 <서비스명>\"\n+                COMPOSE=\"docker compose --ansi always -f docker-compose.prod.yml --env-file .env.prod\"\n+\n+                $COMPOSE ps\n+\n+                # 배포가 깨지는 원인은 대개 백엔드 기동 로그에 그대로 찍힌다. 그것을 콘솔에\n+                # 남기지 않으면 원인을 아는 경로가 서버 접속뿐이라, 배포를 기다리는 사람이\n+                # 복구를 시작하지 못한다. 200줄이면 기동 한 번의 스프링 배너부터 실패 배너까지\n+                # 들어간다 — 기동 실패는 재시작마다 같은 내용을 반복하므로 마지막 한 번으로 족하다.\n+                #\n+                # 백엔드 컨테이너가 만들어지기 전에 실패해도 compose 가 빈 결과를 낼 뿐이고,\n+                # 바깥 sh 가 returnStatus 로 감싸져 있어 이 블록이 뒤따르는 알림을 막지 않는다.\n+                echo\n+                echo \"===== backend 최근 로그 200줄 =====\"\n+                $COMPOSE logs --tail 200 backend\n+\n+                # 원인이 다른 서비스일 때를 위해 접속 경로도 함께 남긴다.\n+                echo\n+                echo \"다른 서비스 로그: ssh 접속 후 cd $DEPLOY_DIR/infra && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 200 <서비스명>\"\n             '''\n         )\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Jenkinsfile.deploy",
+          "old_path": "infra/jenkins/Jenkinsfile.deploy",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,10 +7,18 @@ set -euo pipefail\n \n cd \"$(dirname \"$0\")/..\"\n \n+# 단계 표시. 이미지 빌드 출력이 수백 줄씩 흐르기 때문에, 색이 없으면 지금 어느 단계인지와\n+# 어디서 멈췄는지를 눈으로 찾기 어렵다. TTY 여부를 따지지 않고 항상 켠다 — 이 출력을 읽는\n+# 곳은 Jenkins 콘솔이고, 거기서는 Jenkinsfile.deploy 의 ansiColor('xterm') 가 해석한다.\n+# 수동 실행 시에도 터미널이 그대로 해석하므로 따로 나눌 이유가 없다.\n+step() { printf '\\033[1;36m%s\\033[0m\\n' \"$*\"; }\n+\n ENV_FILE=\".env.prod\"\n-COMPOSE=\"docker compose -f docker-compose.prod.yml --env-file $ENV_FILE\"\n+# --ansi always: Jenkins 의 sh 는 TTY 가 아니라서 compose 가 색을 스스로 끈다. 서비스 이름과\n+# 상태(Started·Healthy·Error)가 색으로 갈리면 어느 컨테이너가 문제인지 바로 보인다.\n+COMPOSE=\"docker compose --ansi always -f docker-compose.prod.yml --env-file $ENV_FILE\"\n \n-echo \"[0/4] 작업 큐 타입 확인 (spec 004 R-06)\"\n+step \"[0/4] 작업 큐 타입 확인 (spec 004 R-06)\"\n # 계약 v2 백엔드는 backtest.jobs를 quorum으로 선언한다. classic 큐가 남아 있으면 재선언이\n # PRECONDITION_FAILED로 실패하고 delivery-limit이 적용되지 않으므로, 먼저 1회 전환해야 한다.\n if [[ -n \"$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)\" ]]; then\n@@ -25,22 +33,22 @@ if [[ -n \"$($COMPOSE ps -q --status running rabbitmq 2>/dev/null)\" ]]; then\n     fi\n fi\n \n-echo \"[1/4] 프론트엔드 빌드\"\n+step \"[1/4] 프론트엔드 빌드\"\n # 호스트 데몬이 띄우므로 Jenkins의 메모리 상한이 적용되지 않는다. 여기서 직접 건다.\n docker run --rm --memory=2g --cpus=2 \\\n     -v \"$PWD/../frontend:/app\" \\\n     -w /app \\\n     node:20-alpine sh -c \"npm ci && npm run build\"\n \n-echo \"[2/4] 정적 파일 교체\"\n+step \"[2/4] 정적 파일 교체\"\n rm -rf nginx/html/*\n cp -r ../frontend/dist/. nginx/html/\n \n-echo \"[3/4] 백엔드/워커 이미지 빌드 및 기동\"\n+step \"[3/4] 백엔드/워커 이미지 빌드 및 기동\"\n $COMPOSE build backend worker\n $COMPOSE up -d\n \n-echo \"[4/4] nginx 재적용 및 정리\"\n+step \"[4/4] nginx 재적용 및 정리\"\n # bind mount된 템플릿 변경은 컨테이너 재시작 없이 자동 반영되지 않는다.\n # 공식 nginx entrypoint 스크립트로 설정을 다시 생성한 뒤 유효한 경우에만 reload한다.\n $COMPOSE exec -T nginx /docker-entrypoint.d/20-envsubst-on-templates.sh\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/deploy.sh",
+          "old_path": "infra/scripts/deploy.sh",
+          "a_mode": "100755",
+          "b_mode": "100755",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2807059": []
+  }
+}

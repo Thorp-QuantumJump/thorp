@@ -1,0 +1,774 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 964046,
+    "iid": 413,
+    "project_id": 1444456,
+    "title": "feat(fe,be): spec013개선-B16 implement / converge / review",
+    "description": "## 작업 내용 요약\n\nspec 013 B16(T197)의 구현, converge, 코드 리뷰를 한 MR에 담는다. 화면이 커리큘럼 조회로 옮겨 가 쓰지 않는 9월 판 글 목록 경로 `GET /learning/articles`를 지우고, converge와 리뷰에서 찾은 테스트 빈틈과 문서 오류를 함께 고친다. 첫 단계 공개 전 글 목록은 커리큘럼의 `preReleaseArticles`가 같은 글과 같은 순서로 싣는다.\n\n## 주요 변경 사항\n\n### 1. implement (T197)\n\n- `GET /learning/articles`를 지운다. 요청하면 404이고, 글 하나·용어·커리큘럼 경로는 그대로다\n- 목록 응답 DTO와 예시 `articles-list.json`을 없애고, 계약 §2를 \"지운 경로\"로 바꾼다. quickstart 2-1·6-1은 커리큘럼 기준으로 고친다\n- 커리큘럼이 쓰고 017 글 열거가 쓸 공개 글 조회는 남긴다(tasks ⑧)\n- 옛 경로 테스트가 확인하던 정렬과 게시 목록 확인은 커리큘럼·관리 IT로 옮긴다\n\n### 2. converge\n\n- 빈 커리큘럼의 `preReleaseArticles`가 null이 아니라 빈 배열인지 확인한다(quickstart 2-1)\n- 공개 글 조회가 CURRENT 판도 싣는지 저장소 테스트로 확인한다(지운 IT만 확인하던 것)\n- 계약 README와 응답 주석이 지운 경로를 아직 있는 것처럼 적던 부분을 고친다\n\n### 3. review (규칙·spec 두 축 AI 리뷰)\n\n- 공개 글 조회를 남긴 이유를 사실대로 적는다(지금 부르는 곳은 없고 017이 쓸 조회)\n- 게시 취소 뒤 `preReleaseArticles`가 배열인지 확인한다\n- 지운 목록에서 온 픽스처 이름·값과 1판 절 번호를 고친다\n- 지운 경로와 대조한다고 적힌 테스트 이름과, 계약 §1·§2가 서로를 가리키던 문장을 고친다\n\n### 브랜치\n\n- plan의 `refactor(be)/learning-articles-endpoint` 대신 `feat(be)/spec-013-b16`을 쓴다. 세 작업을 한 브랜치에 담았다\n\n## 테스트\n\n- [x] `./gradlew build`(Docker 사용): 실패 0, 건너뜀 4(외부 호출·성능 측정 테스트, 따로 켜야 돈다)\n- [x] 운영 배우기 목록이 B11 커리큘럼 화면으로 배포된 것을 운영 화면 파일에서 확인했다\n- [x] AI 코드 리뷰(규칙·spec 두 축) 지적 가운데 B16 범위 안의 것을 모두 반영했다\n\n## 리뷰 포인트\n\n- 병합 조건은 B11 운영 배포다. 위 확인으로 충분한지 판단해 주세요\n- 017 담당 확인: 공개 글 조회는 지우지 않았으므로 017 글 열거가 이 조회를 그대로 쓸 수 있다\n- 리뷰에서 범위 밖으로 둔 것: `ArticleUnavailableException` 주석의 절 번호(§2를 §3으로)는 B15(T198) 문서 정리 때 고친다",
+    "state": "merged",
+    "created_at": "2026-10-12T09:19:59.762+09:00",
+    "updated_at": "2026-10-12T09:20:26.726+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-12T09:20:04.702+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/spec-013-b16",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "54390960a6afab697d4bbe634533f32d285e952f",
+    "merge_commit_sha": "627053dc3e75b783bc8f64ed77c954f10df5cded",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-12T09:20:04.334+09:00",
+    "reference": "!413",
+    "references": {
+      "short": "!413",
+      "relative": "!413",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!413"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/413",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 964046,
+    "iid": 413,
+    "project_id": 1444456,
+    "title": "feat(fe,be): spec013개선-B16 implement / converge / review",
+    "description": "## 작업 내용 요약\n\nspec 013 B16(T197)의 구현, converge, 코드 리뷰를 한 MR에 담는다. 화면이 커리큘럼 조회로 옮겨 가 쓰지 않는 9월 판 글 목록 경로 `GET /learning/articles`를 지우고, converge와 리뷰에서 찾은 테스트 빈틈과 문서 오류를 함께 고친다. 첫 단계 공개 전 글 목록은 커리큘럼의 `preReleaseArticles`가 같은 글과 같은 순서로 싣는다.\n\n## 주요 변경 사항\n\n### 1. implement (T197)\n\n- `GET /learning/articles`를 지운다. 요청하면 404이고, 글 하나·용어·커리큘럼 경로는 그대로다\n- 목록 응답 DTO와 예시 `articles-list.json`을 없애고, 계약 §2를 \"지운 경로\"로 바꾼다. quickstart 2-1·6-1은 커리큘럼 기준으로 고친다\n- 커리큘럼이 쓰고 017 글 열거가 쓸 공개 글 조회는 남긴다(tasks ⑧)\n- 옛 경로 테스트가 확인하던 정렬과 게시 목록 확인은 커리큘럼·관리 IT로 옮긴다\n\n### 2. converge\n\n- 빈 커리큘럼의 `preReleaseArticles`가 null이 아니라 빈 배열인지 확인한다(quickstart 2-1)\n- 공개 글 조회가 CURRENT 판도 싣는지 저장소 테스트로 확인한다(지운 IT만 확인하던 것)\n- 계약 README와 응답 주석이 지운 경로를 아직 있는 것처럼 적던 부분을 고친다\n\n### 3. review (규칙·spec 두 축 AI 리뷰)\n\n- 공개 글 조회를 남긴 이유를 사실대로 적는다(지금 부르는 곳은 없고 017이 쓸 조회)\n- 게시 취소 뒤 `preReleaseArticles`가 배열인지 확인한다\n- 지운 목록에서 온 픽스처 이름·값과 1판 절 번호를 고친다\n- 지운 경로와 대조한다고 적힌 테스트 이름과, 계약 §1·§2가 서로를 가리키던 문장을 고친다\n\n### 브랜치\n\n- plan의 `refactor(be)/learning-articles-endpoint` 대신 `feat(be)/spec-013-b16`을 쓴다. 세 작업을 한 브랜치에 담았다\n\n## 테스트\n\n- [x] `./gradlew build`(Docker 사용): 실패 0, 건너뜀 4(외부 호출·성능 측정 테스트, 따로 켜야 돈다)\n- [x] 운영 배우기 목록이 B11 커리큘럼 화면으로 배포된 것을 운영 화면 파일에서 확인했다\n- [x] AI 코드 리뷰(규칙·spec 두 축) 지적 가운데 B16 범위 안의 것을 모두 반영했다\n\n## 리뷰 포인트\n\n- 병합 조건은 B11 운영 배포다. 위 확인으로 충분한지 판단해 주세요\n- 017 담당 확인: 공개 글 조회는 지우지 않았으므로 017 글 열거가 이 조회를 그대로 쓸 수 있다\n- 리뷰에서 범위 밖으로 둔 것: `ArticleUnavailableException` 주석의 절 번호(§2를 §3으로)는 B15(T198) 문서 정리 때 고친다",
+    "state": "merged",
+    "created_at": "2026-10-12T09:19:59.762+09:00",
+    "updated_at": "2026-10-12T09:20:26.726+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-12T09:20:04.702+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/spec-013-b16",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "54390960a6afab697d4bbe634533f32d285e952f",
+    "merge_commit_sha": "627053dc3e75b783bc8f64ed77c954f10df5cded",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-12T09:20:04.334+09:00",
+    "reference": "!413",
+    "references": {
+      "short": "!413",
+      "relative": "!413",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!413"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/413",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "71861b090cc681d2399625463c8d22554e238b0c",
+      "head_sha": "54390960a6afab697d4bbe634533f32d285e952f",
+      "start_sha": "71861b090cc681d2399625463c8d22554e238b0c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "9ad150bc8aa941934d90132a0cfb9aba589fa697",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883713,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T09:19:59.918+09:00",
+          "updated_at": "2026-10-12T09:19:59.922+09:00",
+          "system": true,
+          "noteable_id": 964046,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 413,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "964a81bf1ffd5ad5f091484fdf9db8fc36f240ee",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883714,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T09:20:00.061+09:00",
+          "updated_at": "2026-10-12T09:20:00.144+09:00",
+          "system": true,
+          "noteable_id": 964046,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 413,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f44208eb488191b6184359e1bb42db0ab97a0d2b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883715,
+          "type": null,
+          "body": "mentioned in commit 627053dc3e75b783bc8f64ed77c954f10df5cded",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T09:20:05.037+09:00",
+          "updated_at": "2026-10-12T09:20:05.070+09:00",
+          "system": true,
+          "noteable_id": 964046,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 413,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "21163433e064aab29a2f38a198181565f57fddc4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883716,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **공개 글 목록 엔드포인트 삭제 확인 시나리오**\n   - `GET /learning/articles`로 요청을 보냈을 때 `404 Not Found` 응답이 반환되는지 확인합니다.\n2. **커리큘럼 preReleaseArticles 빈 배열 반환 시나리오**\n   - 게시된 글이 전혀 없는 상태에서 `GET /learning/curriculum`을 호출하여 `data.preReleaseArticles`가 `null`이 아니라 빈 배열(`[]`)로 정상 반환되는지 확인합니다.\n3. **CURRENT 판 포함 공개 글 정렬 순서 시나리오**\n   - `LEGACY` 판과 `CURRENT` 판의 게시글이 혼재할 때, `LearningQueryService.listPublished()` 및 커리큘럼 조회에서 `readingOrder` 오름차순, 같을 경우 `articleId` 오름차순으로 정확히 정렬되어 조회되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:54390960a6afab697d4bbe634533f32d285e952f -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-12T09:20:11.336+09:00",
+          "updated_at": "2026-10-12T09:20:11.336+09:00",
+          "system": false,
+          "noteable_id": 964046,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 413,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1b8906aee445ffb286364bd2a44239dbb8e887ce",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2883717,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">feat(be): spec013개선-B16 implement / converge / review</code> to <code class=\"idiff\">feat(<span class=\"idiff left right addition\">fe,</span>be): spec013개선-B16 implement / converge / review</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-12T09:20:26.822+09:00",
+          "updated_at": "2026-10-12T09:20:26.826+09:00",
+          "system": true,
+          "noteable_id": 964046,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 413,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "58e0809349e243242a1aa90952ed39c3247ff80b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884994,
+          "type": null,
+          "body": "mentioned in commit 9abf560bbbd0b37bfb010e63e6f05272d5c0e2e9",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:06.202+09:00",
+          "updated_at": "2026-10-13T15:16:06.226+09:00",
+          "system": true,
+          "noteable_id": 964046,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 413,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2264429,
+      "head_commit_sha": "54390960a6afab697d4bbe634533f32d285e952f",
+      "base_commit_sha": "71861b090cc681d2399625463c8d22554e238b0c",
+      "start_commit_sha": "71861b090cc681d2399625463c8d22554e238b0c",
+      "created_at": "2026-10-12T09:20:00.445+09:00",
+      "merge_request_id": 964046,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "fdbfda7c79491f04087c23f76c7c0f24b503b14a"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2264429,
+      "head_commit_sha": "54390960a6afab697d4bbe634533f32d285e952f",
+      "base_commit_sha": "71861b090cc681d2399625463c8d22554e238b0c",
+      "start_commit_sha": "71861b090cc681d2399625463c8d22554e238b0c",
+      "created_at": "2026-10-12T09:20:00.445+09:00",
+      "merge_request_id": 964046,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "fdbfda7c79491f04087c23f76c7c0f24b503b14a",
+      "commits": [
+        {
+          "id": "54390960a6afab697d4bbe634533f32d285e952f",
+          "short_id": "54390960",
+          "created_at": "2026-10-12T07:53:42.000+09:00",
+          "parent_ids": [
+            "2a71a7c4a57714904f1bfe60aadc77f8401975a3"
+          ],
+          "title": "refactor(be): B16 리뷰 지적 다섯 건을 고친다",
+          "message": "refactor(be): B16 리뷰 지적 다섯 건을 고친다\n\n- listPublished()를 남긴 이유를 사실대로 적는다. 지금 부르는 곳은 없고\n  017 plan의 readArticle이 쓸 조회라 남긴다\n- 게시 취소 뒤 preReleaseArticles가 null이 아니라 빈 배열인지 본다\n- 지운 목록에서 온 픽스처 이름·값과 1판 절 번호를 고친다\n- 지운 경로와의 대조를 약속하던 테스트 이름과 계약 §1 문장을 걷는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-12T07:53:42.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-12T07:53:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/54390960a6afab697d4bbe634533f32d285e952f"
+        },
+        {
+          "id": "2a71a7c4a57714904f1bfe60aadc77f8401975a3",
+          "short_id": "2a71a7c4",
+          "created_at": "2026-10-12T00:02:44.000+09:00",
+          "parent_ids": [
+            "e7cbb76e5753cab9a37e00aaaf0ca632c7e6584c"
+          ],
+          "title": "refactor(be): 옛 목록 경로를 지운 뒤 남은 테스트 빈틈과 문서를 채운다",
+          "message": "refactor(be): 옛 목록 경로를 지운 뒤 남은 테스트 빈틈과 문서를 채운다\n\n빈 커리큘럼의 preReleaseArticles가 null이 아니라 빈 배열인지 단언한다\n(quickstart 2-1이 옛 목록 경로에서 커리큘럼으로 옮겨 왔다). 지운 IT만\n지키던 \"공개 글 목록이 CURRENT 판도 싣는다\"를 저장소 테스트로 옮긴다\n(017 글 열거가 이 조회를 쓴다). 계약 README와 응답 주석의 시제를 고친다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-12T00:02:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-12T00:02:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2a71a7c4a57714904f1bfe60aadc77f8401975a3"
+        },
+        {
+          "id": "e7cbb76e5753cab9a37e00aaaf0ca632c7e6584c",
+          "short_id": "e7cbb76e",
+          "created_at": "2026-10-11T23:22:55.000+09:00",
+          "parent_ids": [
+            "71861b090cc681d2399625463c8d22554e238b0c"
+          ],
+          "title": "refactor(be): 화면이 쓰지 않는 9월 판 글 목록 경로를 지운다",
+          "message": "refactor(be): 화면이 쓰지 않는 9월 판 글 목록 경로를 지운다\n\nGET /learning/articles와 응답 DTO, articles-list.json 예시를 지운다.\n첫 단계 공개 전 글 목록은 커리큘럼의 preReleaseArticles가 같은 글과\n순서로 싣는다. listPublished()와 findPublishedOrdered()는 017 글 열거와\n커리큘럼이 쓰므로 남긴다. 정렬 단언은 커리큘럼 IT로 옮긴다. (T197)\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-11T23:22:55.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-11T23:22:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e7cbb76e5753cab9a37e00aaaf0ca632c7e6584c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -87,10 +87,11 @@ public class LearningQueryService {\n     }\n \n     /**\n-     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로가 쓴다\n-     * (learning-public-api §2). 017의 글 열거도 이 조회를 쓴다.\n+     * 공개 중인 글(LEGACY·CURRENT 모두). 판의 {@code readingOrder}, {@code articleId} 오름차순이다. 9월 판 목록 경로를 지운\n+     * 뒤(learning-public-api §2) 지금 부르는 곳은 없다. 017 plan '근거 팩과 도구'의 {@code readArticle}이 게시 글 열거에 쓸\n+     * 조회라 017 구현 전에도 남긴다(tasks ⑧·T197).\n      *\n-     * @return 게시된 글이 없으면 빈 목록. 빈 목록은 정상 화면이다(spec Edge Cases)\n+     * @return 게시된 글이 없으면 빈 목록\n      */\n     public List<LearningArticleSummaryResult> listPublished() {\n         return articleRepository.findPublishedOrdered();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,6 @@ package com.ssafy.thorp.learning.presentation.controller;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.learning.application.service.LearningQueryService;\n import com.ssafy.thorp.learning.presentation.response.CurriculumResponse;\n-import com.ssafy.thorp.learning.presentation.response.LearningArticleListResponse;\n import com.ssafy.thorp.learning.presentation.response.LearningArticleResponse;\n import com.ssafy.thorp.learning.presentation.response.LearningTermResponse;\n import org.springframework.http.ResponseEntity;\n@@ -38,14 +37,6 @@ public class LearningController {\n                 ApiResponse.ok(CurriculumResponse.from(learningQueryService.curriculum())));\n     }\n \n-    /** 공개 중인 글 목록. 게시된 글이 없으면 {@code articles: []}로 200이다. */\n-    @GetMapping(\"/articles\")\n-    public ResponseEntity<ApiResponse<LearningArticleListResponse>> listArticles() {\n-        return ResponseEntity.ok(\n-                ApiResponse.ok(\n-                        LearningArticleListResponse.from(learningQueryService.listPublished())));\n-    }\n-\n     /** 공개 중인 글 하나. 볼 수 없는 글은 404 {@code LEARNING_ARTICLE_UNAVAILABLE}이다. */\n     @GetMapping(\"/articles/{articleId}\")\n     public ResponseEntity<ApiResponse<LearningArticleResponse>> getArticle(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/controller/LearningController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/controller/LearningController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -117,7 +117,7 @@ public record CurriculumResponse(\n     public record PreviousEditionArticle(\n             String articleId, String title, String question, int readingMinutes) {}\n \n-    /** 9월 판 목록(learning-public-api §2)의 한 줄과 같은 모양이다. */\n+    /** B16에서 지운 9월 판 목록(learning-public-api §2)의 한 줄과 같은 모양이다. */\n     public record PreReleaseArticle(\n             String articleId, String title, String question, int readingOrder) {}\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/response/CurriculumResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/response/CurriculumResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,23 +0,0 @@\n-package com.ssafy.thorp.learning.presentation.response;\n-\n-import com.ssafy.thorp.learning.application.result.LearningArticleSummaryResult;\n-import java.util.List;\n-\n-/** {@code GET /learning/articles} 응답의 {@code data}(learning-public-api §1). */\n-public record LearningArticleListResponse(List<Item> articles) {\n-\n-    public static LearningArticleListResponse from(List<LearningArticleSummaryResult> results) {\n-        return new LearningArticleListResponse(\n-                results.stream()\n-                        .map(\n-                                result ->\n-                                        new Item(\n-                                                result.articleId(),\n-                                                result.title(),\n-                                                result.question(),\n-                                                result.readingOrder()))\n-                        .toList());\n-    }\n-\n-    public record Item(String articleId, String title, String question, int readingOrder) {}\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/response/LearningArticleListResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/response/LearningArticleListResponse.java",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -668,6 +668,22 @@ class LearningRepositoryTest extends RepositoryTestSupport {\n         assertThat(snapshot.quiz()).hasSize(1);\n     }\n \n+    @Test\n+    @DisplayName(\"CURRENT 판이 게시 중인 글도 공개 글 목록에 든다 (017 글 열거가 쓸 조회)\")\n+    void publishedOrderedIncludesCurrentEdition() {\n+        long id = insertPublishedRevision(COMPLETE_V2_SNAPSHOT);\n+\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT edition FROM learning_article_revision WHERE id = ?\",\n+                                String.class,\n+                                id))\n+                .isEqualTo(\"CURRENT\");\n+        assertThat(articleRepository.findPublishedOrdered())\n+                .containsExactly(\n+                        new LearningArticleSummaryResult(\"returns-and-losses\", \"수익과 손실\", \"질문\", 8));\n+    }\n+\n     @Test\n     @DisplayName(\"V2 판 JSON에 reading이 없으면 빈 값으로 채우지 않고 실패한다 (원칙 VI)\")\n     void missingV2ReadingFails() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/infrastructure/persistence/LearningRepositoryTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -377,7 +377,7 @@ public final class LearningSeeds {\n     }\n \n     /**\n-     * 목록 항목({@code articles-list.json}의 한 줄)만으로 최소 LEGACY 판을 심는다. 본문은 문단 하나, 예시는 두 섹터다.\n+     * 목록 항목(커리큘럼 {@code preReleaseArticles}의 한 줄)만으로 최소 LEGACY 판을 심는다. 본문은 문단 하나, 예시는 두 섹터다.\n      *\n      * @return 심은 판의 대리키\n      */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/support/LearningSeeds.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/support/LearningSeeds.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -567,7 +567,8 @@ class LearningAdminApiIT extends IntegrationTestSupport {\n         assertThat(published.get(\"checkVersion\").asText()).isEqualTo(\"learning-publish-checks-v1\");\n         assertThat(published.get(\"sectorMapVersion\").asText()).isEqualTo(LearningSeeds.MAP_VERSION);\n \n-        JsonNode publicList = publicCall(\"/learning/articles\", 200).at(\"/data/articles\");\n+        JsonNode publicList =\n+                publicCall(\"/learning/curriculum\", 200).at(\"/data/preReleaseArticles\");\n         assertThat(publicList)\n                 .extracting(item -> item.get(\"articleId\").asText())\n                 .containsExactly(ARTICLE);\n@@ -638,7 +639,10 @@ class LearningAdminApiIT extends IntegrationTestSupport {\n                 .isEqualTo(\"LEARNING_ARTICLE_UNAVAILABLE\");\n         assertThat(publicCall(\"/learning/terms/max-drawdown\", 404).at(\"/error/code\").asText())\n                 .isEqualTo(\"LEARNING_TERM_NOT_READY\");\n-        assertThat(publicCall(\"/learning/articles\", 200).at(\"/data/articles\")).isEmpty();\n+        JsonNode preReleaseAfterUnpublish =\n+                publicCall(\"/learning/curriculum\", 200).at(\"/data/preReleaseArticles\");\n+        assertThat(preReleaseAfterUnpublish.isArray()).isTrue();\n+        assertThat(preReleaseAfterUnpublish).isEmpty();\n         JsonNode afterUnpublish = adminListItem(ARTICLE);\n         assertThat(afterUnpublish.get(\"status\").asText()).isEqualTo(\"DRAFT\");\n         assertThat(afterUnpublish.at(\"/lastPublication/action\").asText()).isEqualTo(\"UNPUBLISH\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/LearningAdminApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/LearningAdminApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,7 +40,7 @@ import org.springframework.transaction.PlatformTransactionManager;\n import org.springframework.transaction.support.TransactionTemplate;\n \n /**\n- * 커리큘럼 조회(learning-public-api §1, quickstart 6-1·8-4·8-7·11-2 서버 부분, tasks T127).\n+ * 커리큘럼 조회(learning-public-api §1, quickstart 2-1·6-1·8-4·8-7·11-2 서버 부분, tasks T127).\n  *\n  * <p>{@code curriculum-pre-release.json}은 실제 요청과 JSON 동치다. {@code curriculum.json}의 {@code\n  * notices}는 지금 시각에 따라 달라지므로, 공개 안내를 보는 경우는 시계를 고정한 {@link LearningQueryService}를 이 테스트 안에서 만들어 부른다.\n@@ -117,9 +117,9 @@ class LearningCurriculumIT extends IntegrationTestSupport {\n                 readOnly.execute(status -> CurriculumResponse.from(service.curriculum())));\n     }\n \n-    /** {@code articles-list.json}의 두 글을 LEGACY 판으로 심는다. 9월 판 목록과 같은 글·순서다. */\n+    /** {@code curriculum-pre-release.json}의 {@code preReleaseArticles} 두 글을 LEGACY 판으로 심는다. */\n     private void seedPreReleaseArticles() throws Exception {\n-        for (JsonNode article : example(\"articles-list.json\").get(\"articles\")) {\n+        for (JsonNode article : example(\"curriculum-pre-release.json\").get(\"preReleaseArticles\")) {\n             seeds.publishMinimal(\n                     article.get(\"articleId\").asText(),\n                     article.get(\"title\").asText(),\n@@ -209,21 +209,27 @@ class LearningCurriculumIT extends IntegrationTestSupport {\n \n     @Test\n     @DisplayName(\n-            \"첫 단계 공개 전에는 curriculum-pre-release.json과 같다 — 9월 판 목록과 같은 글·순서, 모든 단계 준비 중 (quickstart 6-1)\")\n+            \"첫 단계 공개 전에는 curriculum-pre-release.json과 같다 — 공개 중인 글만 판의 읽는 순서로, 모든 단계 준비 중 (quickstart 6-1)\")\n     void preReleaseMatchesExample() throws Exception {\n         seedPreReleaseArticles();\n \n         JsonNode curriculum = requestCurriculum();\n \n         assertThat(curriculum).isEqualTo(example(\"curriculum-pre-release.json\"));\n-        // 첫 단계 공개 전 목록은 9월 판 목록 경로와 같은 글·순서다.\n-        String list =\n-                mockMvc.perform(get(\"/learning/articles\"))\n-                        .andReturn()\n-                        .getResponse()\n-                        .getContentAsString(StandardCharsets.UTF_8);\n-        assertThat(curriculum.get(\"preReleaseArticles\"))\n-                .isEqualTo(objectMapper.readTree(list).at(\"/data/articles\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"첫 단계 공개 전 글은 판의 readingOrder, articleId 순이고 초안 컬럼의 순서를 따르지 않는다\")\n+    void preReleaseArticlesAreOrderedByRevisionReadingOrderThenArticleId() throws Exception {\n+        // 넣는 차례를 기대하는 차례와 다르게 둔다. 초안 reading_order는 backtest 6, transaction-cost 7,\n+        // sectors-and-etf 1이지만 판에는 1·1·2를 준다 — 초안 컬럼으로 정렬하면 순서가 달라진다.\n+        seeds.publishMinimal(\"transaction-cost\", \"거래비용\", \"q\", 2);\n+        seeds.publishMinimal(\"sectors-and-etf\", \"섹터와 ETF\", \"q\", 1);\n+        seeds.publishMinimal(\"backtest\", \"백테스트\", \"q\", 1);\n+\n+        assertThat(requestCurriculum().get(\"preReleaseArticles\"))\n+                .extracting(item -> item.get(\"articleId\").asText())\n+                .containsExactly(\"backtest\", \"sectors-and-etf\", \"transaction-cost\");\n     }\n \n     @Test\n@@ -365,10 +371,13 @@ class LearningCurriculumIT extends IntegrationTestSupport {\n     }\n \n     @Test\n-    @DisplayName(\"게시된 글이 하나도 없어도 200이고 여섯 단계가 모두 준비 중이다\")\n+    @DisplayName(\"게시된 글이 하나도 없어도 200이고 여섯 단계가 모두 준비 중이다 (quickstart 2-1)\")\n     void emptyCurriculumIsOk() throws Exception {\n         JsonNode curriculum = requestCurriculum();\n \n+        // 공개 전 목록은 null이 아니라 빈 배열이다. 화면은 배열인지로 첫 단계 공개 전을 가른다(계약 §1).\n+        assertThat(curriculum.get(\"preReleaseArticles\").isArray()).isTrue();\n+\n         assertThat(curriculum.get(\"stages\")).hasSize(6);\n         assertThat(curriculum.get(\"stages\"))\n                 .allSatisfy(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/LearningCurriculumIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/LearningCurriculumIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,8 @@ import org.springframework.jdbc.core.JdbcTemplate;\n import org.springframework.test.web.servlet.MockMvc;\n \n /**\n- * 배우기 공개 조회 세 주소를 실제로 호출한다(learning-public-api, quickstart 2-1·2-2·3-5·4-4·6-1·9-2 서버 쪽).\n+ * 배우기 공개 조회 주소(글 하나·용어 하나)와 지운 9월 판 목록 경로를 실제로 호출한다(learning-public-api, quickstart\n+ * 2-2·3-5·4-4·6-1·9-2 서버 쪽).\n  *\n  * <p><b>응답이 {@code docs/specs/learning-api/examples/}의 예시 파일과 JSON 동치인지 단언한다.</b> 계약이 구현과 어긋나면 여기서\n  * 깨진다. 9월 판 글 응답 {@code article.json}만은 2판에서 필드가 더해졌으므로 응답 가운데 그 파일에 있는 키만 골라 비교한다({@link\n@@ -95,65 +96,30 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n         seeds.seedSectorMap(names);\n     }\n \n-    /** articles-list.json의 두 글을 심는다. 수익과 손실은 article.json 전체로 심는다. */\n-    private void publishListFixture() throws Exception {\n-        JsonNode list = example(\"articles-list.json\").get(\"articles\");\n-        JsonNode first = list.get(0);\n-        seeds.publishMinimal(\n-                first.get(\"articleId\").asText(),\n-                first.get(\"title\").asText(),\n-                first.get(\"question\").asText(),\n-                first.get(\"readingOrder\").asInt());\n+    /** 9월 판의 두 글을 심는다. 섹터와 ETF는 최소 판, 수익과 손실은 article.json 전체로 심는다. */\n+    private void publishLegacyArticles() throws Exception {\n+        seeds.publishMinimal(\"sectors-and-etf\", \"섹터와 ETF\", \"q\", 1);\n         JsonNode article = example(\"article.json\");\n         seeds.publishFromResponse(article, article.get(\"readingOrder\").asInt());\n     }\n \n-    // --- §1 목록 ---\n+    // --- 9월 판 목록(지웠다) ---\n \n     @Test\n-    @DisplayName(\"게시된 글이 없으면 200 articles: []다 (quickstart 2-1)\")\n-    void emptyListBeforePublishing() throws Exception {\n-        JsonNode data = data(\"/learning/articles\");\n+    @DisplayName(\"9월 판 목록 경로는 지웠다 — 글이 게시돼 있어도 404다 (B16)\")\n+    void legacyListRouteIsGone() throws Exception {\n+        publishLegacyArticles();\n \n-        assertThat(data.get(\"articles\").isArray()).isTrue();\n-        assertThat(data.get(\"articles\")).isEmpty();\n+        mockMvc.perform(get(\"/learning/articles\")).andExpect(status().isNotFound());\n     }\n \n-    @Test\n-    @DisplayName(\"목록 응답이 articles-list.json과 같다\")\n-    void listMatchesExample() throws Exception {\n-        seedFullSectorMap();\n-        publishListFixture();\n-\n-        assertThat(data(\"/learning/articles\")).isEqualTo(example(\"articles-list.json\"));\n-    }\n+    // --- §3 글 하나 ---\n \n     @Test\n-    @DisplayName(\"목록은 판의 readingOrder, articleId 순이고 초안 컬럼의 순서를 따르지 않는다\")\n-    void listIsOrderedByRevisionReadingOrderThenArticleId() throws Exception {\n-        // 넣는 차례를 기대하는 차례와 다르게 둔다. 초안 reading_order는 backtest 6, transaction-cost 7,\n-        // sectors-and-etf 1이지만 판에는 1·1·2를 준다 — 초안 컬럼으로 정렬하면 순서가 달라진다.\n-        seeds.publishMinimal(\"transaction-cost\", \"거래비용\", \"q\", 2);\n-        seeds.publishMinimal(\"sectors-and-etf\", \"섹터와 ETF\", \"q\", 1);\n-        seeds.publishMinimal(\"backtest\", \"백테스트\", \"q\", 1);\n-\n-        JsonNode articles = data(\"/learning/articles\").get(\"articles\");\n-\n-        assertThat(articles)\n-                .extracting(item -> item.get(\"articleId\").asText())\n-                .containsExactly(\"backtest\", \"sectors-and-etf\", \"transaction-cost\");\n-    }\n-\n-    // --- §2 글 하나 ---\n-\n-    @Test\n-    @DisplayName(\"초안뿐인 글은 목록에 없고 단건은 404 LEARNING_ARTICLE_UNAVAILABLE이다 (quickstart 2-2, SC-006)\")\n+    @DisplayName(\"초안뿐인 글은 404 LEARNING_ARTICLE_UNAVAILABLE이다 (quickstart 2-2, SC-006)\")\n     void draftArticleIsUnavailable() throws Exception {\n         seeds.publishMinimal(\"sectors-and-etf\", \"섹터와 ETF\", \"q\", 1);\n \n-        assertThat(data(\"/learning/articles\").get(\"articles\"))\n-                .extracting(item -> item.get(\"articleId\").asText())\n-                .doesNotContain(ARTICLE);\n         assertErrorCode(\"/learning/articles/\" + ARTICLE, \"LEARNING_ARTICLE_UNAVAILABLE\");\n     }\n \n@@ -168,7 +134,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"9월 판 필드는 article.json과 같다 (2판 필드는 더해질 뿐이다)\")\n     void articleMatchesExample() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n \n         JsonNode expected = example(\"article.json\");\n         assertThat(onlyKeysOf(data(\"/learning/articles/\" + ARTICLE), expected)).isEqualTo(expected);\n@@ -178,7 +144,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"단계를 하나도 공개하지 않았으면 LEGACY 판은 article-pre-release.json과 같다 (quickstart 6-1)\")\n     void preReleaseArticleMatchesExample() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n \n         assertThat(data(\"/learning/articles/\" + ARTICLE))\n                 .isEqualTo(example(\"article-pre-release.json\"));\n@@ -188,7 +154,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"공개된 단계가 있으면 LEGACY 판은 article-previous.json과 같다 (quickstart 9-5 서버 쪽)\")\n     void previousArticleMatchesExample() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n         seeds.markStageReleased(\"etf-market-basics\");\n \n         assertThat(data(\"/learning/articles/\" + ARTICLE))\n@@ -252,22 +218,6 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n         assertThat(fieldNames(term)).containsExactlyElementsOf(fieldNames(example(\"term.json\")));\n     }\n \n-    @Test\n-    @DisplayName(\"9월 판 목록 경로는 CURRENT 글도 같은 모양으로 싣는다\")\n-    void legacyListIncludesCurrentArticles() throws Exception {\n-        publishCurrentFixture();\n-\n-        assertThat(data(\"/learning/articles\").get(\"articles\"))\n-                .extracting(item -> item.get(\"articleId\").asText())\n-                .contains(\"volatility-is-not-loss\", \"returns-and-losses\");\n-        assertThat(data(\"/learning/articles\").get(\"articles\"))\n-                .allSatisfy(\n-                        item ->\n-                                assertThat(fieldNames(item))\n-                                        .containsExactly(\n-                                                \"articleId\", \"title\", \"question\", \"readingOrder\"));\n-    }\n-\n     /** {@code actual}에서 {@code expected}의 최상위 키만 남긴다. 2판에서 더한 필드를 빼고 9월 판 필드만 비교할 때 쓴다. */\n     private ObjectNode onlyKeysOf(JsonNode actual, JsonNode expected) {\n         ObjectNode subset = objectMapper.createObjectNode();\n@@ -290,7 +240,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"게시 뒤 초안 용어 문장을 바꿔도 글·용어 응답의 문장은 판의 값 그대로다 (SC-006, quickstart 3-5)\")\n     void draftTermChangesDoNotLeakIntoPublicResponses() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n         String published = example(\"term.json\").get(\"sentence\").asText();\n \n         // 초안의 이름·제목·순서는 seeds.reset()이 되돌리지 않으므로 이 테스트가 직접 되돌린다.\n@@ -324,7 +274,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @Test\n     @DisplayName(\"대응표가 없으면 200에 available=false, SECTOR_MAP_NOT_READY, 이름 null이다\")\n     void exampleUnavailableWhenMapNotReady() throws Exception {\n-        publishListFixture();\n+        publishLegacyArticles();\n \n         JsonNode example = data(\"/learning/articles/\" + ARTICLE).get(\"example\");\n \n@@ -362,7 +312,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"대응표에서 코드 하나가 빠지면 SECTOR_NOT_IN_MAP과 빠진 코드다 (quickstart 4-4 서버 쪽)\")\n     void exampleUnavailableWhenSectorMissing() throws Exception {\n         seeds.seedSectorMap(Map.of(\"SEMICONDUCTOR\", \"반도체\"));\n-        publishListFixture();\n+        publishLegacyArticles();\n \n         JsonNode example = data(\"/learning/articles/\" + ARTICLE).get(\"example\");\n \n@@ -373,14 +323,14 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n                 .containsExactly(\"BATTERY\");\n     }\n \n-    // --- §3 용어 ---\n+    // --- §4 용어 ---\n \n     /** 글의 term 블록과 문장이 같은지는 게시 경로를 거치는 B02의 {@code LearningAdminApiIT}가 본다(SC-003). */\n     @Test\n     @DisplayName(\"게시된 용어 응답이 term.json과 같다\")\n     void termMatchesExample() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n \n         JsonNode term = data(\"/learning/terms/max-drawdown\");\n \n@@ -391,7 +341,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"초안뿐인 용어, 없는 용어, 형식이 틀린 용어는 모두 404 LEARNING_TERM_NOT_READY다 (quickstart 2-2)\")\n     void unpublishedTermsAreNotReady() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n \n         assertErrorCode(\"/learning/terms/rebalancing\", \"LEARNING_TERM_NOT_READY\");\n         assertErrorCode(\"/learning/terms/no-such-term\", \"LEARNING_TERM_NOT_READY\");\n@@ -402,7 +352,7 @@ class LearningPublicApiIT extends IntegrationTestSupport {\n     @DisplayName(\"색인 행을 지우면(게시 취소의 서버 결과) 같은 404다\")\n     void termIsNotReadyAfterIndexIsCleared() throws Exception {\n         seedFullSectorMap();\n-        publishListFixture();\n+        publishLegacyArticles();\n         data(\"/learning/terms/max-drawdown\");\n \n         jdbcTemplate.update(\"DELETE FROM learning_published_term WHERE term_key = 'max-drawdown'\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/LearningPublicApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/LearningPublicApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,16 +0,0 @@\n-{\n-  \"articles\": [\n-    {\n-      \"articleId\": \"sectors-and-etf\",\n-      \"title\": \"섹터와 ETF\",\n-      \"question\": \"섹터와 대표 ETF는 무엇이 같고 무엇이 다른가?\",\n-      \"readingOrder\": 1\n-    },\n-    {\n-      \"articleId\": \"returns-and-losses\",\n-      \"title\": \"수익과 손실\",\n-      \"question\": \"가장 크게 줄었던 폭은 왜 시작 금액 대비 손실과 다른가?\",\n-      \"readingOrder\": 8\n-    }\n-  ]\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/learning-api/examples/articles-list.json",
+          "old_path": "docs/specs/learning-api/examples/articles-list.json",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,6 @@\n | 요청 | 200 `data` | 실패 |\n |---|---|---|\n | `GET /learning/curriculum` | 첫 단계를 공개한 뒤: [`curriculum.json`](examples/curriculum.json)(1·2단계 공개), 공개하기 전: [`curriculum-pre-release.json`](examples/curriculum-pre-release.json). 게시된 글이 없어도 200 | 5xx는 빈 배열로 대신하지 않는다 |\n-| `GET /learning/articles` | [`articles-list.json`](examples/articles-list.json). 게시된 글이 없으면 `articles: []` | 5xx는 빈 배열로 대신하지 않는다 |\n | `GET /learning/articles/{articleId}` | `edition`마다 하나: [`article-current.json`](examples/article-current.json)(`CURRENT`), [`article-previous.json`](examples/article-previous.json)(`PREVIOUS`), [`article-pre-release.json`](examples/article-pre-release.json)(`PRE_RELEASE`). [`article.json`](examples/article.json)은 9월 판 필드의 기준이다 | 404 `LEARNING_ARTICLE_UNAVAILABLE` (없음·초안·게시 취소·형식 오류를 가르지 않는다) |\n | `GET /learning/terms/{termId}` | [`term.json`](examples/term.json) | 404 `LEARNING_TERM_NOT_READY` (초안뿐·게시 취소·없음·형식 오류를 가르지 않는다) |\n \n@@ -33,7 +32,7 @@\n |---|---|\n | `curriculum-pre-release.json` | JSON 동치(실제 요청) |\n | `curriculum.json` | JSON 동치. `notices`가 지금 시각에 따라 달라지므로 시계를 2026-11-20T00:00:00Z로 고정한 조회 결과와 비교한다. 실제 요청은 `notices` 밖의 값을 같은지 본다. 변경 기록에는 두 종류(`STAGE_RELEASED`·`ARTICLE_ADDED`)가 모두 있고, 7일 안의 공개 안내가 두 줄이다 |\n-| `articles-list.json`, `term.json` | JSON 동치 |\n+| `term.json` | JSON 동치 |\n | `article.json` | 응답 가운데 이 파일에 있는 키만 JSON 동치(9월 판 필드) |\n | `article-current.json`, `article-previous.json`, `article-pre-release.json` | JSON 동치 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/learning-api/README.md",
+          "old_path": "docs/specs/learning-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,7 +20,7 @@\n - 외부 경로는 `/api` 접두사가 붙고, Vite·nginx가 접두사를 떼어 백엔드에 넘긴다(014 plan). 이 문서는 백엔드 경로로 적는다.\n - DB 대리키를 내보내지 않는다. 식별자는 `articleId`·`termId`·`stageKey`·`questionId`·`choiceId`·`badgeKey`·`entryKey` 문자열이다([data-model](../data-model.md) §2).\n - 응답 예시는 계약 형식만 보이는 합성 값이다. 원고나 추천 예시가 아니다. 구현 묶음이 `docs/specs/learning-api/examples/`에 같은 모양의 픽스처를 두고 통합 테스트가 실제 응답과 대조한다(003의 `docs/specs/strategy-registry-api/examples/` 방식). **(2판)** 계약 문서의 예시는 발췌일 수 있다. 배열의 일부 원소만 보이거나(여섯 단계 가운데 둘, 배지 31개 가운데 넷) 값을 `...`로, 나머지 키를 `\"...\": \"...\"`로 줄인다. 픽스처는 줄인 자리를 모두 채운 전체 응답이며, 채운 값은 각 계약의 필드 표와 [data-model](../data-model.md)을 따른다.\n-- **(2판) 배포 순서 호환**: 2판 묶음은 이미 있는 공개 응답에 필드를 더하기만 한다. LEGACY 판 글의 블록은 9월 판 모양 그대로 나간다. 그래서 백엔드 묶음이 먼저 병합되어도 9월 판 화면이 깨지지 않는다. 관리 API의 저장·게시도 9월 판 요청을 그대로 받는다. 예외는 관리 API의 글 만들기 하나다([learning-admin-api](./learning-admin-api.md) §3). 화면이 옮겨 간 뒤 지우는 옛 목록 경로는 [learning-public-api](./learning-public-api.md) §2다.\n+- **(2판) 배포 순서 호환**: 2판 묶음은 이미 있는 공개 응답에 필드를 더하기만 한다. LEGACY 판 글의 블록은 9월 판 모양 그대로 나간다. 그래서 백엔드 묶음이 먼저 병합되어도 9월 판 화면이 깨지지 않는다. 관리 API의 저장·게시도 9월 판 요청을 그대로 받는다. 예외는 관리 API의 글 만들기 하나다([learning-admin-api](./learning-admin-api.md) §3). 화면이 옮겨 간 뒤 B16에서 지운 옛 목록 경로는 [learning-public-api](./learning-public-api.md) §2다.\n \n ## 013이 쓰기만 하는 계약\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/contracts/README.md",
+          "old_path": "specs/013-learning-pages/contracts/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -127,21 +127,17 @@ GET /learning/curriculum\n }\n ```\n \n-`releasedStageCount = 0`이면 화면은 9월 판 목록과 같은 모습으로 `preReleaseArticles`만 보인다(FR-031 \"지금 모습 그대로\"). 이 배열은 §2의 응답과 같은 글·같은 순서다. 이때 `stages[].previousEditionArticles`는 비어 있다.\n+`releasedStageCount = 0`이면 화면은 9월 판 목록과 같은 모습으로 `preReleaseArticles`만 보인다(FR-031 \"지금 모습 그대로\"). 이 배열은 공개 중인 글(LEGACY·CURRENT 모두)을 판의 `readingOrder` 오름차순, 같으면 `articleId` 오름차순으로 담는다. 이때 `stages[].previousEditionArticles`는 비어 있다.\n \n **게시된 글이 하나도 없어도 200이다.** 빈 목록은 정상 화면이다(spec Edge Cases). 서버가 응답을 만들지 못했으면 5xx이며 빈 배열로 대신하지 않는다(원칙 VI).\n \n-## 2. 글 목록 (9월 판)\n+## 2. 글 목록 (9월 판, 지웠다)\n \n ```\n GET /learning/articles\n ```\n \n-9월 판 응답 그대로다. 공개 중인 글(LEGACY·CURRENT 모두)을 판의 `readingOrder` 오름차순, 같으면 `articleId` 오름차순으로 돌려준다. **(2판)** 새 화면은 §1을 쓴다. 이 경로는 화면이 §1로 옮긴 묶음(B11)이 배포된 뒤 별도 묶음(B16, `refactor(be)`)에서 지운다. 2판에서 공개 API를 지우는 것은 이 경로 하나다.\n-\n-```json\n-{ \"articles\": [ { \"articleId\": \"sectors-and-etf\", \"title\": \"섹터와 ETF\", \"question\": \"...\", \"readingOrder\": 1 } ] }\n-```\n+**(2판)** 지운 경로다. 화면이 §1로 옮긴 묶음(B11)이 배포된 뒤 B16(`refactor(be)`)에서 지웠다. 요청하면 다른 없는 경로와 같은 응답을 받는다. 같은 글·같은 순서는 §1의 `preReleaseArticles`가 싣는다. 2판에서 공개 API를 지운 것은 이 경로 하나다.\n \n ## 3. 글 하나\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/contracts/learning-public-api.md",
+          "old_path": "specs/013-learning-pages/contracts/learning-public-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,10 +84,10 @@ cd frontend && npm run lint && npm run build && npm test\n ### 2-1. 게시 전 빈 목록\n \n ```bash\n-curl -s localhost:8080/learning/articles\n+curl -s localhost:8080/learning/curriculum\n ```\n \n-**기대**: `success: true`, `data.articles: []`. 오류가 아니다(spec Edge Cases).\n+**기대**: `success: true`, `data.preReleaseArticles: []`. 오류가 아니다(spec Edge Cases). 9월 판 목록 경로 `GET /learning/articles`는 B16에서 지웠으므로 404다.\n \n ### 2-2. 없는 글과 준비 안 된 용어\n \n@@ -249,7 +249,7 @@ curl -s localhost:8080/learning/curriculum\n curl -s localhost:8080/learning/articles/returns-and-losses\n ```\n \n-**기대**: 커리큘럼은 `releasedStageCount: 0`, `preReleaseArticles`에 §2-1과 같은 글·순서, 모든 단계 `PREPARING`, `previousEditionArticles`는 비어 있음. 글은 `edition: PRE_RELEASE`, 블록은 9월 판 모양, `quiz: []`. 화면은 §4-1과 같다(FR-031).\n+**기대**: 커리큘럼은 `releasedStageCount: 0`, `preReleaseArticles`에 §3-3에서 게시한 글이 판의 `readingOrder`, `articleId` 순서로 있음, 모든 단계 `PREPARING`, `previousEditionArticles`는 비어 있음. 글은 `edition: PRE_RELEASE`, 블록은 9월 판 모양, `quiz: []`. 화면은 §4-1과 같다(FR-031).\n \n ### 6-2. 게시 방식 (R16)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/quickstart.md",
+          "old_path": "specs/013-learning-pages/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -758,7 +758,7 @@ Task: \"T026\" / \"T027\" / \"T028\" / \"T029\"                        # 테스트 병\n \n **Purpose**: 화면이 옮겨 간 경로 정리, 문서 동기화, 전체 검증\n \n-- [ ] T197 (BE) `GET /learning/articles`를 지운다 — `LearningController`의 메서드와 응답 DTO, `LearningPublicApiIT`의 해당 경우, `docs/specs/learning-api/examples/articles-list.json`과 README 표의 줄. `LearningQueryService.listPublished()`와 저장소 조회 `findPublishedOrdered()`는 커리큘럼의 `preReleaseArticles`나 017 `readArticle` 도구(게시 글 열거, 017 plan '근거 팩과 도구')가 쓰면 남긴다. 017 코드가 아직 병합되지 않았어도 017 plan이 이 조회를 가리키면 지우지 않는다([plan](plan.md) \"교차 의존\"). 프런트엔드에 `fetchLearningArticles`·`LearningArticleList` 참조가 0건인지 먼저 확인한다(T140이 지운다). B11이 운영에 배포된 뒤에만 병합한다 ‹B16›\n+- [X] T197 (BE) `GET /learning/articles`를 지운다 — `LearningController`의 메서드와 응답 DTO, `LearningPublicApiIT`의 해당 경우, `docs/specs/learning-api/examples/articles-list.json`과 README 표의 줄. `LearningQueryService.listPublished()`와 저장소 조회 `findPublishedOrdered()`는 커리큘럼의 `preReleaseArticles`나 017 `readArticle` 도구(게시 글 열거, 017 plan '근거 팩과 도구')가 쓰면 남긴다. 017 코드가 아직 병합되지 않았어도 017 plan이 이 조회를 가리키면 지우지 않는다([plan](plan.md) \"교차 의존\"). 프런트엔드에 `fetchLearningArticles`·`LearningArticleList` 참조가 0건인지 먼저 확인한다(T140이 지운다). B11이 운영에 배포된 뒤에만 병합한다 ‹B16›\n - [ ] T198 (DOCS) 2판 문서 동기화 — `backend/src/main/resources/registry/parameter-registry.yml`의 주석 참조(`data-model.md §8` → `§13`), `docs/specs/learning-api/README.md` 최종 표, spec·plan·contracts와 구현의 차이 반영, [specs/README.md](../README.md) 색인 확인, 1판 `tasks.md` 머리의 Jira 문장은 기록으로 두고 고치지 않음 ‹B15›\n - [ ] T199 (DOCS) [quickstart.md](quickstart.md) §6~§13을 실제 화면과 HTTP로 돌려 [validation.md](validation.md)에 '2판' 절로 기록한다 — 성공·실패·미수행을 구분하고, HTTP나 자동 확인만 있는 항목을 화면 확인으로 세지 않으며, 375px 확인은 iframe 하네스로 잰다. SC-002는 패턴 검사 통과로 증명되지 않는다는 문장과 SC-005 '사용성 확인: 미수행'(또는 결과)을 따로 적는다 ‹B15›\n - [ ] T200 (DOCS) [plan.md](plan.md) \"첫 단계 공개 조건\" 여섯 항목의 확인 상태(누가, 언제, 결과)를 `validation.md` 2판 절에 표로 둔다. 코드 묶음의 완료와 첫 단계 공개를 섞어 보고하지 않는다 ‹B15›\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/tasks.md",
+          "old_path": "specs/013-learning-pages/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2883716": []
+  }
+}

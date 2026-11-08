@@ -1,9 +1,0 @@
-{
-  "strategyId": "EQUAL_WEIGHT",
-  "rulesVersion": "1",
-  "provisional": false,
-  "spec": {
-    "targetWeights": "EQUAL_AMONG_INVESTABLE",
-    "weightsSource": "COMPUTED"
-  }
-}

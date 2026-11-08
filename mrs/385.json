@@ -1,0 +1,853 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963476,
+    "iid": 385,
+    "project_id": 1444456,
+    "title": "docs(be): javadoc 제자리 위치 및 javadoc 태스크를 통과",
+    "description": "# 작업 내용 요약\n\njavadoc 블록 두 개가 연달아 있어 앞 설명이 어떤 선언에도 붙지 않은 자리와, 설명할 대상이 사라진 채 남은 설명을 운영 코드와 테스트에서 모두 정리합니다. `./gradlew javadoc`을 막던 오류 5건을 고쳐 오류 0건으로 통과시킵니다. `backtest-api` README의 벤치마크 설명도 실제 요청·응답에 맞춥니다. 동작·계약·스키마는 바뀌지 않습니다.\n\n# 주요 변경 사항\n\n- javadoc 오류 5건 수정: 인터페이스 설명에 붙은 `@param`, `&&` 엔터티, import하지 않은 infrastructure 클래스를 가리킨 `{@link}`, caption 없는 표\n- 떨어진 설명 정리: 설명과 `@param`이 두 블록으로 갈라진 곳 병합, 사이에 끼어든 메서드에 밀린 설명은 제자리로, 같은 상수에 겹친 옛 설명은 합침, 09-13에 사라진 `requireSummary`의 설명과 깨진 링크 정리\n- `findSummary` 설명을 실제로 읽는 컬럼과, 최종 상태에서도 정상인 빈 결과(시작 전 취소, 워커 산출물 없는 실패)에 맞춤\n- 테스트: 전략 고르는 helper를 `SearchableStrategies`로 옮기면서 남은 한 줄 설명을 지우고, '축 보유'라는 옛 기준을 고침\n- README §4: v2 요청에는 벤치마크 블록이 없어 보내도 무시되고 `config`에도 남지 않으며, `summary`에도 벤치마크 항목이 없다고 정정\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (2,286건, 실패 0. skipped 5건은 실연동·성능 테스트와 `RequiredDockerTest`로, 로컬에서 원래 건너뜀)\n- [x] `./gradlew javadoc` 오류 0건 (전에는 5건으로 실패. CI는 이 태스크를 돌리지 않음)\n\n# 리뷰 포인트\n\n- README §4 \"프론트가 알아야 할 것\"의 다른 항목(항상 새 Job, 5블록, 1종목만 처리, `MOMENTUM`뿐)도 v1 시절 설명입니다. 이번에는 리뷰에서 지적된 벤치마크 문단만 고쳤습니다.\n- `specs/005` tasks.md T010에 남은 `isAnonymous()`는 완료 이력이라 그대로 두었습니다. javadoc 경고(누락된 `@param` 등)도 그대로입니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-10-05T00:14:56.776+09:00",
+    "updated_at": "2026-10-05T00:16:55.395+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-05T00:16:54.751+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/javadoc-fixes",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d570fc575e4c308cd5530e96b48f24f32e6caee0",
+    "merge_commit_sha": "245e2fba05c2a5a9b36ec3776787ca63bdf7ccab",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-05T00:14:59.417+09:00",
+    "reference": "!385",
+    "references": {
+      "short": "!385",
+      "relative": "!385",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!385"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/385",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963476,
+    "iid": 385,
+    "project_id": 1444456,
+    "title": "docs(be): javadoc 제자리 위치 및 javadoc 태스크를 통과",
+    "description": "# 작업 내용 요약\n\njavadoc 블록 두 개가 연달아 있어 앞 설명이 어떤 선언에도 붙지 않은 자리와, 설명할 대상이 사라진 채 남은 설명을 운영 코드와 테스트에서 모두 정리합니다. `./gradlew javadoc`을 막던 오류 5건을 고쳐 오류 0건으로 통과시킵니다. `backtest-api` README의 벤치마크 설명도 실제 요청·응답에 맞춥니다. 동작·계약·스키마는 바뀌지 않습니다.\n\n# 주요 변경 사항\n\n- javadoc 오류 5건 수정: 인터페이스 설명에 붙은 `@param`, `&&` 엔터티, import하지 않은 infrastructure 클래스를 가리킨 `{@link}`, caption 없는 표\n- 떨어진 설명 정리: 설명과 `@param`이 두 블록으로 갈라진 곳 병합, 사이에 끼어든 메서드에 밀린 설명은 제자리로, 같은 상수에 겹친 옛 설명은 합침, 09-13에 사라진 `requireSummary`의 설명과 깨진 링크 정리\n- `findSummary` 설명을 실제로 읽는 컬럼과, 최종 상태에서도 정상인 빈 결과(시작 전 취소, 워커 산출물 없는 실패)에 맞춤\n- 테스트: 전략 고르는 helper를 `SearchableStrategies`로 옮기면서 남은 한 줄 설명을 지우고, '축 보유'라는 옛 기준을 고침\n- README §4: v2 요청에는 벤치마크 블록이 없어 보내도 무시되고 `config`에도 남지 않으며, `summary`에도 벤치마크 항목이 없다고 정정\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (2,286건, 실패 0. skipped 5건은 실연동·성능 테스트와 `RequiredDockerTest`로, 로컬에서 원래 건너뜀)\n- [x] `./gradlew javadoc` 오류 0건 (전에는 5건으로 실패. CI는 이 태스크를 돌리지 않음)\n\n# 리뷰 포인트\n\n- README §4 \"프론트가 알아야 할 것\"의 다른 항목(항상 새 Job, 5블록, 1종목만 처리, `MOMENTUM`뿐)도 v1 시절 설명입니다. 이번에는 리뷰에서 지적된 벤치마크 문단만 고쳤습니다.\n- `specs/005` tasks.md T010에 남은 `isAnonymous()`는 완료 이력이라 그대로 두었습니다. javadoc 경고(누락된 `@param` 등)도 그대로입니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-10-05T00:14:56.776+09:00",
+    "updated_at": "2026-10-05T00:16:55.395+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-05T00:16:54.751+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/javadoc-fixes",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d570fc575e4c308cd5530e96b48f24f32e6caee0",
+    "merge_commit_sha": "245e2fba05c2a5a9b36ec3776787ca63bdf7ccab",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-05T00:14:59.417+09:00",
+    "reference": "!385",
+    "references": {
+      "short": "!385",
+      "relative": "!385",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!385"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/385",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "24",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "head_sha": "d570fc575e4c308cd5530e96b48f24f32e6caee0",
+      "start_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "902f4e14f8801d550b49f72a7890aaa034bae4fd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881412,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:14:56.892+09:00",
+          "updated_at": "2026-10-05T00:14:56.896+09:00",
+          "system": true,
+          "noteable_id": 963476,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 385,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "08367d02b037f33bc91abd6a3b6dfd64b4861612",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881413,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:14:56.927+09:00",
+          "updated_at": "2026-10-05T00:14:56.950+09:00",
+          "system": true,
+          "noteable_id": 963476,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 385,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1ea8661225aad7359e7372ba1f2d5ae13590ace7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881414,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n이번 변경은 주로 Javadoc 문법 오류 및 경고를 수정하고, 오래된 주석(Javadoc 이중 블록, 중복 주석, v1 시절의 낡은 설명 등)을 정리하는 문서 및 코드 정비 작업입니다. 비즈니스 로직, 데이터 계약, 스키마에 영향을 주는 코드가 변경되지 않았음을 확인했습니다.\n\n### 테스트 제안\n- `./gradlew javadoc` 태스크를 로컬 환경에서 실행하여 경고나 오류가 발생하지 않는지 최종 검증합니다.\n- `./gradlew spotlessApply build`를 통해 코드 포맷팅 및 빌드가 정상적으로 수행되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d570fc575e4c308cd5530e96b48f24f32e6caee0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-05T00:15:05.823+09:00",
+          "updated_at": "2026-10-05T00:15:05.823+09:00",
+          "system": false,
+          "noteable_id": 963476,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 385,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "edced5cd4842a210895b7d76ffe019cb19c2bf53",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881415,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:15:14.277+09:00",
+          "updated_at": "2026-10-05T00:15:14.280+09:00",
+          "system": true,
+          "noteable_id": 963476,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 385,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fd7adb2ebceb2dcf9a52fbefec659c66be3eec7c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881422,
+          "type": null,
+          "body": "mentioned in commit 245e2fba05c2a5a9b36ec3776787ca63bdf7ccab",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-05T00:16:54.730+09:00",
+          "updated_at": "2026-10-05T00:16:54.734+09:00",
+          "system": true,
+          "noteable_id": 963476,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 385,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "086d51178e14e2c12e0293d8214b44a43096a45b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884970,
+          "type": null,
+          "body": "mentioned in commit 65f64575091f23d0ec019cf7f4d72a4a19a73c9c",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:04.892+09:00",
+          "updated_at": "2026-10-13T15:16:05.001+09:00",
+          "system": true,
+          "noteable_id": 963476,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 385,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262341,
+      "head_commit_sha": "d570fc575e4c308cd5530e96b48f24f32e6caee0",
+      "base_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "start_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "created_at": "2026-10-05T00:14:57.218+09:00",
+      "merge_request_id": 963476,
+      "state": "collected",
+      "real_size": "24",
+      "patch_id_sha": "575ab44250309951591f43a82a940a506119fefd"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262341,
+      "head_commit_sha": "d570fc575e4c308cd5530e96b48f24f32e6caee0",
+      "base_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "start_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+      "created_at": "2026-10-05T00:14:57.218+09:00",
+      "merge_request_id": 963476,
+      "state": "collected",
+      "real_size": "24",
+      "patch_id_sha": "575ab44250309951591f43a82a940a506119fefd",
+      "commits": [
+        {
+          "id": "d570fc575e4c308cd5530e96b48f24f32e6caee0",
+          "short_id": "d570fc57",
+          "created_at": "2026-10-04T23:55:33.000+09:00",
+          "parent_ids": [
+            "6b6bda13998dcfacbac71a6d51b249b768b27143"
+          ],
+          "title": "docs(be): 떨어진 javadoc을 제자리에 붙이고 javadoc 태스크를 통과시킨다",
+          "message": "docs(be): 떨어진 javadoc을 제자리에 붙이고 javadoc 태스크를 통과시킨다\n\njavadoc 블록 두 개가 연달아 있으면 앞 블록은 어떤 선언에도 붙지 않는다. 메서드를 옮기거나 지우면서\n설명만 남은 자리가 운영 코드와 테스트에 쌓였고, ./gradlew javadoc 은 오류 5건으로 실패했다.\nCI 는 이 태스크를 돌리지 않아 드러나지 않았다.\n\n- javadoc 오류 5건: 인터페이스 설명에 붙은 @param 을 메서드로 옮기고, && 를 {@code} 로 감싸고,\n  application 이 import 하지 않는 infrastructure 클래스를 {@link} 대신 {@code} 로 적고, 표에 caption 을 단다.\n- 설명과 @param 이 두 블록으로 갈라진 곳(findTrades, BacktestJobPublisher, NewsDigestQueryService)을 합친다.\n- findSummary 설명을 제 선언으로 옮기고, 실제로 읽는 컬럼과 최종 상태에서도 정상인 빈 결과\n  (시작 전 취소, 워커 산출물 없는 실패)에 맞춘다.\n- 09-13 에 사라진 requireSummary 의 설명을 require 설명과 합치고 깨진 링크를 지운다.\n- withChannel 이 끼어들어 떨어진 withConditionalRequestState 설명을 제자리로 옮긴다.\n- 같은 상수에 겹친 옛 한 줄 설명(RssNewsClient, NewsHttpSecurityPolicy)을 긴 설명에 합친다.\n- 테스트: 전략 고르는 helper 를 SearchableStrategies 로 옮기며 남은 한 줄 설명을 지우고,\n  '축 보유'라는 옛 기준을 고친다. 다른 선언에 밀린 설명을 옮기거나 일반 주석으로 바꾼다.\n- backtest-api README §4: v2 요청에는 벤치마크 블록이 없어 보내도 무시되고 config 에도 남지 않으며,\n  summary 에도 벤치마크 항목이 없다고 고친다.\n\n동작·계약·스키마는 바뀌지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T23:55:33.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T23:55:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d570fc575e4c308cd5530e96b48f24f32e6caee0"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -12,10 +12,13 @@ import java.util.List;\n  *\n  * <p>구현이 지켜야 할 것: 입력은 질문·이력·근거 팩·도구 목록뿐이다. 장애·시간 초과·응답 스키마 불일치는 {@code ASSISTANT_UNAVAILABLE}\n  * {@code BusinessException}으로 던진다. 도구 인자가 JSON이 아니면 빈 인자가 아니라 검증에 걸리는 값으로 넘긴다.\n- *\n- * @param timeout 이 호출에 쓸 수 있는 시간. 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽이다\n  */\n public interface AssistantModelPort {\n+    /**\n+     * 모델을 한 번 호출해 도구 요청이나 최종 초안 중 하나를 받는다.\n+     *\n+     * @param timeout 이 호출에 쓸 수 있는 시간. 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽이다\n+     */\n     ModelTurn step(\n             Conversation conversation,\n             List<Evidence> facts,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/port/AssistantModelPort.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/port/AssistantModelPort.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,8 +16,7 @@ public interface BacktestJobPublisher {\n      *\n      * <p>동기 오류(연결 불가·채널 오류)만 잡는다. publisher confirm과 returns가 없으므로 unroutable 메시지와 비동기 nack는 감지하지\n      * 못한다. outbox 도입 전까지의 알려진 한계다.\n-     */\n-    /**\n+     *\n      * @param publishAttempt 이 발행의 시도 번호({@code backtest_run.publish_count} 를 올린 직후의 값). 메시지에 실려\n      *     나가고, 그 메시지가 DLQ 로 끝나면 백엔드가 \"어느 시도가 죽었는지\"를 이 번호로 구분한다(R-18 ③) — 없으면 재전달된 DLQ 메시지를 다른 시도의\n      *     죽음으로 잘못 세어 살아 있는 실행을 끊는다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/BacktestJobPublisher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/BacktestJobPublisher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,12 +30,6 @@ public interface BacktestResultRepository {\n      */\n     void save(SaveBacktestResultCommand command);\n \n-    /**\n-     * 요약에 필요한 스칼라만 읽는다. {@code portfolio_series}와 {@code benchmark}는 읽지 않는다.\n-     *\n-     * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면\n-     * 정상이고, {@code COMPLETED}·{@code FAILED}면 저장 트랜잭션이 깨진 데이터 손상이다.\n-     */\n     /**\n      * 결과 행이 있는지만 본다. JSON 컬럼을 읽지도 파싱하지도 않는다.\n      *\n@@ -45,6 +39,13 @@ public interface BacktestResultRepository {\n      */\n     boolean exists(Long runId);\n \n+    /**\n+     * 요약에 필요한 컬럼만 읽는다. 오류·시각 스칼라와 성과·실행·비용·청산·분석·의존성 JSON이고, {@code portfolio_series}와 {@code\n+     * benchmark}는 읽지 않는다.\n+     *\n+     * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면\n+     * 정상이다. 최종 상태에서는 시작 전 취소와 워커 산출물 없이 끝난 실패만 정상이고, 그 밖에는 저장 트랜잭션이 깨진 데이터 손상이다.\n+     */\n     Optional<BacktestResultSummary> findSummary(Long runId);\n \n     /**\n@@ -88,8 +89,7 @@ public interface BacktestResultRepository {\n      * <p>Spring {@code Page}가 content 쿼리와 count 쿼리를 함께 처리한다. 포트에 프레임워크 타입이 보이지만 application은 이미\n      * {@code @Service}·{@code @Transactional}로 Spring에 의존하고, 계층 규칙은 {@code\n      * consideringOnlyDependenciesInLayers()}라 프레임워크 타입을 보지 않는다. 감싸는 record를 하나 더 만들 이유가 없다.\n-     */\n-    /**\n+     *\n      * @param visibleBefore null = 제한 없음. 먼저 취소한 요청은 스냅샷 다음 날 0시(거래소 현지) 전에 <b>청산된</b> 거래만 본다 —\n      *     가로지르는 거래와 OPEN 거래는 저장된 값이 실행 종료 시점이라 경계 시점 상태가 아니다(R-04)\n      */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -425,12 +425,12 @@ public class BacktestResultQueryService {\n     }\n \n     /**\n-     * 최종 상태 Job의 결과 행. 없으면 결과 저장과 상태 전이를 한 트랜잭션으로 묶은 불변식이 깨진 것이다.\n+     * 관문({@link #requireResultReady})을 통과한 최종 상태 Job의 결과 컬럼. 없으면 결과 저장과 상태 전이를 한 트랜잭션으로 묶은 불변식이 깨진\n+     * 것이다.\n      *\n      * <p>{@code RESULT_NOT_READY}(409)로 돌려주면 안 된다 — 그 코드는 \"기다리면 온다\"는 뜻이고 최종 상태에서는 영원히 오지 않아 프론트가 무한\n      * 폴링한다.\n      */\n-    /** 관문을 통과한(=COMPLETED) Job인데 결과 컬럼이 없으면 데이터 손상이다. {@link #requireSummary}와 같은 이유. */\n     private <T> T require(Optional<T> value, BacktestRun job) {\n         return value.orElseThrow(() -> missingResultRow(job));\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -106,8 +106,7 @@ public class NewsDigestQueryService {\n      *\n      * <p>구간 상한이 설정값이라 조회 객체를 만드는 일도 여기 있다. 컨트롤러가 만들면 설정을 읽어야 하고, 설정 record는 infrastructure에 있어\n      * presentation이 infrastructure를 참조하게 된다(ADR-0001 계층 방향).\n-     */\n-    /**\n+     *\n      * @param sectorIds 좁힐 섹터. 비었거나 null이면 전체다. 여럿이면 그중 하나 이상과 연결된 묶음이다(spec FR-001, 2026-10-02).\n      * @param limit 받을 묶음 수. null이면 {@link NewsDigestQuery#DEFAULT_LIMIT}개이고, 어느 쪽이든 서버 상한을 넘지 않는다.\n      */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/application/service/NewsDigestQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -134,7 +134,6 @@ public class NewsPublisher {\n                 lastModified);\n     }\n \n-    /** 조건부 요청 값을 갱신한다. RSS가 304를 주면 cursor와 기사 데이터는 두고 이 값만 유지·갱신한다(spec FR-013). */\n     /**\n      * 등록표가 소유하는 채널 정보만 갈아 끼운다(spec FR-009).\n      *\n@@ -163,6 +162,7 @@ public class NewsPublisher {\n                 lastModified);\n     }\n \n+    /** 조건부 요청 값을 갱신한다. RSS가 304를 주면 cursor와 기사 데이터는 두고 이 값만 유지·갱신한다(spec FR-013). */\n     public NewsPublisher withConditionalRequestState(String etag, String lastModified) {\n         return new NewsPublisher(\n                 id,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsPublisher.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsPublisher.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,12 +40,13 @@ public class NewsHttpSecurityPolicy {\n     /** 응답 본문이 한도를 넘었다. */\n     public static final String RESPONSE_TOO_LARGE = \"RESPONSE_TOO_LARGE\";\n \n-    /** 배포 파일은 구분자 텍스트로 온다. DOC API의 JSON 한도와 섞지 않으려고 따로 둔다. */\n     /**\n      * GDELT 배포 파일의 content-type.\n      *\n      * <p>GDELT 2.0은 배포 파일을 zip으로만 내려 준다. 서버마다 zip을 가리키는 이름이 갈려 세 가지를 모두 받는다. 압축을 풀어 얻는 것은 탭으로 나뉜\n      * 표라, 압축 없이 그대로 주는 경우까지 열어 둔다.\n+     *\n+     * <p>DOC API의 JSON content-type 목록(설정값 {@code allowedJsonContentTypes})과 섞지 않으려고 따로 둔다.\n      */\n     private static final Set<String> EXPORT_FILE_CONTENT_TYPES =\n             Set.of(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/NewsHttpSecurityPolicy.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,13 +39,12 @@ public class RssNewsClient {\n     /** XML을 해석할 수 없다. 그 응답 전체를 격리한다. */\n     public static final String MALFORMED_XML = \"MALFORMED_XML\";\n \n-    /** RFC 822 계열 형식. 두 자리 연도와 GMT 같은 관용 표기까지 받는다. */\n     /**\n      * 받아들이는 발행 시각 형식.\n      *\n      * <p>규약은 RFC 822 하나지만 실제 매체는 제각각이다. 조사해 보니 국내 경제 매체만 해도 세 갈래를 쓴다 — 표준 {@code +0900}, 콜론을 넣은\n-     * {@code +09:00}, 그리고 {@code dc:date}의 ISO-8601이다. 읽지 못하면 그 기사는 발행 시각 미확인으로 저장되어 과거 조회에서 통째로\n-     * 빠지므로, 형식 하나를 놓치는 비용이 크다.\n+     * {@code +09:00}, 그리고 {@code dc:date}의 ISO-8601이다. 두 자리 연도와 GMT 같은 관용 표기까지 받는다. 읽지 못하면 그 기사는 발행\n+     * 시각 미확인으로 저장되어 과거 조회에서 통째로 빠지므로, 형식 하나를 놓치는 비용이 크다.\n      *\n      * <p>시간대가 없는 값은 어느 형식으로도 읽지 않는다. 서버 시간대를 붙여 추정하면 그 추정이 검증된 시각처럼 저장된다(spec FR-012).\n      */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/RssNewsClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/RssNewsClient.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;\n  * 남은 후보를 '미실행'으로 돌려 끝나는 길({@link ParamSearchCancelService})이다. 두 곳에 같은 판정을 두면 한쪽만 고쳐져 <b>취소된 묶음에만\n  * 선정이 안 붙는</b> 식으로 갈라진다.\n  *\n- * <p>끝났는가의 기준은 하나다 — {@code PENDING} 0 && {@code DISPATCHED} 0(내부 계약 §4 \"묶음 종료\"). 멈추기로 한 묶음이라도 이미\n- * 발행된 후보가 남아 있으면 아직 끝이 아니다. 그 후보들은 회수할 수 없어 완주한다(research R2).\n+ * <p>끝났는가의 기준은 하나다 — {@code PENDING} 0 {@code &&} {@code DISPATCHED} 0(내부 계약 §4 \"묶음 종료\"). 멈추기로 한\n+ * 묶음이라도 이미 발행된 후보가 남아 있으면 아직 끝이 아니다. 그 후보들은 회수할 수 없어 완주한다(research R2).\n  *\n  * <p>{@code stopReason}이 있으면 {@code PARTIAL}, 없으면 {@code COMPLETED}다. 둘 다 선정을 계산한다 — 취소된 묶음도 완료된\n  * 후보끼리는 같은 조건으로 계산됐으므로 그대로 비교할 수 있다(data-model §3).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchCompletionService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchCompletionService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -59,7 +59,7 @@ import org.springframework.transaction.annotation.Transactional;\n  * <p><b>전략에 대한 판단이 하나도 없다.</b> 대상 전략은 {@link SearchTargetResolver}가, 조합은 {@link GridExpander}가,\n  * 유효성은 등록표가 정한다. 이 클래스에는 전략 ID가 나타나지 않는다(FR-025).\n  *\n- * <p>기능 플래그가 켜졌을 때만 빈이 된다 — {@link ParamSearchProperties}의 네 한도가 {@code @NotNull}이라 조건 없이 두면 값을 채우지\n+ * <p>기능 플래그가 켜졌을 때만 빈이 된다 — {@code ParamSearchProperties}의 네 한도가 {@code @NotNull}이라 조건 없이 두면 값을 채우지\n  * 않은 환경에서 애플리케이션 전체가 기동에 실패한다({@code ParamSearchConfig} 주석).\n  */\n @Service\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;\n  * 섹터 조회 API의 오류 매핑 (contracts/sector-api.md 「오류」).\n  *\n  * <table>\n+ *   <caption>상황별 응답</caption>\n  *   <tr><th>상황</th><th>상태</th><th>코드</th></tr>\n  *   <tr><td>대응표가 발행되지 않음</td><td>409</td><td>{@code SECTOR_MAP_NOT_READY}</td></tr>\n  *   <tr><td>없는 섹터 코드</td><td>404</td><td>{@code SECTOR_NOT_FOUND}</td></tr>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/sector/presentation/controller/SectorExceptionHandler.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -41,7 +41,6 @@ class BacktestPublishAfterCommitIT extends IntegrationTestSupport {\n     @Autowired private TransactionTemplate transactionTemplate;\n     @Autowired private JdbcTemplate jdbcTemplate;\n \n-    /** users FK를 만족시킬 최소 행. 회원 도메인을 끌어오지 않으려고 직접 넣는다. */\n     /**\n      * 계약 예시를 그대로 쓰되 시작 금액만 매번 다르게 한다.\n      *\n@@ -53,6 +52,7 @@ class BacktestPublishAfterCommitIT extends IntegrationTestSupport {\n         return Files.readString(REQUEST_FIXTURE).replace(\"10000000.00\", unique + \".00\");\n     }\n \n+    /** users FK를 만족시킬 최소 행. 회원 도메인을 끌어오지 않으려고 직접 넣는다. */\n     private long newUser() {\n         // phone_number 는 varchar(20) 이다. 긴 이메일을 그대로 넣으면 길이 제약에 걸린다.\n         String suffix = Long.toString(System.nanoTime() % 1_000_000_000L);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestPublishAfterCommitIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestPublishAfterCommitIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -144,7 +144,7 @@ class MyRecordLimitIT extends LauncherMockedIntegrationTestSupport {\n                 .formatted(UNIVERSE, supportedStrategyIdsJson(), registry.version());\n     }\n \n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(007 FR-025). */\n+    /** 탐색을 접수할 수 있는 전략({@link SearchableStrategies}). 전략 ID를 테스트에 적지 않는다(007 FR-025). */\n     private String supportedStrategyIdsJson() {\n         return SearchableStrategies.of(registry, jdbcTemplate).stream()\n                 .map(id -> \"\\\"\" + id + \"\\\"\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordLimitIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordLimitIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -654,11 +654,10 @@ class NewsPersistenceIT extends PostgresTestSupport {\n                         });\n     }\n \n-    /**\n-     * 조회 경로를 실제 DB에서 확인한다(spec FR-005·FR-006, T025·T030·T032).\n-     *\n-     * <p>섹터 필터와 과거 구간 필터는 JPQL 조인이 전부라 대역으로는 확인할 수 없다. 조인 조건이 틀리면 대역에서는 통과하고 운영에서만 빈 화면이 된다.\n-     */\n+    // 조회 경로를 실제 DB에서 확인한다(spec FR-005·FR-006, T025·T030·T032).\n+    //\n+    // 섹터 필터와 과거 구간 필터는 JPQL 조인이 전부라 대역으로는 확인할 수 없다. 조인 조건이 틀리면 대역에서는 통과하고 운영에서만 빈 화면이 된다.\n+\n     /** 허가 매체 하나와 그 매체의 기사로 만든 묶음. 섹터 연결까지 붙인다. */\n     private NewsDigest seedDigest(\n             String key, String url, String title, Instant publishedAt, String sectorId) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsPersistenceIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/news/infrastructure/persistence/NewsPersistenceIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -249,7 +249,6 @@ class ParamSearchCancelIT extends LauncherMockedIntegrationTestSupport {\n                 \"\"\");\n     }\n \n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n     /**\n      * 취소 시점에 미실행으로 확정될 후보 수 — <b>취소 직전에 대기 중이던 후보를 센다.</b>\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchCancelIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchCancelIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -354,7 +354,6 @@ class ParamSearchIntakeIT extends LauncherMockedIntegrationTestSupport {\n                 .toList();\n     }\n \n-    /** 등록표에는 있으나 004가 실행을 지원하지 않는 전략. 이름을 적지 않고 조회로 찾는다. */\n     /**\n      * 004가 실행할 수 없는 전략을 한시적으로 만들어 넘긴다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchIntakeIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchIntakeIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -43,9 +43,9 @@ import org.springframework.transaction.support.TransactionTemplate;\n  *       발행 직전에 처리되지 않은 예외로 죽는다.\n  * </ol>\n  *\n- * <p>전략 ID를 적지 않는다(FR-025). 대상은 \"등록표 활성 ∩ 004 지원 ∩ 축이 있는 전략 ∩ 기준이 아닌 전략\"으로 <b>조회해서</b> 고른다. 축이 없는\n- * 전략을 거르는 이유는 자동 탐색의 대상이 축을 가진 전략이기 때문이고, 기준을 빼는 이유는 <b>그것이 깨져 있던 조건</b>이기 때문이다 — 요청 전략에 기준이 우연히\n- * 섞이면 결함이 가려진다.\n+ * <p>전략 ID를 적지 않는다(FR-025). 대상은 탐색을 접수할 수 있는 전략에서 기준을 뺀 것({@link\n+ * SearchableStrategies#excludingBaseline})으로 <b>조회해서</b> 고른다. 기준을 빼는 이유는 <b>그것이 깨져 있던 조건</b>이기 때문이다\n+ * — 요청 전략에 기준이 우연히 섞이면 결함이 가려진다.\n  */\n class ParamSearchLaunchIT extends PortMockedIntegrationTestSupport {\n \n@@ -190,7 +190,6 @@ class ParamSearchLaunchIT extends PortMockedIntegrationTestSupport {\n         assertThat(rulesVersions.get(baselineStrategyId)).isNotNull();\n     }\n \n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유 ∩ 기준 아님. 전략 ID를 테스트에 적지 않는다(FR-025). */\n     private CreateParamSearchCommand createCommand(List<String> strategyIds) {\n         return new CreateParamSearchCommand(\n                 requesterId, UNIVERSE, strategyIds, null, null, null, Map.of(), registry.version());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLaunchIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLaunchIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -217,6 +217,4 @@ class ParamSearchLimitReachedTest extends LauncherMockedIntegrationTestSupport {\n                 {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n                 \"\"\");\n     }\n-\n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchLimitReachedTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -245,6 +245,4 @@ class ParamSearchRecordCompletenessTest extends LauncherMockedIntegrationTestSup\n                 {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n                 \"\"\");\n     }\n-\n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -274,6 +274,4 @@ class ParamSearchRetryTest extends LauncherMockedIntegrationTestSupport {\n                 {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n                 \"\"\");\n     }\n-\n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRetryTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -232,6 +232,4 @@ class ParamSearchSelectionOnceTest extends LauncherMockedIntegrationTestSupport\n                 \"\"\"\n                         .formatted(netReturn));\n     }\n-\n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchSelectionOnceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -176,6 +176,4 @@ class ParamSearchValidationLabelTest extends LauncherMockedIntegrationTestSuppor\n                 \"BT-STUB-\" + id);\n         return id;\n     }\n-\n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchValidationLabelTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchValidationLabelTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -195,6 +195,4 @@ class SelectionRuleImmutabilityTest extends LauncherMockedIntegrationTestSupport\n                 \"BT-STUB-\" + id);\n         return id;\n     }\n-\n-    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SelectionRuleImmutabilityTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SelectionRuleImmutabilityTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -450,8 +450,8 @@ OPEN 거래는 `exitDate`·`exitPrice`·`grossPnl`·`realizedPnl`·`returnRate`\n   필요한 계산은 문자열로 다룬다.\n - **`GET /backtests/{id}`는 백테스트가 실패해도 200이다.** `status`와 `error`로 판단한다. 폴링은 이 리소스로 하고,\n   하위 리소스의 409 `RESULT_NOT_READY`(계속) / `BACKTEST_FAILED`(중단)로 재시도 여부를 가른다(§2.5).\n-- **벤치마크는 항상 비어 있다.** 요청에 `benchmark.instrumentId`를 넣으면 `config.benchmarkId`에는 보이지만, 메시지 계약\n-  v2에는 벤치마크가 없어 워커에 전달되지 않는다. `summary.benchmark`는 `null`이고 `timeseries[].benchmarkReturn`은 키가 없다.\n+- **벤치마크는 항상 비어 있다.** 요청 v2에는 벤치마크 블록이 없어서 보내도 무시되고 `config`에도 남지 않으며, 메시지 계약\n+  v2에도 없어 워커에 전달되지 않는다. `summary`에는 벤치마크 항목이 없고 `timeseries[].benchmarkReturn`은 키가 없다.\n   벤치마크 비교는 별도 spec에서 다룬다.\n - 현재 엔진이 실행할 수 있는 전략은 `MOMENTUM`(파라미터 `lookbackDays`)뿐이다. 다른 `strategyId`는 Job이 접수되고\n   실행 단계에서 `FAILED`(`INVALID_REQUEST`)가 된다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881414": []
+  }
+}

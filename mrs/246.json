@@ -1,0 +1,572 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952791,
+    "iid": 246,
+    "project_id": 1444456,
+    "title": "test(be): 체결 구간 조회의 한쪽 null 조합을 단언",
+    "description": "## 작업 내용 요약\n\n!244 리뷰에서 나온 `findInPeriod`의 null 파라미터 분기 우려에 대한 후속 조치입니다. `from`·`to` 중 한쪽만 null인 조합의 단언을 추가했습니다. 운영 코드는 바꾸지 않았습니다.\n\n## 관련 티켓\n\nS15P21E205-359\n\n## 주요 변경 사항\n\n- `findFills(null, to)`와 결과가 있는 `findFills(from, null)`이 그쪽 제한만 풀린 구간을 돌려주는지 단언\n\n## 테스트\n\n- `./gradlew spotlessApply test --tests '*BacktestResultRepositoryImplTest'` → 8건 통과, skipped 0 (Testcontainers PostgreSQL)\n\n## 리뷰 포인트\n\n- `CAST(:from AS java.time.Instant)`는 null 파라미터의 타입을 PostgreSQL에 알려 주는 용도라 유지했습니다. H2는 저장소에서 제거되어 검증 대상이 아닙니다.",
+    "state": "merged",
+    "created_at": "2026-09-20T13:28:32.945+09:00",
+    "updated_at": "2026-09-20T13:37:15.361+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T13:37:15.380+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/359-backtest-fills",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🐲 Test"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+    "merge_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T13:28:33.863+09:00",
+    "reference": "!246",
+    "references": {
+      "short": "!246",
+      "relative": "!246",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!246"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/246",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952791,
+    "iid": 246,
+    "project_id": 1444456,
+    "title": "test(be): 체결 구간 조회의 한쪽 null 조합을 단언",
+    "description": "## 작업 내용 요약\n\n!244 리뷰에서 나온 `findInPeriod`의 null 파라미터 분기 우려에 대한 후속 조치입니다. `from`·`to` 중 한쪽만 null인 조합의 단언을 추가했습니다. 운영 코드는 바꾸지 않았습니다.\n\n## 관련 티켓\n\nS15P21E205-359\n\n## 주요 변경 사항\n\n- `findFills(null, to)`와 결과가 있는 `findFills(from, null)`이 그쪽 제한만 풀린 구간을 돌려주는지 단언\n\n## 테스트\n\n- `./gradlew spotlessApply test --tests '*BacktestResultRepositoryImplTest'` → 8건 통과, skipped 0 (Testcontainers PostgreSQL)\n\n## 리뷰 포인트\n\n- `CAST(:from AS java.time.Instant)`는 null 파라미터의 타입을 PostgreSQL에 알려 주는 용도라 유지했습니다. H2는 저장소에서 제거되어 검증 대상이 아닙니다.",
+    "state": "merged",
+    "created_at": "2026-09-20T13:28:32.945+09:00",
+    "updated_at": "2026-09-20T13:37:15.361+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T13:37:15.380+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/359-backtest-fills",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🐲 Test"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+    "merge_commit_sha": "d718603dacb0aa87b1a5413a8799fc41654a71af",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T13:28:33.863+09:00",
+    "reference": "!246",
+    "references": {
+      "short": "!246",
+      "relative": "!246",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!246"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/246",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-20T13:32:37.737+09:00",
+    "latest_build_finished_at": "2026-09-20T13:37:14.651+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 209342,
+      "iid": 206,
+      "project_id": 1444456,
+      "sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+      "ref": "feat(be)/359-backtest-fills",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T13:32:37.627+09:00",
+      "updated_at": "2026-09-20T13:37:14.658+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209342"
+    },
+    "head_pipeline": {
+      "id": 209342,
+      "iid": 206,
+      "project_id": 1444456,
+      "sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+      "ref": "feat(be)/359-backtest-fills",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T13:32:37.627+09:00",
+      "updated_at": "2026-09-20T13:37:14.658+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209342",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-20T13:32:37.737+09:00",
+      "finished_at": "2026-09-20T13:37:14.651+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209342",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3d328aacc0d6b88dd473a3d5b053c25dae3fcc3d",
+      "head_sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+      "start_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e1ca1316965c7272f7cbaa0a10c12d3d13a5e16d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840844,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:28:33.036+09:00",
+          "updated_at": "2026-09-20T13:28:33.040+09:00",
+          "system": true,
+          "noteable_id": 952791,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 246,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de5aea18170d8fa624e1e19219b8633cfbe37fb3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840845,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:28:33.055+09:00",
+          "updated_at": "2026-09-20T13:28:33.062+09:00",
+          "system": true,
+          "noteable_id": 952791,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 246,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "af13c52e28289d6efea8f53d25e021cd14f3616f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840847,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 20eedfaaad7fd58a303449f20fc014f47568ca8b pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:28:35.323+09:00",
+          "updated_at": "2026-09-20T13:28:35.327+09:00",
+          "system": true,
+          "noteable_id": 952791,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 246,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "84cbb8f114d9e805ed888e1aa2a2c14fd077f692",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840848,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `findInPeriod` 메서드의 `from`과 `to` 파라미터가 한쪽만 `null`일 때의 경계값 조건을 테스트 코드로 명확하게 검증하여 회귀 가능성을 사전에 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `from`과 `to`가 모두 `null`인 경우에 대한 테스트 케이스 추가: 두 파라미터가 모두 `null`일 때 전체 체결 내역(또는 정의된 정책에 따른 기본 제한 내역)이 올바르게 반환되는지 확인하는 시나리오를 추가하면 더욱 견고한 테스트가 될 것입니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:20eedfaaad7fd58a303449f20fc014f47568ca8b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T13:28:40.228+09:00",
+          "updated_at": "2026-09-20T13:28:40.228+09:00",
+          "system": false,
+          "noteable_id": 952791,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 246,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "847fee1603f5229e692246fcdac4c27bbad09dbf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840875,
+          "type": null,
+          "body": "mentioned in commit d718603dacb0aa87b1a5413a8799fc41654a71af",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:37:15.461+09:00",
+          "updated_at": "2026-09-20T13:37:15.469+09:00",
+          "system": true,
+          "noteable_id": 952791,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 246,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2226803,
+      "head_commit_sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+      "base_commit_sha": "3d328aacc0d6b88dd473a3d5b053c25dae3fcc3d",
+      "start_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "created_at": "2026-09-20T13:28:33.304+09:00",
+      "merge_request_id": 952791,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "af692d82b3a6dd65fca02c712362d898ee3e8957"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2226803,
+      "head_commit_sha": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+      "base_commit_sha": "3d328aacc0d6b88dd473a3d5b053c25dae3fcc3d",
+      "start_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+      "created_at": "2026-09-20T13:28:33.304+09:00",
+      "merge_request_id": 952791,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "af692d82b3a6dd65fca02c712362d898ee3e8957",
+      "commits": [
+        {
+          "id": "20eedfaaad7fd58a303449f20fc014f47568ca8b",
+          "short_id": "20eedfaa",
+          "created_at": "2026-09-20T13:13:52.000+09:00",
+          "parent_ids": [
+            "3d328aacc0d6b88dd473a3d5b053c25dae3fcc3d"
+          ],
+          "title": "test(be): 체결 구간 조회의 한쪽 null 조합을 단언",
+          "message": "test(be): 체결 구간 조회의 한쪽 null 조합을 단언\n\nfindInPeriod 의 from·to 중 한쪽만 null 인 경우에도 그쪽 제한만 풀리는지\nPostgreSQL 위에서 확인한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T13:13:52.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T13:13:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20eedfaaad7fd58a303449f20fc014f47568ca8b"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -157,6 +157,11 @@ class BacktestResultRepositoryImplTest extends RepositoryTestSupport {\n         Instant to = fills.get(fills.size() - 1).time();\n         assertThat(resultRepository.findFills(jobId, from, to))\n                 .contains(fills.subList(1, fills.size() - 1));\n+        // 한쪽만 null 이어도 그쪽 제한만 풀린다\n+        assertThat(resultRepository.findFills(jobId, null, to))\n+                .contains(fills.subList(0, fills.size() - 1));\n+        assertThat(resultRepository.findFills(jobId, from, null))\n+                .contains(fills.subList(1, fills.size()));\n         // 기록은 했는데 그 구간에 체결이 없으면 빈 리스트다 — \"기록하지 않았다\"(빈 Optional)와 다르다\n         assertThat(resultRepository.findFills(jobId, to.plusSeconds(1), null)).contains(List.of());\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImplTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2840848": []
+  }
+}

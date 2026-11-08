@@ -1,0 +1,1007 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943493,
+    "iid": 90,
+    "project_id": 1444456,
+    "title": "feat(fe): 탐색 결과 화면과 비교 연결 (S15P21E205-162)",
+    "description": "# 작업 내용 요약\n\nspec 007 설정 조합 자동 비교의 묶음 M6 `[FE] 탐색 결과 화면과 비교 연결` 이다. T082\\~T088 일곱 개를 전부 끝냈다. M4(확인 화면·진행 상태)가 접수까지를 맡았고, 이 묶음은 **끝난 묶음의 결과를 읽는 층**을 만든다.\n\n**이 화면은 순위표가 되기 쉽다.** 선정이 \"두 필터를 통과한 후보를 비용 차감 후 수익으로 정렬한 상위 5개\"라서, 아무 생각 없이 그리면 1위·2위가 생긴다. 원칙 III이 조건부 통과였던 이유가 그것이고 plan의 설계 제약도 거기 붙어 있다. 그래서 이 MR의 절반은 \"무엇을 그리는가\"보다 **\"무엇을 그리지 않는가\"**에 대한 것이다 — 순위 번호, 추천 문구, 계산하지 않은 값의 0%.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-162\n- link https://ssafy.atlassian.net/browse/S15P21E205-162\n\n# 주요 변경 사항\n\n- `api/paramSearch.ts`에 `getParamSearchCandidates` 추가 — 정렬 항목은 서버가 허용하는 다섯 가지와 같은 목록만 보낸다. 방향도 `asc`·`desc` 뿐이다\n- `hooks/useSearchCandidates.ts` 신설 — 질의가 바뀌면 다시 부르되 **늦게 온 응답을 순번으로 막는다**. 정렬을 빠르게 두 번 바꾸면 먼저 보낸 요청이 나중에 도착해 정렬 표시와 목록이 어긋난다\n- `utils/paramSearchLabels.ts`에 표기 함수들 — 핵심은 `formatPercent`·`formatWon`이 **`null`을 `null`로 돌려주는 것**이다. 값이 없을 때 무엇을 보일지는 화면이 사유와 함께 정한다. `describeCandidateSetting`은 전략 이름·축 라벨·단위를 `config.space`에서만 읽는다(FR-025)\n- `CandidateSummaryCard` — 세 숫자(비용 차감 후 수익·가장 크게 줄었던 폭·거래비용)만 먼저 보인다. 안정성·선정 이유는 상세로 미룬다(FR-018)\n- `SelectionResult` — 표시 후보 집합. 번호·추천·우승 배지를 넣지 않고 **무엇으로 정렬했는지**를 밝힌다. 목록을 `ol`이 아니라 `ul`로 둔 것도 같은 이유다\n- `CandidateDetail` — 인접 설정 안정성·선정 이유·탈락 사유. **탈락(`FILTERED_OUT`)과 \"표시 범위 밖\"(`NOT_IN_DISPLAY`)을 다른 문장으로 적는다**\n- `CandidateTable` — 전체 후보 목록. 정렬·필터·페이징을 전부 서버에 맡긴다. 정렬 헤더는 `aria-sort`를 갖고, `순번` 열은 후보가 만들어진 차례이지 성적이 아니다\n- `CompareHandoff` — 고른 후보를 005로 넘기는 자리. `자동 탐색 후보 비교` 배지로 기본 설정 비교와 구분한다(FR-019)\n- `ParamSearchPage`가 넷을 조합한다. 표시 후보는 `selected=true`로 따로 받아 `selection.displayed` 순서에 맞춰 그린다 — 기본 정렬이 순번이라 그대로 두면 정렬 지표 순서가 아니게 된다\n\n# 테스트\n\n- [x] `npm test` 110 passed (신규 23), `npm run lint` 0 errors, `npm run build` 성공\n- [x] **T088 렌더 검사** — 표시 후보 화면에 `1위`·`랭킹`·`추천`·`최적`·`우승`·`베스트`·`Best`·`TOP` 0건, `ol` 0개\n- [x] **T088 소스 검사** — 결과 화면 코드 6개 파일을 주석만 걷어내고 같은 목록으로 검사한다. 조건부로만 나타나는 배지는 렌더 테스트를 빠져나간다\n- [x] **검사가 실제로 무는지 확인** — 제목을 `추천 설정 1위`로 바꾸면 렌더 검사와 소스 검사가 둘 다 실패하고, 되돌리면 통과한다\n- [x] **T086** 계산하지 않은 후보를 `0%`로 그리지 않는다 — 카드는 표 대신 사유 한 줄로 바꾸고, 표는 그 후보의 줄에 `%`도 `원`도 없이 사유만 들어간다\n- [x] 이웃이 없는 안정성을 `0.00%p`가 아니라 \"이웃한 설정이 없어 계산하지 않았습니다\"로 적는다 (FR-013b)\n- [x] 정렬 동작 — 지표 열을 누르면 `netReturn,desc`로 서버에 다시 묻고, 한 번 더 누르면 `asc`로 뒤집힌다. `aria-sort`가 따라 바뀐다\n- [x] 상태 필터가 질의에 실리고 페이지가 0으로 돌아간다\n- [x] 결과가 없는 후보는 비교 체크박스가 비활성이다\n- [x] **실행 중인 백엔드로 계약 확인** — 응답 필드가 타입과 일치, `selected=true`가 `selection.displayed`와 같은 2건, `sort=netReturn,dsec`(오타)와 `sort=sharpe`가 **둘 다 400**, `status=SKIPPED` 후보가 `netReturn: null` + `NOT_EVALUATED` 사유로 옴\n- [x] 화면에서 실제 응답으로 렌더 확인 (`PS-20260914-000011`)\n- [ ] **워커를 거친 종단 흐름 — 확인 못 함.** 아래 리뷰 포인트 참고\n- [ ] 005 비교 화면 연결 — 005 미구현이라 진입 지점까지만\n\n# 리뷰 포인트\n\n- **화면에 보이는 숫자는 백테스트 결과가 아니다.** `backtest.jobs` 큐에 작 고 워커가 붙은 적이 없다. 지금 값은 M5 선정 로직을 검증하며`backtest.events`에 직접 넣은 것이라 `netReturn`이 `0.300000`처럼 반듯하고 `tradingCost`가 후보마다 `17078.49`로 같다. **그래서 이 MR이 증명하는 것은 \"주어진 숫자를 어떻게 보이는가\"이지 \"숫자가 맞는가\"가 아니다.** 그 구분이 이 정도로 명시되면 충분한지 봐 달라\n- **`순위`라는 낱말을 금지어 목록에서 빼고 부정문일 때만 허용했다.** 우리 말해야 해서 낱말 자체는 나타난다. 한글이 음절 단위라 \"아닙니다\"에 \"아니\"가들어 있지 않아 검사에서 두 형태를 모두 본다. **이 예외가 구멍이 될 수 있는지** 봐 달라 — 지금은 부정 표현 하나만 허용하지만 \"순위를 매기지 않습니다\" 같은 다른 부정문이 들어오면 검사에 걸린다\n- **소스 검사에서 주석을 걷어낸다.** 왜 순위를 만들지 않는지 적은 설명까지된다. 대신 주석 안에 실수로 들어간 배지 문자열은 못 잡는다 — 트레이드오프가 맞는 방향인지 판단이 필요하다\n- **정렬을 전부 서버에 맡겼다.** 화면에서 다시 정렬하면 지금 페이지에 없는 후보가 빠진 채 정렬돼 사실과 어긋나기 때문인데, 열을 누를 때마다 요청이 나간다. 후보가 많지 않아 지금은 괜찮지만 **부담스럽다고 보이면** 페이지 크기를 키우는 쪽을 볼 수 있다\n- **결과가 없는 후보는 비교에 담기지 않게 막았다.** 담으면 비교 화면이 빈 자리를 그려야 한다. 다만 이건 내 판단이고 **\"실패한 설정도 담아서 왜 실패했는지 같이 보고 싶다\"**는 요구가 있으면 달라진다\n- `CompareHandoff`는 `onOpenCompare` prop을 비워 두면 \"비교 화면이 아직 없 . 005가 붙으면 그 prop에 navigate만 연결하면 된다. **눌리지 않는 버튼을이유 없이 두지 않는 방향**이 맞는지 봐 달라\n- 상세를 모달로 열었다. 목록에서 자리를 잃지 않게 하려는 것인데, 정보량이 다. 인라인 확장이 나을 수도 있다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 렌더와 소스 두 층으로 검사하고, 검사가 실제로 무는지까지 확인했다. 목록은 `ul`이고 `ol`은 0개다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 이름·축 라벨·단위는 `config.space`에서만 읽고, `config`가 없으면 축 이름을 그대로 쓴다(지어내지 않는다). 테스트 픽스처는 등록표에 없는 `ALPHA_TILT`·`기울기 관측 창`을 쓴다 — 실제 전략 이름으로 만들면 화면\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 카드는 세 숫자가 모두 없으면 표 대신 사유 한 줄, 표는 칸마다 사유, 상세는 \"계산하지 않았습니다\". 안정성 계산 불가도 0이 아니다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 후보마다 `미검증` 배지가 카드·상세 양쪽에 항상 붙는다(설계 제약 2)\n\n:warning: 본문 첫 줄에 **\"화면 숫자는 백테스트 결과가 아니다\"**를 리뷰 포인트로 명시했습니다. 리뷰어가 수익률을 성과로 읽지 않도록 이 항목은 빼지 마세요.",
+    "state": "merged",
+    "created_at": "2026-09-14T16:46:01.447+09:00",
+    "updated_at": "2026-09-15T15:50:51.508+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T17:00:30.962+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/162-paramsearch-result",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f561211036b1a369d6684e1d4a2c87fbb0fd5bce",
+    "merge_commit_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T16:46:02.049+09:00",
+    "reference": "!90",
+    "references": {
+      "short": "!90",
+      "relative": "!90",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!90"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/90",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 18,
+      "completed_count": 16
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943493,
+    "iid": 90,
+    "project_id": 1444456,
+    "title": "feat(fe): 탐색 결과 화면과 비교 연결 (S15P21E205-162)",
+    "description": "# 작업 내용 요약\n\nspec 007 설정 조합 자동 비교의 묶음 M6 `[FE] 탐색 결과 화면과 비교 연결` 이다. T082\\~T088 일곱 개를 전부 끝냈다. M4(확인 화면·진행 상태)가 접수까지를 맡았고, 이 묶음은 **끝난 묶음의 결과를 읽는 층**을 만든다.\n\n**이 화면은 순위표가 되기 쉽다.** 선정이 \"두 필터를 통과한 후보를 비용 차감 후 수익으로 정렬한 상위 5개\"라서, 아무 생각 없이 그리면 1위·2위가 생긴다. 원칙 III이 조건부 통과였던 이유가 그것이고 plan의 설계 제약도 거기 붙어 있다. 그래서 이 MR의 절반은 \"무엇을 그리는가\"보다 **\"무엇을 그리지 않는가\"**에 대한 것이다 — 순위 번호, 추천 문구, 계산하지 않은 값의 0%.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-162\n- link https://ssafy.atlassian.net/browse/S15P21E205-162\n\n# 주요 변경 사항\n\n- `api/paramSearch.ts`에 `getParamSearchCandidates` 추가 — 정렬 항목은 서버가 허용하는 다섯 가지와 같은 목록만 보낸다. 방향도 `asc`·`desc` 뿐이다\n- `hooks/useSearchCandidates.ts` 신설 — 질의가 바뀌면 다시 부르되 **늦게 온 응답을 순번으로 막는다**. 정렬을 빠르게 두 번 바꾸면 먼저 보낸 요청이 나중에 도착해 정렬 표시와 목록이 어긋난다\n- `utils/paramSearchLabels.ts`에 표기 함수들 — 핵심은 `formatPercent`·`formatWon`이 **`null`을 `null`로 돌려주는 것**이다. 값이 없을 때 무엇을 보일지는 화면이 사유와 함께 정한다. `describeCandidateSetting`은 전략 이름·축 라벨·단위를 `config.space`에서만 읽는다(FR-025)\n- `CandidateSummaryCard` — 세 숫자(비용 차감 후 수익·가장 크게 줄었던 폭·거래비용)만 먼저 보인다. 안정성·선정 이유는 상세로 미룬다(FR-018)\n- `SelectionResult` — 표시 후보 집합. 번호·추천·우승 배지를 넣지 않고 **무엇으로 정렬했는지**를 밝힌다. 목록을 `ol`이 아니라 `ul`로 둔 것도 같은 이유다\n- `CandidateDetail` — 인접 설정 안정성·선정 이유·탈락 사유. **탈락(`FILTERED_OUT`)과 \"표시 범위 밖\"(`NOT_IN_DISPLAY`)을 다른 문장으로 적는다**\n- `CandidateTable` — 전체 후보 목록. 정렬·필터·페이징을 전부 서버에 맡긴다. 정렬 헤더는 `aria-sort`를 갖고, `순번` 열은 후보가 만들어진 차례이지 성적이 아니다\n- `CompareHandoff` — 고른 후보를 005로 넘기는 자리. `자동 탐색 후보 비교` 배지로 기본 설정 비교와 구분한다(FR-019)\n- `ParamSearchPage`가 넷을 조합한다. 표시 후보는 `selected=true`로 따로 받아 `selection.displayed` 순서에 맞춰 그린다 — 기본 정렬이 순번이라 그대로 두면 정렬 지표 순서가 아니게 된다\n\n# 테스트\n\n- [x] `npm test` 110 passed (신규 23), `npm run lint` 0 errors, `npm run build` 성공\n- [x] **T088 렌더 검사** — 표시 후보 화면에 `1위`·`랭킹`·`추천`·`최적`·`우승`·`베스트`·`Best`·`TOP` 0건, `ol` 0개\n- [x] **T088 소스 검사** — 결과 화면 코드 6개 파일을 주석만 걷어내고 같은 목록으로 검사한다. 조건부로만 나타나는 배지는 렌더 테스트를 빠져나간다\n- [x] **검사가 실제로 무는지 확인** — 제목을 `추천 설정 1위`로 바꾸면 렌더 검사와 소스 검사가 둘 다 실패하고, 되돌리면 통과한다\n- [x] **T086** 계산하지 않은 후보를 `0%`로 그리지 않는다 — 카드는 표 대신 사유 한 줄로 바꾸고, 표는 그 후보의 줄에 `%`도 `원`도 없이 사유만 들어간다\n- [x] 이웃이 없는 안정성을 `0.00%p`가 아니라 \"이웃한 설정이 없어 계산하지 않았습니다\"로 적는다 (FR-013b)\n- [x] 정렬 동작 — 지표 열을 누르면 `netReturn,desc`로 서버에 다시 묻고, 한 번 더 누르면 `asc`로 뒤집힌다. `aria-sort`가 따라 바뀐다\n- [x] 상태 필터가 질의에 실리고 페이지가 0으로 돌아간다\n- [x] 결과가 없는 후보는 비교 체크박스가 비활성이다\n- [x] **실행 중인 백엔드로 계약 확인** — 응답 필드가 타입과 일치, `selected=true`가 `selection.displayed`와 같은 2건, `sort=netReturn,dsec`(오타)와 `sort=sharpe`가 **둘 다 400**, `status=SKIPPED` 후보가 `netReturn: null` + `NOT_EVALUATED` 사유로 옴\n- [x] 화면에서 실제 응답으로 렌더 확인 (`PS-20260914-000011`)\n- [ ] **워커를 거친 종단 흐름 — 확인 못 함.** 아래 리뷰 포인트 참고\n- [ ] 005 비교 화면 연결 — 005 미구현이라 진입 지점까지만\n\n# 리뷰 포인트\n\n- **화면에 보이는 숫자는 백테스트 결과가 아니다.** `backtest.jobs` 큐에 작 고 워커가 붙은 적이 없다. 지금 값은 M5 선정 로직을 검증하며`backtest.events`에 직접 넣은 것이라 `netReturn`이 `0.300000`처럼 반듯하고 `tradingCost`가 후보마다 `17078.49`로 같다. **그래서 이 MR이 증명하는 것은 \"주어진 숫자를 어떻게 보이는가\"이지 \"숫자가 맞는가\"가 아니다.** 그 구분이 이 정도로 명시되면 충분한지 봐 달라\n- **`순위`라는 낱말을 금지어 목록에서 빼고 부정문일 때만 허용했다.** 우리 말해야 해서 낱말 자체는 나타난다. 한글이 음절 단위라 \"아닙니다\"에 \"아니\"가들어 있지 않아 검사에서 두 형태를 모두 본다. **이 예외가 구멍이 될 수 있는지** 봐 달라 — 지금은 부정 표현 하나만 허용하지만 \"순위를 매기지 않습니다\" 같은 다른 부정문이 들어오면 검사에 걸린다\n- **소스 검사에서 주석을 걷어낸다.** 왜 순위를 만들지 않는지 적은 설명까지된다. 대신 주석 안에 실수로 들어간 배지 문자열은 못 잡는다 — 트레이드오프가 맞는 방향인지 판단이 필요하다\n- **정렬을 전부 서버에 맡겼다.** 화면에서 다시 정렬하면 지금 페이지에 없는 후보가 빠진 채 정렬돼 사실과 어긋나기 때문인데, 열을 누를 때마다 요청이 나간다. 후보가 많지 않아 지금은 괜찮지만 **부담스럽다고 보이면** 페이지 크기를 키우는 쪽을 볼 수 있다\n- **결과가 없는 후보는 비교에 담기지 않게 막았다.** 담으면 비교 화면이 빈 자리를 그려야 한다. 다만 이건 내 판단이고 **\"실패한 설정도 담아서 왜 실패했는지 같이 보고 싶다\"**는 요구가 있으면 달라진다\n- `CompareHandoff`는 `onOpenCompare` prop을 비워 두면 \"비교 화면이 아직 없 . 005가 붙으면 그 prop에 navigate만 연결하면 된다. **눌리지 않는 버튼을이유 없이 두지 않는 방향**이 맞는지 봐 달라\n- 상세를 모달로 열었다. 목록에서 자리를 잃지 않게 하려는 것인데, 정보량이 다. 인라인 확장이 나을 수도 있다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 렌더와 소스 두 층으로 검사하고, 검사가 실제로 무는지까지 확인했다. 목록은 `ul`이고 `ol`은 0개다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 이름·축 라벨·단위는 `config.space`에서만 읽고, `config`가 없으면 축 이름을 그대로 쓴다(지어내지 않는다). 테스트 픽스처는 등록표에 없는 `ALPHA_TILT`·`기울기 관측 창`을 쓴다 — 실제 전략 이름으로 만들면 화면\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 카드는 세 숫자가 모두 없으면 표 대신 사유 한 줄, 표는 칸마다 사유, 상세는 \"계산하지 않았습니다\". 안정성 계산 불가도 0이 아니다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 후보마다 `미검증` 배지가 카드·상세 양쪽에 항상 붙는다(설계 제약 2)\n\n:warning: 본문 첫 줄에 **\"화면 숫자는 백테스트 결과가 아니다\"**를 리뷰 포인트로 명시했습니다. 리뷰어가 수익률을 성과로 읽지 않도록 이 항목은 빼지 마세요.",
+    "state": "merged",
+    "created_at": "2026-09-14T16:46:01.447+09:00",
+    "updated_at": "2026-09-15T15:50:51.508+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T17:00:30.962+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/162-paramsearch-result",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f561211036b1a369d6684e1d4a2c87fbb0fd5bce",
+    "merge_commit_sha": "d49bd0759815bd58740d78fea52a5145f73a6a88",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T16:46:02.049+09:00",
+    "reference": "!90",
+    "references": {
+      "short": "!90",
+      "relative": "!90",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!90"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/90",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 18,
+      "completed_count": 16
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "21",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "head_sha": "f561211036b1a369d6684e1d4a2c87fbb0fd5bce",
+      "start_sha": "92c4002b7aab100726ba28add98f1f60af334ac3"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e4b04ce6f2c7ce4cc64c01da9d49dfd737d684cd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803506,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. \n\n전반적으로 비즈니스 요구사항(순위/추천 표현 배제, 0% 오표기 방지, 서버 주도 정렬 및 레이스 컨디션 방지 등)을 코드와 테스트 양쪽에서 매우 꼼꼼하게 설계하고 구현했습니다. 리뷰 포인트에서 제기된 고민들 역시 트레이드오프가 타당하며, 방어적인 구현이 잘 되어 있습니다.\n\n### 테스트 제안\n1. **네트워크 지연/경합 테스트**: `useSearchCandidates` 훅에서 빠른 정렬 변경 시 늦게 도착하는 응답이 무시되는지, 실제 비동기 타이밍을 모킹하여 검증하는 시나리오 추가\n2. **모달 포커스 트랩 및 스크롤 잠금**: `CandidateDetail` 모달 오픈 시 키보드 접근성(Tab 키 트랩 및 Escape 닫기)이 예상대로 동작하는지 E2E 또는 RTL 테스트 시나리오 보강\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f561211036b1a369d6684e1d4a2c87fbb0fd5bce -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T16:46:08.419+09:00",
+          "updated_at": "2026-09-14T16:56:48.606+09:00",
+          "system": false,
+          "noteable_id": 943493,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 90,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "768f50ade989b532c2318da1355b9eac92503998",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803550,
+          "type": null,
+          "body": "added 4 commits\n\n<ul><li>9c72ba6d - feat(fe): 후보 목록 조회와 결과 표기 함수를 만든다</li><li>b6aae72d - feat(fe): 표시 후보 카드·집합·상세를 만든다</li><li>4118fd47 - feat(fe): 전체 후보 목록과 비교 연결을 붙이고 화면을 잇는다</li><li>7f2a59c9 - test(fe): 결과 화면이 순위·추천을 만들지 않는지 고정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/90/diffs?diff_id=2195333&start_sha=92c4002b7aab100726ba28add98f1f60af334ac3)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T16:51:32.232+09:00",
+          "updated_at": "2026-09-14T16:51:32.235+09:00",
+          "system": true,
+          "noteable_id": 943493,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 90,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ac6512b00f92c98b162e92c628151451b4afdf95",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803578,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>f5612110 - fix(fe): 후보 조회 의존성을 원시값으로 풀고 정적 검사의 한계를 못 박는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/90/diffs?diff_id=2195366&start_sha=7f2a59c95d76fc68ebb9738d3af0e445a91c25ff)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T16:56:40.941+09:00",
+          "updated_at": "2026-09-14T16:56:40.945+09:00",
+          "system": true,
+          "noteable_id": 943493,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 90,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e24110eae777c00462451ad126797b52283e7f80",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803629,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T17:00:28.574+09:00",
+          "updated_at": "2026-09-14T17:00:28.583+09:00",
+          "system": true,
+          "noteable_id": 943493,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 90,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "19006ec4b6f7186bccda96bb2362c2fd80c724b9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803630,
+          "type": null,
+          "body": "mentioned in commit d49bd0759815bd58740d78fea52a5145f73a6a88",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T17:00:31.244+09:00",
+          "updated_at": "2026-09-14T17:00:31.250+09:00",
+          "system": true,
+          "noteable_id": 943493,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 90,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7ff20f53fa20ce38fb5ccb03667ca6f60968e0d3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809441,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:50:51.606+09:00",
+          "updated_at": "2026-09-15T15:50:51.614+09:00",
+          "system": true,
+          "noteable_id": 943493,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 90,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2195366,
+      "head_commit_sha": "f561211036b1a369d6684e1d4a2c87fbb0fd5bce",
+      "base_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "start_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "created_at": "2026-09-14T16:56:40.692+09:00",
+      "merge_request_id": 943493,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "a08f403291e65dc80e8139b43d277fe95cc13f92"
+    },
+    {
+      "id": 2195333,
+      "head_commit_sha": "7f2a59c95d76fc68ebb9738d3af0e445a91c25ff",
+      "base_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "start_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "created_at": "2026-09-14T16:51:31.980+09:00",
+      "merge_request_id": 943493,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "a13bfd041e0a0a0f3679377dd2acfc145b8ff076"
+    },
+    {
+      "id": 2195298,
+      "head_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "base_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "start_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "created_at": "2026-09-14T16:46:01.787+09:00",
+      "merge_request_id": 943493,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2195366,
+      "head_commit_sha": "f561211036b1a369d6684e1d4a2c87fbb0fd5bce",
+      "base_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "start_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "created_at": "2026-09-14T16:56:40.692+09:00",
+      "merge_request_id": 943493,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "a08f403291e65dc80e8139b43d277fe95cc13f92",
+      "commits": [
+        {
+          "id": "f561211036b1a369d6684e1d4a2c87fbb0fd5bce",
+          "short_id": "f5612110",
+          "created_at": "2026-09-14T16:56:36.000+09:00",
+          "parent_ids": [
+            "7f2a59c95d76fc68ebb9738d3af0e445a91c25ff"
+          ],
+          "title": "fix(fe): 후보 조회 의존성을 원시값으로 풀고 정적 검사의 한계를 못 박는다",
+          "message": "fix(fe): 후보 조회 의존성을 원시값으로 풀고 정적 검사의 한계를 못 박는다\n\n리뷰 지적 둘.\n\nuseSearchCandidates 가 질의를 JSON.stringify 해서 의존성으로 썼다. 호출부가 키를\n적은 순서까지 의존성이 되어, 같은 질의인데도 순서가 다르면 다시 부른다. 지금\n호출부 둘은 키 순서가 고정이라 증상은 없었지만 조건이 코드 바깥에 있는 것이\n문제다. 질의를 원시값으로 풀어 그것들을 의존성으로 둔다 — JSON.parse 왕복도\n함께 없어졌다.\n\nSelectionResult 테스트의 주석 제거는 정규식이라 완전하지 않다. 고치는 대신\n두 방향의 한계를 적었다. 과탐(줄 끝 주석이 안 걷힘)은 안전하다 — 주석 한 줄\n고치면 끝난다. 미탐(문자열 안의 여는 블록 주석 기호 때문에 코드를 먹음)이\n위험하고, 그쪽은 canary 로 막는다: 걷어낸 뒤에도 export 가 남아 있어야 한다.\n정규식을 폭주시켜 그 검사가 실제로 실패하는 것을 확인했다.\n\n완전한 해법은 AST 파싱이고 검사 하나를 위해 파서를 들일지는 남겨 뒀다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:56:36.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:56:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f561211036b1a369d6684e1d4a2c87fbb0fd5bce"
+        },
+        {
+          "id": "7f2a59c95d76fc68ebb9738d3af0e445a91c25ff",
+          "short_id": "7f2a59c9",
+          "created_at": "2026-09-14T16:36:31.000+09:00",
+          "parent_ids": [
+            "4118fd4712e58e4acabdc4e24a5c64f2f51c91e8"
+          ],
+          "title": "test(fe): 결과 화면이 순위·추천을 만들지 않는지 고정한다",
+          "message": "test(fe): 결과 화면이 순위·추천을 만들지 않는지 고정한다\n\nT088.\n\n선정이 \"필터를 통과한 후보를 비용 차감 후 수익으로 정렬한 상위 5개\" 라서 화면에서\n순위로 읽히기 쉽다. plan 의 설계 제약은 그 위험 때문에 붙었고 이 테스트가 그것을\n지킨다.\n\n두 층으로 본다. 렌더 결과의 문구와, 주석을 걷어낸 소스다 — 조건부로만 나타나는\n배지는 렌더 테스트를 빠져나간다. 주석을 걷어내는 이유는 \"왜 순위를 만들지\n않는가\" 를 적은 설명까지 위반으로 세면 설명을 지우게 되기 때문이다.\n\n\"순위\" 는 금지 낱말 목록에 넣지 않고 **부정문일 때만 허용**한다. 우리 화면은\n\"순위가 아닙니다\" 라고 말해야 해서 그 낱말 자체는 나타난다. 한글은 음절 단위라\n\"아닙니다\" 에 \"아니\" 가 들어 있지 않다 — 검사에서 두 형태를 모두 본다.\n\n검사가 실제로 무는지 확인했다. 제목을 \"추천 설정 1위\" 로 바꾸면 렌더 검사와 소스\n검사가 둘 다 실패한다.\n\nCandidateSummaryCard·CandidateTable 테스트는 계산하지 않은 값을 0 으로 그리지\n않는지 본다. 표 전체가 아니라 그 후보의 줄만 보고 판정한다 — 전체를 보면 다른\n줄의 정상 숫자가 섞여 \"+30.00%\" 안의 \"0.00%\" 가 잡힌다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:36:31.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:36:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7f2a59c95d76fc68ebb9738d3af0e445a91c25ff"
+        },
+        {
+          "id": "4118fd4712e58e4acabdc4e24a5c64f2f51c91e8",
+          "short_id": "4118fd47",
+          "created_at": "2026-09-14T16:32:05.000+09:00",
+          "parent_ids": [
+            "b6aae72da7a711a9079809c6bb6704d6beff70b1"
+          ],
+          "title": "feat(fe): 전체 후보 목록과 비교 연결을 붙이고 화면을 잇는다",
+          "message": "feat(fe): 전체 후보 목록과 비교 연결을 붙이고 화면을 잇는다\n\nT085·T087.\n\nCandidateTable 의 정렬·필터는 서버가 한다. 화면에서 다시 정렬하면 페이지 밖의\n후보가 빠진 채 정렬돼 사실과 어긋난다. 정렬 가능한 열은 서버가 허용하는 다섯\n가지와 같고, 한 항목 기준 정렬은 FR-017 이 허용한다 — 다만 순위 번호 열을 두지\n않고 \"정렬은 보기 순서일 뿐 순위가 아니다\" 를 화면에 적는다. 순번은 후보가\n만들어진 차례이지 성적이 아니다. 성과가 없는 칸에는 0 이 아니라 사유가 들어간다.\n\nCompareHandoff 는 '자동 탐색 후보 비교' 임을 배지로 구분한다. 기본 설정 비교와\n같은 이름으로 보이면 사용자가 \"내가 고른 설정끼리\" 와 \"탐색이 고른 설정과\" 를\n섞는다. 비교 기준은 바꾸지 않는다 — 탐색이 고른 후보가 기준 자리에 들어가면\n비교가 자기 자신을 기준으로 삼게 된다. 005 가 없으므로 진입 지점과 표시만 만들고\n무엇이 없어서 막혔는지 적는다.\n\n결과가 없는 후보는 비교에 담기지 않는다. 담으면 비교 화면이 빈 자리를 그려야 한다.\n\n화면은 표시 후보를 selected=true 로 따로 받아 selection.displayed 순서에 맞춰\n그린다 — 기본 정렬은 순번이라 그대로 두면 정렬 지표 순서가 아니게 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:32:05.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:32:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4118fd4712e58e4acabdc4e24a5c64f2f51c91e8"
+        },
+        {
+          "id": "b6aae72da7a711a9079809c6bb6704d6beff70b1",
+          "short_id": "b6aae72d",
+          "created_at": "2026-09-14T16:27:25.000+09:00",
+          "parent_ids": [
+            "9c72ba6d43a711fd852b2cb7a08554eab2338bbc"
+          ],
+          "title": "feat(fe): 표시 후보 카드·집합·상세를 만든다",
+          "message": "feat(fe): 표시 후보 카드·집합·상세를 만든다\n\nT082·T083·T084·T086.\n\nCandidateSummaryCard 는 세 숫자만 먼저 보인다 — 비용 차감 후 수익·가장 크게\n줄었던 폭·거래비용(FR-018). 안정성·선정 이유는 상세로 미룬다.\n\n**계산하지 않은 값을 0%로 그리지 않는다.** 값이 없으면 자리를 비우고 왜 없는지를\n함께 적는다. 세 숫자가 모두 없으면 표를 그리지 않고 사유 한 줄로 바꾼다 — 빈 칸\n세 개보다 정확하다(FR-011, 원칙 VI). 사유는 서버가 준 문장을 먼저 쓴다.\n\nSelectionResult 는 순위표가 아니다. 번호·추천·우승 배지를 넣지 않고 무엇으로\n정렬했는지를 밝힌다. 목록을 ol 이 아니라 ul 로 둔 것도 같은 이유다 — 번호가\n붙는 순간 1위가 생긴다(설계 제약 1·3, 원칙 III).\n\n충족 후보가 표시 개수에 못 미치면 그대로 적고 문턱을 낮춰 채우지 않는다(원칙 VII).\n손실 제약을 걸지 않았으면 그 사실을 적고, 걸었으면 무엇을 기준으로 삼았는지\n적는다 — 걸지 않은 필터를 통과했다고 보이면 안 된다(FR-013d).\n\nCandidateDetail 은 탈락과 \"표시하지 않음\"을 다른 문장으로 적는다. 기준을\n통과하고도 표시 범위 밖이었던 후보를 탈락이라 쓰면 사실이 아니다. 안정성\n'계산 불가' 는 나쁜 값이 아니라 말할 수 없는 값이다(FR-013b).\n\n검증 라벨은 카드와 상세 양쪽에 항상 붙는다(설계 제약 2, FR-015).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:27:25.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:27:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b6aae72da7a711a9079809c6bb6704d6beff70b1"
+        },
+        {
+          "id": "9c72ba6d43a711fd852b2cb7a08554eab2338bbc",
+          "short_id": "9c72ba6d",
+          "created_at": "2026-09-14T16:24:20.000+09:00",
+          "parent_ids": [
+            "92c4002b7aab100726ba28add98f1f60af334ac3"
+          ],
+          "title": "feat(fe): 후보 목록 조회와 결과 표기 함수를 만든다",
+          "message": "feat(fe): 후보 목록 조회와 결과 표기 함수를 만든다\n\nM6 준비. 화면을 붙이기 전에 조회 경로와 숫자·문구 규칙을 먼저 고정한다.\n\ngetParamSearchCandidates 는 서버가 허용하는 다섯 정렬 항목만 보낸다. 방향도\nasc·desc 뿐이고 그 밖은 400 이라 화면이 오타를 기본값으로 접지 않는다 — 접으면\n목록이 조용히 뒤집힌다. 정렬은 FR-017 이 허용하는 \"한 항목 기준 정렬\"이고\n정렬했다고 순위가 생기는 것은 아니다.\n\nuseSearchCandidates 는 질의가 바뀌면 다시 부르되 늦게 온 응답을 순번으로 막는다.\n정렬을 빠르게 두 번 바꾸면 먼저 보낸 요청이 나중에 도착해 정렬 표시와 목록이\n어긋난다.\n\n표기 함수의 핵심은 null 을 null 로 돌려주는 것이다. formatPercent·formatWon 은\n값이 없으면 \"0%\" 대신 null 을 주고, 무엇을 보일지는 화면이 사유와 함께 정한다\n(FR-011, 원칙 VI). missingPerformanceReason 은 서버가 준 사유를 먼저 쓴다 —\n유효성 규칙이 돌려준 문장이 화면이 지어낸 문장보다 정확하다.\n\nformatStability 의 '계산 불가' 는 \"안정성이 나쁘다\" 가 아니라 \"이웃이 없어 말할\n수 없다\" 이다(FR-013b). selectionOutcomeText 는 FILTERED_OUT(탈락)과\nNOT_IN_DISPLAY(표시 범위 밖)를 다른 문장으로 옮긴다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:24:20.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:24:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9c72ba6d43a711fd852b2cb7a08554eab2338bbc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,6 +1,9 @@\n import axios from 'axios'\n import { apiClient } from './client'\n import type {\n+  CandidatePage,\n+  CandidateSort,\n+  CandidateStatus,\n   ParamSearchDetail,\n   ParamSearchEnvelope,\n   ParamSearchPreview,\n@@ -174,3 +177,45 @@ export async function getParamSearch(searchId: string): Promise<ParamSearchDetai\n     throw normalizeParamSearchError(error)\n   }\n }\n+\n+/** 후보 목록 질의. 값을 정하지 않은 항목은 보내지 않는다 — 기본값은 서버가 정한다. */\n+export type CandidateQuery = {\n+  page?: number\n+  size?: number\n+  status?: CandidateStatus\n+  selected?: boolean\n+  sort?: CandidateSort\n+  direction?: 'asc' | 'desc'\n+}\n+\n+/**\n+ * 후보 목록. 정렬 기준은 **서버가 허용하는 다섯 가지뿐**이고 그 밖의 값은 400이다.\n+ *\n+ * <p>방향을 생략하면 지표는 내림차순, 순번은 오름차순이다. <b>`asc`·`desc` 외의 방향도 400</b>이라\n+ * 화면이 오타를 기본값으로 접지 않는다 — 접으면 목록이 조용히 뒤집힌다.\n+ *\n+ * <p>정렬은 FR-017이 허용하는 \"한 항목 기준 정렬\"이다. 정렬했다고 순위가 생기는 것은 아니다.\n+ */\n+export async function getParamSearchCandidates(\n+  searchId: string,\n+  query: CandidateQuery = {},\n+): Promise<CandidatePage> {\n+  const params = new URLSearchParams()\n+  if (query.page !== undefined) params.set('page', String(query.page))\n+  if (query.size !== undefined) params.set('size', String(query.size))\n+  if (query.status) params.set('status', query.status)\n+  if (query.selected !== undefined) params.set('selected', String(query.selected))\n+  if (query.sort) {\n+    params.set('sort', query.direction ? `${query.sort},${query.direction}` : query.sort)\n+  }\n+\n+  const search = params.toString()\n+  try {\n+    const response = await apiClient.get<ParamSearchEnvelope<CandidatePage>>(\n+      `${basePath}/${encodeURIComponent(searchId)}/candidates${search ? `?${search}` : ''}`,\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeParamSearchError(error)\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/paramSearch.ts",
+          "old_path": "frontend/src/api/paramSearch.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,193 @@\n+.overlay {\n+  position: fixed;\n+  inset: 0;\n+  z-index: 50;\n+  display: grid;\n+  padding: 20px;\n+  overflow-y: auto;\n+  background: rgb(3 8 5 / 72%);\n+  place-items: center;\n+}\n+\n+.dialog {\n+  display: grid;\n+  gap: 14px;\n+  width: min(100%, 560px);\n+  padding: 22px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 10px;\n+  background: var(--thorp-surface-raised);\n+  box-shadow: var(--thorp-shadow);\n+  color: var(--thorp-foreground);\n+}\n+\n+.header {\n+  display: flex;\n+  align-items: flex-start;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.header h2 {\n+  margin: 0 0 4px;\n+  font-size: 1.02rem;\n+  font-weight: 700;\n+  letter-spacing: -0.02em;\n+}\n+\n+.header p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.75rem;\n+  line-height: 1.55;\n+}\n+\n+.close {\n+  display: grid;\n+  flex: none;\n+  width: 32px;\n+  height: 32px;\n+  place-items: center;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: transparent;\n+  color: var(--thorp-copy);\n+  cursor: pointer;\n+}\n+\n+.close:hover {\n+  border-color: var(--thorp-accent-soft);\n+  color: var(--thorp-foreground);\n+}\n+\n+.close:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.badges {\n+  display: flex;\n+  gap: 6px;\n+  flex-wrap: wrap;\n+}\n+\n+.status,\n+.validation,\n+.retry {\n+  padding: 2px 7px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 3px;\n+  color: var(--thorp-copy);\n+  font-size: 0.63rem;\n+  font-weight: 700;\n+}\n+\n+.validation {\n+  border-color: var(--thorp-warning);\n+  color: var(--thorp-warning);\n+}\n+\n+.rows {\n+  display: grid;\n+  gap: 0;\n+  margin: 0;\n+}\n+\n+.rows div {\n+  display: grid;\n+  grid-template-columns: 128px minmax(0, 1fr);\n+  gap: 12px;\n+  padding: 11px 0;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.rows div:first-child {\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.rows dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+}\n+\n+.rows dd {\n+  display: grid;\n+  gap: 3px;\n+  margin: 0;\n+  font-size: 0.84rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 650;\n+}\n+\n+.absent {\n+  color: var(--thorp-muted);\n+  font-size: 0.76rem;\n+  font-weight: 600;\n+}\n+\n+.rowNote {\n+  color: var(--thorp-muted);\n+  font-size: 0.68rem;\n+  font-weight: 500;\n+}\n+\n+.missing {\n+  margin: 0;\n+  padding: 10px 12px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.reason {\n+  display: grid;\n+  gap: 6px;\n+  padding: 13px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.reason h3 {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.7rem;\n+  font-weight: 650;\n+  letter-spacing: 0.02em;\n+}\n+\n+.outcome {\n+  margin: 0;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.86rem;\n+  font-weight: 700;\n+}\n+\n+.reasonText {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.6;\n+}\n+\n+.runId {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.7rem;\n+}\n+\n+.runId code {\n+  overflow-wrap: anywhere;\n+  color: var(--thorp-copy);\n+  font-family: var(--thorp-font-mono);\n+}\n+\n+@media (max-width: 560px) {\n+  .rows div {\n+    grid-template-columns: minmax(0, 1fr);\n+    gap: 5px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateDetail.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateDetail.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,179 @@\n+import { useEffect, useRef } from 'react'\n+import { X } from 'lucide-react'\n+import type {\n+  ParamSearchConfig,\n+  SearchCandidateItem,\n+  SelectionRule,\n+} from '@/types/paramSearch'\n+import {\n+  candidateStatusText,\n+  describeCandidateSetting,\n+  formatCount,\n+  formatPercent,\n+  formatStability,\n+  formatWon,\n+  missingPerformanceReason,\n+  selectionFilterText,\n+  selectionOutcomeText,\n+  sortMetricText,\n+  validationLabelText,\n+} from '@/utils/paramSearchLabels'\n+import styles from './CandidateDetail.module.css'\n+\n+interface CandidateDetailProps {\n+  candidate: SearchCandidateItem\n+  config: ParamSearchConfig | null\n+  selectionRule: SelectionRule | null\n+  onClose: () => void\n+}\n+\n+/**\n+ * 후보 하나의 상세(FR-018).\n+ *\n+ * <p>첫 화면에 두지 않은 것을 여기 둔다 — <b>인접 설정 안정성·선정 이유·탈락 사유</b>. 첫 화면은\n+ * 세 숫자로 좁히고 판단 근거는 이 층에서 본다.\n+ *\n+ * <p><b>탈락과 \"표시하지 않음\"을 다른 문장으로 적는다.</b> 기준을 통과하고도 표시 범위 밖이었던\n+ * 후보를 \"탈락\"이라 쓰면 사실이 아니다.\n+ *\n+ * <p>안정성 '계산 불가'는 나쁜 값이 아니라 <b>말할 수 없는 값</b>이다 — 0으로 채우지 않는다(FR-013b).\n+ */\n+export function CandidateDetail({\n+  candidate,\n+  config,\n+  selectionRule,\n+  onClose,\n+}: CandidateDetailProps) {\n+  const closeRef = useRef<HTMLButtonElement>(null)\n+  const { strategyName, parameterText } = describeCandidateSetting(candidate, config)\n+  const stability = formatStability(candidate.stability)\n+  const reason = candidate.selectionReason\n+  const netReturn = formatPercent(candidate.netReturn, { sign: true })\n+  const maxDrawdown = formatPercent(candidate.maxDrawdown)\n+  const tradingCost = formatWon(candidate.tradingCost)\n+\n+  useEffect(() => {\n+    const handleEscape = (event: KeyboardEvent) => {\n+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return\n+      event.preventDefault()\n+      onClose()\n+    }\n+\n+    document.addEventListener('keydown', handleEscape)\n+    return () => document.removeEventListener('keydown', handleEscape)\n+  }, [onClose])\n+\n+  useEffect(() => {\n+    closeRef.current?.focus()\n+  }, [])\n+\n+  return (\n+    <div className={styles.overlay}>\n+      <div\n+        className={styles.dialog}\n+        role=\"dialog\"\n+        aria-modal=\"true\"\n+        aria-labelledby=\"candidate-detail-title\"\n+      >\n+        <header className={styles.header}>\n+          <div>\n+            <h2 id=\"candidate-detail-title\">{strategyName}</h2>\n+            <p>{parameterText}</p>\n+          </div>\n+          <button\n+            type=\"button\"\n+            ref={closeRef}\n+            className={styles.close}\n+            onClick={onClose}\n+            aria-label=\"상세 닫기\"\n+          >\n+            <X size={16} aria-hidden=\"true\" />\n+          </button>\n+        </header>\n+\n+        <div className={styles.badges}>\n+          <span className={styles.status}>{candidateStatusText(candidate.status)}</span>\n+          <span className={styles.validation}>\n+            {validationLabelText(candidate.validationLabel)}\n+          </span>\n+          {candidate.retryCount > 0 && (\n+            <span className={styles.retry}>{`재시도 ${formatCount(candidate.retryCount)}회`}</span>\n+          )}\n+        </div>\n+\n+        <dl className={styles.rows}>\n+          <div>\n+            <dt>비용 차감 후 수익</dt>\n+            <dd>{netReturn ?? <span className={styles.absent}>계산하지 않았습니다</span>}</dd>\n+          </div>\n+          <div>\n+            <dt>가장 크게 줄었던 폭</dt>\n+            <dd>{maxDrawdown ?? <span className={styles.absent}>계산하지 않았습니다</span>}</dd>\n+          </div>\n+          <div>\n+            <dt>거래비용</dt>\n+            <dd>{tradingCost ?? <span className={styles.absent}>계산하지 않았습니다</span>}</dd>\n+          </div>\n+          <div>\n+            <dt>인접 설정 안정성</dt>\n+            <dd>\n+              {stability.text ?? <span className={styles.absent}>계산 불가</span>}\n+              <span className={styles.rowNote}>\n+                {stability.text\n+                  ? `${stability.note} · 작을수록 안정입니다`\n+                  : stability.note}\n+              </span>\n+            </dd>\n+          </div>\n+        </dl>\n+\n+        {netReturn === null && maxDrawdown === null && tradingCost === null && (\n+          <p className={styles.missing}>{missingPerformanceReason(candidate)}</p>\n+        )}\n+\n+        <section className={styles.reason} aria-labelledby=\"candidate-reason-title\">\n+          <h3 id=\"candidate-reason-title\">선정 판단</h3>\n+          {reason === null ? (\n+            <p className={styles.reasonText}>아직 선정을 계산하지 않았습니다.</p>\n+          ) : (\n+            <>\n+              <p className={styles.outcome}>{selectionOutcomeText(reason.outcome)}</p>\n+\n+              {reason.failedFilter && (\n+                <p className={styles.reasonText}>\n+                  {`${selectionFilterText(reason.failedFilter)}에서 걸렀습니다.`}\n+                </p>\n+              )}\n+              {reason.message && <p className={styles.reasonText}>{reason.message}</p>}\n+              {reason.code && !reason.message && (\n+                <p className={styles.reasonText}>{reason.code}</p>\n+              )}\n+\n+              {reason.passedFilters && reason.passedFilters.length > 0 && (\n+                <p className={styles.reasonText}>\n+                  {`통과한 기준: ${reason.passedFilters.map(selectionFilterText).join(' · ')}`}\n+                </p>\n+              )}\n+              {reason.passedFilters && reason.passedFilters.length === 0 && (\n+                <p className={styles.reasonText}>통과한 기준이 없습니다.</p>\n+              )}\n+\n+              {reason.tied && (\n+                <p className={styles.reasonText}>\n+                  {`${sortMetricText(selectionRule?.sortMetric ?? 'NET_RETURN')} 값이 같은 후보가 있어 함께 보입니다. 임의로 자르지 않습니다.`}\n+                </p>\n+              )}\n+            </>\n+          )}\n+        </section>\n+\n+        {candidate.backtestId && (\n+          <p className={styles.runId}>\n+            {'실행 식별자 '}\n+            <code>{candidate.backtestId}</code>\n+          </p>\n+        )}\n+      </div>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateDetail.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateDetail.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,169 @@\n+.card {\n+  display: grid;\n+  gap: 12px;\n+  padding: 15px 16px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.header {\n+  display: flex;\n+  align-items: flex-start;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.identity {\n+  display: grid;\n+  min-width: 0;\n+  gap: 3px;\n+}\n+\n+.strategy {\n+  color: var(--thorp-foreground);\n+  font-size: 0.84rem;\n+  font-weight: 700;\n+}\n+\n+.parameters {\n+  color: var(--thorp-copy);\n+  font-size: 0.72rem;\n+  line-height: 1.5;\n+}\n+\n+.validation {\n+  flex: none;\n+  padding: 2px 7px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 3px;\n+  color: var(--thorp-warning);\n+  font-size: 0.62rem;\n+  font-weight: 700;\n+  white-space: nowrap;\n+}\n+\n+.metrics {\n+  display: grid;\n+  grid-template-columns: repeat(3, minmax(0, 1fr));\n+  gap: 1px;\n+  margin: 0;\n+  background: var(--thorp-line);\n+}\n+\n+.metrics div {\n+  display: grid;\n+  gap: 5px;\n+  padding: 10px 12px 10px 0;\n+  background: var(--thorp-surface);\n+}\n+\n+.metrics div:not(:first-child) {\n+  padding-left: 12px;\n+}\n+\n+.metrics dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.66rem;\n+  line-height: 1.35;\n+}\n+\n+.metrics dd {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 1.02rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 700;\n+}\n+\n+.metrics dd[data-tone='positive'] {\n+  color: var(--thorp-positive);\n+}\n+\n+.metrics dd[data-tone='negative'] {\n+  color: var(--thorp-negative);\n+}\n+\n+.absent {\n+  color: var(--thorp-muted);\n+  font-size: 0.76rem;\n+  font-weight: 600;\n+}\n+\n+.missing {\n+  margin: 0;\n+  padding: 10px 12px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 5px;\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.missing strong {\n+  color: var(--thorp-warning);\n+  font-weight: 700;\n+}\n+\n+.actions {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 12px;\n+  flex-wrap: wrap;\n+}\n+\n+.compare {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 7px;\n+}\n+\n+.compare input {\n+  width: 16px;\n+  height: 16px;\n+  accent-color: var(--thorp-accent);\n+}\n+\n+.compare label {\n+  color: var(--thorp-copy);\n+  cursor: pointer;\n+  font-size: 0.74rem;\n+}\n+\n+.compare input:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.detailButton {\n+  min-height: 34px;\n+  padding: 0 13px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+  cursor: pointer;\n+  font-size: 0.74rem;\n+  font-weight: 700;\n+}\n+\n+.detailButton:hover {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.detailButton:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+@media (max-width: 600px) {\n+  .metrics {\n+    grid-template-columns: minmax(0, 1fr);\n+  }\n+\n+  .metrics div:not(:first-child) {\n+    padding-left: 0;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateSummaryCard.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateSummaryCard.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,94 @@\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it, vi } from 'vitest'\n+import {\n+  completedCandidate,\n+  configFixture,\n+  excludedCandidate,\n+} from '@/test/paramSearchFixtures'\n+import { CandidateSummaryCard } from './CandidateSummaryCard'\n+\n+/**\n+ * 계산하지 않은 값을 0으로 채우지 않는다(T086, FR-011, 원칙 VI).\n+ *\n+ * <p><b>\"0%\"는 \"수익이 없었다\"는 주장이다.</b> 제외·실패·미실행 후보에 그것을 쓰면 화면이 하지 않은\n+ * 계산의 결과를 말하게 된다. 그래서 값이 없으면 자리를 비우고 <b>왜 없는지</b>를 적는다.\n+ */\n+describe('CandidateSummaryCard', () => {\n+  it('세 숫자를 응답에서 읽어 보인다', () => {\n+    const { container } = render(\n+      <CandidateSummaryCard candidate={completedCandidate} config={configFixture} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('비용 차감 후 수익')\n+    expect(text).toContain('+30.00%')\n+    expect(text).toContain('가장 크게 줄었던 폭')\n+    expect(text).toContain('-10.00%')\n+    expect(text).toContain('거래비용')\n+    expect(text).toContain('17,078원')\n+  })\n+\n+  it('전략 이름과 축 라벨을 응답에서만 읽는다', () => {\n+    const { container } = render(\n+      <CandidateSummaryCard candidate={completedCandidate} config={configFixture} />,\n+    )\n+\n+    expect(container.textContent).toContain('알파 기울기')\n+    expect(container.textContent).toContain('기울기 관측 창 5거래일')\n+  })\n+\n+  it('config 가 없으면 축 이름을 그대로 쓰고 지어내지 않는다', () => {\n+    const { container } = render(\n+      <CandidateSummaryCard candidate={completedCandidate} config={null} />,\n+    )\n+\n+    expect(container.textContent).toContain('ALPHA_TILT')\n+    expect(container.textContent).toContain('tiltWindow 5')\n+  })\n+\n+  it('계산하지 않은 후보를 0%로 그리지 않고 사유를 적는다', () => {\n+    const { container } = render(\n+      <CandidateSummaryCard candidate={excludedCandidate} config={configFixture} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).not.toContain('0.00%')\n+    expect(text).not.toContain('0원')\n+    expect(text).toContain('계산 전 제외')\n+    expect(text).toContain('관측 창이 자료 구간보다 깁니다.')\n+  })\n+\n+  it('검증 표시를 항상 함께 보인다', () => {\n+    render(<CandidateSummaryCard candidate={completedCandidate} config={configFixture} />)\n+\n+    expect(screen.getByText('미검증')).toBeTruthy()\n+  })\n+\n+  it('결과가 없는 후보는 비교에 담을 수 없다', () => {\n+    render(\n+      <CandidateSummaryCard\n+        candidate={excludedCandidate}\n+        config={configFixture}\n+        compareChecked={false}\n+        onCompareToggle={vi.fn()}\n+      />,\n+    )\n+\n+    const checkbox = screen.getByRole('checkbox') as HTMLInputElement\n+    expect(checkbox.disabled).toBe(true)\n+    expect(screen.getByText('결과가 없어 담을 수 없습니다')).toBeTruthy()\n+  })\n+\n+  it('결과가 있는 후보는 비교에 담을 수 있다', () => {\n+    render(\n+      <CandidateSummaryCard\n+        candidate={completedCandidate}\n+        config={configFixture}\n+        compareChecked={false}\n+        onCompareToggle={vi.fn()}\n+      />,\n+    )\n+\n+    expect((screen.getByRole('checkbox') as HTMLInputElement).disabled).toBe(false)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateSummaryCard.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,124 @@\n+import type { ParamSearchConfig, SearchCandidateItem } from '@/types/paramSearch'\n+import {\n+  candidateStatusText,\n+  describeCandidateSetting,\n+  formatPercent,\n+  formatWon,\n+  missingPerformanceReason,\n+  validationLabelText,\n+} from '@/utils/paramSearchLabels'\n+import styles from './CandidateSummaryCard.module.css'\n+\n+interface CandidateSummaryCardProps {\n+  candidate: SearchCandidateItem\n+  /** 축 라벨·단위·전략 이름을 읽을 곳. 없으면 축 이름을 그대로 쓴다. */\n+  config: ParamSearchConfig | null\n+  /** 상세를 여는 동작. 주면 '상세 보기' 버튼이 생긴다. */\n+  onOpenDetail?: () => void\n+  /** 비교에 담기. 둘 다 주어야 체크 상자가 생긴다. */\n+  compareChecked?: boolean\n+  onCompareToggle?: () => void\n+}\n+\n+/**\n+ * 표시 후보 하나의 첫 화면(FR-018).\n+ *\n+ * <p><b>세 숫자만 먼저 보인다</b> — 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용. 인접 설정\n+ * 안정성·선정 이유·탈락 사유는 상세에 둔다.\n+ *\n+ * <p><b>계산하지 않은 값을 \"0%\"로 그리지 않는다.</b> 값이 없으면 자리를 비우고 <b>왜 없는지</b>를\n+ * 함께 적는다 — 제외·실패·미실행과 \"수익이 0이었다\"는 전혀 다른 사실이다(FR-011, 원칙 VI).\n+ *\n+ * <p>검증 표시를 후보마다 항상 함께 보인다(plan 설계 제약 2, FR-015). 지금은 전부 '미검증'이고\n+ * 그것은 \"통과\"가 아니라 \"말할 수 없음\"이다.\n+ *\n+ * <p>순위 번호·추천 문구·우승 배지를 넣지 않는다(plan 설계 제약 1, 원칙 III).\n+ */\n+export function CandidateSummaryCard({\n+  candidate,\n+  config,\n+  onOpenDetail,\n+  compareChecked,\n+  onCompareToggle,\n+}: CandidateSummaryCardProps) {\n+  const { strategyName, parameterText } = describeCandidateSetting(candidate, config)\n+  const netReturn = formatPercent(candidate.netReturn, { sign: true })\n+  const maxDrawdown = formatPercent(candidate.maxDrawdown)\n+  const tradingCost = formatWon(candidate.tradingCost)\n+  const hasNumbers = netReturn !== null || maxDrawdown !== null || tradingCost !== null\n+  const showCompare = compareChecked !== undefined && onCompareToggle !== undefined\n+  const compareId = `compare-${candidate.candidateId}`\n+  // 결과가 없는 후보를 비교에 담으면 비교 화면이 빈 자리를 그려야 한다. 담기지 않게 막는다.\n+  const comparable = candidate.status === 'COMPLETED'\n+\n+  return (\n+    <article className={styles.card}>\n+      <header className={styles.header}>\n+        <div className={styles.identity}>\n+          <span className={styles.strategy}>{strategyName}</span>\n+          <span className={styles.parameters}>{parameterText}</span>\n+        </div>\n+        <span className={styles.validation}>{validationLabelText(candidate.validationLabel)}</span>\n+      </header>\n+\n+      {hasNumbers ? (\n+        <dl className={styles.metrics}>\n+          <div>\n+            <dt>비용 차감 후 수익</dt>\n+            <dd data-tone={toneOf(candidate.netReturn)}>\n+              {netReturn ?? <span className={styles.absent}>값 없음</span>}\n+            </dd>\n+          </div>\n+          <div>\n+            <dt>가장 크게 줄었던 폭</dt>\n+            <dd data-tone=\"negative\">\n+              {maxDrawdown ?? <span className={styles.absent}>값 없음</span>}\n+            </dd>\n+          </div>\n+          <div>\n+            <dt>거래비용</dt>\n+            <dd>{tradingCost ?? <span className={styles.absent}>값 없음</span>}</dd>\n+          </div>\n+        </dl>\n+      ) : (\n+        // 세 숫자가 모두 없으면 표를 그리지 않는다. 빈 칸 세 개보다 사유 한 줄이 정확하다.\n+        <p className={styles.missing}>\n+          <strong>{candidateStatusText(candidate.status)}</strong>\n+          {` · ${missingPerformanceReason(candidate)}`}\n+        </p>\n+      )}\n+\n+      {(showCompare || onOpenDetail) && (\n+        <footer className={styles.actions}>\n+          {showCompare && (\n+            <span className={styles.compare}>\n+              <input\n+                id={compareId}\n+                type=\"checkbox\"\n+                checked={compareChecked}\n+                onChange={onCompareToggle}\n+                disabled={!comparable}\n+              />\n+              <label htmlFor={compareId}>\n+                {comparable ? '비교에 담기' : '결과가 없어 담을 수 없습니다'}\n+              </label>\n+            </span>\n+          )}\n+          {onOpenDetail && (\n+            <button type=\"button\" className={styles.detailButton} onClick={onOpenDetail}>\n+              상세 보기\n+            </button>\n+          )}\n+        </footer>\n+      )}\n+    </article>\n+  )\n+}\n+\n+/** 색은 보조 수단이다 — 부호가 이미 값에 들어 있다(design-system 2.3). */\n+function toneOf(value: string | null): 'positive' | 'negative' | 'neutral' {\n+  if (value === null) return 'neutral'\n+  const parsed = Number(value)\n+  if (!Number.isFinite(parsed) || parsed === 0) return 'neutral'\n+  return parsed > 0 ? 'positive' : 'negative'\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateSummaryCard.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateSummaryCard.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,242 @@\n+.section {\n+  display: grid;\n+  gap: 12px;\n+  padding-top: 20px;\n+  border-top: 1px solid var(--thorp-line-strong);\n+}\n+\n+.header {\n+  display: flex;\n+  align-items: flex-end;\n+  justify-content: space-between;\n+  gap: 14px;\n+  flex-wrap: wrap;\n+}\n+\n+.header h2 {\n+  margin: 0 0 5px;\n+  color: var(--thorp-foreground);\n+  font-size: 1.02rem;\n+  font-weight: 700;\n+  letter-spacing: -0.02em;\n+}\n+\n+.header p {\n+  max-width: 520px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.filter {\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+}\n+\n+.filter label {\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+}\n+\n+.filter select {\n+  min-height: 34px;\n+  padding: 0 9px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-foreground);\n+  font: inherit;\n+  font-size: 0.74rem;\n+}\n+\n+.filter select:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.tableWrap {\n+  overflow-x: auto;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 6px;\n+}\n+\n+.table {\n+  width: 100%;\n+  min-width: 880px;\n+  border-collapse: collapse;\n+  font-size: 0.74rem;\n+}\n+\n+.table th,\n+.table td {\n+  padding: 9px 11px;\n+  border-bottom: 1px solid var(--thorp-line);\n+  text-align: left;\n+  vertical-align: top;\n+}\n+\n+.table thead th {\n+  background: var(--thorp-surface);\n+  color: var(--thorp-muted);\n+  font-weight: 650;\n+  white-space: nowrap;\n+}\n+\n+.table tbody tr:last-child td {\n+  border-bottom: 0;\n+}\n+\n+.table tbody tr:hover {\n+  background: var(--thorp-surface);\n+}\n+\n+.pickColumn {\n+  width: 36px;\n+}\n+\n+.table input[type='checkbox'] {\n+  width: 15px;\n+  height: 15px;\n+  accent-color: var(--thorp-accent);\n+}\n+\n+.table input[type='checkbox']:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.sortButton {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 5px;\n+  padding: 0;\n+  border: 0;\n+  background: transparent;\n+  color: inherit;\n+  cursor: pointer;\n+  font: inherit;\n+  font-weight: 650;\n+}\n+\n+.sortButton[data-active='true'] {\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.sortButton:hover {\n+  color: var(--thorp-foreground);\n+}\n+\n+.sortButton:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.strategy {\n+  display: block;\n+  color: var(--thorp-foreground);\n+  font-weight: 650;\n+}\n+\n+.parameters {\n+  display: block;\n+  margin-top: 2px;\n+  color: var(--thorp-muted);\n+  font-size: 0.68rem;\n+  line-height: 1.45;\n+}\n+\n+.numeric {\n+  font-variant-numeric: tabular-nums;\n+  white-space: nowrap;\n+}\n+\n+.absent {\n+  color: var(--thorp-muted);\n+  font-size: 0.68rem;\n+  white-space: normal;\n+}\n+\n+.detailButton {\n+  min-height: 28px;\n+  padding: 0 10px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 4px;\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+  cursor: pointer;\n+  font-size: 0.7rem;\n+  font-weight: 700;\n+}\n+\n+.detailButton:hover {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.detailButton:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.pager {\n+  display: flex;\n+  align-items: center;\n+  justify-content: center;\n+  gap: 12px;\n+}\n+\n+.pager button {\n+  min-height: 32px;\n+  padding: 0 12px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+  cursor: pointer;\n+  font-size: 0.73rem;\n+  font-weight: 700;\n+}\n+\n+.pager button:disabled {\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+.pager button:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.pager span {\n+  color: var(--thorp-muted);\n+  font-size: 0.73rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.note {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+}\n+\n+.error {\n+  margin: 0;\n+  padding: 10px 12px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 5px;\n+  color: var(--thorp-negative);\n+  font-size: 0.75rem;\n+}\n+\n+.srOnly {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateTable.module.css",
+          "old_path": "frontend/src/components/paramsearch/CandidateTable.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,148 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import {\n+  completedCandidate,\n+  configFixture,\n+  excludedCandidate,\n+  notInDisplayCandidate,\n+} from '@/test/paramSearchFixtures'\n+import type { CandidatePage } from '@/types/paramSearch'\n+import { CandidateTable } from './CandidateTable'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  getParamSearchCandidates: vi.fn(),\n+}))\n+\n+vi.mock('@/api/paramSearch', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/paramSearch')>('@/api/paramSearch')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+const pageFixture: CandidatePage = {\n+  page: 0,\n+  size: 20,\n+  totalElements: 3,\n+  totalPages: 1,\n+  content: [completedCandidate, excludedCandidate, notInDisplayCandidate],\n+}\n+\n+function lastQuery() {\n+  const calls = apiMocks.getParamSearchCandidates.mock.calls\n+  return calls[calls.length - 1][1]\n+}\n+\n+function renderTable() {\n+  return render(\n+    <CandidateTable\n+      searchId=\"PS-20260914-000001\"\n+      config={configFixture}\n+      onOpenDetail={vi.fn()}\n+      comparePicks={[]}\n+      onCompareToggle={vi.fn()}\n+    />,\n+  )\n+}\n+\n+/**\n+ * 전체 후보 목록과 한 항목 기준 정렬(T085, FR-017·FR-011).\n+ *\n+ * <p><b>정렬은 서버가 한다.</b> 화면에서 다시 정렬하면 지금 페이지에 없는 후보가 빠진 채 정렬돼\n+ * 사실과 어긋난다 — 그래서 정렬을 누르면 질의가 바뀌는지를 본다.\n+ */\n+describe('CandidateTable', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+    apiMocks.getParamSearchCandidates.mockResolvedValue(pageFixture)\n+  })\n+\n+  it('처음에는 순번 오름차순으로 묻는다', async () => {\n+    renderTable()\n+\n+    await waitFor(() => expect(apiMocks.getParamSearchCandidates).toHaveBeenCalled())\n+    expect(lastQuery()).toEqual({\n+      page: 0,\n+      size: 20,\n+      sort: 'candidateNo',\n+      direction: 'asc',\n+    })\n+  })\n+\n+  it('지표 열을 누르면 그 항목 내림차순으로 서버에 다시 묻는다', async () => {\n+    const user = userEvent.setup()\n+    renderTable()\n+    await screen.findByRole('button', { name: /비용 차감 후 수익/ })\n+\n+    await user.click(screen.getByRole('button', { name: /비용 차감 후 수익/ }))\n+\n+    // 지표는 큰 값부터 보는 편이 낫다.\n+    await waitFor(() => expect(lastQuery().sort).toBe('netReturn'))\n+    expect(lastQuery().direction).toBe('desc')\n+\n+    await user.click(screen.getByRole('button', { name: /비용 차감 후 수익/ }))\n+    await waitFor(() => expect(lastQuery().direction).toBe('asc'))\n+  })\n+\n+  it('정렬 상태를 보조기술에 알린다', async () => {\n+    const user = userEvent.setup()\n+    renderTable()\n+    await screen.findByRole('button', { name: /거래비용/ })\n+\n+    await user.click(screen.getByRole('button', { name: /거래비용/ }))\n+\n+    await waitFor(() => {\n+      const header = screen.getByRole('columnheader', { name: /거래비용/ })\n+      expect(header.getAttribute('aria-sort')).toBe('descending')\n+    })\n+  })\n+\n+  it('상태를 고르면 그 상태만 묻는다', async () => {\n+    const user = userEvent.setup()\n+    renderTable()\n+    await screen.findByLabelText('상태')\n+\n+    await user.selectOptions(screen.getByLabelText('상태'), 'FAILED')\n+\n+    await waitFor(() => expect(lastQuery().status).toBe('FAILED'))\n+    expect(lastQuery().page).toBe(0)\n+  })\n+\n+  it('계산하지 않은 후보의 칸을 0으로 채우지 않고 사유를 적는다', async () => {\n+    renderTable()\n+\n+    // 그 후보의 줄만 본다 — 표 전체를 보면 다른 줄의 정상 숫자가 섞인다.\n+    const reason = await screen.findAllByText('관측 창이 자료 구간보다 깁니다.')\n+    const row = reason[0].closest('tr')\n+    const text = row?.textContent ?? ''\n+\n+    expect(text).toContain('계산 전 제외')\n+    // 수익·하락 폭·거래비용 세 칸이 전부 사유로 채워져 있다.\n+    expect(reason.length).toBeGreaterThanOrEqual(3)\n+    expect(text).not.toContain('%')\n+    expect(text).not.toContain('원')\n+  })\n+\n+  it('이웃이 없는 안정성을 나쁜 값으로 그리지 않는다', async () => {\n+    apiMocks.getParamSearchCandidates.mockResolvedValue({\n+      ...pageFixture,\n+      content: [\n+        {\n+          ...completedCandidate,\n+          stability: { calculable: false, value: null, neighborCount: 0 },\n+        },\n+      ],\n+    })\n+    const { container } = renderTable()\n+\n+    await screen.findByText('이웃한 설정이 없어 계산하지 않았습니다')\n+    expect(container.textContent).not.toContain('0.00%p')\n+  })\n+\n+  it('탈락과 표시 범위 밖을 다른 말로 적는다', async () => {\n+    const { container } = renderTable()\n+\n+    await screen.findByText('표시 후보')\n+    expect(container.textContent).toContain('기준은 통과했으나 표시 범위 밖')\n+    expect(container.textContent).toContain('계산 전 제외')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateTable.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateTable.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,272 @@\n+import { useState } from 'react'\n+import { useSearchCandidates } from '@/hooks/useSearchCandidates'\n+import type {\n+  CandidateSort,\n+  CandidateStatus,\n+  ParamSearchConfig,\n+  SearchCandidateItem,\n+} from '@/types/paramSearch'\n+import {\n+  candidateStatusText,\n+  describeCandidateSetting,\n+  formatCount,\n+  formatPercent,\n+  formatStability,\n+  formatWon,\n+  missingPerformanceReason,\n+  selectionOutcomeText,\n+} from '@/utils/paramSearchLabels'\n+import styles from './CandidateTable.module.css'\n+\n+interface CandidateTableProps {\n+  searchId: string\n+  /** 축 라벨·전략 이름을 읽을 곳. */\n+  config: ParamSearchConfig | null\n+  onOpenDetail: (candidate: SearchCandidateItem) => void\n+  comparePicks: string[]\n+  onCompareToggle: (candidate: SearchCandidateItem) => void\n+}\n+\n+/** 정렬할 수 있는 열. 서버가 허용하는 것과 같고, 여기에 없는 열은 정렬 단추를 주지 않는다. */\n+const sortableColumns: { key: CandidateSort; label: string; numeric: boolean }[] = [\n+  { key: 'candidateNo', label: '순번', numeric: true },\n+  { key: 'netReturn', label: '비용 차감 후 수익', numeric: true },\n+  { key: 'maxDrawdown', label: '가장 크게 줄었던 폭', numeric: true },\n+  { key: 'tradingCost', label: '거래비용', numeric: true },\n+  { key: 'stability', label: '인접 설정 안정성', numeric: true },\n+]\n+\n+const statusOptions: { value: '' | CandidateStatus; label: string }[] = [\n+  { value: '', label: '전체' },\n+  { value: 'COMPLETED', label: '완료' },\n+  { value: 'FAILED', label: '실패' },\n+  { value: 'EXCLUDED', label: '계산 전 제외' },\n+  { value: 'SKIPPED', label: '미실행' },\n+  { value: 'PENDING', label: '대기' },\n+  { value: 'DISPATCHED', label: '계산 중' },\n+]\n+\n+const pageSize = 20\n+\n+/**\n+ * 전체 후보 목록(FR-018 상세, FR-017).\n+ *\n+ * <p><b>한 항목 기준 정렬은 FR-017이 허용한다.</b> 다만 정렬은 보기 편하라고 있는 것이고 순위를\n+ * 만들지 않는다 — 그래서 순위 번호 열을 두지 않고, 정렬 기준을 바꿀 수 있다는 사실을 화면에 적는다.\n+ * `순번`은 후보가 만들어진 차례이지 성적이 아니다.\n+ *\n+ * <p>정렬·필터는 서버가 한다. 화면에서 다시 정렬하면 페이지 밖의 후보가 빠진 채 정렬돼 사실과\n+ * 어긋난다.\n+ *\n+ * <p>성과가 없는 후보의 칸은 <b>0이 아니라 사유</b>다(FR-011).\n+ */\n+export function CandidateTable({\n+  searchId,\n+  config,\n+  onOpenDetail,\n+  comparePicks,\n+  onCompareToggle,\n+}: CandidateTableProps) {\n+  const [sort, setSort] = useState<CandidateSort>('candidateNo')\n+  const [direction, setDirection] = useState<'asc' | 'desc'>('asc')\n+  const [status, setStatus] = useState<'' | CandidateStatus>('')\n+  const [page, setPage] = useState(0)\n+\n+  const { page: result, error, isLoading } = useSearchCandidates(searchId, {\n+    page,\n+    size: pageSize,\n+    sort,\n+    direction,\n+    ...(status ? { status } : {}),\n+  })\n+\n+  const changeSort = (key: CandidateSort) => {\n+    if (key === sort) {\n+      setDirection((current) => (current === 'asc' ? 'desc' : 'asc'))\n+    } else {\n+      setSort(key)\n+      // 순번은 만들어진 차례라 오름차순이 자연스럽고, 지표는 큰 값부터 보는 편이 낫다.\n+      setDirection(key === 'candidateNo' ? 'asc' : 'desc')\n+    }\n+    setPage(0)\n+  }\n+\n+  const ariaSortOf = (key: CandidateSort) =>\n+    key === sort ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'\n+\n+  return (\n+    <section className={styles.section} aria-labelledby=\"candidate-table-title\">\n+      <header className={styles.header}>\n+        <div>\n+          <h2 id=\"candidate-table-title\">전체 후보</h2>\n+          <p>\n+            열 제목을 눌러 한 항목 기준으로 정렬할 수 있습니다. 정렬은 보기 순서일 뿐 순위가\n+            아닙니다.\n+          </p>\n+        </div>\n+        <div className={styles.filter}>\n+          <label htmlFor=\"candidate-status\">상태</label>\n+          <select\n+            id=\"candidate-status\"\n+            value={status}\n+            onChange={(event) => {\n+              setStatus(event.target.value as '' | CandidateStatus)\n+              setPage(0)\n+            }}\n+          >\n+            {statusOptions.map((option) => (\n+              <option key={option.value} value={option.value}>\n+                {option.label}\n+              </option>\n+            ))}\n+          </select>\n+        </div>\n+      </header>\n+\n+      {error && (\n+        <p className={styles.error} role=\"alert\">\n+          {error}\n+        </p>\n+      )}\n+\n+      {isLoading && !result && (\n+        <p className={styles.note} role=\"status\">\n+          후보 목록을 불러오는 중입니다.\n+        </p>\n+      )}\n+\n+      {result && result.content.length === 0 && (\n+        <p className={styles.note}>조건에 맞는 후보가 없습니다.</p>\n+      )}\n+\n+      {result && result.content.length > 0 && (\n+        <div className={styles.tableWrap}>\n+          <table className={styles.table}>\n+            <thead>\n+              <tr>\n+                <th scope=\"col\" className={styles.pickColumn}>\n+                  <span className={styles.srOnly}>비교에 담기</span>\n+                </th>\n+                <th scope=\"col\">설정</th>\n+                <th scope=\"col\">상태</th>\n+                {sortableColumns.map((column) => (\n+                  <th key={column.key} scope=\"col\" aria-sort={ariaSortOf(column.key)}>\n+                    <button\n+                      type=\"button\"\n+                      className={styles.sortButton}\n+                      data-active={column.key === sort}\n+                      onClick={() => changeSort(column.key)}\n+                    >\n+                      {column.label}\n+                      <span aria-hidden=\"true\">\n+                        {column.key === sort ? (direction === 'asc' ? '▲' : '▼') : '↕'}\n+                      </span>\n+                      <span className={styles.srOnly}>\n+                        {column.key === sort\n+                          ? direction === 'asc'\n+                            ? ' 오름차순 정렬됨, 눌러서 내림차순'\n+                            : ' 내림차순 정렬됨, 눌러서 오름차순'\n+                          : ' 이 항목으로 정렬'}\n+                      </span>\n+                    </button>\n+                  </th>\n+                ))}\n+                <th scope=\"col\">선정</th>\n+                <th scope=\"col\">\n+                  <span className={styles.srOnly}>상세</span>\n+                </th>\n+              </tr>\n+            </thead>\n+            <tbody>\n+              {result.content.map((candidate) => {\n+                const { strategyName, parameterText } = describeCandidateSetting(\n+                  candidate,\n+                  config,\n+                )\n+                const stability = formatStability(candidate.stability)\n+                const reason = missingPerformanceReason(candidate)\n+                const pickId = `table-compare-${candidate.candidateId}`\n+                const comparable = candidate.status === 'COMPLETED'\n+\n+                return (\n+                  <tr key={candidate.candidateId}>\n+                    <td>\n+                      <input\n+                        id={pickId}\n+                        type=\"checkbox\"\n+                        checked={comparePicks.includes(candidate.candidateId)}\n+                        onChange={() => onCompareToggle(candidate)}\n+                        disabled={!comparable}\n+                      />\n+                      <label htmlFor={pickId} className={styles.srOnly}>\n+                        {comparable\n+                          ? `${strategyName} ${parameterText} 비교에 담기`\n+                          : `${strategyName} ${parameterText} 결과가 없어 비교에 담을 수 없습니다`}\n+                      </label>\n+                    </td>\n+                    <td>\n+                      <span className={styles.strategy}>{strategyName}</span>\n+                      <span className={styles.parameters}>{parameterText}</span>\n+                    </td>\n+                    <td>{candidateStatusText(candidate.status)}</td>\n+                    <td className={styles.numeric}>{formatCount(candidate.candidateNo)}</td>\n+                    <Numeric\n+                      value={formatPercent(candidate.netReturn, { sign: true })}\n+                      reason={reason}\n+                    />\n+                    <Numeric value={formatPercent(candidate.maxDrawdown)} reason={reason} />\n+                    <Numeric value={formatWon(candidate.tradingCost)} reason={reason} />\n+                    <Numeric value={stability.text} reason={stability.note} />\n+                    <td>\n+                      {candidate.selectionReason\n+                        ? selectionOutcomeText(candidate.selectionReason.outcome)\n+                        : '계산 전'}\n+                    </td>\n+                    <td>\n+                      <button\n+                        type=\"button\"\n+                        className={styles.detailButton}\n+                        onClick={() => onOpenDetail(candidate)}\n+                      >\n+                        상세\n+                      </button>\n+                    </td>\n+                  </tr>\n+                )\n+              })}\n+            </tbody>\n+          </table>\n+        </div>\n+      )}\n+\n+      {result && result.totalPages > 1 && (\n+        <nav className={styles.pager} aria-label=\"후보 목록 페이지\">\n+          <button type=\"button\" onClick={() => setPage((n) => n - 1)} disabled={page <= 0}>\n+            이전\n+          </button>\n+          <span>{`${formatCount(result.page + 1)} / ${formatCount(result.totalPages)}`}</span>\n+          <button\n+            type=\"button\"\n+            onClick={() => setPage((n) => n + 1)}\n+            disabled={page >= result.totalPages - 1}\n+          >\n+            다음\n+          </button>\n+        </nav>\n+      )}\n+\n+      {result && (\n+        <p className={styles.note}>{`후보 ${formatCount(result.totalElements)}개`}</p>\n+      )}\n+    </section>\n+  )\n+}\n+\n+/** 숫자 칸. **값이 없으면 0이 아니라 사유를 적는다**(FR-011). */\n+function Numeric({ value, reason }: { value: string | null; reason: string }) {\n+  return (\n+    <td className={styles.numeric}>\n+      {value ?? <span className={styles.absent}>{reason}</span>}\n+    </td>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CandidateTable.tsx",
+          "old_path": "frontend/src/components/paramsearch/CandidateTable.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,145 @@\n+.tray {\n+  display: grid;\n+  gap: 11px;\n+  padding: 16px;\n+  border: 1px solid var(--thorp-accent-muted);\n+  border-left: 2px solid var(--thorp-accent);\n+  border-radius: 6px;\n+  background: var(--thorp-surface-raised);\n+}\n+\n+.header {\n+  display: flex;\n+  align-items: flex-start;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.kind {\n+  display: inline-block;\n+  margin-bottom: 5px;\n+  padding: 2px 7px;\n+  border: 1px solid var(--thorp-accent);\n+  border-radius: 3px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.62rem;\n+  font-weight: 700;\n+  letter-spacing: 0.02em;\n+}\n+\n+.header h2 {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 0.88rem;\n+  font-weight: 700;\n+}\n+\n+.clear {\n+  flex: none;\n+  padding: 4px 0;\n+  border: 0;\n+  background: transparent;\n+  color: var(--thorp-muted);\n+  cursor: pointer;\n+  font-size: 0.72rem;\n+  font-weight: 650;\n+}\n+\n+.clear:hover {\n+  color: var(--thorp-foreground);\n+  text-decoration: underline;\n+}\n+\n+.clear:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.picks {\n+  display: grid;\n+  gap: 5px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.picks li {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 10px;\n+  padding: 7px 9px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+}\n+\n+.pickText {\n+  min-width: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.73rem;\n+  line-height: 1.45;\n+}\n+\n+.pickText strong {\n+  color: var(--thorp-foreground);\n+  font-weight: 650;\n+}\n+\n+.picks li button {\n+  display: grid;\n+  flex: none;\n+  width: 24px;\n+  height: 24px;\n+  place-items: center;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 4px;\n+  background: transparent;\n+  color: var(--thorp-muted);\n+  cursor: pointer;\n+}\n+\n+.picks li button:hover {\n+  border-color: var(--thorp-negative);\n+  color: var(--thorp-negative);\n+}\n+\n+.picks li button:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.note,\n+.blocked {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+  line-height: 1.55;\n+}\n+\n+.blocked {\n+  padding: 9px 11px;\n+  border: 1px dashed var(--thorp-line-strong);\n+  border-radius: 5px;\n+}\n+\n+.open {\n+  display: inline-flex;\n+  min-height: 40px;\n+  width: fit-content;\n+  align-items: center;\n+  gap: 7px;\n+  padding: 0 15px;\n+  border: 1px solid var(--thorp-accent);\n+  border-radius: 5px;\n+  background: var(--thorp-accent);\n+  color: var(--thorp-action-foreground);\n+  cursor: pointer;\n+  font-size: 0.78rem;\n+  font-weight: 700;\n+}\n+\n+.open:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CompareHandoff.module.css",
+          "old_path": "frontend/src/components/paramsearch/CompareHandoff.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,104 @@\n+import { ArrowUpRight, X } from 'lucide-react'\n+import type {\n+  ParamSearchBaseline,\n+  ParamSearchConfig,\n+  SearchCandidateItem,\n+} from '@/types/paramSearch'\n+import { describeCandidateSetting, formatCount } from '@/utils/paramSearchLabels'\n+import styles from './CompareHandoff.module.css'\n+\n+interface CompareHandoffProps {\n+  picks: SearchCandidateItem[]\n+  config: ParamSearchConfig | null\n+  baseline: ParamSearchBaseline | null\n+  onRemove: (candidateId: string) => void\n+  onClear: () => void\n+  /**\n+   * 005 비교 화면으로 넘기는 동작. **없으면 진입 지점만 보이고 눌리지 않는다** —\n+   * 005가 아직 없으므로 지금이 그 상태다.\n+   */\n+  onOpenCompare?: (candidateIds: string[]) => void\n+}\n+\n+/**\n+ * 고른 후보를 [005] 비교 대상으로 넘기는 자리(FR-019).\n+ *\n+ * <p><b>'자동 탐색 후보 비교'임을 기본 설정 비교와 구분해 표시한다.</b> 둘을 같은 화면 이름으로\n+ * 보이면 사용자가 \"내가 고른 설정끼리의 비교\"와 \"탐색이 고른 설정과의 비교\"를 섞는다.\n+ *\n+ * <p>비교 기준은 바꾸지 않는다 — 사용자 고정 비중과 동일 비중 기준을 그대로 둔다. 탐색이 고른\n+ * 후보가 기준 자리에 들어가면 비교가 자기 자신을 기준으로 삼게 된다.\n+ *\n+ * <p>005가 붙기 전까지는 <b>진입 지점과 표시만</b> 만든다. 눌리지 않는 버튼을 이유 없이 두지 않고\n+ * 무엇이 없어서 막혔는지 적는다.\n+ */\n+export function CompareHandoff({\n+  picks,\n+  config,\n+  baseline,\n+  onRemove,\n+  onClear,\n+  onOpenCompare,\n+}: CompareHandoffProps) {\n+  if (picks.length === 0) return null\n+\n+  const baselineName = baseline?.strategyName ?? baseline?.strategyId ?? null\n+\n+  return (\n+    <aside className={styles.tray} aria-labelledby=\"compare-handoff-title\">\n+      <header className={styles.header}>\n+        <div>\n+          <span className={styles.kind}>자동 탐색 후보 비교</span>\n+          <h2 id=\"compare-handoff-title\">\n+            {`비교에 담은 설정 ${formatCount(picks.length)}개`}\n+          </h2>\n+        </div>\n+        <button type=\"button\" className={styles.clear} onClick={onClear}>\n+          모두 비우기\n+        </button>\n+      </header>\n+\n+      <ul className={styles.picks}>\n+        {picks.map((candidate) => {\n+          const { strategyName, parameterText } = describeCandidateSetting(candidate, config)\n+          return (\n+            <li key={candidate.candidateId}>\n+              <span className={styles.pickText}>\n+                <strong>{strategyName}</strong>\n+                {` · ${parameterText}`}\n+              </span>\n+              <button\n+                type=\"button\"\n+                onClick={() => onRemove(candidate.candidateId)}\n+                aria-label={`${strategyName} ${parameterText} 비교에서 빼기`}\n+              >\n+                <X size={13} aria-hidden=\"true\" />\n+              </button>\n+            </li>\n+          )\n+        })}\n+      </ul>\n+\n+      <p className={styles.note}>\n+        {baselineName\n+          ? `비교 기준은 ${baselineName}과 사용자 고정 비중을 그대로 씁니다. 탐색이 고른 후보를 기준으로 바꾸지 않습니다.`\n+          : '비교 기준은 사용자 고정 비중과 동일 비중을 그대로 씁니다.'}\n+      </p>\n+\n+      {onOpenCompare ? (\n+        <button\n+          type=\"button\"\n+          className={styles.open}\n+          onClick={() => onOpenCompare(picks.map((candidate) => candidate.candidateId))}\n+        >\n+          비교 화면에서 보기\n+          <ArrowUpRight size={15} aria-hidden=\"true\" />\n+        </button>\n+      ) : (\n+        <p className={styles.blocked}>\n+          비교 화면이 아직 없어 넘기지 못합니다. 담은 설정은 이 화면에서 그대로 유지됩니다.\n+        </p>\n+      )}\n+    </aside>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/CompareHandoff.tsx",
+          "old_path": "frontend/src/components/paramsearch/CompareHandoff.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,67 @@\n+.section {\n+  display: grid;\n+  gap: 14px;\n+  padding-top: 20px;\n+  border-top: 1px solid var(--thorp-line-strong);\n+}\n+\n+.header {\n+  display: grid;\n+  gap: 6px;\n+}\n+\n+.header h2 {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 1.05rem;\n+  font-weight: 700;\n+  letter-spacing: -0.02em;\n+}\n+\n+.header p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.76rem;\n+  line-height: 1.6;\n+}\n+\n+.notes {\n+  display: grid;\n+  gap: 6px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.notes li {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 7px;\n+  color: var(--thorp-muted);\n+  font-size: 0.73rem;\n+  line-height: 1.55;\n+}\n+\n+.notes svg {\n+  flex: none;\n+  margin-top: 3px;\n+}\n+\n+.cards {\n+  display: grid;\n+  gap: 10px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.empty {\n+  margin: 0;\n+  padding: 14px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.6;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/SelectionResult.module.css",
+          "old_path": "frontend/src/components/paramsearch/SelectionResult.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,181 @@\n+import { readFileSync } from 'node:fs'\n+import { render, screen } from '@testing-library/react'\n+import { describe, expect, it, vi } from 'vitest'\n+import {\n+  baselineFixture,\n+  completedCandidate,\n+  configFixture,\n+  noNeighborCandidate,\n+  selectionFixture,\n+} from '@/test/paramSearchFixtures'\n+import { SelectionResult } from './SelectionResult'\n+\n+/** 결과를 그리는 007 화면 코드. 여기에 순위·추천 표현이 들어가면 안 된다. */\n+const resultSources = [\n+  'src/components/paramsearch/SelectionResult.tsx',\n+  'src/components/paramsearch/CandidateSummaryCard.tsx',\n+  'src/components/paramsearch/CandidateDetail.tsx',\n+  'src/components/paramsearch/CandidateTable.tsx',\n+  'src/components/paramsearch/CompareHandoff.tsx',\n+  'src/utils/paramSearchLabels.ts',\n+]\n+\n+/**\n+ * 쓰는 순간 순위·추천이 되는 낱말. **\"순위\"는 여기 없다** — 우리 화면은 \"순위가 아닙니다\"라고\n+ * 말해야 해서 그 낱말 자체는 나타난다. 대신 아래 `순위`는 부정문일 때만 허용한다고 따로 본다.\n+ */\n+const rankingWords = [\n+  '1위',\n+  '2위',\n+  '3위',\n+  '랭킹',\n+  '추천',\n+  '최적',\n+  '최고',\n+  '우승',\n+  '베스트',\n+  'Best',\n+  'TOP',\n+]\n+\n+/**\n+ * \"순위\"가 부정 없이 쓰였는가. 부정문이면 제약을 어기는 것이 아니라 밝히는 것이다.\n+ *\n+ * `아니`와 `아닙`을 모두 본다 — 한글은 음절 단위라 \"아닙니다\"에 \"아니\"가 들어 있지 않다.\n+ * 창을 넉넉히 잡는 것은 소스에서 줄바꿈이 사이에 끼기 때문이다.\n+ */\n+function rankingClaimedAsFact(text: string): string[] {\n+  return [...text.matchAll(/순위/g)]\n+    .map((match) => text.slice(match.index, match.index + 30))\n+    .filter((window) => !/순위\\s*(가|는|를|도)?\\s*(아니|아닙)/.test(window))\n+}\n+\n+/**\n+ * 주석을 걷어낸 소스. 왜 순위를 만들지 않는지 적은 주석까지 위반으로 세면 설명을 지우게 된다 —\n+ * 지켜야 할 것은 <b>화면에 닿는 문자열</b>이다.\n+ *\n+ * <p><b>정규식이라 완전하지 않다.</b> 두 방향으로 틀릴 수 있고, 값은 서로 다르다.\n+ *\n+ * <ul>\n+ *   <li>과탐: 줄 끝에 붙인 주석(`const x = 1 // 추천`)은 걷히지 않아 위반으로 잡힌다. 안전한\n+ *       방향이다 — 주석 한 줄을 고쳐 쓰면 끝난다.\n+ *   <li>미탐: 문자열 리터럴 안에 `/*`가 있으면 블록 주석으로 보고 다음 `*` `/`까지 먹는다. 그\n+ *       구간의 위반을 놓친다. <b>이쪽이 위험하다.</b>\n+ * </ul>\n+ *\n+ * <p>그래서 미탐을 canary로 막는다 — 걷어낸 뒤에도 `export`가 남아 있어야 한다. 정규식이 폭주해\n+ * 코드를 통째로 먹었다면 그것이 사라진다. 완전한 해법은 AST 파싱이고, 검사 하나를 위해 파서를\n+ * 들이는 것이 맞다고 판단되면 그때 바꾼다.\n+ */\n+function withoutComments(source: string): string {\n+  return source.replace(/\\/\\*[\\s\\S]*?\\*\\//g, '').replace(/^\\s*\\/\\/.*$/gm, '')\n+}\n+\n+function renderResult(overrides: Partial<Parameters<typeof SelectionResult>[0]> = {}) {\n+  return render(\n+    <SelectionResult\n+      selection={selectionFixture}\n+      selectionRule={configFixture.selectionRule}\n+      baseline={baselineFixture}\n+      config={configFixture}\n+      candidates={[completedCandidate, noNeighborCandidate]}\n+      onOpenDetail={vi.fn()}\n+      comparePicks={[]}\n+      onCompareToggle={vi.fn()}\n+      {...overrides}\n+    />,\n+  )\n+}\n+\n+/**\n+ * 표시 후보는 순위표가 아니다(T088, SC-006, 원칙 III).\n+ *\n+ * <p>선정이 \"필터를 통과한 후보를 비용 차감 후 수익으로 정렬한 상위 5개\"라서 <b>UI에서 순위로\n+ * 읽히기 쉽다</b>. plan의 설계 제약은 그 위험 때문에 붙은 것이고, 이 테스트가 그 제약을 지킨다.\n+ *\n+ * <p>화면 문구만 보지 않고 <b>소스도 읽는다</b> — 조건부로만 나타나는 배지는 렌더 테스트를\n+ * 빠져나간다.\n+ */\n+describe('SelectionResult', () => {\n+  it('순위 번호·추천·우승 표현이 0건이다', () => {\n+    const { container } = renderResult()\n+    const text = container.textContent ?? ''\n+\n+    for (const word of rankingWords) {\n+      expect(text, `\"${word}\" 는 순위·추천으로 읽힌다`).not.toContain(word)\n+    }\n+    expect(rankingClaimedAsFact(text), '\"순위\"는 부정문에서만 쓴다').toEqual([])\n+  })\n+\n+  it('번호가 붙는 목록으로 그리지 않는다', () => {\n+    const { container } = renderResult()\n+\n+    // ol 은 번호를 만든다. 번호가 생기는 순간 1위가 생긴다.\n+    expect(container.querySelectorAll('ol')).toHaveLength(0)\n+    expect(container.querySelectorAll('ul').length).toBeGreaterThan(0)\n+  })\n+\n+  it('무엇으로 정렬했는지 이름으로 밝힌다', () => {\n+    const { container } = renderResult()\n+\n+    expect(container.textContent).toContain('비용 차감 후 수익 기준으로 정렬한 집합입니다')\n+  })\n+\n+  it('충족 후보가 모자라면 그대로 적고 기준을 낮추지 않는다고 말한다', () => {\n+    const { container } = renderResult()\n+\n+    expect(container.textContent).toContain('기준을 충족한 후보가 2개입니다')\n+    expect(container.textContent).toContain('기준을 낮춰 개수를 채우지 않습니다')\n+  })\n+\n+  it('손실 제약을 걸지 않았으면 그 사실을 적는다', () => {\n+    const { container } = renderResult()\n+\n+    expect(container.textContent).toContain('손실 제약은 걸지 않았습니다')\n+  })\n+\n+  it('손실 제약을 걸었으면 무엇을 기준으로 삼았는지 적는다', () => {\n+    const { container } = renderResult({\n+      selection: { ...selectionFixture, drawdownFilterApplied: true },\n+    })\n+\n+    expect(container.textContent).toContain('손실 제약 기준은 캐리 순환입니다')\n+    expect(container.textContent).toContain('-20.00%')\n+  })\n+\n+  it('후보마다 검증 표시를 함께 보인다', () => {\n+    renderResult()\n+\n+    expect(screen.getAllByText('미검증')).toHaveLength(2)\n+  })\n+\n+  it('충족한 후보가 없으면 빈 목록 대신 기준을 낮추지 않는다고 말한다', () => {\n+    const { container } = renderResult({\n+      selection: { ...selectionFixture, displayed: [], note: null },\n+      candidates: [],\n+    })\n+\n+    expect(container.textContent).toContain('기준을 충족한 설정이 없습니다')\n+    expect(container.textContent).toContain('기준을 낮춰 채우지 않으므로')\n+  })\n+\n+  it('결과 화면 코드 어디에도 순위·추천 낱말이 없다', () => {\n+    const violations: string[] = []\n+\n+    for (const source of resultSources) {\n+      const content = withoutComments(readFileSync(source, 'utf-8'))\n+\n+      // 주석 제거가 코드까지 먹었는지 본다. 먹었다면 아래 검사가 조용히 통과해 버린다.\n+      expect(content, `${source} 의 주석 제거가 코드를 먹었다`).toContain('export')\n+\n+      for (const word of rankingWords) {\n+        if (content.includes(word)) violations.push(`${source} → ${word}`)\n+      }\n+      for (const claim of rankingClaimedAsFact(content)) {\n+        violations.push(`${source} → ${claim}`)\n+      }\n+    }\n+\n+    expect(violations).toEqual([])\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/SelectionResult.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/SelectionResult.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,106 @@\n+import { Info } from 'lucide-react'\n+import { CandidateSummaryCard } from './CandidateSummaryCard'\n+import type {\n+  ParamSearchBaseline,\n+  ParamSearchConfig,\n+  ParamSearchSelection,\n+  SearchCandidateItem,\n+  SelectionRule,\n+} from '@/types/paramSearch'\n+import { formatCount, formatPercent, sortMetricText } from '@/utils/paramSearchLabels'\n+import styles from './SelectionResult.module.css'\n+\n+interface SelectionResultProps {\n+  selection: ParamSearchSelection\n+  selectionRule: SelectionRule | null\n+  baseline: ParamSearchBaseline | null\n+  config: ParamSearchConfig | null\n+  /** `selection.displayed`에 든 후보들. 서버가 준 순서를 그대로 쓴다. */\n+  candidates: SearchCandidateItem[]\n+  onOpenDetail: (candidate: SearchCandidateItem) => void\n+  comparePicks: string[]\n+  onCompareToggle: (candidate: SearchCandidateItem) => void\n+}\n+\n+/**\n+ * 표시 후보 집합(FR-018, SC-006).\n+ *\n+ * <p><b>이것은 순위표가 아니다.</b> 순위 번호·추천 문구·우승 배지를 넣지 않고, 대신 <b>무엇으로\n+ * 정렬했는지</b>를 밝힌다(plan 설계 제약 1·3, 원칙 III). 목록을 `ol`이 아니라 `ul`로 두는 것도\n+ * 같은 이유다 — 번호가 붙는 순간 \"1위\"가 생긴다.\n+ *\n+ * <p>충족한 후보가 표시 개수에 못 미치면 <b>그대로 적고 문턱을 낮춰 채우지 않는다</b>(원칙 VII).\n+ * 손실 제약을 걸지 않았으면 그 사실도 적는다 — 걸지 않은 필터를 통과했다고 보이면 안 된다(FR-013d).\n+ */\n+export function SelectionResult({\n+  selection,\n+  selectionRule,\n+  baseline,\n+  config,\n+  candidates,\n+  onOpenDetail,\n+  comparePicks,\n+  onCompareToggle,\n+}: SelectionResultProps) {\n+  const metric = sortMetricText(selectionRule?.sortMetric ?? 'NET_RETURN')\n+\n+  return (\n+    <section className={styles.section} aria-labelledby=\"selection-title\">\n+      <header className={styles.header}>\n+        <h2 id=\"selection-title\">기준을 충족한 설정</h2>\n+        <p>\n+          {`${metric} 기준으로 정렬한 집합입니다. 순위가 아닙니다.`}\n+          {selectionRule?.displayCount\n+            ? ` 최대 ${formatCount(selectionRule.displayCount)}개까지 보입니다.`\n+            : null}\n+        </p>\n+      </header>\n+\n+      <ul className={styles.notes}>\n+        {selection.shortOfDisplayCount && selection.note && (\n+          <li>\n+            <Info size={14} aria-hidden=\"true\" />\n+            {`${selection.note}. 기준을 낮춰 개수를 채우지 않습니다.`}\n+          </li>\n+        )}\n+        {!selection.drawdownFilterApplied && (\n+          <li>\n+            <Info size={14} aria-hidden=\"true\" />\n+            손실 제약은 걸지 않았습니다. 기준 전략이 지정되지 않았거나 기준 실행이 끝나지\n+            않았습니다.\n+          </li>\n+        )}\n+        {selection.drawdownFilterApplied && baseline && (\n+          <li>\n+            <Info size={14} aria-hidden=\"true\" />\n+            {`손실 제약 기준은 ${baseline.strategyName ?? baseline.strategyId}입니다`}\n+            {baseline.maxDrawdown\n+              ? ` (가장 크게 줄었던 폭 ${formatPercent(baseline.maxDrawdown)}).`\n+              : ' (기준 실행의 값이 아직 없습니다).'}\n+          </li>\n+        )}\n+      </ul>\n+\n+      {candidates.length === 0 ? (\n+        <p className={styles.empty}>\n+          기준을 충족한 설정이 없습니다. 기준을 낮춰 채우지 않으므로 범위를 바꿔 다시 실행해\n+          주세요.\n+        </p>\n+      ) : (\n+        <ul className={styles.cards}>\n+          {candidates.map((candidate) => (\n+            <li key={candidate.candidateId}>\n+              <CandidateSummaryCard\n+                candidate={candidate}\n+                config={config}\n+                onOpenDetail={() => onOpenDetail(candidate)}\n+                compareChecked={comparePicks.includes(candidate.candidateId)}\n+                onCompareToggle={() => onCompareToggle(candidate)}\n+              />\n+            </li>\n+          ))}\n+        </ul>\n+      )}\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/SelectionResult.tsx",
+          "old_path": "frontend/src/components/paramsearch/SelectionResult.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,84 @@\n+import { useCallback, useEffect, useRef, useState } from 'react'\n+import { ParamSearchError, getParamSearchCandidates } from '@/api/paramSearch'\n+import type { CandidateQuery } from '@/api/paramSearch'\n+import type { CandidatePage } from '@/types/paramSearch'\n+\n+export type SearchCandidatesState = {\n+  page: CandidatePage | null\n+  error: string | null\n+  isLoading: boolean\n+  refetch: () => void\n+}\n+\n+/**\n+ * 후보 목록 조회(`GET /param-searches/{searchId}/candidates`).\n+ *\n+ * <p>질의가 바뀌면 다시 부른다. <b>늦게 온 응답이 최신 것을 덮지 않도록</b> 순번으로 막는다 —\n+ * 정렬을 빠르게 두 번 바꾸면 먼저 보낸 요청이 나중에 도착할 수 있고, 그러면 화면의 정렬 표시와\n+ * 실제 목록이 어긋난다.\n+ *\n+ * <p>질의 객체는 매 렌더마다 새로 만들어져도 된다 — <b>객체가 아니라 그 안의 값들을 의존성으로\n+ * 본다.</b> 직렬화한 문자열을 쓰면 호출부가 키를 적은 순서까지 의존성이 되어, 같은 질의인데도\n+ * 키 순서가 다르면 다시 부른다.\n+ */\n+export function useSearchCandidates(\n+  searchId: string | null,\n+  query: CandidateQuery = {},\n+): SearchCandidatesState {\n+  const [page, setPage] = useState<CandidatePage | null>(null)\n+  const [error, setError] = useState<string | null>(null)\n+  const [isLoading, setIsLoading] = useState(false)\n+  const [reloadToken, setReloadToken] = useState(0)\n+  const requestSeq = useRef(0)\n+\n+  // 질의를 원시값으로 풀어 둔다. 이것들이 곧 의존성이다.\n+  const { page: queryPage, size, status, selected, sort, direction } = query\n+\n+  const refetch = useCallback(() => {\n+    setReloadToken((current) => current + 1)\n+  }, [])\n+\n+  useEffect(() => {\n+    if (!searchId) {\n+      setPage(null)\n+      setError(null)\n+      setIsLoading(false)\n+      return\n+    }\n+\n+    const seq = ++requestSeq.current\n+    let active = true\n+    setIsLoading(true)\n+\n+    getParamSearchCandidates(searchId, {\n+      page: queryPage,\n+      size,\n+      status,\n+      selected,\n+      sort,\n+      direction,\n+    })\n+      .then((next) => {\n+        if (!active || seq !== requestSeq.current) return\n+        setPage(next)\n+        setError(null)\n+      })\n+      .catch((caught: unknown) => {\n+        if (!active || seq !== requestSeq.current) return\n+        setError(\n+          caught instanceof ParamSearchError\n+            ? caught.message\n+            : '후보 목록을 불러오지 못했습니다.',\n+        )\n+      })\n+      .finally(() => {\n+        if (active && seq === requestSeq.current) setIsLoading(false)\n+      })\n+\n+    return () => {\n+      active = false\n+    }\n+  }, [searchId, queryPage, size, status, selected, sort, direction, reloadToken])\n+\n+  return { page, error, isLoading, refetch }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useSearchCandidates.ts",
+          "old_path": "frontend/src/hooks/useSearchCandidates.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -233,20 +233,6 @@\n   font-weight: 700;\n }\n \n-.selection {\n-  display: grid;\n-  gap: 6px;\n-  padding: 12px;\n-  border: 1px solid var(--thorp-line-strong);\n-  border-radius: 5px;\n-  background: var(--thorp-surface);\n-  font-size: 0.78rem;\n-}\n-\n-.selection p {\n-  margin: 0;\n-}\n-\n .note {\n   margin: 0;\n   color: var(--thorp-muted);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.module.css",
+          "old_path": "frontend/src/pages/ParamSearchPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,13 +4,19 @@ import { Link, useSearchParams } from 'react-router-dom'\n import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'\n import { useAuth } from '@/auth/auth-context'\n import { AppHeader } from '@/components/navigation/AppHeader'\n+import { CandidateDetail } from '@/components/paramsearch/CandidateDetail'\n+import { CandidateTable } from '@/components/paramsearch/CandidateTable'\n+import { CompareHandoff } from '@/components/paramsearch/CompareHandoff'\n import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'\n import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'\n+import { SelectionResult } from '@/components/paramsearch/SelectionResult'\n import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'\n import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'\n+import { useSearchCandidates } from '@/hooks/useSearchCandidates'\n import type {\n   ParamSearchPreview,\n   ParamSearchRequest,\n+  SearchCandidateItem,\n   SearchSpaceSelection,\n   StrategySpaceSummary,\n } from '@/types/paramSearch'\n@@ -236,6 +242,40 @@ export function ParamSearchPage() {\n   const detail = status.detail\n   const selection = detail?.selection ?? null\n \n+  // 상세와 비교 담기는 후보 객체를 그대로 들고 있는다 — 목록이 다시 불릴 때마다 id 로 되찾지 않아도 된다.\n+  const [detailCandidate, setDetailCandidate] = useState<SearchCandidateItem | null>(null)\n+  const [comparePicks, setComparePicks] = useState<SearchCandidateItem[]>([])\n+\n+  const toggleComparePick = useCallback((candidate: SearchCandidateItem) => {\n+    setComparePicks((current) =>\n+      current.some((item) => item.candidateId === candidate.candidateId)\n+        ? current.filter((item) => item.candidateId !== candidate.candidateId)\n+        : [...current, candidate],\n+    )\n+  }, [])\n+\n+  const removeComparePick = useCallback((candidateId: string) => {\n+    setComparePicks((current) => current.filter((item) => item.candidateId !== candidateId))\n+  }, [])\n+\n+  // 표시 후보만 따로 받는다. selection.displayed 의 순서가 정렬 지표 순서라 그대로 맞춘다.\n+  const displayedQuery = useSearchCandidates(selection ? searchId : null, {\n+    selected: true,\n+    size: 200,\n+  })\n+\n+  const displayedCandidates = useMemo(() => {\n+    if (!selection || !displayedQuery.page) return []\n+    const byId = new Map(\n+      displayedQuery.page.content.map((candidate) => [candidate.candidateId, candidate]),\n+    )\n+    return selection.displayed\n+      .map((candidateId) => byId.get(candidateId))\n+      .filter((candidate): candidate is SearchCandidateItem => candidate !== undefined)\n+  }, [selection, displayedQuery.page])\n+\n+  const comparePickIds = comparePicks.map((candidate) => candidate.candidateId)\n+\n   return (\n     <div className={styles.page}>\n       <AppHeader />\n@@ -344,27 +384,48 @@ export function ParamSearchPage() {\n                       <p className={styles.note}>{detail.partialNote}</p>\n                     )}\n \n-                    {selection && (\n-                      <div className={styles.selection}>\n-                        <p>\n-                          {`기준을 충족한 후보 ${formatCount(selection.displayed.length)}개`}\n-                          {detail.config?.selectionRule\n-                            ? ` · 정렬 지표 ${detail.config.selectionRule.sortMetric}`\n-                            : null}\n-                        </p>\n-                        {selection.note && <p className={styles.note}>{selection.note}</p>}\n-                        {!selection.drawdownFilterApplied && (\n-                          <p className={styles.note}>\n-                            손실 제약을 걸지 않았습니다. 기준 전략이 지정되지 않았거나 기준 실행이\n-                            끝나지 않았습니다.\n-                          </p>\n-                        )}\n-                      </div>\n-                    )}\n                   </>\n                 )}\n               </section>\n-            ) : (\n+            ) : null}\n+\n+            {searchId && detail && selection && (\n+              <>\n+                {displayedQuery.error && (\n+                  <p className={styles.error} role=\"alert\">\n+                    {displayedQuery.error}\n+                  </p>\n+                )}\n+                <SelectionResult\n+                  selection={selection}\n+                  selectionRule={detail.config?.selectionRule ?? null}\n+                  baseline={detail.baseline}\n+                  config={detail.config}\n+                  candidates={displayedCandidates}\n+                  onOpenDetail={setDetailCandidate}\n+                  comparePicks={comparePickIds}\n+                  onCompareToggle={toggleComparePick}\n+                />\n+\n+                <CompareHandoff\n+                  picks={comparePicks}\n+                  config={detail.config}\n+                  baseline={detail.baseline}\n+                  onRemove={removeComparePick}\n+                  onClear={() => setComparePicks([])}\n+                />\n+\n+                <CandidateTable\n+                  searchId={searchId}\n+                  config={detail.config}\n+                  onOpenDetail={setDetailCandidate}\n+                  comparePicks={comparePickIds}\n+                  onCompareToggle={toggleComparePick}\n+                />\n+              </>\n+            )}\n+\n+            {searchId ? null : (\n               <>\n                 {previewLoading && !preview && (\n                   <p className={styles.note} role=\"status\">\n@@ -419,6 +480,15 @@ export function ParamSearchPage() {\n         )}\n       </main>\n \n+      {detailCandidate && detail && (\n+        <CandidateDetail\n+          candidate={detailCandidate}\n+          config={detail.config}\n+          selectionRule={detail.config?.selectionRule ?? null}\n+          onClose={() => setDetailCandidate(null)}\n+        />\n+      )}\n+\n       {conflictBase && (\n         <RegistryChangedDialog\n           open\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "old_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,11 @@\n-import type { ParamSearchDetail, ParamSearchPreview } from '@/types/paramSearch'\n+import type {\n+  ParamSearchBaseline,\n+  ParamSearchConfig,\n+  ParamSearchDetail,\n+  ParamSearchPreview,\n+  ParamSearchSelection,\n+  SearchCandidateItem,\n+} from '@/types/paramSearch'\n \n /**\n  * 007 화면 테스트용 응답 픽스처.\n@@ -99,3 +106,111 @@ export const acceptedFixture: ParamSearchDetail = {\n   startedAt: null,\n   finishedAt: null,\n }\n+\n+/** 상태 응답의 config. 축 라벨·전략 이름을 여기서 읽는다 — 화면이 갖고 있지 않다. */\n+export const configFixture: ParamSearchConfig = {\n+  strategyIds: ['ALPHA_TILT'],\n+  instrumentIds: ['TEST.XKRX'],\n+  registryVersion: 'TEST-REGISTRY-1',\n+  searchMethod: 'FULL_GRID',\n+  randomSeed: null,\n+  space: {\n+    ALPHA_TILT: {\n+      strategyName: '알파 기울기',\n+      axes: [\n+        { name: 'tiltWindow', label: '기울기 관측 창', unit: '거래일', values: [5, 10, 20] },\n+      ],\n+    },\n+  },\n+  selectionRule: {\n+    drawdownFilter: { type: 'NOT_WORSE_THAN_BASELINE', baseline: 'CARRY_ROTATION' },\n+    stabilityFilter: { type: 'BATCH_PERCENTILE', keepTopPercent: 50 },\n+    sortMetric: 'NET_RETURN',\n+    displayCount: 5,\n+    tieHandling: 'SHOW_ALL_TIED',\n+    provisional: ['displayCount'],\n+  },\n+  limits: null,\n+  referenceVersions: null,\n+  dataVersionChanged: false,\n+}\n+\n+/** 결과가 있는 후보. 세 숫자가 모두 채워져 있다. */\n+export const completedCandidate: SearchCandidateItem = {\n+  candidateId: 'PS-20260914-000001-C001',\n+  candidateNo: 1,\n+  strategyId: 'ALPHA_TILT',\n+  parameters: { tiltWindow: 5 },\n+  status: 'COMPLETED',\n+  backtestId: 'BT-20260914-000001',\n+  netReturn: '0.300000',\n+  maxDrawdown: '-0.100000',\n+  tradingCost: '17078.49',\n+  stability: { calculable: true, value: '0.05000000', neighborCount: 1 },\n+  retryCount: 0,\n+  validationLabel: 'UNVALIDATED',\n+  selected: true,\n+  selectionReason: { outcome: 'SELECTED', tied: false, passedFilters: ['DRAWDOWN', 'STABILITY'] },\n+}\n+\n+/** 이웃이 없어 안정성을 말할 수 없는 후보. **나쁜 값이 아니라 없는 값이다.** */\n+export const noNeighborCandidate: SearchCandidateItem = {\n+  ...completedCandidate,\n+  candidateId: 'PS-20260914-000001-C002',\n+  candidateNo: 2,\n+  parameters: { tiltWindow: 10 },\n+  netReturn: '0.200000',\n+  stability: { calculable: false, value: null, neighborCount: 0 },\n+  selectionReason: { outcome: 'SELECTED', tied: false, passedFilters: ['STABILITY'] },\n+}\n+\n+/** 계산 전에 제외된 후보. 성과가 전부 null 이고 **0이 아니다**(FR-011). */\n+export const excludedCandidate: SearchCandidateItem = {\n+  candidateId: 'PS-20260914-000001-C003',\n+  candidateNo: 3,\n+  strategyId: 'ALPHA_TILT',\n+  parameters: { tiltWindow: 20 },\n+  status: 'EXCLUDED',\n+  backtestId: null,\n+  netReturn: null,\n+  maxDrawdown: null,\n+  tradingCost: null,\n+  stability: null,\n+  retryCount: 0,\n+  validationLabel: 'UNVALIDATED',\n+  selected: false,\n+  selectionReason: {\n+    outcome: 'EXCLUDED_BEFORE_RUN',\n+    code: 'WINDOW_TOO_SHORT',\n+    message: '관측 창이 자료 구간보다 깁니다.',\n+  },\n+}\n+\n+/** 기준을 통과했으나 표시 범위 밖인 후보. **탈락이 아니다.** */\n+export const notInDisplayCandidate: SearchCandidateItem = {\n+  ...completedCandidate,\n+  candidateId: 'PS-20260914-000001-C004',\n+  candidateNo: 4,\n+  netReturn: '0.010000',\n+  selected: false,\n+  selectionReason: {\n+    outcome: 'NOT_IN_DISPLAY',\n+    passedFilters: ['DRAWDOWN', 'STABILITY'],\n+  },\n+}\n+\n+export const selectionFixture: ParamSearchSelection = {\n+  displayed: [completedCandidate.candidateId, noNeighborCandidate.candidateId],\n+  shortOfDisplayCount: true,\n+  note: '기준을 충족한 후보가 2개입니다',\n+  drawdownFilterApplied: false,\n+}\n+\n+export const baselineFixture: ParamSearchBaseline = {\n+  strategyId: 'CARRY_ROTATION',\n+  strategyName: '캐리 순환',\n+  backtestId: 'BT-20260914-000009',\n+  status: 'COMPLETED',\n+  netReturn: '0.100000',\n+  maxDrawdown: '-0.200000',\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/paramSearchFixtures.ts",
+          "old_path": "frontend/src/test/paramSearchFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -57,6 +57,18 @@ export type SelectionOutcome =\n /** 선정에 쓰는 필터 이름. */\n export type SelectionFilter = 'DRAWDOWN' | 'STABILITY'\n \n+/**\n+ * 후보 목록을 정렬할 수 있는 항목. **서버가 허용하는 것이 전부이고 그 밖의 값은 400이다.**\n+ *\n+ * 한 항목 기준 정렬은 FR-017이 허용한다 — 정렬은 보기 편하라고 있는 것이고 순위를 뜻하지 않는다.\n+ */\n+export type CandidateSort =\n+  | 'candidateNo'\n+  | 'netReturn'\n+  | 'maxDrawdown'\n+  | 'tradingCost'\n+  | 'stability'\n+\n /** 축 후보값과 파라미터 값. 등록표가 정하는 값이라 숫자·문자열 어느 쪽도 올 수 있다. */\n export type AxisValue = number | string\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/paramSearch.ts",
+          "old_path": "frontend/src/types/paramSearch.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,12 @@\n-import type { ValidationLabel } from '@/types/paramSearch'\n+import type {\n+  CandidateStability,\n+  CandidateStatus,\n+  ParamSearchConfig,\n+  SearchCandidateItem,\n+  SelectionFilter,\n+  SelectionOutcome,\n+  ValidationLabel,\n+} from '@/types/paramSearch'\n \n /**\n  * 검증 라벨을 화면 문구로 바꾼다.\n@@ -30,3 +38,176 @@ export function formatSeconds(seconds: number): string {\n   const rest = seconds % 60\n   return rest === 0 ? `${formatCount(minutes)}분` : `${formatCount(minutes)}분 ${rest}초`\n }\n+\n+/**\n+ * 비율을 퍼센트로. **`null`은 `null`로 돌려준다** — 계산하지 않은 값을 \"0%\"로 만들지 않는다\n+ * (FR-011, 원칙 VI). 값이 없을 때 무엇을 보일지는 화면이 사유와 함께 정한다.\n+ *\n+ * 계약이 비율을 문자열로 주므로(부동소수 오차) 표시 직전에만 숫자로 바꾼다.\n+ */\n+export function formatPercent(value: string | null, options: { sign?: boolean } = {}) {\n+  if (value === null) return null\n+\n+  const parsed = Number(value)\n+  if (!Number.isFinite(parsed)) return null\n+\n+  const percent = parsed * 100\n+  const body = percent.toLocaleString('ko-KR', {\n+    minimumFractionDigits: 2,\n+    maximumFractionDigits: 2,\n+  })\n+  return options.sign && percent > 0 ? `+${body}%` : `${body}%`\n+}\n+\n+/** 거래비용. 원 단위로 읽고, 없으면 `null`이다. */\n+export function formatWon(value: string | null) {\n+  if (value === null) return null\n+\n+  const parsed = Number(value)\n+  if (!Number.isFinite(parsed)) return null\n+\n+  return `${Math.round(parsed).toLocaleString('ko-KR')}원`\n+}\n+\n+/**\n+ * 인접 설정 안정성. 이웃과의 수익 차 절댓값 평균이라 **작을수록 안정**이고 단위는 %p다.\n+ *\n+ * `calculable: false`는 \"안정성이 나쁘다\"가 아니라 **\"이웃이 없어 말할 수 없다\"**이다(FR-013b).\n+ * 0으로 채우지 않는다.\n+ */\n+export function formatStability(stability: CandidateStability | null) {\n+  if (stability === null) return { text: null, note: '선정 계산 전입니다' }\n+  if (!stability.calculable || stability.value === null) {\n+    return { text: null, note: '이웃한 설정이 없어 계산하지 않았습니다' }\n+  }\n+\n+  const percent = formatPercent(stability.value)\n+  return {\n+    text: percent === null ? null : `${percent}p`,\n+    note: `이웃 ${formatCount(stability.neighborCount)}개와 비교`,\n+  }\n+}\n+\n+/** 후보 상태 문구. */\n+export function candidateStatusText(status: CandidateStatus): string {\n+  switch (status) {\n+    case 'PENDING':\n+      return '대기'\n+    case 'DISPATCHED':\n+      return '계산 중'\n+    case 'COMPLETED':\n+      return '완료'\n+    case 'FAILED':\n+      return '실패'\n+    case 'EXCLUDED':\n+      return '계산 전 제외'\n+    case 'SKIPPED':\n+      return '미실행'\n+  }\n+}\n+\n+/**\n+ * 성과가 없는 이유. **\"0%\"를 그리지 않으려면 대신 보일 문장이 있어야 한다**(FR-011).\n+ *\n+ * 서버가 사유를 줬으면 그것을 쓴다 — 유효성 규칙이 돌려준 문장이 화면이 지어낸 문장보다 정확하다.\n+ */\n+export function missingPerformanceReason(candidate: SearchCandidateItem): string {\n+  const given = candidate.selectionReason?.message\n+  if (given) return given\n+\n+  switch (candidate.status) {\n+    case 'EXCLUDED':\n+      return '유효성 제약에 걸려 계산 전에 제외되었습니다'\n+    case 'FAILED':\n+      return '계산이 실패했습니다'\n+    case 'SKIPPED':\n+      return '취소·한도로 실행되지 않았습니다'\n+    case 'PENDING':\n+      return '아직 발행되지 않았습니다'\n+    case 'DISPATCHED':\n+      return '계산 중입니다'\n+    case 'COMPLETED':\n+      return '결과에 값이 없습니다'\n+  }\n+}\n+\n+/**\n+ * 선정 결과 문구.\n+ *\n+ * **`FILTERED_OUT`은 탈락이고 `NOT_IN_DISPLAY`는 \"떨어진 것이 아니라 표시하지 않은 것\"이다** —\n+ * 두 문구를 같게 쓰면 통과한 후보가 탈락한 것처럼 읽힌다.\n+ */\n+export function selectionOutcomeText(outcome: SelectionOutcome): string {\n+  switch (outcome) {\n+    case 'SELECTED':\n+      return '표시 후보'\n+    case 'NOT_IN_DISPLAY':\n+      return '기준은 통과했으나 표시 범위 밖'\n+    case 'FILTERED_OUT':\n+      return '기준에서 탈락'\n+    case 'EXCLUDED_BEFORE_RUN':\n+      return '계산 전 제외'\n+    case 'NOT_EVALUATED':\n+      return '비교 대상 아님'\n+  }\n+}\n+\n+/** 필터 이름. 사용자가 읽는 말로 옮긴다. */\n+export function selectionFilterText(filter: SelectionFilter): string {\n+  switch (filter) {\n+    case 'DRAWDOWN':\n+      return '손실 제약'\n+    case 'STABILITY':\n+      return '인접 설정 안정성'\n+  }\n+}\n+\n+/** 정렬 지표 이름. **화면에 무엇으로 정렬했는지 밝히는 것이 설계 제약이다**(plan 설계 제약 3). */\n+export function sortMetricText(metric: string): string {\n+  switch (metric) {\n+    case 'NET_RETURN':\n+      return '비용 차감 후 수익'\n+    case 'MAX_DRAWDOWN':\n+      return '가장 크게 줄었던 폭'\n+    case 'TRADING_COST':\n+      return '거래비용'\n+    case 'STABILITY':\n+      return '인접 설정 안정성'\n+    default:\n+      return metric\n+  }\n+}\n+\n+/**\n+ * 후보가 어떤 설정인지 한 줄로. **전략 이름도 축 라벨도 응답에서만 읽는다**(FR-025).\n+ *\n+ * 상태 응답의 `config.space`가 전략별 축 라벨·단위를 갖고 있다. 그것이 없으면 축 이름을 그대로\n+ * 쓴다 — 지어내지 않는다.\n+ */\n+export function describeCandidateSetting(\n+  candidate: SearchCandidateItem,\n+  config: ParamSearchConfig | null,\n+): { strategyName: string; parameterText: string } {\n+  const space = config?.space?.[candidate.strategyId] ?? null\n+  const labelOf = (name: string) => {\n+    const axis = space?.axes.find((item) => item.name === name)\n+    if (!axis) return { label: name, unit: null as string | null }\n+    return { label: axis.label, unit: axis.unit }\n+  }\n+\n+  const entries = Object.entries(candidate.parameters)\n+  const parameterText =\n+    entries.length === 0\n+      ? '설정 값 없음'\n+      : entries\n+          .map(([name, value]) => {\n+            const { label, unit } = labelOf(name)\n+            return `${label} ${value}${unit ? unit : ''}`\n+          })\n+          .join(' · ')\n+\n+  return {\n+    strategyName: space?.strategyName ?? candidate.strategyId,\n+    parameterText,\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/paramSearchLabels.ts",
+          "old_path": "frontend/src/utils/paramSearchLabels.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -239,13 +239,13 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 2 — Frontend\n \n-- [ ] T082 [P] [US2] (FE) `frontend/src/components/paramsearch/CandidateSummaryCard.tsx` — 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용 세 숫자 (FR-018)\n-- [ ] T083 [US2] (FE) `frontend/src/components/paramsearch/SelectionResult.tsx` — 표시 후보 집합. **순위 번호·추천 문구·우승 배지 금지**, 정렬 지표 이름(\"비용 차감 후 수익\") 명시 (plan 설계 제약 1·3)\n-- [ ] T084 [US2] (FE) `frontend/src/components/paramsearch/CandidateDetail.tsx` — 인접 설정 안정성·선정 이유·탈락 사유\n-- [ ] T085 [US2] (FE) `frontend/src/components/paramsearch/CandidateTable.tsx` — 전체 후보 목록과 한 항목 기준 정렬 (FR-017이 허용하는 범위)\n-- [ ] T086 [P] [US2] (FE) 계산 불가·미완료 후보 표시 — `null` 성과를 \"0%\"가 아니라 사유와 함께 보인다 (FR-011, 원칙 VI)\n-- [ ] T087 [US2] (FE) `frontend/src/components/paramsearch/CompareHandoff.tsx` — 후보를 005 비교 대상으로 넘기는 연결과 '자동 탐색 후보 비교' 표시 (FR-019). 005 미구현이면 진입 지점과 표시만 만든다\n-- [ ] T088 [P] [US2] (FE 테스트) `frontend/src/components/paramsearch/SelectionResult.test.tsx` — 순위 번호·추천·우승 표현이 0건인지 검증 (SC-006)\n+- [X] T082 [P] [US2] (FE) `frontend/src/components/paramsearch/CandidateSummaryCard.tsx` — 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용 세 숫자 (FR-018)\n+- [X] T083 [US2] (FE) `frontend/src/components/paramsearch/SelectionResult.tsx` — 표시 후보 집합. **순위 번호·추천 문구·우승 배지 금지**, 정렬 지표 이름(\"비용 차감 후 수익\") 명시 (plan 설계 제약 1·3)\n+- [X] T084 [US2] (FE) `frontend/src/components/paramsearch/CandidateDetail.tsx` — 인접 설정 안정성·선정 이유·탈락 사유\n+- [X] T085 [US2] (FE) `frontend/src/components/paramsearch/CandidateTable.tsx` — 전체 후보 목록과 한 항목 기준 정렬 (FR-017이 허용하는 범위)\n+- [X] T086 [P] [US2] (FE) 계산 불가·미완료 후보 표시 — `null` 성과를 \"0%\"가 아니라 사유와 함께 보인다 (FR-011, 원칙 VI)\n+- [X] T087 [US2] (FE) `frontend/src/components/paramsearch/CompareHandoff.tsx` — 후보를 005 비교 대상으로 넘기는 연결과 '자동 탐색 후보 비교' 표시 (FR-019). 005 미구현이면 진입 지점과 표시만 만든다\n+- [X] T088 [P] [US2] (FE 테스트) `frontend/src/components/paramsearch/SelectionResult.test.tsx` — 순위 번호·추천·우승 표현이 0건인지 검증 (SC-006)\n \n **Checkpoint**: US1과 US2가 각각 독립적으로 동작한다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2195333,
+      "head_commit_sha": "7f2a59c95d76fc68ebb9738d3af0e445a91c25ff",
+      "base_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "start_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "created_at": "2026-09-14T16:51:31.980+09:00",
+      "merge_request_id": 943493,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "a13bfd041e0a0a0f3679377dd2acfc145b8ff076",
+      "commits": [
+        {
+          "id": "7f2a59c95d76fc68ebb9738d3af0e445a91c25ff",
+          "short_id": "7f2a59c9",
+          "created_at": "2026-09-14T16:36:31.000+09:00",
+          "parent_ids": [
+            "4118fd4712e58e4acabdc4e24a5c64f2f51c91e8"
+          ],
+          "title": "test(fe): 결과 화면이 순위·추천을 만들지 않는지 고정한다",
+          "message": "test(fe): 결과 화면이 순위·추천을 만들지 않는지 고정한다\n\nT088.\n\n선정이 \"필터를 통과한 후보를 비용 차감 후 수익으로 정렬한 상위 5개\" 라서 화면에서\n순위로 읽히기 쉽다. plan 의 설계 제약은 그 위험 때문에 붙었고 이 테스트가 그것을\n지킨다.\n\n두 층으로 본다. 렌더 결과의 문구와, 주석을 걷어낸 소스다 — 조건부로만 나타나는\n배지는 렌더 테스트를 빠져나간다. 주석을 걷어내는 이유는 \"왜 순위를 만들지\n않는가\" 를 적은 설명까지 위반으로 세면 설명을 지우게 되기 때문이다.\n\n\"순위\" 는 금지 낱말 목록에 넣지 않고 **부정문일 때만 허용**한다. 우리 화면은\n\"순위가 아닙니다\" 라고 말해야 해서 그 낱말 자체는 나타난다. 한글은 음절 단위라\n\"아닙니다\" 에 \"아니\" 가 들어 있지 않다 — 검사에서 두 형태를 모두 본다.\n\n검사가 실제로 무는지 확인했다. 제목을 \"추천 설정 1위\" 로 바꾸면 렌더 검사와 소스\n검사가 둘 다 실패한다.\n\nCandidateSummaryCard·CandidateTable 테스트는 계산하지 않은 값을 0 으로 그리지\n않는지 본다. 표 전체가 아니라 그 후보의 줄만 보고 판정한다 — 전체를 보면 다른\n줄의 정상 숫자가 섞여 \"+30.00%\" 안의 \"0.00%\" 가 잡힌다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:36:31.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:36:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7f2a59c95d76fc68ebb9738d3af0e445a91c25ff"
+        },
+        {
+          "id": "4118fd4712e58e4acabdc4e24a5c64f2f51c91e8",
+          "short_id": "4118fd47",
+          "created_at": "2026-09-14T16:32:05.000+09:00",
+          "parent_ids": [
+            "b6aae72da7a711a9079809c6bb6704d6beff70b1"
+          ],
+          "title": "feat(fe): 전체 후보 목록과 비교 연결을 붙이고 화면을 잇는다",
+          "message": "feat(fe): 전체 후보 목록과 비교 연결을 붙이고 화면을 잇는다\n\nT085·T087.\n\nCandidateTable 의 정렬·필터는 서버가 한다. 화면에서 다시 정렬하면 페이지 밖의\n후보가 빠진 채 정렬돼 사실과 어긋난다. 정렬 가능한 열은 서버가 허용하는 다섯\n가지와 같고, 한 항목 기준 정렬은 FR-017 이 허용한다 — 다만 순위 번호 열을 두지\n않고 \"정렬은 보기 순서일 뿐 순위가 아니다\" 를 화면에 적는다. 순번은 후보가\n만들어진 차례이지 성적이 아니다. 성과가 없는 칸에는 0 이 아니라 사유가 들어간다.\n\nCompareHandoff 는 '자동 탐색 후보 비교' 임을 배지로 구분한다. 기본 설정 비교와\n같은 이름으로 보이면 사용자가 \"내가 고른 설정끼리\" 와 \"탐색이 고른 설정과\" 를\n섞는다. 비교 기준은 바꾸지 않는다 — 탐색이 고른 후보가 기준 자리에 들어가면\n비교가 자기 자신을 기준으로 삼게 된다. 005 가 없으므로 진입 지점과 표시만 만들고\n무엇이 없어서 막혔는지 적는다.\n\n결과가 없는 후보는 비교에 담기지 않는다. 담으면 비교 화면이 빈 자리를 그려야 한다.\n\n화면은 표시 후보를 selected=true 로 따로 받아 selection.displayed 순서에 맞춰\n그린다 — 기본 정렬은 순번이라 그대로 두면 정렬 지표 순서가 아니게 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:32:05.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:32:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4118fd4712e58e4acabdc4e24a5c64f2f51c91e8"
+        },
+        {
+          "id": "b6aae72da7a711a9079809c6bb6704d6beff70b1",
+          "short_id": "b6aae72d",
+          "created_at": "2026-09-14T16:27:25.000+09:00",
+          "parent_ids": [
+            "9c72ba6d43a711fd852b2cb7a08554eab2338bbc"
+          ],
+          "title": "feat(fe): 표시 후보 카드·집합·상세를 만든다",
+          "message": "feat(fe): 표시 후보 카드·집합·상세를 만든다\n\nT082·T083·T084·T086.\n\nCandidateSummaryCard 는 세 숫자만 먼저 보인다 — 비용 차감 후 수익·가장 크게\n줄었던 폭·거래비용(FR-018). 안정성·선정 이유는 상세로 미룬다.\n\n**계산하지 않은 값을 0%로 그리지 않는다.** 값이 없으면 자리를 비우고 왜 없는지를\n함께 적는다. 세 숫자가 모두 없으면 표를 그리지 않고 사유 한 줄로 바꾼다 — 빈 칸\n세 개보다 정확하다(FR-011, 원칙 VI). 사유는 서버가 준 문장을 먼저 쓴다.\n\nSelectionResult 는 순위표가 아니다. 번호·추천·우승 배지를 넣지 않고 무엇으로\n정렬했는지를 밝힌다. 목록을 ol 이 아니라 ul 로 둔 것도 같은 이유다 — 번호가\n붙는 순간 1위가 생긴다(설계 제약 1·3, 원칙 III).\n\n충족 후보가 표시 개수에 못 미치면 그대로 적고 문턱을 낮춰 채우지 않는다(원칙 VII).\n손실 제약을 걸지 않았으면 그 사실을 적고, 걸었으면 무엇을 기준으로 삼았는지\n적는다 — 걸지 않은 필터를 통과했다고 보이면 안 된다(FR-013d).\n\nCandidateDetail 은 탈락과 \"표시하지 않음\"을 다른 문장으로 적는다. 기준을\n통과하고도 표시 범위 밖이었던 후보를 탈락이라 쓰면 사실이 아니다. 안정성\n'계산 불가' 는 나쁜 값이 아니라 말할 수 없는 값이다(FR-013b).\n\n검증 라벨은 카드와 상세 양쪽에 항상 붙는다(설계 제약 2, FR-015).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:27:25.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:27:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b6aae72da7a711a9079809c6bb6704d6beff70b1"
+        },
+        {
+          "id": "9c72ba6d43a711fd852b2cb7a08554eab2338bbc",
+          "short_id": "9c72ba6d",
+          "created_at": "2026-09-14T16:24:20.000+09:00",
+          "parent_ids": [
+            "92c4002b7aab100726ba28add98f1f60af334ac3"
+          ],
+          "title": "feat(fe): 후보 목록 조회와 결과 표기 함수를 만든다",
+          "message": "feat(fe): 후보 목록 조회와 결과 표기 함수를 만든다\n\nM6 준비. 화면을 붙이기 전에 조회 경로와 숫자·문구 규칙을 먼저 고정한다.\n\ngetParamSearchCandidates 는 서버가 허용하는 다섯 정렬 항목만 보낸다. 방향도\nasc·desc 뿐이고 그 밖은 400 이라 화면이 오타를 기본값으로 접지 않는다 — 접으면\n목록이 조용히 뒤집힌다. 정렬은 FR-017 이 허용하는 \"한 항목 기준 정렬\"이고\n정렬했다고 순위가 생기는 것은 아니다.\n\nuseSearchCandidates 는 질의가 바뀌면 다시 부르되 늦게 온 응답을 순번으로 막는다.\n정렬을 빠르게 두 번 바꾸면 먼저 보낸 요청이 나중에 도착해 정렬 표시와 목록이\n어긋난다.\n\n표기 함수의 핵심은 null 을 null 로 돌려주는 것이다. formatPercent·formatWon 은\n값이 없으면 \"0%\" 대신 null 을 주고, 무엇을 보일지는 화면이 사유와 함께 정한다\n(FR-011, 원칙 VI). missingPerformanceReason 은 서버가 준 사유를 먼저 쓴다 —\n유효성 규칙이 돌려준 문장이 화면이 지어낸 문장보다 정확하다.\n\nformatStability 의 '계산 불가' 는 \"안정성이 나쁘다\" 가 아니라 \"이웃이 없어 말할\n수 없다\" 이다(FR-013b). selectionOutcomeText 는 FILTERED_OUT(탈락)과\nNOT_IN_DISPLAY(표시 범위 밖)를 다른 문장으로 옮긴다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T16:24:20.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T16:24:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9c72ba6d43a711fd852b2cb7a08554eab2338bbc"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2195298,
+      "head_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "base_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "start_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+      "created_at": "2026-09-14T16:46:01.787+09:00",
+      "merge_request_id": 943493,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null,
+      "commits": [],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-14T17:00:28.534+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2803506": []
+  }
+}

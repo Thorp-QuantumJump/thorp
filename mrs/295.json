@@ -1,0 +1,643 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 956438,
+    "iid": 295,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면 자산가치 곡선에 로그 눈금을 넣고 시작 금액을 적는다",
+    "description": "# 작업 내용 요약\n\n기간이 긴 분석일수록 결과 그래프의 앞부분을 읽을 수 없었다. 16년 구간에서 자산가치가 네 배로 불어난 결과를 열면, 초반 몇 해가 그림 바닥에 눌려 그때 있었던 30% 하락이 거의 평평한 선으로 보였다. 세로축이 금액을 같은 간격으로 놓기 때문에, 원금이 작던 시절의 오르내림은 금액으로는 작아서 높이를 거의 차지하지 못한다.\n\n세로축 눈금을 로그로 바꿨다. 로그 눈금에서는 같은 비율의 오르내림이 어느 구간에서나 같은 높이를 차지하므로, 초반의 30% 하락과 후반의 30% 하락이 같은 깊이로 보인다. 금액 차이를 그대로 견주려는 사람을 위해 선형 눈금으로 되돌리는 단추도 함께 둔다. 시작 금액 기준선에는 금액을 적은 이름표를 붙여, 곡선이 원금 위에 있는지 아래에 있는지를 그래프만 보고 읽게 했다.\n\n# 관련 티켓 번호 & 링크\n\n- `S15P21E205-411` https://ssafy.atlassian.net/browse/S15P21E205-411\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 16년 구간, 자산가치 네 배 결과를 연다 | 초반 몇 해가 바닥에 눌려 하락 구간이 평평하게 보인다 | 초반과 후반의 같은 비율 하락이 같은 깊이로 보인다 |\n| 금액 차이를 그대로 견주고 싶다 | 세로축이 언제나 금액 간격이다 | 단추로 선형 눈금으로 되돌린다 |\n| 세로축에 적히는 값 | 만·억 단위 원화 금액 | **같다.** 바뀌는 것은 금액을 놓는 높이뿐이다 |\n| 시작 금액이 어디인지 확인한다 | 가로 점선만 있고 설명은 그래프 아래 글에만 있다 | 기준선 옆에 금액이 직접 적힌다 |\n| 자산가치가 0원 이하인 날 | 그대로 그린다 | 로그 눈금에서는 그 자리에서 곡선을 끊는다 |\n\n# 주요 변경 사항\n\n## 로그 눈금을 결과 화면 안에서 처리한다\n\n공용 차트 시스템의 세로축은 선형 스케일 하나로 고정되어 있다. 그 타입을 넓히면 격자·곡선·추세선을 비롯해 세로축을 쓰는 모든 차트에 변경이 번진다. 결과 화면 하나의 요구로 공용 시스템을 흔들 이유가 없다고 보고, 결과 화면 안에서 금액을 상용로그 좌표로 옮겨 차트에 넘기는 방식으로 처리했다. 세로축에 적히는 값은 그대로 원화 자산가치다(`FR-001`).\n\n다른 차트에도 로그 눈금이 필요해지면 그때 공용 시스템으로 끌어올리는 편이 낫다.\n\n## 눈금에 적을 금액과 놓을 자리를 나눠 받는다\n\n로그 눈금에서는 차트가 받는 값이 금액이 아니라 금액의 상용로그다. 적을 금액과 놓을 좌표를 하나로 합쳐 두면 글자에 로그값이 찍히거나 격자선이 엉뚱한 높이에 놓인다. 둘을 나눠 받도록 세로축 눈금을 고쳤다.\n\n로그 눈금의 눈금 금액은 1·2·5에 10의 거듭제곱을 곱한 값 중 범위에 드는 것을 먼저 쓴다. 오르내린 폭이 좁아 그런 값이 걸리지 않으면 선형과 같은 둥근 금액으로 되돌아간다. 어느 쪽이든 금액을 놓는 높이는 로그로 잡히므로 곡선과 눈금은 어긋나지 않는다.\n\n## 0원 이하인 날은 그리지 않는다\n\n상용로그는 0 이하에서 정의되지 않는다. 그런 날은 아주 작은 값으로 바꿔 잇지 않고 그 자리에서 곡선을 끊는다. 이어 그리면 있지도 않은 바닥을 만들어 내기 때문이고, 값이 없는 날을 끊는 기존 규칙과 같은 처리다(원칙 VI). 선형 눈금으로 바꾸면 그 날도 그대로 그린다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint && npm run build && npm test` — Vitest 141개 파일 1,327건 통과, 실패 0·건너뜀 0. `node --test` 13건 통과, 건너뜀 0. 린트 오류 0건(경고 20건은 이번에 건드리지 않은 기존 파일). 2026-09-22 측정.\n\n기준선은 2026-09-22 `dev`(`bc3b7e01`) 기준 Vitest 1,317건, `node --test` 13건이다. 결과 그래프 테스트가 17건에서 27건으로 늘었다.\n\n- [x] 로컬 실행 확인: 로컬 데이터로 2010-01-04 ~ 2026-09-15 구간을 실제로 계산해(자산가치 네 배, 최대 하락 -50.6%) 두 눈금을 화면에서 비교했다.\n\n# 리뷰 포인트\n\n1. **공용 차트 시스템을 넓히지 않고 결과 화면 안에서 처리한 판단.** 결과 화면이 차트에 넘기는 값이 금액이 아니게 되므로, 나중에 이 그래프에 값을 읽는 기능(예: 마우스를 올렸을 때 금액을 보이는 것)을 붙이려면 되돌리는 변환이 필요하다. 지금은 그 기능이 없어 문제가 없지만, 붙일 때 놓치기 쉬운 지점이다.\n2. **눈금 종류를 주소에 담지 않았다.** 화면을 떠났다 돌아오면 로그로 돌아간다. `FR-019`가 주소에 담으라고 한 것은 비교 대상이고 보기 설정은 그 대상이 아니라고 판단했다. 선택을 유지해야 한다면 후속으로 다룰 일이다.\n3. **처음 보이는 눈금을 로그로 정했다.** 금융 차트에 익숙하지 않은 사용자는 같은 금액 차이가 구간마다 다른 높이로 보이는 것을 오해할 수 있다. 그래프 아래에 로그 눈금이라는 설명을 한 줄 두었지만, 첫 화면 기본값으로 적절한지는 판단이 필요하다.",
+    "state": "merged",
+    "created_at": "2026-09-22T14:16:51.324+09:00",
+    "updated_at": "2026-09-22T14:22:27.895+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-22T14:22:27.937+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/411-equity-chart-log-scale",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+    "merge_commit_sha": "d0cbb52036016e890473359f4a7aff49663223a0",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T14:16:52.694+09:00",
+    "reference": "!295",
+    "references": {
+      "short": "!295",
+      "relative": "!295",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!295"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/295",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 956438,
+    "iid": 295,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면 자산가치 곡선에 로그 눈금을 넣고 시작 금액을 적는다",
+    "description": "# 작업 내용 요약\n\n기간이 긴 분석일수록 결과 그래프의 앞부분을 읽을 수 없었다. 16년 구간에서 자산가치가 네 배로 불어난 결과를 열면, 초반 몇 해가 그림 바닥에 눌려 그때 있었던 30% 하락이 거의 평평한 선으로 보였다. 세로축이 금액을 같은 간격으로 놓기 때문에, 원금이 작던 시절의 오르내림은 금액으로는 작아서 높이를 거의 차지하지 못한다.\n\n세로축 눈금을 로그로 바꿨다. 로그 눈금에서는 같은 비율의 오르내림이 어느 구간에서나 같은 높이를 차지하므로, 초반의 30% 하락과 후반의 30% 하락이 같은 깊이로 보인다. 금액 차이를 그대로 견주려는 사람을 위해 선형 눈금으로 되돌리는 단추도 함께 둔다. 시작 금액 기준선에는 금액을 적은 이름표를 붙여, 곡선이 원금 위에 있는지 아래에 있는지를 그래프만 보고 읽게 했다.\n\n# 관련 티켓 번호 & 링크\n\n- `S15P21E205-411` https://ssafy.atlassian.net/browse/S15P21E205-411\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 16년 구간, 자산가치 네 배 결과를 연다 | 초반 몇 해가 바닥에 눌려 하락 구간이 평평하게 보인다 | 초반과 후반의 같은 비율 하락이 같은 깊이로 보인다 |\n| 금액 차이를 그대로 견주고 싶다 | 세로축이 언제나 금액 간격이다 | 단추로 선형 눈금으로 되돌린다 |\n| 세로축에 적히는 값 | 만·억 단위 원화 금액 | **같다.** 바뀌는 것은 금액을 놓는 높이뿐이다 |\n| 시작 금액이 어디인지 확인한다 | 가로 점선만 있고 설명은 그래프 아래 글에만 있다 | 기준선 옆에 금액이 직접 적힌다 |\n| 자산가치가 0원 이하인 날 | 그대로 그린다 | 로그 눈금에서는 그 자리에서 곡선을 끊는다 |\n\n# 주요 변경 사항\n\n## 로그 눈금을 결과 화면 안에서 처리한다\n\n공용 차트 시스템의 세로축은 선형 스케일 하나로 고정되어 있다. 그 타입을 넓히면 격자·곡선·추세선을 비롯해 세로축을 쓰는 모든 차트에 변경이 번진다. 결과 화면 하나의 요구로 공용 시스템을 흔들 이유가 없다고 보고, 결과 화면 안에서 금액을 상용로그 좌표로 옮겨 차트에 넘기는 방식으로 처리했다. 세로축에 적히는 값은 그대로 원화 자산가치다(`FR-001`).\n\n다른 차트에도 로그 눈금이 필요해지면 그때 공용 시스템으로 끌어올리는 편이 낫다.\n\n## 눈금에 적을 금액과 놓을 자리를 나눠 받는다\n\n로그 눈금에서는 차트가 받는 값이 금액이 아니라 금액의 상용로그다. 적을 금액과 놓을 좌표를 하나로 합쳐 두면 글자에 로그값이 찍히거나 격자선이 엉뚱한 높이에 놓인다. 둘을 나눠 받도록 세로축 눈금을 고쳤다.\n\n로그 눈금의 눈금 금액은 1·2·5에 10의 거듭제곱을 곱한 값 중 범위에 드는 것을 먼저 쓴다. 오르내린 폭이 좁아 그런 값이 걸리지 않으면 선형과 같은 둥근 금액으로 되돌아간다. 어느 쪽이든 금액을 놓는 높이는 로그로 잡히므로 곡선과 눈금은 어긋나지 않는다.\n\n## 0원 이하인 날은 그리지 않는다\n\n상용로그는 0 이하에서 정의되지 않는다. 그런 날은 아주 작은 값으로 바꿔 잇지 않고 그 자리에서 곡선을 끊는다. 이어 그리면 있지도 않은 바닥을 만들어 내기 때문이고, 값이 없는 날을 끊는 기존 규칙과 같은 처리다(원칙 VI). 선형 눈금으로 바꾸면 그 날도 그대로 그린다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint && npm run build && npm test` — Vitest 141개 파일 1,327건 통과, 실패 0·건너뜀 0. `node --test` 13건 통과, 건너뜀 0. 린트 오류 0건(경고 20건은 이번에 건드리지 않은 기존 파일). 2026-09-22 측정.\n\n기준선은 2026-09-22 `dev`(`bc3b7e01`) 기준 Vitest 1,317건, `node --test` 13건이다. 결과 그래프 테스트가 17건에서 27건으로 늘었다.\n\n- [x] 로컬 실행 확인: 로컬 데이터로 2010-01-04 ~ 2026-09-15 구간을 실제로 계산해(자산가치 네 배, 최대 하락 -50.6%) 두 눈금을 화면에서 비교했다.\n\n# 리뷰 포인트\n\n1. **공용 차트 시스템을 넓히지 않고 결과 화면 안에서 처리한 판단.** 결과 화면이 차트에 넘기는 값이 금액이 아니게 되므로, 나중에 이 그래프에 값을 읽는 기능(예: 마우스를 올렸을 때 금액을 보이는 것)을 붙이려면 되돌리는 변환이 필요하다. 지금은 그 기능이 없어 문제가 없지만, 붙일 때 놓치기 쉬운 지점이다.\n2. **눈금 종류를 주소에 담지 않았다.** 화면을 떠났다 돌아오면 로그로 돌아간다. `FR-019`가 주소에 담으라고 한 것은 비교 대상이고 보기 설정은 그 대상이 아니라고 판단했다. 선택을 유지해야 한다면 후속으로 다룰 일이다.\n3. **처음 보이는 눈금을 로그로 정했다.** 금융 차트에 익숙하지 않은 사용자는 같은 금액 차이가 구간마다 다른 높이로 보이는 것을 오해할 수 있다. 그래프 아래에 로그 눈금이라는 설명을 한 줄 두었지만, 첫 화면 기본값으로 적절한지는 판단이 필요하다.",
+    "state": "merged",
+    "created_at": "2026-09-22T14:16:51.324+09:00",
+    "updated_at": "2026-09-22T14:22:27.895+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-22T14:22:27.937+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/411-equity-chart-log-scale",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+    "merge_commit_sha": "d0cbb52036016e890473359f4a7aff49663223a0",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-22T14:16:52.694+09:00",
+    "reference": "!295",
+    "references": {
+      "short": "!295",
+      "relative": "!295",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!295"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/295",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 2,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "5",
+    "latest_build_started_at": "2026-09-22T14:17:03.014+09:00",
+    "latest_build_finished_at": "2026-09-22T14:22:27.039+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 215954,
+      "iid": 302,
+      "project_id": 1444456,
+      "sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+      "ref": "feat(fe)/411-equity-chart-log-scale",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T14:17:02.681+09:00",
+      "updated_at": "2026-09-22T14:22:27.046+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215954"
+    },
+    "head_pipeline": {
+      "id": 215954,
+      "iid": 302,
+      "project_id": 1444456,
+      "sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+      "ref": "feat(fe)/411-equity-chart-log-scale",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-22T14:17:02.681+09:00",
+      "updated_at": "2026-09-22T14:22:27.046+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215954",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-22T14:17:03.014+09:00",
+      "finished_at": "2026-09-22T14:22:27.039+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/215954",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "head_sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+      "start_sha": "9ac96fac9001b9fd7c08f7548dcb4779a8ac1357"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c25ee9ae6c39bae903a5a9e781fec8cb8e2e6161",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855109,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:16:51.463+09:00",
+          "updated_at": "2026-09-22T14:16:51.467+09:00",
+          "system": true,
+          "noteable_id": 956438,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 295,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3f1d390aaee8165f973f5910ca894d2c19a5615b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855110,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:16:51.478+09:00",
+          "updated_at": "2026-09-22T14:16:51.484+09:00",
+          "system": true,
+          "noteable_id": 956438,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 295,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8632b693bf9ea2f6846237642bae04e568e1fabc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855112,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 가독성:** `AmountAxis` 컴포넌트가 적을 금액과 놓을 자리를 `AmountTick` 형태로 명확히 분리하여, 로그 스케일 좌표계와 화면에 표시되는 원화 금액 간의 혼동을 깔끔하게 방지했습니다.\n- **접근성(a11y) 고려:** 로그/선형 모드 변경 상태를 `aria-pressed`로 관리하고, `aria-label`에 현재 눈금 종류를 포함시켜 스크린 리더 사용자 배려를 잘 구현했습니다.\n\n### 발견 사항\n\n- [Low] `frontend/src/components/result/EquityChart.tsx`\n  - `scaleToggle` 컨테이너에 `role=\"group\"`과 `aria-label=\"세로축 눈금\"`을 부여했으나, 내부 버튼들이 그룹의 맥락을 명확히 전달하도록 `aria-describedby`나 개별 레이블링(예: \"세로축 눈금: 로그\")이 추가되면 접근성 측면에서 더욱 완벽해질 수 있습니다. 현재 구조로도 치명적인 결함은 아닙니다.\n\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **0원 또는 음수 데이터 처리 테스트:** 자산가치가 정확히 `0`이 되거나 음수로 떨어지는 데이터셋을 주입했을 때, 로그 스케일 모드에서 곡선이 해당 지점에서 올바르게 끊어지고(공백 발생) 에러 없이 렌더링되는지 확인하는 시나리오를 추가합니다.\n- **좁은 범위의 로그 스케일 폴백 테스트:** 자산가치 변동 폭이 매우 좁아 `pickLogAmountTicks`가 충분한 개수의 거듭제곱 값을 찾지 못할 때, 선형 눈금과 동일한 둥근 금액으로 자연스럽게 폴백(`pickAmountTicks`)되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8b55a3dd62cab9ecd91d16b2217e8a192f04ccff -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-22T14:16:57.796+09:00",
+          "updated_at": "2026-09-22T14:16:57.796+09:00",
+          "system": false,
+          "noteable_id": 956438,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 295,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b30907ab48d438fc9e3b71c39b49cb44030eab9b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855127,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 8b55a3dd62cab9ecd91d16b2217e8a192f04ccff pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:17:44.993+09:00",
+          "updated_at": "2026-09-22T14:17:44.996+09:00",
+          "system": true,
+          "noteable_id": 956438,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 295,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f4afef398585905946a37584e01e368feed235c1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2855203,
+          "type": null,
+          "body": "mentioned in commit d0cbb52036016e890473359f4a7aff49663223a0",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-22T14:22:28.093+09:00",
+          "updated_at": "2026-09-22T14:22:28.104+09:00",
+          "system": true,
+          "noteable_id": 956438,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 295,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2238852,
+      "head_commit_sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+      "base_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "start_commit_sha": "9ac96fac9001b9fd7c08f7548dcb4779a8ac1357",
+      "created_at": "2026-09-22T14:16:51.771+09:00",
+      "merge_request_id": 956438,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "97aeeefeb0cb8f2c2669084fbd331490f5623f22"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2238852,
+      "head_commit_sha": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+      "base_commit_sha": "bc3b7e01deded889ea793330e150e8e03f8e3dc4",
+      "start_commit_sha": "9ac96fac9001b9fd7c08f7548dcb4779a8ac1357",
+      "created_at": "2026-09-22T14:16:51.771+09:00",
+      "merge_request_id": 956438,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "97aeeefeb0cb8f2c2669084fbd331490f5623f22",
+      "commits": [
+        {
+          "id": "8b55a3dd62cab9ecd91d16b2217e8a192f04ccff",
+          "short_id": "8b55a3dd",
+          "created_at": "2026-09-22T13:30:06.000+09:00",
+          "parent_ids": [
+            "faac094140dac04f3c13f3cf80b0faddb8caf442"
+          ],
+          "title": "feat(fe): 자산가치 곡선 기준선에 시작 금액을 적는다",
+          "message": "feat(fe): 자산가치 곡선 기준선에 시작 금액을 적는다\n\n기준선은 `Grid`가 긋고 있었지만 그것이 무슨 선인지는 그래프 아래 설명글에만\n있었다. 선 옆에 금액을 직접 적어, 곡선이 원금 위에 있는지 아래에 있는지를\n그래프만 보고 읽게 한다.\n\n글자 뒤에 바탕색 외곽선을 둘러 곡선이나 격자와 겹쳐도 읽히게 했다. 폭을 재서\n배경 사각형을 깔지 않은 것은 글꼴에 따라 폭이 달라져 사각형만 남거나 글자가\n삐져나오기 때문이다. 기준선이 그림 위쪽에 붙어 이름표가 잘릴 상황에서는 선\n아래로 내린다.\n\n대안 텍스트에도 시작 금액을 넣었다. 시작 금액을 읽을 수 없는 결과에서는\n이름표를 그리지 않는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-22T13:30:06.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-22T13:30:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8b55a3dd62cab9ecd91d16b2217e8a192f04ccff"
+        },
+        {
+          "id": "faac094140dac04f3c13f3cf80b0faddb8caf442",
+          "short_id": "faac0941",
+          "created_at": "2026-09-22T12:24:55.000+09:00",
+          "parent_ids": [
+            "bc3b7e01deded889ea793330e150e8e03f8e3dc4"
+          ],
+          "title": "feat(fe): 결과 화면 자산가치 곡선에 로그 눈금을 넣는다",
+          "message": "feat(fe): 결과 화면 자산가치 곡선에 로그 눈금을 넣는다\n\n세로축 눈금을 로그로 기본 설정하고 선형으로 바꿀 수 있는 단추를 곁들인다.\n기간이 길어 자산가치가 여러 배로 불어난 결과에서는 선형 눈금이 초반 구간을\n바닥에 눌러, 같은 비율의 하락이 구간마다 다른 깊이로 보였다.\n\n공용 차트 셸의 y 스케일 타입이 `ScaleLinear`로 고정되어 있어 그 타입을 넓히면\nGrid·Line·projection-line 등 모든 차트의 스케일 소비자에 변경이 번진다. 결과\n화면 하나의 요구로 공용 시스템을 흔들지 않으려고, `EquityChart` 안에서 금액을\n상용로그 좌표로 옮겨 넘기는 방식으로 처리했다. 세로축에 적히는 값은 그대로\n원화 자산가치이고(spec 005 FR-001) 바뀌는 것은 금액을 놓는 높이뿐이다.\n\n`AmountAxis`는 눈금에 적을 금액과 그 금액을 놓을 좌표를 나눠 받는다. 로그\n눈금에서는 차트가 받는 값이 금액이 아니라 금액의 상용로그라, 하나로 합치면\n글자에 로그값이 찍히거나 선이 엉뚱한 높이에 놓인다.\n\n로그 눈금에서 자산가치가 0원 이하인 날은 상용로그가 정의되지 않으므로 그리지\n않고 곡선을 끊는다. 값이 없는 날을 끊는 기존 규칙과 같은 처리다(원칙 VI).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-22T12:24:55.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-22T12:24:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/faac094140dac04f3c13f3cf80b0faddb8caf442"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -6,28 +6,37 @@ import { formatAxisAmount } from '@/components/result/formatResult'\n  *\n  * <p>차트 시스템에는 세로축 컴포넌트가 없어 여기서 만든다. 눈금 위치는 차트가 들고 있는 y 스케일에\n  * 맡기고, 같은 값을 가로 격자(`Grid`의 `rowTickValues`)에도 넘겨 글자와 선이 같은 높이에 놓이게 한다.\n+ *\n+ * <p><b>적는 금액과 놓을 자리를 나눠 받는다.</b> 로그 눈금으로 볼 때 차트의 y 스케일이 받는 값은 금액이\n+ * 아니라 금액의 상용로그다. 하나로 합치면 글자에 로그값이 찍히거나 선이 엉뚱한 높이에 놓인다.\n  */\n \n+/** 눈금 하나. `amount`는 글자로 적을 원화 금액이고 `at`은 그 금액이 놓일 세로축 좌표값이다 */\n+export type AmountTick = {\n+  amount: number\n+  at: number\n+}\n+\n /** 그림 영역 왼쪽 여백에 눈금 글자를 오른쪽 끝을 맞춰 적는다. `LineChart`의 자식으로만 쓴다 */\n-export function AmountAxis({ values }: { values: number[] }) {\n+export function AmountAxis({ ticks }: { ticks: AmountTick[] }) {\n   const { yScale } = useChartStable()\n \n   return (\n     <g data-testid=\"amount-axis\">\n-      {values.map((value) => {\n-        const y = yScale(value)\n+      {ticks.map((tick) => {\n+        const y = yScale(tick.at)\n         if (y == null || !Number.isFinite(y)) return null\n         return (\n           <text\n             dominantBaseline=\"middle\"\n             fill=\"var(--chart-label)\"\n             fontSize={11}\n-            key={value}\n+            key={tick.amount}\n             textAnchor=\"end\"\n             x={-6}\n             y={y}\n           >\n-            {formatAxisAmount(value)}\n+            {formatAxisAmount(tick.amount)}\n           </text>\n         )\n       })}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/AmountAxis.tsx",
+          "old_path": "frontend/src/components/result/AmountAxis.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,6 +5,46 @@\n   min-width: 0;\n }\n \n+/*\n+ * 세로축 눈금 전환 단추. 그래프 오른쪽 위에 붙여 어느 눈금으로 보는 중인지 그래프와 함께 읽게 한다.\n+ */\n+.scaleToggle {\n+  display: flex;\n+  gap: 2px;\n+  align-self: flex-end;\n+  padding: 2px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 999px;\n+  background: var(--thorp-surface);\n+}\n+\n+.scaleButton {\n+  padding: 3px 12px;\n+  border: 0;\n+  border-radius: 999px;\n+  background: transparent;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.6;\n+  cursor: pointer;\n+}\n+\n+.scaleButton:hover {\n+  color: var(--thorp-ink);\n+}\n+\n+/* 고른 쪽은 색만이 아니라 바탕과 글자 굵기로도 갈린다. 색을 구별하지 못해도 어느 쪽인지 읽힌다. */\n+.scaleButton[aria-pressed='true'] {\n+  background: var(--thorp-neutral);\n+  color: var(--thorp-surface);\n+  font-weight: 600;\n+}\n+\n+.scaleButton:focus-visible {\n+  outline: 2px solid var(--thorp-neutral);\n+  outline-offset: 1px;\n+}\n+\n /*\n  * 음영의 두 색을 여기 한 곳에서 정한다. SVG 안에서 `var(--result-shade-*)`로 읽으므로 테마 토큰이\n  * 바뀌어도 컴포넌트를 고치지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.module.css",
+          "old_path": "frontend/src/components/result/EquityChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { render, screen } from '@testing-library/react'\n+import { fireEvent, render, screen } from '@testing-library/react'\n import type { ReactNode } from 'react'\n import { afterEach, describe, expect, it, vi } from 'vitest'\n import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'\n@@ -275,6 +275,192 @@ describe('EquityChart', () => {\n     expect(container.querySelector('.chart-grid-highlight-rows line')).not.toBeNull()\n     expect(screen.getByText(/시작 금액 10,000,000원/)).toBeTruthy()\n   })\n+\n+  it('기준선 옆에 시작 금액을 적어 그래프 안에서 원금을 읽게 한다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const label = container.querySelector<SVGTextElement>('[data-testid=\"initial-cash-label\"]')\n+    expect(label?.textContent).toBe('시작 금액 1,000만원')\n+\n+    // 기준선과 같은 높이에 놓인다. 선 위로 띄운 만큼만 어긋나야 한다.\n+    const rule = container.querySelector('.chart-grid-highlight-rows line')\n+    const ruleY = Number(rule?.getAttribute('y1'))\n+    expect(Math.abs(Number(label?.getAttribute('y')) - ruleY)).toBeLessThanOrEqual(16)\n+\n+    // 곡선과 겹쳐도 읽히도록 글자 뒤에 바탕색 외곽선을 두른다.\n+    expect(label?.getAttribute('paint-order')).toBe('stroke')\n+  })\n+\n+  it('시작 금액을 읽을 수 없으면 이름표를 그리지 않는다', () => {\n+    const { container } = render(<EquityChart altNumbers={altNumbers} base={base} initialCash=\"\" />)\n+\n+    expect(container.querySelector('[data-testid=\"initial-cash-label\"]')).toBeNull()\n+    expect(seriesPath(container, 'base')).toBeTruthy()\n+  })\n+\n+  it('대안 텍스트에도 시작 금액을 담는다', () => {\n+    render(<EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />)\n+\n+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('시작 금액은 10,000,000원')\n+  })\n+})\n+\n+/** 눈금 글자를 다시 원화 금액으로 읽는다. `formatAxisAmount`가 적은 만·억 단위를 되돌린다 */\n+function parseAxisAmount(text: string): number {\n+  const cleaned = text.replace(/,/g, '')\n+  if (cleaned.endsWith('억원')) return Number(cleaned.slice(0, -2)) * 100_000_000\n+  if (cleaned.endsWith('만원')) return Number(cleaned.slice(0, -2)) * 10_000\n+  return Number(cleaned.slice(0, -1))\n+}\n+\n+/** 세로축 눈금마다 적힌 금액과 그 금액이 놓인 높이 */\n+function axisTicks(container: HTMLElement): { amount: number; y: number }[] {\n+  return [...container.querySelectorAll('[data-testid=\"amount-axis\"] text')].map((text) => ({\n+    amount: parseAxisAmount(text.textContent ?? ''),\n+    y: Number(text.getAttribute('y')),\n+  }))\n+}\n+\n+/**\n+ * 눈금의 높이가 `project`를 거친 값에 비례하는가. 비례하면 인접한 눈금마다 구한 기울기가 모두 같다.\n+ * 눈금이 셋은 되어야 뜻이 있다 — 둘뿐이면 어떤 변환을 쓰든 언제나 비례한다.\n+ */\n+function slopesOf(\n+  ticks: { amount: number; y: number }[],\n+  project: (amount: number) => number,\n+): number[] {\n+  const sorted = [...ticks].sort((left, right) => left.amount - right.amount)\n+  const slopes: number[] = []\n+  for (let index = 1; index < sorted.length; index += 1) {\n+    const rise = sorted[index].y - sorted[index - 1].y\n+    const run = project(sorted[index].amount) - project(sorted[index - 1].amount)\n+    slopes.push(rise / run)\n+  }\n+  return slopes\n+}\n+\n+/** 시작 금액에서 끝 금액까지 일정한 비율로 불어나는 계열. 내리막이 없어 음영은 생기지 않는다 */\n+function makeGrowthSeries(from: number, to: number): ResultTimeseriesPoint[] {\n+  const dates = BASE_POINTS.map((point) => point.date)\n+  return dates.map((date, index) => {\n+    const equity = from * (to / from) ** (index / (dates.length - 1))\n+    return {\n+      date,\n+      equity: equity.toFixed(2),\n+      cumulativeReturn: (equity / from - 1).toFixed(6),\n+      drawdown: '0.000000',\n+    }\n+  })\n+}\n+\n+const GROWTH_POINTS = makeGrowthSeries(10_000_000, 1_000_000_000)\n+const growth: EquityChartSeries = {\n+  name: '물결 고르기',\n+  points: GROWTH_POINTS,\n+  maxDrawdown: null,\n+}\n+\n+describe('EquityChart 세로축 눈금', () => {\n+  it('처음에는 로그 눈금으로 그려 금액의 상용로그에 높이를 비례시킨다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const ticks = axisTicks(container)\n+    expect(ticks.length).toBeGreaterThanOrEqual(3)\n+\n+    const logSlopes = slopesOf(ticks, Math.log10)\n+    for (const slope of logSlopes) expect(slope).toBeCloseTo(logSlopes[0], 6)\n+\n+    // 같은 눈금이 금액 자체에는 비례하지 않는다. 비례한다면 로그로 놓인 것이 아니다.\n+    const linearSlopes = slopesOf(ticks, (amount) => amount)\n+    expect(Math.abs(linearSlopes[linearSlopes.length - 1] / linearSlopes[0])).toBeLessThan(0.5)\n+  })\n+\n+  it('선형으로 바꾸면 금액 자체에 높이를 비례시킨다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />,\n+    )\n+\n+    fireEvent.click(screen.getByRole('button', { name: '선형' }))\n+\n+    const ticks = axisTicks(container)\n+    expect(ticks.length).toBeGreaterThanOrEqual(3)\n+\n+    const linearSlopes = slopesOf(ticks, (amount) => amount)\n+    for (const slope of linearSlopes) expect(slope).toBeCloseTo(linearSlopes[0], 6)\n+  })\n+\n+  it('고른 눈금을 단추의 눌림 상태로 알린다', () => {\n+    render(<EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />)\n+\n+    const linear = screen.getByRole('button', { name: '선형' })\n+    const log = screen.getByRole('button', { name: '로그' })\n+    expect(log.getAttribute('aria-pressed')).toBe('true')\n+    expect(linear.getAttribute('aria-pressed')).toBe('false')\n+\n+    fireEvent.click(linear)\n+    expect(linear.getAttribute('aria-pressed')).toBe('true')\n+    expect(log.getAttribute('aria-pressed')).toBe('false')\n+  })\n+\n+  it('어느 눈금이든 글자는 원화 금액으로 적는다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const labels = () =>\n+      [...container.querySelectorAll('[data-testid=\"amount-axis\"] text')].map(\n+        (text) => text.textContent ?? '',\n+      )\n+\n+    for (const label of labels()) expect(label).toMatch(/^[\\d,.]+(만|억)?원$/)\n+    fireEvent.click(screen.getByRole('button', { name: '선형' }))\n+    for (const label of labels()) expect(label).toMatch(/^[\\d,.]+(만|억)?원$/)\n+  })\n+\n+  it('대안 텍스트에 지금 보는 눈금 종류를 담는다', () => {\n+    render(<EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />)\n+\n+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('눈금은 로그')\n+    fireEvent.click(screen.getByRole('button', { name: '선형' }))\n+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('눈금은 선형')\n+  })\n+\n+  it('로그 눈금에서 0원 이하인 날은 그리지 않고 곡선을 끊는다', () => {\n+    const points = GROWTH_POINTS.map((point, index) =>\n+      index === 60 ? { ...point, equity: '0.00' } : point,\n+    )\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ name: '물결 고르기', points, maxDrawdown: null }}\n+        initialCash=\"10000000.00\"\n+      />,\n+    )\n+\n+    const definition = seriesPath(container, 'base').getAttribute('d') ?? ''\n+    expect(definition.match(/M/g)).toHaveLength(2)\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(points.length - 1)\n+  })\n+\n+  it('선형 눈금에서는 0원인 날도 그대로 그린다', () => {\n+    const points = GROWTH_POINTS.map((point, index) =>\n+      index === 60 ? { ...point, equity: '0.00' } : point,\n+    )\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ name: '물결 고르기', points, maxDrawdown: null }}\n+        initialCash=\"10000000.00\"\n+      />,\n+    )\n+\n+    fireEvent.click(screen.getByRole('button', { name: '선형' }))\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(points.length)\n+  })\n })\n \n describe('formatAxisAmount', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +1,15 @@\n import { curveLinear } from '@visx/curve'\n import { ticks } from 'd3-array'\n-import { useMemo } from 'react'\n+import { useMemo, useState } from 'react'\n import { Grid } from '@/components/charts/grid'\n import { Line, LineChart } from '@/components/charts/line-chart'\n import { XAxis } from '@/components/charts/x-axis'\n-import { AmountAxis } from '@/components/result/AmountAxis'\n+import { AmountAxis, type AmountTick } from '@/components/result/AmountAxis'\n import { DrawdownShade } from '@/components/result/DrawdownShade'\n import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/drawdownWindow'\n import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'\n import { formatMoney, formatRatio } from '@/components/result/formatResult'\n+import { InitialCashLabel } from '@/components/result/InitialCashLabel'\n import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'\n import type { ResultTimeseriesPoint } from '@/types/result'\n import styles from './EquityChart.module.css'\n@@ -24,7 +25,15 @@ import styles from './EquityChart.module.css'\n  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.\n  *\n  * <p>세로축은 시작 금액을 기준으로 잡는다. 0에서 시작하면 몇 %의 오르내림이 한 줄로 눌려 하락 구간을\n- * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다.\n+ * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다. 시작 금액\n+ * 자리에는 가로 점선과 함께 금액을 적은 이름표를 붙여, 곡선이 원금 위에 있는지 아래에 있는지를 그래프\n+ * 안에서 바로 읽게 한다.\n+ *\n+ * <p><b>세로축 눈금은 로그가 기본이고 선형으로 바꿀 수 있다.</b> 로그 눈금에서는 같은 비율의 오르내림이\n+ * 구간과 관계없이 같은 높이로 보이므로, 기간이 길어 자산가치가 여러 배로 불어난 결과에서도 초반의 하락\n+ * 구간이 납작하게 눌리지 않는다. 대신 같은 금액 차이가 구간마다 다른 높이로 보이기 때문에, 금액 차이를\n+ * 그대로 견주려는 사람을 위해 선형 눈금을 함께 남긴다. 어느 쪽이든 세로축에 적는 값은 원화 자산가치이고\n+ * (FR-001) 바뀌는 것은 그 금액을 놓는 높이뿐이다.\n  */\n \n export type EquityChartSeries = {\n@@ -49,6 +58,9 @@ export type EquityChartProps = {\n   } | null\n }\n \n+/** 세로축 눈금을 금액 그대로 놓을지(`linear`) 금액의 상용로그로 놓을지(`log`) 정한다 */\n+export type YScaleMode = 'linear' | 'log'\n+\n type ChartRow = {\n   date: Date\n   base?: number\n@@ -61,6 +73,8 @@ const TARGET_STROKE = 'var(--chart-line-secondary)'\n const TARGET_DASH = '7,5'\n /** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */\n const MAX_AMOUNT_TICKS = 4\n+/** 처음 보여 줄 눈금 종류 */\n+const DEFAULT_Y_SCALE_MODE: YScaleMode = 'log'\n \n function toNumber(value: string | null | undefined): number | null {\n   if (value == null || value.trim() === '') return null\n@@ -68,24 +82,40 @@ function toNumber(value: string | null | undefined): number | null {\n   return Number.isFinite(parsed) ? parsed : null\n }\n \n+/**\n+ * 금액을 세로축 좌표값으로 옮긴다.\n+ *\n+ * <p>로그 눈금에서 0원 이하는 상용로그가 정의되지 않는다. 그런 날은 `null`을 돌려주어 그 자리에서\n+ * 곡선을 끊는다. 아주 작은 값으로 바꿔 이어 그리면 있지도 않은 바닥을 만들어 낸다(원칙 VI).\n+ */\n+function toAxisValue(amount: number, mode: YScaleMode): number | null {\n+  if (mode === 'linear') return amount\n+  return amount > 0 ? Math.log10(amount) : null\n+}\n+\n /** 날짜 문자열을 UTC 자정으로 읽는다. 차트의 x 접근자가 쓰는 해석과 같게 맞춘다 */\n function toChartDate(date: string): Date {\n   return new Date(date.length === 10 ? date + 'T00:00:00Z' : date)\n }\n \n /**\n- * 두 계열을 날짜로 합쳐 한 그래프의 행으로 만든다.\n+ * 두 계열을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.\n  *\n  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.\n  */\n-function buildRows(base: ResultTimeseriesPoint[], target?: ResultTimeseriesPoint[]): ChartRow[] {\n+function buildRows(\n+  base: ResultTimeseriesPoint[],\n+  target: ResultTimeseriesPoint[] | undefined,\n+  mode: YScaleMode,\n+): ChartRow[] {\n   const byDate = new Map<string, ChartRow>()\n \n   const collect = (points: ResultTimeseriesPoint[], key: 'base' | 'target') => {\n     for (const point of points) {\n       const row = byDate.get(point.date) ?? { date: toChartDate(point.date) }\n       const equity = readEquity(point)\n-      if (equity != null) row[key] = equity\n+      const axisValue = equity == null ? null : toAxisValue(equity, mode)\n+      if (axisValue != null) row[key] = axisValue\n       byDate.set(point.date, row)\n     }\n   }\n@@ -102,10 +132,18 @@ function buildRows(base: ResultTimeseriesPoint[], target?: ResultTimeseriesPoint\n  *\n  * <p>시작 금액을 읽을 수 없으면 곡선의 값만으로 범위를 잡는다. 0을 대신 넣으면 곡선이 그림 위쪽에\n  * 한 줄로 눌려 하락 구간을 알아볼 수 없다.\n+ *\n+ * <p>받는 값과 돌려주는 값은 모두 세로축 좌표값이다. 로그 눈금에서는 로그 공간에서 여백을 잡으므로,\n+ * 곡선이 한 점뿐일 때 쓰는 최소 여백도 금액이 아니라 로그 폭으로 정한다. 금액 기준의 최소 여백인 1원을\n+ * 로그 공간에 그대로 쓰면 열 배 폭이 되어 곡선이 그림 한가운데 선으로 눌린다.\n  */\n-function resolveYDomain(rows: ChartRow[], initialCash: number | null): [number, number] {\n-  let lowest = initialCash ?? Number.POSITIVE_INFINITY\n-  let highest = initialCash ?? Number.NEGATIVE_INFINITY\n+function resolveYDomain(\n+  rows: ChartRow[],\n+  initialAxisValue: number | null,\n+  mode: YScaleMode,\n+): [number, number] {\n+  let lowest = initialAxisValue ?? Number.POSITIVE_INFINITY\n+  let highest = initialAxisValue ?? Number.NEGATIVE_INFINITY\n   for (const row of rows) {\n     for (const value of [row.base, row.target]) {\n       if (value == null) continue\n@@ -113,9 +151,12 @@ function resolveYDomain(rows: ChartRow[], initialCash: number | null): [number,\n       if (value > highest) highest = value\n     }\n   }\n-  if (!Number.isFinite(lowest) || !Number.isFinite(highest)) return [0, 100]\n+  if (!Number.isFinite(lowest) || !Number.isFinite(highest)) {\n+    return mode === 'log' ? [0, 2] : [0, 100]\n+  }\n   const span = highest - lowest\n-  const padding = span > 0 ? span * 0.08 : Math.max(Math.abs(highest) * 0.01, 1)\n+  const minimumPadding = mode === 'log' ? 0.01 : 1\n+  const padding = span > 0 ? span * 0.08 : Math.max(Math.abs(highest) * 0.01, minimumPadding)\n   return [lowest - padding, highest + padding]\n }\n \n@@ -132,8 +173,57 @@ function pickAmountTicks([low, high]: [number, number]): number[] {\n   return []\n }\n \n+/** 눈금이 넷을 넘으면 양끝을 남기고 고르게 솎아 낸다 */\n+function thinTicks(values: number[]): number[] {\n+  if (values.length <= MAX_AMOUNT_TICKS) return values\n+  const step = (values.length - 1) / (MAX_AMOUNT_TICKS - 1)\n+  const picked: number[] = []\n+  for (let index = 0; index < MAX_AMOUNT_TICKS; index += 1) {\n+    picked.push(values[Math.round(index * step)])\n+  }\n+  return [...new Set(picked)]\n+}\n+\n+/**\n+ * 로그 눈금에서 글자로 적을 금액. 1·2·5에 10의 거듭제곱을 곱한 값 가운데 범위에 드는 것을 먼저 찾는다.\n+ * 자산가치가 오르내린 폭이 좁으면 그런 값이 하나도 걸리지 않아 축이 비므로, 그때는 선형과 같은 둥근\n+ * 금액을 쓴다. 어느 쪽이든 금액을 놓는 높이는 로그로 잡히므로 곡선과 눈금은 어긋나지 않는다.\n+ */\n+function pickLogAmountTicks([lowLog, highLog]: [number, number]): number[] {\n+  if (!Number.isFinite(lowLog) || !Number.isFinite(highLog) || !(highLog > lowLog)) return []\n+  const low = 10 ** lowLog\n+  const high = 10 ** highLog\n+  const rounded: number[] = []\n+  for (let exponent = Math.floor(lowLog); exponent <= Math.ceil(highLog); exponent += 1) {\n+    for (const multiple of [1, 2, 5]) {\n+      const amount = multiple * 10 ** exponent\n+      if (amount >= low && amount <= high) rounded.push(amount)\n+    }\n+  }\n+  if (rounded.length >= 2) return thinTicks(rounded)\n+  return pickAmountTicks([low, high])\n+}\n+\n+/** 눈금 금액에 놓일 자리를 붙인다. 좌표로 옮길 수 없는 금액은 눈금에서 뺀다 */\n+function toAmountTicks(amounts: number[], mode: YScaleMode): AmountTick[] {\n+  const result: AmountTick[] = []\n+  for (const amount of amounts) {\n+    const at = toAxisValue(amount, mode)\n+    if (at != null) result.push({ amount, at })\n+  }\n+  return result\n+}\n+\n+/** 눈금 종류를 사람이 읽을 말로 옮긴다 */\n+function scaleModeNoun(mode: YScaleMode): string {\n+  return mode === 'log' ? '로그' : '선형'\n+}\n+\n /** 그래프를 문장으로 옮긴 대안 텍스트(FR-022) */\n-function buildAltText({ base, target, altNumbers }: EquityChartProps): string {\n+function buildAltText(\n+  { base, target, altNumbers, initialCash }: EquityChartProps,\n+  mode: YScaleMode,\n+): string {\n   const numbers = altNumbers\n     ? '비용 차감 후 전체 수익률 ' +\n       formatRatio(altNumbers.netTotalReturn) +\n@@ -146,7 +236,13 @@ function buildAltText({ base, target, altNumbers }: EquityChartProps): string {\n   const comparison = target\n     ? '비교 대상은 ' + target.name + '이며 파선으로 함께 그렸습니다.'\n     : '비교 대상은 없습니다.'\n-  return base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison\n+  const axis =\n+    '세로축은 원화 자산가치이고 눈금은 ' +\n+    scaleModeNoun(mode) +\n+    '이며, 시작 금액은 ' +\n+    formatMoney(initialCash) +\n+    '입니다.'\n+  return base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison + ' ' + axis\n }\n \n /** 음영 구간을 사람이 읽을 문장으로 옮긴다 */\n@@ -156,16 +252,31 @@ function shadeNote(name: string, window: DrawdownWindow): string {\n \n export function EquityChart(props: EquityChartProps) {\n   const { base, target, initialCash } = props\n-  const rows = useMemo(() => buildRows(base.points, target?.points), [base.points, target?.points])\n+  const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)\n+\n+  const rows = useMemo(\n+    () => buildRows(base.points, target?.points, scaleMode),\n+    [base.points, target?.points, scaleMode],\n+  )\n   const initial = toNumber(initialCash)\n-  const yDomain = useMemo(() => resolveYDomain(rows, initial), [rows, initial])\n-  const amountTicks = useMemo(() => pickAmountTicks(yDomain), [yDomain])\n+  const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)\n+  const yDomain = useMemo(\n+    () => resolveYDomain(rows, initialAxisValue, scaleMode),\n+    [rows, initialAxisValue, scaleMode],\n+  )\n+  const amountTicks = useMemo(() => {\n+    const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)\n+    return toAmountTicks(amounts, scaleMode)\n+  }, [yDomain, scaleMode])\n \n   const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)\n   const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null\n \n   const notes = [\n     initial == null ? null : '가로 점선은 시작 금액 ' + formatMoney(initialCash) + '입니다.',\n+    scaleMode === 'log'\n+      ? '세로축 눈금이 로그라 같은 비율의 오르내림이 어느 구간에서나 같은 높이로 보입니다.'\n+      : null,\n     baseWindow ? shadeNote(base.name, baseWindow) : null,\n     target && targetWindow ? shadeNote(target.name, targetWindow) : null,\n   ].filter((note): note is string => note != null)\n@@ -183,7 +294,21 @@ export function EquityChart(props: EquityChartProps) {\n \n   return (\n     <div className={styles.figure}>\n-      <div aria-label={buildAltText(props)} className={styles.chart} role=\"img\">\n+      <div aria-label=\"세로축 눈금\" className={styles.scaleToggle} role=\"group\">\n+        {(['linear', 'log'] as const).map((mode) => (\n+          <button\n+            aria-pressed={scaleMode === mode}\n+            className={styles.scaleButton}\n+            key={mode}\n+            onClick={() => setScaleMode(mode)}\n+            type=\"button\"\n+          >\n+            {scaleModeNoun(mode)}\n+          </button>\n+        ))}\n+      </div>\n+\n+      <div aria-label={buildAltText(props, scaleMode)} className={styles.chart} role=\"img\">\n         <LineChart\n           animationDuration={0}\n           aspectRatio=\"\"\n@@ -199,13 +324,17 @@ export function EquityChart(props: EquityChartProps) {\n             highlightRowStroke=\"var(--thorp-neutral)\"\n             highlightRowStrokeDasharray=\"6,4\"\n             highlightRowStrokeWidth={1.2}\n-            highlightRowValues={initial == null ? undefined : [initial]}\n+            highlightRowValues={initialAxisValue == null ? undefined : [initialAxisValue]}\n             horizontal\n-            rowTickValues={amountTicks}\n+            rowTickValues={amountTicks.map((tick) => tick.at)}\n             strokeDasharray=\"2,5\"\n           />\n \n-          <AmountAxis values={amountTicks} />\n+          <AmountAxis ticks={amountTicks} />\n+\n+          {initial == null || initialAxisValue == null ? null : (\n+            <InitialCashLabel amount={initial} at={initialAxisValue} />\n+          )}\n \n           {baseWindow ? (\n             <DrawdownShade\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,49 @@\n+import { useChartStable } from '@/components/charts/chart-context'\n+import { formatAxisAmount } from '@/components/result/formatResult'\n+\n+/**\n+ * 시작 금액 기준선에 붙는 이름표(FR-001).\n+ *\n+ * <p>기준선 자체는 `Grid`의 `highlightRowValues`가 긋는다. 선만 있으면 그것이 무슨 선인지 그래프\n+ * 안에서는 알 수 없어, 곡선이 원금 위에 있는지 아래에 있는지를 눈으로 바로 읽지 못한다. 그래서 선\n+ * 옆에 금액을 직접 적는다.\n+ *\n+ * <p>글자 뒤에 바탕색 외곽선을 둘러 곡선이나 격자와 겹쳐도 읽히게 한다. 폭을 재서 배경 사각형을\n+ * 깔지 않는 이유는 글꼴에 따라 폭이 달라져 사각형만 남거나 글자가 삐져나오기 때문이다.\n+ */\n+export type InitialCashLabelProps = {\n+  /** 기준선이 놓일 세로축 좌표값. 로그 눈금에서는 금액의 상용로그다 */\n+  at: number\n+  /** 이름표에 적을 원화 금액 */\n+  amount: number\n+}\n+\n+export function InitialCashLabel({ at, amount }: InitialCashLabelProps) {\n+  const { yScale, innerHeight } = useChartStable()\n+\n+  const y = yScale(at)\n+  if (y == null || !Number.isFinite(y)) return null\n+\n+  // 기준선이 그림 위쪽에 가까우면 이름표가 잘린다. 그때만 선 아래로 내린다.\n+  const above = y - 7\n+  const baseline = above < 12 ? Math.min(y + 15, innerHeight - 2) : above\n+\n+  return (\n+    <text\n+      data-testid=\"initial-cash-label\"\n+      dominantBaseline=\"middle\"\n+      fill=\"var(--thorp-copy)\"\n+      fontSize={11}\n+      paintOrder=\"stroke\"\n+      stroke=\"var(--thorp-surface)\"\n+      strokeLinejoin=\"round\"\n+      strokeWidth={3.5}\n+      x={4}\n+      y={baseline}\n+    >\n+      {'시작 금액 ' + formatAxisAmount(amount)}\n+    </text>\n+  )\n+}\n+\n+export default InitialCashLabel\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/InitialCashLabel.tsx",
+          "old_path": "frontend/src/components/result/InitialCashLabel.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2855112": []
+  }
+}

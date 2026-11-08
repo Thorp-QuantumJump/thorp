@@ -1,0 +1,812 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947984,
+    "iid": 170,
+    "project_id": 1444456,
+    "title": "feat(fe): 바꾼 설정값을 그 자리에서 판정하고 분석 요청의 거절을 계약대로 처리한다",
+    "description": "## 작업 내용 요약\n\n상세 설정에서 값을 바꾸면 규칙 위반과 워밍업 판정이 그 자리에서 보이고, 문제가 있으면 '분석하기'가 막힌다. 값을 바꾸는 동안 서버 요청은 나가지 않는다. 분석 요청이 거절되면 계약 §2대로 처리하고, 자동으로 다시 보내지 않는다.\n\n## 관련 티켓\n\n[S15P21E205-241](https://ssafy.atlassian.net/browse/S15P21E205-241)\n\n## 주요 변경 사항\n\n- `StrategySettingsPage`에 상세 설정 패널을 연결하고 값이 바뀔 때마다 즉시 판정한다\n- 등록표 버전이 바뀌어 409가 오면 등록표를 다시 받아 알린다. 유효한 값은 두고, 무효한 값은 복원을 제안한다\n- 422·503·400 거절도 계약대로 처리한다 (전략 선택 해제 / 다시 시도 / 항목 이름으로 안내)\n- 테스트 픽스처 `bandWidth` 기본값을 20에서 35로 올렸다. 기존 값은 섹터 셋에서 규칙을 어겼다\n\n## 테스트\n\nlint·build 통과, Vitest 473·legacy 13 통과. 새 검사는 고치기 전 코드에서 실패하는 것을 확인했다.\n\n## 리뷰 포인트\n\n1. **B06 계약**: 화면은 거절을 오류의 `code`·`details`로 가른다. B06의 전송 통로가 이 둘을 실어 던져야 한다.\n2. **열린 결정 T098**: 이 MR은 \"값을 바꾸는 동안 요청 0건\"을 검사로 고정했다. T042를 적힌 대로(값마다 평가 기간 조회) 구현하면 깨지므로, 그 전에 001과 방향을 정해야 한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T10:06:12.465+09:00",
+    "updated_at": "2026-09-17T10:22:52.761+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T10:11:44.373+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/241-live-verdict",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+    "merge_commit_sha": "5e35716f4ec1771a5ff1df8b30cb818ba8f00c51",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T10:06:14.786+09:00",
+    "reference": "!170",
+    "references": {
+      "short": "!170",
+      "relative": "!170",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!170"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/170",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947984,
+    "iid": 170,
+    "project_id": 1444456,
+    "title": "feat(fe): 바꾼 설정값을 그 자리에서 판정하고 분석 요청의 거절을 계약대로 처리한다",
+    "description": "## 작업 내용 요약\n\n상세 설정에서 값을 바꾸면 규칙 위반과 워밍업 판정이 그 자리에서 보이고, 문제가 있으면 '분석하기'가 막힌다. 값을 바꾸는 동안 서버 요청은 나가지 않는다. 분석 요청이 거절되면 계약 §2대로 처리하고, 자동으로 다시 보내지 않는다.\n\n## 관련 티켓\n\n[S15P21E205-241](https://ssafy.atlassian.net/browse/S15P21E205-241)\n\n## 주요 변경 사항\n\n- `StrategySettingsPage`에 상세 설정 패널을 연결하고 값이 바뀔 때마다 즉시 판정한다\n- 등록표 버전이 바뀌어 409가 오면 등록표를 다시 받아 알린다. 유효한 값은 두고, 무효한 값은 복원을 제안한다\n- 422·503·400 거절도 계약대로 처리한다 (전략 선택 해제 / 다시 시도 / 항목 이름으로 안내)\n- 테스트 픽스처 `bandWidth` 기본값을 20에서 35로 올렸다. 기존 값은 섹터 셋에서 규칙을 어겼다\n\n## 테스트\n\nlint·build 통과, Vitest 473·legacy 13 통과. 새 검사는 고치기 전 코드에서 실패하는 것을 확인했다.\n\n## 리뷰 포인트\n\n1. **B06 계약**: 화면은 거절을 오류의 `code`·`details`로 가른다. B06의 전송 통로가 이 둘을 실어 던져야 한다.\n2. **열린 결정 T098**: 이 MR은 \"값을 바꾸는 동안 요청 0건\"을 검사로 고정했다. T042를 적힌 대로(값마다 평가 기간 조회) 구현하면 깨지므로, 그 전에 001과 방향을 정해야 한다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T10:06:12.465+09:00",
+    "updated_at": "2026-09-17T10:22:52.761+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-17T10:11:44.373+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/241-live-verdict",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+    "merge_commit_sha": "5e35716f4ec1771a5ff1df8b30cb818ba8f00c51",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T10:06:14.786+09:00",
+    "reference": "!170",
+    "references": {
+      "short": "!170",
+      "relative": "!170",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!170"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/170",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "13",
+    "latest_build_started_at": "2026-09-17T10:09:19.390+09:00",
+    "latest_build_finished_at": "2026-09-17T10:32:58.416+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 201076,
+      "iid": 94,
+      "project_id": 1444456,
+      "sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+      "ref": "feat(fe)/241-live-verdict",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T10:09:19.283+09:00",
+      "updated_at": "2026-09-17T10:32:58.422+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201076"
+    },
+    "head_pipeline": {
+      "id": 201076,
+      "iid": 94,
+      "project_id": 1444456,
+      "sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+      "ref": "feat(fe)/241-live-verdict",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T10:09:19.283+09:00",
+      "updated_at": "2026-09-17T10:32:58.422+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201076",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T10:09:19.390+09:00",
+      "finished_at": "2026-09-17T10:32:58.416+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/201076",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "head_sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+      "start_sha": "dd847ee187f7066200edf7293017f723a8aef674"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "24c1c01b1f2bf98f41cc66e4bd794518925da2ba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821583,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T10:06:12.593+09:00",
+          "updated_at": "2026-09-17T10:06:12.597+09:00",
+          "system": true,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "60a1f2e1409025cd7b200a36089549e76251e0e1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821584,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T10:06:12.608+09:00",
+          "updated_at": "2026-09-17T10:06:12.615+09:00",
+          "system": true,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "664ced0de7896a6ec0620b5e84ed846d433dd4b2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821593,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **등록표 버전 변경(409) 시 동시성/경합 상태 테스트**:\n   - 분석 요청 도중 등록표를 변경하고, 응답이 오는 시점에 다른 전략을 선택하거나 설정을 변경했을 때 409 에러 핸들러가 현재 선택된 전략과 새 등록표 상태를 정확히 동기화하는지 검증합니다.\n2. **규칙 판정 예외 시나리오 테스트 (`checkRules`)**:\n   - `checkRules` 내에서 예외가 발생하는 다양한 비정상 입력값(예: undefined, null, 잘못된 타입)이 주어졌을 때, 분석하기 버튼이 올바르게 비활성화(`RULES_UNJUDGED`)되고 UI가 깨지지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3af1f3265de6ff26879ec25978c5a70dcebb2bda -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T10:06:21.341+09:00",
+          "updated_at": "2026-09-17T10:06:21.341+09:00",
+          "system": false,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d1138fa1581660b1db542b42e4a2076b60882339",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821619,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 3af1f3265de6ff26879ec25978c5a70dcebb2bda pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T10:09:14.491+09:00",
+          "updated_at": "2026-09-17T10:09:14.495+09:00",
+          "system": true,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "58118a30d93a9fd6cb6197d1f29972f9a4a60295",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821651,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T10:11:15.282+09:00",
+          "updated_at": "2026-09-17T10:11:15.285+09:00",
+          "system": true,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4cbc7d701cb9e89de4d0ad96ee4afd4a2e70b63f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821658,
+          "type": null,
+          "body": "mentioned in commit 5e35716f4ec1771a5ff1df8b30cb818ba8f00c51",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T10:11:44.500+09:00",
+          "updated_at": "2026-09-17T10:11:44.514+09:00",
+          "system": true,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "844cc9c35939a1f96ca283b9c5f166108c0ed35d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2821774,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T10:22:52.707+09:00",
+          "updated_at": "2026-09-17T10:22:52.707+09:00",
+          "system": false,
+          "noteable_id": 947984,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 170,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2210298,
+      "head_commit_sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "dd847ee187f7066200edf7293017f723a8aef674",
+      "created_at": "2026-09-17T10:06:12.986+09:00",
+      "merge_request_id": 947984,
+      "state": "collected",
+      "real_size": "13",
+      "patch_id_sha": "ccc603711ae350a83a210e78cc73b4bb4b203f21"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2210298,
+      "head_commit_sha": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+      "base_commit_sha": "7818ed1359fde428f95ee043ee9a8133857ac3fa",
+      "start_commit_sha": "dd847ee187f7066200edf7293017f723a8aef674",
+      "created_at": "2026-09-17T10:06:12.986+09:00",
+      "merge_request_id": 947984,
+      "state": "collected",
+      "real_size": "13",
+      "patch_id_sha": "ccc603711ae350a83a210e78cc73b4bb4b203f21",
+      "commits": [
+        {
+          "id": "3af1f3265de6ff26879ec25978c5a70dcebb2bda",
+          "short_id": "3af1f326",
+          "created_at": "2026-09-17T09:42:03.000+09:00",
+          "parent_ids": [
+            "25bcdf124bff0f38235b62bd75898dd7e812c8c9"
+          ],
+          "title": "docs(fe): 003 tasks.md에 B09 완료와 converge·코드리뷰 결과를 남긴다",
+          "message": "docs(fe): 003 tasks.md에 B09 완료와 converge·코드리뷰 결과를 남긴다\n\nT058·T059·T064를 완료로 표시하고 구현 메모를 남겼다. `/speckit-converge`를 세 번 돌려 Phase 15\n(T098~T100)와 Phase 16(T101)을 더했고, T099~T101은 같은 브랜치에서 닫았다. T098(선택 전략의\n워밍업 재판정에 서버 조회가 필요한지)은 001과 정할 결정이라 열린 채 남긴다 — B06의 T042를 적힌\n대로 구현하면 \"값을 바꾸는 동안 요청 0건\" 검사가 깨진다.\n\nMR 전 AI 코드리뷰에서 찾은 결함 둘(409 알림이 새 등록표를 보기 전에 \"그대로 두었습니다\"를 그림,\n보내는 동안 카드를 옮기면 늦게 온 422가 새 선택을 풂)과 고친 방법을 적었다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T09:42:02.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T09:42:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3af1f3265de6ff26879ec25978c5a70dcebb2bda"
+        },
+        {
+          "id": "25bcdf124bff0f38235b62bd75898dd7e812c8c9",
+          "short_id": "25bcdf12",
+          "created_at": "2026-09-17T09:42:03.000+09:00",
+          "parent_ids": [
+            "7818ed1359fde428f95ee043ee9a8133857ac3fa"
+          ],
+          "title": "feat(fe): 바꾼 설정값을 그 자리에서 판정하고 분석 요청의 거절을 계약대로 처리한다",
+          "message": "feat(fe): 바꾼 설정값을 그 자리에서 판정하고 분석 요청의 거절을 계약대로 처리한다\n\n상세 설정 패널을 전략 선택 화면에 붙였다(T058). 값을 바꾸면 규칙 위반·워밍업·고른 카드의\n판정·기본 설정 표시·'분석하기'의 막힘이 한 렌더 안에서 다시 계산되고, 그동안 서버로 요청이\n나가지 않는다. 규칙 판정은 패널과 페이지가 `checkRules` 하나를 함께 써서, 판정하지 못한 경우를\n한쪽만 통과로 접지 않는다. 고른 카드만 지금 설정의 워밍업으로 판정하고, 계산할 수 없으면 기본\n설정으로 대신 판정하지 않고 `unknown`을 보인다(T100).\n\n분석 요청의 거절은 오류의 `code` 하나로 가른다(T059·T099). 409는 등록표를 다시 받아 보관값을\n재검증하고 알리되 다시 보내지 않는다. 422 `STRATEGY_NOT_REGISTERED`는 보낸 전략을 아직 고르고\n있을 때만 선택을 풀고, 503은 '다시 시도'를 제안하며, 400은 서버의 개발용 문장 대신 등록표의 항목\n이름으로 안내한다. B06의 전송 통로는 `code`와 응답 `details`를 실어 던져야 한다.\n\n테스트 픽스처의 `bandWidth` 기본값을 20에서 35로 올렸다. 섹터 셋에서 기본 설정이 규칙을 어기는데\n카드는 고를 수 있다고 적혀 있어, 페이지가 규칙 위반으로 막기 시작하자 드러났다. 실행마다 결과가\n달라지던 기존 페이지 검사 하나는 보관값 재검증을 기다리게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T09:42:01.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T09:42:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/25bcdf124bff0f38235b62bd75898dd7e812c8c9"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -22,7 +22,7 @@ import { SettingsStatusBadge } from './SettingsStatusBadge'\n  * 상세 설정 패널(T056)을 실제 설정 훅과 함께 돌린다(FR-003·FR-006·FR-008·FR-012, quickstart 5-1·6).\n  *\n  * <p><b>섹터 수를 여섯으로 둔다.</b> 픽스처의 규칙은 \"허용 이탈 폭 × 섹터 수 < 100이면 위반\"이라,\n- * 기본값 20에서 섹터 여섯이면 120으로 통과하고 15로 바꾸면 90으로 위반한다. 기본 설정이 이미 위반인\n+ * 기본값 35에서 섹터 여섯이면 210으로 통과하고 15로 바꾸면 90으로 위반한다. 기본 설정이 이미 위반인\n  * 조건에서는 \"바꾸면 생기고 복원하면 사라진다\"를 볼 수 없다.\n  */\n \n@@ -185,7 +185,7 @@ describe('DetailSettingsPanel', () => {\n \n     expect(screen.queryByRole('alert')).toBeNull()\n     expect(screen.getByRole('status').textContent).toContain('기본 설정')\n-    expect((band as HTMLInputElement).value).toBe(String(20))\n+    expect((band as HTMLInputElement).value).toBe(String(selectableStrategy.axes[2].defaultValue))\n \n     expect(fetchSpy).not.toHaveBeenCalled()\n     expect(xhrSpy).not.toHaveBeenCalled()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.test.tsx",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,8 +2,8 @@ import { useId, useState } from 'react'\n import { TermHelp } from '@/components/learning/TermHelp'\n import { applicableAxes, type AxisValues } from '@/hooks/useStrategySettings'\n import type { LearningReturnState } from '@/types/learning'\n-import type { AxisValue, StrategyView, ValidationRule } from '@/types/strategyRegistry'\n-import { evaluateRules } from '@/utils/validationRules'\n+import type { AxisValue, StrategyView } from '@/types/strategyRegistry'\n+import { checkRules } from '@/utils/validationRules'\n import { AxisChoiceField } from './AxisChoiceField'\n import { AxisNumberField } from './AxisNumberField'\n import styles from './DetailSettingsPanel.module.css'\n@@ -24,7 +24,7 @@ interface DetailSettingsPanelProps {\n   onResetAll: () => void\n }\n \n-const RULES_UNJUDGED = '설정 규칙을 판정하지 못했습니다.'\n+const RULES_UNJUDGED ='설정 규칙을 판정하지 못했습니다.'\n \n /** 도움말에서 글로 갔다가 돌아올 자리. 이 화면의 경로와 이름이다(013 term-help-ui §3). */\n const RETURN_TO: LearningReturnState = { path: '/strategy', label: '전략 선택' }\n@@ -61,14 +61,11 @@ export function DetailSettingsPanel({\n   const [open, setOpen] = useState(false)\n   const bodyId = useId()\n \n-  let violations: ValidationRule[] = []\n-  let rulesUnjudged = false\n-  try {\n-    violations = evaluateRules(strategy.validationRules, values, { UNIVERSE_SIZE: universeSize })\n-  } catch {\n-    // 등록표가 규칙 문법을 어겼다. 통과로 접지 않고 판정하지 못했다고 알린다.\n-    rulesUnjudged = true\n-  }\n+  // 등록표가 규칙 문법을 어겼으면 통과로 접지 않고 판정하지 못했다고 알린다. 페이지가 '분석하기'를\n+  // 막을 때도 같은 함수를 쓴다.\n+  const { violations, unjudged: rulesUnjudged } = checkRules(strategy.validationRules, values, {\n+    UNIVERSE_SIZE: universeSize,\n+  })\n \n   return (\n     <section className={styles.panel} aria-label=\"상세 설정\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+/* 등록표 버전 변경 알림. 경고 테두리와 문장이 함께 있어 색을 못 읽어도 뜻이 남는다. */\n+.notice {\n+  display: grid;\n+  gap: 6px;\n+  padding: 12px 14px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 10px;\n+  color: var(--thorp-copy);\n+  font-size: 0.86rem;\n+  line-height: 1.6;\n+}\n+\n+.title {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-weight: 700;\n+}\n+\n+.detail {\n+  margin: 0;\n+}\n+\n+.removed {\n+  display: grid;\n+  gap: 4px;\n+  margin: 0;\n+  padding-left: 18px;\n+  font-size: 0.82rem;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/RegistryChangedNotice.module.css",
+          "old_path": "frontend/src/components/strategy/RegistryChangedNotice.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,57 @@\n+import styles from './RegistryChangedNotice.module.css'\n+\n+/** 바뀐 등록표를 다시 받는 과정의 어디쯤인가. 카드 목록의 조회 상태에서 온다. */\n+export type RegistryReloadPhase = 'reloading' | 'reloaded' | 'failed'\n+\n+interface RegistryChangedNoticeProps {\n+  phase: RegistryReloadPhase\n+  /** 바뀐 등록표로 다시 판정한 뒤 기본값 복원을 기다리는 값의 수. 이 화면에 안내가 보이는 것만 센다 */\n+  pendingRestoreCount: number\n+  /** 바뀐 등록표에서 전략 자체가 사라져 지운 설정의 안내. 되돌릴 자리가 없어 이 알림이 대신 전한다 */\n+  removedMessages: readonly string[]\n+}\n+\n+const TITLE = '확인하신 사이에 등록표가 바뀌었습니다. 분석 요청은 보내지 않았습니다.'\n+\n+function detailOf(phase: RegistryReloadPhase, pendingRestoreCount: number): string {\n+  if (phase === 'reloading') return '바뀐 등록표를 불러오는 중입니다.'\n+  if (phase === 'failed') {\n+    return '바뀐 등록표를 불러오지 못했습니다. 전략 카드 자리에서 다시 불러온 뒤 설정을 확인해 주세요.'\n+  }\n+  if (pendingRestoreCount > 0) {\n+    return '바뀐 등록표에서 쓸 수 없게 된 값이 있습니다. 아래 안내에서 기본값을 복원한 뒤 분석하기를 다시 눌러 주세요.'\n+  }\n+  return '지금 설정값은 바뀐 등록표에서도 쓸 수 있어 그대로 두었습니다. 확인한 뒤 분석하기를 다시 눌러 주세요.'\n+}\n+\n+/**\n+ * 분석 요청이 등록표 버전 변경(409 `REGISTRY_VERSION_CHANGED`)으로 거절되었음을 알린다(research R9,\n+ * quickstart 10).\n+ *\n+ * <p><b>다시 보내지 않는다.</b> 사용자가 본 적 없는 등록표로 요청이 나가면 거절이든 통과든 사용자가\n+ * 확인하지 않은 규칙의 결과다. 바뀐 등록표로 설정을 다시 판정한 결과를 보이고, 보낼지는 사용자가 다시\n+ * 정한다.\n+ *\n+ * <p><b>값을 고치지 않는다.</b> 다시 판정해 유효한 값은 그대로 두고, 쓸 수 없게 된 값은 비운 채 기존\n+ * 무효 안내가 이유와 복원 버튼을 보인다(`useStrategySettings`의 재검증, FR-017). 이 알림은 그 사실을\n+ * 요약할 뿐 복원을 대신하지 않는다.\n+ */\n+export function RegistryChangedNotice({\n+  phase,\n+  pendingRestoreCount,\n+  removedMessages,\n+}: RegistryChangedNoticeProps) {\n+  return (\n+    <div className={styles.notice} role=\"status\" data-phase={phase}>\n+      <p className={styles.title}>{TITLE}</p>\n+      <p className={styles.detail}>{detailOf(phase, pendingRestoreCount)}</p>\n+      {phase === 'reloaded' && removedMessages.length > 0 ? (\n+        <ul className={styles.removed}>\n+          {removedMessages.map((message) => (\n+            <li key={message}>{message}</li>\n+          ))}\n+        </ul>\n+      ) : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/RegistryChangedNotice.tsx",
+          "old_path": "frontend/src/components/strategy/RegistryChangedNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -66,9 +66,66 @@ export type WarmupJudgement = {\n export type AnalysisSupport = {\n   fetchAnalysisVersions: (signal?: AbortSignal) => Promise<AnalysisVersions | null>\n   judgeWarmup: (input: WarmupJudgeInput) => WarmupJudgement\n+  /**\n+   * 요청을 보낸다. 거절되면 **서버가 보낸 오류 이름을 `code`에, 응답의 `details`를 `details`에 실은\n+   * 오류로** 거부하고, 메시지는 서버가 보낸 문장을 쓴다.\n+   *\n+   * 화면은 `code`로 거절마다 계약 §2의 처리를 가르고(`readBacktestRejection`), 400이면 `details.axis`로\n+   * 항목 이름을 찾는다. 공용 `ApiClientError`는 `code`는 싣지만 `details`는 싣지 않는다. Axios 오류를\n+   * 그대로 던지면 그 `code`는 `ERR_BAD_REQUEST` 같은 전송 계층 이름이라 가를 수 없으니, B06(T039)의\n+   * `BacktestRequestError`가 둘을 정규화한 뒤 던진다.\n+   */\n   createBacktest: (request: BacktestCreateRequest) => Promise<BacktestAccepted>\n }\n \n+/**\n+ * 분석 요청의 거절 가운데 화면이 따로 처리하는 것(계약 §2 거절 응답).\n+ *\n+ * 422 `VALIDATION_RULE_VIOLATED`는 여기 없다. 서버가 규칙의 `detail`을 메시지로 싣고, 화면은 그\n+ * 메시지를 그대로 보이면 계약을 만족하기 때문이다.\n+ */\n+export const BacktestRejectionCode = {\n+  /** 400. 축 값이나 시작 금액이 허용 범위 밖이다 */\n+  UNREGISTERED_PARAMETER_VALUE: 'UNREGISTERED_PARAMETER_VALUE',\n+  /** 409. 요청을 보낸 사이에 등록표 버전이 바뀌었다 */\n+  REGISTRY_VERSION_CHANGED: 'REGISTRY_VERSION_CHANGED',\n+  /** 422. 고른 전략이 등록표의 활성 전략에 없다 */\n+  STRATEGY_NOT_REGISTERED: 'STRATEGY_NOT_REGISTERED',\n+  /** 503. 서버가 등록표를 읽지 못했다 */\n+  REGISTRY_UNAVAILABLE: 'REGISTRY_UNAVAILABLE',\n+} as const\n+\n+/** `createBacktest`가 던진 오류에서 화면이 읽는 두 가지. 모르는 모양이면 둘 다 `null`이다. */\n+export type BacktestRejection = {\n+  /** 서버가 보낸 오류 이름 그대로. 아는 이름이 아니어도 접지 않는다 */\n+  code: string | null\n+  /** 거절 응답의 `details`. 400이면 `axis`·`value`·`allowedRange`를 싣는다 */\n+  details: Record<string, unknown> | null\n+}\n+\n+/**\n+ * `createBacktest`가 던진 오류를 읽는다.\n+ *\n+ * 오류 클래스를 묻지 않고 `code`와 `details`만 본다. 전송 통로는 B06이 채우므로, 이 화면이 특정 클래스를\n+ * 알면 통로를 바꿀 때 판별이 조용히 빗나간다.\n+ */\n+export function readBacktestRejection(error: unknown): BacktestRejection {\n+  if (typeof error !== 'object' || error === null) return { code: null, details: null }\n+  const { code, details } = error as { code?: unknown; details?: unknown }\n+  return {\n+    code: typeof code === 'string' ? code : null,\n+    details:\n+      typeof details === 'object' && details !== null && !Array.isArray(details)\n+        ? (details as Record<string, unknown>)\n+        : null,\n+  }\n+}\n+\n+/** `createBacktest`가 던진 오류가 등록표 버전 변경(409)인가. */\n+export function isRegistryVersionChanged(error: unknown): boolean {\n+  return readBacktestRejection(error).code === BacktestRejectionCode.REGISTRY_VERSION_CHANGED\n+}\n+\n export const ANALYSIS_VERSIONS_UNAVAILABLE = '분석 조건 버전을 확인할 수 없습니다.'\n export const EVALUATION_WINDOW_UNAVAILABLE =\n   '공통 평가 기간을 확인할 수 없어 분석을 시작할 수 없습니다.'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/analysisSupport.ts",
+          "old_path": "frontend/src/components/strategy/analysisSupport.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -648,6 +648,8 @@ export type StrategySettings = {\n   /** 모든 축에 값이 있는가. 비워 둔 축이 있으면 분석을 시작할 수 없다 */\n   isComplete: (strategyId: string) => boolean\n   select: (strategyId: string) => void\n+  /** 고른 전략을 내려놓는다. 전략별로 바꿔 둔 값은 지우지 않는다 — 다시 고르면 그대로 돌아온다 */\n+  clearSelection: () => void\n   /** 허용 범위 안이면 반영하고 `null`, 밖이면 반영하지 않고 이유를 돌려준다(FR-006) */\n   setValue: (strategyId: string, axisName: string, value: AxisValue) => InvalidStoredValueReason | null\n   resetAxis: (strategyId: string, axisName: string) => void\n@@ -750,6 +752,14 @@ export function useStrategySettings(\n     [strategies],\n   )\n \n+  const clearSelection = useCallback(() => {\n+    setState((current) =>\n+      current === null || current.selectedStrategyId === null\n+        ? current\n+        : { ...current, selectedStrategyId: null },\n+    )\n+  }, [])\n+\n   const withoutInvalid = (\n     entries: InvalidStoredValue[],\n     strategyId: string,\n@@ -894,6 +904,7 @@ export function useStrategySettings(\n     isDefault,\n     isComplete,\n     select,\n+    clearSelection,\n     setValue,\n     resetAxis,\n     resetAll,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.ts",
+          "old_path": "frontend/src/hooks/useStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -177,6 +177,11 @@\n }\n \n .error {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 6px 12px;\n   margin: 0;\n   padding: 10px 14px;\n   border: 1px solid var(--thorp-negative);\n@@ -186,6 +191,10 @@\n   line-height: 1.6;\n }\n \n+.errorMessage {\n+  margin: 0;\n+}\n+\n @media (max-width: 600px) {\n   .main {\n     width: min(100% - 28px, 760px);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.module.css",
+          "old_path": "frontend/src/pages/StrategySettingsPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,11 +16,13 @@ import {\n } from '@/diagnosis/selectionStorage'\n import { STRATEGY_SETTINGS_STORAGE_KEY } from '@/hooks/useStrategySettings'\n import {\n+  plainStrategy,\n   registryFixture,\n   selectableStrategy,\n   unselectableStrategy,\n } from '@/test/strategyRegistryFixtures'\n import type { BacktestCreateRequest } from '@/types/backtestRequest'\n+import type { StrategyView } from '@/types/strategyRegistry'\n import type { SectorSummary } from '@/types/sector'\n import { StrategySettingsPage } from './StrategySettingsPage'\n \n@@ -212,6 +214,32 @@ function renderPageWithParamSearchRoute(support: AnalysisSupport) {\n   )\n }\n \n+/**\n+ * 사용자 비중을 쓰는 전략을 섹터 셋에서 고를 수 있게 만든 응답.\n+ *\n+ * <p><b>카드만 고를 수 있게 바꾸지 않고 기본값도 규칙에 맞춘다.</b> 픽스처의 기본값(고를 섹터 수 4)은\n+ * 섹터 셋에서 규칙을 어기고, 화면은 규칙 위반이면 '분석하기'를 막는다(T058). 서버는 기본 설정이\n+ * 규칙을 어기는 전략을 고를 수 있다고 내리지 않으므로, 둘을 함께 맞춰야 실제로 올 수 있는 응답이다.\n+ */\n+function selectableUserWeighted(): StrategyView {\n+  const userWeighted = registryFixture.strategies.find(\n+    (strategy) => strategy.targetWeightSource === 'USER',\n+  )!\n+  return {\n+    ...userWeighted,\n+    selectable: true,\n+    unselectableReason: undefined,\n+    axes: userWeighted.axes.map((axis) => {\n+      if (axis.inputType !== 'CHOICE') return axis\n+      const fitting = axis.choices?.filter((choice) => choice.selectable) ?? []\n+      const defaultFits = fitting.some((choice) => choice.value === axis.defaultValue)\n+      return defaultFits || fitting.length === 0\n+        ? axis\n+        : { ...axis, defaultValue: fitting[fitting.length - 1].value }\n+    }),\n+  }\n+}\n+\n /** 행동 버튼에 이어진 이유 문장. 이유가 없으면 빈 문자열이다. */\n function reasonOf(button: HTMLElement): string {\n   const reasonId = button.getAttribute('aria-describedby')\n@@ -326,13 +354,11 @@ describe('StrategySettingsPage', () => {\n \n   it('사용자가 정한 비중을 쓰는 전략에만 목표 비중을 싣는다', async () => {\n     const user = userEvent.setup()\n-    const userWeighted = registryFixture.strategies.find(\n-      (strategy) => strategy.targetWeightSource === 'USER',\n-    )!\n+    const userWeighted = selectableUserWeighted()\n     // 그 전략만 고를 수 있게 둔 응답이다. 화면이 전략 ID로 분기하지 않는다는 것을 본다.\n     apiMocks.fetchStrategyRegistry.mockResolvedValue({\n       ...registryFixture,\n-      strategies: [{ ...userWeighted, selectable: true, unselectableReason: undefined }],\n+      strategies: [userWeighted],\n     })\n     const { support, requests } = makeSupport()\n     renderPage(support)\n@@ -358,12 +384,10 @@ describe('StrategySettingsPage', () => {\n     // 그 사이를 잇는 이 화면이 막지 않으면 서버가 400으로 거절하고 사용자는 무엇을 고칠지 모른다.\n     storeUnbalancedSelection()\n     const user = userEvent.setup()\n-    const userWeighted = registryFixture.strategies.find(\n-      (strategy) => strategy.targetWeightSource === 'USER',\n-    )!\n+    const userWeighted = selectableUserWeighted()\n     apiMocks.fetchStrategyRegistry.mockResolvedValue({\n       ...registryFixture,\n-      strategies: [{ ...userWeighted, selectable: true, unselectableReason: undefined }],\n+      strategies: [userWeighted],\n     })\n     const { support, requests } = makeSupport()\n     renderPageWithSectorRoute(support)\n@@ -567,8 +591,9 @@ describe('StrategySettingsPage', () => {\n     await findCardNamed(selectableStrategy.name)\n     const analyze = actionButton('분석하기')\n     expect(analyze.getAttribute('aria-disabled')).toBe('true')\n-    const reasonId = analyze.getAttribute('aria-describedby')\n-    expect(document.getElementById(reasonId!)?.textContent).toContain('전략 카드를 먼저')\n+    // 카드는 등록표를 받자마자 그려지지만 보관값 재검증은 그다음 렌더에 끝난다. 그 사이의 이유는\n+    // '불러오기 전'이라, 곧바로 읽으면 실행마다 결과가 달라진다.\n+    await waitFor(() => expect(reasonOf(analyze)).toContain('전략 카드를 먼저'))\n   })\n \n   it('보관값이 현재 등록표에서 유효하지 않으면 알리고 분석을 막는다', async () => {\n@@ -1011,4 +1036,478 @@ describe('StrategySettingsPage', () => {\n       expect(screen.queryByTestId('param-search-location')).toBeNull()\n     })\n   })\n+\n+  describe('바꾼 값을 그 자리에서 판정한다(T058·T059, quickstart 5-1·7·10)', () => {\n+    /**\n+     * 워밍업에 따라 판정이 셋으로 갈리는 흉내. 기본 설정(45거래일)은 기간이 줄어드는 것으로, 90거래일은\n+     * 구간이 사라지는 것으로 둔다. **줄어드는 것과 막히는 것을 구분하는지** 함께 본다(quickstart 7).\n+     */\n+    const judgeByWarmup: AnalysisSupport['judgeWarmup'] = ({ warmupTradingDays }) => {\n+      if (warmupTradingDays <= 15) return { verdict: { state: 'ok' }, window: windowFixture }\n+      if (warmupTradingDays <= 45) {\n+        return {\n+          verdict: {\n+            state: 'reduced',\n+            message: `워밍업 ${warmupTradingDays}거래일만큼 평가 기간이 줄어듭니다.`,\n+          },\n+          window: windowFixture,\n+        }\n+      }\n+      return {\n+        verdict: {\n+          state: 'blocked',\n+          message: `워밍업 ${warmupTradingDays}거래일을 채우면 평가할 구간이 남지 않습니다.`,\n+        },\n+        window: null,\n+      }\n+    }\n+\n+    /** 서버가 등록표 버전 변경으로 거절한 것처럼 던진다. 화면은 `code`만 본다. */\n+    function registryVersionChangedError(): Error {\n+      return Object.assign(new Error('등록표 버전이 바뀌었습니다.'), {\n+        code: 'REGISTRY_VERSION_CHANGED',\n+      })\n+    }\n+\n+    /** 버전만 올린 등록표. `patch`로 고른 전략을 바꿀 수 있다. */\n+    function nextRegistry(patch: (strategy: StrategyView) => StrategyView = (strategy) => strategy) {\n+      return {\n+        ...registryFixture,\n+        registryVersion: 'TEST-REGISTRY-003-2',\n+        strategies: registryFixture.strategies.map((strategy) =>\n+          strategy.strategyId === selectableStrategy.strategyId ? patch(strategy) : strategy,\n+        ),\n+      }\n+    }\n+\n+    it('관측 기간을 늘리면 고른 카드의 워밍업 판정과 분석하기가 그 자리에서 바뀌고 서버에 묻지 않는다', async () => {\n+      const fetchSpy = vi.spyOn(globalThis, 'fetch')\n+      const xhrSpy = vi.spyOn(XMLHttpRequest.prototype, 'open')\n+      try {\n+        const user = userEvent.setup()\n+        const { support, requests } = makeSupport({ judgeWarmup: judgeByWarmup })\n+        renderPage(support)\n+\n+        await user.click(await findCardNamed(selectableStrategy.name))\n+        await waitFor(() =>\n+          expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'),\n+        )\n+        // 기본 설정은 줄어든 기간만 알리고 막지 않는다.\n+        let card = await findCardNamed(selectableStrategy.name)\n+        expect(card.getAttribute('data-warmup')).toBe('reduced')\n+\n+        await user.click(screen.getByRole('button', { name: '상세 설정' }))\n+        await user.click(screen.getByRole('radio', { name: '90거래일' }))\n+\n+        // 고른 카드는 지금 설정으로 다시 판정되어 막히지만 고른 사실은 남는다.\n+        card = await findCardNamed(selectableStrategy.name)\n+        expect(card.getAttribute('data-warmup')).toBe('blocked')\n+        expect(card.getAttribute('aria-disabled')).toBe('true')\n+        expect(card.getAttribute('aria-pressed')).toBe('true')\n+        expect(within(card).getByText(/워밍업 90거래일을 채우면/)).toBeTruthy()\n+        expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')\n+        expect(reasonOf(actionButton('분석하기'))).toContain('워밍업 90거래일을 채우면')\n+\n+        // 워밍업을 줄이면 다시 풀린다.\n+        await user.click(screen.getByRole('radio', { name: '15거래일' }))\n+        card = await findCardNamed(selectableStrategy.name)\n+        expect(card.getAttribute('data-warmup')).toBe('ok')\n+        expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')\n+\n+        // 값을 만지는 동안 등록표·섹터 목록을 다시 조회하지도, 다른 요청을 보내지도 않았다.\n+        expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(1)\n+        expect(apiMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)\n+        expect(fetchSpy).not.toHaveBeenCalled()\n+        expect(xhrSpy).not.toHaveBeenCalled()\n+        expect(requests).toHaveLength(0)\n+\n+        await user.click(actionButton('분석하기'))\n+        await waitFor(() => expect(requests).toHaveLength(1))\n+        expect(requests[0].strategy.parameters.driftWindow).toBe(15)\n+        expect(requests[0].conditions.warmupTradingDays).toBe(15)\n+      } finally {\n+        fetchSpy.mockRestore()\n+        xhrSpy.mockRestore()\n+      }\n+    })\n+\n+    it('규칙을 어기는 값으로 바꾸면 즉시 알리고 분석하기를 막으며, 복원하면 풀린다', async () => {\n+      const user = userEvent.setup()\n+      const { support, requests } = makeSupport()\n+      renderPage(support)\n+\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+      await user.click(screen.getByRole('button', { name: '상세 설정' }))\n+\n+      const band = screen.getByRole('textbox', { name: /허용 이탈 폭/ })\n+      await user.clear(band)\n+      await user.type(band, '30')\n+\n+      // 30 × 섹터 3 = 90 < 100. 범위 안이지만 규칙 위반이며, 등록표 문구가 그대로 보인다.\n+      const rule = selectableStrategy.validationRules[0]\n+      expect(screen.getByRole('alert').textContent).toBe(rule.detail)\n+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')\n+      expect(reasonOf(actionButton('분석하기'))).toContain('설정 규칙을 어기는 값이 있습니다')\n+\n+      await user.click(actionButton('분석하기'))\n+      expect(requests).toHaveLength(0)\n+\n+      await user.click(screen.getByRole('button', { name: '모두 기본값 복원' }))\n+      expect(screen.queryByRole('alert')).toBeNull()\n+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false')\n+    })\n+\n+    it('등록표 버전이 바뀌어 거절되면 다시 조회해 알리고, 유효한 값은 두며 다시 보내지 않는다', async () => {\n+      const user = userEvent.setup()\n+      const calls: BacktestCreateRequest[] = []\n+      const { support } = makeSupport({\n+        createBacktest: async (request) => {\n+          calls.push(request)\n+          if (calls.length === 1) throw registryVersionChangedError()\n+          return { backtestId: 'BT-20260917-000002', status: 'QUEUED' }\n+        },\n+      })\n+      renderPage(support)\n+\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+      await user.click(screen.getByRole('button', { name: '상세 설정' }))\n+      await user.click(screen.getByRole('radio', { name: '15거래일' }))\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+\n+      apiMocks.fetchStrategyRegistry.mockResolvedValue(nextRegistry())\n+      await user.click(actionButton('분석하기'))\n+\n+      const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)\n+      await waitFor(() =>\n+        expect(notice.parentElement?.textContent).toContain(\n+          '바뀐 등록표에서도 쓸 수 있어 그대로 두었습니다',\n+        ),\n+      )\n+      expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2)\n+      // 실패 안내로 접지 않는다. 등록표가 바뀐 것은 요청이 잘못된 것과 다른 사실이다.\n+      expect(screen.queryByRole('alert')).toBeNull()\n+\n+      // 자동으로 다시 보내지 않는다.\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+      expect(calls).toHaveLength(1)\n+\n+      // 사용자가 다시 누르면 바뀐 버전으로, 바꿔 둔 값 그대로 나간다.\n+      await user.click(actionButton('분석하기'))\n+      await waitFor(() => expect(calls).toHaveLength(2))\n+      expect(calls[1].strategy.registryVersion).toBe('TEST-REGISTRY-003-2')\n+      expect(calls[1].strategy.parameters.driftWindow).toBe(15)\n+      // 다시 누르면 앞선 알림을 거둔다.\n+      expect(screen.queryByText(/확인하신 사이에 등록표가 바뀌었습니다/)).toBeNull()\n+    })\n+\n+    it('409 직후 새 등록표를 받기 전에는 바뀐 등록표로 확인했다고 말하지 않는다', async () => {\n+      // 코드리뷰 지적. 409 직후 첫 렌더에는 옛 등록표가 아직 '받음' 상태라, 그것을 새 등록표로 읽으면\n+      // 확인하지도 않은 \"그대로 두었습니다\"가 잠깐 그려지고 status 영역이라 읽힐 수 있다.\n+      const user = userEvent.setup()\n+      const { support } = makeSupport({\n+        createBacktest: async () => {\n+          throw registryVersionChangedError()\n+        },\n+      })\n+      renderPage(support)\n+\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+\n+      // 다시 받는 조회를 붙들어 둔다. 그동안 화면에 그려진 글을 빠짐없이 기록한다.\n+      const pending: { release: () => void } = { release: () => {} }\n+      apiMocks.fetchStrategyRegistry.mockImplementation(\n+        () =>\n+          new Promise((resolve) => {\n+            pending.release = () => resolve(nextRegistry())\n+          }),\n+      )\n+      let claimedBeforeReload = false\n+      let released = false\n+      const observer = new MutationObserver(() => {\n+        if (!released && document.body.textContent?.includes('그대로 두었습니다')) {\n+          claimedBeforeReload = true\n+        }\n+      })\n+      observer.observe(document.body, { subtree: true, childList: true, characterData: true })\n+      try {\n+        await user.click(actionButton('분석하기'))\n+        const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)\n+        await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))\n+        expect(notice.parentElement?.textContent).toContain('불러오는 중')\n+\n+        released = true\n+        pending.release()\n+        await waitFor(() =>\n+          expect(notice.parentElement?.textContent).toContain(\n+            '바뀐 등록표에서도 쓸 수 있어 그대로 두었습니다',\n+          ),\n+        )\n+      } finally {\n+        observer.disconnect()\n+      }\n+      expect(claimedBeforeReload).toBe(false)\n+    })\n+\n+    it('바뀐 등록표에서 쓸 수 없게 된 값은 고치지 않고 기본값 복원을 제안한다', async () => {\n+      const user = userEvent.setup()\n+      const calls: BacktestCreateRequest[] = []\n+      const { support } = makeSupport({\n+        createBacktest: async (request) => {\n+          calls.push(request)\n+          if (calls.length === 1) throw registryVersionChangedError()\n+          return { backtestId: 'BT-20260917-000003', status: 'QUEUED' }\n+        },\n+      })\n+      renderPage(support)\n+\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+\n+      // 새 등록표는 허용 이탈 폭의 하한을 올렸다. 지금 값(기본값 35)은 새 범위 밖이다.\n+      apiMocks.fetchStrategyRegistry.mockResolvedValue(\n+        nextRegistry((strategy) => ({\n+          ...strategy,\n+          axes: strategy.axes.map((axis) =>\n+            axis.name === 'bandWidth'\n+              ? { ...axis, range: { min: 40, max: 50, step: 5 }, defaultValue: 40 }\n+              : axis,\n+          ),\n+        })),\n+      )\n+      await user.click(actionButton('분석하기'))\n+\n+      const notice = await screen.findByText(/확인하신 사이에 등록표가 바뀌었습니다/)\n+      await waitFor(() =>\n+        expect(notice.parentElement?.textContent).toContain('쓸 수 없게 된 값이 있습니다'),\n+      )\n+      const invalidList = screen.getByRole('status', { name: '다시 확인할 설정값' })\n+      expect(invalidList.textContent).toContain('허용 범위(40~50퍼센트) 밖입니다')\n+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')\n+      expect(calls).toHaveLength(1)\n+\n+      await user.click(within(invalidList).getByRole('button', { name: '기본값 복원' }))\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+      // 복원을 눌러도 요청은 나가지 않는다. 보내는 것은 사용자가 다시 누를 때다.\n+      expect(calls).toHaveLength(1)\n+\n+      await user.click(actionButton('분석하기'))\n+      await waitFor(() => expect(calls).toHaveLength(2))\n+      expect(calls[1].strategy.parameters.bandWidth).toBe(40)\n+      expect(calls[1].strategy.registryVersion).toBe('TEST-REGISTRY-003-2')\n+    })\n+\n+    it('규칙을 판정하지 못하면 통과로 접지 않고 알리며 분석하기를 막는다', async () => {\n+      // T101. 등록표가 합성 값 축을 대소 비교하는 규칙을 실었다 — 판정할 수 없는 규칙이다.\n+      apiMocks.fetchStrategyRegistry.mockResolvedValue({\n+        ...registryFixture,\n+        strategies: registryFixture.strategies.map((strategy) =>\n+          strategy.strategyId === selectableStrategy.strategyId\n+            ? {\n+                ...strategy,\n+                validationRules: [\n+                  {\n+                    code: 'MALFORMED_RULE',\n+                    detail: '이 문장은 보이면 안 된다.',\n+                    left: { axis: 'resetTiming' },\n+                    operator: 'GREATER_THAN' as const,\n+                    right: { value: 1 },\n+                  },\n+                ],\n+              }\n+            : strategy,\n+        ),\n+      })\n+      const user = userEvent.setup()\n+      const { support, requests } = makeSupport()\n+      renderPage(support)\n+\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+\n+      expect(await screen.findByText('설정 규칙을 판정하지 못했습니다.')).toBeTruthy()\n+      expect(screen.queryByText('이 문장은 보이면 안 된다.')).toBeNull()\n+      await waitFor(() =>\n+        expect(reasonOf(actionButton('분석하기'))).toContain('설정 규칙을 판정하지 못해'),\n+      )\n+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')\n+\n+      await user.click(actionButton('분석하기'))\n+      expect(requests).toHaveLength(0)\n+    })\n+\n+    it('고른 카드의 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않고 판정하지 못했다고 보인다', async () => {\n+      // T100. 재검증이 워밍업 규칙의 축을 비워 복원을 기다리는 동안이다.\n+      const warmupAxis = selectableStrategy.axes.find((axis) => axis.name === 'driftWindow')!\n+      window.sessionStorage.setItem(\n+        STRATEGY_SETTINGS_STORAGE_KEY,\n+        JSON.stringify({\n+          version: 1,\n+          registryVersion: 'OLD-REGISTRY',\n+          universeSize: 3,\n+          selectedStrategyId: selectableStrategy.strategyId,\n+          valuesByStrategy: { [selectableStrategy.strategyId]: { [warmupAxis.name]: 60 } },\n+          analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },\n+          invalidValues: [],\n+        }),\n+      )\n+      const judged: number[] = []\n+      const user = userEvent.setup()\n+      const { support } = makeSupport({\n+        judgeWarmup: (input) => {\n+          if (input.strategy.strategyId === selectableStrategy.strategyId) {\n+            judged.push(input.warmupTradingDays)\n+          }\n+          return judgeByWarmup(input)\n+        },\n+      })\n+      renderPage(support)\n+\n+      let card = await findCardNamed(selectableStrategy.name)\n+      await waitFor(() => expect(card.getAttribute('aria-pressed')).toBe('true'))\n+      expect(card.getAttribute('data-warmup')).toBe('unknown')\n+      expect(within(card).getByText(/현재 설정으로 워밍업을 계산할 수 없습니다/)).toBeTruthy()\n+      // 고를 수 없다는 뜻이 아니다. 기본 설정의 워밍업(45)으로 대신 판정했다면 'reduced'였다.\n+      // 호출 횟수로는 보지 않는다 — 재검증을 마치기 전 첫 렌더에서는 고른 전략이 없어 카드 목록이\n+      // 기본 설정으로 판정하는 것이 맞다.\n+      expect(card.getAttribute('aria-disabled')).toBe('false')\n+      expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('true')\n+\n+      await user.click(screen.getByRole('button', { name: '기본값 복원' }))\n+\n+      card = await findCardNamed(selectableStrategy.name)\n+      await waitFor(() => expect(card.getAttribute('data-warmup')).toBe('reduced'))\n+      expect(judged).toContain(warmupAxis.defaultValue)\n+    })\n+  })\n+\n+  describe('분석 요청의 거절 코드마다 계약이 정한 처리를 한다(T099, 계약 §2)', () => {\n+    /** 서버 거절을 흉내 낸다. 화면은 오류 클래스가 아니라 `code`와 `details`만 읽는다. */\n+    function rejection(code: string, message: string, details?: Record<string, unknown>): Error {\n+      return Object.assign(new Error(message), { code, details })\n+    }\n+\n+    /** 첫 요청만 `error`로 거절하고 그 뒤로는 접수한다. 보낸 요청은 모두 `calls`에 쌓는다. */\n+    function rejectFirst(error: Error) {\n+      const calls: BacktestCreateRequest[] = []\n+      const { support } = makeSupport({\n+        createBacktest: async (request) => {\n+          calls.push(request)\n+          if (calls.length === 1) throw error\n+          return { backtestId: 'BT-20260917-000009', status: 'QUEUED' }\n+        },\n+      })\n+      return { support, calls }\n+    }\n+\n+    async function chooseAndAnalyze(user: ReturnType<typeof userEvent.setup>) {\n+      await user.click(await findCardNamed(selectableStrategy.name))\n+      await waitFor(() => expect(actionButton('분석하기').getAttribute('aria-disabled')).toBe('false'))\n+      await user.click(actionButton('분석하기'))\n+    }\n+\n+    it('등록되지 않은 전략이면 전략 선택으로 되돌리고 등록표를 다시 받으며 다시 보내지 않는다', async () => {\n+      const user = userEvent.setup()\n+      const { support, calls } = rejectFirst(\n+        rejection('STRATEGY_NOT_REGISTERED', '등록되지 않은 전략입니다.'),\n+      )\n+      renderPage(support)\n+      await chooseAndAnalyze(user)\n+\n+      const alert = await screen.findByRole('alert')\n+      expect(alert.textContent).toContain('전략을 다시 골라 주세요')\n+      await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))\n+      const card = await findCardNamed(selectableStrategy.name)\n+      await waitFor(() => expect(card.getAttribute('aria-pressed')).toBe('false'))\n+      expect(reasonOf(actionButton('분석하기'))).toContain('전략 카드를 먼저 골라 주세요')\n+      expect(calls).toHaveLength(1)\n+    })\n+\n+    it('요청을 보낸 뒤 다른 전략을 골랐으면 늦게 온 거절이 새로 고른 전략을 내려놓지 않는다', async () => {\n+      // 코드리뷰 지적. 보내는 동안에도 카드를 고를 수 있다.\n+      const user = userEvent.setup()\n+      const pending: { reject: (error: Error) => void } = { reject: () => {} }\n+      const calls: BacktestCreateRequest[] = []\n+      const { support } = makeSupport({\n+        createBacktest: (request) => {\n+          calls.push(request)\n+          return new Promise((_, reject) => {\n+            pending.reject = reject\n+          })\n+        },\n+      })\n+      renderPage(support)\n+      await chooseAndAnalyze(user)\n+      await waitFor(() => expect(calls).toHaveLength(1))\n+\n+      await user.click(await findCardNamed(plainStrategy.name))\n+      await waitFor(() =>\n+        expect(screen.getByRole('heading', { name: `선택한 전략: ${plainStrategy.name}` })).toBeTruthy(),\n+      )\n+\n+      pending.reject(rejection('STRATEGY_NOT_REGISTERED', '등록되지 않은 전략입니다.'))\n+\n+      // 등록표는 다시 받는다 — 보낸 전략이 목록에서 빠졌는지는 여전히 보여야 한다.\n+      await waitFor(() => expect(apiMocks.fetchStrategyRegistry).toHaveBeenCalledTimes(2))\n+      const plainCard = await findCardNamed(plainStrategy.name)\n+      await waitFor(() => expect(plainCard.getAttribute('aria-pressed')).toBe('true'))\n+      // 새로 고른 전략의 이야기가 아니므로 옛 전략의 거절 안내로 덮지 않는다.\n+      expect(screen.queryByText(/전략을 다시 골라 주세요/)).toBeNull()\n+      expect(calls).toHaveLength(1)\n+    })\n+\n+    it('등록표를 읽지 못했으면 다시 시도를 제안하고, 누르기 전에는 다시 보내지 않는다', async () => {\n+      const user = userEvent.setup()\n+      const { support, calls } = rejectFirst(\n+        rejection('REGISTRY_UNAVAILABLE', '전략 등록 정보를 읽을 수 없습니다. 잠시 후 다시 시도해 주세요.'),\n+      )\n+      renderPage(support)\n+      await chooseAndAnalyze(user)\n+\n+      const alert = await screen.findByRole('alert')\n+      expect(alert.textContent).toContain('전략 등록 정보를 읽을 수 없습니다')\n+      const retry = within(alert).getByRole('button', { name: '다시 시도' })\n+      expect(calls).toHaveLength(1)\n+\n+      await user.click(retry)\n+      await waitFor(() => expect(calls).toHaveLength(2))\n+      expect(await screen.findByText(/BT-20260917-000009/)).toBeTruthy()\n+    })\n+\n+    it('허용 범위 밖이라 거절되면 개발용 문장 대신 등록표의 항목 이름으로 안내한다', async () => {\n+      const user = userEvent.setup()\n+      const bandWidth = selectableStrategy.axes.find((axis) => axis.name === 'bandWidth')!\n+      const { support, calls } = rejectFirst(\n+        rejection(\n+          'UNREGISTERED_PARAMETER_VALUE',\n+          `허용 범위를 벗어난 값입니다: strategyId=${selectableStrategy.strategyId}, 항목=bandWidth, 값=35, 허용 범위=AllowedRange[min=40]`,\n+          { strategyId: selectableStrategy.strategyId, axis: 'bandWidth', value: 35, allowedRange: 'AllowedRange[min=40]' },\n+        ),\n+      )\n+      renderPage(support)\n+      await chooseAndAnalyze(user)\n+\n+      const alert = await screen.findByRole('alert')\n+      expect(alert.textContent).toContain(bandWidth.label)\n+      expect(alert.textContent).not.toContain('strategyId=')\n+      expect(alert.textContent).not.toContain('AllowedRange')\n+      expect(calls).toHaveLength(1)\n+    })\n+\n+    it('어느 항목인지 알 수 없는 범위 밖 거절은 일반 문장으로 안내한다', async () => {\n+      const user = userEvent.setup()\n+      const { support } = rejectFirst(\n+        rejection('UNREGISTERED_PARAMETER_VALUE', '허용 범위를 벗어난 시작 금액입니다: 값=1, 허용 범위=x', {\n+          value: 1,\n+          allowedRange: 'x',\n+        }),\n+      )\n+      renderPage(support)\n+      await chooseAndAnalyze(user)\n+\n+      const alert = await screen.findByRole('alert')\n+      expect(alert.textContent).toContain('허용 범위 밖이라 접수되지 않았습니다')\n+      expect(alert.textContent).not.toContain('허용 범위=x')\n+    })\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useCallback, useEffect, useMemo, useState } from 'react'\n+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'\n import { useNavigate } from 'react-router-dom'\n import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'\n import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'\n@@ -9,19 +9,30 @@ import { ActionButtons } from '@/components/strategy/ActionButtons'\n import {\n   ANALYSIS_VERSIONS_UNAVAILABLE,\n   EVALUATION_WINDOW_UNAVAILABLE,\n+  BacktestRejectionCode,\n   notConnectedSupport,\n+  readBacktestRejection,\n   type AnalysisSupport,\n   type AnalysisVersions,\n+  type BacktestRejection,\n } from '@/components/strategy/analysisSupport'\n import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine'\n+import { DetailSettingsPanel } from '@/components/strategy/DetailSettingsPanel'\n+import type { TargetWeightRow } from '@/components/strategy/ReadOnlyTargetWeights'\n+import {\n+  RegistryChangedNotice,\n+  type RegistryReloadPhase,\n+} from '@/components/strategy/RegistryChangedNotice'\n import { SettingsStatusBadge } from '@/components/strategy/SettingsStatusBadge'\n+import type { WarmupVerdict } from '@/components/strategy/StrategyCard'\n import { StrategyCardList, type RegistryViewState } from '@/components/strategy/StrategyCardList'\n import { formatWeightTenths as formatDisplayWeight } from '@/diagnosis/weights'\n import { useSectorSelection } from '@/hooks/useSectorSelection'\n import { useStrategySettings, type InvalidStoredValue } from '@/hooks/useStrategySettings'\n import type { BacktestAccepted, BacktestRequestStatus } from '@/types/backtestRequest'\n-import type { StrategyView } from '@/types/strategyRegistry'\n+import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'\n import { buildBacktestRequest } from '@/utils/analysisRequest'\n+import { checkRules } from '@/utils/validationRules'\n import styles from './StrategySettingsPage.module.css'\n \n interface StrategySettingsPageProps {\n@@ -49,8 +60,14 @@ const REASON_MISSING = '이 전략을 고를 수 없는 이유를 확인하지 \n const INVALID_STORED_VALUES =\n   '이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.'\n const WARMUP_UNCOMPUTABLE = '현재 설정으로 워밍업을 계산할 수 없습니다.'\n+const RULES_VIOLATED = '설정 규칙을 어기는 값이 있습니다. 상세 설정 아래의 안내를 확인해 주세요.'\n+const RULES_UNJUDGED = '설정 규칙을 판정하지 못해 분석을 시작할 수 없습니다.'\n const VERSIONS_LOADING = '분석 조건 버전을 확인하는 중입니다.'\n const SUBMIT_FAILED = '분석 요청을 보내지 못했습니다.'\n+const STRATEGY_NOT_REGISTERED_MESSAGE =\n+  '고른 전략을 지금은 분석할 수 없어 요청이 접수되지 않았습니다. 전략 설정을 다시 불러왔으니 전략을 다시 골라 주세요.'\n+const PARAMETER_REJECTED_GENERAL =\n+  '설정값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정과 기간·금액·조건을 확인해 주세요.'\n const REQUEST_BUILD_FAILED =\n   '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'\n \n@@ -63,11 +80,27 @@ function weightsUnbalancedMessage(totalTenths: number): string {\n   return `섹터별 비중의 합계가 100%가 아닙니다(현재 ${formatDisplayWeight(totalTenths)}%). 섹터·비중 단계에서 맞춰 주세요.`\n }\n \n+/**\n+ * 허용 범위 밖이라 거절되었다는 한 문장(400 `UNREGISTERED_PARAMETER_VALUE`).\n+ *\n+ * <p><b>서버 메시지를 그대로 보이지 않는다.</b> 그 문장은 `strategyId=…, 항목=…`처럼 로그용으로 짜여\n+ * 사용자가 읽을 수 없다. 응답 `details.axis`로 고른 전략에서 항목을 찾아 등록표의 라벨을 쓰고, 찾지\n+ * 못하면(시작 금액이거나 `details`가 없으면) 어느 항목인지 지어내지 않고 일반 문장을 쓴다.\n+ */\n+function parameterRejectedMessage(rejection: BacktestRejection, strategy: StrategyView): string {\n+  const axisName = rejection.details?.axis\n+  const axis =\n+    typeof axisName === 'string' ? strategy.axes.find((candidate) => candidate.name === axisName) : undefined\n+  if (!axis) return PARAMETER_REJECTED_GENERAL\n+  return `'${axis.label}' 값이 허용 범위 밖이라 접수되지 않았습니다. 상세 설정에서 값을 확인해 주세요.`\n+}\n+\n type Submission =\n   | { status: 'idle' }\n   | { status: 'sending' }\n   | { status: 'accepted'; accepted: BacktestAccepted }\n-  | { status: 'failed'; message: string }\n+  /** `retryable`이면 같은 설정으로 다시 보낼 수 있다고 제안한다. 누르기 전에는 보내지 않는다 */\n+  | { status: 'failed'; message: string; retryable?: boolean }\n \n interface InvalidValueListProps {\n   /** 이 목록이 무엇에 대한 것인가. 보조기술이 두 목록을 구분할 이름이다 */\n@@ -106,8 +139,12 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps)\n  * 004 분석 / 007 자동 비교다.\n  *\n  * <p><b>기본 화면의 입력은 전략 선택 하나다(SC-005).</b> 카드를 고르면 '기본 설정' 표시, 조건 한 줄,\n- * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 상세 설정(US2)과 기간·금액·조건(US3)은 자리만\n- * 두었고 다음 묶음이 채운다.\n+ * 행동 버튼 둘이 보이고 그 밖의 항목은 접혀 있다. 기간·금액·조건(US3)은 자리만 두었고 B10이 채운다.\n+ *\n+ * <p><b>바꾼 값은 그 자리에서 판정한다(US2, FR-008·FR-011).</b> 상세 설정에서 값을 바꾸면 규칙 위반,\n+ * 워밍업, 고른 카드의 판정, 기본 설정 표시, '분석하기'의 막힘이 한 렌더 안에서 다시 계산된다. 값을\n+ * 만지는 동안 서버로 요청이 나가지 않는다. 최종 판정은 접수 시점에 서버가 다시 하고, 그 사이 등록표가\n+ * 바뀌어 409로 거절되면 다시 받아 알리되 자동으로 다시 보내지 않는다(research R9).\n  *\n  * <p><b>등록표를 받기 전에는 아무것도 시작하지 않는다.</b> 조회 중·실패에는 카드를 고를 수 없고\n  * 두 버튼이 막히며, 임시 값이나 예비 등록표로 대신 동작하는 경로가 없다(FR-018, SC-008).\n@@ -234,14 +271,34 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n     ? settings.analysisCondition.minEvaluationYears\n     : Number(registry?.analysisConditions.minEvaluationYears.default)\n \n+  const selectedStrategyId = settings.selectedStrategyId\n+  const currentWarmup = settings.warmupTradingDays\n+\n+  /**\n+   * 카드 하나의 판정. **고른 카드만 지금 설정의 워밍업으로 판정한다**(FR-011).\n+   *\n+   * <p>다른 카드는 기본 설정 기준이다. 고른 카드까지 기본 설정으로 판정하면 관측 기간을 늘려 평가 구간이\n+   * 사라져도 카드는 여전히 고를 수 있다고 말하고, 그 아래 안내와 '분석하기'만 막혀 한 화면이 두 말을\n+   * 한다. 지금 워밍업을 계산할 수 없으면(비워 둔 축이 있으면) 기본 설정으로 대신 판정하지 않고 판정하지\n+   * 못했다는 사실(`unknown`)을 카드에 보인다 — 대신 판정하면 화면이 하지 않은 판정의 결과를 말한다(원칙 VI).\n+   *\n+   * <p><b>값을 만질 때 서버에 묻지 않는다.</b> 판정은 이미 받은 평가 기간으로 화면 안에서 한다 —\n+   * 값마다 서버를 오가면 늦게 온 응답이 이미 바뀐 값을 판정한다(research R7-1).\n+   */\n   const judgeWarmup = useCallback(\n-    (strategy: StrategyView) =>\n-      support.judgeWarmup({\n+    (strategy: StrategyView): WarmupVerdict => {\n+      const selected = strategy.strategyId === selectedStrategyId\n+      // `unknown`은 고를 수 없다는 뜻이 아니다. 카드는 눌린 채 남고 복원하면 지금 설정으로 다시 판정한다.\n+      if (selected && currentWarmup === null) {\n+        return { state: 'unknown', message: WARMUP_UNCOMPUTABLE }\n+      }\n+      return support.judgeWarmup({\n         strategy,\n-        warmupTradingDays: strategy.warmupTradingDays,\n+        warmupTradingDays: selected && currentWarmup !== null ? currentWarmup : strategy.warmupTradingDays,\n         minEvaluationYears,\n-      }).verdict,\n-    [support, minEvaluationYears],\n+      }).verdict\n+    },\n+    [support, minEvaluationYears, selectedStrategyId, currentWarmup],\n   )\n \n   const selectedJudgement = useMemo(() => {\n@@ -291,6 +348,21 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n   const settingsIncomplete =\n     settings.selectedStrategyId !== null && !settings.isComplete(settings.selectedStrategyId)\n \n+  /**\n+   * 고른 전략의 지금 값이 어기는 규칙(FR-008). 상세 설정 패널이 보이는 안내와 **같은 함수**로 판정한다.\n+   *\n+   * 값이 바뀔 때마다 다시 계산하며 서버에 묻지 않는다. 판정하지 못한 경우(`unjudged`)를 통과로 접지\n+   * 않는다 — 접수 시점에 서버가 같은 규칙으로 거절할 요청을 보내게 된다.\n+   */\n+  const ruleCheck = useMemo(() => {\n+    if (!settings.selectedStrategy || !settings.values || universeSize === null) return null\n+    return checkRules(settings.selectedStrategy.validationRules, settings.values, {\n+      UNIVERSE_SIZE: universeSize,\n+    })\n+  }, [settings.selectedStrategy, settings.values, universeSize])\n+  const rulesBlocked =\n+    ruleCheck !== null && (ruleCheck.unjudged || ruleCheck.violations.length > 0)\n+\n   /**\n    * 고른 전략이 사용자가 정한 비중을 쓰는데 그 합계가 100%가 아니다(T091).\n    *\n@@ -322,6 +394,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n       registry === null ||\n       initialAmount === null ||\n       unbalancedUserWeights ||\n+      ruleCheck === null ||\n+      rulesBlocked ||\n       !settings.ready ||\n       settings.registryVersion === null ||\n       !settings.selectedStrategy ||\n@@ -344,7 +418,17 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n       initialAmount,\n       versions,\n     }\n-  }, [selection, registry, initialAmount, unbalancedUserWeights, settings, selectedJudgement, versions])\n+  }, [\n+    selection,\n+    registry,\n+    initialAmount,\n+    unbalancedUserWeights,\n+    ruleCheck,\n+    rulesBlocked,\n+    settings,\n+    selectedJudgement,\n+    versions,\n+  ])\n \n   const analyzeBlocker = ((): string | null => {\n     if (registry === null || !settings.ready) return REGISTRY_NOT_LOADED\n@@ -352,6 +436,8 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n     if (!strategy) return SELECT_STRATEGY_FIRST\n     if (!strategy.selectable) return strategy.unselectableReason ?? REASON_MISSING\n     if (settingsIncomplete || amountAwaitsRestore) return INVALID_STORED_VALUES\n+    if (ruleCheck?.unjudged) return RULES_UNJUDGED\n+    if (ruleCheck && ruleCheck.violations.length > 0) return RULES_VIOLATED\n     if (unbalancedUserWeights && selection.status === 'ready') {\n       return weightsUnbalancedMessage(selection.weights.totalTenths)\n     }\n@@ -403,6 +489,30 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n   // --- 요청 조립과 전송 --------------------------------------------------------------------\n   const [submission, setSubmission] = useState<Submission>({ status: 'idle' })\n \n+  /**\n+   * 마지막 요청이 등록표 버전 변경(409)으로 거절되었다면 **그때 화면이 쓰던 등록표**다(research R9,\n+   * quickstart 10). 거절되지 않았으면 `null`이다.\n+   *\n+   * <p>참이면 등록표를 다시 받고 그 결과를 알린다. 다음 '분석하기'를 누를 때 거둔다 — 그 전에 거두면\n+   * 사용자는 왜 요청이 접수되지 않았는지 모른다.\n+   *\n+   * <p><b>옛 등록표를 함께 붙들어 두는 까닭</b>: 409 직후 첫 렌더에는 다시 조회가 아직 시작되지 않아 옛\n+   * 등록표가 '받음' 상태로 남아 있다. 받았는지만 보고 판정하면, 새 등록표를 보지도 않고 \"그대로 두었습니다\"를\n+   * 알린다. 그래서 옛 등록표와 **다른** 등록표를 받은 뒤에만 다시 받았다고 판정한다.\n+   */\n+  const [registryChange, setRegistryChange] = useState<{ stale: RegistryResponse } | null>(null)\n+  const registryChanged = registryChange !== null\n+  const { clearSelection } = settings\n+\n+  /**\n+   * 지금 고른 전략. 요청을 보낸 뒤 사용자가 카드를 옮겼는지를 응답이 온 시점에 묻기 위한 것이다 —\n+   * `handleAnalyze`가 잡아 둔 값은 누른 시점의 것이라 그 사이의 선택을 모른다.\n+   */\n+  const selectedStrategyIdRef = useRef(settings.selectedStrategyId)\n+  useEffect(() => {\n+    selectedStrategyIdRef.current = settings.selectedStrategyId\n+  }, [settings.selectedStrategyId])\n+\n   const handleSelect = useCallback(\n     (strategyId: string) => {\n       settings.select(strategyId)\n@@ -445,19 +555,83 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n     }\n \n     setSubmission({ status: 'sending' })\n+    setRegistryChange(null)\n     try {\n       const accepted = await support.createBacktest(request)\n       setSubmission({ status: 'accepted', accepted })\n     } catch (error) {\n-      setSubmission({\n-        status: 'failed',\n-        message: error instanceof Error && error.message ? error.message : SUBMIT_FAILED,\n-      })\n+      // 거절마다 계약 §2가 정한 처리를 한다. **어느 경우에도 요청을 다시 보내지 않는다** — 다시 보낼지는\n+      // 사용자가 바뀐 내용을 보고 정한다.\n+      const serverMessage = error instanceof Error && error.message ? error.message : SUBMIT_FAILED\n+      const rejection = readBacktestRejection(error)\n+      switch (rejection.code) {\n+        case BacktestRejectionCode.REGISTRY_VERSION_CHANGED:\n+          // 다시 받아 보관값을 새 등록표로 재검증한다(`useStrategySettings`가 등록표를 받을 때마다 한다).\n+          setSubmission({ status: 'idle' })\n+          if (registry !== null) setRegistryChange({ stale: registry })\n+          reloadRegistry()\n+          return\n+        case BacktestRejectionCode.STRATEGY_NOT_REGISTERED:\n+          // 등록표는 늘 다시 받는다. 보낸 전략이 목록에서 빠졌는지는 사용자가 카드를 옮겼어도 보여야 한다.\n+          reloadRegistry()\n+          // **보낸 전략을 아직 고르고 있을 때만** 전략 선택으로 되돌리고 알린다. 보내는 동안 다른 카드를\n+          // 골랐다면 그 선택을 풀거나 옛 전략의 거절로 덮지 않는다 — 새로 고른 전략의 이야기가 아니다.\n+          // 전략별로 바꿔 둔 값은 어느 경우에도 지우지 않는다.\n+          if (selectedStrategyIdRef.current !== prepared.strategy.strategyId) return\n+          clearSelection()\n+          setSubmission({ status: 'failed', message: STRATEGY_NOT_REGISTERED_MESSAGE })\n+          return\n+        case BacktestRejectionCode.UNREGISTERED_PARAMETER_VALUE:\n+          setSubmission({\n+            status: 'failed',\n+            message: parameterRejectedMessage(rejection, prepared.strategy),\n+          })\n+          return\n+        case BacktestRejectionCode.REGISTRY_UNAVAILABLE:\n+          // 서버 사정이라 같은 설정으로 다시 보낼 수 있다. 제안만 하고 보내는 것은 사용자가 누를 때다.\n+          setSubmission({ status: 'failed', message: serverMessage, retryable: true })\n+          return\n+        default:\n+          // 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙의 `detail`을 메시지로 싣는다. 그대로 보인다.\n+          setSubmission({ status: 'failed', message: serverMessage })\n+      }\n     }\n-  }, [analyzeBlocker, prepared, submission.status, settings.analysisCondition, support])\n+  }, [\n+    analyzeBlocker,\n+    prepared,\n+    submission.status,\n+    settings.analysisCondition,\n+    support,\n+    reloadRegistry,\n+    clearSelection,\n+    registry,\n+  ])\n \n   // --- 화면 -----------------------------------------------------------------------------\n   const selectedId = settings.selectedStrategyId\n+\n+  /** 등록표를 다시 받는 과정의 어디쯤인가. 받았어도 보관값 재검증을 마치기 전이면 아직 받는 중이다. */\n+  const registryReloadPhase: RegistryReloadPhase =\n+    registryState.status === 'failed'\n+      ? registryState.retrying\n+        ? 'reloading'\n+        : 'failed'\n+      : registryState.status === 'loaded' &&\n+          registryState.registry !== registryChange?.stale &&\n+          settings.ready\n+        ? 'reloaded'\n+        : 'reloading'\n+\n+  /** 002 비중을 이름과 함께 읽기 전용 표로. 이름은 섹터 목록에서, 비중은 002가 확정한 값에서 온다. */\n+  const targetWeights = useMemo((): TargetWeightRow[] | null => {\n+    if (selection.status !== 'ready' || catalog?.status !== 'loaded') return null\n+    const names = new Map(catalog.catalog.sectors.map((sector) => [sector.code, sector.name]))\n+    return selection.selection.items.map((item) => ({\n+      sectorId: item.sectorId,\n+      name: names.get(item.sectorId) ?? item.sectorId,\n+      weightTenths: item.weightTenths,\n+    }))\n+  }, [selection, catalog])\n   const costProfile =\n     versions !== 'loading' && versions !== null\n       ? { version: versions.costProfileVersion, provisional: versions.costProfileProvisional }\n@@ -601,11 +775,22 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n                   </p>\n                 ) : null}\n \n-                {/* US2·US3가 채우는 자리. 접혀 있고 기본 화면의 입력을 늘리지 않는다(SC-005). */}\n-                <details className={styles.folded}>\n-                  <summary>상세 설정</summary>\n-                  <p>상세 설정은 아직 준비 중입니다. 지금은 등록표의 기본값으로 분석합니다.</p>\n-                </details>\n+                {/*\n+                  접힌 채로 시작해 기본 화면의 입력을 늘리지 않는다(SC-005). 값을 바꾸면 위의 기본 설정\n+                  표시·카드 판정·'분석하기'가 그 자리에서 다시 계산되고 서버로 요청이 나가지 않는다.\n+                */}\n+                {settings.values !== null && universeSize !== null ? (\n+                  <DetailSettingsPanel\n+                    strategy={settings.selectedStrategy}\n+                    values={settings.values}\n+                    universeSize={universeSize}\n+                    targetWeights={targetWeights}\n+                    onChange={(axisName, value) => settings.setValue(selectedId, axisName, value)}\n+                    onResetAxis={(axisName) => settings.resetAxis(selectedId, axisName)}\n+                    onResetAll={() => settings.resetAll(selectedId)}\n+                  />\n+                ) : null}\n+                {/* US3가 채우는 자리. */}\n                 <details className={styles.folded}>\n                   <summary>기간·금액·조건</summary>\n                   <p>기간·금액·조건 변경은 아직 준비 중입니다. 위의 한 줄이 현재 조건입니다.</p>\n@@ -629,6 +814,17 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n               onAutoCompare={handleAutoCompare}\n             />\n \n+            {registryChanged ? (\n+              <RegistryChangedNotice\n+                phase={registryReloadPhase}\n+                pendingRestoreCount={\n+                  [...globalInvalid, ...strategyInvalid].filter((entry) => entry.restorable).length\n+                }\n+                removedMessages={settings.invalidValues\n+                  .filter((entry) => entry.strategyId !== null && entry.axisName === null)\n+                  .map((entry) => entry.message)}\n+              />\n+            ) : null}\n             {submission.status === 'accepted' ? (\n               <p className={styles.result} role=\"status\">\n                 분석 요청을 접수했습니다. 요청 번호 {submission.accepted.backtestId}, 상태{' '}\n@@ -637,9 +833,21 @@ export function StrategySettingsPage({ support = notConnectedSupport }: Strategy\n               </p>\n             ) : null}\n             {submission.status === 'failed' ? (\n-              <p className={styles.error} role=\"alert\">\n-                {submission.message}\n-              </p>\n+              <div className={styles.error} role=\"alert\">\n+                <p className={styles.errorMessage}>{submission.message}</p>\n+                {submission.retryable ? (\n+                  <button\n+                    type=\"button\"\n+                    className={styles.restoreButton}\n+                    disabled={analyzeBlocker !== null}\n+                    onClick={() => {\n+                      void handleAnalyze()\n+                    }}\n+                  >\n+                    다시 시도\n+                  </button>\n+                ) : null}\n+              </div>\n             ) : null}\n           </>\n         ) : null}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,7 +54,10 @@ export const selectableStrategy: StrategyView = {\n       unit: '퍼센트',\n       inputType: 'NUMBER',\n       range: { min: 5, max: 50, step: 5 },\n-      defaultValue: 20,\n+      // 섹터 셋에서도 기본 설정이 규칙(× 섹터 수 < 100이면 위반)을 지키는 값이다(35 × 3 = 105). 카드가\n+      // `selectable: true`인데 기본값이 규칙을 어기면, 서버가 내리지 않을 조합이라 화면 검사가 거짓 전제에\n+      // 선다 — 페이지는 규칙 위반이면 '분석하기'를 막는다(T058).\n+      defaultValue: 35,\n     },\n   ],\n   validationRules: [\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/strategyRegistryFixtures.ts",
+          "old_path": "frontend/src/test/strategyRegistryFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import { describe, expect, it } from 'vitest'\n import type { RuleOperator, ValidationRule } from '@/types/strategyRegistry'\n-import { RuleEvaluationError, evaluateRules } from './validationRules'\n+import { RuleEvaluationError, checkRules, evaluateRules } from './validationRules'\n \n /**\n  * 화면의 규칙 평가기(T052)가 서버 `RegistryRule.isViolatedBy`와 같은 답을 내는가.\n@@ -96,3 +96,20 @@ describe('evaluateRules', () => {\n     expect(() => evaluateRules([capRule], { cap: 'wide' }, context)).toThrow(RuleEvaluationError)\n   })\n })\n+\n+describe('checkRules', () => {\n+  it('판정하지 못하면 위반 목록을 비우되 통과로 접지 않고 unjudged를 세운다', () => {\n+    // 대소 비교에 숫자가 아닌 값이 왔다. 빈 위반 목록만 보고 통과로 읽으면 안 된다(T101).\n+    const result = checkRules([rule()], { knob: { kind: 'OBJECT' } }, context)\n+    expect(result).toEqual({ violations: [], unjudged: true })\n+  })\n+\n+  it('정상 규칙이면 unjudged가 거짓이고 위반을 그대로 돌려준다', () => {\n+    const target = rule()\n+    expect(checkRules([target], { knob: 11 }, context)).toEqual({\n+      violations: [target],\n+      unjudged: false,\n+    })\n+    expect(checkRules([target], { knob: 9 }, context)).toEqual({ violations: [], unjudged: false })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/validationRules.test.ts",
+          "old_path": "frontend/src/utils/validationRules.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -152,3 +152,32 @@ export function evaluateRules(\n     return test(rule.operator, left, right, rule.code)\n   })\n }\n+\n+/**\n+ * 규칙 판정 한 번의 결과. 위반 목록과, 판정 자체를 하지 못했는지를 함께 담는다.\n+ *\n+ * <p><b>판정하지 못한 것을 \"위반 없음\"으로 접지 않는다.</b> `unjudged`가 참이면 `violations`가 비어\n+ * 있어도 통과가 아니다.\n+ */\n+export type RuleCheck = {\n+  violations: ValidationRule[]\n+  unjudged: boolean\n+}\n+\n+/**\n+ * `evaluateRules`를 부르되 규칙 문법 위반을 예외 대신 결과로 돌려준다.\n+ *\n+ * <p><b>안내를 그리는 패널과 '분석하기'를 막는 페이지가 이 하나를 쓴다.</b> 둘이 각자 예외를 다루면\n+ * 한쪽만 판정 실패를 통과로 접어, 안내는 보이는데 버튼은 눌리는 화면이 생긴다.\n+ */\n+export function checkRules(\n+  rules: readonly ValidationRule[],\n+  values: Record<string, unknown>,\n+  context: RuleContext,\n+): RuleCheck {\n+  try {\n+    return { violations: evaluateRules(rules, values, context), unjudged: false }\n+  } catch {\n+    return { violations: [], unjudged: true }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/validationRules.ts",
+          "old_path": "frontend/src/utils/validationRules.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -206,8 +206,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [X] T057 [P] [US2] (FE) `frontend/src/components/strategy/RuleViolationNotice.tsx` — 위반 규칙의 `detail`을 **그대로** 보인다(화면이 문장을 짓지 않는다, quickstart 5-1). `role=\"alert\"`\n - [X] T057a [P] [US2] (FE) `frontend/src/components/strategy/TermHelp.tsx` — FR-016의 용어 도움말이다. 전략 카드 설명과 상세 설정 축 `description` 옆에서 [013](../013-learning-pages/spec.md) FR-008~FR-010이 소유하는 단일 원본을 읽어 보인다. 013 화면이 아직 없으므로 조회를 `frontend/src/api/learningGlossary.ts` 한 파일의 `fetchGlossaryEntry(term)`에 격리하고 **013이 구현되면 이 파일만 바꾼다**고 머리 주석에 적는다(T030 `useSectorSelection`과 같은 경계 방식). 대응하는 설명이 없거나 조회가 실패하면 즉석 문장을 만들지 않고 '설명 준비 중'을 보인다(013 FR-010). 도움말에는 해당 주제 글 연결을 두고, 도움말을 열거나 그 연결을 눌러도 `useStrategySettings` 상태가 초기화되지 않는다(013 FR-009, FR-017). 키보드로 열고 닫을 수 있으며 닫으면 초점이 호출한 자리로 돌아온다(NFR-001)\n   - **구현 메모 (B08, S15P21E205-240)**: [013 term-help-ui](../013-learning-pages/contracts/term-help-ui.md) §2·§5가 이 자리를 공용 컴포넌트로 바꿨으므로 `components/strategy/TermHelp.tsx`가 아니라 `frontend/src/components/learning/TermHelp.tsx`(인자 `termId`·`label`·`returnTo`)와 `frontend/src/api/learningGlossary.ts`(세 상태 `ready`·`notReady`·`failed`)로 만들었다. 처음에는 상세 설정 축에 붙이지 않았다 — 등록표 응답에 축마다 013 `termId`가 없어, 화면이 축 이름으로 식별자를 고르면 FR-005·research R7-1을 어기기 때문이다(2026-09-16 사용자 결정). **T097이 등록표에 `axes[].termId`를 더해 같은 브랜치에서 붙였다**\n-- [ ] T058 [US2] (FE) `StrategySettingsPage.tsx`에 상세 설정 연결 — 값이 바뀔 때마다 `evaluateRules` 재평가·`evaluateWarmup` 재계산·선택 카드 재판정(`useEvaluationWindow`에 현재 워밍업 전달)·배지 갱신. 위반이 있거나 워밍업 미충족이면 '분석하기' `disabled`. **값을 만질 때 서버 요청이 나가지 않는다**(research R7-1 기각 대안) (T056 의존)\n-- [ ] T059 [US2] (FE) 등록표 버전 변경 처리(research R9, quickstart 10) — `createBacktest`가 `REGISTRY_VERSION_CHANGED`(409)를 돌려주면 등록표를 다시 조회하고 T032의 공통 재검증 로직으로 유효한 값은 유지한 채 \"확인하신 사이에 등록표가 바뀌었습니다\"를 알리며, 유효하지 않은 값은 이유와 기본값 복원을 제안한다 → `frontend/src/components/strategy/RegistryChangedNotice.tsx`. 자동 보정하거나 다시 보내지 않는다 (T058 의존)\n+- [X] T058 [US2] (FE) `StrategySettingsPage.tsx`에 상세 설정 연결 — 값이 바뀔 때마다 `evaluateRules` 재평가·`evaluateWarmup` 재계산·선택 카드 재판정(`useEvaluationWindow`에 현재 워밍업 전달)·배지 갱신. 위반이 있거나 워밍업 미충족이면 '분석하기' `disabled`. **값을 만질 때 서버 요청이 나가지 않는다**(research R7-1 기각 대안) (T056 의존)\n+- [X] T059 [US2] (FE) 등록표 버전 변경 처리(research R9, quickstart 10) — `createBacktest`가 `REGISTRY_VERSION_CHANGED`(409)를 돌려주면 등록표를 다시 조회하고 T032의 공통 재검증 로직으로 유효한 값은 유지한 채 \"확인하신 사이에 등록표가 바뀌었습니다\"를 알리며, 유효하지 않은 값은 이유와 기본값 복원을 제안한다 → `frontend/src/components/strategy/RegistryChangedNotice.tsx`. 자동 보정하거나 다시 보내지 않는다 (T058 의존)\n \n ### Frontend 테스트\n \n@@ -216,7 +216,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n - [X] T062 [P] [US2] (FE 테스트) `frontend/src/components/strategy/AxisChoiceField.test.tsx` — 등록 후보만 렌더; `selectable:false` 후보는 보이되 선택되지 않음; 객체값은 `label`로 보이고 선택 시 원래 객체가 전달됨 (T053 의존)\n - [X] T063 [US2] (FE 테스트) `frontend/src/components/strategy/DetailSettingsPanel.test.tsx` — 선택 전략 축만 보이고 다른 전략 축 `label`이 없다; `USER`면 읽기 전용 비중과 이동 안내, `COMPUTED`면 FR-012 설명; 값을 바꾸면 규칙 위반 `detail`이 **즉시** 보이고 `fetch` mock 호출이 0건; 모두 복원하면 위반이 사라지고 배지가 '기본 설정'(quickstart 6); 축 도움말을 열면 013 원본 문구가 보이고 대응 항목이 없는 용어는 '설명 준비 중'이며 도움말을 열고 닫아도 바꾼 값이 남는다(FR-016) (T056·T057a·T058 의존)\n   - **구현 메모 (B08)**: 페이지 연결(T058)은 B09라, 이 검사는 실제 `useStrategySettings`와 `SettingsStatusBadge`를 묶은 틀로 돌린다. 요청이 0건인지는 `fetch`와 `XMLHttpRequest.open` 둘 다 본다. 축 도움말 항목은 처음에 빠졌다가 **T097에서 채웠다**(도움말이 붙는 축은 등록표의 `termId`가 정하고, 열어도 값이 남는다). 세 상태·키보드는 `components/learning/TermHelp.test.tsx`가 따로 고정한다. 구현 중 T054에서 결함 하나를 찾아 고쳤다: 글자를 칠 때마다 판정하므로 `105`를 치는 도중의 `10`이 먼저 반영되고, 마지막 글이 범위 밖이어도 그 중간 값이 상태에 남았다. 지금은 글이 무효가 되면 입력을 시작하기 전 값으로 되돌린다\n-- [ ] T064 [US2] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 관측 기간을 늘리면 선택 카드의 워밍업 안내가 그 자리에서 갱신된다(quickstart 7, `useEvaluationWindow` mock); 409 응답 뒤 등록표를 다시 조회하고 알림이 보이며 자동 재전송이 없다(quickstart 10) (T058·T059 의존)\n+- [X] T064 [US2] (FE 테스트) `frontend/src/pages/StrategySettingsPage.test.tsx` 확장 — 관측 기간을 늘리면 선택 카드의 워밍업 안내가 그 자리에서 갱신된다(quickstart 7, `useEvaluationWindow` mock); 409 응답 뒤 등록표를 다시 조회하고 알림이 보이며 자동 재전송이 없다(quickstart 10) (T058·T059 의존)\n+  - **구현 메모 (B09)**: `useEvaluationWindow`와 `createBacktest`는 아직 B06이라, 판정과 전송은 B05가 만든 `support` 통로로 받고 검사는 그 흉내로 돈다. 고른 카드만 지금 설정의 워밍업으로 판정하고 다른 카드는 기본 설정 기준이다. 규칙 판정은 패널과 페이지가 `checkRules` 하나를 함께 써서, 판정하지 못한 경우를 한쪽만 통과로 접는 일을 막았다. 409 판별은 오류 클래스가 아니라 `code === 'REGISTRY_VERSION_CHANGED'` 하나로 한다 — **B06(T039)은 Axios 오류를 정규화해 서버 오류 이름을 `code`에 실어 던져야 한다**(`analysisSupport.ts`의 `createBacktest` 설명). 알림은 다음 '분석하기'를 누를 때 거두며, 등록표에서 전략 자체가 사라진 경우의 안내도 이 알림이 전한다. 작업 중 픽스처 결함 하나를 고쳤다: `selectableStrategy`의 `bandWidth` 기본값 20이 섹터 셋에서 규칙을 어기는데 카드는 `selectable: true`였다. 페이지가 규칙 위반으로 막기 시작하자 드러났고, 기본값을 35로 올렸다. 사용자 비중 전략을 고를 수 있게 바꾼 페이지 검사 둘도 같은 까닭으로 기본값을 규칙에 맞춘 응답을 쓴다\n \n **Checkpoint**: 목록형은 등록 후보만, 입력형은 범위 안 값만 받고, 규칙 위반은 입력 즉시 안내되며 서버도 같은 요청을 거절한다\n \n@@ -597,3 +598,60 @@ quickstart 5·5-1·6을 만족한다. 남은 간극은 둘이며 **둘 다 등\n   `conditionalStrategy`(`registryFixture`에는 넣지 않고 `withConditionalStrategy`로 합친다)를 두고 훅(처음 고르기·결정 축 바꾸기·\n   보관값 정돈·조건 참인 축의 무효 안내)과 패널(조건 밖 축 미표시·결정 축 바꾸면 즉시 교체·밀려난 축의 위반 소멸·`termId` 있는 축에만\n   도움말·열어도 값 유지·설명 준비 중)을 고정한다.\n+\n+---\n+\n+## Phase 15: Convergence\n+\n+**Purpose**: B09(바꾼 값을 그 자리에서 판정한다)를 spec·계약·quickstart와 대조한다. 값을 바꾸면 규칙 위반과\n+워밍업 판정이 한 렌더 안에서 다시 계산되고, 그동안 서버로 요청이 나가지 않으며, 409를 받으면 다시 조회해\n+알리되 자동으로 다시 보내지 않는다. 이것으로 FR-008·FR-011·FR-017과 quickstart 5-1·7·10을 만족한다. 남은\n+간극은 셋이다. B06·B10·B12는 위 단계가 이미 추적하므로 간극으로 세지 않았다.\n+\n+- [ ] T098 (DOCS) 선택 전략의 워밍업 재판정에 서버 조회가 필요한지 001과 정하고 T042의 구현 방향을 적는다 per FR-011 · T042 · T058 (contradicts) — T042는 \"선택 전략은 현재 설정으로 조회\"하라고 적어 `useEvaluationWindow`가 값이 바뀔 때마다 `GET /sectors/evaluation-window`를 부르게 한다. 그런데 T058과 티켓 241의 완료 기준은 \"값을 만지는 동안 서버로 요청이 나가지 않는다\"이고, B09가 이 성질을 `StrategySettingsPage.test.tsx`에서 `fetch`·`XMLHttpRequest.open` 호출 0건으로 고정했다. **T042를 적힌 대로 구현하면 그 검사가 깨진다.** 워밍업을 뺀 공통 시작일은 거래일 달력이 있어야 계산되므로, 화면이 한 번 받은 값으로 계산할 수 있는지가 먼저 정해져야 한다. 갈래는 셋이다. ① 001 응답이 워밍업 없는 공통 시작일과 그 뒤 거래일 목록(또는 워밍업 N일째 날짜를 구할 수단)을 함께 내려 화면이 계산한다. ② 전략별 워밍업 후보가 유한하므로(등록표 축의 후보 조합) 한 번에 조회해 둔다. ③ 서버 조회를 허용하되 늦게 온 응답이 바뀐 값을 판정하지 않게 요청마다 워밍업을 붙여 버린다(research R7-1이 기각한 대안이라 그 기각 사유를 다시 따져야 한다). 정한 결과를 T042 아래 구현 메모와 research R7-1에 적는다\n+- [X] T099 (FE) 분석 요청의 거절 코드마다 계약이 정한 화면 처리를 붙인다 per 계약 §2 거절 응답 · FR-018 (partial) — `frontend/src/pages/StrategySettingsPage.tsx`의 `handleAnalyze`는 409 `REGISTRY_VERSION_CHANGED`(T059) 말고는 모든 거절을 `error.message` 한 줄로 보인다. 계약 §2가 정한 처리 가운데 422 `STRATEGY_NOT_REGISTERED`의 \"전략 선택으로 되돌린다\"와 503 `REGISTRY_UNAVAILABLE`의 \"다시 시도를 제안한다\"가 없다. 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙의 `detail`을 메시지로 싣고(`StrategySettingsRejectedException.ruleViolated`) 화면이 그대로 보이므로 이미 만족한다. 400 `UNREGISTERED_PARAMETER_VALUE`는 서버 메시지가 `허용 범위를 벗어난 값입니다: strategyId=…, 항목=…` 같은 개발용 문장이라 그대로 보이면 사용자가 읽을 수 없다 — 응답 `details`의 `axis`·`allowedRange`로 등록표 라벨과 범위를 찾아 안내하거나, 그럴 수 없으면 일반 문장과 등록표 다시 조회를 제안한다. 판별은 T059와 같이 `analysisSupport.ts`에서 오류의 `code` 하나로 하고(`isRegistryVersionChanged`와 나란히), T039의 `BacktestRequestError`가 `code`와 `details`를 싣도록 그 태스크의 구현 메모에 적는다. 검사는 `StrategySettingsPage.test.tsx`에 코드마다 하나씩 두고, 어느 경우에도 자동으로 다시 보내지 않는지 함께 본다\n+- [X] T100 [P] (FE) 고른 카드의 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않고 판정하지 못한 사실을 보인다 per FR-011 · Constitution VI (contradicts) — `frontend/src/pages/StrategySettingsPage.tsx`의 `judgeWarmup`은 주석에 \"지금 워밍업을 계산할 수 없으면 기본 설정으로 판정하지 않는다\"고 적었는데, 코드는 `currentWarmup === null`일 때 `strategy.warmupTradingDays`로 판정한다. 재검증이 축을 비워 복원을 기다리는 동안 고른 카드가 기본값 기준의 `ok`나 `reduced`를 보여, 화면이 하지 않은 판정의 결과를 말한다. '분석하기'는 `INVALID_STORED_VALUES`로 막히므로 요청은 나가지 않는다. 고른 전략이고 워밍업이 `null`이면 `support.judgeWarmup`을 부르지 않고 `{ state: 'unknown', message: '현재 설정으로 워밍업을 계산할 수 없습니다.' }`를 넘긴다(`unknown`은 고를 수 없다는 뜻이 아니라 카드는 눌린 채 남는다). 검사: 보관값의 축 하나가 새 등록표 범위 밖이라 비워진 상태로 전략을 고르면 카드의 `data-warmup`이 `unknown`이고, 복원하면 지금 설정의 판정으로 돌아온다\n+\n+**T099·T100 구현 메모 (같은 브랜치 `feat(fe)/241-live-verdict`)**:\n+\n+- **T100**: 고른 전략의 워밍업이 `null`이면 `support.judgeWarmup`을 부르지 않고 카드에 `unknown`을 넘긴다. 검사는\n+  호출 횟수가 아니라 카드의 `data-warmup`으로 본다 — 재검증을 마치기 전 첫 렌더에서는 고른 전략이 없어 카드 목록이\n+  기본 설정으로 판정하는 것이 맞기 때문이다.\n+- **T099**: `analysisSupport.ts`에 `readBacktestRejection`(오류의 `code`·`details`)과 `BacktestRejectionCode`를 두고\n+  페이지가 코드마다 가른다. 409는 T059 그대로다. 422 `STRATEGY_NOT_REGISTERED`는 `useStrategySettings`에 새로 둔\n+  `clearSelection`으로 고른 전략만 내려놓고(전략별로 바꿔 둔 값은 남는다) 등록표를 다시 받는다. 503은 서버 문장과\n+  '다시 시도' 버튼을 보이고 누르기 전에는 보내지 않는다. 400은 등록표를 다시 받지 않는다 — 버전이 같으면 범위도\n+  같아 다시 받아도 달라질 것이 없다. `details.axis`로 고른 전략의 라벨을 찾고, 찾지 못하면 어느 항목인지 지어내지\n+  않고 일반 문장을 쓴다. 422 `VALIDATION_RULE_VIOLATED`는 서버가 규칙 `detail`을 메시지로 실어 따로 처리하지 않는다.\n+  **B06(T039)의 `BacktestRequestError`는 `code`와 함께 응답 `details`도 실어야 한다** — 공용 `ApiClientError`는\n+  `details`를 싣지 않는다.\n+- **곁에서 고친 것**: 기존 검사 \"전략을 고르기 전에는 분석하기가 그 이유로 막힌다\"가 실행마다 결과가 달랐다. 카드는\n+  등록표를 받자마자 그려지는데 보관값 재검증은 다음 렌더에 끝나, 그 사이에 읽으면 이유가 '불러오기 전'이다.\n+  `waitFor`로 기다리게 했다.\n+- **T098은 남는다.** 001과 정할 결정이라 구현으로 닫을 수 없다.\n+\n+---\n+\n+## Phase 16: Convergence\n+\n+**Purpose**: Phase 15를 구현한 뒤 B09를 다시 대조한다. T099(거절 코드별 화면 처리)와 T100(워밍업을 계산할 수\n+없을 때의 카드 판정)은 코드와 검사로 닫혔다. T098은 001과 정할 결정이라 위에서 열린 채 추적한다. 남은 간극은\n+아래 하나다.\n+\n+- [X] T101 [P] (FE 테스트) 규칙을 판정하지 못한 경우를 통과로 접지 않는다는 것을 검사로 고정한다 per FR-008 · T058 (partial) — `frontend/src/utils/validationRules.ts`의 `checkRules`는 `evaluateRules`가 던지면 `{ violations: [], unjudged: true }`를 돌려주고, `frontend/src/pages/StrategySettingsPage.tsx`는 `unjudged`이면 '분석하기'를 `RULES_UNJUDGED`로 막는다. 그런데 이 두 분기를 부르는 검사가 없어, `unjudged`를 통과로 바꿔도 모든 검사가 통과한다. 위반이 없는 빈 목록과 판정 실패를 가르는 것이 이 함수를 둔 까닭이므로 다음 둘을 고정한다. ① `validationRules.test.ts`: 대소 비교에 숫자가 아닌 축 값이 오면 `unjudged: true`이고 `violations`가 비며, 정상 규칙이면 `unjudged: false`다. ② `StrategySettingsPage.test.tsx`: 규칙 피연산자가 목록형 객체값 축(`resetTiming`)을 대소 비교하는 등록표를 넘기면, 상세 설정 아래에 \"설정 규칙을 판정하지 못했습니다.\"가 보이고 '분석하기'가 그 이유로 막히며 요청이 0건이다\n+\n+**T101 구현 메모**: ①은 대소 비교에 객체값이 온 경우와 정상 규칙 둘을 본다. ②는 합성 값 축 `resetTiming`을 대소 비교하는\n+규칙을 실은 등록표로, 안내가 보이고 규칙의 `detail`은 보이지 않으며 '분석하기'가 막히고 요청이 0건인지 본다. 두 검사가\n+실제로 지키는지 확인하려고 `checkRules`가 `unjudged: false`를 돌려주고 페이지가 `unjudged`를 무시하게 바꿔 돌렸고, 둘 다\n+실패한 뒤 되돌렸다.\n+\n+**코드리뷰 후속 (MR 전 AI 코드리뷰, 같은 브랜치)**: 결함 둘을 찾아 고쳤다. 둘 다 고치기 전 코드에서 실패하는 검사를 먼저 두었다.\n+\n+- **409 알림이 새 등록표를 보기 전에 \"그대로 두었습니다\"를 그렸다(T059).** 409 직후 첫 렌더에는 다시 조회가 아직\n+  시작되지 않아 옛 등록표가 '받음' 상태로 남는데, 알림은 받았는지만 보고 판정했다. `status` 영역이라 읽힐 수 있고,\n+  T064의 \"유효한 값은 둔다\" 검사도 다시 받은 결과와 무관하게 이 렌더에서 통과할 수 있었다. 지금은 409를 받을 때 쓰던\n+  등록표를 붙들어 두고 그와 **다른** 등록표를 받은 뒤에만 다시 받았다고 판정한다. 검사는 다시 받는 조회를 붙든 채\n+  화면에 그려진 글을 `MutationObserver`로 모두 기록해, 풀기 전에 그 문장이 한 번도 없었는지 본다.\n+- **보내는 동안 다른 카드를 고르면 늦게 온 422가 새로 고른 전략을 내려놓았다(T099).** 카드는 보내는 동안에도 고를 수\n+  있다. 지금은 보낸 전략을 아직 고르고 있을 때만 선택을 풀고 알리며, 등록표는 어느 경우에도 다시 받는다. 응답 시점의\n+  선택은 ref로 읽는다 — `handleAnalyze`가 잡은 값은 누른 시점의 것이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2821593": [],
+    "2821774": []
+  }
+}

@@ -1,0 +1,1218 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 950132,
+    "iid": 212,
+    "project_id": 1444456,
+    "title": "docs(de): spec 008의 요구사항 중복과 미매핑 작업을 정리한다",
+    "description": "## 작업 내용 요약\n\nSpec 008의 첫 작업 묶음이다. 17개 경제지표의 등록표를 코드로 세우고 `macro_*` 스키마 13개 테이블을 만들었다. 병합되면 원천 어댑터가 붙을 자리가 생기고, 지표가 어디서 와서 무엇으로 바뀌는지의 단일 출처가 저장소 안에 놓인다.\n\n## 관련 티켓\n\n* S15P21E205-336\n* https://ssafy.atlassian.net/browse/S15P21E205-336\n\n## 주요 변경 사항\n\n* 17개 지표 등록표를 `registry.py`에 정의했다. 통계표·항목 코드·단위·작성기관·확보 구간은 실조회로 확정한 값이며 근거는 `pd11-source-verification.md`다\n* `macro_*` 테이블 13개를 Flyway로 추가했다. 계산 등록표·표시 분류·자료 버전을 각각 별도 테이블로 두고, 권리 판정 상태와 개정 이력 제공 여부, 거래일 달력, 재조회 구간을 지표 정의에 둔다\n* 등록표 불변식을 코드에서 검증한다. 17개, 각 지표가 7개 분야 중 하나, 주 공급원 하나는 행 단위 제약으로 잡히지 않아 별도 검증을 뒀다\n* 원천 어댑터 공통 규약을 세웠다. 재시도 출발값은 최대 3회에 1·2·4초이고 원천별로 덮어쓴다\n* 수집 진입점과 저장 경로 규칙을 만들었다. 적재는 raw에서 processed Parquet으로, 지표와 연도로 나눈다\n* 권리 수명주기 컬럼 셋을 미리 넣었다. 권한 철회 시 그 지표만 중단하는 규칙이 뒤 작업에서 이 컬럼을 쓴다\n* 작업 목록에 T069\\~T073을 더했다. 경제환경 검색 쪽에 남아 있던 임시 대역을 008 자료로 바꾸고 걷어내는 일이다\n\n## 테스트\n\n* [ ] `ruff check src scripts tests` — 로컬 미실행. `data/.venv`가 없어 CI의 Data 단계에 맡긴다\n* [ ] `pytest` — 로컬 미실행. 같은 이유\n* [ ] `./gradlew spotlessApply build` — 로컬 미실행. CI의 Backend 단계에서 확인\n* [x] 등록표 17개 값의 근거를 `pd11-source-verification.md`와 대조했다\n* [x] 마이그레이션 번호가 dev와 겹치지 않는지 확인했다 (CI의 Migration version 단계도 검사)\n\n## 리뷰 포인트\n\n* **등록표를 코드에 두고 DB에 적재하는 구조로 갔다.** 값이 바뀌면 코드 변경과 새 등록표 버전이 함께 간다. 운영 중 DB만 고쳐 바꾸는 길을 막은 선택이라, 이 경계에 동의하는지 봐 달라\n* **권리 수명주기 컬럼 셋을 쓰는 곳이 아직 없다.** T055와 T057이 채운다. 미리 넣은 이유는 마이그레이션을 나중에 또 열지 않기 위해서다\n* **재시도 기본값은 근거 없는 출발값이다.** 실측 뒤 조정한다고 T003에 적었다\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 등록표와 스키마뿐이고 순위를 만들지 않는다\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음. 008은 전략을 다루지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 관측 테이블에 결측 사유 코드를 두어 값 없음과 0을 구분한다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 권리 판정 상태를 확인 완료·권리 확인 대기·미확인으로 나누고, 재조회 구간 기본값을 잠정으로 표시했다",
+    "state": "merged",
+    "created_at": "2026-09-18T09:07:37.877+09:00",
+    "updated_at": "2026-09-18T09:27:19.309+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-18T09:26:58.935+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/336-macro-registry-schema",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+    "merge_commit_sha": "3c384f543a49adc33c6c1bddf6a40195e2bfdbdd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:07:39.581+09:00",
+    "reference": "!212",
+    "references": {
+      "short": "!212",
+      "relative": "!212",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!212"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/212",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 950132,
+    "iid": 212,
+    "project_id": 1444456,
+    "title": "docs(de): spec 008의 요구사항 중복과 미매핑 작업을 정리한다",
+    "description": "## 작업 내용 요약\n\nSpec 008의 첫 작업 묶음이다. 17개 경제지표의 등록표를 코드로 세우고 `macro_*` 스키마 13개 테이블을 만들었다. 병합되면 원천 어댑터가 붙을 자리가 생기고, 지표가 어디서 와서 무엇으로 바뀌는지의 단일 출처가 저장소 안에 놓인다.\n\n## 관련 티켓\n\n* S15P21E205-336\n* https://ssafy.atlassian.net/browse/S15P21E205-336\n\n## 주요 변경 사항\n\n* 17개 지표 등록표를 `registry.py`에 정의했다. 통계표·항목 코드·단위·작성기관·확보 구간은 실조회로 확정한 값이며 근거는 `pd11-source-verification.md`다\n* `macro_*` 테이블 13개를 Flyway로 추가했다. 계산 등록표·표시 분류·자료 버전을 각각 별도 테이블로 두고, 권리 판정 상태와 개정 이력 제공 여부, 거래일 달력, 재조회 구간을 지표 정의에 둔다\n* 등록표 불변식을 코드에서 검증한다. 17개, 각 지표가 7개 분야 중 하나, 주 공급원 하나는 행 단위 제약으로 잡히지 않아 별도 검증을 뒀다\n* 원천 어댑터 공통 규약을 세웠다. 재시도 출발값은 최대 3회에 1·2·4초이고 원천별로 덮어쓴다\n* 수집 진입점과 저장 경로 규칙을 만들었다. 적재는 raw에서 processed Parquet으로, 지표와 연도로 나눈다\n* 권리 수명주기 컬럼 셋을 미리 넣었다. 권한 철회 시 그 지표만 중단하는 규칙이 뒤 작업에서 이 컬럼을 쓴다\n* 작업 목록에 T069\\~T073을 더했다. 경제환경 검색 쪽에 남아 있던 임시 대역을 008 자료로 바꾸고 걷어내는 일이다\n\n## 테스트\n\n* [ ] `ruff check src scripts tests` — 로컬 미실행. `data/.venv`가 없어 CI의 Data 단계에 맡긴다\n* [ ] `pytest` — 로컬 미실행. 같은 이유\n* [ ] `./gradlew spotlessApply build` — 로컬 미실행. CI의 Backend 단계에서 확인\n* [x] 등록표 17개 값의 근거를 `pd11-source-verification.md`와 대조했다\n* [x] 마이그레이션 번호가 dev와 겹치지 않는지 확인했다 (CI의 Migration version 단계도 검사)\n\n## 리뷰 포인트\n\n* **등록표를 코드에 두고 DB에 적재하는 구조로 갔다.** 값이 바뀌면 코드 변경과 새 등록표 버전이 함께 간다. 운영 중 DB만 고쳐 바꾸는 길을 막은 선택이라, 이 경계에 동의하는지 봐 달라\n* **권리 수명주기 컬럼 셋을 쓰는 곳이 아직 없다.** T055와 T057이 채운다. 미리 넣은 이유는 마이그레이션을 나중에 또 열지 않기 위해서다\n* **재시도 기본값은 근거 없는 출발값이다.** 실측 뒤 조정한다고 T003에 적었다\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 등록표와 스키마뿐이고 순위를 만들지 않는다\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음. 008은 전략을 다루지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 관측 테이블에 결측 사유 코드를 두어 값 없음과 0을 구분한다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 권리 판정 상태를 확인 완료·권리 확인 대기·미확인으로 나누고, 재조회 구간 기본값을 잠정으로 표시했다",
+    "state": "merged",
+    "created_at": "2026-09-18T09:07:37.877+09:00",
+    "updated_at": "2026-09-18T09:27:19.309+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-18T09:26:58.935+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/336-macro-registry-schema",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+    "merge_commit_sha": "3c384f543a49adc33c6c1bddf6a40195e2bfdbdd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:07:39.581+09:00",
+    "reference": "!212",
+    "references": {
+      "short": "!212",
+      "relative": "!212",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!212"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/212",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "27",
+    "latest_build_started_at": "2026-09-18T09:14:55.634+09:00",
+    "latest_build_finished_at": "2026-09-18T09:26:30.798+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 204539,
+      "iid": 146,
+      "project_id": 1444456,
+      "sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+      "ref": "feat(de)/336-macro-registry-schema",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T09:14:55.521+09:00",
+      "updated_at": "2026-09-18T09:26:30.805+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204539"
+    },
+    "head_pipeline": {
+      "id": 204539,
+      "iid": 146,
+      "project_id": 1444456,
+      "sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+      "ref": "feat(de)/336-macro-registry-schema",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T09:14:55.521+09:00",
+      "updated_at": "2026-09-18T09:26:30.805+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204539",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T09:14:55.634+09:00",
+      "finished_at": "2026-09-18T09:26:30.798+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204539",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3b58be584a349fc82ac190b65804429ecf050dd9",
+      "head_sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+      "start_sha": "974e4c0795c3f2fadeaa06788f69c0e8bd85475e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "38c7b10b914a8b007637ef5dcdd8b847a13dc668",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829980,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T09:07:37.993+09:00",
+          "updated_at": "2026-09-18T09:07:37.999+09:00",
+          "system": true,
+          "noteable_id": 950132,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 212,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a95c2b236eef7b513d17cdcf7bacd110648696cd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829982,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 불변식 검증 및 제약 설계**: Flyway 마이그레이션 파일(`V20260918120000__macro_registry.sql`)과 통합 테스트(`MacroSchemaIntegrationTest.java`)에서 사유 없는 결측, 17개 지표 미달 시 발행 차단, 권리 중단 시 사유/시점 강제 등 도메인 불변식을 데이터베이스 수준의 `CHECK` 제약과 테스트로 강력하게 방어했습니다.\n- **아키텍처 경계와 설계 의도 문서화**: `package-info.java` 및 각 모듈 docstring을 통해 \"Backend는 계산하지 않는다\", \"지표 계산 및 수집은 `data/` 패키지가 전담한다\"는 아키텍처 원칙과 3가지 버전 관리 모델(계산 등록표, 화면 분류, 자료 버전)의 분리 이유를 매우 명확하게 명시했습니다.\n\n### 발견 사항\n- [Low] `data/src/data_pipeline/macro/registry.py` 파일 내 `nominal_weights()` 함수 구현이 잘리거나 미완성 상태(`per_field[indicator.indicator_id].appe...`)로 PR에 포함되어 있습니다. 실행 시 문법 오류(`SyntaxError`)가 발생할 수 있으므로 확인이 필요합니다.\n\n### 테스트 제안\n- **등록표 데이터 무결성 테스트**: `tests/test_macro_registry.py`에 추가된 17개 지표 개수 및 7개 분야 매핑 검증 테스트(`test_has_exactly_seventeen_indicators`, `test_every_indicator_belongs_to_exactly_one_field`)가 CI 환경에서 정상 수행되는지 확인합니다.\n- **재시도 백오프 계산 검증**: `data_pipeline.macro.config.SourceConfig.backoff_for()` 메서드에 대해 1, 2, 3번째 시도 시 각각 1초, 2초, 4초의 대기 시간이 올바르게 계산되는지 단위 테스트를 추가하는 것을 권장합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3bba2147c07ea7af77f57789494ab9c887a98c6a -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T09:07:44.697+09:00",
+          "updated_at": "2026-09-18T09:14:54.211+09:00",
+          "system": false,
+          "noteable_id": 950132,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 212,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "20dc9f536c7433f8566646d350070b9a4944363f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830000,
+          "type": null,
+          "body": "발견사항은 오탐이며 제안된 테스트는 진행완료했습니다.",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T09:09:23.347+09:00",
+          "updated_at": "2026-09-18T09:09:23.347+09:00",
+          "system": false,
+          "noteable_id": 950132,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 212,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ceca1ebebcb20a55c3d24938fc6fc591f39ffd27",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830058,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>3bba2147 - fix(de): 거시지표 마이그레이션 버전을 dev 최대값 위로 올린다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/212/diffs?diff_id=2217803&start_sha=57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T09:14:46.101+09:00",
+          "updated_at": "2026-09-18T09:14:46.104+09:00",
+          "system": true,
+          "noteable_id": 950132,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 212,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b5e0c0845a6353ecc5a144497b3d9d09d0aca677",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830216,
+          "type": null,
+          "body": "mentioned in commit 3c384f543a49adc33c6c1bddf6a40195e2bfdbdd",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-18T09:26:59.276+09:00",
+          "updated_at": "2026-09-18T09:26:59.295+09:00",
+          "system": true,
+          "noteable_id": 950132,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 212,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2217803,
+      "head_commit_sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+      "base_commit_sha": "3b58be584a349fc82ac190b65804429ecf050dd9",
+      "start_commit_sha": "974e4c0795c3f2fadeaa06788f69c0e8bd85475e",
+      "created_at": "2026-09-18T09:14:45.825+09:00",
+      "merge_request_id": 950132,
+      "state": "collected",
+      "real_size": "27",
+      "patch_id_sha": "7651a47abc173cd5d30666409b365e02ab191383"
+    },
+    {
+      "id": 2217714,
+      "head_commit_sha": "57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b",
+      "base_commit_sha": "3b58be584a349fc82ac190b65804429ecf050dd9",
+      "start_commit_sha": "9177de31db3bec4981a225bda8f6336d451952b8",
+      "created_at": "2026-09-18T09:07:38.315+09:00",
+      "merge_request_id": 950132,
+      "state": "without_files",
+      "real_size": "27",
+      "patch_id_sha": "310a52b79bfa851176418dfc9ff630ec634206db"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2217803,
+      "head_commit_sha": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+      "base_commit_sha": "3b58be584a349fc82ac190b65804429ecf050dd9",
+      "start_commit_sha": "974e4c0795c3f2fadeaa06788f69c0e8bd85475e",
+      "created_at": "2026-09-18T09:14:45.825+09:00",
+      "merge_request_id": 950132,
+      "state": "collected",
+      "real_size": "27",
+      "patch_id_sha": "7651a47abc173cd5d30666409b365e02ab191383",
+      "commits": [
+        {
+          "id": "3bba2147c07ea7af77f57789494ab9c887a98c6a",
+          "short_id": "3bba2147",
+          "created_at": "2026-09-18T09:14:29.000+09:00",
+          "parent_ids": [
+            "57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b"
+          ],
+          "title": "fix(de): 거시지표 마이그레이션 버전을 dev 최대값 위로 올린다",
+          "message": "fix(de): 거시지표 마이그레이션 버전을 dev 최대값 위로 올린다\n\nS15P21E205-336\n\n브랜치를 딴 뒤 dev 에 20260918082017 이 머지되면서 우리 20260917160000 이\n역전됐다. dev 가 먼저 배포되면 이 번호는 이미 지나간 번호가 되어 적용되지\n않고 기동이 막힌다.\n\n내용은 그대로 두고 파일 이름만 20260918120000 으로 올렸다. 아직 어느\n환경에도 적용된 적이 없어 체크섬 문제는 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-18T09:14:29.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-18T09:14:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3bba2147c07ea7af77f57789494ab9c887a98c6a"
+        },
+        {
+          "id": "57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b",
+          "short_id": "57fe180c",
+          "created_at": "2026-09-17T23:01:45.000+09:00",
+          "parent_ids": [
+            "0ca82ae48d36e1840a7b5a76e74d661ccd2a663c"
+          ],
+          "title": "feat(de): 17개 지표 등록표와 수집 진입점을 만든다",
+          "message": "feat(de): 17개 지표 등록표와 수집 진입점을 만든다\n\npd11 실조회 결과를 등록표로 옮겼다. 추정으로 채운 칸이 없다 — 확인하지 못한\n공표 정밀도·거래일 달력은 None 으로 두고 그것을 채울 작업을 모듈에 적었다.\n최소 유효 척도는 010 소유라 008이 건드리지 않는다.\n\n주 공급원을 고르는 것은 등록표다. 어댑터가 고르면 같은 지표가 실행마다 다른\n원천에서 와도 값이 왜 달라졌는지 되짚을 곳이 없다. 원/달러는 일별 표가\n서울외국환중개 작성이라 한국은행이 쓴 월별 표의 말일자료로 바꿔 잡았고,\n두바이유만 권리 확인 대기로 남는다.\n\n어댑터 공통 규약은 다시 걸어 볼 실패와 그렇지 않은 실패를 가른다. 관세청\n옛 주소는 키가 멀쩡해도 인증 오류를 돌려주는데, 이걸 일시 오류로 읽고\n되풀이하면 원인이 주소라는 사실이 드러나지 않는다.\n\n진입점은 --mode 에 기본값을 두지 않는다. 최초 적재와 정기 수집은 호출량이\n자릿수로 다르고, 기본값이 있으면 어느 쪽이 도는지 모르는 채 실행된다.\n수집 본체가 없는 지금은 종료 코드 2로 끝내 아무것도 받지 않은 실행이\n성공으로 보이지 않게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T23:01:45.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T23:01:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b"
+        },
+        {
+          "id": "0ca82ae48d36e1840a7b5a76e74d661ccd2a663c",
+          "short_id": "0ca82ae4",
+          "created_at": "2026-09-17T22:50:43.000+09:00",
+          "parent_ids": [
+            "62a8025af6de8282351ef6d0022dcb773b1cca23"
+          ],
+          "title": "feat(de): 거시지표 등록·수집 스키마를 만든다",
+          "message": "feat(de): 거시지표 등록·수집 스키마를 만든다\n\n표 열셋을 한 마이그레이션에 담았다. 세 버전(계산 등록표·화면 분류·자료)을\n나눈 이유는 서로 다른 속도로 움직이기 때문이다. 화면 문구를 고쳤다고 과거\n검색 결과가 달라지면 안 되고, 분야 매핑을 고쳤다고 전 구간을 다시 처리할\n이유도 없다.\n\n제약으로 막는 것은 값을 지어내는 경로다. 변환값이 비었는데 사유가 없는 행,\n17개가 차지 않은 공개 버전, 사유 없는 권리 중단을 넣지 못한다. 공통 대상월이\n없을 때는 기준월 행을 지우지 않고 월만 비운다 — 행이 없으면 아직 계산하지\n않은 것과 계산했더니 공통 월이 없는 것이 같아 보인다.\n\n수집 실패 상태를 여덟으로 나눴다. 키 미발급·승인 대기·권리 확인 대기·권리\n미확인은 사람이 할 다음 행동이 전부 다르고, 하나로 묶으면 무엇을 해야 하는지가\n응답에서 사라진다.\n\n변환 유형은 여섯이다. SC-007 은 넷이라 적었지만 FR-001 표에는 전월 대비\n증가율(주택가격)과 계절조정 비율(실업률)이 따로 있다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:50:43.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:50:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0ca82ae48d36e1840a7b5a76e74d661ccd2a663c"
+        },
+        {
+          "id": "62a8025af6de8282351ef6d0022dcb773b1cca23",
+          "short_id": "62a8025a",
+          "created_at": "2026-09-17T22:45:24.000+09:00",
+          "parent_ids": [
+            "6fc3120dd426d84666495c524a1d0493d1726cea"
+          ],
+          "title": "feat(de): 거시지표 수집의 설정·표본·조회 패키지 자리를 만든다",
+          "message": "feat(de): 거시지표 수집의 설정·표본·조회 패키지 자리를 만든다\n\n원천 네 곳의 주소·타임아웃·재시도를 config 한자리로 모았다. 기본 주소는\nBackend market 모듈이 이미 쓰는 값과 같게 뒀다 — 두 곳이 다른 주소를 들면\n원천이 주소를 바꿀 때 한쪽만 고쳐진다.\n\n인증키는 설정 객체에 담지 않고 필요한 순간에 읽는다. 설정을 로그나 오류에\n그대로 찍는 일이 흔한데 거기 키가 섞이면 저장소가 아니라 로그로 샌다.\n키가 없어도 임포트는 되며, 없는 키는 값을 꺼낼 때 비로소 문제가 된다.\n\n재시도는 3회·1·2·4초로 뒀다. 근거 있는 상한이 아니라 \"정해진 횟수\"를\n판정할 수 있는 수로 바꾼 것이고 실측 뒤 조정한다.\n\nT005의 계층 이름은 presentation 으로 적었다. controller 라는 계층은 기존\n12개 모듈과 ADR-0001 어디에도 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:45:24.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:45:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/62a8025af6de8282351ef6d0022dcb773b1cca23"
+        },
+        {
+          "id": "6fc3120dd426d84666495c524a1d0493d1726cea",
+          "short_id": "6fc3120d",
+          "created_at": "2026-09-17T22:41:10.000+09:00",
+          "parent_ids": [
+            "64f0f300153c2790393fa49d22c98037df715135"
+          ],
+          "title": "feat(de): 거시지표 수집 패키지 뼈대를 만든다",
+          "message": "feat(de): 거시지표 수집 패키지 뼈대를 만든다\n\n자료가 흐르는 순서대로 모듈 자리를 잡고, 각 자리에 왜 그렇게 두는지를 적었다.\n17개가 다 되기 전에는 공개하지 않는 이유, 한 지표를 여러 원천에서 합치지 않는\n이유, 변환 경계에서 값을 지어내지 않는 이유가 해당 모듈 옆에 있다.\n\n010이 쓸 시계열 읽기는 이 패키지가 아니라 regime.macro.postgres에 둔다는 것도\n패키지 문서에 박았다. 그 경로는 010의 팩터리가 정한 자리라 여기에 두면 배치가\n구현체를 찾지 못한다.\n\nT001의 publish 자리는 모듈로 만들었다. T030·T031·T038·T039가 모두 publish.py를\n가리키고 있어 tasks.md 쪽 표기를 맞췄다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:41:10.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:41:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6fc3120dd426d84666495c524a1d0493d1726cea"
+        },
+        {
+          "id": "64f0f300153c2790393fa49d22c98037df715135",
+          "short_id": "64f0f300",
+          "created_at": "2026-09-17T22:32:49.000+09:00",
+          "parent_ids": [
+            "aea0d099c6d1b6610d73e6743c59c66e4394b765"
+          ],
+          "title": "docs(de): 008이 채워야 할 기존 자리를 표로 세우고 폐기 작업을 더한다",
+          "message": "docs(de): 008이 채워야 할 기존 자리를 표로 세우고 폐기 작업을 더한다\n\n저장소를 훑으니 담당 작업이 없는 자리가 둘 나왔다. 설정 기본값\nthorp.regime.macro.source 가 fixture 로 남아 있고, 양쪽 픽스처와\nmarketflow 예시 자료를 지우는 작업이 어디에도 없었다. 구현을 다 해도\n기본 경로는 계속 가짜 자료를 내보내는 상태가 된다.\n\n폐기 작업을 T071로 넣고, quickstart 검증을 그 뒤에 두어 묶음 I을\nT068~T072로 붙였다. 몇 달 관찰이 필요한 재조회 구간 확정은 T073으로\n밀어 묶음 J에 남긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:32:49.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:32:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/64f0f300153c2790393fa49d22c98037df715135"
+        },
+        {
+          "id": "aea0d099c6d1b6610d73e6743c59c66e4394b765",
+          "short_id": "aea0d099",
+          "created_at": "2026-09-17T22:27:08.000+09:00",
+          "parent_ids": [
+            "2e91b7789703ca9f479104374d5e0dc1a5fc568f"
+          ],
+          "title": "docs(de): T068의 지표 소스 구현 경로를 실제 자리로 맞춘다",
+          "message": "docs(de): T068의 지표 소스 구현 경로를 실제 자리로 맞춘다\n\n010의 `regime/macro/__init__.py`가 구현체를 `regime.macro.postgres`로 찾는데\nT068은 `data_pipeline/macro/source_port.py`에 만들라고 적고 있었다. 그대로면\n008을 다 만들어도 010 배치가 구현체를 못 찾는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:27:08.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:27:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/aea0d099c6d1b6610d73e6743c59c66e4394b765"
+        },
+        {
+          "id": "2e91b7789703ca9f479104374d5e0dc1a5fc568f",
+          "short_id": "2e91b778",
+          "created_at": "2026-09-17T22:27:08.000+09:00",
+          "parent_ids": [
+            "1e9784dd656d3e32eb5e866e4520347802dda3ed"
+          ],
+          "title": "chore(de): speckit 절차가 문서와 코드를 함께 대조하게 한다",
+          "message": "chore(de): speckit 절차가 문서와 코드를 함께 대조하게 한다\n\n문서끼리만 맞춰 보면 상류 spec의 누락이 안 보인다. 소비자가 임시 대역을\n먼저 넣어 두고 기다리는 자리는 spec·plan·tasks 어디에도 안 적히기 때문이다.\n008에서 010의 지표 소스 구현 경로가 어긋난 채로 검토를 통과한 게 그 경우다.\n\ntasks에 \"Existing Seams\" 절을 필수로 두어 교체 대상과 담당 작업을 적게 하고,\n없으면 None이라고 쓰게 했다 — 빈 표는 찾아본 적 없음과 구분되지 않는다.\nanalyze에는 저장소 대조 패스를 넣어 경로 일치와 미청구 자리를 보게 했고,\n확인하지 않은 범위를 리포트에 적게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:27:08.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:27:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2e91b7789703ca9f479104374d5e0dc1a5fc568f"
+        },
+        {
+          "id": "1e9784dd656d3e32eb5e866e4520347802dda3ed",
+          "short_id": "1e9784dd",
+          "created_at": "2026-09-17T22:15:37.000+09:00",
+          "parent_ids": [
+            "3b58be584a349fc82ac190b65804429ecf050dd9"
+          ],
+          "title": "docs(de): spec 008의 요구사항 중복과 미매핑 작업을 정리한다",
+          "message": "docs(de): spec 008의 요구사항 중복과 미매핑 작업을 정리한다\n\n중복이던 FR-016 두 개를 FR-016과 FR-016c로 나눴다. 등록표 필수 항목에서\n최소 유효 척도를 뺐다 — 010 소유(PD-10)라 008 혼자서는 채울 수 없는\n완료 기준이었다. FR-005·FR-012·FR-016b·FR-018·FR-018a에 작업이 없던\n자리를 메우고, 권리 중단·재확인 시점을 담을 컬럼 셋을 등록표 스키마에\n추가했다. 재시도 횟수와 대조 허용 오차처럼 판정할 수 없던 표현에\n출발값을 넣었다.\n\n몇 달 관찰이 필요한 재조회 구간 확정을 묶음 J로 떼어냈다. 묶음 I에\n두면 그동안 병합될 수 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:15:37.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:15:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1e9784dd656d3e32eb5e866e4520347802dda3ed"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -109,6 +109,16 @@ Load only the minimal necessary context from each artifact:\n \n - Load `.specify/memory/constitution.md` for principle validation\n \n+**From the repository (REQUIRED - documents alone are not enough):**\n+\n+- The seams this feature is expected to fill: placeholder adapters (`Pending*`, `Fixture*`, `Example*`,\n+  `Provisional*`, `Stub*`), ports with no real implementation, `TODO`/`NotImplemented` naming this spec\n+- The concrete files and module paths that tasks.md names - do they exist, or is the parent a real place\n+  to create them?\n+- Existing consumers of the data or API this feature will own\n+- Search by feature name, spec number, port/interface names, and table prefix. Reading a handful of\n+  targeted files is enough; do not load the whole tree.\n+\n ### 3. Build Semantic Models\n \n Create internal representations (do not include raw artifacts in output):\n@@ -156,6 +166,23 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i\n - Task ordering contradictions (e.g., integration tasks before foundational setup tasks without dependency note)\n - Conflicting requirements (e.g., one requires Next.js while other specifies Vue)\n \n+#### G. Code Reality Check\n+\n+Documents agreeing with each other is not the same as documents agreeing with the repository. This pass\n+is what catches an upstream feature whose downstream consumers already shipped a stand-in.\n+\n+- **Path truth**: every file or module path named in tasks.md/plan.md - does it exist, or does the code\n+  expect it somewhere else? A seam importing `a.b.c` while tasks say to write `x/y.py` is a defect that\n+  only surfaces at integration.\n+- **Unclaimed seams**: placeholder adapters, empty implementations and spec-referencing TODOs that this\n+  feature is supposed to replace, with no task claiming them\n+- **Contract drift**: interface names, method signatures, identifiers and response envelopes that differ\n+  between this feature's contracts and the already-merged code on either side of the boundary\n+- **Stale plan claims**: \"we reuse X\" / \"we do not reuse Y\" statements in plan.md that the code contradicts\n+\n+Document-vs-code mismatches default to **HIGH**: they always fail at implementation time, and no amount of\n+document review will surface them.\n+\n ### 5. Severity Assignment\n \n Use this heuristic to prioritize findings:\n@@ -195,6 +222,12 @@ Output a Markdown report (no file writes) with the following structure:\n - Duplication Count\n - Critical Issues Count\n \n+**Not Checked:**\n+\n+State plainly what this run did not examine - source files not opened, sibling specs not compared, live\n+schema not inspected, anything the available documents could not settle. Never report a clean result as\n+\"nothing left to find\"; report it as \"nothing found within what was checked\", and name the rest here.\n+\n ### 7. Provide Next Actions\n \n At end of report, output a concise Next Actions block:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".claude/skills/speckit-analyze/SKILL.md",
+          "old_path": ".claude/skills/speckit-analyze/SKILL.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,6 +71,7 @@ You **MUST** consider the user input before proceeding (if not empty).\n    - If data-model.md exists: Extract entities and map to user stories\n    - If contracts/ exists: Map interface contracts to user stories\n    - If research.md exists: Extract decisions for setup tasks\n+   - **Scan the repository for existing seams this feature must fill** (see Existing Seams below) - REQUIRED, not optional\n    - Generate tasks organized by user story (see Task Generation Rules below)\n    - Generate dependency graph showing user story completion order\n    - Create parallel execution examples per user story\n@@ -132,6 +133,7 @@ Output path to generated tasks.md and summary:\n - Parallel opportunities identified\n - Independent test criteria for each story\n - Suggested MVP scope (typically just User Story 1)\n+- Existing seams found, and which task replaces each (or \"None\")\n - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)\n \n Context for task generation: $ARGUMENTS\n@@ -196,7 +198,22 @@ Every task MUST strictly follow this format:\n    - If entity serves multiple stories: Put in earliest story or Setup phase\n    - Relationships → service layer tasks in appropriate story phase\n \n-4. **From Setup/Infrastructure**:\n+4. **From the Existing Codebase (Existing Seams)** - REQUIRED:\n+   - Search the repository for code that is already waiting on this feature. Look for:\n+     - Placeholder adapters and stand-ins: `Pending*`, `Fixture*`, `Example*`, `Provisional*`, `Stub*`\n+     - Ports/interfaces this feature is expected to implement, with no real implementation yet\n+     - `NotImplementedError` / `UnsupportedOperationException` / `TODO` comments naming this spec\n+     - Import paths or module lookups pointing at a module this feature is supposed to create\n+     - Existing consumers reading data this feature will own\n+   - Search terms: the feature name, its spec number, its port/interface names, its table prefix\n+   - **Every seam found MUST get a task that replaces, implements, or removes it.** A downstream spec\n+     that already shipped a stand-in will keep serving fake data until such a task lands.\n+   - **Verify the paths agree.** If the seam expects module `a.b.c` and the plan says to write `x/y.py`,\n+     that mismatch is a defect - resolve it now, not at integration time.\n+   - Record the result in the tasks.md \"Existing Seams\" section. If there are none, write \"None\" there;\n+     never leave it blank, or the next reader cannot tell \"checked, none\" from \"never checked\".\n+\n+5. **From Setup/Infrastructure**:\n    - Shared infrastructure → Setup phase (Phase 1)\n    - Foundational/blocking tasks → Foundational phase (Phase 2)\n    - Story-specific setup → within that story's phase\n@@ -213,5 +230,6 @@ Every task MUST strictly follow this format:\n ## Done When\n \n - [ ] tasks.md generated with all phases, task IDs, and file paths\n+- [ ] Existing Seams section filled in (a seam list with owning tasks, or an explicit \"None\")\n - [ ] Extension hooks dispatched or skipped according to the rules in Mandatory Post-Execution Hooks above\n - [ ] Completion reported to user with task count, story breakdown, and MVP scope\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".claude/skills/speckit-tasks/SKILL.md",
+          "old_path": ".claude/skills/speckit-tasks/SKILL.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,19 @@ description: \"Task list template for feature implementation\"\n - **Mobile**: `api/src/`, `ios/src/` or `android/src/`\n - Paths shown below assume single project - adjust based on plan.md structure\n \n+## Existing Seams\n+\n+Code already in the repository that this feature must replace, implement, or remove. Upstream\n+features are the usual case: consumers ship a stand-in first and keep serving it until something\n+here takes its place. An empty table hides that work entirely.\n+\n+| Seam (file:symbol) | Current state | What this feature does | Task |\n+|---|---|---|---|\n+| [path:symbol] | [stand-in / empty impl / expected module path] | [replace / implement / remove] | [TNNN] |\n+\n+Write \"None\" if the search found nothing. Do not leave this section blank - a blank table cannot be\n+told apart from a search that never happened.\n+\n <!--\n   ============================================================================\n   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/templates/tasks-template.md",
+          "old_path": ".specify/templates/tasks-template.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+/**\n+ * spec 008 경제지표 등록·수집의 <b>조회 쪽</b>. 17개 지표의 표시 정보를 한 응답으로 내보낸다.\n+ *\n+ * <p><b>여기서 계산하지 않는다.</b> 수집·변환·발행은 전부 {@code data/src/data_pipeline/macro/}에 있고, 이 패키지는 그 배치가 적재한\n+ * {@code macro_*} 행을 읽어 내보낼 뿐이다(루트 {@code AGENTS.md} \"Backend는 계산하지 않는다\").\n+ *\n+ * <p><b>응답은 한 번에 조립한다</b>(FR-023). 17개 메타데이터·값·최근 3개월 경로·분야별 {@code T_g}·{@code T_all}·수집 상태·세 버전이\n+ * <b>단일 스냅샷 응답</b>으로 나간다. 현재 포인터의 세 버전을 먼저 고정한 뒤 조립하는 이유는 포인터 교체가 조회 도중에 일어나면 한 응답 안에 서로 다른 자료 버전의\n+ * 값이 섞이기 때문이다 — 그렇게 섞인 화면은 어느 시점의 경제환경인지 아무도 말할 수 없다.\n+ *\n+ * <p>계층 규약은 ADR-0001(docs/adr/0001-be-layered-package-architecture.md)을 따른다.\n+ *\n+ * <ul>\n+ *   <li>{@code presentation/{controller,response}}\n+ *   <li>{@code application/{service,result,repository}}\n+ *   <li>{@code domain/{model,vo}}\n+ *   <li>{@code infrastructure/persistence}\n+ * </ul>\n+ *\n+ * <p><b>소비자</b>는 둘이다. 009 시장 흐름 화면은 이 조회를 거쳐 읽고 {@code macro_*}에 직접 닿지 않는다(T064). 010 경제환경 검색의\n+ * <b>등록표</b>는 {@code regime.application.port.MacroIndicatorPort}로 나가며, 그 구현체는 008이 완성되면 {@code\n+ * regime.infrastructure.macro}의 자리지킴을 대신한다(T070). 010의 <b>시계열</b>은 Backend를 거치지 않고 {@code data/}가\n+ * 직접 읽는다.\n+ */\n+package com.ssafy.thorp.macro;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/macro/package-info.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/macro/package-info.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,308 @@\n+-- 경제지표 등록·수집(spec 008)이 소유하는 표 열둘.\n+--\n+-- 값을 넣는 것은 `data/src/data_pipeline/macro/` 배치뿐이고 Backend 는 읽기만 한다\n+-- (루트 AGENTS.md \"Backend는 계산하지 않는다\"). 열 이름·제약이 배치 정의와 어긋나면\n+-- 적재가 운영에서만 깨진다.\n+--\n+-- decimal 은 예외 없이 JSONB 문자열이다(V2__backtest_result.sql 규약) — NUMERIC 은 scale 을\n+-- 임의로 정해야 하고 그 자릿수를 넘는 값을 조용히 반올림하지만, JSON 은 원천이 준 값과\n+-- 자릿수를 그대로 보존한다. 지표마다 공표 정밀도가 다르므로 여기서 특히 중요하다.\n+--\n+-- 버전이 셋인 이유는 서로 다른 속도로 움직이기 때문이다(FR-003). 화면 문구를 고쳤다고\n+-- 과거 검색 결과가 달라지면 안 되고, 분야 매핑을 고쳤다고 전 구간을 다시 처리할 이유도 없다.\n+\n+-- ---------------------------------------------------------------------------\n+-- 1. 계산 등록표 (T006)\n+-- ---------------------------------------------------------------------------\n+\n+CREATE TABLE macro_calculation_registry_version (\n+    id                     BIGINT GENERATED BY DEFAULT AS IDENTITY,\n+    version_key            VARCHAR(40)  NOT NULL,\n+    value_rule_fingerprint CHAR(64)     NOT NULL,\n+    change_reason          VARCHAR(200) NOT NULL,\n+    status                 VARCHAR(16)  NOT NULL,\n+    created_at             TIMESTAMPTZ  NOT NULL,\n+    CONSTRAINT pk_macro_calc_registry PRIMARY KEY (id),\n+    CONSTRAINT uk_macro_calc_registry_key UNIQUE (version_key),\n+    CONSTRAINT ck_macro_calc_registry_status CHECK (status IN ('DRAFT', 'PUBLISHED'))\n+);\n+\n+-- 값 규칙 지문. 원천·항목·단위·변환·개편 연결·결측 규칙이 재료다(research R3).\n+-- 지문이 같으면 매핑·가중만 다른 등록표라 관측 시계열을 다시 처리하지 않아도 된다.\n+CREATE INDEX ix_macro_calc_registry_fingerprint\n+    ON macro_calculation_registry_version (value_rule_fingerprint);\n+\n+CREATE TABLE macro_indicator_definition (\n+    registry_version_id       BIGINT       NOT NULL,\n+    indicator_id              VARCHAR(64)  NOT NULL,\n+    field_id                  VARCHAR(32)  NOT NULL,\n+    primary_source            VARCHAR(16)  NOT NULL,\n+    table_code                VARCHAR(64),\n+    item_code                 VARCHAR(64),\n+    raw_unit                  VARCHAR(40)  NOT NULL,\n+    transformed_unit          VARCHAR(40)  NOT NULL,\n+    transform_rule            VARCHAR(24)  NOT NULL,\n+    release_rule              VARCHAR(200),\n+    break_link_rule           VARCHAR(200),\n+    missing_rule              VARCHAR(200),\n+    agency                    VARCHAR(80)  NOT NULL,\n+    attribution               VARCHAR(200) NOT NULL,\n+    license_status            VARCHAR(24)  NOT NULL,\n+    license_review_status     VARCHAR(24)  NOT NULL,\n+    license_verified_at       TIMESTAMPTZ,\n+    license_suspended_at      TIMESTAMPTZ,\n+    license_suspended_reason  VARCHAR(200),\n+    published_precision       INTEGER,\n+    minimum_effective_scale   JSONB,\n+    refresh_months_n          INTEGER      NOT NULL,\n+    nominal_weight            JSONB        NOT NULL,\n+    trading_calendar          VARCHAR(40),\n+    revision_history_available BOOLEAN     NOT NULL,\n+    CONSTRAINT pk_macro_indicator_definition PRIMARY KEY (registry_version_id, indicator_id),\n+    CONSTRAINT fk_macro_indicator_definition_registry\n+        FOREIGN KEY (registry_version_id) REFERENCES macro_calculation_registry_version (id),\n+    CONSTRAINT ck_macro_indicator_field CHECK (field_id IN (\n+        'production', 'consumption_investment', 'external_trade', 'labor',\n+        'prices_commodities', 'finance_housing', 'overseas')),\n+    CONSTRAINT ck_macro_indicator_source CHECK (primary_source IN (\n+        'ecos', 'kosis', 'customs', 'oecd')),\n+    -- FR-001 표의 변환 여섯이다. SC-007 은 \"네 변환 유형\"이라 적었지만 표에는 전월 대비\n+    -- 증가율(주택가격)과 계절조정 비율(실업률)이 따로 있다. 둘 다 원천·규칙이 달라 다른\n+    -- 유형으로 두지 않으면 등록표가 표를 담지 못한다.\n+    CONSTRAINT ck_macro_indicator_transform CHECK (transform_rule IN (\n+        'YOY_GROWTH', 'MOM_GROWTH', 'MONTH_END', 'MONTH_AVERAGE',\n+        'OFFICIAL_AMOUNT', 'SEASONAL_RATE')),\n+    -- 권리 판정은 셋을 구분한다(data-model §1). 조건 자체를 모르는 UNVERIFIED 만 발행 보류\n+    -- 대상이고, PENDING_RIGHTS 는 조건은 공개돼 있으나 이 계열이 어느 쪽인지 물을 창구가\n+    -- 없는 상태다 — 두바이유가 여기다. 둘을 한 상태로 묶으면 쓸 수 있는 지표까지 막힌다.\n+    CONSTRAINT ck_macro_indicator_license_review CHECK (license_review_status IN (\n+        'VERIFIED', 'PENDING_RIGHTS', 'UNVERIFIED')),\n+    CONSTRAINT ck_macro_indicator_license_status CHECK (license_status IN (\n+        'ALLOWED', 'RESTRICTED', 'SUSPENDED', 'UNKNOWN')),\n+    -- 중단은 사유와 시점이 함께 남아야 한다(FR-016b). 왜 빠졌는지 없이 지표만 사라지면\n+    -- 나중에 되돌릴 근거가 없다.\n+    CONSTRAINT ck_macro_indicator_suspension CHECK (\n+        (license_status <> 'SUSPENDED')\n+        OR (license_suspended_at IS NOT NULL AND license_suspended_reason IS NOT NULL)),\n+    CONSTRAINT ck_macro_indicator_refresh CHECK (refresh_months_n >= 1)\n+);\n+\n+-- 지표 하나가 한 분야에만 속하는지는 적재기가 본다(T011·T015). 분야별 개수는 DB 제약으로\n+-- 표현할 수 없다 — 17개·7분야는 행 단위가 아니라 등록표 단위의 불변식이다.\n+CREATE INDEX ix_macro_indicator_definition_field\n+    ON macro_indicator_definition (registry_version_id, field_id);\n+\n+-- ---------------------------------------------------------------------------\n+-- 2. 화면 분류 (T007) — 계산 등록표와 별도 버전이다\n+-- ---------------------------------------------------------------------------\n+\n+CREATE TABLE macro_display_version (\n+    id            BIGINT GENERATED BY DEFAULT AS IDENTITY,\n+    version_key   VARCHAR(40)  NOT NULL,\n+    change_reason VARCHAR(200) NOT NULL,\n+    created_at    TIMESTAMPTZ  NOT NULL,\n+    CONSTRAINT pk_macro_display_version PRIMARY KEY (id),\n+    CONSTRAINT uk_macro_display_version_key UNIQUE (version_key)\n+);\n+\n+CREATE TABLE macro_display_field (\n+    display_version_id BIGINT       NOT NULL,\n+    field_id           VARCHAR(32)  NOT NULL,\n+    display_name       VARCHAR(80)  NOT NULL,\n+    display_order      INTEGER      NOT NULL,\n+    description        VARCHAR(400),\n+    CONSTRAINT pk_macro_display_field PRIMARY KEY (display_version_id, field_id),\n+    CONSTRAINT fk_macro_display_field_version\n+        FOREIGN KEY (display_version_id) REFERENCES macro_display_version (id),\n+    CONSTRAINT uk_macro_display_field_order UNIQUE (display_version_id, display_order),\n+    CONSTRAINT ck_macro_display_field_id CHECK (field_id IN (\n+        'production', 'consumption_investment', 'external_trade', 'labor',\n+        'prices_commodities', 'finance_housing', 'overseas'))\n+);\n+\n+CREATE TABLE macro_display_indicator (\n+    display_version_id BIGINT      NOT NULL,\n+    indicator_id       VARCHAR(64) NOT NULL,\n+    display_name       VARCHAR(80) NOT NULL,\n+    display_order      INTEGER     NOT NULL,\n+    CONSTRAINT pk_macro_display_indicator PRIMARY KEY (display_version_id, indicator_id),\n+    CONSTRAINT fk_macro_display_indicator_version\n+        FOREIGN KEY (display_version_id) REFERENCES macro_display_version (id)\n+);\n+\n+-- ---------------------------------------------------------------------------\n+-- 3. 수집 시도 (T008) — 공개 자료 버전과 별개인 운영 상태다\n+-- ---------------------------------------------------------------------------\n+\n+CREATE TABLE macro_collection_attempt (\n+    id          BIGINT GENERATED BY DEFAULT AS IDENTITY,\n+    attempt_key VARCHAR(64) NOT NULL,\n+    mode        VARCHAR(16) NOT NULL,\n+    started_at  TIMESTAMPTZ NOT NULL,\n+    finished_at TIMESTAMPTZ,\n+    status      VARCHAR(16) NOT NULL,\n+    CONSTRAINT pk_macro_collection_attempt PRIMARY KEY (id),\n+    CONSTRAINT uk_macro_collection_attempt_key UNIQUE (attempt_key),\n+    CONSTRAINT ck_macro_collection_attempt_mode CHECK (mode IN ('INITIAL', 'REGULAR')),\n+    CONSTRAINT ck_macro_collection_attempt_status CHECK (status IN (\n+        'RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED'))\n+);\n+\n+CREATE TABLE macro_collection_item_status (\n+    attempt_id      BIGINT      NOT NULL,\n+    indicator_id    VARCHAR(64) NOT NULL,\n+    source          VARCHAR(16) NOT NULL,\n+    status          VARCHAR(28) NOT NULL,\n+    last_success_at TIMESTAMPTZ,\n+    last_error_at   TIMESTAMPTZ,\n+    error_class     VARCHAR(80),\n+    quota_exhausted BOOLEAN     NOT NULL DEFAULT FALSE,\n+    raw_location    VARCHAR(400),\n+    CONSTRAINT pk_macro_collection_item_status PRIMARY KEY (attempt_id, indicator_id),\n+    CONSTRAINT fk_macro_collection_item_attempt\n+        FOREIGN KEY (attempt_id) REFERENCES macro_collection_attempt (id),\n+    -- 못 받은 이유를 한 덩어리로 묶지 않는다(FR-011). 키가 아직 없는 것, 활용 승인을\n+    -- 기다리는 것, 권리 판정을 못 한 것, 조건 자체를 모르는 것은 사람이 할 다음 행동이\n+    -- 전부 다르다. 하나로 뭉뚱그리면 무엇을 해야 하는지가 응답에서 사라진다.\n+    CONSTRAINT ck_macro_collection_item_status CHECK (status IN (\n+        'SUCCEEDED', 'FAILED', 'QUOTA_EXHAUSTED', 'KEY_NOT_ISSUED',\n+        'APPROVAL_PENDING', 'RIGHTS_PENDING', 'RIGHTS_UNVERIFIED', 'SKIPPED'))\n+);\n+\n+-- ---------------------------------------------------------------------------\n+-- 4. 원본 개정 이력과 관측값 (T009)\n+-- ---------------------------------------------------------------------------\n+\n+-- append-only. 같은 응답을 다시 받아도 해시로 걸러내고, 실제 개정만 새 행이 된다(FR-009).\n+CREATE TABLE macro_raw_revision (\n+    id                 BIGINT GENERATED BY DEFAULT AS IDENTITY,\n+    indicator_id       VARCHAR(64) NOT NULL,\n+    source             VARCHAR(16) NOT NULL,\n+    target_month       DATE        NOT NULL,\n+    raw_value          JSONB,\n+    raw_unit           VARCHAR(40) NOT NULL,\n+    released_at        TIMESTAMPTZ,\n+    received_at        TIMESTAMPTZ NOT NULL,\n+    source_revision_key VARCHAR(80),\n+    observed_revision  INTEGER     NOT NULL,\n+    raw_path           VARCHAR(400) NOT NULL,\n+    raw_hash           CHAR(64)    NOT NULL,\n+    CONSTRAINT pk_macro_raw_revision PRIMARY KEY (id),\n+    CONSTRAINT uk_macro_raw_revision_seq UNIQUE (indicator_id, target_month, observed_revision),\n+    CONSTRAINT ck_macro_raw_revision_month CHECK (EXTRACT(DAY FROM target_month) = 1),\n+    CONSTRAINT ck_macro_raw_revision_seq CHECK (observed_revision >= 1)\n+);\n+\n+CREATE INDEX ix_macro_raw_revision_hash ON macro_raw_revision (indicator_id, raw_hash);\n+\n+CREATE TABLE macro_dataset_version (\n+    id                          BIGINT GENERATED BY DEFAULT AS IDENTITY,\n+    version_key                 VARCHAR(40) NOT NULL,\n+    processing_registry_version_id BIGINT   NOT NULL,\n+    value_rule_fingerprint      CHAR(64)    NOT NULL,\n+    status                      VARCHAR(16) NOT NULL,\n+    complete_indicator_count    INTEGER     NOT NULL,\n+    is_sample_data              BOOLEAN     NOT NULL DEFAULT FALSE,\n+    raw_manifest_hash           CHAR(64),\n+    processed_manifest_hash     CHAR(64),\n+    published_at                TIMESTAMPTZ,\n+    created_at                  TIMESTAMPTZ NOT NULL,\n+    CONSTRAINT pk_macro_dataset_version PRIMARY KEY (id),\n+    CONSTRAINT uk_macro_dataset_version_key UNIQUE (version_key),\n+    CONSTRAINT fk_macro_dataset_version_registry\n+        FOREIGN KEY (processing_registry_version_id)\n+        REFERENCES macro_calculation_registry_version (id),\n+    CONSTRAINT ck_macro_dataset_version_status CHECK (status IN (\n+        'COLLECTING', 'NORMALIZING', 'VALIDATING', 'PUBLISHING',\n+        'PUBLISHED', 'FAILED', 'HELD')),\n+    -- 공개된 버전은 17개가 다 있어야 한다(FR-011). 진행 중인 버전까지 17을 요구하지는\n+    -- 않는다 — 그러면 수집 중에는 행을 만들 수조차 없다.\n+    CONSTRAINT ck_macro_dataset_version_complete CHECK (\n+        status <> 'PUBLISHED' OR (complete_indicator_count = 17 AND published_at IS NOT NULL))\n+);\n+\n+CREATE TABLE macro_observation (\n+    dataset_version_id BIGINT      NOT NULL,\n+    indicator_id       VARCHAR(64) NOT NULL,\n+    target_month       DATE        NOT NULL,\n+    raw_value          JSONB,\n+    transformed_value  JSONB,\n+    released_at        TIMESTAMPTZ,\n+    received_at        TIMESTAMPTZ NOT NULL,\n+    break_segment      VARCHAR(40),\n+    missing_reason     VARCHAR(32),\n+    CONSTRAINT pk_macro_observation PRIMARY KEY (dataset_version_id, indicator_id, target_month),\n+    CONSTRAINT fk_macro_observation_dataset\n+        FOREIGN KEY (dataset_version_id) REFERENCES macro_dataset_version (id),\n+    CONSTRAINT ck_macro_observation_month CHECK (EXTRACT(DAY FROM target_month) = 1),\n+    -- 변환값이 없으면 왜 없는지가 반드시 있어야 한다(FR-008, 원칙 VI). 사유 없는 빈칸은\n+    -- 나중에 결측인지 아직 안 채운 것인지 구분되지 않는다. 반대로 값이 있는데 사유가\n+    -- 붙어 있으면 둘 중 하나가 거짓이다.\n+    CONSTRAINT ck_macro_observation_missing CHECK (\n+        (transformed_value IS NULL) = (missing_reason IS NOT NULL)),\n+    CONSTRAINT ck_macro_observation_missing_reason CHECK (missing_reason IS NULL OR missing_reason IN (\n+        'SOURCE_NOT_RELEASED', 'COLLECTION_FAILED', 'BASE_MONTH_MISSING', 'BASE_MONTH_ZERO',\n+        'BEFORE_SERIES_START', 'MONTH_AVERAGE_INCOMPLETE', 'MONTH_END_NO_TRADING_DAY',\n+        'BREAK_SEGMENT_EXCLUDED'))\n+);\n+\n+-- 변환값 하나가 어떤 원본 행들로 만들어졌는지. 월 기말은 그 달 마지막 거래일 한 행을,\n+-- 월 평균은 그 달 거래일 전부를, 전년동월 대비는 t 와 t-12 를 가리킨다.\n+CREATE TABLE macro_observation_lineage (\n+    dataset_version_id BIGINT      NOT NULL,\n+    indicator_id       VARCHAR(64) NOT NULL,\n+    target_month       DATE        NOT NULL,\n+    raw_revision_id    BIGINT      NOT NULL,\n+    role               VARCHAR(24) NOT NULL,\n+    CONSTRAINT pk_macro_observation_lineage\n+        PRIMARY KEY (dataset_version_id, indicator_id, target_month, raw_revision_id),\n+    CONSTRAINT fk_macro_lineage_observation\n+        FOREIGN KEY (dataset_version_id, indicator_id, target_month)\n+        REFERENCES macro_observation (dataset_version_id, indicator_id, target_month),\n+    CONSTRAINT fk_macro_lineage_raw\n+        FOREIGN KEY (raw_revision_id) REFERENCES macro_raw_revision (id),\n+    CONSTRAINT ck_macro_lineage_role CHECK (role IN (\n+        'TARGET', 'BASE_MONTH', 'MONTH_END_SAMPLE', 'MONTH_AVERAGE_SAMPLE', 'BREAK_LINK'))\n+);\n+\n+-- ---------------------------------------------------------------------------\n+-- 5. 기준월과 현재 포인터 (T010)\n+-- ---------------------------------------------------------------------------\n+\n+CREATE TABLE macro_baseline (\n+    dataset_version_id  BIGINT      NOT NULL,\n+    registry_version_id BIGINT      NOT NULL,\n+    scope_id            VARCHAR(32) NOT NULL,\n+    reference_month     DATE,\n+    reference_month_held_back_by JSONB NOT NULL,\n+    computed_at         TIMESTAMPTZ NOT NULL,\n+    CONSTRAINT pk_macro_baseline PRIMARY KEY (dataset_version_id, registry_version_id, scope_id),\n+    CONSTRAINT fk_macro_baseline_dataset\n+        FOREIGN KEY (dataset_version_id) REFERENCES macro_dataset_version (id),\n+    CONSTRAINT fk_macro_baseline_registry\n+        FOREIGN KEY (registry_version_id) REFERENCES macro_calculation_registry_version (id),\n+    -- 7개 분야와 전체 하나. 교집합이 비면 reference_month 만 null 이고 행 자체는 남는다 —\n+    -- 행이 없으면 \"아직 계산 안 함\"과 \"계산했더니 공통 월이 없음\"이 같아 보인다.\n+    CONSTRAINT ck_macro_baseline_scope CHECK (scope_id IN (\n+        'production', 'consumption_investment', 'external_trade', 'labor',\n+        'prices_commodities', 'finance_housing', 'overseas', 'ALL')),\n+    CONSTRAINT ck_macro_baseline_month CHECK (\n+        reference_month IS NULL OR EXTRACT(DAY FROM reference_month) = 1)\n+);\n+\n+-- 한 행짜리 표. 읽는 쪽은 한 트랜잭션에서 세 버전을 먼저 고정한 뒤 조립한다(FR-023).\n+CREATE TABLE macro_current_publication (\n+    singleton_key       CHAR(1)     NOT NULL DEFAULT 'X',\n+    dataset_version_id  BIGINT,\n+    registry_version_id BIGINT      NOT NULL,\n+    display_version_id  BIGINT      NOT NULL,\n+    switched_at         TIMESTAMPTZ NOT NULL,\n+    CONSTRAINT pk_macro_current_publication PRIMARY KEY (singleton_key),\n+    CONSTRAINT ck_macro_current_publication_singleton CHECK (singleton_key = 'X'),\n+    CONSTRAINT fk_macro_current_dataset\n+        FOREIGN KEY (dataset_version_id) REFERENCES macro_dataset_version (id),\n+    CONSTRAINT fk_macro_current_registry\n+        FOREIGN KEY (registry_version_id) REFERENCES macro_calculation_registry_version (id),\n+    CONSTRAINT fk_macro_current_display\n+        FOREIGN KEY (display_version_id) REFERENCES macro_display_version (id)\n+);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260918120000__macro_registry.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260918120000__macro_registry.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,257 @@\n+package com.ssafy.thorp.macro;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageJsonPersistenceConfig;\n+import com.ssafy.thorp.common.config.JpaAuditingConfig;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.dao.DataIntegrityViolationException;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+\n+/**\n+ * 거시지표 등록·수집 스키마를 운영과 같은 조건으로 본다 (tasks.md T016).\n+ *\n+ * <p>이 표들의 값을 넣는 것은 {@code data/src/data_pipeline/macro/} 배치다. Backend 에는 아직 Entity 가 없으므로 여기서 보는\n+ * 것은 매핑이 아니라 <b>제약이 실제로 막는지</b>다 — 배치가 들고 있는 정의와 이 스키마가 갈리면 적재는 운영에서만 깨지고, 그때 원인은 이 MR 이 아니라 배치 쪽으로\n+ * 보인다.\n+ *\n+ * <p>막아야 할 것을 골라 넣었다. 셋 다 \"값을 지어내지 않는다\"(원칙 VI)가 스키마에서 지켜지는지를 본다.\n+ *\n+ * <ul>\n+ *   <li>사유 없는 결측 — 왜 비었는지 없이 값만 비면 결측인지 미처리인지 구분되지 않는다\n+ *   <li>17개가 안 찬 공개 — 반쯤 채운 버전이 완결본으로 보인다\n+ *   <li>사유 없는 권리 중단 — 지표가 왜 빠졌는지 되돌릴 근거가 사라진다\n+ * </ul>\n+ */\n+@DataJpaTest\n+@Import({JpaAuditingConfig.class, MessageJsonPersistenceConfig.class})\n+@DisplayName(\"거시지표 등록·수집 마이그레이션\")\n+class MacroSchemaIntegrationTest extends PostgresTestSupport {\n+\n+    @Autowired private JdbcTemplate jdbc;\n+\n+    private long insertRegistryVersion(String key) {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_calculation_registry_version (\n+                    version_key, value_rule_fingerprint, change_reason, status, created_at)\n+                VALUES (?, repeat('a', 64), '최초 등록', 'PUBLISHED', now())\n+                \"\"\",\n+                key);\n+        return jdbc.queryForObject(\n+                \"SELECT id FROM macro_calculation_registry_version WHERE version_key = ?\",\n+                Long.class,\n+                key);\n+    }\n+\n+    private long insertDatasetVersion(String key, String status, int completeCount) {\n+        long registryId = insertRegistryVersion(\"REG-\" + key);\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_dataset_version (\n+                    version_key, processing_registry_version_id, value_rule_fingerprint,\n+                    status, complete_indicator_count, published_at, created_at)\n+                VALUES (?, ?, repeat('a', 64), ?, ?,\n+                        CASE WHEN ? = 'PUBLISHED' THEN now() ELSE NULL END, now())\n+                \"\"\",\n+                key,\n+                registryId,\n+                status,\n+                completeCount,\n+                status);\n+        return jdbc.queryForObject(\n+                \"SELECT id FROM macro_dataset_version WHERE version_key = ?\", Long.class, key);\n+    }\n+\n+    @Test\n+    @DisplayName(\"표 열둘이 마이그레이션으로 만들어진다\")\n+    void createsAllTables() {\n+        List<String> tables =\n+                jdbc.queryForList(\n+                        \"\"\"\n+                        SELECT table_name FROM information_schema.tables\n+                        WHERE table_schema = 'public' AND table_name LIKE 'macro\\\\_%'\n+                        ORDER BY table_name\n+                        \"\"\",\n+                        String.class);\n+\n+        assertThat(tables)\n+                .containsExactly(\n+                        \"macro_baseline\",\n+                        \"macro_calculation_registry_version\",\n+                        \"macro_collection_attempt\",\n+                        \"macro_collection_item_status\",\n+                        \"macro_current_publication\",\n+                        \"macro_dataset_version\",\n+                        \"macro_display_field\",\n+                        \"macro_display_indicator\",\n+                        \"macro_display_version\",\n+                        \"macro_indicator_definition\",\n+                        \"macro_observation\",\n+                        \"macro_observation_lineage\",\n+                        \"macro_raw_revision\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"변환값이 비었는데 사유가 없으면 넣지 못한다\")\n+    void rejectsMissingValueWithoutReason() {\n+        long datasetId = insertDatasetVersion(\"DS-missing\", \"NORMALIZING\", 0);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                jdbc.update(\n+                                        \"\"\"\n+                                        INSERT INTO macro_observation (\n+                                            dataset_version_id, indicator_id, target_month,\n+                                            raw_value, transformed_value, received_at)\n+                                        VALUES (?, 'industrial_production', '2026-01-01'::date,\n+                                                '\"101.2\"'::jsonb, NULL, now())\n+                                        \"\"\",\n+                                        datasetId))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"변환값이 있는데 결측 사유가 붙어 있으면 넣지 못한다\")\n+    void rejectsValueWithMissingReason() {\n+        long datasetId = insertDatasetVersion(\"DS-both\", \"NORMALIZING\", 0);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                jdbc.update(\n+                                        \"\"\"\n+                                        INSERT INTO macro_observation (\n+                                            dataset_version_id, indicator_id, target_month,\n+                                            transformed_value, missing_reason, received_at)\n+                                        VALUES (?, 'industrial_production', '2026-01-01'::date,\n+                                                '\"1.4\"'::jsonb, 'BASE_MONTH_MISSING', now())\n+                                        \"\"\",\n+                                        datasetId))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"결측은 사유와 함께면 들어간다\")\n+    void acceptsMissingWithReason() {\n+        long datasetId = insertDatasetVersion(\"DS-ok\", \"NORMALIZING\", 0);\n+\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_observation (\n+                    dataset_version_id, indicator_id, target_month,\n+                    raw_value, transformed_value, missing_reason, received_at)\n+                VALUES (?, 'industrial_production', '2026-01-01'::date,\n+                        '\"101.2\"'::jsonb, NULL, 'BEFORE_SERIES_START', now())\n+                \"\"\",\n+                datasetId);\n+\n+        assertThat(\n+                        jdbc.queryForObject(\n+                                \"SELECT missing_reason FROM macro_observation WHERE dataset_version_id = ?\",\n+                                String.class,\n+                                datasetId))\n+                .isEqualTo(\"BEFORE_SERIES_START\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"17개가 차지 않은 자료 버전은 공개 상태가 되지 못한다\")\n+    void rejectsPublishedWithoutAllIndicators() {\n+        assertThatThrownBy(() -> insertDatasetVersion(\"DS-partial\", \"PUBLISHED\", 16))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"권리를 중단하면서 사유와 시점을 비우면 넣지 못한다\")\n+    void rejectsSuspensionWithoutReason() {\n+        long registryId = insertRegistryVersion(\"REG-suspend\");\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                jdbc.update(\n+                                        \"\"\"\n+                                        INSERT INTO macro_indicator_definition (\n+                                            registry_version_id, indicator_id, field_id, primary_source,\n+                                            raw_unit, transformed_unit, transform_rule, agency, attribution,\n+                                            license_status, license_review_status, refresh_months_n,\n+                                            nominal_weight, revision_history_available)\n+                                        VALUES (?, 'dubai_crude', 'prices_commodities', 'ecos',\n+                                                'USD/bbl', 'USD/bbl', 'MONTH_AVERAGE', '국제통화기금', '한국은행',\n+                                                'SUSPENDED', 'PENDING_RIGHTS', 3, '\"0.0588\"'::jsonb, false)\n+                                        \"\"\",\n+                                        registryId))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"공통 대상월이 없어도 기준월 행은 남고 월만 비운다\")\n+    void keepsBaselineRowWhenIntersectionIsEmpty() {\n+        long datasetId = insertDatasetVersion(\"DS-baseline\", \"NORMALIZING\", 0);\n+        long registryId =\n+                jdbc.queryForObject(\n+                        \"SELECT processing_registry_version_id FROM macro_dataset_version WHERE id = ?\",\n+                        Long.class,\n+                        datasetId);\n+\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_baseline (\n+                    dataset_version_id, registry_version_id, scope_id,\n+                    reference_month, reference_month_held_back_by, computed_at)\n+                VALUES (?, ?, 'ALL', NULL, '[\"overseas_cli\"]'::jsonb, now())\n+                \"\"\",\n+                datasetId,\n+                registryId);\n+\n+        assertThat(\n+                        jdbc.queryForObject(\n+                                \"SELECT count(*) FROM macro_baseline WHERE dataset_version_id = ?\"\n+                                        + \" AND reference_month IS NULL\",\n+                                Integer.class,\n+                                datasetId))\n+                .isEqualTo(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"현재 포인터는 한 행을 넘지 못한다\")\n+    void currentPublicationIsSingleton() {\n+        long registryId = insertRegistryVersion(\"REG-pointer\");\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_display_version (version_key, change_reason, created_at)\n+                VALUES ('DSP-1', '최초', now())\n+                \"\"\");\n+        long displayId =\n+                jdbc.queryForObject(\n+                        \"SELECT id FROM macro_display_version WHERE version_key = 'DSP-1'\",\n+                        Long.class);\n+\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO macro_current_publication (\n+                    dataset_version_id, registry_version_id, display_version_id, switched_at)\n+                VALUES (NULL, ?, ?, now())\n+                \"\"\",\n+                registryId,\n+                displayId);\n+\n+        assertThatThrownBy(\n+                        () ->\n+                                jdbc.update(\n+                                        \"\"\"\n+                                        INSERT INTO macro_current_publication (\n+                                            dataset_version_id, registry_version_id,\n+                                            display_version_id, switched_at)\n+                                        VALUES (NULL, ?, ?, now())\n+                                        \"\"\",\n+                                        registryId,\n+                                        displayId))\n+                .isInstanceOf(DataIntegrityViolationException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,128 @@\n+\"\"\"경제지표 수집 진입점 (spec 008 FR-017).\n+\n+최초 한 번은 전 구간을 받고, 그 뒤로는 새 발표분과 최근 N개월만 다시 본다. 뒤쪽 구간을 매번\n+전부 다시 받으면 원천 한도를 쓸데없이 소모하고, 새 발표분만 받으면 정정을 놓친다 — 관세청은\n+매월 15일경 전월까지를 정정한다(pd11 §4).\n+\n+사용 예::\n+\n+    # 최초 전 구간 적재\n+    .venv/bin/python scripts/ingest_macro.py --mode initial\n+\n+    # 정기 수집 — 새 발표분과 지표별 최근 N개월\n+    .venv/bin/python scripts/ingest_macro.py --mode regular\n+\n+    # 지표 하나만\n+    .venv/bin/python scripts/ingest_macro.py --mode regular --indicator dubai_crude\n+\n+    # 무엇을 부를지만 보고 실제로 부르지 않는다\n+    .venv/bin/python scripts/ingest_macro.py --mode initial --dry-run\n+\n+**기본값이 없다.** ``--mode`` 는 반드시 적어야 한다. 최초 적재와 정기 수집은 호출량이 자릿수로\n+다르고, 기본값을 두면 어느 쪽이 도는지 모르는 채로 실행된다.\n+\n+**아무것도 하지 않은 실행을 성공으로 말하지 않는다.** 대상이 0개면 그 사실을 적어 내보낸다 —\n+조용히 0으로 끝나는 실행은 배치가 돈 줄 알고 넘어가게 만든다.\n+\n+수집 본체는 아직 없다(T018~T031). 지금은 대상을 고르고 계획을 보여주는 데까지 한다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import argparse\n+import sys\n+from pathlib import Path\n+\n+_SRC = Path(__file__).resolve().parents[1] / \"src\"\n+if str(_SRC) not in sys.path:  # 진입점을 `python scripts/...`로 바로 실행하는 경우\n+    sys.path.insert(0, str(_SRC))\n+\n+from data_pipeline.macro import registry  # noqa: E402\n+\n+MODE_INITIAL = \"initial\"\n+MODE_REGULAR = \"regular\"\n+MODES = (MODE_INITIAL, MODE_REGULAR)\n+\n+\n+def build_parser() -> argparse.ArgumentParser:\n+    parser = argparse.ArgumentParser(\n+        prog=\"ingest_macro\",\n+        description=\"경제지표 17개를 공식 원천에서 수집한다 (spec 008)\",\n+    )\n+    parser.add_argument(\n+        \"--mode\",\n+        required=True,\n+        choices=MODES,\n+        help=\"initial 은 전 구간, regular 는 새 발표분과 최근 N개월 (FR-017)\",\n+    )\n+    parser.add_argument(\n+        \"--indicator\",\n+        action=\"append\",\n+        default=None,\n+        metavar=\"INDICATOR_ID\",\n+        help=\"이 지표만 수집한다. 여러 번 줄 수 있다. 생략하면 17개 전부\",\n+    )\n+    parser.add_argument(\n+        \"--dry-run\",\n+        action=\"store_true\",\n+        help=\"원천을 부르지 않고 대상과 계획만 보여준다\",\n+    )\n+    return parser\n+\n+\n+def select_indicators(requested: list[str] | None) -> tuple[registry.IndicatorDefinition, ...]:\n+    \"\"\"수집 대상을 고른다. 모르는 지표 id 는 조용히 건너뛰지 않고 멈춘다.\"\"\"\n+    registry.validate()\n+    if not requested:\n+        return registry.INDICATORS\n+\n+    known = {indicator.indicator_id: indicator for indicator in registry.INDICATORS}\n+    unknown = [indicator_id for indicator_id in requested if indicator_id not in known]\n+    if unknown:\n+        raise SystemExit(\n+            f\"등록표에 없는 지표다: {', '.join(unknown)}\\n\"\n+            f\"쓸 수 있는 값: {', '.join(sorted(known))}\"\n+        )\n+    return tuple(known[indicator_id] for indicator_id in requested)\n+\n+\n+def describe_plan(\n+    indicators: tuple[registry.IndicatorDefinition, ...], mode: str\n+) -> list[str]:\n+    \"\"\"무엇을 어디서 얼마만큼 받을지 한 줄씩 적는다.\"\"\"\n+    lines: list[str] = []\n+    for indicator in indicators:\n+        if mode == MODE_INITIAL:\n+            span = f\"{indicator.series_start} ~ 현재 (전 구간)\"\n+        else:\n+            span = f\"새 발표분 + 최근 {indicator.refresh_months_n}개월\"\n+        lines.append(\n+            f\"  {indicator.indicator_id:32} {indicator.primary_source:8} {span}\"\n+        )\n+    return lines\n+\n+\n+def main(argv: list[str] | None = None) -> int:\n+    args = build_parser().parse_args(argv)\n+    indicators = select_indicators(args.indicator)\n+\n+    print(f\"모드: {args.mode} | 대상 {len(indicators)}개\")\n+    for line in describe_plan(indicators, args.mode):\n+        print(line)\n+\n+    if not indicators:\n+        print(\"대상이 0개다. 수집할 것이 없다\")\n+        return 1\n+\n+    if args.dry_run:\n+        print(\"--dry-run 이라 원천을 부르지 않았다\")\n+        return 0\n+\n+    # 수집 본체는 T018~T031 이 채운다. 여기서 조용히 0으로 끝내면 아무것도 받지 않은 실행이\n+    # 성공으로 보이므로, 아직 없다는 사실을 종료 코드로도 알린다.\n+    print(\"수집 구현이 아직 없다(T018~T031). --dry-run 으로 계획만 확인할 수 있다\")\n+    return 2\n+\n+\n+if __name__ == \"__main__\":\n+    raise SystemExit(main())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_macro.py",
+          "old_path": "data/scripts/ingest_macro.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,16 @@\n+\"\"\"원천 어댑터 — 인증·한도·응답 구조가 저마다 다른 네 곳을 같은 모양으로 맞춘다.\n+\n+`base`가 재시도·포기·요청 분할·응답 구조 검증을 맡고(FR-011b), 원천별 모듈은 그 위에서\n+자기 통계표의 항목 코드와 단위만 다룬다::\n+\n+    base      공통 규약 — 재시도·포기·분할·응답 구조 검증\n+    ecos      한국은행 — 국고채 3년·원/달러 환율·두바이유\n+    kosis     국가통계포털 — 생산·소비·투자·노동·물가 등 10개 표\n+    customs   관세청 — 수출·수입·무역수지 (조회 기간 1년 제한, 총계 행 제외)\n+    oecd      경제협력개발기구 — G20 경기선행지수\n+    housing   주택가격 — 기준월별 표 5개를 겹침 구간 비율로 잇는다 (FR-010)\n+\n+**한 지표를 여러 원천에서 받아 합치지 않는다**(FR-005). 겹치는 지표는 등록표가 주 공급원을\n+하나로 정해 두고, 어댑터는 그 결정을 따를 뿐 스스로 고르지 않는다 — 어댑터가 고르면 같은\n+지표가 실행마다 다른 원천에서 와도 값이 왜 달라졌는지 되짚을 곳이 없다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/sources/__init__.py",
+          "old_path": "data/src/data_pipeline/macro/sources/__init__.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,135 @@\n+\"\"\"원천 어댑터 공통 규약 — 재시도·포기·요청 분할·응답 구조 검증 (spec 008 FR-011b).\n+\n+네 원천은 인증도 응답 형식도 한도도 다르지만 **실패를 다루는 방식은 같아야 한다.** 어댑터마다\n+제각각 재시도하면 한 곳은 영영 매달리고 다른 곳은 한 번 만에 포기한다.\n+\n+**다시 걸어 볼 가치가 있는 실패와 그렇지 않은 실패를 가른다.** 끊긴 연결이나 5xx 는 기다렸다\n+다시 걸면 되지만, 인증 거부와 없는 경로는 몇 번을 걸어도 같은 답이 온다 — 거기에 재시도를 붙이면\n+원천에 부담만 주고 실패를 늦게 알게 된다. 관세청에서 옛 주소를 부르면 인증키가 멀쩡해도\n+``SERVICE_KEY_IS_NOT_REGISTERED_ERROR`` 가 오는데(pd11 §4), 이걸 일시 오류로 읽고 되풀이하면\n+원인이 주소라는 사실이 영영 드러나지 않는다.\n+\n+**응답 구조가 등록표와 다르면 그 자리에서 멈춘다.** 원천이 항목 코드나 필드 이름을 바꾸면 값이\n+비거나 다른 계열이 조용히 섞이는데, 그건 결측보다 나쁘다 — 결측은 드러나지만 다른 계열의 값은\n+그럴듯해 보인다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import time\n+from collections.abc import Callable, Mapping, Sequence\n+from dataclasses import dataclass\n+from datetime import date\n+from typing import Any, Final, TypeVar\n+\n+from data_pipeline.macro.config import SourceConfig\n+\n+T = TypeVar(\"T\")\n+\n+\n+class SourceError(RuntimeError):\n+    \"\"\"원천 호출이 실패했다.\"\"\"\n+\n+\n+class TransientSourceError(SourceError):\n+    \"\"\"다시 걸어 볼 만한 실패 — 끊긴 연결, 시간 초과, 5xx.\"\"\"\n+\n+\n+class PermanentSourceError(SourceError):\n+    \"\"\"다시 걸어도 같은 답이 오는 실패 — 인증 거부, 없는 경로, 잘못된 인자.\"\"\"\n+\n+\n+class QuotaExhaustedError(SourceError):\n+    \"\"\"호출 한도에 닿았다. 재시도하지 않고 그 시점까지를 남긴다 (FR-011).\"\"\"\n+\n+\n+class SourceContractError(SourceError):\n+    \"\"\"응답 구조가 등록표가 아는 모양과 다르다 (FR-011b).\"\"\"\n+\n+\n+def fetch_with_retry(\n+    call: Callable[[], T],\n+    config: SourceConfig,\n+    *,\n+    sleep: Callable[[float], None] = time.sleep,\n+) -> T:\n+    \"\"\"``call`` 을 설정된 횟수만큼 다시 시도한다.\n+\n+    간격은 :meth:`SourceConfig.backoff_for` 가 정한다(기본 1·2·4초). 마지막 시도가 실패하면\n+    마지막 오류를 그대로 올린다 — 삼키고 빈 값을 돌려주면 수집이 성공한 것처럼 보인다.\n+    \"\"\"\n+    last_error: TransientSourceError | None = None\n+    for attempt in range(1, config.max_attempts + 1):\n+        try:\n+            return call()\n+        except TransientSourceError as error:\n+            last_error = error\n+            if attempt == config.max_attempts:\n+                break\n+            sleep(config.backoff_for(attempt))\n+    raise SourceError(\n+        f\"{config.source_id} 호출이 {config.max_attempts}회 모두 실패했다\"\n+    ) from last_error\n+\n+\n+@dataclass(frozen=True)\n+class MonthWindow:\n+    \"\"\"요청 하나가 담는 기간. ``start`` 와 ``end`` 는 그 달 1일이다.\"\"\"\n+\n+    start: date\n+    end: date\n+\n+\n+#: 요청 하나에 담을 수 있는 개월 수. 관세청은 조회 기간이 1년으로 제한된다(pd11 §4).\n+MAX_MONTHS_CUSTOMS: Final[int] = 12\n+\n+\n+def split_months(start: date, end: date, max_months: int) -> list[MonthWindow]:\n+    \"\"\"``start``~``end`` 를 요청 상한에 맞춰 나눈다 (FR-017a).\n+\n+    상한이 있는 원천에서 전 구간을 한 번에 부르면 자료가 오지 않는다. 관세청은 1989-01 부터라\n+    연 단위로 37회 이상 나눠 불러야 한다.\n+    \"\"\"\n+    if max_months < 1:\n+        raise ValueError(f\"요청당 개월 수는 1 이상이어야 한다: {max_months}\")\n+    if start > end:\n+        raise ValueError(f\"시작이 끝보다 늦다: {start} > {end}\")\n+\n+    windows: list[MonthWindow] = []\n+    cursor = date(start.year, start.month, 1)\n+    final = date(end.year, end.month, 1)\n+    while cursor <= final:\n+        months_ahead = max_months - 1\n+        year = cursor.year + (cursor.month - 1 + months_ahead) // 12\n+        month = (cursor.month - 1 + months_ahead) % 12 + 1\n+        window_end = min(date(year, month, 1), final)\n+        windows.append(MonthWindow(start=cursor, end=window_end))\n+        cursor = date(\n+            window_end.year + (1 if window_end.month == 12 else 0),\n+            1 if window_end.month == 12 else window_end.month + 1,\n+            1,\n+        )\n+    return windows\n+\n+\n+def require_mapping(payload: Any, context: str) -> Mapping[str, Any]:\n+    \"\"\"응답이 매핑인지 본다. 아니면 구조가 바뀐 것이다.\"\"\"\n+    if not isinstance(payload, Mapping):\n+        raise SourceContractError(\n+            f\"{context}: 응답이 매핑이 아니다({type(payload).__name__}).\"\n+            \" 원천 구조가 바뀌었는지 본다\"\n+        )\n+    return payload\n+\n+\n+def require_keys(payload: Mapping[str, Any], keys: Sequence[str], context: str) -> None:\n+    \"\"\"등록표가 아는 필드가 응답에 다 있는지 본다 (FR-011b).\n+\n+    빠진 필드를 기본값으로 채우지 않는다. 그렇게 채운 값은 원천이 준 값과 구분되지 않는다.\n+    \"\"\"\n+    missing = [key for key in keys if key not in payload]\n+    if missing:\n+        raise SourceContractError(\n+            f\"{context}: 응답에 {', '.join(missing)} 이(가) 없다.\"\n+            f\" 등록표가 아는 필드는 {', '.join(keys)} 다\"\n+        )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/sources/base.py",
+          "old_path": "data/src/data_pipeline/macro/sources/base.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+\"\"\"월별 변환 — 원값을 등록표가 정한 규칙 하나로 바꾼다 (FR-001).\n+\n+변환은 네 가지다. 전년동월 대비 증가율, 월 기말, 월 평균, 그리고 공식 금액을 그대로 쓰는 것.\n+\n+**만들 수 없으면 만들지 않는다.** 분모가 결측이거나 0인 증가율, 계열이 시작되기 전 12개월,\n+마지막 거래일을 찾을 수 없는 월 기말, 거래일이 하나라도 빠진 월 평균 — 넷 다 값을 지어내지\n+않고 결측으로 두며 사유를 남긴다(FR-006a·FR-006b·FR-008, 원칙 VI). 부분 표본으로 만든 평균은\n+다른 달의 평균과 같은 뜻이 아니고, 섞여 들어가면 나중에 아무도 그 차이를 되짚지 못한다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/transform/__init__.py",
+          "old_path": "data/src/data_pipeline/macro/transform/__init__.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+\"\"\"국내 경제지표 등록·수집 (spec 008).\n+\n+17개 월별 지표를 공식 원천에서 받아 변환하고, **17개가 모두 처리된 불변 스냅샷만**\n+공개한다(spec FR-011). 일부만 먼저 내보내지 않는 이유는 소비자가 지표마다 다른 시점의\n+값을 섞어 읽으면 그 조합이 어느 때의 경제환경인지 아무도 말할 수 없어서다.\n+\n+모듈은 자료가 흐르는 순서대로 놓았다. 앞 모듈의 함수를 뒤가 부르고 그 반대는 없다::\n+\n+    config      원천별 접속 설정·타임아웃·재시도 (FR-011b)\n+    registry    지표 등록표 — 원천·항목·단위·변환·이용 조건 (FR-002)\n+    sources/    원천 어댑터 — 한국은행·국가통계포털·관세청·경제협력개발기구\n+    transform/  월별 변환 — 전년동월 대비·월 기말·월 평균 (FR-001)\n+    normalize   원값과 변환값 동시 보존, 계보 기록 (FR-007)\n+    storage     raw → processed Parquet 경로 규칙\n+    ingest      수집 실행 — 재실행 안전성과 전 구간 적재 판정 (FR-017)\n+    publish     발행 게이트·기준월·원자적 포인터 (FR-011a·FR-013)\n+    versioning  계산 등록표·화면 분류·자료의 세 버전 (FR-003)\n+\n+**Backend는 여기를 거치지 않는다.** 계산은 전부 이 패키지에 있고 Backend는 적재된 행을\n+읽어 내보낼 뿐이다(`AGENTS.md` \"Backend는 계산하지 않는다\").\n+\n+**010이 쓸 시계열 읽기는 여기가 아니다.** 그 경계는 010이 잡아 둔 자리라\n+`data_pipeline.regime.macro.postgres`에 두며, `regime/macro/__init__.py`의 팩터리가 바로 그\n+모듈 경로로 구현체를 찾는다. 여기에 두면 010 배치가 구현체를 못 찾는다(T068).\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/__init__.py",
+          "old_path": "data/src/data_pipeline/macro/__init__.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,144 @@\n+\"\"\"원천별 접속 설정 — 주소·타임아웃·재시도를 한자리에 모은다 (spec 008 FR-011b·FR-021).\n+\n+**인증키는 환경변수에서만 읽는다**(FR-021). 코드에 적지 않고, 이 모듈이 돌려주는 설정에도 키를\n+담지 않는다 — 설정 객체를 로그나 오류 메시지에 그대로 찍는 일이 흔한데 거기 키가 섞여 있으면\n+저장소가 아니라 로그로 새어 나간다. 키가 필요한 쪽은 :func:`require_api_key` 로 그때 읽는다.\n+\n+**키가 없어도 임포트는 된다.** 테스트는 ``tests/fixtures/macro/`` 의 저장된 응답만 읽으므로\n+(FR-022) 키 없는 환경에서 모듈을 불러오는 것만으로 실패하면 안 된다. 없는 키는 값을 꺼낼 때\n+비로소 문제가 된다.\n+\n+재시도 값은 **출발값이고 실측 뒤 조정한다**(원칙 IX). 지금 넣은 3회·1·2·4초는 근거 있는 상한이\n+아니라 \"정해진 횟수\"를 판정 가능한 수로 바꾼 것이다. 원천이 수치 한도를 밝힌 곳은 그 한도가\n+우선이며(FR-017·FR-017a), 그것은 등록표가 들고 어댑터가 따른다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import os\n+from dataclasses import dataclass\n+from typing import Final\n+\n+#: 원천 식별자. 등록표의 `primary_source` 와 같은 값을 쓴다.\n+SOURCE_ECOS: Final[str] = \"ecos\"\n+SOURCE_KOSIS: Final[str] = \"kosis\"\n+SOURCE_CUSTOMS: Final[str] = \"customs\"\n+SOURCE_OECD: Final[str] = \"oecd\"\n+\n+SOURCE_IDS: Final[tuple[str, ...]] = (SOURCE_ECOS, SOURCE_KOSIS, SOURCE_CUSTOMS, SOURCE_OECD)\n+\n+#: 재시도 출발값 (FR-011b). 실측 뒤 조정한다.\n+DEFAULT_MAX_ATTEMPTS: Final[int] = 3\n+DEFAULT_BACKOFF_SECONDS: Final[float] = 1.0\n+DEFAULT_BACKOFF_MULTIPLIER: Final[float] = 2.0\n+DEFAULT_TIMEOUT_SECONDS: Final[float] = 30.0\n+\n+\n+class MacroConfigError(ValueError):\n+    \"\"\"설정 값이 없거나 쓸 수 없는 형태다.\"\"\"\n+\n+\n+@dataclass(frozen=True)\n+class SourceConfig:\n+    \"\"\"원천 하나의 접속 설정. **인증키를 담지 않는다** — 모듈 docstring 참고.\"\"\"\n+\n+    source_id: str\n+    base_url: str\n+    api_key_env: str | None\n+    timeout_seconds: float\n+    max_attempts: int\n+    backoff_seconds: float\n+    backoff_multiplier: float\n+\n+    def backoff_for(self, attempt: int) -> float:\n+        \"\"\"``attempt`` 번째 재시도 전에 기다릴 초. 1부터 센다 (1·2·4초).\"\"\"\n+        if attempt < 1:\n+            raise MacroConfigError(f\"재시도 횟수는 1부터다: {attempt}\")\n+        return self.backoff_seconds * (self.backoff_multiplier ** (attempt - 1))\n+\n+\n+# 기본 주소는 Backend `market` 모듈이 이미 쓰고 있는 값과 같다\n+# (`MarketApiProperties`). 두 곳이 서로 다른 주소를 들면 같은 원천을 두 얼굴로\n+# 다루게 되고, 원천이 주소를 바꿀 때 한쪽만 고쳐진다.\n+_DEFAULTS: Final[dict[str, tuple[str, str | None]]] = {\n+    SOURCE_ECOS: (\"https://ecos.bok.or.kr/api\", \"ECOS_API_KEY\"),\n+    SOURCE_KOSIS: (\"https://kosis.kr/openapi/Param/statisticsParameterData.do\", \"KOSIS_API_KEY\"),\n+    SOURCE_CUSTOMS: (\n+        \"https://apis.data.go.kr/1220000/Newtrade/getNewtradeList\",\n+        \"DATA_GO_KR_SERVICE_KEY\",\n+    ),\n+    # 경제협력개발기구 SDMX 는 인증키가 필요 없다(pd11 §OECD).\n+    SOURCE_OECD: (\"https://sdmx.oecd.org/public/rest/data\", None),\n+}\n+\n+\n+def _env_name(source_id: str, suffix: str) -> str:\n+    return f\"MACRO_{source_id.upper()}_{suffix}\"\n+\n+\n+def _read_float(name: str, default: float) -> float:\n+    raw = os.environ.get(name)\n+    if raw is None or raw.strip() == \"\":\n+        return default\n+    try:\n+        value = float(raw)\n+    except ValueError:\n+        raise MacroConfigError(f\"{name}은(는) 숫자여야 한다: {raw!r}\") from None\n+    if value <= 0:\n+        raise MacroConfigError(f\"{name}은(는) 0보다 커야 한다: {value}\")\n+    return value\n+\n+\n+def _read_int(name: str, default: int) -> int:\n+    raw = os.environ.get(name)\n+    if raw is None or raw.strip() == \"\":\n+        return default\n+    try:\n+        value = int(raw)\n+    except ValueError:\n+        raise MacroConfigError(f\"{name}은(는) 정수여야 한다: {raw!r}\") from None\n+    if value < 1:\n+        raise MacroConfigError(f\"{name}은(는) 1 이상이어야 한다: {value}\")\n+    return value\n+\n+\n+def load_source_config(source_id: str) -> SourceConfig:\n+    \"\"\"원천 하나의 설정을 환경변수에서 읽는다. 없는 값은 기본값을 쓴다.\"\"\"\n+    try:\n+        default_url, api_key_env = _DEFAULTS[source_id]\n+    except KeyError:\n+        raise MacroConfigError(\n+            f\"모르는 원천이다: {source_id!r}. 쓸 수 있는 값은 {', '.join(SOURCE_IDS)}\"\n+        ) from None\n+    return SourceConfig(\n+        source_id=source_id,\n+        base_url=os.environ.get(_env_name(source_id, \"BASE_URL\"), default_url).rstrip(\"/\"),\n+        api_key_env=api_key_env,\n+        timeout_seconds=_read_float(_env_name(source_id, \"TIMEOUT\"), DEFAULT_TIMEOUT_SECONDS),\n+        max_attempts=_read_int(_env_name(source_id, \"MAX_ATTEMPTS\"), DEFAULT_MAX_ATTEMPTS),\n+        backoff_seconds=_read_float(_env_name(source_id, \"BACKOFF\"), DEFAULT_BACKOFF_SECONDS),\n+        backoff_multiplier=_read_float(\n+            _env_name(source_id, \"BACKOFF_MULTIPLIER\"), DEFAULT_BACKOFF_MULTIPLIER\n+        ),\n+    )\n+\n+\n+def load_all() -> dict[str, SourceConfig]:\n+    \"\"\"네 원천의 설정을 한 번에 읽는다.\"\"\"\n+    return {source_id: load_source_config(source_id) for source_id in SOURCE_IDS}\n+\n+\n+def require_api_key(config: SourceConfig) -> str:\n+    \"\"\"인증키를 그때 읽는다. 없으면 **어느 환경변수가 비었는지**를 말한다.\n+\n+    키 값 자체는 어떤 오류 메시지에도 넣지 않는다 — 오류는 로그로 가고 로그는 남는다.\n+    \"\"\"\n+    if config.api_key_env is None:\n+        raise MacroConfigError(f\"{config.source_id}은(는) 인증키를 쓰지 않는다\")\n+    key = os.environ.get(config.api_key_env, \"\")\n+    if key.strip() == \"\":\n+        raise MacroConfigError(\n+            f\"{config.source_id} 인증키가 없다. 환경변수 {config.api_key_env}를 채운다\"\n+            \" (data/.env.example 참고). 키 없이 개발할 때는 저장된 응답 표본을 쓴다\"\n+        )\n+    return key\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/config.py",
+          "old_path": "data/src/data_pipeline/macro/config.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+\"\"\"발행 게이트와 기준월 — 17개가 다 되기 전에는 공개하지 않는다 (FR-011·FR-013).\n+\n+발행은 두 관문을 모두 지나야 한다. 17개 각각에 유효한 월별 변환값이 1건 이상 있어야 하고,\n+17개 전부의 이용 권리가 확인되어야 한다(FR-016a). 하나라도 어긋나면 현재 포인터를 움직이지\n+않고 직전 완결 버전을 그대로 둔다 — 반쯤 채운 버전을 내보내면 소비자는 그것이 완결본인지\n+알 길이 없다.\n+\n+T030·T031·T038·T039가 채운다. 지금은 자리만 있다.\n+\"\"\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/publish.py",
+          "old_path": "data/src/data_pipeline/macro/publish.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,312 @@\n+\"\"\"지표 등록표 — 17개 지표가 어디서 오고 무엇으로 바뀌는지의 단일 출처 (spec 008 FR-002).\n+\n+값의 근거는 [pd11-source-verification.md]다. 2026-09-17에 17개 전부를 실제로 조회해 통계표·항목·\n+단위·확보 구간·작성기관을 확인했고, 여기 있는 것은 그 결과를 옮긴 것이다. **추정으로 채운 칸이\n+없다** — 확인하지 못한 항목은 값을 지어내지 않고 ``None`` 으로 두며 그것을 채우는 작업을 적어 둔다.\n+\n+**어댑터는 여기서 읽을 뿐 스스로 고르지 않는다**(FR-005). 한국은행과 국가통계포털이 같은 지표를\n+줄 때 주 공급원을 고르는 것은 등록표이고, 어댑터가 고르면 같은 지표가 실행마다 다른 원천에서 와도\n+값이 왜 달라졌는지 되짚을 곳이 없다.\n+\n+작성기관과 제공기관이 다를 수 있다(FR-016). 두바이유는 한국은행이 제공하지만 작성기관은\n+국제통화기금이고, 주택가격은 국가통계포털이 제공하지만 작성기관은 한국부동산원이다. 이용 조건은\n+**작성기관 쪽을 먼저 본다** — 제공 창구가 어디든 저작권은 작성기관에 있다.\n+\n+아직 비워 둔 칸과 그것을 채울 작업::\n+\n+    published_precision      T069 — 공표 정밀도\n+    minimum_effective_scale  010 소유 (PD-10). 008은 채우지 않는다 (FR-015)\n+    trading_calendar         거래일 달력 출처가 PD-11에서 확정되지 않았다\n+    refresh_months_n         T073 — 정기 수집을 몇 달 관찰한 뒤 실제 개정 관행에 맞춘다\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from dataclasses import dataclass\n+from decimal import Decimal\n+from typing import Final\n+\n+from data_pipeline.macro.config import SOURCE_CUSTOMS, SOURCE_ECOS, SOURCE_KOSIS, SOURCE_OECD\n+\n+#: 7개 분야. 009 계약과 같은 식별자다(data-model §1).\n+FIELD_PRODUCTION: Final[str] = \"production\"\n+FIELD_CONSUMPTION_INVESTMENT: Final[str] = \"consumption_investment\"\n+FIELD_EXTERNAL_TRADE: Final[str] = \"external_trade\"\n+FIELD_LABOR: Final[str] = \"labor\"\n+FIELD_PRICES_COMMODITIES: Final[str] = \"prices_commodities\"\n+FIELD_FINANCE_HOUSING: Final[str] = \"finance_housing\"\n+FIELD_OVERSEAS: Final[str] = \"overseas\"\n+\n+FIELD_IDS: Final[tuple[str, ...]] = (\n+    FIELD_PRODUCTION,\n+    FIELD_CONSUMPTION_INVESTMENT,\n+    FIELD_EXTERNAL_TRADE,\n+    FIELD_LABOR,\n+    FIELD_PRICES_COMMODITIES,\n+    FIELD_FINANCE_HOUSING,\n+    FIELD_OVERSEAS,\n+)\n+\n+#: 변환 여섯 (FR-001 표). 앞의 넷은 계산하고 뒤의 둘은 원천 값을 그대로 쓴다.\n+TRANSFORM_YOY: Final[str] = \"YOY_GROWTH\"\n+TRANSFORM_MOM: Final[str] = \"MOM_GROWTH\"\n+TRANSFORM_MONTH_END: Final[str] = \"MONTH_END\"\n+TRANSFORM_MONTH_AVERAGE: Final[str] = \"MONTH_AVERAGE\"\n+TRANSFORM_OFFICIAL_AMOUNT: Final[str] = \"OFFICIAL_AMOUNT\"\n+TRANSFORM_SEASONAL_RATE: Final[str] = \"SEASONAL_RATE\"\n+\n+#: 권리 판정 상태 (data-model §1). UNVERIFIED 만 발행 보류 대상이다 (FR-016a).\n+REVIEW_VERIFIED: Final[str] = \"VERIFIED\"\n+REVIEW_PENDING_RIGHTS: Final[str] = \"PENDING_RIGHTS\"\n+REVIEW_UNVERIFIED: Final[str] = \"UNVERIFIED\"\n+\n+#: 정기 재조회 구간의 잠정 기본값 (T012, FR-017). 관찰 뒤 T073 이 지표별로 조정한다.\n+#:\n+#: 관세청은 **매월 15일경 전월까지의 자료를 정정**한다고 안내한다(pd11 §4). 3개월은 그 주기보다\n+#: 짧지 않으므로 세 지표 모두 기본값을 그대로 쓴다. 몇 달치가 함께 정정되는지는 갱신을 봐야\n+#: 알 수 있고, 그것이 T073 의 일이다.\n+DEFAULT_REFRESH_MONTHS_N: Final[int] = 3\n+\n+\n+class RegistryError(ValueError):\n+    \"\"\"등록표가 지켜야 할 불변식을 어겼다.\"\"\"\n+\n+\n+@dataclass(frozen=True)\n+class IndicatorDefinition:\n+    \"\"\"지표 하나의 등록 정보. 컬럼 이름은 `macro_indicator_definition` 과 같다.\"\"\"\n+\n+    indicator_id: str\n+    field_id: str\n+    primary_source: str\n+    table_code: str | None\n+    item_code: str | None\n+    raw_unit: str\n+    transformed_unit: str\n+    transform_rule: str\n+    agency: str\n+    attribution: str\n+    license_status: str\n+    license_review_status: str\n+    series_start: str\n+    revision_history_available: bool\n+    release_rule: str | None = None\n+    break_link_rule: str | None = None\n+    missing_rule: str | None = None\n+    refresh_months_n: int = DEFAULT_REFRESH_MONTHS_N\n+    # 아래 셋은 이 작업의 범위가 아니다. 모듈 docstring 참고.\n+    published_precision: int | None = None\n+    minimum_effective_scale: str | None = None\n+    trading_calendar: str | None = None\n+\n+\n+_KOSIS_ATTRIBUTION: Final[str] = \"국가통계포털(KOSIS)\"\n+_ECOS_ATTRIBUTION: Final[str] = \"한국은행 경제통계시스템(ECOS)\"\n+_STATISTICS_KOREA: Final[str] = \"통계청\"\n+\n+_NO_RELEASE_DATE: Final[str] = (\n+    \"원천이 관측치별 발표일을 주지 않는다. 수신 시각을 발표일로 쓰지 않는다\"\n+)\n+_TABLE_UPDATED_AT: Final[str] = \"LST_CHN_DE 는 통계표 갱신일이며 관측치별 발표일이 아니다\"\n+\n+\n+def _kosis(\n+    indicator_id: str,\n+    field_id: str,\n+    table_code: str,\n+    item_code: str,\n+    raw_unit: str,\n+    transform_rule: str,\n+    series_start: str,\n+    *,\n+    agency: str = _STATISTICS_KOREA,\n+    transformed_unit: str = \"%\",\n+) -> IndicatorDefinition:\n+    return IndicatorDefinition(\n+        indicator_id=indicator_id,\n+        field_id=field_id,\n+        primary_source=SOURCE_KOSIS,\n+        table_code=table_code,\n+        item_code=item_code,\n+        raw_unit=raw_unit,\n+        transformed_unit=transformed_unit,\n+        transform_rule=transform_rule,\n+        agency=agency,\n+        attribution=_KOSIS_ATTRIBUTION,\n+        license_status=\"ALLOWED\",\n+        license_review_status=REVIEW_VERIFIED,\n+        series_start=series_start,\n+        revision_history_available=True,\n+        release_rule=_TABLE_UPDATED_AT,\n+    )\n+\n+\n+#: 17개 지표. 순서는 FR-001 표를 따른다.\n+INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n+    # --- 생산 (pd11 §2) ---\n+    _kosis(\"all_industry_production\", FIELD_PRODUCTION, \"DT_1JH20201\", \"T1\", \"2020=100\",\n+           TRANSFORM_YOY, \"2000-01\"),\n+    _kosis(\"mining_manufacturing_production\", FIELD_PRODUCTION, \"DT_1F02001\", \"T10\", \"2020=100\",\n+           TRANSFORM_YOY, \"1980-01\"),\n+    _kosis(\"service_production\", FIELD_PRODUCTION, \"DT_1KC2020\", \"T1\", \"2020=100\",\n+           TRANSFORM_YOY, \"2000-01\"),\n+    # --- 소비·투자 (pd11 §2) ---\n+    _kosis(\"retail_sales_index\", FIELD_CONSUMPTION_INVESTMENT, \"DT_1K41012\", \"T1\", \"2020=100\",\n+           TRANSFORM_YOY, \"1995-01\"),\n+    _kosis(\"facility_investment_index\", FIELD_CONSUMPTION_INVESTMENT, \"DT_1F70011\", \"T3\",\n+           \"2020=100\", TRANSFORM_YOY, \"1995-02\"),\n+    _kosis(\"construction_completed_constant\", FIELD_CONSUMPTION_INVESTMENT, \"DT_1G18011\", \"T10\",\n+           \"백만원\", TRANSFORM_YOY, \"1997-07\"),\n+    # --- 대외거래 (pd11 §4). 무역수지는 원천이 주는 공식 값이며 수출-수입 파생식이 아니다 ---\n+    IndicatorDefinition(\n+        indicator_id=\"exports\", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,\n+        table_code=None, item_code=\"expDlr\", raw_unit=\"미국 달러\", transformed_unit=\"%\",\n+        transform_rule=TRANSFORM_YOY, agency=\"관세청\", attribution=\"관세청 수출입총괄\",\n+        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n+        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n+    ),\n+    IndicatorDefinition(\n+        indicator_id=\"imports\", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,\n+        table_code=None, item_code=\"impDlr\", raw_unit=\"미국 달러\", transformed_unit=\"%\",\n+        transform_rule=TRANSFORM_YOY, agency=\"관세청\", attribution=\"관세청 수출입총괄\",\n+        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n+        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n+    ),\n+    IndicatorDefinition(\n+        indicator_id=\"trade_balance\", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,\n+        table_code=None, item_code=\"balPayments\", raw_unit=\"미국 달러\",\n+        transformed_unit=\"미국 달러\", transform_rule=TRANSFORM_OFFICIAL_AMOUNT, agency=\"관세청\",\n+        attribution=\"관세청 수출입총괄\", license_status=\"ALLOWED\",\n+        license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n+        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        missing_rule=\"원천 제공값이다. 수출에서 수입을 빼 만들지 않는다\",\n+    ),\n+    # --- 노동 (pd11 §2). 실업률은 원천이 계절조정한 값이라 우리가 다시 조정하지 않는다 ---\n+    _kosis(\"employed_persons\", FIELD_LABOR, \"DT_1DA7001S\", \"T30\", \"천명\",\n+           TRANSFORM_YOY, \"1999-06\"),\n+    IndicatorDefinition(\n+        indicator_id=\"unemployment_rate\", field_id=FIELD_LABOR, primary_source=SOURCE_KOSIS,\n+        table_code=\"DT_1DA9001S\", item_code=\"T80\", raw_unit=\"%\", transformed_unit=\"%\",\n+        transform_rule=TRANSFORM_SEASONAL_RATE, agency=_STATISTICS_KOREA,\n+        attribution=_KOSIS_ATTRIBUTION, license_status=\"ALLOWED\",\n+        license_review_status=REVIEW_VERIFIED, series_start=\"1999-06\",\n+        revision_history_available=True, release_rule=_TABLE_UPDATED_AT,\n+        missing_rule=\"원천이 계절조정한 값을 그대로 쓴다. 우리가 계절조정하지 않는다\",\n+    ),\n+    # --- 물가·원자재 ---\n+    _kosis(\"consumer_price_index\", FIELD_PRICES_COMMODITIES, \"DT_1J22003\", \"T\", \"2020=100\",\n+           TRANSFORM_YOY, \"1980-01\"),\n+    IndicatorDefinition(\n+        indicator_id=\"dubai_crude\", field_id=FIELD_PRICES_COMMODITIES, primary_source=SOURCE_ECOS,\n+        table_code=\"902Y003\", item_code=\"010102\", raw_unit=\"달러/배럴\",\n+        transformed_unit=\"달러/배럴\", transform_rule=TRANSFORM_MONTH_AVERAGE,\n+        agency=\"국제통화기금(IMF)\", attribution=_ECOS_ATTRIBUTION, license_status=\"ALLOWED\",\n+        # 한국은행 약관은 상업 이용 제한 계열에 작성기관 승인을 요구하는데, 이 계열이 제한\n+        # 대상인지 물을 창구가 없다(pd11 §1). 조건 자체를 모르는 UNVERIFIED 와 구분해 두고\n+        # 쓴다 — 하나로 묶으면 발행이 보류되어 나머지 16개까지 멈춘다.\n+        license_review_status=REVIEW_PENDING_RIGHTS, series_start=\"1992-01\",\n+        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+    ),\n+    # --- 금융·주택 ---\n+    IndicatorDefinition(\n+        indicator_id=\"treasury_bond_3y\", field_id=FIELD_FINANCE_HOUSING,\n+        primary_source=SOURCE_ECOS, table_code=\"817Y002\", item_code=\"010200000\", raw_unit=\"연%\",\n+        transformed_unit=\"연%\", transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\",\n+        attribution=_ECOS_ATTRIBUTION, license_status=\"ALLOWED\",\n+        license_review_status=REVIEW_VERIFIED, series_start=\"1998-11\",\n+        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        missing_rule=\"일별 계열이다. 그 달 마지막 거래일 값을 쓰고 휴장일 값을 만들지 않는다\",\n+    ),\n+    IndicatorDefinition(\n+        # 일별 표(731Y001)는 서울외국환중개 작성이라 쓰지 않는다. 월별 표의 말일자료가\n+        # 한국은행 작성이면서 월 기말 규칙을 그대로 충족한다(pd11 §1).\n+        indicator_id=\"usd_krw_rate\", field_id=FIELD_FINANCE_HOUSING, primary_source=SOURCE_ECOS,\n+        table_code=\"731Y004\", item_code=\"0000001/0000200\", raw_unit=\"원\", transformed_unit=\"원\",\n+        transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\", attribution=_ECOS_ATTRIBUTION,\n+        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1964-05\",\n+        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        missing_rule=\"항목2 0000200 말일자료다. 평균자료(0000100)와 섞지 않는다\",\n+    ),\n+    IndicatorDefinition(\n+        indicator_id=\"housing_sale_price\", field_id=FIELD_FINANCE_HOUSING,\n+        primary_source=SOURCE_KOSIS, table_code=\"DT_30404_C012\", item_code=\"sales\",\n+        raw_unit=\"2026.6=100\", transformed_unit=\"%\", transform_rule=TRANSFORM_MOM,\n+        agency=\"한국부동산원\", attribution=_KOSIS_ATTRIBUTION, license_status=\"ALLOWED\",\n+        license_review_status=REVIEW_VERIFIED, series_start=\"2021-06\",\n+        revision_history_available=True, release_rule=_TABLE_UPDATED_AT,\n+        # 기준월이 바뀔 때마다 표가 새로 만들어지고 지수가 재기준화된다. 겹치는 구간의\n+        # 비율로 이으면 2000-01 까지 닿는다(pd11 §2). 연결 계수는 T026 이 산출한다.\n+        break_link_rule=\"기준월별 표 5개를 겹침 구간 비율로 연결한다 (T026).\"\n+        \" 연결 규칙을 정하기 전까지 2021-06 이전은 사용 가능 범위에서 제외한다\",\n+    ),\n+    # --- 해외 경기 (pd11 §3). 원천이 주는 증가율(TR/GY)은 지수보다 여섯 달 늦어 쓰지 않는다 ---\n+    IndicatorDefinition(\n+        indicator_id=\"g20_cli\", field_id=FIELD_OVERSEAS, primary_source=SOURCE_OECD,\n+        table_code=\"OECD.SDD.STES,DSD_STES@DF_CLI\", item_code=\"G20.M.LI.AA.IX\",\n+        raw_unit=\"지수\", transformed_unit=\"%\", transform_rule=TRANSFORM_YOY,\n+        agency=\"경제협력개발기구(OECD)\", attribution=\"OECD Composite Leading Indicators\",\n+        license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1961-01\",\n+        revision_history_available=True,\n+        release_rule=\"응답 헤더 Last-Modified 를 데이터셋 갱신일로 쓴다.\"\n+        \" SDMX 헤더의 Prepared 는 응답 생성 시각이라 개정 식별자로 쓰지 않는다\",\n+        missing_rule=\"증가율은 지수에서 직접 계산한다. 원천의 TR/GY 계열을 쓰지 않는다 (FR-019)\",\n+    ),\n+)\n+\n+EXPECTED_INDICATOR_COUNT: Final[int] = 17\n+\n+\n+def nominal_weights() -> dict[str, Decimal]:\n+    \"\"\"분야 간 1/7, 분야 안에서 동일가중인 명목 비중 (FR-004).\n+\n+    **이것은 Thorp 의 설계 선택이지 경제적 중요성이 같다는 뜻이 아니다.** 근거를 등록표에\n+    남기는 것과 실제 거리 기여를 비교하는 것은 T040 이 이어받는다.\n+    \"\"\"\n+    per_field: dict[str, list[str]] = {field_id: [] for field_id in FIELD_IDS}\n+    for indicator in INDICATORS:\n+        per_field[indicator.field_id].append(indicator.indicator_id)\n+    field_weight = Decimal(1) / Decimal(len(FIELD_IDS))\n+    weights: dict[str, Decimal] = {}\n+    for members in per_field.values():\n+        if not members:\n+            continue\n+        share = field_weight / Decimal(len(members))\n+        for indicator_id in members:\n+            weights[indicator_id] = share\n+    return weights\n+\n+\n+def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:\n+    \"\"\"등록표 단위의 불변식을 본다. 행 단위 제약으로는 표현할 수 없는 것들이다.\n+\n+    DB 의 ``CHECK`` 는 한 행만 보므로 \"17개\"와 \"7개 분야\"와 \"주 공급원 하나\"를 잡지 못한다.\n+    \"\"\"\n+    if len(indicators) != EXPECTED_INDICATOR_COUNT:\n+        raise RegistryError(f\"지표는 {EXPECTED_INDICATOR_COUNT}개여야 한다: {len(indicators)}개\")\n+\n+    seen: set[str] = set()\n+    for indicator in indicators:\n+        if indicator.indicator_id in seen:\n+            raise RegistryError(f\"지표 id 가 겹친다: {indicator.indicator_id}\")\n+        seen.add(indicator.indicator_id)\n+        if indicator.field_id not in FIELD_IDS:\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}의 분야가 7개 밖이다: {indicator.field_id}\"\n+            )\n+        if indicator.refresh_months_n < 1:\n+            raise RegistryError(f\"{indicator.indicator_id}의 재조회 구간이 1보다 작다\")\n+\n+    used_fields = {indicator.field_id for indicator in indicators}\n+    missing = set(FIELD_IDS) - used_fields\n+    if missing:\n+        raise RegistryError(f\"지표가 하나도 없는 분야가 있다: {sorted(missing)}\")\n+\n+\n+def by_field() -> dict[str, tuple[IndicatorDefinition, ...]]:\n+    \"\"\"분야별 지표. 표시 순서는 `INDICATORS` 의 순서를 따른다.\"\"\"\n+    grouped: dict[str, list[IndicatorDefinition]] = {field_id: [] for field_id in FIELD_IDS}\n+    for indicator in INDICATORS:\n+        grouped[indicator.field_id].append(indicator)\n+    return {field_id: tuple(members) for field_id, members in grouped.items()}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,91 @@\n+\"\"\"raw 에서 processed 로 가는 경로 규칙 (spec 008, data/CLAUDE.md 구조 규칙).\n+\n+적재는 ``raw/ → processed/ → PostgreSQL`` 한 방향이다. 원본을 먼저 남기고 그것으로 Parquet 을\n+만들고 마지막에 DB 에 넣는다. **거꾸로 가지 않는다** — DB 에서 읽어 Parquet 을 고치면 원본과\n+어긋난 파생물이 생기고, 어느 쪽이 맞는지 판정할 근거가 사라진다.\n+\n+**파티션은 지표/연도다.** ``data/CLAUDE.md`` 의 자산/연도 규칙을 이 도메인에 옮긴 것이며, Spark 를\n+도입하면 그대로 읽는 전제라 임의로 바꾸지 않는다. 지표를 앞에 두는 이유는 읽는 쪽이 늘 지표\n+하나의 시계열을 통째로 요구해서다(010 의 척도 계산이 그렇다).\n+\n+**원본 파일 이름에 수신 시각을 넣는다.** 같은 대상월을 다시 받아도 옛 파일을 덮지 않는다 —\n+개정 이력은 원본이 남아 있어야 되짚을 수 있고(FR-009), 덮어쓴 원본은 되살릴 수 없다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import hashlib\n+import re\n+from datetime import datetime\n+from pathlib import Path\n+from typing import Final\n+\n+#: `data/` 아래의 두 뿌리. 데이터 파일은 커밋하지 않는다(.gitignore).\n+RAW_ROOT: Final[str] = \"raw/macro\"\n+PROCESSED_ROOT: Final[str] = \"processed/macro\"\n+\n+_SAFE_ID: Final[re.Pattern[str]] = re.compile(r\"^[a-z0-9_]+$\")\n+\n+\n+class StorageError(ValueError):\n+    \"\"\"경로를 만들 수 없는 식별자나 시각이다.\"\"\"\n+\n+\n+def _require_safe(value: str, field: str) -> str:\n+    if not _SAFE_ID.match(value):\n+        raise StorageError(\n+            f\"{field}는 소문자·숫자·밑줄만 쓴다: {value!r}.\"\n+            \" 경로에 들어가므로 구분자나 상위 경로 기호가 섞이면 안 된다\"\n+        )\n+    return value\n+\n+\n+def raw_path(\n+    base_dir: Path, source_id: str, indicator_id: str, received_at: datetime, suffix: str\n+) -> Path:\n+    \"\"\"원천 응답 원본을 둘 자리.\n+\n+    ``raw/macro/{원천}/{지표}/{연도}/{수신시각}{확장자}`` 다. 연도는 수신 연도이지 대상월의\n+    연도가 아니다 — 한 응답이 여러 해를 담을 수 있어서다(관세청은 요청당 1년, 경제협력개발기구는\n+    한 번에 전 구간).\n+    \"\"\"\n+    _require_safe(source_id, \"원천 id\")\n+    _require_safe(indicator_id, \"지표 id\")\n+    if not suffix.startswith(\".\"):\n+        raise StorageError(f\"확장자는 점으로 시작한다: {suffix!r}\")\n+    stamp = received_at.strftime(\"%Y%m%dT%H%M%S%f\")\n+    return (\n+        base_dir\n+        / RAW_ROOT\n+        / source_id\n+        / indicator_id\n+        / f\"{received_at.year:04d}\"\n+        / f\"{stamp}{suffix}\"\n+    )\n+\n+\n+def processed_path(base_dir: Path, indicator_id: str, year: int) -> Path:\n+    \"\"\"정제된 월별 값을 둘 자리.\n+\n+    ``processed/macro/indicator_id={지표}/year={연도}/part.parquet`` 이다. 여기의 연도는\n+    **대상월의 연도**다 — 읽는 쪽이 구간으로 자르기 때문이다.\n+    \"\"\"\n+    _require_safe(indicator_id, \"지표 id\")\n+    if not 1900 <= year <= 2999:\n+        raise StorageError(f\"연도가 범위 밖이다: {year}\")\n+    return (\n+        base_dir\n+        / PROCESSED_ROOT\n+        / f\"indicator_id={indicator_id}\"\n+        / f\"year={year:04d}\"\n+        / \"part.parquet\"\n+    )\n+\n+\n+def content_hash(payload: bytes) -> str:\n+    \"\"\"원본 내용 해시. 같은 응답을 다시 받은 것과 실제 개정을 가른다 (FR-009).\n+\n+    해시가 같으면 새 개정이 아니므로 이력에 행을 늘리지 않는다. 그렇게 하지 않으면 정기 재조회를\n+    돌릴 때마다 바뀐 것이 없는 달도 개정된 것처럼 쌓인다.\n+    \"\"\"\n+    return hashlib.sha256(payload).hexdigest()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/storage.py",
+          "old_path": "data/src/data_pipeline/macro/storage.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/customs/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/customs/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/ecos/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/ecos/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/housing/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/housing/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/kosis/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/kosis/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/oecd/.gitkeep",
+          "old_path": "data/tests/fixtures/macro/oecd/.gitkeep",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+# 경제지표 원천 응답 표본 (spec 008)\n+\n+원천별로 **한 번 받아 저장해 둔 실제 응답**을 둔다. `tests/fixtures/krx/`와 같은 규약이다.\n+\n+## 왜 저장해 두는가\n+\n+- **테스트가 네트워크를 쓰지 않는다.** 인증키가 없는 환경에서도 `pytest`가 그대로 돈다.\n+  키 발급 전에는 수집을 못 하지만 파싱·변환·발행 규칙은 여기서 전부 검증된다.\n+- **원천이 바뀌면 드러난다.** 저장된 표본과 실제 응답의 구조가 달라지면 어댑터의 구조 검증이\n+  잡아낸다(FR-011b). 표본을 갱신할 때는 받은 날짜를 테스트 docstring에 적는다.\n+\n+## 디렉터리\n+\n+| 폴더 | 원천 | 담당 작업 |\n+|---|---|---|\n+| `ecos/` | 한국은행 경제통계시스템 | T018·T022 |\n+| `kosis/` | 국가통계포털 | T019·T023 |\n+| `customs/` | 관세청 수출입총괄 | T020·T024 |\n+| `oecd/` | 경제협력개발기구 | T025 |\n+| `housing/` | 주택가격 (기준월별 표 5개) | T026 |\n+\n+## 넣지 않는 것\n+\n+**인증키가 박힌 요청 URL이나 응답 헤더를 그대로 저장하지 않는다.** 표본은 본문만 남기고,\n+키가 섞여 들어갔으면 지운 뒤 커밋한다 — 저장소에 한 번 들어간 키는 되돌려도 이력에 남는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/fixtures/macro/README.md",
+          "old_path": "data/tests/fixtures/macro/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,161 @@\n+\"\"\"지표 등록표가 spec 008 의 불변식을 지키는지 본다 (tasks.md T015, SC-001·FR-005).\n+\n+**네트워크를 쓰지 않는다.** 등록표는 코드에 있는 상수라 인증키도 필요 없다.\n+\n+여기서 보는 것은 행 단위 DB 제약이 잡지 못하는 것들이다 — \"17개\", \"7개 분야\", \"지표마다 주\n+공급원 하나\"는 한 행만 봐서는 판정할 수 없다. 그래서 스키마의 ``CHECK`` 와 이 테스트가 서로 다른\n+층을 막는다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import dataclasses\n+from decimal import Decimal\n+\n+import pytest\n+\n+from data_pipeline.macro import registry\n+\n+\n+def test_has_exactly_seventeen_indicators():\n+    assert len(registry.INDICATORS) == registry.EXPECTED_INDICATOR_COUNT\n+\n+\n+def test_validate_passes_for_shipped_registry():\n+    registry.validate()\n+\n+\n+def test_every_indicator_belongs_to_exactly_one_field():\n+    grouped = registry.by_field()\n+    total = sum(len(members) for members in grouped.values())\n+\n+    assert total == registry.EXPECTED_INDICATOR_COUNT\n+    assert set(grouped) == set(registry.FIELD_IDS)\n+    for field_id, members in grouped.items():\n+        assert members, f\"{field_id}에 지표가 없다\"\n+\n+\n+def test_indicator_ids_are_unique():\n+    ids = [indicator.indicator_id for indicator in registry.INDICATORS]\n+\n+    assert len(set(ids)) == len(ids)\n+\n+\n+def test_each_indicator_has_exactly_one_primary_source():\n+    \"\"\"FR-005. 한 지표를 여러 원천에서 받아 합치지 않는다.\n+\n+    ``primary_source`` 가 스칼라 하나라는 것만으로는 부족하다 — 같은 지표를 다른 id 로 두 번\n+    등록해 두 원천에서 받으면 합산이 아니라 중복이 되고, 분야 가중이 그만큼 기운다.\n+    \"\"\"\n+    by_source_and_table = [\n+        (indicator.primary_source, indicator.table_code, indicator.item_code)\n+        for indicator in registry.INDICATORS\n+    ]\n+\n+    assert len(set(by_source_and_table)) == len(by_source_and_table)\n+    for indicator in registry.INDICATORS:\n+        assert isinstance(indicator.primary_source, str)\n+        assert indicator.primary_source\n+\n+\n+def test_nominal_weights_are_equal_within_field_and_one_seventh_across_fields():\n+    \"\"\"FR-004. 분야 간 1/7, 분야 안에서 동일가중.\"\"\"\n+    weights = registry.nominal_weights()\n+    grouped = registry.by_field()\n+\n+    assert sum(weights.values()) == pytest.approx(Decimal(1))\n+    for members in grouped.values():\n+        shares = {weights[indicator.indicator_id] for indicator in members}\n+        assert len(shares) == 1, \"분야 안에서 비중이 갈린다\"\n+        field_total = sum(weights[indicator.indicator_id] for indicator in members)\n+        assert field_total == pytest.approx(Decimal(1) / Decimal(7))\n+\n+\n+def test_all_six_transform_rules_are_represented():\n+    \"\"\"FR-001 표의 여섯이 모두 쓰인다. 하나라도 비면 그 변환은 검증 표본에서 빠진다(SC-007).\"\"\"\n+    used = {indicator.transform_rule for indicator in registry.INDICATORS}\n+\n+    assert used == {\n+        registry.TRANSFORM_YOY,\n+        registry.TRANSFORM_MOM,\n+        registry.TRANSFORM_MONTH_END,\n+        registry.TRANSFORM_MONTH_AVERAGE,\n+        registry.TRANSFORM_OFFICIAL_AMOUNT,\n+        registry.TRANSFORM_SEASONAL_RATE,\n+    }\n+\n+\n+def test_only_dubai_crude_waits_on_rights():\n+    \"\"\"두바이유만 권리 확인 대기이고, 발행을 막는 미확인은 없다 (FR-016a).\"\"\"\n+    pending = [\n+        indicator.indicator_id\n+        for indicator in registry.INDICATORS\n+        if indicator.license_review_status == registry.REVIEW_PENDING_RIGHTS\n+    ]\n+    unverified = [\n+        indicator.indicator_id\n+        for indicator in registry.INDICATORS\n+        if indicator.license_review_status == registry.REVIEW_UNVERIFIED\n+    ]\n+\n+    assert pending == [\"dubai_crude\"]\n+    assert unverified == []\n+\n+\n+def test_agency_differs_from_provider_where_verified():\n+    \"\"\"작성기관과 제공기관이 다른 둘을 등록표가 구분해 들고 있다 (FR-016).\"\"\"\n+    indicators = {indicator.indicator_id: indicator for indicator in registry.INDICATORS}\n+\n+    assert indicators[\"dubai_crude\"].agency == \"국제통화기금(IMF)\"\n+    assert \"한국은행\" in indicators[\"dubai_crude\"].attribution\n+    assert indicators[\"housing_sale_price\"].agency == \"한국부동산원\"\n+    assert \"국가통계포털\" in indicators[\"housing_sale_price\"].attribution\n+\n+\n+def test_every_indicator_has_attribution_and_agency():\n+    \"\"\"SC-006. 출처와 작성기관이 빈 지표가 0개다.\"\"\"\n+    for indicator in registry.INDICATORS:\n+        assert indicator.agency.strip(), indicator.indicator_id\n+        assert indicator.attribution.strip(), indicator.indicator_id\n+\n+\n+def test_refresh_months_default_is_not_shorter_than_customs_revision_cycle():\n+    \"\"\"T012. 관세청은 매월 정정하므로 재조회 구간이 그보다 짧으면 정정을 놓친다 (FR-017).\"\"\"\n+    customs = [\n+        indicator\n+        for indicator in registry.INDICATORS\n+        if indicator.primary_source == \"customs\"\n+    ]\n+\n+    assert len(customs) == 3\n+    for indicator in customs:\n+        assert indicator.refresh_months_n >= 1\n+        assert indicator.refresh_months_n == registry.DEFAULT_REFRESH_MONTHS_N\n+\n+\n+def test_minimum_effective_scale_is_left_to_spec_010():\n+    \"\"\"FR-015. 008은 공표 정밀도만 기록하고 최소 유효 척도를 정하지 않는다.\"\"\"\n+    for indicator in registry.INDICATORS:\n+        assert indicator.minimum_effective_scale is None, indicator.indicator_id\n+\n+\n+def test_validate_rejects_wrong_count():\n+    trimmed = registry.INDICATORS[:-1]\n+\n+    with pytest.raises(registry.RegistryError, match=\"17개\"):\n+        registry.validate(trimmed)\n+\n+\n+def test_validate_rejects_unknown_field():\n+    broken = dataclasses.replace(registry.INDICATORS[0], field_id=\"unknown_field\")\n+    mutated = (broken,) + registry.INDICATORS[1:]\n+\n+    with pytest.raises(registry.RegistryError, match=\"분야가 7개 밖\"):\n+        registry.validate(mutated)\n+\n+\n+def test_validate_rejects_duplicate_indicator_id():\n+    duplicated = (registry.INDICATORS[0],) + registry.INDICATORS[:-1]\n+\n+    with pytest.raises(registry.RegistryError, match=\"겹친다\"):\n+        registry.validate(duplicated)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_registry.py",
+          "old_path": "data/tests/test_macro_registry.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,3 +9,16 @@ KRX_API_KEY=\n # 아래 thorp/thorp는 로컬 개발용 예시 계정이다. 운영 계정은 서버에서만 만들고 저장소에 남기지 않는다.\n # 컨테이너 안에서 실행할 때는 호스트를 localhost 대신 postgres로 바꾼다(docker-compose.dev.yml과 같은 형식).\n DATABASE_URL=postgresql://thorp:thorp@localhost:5432/thorp\n+\n+# --- 경제지표 원천 (spec 008) ---\n+# 세 키 모두 루트 .env.example과 같은 이름이다. 값은 여기에 적지 않는다.\n+# 키가 없으면 수집은 못 하지만 테스트는 돈다 — tests/fixtures/macro/의 저장된 응답만 읽기 때문이다.\n+\n+# 한국은행 경제통계시스템. 국고채 3년·원/달러 환율·두바이유.\n+# 끝의 =를 포함한 발급 키 전체를 입력한다. 임의로 URL 인코딩하지 않는다.\n+# 이용기간은 발급일로부터 2년이다. 만료 전에 다시 확인한다(FR-018a).\n+ECOS_API_KEY=\n+# 국가통계포털. 생산·소비·투자·노동·물가 등 10개 표. 분당 200회·요청당 40,000셀 한도(FR-017).\n+KOSIS_API_KEY=\n+# 관세청 수출입총괄(GW) 활용신청 후 발급받은 일반 인증키(Decoding). 조회 기간 1년 제한(FR-017a).\n+DATA_GO_KR_SERVICE_KEY=\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/.env.example",
+          "old_path": "data/.env.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@\n | 엔터티 (예상 테이블) | 핵심 필드 | 제약/책임 |\n |---|---|---|\n | `macro_calculation_registry_version` | `id`, `created_at`, `value_rule_fingerprint`, `change_reason`, `status` | 발행 후 불변. 값 규칙과 매핑·명목 가중을 포함한 계산 등록표 버전 |\n-| `macro_indicator_definition` | `(registry_version_id, indicator_id)`, `field_id`, `primary_source`, `table_code`, `item_code`, `raw_unit`, `transformed_unit`, `transform_rule`, `release_rule`, `break_link_rule`, `missing_rule`, `agency`, `attribution`, `license_status`, `published_precision`, `minimum_effective_scale`, `refresh_months_n`, `nominal_weight`, `trading_calendar`, `license_review_status`, `revision_history_available` | 버전마다 정확히 17개, 각 지표는 정확히 한 분야. 미확인 PD-10/11은 값 대신 상태/근거로 구분; 공개 실자료 버전에는 필수 PD-11 검증 완료 |\n+| `macro_indicator_definition` | `(registry_version_id, indicator_id)`, `field_id`, `primary_source`, `table_code`, `item_code`, `raw_unit`, `transformed_unit`, `transform_rule`, `release_rule`, `break_link_rule`, `missing_rule`, `agency`, `attribution`, `license_status`, `published_precision`, `minimum_effective_scale`, `refresh_months_n`, `nominal_weight`, `trading_calendar`, `license_review_status`, `license_verified_at`, `license_suspended_at`, `license_suspended_reason`, `revision_history_available` | 버전마다 정확히 17개, 각 지표는 정확히 한 분야. 미확인 PD-10/11은 값 대신 상태/근거로 구분; 공개 실자료 버전에는 필수 PD-11 검증 완료. `license_verified_at`은 이용 조건을 마지막으로 확인한 시점(FR-018a), `license_suspended_at`·`license_suspended_reason`은 조건 변경·권한 철회로 중단한 시점과 사유(FR-016b)다. 중단은 새 등록표 버전으로 남기고 이미 발행한 자료 버전은 고치지 않는다 |\n | `macro_display_version` / `macro_display_field` | `id`, `field_id`, `display_name`, `display_order`, `description`; 지표 표시명/순서 | 버전마다 7개 분야와 17개 지표 표시. 계산 규칙·자료에 영향 없음 |\n | `macro_collection_attempt` / `macro_collection_item_status` | `attempt_id`, 시작/종료 시각, 원천/지표, `status`, `last_success_at`, `last_error_at`, `error_class`, quota 상태, raw 위치 | mutable 운영 상태. 공개 버전과 별도. 원본은 일부 성공해도 보존 |\n | `macro_raw_revision` | `indicator_id`, `source`, `target_month`, 원본 값/단위, `released_at`, `received_at`, `source_revision_key`, raw 경로·해시, 순번 | append-only 원천별·지표별 이력. 동일 응답 재수집은 해시/원천 키로 중복 제거하되 실제 개정은 새 행. 일별 원천은 월별 변환에 기여한 여러 행을 보존 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/data-model.md",
+          "old_path": "specs/008-macro-indicator-registry/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,7 +22,7 @@\n \n ## Constitution Check\n \n-*GATE: Phase 0 이전 판정, Phase 1 산출물 작성 후 재판정. 기준: `.specify/memory/constitution.md`의 현재 본문. 상단 Sync Impact Report는 3.4.0 승인 완료라고 하나 footer는 초안으로 표기되어 메타데이터가 불일치한다. 이 plan은 현재 본문의 더 엄격한 기준으로 검증하며, 헌장 표기 정합화는 별도 문서 작업으로 남긴다.*\n+*GATE: Phase 0 이전 판정, Phase 1 산출물 작성 후 재판정. 기준: `.specify/memory/constitution.md`의 현재 본문. 2026-09-17 기준 상단 Sync Impact Report와 footer가 3.5.0 초안(마지막 승인판 3.4.0)으로 일치하며, 이전에 적어 둔 메타데이터 불일치는 해소되었다. 이 plan은 승인판 3.4.0을 기준으로 판정하고 3.5.0 초안 규칙은 승인 전까지 강제하지 않는다.*\n \n | 원칙/규칙 | 계획상 대응 | 판정 |\n |---|---|---|\n@@ -37,7 +37,7 @@\n | IX 실측 실행 한도 | 배치·조회 성능 수치 사전 고정 없음; 원천 한도와 실측 근거 기록 | 통과 |\n | X 이용 조건 | 17개 작성기관·출처·조건을 실조회로 확인 완료(PD-11). 권리 미확인 계열은 공개 버전 제외·발행 보류(R10). 두바이유는 '권리 확인 대기'로 표시해 쓴다 | 조건부 통과 — Complexity Tracking의 감수 위험 |\n | 스키마 협업 | 구현 시 각 작업 묶음 1 Ticket·Branch·MR, Flyway 변경과 코드·검증 동일 MR | 통과 |\n-| 현재 Git 브랜치 형식 | 사용자가 지정한 `docs/275-spec008-plan-task`는 헌장의 `{type}({position})/{JIRA_NUMBER}-{description}`과 불일치. 이 plan에서 임의 변경하지 않으며 MR 전 팀 확인 필요 | 보류 |\n+| 현재 Git 브랜치 형식 | 문서 작업 브랜치 `docs/275-spec008-plan-task`는 헌장 형식과 어긋났으나 이미 병합되었고, 구현은 `feat(de)/336-macro-registry-schema`로 형식을 지켜 진행한다 | 통과 |\n \n **Phase 1 재판정 (2026-09-17 갱신)**: [data-model.md](data-model.md)의 완결성 검증·원자적 포인터·대체 원천 표시, [contracts/openapi.yaml](contracts/openapi.yaml)의 무자료·출처·결측 사유·버전, [contracts/macro-indicator-source.md](contracts/macro-indicator-source.md)의 010 경계를 대조했다. PD-11은 17개 실조회로 완료했고, PD-10은 [010](../010-economic-regime-search/spec.md) 소유로 넘겼다. 새로 생긴 유일한 긴장은 두바이유 한 계열의 개정 이력 미보장이며 Complexity Tracking에 근거와 좁히는 방법을 적었다. 브랜치 명명 게이트는 여전히 보류다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/plan.md",
+          "old_path": "specs/008-macro-indicator-registry/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,7 +84,7 @@\n \n **Acceptance Scenarios**:\n \n-1. **Given** 지표 등록표가 있을 때, **Then** 각 지표에 원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도가 기록되어 있다.\n+1. **Given** 지표 등록표가 있을 때, **Then** 각 지표에 원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·정기 재조회 구간 N이 기록되어 있다. 최소 유효 척도는 010이 정하므로 008 등록표의 검증 대상이 아니다(FR-015).\n 2. **Given** 화면의 분야 이름이나 배치를 바꾸면, **Then** 계산 가중과 분야-지표 매핑의 버전은 바뀌지 않는다.\n 3. **Given** 지표의 원천·변환·매핑·가중 중 하나를 바꾸면, **Then** 새 등록표 버전으로 기록되고 기존 검색 결과가 참조하던 버전은 그대로 유지된다.\n 4. **Given** 등록표에서, **Then** 분야 내부 지표 동일가중과 분야 간 1/7 동일가중이 명목 비중으로 기록되어 있고 이것이 Thorp의 설계 선택임이 함께 기록된다.\n@@ -163,7 +163,7 @@\n   | 금융·주택 | 국고채 3년·원/달러 환율 / 주택가격 | 월 기말 / 전월 대비 증가율 |\n   | 해외 경기 | G20 경기선행지수 | 전년동월 대비 증가율 |\n \n-- **FR-002**: 지표 등록표에 지표별 원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도·**정기 재조회 구간 N**(FR-017)을 기록하고 버전으로 관리한다. 통계표 코드·항목 코드·과거 범위 등 실제 값은 인증키 발급 후 확인해 채우는 결정 항목 PD-11이다. PD-11의 확인 근거(실제 응답에서 읽은 항목 식별자, 조회 조건, 확인 일시, 이용 조건의 출처)는 지표별로 `pd11-source-verification.md`에 남기고 등록표는 그 결과를 참조한다 — 001이 `pd01-etf-candidates.md`를 둔 것과 같은 자리다. (§6.2, §6.4.4)\n+- **FR-002**: 지표 등록표에 지표별 원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·**정기 재조회 구간 N**(FR-017)을 기록하고 버전으로 관리한다. 최소 유효 척도는 [010](../010-economic-regime-search/spec.md) 소유(PD-10)라 008이 채우지 않는다(FR-015). 통계표 코드·항목 코드·과거 범위 등 실제 값은 인증키 발급 후 확인해 채우는 결정 항목 PD-11이다. PD-11의 확인 근거(실제 응답에서 읽은 항목 식별자, 조회 조건, 확인 일시, 이용 조건의 출처)는 지표별로 `pd11-source-verification.md`에 남기고 등록표는 그 결과를 참조한다 — 001이 `pd01-etf-candidates.md`를 둔 것과 같은 자리다. (§6.2, §6.4.4)\n - **FR-003**: 지표 등록·분야-지표 매핑·계산 가중은 화면 분류(분야 이름·배치·설명)와 별도 버전으로 관리한다. 화면 이름·배치·설명만 바뀌면 화면 분류 버전만 올리고 계산 등록표·자료 버전은 유지한다. 분야-지표 매핑이나 계산 가중만 바뀌면 계산 등록표 버전을 올리되 관측 시계열을 다시 처리하거나 자료 버전을 올리지 않는다. 원천·통계 항목·단위·변환·개편 연결·결측 규칙처럼 관측 시계열의 값이나 유효 구간을 바꾸는 항목이 바뀌면 새 계산 등록표 버전과 함께 전 구간을 다시 처리해 새 자료 버전을 발행한다. (§6.4.4, D23)\n - **FR-004**: 분야 내부 지표 동일가중과 분야 간 1/7 동일가중을 초기 기본 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택이며 경제적 중요성의 동일함이 아님을 등록표에 기록한다. (§6.4.4, D23, U02)\n - **FR-005**: 같은 지표를 여러 공급원에서 중복 합산하지 않는다. ECOS·KOSIS가 중복되는 지표는 주 공급원을 하나 정해 등록표에 기록한다. (§6.2)\n@@ -192,9 +192,9 @@\n #### 이용 조건과 출처 (§6.2, §10.1, 원칙 X)\n \n - **FR-016**: 이용 조건은 **통계를 작성한 기관의 조건을 먼저 본다**. 제공 창구가 어디든 저작권은 작성기관에 있고, 제공기관의 약관은 그 위에 얹히는 조건이다. 한 통계표 안에서도 계열마다 작성기관이 다를 수 있으므로 지표별로 작성기관을 확인해 등록표에 적는다. 작성기관과 제공기관이 다르면 둘의 조건을 모두 기록한다. (§6.2, 원칙 X)\n-- **FR-016**: ECOS 한국은행 작성 통계는 기획서·constitution이 출처 표시를 전제로 상업 이용·가공·재배포 허용으로 분류하고, 다른 기관 작성 통계는 해당 기관의 조건을 따른다. 실제 계열의 권리와 표시 조건은 이용 전에 확인한다(PD-11). KOSIS 일반 통계는 출처 표시 조건으로 쓰되, 라이선스 제한이 있는 국제통계·북한통계의 비상업/재배포 금지 예외를 지표별로 확인한다. 지표를 표시하는 모든 화면에 출처와 작성기관을 표시한다. **대상은 지표 값이 보이는 모든 곳이다** — [009](../009-market-flow-overview/spec.md)의 시장 흐름 화면과 분야 상세, [010](../010-economic-regime-search/spec.md)의 검색 결과와 상세, [006](../006-my-records/spec.md)의 기록과 내보내기다. 008은 출처와 작성기관을 조회 응답에 실어 보내는 데까지 책임지고, 화면에 실제로 띄우는 책임은 그 화면을 소유한 spec에 있다. (§6.2)\n - **FR-016a**: 이용 권리와 표시 조건을 확인하지 못한 지표는 수집과 보관은 하되 공개 자료 버전에 넣지 않고, 권리 확인 전까지 완결 자료 버전 발행을 보류한다. 인증키 미발급·승인 대기는 자료를 아직 받지 못한 상태이고 권리 미확인은 자료는 받았으나 쓸 수 있는 범위를 모르는 상태이므로 서로 구분해 기록한다. 권리 미확인 지표의 값을 '확인 중' 표시와 함께 내보내지 않는다 — 표시를 붙여도 이용 범위를 벗어난 사용이다. 다만 공식 원천이 조건을 공개하고 있으나 해당 계열이 그 조건의 어느 쪽인지 확인할 창구가 없는 경우에는, 그 지표를 **권리 확인 대기**로 등록표에 표시하고 수집·공개를 이어간다. 확인이 가능해지면 그때 판정하고, 제한 대상으로 밝혀지면 FR-016b를 적용한다. 이는 조건 자체를 모르는 상태와 구분되는 별도 상태다. (§6.2, §10.1, 원칙 X)\n - **FR-016b**: 원천의 이용 조건이 바뀌거나 이용 권한이 철회되면 **그 지표의 새 수집과 공개를 중단하고, 화면·조회·내보내기에서 그 지표를 뺀다**. 이미 발행한 과거 자료 버전은 지우지 않고 보존한다 — 과거 검색 결과의 재현이 깨지기 때문이다. 중단 사유와 시점을 기록하고, 그 지표가 빠진 상태임을 이용자에게 알린다. (§6.2, 원칙 VIII·X)\n+- **FR-016c**: ECOS 한국은행 작성 통계는 기획서·constitution이 출처 표시를 전제로 상업 이용·가공·재배포 허용으로 분류하고, 다른 기관 작성 통계는 해당 기관의 조건을 따른다. 실제 계열의 권리와 표시 조건은 이용 전에 확인한다(PD-11). KOSIS 일반 통계는 출처 표시 조건으로 쓰되, 라이선스 제한이 있는 국제통계·북한통계의 비상업/재배포 금지 예외를 지표별로 확인한다. 지표를 표시하는 모든 화면에 출처와 작성기관을 표시한다. **대상은 지표 값이 보이는 모든 곳이다** — [009](../009-market-flow-overview/spec.md)의 시장 흐름 화면과 분야 상세, [010](../010-economic-regime-search/spec.md)의 검색 결과와 상세, [006](../006-my-records/spec.md)의 기록과 내보내기다. 008은 출처와 작성기관을 조회 응답에 실어 보내는 데까지 책임지고, 화면에 실제로 띄우는 책임은 그 화면을 소유한 spec에 있다. (§6.2)\n - **FR-017**: KOSIS는 분당 200회·요청당 40,000셀 한도 안에서 수집한다. **최초 1회 전 구간을 적재하고, 이후에는 새 발표분과 최근 N개월만 정기 재조회한다** — 뒤쪽 구간을 함께 받는 것은 잠정치가 확정치로 개정된 것을 잡기 위해서다(FR-009). N은 지표별 개정 관행과 실제 원천 근거에 따라 등록표에 기록한다. **관행을 관찰하기 전 기본값은 3개월로 두고 잠정임을 표시한다** — 원천이 밝힌 정정 주기(예: 매월 전월까지 정정)보다 짧게 잡지 않는다. 정기 재조회에서 N 안에 들어온 개정과 N 밖에서 뒤늦게 발견한 개정을 각각 세어 남기고, 뒤엣것이 이어지면 그 지표의 N을 늘린다. N개월 밖의 과거 개정이 원천 공지·메타데이터 등으로 확인되면 해당 범위를 별도로 재조회한다. 기준연도 개편처럼 계열 전체가 바뀌는 경우에는 전 구간을 다시 적재하고 새 등록표 버전으로 처리한다. **사용자 요청 시에는 원천을 호출하지 않고 저장된 자료만 읽는다.** (§6.2, §6.5)\n - **FR-017a**: 원천별 호출 한도와 요청 크기 제한을 등록표에 적고 그 안에서 수집한다. **요청당 조회 기간 상한이 있는 원천은 그 상한을 등록표에 적고 전 구간을 그 단위로 나눠 호출한다.** 응답에 합계·소계처럼 월별 관측값이 아닌 행이 섞여 오면 적재 전에 걸러내고, 걸러낸 행 수를 수집 기록에 남긴다. 수치 한도를 공표하지 않는 원천은 '수치 한도 없음, 과다 호출 시 제한 가능'으로 적고 재시도 간격과 요청 분할을 보수적으로 잡는다. **한도를 확인하지 못한 원천은 정기 수집 대상으로 올리지 않는다** — 한도를 모르고 반복 호출하면 차단될 수 있고, 차단은 그 지표의 자료를 끊는다. 이 경우 그 지표는 자료를 얻지 못한 상태가 되어 완결 자료 버전이 발행되지 않는다(FR-011). 한도를 수치로 공표하지 않는 원천은 '수치 한도 없음'으로 **확인된 것**이므로 이 제외 대상이 아니다. (§6.2, §6.5)\n - **FR-018**: 소비 경로마다 허용 범위가 다르므로 구분해서 다룬다. **내부 계산 입력**([010](../010-economic-regime-search/spec.md)이 척도·거리를 구하는 데 쓰는 것)은 가공에 해당하며 원자료를 밖으로 내보내지 않는다. **화면 표시와 조회 응답**은 출처·작성기관을 함께 붙여 내보낸다. **사용자 내보내기**([006](../006-my-records/spec.md))는 원자료가 파일로 빠져나가는 경로라 이용 범위 표시를 함께 싣는다. **원자료 재배포**, 곧 수집한 통계를 플랫폼 없이 그대로 제3자에게 넘기거나 유료로 제공하는 것은 하지 않는다. 경로가 달라도 작성기관이 상업적 이용을 제한한 계열은 어느 경로로도 내보내지 않는다(FR-016a). (§6.2)\n@@ -220,13 +220,13 @@\n \n ### Measurable Outcomes\n \n-- **SC-001**: 17개 지표 모두가 7개 분야 중 하나에 매핑되어 있고, 등록표의 필수 항목(원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도·정기 재조회 구간 N)이 빈칸인 지표가 0개다. 개발 중 인증키 확인 전 항목은 '미확인'으로 표시해 빈칸과 구분하며, 완료 판정 시 '미확인'인 지표가 0개다.\n-- **SC-002**: 사용자 화면에 자료 공급원·API 이름 선택 항목과 인증키 입력이 0개다.\n+- **SC-001**: 17개 지표 모두가 7개 분야 중 하나에 매핑되어 있고, 등록표의 필수 항목(원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·정기 재조회 구간 N)이 빈칸인 지표가 0개다. 최소 유효 척도는 [010](../010-economic-regime-search/spec.md)이 정하므로 이 목록에 넣지 않는다(FR-015, PD-10). 개발 중 인증키 확인 전 항목은 '미확인'으로 표시해 빈칸과 구분하며, 완료 판정 시 '미확인'인 지표가 0개다.\n+- **SC-002**: 사용자 화면에 자료 공급원·API 이름 선택 항목과 인증키 입력이 0개다. 008은 조회 응답과 수집 경로에 그런 입력을 두지 않는 데까지 책임지고, 화면 확인은 그 화면을 소유한 spec(009·010)에서 한다.\n - **SC-003**: 결측월이 보간된 값으로 채워진 사례가 0건이다.\n - **SC-004**: 같은 자료 버전·등록표 버전으로 다시 조회하면 값과 기준월 산출값이 100% 같다.\n - **SC-005**: 화면 분야 이름·배치·설명만 바꾼 뒤 계산 등록표·자료 버전이 바뀐 사례가 0건이다. 분야-지표 매핑 또는 계산 가중만 바꾼 뒤 관측 시계열 재처리나 자료 버전 변경이 발생한 사례가 0건이고, 관측 시계열의 값이나 유효 구간을 바꾸는 등록표 항목 변경 뒤 전 구간 재처리와 새 자료 버전 발행이 누락된 사례가 0건이다.\n-- **SC-006**: 지표를 표시하는 화면의 100%에 출처와 작성기관이 표시되고, 예시 자료를 쓰는 화면의 100%에 예시 표시가 있다.\n-- **SC-007**: 표본 대상월에서 변환값이 원값으로부터 독립 계산한 값과 허용 오차 안에서 일치한다. 표본은 17개 지표마다 서로 다른 대상월 3개를 고르되, 네 변환 유형(전년동월 대비 증가율·월 기말·월 평균·공식 금액)이 각각 최소 한 번 포함되고, **개편 연결 구간의 달과 결측 직후의 달을 반드시 포함한다** — 거기가 틀리기 쉬운 자리다. 허용 오차는 [010](../010-economic-regime-search/spec.md)의 PD-12(수기 대조 허용 오차, 소유 [007](../007-auto-parameter-search/spec.md))를 따르고, 확정 전에는 정확 일치(오차 0)로 대조한다. 표본 대상월 목록은 구현 담당자가 tasks 단계에서 확정해 기록한다.\n+- **SC-006**: 지표를 표시하는 화면의 100%에 출처와 작성기관이 표시되고, 예시 자료를 쓰는 화면의 100%에 예시 표시가 있다. 008의 판정 대상은 조회 응답에 출처·작성기관·예시 여부가 빠진 지표가 0개인지까지이며, 화면 표시는 009·010이 확인한다(FR-016c).\n+- **SC-007**: 표본 대상월에서 변환값이 원값으로부터 독립 계산한 값과 허용 오차 안에서 일치한다. 표본은 17개 지표마다 서로 다른 대상월 3개를 고르되, 여섯 변환 유형(전년동월 대비·전월 대비·월 기말·월 평균·공식 금액·계절조정 비율)이 각각 최소 한 번 포함되고, **개편 연결 구간의 달과 결측 직후의 달을 반드시 포함한다** — 거기가 틀리기 쉬운 자리다. 허용 오차는 [010](../010-economic-regime-search/spec.md)의 PD-12(수기 대조 허용 오차, 소유 [007](../007-auto-parameter-search/spec.md))를 따르고, 확정 전에는 정확 일치(오차 0)로 대조한다. 표본 대상월 목록은 구현 담당자가 tasks 단계에서 확정해 기록한다.\n - **SC-008**: 008의 조회 결과에 17개 지표의 등록 정보가 모두 제공된다. 완결 자료 버전이 있을 때 FR-023의 확보 가능한 값·최근 3개월 경로·분야별 T_g·T_all 상태·수집 상태가 누락된 지표가 0개이고, 유효한 월별 변환값이 전체 구간에서 0건인 지표가 0개다. 원값만 있는 지표를 유효 관측값으로 세어 발행한 사례가 0건이다. 공통 대상월이 없는 완결 버전에서 자료 버전이나 확보한 지표 값이 누락되거나 T_all을 실제 월로 표시한 사례가 0건이다. 첫 완결 버전이 없을 때 값·기준월·자료 버전이 채워진 지표가 0개이고, 자료 없음·수집 실패 상태가 누락된 지표가 0개다. 같은 자료 버전에서 008의 지표 정보와 009 화면의 지표 정보가 서로 다른 사례가 0건이다.\n \n ## Assumptions\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/spec.md",
+          "old_path": "specs/008-macro-indicator-registry/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,17 +32,32 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **검증 명령**: `data/`는 `ruff check src scripts tests`와 `pytest`, `backend/`는 `./gradlew spotlessApply build`. DB 통합 테스트는 `THORP_REQUIRE_DOCKER=true`로 실행하고 skip 건수를 확인한다.\n \n+## Existing Seams\n+\n+008을 기다리며 이미 들어와 있는 코드다. 009·010이 임시 대역을 먼저 넣고 008이 오기를 기다리는 구조라, 이 표가 비면 교체 작업이 통째로 빠진다.\n+\n+| 자리 (파일·심볼) | 지금 상태 | 008이 할 일 | 담당 작업 |\n+|---|---|---|---|\n+| `regime/application/port/MacroIndicatorPort` | 등록표 조회 포트. 구현체 없음 | 구현 | T070 |\n+| `regime/infrastructure/macro/PendingMacroIndicatorAdapter` | 부르면 실패하는 자리지킴 | 교체 | T070 |\n+| `data_pipeline.regime.macro.postgres` | **아직 없는 모듈.** `regime/macro/__init__.py`의 팩터리가 이 경로로 찾는다 | 구현 (`create_source()` 하나) | T068 |\n+| `marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter` | 예시 자료 어댑터 | 008 스냅샷 조회로 교체 | T064 |\n+| `thorp.regime.macro.source: fixture` (`application.yml`·`application-local.yml`) | 공통 기본이 임시 대역 | `macro`로 전환 | T071 |\n+| `regime/infrastructure/macro/fixture/`, `data_pipeline/regime/macro/fixture/`, `marketflow/macro-indicators-example-v1.json` | 픽스처·예시 자료 | 폐기 | T071 |\n+\n+`regime_baseline_month`는 010이 소유하며 008이 건드리지 않는다 — 검색 가능월은 008의 `T_g`가 아니라 010 배치 결과다(FR-013).\n+\n ---\n \n ## Phase 1: Setup (공용 기반)\n \n **Purpose**: 패키지 뼈대와 접속 정보를 준비한다\n \n-- [ ] T001 `data/src/data_pipeline/macro/` 패키지를 만들고 `__init__.py`와 하위 모듈 자리(`sources/`, `transform/`, `publish/`)를 둔다\n-- [ ] T002 `data/.env.example`에 `ECOS_API_KEY`·`KOSIS_API_KEY`·`DATA_GO_KR_SERVICE_KEY` 이름을 추가한다. 키 값은 적지 않는다\n-- [ ] T003 [P] `data/src/data_pipeline/macro/config.py`에 원천별 기본 URL·타임아웃·재시도 설정을 환경변수에서 읽는 구조로 둔다\n-- [ ] T004 [P] `data/tests/fixtures/macro/`에 원천별 응답 표본을 둘 자리를 만들고 실제 키가 없어도 테스트가 돌도록 한다\n-- [ ] T005 [P] `backend/src/main/java/com/ssafy/thorp/macro/` 패키지를 controller·application·domain·infrastructure 계층으로 만든다\n+- [X] T001 `data/src/data_pipeline/macro/` 패키지를 만들고 `__init__.py`와 하위 모듈 자리(`sources/`, `transform/`, `publish.py`)를 둔다\n+- [X] T002 `data/.env.example`에 `ECOS_API_KEY`·`KOSIS_API_KEY`·`DATA_GO_KR_SERVICE_KEY` 이름을 추가한다. 키 값은 적지 않는다\n+- [X] T003 [P] `data/src/data_pipeline/macro/config.py`에 원천별 기본 URL·타임아웃·재시도 설정을 환경변수에서 읽는 구조로 둔다. 재시도 출발값은 최대 3회, 간격 1초에서 2배씩(1·2·4초)이고 원천별로 덮어쓸 수 있다. 실측 뒤 조정한다\n+- [X] T004 [P] `data/tests/fixtures/macro/`에 원천별 응답 표본을 둘 자리를 만들고 실제 키가 없어도 테스트가 돌도록 한다\n+- [X] T005 [P] `backend/src/main/java/com/ssafy/thorp/macro/` 패키지를 presentation·application·domain·infrastructure 계층으로 만들고 `package-info.java`에 계층과 소비자를 적는다. 계층 이름은 ADR-0001과 기존 12개 모듈을 따른다\n \n ---\n \n@@ -52,18 +67,18 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **이 단계를 마쳐야 사용자 스토리에 들어갈 수 있다**\n \n-- [ ] T006 `backend/src/main/resources/db/migration/`에 Flyway 마이그레이션으로 `macro_calculation_registry_version`·`macro_indicator_definition` 테이블을 만든다. 컬럼은 data-model.md 2절을 따르고 `license_review_status`·`revision_history_available`·`trading_calendar`·`refresh_months_n`을 포함한다\n-- [ ] T007 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_display_version`·`macro_display_field`를 만든다. 계산 등록표와 별도 버전이다\n-- [ ] T008 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_collection_attempt`·`macro_collection_item_status`를 만든다. 인증키 미발급·승인 대기·권리 확인 대기·미확인을 구분하는 상태 컬럼을 둔다\n-- [ ] T009 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_raw_revision`·`macro_observation`·`macro_observation_lineage`를 만든다. 원값과 변환값을 모두 보존하고 결측 사유 코드를 둔다\n-- [ ] T010 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_dataset_version`·`macro_baseline`·`macro_current_publication`을 만든다. `macro_baseline`의 `scope_id`는 7개 분야 또는 ALL이다\n-- [ ] T011 `data/src/data_pipeline/macro/registry.py`에 등록표 적재기를 만든다. pd11-source-verification.md의 17개 지표 확정값(원천·통계표·항목·단위·작성기관·확보 구간)을 읽어 계산 등록표 버전 1을 발행한다\n-- [ ] T012 `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 `refresh_months_n` 기본값 3개월을 잠정으로 채운다. 관세청 세 지표는 원천이 밝힌 매월 정정 주기보다 짧게 잡지 않는다 (FR-017)\n-- [ ] T013 [P] `data/src/data_pipeline/macro/sources/base.py`에 원천 어댑터 공통 규약을 둔다. 재시도·포기·요청 분할·응답 구조 검증을 여기서 다룬다 (FR-011b)\n-- [ ] T014 [P] `data/src/data_pipeline/macro/storage.py`에 raw에서 processed Parquet으로 가는 경로 규칙을 지표/연도 파티션으로 둔다. `data/CLAUDE.md`의 한 방향 적재 규칙을 지킨다\n-- [ ] T015 [P] `data/tests/test_macro_registry.py`에 등록표 적재 테스트를 둔다. 17개가 정확히 등록되고 각 지표가 7개 분야 중 하나에 속하는지 확인한다 (SC-001)\n-- [ ] T016 [P] `backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java`에 스키마 통합 테스트를 둔다. Testcontainers로 PostgreSQL을 띄워 마이그레이션이 적용되는지 확인한다\n-- [ ] T017 `data/scripts/ingest_macro.py`에 실행 진입점을 argparse로 만든다. `--mode initial|regular`, `--indicator`, `--dry-run`을 받는다\n+- [X] T006 `backend/src/main/resources/db/migration/`에 Flyway 마이그레이션으로 `macro_calculation_registry_version`·`macro_indicator_definition` 테이블을 만든다. 컬럼은 data-model.md 2절을 따르고 `license_review_status`·`license_verified_at`·`license_suspended_at`·`license_suspended_reason`·`revision_history_available`·`trading_calendar`·`refresh_months_n`을 포함한다. 뒤의 권리 수명주기 세 컬럼은 T055·T057이 쓴다\n+- [X] T007 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_display_version`·`macro_display_field`를 만든다. 계산 등록표와 별도 버전이다\n+- [X] T008 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_collection_attempt`·`macro_collection_item_status`를 만든다. 인증키 미발급·승인 대기·권리 확인 대기·미확인을 구분하는 상태 컬럼을 둔다\n+- [X] T009 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_raw_revision`·`macro_observation`·`macro_observation_lineage`를 만든다. 원값과 변환값을 모두 보존하고 결측 사유 코드를 둔다\n+- [X] T010 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_dataset_version`·`macro_baseline`·`macro_current_publication`을 만든다. `macro_baseline`의 `scope_id`는 7개 분야 또는 ALL이다\n+- [X] T011 `data/src/data_pipeline/macro/registry.py`에 등록표 적재기를 만든다. pd11-source-verification.md의 17개 지표 확정값(원천·통계표·항목·단위·작성기관·확보 구간)을 읽어 계산 등록표 버전 1을 발행한다. 한국은행과 국가통계포털이 겹치는 지표는 주 공급원을 하나만 적고 나머지는 등록하지 않는다 (FR-005)\n+- [X] T012 `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 `refresh_months_n` 기본값 3개월을 잠정으로 채운다. 관세청 세 지표는 원천이 밝힌 매월 정정 주기보다 짧게 잡지 않는다 (FR-017)\n+- [X] T013 [P] `data/src/data_pipeline/macro/sources/base.py`에 원천 어댑터 공통 규약을 둔다. 재시도·포기·요청 분할·응답 구조 검증을 여기서 다룬다 (FR-011b)\n+- [X] T014 [P] `data/src/data_pipeline/macro/storage.py`에 raw에서 processed Parquet으로 가는 경로 규칙을 지표/연도 파티션으로 둔다. `data/CLAUDE.md`의 한 방향 적재 규칙을 지킨다\n+- [X] T015 [P] `data/tests/test_macro_registry.py`에 등록표 적재 테스트를 둔다. 17개가 정확히 등록되고 각 지표가 7개 분야 중 하나에 속하는지, 지표마다 주 공급원이 정확히 하나인지 확인한다 (SC-001, FR-005)\n+- [X] T016 [P] `backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java`에 스키마 통합 테스트를 둔다. Testcontainers로 PostgreSQL을 띄워 마이그레이션이 적용되는지 확인한다\n+- [X] T017 `data/scripts/ingest_macro.py`에 실행 진입점을 argparse로 만든다. `--mode initial|regular`, `--indicator`, `--dry-run`을 받는다\n \n **Checkpoint**: 등록표와 저장소가 준비되어 원천 수집을 붙일 수 있다\n \n@@ -94,8 +109,8 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [ ] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다\n - [ ] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)\n - [ ] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)\n-- [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다 (FR-023)\n-- [ ] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016)\n+- [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다. 자료 성격을 '최신 개정자료를 이용한 역사 비교'로 응답에 실어 당시 자료로 오인되지 않게 한다 (FR-023, FR-012)\n+- [ ] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016, FR-016c)\n - [ ] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)\n - [ ] T035 [US1] `data/tests/test_macro_publish.py`에 발행 테스트를 둔다. 17개 중 하나라도 유효 변환값이 0건이면 발행이 보류되는지 확인한다\n \n@@ -130,7 +145,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n - [ ] T044 [P] [US3] `data/src/data_pipeline/macro/normalize.py`에 대상월·발표일·수신 시각 분리를 넣는다. 발표일을 주지 않는 원천은 미제공으로 남기고 수신 시각으로 대체하지 않는다 (FR-007)\n - [ ] T045 [US3] `data/src/data_pipeline/macro/sources/kosis.py`에서 `LST_CHN_DE`를 통계표 단위 갱신일로 기록한다. 관측치별 발표일로 쓰지 않는다\n-- [ ] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. 간격을 늘려가며 정해진 횟수만큼 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)\n+- [ ] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. T003의 재시도 설정(기본 최대 3회, 1·2·4초)대로 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)\n - [ ] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다\n - [ ] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다\n - [ ] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다\n@@ -148,14 +163,17 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **Independent Test**: 인증키 없는 개발 환경에서 예시 자료로 지표가 제공되고 예시 표시가 붙는지, 운영에서는 자동 대체가 일어나지 않는지 확인한다\n \n-- [ ] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다 (FR-016)\n+- [ ] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다. 내보내기 경로가 함께 실어야 할 이용 범위 문구도 지표별로 둔다 — 006이 파일로 내보낼 때 쓴다 (FR-016, FR-016c, FR-018)\n - [ ] T054 [US4] `data/src/data_pipeline/macro/registry.py`에서 두바이유를 권리 확인 대기로 표시한다. 조건 자체를 모르는 미확인과 구분되며 발행을 보류하지 않는다 (FR-016a)\n-- [ ] T055 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)\n-- [ ] T056 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)\n-- [ ] T057 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다\n-- [ ] T058 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)\n-- [ ] T059 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다\n-- [ ] T060 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다\n+- [ ] T055 [US4] `data/src/data_pipeline/macro/registry.py`와 `publish.py`에 이용 조건 철회 처리를 넣는다. 지표의 권리 상태가 중단이 되면 그 지표의 새 수집과 새 자료 버전 편입을 멈추고 중단 사유·시점을 등록표에 남긴다. 이미 발행한 자료 버전은 지우지 않는다 (FR-016b)\n+- [ ] T056 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에서 중단된 지표를 값 목록에서 빼고 중단 상태와 사유를 싣는다. 조용히 사라지지 않고 빠진 상태임이 드러난다 (FR-016b, 원칙 VI)\n+- [ ] T057 [US4] `data/src/data_pipeline/macro/registry.py`에 이용 조건·인증 자격 재확인 시점을 둔다. 인증키 이용기간 만료 전(한국은행은 발급일로부터 2년)과 원천의 약관·서비스 명세 개정 시 재확인하고 확인 일시를 등록표에 남긴다. 조건이 달라졌으면 T055의 중단 처리로 넘긴다 (FR-018a)\n+- [ ] T058 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)\n+- [ ] T059 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)\n+- [ ] T060 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다\n+- [ ] T061 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)\n+- [ ] T062 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다. 중단된 지표가 공개 버전과 조회 응답에 남지 않는지, 인증키 만기 임박과 약관 개정이 재확인 대상으로 잡히는지도 확인한다\n+- [ ] T063 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다\n \n **Checkpoint**: 이용 조건을 지키며 수집하고 개발 대역이 운영에 섞이지 않는다\n \n@@ -165,14 +183,16 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **Purpose**: 009·010 연동 정합화와 남은 결정 마무리\n \n-- [ ] T061 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다\n-- [ ] T062 `specs/009-market-flow-overview/`의 spec과 계약에서 지표·분야 식별자를 008과 맞춘다. 두바이유 식별자 표기 불일치와 분야 식별자 대소문자를 정리한다\n-- [ ] T063 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)\n-- [ ] T064 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다\n-- [ ] T065 [P] `data/src/data_pipeline/macro/source_port.py`에 010이 쓸 시계열 읽기를 만든다. contracts/macro-indicator-source.md를 따르고 결측 사유를 함께 돌려준다\n-- [ ] T066 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)\n-- [ ] T067 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)\n-- [ ] T068 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 네 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다 (SC-007)\n+- [ ] T064 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다\n+- [ ] T065 `specs/009-market-flow-overview/`의 spec과 계약에서 지표·분야 식별자를 008과 맞춘다. 두바이유 식별자 표기 불일치와 분야 식별자 대소문자를 정리한다\n+- [ ] T066 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)\n+- [ ] T067 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다\n+- [ ] T068 [P] `data/src/data_pipeline/regime/macro/postgres.py`에 010이 쓸 시계열 읽기를 만든다. `regime/macro/source.py`의 `MacroIndicatorSource` 프로토콜을 구현하고 `create_source()` 하나를 내놓는다 — `regime/macro/__init__.py`의 팩터리가 바로 이 모듈 경로로 찾으므로 다른 자리에 두면 010 배치가 구현체를 못 찾는다. contracts/macro-indicator-source.md를 따르고 결측 사유를 함께 돌려준다\n+- [ ] T069 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)\n+- [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다\n+- [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)\n+- [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)\n+- [ ] T073 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)\n \n ---\n \n@@ -229,11 +249,12 @@ T032 → T033 → T034·T035\n | D. 008 조회 | T032·T033·T034 | BE | 백엔드 단일 스냅샷 응답. 009가 소비할 계약이 여기서 고정된다 |\n | E. 버전 독립 | T036~T043 | DE·BE | US2 전체. 세 버전 분리와 원자적 발행 |\n | F. 상태 드러내기 | T044~T052 | DE·BE | US3 전체. 지연·실패·결측·개정 |\n-| G. 이용 조건 | T053~T060 | DE·BE | US4 전체. 한도 준수와 예시 자료 격리 |\n-| H. 009 연동 | T061~T064 | BE | 009의 코드와 문서를 함께 고친다. 008 단독으로 끝나지 않는다 |\n-| I. 010 연동과 마무리 | T065~T068 | DE | 시계열 읽기와 최종 검증 |\n+| G. 이용 조건 | T053~T063 | DE·BE | US4 전체. 한도 준수와 권리 철회 대응과 예시 자료 격리 |\n+| H. 009 연동 | T064~T067 | BE | 009의 코드와 문서를 함께 고친다. 008 단독으로 끝나지 않으므로 009 담당자와 먼저 합의하고 연다 |\n+| I. 010 연동과 마무리 | T068~T072 | DE·BE | 시계열 읽기와 구현체 교체와 임시 대역 폐기와 최종 검증 |\n+| J. 재조회 구간 확정 | T073 | DE | 정기 수집을 몇 달 관찰해야 정해진다. 묶음 I에 두면 I가 그동안 병합되지 못한다 |\n \n-아홉 묶음이다. 단계가 일곱인데 묶음이 아홉인 이유는 US1이 작업 18개로 너무 커서다. 어댑터 넷과 변환과 발행과 조회를 한 병합 요청에 담으면 리뷰가 되지 않아 B·C·D로 나눴다.\n+열 묶음이다. 단계가 일곱인데 묶음이 더 많은 이유는 US1이 작업 18개로 너무 커서다. 어댑터 넷과 변환과 발행과 조회를 한 병합 요청에 담으면 리뷰가 되지 않아 B·C·D로 나눴다.\n \n ### 더 쪼갤 수 있는 곳\n \n@@ -241,7 +262,7 @@ B는 어댑터별로 넷(T022·T023·T024·T025)으로 더 나눠도 각각 표\n \n ### 순서\n \n-A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다.\n+A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다. J는 정기 수집이 몇 달 돌아간 뒤라 나머지와 같은 릴리즈에 들어가지 않는다.\n \n ---\n \n@@ -255,6 +276,6 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기\n \n ## 주의\n \n-- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T067), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)\n+- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T073), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)\n - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)\n - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2217714,
+      "head_commit_sha": "57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b",
+      "base_commit_sha": "3b58be584a349fc82ac190b65804429ecf050dd9",
+      "start_commit_sha": "9177de31db3bec4981a225bda8f6336d451952b8",
+      "created_at": "2026-09-18T09:07:38.315+09:00",
+      "merge_request_id": 950132,
+      "state": "without_files",
+      "real_size": "27",
+      "patch_id_sha": "310a52b79bfa851176418dfc9ff630ec634206db",
+      "commits": [
+        {
+          "id": "57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b",
+          "short_id": "57fe180c",
+          "created_at": "2026-09-17T23:01:45.000+09:00",
+          "parent_ids": [
+            "0ca82ae48d36e1840a7b5a76e74d661ccd2a663c"
+          ],
+          "title": "feat(de): 17개 지표 등록표와 수집 진입점을 만든다",
+          "message": "feat(de): 17개 지표 등록표와 수집 진입점을 만든다\n\npd11 실조회 결과를 등록표로 옮겼다. 추정으로 채운 칸이 없다 — 확인하지 못한\n공표 정밀도·거래일 달력은 None 으로 두고 그것을 채울 작업을 모듈에 적었다.\n최소 유효 척도는 010 소유라 008이 건드리지 않는다.\n\n주 공급원을 고르는 것은 등록표다. 어댑터가 고르면 같은 지표가 실행마다 다른\n원천에서 와도 값이 왜 달라졌는지 되짚을 곳이 없다. 원/달러는 일별 표가\n서울외국환중개 작성이라 한국은행이 쓴 월별 표의 말일자료로 바꿔 잡았고,\n두바이유만 권리 확인 대기로 남는다.\n\n어댑터 공통 규약은 다시 걸어 볼 실패와 그렇지 않은 실패를 가른다. 관세청\n옛 주소는 키가 멀쩡해도 인증 오류를 돌려주는데, 이걸 일시 오류로 읽고\n되풀이하면 원인이 주소라는 사실이 드러나지 않는다.\n\n진입점은 --mode 에 기본값을 두지 않는다. 최초 적재와 정기 수집은 호출량이\n자릿수로 다르고, 기본값이 있으면 어느 쪽이 도는지 모르는 채 실행된다.\n수집 본체가 없는 지금은 종료 코드 2로 끝내 아무것도 받지 않은 실행이\n성공으로 보이지 않게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T23:01:45.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T23:01:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/57fe180c1ed7ee27d936eb0dae611b0ceb1fbe3b"
+        },
+        {
+          "id": "0ca82ae48d36e1840a7b5a76e74d661ccd2a663c",
+          "short_id": "0ca82ae4",
+          "created_at": "2026-09-17T22:50:43.000+09:00",
+          "parent_ids": [
+            "62a8025af6de8282351ef6d0022dcb773b1cca23"
+          ],
+          "title": "feat(de): 거시지표 등록·수집 스키마를 만든다",
+          "message": "feat(de): 거시지표 등록·수집 스키마를 만든다\n\n표 열셋을 한 마이그레이션에 담았다. 세 버전(계산 등록표·화면 분류·자료)을\n나눈 이유는 서로 다른 속도로 움직이기 때문이다. 화면 문구를 고쳤다고 과거\n검색 결과가 달라지면 안 되고, 분야 매핑을 고쳤다고 전 구간을 다시 처리할\n이유도 없다.\n\n제약으로 막는 것은 값을 지어내는 경로다. 변환값이 비었는데 사유가 없는 행,\n17개가 차지 않은 공개 버전, 사유 없는 권리 중단을 넣지 못한다. 공통 대상월이\n없을 때는 기준월 행을 지우지 않고 월만 비운다 — 행이 없으면 아직 계산하지\n않은 것과 계산했더니 공통 월이 없는 것이 같아 보인다.\n\n수집 실패 상태를 여덟으로 나눴다. 키 미발급·승인 대기·권리 확인 대기·권리\n미확인은 사람이 할 다음 행동이 전부 다르고, 하나로 묶으면 무엇을 해야 하는지가\n응답에서 사라진다.\n\n변환 유형은 여섯이다. SC-007 은 넷이라 적었지만 FR-001 표에는 전월 대비\n증가율(주택가격)과 계절조정 비율(실업률)이 따로 있다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:50:43.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:50:43.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0ca82ae48d36e1840a7b5a76e74d661ccd2a663c"
+        },
+        {
+          "id": "62a8025af6de8282351ef6d0022dcb773b1cca23",
+          "short_id": "62a8025a",
+          "created_at": "2026-09-17T22:45:24.000+09:00",
+          "parent_ids": [
+            "6fc3120dd426d84666495c524a1d0493d1726cea"
+          ],
+          "title": "feat(de): 거시지표 수집의 설정·표본·조회 패키지 자리를 만든다",
+          "message": "feat(de): 거시지표 수집의 설정·표본·조회 패키지 자리를 만든다\n\n원천 네 곳의 주소·타임아웃·재시도를 config 한자리로 모았다. 기본 주소는\nBackend market 모듈이 이미 쓰는 값과 같게 뒀다 — 두 곳이 다른 주소를 들면\n원천이 주소를 바꿀 때 한쪽만 고쳐진다.\n\n인증키는 설정 객체에 담지 않고 필요한 순간에 읽는다. 설정을 로그나 오류에\n그대로 찍는 일이 흔한데 거기 키가 섞이면 저장소가 아니라 로그로 샌다.\n키가 없어도 임포트는 되며, 없는 키는 값을 꺼낼 때 비로소 문제가 된다.\n\n재시도는 3회·1·2·4초로 뒀다. 근거 있는 상한이 아니라 \"정해진 횟수\"를\n판정할 수 있는 수로 바꾼 것이고 실측 뒤 조정한다.\n\nT005의 계층 이름은 presentation 으로 적었다. controller 라는 계층은 기존\n12개 모듈과 ADR-0001 어디에도 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:45:24.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:45:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/62a8025af6de8282351ef6d0022dcb773b1cca23"
+        },
+        {
+          "id": "6fc3120dd426d84666495c524a1d0493d1726cea",
+          "short_id": "6fc3120d",
+          "created_at": "2026-09-17T22:41:10.000+09:00",
+          "parent_ids": [
+            "64f0f300153c2790393fa49d22c98037df715135"
+          ],
+          "title": "feat(de): 거시지표 수집 패키지 뼈대를 만든다",
+          "message": "feat(de): 거시지표 수집 패키지 뼈대를 만든다\n\n자료가 흐르는 순서대로 모듈 자리를 잡고, 각 자리에 왜 그렇게 두는지를 적었다.\n17개가 다 되기 전에는 공개하지 않는 이유, 한 지표를 여러 원천에서 합치지 않는\n이유, 변환 경계에서 값을 지어내지 않는 이유가 해당 모듈 옆에 있다.\n\n010이 쓸 시계열 읽기는 이 패키지가 아니라 regime.macro.postgres에 둔다는 것도\n패키지 문서에 박았다. 그 경로는 010의 팩터리가 정한 자리라 여기에 두면 배치가\n구현체를 찾지 못한다.\n\nT001의 publish 자리는 모듈로 만들었다. T030·T031·T038·T039가 모두 publish.py를\n가리키고 있어 tasks.md 쪽 표기를 맞췄다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:41:10.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:41:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6fc3120dd426d84666495c524a1d0493d1726cea"
+        },
+        {
+          "id": "64f0f300153c2790393fa49d22c98037df715135",
+          "short_id": "64f0f300",
+          "created_at": "2026-09-17T22:32:49.000+09:00",
+          "parent_ids": [
+            "aea0d099c6d1b6610d73e6743c59c66e4394b765"
+          ],
+          "title": "docs(de): 008이 채워야 할 기존 자리를 표로 세우고 폐기 작업을 더한다",
+          "message": "docs(de): 008이 채워야 할 기존 자리를 표로 세우고 폐기 작업을 더한다\n\n저장소를 훑으니 담당 작업이 없는 자리가 둘 나왔다. 설정 기본값\nthorp.regime.macro.source 가 fixture 로 남아 있고, 양쪽 픽스처와\nmarketflow 예시 자료를 지우는 작업이 어디에도 없었다. 구현을 다 해도\n기본 경로는 계속 가짜 자료를 내보내는 상태가 된다.\n\n폐기 작업을 T071로 넣고, quickstart 검증을 그 뒤에 두어 묶음 I을\nT068~T072로 붙였다. 몇 달 관찰이 필요한 재조회 구간 확정은 T073으로\n밀어 묶음 J에 남긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:32:49.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:32:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/64f0f300153c2790393fa49d22c98037df715135"
+        },
+        {
+          "id": "aea0d099c6d1b6610d73e6743c59c66e4394b765",
+          "short_id": "aea0d099",
+          "created_at": "2026-09-17T22:27:08.000+09:00",
+          "parent_ids": [
+            "2e91b7789703ca9f479104374d5e0dc1a5fc568f"
+          ],
+          "title": "docs(de): T068의 지표 소스 구현 경로를 실제 자리로 맞춘다",
+          "message": "docs(de): T068의 지표 소스 구현 경로를 실제 자리로 맞춘다\n\n010의 `regime/macro/__init__.py`가 구현체를 `regime.macro.postgres`로 찾는데\nT068은 `data_pipeline/macro/source_port.py`에 만들라고 적고 있었다. 그대로면\n008을 다 만들어도 010 배치가 구현체를 못 찾는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:27:08.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:27:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/aea0d099c6d1b6610d73e6743c59c66e4394b765"
+        },
+        {
+          "id": "2e91b7789703ca9f479104374d5e0dc1a5fc568f",
+          "short_id": "2e91b778",
+          "created_at": "2026-09-17T22:27:08.000+09:00",
+          "parent_ids": [
+            "1e9784dd656d3e32eb5e866e4520347802dda3ed"
+          ],
+          "title": "chore(de): speckit 절차가 문서와 코드를 함께 대조하게 한다",
+          "message": "chore(de): speckit 절차가 문서와 코드를 함께 대조하게 한다\n\n문서끼리만 맞춰 보면 상류 spec의 누락이 안 보인다. 소비자가 임시 대역을\n먼저 넣어 두고 기다리는 자리는 spec·plan·tasks 어디에도 안 적히기 때문이다.\n008에서 010의 지표 소스 구현 경로가 어긋난 채로 검토를 통과한 게 그 경우다.\n\ntasks에 \"Existing Seams\" 절을 필수로 두어 교체 대상과 담당 작업을 적게 하고,\n없으면 None이라고 쓰게 했다 — 빈 표는 찾아본 적 없음과 구분되지 않는다.\nanalyze에는 저장소 대조 패스를 넣어 경로 일치와 미청구 자리를 보게 했고,\n확인하지 않은 범위를 리포트에 적게 했다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:27:08.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:27:08.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2e91b7789703ca9f479104374d5e0dc1a5fc568f"
+        },
+        {
+          "id": "1e9784dd656d3e32eb5e866e4520347802dda3ed",
+          "short_id": "1e9784dd",
+          "created_at": "2026-09-17T22:15:37.000+09:00",
+          "parent_ids": [
+            "3b58be584a349fc82ac190b65804429ecf050dd9"
+          ],
+          "title": "docs(de): spec 008의 요구사항 중복과 미매핑 작업을 정리한다",
+          "message": "docs(de): spec 008의 요구사항 중복과 미매핑 작업을 정리한다\n\n중복이던 FR-016 두 개를 FR-016과 FR-016c로 나눴다. 등록표 필수 항목에서\n최소 유효 척도를 뺐다 — 010 소유(PD-10)라 008 혼자서는 채울 수 없는\n완료 기준이었다. FR-005·FR-012·FR-016b·FR-018·FR-018a에 작업이 없던\n자리를 메우고, 권리 중단·재확인 시점을 담을 컬럼 셋을 등록표 스키마에\n추가했다. 재시도 횟수와 대조 허용 오차처럼 판정할 수 없던 표현에\n출발값을 넣었다.\n\n몇 달 관찰이 필요한 재조회 구간 확정을 묶음 J로 떼어냈다. 묶음 I에\n두면 그동안 병합될 수 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T22:15:37.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T22:15:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1e9784dd656d3e32eb5e866e4520347802dda3ed"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2829982": [],
+    "2830000": []
+  }
+}

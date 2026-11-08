@@ -1,0 +1,753 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959436,
+    "iid": 324,
+    "project_id": 1444456,
+    "title": "docs: 화면 맥락 도우미 ADR·spec 015·계약을 적는다",
+    "description": "# docs: 화면 맥락 도우미 ADR·spec 015·계약을 적는다\n\n## 작업 내용 요약\n\n결과 화면에서 그 결과의 값을 자연어로 묻는 도우미(spec 015)의 문서를 올린다. 외부 LLM을 GMS 게이트웨이(`gpt-5-mini`)로 부르는 ADR-0008, spec-kit 형식의 spec·plan·tasks, HTTP·모델 계약과 예시 JSON이다. 코드 변경은 없다.\n\n## 관련 티켓\n\n- S15P21E205-434 (Story S15P21E205-433 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **ADR-0008**: 별도 AI 서버 없이 백엔드 `assistant` 도메인이 서버 키로 GMS Chat Completions를 부른다. 모델 `gpt-5-mini`. 자료 처리 조건은 통제 못 하는 것을 보내지 않는 것으로 갈음(식별자·개인정보 미전송, 원문 미저장, 사용자 안내). 금액 상한 없음, 한도(IP 8/분·토큰 5/분·하루 1,000·300자)로 남용 방지. 장애는 문구+재시도 버튼.\n- **spec 015**: 1차는 결과 화면만. 근거는 결과 상세·비중 응답 가운데 계약의 포함 표 항목 + 서버 실행 도구 5개(날짜·구간·하락 구간)로 읽은 것. 모델은 도구를 요청만 하고 식별자를 받지 않는다. 답의 숫자·날짜는 자리표시자를 서버가 채운 값만. 로봇 아이콘 플로팅 버튼(끌어 옮기기·여백에 붙기) + 말풍선. 근거 카드를 누르면 그 탭이 열린다(결과 탭 묶음에 제어 prop 추가).\n- **계약**: `GET /assistant/capabilities`(항상 200), `POST /assistant/questions`, 오류표(005와 같은 400/404/409 세 코드/410 + 429/503), 모델 요청·응답 스키마, 도구 정의·검증 규칙 표, **초기 팩 포함 표**(라벨은 한국어 고정 문자열, 토큰·만료·버전·진행·상관 행렬 제외, 60 초과 시 섹터별 위험·손실 기여부터 뺌), 표기 규칙(프론트 `formatResult.ts`와 같은 수치, HALF_UP, 날짜는 ISO 원문), 설정 변수(키·주소·모델은 prod도 빈 기본값 → 비어 있으면 비활성이고 기동 정상).\n- **plan**: 새 의존은 `assistant → result`·`backtest`·`sector`(섹터 이름) 셋이고 반대 방향은 ArchUnit 규칙 12로 막는다. 초기 조회는 `getWeights`(005의 409 판정을 그대로 거친다) → `getDetail`. 전체 데드라인 15초가 라운드 예산보다 우선.\n- **tasks**: 작업 묶음 6개(DOCS 1·BE 4·FE 1)가 Jira Task·브랜치·MR 하나씩. 플래그는 품질 관문 뒤에만 켠다.\n- `specs/README.md`에 015 행과 흐름 한 줄.\n\n## 테스트\n\n- 문서만이라 자동 테스트 없음. 예시 JSON 8개는 파싱 확인. 계약의 예시 파일 경로가 Task 2 IT의 대조 대상이다.\n- `/speckit-analyze`로 spec·plan·tasks·계약을 constitution과 코드 seam(`PublicResultService`·결과 DTO·`ResultTabs`·`SecurityConfig`·`ArchitectureTest`·설정 파일·`formatResult.ts`)에 대조했다. CRITICAL 0, 지적은 문서에 모두 반영됐다.\n- 확인하지 않은 것: `SectorService.getSectors()`의 반환 모양(013 어댑터 Javadoc으로만 확인), 실제 섹터 선택 상한이 6개를 넘는지, `lucide-react`의 `Bot` 아이콘, GMS 도달성. 모두 해당 묶음 착수 때 코드를 열면 정해진다.\n\n## 리뷰 포인트\n\n- **서버는 계산하지 않는다**는 원칙을 \"시계열에서 고르기(첫·끝·최고·최저·가장 낮은 날)는 계산이 아니다\"로 해석했다. 005 화면의 `drawdownWindow.ts`와 같은 종류의 일이다. 이 해석이 괜찮은지.\n- 하락 구간 정의가 화면과 서버 도구 두 벌이 된다. 워커가 결과에 날짜를 담는 후속으로 통일할 계획이며 1차 선행 조건으로 두지 않았다.\n- 자리표시자 검증에서 한글 수사는 허용하고 아라비아 숫자는 전부 거절한다. 정상 답이 과하게 버려질지는 Task 6 표본에서 본다.\n- 상관 행렬(섹터 수의 제곱)은 1차 근거 팩에서 뺐다. 물으면 근거 부족으로 답한다. 팩 상한 60을 지키려는 선택인데, 도구로 여는 것이 낫다고 보면 후속에서 더한다.\n- 키·주소·모델 셋만 prod에서 빈 기본값을 둔다. \"미설정이면 기동 실패\"라는 기존 prod 규칙의 예외라 팀이 알고 있어야 한다.\n\n## 전달만 하는 것\n\n- 저장소 밖 초안 폴더(`ai-feat/`)는 이관 뒤 지웠다.\n- `.specify/feature.json`(gitignore)은 015로 바꿔 뒀다.\n\n## 남은 것\n\n- 없음. 머지되면 묶음 2(BE 계약)와 5(FE 버튼·말풍선)를 병렬로 시작한다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T23:33:06.963+09:00",
+    "updated_at": "2026-09-24T23:33:11.614+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T23:33:11.141+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/434-assistant-spec",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3369d878014de3eb0be6ab120a581cdc0e082446",
+    "merge_commit_sha": "7e886d57cfbf79397a6d71ad2a4f3182a1f5bbee",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T23:33:08.353+09:00",
+    "reference": "!324",
+    "references": {
+      "short": "!324",
+      "relative": "!324",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!324"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/324",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959436,
+    "iid": 324,
+    "project_id": 1444456,
+    "title": "docs: 화면 맥락 도우미 ADR·spec 015·계약을 적는다",
+    "description": "# docs: 화면 맥락 도우미 ADR·spec 015·계약을 적는다\n\n## 작업 내용 요약\n\n결과 화면에서 그 결과의 값을 자연어로 묻는 도우미(spec 015)의 문서를 올린다. 외부 LLM을 GMS 게이트웨이(`gpt-5-mini`)로 부르는 ADR-0008, spec-kit 형식의 spec·plan·tasks, HTTP·모델 계약과 예시 JSON이다. 코드 변경은 없다.\n\n## 관련 티켓\n\n- S15P21E205-434 (Story S15P21E205-433 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **ADR-0008**: 별도 AI 서버 없이 백엔드 `assistant` 도메인이 서버 키로 GMS Chat Completions를 부른다. 모델 `gpt-5-mini`. 자료 처리 조건은 통제 못 하는 것을 보내지 않는 것으로 갈음(식별자·개인정보 미전송, 원문 미저장, 사용자 안내). 금액 상한 없음, 한도(IP 8/분·토큰 5/분·하루 1,000·300자)로 남용 방지. 장애는 문구+재시도 버튼.\n- **spec 015**: 1차는 결과 화면만. 근거는 결과 상세·비중 응답 가운데 계약의 포함 표 항목 + 서버 실행 도구 5개(날짜·구간·하락 구간)로 읽은 것. 모델은 도구를 요청만 하고 식별자를 받지 않는다. 답의 숫자·날짜는 자리표시자를 서버가 채운 값만. 로봇 아이콘 플로팅 버튼(끌어 옮기기·여백에 붙기) + 말풍선. 근거 카드를 누르면 그 탭이 열린다(결과 탭 묶음에 제어 prop 추가).\n- **계약**: `GET /assistant/capabilities`(항상 200), `POST /assistant/questions`, 오류표(005와 같은 400/404/409 세 코드/410 + 429/503), 모델 요청·응답 스키마, 도구 정의·검증 규칙 표, **초기 팩 포함 표**(라벨은 한국어 고정 문자열, 토큰·만료·버전·진행·상관 행렬 제외, 60 초과 시 섹터별 위험·손실 기여부터 뺌), 표기 규칙(프론트 `formatResult.ts`와 같은 수치, HALF_UP, 날짜는 ISO 원문), 설정 변수(키·주소·모델은 prod도 빈 기본값 → 비어 있으면 비활성이고 기동 정상).\n- **plan**: 새 의존은 `assistant → result`·`backtest`·`sector`(섹터 이름) 셋이고 반대 방향은 ArchUnit 규칙 12로 막는다. 초기 조회는 `getWeights`(005의 409 판정을 그대로 거친다) → `getDetail`. 전체 데드라인 15초가 라운드 예산보다 우선.\n- **tasks**: 작업 묶음 6개(DOCS 1·BE 4·FE 1)가 Jira Task·브랜치·MR 하나씩. 플래그는 품질 관문 뒤에만 켠다.\n- `specs/README.md`에 015 행과 흐름 한 줄.\n\n## 테스트\n\n- 문서만이라 자동 테스트 없음. 예시 JSON 8개는 파싱 확인. 계약의 예시 파일 경로가 Task 2 IT의 대조 대상이다.\n- `/speckit-analyze`로 spec·plan·tasks·계약을 constitution과 코드 seam(`PublicResultService`·결과 DTO·`ResultTabs`·`SecurityConfig`·`ArchitectureTest`·설정 파일·`formatResult.ts`)에 대조했다. CRITICAL 0, 지적은 문서에 모두 반영됐다.\n- 확인하지 않은 것: `SectorService.getSectors()`의 반환 모양(013 어댑터 Javadoc으로만 확인), 실제 섹터 선택 상한이 6개를 넘는지, `lucide-react`의 `Bot` 아이콘, GMS 도달성. 모두 해당 묶음 착수 때 코드를 열면 정해진다.\n\n## 리뷰 포인트\n\n- **서버는 계산하지 않는다**는 원칙을 \"시계열에서 고르기(첫·끝·최고·최저·가장 낮은 날)는 계산이 아니다\"로 해석했다. 005 화면의 `drawdownWindow.ts`와 같은 종류의 일이다. 이 해석이 괜찮은지.\n- 하락 구간 정의가 화면과 서버 도구 두 벌이 된다. 워커가 결과에 날짜를 담는 후속으로 통일할 계획이며 1차 선행 조건으로 두지 않았다.\n- 자리표시자 검증에서 한글 수사는 허용하고 아라비아 숫자는 전부 거절한다. 정상 답이 과하게 버려질지는 Task 6 표본에서 본다.\n- 상관 행렬(섹터 수의 제곱)은 1차 근거 팩에서 뺐다. 물으면 근거 부족으로 답한다. 팩 상한 60을 지키려는 선택인데, 도구로 여는 것이 낫다고 보면 후속에서 더한다.\n- 키·주소·모델 셋만 prod에서 빈 기본값을 둔다. \"미설정이면 기동 실패\"라는 기존 prod 규칙의 예외라 팀이 알고 있어야 한다.\n\n## 전달만 하는 것\n\n- 저장소 밖 초안 폴더(`ai-feat/`)는 이관 뒤 지웠다.\n- `.specify/feature.json`(gitignore)은 015로 바꿔 뒀다.\n\n## 남은 것\n\n- 없음. 머지되면 묶음 2(BE 계약)와 5(FE 버튼·말풍선)를 병렬로 시작한다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-24T23:33:06.963+09:00",
+    "updated_at": "2026-09-24T23:33:11.614+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T23:33:11.141+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/434-assistant-spec",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3369d878014de3eb0be6ab120a581cdc0e082446",
+    "merge_commit_sha": "7e886d57cfbf79397a6d71ad2a4f3182a1f5bbee",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-24T23:33:08.353+09:00",
+    "reference": "!324",
+    "references": {
+      "short": "!324",
+      "relative": "!324",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!324"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/324",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "head_sha": "3369d878014de3eb0be6ab120a581cdc0e082446",
+      "start_sha": "12779bebb5a3ba006243dc8e53e341a5fb68e3c6"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "eefccb3d3d98a5a82b5985d707148b198d9e33fc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866800,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T23:33:07.073+09:00",
+          "updated_at": "2026-09-24T23:33:07.077+09:00",
+          "system": true,
+          "noteable_id": 959436,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 324,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9a9566f33fa088423b4beca9971f8c9b99ad1732",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866801,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T23:33:07.102+09:00",
+          "updated_at": "2026-09-24T23:33:07.114+09:00",
+          "system": true,
+          "noteable_id": 959436,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 324,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3b0aa5ff29972f97bce24d13cb2516eac8b6bff6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866802,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T23:33:09.954+09:00",
+          "updated_at": "2026-09-24T23:33:09.960+09:00",
+          "system": true,
+          "noteable_id": 959436,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 324,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b0bae3ed94f27a9060c9f26f74122c4e45b3760b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2866803,
+          "type": null,
+          "body": "mentioned in commit 7e886d57cfbf79397a6d71ad2a4f3182a1f5bbee",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T23:33:11.474+09:00",
+          "updated_at": "2026-09-24T23:33:11.478+09:00",
+          "system": true,
+          "noteable_id": 959436,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 324,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "85ed8902320769a6023235c79b1c67fbc519c3e7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885085,
+          "type": null,
+          "body": "mentioned in commit b156faf94eaedb9c36894c568d2df123e9677153",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:19.286+09:00",
+          "updated_at": "2026-10-13T15:16:19.290+09:00",
+          "system": true,
+          "noteable_id": 959436,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 324,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2248917,
+      "head_commit_sha": "3369d878014de3eb0be6ab120a581cdc0e082446",
+      "base_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "start_commit_sha": "12779bebb5a3ba006243dc8e53e341a5fb68e3c6",
+      "created_at": "2026-09-24T23:33:07.573+09:00",
+      "merge_request_id": 959436,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "997cd7d3304a2b11dfe4c0afcbcd259d9389fb11"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2248917,
+      "head_commit_sha": "3369d878014de3eb0be6ab120a581cdc0e082446",
+      "base_commit_sha": "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe",
+      "start_commit_sha": "12779bebb5a3ba006243dc8e53e341a5fb68e3c6",
+      "created_at": "2026-09-24T23:33:07.573+09:00",
+      "merge_request_id": 959436,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "997cd7d3304a2b11dfe4c0afcbcd259d9389fb11",
+      "commits": [
+        {
+          "id": "3369d878014de3eb0be6ab120a581cdc0e082446",
+          "short_id": "3369d878",
+          "created_at": "2026-09-24T23:25:23.000+09:00",
+          "parent_ids": [
+            "0d456a6f59113b486221ea77db5e6a3e5173eabb"
+          ],
+          "title": "docs: spec 015 2차 분석 지적을 반영한다 — 섹터 이름 원천·팩 크기·비중 날짜·ADR 기본값",
+          "message": "docs: spec 015 2차 분석 지적을 반영한다 — 섹터 이름 원천·팩 크기·비중 날짜·ADR 기본값\n\n- 근거 팩에 섹터 이름이 필요해 `assistant → sector` 의존과 규칙 12 범위를 적는다\n- 상관 행렬은 1차 팩에서 빼고, 60 초과 시 위험·손실 기여부터 빼는 규칙과 크기 산식을 둔다\n- 실제 비중은 `getWeights` 마지막 점, 날짜 표기는 탭과 같은 ISO 원문, 반올림은 HALF_UP\n- 409 판정은 첫 조회 `getWeights`가 던지는 것을 그대로 쓴다\n- ADR-0008의 prod 기본값 문장을 spec·계약과 같게 고치고 README 요약을 맞춘다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T23:25:23.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T23:25:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3369d878014de3eb0be6ab120a581cdc0e082446"
+        },
+        {
+          "id": "0d456a6f59113b486221ea77db5e6a3e5173eabb",
+          "short_id": "0d456a6f",
+          "created_at": "2026-09-24T22:58:40.000+09:00",
+          "parent_ids": [
+            "31fec66bb80ecc55b9e76e022beb9afeef23716d"
+          ],
+          "title": "docs: spec 015 분석 지적을 반영한다 — 포함 표·탭 제어·빈 기본값·의존 방향",
+          "message": "docs: spec 015 분석 지적을 반영한다 — 포함 표·탭 제어·빈 기본값·의존 방향\n\n/speckit-analyze 결과 HIGH 4·MEDIUM 7·LOW 5를 고친다. 초기 팩은 계약 §2.1 포함 표대로만\n(토큰·만료·버전 제외), 비중은 getWeights 두 번째 조회, 근거 카드 → 탭 이동을 위해\nResultTabs 제어 prop을 T044에, prod THORP_ASSISTANT_*는 빈 기본값, assistant → backtest\n의존과 ArchUnit 규칙 12, 409 세 코드, 근거 알갱이·자르기 순서, 표기 규칙 수치, 금지 표현\n파일 경로, 전체 데드라인 우선, record 통째 복사 금지.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T22:58:40.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T22:58:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0d456a6f59113b486221ea77db5e6a3e5173eabb"
+        },
+        {
+          "id": "31fec66bb80ecc55b9e76e022beb9afeef23716d",
+          "short_id": "31fec66b",
+          "created_at": "2026-09-24T22:22:20.000+09:00",
+          "parent_ids": [
+            "3b51d3fed172a55b5e2947fe25ef37b74afcbbbe"
+          ],
+          "title": "docs: 화면 맥락 도우미 ADR·spec 015·계약을 적는다",
+          "message": "docs: 화면 맥락 도우미 ADR·spec 015·계약을 적는다\n\n결과 화면에서 그 결과의 값을 자연어로 묻는 도우미의 문서. 외부 LLM을 GMS 게이트웨이\n(gpt-5-mini, Chat Completions)로 부르는 ADR-0008, spec-kit 형식의 spec·plan·tasks,\nHTTP·모델 계약(서버 실행 도구 5개·자리표시자 검증)과 예시 JSON. 코드 변경은 없다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-24T22:22:20.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-24T22:22:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/31fec66bb80ecc55b9e76e022beb9afeef23716d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,53 @@\n+# ADR-0008: 화면 맥락 도우미는 외부 LLM을 GMS 게이트웨이로 부른다 — 별도 AI 서버를 두지 않는다\n+\n+- 상태: 승인 (2026-09-24) — spec 015 착수 전 팀 합의를 규약으로 올림\n+- 대상: `backend/src/main/java/com/ssafy/thorp/assistant/`, `infra/docker-compose.prod.yml`(환경 변수), `.env.example`\n+- 선행: [ADR-0001](0001-be-layered-package-architecture.md) 계층 구조\n+- 근거 문서: [spec 015](../../specs/015-context-assistant/spec.md), [계약](../../specs/015-context-assistant/contracts/assistant-api.md), [constitution](../../.specify/memory/constitution.md) 원칙 III·VI·IX\n+\n+## 배경\n+\n+결과 화면에서 사용자가 자연어로 결과의 값을 묻고 근거와 함께 답을 받는 기능(spec 015)은 자연어를 이해하고 한국어로 설명하는 모델이 필요하다. 자체 모델을 두거나 학습할 여건은 없다. SSAFY가 제공하는 GMS 게이트웨이 키가 있고, 이 게이트웨이는 `api.openai.com`을 중계한다(`https://gms.ssafy.io/gmsapi/api.openai.com/v1/chat/completions`).\n+\n+이 기능은 값을 계산하지 않는다 — 서버가 결과 응답에서 읽은 값을 모델이 설명만 한다. 그래서 모델에 요구되는 것은 한국어 설명, 구조화 출력(strict JSON Schema), 함수 호출(도구 요청)이고 깊은 추론은 아니다.\n+\n+## 결정\n+\n+### D1. 별도 AI 서버를 두지 않는다. Spring 백엔드의 `assistant` 도메인이 서버 키로 GMS를 부른다\n+\n+- 새 코드는 `backend/.../assistant/` 한 도메인(ADR-0001 4계층)이다. `ai/` 폴더, Python 서비스, 벡터 DB, 프론트 SDK를 두지 않는다.\n+- 우리가 하는 일은 넷이다: 프롬프트(리소스 파일 하나), 근거 팩 구성, 도구 정의·실행·검증, 답변 검증·치환.\n+- 버린 대안:\n+  - **브라우저가 키로 직접 호출** — 키가 노출되고, 근거·도구·검증을 서버가 통제할 수 없다.\n+  - **별도 Python AI 서버** — 돌릴 모델 코드가 없는데 서비스와 배포 대상만 늘어난다. 백엔드가 이미 결과 조회 권한과 토큰 판정을 갖고 있어 그 옆이 자연스럽다.\n+\n+### D2. 모델은 `gpt-5-mini`, 형식은 Chat Completions\n+\n+- GMS 예시가 확인해 준 형식이 Chat Completions다. `tools`(function, strict), `tool_choice:auto`, `parallel_tool_calls:false`, `response_format:{type:json_schema, strict:true}`, `store:false`를 요청마다 명시한다.\n+- `gpt-5-mini`를 고른 이유: 이 일은 설명·구조화 출력·함수 호출이고 추론 깊이가 아니다. 15초 예산 안에 최대 3번 왕복해야 해 응답 속도가 중요하다. 최상위 모델은 느리고 과하며, `nano`급은 자리표시자 규칙을 어기는 답이 늘어 검증에서 버려진다.\n+- 모델명·주소는 코드에 고정하지 않고 `THORP_ASSISTANT_MODEL`·`THORP_ASSISTANT_BASE_URL`이다. 어댑터는 `AssistantModelPort` 뒤에 있어 Responses API나 다른 제공업체로 바꿀 때 어댑터만 교체한다.\n+\n+### D3. 자료 처리 조건 — 통제하지 못하는 것은 보내지 않는 것으로 갈음한다\n+\n+- 질문과 근거 팩은 GMS를 거쳐 원 제공업체로 간다. **게이트웨이와 제공업체의 보존·학습·처리 지역 정책은 우리가 통제하지 못한다.** `store:false`는 대화 저장 여부이지 학습 미사용 보장이 아니다. 별도 ZDR 계약은 하지 않는다.\n+- 그래서 규칙은 셋이다:\n+  1. 식별자·개인정보를 보내지 않는다 — 공개 토큰, `backtestId`, 계정·이메일, 브라우저 상태는 프롬프트·도구 인자·이력·로그 어디에도 없다. 근거 ID는 요청마다 `F1..`로 새로 매겨 결과 필드 이름도 노출하지 않는다.\n+  2. 사용자가 질문에 적은 내용은 그대로 전달된다. 서버가 걸러 내지 않는다(걸러 낼 수 없다). 첫 전송 전에 \"질문과 답변에 필요한 화면 자료가 외부 AI 처리 서비스로 전달됩니다\"를 보이고, 전송은 사용자가 제출할 때만 한다.\n+  3. Thorp는 질문·답변 원문을 저장하지 않는다. 운영 로그는 페이지 종류·상태·라운드 수·지연·토큰 사용량만이다.\n+- GMS 운영 정책이 바뀌거나 문서가 생기면 이 절을 갱신한다.\n+\n+### D4. 비용 상한은 두지 않는다. 무분별·악의적 사용은 한도로 막는다\n+\n+- 금액 상한을 두지 않는다(팀 합의). 대신 설정값 한도를 둔다: IP별 분당 8회, 결과 토큰별 분당 5회, **하루 전체 1,000회**, 질문 300자, 요청당 도구 라운드 2회·팩 60개, 서버 15초. 하루 전체 상한은 IP를 바꿔 가며 돌리는 경우에도 하루 비용이 무한히 커지지 않게 하는 안전핀이다.\n+- 숫자는 실측 후 조정한다(원칙 IX). 단일 인스턴스 메모리 한도는 보안 경계가 아니며 다중 인스턴스 전에는 공유 저장소가 필요하다 — 코드에 `// ponytail:` 주석으로 남긴다.\n+\n+### D5. 키는 서버 환경 변수, 장애는 사용자에게 문구로\n+\n+- `THORP_ASSISTANT_API_KEY`는 서버 환경 변수에만 있다. 키·모델·주소 셋은 prod에서도 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)이다 — 다른 prod 설정처럼 기본값 없이 두면 미설정 시 기동이 실패하는데, 이 기능의 요구는 \"없으면 기능만 꺼진다\"다. 하나라도 비어 있으면 `capabilities.enabled=false`이고 기동은 정상이다.\n+- 모델 장애·시간 초과·응답 검증 실패는 사용자에게 \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\"와 재시도 버튼으로 보인다. 자동 재시도는 없다. 다른 자료로 대체 답변하지 않는다. 결과·배우기·시장 흐름 화면과 API는 영향받지 않는다.\n+\n+## 결과\n+\n+- 외부 호출 경로가 하나(`THORP_ASSISTANT_BASE_URL`), 새 배포 대상이 없다. 기능은 플래그 `RESULT`로 켜고 끄며 품질 관문(spec SC-001~SC-004)을 넘긴 뒤에만 켠다.\n+- 모델이 결과에 접근하는 경로는 서버가 정한 읽기 도구 다섯 개뿐이고, 도구는 요청의 결과에 묶여 식별자 인자가 없다. 답의 숫자·날짜는 서버가 채운 값만이다.\n+- 이 결정은 결과 화면 1차에 대한 것이다. 배우기·시장 흐름으로 넓히거나 제공업체·모델을 바꾸면 이 ADR을 개정한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/0008-external-llm-via-gms.md",
+          "old_path": "docs/adr/0008-external-llm-via-gms.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"status\": \"ANSWERED\",\n+    \"answer\": \"비용을 뺀 전체 수익률은 16.67%이고, 거래비용은 모두 17,078원입니다. 그중 수수료가 12,000원, 슬리피지가 5,078원입니다.\",\n+    \"evidence\": [\n+      { \"id\": \"F1\", \"label\": \"비용 차감 후 전체 수익률\", \"value\": \"16.67%\", \"asOf\": \"2024-12-31\", \"tab\": \"summary\" },\n+      { \"id\": \"F4\", \"label\": \"거래비용 합계\", \"value\": \"17,078원\", \"asOf\": null, \"tab\": \"settings\" },\n+      { \"id\": \"F5\", \"label\": \"수수료\", \"value\": \"12,000원\", \"asOf\": null, \"tab\": \"settings\" },\n+      { \"id\": \"F6\", \"label\": \"슬리피지\", \"value\": \"5,078원\", \"asOf\": null, \"tab\": \"settings\" }\n+    ],\n+    \"page\": { \"kind\": \"RESULT\" }\n+  },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/answer-answered.json",
+          "old_path": "docs/specs/assistant-api/examples/answer-answered.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"status\": \"INSUFFICIENT_EVIDENCE\",\n+    \"answer\": \"이 화면 자료만으로 확인할 수 없습니다.\",\n+    \"evidence\": [],\n+    \"page\": { \"kind\": \"RESULT\" }\n+  },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/answer-insufficient.json",
+          "old_path": "docs/specs/assistant-api/examples/answer-insufficient.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"status\": \"OUT_OF_SCOPE\",\n+    \"answer\": \"이 도우미는 지금 보고 있는 기준 결과의 기록을 설명합니다. 투자 추천이나 앞으로의 성과, 다른 결과에 대해서는 답하지 않습니다.\",\n+    \"evidence\": [],\n+    \"page\": { \"kind\": \"RESULT\" }\n+  },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/answer-out-of-scope.json",
+          "old_path": "docs/specs/assistant-api/examples/answer-out-of-scope.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,5 @@\n+{\n+  \"success\": true,\n+  \"data\": { \"enabled\": false, \"scopes\": [] },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/capabilities-disabled.json",
+          "old_path": "docs/specs/assistant-api/examples/capabilities-disabled.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,5 @@\n+{\n+  \"success\": true,\n+  \"data\": { \"enabled\": true, \"scopes\": [\"RESULT\"] },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/capabilities-enabled.json",
+          "old_path": "docs/specs/assistant-api/examples/capabilities-enabled.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+{\n+  \"success\": false,\n+  \"data\": null,\n+  \"error\": {\n+    \"code\": \"ASSISTANT_LIMIT\",\n+    \"message\": \"질문 한도에 도달했습니다. 잠시 후 다시 시도해 주세요.\",\n+    \"details\": { \"retryAfterSeconds\": 42 }\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/error-limit.json",
+          "old_path": "docs/specs/assistant-api/examples/error-limit.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,8 @@\n+{\n+  \"success\": false,\n+  \"data\": null,\n+  \"error\": {\n+    \"code\": \"ASSISTANT_UNAVAILABLE\",\n+    \"message\": \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\"\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/error-unavailable.json",
+          "old_path": "docs/specs/assistant-api/examples/error-unavailable.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+{\n+  \"question\": \"거래비용은 어떻게 구성됐어?\",\n+  \"context\": { \"kind\": \"RESULT\", \"publicToken\": \"0123456789abcdef0123456789abcdef\" }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/question-request.json",
+          "old_path": "docs/specs/assistant-api/examples/question-request.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,50 @@\n+# 화면 맥락 도우미 HTTP 계약 (Backend ↔ Frontend)\n+\n+spec 015 결과 화면 질문 도우미가 쓰는 경로의 요약이다. 원본은 [`specs/015-context-assistant/contracts/assistant-api.md`](../../../specs/015-context-assistant/contracts/assistant-api.md)이고, 둘이 어긋나면 원본을 따르고 이 문서를 고친다. 서버↔모델 계약(도구·스키마·검증 규칙)도 원본에 있다.\n+\n+예시 파일이 계약의 기준이다. `backend/src/test/java/com/ssafy/thorp/assistant/**`의 IT가 실제 응답과 필드 단위로 대조하고, 프론트엔드 말풍선 테스트가 같은 파일을 픽스처로 읽는다.\n+\n+| 파일 | 내용 |\n+|---|---|\n+| [`examples/capabilities-enabled.json`](examples/capabilities-enabled.json) | 기능 켜짐. `scopes`에 `RESULT` |\n+| [`examples/capabilities-disabled.json`](examples/capabilities-disabled.json) | 키 없음·플래그 꺼짐 |\n+| [`examples/question-request.json`](examples/question-request.json) | 결과 페이지에서의 요청 본문 |\n+| [`examples/answer-answered.json`](examples/answer-answered.json) | 답변과 근거 카드. `answer`의 숫자는 모두 `evidence[].value` |\n+| [`examples/answer-insufficient.json`](examples/answer-insufficient.json) | 근거 부족 고정 안내 |\n+| [`examples/answer-out-of-scope.json`](examples/answer-out-of-scope.json) | 범위 밖(추천·비교 대상·다른 결과) 안내 |\n+| [`examples/error-limit.json`](examples/error-limit.json) | 한도 초과 `429 ASSISTANT_LIMIT` |\n+| [`examples/error-unavailable.json`](examples/error-unavailable.json) | 모델 장애·시간 초과 `503 ASSISTANT_UNAVAILABLE` |\n+\n+## 1. 공통 규칙\n+\n+- 봉투는 `ApiResponse`(`success`·`data`·`error`). `POST`는 저장소 CSRF 규약. 로그인 불필요.\n+- `context.kind`는 현재 **페이지 종류**다(1차 `RESULT`). 그 종류의 식별자 하나만 함께 보낸다. 다른 화면 데이터는 받지 않는다.\n+- 결과 토큰 판정(400/404/410)과 결과 없음(409)은 005 결과 계약과 같은 코드·뜻이고 **모델을 부르기 전에** 끝난다.\n+- 어느 응답·오류에도 `backtestId`가 없다(005 SC-009).\n+\n+## 2. 경로\n+\n+| 경로 | 뜻 | 응답 |\n+|---|---|---|\n+| `GET /assistant/capabilities` | 기능 켜짐 여부와 화면 범위 | `{enabled, scopes[]}`. 항상 200 |\n+| `POST /assistant/questions` | 질문 | `{status, answer, evidence[], page}` |\n+\n+`status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE`. `evidence[]`는 답에 실제로 쓰인 근거만이고 `tab`(`summary`·`analysis`·`settings`·`trades`·`loss`)으로 결과 탭에 간다. 부분 결과면 `answer` 첫 문장에 완료 끝 날짜까지의 부분 결과임이 붙는다.\n+\n+## 3. 오류\n+\n+| HTTP | code | 뜻 |\n+|---|---|---|\n+| 400 | `INVALID_INPUT` | 질문 길이·공백, 낯선 `kind`, 식별자 불일치, 토큰 형식 |\n+| 404 | `RESOURCE_NOT_FOUND` | 토큰 없음, 또는 기능 비활성(질문 경로만 비노출 — `capabilities`는 항상 200) |\n+| 409 | `RESULT_NOT_READY` / `BACKTEST_FAILED` | 결과 없음. 005와 같다 |\n+| 410 | `RESULT_EXPIRED` | 토큰 만료 |\n+| 429 | `ASSISTANT_LIMIT` | 한도 초과. `details.retryAfterSeconds` |\n+| 503 | `ASSISTANT_UNAVAILABLE` | 모델 장애·시간 초과. 자동 재시도 없음 |\n+\n+## 4. 서버가 지키는 것\n+\n+- 답변의 숫자·날짜는 모델이 적은 자리표시자(`{{Fn}}`)를 서버가 근거 값으로 채운 것이다. 모델이 직접 적은 숫자가 있으면 답변 전체를 버린다.\n+- 큰 자료(시계열·거래·보유)는 모델이 요청하면 서버가 검증 뒤 읽는 도구 다섯 개로만 읽는다. 도구는 날짜 인자만 받고 어느 결과인지는 서버가 묶어 둔다.\n+- 서버는 새 합계·비율·구간을 계산하지 않는다. 시계열에서 고르기만 한다.\n+- 한도(429): IP 8/분, 토큰 5/분, 하루 1,000회(설정값, [ADR-0008](../../adr/0008-external-llm-via-gms.md)). 질문 300자는 입력 검증(400), 서버 15초는 시간 예산(503)이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/README.md",
+          "old_path": "docs/specs/assistant-api/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,193 @@\n+# 화면 맥락 도우미 계약 (Backend ↔ Frontend, Backend ↔ 모델)\n+\n+spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`docs/specs/assistant-api/README.md`](../../../docs/specs/assistant-api/README.md)에 있고 둘이 어긋나면 이 문서를 따른다. 예시 JSON(`docs/specs/assistant-api/examples/`)이 IT의 대조 기준이다.\n+\n+## 1. HTTP\n+\n+공통: `ApiResponse` 봉투(`success`·`data`·`error`), `POST`는 저장소 CSRF 규약. 로그인 불필요(결과 화면이 공개이므로).\n+\n+### GET /assistant/capabilities\n+\n+`200 {enabled: boolean, scopes: string[]}`. `enabled=false`면 `scopes`는 빈 배열이고 화면은 버튼을 그리지 않는다. 키가 없거나 플래그가 꺼지면 `false`. 이 경로는 플래그와 무관하게 항상 200이다.\n+\n+### POST /assistant/questions\n+\n+요청:\n+\n+```json\n+{ \"question\": \"거래비용은 어떻게 구성됐어?\", \"context\": { \"kind\": \"RESULT\", \"publicToken\": \"0123456789abcdef0123456789abcdef\" } }\n+```\n+\n+- `question`: 공백 제외 1~300자.\n+- `context.kind`: 현재 페이지 종류. 1차는 `RESULT`만. 그 종류의 식별자 하나만 허용하고 나머지 필드가 있으면 400.\n+- `context.publicToken`: 32자 소문자 16진. 형식 판정은 005와 같다.\n+\n+응답 `200`:\n+\n+```json\n+{\n+  \"status\": \"ANSWERED\",\n+  \"answer\": \"비용을 뺀 전체 수익률은 16.67%이고, 거래비용은 모두 17,078원입니다. 그중 수수료가 12,000원, 슬리피지가 5,078원입니다.\",\n+  \"evidence\": [\n+    { \"id\": \"F1\", \"label\": \"비용 차감 후 전체 수익률\", \"value\": \"16.67%\", \"asOf\": \"2024-12-31\", \"tab\": \"summary\" },\n+    { \"id\": \"F4\", \"label\": \"거래비용 합계\", \"value\": \"17,078원\", \"asOf\": null, \"tab\": \"settings\" }\n+  ],\n+  \"page\": { \"kind\": \"RESULT\" }\n+}\n+```\n+\n+- `status`: `ANSWERED` | `INSUFFICIENT_EVIDENCE` | `OUT_OF_SCOPE`. 뒤 둘은 `answer`가 고정 안내 문장이고 `evidence`는 빈 배열이다.\n+- `answer`: 자리표시자가 치환된 최종 문장. 안의 숫자·날짜는 모두 `evidence[].value`에서 왔다.\n+- `evidence[]`: 답에 실제로 쓰인 근거만. `id`는 이 응답 안에서만 뜻이 있다. `tab`은 결과 화면 탭 id(`summary`·`analysis`·`settings`·`trades`·`loss`) 중 하나이며 화면은 그 탭으로 이동한다.\n+- 부분 결과(`partial=true`)면 `answer` 첫 문장은 서버가 붙인 \"이 결과는 {완료 끝 날짜}까지의 부분 결과입니다.\"다.\n+\n+오류(봉투 `error.code`):\n+\n+| 상황 | HTTP | code | 화면 |\n+|---|---|---|---|\n+| 질문 길이·공백, 낯선 `kind`, 식별자 불일치, 토큰 형식 | 400 | `INVALID_INPUT` | 입력 안내 |\n+| 토큰 없음 | 404 | `RESOURCE_NOT_FOUND` | 005와 같은 뜻 |\n+| 토큰 만료(묘비 포함) | 410 | `RESULT_EXPIRED` | 005와 같은 뜻 |\n+| 결과 없음 — 계산 중 | 409 | `RESULT_NOT_READY` | 005 하위 자원 `requireResultReady`와 같은 판정. 모델 무호출 |\n+| 결과 없음 — 실패 | 409 | `BACKTEST_FAILED` | 위와 같다 |\n+| 결과 없음 — 완료 거래일 없는 취소 | 409 | `NO_PARTIAL_RESULT` | 위와 같다 |\n+| CSRF 누락 | 403 | 저장소 공통 | — |\n+| 한도 초과(IP·토큰·하루) | 429 | `ASSISTANT_LIMIT` | `details.retryAfterSeconds`로 다시 가능한 시점 |\n+| 모델 장애·시간 초과·응답 검증 실패로 답을 만들 수 없음 | 503 | `ASSISTANT_UNAVAILABLE` | \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\" + 재시도 버튼 |\n+| 기능 비활성(질문 경로만) | 404 | `RESOURCE_NOT_FOUND` | 경로 자체를 노출하지 않음. `capabilities`는 항상 200 |\n+\n+토큰 판정(400/404/410/409)은 **모델 호출 전에** 끝난다. 어느 오류에서도 다른 자료로 대체 답변하지 않는다.\n+\n+## 2. 서버 ↔ 모델\n+\n+### 2.1 요청 (Chat Completions, GMS 게이트웨이)\n+\n+`POST {THORP_ASSISTANT_BASE_URL}/v1/chat/completions`, `Authorization: Bearer {THORP_ASSISTANT_API_KEY}`.\n+\n+```json\n+{\n+  \"model\": \"gpt-5-mini\",\n+  \"store\": false,\n+  \"parallel_tool_calls\": false,\n+  \"tool_choice\": \"auto\",\n+  \"messages\": [\n+    { \"role\": \"developer\", \"content\": \"<answer-ko.txt 프롬프트>\" },\n+    { \"role\": \"user\", \"content\": \"질문:\\n거래비용은 어떻게 구성됐어?\\n\\n근거:\\nF1 비용 차감 후 전체 수익률 (2024-12-31) = 0.166652\\nF2 ...\\n\" }\n+  ],\n+  \"tools\": [ { \"type\": \"function\", \"function\": { \"name\": \"getEquityOn\", \"strict\": true, \"parameters\": { \"type\": \"object\", \"properties\": { \"date\": { \"type\": \"string\", \"description\": \"YYYY-MM-DD\" } }, \"required\": [\"date\"], \"additionalProperties\": false } } }, \"...\" ],\n+  \"response_format\": { \"type\": \"json_schema\", \"json_schema\": { \"name\": \"assistant_answer\", \"strict\": true, \"schema\": { \"...\": \"§2.3\" } } }\n+}\n+```\n+\n+- 근거는 `Fn label (asOf) = value` 한 줄씩. **값은 원문 문자열이다**(모델이 표기를 바꾸지 않게 한다). 라벨은 아래 포함 표의 한국어 고정 문자열이고 결과 필드 이름을 쓰지 않는다.\n+\n+#### 초기 팩 포함 표 (`getDetail` + `getWeights`)\n+\n+| 원천 | 항목 | 라벨 | 표기 |\n+|---|---|---|---|\n+| `summary` | `initialEquity`·`finalEquity` | 시작 자산·종료 자산 | 금액 |\n+| `summary` | `totalReturn`·`netTotalReturn`·`cagr`·`maxDrawdown`·`volatility`·`winRate` | 전체 수익률·비용 차감 후 전체 수익률·연복리 수익률·가장 크게 줄었던 폭·변동성·승률 | 비율 |\n+| `summary` | `sharpeRatio` | 샤프 비율 | 소수 2자리 |\n+| `summary` | `tradeCount` | 거래 횟수 | 정수 |\n+| `summary` | `totalTradingCost`와 `costs`의 항목별 합계 | 거래비용 합계·수수료·세금·슬리피지 등(항목 이름은 004 `Costs` 갈래의 한국어) | 금액 |\n+| `summary.analytics` | `recoveryDays`·`turnover`·`weightError`·`method` | 회복 기간(거래일)·회전율·비중 오차·추정 방법 | 정수·비율·비율·문자 |\n+| `summary.analytics` | `riskContribution`·`lossContribution` | 섹터별 위험 기여·손실 기여(섹터 이름은 `SectorService.getSectors()`에서 `sectorId`로 찾고, 없으면 `sectorId` 원문) | 비율·비율. **60을 넘으면 이 둘부터 빼고** \"일부 분석 값은 싣지 않음\" 근거 하나를 남긴다 |\n+| `partial` | 부분 결과 여부. `true`면 완료 끝 날짜가 필요한데 상세에는 없으므로(005 화면도 시계열 마지막 점을 쓴다) **이때만** `getTimeseries`를 초기 조회에 더해 마지막 점의 날짜를 근거로 넣고 접두 문장에 쓴다 | 부분 결과·완료 끝 날짜 | 문자·날짜 |\n+| `config` | `start`·`end`·`effectiveStart`·`effectiveEnd`·`warmupTradingDays`·`initialCash` | 요청 시작일·요청 종료일·평가 시작일·평가 종료일·준비 기간(거래일)·시작 금액 | 날짜·정수·금액 |\n+| `config` | `strategyId`(→ `strategyName`)·`parameters`의 축마다 | 전략·(축 라벨은 003 등록표 `ParameterRegistryPort`의 한국어 라벨) | 문자·등록표 표기 |\n+| `config.items[]` | `instrumentId`·`targetWeight` (라벨에 섹터 이름을 넣는다: \"{섹터 이름} 대표 ETF\"·\"{섹터 이름} 목표 비중\") | 대표 ETF·목표 비중 | 문자·비율 |\n+| `weightsSource`, `getWeights` | 비중 출처, **마지막 점**의 `actual`(섹터별; `asOf`는 그 점의 날짜) | 비중 출처(사용자 입력/전략 계산)·\"{섹터 이름} 실제 비중\" | 문자·비율 |\n+| `exceptionKinds` | 예외 종류 목록 | 계산 중 예외 | 문자 |\n+\n+**넣지 않는 것**: `publicToken`, `expiresAt`, `versions`, `progress`, `cancelRequested`, `resultSource`, `queuedAt`·`startedAt`·`finishedAt`, `queueWaitSeconds`, `failure`, `validationTier`, `analytics.correlationMatrix`(N²라 60 안에 들지 않는다 — 1차는 싣지 않고, 물으면 근거 부족이다), `getWeights`의 마지막 점 이외 점과 `weightError`·`riskScale`·`estimatedVolatility`. 결과 타입 record를 통째로 옮기지 않고 위 표의 항목만 필드 단위로 옮긴다.\n+\n+**크기**: 고정 항목 약 34개 + 섹터별 5개(대표 ETF·목표 비중·실제 비중·위험 기여·손실 기여)라 섹터 6개부터 60을 넘는다. 넘치면 위 표의 규칙대로 위험·손실 기여부터 빼고, 목표·실제 비중은 항상 싣는다. 초기 조회 순서는 `getWeights` → `getDetail`이다 — `getWeights`가 005 `requireResultReady`의 409(`RESULT_NOT_READY`·`BACKTEST_FAILED`·`NO_PARTIAL_RESULT`)를 그대로 던지므로 결과 없음 판정을 따로 만들지 않는다.\n+- `tools`에는 §2.2의 함수 5개만. 웹 검색·코드 실행 같은 내장 도구는 넣지 않는다.\n+- 도구 라운드: 응답이 `tool_calls`면 서버가 검증·실행하고 `assistant(tool_calls)`·`tool(content=새 근거 줄들 또는 \"사용할 수 없음: 이유\")` 메시지를 이력에 붙여 다시 보낸다. `store:false`라 이력은 서버가 매번 담는다. 최대 2라운드.\n+- 시간: **전체 데드라인 15초가 우선**이다. 라운드별 모델 호출 예산(첫 7초·이후 4초, 설정값)은 그 안에서 남은 시간과 작은 쪽을 쓴다(`MarketHttpClient`의 `deadline.remaining()` 방식). 도구 실행·검증 시간도 15초에 든다.\n+\n+### 2.2 도구\n+\n+도구는 요청 시작 때 풀린 결과에 묶여 만들어진다. **어느 도구도 식별자 인자를 받지 않는다.**\n+\n+| 이름 | 인자 | 서버 검증 | 반환 근거(고르기만, 계산 없음) |\n+|---|---|---|---|\n+| `getEquityOn` | `date` | 결과 `effectiveStart~End` 안. 시계열에 없는 날은 직전 거래일로 바꾸고 라벨에 표시 | 그 날의 자산가치·누적 수익률·하락 폭 |\n+| `getEquityRange` | `from`, `to` | 기간 안, `from<=to`, 1년 이하 | 첫·끝·최고·최저 점 넷 |\n+| `getTradesBetween` | `from`, `to` | 기간 안, `from<=to` | `/trades?from&to` 첫 페이지(공개 상한). 잘리면 \"일부 거래\" 근거 추가 |\n+| `getPositionsOn` | `date` | 기간 안 | `/positions?date`의 보유 종목·비중 |\n+| `getDeepestDrawdownWindow` | 없음 | — | `drawdown`이 가장 낮은 첫날과 그 앞 고점 날(005 `drawdownWindow.ts`와 같은 정의). `summary.maxDrawdown`과 다르면 빈 결과 |\n+\n+검증 실패·모르는 이름은 실행하지 않고 `tool` 메시지로 \"사용할 수 없음: {이유}\"를 돌려준다.\n+\n+근거 알갱이: 시계열 점 1개·거래 1건·보유 종목 1개가 각각 근거 1개다. 라운드당 30개, 팩 전체 60개. 넘으면 **도구 결과의 뒤를 자르고 초기 팩은 보존**하며 \"일부만 읽음\" 근거를 남긴다(거래 첫 페이지는 공개 상한 100건이라 거의 항상 잘린다 — 그래서 `getTradesBetween`은 구간을 좁혀 다시 부르라는 안내를 프롬프트에 둔다). 도구 결과는 결과 record를 통째로 옮기지 않고 필드 단위로 만든다 — `backtestId`, 시계열 점의 `benchmarkReturn`·`cashFlows`는 넣지 않는다.\n+\n+### 2.3 응답 스키마 (strict)\n+\n+```json\n+{\n+  \"type\": \"object\",\n+  \"properties\": {\n+    \"status\": { \"type\": \"string\", \"enum\": [\"ANSWERED\", \"INSUFFICIENT_EVIDENCE\", \"OUT_OF_SCOPE\"] },\n+    \"answerParts\": {\n+      \"type\": \"array\",\n+      \"items\": {\n+        \"type\": \"object\",\n+        \"properties\": {\n+          \"text\": { \"type\": \"string\" },\n+          \"factIds\": { \"type\": \"array\", \"items\": { \"type\": \"string\" } }\n+        },\n+        \"required\": [\"text\", \"factIds\"],\n+        \"additionalProperties\": false\n+      }\n+    }\n+  },\n+  \"required\": [\"status\", \"answerParts\"],\n+  \"additionalProperties\": false\n+}\n+```\n+\n+`text`의 값 자리는 `{{Fn}}`만이다. 예: `\"비용을 뺀 전체 수익률은 {{F1}}이고, 거래비용은 모두 {{F4}}입니다.\"`\n+\n+### 2.4 서버 검증 규칙\n+\n+하나라도 걸리면 답변 전체를 버리고 `INSUFFICIENT_EVIDENCE` 고정 안내로 바꾼다(503이 아니다 — 모델은 응답했으나 쓸 수 없는 경우).\n+\n+| 규칙 | 판정 |\n+|---|---|\n+| `factIds`가 모두 팩에 있다 | 아니면 거절 |\n+| `text`의 모든 `{{Fn}}`이 그 part의 `factIds`에 있고, `factIds`의 ID가 모두 `text`에 등장 | 아니면 거절 |\n+| `text`에서 자리표시자를 뺀 나머지에 아라비아 숫자, `%`, 통화 단위 뒤 숫자, `YYYY-MM-DD`·`N월 N일` 형식, URL·경로가 없다 | 있으면 거절. 한글 수사(\"두 번\", \"세 종목\", \"첫째\")는 허용 |\n+| `ANSWERED`인 part는 `factIds`가 비어 있지 않다 | 아니면 거절 |\n+| 전체 길이 ≤ 600자(설정값), part 수 ≤ 5(설정값) | 넘으면 거절 |\n+| 금지 표현 목록(`backend/src/main/resources/assistant/forbidden-phrases.txt`, 한 줄에 하나, `#` 주석: 권고·확률·원인 단정 어구) | 걸리면 거절. **보조 검사다** — 실제 방어는 프롬프트와 평가 표본 |\n+\n+통과하면 `{{Fn}}`을 `Evidence.value`의 표기 함수로 치환한다. 표기는 프론트 `frontend/src/components/result/formatResult.ts`와 같은 규칙이어야 근거 카드 값과 탭의 값이 어긋나지 않는다:\n+\n+| 종류 | 규칙 | 예 |\n+|---|---|---|\n+| 금액 | 정수로 반올림(HALF_UP), 천 단위 구분, 뒤에 `원` (`formatMoney`) | `17078.49` → `17,078원` |\n+| 비율 | ×100, 소수 2자리(HALF_UP), 뒤에 `%`, `-0.00`은 `0.00` (`formatRatio`) | `0.166652` → `16.67%`, `0.12345` → `12.35%` |\n+| 소수 2자리 | 반올림 소수 2자리 | `1.2345` → `1.23` |\n+| 정수 | 천 단위 구분 | `1234` → `1,234` |\n+| 날짜 | ISO 원문 그대로 — 결과 탭이 `2024-12-31` 형식으로 보이므로 카드도 같게 | `2024-12-31` → `2024-12-31` |\n+| 문자 | 그대로 | — |\n+\n+표기 함수는 근거를 만들 때 종류로 정해 둔다.\n+\n+## 3. 넘기지 않는 것\n+\n+프롬프트·도구 인자·이력·응답·로그 어디에도: 공개 토큰, `backtestId`(`BT-…`), 계정·이메일, 브라우저 화면 상태, 비교 대상·KOSPI 참고선 값. 사용자가 친 질문 원문은 그대로 모델에 간다(화면 안내로 갈음).\n+\n+## 4. 설정\n+\n+| 변수 | 뜻 | prod 기본값 |\n+|---|---|---|\n+| `THORP_ASSISTANT_API_KEY` | GMS 키 | 빈 값(`${THORP_ASSISTANT_API_KEY:}`) → 비활성 |\n+| `THORP_ASSISTANT_BASE_URL` | `https://gms.ssafy.io/gmsapi/api.openai.com` | 빈 값 → 비활성 |\n+| `THORP_ASSISTANT_MODEL` | `gpt-5-mini` | 빈 값 → 비활성 |\n+| `THORP_ASSISTANT_ENABLED_SCOPES` | 쉼표 목록, 1차 `RESULT` | 빈 값(비활성) |\n+| `thorp.assistant.limits.per-ip-per-minute` 등 | IP 8, 토큰 5, 하루 1000, 질문 300자 | 설정값 |\n+| `thorp.assistant.timeout.*` | 전체 15초, 첫 호출 7초, 이후 4초 | 설정값 |\n+\n+키·모델·주소 중 하나라도 비어 있으면 `capabilities.enabled=false`이고 기동은 정상이다. 다른 prod 설정(`${THORP_LEARNING_ADMIN_USER_IDS}`)처럼 기본값 없이 두면 미설정 시 기동이 실패하므로, 이 셋은 예외로 **빈 기본값**을 둔다 — \"없으면 기능만 꺼진다\"가 이 기능의 요구다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/contracts/assistant-api.md",
+          "old_path": "specs/015-context-assistant/contracts/assistant-api.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,146 @@\n+# Implementation Plan: 화면 맥락 도우미\n+\n+**Branch**: `015-context-assistant` | **Date**: 2026-09-24 | **Spec**: [spec.md](spec.md)\n+\n+**Input**: `specs/015-context-assistant/spec.md`의 결과 화면 질문 도우미 요구사항\n+\n+## Summary\n+\n+별도 AI 서버 없이 Spring 백엔드의 새 `assistant` 도메인이 서버 키로 GMS 게이트웨이(`api.openai.com` 중계, `gpt-5-mini`)를 부른다. 흐름은 토큰 판정 → 결과 상세 응답 전부를 근거 팩으로 → 모델 호출(질문·팩·서버 실행 도구 5개 목록) → 모델이 적은 `tool_calls`를 서버가 검증·실행해 근거 추가(최대 2라운드) → 최종 답변의 자리표시자 검증·치환이다. 프론트는 `App` 공통 위치의 로봇 아이콘 플로팅 버튼과 말풍선이 질문과 현재 페이지 식별자만 보낸다. 기능은 플래그 `RESULT` 하나로 열고 닫는다.\n+\n+## Technical Context\n+\n+**Language/Version**: Frontend TypeScript 5.8·React 19.1, Backend Java 21·Spring Boot 3.5.4\n+\n+**Primary Dependencies**: 기존만 쓴다 — Frontend `radix-ui` Popover·`lucide-react`·Axios; Backend Spring MVC·Validation, Java `HttpClient`(`market/infrastructure/client/MarketHttpClient` 관례), Jackson. 새 SDK·벡터 DB·채팅 저장소는 없다.\n+\n+**Storage**: 없다. 질문·답변 원문을 저장하지 않는다. 한도 카운터는 인스턴스 메모리다(다중 인스턴스 전까지). 버튼 위치만 브라우저 `localStorage` `thorp.assistant.fabPosition`.\n+\n+**Testing**: Backend JUnit 5·MockMvc·`PortMockedIntegrationTestSupport`(PostgreSQL Testcontainers), 모델은 가짜 포트와 로컬 가짜 HTTP 서버. Frontend Vitest·React Testing Library. 실제 모델 호출은 Task 6 평가 문서에만.\n+\n+**Target Platform**: 기존 SPA + Spring 서버. 외부 호출은 `THORP_ASSISTANT_BASE_URL`(GMS) 하나.\n+\n+**Project Type**: React SPA + Spring Boot web API\n+\n+**Performance Goals**: 요청당 서버 15초 상한(도구 라운드 포함). 초기 팩은 상세(`getDetail`)와 비중(`getWeights`) 두 번의 조회로 만들고, 도구 라운드마다 하위 자원 조회 1회다.\n+\n+**Constraints**: `store:false`, `parallel_tool_calls:false`, `tools`에는 서버 실행 도구 5개만, `response_format` strict JSON Schema. 모델에 토큰·`backtestId` 미전달. 서버는 계산하지 않는다(원칙 1) — 응답 값 그대로와 그 안에서 고른 것만. prod의 `THORP_ASSISTANT_*`는 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)으로 둔다 — 기본값 없는 `${ENV}`는 미설정 시 기동 실패라 \"없으면 비활성\"과 양립하지 않는다. 비어 있으면 `capabilities.enabled=false`.\n+\n+**Scale/Scope**: 엔드포인트 2개(`GET /assistant/capabilities`, `POST /assistant/questions`), 도구 5개, 화면 부품 2개(버튼·말풍선), 결과 화면 한 곳.\n+\n+## Constitution Check\n+\n+*GATE: 설계 시점에 통과. 구현 뒤 재검사.*\n+\n+| Gate | 판정 | 설계 반영 |\n+|---|---|---|\n+| I. 전략 진단 중심 | PASS | 결과 화면의 이해를 돕는 보조 기능이다. 진단 흐름·주 버튼을 바꾸지 않는다. |\n+| II. 첫 화면 단순성 | PASS | 버튼은 여백의 보조 요소, 말풍선은 요청할 때만 열린다. 결과 화면 요소를 늘리지 않는다. |\n+| III. 진단이지 추천이 아니다 | PASS | FR-011 금지 표현, 원인 질문에는 관측 사실만. 프롬프트·검증·평가 표본 세 겹. |\n+| VI. 없는 결과를 만들지 않음 | PASS | 답의 숫자는 서버 치환 값만(FR-009). 근거 없으면 그렇게 말한다. 기간 밖 날짜에 값을 만들지 않는다. |\n+| IX. 한도는 실측으로 | PASS | 한도는 설정값이고 초안 숫자는 실측 후 조정. 하루 전체 상한은 무분별 사용 방지용 안전핀. |\n+| 아키텍처 원칙 1 (Backend는 계산하지 않는다) | PASS | 근거는 응답 값과 그 안에서 고른 것. 합계·비율·구간을 새로 만들지 않는다. |\n+| 005 SC-009 (`backtestId` 비노출) | PASS | 모델·응답·로그 어디에도 없다. 도구는 서버가 결과에 묶어 식별자 인자가 없다. |\n+| Git·Jira 작업 묶음 | PASS | 6개 묶음(DOCS 1·BE 4·FE 1), 각각 독립 검증·롤백 가능. |\n+\n+위반 없음. Complexity Tracking 해당 없음.\n+\n+## Project Structure\n+\n+### Documentation (this feature)\n+\n+```text\n+specs/015-context-assistant/\n+├── spec.md\n+├── plan.md              # 이 파일\n+├── tasks.md\n+└── contracts/\n+    └── assistant-api.md # HTTP 계약·모델 스키마·도구 정의 원본\n+docs/specs/assistant-api/\n+├── README.md            # 계약 요약(다른 docs/specs/*와 같은 역할)\n+├── evaluation.md        # Task 6가 만든다\n+└── examples/*.json      # Task 2 IT가 대조\n+docs/adr/0008-external-llm-via-gms.md\n+```\n+\n+### Source Code (repository root)\n+\n+```text\n+backend/src/main/java/com/ssafy/thorp/assistant/\n+├── presentation/{controller,request,response}/\n+├── application/\n+│   ├── service/         # AssistantQuestionService, ToolLoop, AnswerValidator, ResultEvidenceBuilder\n+│   ├── service/tools/   # EquityOnTool, EquityRangeTool, TradesBetweenTool, PositionsOnTool, DeepestDrawdownWindowTool\n+│   ├── port/            # AssistantModelPort, AssistantTool, EvidenceBuilder\n+│   ├── result/          # Evidence, EvidenceBundle, ToolSpec, ToolCall, ModelDraft, AssistantAnswer\n+│   └── exception/\n+└── infrastructure/\n+    ├── client/          # OpenAiChatCompletionsClient, AssistantHttpClient\n+    └── config/          # AssistantProperties, AssistantModelProperties\n+backend/src/main/resources/assistant/prompts/answer-ko.txt\n+backend/src/test/java/com/ssafy/thorp/assistant/**\n+backend/src/test/resources/assistant/quality-cases.json\n+\n+frontend/src/components/assistant/\n+├── AssistantFab.tsx, AssistantBubble.tsx, assistant.module.css\n+├── assistantPageContext.tsx, fabPosition.ts\n+└── *.test.tsx\n+frontend/src/api/assistant.ts, frontend/src/types/assistant.ts\n+frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPage.tsx (페이지 맥락 등록)\n+```\n+\n+**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회), `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입), `assistant → sector`(`SectorService.getSectors()`로 `sectorId → 섹터 이름`; 013의 `SectorServiceSectorMapAdapter`와 같은 방식 — `config.items`에는 id만 있다) 셋이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.\n+\n+## Design Decisions\n+\n+### 근거 팩과 도구 (spec FR-006·FR-007)\n+\n+- 초기 팩은 `PublicResultService.getWeights`(먼저 — 이 호출이 005 `requireResultReady`의 409 판정을 그대로 거치므로 계산 중·실패·시작 전 취소는 여기서 끝난다)와 `getDetail` 두 번으로 만든다(비중은 상세에 없다). 둘 다 작다. 포함 항목은 계약 §2.1 표대로만이고, `PublicResultDetail`에 든 `publicToken`·`expiresAt`·`versions`·`progress` 등은 넣지 않는다.\n+- 팩 상한 60은 섹터 수 N에 따라 넘칠 수 있다(고정 항목 약 34 + 섹터별 5N, 섹터 6개부터 초과). 그래서 상관 행렬(N²)은 1차 팩에 넣지 않고, 60을 넘으면 섹터별 위험 기여·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거 하나를 남긴다. 목표·실제 비중은 항상 싣는다. 실제 비중은 `getWeights` 마지막 점의 `actual`이다(`asOf`는 그 날짜).\n+- 섹터 이름은 `sector` 도메인 `SectorService.getSectors()`에서 `sectorId`로 찾는다. 못 찾으면 `sectorId` 원문을 라벨에 쓴다(지어내지 않는다).\n+- **결과 타입 record를 통째로 근거나 도구 결과로 옮기지 않는다.** `BacktestTimeseriesResult`·`BacktestTradePageResult`에는 `backtestId`가 있다(005는 표현 계층에서 뗀다). 도구는 필드 단위로 골라 `Evidence`를 만들고, 시계열 점의 `benchmarkReturn`·`cashFlows`는 뺀다(KOSPI 참고선·현금 흐름은 범위 밖).\n+- 시계열·거래·보유는 크거나 질문에 따라 달라 도구로 읽는다. 도구는 `AssistantTool` 포트(`spec()`·`run(args)`)이고 요청 시작 때 풀린 결과에 묶여 만들어진다 — 함수 시그니처에 식별자 인자가 없어 프롬프트 인젹션으로 다른 결과를 읽을 경로가 없다.\n+- 도구는 시계열에서 **고르기만** 한다(첫·끝·최고·최저·가장 낮은 날). 이는 005 화면의 `drawdownWindow.ts`가 하는 일과 같은 종류다. 합산·비율 계산은 하지 않는다.\n+- 버린 대안: 서버가 질문을 파싱해 날짜를 뽑고 미리 읽는다 — 파싱이 곧 두 번째 분류기가 된다. 브라우저가 계산한 날짜를 보낸다 — 화면 상태를 신뢰 밖에 두는 원칙에 어긋난다.\n+\n+### 자리표시자와 검증 (spec FR-009)\n+\n+- 답변 스키마는 `{status, answerParts[{text, factIds}]}` strict. `text`의 값 자리는 `{{Fn}}`만이다.\n+- `AnswerValidator`가 §계약의 규칙 표대로 검사하고, 통과하면 `Evidence.value`의 표기 함수(금액·비율·날짜·정수)로 치환한다. 그래서 답의 모든 숫자는 서버가 읽은 값이다.\n+- 금지 표현 목록은 `backend/src/main/resources/assistant/forbidden-phrases.txt`(한 줄에 하나, `#` 주석)이고 보조 검사다. 실제 방어는 프롬프트와 Task 6 평가 표본이다. 이 한계를 계약 문서에 그대로 적는다.\n+- 치환 표기는 서버가 하되 프론트 `formatResult.ts`와 같은 규칙이어야 근거 카드 값과 탭의 값이 어긋나지 않는다(계약 §2.4에 수치로 적고 T032가 대조한다).\n+\n+### 모델 연결 (ADR-0008)\n+\n+- GMS가 확인해 준 형식은 Chat Completions(`POST {base}/v1/chat/completions`)다. `messages`(developer·user·tool), `tools`(function 5개, strict), `tool_choice:auto`, `parallel_tool_calls:false`, `response_format:{type:json_schema, strict:true}`, `store:false`.\n+- `store:false`라 라운드마다 이전 `assistant(tool_calls)`·`tool` 메시지를 서버가 다시 담아 보낸다.\n+- 어댑터는 `AssistantModelPort.step(conversation, facts, tools): ModelTurn` 뒤에 있다. Responses API로 바꾸거나 제공업체를 바꾸면 어댑터만 교체한다.\n+- 시간 예산은 **전체 데드라인 15초가 우선**이고, 라운드별 모델 호출 예산(초안 첫 7초·이후 4초)은 그 안에서 `MarketHttpClient`의 `deadline.remaining()` 방식으로 남은 시간과 작은 쪽을 쓴다. 도구 실행·검증 시간도 전체 데드라인에 든다. 넘으면 503.\n+\n+### 한도와 장애 (spec FR-012·FR-013)\n+\n+- IP 8/분, 토큰 5/분, 하루 전체 1000, 질문 300자 — 모두 `thorp.assistant.limits.*` 설정. 인스턴스 메모리 구현에 `// ponytail:` 주석으로 다중 인스턴스 시 공유 저장소 필요를 적는다.\n+- 503 문구 \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\" + 재시도 버튼. 429 문구에 다시 가능한 시점. 자동 재시도 없음.\n+\n+### 진입 UI (spec FR-001~FR-004)\n+\n+- 버튼·말풍선 상태는 `App`의 `AnimatedRoutes` 바깥. 페이지는 `useAssistantPageContext({kind, publicToken})`로 자기 맥락을 등록하고 언마운트 때 지운다.\n+- 끌기는 `pointerdown/move/up` 직접 구현(라이브러리 없음). 놓을 때 `side`는 화면 중앙 기준, `y`는 화면 안으로 자른다. 말풍선은 결과 화면의 '비교 대상 고르기'와 같은 `radix-ui` Popover + `useDisclosure`.\n+- z-index: 말풍선 55(대화상자 60·61, 물음표 도움말 80 아래).\n+\n+## Work Partition for Task Generation\n+\n+`$speckit-tasks`가 아래 묶음을 실행 task로 나눈다. 묶음 하나가 Jira Task·브랜치·MR 하나다.\n+\n+1. **[DOCS] ADR·spec 015·계약** — 이 문서들. (S15P21E205-434)\n+2. **[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)** — 엔드포인트, 요청 검증, 한도, `AnswerValidator`, `ToolLoop`, 포트·타입, 가짜 모델. 플래그 기본 비활성.\n+3. **[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)** — `OpenAiChatCompletionsClient`, 프롬프트 파일, 로컬 가짜 HTTP 테스트.\n+4. **[BE] 결과 근거 팩과 읽기 도구 다섯 개** — `ResultEvidenceBuilder`, 도구 5개, `AssistantResultIT`.\n+5. **[FE] 질문하기 플로팅 버튼과 말풍선** — `AssistantFab`·`AssistantBubble`·API·타입·`App`·`ResultPage` 맥락 등록.\n+6. **[BE] 도우미 품질 표본·자동 검사·평가 문서** — `quality-cases.json`, `AssistantQualityTest`, `evaluation.md`, 플래그 관문.\n+\n+2와 5는 1(계약)만 있으면 병렬이다. 3·4는 2의 포트·타입 위에서 병렬이다. 플래그 `RESULT`는 6의 관문을 넘긴 뒤에만 켠다.\n+\n+## 후속(1차와 무관)\n+\n+워커가 결과 `analytics`에 `maxDrawdownWindow{peakDate,troughDate}`를 담으면(004 계약 변경, 워커 담당) 005 화면의 `drawdownWindow.ts`와 도구 `getDeepestDrawdownWindow`가 모두 그 값을 읽고 선택 로직을 지운다. 배우기·시장 흐름 확장은 1차를 내보낸 뒤 spec 개정으로 정한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/plan.md",
+          "old_path": "specs/015-context-assistant/plan.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,174 @@\n+# Feature Specification: 화면 맥락 도우미\n+\n+**Feature Branch**: `015-context-assistant` (spec 디렉터리 식별자다. 구현 Task의 Git 브랜치는 Jira Task마다 `{type}({position})/{JIRA_NUMBER}-{description}` 형식으로 만든다.)\n+\n+**Created**: 2026-09-24\n+\n+**Status**: Draft\n+\n+**Input**: User description: \"결과 화면(`/results/:token`)에서 사용자가 보고 있는 결과의 수치를 자연어로 묻고, 확인 가능한 근거와 함께 한국어 답을 받는다. 플로팅 버튼을 누르면 말풍선이 열리고, 답의 모든 숫자·날짜는 서버가 읽은 값이다. 추천·원인 단정·미래 성과 표현은 하지 않는다.\"\n+\n+**근거 문서**: [constitution v1.0.0](../../.specify/memory/constitution.md) 원칙 II(첫 화면 단순)·III(진단이지 추천이 아니다)·VI(없는 결과를 만들지 않는다)·IX(한도는 실측으로). [ADR-0008](../../docs/adr/0008-external-llm-via-gms.md) 외부 LLM 도입 결정. 설계 초안은 이 spec으로 옮겨 왔고 원본은 저장소 밖에 있었다.\n+\n+**관련 spec**: [005 결과 이해·비교](../005-result-comparison/spec.md)의 공개 결과 조회(토큰 판정·`partial`·하위 자원)를 근거 원천으로 그대로 쓴다. [004 백테스트 실행](../004-backtest-execution/spec.md)의 결과 응답 모양을 바꾸지 않는다. Jira Story S15P21E205-433.\n+\n+## 범위 요약\n+\n+사용자가 결과 화면에서 로봇 아이콘 플로팅 버튼을 눌러 말풍선을 열고, 그 결과에 대해 300자 이내로 묻는다. 서버는 그 결과의 공개 응답에 이미 있는 값을 근거 팩으로 만들고, 시계열·거래·보유처럼 큰 자료는 사용자가 물었을 때만 서버가 정한 읽기 도구로 읽는다. 외부 LLM은 근거를 한국어로 설명하는 일만 하며, 답변의 숫자·날짜는 자리표시자를 서버가 채운 것이다. 근거가 없으면 그렇게 말하고, 범위 밖 질문(추천·미래·다른 결과)에는 범위를 안내한다. **1차는 결과 화면 한 곳이다.** 배우기·시장 흐름으로 넓힐지는 1차를 내보낸 뒤 정한다.\n+\n+## Clarifications\n+\n+### Session 2026-09-24\n+\n+- Q: 배우기·시장 흐름까지 한 번에 하나? → A: 아니다. 결과 화면 1차만 확정한다. 나머지는 1차를 내보낸 뒤 spec 개정으로 정한다. 기능이 얼마나 쓸모 있는지의 기준도 그때 정한다 — 지금은 만드는 데 집중한다.\n+- Q: 질문 종류를 모델이 먼저 분류(모델 2회)하나? → A: 아니다. 결과 상세 응답의 값은 전부 처음부터 근거 팩에 넣고, 큰 자료는 서버가 정한 읽기 도구를 모델이 **요청**하면 서버가 검증 뒤 읽어 더한다. 분류 호출은 없다.\n+- Q: 모델이 API를 직접 부르나? → A: 아니다. 모델은 \"이 도구를 이 인자로\"라는 JSON 텍스트를 응답에 적을 뿐이고, 실행은 우리 서버 코드가 이름·인자를 검증한 뒤 한다. 외부 LLM 서버는 우리 백엔드에 닿을 수 없다.\n+- Q: 모델이 어느 결과를 읽을지 알도록 DB id를 넘기나? → A: 아니다. 요청 시작 때 서버가 공개 토큰을 결과로 풀고 도구를 그 결과에 묶어 둔다. 도구는 날짜 인자만 받고, 모델은 토큰도 `backtestId`도 받지 않는다(005 SC-009).\n+- Q: 별도 AI 서버를 두나? → A: 아니다. Spring 백엔드의 새 `assistant` 도메인이 서버 키로 GMS 게이트웨이(`gms.ssafy.io`가 `api.openai.com`을 중계)를 부른다. 모델은 `gpt-5-mini`. 우리가 하는 일은 프롬프트·근거 팩·도구 정의·검증이다.\n+- Q: 진입 UI는? → A: 콘텐츠 바깥 여백에 뜨는 로봇 아이콘(`Bot`) 플로팅 버튼. 넓은 화면에서는 끌어 옮기고 가까운 여백에 붙는다. 누르면 그 옆에 말풍선이 열린다. 좁은 화면(≤600px)은 끌기 없이 우측 하단 고정 + 바닥 시트. 물음표는 이 앱에서 이미 \"설명 보기\"라 쓰지 않는다.\n+- Q: 비용 상한은? → A: 금액 상한은 두지 않는다. 대신 무분별·악의적 사용을 막는 한도(IP·토큰별 분당, 하루 전체 호출 상한, 질문 길이)를 설정값으로 둔다.\n+- Q: 장애 시? → A: 사용자에게 문구로 보이고 재시도 버튼을 둔다. 자동 재시도는 없다. 기존 결과 화면은 영향받지 않는다.\n+\n+## User Scenarios & Testing *(mandatory)*\n+\n+### User Story 1 - 결과의 값을 묻는다 (Priority: P1)\n+\n+결과 화면을 보는 사용자가 \"거래비용은 어떻게 구성됐어?\", \"비용을 빼고 얼마가 남았어?\", \"어떤 설정으로 돌린 거야?\"처럼 그 결과의 값을 묻고, 서버가 읽은 값으로 채워진 한국어 답과 근거 카드를 받는다.\n+\n+**Why this priority**: 이 기능의 중심이다. 상세 응답에 이미 있는 값만으로 답할 수 있어 도구 없이 완결된다.\n+\n+**Independent Test**: 완료된 결과 주소에서 말풍선을 열어 비용·수익률·설정을 묻고, 답의 모든 숫자가 그 결과의 상세 응답 값과 일치하며 근거 카드가 그 값을 가리키는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 완료된 결과 화면, **When** \"거래비용은 어떻게 구성됐어?\"라고 물으면, **Then** 비용 항목별 금액이 상세 응답 값 그대로 답에 들어가고, 각 값에 근거 카드가 붙는다.\n+2. **Given** 부분 결과(`partial=true`), **When** 수익률을 물으면, **Then** 답의 첫 문장에 완료된 끝 날짜까지의 부분 결과임이 먼저 나온다.\n+3. **Given** 계산 중이거나 실패한 결과, **When** 값을 물으면, **Then** 결과 없음(005와 같은 409 뜻)을 안내하고 모델을 부르지 않는다.\n+4. **Given** 답변 문장에 근거에 없는 숫자가 들어 있다면(모델 오류), **When** 서버가 검증하면, **Then** 그 답은 노출되지 않고 \"이 화면 자료만으로 확인할 수 없습니다\"로 바뀐다.\n+\n+---\n+\n+### User Story 2 - 특정 날짜·구간·하락 구간을 묻는다 (Priority: P1)\n+\n+사용자가 \"2023년 3월에는 어땠어?\", \"가장 크게 줄었던 때 무엇을 보유하고 거래했어?\"처럼 시계열·거래·보유를 봐야 하는 질문을 하면, 서버가 그 부분만 읽어 답한다.\n+\n+**Why this priority**: 결과 화면에 이미 있는 고정 문장·탭으로는 답하기 어려운 질문이라 이 기능의 추가 가치가 여기 있다.\n+\n+**Independent Test**: 결과 기간 안의 날짜·구간을 물었을 때 그 날짜의 시계열 점·그 구간의 거래·저점의 보유가 근거로 나오고, 기간 밖 날짜는 \"그 날짜의 자료가 없다\"로 답하며, 시계열 전체가 모델에 전달되지 않는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 결과 기간 안의 날짜, **When** \"그날 자산은 얼마였어?\"라고 물으면, **Then** 그 날짜(거래일이 아니면 직전 거래일) 한 점의 자산가치가 근거로 들어간 답이 온다.\n+2. **Given** 결과 기간 안의 한 달 구간, **When** \"그 달에는 어땠어?\"라고 물으면, **Then** 그 구간의 첫·끝·최고·최저 점(응답 값에서 고른 것)만 근거로 쓴다. 새 점을 만들지 않는다.\n+3. **Given** 완료된 결과, **When** \"가장 크게 줄었던 때 무엇을 거래했어?\"라고 물으면, **Then** 시계열에서 하락 폭이 가장 낮은 날과 그 앞 고점 날을 고르고(005 화면과 같은 정의), 그 구간의 거래와 저점 날의 보유가 근거에 든다.\n+4. **Given** 결과 기간 밖 날짜, **When** 그날을 물으면, **Then** 자료가 없다고 답하고 임의 값을 만들지 않는다.\n+5. **Given** 모델이 목록에 없는 도구 이름이나 식별자를 담은 인자를 적었다면, **When** 서버가 검증하면, **Then** 실행하지 않고 \"사용할 수 없음\"을 모델에 돌려준다.\n+\n+---\n+\n+### User Story 3 - 플로팅 버튼과 말풍선으로 연다 (Priority: P2)\n+\n+사용자가 화면 여백의 로봇 아이콘 버튼을 눌러 말풍선을 열고, 예시 질문을 누르거나 직접 입력해 묻고, 답과 근거 카드를 읽고, 근거 카드로 그 값이 있는 탭에 간다.\n+\n+**Why this priority**: 진입과 표시가 없으면 앞의 두 스토리가 사용자에게 닿지 않는다. 다만 서버 기능은 이것 없이도 검증할 수 있다.\n+\n+**Independent Test**: 넓은 화면에서 버튼을 끌어 옮기면 가까운 여백에 붙고 새로고침 뒤에도 그 자리인지, 좁은 화면에서는 고정 버튼과 바닥 시트인지, Escape로 닫히고 초점이 버튼으로 돌아오는지, 다른 화면으로 옮기면 이전 답이 새 화면의 답으로 보이지 않는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 기능이 켜진 결과 화면, **When** 화면이 열리면, **Then** 여백에 `질문하기` 접근 이름의 로봇 아이콘 버튼이 닫힌 채 보이고, 결과 화면의 주 행동 버튼은 여전히 '비교 대상 고르기' 하나다.\n+2. **Given** 넓은 화면, **When** 버튼을 콘텐츠 위로 끌어 놓으면, **Then** 가까운 쪽 여백으로 붙고 위치가 브라우저에 기억된다.\n+3. **Given** 말풍선이 열린 상태, **When** Escape를 누르면, **Then** 말풍선이 닫히고 초점이 버튼으로 돌아간다.\n+4. **Given** 첫 질문을 보내기 전, **When** 말풍선을 열면, **Then** \"질문과 답변에 필요한 화면 자료가 외부 AI 처리 서비스로 전달됩니다\" 안내가 보이고, 전송은 사용자가 제출할 때만 일어난다.\n+5. **Given** 기능이 꺼진 환경(`capabilities.enabled=false`), **When** 어느 화면을 열어도, **Then** 버튼이 보이지 않고 기존 화면은 그대로다.\n+\n+---\n+\n+### User Story 4 - 범위 밖·근거 없음·장애를 정직하게 처리한다 (Priority: P2)\n+\n+사용자가 추천·미래 성과·원인·다른 결과를 묻거나, 서비스에 장애가 있을 때, 답을 꾸미지 않고 상황을 말한다.\n+\n+**Why this priority**: 원칙 III·VI의 직접 요구다. 틀린 답 한 번이 기능 전체의 신뢰를 깎는다.\n+\n+**Independent Test**: 경계 질문 표본(추천·미래·원인·비교 대상·KOSPI·다른 결과)에 `OUT_OF_SCOPE`/`INSUFFICIENT_EVIDENCE`가 나오고 권고·원인 단정 문구가 없는지, 모델 장애·시간 초과에 정해진 문구와 재시도 버튼이 나오는지, 한도 초과에 대기 안내가 나오는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** \"이 전략 사도 돼?\" 같은 추천 요구, **When** 물으면, **Then** 기록을 설명하는 범위임을 안내하고 권고하지 않는다.\n+2. **Given** \"왜 손실이 났어?\" 같은 원인 질문, **When** 물으면, **Then** 그 기간에 관측된 보유·거래·손익 변화만 제시하고 원인이라고 말하지 않는다.\n+3. **Given** 비교 대상·KOSPI 참고선이 함께 그려진 화면, **When** 그것에 대해 물으면, **Then** 기준 결과만 답할 수 있음을 안내한다.\n+4. **Given** 모델 장애 또는 15초 초과, **When** 질문하면, **Then** \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\"와 재시도 버튼이 보이고 자동 재시도는 없다.\n+5. **Given** 분당·하루 한도 초과, **When** 질문하면, **Then** 한도 안내와 다시 가능한 시점이 보인다.\n+\n+---\n+\n+### Edge Cases\n+\n+- 만료(410)·없는(404)·형식이 틀린(400) 토큰: 모델을 부르기 전에 005와 같은 응답으로 끝난다. 결과 존재 여부를 누출하지 않는다.\n+- 질문이 공백만이거나 300자를 넘는다: 400. 질문에 URL·코드가 섞여 있어도 그대로 모델에 가되, 답변 검증은 같다.\n+- 모델이 도구를 3번째 요청한다: 라운드 상한(2)에서 끊고 근거 부족으로 답한다.\n+- 도구 결과까지 합쳐 근거가 60개를 넘는다: 뒤를 자르고 \"일부만 읽음\" 근거를 남긴다.\n+- 답변에 `{{F7}}`은 있는데 `factIds`에 `F7`이 없다(또는 반대): 답변 전체를 버린다.\n+- 한글 수사(\"두 번\", \"세 종목\")는 숫자 검증을 통과한다. 아라비아 숫자·`%`·`원`·날짜·URL은 자리표시자 밖에 있으면 거절한다.\n+- 결과 기간 안이지만 시계열에 그 날짜가 없다(휴장): 직전 거래일을 쓰고 근거 라벨에 그 사실을 적는다.\n+- 하락 폭이 가장 낮은 날의 값이 `summary.maxDrawdown`과 다르다: 005 화면과 같이 구간을 정하지 않고 근거 부족으로 답한다.\n+- 사용자가 질문에 개인정보를 적는다: 서버는 걸러 내지 않는다(걸러 낼 수 없다). 그래서 첫 전송 전 안내가 있다.\n+- 다중 인스턴스 배포: 메모리 한도는 인스턴스별이라 보안 경계가 아니다. 공유 저장소 전까지 한도는 완화된 것으로 본다.\n+\n+## Requirements *(mandatory)*\n+\n+### Functional Requirements\n+\n+- **FR-001**: 기능이 켜진 지원 화면(1차: `/results/:token`)의 콘텐츠 바깥 여백에 로봇 아이콘 플로팅 버튼(접근 이름 `질문하기`)을 둔다. 로그인·가입·관리 화면과 기능이 꺼진 환경에는 두지 않는다. 결과 화면의 주 행동 버튼은 '비교 대상 고르기' 하나로 유지한다(005 FR-004, 원칙 II).\n+- **FR-002**: 넓은 화면(>600px)에서 버튼은 포인터로 끌어 옮길 수 있고 놓으면 가까운 쪽 여백에 붙는다. 세로 위치는 화면 안에서 자유다. 위치는 브라우저 저장소에 기억한다. 좁은 화면(≤600px)에서는 끌 수 없고 우측 하단에 고정한다.\n+- **FR-003**: 버튼을 누르면 옆에 말풍선(팝오버)이 열린다. 좁은 화면에서는 바닥 시트다. 말풍선은 대화상자와 물음표 도움말보다 아래 층이고 뒤 화면을 막지 않는다. 다시 누르기·Escape·바깥 누르기로 닫히며 닫힐 때 초점은 버튼으로 돌아간다. 열릴 때 초점은 질문 입력에 둔다.\n+- **FR-004**: 말풍선에는 현재 맥락 표시(`기준 결과에 질문`), 예시 질문 2~3개, 300자 이내 자유 입력 하나가 있다. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 외부 AI 처리 서비스로 전달된다는 안내를 보이고, 전송은 사용자가 제출할 때만 한다.\n+- **FR-005**: 서버는 요청마다 공개 토큰을 005와 같은 규칙으로 판정한다(400/404/410). 결과가 없는 상태는 005 하위 자원과 같은 판정으로 409다 — 계산 중 `RESULT_NOT_READY`, 실패 `BACKTEST_FAILED`, 완료 거래일 없는 취소 `NO_PARTIAL_RESULT`. 이 판정은 근거 팩의 첫 조회(`getWeights`)가 이미 하므로 따로 만들지 않는다. 이 판정은 모델 호출 전에 끝나고, 실패하면 모델을 부르지 않는다.\n+- **FR-006**: 서버는 결과 상세 응답과 비중 응답에 이미 있는 값 가운데 **계약 §2.1의 포함 표에 있는 항목만** 근거 팩으로 만든다(요약·비용·조건·설정값·분석 값·목표/실제 비중·예외 종류·`partial`). 라벨은 표의 한국어 고정 문자열이고 결과 필드 이름을 쓰지 않는다. 섹터는 001 섹터 목록의 이름으로 부른다(없으면 id 원문). 공개 토큰·만료 시각·버전·진행 상태·실행 시각·실패 메시지·상관 행렬은 넣지 않는다. 팩 상한은 60개이고, 섹터가 많아 넘치면 섹터별 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다. 목표·실제 비중은 항상 싣는다. 서버는 새 합계·비율·구간을 계산하지 않는다(아키텍처 원칙 1). 시계열 전체·거래 목록 전체는 팩에 넣지 않는다.\n+- **FR-007**: 서버는 읽기 도구 다섯 개를 정한다 — 특정 날짜의 시계열 점, 구간의 첫·끝·최고·최저 점, 구간의 거래 첫 페이지, 특정 날짜의 보유, 하락 폭이 가장 낮은 날과 그 앞 고점 날. 도구는 날짜 인자만 받고 어느 결과를 읽는지는 요청 시작 때 서버가 묶는다. 모델은 도구 사용을 요청할 수 있을 뿐 실행하지 못한다. 서버는 도구 이름이 목록에 있는지, 인자가 결과 기간 안이고 규칙(구간 최대 1년, 첫 페이지 상한)에 맞는지 검증한 뒤 실행하고, 실패하면 실행하지 않고 \"사용할 수 없음\"을 돌려준다. 도구 라운드는 요청당 최대 2회, 라운드당 근거 최대 30개다. 근거 알갱이는 시계열 점 1개·거래 1건·보유 종목 1개가 각각 근거 1개이며, 상한을 넘으면 도구 결과를 자르고 초기 팩은 보존한다.\n+- **FR-008**: 모델에는 질문, 근거 팩, 도구 목록만 보낸다. 공개 토큰·`backtestId`·계정 식별자·브라우저 화면 상태는 어느 입력(프롬프트·도구 인자·이력)에도 넣지 않는다. 근거 ID는 요청마다 `F1`, `F2`…로 새로 매겨 결과 필드 이름을 노출하지 않는다.\n+- **FR-009**: 모델의 최종 답변은 `status`와 `answerParts[{text, factIds}]` 구조다. `text` 안의 숫자·날짜·금액은 `{{Fn}}` 자리표시자로만 들어오고 서버가 근거 값의 표기 함수로 채운다. 서버는 다음을 검증하고 하나라도 걸리면 답변 전체를 버리고 근거 부족 안내로 바꾼다: 모르는 `factId`, `text`의 자리표시자와 `factIds` 불일치, 자리표시자 밖의 아라비아 숫자·`%`·`원`·날짜·URL(한글 수사는 허용), 근거 없는 `ANSWERED`, 길이·part 수 상한, 금지 표현 목록(권고·확률·원인 단정 — 보조 검사).\n+- **FR-010**: 응답 `status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE` 셋이다. 근거 카드는 답변에 실제로 쓰인 근거만 보이고, 값·기준 날짜·그 값이 있는 탭을 가리킨다. 카드를 누르면 결과 화면의 그 탭이 열린다 — 결과 탭 묶음은 바깥에서 탭을 바꿀 수 있어야 한다(지금은 첫 탭만 받는다). 부분 결과면 답의 첫 문장에 완료 끝 날짜까지의 부분 결과임을 서버가 붙인다.\n+- **FR-011**: 추천·종목 매수·미래 성과·확률 표현·원인 단정을 답에 넣지 않는다(원칙 III). 원인 질문에는 관측된 사실만 제시한다. 비교 대상·KOSPI 참고선·다른 결과는 범위 밖으로 안내한다.\n+- **FR-012**: 요청은 서버에서 15초(도구 라운드 포함) 안에 끝내고 자동 재시도하지 않는다. 모델 장애·시간 초과는 503 `ASSISTANT_UNAVAILABLE`, 한도 초과는 429 `ASSISTANT_LIMIT`, 기능 비활성이면 질문 경로는 404다(`capabilities`는 항상 200). 어느 오류에서도 다른 자료로 대체 답변하지 않고 기존 결과 화면은 영향받지 않는다.\n+- **FR-013**: 한도는 설정값이다 — IP별 분당 요청 수, 결과 토큰별 분당 요청 수, 하루 전체 요청 수(초안 8·5·1000). 넘으면 429다. 질문 길이 상한(300자)은 한도가 아니라 입력 검증이라 400이다. 금액 상한은 두지 않는다.\n+- **FR-014**: 서버는 질문·답변 원문을 영속 저장하지 않는다. 운영 로그에는 페이지 종류·상태·라운드 수·지연·토큰 사용량만 남기고 토큰·식별자·원문을 남기지 않는다. 대화는 새로고침하면 사라진다(버튼 위치만 남는다).\n+- **FR-015**: 화면이 바뀌면 진행 중 요청을 취소하고 말풍선을 닫는다. 늦게 끝난 이전 화면의 응답을 새 화면의 답으로 보이지 않는다.\n+- **FR-016**: 기능은 플래그로 켜고 끈다. 꺼져 있거나 모델 키·주소·모델명 중 하나라도 비어 있으면 `capabilities.enabled=false`이고 버튼이 없다. 이 값들이 비어 있어도 서버 기동은 정상이다(설정에 빈 기본값을 둔다). 켜는 것은 품질 관문(SC-001~SC-004)을 넘긴 뒤다.\n+\n+### Key Entities\n+\n+- **근거(Evidence)**: `id`(요청 안에서만 유효한 `Fn`), `label`(사람이 읽는 이름), `value`(서버가 읽은 값 문자열), `asOf`(기준 날짜, 없을 수 있음), `tab`(그 값이 있는 결과 탭). 처음 팩과 도구 결과가 같은 모양이다.\n+- **도구(Tool)**: 이름, 인자 스키마(날짜·구간만), 서버 검증 규칙, 반환 근거. 요청의 결과에 묶여 만들어진다.\n+- **모델 초안(ModelDraft)**: `status`, `answerParts[{text, factIds}]`. 검증 전 상태다.\n+- **답변(AssistantAnswer)**: `status`, 치환된 `answer`, 쓰인 `evidence[]`, `page{kind}`.\n+- **페이지 맥락(PageContext)**: `kind`(1차 `RESULT`)와 그 종류의 식별자 하나(`publicToken`).\n+\n+## Success Criteria *(mandatory)*\n+\n+### Measurable Outcomes\n+\n+- **SC-001**: 평가 표본(결과 질문 20개 + 경계 질문 10개, 실제 결과 기반)에서 답변의 숫자·날짜가 결과 응답 값과 다른 경우가 0건이다.\n+- **SC-002**: 같은 표본에서 무근거 사실·투자 권고·원인 단정·미래 성과 표현이 0건이다(사람 두 명 독립 판정).\n+- **SC-003**: 같은 표본에서 답변에 쓰인 근거 카드가 100% 실제 응답 값을 가리킨다.\n+- **SC-004**: 만료·없는·형식 오류 토큰과 결과 없는 상태에서 모델 호출이 0회다. 프롬프트·도구 인자·로그의 직렬화 결과에 토큰·`backtestId`가 0회 나타난다.\n+- **SC-005**: 도구가 필요한 질문(표본의 절반)에서 모델이 필요한 도구를 요청한 비율과, 요청당 라운드 수·지연·토큰 사용량을 평가 문서에 기록한다. 목표값은 두지 않고 기준선으로 남긴다.\n+- **SC-006**: 기능이 꺼진 상태에서 결과·배우기·시장 흐름 화면의 기존 테스트가 전부 그대로 통과한다.\n+\n+## Assumptions\n+\n+- 표본 30개는 통계적 보장이 아니라 고장 유형을 걸러 내는 검사다. 통과가 안전을 뜻하지 않으므로 1차는 결과 화면 한 곳에만 연다.\n+- 근거 값을 다른 단위로 옮겨 적는 것(시작 금액 대비 변화율 등)은 계산이 아니라 표기로 본다. 새 지표를 만들지 않는다. 시계열에서 날짜를 고르는 것(첫·끝·최고·최저·가장 낮은 날)도 같다 — 005 `drawdownWindow.ts`가 화면에서 같은 일을 한다.\n+- 하락 구간 정의가 화면(005)과 서버 도구 두 곳에 있는 것은 빚이다. 워커가 결과에 고점·저점 날짜를 담아 주면 둘 다 그 값을 읽는다. 1차 선행 조건은 아니다.\n+- GMS 게이트웨이와 원 제공업체의 보존·학습 정책은 우리가 통제하지 못한다. 그래서 식별자·개인정보를 보내지 않고, 사용자가 질문에 적은 내용은 그대로 전달된다고 안내한다(ADR-0008).\n+- 사용자가 친 질문 원문이 외부로 가는 것은 사용자 안내로 갈음한다. 서버가 개인정보를 걸러 내지 않는다.\n+\n+## Dependencies\n+\n+- 005 공개 결과 조회(`PublicResultService`)와 그 응답 모양. 바꾸지 않는다.\n+- GMS 게이트웨이 키와 `gpt-5-mini` 사용 가능 여부(ADR-0008).\n+- 결과 화면의 팝오버·초점 처리 부품(`radix-ui` Popover, `useDisclosure`)과 `lucide-react`.\n+\n+## Out of Scope\n+\n+- 배우기·시장 흐름 화면의 질문(후속 spec 개정), 비교 대상·KOSPI 참고선에 대한 질문, 뉴스·유사 국면·개인화 추천, 사용자 설정 변경·주문, 대화 저장, 음성 입력, 벡터 검색·웹 검색, 다중 턴 대화의 맥락 유지(각 질문은 독립이다).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/spec.md",
+          "old_path": "specs/015-context-assistant/spec.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,145 @@\n+---\n+\n+description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n+---\n+\n+# Tasks: 화면 맥락 도우미\n+\n+**Input**: `specs/015-context-assistant/`의 spec.md, plan.md, contracts/assistant-api.md\n+\n+**Tests**: spec의 독립 검증 시나리오와 plan의 검증 방침에 따라 자동화 테스트 작업을 포함한다. 실패하는 테스트를 먼저 쓴다.\n+\n+**Organization**: 작업은 사용자 스토리별로 구성한다. 개별 T번호는 실행 지시이며, 하단의 작업 묶음 하나가 Jira Task·Branch·MR 하나에 대응한다.\n+\n+## Format: `[ID] [P?] [Story] Description`\n+\n+- **[P]**: 선행 작업이 끝난 뒤 다른 파일에서 병렬 진행 가능\n+- **[Story]**: spec.md의 User Story 추적 라벨\n+- 모든 경로는 저장소 루트 기준\n+\n+## Existing Seams\n+\n+| Seam (file:symbol) | Current state | What this feature does | Task |\n+|---|---|---|---|\n+| `backend/.../result/application/service/PublicResultService.java:resolve/getDetail/getTimeseries/getTrades/getPositions` | 005 공개 조회. 그대로 있음 | 그대로 부른다. 바꾸지 않는다 | T020·T030 |\n+| `frontend/src/App.tsx:AnimatedRoutes` | 라우트 전환 시 페이지를 다시 그림 | 그 바깥에 버튼·말풍선을 마운트한다 | T041 |\n+| `frontend/src/pages/ResultPage.tsx` | 결과 화면 | `useAssistantPageContext({kind:'RESULT', publicToken})` 등록 한 줄 | T042 |\n+| `frontend/src/components/result/drawdownWindow.ts:findDrawdownWindow` | 화면에서 하락 구간 날짜를 고른다 | 같은 정의를 서버 도구 `DeepestDrawdownWindowTool`이 갖는다(두 벌, 후속에서 워커 값으로 통일) | T034 |\n+| `backend/.../market/infrastructure/client/MarketHttpClient.java` | 외부 HTTP 관례 | 같은 모양으로 `AssistantHttpClient`를 만든다 | T025 |\n+| `frontend/src/components/common/InlineHelp.tsx` (z 80), `comparison.module.css .popover` (z 61) | 층 순서 | 말풍선은 55에 둔다 | T043 |\n+| `frontend/src/components/result/ResultTabs.tsx:ResultTabs` | `defaultTab`만 받는 비제어 탭 | 바깥에서 탭을 바꾸는 제어 prop(`activeTab`/`onActiveTabChange`)을 더한다. 근거 카드 → 탭 이동에 필요 | T044 |\n+| `backend/.../result/application/service/PublicResultService.java:getWeights` | 비중은 상세에 없고 별도 조회 | 초기 팩의 두 번째 조회 | T032 |\n+| `backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java` 규칙 8~11 | 도메인 간 금지 의존 | 규칙 12 `result`·`backtest`·`sector` → `assistant` 금지 추가 | T017 |\n+| `backend/.../sector/application/service/SectorService.java:getSectors` | 001 섹터 목록(id·이름) | `sectorId → 섹터 이름` 라벨 원천. 013 `SectorServiceSectorMapAdapter`와 같은 방식 | T032 |\n+\n+## Phase 1: 문서 (작업 묶음 1 · S15P21E205-434)\n+\n+**Purpose**: 구현 묶음이 같은 계약과 안전 규칙을 보고 병렬로 가게 한다.\n+\n+- [x] T001 `docs/adr/0008-external-llm-via-gms.md` — 제공업체(GMS 게이트웨이)·모델(`gpt-5-mini`)·API 형식·자료 처리 조건·한도·키·장애 시 동작·버린 대안\n+- [x] T002 `specs/015-context-assistant/{spec,plan,tasks}.md` — spec-kit 형식\n+- [x] T003 `specs/015-context-assistant/contracts/assistant-api.md` — HTTP 계약, 모델 요청·응답 스키마, 도구 5개 정의, 검증 규칙 표\n+- [x] T004 `docs/specs/assistant-api/README.md`와 `examples/*.json` — 계약 요약과 IT가 대조할 예시\n+- [x] T005 `specs/README.md`에 015 행과 흐름 한 줄\n+\n+**Checkpoint**: 머지되면 묶음 2와 5가 병렬로 시작한다.\n+\n+---\n+\n+## Phase 2: 기반 — API 계약·검증기·도구 실행 틀 (작업 묶음 2, 모델 없이)\n+\n+**Purpose**: 모든 스토리가 공유하는 경계 — 요청 검증, 토큰 판정 순서, 한도, 자리표시자 검증, 도구 루프. 실제 모델은 없다.\n+\n+**⚠️ CRITICAL**: 이 단계가 끝나기 전에는 묶음 3·4를 병합하지 않는다.\n+\n+- [ ] T010 [P] 실패 테스트 `backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java` — 301자·공백 질문 400, 낯선 `kind` 400, `RESULT`에 토큰 없음 400, 식별자 둘 동시 400, CSRF 누락 403, 플래그 비활성 404(`capabilities`는 200), IP 한도 429, 결과 토큰별 한도 429, 하루 상한 429, 응답 모양이 `docs/specs/assistant-api/examples/*.json`과 같음\n+- [ ] T011 [P] 실패 테스트 `.../assistant/application/service/AnswerValidatorTest.java` — 모르는 `factId` 거절, `text` 안 아라비아 숫자·`%`·`원`·날짜·URL 거절, 한글 수사(\"두 번\") 통과, `{{F1}}`↔`factIds` 불일치 거절, `ANSWERED`인데 `factIds` 빈 part 거절, 길이·part 수 상한, 금지 표현 거절, 치환 결과가 `Evidence.value` 표기와 같음\n+- [ ] T012 [P] 실패 테스트 `.../assistant/application/service/ToolLoopTest.java`(가짜 모델·가짜 도구) — 목록에 없는 도구 이름 실행 0회, 스키마 밖 인자(식별자 필드 포함) 거절 후 \"사용할 수 없음\" 반환, 3번째 라운드 요청은 끊고 `INSUFFICIENT_EVIDENCE`, 팩 60개 초과 시 뒤를 잘라 \"일부만 읽음\" 근거, 15초 예산 초과 시 503\n+- [ ] T013 타입·포트 `.../assistant/application/{port,result}/` — `Evidence(id,label,value,asOf,tab)`, `EvidenceBundle(facts, tools)`, `ToolSpec`, `ToolCall(name, arguments)`, `ModelTurn`(ToolCall | ModelDraft), `ModelDraft(status, parts[{text,factIds}])`, `AssistantAnswer(status, answer, evidence, page)`, `AssistantModelPort.step(conversation, facts, tools)`, `AssistantTool{spec(), run(args)}`, `EvidenceBuilder{supports(kind), build(context)}`\n+- [ ] T014 `AssistantQuestionService.ask(question, context)` — 순서: 플래그 → 요청 검증 → 한도 → 페이지 판정(`RESULT`는 `PublicResultService.resolve`) → 근거 빌더(첫 호출 `getWeights`가 005 `requireResultReady`(private)의 409를 그대로 던진다 — `RESULT_NOT_READY`/`BACKTEST_FAILED`/`NO_PARTIAL_RESULT`, 따로 판정하지 않는다) → `ToolLoop`(전체 데드라인 15초 우선, 라운드 예산은 그 안에서) → `AnswerValidator` → 치환. 이 묶음에서는 빈 근거 빌더와 가짜 모델로 `INSUFFICIENT_EVIDENCE`까지 흐른다\n+- [ ] T015 `AnswerValidator`(금지 표현은 `backend/src/main/resources/assistant/forbidden-phrases.txt`, 한 줄에 하나·`#` 주석)·`ToolLoop`(근거 알갱이: 점 1개·거래 1건·보유 1종목 = 근거 1개, 상한 초과 시 도구 결과부터 자르고 초기 팩 보존)·`RateLimiter`(`thorp.assistant.limits.*`, 인스턴스 메모리, `// ponytail:` 주석) 구현\n+- [ ] T016 `AssistantController` — `GET /assistant/capabilities`, `POST /assistant/questions`; `ErrorCode`에 `ASSISTANT_UNAVAILABLE`(503)·`ASSISTANT_LIMIT`(429); `application.yml`·`application-prod.yml`·`.env.example`에 `THORP_ASSISTANT_*` — prod도 **빈 기본값**(`${THORP_ASSISTANT_API_KEY:}`)으로 두어 미설정 시 기동은 되고 기능만 비활성\n+- [ ] T017 `ArchitectureTest`에 규칙 12 추가 — `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다(규칙 8~11 관례). `./gradlew spotlessApply build` 통과. 로그에 토큰·식별자·원문 없음 확인\n+\n+**Checkpoint**: 플래그 꺼진 상태로 머지 가능. 3·4·5가 이 포트·타입 위에서 병렬로 간다.\n+\n+---\n+\n+## Phase 3: User Story 1·2 — 모델 어댑터 (작업 묶음 3)\n+\n+**Goal**: 실제 GMS Chat Completions에 도구 라운드를 포함해 붙인다.\n+\n+**Independent Test**: 로컬 가짜 HTTP 서버가 `tool_calls`를 한 번 돌려주고 두 번째에 최종 답변을 주는 시나리오에서 요청 본문·이력·응답 파싱이 계약대로인지 확인한다.\n+\n+- [ ] T020 [P] [US1] 실패 테스트 `.../assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java`(가짜 HTTP) — 요청에 `model`·`store:false`·`parallel_tool_calls:false`·`response_format` strict·`tools` 5개만(내장 도구 없음); developer·user 메시지가 질문과 근거 팩을 분리; 응답 `tool_calls`를 `ToolCall`로 읽고 `arguments`가 JSON이 아니면 검증 실패로 넘김; 두 번째 라운드 요청에 이전 `assistant(tool_calls)`·`tool` 메시지가 들어 있음; `refusal`·빈 `content`·스키마 불일치·시간 초과 → `ASSISTANT_UNAVAILABLE`; 직렬화 결과 어디에도 토큰·`backtestId` 문자열 없음\n+- [ ] T021 [US1] `AssistantHttpClient`(`MarketHttpClient` 관례, 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽)·`OpenAiChatCompletionsClient implements AssistantModelPort`·`AssistantModelProperties`(`THORP_ASSISTANT_API_KEY`·`THORP_ASSISTANT_BASE_URL`·`THORP_ASSISTANT_MODEL`, 비어 있으면 비활성). 응답의 `usage` 토큰 수·라운드 수·지연을 운영 로그에 남긴다(원문·식별자는 없이)\n+- [ ] T022 [US1] 프롬프트 `backend/src/main/resources/assistant/prompts/answer-ko.txt` — 자리표시자 규칙, 도구 사용 지침(모르는 날짜는 묻지 말고 도구로 확인, 기간 밖은 없다고 답, 최대 2회), 부분 결과 접두, 헌장 III 금지 문구, 범위 밖 안내 문구\n+- [ ] T023 [US1] 키·주소·모델명 중 하나라도 비어 있으면 어댑터 빈이 뜨지 않고 `capabilities.enabled=false`이며 **컨텍스트 기동은 성공**하는지 설정 테스트로 고정(prod 프로파일의 빈 기본값 포함). `spotlessApply build`\n+\n+---\n+\n+## Phase 4: User Story 1·2 — 결과 근거 팩과 도구 (작업 묶음 4)\n+\n+**Goal**: 상세 응답 전부를 근거로 만들고, 시계열·거래·보유를 도구로 읽는다.\n+\n+**Independent Test**: 완료·부분·계산 중·실패·만료 결과 픽스처로 근거 팩과 도구 5개의 검증·반환을 확인한다. 모델은 가짜다.\n+\n+- [ ] T030 [P] [US1] 실패 테스트 `.../assistant/application/service/ResultEvidenceBuilderTest.java` — 400/404/410 토큰이면 모델 포트 `verifyNoInteractions`; 계산 중·실패·시작 전 취소는 409; 초기 팩이 계약 §2.1 포함 표와 정확히 같고(라벨은 표의 한국어, 필드명 아님; 섹터 라벨은 `SectorService` 이름, 못 찾으면 `sectorId` 원문) 섹터 8개 픽스처에서도 60개 이하이며 상관 행렬은 없고 위험·손실 기여가 빠지면 \"일부 분석 값은 싣지 않음\" 근거가 있음; 실제 비중은 `getWeights` 마지막 점의 `actual`이고 `asOf`가 그 날짜; `getWeights`가 409를 던지면 모델 포트 `verifyNoInteractions`; `publicToken`·`expiresAt`·`versions`·`progress`·`cancelRequested`·실행 시각·`failure`는 근거에 없음; 표기 결과가 `frontend/src/components/result/formatResult.ts`의 `formatMoney`·`formatRatio` 출력과 같은 픽스처 쌍(예: `17078.49`→`17,078원`, `0.166652`→`16.67%`, 경계값 `0.12345`→`12.35%` HALF_UP)으로 대조; 날짜는 ISO 원문 그대로(탭과 같다); `partial=true`면 완료 끝 날짜 근거와 접두 문장; 근거·도구 인자 어디에도 `backtestId`·토큰 없음; `tab`이 결과 탭 id 중 하나\n+- [ ] T031 [P] [US2] 실패 테스트 `.../assistant/application/service/tools/*ToolTest.java` — `getEquityOn` 기간 밖 거절·휴장일은 직전 거래일과 라벨 표시; `getEquityRange` 1년 초과·뒤집힌 구간 거절, 첫·끝·최고·최저 넷만(새 점 없음); `getTradesBetween` 거래 1건=근거 1개, 라운드 상한 30을 넘으면 뒤를 자르고 \"일부 거래\" 근거; 시계열 점의 `benchmarkReturn`·`cashFlows`는 어느 도구 근거에도 없음; 도구 결과에 `backtestId` 문자열 없음(record 통째 복사 금지); `getPositionsOn` 기간 밖 거절; `getDeepestDrawdownWindow`가 `frontend/src/components/result/drawdownWindow.ts` 예시와 같은 날짜를 고르고 `summary.maxDrawdown`과 어긋나면 빈 결과; 어느 도구에도 식별자 인자가 없음\n+- [ ] T032 [US1] `ResultEvidenceBuilder implements EvidenceBuilder` — `getWeights`(먼저, 409 판정 포함)와 `getDetail`에서 계약 §2.1 포함 표의 항목만 필드 단위로 `Evidence`로 옮긴다(record 통째 복사 금지). 상관 행렬은 넣지 않고, 60을 넘으면 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다. 섹터 라벨은 `SectorService.getSectors()`의 이름(없으면 `sectorId`). 값은 API 문자열 그대로, 표기 함수(금액·비율·날짜·정수)를 종류별로 붙인다. 설정값 축의 라벨은 003 등록표(`ParameterRegistryPort`)의 라벨을 쓴다. 도구 5개를 이 요청의 토큰에 묶어 `EvidenceBundle.tools`로\n+- [ ] T033 [US2] 도구 4개 `EquityOnTool`·`EquityRangeTool`·`TradesBetweenTool`·`PositionsOnTool` — `getTimeseries`·`getTrades(from,to)`·`getPositions(date)`를 묶인 토큰으로 읽고 고르기만. 결과 record를 통째로 옮기지 않고 필드 단위로 `Evidence`를 만든다(`backtestId` 제외, 점의 `benchmarkReturn`·`cashFlows` 제외)\n+- [ ] T034 [US2] `DeepestDrawdownWindowTool` — `drawdownWindow.ts`와 같은 정의(가장 낮은 `drawdown`의 첫날, 그 앞 고점 날, `summary.maxDrawdown` 불일치면 없음). 두 벌임을 주석에 적고 후속(워커 값)으로 연결\n+- [ ] T035 [US1] `.../assistant/AssistantResultIT.java`(`PortMockedIntegrationTestSupport`, 가짜 모델) — 완료 결과로 끝까지 흐르고 응답이 `examples/answer-answered.json` 모양; `ResultApiIT` 불변 확인; `spotlessApply build`\n+\n+---\n+\n+## Phase 5: User Story 3·4 — 플로팅 버튼과 말풍선 (작업 묶음 5)\n+\n+**Goal**: 결과 화면에서 버튼으로 말풍선을 열어 묻고 답과 근거 카드를 본다.\n+\n+**Independent Test**: 가짜 API로 버튼·끌기·말풍선·답변·오류·페이지 전환을 검증한다.\n+\n+- [ ] T040 [P] [US3] 실패 테스트 `frontend/src/components/assistant/AssistantFab.test.tsx` — 접근 이름 `질문하기`, 보이는 글자 없음, `Bot` 아이콘 `aria-hidden`; `capabilities.enabled=false`면 없음; 로그인·가입·관리 경로에 없음; 기본 우측 하단; 끌어 가운데 놓으면 가까운 여백으로 붙고 `thorp.assistant.fabPosition`에 저장; 재렌더 시 저장 자리; ≤600px에서 끌기 무시·우측 하단 고정; Tab·Enter로 열림; `[data-variant=\"default\"]` 버튼은 '비교 대상 고르기' 하나\n+- [ ] T041 [P] [US3] 실패 테스트 `.../AssistantBubble.test.tsx` — 열면 맥락 표시·예시 질문·입력 하나·전송 안내·입력에 초점; 왼쪽 여백이면 오른쏙으로 펼침; 답과 `factIds`에 쓰인 근거 카드만; 근거 카드 클릭이 해당 탭으로; 페이지 이동 시 `abort`·요청 번호로 이전 답 미표시·말풍선 닫힘; Escape·바깥 누르기로 닫히고 초점 복귀; 429 대기 문구, 503 문구+재시도 버튼(자동 재시도 없음); ≤600px 바닥 시트; `InlineHelp`(z 80)가 위에 뜸\n+- [ ] T042 [US3] `frontend/src/types/assistant.ts`·`frontend/src/api/assistant.ts`(`fetchAssistantCapabilities`, `askAssistant(question, context, signal)` — `runCsrfProtectedMutation` 경로)·`assistantPageContext.tsx`(`useAssistantPageContext`)·`fabPosition.ts`(`localStorage` try/catch, 테스트는 `fabPosition.test.tsx` — `vite.config.ts` `test.include`가 `.test.ts`를 잡지 않는다)\n+- [ ] T043 [US3] `AssistantFab.tsx`(pointer 끌기 직접 구현, 붙기, `prefers-reduced-motion`)·`AssistantBubble.tsx`(`radix-ui` Popover·`useDisclosure`, z 55, `role=\"dialog\" aria-modal=\"false\"`, 바닥 시트)·`assistant.module.css`\n+- [ ] T044 [US3] `App.tsx`에 `AnimatedRoutes` 바깥 마운트, `ResultPage.tsx`에 맥락 등록과 \"탭 열기 요청\" 연결, **`ResultTabs.tsx`에 제어 prop(`activeTab`·`onActiveTabChange`, 없으면 지금처럼 비제어) 추가**와 `ResultDetailTabs.tsx` 전달, `ResultTabs.test.tsx`·`ResultPage.test.tsx` 갱신 — 근거 카드 클릭이 그 탭을 여는 경로다\n+- [ ] T045 [US4] 오류 문구 — 503 \"지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요.\", 429 다시 가능한 시점, `OUT_OF_SCOPE`·`INSUFFICIENT_EVIDENCE` 카드\n+- [ ] T046 `npm run lint && npm run build && npm test`(skipped 0, `vite.config.ts` `test.include` 확인). 데스크톱(끌기·붙기·펼침 방향)·모바일(고정·바닥 시트)에서 사람이 배치 확인. 서버 플래그가 꺼져 있으면 버튼이 없음을 확인\n+\n+---\n+\n+## Phase 6: 품질 관문 (작업 묶음 6)\n+\n+**Goal**: 플래그를 켤 근거를 만든다.\n+\n+- [ ] T050 `backend/src/test/resources/assistant/quality-cases.json` — 결과 질문 20개(절반은 날짜·구간·하락 구간) + 경계 10개(추천·미래·원인·비교 대상·KOSPI·부분 결과·기간 밖 날짜·\"다른 결과 보여 줘\"). 행: `question`, `expectedTools`, `requiredEvidenceKinds`, `forbiddenClaims`, `expectedStatus`\n+- [ ] T051 `.../assistant/AssistantQualityTest.java`(가짜 모델·고정 fixture, CI) — 근거 ID 존재, 치환 숫자가 fixture 값과 같음, 토큰·식별자 비노출(도구 인자·이력 포함), 만료 토큰 모델 무호출, 모르는 도구·기간 밖 인자 실행 0회, 429/503 매핑\n+- [ ] T052 `docs/specs/assistant-api/evaluation.md` — 실제 모델로 30개를 돌려 두 명이 독립 채점(SC-001~SC-003, 도구 사용 여부). 표본·환경·모델명·날짜·라운드 수·토큰·지연 기록. 원문은 테스트 산출물에만\n+- [ ] T053 관문 판정 — SC-001~SC-004 충족 시에만 배포 설정에 `THORP_ASSISTANT_ENABLED_SCOPES=RESULT`. 미달이면 원인 기록, 플래그 유지\n+\n+---\n+\n+## Dependencies & Execution Order\n+\n+- Phase 1 → Phase 2 → {Phase 3, Phase 4} 병렬 → Phase 6. Phase 5는 Phase 1 뒤 언제든(계약만 필요).\n+- Phase 6의 실제 모델 평가는 3·4·5가 모두 머지된 뒤다.\n+\n+## Recommended Work Batches and Jira Tasks\n+\n+| 묶음 | Jira Task 제목 | 브랜치 | SP | T번호 | 선행 |\n+|---|---|---|---|---|---|\n+| 1 | `[DOCS] 화면 맥락 도우미 ADR·spec 015·계약을 적는다` (S15P21E205-434) | `docs/434-assistant-spec` | 3 | T001~T005 | — |\n+| 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` | `feat(be)/{N}-assistant-contract` | 3 | T010~T017 | 1 |\n+| 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` | `feat(be)/{N}-assistant-model-adapter` | 3 | T020~T023 | 2 |\n+| 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` | `feat(be)/{N}-assistant-result-evidence` | 3 | T030~T035 | 2 |\n+| 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |\n+| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |\n+\n+티켓은 브랜치를 딸 때 만든다(`AGENTS.md`). Epic S15P21E205-30, Story S15P21E205-433 `relates to`.\n+\n+## Notes\n+\n+- 서버는 계산하지 않는다. 도구가 시계열에서 하는 일은 고르기다.\n+- 모델에 넘기는 것: 질문, 근거 팩, 도구 목록. 넘기지 않는 것: 토큰, `backtestId`, 계정, 화면 상태.\n+- 후속(1차와 무관): 워커가 `analytics.maxDrawdownWindow`를 담으면 T034와 005 `drawdownWindow.ts`를 지운다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/tasks.md",
+          "old_path": "specs/015-context-assistant/tasks.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,6 +32,7 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n | 012 | [시장 흐름 뉴스 묶음](012-market-news-digest/spec.md) | 뉴스 묶음 3개 표시, RSS·GDELT 수집·필터·묶음, 당시 뉴스 연결, 매체 허가 확인 | 5 | P4 | §4.4, §6.3, §10.1 |\n | 013 | [배우기](013-learning-pages/spec.md) | 주제별 글(질문 하나·예시 하나), 예시로 진단 시작, 용어 도움말 재사용 | 5 | P4 | §4.5, D01, D02 |\n | 014 | [사용자 인증](014-user-auth/spec.md) | 회원가입·이메일 인증, 로그인과 상태 복원, '내 기록' 보호와 원래 위치 복귀, 로그아웃·만료 복구 | 기반 (§8.1 항목 아님) | P2 (006과 함께) | §5, 원칙 VIII, constitution 미합의 인증·인가 영역 |\n+| 015 | [화면 맥락 도우미](015-context-assistant/spec.md) | 결과 화면의 플로팅 버튼·말풍선으로 그 결과의 값을 자연어로 묻고, 서버가 읽은 근거로 채운 답을 받는다. 1차는 결과 화면만 | 보조 (§8.1 항목 아님, 2026-09-24 추가) | P3 (005 뒤) | 원칙 II·III·VI, [ADR-0008](../docs/adr/0008-external-llm-via-gms.md) |\n \n §8.1 항목: 1 대표 ETF·공통 자료·전략 명세와 다섯 전략 완성 / 2 섹터 선택 → 전략 확인 → 결과 비교 흐름과 상세 설정·내 기록 / 3 자동 파라미터 대량 탐색 / 4 경제환경 검색과 전략 진단 연결 / 5 시장 흐름·뉴스·배우기.\n \n@@ -45,6 +46,7 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n - **뉴스**: 012는 009의 기본 화면에 놓이고, 010·011의 사례 화면에 당시 뉴스를 연결한다.\n - **배우기**: 013의 '이 예시로 비중 비교하기'는 002로 진입하고, 003·005의 용어 도움말이 013의 설명을 재사용한다.\n - **사용자 인증**: 014는 006 내 기록의 진입 경계다. 비로그인 사용자가 '내 기록'에 접근하면 014의 로그인 흐름으로 보내고 성공 후 원래 위치로 돌려보낸다. 001~005·007~013의 공개 흐름은 로그인 없이 이용한다. 단 011의 계산 생성·재계산·재시도·개인 검색 기록 저장 및 시장 흐름의 전략 비교 진입은 014 인증·복귀 흐름을 사용한다(2026-09-20 결정, 014 소유자의 권한 위임). 경제환경 검색·사례 열람·유효한 공개 주소의 기존 결과 조회는 공개한다.\n+- **화면 맥락 도우미**: 015는 005 결과 화면 위에 놓이는 보조 기능이다. 005의 공개 결과 조회를 근거 원천으로 그대로 쓰고 004·005의 응답 모양을 바꾸지 않는다. 외부 LLM은 서버가 읽은 값을 설명만 하며(ADR-0008), 배우기·시장 흐름으로 넓힐지는 1차를 내보낸 뒤 정한다.\n - **공통 축**: 004의 실행 측정 기록(실행 유형별 대기 시간·처리량·원가)은 007과 010의 실행도 함께 기록한다. 001과 008의 자료 버전, 003의 등록표 버전, 004의 비용 조건 버전은 006의 재현 기록이 참조한다.\n \n ## 우선순위\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-24T23:33:09.876+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

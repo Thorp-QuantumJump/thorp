@@ -1,0 +1,721 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952540,
+    "iid": 242,
+    "project_id": 1444456,
+    "title": "feat(be): 백테스트 결과의 환경 간 재현을 검증하고 골든 재생성 정책을 정한다",
+    "description": "## 작업 내용 요약\n\n워커 결과가 OS·CPU·이미지가 달라도 같은지 세 환경에서 확인했고, 규칙 스냅샷 6개가 반올림 전 해시까지 같았습니다. 판정 기준은 골든과 같은 유효숫자 12자리 해시로 정했고, 의존성·이미지를 바꿀 때 골든을 다시 만드는 정책도 정했습니다.\n\n## 관련 티켓\n\nS15P21E205-354 (spec 004 T030)\n\n## 주요 변경 사항\n\n- 해시 정의를 `worker.reproducibility` 한 곳에 두었습니다. 골든 테스트와 새 비교 스크립트(`scripts/reproducibility_report.py`)가 이 정의를 함께 씁니다.\n- 골든의 기준 입력과 실행, 픽스처 경로를 pytest를 import하지 않는 모듈로 옮겼습니다. pytest가 없는 운영 이미지 안에서도 같은 입력으로 비교할 수 있습니다.\n- 측정 기록과 허용 기준은 spec 004 research R-21에, 골든 재생성 정책은 `worker/CLAUDE.md`에, 실행 명령은 `worker/README.md` \"환경 간 재현 확인\"에 적었습니다.\n- 계산 코드와 골든 파일은 바꾸지 않았습니다.\n\n## 테스트\n\n- `ruff check`·`ruff format --check`·`pytest`(worker): 415 passed\n- 비교 스크립트: Windows 11 x86_64(OpenBLAS SkylakeX), 워커 이미지 linux/amd64(Haswell), linux/arm64(qemu 에뮬레이션, neoversev2)에서 6개 모두 반올림 전 해시가 일치했고 결과 전문 diff도 없었습니다. pytest가 없는 워커 이미지 안에서도 스크립트가 돌고 골든과 일치했습니다.\n\n## 리뷰 포인트\n\n- 반올림 전 해시가 모두 같았지만 판정은 12자리 해시로 두었습니다. 다른 CPU·BLAS 빌드에서 float 지표의 끝자리가 달라지는 것을 실패로 만들지 않으려는 선택입니다. 대신 12자리 해시는 정수부가 긴 금액의 소수 끝자리 차이를 가리므로, 금액 계산을 고치는 MR은 반올림 전 해시까지 확인하는 규칙을 두었습니다. 이 기준이 괜찮은지 봐 주세요.\n- 비교 스크립트가 `tests/golden_inputs.py`를 import합니다. 기준 입력 정의를 한 곳에 두려는 구조인데, 이 방식이 괜찮은지 봐 주세요.\n- 운영 서버, 실제 ARM 하드웨어, 실제 시장 자료로는 비교하지 않았습니다. 이 범위로 충분한지 판단해 주세요.",
+    "state": "merged",
+    "created_at": "2026-09-19T23:13:11.083+09:00",
+    "updated_at": "2026-09-19T23:13:56.993+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-19T23:13:57.046+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/354-cross-env-reproducibility",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+    "merge_commit_sha": "02e769e4f09d3deb06a777355b908dd4916de87f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-19T23:13:12.575+09:00",
+    "reference": "!242",
+    "references": {
+      "short": "!242",
+      "relative": "!242",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!242"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/242",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952540,
+    "iid": 242,
+    "project_id": 1444456,
+    "title": "feat(be): 백테스트 결과의 환경 간 재현을 검증하고 골든 재생성 정책을 정한다",
+    "description": "## 작업 내용 요약\n\n워커 결과가 OS·CPU·이미지가 달라도 같은지 세 환경에서 확인했고, 규칙 스냅샷 6개가 반올림 전 해시까지 같았습니다. 판정 기준은 골든과 같은 유효숫자 12자리 해시로 정했고, 의존성·이미지를 바꿀 때 골든을 다시 만드는 정책도 정했습니다.\n\n## 관련 티켓\n\nS15P21E205-354 (spec 004 T030)\n\n## 주요 변경 사항\n\n- 해시 정의를 `worker.reproducibility` 한 곳에 두었습니다. 골든 테스트와 새 비교 스크립트(`scripts/reproducibility_report.py`)가 이 정의를 함께 씁니다.\n- 골든의 기준 입력과 실행, 픽스처 경로를 pytest를 import하지 않는 모듈로 옮겼습니다. pytest가 없는 운영 이미지 안에서도 같은 입력으로 비교할 수 있습니다.\n- 측정 기록과 허용 기준은 spec 004 research R-21에, 골든 재생성 정책은 `worker/CLAUDE.md`에, 실행 명령은 `worker/README.md` \"환경 간 재현 확인\"에 적었습니다.\n- 계산 코드와 골든 파일은 바꾸지 않았습니다.\n\n## 테스트\n\n- `ruff check`·`ruff format --check`·`pytest`(worker): 415 passed\n- 비교 스크립트: Windows 11 x86_64(OpenBLAS SkylakeX), 워커 이미지 linux/amd64(Haswell), linux/arm64(qemu 에뮬레이션, neoversev2)에서 6개 모두 반올림 전 해시가 일치했고 결과 전문 diff도 없었습니다. pytest가 없는 워커 이미지 안에서도 스크립트가 돌고 골든과 일치했습니다.\n\n## 리뷰 포인트\n\n- 반올림 전 해시가 모두 같았지만 판정은 12자리 해시로 두었습니다. 다른 CPU·BLAS 빌드에서 float 지표의 끝자리가 달라지는 것을 실패로 만들지 않으려는 선택입니다. 대신 12자리 해시는 정수부가 긴 금액의 소수 끝자리 차이를 가리므로, 금액 계산을 고치는 MR은 반올림 전 해시까지 확인하는 규칙을 두었습니다. 이 기준이 괜찮은지 봐 주세요.\n- 비교 스크립트가 `tests/golden_inputs.py`를 import합니다. 기준 입력 정의를 한 곳에 두려는 구조인데, 이 방식이 괜찮은지 봐 주세요.\n- 운영 서버, 실제 ARM 하드웨어, 실제 시장 자료로는 비교하지 않았습니다. 이 범위로 충분한지 판단해 주세요.",
+    "state": "merged",
+    "created_at": "2026-09-19T23:13:11.083+09:00",
+    "updated_at": "2026-09-19T23:13:56.993+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-19T23:13:57.046+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/354-cross-env-reproducibility",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+    "merge_commit_sha": "02e769e4f09d3deb06a777355b908dd4916de87f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-19T23:13:12.575+09:00",
+    "reference": "!242",
+    "references": {
+      "short": "!242",
+      "relative": "!242",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!242"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/242",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-19T23:13:20.183+09:00",
+    "latest_build_finished_at": "2026-09-19T23:13:56.061+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 208775,
+      "iid": 196,
+      "project_id": 1444456,
+      "sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+      "ref": "feat(be)/354-cross-env-reproducibility",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T23:13:20.078+09:00",
+      "updated_at": "2026-09-19T23:13:56.068+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208775"
+    },
+    "head_pipeline": {
+      "id": 208775,
+      "iid": 196,
+      "project_id": 1444456,
+      "sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+      "ref": "feat(be)/354-cross-env-reproducibility",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T23:13:20.078+09:00",
+      "updated_at": "2026-09-19T23:13:56.068+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208775",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-19T23:13:20.183+09:00",
+      "finished_at": "2026-09-19T23:13:56.061+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208775",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "50d1f380a37e68685fc0f2e643813eaf59f151a2",
+      "head_sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+      "start_sha": "50d1f380a37e68685fc0f2e643813eaf59f151a2"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "9aa4d0b3b3895b165715d0b1f86eb906e919707f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839719,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T23:13:11.178+09:00",
+          "updated_at": "2026-09-19T23:13:11.181+09:00",
+          "system": true,
+          "noteable_id": 952540,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 242,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d439b824942c97a051cb0923b91941369d7bf9d8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839720,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T23:13:11.199+09:00",
+          "updated_at": "2026-09-19T23:13:11.206+09:00",
+          "system": true,
+          "noteable_id": 952540,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 242,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a4409a745eeebbec1e5fd031b1c040deb290d107",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839721,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for b969fe6bd54475258620d6bf7d77452c0b4dec52 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T23:13:14.538+09:00",
+          "updated_at": "2026-09-19T23:13:14.541+09:00",
+          "system": true,
+          "noteable_id": 952540,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 242,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b38ddc63cc5ae9bc5df24b3fc6320a2087087271",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839722,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 의존성 분리 설계**: pytest가 포함되지 않은 `--no-dev` 운영 이미지 환경에서도 재현성 검증 스크립트가 정상 동작하도록 `golden_inputs`와 `fixture_paths`를 분리하고 `pytest` import를 철저히 배제한 설계가 돋보입니다.\n- **실용적인 허용 오차 기준(유효숫자 12자리)**: 서로 다른 OS, CPU 아키텍처, BLAS 커널(OpenBLAS 등) 간의 미세한 부동소수점 끝자리 흔들림을 허용하되, 금액 계산 등 핵심 변경 시에는 `exactSha256` 검증을 병행하도록 명확한 골든 재생성 및 판정 정책을 문서화(`CLAUDE.md`, `research.md`)한 점이 매우 훌륭합니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (코드 구조, 캡슐화, 테스트 커버리지 및 문서화 모두 의도된 스펙에 맞춰 깔끔하게 구현되었습니다.)\n\n### 테스트 제안\n- **운영 이미지 컨테이너 내 실행 테스트**: 실제 `linux/amd64` 또는 `linux/arm64` Docker 이미지 내부에서 `PYTHONPATH=/repo/worker/src python scripts/reproducibility_report.py` 명령을 직접 수행하여 의존성 누락이나 경로 에러 없이 정상적으로 결과 JSON이 생성되는지 최종 확인하는 시나리오를 권장합니다.\n- **골든 불일치 감지 테스트**: 강제로 기준 입력의 소수점 자리를 미세하게 수정한 뒤, `test_reproducibility_report.py` 및 `test_rules_goldens.py`가 이를 정확히 감지하고 실패(Fail)하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b969fe6bd54475258620d6bf7d77452c0b4dec52 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-19T23:13:21.047+09:00",
+          "updated_at": "2026-09-19T23:13:21.047+09:00",
+          "system": false,
+          "noteable_id": 952540,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 242,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "809e382e47b17265fa107cea87ad5e62c16e4d4e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839724,
+          "type": null,
+          "body": "mentioned in commit 02e769e4f09d3deb06a777355b908dd4916de87f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T23:13:57.276+09:00",
+          "updated_at": "2026-09-19T23:13:57.284+09:00",
+          "system": true,
+          "noteable_id": 952540,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 242,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2225972,
+      "head_commit_sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+      "base_commit_sha": "50d1f380a37e68685fc0f2e643813eaf59f151a2",
+      "start_commit_sha": "50d1f380a37e68685fc0f2e643813eaf59f151a2",
+      "created_at": "2026-09-19T23:13:11.506+09:00",
+      "merge_request_id": 952540,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "616f361a23937ef169ac3ae3d31d62ec9f775b60"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2225972,
+      "head_commit_sha": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+      "base_commit_sha": "50d1f380a37e68685fc0f2e643813eaf59f151a2",
+      "start_commit_sha": "50d1f380a37e68685fc0f2e643813eaf59f151a2",
+      "created_at": "2026-09-19T23:13:11.506+09:00",
+      "merge_request_id": 952540,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "616f361a23937ef169ac3ae3d31d62ec9f775b60",
+      "commits": [
+        {
+          "id": "b969fe6bd54475258620d6bf7d77452c0b4dec52",
+          "short_id": "b969fe6b",
+          "created_at": "2026-09-19T23:08:52.000+09:00",
+          "parent_ids": [
+            "52f41a1fada1a73bd5de1834615fc384dcd5ab60"
+          ],
+          "title": "fix(be): 골든 입력이 conftest 없이 픽스처 경로를 읽고 12자리 해시의 한계를 적는다",
+          "message": "fix(be): 골든 입력이 conftest 없이 픽스처 경로를 읽고 12자리 해시의 한계를 적는다\n\n- 픽스처 경로를 tests/fixture_paths.py 로 옮겨 golden_inputs 가 conftest(= pytest fixture 자리)에\n  기대지 않게 했다. 운영 이미지(pytest 없음)에서 비교 스크립트가 깨지지 않는다\n- research R-21·worker/CLAUDE.md: 12자리 해시는 정수부가 긴 금액의 소수 끝자리를 가린다.\n  금액 계산을 고치는 MR은 반올림 전 해시까지 확인한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T23:08:52.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T23:08:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b969fe6bd54475258620d6bf7d77452c0b4dec52"
+        },
+        {
+          "id": "52f41a1fada1a73bd5de1834615fc384dcd5ab60",
+          "short_id": "52f41a1f",
+          "created_at": "2026-09-19T23:00:51.000+09:00",
+          "parent_ids": [
+            "50d1f380a37e68685fc0f2e643813eaf59f151a2"
+          ],
+          "title": "feat(be): 백테스트 결과의 환경 간 재현을 검증하고 골든 재생성 정책을 정한다",
+          "message": "feat(be): 백테스트 결과의 환경 간 재현을 검증하고 골든 재생성 정책을 정한다\n\n- 해시 정의를 worker.reproducibility 로, 골든 기준 입력·실행을 tests/golden_inputs.py 로 옮겨\n  골든 테스트와 환경 간 비교 스크립트가 같은 정의를 쓰게 했다\n- scripts/reproducibility_report.py: 전략별 반올림 전·12자리 해시와 환경 정보(BLAS 커널 포함)\n- Windows x86_64, linux/amd64, linux/arm64 이미지에서 6개 규칙 스냅샷이 반올림 전까지 일치\n  (research R-21). 판정은 12자리 해시로 유지\n- worker/CLAUDE.md 골든 재생성 정책, README \"환경 간 재현 확인\"\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T23:00:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T23:00:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/52f41a1fada1a73bd5de1834615fc384dcd5ab60"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -128,3 +128,29 @@ Technical Context의 미확정 항목과 설계 선택을 결정으로 정리한\n - **Rationale**: T014에서 세 갈래가 모두 막혔다 — 탐색을 사용자별 한도에 세면 `dispatch-window`와 충돌하고, 전체 한도에서 거절하면 007 `advance()`가 `BacktestFinished`로만 불려 마지막 진행 후보 뒤의 거절이 묶음을 영구 정지시키고, 한도에서 빼면 탐색이 도는 동안 **단건만 계속 429**를 받는다(묶음 수 × 창 = 80 > 50). 값이 아니라 **대화형과 배치가 한 큐·한 정책을 공유하는 구조**의 문제라 R-19의 \"재검토 조건(T012 실측 뒤)\"을 기다리지 않고 도입한다 — 실측 없이도 정책이 성립하지 않음이 리뷰에서 확인됐기 때문이다. 큐 이름을 바꾸지 않는 이유: `backtest.jobs`→`backtest.jobs.single` 개명은 quorum 큐 교체 절차(접수 중단 → ready·unacked 0 → 삭제 → 재선언, T002 `migrate-jobs-queue.sh`)를 다시 요구하는데 `bulk`만 추가하면 전환 절차가 없고 single 워커는 코드 변경이 없다. flex가 pull인 이유: quorum 큐는 **global QoS prefetch를 지원하지 않아**(RabbitMQ 3.13 기능 비교표) 한 채널에서 두 큐를 `basic_consume`하며 \"합쳐서 1건\"을 표현할 수 없고, 컨슈머별 prefetch 1로 두 큐를 구독하면 워커가 2건을 unacked로 쥔다 — 처리도 안 한 두 번째 메시지가 크래시로 재전달되면 유일한 재시도 기회(`x-delivery-limit=1`)가 실행 한 번 없이 소진된다. flex가 bulk 우선인 이유: 단건 최소 처리량은 single N이 이미 보장하고, single 우선이면 단건이 계속 들어오는 동안 벌크가 굶어 묶음이 `time-limit`에 걸려 PARTIAL로 끝난다. 수용한 한계: flex 워커의 단건 응답은 최대 폴링 간격(1초)만큼 늦다(single 워커는 push라 즉시). 배포는 T014와 같은 릴리즈로 묶는다(데모 규모에서 T014 단독 배포 위험은 낮지만 함께 내보내면 그 논의가 필요 없다).\n - **Alternatives**: 완전 분리(single 전용 N + bulk 전용 M — 벌크가 없으면 M이 놀고 단건이 몰려도 못 쓴다, 4 vCPU에 워커 2개라 절반을 놀릴 수 없다) / 두 큐 `basic_consume` + global prefetch 1(quorum 미지원) / flex 단건 우선(벌크 굶음) / 두 큐의 도착 시각을 비교한 전역 FIFO(RabbitMQ는 큐 내부 FIFO만 보장하고 peek이 없어 꺼내 비교하고 requeue해야 하는데 순서와 `x-delivery-limit`이 꼬인다) / 우선순위 큐 하나(`x-max-priority` — quorum 미지원) / 007에 PENDING 재시도 스케줄러를 두고 묶음도 거절(007 담당자 몫이며, 있어도 배치가 대화형 한도를 소비하는 문제는 남는다).\n - **T012에 넣는 지표**: 단건 큐 대기시간 p95/p99, 벌크 큐 대기시간·후보 처리량, single 워커 사용률, flex 워커가 단건을 지원한 비율, 동시 탐색 묶음 수, 큐별 대기 작업 수, 단건 429 횟수. N/M 비율과 `dispatch-window`를 이것으로 조정한다. 폴링 지연이 실제 문제로 측정되면 flex가 single만 `basic_consume`하고 벌크는 처리 사이에 `basic_get`하는 하이브리드가 다음 단계다.\n+\n+## R-21 환경 간 재현 검증과 골든 재생성 정책 (T030, 2026-09-19)\n+\n+- **Decision**: 환경 간 재현의 판정은 규칙 버전 골든과 같은 **유효숫자 12자리 반올림 해시**로 한다. 반올림하지 않은 해시(`exactSha256`)는 판정에 쓰지 않고, 갈렸을 때 원인을 좁히는 진단 값으로만 남긴다. 해시 정의는 `worker/src/worker/reproducibility.py` 한 곳에 두고 골든 테스트(`tests/test_rules_goldens.py`)와 비교 스크립트(`scripts/reproducibility_report.py`)가 함께 쓴다. 기준 입력과 실행은 pytest 없이도 import되는 `tests/golden_inputs.py`에 두어, pytest가 없는 운영 이미지 안에서도 같은 입력으로 돈다.\n+- **측정(2026-09-19)**: 규칙 스냅샷 6개(다섯 전략 + 목표 위험 오버레이)를 골든과 같은 기준 입력(`examples/three_etf_24m`, 3종목·24개월 합성 자료)으로 세 환경에서 돌렸다. numpy 2.4.6·scipy 1.17.1·pandas 2.3.3·nautilus_trader 1.219.0은 세 환경 모두 `uv.lock` 그대로다.\n+\n+  | 환경 | OS | CPU·아키텍처 | Python | OpenBLAS 커널 |\n+  |---|---|---|---|---|\n+  | A 개발기 | Windows 11 | Intel i7-13700H, x86_64 | 3.11.15 | SkylakeX |\n+  | B 워커 이미지 | Debian trixie(glibc 2.41, WSL2 VM) | 같은 CPU, x86_64 | 3.11.16 | Haswell |\n+  | C 워커 이미지 arm64 | Debian trixie(qemu 에뮬레이션) | aarch64 | 3.11.16 | neoversev2 |\n+\n+  | 규칙 스냅샷 | exactSha256 | roundedSha256(= 골든) |\n+  |---|---|---|\n+  | EQUAL_WEIGHT-1 | `57003f49257f15b367d0feb44db5fea3859d6c9d3b7b234c8a377ba156a57d66` | `4e57527bef912329d5042d945893c7e2025d8288af8a00674f8d0aee3566b890` |\n+  | FIXED_WEIGHT-1 | `11a4f9fad0a4e53bf43886a4ac28e7f3ce9e9d6c9283612a842795ec3d6e5807` | `365ef7a2cda9e773adbb62a675e1620357c382d90cb5a64fd5c792d920254c69` |\n+  | INVERSE_VOLATILITY-1 | `3a0e9d03dca863dd8f29e7c6388dd88feb9158db205ddbcfcd295a3136109be4` | `cdd38b5f1857e9ad669d4306428c5803b7370d41452a80247ff236c457ea3dd3` |\n+  | MINIMUM_VARIANCE-1 | `6ca6504059c21f3cea791a6e6dfe6e8590e8078f4f2683deaa907f9b129a0cb3` | `df7898ce28c3abba1c3cba06d8da9abd58dd953bff20135eb6a85c2bb87a5cdf` |\n+  | SECTOR_MOMENTUM-1 | `a9722dcfa877876f21e7e7b15bf4679db7d4df4e54fbd2a7ec47bb7c756897a8` | `4f4f6db10d0fd8a5d93ea38c935fd356d665b7a340a9e049bf6a74899f32f43c` |\n+  | TARGET_RISK_OVERLAY-1 | `ae44175631eb3f123e837c6bd18b68baed0d49e65e30a8889cf9ad0fa30455f7` | `e6926b73b3e56c2c88af3ad53a03e288d543391a1401cc3e86b90840abf86905` |\n+\n+  세 환경의 두 해시가 모두 같았고, 계산 결과 전문도 바이트 단위로 같았다. 즉 이 입력 규모에서는 OS·libm·BLAS 커널·아키텍처·Python 패치 버전 차이가 결과에 나타나지 않았다. 12자리 반올림은 지금 흡수하는 차이가 없는 방어선이다.\n+- **Rationale**: 반올림 전 해시로 판정하면 이번에는 통과하지만, 다른 CPU나 BLAS 빌드에서 float 지표(샤프 비율·변동성 등)의 마지막 자리가 흔들리는 순간 \"같은 버전이 다른 숫자를 낸다\"로 오판한다. 규칙 변경으로 생기는 차이는 비중·거래·수익률을 크게 움직이므로 12자리 반올림에 가려지지 않는다(T029 ⓒ). **다만 가려지는 차이가 있다.** 반올림은 유효숫자 기준이라 정수부가 긴 금액일수록 소수 자리가 먼저 잘린다. 예를 들어 기준 입력의 `finalEquity \"10651221.245050\"`은 14자리라서 12자리 해시에는 소수 넷째 자리까지만 들어간다. 그래서 비용이나 체결 금액이 0.0001원보다 작게 달라지는 엔진 변경(예: 반올림 방식 변경)은 골든을 통과한다. 초기 자본이 클수록 가려지는 폭도 커진다. 이 차이는 반올림 전 해시(`exactSha256`)가 드러내므로, 엔진의 금액 계산을 고치는 MR은 비교 스크립트로 고치기 전과 후의 반올림 전 해시를 함께 확인한다. 금액·비중(`Decimal`)은 반올림하지 않고 float 지표만 반올림하는 방법도 검토했지만, JSON에서는 둘 다 문자열이라 계약 모델에서 필드 목록을 뽑아야 하고 골든 6개를 모두 다시 만들어야 해서 이번에는 넣지 않았다(2026-09-19 결정).\n+- **한계**: C는 실제 ARM 하드웨어가 아니라 에뮬레이션이다. 운영 서버에서는 아직 돌리지 않았다. 자료가 3종목·24개월이라 행렬이 작아 BLAS가 커널별로 다른 경로를 타지 않았을 수 있다. 실제 자료(001 적재 표)는 비교하지 않았다. 운영 서버에서는 저장소를 받은 뒤 `worker/README.md` \"환경 간 재현 확인\"의 명령을 돌려 이 표와 대조한다.\n+- **골든 재생성 정책**: 의존성(`uv.lock`)이나 기반 이미지 digest를 바꾸는 MR은 새 이미지 안에서 비교 스크립트를 돌린다. 12자리 해시가 그대로면 골든을 건드리지 않는다. 깨지면 먼저 `inputSha256`으로 입력 변경인지 가르고, 의존성·이미지·엔진 변경이 원인일 때만 그 골든을 지우고 다시 만든다. MR 본문에는 원인, 바뀐 필드와 자리수, 이전과 이후 `summary`를 적는다. 세부 절차는 `worker/CLAUDE.md`.\n+- **Alternatives**: 반올림 없는 해시로 판정(환경마다 골든이 필요해진다) / 필드별 상대 오차 허용(필드마다 기준을 따로 정해야 하고, 해시 하나로 버전과 결과를 묶는 T029 구조와 맞지 않는다) / 비교 스크립트를 CI에 넣기(CI 에이전트는 환경 하나라 비교가 되지 않는다. 골든 테스트가 그 환경의 대조를 이미 한다)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/research.md",
+          "old_path": "specs/004-backtest-execution/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -353,7 +353,8 @@ Phase 9에서 뺀 것이다. 정확성이 아니라 **다른 환경·다른 시\n   - 구현 시 결정: ① **지문은 이미지 digest가 아니라 `uv.lock` 지문**이다. 이미지 digest는 배포가 빌드한 뒤에야 알 수 있어 백엔드 설정에 미리 쓸 수 없고, 설치 내용은 lock이 정하며 기반 이미지는 Dockerfile에 digest로 고정돼 있다(T027). 값은 `worker/uv.lock`(LF) sha256 앞 12자이고 `engine-version: \"nautilus_trader 1.219.0 / worker 2.2.0 / uv.lock <12자>\"` 끝에 붙였다. lock을 바꾸고 설정을 잊으면 백엔드 `EngineVersionFingerprintTest`와 `worker/tests/test_dependency_pins.py`가 올바른 값을 알려 주며 실패한다 — CI는 바뀐 파트의 테스트만 돌리므로 백엔드 설정만 고친 MR에서도 잡히도록 양쪽에 둔다. 값이 바뀌면 동일 버전 키가 모두 바뀌어 기존 결과는 재사용되지 않는다(의도) ② 워커는 `importlib.metadata`로 numpy·scipy 설치 버전을 읽어 결과 `versions.dependencies`에 싣는다. 결과 행 `versions`에 통째로 저장되므로 스키마 변경은 없다 ③ 상세 조회는 `worker`와 같은 규칙으로 결과 쪽을 덧붙인다 — 계획(`backtest_run.versions`)은 그대로 두고, 결과가 있고 보고가 있을 때만 `versions.dependencies`를 붙인다. 공개 결과(005)는 `worker`와 같은 이유(운영 정보)로 뺀다\n - [x] T029 [BE] 규칙 버전 수명주기 — 규칙이 바뀌면 새 버전 행(`/2`)을 더하고 옛 행은 `SUPERSEDED`(CHECK 제약 확장). 검사를 둘로: 신규 접수 `requireCurrent`(REGISTERED만, PENDING 422, SUPERSEDED `409 REGISTRY_VERSION_CHANGED` — 화면은 두 등록표를 다시 받는다) / 저장된 실행의 조립·재발행·실패·취소 재시도 `requireExecutable`(SUPERSEDED 통과, README §1.6 동일 버전 재시도 계약). 과거 버전 재실행에는 전략 규칙뿐 아니라 **003의 과거 `registryVersion` 검증도 포함**한다 — 재시도가 신규 접수용 등록표 검증(`StrategySettingsValidator`)에 걸려 거절되지 않도록 같은 방식으로 검사를 분리한다. 워커는 `capOverflow`·`weightUnit` 규칙 키로 분기하고 버전별 골든을 나란히 둔다. registry 조회는 SUPERSEDED를 뺀다 — Jira `S15P21E205-353`\n   - 구현 시 결정(T029, 2026-09-19, Jira `S15P21E205-353`): ① **접수 입구를 둘로 나눴다.** `BacktestService.create`(새 요청)는 `StrategyRulesService.requireCurrent`, `BacktestService.createPinned`(버전이 이미 고정된 요청 — 재시도와 007 묶음 후보, `application/command/PinnedVersions`)는 `requireExecutable`을 탄다. 옛 `create(command, retryOf)`는 없앴다 — 재시도 여부를 인자 하나로 넘기면 호출자가 새 요청 경로에 재시도 id를 실어도 막을 수 없다. 새 요청의 409 `details`에 `strategyId`·`requestedRulesVersion`·`currentRulesVersion`을 싣는다. 코드는 003과 같은 `REGISTRY_VERSION_CHANGED`라 화면은 두 등록표를 함께 다시 받는다(003 T059가 이미 그 코드로 다시 받는다) ② **003 등록표는 `StrategySettingsValidator.verifySaved`로 나눴다.** 저장된 `registryVersion`이 지금과 같으면 `verify`와 같고, 과거 버전이면 판정하지 않는다. 등록표는 값이 바뀌면 버전을 올리므로 같은 버전으로 다시 판정해도 답이 같고, 003은 과거 버전 파일을 두지 않아 지금 규칙으로 판정하면 과거 요청을 뒤에 생긴 규칙으로 거절하게 된다. 워밍업은 저장된 사본의 실효값을 쓴다 ③ **목표 위험 오버레이의 `\"1\"` 하드코딩을 없앴다.** 새 요청은 지금 행(`requireCurrent(strategyId)`), 작업 조립·재시도는 실행에 기록된 `versions.scenarioRules`(`RunPlan.scenarioRules()`)를 `requireExecutable`로 읽는다. `전략/버전` 표기는 `RulesRef` 한 곳에서 만들고 풀며, 읽을 때 전략 이름이 오버레이인지도 확인한다. 재시도에서 기록을 읽지 못하면 500이다 — 400으로 두면 서버 기록 문제가 사용자 입력 잘못으로 보인다. 오버레이만 `/2`가 되면 모든 목표 위험 요청이 409가 되거나, 재시도가 다른 동일 버전 키를 받아 재사용을 놓친다. 기록이 없으면 지어내지 않고 실패한다(조립은 영구 실패로 닫힌다) ④ **전략당 지금 행 하나를 DB가 지킨다**(`uk_strategy_rules_current`, 부분 유니크 인덱스). 새 버전 마이그레이션은 한 파일 안에서 옛 행 UPDATE → 새 행 INSERT 순서이고, `SUPERSEDED`도 명세를 잃지 않는다(CHECK). 조회 API·007 지원 목록이 행 순서에 기대지 않게 된다 ⑤ **버전별 골든은 백엔드와 같은 명세 스냅샷으로 돈다.** `docs/specs/backtest-messaging/examples/rules/{전략}-{버전}.json`을 백엔드 `StrategyRulesSnapshotTest`가 DB 행과 대조하고, 워커 `test_rules_goldens.py`가 규칙 사본으로 실어 `worker/tests/goldens/`의 해시와 대조한다. 이 연결이 있어야 \"등록된 버전을 제자리에서 고치지 않는다\"가 말이 아니라 빌드가 된다. 해시에서 `versions`(이름표)와 실행 시각을 뺀다 — 워커 버전을 올릴 때마다 골든이 바뀌면 진짜 숫자 변화를 가려낼 수 없다. 골든은 없는 것만 만들고(`THORP_WRITE_RULES_GOLDENS=1`) 있는 것은 덮어쓰지 않는다 ⑥ **워커 계산 코드는 바꾸지 않았다.** 엔진은 이미 규칙 키(`capOverflow`·`weightUnit` 등)로만 분기하고 `rulesVersion`은 결과 이름표로만 쓴다. 그 사실을 테스트 둘로 고정했다(이름표만 바꾸면 같은 해시, 키를 바꾸면 다른 비중). 모멘텀 기준 입력(`engine-input-three-etf-momentum.json`)을 더해 다섯 전략과 오버레이 모두 골든이 있다 ⑦ **실제 `/2`는 넣지 않았다.** 장치만 넣었고 첫 버전 교체는 PD-02 확정(역변동성) 때다 — research R-08의 \"제자리 갱신\" 계획을 새 버전 추가로 고쳐 적었다 ⑧ **리뷰 반영(2026-09-19)**: ⓐ **007 묶음 후보를 버전 고정 접수로 옮겼다**(`CandidateJobLauncherImpl` → `createPinned(PinnedVersions.searchBundle())`, 007 내부 계약 §2에 반영). 새 요청으로 넣으면 묶음 도중 규칙이 대체된 날 다음 후보 발행이 409를 던지고, 그 예외가 결과 반영 트랜잭션(`ParamSearchProgressService.candidateFinished`, `REQUIRES_NEW`)을 되돌려 방금 끝난 후보의 완료 표시까지 사라지며 탐색이 RUNNING으로 멈췄다. 묶음은 접수 때 버전을 스냅샷에 고정하므로(007 FR-012) 고정 접수가 그 뜻과 맞다. 같은 이유로 003 등록표 버전이 오를 때 멈추던 기존 결함도 함께 닫힌다. 007 지원 목록(`StrategyExecutionSupportAdapter`)도 `findCurrent`를 쓰게 바꿨다 — 버전 문자열의 크기로 고르면 \"10\" < \"9\"다 ⓑ **2026-09-11~09-15 목표 위험 실행의 오버레이 기록을 채웠다.** 목표 위험 접수는 09-11부터, `versions.scenarioRules` 기록은 09-15부터라 그 사이 실행은 기록이 없고, 기록으로 오버레이를 읽게 된 뒤로는 재시도가 500, 대기 중 실행은 재발행에서 조립 실패로 닫혔다. 그 기간 코드는 `TARGET_RISK_OVERLAY/1`을 고정해 읽었으므로 수명주기 마이그레이션이 그 값으로 채운다(데이터 추가만, 지우거나 바꾸는 값 없음) ⓒ **골든 해시는 수를 유효숫자 12자리로 맞춘 뒤에 잰다.** 샤프 비율·변동성 같은 float 지표는 같은 라이브러리 버전이라도 OS·CPU가 다르면 끝자리가 흔들릴 수 있다. 의존성 버전은 T027이 `uv.lock`으로 고정했지만 환경 간 끝자리 차이까지 막지는 못한다(허용 기준은 T030). 골든에 기준 입력 지문(`inputSha256`)을 남겨 입력 변경과 엔진 변경을 가르고, 같은 입력의 엔진 실행은 한 번만 한다 ⓓ **이 MR에서 고치지 않은 것**: 005 결과 화면의 기간 비교·목표 위험 비교(`compareRequest.ts`)는 원래 결과의 `rulesVersion`을 새 요청에 다시 싣는다. 그 결과의 규칙이 대체되면 409를 받고 등록표를 다시 받아도 풀리지 않는다 — 옛 규칙 그대로 비교할지 새 규칙으로 바꿔 알릴지는 005(프론트) 판단이라 첫 `/2` 전에 정한다. CI 파트 판정(`Jenkinsfile` `partChanged`)은 `docs/specs/backtest-messaging/` 아래만 바뀐 MR에서 백엔드·워커를 돌리지 않아 스냅샷·골든 대조가 빠진다(계약 예시 파일도 같다). 인프라 파트 변경이라 이 MR에 넣지 않았다\n-- [ ] T030 [BE] 환경 간 재현 검증 — 다른 OS·CPU·이미지에서 같은 입력의 결과 해시 비교, 의존성·이미지 변경 시 골든 재생성 정책을 worker/CLAUDE.md에\n+- [X] T030 [BE] 환경 간 재현 검증 — 다른 OS·CPU·이미지에서 같은 입력의 결과 해시 비교, 의존성·이미지 변경 시 골든 재생성 정책을 worker/CLAUDE.md에 — Jira `S15P21E205-354`\n+  - 구현 시 결정(2026-09-19): ① **판정은 골든과 같은 유효숫자 12자리 해시다.** 반올림 전 해시는 진단 값으로만 남긴다. 측정 기록과 근거는 research R-21 ② **해시 정의를 `worker/src/worker/reproducibility.py` 한 곳으로 옮겼다.** 골든 테스트와 비교 스크립트(`worker/scripts/reproducibility_report.py`)가 따로 정의하면 스크립트는 같다는데 골든이 깨지는 일이 생긴다. 기준 입력과 실행은 `worker/tests/golden_inputs.py`로 옮겼다. 운영 이미지는 `--no-dev`라 pytest가 없으므로 이 모듈은 pytest를 import하지 않고, 픽스처 경로도 conftest가 아니라 `worker/tests/fixture_paths.py`에서 읽는다(conftest는 fixture를 두는 자리라 언제든 pytest를 import할 수 있다). 12자리 해시는 정수부가 긴 금액의 소수 끝자리를 가린다 — 판정은 12자리로 두고, 금액 계산을 고치는 MR은 반올림 전 해시까지 확인한다(research R-21). 스크립트의 판정이 골든과 같은지는 `test_reproducibility_report.py`가 붙박는다 ③ **측정**: Windows 11 x86_64(OpenBLAS SkylakeX), 워커 이미지 linux/amd64(Haswell), 워커 이미지 linux/arm64(qemu 에뮬레이션, neoversev2)에서 규칙 스냅샷 6개가 반올림 전 해시까지 같았다. 운영 서버와 실제 ARM 하드웨어, 실제 자료는 비교하지 않았다 ④ **골든 재생성 정책**은 `worker/CLAUDE.md`, 실행 명령은 `worker/README.md` \"환경 간 재현 확인\"에 적었다. 기반 이미지 digest를 올리는 절차에 이 확인을 넣었다 ⑤ 비교 스크립트는 CI에 넣지 않았다. CI 에이전트는 환경 하나라 비교가 되지 않고, 그 환경의 대조는 골든 테스트가 이미 한다\n \n **후속 후보 (Task로 만들지 않음)**\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,131 @@\n+\"\"\"환경 간 재현 비교 보고서(spec 004 T030).\n+\n+골든 테스트(``tests/test_rules_goldens.py``)와 같은 기준 입력·규칙 스냅샷으로 엔진을 돌려, 전략마다\n+반올림 없는 해시(``exactSha256``)와 골든 해시(``roundedSha256``, 유효숫자 12자리)를 환경 정보와 함께\n+JSON으로 낸다. 두 환경의 보고서를 나란히 놓으면 어느 전략이 어느 수준에서 갈리는지 보인다.\n+\n+기준 입력은 ``docs/specs/backtest-messaging/examples`` 와 ``worker/tests/fixtures`` 에 있으므로\n+저장소 전체가 보이는 곳에서 ``worker/`` 를 작업 디렉터리로 두고 실행한다::\n+\n+    uv run --no-sync python scripts/reproducibility_report.py --out report.json\n+\n+컨테이너에서는 저장소 전체를 마운트하고 이미지의 가상환경으로 돌린다::\n+\n+    docker run --rm -v \"<저장소>:/repo\" -w /repo/worker -e PYTHONPATH=/repo/worker/src \\\\\n+        -e THORP_IMAGE=<이미지 digest> <워커 이미지> \\\\\n+        python scripts/reproducibility_report.py --out /repo/worker/report.json\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import argparse\n+import json\n+import os\n+import platform\n+import sys\n+from importlib import metadata\n+from pathlib import Path\n+from typing import Any\n+\n+WORKER_DIR = Path(__file__).resolve().parents[1]\n+# 기준 입력을 만드는 방법은 골든 테스트 하나가 정한다 — 여기서 다시 쓰면 둘이 어긋난다.\n+sys.path.insert(0, str(WORKER_DIR / \"tests\"))\n+\n+from golden_inputs import (  # noqa: E402\n+    BASE_INPUTS,\n+    engine_input_for,\n+    golden_path,\n+    load_json,\n+    rule_snapshots,\n+    run,\n+)\n+\n+from worker.reproducibility import (  # noqa: E402\n+    computed,\n+    digest,\n+    exact_digest,\n+    input_digest,\n+)\n+\n+PACKAGES = (\"numpy\", \"scipy\", \"pandas\", \"nautilus_trader\", \"pydantic\")\n+\n+\n+def cpu_model() -> str:\n+    cpuinfo = Path(\"/proc/cpuinfo\")\n+    if cpuinfo.exists():\n+        for line in cpuinfo.read_text(encoding=\"utf-8\", errors=\"replace\").splitlines():\n+            if line.lower().startswith((\"model name\", \"cpu model\", \"hardware\")):\n+                return line.split(\":\", 1)[1].strip()\n+    return platform.processor()\n+\n+\n+def blas_info() -> dict[str, Any]:\n+    \"\"\"numpy 가 쓰는 BLAS/LAPACK. float 끝자리 차이는 대개 여기서 난다(커널이 CPU마다 다르다).\"\"\"\n+    import numpy\n+\n+    try:\n+        config: dict[str, Any] = numpy.show_config(mode=\"dicts\")  # type: ignore[no-untyped-call]\n+    except TypeError:\n+        return {}\n+    dependencies = config.get(\"Build Dependencies\", {})\n+    keys = (\"name\", \"version\", \"openblas configuration\")\n+    return {\n+        name: {key: dependencies.get(name, {}).get(key) for key in keys}\n+        for name in (\"blas\", \"lapack\")\n+    }\n+\n+\n+def environment() -> dict[str, Any]:\n+    return {\n+        \"label\": os.environ.get(\"THORP_ENV_LABEL\"),\n+        \"image\": os.environ.get(\"THORP_IMAGE\"),\n+        \"platform\": platform.platform(),\n+        \"machine\": platform.machine(),\n+        \"cpu\": cpu_model(),\n+        \"python\": platform.python_version(),\n+        \"packages\": {name: metadata.version(name) for name in PACKAGES},\n+        \"blas\": blas_info(),\n+    }\n+\n+\n+def report(dump_dir: Path | None) -> dict[str, Any]:\n+    results: dict[str, Any] = {}\n+    for snapshot_path in rule_snapshots():\n+        snapshot = load_json(snapshot_path)\n+        body = engine_input_for(snapshot)\n+        payload = computed(run(body))\n+        golden_file = golden_path(snapshot_path)\n+        golden = load_json(golden_file) if golden_file.exists() else None\n+        rounded_sha = digest(payload)\n+        results[snapshot_path.stem] = {\n+            \"engineInput\": BASE_INPUTS[snapshot[\"strategyId\"]],\n+            \"inputSha256\": input_digest(body),\n+            \"exactSha256\": exact_digest(payload),\n+            \"roundedSha256\": rounded_sha,\n+            \"goldenMatch\": None if golden is None else golden[\"sha256\"] == rounded_sha,\n+        }\n+        if dump_dir is not None:\n+            dump_dir.mkdir(parents=True, exist_ok=True)\n+            text = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + \"\\n\"\n+            (dump_dir / f\"{snapshot_path.stem}.json\").write_text(\n+                text, encoding=\"utf-8\", newline=\"\\n\"\n+            )\n+    return {\"environment\": environment(), \"results\": results}\n+\n+\n+def main() -> int:\n+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])\n+    parser.add_argument(\"--out\", type=Path, help=\"보고서 JSON 경로(없으면 표준 출력)\")\n+    parser.add_argument(\"--dump-dir\", type=Path, help=\"전략별 계산 결과 전문을 남길 디렉터리\")\n+    args = parser.parse_args()\n+\n+    text = json.dumps(report(args.dump_dir), ensure_ascii=False, indent=2) + \"\\n\"\n+    if args.out is None:\n+        sys.stdout.write(text)\n+    else:\n+        args.out.write_text(text, encoding=\"utf-8\", newline=\"\\n\")\n+    return 0\n+\n+\n+if __name__ == \"__main__\":\n+    raise SystemExit(main())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/scripts/reproducibility_report.py",
+          "old_path": "worker/scripts/reproducibility_report.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,76 @@\n+\"\"\"결과 재현 판정에 쓰는 해시 정의(spec 004 T029·T030).\n+\n+골든 테스트(``tests/test_rules_goldens.py``)와 환경 간 비교 스크립트\n+(``scripts/reproducibility_report.py``)가 \"같은 결과\"를 같은 뜻으로 재도록 한 곳에 둔다.\n+\n+- ``computed``: 실행 시각과 이름표(``versions``)를 뺀 계산 결과\n+- ``rounded``: 수(숫자 문자열 포함)를 유효숫자 12자리로 맞춘다(float 끝자리 흔들림 흡수)\n+- ``digest``: 반올림한 정규 JSON의 sha256 — 골든이 지키는 값\n+- ``exact_digest``: 반올림 없는 정규 JSON의 sha256 — 환경 간 비교에서 바이트 단위 일치를 본다\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import hashlib\n+import json\n+import re\n+from decimal import Context, Decimal\n+from typing import Any\n+\n+from worker.contracts.engine_output import EngineOutput\n+\n+#: 해시에 넣기 전에 수를 맞추는 유효숫자 자리수.\n+SIGNIFICANT_DIGITS = 12\n+_NUMBER = re.compile(r\"^-?\\d+(\\.\\d+)?([eE][-+]?\\d+)?$\")\n+_ROUNDING = Context(prec=SIGNIFICANT_DIGITS)\n+\n+\n+def canonical_json(value: Any) -> str:\n+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(\",\", \":\"))\n+\n+\n+def computed(output: EngineOutput) -> dict[str, Any]:\n+    \"\"\"계산 결과만 남긴다. 실행 시각과 이름표(``versions``: 규칙·엔진·워커 버전 문자열)는 뺀다.\n+\n+    이름표를 빼는 이유: 골든이 지키는 것은 \"이 명세로 계산하면 이 숫자\"이고, 워커 버전을 올릴 때마다\n+    모든 골든이 바뀌면 정말 숫자가 바뀐 경우를 가려낼 수 없다.\n+    \"\"\"\n+    payload: dict[str, Any] = json.loads(output.to_json())\n+    payload[\"run\"].pop(\"startedAt\", None)\n+    payload[\"run\"].pop(\"finishedAt\", None)\n+    payload.pop(\"versions\", None)\n+    return payload\n+\n+\n+def rounded(value: Any) -> Any:\n+    \"\"\"수(숫자 문자열 포함)를 유효숫자 12자리로 맞춘다.\n+\n+    식별자·날짜 같은 나머지 문자열은 그대로 둔다.\n+    \"\"\"\n+    if isinstance(value, dict):\n+        return {key: rounded(item) for key, item in value.items()}\n+    if isinstance(value, list):\n+        return [rounded(item) for item in value]\n+    if isinstance(value, float):\n+        return _significant(Decimal(repr(value)))\n+    if isinstance(value, str) and _NUMBER.match(value):\n+        return _significant(Decimal(value))\n+    return value\n+\n+\n+def _significant(number: Decimal) -> str:\n+    \"\"\"유효숫자로 반올림한 뒤 뒷자리 0을 떼어 같은 값이 언제나 같은 표기가 되게 한다.\"\"\"\n+    return format(_ROUNDING.create_decimal(number).normalize(), \"f\")\n+\n+\n+def digest(payload: dict[str, Any]) -> str:\n+    return hashlib.sha256(canonical_json(rounded(payload)).encode(\"utf-8\")).hexdigest()\n+\n+\n+def exact_digest(payload: dict[str, Any]) -> str:\n+    return hashlib.sha256(canonical_json(payload).encode(\"utf-8\")).hexdigest()\n+\n+\n+def input_digest(body: dict[str, Any]) -> str:\n+    \"\"\"기준 입력의 지문. 결과가 어긋났을 때 입력이 바뀐 것인지 엔진이 바뀐 것인지 가른다.\"\"\"\n+    return hashlib.sha256(canonical_json(body).encode(\"utf-8\")).hexdigest()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/reproducibility.py",
+          "old_path": "worker/src/worker/reproducibility.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +1,10 @@\n from copy import deepcopy\n-from pathlib import Path\n from typing import Any\n \n-# 백엔드 테스트와 같은 파일을 읽는다 (테스트 리소스로 복사하지 않는다 — 복사하면 어긋난다).\n-FIXTURE_DIR = (\n-    Path(__file__).resolve().parents[2] / \"docs\" / \"specs\" / \"backtest-messaging\" / \"examples\"\n-)\n+from fixture_paths import FIXTURE_DIR, THREE_ETF_DIR\n+\n+__all__ = [\"FIXTURE_DIR\", \"THREE_ETF_DIR\"]\n \n-#: 3종목 24개월 합성 픽스처(spec 004 T004). 결과는 항상 픽스처로 식별된다.\n-THREE_ETF_DIR = Path(__file__).resolve().parents[1] / \"examples\" / \"three_etf_24m\"\n THREE_ETF_DATASET = \"FIXTURE-three_etf_24m\"\n \n SEMICONDUCTOR = \"091160.XKRX\"  # 2015-01-02 상장\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/conftest.py",
+          "old_path": "worker/tests/conftest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,16 @@\n+\"\"\"테스트가 읽는 픽스처 경로.\n+\n+``conftest`` 와 ``golden_inputs`` 가 함께 쓴다. 환경 간 비교 스크립트가 pytest 없는 운영 이미지\n+안에서 ``golden_inputs`` 를 import 하므로 이 모듈은 pytest 를 import 하지 않는다(spec 004 T030).\n+conftest 는 fixture 를 두는 자리라 언제든 pytest 를 import 할 수 있어서 경로를 여기로 뺐다.\n+\"\"\"\n+\n+from pathlib import Path\n+\n+# 백엔드 테스트와 같은 파일을 읽는다 (테스트 리소스로 복사하지 않는다 — 복사하면 어긋난다).\n+FIXTURE_DIR = (\n+    Path(__file__).resolve().parents[2] / \"docs\" / \"specs\" / \"backtest-messaging\" / \"examples\"\n+)\n+\n+#: 3종목 24개월 합성 픽스처(spec 004 T004). 결과는 항상 픽스처로 식별된다.\n+THREE_ETF_DIR = Path(__file__).resolve().parents[1] / \"examples\" / \"three_etf_24m\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixture_paths.py",
+          "old_path": "worker/tests/fixture_paths.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,95 @@\n+\"\"\"규칙 버전 골든의 기준 입력과 실행(spec 004 T029·T030).\n+\n+골든 테스트(``test_rules_goldens.py``)와 환경 간 비교 스크립트\n+(``scripts/reproducibility_report.py``)가 같은 입력으로 엔진을 돌리도록 한 곳에 둔다.\n+스크립트는 pytest 가 없는 운영 이미지 안에서도 돌아야 하므로 이 모듈은 pytest 를 import 하지\n+않는다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import functools\n+import json\n+from pathlib import Path\n+from typing import Any\n+\n+from fixture_paths import FIXTURE_DIR, THREE_ETF_DIR\n+\n+from worker.contracts.engine_output import EngineOutput, RunStatus\n+from worker.engine_runner import PortfolioBacktestEngine\n+from worker.market_data import CsvMarketDataProvider\n+from worker.reproducibility import canonical_json, computed\n+\n+RULES_DIR = FIXTURE_DIR / \"rules\"\n+GOLDEN_DIR = Path(__file__).resolve().parent / \"goldens\"\n+INPUT_DIR = Path(__file__).resolve().parent / \"fixtures\"\n+\n+#: 전략 → 골든을 돌릴 기준 입력. 규칙 사본만 스냅샷의 것으로 바꿔 끼운다.\n+BASE_INPUTS: dict[str, str] = {\n+    \"FIXED_WEIGHT\": \"engine-input-three-etf-fixed.json\",\n+    \"EQUAL_WEIGHT\": \"engine-input-three-etf-equal.json\",\n+    \"INVERSE_VOLATILITY\": \"engine-input-three-etf-inverse_vol.json\",\n+    \"SECTOR_MOMENTUM\": \"engine-input-three-etf-momentum.json\",\n+    \"MINIMUM_VARIANCE\": \"engine-input-three-etf-min_variance.json\",\n+    # 전략이 아니라 시나리오 오버레이라 run.scenarioRules 로 실린다.\n+    \"TARGET_RISK_OVERLAY\": \"engine-input-three-etf-target-risk.json\",\n+}\n+OVERLAY = \"TARGET_RISK_OVERLAY\"\n+\n+\n+def rule_snapshots() -> list[Path]:\n+    return sorted(RULES_DIR.glob(\"*.json\"))\n+\n+\n+def load_json(path: Path) -> dict[str, Any]:\n+    loaded: dict[str, Any] = json.loads(path.read_text(encoding=\"utf-8\"))\n+    return loaded\n+\n+\n+def engine_input_for(snapshot: dict[str, Any], rules_version: str | None = None) -> dict[str, Any]:\n+    \"\"\"기준 입력에 스냅샷의 명세를 규칙 사본으로 끼운다.\n+\n+    모양은 백엔드 ``EngineInputAssembler`` 가 싣는 것과 같다 — 명세에 ``provisional`` 을\n+    더한 사본이다.\n+    \"\"\"\n+    strategy_id = snapshot[\"strategyId\"]\n+    assert strategy_id in BASE_INPUTS, f\"{strategy_id} 의 골든 기준 입력을 BASE_INPUTS 에 더한다\"\n+    body = load_json(INPUT_DIR / BASE_INPUTS[strategy_id])\n+    version = rules_version or snapshot[\"rulesVersion\"]\n+    if strategy_id == OVERLAY:\n+        body[\"run\"][\"scenarioRules\"] = {**snapshot[\"spec\"], \"version\": f\"{OVERLAY}/{version}\"}\n+    else:\n+        body[\"allocation\"][\"rulesVersion\"] = version\n+        body[\"allocation\"][\"rules\"] = {**snapshot[\"spec\"], \"provisional\": snapshot[\"provisional\"]}\n+    return body\n+\n+\n+def run(body: dict[str, Any]) -> EngineOutput:\n+    \"\"\"같은 입력은 한 번만 돌린다 — 골든과 분기 테스트가 같은 기준 입력을 쓴다.\"\"\"\n+    return _run_cached(canonical_json(body))\n+\n+\n+@functools.cache\n+def _run_cached(body_json: str) -> EngineOutput:\n+    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(\n+        json.loads(body_json)\n+    )\n+    assert output.run.status is RunStatus.COMPLETED, output.run.error\n+    return output\n+\n+\n+def summary(output: EngineOutput) -> dict[str, Any]:\n+    \"\"\"골든이 어긋났을 때 어디가 달라졌는지 가늠할 숫자 몇 개. 판정에는 쓰지 않는다.\"\"\"\n+    payload = computed(output)\n+    series = payload.get(\"weightsSeries\") or []\n+    return {\n+        \"performance\": payload.get(\"performance\"),\n+        \"tradeCount\": len(payload.get(\"trades\") or []),\n+        \"exceptionCount\": len(payload.get(\"exceptions\") or []),\n+        \"firstTarget\": series[0][\"target\"] if series else None,\n+        \"lastTarget\": series[-1][\"target\"] if series else None,\n+    }\n+\n+\n+def golden_path(snapshot_path: Path) -> Path:\n+    return GOLDEN_DIR / snapshot_path.name\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/golden_inputs.py",
+          "old_path": "worker/tests/golden_inputs.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,38 @@\n+\"\"\"환경 간 비교 스크립트가 골든과 같은 판정을 내는지(spec 004 T030).\n+\n+스크립트는 CI 에서 따로 돌지 않으므로, 골든 테스트와 입력·해시 정의가 어긋나도 아무도 모른다.\n+이 환경에서 스크립트의 판정이 골든 테스트와 같은지 붙박는다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import importlib.util\n+from pathlib import Path\n+from types import ModuleType\n+\n+from golden_inputs import golden_path, load_json, rule_snapshots\n+\n+SCRIPT = Path(__file__).resolve().parents[1] / \"scripts\" / \"reproducibility_report.py\"\n+\n+\n+def load_script() -> ModuleType:\n+    spec = importlib.util.spec_from_file_location(\"reproducibility_report\", SCRIPT)\n+    assert spec is not None and spec.loader is not None\n+    module = importlib.util.module_from_spec(spec)\n+    spec.loader.exec_module(module)\n+    return module\n+\n+\n+def test_the_report_covers_every_rules_snapshot_and_matches_its_golden() -> None:\n+    report = load_script().report(dump_dir=None)\n+\n+    results = report[\"results\"]\n+    assert set(results) == {path.stem for path in rule_snapshots()}\n+    for snapshot_path in rule_snapshots():\n+        entry = results[snapshot_path.stem]\n+        golden = load_json(golden_path(snapshot_path))\n+        assert entry[\"roundedSha256\"] == golden[\"sha256\"], snapshot_path.stem\n+        assert entry[\"inputSha256\"] == golden[\"inputSha256\"], snapshot_path.stem\n+        assert entry[\"goldenMatch\"] is True\n+        assert len(entry[\"exactSha256\"]) == 64\n+    assert report[\"environment\"][\"packages\"][\"numpy\"]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_reproducibility_report.py",
+          "old_path": "worker/tests/test_reproducibility_report.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,158 +24,35 @@\n **해시는 수를 유효숫자 12자리로 맞춘 뒤에 잰다.** 샤프 비율·변동성 같은 지표는 float 표기 그대로\n 결과에 실리고, 같은 라이브러리 버전이라도 OS·CPU가 다르면 마지막 자리가 흔들릴 수 있다. 의존성\n 버전은 ``uv.lock`` 이 고정하지만(004 T027) 그것만으로 환경 간 끝자리 차이까지 막지는 못한다. 규칙이\n-바뀌어서 생기는 차이는 그보다 훨씬 크므로 12자리에서 잘라도 놓치지 않는다. 환경 간 재현의 허용\n-기준은 004 T030이 정한다.\n+바뀌어서 생기는 차이는 그보다 훨씬 크므로 12자리에서 잘라도 놓치지 않는다. 환경 간 재현도 이\n+해시로 판정한다(004 T030, research R-21). 해시 정의는 ``worker.reproducibility``, 기준 입력과 실행은\n+``golden_inputs`` 에 있고 환경 간 비교 스크립트(``scripts/reproducibility_report.py``)도 같은\n+것을 쓴다.\n \"\"\"\n \n from __future__ import annotations\n \n-import functools\n-import hashlib\n import json\n import os\n-import re\n-from decimal import Context, Decimal\n from pathlib import Path\n-from typing import Any\n \n import pytest\n-from conftest import FIXTURE_DIR, THREE_ETF_DIR\n+from golden_inputs import (\n+    BASE_INPUTS,\n+    GOLDEN_DIR,\n+    RULES_DIR,\n+    engine_input_for,\n+    golden_path,\n+    load_json,\n+    rule_snapshots,\n+    run,\n+    summary,\n+)\n+\n+from worker.reproducibility import computed, digest, input_digest, rounded\n \n-from worker.contracts.engine_output import EngineOutput, RunStatus\n-from worker.engine_runner import PortfolioBacktestEngine\n-from worker.market_data import CsvMarketDataProvider\n-\n-RULES_DIR = FIXTURE_DIR / \"rules\"\n-GOLDEN_DIR = Path(__file__).resolve().parent / \"goldens\"\n-INPUT_DIR = Path(__file__).resolve().parent / \"fixtures\"\n WRITE_ENV = \"THORP_WRITE_RULES_GOLDENS\"\n \n-#: 전략 → 골든을 돌릴 기준 입력. 규칙 사본만 스냅샷의 것으로 바꿔 끼운다.\n-BASE_INPUTS: dict[str, str] = {\n-    \"FIXED_WEIGHT\": \"engine-input-three-etf-fixed.json\",\n-    \"EQUAL_WEIGHT\": \"engine-input-three-etf-equal.json\",\n-    \"INVERSE_VOLATILITY\": \"engine-input-three-etf-inverse_vol.json\",\n-    \"SECTOR_MOMENTUM\": \"engine-input-three-etf-momentum.json\",\n-    \"MINIMUM_VARIANCE\": \"engine-input-three-etf-min_variance.json\",\n-    # 전략이 아니라 시나리오 오버레이라 run.scenarioRules 로 실린다.\n-    \"TARGET_RISK_OVERLAY\": \"engine-input-three-etf-target-risk.json\",\n-}\n-OVERLAY = \"TARGET_RISK_OVERLAY\"\n-\n-#: 해시에 넣기 전에 수를 맞추는 유효숫자 자리수(모듈 주석).\n-SIGNIFICANT_DIGITS = 12\n-_NUMBER = re.compile(r\"^-?\\d+(\\.\\d+)?([eE][-+]?\\d+)?$\")\n-_ROUNDING = Context(prec=SIGNIFICANT_DIGITS)\n-\n-\n-def rule_snapshots() -> list[Path]:\n-    return sorted(RULES_DIR.glob(\"*.json\"))\n-\n-\n-def load_json(path: Path) -> dict[str, Any]:\n-    loaded: dict[str, Any] = json.loads(path.read_text(encoding=\"utf-8\"))\n-    return loaded\n-\n-\n-def engine_input_for(snapshot: dict[str, Any], rules_version: str | None = None) -> dict[str, Any]:\n-    \"\"\"기준 입력에 스냅샷의 명세를 규칙 사본으로 끼운다.\n-\n-    모양은 백엔드 ``EngineInputAssembler`` 가 싣는 것과 같다 — 명세에 ``provisional`` 을\n-    더한 사본이다.\n-    \"\"\"\n-    strategy_id = snapshot[\"strategyId\"]\n-    assert strategy_id in BASE_INPUTS, f\"{strategy_id} 의 골든 기준 입력을 BASE_INPUTS 에 더한다\"\n-    body = load_json(INPUT_DIR / BASE_INPUTS[strategy_id])\n-    version = rules_version or snapshot[\"rulesVersion\"]\n-    if strategy_id == OVERLAY:\n-        body[\"run\"][\"scenarioRules\"] = {**snapshot[\"spec\"], \"version\": f\"{OVERLAY}/{version}\"}\n-    else:\n-        body[\"allocation\"][\"rulesVersion\"] = version\n-        body[\"allocation\"][\"rules\"] = {**snapshot[\"spec\"], \"provisional\": snapshot[\"provisional\"]}\n-    return body\n-\n-\n-def canonical_json(value: Any) -> str:\n-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(\",\", \":\"))\n-\n-\n-def run(body: dict[str, Any]) -> EngineOutput:\n-    \"\"\"같은 입력은 한 번만 돌린다 — 골든과 분기 테스트가 같은 기준 입력을 쓴다.\"\"\"\n-    return _run_cached(canonical_json(body))\n-\n-\n-@functools.cache\n-def _run_cached(body_json: str) -> EngineOutput:\n-    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(\n-        json.loads(body_json)\n-    )\n-    assert output.run.status is RunStatus.COMPLETED, output.run.error\n-    return output\n-\n-\n-def computed(output: EngineOutput) -> dict[str, Any]:\n-    \"\"\"계산 결과만 남긴다. 실행 시각과 이름표(``versions``: 규칙·엔진·워커 버전 문자열)는 뺀다.\n-\n-    이름표를 빼는 이유: 골든이 지키는 것은 \"이 명세로 계산하면 이 숫자\"이고, 워커 버전을 올릴 때마다\n-    모든 골든이 바뀌면 정말 숫자가 바뀐 경우를 가려낼 수 없다.\n-    \"\"\"\n-    payload: dict[str, Any] = json.loads(output.to_json())\n-    payload[\"run\"].pop(\"startedAt\", None)\n-    payload[\"run\"].pop(\"finishedAt\", None)\n-    payload.pop(\"versions\", None)\n-    return payload\n-\n-\n-def rounded(value: Any) -> Any:\n-    \"\"\"수(숫자 문자열 포함)를 유효숫자 12자리로 맞춘다.\n-\n-    식별자·날짜 같은 나머지 문자열은 그대로 둔다.\n-    \"\"\"\n-    if isinstance(value, dict):\n-        return {key: rounded(item) for key, item in value.items()}\n-    if isinstance(value, list):\n-        return [rounded(item) for item in value]\n-    if isinstance(value, float):\n-        return _significant(Decimal(repr(value)))\n-    if isinstance(value, str) and _NUMBER.match(value):\n-        return _significant(Decimal(value))\n-    return value\n-\n-\n-def _significant(number: Decimal) -> str:\n-    \"\"\"유효숫자로 반올림한 뒤 뒷자리 0을 떼어 같은 값이 언제나 같은 표기가 되게 한다.\"\"\"\n-    return format(_ROUNDING.create_decimal(number).normalize(), \"f\")\n-\n-\n-def digest(payload: dict[str, Any]) -> str:\n-    return hashlib.sha256(canonical_json(rounded(payload)).encode(\"utf-8\")).hexdigest()\n-\n-\n-def input_digest(body: dict[str, Any]) -> str:\n-    \"\"\"골든을 만든 기준 입력의 지문.\n-\n-    결과가 어긋났을 때 입력이 바뀐 것인지 엔진이 바뀐 것인지 가른다.\n-    \"\"\"\n-    return hashlib.sha256(canonical_json(body).encode(\"utf-8\")).hexdigest()\n-\n-\n-def summary(output: EngineOutput) -> dict[str, Any]:\n-    \"\"\"골든이 어긋났을 때 어디가 달라졌는지 가늠할 숫자 몇 개. 판정에는 쓰지 않는다.\"\"\"\n-    payload = computed(output)\n-    series = payload.get(\"weightsSeries\") or []\n-    return {\n-        \"performance\": payload.get(\"performance\"),\n-        \"tradeCount\": len(payload.get(\"trades\") or []),\n-        \"exceptionCount\": len(payload.get(\"exceptions\") or []),\n-        \"firstTarget\": series[0][\"target\"] if series else None,\n-        \"lastTarget\": series[-1][\"target\"] if series else None,\n-    }\n-\n-\n-def golden_path(snapshot_path: Path) -> Path:\n-    return GOLDEN_DIR / snapshot_path.name\n-\n \n @pytest.mark.parametrize(\"snapshot_path\", rule_snapshots(), ids=lambda path: path.stem)\n def test_each_rules_version_reproduces_its_golden(snapshot_path: Path) -> None:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_rules_goldens.py",
+          "old_path": "worker/tests/test_rules_goldens.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -85,7 +85,9 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest\n   독립 계산이라 기대값을 엔진 출력으로 채우면 대조가 아니다\n - **섹터 모멘텀은 네 단계다**(`allocation/momentum.py`, PD-03). 점수(`P(t-S)/P(t-S-L)-1`, 조정 종가) → 선정(`selectionMode` **하나만**) → 배분(`EQUAL` 또는 역변동성) → 공통 출력. 필요한 이력은 **`L+S+1` 거래일**로 독립 역변동성의 `L+1`과 다르다 — 최근 구간을 건너뛴 만큼 더 앞을 봐야 한다. 모멘텀 안 역변동성 배분은 관측 길이만 물려받고 **`skipRecentDays`는 적용하지 않는다**(점수는 단기 반전을 피하려 최근을 빼지만 변동성은 위험 추정이라 최근이 가장 중요하다). 변동성 계산은 `base.volatility_of` 하나를 독립 역변동성과 함께 쓴다 — 두 곳에서 따로 재면 같은 종목의 위험이 화면마다 달라진다\n - **배분은 순수 함수다**(`allocation/`). 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려주고 주문·현금·시각을 모른다. 같은 입력이면 언제 불러도 같은 답이 나와야 재사용 판정(R-03)이 성립한다. 전략 추가는 모듈 하나 + `ALLOCATION_RULES` 한 줄이다\n-- **규칙 버전마다 골든을 나란히 둔다**(`tests/test_rules_goldens.py`, spec 004 T029). 백엔드와 같은 명세 스냅샷(`docs/specs/backtest-messaging/examples/rules/{전략}-{버전}.json`)을 규칙 사본으로 실어 돌린 결과가 `tests/goldens/{전략}-{버전}.json`의 해시와 같아야 한다. 새 규칙 버전이 생기면 `THORP_WRITE_RULES_GOLDENS=1 pytest tests/test_rules_goldens.py`로 **없는 골든만** 만든다(있는 것은 덮어쓰지 않는다). 해시는 수를 유효숫자 12자리로 맞춘 뒤에 재고(float 끝자리 흔들림 흡수, 환경 간 허용 기준은 004 T030), 골든에 기준 입력의 지문(`inputSha256`)을 함께 남겨 입력이 바뀐 것과 엔진이 바뀐 것을 가른다. 옛 버전의 골든은 지우지 않는다 — 옛 버전으로 접수된 실행이 재시도·재발행에서 옛 명세로 계산되기 때문이다. 이미 있는 골든이 깨지면 \"같은 버전이 다른 숫자를 낸다\"는 뜻이라, 의존성·엔진 변경이 원인일 때만 파일을 지우고 다시 만들며 MR에 이유를 적는다. **엔진은 `allocation.rulesVersion`으로 분기하지 않는다** — 버전 문자열은 결과 이름표이고, 버전 사이의 계산 차이는 명세 키(`capOverflow`·`weightUnit` 등)의 값 차이로만 생긴다\n+- **규칙 버전마다 골든을 나란히 둔다**(`tests/test_rules_goldens.py`, spec 004 T029). 백엔드와 같은 명세 스냅샷(`docs/specs/backtest-messaging/examples/rules/{전략}-{버전}.json`)을 규칙 사본으로 실어 돌린 결과가 `tests/goldens/{전략}-{버전}.json`의 해시와 같아야 한다. 새 규칙 버전이 생기면 `THORP_WRITE_RULES_GOLDENS=1 pytest tests/test_rules_goldens.py`로 **없는 골든만** 만든다(있는 것은 덮어쓰지 않는다). 해시는 수를 유효숫자 12자리로 맞춘 뒤에 재고(float 끝자리 흔들림 흡수, 아래 환경 간 재현 항목), 골든에 기준 입력의 지문(`inputSha256`)을 함께 남겨 입력이 바뀐 것과 엔진이 바뀐 것을 가른다. 옛 버전의 골든은 지우지 않는다 — 옛 버전으로 접수된 실행이 재시도·재발행에서 옛 명세로 계산되기 때문이다. 이미 있는 골든이 깨지면 \"같은 버전이 다른 숫자를 낸다\"는 뜻이라, 의존성·엔진 변경이 원인일 때만 파일을 지우고 다시 만들며 MR에 이유를 적는다. **엔진은 `allocation.rulesVersion`으로 분기하지 않는다** — 버전 문자열은 결과 이름표이고, 버전 사이의 계산 차이는 명세 키(`capOverflow`·`weightUnit` 등)의 값 차이로만 생긴다\n+- **환경 간 재현은 골든과 같은 12자리 해시로 판정한다**(spec 004 T030, research R-21). 해시 정의는 `reproducibility.py` 하나이고 골든 테스트와 `scripts/reproducibility_report.py`가 함께 쓴다 — 둘이 따로 정의하면 스크립트는 같다는데 골든은 깨지는 일이 생긴다. 기준 입력과 실행은 `tests/golden_inputs.py`에 두고 **pytest를 import하지 않는다**(운영 이미지는 `--no-dev`라 pytest가 없는데 스크립트는 그 안에서 돌아야 한다). 반올림 전 해시(`exactSha256`)는 판정에 쓰지 않는다. 2026-09-19에 Windows·Linux x86_64·Linux aarch64에서 반올림 전까지 같았지만, 다른 CPU·BLAS 빌드에서 float 지표 끝자리가 흔들리는 것을 실패로 만들지 않으려는 것이다. **12자리 해시가 못 잡는 차이가 있다**: 유효숫자 기준이라 정수부가 긴 금액은 소수 자리가 먼저 잘린다(1천만 원대 `finalEquity`는 소수 넷째 자리까지만 들어간다). 비용·체결·현금처럼 금액 계산을 고치는 MR은 고치기 전과 후에 비교 스크립트를 돌려 `exactSha256`까지 확인한다\n+- **골든 재생성 정책**: ① `uv.lock`이나 기반 이미지 digest를 바꾸는 MR은 새 이미지 안에서 비교 스크립트를 돌린다(`worker/README.md` \"환경 간 재현 확인\") ② `goldenMatch`가 모두 참이면 골든을 건드리지 않는다 ③ 깨지면 먼저 `inputSha256`이 같은지 본다. 다르면 입력(기준 입력·규칙 스냅샷)이 바뀐 것이지 엔진 회귀가 아니다 ④ 입력이 같은데 깨졌으면 `--dump-dir` 결과를 옛 환경 것과 diff해 갈린 필드와 자리수를 찾는다. 원인이 의존성·이미지·엔진 변경으로 확인될 때만 그 골든 파일을 지우고 `THORP_WRITE_RULES_GOLDENS=1 pytest tests/test_rules_goldens.py`로 다시 만든다 ⑤ MR 본문에 원인, 바뀐 필드와 자리수, 이전·이후 `summary`를 적는다. 골든이 바뀐다는 것은 저장된 과거 결과를 재시도하면 다른 숫자가 나온다는 뜻이다 ⑥ 원인을 설명하지 못하면 골든을 바꾸지 않고 의존성·이미지 변경을 되돌린다\n - **규칙 값과 비용 수치를 코드에 두지 말 것.** 전부 `allocation.rules`·`execution.costProfile`에서 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-07·R-08). 명세에 없는 값이 필요하면 지어내지 말고 `INVALID_REQUEST`로 멈춘다\n - **팀 미확정 전략은 돌리지 않는다**(`rules_registry.py`). 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 낸다(FR-010). \"팀이 안 정했다\"와 \"엔진이 구현 안 했다\"는 메시지를 구분한다 — 사용자가 할 일이 다르다. **표는 지금 비어 있다**(2026-09-17 PD-03·PD-04 확정으로 다섯 전략이 모두 등록됐다). 규칙 없는 전략을 더할 때 다시 쓴다\n - **`INVALID_REQUEST`와 `CONSTRAINT_VIOLATION`을 섞지 말 것.** 앞은 요청이 잘못됐다는 뜻이고 뒤는 요청은 말이 되지만 그 조건을 만족하는 배분이 없다는 뜻이다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/CLAUDE.md",
+          "old_path": "worker/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -63,6 +63,29 @@ Python 3.11이고 lock은 3.11과 3.12 이상에 서로 다른 numpy를 고르\n      \"import sys, numpy, scipy, nautilus_trader; print(sys.version, numpy.__version__, scipy.__version__, nautilus_trader.__version__)\"\n    ```\n \n+4. 새 이미지 안에서 아래 \"환경 간 재현 확인\"을 돌려 골든과 같은지 본다.\n+\n+### 환경 간 재현 확인\n+\n+`scripts/reproducibility_report.py`는 규칙 버전 골든과 같은 입력으로 엔진을 돌려 전략마다 반올림 전\n+해시(`exactSha256`)와 골든 해시(`roundedSha256`, 유효숫자 12자리), 골든 일치 여부를 환경 정보(OS·CPU·\n+패키지·BLAS 커널)와 함께 JSON으로 낸다. 판정은 `goldenMatch`로 하고, 반올림 전 해시는 두 환경이 어디서\n+갈렸는지 좁히는 데 쓴다(spec 004 research R-21). 기준 입력이 `docs/specs/backtest-messaging/examples`에도\n+있으므로 저장소 전체가 보이는 곳에서 `worker/`를 작업 디렉터리로 두고 돌린다.\n+\n+```bash\n+# 개발기\n+uv run --no-sync python scripts/reproducibility_report.py --out report.json --dump-dir dump\n+\n+# 워커 이미지(저장소 루트에서). 운영 이미지에는 pytest가 없어도 된다\n+docker run --rm -v \"$PWD:/repo\" -w /repo/worker -e PYTHONPATH=/repo/worker/src \\\n+  -e PYTHONDONTWRITEBYTECODE=1 -e THORP_ENV_LABEL=<환경 이름> <워커 이미지> \\\n+  python scripts/reproducibility_report.py --out /repo/worker/report.json --dump-dir /repo/worker/dump\n+```\n+\n+두 환경의 `exactSha256`이 다르면 `--dump-dir`로 남긴 전략별 결과 전문을 diff해 갈린 필드와 자리수를 본다.\n+보고서와 덤프는 커밋하지 않는다.\n+\n ### 엔진을 직접 호출하기\n \n ```python\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/README.md",
+          "old_path": "worker/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2839722": []
+  }
+}

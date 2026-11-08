@@ -1,0 +1,648 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 932780,
+    "iid": 4,
+    "project_id": 1444456,
+    "title": "refactor(be): 서비스 식별자 quantumjump → thorp 리네임",
+    "description": "# 작업 내용 요약\n\n백엔드 코드에 남아 있던 서비스 식별자 `quantumjump`를 서비스명 `thorp`로 리네임했다. 팀명 \"Quantum Jump\"는 유지하고, 서비스를 가리키는 식별자만 바꿨다. Java 파일이 4개뿐인 지금 패키지 디렉토리 이동까지 처리했다.\n\n# 관련 이슈\n\n- close #\n\n# 주요 변경 사항\n\n- Gradle `group`을 `com.thorp`, `rootProject.name`을 `thorp-backend`로 변경 (jar → `thorp-backend-0.1.1-SNAPSHOT.jar`)\n- 패키지 `com.quantumjump.api` → `com.thorp.api` 디렉토리 이동, 메인 클래스 `QuantumJumpApplication` → `ThorpApplication`\n- `application.yml` 앱 이름 `thorp-backend`, 로컬 DB 기본값 `localhost:5432/thorp`로 통일\n- 루트 `docker-compose.dev.yml`의 `POSTGRES_DB` 기본값 4곳을 prod(`.env.prod.example`)와 동일하게 `thorp`로 변경 (BE 브랜치가 루트 파일을 건드림)\n- `backend/CLAUDE.md` 패키지 규칙 헤더 수정\n\n# 테스트\n\n- [x] `./gradlew clean spotlessApply build` 통과, `build/libs/thorp-backend-0.1.1-SNAPSHOT.jar` 생성 확인\n- [x] jar 매니페스트 `Start-Class: com.thorp.api.ThorpApplication` 확인\n- [x] `grep -ri quantumjump backend/`, `grep -ri quantum-jump backend/` 결과 없음 (build, .gradle 제외)\n- [x] 빈 디렉토리 `src/{main,test}/java/com/quantumjump` 남지 않음\n- [x] `docker compose -f docker-compose.dev.yml config`에 `quantumjump` 없음, `POSTGRES_DB: thorp` 확인\n- [ ] 컨테이너 빌드 및 기동 로그에 `ThorpApplication` 표시 확인\n\n# 리뷰 포인트\n\n- `docker-compose.dev.yml` 1행의 compose 프로젝트명 `name: quantum-jump`는 팀명으로 보고 유지했는데, 서비스 식별자로 보고 `thorp`로 바꿀지\n- DB 계정 기본값 `username`/`password` = `quantum`은 서비스 식별자가 아니라 그대로 둔 판단이 적절한지\n- 로컬 개발 DB 볼륨에 `quantumjump` DB만 있는 팀원은 `docker compose down -v` 후 재기동 필요 (초기 데이터 없어 손실 없음)",
+    "state": "merged",
+    "created_at": "2026-09-03T11:13:45.385+09:00",
+    "updated_at": "2026-09-14T14:33:21.869+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-03T11:14:19.739+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(be)/76-rename-quantumjump-to-thorp",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c99e78f6ac5df394ce135791536d79893ffe5717",
+    "merge_commit_sha": "396ce4dc94f52b34f724a78a045a9d5ea549c7e5",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-03T11:13:46.509+09:00",
+    "reference": "!4",
+    "references": {
+      "short": "!4",
+      "relative": "!4",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!4"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/4",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 932780,
+    "iid": 4,
+    "project_id": 1444456,
+    "title": "refactor(be): 서비스 식별자 quantumjump → thorp 리네임",
+    "description": "# 작업 내용 요약\n\n백엔드 코드에 남아 있던 서비스 식별자 `quantumjump`를 서비스명 `thorp`로 리네임했다. 팀명 \"Quantum Jump\"는 유지하고, 서비스를 가리키는 식별자만 바꿨다. Java 파일이 4개뿐인 지금 패키지 디렉토리 이동까지 처리했다.\n\n# 관련 이슈\n\n- close #\n\n# 주요 변경 사항\n\n- Gradle `group`을 `com.thorp`, `rootProject.name`을 `thorp-backend`로 변경 (jar → `thorp-backend-0.1.1-SNAPSHOT.jar`)\n- 패키지 `com.quantumjump.api` → `com.thorp.api` 디렉토리 이동, 메인 클래스 `QuantumJumpApplication` → `ThorpApplication`\n- `application.yml` 앱 이름 `thorp-backend`, 로컬 DB 기본값 `localhost:5432/thorp`로 통일\n- 루트 `docker-compose.dev.yml`의 `POSTGRES_DB` 기본값 4곳을 prod(`.env.prod.example`)와 동일하게 `thorp`로 변경 (BE 브랜치가 루트 파일을 건드림)\n- `backend/CLAUDE.md` 패키지 규칙 헤더 수정\n\n# 테스트\n\n- [x] `./gradlew clean spotlessApply build` 통과, `build/libs/thorp-backend-0.1.1-SNAPSHOT.jar` 생성 확인\n- [x] jar 매니페스트 `Start-Class: com.thorp.api.ThorpApplication` 확인\n- [x] `grep -ri quantumjump backend/`, `grep -ri quantum-jump backend/` 결과 없음 (build, .gradle 제외)\n- [x] 빈 디렉토리 `src/{main,test}/java/com/quantumjump` 남지 않음\n- [x] `docker compose -f docker-compose.dev.yml config`에 `quantumjump` 없음, `POSTGRES_DB: thorp` 확인\n- [ ] 컨테이너 빌드 및 기동 로그에 `ThorpApplication` 표시 확인\n\n# 리뷰 포인트\n\n- `docker-compose.dev.yml` 1행의 compose 프로젝트명 `name: quantum-jump`는 팀명으로 보고 유지했는데, 서비스 식별자로 보고 `thorp`로 바꿀지\n- DB 계정 기본값 `username`/`password` = `quantum`은 서비스 식별자가 아니라 그대로 둔 판단이 적절한지\n- 로컬 개발 DB 볼륨에 `quantumjump` DB만 있는 팀원은 `docker compose down -v` 후 재기동 필요 (초기 데이터 없어 손실 없음)",
+    "state": "merged",
+    "created_at": "2026-09-03T11:13:45.385+09:00",
+    "updated_at": "2026-09-14T14:33:21.869+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-03T11:14:19.739+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(be)/76-rename-quantumjump-to-thorp",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c99e78f6ac5df394ce135791536d79893ffe5717",
+    "merge_commit_sha": "396ce4dc94f52b34f724a78a045a9d5ea549c7e5",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-03T11:13:46.509+09:00",
+    "reference": "!4",
+    "references": {
+      "short": "!4",
+      "relative": "!4",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!4"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/4",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "fb26250b8c2148f6de09d315dbfbb1a68bca5104",
+      "head_sha": "c99e78f6ac5df394ce135791536d79893ffe5717",
+      "start_sha": "fb26250b8c2148f6de09d315dbfbb1a68bca5104"
+    },
+    "merge_error": null,
+    "first_contribution": true,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a3029fefa57abcd523ee3d49f30c8607999ec1c0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760566,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-03T11:13:45.521+09:00",
+          "updated_at": "2026-09-03T11:13:45.532+09:00",
+          "system": true,
+          "noteable_id": 932780,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 4,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3c550b718fb217db84db356deaf5f1642b5ace98",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760569,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- 패키지 구조 개편, Gradle 설정(`group`, `rootProject.name`), 설정 파일(`application.yml`, `docker-compose.dev.yml`) 및 문서(`CLAUDE.md`)까지 식별자 리네임 작업이 누락 없이 일관성 있게 잘 수행되었습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (리뷰 포인트로 제기하신 `docker-compose.dev.yml`의 프로젝트명 `name: quantum-jump` 및 DB 계정명 `quantum`은 팀명 및 기존 인프라 규칙과 일치하므로 현재 상태를 유지하는 것이 타당합니다.)\n\n### 테스트 제안\n- 새롭게 변경된 애플리케이션 이름과 데이터베이스 설정으로 스프링 부트 애플리케이션이 정상 기동되는지 확인합니다.\n  - 시나리오: `./gradlew clean build` 실행 후, `docker compose -f docker-compose.dev.yml up --build`를 통해 PostgreSQL 및 백엔드 컨테이너가 정상 구동되며 로그에 `ThorpApplication`이 표시되는지 검증합니다.\n- 데이터베이스 연결 및 마이그레이션/JPA 초기화 동작을 확인합니다.\n  - 시나리오: 백엔드 컨테이너가 기동된 후 `thorp` 데이터베이스에 성공적으로 연결되어 예외 없이 대기 상태로 진입하는지 로그를 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c99e78f6ac5df394ce135791536d79893ffe5717 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-03T11:13:54.028+09:00",
+          "updated_at": "2026-09-03T11:13:54.028+09:00",
+          "system": false,
+          "noteable_id": 932780,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 4,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d8b2a7b8e875b9f6cd74bc0e9916ee0e63a570f0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760570,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-03T11:14:10.057+09:00",
+          "updated_at": "2026-09-03T11:14:10.065+09:00",
+          "system": true,
+          "noteable_id": 932780,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 4,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f392c035093af3d3fafff833743409eaf2a810cf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760571,
+          "type": null,
+          "body": "mentioned in commit 396ce4dc94f52b34f724a78a045a9d5ea549c7e5",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-03T11:14:19.852+09:00",
+          "updated_at": "2026-09-03T11:14:19.857+09:00",
+          "system": true,
+          "noteable_id": 932780,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 4,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5fdc00a85fdf380da7f3909d6524ad026d6ab712",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802148,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:33:21.828+09:00",
+          "updated_at": "2026-09-14T14:33:21.832+09:00",
+          "system": true,
+          "noteable_id": 932780,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 4,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2160595,
+      "head_commit_sha": "c99e78f6ac5df394ce135791536d79893ffe5717",
+      "base_commit_sha": "fb26250b8c2148f6de09d315dbfbb1a68bca5104",
+      "start_commit_sha": "fb26250b8c2148f6de09d315dbfbb1a68bca5104",
+      "created_at": "2026-09-03T11:13:45.728+09:00",
+      "merge_request_id": 932780,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "742bfe1ab63099b792d0b36cc6d16b104e9e8379"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2160595,
+      "head_commit_sha": "c99e78f6ac5df394ce135791536d79893ffe5717",
+      "base_commit_sha": "fb26250b8c2148f6de09d315dbfbb1a68bca5104",
+      "start_commit_sha": "fb26250b8c2148f6de09d315dbfbb1a68bca5104",
+      "created_at": "2026-09-03T11:13:45.728+09:00",
+      "merge_request_id": 932780,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "742bfe1ab63099b792d0b36cc6d16b104e9e8379",
+      "commits": [
+        {
+          "id": "c99e78f6ac5df394ce135791536d79893ffe5717",
+          "short_id": "c99e78f6",
+          "created_at": "2026-09-03T11:10:26.000+09:00",
+          "parent_ids": [
+            "fb26250b8c2148f6de09d315dbfbb1a68bca5104"
+          ],
+          "title": "refactor(be): 서비스 식별자 quantumjump → thorp 리네임",
+          "message": "refactor(be): 서비스 식별자 quantumjump → thorp 리네임\n\n  - Gradle group com.thorp, rootProject.name thorp-backend\n  - 패키지 com.quantumjump.api → com.thorp.api, 메인 클래스 ThorpApplication\n  - application.yml 앱 이름·로컬 DB 기본값을 thorp로 통일\n  - docker-compose.dev.yml POSTGRES_DB 기본값을 prod(.env.prod.example)와 동일하게 thorp로 변경\n\n  close #76\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-03T11:10:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-03T11:10:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c99e78f6ac5df394ce135791536d79893ffe5717"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-package com.quantumjump.api.backtest;\n+package com.thorp.api.backtest;\n \n import jakarta.validation.Valid;\n import org.springframework.http.HttpStatus;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/BacktestController.java",
+          "old_path": "backend/src/main/java/com/quantumjump/api/backtest/BacktestController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-package com.quantumjump.api.backtest;\n+package com.thorp.api.backtest;\n \n import jakarta.validation.constraints.NotBlank;\n import jakarta.validation.constraints.NotNull;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/BacktestJobRequest.java",
+          "old_path": "backend/src/main/java/com/quantumjump/api/backtest/BacktestJobRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/.gitkeep",
+          "old_path": "backend/src/main/java/com/quantumjump/api/common/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,12 @@\n-package com.quantumjump.api;\n+package com.thorp.api;\n \n import org.springframework.boot.SpringApplication;\n import org.springframework.boot.autoconfigure.SpringBootApplication;\n \n @SpringBootApplication\n-public class QuantumJumpApplication {\n+public class ThorpApplication {\n \n     public static void main(String[] args) {\n-        SpringApplication.run(QuantumJumpApplication.class, args);\n+        SpringApplication.run(ThorpApplication.class, args);\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/ThorpApplication.java",
+          "old_path": "backend/src/main/java/com/quantumjump/api/QuantumJumpApplication.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,9 @@\n spring:\n   application:\n-    name: quantum-jump-backend\n+    name: thorp-backend\n \n   datasource:\n-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/quantumjump}\n+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/thorp}\n     username: ${SPRING_DATASOURCE_USERNAME:quantum}\n     password: ${SPRING_DATASOURCE_PASSWORD:quantum}\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,8 @@\n-package com.quantumjump.api;\n+package com.thorp.api;\n \n import org.junit.jupiter.api.Test;\n \n-class QuantumJumpApplicationTests {\n+class ThorpApplicationTests {\n \n     @Test\n     void placeholder() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/ThorpApplicationTests.java",
+          "old_path": "backend/src/test/java/com/quantumjump/api/QuantumJumpApplicationTests.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,7 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.\n ./gradlew spotlessApply build\n ```\n \n-## 패키지 규칙 (`com.quantumjump.api`)\n+## 패키지 규칙 (`com.thorp.api`)\n \n - 도메인별 패키지(`backtest/`, ...) 안에 controller·service·repository·dto를 함께 둔다 (계층별 상위 폴더 X)\n - `config/` 공통 설정, `common/` 공통 예외·응답 포맷\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,7 +5,7 @@ plugins {\n     id 'com.diffplug.spotless' version '7.0.2'\n }\n \n-group = 'com.quantumjump'\n+group = 'com.thorp'\n version = '0.1.1-SNAPSHOT'\n \n java {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/build.gradle",
+          "old_path": "backend/build.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,4 +3,4 @@ plugins {\n     id 'org.gradle.toolchains.foojay-resolver-convention' version '0.10.0'\n }\n \n-rootProject.name = 'quantum-jump-backend'\n+rootProject.name = 'thorp-backend'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/settings.gradle",
+          "old_path": "backend/settings.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,7 +5,7 @@ services:\n     image: postgres:16-alpine\n     container_name: qj-postgres\n     environment:\n-      POSTGRES_DB: ${POSTGRES_DB:-quantumjump}\n+      POSTGRES_DB: ${POSTGRES_DB:-thorp}\n       POSTGRES_USER: ${POSTGRES_USER:-quantum}\n       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-quantum}\n     ports:\n@@ -13,7 +13,7 @@ services:\n     volumes:\n       - postgres-data:/var/lib/postgresql/data\n     healthcheck:\n-      test: [\"CMD-SHELL\", \"pg_isready -U ${POSTGRES_USER:-quantum} -d ${POSTGRES_DB:-quantumjump}\"]\n+      test: [\"CMD-SHELL\", \"pg_isready -U ${POSTGRES_USER:-quantum} -d ${POSTGRES_DB:-thorp}\"]\n       interval: 5s\n       timeout: 3s\n       retries: 10\n@@ -68,7 +68,7 @@ services:\n     ports:\n       - \"8080:8080\"\n     environment:\n-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-quantumjump}\n+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-thorp}\n       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-quantum}\n       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-quantum}\n       SPRING_RABBITMQ_HOST: rabbitmq\n@@ -90,7 +90,7 @@ services:\n     environment:\n       RABBITMQ_URL: amqp://${RABBITMQ_USER:-quantum}:${RABBITMQ_PASSWORD:-quantum}@rabbitmq:5672/\n       KAFKA_BOOTSTRAP_SERVERS: kafka:29092\n-      DATABASE_URL: postgresql://${POSTGRES_USER:-quantum}:${POSTGRES_PASSWORD:-quantum}@postgres:5432/${POSTGRES_DB:-quantumjump}\n+      DATABASE_URL: postgresql://${POSTGRES_USER:-quantum}:${POSTGRES_PASSWORD:-quantum}@postgres:5432/${POSTGRES_DB:-thorp}\n     depends_on:\n       postgres:\n         condition: service_healthy\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docker-compose.dev.yml",
+          "old_path": "docker-compose.dev.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-03T11:14:10.023+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2760569": []
+  }
+}

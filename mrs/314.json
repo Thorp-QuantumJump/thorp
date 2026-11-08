@@ -1,0 +1,1158 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958859,
+    "iid": 314,
+    "project_id": 1444456,
+    "title": "feat(fe): 비교 대상을 여럿 고르고 내가 쓴 설정 조합을 후보에 올린다",
+    "description": "# 작업 내용 요약\n\n결과 화면(005)의 '비교 대상 고르기'를 고쳤습니다. 후보가 전략 다섯이 아니라 **전략·설정값 조합**이 되었고(등록표 기본값 + 내가 돌려 본 조합), 조합마다 쓰일 설정값이 적혀 무엇과 비교하는지 보입니다. 후보를 최대 셋까지 골라 '비교하기' 한 번으로 요청하면 완료되는 대상부터 그래프에 선이 늘어나고, 대상마다 진행·실패·해제 자리가 따로 있습니다. 해석 요약은 대상마다 한 문장입니다.\n\n지금까지는 상대 전략을 등록표 기본값으로만 돌리고 그 값을 화면에 적지 않아 사용자가 무엇과 비교하는지 알 수 없었습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-419 `[FE] 비교 대상 여러 개 고르기와 내가 쓴 설정 조합 후보`\n- Story: -300 / Epic: -30 · 선행: -418(BE `GET /my-records/used-strategies`) — **418이 dev에 먼저 들어가야 '내가 쓴 설정' 후보가 채워집니다.** 없으면 기본값 조합만 보이고 화면은 그대로 동작합니다.\n\n# 주요 변경 사항\n\n- **비교 주소**: `?compare=` 가 쉼표로 이은 공개 토큰 목록(최대 셋)입니다. 토큰 하나짜리 옛 주소는 그대로 열립니다. 잘못된 토큰은 버리고 넷째부터는 자릅니다.\n- **후보 = 전략·설정값 조합**(`compareCandidates.ts`): 등록표 기본값 조합과, 로그인했으면 `GET /backtests/used-strategies`의 조합을 전략별로 묶습니다. 써 본 조합의 설정값은 **현재 등록표로 다시 판정**해 축이 없어졌거나 범위 밖이면 후보에 올리지 않습니다(값을 고쳐 넣지 않음, 원칙 VI). 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보입니다. 설정값은 등록표의 축·선택지 `label`로 적습니다 — 화면이 축 이름을 알지 않습니다(003 FR-005).\n- **고르기 화면**: '기본 전략'(등록표 기본값, 전략 이름만 한 줄)·'내 전략'(내가 돌려 본 조합마다 한 줄, 내 기록 항목 이름을 제목으로 하고 아래 작은 글씨로 바탕 전략) 두 묶음의 체크박스 목록. 설정값은 접근 가능한 이름과 도움말에 남습니다. 조회는 006의 `GET /my-records/used-strategies`(`api/myRecords.ts`). 남은 자리만큼만 고를 수 있고 '비교하기 (n)' 한 번. 비로그인은 써 본 조합을 부르지 않습니다(401을 받아 넘기는 대신 처음부터 기본값만).\n- **훅 `useCompareTargets`**(옛 `useCompareTarget`): 자리 셋을 고정으로 두고 토큰마다 결과를 읽습니다. 고른 후보들은 한 번에 접수해 성공한 토큰만 주소에 더하고, 거절(429 등)은 그 자리에 남아 사용자가 누를 때만 다시 보냅니다(원칙 IX). 준비 기간이 기준보다 긴 후보가 섞여 있으면 **가장 긴 것 기준으로 공통 구간을 한 번만** 확인하고, 확인하면 기준과 모든 후보를 그 구간으로 함께 요청합니다(FR-005). 기존 단일 비교의 흐름(실패 재시도·만료·기간·버전 불일치·422 필요값)은 대상마다 그대로입니다.\n- **그래프**: 비교 대상마다 다른 파선(`7,5` `2,4` `10,4,2,4`)과 색, 끝 이름표. 비교 대상의 하락 구간 음영은 대상이 하나일 때만 칠합니다 — 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없어서입니다. 색 토큰 `--chart-line-tertiary`·`--chart-line-quaternary`를 더했습니다.\n- **결과 화면**: 대상마다 `CompareTargetChip` — '비교 대상 고르기' 단추 왼쪽에 칩으로 늘어서고 ×로 하나씩 해제합니다. 이름은 폭 220px에서 말줄임, 겹쳐 그려진 대상은 이름만, 그 밖에는 짧은 상태(계산 중 42% · 실패 · 조건 다름)를 덧붙이며 실패·한도 칩은 본체가 다시 시도 단추입니다. 전체 이름·상태 문장은 `title`과 보조 기술용 글에 남습니다. 해석 요약은 그려진 대상마다 한 문장, 조건 한 줄은 이름을 쉼표로 잇습니다. 같은 이름이 둘이면 `(1)` `(2)`로 가릅니다 — 결과 응답에는 등록표 이름표가 없어 설정값으로 갈라 적지 못합니다. 상세의 선정·배분 효과는 첫 대상 기준입니다.\n- **그래프 아래 '차트 읽는 법' 펼침 삭제**(요청): 로그 눈금·음영 설명을 접어 두던 자리입니다. 범례 줄(점선·음영)은 남고, 음영 구간 설명은 그림 안 도움말과 대안 텍스트가 그대로 듭니다.\n- **spec 005**: FR-003·FR-004·FR-006, data-model §3-2·§3-3, contracts 비교 주소, tasks Phase 15(T098~T103).\n\n# dev 머지 (2026-09-23)\n\n425(디자인 개편)·427(결과 화면 탭 묶음·팝오버 고르기)이 먼저 dev에 들어가 있어 그 디자인을 기준으로 다시 얹었습니다. 조건 한 줄은 요약 탭의 `ResultConditionLine`이 대상 목록을 받고, 고르기 목록은 dev의 팝오버 안에 들어갑니다(조합 줄이 길어 폭을 360→460px). 비교 대상 자리들은 dev가 두던 위치(제목 아래, 요약 카드 위)에 대상 수만큼 놓입니다. 005 tasks는 dev가 T098을 쓰므로 Phase 15를 T099~T104로 옮겼습니다.\n\n# 테스트\n\n- `npm run lint && npm run build && npm test` — lint 오류 0(경고 21, 기존), build 통과, Vitest 144파일 1385건 통과·skipped 0(dev 머지 뒤 기준).\n- 새·고친 검사: 주소 왕복·중복·상한, 후보 조합(기본값·써 본 조합·재판정·기준 제외·자리 상한), 훅(여럿 접수·부분 거절·자리별 해제·기간 확인 한 번), 그래프(대상 셋의 파선·색·이름표·음영 없음), 결과 화면(대상 둘의 문장·조건 줄·해제, 같은 이름 번호).\n- 로컬에서 418 브랜치 백엔드를 워크트리로 띄워 로그인 → 조합 조회 → 여럿 비교까지 눈으로 확인했습니다.\n\n# 리뷰 포인트\n\n- 칩의 상태 문장을 `aria-live`로 두지 않았습니다. 대화상자가 열려 나머지를 숨길 때 살아 있는 영역만 남아 '비교 대상 고르기' 단추의 이름 계산이 어긋나(테스트로 확인) 도움말과 숨긴 글로만 둡니다.\n- 대상 상한 셋은 그래프 판독 한계에서 정했습니다(기준 포함 곡선 넷). 훅이 `useResult`를 자리 셋으로 고정 호출하는 것도 그 때문입니다.\n- 결과 응답에는 설정값 이름표가 없어 주소로 열린 대상의 이름은 전략 이름 + 번호입니다. 등록표를 한 번 더 불러 설정값으로 적을 수도 있지만 첫 화면 요청 수(SC-001)를 넘겨 두지 않았습니다.\n- 상세 패널의 선정·배분 효과는 첫 대상만 봅니다. 대상마다 표를 늘리면 첫 화면이 아니라고 봤습니다.\n- 커밋은 리뷰 단위로 나눴고(주소·후보 → 훅 → 그래프 → 고르기 → 결과 화면 → spec) 중간 커밋 단독으로는 타입이 맞지 않을 수 있습니다. 브랜치 끝이 검증 대상입니다.\n\n# 전달만 하는 것\n\n- 비교 대상 여럿일 때 `PeriodMismatchDialog`의 문구는 아직 \"두 결과 다시 계산\"입니다. 대상이 둘 이상이어도 동작은 맞고 문구만 옛것이라 415(결과 화면 UI)에서 함께 손봅니다.\n\n# 남은 것\n\n- 없음.",
+    "state": "merged",
+    "created_at": "2026-09-23T17:57:15.030+09:00",
+    "updated_at": "2026-09-24T16:32:11.364+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T16:32:10.922+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/419-multi-compare",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+    "merge_commit_sha": "1d6ad2340fdac251675582e06c3b26eb21c99bf3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T17:57:18.276+09:00",
+    "reference": "!314",
+    "references": {
+      "short": "!314",
+      "relative": "!314",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!314"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/314",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958859,
+    "iid": 314,
+    "project_id": 1444456,
+    "title": "feat(fe): 비교 대상을 여럿 고르고 내가 쓴 설정 조합을 후보에 올린다",
+    "description": "# 작업 내용 요약\n\n결과 화면(005)의 '비교 대상 고르기'를 고쳤습니다. 후보가 전략 다섯이 아니라 **전략·설정값 조합**이 되었고(등록표 기본값 + 내가 돌려 본 조합), 조합마다 쓰일 설정값이 적혀 무엇과 비교하는지 보입니다. 후보를 최대 셋까지 골라 '비교하기' 한 번으로 요청하면 완료되는 대상부터 그래프에 선이 늘어나고, 대상마다 진행·실패·해제 자리가 따로 있습니다. 해석 요약은 대상마다 한 문장입니다.\n\n지금까지는 상대 전략을 등록표 기본값으로만 돌리고 그 값을 화면에 적지 않아 사용자가 무엇과 비교하는지 알 수 없었습니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-419 `[FE] 비교 대상 여러 개 고르기와 내가 쓴 설정 조합 후보`\n- Story: -300 / Epic: -30 · 선행: -418(BE `GET /my-records/used-strategies`) — **418이 dev에 먼저 들어가야 '내가 쓴 설정' 후보가 채워집니다.** 없으면 기본값 조합만 보이고 화면은 그대로 동작합니다.\n\n# 주요 변경 사항\n\n- **비교 주소**: `?compare=` 가 쉼표로 이은 공개 토큰 목록(최대 셋)입니다. 토큰 하나짜리 옛 주소는 그대로 열립니다. 잘못된 토큰은 버리고 넷째부터는 자릅니다.\n- **후보 = 전략·설정값 조합**(`compareCandidates.ts`): 등록표 기본값 조합과, 로그인했으면 `GET /backtests/used-strategies`의 조합을 전략별로 묶습니다. 써 본 조합의 설정값은 **현재 등록표로 다시 판정**해 축이 없어졌거나 범위 밖이면 후보에 올리지 않습니다(값을 고쳐 넣지 않음, 원칙 VI). 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보입니다. 설정값은 등록표의 축·선택지 `label`로 적습니다 — 화면이 축 이름을 알지 않습니다(003 FR-005).\n- **고르기 화면**: '기본 전략'(등록표 기본값, 전략 이름만 한 줄)·'내 전략'(내가 돌려 본 조합마다 한 줄, 내 기록 항목 이름을 제목으로 하고 아래 작은 글씨로 바탕 전략) 두 묶음의 체크박스 목록. 설정값은 접근 가능한 이름과 도움말에 남습니다. 조회는 006의 `GET /my-records/used-strategies`(`api/myRecords.ts`). 남은 자리만큼만 고를 수 있고 '비교하기 (n)' 한 번. 비로그인은 써 본 조합을 부르지 않습니다(401을 받아 넘기는 대신 처음부터 기본값만).\n- **훅 `useCompareTargets`**(옛 `useCompareTarget`): 자리 셋을 고정으로 두고 토큰마다 결과를 읽습니다. 고른 후보들은 한 번에 접수해 성공한 토큰만 주소에 더하고, 거절(429 등)은 그 자리에 남아 사용자가 누를 때만 다시 보냅니다(원칙 IX). 준비 기간이 기준보다 긴 후보가 섞여 있으면 **가장 긴 것 기준으로 공통 구간을 한 번만** 확인하고, 확인하면 기준과 모든 후보를 그 구간으로 함께 요청합니다(FR-005). 기존 단일 비교의 흐름(실패 재시도·만료·기간·버전 불일치·422 필요값)은 대상마다 그대로입니다.\n- **그래프**: 비교 대상마다 다른 파선(`7,5` `2,4` `10,4,2,4`)과 색, 끝 이름표. 비교 대상의 하락 구간 음영은 대상이 하나일 때만 칠합니다 — 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없어서입니다. 색 토큰 `--chart-line-tertiary`·`--chart-line-quaternary`를 더했습니다.\n- **결과 화면**: 대상마다 `CompareTargetChip` — '비교 대상 고르기' 단추 왼쪽에 칩으로 늘어서고 ×로 하나씩 해제합니다. 이름은 폭 220px에서 말줄임, 겹쳐 그려진 대상은 이름만, 그 밖에는 짧은 상태(계산 중 42% · 실패 · 조건 다름)를 덧붙이며 실패·한도 칩은 본체가 다시 시도 단추입니다. 전체 이름·상태 문장은 `title`과 보조 기술용 글에 남습니다. 해석 요약은 그려진 대상마다 한 문장, 조건 한 줄은 이름을 쉼표로 잇습니다. 같은 이름이 둘이면 `(1)` `(2)`로 가릅니다 — 결과 응답에는 등록표 이름표가 없어 설정값으로 갈라 적지 못합니다. 상세의 선정·배분 효과는 첫 대상 기준입니다.\n- **그래프 아래 '차트 읽는 법' 펼침 삭제**(요청): 로그 눈금·음영 설명을 접어 두던 자리입니다. 범례 줄(점선·음영)은 남고, 음영 구간 설명은 그림 안 도움말과 대안 텍스트가 그대로 듭니다.\n- **spec 005**: FR-003·FR-004·FR-006, data-model §3-2·§3-3, contracts 비교 주소, tasks Phase 15(T098~T103).\n\n# dev 머지 (2026-09-23)\n\n425(디자인 개편)·427(결과 화면 탭 묶음·팝오버 고르기)이 먼저 dev에 들어가 있어 그 디자인을 기준으로 다시 얹었습니다. 조건 한 줄은 요약 탭의 `ResultConditionLine`이 대상 목록을 받고, 고르기 목록은 dev의 팝오버 안에 들어갑니다(조합 줄이 길어 폭을 360→460px). 비교 대상 자리들은 dev가 두던 위치(제목 아래, 요약 카드 위)에 대상 수만큼 놓입니다. 005 tasks는 dev가 T098을 쓰므로 Phase 15를 T099~T104로 옮겼습니다.\n\n# 테스트\n\n- `npm run lint && npm run build && npm test` — lint 오류 0(경고 21, 기존), build 통과, Vitest 144파일 1385건 통과·skipped 0(dev 머지 뒤 기준).\n- 새·고친 검사: 주소 왕복·중복·상한, 후보 조합(기본값·써 본 조합·재판정·기준 제외·자리 상한), 훅(여럿 접수·부분 거절·자리별 해제·기간 확인 한 번), 그래프(대상 셋의 파선·색·이름표·음영 없음), 결과 화면(대상 둘의 문장·조건 줄·해제, 같은 이름 번호).\n- 로컬에서 418 브랜치 백엔드를 워크트리로 띄워 로그인 → 조합 조회 → 여럿 비교까지 눈으로 확인했습니다.\n\n# 리뷰 포인트\n\n- 칩의 상태 문장을 `aria-live`로 두지 않았습니다. 대화상자가 열려 나머지를 숨길 때 살아 있는 영역만 남아 '비교 대상 고르기' 단추의 이름 계산이 어긋나(테스트로 확인) 도움말과 숨긴 글로만 둡니다.\n- 대상 상한 셋은 그래프 판독 한계에서 정했습니다(기준 포함 곡선 넷). 훅이 `useResult`를 자리 셋으로 고정 호출하는 것도 그 때문입니다.\n- 결과 응답에는 설정값 이름표가 없어 주소로 열린 대상의 이름은 전략 이름 + 번호입니다. 등록표를 한 번 더 불러 설정값으로 적을 수도 있지만 첫 화면 요청 수(SC-001)를 넘겨 두지 않았습니다.\n- 상세 패널의 선정·배분 효과는 첫 대상만 봅니다. 대상마다 표를 늘리면 첫 화면이 아니라고 봤습니다.\n- 커밋은 리뷰 단위로 나눴고(주소·후보 → 훅 → 그래프 → 고르기 → 결과 화면 → spec) 중간 커밋 단독으로는 타입이 맞지 않을 수 있습니다. 브랜치 끝이 검증 대상입니다.\n\n# 전달만 하는 것\n\n- 비교 대상 여럿일 때 `PeriodMismatchDialog`의 문구는 아직 \"두 결과 다시 계산\"입니다. 대상이 둘 이상이어도 동작은 맞고 문구만 옛것이라 415(결과 화면 UI)에서 함께 손봅니다.\n\n# 남은 것\n\n- 없음.",
+    "state": "merged",
+    "created_at": "2026-09-23T17:57:15.030+09:00",
+    "updated_at": "2026-09-24T16:32:11.364+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-24T16:32:10.922+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/419-multi-compare",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+    "merge_commit_sha": "1d6ad2340fdac251675582e06c3b26eb21c99bf3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T17:57:18.276+09:00",
+    "reference": "!314",
+    "references": {
+      "short": "!314",
+      "relative": "!314",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!314"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/314",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "26",
+    "latest_build_started_at": "2026-09-23T17:57:26.392+09:00",
+    "latest_build_finished_at": "2026-09-23T18:01:10.266+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 220188,
+      "iid": 339,
+      "project_id": 1444456,
+      "sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+      "ref": "feat(fe)/419-multi-compare",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T17:57:26.291+09:00",
+      "updated_at": "2026-09-23T18:01:10.272+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220188"
+    },
+    "head_pipeline": {
+      "id": 220188,
+      "iid": 339,
+      "project_id": 1444456,
+      "sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+      "ref": "feat(fe)/419-multi-compare",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T17:57:26.291+09:00",
+      "updated_at": "2026-09-23T18:01:10.272+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220188",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T17:57:26.392+09:00",
+      "finished_at": "2026-09-23T18:01:10.266+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220188",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "head_sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+      "start_sha": "6da415396053e408944404d2b811cfc08ba701e5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "eae739e2f47f782d10970904cf6a1cc3ad071a2d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2864393,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T17:57:15.160+09:00",
+          "updated_at": "2026-09-23T17:57:15.164+09:00",
+          "system": true,
+          "noteable_id": 958859,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 314,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0b0ee8ee4bf6b8af97f9eef55f85f52269b3d5e4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2864394,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T17:57:15.182+09:00",
+          "updated_at": "2026-09-23T17:57:15.191+09:00",
+          "system": true,
+          "noteable_id": 958859,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 314,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a58aa21c4df1d39d57813bafd36293e6652b760d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2864396,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T17:57:19.306+09:00",
+          "updated_at": "2026-09-23T17:57:19.314+09:00",
+          "system": true,
+          "noteable_id": 958859,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 314,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "405926c7e6e7deebf8ae4d7e4cc3064c89ec28b7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2864398,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 전체적인 코드가 견고하며, 프롬프트의 요구사항과 아키텍처 원칙(원칙 VI, IX, SC-010 등)을 잘 준수하고 있습니다. 특히 다중 비교 대상의 칩 상태 관리, URL 쿼리 파싱 안정성, 컴포넌트 간 책임 분리가 깔끔하게 구현되어 있습니다.\n\n### 테스트 제안\n- **다중 비교 대상 쿼리 파싱 시나리오**: `?compare=` 파라미터에 중복된 토큰, 유효하지 않은 포맷의 토큰, 허용 상한(3개)을 초과하는 토큰이 섞여 있을 때 의도한 대로 필터링 및 절단(Slice)되는지 검증합니다.\n- **로그인 상태에 따른 후보 필터링 시나리오**: 비로그인 상태에서는 `fetchUsedStrategies`가 호출되지 않고 기본 전략만 후보로 노출되는지, 로그인 상태에서는 사용자가 시도했던 조합 중 현재 등록표 규칙에 부합하는 조합만 '내 전략' 묶음에 올바르게 렌더링되는지 확인합니다.\n- **비동기 부분 거절(Partial Rejection) 시나리오**: 여럿을 한 번에 비교 요청(`compare.select([...])`)했을 때, 일부 대상이 `429 EXECUTION_LIMIT` 에러를 반환하더라도 성공한 대상들은 즉시 그래프와 칩에 반영되고, 실패한 대상은 해당 칩에서 수동 재시도(`onRetry`)가 가능한 상태로 남는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:da8819883adc8b65a5364b380e29d6840be082d2 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T17:57:27.037+09:00",
+          "updated_at": "2026-09-23T17:57:27.037+09:00",
+          "system": false,
+          "noteable_id": 958859,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 314,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3806baf172b0e954840adb4138312ed27f34a89d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2865884,
+          "type": null,
+          "body": "mentioned in commit 1d6ad2340fdac251675582e06c3b26eb21c99bf3",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-24T16:32:10.947+09:00",
+          "updated_at": "2026-09-24T16:32:10.954+09:00",
+          "system": true,
+          "noteable_id": 958859,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 314,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e9e152005e347d64e8bdef21c09620a6410ed34e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885016,
+          "type": null,
+          "body": "mentioned in commit b663944b2b3cd6cdeac24c8af2071ae16e1c79f1",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.408+09:00",
+          "updated_at": "2026-10-13T15:16:08.425+09:00",
+          "system": true,
+          "noteable_id": 958859,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 314,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2246888,
+      "head_commit_sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+      "base_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "start_commit_sha": "6da415396053e408944404d2b811cfc08ba701e5",
+      "created_at": "2026-09-23T17:57:15.556+09:00",
+      "merge_request_id": 958859,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "16034be37f63ccb90c69ba513347304466964bf6"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2246888,
+      "head_commit_sha": "da8819883adc8b65a5364b380e29d6840be082d2",
+      "base_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "start_commit_sha": "6da415396053e408944404d2b811cfc08ba701e5",
+      "created_at": "2026-09-23T17:57:15.556+09:00",
+      "merge_request_id": 958859,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "16034be37f63ccb90c69ba513347304466964bf6",
+      "commits": [
+        {
+          "id": "da8819883adc8b65a5364b380e29d6840be082d2",
+          "short_id": "da881988",
+          "created_at": "2026-09-23T17:47:23.000+09:00",
+          "parent_ids": [
+            "ef51931bf14b04dced9a73c9909377f82d85f591"
+          ],
+          "title": "feat(fe): 그래프 아래 '차트 읽는 법' 펼침을 뺀다",
+          "message": "feat(fe): 그래프 아래 '차트 읽는 법' 펼침을 뺀다\n\n로그 눈금·음영 설명 문장을 접어 두던 자리다. 음영 구간 설명은 그림 안 도움말(title)과 대안\n텍스트가 그대로 들고, 범례 줄(점선·음영)만 남긴다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T17:47:23.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T17:47:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da8819883adc8b65a5364b380e29d6840be082d2"
+        },
+        {
+          "id": "ef51931bf14b04dced9a73c9909377f82d85f591",
+          "short_id": "ef51931b",
+          "created_at": "2026-09-23T17:35:35.000+09:00",
+          "parent_ids": [
+            "d5fe8a013c6241dc1ace4bfbc921087170170b66"
+          ],
+          "title": "docs(fe): 005 tasks T104를 칩 방식으로 맞춘다",
+          "message": "docs(fe): 005 tasks T104를 칩 방식으로 맞춘다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T17:35:35.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T17:35:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ef51931bf14b04dced9a73c9909377f82d85f591"
+        },
+        {
+          "id": "d5fe8a013c6241dc1ace4bfbc921087170170b66",
+          "short_id": "d5fe8a01",
+          "created_at": "2026-09-23T17:35:16.000+09:00",
+          "parent_ids": [
+            "cc211cb8b40cbbdb3d4addcf75e81475d3873cce"
+          ],
+          "title": "feat(fe): 비교 대상을 고르기 단추 왼쪽의 칩으로 보이고 ×로 해제한다",
+          "message": "feat(fe): 비교 대상을 고르기 단추 왼쪽의 칩으로 보이고 ×로 해제한다\n\n대상마다 카드를 세우던 자리를 없애고 헤더의 '비교 대상 고르기' 왼쪽에 칩으로 늘어놓는다.\n이름은 폭 상한(220px)에서 말줄임, 겹쳐 그려진 대상은 이름만, 그 밖에는 짧은 상태(계산 중\n42% · 실패 · 조건 다름)를 덧붙인다. 실패·한도 칩은 본체가 다시 시도 단추다. 전체 이름과\n상태 문장은 title 과 보조 기술용 글에 남긴다. '비교 모두 해제'는 뺐다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T17:35:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T17:35:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d5fe8a013c6241dc1ace4bfbc921087170170b66"
+        },
+        {
+          "id": "cc211cb8b40cbbdb3d4addcf75e81475d3873cce",
+          "short_id": "cc211cb8",
+          "created_at": "2026-09-23T17:19:05.000+09:00",
+          "parent_ids": [
+            "bf158d97b1557a451744073691cff375bd67b716"
+          ],
+          "title": "feat(fe): 내 전략 후보에 기록 이름을 제목으로, 바탕 전략을 작게 적는다",
+          "message": "feat(fe): 내 전략 후보에 기록 이름을 제목으로, 바탕 전략을 작게 적는다\n\n기본 전략 줄은 전략 이름만. 내 전략 줄은 내 기록 항목 이름(없으면 설정값) 아래에 바탕 전략\n이름을 연한 작은 글씨로 둔다. 설정값은 접근 가능한 이름과 도움말에 남는다. 조회 경로는\n006 으로 옮겨 간 GET /my-records/used-strategies 를 쓰고(api/myRecords.ts), 응답의\nrecordName 을 후보에 싣는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T17:19:05.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T17:19:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cc211cb8b40cbbdb3d4addcf75e81475d3873cce"
+        },
+        {
+          "id": "bf158d97b1557a451744073691cff375bd67b716",
+          "short_id": "bf158d97",
+          "created_at": "2026-09-23T17:10:16.000+09:00",
+          "parent_ids": [
+            "1c79f03af39b76eeb978896d684d642603d2b932"
+          ],
+          "title": "feat(fe): 비교 후보를 기본 전략·내 전략 두 묶음으로 보인다",
+          "message": "feat(fe): 비교 후보를 기본 전략·내 전략 두 묶음으로 보인다\n\n전략별 묶음 대신 출처별 묶음이다. 기본 전략 묶음에는 등록표 기본값으로 전략마다 한 줄,\n내 전략 묶음에는 내가 돌려 본 조합마다 한 줄. 줄에는 전략 이름과 설정값을 적는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T17:10:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T17:10:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bf158d97b1557a451744073691cff375bd67b716"
+        },
+        {
+          "id": "1c79f03af39b76eeb978896d684d642603d2b932",
+          "short_id": "1c79f03a",
+          "created_at": "2026-09-23T16:47:54.000+09:00",
+          "parent_ids": [
+            "0bc1bca5af93abdea2deaf6a7dbb4a36801db08e",
+            "17b9fc05588e375601b10cd36fb41ef172932db7"
+          ],
+          "title": "Merge origin/dev into feat(fe)/419-multi-compare",
+          "message": "Merge origin/dev into feat(fe)/419-multi-compare\n\ndev의 결과 화면 디자인(425 개편, 427 탭 묶음·팝오버 고르기)을 기준으로 두고 비교 대상\n여럿 연결을 그 위에 다시 얹었다. 조건 한 줄은 요약 탭의 ResultConditionLine 이 대상\n목록을 받고, 고르기는 dev 의 팝오버 안에 조합 목록으로 들어간다(폭 460px).\n005 tasks 는 dev 가 T098 을 쓰므로 Phase 15 를 T099~T104 로 옮겼다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T16:47:54.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T16:47:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1c79f03af39b76eeb978896d684d642603d2b932"
+        },
+        {
+          "id": "0bc1bca5af93abdea2deaf6a7dbb4a36801db08e",
+          "short_id": "0bc1bca5",
+          "created_at": "2026-09-23T10:16:40.000+09:00",
+          "parent_ids": [
+            "2a5a92b4851c9e4d1760d84848b5ffd7533c515b"
+          ],
+          "title": "docs(fe): 005 spec에 비교 대상 여럿과 설정 조합 후보를 적는다",
+          "message": "docs(fe): 005 spec에 비교 대상 여럿과 설정 조합 후보를 적는다\n\nFR-003·FR-004·FR-006, data-model §3-2·§3-3, contracts 비교 주소, tasks Phase 15.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T10:16:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T10:16:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0bc1bca5af93abdea2deaf6a7dbb4a36801db08e"
+        },
+        {
+          "id": "2a5a92b4851c9e4d1760d84848b5ffd7533c515b",
+          "short_id": "2a5a92b4",
+          "created_at": "2026-09-23T10:16:39.000+09:00",
+          "parent_ids": [
+            "d7d88c612ce6f04530f209827c543c7d2ae0e553"
+          ],
+          "title": "feat(fe): 결과 화면이 비교 대상마다 자리를 두고 문장·조건 줄에 모두 적는다",
+          "message": "feat(fe): 결과 화면이 비교 대상마다 자리를 두고 문장·조건 줄에 모두 적는다\n\n대상마다 CompareTargetSlot 하나(진행·실패·불일치·해제), 둘 이상이면 '비교 모두 해제'.\n해석 요약은 그려진 대상마다 한 문장, 조건 한 줄은 이름을 쉼표로 잇는다. 같은 이름이\n둘이면 번호를 붙인다. 상세의 선정·배분 효과는 첫 대상 기준이다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T10:16:39.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T10:16:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2a5a92b4851c9e4d1760d84848b5ffd7533c515b"
+        },
+        {
+          "id": "d7d88c612ce6f04530f209827c543c7d2ae0e553",
+          "short_id": "d7d88c61",
+          "created_at": "2026-09-23T10:16:39.000+09:00",
+          "parent_ids": [
+            "83f10d8842d975ec44382c48a5f72fad70ba5339"
+          ],
+          "title": "feat(fe): 비교 대상 고르기를 설정 조합 다중 선택으로 바꾼다",
+          "message": "feat(fe): 비교 대상 고르기를 설정 조합 다중 선택으로 바꾼다\n\n전략별로 기본값 조합과 내가 쓴 조합을 설정값과 함께 나열하고, 남은 자리만큼 골라\n'비교하기' 한 번으로 넘긴다. 비로그인이면 써 본 조합을 부르지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T10:16:39.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T10:16:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d7d88c612ce6f04530f209827c543c7d2ae0e553"
+        },
+        {
+          "id": "83f10d8842d975ec44382c48a5f72fad70ba5339",
+          "short_id": "83f10d88",
+          "created_at": "2026-09-23T10:16:39.000+09:00",
+          "parent_ids": [
+            "5fc0762a8bbda3fd6d6007ef9c2b9318b2f9eb49"
+          ],
+          "title": "feat(fe): 그래프에 비교 대상 셋까지 각기 다른 파선으로 그린다",
+          "message": "feat(fe): 그래프에 비교 대상 셋까지 각기 다른 파선으로 그린다\n\ntarget → targets. 대상마다 파선 간격과 색이 다르고 끝 이름표가 붙는다. 비교 대상의\n하락 구간 음영은 대상이 하나일 때만 칠한다 — 둘 이상이면 빗금이 겹쳐 읽을 수 없다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T10:16:39.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T10:16:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/83f10d8842d975ec44382c48a5f72fad70ba5339"
+        },
+        {
+          "id": "5fc0762a8bbda3fd6d6007ef9c2b9318b2f9eb49",
+          "short_id": "5fc0762a",
+          "created_at": "2026-09-23T10:16:38.000+09:00",
+          "parent_ids": [
+            "ded9bb1097b3ab036cb45213104a36200e6ec615"
+          ],
+          "title": "feat(fe): 비교 훅을 대상 여럿으로 바꾼다",
+          "message": "feat(fe): 비교 훅을 대상 여럿으로 바꾼다\n\nuseCompareTarget → useCompareTargets. 주소의 토큰마다 결과를 읽고(자리 셋 고정), 고른\n후보들을 한 번에 접수해 주소에 더한다. 대상마다 상태·불일치·다시 시도·해제를 따로 두고,\n접수 거절은 자리에 남겨 사용자가 누를 때만 다시 보낸다. 공통 구간 확인은 가장 긴 준비\n기간 기준으로 한 번이며 확인하면 기준과 모든 대상을 같은 구간으로 함께 요청한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T10:16:38.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T10:16:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5fc0762a8bbda3fd6d6007ef9c2b9318b2f9eb49"
+        },
+        {
+          "id": "ded9bb1097b3ab036cb45213104a36200e6ec615",
+          "short_id": "ded9bb10",
+          "created_at": "2026-09-23T10:16:38.000+09:00",
+          "parent_ids": [
+            "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+          ],
+          "title": "feat(fe): 비교 주소를 토큰 목록으로, 후보를 전략·설정값 조합으로 정의한다",
+          "message": "feat(fe): 비교 주소를 토큰 목록으로, 후보를 전략·설정값 조합으로 정의한다\n\n?compare= 는 쉼표로 이은 공개 토큰 목록(최대 셋)이다. 비교 후보(CompareChoice)가\n설정값을 직접 들고, 요청 조립은 등록표 기본값을 대신 넣지 않는다. 후보 재료는\ncompareCandidates 가 만든다 — 등록표 기본값 + 써 본 조합(GET /backtests/used-strategies),\n현재 등록표로 재판정, 기준 자신과 같은 조합 제외, 설정값을 등록표 이름표로 적기.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T10:16:38.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T10:16:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ded9bb1097b3ab036cb45213104a36200e6ec615"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -6,6 +6,7 @@ import type {\n   MyRecordListPage,\n   MyRecordListQuery,\n   MyRecordRegime,\n+  UsedStrategy,\n } from '@/types/myRecords'\n \n /**\n@@ -173,3 +174,32 @@ function filenameFrom(disposition: unknown, fallback: string): string {\n   const plain = /filename=\"?([^\";]+)\"?/i.exec(disposition)\n   return plain ? plain[1] : fallback\n }\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null && !Array.isArray(value)\n+}\n+\n+function readUsedStrategy(value: unknown): UsedStrategy | null {\n+  if (!isRecord(value)) return null\n+  const { strategyId, recordName, rulesVersion, parameters } = value\n+  if (typeof strategyId !== 'string' || typeof rulesVersion !== 'string' || !isRecord(parameters))\n+    return null\n+  return {\n+    strategyId,\n+    recordName: typeof recordName === 'string' && recordName.trim() !== '' ? recordName : null,\n+    rulesVersion,\n+    parameters,\n+  }\n+}\n+\n+/**\n+ * 내가 써 본 전략·설정값 조합(006 contracts `GET /my-records/used-strategies`). 005 비교 후보의 '내 전략' 묶음이다.\n+ *\n+ * <p>로그인이 필요한 경로라 비로그인 화면은 부르지 않는다 — 401 을 받아 넘기는 대신 처음부터 기본 전략만 후보로 둔다.\n+ * 계약에 맞지 않는 항목은 버린다. 조합 하나를 잃는 쪽이 잘못된 요청을 보내는 쪽보다 낫다.\n+ */\n+export async function fetchUsedStrategies(signal?: AbortSignal): Promise<UsedStrategy[]> {\n+  const data = await getResource<{ items?: unknown }>(basePath + '/used-strategies', signal)\n+  const items = Array.isArray(data.items) ? data.items : []\n+  return items.map(readUsedStrategy).filter((item): item is UsedStrategy => item !== null)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/myRecords.ts",
+          "old_path": "frontend/src/api/myRecords.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,146 @@\n+import { X } from 'lucide-react'\n+import type { CompareTargetState } from '@/hooks/useCompareTargets'\n+import styles from './comparison.module.css'\n+\n+/** 기준과 겹쳐 그리지 않는 이유를 한 문장으로(FR-005). 값을 계산하지 않고 어긋난 항목만 말한다. */\n+export const MISMATCH_MESSAGES = {\n+  conditions:\n+    '섹터·금액·비용·자료 기준 또는 분석 시나리오가 달라 기준과 겹쳐 그리지 않았습니다. 비교 대상을 다시 골라 주세요.',\n+  period: '평가 기간 또는 준비 기간이 달라 기준과 겹쳐 그리지 않았습니다.',\n+  versions:\n+    '자료 또는 계산 엔진 기준이 달라 기준과 겹쳐 그리지 않았습니다. 같은 현재 기준으로 다시 계산해 비교할 수 있습니다.',\n+} as const\n+\n+const STAGES: Record<string, string> = {\n+  PREPARING_DATA: '자료 준비',\n+  COMPUTING: '분석 계산',\n+  SAVING: '결과 저장',\n+}\n+\n+/** 칩에 붙는 짧은 상태 말과, 도움말·보조 기술에 주는 긴 문장. READY 이고 불일치가 없으면 둘 다 없다. */\n+function describe(state: CompareTargetState): { short: string | null; long: string | null } {\n+  const detail = state.detail\n+  const progress = detail?.progress\n+  switch (state.targetState) {\n+    case 'REQUESTED':\n+      return { short: '요청 중', long: '비교 결과를 요청하고 있습니다.' }\n+    case 'RUNNING': {\n+      if (detail?.status === 'QUEUED') {\n+        return {\n+          short: '대기 중',\n+          long:\n+            '비교 분석이 차례를 기다리고 있습니다.' +\n+            (detail.queueWaitSeconds !== null\n+              ? ' 지금까지 ' + detail.queueWaitSeconds + '초 기다렸습니다.'\n+              : ''),\n+        }\n+      }\n+      const ratio =\n+        progress?.completedTradingDays != null && progress.totalTradingDays\n+          ? Math.round((progress.completedTradingDays / progress.totalTradingDays) * 100)\n+          : null\n+      return {\n+        short: ratio === null ? '계산 중' : '계산 중 ' + ratio + '%',\n+        long:\n+          (STAGES[progress?.stage ?? ''] ?? '분석 진행') +\n+          (progress?.completedTradingDays != null && progress.totalTradingDays\n+            ? ': ' +\n+              progress.completedTradingDays +\n+              '/' +\n+              progress.totalTradingDays +\n+              '거래일 (' +\n+              ratio +\n+              '%)'\n+            : ''),\n+      }\n+    }\n+    case 'EXECUTION_LIMIT':\n+      return {\n+        short: '한도',\n+        long:\n+          '실행 한도에 걸렸습니다. ' +\n+          (state.retryAfterSeconds !== null\n+            ? state.retryAfterSeconds + '초 뒤 다시 요청할 수 있습니다.'\n+            : (state.message ?? '')),\n+      }\n+    case 'FAILED':\n+      return { short: '실패', long: state.message ?? '비교 분석을 완료하지 못했습니다.' }\n+    case 'EXPIRED':\n+      return {\n+        short: '만료',\n+        long: '비교 대상 결과가 더 이상 남아 있지 않습니다. 기준 결과는 계속 볼 수 있습니다.',\n+      }\n+    case 'READY':\n+      return state.mismatch\n+        ? { short: '조건 다름', long: MISMATCH_MESSAGES[state.mismatch] }\n+        : { short: null, long: null }\n+  }\n+}\n+\n+/**\n+ * 비교 대상 하나의 칩(FR-004, `S15P21E205-419`). '비교 대상 고르기' 단추 왼쪽에 대상 수만큼 늘어선다.\n+ *\n+ * <p>이름은 한 줄로 자른다 — 폭 상한을 두고 넘치면 말줄임이다. 전체 이름과 상태 문장은 도움말(`title`)과 보조 기술용 글에\n+ * 그대로 있다. 겹쳐 그려진 대상은 이름만, 그 밖의 상태는 이름 옆에 짧은 말(계산 중 42% · 실패 · 조건 다름)을 붙인다.\n+ *\n+ * <p>다시 시도할 수 있는 상태(실패·한도)면 칩 본체가 다시 시도 단추이고, × 는 늘 해제다. 화면이 조용히 재시도하지 않는다(원칙 IX).\n+ * `name`은 부른 쪽이 정한다 — 이 컴포넌트는 이름을 짓지 않는다.\n+ */\n+export function CompareTargetChip({\n+  state,\n+  name,\n+  onRetry,\n+  onRemove,\n+}: {\n+  state: CompareTargetState\n+  name: string\n+  onRetry: () => void\n+  onRemove: () => void\n+}) {\n+  const { short, long } = describe(state)\n+  const retryable =\n+    state.retryable && (state.targetState === 'FAILED' || state.targetState === 'EXECUTION_LIMIT')\n+  const retryLabel = state.targetState === 'EXECUTION_LIMIT' ? '다시 요청' : '다시 시도'\n+  const body = (\n+    <>\n+      <span className={styles.chipName}>{name}</span>\n+      {short ? <span className={styles.chipState}>{short}</span> : null}\n+    </>\n+  )\n+  return (\n+    <span\n+      className={styles.chip}\n+      data-state={state.targetState}\n+      aria-label={'비교 대상 ' + name}\n+      title={long ? name + ' — ' + long : name}\n+    >\n+      {retryable ? (\n+        <button\n+          type=\"button\"\n+          className={styles.chipBody}\n+          aria-label={retryLabel}\n+          title={long ?? undefined}\n+          onClick={onRetry}\n+        >\n+          {body}\n+        </button>\n+      ) : (\n+        <span className={styles.chipBody}>{body}</span>\n+      )}\n+      {/*\n+        상태 문장은 화면에서는 도움말이고 보조 기술에는 글이다. 살아 있는 영역(aria-live)으로 두지 않는다 —\n+        대화상자가 열려 나머지를 숨길 때 살아 있는 영역만 남아 대상 고르기 단추의 이름 계산이 어긋난다(확인: 2026-09-23).\n+      */}\n+      {long ? <span className={styles.visuallyHidden}>{long}</span> : null}\n+      <button\n+        type=\"button\"\n+        className={styles.chipRemove}\n+        aria-label=\"비교 해제\"\n+        title={name + ' 비교 해제'}\n+        onClick={onRemove}\n+      >\n+        <X size={13} strokeWidth={2} aria-hidden=\"true\" />\n+      </button>\n+    </span>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetChip.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetChip.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,9 @@\n import { fireEvent, render, screen } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { AuthContext } from '@/auth/auth-context'\n+import { defaultValuesOf } from '@/hooks/useStrategySettings'\n+import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'\n import { resultDetailCompleted as base } from '@/test/resultFixtures'\n import {\n   registryFixture,\n@@ -9,10 +12,41 @@ import {\n } from '@/test/strategyRegistryFixtures'\n import { CompareTargetPicker } from './CompareTargetPicker'\n \n-const api = vi.hoisted(() => ({ registry: vi.fn(), versions: vi.fn(), window: vi.fn() }))\n+const api = vi.hoisted(() => ({\n+  registry: vi.fn(),\n+  versions: vi.fn(),\n+  window: vi.fn(),\n+  used: vi.fn(),\n+}))\n vi.mock('@/api/strategyRegistry', () => ({ fetchStrategyRegistry: api.registry }))\n vi.mock('@/api/analysisVersions', () => ({ fetchAnalysisVersions: api.versions }))\n vi.mock('@/api/sectors', () => ({ fetchEvaluationWindow: api.window }))\n+vi.mock('@/api/myRecords', async (load) => ({\n+  ...(await load<typeof import('@/api/myRecords')>()),\n+  fetchUsedStrategies: api.used,\n+}))\n+\n+const authenticatedAuthContext = {\n+  ...anonymousAuthContext,\n+  status: 'authenticated',\n+  user: authenticatedUser,\n+} as typeof anonymousAuthContext\n+const DEFAULT_ROW = /기본 전략 · 표류 균형 맞추기/\n+const DEFAULT_SETTINGS = '표류 관측 창 45거래일 · 되돌리는 시점 달 끝마다 · 허용 이탈 폭 35퍼센트'\n+\n+function setup(\n+  props: Partial<Parameters<typeof CompareTargetPicker>[0]> = {},\n+  auth = anonymousAuthContext,\n+) {\n+  const select = vi.fn()\n+  render(\n+    <AuthContext.Provider value={auth}>\n+      <CompareTargetPicker base={base} room={3} onSelect={select} onClose={() => {}} {...props} />\n+    </AuthContext.Provider>,\n+  )\n+  return select\n+}\n+\n beforeEach(() => {\n   Object.values(api).forEach((mock) => mock.mockReset())\n   api.registry.mockResolvedValue({\n@@ -28,42 +62,149 @@ beforeEach(() => {\n     tradingDaysFromBase: ['2023-07-03', '2023-07-04', '2023-07-05'],\n     commonEnd: base.config.effectiveEnd,\n   })\n+  api.used.mockResolvedValue([])\n })\n-describe('비교 목록 (T058)', () => {\n-  it('달력으로 확인한 기간 감소와 선택 불가 이유를 보이며 키보드로 선택한다', async () => {\n+\n+describe('비교 목록 (T058, S15P21E205-419)', () => {\n+  it('기본 전략 묶음에 설정값을 적고, 기간 감소와 선택 불가 이유를 보이며 키보드로 고른 뒤 한 번에 넘긴다', async () => {\n     const user = userEvent.setup()\n-    const select = vi.fn()\n-    render(<CompareTargetPicker base={base} onSelect={select} onClose={() => {}} />)\n+    const select = setup()\n     expect(await screen.findByText('이 전략을 고르면 비교 기간이 2거래일 짧아집니다.')).toBeTruthy()\n     expect(screen.getByText(unselectableStrategy.unselectableReason!)).toBeTruthy()\n     expect(\n-      (screen.getByRole('button', { name: unselectableStrategy.name }) as HTMLButtonElement)\n-        .disabled,\n+      (\n+        screen.getByRole('checkbox', {\n+          name: new RegExp('기본 전략 · ' + unselectableStrategy.name),\n+        }) as HTMLInputElement\n+      ).disabled,\n     ).toBe(true)\n-    screen.getByRole('button', { name: selectableStrategy.name }).focus()\n-    await user.keyboard('{Enter}')\n-    expect(select).toHaveBeenCalledWith(\n-      expect.objectContaining({\n-        rulesVersion: 'RULES-2',\n-        period: { start: '2023-07-05', end: base.config.effectiveEnd },\n-      }),\n-    )\n+    const row = screen.getByRole('checkbox', { name: DEFAULT_ROW }) as HTMLInputElement\n+    expect(row.getAttribute('aria-label')).toContain(DEFAULT_SETTINGS)\n+    // 보이는 줄은 전략 이름만이다. 설정값은 접근 가능한 이름에만 남는다.\n+    expect(row.parentElement?.textContent).toBe(selectableStrategy.name)\n+    expect(screen.getByRole('button', { name: '비교하기' })).toHaveProperty('disabled', true)\n+    row.focus()\n+    await user.keyboard(' ')\n+    await user.click(screen.getByRole('button', { name: '비교하기 (1)' }))\n+    expect(select).toHaveBeenCalledTimes(1)\n+    expect(select.mock.calls[0][0]).toHaveLength(1)\n+    expect(select.mock.calls[0][0][0]).toMatchObject({\n+      rulesVersion: 'RULES-2',\n+      period: { start: '2023-07-05', end: base.config.effectiveEnd },\n+      parameters: defaultValuesOf(selectableStrategy),\n+    })\n     expect(api.registry).toHaveBeenCalledWith(base.config.items.length, expect.any(AbortSignal))\n+    // 비로그인이면 써 본 조합을 묻지 않는다.\n+    expect(api.used).not.toHaveBeenCalled()\n+  })\n+  it('로그인했으면 써 본 조합을 내 전략 묶음에 설정값과 함께 올리고, 기본값과 같거나 등록표에 맞지 않는 것은 뺀다', async () => {\n+    api.used.mockResolvedValue([\n+      {\n+        strategyId: selectableStrategy.strategyId,\n+        recordName: '넓게 표류 9/23',\n+        rulesVersion: 'RULES-1',\n+        parameters: {\n+          driftWindow: 90,\n+          resetTiming: { kind: 'FIXED_DAYS', span: 30 },\n+          bandWidth: 40,\n+        },\n+      },\n+      // 기본값과 같은 조합 — 기본값 줄 하나로 접힌다.\n+      {\n+        strategyId: selectableStrategy.strategyId,\n+        recordName: null,\n+        rulesVersion: 'RULES-1',\n+        parameters: defaultValuesOf(selectableStrategy),\n+      },\n+      // 허용 범위 밖(간격 5) — 값을 고쳐 넣어 올리지 않는다.\n+      {\n+        strategyId: selectableStrategy.strategyId,\n+        recordName: null,\n+        rulesVersion: 'RULES-1',\n+        parameters: { ...defaultValuesOf(selectableStrategy), bandWidth: 37 },\n+      },\n+    ])\n+    const select = setup({ room: 1 }, authenticatedAuthContext)\n+    const used = (await screen.findByRole('checkbox', {\n+      name: /내 전략 · 넓게 표류 9\\/23/,\n+    })) as HTMLInputElement\n+    expect(used.getAttribute('aria-label')).toContain(\n+      '표류 관측 창 90거래일 · 되돌리는 시점 30거래일마다 · 허용 이탈 폭 40퍼센트',\n+    )\n+    // 보이는 줄은 기록 이름이고 그 아래에 바탕 전략 이름이 작게 붙는다.\n+    expect(used.parentElement?.textContent).toBe('넓게 표류 9/23' + selectableStrategy.name)\n+    expect(screen.getAllByRole('checkbox', { name: /표류 균형 맞추기/ })).toHaveLength(2)\n+    expect(screen.getByText(/최대 1개까지/)).toBeTruthy()\n+    fireEvent.click(used)\n+    // 자리가 하나라 다른 줄은 더 고를 수 없다.\n+    expect(\n+      (screen.getByRole('checkbox', { name: DEFAULT_ROW }) as HTMLInputElement).disabled,\n+    ).toBe(true)\n+    fireEvent.click(screen.getByRole('button', { name: '비교하기 (1)' }))\n+    expect(select.mock.calls[0][0][0].parameters).toEqual({\n+      driftWindow: 90,\n+      resetTiming: { kind: 'FIXED_DAYS', span: 30 },\n+      bandWidth: 40,\n+    })\n+  })\n+  it('기준 결과와 같은 전략·설정 조합은 후보에서 빼고 설정값이 다른 조합만 남긴다', async () => {\n+    api.registry.mockResolvedValue({ ...registryFixture, strategies: [selectableStrategy] })\n+    api.used.mockResolvedValue([\n+      {\n+        strategyId: selectableStrategy.strategyId,\n+        recordName: null,\n+        rulesVersion: 'RULES-1',\n+        parameters: { ...defaultValuesOf(selectableStrategy), bandWidth: 40 },\n+      },\n+    ])\n+    render(\n+      <AuthContext.Provider value={authenticatedAuthContext}>\n+        <CompareTargetPicker\n+          base={{\n+            ...base,\n+            config: {\n+              ...base.config,\n+              strategyId: selectableStrategy.strategyId,\n+              parameters: defaultValuesOf(selectableStrategy),\n+            },\n+          }}\n+          room={3}\n+          onSelect={() => {}}\n+          onClose={() => {}}\n+        />\n+      </AuthContext.Provider>,\n+    )\n+    // 기록 이름이 없으면(지운 항목) 설정값이 제목이 된다.\n+    const used = await screen.findByRole('checkbox', { name: /내 전략/ })\n+    expect(used.parentElement?.textContent).toContain('허용 이탈 폭 40퍼센트')\n+    expect(screen.queryByRole('checkbox', { name: DEFAULT_ROW })).toBeNull()\n+  })\n+  it('써 본 조합 조회가 실패하면 기본 전략만 보이고 그 사실을 한 줄로 알린다', async () => {\n+    api.used.mockRejectedValue(new Error('401'))\n+    setup({}, authenticatedAuthContext)\n+    expect(await screen.findByText(/내 전략 목록은 지금 불러오지 못했습니다/)).toBeTruthy()\n+    expect(screen.getByRole('checkbox', { name: DEFAULT_ROW })).toBeTruthy()\n   })\n   it('과거 준비 자료가 충분하면 기간이 줄어든다고 잘못 안내하지 않는다', async () => {\n     api.window.mockResolvedValue({\n       tradingDaysFromBase: ['2020-01-02', '2020-01-03', '2020-01-06'],\n       commonEnd: base.config.effectiveEnd,\n     })\n-    render(<CompareTargetPicker base={base} onSelect={() => {}} onClose={() => {}} />)\n-    expect(await screen.findByText('준비 기간을 맞춰 두 결과를 다시 계산합니다.')).toBeTruthy()\n+    setup()\n+    expect(await screen.findByText('준비 기간을 맞춰 결과를 다시 계산합니다.')).toBeTruthy()\n     expect(screen.queryByText(/짧아집니다/)).toBeNull()\n   })\n+  it('자리가 없으면 고를 수 없다고 알리고 모든 줄을 막는다', async () => {\n+    setup({ room: 0 })\n+    expect(await screen.findByText(/더 고를 자리가 없습니다/)).toBeTruthy()\n+    for (const box of screen.getAllByRole('checkbox'))\n+      expect((box as HTMLInputElement).disabled).toBe(true)\n+  })\n   it('등록표 실패는 대체 목록 대신 사유와 수동 재조회로 보인다', async () => {\n     api.registry.mockRejectedValue(new Error('등록표를 받을 수 없습니다.'))\n-    render(<CompareTargetPicker base={base} onSelect={() => {}} onClose={() => {}} />)\n+    setup()\n     expect(await screen.findByRole('alert')).toBeTruthy()\n-    expect(screen.queryByRole('button', { name: selectableStrategy.name })).toBeNull()\n+    expect(screen.queryByRole('checkbox')).toBeNull()\n     fireEvent.click(screen.getByRole('button', { name: '목록 다시 불러오기' }))\n     expect(await screen.findByText('등록표를 받을 수 없습니다.')).toBeTruthy()\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.test.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,34 +1,86 @@\n-import { useEffect, useState } from 'react'\n+import { useEffect, useId, useState } from 'react'\n import { fetchAnalysisVersions } from '@/api/analysisVersions'\n+import { fetchUsedStrategies } from '@/api/myRecords'\n import { fetchEvaluationWindow } from '@/api/sectors'\n import { fetchStrategyRegistry } from '@/api/strategyRegistry'\n+import { useAuth } from '@/auth/auth-context'\n import { resolveRulesVersion } from '@/components/strategy/analysisSupport'\n import { Button } from '@/components/ui/button'\n+import type { UsedStrategy } from '@/types/myRecords'\n import type { PublicResultDetail } from '@/types/result'\n+import { type CandidateSource, combinationsFor, describeParameters } from './compareCandidates'\n import type { CompareChoice } from './compareRequest'\n import styles from './comparison.module.css'\n \n-type Candidate = { choice: CompareChoice; reason: string | null; shortenedDays: number | null }\n+type Candidate = {\n+  key: string\n+  choice: CompareChoice\n+  source: CandidateSource\n+  /** 내 전략의 이름표(내 기록 항목 이름). 없으면 `null` */\n+  recordName: string | null\n+  /** 설정값 한 줄. 축이 없는 전략은 빈 문자열 */\n+  settings: string\n+  reason: string | null\n+  shortenedDays: number | null\n+}\n+\n+/** 후보 묶음 이름. 출처별로 묶는다 — 기본 전략(등록표 기본값)과 내 전략(내가 돌려 본 조합). */\n+const SOURCE_LABELS: Record<CandidateSource, string> = {\n+  default: '기본 전략',\n+  used: '내 전략',\n+}\n+const SOURCE_ORDER: readonly CandidateSource[] = ['default', 'used']\n \n+/**\n+ * 비교 대상 고르기(FR-004, `S15P21E205-419`).\n+ *\n+ * <p><b>후보는 전략이 아니라 전략·설정값 조합이다.</b> 등록표 기본값 조합과, 로그인했으면 내가 써 본 조합\n+ * (`GET /backtests/used-strategies`)을 '기본 전략'·'내 전략' 두 묶음으로 보인다. 조합마다 쓰일 설정값을 적어 무엇과 비교하는지 보이게 한다.\n+ * 기준 전략 줄은 전략 이름만 적고, 내 전략 줄은 내 기록 항목 이름 아래에 바탕 전략을 작게 적는다. 설정값은 접근 가능한 이름과 도움말에\n+ * 남긴다. 기준 결과 자신과 같은 조합은 빼고, 같은 전략이라도 설정값이 다르면 후보다.\n+ *\n+ * <p><b>여럿을 골라 한 번에 요청한다.</b> 남은 자리(`room`)만큼 고를 수 있고, 준비 기간이 기준보다 긴 후보는 고르기 전에\n+ * 비교 기간이 짧아진다는 사실을 적는다(FR-004). 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않는다.\n+ *\n+ * <p>비로그인이면 써 본 조합을 부르지 않는다 — 401 을 받아 넘기는 대신 기본값만 후보로 둔다.\n+ */\n export function CompareTargetPicker({\n   base,\n+  room,\n   onSelect,\n   onClose,\n }: {\n   base: PublicResultDetail\n-  onSelect: (choice: CompareChoice) => void\n+  /** 더 고를 수 있는 자리 수 */\n+  room: number\n+  onSelect: (choices: CompareChoice[]) => void\n   onClose: () => void\n }) {\n-  const [state, setState] = useState<{ candidates: Candidate[]; error: string | null } | null>(null)\n+  const { status: authStatus } = useAuth()\n+  const authenticated = authStatus === 'authenticated'\n+  const [state, setState] = useState<{\n+    candidates: Candidate[]\n+    usedUnavailable: boolean\n+    error: string | null\n+  } | null>(null)\n   const [attempt, setAttempt] = useState(0)\n+  const [picked, setPicked] = useState<string[]>([])\n+  const listId = useId()\n+\n   useEffect(() => {\n     const controller = new AbortController()\n     let active = true\n     const load = async () => {\n       try {\n-        const [registry, versions] = await Promise.all([\n+        const [registry, versions, used] = await Promise.all([\n           fetchStrategyRegistry(base.config.items.length, controller.signal),\n           fetchAnalysisVersions(controller.signal),\n+          authenticated\n+            ? fetchUsedStrategies(controller.signal).then(\n+                (items): { items: UsedStrategy[]; failed: boolean } => ({ items, failed: false }),\n+                () => ({ items: [], failed: true }),\n+              )\n+            : Promise.resolve({ items: [], failed: false }),\n         ])\n         if (!versions) throw new Error('전략 규칙 버전을 확인할 수 없습니다.')\n         const maxWarmup = Math.max(\n@@ -45,64 +97,88 @@ export function CompareTargetPicker({\n                 controller.signal,\n               ).catch(() => null)\n             : null\n-        const candidates = registry.strategies\n-          .filter((strategy) => strategy.strategyId !== base.config.strategyId)\n-          .map((strategy): Candidate => {\n-            const rules = resolveRulesVersion(versions, strategy.strategyId)\n-            const longer = strategy.warmupTradingDays > base.config.warmupTradingDays\n-            const firstDay = longer ? window?.tradingDaysFromBase[strategy.warmupTradingDays] : null\n-            const start =\n-              firstDay && firstDay > base.config.effectiveStart\n-                ? firstDay\n-                : base.config.effectiveStart\n-            const end =\n-              window && window.commonEnd < base.config.effectiveEnd\n-                ? window.commonEnd\n-                : base.config.effectiveEnd\n-            const reason = !strategy.selectable\n-              ? (strategy.unselectableReason ?? '현재 조건에서는 고를 수 없습니다.')\n-              : rules.status !== 'registered'\n-                ? '전략의 계산 규칙을 확인할 수 없습니다.'\n-                : !base.versions.costProfile\n-                  ? '기준 결과의 비용 기준을 확인할 수 없습니다.'\n-                  : strategy.targetWeightSource === 'USER' &&\n-                      base.config.items.some((item) => item.targetWeight == null)\n-                    ? '입력한 목표 비중이 없습니다. 처음부터 다시 분석에서 비중을 먼저 정해 주세요.'\n-                    : longer && (!firstDay || start > end)\n-                      ? '이 전략의 공통 평가 기간을 확인할 수 없습니다.'\n-                      : null\n-            return {\n-              choice: {\n-                strategy,\n-                registryVersion: registry.registryVersion,\n-                rulesVersion: rules.status === 'registered' ? rules.rulesVersion : '',\n-                ...(longer && firstDay ? { period: { start, end } } : {}),\n-              },\n-              reason,\n-              shortenedDays:\n-                longer && firstDay && window\n-                  ? window.tradingDaysFromBase.filter(\n-                      (date) => date >= base.config.effectiveStart && date < start,\n-                    ).length\n-                  : null,\n-            }\n-          })\n-        if (active) setState({ candidates, error: null })\n+        const candidates = registry.strategies.flatMap((strategy): Candidate[] => {\n+          const rules = resolveRulesVersion(versions, strategy.strategyId)\n+          const longer = strategy.warmupTradingDays > base.config.warmupTradingDays\n+          const firstDay = longer ? window?.tradingDaysFromBase[strategy.warmupTradingDays] : null\n+          const start =\n+            firstDay && firstDay > base.config.effectiveStart ? firstDay : base.config.effectiveStart\n+          const end =\n+            window && window.commonEnd < base.config.effectiveEnd\n+              ? window.commonEnd\n+              : base.config.effectiveEnd\n+          const reason = !strategy.selectable\n+            ? (strategy.unselectableReason ?? '현재 조건에서는 고를 수 없습니다.')\n+            : rules.status !== 'registered'\n+              ? '전략의 계산 규칙을 확인할 수 없습니다.'\n+              : !base.versions.costProfile\n+                ? '기준 결과의 비용 기준을 확인할 수 없습니다.'\n+                : strategy.targetWeightSource === 'USER' &&\n+                    base.config.items.some((item) => item.targetWeight == null)\n+                  ? '입력한 목표 비중이 없습니다. 처음부터 다시 분석에서 비중을 먼저 정해 주세요.'\n+                  : longer && (!firstDay || start > end)\n+                    ? '이 전략의 공통 평가 기간을 확인할 수 없습니다.'\n+                    : null\n+          const shortenedDays =\n+            longer && firstDay && window\n+              ? window.tradingDaysFromBase.filter(\n+                  (date) => date >= base.config.effectiveStart && date < start,\n+                ).length\n+              : null\n+          return combinationsFor(strategy, used.items, {\n+            strategyId: base.config.strategyId,\n+            parameters: base.config.parameters,\n+          }).map((combination, index) => ({\n+            key: strategy.strategyId + '#' + index,\n+            source: combination.source,\n+            recordName: combination.recordName,\n+            settings: describeParameters(strategy, combination.parameters),\n+            reason,\n+            shortenedDays,\n+            choice: {\n+              strategy,\n+              parameters: combination.parameters,\n+              registryVersion: registry.registryVersion,\n+              rulesVersion: rules.status === 'registered' ? rules.rulesVersion : '',\n+              ...(longer && firstDay ? { period: { start, end } } : {}),\n+            },\n+          }))\n+        })\n+        if (active) setState({ candidates, usedUnavailable: used.failed, error: null })\n       } catch (error) {\n         if (active)\n           setState({\n             candidates: [],\n+            usedUnavailable: false,\n             error: error instanceof Error ? error.message : '비교 전략을 불러오지 못했습니다.',\n           })\n       }\n     }\n     setState(null)\n+    setPicked([])\n     void load()\n     return () => {\n       active = false\n       controller.abort()\n     }\n-  }, [base, attempt])\n+  }, [base, attempt, authenticated])\n+\n+  const toggle = (key: string) =>\n+    setPicked((known) =>\n+      known.includes(key) ? known.filter((item) => item !== key) : [...known, key],\n+    )\n+  const full = picked.length >= room\n+  const submit = () => {\n+    const chosen = (state?.candidates ?? []).filter((candidate) => picked.includes(candidate.key))\n+    if (chosen.length === 0) return\n+    onSelect(chosen.map((candidate) => candidate.choice))\n+  }\n+\n+  // 출처별로 묶어 보인다. 기본 전략 묶음에는 전략마다 한 줄, 내 전략 묶음에는 돌려 본 조합마다 한 줄이다.\n+  const groups = SOURCE_ORDER.map((source) => ({\n+    source,\n+    candidates: (state?.candidates ?? []).filter((candidate) => candidate.source === source),\n+  })).filter((group) => group.candidates.length > 0)\n \n   return (\n     <section className={styles.panel} aria-label=\"비교 전략 선택\">\n@@ -116,31 +192,81 @@ export function CompareTargetPicker({\n           </Button>\n         </div>\n       ) : null}\n-      <ul className={styles.candidates}>\n-        {state?.candidates.map(({ choice, reason, shortenedDays }, index) => (\n-          <li key={choice.strategy.strategyId}>\n-            <Button\n-              variant=\"outline\"\n-              disabled={!!reason}\n-              aria-describedby={'compare-candidate-' + index}\n-              onClick={() => onSelect(choice)}\n-            >\n-              {choice.strategy.name}\n-            </Button>\n-            <p id={'compare-candidate-' + index}>\n-              {reason ??\n-                (shortenedDays !== null && shortenedDays > 0\n-                  ? '이 전략을 고르면 비교 기간이 ' + shortenedDays + '거래일 짧아집니다.'\n-                  : choice.strategy.warmupTradingDays > base.config.warmupTradingDays\n-                    ? '준비 기간을 맞춰 두 결과를 다시 계산합니다.'\n-                    : choice.strategy.description)}\n-            </p>\n+      {state && !state.error ? (\n+        <p id={listId} className={styles.pickerNote}>\n+          {room > 0\n+            ? '최대 ' + room + '개까지 고를 수 있습니다. 기본 전략은 등록표의 기본 설정이고, 내 전략은 이전에 돌려 본 설정입니다.'\n+            : '비교 대상을 더 고를 자리가 없습니다. 하나를 해제한 뒤 고르세요.'}\n+          {state.usedUnavailable ? ' 내 전략 목록은 지금 불러오지 못했습니다.' : ''}\n+        </p>\n+      ) : null}\n+      <ul className={styles.candidates} aria-describedby={listId}>\n+        {groups.map(({ source, candidates }) => (\n+          <li key={source} className={styles.group}>\n+            <p className={styles.groupTitle}>{SOURCE_LABELS[source]}</p>\n+            <ul className={styles.combinations}>\n+              {candidates.map((candidate) => {\n+                const checked = picked.includes(candidate.key)\n+                const disabled = !!candidate.reason || room === 0 || (full && !checked)\n+                // 기본 전략은 전략 이름만, 내 전략은 기록 이름(없으면 설정값)과 그 아래 작은 글씨의 바탕 전략.\n+                const title =\n+                  source === 'used'\n+                    ? (candidate.recordName ?? candidate.settings) || candidate.choice.strategy.name\n+                    : candidate.choice.strategy.name\n+                const name =\n+                  SOURCE_LABELS[source] +\n+                  ' · ' +\n+                  title +\n+                  (source === 'used' ? ' · ' + candidate.choice.strategy.name : '') +\n+                  (candidate.settings ? ' · ' + candidate.settings : '')\n+                return (\n+                  <li key={candidate.key}>\n+                    <label className={styles.combination}>\n+                      <input\n+                        type=\"checkbox\"\n+                        checked={checked}\n+                        disabled={disabled}\n+                        aria-label={name}\n+                        aria-describedby={candidate.key + '-hint'}\n+                        onChange={() => toggle(candidate.key)}\n+                      />\n+                      <span className={styles.rowText}>\n+                        <span className={styles.rowTitle}>{title}</span>\n+                        {source === 'used' ? (\n+                          <span className={styles.rowBase}>{candidate.choice.strategy.name}</span>\n+                        ) : null}\n+                      </span>\n+                    </label>\n+                    <p id={candidate.key + '-hint'}>\n+                      {candidate.reason ??\n+                        (candidate.shortenedDays !== null && candidate.shortenedDays > 0\n+                          ? '이 전략을 고르면 비교 기간이 ' +\n+                            candidate.shortenedDays +\n+                            '거래일 짧아집니다.'\n+                          : candidate.choice.strategy.warmupTradingDays >\n+                              base.config.warmupTradingDays\n+                            ? '준비 기간을 맞춰 결과를 다시 계산합니다.'\n+                            : candidate.source === 'default'\n+                              ? candidate.choice.strategy.description\n+                              : '')}\n+                    </p>\n+                  </li>\n+                )\n+              })}\n+            </ul>\n           </li>\n         ))}\n       </ul>\n-      <Button variant=\"outline\" onClick={onClose}>\n-        목록 닫기\n-      </Button>\n+      <div className={styles.actions}>\n+        {state && !state.error ? (\n+          <Button variant=\"outline\" disabled={picked.length === 0} onClick={submit}>\n+            비교하기{picked.length > 0 ? ' (' + picked.length + ')' : ''}\n+          </Button>\n+        ) : null}\n+        <Button variant=\"outline\" onClick={onClose}>\n+          목록 닫기\n+        </Button>\n+      </div>\n     </section>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetPicker.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,91 +0,0 @@\n-import { Button } from '@/components/ui/button'\n-import type { CompareTargetState } from '@/hooks/useCompareTarget'\n-import { strategyLabel } from './conditionLine'\n-import { ResultStatusLine } from './ResultStatusLine'\n-import styles from './comparison.module.css'\n-\n-export function CompareTargetSlot({\n-  state,\n-  onRetry,\n-  onClear,\n-  onPick,\n-}: {\n-  state: CompareTargetState\n-  onRetry: () => void\n-  onClear: () => void\n-  onPick: () => void\n-}) {\n-  if (state.targetState === 'NONE') return null\n-  const detail = state.detail\n-  const progress = detail?.progress\n-  const completedThrough =\n-    progress?.lastTradingDate ??\n-    (state.timeseries.status === 'loaded'\n-      ? (state.timeseries.data.points[state.timeseries.data.points.length - 1]?.date ?? null)\n-      : null)\n-  const stages: Record<string, string> = {\n-    PREPARING_DATA: '자료 준비',\n-    COMPUTING: '분석 계산',\n-    SAVING: '결과 저장',\n-  }\n-  return (\n-    <section className={styles.panel} aria-label=\"비교 대상 상태\">\n-      <div role=\"status\" aria-live=\"polite\">\n-        {state.targetState === 'REQUESTED' ? <p>비교 결과를 요청하고 있습니다.</p> : null}\n-        {state.targetState === 'RUNNING' ? (\n-          <p>\n-            {detail?.status === 'QUEUED'\n-              ? '비교 분석이 차례를 기다리고 있습니다.' +\n-                (detail.queueWaitSeconds !== null\n-                  ? ' 지금까지 ' + detail.queueWaitSeconds + '초 기다렸습니다.'\n-                  : '')\n-              : (stages[progress?.stage ?? ''] ?? '분석 진행') +\n-                (progress?.completedTradingDays != null && progress.totalTradingDays\n-                  ? ': ' +\n-                    progress.completedTradingDays +\n-                    '/' +\n-                    progress.totalTradingDays +\n-                    '거래일 (' +\n-                    Math.round((progress.completedTradingDays / progress.totalTradingDays) * 100) +\n-                    '%)'\n-                  : '')}\n-          </p>\n-        ) : null}\n-        {state.targetState === 'EXECUTION_LIMIT' ? (\n-          <p>\n-            실행 한도에 걸렸습니다.{' '}\n-            {state.retryAfterSeconds !== null\n-              ? state.retryAfterSeconds + '초 뒤 다시 요청할 수 있습니다.'\n-              : state.message}\n-          </p>\n-        ) : null}\n-        {state.targetState === 'FAILED' ? (\n-          <p>{state.message ?? '비교 분석을 완료하지 못했습니다.'}</p>\n-        ) : null}\n-        {state.targetState === 'EXPIRED' ? (\n-          <p>비교 대상 결과가 더 이상 남아 있지 않습니다. 기준 결과는 계속 볼 수 있습니다.</p>\n-        ) : null}\n-        {state.targetState === 'READY' && detail ? <p>비교 대상: {strategyLabel(detail)}</p> : null}\n-      </div>\n-      {state.targetState === 'READY' && detail ? (\n-        <ResultStatusLine detail={detail} completedThrough={completedThrough} />\n-      ) : null}\n-      <div className={styles.actions}>\n-        {state.retryable &&\n-        (state.targetState === 'FAILED' || state.targetState === 'EXECUTION_LIMIT') ? (\n-          <Button variant=\"outline\" onClick={onRetry}>\n-            {state.targetState === 'EXECUTION_LIMIT' ? '다시 요청' : '다시 시도'}\n-          </Button>\n-        ) : null}\n-        {state.targetState === 'EXPIRED' ? (\n-          <Button variant=\"outline\" onClick={onPick}>\n-            다시 고르기\n-          </Button>\n-        ) : null}\n-        <Button variant=\"outline\" onClick={onClear}>\n-          비교 해제\n-        </Button>\n-      </div>\n-    </section>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetSlot.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetSlot.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -94,16 +94,6 @@\n   line-height: 1.6;\n }\n \n-.help summary {\n-  color: var(--thorp-foreground);\n-  cursor: pointer;\n-}\n-\n-.help p {\n-  max-width: 65ch;\n-  margin: 6px 0 0;\n-}\n-\n @media (max-width: 600px) {\n   .chart {\n     height: auto;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.module.css",
+          "old_path": "frontend/src/components/result/EquityChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,8 +48,15 @@ const altNumbers = {\n }\n \n /** 곡선의 경로. 기준과 비교 대상은 선 색으로 갈린다 */\n-function seriesPath(container: HTMLElement, which: 'base' | 'target'): SVGPathElement {\n-  const stroke = which === 'base' ? '--chart-line-primary' : '--chart-line-secondary'\n+const STROKES: Record<string, string> = {\n+  base: '--chart-line-primary',\n+  target0: '--chart-line-secondary',\n+  target1: '--chart-line-tertiary',\n+  target2: '--chart-line-quaternary',\n+}\n+\n+function seriesPath(container: HTMLElement, which: string): SVGPathElement {\n+  const stroke = STROKES[which]\n   const path = container.querySelector<SVGPathElement>(`path[stroke=\"var(${stroke})\"]`)\n   if (!path) throw new Error(`${which} 곡선을 찾지 못했다`)\n   return path\n@@ -63,7 +70,7 @@ const LONG_BASE_NAME = '가나다 라마바사 아자차카 타파하'\n const LONG_TARGET_NAME = '거너더 러머버서 어저처커 터퍼허'\n \n /** 이름표 하나의 줄들과 세로 범위. 줄마다 `y`가 그 줄의 가운데다 */\n-function labelBlock(container: HTMLElement, dataKey: 'base' | 'target') {\n+function labelBlock(container: HTMLElement, dataKey: string) {\n   const lines = [\n     ...container.querySelectorAll(`[data-testid=\"series-end-label-${dataKey}\"] tspan`),\n   ]\n@@ -90,15 +97,47 @@ function pointCount(path: SVGPathElement): number {\n describe('EquityChart', () => {\n   it('비교 대상이 있으면 파선 곡선과 이름표 둘을 그린다', () => {\n     const { container } = render(\n-      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" target={target} />,\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={base}\n+        initialCash=\"10000000.00\"\n+        targets={[target]}\n+      />,\n     )\n \n     expect(seriesPath(container, 'base').getAttribute('stroke-dasharray')).toBeNull()\n-    expect(seriesPath(container, 'target').getAttribute('stroke-dasharray')).toBe('7,5')\n+    expect(seriesPath(container, 'target0').getAttribute('stroke-dasharray')).toBe('7,5')\n     expect(screen.getByText('물결 고르기')).toBeTruthy()\n     expect(screen.getByText('모래 고르기')).toBeTruthy()\n   })\n \n+  it('비교 대상이 셋이면 파선 모양과 색이 서로 다르고 이름표가 넷이며 비교 대상 음영은 없다', () => {\n+    const others = ['조약돌 고르기', '해초 고르기'].map((name) => ({ ...target, name }))\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={base}\n+        initialCash=\"10000000.00\"\n+        targets={[target, ...others]}\n+      />,\n+    )\n+    const dashes = [0, 1, 2].map((index) =>\n+      seriesPath(container, 'target' + index).getAttribute('stroke-dasharray'),\n+    )\n+    const strokes = [0, 1, 2].map((index) =>\n+      seriesPath(container, 'target' + index).getAttribute('stroke'),\n+    )\n+    expect(new Set(dashes).size).toBe(3)\n+    expect(new Set(strokes).size).toBe(3)\n+    for (const name of ['물결 고르기', '모래 고르기', '조약돌 고르기', '해초 고르기'])\n+      expect(screen.getByText(name)).toBeTruthy()\n+    expect(container.querySelector('[data-testid=\"drawdown-shade-target\"]')).toBeNull()\n+    expect(container.querySelector('[data-testid=\"drawdown-shade-base\"]')).not.toBeNull()\n+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain(\n+      '모래 고르기, 조약돌 고르기, 해초 고르기',\n+    )\n+  })\n+\n   it.each([\n     ['넓은 화면', WIDE],\n     ['폭 360px 화면', { width: 326, height: 245 }],\n@@ -109,12 +148,12 @@ describe('EquityChart', () => {\n         altNumbers={altNumbers}\n         base={{ ...base, name: LONG_BASE_NAME }}\n         initialCash=\"10000000.00\"\n-        target={{ ...target, name: LONG_TARGET_NAME }}\n+        targets={[{ ...target, name: LONG_TARGET_NAME }]}\n       />,\n     )\n \n     const baseLabel = labelBlock(container, 'base')\n-    const targetLabel = labelBlock(container, 'target')\n+    const targetLabel = labelBlock(container, 'target0')\n     const { height } = plotArea(container)\n \n     for (const [label, name] of [\n@@ -243,7 +282,12 @@ describe('EquityChart', () => {\n     expect(alone).toContain('비교 대상은 없습니다')\n \n     rerender(\n-      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" target={target} />,\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={base}\n+        initialCash=\"10000000.00\"\n+        targets={[target]}\n+      />,\n     )\n     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('모래 고르기')\n   })\n@@ -363,12 +407,13 @@ const growth: EquityChartSeries = {\n }\n \n describe('EquityChart 세로축 눈금', () => {\n-  it('차트 제목과 시작 금액 범례, 눈금 설명을 가까이 둔다', () => {\n+  it('차트 제목과 시작 금액 범례를 가까이 두고 읽는 법 펼침은 두지 않는다', () => {\n     render(<EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />)\n \n     expect(screen.getByText('자산가치 추이')).not.toBeNull()\n     expect(screen.getByText('점선 · 시작 금액 10,000,000원')).not.toBeNull()\n-    expect(screen.getByText('차트 읽는 법')).not.toBeNull()\n+    // '차트 읽는 법' 펼침은 뺐다. 음영 구간 설명은 그림 안 도움말(title)과 대안 텍스트가 든다.\n+    expect(screen.queryByText('차트 읽는 법')).toBeNull()\n   })\n \n   it('처음에는 로그 눈금으로 그려 금액의 상용로그에 높이를 비례시킨다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,9 +21,12 @@ import styles from './EquityChart.module.css'\n  * 곡선이 '가장 크게 줄었던 폭' 숫자보다 얕아 보인다. 값이 없는 날은 앞뒤를 잇지 않고 선을 끊는다 —\n  * 이어 그리면 없는 자산가치를 만들어 낸다(원칙 VI).\n  *\n- * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 파선이고 두 곡선의 오른쪽 끝에\n+ * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 각기 다른 파선이고 모든 곡선의 오른쪽 끝에\n  * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.\n  *\n+ * <p><b>비교 대상은 셋까지다</b>(`S15P21E205-419`). 넷을 넘으면 선 모양과 색으로 갈리지 않는다. 비교 대상의 하락 구간\n+ * 음영은 대상이 하나일 때만 칠한다 — 둘 이상이면 빗금이 겹쳐 어느 구간이 누구 것인지 읽을 수 없다.\n+ *\n  * <p>세로축은 시작 금액을 기준으로 잡는다. 0에서 시작하면 몇 %의 오르내림이 한 줄로 눌려 하락 구간을\n  * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다. 시작 금액\n  * 자리에는 가로 점선과 함께 금액을 적은 이름표를 붙여, 곡선이 원금 위에 있는지 아래에 있는지를 그래프\n@@ -46,8 +49,8 @@ export type EquityChartSeries = {\n \n export type EquityChartProps = {\n   base: EquityChartSeries\n-  /** 비교 대상. 없으면 곡선은 하나다 */\n-  target?: EquityChartSeries | null\n+  /** 비교 대상들. 없으면 곡선은 하나다. 셋을 넘는 것은 그리지 않는다 */\n+  targets?: readonly EquityChartSeries[] | null\n   /** `config.initialCash`. 세로축의 기준이자 가로 기준선의 위치다 */\n   initialCash: string\n   /** 대안 텍스트에 담을 기준 결과의 핵심 숫자 3개. 계산되지 않았으면 `null` */\n@@ -61,21 +64,29 @@ export type EquityChartProps = {\n /** 세로축 눈금을 금액 그대로 놓을지(`linear`) 금액의 상용로그로 놓을지(`log`) 정한다 */\n export type YScaleMode = 'linear' | 'log'\n \n-type ChartRow = {\n-  date: Date\n-  base?: number\n-  target?: number\n-}\n+type ChartRow = { date: Date } & Partial<Record<string, number | Date>>\n \n+const BASE_KEY = 'base'\n const BASE_STROKE = 'var(--chart-line-primary)'\n-const TARGET_STROKE = 'var(--chart-line-secondary)'\n-/** 비교 대상 곡선의 파선 간격. 색을 못 봐도 선 모양으로 갈린다 */\n-const TARGET_DASH = '7,5'\n+/**\n+ * 비교 대상의 색과 파선. 자리 순서대로 쓴다. 파선 간격이 서로 달라 색을 못 봐도 선 모양으로 갈린다.\n+ * 넷째 대상은 없다 — 상한이 셋이다.\n+ */\n+const TARGET_STYLES = [\n+  { stroke: 'var(--chart-line-secondary)', dash: '7,5' },\n+  { stroke: 'var(--chart-line-tertiary)', dash: '2,4' },\n+  { stroke: 'var(--chart-line-quaternary)', dash: '10,4,2,4' },\n+] as const\n /** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */\n const MAX_AMOUNT_TICKS = 4\n /** 처음 보여 줄 눈금 종류 */\n const DEFAULT_Y_SCALE_MODE: YScaleMode = 'log'\n \n+/** 비교 대상 i번째의 행 열 이름(`target0`…). 시험이 이 이름의 색 변수로 곡선을 찾는다 */\n+function targetKey(index: number): string {\n+  return 'target' + index\n+}\n+\n function toNumber(value: string | null | undefined): number | null {\n   if (value == null || value.trim() === '') return null\n   const parsed = Number(value)\n@@ -99,18 +110,16 @@ function toChartDate(date: string): Date {\n }\n \n /**\n- * 두 계열을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.\n+ * 계열들을 날짜로 합쳐 한 그래프의 행으로 만든다. 값은 눈금 종류에 맞춘 세로축 좌표값으로 담는다.\n  *\n  * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.\n  */\n function buildRows(\n-  base: ResultTimeseriesPoint[],\n-  target: ResultTimeseriesPoint[] | undefined,\n+  series: readonly { key: string; points: ResultTimeseriesPoint[] }[],\n   mode: YScaleMode,\n ): ChartRow[] {\n   const byDate = new Map<string, ChartRow>()\n-\n-  const collect = (points: ResultTimeseriesPoint[], key: 'base' | 'target') => {\n+  for (const { key, points } of series) {\n     for (const point of points) {\n       const row = byDate.get(point.date) ?? { date: toChartDate(point.date) }\n       const equity = readEquity(point)\n@@ -119,10 +128,6 @@ function buildRows(\n       byDate.set(point.date, row)\n     }\n   }\n-\n-  collect(base, 'base')\n-  if (target) collect(target, 'target')\n-\n   return [...byDate.values()].sort((left, right) => left.date.getTime() - right.date.getTime())\n }\n \n@@ -139,14 +144,16 @@ function buildRows(\n  */\n function resolveYDomain(\n   rows: ChartRow[],\n+  keys: readonly string[],\n   initialAxisValue: number | null,\n   mode: YScaleMode,\n ): [number, number] {\n   let lowest = initialAxisValue ?? Number.POSITIVE_INFINITY\n   let highest = initialAxisValue ?? Number.NEGATIVE_INFINITY\n   for (const row of rows) {\n-    for (const value of [row.base, row.target]) {\n-      if (value == null) continue\n+    for (const key of keys) {\n+      const value = row[key]\n+      if (typeof value !== 'number') continue\n       if (value < lowest) lowest = value\n       if (value > highest) highest = value\n     }\n@@ -221,7 +228,10 @@ function scaleModeNoun(mode: YScaleMode): string {\n \n /** 그래프를 문장으로 옮긴 대안 텍스트(FR-022) */\n function buildAltText(\n-  { base, target, altNumbers, initialCash }: EquityChartProps,\n+  base: EquityChartSeries,\n+  targets: readonly EquityChartSeries[],\n+  altNumbers: EquityChartProps['altNumbers'],\n+  initialCash: string,\n   mode: YScaleMode,\n ): string {\n   const numbers = altNumbers\n@@ -233,9 +243,13 @@ function buildAltText(\n       formatMoney(altNumbers.totalTradingCost) +\n       '입니다.'\n     : '핵심 숫자가 계산되지 않아 곡선만 그렸습니다.'\n-  const comparison = target\n-    ? '비교 대상은 ' + target.name + '이며 파선으로 함께 그렸습니다.'\n-    : '비교 대상은 없습니다.'\n+  const comparison =\n+    targets.length > 0\n+      ? '비교 대상은 ' +\n+        targets.map((target) => target.name).join(', ') +\n+        (targets.length === 1 ? '이며 파선으로' : '이며 서로 다른 파선으로') +\n+        ' 함께 그렸습니다.'\n+      : '비교 대상은 없습니다.'\n   const axis =\n     '세로축은 원화 자산가치이고 눈금은 ' +\n     scaleModeNoun(mode) +\n@@ -251,18 +265,29 @@ function shadeNote(name: string, window: DrawdownWindow): string {\n }\n \n export function EquityChart(props: EquityChartProps) {\n-  const { base, target, initialCash } = props\n+  const { base, initialCash, altNumbers } = props\n+  const targets = useMemo(\n+    () => (props.targets ?? []).slice(0, TARGET_STYLES.length),\n+    [props.targets],\n+  )\n   const [scaleMode, setScaleMode] = useState<YScaleMode>(DEFAULT_Y_SCALE_MODE)\n \n-  const rows = useMemo(\n-    () => buildRows(base.points, target?.points, scaleMode),\n-    [base.points, target?.points, scaleMode],\n+  const keyed = useMemo(\n+    () => [\n+      { key: BASE_KEY, points: base.points },\n+      ...targets.map((target, index) => ({ key: targetKey(index), points: target.points })),\n+    ],\n+    [base.points, targets],\n   )\n+  const keys = keyed.map((series) => series.key)\n+  const rows = useMemo(() => buildRows(keyed, scaleMode), [keyed, scaleMode])\n   const initial = toNumber(initialCash)\n   const initialAxisValue = initial == null ? null : toAxisValue(initial, scaleMode)\n   const yDomain = useMemo(\n-    () => resolveYDomain(rows, initialAxisValue, scaleMode),\n-    [rows, initialAxisValue, scaleMode],\n+    () => resolveYDomain(rows, keys, initialAxisValue, scaleMode),\n+    // keys 는 keyed 에서 나오므로 keyed 로 갈음한다.\n+    // eslint-disable-next-line react-hooks/exhaustive-deps\n+    [rows, keyed, initialAxisValue, scaleMode],\n   )\n   const amountTicks = useMemo(() => {\n     const amounts = scaleMode === 'log' ? pickLogAmountTicks(yDomain) : pickAmountTicks(yDomain)\n@@ -270,26 +295,23 @@ export function EquityChart(props: EquityChartProps) {\n   }, [yDomain, scaleMode])\n \n   const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)\n-  const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null\n-\n-  const notes = [\n-    scaleMode === 'log'\n-      ? '세로축 눈금이 로그라 같은 비율의 오르내림이 어느 구간에서나 같은 높이로 보입니다.'\n-      : null,\n-    baseWindow ? shadeNote(base.name, baseWindow) : null,\n-    target && targetWindow ? shadeNote(target.name, targetWindow) : null,\n-  ].filter((note): note is string => note != null)\n+  // 비교 대상의 음영은 하나일 때만. 둘 이상이면 빗금이 겹쳐 누구 구간인지 읽을 수 없다.\n+  const targetWindow =\n+    targets.length === 1 ? findDrawdownWindow(targets[0].points, targets[0].maxDrawdown) : null\n \n   // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 \"돌았고 비어 있었다\"는 거짓이므로 그리지\n   // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.\n-  if (!hasDrawableEquity(base.points) && !(target && hasDrawableEquity(target.points))) return null\n-\n-  const endLabels = target\n-    ? [\n-        { dataKey: 'base', name: base.name, stroke: BASE_STROKE },\n-        { dataKey: 'target', name: target.name, stroke: TARGET_STROKE },\n-      ]\n-    : [{ dataKey: 'base', name: base.name, stroke: BASE_STROKE }]\n+  if (!hasDrawableEquity(base.points) && !targets.some((target) => hasDrawableEquity(target.points)))\n+    return null\n+\n+  const endLabels = [\n+    { dataKey: BASE_KEY, name: base.name, stroke: BASE_STROKE },\n+    ...targets.map((target, index) => ({\n+      dataKey: targetKey(index),\n+      name: target.name,\n+      stroke: TARGET_STYLES[index].stroke,\n+    })),\n+  ]\n \n   return (\n     <div className={styles.figure}>\n@@ -310,7 +332,11 @@ export function EquityChart(props: EquityChartProps) {\n         </div>\n       </div>\n \n-      <div aria-label={buildAltText(props, scaleMode)} className={styles.chart} role=\"img\">\n+      <div\n+        aria-label={buildAltText(base, targets, altNumbers, initialCash, scaleMode)}\n+        className={styles.chart}\n+        role=\"img\"\n+      >\n         <LineChart\n           animationDuration={0}\n           aspectRatio=\"\"\n@@ -347,10 +373,10 @@ export function EquityChart(props: EquityChartProps) {\n             />\n           ) : null}\n \n-          {target && targetWindow ? (\n+          {targetWindow ? (\n             <DrawdownShade\n               from={toChartDate(targetWindow.peakDate)}\n-              label={shadeNote(target.name, targetWindow)}\n+              label={shadeNote(targets[0].name, targetWindow)}\n               to={toChartDate(targetWindow.troughDate)}\n               variant=\"target\"\n             />\n@@ -359,27 +385,31 @@ export function EquityChart(props: EquityChartProps) {\n           <Line\n             animate={false}\n             curve={curveLinear}\n-            dataKey=\"base\"\n-            defined={(row) => typeof row.base === 'number'}\n+            dataKey={BASE_KEY}\n+            defined={(row) => typeof row[BASE_KEY] === 'number'}\n             fadeEdges={false}\n             showHighlight={false}\n             stroke={BASE_STROKE}\n             strokeWidth={2.4}\n           />\n \n-          {target ? (\n-            <Line\n-              animate={false}\n-              curve={curveLinear}\n-              dataKey=\"target\"\n-              defined={(row) => typeof row.target === 'number'}\n-              fadeEdges={false}\n-              showHighlight={false}\n-              stroke={TARGET_STROKE}\n-              strokeDasharray={TARGET_DASH}\n-              strokeWidth={2.4}\n-            />\n-          ) : null}\n+          {targets.map((_, index) => {\n+            const key = targetKey(index)\n+            return (\n+              <Line\n+                animate={false}\n+                curve={curveLinear}\n+                dataKey={key}\n+                defined={(row) => typeof row[key] === 'number'}\n+                fadeEdges={false}\n+                key={key}\n+                showHighlight={false}\n+                stroke={TARGET_STYLES[index].stroke}\n+                strokeDasharray={TARGET_STYLES[index].dash}\n+                strokeWidth={2.4}\n+              />\n+            )\n+          })}\n \n           <SeriesEndLabels series={endLabels} />\n \n@@ -392,12 +422,6 @@ export function EquityChart(props: EquityChartProps) {\n         {baseWindow && base.maxDrawdown ? (\n           <span>음영 · 최대 하락 구간 {formatRatio(base.maxDrawdown)}</span>\n         ) : null}\n-        {notes.length > 0 ? (\n-          <details className={styles.help}>\n-            <summary>차트 읽는 법</summary>\n-            <p>{notes.join(' ')}</p>\n-          </details>\n-        ) : null}\n       </div>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,8 @@ export const METRIC_DEFINITIONS = {\n \n type ResultConditionLineProps = {\n   detail: PublicResultDetail\n-  target?: PublicResultDetail | null\n+  /** 겹쳐 그리는 비교 대상들. 이름은 부른 쪽이 정한다 — 같은 전략이 둘이면 번호로 갈라야 해서다(`S15P21E205-419`) */\n+  targets?: readonly { detail: PublicResultDetail; name: string }[]\n }\n \n /**\n@@ -68,11 +69,13 @@ export function ResultSummaryCard({ detail }: { detail: PublicResultDetail }) {\n }\n \n /** 분석 조건은 그래프 아래 기본 요약 탭에서 읽는다. */\n-export function ResultConditionLine({ detail, target }: ResultConditionLineProps) {\n+export function ResultConditionLine({ detail, targets = [] }: ResultConditionLineProps) {\n   const condition = buildConditionLine({\n     ...detail,\n-    targetName: target?.strategyName ?? target?.config.strategyId,\n-    targetWeightsSource: target?.weightsSource,\n+    targetName: targets.length ? targets.map((target) => target.name).join(', ') : null,\n+    targetWeightsSource: targets.some((target) => target.detail.weightsSource === 'COMPUTED')\n+      ? 'COMPUTED'\n+      : targets[0]?.detail.weightsSource,\n   })\n \n   return (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,119 @@\n+import {\n+  type AxisValues,\n+  applicableAxes,\n+  axisValueEquals,\n+  checkAxisValue,\n+  defaultValuesOf,\n+  isAxisValue,\n+} from '@/hooks/useStrategySettings'\n+import type { UsedStrategy } from '@/types/myRecords'\n+import type { AxisValue, StrategyView } from '@/types/strategyRegistry'\n+\n+/**\n+ * 비교 후보의 재료(`S15P21E205-419`). 후보는 <b>전략 + 설정값 조합</b>이고 출처는 둘이다 — 등록표 기본값과 내가 써 본 조합\n+ * (`GET /backtests/used-strategies`). 조건(섹터·기간·비용)은 기준 결과가 들고 있으므로 여기서는 다루지 않는다.\n+ *\n+ * <p>화면은 설정값의 뜻을 읽지 않는다. 축 이름은 등록표의 `label`로, 목록형 값은 등록표의 `label`로 바꿔 적고, 등록표에 없는\n+ * 축이나 후보에 없는 값은 그대로 문자열로 보인다(003 FR-005).\n+ */\n+\n+export type CandidateSource = 'default' | 'used'\n+\n+/** 설정 조합 하나. 같은 전략이라도 설정값이 다르면 다른 후보다. */\n+export type ParameterCombination = {\n+  strategy: StrategyView\n+  parameters: AxisValues\n+  source: CandidateSource\n+  /** 내 전략의 이름표 — 그 조합을 가리키는 내 기록 항목 이름. 기본 전략과 지운 항목은 `null` */\n+  recordName: string | null\n+}\n+\n+function describeValue(value: AxisValue): string {\n+  if (typeof value === 'object') return Object.values(value).join(' ')\n+  return String(value)\n+}\n+\n+/**\n+ * 설정값을 사람이 읽는 한 줄로. 등록표가 이 전략에 적용한다고 한 축만, 등록표의 순서로 적는다.\n+ * 예: `리밸런싱 주기 월말 · 섹터당 최대 비중 40%`. 축이 없는 전략은 빈 문자열이다.\n+ */\n+export function describeParameters(strategy: StrategyView, parameters: AxisValues): string {\n+  return applicableAxes(strategy, parameters)\n+    .filter((axis) => parameters[axis.name] !== undefined)\n+    .map((axis) => {\n+      const value = parameters[axis.name]\n+      const choice = axis.choices?.find((candidate) => axisValueEquals(candidate.value, value))\n+      const shown = choice ? choice.label : describeValue(value) + (axis.unit ?? '')\n+      return axis.label + ' ' + shown\n+    })\n+    .join(' · ')\n+}\n+\n+/** 두 설정 조합이 같은가. 적용되는 축의 값만 비교한다 — 조건 밖 축은 저장되지도 않는다(003 FR-003). */\n+export function parametersEqual(\n+  strategy: StrategyView,\n+  left: AxisValues,\n+  right: AxisValues,\n+): boolean {\n+  const axes = applicableAxes(strategy, left)\n+  if (axes.length !== applicableAxes(strategy, right).length) return false\n+  return axes.every((axis) => {\n+    const a = left[axis.name]\n+    const b = right[axis.name]\n+    return a !== undefined && b !== undefined && axisValueEquals(a, b)\n+  })\n+}\n+\n+/**\n+ * 써 본 조합의 설정값을 현재 등록표로 다시 판정한다. 접수가 저장한 값이라 등록표가 바뀐 뒤에는 축이 없어졌거나 범위 밖일 수 있다\n+ * (계약 §1.12). 적용되는 축이 하나라도 비거나 어긋나면 `null` — 값을 고쳐 넣어 후보로 올리지 않는다(원칙 VI).\n+ */\n+export function readUsedParameters(\n+  strategy: StrategyView,\n+  parameters: Record<string, unknown>,\n+): AxisValues | null {\n+  const values: AxisValues = {}\n+  for (const [name, value] of Object.entries(parameters)) {\n+    if (!isAxisValue(value)) return null\n+    values[name] = value\n+  }\n+  const axes = applicableAxes(strategy, values)\n+  for (const axis of axes) {\n+    const value = values[axis.name]\n+    if (value === undefined || checkAxisValue(axis, value) !== null) return null\n+  }\n+  // 조건 밖 축이 섞여 있어도 요청에는 적용 축만 싣는다.\n+  const settled: AxisValues = {}\n+  for (const axis of axes) settled[axis.name] = values[axis.name]\n+  return settled\n+}\n+\n+/**\n+ * 전략 하나의 후보 조합들. 기본값이 먼저, 그 다음 써 본 조합을 받은 순서(최근 순)대로. 기본값과 같은 조합·서로 같은 조합·\n+ * `exclude`(기준 결과 자신)와 같은 조합은 한 번만 남기거나 뺀다.\n+ */\n+export function combinationsFor(\n+  strategy: StrategyView,\n+  used: readonly UsedStrategy[],\n+  exclude: { strategyId: string; parameters: Record<string, unknown> } | null,\n+): ParameterCombination[] {\n+  const result: ParameterCombination[] = []\n+  const seen: AxisValues[] = []\n+  const excluded =\n+    exclude && exclude.strategyId === strategy.strategyId\n+      ? readUsedParameters(strategy, exclude.parameters)\n+      : null\n+  const push = (parameters: AxisValues, source: CandidateSource, recordName: string | null) => {\n+    if (excluded && parametersEqual(strategy, excluded, parameters)) return\n+    if (seen.some((known) => parametersEqual(strategy, known, parameters))) return\n+    seen.push(parameters)\n+    result.push({ strategy, parameters, source, recordName })\n+  }\n+  push(defaultValuesOf(strategy), 'default', null)\n+  for (const item of used) {\n+    if (item.strategyId !== strategy.strategyId) continue\n+    const parameters = readUsedParameters(strategy, item.parameters)\n+    if (parameters) push(parameters, 'used', item.recordName)\n+  }\n+  return result\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareCandidates.ts",
+          "old_path": "frontend/src/components/result/compareCandidates.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,21 +1,35 @@\n import { describe, expect, it } from 'vitest'\n-import { buildResultPath, parseCompareQuery } from './compareQuery'\n+import { MAX_COMPARE_TARGETS, buildResultPath, parseCompareQuery } from './compareQuery'\n \n const base = 'a'.repeat(32)\n const target = 'b'.repeat(32)\n+const second = 'c'.repeat(32)\n describe('비교 주소', () => {\n-  it('공개 토큰과 탐색 주소를 손실 없이 왕복한다', () => {\n-    const path = buildResultPath(base, { compareToken: target, searchId: 'SEARCH / 한글&' })\n+  it('공개 토큰 목록과 탐색 주소를 손실 없이 왕복한다', () => {\n+    const path = buildResultPath(base, {\n+      compareTokens: [target, second],\n+      searchId: 'SEARCH / 한글&',\n+    })\n     expect(parseCompareQuery(path.slice(path.indexOf('?')))).toEqual({\n-      compareToken: target,\n+      compareTokens: [target, second],\n       searchId: 'SEARCH / 한글&',\n     })\n     expect(buildResultPath(base)).toBe('/results/' + base)\n+    expect(buildResultPath(base, { compareTokens: [] })).toBe('/results/' + base)\n+  })\n+  it('같은 토큰은 한 번만 두고 상한을 넘는 토큰은 뒤에서 자른다', () => {\n+    const tokens = ['b', 'c', 'd', 'e'].map((char) => char.repeat(32))\n+    expect(parseCompareQuery('?compare=' + [tokens[0], ...tokens].join(',')).compareTokens).toEqual(\n+      tokens.slice(0, MAX_COMPARE_TARGETS),\n+    )\n   })\n   it.each(['BT-123', '../secret', 'A'.repeat(32), 'a'.repeat(31), ''])(\n     '잘못된 토큰 %s는 무시한다',\n     (value) => {\n-      expect(parseCompareQuery('?compare=' + encodeURIComponent(value)).compareToken).toBeNull()\n+      expect(parseCompareQuery('?compare=' + encodeURIComponent(value)).compareTokens).toEqual([])\n+      expect(\n+        parseCompareQuery('?compare=' + encodeURIComponent(value + ',' + target)).compareTokens,\n+      ).toEqual([target])\n     },\n   )\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareQuery.test.ts",
+          "old_path": "frontend/src/components/result/compareQuery.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,21 +1,32 @@\n const tokenPattern = /^[0-9a-f]{32}$/\n \n+/** 한 그래프에 겹치는 비교 대상의 상한. 기준까지 넷을 넘으면 색·선 모양으로 갈리지 않는다(FR-004). */\n+export const MAX_COMPARE_TARGETS = 3\n+\n+/**\n+ * 비교 주소를 읽는다. `?compare=`는 쉼표로 이은 공개 토큰 목록이다(contracts \"비교 주소\").\n+ * 잘못된 토큰은 버리고, 같은 토큰은 한 번만, 상한을 넘는 것은 뒤에서 자른다.\n+ */\n export function parseCompareQuery(search: string) {\n   const query = new URLSearchParams(search)\n-  const token = query.get('compare')\n+  const tokens: string[] = []\n+  for (const raw of (query.get('compare') ?? '').split(',')) {\n+    const token = raw.trim()\n+    if (tokenPattern.test(token) && !tokens.includes(token)) tokens.push(token)\n+  }\n   return {\n-    compareToken: token && tokenPattern.test(token) ? token : null,\n+    compareTokens: tokens.slice(0, MAX_COMPARE_TARGETS),\n     searchId: query.get('search') || null,\n   }\n }\n \n export function buildResultPath(\n   baseToken: string,\n-  options: { compareToken?: string | null; searchId?: string | null } = {},\n+  options: { compareTokens?: readonly string[] | null; searchId?: string | null } = {},\n ): string {\n   const query = new URLSearchParams()\n-  if (options.compareToken && tokenPattern.test(options.compareToken))\n-    query.set('compare', options.compareToken)\n+  const tokens = (options.compareTokens ?? []).filter((token) => tokenPattern.test(token))\n+  if (tokens.length) query.set('compare', tokens.slice(0, MAX_COMPARE_TARGETS).join(','))\n   if (options.searchId) query.set('search', options.searchId)\n   return '/results/' + baseToken + (query.size ? '?' + query.toString() : '')\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareQuery.ts",
+          "old_path": "frontend/src/components/result/compareQuery.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,15 +1,17 @@\n import { describe, expect, it } from 'vitest'\n import { resultDetailCompleted as base } from '@/test/resultFixtures'\n import { selectableStrategy } from '@/test/strategyRegistryFixtures'\n+import { defaultValuesOf } from '@/hooks/useStrategySettings'\n import { buildCompareRequest, comparisonMismatch } from './compareRequest'\n \n const choice = {\n   strategy: selectableStrategy,\n   registryVersion: 'registry-new',\n   rulesVersion: 'rules-new',\n+  parameters: defaultValuesOf(selectableStrategy),\n }\n describe('동일 조건 요청', () => {\n-  it('비용 버전과 평가 조건은 보존하고 새 전략의 기본 설정과 규칙 버전을 쓴다', () => {\n+  it('비용 버전과 평가 조건은 보존하고 후보가 든 설정값과 규칙 버전을 쓴다', () => {\n     const request = buildCompareRequest(base, choice)\n     expect(request.sectorAllocation.items).toEqual(\n       base.config.items.map(({ sectorId, instrumentId }) => ({ sectorId, instrumentId })),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareRequest.test.ts",
+          "old_path": "frontend/src/components/result/compareRequest.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { defaultValuesOf } from '@/hooks/useStrategySettings'\n+import type { AxisValues } from '@/hooks/useStrategySettings'\n import type { BacktestCreateRequest, BacktestScenario } from '@/types/backtestRequest'\n import type { PublicResultDetail } from '@/types/result'\n import type { AxisValue, StrategyView } from '@/types/strategyRegistry'\n@@ -8,11 +8,16 @@ export type CompareChoice = {\n   strategy: StrategyView\n   registryVersion: string\n   rulesVersion: string\n+  /**\n+   * 상대편에 붙일 설정값. 등록표 기본값이거나 내가 써 본 조합이다(`S15P21E205-419`). 후보를 만드는 쪽이 채우므로\n+   * 요청을 조립하는 이 파일은 어느 쪽인지 모른다.\n+   */\n+  parameters: AxisValues\n }\n \n /**\n  * 공개 config → 004 요청의 대응은 이곳에만 둔다. 비용은 config에 없으므로 versions에서 읽는다.\n- * choice가 없으면 원래 설정을 재현한다. 새 전략의 기본값과 규칙 버전은 등록표가 소유한다.\n+ * choice가 없으면 원래 설정을 재현한다. 새 전략의 설정값은 choice가 들고 오고 규칙 버전은 등록표가 소유한다.\n  */\n export function buildCompareRequest(\n   base: PublicResultDetail,\n@@ -56,7 +61,7 @@ export function buildCompareRequest(\n           ? { registryVersion: config.registryVersion }\n           : {}),\n       parameters: choice\n-        ? defaultValuesOf(choice.strategy)\n+        ? { ...choice.parameters }\n         : ({ ...config.parameters } as Record<string, AxisValue>),\n     },\n     conditions: {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/compareRequest.ts",
+          "old_path": "frontend/src/components/result/compareRequest.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -61,7 +61,7 @@\n \n .popover {\n   z-index: 61;\n-  width: min(360px, calc(100vw - 32px));\n+  width: min(460px, calc(100vw - 32px));\n   max-height: calc(100svh - 32px);\n   overflow-y: auto;\n   padding: 16px;\n@@ -87,3 +87,126 @@\n   margin-top: 2px;\n   line-height: 1.4;\n }\n+\n+/* 비교 대상 칩. '비교 대상 고르기' 왼쪽에 늘어선다. 이름은 폭 상한에서 말줄임이다. */\n+.chip {\n+  display: inline-flex;\n+  align-items: center;\n+  max-width: 220px;\n+  height: 36px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 999px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-foreground);\n+  font-size: 0.85rem;\n+  line-height: 1;\n+}\n+.chip[data-state='FAILED'],\n+.chip[data-state='EXECUTION_LIMIT'],\n+.chip[data-state='EXPIRED'] {\n+  border-color: var(--thorp-negative);\n+}\n+.chipBody {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 6px;\n+  min-width: 0;\n+  padding: 0 4px 0 12px;\n+  border: 0;\n+  background: transparent;\n+  color: inherit;\n+  font: inherit;\n+}\n+button.chipBody {\n+  cursor: pointer;\n+}\n+button.chipBody:hover .chipName {\n+  text-decoration: underline;\n+}\n+.chipName {\n+  min-width: 0;\n+  overflow: hidden;\n+  text-overflow: ellipsis;\n+  white-space: nowrap;\n+}\n+.chipState {\n+  flex: none;\n+  color: var(--thorp-muted);\n+  font-size: 0.75rem;\n+}\n+.chipRemove {\n+  display: inline-flex;\n+  align-items: center;\n+  justify-content: center;\n+  flex: none;\n+  width: 28px;\n+  height: 28px;\n+  margin: 0 3px 0 0;\n+  border: 0;\n+  border-radius: 999px;\n+  background: transparent;\n+  color: var(--thorp-copy);\n+  cursor: pointer;\n+}\n+.chipRemove:hover {\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-foreground);\n+}\n+.chipRemove:focus-visible,\n+button.chipBody:focus-visible {\n+  outline: 2px solid var(--thorp-neutral);\n+  outline-offset: 1px;\n+}\n+.visuallyHidden {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  overflow: hidden;\n+  clip: rect(0 0 0 0);\n+  white-space: nowrap;\n+}\n+.pickerNote {\n+  margin: 0 0 12px;\n+  font-size: 0.85rem;\n+  color: var(--thorp-copy);\n+}\n+.group {\n+  border-top: 1px solid var(--thorp-line);\n+  padding-top: 10px;\n+}\n+.groupTitle {\n+  margin: 0 0 6px;\n+  font-weight: 600;\n+}\n+.combinations {\n+  list-style: none;\n+  padding: 0;\n+  display: grid;\n+  gap: 8px;\n+}\n+.combination {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 8px;\n+  cursor: pointer;\n+  line-height: 1.6;\n+}\n+.combination input {\n+  margin-top: 5px;\n+}\n+.combination input:disabled + span {\n+  color: var(--thorp-muted);\n+}\n+.rowText {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 1px;\n+  min-width: 0;\n+}\n+.rowTitle {\n+  font-weight: 600;\n+}\n+.rowBase {\n+  font-size: 0.78rem;\n+  color: var(--thorp-muted);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/comparison.module.css",
+          "old_path": "frontend/src/components/result/comparison.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,335 +0,0 @@\n-import { useEffect, useRef, useState } from 'react'\n-import { useLocation, useNavigate } from 'react-router-dom'\n-import { BacktestRequestError, createBacktest } from '@/api/backtest'\n-import { ResultError, retryResult } from '@/api/result'\n-import { buildResultPath, parseCompareQuery } from '@/components/result/compareQuery'\n-import { hasDrawableEquity } from '@/components/result/equityPoints'\n-import {\n-  type CompareChoice,\n-  buildCompareRequest,\n-  comparisonMismatch,\n-} from '@/components/result/compareRequest'\n-import type { PeriodConfirmation } from '@/components/result/PeriodMismatchDialog'\n-import type { PublicResultDetail } from '@/types/result'\n-import { type TimeseriesState, useResult } from './useResult'\n-\n-export type CompareTargetState = {\n-  targetState: 'NONE' | 'REQUESTED' | 'RUNNING' | 'READY' | 'FAILED' | 'EXPIRED' | 'EXECUTION_LIMIT'\n-  detail: PublicResultDetail | null\n-  timeseries: TimeseriesState\n-  message: string | null\n-  retryAfterSeconds: number | null\n-  retryable: boolean\n-}\n-\n-type Recalculation = PeriodConfirmation & {\n-  choice: CompareChoice | null\n-  target: PublicResultDetail | null\n-  acceptedBaseToken?: string\n-}\n-type Accepted = { publicToken?: string }\n-type Action = () => Promise<Accepted>\n-type Mutation =\n-  | { error: unknown; action: Action; searchId: string | null; choice: CompareChoice | null }\n-  | { sending: true }\n-  | null\n-\n-function errorMessage(error: unknown): string {\n-  return error instanceof Error ? error.message : '비교 요청을 완료하지 못했습니다.'\n-}\n-function retryDelay(error: unknown): number | null {\n-  if (error instanceof ResultError) return error.retryAfterSeconds\n-  if (error instanceof BacktestRequestError) {\n-    const delay = error.details?.retryAfterSeconds\n-    if (typeof delay === 'number' && Number.isFinite(delay) && delay >= 0) return delay\n-  }\n-  return null\n-}\n-function publicTokenOf(accepted: Accepted): string {\n-  if (!accepted.publicToken || !/^[0-9a-f]{32}$/.test(accepted.publicToken)) {\n-    throw new Error('접수된 결과의 공개 주소를 확인하지 못했습니다.')\n-  }\n-  return accepted.publicToken\n-}\n-function readRequiredWarmup(error: BacktestRequestError): number | null {\n-  const value = error.details?.requiredWarmupTradingDays ?? error.details?.requiredWarmup\n-  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null\n-}\n-function readRequiredStart(error: BacktestRequestError): string | null {\n-  const value = error.details?.requiredStart ?? error.details?.requiredStartDate\n-  return typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) ? value : null\n-}\n-\n-export function useCompareTarget(base: PublicResultDetail) {\n-  const location = useLocation()\n-  const navigate = useNavigate()\n-  const { compareToken, searchId } = parseCompareQuery(location.search)\n-  const result = useResult(compareToken)\n-  const [mutation, setMutation] = useState<Mutation>(null)\n-  const [manualPeriod, setManualPeriod] = useState<Recalculation | null>(null)\n-  const [dismissedToken, setDismissedToken] = useState<string | null>(null)\n-  const [dialogError, setDialogError] = useState<string | null>(null)\n-  const [recalculating, setRecalculating] = useState(false)\n-  const operation = useRef(0)\n-  const busy = useRef(false)\n-\n-  useEffect(() => {\n-    operation.current += 1\n-    busy.current = false\n-    setMutation(null)\n-    setManualPeriod(null)\n-    setDialogError(null)\n-    setRecalculating(false)\n-    setDismissedToken(null)\n-    return () => {\n-      operation.current += 1\n-    }\n-  }, [compareToken, searchId])\n-\n-  const detail =\n-    result.status === 'ready' && result.detail.publicToken === compareToken ? result.detail : null\n-  const state: CompareTargetState = {\n-    targetState: 'NONE',\n-    detail,\n-    timeseries: detail && result.status === 'ready' ? result.timeseries : { status: 'none' },\n-    message: null,\n-    retryAfterSeconds: null,\n-    retryable: false,\n-  }\n-  if (mutation && 'sending' in mutation) state.targetState = 'REQUESTED'\n-  else if (mutation && 'error' in mutation) {\n-    const error = mutation.error\n-    state.targetState =\n-      (error instanceof BacktestRequestError || error instanceof ResultError) &&\n-      (error.code === 'EXECUTION_LIMIT' || error.status === 429)\n-        ? 'EXECUTION_LIMIT'\n-        : 'FAILED'\n-    state.message = errorMessage(error)\n-    state.retryAfterSeconds = retryDelay(error)\n-    state.retryable = true\n-  } else if (compareToken) {\n-    if (result.status === 'expired') state.targetState = 'EXPIRED'\n-    else if (result.status === 'error' || result.status === 'notFound') {\n-      state.targetState = 'FAILED'\n-      state.message =\n-        result.status === 'error' ? result.message : '비교 대상 주소를 찾을 수 없습니다.'\n-      state.retryable = result.status === 'error'\n-    } else if (!detail) state.targetState = 'REQUESTED'\n-    else if (detail.status === 'QUEUED' || detail.status === 'RUNNING')\n-      state.targetState = 'RUNNING'\n-    else if (detail.status === 'FAILED' || detail.status === 'CANCELLED' || !detail.summary) {\n-      state.targetState = 'FAILED'\n-      state.message = detail.failure\n-        ? detail.failure.code + ': ' + detail.failure.message\n-        : '비교 분석이 완료되지 않아 같은 기간으로 비교할 수 없습니다.'\n-      state.retryable = detail.status === 'FAILED' || detail.status === 'CANCELLED'\n-    } else if (state.timeseries.status === 'unavailable') {\n-      state.targetState = 'FAILED'\n-      state.message = state.timeseries.message\n-      state.retryable = true\n-    } else if (state.timeseries.status === 'loaded') {\n-      if (hasDrawableEquity(state.timeseries.data.points)) state.targetState = 'READY'\n-      else {\n-        state.targetState = 'FAILED'\n-        state.message = '비교 곡선을 그릴 자산가치 기록이 없습니다.'\n-      }\n-    }\n-  }\n-\n-  const mismatch = state.targetState === 'READY' && detail ? comparisonMismatch(base, detail) : null\n-  const inferredPeriod: Recalculation | null =\n-    (mismatch === 'period' || mismatch === 'versions') &&\n-    detail &&\n-    dismissedToken !== compareToken\n-      ? {\n-          start: [base.config.effectiveStart, detail.config.effectiveStart].sort().at(-1)!,\n-          end: [base.config.effectiveEnd, detail.config.effectiveEnd].sort()[0],\n-          warmupTradingDays: Math.max(\n-            base.config.warmupTradingDays,\n-            detail.config.warmupTradingDays,\n-          ),\n-          choice: null,\n-          target: detail,\n-          ...(mismatch === 'versions'\n-            ? { message: '자료 또는 계산 엔진 기준이 달라 두 결과를 같은 현재 기준으로 다시 계산합니다.' }\n-            : {}),\n-        }\n-      : null\n-  const period = manualPeriod ?? inferredPeriod\n-\n-  const send = async (\n-    action: Action,\n-    nextSearchId: string | null,\n-    choice: CompareChoice | null = null,\n-  ) => {\n-    if (busy.current) return\n-    busy.current = true\n-    const current = ++operation.current\n-    setMutation({ sending: true })\n-    try {\n-      const accepted = await action()\n-      if (current !== operation.current) return\n-      const nextToken = publicTokenOf(accepted)\n-      setMutation(null)\n-      navigate(\n-        buildResultPath(base.publicToken, { compareToken: nextToken, searchId: nextSearchId }),\n-        { replace: true, state: location.state },\n-      )\n-      if (nextToken === compareToken) result.retry()\n-    } catch (error) {\n-      if (current !== operation.current) return\n-      if (error instanceof BacktestRequestError && error.code === 'INSUFFICIENT_HISTORY') {\n-        setMutation(null)\n-        const requiredStart = readRequiredStart(error)\n-        setManualPeriod({\n-          choice,\n-          target: choice ? null : detail,\n-          start:\n-            requiredStart && requiredStart > base.config.effectiveStart\n-              ? requiredStart\n-              : base.config.effectiveStart,\n-          end: base.config.effectiveEnd,\n-          warmupTradingDays: readRequiredWarmup(error),\n-          requiredStart,\n-          message: error.message,\n-        })\n-      } else setMutation({ error, action, searchId: nextSearchId, choice })\n-    } finally {\n-      if (current === operation.current) busy.current = false\n-    }\n-  }\n-\n-  const select = (choice: CompareChoice) => {\n-    if (busy.current) return\n-    setDialogError(null)\n-    setManualPeriod(null)\n-    if (choice.strategy.warmupTradingDays > base.config.warmupTradingDays) {\n-      setManualPeriod({\n-        ...(choice.period ?? { start: null, end: null }),\n-        warmupTradingDays: choice.strategy.warmupTradingDays,\n-        choice,\n-        target: null,\n-      })\n-      return\n-    }\n-    void send(() => createBacktest(buildCompareRequest(base, choice)), null, choice)\n-  }\n-\n-  const retry = () => {\n-    if (mutation && 'error' in mutation)\n-      void send(mutation.action, mutation.searchId, mutation.choice)\n-    else if (\n-      compareToken &&\n-      detail &&\n-      (detail.status === 'FAILED' || detail.status === 'CANCELLED')\n-    ) {\n-      void send(() => retryResult(compareToken), searchId)\n-    } else result.retry()\n-  }\n-\n-  const clear = () => {\n-    operation.current += 1\n-    busy.current = false\n-    setMutation(null)\n-    setManualPeriod(null)\n-    navigate(buildResultPath(base.publicToken), { replace: true, state: location.state })\n-  }\n-\n-  const confirmPeriod = async () => {\n-    if (\n-      !period ||\n-      busy.current ||\n-      period.warmupTradingDays === null ||\n-      !period.start ||\n-      !period.end ||\n-      period.start > period.end\n-    )\n-      return\n-    busy.current = true\n-    const current = ++operation.current\n-    setRecalculating(true)\n-    setDialogError(null)\n-    let acceptedBaseToken = period.acceptedBaseToken\n-    try {\n-      // 두 번째 요청이 실패해도 첫 번째 접수는 남는다. 명시적 재시도에서는 두 번째만 보낸다.\n-      const range = { start: period.start, end: period.end }\n-      const baseRequest = buildCompareRequest(base, null, period.warmupTradingDays, range)\n-      const targetRequest = buildCompareRequest(\n-        period.target ?? base,\n-        period.choice,\n-        period.warmupTradingDays,\n-        range,\n-      )\n-      if (!acceptedBaseToken) {\n-        acceptedBaseToken = publicTokenOf(await createBacktest(baseRequest))\n-        if (current !== operation.current) return\n-      }\n-      const targetToken = publicTokenOf(await createBacktest(targetRequest))\n-      if (current !== operation.current) return\n-      navigate(\n-        buildResultPath(acceptedBaseToken, {\n-          compareToken: targetToken,\n-          searchId: period.choice ? null : searchId,\n-        }),\n-        {\n-          state: { returnTo: location.pathname + location.search },\n-        },\n-      )\n-    } catch (error) {\n-      if (current !== operation.current) return\n-      let next = { ...period, acceptedBaseToken }\n-      if (error instanceof BacktestRequestError && error.code === 'INSUFFICIENT_HISTORY') {\n-        const required = readRequiredWarmup(error)\n-        const requiredStart = readRequiredStart(error)\n-        next = {\n-          ...period,\n-          acceptedBaseToken: undefined,\n-          warmupTradingDays: required,\n-          requiredStart,\n-          start:\n-            requiredStart && requiredStart > (period.start ?? '') ? requiredStart : period.start,\n-        }\n-      }\n-      setManualPeriod(next)\n-      const delay = retryDelay(error)\n-      setDialogError(\n-        errorMessage(error) +\n-          (delay !== null ? ' ' + delay + '초 뒤 다시 요청할 수 있습니다.' : ''),\n-      )\n-    } finally {\n-      if (current === operation.current) {\n-        busy.current = false\n-        setRecalculating(false)\n-      }\n-    }\n-  }\n-\n-  return {\n-    ...state,\n-    compareToken,\n-    searchId,\n-    comparisonKind:\n-      searchId || detail?.config.executionType === 'SEARCH_BUNDLE'\n-        ? ('AUTO_SEARCH' as const)\n-        : ('BASIC' as const),\n-    compatibleTarget: state.targetState === 'READY' && !mismatch && !period ? detail : null,\n-    mismatch,\n-    period,\n-    dialogError,\n-    recalculating,\n-    select,\n-    retry,\n-    clear,\n-    confirmPeriod,\n-    cancelPeriod: () => {\n-      setManualPeriod(null)\n-      setDialogError(null)\n-      setDismissedToken(compareToken)\n-    },\n-    returnTo:\n-      typeof location.state?.returnTo === 'string' &&\n-      /^\\/results\\/[0-9a-f]{32}(?:\\?|$)/.test(location.state.returnTo)\n-        ? (location.state.returnTo as string)\n-        : null,\n-  }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useCompareTarget.ts",
+          "old_path": "frontend/src/hooks/useCompareTarget.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,16 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n import { MemoryRouter, useLocation } from 'react-router-dom'\n import { BacktestRequestError } from '@/api/backtest'\n import { ResultError } from '@/api/result'\n-import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'\n+import { CompareTargetChip } from '@/components/result/CompareTargetChip'\n import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'\n+import { defaultValuesOf } from '@/hooks/useStrategySettings'\n import {\n   resultDetailCompleted as base,\n   resultDetailRunning,\n   resultTimeseries,\n } from '@/test/resultFixtures'\n-import { selectableStrategy } from '@/test/strategyRegistryFixtures'\n+import { plainStrategy, selectableStrategy } from '@/test/strategyRegistryFixtures'\n import type { PublicResultDetail } from '@/types/result'\n-import { useCompareTarget } from './useCompareTarget'\n+import { useCompareTargets } from './useCompareTargets'\n \n const api = vi.hoisted(() => ({\n   create: vi.fn(),\n@@ -33,41 +34,61 @@ vi.mock('@/api/result', async (load) => ({\n const targetToken = 'b'.repeat(32)\n const newBase = 'c'.repeat(32)\n const newTarget = 'd'.repeat(32)\n+const secondToken = 'e'.repeat(32)\n const choice = {\n   strategy: { ...selectableStrategy, warmupTradingDays: 0 },\n   registryVersion: 'registry-new',\n   rulesVersion: 'rules-new',\n+  parameters: defaultValuesOf(selectableStrategy),\n+}\n+const secondChoice = {\n+  strategy: { ...plainStrategy, warmupTradingDays: 0 },\n+  registryVersion: 'registry-new',\n+  rulesVersion: 'rules-plain',\n+  parameters: defaultValuesOf(plainStrategy),\n }\n let target: PublicResultDetail\n+let second: PublicResultDetail\n \n function Harness() {\n-  const compare = useCompareTarget(base)\n+  const compare = useCompareTargets(base)\n   const location = useLocation()\n   return (\n     <>\n       <p>기준 결과 유지</p>\n-      <button onClick={() => compare.select(choice)}>전략 선택</button>\n+      <button onClick={() => compare.select([choice])}>전략 선택</button>\n+      <button onClick={() => compare.select([choice, secondChoice])}>둘 선택</button>\n       <button\n         onClick={() =>\n-          compare.select({\n-            ...choice,\n-            strategy: { ...choice.strategy, warmupTradingDays: 80 },\n-            period: { start: '2024-01-02', end: base.config.effectiveEnd },\n-          })\n+          compare.select([\n+            {\n+              ...choice,\n+              strategy: { ...choice.strategy, warmupTradingDays: 80 },\n+              period: { start: '2024-01-02', end: base.config.effectiveEnd },\n+            },\n+          ])\n         }\n       >\n         긴 전략 선택\n       </button>\n-      <output aria-label=\"상태\">{compare.targetState}</output>\n+      <output aria-label=\"상태\">\n+        {compare.targets.map((item) => item.targetState).join(',') || 'NONE'}\n+      </output>\n       <output aria-label=\"주소\">{location.pathname + location.search}</output>\n       <output aria-label=\"복귀\">{compare.returnTo}</output>\n-      {compare.compatibleTarget ? <p>비교 곡선 사용 가능</p> : null}\n-      <CompareTargetSlot\n-        state={compare}\n-        onRetry={compare.retry}\n-        onClear={compare.clear}\n-        onPick={() => {}}\n-      />\n+      <output aria-label=\"자리\">{compare.room}</output>\n+      {compare.compatibleTargets.length > 0 ? (\n+        <p>비교 곡선 사용 가능 {compare.compatibleTargets.length}</p>\n+      ) : null}\n+      {compare.targets.map((item) => (\n+        <CompareTargetChip\n+          key={item.key}\n+          state={item}\n+          name={item.detail?.strategyName ?? item.choice?.strategy.name ?? '대상'}\n+          onRetry={() => compare.retry(item.key)}\n+          onRemove={() => compare.remove(item.key)}\n+        />\n+      ))}\n       {compare.period ? (\n         <PeriodMismatchDialog\n           period={compare.period}\n@@ -90,7 +111,10 @@ function setup(search = '') {\n beforeEach(() => {\n   Object.values(api).forEach((mock) => mock.mockReset())\n   target = { ...base, publicToken: targetToken, strategyName: '비교용 전략' }\n-  api.detail.mockImplementation(async () => target)\n+  second = { ...base, publicToken: secondToken, strategyName: '둘째 전략' }\n+  api.detail.mockImplementation(async (requested: string) =>\n+    requested === secondToken ? second : target,\n+  )\n   api.series.mockResolvedValue(resultTimeseries)\n   api.create.mockResolvedValue({\n     publicToken: targetToken,\n@@ -101,16 +125,18 @@ beforeEach(() => {\n afterEach(() => vi.useRealTimers())\n \n describe('비교 실행 흐름 (quickstart 3)', () => {\n-  it('대상의 시계열에 그릴 값이 없으면 두 곡선이 준비됐다고 표시하지 않는다', async () => {\n+  it('대상의 시계열에 그릴 값이 없으면 곡선이 준비됐다고 표시하지 않는다', async () => {\n     api.series.mockResolvedValue({ ...resultTimeseries, points: [] })\n     setup('?compare=' + targetToken)\n     expect(await screen.findByText('비교 곡선을 그릴 자산가치 기록이 없습니다.')).toBeTruthy()\n-    expect(screen.queryByText('비교 곡선 사용 가능')).toBeNull()\n+    expect(screen.queryByText(/비교 곡선 사용 가능/)).toBeNull()\n     expect(api.create).not.toHaveBeenCalled()\n   })\n   it('선택 전에는 조회하지 않고, 고르면 같은 조건의 요청 한 건과 공개 주소로 이어진다', async () => {\n     setup()\n     expect(api.detail).not.toHaveBeenCalled()\n+    expect(screen.getByLabelText('상태').textContent).toBe('NONE')\n+    expect(screen.getByLabelText('자리').textContent).toBe('3')\n     fireEvent.click(screen.getByText('전략 선택'))\n     await waitFor(() => expect(screen.getByLabelText('상태').textContent).toBe('READY'))\n     expect(api.create).toHaveBeenCalledTimes(1)\n@@ -121,8 +147,59 @@ describe('비교 실행 흐름 (quickstart 3)', () => {\n       warmupTradingDays: base.config.warmupTradingDays,\n       costProfileVersion: base.versions.costProfile?.version,\n     })\n+    expect(api.create.mock.calls[0][0].strategy.parameters).toEqual(choice.parameters)\n     expect(screen.getByLabelText('주소').textContent).toContain('?compare=' + targetToken)\n-    expect(screen.getByText('비교 곡선 사용 가능')).toBeTruthy()\n+    expect(screen.getByText('비교 곡선 사용 가능 1')).toBeTruthy()\n+    expect(screen.getByLabelText('자리').textContent).toBe('2')\n+  })\n+  it('여럿을 고르면 한 번에 요청하고 모두 주소에 올린 뒤 하나씩 뺄 수 있다', async () => {\n+    api.create\n+      .mockResolvedValueOnce({ publicToken: targetToken })\n+      .mockResolvedValueOnce({ publicToken: secondToken })\n+    setup()\n+    fireEvent.click(screen.getByText('둘 선택'))\n+    await waitFor(() => expect(screen.getByLabelText('상태').textContent).toBe('READY,READY'))\n+    expect(api.create).toHaveBeenCalledTimes(2)\n+    expect(api.create.mock.calls[1][0].strategy.strategyId).toBe(plainStrategy.strategyId)\n+    expect(screen.getByLabelText('주소').textContent).toContain(\n+      '?compare=' + targetToken + '%2C' + secondToken,\n+    )\n+    expect(screen.getByText('비교 곡선 사용 가능 2')).toBeTruthy()\n+    expect(screen.getByLabelText('비교 대상 비교용 전략')).toBeTruthy()\n+    fireEvent.click(screen.getAllByRole('button', { name: '비교 해제' })[0])\n+    await waitFor(() =>\n+      expect(screen.getByLabelText('주소').textContent).toBe(\n+        '/results/' + base.publicToken + '?compare=' + secondToken,\n+      ),\n+    )\n+    expect(screen.queryByLabelText('비교 대상 비교용 전략')).toBeNull()\n+  })\n+  it('하나가 거절돼도 접수된 것은 주소에 오르고 거절은 자리에 남아 다시 요청할 수 있다', async () => {\n+    api.create\n+      .mockResolvedValueOnce({ publicToken: targetToken })\n+      .mockRejectedValueOnce(\n+        new BacktestRequestError('api', '한도', {\n+          code: 'EXECUTION_LIMIT',\n+          status: 429,\n+          details: { retryAfterSeconds: 30 },\n+        }),\n+      )\n+      .mockResolvedValueOnce({ publicToken: secondToken })\n+    setup()\n+    fireEvent.click(screen.getByText('둘 선택'))\n+    expect(await screen.findByText(/30초 뒤/)).toBeTruthy()\n+    await waitFor(() =>\n+      expect(screen.getByLabelText('주소').textContent).toContain('?compare=' + targetToken),\n+    )\n+    expect(screen.getByLabelText('주소').textContent).not.toContain(secondToken)\n+    expect(screen.getByLabelText('비교 대상 ' + plainStrategy.name)).toBeTruthy()\n+    fireEvent.click(screen.getByRole('button', { name: '다시 요청' }))\n+    await waitFor(() => expect(api.create).toHaveBeenCalledTimes(3))\n+    await waitFor(() =>\n+      expect(screen.getByLabelText('주소').textContent).toContain(\n+        targetToken + '%2C' + secondToken,\n+      ),\n+    )\n   })\n   it('대기·실행 중에는 단계와 비율을 보이고 조회만 반복한다', async () => {\n     target = { ...resultDetailRunning, publicToken: targetToken }\n@@ -182,7 +259,7 @@ describe('비교 실행 흐름 (quickstart 3)', () => {\n     expect(screen.getByText('기준 결과 유지')).toBeTruthy()\n     expect(api.create).not.toHaveBeenCalled()\n   })\n-  it('선택 뒤 비교 해제를 누르면 늦게 온 접수 응답으로 주소를 되돌리지 않는다', async () => {\n+  it('선택 뒤 비교 해제를 누르면 늦게 온 접수 응답으로 주소를 바꾸지 않는다', async () => {\n     let resolve!: (value: { publicToken: string }) => void\n     api.create.mockImplementation(\n       () =>\n@@ -195,6 +272,7 @@ describe('비교 실행 흐름 (quickstart 3)', () => {\n     fireEvent.click(await screen.findByRole('button', { name: '비교 해제' }))\n     await act(async () => resolve({ publicToken: targetToken }))\n     expect(screen.getByLabelText('주소').textContent).toBe('/results/' + base.publicToken)\n+    expect(screen.getByLabelText('상태').textContent).toBe('NONE')\n     expect(api.retry).not.toHaveBeenCalled()\n   })\n })\n@@ -222,6 +300,7 @@ describe('공통 기간 재계산 (T060)', () => {\n     fireEvent.click(await screen.findByRole('button', { name: '두 결과 다시 계산' }))\n     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(4))\n     expect(api.create.mock.calls[3][0].strategy.strategyId).toBe(choice.strategy.strategyId)\n+    expect(api.create.mock.calls[3][0].strategy.parameters).toEqual(choice.parameters)\n   })\n   it('기간 불일치는 비교 곡선을 막고 취소하면 요청이 없다', async () => {\n     target = {\n@@ -230,10 +309,11 @@ describe('공통 기간 재계산 (T060)', () => {\n     }\n     setup('?compare=' + targetToken)\n     expect(await screen.findByRole('dialog')).toBeTruthy()\n-    expect(screen.queryByText('비교 곡선 사용 가능')).toBeNull()\n+    expect(screen.queryByText(/비교 곡선 사용 가능/)).toBeNull()\n     fireEvent.click(screen.getByRole('button', { name: '취소' }))\n     expect(api.create).not.toHaveBeenCalled()\n     expect(screen.queryByRole('dialog')).toBeNull()\n+    expect(screen.getByText(/평가 기간 또는 준비 기간이 달라/)).toBeTruthy()\n   })\n   it('더 긴 전략은 사전 확인 뒤 두 건을 같은 워밍업·기간으로 요청하고 복귀 주소를 남긴다', async () => {\n     api.create\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useCompareTargets.test.tsx",
+          "old_path": "frontend/src/hooks/useCompareTarget.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,511 @@\n+import { useEffect, useRef, useState } from 'react'\n+import { useLocation, useNavigate } from 'react-router-dom'\n+import { BacktestRequestError, createBacktest } from '@/api/backtest'\n+import { ResultError, retryResult } from '@/api/result'\n+import {\n+  MAX_COMPARE_TARGETS,\n+  buildResultPath,\n+  parseCompareQuery,\n+} from '@/components/result/compareQuery'\n+import { hasDrawableEquity } from '@/components/result/equityPoints'\n+import {\n+  type CompareChoice,\n+  buildCompareRequest,\n+  comparisonMismatch,\n+} from '@/components/result/compareRequest'\n+import type { PeriodConfirmation } from '@/components/result/PeriodMismatchDialog'\n+import type { PublicResultDetail } from '@/types/result'\n+import { type TimeseriesState, useResult } from './useResult'\n+\n+/**\n+ * 비교 대상 하나의 상태(spec 005 data-model §3-2, `S15P21E205-419`로 여럿이 됐다).\n+ *\n+ * <p>주소에 든 대상(`token`)과 아직 접수 중이거나 접수에 실패해 주소에 못 오른 대상(`choice`만 있음)이 같은 모양으로\n+ * 나온다 — 화면이 대상마다 슬롯 하나를 그리고, 어느 쪽이든 다시 시도·해제할 수 있어야 한다.\n+ */\n+export type CompareTargetState = {\n+  /** 슬롯 식별자. 주소의 토큰이거나 접수 중인 후보의 자리 번호다 */\n+  key: string\n+  token: string | null\n+  /** 접수 중이거나 거절된 후보. 주소에 오른 대상은 결과(`detail`)가 설정을 들고 있어 `null`이다 */\n+  choice: CompareChoice | null\n+  targetState: 'REQUESTED' | 'RUNNING' | 'READY' | 'FAILED' | 'EXPIRED' | 'EXECUTION_LIMIT'\n+  detail: PublicResultDetail | null\n+  timeseries: TimeseriesState\n+  message: string | null\n+  retryAfterSeconds: number | null\n+  retryable: boolean\n+  /** 준비됐지만 기준과 조건·버전·기간이 달라 겹쳐 그리지 않는 이유. 없으면 `null` */\n+  mismatch: 'conditions' | 'versions' | 'period' | null\n+  /** 겹쳐 그릴 수 있는 결과. READY 이고 불일치가 없을 때만 */\n+  compatible: PublicResultDetail | null\n+}\n+\n+type Recalculation = PeriodConfirmation & {\n+  /** 아직 접수하지 않은 후보들. 확인하면 기준과 같은 기간으로 함께 요청한다 */\n+  choices: CompareChoice[]\n+  /** 이미 결과가 있는 대상들. 확인하면 그 설정을 같은 기간으로 다시 요청한다 */\n+  targets: PublicResultDetail[]\n+  acceptedBaseToken?: string\n+  /** 접수가 이미 끝난 대상 토큰. 두 번째 시도에서 되풀이하지 않는다 */\n+  acceptedTargetTokens?: string[]\n+}\n+type Accepted = { publicToken?: string }\n+type Pending = {\n+  key: string\n+  choice: CompareChoice | null\n+  /** 접수 중이면 `null`, 거절됐으면 그 오류 */\n+  error: unknown | null\n+}\n+\n+function errorMessage(error: unknown): string {\n+  return error instanceof Error ? error.message : '비교 요청을 완료하지 못했습니다.'\n+}\n+function retryDelay(error: unknown): number | null {\n+  if (error instanceof ResultError) return error.retryAfterSeconds\n+  if (error instanceof BacktestRequestError) {\n+    const delay = error.details?.retryAfterSeconds\n+    if (typeof delay === 'number' && Number.isFinite(delay) && delay >= 0) return delay\n+  }\n+  return null\n+}\n+function isLimit(error: unknown): boolean {\n+  return (\n+    (error instanceof BacktestRequestError || error instanceof ResultError) &&\n+    (error.code === 'EXECUTION_LIMIT' || error.status === 429)\n+  )\n+}\n+function isInsufficientHistory(error: unknown): error is BacktestRequestError {\n+  return error instanceof BacktestRequestError && error.code === 'INSUFFICIENT_HISTORY'\n+}\n+function publicTokenOf(accepted: Accepted): string {\n+  if (!accepted.publicToken || !/^[0-9a-f]{32}$/.test(accepted.publicToken)) {\n+    throw new Error('접수된 결과의 공개 주소를 확인하지 못했습니다.')\n+  }\n+  return accepted.publicToken\n+}\n+function readRequiredWarmup(error: BacktestRequestError): number | null {\n+  const value = error.details?.requiredWarmupTradingDays ?? error.details?.requiredWarmup\n+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : null\n+}\n+function readRequiredStart(error: BacktestRequestError): string | null {\n+  const value = error.details?.requiredStart ?? error.details?.requiredStartDate\n+  return typeof value === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) ? value : null\n+}\n+function latest(dates: string[]): string {\n+  return [...dates].sort().at(-1)!\n+}\n+function earliest(dates: string[]): string {\n+  return [...dates].sort()[0]\n+}\n+\n+/** 주소의 대상 하나를 조회 결과로 읽는다. */\n+function readTokenState(\n+  base: PublicResultDetail,\n+  token: string,\n+  result: ReturnType<typeof useResult>,\n+): CompareTargetState {\n+  const detail =\n+    result.status === 'ready' && result.detail.publicToken === token ? result.detail : null\n+  const state: CompareTargetState = {\n+    key: token,\n+    token,\n+    choice: null,\n+    targetState: 'REQUESTED',\n+    detail,\n+    timeseries: detail && result.status === 'ready' ? result.timeseries : { status: 'none' },\n+    message: null,\n+    retryAfterSeconds: null,\n+    retryable: false,\n+    mismatch: null,\n+    compatible: null,\n+  }\n+  if (result.status === 'expired') state.targetState = 'EXPIRED'\n+  else if (result.status === 'error' || result.status === 'notFound') {\n+    state.targetState = 'FAILED'\n+    state.message =\n+      result.status === 'error' ? result.message : '비교 대상 주소를 찾을 수 없습니다.'\n+    state.retryable = result.status === 'error'\n+  } else if (!detail) state.targetState = 'REQUESTED'\n+  else if (detail.status === 'QUEUED' || detail.status === 'RUNNING') state.targetState = 'RUNNING'\n+  else if (detail.status === 'FAILED' || detail.status === 'CANCELLED' || !detail.summary) {\n+    state.targetState = 'FAILED'\n+    state.message = detail.failure\n+      ? detail.failure.code + ': ' + detail.failure.message\n+      : '비교 분석이 완료되지 않아 같은 기간으로 비교할 수 없습니다.'\n+    state.retryable = detail.status === 'FAILED' || detail.status === 'CANCELLED'\n+  } else if (state.timeseries.status === 'unavailable') {\n+    state.targetState = 'FAILED'\n+    state.message = state.timeseries.message\n+    state.retryable = true\n+  } else if (state.timeseries.status === 'loaded') {\n+    if (hasDrawableEquity(state.timeseries.data.points)) state.targetState = 'READY'\n+    else {\n+      state.targetState = 'FAILED'\n+      state.message = '비교 곡선을 그릴 자산가치 기록이 없습니다.'\n+    }\n+  }\n+  if (state.targetState === 'READY' && detail) {\n+    state.mismatch = comparisonMismatch(base, detail)\n+    state.compatible = state.mismatch ? null : detail\n+  }\n+  return state\n+}\n+\n+/** 아직 주소에 오르지 않은 후보의 상태. 접수 중이거나 접수가 거절됐다. */\n+function readPendingState(pending: Pending): CompareTargetState {\n+  const state: CompareTargetState = {\n+    key: pending.key,\n+    token: null,\n+    choice: pending.choice,\n+    targetState: 'REQUESTED',\n+    detail: null,\n+    timeseries: { status: 'none' },\n+    message: null,\n+    retryAfterSeconds: null,\n+    retryable: false,\n+    mismatch: null,\n+    compatible: null,\n+  }\n+  if (pending.error !== null) {\n+    state.targetState = isLimit(pending.error) ? 'EXECUTION_LIMIT' : 'FAILED'\n+    state.message = errorMessage(pending.error)\n+    state.retryAfterSeconds = retryDelay(pending.error)\n+    state.retryable = pending.choice !== null\n+  }\n+  return state\n+}\n+\n+/**\n+ * 비교 대상 여럿(FR-004·FR-005, quickstart 3). 주소 `?compare=`의 토큰마다 결과를 읽고, 새로 고른 후보는 접수해 주소에 더한다.\n+ *\n+ * <p><b>대상은 상한이 셋이고 훅은 그 수만큼 조회를 든다.</b> 훅은 개수가 바뀌면 부를 수 없어 자리 셋을 늘 부르고 빈 자리는\n+ * `null` 토큰으로 놀린다.\n+ *\n+ * <p><b>화면이 조용히 재시도하지 않는다.</b> 한도·실패는 대상마다 자리에 남고 사용자가 누를 때만 다시 보낸다(원칙 IX).\n+ *\n+ * <p><b>기간 확인은 한 번이다.</b> 고른 후보 가운데 준비 기간이 기준보다 긴 것이 있으면 가장 긴 것 기준으로 공통 구간을 한 번\n+ * 확인하고, 확인하면 기준과 모든 후보를 그 구간으로 함께 요청한다(FR-005).\n+ */\n+export function useCompareTargets(base: PublicResultDetail) {\n+  const location = useLocation()\n+  const navigate = useNavigate()\n+  const { compareTokens, searchId } = parseCompareQuery(location.search)\n+  // 훅은 반복문 안에서 부를 수 없다. 상한이 셋이라 자리 셋을 고정으로 둔다.\n+  const results = [\n+    useResult(compareTokens[0] ?? null),\n+    useResult(compareTokens[1] ?? null),\n+    useResult(compareTokens[2] ?? null),\n+  ]\n+  const [pending, setPending] = useState<Pending[]>([])\n+  const [manualPeriod, setManualPeriod] = useState<Recalculation | null>(null)\n+  const [dismissedFor, setDismissedFor] = useState<string | null>(null)\n+  const [dialogError, setDialogError] = useState<string | null>(null)\n+  const [recalculating, setRecalculating] = useState(false)\n+  const operation = useRef(0)\n+  const busy = useRef(false)\n+  const pendingSeq = useRef(0)\n+\n+  const tokensKey = compareTokens.join(',')\n+  useEffect(() => {\n+    operation.current += 1\n+    busy.current = false\n+    setManualPeriod(null)\n+    setDialogError(null)\n+    setRecalculating(false)\n+    setDismissedFor(null)\n+    return () => {\n+      operation.current += 1\n+    }\n+  }, [tokensKey, searchId])\n+\n+  const targets: CompareTargetState[] = [\n+    ...compareTokens.map((token, index) => readTokenState(base, token, results[index])),\n+    ...pending.map(readPendingState),\n+  ]\n+  const readyMismatched = targets\n+    .map((target) => target.detail)\n+    .filter((detail, index): detail is PublicResultDetail => {\n+      const mismatch = targets[index].mismatch\n+      return detail !== null && (mismatch === 'period' || mismatch === 'versions')\n+    })\n+  const inferredPeriod: Recalculation | null =\n+    readyMismatched.length > 0 && dismissedFor !== tokensKey\n+      ? {\n+          start: latest([\n+            base.config.effectiveStart,\n+            ...readyMismatched.map((detail) => detail.config.effectiveStart),\n+          ]),\n+          end: earliest([\n+            base.config.effectiveEnd,\n+            ...readyMismatched.map((detail) => detail.config.effectiveEnd),\n+          ]),\n+          warmupTradingDays: Math.max(\n+            base.config.warmupTradingDays,\n+            ...readyMismatched.map((detail) => detail.config.warmupTradingDays),\n+          ),\n+          choices: [],\n+          targets: readyMismatched,\n+          ...(targets.some((target) => target.mismatch === 'versions')\n+            ? {\n+                message:\n+                  '자료 또는 계산 엔진 기준이 달라 결과들을 같은 현재 기준으로 다시 계산합니다.',\n+              }\n+            : {}),\n+        }\n+      : null\n+  const period = manualPeriod ?? inferredPeriod\n+\n+  const go = (tokens: string[]) =>\n+    navigate(buildResultPath(base.publicToken, { compareTokens: tokens, searchId }), {\n+      replace: true,\n+      state: location.state,\n+    })\n+\n+  /** 후보들을 접수한다. 성공한 토큰은 주소에 더하고, 거절은 그 자리에 남긴다. */\n+  const submit = async (choices: CompareChoice[]) => {\n+    if (busy.current || choices.length === 0) return\n+    busy.current = true\n+    const current = ++operation.current\n+    const items: Pending[] = choices.map((choice) => ({\n+      key: 'pending-' + ++pendingSeq.current,\n+      choice,\n+      error: null,\n+    }))\n+    setPending((known) => [...known, ...items])\n+    const settled = await Promise.allSettled(\n+      items.map((item) => createBacktest(buildCompareRequest(base, item.choice!))),\n+    )\n+    if (current !== operation.current) return\n+    const accepted: string[] = []\n+    const failed: Pending[] = []\n+    let history: { choice: CompareChoice; error: BacktestRequestError } | null = null\n+    settled.forEach((outcome, index) => {\n+      const item = items[index]\n+      if (outcome.status === 'fulfilled') {\n+        try {\n+          accepted.push(publicTokenOf(outcome.value))\n+        } catch (error) {\n+          failed.push({ ...item, error })\n+        }\n+      } else if (isInsufficientHistory(outcome.reason) && history === null) {\n+        // 준비 자료 부족은 자리에 남기지 않고 공통 구간 확인으로 넘긴다. 여럿이면 첫 것 기준으로 한 번만 묻는다.\n+        history = { choice: item.choice!, error: outcome.reason }\n+      } else failed.push({ ...item, error: outcome.reason })\n+    })\n+    setPending((known) => [...known.filter((item) => !items.includes(item)), ...failed])\n+    const insufficient = history as { choice: CompareChoice; error: BacktestRequestError } | null\n+    if (insufficient) {\n+      const requiredStart = readRequiredStart(insufficient.error)\n+      setManualPeriod({\n+        choices: [insufficient.choice],\n+        targets: [],\n+        start:\n+          requiredStart && requiredStart > base.config.effectiveStart\n+            ? requiredStart\n+            : base.config.effectiveStart,\n+        end: base.config.effectiveEnd,\n+        warmupTradingDays: readRequiredWarmup(insufficient.error),\n+        requiredStart,\n+        message: insufficient.error.message,\n+      })\n+    }\n+    busy.current = false\n+    if (accepted.length > 0) {\n+      const next = [...compareTokens]\n+      for (const token of accepted) if (!next.includes(token)) next.push(token)\n+      void go(next.slice(0, MAX_COMPARE_TARGETS))\n+    }\n+  }\n+\n+  /**\n+   * 후보들을 고른다. 준비 기간이 기준보다 긴 후보가 있으면 접수하지 않고 공통 구간 확인으로 넘긴다 — 확인하면 기준과 모든\n+   * 후보를 같은 구간으로 함께 요청한다.\n+   */\n+  const select = (choices: CompareChoice[]) => {\n+    if (busy.current) return\n+    const room = MAX_COMPARE_TARGETS - targets.length\n+    const chosen = choices.slice(0, Math.max(0, room))\n+    if (chosen.length === 0) return\n+    setDialogError(null)\n+    setManualPeriod(null)\n+    const longer = chosen.filter(\n+      (choice) => choice.strategy.warmupTradingDays > base.config.warmupTradingDays,\n+    )\n+    if (longer.length > 0) {\n+      const withPeriod = longer.filter((choice) => choice.period)\n+      setManualPeriod({\n+        start: withPeriod.length ? latest(withPeriod.map((choice) => choice.period!.start)) : null,\n+        end: withPeriod.length ? earliest(withPeriod.map((choice) => choice.period!.end)) : null,\n+        warmupTradingDays: Math.max(...longer.map((choice) => choice.strategy.warmupTradingDays)),\n+        choices: chosen,\n+        targets: [],\n+      })\n+      return\n+    }\n+    void submit(chosen)\n+  }\n+\n+  /** 자리 하나를 다시 시도한다. 접수 거절은 다시 접수, 실패한 결과는 공개 토큰으로 재시도, 그 외는 다시 읽는다. */\n+  const retry = (key: string) => {\n+    const item = pending.find((candidate) => candidate.key === key)\n+    if (item) {\n+      if (busy.current || !item.choice) return\n+      setPending((known) => known.filter((candidate) => candidate.key !== key))\n+      void submit([item.choice])\n+      return\n+    }\n+    const index = compareTokens.indexOf(key)\n+    if (index === -1) return\n+    const detail = targets[index].detail\n+    if (detail && (detail.status === 'FAILED' || detail.status === 'CANCELLED')) {\n+      if (busy.current) return\n+      busy.current = true\n+      const current = ++operation.current\n+      void retryResult(key)\n+        .then((accepted) => {\n+          if (current !== operation.current) return\n+          const next = [...compareTokens]\n+          next[index] = publicTokenOf(accepted)\n+          void go(next)\n+        })\n+        .catch((error: unknown) => {\n+          if (current !== operation.current) return\n+          // 재시도는 후보가 아니라 결과라 설정을 다시 조립하지 않는다. 자리만 남겨 사유를 보인다.\n+          setPending((known) => [\n+            ...known,\n+            { key: 'pending-' + ++pendingSeq.current, choice: null, error },\n+          ])\n+        })\n+        .finally(() => {\n+          if (current === operation.current) busy.current = false\n+        })\n+      return\n+    }\n+    results[index].retry()\n+  }\n+\n+  /** 자리 하나를 뺀다. 접수 중이던 것은 늦게 온 응답이 주소를 건드리지 않게 세대를 올린다. */\n+  const remove = (key: string) => {\n+    operation.current += 1\n+    busy.current = false\n+    setPending((known) => known.filter((item) => item.key !== key))\n+    if (compareTokens.includes(key)) void go(compareTokens.filter((token) => token !== key))\n+  }\n+\n+  const clear = () => {\n+    operation.current += 1\n+    busy.current = false\n+    setPending([])\n+    setManualPeriod(null)\n+    void go([])\n+  }\n+\n+  const confirmPeriod = async () => {\n+    if (\n+      !period ||\n+      busy.current ||\n+      period.warmupTradingDays === null ||\n+      !period.start ||\n+      !period.end ||\n+      period.start > period.end\n+    )\n+      return\n+    busy.current = true\n+    const current = ++operation.current\n+    setRecalculating(true)\n+    setDialogError(null)\n+    const warmup = period.warmupTradingDays\n+    const range = { start: period.start, end: period.end }\n+    let acceptedBaseToken = period.acceptedBaseToken\n+    const acceptedTargets = [...(period.acceptedTargetTokens ?? [])]\n+    try {\n+      // 요청은 순서대로 보낸다. 하나가 실패해도 앞서 접수된 것은 남고, 다시 시도에서는 남은 것만 보낸다.\n+      if (!acceptedBaseToken) {\n+        acceptedBaseToken = publicTokenOf(\n+          await createBacktest(buildCompareRequest(base, null, warmup, range)),\n+        )\n+        if (current !== operation.current) return\n+      }\n+      const requests = [\n+        ...period.targets.map((target) => buildCompareRequest(target, null, warmup, range)),\n+        ...period.choices.map((choice) => buildCompareRequest(base, choice, warmup, range)),\n+      ]\n+      for (let index = acceptedTargets.length; index < requests.length; index += 1) {\n+        acceptedTargets.push(publicTokenOf(await createBacktest(requests[index])))\n+        if (current !== operation.current) return\n+      }\n+      void navigate(\n+        buildResultPath(acceptedBaseToken, {\n+          compareTokens: acceptedTargets,\n+          searchId: period.choices.length ? null : searchId,\n+        }),\n+        { state: { returnTo: location.pathname + location.search } },\n+      )\n+    } catch (error) {\n+      if (current !== operation.current) return\n+      let next: Recalculation = {\n+        ...period,\n+        acceptedBaseToken,\n+        acceptedTargetTokens: acceptedTargets,\n+      }\n+      if (isInsufficientHistory(error)) {\n+        const requiredStart = readRequiredStart(error)\n+        next = {\n+          ...period,\n+          acceptedBaseToken: undefined,\n+          acceptedTargetTokens: [],\n+          warmupTradingDays: readRequiredWarmup(error),\n+          requiredStart,\n+          start:\n+            requiredStart && requiredStart > (period.start ?? '') ? requiredStart : period.start,\n+        }\n+      }\n+      setManualPeriod(next)\n+      const delay = retryDelay(error)\n+      setDialogError(\n+        errorMessage(error) +\n+          (delay !== null ? ' ' + delay + '초 뒤 다시 요청할 수 있습니다.' : ''),\n+      )\n+    } finally {\n+      if (current === operation.current) {\n+        busy.current = false\n+        setRecalculating(false)\n+      }\n+    }\n+  }\n+\n+  return {\n+    targets,\n+    /** 겹쳐 그릴 수 있는 대상들. 기간 확인이 열려 있으면 비어 있다 — 확인 전까지는 기준만 그린다(FR-005) */\n+    compatibleTargets: period\n+      ? []\n+      : targets.filter((target) => target.compatible !== null),\n+    searchId,\n+    /** 더 고를 수 있는 자리 수 */\n+    room: Math.max(0, MAX_COMPARE_TARGETS - targets.length),\n+    sending: pending.some((item) => item.error === null),\n+    comparisonKind:\n+      searchId || targets.some((target) => target.detail?.config.executionType === 'SEARCH_BUNDLE')\n+        ? ('AUTO_SEARCH' as const)\n+        : ('BASIC' as const),\n+    period,\n+    dialogError,\n+    recalculating,\n+    select,\n+    retry,\n+    remove,\n+    clear,\n+    confirmPeriod,\n+    cancelPeriod: () => {\n+      setManualPeriod(null)\n+      setDialogError(null)\n+      setDismissedFor(tokensKey)\n+    },\n+    returnTo:\n+      typeof location.state?.returnTo === 'string' &&\n+      /^\\/results\\/[0-9a-f]{32}(?:\\?|$)/.test(location.state.returnTo)\n+        ? (location.state.returnTo as string)\n+        : null,\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useCompareTargets.ts",
+          "old_path": "frontend/src/hooks/useCompareTargets.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -95,8 +95,8 @@ describe('결과 화면의 비교 연결 (T061)', () => {\n       .mockResolvedValueOnce({ publicToken: 'c'.repeat(32) })\n       .mockResolvedValueOnce({ publicToken: 'd'.repeat(32) })\n     setup()\n-    expect(await screen.findByRole('dialog')).toBeTruthy()\n-    expect(screen.getByText(/자료 또는 계산 엔진 기준이 달라/)).toBeTruthy()\n+    const dialog = await screen.findByRole('dialog')\n+    expect(dialog.textContent).toContain('자료 또는 계산 엔진 기준이 달라')\n     fireEvent.click(screen.getByRole('button', { name: '두 결과 다시 계산' }))\n     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(2))\n   })\n@@ -107,6 +107,33 @@ describe('결과 화면의 비교 연결 (T061)', () => {\n     expect(screen.getByRole('img').getAttribute('aria-label')).toContain('비교 대상은 없습니다')\n     expect(screen.queryByText(/같은 조건에서 비교 대상/)).toBeNull()\n   })\n+  it('대상이 둘이면 파선 둘·문장 둘·조건 줄의 이름 둘과 칩 둘을 보인다', async () => {\n+    const other = 'c'.repeat(32)\n+    const second = { ...target, publicToken: other, strategyName: '둘째 전략' }\n+    api.detail.mockImplementation(async (requested: string) =>\n+      requested === base.publicToken ? base : requested === other ? second : target,\n+    )\n+    const { container } = setup('?compare=' + token + ',' + other)\n+    expect(await screen.findByText(/같은 조건에서 비교 대상\\(비교용 전략\\)/)).toBeTruthy()\n+    expect(screen.getByText(/같은 조건에서 비교 대상\\(둘째 전략\\)/)).toBeTruthy()\n+    expect(screen.getByLabelText('분석 조건').textContent).toContain('비교 대상 비교용 전략, 둘째 전략')\n+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain(\n+      '비교 대상은 비교용 전략, 둘째 전략이며 서로 다른 파선',\n+    )\n+    // 대상마다 칩 하나와 해제 단추 하나가 '비교 대상 고르기' 옆에 선다.\n+    expect(screen.getByLabelText('비교 대상 둘째 전략')).toBeTruthy()\n+    expect(screen.getAllByRole('button', { name: '비교 해제' })).toHaveLength(2)\n+    expect(container.innerHTML).not.toContain('BT-')\n+  })\n+  it('같은 이름의 대상이 둘이면 번호를 붙여 갈라 적는다', async () => {\n+    const other = 'c'.repeat(32)\n+    api.detail.mockImplementation(async (requested: string) =>\n+      requested === base.publicToken ? base : { ...target, publicToken: requested },\n+    )\n+    setup('?compare=' + token + ',' + other)\n+    expect(await screen.findByLabelText('비교 대상 비교용 전략 (1)')).toBeTruthy()\n+    expect(screen.getByLabelText('비교 대상 비교용 전략 (2)')).toBeTruthy()\n+  })\n   it('대상만 410이면 기준 숫자와 곡선이 유지된다', async () => {\n     api.detail.mockImplementation(async (requested: string) => {\n       if (requested === base.publicToken) return base\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,9 +6,10 @@ import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'\n import comparisonStyles from '@/components/result/comparison.module.css'\n-import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'\n+import { CompareTargetChip } from '@/components/result/CompareTargetChip'\n import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'\n-import { useCompareTarget } from '@/hooks/useCompareTarget'\n+import { type CompareTargetState, useCompareTargets } from '@/hooks/useCompareTargets'\n+import { describeParameters } from '@/components/result/compareCandidates'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'\n import { strategyLabel } from '@/components/result/conditionLine'\n@@ -96,8 +97,13 @@ function ResultView({\n   const [searchParams] = useSearchParams()\n   const fromRecords = searchParams.get('from') === 'records'\n   const completedThrough = completedRange(detail, timeseries)\n-  const compare = useCompareTarget(detail)\n-  const target = compare.compatibleTarget\n+  const compare = useCompareTargets(detail)\n+  const names = nameTargets(compare.targets)\n+  // 겹쳐 그릴 수 있고 시계열까지 받은 대상만 곡선·문장·조건 줄에 오른다.\n+  const drawn = compare.compatibleTargets.filter(\n+    (target) => target.compatible !== null && target.timeseries.status === 'loaded',\n+  )\n+  const drawnFirst = drawn[0]?.compatible ?? null\n   const pickerId = useId()\n   const picker = useDisclosure(pickerId)\n   const pickerButtonId = pickerId + '-trigger'\n@@ -126,7 +132,10 @@ function ResultView({\n   // 차트 아래 탭의 요약 내용. 종료일 평가 안내도 여기로 내려 첫 화면을 간결하게 둔다.\n   const summaryBlock = (\n     <div className={styles.summaryStack}>\n-      <ResultConditionLine detail={detail} target={target} />\n+      <ResultConditionLine\n+        detail={detail}\n+        targets={drawn.map((target) => ({ detail: target.compatible!, name: names.get(target.key)! }))}\n+      />\n       <ResultStatusLine\n         detail={detail}\n         completedThrough={completedThrough}\n@@ -139,28 +148,31 @@ function ResultView({\n             : undefined\n         }\n       />\n-      {summary ? (\n-        <p className={styles.sentence}>\n-          {selectSummarySentence({\n-            base: {\n-              name: strategyLabel(detail),\n-              netTotalReturn: summary.netTotalReturn,\n-              maxDrawdown: summary.maxDrawdown,\n-              totalTradingCost: summary.totalTradingCost,\n-            },\n-            target: target?.summary\n-              ? {\n-                  name: strategyLabel(target),\n-                  netTotalReturn: target.summary.netTotalReturn,\n-                  maxDrawdown: target.summary.maxDrawdown,\n-                  totalTradingCost: target.summary.totalTradingCost,\n-                }\n-              : null,\n-            partial: detail.partial ? { completedThrough } : null,\n-          })}\n-          {recoverySentence ? ` ${recoverySentence}` : null}\n-        </p>\n-      ) : null}\n+      {summary\n+        ? // 해석 요약은 비교 대상마다 한 문장이다(FR-006). 대상이 없으면 기준의 세 숫자만 말한다.\n+          (drawn.length === 0 ? [null] : drawn).map((target, index) => (\n+            <p className={styles.sentence} key={target?.key ?? 'single'}>\n+              {selectSummarySentence({\n+                base: {\n+                  name: strategyLabel(detail),\n+                  netTotalReturn: summary.netTotalReturn,\n+                  maxDrawdown: summary.maxDrawdown,\n+                  totalTradingCost: summary.totalTradingCost,\n+                },\n+                target: target?.compatible?.summary\n+                  ? {\n+                      name: names.get(target.key)!,\n+                      netTotalReturn: target.compatible.summary.netTotalReturn,\n+                      maxDrawdown: target.compatible.summary.maxDrawdown,\n+                      totalTradingCost: target.compatible.summary.totalTradingCost,\n+                    }\n+                  : null,\n+                partial: detail.partial ? { completedThrough } : null,\n+              })}\n+              {index === 0 && recoverySentence ? ` ${recoverySentence}` : null}\n+            </p>\n+          ))\n+        : null}\n       <ResultValuationNote detail={detail} />\n     </div>\n   )\n@@ -181,6 +193,16 @@ function ResultView({\n           백테스트 결과\n         </h1>\n         <div className={styles.actions}>\n+          {/* 겹쳐 그리는 대상들. 단추 왼쪽에 칩으로 늘어서고 × 로 하나씩 해제한다(`S15P21E205-419`). */}\n+          {compare.targets.map((target) => (\n+            <CompareTargetChip\n+              key={target.key}\n+              state={target}\n+              name={names.get(target.key)!}\n+              onRetry={() => compare.retry(target.key)}\n+              onRemove={() => compare.remove(target.key)}\n+            />\n+          ))}\n           <Popover.Root\n             open={picker.open}\n             onOpenChange={(open) => {\n@@ -191,7 +213,7 @@ function ResultView({\n               <Button\n                 id={pickerButtonId}\n                 type=\"button\"\n-                disabled={!viewable || compare.targetState === 'REQUESTED'}\n+                disabled={!viewable || compare.sending || compare.room === 0}\n                 {...picker.toggleProps}\n               >\n                 비교 대상 고르기\n@@ -213,10 +235,11 @@ function ResultView({\n               >\n                 <CompareTargetPicker\n                   base={detail}\n+                  room={compare.room}\n                   onClose={picker.close}\n-                  onSelect={(choice) => {\n+                  onSelect={(choices) => {\n                     picker.close()\n-                    compare.select(choice)\n+                    compare.select(choices)\n                   }}\n                 />\n               </Popover.Content>\n@@ -234,31 +257,6 @@ function ResultView({\n       ) : null}\n \n       <ComparisonKindBadge kind={compare.comparisonKind} searchId={compare.searchId} />\n-      <CompareTargetSlot\n-        state={compare}\n-        onRetry={compare.retry}\n-        onClear={compare.clear}\n-        onPick={() => {\n-          if (!picker.open) picker.toggleProps.onClick()\n-        }}\n-      />\n-      {compare.mismatch === 'conditions' ? (\n-        <p role=\"status\">\n-          섹터·금액·비용·자료 기준 또는 분석 시나리오가 달라 두 결과를 겹쳐 그리지 않았습니다. 기준\n-          결과에서 비교 대상을 다시 골라 주세요.\n-        </p>\n-      ) : null}\n-      {compare.mismatch === 'period' && !compare.period ? (\n-        <p role=\"status\">\n-          평가 기간 또는 준비 기간이 달라 기준 결과만 표시합니다. 비교 대상을 다시 골라 주세요.\n-        </p>\n-      ) : null}\n-      {compare.mismatch === 'versions' && !compare.period ? (\n-        <p role=\"status\">\n-          자료 또는 계산 엔진 기준이 달라 기준 결과만 표시합니다. 같은 현재 기준으로 다시 계산해\n-          비교할 수 있습니다.\n-        </p>\n-      ) : null}\n       {compare.period ? (\n         <PeriodMismatchDialog\n           period={compare.period}\n@@ -274,15 +272,11 @@ function ResultView({\n         detail={detail}\n         timeseries={timeseries}\n         progressPoints={progressSeries.points}\n-        target={\n-          target && compare.timeseries.status === 'loaded'\n-            ? {\n-                name: strategyLabel(target),\n-                points: compare.timeseries.data.points,\n-                maxDrawdown: target.summary?.maxDrawdown ?? null,\n-              }\n-            : null\n-        }\n+        targets={drawn.map((target) => ({\n+          name: names.get(target.key)!,\n+          points: target.timeseries.status === 'loaded' ? target.timeseries.data.points : [],\n+          maxDrawdown: target.compatible?.summary?.maxDrawdown ?? null,\n+        }))}\n       />\n       {viewable ? (\n         <ResultDetailTabs\n@@ -291,11 +285,12 @@ function ResultView({\n           summary={summaryBlock}\n           lossWindow={lossWindow}\n           compare={\n-            target\n+            // 설정·근거 탭의 선정·배분 효과는 대상 하나 기준이다. 여럿이면 첫 대상만 — 표를 대상 수만큼 늘리면 첫 화면이 아니다.\n+            drawnFirst\n               ? {\n-                  token: target.publicToken,\n-                  name: strategyLabel(target),\n-                  items: target.config.items,\n+                  token: drawnFirst.publicToken,\n+                  name: names.get(drawn[0].key)!,\n+                  items: drawnFirst.config.items,\n                 }\n               : null\n           }\n@@ -323,19 +318,19 @@ function ResultView({\n  * `maxDrawdown` 같은 확정된 값이고, 그 값은 실행이 끝나야 나온다. 중간 곡선으로 짐작해 칠하면 끝난 뒤\n  * 음영이 다른 자리로 옮겨 간다.\n  *\n- * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.\n+ * <p>비교 대상 곡선들은 B05가 이 컴포넌트의 `targets`에 이어 붙인다(최대 셋, `S15P21E205-419`).\n  */\n function ResultChartSlot({\n   detail,\n   timeseries,\n   progressPoints,\n-  target,\n+  targets,\n }: {\n   detail: PublicResultDetail\n   timeseries: TimeseriesState\n   /** 계산 중 구독으로 받은 점. 최종 시계열이 오면 쓰이지 않는다 */\n   progressPoints?: ResultTimeseriesPoint[]\n-  target?: EquityChartSeries | null\n+  targets?: EquityChartSeries[]\n }) {\n   if (timeseries.status === 'unavailable') {\n     return (\n@@ -367,7 +362,7 @@ function ResultChartSlot({\n \n   return (\n     <EquityChart\n-      target={target}\n+      targets={targets}\n       altNumbers={\n         summary\n           ? {\n@@ -406,3 +401,33 @@ function inFlightMessage(detail: PublicResultDetail): string {\n   }\n   return '분석을 계산하고 있습니다.'\n }\n+\n+/**\n+ * 비교 대상의 이름. 주소에 오른 대상은 결과의 전략 이름, 접수 중인 후보는 전략 이름과 설정값이다. 같은 이름이 둘이면\n+ * 번호를 붙여 곡선·문장·조건 줄에서 서로 갈리게 한다 — 결과 응답에는 설정값의 이름표(등록표)가 없어 값으로 갈라 적지 못한다.\n+ */\n+function nameTargets(targets: readonly CompareTargetState[]): Map<string, string> {\n+  const raw = new Map<string, string>()\n+  const counts = new Map<string, number>()\n+  for (const target of targets) {\n+    let name = '비교 대상'\n+    if (target.choice) {\n+      const settings = describeParameters(target.choice.strategy, target.choice.parameters)\n+      name = target.choice.strategy.name + (settings ? ' · ' + settings : '')\n+    } else if (target.detail) name = strategyLabel(target.detail)\n+    raw.set(target.key, name)\n+    counts.set(name, (counts.get(name) ?? 0) + 1)\n+  }\n+  const names = new Map<string, string>()\n+  const seen = new Map<string, number>()\n+  for (const target of targets) {\n+    const name = raw.get(target.key)!\n+    if ((counts.get(name) ?? 0) === 1) names.set(target.key, name)\n+    else {\n+      const index = (seen.get(name) ?? 0) + 1\n+      seen.set(name, index)\n+      names.set(target.key, name + ' (' + index + ')')\n+    }\n+  }\n+  return names\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -135,3 +135,15 @@ export type MyRecordApiErrorCode =\n   | 'RESULT_NOT_READY'\n   | 'RESOURCE_NOT_FOUND'\n   | 'INVALID_INPUT'\n+\n+/**\n+ * `GET /my-records/used-strategies` 항목(006 contracts). 내가 단일 분석에서 써 본 전략·설정값 조합이다. 결과가 아니라\n+ * 조합이라 실행·결과 식별자가 없다. `parameters`는 접수가 저장한 JSON 그대로이므로 화면이 현재 등록표로 다시 판정한다.\n+ * `recordName`은 그 조합을 가리키는 살아 있는 내 기록 항목의 이름이고, 지웠으면 `null`이다(FR-017).\n+ */\n+export type UsedStrategy = {\n+  strategyId: string\n+  recordName: string | null\n+  rulesVersion: string\n+  parameters: Record<string, unknown>\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/myRecords.ts",
+          "old_path": "frontend/src/types/myRecords.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -145,6 +145,9 @@\n   --chart-foreground-muted: var(--thorp-muted);\n   --chart-line-primary: var(--chart-1);\n   --chart-line-secondary: var(--chart-2);\n+  /* 비교 대상이 둘·셋일 때 쓰는 색. 선 모양과 끝 이름표가 함께 갈리므로 색은 보조다(SC-010). */\n+  --chart-line-tertiary: var(--chart-3);\n+  --chart-line-quaternary: var(--chart-4);\n   --chart-crosshair: var(--thorp-accent-soft);\n   /* 격자는 배경 위에 직접 그려진다. line이 올라간 만큼 따라 굵어지지 않게 예전 값에 묶어 둔다. */\n   --chart-grid: rgb(255 255 255 / 7%);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/index.css",
+          "old_path": "frontend/src/index.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -64,7 +64,7 @@\n \n `config.executionType`에는 원 요청의 실행 종류(`SINGLE`·`SEARCH_BUNDLE` 등)를 담는다. 실행을 공유하더라도 요청 종류는 유지되며, `search` 질의가 없는 공개 주소에서도 자동 탐색 후보임을 구분한다. 탐색 식별자가 없으면 묶음 주소를 만들어 내지 않는다.\n \n-`/results/{baseToken}?compare={candidateToken}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.\n+`/results/{baseToken}?compare={token1},{token2},{token3}&search={searchId}`. `compare`는 비교 대상 결과의 공개 토큰을 쉼표로 이은 목록(최대 셋, `S15P21E205-419`)이고, `search`는 비교 대상이 자동 탐색(007) 후보일 때 그 탐색의 식별자다. `search`가 있으면 화면은 '자동 탐색 후보 비교'로 표시하고 007 상세로 돌아가는 진입점을 둔다(FR-011, SC-011). 서버는 이 인자를 읽지 않는다 — 두 결과를 각각 `GET /results/{token}`으로 읽는다.\n \n ## POST /results/{publicToken}/retry\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/contracts/result-api.md",
+          "old_path": "specs/005-result-comparison/contracts/result-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -81,14 +81,16 @@\n | 필드 | 설명 |\n |---|---|\n | base | 기준 결과. 사용자 고정 비중 또는 동일 비중 |\n-| target | 비교 대상 결과 또는 없음 |\n-| targetState | `NONE` `REQUESTED` `RUNNING` `READY` `FAILED` `EXPIRED` |\n+| targets | 비교 대상 결과 0~3개(`S15P21E205-419`). 주소 `?compare=`의 토큰 순서 |\n+| targets[].targetState | `REQUESTED` `RUNNING` `READY` `FAILED` `EXPIRED` `EXECUTION_LIMIT`. 대상마다 따로 |\n+| targets[].mismatch | READY인데 기준과 겹쳐 그리지 않는 이유 `conditions` `versions` `period` 또는 없음 |\n+| candidate | 비교 후보 하나. 전략 + 설정값 조합. `source`는 `default`(등록표 기본값) 또는 `used`(004 `GET /backtests/used-strategies`) |\n | comparisonKind | `BASIC`(기본 설정) 또는 `AUTO_SEARCH`(자동 탐색 후보) — 화면에서 구분 표시 (FR-011) |\n | commonConditions | 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준 |\n-| periodMismatch | 두 결과의 평가 기간이 다를 때 공통 구간과 재계산 대상 두 건 |\n+| periodMismatch | 기준과 대상들의 평가 기간이 다를 때 공통 구간(가장 늦은 시작·가장 이른 끝·가장 긴 준비 기간)과 재계산 대상(기준 + 어긋난 대상들). 확인은 한 번이다 |\n | candidateWarmupHint | 비교 대상 목록의 전략마다, 003 등록표에서 읽은 준비 기간이 기준 결과보다 길면 \"비교 기간이 N일 짧아진다\"는 표시. 화면은 값을 읽기만 하고 계산하지 않는다 (R-13) |\n \n-`targetState`가 `READY`가 아니면 그래프에 기준만 그린다. `FAILED`는 사유 한 문장과 다시 시도 선택을 함께 둔다(Edge Cases).\n+`targetState`가 `READY`가 아니거나 `mismatch`가 있는 대상은 그래프에 그리지 않는다. `FAILED`는 그 대상 자리에 사유 한 문장과 다시 시도 선택을 함께 둔다(Edge Cases). 해석 요약은 그려진 대상마다 한 문장이다(FR-006).\n \n ### 3-3. 그래프 계열 (FR-001, R-05·R-08·R-09)\n \n@@ -98,7 +100,7 @@\n | points[].equity | `/timeseries[].equity` | 세로축. 사용자가 입력한 금액에서 출발하는 비용 차감 후 원화 자산가치 |\n | points[].drawdown | `/timeseries[].drawdown` | 음영 구간을 찾는 데만 쓴다 |\n | drawdownWindow | `drawdown` 최솟값 지점과 직전 고점 | `summary.maxDrawdown`과 어긋나면 음영을 그리지 않는다 (R-05) |\n-| lineStyle | `SOLID`(기준) / `DASHED`(비교 대상) | 색에 기대지 않는 구분 (SC-010) |\n+| lineStyle | `SOLID`(기준) / 대상마다 다른 파선 셋 `7,5` `2,4` `10,4,2,4` | 색에 기대지 않는 구분 (SC-010). 비교 대상 하락 음영은 대상이 하나일 때만 |\n | endLabel | 곡선 오른쪽 끝에 붙는 이름 | 범례만으로 구분하지 않는다 |\n \n ### 3-4. 결과 상태 표시 (FR-012, FR-013)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/data-model.md",
+          "old_path": "specs/005-result-comparison/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -147,10 +147,10 @@\n \n - **FR-001**: 결과 첫 화면은 핵심 숫자 3개(비용 차감 후 전체 수익률·가장 크게 줄었던 폭·거래비용), 비교 그래프 1개, 해석 요약 1문장으로 구성한다. 비교 그래프의 세로축은 사용자가 입력한 금액에서 출발하는 비용 차감 후 원화 자산가치이며, 최대 하락이 일어난 구간은 같은 곡선 위에 음영으로 겹쳐 표시한다. 음영은 곡선에 겹치는 표시이므로 첫 화면의 그래프 수는 하나를 유지한다. 곡선은 004가 산출한 시계열을 받은 그대로 그리고 점 수를 줄이지 않는다. 점을 줄이면 가장 낮았던 날이 빠져 곡선과 '가장 크게 줄었던 폭' 숫자가 다른 말을 할 수 있기 때문이다(원칙 VI). 한 그래프에 두 결과가 그려질 때 둘을 구분하는 수단은 색에만 기대지 않는다. 선 모양이나 곡선에 직접 붙인 이름표를 함께 써서 색을 구별하지 못하는 사용자도 어느 곡선이 자기 설정인지 알 수 있게 하고, 하락 구간 음영에도 같은 규칙을 적용한다. (§4.1, §4.2.3, 원칙 II)\n - **FR-002**: '가장 크게 줄었던 폭'은 운용 중 고점 대비 최대 하락으로 정의하고, 시작 금액 대비 손실과 혼동하지 않게 설명을 붙인다. FR-001의 음영 구간은 이 고점 대비 최대 하락이 일어난 구간이며, 같은 그래프에서 시작 금액 수준을 함께 알아볼 수 있게 한다. 음영의 시작은 운용 중 가장 높았던 날이고 끝은 그 뒤 가장 낮았던 날이다. 회복 시점은 구간에 넣지 않으며 회복 기간은 상세의 숫자로 본다. (§4.2.3)\n-- **FR-003**: 분석 기간·비교 대상·비용 적용 여부를 요약 한 줄에 항상 표시한다. 세 항목은 어느 화면 폭에서도 생략하지 않으며, 좁은 화면에서는 줄바꿈을 허용한다. '한 줄'은 하나의 묶음이라는 뜻이다. (§4.1)\n-- **FR-004**: 비교 그래프는 최대 두 결과를 동시에 그린다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이며, 비교 대상은 다섯 전략 중 다른 결과나 자동 탐색에서 고른 후보로 바꿀 수 있다. 비교 대상으로 고른 전략의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 진행 상태는 004가 주는 단계(자료 준비·계산·저장)와 진행 비율을 보이고, 아직 대기 중이면 지금까지 기다린 시간을 보인다. 요청이 004의 대기열 상한에 걸리면(`429 EXECUTION_LIMIT`) 비교 대상 자리에 한도에 걸렸다는 사실과 004가 알려 준 다시 시도 가능 시각을 보이고, 사용자가 누를 때만 다시 요청한다. 화면이 조용히 재시도하지 않는다(원칙 IX). 비교 대상 전략의 준비 기간(워밍업)이 기준 결과보다 길면 시작일이 뒤로 밀려 같은 그래프에 겹칠 수 없으므로, 화면은 [003](../003-strategy-settings/spec.md) 등록표에 적힌 각 전략의 준비 기간을 읽어 **고르기 전에** 그 전략을 고르면 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 기간 불일치 확인으로 이어간다. 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않으며, 004의 `INSUFFICIENT_HISTORY` 거부는 화면의 판단이 어긋났을 때 잘못된 비교를 막는 안전장치로 그대로 둔다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. 결과 화면에서 가장 중요한 행동 버튼은 '비교 대상 고르기' 하나다. '자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'·보조 보기·다음 탐색 진입점은 그보다 눈에 덜 띄는 보조 모양으로 둔다(원칙 II). (§4.1, §4.2.3, D10)\n+- **FR-003**: 분석 기간·비교 대상·비용 적용 여부를 요약 한 줄에 항상 표시한다. 세 항목은 어느 화면 폭에서도 생략하지 않으며, 좁은 화면에서는 줄바꿈을 허용한다. '한 줄'은 하나의 묶음이라는 뜻이다. 비교 대상이 여럿이면 이름을 쉼표로 이어 모두 적는다. (§4.1)\n+- **FR-004**: 비교 그래프는 기준 하나와 비교 대상 최대 셋을 동시에 그린다(2026-09-23 `S15P21E205-419`, 그 전에는 두 결과). 넷을 넘으면 선 모양과 색으로 곡선이 갈리지 않는다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이다. **비교 대상 후보는 전략이 아니라 전략·설정값 조합이다.** 후보의 출처는 둘이다 — 003 등록표의 기본값 조합과, 로그인한 사용자가 단일 분석에서 써 본 조합(004 `GET /backtests/used-strategies`). 화면은 후보마다 쓰일 설정값을 등록표의 이름표로 적어 무엇과 비교하는지 보이게 하고, 기준 결과 자신과 같은 조합은 후보에서 뺀다. 같은 전략이라도 설정값이 다르면 다른 후보다. 써 본 조합의 설정값은 현재 등록표로 다시 판정해 맞지 않으면 후보에 올리지 않는다(원칙 VI). 비로그인 사용자에게는 기본값 조합만 보인다. 자동 탐색에서 고른 후보도 비교 대상이 될 수 있다. 사용자는 남은 자리만큼 후보를 여럿 골라 한 번에 요청하고, 대상마다 자리를 두어 진행·실패·해제를 따로 다룬다. 완료되는 대상부터 곡선이 늘어난다. 비교 대상으로 고른 조합의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 진행 상태는 004가 주는 단계(자료 준비·계산·저장)와 진행 비율을 보이고, 아직 대기 중이면 지금까지 기다린 시간을 보인다. 요청이 004의 대기열 상한에 걸리면(`429 EXECUTION_LIMIT`) 비교 대상 자리에 한도에 걸렸다는 사실과 004가 알려 준 다시 시도 가능 시각을 보이고, 사용자가 누를 때만 다시 요청한다. 화면이 조용히 재시도하지 않는다(원칙 IX). 비교 대상 전략의 준비 기간(워밍업)이 기준 결과보다 길면 시작일이 뒤로 밀려 같은 그래프에 겹칠 수 없으므로, 화면은 [003](../003-strategy-settings/spec.md) 등록표에 적힌 각 전략의 준비 기간을 읽어 **고르기 전에** 그 전략을 고르면 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 기간 불일치 확인으로 이어간다. 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않으며, 004의 `INSUFFICIENT_HISTORY` 거부는 화면의 판단이 어긋났을 때 잘못된 비교를 막는 안전장치로 그대로 둔다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. 결과 화면에서 가장 중요한 행동 버튼은 '비교 대상 고르기' 하나다. '자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'·보조 보기·다음 탐색 진입점은 그보다 눈에 덜 띄는 보조 모양으로 둔다(원칙 II). (§4.1, §4.2.3, D10)\n - **FR-005**: 비교하는 두 결과는 같은 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준을 쓴다. 후보마다 유리한 과거 기간을 달리 쓰지 않으며, 기간이 다르면 겹쳐 그리지 않는다. 기간이 다를 때 화면은 공통 구간과 두 결과를 모두 다시 계산해야 한다는 사실을 보이고, 사용자가 확인하면 공통 구간을 쓰는 실행 두 건을 [004](../004-backtest-execution/spec.md)에 요청한다. 확인하기 전까지는 기준 결과만 그린다. 다시 계산한 두 건은 새 결과로 저장되어 새 비교 주소를 가지며, 원래 기준 결과와 그 주소, '내 기록' 항목은 그대로 남는다. 화면은 새 비교로 이동하고 원래 결과로 돌아가는 연결을 둔다(원칙 VI, 006의 \"설정 변경은 새 버전으로 보존하고 덮어쓰지 않는다\"와 같은 방식). (§4.2.3, §6.4.1, 원칙 IV)\n-- **FR-006**: 해석 요약 1문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다. 두 결과의 수익률과 최대 하락 폭이 같을 때 그 사실만 말하는 틀과, 거래비용만 다를 때 그 차이만 말하는 틀을 따로 둔다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n+- **FR-006**: 해석 요약은 비교 대상마다 1문장이다(대상이 없으면 기준의 세 숫자로 1문장). 각 문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다. 두 결과의 수익률과 최대 하락 폭이 같을 때 그 사실만 말하는 틀과, 거래비용만 다를 때 그 차이만 말하는 틀을 따로 둔다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n - **FR-007**: 결과 화면은 제목·그래프 1개·해석 요약 1문장·비교 대상 고르기·탭 묶음 순이며 설정 화면으로 되돌리지 않는다. 탭은 요약·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교·목표 위험 맞춤 일곱이며 첫 화면에서 **요약**이 열려 있다. **요약**에는 FR-001의 핵심 숫자 3개·조건 한 줄과 결과 상태 문장(FR-013)을, **결과 분석**에는 회복 기간·회전율·상관관계·위험 기여·손실 기여(추정 기간·공분산 산정법 포함)·계산 제한 항목을, **설정·근거**에는 비교 규칙·비용 가정·목표·실제 비중·구성종목 중복·대표 ETF 구성·출처를, **전체 거래 내역**에는 거래 내역과 그 조건 질의를 둔다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보인다. 계산에서 나온 값과 사용자가 넣은 조건을 한 패널에 번갈아 두지 않는다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 요약 탭의 자료(상세·시계열)와 탭들이 함께 쓰는 섹터 목록은 첫 화면과 함께 받고, 다른 탭의 자료는 사용자가 그 탭을 처음 열 때 받는다. (§4.1, §4.2.3)\n - **FR-008**: 비교 대상의 실제 보유 섹터가 기준과 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n - **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. 계산이 제한되었는지의 판정과 그 사유는 [004](../004-backtest-execution/spec.md) FR-030에 따라 004가 결과에 담아 준다. 005는 그것을 표시할 뿐 자료 길이로 스스로 판정하지 않는다. (§4.2.3, 원칙 VI)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -482,3 +482,14 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대\n - [X] T096 (FE) LOW — 011 진입점의 보이는 이름을 spec의 `경제환경이 비슷했던 과거 보기`로 통일하고 `frontend/src/pages/ResultPage.auxiliary.test.tsx`가 그 이름과 비활성 사유를 함께 고정하게 한다. 011의 진입 계약과 라우트가 생기기 전까지는 지금처럼 누를 수 없게 둔다 per FR-018 · US5 인수 기준 3 · T079 (partial)\n - [X] T097 (FE) MEDIUM — `frontend/src/components/result/NextStepLinks.tsx`에서 spec·tasks에 없는 `이전 화면으로` 버튼과 `navigate(-1)` 행동을 제거한다. 결과에서 011로 이동한 뒤 돌아오는 수단은 FR-018이 정한 브라우저 뒤로 가기이며, 별도 이전 화면 행동은 근거 없이 결과 화면의 보조 행동을 늘린다 per FR-018 · FR-019 · Constitution II · T079 (unrequested)\n - [X] T098 (FE) 결과 화면을 제목·비교 대상 고르기·탭 하나로 정리한다. 요약(핵심 숫자·상태 문장, 기본 열림. 그래프·해석 문장은 탭 위)·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교·목표 위험 맞춤 일곱 탭 — `frontend/src/components/result/ResultTabs.tsx`(탭 줄·키보드·지연 마운트)와 `ResultDetailTabs.tsx`(다섯 탭 조립). '자세히 보기'는 결과 분석과 설정·근거로 나눈다(`DetailPanel.tsx`의 `AnalysisPanel`·`SettingsPanel`·`TradesPanel`). 섹터 목록은 탭 묶음이 한 번 받아 나눠 쓴다. 열 수 없는 탭은 `aria-disabled`와 사유 문장이다. 420이 상관관계·위험 기여·손실 기여 표를 넣자 한 패널이 화면 두세 장이 된 것이 계기다(Jira S15P21E205-424) per FR-007 · FR-010 · FR-017 · FR-022 · SC-001(2026-09-23 개정)\n+\n+## Phase 15: 비교 대상 여럿과 설정 조합 후보 (`S15P21E205-419`, 2026-09-23)\n+\n+'비교 대상 고르기'가 등록표 기본값으로만 상대를 돌리고 그 값을 보이지 않던 것을 고쳤다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.\n+\n+- [X] T099 (FE) 비교 주소 `?compare=`를 쉼표로 이은 토큰 목록(최대 셋)으로 읽고 쓴다 — `frontend/src/components/result/compareQuery.ts` per FR-004 · contracts \"비교 주소\"\n+- [X] T100 (FE) 후보를 전략·설정값 조합으로 만든다 — `frontend/src/components/result/compareCandidates.ts`. 등록표 기본값 + 써 본 조합(`GET /backtests/used-strategies`, 로그인 시), 현재 등록표로 재판정, 기준 자신과 같은 조합 제외, 설정값을 등록표 이름표로 적는 `describeParameters` per FR-004 · 003 FR-005 · 원칙 VI\n+- [X] T101 (FE) 비교 훅을 대상 여럿으로 바꾼다 — `frontend/src/hooks/useCompareTargets.ts`. 대상마다 상태·불일치·다시 시도·해제, 여럿을 한 번에 접수, 공통 구간 확인은 가장 긴 준비 기간 기준으로 한 번 per FR-004 · FR-005 · 원칙 IX\n+- [X] T102 (FE) 그래프에 비교 대상 셋까지 각기 다른 파선·색·끝 이름표로 그린다. 비교 대상 음영은 하나일 때만 — `frontend/src/components/result/EquityChart.tsx` per FR-001 · SC-010\n+- [X] T103 (FE) 고르기 화면을 전략별 조합 목록·다중 선택·'비교하기' 한 번으로 바꾼다 — `frontend/src/components/result/CompareTargetPicker.tsx` per FR-004\n+- [X] T104 (FE) 결과 화면이 대상마다 고르기 단추 왼쪽에 칩(이름 말줄임·짧은 상태·× 해제)을 두고, 해석 요약을 대상마다 한 문장, 조건 한 줄에 이름을 모두 적는다. 같은 이름은 번호로 가른다 — `frontend/src/pages/ResultPage.tsx` · `CompareTargetChip.tsx` · `ResultSummaryCard.tsx` per FR-003 · FR-006\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-23T17:57:19.244+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2864398": []
+  }
+}

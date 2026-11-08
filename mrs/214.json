@@ -1,0 +1,826 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 950232,
+    "iid": 214,
+    "project_id": 1444456,
+    "title": "feat(fe): 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다",
+    "description": "## 작업 내용 요약\n\n결과 첫 화면에 그래프 하나가 들어간다. 자산가치 곡선을 받은 점 그대로 그리고, 최대 하락 구간을 같은 그래프에 음영으로 겹친다. 두 곡선은 색을 구별하지 못해도 갈린다.\n\n## 관련 티켓\n\nS15P21E205-308 (spec 005 묶음 B04 · T040,T044, T055, T056) 수렴 점검에서 나온 T089,T091,T092도 이 MR에 담았다. 별도 티켓 없이 여기서 끝내기로 정했다.\n\n## 주요 변경 사항\n\n- `/results/{token}` 화면이 시계열을 받으면 곡선을 그린다. 받지 못했거나 받았어도 자산가치 기록이 하나도 없으면 빈 축 대신 그 사실을 한 문장으로 둔다.\n- 곡선은 점을 줄이지 않는다. 값이 없는 날은 앞뒤를 잇지 않고 끊는다.\n- 최대 하락 구간은 `summary.maxDrawdown`과 저점이 일치할 때만 칠한다. 어긋나면 음영을 포기하고 숫자만 남긴다. 004가 `summary.maxDrawdownWindow`를 주면 `drawdownWindow.ts`를 지운다.\n- 기준은 실선, 비교 대상은 파선이며 곡선 끝에 이름표가 직접 붙는다. 음영에는 점선 경계를 둔다.\n- 세로축은 시작 금액을 기준으로 잡고, 만·억 단위 원화 눈금을 넷 이하로 적는다. 시작 금액 수준에는 가로 점선을 그린다.\n- 차트 시스템에 속성 넷을 더했다. 모두 기본값이 기존 동작이라 다른 차트는 그대로다.\n  - `Line`: `defined`(빈 값에서 선을 끊는다), `strokeDasharray`(선 전체를 파선으로)\n  - `LineChart`: `yDomain`(세로축 범위 고정), `decimate`(점 축소 해제)\n- 결과 픽스처의 시계열을 계약 예시의 값으로 맞췄다. 이제 상세의 최대 하락 폭과 저점이 같다.\n- 테스트 설정: `testTimeout`·`hookTimeout` 20초, `asyncUtilTimeout` 5초. jsdom에 없는 `ResizeObserver`·`getTotalLength` 대역.\n\n## 테스트\n\n`npm run lint && npm run build && npm test` — 오류 0, 96파일 909건 통과, `skipped` 0.\n\n자동 시험 밖의 확인:\n\n- 회색조 구분(SC-010)은 R-09가 정한 대로 PD-14 사용성 관찰 항목이다. 이 MR은 선 모양·이름표· 점선 경계가 DOM에 있다는 사실까지만 고정한다.\n- 음영의 가로 위치는 시간 축을 독립으로 계산해 대조한다.\n\n## 리뷰 포인트\n\n- **차트 시스템 변경 넷**이 판단거리다. T042가 자식용 스케일 컨텍스트를 예상했으나 `useChartStable()`이 이미 x 스케일을 주므로 그쪽은 손대지 않았다. 대신 점 축소와 끊김은 기존 수단으로 풀 길이 없어 속성을 더했다. `dashFromIndex`로 전체 파선을 흉내 내는 길도 있었지만 본선을 투명으로 만들고 경로 길이 계산에 기대는 방식이라 버렸다.\n- **세로축 눈금은 차트 시스템에 `YAxis`가 없어 결과 화면 쪽(`AmountAxis`)에 만들었다.** 다른 화면도 쓰게 되면 차트 시스템으로 옮길 만하다.\n- **`aspectRatio=\"\"`로 인라인 비율을 비우고 CSS 모듈이 비율을 정한다.** 미디어 쿼리로 좁은 화면의 비율을 바꾸려면 이 길뿐이다.\n- **dev의 `npm test`가 이미 불안정했다.** 기준 커밋에서 네 번 돌려 `SignupPage.test.tsx`가 매번 한두 건씩, 매번 다른 항목이 실패했다. 단독 실행은 모두 통과한다. 한계 시간을 올려 막았다. `SignupPage.test.tsx`가 혼자 20초를 쓰는 문제는 그대로 남아 있다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-18T09:43:29.395+09:00",
+    "updated_at": "2026-09-18T09:43:43.965+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T09:43:43.753+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/308-result-equity-chart",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c56b1679169c54bffcdd9b885d857338b9161d38",
+    "merge_commit_sha": "ef13f722a7837e06cc268603a88290a83e8a25cb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:43:32.309+09:00",
+    "reference": "!214",
+    "references": {
+      "short": "!214",
+      "relative": "!214",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!214"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/214",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 950232,
+    "iid": 214,
+    "project_id": 1444456,
+    "title": "feat(fe): 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다",
+    "description": "## 작업 내용 요약\n\n결과 첫 화면에 그래프 하나가 들어간다. 자산가치 곡선을 받은 점 그대로 그리고, 최대 하락 구간을 같은 그래프에 음영으로 겹친다. 두 곡선은 색을 구별하지 못해도 갈린다.\n\n## 관련 티켓\n\nS15P21E205-308 (spec 005 묶음 B04 · T040,T044, T055, T056) 수렴 점검에서 나온 T089,T091,T092도 이 MR에 담았다. 별도 티켓 없이 여기서 끝내기로 정했다.\n\n## 주요 변경 사항\n\n- `/results/{token}` 화면이 시계열을 받으면 곡선을 그린다. 받지 못했거나 받았어도 자산가치 기록이 하나도 없으면 빈 축 대신 그 사실을 한 문장으로 둔다.\n- 곡선은 점을 줄이지 않는다. 값이 없는 날은 앞뒤를 잇지 않고 끊는다.\n- 최대 하락 구간은 `summary.maxDrawdown`과 저점이 일치할 때만 칠한다. 어긋나면 음영을 포기하고 숫자만 남긴다. 004가 `summary.maxDrawdownWindow`를 주면 `drawdownWindow.ts`를 지운다.\n- 기준은 실선, 비교 대상은 파선이며 곡선 끝에 이름표가 직접 붙는다. 음영에는 점선 경계를 둔다.\n- 세로축은 시작 금액을 기준으로 잡고, 만·억 단위 원화 눈금을 넷 이하로 적는다. 시작 금액 수준에는 가로 점선을 그린다.\n- 차트 시스템에 속성 넷을 더했다. 모두 기본값이 기존 동작이라 다른 차트는 그대로다.\n  - `Line`: `defined`(빈 값에서 선을 끊는다), `strokeDasharray`(선 전체를 파선으로)\n  - `LineChart`: `yDomain`(세로축 범위 고정), `decimate`(점 축소 해제)\n- 결과 픽스처의 시계열을 계약 예시의 값으로 맞췄다. 이제 상세의 최대 하락 폭과 저점이 같다.\n- 테스트 설정: `testTimeout`·`hookTimeout` 20초, `asyncUtilTimeout` 5초. jsdom에 없는 `ResizeObserver`·`getTotalLength` 대역.\n\n## 테스트\n\n`npm run lint && npm run build && npm test` — 오류 0, 96파일 909건 통과, `skipped` 0.\n\n자동 시험 밖의 확인:\n\n- 회색조 구분(SC-010)은 R-09가 정한 대로 PD-14 사용성 관찰 항목이다. 이 MR은 선 모양·이름표· 점선 경계가 DOM에 있다는 사실까지만 고정한다.\n- 음영의 가로 위치는 시간 축을 독립으로 계산해 대조한다.\n\n## 리뷰 포인트\n\n- **차트 시스템 변경 넷**이 판단거리다. T042가 자식용 스케일 컨텍스트를 예상했으나 `useChartStable()`이 이미 x 스케일을 주므로 그쪽은 손대지 않았다. 대신 점 축소와 끊김은 기존 수단으로 풀 길이 없어 속성을 더했다. `dashFromIndex`로 전체 파선을 흉내 내는 길도 있었지만 본선을 투명으로 만들고 경로 길이 계산에 기대는 방식이라 버렸다.\n- **세로축 눈금은 차트 시스템에 `YAxis`가 없어 결과 화면 쪽(`AmountAxis`)에 만들었다.** 다른 화면도 쓰게 되면 차트 시스템으로 옮길 만하다.\n- **`aspectRatio=\"\"`로 인라인 비율을 비우고 CSS 모듈이 비율을 정한다.** 미디어 쿼리로 좁은 화면의 비율을 바꾸려면 이 길뿐이다.\n- **dev의 `npm test`가 이미 불안정했다.** 기준 커밋에서 네 번 돌려 `SignupPage.test.tsx`가 매번 한두 건씩, 매번 다른 항목이 실패했다. 단독 실행은 모두 통과한다. 한계 시간을 올려 막았다. `SignupPage.test.tsx`가 혼자 20초를 쓰는 문제는 그대로 남아 있다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-18T09:43:29.395+09:00",
+    "updated_at": "2026-09-18T09:43:43.965+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T09:43:43.753+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/308-result-equity-chart",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c56b1679169c54bffcdd9b885d857338b9161d38",
+    "merge_commit_sha": "ef13f722a7837e06cc268603a88290a83e8a25cb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:43:32.309+09:00",
+    "reference": "!214",
+    "references": {
+      "short": "!214",
+      "relative": "!214",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!214"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/214",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "head_sha": "c56b1679169c54bffcdd9b885d857338b9161d38",
+      "start_sha": "e3a6511958bc7525bc4305ed93748db42531ed6c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0276a96eebd0a49d4c7aed61f8d8ef56fa654fd1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830422,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:43:29.520+09:00",
+          "updated_at": "2026-09-18T09:43:29.523+09:00",
+          "system": true,
+          "noteable_id": 950232,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 214,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dede836fc73ee41db20dab057a080b4125d667b8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830423,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:43:29.541+09:00",
+          "updated_at": "2026-09-18T09:43:29.549+09:00",
+          "system": true,
+          "noteable_id": 950232,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 214,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "34a8f41d73ac914b9ea73574492c9139441fda25",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830425,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **접근성 및 사용성 고려 (SC-010, R-09):** 색상 구분에만 의존하지 않고 실선/파선 조합, 상단 점선 경계, 빗금 패턴(비교 대상), 그리고 곡선 끝 직접 이름표(`SeriesEndLabel`)를 구현하여 시각 장애인이나 흑백 모드 사용자도 데이터를 올바르게 읽을 수 있도록 철저히 설계했습니다.\n- **철저한 테스트 검증:** `EquityChart.test.tsx`와 `drawdownWindow.test.ts`를 통해 긴 이름 줄바꿈, 엣지 케이스(점 축소 해제, 빈 데이터 처리 등)를 꼼꼼하게 커버했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (차트 시스템의 확장성 및 JSDOM 제약 사항을 우회하기 위한 아키텍처적 결정들이 명확하게 주석으로 문서화되어 있고, 단위/통합 테스트로 뒷받침되고 있습니다.)\n\n### 테스트 제안\n변경 사항에 대해 아래 시나리오로 추가 테스트 검증을 권장합니다.\n1. **데이터 단절 시나리오:** 자산가치(`equity`)가 중간에 연속으로 여러 번 비어 있는(missing) 경우, `defined` 함수가 선을 올바르게 끊고 보간(interpolation) 없이 렌더링하는지 확인하는 시나리오.\n2. **반응형 화면 뷰포트 변경:** 모바일 화면 폭(360px 이하)에서 두 개의 긴 전략 이름표가 상하로 밀려나며 겹치지 않고 레이아웃이 깨지지 않는지 시각적/DOM 기반 검증.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c56b1679169c54bffcdd9b885d857338b9161d38 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T09:43:40.104+09:00",
+          "updated_at": "2026-09-18T09:43:40.104+09:00",
+          "system": false,
+          "noteable_id": 950232,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 214,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ec102f913610ca40cf43e4e8bfd6b4ce16774a03",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830426,
+          "type": null,
+          "body": "mentioned in commit ef13f722a7837e06cc268603a88290a83e8a25cb",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:43:43.782+09:00",
+          "updated_at": "2026-09-18T09:43:43.786+09:00",
+          "system": true,
+          "noteable_id": 950232,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 214,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2218117,
+      "head_commit_sha": "c56b1679169c54bffcdd9b885d857338b9161d38",
+      "base_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "start_commit_sha": "e3a6511958bc7525bc4305ed93748db42531ed6c",
+      "created_at": "2026-09-18T09:43:29.924+09:00",
+      "merge_request_id": 950232,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "7a211bf533fc14f5f7a8813552ccb9fec8ce2575"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2218117,
+      "head_commit_sha": "c56b1679169c54bffcdd9b885d857338b9161d38",
+      "base_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "start_commit_sha": "e3a6511958bc7525bc4305ed93748db42531ed6c",
+      "created_at": "2026-09-18T09:43:29.924+09:00",
+      "merge_request_id": 950232,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "7a211bf533fc14f5f7a8813552ccb9fec8ce2575",
+      "commits": [
+        {
+          "id": "c56b1679169c54bffcdd9b885d857338b9161d38",
+          "short_id": "c56b1679",
+          "created_at": "2026-09-18T09:38:30.000+09:00",
+          "parent_ids": [
+            "50d4b6a87279e91f49106e6c4e70b8a91e66954e"
+          ],
+          "title": "fix(fe): 곡선 끝 이름표가 전략 이름을 자르지 않고 여러 줄로 나눈다",
+          "message": "fix(fe): 곡선 끝 이름표가 전략 이름을 자르지 않고 여러 줄로 나눈다\n\n등록표의 전략 이름은 7~17자인데 이름표가 여섯 글자에서 잘라 다섯 모두 알아보기\n어려웠다. 오른쪽 여백 폭에 맞춰 단어 단위로 줄을 나누고, 줄 수만큼 높이를 셈해 두\n이름표가 겹치지 않게 민다. 밀려난 이름표는 짧은 선으로 곡선 끝과 잇는다. 글자 폭\n어림은 앱 글꼴과 맑은 고딕으로 잰 값보다 넓게 잡았다.\n\nT092(spec 005 Phase 10).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T09:38:30.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T09:38:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c56b1679169c54bffcdd9b885d857338b9161d38"
+        },
+        {
+          "id": "50d4b6a87279e91f49106e6c4e70b8a91e66954e",
+          "short_id": "50d4b6a8",
+          "created_at": "2026-09-18T09:27:52.000+09:00",
+          "parent_ids": [
+            "5c09e54e2beb6b5acbfd91a60eb18286c141873d"
+          ],
+          "title": "docs(fe): 이름표가 전략 이름을 자르는 문제를 tasks.md에 이어 적는다",
+          "message": "docs(fe): 이름표가 전략 이름을 자르는 문제를 tasks.md에 이어 적는다\n\nB04 범위를 다시 대조해 남은 일 하나를 Phase 10으로 덧붙인다. 곡선 끝 이름표가 등록된\n다섯 전략 이름을 모두 여섯 글자에서 자른다. 위의 태스크는 손대지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T09:27:52.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T09:27:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/50d4b6a87279e91f49106e6c4e70b8a91e66954e"
+        },
+        {
+          "id": "5c09e54e2beb6b5acbfd91a60eb18286c141873d",
+          "short_id": "5c09e54e",
+          "created_at": "2026-09-18T09:20:49.000+09:00",
+          "parent_ids": [
+            "1ffc88ebc72f798c6d066d6accf500eadf4cb4b7"
+          ],
+          "title": "feat(fe): 그래프에 금액 눈금과 빈 시계열 안내를 더하고 픽스처를 계약에 맞춘다",
+          "message": "feat(fe): 그래프에 금액 눈금과 빈 시계열 안내를 더하고 픽스처를 계약에 맞춘다\n\n세로축에 만·억 단위 원화 눈금을 넷 이하로 적고, 같은 값을 격자선에도 넘겨 글자와\n선이 같은 높이에 놓이게 한다. 시계열을 받았어도 자산가치 기록이 하나도 없으면 빈 축\n대신 그 사실을 한 문장으로 알린다. 결과 픽스처의 시계열을 계약 예시의 값으로 바꿔\n상세의 최대 하락 폭과 저점이 맞게 하고, 둘이 다시 어긋나지 않도록 테스트로 묶는다.\n\nT089·T090·T091(spec 005 Phase 9).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T09:20:49.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T09:20:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5c09e54e2beb6b5acbfd91a60eb18286c141873d"
+        },
+        {
+          "id": "1ffc88ebc72f798c6d066d6accf500eadf4cb4b7",
+          "short_id": "1ffc88eb",
+          "created_at": "2026-09-18T09:03:51.000+09:00",
+          "parent_ids": [
+            "3384e6e79d5b5f38bd711b7a5a37eb2bdde5783a"
+          ],
+          "title": "docs(fe): B04 뒤 남은 일 셋을 tasks.md에 이어 적는다",
+          "message": "docs(fe): B04 뒤 남은 일 셋을 tasks.md에 이어 적는다\n\n코드를 spec·plan·tasks와 대조해 남은 일을 Phase 9로 덧붙인다. 그릴 점이 없을 때의\n안내, 세로축 금액 눈금, 서로 어긋난 결과 픽스처 셋이다. 위의 태스크는 손대지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T09:03:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T09:03:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1ffc88ebc72f798c6d066d6accf500eadf4cb4b7"
+        },
+        {
+          "id": "3384e6e79d5b5f38bd711b7a5a37eb2bdde5783a",
+          "short_id": "3384e6e7",
+          "created_at": "2026-09-18T08:36:18.000+09:00",
+          "parent_ids": [
+            "d3f515ff545821944c890a65c981a88ec7fa056f"
+          ],
+          "title": "fix(fe): 곡선이 끊길 때와 시작 금액을 읽을 수 없을 때를 바로잡는다",
+          "message": "fix(fe): 곡선이 끊길 때와 시작 금액을 읽을 수 없을 때를 바로잡는다\n\n애니메이션 경로는 점만으로 다시 그려져 끊김을 표현하지 못한다. 끊는 조건을 받은\n계열은 그 경로를 쓰지 않게 해, 그림이 자리를 잡은 뒤 빈 날이 조용히 이어지는 일을\n막는다. 시작 금액을 읽지 못하면 0 대신 곡선의 값만으로 세로축을 잡는다. 곡선 끝\n이름표는 오른쪽 여백 안에 들어가는 여섯 글자까지만 보인다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T08:36:18.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T08:36:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3384e6e79d5b5f38bd711b7a5a37eb2bdde5783a"
+        },
+        {
+          "id": "d3f515ff545821944c890a65c981a88ec7fa056f",
+          "short_id": "d3f515ff",
+          "created_at": "2026-09-18T08:32:25.000+09:00",
+          "parent_ids": [
+            "1712d8231586e7549a81773899ac74eea27aefa9"
+          ],
+          "title": "feat(fe): 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다",
+          "message": "feat(fe): 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다\n\n결과 첫 화면에 그래프 하나를 넣는다. 곡선은 받은 점을 줄이지 않고 그리며 값이 없는\n날에서는 끊는다. 최대 하락 구간은 칠한 면과 점선 경계로 겹쳐 표시하고, 두 곡선은\n실선·파선과 곡선 끝 이름표로 갈라 색을 구별하지 못해도 읽히게 한다.\n\n차트 시스템에는 되돌릴 수 있는 속성 넷을 더했다. `Line`의 `defined`·`strokeDasharray`,\n`LineChart`의 `yDomain`·`decimate`이며 모두 기본값이 기존 동작이다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T08:32:25.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T08:32:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d3f515ff545821944c890a65c981a88ec7fa056f"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -57,6 +57,18 @@ export interface LineChartProps {\n   xDomainSlotCount?: number;\n   /** Tween y-domain when brush changes the visible x-range. Default: false */\n   tweenYDomainOnXDomainChange?: boolean;\n+  /**\n+   * Fixed primary y-domain `[min, max]`, used as-is instead of deriving one\n+   * from the data — anchors the axis to a meaningful level (e.g. the amount\n+   * the user started with) rather than to zero.\n+   */\n+  yDomain?: [number, number];\n+  /**\n+   * Thin the series down to what the pixel width can show. Set `false` to draw\n+   * every row — charts whose extremes carry meaning must not drop points.\n+   * Default: true.\n+   */\n+  decimate?: boolean;\n   /** Inline container styles (e.g. fixed height for brush strip). */\n   style?: CSSProperties;\n   /** Fires when the internal chart phase changes (e.g. OG capture readiness). */\n@@ -154,6 +166,8 @@ interface ChartInnerProps {\n   xDomain?: [Date, Date];\n   xDomainSlotCount?: number;\n   tweenYDomainOnXDomainChange?: boolean;\n+  yDomain?: [number, number];\n+  decimate?: boolean;\n   children: ReactNode;\n   containerRef: React.RefObject<HTMLDivElement | null>;\n   onPhaseChange: (phase: ChartPhase) => void;\n@@ -176,6 +190,8 @@ function ChartInner({\n   xDomain,\n   xDomainSlotCount,\n   tweenYDomainOnXDomainChange,\n+  yDomain,\n+  decimate,\n   children,\n   containerRef,\n   onPhaseChange,\n@@ -190,6 +206,7 @@ function ChartInner({\n       clipPathId=\"chart-grow-clip\"\n       containerRef={containerRef}\n       data={data}\n+      decimate={decimate}\n       enterTransition={enterTransition}\n       height={height}\n       lines={lines}\n@@ -202,6 +219,7 @@ function ChartInner({\n       xDataKey={xDataKey}\n       xDomain={xDomain}\n       xDomainSlotCount={xDomainSlotCount}\n+      yDomain={yDomain}\n       yDomainTween={yDomainTween}\n       yDomainTweenDuration={yDomainTweenDuration}\n     >\n@@ -227,6 +245,8 @@ export function LineChart({\n   xDomain,\n   xDomainSlotCount,\n   tweenYDomainOnXDomainChange = false,\n+  yDomain,\n+  decimate,\n   style,\n   onPhaseChange,\n   children,\n@@ -270,6 +290,7 @@ export function LineChart({\n             chartStatus={status}\n             containerRef={containerRef}\n             data={data}\n+            decimate={decimate}\n             enterTransition={enterTransition}\n             height={height}\n             loadingLabel={loadingLabel}\n@@ -281,6 +302,7 @@ export function LineChart({\n             xDataKey={xDataKey}\n             xDomain={xDomain}\n             xDomainSlotCount={xDomainSlotCount}\n+            yDomain={yDomain}\n             yDomainTween={yDomainTween}\n             yDomainTweenDuration={yDomainTweenDuration}\n           >\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/charts/line-chart.tsx",
+          "old_path": "frontend/src/components/charts/line-chart.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,6 +71,18 @@ export interface LineProps {\n   dashFromIndex?: number;\n   /** Dash pattern for the tail segment when `dashFromIndex` is set. Default: \"6,4\" */\n   dashArray?: string;\n+  /**\n+   * Dash pattern for the WHOLE stroke (SVG `stroke-dasharray`) — lets two\n+   * series be told apart without relying on color. Unrelated to `dashArray`,\n+   * which only dashes the tail after `dashFromIndex`. Default: solid.\n+   */\n+  strokeDasharray?: string;\n+  /**\n+   * Whether a datum has a value worth drawing. Returning `false` breaks the\n+   * path at that point instead of joining the neighbours across the gap.\n+   * Default: every datum is drawn.\n+   */\n+  defined?: (datum: Record<string, unknown>) => boolean;\n   /**\n    * Show the loading pulse overlay. Default: follows chart loading phase.\n    * Set `false` to disable even during loading.\n@@ -95,9 +107,11 @@ export interface LineProps {\n function LineSeriesStroke({\n   animatedPathD,\n   curve,\n+  defined,\n   getY,\n   pathRef,\n   renderData,\n+  strokeDasharray,\n   strokeWidth,\n   useDataTransitionPath,\n   visibleStroke,\n@@ -106,9 +120,11 @@ function LineSeriesStroke({\n }: {\n   animatedPathD: string;\n   curve: CurveFactory;\n+  defined?: (datum: Record<string, unknown>) => boolean;\n   getY: (datum: Record<string, unknown>) => number;\n   pathRef: RefObject<SVGPathElement | null>;\n   renderData: Record<string, unknown>[];\n+  strokeDasharray?: string;\n   strokeWidth: number;\n   useDataTransitionPath: boolean;\n   visibleStroke: string;\n@@ -122,6 +138,7 @@ function LineSeriesStroke({\n         fill=\"none\"\n         ref={pathRef}\n         stroke={visibleStroke}\n+        strokeDasharray={strokeDasharray}\n         strokeLinecap=\"round\"\n         strokeWidth={strokeWidth}\n       />\n@@ -132,8 +149,10 @@ function LineSeriesStroke({\n     <LinePath\n       curve={curve}\n       data={renderData}\n+      defined={defined}\n       innerRef={pathRef}\n       stroke={visibleStroke}\n+      strokeDasharray={strokeDasharray}\n       strokeLinecap=\"round\"\n       strokeWidth={strokeWidth}\n       x={(d) => xScale(xAccessor(d)) ?? 0}\n@@ -213,6 +232,8 @@ export function Line({\n   markers,\n   dashFromIndex,\n   dashArray = \"6,4\",\n+  strokeDasharray,\n+  defined,\n   loading,\n   loadingStroke = chartCssVars.foreground,\n   loadingStrokeOpacity = 0.5,\n@@ -239,7 +260,11 @@ export function Line({\n     yDomainTweenDuration,\n   } = useChartStable();\n   const yScale = useYScale(yAxisId);\n-  const useDataTransitionPath = animate && chartPhase === \"ready\";\n+  // The animated path is rebuilt from raw points and cannot express a gap, so a\n+  // series that breaks on missing values must skip it — otherwise the gap would\n+  // quietly close once the chart settles.\n+  const useDataTransitionPath =\n+    animate && chartPhase === \"ready\" && defined == null;\n   const { pathD: animatedPathD } = useAnimatedSeriesPath({\n     chartPhase,\n     curve,\n@@ -338,9 +363,11 @@ export function Line({\n         <LineSeriesStroke\n           animatedPathD={animatedPathD}\n           curve={curve}\n+          defined={defined}\n           getY={getY}\n           pathRef={pathRef}\n           renderData={renderData}\n+          strokeDasharray={strokeDasharray}\n           strokeWidth={strokeWidth}\n           useDataTransitionPath={useDataTransitionPath}\n           visibleStroke={visibleStroke}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/charts/line.tsx",
+          "old_path": "frontend/src/components/charts/line.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -153,6 +153,19 @@ export interface TimeSeriesChartInnerProps {\n   composedStackGap?: number;\n   /** When set, drives the y-axis max instead of scanning `lines` (e.g. stacked bar totals). */\n   yScaleDomainMax?: number;\n+  /**\n+   * Fixed primary y-domain `[min, max]`, used as-is instead of deriving one\n+   * from the data. Lets a caller anchor the axis to a meaningful level (e.g.\n+   * the amount the user started with) rather than to zero. Ignored when the\n+   * chart has more than the default y-axis.\n+   */\n+  yDomain?: [number, number];\n+  /**\n+   * Thin the series down to what the pixel width can show. Set `false` to draw\n+   * every row — charts whose extremes carry meaning (an equity curve read\n+   * against its deepest day) must not drop points. Default: true.\n+   */\n+  decimate?: boolean;\n   /** Loading vs ready — drives chart phase until transition orchestration lands. */\n   chartStatus?: ChartStatus;\n   loadingLabel?: string;\n@@ -198,6 +211,8 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({\n   composedStackOffsets,\n   composedStackGap,\n   yScaleDomainMax,\n+  yDomain,\n+  decimate = true,\n   chartStatus = DEFAULT_CHART_STATUS,\n   loadingLabel,\n   yDomainTween = true,\n@@ -216,13 +231,16 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({\n       const axisGroups = groupLinesByYAxisId(lines);\n       const usesDefaultOnly =\n         axisGroups.size === 1 && axisGroups.has(DEFAULT_Y_AXIS_ID);\n+      if (usesDefaultOnly && yDomain != null) {\n+        return yDomain;\n+      }\n       const domainMax =\n         usesDefaultOnly && yScaleDomainMax != null\n           ? yScaleDomainMax\n           : undefined;\n       return resolveTimeSeriesYDomain(sourceData, dataKeys, domainMax);\n     },\n-    [lines, yScaleDomainMax]\n+    [lines, yScaleDomainMax, yDomain]\n   );\n \n   const skeletonData = useMemo(() => {\n@@ -306,13 +324,16 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({\n   const seriesSourceData = xDomain ? plotData : visiblePlotData;\n \n   const renderData = useMemo(() => {\n+    if (!decimate) {\n+      return seriesSourceData;\n+    }\n     const valueKeys = lines.map((line) => line.dataKey);\n     return decimateTimeSeries(\n       seriesSourceData,\n       maxRenderPointsForWidth(innerWidth),\n       valueKeys\n     );\n-  }, [seriesSourceData, innerWidth, lines]);\n+  }, [seriesSourceData, innerWidth, lines, decimate]);\n \n   const columnWidth = useMemo(() => {\n     const slotCount =\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/charts/time-series-chart-shell.tsx",
+          "old_path": "frontend/src/components/charts/time-series-chart-shell.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,38 @@\n+import { useChartStable } from '@/components/charts/chart-context'\n+import { formatAxisAmount } from '@/components/result/formatResult'\n+\n+/**\n+ * 세로축의 원화 금액 눈금(FR-001).\n+ *\n+ * <p>차트 시스템에는 세로축 컴포넌트가 없어 여기서 만든다. 눈금 위치는 차트가 들고 있는 y 스케일에\n+ * 맡기고, 같은 값을 가로 격자(`Grid`의 `rowTickValues`)에도 넘겨 글자와 선이 같은 높이에 놓이게 한다.\n+ */\n+\n+/** 그림 영역 왼쪽 여백에 눈금 글자를 오른쪽 끝을 맞춰 적는다. `LineChart`의 자식으로만 쓴다 */\n+export function AmountAxis({ values }: { values: number[] }) {\n+  const { yScale } = useChartStable()\n+\n+  return (\n+    <g data-testid=\"amount-axis\">\n+      {values.map((value) => {\n+        const y = yScale(value)\n+        if (y == null || !Number.isFinite(y)) return null\n+        return (\n+          <text\n+            dominantBaseline=\"middle\"\n+            fill=\"var(--chart-label)\"\n+            fontSize={11}\n+            key={value}\n+            textAnchor=\"end\"\n+            x={-6}\n+            y={y}\n+          >\n+            {formatAxisAmount(value)}\n+          </text>\n+        )\n+      })}\n+    </g>\n+  )\n+}\n+\n+export default AmountAxis\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/AmountAxis.tsx",
+          "old_path": "frontend/src/components/result/AmountAxis.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,83 @@\n+import { useId } from 'react'\n+import { useChartStable } from '@/components/charts/chart-context'\n+\n+/**\n+ * 최대 하락 구간 음영(FR-002, R-09).\n+ *\n+ * <p><b>색만으로 구간을 알리지 않는다.</b> 칠한 면과 함께 위쪽 경계에 점선을 그어, 회색조로 보아도\n+ * 어디부터 어디까지가 하락 구간인지 드러나게 한다. 비교 대상의 음영은 빗금으로 채워 기준과 구분한다.\n+ *\n+ * <p>날짜를 화소로 옮기는 일은 차트가 이미 들고 있는 x 스케일에 맡긴다. 그래서 이 컴포넌트는\n+ * `LineChart`의 자식으로만 쓸 수 있고, 부모가 `Date`로 바꿔 넘긴 두 날짜만 받는다.\n+ */\n+export type DrawdownShadeProps = {\n+  /** 구간의 시작(운용 중 가장 높았던 날) */\n+  from: Date\n+  /** 구간의 끝(그 뒤 가장 낮았던 날) */\n+  to: Date\n+  /** 기준 결과인가 비교 대상인가. 비교 대상은 빗금으로 채운다 */\n+  variant?: 'base' | 'target'\n+  /** 대안 텍스트가 따로 있으므로 그림 자체는 보조 기술에 노출하지 않는다 */\n+  label?: string\n+}\n+\n+export function DrawdownShade({ from, to, variant = 'base', label }: DrawdownShadeProps) {\n+  const { xScale, innerWidth, innerHeight } = useChartStable()\n+  const patternId = `drawdown-hatch-${useId()}`\n+\n+  const start = xScale(from)\n+  const end = xScale(to)\n+  if (start == null || end == null || !Number.isFinite(start) || !Number.isFinite(end)) {\n+    return null\n+  }\n+\n+  const left = Math.max(0, Math.min(start, end))\n+  const right = Math.min(innerWidth, Math.max(start, end))\n+  const width = right - left\n+  if (!(width > 0) || !(innerHeight > 0)) return null\n+\n+  const fill = variant === 'target' ? `url(#${patternId})` : 'var(--result-shade-fill)'\n+\n+  return (\n+    <g data-drawdown-shade={variant} data-testid={`drawdown-shade-${variant}`}>\n+      {variant === 'target' ? (\n+        <defs>\n+          <pattern\n+            id={patternId}\n+            width={6}\n+            height={6}\n+            patternTransform=\"rotate(45)\"\n+            patternUnits=\"userSpaceOnUse\"\n+          >\n+            <line\n+              stroke=\"var(--result-shade-edge)\"\n+              strokeWidth={1.2}\n+              x1={0}\n+              x2={0}\n+              y1={0}\n+              y2={6}\n+            />\n+          </pattern>\n+        </defs>\n+      ) : null}\n+\n+      <rect fill={fill} height={innerHeight} width={width} x={left} y={0}>\n+        {label ? <title>{label}</title> : null}\n+      </rect>\n+\n+      {/* 위쪽 경계선. 색을 구별하지 못해도 이 점선으로 구간의 범위를 읽는다. */}\n+      <line\n+        data-testid={`drawdown-shade-edge-${variant}`}\n+        stroke=\"var(--result-shade-edge)\"\n+        strokeDasharray=\"5,4\"\n+        strokeWidth={1.4}\n+        x1={left}\n+        x2={right}\n+        y1={0}\n+        y2={0}\n+      />\n+    </g>\n+  )\n+}\n+\n+export default DrawdownShade\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DrawdownShade.tsx",
+          "old_path": "frontend/src/components/result/DrawdownShade.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,46 @@\n+.figure {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 10px;\n+  min-width: 0;\n+}\n+\n+/*\n+ * 음영의 두 색을 여기 한 곳에서 정한다. SVG 안에서 `var(--result-shade-*)`로 읽으므로 테마 토큰이\n+ * 바뀌어도 컴포넌트를 고치지 않는다.\n+ */\n+.chart {\n+  --result-shade-fill: rgb(232 189 114 / 16%);\n+  --result-shade-edge: rgb(232 189 114 / 78%);\n+\n+  width: 100%;\n+  min-width: 0;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 14px;\n+  background: var(--thorp-surface);\n+\n+  /* 넓은 화면에서는 납작하게, 좁은 화면에서는 세로를 키워 하락 구간이 눌리지 않게 한다. */\n+  aspect-ratio: 16 / 7;\n+}\n+\n+/*\n+ * `LineChart`는 `aspectRatio` 속성을 비우면 인라인 크기를 정하지 않고 부모를 채운다. 비율을 CSS에\n+ * 두어야 화면 폭에 따라 미디어 쿼리로 바꿀 수 있다.\n+ */\n+.canvas {\n+  height: 100%;\n+}\n+\n+.notes {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.85rem;\n+  line-height: 1.6;\n+  overflow-wrap: anywhere;\n+}\n+\n+@media (max-width: 600px) {\n+  .chart {\n+    aspect-ratio: 4 / 3;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.module.css",
+          "old_path": "frontend/src/components/result/EquityChart.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,289 @@\n+import { render, screen } from '@testing-library/react'\n+import type { ReactNode } from 'react'\n+import { afterEach, describe, expect, it, vi } from 'vitest'\n+import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'\n+import { formatAxisAmount } from '@/components/result/formatResult'\n+import { makeEquitySeries } from '@/test/resultFixtures'\n+import type { ResultTimeseriesPoint } from '@/types/result'\n+\n+/**\n+ * jsdom은 요소의 크기를 재지 않아 `ParentSize`가 언제나 0을 보고하고, 폭이 0이면 차트는 아무것도\n+ * 그리지 않는다. 그려진 것을 확인해야 하므로 여기서만 크기를 정해 준다. 좁은 화면을 볼 때는 테스트\n+ * 안에서 값을 바꾸고 `afterEach`가 되돌린다.\n+ */\n+const WIDE = { width: 840, height: 380 }\n+const chartSize = vi.hoisted(() => ({ width: 840, height: 380 }))\n+\n+vi.mock('@visx/responsive', () => ({\n+  ParentSize: ({\n+    children,\n+  }: {\n+    children: (size: { width: number; height: number }) => ReactNode\n+  }) => children({ width: chartSize.width, height: chartSize.height }),\n+}))\n+\n+afterEach(() => {\n+  Object.assign(chartSize, WIDE)\n+})\n+\n+const BASE_POINTS = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })\n+const TARGET_POINTS = makeEquitySeries({ points: 129, peakIndex: 30, troughIndex: 70 })\n+\n+const base: EquityChartSeries = {\n+  name: '물결 고르기',\n+  points: BASE_POINTS,\n+  maxDrawdown: BASE_POINTS[55].drawdown,\n+}\n+\n+const target: EquityChartSeries = {\n+  name: '모래 고르기',\n+  points: TARGET_POINTS,\n+  maxDrawdown: TARGET_POINTS[70].drawdown,\n+}\n+\n+const altNumbers = {\n+  netTotalReturn: '0.166652',\n+  maxDrawdown: '-0.041757',\n+  totalTradingCost: '17078.49',\n+}\n+\n+/** 곡선의 경로. 기준과 비교 대상은 선 색으로 갈린다 */\n+function seriesPath(container: HTMLElement, which: 'base' | 'target'): SVGPathElement {\n+  const stroke = which === 'base' ? '--chart-line-primary' : '--chart-line-secondary'\n+  const path = container.querySelector<SVGPathElement>(`path[stroke=\"var(${stroke})\"]`)\n+  if (!path) throw new Error(`${which} 곡선을 찾지 못했다`)\n+  return path\n+}\n+\n+/**\n+ * 등록표 이름과 같은 길이(17자, 띄어쓰기 포함)의 합성 이름. 실제 이름을 쓰지 않는 이유는\n+ * `resultFixtures.ts` 머리 주석과 같다.\n+ */\n+const LONG_BASE_NAME = '가나다 라마바사 아자차카 타파하'\n+const LONG_TARGET_NAME = '거너더 러머버서 어저처커 터퍼허'\n+\n+/** 이름표 하나의 줄들과 세로 범위. 줄마다 `y`가 그 줄의 가운데다 */\n+function labelBlock(container: HTMLElement, dataKey: 'base' | 'target') {\n+  const lines = [\n+    ...container.querySelectorAll(`[data-testid=\"series-end-label-${dataKey}\"] tspan`),\n+  ]\n+  const centers = lines.map((line) => Number(line.getAttribute('y')))\n+  const lineHeight = centers.length > 1 ? centers[1] - centers[0] : 13\n+  return {\n+    texts: lines.map((line) => line.textContent ?? ''),\n+    top: Math.min(...centers) - lineHeight / 2,\n+    bottom: Math.max(...centers) + lineHeight / 2,\n+  }\n+}\n+\n+/** 그림 영역의 바탕 사각형. 축 여백을 뺀 실제 그리기 크기다 */\n+function plotArea(container: HTMLElement) {\n+  const plot = container.querySelectorAll('rect[fill=\"transparent\"]')[1]\n+  return { width: Number(plot.getAttribute('width')), height: Number(plot.getAttribute('height')) }\n+}\n+\n+/** 경로에 찍힌 점의 수. `M`과 `L` 하나가 점 하나다 */\n+function pointCount(path: SVGPathElement): number {\n+  return (path.getAttribute('d') ?? '').match(/[ML]/g)?.length ?? 0\n+}\n+\n+describe('EquityChart', () => {\n+  it('비교 대상이 있으면 파선 곡선과 이름표 둘을 그린다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" target={target} />,\n+    )\n+\n+    expect(seriesPath(container, 'base').getAttribute('stroke-dasharray')).toBeNull()\n+    expect(seriesPath(container, 'target').getAttribute('stroke-dasharray')).toBe('7,5')\n+    expect(screen.getByText('물결 고르기')).toBeTruthy()\n+    expect(screen.getByText('모래 고르기')).toBeTruthy()\n+  })\n+\n+  it.each([\n+    ['넓은 화면', WIDE],\n+    ['폭 360px 화면', { width: 326, height: 245 }],\n+  ])('%s에서 긴 이름도 자르지 않고 여러 줄로 나누며 두 이름표가 겹치지 않는다', (_case, size) => {\n+    Object.assign(chartSize, size)\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ ...base, name: LONG_BASE_NAME }}\n+        initialCash=\"10000000.00\"\n+        target={{ ...target, name: LONG_TARGET_NAME }}\n+      />,\n+    )\n+\n+    const baseLabel = labelBlock(container, 'base')\n+    const targetLabel = labelBlock(container, 'target')\n+    const { height } = plotArea(container)\n+\n+    for (const [label, name] of [\n+      [baseLabel, LONG_BASE_NAME],\n+      [targetLabel, LONG_TARGET_NAME],\n+    ] as const) {\n+      expect(label.texts.length).toBeGreaterThan(1)\n+      expect(label.texts.join(' ')).toBe(name)\n+      // 오른쪽 여백(88px)에 11px 한글이 일곱 자까지 들어간다.\n+      for (const text of label.texts) expect(text.replace(/\\s/g, '').length).toBeLessThanOrEqual(7)\n+      expect(label.top).toBeGreaterThanOrEqual(0)\n+      expect(label.bottom).toBeLessThanOrEqual(height)\n+    }\n+    // 두 곡선의 끝 값이 같아 이름표가 같은 자리를 원한다. 밀어낸 뒤에는 겹치지 않아야 한다.\n+    const [upper, lower] = [baseLabel, targetLabel].sort((left, right) => left.top - right.top)\n+    expect(upper.bottom).toBeLessThanOrEqual(lower.top)\n+    expect(container.textContent).not.toContain('…')\n+  })\n+\n+  it('기준만 있으면 파선 곡선이 없다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    expect(container.querySelector('path[stroke-dasharray]')).toBeNull()\n+    expect(screen.queryByText('모래 고르기')).toBeNull()\n+  })\n+\n+  it('하락 구간에 음영과 점선 경계를 함께 그린다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const shade = container.querySelector('[data-testid=\"drawdown-shade-base\"] rect')\n+    const edge = container.querySelector<SVGLineElement>(\n+      '[data-testid=\"drawdown-shade-edge-base\"]',\n+    )\n+    expect(shade).not.toBeNull()\n+    expect(Number(shade?.getAttribute('width'))).toBeGreaterThan(0)\n+    expect(edge?.getAttribute('stroke-dasharray')).toBe('5,4')\n+  })\n+\n+  it('음영이 고점과 저점 사이에 놓인다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const innerWidth = plotArea(container).width\n+    const first = Date.parse(BASE_POINTS[0].date + 'T00:00:00Z')\n+    const last = Date.parse(BASE_POINTS[BASE_POINTS.length - 1].date + 'T00:00:00Z')\n+    const at = (date: string) =>\n+      (innerWidth * (Date.parse(date + 'T00:00:00Z') - first)) / (last - first)\n+\n+    const shade = container.querySelector('[data-testid=\"drawdown-shade-base\"] rect')\n+    const left = Number(shade?.getAttribute('x'))\n+    const width = Number(shade?.getAttribute('width'))\n+    expect(left).toBeCloseTo(at(BASE_POINTS[40].date), 1)\n+    expect(left + width).toBeCloseTo(at(BASE_POINTS[55].date), 1)\n+  })\n+\n+  it('보고된 최대 하락 폭과 저점이 어긋나면 음영을 그리지 않는다', () => {\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ ...base, maxDrawdown: '-0.010000' }}\n+        initialCash=\"10000000.00\"\n+      />,\n+    )\n+\n+    expect(container.querySelector('[data-testid=\"drawdown-shade-base\"]')).toBeNull()\n+    expect(seriesPath(container, 'base')).toBeTruthy()\n+  })\n+\n+  it('받은 점을 하나도 줄이지 않고 그린다', () => {\n+    const points = makeEquitySeries({ points: 1900, peakIndex: 600, troughIndex: 900 })\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ name: '물결 고르기', points, maxDrawdown: points[900].drawdown }}\n+        initialCash=\"10000000.00\"\n+      />,\n+    )\n+\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(points.length)\n+  })\n+\n+  it('자산가치가 없는 날에서 곡선을 끊고 앞뒤를 잇지 않는다', () => {\n+    const points: ResultTimeseriesPoint[] = BASE_POINTS.map((point, index) =>\n+      index === 60 ? { ...point, equity: '' } : point,\n+    )\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ name: '물결 고르기', points, maxDrawdown: BASE_POINTS[55].drawdown }}\n+        initialCash=\"10000000.00\"\n+      />,\n+    )\n+\n+    const definition = seriesPath(container, 'base').getAttribute('d') ?? ''\n+    expect(definition.match(/M/g)).toHaveLength(2)\n+    expect(pointCount(seriesPath(container, 'base'))).toBe(points.length - 1)\n+  })\n+\n+  it('그릴 자산가치가 하나도 없으면 빈 축을 그리지 않는다', () => {\n+    const empty = BASE_POINTS.map((point) => ({ ...point, equity: '' }))\n+    const { container } = render(\n+      <EquityChart\n+        altNumbers={altNumbers}\n+        base={{ name: '물결 고르기', points: empty, maxDrawdown: null }}\n+        initialCash=\"10000000.00\"\n+      />,\n+    )\n+\n+    expect(container.innerHTML).toBe('')\n+  })\n+\n+  it('대안 텍스트에 핵심 숫자 3개와 비교 대상 유무를 담는다', () => {\n+    const { rerender } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const alone = screen.getByRole('img').getAttribute('aria-label') ?? ''\n+    expect(alone).toContain('16.67%')\n+    expect(alone).toContain('-4.18%')\n+    expect(alone).toContain('17,078원')\n+    expect(alone).toContain('비교 대상은 없습니다')\n+\n+    rerender(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" target={target} />,\n+    )\n+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('모래 고르기')\n+  })\n+\n+  it('세로축에 원화 금액 눈금을 넷 이하로 적고 격자선과 같은 높이에 둔다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    const labels = [...container.querySelectorAll('[data-testid=\"amount-axis\"] text')]\n+    const rowHeights = [...container.querySelectorAll('.visx-rows line')].map((line) =>\n+      Number(line.getAttribute('y1')),\n+    )\n+\n+    expect(labels.length).toBeGreaterThanOrEqual(2)\n+    expect(labels.length).toBeLessThanOrEqual(4)\n+    for (const label of labels) {\n+      expect(label.textContent).toMatch(/^[\\d,.]+(만|억)?원$/)\n+      const height = Number(label.getAttribute('y'))\n+      expect(rowHeights.some((row) => Math.abs(row - height) < 0.01)).toBe(true)\n+    }\n+  })\n+\n+  it('시작 금액 기준선을 그리고 그 값을 글로도 알린다', () => {\n+    const { container } = render(\n+      <EquityChart altNumbers={altNumbers} base={base} initialCash=\"10000000.00\" />,\n+    )\n+\n+    expect(container.querySelector('.chart-grid-highlight-rows line')).not.toBeNull()\n+    expect(screen.getByText(/시작 금액 10,000,000원/)).toBeTruthy()\n+  })\n+})\n+\n+describe('formatAxisAmount', () => {\n+  it.each([\n+    [10_500_000, '1,050만원'],\n+    [125_000_000, '1.25억원'],\n+    [9_500, '9,500원'],\n+    [Number.NaN, ''],\n+  ])('%d → \"%s\"', (value, text) => {\n+    expect(formatAxisAmount(value)).toBe(text)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,264 @@\n+import { curveLinear } from '@visx/curve'\n+import { ticks } from 'd3-array'\n+import { useMemo } from 'react'\n+import { Grid } from '@/components/charts/grid'\n+import { Line, LineChart } from '@/components/charts/line-chart'\n+import { XAxis } from '@/components/charts/x-axis'\n+import { AmountAxis } from '@/components/result/AmountAxis'\n+import { DrawdownShade } from '@/components/result/DrawdownShade'\n+import { type DrawdownWindow, findDrawdownWindow } from '@/components/result/drawdownWindow'\n+import { hasDrawableEquity, readEquity } from '@/components/result/equityPoints'\n+import { formatMoney, formatRatio } from '@/components/result/formatResult'\n+import { SeriesEndLabels } from '@/components/result/SeriesEndLabel'\n+import type { ResultTimeseriesPoint } from '@/types/result'\n+import styles from './EquityChart.module.css'\n+\n+/**\n+ * 결과 첫 화면의 그래프 하나(FR-001, FR-002).\n+ *\n+ * <p><b>받은 점을 줄이지 않는다</b>(`decimate={false}`, R-08). 점을 줄이면 가장 낮았던 날이 빠져\n+ * 곡선이 '가장 크게 줄었던 폭' 숫자보다 얕아 보인다. 값이 없는 날은 앞뒤를 잇지 않고 선을 끊는다 —\n+ * 이어 그리면 없는 자산가치를 만들어 낸다(원칙 VI).\n+ *\n+ * <p><b>색에만 기대지 않는다</b>(SC-010). 기준은 실선, 비교 대상은 파선이고 두 곡선의 오른쪽 끝에\n+ * 이름표가 직접 붙는다. 하락 구간 음영도 칠한 면과 점선 경계를 함께 쓴다.\n+ *\n+ * <p>세로축은 시작 금액을 기준으로 잡는다. 0에서 시작하면 몇 %의 오르내림이 한 줄로 눌려 하락 구간을\n+ * 알아볼 수 없다. 눈금은 만·억 단위 원화로 넷 이하만 적어 곡선의 높이를 금액으로 읽게 한다.\n+ */\n+\n+export type EquityChartSeries = {\n+  /** 곡선에 붙일 이름. 전략 이름이다 */\n+  name: string\n+  points: ResultTimeseriesPoint[]\n+  /** `summary.maxDrawdown`. 음영 구간 판정에 쓴다 */\n+  maxDrawdown: string | null\n+}\n+\n+export type EquityChartProps = {\n+  base: EquityChartSeries\n+  /** 비교 대상. 없으면 곡선은 하나다 */\n+  target?: EquityChartSeries | null\n+  /** `config.initialCash`. 세로축의 기준이자 가로 기준선의 위치다 */\n+  initialCash: string\n+  /** 대안 텍스트에 담을 기준 결과의 핵심 숫자 3개. 계산되지 않았으면 `null` */\n+  altNumbers?: {\n+    netTotalReturn: string\n+    maxDrawdown: string\n+    totalTradingCost: string\n+  } | null\n+}\n+\n+type ChartRow = {\n+  date: Date\n+  base?: number\n+  target?: number\n+}\n+\n+const BASE_STROKE = 'var(--chart-line-primary)'\n+const TARGET_STROKE = 'var(--chart-line-secondary)'\n+/** 비교 대상 곡선의 파선 간격. 색을 못 봐도 선 모양으로 갈린다 */\n+const TARGET_DASH = '7,5'\n+/** 세로축 눈금은 많아야 넷이다. 더 늘리면 첫 화면이 숫자로 붐빈다(원칙 II) */\n+const MAX_AMOUNT_TICKS = 4\n+\n+function toNumber(value: string | null | undefined): number | null {\n+  if (value == null || value.trim() === '') return null\n+  const parsed = Number(value)\n+  return Number.isFinite(parsed) ? parsed : null\n+}\n+\n+/** 날짜 문자열을 UTC 자정으로 읽는다. 차트의 x 접근자가 쓰는 해석과 같게 맞춘다 */\n+function toChartDate(date: string): Date {\n+  return new Date(date.length === 10 ? date + 'T00:00:00Z' : date)\n+}\n+\n+/**\n+ * 두 계열을 날짜로 합쳐 한 그래프의 행으로 만든다.\n+ *\n+ * 값이 없는 날도 행은 남기고 그 열만 비운다. 비어 있어야 `defined`가 그 자리에서 선을 끊는다.\n+ */\n+function buildRows(base: ResultTimeseriesPoint[], target?: ResultTimeseriesPoint[]): ChartRow[] {\n+  const byDate = new Map<string, ChartRow>()\n+\n+  const collect = (points: ResultTimeseriesPoint[], key: 'base' | 'target') => {\n+    for (const point of points) {\n+      const row = byDate.get(point.date) ?? { date: toChartDate(point.date) }\n+      const equity = readEquity(point)\n+      if (equity != null) row[key] = equity\n+      byDate.set(point.date, row)\n+    }\n+  }\n+\n+  collect(base, 'base')\n+  if (target) collect(target, 'target')\n+\n+  return [...byDate.values()].sort((left, right) => left.date.getTime() - right.date.getTime())\n+}\n+\n+/**\n+ * 세로축의 범위. 시작 금액을 아래끝으로 삼되 곡선이 그보다 더 내려간 적이 있으면 그만큼 넓힌다.\n+ * 위아래에 약간의 여백을 두어 시작 금액 기준선이 그림 가장자리에 붙어 잘리지 않게 한다.\n+ *\n+ * <p>시작 금액을 읽을 수 없으면 곡선의 값만으로 범위를 잡는다. 0을 대신 넣으면 곡선이 그림 위쪽에\n+ * 한 줄로 눌려 하락 구간을 알아볼 수 없다.\n+ */\n+function resolveYDomain(rows: ChartRow[], initialCash: number | null): [number, number] {\n+  let lowest = initialCash ?? Number.POSITIVE_INFINITY\n+  let highest = initialCash ?? Number.NEGATIVE_INFINITY\n+  for (const row of rows) {\n+    for (const value of [row.base, row.target]) {\n+      if (value == null) continue\n+      if (value < lowest) lowest = value\n+      if (value > highest) highest = value\n+    }\n+  }\n+  if (!Number.isFinite(lowest) || !Number.isFinite(highest)) return [0, 100]\n+  const span = highest - lowest\n+  const padding = span > 0 ? span * 0.08 : Math.max(Math.abs(highest) * 0.01, 1)\n+  return [lowest - padding, highest + padding]\n+}\n+\n+/**\n+ * 세로축 범위에서 둥근 눈금 값을 고른다. d3의 개수 인자는 힌트라 넷보다 많이 돌려줄 수 있으므로, 넷\n+ * 이하가 될 때까지 힌트를 줄인다. 같은 값을 격자선과 눈금 글자에 함께 넘겨 둘이 같은 높이에 놓이게 한다.\n+ */\n+function pickAmountTicks([low, high]: [number, number]): number[] {\n+  if (!Number.isFinite(low) || !Number.isFinite(high) || !(high > low)) return []\n+  for (let count = MAX_AMOUNT_TICKS; count >= 1; count -= 1) {\n+    const values = ticks(low, high, count)\n+    if (values.length <= MAX_AMOUNT_TICKS) return values\n+  }\n+  return []\n+}\n+\n+/** 그래프를 문장으로 옮긴 대안 텍스트(FR-022) */\n+function buildAltText({ base, target, altNumbers }: EquityChartProps): string {\n+  const numbers = altNumbers\n+    ? '비용 차감 후 전체 수익률 ' +\n+      formatRatio(altNumbers.netTotalReturn) +\n+      ', 가장 크게 줄었던 폭 ' +\n+      formatRatio(altNumbers.maxDrawdown) +\n+      ', 거래비용 ' +\n+      formatMoney(altNumbers.totalTradingCost) +\n+      '입니다.'\n+    : '핵심 숫자가 계산되지 않아 곡선만 그렸습니다.'\n+  const comparison = target\n+    ? '비교 대상은 ' + target.name + '이며 파선으로 함께 그렸습니다.'\n+    : '비교 대상은 없습니다.'\n+  return base.name + '의 자산가치 곡선입니다. ' + numbers + ' ' + comparison\n+}\n+\n+/** 음영 구간을 사람이 읽을 문장으로 옮긴다 */\n+function shadeNote(name: string, window: DrawdownWindow): string {\n+  return name + '의 음영은 가장 크게 줄었던 구간(' + window.peakDate + ' ~ ' + window.troughDate + ')입니다.'\n+}\n+\n+export function EquityChart(props: EquityChartProps) {\n+  const { base, target, initialCash } = props\n+  const rows = useMemo(() => buildRows(base.points, target?.points), [base.points, target?.points])\n+  const initial = toNumber(initialCash)\n+  const yDomain = useMemo(() => resolveYDomain(rows, initial), [rows, initial])\n+  const amountTicks = useMemo(() => pickAmountTicks(yDomain), [yDomain])\n+\n+  const baseWindow = findDrawdownWindow(base.points, base.maxDrawdown)\n+  const targetWindow = target ? findDrawdownWindow(target.points, target.maxDrawdown) : null\n+\n+  const notes = [\n+    initial == null ? null : '가로 점선은 시작 금액 ' + formatMoney(initialCash) + '입니다.',\n+    baseWindow ? shadeNote(base.name, baseWindow) : null,\n+    target && targetWindow ? shadeNote(target.name, targetWindow) : null,\n+  ].filter((note): note is string => note != null)\n+\n+  // 그릴 값이 하나도 없으면 빈 축만 남는다. 빈 그래프는 \"돌았고 비어 있었다\"는 거짓이므로 그리지\n+  // 않는다. 그 사실을 알리는 문장은 그래프 자리(`ResultPage`)가 같은 규칙으로 판단해 둔다.\n+  if (!hasDrawableEquity(base.points) && !(target && hasDrawableEquity(target.points))) return null\n+\n+  const endLabels = target\n+    ? [\n+        { dataKey: 'base', name: base.name, stroke: BASE_STROKE },\n+        { dataKey: 'target', name: target.name, stroke: TARGET_STROKE },\n+      ]\n+    : [{ dataKey: 'base', name: base.name, stroke: BASE_STROKE }]\n+\n+  return (\n+    <div className={styles.figure}>\n+      <div aria-label={buildAltText(props)} className={styles.chart} role=\"img\">\n+        <LineChart\n+          animationDuration={0}\n+          aspectRatio=\"\"\n+          className={styles.canvas}\n+          data={rows as unknown as Record<string, unknown>[]}\n+          decimate={false}\n+          margin={{ top: 18, right: 88, bottom: 30, left: 58 }}\n+          xDataKey=\"date\"\n+          yDomain={yDomain}\n+          yDomainTween={false}\n+        >\n+          <Grid\n+            highlightRowStroke=\"var(--thorp-neutral)\"\n+            highlightRowStrokeDasharray=\"6,4\"\n+            highlightRowStrokeWidth={1.2}\n+            highlightRowValues={initial == null ? undefined : [initial]}\n+            horizontal\n+            rowTickValues={amountTicks}\n+            strokeDasharray=\"2,5\"\n+          />\n+\n+          <AmountAxis values={amountTicks} />\n+\n+          {baseWindow ? (\n+            <DrawdownShade\n+              from={toChartDate(baseWindow.peakDate)}\n+              label={shadeNote(base.name, baseWindow)}\n+              to={toChartDate(baseWindow.troughDate)}\n+              variant=\"base\"\n+            />\n+          ) : null}\n+\n+          {target && targetWindow ? (\n+            <DrawdownShade\n+              from={toChartDate(targetWindow.peakDate)}\n+              label={shadeNote(target.name, targetWindow)}\n+              to={toChartDate(targetWindow.troughDate)}\n+              variant=\"target\"\n+            />\n+          ) : null}\n+\n+          <Line\n+            animate={false}\n+            curve={curveLinear}\n+            dataKey=\"base\"\n+            defined={(row) => typeof row.base === 'number'}\n+            fadeEdges={false}\n+            showHighlight={false}\n+            stroke={BASE_STROKE}\n+            strokeWidth={2.4}\n+          />\n+\n+          {target ? (\n+            <Line\n+              animate={false}\n+              curve={curveLinear}\n+              dataKey=\"target\"\n+              defined={(row) => typeof row.target === 'number'}\n+              fadeEdges={false}\n+              showHighlight={false}\n+              stroke={TARGET_STROKE}\n+              strokeDasharray={TARGET_DASH}\n+              strokeWidth={2.4}\n+            />\n+          ) : null}\n+\n+          <SeriesEndLabels series={endLabels} />\n+\n+          <XAxis numTicks={4} tickMode=\"domain\" />\n+        </LineChart>\n+      </div>\n+\n+      {notes.length > 0 ? <p className={styles.notes}>{notes.join(' ')}</p> : null}\n+    </div>\n+  )\n+}\n+\n+export default EquityChart\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,185 @@\n+import { useChartStable } from '@/components/charts/chart-context'\n+\n+/**\n+ * 곡선 오른쪽 끝에 직접 붙는 이름표(R-09, SC-010).\n+ *\n+ * <p><b>범례만으로 두 곡선을 구분하지 않는다.</b> 범례는 색을 보고 곡선을 되짚어 찾는 단계를\n+ * 요구하는데, 색을 구별하지 못하면 그 단계에서 막힌다. 이름을 곡선 끝에 붙이면 그 단계가 없어진다.\n+ *\n+ * <p><b>이름을 자르지 않는다.</b> 등록표의 전략 이름은 7~17자라 오른쪽 여백 한 줄에 들어가지 않는다.\n+ * 잘라 보이면 두 곡선이 어느 전략인지 읽을 수 없으므로, 여백 폭에 맞춰 단어 단위로 여러 줄로 나눈다.\n+ * 줄 수만큼 이름표의 높이가 달라지므로 겹침도 높이를 셈해 푼다.\n+ *\n+ * <p>차트 시스템의 `line-series-terminal-marker.tsx`는 끝점에 점만 찍으므로 여기서 새로 만든다.\n+ */\n+\n+/** 이름표 하나가 필요로 하는 값 */\n+export type SeriesEndLabelItem = {\n+  /** 차트 행에서 값을 꺼낼 열 이름 */\n+  dataKey: string\n+  /** 보일 이름 */\n+  name: string\n+  /** 곡선과 같은 색 */\n+  stroke: string\n+}\n+\n+const FONT_SIZE = 11\n+const LINE_HEIGHT = 13\n+/** 곡선 끝에서 글자까지의 거리. 앞의 6px에는 곡선과 이름표를 잇는 짧은 선이 들어간다 */\n+const TEXT_OFFSET = 9\n+/** 여백 오른쪽 끝에 남기는 틈. 글자가 그림 가장자리에 붙어 잘리지 않게 한다 */\n+const EDGE_PADDING = 2\n+/** 두 이름표 사이에 두는 세로 틈(화소) */\n+const BLOCK_GAP = 4\n+\n+/**\n+ * 글자 폭 어림. 한글·한자는 글자 크기만큼, 띄어쓰기는 그 4할, 나머지는 6할 남짓으로 잡는다.\n+ *\n+ * 앱 글꼴(Pretendard)과 대체 글꼴(맑은 고딕)로 11px에서 재 보면 한글은 글자 크기와 같거나 조금 좁고,\n+ * 띄어쓰기는 맑은 고딕에서 0.35배 남짓이다. 어림을 실제보다 조금 넓게 잡아야 줄이 여백을 넘지 않는다.\n+ */\n+const WIDE_CHAR = /[\\u1100-\\u11ff\\u3130-\\u318f\\uac00-\\ud7af\\u3000-\\u9fff]/\n+\n+function estimateWidth(text: string): number {\n+  let width = 0\n+  for (const char of text) {\n+    if (char === ' ') width += FONT_SIZE * 0.4\n+    else if (WIDE_CHAR.test(char)) width += FONT_SIZE\n+    else width += FONT_SIZE * 0.62\n+  }\n+  return width\n+}\n+\n+/**\n+ * 이름을 주어진 폭 안에 들어가는 줄들로 나눈다. 단어 사이에서 먼저 끊고, 한 단어가 폭을 넘을 때만\n+ * 글자 사이에서 끊는다. 글자를 버리지 않는다.\n+ */\n+function wrapName(name: string, maxWidth: number): string[] {\n+  const lines: string[] = []\n+  let current = ''\n+\n+  for (const word of name.trim().split(/\\s+/)) {\n+    const candidate = current ? current + ' ' + word : word\n+    if (estimateWidth(candidate) <= maxWidth) {\n+      current = candidate\n+      continue\n+    }\n+    if (current) lines.push(current)\n+    if (estimateWidth(word) <= maxWidth) {\n+      current = word\n+      continue\n+    }\n+    let piece = ''\n+    for (const char of word) {\n+      if (piece && estimateWidth(piece + char) > maxWidth) {\n+        lines.push(piece)\n+        piece = char\n+      } else {\n+        piece += char\n+      }\n+    }\n+    current = piece\n+  }\n+  if (current) lines.push(current)\n+  return lines\n+}\n+\n+type PlacedLabel = SeriesEndLabelItem & {\n+  /** 곡선 끝점 */\n+  x: number\n+  y: number\n+  lines: string[]\n+  /** 이름표 묶음의 위끝. 겹침을 푼 뒤의 값이다 */\n+  top: number\n+}\n+\n+function blockHeight(label: Pick<PlacedLabel, 'lines'>): number {\n+  return label.lines.length * LINE_HEIGHT\n+}\n+\n+/**\n+ * 이름표 하나. 위치는 부모가 정해 넘긴다 — 겹침은 이름표 하나가 혼자 풀 수 없다. 이름표가 곡선 끝에서\n+ * 밀려났으면 짧은 선이 곡선 끝과 이름표 가운데를 잇는다.\n+ */\n+export function SeriesEndLabel({ label }: { label: PlacedLabel }) {\n+  const center = label.top + blockHeight(label) / 2\n+\n+  return (\n+    <g data-testid={'series-end-label-' + label.dataKey}>\n+      <line\n+        stroke={label.stroke}\n+        strokeWidth={1}\n+        x1={label.x}\n+        x2={label.x + 6}\n+        y1={label.y}\n+        y2={center}\n+      />\n+      <text dominantBaseline=\"middle\" fill={label.stroke} fontSize={FONT_SIZE}>\n+        {label.lines.map((line, index) => (\n+          <tspan\n+            key={index}\n+            x={label.x + TEXT_OFFSET}\n+            y={label.top + LINE_HEIGHT * index + LINE_HEIGHT / 2}\n+          >\n+            {line}\n+          </tspan>\n+        ))}\n+      </text>\n+    </g>\n+  )\n+}\n+\n+/**\n+ * 곡선마다 마지막 값이 있는 날을 찾아 그 자리에 이름표를 붙이고, 겹치면 위아래로 민다.\n+ */\n+export function SeriesEndLabels({ series }: { series: SeriesEndLabelItem[] }) {\n+  const { data, xScale, yScale, xAccessor, innerHeight, margin } = useChartStable()\n+  const textWidth = Math.max(margin.right - TEXT_OFFSET - EDGE_PADDING, FONT_SIZE)\n+\n+  const placed: PlacedLabel[] = []\n+  for (const item of series) {\n+    for (let index = data.length - 1; index >= 0; index -= 1) {\n+      const value = data[index][item.dataKey]\n+      if (typeof value !== 'number' || !Number.isFinite(value)) continue\n+      const x = xScale(xAccessor(data[index]))\n+      const y = yScale(value)\n+      if (x == null || y == null || !Number.isFinite(x) || !Number.isFinite(y)) break\n+      const lines = wrapName(item.name, textWidth)\n+      placed.push({ ...item, x, y, lines, top: y - (lines.length * LINE_HEIGHT) / 2 })\n+      break\n+    }\n+  }\n+  if (placed.length === 0) return null\n+\n+  return (\n+    <g data-testid=\"series-end-labels\">\n+      {spreadApart(placed, innerHeight).map((label) => (\n+        <SeriesEndLabel key={label.dataKey} label={label} />\n+      ))}\n+    </g>\n+  )\n+}\n+\n+/**\n+ * 이름표 묶음을 위에서 아래 순으로 훑으며 앞 묶음의 아래끝보다 아래로 밀고, 그러다 그림 영역 바닥을\n+ * 넘으면 전체를 그만큼 위로 되돌린다. 그래도 위끝이 영역을 벗어나면 다시 아래로 붙인다. 바닥 아래에는\n+ * 가로축 날짜가 있어 그 선을 넘지 않게 한다. 원래 자리에서 조금 멀어지더라도 두 이름이 겹쳐 읽히지\n+ * 않는 편이 낫다.\n+ */\n+function spreadApart(labels: PlacedLabel[], innerHeight: number): PlacedLabel[] {\n+  const sorted = [...labels].sort((left, right) => left.top - right.top)\n+  for (let index = 1; index < sorted.length; index += 1) {\n+    const previous = sorted[index - 1]\n+    const floor = previous.top + blockHeight(previous) + BLOCK_GAP\n+    if (sorted[index].top < floor) sorted[index] = { ...sorted[index], top: floor }\n+  }\n+\n+  const last = sorted[sorted.length - 1]\n+  const overflow = last.top + blockHeight(last) - innerHeight\n+  const lifted = overflow > 0 ? sorted.map((label) => ({ ...label, top: label.top - overflow })) : sorted\n+\n+  const underflow = -lifted[0].top\n+  return underflow > 0 ? lifted.map((label) => ({ ...label, top: label.top + underflow })) : lifted\n+}\n+\n+export default SeriesEndLabels\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/SeriesEndLabel.tsx",
+          "old_path": "frontend/src/components/result/SeriesEndLabel.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,98 @@\n+import { describe, expect, it } from 'vitest'\n+import { findDrawdownWindow } from '@/components/result/drawdownWindow'\n+import { makeEquitySeries } from '@/test/resultFixtures'\n+import type { ResultTimeseriesPoint } from '@/types/result'\n+\n+/** 날짜·자산가치·하락 폭만 정해 손으로 만든 계열 */\n+function series(rows: [string, number, number][]): ResultTimeseriesPoint[] {\n+  return rows.map(([date, equity, drawdown]) => ({\n+    date,\n+    equity: equity.toFixed(2),\n+    cumulativeReturn: '0.000000',\n+    drawdown: drawdown.toFixed(6),\n+  }))\n+}\n+\n+describe('findDrawdownWindow', () => {\n+  it('고점과 저점의 날짜를 돌려준다', () => {\n+    const points = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })\n+\n+    const window = findDrawdownWindow(points, points[55].drawdown)\n+\n+    expect(window).toEqual({ peakDate: points[40].date, troughDate: points[55].date })\n+  })\n+\n+  it('보고된 최대 하락 폭과 저점이 어긋나면 음영을 포기한다', () => {\n+    const points = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })\n+\n+    expect(findDrawdownWindow(points, '-0.030000')).toBeNull()\n+  })\n+\n+  it('가장 낮은 하락 폭이 여러 날이면 처음 날을 저점으로 본다', () => {\n+    const points = series([\n+      ['2025-01-02', 10_000, 0],\n+      ['2025-01-03', 10_500, 0],\n+      ['2025-01-06', 9_975, -0.05],\n+      ['2025-01-07', 9_975, -0.05],\n+      ['2025-01-08', 10_200, -0.028571],\n+    ])\n+\n+    expect(findDrawdownWindow(points, '-0.050000')).toEqual({\n+      peakDate: '2025-01-03',\n+      troughDate: '2025-01-06',\n+    })\n+  })\n+\n+  it('고점 값이 여러 날이면 마지막 날부터 구간이 시작한다', () => {\n+    const points = series([\n+      ['2025-01-02', 10_500, 0],\n+      ['2025-01-03', 10_500, 0],\n+      ['2025-01-06', 9_975, -0.05],\n+    ])\n+\n+    expect(findDrawdownWindow(points, '-0.050000')).toEqual({\n+      peakDate: '2025-01-03',\n+      troughDate: '2025-01-06',\n+    })\n+  })\n+\n+  it('점이 1,900개여도 같은 구간을 찾는다', () => {\n+    const points = makeEquitySeries({ points: 1900, peakIndex: 600, troughIndex: 900 })\n+\n+    const window = findDrawdownWindow(points, points[900].drawdown)\n+\n+    expect(window).toEqual({ peakDate: points[600].date, troughDate: points[900].date })\n+    expect(points).toHaveLength(1900)\n+  })\n+\n+  it('저점 뒤 회복한 날은 구간에 들어가지 않는다', () => {\n+    const points = makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 })\n+\n+    const window = findDrawdownWindow(points, points[55].drawdown)\n+\n+    // 마지막 날은 저점보다 자산가치가 높다. 그런데도 구간의 끝은 저점이다.\n+    expect(Number(points[128].equity)).toBeGreaterThan(Number(points[55].equity))\n+    expect(window?.troughDate).toBe(points[55].date)\n+  })\n+\n+  it('하락이 없었다고 보고된 결과에는 구간이 없다', () => {\n+    const points = series([\n+      ['2025-01-02', 10_000, 0],\n+      ['2025-01-03', 10_500, 0],\n+    ])\n+\n+    expect(findDrawdownWindow(points, '0.000000')).toBeNull()\n+  })\n+\n+  it('최대 하락 폭을 읽을 수 없으면 구간이 없다', () => {\n+    const points = makeEquitySeries({ points: 40, peakIndex: 10, troughIndex: 20 })\n+\n+    expect(findDrawdownWindow(points, null)).toBeNull()\n+    expect(findDrawdownWindow(points, '')).toBeNull()\n+    expect(findDrawdownWindow(points, '계산되지 않음')).toBeNull()\n+  })\n+\n+  it('시계열이 비어 있으면 구간이 없다', () => {\n+    expect(findDrawdownWindow([], '-0.050000')).toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/drawdownWindow.test.ts",
+          "old_path": "frontend/src/components/result/drawdownWindow.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,83 @@\n+import type { ResultTimeseriesPoint } from '@/types/result'\n+\n+/**\n+ * 최대 하락 구간(FR-002). 그래프에 음영으로 겹쳐 그릴 고점~저점 두 날짜다.\n+ *\n+ * <p><b>004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다</b>\n+ * (spec Assumptions가 허용한 유일한 계산 예외, R-05). 그때까지는 받은 시계열에서 구간을 찾되,\n+ * 찾은 저점이 `summary.maxDrawdown`과 다른 말을 하면 음영을 포기한다 — 숫자와 그림이 어긋나 보이는\n+ * 것보다 음영이 없는 편이 낫다(원칙 VI).\n+ */\n+\n+/** 음영을 칠할 구간. 시작은 운용 중 가장 높았던 날, 끝은 그 뒤 가장 낮았던 날이다 */\n+export type DrawdownWindow = {\n+  peakDate: string\n+  troughDate: string\n+}\n+\n+/**\n+ * 저점의 하락 폭과 `summary.maxDrawdown`이 같다고 볼 수 있는 차이의 한계.\n+ *\n+ * 계약이 비율을 소수점 여섯 자리 문자열로 주므로, 두 값이 같은 계산에서 나왔어도 마지막 자리에서\n+ * 갈릴 수 있다. 이보다 큰 차이는 두 값이 다른 계산에서 나왔다는 뜻으로 읽는다.\n+ */\n+const MATCH_TOLERANCE = 1e-6\n+\n+/** 수로 읽히면 그 수, 아니면 `null`. 읽을 수 없는 값을 0으로 바꾸지 않는다 */\n+function toNumber(value: string | undefined | null): number | null {\n+  if (value == null || value.trim() === '') return null\n+  const parsed = Number(value)\n+  return Number.isFinite(parsed) ? parsed : null\n+}\n+\n+/**\n+ * 시계열에서 최대 하락 구간을 찾는다.\n+ *\n+ * <p>저점은 `drawdown`이 가장 낮은 날이며, 같은 값이 여러 날이면 처음 날을 쓴다 — 하락이 처음\n+ * 바닥에 닿은 날이 구간의 끝이다. 고점은 저점까지의 `equity`가 가장 높았던 날이고, 같은 값이 여러\n+ * 날이면 마지막 날을 쓴다 — 고점에 머무른 날들은 아직 하락이 아니므로 구간에 넣지 않는다.\n+ *\n+ * <p>회복 시점은 구간에 넣지 않는다(FR-002). 회복까지 걸린 기간은 상세의 숫자로 본다.\n+ *\n+ * @param points 받은 시계열. 점을 줄이지 않은 원본이어야 저점이 남는다(R-08)\n+ * @param summaryMaxDrawdown `summary.maxDrawdown`. 없거나 저점과 어긋나면 `null`을 돌려준다\n+ */\n+export function findDrawdownWindow(\n+  points: ResultTimeseriesPoint[],\n+  summaryMaxDrawdown: string | null | undefined,\n+): DrawdownWindow | null {\n+  const reported = toNumber(summaryMaxDrawdown)\n+  // 하락이 없었다고 보고된 결과에는 칠할 구간이 없다.\n+  if (reported == null || reported >= 0) return null\n+\n+  let troughIndex = -1\n+  let troughDrawdown = Number.POSITIVE_INFINITY\n+  for (let index = 0; index < points.length; index += 1) {\n+    const drawdown = toNumber(points[index].drawdown)\n+    if (drawdown == null) continue\n+    if (drawdown < troughDrawdown) {\n+      troughDrawdown = drawdown\n+      troughIndex = index\n+    }\n+  }\n+  if (troughIndex < 0 || troughDrawdown >= 0) return null\n+  if (Math.abs(troughDrawdown - reported) > MATCH_TOLERANCE) return null\n+\n+  let peakIndex = -1\n+  let peakEquity = Number.NEGATIVE_INFINITY\n+  for (let index = 0; index <= troughIndex; index += 1) {\n+    const equity = toNumber(points[index].equity)\n+    if (equity == null) continue\n+    if (equity >= peakEquity) {\n+      peakEquity = equity\n+      peakIndex = index\n+    }\n+  }\n+  // 고점을 찾지 못했거나 고점과 저점이 같은 날이면 그릴 구간이 없다.\n+  if (peakIndex < 0 || peakIndex >= troughIndex) return null\n+\n+  return {\n+    peakDate: points[peakIndex].date,\n+    troughDate: points[troughIndex].date,\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/drawdownWindow.ts",
+          "old_path": "frontend/src/components/result/drawdownWindow.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,24 @@\n+import type { ResultTimeseriesPoint } from '@/types/result'\n+\n+/**\n+ * 시계열 점의 자산가치를 읽는 규칙. 그래프(`EquityChart`)와 그래프 자리(`ResultPage`)가 같은 규칙으로\n+ * \"그릴 것이 있는가\"를 판단해야 둘의 말이 어긋나지 않는다.\n+ */\n+\n+/** 자산가치가 수로 읽히면 그 수, 아니면 `null`. 읽을 수 없는 값을 0으로 바꾸지 않는다(원칙 VI) */\n+export function readEquity(point: ResultTimeseriesPoint): number | null {\n+  const value = point.equity\n+  if (typeof value !== 'string' || value.trim() === '') return null\n+  const parsed = Number(value)\n+  return Number.isFinite(parsed) ? parsed : null\n+}\n+\n+/**\n+ * 그래프로 그릴 자산가치가 하나라도 있는가.\n+ *\n+ * 점이 없거나 모든 날의 자산가치가 비어 있으면 `false`다. 이때 축만 있는 빈 그래프를 그리면 \"돌았고\n+ * 비어 있었다\"는 거짓이 되므로, 화면은 그래프 대신 그 사실을 한 문장으로 알린다.\n+ */\n+export function hasDrawableEquity(points: ResultTimeseriesPoint[]): boolean {\n+  return points.some((point) => readEquity(point) != null)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/equityPoints.ts",
+          "old_path": "frontend/src/components/result/equityPoints.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,6 +24,22 @@ export function formatMoney(value: string): string {\n   return `${moneyFormat.format(amount)}원`\n }\n \n+const axisAmountFormat = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 })\n+\n+/**\n+ * 그래프 세로축 눈금의 금액. `10500000` → `\"1,050만원\"`, `125000000` → `\"1.25억원\"`.\n+ *\n+ * <p>응답의 값이 아니라 축이 고른 둥근 눈금 값을 옮긴다. 좁은 여백에 들어가도록 만·억 단위로 줄여\n+ * 쓴다. 결과의 금액은 이 함수가 아니라 `formatMoney`로 원 단위까지 보인다.\n+ */\n+export function formatAxisAmount(value: number): string {\n+  if (!Number.isFinite(value)) return ''\n+  const size = Math.abs(value)\n+  if (size >= 100_000_000) return `${axisAmountFormat.format(value / 100_000_000)}억원`\n+  if (size >= 10_000) return `${axisAmountFormat.format(value / 10_000)}만원`\n+  return `${axisAmountFormat.format(value)}원`\n+}\n+\n /** 값이 수로 읽히고 0인가. 읽을 수 없으면 `false`다 */\n export function isZeroValue(value: string): boolean {\n   return value.trim() !== '' && Number(value) === 0\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/formatResult.ts",
+          "old_path": "frontend/src/components/result/formatResult.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -214,6 +214,21 @@ describe('ResultPage', () => {\n     expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n   })\n \n+  it.each([\n+    ['점이 하나도 없으면', []],\n+    ['모든 날의 자산가치가 비어 있으면', resultTimeseries.points.map((point) => ({ ...point, equity: '' }))],\n+  ])('시계열을 받았어도 %s 그래프 대신 그 사실을 알린다', async (_case, points) => {\n+    apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n+    apiMocks.fetchResultTimeseries.mockResolvedValue({ partial: true, points })\n+\n+    const { container } = renderResult()\n+\n+    expect(\n+      await screen.findByText('받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.'),\n+    ).not.toBeNull()\n+    expect(container.querySelector('[role=\"img\"]')).toBeNull()\n+  })\n+\n   it('연결에 실패하면 다시 불러오기를 두고 누르면 다시 부른다', async () => {\n     apiMocks.fetchResult\n       .mockRejectedValueOnce(new ResultError('서버에 연결할 수 없습니다.'))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,8 @@\n import { useParams } from 'react-router-dom'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { strategyLabel } from '@/components/result/conditionLine'\n+import { EquityChart } from '@/components/result/EquityChart'\n+import { hasDrawableEquity } from '@/components/result/equityPoints'\n import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'\n import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'\n import { selectSummarySentence } from '@/components/result/summarySentences'\n@@ -16,8 +18,7 @@ import styles from './ResultPage.module.css'\n  *\n  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).\n  *\n- * <p>그래프(B04 T044)·상태 한 문장(B06 T075)·자세히 보기(B07 T064)·비교(B05 T050)는 뒤 묶음이\n- * 표시한 자리에 끼운다.\n+ * <p>상태 한 문장(B06 T075)·자세히 보기(B07 T064)·비교(B05 T050)는 뒤 묶음이 표시한 자리에 끼운다.\n  */\n export function ResultPage() {\n   const { token = '' } = useParams()\n@@ -87,7 +88,7 @@ function ResultView({\n \n       <ResultSummaryCard detail={detail} completedThrough={completedThrough} />\n \n-      {/* B04 T044: 자산가치 곡선과 최대 하락 구간 음영이 이 자리에 온다. */}\n+      <ResultChartSlot detail={detail} timeseries={timeseries} />\n \n       {summary ? (\n         <p className={styles.sentence}>\n@@ -111,6 +112,56 @@ function ResultView({\n   )\n }\n \n+/**\n+ * 그래프 자리(FR-001).\n+ *\n+ * <p>시계열을 받았을 때만 그린다. 받지 못했으면 빈 곡선 대신 받지 못한 사유를 한 문장으로 둔다 —\n+ * 빈 그래프는 \"돌았고 비어 있었다\"는 거짓이 된다. 받았더라도 자산가치 기록이 하나도 없으면(거래일을\n+ * 하나도 마치지 못하고 취소된 부분 결과) 같은 이유로 그리지 않고 그 사실을 알린다. 아직 계산 중이면\n+ * 그릴 것이 없으므로 자리를 비운다.\n+ *\n+ * <p>비교 대상 곡선은 B05가 이 컴포넌트의 `target`에 이어 붙인다.\n+ */\n+function ResultChartSlot({\n+  detail,\n+  timeseries,\n+}: {\n+  detail: PublicResultDetail\n+  timeseries: TimeseriesState\n+}) {\n+  if (timeseries.status === 'unavailable') {\n+    return (\n+      <p className={styles.status}>그래프를 그릴 시계열을 받지 못했습니다. {timeseries.message}</p>\n+    )\n+  }\n+  if (timeseries.status !== 'loaded') return null\n+  if (!hasDrawableEquity(timeseries.data.points)) {\n+    return <p className={styles.status}>받은 시계열에 자산가치 기록이 없어 그래프를 그리지 않았습니다.</p>\n+  }\n+\n+  const { summary } = detail\n+\n+  return (\n+    <EquityChart\n+      altNumbers={\n+        summary\n+          ? {\n+              netTotalReturn: summary.netTotalReturn,\n+              maxDrawdown: summary.maxDrawdown,\n+              totalTradingCost: summary.totalTradingCost,\n+            }\n+          : null\n+      }\n+      base={{\n+        name: strategyLabel(detail),\n+        points: timeseries.data.points,\n+        maxDrawdown: summary?.maxDrawdown ?? null,\n+      }}\n+      initialCash={detail.config.initialCash}\n+    />\n+  )\n+}\n+\n /**\n  * 완료 범위. 계산 중이면 진행 보고의 날짜를, 끝난 결과면 받은 시계열의 마지막 날짜를 쓴다.\n  * 공개 상세는 끝난 결과에 `progress`를 담지 않는다. 둘 다 없으면 지어내지 않고 `null`이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'\n import { dirname, resolve } from 'node:path'\n import { fileURLToPath } from 'node:url'\n import { describe, expect, it } from 'vitest'\n+import { findDrawdownWindow } from '@/components/result/drawdownWindow'\n import {\n   makeEquitySeries,\n   resultDetailCancelledNoSummary,\n@@ -17,8 +18,9 @@ import {\n  * <p>프론트엔드가 `docs/specs`의 계약 예시를 테스트에서 직접 읽는 첫 사례다. 지금까지는 주석으로만\n  * 가리켰다. 계약 예시가 바뀌었는데 픽스처가 그대로면 화면 테스트는 옛 모양으로 통과한다.\n  *\n- * <p>값이 아니라 <b>키 집합</b>과 분기에 쓰는 값(`status`·`validationTier`)만 본다. 전략 이름·종목 같은\n- * 값은 픽스처가 일부러 지어낸 것이다(`resultFixtures.ts` 머리 주석).\n+ * <p>상세는 값이 아니라 <b>키 집합</b>과 분기에 쓰는 값(`status`·`validationTier`)만 본다. 전략 이름·종목\n+ * 같은 값은 픽스처가 일부러 지어낸 것이다(`resultFixtures.ts` 머리 주석). 시계열은 지어낼 이유가 없어\n+ * 값까지 같게 둔다 — 상세의 최대 하락 폭과 저점이 맞아야 그래프가 음영을 그린다.\n  */\n \n const examplesDir = resolve(\n@@ -87,6 +89,21 @@ describe('결과 픽스처와 계약 예시', () => {\n     expect(resultTimeseries.points).toHaveLength(points.length)\n   })\n \n+  it('시계열의 값이 계약 예시와 같다', () => {\n+    expect(resultTimeseries).toEqual(readExample('result-timeseries.json').data)\n+  })\n+\n+  it('완료 상세의 최대 하락 폭이 시계열의 저점과 같아 음영 구간이 잡힌다', () => {\n+    const lowest = resultTimeseries.points.reduce((low, point) =>\n+      Number(point.drawdown) < Number(low.drawdown) ? point : low,\n+    )\n+\n+    expect(lowest.drawdown).toBe(resultDetailCompleted.summary?.maxDrawdown)\n+    expect(\n+      findDrawdownWindow(resultTimeseries.points, resultDetailCompleted.summary?.maxDrawdown),\n+    ).not.toBeNull()\n+  })\n+\n   it('어느 예시에도 004의 내부 실행 식별자가 없다', () => {\n     for (const file of [\n       'result-detail-completed.json',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/resultFixtures.test.ts",
+          "old_path": "frontend/src/test/resultFixtures.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -200,7 +200,151 @@ export function makeEquitySeries({\n   })\n }\n \n+/**\n+ * `result-timeseries.json`의 점을 그대로 옮긴 표다. 열 순서는 날짜·자산가치·누적 수익률·하락 비율이다.\n+ *\n+ * <p><b>`resultDetailCompleted.summary.maxDrawdown`(-0.041757)이 이 계열의 저점과 같아야 한다.</b> 둘이\n+ * 어긋나면 그래프가 R-05 규칙에 따라 음영을 포기하므로, 픽스처로 그린 화면에서 음영을 한 번도 볼 수\n+ * 없다. `resultFixtures.test.ts`가 값이 계약 예시와 같은지, 저점이 상세와 같은지 확인한다.\n+ */\n+const TIMESERIES_ROWS: [date: string, equity: string, cumulativeReturn: string, drawdown: string][] = [\n+  ['2025-01-01', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-02', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-03', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-06', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-07', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-08', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-09', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-10', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-13', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-14', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-15', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-16', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-17', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-20', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-21', '10000000.00', '0.000000', '0.000000'],\n+  ['2025-01-22', '9996858.55', '-0.000314', '-0.000314'],\n+  ['2025-01-23', '10014858.55', '0.001486', '0.000000'],\n+  ['2025-01-24', '10122858.55', '0.012286', '0.000000'],\n+  ['2025-01-27', '10131858.55', '0.013186', '0.000000'],\n+  ['2025-01-28', '10122858.55', '0.012286', '-0.000888'],\n+  ['2025-01-29', '10167858.55', '0.016786', '0.000000'],\n+  ['2025-01-30', '10059858.55', '0.005986', '-0.010622'],\n+  ['2025-01-31', '10032858.55', '0.003286', '-0.013277'],\n+  ['2025-02-03', '10077858.55', '0.007786', '-0.008851'],\n+  ['2025-02-04', '10149858.55', '0.014986', '-0.001770'],\n+  ['2025-02-05', '10131858.55', '0.013186', '-0.003541'],\n+  ['2025-02-06', '10164520.15', '0.016452', '-0.000328'],\n+  ['2025-02-07', '10093720.15', '0.009372', '-0.007291'],\n+  ['2025-02-10', '10302520.15', '0.030252', '0.000000'],\n+  ['2025-02-11', '10222120.15', '0.022212', '-0.007804'],\n+  ['2025-02-12', '10353520.15', '0.035352', '0.000000'],\n+  ['2025-02-13', '10397320.15', '0.039732', '0.000000'],\n+  ['2025-02-14', '10278520.15', '0.027852', '-0.011426'],\n+  ['2025-02-17', '10267120.15', '0.026712', '-0.012522'],\n+  ['2025-02-18', '10496920.15', '0.049692', '0.000000'],\n+  ['2025-02-19', '10602520.15', '0.060252', '0.000000'],\n+  ['2025-02-20', '10610920.15', '0.061092', '0.000000'],\n+  ['2025-02-21', '10535320.15', '0.053532', '-0.007125'],\n+  ['2025-02-24', '10807120.15', '0.080712', '0.000000'],\n+  ['2025-02-25', '10749520.15', '0.074952', '-0.005330'],\n+  ['2025-02-26', '10823920.15', '0.082392', '0.000000'],\n+  ['2025-02-27', '10972120.15', '0.097212', '0.000000'],\n+  ['2025-02-28', '10910920.15', '0.091092', '-0.005578'],\n+  ['2025-03-03', '10719520.15', '0.071952', '-0.023022'],\n+  ['2025-03-04', '10814320.15', '0.081432', '-0.014382'],\n+  ['2025-03-05', '10870120.15', '0.087012', '-0.009296'],\n+  ['2025-03-06', '10835320.15', '0.083532', '-0.012468'],\n+  ['2025-03-07', '10993720.15', '0.099372', '0.000000'],\n+  ['2025-03-10', '11037520.15', '0.103752', '0.000000'],\n+  ['2025-03-11', '10834720.15', '0.083472', '-0.018374'],\n+  ['2025-03-12', '10876631.35', '0.087663', '-0.014577'],\n+  ['2025-03-13', '10845431.35', '0.084543', '-0.017403'],\n+  ['2025-03-14', '10631831.35', '0.063183', '-0.036755'],\n+  ['2025-03-17', '10694231.35', '0.069423', '-0.031102'],\n+  ['2025-03-18', '10684631.35', '0.068463', '-0.031972'],\n+  ['2025-03-19', '10576631.35', '0.057663', '-0.041757'],\n+  ['2025-03-20', '10648631.35', '0.064863', '-0.035233'],\n+  ['2025-03-21', '10715831.35', '0.071583', '-0.029145'],\n+  ['2025-03-24', '10631831.35', '0.063183', '-0.036755'],\n+  ['2025-03-25', '10684631.35', '0.068463', '-0.031972'],\n+  ['2025-03-26', '10828631.35', '0.082863', '-0.018925'],\n+  ['2025-03-27', '10723031.35', '0.072303', '-0.028493'],\n+  ['2025-03-28', '10775831.35', '0.077583', '-0.023709'],\n+  ['2025-03-31', '10773431.35', '0.077343', '-0.023926'],\n+  ['2025-04-01', '11107031.35', '0.110703', '0.000000'],\n+  ['2025-04-02', '10828631.35', '0.082863', '-0.025065'],\n+  ['2025-04-03', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-04', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-07', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-08', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-09', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-10', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-11', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-14', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-15', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-16', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-17', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-18', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-21', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-22', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-23', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-24', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-25', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-28', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-29', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-04-30', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-01', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-02', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-05', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-06', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-07', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-08', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-09', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-12', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-13', '10923031.51', '0.092303', '-0.016566'],\n+  ['2025-05-14', '10919521.51', '0.091952', '-0.016882'],\n+  ['2025-05-15', '11036521.51', '0.103652', '-0.006348'],\n+  ['2025-05-16', '11036521.51', '0.103652', '-0.006348'],\n+  ['2025-05-19', '11216521.51', '0.121652', '0.000000'],\n+  ['2025-05-20', '11180521.51', '0.118052', '-0.003210'],\n+  ['2025-05-21', '11333521.51', '0.133352', '0.000000'],\n+  ['2025-05-22', '11351521.51', '0.135152', '0.000000'],\n+  ['2025-05-23', '11306521.51', '0.130652', '-0.003964'],\n+  ['2025-05-26', '11207521.51', '0.120752', '-0.012686'],\n+  ['2025-05-27', '11189521.51', '0.118952', '-0.014271'],\n+  ['2025-05-28', '11324521.51', '0.132452', '-0.002379'],\n+  ['2025-05-29', '11405521.51', '0.140552', '0.000000'],\n+  ['2025-05-30', '11477521.51', '0.147752', '0.000000'],\n+  ['2025-06-02', '11261521.51', '0.126152', '-0.018819'],\n+  ['2025-06-03', '11324521.51', '0.132452', '-0.013330'],\n+  ['2025-06-04', '11378521.51', '0.137852', '-0.008626'],\n+  ['2025-06-05', '11333521.51', '0.133352', '-0.012546'],\n+  ['2025-06-06', '11279521.51', '0.127952', '-0.017251'],\n+  ['2025-06-09', '11279521.51', '0.127952', '-0.017251'],\n+  ['2025-06-10', '11450521.51', '0.145052', '-0.002352'],\n+  ['2025-06-11', '11351521.51', '0.135152', '-0.010978'],\n+  ['2025-06-12', '11315521.51', '0.131552', '-0.014115'],\n+  ['2025-06-13', '11450521.51', '0.145052', '-0.002352'],\n+  ['2025-06-16', '11405521.51', '0.140552', '-0.006273'],\n+  ['2025-06-17', '11378521.51', '0.137852', '-0.008626'],\n+  ['2025-06-18', '11387521.51', '0.138752', '-0.007841'],\n+  ['2025-06-19', '11279521.51', '0.127952', '-0.017251'],\n+  ['2025-06-20', '11297521.51', '0.129752', '-0.015683'],\n+  ['2025-06-23', '11198521.51', '0.119852', '-0.024308'],\n+  ['2025-06-24', '11279521.51', '0.127952', '-0.017251'],\n+  ['2025-06-25', '11279521.51', '0.127952', '-0.017251'],\n+  ['2025-06-26', '11504521.51', '0.150452', '0.000000'],\n+  ['2025-06-27', '11531521.51', '0.153152', '0.000000'],\n+  ['2025-06-30', '11666521.51', '0.166652', '0.000000'],\n+]\n+\n export const resultTimeseries: ResultTimeseries = {\n   partial: false,\n-  points: makeEquitySeries({ points: 129, peakIndex: 40, troughIndex: 55 }),\n+  points: TIMESERIES_ROWS.map(([date, equity, cumulativeReturn, drawdown]) => ({\n+    date,\n+    equity,\n+    cumulativeReturn,\n+    drawdown,\n+  })),\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/resultFixtures.ts",
+          "old_path": "frontend/src/test/resultFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,53 @@\n-import { cleanup } from '@testing-library/react'\n+import { cleanup, configure } from '@testing-library/react'\n import { afterEach, vi } from 'vitest'\n \n+/**\n+ * `findBy*`·`waitFor`가 기다리는 시간의 한계.\n+ *\n+ * <p>기본값 1초는 이 저장소의 화면 테스트에 모자란다. 파일 96개가 jsdom을 각자 만들며 병렬로 도는\n+ * 동안 느린 화면(`SignupPage`는 혼자 20초가 넘는다)이 1초 안에 다음 단계를 그리지 못해, 코드가\n+ * 멀쩡해도 실행할 때마다 다른 파일이 실패한다. 한계를 늘려도 단언은 그대로이므로 진짜 고장은 여전히\n+ * 실패한다.\n+ */\n+configure({ asyncUtilTimeout: 5_000 })\n+\n Object.defineProperty(window, 'scrollTo', {\n   configurable: true,\n   value: vi.fn(),\n })\n \n+/**\n+ * jsdom에는 `ResizeObserver`가 없다. 차트의 크기 측정(`@visx/responsive`의 `ParentSize`)이 마운트\n+ * 시점에 생성자를 부르므로, 없으면 차트를 품은 화면이 렌더 도중 터진다.\n+ *\n+ * <p>크기를 알려주지 않는 관찰자다. 폭이 0이면 차트는 아무것도 그리지 않으므로, 화면 테스트는\n+ * 차트 없이 나머지를 확인한다. 실제로 그려진 요소를 봐야 하는 테스트는 `ParentSize`를 그 파일에서\n+ * 직접 대역으로 바꿔 크기를 정한다(`EquityChart.test.tsx`).\n+ */\n+if (!('ResizeObserver' in window)) {\n+  Object.defineProperty(window, 'ResizeObserver', {\n+    configurable: true,\n+    value: class {\n+      observe() {}\n+      unobserve() {}\n+      disconnect() {}\n+    },\n+  })\n+}\n+\n+/**\n+ * jsdom은 SVG 경로의 길이를 재지 않는다. 차트가 선 길이로 파선 꼬리와 강조 구간을 계산하므로,\n+ * 없으면 경로를 그리는 화면이 마운트 직후 터진다. 길이에 기대는 표현은 이 저장소의 결과 그래프가\n+ * 쓰지 않으므로 0으로 답한다.\n+ */\n+const svgPathPrototype: { getTotalLength?: () => number } | undefined =\n+  typeof SVGPathElement === 'undefined'\n+    ? (globalThis as { SVGElement?: { prototype: object } }).SVGElement?.prototype\n+    : SVGPathElement.prototype\n+if (svgPathPrototype && !svgPathPrototype.getTotalLength) {\n+  svgPathPrototype.getTotalLength = () => 0\n+}\n+\n afterEach(() => {\n   cleanup()\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/setup.ts",
+          "old_path": "frontend/src/test/setup.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,6 +33,11 @@ export default defineConfig({\n     // 이 파일은 node:test 전용이며 아래 package.json의 test:legacy에서 별도로 실행한다.\n     exclude: [...configDefaults.exclude, 'src/api/market.test.ts'],\n     setupFiles: ['./src/test/setup.ts'],\n+    // 파일마다 jsdom을 새로 만들어 병렬로 돌기 때문에, 입력을 한 글자씩 흘려 넣는 무거운 화면\n+    // 테스트는 기본 한계 5초를 넘길 때가 있다. 코드가 멀쩡한데도 실행할 때마다 다른 파일이 실패하면\n+    // 결과를 믿을 수 없으므로 한계를 늘린다. 단언은 그대로이니 진짜 멈춘 테스트는 여전히 실패한다.\n+    testTimeout: 20_000,\n+    hookTimeout: 20_000,\n   },\n   server: {\n     port: 5173,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -160,11 +160,11 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Frontend — 그래프\n \n-- [ ] T040 [US2] (FE) `frontend/src/components/result/drawdownWindow.ts` — `findDrawdownWindow(points, summaryMaxDrawdown)`: `drawdown` 계열의 최솟값 지점(저점)과 그 직전에 `equity`가 가장 높았던 날(고점)을 `{peakDate, troughDate}`로 돌려준다. 저점의 `drawdown`이 `summary.maxDrawdown`과 다르면 `null`(R-05, 원칙 VI). 회복 시점은 구간에 넣지 않는다(FR-002). 머리 주석: \"004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다(spec Assumptions의 유일한 계산 예외)\"\n-- [ ] T041 [US2] (FE) `frontend/src/components/result/EquityChart.tsx`(plan의 `ComparisonChart`) — `frontend/src/components/charts/line-chart.tsx`의 `LineChart`·`Line`으로 세로축 원화 자산가치(사용자가 입력한 금액에서 출발), 기준 실선·비교 대상 파선(`Line`의 `dashArray`), 시작 금액 수준의 기준선(`Grid`의 `highlightRow*`). **점 수를 줄이지 않는다** — `decimate-time-series.ts`를 import하지 않는다(R-08, FR-001). 두 계열의 날짜 축을 병합한다. `equity`가 없는 날은 선을 끊어 빈 채로 두고 앞뒤 값을 잇거나 보간하지 않는다(spec Edge Case, 원칙 VI. `Line`에 끊는 수단이 없으면 T042와 같은 한 곳에서 최소로 더한다). `role=\"img\"`와 대안 텍스트(세 숫자와 비교 대상 유무를 문장으로, FR-022)\n-- [ ] T042 [US2] (FE) `frontend/src/components/result/DrawdownShade.tsx` — 고점~저점 구간 음영: 색 채움과 **상단 점선 경계**를 함께 그려 회색조에서도 경계가 보인다(R-09). `LineChart`의 자식으로 x 스케일을 읽어 `<rect>`로 그린다. 자식이 스케일을 읽을 수단이 없으면 `frontend/src/components/charts/line-chart.tsx`에 자식용 스케일 컨텍스트를 최소로 추가한다(차트 시스템 변경은 이 한 곳으로 제한하고 MR 본문에 적는다). 비교 대상의 음영은 빗금 패턴으로 기준과 구분한다\n-- [ ] T043 [US2] (FE) `frontend/src/components/result/SeriesEndLabel.tsx` — 곡선 오른쪽 끝에 직접 붙는 이름표(기준·비교 대상의 전략 이름). 두 이름표가 겹치면 위아래로 민다. 범례만으로 구분하지 않는다(SC-010). 차트 시스템에는 이름표 컴포넌트가 없어 새로 만든다(`line-series-terminal-marker.tsx`는 점만 그린다)\n-- [ ] T044 [US2] (FE) `frontend/src/pages/ResultPage.tsx`에 `EquityChart`를 끼운다 — 기준만 있으면 곡선 1개와 음영, `targetState === 'READY'`일 때만 두 곡선. 음영 구간이 `null`이면 숫자와 정의만 보이고 음영은 없다(quickstart 2의 정상 동작). 좁은 화면에서 `aspectRatio`를 조정한다\n+- [X] T040 [US2] (FE) `frontend/src/components/result/drawdownWindow.ts` — `findDrawdownWindow(points, summaryMaxDrawdown)`: `drawdown` 계열의 최솟값 지점(저점)과 그 직전에 `equity`가 가장 높았던 날(고점)을 `{peakDate, troughDate}`로 돌려준다. 저점의 `drawdown`이 `summary.maxDrawdown`과 다르면 `null`(R-05, 원칙 VI). 회복 시점은 구간에 넣지 않는다(FR-002). 머리 주석: \"004가 `summary.maxDrawdownWindow`를 주면 그 값을 쓰고 이 함수를 지운다(spec Assumptions의 유일한 계산 예외)\"\n+- [X] T041 [US2] (FE) `frontend/src/components/result/EquityChart.tsx`(plan의 `ComparisonChart`) — `frontend/src/components/charts/line-chart.tsx`의 `LineChart`·`Line`으로 세로축 원화 자산가치(사용자가 입력한 금액에서 출발), 기준 실선·비교 대상 파선(`Line`의 `dashArray`), 시작 금액 수준의 기준선(`Grid`의 `highlightRow*`). **점 수를 줄이지 않는다** — `decimate-time-series.ts`를 import하지 않는다(R-08, FR-001). 두 계열의 날짜 축을 병합한다. `equity`가 없는 날은 선을 끊어 빈 채로 두고 앞뒤 값을 잇거나 보간하지 않는다(spec Edge Case, 원칙 VI. `Line`에 끊는 수단이 없으면 T042와 같은 한 곳에서 최소로 더한다). `role=\"img\"`와 대안 텍스트(세 숫자와 비교 대상 유무를 문장으로, FR-022)\n+- [X] T042 [US2] (FE) `frontend/src/components/result/DrawdownShade.tsx` — 고점~저점 구간 음영: 색 채움과 **상단 점선 경계**를 함께 그려 회색조에서도 경계가 보인다(R-09). `LineChart`의 자식으로 x 스케일을 읽어 `<rect>`로 그린다. 자식이 스케일을 읽을 수단이 없으면 `frontend/src/components/charts/line-chart.tsx`에 자식용 스케일 컨텍스트를 최소로 추가한다(차트 시스템 변경은 이 한 곳으로 제한하고 MR 본문에 적는다). 비교 대상의 음영은 빗금 패턴으로 기준과 구분한다\n+- [X] T043 [US2] (FE) `frontend/src/components/result/SeriesEndLabel.tsx` — 곡선 오른쪽 끝에 직접 붙는 이름표(기준·비교 대상의 전략 이름). 두 이름표가 겹치면 위아래로 민다. 범례만으로 구분하지 않는다(SC-010). 차트 시스템에는 이름표 컴포넌트가 없어 새로 만든다(`line-series-terminal-marker.tsx`는 점만 그린다)\n+- [X] T044 [US2] (FE) `frontend/src/pages/ResultPage.tsx`에 `EquityChart`를 끼운다 — 기준만 있으면 곡선 1개와 음영, `targetState === 'READY'`일 때만 두 곡선. 음영 구간이 `null`이면 숫자와 정의만 보이고 음영은 없다(quickstart 2의 정상 동작). 좁은 화면에서 `aspectRatio`를 조정한다\n \n ### Frontend — 비교 대상 선택과 실행 요청\n \n@@ -181,8 +181,8 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ### Frontend 테스트\n \n-- [ ] T055 [US2] (FE 테스트) `frontend/src/components/result/drawdownWindow.test.ts` — 합성 계열에서 고점·저점 날짜; `summary.maxDrawdown`과 어긋나면 `null`; 저점이 여러 날이면 처음 것; 1,900점 입력에서도 같은 결과; 회복일이 구간에 없다\n-- [ ] T056 [US2] (FE 테스트) `frontend/src/components/result/EquityChart.test.tsx` — 두 계열이면 `stroke-dasharray`가 있는 경로와 이름표 텍스트 둘이 DOM에 있다(SC-010의 자동 확인 부분, R-09); 음영 `<rect>`와 점선 경계가 있고 구간이 `null`이면 없다(quickstart 2); 입력 점 수와 렌더 점 수가 같다(축소 없음); `role=\"img\"` 대안 텍스트에 세 숫자; 기준만 있으면 파선이 없다; `equity`가 빠진 날이 있으면 경로가 그 자리에서 끊긴다(보간 없음)\n+- [X] T055 [US2] (FE 테스트) `frontend/src/components/result/drawdownWindow.test.ts` — 합성 계열에서 고점·저점 날짜; `summary.maxDrawdown`과 어긋나면 `null`; 저점이 여러 날이면 처음 것; 1,900점 입력에서도 같은 결과; 회복일이 구간에 없다\n+- [X] T056 [US2] (FE 테스트) `frontend/src/components/result/EquityChart.test.tsx` — 두 계열이면 `stroke-dasharray`가 있는 경로와 이름표 텍스트 둘이 DOM에 있다(SC-010의 자동 확인 부분, R-09); 음영 `<rect>`와 점선 경계가 있고 구간이 `null`이면 없다(quickstart 2); 입력 점 수와 렌더 점 수가 같다(축소 없음); `role=\"img\"` 대안 텍스트에 세 숫자; 기준만 있으면 파선이 없다; `equity`가 빠진 날이 있으면 경로가 그 자리에서 끊긴다(보간 없음)\n - [ ] T057 [US2] (FE 테스트) `frontend/src/components/result/compareQuery.test.ts` — 파싱·조립 왕복, 형식 오류 무시, `searchId` 보존, 비교 해제 시 기준 주소만 남음\n - [ ] T058 [US2] (FE 테스트) `frontend/src/components/result/CompareTargetPicker.test.tsx` — 워밍업이 긴 전략에만 \"짧아집니다\" 문구(R-13); `selectable: false`는 이유와 함께 비활성; 키보드로 선택; 등록표 실패 시 목록 대신 사유\n - [ ] T059 [US2] (FE 테스트) `frontend/src/hooks/useCompareTarget.test.tsx`와 `frontend/src/components/result/CompareTargetSlot.test.tsx` — 고르면 `createBacktest`가 1회 호출되고 본문의 섹터·기간·금액·비용·워밍업이 기준 `config`와 같으며 전략만 다르다(SC-003, quickstart 3); `REUSED`면 즉시 READY; RUNNING이면 단계·비율, QUEUED면 기다린 시간; 429면 `retryAfterSeconds`가 보이고 자동 재요청 0회, 버튼을 누르면 1회; FAILED면 사유와 '다시 시도'가 `retryResult`를 부른다; 410이면 기준이 그대로 그려지고 안내가 있다; 비교 대상을 바꿔도 취소 호출이 없다\n@@ -414,3 +414,19 @@ Task: \"api/result.test.ts — 경로·오류 정규화\" (T038)\n - 문장은 `summarySentences.ts`·`statusSentences.ts` 두 파일에서만 나온다. 컴포넌트가 문장을 만들면 SC-004의 검수 대상이 흩어진다\n - `backtestId`(`BT-…`)는 백엔드 `result` 패키지의 응답과 프론트엔드 결과 화면 어디에도 없어야 한다(SC-009). T084·T085가 검사한다\n - 각 묶음의 MR 본문 \"주요 변경 사항\"에 포함한 T### 번호를 나열해 추적한다(constitution \"Jira 연계\")\n+\n+---\n+\n+## Phase 9: Convergence\n+\n+B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.\n+\n+- [X] T089 (FE) 그릴 점이 없을 때 그래프 자리에 그 사실을 한 문장으로 알린다 — `frontend/src/pages/ResultPage.tsx`의 `ResultChartSlot`이 `timeseries.status === 'loaded'`인데 `points`가 비어 있는 경우를 따로 가른다. 지금은 `frontend/src/components/result/EquityChart.tsx`가 `null`을 돌려주고 화면에는 빈 칸만 남는다. 취소된 부분 결과처럼 거래일이 하나도 저장되지 않은 결과에서 일어난다 per 원칙 VI · FR-001 (partial)\n+- [X] T090 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)\n+- [X] T091 (FE 테스트) `frontend/src/test/resultFixtures.ts`의 `resultTimeseries`와 `resultDetailCompleted.summary.maxDrawdown`을 서로 맞춘다 — 지금은 계열의 최저 하락 폭이 -0.050000인데 상세는 -0.041757이라 R-05 규칙에 걸려 픽스처로 그린 화면에 음영이 한 번도 나오지 않는다. 계약 예시(`docs/specs/result-api/examples/`)는 둘이 맞으므로 픽스처를 그쪽에 맞춘다. `resultFixtures.test.ts`·`ResultSummaryCard.test.tsx`가 계속 통과하는지 확인한다 per T002 · T006 (contradicts)\n+\n+## Phase 10: Convergence\n+\n+Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.\n+\n+- [X] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 \"변동성에 …\"처럼 잘린다. 같은 파일 주석의 \"등록된 다섯 전략 이름이 모두 여기 들어간다\"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2830425": []
+  }
+}

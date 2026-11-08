@@ -1,0 +1,692 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 946811,
+    "iid": 151,
+    "project_id": 1444456,
+    "title": "feat(be) : GDELT 관련 API 호출 오류 문제 수정",
+    "description": "## 작업 내용 요약\n\nspec 012를 닫기 전에 남은 기록 공백을 메우고, 실제로 띄워 확인하는 과정에서 드러난 결함 둘을 고쳤다.\n\n기록 쪽은 셋이다. 매체에 허가를 요청해도 그 사실을 남길 자리가 없었고, 묶음 규칙을 v2로 올린 것이 옛 자료에 닿지 않는다는 사실이 어디에도 적혀 있지 않았으며, 제목 유사도 값에 두 척도가 섞이는데 그 구분이 코드에도 스키마에도 없었다.\n\nPD-15는 각 매체가 공개한 RSS 안내를 읽어 확인을 마쳤다. 매체 회신은 받지 않았고, 확인 결과를 근거로 팀이 사용 여부를 정한 기록을 등록표에 남겼다.\n\n결함 둘은 로컬에서 백엔드를 띄워 수집을 돌려 보고 찾았다. 등록표 동기화가 시험용 공용 DB를 오염시키던 것과, GDELT 질의가 API 문법을 어겨 매 회차 빈손으로 끝나던 것이다.\n\n## 관련 티켓\n\n* S15P21E205-261\n* https://ssafy.atlassian.net/browse/S15P21E205-261\n\n## 주요 변경 사항\n\n* **허가 요청 이력** — 등록표에 `permissionRequest`(요청 시각·근거)를 적을 수 있게 하고 동기화가 `REQUESTED` 이력으로 남긴다. 회신과 같은 append-only 규칙을 따르고 재기동해도 늘지 않는다. 요청을 회신보다 먼저 넣어 이력이 실제 순서대로 쌓이게 했고, 회신 시각이 요청보다 빠른 등록표는 기동에서 막는다 — 앞뒤가 뒤집히면 허가받은 매체가 `PENDING`으로 굳어 조용히 공개에서 빠진다\n* **PD-15 진행 상황 로그** — 기동할 때 `allowed / denied / awaitingReply / notRequested`를 남긴다. 요청했는데 답이 없는 것과 아예 요청하지 않은 것을 가른다. 새 API를 만들지 않았다\n* **매체 이용 조건 확인과 기록** — 경향신문·한국경제·매일경제의 RSS 안내를 읽고 결과를 등록표 `_permission`과 각 항목 `reference`, 그리고 문서에 남겼다. 등록표의 `permission`은 회신이 아니라 우리 확인과 팀 판단의 기록임을 그 자리에 분명히 적었다\n* **등록표 동기화가 시험 DB를 오염시키던 것** — 기동 시 도는 코드라 `@SpringBootTest` 컨텍스트에서 공용 Testcontainer에 매체를 커밋한다. 등록표에 허가 상태를 적자 \"허가된 매체가 없을 때\"를 확인하는 시험이 전제를 만들 수 없게 되면서 드러났다. 수집을 끈 것과 같은 이유로 `thorp.news.registry-sync-enabled=false`를 시험에 걸었다\n* **GDELT 질의 문법** — `mode=ArticleList` → `artlist`, OR로 이은 항목을 괄호로 감쌈, 하이픈이 든 낱말을 따옴표로 감쌈. 셋 다 GDELT가 오류 상태가 아니라 200에 평문 안내를 실어 보내는 종류라 fixture로는 드러나지 않는다\n* **규칙 전환과 유사도 척도** — 규칙 버전이 바뀌어도 옛 묶음을 다시 만들지 않는다는 것과 그 결과를 문서에 적고, `title_similarity`가 어느 척도인지 `grouping_rule_version`으로 갈린다는 것을 코드 주석에 남겼다\n* **남은 일 정리** — `docs/specs/market-news-api.md` 끝에 \"남은 일\" 절을 만들어 GDELT 질의어 문제와 알려진 한계 넷을 한자리에 적었다\n\n실행 Task: T084, T085 (tasks.md Phase 16)\n\n## 테스트\n\n- [x] `./gradlew spotlessApply cleanTest build` 통과 — 1335개 중 실패 0, skip 4\n- [x] skip 4건이 모두 opt-in 게이트임을 확인 (`MarketLiveApiTest` 1, `NewsPerformanceIT` 2, `RequiredDockerTest` 1)\n- [x] PostgreSQL Testcontainers·Flyway 시험이 건너뛰어지지 않음\n- [x] 허가 요청 이력 시험 4개 추가 — 요청 반영, 멱등, 요청과 회신이 함께 있을 때 회신이 현재 상태가 되는 것, 시각이 뒤집힌 등록표 거부\n- [x] GDELT 질의 문법 시험 4개 추가 — 값이 틀려도 fixture는 통과하므로 `mode=artlist`·괄호·따옴표를 시험에 그대로 박음\n- [x] 로컬에서 백엔드를 띄워 실제 동작 확인 (아래 표)\n- [ ] GDELT가 기사를 실제로 가져오는지는 확인하지 못함 — 리뷰 포인트 참고\n\n로컬 실행 결과다.\n\n| 확인 | 결과 |\n|----|----|\n| 등록표 반영 | `added=0 updated=7 requests=0 responses=7`, `allowed=7` |\n| RSS 수집 | 7채널 346건, 발행 시각 전부 `VERIFIED` |\n| 묶음 조회 | `READY`, 묶음 3개. 서로 다른 매체의 같은 사건이 실제로 묶임 |\n| 내보내기 | 허용 4개 필드만, 본문 없음, cursor 1·2페이지 중복 0, `limit=501`·기간 누락 각각 400 |\n| 장애 격리 | GDELT 실패가 국내 수집과 화면에 번지지 않음 |\n\n## 리뷰 포인트\n\n* **등록표의 `permission`이 매체 회신이 아니다.** 각 매체가 공개한 RSS 안내를 읽고 팀이 사용 여부를 정한 기록이다. 근거는 수익을 내지 않는 교육 과정 프로젝트이고, 본문을 저장하거나 표시하지 않으며, 공개 범위를 발표와 심사로 한정해 2026-09-28 뒤 배포를 중단한다는 것이다. **경향신문 RSS 안내에는 \"홈페이지 등을 통해 다수와 정보를 공유하거나 영리를 취하는 행위는 사전에 저작권자의 허락을 받아야 한다\"는 문구가 있고 그 문구는 영리 여부를 따지지 않는다.** 확인하고 내린 결정이며 매체의 동의를 받은 것이 아니다. 이 판단에 동의하지 않으면 해당 매체를 `enabled: false`로 내리는 것이 대안이다. 조건이 깨지면(계속 운영하거나 수익 모델을 붙이면) 판단도 무효다\n* **GDELT 질의어가 기사를 가져오는지 확인하지 못했다.** 문법 셋을 고쳐 질의는 성립했지만 결과가 0건이었고 원인을 가리지 못했다. 질의어로 보내는 값이 `monetary-policy`·`prices` 같은 내부 주제 키라 영어 기사에 나올 낱말이 아닌 것으로 짐작하지만, 확인하려던 날 호출을 여러 번 한 탓에 IP가 429로 막혀 비교 측정을 하지 못했다. 짐작으로 고치면 문법 오류를 짐작으로 만든 일이 반복되므로 손대지 않았다. 문서의 \"남은 일\" 절에 재측정 방법을 남겼다\n* **시험에서 등록표 동기화를 끈 것이 적절한지 봐 달라.** 수집을 끈 것과 같은 판단이다. 동기화 자체의 동작은 `NewsPublisherRegistrySyncTest`가 컨텍스트 없이 직접 호출해 보므로 덮이지 않는 범위는 없다고 봤다\n* **옛 묶음을 다시 만들지 않기로 한 것은 원칙 VIII에 따른 결정이다.** 저장된 묶음은 그 규칙으로 판정했다는 기록이라 소급해서 바꾸면 당시 화면을 재현할 수 없다. 그 대신 과거 조회에는 v1 판정이 남는다는 사실을 문서에 적었다. 재생성하는 편이 낫다고 보면 별도로 논의할 자리다\n* **`docs/specs/market-news-api.md` 끝의 \"남은 일\" 절을 함께 봐 달라.** 뉴스 쪽을 다시 손대는 사람이 처음 읽을 자리로 만들었다. 여기 적지 않은 진행 중인 일은 없다\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건 — 묶음은 순서 있는 목록이 아니라 정렬 지표(허가된 매체 수·최근성)를 밝힌 집합이다. 이 MR은 표시 문구를 건드리지 않았다. \"1위\"·\"추천\"·\"최적\"·우승 배지를 넣지 않았다\n- [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음. 뉴스 도메인에는 이런 단계가 없고 이 MR도 만들지 않았다\n- [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음(전략 도메인 아님). 같은 성격으로 매체별 분기가 없는지 봤다. 매체는 등록표가 돌려주는 값으로만 다루고 `publisherKey`로 `switch`·`if` 분기하지 않는다. 이번에 더한 요청 이력도 등록표 항목을 그대로 읽으므로 매체가 늘어도 이 코드를 고치지 않는다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 발행 시각을 확인하지 못한 기사는 `publishedAt`이 `null`이고 `publicationTimeStatus=UNKNOWN`이다. 수집 시각으로 대신 채우지 않는다. 허가 요청 이력도 요청하지 않은 매체에 빈 기록을 만들지 않는다 — 없는 것은 없는 채로 둔다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 등록표의 `permission`이 매체 회신이 아니라는 사실을 `_permission`·`reference`·코드 주석·문서 네 곳에 적었다. GDELT 질의어가 기사를 가져오는지 확인하지 못했다는 것도 \"확인함\"으로 적지 않고 미확인으로 남겼다(원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T15:17:20.300+09:00",
+    "updated_at": "2026-09-16T15:31:50.132+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-16T15:31:49.820+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/261-pd-15",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+    "merge_commit_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T15:17:22.610+09:00",
+    "reference": "!151",
+    "references": {
+      "short": "!151",
+      "relative": "!151",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!151"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/151",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 12,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 946811,
+    "iid": 151,
+    "project_id": 1444456,
+    "title": "feat(be) : GDELT 관련 API 호출 오류 문제 수정",
+    "description": "## 작업 내용 요약\n\nspec 012를 닫기 전에 남은 기록 공백을 메우고, 실제로 띄워 확인하는 과정에서 드러난 결함 둘을 고쳤다.\n\n기록 쪽은 셋이다. 매체에 허가를 요청해도 그 사실을 남길 자리가 없었고, 묶음 규칙을 v2로 올린 것이 옛 자료에 닿지 않는다는 사실이 어디에도 적혀 있지 않았으며, 제목 유사도 값에 두 척도가 섞이는데 그 구분이 코드에도 스키마에도 없었다.\n\nPD-15는 각 매체가 공개한 RSS 안내를 읽어 확인을 마쳤다. 매체 회신은 받지 않았고, 확인 결과를 근거로 팀이 사용 여부를 정한 기록을 등록표에 남겼다.\n\n결함 둘은 로컬에서 백엔드를 띄워 수집을 돌려 보고 찾았다. 등록표 동기화가 시험용 공용 DB를 오염시키던 것과, GDELT 질의가 API 문법을 어겨 매 회차 빈손으로 끝나던 것이다.\n\n## 관련 티켓\n\n* S15P21E205-261\n* https://ssafy.atlassian.net/browse/S15P21E205-261\n\n## 주요 변경 사항\n\n* **허가 요청 이력** — 등록표에 `permissionRequest`(요청 시각·근거)를 적을 수 있게 하고 동기화가 `REQUESTED` 이력으로 남긴다. 회신과 같은 append-only 규칙을 따르고 재기동해도 늘지 않는다. 요청을 회신보다 먼저 넣어 이력이 실제 순서대로 쌓이게 했고, 회신 시각이 요청보다 빠른 등록표는 기동에서 막는다 — 앞뒤가 뒤집히면 허가받은 매체가 `PENDING`으로 굳어 조용히 공개에서 빠진다\n* **PD-15 진행 상황 로그** — 기동할 때 `allowed / denied / awaitingReply / notRequested`를 남긴다. 요청했는데 답이 없는 것과 아예 요청하지 않은 것을 가른다. 새 API를 만들지 않았다\n* **매체 이용 조건 확인과 기록** — 경향신문·한국경제·매일경제의 RSS 안내를 읽고 결과를 등록표 `_permission`과 각 항목 `reference`, 그리고 문서에 남겼다. 등록표의 `permission`은 회신이 아니라 우리 확인과 팀 판단의 기록임을 그 자리에 분명히 적었다\n* **등록표 동기화가 시험 DB를 오염시키던 것** — 기동 시 도는 코드라 `@SpringBootTest` 컨텍스트에서 공용 Testcontainer에 매체를 커밋한다. 등록표에 허가 상태를 적자 \"허가된 매체가 없을 때\"를 확인하는 시험이 전제를 만들 수 없게 되면서 드러났다. 수집을 끈 것과 같은 이유로 `thorp.news.registry-sync-enabled=false`를 시험에 걸었다\n* **GDELT 질의 문법** — `mode=ArticleList` → `artlist`, OR로 이은 항목을 괄호로 감쌈, 하이픈이 든 낱말을 따옴표로 감쌈. 셋 다 GDELT가 오류 상태가 아니라 200에 평문 안내를 실어 보내는 종류라 fixture로는 드러나지 않는다\n* **규칙 전환과 유사도 척도** — 규칙 버전이 바뀌어도 옛 묶음을 다시 만들지 않는다는 것과 그 결과를 문서에 적고, `title_similarity`가 어느 척도인지 `grouping_rule_version`으로 갈린다는 것을 코드 주석에 남겼다\n* **남은 일 정리** — `docs/specs/market-news-api.md` 끝에 \"남은 일\" 절을 만들어 GDELT 질의어 문제와 알려진 한계 넷을 한자리에 적었다\n\n실행 Task: T084, T085 (tasks.md Phase 16)\n\n## 테스트\n\n- [x] `./gradlew spotlessApply cleanTest build` 통과 — 1335개 중 실패 0, skip 4\n- [x] skip 4건이 모두 opt-in 게이트임을 확인 (`MarketLiveApiTest` 1, `NewsPerformanceIT` 2, `RequiredDockerTest` 1)\n- [x] PostgreSQL Testcontainers·Flyway 시험이 건너뛰어지지 않음\n- [x] 허가 요청 이력 시험 4개 추가 — 요청 반영, 멱등, 요청과 회신이 함께 있을 때 회신이 현재 상태가 되는 것, 시각이 뒤집힌 등록표 거부\n- [x] GDELT 질의 문법 시험 4개 추가 — 값이 틀려도 fixture는 통과하므로 `mode=artlist`·괄호·따옴표를 시험에 그대로 박음\n- [x] 로컬에서 백엔드를 띄워 실제 동작 확인 (아래 표)\n- [ ] GDELT가 기사를 실제로 가져오는지는 확인하지 못함 — 리뷰 포인트 참고\n\n로컬 실행 결과다.\n\n| 확인 | 결과 |\n|----|----|\n| 등록표 반영 | `added=0 updated=7 requests=0 responses=7`, `allowed=7` |\n| RSS 수집 | 7채널 346건, 발행 시각 전부 `VERIFIED` |\n| 묶음 조회 | `READY`, 묶음 3개. 서로 다른 매체의 같은 사건이 실제로 묶임 |\n| 내보내기 | 허용 4개 필드만, 본문 없음, cursor 1·2페이지 중복 0, `limit=501`·기간 누락 각각 400 |\n| 장애 격리 | GDELT 실패가 국내 수집과 화면에 번지지 않음 |\n\n## 리뷰 포인트\n\n* **등록표의 `permission`이 매체 회신이 아니다.** 각 매체가 공개한 RSS 안내를 읽고 팀이 사용 여부를 정한 기록이다. 근거는 수익을 내지 않는 교육 과정 프로젝트이고, 본문을 저장하거나 표시하지 않으며, 공개 범위를 발표와 심사로 한정해 2026-09-28 뒤 배포를 중단한다는 것이다. **경향신문 RSS 안내에는 \"홈페이지 등을 통해 다수와 정보를 공유하거나 영리를 취하는 행위는 사전에 저작권자의 허락을 받아야 한다\"는 문구가 있고 그 문구는 영리 여부를 따지지 않는다.** 확인하고 내린 결정이며 매체의 동의를 받은 것이 아니다. 이 판단에 동의하지 않으면 해당 매체를 `enabled: false`로 내리는 것이 대안이다. 조건이 깨지면(계속 운영하거나 수익 모델을 붙이면) 판단도 무효다\n* **GDELT 질의어가 기사를 가져오는지 확인하지 못했다.** 문법 셋을 고쳐 질의는 성립했지만 결과가 0건이었고 원인을 가리지 못했다. 질의어로 보내는 값이 `monetary-policy`·`prices` 같은 내부 주제 키라 영어 기사에 나올 낱말이 아닌 것으로 짐작하지만, 확인하려던 날 호출을 여러 번 한 탓에 IP가 429로 막혀 비교 측정을 하지 못했다. 짐작으로 고치면 문법 오류를 짐작으로 만든 일이 반복되므로 손대지 않았다. 문서의 \"남은 일\" 절에 재측정 방법을 남겼다\n* **시험에서 등록표 동기화를 끈 것이 적절한지 봐 달라.** 수집을 끈 것과 같은 판단이다. 동기화 자체의 동작은 `NewsPublisherRegistrySyncTest`가 컨텍스트 없이 직접 호출해 보므로 덮이지 않는 범위는 없다고 봤다\n* **옛 묶음을 다시 만들지 않기로 한 것은 원칙 VIII에 따른 결정이다.** 저장된 묶음은 그 규칙으로 판정했다는 기록이라 소급해서 바꾸면 당시 화면을 재현할 수 없다. 그 대신 과거 조회에는 v1 판정이 남는다는 사실을 문서에 적었다. 재생성하는 편이 낫다고 보면 별도로 논의할 자리다\n* **`docs/specs/market-news-api.md` 끝의 \"남은 일\" 절을 함께 봐 달라.** 뉴스 쪽을 다시 손대는 사람이 처음 읽을 자리로 만들었다. 여기 적지 않은 진행 중인 일은 없다\n\n## 공통 확인\n\n- [x] 순위 배지·추천 표현 0건 — 묶음은 순서 있는 목록이 아니라 정렬 지표(허가된 매체 수·최근성)를 밝힌 집합이다. 이 MR은 표시 문구를 건드리지 않았다. \"1위\"·\"추천\"·\"최적\"·우승 배지를 넣지 않았다\n- [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음. 뉴스 도메인에는 이런 단계가 없고 이 MR도 만들지 않았다\n- [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음(전략 도메인 아님). 같은 성격으로 매체별 분기가 없는지 봤다. 매체는 등록표가 돌려주는 값으로만 다루고 `publisherKey`로 `switch`·`if` 분기하지 않는다. 이번에 더한 요청 이력도 등록표 항목을 그대로 읽으므로 매체가 늘어도 이 코드를 고치지 않는다\n- [x] 계산하지 않은 값을 0으로 채우지 않았다 — 발행 시각을 확인하지 못한 기사는 `publishedAt`이 `null`이고 `publicationTimeStatus=UNKNOWN`이다. 수집 시각으로 대신 채우지 않는다. 허가 요청 이력도 요청하지 않은 매체에 빈 기록을 만들지 않는다 — 없는 것은 없는 채로 둔다\n- [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 등록표의 `permission`이 매체 회신이 아니라는 사실을 `_permission`·`reference`·코드 주석·문서 네 곳에 적었다. GDELT 질의어가 기사를 가져오는지 확인하지 못했다는 것도 \"확인함\"으로 적지 않고 미확인으로 남겼다(원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T15:17:20.300+09:00",
+    "updated_at": "2026-09-16T15:31:50.132+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-16T15:31:49.820+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/261-pd-15",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+    "merge_commit_sha": "39a897d432335f4970a0828a167cbe3b62c684cf",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T15:17:22.610+09:00",
+    "reference": "!151",
+    "references": {
+      "short": "!151",
+      "relative": "!151",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!151"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/151",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 12,
+      "completed_count": 11
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": "2026-09-16T15:22:37.206+09:00",
+    "latest_build_finished_at": "2026-09-16T15:30:20.151+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 199080,
+      "iid": 69,
+      "project_id": 1444456,
+      "sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+      "ref": "feat(be)/261-pd-15",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T15:22:37.087+09:00",
+      "updated_at": "2026-09-16T15:30:20.157+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199080"
+    },
+    "head_pipeline": {
+      "id": 199080,
+      "iid": 69,
+      "project_id": 1444456,
+      "sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+      "ref": "feat(be)/261-pd-15",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T15:22:37.087+09:00",
+      "updated_at": "2026-09-16T15:30:20.157+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199080",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T15:22:37.206+09:00",
+      "finished_at": "2026-09-16T15:30:20.151+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/199080",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "head_sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+      "start_sha": "4b89c731a759d4db09b28fd4406124407bc9a9ad"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f9a5c3d044a0e9935bd73f44e52f329966766d82",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817003,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-16T15:17:20.473+09:00",
+          "updated_at": "2026-09-16T15:17:20.482+09:00",
+          "system": true,
+          "noteable_id": 946811,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 151,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3e4a398e9973433c1163580c2db98f7d45ed4a32",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817007,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 예외 방어 및 도메인 제약 검증:** `NewsPublisherRegistry`에서 회신 시각(`respondedAt`)이 요청 시각(`requestedAt`)보다 이른 경우를 `IllegalArgumentException`으로 사전에 차단하여 타임라인 왜곡과 상태 오류를 깔끔하게 예방했습니다.\n- **명확한 문서화와 이력 추적성:** GDELT API의 특이점(`mode=artlist`, OR 연산 시 괄호 필수, 하이픈 포함 키워드 따옴표 처리)에 대한 상세한 주석과 테스트 케이스를 작성하여 향후 유지보수 시 동일한 함정에 빠지지 않도록 잘 보완했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **타임라인 검증 테스트:** \n   - `permissionRequest`의 요청 시각이 `permission`의 회신 시각보다 미래인 데이터(예: `requestedAt: 2026-09-20T02:00:00Z`, `respondedAt: 2026-09-20T01:00:00Z`)를 등록표에 입력했을 때, 애플리케이션 기동 시점 혹은 객체 생성 시점에 정확히 예외가 발생하는지 통합 테스트 환경에서 검증합니다.\n2. **GDELT 쿼리 생성 테스트:**\n   - 주제 키 리스트에 하이픈이 포함된 키워드와 단일 키워드, 그리고 다중 키워드(OR 조건)가 복합적으로 섞여 있을 때 `GdeltDocNewsClient`가 생성하는 URL 쿼리 스트링이 올바른 괄호(`()`)와 따옴표(`\"\"`) 포맷을 유지하는지 경계값 테스트를 수행합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0b4415a073dfc468ad0da1537c74dec478a5f3a1 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T15:17:27.852+09:00",
+          "updated_at": "2026-09-16T15:17:27.852+09:00",
+          "system": false,
+          "noteable_id": 946811,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 151,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "505ef8c5bb9dc0ac75d6f84ac8b642c2fd320f56",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2817216,
+          "type": null,
+          "body": "mentioned in commit 39a897d432335f4970a0828a167cbe3b62c684cf",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-16T15:31:49.870+09:00",
+          "updated_at": "2026-09-16T15:31:49.878+09:00",
+          "system": true,
+          "noteable_id": 946811,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 151,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2206460,
+      "head_commit_sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+      "base_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "start_commit_sha": "4b89c731a759d4db09b28fd4406124407bc9a9ad",
+      "created_at": "2026-09-16T15:17:20.814+09:00",
+      "merge_request_id": 946811,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "9639db1919b4cdcd292972fd94a4c45e653f3ed4"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2206460,
+      "head_commit_sha": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+      "base_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "start_commit_sha": "4b89c731a759d4db09b28fd4406124407bc9a9ad",
+      "created_at": "2026-09-16T15:17:20.814+09:00",
+      "merge_request_id": 946811,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "9639db1919b4cdcd292972fd94a4c45e653f3ed4",
+      "commits": [
+        {
+          "id": "0b4415a073dfc468ad0da1537c74dec478a5f3a1",
+          "short_id": "0b4415a0",
+          "created_at": "2026-09-16T15:13:37.000+09:00",
+          "parent_ids": [
+            "6d35835b180df5cad2c0a89df4a9efce5a7b03a2"
+          ],
+          "title": "docs(be): spec 012에 남은 일과 알려진 한계를 한자리에 적음",
+          "message": "docs(be): spec 012에 남은 일과 알려진 한계를 한자리에 적음\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T15:13:37.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T15:13:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0b4415a073dfc468ad0da1537c74dec478a5f3a1"
+        },
+        {
+          "id": "6d35835b180df5cad2c0a89df4a9efce5a7b03a2",
+          "short_id": "6d35835b",
+          "created_at": "2026-09-16T15:00:53.000+09:00",
+          "parent_ids": [
+            "4fed261ea602ed91f5882f40613737f65938e400"
+          ],
+          "title": "fix(be): GDELT 질의가 실제 API 문법을 어겨 매 회차 빈손으로 끝나던 것을 고침",
+          "message": "fix(be): GDELT 질의가 실제 API 문법을 어겨 매 회차 빈손으로 끝나던 것을 고침\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T15:00:53.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T15:00:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d35835b180df5cad2c0a89df4a9efce5a7b03a2"
+        },
+        {
+          "id": "4fed261ea602ed91f5882f40613737f65938e400",
+          "short_id": "4fed261e",
+          "created_at": "2026-09-16T14:07:05.000+09:00",
+          "parent_ids": [
+            "50dc1b2e3959526007267b8f4b713bf3bcc1d83f"
+          ],
+          "title": "fix(be): 등록표 동기화가 시험용 공용 DB를 오염시키던 것을 막음",
+          "message": "fix(be): 등록표 동기화가 시험용 공용 DB를 오염시키던 것을 막음\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T14:07:05.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T14:07:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4fed261ea602ed91f5882f40613737f65938e400"
+        },
+        {
+          "id": "50dc1b2e3959526007267b8f4b713bf3bcc1d83f",
+          "short_id": "50dc1b2e",
+          "created_at": "2026-09-16T14:07:00.000+09:00",
+          "parent_ids": [
+            "71c5083060ec3c193881021aaaf2113bcf3763c3"
+          ],
+          "title": "feat(be): 매체 RSS 이용 조건을 확인하고 등록표에 허가 상태와 근거를 기록함",
+          "message": "feat(be): 매체 RSS 이용 조건을 확인하고 등록표에 허가 상태와 근거를 기록함\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T14:07:00.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T14:07:00.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/50dc1b2e3959526007267b8f4b713bf3bcc1d83f"
+        },
+        {
+          "id": "71c5083060ec3c193881021aaaf2113bcf3763c3",
+          "short_id": "71c50830",
+          "created_at": "2026-09-16T11:28:16.000+09:00",
+          "parent_ids": [
+            "0f3eb01459ce5f2e79eab721c880348b93b56ff2"
+          ],
+          "title": "docs(be): 규칙 전환이 옛 묶음에 닿지 않는다는 것과 유사도 척도 구분을 적음",
+          "message": "docs(be): 규칙 전환이 옛 묶음에 닿지 않는다는 것과 유사도 척도 구분을 적음\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T11:28:16.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T11:28:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/71c5083060ec3c193881021aaaf2113bcf3763c3"
+        },
+        {
+          "id": "0f3eb01459ce5f2e79eab721c880348b93b56ff2",
+          "short_id": "0f3eb014",
+          "created_at": "2026-09-16T11:28:16.000+09:00",
+          "parent_ids": [
+            "b57836d37dcc2c2ed914d72d56ad801d2bb99f26"
+          ],
+          "title": "feat(be): 매체 허가 요청 이력을 등록표에서 남기고 진행 상황을 기동 로그에 적음",
+          "message": "feat(be): 매체 허가 요청 이력을 등록표에서 남기고 진행 상황을 기동 로그에 적음\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T11:28:16.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T11:28:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0f3eb01459ce5f2e79eab721c880348b93b56ff2"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -18,7 +18,7 @@ import org.springframework.beans.factory.annotation.Value;\n import org.springframework.stereotype.Component;\n \n /**\n- * GDELT DOC 2.0 ArticleList로 해외 보도를 보완 수집한다(research Decision 3).\n+ * GDELT DOC 2.0 기사 목록({@code mode=artlist})으로 해외 보도를 보완 수집한다(research Decision 3).\n  *\n  * <p>기간과 주제로 조회를 제한하고 장기 원천 전체를 적재하지 않는다(spec FR-013).\n  *\n@@ -73,7 +73,10 @@ public class GdeltDocNewsClient {\n         return ENDPOINT\n                 + \"?query=\"\n                 + URLEncoder.encode(query, StandardCharsets.UTF_8)\n-                + \"&mode=ArticleList&format=json\"\n+                // mode 값은 GDELT가 정한 소문자 토큰이다. 'ArticleList' 같은 다른 표기를 보내면\n+                // 질의가 성립하지 않고, 그때 GDELT는 오류 상태가 아니라 200에 \"Invalid mode.\"라는\n+                // 평문을 실어 보낸다. 2026-09-16 실제 호출에서 드러났다 — fixture로는 잡히지 않는다.\n+                + \"&mode=artlist&format=json\"\n                 + \"&startdatetime=\"\n                 + GdeltTimestamps.format(source.windowStart())\n                 + \"&enddatetime=\"\n@@ -82,12 +85,35 @@ public class GdeltDocNewsClient {\n                 + maxRecords;\n     }\n \n-    /** 등록된 주제 키로 조회를 좁힌다. 주제가 없으면 국내 관련 기본 질의를 쓴다. */\n+    /**\n+     * 등록된 주제 키로 조회를 좁힌다. 주제가 없으면 국내 관련 기본 질의를 쓴다.\n+     *\n+     * <p>GDELT 질의 문법에 두 가지 제약이 있고 둘 다 지키지 않으면 오류 상태가 아니라 200에 평문 안내가 온다. 그래서 fixture로는 드러나지 않고\n+     * 운영에서만 매 회차가 빈손으로 끝난다(2026-09-16 실제 호출에서 셋을 연달아 만났다).\n+     *\n+     * <ul>\n+     *   <li><b>하이픈이 든 낱말은 따옴표로 감싼다.</b> {@code monetary-policy}처럼 우리 주제 키에 하이픈이 흔하다. 빠뜨리면 {@code\n+     *       \"One or more of your keywords contained an illegal character.\"}가 온다\n+     *   <li><b>OR로 이은 항목은 괄호로 감싼다.</b> 빠뜨리면 {@code \"Queries containing OR'd terms must be\n+     *       surrounded by ().\"}가 온다\n+     * </ul>\n+     *\n+     * <p>주제가 하나뿐이면 OR가 없으므로 괄호를 씌우지 않는다. 따옴표는 하이픈이 있을 때만 붙인다 — 없는 낱말까지 감싸도 통하지만 질의를 읽기 어렵게 만든다.\n+     */\n     private static String buildQuery(List<String> topicKeys) {\n         if (topicKeys.isEmpty()) {\n             return \"sourcecountry:southkorea\";\n         }\n-        return String.join(\" OR \", topicKeys);\n+        List<String> terms = topicKeys.stream().map(GdeltDocNewsClient::quoteIfNeeded).toList();\n+        if (terms.size() == 1) {\n+            return terms.get(0);\n+        }\n+        return \"(\" + String.join(\" OR \", terms) + \")\";\n+    }\n+\n+    /** 하이픈이 든 낱말만 따옴표로 감싼다. GDELT가 하이픈을 연산자로 읽기 때문이다. */\n+    private static String quoteIfNeeded(String term) {\n+        return term.indexOf('-') >= 0 ? \"\\\"\" + term + \"\\\"\" : term;\n     }\n \n     private JsonNode readArticles(byte[] body) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/GdeltDocNewsClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/client/GdeltDocNewsClient.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -28,6 +28,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers)\n      * @param rssUrl 공식 RSS 채널 주소. 서버 전용이며 응답·로그에 노출하지 않는다(spec FR-021).\n      * @param enabled 수집 활성화 여부.\n      * @param topicKeys 이 채널이 다루는 주제. 기사가 분류 값을 주지 않는 매체에만 적는다.\n+     * @param permissionRequest 매체에 허가를 요청한 사실. 요청하지 않았으면 null이다.\n      * @param permission 매체가 보낸 허가 회신. 아직 회신이 없으면 null이고 그 매체는 {@code PENDING}으로 남는다.\n      */\n     public record Publisher(\n@@ -38,6 +39,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers)\n             String rssUrl,\n             boolean enabled,\n             java.util.List<String> topicKeys,\n+            PermissionRequest permissionRequest,\n             Permission permission) {\n \n         /** 채널 주제도 회신도 적지 않은 매체. */\n@@ -57,6 +59,7 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers)\n                     rssUrl,\n                     enabled,\n                     topicKeys,\n+                    null,\n                     null);\n         }\n \n@@ -92,6 +95,13 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers)\n                 throw new IllegalArgumentException(\n                         \"publisherKey는 영문 소문자·숫자·하이픈만 쓴다: \" + publisherKey);\n             }\n+            // 답이 요청보다 먼저 올 수는 없다. 시각을 잘못 적으면 이력의 앞뒤가 뒤집혀 현재 상태가\n+            // 요청(PENDING)으로 굳는다 — 허가받은 매체가 조용히 공개에서 빠진다.\n+            if (permissionRequest != null\n+                    && permission != null\n+                    && permission.respondedAt().isBefore(permissionRequest.requestedAt())) {\n+                throw new IllegalArgumentException(\"회신 시각이 요청 시각보다 빠르다: \" + publisherKey);\n+            }\n             registeredDomain = registeredDomain.toLowerCase(Locale.ROOT);\n             String host = hostOf(rssUrl);\n             if (!isSameOrSubdomain(host, registeredDomain)) {\n@@ -144,6 +154,17 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers)\n      *\n      * <p>회신이 없는 매체는 이 항목을 적지 않는다. {@code PENDING}을 적는 자리가 아니다 — 그것은 회신이 없다는 뜻이고, 없는 것을 적어 둘 이유가 없다.\n      *\n+     * <p><b>2026-09-16 현재 등록표의 값은 매체 회신이 아니다.</b> 어느 매체에서도 답을 받지 않았고, 각 매체가 공개한 RSS 안내를 읽고 팀이 사용\n+     * 여부를 정한 기록이다. 근거는 이 서비스가 SSAFY 교육 과정의 팀 프로젝트로 수익을 내지 않고, 기사 본문을 저장하거나 표시하지 않으며 제목·매체명·발행 시각·원문\n+     * 링크만 쓰고, 공개 범위를 발표와 심사로 한정해 2026-09-28 최종 발표 뒤 배포를 중단한다는 것이다. 팀은 이 조건이라면 불특정 다수를 상대로 한 배포나 영리\n+     * 이용에 해당하지 않는다고 보았다.\n+     *\n+     * <p>다만 경향신문 RSS 안내에는 홈페이지를 통해 다수와 공유하려면 사전 허락이 필요하다는 문구가 있고, 그 문구는 영리 여부를 따지지 않는다. 확인하고 내린\n+     * 결정이며 매체의 동의를 받은 것이 아니다. <b>이 판단은 위 조건이 유지되는 동안에만 유효하다</b> — 서비스를 계속 운영하거나 수익 모델을 붙이려면 각 매체와\n+     * 이용 계약을 맺어야 한다. 근거와 확인한 주소는 등록표 파일의 {@code _permission}과 각 항목의 {@code reference}에 있다.\n+     *\n+     * <p>이 사정은 코드와 등록표에만 남기고 화면이나 API 응답에는 싣지 않는다. 사용자에게 보일 내용이 아니다.\n+     *\n      * @param status 회신 결과. {@code ALLOWED} 또는 {@code DENIED}만 쓴다.\n      * @param allowedFields 허용된 필드. {@code ALLOWED}면 하나 이상이어야 한다.\n      * @param respondedAt 회신을 받은 시각. 같은 회신을 두 번 반영하지 않는 기준이 된다.\n@@ -175,6 +196,27 @@ public record NewsPublisherRegistry(String version, List<Publisher> publishers)\n         }\n     }\n \n+    /**\n+     * 매체에 허가를 요청한 사실(spec FR-015).\n+     *\n+     * <p><b>회신과 따로 적는다.</b> 요청했는데 답이 없는 것과 아예 요청하지 않은 것은 전혀 다른 상태인데, 회신만 적을 수 있으면 둘이 똑같이 빈칸으로 보인다.\n+     * 프로젝트가 끝날 때 \"우리가 요청은 했는가\"에 답하려면 이 자리가 있어야 한다.\n+     *\n+     * <p>요청은 매체의 현재 상태를 {@code PENDING}으로 둔다. 요청했다는 것과 공개해도 된다는 것은 다르다.\n+     *\n+     * @param requestedAt 요청을 보낸 시각.\n+     * @param reference 요청의 근거. 메일 제목이나 문서 번호처럼 나중에 찾아갈 수 있는 것을 적는다.\n+     */\n+    public record PermissionRequest(java.time.Instant requestedAt, String reference) {\n+\n+        public PermissionRequest {\n+            java.util.Objects.requireNonNull(requestedAt, \"requestedAt\");\n+            if (reference == null || reference.isBlank()) {\n+                throw new IllegalArgumentException(\"reference는 비어 있을 수 없다. 요청의 근거를 적는다\");\n+            }\n+        }\n+    }\n+\n     public NewsPublisherRegistry {\n         if (version == null || version.isBlank()) {\n             throw new IllegalArgumentException(\"version은 비어 있을 수 없다\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsPublisherRegistry.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsPublisherRegistry.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,6 +42,10 @@ import org.springframework.stereotype.Component;\n  * 같다. 기동 단계에서 트랜잭션 경계를 넓게 잡으면 그 안에서 나는 실패가 기동 자체를 막는다.\n  */\n @Component\n+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(\n+        name = \"thorp.news.registry-sync-enabled\",\n+        havingValue = \"true\",\n+        matchIfMissing = true)\n public class NewsPublisherRegistrySync implements SmartInitializingSingleton {\n \n     private static final Logger log = LoggerFactory.getLogger(NewsPublisherRegistrySync.class);\n@@ -63,6 +67,7 @@ public class NewsPublisherRegistrySync implements SmartInitializingSingleton {\n     public void afterSingletonsInstantiated() {\n         int added = 0;\n         int updated = 0;\n+        int requests = 0;\n         int responses = 0;\n         for (NewsPublisherRegistry.Publisher entry : registry.publishers()) {\n             Optional<NewsPublisher> existing = publishers.findByPublisherKey(entry.publisherKey());\n@@ -91,19 +96,109 @@ public class NewsPublisherRegistrySync implements SmartInitializingSingleton {\n                                         entry.enabled()));\n                 added++;\n             }\n+            // 요청을 먼저 넣는다. 등록표에 둘 다 적혀 있을 때 이력이 실제 순서대로 쌓인다.\n+            if (applyRequest(publisher, entry.permissionRequest())) {\n+                requests++;\n+            }\n             if (applyPermission(publisher, entry.permission())) {\n                 responses++;\n             }\n         }\n+        reportPermissionProgress();\n         // 주소는 남기지 않는다. 매체 키와 건수면 무엇이 반영됐는지 알 수 있다(spec FR-021).\n         log.info(\n-                \"매체 등록표를 반영했다 version={} added={} updated={} responses={}\",\n+                \"매체 등록표를 반영했다 version={} added={} updated={} requests={} responses={}\",\n                 registry.version(),\n                 added,\n                 updated,\n+                requests,\n                 responses);\n     }\n \n+    /**\n+     * 등록표에 적힌 허가 요청을 이력으로 반영한다(spec FR-015).\n+     *\n+     * <p><b>요청했는데 답이 없는 것과 아예 요청하지 않은 것은 다른 상태다.</b> 이 경로가 없으면 둘이 똑같이 {@code PENDING}으로 보이고, 프로젝트가\n+     * 끝날 때 \"우리가 요청은 했는가\"에 답할 근거가 메일함에만 남는다.\n+     *\n+     * <p>회신과 같은 이유로 매체 행에 직접 쓰지 않고 이력을 통한다. 같은 요청을 두 번 넣지 않는 것도 같다 — 기동할 때마다 도는 코드라 그냥 두면 재시작 횟수만큼\n+     * 이력이 불어난다.\n+     *\n+     * @return 이번에 새로 반영했으면 참.\n+     */\n+    private boolean applyRequest(\n+            NewsPublisher publisher, NewsPublisherRegistry.PermissionRequest request) {\n+        if (request == null) {\n+            return false;\n+        }\n+        boolean alreadyRecorded =\n+                permissions.findByPublisherId(publisher.getId()).stream()\n+                        .anyMatch(\n+                                event ->\n+                                        event.eventType()\n+                                                        == com.ssafy.thorp.news.domain.vo\n+                                                                .PermissionEventType.REQUESTED\n+                                                && event.occurredAt().equals(request.requestedAt())\n+                                                && java.util.Objects.equals(\n+                                                        event.reference(), request.reference()));\n+        if (alreadyRecorded) {\n+            return false;\n+        }\n+        permissions.appendAndApply(\n+                NewsPublisherPermissionHistory.requested(\n+                        publisher.getId(), request.requestedAt(), request.reference()));\n+        return true;\n+    }\n+\n+    /**\n+     * PD-15가 어디까지 왔는지 기동 로그에 남긴다.\n+     *\n+     * <p>공개 게이트가 열렸는지는 배포할 때마다 확인하게 되는 값인데, 지금은 DB를 직접 봐야만 알 수 있다. 매체 키와 상태만 남기므로 가림 규칙을 어기지\n+     * 않는다(spec FR-021).\n+     *\n+     * <p>여기서 실패해도 기동을 막지 않는다. 진행 상황을 못 적은 것 때문에 서비스가 안 뜨면 본말이 뒤집힌다.\n+     */\n+    private void reportPermissionProgress() {\n+        try {\n+            int allowed = 0;\n+            int denied = 0;\n+            int awaiting = 0;\n+            int neverRequested = 0;\n+            for (NewsPublisher publisher : publishers.findEnabled()) {\n+                switch (publisher.getPermissionStatus()) {\n+                    case ALLOWED -> allowed++;\n+                    case DENIED -> denied++;\n+                    default -> {\n+                        boolean requested =\n+                                permissions.findByPublisherId(publisher.getId()).stream()\n+                                        .anyMatch(\n+                                                event ->\n+                                                        event.eventType()\n+                                                                == com.ssafy.thorp.news.domain.vo\n+                                                                        .PermissionEventType\n+                                                                        .REQUESTED);\n+                        if (requested) {\n+                            awaiting++;\n+                        } else {\n+                            neverRequested++;\n+                        }\n+                    }\n+                }\n+            }\n+            log.info(\n+                    \"매체 허가 진행(PD-15) allowed={} denied={} awaitingReply={} notRequested={}\",\n+                    allowed,\n+                    denied,\n+                    awaiting,\n+                    neverRequested);\n+            if (allowed == 0) {\n+                log.info(\"허가된 매체가 없어 공개 조회는 준비 중 상태로 답한다(spec FR-016)\");\n+            }\n+        } catch (RuntimeException e) {\n+            log.warn(\"매체 허가 진행 상황을 남기지 못했다\");\n+        }\n+    }\n+\n     /**\n      * 등록표에 적힌 회신을 이력으로 반영한다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsPublisherRegistrySync.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsPublisherRegistrySync.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -199,6 +199,11 @@ public class NewsDigestRepositoryImpl implements NewsDigestRepository {\n      * 대표 기사와의 제목 유사도. 왜 이 기사가 이 묶음에 들어왔는지 남긴다(원칙 VIII).\n      *\n      * <p>대표 기사 자신은 비교 대상이 아니므로 값을 두지 않는다.\n+     *\n+     * <p><b>이 값이 어느 척도인지는 같은 묶음의 {@code groupingRuleVersion}이 정한다.</b> {@code news-grouping-v1}\n+     * 묶음에는 어절 Jaccard가, {@code news-grouping-v2} 묶음에는 문자 2-gram Jaccard가 들어 있다. 규칙을 바꾸면서 옛 행을 다시\n+     * 계산하지 않기 때문이다(원칙 VIII). 이 컬럼만 모아 문턱을 다시 재려는 사람은 규칙 버전으로 먼저 갈라야 한다 — 섞어서 한 분포로 읽으면 두 척도의 평균을 보게\n+     * 된다.\n      */\n     private Double titleSimilarity(NewsDigest digest, NewsArticle member) {\n         NewsArticle representative = digest.getRepresentative();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/persistence/NewsDigestRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/persistence/NewsDigestRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,8 @@\n {\n   \"version\": \"news-publishers-v1\",\n-  \"_comment\": \"등록 조건: HTTPS, rssUrl의 host가 registeredDomain 또는 그 하위 도메인, 집계·재배포 feed 제외. enabled는 수집 여부이고 공개 여부가 아니다 — 공개는 매체 허가 회신(PD-15)이 기록된 뒤에만 열린다. 회신 전 매체는 PENDING이라 공개 조회에서 빠지고 내부 검증에서만 보인다.\",\n+  \"_comment\": \"등록 조건: HTTPS, rssUrl의 host가 registeredDomain 또는 그 하위 도메인, 집계·재배포 feed 제외. enabled는 수집 여부이고 공개 여부가 아니다 — 공개는 허가 상태가 ALLOWED인 매체만 열린다. permission의 뜻과 지금 값의 근거는 _permission을 본다.\",\n   \"_topicKeys\": \"기사가 분류 값을 주지 않는 채널에만 적는다. 기사 분류가 등록표를 하나라도 통과하면 이 값은 쓰이지 않는다 — 기사가 말한 것을 먼저 믿는다. 국내 경제 RSS 20곳을 받아 본 결과 기사별 분류 값을 주는 곳은 경향신문뿐이었고 나머지는 피드 이름을 되풀이하거나 분류가 아예 없었다.\",\n+  \"_permission\": \"아래 permission은 매체가 보낸 회신이 아니다. 각 매체가 공개한 RSS 안내를 읽고 팀이 사용 여부를 정한 기록이다(spec FR-015, PD-15). 판단 근거는 이렇다 — 이 서비스는 SSAFY 교육 과정의 팀 프로젝트로 수익을 내지 않고, 기사 본문을 저장하거나 표시하지 않으며 제목·매체명·발행 시각·원문 링크만 쓴다. 공개 범위는 발표와 심사로 한정하고 2026-09-28 최종 발표 뒤 배포를 중단한다. 팀은 이 조건이라면 불특정 다수를 상대로 한 배포나 영리 이용에 해당하지 않는다고 보았다. 다만 경향신문 RSS 안내에는 홈페이지를 통해 다수와 공유하려면 사전 허락이 필요하다는 문구가 있고 그 문구는 영리 여부를 따지지 않는다. 그 사실을 확인하고 내린 결정이며 매체의 동의를 받은 것이 아니다. 이 판단은 위 조건이 유지되는 동안에만 유효하다. 서비스를 계속 운영하거나 수익 모델을 붙이려면 각 매체와 이용 계약을 맺어야 한다.\",\n   \"publishers\": [\n     {\n       \"publisherKey\": \"khan-economy\",\n@@ -9,7 +10,13 @@\n       \"language\": \"ko\",\n       \"registeredDomain\": \"khan.co.kr\",\n       \"rssUrl\": \"https://www.khan.co.kr/rss/rssdata/economy_news.xml\",\n-      \"enabled\": true\n+      \"enabled\": true,\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.khan.co.kr/help/help_rss.html). '개인적인 구독을 목적으로 지원하는 서비스이며, 홈페이지 등을 통해 다수와 정보를 공유하거나 영리를 취하는 행위는 사전에 저작권자의 허락을 받아야 한다'는 문구가 있다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     },\n     {\n       \"publisherKey\": \"hankyung-economy\",\n@@ -18,7 +25,13 @@\n       \"registeredDomain\": \"hankyung.com\",\n       \"rssUrl\": \"https://www.hankyung.com/feed/economy\",\n       \"enabled\": true,\n-      \"topicKeys\": [\"economy-general\"]\n+      \"topicKeys\": [\"economy-general\"],\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.hankyung.com/feed). 이용 제한 문구가 없다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     },\n     {\n       \"publisherKey\": \"hankyung-finance\",\n@@ -27,7 +40,13 @@\n       \"registeredDomain\": \"hankyung.com\",\n       \"rssUrl\": \"https://www.hankyung.com/feed/finance\",\n       \"enabled\": true,\n-      \"topicKeys\": [\"markets\"]\n+      \"topicKeys\": [\"markets\"],\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.hankyung.com/feed). 이용 제한 문구가 없다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     },\n     {\n       \"publisherKey\": \"hankyung-it\",\n@@ -36,7 +55,13 @@\n       \"registeredDomain\": \"hankyung.com\",\n       \"rssUrl\": \"https://www.hankyung.com/feed/it\",\n       \"enabled\": true,\n-      \"topicKeys\": [\"tech\"]\n+      \"topicKeys\": [\"tech\"],\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.hankyung.com/feed). 이용 제한 문구가 없다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     },\n     {\n       \"publisherKey\": \"mk-economy\",\n@@ -44,7 +69,13 @@\n       \"language\": \"ko\",\n       \"registeredDomain\": \"mk.co.kr\",\n       \"rssUrl\": \"https://www.mk.co.kr/rss/30100041/\",\n-      \"enabled\": true\n+      \"enabled\": true,\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.mk.co.kr/rss)과 이용약관 확인(https://www.mk.co.kr/mypage/policy). RSS 안내에 이용 제한 문구가 없고 약관은 상업적 이용만 제한한다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     },\n     {\n       \"publisherKey\": \"mk-stock\",\n@@ -52,7 +83,13 @@\n       \"language\": \"ko\",\n       \"registeredDomain\": \"mk.co.kr\",\n       \"rssUrl\": \"https://www.mk.co.kr/rss/50200011/\",\n-      \"enabled\": true\n+      \"enabled\": true,\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.mk.co.kr/rss)과 이용약관 확인(https://www.mk.co.kr/mypage/policy). RSS 안내에 이용 제한 문구가 없고 약관은 상업적 이용만 제한한다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     },\n     {\n       \"publisherKey\": \"mk-company\",\n@@ -60,7 +97,13 @@\n       \"language\": \"ko\",\n       \"registeredDomain\": \"mk.co.kr\",\n       \"rssUrl\": \"https://www.mk.co.kr/rss/50100032/\",\n-      \"enabled\": true\n+      \"enabled\": true,\n+      \"permission\": {\n+        \"status\": \"ALLOWED\",\n+        \"allowedFields\": [\"TITLE\", \"PUBLISHER\", \"PUBLISHED_AT\", \"ORIGINAL_URL\"],\n+        \"respondedAt\": \"2026-09-16T00:00:00Z\",\n+        \"reference\": \"2026-09-16 RSS 안내 확인(https://www.mk.co.kr/rss)과 이용약관 확인(https://www.mk.co.kr/mypage/policy). RSS 안내에 이용 제한 문구가 없고 약관은 상업적 이용만 제한한다. 매체 회신은 받지 않았고 _permission의 조건 아래 팀이 사용하기로 정했다.\"\n+      }\n     }\n   ]\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/news/news-publishers-v1.json",
+          "old_path": "backend/src/main/resources/news/news-publishers-v1.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,7 @@ import com.ssafy.thorp.news.infrastructure.config.NewsPublisherRegistry;\n import java.io.IOException;\n import java.io.InputStream;\n import java.net.URI;\n+import java.nio.charset.StandardCharsets;\n import java.time.Duration;\n import java.time.Instant;\n import java.util.ArrayList;\n@@ -156,6 +157,84 @@ class GdeltNewsClientTest {\n             assertThat(query).as(\"장기 전체 적재를 하지 않는다\").doesNotContain(\"timespan=full\");\n         }\n \n+        @Test\n+        @DisplayName(\"GDELT가 정한 mode 토큰을 그대로 보낸다\")\n+        void 모드_토큰() {\n+            StubHttpClient http = StubHttpClient.json(\"doc-response.json\");\n+\n+            new GdeltDocNewsClient(http, policy(), 3).fetch(WINDOW);\n+\n+            // 값을 여기 박아 두는 이유가 있다. 다른 표기를 보내면 GDELT는 오류 상태가 아니라 200에\n+            // \"Invalid mode.\"라는 평문을 실어 보내고, 그러면 fixture로 도는 나머지 시험은 전부\n+            // 통과한 채 운영에서만 매 회차가 빈손으로 끝난다(2026-09-16 실제 호출에서 드러났다).\n+            assertThat(http.requested.get(0).getQuery())\n+                    .as(\"GDELT의 mode는 소문자 artlist다. ArticleList 같은 표기는 받지 않는다\")\n+                    .contains(\"mode=artlist\");\n+        }\n+\n+        @Test\n+        @DisplayName(\"OR로 이은 주제는 괄호로 감싼다\")\n+        void 질의_괄호() {\n+            StubHttpClient http = StubHttpClient.json(\"doc-response.json\");\n+\n+            new GdeltDocNewsClient(http, policy(), 3)\n+                    .fetch(\n+                            new GdeltNewsSource(\n+                                    \"gdelt:doc\",\n+                                    WINDOW.windowStart(),\n+                                    WINDOW.windowEnd(),\n+                                    List.of(\"semiconductor\", \"trade\")));\n+\n+            // 괄호가 없으면 GDELT는 오류 상태가 아니라 200에 \"Queries containing OR'd terms must be\n+            // surrounded by ().\"라는 평문을 실어 보낸다. mode와 같은 종류의 함정이라 값을 박아 둔다.\n+            assertThat(\n+                            java.net.URLDecoder.decode(\n+                                    http.requested.get(0).getQuery(), StandardCharsets.UTF_8))\n+                    .as(\"괄호를 빠뜨리면 질의가 성립하지 않는다\")\n+                    .contains(\"query=(semiconductor OR trade)\");\n+        }\n+\n+        @Test\n+        @DisplayName(\"하이픈이 든 주제는 따옴표로 감싼다\")\n+        void 하이픈_주제() {\n+            StubHttpClient http = StubHttpClient.json(\"doc-response.json\");\n+\n+            new GdeltDocNewsClient(http, policy(), 3)\n+                    .fetch(\n+                            new GdeltNewsSource(\n+                                    \"gdelt:doc\",\n+                                    WINDOW.windowStart(),\n+                                    WINDOW.windowEnd(),\n+                                    List.of(\"monetary-policy\", \"prices\")));\n+\n+            // 감싸지 않으면 GDELT가 하이픈을 연산자로 읽고 200에 \"One or more of your keywords\n+            // contained an illegal character.\"를 실어 보낸다. 우리 주제 키에 하이픈이 흔하다.\n+            assertThat(\n+                            java.net.URLDecoder.decode(\n+                                    http.requested.get(0).getQuery(), StandardCharsets.UTF_8))\n+                    .contains(\"(\\\"monetary-policy\\\" OR prices)\");\n+        }\n+\n+        @Test\n+        @DisplayName(\"주제가 하나면 괄호를 씌우지 않는다\")\n+        void 단일_주제() {\n+            StubHttpClient http = StubHttpClient.json(\"doc-response.json\");\n+\n+            new GdeltDocNewsClient(http, policy(), 3)\n+                    .fetch(\n+                            new GdeltNewsSource(\n+                                    \"gdelt:doc\",\n+                                    WINDOW.windowStart(),\n+                                    WINDOW.windowEnd(),\n+                                    List.of(\"semiconductor\")));\n+\n+            assertThat(\n+                            java.net.URLDecoder.decode(\n+                                    http.requested.get(0).getQuery(), StandardCharsets.UTF_8))\n+                    .contains(\"query=semiconductor&\")\n+                    .doesNotContain(\"(\");\n+        }\n+\n         @Test\n         @DisplayName(\"기록 시각을 발행 시각으로 쓰지 않는다\")\n         void 기록_시각_분리() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/GdeltNewsClientTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/news/infrastructure/client/GdeltNewsClientTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,14 @@\n package com.ssafy.thorp.news.infrastructure.config;\n \n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n \n import com.ssafy.thorp.news.application.repository.NewsPublisherPermissionHistoryRepository;\n import com.ssafy.thorp.news.application.repository.NewsPublisherRepository;\n import com.ssafy.thorp.news.domain.model.NewsPublisher;\n import com.ssafy.thorp.news.domain.model.NewsPublisherPermissionHistory;\n import com.ssafy.thorp.news.domain.vo.NewsAllowedField;\n+import com.ssafy.thorp.news.domain.vo.PermissionEventType;\n import com.ssafy.thorp.news.domain.vo.PermissionStatus;\n import java.time.Instant;\n import java.util.ArrayList;\n@@ -26,7 +28,15 @@ class NewsPublisherRegistrySyncTest {\n \n     private static final Instant RESPONDED_AT = Instant.parse(\"2026-09-20T01:00:00Z\");\n \n+    private static final Instant REQUESTED_AT = Instant.parse(\"2026-09-16T01:00:00Z\");\n+\n+    private static NewsPublisherRegistry.Publisher entry(\n+            NewsPublisherRegistry.Permission permission) {\n+        return entry(null, permission);\n+    }\n+\n     private static NewsPublisherRegistry.Publisher entry(\n+            NewsPublisherRegistry.PermissionRequest request,\n             NewsPublisherRegistry.Permission permission) {\n         return new NewsPublisherRegistry.Publisher(\n                 \"khan-economy\",\n@@ -36,9 +46,14 @@ class NewsPublisherRegistrySyncTest {\n                 \"https://www.khan.co.kr/rss/rssdata/economy_news.xml\",\n                 true,\n                 List.of(),\n+                request,\n                 permission);\n     }\n \n+    private static NewsPublisherRegistry.PermissionRequest requested() {\n+        return new NewsPublisherRegistry.PermissionRequest(REQUESTED_AT, \"2026-09-16 요청 메일\");\n+    }\n+\n     private static NewsPublisherRegistry.Permission allowed() {\n         return new NewsPublisherRegistry.Permission(\n                 PermissionStatus.ALLOWED,\n@@ -203,6 +218,71 @@ class NewsPublisherRegistrySyncTest {\n     }\n \n     /** 매체 저장소 대역. */\n+    @Test\n+    @DisplayName(\"등록표에 적힌 허가 요청을 이력으로 남긴다\")\n+    void 요청_반영() {\n+        Harness harness = sync(entry(requested(), null));\n+\n+        harness.target().afterSingletonsInstantiated();\n+\n+        assertThat(harness.history().saved)\n+                .as(\"요청했는데 답이 없는 것과 아예 요청하지 않은 것은 다른 상태다\")\n+                .singleElement()\n+                .satisfies(\n+                        event -> {\n+                            assertThat(event.eventType()).isEqualTo(PermissionEventType.REQUESTED);\n+                            assertThat(event.permissionStatus())\n+                                    .isEqualTo(PermissionStatus.PENDING);\n+                            assertThat(event.occurredAt()).isEqualTo(REQUESTED_AT);\n+                            assertThat(event.reference()).isEqualTo(\"2026-09-16 요청 메일\");\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"같은 요청을 다시 기동해도 이력이 늘지 않는다\")\n+    void 요청_멱등() {\n+        Harness harness = sync(entry(requested(), null));\n+\n+        harness.target().afterSingletonsInstantiated();\n+        harness.target().afterSingletonsInstantiated();\n+\n+        assertThat(harness.history().saved)\n+                .as(\"기동할 때마다 도는 코드라 막지 않으면 재시작 횟수만큼 이력이 불어난다\")\n+                .hasSize(1);\n+    }\n+\n+    @Test\n+    @DisplayName(\"요청과 회신이 모두 적혀 있으면 둘 다 남고 회신이 현재 상태가 된다\")\n+    void 요청과_회신() {\n+        Harness harness = sync(entry(requested(), allowed()));\n+\n+        harness.target().afterSingletonsInstantiated();\n+\n+        assertThat(harness.history().saved)\n+                .extracting(NewsPublisherPermissionHistory::eventType)\n+                .containsExactly(PermissionEventType.REQUESTED, PermissionEventType.RESPONDED);\n+        assertThat(harness.publishers().findByPublisherKey(\"khan-economy\"))\n+                .get()\n+                .satisfies(\n+                        publisher ->\n+                                assertThat(publisher.getPermissionStatus())\n+                                        .as(\"요청이 나중에 반영돼 회신을 덮으면 허가받은 매체가 공개에서 빠진다\")\n+                                        .isEqualTo(PermissionStatus.ALLOWED));\n+    }\n+\n+    @Test\n+    @DisplayName(\"회신 시각이 요청보다 빠른 등록표는 기동에서 막는다\")\n+    void 뒤집힌_시각은_거부() {\n+        assertThatThrownBy(\n+                        () ->\n+                                entry(\n+                                        new NewsPublisherRegistry.PermissionRequest(\n+                                                RESPONDED_AT.plusSeconds(1), \"요청\"),\n+                                        allowed()))\n+                .as(\"이력의 앞뒤가 뒤집히면 현재 상태가 요청(PENDING)으로 굳는다\")\n+                .isInstanceOf(IllegalArgumentException.class);\n+    }\n+\n     private static final class PublisherStore implements NewsPublisherRepository {\n         private final java.util.Map<String, NewsPublisher> byKey = new java.util.LinkedHashMap<>();\n         private final AtomicLong ids = new AtomicLong();\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/news/infrastructure/config/NewsPublisherRegistrySyncTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/news/infrastructure/config/NewsPublisherRegistrySyncTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -91,6 +91,17 @@ tasks.named('test') {\n     // 그날 상태에 달리는 것이 가장 나쁘다.\n     systemProperty 'thorp.news.collection-enabled', 'false'\n \n+    // 등록표 동기화도 같은 이유로 끈다.\n+    //\n+    // 기동할 때 도는 코드라 @SpringBootTest 컨텍스트에서 등록표의 매체를 공용 Testcontainer DB에\n+    // 커밋한다. 수집과 달리 바깥 망에 나가지는 않지만, 결과는 같다 — 뒤에 오는 DB 시험이 자기가 만들지\n+    // 않은 매체 행을 보게 된다. 등록표에 허가 상태를 적자 \"허가된 매체가 없을 때\"를 확인하는 시험이\n+    // 전제를 만들 수 없게 되면서 드러났다(2026-09-16).\n+    //\n+    // 동기화 자체의 동작은 NewsPublisherRegistrySyncTest가 대역으로 본다. 그쪽은 컨텍스트를 띄우지\n+    // 않고 직접 호출하므로 이 설정에 영향받지 않는다.\n+    systemProperty 'thorp.news.registry-sync-enabled', 'false'\n+\n     // 저장소 밖(backend/ 바깥)에 있는 공유 픽스처를 이 태스크의 입력으로 선언한다.\n     //\n     // 계약 픽스처는 워커(Python)와 백엔드(Java)가 같은 파일 하나를 읽어 두 구현을 묶는\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/build.gradle",
+          "old_path": "backend/build.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -159,6 +159,20 @@ single-link로 완화해도, 오병합 0건을 지키면서 그 값을 만족할\n | v2 후보: 2-gram 0.45 | 0건 | 4/29 |\n | **v2: 2-gram 0.30 + 고유어 조건** | **0건** | **14/29 (48%)** |\n \n+### 규칙을 바꿔도 옛 묶음은 다시 만들지 않는다\n+\n+수집은 그 회차가 건드린 기사가 속한 묶음만 다시 만든다(`NewsIngestionService.regroup`). 그래서 규칙을\n+v2로 올린 뒤에도 **새 기사가 들어오지 않는 묶음은 v1 판정 그대로 남는다.** 현재 뉴스 조회는 48시간 창이라\n+이틀이면 v2로 채워지지만, 과거 뉴스 조회는 창이 없어 v1으로 갈라진 묶음이 계속 보인다.\n+\n+이것은 고쳐야 할 결함이 아니라 정한 것이다. 원칙 VIII이 \"규칙 변경은 기존 결과를 덮어쓰지 않고 새 버전으로\n+식별한다\"고 정했고, 저장된 묶음은 **그 규칙으로 그렇게 판정했다는 기록**이기 때문이다. 소급해서 다시 만들면\n+당시 화면을 재현할 수 없게 된다.\n+\n+대신 어느 규칙으로 만든 묶음인지 값으로 남아 있다. `news_digest.grouping_rule_version`이 그것이고,\n+`news_digest_article.title_similarity`의 척도도 이 값에 따라 다르다(v1은 어절 Jaccard, v2는 문자\n+2-gram Jaccard).\n+\n 측정 근거는 `backend/src/test/resources/news/grouping-quality-v2.json`(실제 수집분 345건, 사람이\n 판정한 복수 보도 사건 29개)이고 `NewsGroupingQualityTest`가 빌드마다 다시 잰다. 합성 표본\n `grouping-quality.json`은 v1 판정과 함께 그대로 두었다(원칙 VIII).\n@@ -166,11 +180,68 @@ single-link로 완화해도, 오병합 0건을 지키면서 그 값을 만족할\n 표본의 한계도 적어 둔다. 후보 쌍을 \"48시간 내 + 공통 주제 + 공통 어절 1개 이상\"으로 좁힌 뒤 사람이\n 읽었으므로, 제목에 공통 어절이 하나도 없는 같은 사건 쌍은 표본에서 빠져 있을 수 있다.\n \n-PD-15는 미완료다. 등록표(`news-publishers-v1.json`)에 경향신문·한국경제·매일경제 7채널이 올라 있지만\n-**어느 항목에도 `permission` 값이 없다.** 즉 세 매체 모두 `PENDING`으로 등록되며, 실제 표시 허가 회신을\n-받은 매체는 하나도 없다. 그래서 공개 모드의 응답은 지금 `PREPARING`이고, 실제 요청·회신을 기록하고 허용\n-필드를 확정하기 전에는 그대로 둔다.\n+PD-15는 **확인을 마쳤고 매체 회신은 받지 않았다.** 2026-09-16에 각 매체가 공개한 RSS 안내를 읽고\n+확인한 결과는 이렇다.\n+\n+| 매체 | RSS 안내의 이용 조건 |\n+|---|---|\n+| 경향신문 | \"개인적인 구독을 목적으로 지원하는 서비스\"이며 \"홈페이지 등을 통해 다수와 정보를 공유하거나 영리를 취하는 행위는 사전에 저작권자의 허락을 받아야\" 한다고 적혀 있다 |\n+| 한국경제 | 이용 제한 문구가 없다 |\n+| 매일경제 | RSS 안내에 이용 제한 문구가 없다. 이용약관은 상업적 이용만 제한한다 |\n+\n+등록표의 `permission` 값은 **매체가 보낸 회신이 아니라 위 확인을 근거로 팀이 사용 여부를 정한 기록이다.**\n+근거는 이 서비스가 수익을 내지 않는 교육 과정 팀 프로젝트이고, 기사 본문을 저장하거나 표시하지 않으며\n+제목·매체명·발행 시각·원문 링크만 쓰고, 공개 범위를 발표와 심사로 한정해 2026-09-28 최종 발표 뒤 배포를\n+중단한다는 것이다. 팀은 이 조건이라면 불특정 다수를 상대로 한 배포나 영리 이용에 해당하지 않는다고 보았다.\n+\n+경향신문의 문구는 영리 여부를 따지지 않으므로 비영리라는 사실만으로 벗어나지 않는다. 그 점을 확인하고\n+내린 결정이며 매체의 동의를 받은 것이 아니다. **이 판단은 위 조건이 유지되는 동안에만 유효하다** —\n+서비스를 계속 운영하거나 수익 모델을 붙이려면 각 매체와 이용 계약을 맺어야 한다.\n+\n+확인한 주소와 매체별 근거는 등록표 파일의 `_permission`과 각 항목의 `reference`에 있다. 이 사정은\n+코드와 등록표에만 남기고 화면이나 API 응답에는 싣지 않는다.\n+\n+## 남은 일 (2026-09-16 기준)\n+\n+spec 012의 실행 Task는 모두 끝났고 아래는 그 뒤에 남은 것이다. **여기에 적은 것 말고 진행 중인 일은\n+없다** — 뉴스 쪽을 다시 손대게 되면 이 절부터 읽으면 된다.\n+\n+### GDELT 질의어가 기사를 가져오지 못한다\n+\n+2026-09-16에 GDELT DOC API 호출이 매 회차 빈손으로 끝나던 원인 셋을 고쳤다. 셋 다 GDELT가 오류 상태가\n+아니라 **HTTP 200에 평문 안내**를 실어 보내는 종류라, 로컬 fixture로 도는 시험은 전부 통과한 채 운영에서만\n+드러났다.\n+\n+| 고친 것 | GDELT가 보내던 응답 |\n+|---|---|\n+| `mode=ArticleList` → `artlist` | `Invalid mode.` |\n+| `A OR B` → `(A OR B)` | `Queries containing OR'd terms must be surrounded by ().` |\n+| `monetary-policy` → `\"monetary-policy\"` | `One or more of your keywords contained an illegal character.` |\n+\n+문법을 고친 뒤 질의는 성립했지만 **결과가 0건이었다.** 원인은 확인하지 못했다. 짐작으로는 우리가 질의어로\n+보내는 값이 `monetary-policy`·`prices` 같은 **내부 주제 키**라서 영어 기사 본문에 그대로 나올 낱말이 아닌\n+것인데, 재보지 않았으므로 짐작이다. 확인하려던 날 호출을 여러 번 한 탓에 IP가 429로 막혀 질의어 비교를\n+하지 못했다.\n+\n+다시 잴 때 쓸 스크립트를 남겨 두지 않았다(세션 임시 폴더에 있었다). 질의어를 바꿔 가며\n+`https://api.gdeltproject.org/api/v2/doc/doc?query=...&mode=artlist&format=json&timespan=24h`를\n+호출해 `articles` 길이를 비교하면 된다. **호출 간격을 넉넉히 둔다** — 안내는 5초당 1회지만 실제로는 100초\n+간격에도 429가 이어졌다.\n+\n+관련해 확인만 하고 손대지 않은 것이 둘 더 있다.\n+\n+- **재시도 간격이 GDELT 제한과 맞지 않는다.** 실패하면 몇 초 안에 다시 부르는데 그 자체가 429를 부른다\n+- **응답이 10초 안팎인데 `requestTimeout`이 20초다.** 여유가 적어 느린 날에는 타임아웃으로 끝난다\n+\n+이 셋은 급하지 않다. GDELT는 해외 보완원이고, 실패해도 장애 격리가 동작해 국내 RSS 수집과 화면에 영향을\n+주지 않는다(spec FR-014).\n+\n+### 그 밖에 알고 있는 한계\n \n-등록표에 `permission`을 적는 자리는 마련돼 있다(회신이 오면 상태·허용 필드·회신 시각·근거를 적으면\n-`NewsPublisherRegistrySync`가 이력으로 남기고 매체 상태를 전이한다). 그 자리가 비어 있다는 것이 곧\n-아직 아무 매체와도 합의하지 않았다는 뜻이다.\n+- **SC-002 표본에 빠진 쌍이 있을 수 있다.** 후보를 \"48시간 내 + 공통 주제 + 공통 어절 1개 이상\"으로 좁힌 뒤\n+  사람이 읽었으므로, 제목에 공통 어절이 하나도 없는 같은 사건 쌍은 표본에 없다\n+- **고유어 조건의 문서 빈도 기준(3)이 후보 집합 크기에 따라 뜻이 달라진다.** 회차 후보가 적으면 대부분의\n+  어절이 고유어로 판정되어 조건이 자주 걸린다. 덜 합치는 쪽이라 안전하다고 보고 절대값으로 고정했다\n+- **PD-15는 매체 회신 없이 팀 판단으로 진행 중이다.** 위 PD-15 절의 조건이 깨지면(계속 운영하거나 수익\n+  모델을 붙이면) 그 판단도 무효다\n+- **규칙 버전이 바뀌어도 옛 묶음은 다시 만들지 않는다.** 의도한 결정이며 과거 조회에는 v1 판정이 남는다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/market-news-api.md",
+          "old_path": "docs/specs/market-news-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -361,3 +361,13 @@ T052까지 dev에 통합된 상태에서 본 일곱 번째 수렴 검토다. 앞\n \n - [X] T082 CRITICAL: 묶음 품질 표본을 실제 보도로 바꾸고 그 위에서 묶음 규칙을 다시 정한다. 지금 `grouping-quality.json`은 같은 사건 기사 쌍 11개 중 9개의 제목이 글자 그대로 같아(Jaccard 1.000, 평균 0.909) 어떤 토큰화를 쓰든 통과한다. 실제 수집분 345건에서 같은 주제·다른 매체 쌍 8,539개를 재면 0.60에 닿는 쌍이 0개이고 최대가 0.455라, 운영에서는 같은 사건이 한 번도 묶이지 않는다. 원인은 문턱값이 아니라 조사·어미가 붙는 한국어 어절 토큰화이므로 문턱만 낮추면 다른 사건이 붙는다. 실제 수집분에서 뽑은 표본을 `grouping-quality-v2`로 추가하고(v1과 그 판정은 덮어쓰지 않는다), 토큰화와 문턱을 `news-grouping-v2`로 새로 정해 두 표본 모두에서 오병합 0건·분리율 10% 이하를 다시 측정한다. 측정 절차와 수치를 저장소에 남겨 다음 사람이 재현할 수 있게 한다 per SC-002, FR-011, US1/AC1, 원칙 VIII (partial)\n - [X] T083 `docs/specs/market-news-api.md`의 PD-15 문단을 등록표의 실제 상태와 맞춘다. 문단이 \"등록표의 경향신문·한국경제·매일경제 항목과 `permission` 값은 내부 fixture 검증용\"이라고 적었지만 `news-publishers-v1.json`에는 `permission` 키가 없고 세 매체 모두 `PENDING`으로 등록된다. 지금 문장은 회신을 흉내 낸 값이 파일에 들어 있다는 인상을 주어, 읽는 사람이 공개 게이트가 이미 열려 있는지 의심하게 만든다 per FR-016, T053 (partial)\n+\n+---\n+\n+## Phase 16: Convergence\n+\n+묶음 규칙 v2가 dev에 들어간 뒤 본 여덟 번째 수렴 검토다. 규칙을 바꾼 것이 저장된 자료에 어떻게 닿는지를 살폈다.\n+기존 Task는 손대지 않는다.\n+\n+- [X] T084 규칙 버전이 바뀐 뒤 옛 판정으로 저장된 묶음을 어떻게 할지 정하고 그대로 처리한다. `NewsIngestionService.regroup`은 이번 회차가 건드린 기사가 속한 묶음만 다시 만들므로, v2로 바꾼 뒤에도 새 기사가 들어오지 않는 묶음은 v1 판정 그대로 남는다. 현재 조회는 48시간 창이라 이틀이면 v2로 채워지지만 과거 조회는 창이 없어 갈라진 묶음이 영구히 보인다. 어제 묶이는 사건을 1개에서 14개로 늘린 개선이 과거 자료에는 닿지 않는다는 뜻이다. **원칙 VIII과 정면으로 부딪히는 자리라 코드로 결정하지 말 것** — \"기존 결과를 덮어쓰지 않는다\"는 원칙대로면 옛 묶음은 그대로 두는 것이 맞고, 그러면 사용자는 어느 규칙으로 만든 화면인지 모른 채 중복이 정리되지 않은 과거 화면을 본다. 재생성할지, 그대로 두고 그 사실을 화면과 문서에 드러낼지 사람이 정한 뒤 그에 맞게 처리한다 per SC-002, FR-006, 원칙 VIII (partial)\n+- [X] T085 `news_digest_article.title_similarity`가 어느 척도로 잰 값인지 읽는 쪽이 알 수 있게 한다. v1 묶음 행에는 어절 Jaccard가, v2 묶음 행에는 문자 2-gram Jaccard가 들어 있어 같은 컬럼에 뜻이 다른 두 값이 섞인다. `news_digest.grouping_rule_version`을 함께 보면 구분할 수 있지만 그 사실이 코드에도 스키마 주석에도 없어, 나중에 이 값으로 문턱을 다시 재는 사람이 두 척도를 한 분포로 읽는다 per 원칙 VIII, data-model `NewsDigestArticle` (partial)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/012-market-news-digest/tasks.md",
+          "old_path": "specs/012-market-news-digest/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2817007": []
+  }
+}

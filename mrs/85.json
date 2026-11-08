@@ -1,0 +1,841 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943228,
+    "iid": 85,
+    "project_id": 1444456,
+    "title": "feat(fe): 로그아웃 및 인증 만료 복구 기능을 구현",
+    "description": "# 작업 내용 요약\n\n로그아웃, 세션 만료 및 인증 복구 흐름을 구현했습니다. 백엔드 API가 없는 부분은 인증 계약을 기준으로 클라이언트와 목업 테스트를 구성했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* ticket #FE-198\n* branch: `feat(fe)/198-logout-auth-recovery`\n\n# 주요 변경 사항\n\n* 로그아웃 즉시 사용자 및 보호 정보 숨김\n* 로그아웃 성공·결과 미확인 상태와 재시도 기능 구현\n* 401 세션 만료 및 CSRF 토큰 갱신 처리\n* 오래된 인증 응답이 최신 상태를 덮어쓰지 않도록 방지\n* 탭 재활성화·보호 경로 진입·페이지 복원 시 인증 재확인\n* 상태 알림, 키보드 초점 및 360px 반응형 보완\n\n# 테스트\n\n* 전체 프론트엔드 테스트 71개 통과\n* lint 오류 0개\n* build 및 `git diff --check` 통과\n\n# 리뷰 포인트\n\n* 로그아웃·현재 사용자 조회·CSRF API는 백엔드 구현 후 실제 연동 확인이 필요합니다.\n* CSRF 오류 발생 시 토큰만 갱신하며 상태 변경 요청은 자동 재전송하지 않습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T14:57:08.953+09:00",
+    "updated_at": "2026-09-14T16:09:47.018+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-14T16:09:46.168+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/198-logout-auth-recovery",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e27563fcb298d364fb038a69d655cd8099b8b2c2",
+    "merge_commit_sha": "533b91bdf30c5065ec1dc437c065c2eea607e053",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:57:10.939+09:00",
+    "reference": "!85",
+    "references": {
+      "short": "!85",
+      "relative": "!85",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!85"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/85",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943228,
+    "iid": 85,
+    "project_id": 1444456,
+    "title": "feat(fe): 로그아웃 및 인증 만료 복구 기능을 구현",
+    "description": "# 작업 내용 요약\n\n로그아웃, 세션 만료 및 인증 복구 흐름을 구현했습니다. 백엔드 API가 없는 부분은 인증 계약을 기준으로 클라이언트와 목업 테스트를 구성했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* ticket #FE-198\n* branch: `feat(fe)/198-logout-auth-recovery`\n\n# 주요 변경 사항\n\n* 로그아웃 즉시 사용자 및 보호 정보 숨김\n* 로그아웃 성공·결과 미확인 상태와 재시도 기능 구현\n* 401 세션 만료 및 CSRF 토큰 갱신 처리\n* 오래된 인증 응답이 최신 상태를 덮어쓰지 않도록 방지\n* 탭 재활성화·보호 경로 진입·페이지 복원 시 인증 재확인\n* 상태 알림, 키보드 초점 및 360px 반응형 보완\n\n# 테스트\n\n* 전체 프론트엔드 테스트 71개 통과\n* lint 오류 0개\n* build 및 `git diff --check` 통과\n\n# 리뷰 포인트\n\n* 로그아웃·현재 사용자 조회·CSRF API는 백엔드 구현 후 실제 연동 확인이 필요합니다.\n* CSRF 오류 발생 시 토큰만 갱신하며 상태 변경 요청은 자동 재전송하지 않습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T14:57:08.953+09:00",
+    "updated_at": "2026-09-14T16:09:47.018+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-14T16:09:46.168+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/198-logout-auth-recovery",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e27563fcb298d364fb038a69d655cd8099b8b2c2",
+    "merge_commit_sha": "533b91bdf30c5065ec1dc437c065c2eea607e053",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:57:10.939+09:00",
+    "reference": "!85",
+    "references": {
+      "short": "!85",
+      "relative": "!85",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!85"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/85",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "21",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "head_sha": "e27563fcb298d364fb038a69d655cd8099b8b2c2",
+      "start_sha": "eda07078e0977e612a0152566715acf61cb00286"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "69dee2a75d56228435d7b0252359acdd3e8bf318",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802408,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T14:57:09.065+09:00",
+          "updated_at": "2026-09-14T14:57:09.073+09:00",
+          "system": true,
+          "noteable_id": 943228,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 85,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0ba7f8a51c52716114fa319cff05f17f74e23d47",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802409,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 상태 관리와 레이스 컨디션 방지**: `AuthProvider` 및 `ProtectedRoute`에서 AbortController와 요청 ID(requestIdRef)를 활용하여 오래된 비동기 응답이 최신 상태를 덮어쓰는 문제를 효과적으로 방지했습니다.\n- **철저한 테스트 커버리지**: 로그아웃 흐름, 401 세션 만료, CSRF 토큰 갱신, 탭 재활성화(Visibility API, bfcache) 등 다양한 에지 케이스를 검증하는 단위 및 통합 테스트가 풍부하게 작성되었습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (접근성, 반응형 레이아웃, 에러 처리 흐름이 모범적으로 구현되어 있습니다.)\n\n### 테스트 제안\n- **네트워크 지연 시 다중 클릭 테스트**: 로그아웃 버튼이나 '로그아웃 다시 시도' 버튼을 네트워크 응답 대기 중에 빠르게 여러 번 연속 클릭했을 때, 중복 요청이 발생하지 않고 상태가 안정적으로 유지되는지 확인하는 시나리오를 추가하세요.\n- **토큰 만료 후 보호 경로 진입 시나리오**: `ProtectedRoute` 진입 시 `recheck()`가 실패(`AUTHENTICATION_REQUIRED`)할 때, 사용자가 로그인 페이지로 매끄럽게 리다이렉트되고 원래 접근하려던 target 경로가 올바르게 보존되는지 검증하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e27563fcb298d364fb038a69d655cd8099b8b2c2 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T14:57:18.985+09:00",
+          "updated_at": "2026-09-14T15:07:22.829+09:00",
+          "system": false,
+          "noteable_id": 943228,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 85,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8d5a2caee845da284226fd02864ada80be93dfbe",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802489,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>e27563fc - feat(fe): 로그아웃관련 test 추가</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/85/diffs?diff_id=2194469&start_sha=8c39620a7ad0af1c296d4040c862def49d0c364c)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T15:07:18.708+09:00",
+          "updated_at": "2026-09-14T15:07:18.710+09:00",
+          "system": true,
+          "noteable_id": 943228,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 85,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de13166d324d0106c71e50d59af32ae6ea0de6b0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802531,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T15:11:13.988+09:00",
+          "updated_at": "2026-09-14T15:15:16.977+09:00",
+          "system": false,
+          "noteable_id": 943228,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 85,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cde8f97b89049a9ff108373d92cb5a7d3e30c560",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803084,
+          "type": null,
+          "body": "mentioned in commit 533b91bdf30c5065ec1dc437c065c2eea607e053",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T16:09:46.283+09:00",
+          "updated_at": "2026-09-14T16:09:46.301+09:00",
+          "system": true,
+          "noteable_id": 943228,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 85,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194469,
+      "head_commit_sha": "e27563fcb298d364fb038a69d655cd8099b8b2c2",
+      "base_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "start_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "created_at": "2026-09-14T15:07:18.468+09:00",
+      "merge_request_id": 943228,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "d1a5accd30cd3dac77ff7c9fc6b3e4d395dcfc28"
+    },
+    {
+      "id": 2194399,
+      "head_commit_sha": "8c39620a7ad0af1c296d4040c862def49d0c364c",
+      "base_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "start_commit_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+      "created_at": "2026-09-14T14:57:09.350+09:00",
+      "merge_request_id": 943228,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "74a6a4317c1d2f77eba62f5bb170e986b573378d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194469,
+      "head_commit_sha": "e27563fcb298d364fb038a69d655cd8099b8b2c2",
+      "base_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "start_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "created_at": "2026-09-14T15:07:18.468+09:00",
+      "merge_request_id": 943228,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "d1a5accd30cd3dac77ff7c9fc6b3e4d395dcfc28",
+      "commits": [
+        {
+          "id": "e27563fcb298d364fb038a69d655cd8099b8b2c2",
+          "short_id": "e27563fc",
+          "created_at": "2026-09-14T15:07:10.000+09:00",
+          "parent_ids": [
+            "8c39620a7ad0af1c296d4040c862def49d0c364c"
+          ],
+          "title": "feat(fe): 로그아웃관련 test 추가",
+          "message": "feat(fe): 로그아웃관련 test 추가\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-14T15:07:10.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-14T15:07:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e27563fcb298d364fb038a69d655cd8099b8b2c2"
+        },
+        {
+          "id": "8c39620a7ad0af1c296d4040c862def49d0c364c",
+          "short_id": "8c39620a",
+          "created_at": "2026-09-14T14:56:16.000+09:00",
+          "parent_ids": [
+            "e8a9003bef9b4fd54f29faf96e85a89d2b009f77"
+          ],
+          "title": "feat(fe): 로그아웃 및 인증 만료 복구 기능을 구현",
+          "message": "feat(fe): 로그아웃 및 인증 만료 복구 기능을 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-14T14:56:16.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-14T14:56:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c39620a7ad0af1c296d4040c862def49d0c364c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -11,6 +11,7 @@ import {\n   confirmEmailVerification,\n   getCurrentUser,\n   login,\n+  logout,\n   normalizeEmail,\n   requestEmailVerification,\n   signup,\n@@ -158,6 +159,14 @@ describe('auth API', () => {\n     expect(getSpy).toHaveBeenCalledWith('/auth/me', { signal: undefined })\n   })\n \n+  it('로그아웃은 CSRF를 준비한 뒤 현재 세션만 종료한다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))\n+    const deleteSpy = vi.spyOn(apiClient, 'delete').mockResolvedValue(axiosResponse(null, 204))\n+\n+    await expect(logout()).resolves.toBeUndefined()\n+    expect(deleteSpy).toHaveBeenCalledWith('/auth/sessions/current', { signal: undefined })\n+  })\n+\n   it('로그인 실패 envelope를 안정된 인증 오류로 변환한다', async () => {\n     vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))\n     const response = axiosResponse(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/auth.test.ts",
+          "old_path": "frontend/src/api/auth.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,8 +2,8 @@ import {\n   ApiClientError,\n   apiClient,\n   normalizeApiError,\n-  prepareCsrfToken,\n   resetCsrfToken,\n+  runCsrfProtectedMutation,\n } from './client'\n import type {\n   ApiEnvelope,\n@@ -55,21 +55,12 @@ function describeShape(value: unknown): string {\n   return `{ ${fields} }`\n }\n \n-async function runMutation<T>(request: () => Promise<T>): Promise<T> {\n-  try {\n-    await prepareCsrfToken()\n-    return await request()\n-  } catch (error) {\n-    throw normalizeApiError(error)\n-  }\n-}\n-\n export async function requestEmailVerification(\n   input: EmailVerificationRequest,\n   signal?: AbortSignal,\n ): Promise<void> {\n   const email = normalizeEmail(input.email)\n-  await runMutation(() =>\n+  await runCsrfProtectedMutation(() =>\n     apiClient.post('/accounts/email-verifications', { email }, { signal }),\n   )\n }\n@@ -79,7 +70,7 @@ export async function confirmEmailVerification(\n   signal?: AbortSignal,\n ): Promise<void> {\n   const email = normalizeEmail(input.email)\n-  await runMutation(() =>\n+  await runCsrfProtectedMutation(() =>\n     apiClient.post(\n       '/accounts/email-verifications/confirm',\n       { email, verificationCode: input.verificationCode },\n@@ -93,7 +84,7 @@ export async function signup(\n   signal?: AbortSignal,\n ): Promise<SignupResponse> {\n   const email = normalizeEmail(input.email)\n-  const response = await runMutation(() =>\n+  const response = await runCsrfProtectedMutation(() =>\n     apiClient.post<ApiEnvelope<SignupResponse>>(\n       '/accounts',\n       { ...input, email },\n@@ -125,7 +116,7 @@ export async function login(\n   input: LoginRequest,\n   signal?: AbortSignal,\n ): Promise<AuthenticatedUser> {\n-  const response = await runMutation(() =>\n+  const response = await runCsrfProtectedMutation(() =>\n     apiClient.post<ApiEnvelope<AuthenticatedUser>>(\n       '/auth/sessions',\n       { email: normalizeEmail(input.email), password: input.password },\n@@ -154,6 +145,13 @@ export async function login(\n   return user\n }\n \n+export async function logout(signal?: AbortSignal): Promise<void> {\n+  await runCsrfProtectedMutation(() =>\n+    apiClient.delete('/auth/sessions/current', { signal }),\n+  )\n+  resetCsrfToken()\n+}\n+\n export async function getCurrentUser(signal?: AbortSignal): Promise<AuthenticatedUser> {\n   try {\n     const response = await apiClient.get<ApiEnvelope<AuthenticatedUser>>('/auth/me', { signal })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/auth.ts",
+          "old_path": "frontend/src/api/auth.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,10 @@ export const apiClient = axios.create({\n   xsrfHeaderName: 'X-XSRF-TOKEN',\n })\n \n+type AuthenticationRequiredListener = () => void\n+\n+const authenticationRequiredListeners = new Set<AuthenticationRequiredListener>()\n+\n type ApiClientErrorKind = 'api' | 'network' | 'unexpected'\n \n export class ApiClientError extends Error {\n@@ -80,6 +84,28 @@ function readApiError(value: unknown) {\n   return { code: error.code, message: error.message, fieldErrors }\n }\n \n+apiClient.interceptors.response.use(\n+  (response) => response,\n+  (error: unknown) => {\n+    if (axios.isAxiosError(error) && error.response?.status === 401) {\n+      const apiError = readApiError(error.response.data)\n+      if (apiError?.code === 'AUTHENTICATION_REQUIRED') {\n+        authenticationRequiredListeners.forEach((listener) => listener())\n+      }\n+    }\n+\n+    return Promise.reject(error)\n+  },\n+)\n+\n+/** 인증된 요청에서 세션 만료가 확인되면 전역 인증 상태에 전달한다. */\n+export function subscribeAuthenticationRequired(\n+  listener: AuthenticationRequiredListener,\n+): () => void {\n+  authenticationRequiredListeners.add(listener)\n+  return () => authenticationRequiredListeners.delete(listener)\n+}\n+\n /** Axios 오류를 화면에서 안전하게 분기할 수 있는 공통 오류로 변환한다. */\n export function normalizeApiError(error: unknown): ApiClientError {\n   if (error instanceof ApiClientError) return error\n@@ -144,3 +170,25 @@ export function resetCsrfToken(): void {\n   csrfReady = false\n   pendingCsrfRequest = null\n }\n+\n+/** CSRF 오류에서는 토큰만 갱신하고 상태 변경 요청은 사용자가 재시도할 때까지 반복하지 않는다. */\n+export async function runCsrfProtectedMutation<T>(request: () => Promise<T>): Promise<T> {\n+  try {\n+    await prepareCsrfToken()\n+    return await request()\n+  } catch (error) {\n+    const normalizedError = normalizeApiError(error)\n+\n+    if (normalizedError.code === 'CSRF_TOKEN_INVALID') {\n+      resetCsrfToken()\n+      try {\n+        await prepareCsrfToken()\n+      } catch {\n+        // 다음 명시적 재시도에서도 새 토큰을 준비하도록 실패 상태를 유지한다.\n+        resetCsrfToken()\n+      }\n+    }\n+\n+    throw normalizedError\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/client.ts",
+          "old_path": "frontend/src/api/client.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,3 +16,66 @@\n   background: var(--thorp-surface);\n   font-size: 0.76rem;\n }\n+\n+.recovery {\n+  display: grid;\n+  width: min(100% - 32px, 520px);\n+  gap: 12px;\n+  padding: 28px;\n+  border: 1px solid var(--thorp-line-strong);\n+  background: var(--thorp-surface);\n+}\n+\n+.recovery h1,\n+.recovery p {\n+  margin: 0;\n+}\n+\n+.recovery h1 {\n+  color: var(--thorp-foreground);\n+  font-size: 1.25rem;\n+}\n+\n+.recovery p {\n+  color: var(--thorp-muted);\n+  line-height: 1.6;\n+}\n+\n+.actions {\n+  display: flex;\n+  gap: 8px;\n+  margin-top: 8px;\n+  flex-wrap: wrap;\n+}\n+\n+.actions button {\n+  min-height: 42px;\n+  padding: 0 14px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 3px;\n+  background: var(--thorp-surface-raised);\n+  color: var(--thorp-foreground);\n+  cursor: pointer;\n+}\n+\n+.actions button:hover {\n+  border-color: var(--thorp-accent);\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.actions button:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+@media (max-width: 360px) {\n+  .recovery {\n+    width: min(100% - 24px, 520px);\n+    padding: 22px 18px;\n+  }\n+\n+  .actions,\n+  .actions button {\n+    width: 100%;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthEntryGuard.module.css",
+          "old_path": "frontend/src/auth/AuthEntryGuard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,6 +9,7 @@ import { AuthProvider } from './AuthProvider'\n const apiMocks = vi.hoisted(() => ({\n   getCurrentUser: vi.fn(),\n   login: vi.fn(),\n+  logout: vi.fn(),\n }))\n \n vi.mock('@/api/auth', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthProvider.test.tsx",
+          "old_path": "frontend/src/auth/AuthProvider.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,10 @@\n import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'\n-import { getCurrentUser, login as requestLogin } from '@/api/auth'\n-import { ApiClientError } from '@/api/client'\n+import {\n+  getCurrentUser,\n+  login as requestLogin,\n+  logout as requestLogout,\n+} from '@/api/auth'\n+import { ApiClientError, subscribeAuthenticationRequired } from '@/api/client'\n import type { AuthenticatedUser, LoginRequest } from '@/types/auth'\n import { AuthContext, type AuthContextValue, type AuthSnapshot } from './auth-context'\n \n@@ -15,9 +19,16 @@ function loadBootstrapUser(): Promise<AuthenticatedUser> {\n   return pendingBootstrap\n }\n \n-function rejectedSnapshot(error: unknown): AuthSnapshot {\n+function rejectedSnapshot(error: unknown, previousStatus?: AuthSnapshot['status']): AuthSnapshot {\n   if (error instanceof ApiClientError && error.code === 'AUTHENTICATION_REQUIRED') {\n-    return { status: 'anonymous', user: null }\n+    const status =\n+      previousStatus === 'authenticated' || previousStatus === 'expired'\n+        ? 'expired'\n+        : 'anonymous'\n+    return { status, user: null }\n+  }\n+  if (previousStatus === 'logoutUnconfirmed') {\n+    return { status: 'logoutUnconfirmed', user: null }\n   }\n   return { status: 'error', user: null }\n }\n@@ -30,6 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {\n   })\n   const mountedRef = useRef(true)\n   const requestIdRef = useRef(0)\n+  const currentUserAbortRef = useRef<AbortController | null>(null)\n+  const snapshotRef = useRef(snapshot)\n+\n+  const commitSnapshot = useCallback((next: AuthSnapshot) => {\n+    snapshotRef.current = next\n+    if (mountedRef.current) setSnapshot(next)\n+  }, [])\n \n   const applyCurrentUserRequest = useCallback(\n     async (request: Promise<AuthenticatedUser>): Promise<AuthSnapshot> => {\n@@ -38,15 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {\n       try {\n         const user = await request\n         const next: AuthSnapshot = { status: 'authenticated', user }\n-        if (mountedRef.current && requestId === requestIdRef.current) setSnapshot(next)\n+        if (mountedRef.current && requestId === requestIdRef.current) commitSnapshot(next)\n         return next\n       } catch (error) {\n-        const next = rejectedSnapshot(error)\n-        if (mountedRef.current && requestId === requestIdRef.current) setSnapshot(next)\n+        const next = rejectedSnapshot(error, snapshotRef.current.status)\n+        if (mountedRef.current && requestId === requestIdRef.current) commitSnapshot(next)\n         return next\n       }\n     },\n-    [],\n+    [commitSnapshot],\n   )\n \n   useEffect(() => {\n@@ -54,35 +72,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {\n     void applyCurrentUserRequest(loadBootstrapUser())\n     return () => {\n       mountedRef.current = false\n+      currentUserAbortRef.current?.abort()\n     }\n   }, [applyCurrentUserRequest])\n \n-  const recheck = useCallback(() => {\n-    setSnapshot({ status: 'checking', user: null })\n-    return applyCurrentUserRequest(getCurrentUser())\n-  }, [applyCurrentUserRequest])\n+  const recheck = useCallback(async (): Promise<AuthSnapshot> => {\n+    const previousStatus = snapshotRef.current.status\n+    const requestId = ++requestIdRef.current\n+    currentUserAbortRef.current?.abort()\n+    const controller = new AbortController()\n+    currentUserAbortRef.current = controller\n+    commitSnapshot({ status: 'checking', user: null })\n+\n+    try {\n+      const user = await getCurrentUser(controller.signal)\n+      const next: AuthSnapshot = { status: 'authenticated', user }\n+      if (mountedRef.current && requestId === requestIdRef.current) commitSnapshot(next)\n+      return next\n+    } catch (error) {\n+      if (controller.signal.aborted || requestId !== requestIdRef.current) {\n+        return snapshotRef.current\n+      }\n+      const next = rejectedSnapshot(error, previousStatus)\n+      if (mountedRef.current) commitSnapshot(next)\n+      return next\n+    } finally {\n+      if (currentUserAbortRef.current === controller) currentUserAbortRef.current = null\n+    }\n+  }, [commitSnapshot])\n \n   const login = useCallback(async (input: LoginRequest, signal?: AbortSignal) => {\n     const requestId = ++requestIdRef.current\n+    currentUserAbortRef.current?.abort()\n \n     try {\n       const user = await requestLogin(input, signal)\n       if (mountedRef.current && requestId === requestIdRef.current) {\n-        setSnapshot({ status: 'authenticated', user })\n+        commitSnapshot({ status: 'authenticated', user })\n       }\n       return user\n     } catch (error) {\n       if (signal?.aborted) throw error\n       if (mountedRef.current && requestId === requestIdRef.current) {\n-        setSnapshot(rejectedSnapshot(error))\n+        commitSnapshot(rejectedSnapshot(error))\n       }\n       throw error\n     }\n-  }, [])\n+  }, [commitSnapshot])\n+\n+  const logout = useCallback(async (signal?: AbortSignal) => {\n+    const requestId = ++requestIdRef.current\n+    currentUserAbortRef.current?.abort()\n+    commitSnapshot({ status: 'logoutUnconfirmed', user: null })\n+\n+    try {\n+      await requestLogout(signal)\n+      if (mountedRef.current && requestId === requestIdRef.current) {\n+        commitSnapshot({ status: 'anonymous', user: null })\n+      }\n+    } catch (error) {\n+      if (!signal?.aborted && mountedRef.current && requestId === requestIdRef.current) {\n+        commitSnapshot({ status: 'logoutUnconfirmed', user: null })\n+      }\n+      throw error\n+    }\n+  }, [commitSnapshot])\n+\n+  useEffect(() => subscribeAuthenticationRequired(() => {\n+    if (snapshotRef.current.status !== 'authenticated') return\n+    requestIdRef.current += 1\n+    currentUserAbortRef.current?.abort()\n+    commitSnapshot({ status: 'expired', user: null })\n+  }), [commitSnapshot])\n+\n+  useEffect(() => {\n+    const handleVisibilityChange = () => {\n+      if (document.visibilityState === 'visible') void recheck()\n+    }\n+    const handlePageShow = (event: PageTransitionEvent) => {\n+      if (event.persisted) void recheck()\n+    }\n+\n+    document.addEventListener('visibilitychange', handleVisibilityChange)\n+    window.addEventListener('pageshow', handlePageShow)\n+    return () => {\n+      document.removeEventListener('visibilitychange', handleVisibilityChange)\n+      window.removeEventListener('pageshow', handlePageShow)\n+    }\n+  }, [recheck])\n \n   const value = useMemo<AuthContextValue>(\n-    () => ({ ...snapshot, login, recheck }),\n-    [login, recheck, snapshot],\n+    () => ({ ...snapshot, login, logout, recheck }),\n+    [login, logout, recheck, snapshot],\n   )\n \n   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthProvider.tsx",
+          "old_path": "frontend/src/auth/AuthProvider.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,139 @@\n+import { act, render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { login } from '@/api/auth'\n+import { ApiClientError, apiClient, resetCsrfToken } from '@/api/client'\n+import { authenticatedUser, authenticatedUserSuccess, authError } from '@/test/authFixtures'\n+import { useAuth } from './auth-context'\n+import { AuthProvider } from './AuthProvider'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  getCurrentUser: vi.fn(),\n+  login: vi.fn(),\n+  logout: vi.fn(),\n+}))\n+\n+const originalAdapter = apiClient.defaults.adapter\n+\n+vi.mock('@/api/auth', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')\n+  return { ...actual, getCurrentUser: apiMocks.getCurrentUser, logout: apiMocks.logout }\n+})\n+\n+function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {\n+  return {\n+    data,\n+    status,\n+    statusText: status >= 400 ? 'Error' : 'OK',\n+    headers: {},\n+    config: { headers: new AxiosHeaders() },\n+  }\n+}\n+\n+function deferred<T>() {\n+  let resolve!: (value: T) => void\n+  const promise = new Promise<T>((resolvePromise) => {\n+    resolve = resolvePromise\n+  })\n+  return { promise, resolve }\n+}\n+\n+function Probe() {\n+  const auth = useAuth()\n+  return (\n+    <div>\n+      <output data-testid=\"snapshot\">{auth.status}:{auth.user?.email ?? 'none'}</output>\n+      <button type=\"button\" onClick={() => void auth.recheck()}>재확인</button>\n+    </div>\n+  )\n+}\n+\n+describe('authentication recovery', () => {\n+  beforeEach(() => {\n+    vi.restoreAllMocks()\n+    vi.clearAllMocks()\n+    resetCsrfToken()\n+  })\n+\n+  afterEach(() => {\n+    apiClient.defaults.adapter = originalAdapter\n+  })\n+\n+  it('인증된 요청의 401 신호를 받으면 이전 사용자를 즉시 숨기고 expired가 된다', async () => {\n+    apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()\n+\n+    const response = axiosResponse(\n+      authError('AUTHENTICATION_REQUIRED', '로그인이 필요합니다.'),\n+      401,\n+    )\n+    apiClient.defaults.adapter = vi.fn().mockRejectedValueOnce(\n+      new AxiosError('Unauthorized', 'ERR_BAD_RESPONSE', undefined, undefined, response),\n+    )\n+\n+    await apiClient.get('/protected').catch(() => undefined)\n+    expect(await screen.findByText('expired:none')).toBeTruthy()\n+  })\n+\n+  it('인증 상태 재확인에서 401을 받으면 비로그인이 아니라 만료로 구분한다', async () => {\n+    apiMocks.getCurrentUser\n+      .mockResolvedValueOnce(authenticatedUser)\n+      .mockRejectedValueOnce(\n+        new ApiClientError('api', '로그인이 필요합니다.', {\n+          code: 'AUTHENTICATION_REQUIRED',\n+        }),\n+      )\n+    const user = userEvent.setup()\n+\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()\n+    await user.click(screen.getByRole('button', { name: '재확인' }))\n+\n+    expect(await screen.findByText('expired:none')).toBeTruthy()\n+  })\n+\n+  it('CSRF 403에서는 토큰만 다시 준비하고 원 요청은 사용자가 재시도할 때까지 반복하지 않는다', async () => {\n+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(null, 204))\n+    const csrfError = new AxiosError(\n+      'Forbidden',\n+      'ERR_BAD_RESPONSE',\n+      undefined,\n+      undefined,\n+      axiosResponse(authError('CSRF_TOKEN_INVALID', '토큰 만료'), 403),\n+    )\n+    const postSpy = vi.spyOn(apiClient, 'post').mockRejectedValueOnce(csrfError)\n+\n+    await expect(login({ email: 'user@example.com', password: 'password1234' })).rejects.toMatchObject({\n+      code: 'CSRF_TOKEN_INVALID',\n+    })\n+    expect(postSpy).toHaveBeenCalledOnce()\n+    expect(getSpy).toHaveBeenCalledTimes(2)\n+\n+    postSpy.mockResolvedValueOnce(axiosResponse(authenticatedUserSuccess))\n+    await expect(login({ email: 'user@example.com', password: 'password1234' })).resolves.toEqual(authenticatedUser)\n+    expect(postSpy).toHaveBeenCalledTimes(2)\n+  })\n+\n+  it('늦게 도착한 이전 재확인 결과가 최신 사용자 상태를 덮어쓰지 않는다', async () => {\n+    apiMocks.getCurrentUser.mockResolvedValueOnce(authenticatedUser)\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()\n+\n+    const first = deferred<typeof authenticatedUser>()\n+    const second = deferred<typeof authenticatedUser>()\n+    apiMocks.getCurrentUser.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)\n+    const user = userEvent.setup()\n+\n+    await user.click(screen.getByRole('button', { name: '재확인' }))\n+    await user.click(screen.getByRole('button', { name: '재확인' }))\n+\n+    const newestUser = { ...authenticatedUser, email: 'newest@example.com' }\n+    await act(async () => second.resolve(newestUser))\n+    expect(screen.getByTestId('snapshot').textContent).toBe('authenticated:newest@example.com')\n+\n+    await act(async () => first.resolve(authenticatedUser))\n+    expect(screen.getByTestId('snapshot').textContent).toBe('authenticated:newest@example.com')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthRecovery.test.tsx",
+          "old_path": "frontend/src/auth/AuthRecovery.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,120 @@\n+import { act, render, screen, waitFor } from '@testing-library/react'\n+import { MemoryRouter } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { ApiClientError } from '@/api/client'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import { useAuth } from './auth-context'\n+import { AuthProvider } from './AuthProvider'\n+import { ProtectedRoute } from './ProtectedRoute'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  getCurrentUser: vi.fn(),\n+  login: vi.fn(),\n+  logout: vi.fn(),\n+}))\n+\n+vi.mock('@/api/auth', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+function deferred<T>() {\n+  let resolve!: (value: T) => void\n+  const promise = new Promise<T>((resolvePromise) => {\n+    resolve = resolvePromise\n+  })\n+  return { promise, resolve }\n+}\n+\n+function Probe() {\n+  const auth = useAuth()\n+  return (\n+    <>\n+      <h1>공개 시장 화면</h1>\n+      <output data-testid=\"snapshot\">{auth.status}:{auth.user?.email ?? 'none'}</output>\n+    </>\n+  )\n+}\n+\n+describe('authentication revalidation', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+    apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)\n+  })\n+\n+  it('숨겨졌던 탭이 다시 보이면 사용자를 지운 확인 중 상태에서 재조회한다', async () => {\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()\n+\n+    const pending = deferred<typeof authenticatedUser>()\n+    apiMocks.getCurrentUser.mockReturnValueOnce(pending.promise)\n+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })\n+    act(() => document.dispatchEvent(new Event('visibilitychange')))\n+\n+    expect(screen.getByTestId('snapshot').textContent).toBe('checking:none')\n+    expect(screen.getByRole('heading', { name: '공개 시장 화면' })).toBeTruthy()\n+    expect(apiMocks.getCurrentUser).toHaveBeenCalledTimes(2)\n+    await act(async () => pending.resolve(authenticatedUser))\n+    expect(screen.getByTestId('snapshot').textContent).toBe('authenticated:user@example.com')\n+  })\n+\n+  it('bfcache에서 복원되면 이전 보호 사용자를 먼저 지우고 재조회한다', async () => {\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()\n+\n+    const pending = deferred<typeof authenticatedUser>()\n+    apiMocks.getCurrentUser.mockReturnValueOnce(pending.promise)\n+    const pageShow = new Event('pageshow')\n+    Object.defineProperty(pageShow, 'persisted', { value: true })\n+    act(() => window.dispatchEvent(pageShow))\n+\n+    expect(screen.getByTestId('snapshot').textContent).toBe('checking:none')\n+    await act(async () => pending.resolve(authenticatedUser))\n+  })\n+\n+  it('보호 경로에 들어갈 때 세션을 다시 확인할 때까지 이전 보호 내용을 숨긴다', async () => {\n+    const protectedEntry = deferred<typeof authenticatedUser>()\n+    apiMocks.getCurrentUser\n+      .mockResolvedValueOnce(authenticatedUser)\n+      .mockReturnValueOnce(protectedEntry.promise)\n+\n+    render(\n+      <MemoryRouter initialEntries={['/records/analysis-42']}>\n+        <AuthProvider>\n+          <ProtectedRoute><h1>보호된 분석 기록</h1></ProtectedRoute>\n+        </AuthProvider>\n+      </MemoryRouter>,\n+    )\n+\n+    await waitFor(() => expect(apiMocks.getCurrentUser).toHaveBeenCalledTimes(2))\n+    expect(screen.queryByRole('heading', { name: '보호된 분석 기록' })).toBeNull()\n+    expect(screen.getByRole('status').textContent).toContain('로그인 상태를 확인')\n+\n+    await act(async () => protectedEntry.resolve(authenticatedUser))\n+    expect(await screen.findByRole('heading', { name: '보호된 분석 기록' })).toBeTruthy()\n+  })\n+\n+  it.each([\n+    ['탭 재활성화', () => document.dispatchEvent(new Event('visibilitychange'))],\n+    ['bfcache 복원', () => {\n+      const pageShow = new Event('pageshow')\n+      Object.defineProperty(pageShow, 'persisted', { value: true })\n+      window.dispatchEvent(pageShow)\n+    }],\n+  ])('%s 재확인에서 401을 받으면 expired로 전환한다', async (_label, restorePage) => {\n+    apiMocks.getCurrentUser\n+      .mockResolvedValueOnce(authenticatedUser)\n+      .mockRejectedValueOnce(\n+        new ApiClientError('api', '로그인이 필요합니다.', {\n+          code: 'AUTHENTICATION_REQUIRED',\n+        }),\n+      )\n+\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:user@example.com')).toBeTruthy()\n+\n+    act(() => restorePage())\n+\n+    expect(await screen.findByText('expired:none')).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/AuthRevalidation.test.tsx",
+          "old_path": "frontend/src/auth/AuthRevalidation.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,103 @@\n+import { act, render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { ApiClientError } from '@/api/client'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import { useAuth } from './auth-context'\n+import { AuthProvider } from './AuthProvider'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  getCurrentUser: vi.fn(),\n+  login: vi.fn(),\n+  logout: vi.fn(),\n+}))\n+\n+vi.mock('@/api/auth', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+function deferred<T>() {\n+  let resolve!: (value: T) => void\n+  let reject!: (reason: unknown) => void\n+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {\n+    resolve = resolvePromise\n+    reject = rejectPromise\n+  })\n+  return { promise, resolve, reject }\n+}\n+\n+function Probe() {\n+  const auth = useAuth()\n+  return (\n+    <div>\n+      <output data-testid=\"snapshot\">{auth.status}:{auth.user?.nickname ?? 'none'}</output>\n+      <button type=\"button\" onClick={() => void auth.logout().catch(() => undefined)}>로그아웃 실행</button>\n+      <button type=\"button\" onClick={() => void auth.recheck()}>상태 확인</button>\n+    </div>\n+  )\n+}\n+\n+describe('logout flow', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+    apiMocks.getCurrentUser.mockResolvedValue(authenticatedUser)\n+  })\n+\n+  it('로그아웃 시작 즉시 사용자를 지우고 204 확인 뒤 anonymous가 된다', async () => {\n+    const pendingLogout = deferred<void>()\n+    apiMocks.logout.mockReturnValue(pendingLogout.promise)\n+    const user = userEvent.setup()\n+\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:쏘프사용자')).toBeTruthy()\n+\n+    await user.click(screen.getByRole('button', { name: '로그아웃 실행' }))\n+    expect(screen.getByTestId('snapshot').textContent).toBe('logoutUnconfirmed:none')\n+\n+    await act(async () => pendingLogout.resolve())\n+    expect(screen.getByTestId('snapshot').textContent).toBe('anonymous:none')\n+  })\n+\n+  it('응답을 확인하지 못하면 보호 정보를 숨긴 상태를 유지하고 재확인할 수 있다', async () => {\n+    apiMocks.logout.mockRejectedValue(new ApiClientError('network', '연결 실패'))\n+    const user = userEvent.setup()\n+\n+    render(<AuthProvider><Probe /></AuthProvider>)\n+    expect(await screen.findByText('authenticated:쏘프사용자')).toBeTruthy()\n+    await user.click(screen.getByRole('button', { name: '로그아웃 실행' }))\n+    expect(await screen.findByText('logoutUnconfirmed:none')).toBeTruthy()\n+\n+    apiMocks.getCurrentUser.mockRejectedValueOnce(\n+      new ApiClientError('api', '로그인이 필요합니다.', {\n+        code: 'AUTHENTICATION_REQUIRED',\n+      }),\n+    )\n+    await user.click(screen.getByRole('button', { name: '상태 확인' }))\n+    expect(await screen.findByText('anonymous:none')).toBeTruthy()\n+  })\n+\n+  it('헤더에서 로그아웃 실패를 알리고 재시도할 수 있다', async () => {\n+    apiMocks.logout\n+      .mockRejectedValueOnce(new ApiClientError('network', '연결 실패'))\n+      .mockResolvedValueOnce(undefined)\n+    const user = userEvent.setup()\n+\n+    render(\n+      <MemoryRouter>\n+        <AuthProvider><AppHeader /></AuthProvider>\n+      </MemoryRouter>,\n+    )\n+    expect(await screen.findByText('쏘프사용자')).toBeTruthy()\n+    await user.click(screen.getByRole('button', { name: '로그아웃' }))\n+\n+    expect((await screen.findByRole('alert')).textContent).toContain('로그아웃 상태를 확인하지 못했습니다')\n+    const retryButton = screen.getByRole('button', { name: '로그아웃 다시 시도' })\n+    expect(document.activeElement).toBe(retryButton)\n+    await user.click(retryButton)\n+    const loginLink = await screen.findByRole('link', { name: '로그인' })\n+    expect(document.activeElement).toBe(loginLink)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/LogoutFlow.test.tsx",
+          "old_path": "frontend/src/auth/LogoutFlow.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,6 +7,8 @@ import { ProtectedRoute } from './ProtectedRoute'\n \n const authMock = vi.hoisted(() => ({\n   status: 'anonymous' as AuthStateStatus,\n+  logout: vi.fn(),\n+  recheck: vi.fn(),\n }))\n \n vi.mock('./auth-context', () => ({\n@@ -14,7 +16,8 @@ vi.mock('./auth-context', () => ({\n     status: authMock.status,\n     user: authMock.status === 'authenticated' ? authenticatedUser : null,\n     login: vi.fn(),\n-    recheck: vi.fn(),\n+    logout: authMock.logout,\n+    recheck: authMock.recheck,\n   }),\n }))\n \n@@ -39,6 +42,8 @@ function renderProtected(initialEntry = '/records/analysis-42?view=trades#loss')\n describe('ProtectedRoute', () => {\n   beforeEach(() => {\n     authMock.status = 'anonymous'\n+    authMock.logout.mockReset()\n+    authMock.recheck.mockReset()\n     window.sessionStorage.clear()\n   })\n \n@@ -52,9 +57,13 @@ describe('ProtectedRoute', () => {\n \n   it('로그인 사용자는 보호된 내 기록을 볼 수 있다', () => {\n     authMock.status = 'authenticated'\n+    authMock.recheck.mockResolvedValue({ status: 'authenticated', user: authenticatedUser })\n     renderProtected()\n \n-    expect(screen.getByRole('heading', { name: '보호된 내 기록' })).toBeTruthy()\n+    return screen.findByRole('heading', { name: '보호된 내 기록' }).then((heading) => {\n+      expect(heading).toBeTruthy()\n+      expect(authMock.recheck).toHaveBeenCalledOnce()\n+    })\n   })\n \n   it.each(['anonymous', 'expired'] as const)(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/ProtectedRoute.test.tsx",
+          "old_path": "frontend/src/auth/ProtectedRoute.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useEffect, useState, type ReactNode } from 'react'\n+import { useEffect, useRef, useState, type ReactNode } from 'react'\n import { Navigate, useLocation } from 'react-router-dom'\n import { useAuth } from './auth-context'\n import styles from './AuthEntryGuard.module.css'\n@@ -24,10 +24,23 @@ function LoginRedirect({ target }: { target: string }) {\n \n /** 현재 사용자 확인이 끝난 경우에만 내 기록 화면을 노출한다. */\n export function ProtectedRoute({ children }: { children: ReactNode }) {\n-  const { status } = useAuth()\n+  const { status, logout, recheck } = useAuth()\n   const location = useLocation()\n+  const target = `${location.pathname}${location.search}${location.hash}`\n+  const recheckTargetRef = useRef<string | null>(null)\n+  const [verifiedTarget, setVerifiedTarget] = useState<string | null>(null)\n+\n+  useEffect(() => {\n+    if (status !== 'authenticated' || recheckTargetRef.current === target) return\n \n-  if (status === 'checking') {\n+    recheckTargetRef.current = target\n+    void recheck().then((next) => {\n+      if (next.status === 'authenticated') setVerifiedTarget(target)\n+      else recheckTargetRef.current = null\n+    })\n+  }, [recheck, status, target])\n+\n+  if (status === 'checking' || (status === 'authenticated' && verifiedTarget !== target)) {\n     return (\n       <main className={styles.checking}>\n         <span role=\"status\">로그인 상태를 확인하고 있습니다.</span>\n@@ -36,6 +49,30 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {\n   }\n   if (status === 'authenticated') return children\n \n-  const target = `${location.pathname}${location.search}${location.hash}`\n+  if (status === 'error' || status === 'logoutUnconfirmed') {\n+    return (\n+      <main className={styles.checking}>\n+        <section className={styles.recovery} aria-labelledby=\"auth-recovery-title\">\n+          <h1 id=\"auth-recovery-title\">내 기록을 잠시 숨겼습니다.</h1>\n+          <p role={status === 'logoutUnconfirmed' ? 'alert' : 'status'}>\n+            {status === 'logoutUnconfirmed'\n+              ? '로그아웃 결과를 확인하지 못했습니다.'\n+              : '로그인 상태를 확인하지 못했습니다.'}\n+          </p>\n+          <div className={styles.actions}>\n+            {status === 'logoutUnconfirmed' && (\n+              <button type=\"button\" onClick={() => void logout().catch(() => undefined)}>\n+                로그아웃 다시 시도\n+              </button>\n+            )}\n+            <button type=\"button\" onClick={() => void recheck()}>\n+              로그인 상태 다시 확인\n+            </button>\n+          </div>\n+        </section>\n+      </main>\n+    )\n+  }\n+\n   return <LoginRedirect target={target} />\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/ProtectedRoute.tsx",
+          "old_path": "frontend/src/auth/ProtectedRoute.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,7 @@ export type AuthSnapshot = {\n \n export type AuthContextValue = AuthSnapshot & {\n   login: (input: LoginRequest, signal?: AbortSignal) => Promise<AuthenticatedUser>\n+  logout: (signal?: AbortSignal) => Promise<void>\n   recheck: () => Promise<AuthSnapshot>\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/auth-context.ts",
+          "old_path": "frontend/src/auth/auth-context.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -73,6 +73,7 @@\n   color: var(--thorp-copy);\n   font-size: 0.75rem;\n   line-height: 1.5;\n+  overflow-wrap: anywhere;\n }\n \n .status svg {\n@@ -143,3 +144,15 @@\n     transition: none;\n   }\n }\n+\n+@media (max-width: 360px) {\n+  .status {\n+    padding: 10px;\n+    font-size: 0.71rem;\n+  }\n+\n+  .submitButton,\n+  .secondaryButton {\n+    min-height: 46px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/auth/AuthForm.module.css",
+          "old_path": "frontend/src/components/auth/AuthForm.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,6 +18,7 @@ export function AuthStatus({ message, tone = 'info' }: AuthStatusProps) {\n       data-tone={tone}\n       role={tone === 'error' ? 'alert' : 'status'}\n       aria-live={tone === 'error' ? 'assertive' : 'polite'}\n+      aria-atomic=\"true\"\n     >\n       <Icon size={17} aria-hidden=\"true\" />\n       <span>{message}</span>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/auth/AuthStatus.tsx",
+          "old_path": "frontend/src/components/auth/AuthStatus.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,6 +17,9 @@\n .recordsLink,\n .authLink,\n .authState,\n+.authActions,\n+.authRecovery,\n+.authButton,\n .drawerHeader,\n .drawerHeader button,\n .drawerLink,\n@@ -26,6 +29,46 @@\n   align-items: center;\n }\n \n+.authActions,\n+.authRecovery {\n+  gap: 8px;\n+}\n+\n+.authButton {\n+  gap: 6px;\n+  min-height: 34px;\n+  padding: 0 9px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 3px;\n+  background: transparent;\n+  color: var(--thorp-copy);\n+  font: inherit;\n+  font-size: 0.72rem;\n+  cursor: pointer;\n+}\n+\n+.authButton:hover:not(:disabled) {\n+  border-color: var(--thorp-accent);\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.authButton:disabled {\n+  cursor: wait;\n+  opacity: 0.55;\n+}\n+\n+.authNotice {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n+\n .inner {\n   display: grid;\n   grid-template-columns: 1fr auto 1fr;\n@@ -158,6 +201,7 @@\n .desktopNav a:focus-visible,\n .recordsLink:focus-visible,\n .authLink:focus-visible,\n+.authButton:focus-visible,\n .drawer button:focus-visible,\n .drawer a:focus-visible {\n   border-radius: 8px;\n@@ -288,11 +332,42 @@\n   text-decoration: none;\n }\n \n+.drawerAuthActions {\n+  display: grid;\n+  gap: 6px;\n+  margin-top: auto;\n+  padding-top: 12px;\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.drawerAuthActions .drawerAuth {\n+  width: 100%;\n+  margin-top: 0;\n+  border: 0;\n+  background: transparent;\n+  cursor: pointer;\n+}\n+\n+.drawerNotice {\n+  color: var(--thorp-warning, var(--thorp-muted));\n+  font-size: 0.74rem;\n+  line-height: 1.5;\n+}\n+\n .drawerRecords {\n   margin-top: 18px;\n   border-top-color: var(--thorp-line);\n }\n \n+@media (max-width: 1100px) {\n+  .authButton {\n+    width: 36px;\n+    padding: 0;\n+    justify-content: center;\n+    font-size: 0;\n+  }\n+}\n+\n @media (max-width: 720px) {\n   .inner {\n     grid-template-columns: 1fr auto;\n@@ -314,11 +389,28 @@\n     font-size: 0;\n   }\n \n+  .authActions,\n+  .authRecovery {\n+    gap: 4px;\n+  }\n+\n+  .authButton {\n+    width: 36px;\n+    padding: 0;\n+    justify-content: center;\n+    font-size: 0;\n+  }\n+\n   .recordsLink svg,\n   .authLink svg {\n     width: 20px;\n     height: 20px;\n   }\n+\n+  .authButton svg {\n+    width: 19px;\n+    height: 19px;\n+  }\n }\n \n @media (prefers-reduced-motion: reduce) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,8 +3,10 @@ import {\n   FolderClock,\n   Home,\n   LogIn,\n+  LogOut,\n   Menu,\n   Play,\n+  RefreshCw,\n   UserRound,\n   X,\n } from 'lucide-react'\n@@ -44,12 +46,27 @@ const navigationItems = [\n /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */\n export function AppHeader() {\n   const location = useLocation()\n-  const { status: authStatus, user } = useAuth()\n+  const { status: authStatus, user, logout, recheck } = useAuth()\n   const [isMenuOpen, setIsMenuOpen] = useState(false)\n   const [isScrolled, setIsScrolled] = useState(false)\n+  const [pendingAuthAction, setPendingAuthAction] = useState<'logout' | 'recheck' | null>(null)\n   const menuButtonRef = useRef<HTMLButtonElement>(null)\n   const firstMenuLinkRef = useRef<HTMLAnchorElement>(null)\n   const drawerRef = useRef<HTMLElement>(null)\n+  const recoveryButtonRef = useRef<HTMLButtonElement>(null)\n+  const loginLinkRef = useRef<HTMLAnchorElement>(null)\n+  const previousAuthStatusRef = useRef(authStatus)\n+\n+  useEffect(() => {\n+    const previousStatus = previousAuthStatusRef.current\n+    previousAuthStatusRef.current = authStatus\n+\n+    if (previousStatus === 'authenticated' && authStatus === 'logoutUnconfirmed') {\n+      recoveryButtonRef.current?.focus()\n+    } else if (previousStatus === 'logoutUnconfirmed' && authStatus === 'anonymous') {\n+      loginLinkRef.current?.focus()\n+    }\n+  }, [authStatus])\n \n   // 닫기 동작 뒤 햄버거 버튼으로 초점을 되돌려 키보드 흐름을 유지한다.\n   const closeMenu = useCallback(() => {\n@@ -117,6 +134,109 @@ export function AppHeader() {\n     }\n   }\n \n+  const handleLogout = async () => {\n+    if (pendingAuthAction) return\n+    setPendingAuthAction('logout')\n+    try {\n+      await logout()\n+    } catch {\n+      // AuthProvider가 보호 정보를 숨긴 채 복구 가능한 미확인 상태를 유지한다.\n+    } finally {\n+      setPendingAuthAction(null)\n+    }\n+  }\n+\n+  const handleRecheck = async () => {\n+    if (pendingAuthAction) return\n+    setPendingAuthAction('recheck')\n+    await recheck()\n+    setPendingAuthAction(null)\n+  }\n+\n+  const desktopAuthControl = (() => {\n+    if (authStatus === 'checking') {\n+      return <span className={styles.authState} role=\"status\">확인 중</span>\n+    }\n+    if (authStatus === 'authenticated' && user) {\n+      return (\n+        <div className={styles.authActions}>\n+          <Link className={styles.authLink} to=\"/records\" aria-label={`${user.nickname} 로그인됨`}>\n+            <UserRound size={16} aria-hidden=\"true\" />\n+            {user.nickname}\n+          </Link>\n+          <button\n+            type=\"button\"\n+            className={styles.authButton}\n+            disabled={pendingAuthAction !== null}\n+            onClick={() => void handleLogout()}\n+          >\n+            <LogOut size={16} aria-hidden=\"true\" />\n+            로그아웃\n+          </button>\n+        </div>\n+      )\n+    }\n+    if (authStatus === 'logoutUnconfirmed') {\n+      return (\n+        <div className={styles.authRecovery}>\n+          <span className={styles.authNotice} role=\"alert\">로그아웃 상태를 확인하지 못했습니다.</span>\n+          <button\n+            ref={recoveryButtonRef}\n+            type=\"button\"\n+            className={styles.authButton}\n+            disabled={pendingAuthAction !== null}\n+            onClick={() => void handleLogout()}\n+          >\n+            <LogOut size={16} aria-hidden=\"true\" />\n+            로그아웃 다시 시도\n+          </button>\n+          <button\n+            type=\"button\"\n+            className={styles.authButton}\n+            disabled={pendingAuthAction !== null}\n+            onClick={() => void handleRecheck()}\n+          >\n+            <RefreshCw size={16} aria-hidden=\"true\" />\n+            로그인 상태 다시 확인\n+          </button>\n+        </div>\n+      )\n+    }\n+    if (authStatus === 'error') {\n+      return (\n+        <div className={styles.authRecovery}>\n+          <span className={styles.authNotice} role=\"status\">로그인 상태를 확인하지 못했습니다.</span>\n+          <button\n+            type=\"button\"\n+            className={styles.authButton}\n+            disabled={pendingAuthAction !== null}\n+            onClick={() => void handleRecheck()}\n+          >\n+            <RefreshCw size={16} aria-hidden=\"true\" />\n+            로그인 상태 다시 확인\n+          </button>\n+        </div>\n+      )\n+    }\n+    if (authStatus === 'expired') {\n+      return (\n+        <div className={styles.authRecovery}>\n+          <span className={styles.authNotice} role=\"status\">로그인이 만료되었습니다.</span>\n+          <Link className={styles.authLink} to=\"/login\">\n+            <LogIn size={16} aria-hidden=\"true\" />\n+            다시 로그인\n+          </Link>\n+        </div>\n+      )\n+    }\n+    return (\n+      <Link ref={loginLinkRef} className={styles.authLink} to=\"/login\">\n+        <LogIn size={16} aria-hidden=\"true\" />\n+        로그인\n+      </Link>\n+    )\n+  })()\n+\n   return (\n     <>\n       <header className={styles.header} data-scrolled={isScrolled}>\n@@ -165,21 +285,7 @@ export function AppHeader() {\n               <FolderClock size={16} aria-hidden=\"true\" />\n               내 기록\n             </Link>\n-            {authStatus === 'checking' ? (\n-              <span className={styles.authState} role=\"status\">\n-                확인 중\n-              </span>\n-            ) : authStatus === 'authenticated' && user ? (\n-              <Link className={styles.authLink} to=\"/records\" aria-label={`${user.nickname} 로그인됨`}>\n-                <UserRound size={16} aria-hidden=\"true\" />\n-                {user.nickname}\n-              </Link>\n-            ) : (\n-              <Link className={styles.authLink} to=\"/login\">\n-                <LogIn size={16} aria-hidden=\"true\" />\n-                로그인\n-              </Link>\n-            )}\n+            {desktopAuthControl}\n           </div>\n         </div>\n       </header>\n@@ -261,18 +367,39 @@ export function AppHeader() {\n               </Link>\n \n               {authStatus === 'authenticated' && user ? (\n-                <Link className={styles.drawerAuth} to=\"/records\" onClick={() => setIsMenuOpen(false)}>\n-                  <UserRound size={18} aria-hidden=\"true\" />\n-                  {user.nickname}\n-                </Link>\n+                <div className={styles.drawerAuthActions}>\n+                  <Link className={styles.drawerAuth} to=\"/records\" onClick={() => setIsMenuOpen(false)}>\n+                    <UserRound size={18} aria-hidden=\"true\" />\n+                    {user.nickname}\n+                  </Link>\n+                  <button\n+                    type=\"button\"\n+                    className={styles.drawerAuth}\n+                    disabled={pendingAuthAction !== null}\n+                    onClick={() => void handleLogout()}\n+                  >\n+                    <LogOut size={18} aria-hidden=\"true\" />\n+                    로그아웃\n+                  </button>\n+                </div>\n               ) : authStatus === 'checking' ? (\n                 <span className={styles.drawerAuth} role=\"status\">\n                   확인 중\n                 </span>\n+              ) : authStatus === 'logoutUnconfirmed' ? (\n+                <div className={styles.drawerAuthActions}>\n+                  <span className={styles.drawerNotice} role=\"alert\">로그아웃 상태를 확인하지 못했습니다.</span>\n+                  <button type=\"button\" className={styles.drawerAuth} onClick={() => void handleLogout()}>\n+                    <LogOut size={18} aria-hidden=\"true\" /> 로그아웃 다시 시도\n+                  </button>\n+                  <button type=\"button\" className={styles.drawerAuth} onClick={() => void handleRecheck()}>\n+                    <RefreshCw size={18} aria-hidden=\"true\" /> 로그인 상태 다시 확인\n+                  </button>\n+                </div>\n               ) : (\n                 <Link className={styles.drawerAuth} to=\"/login\" onClick={() => setIsMenuOpen(false)}>\n                   <LogIn size={18} aria-hidden=\"true\" />\n-                  로그인\n+                  {authStatus === 'expired' ? '다시 로그인' : '로그인'}\n                 </Link>\n               )}\n             </motion.nav>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,52 @@\n+import { render, screen } from '@testing-library/react'\n+import { MemoryRouter } from 'react-router-dom'\n+import { describe, expect, it, vi } from 'vitest'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { AuthStatus } from '@/components/auth/AuthStatus'\n+\n+function renderHeader(status: AuthContextValue['status']) {\n+  const value: AuthContextValue = {\n+    status,\n+    user: null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+  return render(\n+    <MemoryRouter>\n+      <AuthContext.Provider value={value}><AppHeader /></AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('authentication status accessibility', () => {\n+  it('360px에서도 확인 중 상태를 live status로 전달한다', () => {\n+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 360 })\n+    renderHeader('checking')\n+    expect(screen.getByRole('status').textContent).toContain('확인 중')\n+  })\n+\n+  it('만료 상태에서 재로그인 행동을 제공한다', () => {\n+    renderHeader('expired')\n+    expect(screen.getByRole('status').textContent).toContain('로그인이 만료되었습니다')\n+    expect(screen.getByRole('link', { name: '다시 로그인' })).toBeTruthy()\n+  })\n+\n+  it('로그아웃 미확인 상태에서 경고와 두 복구 행동을 제공한다', () => {\n+    renderHeader('logoutUnconfirmed')\n+    expect(screen.getByRole('alert').textContent).toContain('로그아웃 상태를 확인하지 못했습니다')\n+    expect(screen.getByRole('button', { name: '로그아웃 다시 시도' })).toBeTruthy()\n+    expect(screen.getByRole('button', { name: '로그인 상태 다시 확인' })).toBeTruthy()\n+  })\n+\n+  it('요청 중과 오류 메시지를 live region으로 원자적으로 알린다', () => {\n+    const { rerender } = render(<AuthStatus message=\"요청을 처리하고 있습니다.\" />)\n+    const pendingStatus = screen.getByRole('status')\n+    expect(pendingStatus.textContent).toContain('요청을 처리하고 있습니다.')\n+    expect(pendingStatus.getAttribute('aria-atomic')).toBe('true')\n+\n+    rerender(<AuthStatus message=\"요청을 처리하지 못했습니다.\" tone=\"error\" />)\n+    expect(screen.getByRole('alert').textContent).toContain('요청을 처리하지 못했습니다.')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AuthAccessibility.test.tsx",
+          "old_path": "frontend/src/pages/AuthAccessibility.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,3 +22,9 @@\n     justify-self: stretch;\n   }\n }\n+\n+@media (max-width: 360px) {\n+  .loginForm {\n+    gap: 16px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LoginPage.module.css",
+          "old_path": "frontend/src/pages/LoginPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -347,6 +347,25 @@\n   }\n }\n \n+@media (max-width: 360px) {\n+  .header,\n+  .layout {\n+    width: min(100% - 24px, 1320px);\n+  }\n+\n+  .formPanel {\n+    padding: 20px 14px;\n+  }\n+\n+  .panelHeading {\n+    gap: 12px;\n+  }\n+\n+  .stepProgress span {\n+    width: 18px;\n+  }\n+}\n+\n @media (prefers-reduced-motion: reduce) {\n   .ambient {\n     filter: none;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SignupPage.module.css",
+          "old_path": "frontend/src/pages/SignupPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,6 +19,7 @@ const anonymousAuth: AuthContextValue = {\n   status: 'anonymous',\n   user: null,\n   login: vi.fn(),\n+  logout: vi.fn(),\n   recheck: vi.fn(),\n }\n \n@@ -63,6 +64,7 @@ describe('App authentication routes', () => {\n   })\n \n   it('로그인 사용자는 내 기록 진입 화면을 바로 볼 수 있다', async () => {\n+    authenticatedAuth.recheck = vi.fn().mockResolvedValue(authenticatedAuth)\n     renderApp('/records', authenticatedAuth)\n \n     expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.auth.test.tsx",
+          "old_path": "frontend/src/App.auth.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -135,14 +135,14 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n ### Tests for User Story 4\n \n - [ ] T042 [P] [US4] Add failing integration tests for current-session invalidation, idempotent anonymous logout, cookie expiry, and post-logout 401 in `backend/src/test/java/com/ssafy/thorp/account/presentation/LogoutIntegrationTest.java`\n-- [ ] T043 [P] [US4] Add failing provider and header tests for logout start, 204 completion, network uncertainty, retry, recheck, and immediate data removal in `frontend/src/auth/LogoutFlow.test.tsx`\n+- [x] T043 [P] [US4] Add failing provider and header tests for logout start, 204 completion, network uncertainty, retry, recheck, and immediate data removal in `frontend/src/auth/LogoutFlow.test.tsx`\n \n ### Implementation for User Story 4\n \n - [ ] T044 [US4] Implement idempotent current-session logout and JSON security behavior in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/AuthenticationController.java` and `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T042\n-- [ ] T045 [P] [US4] Add current-session logout operation to `frontend/src/api/auth.ts`\n-- [ ] T046 [US4] Implement `logoutUnconfirmed`, retry, and current-user recheck transitions with immediate credential-free state clearing in `frontend/src/auth/AuthProvider.tsx` after T043 and T045\n-- [ ] T047 [US4] Add accessible logout, retry, and status UI without blocking public navigation in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n+- [x] T045 [P] [US4] Add current-session logout operation to `frontend/src/api/auth.ts`\n+- [x] T046 [US4] Implement `logoutUnconfirmed`, retry, and current-user recheck transitions with immediate credential-free state clearing in `frontend/src/auth/AuthProvider.tsx` after T043 and T045\n+- [x] T047 [US4] Add accessible logout, retry, and status UI without blocking public navigation in `frontend/src/components/navigation/AppHeader.tsx` and `frontend/src/components/navigation/AppHeader.module.css`\n \n **Checkpoint**: 로그아웃 성공과 미확인 복구 흐름을 독립적으로 검증할 수 있다.\n \n@@ -157,16 +157,16 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n ### Tests for User Story 5\n \n - [ ] T048 [P] [US5] Add failing Backend tests for 30-minute inactivity expiry, CSRF refresh, session fixation, sanitized logs, and migration compatibility in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSessionLifecycleIntegrationTest.java`\n-- [ ] T049 [P] [US5] Add failing FE tests for authenticated 401 expiry, CSRF refresh without automatic mutation replay, stale-response rejection, and public-page availability in `frontend/src/auth/AuthRecovery.test.tsx`\n-- [ ] T050 [P] [US5] Add failing browser-state tests for tab reactivation, protected-entry recheck, back-forward cache restoration, and stale protected-data clearing in `frontend/src/auth/AuthRevalidation.test.tsx`\n-- [ ] T051 [P] [US5] Add failing accessibility and 360px responsive tests for pending, error, expired, and logout-unconfirmed states in `frontend/src/pages/AuthAccessibility.test.tsx`\n+- [x] T049 [P] [US5] Add failing FE tests for authenticated 401 expiry, CSRF refresh without automatic mutation replay, stale-response rejection, and public-page availability in `frontend/src/auth/AuthRecovery.test.tsx`\n+- [x] T050 [P] [US5] Add failing browser-state tests for tab reactivation, protected-entry recheck, back-forward cache restoration, and stale protected-data clearing in `frontend/src/auth/AuthRevalidation.test.tsx`\n+- [x] T051 [P] [US5] Add failing accessibility and 360px responsive tests for pending, error, expired, and logout-unconfirmed states in `frontend/src/pages/AuthAccessibility.test.tsx`\n \n ### Implementation for User Story 5\n \n - [ ] T052 [US5] Complete session expiry, CSRF refresh, safe security logging, and production cookie behavior in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java`, `backend/src/main/resources/application.yml`, and `backend/src/main/resources/application-prod.yml` to satisfy T048\n-- [ ] T053 [US5] Implement request identity/abort handling, authenticated 401 expiry, one-time CSRF refresh, and user-driven retry without automatic mutation replay in `frontend/src/api/client.ts` and `frontend/src/auth/AuthProvider.tsx`\n-- [ ] T054 [US5] Revalidate authentication on tab activation, protected-route entry, and page-cache restoration while leaving public screens available in `frontend/src/auth/AuthProvider.tsx` and `frontend/src/auth/ProtectedRoute.tsx`\n-- [ ] T055 [US5] Complete focus movement, live status announcements, reduced-motion-safe feedback, and 360px auth layouts in `frontend/src/components/auth/AuthStatus.tsx`, `frontend/src/pages/LoginPage.module.css`, and `frontend/src/pages/SignupPage.module.css`\n+- [x] T053 [US5] Implement request identity/abort handling, authenticated 401 expiry, one-time CSRF refresh, and user-driven retry without automatic mutation replay in `frontend/src/api/client.ts` and `frontend/src/auth/AuthProvider.tsx`\n+- [x] T054 [US5] Revalidate authentication on tab activation, protected-route entry, and page-cache restoration while leaving public screens available in `frontend/src/auth/AuthProvider.tsx` and `frontend/src/auth/ProtectedRoute.tsx`\n+- [x] T055 [US5] Complete focus movement, live status announcements, reduced-motion-safe feedback, and 360px auth layouts in `frontend/src/components/auth/AuthStatus.tsx`, `frontend/src/pages/LoginPage.module.css`, and `frontend/src/pages/SignupPage.module.css`\n \n **Checkpoint**: 모든 인증 상태와 복구 흐름이 독립적으로 검증 가능하다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2194399,
+      "head_commit_sha": "8c39620a7ad0af1c296d4040c862def49d0c364c",
+      "base_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "start_commit_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+      "created_at": "2026-09-14T14:57:09.350+09:00",
+      "merge_request_id": 943228,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "74a6a4317c1d2f77eba62f5bb170e986b573378d",
+      "commits": [
+        {
+          "id": "8c39620a7ad0af1c296d4040c862def49d0c364c",
+          "short_id": "8c39620a",
+          "created_at": "2026-09-14T14:56:16.000+09:00",
+          "parent_ids": [
+            "e8a9003bef9b4fd54f29faf96e85a89d2b009f77"
+          ],
+          "title": "feat(fe): 로그아웃 및 인증 만료 복구 기능을 구현",
+          "message": "feat(fe): 로그아웃 및 인증 만료 복구 기능을 구현\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-14T14:56:16.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-14T14:56:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c39620a7ad0af1c296d4040c862def49d0c364c"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802409": [],
+    "2802531": [
+      {
+        "id": 66001,
+        "name": "grin",
+        "user": {
+          "id": 30869,
+          "username": "wdg0434",
+          "public_email": "",
+          "name": "우동균",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+          "web_url": "https://lab.ssafy.com/wdg0434"
+        },
+        "created_at": "2026-09-14T15:15:16.965+09:00",
+        "updated_at": "2026-09-14T15:15:16.965+09:00",
+        "awardable_id": 2802531,
+        "awardable_type": "Note",
+        "url": null
+      }
+    ]
+  }
+}

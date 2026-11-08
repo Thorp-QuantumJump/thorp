@@ -1,0 +1,663 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 962421,
+    "iid": 346,
+    "project_id": 1444456,
+    "title": "feat(fe): 회원정보 수정 화면과 로컬 미리보기를 추가했습니다.",
+    "description": "## 작업 내용 요약\n\nmain으로 잘못 병합됐던 회원정보 수정 화면 MR을 dev 대상으로 다시 올립니다. 커밋은 원래 것(4fd7b4eb) 그대로입니다.\n\n## 주요 변경 사항\n\n- 회원정보 수정 화면과 로컬 미리보기 추가\n\n## 테스트\n\n- 원래 MR에서 확인한 내용과 같습니다. dev 끝(077cb0c4)에서 갈라진 커밋이라 충돌은 없습니다.\n\n## 리뷰 포인트\n\n- 없음(내용 변경 없이 대상 브랜치만 바꿈)",
+    "state": "merged",
+    "created_at": "2026-09-29T13:29:12.418+09:00",
+    "updated_at": "2026-09-29T15:33:21.037+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T13:29:17.146+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/account-profile",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+    "merge_commit_sha": "da3275e7432bba39951f061f561e374c5dbdb5dd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-29T13:29:14.150+09:00",
+    "reference": "!346",
+    "references": {
+      "short": "!346",
+      "relative": "!346",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!346"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/346",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 962421,
+    "iid": 346,
+    "project_id": 1444456,
+    "title": "feat(fe): 회원정보 수정 화면과 로컬 미리보기를 추가했습니다.",
+    "description": "## 작업 내용 요약\n\nmain으로 잘못 병합됐던 회원정보 수정 화면 MR을 dev 대상으로 다시 올립니다. 커밋은 원래 것(4fd7b4eb) 그대로입니다.\n\n## 주요 변경 사항\n\n- 회원정보 수정 화면과 로컬 미리보기 추가\n\n## 테스트\n\n- 원래 MR에서 확인한 내용과 같습니다. dev 끝(077cb0c4)에서 갈라진 커밋이라 충돌은 없습니다.\n\n## 리뷰 포인트\n\n- 없음(내용 변경 없이 대상 브랜치만 바꿈)",
+    "state": "merged",
+    "created_at": "2026-09-29T13:29:12.418+09:00",
+    "updated_at": "2026-09-29T15:33:21.037+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-29T13:29:17.146+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/account-profile",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+    "merge_commit_sha": "da3275e7432bba39951f061f561e374c5dbdb5dd",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-29T13:29:14.150+09:00",
+    "reference": "!346",
+    "references": {
+      "short": "!346",
+      "relative": "!346",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!346"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/346",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-29T10:55:06.973+09:00",
+    "latest_build_finished_at": "2026-09-29T13:59:53.604+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 226801,
+      "iid": 373,
+      "project_id": 1444456,
+      "sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+      "ref": "feat(fe)/account-profile",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T10:55:06.820+09:00",
+      "updated_at": "2026-09-29T13:59:53.612+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226801"
+    },
+    "head_pipeline": {
+      "id": 226801,
+      "iid": 373,
+      "project_id": 1444456,
+      "sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+      "ref": "feat(fe)/account-profile",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-29T10:55:06.820+09:00",
+      "updated_at": "2026-09-29T13:59:53.612+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226801",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-29T10:55:06.973+09:00",
+      "finished_at": "2026-09-29T13:59:53.604+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/226801",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "head_sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+      "start_sha": "c3498aec309eee673c423daed57be7babc496eb9"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "573551563c833872b964861567e97a74b072e556",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877817,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T13:29:12.526+09:00",
+          "updated_at": "2026-09-29T13:29:12.535+09:00",
+          "system": true,
+          "noteable_id": 962421,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 346,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "473b26dcd844a9fcb25a823d7c3c492306310b3f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877819,
+          "type": null,
+          "body": "mentioned in commit da3275e7432bba39951f061f561e374c5dbdb5dd",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T13:29:17.185+09:00",
+          "updated_at": "2026-09-29T13:29:17.189+09:00",
+          "system": true,
+          "noteable_id": 962421,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 346,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2ab092b5252f74aa58ae213b7a908f2f6aab7ebe",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877820,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `ProtectedRoute` 컴포넌트에 `recoveryTitle` 속성을 추가하여 페이지 맥락에 맞는 안내 메시지를 유연하게 보여주도록 설계한 점이 훌륭합니다.\n- 개발 환경(`import.meta.env.DEV`)에서만 조건부로 미리보기 라우트를 로드하고 테스트를 충실하게 작성하여 코드 품질을 높인 점이 돋보입니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **회원정보 수정 화면 접근 권한 테스트**: 비로그인 상태로 `/account/profile`에 접근했을 때, 로그인 페이지로 리다이렉트되며 세션 스토리지에 복귀 경로(`thorp.auth.returnTarget`)가 올바르게 저장되는지 시나리오 테스트를 수행합니다.\n- **입력값 유효성 검증 테스트**: `AccountProfilePage`에서 닉네임을 2자 미만 또는 20자 초과로 입력하고 '입력값 확인' 버튼을 눌렀을 때, 적절한 에러 메시지가 노출되고 서버 저장 시뮬레이션 안내가 나오지 않는지 확인하는 테스트를 진행합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-29T13:29:21.771+09:00",
+          "updated_at": "2026-09-29T13:29:21.771+09:00",
+          "system": false,
+          "noteable_id": 962421,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 346,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4ffc6ebfe39a6c5fababa27ca6a37a2beffa2b70",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2877978,
+          "type": null,
+          "body": "requested review from @zzangbat95",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-29T15:33:21.000+09:00",
+          "updated_at": "2026-09-29T15:33:21.003+09:00",
+          "system": true,
+          "noteable_id": 962421,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 346,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1015f6efe4d391bf8ceb2534ec9ffe1dc15b2ddb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885070,
+          "type": null,
+          "body": "mentioned in commit 6fe73fd1befbd573f7f084e7466b93166e6154e7",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:13.402+09:00",
+          "updated_at": "2026-10-13T15:16:13.411+09:00",
+          "system": true,
+          "noteable_id": 962421,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 346,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2259393,
+      "head_commit_sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+      "base_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "start_commit_sha": "c3498aec309eee673c423daed57be7babc496eb9",
+      "created_at": "2026-09-29T13:29:12.946+09:00",
+      "merge_request_id": 962421,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "c90f3897fd3fe8450ebb55c768f418964e33b3bd"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2259393,
+      "head_commit_sha": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+      "base_commit_sha": "077cb0c4850b9d62c6b01b52d640221c7ef588e2",
+      "start_commit_sha": "c3498aec309eee673c423daed57be7babc496eb9",
+      "created_at": "2026-09-29T13:29:12.946+09:00",
+      "merge_request_id": 962421,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "c90f3897fd3fe8450ebb55c768f418964e33b3bd",
+      "commits": [
+        {
+          "id": "4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc",
+          "short_id": "4fd7b4eb",
+          "created_at": "2026-09-29T10:52:20.000+09:00",
+          "parent_ids": [
+            "077cb0c4850b9d62c6b01b52d640221c7ef588e2"
+          ],
+          "title": "feat(fe): 회원정보 수정 화면과 로컬 미리보기를 추가했습니다.",
+          "message": "feat(fe): 회원정보 수정 화면과 로컬 미리보기를 추가했습니다.\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-29T10:52:20.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-29T10:52:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4fd7b4ebc7e1b8b9025d2774d8a993cdf259f7cc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -22,8 +22,14 @@ function LoginRedirect({ target }: { target: string }) {\n   return <Navigate to=\"/login\" replace />\n }\n \n-/** 현재 사용자 확인이 끝난 경우에만 내 기록 화면을 노출한다. */\n-export function ProtectedRoute({ children }: { children: ReactNode }) {\n+/** 현재 사용자 확인이 끝난 경우에만 보호된 화면을 노출한다. */\n+export function ProtectedRoute({\n+  children,\n+  recoveryTitle = '내 기록을 잠시 숨겼습니다.',\n+}: {\n+  children: ReactNode\n+  recoveryTitle?: string\n+}) {\n   const { status, logout, recheck } = useAuth()\n   const location = useLocation()\n   const target = `${location.pathname}${location.search}${location.hash}`\n@@ -53,7 +59,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {\n     return (\n       <main className={styles.checking}>\n         <section className={styles.recovery} aria-labelledby=\"auth-recovery-title\">\n-          <h1 id=\"auth-recovery-title\">내 기록을 잠시 숨겼습니다.</h1>\n+          <h1 id=\"auth-recovery-title\">{recoveryTitle}</h1>\n           <p role={status === 'logoutUnconfirmed' ? 'alert' : 'status'}>\n             {status === 'logoutUnconfirmed'\n               ? '로그아웃 결과를 확인하지 못했습니다.'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/auth/ProtectedRoute.tsx",
+          "old_path": "frontend/src/auth/ProtectedRoute.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -74,7 +74,7 @@ function isCurrentPath(pathname: string, covers: readonly string[]): boolean {\n }\n \n /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */\n-export function AppHeader() {\n+export function AppHeader({ preview = false }: { preview?: boolean }) {\n   const location = useLocation()\n   const { status: authStatus, user, logout, recheck } = useAuth()\n   const rememberReturn = useLoginReturn()\n@@ -172,19 +172,21 @@ export function AppHeader() {\n     if (authStatus === 'authenticated' && user) {\n       return (\n         <div className={styles.authActions}>\n-          <Link className={styles.authLink} to=\"/records\" aria-label={`${user.nickname} 로그인됨`}>\n+          <Link className={styles.authLink} to={preview ? '/dev/account-profile' : '/account/profile'} aria-label={`${user.nickname} 회원정보 수정`}>\n             <UserRound size={16} aria-hidden=\"true\" />\n             {user.nickname}\n           </Link>\n-          <button\n-            type=\"button\"\n-            className={styles.authButton}\n-            disabled={pendingAuthAction !== null}\n-            onClick={() => void handleLogout()}\n-          >\n-            <LogOut size={16} aria-hidden=\"true\" />\n-            로그아웃\n-          </button>\n+          {preview ? <span className={styles.authState}>미리보기</span> : (\n+            <button\n+              type=\"button\"\n+              className={styles.authButton}\n+              disabled={pendingAuthAction !== null}\n+              onClick={() => void handleLogout()}\n+            >\n+              <LogOut size={16} aria-hidden=\"true\" />\n+              로그아웃\n+            </button>\n+          )}\n         </div>\n       )\n     }\n@@ -303,8 +305,7 @@ export function AppHeader() {\n \n           {/*\n             '내 기록'은 위 메뉴에 있으므로 여기 같은 이름의 링크를 따로 두지 않는다.\n-            아래 로그인 표시는 목적지가 같아도 하는 일이 다르다. 메뉴 항목이 아니라 지금 누가\n-            로그인해 있는지를 알리는 자리다.\n+            로그인한 사용자의 닉네임은 계정 정보 화면으로 이동한다.\n           */}\n           <div className={styles.accountLinks}>{desktopAuthControl}</div>\n         </div>\n@@ -373,19 +374,21 @@ export function AppHeader() {\n \n               {authStatus === 'authenticated' && user ? (\n                 <div className={styles.drawerAuthActions}>\n-                  <Link className={styles.drawerAuth} to=\"/records\" onClick={() => setIsMenuOpen(false)}>\n+                  <Link className={styles.drawerAuth} to={preview ? '/dev/account-profile' : '/account/profile'} onClick={() => setIsMenuOpen(false)}>\n                     <UserRound size={18} aria-hidden=\"true\" />\n                     {user.nickname}\n                   </Link>\n-                  <button\n-                    type=\"button\"\n-                    className={styles.drawerAuth}\n-                    disabled={pendingAuthAction !== null}\n-                    onClick={() => void handleLogout()}\n-                  >\n-                    <LogOut size={18} aria-hidden=\"true\" />\n-                    로그아웃\n-                  </button>\n+                  {preview ? <span className={styles.drawerAuth}>미리보기</span> : (\n+                    <button\n+                      type=\"button\"\n+                      className={styles.drawerAuth}\n+                      disabled={pendingAuthAction !== null}\n+                      onClick={() => void handleLogout()}\n+                    >\n+                      <LogOut size={18} aria-hidden=\"true\" />\n+                      로그아웃\n+                    </button>\n+                  )}\n                 </div>\n               ) : authStatus === 'checking' ? (\n                 <span className={styles.drawerAuth} role=\"status\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,159 @@\n+.page {\n+  min-height: 100svh;\n+  background: var(--thorp-background);\n+  color: var(--thorp-foreground);\n+  font-family: var(--thorp-font-page, inherit);\n+}\n+\n+.main {\n+  box-sizing: border-box;\n+  width: min(100% - var(--thorp-page-gutter, 40px), 960px);\n+  margin: 0 auto;\n+  padding: clamp(64px, 10vh, 112px) 0 120px;\n+}\n+\n+.previewNotice {\n+  margin: 0 0 24px;\n+  padding: 12px 16px;\n+  border-left: 2px solid var(--thorp-accent);\n+  background: var(--thorp-surface);\n+  color: var(--thorp-copy);\n+  line-height: 1.5;\n+}\n+\n+.heading {\n+  padding-bottom: 42px;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.eyebrow {\n+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));\n+  font-size: var(--thorp-text-caption, 0.72rem);\n+  font-weight: 750;\n+  letter-spacing: 0.16em;\n+}\n+\n+.heading h1 {\n+  margin: 17px 0 10px;\n+  font-size: clamp(2rem, 4.5vw, 3.4rem);\n+  line-height: 1.15;\n+  letter-spacing: -0.055em;\n+}\n+\n+.heading p,\n+.sectionHeading p,\n+.actions p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  line-height: 1.65;\n+}\n+\n+.section {\n+  padding-top: 34px;\n+}\n+\n+.sectionHeading {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 20px;\n+  padding-bottom: 22px;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.sectionIndex {\n+  padding-top: 6px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.78rem;\n+  font-weight: 750;\n+}\n+\n+.sectionHeading h2 {\n+  margin: 0 0 4px;\n+  font-size: 1.35rem;\n+  letter-spacing: -0.035em;\n+}\n+\n+.sectionHeading > svg {\n+  margin-left: auto;\n+  color: var(--thorp-muted);\n+}\n+\n+.form {\n+  display: grid;\n+  gap: 26px;\n+  max-width: 620px;\n+  padding-top: 30px;\n+}\n+\n+.form input[readonly] {\n+  color: var(--thorp-copy);\n+  background: var(--thorp-surface);\n+}\n+\n+.notice {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 10px;\n+  margin: 0;\n+  padding: 14px 16px;\n+  border: 1px solid var(--thorp-line-strong);\n+  color: var(--thorp-copy);\n+  line-height: 1.5;\n+}\n+\n+.notice svg {\n+  flex: 0 0 auto;\n+  color: var(--thorp-accent);\n+}\n+\n+.actions {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 24px;\n+  padding-top: 18px;\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.actions p {\n+  max-width: 300px;\n+  font-size: 0.78rem;\n+}\n+\n+.actions button {\n+  flex: 0 0 auto;\n+  min-height: 48px;\n+  padding: 0 24px;\n+  border: 1px solid var(--thorp-accent);\n+  border-radius: var(--thorp-radius-control, 4px);\n+  background: var(--thorp-accent);\n+  color: var(--thorp-action-foreground);\n+  font: inherit;\n+  font-weight: 700;\n+  cursor: pointer;\n+}\n+\n+.actions button:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+@media (max-width: 600px) {\n+  .main {\n+    width: min(100% - 28px, 960px);\n+    padding-top: 64px;\n+  }\n+\n+  .heading {\n+    padding-bottom: 32px;\n+  }\n+\n+  .actions {\n+    align-items: stretch;\n+    flex-direction: column;\n+  }\n+\n+  .actions p {\n+    max-width: none;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AccountProfilePage.module.css",
+          "old_path": "frontend/src/pages/AccountProfilePage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+import { render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter } from 'react-router-dom'\n+import { describe, expect, it, vi } from 'vitest'\n+import { AuthContext } from '@/auth/auth-context'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import { AccountProfilePage } from './AccountProfilePage'\n+import { AccountProfilePreviewPage } from './AccountProfilePreviewPage'\n+\n+function renderPage() {\n+  return render(\n+    <MemoryRouter>\n+      <AuthContext.Provider value={{\n+        status: 'authenticated',\n+        user: authenticatedUser,\n+        login: vi.fn(),\n+        logout: vi.fn(),\n+        recheck: vi.fn(),\n+      }}>\n+        <AccountProfilePage />\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('AccountProfilePage', () => {\n+  it('개발용 미리보기는 로그인 없이 예시 정보와 저장 불가 안내를 보여 준다', () => {\n+    render(\n+      <MemoryRouter>\n+        <AccountProfilePreviewPage />\n+      </MemoryRouter>,\n+    )\n+\n+    expect(screen.getByRole('note').textContent).toContain('실제로 로그인한 상태가 아니며')\n+    expect((screen.getByLabelText('이메일') as HTMLInputElement).value).toBe('preview@example.com')\n+    expect((screen.getByLabelText('닉네임') as HTMLInputElement).value).toBe('미리보기 사용자')\n+  })\n+\n+  it('닉네임은 회원정보로, 내 기록은 기존 기록 경로로 연결한다', async () => {\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    expect(screen.getByRole('link', { name: '쏘프사용자 회원정보 수정' }).getAttribute('href'))\n+      .toBe('/account/profile')\n+    expect(screen.getByRole('link', { name: '내 기록' }).getAttribute('href')).toBe('/records')\n+\n+    await user.click(screen.getByRole('button', { name: '전체 메뉴 열기' }))\n+    expect(screen.getByRole('dialog', { name: '메뉴' })).toBeTruthy()\n+    expect(screen.getByRole('link', { name: '쏘프사용자' }).getAttribute('href'))\n+      .toBe('/account/profile')\n+  })\n+\n+  it('현재 응답에 있는 이메일·닉네임만 채우고 전화번호나 변경 저장을 꾸며내지 않는다', async () => {\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    expect((screen.getByLabelText('이메일') as HTMLInputElement).value).toBe('user@example.com')\n+    expect((screen.getByLabelText('이메일') as HTMLInputElement).readOnly).toBe(true)\n+    expect((screen.getByLabelText('닉네임') as HTMLInputElement).value).toBe('쏘프사용자')\n+    expect((screen.getByLabelText('휴대폰 번호') as HTMLInputElement).disabled).toBe(true)\n+\n+    await user.clear(screen.getByLabelText('닉네임'))\n+    await user.click(screen.getByRole('button', { name: '입력값 확인' }))\n+    expect(screen.getByText('닉네임은 2~20자로 입력해 주세요.')).toBeTruthy()\n+\n+    await user.type(screen.getByLabelText('닉네임'), '새닉네임')\n+    await user.click(screen.getByRole('button', { name: '입력값 확인' }))\n+    expect(screen.getByRole('status').textContent).toContain('변경 내용은 저장되지 않았습니다')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AccountProfilePage.test.tsx",
+          "old_path": "frontend/src/pages/AccountProfilePage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,109 @@\n+import { CircleCheck, UserRound } from 'lucide-react'\n+import { useEffect, useState, type FormEvent } from 'react'\n+import { useAuth } from '@/auth/auth-context'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { AuthField } from '@/components/auth/AuthField'\n+import styles from './AccountProfilePage.module.css'\n+\n+/** 현재 사용자 응답으로 확인할 수 있는 정보만 보여 주는 회원정보 수정 준비 화면이다. */\n+export function AccountProfilePage({ preview = false }: { preview?: boolean }) {\n+  const { user } = useAuth()\n+  const [nickname, setNickname] = useState(user?.nickname ?? '')\n+  const [nicknameError, setNicknameError] = useState('')\n+  const [notice, setNotice] = useState('')\n+\n+  useEffect(() => {\n+    setNickname(user?.nickname ?? '')\n+    setNicknameError('')\n+    setNotice('')\n+  }, [user?.nickname])\n+\n+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {\n+    event.preventDefault()\n+    const trimmed = nickname.trim()\n+    if (trimmed.length < 2 || trimmed.length > 20) {\n+      setNicknameError('닉네임은 2~20자로 입력해 주세요.')\n+      setNotice('')\n+      return\n+    }\n+    setNicknameError('')\n+    setNotice('입력값을 확인했습니다. 서버 저장 기능은 아직 연결되지 않아 변경 내용은 저장되지 않았습니다.')\n+  }\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader preview={preview} />\n+      <main className={styles.main}>\n+        {preview ? (\n+          <p className={styles.previewNotice} role=\"note\">\n+            개발용 예시 화면입니다. 실제로 로그인한 상태가 아니며, 입력한 내용은 저장되지 않습니다.\n+          </p>\n+        ) : null}\n+        <div className={styles.heading}>\n+          <span className={styles.eyebrow}>ACCOUNT / PROFILE</span>\n+          <h1>회원정보 수정</h1>\n+          <p>계정에 표시되는 정보를 확인하고 수정할 내용을 입력할 수 있습니다.</p>\n+        </div>\n+\n+        <section className={styles.section} aria-labelledby=\"profile-section-title\">\n+          <div className={styles.sectionHeading}>\n+            <span className={styles.sectionIndex}>01</span>\n+            <div>\n+              <h2 id=\"profile-section-title\">기본 정보</h2>\n+              <p>현재 로그인한 계정의 정보입니다.</p>\n+            </div>\n+            <UserRound size={22} aria-hidden=\"true\" />\n+          </div>\n+\n+          <form className={styles.form} noValidate onSubmit={handleSubmit}>\n+            <AuthField\n+              label=\"이메일\"\n+              type=\"email\"\n+              name=\"email\"\n+              value={user?.email ?? ''}\n+              hint=\"가입할 때 인증한 이메일입니다. 이 화면에서는 변경할 수 없습니다.\"\n+              readOnly\n+            />\n+            <AuthField\n+              label=\"닉네임\"\n+              type=\"text\"\n+              name=\"nickname\"\n+              autoComplete=\"nickname\"\n+              minLength={2}\n+              maxLength={20}\n+              value={nickname}\n+              hint=\"2~20자로 입력해 주세요. 중복 확인은 서버 연결 후 가능합니다.\"\n+              error={nicknameError}\n+              onChange={(event) => {\n+                setNickname(event.target.value)\n+                setNicknameError('')\n+                setNotice('')\n+              }}\n+            />\n+            <AuthField\n+              label=\"휴대폰 번호\"\n+              type=\"tel\"\n+              name=\"phoneNumber\"\n+              value=\"\"\n+              placeholder=\"현재 등록된 번호를 불러올 수 없습니다\"\n+              hint=\"현재 사용자 조회에는 전화번호가 포함되지 않습니다. 조회·수정 기능이 연결되면 사용할 수 있습니다.\"\n+              disabled\n+            />\n+\n+            {notice ? (\n+              <p className={styles.notice} role=\"status\">\n+                <CircleCheck size={18} aria-hidden=\"true\" />\n+                {notice}\n+              </p>\n+            ) : null}\n+\n+            <div className={styles.actions}>\n+              <p>서버 기능이 연결되기 전에는 입력한 내용이 계정에 반영되지 않습니다.</p>\n+              <button type=\"submit\">입력값 확인</button>\n+            </div>\n+          </form>\n+        </section>\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AccountProfilePage.tsx",
+          "old_path": "frontend/src/pages/AccountProfilePage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import type { AuthenticatedUser } from '@/types/auth'\n+import { AccountProfilePage } from './AccountProfilePage'\n+\n+const previewUser: AuthenticatedUser = {\n+  userId: 0,\n+  email: 'preview@example.com',\n+  nickname: '미리보기 사용자',\n+  status: 'ACTIVE',\n+}\n+\n+const previewAuth: AuthContextValue = {\n+  status: 'authenticated',\n+  user: previewUser,\n+  login: async () => previewUser,\n+  logout: async () => {},\n+  recheck: async () => ({ status: 'authenticated', user: previewUser }),\n+}\n+\n+/** 개발 서버에서만 라우트에 연결한다. 서버 인증이나 저장 요청은 하지 않는다. */\n+export function AccountProfilePreviewPage() {\n+  return (\n+    <AuthContext.Provider value={previewAuth}>\n+      <AccountProfilePage preview />\n+    </AuthContext.Provider>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AccountProfilePreviewPage.tsx",
+          "old_path": "frontend/src/pages/AccountProfilePreviewPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,12 @@ vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면\n vi.mock('@/pages/MyRecordsPage', () => ({\n   MyRecordsPage: () => <h1>내 기록 화면</h1>,\n }))\n+vi.mock('@/pages/AccountProfilePage', () => ({\n+  AccountProfilePage: () => <h1>회원정보 수정 화면</h1>,\n+}))\n+vi.mock('@/pages/AccountProfilePreviewPage', () => ({\n+  AccountProfilePreviewPage: () => <h1>회원정보 미리보기 화면</h1>,\n+}))\n \n const anonymousAuth: AuthContextValue = {\n   status: 'anonymous',\n@@ -95,7 +101,7 @@ describe('App authentication routes', () => {\n     expect(screen.getByTestId('pathname').textContent).toBe('/')\n   })\n \n-  it('내 기록 경로만 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {\n+  it('내 기록 경로는 로그인 화면으로 연결하고 원래 하위 위치를 저장한다', async () => {\n     renderApp('/records/run-17?tab=trades#cost')\n \n     expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()\n@@ -110,4 +116,24 @@ describe('App authentication routes', () => {\n \n     expect(await screen.findByRole('heading', { name: '내 기록 화면' })).toBeTruthy()\n   })\n+\n+  it('비로그인 사용자가 회원정보 경로로 오면 로그인 후 돌아올 위치를 저장한다', async () => {\n+    renderApp('/account/profile')\n+\n+    expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()\n+    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBe('/account/profile')\n+  })\n+\n+  it('로그인 사용자는 회원정보 수정 화면으로 들어갈 수 있다', async () => {\n+    authenticatedAuth.recheck = vi.fn().mockResolvedValue(authenticatedAuth)\n+    renderApp('/account/profile', authenticatedAuth)\n+\n+    expect(await screen.findByRole('heading', { name: '회원정보 수정 화면' })).toBeTruthy()\n+  })\n+\n+  it('개발용 미리보기 경로는 비로그인 상태에서도 열린다', async () => {\n+    renderApp('/dev/account-profile')\n+\n+    expect(await screen.findByRole('heading', { name: '회원정보 미리보기 화면' })).toBeTruthy()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.auth.test.tsx",
+          "old_path": "frontend/src/App.auth.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -58,6 +58,20 @@ const MyRecordsPage = lazy(() =>\n   })),\n )\n \n+const AccountProfilePage = lazy(() =>\n+  import('@/pages/AccountProfilePage').then((module) => ({\n+    default: module.AccountProfilePage,\n+  })),\n+)\n+\n+const AccountProfilePreviewPage = import.meta.env.DEV\n+  ? lazy(() =>\n+      import('@/pages/AccountProfilePreviewPage').then((module) => ({\n+        default: module.AccountProfilePreviewPage,\n+      })),\n+    )\n+  : null\n+\n // 013 배우기. 글의 예시는 002 `/diagnosis/sectors`로 넘어간다.\n const LearningListPage = lazy(() =>\n   import('@/pages/LearningListPage').then((module) => ({\n@@ -156,6 +170,17 @@ function AnimatedRoutes() {\n                 </ProtectedRoute>\n               }\n             />\n+            <Route\n+              path=\"/account/profile\"\n+              element={\n+                <ProtectedRoute recoveryTitle=\"회원정보를 잠시 숨겼습니다.\">\n+                  <AccountProfilePage />\n+                </ProtectedRoute>\n+              }\n+            />\n+            {AccountProfilePreviewPage ? (\n+              <Route path=\"/dev/account-profile\" element={<AccountProfilePreviewPage />} />\n+            ) : null}\n             {/* 관리 화면은 로그인이 전제다. 권한 판정은 서버가 하고 화면은 200일 때만 그린다. */}\n             <Route\n               path=\"/admin/learning\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2877820": []
+  }
+}

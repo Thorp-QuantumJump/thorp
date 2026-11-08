@@ -1,0 +1,928 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 936938,
+    "iid": 22,
+    "project_id": 1444456,
+    "title": "feat(fe): 경제지표api연결",
+    "description": "# 작업 내용 요약\n\n![image.png](/uploads/cabc8649d70838bbd52540d9f0961deb/image.png){width=900 height=76}\n\n![image.png](/uploads/1cf56d2e55a3fe93e1af814be1506222/image.png){width=900 height=329}\n\n홈·대시보드의 경제지표를 목업 값에서 백엔드 /markets/\\* API 최신값 연동으로 전환했습니다. 11개 지표를 개별 호출해 독립적으로 수집하고, 실패한 지표만 예시값으로 폴백하도록 했습니다. \n\n**차트·해석·추천은 아직 예시 데이터이며, 이를 화면에서 구분해 표시합니다.**\n\n# 주요 변경 사항\n\n- api/market.ts — 11개 지표 엔드포인트 매핑, Pr 응답 isSuccess·code 일치·Number.isFinite 검증\n- types/marketApi.ts — ApiEnvelope, MarketIndicatorResponse, 지표 코드 유니온\n- hooks/useMarketIndicators.ts — 모듈 레벨 60초 캐시 + in-flight 요청 공유, 목업 지표에 최신값 병합\n\n변경\n\n- HomePage / DashboardPage — useMarketIndicators로 지표 주입, 면책 문구를 \"최신값은 API, 차트·해석은 예시\"로 수정\n- MarketSnapshot / MacroIndicatorGrid / DashboardIndicatorStrip — formatIndicatorChange → formatIndicatorContext, data-status 속성과 title 툴팁 추가\n- marketFormat.ts — formatIndicatorContext 추가 표기), USD → B USD, 십억원 → 조원 축약\n- market.ts — IndicatorDataStatus, statusMessage 필드 추가\n- CSS 3종 — data-status 상태값을 muted 색으로\n- MacroIndicatorGrid 메타가 수정 가능/초기 발표 → 발표 주기로 교체\n\n# 리뷰 포인트\n\n1. applyLatestValue가 indicator.code를 응답 코드로 덮어씁니다 (hooks/useMarketIndicators.ts:62). CORE_CPI → CORE_CPI_YOY, EXPORTS_YOY → EXPORTS_USD, M2_YOY → M2로 바뀝니다. UI 코드를 키로 쓰는 로직이 뒤에 생기면 깨집니다 — 덮어쓸 이유가 있는지 확인 필요.\n2. HomePage의 비교 패널만 목업을 직접 참조합니다 (HomePage.tsx:21). allComparisonIndicators가 marketMock.\\* 원본이라, 위 카드에는 실시간 값·아래 비교 패널에는 목업 값이 동시에 보입니다. marketIndicators/macroIndicators로 교체가 맞아 보입니다.\n3. isLoading·failedCodes가 반환만 되고 어디서도 안 쓰입니다. 전체 실패 시에도 배너 없이 카드마다 \"연결 실패 · 예시값\"만 뜹니다. 미사용이면 제거하거나 상단 알림에 연\n4. value만 실시간이고 change/tone/series는 목업입니다. formatIndicatorContext가 변화량 텍스트는 가렸지만 data-tone 색상과 스파크라인은 여전히 예시 기준이라, 실제 값과.\n5. 페이지 진입마다 11개 요청이 나갑니다. 백엔드 배치 엔드포인트를 두는 편이 나을지 검토. 캐시가 모듈 전역 가변 상태(cachedBatch)라 강제 새로고침 수단이 없\n6. formatIndicatorValue의 축약 분기가 indicator.decimals를 무시하고 소수 1자리로 고정됩니다 — 의도된 것인지 확인.",
+    "state": "merged",
+    "created_at": "2026-09-08T17:18:33.347+09:00",
+    "updated_at": "2026-09-09T10:01:00.278+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-09T10:01:00.038+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/107-economic-indicators-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "43b7b78bc5b2afa5c578109484efe3b1b3a72a2d",
+    "merge_commit_sha": "e224be69313030aa71561ab9950e5fe606205a62",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T17:18:34.861+09:00",
+    "reference": "!22",
+    "references": {
+      "short": "!22",
+      "relative": "!22",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!22"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/22",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 936938,
+    "iid": 22,
+    "project_id": 1444456,
+    "title": "feat(fe): 경제지표api연결",
+    "description": "# 작업 내용 요약\n\n![image.png](/uploads/cabc8649d70838bbd52540d9f0961deb/image.png){width=900 height=76}\n\n![image.png](/uploads/1cf56d2e55a3fe93e1af814be1506222/image.png){width=900 height=329}\n\n홈·대시보드의 경제지표를 목업 값에서 백엔드 /markets/\\* API 최신값 연동으로 전환했습니다. 11개 지표를 개별 호출해 독립적으로 수집하고, 실패한 지표만 예시값으로 폴백하도록 했습니다. \n\n**차트·해석·추천은 아직 예시 데이터이며, 이를 화면에서 구분해 표시합니다.**\n\n# 주요 변경 사항\n\n- api/market.ts — 11개 지표 엔드포인트 매핑, Pr 응답 isSuccess·code 일치·Number.isFinite 검증\n- types/marketApi.ts — ApiEnvelope, MarketIndicatorResponse, 지표 코드 유니온\n- hooks/useMarketIndicators.ts — 모듈 레벨 60초 캐시 + in-flight 요청 공유, 목업 지표에 최신값 병합\n\n변경\n\n- HomePage / DashboardPage — useMarketIndicators로 지표 주입, 면책 문구를 \"최신값은 API, 차트·해석은 예시\"로 수정\n- MarketSnapshot / MacroIndicatorGrid / DashboardIndicatorStrip — formatIndicatorChange → formatIndicatorContext, data-status 속성과 title 툴팁 추가\n- marketFormat.ts — formatIndicatorContext 추가 표기), USD → B USD, 십억원 → 조원 축약\n- market.ts — IndicatorDataStatus, statusMessage 필드 추가\n- CSS 3종 — data-status 상태값을 muted 색으로\n- MacroIndicatorGrid 메타가 수정 가능/초기 발표 → 발표 주기로 교체\n\n# 리뷰 포인트\n\n1. applyLatestValue가 indicator.code를 응답 코드로 덮어씁니다 (hooks/useMarketIndicators.ts:62). CORE_CPI → CORE_CPI_YOY, EXPORTS_YOY → EXPORTS_USD, M2_YOY → M2로 바뀝니다. UI 코드를 키로 쓰는 로직이 뒤에 생기면 깨집니다 — 덮어쓸 이유가 있는지 확인 필요.\n2. HomePage의 비교 패널만 목업을 직접 참조합니다 (HomePage.tsx:21). allComparisonIndicators가 marketMock.\\* 원본이라, 위 카드에는 실시간 값·아래 비교 패널에는 목업 값이 동시에 보입니다. marketIndicators/macroIndicators로 교체가 맞아 보입니다.\n3. isLoading·failedCodes가 반환만 되고 어디서도 안 쓰입니다. 전체 실패 시에도 배너 없이 카드마다 \"연결 실패 · 예시값\"만 뜹니다. 미사용이면 제거하거나 상단 알림에 연\n4. value만 실시간이고 change/tone/series는 목업입니다. formatIndicatorContext가 변화량 텍스트는 가렸지만 data-tone 색상과 스파크라인은 여전히 예시 기준이라, 실제 값과.\n5. 페이지 진입마다 11개 요청이 나갑니다. 백엔드 배치 엔드포인트를 두는 편이 나을지 검토. 캐시가 모듈 전역 가변 상태(cachedBatch)라 강제 새로고침 수단이 없\n6. formatIndicatorValue의 축약 분기가 indicator.decimals를 무시하고 소수 1자리로 고정됩니다 — 의도된 것인지 확인.",
+    "state": "merged",
+    "created_at": "2026-09-08T17:18:33.347+09:00",
+    "updated_at": "2026-09-09T10:01:00.278+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-09T10:01:00.038+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/107-economic-indicators-api",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "43b7b78bc5b2afa5c578109484efe3b1b3a72a2d",
+    "merge_commit_sha": "e224be69313030aa71561ab9950e5fe606205a62",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T17:18:34.861+09:00",
+    "reference": "!22",
+    "references": {
+      "short": "!22",
+      "relative": "!22",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!22"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/22",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "23",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "head_sha": "43b7b78bc5b2afa5c578109484efe3b1b3a72a2d",
+      "start_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "86a2522eb8ff9397b010e9623d4c65f239d2fd17",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2775810,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-08T17:18:33.486+09:00",
+          "updated_at": "2026-09-08T17:18:33.493+09:00",
+          "system": true,
+          "noteable_id": 936938,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 22,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a4b15913a4d46d6eaa873e815d3fe2b790ef30ba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2775813,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 에러 격리 및 테스트:** `fetchLatestMarketIndicators`에서 `Promise.allSettled`를 사용하여 하나의 지표 API가 실패해도 나머지 지표에 영향을 주지 않도록 잘 구현되었습니다. 또한 Node.js 내장 테스트 러너(`node:test`)를 이용해 실패 케이스, 응답 코드 불일치, NaN/Infinity 등의 예외 상황을 꼼꼼하게 검증한 점이 매우 훌륭합니다.\n- **모듈 레벨 인플라이트(In-flight) 요청 공유 및 캐싱:** 불필요한 중복 네트워크 요청을 막기 위해 짧은 TTL(60초)과 `pendingRequest` 기반의 요청 합치기(request coalescing) 패턴이 깔끔하게 적용되었습니다.\n\n### 발견 사항\n- [High] `frontend/src/hooks/useMarketIndicators.ts`: `applyLatestValue` 함수 내에서 API 응답으로 받은 `response.code`(`MarketIndicatorCode`)를 기존 `indicator.code` 대신 그대로 대입하고 있습니다. 리뷰 포인트 1번에서 지적된 바와 같이, UI 컴포넌트나 매핑 테이블에서 사용하던 UI 코드(예: `CORE_CPI_YOY`)가 응답 코드(`CORE_CPI`)로 덮어씌워지면 이후 키 기반 조회 로직이나 매핑에 문제가 생길 수 있으므로 `indicator.code`는 원본을 유지하거나 타입 동기화를 철저히 확인해야 합니다.\n- [Medium] `frontend/src/hooks/useMarketIndicators.ts`: 전역 가변 상태인 `cachedBatch`와 `pendingRequest`가 모듈 스코프에 존재합니다. 단일 페이지 애플리케이션의 일반적인 라우팅에서는 문제가 적을 수 있으나, SSR 환경 도입 시 상태가 요청 간 공유되는 보안/동시성 문제가 발생할 수 있으며 사용자가 명시적으로 캐시를 무효화하고 재시도할 수 있는 수단이 부족합니다.\n\n### 테스트 제안\n- **네트워크 에러 및 전체 실패 시나리오 테스트:** 11개 지표 API가 모두 실패(`Promise.reject` 또는 `isSuccess: false`)할 경우, `MarketDataStatus` 컴포넌트가 올바르게 11개 실패를 감지하고 상단 배너에 정상적으로 노출되는지 테스트합니다.\n- **캐시 유효성 테스트:** `useMarketIndicators`를 사용하는 컴포넌트 마운트 시 60초 이내 재진입할 경우 추가 API 호출(네트워크 요청)이 발생하지 않고 캐시된 배치 데이터를 즉시 반환하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:43b7b78bc5b2afa5c578109484efe3b1b3a72a2d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-08T17:18:43.856+09:00",
+          "updated_at": "2026-09-09T09:43:52.653+09:00",
+          "system": false,
+          "noteable_id": 936938,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 22,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8840556bbc6cbb0d7d8c3dd9b77e9f5e4336a5f8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2776595,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>b3d4f3a2 - feat(fe): 경제 지표 API 연동과 실패 재조회 기능 추가</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/22/diffs?diff_id=2174269&start_sha=8f5528b7bfb75f263c24193bf30fc5704080f399)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-08T22:38:26.154+09:00",
+          "updated_at": "2026-09-08T22:38:26.159+09:00",
+          "system": true,
+          "noteable_id": 936938,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 22,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "426fe9277532b0173f407c9992d71800d0d08e75",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2777352,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>43b7b78b - feat(fe): ai코드리뷰-단위테스트보강</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/22/diffs?diff_id=2174836&start_sha=b3d4f3a2c046ce78bf11072d65589524816769bf)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T09:43:40.921+09:00",
+          "updated_at": "2026-09-09T09:43:40.925+09:00",
+          "system": true,
+          "noteable_id": 936938,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 22,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0c12ed55f06dfabad205556ca9cbca34052ad493",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2777582,
+          "type": null,
+          "body": "mentioned in commit e224be69313030aa71561ab9950e5fe606205a62",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-09T10:01:00.066+09:00",
+          "updated_at": "2026-09-09T10:01:00.073+09:00",
+          "system": true,
+          "noteable_id": 936938,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 22,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2174836,
+      "head_commit_sha": "43b7b78bc5b2afa5c578109484efe3b1b3a72a2d",
+      "base_commit_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "start_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "created_at": "2026-09-09T09:43:40.595+09:00",
+      "merge_request_id": 936938,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "983d0cd5a1d431bd5bf2313c5263e978379f3faf"
+    },
+    {
+      "id": 2174269,
+      "head_commit_sha": "b3d4f3a2c046ce78bf11072d65589524816769bf",
+      "base_commit_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "start_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "created_at": "2026-09-08T22:38:25.712+09:00",
+      "merge_request_id": 936938,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "a9d14dc35580a52528d5d33b79b4e0a982098c05"
+    },
+    {
+      "id": 2173645,
+      "head_commit_sha": "8f5528b7bfb75f263c24193bf30fc5704080f399",
+      "base_commit_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "start_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "created_at": "2026-09-08T17:18:33.901+09:00",
+      "merge_request_id": 936938,
+      "state": "without_files",
+      "real_size": "14",
+      "patch_id_sha": "496b90ff0c2835e91d6d0d1a9f7e93d6b23c6f04"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2174836,
+      "head_commit_sha": "43b7b78bc5b2afa5c578109484efe3b1b3a72a2d",
+      "base_commit_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "start_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "created_at": "2026-09-09T09:43:40.595+09:00",
+      "merge_request_id": 936938,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "983d0cd5a1d431bd5bf2313c5263e978379f3faf",
+      "commits": [
+        {
+          "id": "43b7b78bc5b2afa5c578109484efe3b1b3a72a2d",
+          "short_id": "43b7b78b",
+          "created_at": "2026-09-09T09:43:34.000+09:00",
+          "parent_ids": [
+            "b3d4f3a2c046ce78bf11072d65589524816769bf"
+          ],
+          "title": "feat(fe): ai코드리뷰-단위테스트보강",
+          "message": "feat(fe): ai코드리뷰-단위테스트보강\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-09T09:43:34.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-09T09:43:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/43b7b78bc5b2afa5c578109484efe3b1b3a72a2d"
+        },
+        {
+          "id": "b3d4f3a2c046ce78bf11072d65589524816769bf",
+          "short_id": "b3d4f3a2",
+          "created_at": "2026-09-08T22:38:18.000+09:00",
+          "parent_ids": [
+            "8f5528b7bfb75f263c24193bf30fc5704080f399"
+          ],
+          "title": "feat(fe): 경제 지표 API 연동과 실패 재조회 기능 추가",
+          "message": "feat(fe): 경제 지표 API 연동과 실패 재조회 기능 추가\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-08T22:38:18.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-08T22:38:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b3d4f3a2c046ce78bf11072d65589524816769bf"
+        },
+        {
+          "id": "8f5528b7bfb75f263c24193bf30fc5704080f399",
+          "short_id": "8f5528b7",
+          "created_at": "2026-09-08T17:03:33.000+09:00",
+          "parent_ids": [
+            "f0618dd6df35038728a3779df5ecc1ed540445cd"
+          ],
+          "title": "feat(fe):경제지표api연결",
+          "message": "feat(fe):경제지표api연결\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-08T17:03:33.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-08T17:03:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8f5528b7bfb75f263c24193bf30fc5704080f399"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,110 @@\n+import assert from 'node:assert/strict'\n+import { registerHooks } from 'node:module'\n+import { test } from 'node:test'\n+import { apiClient } from './marketClientStub.ts'\n+import type {\n+  ApiEnvelope,\n+  MarketIndicatorCode,\n+  MarketIndicatorResponse,\n+} from '../types/marketApi.ts'\n+\n+const clientStubUrl = new URL('./marketClientStub.ts', import.meta.url).href\n+\n+// 운영 모듈은 그대로 두고 Node 단독 테스트에서만 공용 HTTP 클라이언트를 대역으로 교체한다.\n+registerHooks({\n+  resolve(specifier, context, nextResolve) {\n+    if (specifier === './client' && context.parentURL?.endsWith('/api/market.ts')) {\n+      return { url: clientStubUrl, shortCircuit: true }\n+    }\n+    return nextResolve(specifier, context)\n+  },\n+})\n+\n+const { fetchLatestMarketIndicators, marketIndicatorCodes } = await import('./market.ts')\n+\n+const codeByEndpoint: Record<string, MarketIndicatorCode> = {\n+  '/markets/kospi': 'KOSPI',\n+  '/markets/kosdaq': 'KOSDAQ',\n+  '/markets/usd-krw': 'USD_KRW',\n+  '/markets/vkospi200': 'VKOSPI200',\n+  '/markets/ktb-3y': 'KTB_3Y',\n+  '/markets/coincident-cycle': 'COINCIDENT_CYCLE',\n+  '/markets/leading-cycle': 'LEADING_CYCLE',\n+  '/markets/esi-cycle': 'ESI_CYCLE',\n+  '/markets/core-cpi-yoy': 'CORE_CPI_YOY',\n+  '/markets/exports-usd': 'EXPORTS_USD',\n+  '/markets/m2': 'M2',\n+}\n+\n+function responseFor(code: MarketIndicatorCode): ApiEnvelope<MarketIndicatorResponse> {\n+  return {\n+    httpStatus: 'OK',\n+    isSuccess: true,\n+    message: '성공',\n+    code: 200,\n+    result: {\n+      code,\n+      name: code,\n+      group: code === 'KOSPI' ? 'market' : 'macro',\n+      value: 100,\n+      unit: '지수',\n+      frequency: 'monthly',\n+      observationDate: '2026-08',\n+      retrievedAt: '2026-09-08T00:00:00Z',\n+      source: { provider: 'test', datasetName: 'test' },\n+      status: 'ok',\n+      statusMessage: null,\n+    },\n+  }\n+}\n+\n+async function withMockedGet(\n+  handler: (endpoint: string) => ApiEnvelope<MarketIndicatorResponse> | Promise<never>,\n+) {\n+  const originalGet = apiClient.get\n+  apiClient.get = (async (endpoint: string) => ({\n+    data: await handler(endpoint),\n+  })) as typeof apiClient.get\n+\n+  try {\n+    return await fetchLatestMarketIndicators()\n+  } finally {\n+    apiClient.get = originalGet\n+  }\n+}\n+\n+test('한 지표 요청이 실패해도 나머지 열 개의 성공 결과를 유지한다', async () => {\n+  const batch = await withMockedGet((endpoint) => {\n+    const code = codeByEndpoint[endpoint]\n+    assert.ok(code, endpoint)\n+    if (code === 'KOSPI') return Promise.reject(new Error('network error'))\n+    return responseFor(code)\n+  })\n+\n+  assert.equal(Object.keys(batch.data).length, marketIndicatorCodes.length - 1)\n+  assert.equal(batch.data.KOSPI, undefined)\n+  assert.match(batch.errors.KOSPI ?? '', /network error/)\n+  assert.equal(batch.data.KOSDAQ?.value, 100)\n+})\n+\n+test('실패 envelope, 코드 불일치, NaN과 Infinity를 개별 오류로 격리한다', async () => {\n+  const batch = await withMockedGet((endpoint) => {\n+    const requestedCode = codeByEndpoint[endpoint]\n+    assert.ok(requestedCode, endpoint)\n+    const body = responseFor(requestedCode)\n+\n+    if (requestedCode === 'KOSPI') body.isSuccess = false\n+    if (requestedCode === 'KOSDAQ') body.result.code = 'KOSPI'\n+    if (requestedCode === 'USD_KRW') body.result.value = Number.NaN\n+    if (requestedCode === 'VKOSPI200') body.result.value = Number.POSITIVE_INFINITY\n+\n+    return body\n+  })\n+\n+  assert.deepEqual(\n+    Object.keys(batch.errors).sort(),\n+    ['KOSDAQ', 'KOSPI', 'USD_KRW', 'VKOSPI200'],\n+  )\n+  assert.equal(Object.keys(batch.data).length, marketIndicatorCodes.length - 4)\n+  assert.equal(batch.data.KTB_3Y?.value, 100)\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/market.test.ts",
+          "old_path": "frontend/src/api/market.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,61 @@\n+import { apiClient } from './client'\n+import type {\n+  ApiEnvelope,\n+  MarketIndicatorBatch,\n+  MarketIndicatorCode,\n+  MarketIndicatorResponse,\n+} from '@/types/marketApi'\n+\n+const indicatorEndpoints: Record<MarketIndicatorCode, string> = {\n+  KOSPI: '/markets/kospi',\n+  KOSDAQ: '/markets/kosdaq',\n+  USD_KRW: '/markets/usd-krw',\n+  VKOSPI200: '/markets/vkospi200',\n+  KTB_3Y: '/markets/ktb-3y',\n+  COINCIDENT_CYCLE: '/markets/coincident-cycle',\n+  LEADING_CYCLE: '/markets/leading-cycle',\n+  ESI_CYCLE: '/markets/esi-cycle',\n+  CORE_CPI_YOY: '/markets/core-cpi-yoy',\n+  EXPORTS_USD: '/markets/exports-usd',\n+  M2: '/markets/m2',\n+}\n+\n+export const marketIndicatorCodes = Object.keys(indicatorEndpoints) as MarketIndicatorCode[]\n+\n+/** 지표별 최신값 API를 호출하고 응답 코드가 요청 지표와 일치하는지 확인한다. */\n+async function fetchMarketIndicator(code: MarketIndicatorCode) {\n+  const response = await apiClient.get<ApiEnvelope<MarketIndicatorResponse>>(\n+    indicatorEndpoints[code],\n+  )\n+  const body = response.data\n+\n+  if (!body.isSuccess || !body.result || body.result.code !== code) {\n+    throw new Error(`${code} 지표 응답 형식이 올바르지 않습니다.`)\n+  }\n+\n+  if (!Number.isFinite(body.result.value)) {\n+    throw new Error(`${code} 지표 값이 숫자가 아닙니다.`)\n+  }\n+\n+  return body.result\n+}\n+\n+/** 한 원천기관의 실패가 다른 지표를 가리지 않도록 11개 요청 결과를 독립적으로 모은다. */\n+export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {\n+  const settled = await Promise.allSettled(marketIndicatorCodes.map(fetchMarketIndicator))\n+  const batch: MarketIndicatorBatch = { data: {}, errors: {} }\n+\n+  settled.forEach((result, index) => {\n+    const code = marketIndicatorCodes[index]\n+    if (result.status === 'fulfilled') {\n+      batch.data[code] = result.value\n+      return\n+    }\n+\n+    batch.errors[code] = result.reason instanceof Error\n+      ? result.reason.message\n+      : '지표를 불러오지 못했습니다.'\n+  })\n+\n+  return batch\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/market.ts",
+          "old_path": "frontend/src/api/market.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,7 @@\n+/** Node 단독 API 테스트에서 axios 대신 사용하는 최소 클라이언트다. */\n+export const apiClient = {\n+  async get<T>(_endpoint: string): Promise<{ data: T }> {\n+    void _endpoint\n+    throw new Error('테스트에서 apiClient.get 구현을 지정해야 합니다.')\n+  },\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/marketClientStub.ts",
+          "old_path": "frontend/src/api/marketClientStub.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -137,6 +137,13 @@\n   color: var(--market-warning);\n }\n \n+.change[data-status='loading'],\n+.change[data-status='live'],\n+.change[data-status='stale'],\n+.change[data-status='error'] {\n+  color: var(--market-muted);\n+}\n+\n .card svg {\n   min-width: 48px;\n   height: 38px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.module.css",
+          "old_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,7 @@ import type { Indicator } from '@/types/market'\n import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n import {\n   formatDataDate,\n-  formatIndicatorChange,\n+  formatIndicatorContext,\n   formatIndicatorValue,\n } from '@/utils/marketFormat'\n import { TrendSparkline } from '@/components/market/TrendSparkline'\n@@ -65,8 +65,13 @@ export function DashboardIndicatorStrip({\n                   <small>{formatDataDate(indicator.observationDate)}</small>\n                 </div>\n                 <strong>{formatIndicatorValue(indicator)}</strong>\n-                <span className={styles.change} data-tone={indicator.tone}>\n-                  {formatIndicatorChange(indicator)}\n+                <span\n+                  className={styles.change}\n+                  data-tone={indicator.tone}\n+                  data-status={indicator.dataStatus}\n+                  title={indicator.statusMessage ?? undefined}\n+                >\n+                  {formatIndicatorContext(indicator)}\n                 </span>\n               </div>\n               <TrendSparkline\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.tsx",
+          "old_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -142,7 +142,7 @@ export function IndicatorHistoryCard({\n           aria-controls={panelId}\n           onClick={() => onActiveChange(expanded ? null : indicator.id)}\n         >\n-          최근 3개월 <span>5년 보기 <ArrowUpRight size={13} aria-hidden=\"true\" /></span>\n+          최근 3개월 · 예시 <span>5년 보기 <ArrowUpRight size={13} aria-hidden=\"true\" /></span>\n         </button>\n       </motion.div>\n       <AnimatePresence initial={false}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/IndicatorHistoryCard.tsx",
+          "old_path": "frontend/src/components/market/IndicatorHistoryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -119,6 +119,13 @@\n   color: var(--market-warning);\n }\n \n+.valueRow span[data-status='loading'],\n+.valueRow span[data-status='live'],\n+.valueRow span[data-status='stale'],\n+.valueRow span[data-status='error'] {\n+  color: var(--market-muted);\n+}\n+\n .chartWrap {\n   margin-top: 6px;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MacroIndicatorGrid.module.css",
+          "old_path": "frontend/src/components/market/MacroIndicatorGrid.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,7 +3,8 @@ import type { Indicator } from '@/types/market'\n import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n import {\n   formatDataDate,\n-  formatIndicatorChange,\n+  formatFrequency,\n+  formatIndicatorContext,\n   formatIndicatorValue,\n } from '@/utils/marketFormat'\n import { TrendSparkline } from './TrendSparkline'\n@@ -28,7 +29,7 @@ export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChan\n         </div>\n         <span>\n           <Database size={13} aria-hidden=\"true\" />\n-          발표일과 수정 여부를 함께 표시해요\n+          최신 관측값과 출처를 함께 표시해요\n         </span>\n       </div>\n \n@@ -52,7 +53,13 @@ export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChan\n             </div>\n             <div className={styles.valueRow}>\n               <strong>{formatIndicatorValue(indicator)}</strong>\n-              <span data-tone={indicator.tone}>{formatIndicatorChange(indicator)}</span>\n+              <span\n+                data-tone={indicator.tone}\n+                data-status={indicator.dataStatus}\n+                title={indicator.statusMessage ?? undefined}\n+              >\n+                {formatIndicatorContext(indicator)}\n+              </span>\n             </div>\n             <div className={styles.chartWrap}>\n               <TrendSparkline\n@@ -64,7 +71,7 @@ export function MacroIndicatorGrid({ indicators, activeIndicatorId, onActiveChan\n             <p className={styles.interpretation}>{indicator.interpretation}</p>\n             <div className={styles.meta}>\n               <span>{indicator.source.provider}</span>\n-              <span>{indicator.revisionStatus === 'revised' ? '수정 가능' : '초기 발표'}</span>\n+              <span>{formatFrequency(indicator.source.frequency)}</span>\n             </div>\n           </IndicatorHistoryCard>\n         ))}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MacroIndicatorGrid.tsx",
+          "old_path": "frontend/src/components/market/MacroIndicatorGrid.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,53 @@\n+.notice,\n+.notice button {\n+  display: flex;\n+  align-items: center;\n+}\n+\n+.notice {\n+  min-height: 34px;\n+  justify-content: space-between;\n+  gap: 16px;\n+  padding: 7px 2px;\n+  border-top: 1px solid var(--market-line-soft);\n+  border-bottom: 1px solid var(--market-line-soft);\n+  color: var(--market-muted);\n+  font-size: 0.68rem;\n+}\n+\n+.notice button {\n+  gap: 5px;\n+  padding: 4px 8px;\n+  border: 0;\n+  background: transparent;\n+  color: var(--market-brand);\n+  font: inherit;\n+  font-weight: 680;\n+  cursor: pointer;\n+}\n+\n+.notice button:disabled {\n+  cursor: wait;\n+  opacity: 0.55;\n+}\n+\n+.notice button:focus-visible {\n+  outline: 2px solid var(--market-brand);\n+  outline-offset: 2px;\n+}\n+\n+.notice button:disabled svg {\n+  animation: spin 0.8s linear infinite;\n+}\n+\n+@keyframes spin {\n+  to {\n+    transform: rotate(360deg);\n+  }\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .notice button:disabled svg {\n+    animation: none;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketDataStatus.module.css",
+          "old_path": "frontend/src/components/market/MarketDataStatus.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+import { RefreshCw } from 'lucide-react'\n+import styles from './MarketDataStatus.module.css'\n+\n+interface MarketDataStatusProps {\n+  failedCount: number\n+  isRefreshing: boolean\n+  onRetry: () => void\n+}\n+\n+/** 일부 지표 연결 실패를 알리고 전체 최신값을 즉시 다시 조회할 수 있게 한다. */\n+export function MarketDataStatus({\n+  failedCount,\n+  isRefreshing,\n+  onRetry,\n+}: MarketDataStatusProps) {\n+  if (failedCount === 0) return null\n+\n+  return (\n+    <div className={styles.notice} role=\"status\" aria-live=\"polite\">\n+      <span>{failedCount}개 지표 연결 실패 · 예시값 표시 중</span>\n+      <button type=\"button\" onClick={onRetry} disabled={isRefreshing}>\n+        <RefreshCw size={13} aria-hidden=\"true\" />\n+        {isRefreshing ? '다시 불러오는 중' : '다시 불러오기'}\n+      </button>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketDataStatus.tsx",
+          "old_path": "frontend/src/components/market/MarketDataStatus.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,6 +105,13 @@\n   color: var(--market-warning);\n }\n \n+.change[data-status='loading'],\n+.change[data-status='live'],\n+.change[data-status='stale'],\n+.change[data-status='error'] {\n+  color: var(--market-muted);\n+}\n+\n .interpretation {\n   min-height: 42px;\n   margin: 9px 0 13px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketSnapshot.module.css",
+          "old_path": "frontend/src/components/market/MarketSnapshot.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,7 +4,7 @@ import { selectIndicatorPeriod } from '@/utils/indicatorHistory'\n import {\n   formatDataDate,\n   formatFrequency,\n-  formatIndicatorChange,\n+  formatIndicatorContext,\n   formatIndicatorValue,\n } from '@/utils/marketFormat'\n import { TrendSparkline } from './TrendSparkline'\n@@ -49,8 +49,13 @@ export function MarketSnapshot({ indicators, activeIndicatorId, onActiveChange,\n               <small>{formatDataDate(indicator.observationDate)}</small>\n             </div>\n             <strong>{formatIndicatorValue(indicator)}</strong>\n-            <p className={styles.change} data-tone={indicator.tone}>\n-              {formatIndicatorChange(indicator)}\n+            <p\n+              className={styles.change}\n+              data-tone={indicator.tone}\n+              data-status={indicator.dataStatus}\n+              title={indicator.statusMessage ?? undefined}\n+            >\n+              {formatIndicatorContext(indicator)}\n             </p>\n             <TrendSparkline\n               series={selectIndicatorPeriod(indicator.series, indicator.observationDate, 3)}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketSnapshot.tsx",
+          "old_path": "frontend/src/components/market/MarketSnapshot.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,8 +11,14 @@ const historyAnchors: Record<string, number[]> = {\n   'leading-cycle': [102.7, 100.8, 98.2, 99.4, 100.1],\n   'esi-cycle': [108, 94, 87, 101, 92],\n   'core-cpi': [1.2, 3.6, 4.1, 3.1, 2.7],\n-  'exports-yoy': [18, 7, -12, 9, 2],\n-  'm2-yoy': [11, 8, 3, 5, 4],\n+  'exports-usd': [\n+    64_000_000_000,\n+    58_000_000_000,\n+    52_000_000_000,\n+    57_000_000_000,\n+    59_000_000_000,\n+  ],\n+  m2: [3_450_000, 3_620_000, 3_780_000, 3_930_000, 4_020_000],\n }\n \n /** 고정된 기준값 사이를 보간해 60개월 예시 이력을 만들며 실제 관측값을 생성하지 않는다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/indicatorHistoryMock.ts",
+          "old_path": "frontend/src/data/indicatorHistoryMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -261,7 +261,7 @@ const macroIndicators: Indicator[] = [\n   },\n   {\n     id: 'core-cpi',\n-    code: 'CORE_CPI',\n+    code: 'CORE_CPI_YOY',\n     name: '물가 부담 (근원 CPI)',\n     category: 'inflation',\n     value: 2.2,\n@@ -292,18 +292,17 @@ const macroIndicators: Indicator[] = [\n     ],\n   },\n   {\n-    id: 'exports-yoy',\n-    code: 'EXPORTS_YOY',\n-    name: '수출 성장률',\n+    id: 'exports-usd',\n+    code: 'EXPORTS_USD',\n+    name: '월간 수출액',\n     category: 'growth',\n-    value: 5.8,\n-    unit: '%',\n-    decimals: 1,\n-    change: 3.1,\n-    changeUnit: '%p · 전월',\n-    direction: 'up',\n-    tone: 'positive',\n-    interpretation: '수출이 늘어 제조업과 수출 대기업에 긍정적입니다.',\n+    value: 61_200_000_000,\n+    unit: 'USD',\n+    decimals: 0,\n+    change: null,\n+    direction: 'flat',\n+    tone: 'neutral',\n+    interpretation: '월간 수출 규모이며, 증감 판단에는 이전 관측값이 추가로 필요합니다.',\n     observationDate: '2026-07',\n     releaseDate: '2026-08-01',\n     availableAt: '2026-08-01T09:00:00+09:00',\n@@ -315,27 +314,26 @@ const macroIndicators: Indicator[] = [\n       frequency: 'monthly',\n     },\n     series: [\n-      { date: '2026-02', value: -1.2 },\n-      { date: '2026-03', value: 0.8 },\n-      { date: '2026-04', value: 1.7 },\n-      { date: '2026-05', value: 2.1 },\n-      { date: '2026-06', value: 2.7 },\n-      { date: '2026-07', value: 5.8 },\n+      { date: '2026-02', value: 52_400_000_000 },\n+      { date: '2026-03', value: 55_100_000_000 },\n+      { date: '2026-04', value: 58_200_000_000 },\n+      { date: '2026-05', value: 57_000_000_000 },\n+      { date: '2026-06', value: 59_300_000_000 },\n+      { date: '2026-07', value: 61_200_000_000 },\n     ],\n   },\n   {\n-    id: 'm2-yoy',\n-    code: 'M2_YOY',\n+    id: 'm2',\n+    code: 'M2',\n     name: '시중 유동성 (M2)',\n     category: 'liquidity',\n-    value: 4.6,\n-    unit: '%',\n-    decimals: 1,\n-    change: 0.4,\n-    changeUnit: '%p · 전월',\n-    direction: 'up',\n+    value: 4_200_000,\n+    unit: '십억원',\n+    decimals: 0,\n+    change: null,\n+    direction: 'flat',\n     tone: 'neutral',\n-    interpretation: '시장에 풀린 돈은 늘고 있지만 강한 상승 신호는 아닙니다.',\n+    interpretation: 'M2 총액이며, 유동성 증감 판단에는 이전 관측값이 추가로 필요합니다.',\n     observationDate: '2026-06',\n     releaseDate: '2026-08-14',\n     availableAt: '2026-08-14T12:00:00+09:00',\n@@ -347,12 +345,12 @@ const macroIndicators: Indicator[] = [\n       frequency: 'monthly',\n     },\n     series: [\n-      { date: '2026-01', value: 3.4 },\n-      { date: '2026-02', value: 3.5 },\n-      { date: '2026-03', value: 3.7 },\n-      { date: '2026-04', value: 3.9 },\n-      { date: '2026-05', value: 4.2 },\n-      { date: '2026-06', value: 4.6 },\n+      { date: '2026-01', value: 4_050_000 },\n+      { date: '2026-02', value: 4_078_000 },\n+      { date: '2026-03', value: 4_105_000 },\n+      { date: '2026-04', value: 4_132_000 },\n+      { date: '2026-05', value: 4_166_000 },\n+      { date: '2026-06', value: 4_200_000 },\n     ],\n   },\n ]\n@@ -587,12 +585,6 @@ export const marketMock: MarketData = {\n         historicalValue: 1.1,\n         unit: '%',\n       },\n-      {\n-        indicatorId: 'exports-yoy',\n-        currentValue: 5.8,\n-        historicalValue: -1.7,\n-        unit: '%',\n-      },\n       {\n         indicatorId: 'usd-krw',\n         currentValue: 1378.5,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/data/marketMock.ts",
+          "old_path": "frontend/src/data/marketMock.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,142 @@\n+import { useCallback, useEffect, useMemo, useState } from 'react'\n+import { fetchLatestMarketIndicators } from '@/api/market'\n+import type { Indicator } from '@/types/market'\n+import type {\n+  MarketIndicatorBatch,\n+  MarketIndicatorCode,\n+  MarketIndicatorResponse,\n+} from '@/types/marketApi'\n+\n+const frontendCacheTtl = 60_000\n+let cachedBatch: { value: MarketIndicatorBatch; storedAt: number } | null = null\n+let pendingRequest: Promise<MarketIndicatorBatch> | null = null\n+\n+const requestCodeByUiCode: Record<string, MarketIndicatorCode> = {\n+  KOSPI: 'KOSPI',\n+  KOSDAQ: 'KOSDAQ',\n+  USD_KRW: 'USD_KRW',\n+  VKOSPI200: 'VKOSPI200',\n+  KTB_3Y: 'KTB_3Y',\n+  COINCIDENT_CYCLE: 'COINCIDENT_CYCLE',\n+  LEADING_CYCLE: 'LEADING_CYCLE',\n+  ESI_CYCLE: 'ESI_CYCLE',\n+  CORE_CPI_YOY: 'CORE_CPI_YOY',\n+  EXPORTS_USD: 'EXPORTS_USD',\n+  M2: 'M2',\n+}\n+\n+const displayNameOverrides: Partial<Record<MarketIndicatorCode, string>> = {\n+  EXPORTS_USD: '월간 수출액',\n+  M2: '시중 유동성 (M2)',\n+}\n+\n+/** 라우트 전환 시 같은 요청을 반복하지 않도록 짧은 브라우저 메모리 캐시를 공유한다. */\n+function loadLatestIndicators(force = false) {\n+  if (!force && cachedBatch && Date.now() - cachedBatch.storedAt < frontendCacheTtl) {\n+    return Promise.resolve(cachedBatch.value)\n+  }\n+\n+  if (!pendingRequest) {\n+    pendingRequest = fetchLatestMarketIndicators()\n+      .then((value) => {\n+        cachedBatch = { value, storedAt: Date.now() }\n+        return value\n+      })\n+      .finally(() => {\n+        pendingRequest = null\n+      })\n+  }\n+\n+  return pendingRequest\n+}\n+\n+function applyLatestValue(\n+  indicator: Indicator,\n+  response: MarketIndicatorResponse,\n+): Indicator {\n+  return {\n+    ...indicator,\n+    name: displayNameOverrides[response.code] ?? indicator.name,\n+    value: response.value,\n+    unit: response.unit,\n+    observationDate: response.observationDate,\n+    retrievedAt: response.retrievedAt,\n+    source: {\n+      provider: response.source.provider,\n+      datasetName: response.source.datasetName,\n+      frequency: response.frequency,\n+    },\n+    dataStatus: response.status === 'stale' ? 'stale' : 'live',\n+    statusMessage: response.statusMessage,\n+  }\n+}\n+\n+function mergeIndicators(\n+  indicators: Indicator[],\n+  batch: MarketIndicatorBatch | null,\n+): Indicator[] {\n+  return indicators.map((indicator) => {\n+    const requestCode = requestCodeByUiCode[indicator.code]\n+    if (!requestCode) return indicator\n+\n+    const response = batch?.data[requestCode]\n+    if (response) return applyLatestValue(indicator, response)\n+\n+    if (!batch) {\n+      return {\n+        ...indicator,\n+        dataStatus: 'loading',\n+        statusMessage: '최신 지표를 불러오는 중입니다.',\n+      }\n+    }\n+\n+    return {\n+      ...indicator,\n+      dataStatus: 'error',\n+      statusMessage: batch.errors[requestCode] ?? '최신 지표를 불러오지 못했습니다.',\n+    }\n+  })\n+}\n+\n+/** 홈과 대시보드가 같은 최신 지표 조회 결과를 사용하도록 UI 지표 모델에 병합한다. */\n+export function useMarketIndicators(\n+  marketIndicators: Indicator[],\n+  macroIndicators: Indicator[],\n+) {\n+  const validCache = cachedBatch && Date.now() - cachedBatch.storedAt < frontendCacheTtl\n+    ? cachedBatch.value\n+    : null\n+  const [batch, setBatch] = useState<MarketIndicatorBatch | null>(validCache)\n+  const [isRefreshing, setIsRefreshing] = useState(false)\n+\n+  useEffect(() => {\n+    let active = true\n+\n+    loadLatestIndicators().then((value) => {\n+      if (active) setBatch(value)\n+    })\n+\n+    return () => {\n+      active = false\n+    }\n+  }, [])\n+\n+  const refetch = useCallback(async () => {\n+    setIsRefreshing(true)\n+    try {\n+      const value = await loadLatestIndicators(true)\n+      setBatch(value)\n+    } finally {\n+      setIsRefreshing(false)\n+    }\n+  }, [])\n+\n+  return useMemo(() => ({\n+    marketIndicators: mergeIndicators(marketIndicators, batch),\n+    macroIndicators: mergeIndicators(macroIndicators, batch),\n+    isLoading: batch === null,\n+    isRefreshing,\n+    failedCodes: batch ? Object.keys(batch.errors) as MarketIndicatorCode[] : [],\n+    refetch,\n+  }), [batch, isRefreshing, macroIndicators, marketIndicators, refetch])\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useMarketIndicators.ts",
+          "old_path": "frontend/src/hooks/useMarketIndicators.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,33 +1,51 @@\n import { useState } from 'react'\n import { DashboardIndicatorStrip } from '@/components/dashboard/DashboardIndicatorStrip'\n import { MarketStatusSummary } from '@/components/dashboard/MarketStatusSummary'\n+import { MarketDataStatus } from '@/components/market/MarketDataStatus'\n import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { marketMock } from '@/data/marketMock'\n+import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n import layout from '@/styles/MarketLayout.module.css'\n import styles from './DashboardPage.module.css'\n \n /** 시장 요약 → 지표 확인 → 추천 전략 순서로 빠르게 살펴보는 대시보드다. */\n export function DashboardPage() {\n   const [indicatorGroup, setIndicatorGroup] = useState<'market' | 'macro'>('market')\n+  const {\n+    marketIndicators,\n+    macroIndicators,\n+    failedCodes,\n+    isRefreshing,\n+    refetch,\n+  } = useMarketIndicators(\n+    marketMock.marketIndicators,\n+    marketMock.macroIndicators,\n+  )\n \n   return (\n     <div className={`${layout.page} ${styles.page}`}>\n       <AppHeader />\n       <main className={styles.container}>\n+        <MarketDataStatus\n+          failedCount={failedCodes.length}\n+          isRefreshing={isRefreshing}\n+          onRetry={() => void refetch()}\n+        />\n         <MarketStatusSummary regime={marketMock.regime} />\n \n         <DashboardIndicatorStrip\n           group={indicatorGroup}\n-          marketIndicators={marketMock.marketIndicators}\n-          macroIndicators={marketMock.macroIndicators}\n+          marketIndicators={marketIndicators}\n+          macroIndicators={macroIndicators}\n           onGroupChange={setIndicatorGroup}\n         />\n \n         <StrategyRecommendationSection compact strategies={marketMock.strategyRecommendations} />\n \n         <footer className={layout.footer}>\n-          본 화면은 UI 검증을 위한 예시 데이터이며 투자 권유나 수익을 보장하는 정보가 아닙니다.\n+          지표 최신값은 연동 API를 우선 사용하며, 시장 해석·차트·추천 결과는 UI 검증용 예시\n+          데이터입니다. 투자 권유나 수익을 보장하는 정보가 아닙니다.\n         </footer>\n       </main>\n     </div>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/DashboardPage.tsx",
+          "old_path": "frontend/src/pages/DashboardPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,22 +1,39 @@\n-import { useState } from 'react'\n+import { useMemo, useState } from 'react'\n import { DataFreshnessPanel } from '@/components/home/DataFreshnessPanel'\n import { MacroIndicatorGrid } from '@/components/market/MacroIndicatorGrid'\n import { MarketRegimeHero } from '@/components/home/MarketRegimeHero'\n import { MarketSnapshot } from '@/components/market/MarketSnapshot'\n+import { MarketDataStatus } from '@/components/market/MarketDataStatus'\n import { SimilarMarketPanel } from '@/components/home/SimilarMarketPanel'\n import { StrategyRecommendationSection } from '@/components/market/StrategyRecommendationSection'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { marketMock } from '@/data/marketMock'\n+import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n+import { withCurrentIndicatorValues } from '@/utils/marketComparison'\n import layout from '@/styles/MarketLayout.module.css'\n import styles from './HomePage.module.css'\n \n /** 기존 시장 분석 화면을 홈으로 제공하고 상세 지표·차트·유사 시장 탐색을 유지한다. */\n export function HomePage() {\n   const [activeIndicatorId, setActiveIndicatorId] = useState<string | null>(null)\n-  const allComparisonIndicators = [\n-    ...marketMock.marketIndicators,\n-    ...marketMock.macroIndicators,\n-  ]\n+  const {\n+    marketIndicators,\n+    macroIndicators,\n+    failedCodes,\n+    isRefreshing,\n+    refetch,\n+  } = useMarketIndicators(\n+    marketMock.marketIndicators,\n+    marketMock.macroIndicators,\n+  )\n+  const allComparisonIndicators = useMemo(\n+    () => [...marketIndicators, ...macroIndicators],\n+    [macroIndicators, marketIndicators],\n+  )\n+  const comparisonPeriod = useMemo(\n+    () => withCurrentIndicatorValues(marketMock.similarPeriod, allComparisonIndicators),\n+    [allComparisonIndicators],\n+  )\n \n   return (\n     <div className={layout.page}>\n@@ -31,18 +48,23 @@ export function HomePage() {\n \n         <div className={styles.contentBoundary}>\n           <div className={styles.contentFlow}>\n+            <MarketDataStatus\n+              failedCount={failedCodes.length}\n+              isRefreshing={isRefreshing}\n+              onRetry={() => void refetch()}\n+            />\n             <MarketSnapshot\n-              indicators={marketMock.marketIndicators}\n+              indicators={marketIndicators}\n               activeIndicatorId={activeIndicatorId}\n               onActiveChange={setActiveIndicatorId}\n             />\n             <MacroIndicatorGrid\n-              indicators={marketMock.macroIndicators}\n+              indicators={macroIndicators}\n               activeIndicatorId={activeIndicatorId}\n               onActiveChange={setActiveIndicatorId}\n             />\n             <SimilarMarketPanel\n-              period={marketMock.similarPeriod}\n+              period={comparisonPeriod}\n               indicators={allComparisonIndicators}\n             />\n             <StrategyRecommendationSection strategies={marketMock.strategyRecommendations} />\n@@ -53,8 +75,8 @@ export function HomePage() {\n           </div>\n \n           <footer className={layout.footer}>\n-            본 화면은 UI 검증을 위한 예시 데이터이며 투자 권유나 수익을 보장하는 정보가\n-            아닙니다.\n+            지표 최신값은 연동 API를 우선 사용하며, 과거 차트·시장 해석·추천 결과는 UI\n+            검증용 예시 데이터입니다. 투자 권유나 수익을 보장하는 정보가 아닙니다.\n           </footer>\n         </div>\n       </main>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/HomePage.tsx",
+          "old_path": "frontend/src/pages/HomePage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,8 @@ export type IndicatorCategory =\n \n export type IndicatorTone = 'positive' | 'negative' | 'warning' | 'neutral'\n \n+export type IndicatorDataStatus = 'example' | 'loading' | 'live' | 'stale' | 'error'\n+\n export interface DataSource {\n   provider: string\n   datasetName: string\n@@ -43,6 +45,8 @@ export interface Indicator {\n   revisionStatus?: 'initial' | 'revised' | 'backfilled'\n   source: DataSource\n   series: IndicatorSeriesPoint[]\n+  dataStatus?: IndicatorDataStatus\n+  statusMessage?: string | null\n }\n \n export interface MarketCyclePoint {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/market.ts",
+          "old_path": "frontend/src/types/market.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,42 @@\n+export type MarketIndicatorCode =\n+  | 'KOSPI'\n+  | 'KOSDAQ'\n+  | 'USD_KRW'\n+  | 'VKOSPI200'\n+  | 'KTB_3Y'\n+  | 'COINCIDENT_CYCLE'\n+  | 'LEADING_CYCLE'\n+  | 'ESI_CYCLE'\n+  | 'CORE_CPI_YOY'\n+  | 'EXPORTS_USD'\n+  | 'M2'\n+\n+export interface ApiEnvelope<T> {\n+  httpStatus: string\n+  isSuccess: boolean\n+  message: string\n+  code: number\n+  result: T\n+}\n+\n+export interface MarketIndicatorResponse {\n+  code: MarketIndicatorCode\n+  name: string\n+  group: 'market' | 'macro'\n+  value: number\n+  unit: string\n+  frequency: 'daily' | 'monthly'\n+  observationDate: string\n+  retrievedAt: string\n+  source: {\n+    provider: string\n+    datasetName: string\n+  }\n+  status: 'ok' | 'stale'\n+  statusMessage: string | null\n+}\n+\n+export interface MarketIndicatorBatch {\n+  data: Partial<Record<MarketIndicatorCode, MarketIndicatorResponse>>\n+  errors: Partial<Record<MarketIndicatorCode, string>>\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/marketApi.ts",
+          "old_path": "frontend/src/types/marketApi.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+import assert from 'node:assert/strict'\n+import { test } from 'node:test'\n+import type { Indicator, SimilarMarketPeriod } from '@/types/market'\n+import { withCurrentIndicatorValues } from './marketComparison.ts'\n+\n+const period = {\n+  comparisons: [\n+    { indicatorId: 'live', currentValue: 1, historicalValue: 2, unit: '%' },\n+    { indicatorId: 'failed', currentValue: 3, historicalValue: 4, unit: 'pt' },\n+  ],\n+} as SimilarMarketPeriod\n+\n+test('API로 확인된 지표만 비교 패널 현재값과 단위를 갱신한다', () => {\n+  const indicators = [\n+    { id: 'live', value: 10, unit: '% YoY', dataStatus: 'live' },\n+    { id: 'failed', value: 30, unit: '지수', dataStatus: 'error' },\n+  ] as Indicator[]\n+\n+  const result = withCurrentIndicatorValues(period, indicators)\n+\n+  assert.deepEqual(result.comparisons[0], {\n+    indicatorId: 'live',\n+    currentValue: 10,\n+    historicalValue: 2,\n+    unit: '% YoY',\n+  })\n+  assert.deepEqual(result.comparisons[1], period.comparisons[1])\n+  assert.notEqual(result, period)\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketComparison.test.ts",
+          "old_path": "frontend/src/utils/marketComparison.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+import type { Indicator, SimilarMarketPeriod } from '@/types/market'\n+\n+/** API로 확인된 최신값만 비교 패널의 현재값에 반영하고 과거 예시값은 유지한다. */\n+export function withCurrentIndicatorValues(\n+  period: SimilarMarketPeriod,\n+  indicators: Indicator[],\n+): SimilarMarketPeriod {\n+  const indicatorsById = new Map(indicators.map((indicator) => [indicator.id, indicator]))\n+\n+  return {\n+    ...period,\n+    comparisons: period.comparisons.map((comparison) => {\n+      const indicator = indicatorsById.get(comparison.indicatorId)\n+      if (!indicator || (indicator.dataStatus !== 'live' && indicator.dataStatus !== 'stale')) {\n+        return comparison\n+      }\n+\n+      return {\n+        ...comparison,\n+        currentValue: indicator.value,\n+        unit: indicator.unit,\n+      }\n+    }),\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketComparison.ts",
+          "old_path": "frontend/src/utils/marketComparison.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+import assert from 'node:assert/strict'\n+import { test } from 'node:test'\n+import type { Indicator } from '@/types/market'\n+import { formatIndicatorValue } from './marketFormat.ts'\n+\n+test('월간 수출액을 10억 달러 단위로 축약한다', () => {\n+  const indicator = { value: 61_200_000_000, unit: 'USD', decimals: 0 } as Indicator\n+  assert.equal(formatIndicatorValue(indicator), '61.2B USD')\n+})\n+\n+test('M2 십억원 값을 조원 단위로 축약한다', () => {\n+  const indicator = { value: 4_200_000, unit: '십억원', decimals: 0 } as Indicator\n+  assert.equal(formatIndicatorValue(indicator), '4,200.0 조원')\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketFormat.test.ts",
+          "old_path": "frontend/src/utils/marketFormat.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,6 +9,22 @@ const frequencyLabels: Record<DataFrequency, string> = {\n \n /** 지표의 원시 숫자를 소수점과 단위 규칙에 맞춰 표시한다. */\n export function formatIndicatorValue(indicator: Indicator) {\n+  if (indicator.unit === 'USD' && Math.abs(indicator.value) >= 1_000_000_000) {\n+    const value = (indicator.value / 1_000_000_000).toLocaleString('ko-KR', {\n+      minimumFractionDigits: 1,\n+      maximumFractionDigits: 1,\n+    })\n+    return `${value}B USD`\n+  }\n+\n+  if (indicator.unit === '십억원' && Math.abs(indicator.value) >= 1_000) {\n+    const value = (indicator.value / 1_000).toLocaleString('ko-KR', {\n+      minimumFractionDigits: 1,\n+      maximumFractionDigits: 1,\n+    })\n+    return `${value} 조원`\n+  }\n+\n   const value = indicator.value.toLocaleString('ko-KR', {\n     minimumFractionDigits: indicator.decimals,\n     maximumFractionDigits: indicator.decimals,\n@@ -25,6 +41,22 @@ export function formatIndicatorChange(indicator: Indicator) {\n   return `${prefix}${indicator.change.toLocaleString('ko-KR')}${indicator.changeUnit ? ` ${indicator.changeUnit}` : ''}`\n }\n \n+/** 최신값 API와 예시 변화량·차트를 혼동하지 않도록 데이터 상태를 우선 표시한다. */\n+export function formatIndicatorContext(indicator: Indicator) {\n+  switch (indicator.dataStatus) {\n+    case 'loading':\n+      return '최신값 불러오는 중'\n+    case 'live':\n+      return '최신 관측값 · 차트 예시'\n+    case 'stale':\n+      return '이전 수집값 · 차트 예시'\n+    case 'error':\n+      return '연결 실패 · 예시값'\n+    default:\n+      return formatIndicatorChange(indicator)\n+  }\n+}\n+\n /** ISO 형태의 기준일을 짧은 한국어 화면 표기로 변환한다. */\n export function formatDataDate(value: string) {\n   return value.replaceAll('-', '.')\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketFormat.ts",
+          "old_path": "frontend/src/utils/marketFormat.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2174269,
+      "head_commit_sha": "b3d4f3a2c046ce78bf11072d65589524816769bf",
+      "base_commit_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "start_commit_sha": "2be44f6a135426ff1cf83605600a2aa3b19ae81b",
+      "created_at": "2026-09-08T22:38:25.712+09:00",
+      "merge_request_id": 936938,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "a9d14dc35580a52528d5d33b79b4e0a982098c05",
+      "commits": [
+        {
+          "id": "b3d4f3a2c046ce78bf11072d65589524816769bf",
+          "short_id": "b3d4f3a2",
+          "created_at": "2026-09-08T22:38:18.000+09:00",
+          "parent_ids": [
+            "8f5528b7bfb75f263c24193bf30fc5704080f399"
+          ],
+          "title": "feat(fe): 경제 지표 API 연동과 실패 재조회 기능 추가",
+          "message": "feat(fe): 경제 지표 API 연동과 실패 재조회 기능 추가\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-08T22:38:18.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-08T22:38:18.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b3d4f3a2c046ce78bf11072d65589524816769bf"
+        },
+        {
+          "id": "8f5528b7bfb75f263c24193bf30fc5704080f399",
+          "short_id": "8f5528b7",
+          "created_at": "2026-09-08T17:03:33.000+09:00",
+          "parent_ids": [
+            "f0618dd6df35038728a3779df5ecc1ed540445cd"
+          ],
+          "title": "feat(fe):경제지표api연결",
+          "message": "feat(fe):경제지표api연결\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-08T17:03:33.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-08T17:03:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8f5528b7bfb75f263c24193bf30fc5704080f399"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2173645,
+      "head_commit_sha": "8f5528b7bfb75f263c24193bf30fc5704080f399",
+      "base_commit_sha": "f0618dd6df35038728a3779df5ecc1ed540445cd",
+      "start_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+      "created_at": "2026-09-08T17:18:33.901+09:00",
+      "merge_request_id": 936938,
+      "state": "without_files",
+      "real_size": "14",
+      "patch_id_sha": "496b90ff0c2835e91d6d0d1a9f7e93d6b23c6f04",
+      "commits": [
+        {
+          "id": "8f5528b7bfb75f263c24193bf30fc5704080f399",
+          "short_id": "8f5528b7",
+          "created_at": "2026-09-08T17:03:33.000+09:00",
+          "parent_ids": [
+            "f0618dd6df35038728a3779df5ecc1ed540445cd"
+          ],
+          "title": "feat(fe):경제지표api연결",
+          "message": "feat(fe):경제지표api연결\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-08T17:03:33.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-08T17:03:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8f5528b7bfb75f263c24193bf30fc5704080f399"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2775813": []
+  }
+}

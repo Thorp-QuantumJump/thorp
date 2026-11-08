@@ -1,0 +1,825 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943406,
+    "iid": 89,
+    "project_id": 1444456,
+    "title": "feat(fe): 탐색 실행 전 확인·상세 변경·진행 상태 (S15P21E205-160)",
+    "description": "# 작업 내용 요약\n\nspec 007 설정 조합 자동 비교의 묶음 M4 `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` 다. 13개(T005·T006, T058~~T064, T063a·T063b, T135·T136)를 전부 끝냈다. 백엔드 M1~~M3 을 기다리지 않고 계약(`docs/specs/param-search-api/README.md`)만 보고 만들었고, 마지막에 실행 중인 서버로 응답 모양을 맞춰 봤다.\n\n**이 화면의 제약이 곧 설계다.** 후보 숫자를 입력받지 않고(SC-001), 화면에 전략 목록을 두지 않으며(FR-025), 계산하지 않은 값을 0으로 그리지 않고(FR-011), 미검증을 검증된 것처럼 보이지 않는다(FR-015). 넷 다 \"안 하는 것\"이라 코드만 봐서는 지켜졌는지 알 수 없어서 테스트로 고정했다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-160\n- link https://ssafy.atlassian.net/browse/S15P21E205-160\n\n# 주요 변경 사항\n\n- `types/paramSearch.ts` 신설 — 계약과 1:1. 금액·비율은 `string`(부동소수 오차), 계산하지 않은 값은 `null`. **전략 목록·이름·축 라벨·단위·기본값·허용 범위를 상수로 두지 않는다** — 타입은 모양만 정하고 값은 서버가 정한다\n- `api/paramSearch.ts` 신설 — `previewParamSearch`·`createParamSearch`·`getParamSearch`. 오류 코드가 auth 와 달라 공용 `ApiClientError` 를 쓰지 않고 `ParamSearchError` 로 따로 읽는다. **모르는 코드를 아는 코드로 접지 않는다** — 접으면 화면이 잘못된 안내를 한다\n- `PreflightPanel` — 네 항목(대상 전략·탐색 범위·예상 작업량·적용 한도)만 보이고 **행동 버튼이 하나**다. 여기 보이는 전략은 고를 것들이 아니라 이번 탐색의 대상이고 이름은 `strategies[].name` 에서만 읽는다. 검증 표시를 결과보다 먼저 보인다 — 결과를 본 뒤에야 미검증임을 알면 이미 오해가 생긴 뒤다\n- `ProvisionalBadge` — `limits.provisional` 에 든 항목에만 붙는다. 어떤 항목이 임시값인지 화면이 정하지 않으므로 실측 뒤 서버가 목록에서 빼면 배지도 사라진다. 색만으로 알리지 않고 \"임시값\" 글자가 배지의 내용이다\n- `SpaceEditor` — 등록된 후보값만 켜고 끈다. **자유 입력이 없어 범위 밖 값이 들어갈 길이 없다**(`allowedRange` 는 표시용이고 그 안이라도 등록되지 않은 값은 400). 마지막 하나는 끌 수 없다. 기본 시작값에 '추천'·'최적' 을 붙이지 않는다. 수수료·세금·평가 기간이 나오지 않는 것도 같은 구조 덕이다 — 등록표가 축으로 주지 않으면 나올 길이 없다\n- `RegistryChangedDialog` — `409 REGISTRY_VERSION_CHANGED` 를 받으면 바뀐 보이고 확인을 받는다. 조용히 다시 보내면 사용자가 확인하지 않은 탐색의결과를 받는다. 다시 부르기가 실패하면 실행 버튼을 열지 않는다\n- `useParamSearchStatus` — 응답을 받은 뒤 다음 타이머를 걸어 요청이 겹치지 않게 한다. 끝난 상태에 닿으면 멈추고, 화면을 떠난 뒤 도착한 응답은 버린다. 조회 실패는 폴링을 끊지 않지만 **404 는 멈춘다** — 다시 물어도 생기지 않는다\n- `ParamSearchPage` + `/param-search` 라우트 — 탐색 대상을 질의 문자열로 받는다. 접수 뒤 `searchId` 도 같은 자리에 둬서 새로고침해도 진행을 이어 본다. `/backtest` 에 보조 링크로 진입점을 달았다\n- **결함 하나 수정** — 미리보기는 보낸 `space` 만 되돌려 주므로, 그 응답으 값의 자리가 사라져 **다시 켤 수 없었다**. 좁히지 않고 물은 응답을 등록 범위로 따로 들고 그것으로 그린다\n\n# 테스트\n\n- [x] `npm test` 70 passed (신규 27), `npm run lint` 0 errors, `npm run build` 성공, `git diff --check` 깨끗\n- [x] **T064** 값을 하나도 입력하지 않고 실행 버튼이 활성 — 입력 요소 0개,01)\n- [x] **T136** 지어낸 전략(`MOON_PHASE_BLEND`)과 축이 코드 변경 없이 렌더된다. 실제 전략 이름으로 픽스처를 만들면 화면이 그 전략을 알아도 통과하므로 이름을 지어냈다 (SC-010)\n- [x] **T136 정적 검사** — 007 화면 코드 9개 파일에 등록표의 전략 ID·전략명 0건, `strategyId` 분기 0건. 분기가 하나 생겨도 그 전략을 쓰는 테스트는 통과하므로 소스를 읽는다 (백엔드 `StrategyIndependenceTest` 와 같은 이유)\n- [x] **T063b** 409 를 받고 확인 전에는 접수가 한 번뿐이고, 확인하면 새 `registryVersion` 으로 한 번 더 나간다 (FR-028)\n- [x] **T063b** 503 은 '잠시 후 다시' 안내로 끝나고, **한 번 받아 둔 요약이 있어도 그것으로 실행하지 않는다**\n- [x] 좁힌 값을 다시 켤 수 있다 — 서버가 좁힌 응답을 돌려주는 것까지 흉내 냈고, **고치기 전 코드에서는 이 테스트만 실패하는 것을 확인**했다\n- [x] 좁힌 범위가 예상 작업량에 반영되고 접수 본문에 그대로 실린다\n- [x] 로그인 전에는 실행이 막히고 이유가 적힌다\n- [x] **실행 중인 서버로 확인** — `/api` 프록시 경유 미리보기 200, 응답 필드가 타입과 일치, 중첩 `space` 로 조합 4개 → 2개 축소, 상태 조회의 `config`·`selection`·`baseline` 모양 일치\n- [ ] 실제 접수부터 완료까지의 화면 흐름 — 워커 없이 확인해 후보가 `DISPATCHED` 에 머문다. 완료·부분 완료 표시는 M6 에서 결과 화면과 함께 본다\n\n# 리뷰 포인트\n\n- **탐색 대상을 화면이 정하지 않고 질의 문자열로 받는 것**이 이 MR 의 가장 큰 결정이다. FR-025 가 화면에 전략 목록을 두는 것을 막는데 007 API 로는 전략을 발견할 수 없다 — 미리보기가 `strategyIds` 를 입력으로 받기 때문이다. 그래서 대상은 003 전략 화면이 채우고 이 화면은 받아 쓰기만 한다. 대상 없이 열면 실행 대신 들어온 경로를 안내한다. **이 방향이 맞는지 봐 달라**\n- 그래서 **`/backtest` 의 진입점이 대상을 넘기지 않는다.** 그 화면의 전략은 아직 `backtestMock` 의 예시 데이터라 등록표 ID 가 아니고, 매핑하면 없는 전략을 보내게 된다. 링크만 걸고 안내 화면으로 떨어지게 뒀는데, 003 이 붙기 전까지 이대로 둘지 아니면 진입점을 숨길지 정해 달라\n- **`X-User-Id` 를 브라우저에서 보낸다.** 접수·취소가 `requester_id`(NOT NULL)를 요구하는데 인증(spec 014)이 없어서다. 헤더는 위조되고 이것은 인증이 아니며, 백엔드도 `trust-user-id-header` 를 켠 환경에서만 읽는다. 로그인 전에는 실행을 막아 트에 두는 것 자체가 괜찮은지\\*\\* 판단이 필요하다\n- `SpaceEditor` 는 **한 축이라도 좁히면 그 전략의 축을 전부 실어 보낸다.** 일부만 보낼 때 나머지 축이 전체 범위인지 아닌지 계약에 적혀 있지 않아 모호함을 피했다. 계약에 명시하는 편이 나을 것 같다\n- 미리보기를 축 칩 클릭마다 부른다(200ms 디바운스 + 순번으로 늦은 응답 차 화면이 계산하지 않으려면 서버에 물어야 해서인데, **호출이 잦다고 보이면**확정 버튼을 두는 방식으로 바꿀 수 있다\n- `src/data/backtestMock.ts` 의 전략들(이동평균 추세추종 등)은 003 화면의 전략이 아니라 T135 에서 그대로 뒀다. 지우면 `/backtest` 가 통째로 깨진다\n- **범위 밖 발견** — \\`src/components/market/StrategyRecommendationSection. 트 전략\"이라고 쓴다. 원칙 III(진단이지 추천 아님)에 걸리는 문구인데 007범위가 아니라 손대지 않았다. **별도 티켓이 맞아 보인다**\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 표시 후보에 순위 번호를 붙이지 않고, 기본 시작값에 '추천'·'최적' 을 쓰지 않는다. `PreflightPanel`·`SpaceEditor` 테스트가 '추천'·'최적'·'1위'·'우승' 문자열 0건을 단언한다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 007 화면 코드 9개 파일을 정적 검사한다. 안내문에 있던 전략 ID 예시도 지웠다 — 설명이라도 운영 코드에 있으면 그것이 상수다. 등록표에 전략·축이 늘어도 이 코드를 고치지 않는 것을 지어낸 전략으로 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 타입이 `null` 을 허용하고, 기준 실행이 안 끝났으면 성과 자리를 비운다. 손실 제약을 걸지 않았으면 그 사실을 문장으로 보인다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `UNVALIDATED` 를 '미검증'으로 옮기고 확인 화면과 진행 상태 양쪽에 항상 함께 보인다. `validationLabelText` 주석에 \"통과가 아니라 말할 수 없음\"을 남겼다\n\n:warning: 티켓 상태가 진행 중이라 머지 뒤 완료 전이가 필요합니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T16:08:50.220+09:00",
+    "updated_at": "2026-09-15T15:50:51.353+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T16:19:17.438+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/160-paramsearch-preflight",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "738c02232896d768284c238b710f911d8af92673",
+    "merge_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T16:08:52.927+09:00",
+    "reference": "!89",
+    "references": {
+      "short": "!89",
+      "relative": "!89",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!89"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/89",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 16,
+      "completed_count": 15
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943406,
+    "iid": 89,
+    "project_id": 1444456,
+    "title": "feat(fe): 탐색 실행 전 확인·상세 변경·진행 상태 (S15P21E205-160)",
+    "description": "# 작업 내용 요약\n\nspec 007 설정 조합 자동 비교의 묶음 M4 `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` 다. 13개(T005·T006, T058~~T064, T063a·T063b, T135·T136)를 전부 끝냈다. 백엔드 M1~~M3 을 기다리지 않고 계약(`docs/specs/param-search-api/README.md`)만 보고 만들었고, 마지막에 실행 중인 서버로 응답 모양을 맞춰 봤다.\n\n**이 화면의 제약이 곧 설계다.** 후보 숫자를 입력받지 않고(SC-001), 화면에 전략 목록을 두지 않으며(FR-025), 계산하지 않은 값을 0으로 그리지 않고(FR-011), 미검증을 검증된 것처럼 보이지 않는다(FR-015). 넷 다 \"안 하는 것\"이라 코드만 봐서는 지켜졌는지 알 수 없어서 테스트로 고정했다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-160\n- link https://ssafy.atlassian.net/browse/S15P21E205-160\n\n# 주요 변경 사항\n\n- `types/paramSearch.ts` 신설 — 계약과 1:1. 금액·비율은 `string`(부동소수 오차), 계산하지 않은 값은 `null`. **전략 목록·이름·축 라벨·단위·기본값·허용 범위를 상수로 두지 않는다** — 타입은 모양만 정하고 값은 서버가 정한다\n- `api/paramSearch.ts` 신설 — `previewParamSearch`·`createParamSearch`·`getParamSearch`. 오류 코드가 auth 와 달라 공용 `ApiClientError` 를 쓰지 않고 `ParamSearchError` 로 따로 읽는다. **모르는 코드를 아는 코드로 접지 않는다** — 접으면 화면이 잘못된 안내를 한다\n- `PreflightPanel` — 네 항목(대상 전략·탐색 범위·예상 작업량·적용 한도)만 보이고 **행동 버튼이 하나**다. 여기 보이는 전략은 고를 것들이 아니라 이번 탐색의 대상이고 이름은 `strategies[].name` 에서만 읽는다. 검증 표시를 결과보다 먼저 보인다 — 결과를 본 뒤에야 미검증임을 알면 이미 오해가 생긴 뒤다\n- `ProvisionalBadge` — `limits.provisional` 에 든 항목에만 붙는다. 어떤 항목이 임시값인지 화면이 정하지 않으므로 실측 뒤 서버가 목록에서 빼면 배지도 사라진다. 색만으로 알리지 않고 \"임시값\" 글자가 배지의 내용이다\n- `SpaceEditor` — 등록된 후보값만 켜고 끈다. **자유 입력이 없어 범위 밖 값이 들어갈 길이 없다**(`allowedRange` 는 표시용이고 그 안이라도 등록되지 않은 값은 400). 마지막 하나는 끌 수 없다. 기본 시작값에 '추천'·'최적' 을 붙이지 않는다. 수수료·세금·평가 기간이 나오지 않는 것도 같은 구조 덕이다 — 등록표가 축으로 주지 않으면 나올 길이 없다\n- `RegistryChangedDialog` — `409 REGISTRY_VERSION_CHANGED` 를 받으면 바뀐 보이고 확인을 받는다. 조용히 다시 보내면 사용자가 확인하지 않은 탐색의결과를 받는다. 다시 부르기가 실패하면 실행 버튼을 열지 않는다\n- `useParamSearchStatus` — 응답을 받은 뒤 다음 타이머를 걸어 요청이 겹치지 않게 한다. 끝난 상태에 닿으면 멈추고, 화면을 떠난 뒤 도착한 응답은 버린다. 조회 실패는 폴링을 끊지 않지만 **404 는 멈춘다** — 다시 물어도 생기지 않는다\n- `ParamSearchPage` + `/param-search` 라우트 — 탐색 대상을 질의 문자열로 받는다. 접수 뒤 `searchId` 도 같은 자리에 둬서 새로고침해도 진행을 이어 본다. `/backtest` 에 보조 링크로 진입점을 달았다\n- **결함 하나 수정** — 미리보기는 보낸 `space` 만 되돌려 주므로, 그 응답으 값의 자리가 사라져 **다시 켤 수 없었다**. 좁히지 않고 물은 응답을 등록 범위로 따로 들고 그것으로 그린다\n\n# 테스트\n\n- [x] `npm test` 70 passed (신규 27), `npm run lint` 0 errors, `npm run build` 성공, `git diff --check` 깨끗\n- [x] **T064** 값을 하나도 입력하지 않고 실행 버튼이 활성 — 입력 요소 0개,01)\n- [x] **T136** 지어낸 전략(`MOON_PHASE_BLEND`)과 축이 코드 변경 없이 렌더된다. 실제 전략 이름으로 픽스처를 만들면 화면이 그 전략을 알아도 통과하므로 이름을 지어냈다 (SC-010)\n- [x] **T136 정적 검사** — 007 화면 코드 9개 파일에 등록표의 전략 ID·전략명 0건, `strategyId` 분기 0건. 분기가 하나 생겨도 그 전략을 쓰는 테스트는 통과하므로 소스를 읽는다 (백엔드 `StrategyIndependenceTest` 와 같은 이유)\n- [x] **T063b** 409 를 받고 확인 전에는 접수가 한 번뿐이고, 확인하면 새 `registryVersion` 으로 한 번 더 나간다 (FR-028)\n- [x] **T063b** 503 은 '잠시 후 다시' 안내로 끝나고, **한 번 받아 둔 요약이 있어도 그것으로 실행하지 않는다**\n- [x] 좁힌 값을 다시 켤 수 있다 — 서버가 좁힌 응답을 돌려주는 것까지 흉내 냈고, **고치기 전 코드에서는 이 테스트만 실패하는 것을 확인**했다\n- [x] 좁힌 범위가 예상 작업량에 반영되고 접수 본문에 그대로 실린다\n- [x] 로그인 전에는 실행이 막히고 이유가 적힌다\n- [x] **실행 중인 서버로 확인** — `/api` 프록시 경유 미리보기 200, 응답 필드가 타입과 일치, 중첩 `space` 로 조합 4개 → 2개 축소, 상태 조회의 `config`·`selection`·`baseline` 모양 일치\n- [ ] 실제 접수부터 완료까지의 화면 흐름 — 워커 없이 확인해 후보가 `DISPATCHED` 에 머문다. 완료·부분 완료 표시는 M6 에서 결과 화면과 함께 본다\n\n# 리뷰 포인트\n\n- **탐색 대상을 화면이 정하지 않고 질의 문자열로 받는 것**이 이 MR 의 가장 큰 결정이다. FR-025 가 화면에 전략 목록을 두는 것을 막는데 007 API 로는 전략을 발견할 수 없다 — 미리보기가 `strategyIds` 를 입력으로 받기 때문이다. 그래서 대상은 003 전략 화면이 채우고 이 화면은 받아 쓰기만 한다. 대상 없이 열면 실행 대신 들어온 경로를 안내한다. **이 방향이 맞는지 봐 달라**\n- 그래서 **`/backtest` 의 진입점이 대상을 넘기지 않는다.** 그 화면의 전략은 아직 `backtestMock` 의 예시 데이터라 등록표 ID 가 아니고, 매핑하면 없는 전략을 보내게 된다. 링크만 걸고 안내 화면으로 떨어지게 뒀는데, 003 이 붙기 전까지 이대로 둘지 아니면 진입점을 숨길지 정해 달라\n- **`X-User-Id` 를 브라우저에서 보낸다.** 접수·취소가 `requester_id`(NOT NULL)를 요구하는데 인증(spec 014)이 없어서다. 헤더는 위조되고 이것은 인증이 아니며, 백엔드도 `trust-user-id-header` 를 켠 환경에서만 읽는다. 로그인 전에는 실행을 막아 트에 두는 것 자체가 괜찮은지\\*\\* 판단이 필요하다\n- `SpaceEditor` 는 **한 축이라도 좁히면 그 전략의 축을 전부 실어 보낸다.** 일부만 보낼 때 나머지 축이 전체 범위인지 아닌지 계약에 적혀 있지 않아 모호함을 피했다. 계약에 명시하는 편이 나을 것 같다\n- 미리보기를 축 칩 클릭마다 부른다(200ms 디바운스 + 순번으로 늦은 응답 차 화면이 계산하지 않으려면 서버에 물어야 해서인데, **호출이 잦다고 보이면**확정 버튼을 두는 방식으로 바꿀 수 있다\n- `src/data/backtestMock.ts` 의 전략들(이동평균 추세추종 등)은 003 화면의 전략이 아니라 T135 에서 그대로 뒀다. 지우면 `/backtest` 가 통째로 깨진다\n- **범위 밖 발견** — \\`src/components/market/StrategyRecommendationSection. 트 전략\"이라고 쓴다. 원칙 III(진단이지 추천 아님)에 걸리는 문구인데 007범위가 아니라 손대지 않았다. **별도 티켓이 맞아 보인다**\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 표시 후보에 순위 번호를 붙이지 않고, 기본 시작값에 '추천'·'최적' 을 쓰지 않는다. `PreflightPanel`·`SpaceEditor` 테스트가 '추천'·'최적'·'1위'·'우승' 문자열 0건을 단언한다\n- [x] **결제·포인트·상품 선택 단계 0건**\n- [x] **전략 ID 상수·전략별 분기 0건** — 007 화면 코드 9개 파일을 정적 검사한다. 안내문에 있던 전략 ID 예시도 지웠다 — 설명이라도 운영 코드에 있으면 그것이 상수다. 등록표에 전략·축이 늘어도 이 코드를 고치지 않는 것을 지어낸 전략으로 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 타입이 `null` 을 허용하고, 기준 실행이 안 끝났으면 성과 자리를 비운다. 손실 제약을 걸지 않았으면 그 사실을 문장으로 보인다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `UNVALIDATED` 를 '미검증'으로 옮기고 확인 화면과 진행 상태 양쪽에 항상 함께 보인다. `validationLabelText` 주석에 \"통과가 아니라 말할 수 없음\"을 남겼다\n\n:warning: 티켓 상태가 진행 중이라 머지 뒤 완료 전이가 필요합니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T16:08:50.220+09:00",
+    "updated_at": "2026-09-15T15:50:51.353+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T16:19:17.438+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/160-paramsearch-preflight",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "738c02232896d768284c238b710f911d8af92673",
+    "merge_commit_sha": "92c4002b7aab100726ba28add98f1f60af334ac3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T16:08:52.927+09:00",
+    "reference": "!89",
+    "references": {
+      "short": "!89",
+      "relative": "!89",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!89"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/89",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 16,
+      "completed_count": 15
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "23",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+      "head_sha": "738c02232896d768284c238b710f911d8af92673",
+      "start_sha": "d868e73fee83fa2307c6ec743ae13b5c6beb0e55"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f8dea51caa9be949ae2f54ef3133f26d423bfa72",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803079,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 테스트 주도 설계 및 무상태성 유지**: `SpaceEditor.test.tsx`에서 정적 분석(파일 내용에 특정 전략 ID나 분기문 존재 여부 검사)을 수행하여, 백엔드 레지스트리 변화에 프론트엔드가 강결합되지 않도록 아키텍처 원칙을 테스트로 훌륭하게 고정했습니다.\n- **견고한 에러 핸들잉과 상태 관리**: 409(`REGISTRY_VERSION_CHANGED`)나 503 오류 발생 시 캐시된 요약 값으로 우회 실행하는 것을 엄격히 차단하고, 사용자의 명시적 확인을 거치도록 다이얼로그 흐름을 안전하게 구현했습니다.\n\n### 발견 사항\n- [Low] `frontend/src/pages/ParamSearchPage.tsx` 파일 내에서 `formatCount(Number` 부근의 코드가 diff에서 잘려 있어 완전한 구문 검증은 어렵지만, JSX 태그나 괄호 누락 여부 등 빌드 에러를 유발할 수 있는 부분이 있는지 최종 빌드 산출물을 통해 재확인할 것을 권장합니다. (제공된 MR 설명에 따르면 `npm run build`는 성공했다고 합니다.)\n\n### 테스트 제안\n- **폴링 중단 및 컴포넌트 언마운트 시나리오 테스트**: `useParamSearchStatus` 훅이 컴포넌트 언마운트 시 활성 상태 플래그(`active = false`)를 올바르고 타이머를 명시적으로 해제하는지, 그리고 화면을 떠난 뒤 지연 도착한 응답이 상태를 오염시키지 않는지 시뮬레이션하는 유닛 테스트를 추가합니다.\n- **네트워크 단절 및 재연결 시나리오**: `previewParamSearch` 호출 도중 네트워크가 끊겼을 때 `previewLoading` 상태가 올바르게 해제되고, 사용자에게 적절한 에러 메시지가 노출되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:738c02232896d768284c238b710f911d8af92673 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T16:09:02.472+09:00",
+          "updated_at": "2026-09-14T16:09:02.472+09:00",
+          "system": false,
+          "noteable_id": 943406,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 89,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4efef441a5f2328ee0ab442cf8ac64573f91ef92",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803191,
+          "type": null,
+          "body": "오탐입니다",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T16:19:00.883+09:00",
+          "updated_at": "2026-09-14T16:19:00.883+09:00",
+          "system": false,
+          "noteable_id": 943406,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 89,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3a92f1c19ab19b3dd72a59d760f383b98b3587d4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2803193,
+          "type": null,
+          "body": "mentioned in commit 92c4002b7aab100726ba28add98f1f60af334ac3",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T16:19:17.444+09:00",
+          "updated_at": "2026-09-14T16:19:17.449+09:00",
+          "system": true,
+          "noteable_id": 943406,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 89,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5b6624130a783db139ab8369c970464012f68479",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809440,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-15T15:50:51.412+09:00",
+          "updated_at": "2026-09-15T15:50:51.419+09:00",
+          "system": true,
+          "noteable_id": 943406,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 89,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194986,
+      "head_commit_sha": "738c02232896d768284c238b710f911d8af92673",
+      "base_commit_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+      "start_commit_sha": "d868e73fee83fa2307c6ec743ae13b5c6beb0e55",
+      "created_at": "2026-09-14T16:08:50.705+09:00",
+      "merge_request_id": 943406,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "ecb072b0c296717a6c04c9d42cd4c8fc28da5ec1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194986,
+      "head_commit_sha": "738c02232896d768284c238b710f911d8af92673",
+      "base_commit_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+      "start_commit_sha": "d868e73fee83fa2307c6ec743ae13b5c6beb0e55",
+      "created_at": "2026-09-14T16:08:50.705+09:00",
+      "merge_request_id": 943406,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "ecb072b0c296717a6c04c9d42cd4c8fc28da5ec1",
+      "commits": [
+        {
+          "id": "738c02232896d768284c238b710f911d8af92673",
+          "short_id": "738c0223",
+          "created_at": "2026-09-14T15:56:49.000+09:00",
+          "parent_ids": [
+            "7a114dea92bb45e6597558a903a46ce1cbab5005"
+          ],
+          "title": "fix(fe): 좁힌 응답이 등록 범위를 덮어 값을 다시 켤 수 없던 것을 고친다",
+          "message": "fix(fe): 좁힌 응답이 등록 범위를 덮어 값을 다시 켤 수 없던 것을 고친다\n\n실행 중인 서버에 실제로 물어보다 찾았다. 미리보기는 보낸 space 만 되돌려 준다 —\nlookbackDays 를 [21,63] 으로 좁혀 보내면 응답의 values 도 [21,63] 이다. 그\n응답으로 상세 변경을 다시 그리면 끈 값의 자리가 사라져 **다시 켤 수 없다.**\n한 번 좁히면 되돌릴 길이 없는 화면이었다.\n\n그래서 좁히지 않고 물은 응답을 등록 범위로 따로 들고, 상세 변경은 그것으로\n그린다. 확인 화면의 탐색 범위·예상 작업량은 계속 좁힌 응답을 쓴다 — 그쪽은\n\"무엇이 돌 것인가\"를 보이는 자리다.\n\n대상이 바뀌면 좁힌 범위를 버린다. 다른 전략의 축을 그대로 들고 갈 수 없다.\n등록표 버전이 바뀌어도 버린다 — 좁혀 둔 값이 아직 등록된 값인지 알 수 없고,\n아니면 다음 요청이 400 UNREGISTERED_PARAMETER_VALUE 로 끊긴다.\n\nconfig.limits 에는 exceeded 가 없다(접수된 묶음에 \"넘었는가\"는 물을 것이 없다).\n타입을 AppliedLimits 와 ParamSearchLimits 로 갈라 없는 필드를 읽지 않게 했다.\n\n회귀 테스트를 붙였다. 서버가 좁힌 응답을 돌려주는 것까지 흉내 내며, 고치기 전\n코드에서는 이 테스트만 실패한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T15:56:49.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T15:56:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/738c02232896d768284c238b710f911d8af92673"
+        },
+        {
+          "id": "7a114dea92bb45e6597558a903a46ce1cbab5005",
+          "short_id": "7a114dea",
+          "created_at": "2026-09-14T15:53:20.000+09:00",
+          "parent_ids": [
+            "a57f46936a4afad5b852c56a86c4dce973a53b78"
+          ],
+          "title": "test(fe): 확인 화면·전략 비의존성·등록표 경계를 테스트로 고정한다",
+          "message": "test(fe): 확인 화면·전략 비의존성·등록표 경계를 테스트로 고정한다\n\nT063b·T064·T135·T136.\n\n픽스처는 등록표에 없는 전략과 축을 일부러 쓴다. 실제 전략 이름으로 만들면 화면이\n그 전략을 알고 있어도 통과한다 — 이름을 지어내야 \"응답만 보고 그린다\"가 증명된다.\n\nPreflightPanel 테스트는 입력 요소가 0개이고 버튼이 1개인지 본다. SC-001 이 깨지는\n방식은 대개 편의 기능이다: 후보 수를 직접 넣게 하거나 버튼을 둘로 나눈다.\n\nSpaceEditor 테스트는 동작에 더해 소스를 읽는다. 전략 ID 분기가 하나 생겨도 그\n전략을 쓰는 테스트는 여전히 통과하므로 정적 검사가 필요하다(백엔드\nStrategyIndependenceTest 와 같은 이유).\n\n등록표 경계 테스트는 조용히 깨지는 둘을 잡는다 — 409 를 받고 자동으로 다시 보내는\n것과, 503 을 받고 캐시된 요약으로 실행하는 것. 둘 다 화면에 티가 나지 않는다.\n\nT135 로 화면 안내문에 있던 전략 ID 예시를 지웠다. 설명이라도 운영 코드에 전략\n이름이 있으면 그것이 상수다. src/data/backtestMock.ts 의 전략들은 003 화면의 예시\n데이터이고 등록표의 배분 전략이 아니라 그대로 둔다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T15:53:20.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T15:53:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7a114dea92bb45e6597558a903a46ce1cbab5005"
+        },
+        {
+          "id": "a57f46936a4afad5b852c56a86c4dce973a53b78",
+          "short_id": "a57f4693",
+          "created_at": "2026-09-14T15:47:53.000+09:00",
+          "parent_ids": [
+            "2cf7412e5216fdfc0c4f1d5e8f3d7f3d1cc895eb"
+          ],
+          "title": "feat(fe): 탐색 화면과 진행 폴링을 붙이고 라우팅을 연다",
+          "message": "feat(fe): 탐색 화면과 진행 폴링을 붙이고 라우팅을 연다\n\nT062·T063.\n\nuseParamSearchStatus 는 응답을 받은 뒤 다음 타이머를 걸어 요청이 겹치지 않게 하고,\n끝난 상태(COMPLETED·PARTIAL·FAILED·REJECTED)에 닿으면 멈춘다. 화면을 떠난 뒤\n도착한 응답은 버린다 — 늦은 응답이 다음 묶음의 상태를 덮으면 화면이 남의 진행을\n보이게 된다. 조회 실패는 폴링을 끊지 않지만 404 는 멈춘다. 다시 물어도 생기지 않는다.\n\nParamSearchPage 는 탐색 대상을 정하지 않고 질의 문자열로 받는다. 화면에 전략\n목록을 두면 전략이 늘 때마다 이 파일을 고쳐야 하고 그것이 FR-025 가 막으려는\n것이다. 대상이 없으면 실행 대신 들어온 경로를 안내한다. searchId 도 같은 자리에\n둬서 새로고침해도 진행을 계속 본다.\n\n미리보기 실패는 이전 확인 내용을 지운다 — 503 을 받고도 캐시된 요약으로 실행하면\n사용자가 보지 않은 범위가 돈다. 409 는 대화상자를 열고 확인을 받기 전에는 다시\n보내지 않으며, 확인 버튼이 넘겨 준 새 미리보기로만 실행한다.\n\nBacktestPage 에 진입점을 단다. 이 화면의 주요 행동은 백테스트 실행 하나라 보조\n링크로 둔다. 전략이 아직 예시 데이터라 대상은 함께 넘기지 않는다 — 전략 화면이\n등록표를 읽게 되면 그때 붙인다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T15:47:53.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T15:47:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a57f46936a4afad5b852c56a86c4dce973a53b78"
+        },
+        {
+          "id": "2cf7412e5216fdfc0c4f1d5e8f3d7f3d1cc895eb",
+          "short_id": "2cf7412e",
+          "created_at": "2026-09-14T15:43:55.000+09:00",
+          "parent_ids": [
+            "b48e2549ccadd87a6d61a1a57dd3d4e77e9bc536"
+          ],
+          "title": "feat(fe): 확인 화면·상세 변경·등록표 경계 컴포넌트를 만든다",
+          "message": "feat(fe): 확인 화면·상세 변경·등록표 경계 컴포넌트를 만든다\n\nT059·T060·T061·T063a.\n\nPreflightPanel 은 네 항목만 보이고 행동 버튼이 하나다. 후보 숫자를 입력받지\n않는다 — 몇 개를 돌릴지는 등록표와 한도가 정한다(SC-001). 화면에 전략 목록을\n두지 않는다: 여기 보이는 전략은 고를 것들이 아니라 이번 탐색의 대상이고 이름은\nstrategies[].name 에서만 읽는다. 검증 표시를 결과보다 먼저 보인다 — 결과를 본\n뒤에야 미검증임을 알면 이미 오해가 생긴 뒤다(FR-015).\n\nProvisionalBadge 는 limits.provisional 에 든 항목에만 붙는다. 어떤 항목이\n임시값인지 화면이 정하지 않으므로, 실측 뒤 서버가 목록에서 빼면 배지도 사라진다.\n색만으로 알리지 않고 \"임시값\" 글자가 배지의 내용이다.\n\nSpaceEditor 는 등록된 후보값만 켜고 끈다. 자유 입력이 없어 범위 밖 값이 들어갈\n길이 없다 — allowedRange 는 표시용이고 그 안이라도 등록되지 않은 값은 400 이다.\n전략 이름·축 라벨·단위·기본값·후보값이 이 파일에 하나도 없어서 등록표에 축이\n늘어도 고치지 않는다. 수수료·세금·평가 기간이 나오지 않는 것도 같은 이유다.\n기본 시작값에 '추천'·'최적' 을 붙이지 않는다.\n\nRegistryChangedDialog 는 409 를 받으면 바뀐 후보값과 조합 수를 줄 단위로 보이고\n확인을 받는다. 조용히 다시 보내면 사용자가 확인하지 않은 탐색의 결과를 받게 된다.\n다시 부르기가 실패하면 실행 버튼을 열지 않는다 — 캐시로 대체해 실행하지 않는다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T15:43:55.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T15:43:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2cf7412e5216fdfc0c4f1d5e8f3d7f3d1cc895eb"
+        },
+        {
+          "id": "b48e2549ccadd87a6d61a1a57dd3d4e77e9bc536",
+          "short_id": "b48e2549",
+          "created_at": "2026-09-14T15:39:23.000+09:00",
+          "parent_ids": [
+            "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1"
+          ],
+          "title": "feat(fe): 자동 탐색 계약 타입과 API 모듈을 만든다",
+          "message": "feat(fe): 자동 탐색 계약 타입과 API 모듈을 만든다\n\nT005·T006·T058. 화면을 붙이기 전에 계약을 타입으로 먼저 고정한다.\n\ntypes/paramSearch.ts 는 docs/specs/param-search-api/README.md 와 1:1이다.\n금액·비율은 string 이고(부동소수 오차), 계산하지 않은 값은 null 이며 0 이 아니다.\n전략 목록·이름·축 라벨·단위·기본값을 상수로 두지 않는다 — 타입은 모양만 정하고\n값은 서버가 정한다(FR-025).\n\napi/paramSearch.ts 는 preview·create·get 셋을 연다. 오류 코드가 auth 와 달라\n공용 ApiClientError 를 쓰지 않고 ParamSearchError 로 따로 읽는다. 모르는 코드는\n아는 코드로 접지 않고 그대로 싣는다 — 접으면 화면이 잘못된 안내를 한다.\n\n요청자 헤더(X-User-Id)는 접수 전용이고 인증이 아니다. spec 014 가 붙으면\nrequesterHeaders 와 호출부의 requesterId 가 함께 사라진다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T15:39:23.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T15:39:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b48e2549ccadd87a6d61a1a57dd3d4e77e9bc536"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,176 @@\n+import axios from 'axios'\n+import { apiClient } from './client'\n+import type {\n+  ParamSearchDetail,\n+  ParamSearchEnvelope,\n+  ParamSearchPreview,\n+  ParamSearchRequest,\n+} from '@/types/paramSearch'\n+\n+/**\n+ * spec 007 설정 조합 자동 비교 API.\n+ *\n+ * 계약은 `docs/specs/param-search-api/README.md`다. 이 모듈은 URL과 응답 껍데기만 알고\n+ * **전략 지식은 갖지 않는다** — 전략 ID·이름·축·기본값은 전부 호출자가 넘기거나 응답에서 읽는다(FR-025).\n+ */\n+\n+const basePath = '/param-searches'\n+\n+/** 007 오류 코드. 공용 `ApiClientError`는 auth 코드만 알아서 여기서 따로 읽는다. */\n+export type ParamSearchErrorCode =\n+  | 'INVALID_INPUT'\n+  | 'UNREGISTERED_PARAMETER_VALUE'\n+  | 'CANDIDATE_LIMIT_EXCEEDED'\n+  | 'NO_VALID_COMBINATION'\n+  | 'STRATEGY_NOT_REGISTERED'\n+  | 'STRATEGY_NOT_EXECUTABLE'\n+  | 'RULES_NOT_REGISTERED'\n+  | 'REGISTRY_VERSION_CHANGED'\n+  | 'REGISTRY_UNAVAILABLE'\n+  | 'ALREADY_FINISHED'\n+  | 'NOTHING_TO_RETRY'\n+  | 'RESOURCE_NOT_FOUND'\n+\n+/**\n+ * 화면이 분기할 수 있는 007 오류.\n+ *\n+ * `code`는 서버가 준 문자열 그대로다 — 위 union에 없는 코드도 그대로 싣는다. 모르는 코드를\n+ * 아는 코드로 접으면 화면이 잘못된 안내를 하게 된다.\n+ */\n+export class ParamSearchError extends Error {\n+  readonly code: string | null\n+  readonly status: number | null\n+\n+  constructor(\n+    message: string,\n+    options: { code?: string | null; status?: number | null; cause?: unknown } = {},\n+  ) {\n+    super(message, { cause: options.cause })\n+    this.name = 'ParamSearchError'\n+    this.code = options.code ?? null\n+    this.status = options.status ?? null\n+  }\n+\n+  /** 화면이 자주 묻는 질문 하나를 이름으로 둔다. */\n+  is(code: ParamSearchErrorCode): boolean {\n+    return this.code === code\n+  }\n+}\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+/** 응답 본문에서 `{ code, message }`를 읽는다. 모양이 다르면 `null`이다. */\n+function readErrorBody(body: unknown): { code: string; message: string } | null {\n+  if (!isRecord(body) || !isRecord(body.error)) return null\n+  const { code, message } = body.error\n+  if (typeof code !== 'string' || typeof message !== 'string') return null\n+  return { code, message }\n+}\n+\n+/** Axios 오류를 화면이 분기할 수 있는 007 오류로 바꾼다. */\n+export function normalizeParamSearchError(error: unknown): ParamSearchError {\n+  if (error instanceof ParamSearchError) return error\n+\n+  if (axios.isAxiosError(error)) {\n+    if (!error.response) {\n+      return new ParamSearchError(\n+        '서버에 연결할 수 없습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.',\n+        { cause: error },\n+      )\n+    }\n+\n+    const body = readErrorBody(error.response.data)\n+    return new ParamSearchError(\n+      body?.message ?? '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.',\n+      { code: body?.code ?? null, status: error.response.status, cause: error },\n+    )\n+  }\n+\n+  return new ParamSearchError('요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.', {\n+    cause: error,\n+  })\n+}\n+\n+/**\n+ * 성공 껍데기를 벗긴다. `success: false`가 200으로 오는 경우도 오류로 다룬다 —\n+ * 껍데기를 믿고 `data`를 그대로 쓰면 `null`이 화면까지 내려간다.\n+ */\n+function unwrap<T>(body: ParamSearchEnvelope<T>): T {\n+  if (!body.success || body.data === null) {\n+    throw new ParamSearchError(body.success ? '응답 본문이 비어 있습니다.' : body.error.message, {\n+      code: body.success ? null : body.error.code,\n+    })\n+  }\n+  return body.data\n+}\n+\n+/**\n+ * 요청자 헤더.\n+ *\n+ * **이것은 인증이 아니다.** spec 014 이전까지 백엔드가 `thorp.auth.trust-user-id-header`를 켠\n+ * 환경에서만 읽는 개발용 통로이고, 접수·취소·재시도가 `backtest_request.requester_id`(NOT NULL)를\n+ * 채우려면 지금은 이 값이 필요하다. 인증이 붙으면 이 함수와 호출부의 `requesterId`가 함께 사라진다.\n+ */\n+function requesterHeaders(requesterId: number | null | undefined) {\n+  return requesterId == null ? undefined : { 'X-User-Id': String(requesterId) }\n+}\n+\n+/**\n+ * 실행 전 확인. 저장하지 않고 계산만 한다.\n+ *\n+ * 확인 화면의 네 항목(대상 전략·탐색 범위 요약·예상 작업량·적용 한도)이 응답 하나에 다 들어 있다.\n+ * **사용자에게 후보 숫자를 입력받지 않는다**(SC-001).\n+ */\n+export async function previewParamSearch(\n+  request: ParamSearchRequest,\n+): Promise<ParamSearchPreview> {\n+  try {\n+    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchPreview>>(\n+      `${basePath}/preview`,\n+      request,\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeParamSearchError(error)\n+  }\n+}\n+\n+/**\n+ * 탐색 실행. `registryVersion`은 **미리보기에서 받은 값을 그대로 되돌려 보낸다** — 그 사이 등록표가\n+ * 바뀌었으면 서버가 `409 REGISTRY_VERSION_CHANGED`로 막는다(FR-028).\n+ *\n+ * 응답은 `202`이고 뜻이 있는 값은 `searchId`·`status`와 검증 표시뿐이다. 나머지는 폴링으로 받는다.\n+ */\n+export async function createParamSearch(\n+  request: ParamSearchRequest & { registryVersion: string },\n+  requesterId?: number | null,\n+): Promise<ParamSearchDetail> {\n+  try {\n+    const response = await apiClient.post<ParamSearchEnvelope<ParamSearchDetail>>(\n+      basePath,\n+      request,\n+      { headers: requesterHeaders(requesterId) },\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeParamSearchError(error)\n+  }\n+}\n+\n+/**\n+ * 묶음 상태·결과. 폴링 대상이다.\n+ *\n+ * **실패해도 200이다** — `status`로 판단한다. `selection`이 `null`이면 아직 선정 전이다.\n+ */\n+export async function getParamSearch(searchId: string): Promise<ParamSearchDetail> {\n+  try {\n+    const response = await apiClient.get<ParamSearchEnvelope<ParamSearchDetail>>(\n+      `${basePath}/${encodeURIComponent(searchId)}`,\n+    )\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeParamSearchError(error)\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/paramSearch.ts",
+          "old_path": "frontend/src/api/paramSearch.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,251 @@\n+.panel {\n+  display: grid;\n+  gap: 18px;\n+  padding: 22px 0 0;\n+  border-top: 1px solid var(--thorp-line-strong);\n+}\n+\n+.header {\n+  display: grid;\n+  gap: 6px;\n+}\n+\n+.header h2 {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 1.05rem;\n+  font-weight: 700;\n+  letter-spacing: -0.02em;\n+}\n+\n+.header p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.6;\n+}\n+\n+.validation {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 8px;\n+  padding: 9px 11px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-copy);\n+  font-size: 0.72rem;\n+  line-height: 1.55;\n+}\n+\n+.validation svg {\n+  flex: none;\n+  margin-top: 2px;\n+  color: var(--thorp-warning);\n+}\n+\n+.validation strong {\n+  color: var(--thorp-warning);\n+  font-weight: 700;\n+}\n+\n+.items {\n+  display: grid;\n+  gap: 0;\n+  margin: 0;\n+}\n+\n+.item {\n+  display: grid;\n+  grid-template-columns: 104px minmax(0, 1fr);\n+  gap: 14px;\n+  padding: 13px 0;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.item:first-child {\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.item dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+  font-weight: 650;\n+  letter-spacing: 0.02em;\n+}\n+\n+.item dd {\n+  min-width: 0;\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 0.8rem;\n+}\n+\n+.empty {\n+  color: var(--thorp-muted);\n+  font-size: 0.75rem;\n+}\n+\n+.strategyList,\n+.spaceList,\n+.exclusions,\n+.limitList {\n+  display: grid;\n+  gap: 7px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.strategyList li {\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+  font-weight: 650;\n+}\n+\n+.notExecutable {\n+  padding: 1px 6px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 3px;\n+  color: var(--thorp-negative);\n+  font-size: 0.62rem;\n+  font-style: normal;\n+  font-weight: 700;\n+}\n+\n+.spaceList li {\n+  display: grid;\n+  gap: 3px;\n+}\n+\n+.spaceName {\n+  font-weight: 650;\n+}\n+\n+.spaceAxes {\n+  color: var(--thorp-copy);\n+  font-size: 0.72rem;\n+  line-height: 1.5;\n+}\n+\n+.spaceCount {\n+  color: var(--thorp-muted);\n+  font-size: 0.7rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.workload {\n+  margin: 0;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.workload strong {\n+  color: var(--thorp-accent-soft);\n+  font-size: 1.05rem;\n+  font-weight: 750;\n+}\n+\n+.workloadTotal {\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+}\n+\n+.exclusions {\n+  margin-top: 8px;\n+  padding-left: 11px;\n+  border-left: 1px solid var(--thorp-line-strong);\n+  color: var(--thorp-copy);\n+  font-size: 0.72rem;\n+  line-height: 1.5;\n+}\n+\n+.exclusionHead {\n+  color: var(--thorp-warning);\n+  font-weight: 700;\n+}\n+\n+.limitList li {\n+  display: flex;\n+  align-items: center;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.limitLabel {\n+  display: flex;\n+  align-items: center;\n+  gap: 6px;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+}\n+\n+.limitValue {\n+  font-size: 0.78rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 650;\n+}\n+\n+.period {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.blocked {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 8px;\n+  margin: 0;\n+  padding: 9px 11px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 5px;\n+  color: var(--thorp-negative);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.blocked svg {\n+  flex: none;\n+  margin-top: 2px;\n+}\n+\n+.run {\n+  display: inline-flex;\n+  min-height: 46px;\n+  align-items: center;\n+  justify-content: center;\n+  gap: 9px;\n+  border: 1px solid var(--thorp-accent);\n+  border-radius: 5px;\n+  background: var(--thorp-accent);\n+  color: var(--thorp-action-foreground);\n+  cursor: pointer;\n+  font-size: 0.84rem;\n+  font-weight: 700;\n+  transition: transform 160ms ease, opacity 160ms ease;\n+}\n+\n+.run:hover:not(:disabled) {\n+  transform: translateY(-1px);\n+}\n+\n+.run:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+.run:disabled {\n+  border-color: var(--thorp-line-strong);\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+@media (max-width: 600px) {\n+  .item {\n+    grid-template-columns: minmax(0, 1fr);\n+    gap: 7px;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PreflightPanel.module.css",
+          "old_path": "frontend/src/components/paramsearch/PreflightPanel.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,120 @@\n+import { render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { describe, expect, it, vi } from 'vitest'\n+import { previewFixture } from '@/test/paramSearchFixtures'\n+import { PreflightPanel } from './PreflightPanel'\n+\n+function runButton() {\n+  return screen.getByRole('button', { name: /실행/ }) as HTMLButtonElement\n+}\n+\n+/**\n+ * 확인 화면은 값을 하나도 받지 않고 한 동작으로 실행된다(SC-001, FR-005a).\n+ *\n+ * <p>이것이 깨지는 방식은 대개 \"편의 기능\"이다 — 후보 수를 직접 넣게 하거나, 실행 전에 무언가를\n+ * 고르게 만들거나, 버튼을 둘로 나눈다. 그래서 <b>입력 요소가 없는지</b>와 <b>버튼이 하나인지</b>를\n+ * 함께 본다.\n+ */\n+describe('PreflightPanel', () => {\n+  it('값을 하나도 입력하지 않아도 실행 버튼이 활성이다', () => {\n+    render(<PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />)\n+\n+    expect(runButton().disabled).toBe(false)\n+\n+    // 실행 전에 채워야 할 입력이 없다 — 후보 숫자를 받지 않는다.\n+    expect(screen.queryAllByRole('textbox')).toHaveLength(0)\n+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0)\n+    expect(screen.queryAllByRole('combobox')).toHaveLength(0)\n+    expect(screen.getAllByRole('button')).toHaveLength(1)\n+  })\n+\n+  it('한 번 누르면 실행이 한 번만 나간다', async () => {\n+    const onRun = vi.fn()\n+    const user = userEvent.setup()\n+    render(<PreflightPanel preview={previewFixture} onRun={onRun} running={false} />)\n+\n+    await user.click(runButton())\n+\n+    expect(onRun).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('네 항목을 응답에서 읽어 보인다', () => {\n+    const { container } = render(\n+      <PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    // 전략 이름·축 라벨·단위는 전부 응답의 값이다.\n+    expect(text).toContain('알파 기울기')\n+    expect(text).toContain('캐리 순환')\n+    expect(text).toContain('실행 미지원')\n+    expect(text).toContain('기울기 관측 창 3개 (거래일)')\n+    expect(text).toContain('조합 6개')\n+\n+    // 예상 작업량과 제외 사유.\n+    expect(text).toContain('7개')\n+    expect(text).toContain('전체 조합 8개')\n+    expect(text).toContain('관측 창이 자료 구간보다 깁니다.')\n+\n+    // 적용 한도 네 줄.\n+    expect(text).toContain('후보 수 상한')\n+    expect(text).toContain('실행 시간 한도')\n+    expect(text).toContain('2분')\n+    expect(text).toContain('연속 실패 한도')\n+  })\n+\n+  it('limits.provisional 에 든 항목에만 임시값 표시가 붙는다', () => {\n+    render(<PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />)\n+\n+    // 픽스처는 maxCandidates·dispatchWindow 둘만 임시값이다.\n+    expect(screen.getAllByText('임시값')).toHaveLength(2)\n+    expect(screen.getByText('후보 수 상한은(는) 실측 전 임시로 정한 값입니다')).toBeTruthy()\n+    expect(screen.queryByText('실행 시간 한도은(는) 실측 전 임시로 정한 값입니다')).toBeNull()\n+  })\n+\n+  it('미검증을 결과보다 먼저 보인다', () => {\n+    const { container } = render(\n+      <PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('미검증')\n+    expect(text).toContain('평가 분할이 등록되지 않아')\n+  })\n+\n+  it('한도를 넘으면 실행을 막고 범위를 좁히라고 안내한다', () => {\n+    const exceeded = {\n+      ...previewFixture,\n+      limits: { ...previewFixture.limits, exceeded: true },\n+    }\n+    render(<PreflightPanel preview={exceeded} onRun={vi.fn()} running={false} />)\n+\n+    expect(runButton().disabled).toBe(true)\n+    expect(screen.getByRole('alert').textContent).toMatch(/후보값을 줄여/)\n+  })\n+\n+  it('화면 사정으로 막을 때는 이유를 함께 보인다', () => {\n+    render(\n+      <PreflightPanel\n+        preview={previewFixture}\n+        onRun={vi.fn()}\n+        running={false}\n+        blockedReason=\"실행하려면 로그인이 필요합니다.\"\n+      />,\n+    )\n+\n+    expect(runButton().disabled).toBe(true)\n+    expect(screen.getByRole('alert').textContent).toContain('로그인이 필요합니다')\n+  })\n+\n+  it('순위·추천 문구를 쓰지 않는다', () => {\n+    const { container } = render(\n+      <PreflightPanel preview={previewFixture} onRun={vi.fn()} running={false} />,\n+    )\n+\n+    const text = container.textContent ?? ''\n+    for (const banned of ['추천', '최적', '1위', '우승']) {\n+      expect(text).not.toContain(banned)\n+    }\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PreflightPanel.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/PreflightPanel.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,211 @@\n+import { Play, ShieldQuestion, TriangleAlert } from 'lucide-react'\n+import { ProvisionalBadge } from './ProvisionalBadge'\n+import type { ParamSearchPreview } from '@/types/paramSearch'\n+import { formatCount, formatSeconds, validationLabelText } from '@/utils/paramSearchLabels'\n+import styles from './PreflightPanel.module.css'\n+\n+interface PreflightPanelProps {\n+  preview: ParamSearchPreview\n+  /** 한 동작으로 탐색을 시작한다. 이 패널의 유일한 행동이다. */\n+  onRun: () => void\n+  running: boolean\n+  /**\n+   * 지금 실행할 수 없는 이유. 응답이 아니라 화면 사정(로그인 필요 등)으로 막을 때만 쓴다.\n+   * 주면 실행을 막고 그 문장을 그대로 보인다 — 막힌 이유를 적지 않고 버튼만 끄지 않는다.\n+   */\n+  blockedReason?: string | null\n+}\n+\n+/** 한도 항목의 이름과 값. 필드 이름은 계약의 것이고 전략 지식이 아니다. */\n+function limitRows(limits: ParamSearchPreview['limits']) {\n+  return [\n+    { key: 'maxCandidates', label: '후보 수 상한', value: `${formatCount(limits.maxCandidates)}개` },\n+    {\n+      key: 'timeLimitSeconds',\n+      label: '실행 시간 한도',\n+      value: formatSeconds(limits.timeLimitSeconds),\n+    },\n+    {\n+      key: 'dispatchWindow',\n+      label: '동시 실행 수',\n+      value: `${formatCount(limits.dispatchWindow)}개`,\n+    },\n+    {\n+      key: 'consecutiveFailureLimit',\n+      label: '연속 실패 한도',\n+      value: `${formatCount(limits.consecutiveFailureLimit)}회`,\n+    },\n+  ]\n+}\n+\n+/**\n+ * 실행 전 확인 화면(SC-001, FR-005a).\n+ *\n+ * <p><b>네 항목만 보이고 행동 버튼은 하나다.</b> 대상 전략·탐색 범위 요약·예상 작업량·적용 한도를\n+ * 읽고 실행을 누르면 끝이며, <b>후보 숫자를 입력받지 않는다</b> — 몇 개를 돌릴지는 등록표와 한도가\n+ * 정한다. 범위를 좁히고 싶으면 상세 변경(`SpaceEditor`)으로 간다.\n+ *\n+ * <p>화면에 전략 목록을 두지 않는다. 여기 보이는 전략은 \"고를 수 있는 것들\"이 아니라 <b>이번 탐색의\n+ * 대상</b>이고, 이름은 응답의 `strategies[].name`에서만 읽는다(FR-025).\n+ *\n+ * <p>검증 표시를 결과보다 먼저 보인다 — 결과를 본 뒤에야 미검증임을 알면 이미 오해가 생긴 뒤다(FR-015).\n+ */\n+export function PreflightPanel({\n+  preview,\n+  onRun,\n+  running,\n+  blockedReason = null,\n+}: PreflightPanelProps) {\n+  const { strategies, spaceSummary, workload, limits } = preview\n+  const blocked = limits.exceeded || workload.validCombinations === 0 || blockedReason !== null\n+\n+  return (\n+    <section className={styles.panel} aria-labelledby=\"preflight-title\">\n+      <header className={styles.header}>\n+        <h2 id=\"preflight-title\">실행 전 확인</h2>\n+        <p>\n+          등록표 {preview.registryVersion} 기준입니다. 아래 내용 그대로 한 번에 실행합니다.\n+        </p>\n+      </header>\n+\n+      <div className={styles.validation}>\n+        <ShieldQuestion size={15} aria-hidden=\"true\" />\n+        <span>\n+          <strong>{validationLabelText(preview.validationLabel)}</strong>\n+          {preview.validationNote ? ` · ${preview.validationNote}` : null}\n+        </span>\n+      </div>\n+\n+      <dl className={styles.items}>\n+        {/* 1. 대상 전략 — 이름은 응답에서만 읽는다 */}\n+        <div className={styles.item}>\n+          <dt>대상 전략</dt>\n+          <dd>\n+            {strategies.length === 0 ? (\n+              <span className={styles.empty}>등록표에서 찾은 전략이 없습니다.</span>\n+            ) : (\n+              <ul className={styles.strategyList}>\n+                {strategies.map((strategy) => (\n+                  <li key={strategy.strategyId}>\n+                    <span>{strategy.name}</span>\n+                    {strategy.executable ? null : (\n+                      <em className={styles.notExecutable}>실행 미지원</em>\n+                    )}\n+                  </li>\n+                ))}\n+              </ul>\n+            )}\n+          </dd>\n+        </div>\n+\n+        {/* 2. 탐색 범위 요약 — 축 라벨·단위도 응답의 것이다 */}\n+        <div className={styles.item}>\n+          <dt>탐색 범위</dt>\n+          <dd>\n+            {spaceSummary.length === 0 ? (\n+              <span className={styles.empty}>탐색할 범위가 없습니다.</span>\n+            ) : (\n+              <ul className={styles.spaceList}>\n+                {spaceSummary.map((space) => (\n+                  <li key={space.strategyId}>\n+                    <span className={styles.spaceName}>{space.strategyName}</span>\n+                    <span className={styles.spaceAxes}>\n+                      {space.axes.length === 0\n+                        ? '탐색 축 없음'\n+                        : space.axes\n+                            .map(\n+                              (axis) =>\n+                                `${axis.label} ${formatCount(axis.values.length)}개${\n+                                  axis.unit ? ` (${axis.unit})` : ''\n+                                }`,\n+                            )\n+                            .join(' · ')}\n+                    </span>\n+                    <span className={styles.spaceCount}>\n+                      조합 {formatCount(space.combinations)}개\n+                    </span>\n+                  </li>\n+                ))}\n+              </ul>\n+            )}\n+          </dd>\n+        </div>\n+\n+        {/* 3. 예상 작업량 — 제외된 조합은 사유와 함께 보인다 */}\n+        <div className={styles.item}>\n+          <dt>예상 작업량</dt>\n+          <dd>\n+            <p className={styles.workload}>\n+              <strong>{formatCount(workload.validCombinations)}개</strong> 실행 예정\n+              <span className={styles.workloadTotal}>\n+                {` / 전체 조합 ${formatCount(workload.totalCombinations)}개`}\n+              </span>\n+            </p>\n+            {workload.excludedCombinations > 0 && (\n+              <ul className={styles.exclusions}>\n+                <li className={styles.exclusionHead}>\n+                  {`계산 전 제외 ${formatCount(workload.excludedCombinations)}개`}\n+                </li>\n+                {workload.exclusionReasons.map((reason) => (\n+                  <li key={reason.code}>\n+                    {`${reason.message} (${formatCount(reason.count)}개)`}\n+                  </li>\n+                ))}\n+              </ul>\n+            )}\n+          </dd>\n+        </div>\n+\n+        {/* 4. 적용 한도 — provisional 에 든 항목에만 임시값 표시가 붙는다 */}\n+        <div className={styles.item}>\n+          <dt>적용 한도</dt>\n+          <dd>\n+            <ul className={styles.limitList}>\n+              {limitRows(limits).map((row) => (\n+                <li key={row.key}>\n+                  <span className={styles.limitLabel}>\n+                    {row.label}\n+                    {limits.provisional.includes(row.key) && (\n+                      <ProvisionalBadge label={row.label} />\n+                    )}\n+                  </span>\n+                  <span className={styles.limitValue}>{row.value}</span>\n+                </li>\n+              ))}\n+            </ul>\n+          </dd>\n+        </div>\n+      </dl>\n+\n+      {preview.commonPeriod && (\n+        <p className={styles.period}>\n+          {`평가 구간 ${preview.commonPeriod.start} ~ ${preview.commonPeriod.end}`}\n+          {preview.commonPeriod.shortenedBy\n+            ? ` · ${preview.commonPeriod.shortenedBy} 때문에 짧아졌습니다`\n+            : null}\n+        </p>\n+      )}\n+\n+      {blocked && (\n+        <p className={styles.blocked} role=\"alert\">\n+          <TriangleAlert size={15} aria-hidden=\"true\" />\n+          {limits.exceeded\n+            ? '실행 예정 후보가 한도를 넘습니다. 상세 변경에서 후보값을 줄여 주세요.'\n+            : workload.validCombinations === 0\n+              ? '실행할 수 있는 조합이 없습니다. 대상 섹터나 후보값을 바꿔 주세요.'\n+              : blockedReason}\n+        </p>\n+      )}\n+\n+      <button\n+        type=\"button\"\n+        className={styles.run}\n+        onClick={onRun}\n+        disabled={running || blocked}\n+      >\n+        <Play size={15} fill=\"currentColor\" aria-hidden=\"true\" />\n+        {running ? '실행 접수 중' : '설정 조합 자동 비교 실행'}\n+      </button>\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/PreflightPanel.tsx",
+          "old_path": "frontend/src/components/paramsearch/PreflightPanel.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,24 @@\n+.badge {\n+  display: inline-flex;\n+  align-items: center;\n+  padding: 1px 6px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 3px;\n+  color: var(--thorp-warning);\n+  font-size: 0.62rem;\n+  font-weight: 700;\n+  letter-spacing: 0.04em;\n+  white-space: nowrap;\n+}\n+\n+.srOnly {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  padding: 0;\n+  margin: -1px;\n+  overflow: hidden;\n+  clip: rect(0, 0, 0, 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ProvisionalBadge.module.css",
+          "old_path": "frontend/src/components/paramsearch/ProvisionalBadge.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,23 @@\n+import styles from './ProvisionalBadge.module.css'\n+\n+interface ProvisionalBadgeProps {\n+  /** 배지가 붙은 값의 이름. 보조기술이 \"무엇이 임시값인지\" 알 수 있어야 한다. */\n+  label: string\n+}\n+\n+/**\n+ * 아직 실측하지 않아 임시로 정한 값에 붙이는 표시(FR-005a, 원칙 IX).\n+ *\n+ * <p>어떤 항목이 임시값인지는 화면이 정하지 않는다 — `limits.provisional`에 든 항목에만 붙인다.\n+ * 실측이 끝나 서버가 그 목록에서 빼면 배지도 저절로 사라진다.\n+ *\n+ * <p>색만으로 알리지 않는다. \"임시값\"이라는 글자가 배지의 내용이다.\n+ */\n+export function ProvisionalBadge({ label }: ProvisionalBadgeProps) {\n+  return (\n+    <span className={styles.badge}>\n+      <span aria-hidden=\"true\">임시값</span>\n+      <span className={styles.srOnly}>{`${label}은(는) 실측 전 임시로 정한 값입니다`}</span>\n+    </span>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/ProvisionalBadge.tsx",
+          "old_path": "frontend/src/components/paramsearch/ProvisionalBadge.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,161 @@\n+.overlay {\n+  position: fixed;\n+  inset: 0;\n+  z-index: 50;\n+  display: grid;\n+  padding: 20px;\n+  overflow-y: auto;\n+  background: rgb(3 8 5 / 72%);\n+  place-items: center;\n+}\n+\n+.dialog {\n+  display: grid;\n+  gap: 14px;\n+  width: min(100%, 520px);\n+  padding: 22px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 10px;\n+  background: var(--thorp-surface-raised);\n+  box-shadow: var(--thorp-shadow);\n+  color: var(--thorp-foreground);\n+}\n+\n+.dialog h2 {\n+  margin: 0;\n+  font-size: 1.02rem;\n+  font-weight: 700;\n+  letter-spacing: -0.02em;\n+}\n+\n+.lead {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.6;\n+}\n+\n+.versions {\n+  display: grid;\n+  grid-template-columns: repeat(2, minmax(0, 1fr));\n+  gap: 10px;\n+  margin: 0;\n+  padding: 11px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+}\n+\n+.versions div {\n+  display: grid;\n+  min-width: 0;\n+  gap: 3px;\n+}\n+\n+.versions dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.66rem;\n+}\n+\n+.versions dd {\n+  margin: 0;\n+  overflow-wrap: anywhere;\n+  font-size: 0.76rem;\n+  font-weight: 650;\n+}\n+\n+.changes {\n+  display: grid;\n+  gap: 7px;\n+}\n+\n+.changes h3 {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.74rem;\n+  font-weight: 650;\n+}\n+\n+.changes ul {\n+  display: grid;\n+  gap: 5px;\n+  margin: 0;\n+  padding-left: 11px;\n+  border-left: 1px solid var(--thorp-line-strong);\n+  list-style: none;\n+  color: var(--thorp-foreground);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.status {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.74rem;\n+}\n+\n+.error {\n+  margin: 0;\n+  padding: 9px 11px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 5px;\n+  color: var(--thorp-negative);\n+  font-size: 0.74rem;\n+  line-height: 1.55;\n+}\n+\n+.actions {\n+  display: flex;\n+  justify-content: flex-end;\n+  gap: 8px;\n+  flex-wrap: wrap;\n+}\n+\n+.primary,\n+.secondary {\n+  display: inline-flex;\n+  min-height: 40px;\n+  align-items: center;\n+  gap: 7px;\n+  padding: 0 16px;\n+  border-radius: 5px;\n+  cursor: pointer;\n+  font-size: 0.78rem;\n+  font-weight: 700;\n+}\n+\n+.primary {\n+  border: 1px solid var(--thorp-accent);\n+  background: var(--thorp-accent);\n+  color: var(--thorp-action-foreground);\n+}\n+\n+.primary:disabled {\n+  border-color: var(--thorp-line-strong);\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+.secondary {\n+  border: 1px solid var(--thorp-line-strong);\n+  background: transparent;\n+  color: var(--thorp-foreground);\n+}\n+\n+.primary:focus-visible,\n+.secondary:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+@media (max-width: 520px) {\n+  .versions {\n+    grid-template-columns: minmax(0, 1fr);\n+  }\n+\n+  .actions button {\n+    flex: 1 1 auto;\n+    justify-content: center;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RegistryChangedDialog.module.css",
+          "old_path": "frontend/src/components/paramsearch/RegistryChangedDialog.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,219 @@\n+import { useEffect, useRef } from 'react'\n+import { RefreshCw } from 'lucide-react'\n+import type { AxisValue, ParamSearchPreview, StrategySpaceSummary } from '@/types/paramSearch'\n+import { formatCount } from '@/utils/paramSearchLabels'\n+import styles from './RegistryChangedDialog.module.css'\n+\n+interface RegistryChangedDialogProps {\n+  open: boolean\n+  /** 실행을 보냈던 시점의 미리보기. */\n+  previous: ParamSearchPreview\n+  /** 409를 받고 다시 부른 미리보기. 아직 오지 않았으면 `null`이다. */\n+  next: ParamSearchPreview | null\n+  loadingNext: boolean\n+  /** 다시 부르기가 실패했을 때의 문장. */\n+  reloadError: string | null\n+  onConfirm: () => void\n+  onCancel: () => void\n+  onReload: () => void\n+}\n+\n+/** 축 후보값을 비교 가능한 한 줄로 만든다. */\n+function joinValues(values: AxisValue[]): string {\n+  return values.map(String).join(', ')\n+}\n+\n+function byStrategyId(spaces: StrategySpaceSummary[]) {\n+  return new Map(spaces.map((space) => [space.strategyId, space]))\n+}\n+\n+/**\n+ * 무엇이 바뀌었는지 한 줄씩. 화면이 \"달라졌습니다\"로 끝내면 사용자는 무엇을 확인해야 할지 모른다.\n+ *\n+ * 전략 이름·축 라벨은 응답에서 읽고, 사라진 전략은 이전 응답의 이름으로 적는다.\n+ */\n+function describeChanges(\n+  previous: ParamSearchPreview,\n+  next: ParamSearchPreview,\n+): string[] {\n+  const before = byStrategyId(previous.spaceSummary)\n+  const after = byStrategyId(next.spaceSummary)\n+  const lines: string[] = []\n+\n+  for (const [strategyId, beforeSpace] of before) {\n+    const afterSpace = after.get(strategyId)\n+    if (!afterSpace) {\n+      lines.push(`${beforeSpace.strategyName}: 등록표에서 빠졌습니다`)\n+      continue\n+    }\n+\n+    const beforeAxes = new Map(beforeSpace.axes.map((axis) => [axis.axis, axis]))\n+    for (const afterAxis of afterSpace.axes) {\n+      const beforeAxis = beforeAxes.get(afterAxis.axis)\n+      if (!beforeAxis) {\n+        lines.push(\n+          `${afterSpace.strategyName} · ${afterAxis.label}: 축이 추가되었습니다 (${joinValues(afterAxis.values)})`,\n+        )\n+        continue\n+      }\n+      if (joinValues(beforeAxis.values) !== joinValues(afterAxis.values)) {\n+        lines.push(\n+          `${afterSpace.strategyName} · ${afterAxis.label}: ${joinValues(beforeAxis.values)} → ${joinValues(afterAxis.values)}`,\n+        )\n+      }\n+      beforeAxes.delete(afterAxis.axis)\n+    }\n+    for (const removed of beforeAxes.values()) {\n+      lines.push(`${beforeSpace.strategyName} · ${removed.label}: 축이 빠졌습니다`)\n+    }\n+\n+    if (beforeSpace.combinations !== afterSpace.combinations) {\n+      lines.push(\n+        `${afterSpace.strategyName}: 조합 ${formatCount(beforeSpace.combinations)}개 → ${formatCount(afterSpace.combinations)}개`,\n+      )\n+    }\n+  }\n+\n+  for (const [strategyId, afterSpace] of after) {\n+    if (!before.has(strategyId)) {\n+      lines.push(`${afterSpace.strategyName}: 등록표에 추가되었습니다`)\n+    }\n+  }\n+\n+  if (previous.workload.validCombinations !== next.workload.validCombinations) {\n+    lines.push(\n+      `실행 예정 후보 ${formatCount(previous.workload.validCombinations)}개 → ${formatCount(next.workload.validCombinations)}개`,\n+    )\n+  }\n+\n+  return lines\n+}\n+\n+/**\n+ * 등록표 버전이 달라졌을 때의 확인(FR-028, `409 REGISTRY_VERSION_CHANGED`).\n+ *\n+ * <p><b>사용자가 확인하기 전에는 실행을 다시 보내지 않는다.</b> 미리보기를 본 뒤 실행을 누르는\n+ * 사이에 등록표가 바뀌면 화면이 보여 준 조합과 실제로 돌 조합이 달라진다 — 조용히 다시 보내면\n+ * 사용자는 자기가 확인하지 않은 탐색의 결과를 받는다.\n+ *\n+ * <p>그래서 <b>바뀐 후보값과 조합 수를 보이고</b> 확인을 받는다. 캐시된 요약이나 기본값으로\n+ * 대체해 실행하지 않는다 — 다시 부르기가 실패하면 실행 버튼 자체를 열지 않는다.\n+ */\n+export function RegistryChangedDialog({\n+  open,\n+  previous,\n+  next,\n+  loadingNext,\n+  reloadError,\n+  onConfirm,\n+  onCancel,\n+  onReload,\n+}: RegistryChangedDialogProps) {\n+  const closeRef = useRef<HTMLButtonElement>(null)\n+\n+  // 열려 있는 동안만 Escape 를 받는다.\n+  useEffect(() => {\n+    if (!open) return\n+\n+    const handleEscape = (event: KeyboardEvent) => {\n+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return\n+      event.preventDefault()\n+      onCancel()\n+    }\n+\n+    document.addEventListener('keydown', handleEscape)\n+    return () => document.removeEventListener('keydown', handleEscape)\n+  }, [open, onCancel])\n+\n+  // 대화상자가 열리면 포커스를 안으로 들인다.\n+  useEffect(() => {\n+    if (open) closeRef.current?.focus()\n+  }, [open])\n+\n+  if (!open) return null\n+\n+  const changes = next ? describeChanges(previous, next) : []\n+\n+  return (\n+    <div className={styles.overlay}>\n+      <div\n+        className={styles.dialog}\n+        role=\"dialog\"\n+        aria-modal=\"true\"\n+        aria-labelledby=\"registry-changed-title\"\n+      >\n+        <h2 id=\"registry-changed-title\">등록표가 바뀌었습니다</h2>\n+        <p className={styles.lead}>\n+          확인 화면을 보는 사이에 전략·파라미터 등록표가 바뀌어 실행하지 않았습니다. 바뀐 내용을\n+          확인한 뒤 다시 실행해 주세요.\n+        </p>\n+\n+        <dl className={styles.versions}>\n+          <div>\n+            <dt>확인한 버전</dt>\n+            <dd>{previous.registryVersion}</dd>\n+          </div>\n+          <div>\n+            <dt>현재 버전</dt>\n+            <dd>{next ? next.registryVersion : '확인 중'}</dd>\n+          </div>\n+        </dl>\n+\n+        {loadingNext && (\n+          <p className={styles.status} role=\"status\">\n+            바뀐 내용을 다시 불러오는 중입니다.\n+          </p>\n+        )}\n+\n+        {reloadError && (\n+          <p className={styles.error} role=\"alert\">\n+            {reloadError}\n+          </p>\n+        )}\n+\n+        {next && (\n+          <div className={styles.changes}>\n+            <h3>바뀐 내용</h3>\n+            {changes.length === 0 ? (\n+              <p className={styles.status}>\n+                버전만 올라갔고 후보값과 조합 수는 그대로입니다.\n+              </p>\n+            ) : (\n+              <ul>\n+                {changes.map((line) => (\n+                  <li key={line}>{line}</li>\n+                ))}\n+              </ul>\n+            )}\n+          </div>\n+        )}\n+\n+        <div className={styles.actions}>\n+          <button\n+            type=\"button\"\n+            ref={closeRef}\n+            className={styles.secondary}\n+            onClick={onCancel}\n+          >\n+            닫기\n+          </button>\n+          {reloadError ? (\n+            <button type=\"button\" className={styles.primary} onClick={onReload}>\n+              <RefreshCw size={15} aria-hidden=\"true\" />\n+              다시 불러오기\n+            </button>\n+          ) : (\n+            <button\n+              type=\"button\"\n+              className={styles.primary}\n+              onClick={onConfirm}\n+              disabled={!next || loadingNext}\n+            >\n+              확인하고 실행\n+            </button>\n+          )}\n+        </div>\n+      </div>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/RegistryChangedDialog.tsx",
+          "old_path": "frontend/src/components/paramsearch/RegistryChangedDialog.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,123 @@\n+.editor {\n+  display: grid;\n+  gap: 18px;\n+}\n+\n+.guide,\n+.empty,\n+.noAxis {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.72rem;\n+  line-height: 1.55;\n+}\n+\n+.strategy {\n+  display: grid;\n+  gap: 12px;\n+  padding-top: 13px;\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.strategyHeader {\n+  display: flex;\n+  align-items: baseline;\n+  justify-content: space-between;\n+  gap: 10px;\n+}\n+\n+.strategyHeader h3 {\n+  margin: 0;\n+  color: var(--thorp-foreground);\n+  font-size: 0.86rem;\n+  font-weight: 700;\n+}\n+\n+.strategyHeader span {\n+  color: var(--thorp-muted);\n+  font-size: 0.7rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.axis {\n+  display: grid;\n+  gap: 8px;\n+  min-width: 0;\n+  margin: 0;\n+  padding: 0;\n+  border: 0;\n+}\n+\n+.axisLegend {\n+  display: flex;\n+  align-items: center;\n+  gap: 7px;\n+  padding: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.75rem;\n+  font-weight: 650;\n+}\n+\n+.unit {\n+  padding: 1px 5px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 3px;\n+  color: var(--thorp-muted);\n+  font-size: 0.62rem;\n+  font-weight: 600;\n+}\n+\n+.values {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 6px;\n+}\n+\n+.value {\n+  display: inline-flex;\n+  min-height: 34px;\n+  align-items: center;\n+  gap: 6px;\n+  padding: 0 11px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+  color: var(--thorp-muted);\n+  cursor: pointer;\n+  font-size: 0.76rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 650;\n+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;\n+}\n+\n+.value[data-on='true'] {\n+  border-color: var(--thorp-accent);\n+  background: var(--thorp-accent-muted);\n+  color: var(--thorp-foreground);\n+}\n+\n+.value:hover {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.value:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.defaultMark {\n+  color: var(--thorp-muted);\n+  font-size: 0.6rem;\n+  font-weight: 600;\n+}\n+\n+.value[data-on='true'] .defaultMark {\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.axisMeta {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.68rem;\n+  font-variant-numeric: tabular-nums;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/SpaceEditor.module.css",
+          "old_path": "frontend/src/components/paramsearch/SpaceEditor.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,195 @@\n+import { readFileSync } from 'node:fs'\n+import { render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { useState } from 'react'\n+import { describe, expect, it, vi } from 'vitest'\n+import { previewFixture } from '@/test/paramSearchFixtures'\n+import type { SearchSpaceSelection, StrategySpaceSummary } from '@/types/paramSearch'\n+import { SpaceEditor } from './SpaceEditor'\n+\n+/** 등록표에 없는, 이 테스트에서 지어낸 전략과 축. 화면이 이것을 알 방법은 응답뿐이다. */\n+const inventedSpace: StrategySpaceSummary[] = [\n+  {\n+    strategyId: 'MOON_PHASE_BLEND',\n+    strategyName: '달 위상 혼합',\n+    axes: [\n+      {\n+        axis: 'phaseDepth',\n+        label: '위상 깊이',\n+        unit: '단계',\n+        values: [1, 2, 3, 4],\n+        defaultValue: 2,\n+        allowedRange: { min: 1, max: 9, step: 1, values: null },\n+      },\n+    ],\n+    combinations: 4,\n+  },\n+]\n+\n+/** 007 운영 코드(프론트). 테스트와 픽스처는 FR-025의 명시적 예외라 뺀다. */\n+const productionSources = [\n+  'src/api/paramSearch.ts',\n+  'src/types/paramSearch.ts',\n+  'src/hooks/useParamSearchStatus.ts',\n+  'src/utils/paramSearchLabels.ts',\n+  'src/pages/ParamSearchPage.tsx',\n+  'src/components/paramsearch/PreflightPanel.tsx',\n+  'src/components/paramsearch/ProvisionalBadge.tsx',\n+  'src/components/paramsearch/RegistryChangedDialog.tsx',\n+  'src/components/paramsearch/SpaceEditor.tsx',\n+]\n+\n+/**\n+ * 등록표의 전략 ID와 이름. 원본은\n+ * `backend/src/main/resources/registry/parameter-registry-provisional.yml`이고 여기 적은 것은\n+ * **화면 코드에 나타나면 안 되는 낱말 목록**이다. 등록표에 전략이 늘면 이 목록에도 더한다.\n+ */\n+const registryWords = [\n+  'EQUAL_WEIGHT',\n+  'FIXED_WEIGHT',\n+  'INVERSE_VOLATILITY',\n+  'SECTOR_MOMENTUM',\n+  'MINIMUM_VARIANCE',\n+  '동일 비중',\n+  '고정 비중',\n+  '역변동성',\n+  '섹터 모멘텀',\n+  '최소분산',\n+]\n+\n+/** 전략 분기의 흔한 형태. */\n+const branchingPatterns = [\n+  /switch\\s*\\(\\s*[\\w.]*[sS]trategyId/,\n+  /[\\w.]*[sS]trategyId\\s*===?\\s*['\"]/,\n+  /['\"][A-Z][A-Z0-9_]{3,}['\"]\\s*===?\\s*[\\w.]*[sS]trategyId/,\n+]\n+\n+/** 제어 컴포넌트를 여러 번 눌러 보기 위한 최소 껍데기. */\n+function Harness({ spaceSummary }: { spaceSummary: StrategySpaceSummary[] }) {\n+  const [value, setValue] = useState<SearchSpaceSelection>({})\n+  return <SpaceEditor spaceSummary={spaceSummary} value={value} onChange={setValue} />\n+}\n+\n+/**\n+ * 전략이 늘어도 화면 코드를 고치지 않는다(T136, SC-010, FR-025).\n+ *\n+ * <p>동작만 보는 테스트로는 이것을 잡을 수 없다. 전략 ID 분기가 하나 생겨도 그 전략을 쓰는\n+ * 테스트는 여전히 통과한다. 그래서 <b>지어낸 전략으로 렌더되는지</b>와 <b>소스에 전략 지식이\n+ * 있는지</b>를 함께 본다.\n+ */\n+describe('SpaceEditor', () => {\n+  it('응답에만 있는 전략과 축도 코드 변경 없이 렌더된다', () => {\n+    const { container } = render(\n+      <SpaceEditor spaceSummary={inventedSpace} value={{}} onChange={vi.fn()} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('달 위상 혼합')\n+    expect(text).toContain('위상 깊이')\n+    expect(text).toContain('단계')\n+    expect(text).toContain('등록 허용 범위 1~9 · 간격 1')\n+    for (const value of ['1', '2', '3', '4']) {\n+      expect(screen.getByRole('button', { name: new RegExp(`^${value}`) })).toBeTruthy()\n+    }\n+  })\n+\n+  it('축이 없는 전략은 조합이 1개라고 알린다', () => {\n+    const { container } = render(\n+      <SpaceEditor spaceSummary={previewFixture.spaceSummary} value={{}} onChange={vi.fn()} />,\n+    )\n+\n+    expect(container.textContent).toContain('탐색 축이 없는 전략입니다. 조합은 1개입니다.')\n+  })\n+\n+  it('처음에는 등록된 후보값이 모두 켜져 있다', () => {\n+    render(<SpaceEditor spaceSummary={inventedSpace} value={{}} onChange={vi.fn()} />)\n+\n+    for (const value of ['1', '2', '3', '4']) {\n+      const button = screen.getByRole('button', { name: new RegExp(`^${value}`) })\n+      expect(button.getAttribute('aria-pressed')).toBe('true')\n+    }\n+  })\n+\n+  it('끈 값만 빠지고 남는 값은 모두 등록된 후보값이다', async () => {\n+    const onChange = vi.fn()\n+    const user = userEvent.setup()\n+    render(<SpaceEditor spaceSummary={inventedSpace} value={{}} onChange={onChange} />)\n+\n+    await user.click(screen.getByRole('button', { name: /^3/ }))\n+\n+    expect(onChange).toHaveBeenCalledTimes(1)\n+    const next = onChange.mock.calls[0][0] as SearchSpaceSelection\n+    expect(next.MOON_PHASE_BLEND.phaseDepth).toEqual([1, 2, 4])\n+    // 등록되지 않은 값이 끼어들 자리가 없다.\n+    for (const picked of next.MOON_PHASE_BLEND.phaseDepth) {\n+      expect(inventedSpace[0].axes[0].values).toContain(picked)\n+    }\n+  })\n+\n+  it('마지막 하나는 끌 수 없다 — 축이 비면 돌릴 조합이 없다', async () => {\n+    const user = userEvent.setup()\n+    render(<Harness spaceSummary={inventedSpace} />)\n+\n+    for (const value of ['1', '2', '3']) {\n+      await user.click(screen.getByRole('button', { name: new RegExp(`^${value}`) }))\n+    }\n+    const last = screen.getByRole('button', { name: /^4/ })\n+    expect(last.getAttribute('aria-pressed')).toBe('true')\n+\n+    await user.click(last)\n+\n+    expect(screen.getByRole('button', { name: /^4/ }).getAttribute('aria-pressed')).toBe('true')\n+  })\n+\n+  it('전부 다시 켜면 좁히지 않은 것과 같아진다', async () => {\n+    const user = userEvent.setup()\n+    render(<Harness spaceSummary={inventedSpace} />)\n+\n+    const target = () => screen.getByRole('button', { name: /^2/ })\n+    await user.click(target())\n+    expect(target().getAttribute('aria-pressed')).toBe('false')\n+\n+    await user.click(target())\n+    expect(target().getAttribute('aria-pressed')).toBe('true')\n+    expect(screen.getByText('4/4개 선택 · 등록 허용 범위 1~9 · 간격 1')).toBeTruthy()\n+  })\n+\n+  it('기본 시작값을 표시하되 추천·최적이라고 쓰지 않는다', () => {\n+    const { container } = render(\n+      <SpaceEditor spaceSummary={inventedSpace} value={{}} onChange={vi.fn()} />,\n+    )\n+    const text = container.textContent ?? ''\n+\n+    expect(text).toContain('기본 시작값')\n+    for (const banned of ['추천', '최적', '1위', '우승']) {\n+      expect(text).not.toContain(banned)\n+    }\n+  })\n+\n+  it('007 화면 코드에 등록표의 전략 ID·전략명이 없다', () => {\n+    const violations: string[] = []\n+\n+    for (const source of productionSources) {\n+      const content = readFileSync(source, 'utf-8')\n+      for (const word of registryWords) {\n+        if (content.includes(word)) violations.push(`${source} → ${word}`)\n+      }\n+    }\n+\n+    expect(violations).toEqual([])\n+  })\n+\n+  it('007 화면 코드에 strategyId 분기가 없다', () => {\n+    const violations: string[] = []\n+\n+    for (const source of productionSources) {\n+      const content = readFileSync(source, 'utf-8')\n+      for (const pattern of branchingPatterns) {\n+        const matched = pattern.exec(content)\n+        if (matched) violations.push(`${source} → ${matched[0]}`)\n+      }\n+    }\n+\n+    expect(violations).toEqual([])\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/SpaceEditor.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/SpaceEditor.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,158 @@\n+import type {\n+  AxisValue,\n+  SearchSpaceSelection,\n+  SpaceAxis,\n+  StrategySpaceSummary,\n+} from '@/types/paramSearch'\n+import { formatCount } from '@/utils/paramSearchLabels'\n+import styles from './SpaceEditor.module.css'\n+\n+interface SpaceEditorProps {\n+  spaceSummary: StrategySpaceSummary[]\n+  /** 지금 좁혀 둔 범위. 비어 있으면 등록표 전체 범위다. */\n+  value: SearchSpaceSelection\n+  onChange: (next: SearchSpaceSelection) => void\n+}\n+\n+/** 이 축에서 지금 고른 값들. 고른 적이 없으면 등록된 후보값 전부다. */\n+function selectedValues(\n+  value: SearchSpaceSelection,\n+  strategyId: string,\n+  axis: SpaceAxis,\n+): AxisValue[] {\n+  const picked = value[strategyId]?.[axis.axis]\n+  return picked ?? axis.values\n+}\n+\n+/** 허용 범위를 사람이 읽는 한 줄로. 값이 없는 항목은 적지 않는다. */\n+function describeRange(axis: SpaceAxis): string | null {\n+  const range = axis.allowedRange\n+  if (!range) return null\n+\n+  const parts: string[] = []\n+  if (range.min !== null && range.max !== null) parts.push(`${range.min}~${range.max}`)\n+  else if (range.min !== null) parts.push(`${range.min} 이상`)\n+  else if (range.max !== null) parts.push(`${range.max} 이하`)\n+  if (range.step !== null) parts.push(`간격 ${range.step}`)\n+\n+  return parts.length === 0 ? null : parts.join(' · ')\n+}\n+\n+/**\n+ * 탐색 범위 상세 변경(FR-004·FR-025·FR-027).\n+ *\n+ * <p><b>화면이 아는 것은 모양뿐이고 값은 전부 `spaceSummary`에서 읽는다.</b> 전략 이름·축 라벨·단위·\n+ * 기본 시작값·후보값·허용 범위 어느 것도 이 파일에 없다. 그래서 등록표에 전략이나 축이 늘어도 이\n+ * 컴포넌트를 고치지 않는다. 같은 이유로 <b>수수료·세금·평가 기간이 탐색 변수로 나타나지 않는다</b> —\n+ * 등록표가 축으로 주지 않는 한 여기에 나올 길이 없다(FR-027).\n+ *\n+ * <p><b>범위 밖 값은 입력할 수 없다.</b> 자유 입력을 두지 않고 등록된 후보값만 켜고 끈다 —\n+ * `allowedRange`는 표시용이며 입력 허용 범위가 아니다(그 안이라도 등록되지 않은 값은 400이다).\n+ *\n+ * <p>기본 시작값에 '추천'·'최적' 문구를 붙이지 않는다. 그것은 등록된 출발점이지 좋은 값이 아니다(원칙 III).\n+ */\n+export function SpaceEditor({ spaceSummary, value, onChange }: SpaceEditorProps) {\n+  // 한 축이라도 좁혔으면 전략의 축을 전부 실어 보낸다 — 일부만 보내면 나머지 축의 뜻이 모호해진다.\n+  const emit = (strategyId: string, axisName: string, nextValues: AxisValue[]) => {\n+    const space = spaceSummary.find((item) => item.strategyId === strategyId)\n+    if (!space) return\n+\n+    const next: SearchSpaceSelection = { ...value }\n+    const axes: Record<string, AxisValue[]> = {}\n+    let narrowed = false\n+\n+    for (const axis of space.axes) {\n+      const picked =\n+        axis.axis === axisName ? nextValues : selectedValues(value, strategyId, axis)\n+      axes[axis.axis] = picked\n+      if (picked.length !== axis.values.length) narrowed = true\n+    }\n+\n+    // 아무것도 좁히지 않았으면 항목을 지운다. 전부 고른 것과 보내지 않는 것은 같은 뜻이다.\n+    if (narrowed) next[strategyId] = axes\n+    else delete next[strategyId]\n+\n+    onChange(next)\n+  }\n+\n+  const toggle = (strategyId: string, axis: SpaceAxis, candidate: AxisValue) => {\n+    const current = selectedValues(value, strategyId, axis)\n+    const isOn = current.includes(candidate)\n+\n+    // 마지막 하나는 끄지 못한다. 축이 비면 그 전략은 돌릴 조합이 없다.\n+    if (isOn && current.length === 1) return\n+\n+    const next = isOn\n+      ? current.filter((item) => item !== candidate)\n+      : axis.values.filter((item) => item === candidate || current.includes(item))\n+\n+    emit(strategyId, axis.axis, next)\n+  }\n+\n+  if (spaceSummary.length === 0) {\n+    return <p className={styles.empty}>변경할 탐색 범위가 없습니다.</p>\n+  }\n+\n+  return (\n+    <div className={styles.editor}>\n+      <p className={styles.guide}>\n+        등록표에 있는 후보값만 켜고 끌 수 있습니다. 끈 값은 이번 탐색에서 제외됩니다.\n+      </p>\n+\n+      {spaceSummary.map((space) => (\n+        <section key={space.strategyId} className={styles.strategy}>\n+          <header className={styles.strategyHeader}>\n+            <h3>{space.strategyName}</h3>\n+            <span>등록 조합 {formatCount(space.combinations)}개</span>\n+          </header>\n+\n+          {space.axes.length === 0 ? (\n+            <p className={styles.noAxis}>탐색 축이 없는 전략입니다. 조합은 1개입니다.</p>\n+          ) : (\n+            space.axes.map((axis) => {\n+              const current = selectedValues(value, space.strategyId, axis)\n+              const range = describeRange(axis)\n+\n+              return (\n+                <fieldset key={axis.axis} className={styles.axis}>\n+                  <legend className={styles.axisLegend}>\n+                    {axis.label}\n+                    {axis.unit ? <span className={styles.unit}>{axis.unit}</span> : null}\n+                  </legend>\n+\n+                  <div className={styles.values}>\n+                    {axis.values.map((candidate) => {\n+                      const isOn = current.includes(candidate)\n+                      const isDefault = axis.defaultValue === candidate\n+\n+                      return (\n+                        <button\n+                          key={String(candidate)}\n+                          type=\"button\"\n+                          className={styles.value}\n+                          data-on={isOn}\n+                          aria-pressed={isOn}\n+                          onClick={() => toggle(space.strategyId, axis, candidate)}\n+                        >\n+                          {String(candidate)}\n+                          {isDefault ? (\n+                            <span className={styles.defaultMark}>기본 시작값</span>\n+                          ) : null}\n+                        </button>\n+                      )\n+                    })}\n+                  </div>\n+\n+                  <p className={styles.axisMeta}>\n+                    {`${formatCount(current.length)}/${formatCount(axis.values.length)}개 선택`}\n+                    {range ? ` · 등록 허용 범위 ${range}` : null}\n+                  </p>\n+                </fieldset>\n+              )\n+            })\n+          )}\n+        </section>\n+      ))}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/SpaceEditor.tsx",
+          "old_path": "frontend/src/components/paramsearch/SpaceEditor.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,104 @@\n+import { useCallback, useEffect, useState } from 'react'\n+import { ParamSearchError, getParamSearch } from '@/api/paramSearch'\n+import type { ParamSearchDetail, ParamSearchStatus } from '@/types/paramSearch'\n+\n+/** 더 폴링하지 않아도 되는 상태. 재시도로 다시 열리면 `refetch`가 폴링을 되살린다. */\n+const finishedStatuses: ParamSearchStatus[] = ['COMPLETED', 'PARTIAL', 'FAILED', 'REJECTED']\n+\n+const defaultIntervalMs = 3_000\n+\n+export type ParamSearchStatusState = {\n+  detail: ParamSearchDetail | null\n+  error: string | null\n+  isLoading: boolean\n+  /** 지금 폴링 중인가. 끝난 묶음이면 `false`다. */\n+  isPolling: boolean\n+  refetch: () => void\n+}\n+\n+/**\n+ * 묶음 상태 폴링(`GET /param-searches/{searchId}`).\n+ *\n+ * <p>접수는 202로 끝나고 진행은 이 조회로만 보인다. <b>실패해도 200</b>이므로 `status`로 판단하고,\n+ * 끝난 상태에 닿으면 폴링을 멈춘다 — 끝난 묶음을 계속 두드릴 이유가 없다.\n+ *\n+ * <p>타이머는 겹치지 않도록 응답을 받은 뒤에 다음 것을 건다. 화면을 떠나면 해제하고, 떠난 뒤 도착한\n+ * 응답은 버린다 — 늦은 응답이 다음 묶음의 상태를 덮어쓰면 화면이 남의 진행을 보이게 된다.\n+ *\n+ * <p>조회 실패는 폴링을 끊지 않는다. 다만 <b>없는 묶음(404)은 다시 물어도 생기지 않으므로</b> 멈춘다.\n+ */\n+export function useParamSearchStatus(\n+  searchId: string | null,\n+  options: { intervalMs?: number } = {},\n+): ParamSearchStatusState {\n+  const intervalMs = options.intervalMs ?? defaultIntervalMs\n+  const [detail, setDetail] = useState<ParamSearchDetail | null>(null)\n+  const [error, setError] = useState<string | null>(null)\n+  const [isLoading, setIsLoading] = useState(false)\n+  const [isPolling, setIsPolling] = useState(false)\n+  const [reloadToken, setReloadToken] = useState(0)\n+\n+  const refetch = useCallback(() => {\n+    setReloadToken((current) => current + 1)\n+  }, [])\n+\n+  useEffect(() => {\n+    if (!searchId) {\n+      setDetail(null)\n+      setError(null)\n+      setIsLoading(false)\n+      setIsPolling(false)\n+      return\n+    }\n+\n+    let active = true\n+    let timer = 0\n+\n+    const stop = () => {\n+      if (active) setIsPolling(false)\n+    }\n+\n+    const tick = async () => {\n+      try {\n+        const next = await getParamSearch(searchId)\n+        if (!active) return\n+\n+        setDetail(next)\n+        setError(null)\n+        setIsLoading(false)\n+\n+        if (finishedStatuses.includes(next.status)) {\n+          stop()\n+          return\n+        }\n+      } catch (caught) {\n+        if (!active) return\n+\n+        const failure =\n+          caught instanceof ParamSearchError\n+            ? caught\n+            : new ParamSearchError('진행 상태를 불러오지 못했습니다.')\n+        setError(failure.message)\n+        setIsLoading(false)\n+\n+        if (failure.status === 404) {\n+          stop()\n+          return\n+        }\n+      }\n+\n+      if (active) timer = window.setTimeout(tick, intervalMs)\n+    }\n+\n+    setIsLoading(true)\n+    setIsPolling(true)\n+    void tick()\n+\n+    return () => {\n+      active = false\n+      window.clearTimeout(timer)\n+    }\n+  }, [searchId, intervalMs, reloadToken])\n+\n+  return { detail, error, isLoading, isPolling, refetch }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useParamSearchStatus.ts",
+          "old_path": "frontend/src/hooks/useParamSearchStatus.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -401,3 +401,27 @@\n     transition: none;\n   }\n }\n+\n+/* 설정 조합 자동 비교로 넘어가는 보조 진입점. 이 화면의 주요 행동은 백테스트 실행 하나다. */\n+.autoSearchLink {\n+  display: inline-flex;\n+  align-items: center;\n+  justify-content: center;\n+  gap: 7px;\n+  min-height: 38px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.76rem;\n+  font-weight: 700;\n+  text-decoration: none;\n+}\n+\n+.autoSearchLink:hover {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.autoSearchLink:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.module.css",
+          "old_path": "frontend/src/pages/BacktestPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import {\n+  ArrowRight,\n   ChartNoAxesCombined,\n   CircleDollarSign,\n   Play,\n@@ -7,6 +8,7 @@ import {\n } from 'lucide-react'\n import { AnimatePresence, motion } from 'motion/react'\n import { useEffect, useMemo, useState } from 'react'\n+import { Link } from 'react-router-dom'\n import { BacktestChart } from '@/components/backtest/BacktestChart'\n import { ResultTable } from '@/components/backtest/ResultTable'\n import { StrategySelector } from '@/components/backtest/StrategySelector'\n@@ -268,6 +270,17 @@ export function BacktestPage() {\n             <p className={styles.configNote}>\n               현재 화면의 결과는 UI 검증을 위한 고정 예시 데이터입니다.\n             </p>\n+\n+            {/*\n+              설정 조합 자동 비교(spec 007)로 넘어가는 진입점이다. 대상 섹터·전략은 질의 문자열로\n+              넘기는데, 이 화면의 전략은 아직 예시 데이터라 등록표의 전략 ID가 아니다 — 그래서\n+              지금은 대상 없이 열리고 그 화면이 들어온 경로를 안내한다. 전략 화면이 등록표를\n+              읽게 되면 여기서 고른 값을 그대로 붙인다.\n+            */}\n+            <Link to=\"/param-search\" className={styles.autoSearchLink}>\n+              설정 조합 자동 비교\n+              <ArrowRight size={14} aria-hidden=\"true\" />\n+            </Link>\n           </aside>\n         </div>\n       </div>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.tsx",
+          "old_path": "frontend/src/pages/BacktestPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,275 @@\n+.page {\n+  min-height: 100svh;\n+  overflow-x: clip;\n+  background:\n+    linear-gradient(var(--thorp-line) 1px, transparent 1px),\n+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),\n+    radial-gradient(circle at 50% 24%, rgb(3 199 90 / 8%), transparent 36%),\n+    var(--thorp-background);\n+  background-size: 72px 72px, 72px 72px, auto, auto;\n+  color: var(--thorp-foreground);\n+}\n+\n+.main {\n+  display: grid;\n+  gap: 20px;\n+  width: min(100% - 40px, 960px);\n+  margin: 0 auto;\n+  padding: clamp(84px, 13vh, 130px) 0 80px;\n+}\n+\n+.eyebrow {\n+  display: flex;\n+  align-items: center;\n+  gap: 9px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.72rem;\n+  font-weight: 750;\n+  letter-spacing: 0.14em;\n+}\n+\n+.main h1 {\n+  max-width: 720px;\n+  margin: 0;\n+  font-size: clamp(1.5rem, 3.4vw, 2.2rem);\n+  letter-spacing: -0.04em;\n+  line-height: 1.2;\n+}\n+\n+.lead {\n+  max-width: 640px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.84rem;\n+  line-height: 1.75;\n+}\n+\n+.guide {\n+  display: grid;\n+  gap: 11px;\n+  padding: 20px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 6px;\n+  background: var(--thorp-surface);\n+}\n+\n+.guide h2 {\n+  margin: 0;\n+  font-size: 0.94rem;\n+  font-weight: 700;\n+}\n+\n+.guide p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  line-height: 1.65;\n+}\n+\n+.guideNote {\n+  color: var(--thorp-muted);\n+}\n+\n+.guideNote code {\n+  overflow-wrap: anywhere;\n+  color: var(--thorp-accent-soft);\n+  font-family: var(--thorp-font-mono);\n+  font-size: 0.72rem;\n+}\n+\n+.guideLink {\n+  display: inline-flex;\n+  min-height: 40px;\n+  width: fit-content;\n+  align-items: center;\n+  gap: 8px;\n+  padding: 0 15px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  color: var(--thorp-foreground);\n+  font-size: 0.78rem;\n+  font-weight: 700;\n+  text-decoration: none;\n+}\n+\n+.guideLink:hover {\n+  border-color: var(--thorp-accent-soft);\n+}\n+\n+.guideLink:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+.target {\n+  display: grid;\n+  grid-template-columns: repeat(2, minmax(0, 1fr));\n+  gap: 14px;\n+  padding: 13px 0;\n+  border-top: 1px solid var(--thorp-line);\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.target div {\n+  display: grid;\n+  min-width: 0;\n+  gap: 4px;\n+}\n+\n+.target span {\n+  color: var(--thorp-muted);\n+  font-size: 0.68rem;\n+}\n+\n+.target strong {\n+  overflow-wrap: anywhere;\n+  font-size: 0.8rem;\n+  font-weight: 650;\n+}\n+\n+.details {\n+  display: grid;\n+  gap: 12px;\n+  padding-top: 16px;\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.textButton {\n+  width: fit-content;\n+  padding: 4px 0;\n+  border: 0;\n+  background: transparent;\n+  color: var(--thorp-accent-soft);\n+  cursor: pointer;\n+  font-size: 0.76rem;\n+  font-weight: 700;\n+}\n+\n+.textButton:hover {\n+  text-decoration: underline;\n+}\n+\n+.textButton:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.progress {\n+  display: grid;\n+  gap: 12px;\n+  padding-top: 20px;\n+  border-top: 1px solid var(--thorp-line-strong);\n+}\n+\n+.progress header {\n+  display: flex;\n+  align-items: baseline;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.progress h2 {\n+  margin: 0;\n+  font-size: 1.02rem;\n+  font-weight: 700;\n+}\n+\n+.searchId {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-family: var(--thorp-font-mono);\n+  font-size: 0.74rem;\n+}\n+\n+.statusLine {\n+  display: flex;\n+  align-items: center;\n+  gap: 10px;\n+  flex-wrap: wrap;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.8rem;\n+}\n+\n+.statusLine strong {\n+  color: var(--thorp-foreground);\n+  font-size: 1.02rem;\n+  font-weight: 750;\n+}\n+\n+.validation {\n+  padding: 2px 7px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 3px;\n+  color: var(--thorp-warning);\n+  font-size: 0.64rem;\n+  font-weight: 700;\n+}\n+\n+.counts {\n+  display: grid;\n+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));\n+  gap: 1px;\n+  margin: 0;\n+  background: var(--thorp-line);\n+}\n+\n+.counts div {\n+  display: grid;\n+  gap: 4px;\n+  padding: 11px 12px;\n+  background: var(--thorp-background);\n+}\n+\n+.counts dt {\n+  color: var(--thorp-muted);\n+  font-size: 0.68rem;\n+}\n+\n+.counts dd {\n+  margin: 0;\n+  font-size: 1.02rem;\n+  font-variant-numeric: tabular-nums;\n+  font-weight: 700;\n+}\n+\n+.selection {\n+  display: grid;\n+  gap: 6px;\n+  padding: 12px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  background: var(--thorp-surface);\n+  font-size: 0.78rem;\n+}\n+\n+.selection p {\n+  margin: 0;\n+}\n+\n+.note {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.74rem;\n+  line-height: 1.6;\n+}\n+\n+.error {\n+  margin: 0;\n+  padding: 10px 12px;\n+  border: 1px solid var(--thorp-negative);\n+  border-radius: 5px;\n+  color: var(--thorp-negative);\n+  font-size: 0.76rem;\n+  line-height: 1.6;\n+}\n+\n+@media (max-width: 720px) {\n+  .main {\n+    width: min(100% - 28px, 960px);\n+  }\n+\n+  .target {\n+    grid-template-columns: minmax(0, 1fr);\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.module.css",
+          "old_path": "frontend/src/pages/ParamSearchPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,163 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { AuthProvider } from '@/auth/AuthProvider'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import { acceptedFixture, previewFixture } from '@/test/paramSearchFixtures'\n+import type { AxisValue, ParamSearchRequest } from '@/types/paramSearch'\n+import { ParamSearchPage } from './ParamSearchPage'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  previewParamSearch: vi.fn(),\n+  createParamSearch: vi.fn(),\n+  getParamSearch: vi.fn(),\n+}))\n+\n+const authMocks = vi.hoisted(() => ({\n+  getCurrentUser: vi.fn(),\n+}))\n+\n+vi.mock('@/api/paramSearch', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/paramSearch')>('@/api/paramSearch')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+vi.mock('@/api/auth', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')\n+  return { ...actual, ...authMocks }\n+})\n+\n+/**\n+ * 서버를 흉내 낸다. **미리보기는 보낸 `space`만 되돌려 준다** — 이것이 이 파일이 지키는 사실이다.\n+ * 실제 백엔드도 좁혀 보내면 `spaceSummary.axes[].values`에 좁힌 값만 싣는다.\n+ */\n+function respondLikeServer(request: ParamSearchRequest) {\n+  const picked = request.space?.ALPHA_TILT?.tiltWindow\n+  if (!picked) return Promise.resolve(previewFixture)\n+\n+  const [tiltAxis, modeAxis] = previewFixture.spaceSummary[0].axes\n+  const combinations = picked.length * modeAxis.values.length\n+  return Promise.resolve({\n+    ...previewFixture,\n+    spaceSummary: [\n+      {\n+        ...previewFixture.spaceSummary[0],\n+        axes: [{ ...tiltAxis, values: picked as AxisValue[] }, modeAxis],\n+        combinations,\n+      },\n+      previewFixture.spaceSummary[1],\n+    ],\n+    workload: {\n+      ...previewFixture.workload,\n+      totalCombinations: combinations + 1,\n+      validCombinations: combinations + 1,\n+      excludedCombinations: 0,\n+      exclusionReasons: [],\n+    },\n+  })\n+}\n+\n+function renderPage(search = '?instruments=TEST.XKRX&strategies=ALPHA_TILT') {\n+  return render(\n+    <MemoryRouter initialEntries={[`/param-search${search}`]}>\n+      <AuthProvider>\n+        <ParamSearchPage />\n+      </AuthProvider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('ParamSearchPage', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+    authMocks.getCurrentUser.mockResolvedValue(authenticatedUser)\n+    apiMocks.getParamSearch.mockResolvedValue({ ...acceptedFixture, status: 'COMPLETED' })\n+    apiMocks.previewParamSearch.mockImplementation(respondLikeServer)\n+    apiMocks.createParamSearch.mockResolvedValue(acceptedFixture)\n+  })\n+\n+  it('대상이 없으면 실행 대신 들어온 경로를 안내한다', async () => {\n+    renderPage('')\n+\n+    expect(await screen.findByText('탐색 대상이 없습니다')).toBeTruthy()\n+    expect(screen.queryByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeNull()\n+    expect(apiMocks.previewParamSearch).not.toHaveBeenCalled()\n+  })\n+\n+  it('값을 껐다가 다시 켤 수 있다 — 좁힌 응답이 등록 범위를 덮지 않는다', async () => {\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ })\n+    await user.click(screen.getByRole('button', { name: '탐색 범위 상세 변경' }))\n+\n+    const twenty = () => screen.getByRole('button', { name: /^20/ })\n+    await user.click(twenty())\n+\n+    // 좁힌 응답이 돌아온 뒤에도 끈 값의 자리가 남아 있어야 다시 켤 수 있다.\n+    await waitFor(() => expect(apiMocks.previewParamSearch).toHaveBeenCalledTimes(2))\n+    await waitFor(() => expect(twenty().getAttribute('aria-pressed')).toBe('false'))\n+    expect(screen.getByRole('button', { name: /^5/ }).getAttribute('aria-pressed')).toBe('true')\n+\n+    await user.click(twenty())\n+\n+    await waitFor(() => expect(twenty().getAttribute('aria-pressed')).toBe('true'))\n+  })\n+\n+  it('좁힌 범위가 예상 작업량에 반영된다', async () => {\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ })\n+    await user.click(screen.getByRole('button', { name: '탐색 범위 상세 변경' }))\n+    await user.click(screen.getByRole('button', { name: /^20/ }))\n+\n+    // 축 후보값 3개 → 2개면 조합은 4개, 축 없는 전략 1개를 더해 5개다.\n+    await waitFor(() => expect(apiMocks.previewParamSearch).toHaveBeenCalledTimes(2))\n+    await waitFor(() => {\n+      expect(screen.getByText('5개')).toBeTruthy()\n+    })\n+  })\n+\n+  it('좁힌 범위를 그대로 실어 접수한다', async () => {\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    const run = await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ })\n+    await user.click(screen.getByRole('button', { name: '탐색 범위 상세 변경' }))\n+    await user.click(screen.getByRole('button', { name: /^20/ }))\n+    await waitFor(() => expect(apiMocks.previewParamSearch).toHaveBeenCalledTimes(2))\n+\n+    await waitFor(() => expect((run as HTMLButtonElement).disabled).toBe(false))\n+    await user.click(run)\n+\n+    await waitFor(() => expect(apiMocks.createParamSearch).toHaveBeenCalledTimes(1))\n+    const [body, requesterId] = apiMocks.createParamSearch.mock.calls[0]\n+    expect(body.space.ALPHA_TILT.tiltWindow).toEqual([5, 10])\n+    expect(body.registryVersion).toBe(previewFixture.registryVersion)\n+    // 요청자 헤더는 접수에만 붙는다. 인증이 아니라 spec 014 전의 임시 통로다.\n+    expect(requesterId).toBe(authenticatedUser.userId)\n+  })\n+\n+  it('접수하면 searchId 를 주소에 남기고 진행 상태를 폴링한다', async () => {\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    await user.click(await screen.findByRole('button', { name: /설정 조합 자동 비교 실행/ }))\n+\n+    expect(await screen.findByText(acceptedFixture.searchId)).toBeTruthy()\n+    await waitFor(() => expect(apiMocks.getParamSearch).toHaveBeenCalledWith(acceptedFixture.searchId))\n+  })\n+\n+  it('로그인 전에는 실행을 막고 이유를 적는다', async () => {\n+    authMocks.getCurrentUser.mockRejectedValue(new Error('anonymous'))\n+    renderPage()\n+\n+    const run = (await screen.findByRole('button', {\n+      name: /설정 조합 자동 비교 실행/,\n+    })) as HTMLButtonElement\n+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('로그인'))\n+    expect(run.disabled).toBe(true)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/ParamSearchPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,436 @@\n+import { ArrowLeft, SlidersHorizontal } from 'lucide-react'\n+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'\n+import { Link, useSearchParams } from 'react-router-dom'\n+import { createParamSearch, normalizeParamSearchError, previewParamSearch } from '@/api/paramSearch'\n+import { useAuth } from '@/auth/auth-context'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { PreflightPanel } from '@/components/paramsearch/PreflightPanel'\n+import { RegistryChangedDialog } from '@/components/paramsearch/RegistryChangedDialog'\n+import { SpaceEditor } from '@/components/paramsearch/SpaceEditor'\n+import { useParamSearchStatus } from '@/hooks/useParamSearchStatus'\n+import type {\n+  ParamSearchPreview,\n+  ParamSearchRequest,\n+  SearchSpaceSelection,\n+  StrategySpaceSummary,\n+} from '@/types/paramSearch'\n+import { formatCount, validationLabelText } from '@/utils/paramSearchLabels'\n+import styles from './ParamSearchPage.module.css'\n+\n+/** 쉼표로 이어 붙인 질의 문자열을 목록으로. 빈 값과 중복은 버린다. */\n+function parseList(raw: string | null): string[] {\n+  if (!raw) return []\n+  return [...new Set(raw.split(',').map((item) => item.trim()).filter(Boolean))]\n+}\n+\n+/** 진행 상태 문구. 상태 이름을 그대로 보이면 사용자가 읽을 수 없다. */\n+const statusText: Record<string, string> = {\n+  QUEUED: '대기 중',\n+  RUNNING: '실행 중',\n+  COMPLETED: '완료',\n+  PARTIAL: '부분 완료',\n+  FAILED: '실패',\n+  REJECTED: '거부됨',\n+}\n+\n+/**\n+ * 설정 조합 자동 비교 화면(US1).\n+ *\n+ * <p><b>탐색 대상은 이 화면이 정하지 않는다.</b> 섹터와 전략은 전략 화면에서 고른 것을 질의 문자열로\n+ * 받아 온다 — 화면에 전략 목록을 두면 전략이 늘 때마다 이 파일을 고쳐야 하고, 그것이 FR-025가\n+ * 막으려는 것이다. 대상이 없으면 실행 대신 들어온 경로를 안내한다.\n+ *\n+ * <p>대상을 질의 문자열에 둔 덕에 새로고침·링크 공유가 그대로 되고, 접수한 뒤에는 `searchId`도 같은\n+ * 자리에 둬서 새로고침해도 진행을 계속 본다.\n+ */\n+export function ParamSearchPage() {\n+  const [params, setParams] = useSearchParams()\n+  const { user } = useAuth()\n+\n+  const strategyIds = useMemo(() => parseList(params.get('strategies')), [params])\n+  const instrumentIds = useMemo(() => parseList(params.get('instruments')), [params])\n+  const searchId = params.get('searchId')\n+  const hasTarget = strategyIds.length > 0 && instrumentIds.length > 0\n+\n+  const [space, setSpace] = useState<SearchSpaceSelection>({})\n+  /**\n+   * 좁히기 전의 등록 범위. **좁힌 뒤의 응답을 그대로 쓰면 안 된다** — 미리보기는 보낸 `space`만\n+   * 되돌려 주므로, 끈 값이 다음 응답에서 사라져 다시 켤 수 없게 된다.\n+   */\n+  const [baseSpace, setBaseSpace] = useState<\n+    { registryVersion: string; summary: StrategySpaceSummary[] } | null\n+  >(null)\n+  const [preview, setPreview] = useState<ParamSearchPreview | null>(null)\n+  const [previewError, setPreviewError] = useState<string | null>(null)\n+  const [previewLoading, setPreviewLoading] = useState(false)\n+  const [previewToken, setPreviewToken] = useState(0)\n+  const [showSpaceEditor, setShowSpaceEditor] = useState(false)\n+\n+  const [creating, setCreating] = useState(false)\n+  const [runError, setRunError] = useState<string | null>(null)\n+\n+  // 409를 받은 순간의 미리보기와, 그것을 대신할 새 미리보기. 확인 전에는 다시 보내지 않는다.\n+  const [conflictBase, setConflictBase] = useState<ParamSearchPreview | null>(null)\n+  const [conflictNext, setConflictNext] = useState<ParamSearchPreview | null>(null)\n+  const [conflictLoading, setConflictLoading] = useState(false)\n+  const [conflictError, setConflictError] = useState<string | null>(null)\n+\n+  const status = useParamSearchStatus(searchId)\n+  const requestSeq = useRef(0)\n+  const targetKey = `${instrumentIds.join(',')}|${strategyIds.join(',')}`\n+\n+  // 대상이 바뀌면 좁힌 범위는 뜻을 잃는다 — 다른 전략의 축을 그대로 들고 갈 수 없다.\n+  useEffect(() => {\n+    setSpace({})\n+    setBaseSpace(null)\n+  }, [targetKey])\n+\n+  // 효과가 baseSpace 에 의존하면 갱신할 때마다 다시 조회한다. 버전만 ref 로 들고 본다.\n+  const baseSpaceVersion = useRef<string | null>(null)\n+  useEffect(() => {\n+    baseSpaceVersion.current = baseSpace?.registryVersion ?? null\n+  }, [baseSpace])\n+\n+  const buildRequest = useCallback((): ParamSearchRequest => {\n+    const request: ParamSearchRequest = {\n+      universe: { instrumentIds },\n+      strategy: { strategyIds },\n+    }\n+    if (Object.keys(space).length > 0) request.space = space\n+    return request\n+  }, [instrumentIds, strategyIds, space])\n+\n+  // 대상이나 범위가 바뀌면 확인 내용을 다시 받는다. 늦게 온 응답이 최신 것을 덮지 않도록 순번으로 막는다.\n+  useEffect(() => {\n+    if (!hasTarget) {\n+      setPreview(null)\n+      setPreviewError(null)\n+      return\n+    }\n+\n+    const seq = ++requestSeq.current\n+    const narrowed = Object.keys(space).length > 0\n+    let active = true\n+    setPreviewLoading(true)\n+\n+    const timer = window.setTimeout(() => {\n+      previewParamSearch(buildRequest())\n+        .then((next) => {\n+          if (!active || seq !== requestSeq.current) return\n+          setPreview(next)\n+          setPreviewError(null)\n+\n+          if (!narrowed) {\n+            // 좁히지 않고 물었으니 이 응답이 등록 범위 자체다.\n+            setBaseSpace({ registryVersion: next.registryVersion, summary: next.spaceSummary })\n+            return\n+          }\n+          if (baseSpaceVersion.current !== null && baseSpaceVersion.current !== next.registryVersion) {\n+            // 등록표가 바뀌면 좁혀 둔 값이 아직 등록된 값인지 알 수 없다. 범위를 놓고 다시 받는다.\n+            setSpace({})\n+            setBaseSpace(null)\n+          }\n+        })\n+        .catch((caught: unknown) => {\n+          if (!active || seq !== requestSeq.current) return\n+          // 실패하면 이전 확인 내용을 지운다 — 캐시된 요약으로 실행하지 않는다(FR-028).\n+          setPreview(null)\n+          setPreviewError(normalizeParamSearchError(caught).message)\n+        })\n+        .finally(() => {\n+          if (active && seq === requestSeq.current) setPreviewLoading(false)\n+        })\n+    }, 200)\n+\n+    return () => {\n+      active = false\n+      window.clearTimeout(timer)\n+    }\n+  }, [hasTarget, buildRequest, previewToken, space])\n+\n+  const startSearch = useCallback(\n+    async (source: ParamSearchPreview) => {\n+      setCreating(true)\n+      setRunError(null)\n+\n+      try {\n+        const detail = await createParamSearch(\n+          { ...buildRequest(), registryVersion: source.registryVersion },\n+          user?.userId,\n+        )\n+        setParams(\n+          (current) => {\n+            const next = new URLSearchParams(current)\n+            next.set('searchId', detail.searchId)\n+            return next\n+          },\n+          { replace: false },\n+        )\n+      } catch (caught) {\n+        const failure = normalizeParamSearchError(caught)\n+\n+        // 등록표가 바뀌었으면 다시 확인받기 전에는 보내지 않는다(FR-028).\n+        if (failure.is('REGISTRY_VERSION_CHANGED')) {\n+          setConflictBase(source)\n+          setConflictNext(null)\n+          setConflictError(null)\n+          setPreviewToken((token) => token + 1)\n+          return\n+        }\n+\n+        setRunError(failure.message)\n+      } finally {\n+        setCreating(false)\n+      }\n+    },\n+    [buildRequest, setParams, user?.userId],\n+  )\n+\n+  // 409 대화상자가 열려 있는 동안 바뀐 내용을 가져온다. 실패하면 실행 버튼을 열지 않는다.\n+  const loadConflictPreview = useCallback(() => {\n+    setConflictLoading(true)\n+    setConflictError(null)\n+\n+    previewParamSearch(buildRequest())\n+      .then((next) => {\n+        setConflictNext(next)\n+        setPreview(next)\n+      })\n+      .catch((caught: unknown) => {\n+        setConflictError(normalizeParamSearchError(caught).message)\n+      })\n+      .finally(() => setConflictLoading(false))\n+  }, [buildRequest])\n+\n+  useEffect(() => {\n+    if (conflictBase && !conflictNext && !conflictLoading && !conflictError) {\n+      loadConflictPreview()\n+    }\n+  }, [conflictBase, conflictNext, conflictLoading, conflictError, loadConflictPreview])\n+\n+  const closeConflict = () => {\n+    setConflictBase(null)\n+    setConflictNext(null)\n+    setConflictError(null)\n+  }\n+\n+  const confirmConflict = () => {\n+    if (!conflictNext) return\n+    const confirmed = conflictNext\n+    closeConflict()\n+    void startSearch(confirmed)\n+  }\n+\n+  const startNewSearch = () => {\n+    setParams(\n+      (current) => {\n+        const next = new URLSearchParams(current)\n+        next.delete('searchId')\n+        return next\n+      },\n+      { replace: false },\n+    )\n+    setRunError(null)\n+  }\n+\n+  const detail = status.detail\n+  const selection = detail?.selection ?? null\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+\n+      <main className={styles.main} aria-labelledby=\"param-search-title\">\n+        <div className={styles.eyebrow}>\n+          <SlidersHorizontal size={16} aria-hidden=\"true\" />\n+          설정 조합 자동 비교\n+        </div>\n+        <h1 id=\"param-search-title\">한 번에 여러 설정을 같은 조건으로 비교합니다</h1>\n+        <p className={styles.lead}>\n+          고른 섹터와 전략에 등록된 설정 조합을 모두 돌려 같은 기준으로 견줍니다. 몇 개를 돌릴지는\n+          등록표와 한도가 정하므로 숫자를 입력할 필요가 없습니다.\n+        </p>\n+\n+        {!hasTarget ? (\n+          <section className={styles.guide}>\n+            <h2>탐색 대상이 없습니다</h2>\n+            <p>\n+              비교할 섹터와 전략은 전략 화면에서 고른 것을 그대로 받아 옵니다. 전략 화면에서 '설정\n+              조합 자동 비교'로 들어와 주세요.\n+            </p>\n+            <p className={styles.guideNote}>\n+              주소로 바로 열 때는 <code>?instruments=&#123;종목ID&#125;&amp;strategies=&#123;전략ID&#125;</code>\n+              처럼 대상을 함께 적습니다. 고를 수 있는 값은 등록표가 정하므로 이 화면에 목록을 두지\n+              않습니다.\n+            </p>\n+            <Link to=\"/backtest\" className={styles.guideLink}>\n+              <ArrowLeft size={15} aria-hidden=\"true\" />\n+              전략 화면으로\n+            </Link>\n+          </section>\n+        ) : (\n+          <>\n+            <section className={styles.target} aria-label=\"탐색 대상\">\n+              <div>\n+                <span>대상 섹터</span>\n+                <strong>{instrumentIds.join(', ')}</strong>\n+              </div>\n+              <div>\n+                <span>대상 전략</span>\n+                <strong>\n+                  {preview && preview.strategies.length > 0\n+                    ? preview.strategies.map((item) => item.name).join(', ')\n+                    : `${formatCount(strategyIds.length)}개`}\n+                </strong>\n+              </div>\n+            </section>\n+\n+            {searchId ? (\n+              <section className={styles.progress} aria-labelledby=\"progress-title\">\n+                <header>\n+                  <h2 id=\"progress-title\">진행 상태</h2>\n+                  <button type=\"button\" className={styles.textButton} onClick={startNewSearch}>\n+                    새 탐색 준비\n+                  </button>\n+                </header>\n+\n+                <p className={styles.searchId}>{searchId}</p>\n+\n+                {status.isLoading && !detail && (\n+                  <p className={styles.note} role=\"status\">\n+                    진행 상태를 불러오는 중입니다.\n+                  </p>\n+                )}\n+\n+                {status.error && (\n+                  <p className={styles.error} role=\"alert\">\n+                    {status.error}\n+                  </p>\n+                )}\n+\n+                {detail && (\n+                  <>\n+                    <p className={styles.statusLine} aria-live=\"polite\">\n+                      <strong>{statusText[detail.status] ?? detail.status}</strong>\n+                      {detail.stopReason ? <span> · 멈추는 중</span> : null}\n+                      <span className={styles.validation}>\n+                        {validationLabelText(detail.validationLabel)}\n+                      </span>\n+                    </p>\n+\n+                    {detail.validationNote && (\n+                      <p className={styles.note}>{detail.validationNote}</p>\n+                    )}\n+\n+                    {detail.counts && (\n+                      <dl className={styles.counts}>\n+                        {[\n+                          ['유효 후보', detail.counts.valid],\n+                          ['완료', detail.counts.completed],\n+                          ['실패', detail.counts.failed],\n+                          ['대기', detail.counts.pending],\n+                          ['제외', detail.counts.excluded],\n+                          ['미실행', detail.counts.skipped],\n+                        ].map(([label, value]) => (\n+                          <div key={String(label)}>\n+                            <dt>{label}</dt>\n+                            <dd>{formatCount(Number(value))}</dd>\n+                          </div>\n+                        ))}\n+                      </dl>\n+                    )}\n+\n+                    {detail.partialNote && (\n+                      <p className={styles.note}>{detail.partialNote}</p>\n+                    )}\n+\n+                    {selection && (\n+                      <div className={styles.selection}>\n+                        <p>\n+                          {`기준을 충족한 후보 ${formatCount(selection.displayed.length)}개`}\n+                          {detail.config?.selectionRule\n+                            ? ` · 정렬 지표 ${detail.config.selectionRule.sortMetric}`\n+                            : null}\n+                        </p>\n+                        {selection.note && <p className={styles.note}>{selection.note}</p>}\n+                        {!selection.drawdownFilterApplied && (\n+                          <p className={styles.note}>\n+                            손실 제약을 걸지 않았습니다. 기준 전략이 지정되지 않았거나 기준 실행이\n+                            끝나지 않았습니다.\n+                          </p>\n+                        )}\n+                      </div>\n+                    )}\n+                  </>\n+                )}\n+              </section>\n+            ) : (\n+              <>\n+                {previewLoading && !preview && (\n+                  <p className={styles.note} role=\"status\">\n+                    실행 전 확인 내용을 불러오는 중입니다.\n+                  </p>\n+                )}\n+\n+                {previewError && (\n+                  <p className={styles.error} role=\"alert\">\n+                    {previewError}\n+                  </p>\n+                )}\n+\n+                {preview && (\n+                  <>\n+                    <PreflightPanel\n+                      preview={preview}\n+                      onRun={() => void startSearch(preview)}\n+                      running={creating}\n+                      blockedReason={user ? null : '실행하려면 로그인이 필요합니다.'}\n+                    />\n+\n+                    {runError && (\n+                      <p className={styles.error} role=\"alert\">\n+                        {runError}\n+                      </p>\n+                    )}\n+\n+                    <section className={styles.details}>\n+                      <button\n+                        type=\"button\"\n+                        className={styles.textButton}\n+                        onClick={() => setShowSpaceEditor((open) => !open)}\n+                        aria-expanded={showSpaceEditor}\n+                        aria-controls=\"space-editor\"\n+                      >\n+                        {showSpaceEditor ? '상세 변경 접기' : '탐색 범위 상세 변경'}\n+                      </button>\n+                      <div id=\"space-editor\" hidden={!showSpaceEditor}>\n+                        <SpaceEditor\n+                          spaceSummary={baseSpace?.summary ?? preview.spaceSummary}\n+                          value={space}\n+                          onChange={setSpace}\n+                        />\n+                      </div>\n+                    </section>\n+                  </>\n+                )}\n+              </>\n+            )}\n+          </>\n+        )}\n+      </main>\n+\n+      {conflictBase && (\n+        <RegistryChangedDialog\n+          open\n+          previous={conflictBase}\n+          next={conflictNext}\n+          loadingNext={conflictLoading}\n+          reloadError={conflictError}\n+          onConfirm={confirmConflict}\n+          onCancel={closeConflict}\n+          onReload={loadConflictPreview}\n+        />\n+      )}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "old_path": "frontend/src/pages/ParamSearchPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,167 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { ParamSearchError } from '@/api/paramSearch'\n+import { AuthProvider } from '@/auth/AuthProvider'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import {\n+  acceptedFixture,\n+  changedPreviewFixture,\n+  previewFixture,\n+} from '@/test/paramSearchFixtures'\n+import { ParamSearchPage } from './ParamSearchPage'\n+\n+const apiMocks = vi.hoisted(() => ({\n+  previewParamSearch: vi.fn(),\n+  createParamSearch: vi.fn(),\n+  getParamSearch: vi.fn(),\n+}))\n+\n+const authMocks = vi.hoisted(() => ({\n+  getCurrentUser: vi.fn(),\n+}))\n+\n+vi.mock('@/api/paramSearch', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/paramSearch')>('@/api/paramSearch')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+vi.mock('@/api/auth', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/auth')>('@/api/auth')\n+  return { ...actual, ...authMocks }\n+})\n+\n+const target = '/param-search?instruments=TEST.XKRX&strategies=ALPHA_TILT'\n+\n+function renderPage() {\n+  return render(\n+    <MemoryRouter initialEntries={[target]}>\n+      <AuthProvider>\n+        <ParamSearchPage />\n+      </AuthProvider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+/** 로그인 확인이 끝나 실행이 열릴 때까지 기다린다. */\n+async function readyRunButton() {\n+  const run = (await screen.findByRole('button', {\n+    name: /설정 조합 자동 비교 실행/,\n+  })) as HTMLButtonElement\n+  await waitFor(() => expect(run.disabled).toBe(false))\n+  return run\n+}\n+\n+/**\n+ * 등록표 경계 흐름(T063b, FR-028).\n+ *\n+ * <p>두 가지가 조용히 깨질 수 있다. 하나는 <b>409를 받고 자동으로 다시 보내는 것</b> — 사용자는 자기가\n+ * 확인하지 않은 범위의 결과를 받는다. 다른 하나는 <b>503을 받고 캐시된 요약으로 실행하는 것</b> —\n+ * 등록 정보를 모르는 채 돌린 탐색이 된다. 둘 다 화면에는 아무 티가 나지 않아서 테스트로 고정한다.\n+ */\n+describe('ParamSearchPage 등록표 경계', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+    authMocks.getCurrentUser.mockResolvedValue(authenticatedUser)\n+    apiMocks.getParamSearch.mockResolvedValue({ ...acceptedFixture, status: 'COMPLETED' })\n+  })\n+\n+  it('409를 받으면 확인 전에는 실행을 다시 보내지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.previewParamSearch\n+      .mockResolvedValueOnce(previewFixture)\n+      .mockResolvedValue(changedPreviewFixture)\n+    apiMocks.createParamSearch.mockRejectedValueOnce(\n+      new ParamSearchError('등록표 버전이 달라졌습니다.', {\n+        code: 'REGISTRY_VERSION_CHANGED',\n+        status: 409,\n+      }),\n+    )\n+\n+    renderPage()\n+    await user.click(await readyRunButton())\n+\n+    const dialog = await screen.findByRole('dialog')\n+    expect(dialog.textContent).toContain('등록표가 바뀌었습니다')\n+\n+    // 확인을 받기 전이므로 접수는 한 번뿐이다.\n+    expect(apiMocks.createParamSearch).toHaveBeenCalledTimes(1)\n+\n+    // 무엇이 바뀌었는지 후보값과 조합 수로 보인다.\n+    await waitFor(() => {\n+      expect(dialog.textContent).toContain('5, 10, 20 → 5, 10')\n+    })\n+    expect(dialog.textContent).toContain('조합 6개 → 4개')\n+    expect(dialog.textContent).toContain('TEST-REGISTRY-2')\n+  })\n+\n+  it('확인을 누르면 새 등록표 버전으로 한 번 더 보낸다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.previewParamSearch\n+      .mockResolvedValueOnce(previewFixture)\n+      .mockResolvedValue(changedPreviewFixture)\n+    apiMocks.createParamSearch\n+      .mockRejectedValueOnce(\n+        new ParamSearchError('등록표 버전이 달라졌습니다.', {\n+          code: 'REGISTRY_VERSION_CHANGED',\n+          status: 409,\n+        }),\n+      )\n+      .mockResolvedValue(acceptedFixture)\n+\n+    renderPage()\n+    await user.click(await readyRunButton())\n+    await screen.findByRole('dialog')\n+\n+    const confirm = await screen.findByRole('button', { name: '확인하고 실행' })\n+    await waitFor(() => expect((confirm as HTMLButtonElement).disabled).toBe(false))\n+    await user.click(confirm)\n+\n+    await waitFor(() => expect(apiMocks.createParamSearch).toHaveBeenCalledTimes(2))\n+    expect(apiMocks.createParamSearch.mock.calls[1][0].registryVersion).toBe('TEST-REGISTRY-2')\n+\n+    // 확인이 끝나면 대화상자가 닫히고 진행 상태로 넘어간다.\n+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())\n+    expect(await screen.findByText(acceptedFixture.searchId)).toBeTruthy()\n+  })\n+\n+  it(\"503은 '잠시 후 다시' 안내로 끝나고 실행을 열지 않는다\", async () => {\n+    apiMocks.previewParamSearch.mockRejectedValue(\n+      new ParamSearchError('등록 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', {\n+        code: 'REGISTRY_UNAVAILABLE',\n+        status: 503,\n+      }),\n+    )\n+\n+    renderPage()\n+\n+    const alert = await screen.findByRole('alert')\n+    expect(alert.textContent).toContain('잠시 후 다시')\n+    expect(screen.queryByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeNull()\n+    expect(apiMocks.createParamSearch).not.toHaveBeenCalled()\n+  })\n+\n+  it('한 번 받아 둔 요약이 있어도 다시 조회가 실패하면 그것으로 실행하지 않는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.previewParamSearch.mockResolvedValueOnce(previewFixture).mockRejectedValue(\n+      new ParamSearchError('등록 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.', {\n+        code: 'REGISTRY_UNAVAILABLE',\n+        status: 503,\n+      }),\n+    )\n+\n+    renderPage()\n+    await readyRunButton()\n+\n+    // 범위를 좁히면 확인 내용을 다시 받는다 — 그 조회가 실패하는 상황이다.\n+    await user.click(screen.getByRole('button', { name: '탐색 범위 상세 변경' }))\n+    await user.click(screen.getByRole('button', { name: /^20/ }))\n+\n+    await waitFor(() => {\n+      expect(screen.queryByRole('button', { name: /설정 조합 자동 비교 실행/ })).toBeNull()\n+    })\n+    expect((await screen.findByRole('alert')).textContent).toContain('잠시 후 다시')\n+    expect(apiMocks.createParamSearch).not.toHaveBeenCalled()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ParamSearchRegistryBoundary.test.tsx",
+          "old_path": "frontend/src/pages/ParamSearchRegistryBoundary.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,101 @@\n+import type { ParamSearchDetail, ParamSearchPreview } from '@/types/paramSearch'\n+\n+/**\n+ * 007 화면 테스트용 응답 픽스처.\n+ *\n+ * <p><b>등록표에 없는 전략과 축을 일부러 쓴다.</b> 실제 전략 이름으로 픽스처를 만들면 화면이 그\n+ * 전략을 알고 있어도 테스트가 통과한다 — 이름을 지어내야 \"응답만 보고 그린다\"가 증명된다(SC-010).\n+ * 픽스처에 전략 데이터를 두는 것은 FR-025의 명시적 예외다.\n+ */\n+export const previewFixture: ParamSearchPreview = {\n+  registryVersion: 'TEST-REGISTRY-1',\n+  strategies: [\n+    { strategyId: 'ALPHA_TILT', name: '알파 기울기', executable: true },\n+    { strategyId: 'CARRY_ROTATION', name: '캐리 순환', executable: false },\n+  ],\n+  spaceSummary: [\n+    {\n+      strategyId: 'ALPHA_TILT',\n+      strategyName: '알파 기울기',\n+      axes: [\n+        {\n+          axis: 'tiltWindow',\n+          label: '기울기 관측 창',\n+          unit: '거래일',\n+          values: [5, 10, 20],\n+          defaultValue: 10,\n+          allowedRange: { min: 5, max: 60, step: 5, values: null },\n+        },\n+        {\n+          axis: 'rebalanceMode',\n+          label: '재조정 방식',\n+          unit: null,\n+          values: ['월말', '분기말'],\n+          defaultValue: '월말',\n+          allowedRange: null,\n+        },\n+      ],\n+      combinations: 6,\n+    },\n+    {\n+      strategyId: 'CARRY_ROTATION',\n+      strategyName: '캐리 순환',\n+      axes: [],\n+      combinations: 1,\n+    },\n+  ],\n+  workload: {\n+    totalCombinations: 8,\n+    validCombinations: 7,\n+    excludedCombinations: 1,\n+    exclusionReasons: [\n+      { code: 'WINDOW_TOO_SHORT', message: '관측 창이 자료 구간보다 깁니다.', count: 1 },\n+    ],\n+  },\n+  limits: {\n+    maxCandidates: 120,\n+    timeLimitSeconds: 120,\n+    dispatchWindow: 4,\n+    consecutiveFailureLimit: 5,\n+    provisional: ['maxCandidates', 'dispatchWindow'],\n+    exceeded: false,\n+  },\n+  commonPeriod: { start: '2015-12-22', end: '2026-09-14', shortenedBy: null },\n+  validationLabel: 'UNVALIDATED',\n+  validationNote: '평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다',\n+}\n+\n+/** 등록표가 바뀐 뒤의 미리보기. 후보값과 조합 수가 달라진다. */\n+export const changedPreviewFixture: ParamSearchPreview = {\n+  ...previewFixture,\n+  registryVersion: 'TEST-REGISTRY-2',\n+  spaceSummary: [\n+    {\n+      ...previewFixture.spaceSummary[0],\n+      axes: [\n+        { ...previewFixture.spaceSummary[0].axes[0], values: [5, 10] },\n+        previewFixture.spaceSummary[0].axes[1],\n+      ],\n+      combinations: 4,\n+    },\n+    previewFixture.spaceSummary[1],\n+  ],\n+  workload: { ...previewFixture.workload, totalCombinations: 5, validCombinations: 5 },\n+}\n+\n+/** 접수 직후 응답. 뜻이 있는 값은 searchId·status 와 검증 표시뿐이다. */\n+export const acceptedFixture: ParamSearchDetail = {\n+  searchId: 'PS-20260914-000001',\n+  status: 'QUEUED',\n+  stopReason: null,\n+  counts: null,\n+  partial: false,\n+  partialNote: null,\n+  config: null,\n+  baseline: null,\n+  validationLabel: 'UNVALIDATED',\n+  validationNote: '평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다',\n+  selection: null,\n+  startedAt: null,\n+  finishedAt: null,\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/paramSearchFixtures.ts",
+          "old_path": "frontend/src/test/paramSearchFixtures.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,382 @@\n+/**\n+ * spec 007 설정 조합 자동 비교(자동 파라미터 탐색)의 HTTP 계약 타입.\n+ *\n+ * 원본 계약은 `docs/specs/param-search-api/README.md`이며 이 파일의 필드는 그것과 1:1이다.\n+ * 세 가지를 계약에서 그대로 옮겼다.\n+ *\n+ * - **금액·비율은 문자열이다.** 부동소수 오차를 피하려고 백엔드가 문자열로 내보낸다. 화면에서\n+ *   숫자로 바꿔야 할 때만 바꾸고, 비교·정렬을 위해 미리 `Number()`로 접지 않는다.\n+ * - **계산하지 않은 값은 `null`이며 0이 아니다.** 제외·실패·미실행 후보의 성과는 `null`이고\n+ *   화면은 그것을 \"0%\"가 아니라 사유와 함께 보인다(FR-011, 원칙 VI).\n+ * - **전략 데이터는 응답에만 있다.** 전략 목록·이름·축 라벨·단위·기본값·후보값·허용 범위를\n+ *   이 파일에 상수로 두지 않는다(FR-025). 타입은 모양만 정하고 값은 서버가 정한다.\n+ */\n+\n+/** 탐색 묶음의 상태. `REJECTED`는 접수 시점 거부이며 후보 행이 없다. */\n+export type ParamSearchStatus =\n+  | 'QUEUED'\n+  | 'RUNNING'\n+  | 'COMPLETED'\n+  | 'PARTIAL'\n+  | 'FAILED'\n+  | 'REJECTED'\n+\n+/** 묶음이 멈춘 사유. 멈추지 않았으면 `null`이다. */\n+export type ParamSearchStopReason =\n+  | 'CANCELLED'\n+  | 'CANDIDATE_LIMIT'\n+  | 'TIME_LIMIT'\n+  | 'FAILURE_LIMIT'\n+  | 'NO_VALID_CANDIDATE'\n+  | 'STRATEGY_NOT_REGISTERED'\n+  | 'STRATEGY_NOT_EXECUTABLE'\n+\n+/** 후보 하나의 상태. */\n+export type CandidateStatus =\n+  | 'PENDING'\n+  | 'DISPATCHED'\n+  | 'COMPLETED'\n+  | 'FAILED'\n+  | 'EXCLUDED'\n+  | 'SKIPPED'\n+\n+/**\n+ * 검증 라벨. `UNVALIDATED`는 \"통과\"가 아니라 **\"검증 여부를 말할 수 없다\"**는 뜻이다(FR-015, 원칙 VII).\n+ * 평가 분할(PD-12)이 등록되기 전에는 모든 결과가 이 값이다.\n+ */\n+export type ValidationLabel = 'SEARCH_RESULT' | 'HELD_OUT_RESULT' | 'UNVALIDATED'\n+\n+/** 선정 결과에서 후보가 어떤 처지였는지. 선정 계산 전에는 `selectionReason` 자체가 `null`이다. */\n+export type SelectionOutcome =\n+  | 'SELECTED'\n+  | 'NOT_IN_DISPLAY'\n+  | 'FILTERED_OUT'\n+  | 'EXCLUDED_BEFORE_RUN'\n+  | 'NOT_EVALUATED'\n+\n+/** 선정에 쓰는 필터 이름. */\n+export type SelectionFilter = 'DRAWDOWN' | 'STABILITY'\n+\n+/** 축 후보값과 파라미터 값. 등록표가 정하는 값이라 숫자·문자열 어느 쪽도 올 수 있다. */\n+export type AxisValue = number | string\n+\n+/** 007이 쓰는 응답 껍데기. 오류 코드가 auth와 달라 `types/auth.ts`의 것을 재사용하지 않는다. */\n+export type ParamSearchEnvelope<T> =\n+  | { success: true; data: T; error: null }\n+  | { success: false; data: null; error: { code: string; message: string } }\n+\n+// ---------------------------------------------------------------------------\n+// 요청\n+// ---------------------------------------------------------------------------\n+\n+/**\n+ * 미리보기·실행 요청 본문. 두 엔드포인트가 같은 모양을 쓰고 `registryVersion`만 다르다\n+ * (미리보기는 무시, 실행은 필수).\n+ *\n+ * `space`는 **전략별로 중첩**한다 — 축 이름이 전략마다 겹칠 수 있기 때문이다. 생략하면 등록표\n+ * 전체 범위를 쓴다. 값은 등록표의 후보값이어야 하며 `allowedRange` 안이라도 등록되지 않은 값은\n+ * `400 UNREGISTERED_PARAMETER_VALUE`다.\n+ */\n+export type ParamSearchRequest = {\n+  universe: { instrumentIds: string[] }\n+  strategy: { strategyIds: string[] }\n+  run?: { start?: string; end?: string }\n+  portfolio?: { initialCash?: string }\n+  space?: SearchSpaceSelection\n+  registryVersion?: string\n+}\n+\n+/**\n+ * 사용자가 좁힌 탐색 공간. `전략 ID → 축 이름 → 고른 후보값`이다.\n+ *\n+ * **비어 있는 것과 전부 고른 것은 같은 뜻이다** — 둘 다 등록표 전체 범위를 쓴다. 그래서 화면은\n+ * 아무것도 좁히지 않았으면 `space`를 아예 보내지 않는다.\n+ */\n+export type SearchSpaceSelection = Record<string, Record<string, AxisValue[]>>\n+\n+// ---------------------------------------------------------------------------\n+// 미리보기 응답 (POST /param-searches/preview)\n+// ---------------------------------------------------------------------------\n+\n+/** 등록표가 아는 전략. `executable`은 004가 실행을 지원하는지다. */\n+export type PreviewStrategy = {\n+  strategyId: string\n+  name: string\n+  executable: boolean\n+}\n+\n+/** 축의 허용 범위. **화면 표시용이며 입력 허용 범위가 아니다** — 입력은 `values`만 받는다. */\n+export type AxisAllowedRange = {\n+  min: number | null\n+  max: number | null\n+  step: number | null\n+  values: AxisValue[] | null\n+}\n+\n+/**\n+ * 탐색 축 하나. `values` 순서가 인접 판정의 근거이고 `axes` 순서가 그리드 좌표 축 순서다(FR-029).\n+ *\n+ * `defaultValue`는 등록된 **기본 시작값**이며 추천값이나 최적값이 아니다 — 화면에 '추천'·'최적'\n+ * 문구를 붙이지 않는다(원칙 III).\n+ */\n+export type SpaceAxis = {\n+  axis: string\n+  label: string\n+  unit: string | null\n+  values: AxisValue[]\n+  defaultValue: AxisValue | null\n+  allowedRange: AxisAllowedRange | null\n+}\n+\n+/** 전략 하나의 탐색 공간 요약. 축이 없으면 조합 1건이다(FR-027). */\n+export type StrategySpaceSummary = {\n+  strategyId: string\n+  strategyName: string\n+  axes: SpaceAxis[]\n+  combinations: number\n+}\n+\n+/** 유효성 위반으로 계산 전에 빠진 조합의 사유. */\n+export type ExclusionReason = {\n+  code: string\n+  message: string\n+  count: number\n+}\n+\n+/** 예상 작업량. `excludedCombinations`는 계산 전에 빠지는 조합 수다(FR-006). */\n+export type PreviewWorkload = {\n+  totalCombinations: number\n+  validCombinations: number\n+  excludedCombinations: number\n+  exclusionReasons: ExclusionReason[]\n+}\n+\n+/**\n+ * 묶음에 걸린 한도. `provisional`에 든 항목은 **실측 전 임시값**이라 화면이 그 사실을 표시한다\n+ * (FR-005a, 원칙 IX).\n+ */\n+export type AppliedLimits = {\n+  maxCandidates: number\n+  timeLimitSeconds: number\n+  dispatchWindow: number\n+  consecutiveFailureLimit: number\n+  provisional: string[]\n+}\n+\n+/**\n+ * 미리보기가 주는 한도. `exceeded`가 `true`면 실행은 거부되고 화면은 범위를 좁히라고 안내한다.\n+ *\n+ * **이 필드는 미리보기에만 있다** — 상태 응답의 `config.limits`는 이미 접수된 묶음에 걸린 값이라\n+ * \"넘었는가\"라는 질문 자체가 없다. 두 타입을 하나로 합치면 없는 필드를 읽게 된다.\n+ */\n+export type ParamSearchLimits = AppliedLimits & {\n+  exceeded: boolean\n+}\n+\n+/** 종목들이 겹치는 평가 구간. `shortenedBy`가 있으면 그 축 때문에 구간이 짧아졌다. */\n+export type CommonPeriod = {\n+  start: string\n+  end: string\n+  shortenedBy: string | null\n+}\n+\n+/** 확인 화면의 네 항목(대상 전략·탐색 범위 요약·예상 작업량·적용 한도)이 여기 다 있다. */\n+export type ParamSearchPreview = {\n+  registryVersion: string\n+  strategies: PreviewStrategy[]\n+  spaceSummary: StrategySpaceSummary[]\n+  workload: PreviewWorkload\n+  limits: ParamSearchLimits\n+  commonPeriod: CommonPeriod | null\n+  validationLabel: ValidationLabel\n+  validationNote: string | null\n+}\n+\n+// ---------------------------------------------------------------------------\n+// 접수·상태 응답 (POST /param-searches, GET /param-searches/{searchId})\n+// ---------------------------------------------------------------------------\n+\n+/** 후보 집계. 합이 맞지 않아도 화면이 만들어 채우지 않는다. */\n+export type SearchCounts = {\n+  expected: number\n+  valid: number\n+  completed: number\n+  failed: number\n+  excluded: number\n+  pending: number\n+  skipped: number\n+}\n+\n+/** 상태 응답이 되돌려 주는 탐색 공간. 미리보기의 축과 달리 라벨·단위·후보값만 싣는다. */\n+export type ConfigSpaceAxis = {\n+  name: string\n+  label: string\n+  unit: string | null\n+  values: AxisValue[]\n+}\n+\n+export type ConfigStrategySpace = {\n+  strategyName: string\n+  axes: ConfigSpaceAxis[]\n+}\n+\n+/** 손실 제약. `type`이 `NOT_APPLIED`이거나 `baseline`이 없으면 걸지 않은 것이다. */\n+export type DrawdownFilterRule = {\n+  type: string\n+  baseline: string | null\n+  baselineName?: string | null\n+}\n+\n+export type StabilityFilterRule = {\n+  type: string\n+  keepTopPercent: number\n+}\n+\n+/**\n+ * 선정 규칙 스냅샷. **묶음이 시작될 때 굳고 이후 바뀌지 않는다**(FR-013c) — 나중에 규칙이 바뀌어도\n+ * 끝난 묶음은 그때의 규칙으로 읽어야 재현이 성립한다.\n+ */\n+export type SelectionRule = {\n+  drawdownFilter: DrawdownFilterRule | null\n+  stabilityFilter: StabilityFilterRule | null\n+  sortMetric: string\n+  displayCount: number\n+  tieHandling: string\n+  stabilityFormula?: { neighbor: string; value: string } | null\n+  provisional?: string[]\n+}\n+\n+/** 재현에 필요한 참조 버전들. */\n+export type ReferenceVersions = {\n+  marketData?: string\n+  registry?: string\n+  cost?: string\n+  engine?: string\n+}\n+\n+export type ParamSearchConfig = {\n+  strategyIds: string[]\n+  instrumentIds: string[]\n+  registryVersion: string\n+  searchMethod: string\n+  randomSeed: number | null\n+  space: Record<string, ConfigStrategySpace>\n+  selectionRule: SelectionRule | null\n+  limits: AppliedLimits | null\n+  referenceVersions: ReferenceVersions | null\n+  dataVersionChanged: boolean\n+}\n+\n+/**\n+ * 손실 제약의 기준이 된 실행. 기준 실행을 만들지 않았으면 전체가 `null`이고, 만들었지만 아직\n+ * 끝나지 않았으면 성과만 `null`이다.\n+ */\n+export type ParamSearchBaseline = {\n+  strategyId: string\n+  strategyName: string | null\n+  backtestId: string | null\n+  status: string | null\n+  netReturn: string | null\n+  maxDrawdown: string | null\n+}\n+\n+/**\n+ * 선정 결과. `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다.\n+ *\n+ * **`displayed`는 순위가 아니다.** 정렬 지표를 밝힌 집합이며 화면에 순위 번호를 붙이지 않는다\n+ * (원칙 III). `shortOfDisplayCount`가 `true`여도 문턱을 낮춰 채우지 않는다(원칙 VII).\n+ */\n+export type ParamSearchSelection = {\n+  displayed: string[]\n+  shortOfDisplayCount: boolean\n+  note: string | null\n+  drawdownFilterApplied: boolean\n+}\n+\n+/** 접수 응답(202)과 상태 조회 응답(200)이 같은 모양을 쓴다. 접수 직후엔 대부분 `null`이다. */\n+export type ParamSearchDetail = {\n+  searchId: string\n+  status: ParamSearchStatus\n+  stopReason: ParamSearchStopReason | null\n+  counts: SearchCounts | null\n+  partial: boolean\n+  partialNote: string | null\n+  config: ParamSearchConfig | null\n+  baseline: ParamSearchBaseline | null\n+  validationLabel: ValidationLabel\n+  validationNote: string | null\n+  selection: ParamSearchSelection | null\n+  startedAt: string | null\n+  finishedAt: string | null\n+}\n+\n+// ---------------------------------------------------------------------------\n+// 후보 목록 (GET /param-searches/{searchId}/candidates)\n+// ---------------------------------------------------------------------------\n+\n+/** 이웃 후보와의 성과 차이. 이웃이 없으면 `calculable: false`에 `value: null`이다. */\n+export type CandidateStability = {\n+  calculable: boolean\n+  value: string | null\n+  neighborCount: number\n+}\n+\n+/**\n+ * 후보가 표시·탈락·미평가 중 어디에 속하는지와 그 근거.\n+ *\n+ * `FILTERED_OUT`은 **탈락**이고 `NOT_IN_DISPLAY`는 **\"떨어진 것이 아니라 표시하지 않은 것\"**이다 —\n+ * 화면에서 두 문구를 구분한다.\n+ */\n+export type CandidateSelectionReason = {\n+  outcome: SelectionOutcome\n+  tied?: boolean\n+  passedFilters?: SelectionFilter[]\n+  failedFilter?: SelectionFilter\n+  code?: string\n+  message?: string\n+}\n+\n+export type SearchCandidateItem = {\n+  candidateId: string\n+  candidateNo: number\n+  strategyId: string\n+  parameters: Record<string, AxisValue>\n+  status: CandidateStatus\n+  backtestId: string | null\n+  netReturn: string | null\n+  maxDrawdown: string | null\n+  tradingCost: string | null\n+  stability: CandidateStability | null\n+  retryCount: number\n+  validationLabel: ValidationLabel\n+  selected: boolean\n+  selectionReason: CandidateSelectionReason | null\n+}\n+\n+export type CandidatePage = {\n+  page: number\n+  size: number\n+  totalElements: number\n+  totalPages: number\n+  content: SearchCandidateItem[]\n+}\n+\n+// ---------------------------------------------------------------------------\n+// 취소·재시도 (POST /param-searches/{searchId}/cancel, /retry-failed)\n+// ---------------------------------------------------------------------------\n+\n+/** 취소 응답. `inFlight`는 이미 큐에 들어가 끝까지 도는 후보 수다 — 그것이 끝나야 `PARTIAL`이 된다. */\n+export type ParamSearchCancelResult = {\n+  searchId: string\n+  status: ParamSearchStatus\n+  skipped: number\n+  inFlight: number\n+}\n+\n+/** 재시도 응답. 발행 창을 넘겨 보내지 않으므로 `remainingFailed`가 남으면 다시 요청한다. */\n+export type ParamSearchRetryResult = {\n+  searchId: string\n+  status: ParamSearchStatus\n+  retried: number\n+  remainingFailed: number\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/paramSearch.ts",
+          "old_path": "frontend/src/types/paramSearch.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,32 @@\n+import type { ValidationLabel } from '@/types/paramSearch'\n+\n+/**\n+ * 검증 라벨을 화면 문구로 바꾼다.\n+ *\n+ * **`UNVALIDATED`는 \"통과\"가 아니라 \"말할 수 없음\"이다**(FR-015, 원칙 VII). 평가 분할이 등록되기\n+ * 전까지 모든 결과가 이 값이므로, 문구가 안심시키는 쪽으로 기울면 화면 전체가 사실과 달라진다.\n+ */\n+export function validationLabelText(label: ValidationLabel): string {\n+  switch (label) {\n+    case 'SEARCH_RESULT':\n+      return '탐색 구간 결과'\n+    case 'HELD_OUT_RESULT':\n+      return '검증 구간 결과'\n+    case 'UNVALIDATED':\n+      return '미검증'\n+  }\n+}\n+\n+/** 사람이 읽는 정수. 자릿수가 큰 후보 수·조합 수가 화면에서 흐트러지지 않게 한다. */\n+export function formatCount(value: number): string {\n+  return value.toLocaleString('ko-KR')\n+}\n+\n+/** 초 단위 한도를 분·초로 읽는다. 60초 미만은 초로 둔다. */\n+export function formatSeconds(seconds: number): string {\n+  if (seconds < 60) return `${formatCount(seconds)}초`\n+\n+  const minutes = Math.floor(seconds / 60)\n+  const rest = seconds % 60\n+  return rest === 0 ? `${formatCount(minutes)}분` : `${formatCount(minutes)}분 ${rest}초`\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/paramSearchLabels.ts",
+          "old_path": "frontend/src/utils/paramSearchLabels.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,13 @@ const BacktestPage = lazy(() =>\n )\n \n // 상세 홈과 요약 대시보드는 각 경로에 접근할 때 불러온다.\n+// 설정 조합 자동 비교(spec 007)도 전략 화면에서 넘어올 때 불러온다.\n+const ParamSearchPage = lazy(() =>\n+  import('@/pages/ParamSearchPage').then((module) => ({\n+    default: module.ParamSearchPage,\n+  })),\n+)\n+\n const HomePage = lazy(() =>\n   import('@/pages/HomePage').then((module) => ({\n     default: module.HomePage,\n@@ -67,6 +74,7 @@ function AnimatedRoutes() {\n             <Route path=\"/home\" element={<HomePage />} />\n             <Route path=\"/dashboard\" element={<DashboardPage />} />\n             <Route path=\"/backtest\" element={<BacktestPage />} />\n+            <Route path=\"/param-search\" element={<ParamSearchPage />} />\n             <Route\n               path=\"/records/*\"\n               element={\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -63,8 +63,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Frontend\n \n-- [ ] T005 [P] (FE) `frontend/src/types/paramSearch.ts`에 계약 응답 타입 정의 ([contracts/param-search-api.md](contracts/param-search-api.md)의 응답 모양과 1:1, 금액·비율은 `string`)\n-- [ ] T006 [P] (FE) `frontend/src/api/paramSearch.ts` 빈 모듈과 `frontend/src/components/paramsearch/` 디렉터리 생성 (`frontend/src/api/client.ts`의 기존 호출 규약 재사용)\n+- [X] T005 [P] (FE) `frontend/src/types/paramSearch.ts`에 계약 응답 타입 정의 ([contracts/param-search-api.md](contracts/param-search-api.md)의 응답 모양과 1:1, 금액·비율은 `string`)\n+- [X] T006 [P] (FE) `frontend/src/api/paramSearch.ts` 빈 모듈과 `frontend/src/components/paramsearch/` 디렉터리 생성 (`frontend/src/api/client.ts`의 기존 호출 규약 재사용)\n \n ### Test 기반\n \n@@ -188,15 +188,15 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 1 — Frontend\n \n-- [ ] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현\n-- [ ] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)\n-- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)\n-- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)\n-- [ ] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)\n-- [ ] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결\n-- [ ] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)\n-- [ ] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)\n-- [ ] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)\n+- [X] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현\n+- [X] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)\n+- [X] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)\n+- [X] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)\n+- [X] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)\n+- [X] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결\n+- [X] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)\n+- [X] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)\n+- [X] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)\n \n **Checkpoint**: 탐색을 접수해 진행 상태까지 볼 수 있다. 선정 결과는 아직 없다\n \n@@ -352,8 +352,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n ### Implementation for User Story 5\n \n - [X] T134 [US5] (BE) `SearchTargetResolver`를 `preview()`·`create()` 경로에 연결해 거부를 마무리한다 — 미등록·실행 미지원을 조합 생성 전에 끊고, 묶음을 `REJECTED`로 저장하며 `stop_reason`에 두 사유를 구분해 남긴다. 미리보기에서는 저장 없이 사유만 알린다 (T036d·T095·T096 의존, FR-026)\n-- [ ] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)\n-- [ ] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)\n+- [X] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)\n+- [X] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)\n \n **Checkpoint**: 다섯 사용자 스토리가 모두 독립적으로 동작하고, 전략 추가가 007을 건드리지 않는다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2803079": [],
+    "2803191": []
+  }
+}

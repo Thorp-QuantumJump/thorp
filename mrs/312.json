@@ -1,0 +1,1041 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958753,
+    "iid": 312,
+    "project_id": 1444456,
+    "title": "feat(be): 첫 화면 지표 차트를 KRX·ECOS 최근 60거래일 실제 값으로 그린다",
+    "description": "# **작업 내용 요약**\n\n첫 화면 오른쪽 차트가 KOSPI·KOSDAQ·원/달러·VKOSPI 200의 최근 60거래일 실제 값을 그린다. 백엔드는 이 값을 백그라운드로 모아 두고, 아직 모으지 못한 지표만 예시 흐름으로 그리며 그렇다고 밝힌다. 첫 화면 칸이 화면 높이를 넘어 맨 위로 돌아올 때 한 번 더 올려야 하던 문제도 고친다.\n\n# **관련 티켓**\n\n* ticket # S15P21E205-425\n* link https://ssafy.atlassian.net/browse/S15P21E205-425\n\n# **주요 변경 사항**\n\n* **새 API** `GET /markets/{kospi|kosdaq|usd-krw|vkospi200}/series`: 날짜 오름차순 최대 60개, 원천(KRX/한국은행 ECOS)과 `status`(ok/stale)를 싣는다. 명세는 `docs/specs/market-api.md` \"최근 흐름 API\".\n* **요청은 원천을 부르지 않는다.** KRX는 날짜 하나당 한 번 호출이라 기동 직후와 6시간마다 전용 스레드에서 모으고, 이미 모은 날짜는 다시 부르지 않는다(호출 간격 150ms, 한 번의 갱신 90초 안). ECOS는 90일을 한 번에 읽는다.\n* 아직 모은 값이 없으면 503, 마지막 성공이 24시간을 넘으면 200 + `stale`. 수집 실패 로그에는 지표와 사유만 남긴다.\n* **첫 화면 차트**: 실제 값은 왼쪽부터 그려 나간 뒤 멈추고 \"KRX · 2026-09-22 기준\"처럼 원천과 기준일을 밝힌다. 지표 칸은 마지막 값과 60거래일 등락을 보인다. 지표는 저절로 넘어가지 않는다.\n* 예시 흐름(503일 때)은 끊김 없이 흘러가도록 다시 그렸다. 첫 화면 각 칸이 화면 높이를 넘지 않게 맞췄다.\n\n# **테스트**\n\n* 완료`./gradlew spotlessApply build` 통과\n* 완료`npm run lint && npm run build && npm test` 통과(1380건, skipped 0)\n* 완료Docker로 백엔드를 띄워 네 경로 모두 실제 60거래일 수신 확인(첫 수집 1\\~2분), 첫 화면에 원천·기준일과 실제 값 표시 확인\n* 완료백엔드가 꺼져 있을 때 예시 흐름과 \"움직임 예시\" 표시 확인\n\n# **리뷰 포인트**\n\n* 모아 둔 값은 인스턴스 메모리에만 있다. 재기동하면 1\\~2분 동안 503(예시 흐름)이고, 인스턴스를 늘리면 각자 KRX를 부른다. 지금 규모에선 DB 저장을 두지 않았다.\n* 공용 `@Scheduled` 스레드가 하나라 수집을 전용 스레드(`MarketSeriesScheduler`)로 뺐다. 전역 스레드 수는 바꾸지 않았다(다른 스케줄끼리 동시에 돌게 되므로).\n* 첫 화면 아래쪽 전략 비교 표의 수치는 예시 그대로다(의도).\n\n# **공통 확인**\n\n* 완료**순위 배지·추천 표현 0건**\n* 완료**결제·포인트·상품 선택 단계 0건**\n* 완료**전략 ID 상수·전략별 분기 0건**\n* 완료**계산하지 않은 값을 0으로 채우지 않았다** — 결측 날짜는 빼고, 값이 없으면 503으로 예시임을 밝힌다\n* 완료**검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 예시 흐름은 \"움직임 예시\", 실제 값은 원천·기준일을 붙인다",
+    "state": "merged",
+    "created_at": "2026-09-23T17:07:26.223+09:00",
+    "updated_at": "2026-09-23T17:28:33.838+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-23T17:28:33.364+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/425-design-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+    "merge_commit_sha": "771d1220f819a9ecc975ce0c375f3e2c7b87f496",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-23T17:07:27.926+09:00",
+    "reference": "!312",
+    "references": {
+      "short": "!312",
+      "relative": "!312",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!312"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/312",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958753,
+    "iid": 312,
+    "project_id": 1444456,
+    "title": "feat(be): 첫 화면 지표 차트를 KRX·ECOS 최근 60거래일 실제 값으로 그린다",
+    "description": "# **작업 내용 요약**\n\n첫 화면 오른쪽 차트가 KOSPI·KOSDAQ·원/달러·VKOSPI 200의 최근 60거래일 실제 값을 그린다. 백엔드는 이 값을 백그라운드로 모아 두고, 아직 모으지 못한 지표만 예시 흐름으로 그리며 그렇다고 밝힌다. 첫 화면 칸이 화면 높이를 넘어 맨 위로 돌아올 때 한 번 더 올려야 하던 문제도 고친다.\n\n# **관련 티켓**\n\n* ticket # S15P21E205-425\n* link https://ssafy.atlassian.net/browse/S15P21E205-425\n\n# **주요 변경 사항**\n\n* **새 API** `GET /markets/{kospi|kosdaq|usd-krw|vkospi200}/series`: 날짜 오름차순 최대 60개, 원천(KRX/한국은행 ECOS)과 `status`(ok/stale)를 싣는다. 명세는 `docs/specs/market-api.md` \"최근 흐름 API\".\n* **요청은 원천을 부르지 않는다.** KRX는 날짜 하나당 한 번 호출이라 기동 직후와 6시간마다 전용 스레드에서 모으고, 이미 모은 날짜는 다시 부르지 않는다(호출 간격 150ms, 한 번의 갱신 90초 안). ECOS는 90일을 한 번에 읽는다.\n* 아직 모은 값이 없으면 503, 마지막 성공이 24시간을 넘으면 200 + `stale`. 수집 실패 로그에는 지표와 사유만 남긴다.\n* **첫 화면 차트**: 실제 값은 왼쪽부터 그려 나간 뒤 멈추고 \"KRX · 2026-09-22 기준\"처럼 원천과 기준일을 밝힌다. 지표 칸은 마지막 값과 60거래일 등락을 보인다. 지표는 저절로 넘어가지 않는다.\n* 예시 흐름(503일 때)은 끊김 없이 흘러가도록 다시 그렸다. 첫 화면 각 칸이 화면 높이를 넘지 않게 맞췄다.\n\n# **테스트**\n\n* 완료`./gradlew spotlessApply build` 통과\n* 완료`npm run lint && npm run build && npm test` 통과(1380건, skipped 0)\n* 완료Docker로 백엔드를 띄워 네 경로 모두 실제 60거래일 수신 확인(첫 수집 1\\~2분), 첫 화면에 원천·기준일과 실제 값 표시 확인\n* 완료백엔드가 꺼져 있을 때 예시 흐름과 \"움직임 예시\" 표시 확인\n\n# **리뷰 포인트**\n\n* 모아 둔 값은 인스턴스 메모리에만 있다. 재기동하면 1\\~2분 동안 503(예시 흐름)이고, 인스턴스를 늘리면 각자 KRX를 부른다. 지금 규모에선 DB 저장을 두지 않았다.\n* 공용 `@Scheduled` 스레드가 하나라 수집을 전용 스레드(`MarketSeriesScheduler`)로 뺐다. 전역 스레드 수는 바꾸지 않았다(다른 스케줄끼리 동시에 돌게 되므로).\n* 첫 화면 아래쪽 전략 비교 표의 수치는 예시 그대로다(의도).\n\n# **공통 확인**\n\n* 완료**순위 배지·추천 표현 0건**\n* 완료**결제·포인트·상품 선택 단계 0건**\n* 완료**전략 ID 상수·전략별 분기 0건**\n* 완료**계산하지 않은 값을 0으로 채우지 않았다** — 결측 날짜는 빼고, 값이 없으면 503으로 예시임을 밝힌다\n* 완료**검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 예시 흐름은 \"움직임 예시\", 실제 값은 원천·기준일을 붙인다",
+    "state": "merged",
+    "created_at": "2026-09-23T17:07:26.223+09:00",
+    "updated_at": "2026-09-23T17:28:33.838+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-23T17:28:33.364+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/425-design-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+    "merge_commit_sha": "771d1220f819a9ecc975ce0c375f3e2c7b87f496",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-23T17:07:27.926+09:00",
+    "reference": "!312",
+    "references": {
+      "short": "!312",
+      "relative": "!312",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!312"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/312",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": "2026-09-23T17:16:12.701+09:00",
+    "latest_build_finished_at": "2026-09-23T17:24:47.787+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 220037,
+      "iid": 337,
+      "project_id": 1444456,
+      "sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+      "ref": "feat(fe)/425-design-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T17:16:12.476+09:00",
+      "updated_at": "2026-09-23T17:24:47.794+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220037"
+    },
+    "head_pipeline": {
+      "id": 220037,
+      "iid": 337,
+      "project_id": 1444456,
+      "sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+      "ref": "feat(fe)/425-design-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T17:16:12.476+09:00",
+      "updated_at": "2026-09-23T17:24:47.794+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220037",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T17:16:12.701+09:00",
+      "finished_at": "2026-09-23T17:24:47.787+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/220037",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "head_sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+      "start_sha": "17b9fc05588e375601b10cd36fb41ef172932db7"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "8f1294a28994e56d45599dd4677fd94298f89fcc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863982,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T17:07:26.327+09:00",
+          "updated_at": "2026-09-23T17:07:26.335+09:00",
+          "system": true,
+          "noteable_id": 958753,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 312,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c87dd05c7cb6ca5f7bfe261c2909e307752df5a2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863985,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **안전한 동시성 제어 및 백그라운드 수집**: 공용 스케줄러 대신 전용 `ThreadPoolTaskScheduler` (`MarketSeriesScheduler`)를 구성하여 무거운 KRX/ECOS 스크래핑 작업이 애플리케이션의 다른 백그라운드 스케줄에 영향을 주지 않도록 잘 분리했습니다.\n- **철저한 예외 처리 및 방어적 복사**: `MarketSeriesResult`와 같은 레코드(Record) 객체에서 생성자 검증 및 방어적 복사(`List.copyOf`)를 사용하여 불변성을 보장하고, 외부 API 호출 실패 시에도 기존 캐시 데이터를 유지하고 Stale 상태로 전환하는 견고한 폴백(Fallback) 메커니즘을 구현했습니다.\n\n### 발견 사항\n- [Medium] `backend/src/main/java/com/ssafy/thorp/market/application/service/MarketSeriesService.java`: `refresh(MarketCode code)` 메서드에 `synchronized` 키워드가 적용되어 있습니다. 멀티 인스턴스 환경이 아니라 단일 인스턴스 내부의 단일 스레드 스케줄러(`MarketSeriesScheduler`의 풀 사이즈가 1)에서만 호출된다 하더라도, 만약 향후 다른 곳에서 이 메서드를 호출하거나 스레드 풀 설정이 변경될 경우 병목이 발생할 수 있습니다. 현재 구조에서는 `snapshots` 맵 자체가 `ConcurrentHashMap`이므로 동기화 범위를 세밀하게 조정하거나 락 객체를 분리하는 방안을 고려할 수 있습니다.\n\n### 테스트 제안\n- **스케줄러 타임아웃 시나리오 테스트**: `MarketSeriesService.refresh()` 실행 중 `MarketDeadline`에 의해 타임아웃 예외가 발생했을 때, 이미 수집된 부분 데이터가 올바르게 처리되고 기존 스냅샷이 안전하게 유지되는지 검증하는 단위 테스트를 추가하세요.\n- **Stale 데이터 응답 검증**: 마지막 성공 수집 시각이 `cacheMaxAge`를 초과했을 때, API 응답의 `status`가 `\"stale\"`로 정상 반환되고 `statusMessage`가 포함되는지 프레젠테이션 레이어(Controller) 테스트로 확인하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:912a1fac1c540c98c7e553c0f1cf47111ab0ca1d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T17:07:36.082+09:00",
+          "updated_at": "2026-09-23T17:16:00.468+09:00",
+          "system": false,
+          "noteable_id": 958753,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 312,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "852c5706cec83e44b22bc439c74b5a7e94328ff1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863999,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T17:09:17.505+09:00",
+          "updated_at": "2026-09-23T17:09:17.508+09:00",
+          "system": true,
+          "noteable_id": 958753,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 312,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7c3a608cb49647a85579c1794154270621a30f69",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2864050,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>912a1fac - fix(be): 최근 흐름 갱신을 한 번에 하나만 돌게 하고 예산 소진 테스트를 더한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/312/diffs?diff_id=2246610&start_sha=a560f7cc49158a261c1ac5676b76edbe7d842705)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T17:15:53.271+09:00",
+          "updated_at": "2026-09-23T17:15:53.317+09:00",
+          "system": true,
+          "noteable_id": 958753,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 312,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c4a2c250e4f09aeb688291c795325cb6496cc52d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2864174,
+          "type": null,
+          "body": "mentioned in commit 771d1220f819a9ecc975ce0c375f3e2c7b87f496",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T17:28:33.478+09:00",
+          "updated_at": "2026-09-23T17:28:33.485+09:00",
+          "system": true,
+          "noteable_id": 958753,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 312,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "199dd0e6407d19ea26bc15e874fca6c126e47d6d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885009,
+          "type": null,
+          "body": "mentioned in commit 44c9a4f607ad38b1eff07e23ea02f1572d18817b",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.117+09:00",
+          "updated_at": "2026-10-13T15:16:08.145+09:00",
+          "system": true,
+          "noteable_id": 958753,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 312,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2246610,
+      "head_commit_sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+      "base_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "start_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "created_at": "2026-09-23T17:15:47.101+09:00",
+      "merge_request_id": 958753,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "66eb51a67417f126a0d29df813ce1c774f5b1344"
+    },
+    {
+      "id": 2246555,
+      "head_commit_sha": "a560f7cc49158a261c1ac5676b76edbe7d842705",
+      "base_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "start_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "created_at": "2026-09-23T17:07:26.650+09:00",
+      "merge_request_id": 958753,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "e8625e718d88caf949cb25d95c5fd214076bbf52"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2246610,
+      "head_commit_sha": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+      "base_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "start_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "created_at": "2026-09-23T17:15:47.101+09:00",
+      "merge_request_id": 958753,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "66eb51a67417f126a0d29df813ce1c774f5b1344",
+      "commits": [
+        {
+          "id": "912a1fac1c540c98c7e553c0f1cf47111ab0ca1d",
+          "short_id": "912a1fac",
+          "created_at": "2026-09-23T17:15:30.000+09:00",
+          "parent_ids": [
+            "a560f7cc49158a261c1ac5676b76edbe7d842705"
+          ],
+          "title": "fix(be): 최근 흐름 갱신을 한 번에 하나만 돌게 하고 예산 소진 테스트를 더한다",
+          "message": "fix(be): 최근 흐름 갱신을 한 번에 하나만 돌게 하고 예산 소진 테스트를 더한다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T17:15:30.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T17:15:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/912a1fac1c540c98c7e553c0f1cf47111ab0ca1d"
+        },
+        {
+          "id": "a560f7cc49158a261c1ac5676b76edbe7d842705",
+          "short_id": "a560f7cc",
+          "created_at": "2026-09-23T17:07:23.000+09:00",
+          "parent_ids": [
+            "0826e4b50bd92c1e47f4042ba97c16bc4b159a8b"
+          ],
+          "title": "fix(be): 최근 흐름 수집을 전용 스레드로 옮겨 다른 스케줄을 막지 않게 한다",
+          "message": "fix(be): 최근 흐름 수집을 전용 스레드로 옮겨 다른 스케줄을 막지 않게 한다\n\n@Scheduled는 스레드 하나를 나눠 써서 KRX 첫 수집(지표마다 최대 90초) 동안 발행 재시도·정체 감시가\n멈췄다. market.series.enabled=false로 끌 수 있게 한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T17:07:23.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T17:07:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a560f7cc49158a261c1ac5676b76edbe7d842705"
+        },
+        {
+          "id": "0826e4b50bd92c1e47f4042ba97c16bc4b159a8b",
+          "short_id": "0826e4b5",
+          "created_at": "2026-09-23T16:54:06.000+09:00",
+          "parent_ids": [
+            "dce73115fd9c4497cde04d1e029ea596ac45e1ea"
+          ],
+          "title": "feat(fe): 첫 화면 지표 차트를 실제 최근 60거래일 값으로 그린다",
+          "message": "feat(fe): 첫 화면 지표 차트를 실제 최근 60거래일 값으로 그린다\n\n받은 흐름은 왼쪽부터 그려 나간 뒤 멈추고 원천과 기준일을 밝힌다. 아직 못 모은 지표만 예시 흐름으로\n그린다. 초점이 옮겨 갈 때 첫 칸이 옆으로 밀리지 않게 overflow를 clip으로 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:54:06.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:54:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0826e4b50bd92c1e47f4042ba97c16bc4b159a8b"
+        },
+        {
+          "id": "dce73115fd9c4497cde04d1e029ea596ac45e1ea",
+          "short_id": "dce73115",
+          "created_at": "2026-09-23T16:54:05.000+09:00",
+          "parent_ids": [
+            "aa8b553356d146dd68f8b73b3a0af998a15cce0f"
+          ],
+          "title": "feat(be): 코스피·코스닥·원/달러·VKOSPI 200 최근 60거래일 흐름 API를 더한다",
+          "message": "feat(be): 코스피·코스닥·원/달러·VKOSPI 200 최근 60거래일 흐름 API를 더한다\n\nGET /markets/{code}/series. KRX는 날짜마다 한 번 호출이라 기동 직후와 6시간마다 백그라운드로 모으고,\n요청은 모아 둔 값만 돌려준다. 이미 모은 날짜는 다시 부르지 않는다. 아직 못 모았으면 503, 24시간 넘게\n갱신하지 못하면 stale이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:54:05.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:54:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dce73115fd9c4497cde04d1e029ea596ac45e1ea"
+        },
+        {
+          "id": "aa8b553356d146dd68f8b73b3a0af998a15cce0f",
+          "short_id": "aa8b5533",
+          "created_at": "2026-09-23T16:33:15.000+09:00",
+          "parent_ids": [
+            "a76786340a4fee5ff77f4770795370f5b5de442d"
+          ],
+          "title": "fix(fe): 첫 화면 칸이 화면 높이를 넘지 않게 해 맨 위로 돌아올 때 멈추지 않게 한다",
+          "message": "fix(fe): 첫 화면 칸이 화면 높이를 넘지 않게 해 맨 위로 돌아올 때 멈추지 않게 한다\n\n- 첫 칸이 화면보다 커서, 한 칸씩 넘기는 스냅이 위로 돌아올 때 첫 칸 아래쪽에서 한 번 멈췄다.\n  첫 칸 여백을 화면 높이에 맞추고, 화면이 800px 이하로 낮으면 창 아래 규칙 비교 표를 접는다.\n- 배분 규칙 칸의 궤도 높이가 폭만 보던 것을 남은 높이도 보게 해 낮은 화면에서 넘치지 않게 한다.\n- 글과 창이 위아래로 쌓이는 1040px 이하에서는 칸이 길어져 스냅을 끄고 이어서 내려가게 한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:33:15.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:33:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/aa8b553356d146dd68f8b73b3a0af998a15cce0f"
+        },
+        {
+          "id": "a76786340a4fee5ff77f4770795370f5b5de442d",
+          "short_id": "a7678634",
+          "created_at": "2026-09-23T16:33:15.000+09:00",
+          "parent_ids": [
+            "d3c4b2bab861f3b0dada5faf881783839bdc2a0d"
+          ],
+          "title": "feat(fe): 첫 화면 지표 차트를 끊김 없이 흘러가게 하고 자동 넘김을 없앤다",
+          "message": "feat(fe): 첫 화면 지표 차트를 끊김 없이 흘러가게 하고 자동 넘김을 없앤다\n\n- 0.9초마다 점을 붙이며 선을 한 칸씩 옮기던 방식 대신, 점(키프레임) 사이를 Catmull-Rom 곡선으로\n  이어 매 프레임 같은 자리에서 읽어 그린다. 선은 계속 흐르고 끝점은 오른쪽에 머문 채 값만 바뀐다.\n  세로 범위는 서서히 따라가고, 지표를 바꿀 때만 새로 잡는다. SVG를 직접 고쳐 매 프레임 다시\n  그리지 않는다.\n- 지표가 7초마다 저절로 넘어가던 것을 없앤다. 지표 칸을 눌러야만 바뀐다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:33:15.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:33:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a76786340a4fee5ff77f4770795370f5b5de442d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+package com.ssafy.thorp.market.application.port;\n+\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Set;\n+\n+/** 일별 지표의 기간 관측값을 원천에서 읽는다. 최근 흐름(series) API가 쓴다. */\n+public interface MarketSeriesProvider {\n+    boolean supportsSeries(MarketCode code);\n+\n+    /**\n+     * {@code from}~{@code to} 사이의 관측값을 날짜 오름차순으로 돌려준다.\n+     *\n+     * <p>{@code known}에 든 날짜(yyyy-MM-dd)는 이미 모은 값이라 다시 부르지 않아도 된다. 날짜마다 호출하는 원천(KRX)이 매번 전체 기간을 다시\n+     * 부르지 않게 하려는 것이다. 한 번에 기간을 읽는 원천은 무시해도 된다.\n+     *\n+     * <p>시간 예산이 다 되면 그때까지 모은 값만 돌려줄 수 있다. 모자란 날짜는 다음 갱신이 잇는다.\n+     */\n+    List<MarketObservation> fetchSeries(\n+            MarketCode code,\n+            LocalDate from,\n+            LocalDate to,\n+            Set<String> known,\n+            MarketDeadline deadline);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/port/MarketSeriesProvider.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/port/MarketSeriesProvider.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+package com.ssafy.thorp.market.application.result;\n+\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.time.Instant;\n+import java.util.List;\n+\n+/** 날짜 오름차순의 최근 관측값. {@code points}는 비어 있지 않다. */\n+public record MarketSeriesResult(\n+        MarketCode code, List<MarketObservation> points, Instant retrievedAt, boolean stale) {\n+    public MarketSeriesResult {\n+        points = List.copyOf(points);\n+        if (points.isEmpty()) throw new IllegalArgumentException(\"관측값이 필요합니다.\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/result/MarketSeriesResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/result/MarketSeriesResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+package com.ssafy.thorp.market.application.service;\n+\n+import java.time.Duration;\n+\n+/**\n+ * 최근 흐름(series) 갱신 정책.\n+ *\n+ * @param window 돌려주는 거래일 수\n+ * @param lookbackDays 거래일 {@code window}개를 덮는 달력 날짜 수\n+ * @param refreshBudget 지표 하나를 한 번 갱신할 때의 시간 예산\n+ * @param maxAge 마지막 성공 뒤 이 시간이 지나면 stale로 알린다\n+ */\n+public record MarketSeriesPolicy(\n+        int window, int lookbackDays, Duration refreshBudget, Duration maxAge) {\n+    public MarketSeriesPolicy {\n+        if (window <= 0\n+                || lookbackDays < window\n+                || refreshBudget.isNegative()\n+                || refreshBudget.isZero()\n+                || maxAge.isNegative()\n+                || maxAge.isZero()) {\n+            throw new IllegalArgumentException(\"시장 흐름 갱신 설정이 올바르지 않습니다.\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketSeriesPolicy.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketSeriesPolicy.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+package com.ssafy.thorp.market.application.service;\n+\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.application.port.MarketSeriesProvider;\n+import com.ssafy.thorp.market.application.result.MarketSeriesResult;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.time.Clock;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Set;\n+import java.util.TreeMap;\n+import java.util.concurrent.ConcurrentHashMap;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.beans.factory.annotation.Qualifier;\n+import org.springframework.stereotype.Service;\n+\n+/**\n+ * 일별 지표의 최근 흐름. 요청은 원천을 부르지 않고 모아 둔 값만 돌려준다.\n+ *\n+ * <p>KRX는 날짜 하나당 한 번 호출이라 거래일 60개를 요청마다 모으면 요청 예산(8초)을 넘는다. 그래서 기동 직후와 정해진 간격마다 백그라운드로 모아 둔다. 이미 모은\n+ * 날짜는 다시 부르지 않으므로, 처음 한 번만 오래 걸리고 그 뒤로는 하루치만 부른다.\n+ */\n+@Service\n+public class MarketSeriesService {\n+    /** 첫 화면 차트가 쓰는 일별 지표. */\n+    public static final List<MarketCode> CODES =\n+            List.of(MarketCode.KOSPI, MarketCode.KOSDAQ, MarketCode.USD_KRW, MarketCode.VKOSPI200);\n+\n+    private static final Logger log = LoggerFactory.getLogger(MarketSeriesService.class);\n+    private static final ZoneId SEOUL = ZoneId.of(\"Asia/Seoul\");\n+\n+    private final List<MarketSeriesProvider> providers;\n+    private final Clock clock;\n+    private final MarketSeriesPolicy policy;\n+    private final Map<MarketCode, Snapshot> snapshots = new ConcurrentHashMap<>();\n+\n+    public MarketSeriesService(\n+            List<MarketSeriesProvider> providers,\n+            @Qualifier(\"marketClock\") Clock clock,\n+            MarketSeriesPolicy policy) {\n+        this.providers = List.copyOf(providers);\n+        this.clock = clock;\n+        this.policy = policy;\n+    }\n+\n+    /** 모아 둔 값이 없으면 NO_DATA(503)다. 마지막 성공이 오래되면 stale로 알린다. */\n+    public MarketSeriesResult get(MarketCode code) {\n+        if (!CODES.contains(code)) throw new MarketDataException(Reason.NOT_CONFIGURED);\n+        Snapshot snapshot = snapshots.get(code);\n+        if (snapshot == null || snapshot.points().isEmpty())\n+            throw new MarketDataException(Reason.NO_DATA);\n+        boolean stale = clock.instant().isAfter(snapshot.retrievedAt().plus(policy.maxAge()));\n+        return new MarketSeriesResult(code, snapshot.points(), snapshot.retrievedAt(), stale);\n+    }\n+\n+    /** 모든 지표를 갱신한다. 부르는 곳은 전용 스레드의 {@code MarketSeriesScheduler}다. */\n+    public void refreshAll() {\n+        for (MarketCode code : CODES) {\n+            try {\n+                refresh(code);\n+            } catch (MarketDataException e) {\n+                // 원천 URL·키·응답 본문을 남기지 않는다. 지표와 사유만 남긴다.\n+                log.warn(\"시장 흐름 갱신 실패 code={} reason={}\", code, e.reason());\n+            }\n+        }\n+    }\n+\n+    /**\n+     * 지표 하나를 갱신한다. 이미 모은 날짜는 넘기고, 창(window) 밖으로 밀려난 날짜는 버린다.\n+     *\n+     * <p>이전 값 읽기 → 원천 호출 → 저장이 한 덩어리라 갱신은 한 번에 하나만 돈다. 조회({@link #get})는 잠그지 않는다. 원천을 기다리는 동안 맵을\n+     * 잠그면({@code compute}) 조회까지 멈추므로 쓰지 않는다.\n+     */\n+    synchronized void refresh(MarketCode code) {\n+        MarketSeriesProvider provider =\n+                providers.stream()\n+                        .filter(p -> p.supportsSeries(code))\n+                        .findFirst()\n+                        .orElseThrow(() -> new MarketDataException(Reason.NOT_CONFIGURED));\n+        LocalDate today = LocalDate.now(clock.withZone(SEOUL));\n+        LocalDate from = today.minusDays(policy.lookbackDays());\n+        TreeMap<String, MarketObservation> merged = new TreeMap<>();\n+        Snapshot previous = snapshots.get(code);\n+        if (previous != null)\n+            for (MarketObservation point : previous.points())\n+                if (point.observationDate().compareTo(from.toString()) >= 0)\n+                    merged.put(point.observationDate(), point);\n+\n+        List<MarketObservation> fetched =\n+                provider.fetchSeries(\n+                        code,\n+                        from,\n+                        today,\n+                        Set.copyOf(merged.keySet()),\n+                        new MarketDeadline(policy.refreshBudget()));\n+        for (MarketObservation point : fetched) merged.put(point.observationDate(), point);\n+        if (merged.isEmpty()) throw new MarketDataException(Reason.NO_DATA);\n+\n+        List<MarketObservation> points = List.copyOf(merged.values());\n+        if (points.size() > policy.window())\n+            points = points.subList(points.size() - policy.window(), points.size());\n+        snapshots.put(code, new Snapshot(points, clock.instant()));\n+    }\n+\n+    private record Snapshot(List<MarketObservation> points, Instant retrievedAt) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketSeriesService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/application/service/MarketSeriesService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.market.infrastructure.client;\n import com.fasterxml.jackson.databind.JsonNode;\n import com.ssafy.thorp.market.application.port.MarketDeadline;\n import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.application.port.MarketSeriesProvider;\n import com.ssafy.thorp.market.domain.exception.MarketDataException;\n import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n import com.ssafy.thorp.market.domain.model.MarketObservation;\n@@ -12,13 +13,17 @@ import java.time.Clock;\n import java.time.LocalDate;\n import java.time.ZoneId;\n import java.time.format.DateTimeFormatter;\n+import java.util.ArrayList;\n+import java.util.Comparator;\n+import java.util.List;\n import java.util.Map;\n+import java.util.Set;\n import org.springframework.beans.factory.annotation.Qualifier;\n import org.springframework.stereotype.Component;\n import org.springframework.web.util.UriComponentsBuilder;\n \n @Component\n-public class EcosMarketClient implements MarketProvider {\n+public class EcosMarketClient implements MarketProvider, MarketSeriesProvider {\n     private final MarketHttpClient http;\n     private final MarketApiProperties.Ecos config;\n     private final Clock clock;\n@@ -40,24 +45,53 @@ public class EcosMarketClient implements MarketProvider {\n                 || code == MarketCode.M2;\n     }\n \n+    @Override\n+    public boolean supportsSeries(MarketCode code) {\n+        return code == MarketCode.USD_KRW;\n+    }\n+\n     @Override\n     public MarketObservation fetch(MarketCode code, MarketDeadline deadline) {\n-        Series series =\n-                switch (code) {\n-                    case USD_KRW -> new Series(\"731Y001\", \"0000001\", \"D\", \"원\", \"원/USD\");\n-                    case KTB_3Y -> new Series(\"817Y002\", \"010200000\", \"D\", \"연%\", \"%\");\n-                    case ESI_CYCLE -> new Series(\"513Y001\", \"E2000\", \"M\", \"\", \"지수\");\n-                    case M2 ->\n-                            new Series(config.getM2Table(), config.getM2Item(), \"M\", \"십억원\", \"십억원\");\n-                    default -> throw new IllegalArgumentException(\"ECOS 지원 코드가 아닙니다.\");\n-                };\n-        String key = MarketHttpClient.key(config.getApiKey());\n+        Series series = series(code);\n         boolean monthly = series.cycle().equals(\"M\");\n         LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(\"Asia/Seoul\")));\n-        DateTimeFormatter format = DateTimeFormatter.ofPattern(monthly ? \"uuuuMM\" : \"uuuuMMdd\");\n-        String start = (monthly ? today.minusMonths(24) : today.minusDays(60)).format(format);\n-        String end = today.format(format);\n         // 이 범위에는 일별 61건/월별 25건 이하만 존재한다. 100행으로 전체를 읽는다.\n+        LocalDate start = monthly ? today.minusMonths(24) : today.minusDays(60);\n+        List<MarketObservation> rows = rows(series, start, today, deadline);\n+        if (rows.isEmpty()) throw new MarketDataException(Reason.NO_DATA);\n+        return rows.get(rows.size() - 1);\n+    }\n+\n+    /** 한 번의 호출로 기간을 읽는다. 날짜마다 부르는 원천과 달리 {@code known}은 쓰지 않는다. */\n+    @Override\n+    public List<MarketObservation> fetchSeries(\n+            MarketCode code,\n+            LocalDate from,\n+            LocalDate to,\n+            Set<String> known,\n+            MarketDeadline deadline) {\n+        if (!supportsSeries(code)) throw new IllegalArgumentException(\"ECOS 흐름 지원 코드가 아닙니다.\");\n+        return rows(series(code), from, to, deadline);\n+    }\n+\n+    private Series series(MarketCode code) {\n+        return switch (code) {\n+            case USD_KRW -> new Series(\"731Y001\", \"0000001\", \"D\", \"원\", \"원/USD\");\n+            case KTB_3Y -> new Series(\"817Y002\", \"010200000\", \"D\", \"연%\", \"%\");\n+            case ESI_CYCLE -> new Series(\"513Y001\", \"E2000\", \"M\", \"\", \"지수\");\n+            case M2 -> new Series(config.getM2Table(), config.getM2Item(), \"M\", \"십억원\", \"십억원\");\n+            default -> throw new IllegalArgumentException(\"ECOS 지원 코드가 아닙니다.\");\n+        };\n+    }\n+\n+    /** 기간 안의 유효한 관측값을 날짜 오름차순으로. 결측·\"-\"는 빼고 0으로 채우지 않는다. */\n+    private List<MarketObservation> rows(\n+            Series series, LocalDate from, LocalDate to, MarketDeadline deadline) {\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        boolean monthly = series.cycle().equals(\"M\");\n+        DateTimeFormatter format = DateTimeFormatter.ofPattern(monthly ? \"uuuuMM\" : \"uuuuMMdd\");\n+        String start = from.format(format);\n+        String end = to.format(format);\n         var uri =\n                 UriComponentsBuilder.fromUriString(config.getBaseUrl())\n                         .pathSegment(\n@@ -86,7 +120,7 @@ public class EcosMarketClient implements MarketProvider {\n         JsonNode data = root.path(\"StatisticSearch\");\n         JsonNode rows = data.path(\"row\");\n         MarketValues.require(rows.isArray() && data.path(\"list_total_count\").asInt() <= 100);\n-        MarketObservation latest = null;\n+        List<MarketObservation> observations = new ArrayList<>();\n         for (JsonNode row : rows) {\n             MarketValues.require(\n                     series.table().equals(row.path(\"STAT_CODE\").asText())\n@@ -95,19 +129,12 @@ public class EcosMarketClient implements MarketProvider {\n             MarketValues.require(period.compareTo(start) >= 0 && period.compareTo(end) <= 0);\n             if (!series.sourceUnit().isEmpty())\n                 MarketValues.require(series.sourceUnit().equals(row.path(\"UNIT_NAME\").asText()));\n-            var observation =\n-                    MarketValues.observation(\n-                            row.path(\"DATA_VALUE\").asText(), series.unit(), period, monthly);\n-            if (observation.isPresent()\n-                    && (latest == null\n-                            || observation\n-                                            .get()\n-                                            .observationDate()\n-                                            .compareTo(latest.observationDate())\n-                                    > 0)) latest = observation.get();\n+            MarketValues.observation(\n+                            row.path(\"DATA_VALUE\").asText(), series.unit(), period, monthly)\n+                    .ifPresent(observations::add);\n         }\n-        if (latest == null) throw new MarketDataException(Reason.NO_DATA);\n-        return latest;\n+        observations.sort(Comparator.comparing(MarketObservation::observationDate));\n+        return observations;\n     }\n \n     private record Series(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/EcosMarketClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/EcosMarketClient.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.market.infrastructure.client;\n import com.fasterxml.jackson.databind.JsonNode;\n import com.ssafy.thorp.market.application.port.MarketDeadline;\n import com.ssafy.thorp.market.application.port.MarketProvider;\n+import com.ssafy.thorp.market.application.port.MarketSeriesProvider;\n import com.ssafy.thorp.market.domain.exception.MarketDataException;\n import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n import com.ssafy.thorp.market.domain.model.MarketObservation;\n@@ -10,17 +11,24 @@ import com.ssafy.thorp.market.domain.vo.MarketCode;\n import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n import java.time.Clock;\n import java.time.DayOfWeek;\n+import java.time.Duration;\n import java.time.LocalDate;\n import java.time.ZoneId;\n import java.time.format.DateTimeFormatter;\n+import java.util.ArrayList;\n+import java.util.Comparator;\n+import java.util.List;\n import java.util.Map;\n+import java.util.Optional;\n+import java.util.Set;\n import org.springframework.beans.factory.annotation.Qualifier;\n import org.springframework.stereotype.Component;\n \n @Component\n-public class KrxMarketClient implements MarketProvider {\n+public class KrxMarketClient implements MarketProvider, MarketSeriesProvider {\n     private final MarketHttpClient http;\n     private final MarketApiProperties.Krx config;\n+    private final Duration pace;\n     private final Clock clock;\n \n     public KrxMarketClient(\n@@ -29,6 +37,7 @@ public class KrxMarketClient implements MarketProvider {\n             @Qualifier(\"marketClock\") Clock clock) {\n         this.http = http;\n         this.config = properties.getKrx();\n+        this.pace = properties.getSeries().getKrxPace();\n         this.clock = clock;\n     }\n \n@@ -39,8 +48,59 @@ public class KrxMarketClient implements MarketProvider {\n                 || code == MarketCode.VKOSPI200;\n     }\n \n+    @Override\n+    public boolean supportsSeries(MarketCode code) {\n+        return supports(code);\n+    }\n+\n     @Override\n     public MarketObservation fetch(MarketCode code, MarketDeadline deadline) {\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(\"Asia/Seoul\")));\n+        for (int offset = 0; offset < config.getLookbackDays(); offset++) {\n+            LocalDate date = today.minusDays(offset);\n+            if (isWeekend(date)) continue;\n+            // 휴일/당일 미게시인 빈 응답만 이전 날짜로 이동한다. 잘못된 식별자는 숨기지 않는다.\n+            Optional<MarketObservation> observation = day(code, key, date, deadline);\n+            if (observation.isPresent()) return observation.get();\n+        }\n+        throw new MarketDataException(Reason.NO_DATA);\n+    }\n+\n+    /**\n+     * 날짜마다 한 번씩 부른다. 최근 날짜부터 거슬러 가며 이미 모은 날짜는 건너뛴다. 원천에 부담을 주지 않도록 호출 사이에 간격을 두고, 시간 예산이 다 되면 그때까지\n+     * 모은 값만 돌려준다.\n+     */\n+    @Override\n+    public List<MarketObservation> fetchSeries(\n+            MarketCode code,\n+            LocalDate from,\n+            LocalDate to,\n+            Set<String> known,\n+            MarketDeadline deadline) {\n+        String key = MarketHttpClient.key(config.getApiKey());\n+        List<MarketObservation> collected = new ArrayList<>();\n+        boolean first = true;\n+        for (LocalDate date = to; !date.isBefore(from); date = date.minusDays(1)) {\n+            if (isWeekend(date) || known.contains(date.toString())) continue;\n+            try {\n+                deadline.remaining();\n+                if (!first) sleep(pace);\n+                first = false;\n+                day(code, key, date, deadline).ifPresent(collected::add);\n+            } catch (MarketDataException e) {\n+                if (e.reason() == Reason.TIMEOUT) break;\n+                // 한 날짜의 결측(휴일에 채워진 다른 지수만 있는 경우 등)은 건너뛴다. 인증 실패 등은 그대로 알린다.\n+                if (e.reason() != Reason.NO_DATA) throw e;\n+            }\n+        }\n+        collected.sort(Comparator.comparing(MarketObservation::observationDate));\n+        return collected;\n+    }\n+\n+    /** 하루치. 빈 응답(휴일·미게시)은 비어 있음, 응답은 있는데 지수가 없으면 NO_DATA다. */\n+    private Optional<MarketObservation> day(\n+            MarketCode code, String key, LocalDate date, MarketDeadline deadline) {\n         String endpoint =\n                 switch (code) {\n                     case KOSPI -> \"kospi_dd_trd\";\n@@ -48,33 +108,39 @@ public class KrxMarketClient implements MarketProvider {\n                     case VKOSPI200 -> \"drvprod_dd_trd\";\n                     default -> throw new IllegalArgumentException(\"KRX 지원 코드가 아닙니다.\");\n                 };\n-        String key = MarketHttpClient.key(config.getApiKey());\n-        LocalDate today = LocalDate.now(clock.withZone(ZoneId.of(\"Asia/Seoul\")));\n-        for (int offset = 0; offset < config.getLookbackDays(); offset++) {\n-            LocalDate date = today.minusDays(offset);\n-            if (date.getDayOfWeek() == DayOfWeek.SATURDAY\n-                    || date.getDayOfWeek() == DayOfWeek.SUNDAY) continue;\n-            String day = date.format(DateTimeFormatter.BASIC_ISO_DATE);\n-            JsonNode root =\n-                    http.json(\n-                            MarketHttpClient.query(\n-                                    config.getBaseUrl() + \"/\" + endpoint, Map.of(\"basDd\", day)),\n-                            Map.of(\"AUTH_KEY\", key),\n-                            deadline);\n-            if (root == null) throw new MarketDataException(Reason.INVALID_RESPONSE);\n-            JsonNode rows = root.path(\"OutBlock_1\");\n-            MarketValues.require(rows.isArray());\n-            for (JsonNode row : rows) {\n-                if (!matches(code, row.path(\"IDX_NM\").asText())) continue;\n-                MarketValues.require(day.equals(row.path(\"BAS_DD\").asText()));\n-                var observation =\n-                        MarketValues.observation(row.path(\"CLSPRC_IDX\").asText(), \"pt\", day, false);\n-                if (observation.isPresent()) return observation.get();\n-            }\n-            // 휴일/당일 미게시인 빈 응답만 이전 날짜로 이동한다. 잘못된 식별자는 숨기지 않는다.\n-            if (!rows.isEmpty()) throw new MarketDataException(Reason.NO_DATA);\n+        String basDd = date.format(DateTimeFormatter.BASIC_ISO_DATE);\n+        JsonNode root =\n+                http.json(\n+                        MarketHttpClient.query(\n+                                config.getBaseUrl() + \"/\" + endpoint, Map.of(\"basDd\", basDd)),\n+                        Map.of(\"AUTH_KEY\", key),\n+                        deadline);\n+        if (root == null) throw new MarketDataException(Reason.INVALID_RESPONSE);\n+        JsonNode rows = root.path(\"OutBlock_1\");\n+        MarketValues.require(rows.isArray());\n+        for (JsonNode row : rows) {\n+            if (!matches(code, row.path(\"IDX_NM\").asText())) continue;\n+            MarketValues.require(basDd.equals(row.path(\"BAS_DD\").asText()));\n+            var observation =\n+                    MarketValues.observation(row.path(\"CLSPRC_IDX\").asText(), \"pt\", basDd, false);\n+            if (observation.isPresent()) return observation;\n+        }\n+        if (!rows.isEmpty()) throw new MarketDataException(Reason.NO_DATA);\n+        return Optional.empty();\n+    }\n+\n+    private static boolean isWeekend(LocalDate date) {\n+        return date.getDayOfWeek() == DayOfWeek.SATURDAY || date.getDayOfWeek() == DayOfWeek.SUNDAY;\n+    }\n+\n+    private static void sleep(Duration duration) {\n+        if (duration.isZero() || duration.isNegative()) return;\n+        try {\n+            Thread.sleep(duration.toMillis());\n+        } catch (InterruptedException e) {\n+            Thread.currentThread().interrupt();\n+            throw new MarketDataException(Reason.TIMEOUT);\n         }\n-        throw new MarketDataException(Reason.NO_DATA);\n     }\n \n     private boolean matches(MarketCode code, String name) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/KrxMarketClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/client/KrxMarketClient.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,6 +20,7 @@ public class MarketApiProperties {\n     private final Krx krx = new Krx();\n     private final Kosis kosis = new Kosis();\n     private final Customs customs = new Customs();\n+    private final Series series = new Series();\n \n     @Getter\n     @Setter\n@@ -48,6 +49,20 @@ public class MarketApiProperties {\n         private String coreCpiTable = \"DT_1J22042\";\n     }\n \n+    /** 최근 흐름(series) API. 요청이 아니라 백그라운드 갱신이 원천을 부른다. */\n+    @Getter\n+    @Setter\n+    public static class Series {\n+        /** 돌려주는 거래일 수. */\n+        private int window = 60;\n+\n+        /** 거래일 60개를 덮는 달력 날짜 수. 공휴일이 몰려도 모자라지 않게 넉넉히 잡는다. */\n+        private int lookbackDays = 95;\n+\n+        private Duration refreshBudget = Duration.ofSeconds(90);\n+        private Duration krxPace = Duration.ofMillis(150);\n+    }\n+\n     @Getter\n     @Setter\n     public static class Customs {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketApiProperties.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketApiProperties.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.market.infrastructure.config;\n \n import com.ssafy.thorp.market.application.service.MarketCachePolicy;\n+import com.ssafy.thorp.market.application.service.MarketSeriesPolicy;\n import java.time.Clock;\n import org.springframework.boot.context.properties.ConfigurationProperties;\n import org.springframework.boot.convert.DurationStyle;\n@@ -73,4 +74,14 @@ public class MarketConfig {\n                 properties.getFailureCooldown(),\n                 properties.getRequestBudget());\n     }\n+\n+    @Bean\n+    public MarketSeriesPolicy marketSeriesPolicy(MarketApiProperties properties) {\n+        var series = properties.getSeries();\n+        return new MarketSeriesPolicy(\n+                series.getWindow(),\n+                series.getLookbackDays(),\n+                series.getRefreshBudget(),\n+                properties.getCacheMaxAge());\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/config/MarketConfig.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,52 @@\n+package com.ssafy.thorp.market.infrastructure.scheduling;\n+\n+import com.ssafy.thorp.market.application.service.MarketSeriesService;\n+import java.time.Duration;\n+import java.time.Instant;\n+import org.springframework.beans.factory.DisposableBean;\n+import org.springframework.beans.factory.InitializingBean;\n+import org.springframework.beans.factory.annotation.Value;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 최근 흐름을 기동 직후와 정해진 간격마다 모은다.\n+ *\n+ * <p><b>공용 스케줄러 스레드를 쓰지 않는다.</b> {@code @Scheduled}는 스레드 하나를 나눠 쓰는데, KRX 첫 수집은 지표마다 시간 예산(기본 90초)까지\n+ * 걸린다. 그 동안 발행 재시도·정체 감시 같은 다른 스케줄이 멈추므로 전용 스레드 하나에서 돌린다.\n+ *\n+ * <p>{@code market.series.enabled=false}로 끌 수 있다. 끄면 수집만 멈추고 조회는 모아 둔 값이 없어 503이다.\n+ */\n+@Component\n+@ConditionalOnProperty(name = \"market.series.enabled\", havingValue = \"true\", matchIfMissing = true)\n+public class MarketSeriesScheduler implements InitializingBean, DisposableBean {\n+    private final MarketSeriesService service;\n+    private final Duration initialDelay;\n+    private final Duration interval;\n+    private final ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();\n+\n+    public MarketSeriesScheduler(\n+            MarketSeriesService service,\n+            @Value(\"${market.series.initial-delay:PT5S}\") Duration initialDelay,\n+            @Value(\"${market.series.refresh-interval:PT6H}\") Duration interval) {\n+        this.service = service;\n+        this.initialDelay = initialDelay;\n+        this.interval = interval;\n+    }\n+\n+    @Override\n+    public void afterPropertiesSet() {\n+        scheduler.setPoolSize(1);\n+        scheduler.setThreadNamePrefix(\"market-series-\");\n+        scheduler.setDaemon(true);\n+        scheduler.initialize();\n+        scheduler.scheduleWithFixedDelay(\n+                service::refreshAll, Instant.now().plus(initialDelay), interval);\n+    }\n+\n+    @Override\n+    public void destroy() {\n+        scheduler.shutdown();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/scheduling/MarketSeriesScheduler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/infrastructure/scheduling/MarketSeriesScheduler.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,11 @@\n package com.ssafy.thorp.market.presentation.controller;\n \n import com.ssafy.thorp.common.web.response.HttpApiResponse;\n+import com.ssafy.thorp.market.application.service.MarketSeriesService;\n import com.ssafy.thorp.market.application.service.MarketService;\n import com.ssafy.thorp.market.domain.vo.MarketCode;\n import com.ssafy.thorp.market.presentation.response.MarketResponse;\n+import com.ssafy.thorp.market.presentation.response.MarketSeriesResponse;\n import org.springframework.web.bind.annotation.GetMapping;\n import org.springframework.web.bind.annotation.RequestMapping;\n import org.springframework.web.bind.annotation.RestController;\n@@ -13,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;\n @RequestMapping(\"/markets\")\n public class MarketController {\n     private final MarketService service;\n+    private final MarketSeriesService seriesService;\n \n-    public MarketController(MarketService service) {\n+    public MarketController(MarketService service, MarketSeriesService seriesService) {\n         this.service = service;\n+        this.seriesService = seriesService;\n     }\n \n     @GetMapping(\"/kospi\")\n@@ -73,6 +77,31 @@ public class MarketController {\n         return get(MarketCode.M2);\n     }\n \n+    /** 최근 흐름. 요청은 원천을 부르지 않고 백그라운드로 모아 둔 값만 돌려준다(market-api.md). */\n+    @GetMapping(\"/kospi/series\")\n+    public HttpApiResponse<MarketSeriesResponse> kospiSeries() {\n+        return series(MarketCode.KOSPI);\n+    }\n+\n+    @GetMapping(\"/kosdaq/series\")\n+    public HttpApiResponse<MarketSeriesResponse> kosdaqSeries() {\n+        return series(MarketCode.KOSDAQ);\n+    }\n+\n+    @GetMapping(\"/usd-krw/series\")\n+    public HttpApiResponse<MarketSeriesResponse> usdKrwSeries() {\n+        return series(MarketCode.USD_KRW);\n+    }\n+\n+    @GetMapping(\"/vkospi200/series\")\n+    public HttpApiResponse<MarketSeriesResponse> vkospi200Series() {\n+        return series(MarketCode.VKOSPI200);\n+    }\n+\n+    private HttpApiResponse<MarketSeriesResponse> series(MarketCode code) {\n+        return HttpApiResponse.ok(MarketSeriesResponse.from(seriesService.get(code)));\n+    }\n+\n     private HttpApiResponse<MarketResponse> get(MarketCode code) {\n         return HttpApiResponse.ok(MarketResponse.from(service.get(code)));\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/controller/MarketController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/controller/MarketController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+package com.ssafy.thorp.market.presentation.response;\n+\n+import com.ssafy.thorp.market.application.result.MarketSeriesResult;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.util.List;\n+\n+/** 최근 흐름. {@code points}는 날짜 오름차순이다. */\n+public record MarketSeriesResponse(\n+        String code,\n+        String name,\n+        String unit,\n+        String frequency,\n+        List<Point> points,\n+        Instant retrievedAt,\n+        MarketResponse.Source source,\n+        String status,\n+        String statusMessage) {\n+    public record Point(String date, BigDecimal value) {}\n+\n+    public static MarketSeriesResponse from(MarketSeriesResult result) {\n+        var code = result.code();\n+        var points = result.points();\n+        return new MarketSeriesResponse(\n+                code.name(),\n+                code.displayName(),\n+                points.get(points.size() - 1).unit(),\n+                code.frequency(),\n+                points.stream().map(p -> new Point(p.observationDate(), p.value())).toList(),\n+                result.retrievedAt(),\n+                new MarketResponse.Source(code.provider(), code.datasetName()),\n+                result.stale() ? \"stale\" : \"ok\",\n+                result.stale() ? \"최근 흐름 갱신에 실패하여 이전 수집값을 표시합니다.\" : null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/response/MarketSeriesResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/market/presentation/response/MarketSeriesResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,97 @@\n+package com.ssafy.thorp.market.application.service;\n+\n+import static org.assertj.core.api.Assertions.*;\n+import static org.mockito.ArgumentMatchers.*;\n+import static org.mockito.Mockito.*;\n+\n+import com.ssafy.thorp.market.application.port.MarketSeriesProvider;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import java.math.BigDecimal;\n+import java.time.*;\n+import java.util.List;\n+import java.util.Set;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentCaptor;\n+\n+class MarketSeriesServiceTest {\n+    private final Clock clock = mock(Clock.class);\n+    private final MarketSeriesProvider provider = mock(MarketSeriesProvider.class);\n+    private MarketSeriesService service;\n+\n+    private static MarketObservation point(String date, String value) {\n+        return new MarketObservation(new BigDecimal(value), \"pt\", date);\n+    }\n+\n+    @BeforeEach\n+    void setUp() {\n+        when(clock.instant()).thenReturn(Instant.parse(\"2026-09-09T00:00:00Z\"));\n+        when(clock.getZone()).thenReturn(ZoneOffset.UTC);\n+        when(clock.withZone(any())).thenAnswer(i -> Clock.fixed(clock.instant(), i.getArgument(0)));\n+        when(provider.supportsSeries(any())).thenReturn(true);\n+        service =\n+                new MarketSeriesService(\n+                        List.of(provider),\n+                        clock,\n+                        new MarketSeriesPolicy(3, 30, Duration.ofSeconds(5), Duration.ofHours(24)));\n+    }\n+\n+    @Test\n+    void noCollectedValueIsNoDataWithoutCallingUpstream() {\n+        assertThatThrownBy(() -> service.get(MarketCode.KOSPI))\n+                .isInstanceOfSatisfying(\n+                        MarketDataException.class,\n+                        e -> assertThat(e.reason()).isEqualTo(Reason.NO_DATA));\n+        verifyNoInteractions(provider);\n+    }\n+\n+    @Test\n+    void skipsKnownDatesAndKeepsOnlyTheLatestWindow() {\n+        when(provider.fetchSeries(eq(MarketCode.KOSPI), any(), any(), any(), any()))\n+                .thenReturn(List.of(point(\"2026-09-03\", \"1\"), point(\"2026-09-04\", \"2\")))\n+                .thenReturn(List.of(point(\"2026-09-07\", \"3\"), point(\"2026-09-08\", \"4\")));\n+\n+        service.refresh(MarketCode.KOSPI);\n+        service.refresh(MarketCode.KOSPI);\n+\n+        @SuppressWarnings(\"unchecked\")\n+        ArgumentCaptor<Set<String>> known = ArgumentCaptor.forClass(Set.class);\n+        verify(provider, times(2))\n+                .fetchSeries(eq(MarketCode.KOSPI), any(), any(), known.capture(), any());\n+        assertThat(known.getAllValues().get(1))\n+                .containsExactlyInAnyOrder(\"2026-09-03\", \"2026-09-04\");\n+        var result = service.get(MarketCode.KOSPI);\n+        assertThat(result.points())\n+                .extracting(MarketObservation::observationDate)\n+                .containsExactly(\"2026-09-04\", \"2026-09-07\", \"2026-09-08\");\n+        assertThat(result.stale()).isFalse();\n+    }\n+\n+    @Test\n+    void failedRefreshKeepsCollectedValuesAndMarksThemStaleWhenOld() {\n+        when(provider.fetchSeries(any(), any(), any(), any(), any()))\n+                .thenReturn(List.of(point(\"2026-09-08\", \"10\")))\n+                .thenThrow(new MarketDataException(Reason.UPSTREAM_ERROR));\n+        service.refresh(MarketCode.KOSPI);\n+\n+        when(clock.instant()).thenReturn(Instant.parse(\"2026-09-10T06:00:00Z\"));\n+        service.refreshAll(); // 실패는 기록만 하고 삼킨다\n+\n+        var result = service.get(MarketCode.KOSPI);\n+        assertThat(result.points())\n+                .extracting(MarketObservation::value)\n+                .containsExactly(new BigDecimal(\"10\"));\n+        assertThat(result.stale()).isTrue();\n+    }\n+\n+    @Test\n+    void codesOutsideTheLandingChartHaveNoSeries() {\n+        assertThatThrownBy(() -> service.get(MarketCode.M2))\n+                .isInstanceOfSatisfying(\n+                        MarketDataException.class,\n+                        e -> assertThat(e.reason()).isEqualTo(Reason.NOT_CONFIGURED));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/application/service/MarketSeriesServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/application/service/MarketSeriesServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,161 @@\n+package com.ssafy.thorp.market.infrastructure.client;\n+\n+import static org.assertj.core.api.Assertions.*;\n+import static org.mockito.ArgumentMatchers.*;\n+import static org.mockito.Mockito.*;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.market.application.port.MarketDeadline;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException;\n+import com.ssafy.thorp.market.domain.exception.MarketDataException.Reason;\n+import com.ssafy.thorp.market.domain.model.MarketObservation;\n+import com.ssafy.thorp.market.domain.vo.MarketCode;\n+import com.ssafy.thorp.market.infrastructure.config.MarketApiProperties;\n+import java.net.URI;\n+import java.time.*;\n+import java.util.List;\n+import java.util.Set;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentCaptor;\n+\n+class MarketSeriesClientsTest {\n+    private final MarketHttpClient http = mock(MarketHttpClient.class);\n+    private final MarketApiProperties config = new MarketApiProperties();\n+    private final ObjectMapper mapper = new ObjectMapper();\n+    private final Clock clock = Clock.fixed(Instant.parse(\"2026-09-09T00:00:00Z\"), ZoneOffset.UTC);\n+\n+    @BeforeEach\n+    void setUp() {\n+        config.getSeries().setKrxPace(Duration.ZERO);\n+    }\n+\n+    private MarketDeadline deadline() {\n+        return new MarketDeadline(Duration.ofSeconds(8));\n+    }\n+\n+    private JsonNode krxDay(String basDd, String close) throws Exception {\n+        return mapper.readTree(\n+                \"\"\"\n+                {\"OutBlock_1\":[{\"IDX_NM\":\"코스피\",\"BAS_DD\":\"%s\",\"CLSPRC_IDX\":\"%s\"}]}\n+                \"\"\"\n+                        .formatted(basDd, close));\n+    }\n+\n+    @Test\n+    void krxSeriesSkipsWeekendsAndKnownDatesAndReturnsAscending() throws Exception {\n+        config.getKrx().setApiKey(\"test-key\");\n+        // 2026-09-04(금) ~ 2026-09-09(수): 주말 이틀과 이미 모은 9/8을 뺀 9/9, 9/7, 9/4만 부른다.\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        krxDay(\"20260909\", \"2,510\"),\n+                        krxDay(\"20260907\", \"2,490.5\"),\n+                        krxDay(\"20260904\", \"2,480\"));\n+        var client = new KrxMarketClient(http, config, clock);\n+\n+        List<MarketObservation> series =\n+                client.fetchSeries(\n+                        MarketCode.KOSPI,\n+                        LocalDate.parse(\"2026-09-04\"),\n+                        LocalDate.parse(\"2026-09-09\"),\n+                        Set.of(\"2026-09-08\"),\n+                        deadline());\n+\n+        assertThat(series)\n+                .extracting(MarketObservation::observationDate)\n+                .containsExactly(\"2026-09-04\", \"2026-09-07\", \"2026-09-09\");\n+        var uri = ArgumentCaptor.forClass(URI.class);\n+        verify(http, times(3)).json(uri.capture(), anyMap(), any());\n+        assertThat(uri.getAllValues())\n+                .extracting(URI::getQuery)\n+                .containsExactly(\"basDd=20260909\", \"basDd=20260907\", \"basDd=20260904\");\n+    }\n+\n+    @Test\n+    void krxSeriesSkipsHolidaysButReportsAuthenticationFailure() throws Exception {\n+        config.getKrx().setApiKey(\"test-key\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(mapper.readTree(\"{\\\"OutBlock_1\\\":[]}\"), krxDay(\"20260908\", \"2,500\"));\n+        var client = new KrxMarketClient(http, config, clock);\n+        var series =\n+                client.fetchSeries(\n+                        MarketCode.KOSPI,\n+                        LocalDate.parse(\"2026-09-08\"),\n+                        LocalDate.parse(\"2026-09-09\"),\n+                        Set.of(),\n+                        deadline());\n+        assertThat(series)\n+                .extracting(MarketObservation::observationDate)\n+                .containsExactly(\"2026-09-08\");\n+\n+        when(http.json(any(), anyMap(), any()))\n+                .thenThrow(new MarketDataException(Reason.AUTHENTICATION));\n+        assertThatThrownBy(\n+                        () ->\n+                                client.fetchSeries(\n+                                        MarketCode.KOSPI,\n+                                        LocalDate.parse(\"2026-09-08\"),\n+                                        LocalDate.parse(\"2026-09-09\"),\n+                                        Set.of(),\n+                                        deadline()))\n+                .isInstanceOfSatisfying(\n+                        MarketDataException.class,\n+                        e -> assertThat(e.reason()).isEqualTo(Reason.AUTHENTICATION));\n+    }\n+\n+    @Test\n+    void krxSeriesStopsAtBudgetAndReturnsWhatItCollected() throws Exception {\n+        config.getKrx().setApiKey(\"test-key\");\n+        // 9/9는 받고 9/8에서 예산이 다 된다. 9/7 이전은 부르지 않고 모은 하루만 돌려준다.\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(krxDay(\"20260909\", \"2,510\"))\n+                .thenThrow(new MarketDataException(Reason.TIMEOUT));\n+        var client = new KrxMarketClient(http, config, clock);\n+\n+        var series =\n+                client.fetchSeries(\n+                        MarketCode.KOSPI,\n+                        LocalDate.parse(\"2026-09-01\"),\n+                        LocalDate.parse(\"2026-09-09\"),\n+                        Set.of(),\n+                        deadline());\n+\n+        assertThat(series)\n+                .extracting(MarketObservation::observationDate)\n+                .containsExactly(\"2026-09-09\");\n+        verify(http, times(2)).json(any(), anyMap(), any());\n+    }\n+\n+    @Test\n+    void ecosSeriesReadsRangeOnceAndDropsMissingValues() throws Exception {\n+        config.getEcos().setApiKey(\"test-key\");\n+        when(http.json(any(), anyMap(), any()))\n+                .thenReturn(\n+                        mapper.readTree(\n+                                \"\"\"\n+            {\"StatisticSearch\":{\"list_total_count\":3,\"row\":[\n+             {\"STAT_CODE\":\"731Y001\",\"ITEM_CODE1\":\"0000001\",\"UNIT_NAME\":\"원\",\"TIME\":\"20260908\",\"DATA_VALUE\":\"1,380.1\"},\n+             {\"STAT_CODE\":\"731Y001\",\"ITEM_CODE1\":\"0000001\",\"UNIT_NAME\":\"원\",\"TIME\":\"20260904\",\"DATA_VALUE\":\"1,371.5\"},\n+             {\"STAT_CODE\":\"731Y001\",\"ITEM_CODE1\":\"0000001\",\"UNIT_NAME\":\"원\",\"TIME\":\"20260907\",\"DATA_VALUE\":\"-\"}]}}\n+            \"\"\"));\n+        var client = new EcosMarketClient(http, config, clock);\n+\n+        var series =\n+                client.fetchSeries(\n+                        MarketCode.USD_KRW,\n+                        LocalDate.parse(\"2026-06-06\"),\n+                        LocalDate.parse(\"2026-09-09\"),\n+                        Set.of(\"2026-09-04\"),\n+                        deadline());\n+\n+        assertThat(series)\n+                .extracting(MarketObservation::observationDate)\n+                .containsExactly(\"2026-09-04\", \"2026-09-08\");\n+        assertThat(series.get(1).value()).isEqualByComparingTo(\"1380.1\");\n+        assertThat(series.get(1).unit()).isEqualTo(\"원/USD\");\n+        var uri = ArgumentCaptor.forClass(URI.class);\n+        verify(http).json(uri.capture(), anyMap(), any());\n+        assertThat(uri.getValue().getPath()).contains(\"/731Y001/D/20260606/20260909/\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/client/MarketSeriesClientsTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/infrastructure/client/MarketSeriesClientsTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,12 +8,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;\n \n import com.ssafy.thorp.market.application.result.MarketResult;\n+import com.ssafy.thorp.market.application.result.MarketSeriesResult;\n+import com.ssafy.thorp.market.application.service.MarketSeriesService;\n import com.ssafy.thorp.market.application.service.MarketService;\n import com.ssafy.thorp.market.domain.exception.MarketDataException;\n import com.ssafy.thorp.market.domain.model.MarketObservation;\n import com.ssafy.thorp.market.domain.vo.MarketCode;\n import java.math.BigDecimal;\n import java.time.Instant;\n+import java.util.List;\n import org.junit.jupiter.api.BeforeEach;\n import org.junit.jupiter.api.Test;\n import org.junit.jupiter.params.ParameterizedTest;\n@@ -23,12 +26,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;\n \n class MarketControllerTest {\n     private final MarketService service = mock(MarketService.class);\n+    private final MarketSeriesService seriesService = mock(MarketSeriesService.class);\n     private MockMvc mvc;\n \n     @BeforeEach\n     void setUp() {\n         mvc =\n-                MockMvcBuilders.standaloneSetup(new MarketController(service))\n+                MockMvcBuilders.standaloneSetup(new MarketController(service, seriesService))\n                         .setControllerAdvice(\n                                 new MarketExceptionHandler(),\n                                 new com.ssafy.thorp.common.web.advice.GlobalExceptionHandler())\n@@ -88,4 +92,37 @@ class MarketControllerTest {\n                 .andExpect(status().isInternalServerError())\n                 .andExpect(jsonPath(\"$.message\").value(\"서버 오류가 발생했습니다.\"));\n     }\n+\n+    @Test\n+    void seriesRouteReturnsAscendingPointsWithSource() throws Exception {\n+        when(seriesService.get(MarketCode.KOSPI))\n+                .thenReturn(\n+                        new MarketSeriesResult(\n+                                MarketCode.KOSPI,\n+                                List.of(\n+                                        new MarketObservation(\n+                                                new BigDecimal(\"2480\"), \"pt\", \"2026-09-04\"),\n+                                        new MarketObservation(\n+                                                new BigDecimal(\"2510.5\"), \"pt\", \"2026-09-07\")),\n+                                Instant.parse(\"2026-09-07T00:00:00Z\"),\n+                                false));\n+        mvc.perform(get(\"/markets/kospi/series\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.result.code\").value(\"KOSPI\"))\n+                .andExpect(jsonPath(\"$.result.unit\").value(\"pt\"))\n+                .andExpect(jsonPath(\"$.result.points[0].date\").value(\"2026-09-04\"))\n+                .andExpect(jsonPath(\"$.result.points[1].value\").value(2510.5))\n+                .andExpect(jsonPath(\"$.result.source.provider\").value(\"KRX\"))\n+                .andExpect(jsonPath(\"$.result.status\").value(\"ok\"));\n+    }\n+\n+    @Test\n+    void seriesNotCollectedYetIs503() throws Exception {\n+        when(seriesService.get(any()))\n+                .thenThrow(new MarketDataException(MarketDataException.Reason.NO_DATA));\n+        for (String slug : List.of(\"kospi\", \"kosdaq\", \"usd-krw\", \"vkospi200\"))\n+            mvc.perform(get(\"/markets/\" + slug + \"/series\"))\n+                    .andExpect(status().isServiceUnavailable())\n+                    .andExpect(jsonPath(\"$.result\").value(nullValue()));\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/presentation/controller/MarketControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/presentation/controller/MarketControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -70,6 +70,44 @@ ECOS 과거 101Y003은 현재 M2 평잔·원계열 정의와 다르므로 사용\n - 관세청은 완료된 최근 12개월을 조회하며 총계 행은 제외한다. expDlr은 달러 단위이다.\n - 결측·숫자 파싱 실패를 0으로 바꾸지 않는다. 목업 값으로 대체하지 않는다.\n \n+## 최근 흐름 API (series)\n+\n+첫 화면의 지표 차트가 실제 일별 흐름을 그리도록, 일별 지표 네 개는 최근 거래일 종가 목록을 따로 준다.\n+최신값 API와 같은 `HttpApiResponse` 형식이고 인증이 필요 없다.\n+\n+| 경로 | code | 원천 |\n+|---|---|---|\n+| `/markets/kospi/series` | KOSPI | KRX kospi_dd_trd (날짜별 호출) |\n+| `/markets/kosdaq/series` | KOSDAQ | KRX kosdaq_dd_trd (날짜별 호출) |\n+| `/markets/usd-krw/series` | USD_KRW | ECOS 731Y001 / 0000001 / D (기간 한 번 호출) |\n+| `/markets/vkospi200/series` | VKOSPI200 | KRX drvprod_dd_trd (날짜별 호출) |\n+\n+```json\n+{\n+  \"code\": \"KOSPI\",\n+  \"name\": \"KOSPI 지수\",\n+  \"unit\": \"pt\",\n+  \"frequency\": \"daily\",\n+  \"points\": [{\"date\": \"2026-06-24\", \"value\": 2688.1}, {\"date\": \"2026-06-25\", \"value\": 2701.4}],\n+  \"retrievedAt\": \"2026-09-23T03:00:00Z\",\n+  \"source\": {\"provider\": \"KRX\", \"datasetName\": \"KOSPI 시리즈 일별시세정보\"},\n+  \"status\": \"ok\",\n+  \"statusMessage\": null\n+}\n+```\n+\n+- `points`는 날짜 오름차순이고 최대 60개다(거래일 기준). 결측·파싱 실패 날짜는 빼며 0으로 채우지 않는다.\n+- **요청은 외부 기관을 부르지 않는다.** KRX는 날짜 하나당 한 번 호출이라 60일을 요청마다 모으면 8초 예산을\n+  넘는다. 백엔드가 기동 직후와 `market.series.refresh-interval`(기본 6시간)마다 백그라운드로 모아 두고, 요청은\n+  모아 둔 값만 돌려준다. 수집은 공용 `@Scheduled` 스레드가 아닌 전용 스레드에서 돈다(첫 수집이 몇 분 걸려도\n+  다른 스케줄을 막지 않는다). `market.series.enabled=false`로 끌 수 있다.\n+- 모아 둔 값은 인스턴스 메모리에만 있다. 재기동하면 처음부터 다시 모은다.\n+- KRX는 이미 모은 날짜를 다시 부르지 않고 빠진 평일만 부른다. 호출 사이에 `market.series.krx-pace`(기본 150ms)를\n+  두고, 한 번의 갱신은 `market.series.refresh-budget`(기본 90초) 안에서 멈춘다. 모자란 날짜는 다음 갱신이 잇는다.\n+- ECOS는 최근 90일 범위를 한 번에 읽는다(100행 이하).\n+- 아직 모은 값이 없으면 503 + `result=null`이다. 마지막 성공이 `cacheMaxAge`(24시간)보다 오래되면 200 +\n+  `status=stale`로 모아 둔 값을 준다. 프론트는 503이면 예시 흐름을 쓰고 그렇다고 밝힌다.\n+\n ## 실행\n \n 저장소 루트 `.env`에 ECOS_API_KEY, KRX_API_KEY, KOSIS_API_KEY, DATA_GO_KR_SERVICE_KEY를 설정한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/market-api.md",
+          "old_path": "docs/specs/market-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,6 +6,7 @@ import type {\n   ApiEnvelope,\n   MarketIndicatorCode,\n   MarketIndicatorResponse,\n+  MarketSeriesResponse,\n } from '../types/marketApi.ts'\n \n const clientStubUrl = new URL('./marketClientStub.ts', import.meta.url).href\n@@ -20,7 +21,7 @@ registerHooks({\n   },\n })\n \n-const { fetchLatestMarketIndicators, marketIndicatorCodes } = await import('./market.ts')\n+const { fetchLatestMarketIndicators, fetchMarketSeries, marketIndicatorCodes } = await import('./market.ts')\n \n const codeByEndpoint: Record<string, MarketIndicatorCode> = {\n   '/markets/kospi': 'KOSPI',\n@@ -108,3 +109,70 @@ test('실패 envelope, 코드 불일치, NaN과 Infinity를 개별 오류로 격\n   assert.equal(Object.keys(batch.data).length, marketIndicatorCodes.length - 4)\n   assert.equal(batch.data.KTB_3Y?.value, 100)\n })\n+\n+function seriesFor(points: MarketSeriesResponse['points']): ApiEnvelope<MarketSeriesResponse> {\n+  return {\n+    httpStatus: 'OK',\n+    isSuccess: true,\n+    message: '성공',\n+    code: 200,\n+    result: {\n+      code: 'KOSPI',\n+      name: 'KOSPI 지수',\n+      unit: 'pt',\n+      frequency: 'daily',\n+      points,\n+      retrievedAt: '2026-09-08T00:00:00Z',\n+      source: { provider: 'KRX', datasetName: 'test' },\n+      status: 'ok',\n+      statusMessage: null,\n+    },\n+  }\n+}\n+\n+async function withSeries(body: ApiEnvelope<MarketSeriesResponse>) {\n+  const originalGet = apiClient.get\n+  let requested = ''\n+  apiClient.get = (async (endpoint: string) => {\n+    requested = endpoint\n+    return { data: body }\n+  }) as typeof apiClient.get\n+  try {\n+    return { series: await fetchMarketSeries('KOSPI'), requested }\n+  } finally {\n+    apiClient.get = originalGet\n+  }\n+}\n+\n+test('최근 흐름은 지표별 series 경로에서 날짜 오름차순 값을 받는다', async () => {\n+  const { series, requested } = await withSeries(\n+    seriesFor([\n+      { date: '2026-09-04', value: 2480 },\n+      { date: '2026-09-07', value: 2510.5 },\n+    ]),\n+  )\n+  assert.equal(requested, '/markets/kospi/series')\n+  assert.deepEqual(\n+    series.points.map((point) => point.value),\n+    [2480, 2510.5],\n+  )\n+})\n+\n+test('날짜가 뒤섞이거나 값이 숫자가 아닌 흐름은 받지 않는다', async () => {\n+  await assert.rejects(\n+    withSeries(\n+      seriesFor([\n+        { date: '2026-09-07', value: 2510 },\n+        { date: '2026-09-04', value: 2480 },\n+      ]),\n+    ),\n+  )\n+  await assert.rejects(\n+    withSeries(\n+      seriesFor([\n+        { date: '2026-09-04', value: 2480 },\n+        { date: '2026-09-07', value: Number.NaN },\n+      ]),\n+    ),\n+  )\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/market.test.ts",
+          "old_path": "frontend/src/api/market.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,8 @@ import type {\n   MarketIndicatorBatch,\n   MarketIndicatorCode,\n   MarketIndicatorResponse,\n+  MarketSeriesCode,\n+  MarketSeriesResponse,\n } from '@/types/marketApi'\n \n const indicatorEndpoints: Record<MarketIndicatorCode, string> = {\n@@ -71,3 +73,31 @@ export async function fetchMarketIndicatorsFor(\n export async function fetchLatestMarketIndicators(): Promise<MarketIndicatorBatch> {\n   return fetchMarketIndicatorsFor(marketIndicatorCodes)\n }\n+\n+const seriesEndpoints: Record<MarketSeriesCode, string> = {\n+  KOSPI: '/markets/kospi/series',\n+  KOSDAQ: '/markets/kosdaq/series',\n+  USD_KRW: '/markets/usd-krw/series',\n+  VKOSPI200: '/markets/vkospi200/series',\n+}\n+\n+/**\n+ * 일별 지표 하나의 최근 흐름. 백엔드가 아직 모으지 못했으면 503이고, 호출한 쪽은 예시 흐름을 쓴다.\n+ * 날짜가 오름차순이고 값이 숫자인지 확인한다 — 어긋난 응답으로 그린 차트는 틀린 흐름을 보인다.\n+ */\n+export async function fetchMarketSeries(code: MarketSeriesCode): Promise<MarketSeriesResponse> {\n+  const response = await apiClient.get<ApiEnvelope<MarketSeriesResponse>>(seriesEndpoints[code])\n+  const body = response.data\n+  const series = body.result\n+  if (!body.isSuccess || !series || series.code !== code || !Array.isArray(series.points)) {\n+    throw new Error(`${code} 흐름 응답 형식이 올바르지 않습니다.`)\n+  }\n+  const ordered = series.points.every(\n+    (point, index) =>\n+      Number.isFinite(point.value) && (index === 0 || series.points[index - 1].date < point.date),\n+  )\n+  if (!ordered || series.points.length < 2) {\n+    throw new Error(`${code} 흐름 값이 올바르지 않습니다.`)\n+  }\n+  return series\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/market.ts",
+          "old_path": "frontend/src/api/market.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,26 +1,38 @@\n import { useEffect, useMemo, useRef, useState } from 'react'\n import { useReducedMotion } from 'motion/react'\n+import { fetchMarketSeries } from '@/api/market'\n import type { Indicator } from '@/types/market'\n+import type { MarketSeriesCode } from '@/types/marketApi'\n import styles from '@/pages/LandingPage.module.css'\n \n /*\n-  첫 화면 오른쪽 창. 국내 시장 지표를 탭으로 바꿔 가며 차트가 계속 그려지는 모습을 보인다.\n+  첫 화면 오른쪽 창. 국내 시장 지표 칸을 눌러 고르면 그 지표의 차트가 끊김 없이 흘러간다.\n+  지표는 저절로 넘어가지 않는다. 사용자가 보던 지표가 멋대로 바뀌면 읽던 흐름이 끊긴다.\n \n-  **움직임은 만든 것이다.** 틱 단위 시세를 받지 않으므로, 첫 화면이 받은 지표 값(없으면 예시 값)을\n-  출발점으로 삼아 그 둘레를 오가는 흐름을 그린다. 그래서 창에 '움직임 예시'를 밝히고 'LIVE'라고\n-  쓰지 않는다. 실제 값과 출처는 시장 흐름 화면이 보인다.\n+  **실제 값이 먼저다.** 백엔드가 모아 둔 최근 거래일 종가(`GET /markets/{code}/series`)를 받으면 그 흐름을\n+  왼쪽부터 그려 나간 뒤 멈추고, 창에 원천과 기준일을 밝힌다. 아직 모으지 못한 지표(503)만 첫 화면이 받은\n+  지표 값(없으면 예시 값)을 출발점으로 둘레를 오가는 흐름을 만들어 그리고, 창에 '움직임 예시'를 밝힌다.\n+  어느 쪽이든 'LIVE'라고 쓰지 않는다. 틱 단위 시세는 받지 않는다.\n+\n+  **예시 흐름을 부드럽게 그리는 방법.** 값은 TICK_MS마다 하나씩 생기는 점(키프레임)이고, 화면은 그 점들을\n+  곡선으로 이은 값을 매 프레임 같은 x 위치에서 읽어 그린다. 시간이 흐르면 읽는 자리가 조금씩\n+  옮겨 가므로 선이 한 칸씩 튀지 않고 흘러가며, 끝점은 오른쪽 끝에 머문 채 값만 바뀐다. 세로 범위도\n+  한 번에 바꾸지 않고 따라가게 한다. 매 프레임 React를 다시 그리지 않고 SVG를 직접 고친다.\n */\n const MARKETS = [\n-  { code: 'KOSPI', label: 'KOSPI', volatility: 0.0016 },\n-  { code: 'KOSDAQ', label: 'KOSDAQ', volatility: 0.0022 },\n-  { code: 'USD_KRW', label: '원/달러', volatility: 0.0007 },\n+  { code: 'KOSPI', label: 'KOSPI', volatility: 0.0011 },\n+  { code: 'KOSDAQ', label: 'KOSDAQ', volatility: 0.0015 },\n+  { code: 'USD_KRW', label: '원/달러', volatility: 0.0005 },\n   // 국내판 VIX(변동성 지수)다.\n-  { code: 'VKOSPI200', label: 'VKOSPI 200', volatility: 0.006 },\n+  { code: 'VKOSPI200', label: 'VKOSPI 200', volatility: 0.004 },\n ] as const\n \n-const POINTS = 72\n-const TICK_MS = 900\n-const ROTATE_MS = 7000\n+/** 쌓아 두는 점 수. 화면에는 이 중 VISIBLE 걸음만큼이 보인다. */\n+const POINTS = 64\n+const VISIBLE = 60\n+/** 화면에서 읽는 자리 수. 점보다 촘촘해야 곡선이 매끄럽다. */\n+const SAMPLES = 180\n+const TICK_MS = 650\n const plot = { width: 400, height: 190, left: 8, right: 336, top: 14, bottom: 146, barTop: 156, barBottom: 184 }\n \n /** 같은 출발값이면 같은 흐름이 나오도록 씨앗을 받는 난수다(렌더마다 모양이 튀지 않게). */\n@@ -35,26 +47,42 @@ function seededRandom(seed: number) {\n   }\n }\n \n-/** 한 걸음. 출발값에서 멀어질수록 조금씩 되돌아오게 해 화면 밖으로 흘러가지 않는다. */\n-function step(previous: number, base: number, volatility: number, random: () => number) {\n-  const shock = (random() * 2 - 1) * volatility * 1.7\n-  const pull = ((base - previous) / base) * 0.05\n-  return previous * (1 + shock + pull)\n+type Series = { base: number; values: number[]; drift: number; random: () => number }\n+\n+/**\n+ * 한 걸음. 앞 걸음의 기울기를 조금 이어받아(관성) 뾰족하게 꺾이지 않고, 출발값에서 멀어질수록\n+ * 되돌아오게 해 화면 밖으로 흘러가지 않는다.\n+ */\n+function nextValue(series: Series, volatility: number) {\n+  const previous = series.values[series.values.length - 1]\n+  const shock = (series.random() * 2 - 1) * volatility\n+  series.drift = series.drift * 0.74 + shock\n+  const pull = ((series.base - previous) / series.base) * 0.035\n+  return previous * (1 + series.drift + pull)\n }\n \n /** 끝점이 출발값에 닿는 첫 흐름을 만든다. 창을 열었을 때 보이는 마지막 값이 받은 값과 같다. */\n-function initialSeries(base: number, volatility: number, random: () => number) {\n-  const values: number[] = []\n-  let value = base * (1 - volatility * 10 * (random() - 0.35))\n-  for (let index = 0; index < POINTS; index += 1) {\n-    value = step(value, base, volatility, random)\n-    values.push(value)\n-  }\n-  const scale = base / values[values.length - 1]\n-  return values.map((item) => item * scale)\n+function createSeries(base: number, volatility: number, seed: number): Series {\n+  const random = seededRandom(seed)\n+  const series: Series = { base, values: [base * (1 - volatility * 12 * (random() - 0.4))], drift: 0, random }\n+  while (series.values.length < POINTS) series.values.push(nextValue(series, volatility))\n+  const scale = base / series.values[series.values.length - 2]\n+  series.values = series.values.map((value) => value * scale)\n+  return series\n+}\n+\n+/** 점들 사이를 부드럽게 잇는 값(Catmull-Rom). `time`은 점 번호 단위다. */\n+function sampleAt(values: number[], time: number) {\n+  const index = Math.min(values.length - 2, Math.max(0, Math.floor(time)))\n+  const t = Math.min(1, Math.max(0, time - index))\n+  const p0 = values[Math.max(0, index - 1)]\n+  const p1 = values[index]\n+  const p2 = values[index + 1]\n+  const p3 = values[Math.min(values.length - 1, index + 2)]\n+  return 0.5 * (2 * p1 + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t)\n }\n \n-type Market = (typeof MARKETS)[number] & { base: number; decimals: number; unit: string }\n+type Market = (typeof MARKETS)[number] & { base: number; decimals: number }\n \n function toMarkets(indicators: Indicator[]): Market[] {\n   return MARKETS.map((market) => {\n@@ -63,7 +91,6 @@ function toMarkets(indicators: Indicator[]): Market[] {\n       ...market,\n       base: indicator && indicator.value > 0 ? indicator.value : 1,\n       decimals: indicator?.decimals ?? 2,\n-      unit: indicator?.unit ?? '',\n     }\n   })\n }\n@@ -75,96 +102,247 @@ function format(value: number, decimals: number) {\n   }).format(value)\n }\n \n+function formatChange(change: number) {\n+  return `${change > 0 ? '+' : ''}${change.toFixed(2)}%`\n+}\n+\n+function directionOf(change: number) {\n+  return change > 0.005 ? 'up' : change < -0.005 ? 'down' : undefined\n+}\n+\n+/** 창에 보이는 구간의 처음과 끝. 끝은 지금 시각의 곡선 값이다. */\n+function windowEnds(series: Series, phase: number) {\n+  const now = POINTS - 2 + phase\n+  return { first: sampleAt(series.values, now - VISIBLE), last: sampleAt(series.values, now) }\n+}\n+\n+/** 백엔드가 모아 둔 실제 최근 흐름. 없으면 그 지표는 예시 흐름으로 그린다. */\n+type RealSeries = { values: number[]; lastDate: string; provider: string; stale: boolean }\n+\n+/** 실제 흐름을 왼쪽부터 끝까지 그려 나가는 시간. 다 그리면 멈춘다. */\n+const REVEAL_MS = 1400\n+\n+function easeOut(t: number) {\n+  return 1 - (1 - t) ** 3\n+}\n+\n export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] }) {\n   const reducedMotion = useReducedMotion()\n   const markets = useMemo(() => toMarkets(indicators), [indicators])\n   const [active, setActive] = useState(0)\n-  const [pinned, setPinned] = useState(false)\n-  const [, setTick] = useState(0)\n-  const series = useRef<Record<string, { base: number; values: number[]; random: () => number }>>({})\n+  const [real, setReal] = useState<Partial<Record<MarketSeriesCode, RealSeries>>>({})\n+  const store = useRef<Record<string, Series>>({})\n \n-  // 출발값이 바뀌면(최신 값을 받으면) 그 지표의 흐름을 새로 만든다.\n+  // 출발값이 바뀌면(최신 값을 받으면) 그 지표의 예시 흐름을 새로 만든다.\n   for (const market of markets) {\n-    const current = series.current[market.code]\n+    const current = store.current[market.code]\n     if (!current || current.base !== market.base) {\n-      const random = seededRandom(Math.round(market.base * 100) + market.code.length)\n-      series.current[market.code] = { base: market.base, values: initialSeries(market.base, market.volatility, random), random }\n+      store.current[market.code] = createSeries(market.base, market.volatility, Math.round(market.base * 100) + market.code.length)\n     }\n   }\n \n+  // 한 지표가 실패해도(아직 못 모아 503 등) 나머지는 실제 값으로 그린다.\n   useEffect(() => {\n-    if (reducedMotion) return\n-    const timer = window.setInterval(() => {\n-      if (document.hidden) return\n-      const market = markets[active]\n-      const entry = series.current[market.code]\n-      const last = entry.values[entry.values.length - 1]\n-      entry.values = [...entry.values.slice(1), step(last, entry.base, market.volatility, entry.random)]\n-      setTick((value) => value + 1)\n-    }, TICK_MS)\n-    return () => window.clearInterval(timer)\n-  }, [active, markets, reducedMotion])\n+    let alive = true\n+    void Promise.allSettled(MARKETS.map((market) => fetchMarketSeries(market.code))).then((results) => {\n+      if (!alive) return\n+      const next: Partial<Record<MarketSeriesCode, RealSeries>> = {}\n+      results.forEach((result, index) => {\n+        if (result.status !== 'fulfilled') return\n+        const points = result.value.points\n+        next[MARKETS[index].code] = {\n+          values: points.map((point) => point.value),\n+          lastDate: points[points.length - 1].date,\n+          provider: result.value.source.provider,\n+          stale: result.value.status === 'stale',\n+        }\n+      })\n+      setReal(next)\n+    })\n+    return () => {\n+      alive = false\n+    }\n+  }, [])\n+\n+  const line = useRef<SVGPathElement>(null)\n+  const area = useRef<SVGPathElement>(null)\n+  const bars = useRef<SVGGElement>(null)\n+  const lastLine = useRef<SVGLineElement>(null)\n+  const point = useRef<SVGCircleElement>(null)\n+  const pulse = useRef<SVGCircleElement>(null)\n+  const tag = useRef<SVGGElement>(null)\n+  const tagText = useRef<SVGTextElement>(null)\n+  const titleValue = useRef<HTMLSpanElement>(null)\n+  const tickerValue = useRef<HTMLElement>(null)\n+  const tickerChange = useRef<HTMLElement>(null)\n+  const domain = useRef<{ low: number; high: number } | null>(null)\n+  const activeReal = real[markets[active].code]\n \n   useEffect(() => {\n-    if (reducedMotion || pinned) return\n-    const timer = window.setInterval(() => {\n-      if (!document.hidden) setActive((value) => (value + 1) % markets.length)\n-    }, ROTATE_MS)\n-    return () => window.clearInterval(timer)\n-  }, [markets.length, pinned, reducedMotion])\n+    const market = markets[active]\n+    // 다른 지표로 바꾸면 세로 범위를 새로 잡는다. 이어서 따라가면 선이 화면 밖에서 날아든다.\n+    domain.current = null\n+    let frame = 0\n+\n+    /**\n+     * 곡선 위 시각 t0~tEnd를 그린다. x는 t0~t0+span을 창 폭에 늘어놓은 자리다. 실제 흐름은 t0=0에 고정하고 tEnd가\n+     * 자라며 그려지고, 예시 흐름은 창이 시간을 따라 옮겨 간다. `fixed`면 세로 범위를 전체 값으로 미리 잡는다.\n+     */\n+    const render = (values: number[], t0: number, span: number, tEnd: number, fixed: boolean) => {\n+      const count = Math.max(2, Math.round(SAMPLES * ((tEnd - t0) / span)))\n+      const times: number[] = []\n+      const samples: number[] = []\n+      for (let j = 0; j < count; j += 1) {\n+        const time = t0 + (j / (count - 1)) * (tEnd - t0)\n+        times.push(time)\n+        samples.push(sampleAt(values, time))\n+      }\n+      const first = sampleAt(values, t0)\n+      const last = samples[samples.length - 1]\n+\n+      // 세로 범위는 곧바로 바꾸지 않고 따라간다. 범위가 튀면 선 전체가 움찔한다.\n+      const basis = fixed ? values : samples\n+      const minimum = Math.min(...basis)\n+      const maximum = Math.max(...basis)\n+      const pad = (maximum - minimum) * 0.14 || last * 0.001\n+      const target = { low: minimum - pad, high: maximum + pad }\n+      const current = domain.current ?? target\n+      const follow = reducedMotion || fixed ? 1 : 0.08\n+      domain.current = { low: current.low + (target.low - current.low) * follow, high: current.high + (target.high - current.high) * follow }\n+      const { low, high } = domain.current\n+\n+      const x = (time: number) => plot.left + ((time - t0) / span) * (plot.right - plot.left)\n+      const y = (value: number) => plot.bottom - ((value - low) / (high - low)) * (plot.bottom - plot.top)\n+      let d = ''\n+      for (let j = 0; j < count; j += 1) d += `${j === 0 ? 'M' : 'L'}${x(times[j]).toFixed(2)} ${y(samples[j]).toFixed(2)}`\n+      const tipX = x(tEnd).toFixed(2)\n+      line.current?.setAttribute('d', d)\n+      area.current?.setAttribute('d', `${d} L${tipX} ${plot.bottom} L${plot.left} ${plot.bottom} Z`)\n+\n+      // 막대는 점 사이 하루 움직임의 크기다. 선과 함께 옮겨 가고, 아직 그리지 않은 자리는 숨긴다.\n+      const group = bars.current\n+      if (group) {\n+        const moves: number[] = []\n+        for (let k = 1; k < values.length; k += 1) moves.push(Math.abs(values[k] - values[k - 1]))\n+        const largest = Math.max(...moves) || 1\n+        const rects = group.children\n+        for (let k = 1; k <= rects.length; k += 1) {\n+          const rect = rects[k - 1] as SVGRectElement\n+          if (k >= values.length || k < t0 || k > tEnd) {\n+            rect.style.opacity = '0'\n+            continue\n+          }\n+          const height = 3 + (moves[k - 1] / largest) * (plot.barBottom - plot.barTop - 3)\n+          rect.setAttribute('x', (x(k) - 1.6).toFixed(2))\n+          rect.setAttribute('y', (plot.barBottom - height).toFixed(2))\n+          rect.setAttribute('height', height.toFixed(2))\n+          rect.setAttribute('data-direction', values[k] >= values[k - 1] ? 'up' : 'down')\n+          rect.style.opacity = ''\n+        }\n+      }\n+\n+      const lastY = y(last).toFixed(2)\n+      lastLine.current?.setAttribute('y1', lastY)\n+      lastLine.current?.setAttribute('y2', lastY)\n+      point.current?.setAttribute('cx', tipX)\n+      point.current?.setAttribute('cy', lastY)\n+      pulse.current?.setAttribute('cx', tipX)\n+      pulse.current?.setAttribute('cy', lastY)\n+      tag.current?.setAttribute('transform', `translate(${plot.right + 6} ${(y(last) - 9).toFixed(2)})`)\n+      const text = format(last, market.decimals)\n+      if (tagText.current) tagText.current.textContent = text\n+      if (titleValue.current) titleValue.current.textContent = text\n+      if (tickerValue.current) tickerValue.current.textContent = text\n+      const change = ((last - first) / first) * 100\n+      const direction = directionOf(change)\n+      if (tickerChange.current) tickerChange.current.textContent = formatChange(change)\n+      for (const element of [tickerChange.current, titleValue.current]) {\n+        if (!element) continue\n+        if (direction) element.setAttribute('data-direction', direction)\n+        else element.removeAttribute('data-direction')\n+      }\n+    }\n+\n+    // 실제 흐름: 왼쪽부터 끝까지 그려 나가고 멈춘다. 받은 값 밖으로 움직임을 지어내지 않는다.\n+    if (activeReal) {\n+      const values = activeReal.values\n+      const span = values.length - 1\n+      if (reducedMotion) {\n+        render(values, 0, span, span, true)\n+        return\n+      }\n+      const startedAt = performance.now()\n+      const reveal = (time: number) => {\n+        const progress = Math.min(1, Math.max(0, (time - startedAt) / REVEAL_MS))\n+        render(values, 0, span, Math.max(0.05, easeOut(progress) * span), true)\n+        if (progress < 1) frame = requestAnimationFrame(reveal)\n+      }\n+      frame = requestAnimationFrame(reveal)\n+      return () => cancelAnimationFrame(frame)\n+    }\n+\n+    // 예시 흐름: 점이 쌓이며 창이 시간을 따라 옮겨 간다.\n+    const series = store.current[market.code]\n+    let tickStartedAt = performance.now()\n+    const renderExample = (phase: number) => {\n+      const now = POINTS - 2 + phase\n+      render(series.values, now - VISIBLE, VISIBLE, now, false)\n+    }\n+    if (reducedMotion) {\n+      renderExample(0)\n+      return\n+    }\n+    const loop = (time: number) => {\n+      if (!document.hidden) {\n+        let phase = (time - tickStartedAt) / TICK_MS\n+        // 한 걸음이 지나면 새 점을 붙이고 가장 오래된 점을 뺀다. 읽는 시각이 같이 한 칸 당겨져 화면은 이어진다.\n+        while (phase >= 1) {\n+          series.values = [...series.values.slice(1), nextValue(series, market.volatility)]\n+          tickStartedAt += TICK_MS\n+          phase -= 1\n+        }\n+        renderExample(phase)\n+      } else {\n+        tickStartedAt = time\n+      }\n+      frame = requestAnimationFrame(loop)\n+    }\n+    frame = requestAnimationFrame(loop)\n+    return () => cancelAnimationFrame(frame)\n+  }, [active, activeReal, markets, reducedMotion])\n \n   const market = markets[active]\n-  const values = series.current[market.code].values\n-  const first = values[0]\n-  const last = values[values.length - 1]\n-  const change = ((last - first) / first) * 100\n-  const direction = change > 0.005 ? 'up' : change < -0.005 ? 'down' : undefined\n-\n-  const minimum = Math.min(...values)\n-  const maximum = Math.max(...values)\n-  const pad = (maximum - minimum) * 0.12 || last * 0.001\n-  const low = minimum - pad\n-  const high = maximum + pad\n-  const x = (index: number) => plot.left + (index / (POINTS - 1)) * (plot.right - plot.left)\n-  const y = (value: number) => plot.bottom - ((value - low) / (high - low)) * (plot.bottom - plot.top)\n-  const line = values.map((value, index) => `${index === 0 ? 'M' : 'L'}${x(index).toFixed(1)} ${y(value).toFixed(1)}`).join(' ')\n-  const area = `${line} L${plot.right} ${plot.bottom} L${plot.left} ${plot.bottom} Z`\n-  const moves = values.slice(1).map((value, index) => Math.abs(value - values[index]))\n-  const largestMove = Math.max(...moves) || 1\n-\n-  const quotes = markets.map((item) => {\n-    const itemValues = series.current[item.code].values\n-    const itemLast = itemValues[itemValues.length - 1]\n-    const itemChange = ((itemLast - itemValues[0]) / itemValues[0]) * 100\n-    return { ...item, last: itemLast, change: itemChange }\n-  })\n+  /** 칸과 제목에 처음 보일 값. 실제 흐름은 받은 구간의 처음·끝, 예시는 창의 처음·끝이다. */\n+  const endsOf = (code: MarketSeriesCode) => {\n+    const series = real[code]\n+    if (series) return { first: series.values[0], last: series.values[series.values.length - 1] }\n+    return windowEnds(store.current[code], 0)\n+  }\n+  const opening = endsOf(market.code)\n \n   return (\n-    <div className={styles.previewWindow} role=\"group\" aria-label=\"국내 시장 지표 움직임 예시\">\n+    <div className={styles.previewWindow} role=\"group\" aria-label={activeReal ? '국내 시장 지표 최근 흐름' : '국내 시장 지표 움직임 예시'}>\n       <div className={styles.previewBar}>\n         <span className={styles.previewDots} aria-hidden=\"true\"><i /><i /><i /></span>\n         <span className={styles.previewAddress} aria-hidden=\"true\">thorp · <b>시장 흐름</b></span>\n-        <span className={styles.previewExample}>움직임 예시</span>\n+        {/* 실제 값이면 원천과 기준일을, 아니면 만든 흐름임을 밝힌다. */}\n+        <span className={styles.previewExample}>\n+          {activeReal ? `${activeReal.provider} · ${activeReal.lastDate} 기준${activeReal.stale ? ' · 갱신 지연' : ''}` : '움직임 예시'}\n+        </span>\n       </div>\n \n       <div className={styles.previewTickers}>\n-        {quotes.map((item, index) => {\n-          const itemDirection = item.change > 0.005 ? 'up' : item.change < -0.005 ? 'down' : undefined\n+        {markets.map((item, index) => {\n+          // 고른 지표의 값은 그리는 흐름이 직접 바꾼다. 나머지는 구간의 끝값이다.\n+          const ends = endsOf(item.code)\n+          const change = ((ends.last - ends.first) / ends.first) * 100\n+          const isActive = index === active\n           return (\n-            <button\n-              key={item.code}\n-              type=\"button\"\n-              aria-pressed={index === active}\n-              onClick={() => {\n-                setActive(index)\n-                setPinned(true)\n-              }}\n-            >\n+            <button key={item.code} type=\"button\" aria-pressed={isActive} onClick={() => setActive(index)}>\n               <span>{item.label}</span>\n-              <strong aria-hidden=\"true\">{format(item.last, item.decimals)}</strong>\n-              <em aria-hidden=\"true\" data-direction={itemDirection}>\n-                {item.change > 0 ? '+' : ''}\n-                {item.change.toFixed(2)}%\n+              <strong aria-hidden=\"true\" ref={isActive ? tickerValue : undefined}>{format(ends.last, item.decimals)}</strong>\n+              <em aria-hidden=\"true\" ref={isActive ? tickerChange : undefined} data-direction={directionOf(change)}>\n+                {formatChange(change)}\n               </em>\n             </button>\n           )\n@@ -172,38 +350,35 @@ export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] })\n       </div>\n \n       <p className={styles.previewChartTitle} aria-hidden=\"true\">\n-        {market.label} <b>최근 흐름</b>\n-        <span data-direction={direction}>{format(last, market.decimals)}</span>\n+        {market.label} <b>{activeReal ? `최근 ${activeReal.values.length}거래일` : '최근 흐름'}</b>\n+        <span ref={titleValue}>{format(opening.last, market.decimals)}</span>\n       </p>\n       <svg className={styles.previewChart} viewBox={`0 0 ${plot.width} ${plot.height}`} aria-hidden=\"true\">\n+        <defs>\n+          <clipPath id=\"market-preview-plot\">\n+            <rect x={plot.left} y={0} width={plot.right - plot.left} height={plot.height} />\n+          </clipPath>\n+        </defs>\n         {[0.25, 0.5, 0.75].map((ratio) => {\n           const lineY = plot.top + ratio * (plot.bottom - plot.top)\n           return <line key={ratio} className={styles.previewGrid} x1={plot.left} x2={plot.right} y1={lineY} y2={lineY} />\n         })}\n-        {moves.map((move, index) => {\n-          const barHeight = 3 + (move / largestMove) * (plot.barBottom - plot.barTop - 3)\n-          const rising = values[index + 1] >= values[index]\n-          return (\n-            <rect\n-              key={index}\n-              className={styles.previewVolume}\n-              data-direction={rising ? 'up' : 'down'}\n-              x={x(index + 1) - 1.6}\n-              y={plot.barBottom - barHeight}\n-              width={3.2}\n-              height={barHeight}\n-            />\n-          )\n-        })}\n-        <path className={styles.previewArea} d={area} />\n-        <path className={styles.previewLine} d={line} />\n-        <line className={styles.previewLastLine} x1={plot.left} x2={plot.right + 6} y1={y(last)} y2={y(last)} />\n-        <circle className={styles.previewPulse} cx={x(POINTS - 1)} cy={y(last)} r={6} />\n-        <circle className={styles.previewPoint} cx={x(POINTS - 1)} cy={y(last)} r={3.2} />\n-        <g transform={`translate(${plot.right + 6} ${y(last) - 9})`}>\n+        <g ref={bars} clipPath=\"url(#market-preview-plot)\">\n+          {Array.from({ length: POINTS - 1 }, (_, index) => (\n+            <rect key={index} className={styles.previewVolume} width={3.2} x={-10} y={plot.barBottom} height={0} />\n+          ))}\n+        </g>\n+        <g clipPath=\"url(#market-preview-plot)\">\n+          <path ref={area} className={styles.previewArea} />\n+          <path ref={line} className={styles.previewLine} />\n+        </g>\n+        <line ref={lastLine} className={styles.previewLastLine} x1={plot.left} x2={plot.right + 6} y1={plot.bottom} y2={plot.bottom} />\n+        <circle ref={pulse} className={styles.previewPulse} cx={plot.right} cy={plot.bottom} r={6} />\n+        <circle ref={point} className={styles.previewPoint} cx={plot.right} cy={plot.bottom} r={3.2} />\n+        <g ref={tag} transform={`translate(${plot.right + 6} ${plot.bottom - 9})`}>\n           <rect className={styles.previewTag} width={plot.width - plot.right - 6} height={18} rx={4} />\n-          <text className={styles.previewTagText} x={(plot.width - plot.right - 6) / 2} y={12.5} textAnchor=\"middle\">\n-            {format(last, market.decimals)}\n+          <text ref={tagText} className={styles.previewTagText} x={(plot.width - plot.right - 6) / 2} y={12.5} textAnchor=\"middle\">\n+            {format(opening.last, market.decimals)}\n           </text>\n         </g>\n       </svg>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "old_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,7 +76,8 @@\n   scroll-snap-align: start;\n   scroll-snap-stop: always;\n   place-items: center;\n-  overflow: hidden;\n+  /* hidden은 초점이 옮겨 갈 때 칸 자체가 옆으로 밀린다. clip은 그 스크롤까지 막는다. */\n+  overflow: clip;\n   isolation: isolate;\n }\n \n@@ -213,7 +214,16 @@\n   align-items: center;\n   gap: clamp(32px, 4vw, 64px);\n   width: min(100% - 2 * clamp(24px, 4vw, 68px), 1320px);\n-  padding: clamp(40px, 6vh, 72px) 0 clamp(72px, 9vh, 104px);\n+  padding: clamp(24px, 4vh, 64px) 0 clamp(48px, 7vh, 96px);\n+}\n+\n+/*\n+  **첫 칸은 화면 높이를 넘지 않는다.** 한 칸씩 넘기는 스냅은 화면보다 큰 칸 안에서는 멈춰도 되는\n+  규칙이라, 첫 칸이 넘치면 위로 돌아올 때 첫 칸 아래쪽에서 한 번 멈추고 한 번 더 올려야 맨 위에\n+  닿았다. 화면이 낮으면 창 아래의 규칙 비교 표를 접어 높이를 맞춘다.\n+*/\n+@media (max-height: 800px) and (min-width: 761px) {\n+  .heroLayout .previewTable { display: none; }\n }\n \n .heroContent {\n@@ -592,7 +602,7 @@\n   min-height: calc(100svh - var(--landing-header-height));\n   scroll-snap-align: start;\n   scroll-snap-stop: always;\n-  padding: clamp(72px, 8vh, 92px) clamp(18px, 5vw, 72px) 36px;\n+  padding: clamp(40px, 6vh, 92px) clamp(18px, 5vw, 72px) 36px;\n   overflow: hidden;\n   isolation: isolate;\n }\n@@ -625,7 +635,8 @@\n .orbitStage {\n   position: relative;\n   width: min(100%, 1320px);\n-  height: clamp(350px, 38vw, 430px);\n+  /* 폭만 보면 낮은 화면에서 칸이 넘쳐 스냅이 칸 안에서 멈춘다. 남은 높이도 함께 본다. */\n+  height: clamp(300px, min(38vw, 100svh - var(--landing-header-height) - 312px), 430px);\n   margin-top: 8px;\n   outline: none;\n   perspective: 1250px;\n@@ -1360,6 +1371,12 @@\n @media (max-width: 1040px) {\n   .heroLayout { grid-template-columns: 1fr; }\n   .heroContent { padding-top: 0; }\n+\n+  /* 글과 창이 위아래로 쌓이면 칸이 화면보다 길어진다. 넘치는 칸에서 스냅이 중간에 멈추므로 끈다. */\n+  .page { scroll-snap-type: none; }\n+  .hero,\n+  .storySection,\n+  .algorithmSection { scroll-snap-align: none; }\n }\n \n @media (max-width: 640px) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,3 +40,22 @@ export interface MarketIndicatorBatch {\n   data: Partial<Record<MarketIndicatorCode, MarketIndicatorResponse>>\n   errors: Partial<Record<MarketIndicatorCode, string>>\n }\n+\n+/** 최근 흐름을 주는 일별 지표. 첫 화면 차트가 쓴다. */\n+export type MarketSeriesCode = 'KOSPI' | 'KOSDAQ' | 'USD_KRW' | 'VKOSPI200'\n+\n+/** `GET /markets/{slug}/series`. `points`는 날짜 오름차순이다(market-api.md \"최근 흐름 API\"). */\n+export interface MarketSeriesResponse {\n+  code: MarketSeriesCode\n+  name: string\n+  unit: string\n+  frequency: 'daily'\n+  points: { date: string; value: number }[]\n+  retrievedAt: string\n+  source: {\n+    provider: string\n+    datasetName: string\n+  }\n+  status: 'ok' | 'stale'\n+  statusMessage: string | null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/marketApi.ts",
+          "old_path": "frontend/src/types/marketApi.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2246555,
+      "head_commit_sha": "a560f7cc49158a261c1ac5676b76edbe7d842705",
+      "base_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+      "start_commit_sha": "17b9fc05588e375601b10cd36fb41ef172932db7",
+      "created_at": "2026-09-23T17:07:26.650+09:00",
+      "merge_request_id": 958753,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "e8625e718d88caf949cb25d95c5fd214076bbf52",
+      "commits": [
+        {
+          "id": "a560f7cc49158a261c1ac5676b76edbe7d842705",
+          "short_id": "a560f7cc",
+          "created_at": "2026-09-23T17:07:23.000+09:00",
+          "parent_ids": [
+            "0826e4b50bd92c1e47f4042ba97c16bc4b159a8b"
+          ],
+          "title": "fix(be): 최근 흐름 수집을 전용 스레드로 옮겨 다른 스케줄을 막지 않게 한다",
+          "message": "fix(be): 최근 흐름 수집을 전용 스레드로 옮겨 다른 스케줄을 막지 않게 한다\n\n@Scheduled는 스레드 하나를 나눠 써서 KRX 첫 수집(지표마다 최대 90초) 동안 발행 재시도·정체 감시가\n멈췄다. market.series.enabled=false로 끌 수 있게 한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T17:07:23.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T17:07:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a560f7cc49158a261c1ac5676b76edbe7d842705"
+        },
+        {
+          "id": "0826e4b50bd92c1e47f4042ba97c16bc4b159a8b",
+          "short_id": "0826e4b5",
+          "created_at": "2026-09-23T16:54:06.000+09:00",
+          "parent_ids": [
+            "dce73115fd9c4497cde04d1e029ea596ac45e1ea"
+          ],
+          "title": "feat(fe): 첫 화면 지표 차트를 실제 최근 60거래일 값으로 그린다",
+          "message": "feat(fe): 첫 화면 지표 차트를 실제 최근 60거래일 값으로 그린다\n\n받은 흐름은 왼쪽부터 그려 나간 뒤 멈추고 원천과 기준일을 밝힌다. 아직 못 모은 지표만 예시 흐름으로\n그린다. 초점이 옮겨 갈 때 첫 칸이 옆으로 밀리지 않게 overflow를 clip으로 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:54:06.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:54:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0826e4b50bd92c1e47f4042ba97c16bc4b159a8b"
+        },
+        {
+          "id": "dce73115fd9c4497cde04d1e029ea596ac45e1ea",
+          "short_id": "dce73115",
+          "created_at": "2026-09-23T16:54:05.000+09:00",
+          "parent_ids": [
+            "aa8b553356d146dd68f8b73b3a0af998a15cce0f"
+          ],
+          "title": "feat(be): 코스피·코스닥·원/달러·VKOSPI 200 최근 60거래일 흐름 API를 더한다",
+          "message": "feat(be): 코스피·코스닥·원/달러·VKOSPI 200 최근 60거래일 흐름 API를 더한다\n\nGET /markets/{code}/series. KRX는 날짜마다 한 번 호출이라 기동 직후와 6시간마다 백그라운드로 모으고,\n요청은 모아 둔 값만 돌려준다. 이미 모은 날짜는 다시 부르지 않는다. 아직 못 모았으면 503, 24시간 넘게\n갱신하지 못하면 stale이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:54:05.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:54:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dce73115fd9c4497cde04d1e029ea596ac45e1ea"
+        },
+        {
+          "id": "aa8b553356d146dd68f8b73b3a0af998a15cce0f",
+          "short_id": "aa8b5533",
+          "created_at": "2026-09-23T16:33:15.000+09:00",
+          "parent_ids": [
+            "a76786340a4fee5ff77f4770795370f5b5de442d"
+          ],
+          "title": "fix(fe): 첫 화면 칸이 화면 높이를 넘지 않게 해 맨 위로 돌아올 때 멈추지 않게 한다",
+          "message": "fix(fe): 첫 화면 칸이 화면 높이를 넘지 않게 해 맨 위로 돌아올 때 멈추지 않게 한다\n\n- 첫 칸이 화면보다 커서, 한 칸씩 넘기는 스냅이 위로 돌아올 때 첫 칸 아래쪽에서 한 번 멈췄다.\n  첫 칸 여백을 화면 높이에 맞추고, 화면이 800px 이하로 낮으면 창 아래 규칙 비교 표를 접는다.\n- 배분 규칙 칸의 궤도 높이가 폭만 보던 것을 남은 높이도 보게 해 낮은 화면에서 넘치지 않게 한다.\n- 글과 창이 위아래로 쌓이는 1040px 이하에서는 칸이 길어져 스냅을 끄고 이어서 내려가게 한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:33:15.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:33:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/aa8b553356d146dd68f8b73b3a0af998a15cce0f"
+        },
+        {
+          "id": "a76786340a4fee5ff77f4770795370f5b5de442d",
+          "short_id": "a7678634",
+          "created_at": "2026-09-23T16:33:15.000+09:00",
+          "parent_ids": [
+            "d3c4b2bab861f3b0dada5faf881783839bdc2a0d"
+          ],
+          "title": "feat(fe): 첫 화면 지표 차트를 끊김 없이 흘러가게 하고 자동 넘김을 없앤다",
+          "message": "feat(fe): 첫 화면 지표 차트를 끊김 없이 흘러가게 하고 자동 넘김을 없앤다\n\n- 0.9초마다 점을 붙이며 선을 한 칸씩 옮기던 방식 대신, 점(키프레임) 사이를 Catmull-Rom 곡선으로\n  이어 매 프레임 같은 자리에서 읽어 그린다. 선은 계속 흐르고 끝점은 오른쪽에 머문 채 값만 바뀐다.\n  세로 범위는 서서히 따라가고, 지표를 바꿀 때만 새로 잡는다. SVG를 직접 고쳐 매 프레임 다시\n  그리지 않는다.\n- 지표가 7초마다 저절로 넘어가던 것을 없앤다. 지표 칸을 눌러야만 바뀐다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T16:33:15.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T16:33:15.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a76786340a4fee5ff77f4770795370f5b5de442d"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2863985": []
+  }
+}

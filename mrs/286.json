@@ -1,0 +1,571 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 955374,
+    "iid": 286,
+    "project_id": 1444456,
+    "title": "feat(be): 시장 흐름이 008 스냅샷을 읽는다",
+    "description": "# 작업 내용 요약\n\n시장 흐름 지표를 예시 JSON 대신 008 스냅샷에서 읽는다. 예시 자료 가드가 운영 기동을 무조건 거부해 2026-09-21 배포가 실패한 상태였고, 그 가드를 푸는 유일한 길이 이 작업이었다. 운영 DB에는 같은 날 17개 지표 14,050건을 적재해 두었으므로 병합되면 실자료로 화면이 그려진다.\n\n**이 MR은 티켓 373의 T064만 담는다.** 같은 티켓의 T065\\~T067(009 스펙·계약 문서를 008과 맞추기)은 배포를 막지 않아 뒤로 뺐다. 373은 완료가 아니다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-373\n- link: https://ssafy.atlassian.net/browse/S15P21E205-373\n\n# 주요 변경 사항\n\n**동작**\n\n- `marketflow` 의 지표 조회가 008 `MacroSnapshotQueryService.getSnapshot()` 을 읽는다. 포트 메서드 넷이 한 스냅샷에서 나온다 — 메서드마다 따로 질의하면 그 사이 자료 버전이 바뀌어 한 화면 안에서 기준월과 값이 서로 다른 버전에서 온다\n- 008이 경로를 세 달로 주지 못하는 지표(이용 중단·기준월 없음)는 빈 결과를 돌려주고, 화면은 값 없는 세 점을 그린다. 달을 채우거나 이전 값을 끌어오지 않는다\n- 분야 기준월보다 새 달의 값이 이미 있는 지표는 그 값을 경로에 섞지 않고 `afterReferenceMonthRelease` 로 따로 싣는다\n- 발행된 자료 버전이 없으면 빈 화면 대신 무엇을 해야 하는지 말하고 멈춘다\n\n**설정** — `thorp.marketflow.indicator-source`\n\n- 기본값 `macro`(속성이 없어도). 예시가 기본이면 설정을 빠뜨린 환경이 조용히 가짜를 그린다\n- `application-local.yml` 은 `example` — 지역 개발은 거시지표 적재 없이도 화면을 봐야 한다\n- 예시 어댑터와 `MarketFlowExampleDataGuard` 는 `example` 일 때만 올라온다. **가드를 지우지 않았다** — 운영에 `example` 이 잘못 걸리면 여전히 기동을 막는다\n\n**스키마** — 변경 없음\n\n# 테스트\n\n- [x] `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` → BUILD SUCCESSFUL (3분). macro·marketflow 테스트 전부 실행, **skipped 0**\n- [x] 새 테스트 16개 — 스냅샷 매핑 11, 빈 선택 5\n- [x] 빈 선택 테스트가 이번 배포 실패 지점을 양쪽으로 고정한다: `prod + macro → 기동 성공`, `prod + example → 기동 실패`. 하나만 두면 다음에 같은 실수가 반대 방향으로 난다\n- [x] 자동 테스트 밖: 운영 DB 적재를 먼저 끝냈다. 자료 버전 `PUBLISHED`·완성지표 17· 포인터 연결·저장된 소수 전부 JSONB 문자열을 SQL 로 확인했다\n- [ ] **실제 기동은 이 MR 병합 후 배포 로그에서 확인해야 한다.** 로컬에서 운영 DB에 붙을 수 없어 빈 선택까지만 확인했다. 볼 것: 가드 예외 없음 / `Started ThorpApplication` / 스모크 테스트 통과 / `GET /market-flow/fields` 의 `exampleData=false` 와 기준월(생산 2026-07, 대외거래 2026-09)\n\n# 리뷰 포인트\n\n- **포트 메서드마다 `getSnapshot()` 을 부른다.** 분야 요약을 처음 만들 때 (`FieldSummaryBuilder` 캐시 미스) 지표 17개의 경로를 각각 물어 스냅샷을 20번 가까이 읽는다. 결과는 `marketflow_field_summary` 에 (등록표 버전, 자료 버전) 으로 저장되어 그 뒤로는 읽지 않으므로 자료 버전이 바뀔 때만 발생한다. 포트 모양을 그대로 두고 어댑터만 갈아끼우는 것을 택한 결과인데, 포트에 \"한 번에 다 주는\" 메서드를 더하는 편이 나을지 판단 바란다\n- **`successful` 을 `status == READY && 실패 목록에 없음` 으로 뒀다.** 어제 값이 남아 있어도 오늘 수집이 실패했으면 성공이 아니라고 봤다(FR-011). `NO_DATA`·`SUSPENDED` 도 성공이 아니므로 그 분야는 `COLLECTION_FAILED` 로 표시된다 — 중단된 지표가 있는 분야를 실패로 보이게 하는 것이 맞는지 봐 달라\n- **자료 버전이 없으면 예외를 던진다.** 분야 요약이 (등록표 버전, 자료 버전) 으로 저장되므로 저장할 키가 없고, 기준월도 없어 경로를 만들 수 없다. 빈 화면을 그리면 \"아직 자료가 없다\"와 \"자료를 못 읽었다\"가 같아 보인다고 판단했다. 무자료 응답 계약은 T067 범위다\n- **가드를 남긴 것.** T071이 예시 어댑터를 지울 때 함께 사라진다. 그때까지 두는 것이 과한지 판단 바란다\n\n# 지금 손대지 않은 것\n\n- T065\\~T067 (009 스펙·계약을 008과 맞추기) — 같은 티켓이지만 문서 작업이고 배포를 막지 않는다\n- 008 계약의 `collectionState.status` enum 에 `PARTIAL` 이 없는데 DB 는 허용하고 백엔드가 DB 값을 그대로 싣는다. 이번 범위 밖이다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 지표 표시에 점수·등급·순위가 없다. 옮긴 것은 값과 단위와 출처뿐이다\n- [x] **결제·포인트·상품 선택 단계 0건** — 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 지표별 분기도 없다. 이름·단위·분야·표시 순서를 모두 008 스냅샷에서 읽고 `indicatorId` 로 `switch`·`if` 하지 않는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 세 달을 못 채우는 경로는 0이 아니라 값 없는 세 점이고, 값 없는 지표는 최신월 지도에서 빠진다. 공표 정밀도는 008이 아직 채우지 않아 지어내지 않고 비웠다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `exampleData` 표시를 그대로 전달하고, 운영에서 예시 대역이 골라지면 기동 자체를 막는다",
+    "state": "merged",
+    "created_at": "2026-09-21T22:33:11.655+09:00",
+    "updated_at": "2026-09-21T22:40:08.017+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-21T22:39:55.198+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/373-marketflow-macro-snapshot",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+    "merge_commit_sha": "06a2fe0ab88a024adc54fbbdcc0c2063ec8bebb9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-21T22:33:12.807+09:00",
+    "reference": "!286",
+    "references": {
+      "short": "!286",
+      "relative": "!286",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!286"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/286",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 955374,
+    "iid": 286,
+    "project_id": 1444456,
+    "title": "feat(be): 시장 흐름이 008 스냅샷을 읽는다",
+    "description": "# 작업 내용 요약\n\n시장 흐름 지표를 예시 JSON 대신 008 스냅샷에서 읽는다. 예시 자료 가드가 운영 기동을 무조건 거부해 2026-09-21 배포가 실패한 상태였고, 그 가드를 푸는 유일한 길이 이 작업이었다. 운영 DB에는 같은 날 17개 지표 14,050건을 적재해 두었으므로 병합되면 실자료로 화면이 그려진다.\n\n**이 MR은 티켓 373의 T064만 담는다.** 같은 티켓의 T065\\~T067(009 스펙·계약 문서를 008과 맞추기)은 배포를 막지 않아 뒤로 뺐다. 373은 완료가 아니다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-373\n- link: https://ssafy.atlassian.net/browse/S15P21E205-373\n\n# 주요 변경 사항\n\n**동작**\n\n- `marketflow` 의 지표 조회가 008 `MacroSnapshotQueryService.getSnapshot()` 을 읽는다. 포트 메서드 넷이 한 스냅샷에서 나온다 — 메서드마다 따로 질의하면 그 사이 자료 버전이 바뀌어 한 화면 안에서 기준월과 값이 서로 다른 버전에서 온다\n- 008이 경로를 세 달로 주지 못하는 지표(이용 중단·기준월 없음)는 빈 결과를 돌려주고, 화면은 값 없는 세 점을 그린다. 달을 채우거나 이전 값을 끌어오지 않는다\n- 분야 기준월보다 새 달의 값이 이미 있는 지표는 그 값을 경로에 섞지 않고 `afterReferenceMonthRelease` 로 따로 싣는다\n- 발행된 자료 버전이 없으면 빈 화면 대신 무엇을 해야 하는지 말하고 멈춘다\n\n**설정** — `thorp.marketflow.indicator-source`\n\n- 기본값 `macro`(속성이 없어도). 예시가 기본이면 설정을 빠뜨린 환경이 조용히 가짜를 그린다\n- `application-local.yml` 은 `example` — 지역 개발은 거시지표 적재 없이도 화면을 봐야 한다\n- 예시 어댑터와 `MarketFlowExampleDataGuard` 는 `example` 일 때만 올라온다. **가드를 지우지 않았다** — 운영에 `example` 이 잘못 걸리면 여전히 기동을 막는다\n\n**스키마** — 변경 없음\n\n# 테스트\n\n- [x] `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply build` → BUILD SUCCESSFUL (3분). macro·marketflow 테스트 전부 실행, **skipped 0**\n- [x] 새 테스트 16개 — 스냅샷 매핑 11, 빈 선택 5\n- [x] 빈 선택 테스트가 이번 배포 실패 지점을 양쪽으로 고정한다: `prod + macro → 기동 성공`, `prod + example → 기동 실패`. 하나만 두면 다음에 같은 실수가 반대 방향으로 난다\n- [x] 자동 테스트 밖: 운영 DB 적재를 먼저 끝냈다. 자료 버전 `PUBLISHED`·완성지표 17· 포인터 연결·저장된 소수 전부 JSONB 문자열을 SQL 로 확인했다\n- [ ] **실제 기동은 이 MR 병합 후 배포 로그에서 확인해야 한다.** 로컬에서 운영 DB에 붙을 수 없어 빈 선택까지만 확인했다. 볼 것: 가드 예외 없음 / `Started ThorpApplication` / 스모크 테스트 통과 / `GET /market-flow/fields` 의 `exampleData=false` 와 기준월(생산 2026-07, 대외거래 2026-09)\n\n# 리뷰 포인트\n\n- **포트 메서드마다 `getSnapshot()` 을 부른다.** 분야 요약을 처음 만들 때 (`FieldSummaryBuilder` 캐시 미스) 지표 17개의 경로를 각각 물어 스냅샷을 20번 가까이 읽는다. 결과는 `marketflow_field_summary` 에 (등록표 버전, 자료 버전) 으로 저장되어 그 뒤로는 읽지 않으므로 자료 버전이 바뀔 때만 발생한다. 포트 모양을 그대로 두고 어댑터만 갈아끼우는 것을 택한 결과인데, 포트에 \"한 번에 다 주는\" 메서드를 더하는 편이 나을지 판단 바란다\n- **`successful` 을 `status == READY && 실패 목록에 없음` 으로 뒀다.** 어제 값이 남아 있어도 오늘 수집이 실패했으면 성공이 아니라고 봤다(FR-011). `NO_DATA`·`SUSPENDED` 도 성공이 아니므로 그 분야는 `COLLECTION_FAILED` 로 표시된다 — 중단된 지표가 있는 분야를 실패로 보이게 하는 것이 맞는지 봐 달라\n- **자료 버전이 없으면 예외를 던진다.** 분야 요약이 (등록표 버전, 자료 버전) 으로 저장되므로 저장할 키가 없고, 기준월도 없어 경로를 만들 수 없다. 빈 화면을 그리면 \"아직 자료가 없다\"와 \"자료를 못 읽었다\"가 같아 보인다고 판단했다. 무자료 응답 계약은 T067 범위다\n- **가드를 남긴 것.** T071이 예시 어댑터를 지울 때 함께 사라진다. 그때까지 두는 것이 과한지 판단 바란다\n\n# 지금 손대지 않은 것\n\n- T065\\~T067 (009 스펙·계약을 008과 맞추기) — 같은 티켓이지만 문서 작업이고 배포를 막지 않는다\n- 008 계약의 `collectionState.status` enum 에 `PARTIAL` 이 없는데 DB 는 허용하고 백엔드가 DB 값을 그대로 싣는다. 이번 범위 밖이다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 지표 표시에 점수·등급·순위가 없다. 옮긴 것은 값과 단위와 출처뿐이다\n- [x] **결제·포인트·상품 선택 단계 0건** — 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 지표별 분기도 없다. 이름·단위·분야·표시 순서를 모두 008 스냅샷에서 읽고 `indicatorId` 로 `switch`·`if` 하지 않는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 세 달을 못 채우는 경로는 0이 아니라 값 없는 세 점이고, 값 없는 지표는 최신월 지도에서 빠진다. 공표 정밀도는 008이 아직 채우지 않아 지어내지 않고 비웠다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `exampleData` 표시를 그대로 전달하고, 운영에서 예시 대역이 골라지면 기동 자체를 막는다",
+    "state": "merged",
+    "created_at": "2026-09-21T22:33:11.655+09:00",
+    "updated_at": "2026-09-21T22:40:08.017+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-21T22:39:55.198+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/373-marketflow-macro-snapshot",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+    "merge_commit_sha": "06a2fe0ab88a024adc54fbbdcc0c2063ec8bebb9",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-21T22:33:12.807+09:00",
+    "reference": "!286",
+    "references": {
+      "short": "!286",
+      "relative": "!286",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!286"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/286",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-21T22:33:23.993+09:00",
+    "latest_build_finished_at": "2026-09-21T22:39:16.153+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 214002,
+      "iid": 291,
+      "project_id": 1444456,
+      "sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+      "ref": "feat(be)/373-marketflow-macro-snapshot",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T22:33:23.876+09:00",
+      "updated_at": "2026-09-21T22:39:16.159+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/214002"
+    },
+    "head_pipeline": {
+      "id": 214002,
+      "iid": 291,
+      "project_id": 1444456,
+      "sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+      "ref": "feat(be)/373-marketflow-macro-snapshot",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T22:33:23.876+09:00",
+      "updated_at": "2026-09-21T22:39:16.159+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/214002",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T22:33:23.993+09:00",
+      "finished_at": "2026-09-21T22:39:16.153+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/214002",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "87f088a69896caddccd82b115e7a0e613d452d7f",
+      "head_sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+      "start_sha": "87f088a69896caddccd82b115e7a0e613d452d7f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0c0fddf23ade20846cdc1047da40b192adb22465",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850879,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T22:33:11.802+09:00",
+          "updated_at": "2026-09-21T22:33:11.814+09:00",
+          "system": true,
+          "noteable_id": 955374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 286,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "90a2616338582474e75272c91aba46bc6b29b3f0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850880,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **아키텍처 경계와 안정성 보호**: `MacroSnapshotIndicatorAdapter`에서 `MacroSnapshotQueryService.getSnapshot()`을 한 번만 호출하여 여러 포트 메서드에 재사용함으로써, 데이터 조회 중간에 버전이 바뀌어 화면 데이터가 불일치하는 문제를 훌륭히 예방했습니다.\n- **철저한 설정 및 가드 검증**: `MarketFlowIndicatorSourceTest`를 통해 `prod` 환경에서 `example` 설정이 주어졌을 때 기동이 차단되는 시나리오와 `macro` 기본값 동작을 코드로 견고하게 검증한 점이 매우 인상적입니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **운영 환경 데이터 누락 시나리오 (`prod` + `macro`)**: 실제 배포 환경에서 `ingest_macro.py`를 통한 초기 데이터 적재가 완료되지 않은 상태로 `macro` 소스가 지정되어 기동될 때, `IllegalStateException` 예외가 의도대로 발생하며 애플리케이션 기동이 안전하게 중단되는지 통합 테스트로 검증하세요.\n- **등록표 버전 불일치 시나리오**: `loadIndicatorMeta` 호출 시 현재 스냅샷의 `calculationRegistryVersion`과 다른 옛 버전을 요청할 경우, 의도한 대로 빈 목록(`List.of()`)이 반환되어 잘못된 규칙의 데이터 혼입을 방지하는지 확인하는 단위 테스트를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0917f3af2862df1ed7a636501833ba63ded0dc53 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T22:33:20.641+09:00",
+          "updated_at": "2026-09-21T22:33:20.641+09:00",
+          "system": false,
+          "noteable_id": 955374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 286,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "871bdedbe155f7e9511c76fb1699f108c1aeab28",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2850911,
+          "type": null,
+          "body": "mentioned in commit 06a2fe0ab88a024adc54fbbdcc0c2063ec8bebb9",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T22:39:55.469+09:00",
+          "updated_at": "2026-09-21T22:39:55.481+09:00",
+          "system": true,
+          "noteable_id": 955374,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 286,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2235329,
+      "head_commit_sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+      "base_commit_sha": "87f088a69896caddccd82b115e7a0e613d452d7f",
+      "start_commit_sha": "87f088a69896caddccd82b115e7a0e613d452d7f",
+      "created_at": "2026-09-21T22:33:12.061+09:00",
+      "merge_request_id": 955374,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "1126a351d69c8ba390389081cd69c020a661afac"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2235329,
+      "head_commit_sha": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+      "base_commit_sha": "87f088a69896caddccd82b115e7a0e613d452d7f",
+      "start_commit_sha": "87f088a69896caddccd82b115e7a0e613d452d7f",
+      "created_at": "2026-09-21T22:33:12.061+09:00",
+      "merge_request_id": 955374,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "1126a351d69c8ba390389081cd69c020a661afac",
+      "commits": [
+        {
+          "id": "0917f3af2862df1ed7a636501833ba63ded0dc53",
+          "short_id": "0917f3af",
+          "created_at": "2026-09-21T22:29:59.000+09:00",
+          "parent_ids": [
+            "87f088a69896caddccd82b115e7a0e613d452d7f"
+          ],
+          "title": "feat(be): 시장 흐름이 008 스냅샷을 읽는다",
+          "message": "feat(be): 시장 흐름이 008 스냅샷을 읽는다\n\n시장 흐름 지표는 예시 JSON 에서 왔다. 운영에서 지어낸 값을 그리지 못하게 막는\n가드가 무조건 올라와 prod 기동이 거부됐고, 그 가드를 푸는 길은 008 스냅샷을 읽는\n구현뿐이었다.\n\n새 어댑터는 getSnapshot() 을 한 번 읽어 포트 메서드 넷으로 나눈다. 메서드마다 따로\n질의하면 그 사이에 자료 버전이 바뀔 수 있고, 그러면 한 화면 안에서 기준월과 값이\n서로 다른 버전에서 온다.\n\n옮기면서 값을 만들어 내지 않는다. 008 이 경로를 세 달로 주지 못하는 지표(중단·기준월\n없음)는 빈 결과를 돌려주고 화면이 빈 세 점을 그린다 — 여기서 달을 채우거나 이전 값을\n끌어오면 자료가 있는 것처럼 보인다. 공표 정밀도는 008 이 아직 채우지 않으므로(T069)\n지어내지 않고 비운다.\n\n가드는 지우지 않고 예시 대역을 고른 경우에만 올라오게 했다. 무조건 세우면 멀쩡한\n운영 기동까지 막고, 지우면 설정이 잘못 걸렸을 때 지어낸 값이 그대로 화면에 나간다.\n기본값은 008 스냅샷이다 — 예시가 기본이면 설정을 빠뜨린 환경이 조용히 가짜를 그린다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T22:29:59.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T22:29:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0917f3af2862df1ed7a636501833ba63ded0dc53"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -22,12 +22,22 @@ import java.util.List;\n import java.util.Map;\n import java.util.Optional;\n import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n import org.springframework.core.io.ClassPathResource;\n import org.springframework.core.io.Resource;\n import org.springframework.stereotype.Component;\n \n-/** 008 실제 저장소가 합류하기 전 사용하는 버전 고정 예시 자료 어댑터. */\n+/**\n+ * 008 실제 저장소가 합류하기 전 사용하는 버전 고정 예시 자료 어댑터.\n+ *\n+ * <p><b>명시적으로 고를 때만 올라온다</b>(T064). 008 스냅샷을 읽는 {@code\n+ * com.ssafy.thorp.marketflow.infrastructure.macro.MacroSnapshotIndicatorAdapter} 가 기본이고, 이 대역은\n+ * {@code thorp.marketflow.indicator-source=example} 일 때만 대신 들어온다. 둘 다 올라오면 포트 구현이 둘이라 주입이 모호해진다.\n+ *\n+ * <p>운영에서 이것이 골라지면 {@link MarketFlowExampleDataGuard} 가 기동을 막는다.\n+ */\n @Component\n+@ConditionalOnProperty(name = \"thorp.marketflow.indicator-source\", havingValue = \"example\")\n public class ExampleMacroIndicatorSnapshotAdapter implements MacroIndicatorSnapshotPort {\n \n     static final String RESOURCE_PATH = \"marketflow/macro-indicators-example-v1.json\";\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/ExampleMacroIndicatorSnapshotAdapter.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.marketflow.infrastructure.example;\n \n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n import org.springframework.context.annotation.Configuration;\n import org.springframework.core.env.Environment;\n import org.springframework.core.env.Profiles;\n@@ -16,9 +17,14 @@ import org.springframework.core.env.Profiles;\n  * <p><b>끄는 길을 두지 않는다.</b> 속성으로 켜고 끌 수 있게 하면 배포가 급할 때 그 속성이 켜지고, 켜진 채로 잊힌다. 운영에서 예시 자료를 쓸 이유는 없으므로\n  * 선택지를 만들지 않는다.\n  *\n- * <p>이 가드는 {@code marketflow} 의 지표 조회가 008 스냅샷을 읽도록 바뀌면(T064) 필요 없어지고, 예시 어댑터와 함께 사라진다(T071).\n+ * <p><b>예시 대역을 고른 경우에만 올라온다</b>(T064). 008 스냅샷을 읽는 것이 기본이 된 뒤로는 운영이 이 자리에 오지 않으므로, 가드를 무조건 세우면 멀쩡한\n+ * 운영 기동까지 막는다. 그렇다고 지우면 {@code thorp.marketflow.indicator-source=example} 이 운영에 잘못 걸렸을 때 지어낸 값이 그대로\n+ * 화면에 나간다 — 그 경우에만 막는다.\n+ *\n+ * <p>예시 어댑터가 사라지면(T071) 이 가드도 함께 사라진다.\n  */\n @Configuration\n+@ConditionalOnProperty(name = \"thorp.marketflow.indicator-source\", havingValue = \"example\")\n public class MarketFlowExampleDataGuard {\n \n     private static final String PROD_PROFILE = \"prod\";\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/MarketFlowExampleDataGuard.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/example/MarketFlowExampleDataGuard.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,220 @@\n+package com.ssafy.thorp.marketflow.infrastructure.macro;\n+\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;\n+import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.domain.model.AfterReferenceMonthRelease;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot.FieldReferenceMonth;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 009 시장 흐름이 008 스냅샷을 읽는 어댑터 (T064, 008 FR-023).\n+ *\n+ * <p><b>한 번 읽어 넷으로 나눈다.</b> 008은 {@link MacroSnapshotQueryService#getSnapshot()} 하나로 세 버전을 고정한 뒤\n+ * 분야·지표·수집 상태를 함께 돌려준다. 포트의 메서드마다 따로 질의하면 그 사이에 자료 버전이 바뀔 수 있고, 그러면 한 화면 안에서 기준월과 값이 서로 다른 버전에서 온다.\n+ *\n+ * <p><b>값을 만들어 내지 않는다.</b> 008이 경로를 세 달로 주지 못하면(중단된 지표, 기준월 없음) 빈 결과를 돌려주고, 화면은 그것을 세 개의 빈 점으로\n+ * 그린다(원칙 VI). 여기서 달을 채우거나 이전 값을 끌어오면 화면은 자료가 있는 것처럼 보인다.\n+ */\n+@Component\n+@ConditionalOnProperty(\n+        name = \"thorp.marketflow.indicator-source\",\n+        havingValue = \"macro\",\n+        matchIfMissing = true)\n+public class MacroSnapshotIndicatorAdapter implements MacroIndicatorSnapshotPort {\n+\n+    /** 화면이 그리는 경로의 길이. 008과 같은 t-2·t-1·t 세 달이다. */\n+    private static final int PATH_MONTHS = 3;\n+\n+    private final MacroSnapshotQueryService queryService;\n+\n+    public MacroSnapshotIndicatorAdapter(MacroSnapshotQueryService queryService) {\n+        this.queryService = queryService;\n+    }\n+\n+    @Override\n+    public FieldReferenceSnapshot loadFieldReferenceMonths() {\n+        MacroSnapshotResult snapshot = queryService.getSnapshot();\n+        Map<String, YearMonth> latestByIndicator = latestMonths(snapshot);\n+        List<FieldReferenceMonth> fields =\n+                snapshot.fields().stream()\n+                        .map(field -> toFieldReference(field, latestByIndicator))\n+                        .toList();\n+        return new FieldReferenceSnapshot(\n+                snapshot.calculationRegistryVersion(), requireDataVersion(snapshot), fields);\n+    }\n+\n+    @Override\n+    public Optional<IndicatorPathSnapshot> loadRecentPath(\n+            String indicatorId, YearMonth referenceMonth) {\n+        MacroSnapshotResult snapshot = queryService.getSnapshot();\n+        return snapshot.indicators().stream()\n+                .filter(indicator -> indicator.indicatorId().equals(indicatorId))\n+                .findFirst()\n+                .flatMap(indicator -> toPathSnapshot(indicator, referenceMonth));\n+    }\n+\n+    @Override\n+    public List<IndicatorMetadata> loadIndicatorMeta(String registryVersion) {\n+        MacroSnapshotResult snapshot = queryService.getSnapshot();\n+        // 다른 등록표 버전을 물으면 빈 목록이다. 지금 버전의 메타를 옛 버전 요청에 돌려주면\n+        // 화면은 그 사실을 모른 채 다른 규칙으로 만든 값과 이름을 나란히 놓는다(FR-003).\n+        if (!snapshot.calculationRegistryVersion().equals(registryVersion)) {\n+            return List.of();\n+        }\n+        return snapshot.indicators().stream()\n+                .map(MacroSnapshotIndicatorAdapter::toMetadata)\n+                .toList();\n+    }\n+\n+    @Override\n+    public List<IndicatorCollectionState> loadCollectionState() {\n+        MacroSnapshotResult snapshot = queryService.getSnapshot();\n+        List<String> failed = snapshot.collection().failedIndicatorIds();\n+        return snapshot.indicators().stream()\n+                .map(\n+                        indicator ->\n+                                new IndicatorCollectionState(\n+                                        indicator.indicatorId(),\n+                                        indicator.lastUpdatedAt(),\n+                                        // 지표 상태가 READY 여도 이번 수집에서 실패했으면 성공이\n+                                        // 아니다. 어제 값이 남아 있는 것과 오늘 받은 것은 다르다.\n+                                        \"READY\".equals(indicator.status())\n+                                                && !failed.contains(indicator.indicatorId()),\n+                                        snapshot.exampleData()))\n+                .toList();\n+    }\n+\n+    /**\n+     * 지표별 최신 확보월. 분야 요약이 어느 지표가 기준월을 뒤로 당기는지 보일 때 쓴다.\n+     *\n+     * <p>값이 없는 지표는 넣지 않는다 — 없는 달을 기준월로 적으면 그 지표가 최신인 것처럼 보인다.\n+     */\n+    private Map<String, YearMonth> latestMonths(MacroSnapshotResult snapshot) {\n+        Map<String, YearMonth> months = new LinkedHashMap<>();\n+        for (MacroSnapshotResult.IndicatorSummary indicator : snapshot.indicators()) {\n+            if (indicator.latest() != null && indicator.latest().targetMonth() != null) {\n+                months.put(\n+                        indicator.indicatorId(), YearMonth.from(indicator.latest().targetMonth()));\n+            }\n+        }\n+        return months;\n+    }\n+\n+    private FieldReferenceMonth toFieldReference(\n+            MacroSnapshotResult.FieldSummary field, Map<String, YearMonth> latestByIndicator) {\n+        List<String> indicatorIds = field.indicatorIds();\n+        Map<String, YearMonth> latest = new LinkedHashMap<>();\n+        for (String indicatorId : indicatorIds) {\n+            YearMonth month = latestByIndicator.get(indicatorId);\n+            if (month != null) {\n+                latest.put(indicatorId, month);\n+            }\n+        }\n+        return new FieldReferenceMonth(\n+                FieldId.from(field.fieldId()),\n+                field.displayName(),\n+                field.displayOrder(),\n+                field.referenceMonth() == null ? null : YearMonth.from(field.referenceMonth()),\n+                indicatorIds,\n+                latest,\n+                field.referenceMonthHeldBackBy());\n+    }\n+\n+    private static IndicatorMetadata toMetadata(MacroSnapshotResult.IndicatorSummary indicator) {\n+        return new IndicatorMetadata(\n+                indicator.indicatorId(),\n+                FieldId.from(indicator.fieldId()),\n+                indicator.displayName(),\n+                // 화면이 보이는 단위는 변환 뒤 단위다. 원단위는 변환 전 값의 것이라 섞으면\n+                // 증가율에 \"2020=100\" 이 붙는다.\n+                indicator.transformedUnit(),\n+                indicator.transform(),\n+                indicator.source(),\n+                indicator.agency(),\n+                // 공표 정밀도는 008이 아직 채우지 않는다(T069). 지어내지 않고 비워 둔다.\n+                null,\n+                indicator.displayOrder());\n+    }\n+\n+    private Optional<IndicatorPathSnapshot> toPathSnapshot(\n+            MacroSnapshotResult.IndicatorSummary indicator, YearMonth referenceMonth) {\n+        if (indicator.referenceMonth() == null\n+                || !YearMonth.from(indicator.referenceMonth()).equals(referenceMonth)) {\n+            return Optional.empty();\n+        }\n+        List<MacroSnapshotResult.PathPoint> points = indicator.path();\n+        // 세 달을 못 채우면 부분 경로를 내보내지 않는다. 화면은 빈 세 점을 그리고, 그것이\n+        // \"자료가 없다\"는 사실을 그대로 말한다.\n+        if (points.size() != PATH_MONTHS) {\n+            return Optional.empty();\n+        }\n+        List<PathPoint> path =\n+                points.stream()\n+                        .map(\n+                                point ->\n+                                        new PathPoint(\n+                                                YearMonth.from(point.targetMonth()),\n+                                                point.transformedValue()))\n+                        .toList();\n+        LocalDate releaseDate =\n+                indicator.referenceValue() == null\n+                        ? null\n+                        : indicator.referenceValue().releaseDate();\n+        return Optional.of(\n+                new IndicatorPathSnapshot(\n+                        indicator.indicatorId(),\n+                        referenceMonth,\n+                        path,\n+                        releaseDate,\n+                        afterReferenceRelease(indicator, referenceMonth)));\n+    }\n+\n+    /**\n+     * 분야 기준월 뒤에 따로 발표된 값 (009 FR).\n+     *\n+     * <p>분야 기준월은 그 분야에서 가장 늦은 지표에 맞춰 당겨진다. 먼저 나온 지표는 그보다 새 달의 값을 이미 갖고 있는데, 그 값을 경로에 섞으면 분야 안의 지표들이\n+     * 서로 다른 달을 말하게 된다. 그래서 경로 밖에 따로 싣는다.\n+     */\n+    private AfterReferenceMonthRelease afterReferenceRelease(\n+            MacroSnapshotResult.IndicatorSummary indicator, YearMonth referenceMonth) {\n+        MacroSnapshotResult.ObservationValue latest = indicator.latest();\n+        if (latest == null || latest.targetMonth() == null || latest.transformedValue() == null) {\n+            return null;\n+        }\n+        YearMonth latestMonth = YearMonth.from(latest.targetMonth());\n+        if (!latestMonth.isAfter(referenceMonth)) {\n+            return null;\n+        }\n+        return new AfterReferenceMonthRelease(\n+                latestMonth, latest.transformedValue(), indicator.transformedUnit());\n+    }\n+\n+    /**\n+     * 자료 버전. <b>없으면 멈춘다.</b>\n+     *\n+     * <p>분야 요약은 (등록표 버전, 자료 버전) 으로 저장·재사용되므로 자료 버전이 없으면 저장할 키가 없다. 첫 수집 전에는 기준월도 없어 경로를 만들 수 없으니, 빈\n+     * 화면을 그리는 대신 무엇을 해야 하는지 말한다.\n+     */\n+    private String requireDataVersion(MacroSnapshotResult snapshot) {\n+        if (snapshot.dataVersion() == null) {\n+            throw new IllegalStateException(\n+                    \"발행된 거시지표 자료 버전이 없습니다. 등록표만 세워진 상태이며, \"\n+                            + \"data/scripts/ingest_macro.py 로 전 구간을 적재해야 시장 흐름을 그릴 수 있습니다.\");\n+        }\n+        return snapshot.dataVersion();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/macro/MacroSnapshotIndicatorAdapter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/infrastructure/macro/MacroSnapshotIndicatorAdapter.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,6 +48,9 @@ thorp:\n   regime:\n     macro:\n       source: fixture\n+  # 지역 개발은 거시지표 적재 없이도 화면을 볼 수 있어야 한다. 예시임은 응답의 exampleData 로 드러난다.\n+  marketflow:\n+    indicator-source: example\n   ops:\n     # 개발용 운영자 토큰. quickstart S10 이 X-Ops-Token 에 이 값을 보낸다. 운영 값은 .env.prod 의 THORP_OPS_TOKEN.\n     token: dev-ops-token\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-local.yml",
+          "old_path": "backend/src/main/resources/application-local.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -95,6 +95,10 @@ thorp:\n   regime:\n     macro:\n       source: fixture\n+  # 시장 흐름(spec 009)이 지표를 어디서 읽는가. 008 스냅샷이 기본이다 — 예시 자료는 명시적으로\n+  # 고를 때만 들어오고(T064), 운영에서 고르면 MarketFlowExampleDataGuard 가 기동을 막는다.\n+  marketflow:\n+    indicator-source: macro\n   learning:\n     # 배우기 관리 계정 허용 목록(spec 013 research R5). 쉼표로 구분한 사용자 ID(users.id)다.\n     # 비어 있으면 관리자가 없다 — 관리 경로가 모두 404 다. 014 가 역할을 주면 ConfiguredLearningAdminPolicy\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,269 @@\n+package com.ssafy.thorp.marketflow.infrastructure.macro;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.CollectionState;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.FieldSummary;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.IndicatorSummary;\n+import com.ssafy.thorp.macro.application.result.MacroSnapshotResult.ObservationValue;\n+import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;\n+import com.ssafy.thorp.marketflow.domain.model.FieldReferenceSnapshot;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorCollectionState;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorMetadata;\n+import com.ssafy.thorp.marketflow.domain.model.IndicatorPathSnapshot;\n+import com.ssafy.thorp.marketflow.domain.vo.FieldId;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.YearMonth;\n+import java.util.List;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 008 스냅샷이 시장 흐름 모델로 옮겨지는지 본다 (T064).\n+ *\n+ * <p>여기서 보는 것은 값의 정확성이 아니라 <b>옮기는 과정에서 없는 것이 있는 것처럼 되지 않는가</b>다. 008 계약과 009 모델은 모양이 달라서, 빈 경로·기준월\n+ * 없음·중단된 지표 같은 경계가 옮겨지며 조용히 채워지기 쉽다.\n+ */\n+@DisplayName(\"008 스냅샷 → 시장 흐름 어댑터\")\n+class MacroSnapshotIndicatorAdapterTest {\n+\n+    private static final String REGISTRY = \"macro-calc-v1\";\n+    private static final String DATASET = \"macro-20260921T131117\";\n+\n+    @Test\n+    @DisplayName(\"분야 기준월과 지표별 최신월을 옮긴다\")\n+    void mapsFieldReferenceMonths() {\n+        FieldReferenceSnapshot snapshot = adapter(snapshot()).loadFieldReferenceMonths();\n+\n+        assertThat(snapshot.registryVersion()).isEqualTo(REGISTRY);\n+        assertThat(snapshot.datasetVersion()).isEqualTo(DATASET);\n+        assertThat(snapshot.fields()).hasSize(1);\n+        var field = snapshot.fields().getFirst();\n+        assertThat(field.fieldId()).isEqualTo(FieldId.PRODUCTION);\n+        assertThat(field.referenceMonth()).isEqualTo(YearMonth.of(2026, 7));\n+        assertThat(field.indicatorIds()).containsExactly(\"all_industry_production\", \"no_data\");\n+        assertThat(field.heldBackBy()).containsExactly(\"all_industry_production\");\n+        // 값이 없는 지표는 최신월 지도에 넣지 않는다. 없는 달을 적으면 최신인 것처럼 보인다.\n+        assertThat(field.latestMonths()).containsOnlyKeys(\"all_industry_production\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"경로 세 점과 발표일을 옮긴다\")\n+    void mapsRecentPath() {\n+        Optional<IndicatorPathSnapshot> path =\n+                adapter(snapshot())\n+                        .loadRecentPath(\"all_industry_production\", YearMonth.of(2026, 7));\n+\n+        assertThat(path).isPresent();\n+        assertThat(path.get().path())\n+                .extracting(point -> point.month().toString())\n+                .containsExactly(\"2026-05\", \"2026-06\", \"2026-07\");\n+        assertThat(path.get().path().getLast().value()).isEqualByComparingTo(\"1.5\");\n+        assertThat(path.get().releaseDate()).isEqualTo(LocalDate.of(2026, 8, 31));\n+    }\n+\n+    @Test\n+    @DisplayName(\"결측 달은 값 없는 점으로 남는다\")\n+    void keepsMissingMonthsAsEmptyPoints() {\n+        Optional<IndicatorPathSnapshot> path =\n+                adapter(snapshot())\n+                        .loadRecentPath(\"all_industry_production\", YearMonth.of(2026, 7));\n+\n+        // 배열에서 지우면 세 달이 두 달로 보이고 어느 달이 빠졌는지 알 수 없다(원칙 VI).\n+        assertThat(path.orElseThrow().path().get(1).value()).isNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"다른 기준월을 물으면 비어 있다\")\n+    void returnsEmptyForAnotherReferenceMonth() {\n+        assertThat(\n+                        adapter(snapshot())\n+                                .loadRecentPath(\"all_industry_production\", YearMonth.of(2026, 6)))\n+                .isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"경로가 세 달이 아니면 부분 경로를 내보내지 않는다\")\n+    void refusesPartialPath() {\n+        // 중단된 지표와 기준월 없는 지표는 008이 빈 경로를 준다. 그대로 옮기면 화면이 요구하는\n+        // 세 점을 채우지 못해 터지고, 억지로 채우면 없는 값이 생긴다.\n+        assertThat(adapter(snapshot()).loadRecentPath(\"no_data\", YearMonth.of(2026, 7))).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"표시 메타는 변환 뒤 단위를 쓴다\")\n+    void mapsMetadataWithTransformedUnit() {\n+        List<IndicatorMetadata> metadata = adapter(snapshot()).loadIndicatorMeta(REGISTRY);\n+\n+        assertThat(metadata).hasSize(2);\n+        IndicatorMetadata first = metadata.getFirst();\n+        assertThat(first.name()).isEqualTo(\"전산업생산\");\n+        // 원단위(2020=100)를 쓰면 증가율에 지수 단위가 붙는다.\n+        assertThat(first.unit()).isEqualTo(\"%\");\n+        assertThat(first.source()).isEqualTo(\"국가통계포털(KOSIS)\");\n+        assertThat(first.agency()).isEqualTo(\"통계청\");\n+        assertThat(first.fieldId()).isEqualTo(FieldId.PRODUCTION);\n+    }\n+\n+    @Test\n+    @DisplayName(\"다른 등록표 버전을 물으면 빈 목록이다\")\n+    void returnsNoMetadataForAnotherRegistryVersion() {\n+        assertThat(adapter(snapshot()).loadIndicatorMeta(\"macro-calc-v0\")).isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"이번 수집에서 실패한 지표는 성공이 아니다\")\n+    void marksFailedIndicatorsUnsuccessful() {\n+        List<IndicatorCollectionState> states = adapter(snapshot()).loadCollectionState();\n+\n+        assertThat(states).hasSize(2);\n+        assertThat(states.getFirst().indicatorId()).isEqualTo(\"all_industry_production\");\n+        assertThat(states.getFirst().successful()).isTrue();\n+        assertThat(states.getFirst().exampleData()).isFalse();\n+        // 값이 남아 있어도 오늘 못 받았다는 사실은 숨기지 않는다(FR-011).\n+        assertThat(states.getLast().successful()).isFalse();\n+    }\n+\n+    @Test\n+    @DisplayName(\"예시 자료 표시가 그대로 전달된다\")\n+    void carriesExampleFlag() {\n+        MacroSnapshotResult example =\n+                new MacroSnapshotResult(\n+                        DATASET,\n+                        REGISTRY,\n+                        \"macro-display-v1\",\n+                        true,\n+                        LocalDate.of(2026, 7, 1),\n+                        collection(),\n+                        List.of(productionField()),\n+                        List.of(readyIndicator(), noDataIndicator()));\n+\n+        assertThat(adapter(example).loadCollectionState())\n+                .allSatisfy(state -> assertThat(state.exampleData()).isTrue());\n+    }\n+\n+    @Test\n+    @DisplayName(\"발행된 자료 버전이 없으면 무엇을 해야 하는지 말한다\")\n+    void saysWhatToDoWhenNothingIsPublished() {\n+        MacroSnapshotResult noData =\n+                new MacroSnapshotResult(\n+                        null,\n+                        REGISTRY,\n+                        \"macro-display-v1\",\n+                        false,\n+                        null,\n+                        collection(),\n+                        List.of(),\n+                        List.of());\n+\n+        // 빈 화면을 그리면 \"자료가 아직 없다\"와 \"자료를 못 읽었다\"가 같아 보인다.\n+        assertThatThrownBy(() -> adapter(noData).loadFieldReferenceMonths())\n+                .isInstanceOf(IllegalStateException.class)\n+                .hasMessageContaining(\"ingest_macro.py\");\n+    }\n+\n+    private static MacroSnapshotIndicatorAdapter adapter(MacroSnapshotResult result) {\n+        MacroSnapshotQueryService queryService = mock(MacroSnapshotQueryService.class);\n+        when(queryService.getSnapshot()).thenReturn(result);\n+        return new MacroSnapshotIndicatorAdapter(queryService);\n+    }\n+\n+    private static MacroSnapshotResult snapshot() {\n+        return new MacroSnapshotResult(\n+                DATASET,\n+                REGISTRY,\n+                \"macro-display-v1\",\n+                false,\n+                LocalDate.of(2026, 7, 1),\n+                collection(),\n+                List.of(productionField()),\n+                List.of(readyIndicator(), noDataIndicator()));\n+    }\n+\n+    private static CollectionState collection() {\n+        return new CollectionState(\n+                \"SUCCEEDED\",\n+                List.of(),\n+                Instant.parse(\"2026-09-21T13:11:17Z\"),\n+                Instant.parse(\"2026-09-21T13:11:17Z\"),\n+                List.of(\"no_data\"),\n+                false);\n+    }\n+\n+    private static FieldSummary productionField() {\n+        return new FieldSummary(\n+                \"production\",\n+                \"생산\",\n+                1,\n+                \"전산업·광공업·서비스업 생산 지수\",\n+                LocalDate.of(2026, 7, 1),\n+                List.of(\"all_industry_production\"),\n+                List.of(\"all_industry_production\", \"no_data\"));\n+    }\n+\n+    private static IndicatorSummary readyIndicator() {\n+        return new IndicatorSummary(\n+                \"all_industry_production\",\n+                \"production\",\n+                \"전산업생산\",\n+                1,\n+                \"국가통계포털(KOSIS)\",\n+                \"통계청\",\n+                \"2020=100\",\n+                \"%\",\n+                \"YOY_GROWTH\",\n+                \"READY\",\n+                LocalDate.of(2026, 7, 1),\n+                new ObservationValue(\n+                        LocalDate.of(2026, 7, 1),\n+                        new BigDecimal(\"112.3\"),\n+                        new BigDecimal(\"1.5\"),\n+                        LocalDate.of(2026, 8, 31)),\n+                new ObservationValue(\n+                        LocalDate.of(2026, 7, 1),\n+                        new BigDecimal(\"112.3\"),\n+                        new BigDecimal(\"1.5\"),\n+                        LocalDate.of(2026, 8, 31)),\n+                List.of(\n+                        point(LocalDate.of(2026, 5, 1), new BigDecimal(\"1.1\")),\n+                        point(LocalDate.of(2026, 6, 1), null),\n+                        point(LocalDate.of(2026, 7, 1), new BigDecimal(\"1.5\"))),\n+                List.of(),\n+                Instant.parse(\"2026-09-21T13:11:17Z\"),\n+                null);\n+    }\n+\n+    /** 값을 못 받은 지표. 008은 기준월도 경로도 비워 보낸다. */\n+    private static IndicatorSummary noDataIndicator() {\n+        return new IndicatorSummary(\n+                \"no_data\",\n+                \"production\",\n+                \"표본 없음\",\n+                2,\n+                \"국가통계포털(KOSIS)\",\n+                \"통계청\",\n+                \"2020=100\",\n+                \"%\",\n+                \"YOY_GROWTH\",\n+                \"COLLECTION_FAILED\",\n+                null,\n+                null,\n+                null,\n+                List.of(),\n+                List.of(),\n+                null,\n+                null);\n+    }\n+\n+    private static MacroSnapshotResult.PathPoint point(LocalDate month, BigDecimal value) {\n+        return new MacroSnapshotResult.PathPoint(\n+                month, null, value, null, value == null ? \"NOT_TRANSFORMABLE\" : null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/macro/MacroSnapshotIndicatorAdapterTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/macro/MacroSnapshotIndicatorAdapterTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,119 @@\n+package com.ssafy.thorp.marketflow.infrastructure;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.mockito.Mockito.mock;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.macro.application.service.MacroSnapshotQueryService;\n+import com.ssafy.thorp.marketflow.application.port.MacroIndicatorSnapshotPort;\n+import com.ssafy.thorp.marketflow.infrastructure.example.ExampleMacroIndicatorSnapshotAdapter;\n+import com.ssafy.thorp.marketflow.infrastructure.example.MarketFlowExampleDataGuard;\n+import com.ssafy.thorp.marketflow.infrastructure.macro.MacroSnapshotIndicatorAdapter;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.boot.test.context.runner.ApplicationContextRunner;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Configuration;\n+\n+/**\n+ * 시장 흐름이 지표를 어디서 읽는지 고정한다 (T064).\n+ *\n+ * <p><b>2026-09-21 운영 배포가 여기서 막혔다.</b> 예시 자료 가드가 무조건 올라와 {@code prod} 기동을 거부했는데, 그 가드를 풀 방법이 008\n+ * 스냅샷을 읽는 구현뿐이었다. 그래서 이 테스트는 \"운영이 뜬다\"와 \"예시 자료로는 뜨지 않는다\"를 함께 고정한다 — 하나만 두면 다음에 같은 실수가 반대 방향으로 난다.\n+ */\n+@DisplayName(\"시장 흐름 지표 공급원 선택\")\n+class MarketFlowIndicatorSourceTest {\n+\n+    private final ApplicationContextRunner contextRunner =\n+            new ApplicationContextRunner()\n+                    .withUserConfiguration(StubMacroSnapshot.class)\n+                    .withBean(ObjectMapper.class, ObjectMapper::new)\n+                    .withUserConfiguration(\n+                            MacroSnapshotIndicatorAdapter.class,\n+                            ExampleMacroIndicatorSnapshotAdapter.class,\n+                            MarketFlowExampleDataGuard.class);\n+\n+    @Test\n+    @DisplayName(\"설정이 없으면 008 스냅샷을 읽는다\")\n+    void defaultsToMacroSnapshot() {\n+        // 기본이 예시 자료면, 설정을 빠뜨린 환경이 조용히 지어낸 값을 그린다.\n+        contextRunner.run(\n+                context -> {\n+                    assertThat(context).hasNotFailed();\n+                    assertThat(context.getBean(MacroIndicatorSnapshotPort.class))\n+                            .isInstanceOf(MacroSnapshotIndicatorAdapter.class);\n+                    assertThat(context).doesNotHaveBean(ExampleMacroIndicatorSnapshotAdapter.class);\n+                });\n+    }\n+\n+    @Test\n+    @DisplayName(\"운영에서 008 스냅샷으로 기동한다\")\n+    void prodStartsWithMacroSnapshot() {\n+        contextRunner\n+                .withInitializer(context -> context.getEnvironment().setActiveProfiles(\"prod\"))\n+                .withPropertyValues(\"thorp.marketflow.indicator-source=macro\")\n+                .run(\n+                        context -> {\n+                            assertThat(context).hasNotFailed();\n+                            assertThat(context.getBean(MacroIndicatorSnapshotPort.class))\n+                                    .isInstanceOf(MacroSnapshotIndicatorAdapter.class);\n+                            // 예시 자료를 쓰지 않으므로 가드가 설 자리도 없다.\n+                            assertThat(context).doesNotHaveBean(MarketFlowExampleDataGuard.class);\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"운영에서 예시 자료를 고르면 기동에 실패한다\")\n+    void prodWithExampleDataFailsToStart() {\n+        contextRunner\n+                .withInitializer(context -> context.getEnvironment().setActiveProfiles(\"prod\"))\n+                .withPropertyValues(\"thorp.marketflow.indicator-source=example\")\n+                .run(\n+                        context ->\n+                                assertThat(context)\n+                                        .hasFailed()\n+                                        .getFailure()\n+                                        .rootCause()\n+                                        .isInstanceOf(IllegalStateException.class)\n+                                        .hasMessageContaining(\"예시 자료\")\n+                                        .hasMessageContaining(\"prod\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"지역 개발은 예시 자료로 기동한다\")\n+    void localStartsWithExampleData() {\n+        contextRunner\n+                .withPropertyValues(\"thorp.marketflow.indicator-source=example\")\n+                .run(\n+                        context -> {\n+                            assertThat(context).hasNotFailed();\n+                            assertThat(context.getBean(MacroIndicatorSnapshotPort.class))\n+                                    .isInstanceOf(ExampleMacroIndicatorSnapshotAdapter.class);\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"두 구현이 함께 올라오지 않는다\")\n+    void onlyOneImplementationIsWired() {\n+        // 둘 다 올라오면 주입이 모호해져 기동이 실패하거나, 더 나쁘게는 어느 쪽이 쓰였는지\n+        // 모른 채 화면이 그려진다.\n+        contextRunner.run(\n+                context ->\n+                        assertThat(context.getBeansOfType(MacroIndicatorSnapshotPort.class))\n+                                .hasSize(1));\n+        contextRunner\n+                .withPropertyValues(\"thorp.marketflow.indicator-source=example\")\n+                .run(\n+                        context ->\n+                                assertThat(context.getBeansOfType(MacroIndicatorSnapshotPort.class))\n+                                        .hasSize(1));\n+    }\n+\n+    @Configuration\n+    static class StubMacroSnapshot {\n+        @Bean\n+        MacroSnapshotQueryService macroSnapshotQueryService() {\n+            return mock(MacroSnapshotQueryService.class);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/MarketFlowIndicatorSourceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/infrastructure/MarketFlowIndicatorSourceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -183,7 +183,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n \n **Purpose**: 009·010 연동 정합화와 남은 결정 마무리\n \n-- [ ] T064 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다\n+- [X] T064 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다\n - [ ] T065 `specs/009-market-flow-overview/`의 spec과 계약에서 지표·분야 식별자를 008과 맞춘다. 두바이유 식별자 표기 불일치와 분야 식별자 대소문자를 정리한다\n - [ ] T066 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)\n - [ ] T067 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2850880": []
+  }
+}

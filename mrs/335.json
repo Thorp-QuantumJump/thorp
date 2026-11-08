@@ -1,0 +1,919 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 960246,
+    "iid": 335,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름·경제환경 검색 화면의 숫자를 소수 첫째 자리로 보인다",
+    "description": "## 작업 내용 요약\n\n시장 흐름과 경제환경 검색 화면·문장에 소수 6\\~12자리로 보이던 숫자를 소수 첫째 자리로 정리한다. 저장 값과 API는 12자리 그대로 두고 표기만 바꾼다. 문장 표기가 바뀌므로 분야·종합 모델 버전을 올린다.\n\n## 관련 티켓\n\nS15P21E205-447\n\n## 주요 변경 사항\n\n- **시장 흐름(FE)**: 관측값·차트·축 설명을 소수 첫째 자리까지 보인다. 변화 방향과 축 범위는 반올림 전 값으로 정한다.\n- **시장 흐름 요약 문장(BE)**: `NarrativeFormatter`가 값을 소수 첫째 자리(사사오입)로 쓴다.\n- **경제환경 검색 상세(FE)**: 거리·블록 거리·z·척도·원값은 소수 첫째 자리, 기여·명목 비중은 %로 보인다. 정밀 값은 숫자의 `title`로 남긴다(`Num` 컴포넌트).\n- **경제환경 검색 문장(DE)**\n  - 기본은 소수 첫째 자리다. 지금·당시 두 값이 같게 보이면 다르게 보일 때까지 자리를 늘린다. \"지금이 2.3%로 당시 2.3%보다 높습니다\" 같은 문장을 막는다.\n  - 문장 표기는 모델 버전의 일부라 `REGIME-V1` → `REGIME-V1.1`, `REGIME-V3-EQ` → `REGIME-V3-EQ.1`. 계산은 같다.\n- **문서**: spec 010 FR-045(숫자 표기 규칙), spec 009 Session 2026-09-25, 계약·data-model·운영 절차의 버전 표기.\n\n## 테스트\n\n- data: `ruff check src scripts tests && pytest` 1254개 통과\n- backend: `./gradlew clean build` 2198개 통과\n- frontend: lint 오류 0, build, vitest 1432개 통과. `SignupPage` 테스트 1개 실패는 수정 전 dev에서도 실패한다.\n- 실데이터 표본: \"수입은 지금 26.4%, 당시 38.2%입니다\", \"무역수지 … 241.4억 달러\"\n\n## 리뷰 포인트\n\n- 모델 버전이 올라가 머지 후 운영 배치를 다시 돌려야 문장이 바뀐다(runbook 4절). 버전이 바뀐 범위는 전 구간을 다시 계산한다.\n- 기여·비중을 소수가 아니라 %로 바꿨다(0.396 → 39.6%).\n- 수기 대조는 API의 12자리 값으로 한다. 화면은 `title`로만 정밀 값을 보인다.",
+    "state": "merged",
+    "created_at": "2026-09-26T07:35:49.293+09:00",
+    "updated_at": "2026-09-27T17:57:33.904+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-26T07:49:44.429+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/447-decimal-display",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+    "merge_commit_sha": "d9788d13057a2a26ef02c4b6c822bb51244bf561",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-26T07:35:51.787+09:00",
+    "reference": "!335",
+    "references": {
+      "short": "!335",
+      "relative": "!335",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!335"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/335",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 960246,
+    "iid": 335,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름·경제환경 검색 화면의 숫자를 소수 첫째 자리로 보인다",
+    "description": "## 작업 내용 요약\n\n시장 흐름과 경제환경 검색 화면·문장에 소수 6\\~12자리로 보이던 숫자를 소수 첫째 자리로 정리한다. 저장 값과 API는 12자리 그대로 두고 표기만 바꾼다. 문장 표기가 바뀌므로 분야·종합 모델 버전을 올린다.\n\n## 관련 티켓\n\nS15P21E205-447\n\n## 주요 변경 사항\n\n- **시장 흐름(FE)**: 관측값·차트·축 설명을 소수 첫째 자리까지 보인다. 변화 방향과 축 범위는 반올림 전 값으로 정한다.\n- **시장 흐름 요약 문장(BE)**: `NarrativeFormatter`가 값을 소수 첫째 자리(사사오입)로 쓴다.\n- **경제환경 검색 상세(FE)**: 거리·블록 거리·z·척도·원값은 소수 첫째 자리, 기여·명목 비중은 %로 보인다. 정밀 값은 숫자의 `title`로 남긴다(`Num` 컴포넌트).\n- **경제환경 검색 문장(DE)**\n  - 기본은 소수 첫째 자리다. 지금·당시 두 값이 같게 보이면 다르게 보일 때까지 자리를 늘린다. \"지금이 2.3%로 당시 2.3%보다 높습니다\" 같은 문장을 막는다.\n  - 문장 표기는 모델 버전의 일부라 `REGIME-V1` → `REGIME-V1.1`, `REGIME-V3-EQ` → `REGIME-V3-EQ.1`. 계산은 같다.\n- **문서**: spec 010 FR-045(숫자 표기 규칙), spec 009 Session 2026-09-25, 계약·data-model·운영 절차의 버전 표기.\n\n## 테스트\n\n- data: `ruff check src scripts tests && pytest` 1254개 통과\n- backend: `./gradlew clean build` 2198개 통과\n- frontend: lint 오류 0, build, vitest 1432개 통과. `SignupPage` 테스트 1개 실패는 수정 전 dev에서도 실패한다.\n- 실데이터 표본: \"수입은 지금 26.4%, 당시 38.2%입니다\", \"무역수지 … 241.4억 달러\"\n\n## 리뷰 포인트\n\n- 모델 버전이 올라가 머지 후 운영 배치를 다시 돌려야 문장이 바뀐다(runbook 4절). 버전이 바뀐 범위는 전 구간을 다시 계산한다.\n- 기여·비중을 소수가 아니라 %로 바꿨다(0.396 → 39.6%).\n- 수기 대조는 API의 12자리 값으로 한다. 화면은 `title`로만 정밀 값을 보인다.",
+    "state": "merged",
+    "created_at": "2026-09-26T07:35:49.293+09:00",
+    "updated_at": "2026-09-27T17:57:33.904+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-26T07:49:44.429+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/447-decimal-display",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+    "merge_commit_sha": "d9788d13057a2a26ef02c4b6c822bb51244bf561",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-26T07:35:51.787+09:00",
+    "reference": "!335",
+    "references": {
+      "short": "!335",
+      "relative": "!335",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!335"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/335",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "25",
+    "latest_build_started_at": "2026-09-26T07:36:03.089+09:00",
+    "latest_build_finished_at": "2026-09-26T07:49:43.687+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 223123,
+      "iid": 365,
+      "project_id": 1444456,
+      "sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+      "ref": "feat(fe)/447-decimal-display",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-26T07:36:02.953+09:00",
+      "updated_at": "2026-09-26T07:49:43.694+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/223123"
+    },
+    "head_pipeline": {
+      "id": 223123,
+      "iid": 365,
+      "project_id": 1444456,
+      "sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+      "ref": "feat(fe)/447-decimal-display",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-26T07:36:02.953+09:00",
+      "updated_at": "2026-09-26T07:49:43.694+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/223123",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-26T07:36:03.089+09:00",
+      "finished_at": "2026-09-26T07:49:43.687+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/223123",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c",
+      "head_sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+      "start_sha": "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "186f4e973e4548e79456e15f27c33c8d0b83efd8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2870373,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-26T07:35:49.415+09:00",
+          "updated_at": "2026-09-26T07:35:49.422+09:00",
+          "system": true,
+          "noteable_id": 960246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 335,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7be02ce0ab8113493e657f3b00f5eea08540d964",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2870374,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **비즈니스 요구사항 준수와 안전성**: 백엔드와 프론트엔드 전반에 걸쳐 데이터 저장 및 API 응답값(12자리 정밀도)은 그대로 유지하면서 화면 표기(UI)와 요약 문장 포맷팅만 소수 첫째 자리(비율은 %)로 깔끔하게 분리하여 구현했습니다.\n- **엣지 케이스 대응**: `formatPair` 함수를 통해 지금과 당시 두 값의 비교 문장에서 첫째 자리 반올림 결과가 동일할 경우 다르게 보일 때까지 자릿수를 동적으로 늘려 판정과 숫자가 어긋나는 논리적 모순을 방지한 설계가 돋보입니다. 또한 `-0`이 표시되는 현상을 방지하는 예외 처리가 잘 되어 있습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **동적 자릿수 증가 시나리오 (`formatPair`)**:\n  - `query=2.31, case=2.34` 입력 시 소수 첫째 자리에서 같아 보이지 않으므로 기본 자릿수인 `(\"2.31\", \"2.34\")`가 정상 반환되는지 확인합니다.\n  - `query=2.301, case=2.304` 같이 소수 첫째/둘째 자리까지 같아 보일 때 자릿수가 자동으로 늘어나는지 테스트합니다.\n- **음수 반올림 및 `-0` 방지**:\n  - `-0.04`가 입력되었을 때 화면에 `-0`이 아닌 `0` 또는 `0.0`으로 올바르게 정제되어 출력되는지 검증합니다.\n- **UI 툴팁(`title`) 확인**:\n  - 프론트엔드 `Num` 컴포넌트가 적용된 요소들에 마우스 호버 시 원본 12자리 정밀 값이 `title` 속성에 올바르게 노출되는지 컴포넌트 테스트로 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-26T07:35:59.925+09:00",
+          "updated_at": "2026-09-26T07:35:59.925+09:00",
+          "system": false,
+          "noteable_id": 960246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 335,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "514e8502f62f38cd51465992396498ccb8462abb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2870375,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9 pass",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-26T07:36:25.036+09:00",
+          "updated_at": "2026-09-26T07:36:25.039+09:00",
+          "system": true,
+          "noteable_id": 960246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 335,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bace8d52deb861774b37c093e38b19b81de2996a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2870436,
+          "type": null,
+          "body": "mentioned in commit d9788d13057a2a26ef02c4b6c822bb51244bf561",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-26T07:49:44.597+09:00",
+          "updated_at": "2026-09-26T07:49:44.602+09:00",
+          "system": true,
+          "noteable_id": 960246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 335,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "25d3e0142c0dcdbb19065f477783463f7ec70634",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885027,
+          "type": null,
+          "body": "mentioned in commit d00bdb3b540fa3868f5925b950eca4e527c29f36",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:09.568+09:00",
+          "updated_at": "2026-10-13T15:16:09.573+09:00",
+          "system": true,
+          "noteable_id": 960246,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 335,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2252052,
+      "head_commit_sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+      "base_commit_sha": "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c",
+      "start_commit_sha": "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c",
+      "created_at": "2026-09-26T07:35:49.669+09:00",
+      "merge_request_id": 960246,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "8f6778a1d80bcd96822eadacc36975957b1ac427"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2252052,
+      "head_commit_sha": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+      "base_commit_sha": "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c",
+      "start_commit_sha": "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c",
+      "created_at": "2026-09-26T07:35:49.669+09:00",
+      "merge_request_id": 960246,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "8f6778a1d80bcd96822eadacc36975957b1ac427",
+      "commits": [
+        {
+          "id": "ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9",
+          "short_id": "ad83decf",
+          "created_at": "2026-09-25T23:37:03.000+09:00",
+          "parent_ids": [
+            "b2fd7bac135cc27b6156fa3a7abcdd324926c289"
+          ],
+          "title": "docs(fe): spec 009·010에 숫자 표기 규칙(FR-045)과 모델 버전 이력을 적는다",
+          "message": "docs(fe): spec 009·010에 숫자 표기 규칙(FR-045)과 모델 버전 이력을 적는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "EUNSEO-YA",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-25T23:37:03.000+09:00",
+          "committer_name": "EUNSEO-YA",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-25T23:37:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ad83decff15e18c1ea2f5b4b4be5cc169a6f31e9"
+        },
+        {
+          "id": "b2fd7bac135cc27b6156fa3a7abcdd324926c289",
+          "short_id": "b2fd7bac",
+          "created_at": "2026-09-25T23:37:03.000+09:00",
+          "parent_ids": [
+            "2962d12789ac2c72d56872fce2758c723a306566"
+          ],
+          "title": "feat(de): 경제환경 검색 문장의 값을 소수 첫째 자리로 쓰고 분야·종합 모델 버전을 올린다",
+          "message": "feat(de): 경제환경 검색 문장의 값을 소수 첫째 자리로 쓰고 분야·종합 모델 버전을 올린다\n\n- 기본 소수 첫째 자리, 지금·당시 두 값이 같게 보이면 다르게 보일 때까지 자리를 늘린다.\n- 문장 표기는 모델 버전의 일부라 REGIME-V1 → REGIME-V1.1, REGIME-V3-EQ → REGIME-V3-EQ.1. 계산은 같다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "EUNSEO-YA",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-25T23:37:03.000+09:00",
+          "committer_name": "EUNSEO-YA",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-25T23:37:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b2fd7bac135cc27b6156fa3a7abcdd324926c289"
+        },
+        {
+          "id": "2962d12789ac2c72d56872fce2758c723a306566",
+          "short_id": "2962d127",
+          "created_at": "2026-09-25T23:37:03.000+09:00",
+          "parent_ids": [
+            "da6290564f8eb4b728a3900e25c8a7658cccc8b5"
+          ],
+          "title": "feat(be): 시장 흐름 요약 문장의 값을 소수 첫째 자리로 쓴다",
+          "message": "feat(be): 시장 흐름 요약 문장의 값을 소수 첫째 자리로 쓴다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "EUNSEO-YA",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-25T23:37:03.000+09:00",
+          "committer_name": "EUNSEO-YA",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-25T23:37:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2962d12789ac2c72d56872fce2758c723a306566"
+        },
+        {
+          "id": "da6290564f8eb4b728a3900e25c8a7658cccc8b5",
+          "short_id": "da629056",
+          "created_at": "2026-09-25T23:37:03.000+09:00",
+          "parent_ids": [
+            "6eeb94f367c29e6f6fda6b1a4ebee7e7131e1a8c"
+          ],
+          "title": "feat(fe): 시장 흐름·경제환경 검색 화면의 숫자를 소수 첫째 자리로 보인다",
+          "message": "feat(fe): 시장 흐름·경제환경 검색 화면의 숫자를 소수 첫째 자리로 보인다\n\n- 시장 흐름 관측값·차트·축 설명은 소수 첫째 자리까지 보인다.\n- 경제환경 검색 상세의 거리·블록 거리·z·척도·원값은 소수 첫째 자리, 기여·명목 비중은 %로 보이고\n  정밀 값은 title로 남긴다(Num 컴포넌트).\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "EUNSEO-YA",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-25T23:37:03.000+09:00",
+          "committer_name": "EUNSEO-YA",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-25T23:37:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da6290564f8eb4b728a3900e25c8a7658cccc8b5"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.marketflow.domain.model;\n import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.Direction;\n import com.ssafy.thorp.marketflow.domain.model.NarrativeSubjectSelector.SelectedSubject;\n import java.math.BigDecimal;\n+import java.math.RoundingMode;\n import java.util.List;\n \n /** 등록된 문장 틀만 사용해 실제 값의 방향과 지속 기간을 설명한다. */\n@@ -56,8 +57,16 @@ public class NarrativeFormatter {\n                         movement);\n     }\n \n-    private static String formatValue(BigDecimal value) {\n-        return value == null ? \"값 없음 \" : value.stripTrailingZeros().toPlainString();\n+    /** 문장 값은 소수 첫째 자리까지 쓴다(S15P21E205-447). 저장·응답의 값은 그대로다. */\n+    static final int SENTENCE_DECIMALS = 1;\n+\n+    static String formatValue(BigDecimal value) {\n+        if (value == null) {\n+            return \"값 없음 \";\n+        }\n+        return value.setScale(SENTENCE_DECIMALS, RoundingMode.HALF_UP)\n+                .stripTrailingZeros()\n+                .toPlainString();\n     }\n \n     private static String subjectMarker(String word) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatter.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,10 @@ import com.ssafy.thorp.marketflow.domain.vo.PathPoint;\n import java.math.BigDecimal;\n import java.time.YearMonth;\n import java.util.List;\n+import org.junit.jupiter.api.DisplayName;\n import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.CsvSource;\n \n class NarrativeFormatterTest {\n \n@@ -49,6 +52,30 @@ class NarrativeFormatterTest {\n                                         .isEmpty());\n     }\n \n+    @ParameterizedTest\n+    @CsvSource({\n+        \"4.346167, 4.3\",\n+        \"1351.25, 1351.3\",\n+        \"3.0, 3\",\n+        \"-0.04, 0\",\n+        \"-0.25, -0.3\",\n+        \"0.000050, 0\",\n+        \"112, 112\"\n+    })\n+    @DisplayName(\"요약 문장의 값은 소수 첫째 자리에서 사사오입하고 꼬리 0을 덜어 낸다\")\n+    void valueIsRoundedToOneDecimal(String raw, String expected) {\n+        assertThat(NarrativeFormatter.formatValue(new BigDecimal(raw))).isEqualTo(expected);\n+    }\n+\n+    @Test\n+    void narrativeValueHasAtMostOneDecimal() {\n+        var indicator = indicator(\"수출 증가율\", \"%\", \"3.2\", \"4.0\", \"4.846167\");\n+\n+        String narrative = formatter.format(selector.select(List.of(indicator)), true);\n+\n+        assertThat(narrative).contains(\"4.8%\").doesNotContain(\"4.846167\");\n+    }\n+\n     private static IndicatorDisplay indicator(\n             String name, String unit, String first, String second, String third) {\n         return new IndicatorDisplay(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatterTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/marketflow/domain/model/NarrativeFormatterTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n {\n-  \"version\": \"REGIME-V3-EQ\",\n+  \"version\": \"REGIME-V3-EQ.1\",\n   \"_comment\": \"spec 010 v3 개정안(factor-model-amendment.md) §3.1 국면 입력표와 §3.2 경제 블록 구성표(PD-F4, 2026-09-24 팀 확정). 블록 요인은 동일가중이다(2026-09-25 팀 결정, constitution '하지 않는 것' 때문에 주성분을 쓰지 않는다). 이 파일은 지표 id를 담는 유일한 자리이며, 010 코드는 지표를 이름으로 알지 않는다(spec FR-004).\",\n   \"_inputKinds\": \"AS_IS=008 변환값(전년동월 대비 증가율)을 그대로, YOY_DIFF=12개월 전 값과의 차, YOY_PCT=12개월 전 값 대비 증가율(%), CUM12_FROM_MOM=최근 12개월 전월 대비 증가율을 복리로 누적(%). 12개월 전(또는 12개월 연속) 값이 없으면 그 달의 국면 입력은 없다(채우지 않는다).\",\n   \"inputs\": {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/config/regime-phase-v3.json",
+          "old_path": "data/config/regime-phase-v3.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,12 +25,12 @@ from __future__ import annotations\n from collections.abc import Mapping\n from dataclasses import dataclass\n from datetime import date\n-from decimal import Decimal\n+from decimal import ROUND_HALF_UP, Decimal\n from typing import Final\n \n from data_pipeline.regime.distance import CandidateDistance, IndicatorDistance\n from data_pipeline.regime.macro.types import IndicatorEntry, MonthlyValue\n-from data_pipeline.regime.rounding import equal_at_storage, to_storage_text\n+from data_pipeline.regime.rounding import STORAGE_DECIMALS, equal_at_storage, to_storage_text\n \n #: 한쪽에 담는 문장 수 상한 (research R8).\n MAX_SENTENCES: Final[int] = 2\n@@ -57,18 +57,36 @@ def topic_particle(text: str) -> str:\n     return \"는\"\n \n \n-def format_value(value: float) -> str:\n-    \"\"\"문장에 넣을 값 표기.\n+#: 문장에 싣는 기본 소수 자릿수 (S15P21E205-447). 모델 버전의 일부다 — 바꾸면 버전을 올린다.\n+SENTENCE_DECIMALS: Final[int] = 1\n \n-    **표시 자릿수를 새로 정하지 않는다.** \"소수 첫째 자리\" 같은 규칙을 여기서 만들면 모델 버전에\n-    없는 규칙이 하나 느는 셈이라, 이미 모델 버전에 있는 저장 자릿수(12)를 그대로 쓴다. 그 자리에서\n-    반올림하면 `0.30000000000000004` 같은 2진 찌꺼기가 사라지고, 꼬리 0을 덜어 내면 `0.3`이 된다.\n \n-    ``repr``을 쓰지 않는 이유는 지수 표기 때문이다 — `5e-05`가 문장에 그대로 실리면 읽는 사람이\n-    값을 읽을 수 없다.\n+def format_value(value: float, decimals: int = SENTENCE_DECIMALS) -> str:\n+    \"\"\"문장에 넣을 값 표기 — 소수 ``decimals``자리에서 반올림하고 꼬리 0을 덜어 낸다.\n+\n+    저장 자릿수(12)를 그대로 쓰면 증가율 같은 파생 값이 `4.346167`처럼 실려 읽을 수 없다. 표시\n+    자릿수는 **문장에만** 적용하고 저장 값·거리 계산은 12자리 그대로다. 반올림은 사사오입\n+    (`ROUND_HALF_UP`)이고, `-0`은 `0`으로 쓴다. ``repr``을 쓰지 않는 이유는 지수 표기(`5e-05`)\n+    때문이다.\n+    \"\"\"\n+    quantum = Decimal(1).scaleb(-decimals)\n+    rounded = Decimal(to_storage_text(value)).quantize(quantum, rounding=ROUND_HALF_UP)\n+    if rounded == 0:\n+        return \"0\"\n+    return f\"{rounded.normalize():f}\"\n+\n+\n+def format_pair(query: float, case: float) -> tuple[str, str]:\n+    \"\"\"지금·당시 두 값을 함께 표기한다. 기본 한 자리에서 둘이 같게 보이면 다르게 보일 때까지 늘린다.\n+\n+    \"지금이 2.3%로 당시 2.3%보다 높습니다\"처럼 판정과 숫자가 어긋나는 문장을 내지 않기 위해서다.\n+    저장 자릿수까지 같으면 같은 값이므로 기본 자릿수로 둔다.\n     \"\"\"\n-    quantized = Decimal(to_storage_text(value)).normalize()\n-    return f\"{quantized:f}\"\n+    for decimals in range(SENTENCE_DECIMALS, STORAGE_DECIMALS + 1):\n+        pair = format_value(query, decimals), format_value(case, decimals)\n+        if pair[0] != pair[1]:\n+            return pair\n+    return format_value(query), format_value(case)\n \n \n @dataclass(frozen=True)\n@@ -94,12 +112,12 @@ def _values(\n def similar_sentence(\n     entry: IndicatorEntry, item: IndicatorDistance, series: Mapping[date, MonthlyValue]\n ) -> str:\n-    query, case = _values(item, series)\n+    query, case = format_pair(*_values(item, series))\n     return SIMILAR_TEMPLATE.format(\n         name=entry.name,\n         particle=topic_particle(entry.name),\n-        query=format_value(query),\n-        case=format_value(case),\n+        query=query,\n+        case=case,\n         unit=entry.unit,\n     )\n \n@@ -108,11 +126,12 @@ def different_sentence(\n     entry: IndicatorEntry, item: IndicatorDistance, series: Mapping[date, MonthlyValue]\n ) -> str:\n     query, case = _values(item, series)\n+    query_text, case_text = format_pair(query, case)\n     return DIFFERENT_TEMPLATE.format(\n         name=entry.name,\n         particle=topic_particle(entry.name),\n-        query=format_value(query),\n-        case=format_value(case),\n+        query=query_text,\n+        case=case_text,\n         unit=entry.unit,\n         verdict=HIGHER if query > case else LOWER,\n     )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/explain.py",
+          "old_path": "data/src/data_pipeline/regime/explain.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,7 +19,7 @@ from dataclasses import dataclass\n from datetime import date\n from typing import Any, Final\n \n-from data_pipeline.regime.explain import topic_particle\n+from data_pipeline.regime.explain import format_pair, format_value, topic_particle\n from data_pipeline.regime.macro.types import IndicatorEntry, format_month\n from data_pipeline.regime.phase import Block, PhaseDistance, PhaseModel\n from data_pipeline.regime.rounding import round_for_storage, to_storage_text\n@@ -59,14 +59,8 @@ KIND_LABELS: Final[dict[str, str]] = {\n \n \n def format_phase_value(value: float) -> str:\n-    \"\"\"문장 값 표기 — 소수 둘째 자리까지, 꼬리 0은 덜어 낸다.\n-\n-    v1은 저장 자릿수(12)를 그대로 썼지만 v3 국면 입력은 1년 변화율처럼 원천이 공표 자릿수를 정하지\n-    않은 파생 값이 섞여 12자리면 읽을 수 없다. 이 규칙은 모델 버전 ``REGIME-V3-EQ``에 속한다.\n-    표시에만 쓰며 거리 계산에는 반올림하지 않은 값을 쓴다.\n-    \"\"\"\n-    text = f\"{round(value, 2) + 0.0:.2f}\".rstrip(\"0\").rstrip(\".\")\n-    return \"0\" if text == \"-0\" else text\n+    \"\"\"v3 문장 값 표기 — v1과 같은 규칙(`explain.format_value`, 소수 첫째 자리)이다.\"\"\"\n+    return format_value(value)\n \n \n def subject_of(name: str, label: str) -> str:\n@@ -150,13 +144,14 @@ def explanation_for(\n     def sentence(template: str, block: Block, indicator_id: str) -> str:\n         kind = model.config.input_kinds[indicator_id]\n         series = model.series[indicator_id]\n-        query, unit = model.config.display_of(indicator_id, series[query_month].value)\n-        case, _ = model.config.display_of(indicator_id, series[case_month].value)\n+        query_value, unit = model.config.display_of(indicator_id, series[query_month].value)\n+        case_value, _ = model.config.display_of(indicator_id, series[case_month].value)\n+        query, case = format_pair(query_value, case_value)\n         return template.format(\n             block=block.name,\n             subject=subject_of(entries[indicator_id].name, KIND_LABELS[kind]),\n-            query=format_phase_value(query),\n-            case=format_phase_value(case),\n+            query=query,\n+            case=case,\n             unit=unit or entries[indicator_id].unit,\n         )\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/phase_snapshot.py",
+          "old_path": "data/src/data_pipeline/regime/phase_snapshot.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -65,10 +65,13 @@ from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, SCALE_ZERO, Scale\n #: - 시대별 위치 판정 경계값 — `era.SIMILAR_THRESHOLD`(FR-017)\n #: - 후보 제한(12개월·±6개월·동률), 표시 개수(FR-012·FR-013)\n #: - 문턱(FR-019·FR-020), decimal 반올림 자릿수(research R4)\n+#: - 문장의 값 표기 자릿수 — `explain.SENTENCE_DECIMALS`\n+#:\n+#: 이력: REGIME-V1 → REGIME-V1.1 (S15P21E205-447, 문장 값을 소수 첫째 자리로). 계산은 같다.\n #:\n #: ⚠ d21-amendment의 v2 검증 제안은 **기본 계산 경로에 들어가지 않는다**(PD-08 미확정).\n #: 제안을 여기에 미리 반영하면 검증 전 모델이 운영 값이 된다.\n-MODEL_VERSION: Final[str] = \"REGIME-V1\"\n+MODEL_VERSION: Final[str] = \"REGIME-V1.1\"\n \n MODE_FIELD: Final[str] = \"FIELD\"\n MODE_COMPOSITE: Final[str] = \"COMPOSITE\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/snapshot.py",
+          "old_path": "data/src/data_pipeline/regime/snapshot.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -109,16 +109,18 @@ class TestSentence:\n         assert position is not None\n         assert \"20명은 당시로서는\" in position.sentence\n \n-    def test_소수_자릿수를_지어내지_않는다(self) -> None:\n+    def test_값은_소수_첫째_자리까지다(self) -> None:\n         assert format_value(3.2) == \"3.2\"\n         assert format_value(112.0) == \"112\"\n-        assert format_value(-0.25) == \"-0.25\"\n+        assert format_value(-0.25) == \"-0.3\"  # 사사오입\n+        assert format_value(4.346167) == \"4.3\"\n+        assert format_value(-0.04) == \"0\"\n \n     def test_지수_표기가_문장에_실리지_않는다(self) -> None:\n         position = era_position_for(indicator(), END_MONTH, series_with(0.00005))\n         assert position is not None\n         assert \"e-\" not in position.sentence\n-        assert \"0.00005%\" in position.sentence\n+        assert \"실업률 0%\" in position.sentence\n \n     def test_좋다_나쁘다를_쓰지_않는다(self) -> None:\n         for value in (4.0, WINDOW_MEDIAN, 20.0):\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_era.py",
+          "old_path": "data/tests/regime/test_era.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,6 +16,7 @@ from conftest import make_registry, make_series, write_phase_config\n \n from data_pipeline.macro.registry import INDICATORS\n from data_pipeline.regime.context import ContextEvent, events_within\n+from data_pipeline.regime.explain import format_pair\n from data_pipeline.regime.macro.types import format_month\n from data_pipeline.regime.phase import DEFAULT_CONFIG, build_phase_model, load_config, phase_inputs\n from data_pipeline.regime.phase_snapshot import (\n@@ -158,12 +159,28 @@ class TestResidual:\n         assert format_month(model.months[-1]) == \"2019-12\"\n \n \n+class TestPair:\n+    def test_한_자리에서_같게_보이면_다르게_보일_때까지_늘린다(self) -> None:\n+        assert format_pair(2.31, 2.34) == (\"2.31\", \"2.34\")\n+        assert format_pair(2.301, 2.304) == (\"2.301\", \"2.304\")\n+        assert format_pair(2.3, 4.1) == (\"2.3\", \"4.1\")\n+\n+    def test_저장_자릿수까지_같으면_기본_자릿수다(self) -> None:\n+        assert format_pair(2.3, 2.3) == (\"2.3\", \"2.3\")\n+\n+\n class TestFormat:\n     @pytest.mark.parametrize(\n         (\"value\", \"text\"),\n-        [(0.30000000000000004, \"0.3\"), (12.3456, \"12.35\"), (-0.004, \"0\"), (2.0, \"2\")],\n+        [\n+            (0.30000000000000004, \"0.3\"),\n+            (12.3456, \"12.3\"),\n+            (12.35, \"12.4\"),\n+            (-0.04, \"0\"),\n+            (2.0, \"2\"),\n+        ],\n     )\n-    def test_값은_소수_둘째_자리까지다(self, value: float, text: str) -> None:\n+    def test_값은_소수_첫째_자리까지다(self, value: float, text: str) -> None:\n         assert format_phase_value(value) == text\n \n     @pytest.mark.parametrize(\n@@ -243,4 +260,4 @@ class TestDisplay:\n         config = load_config(DEFAULT_CONFIG, indicator_ids=[i.indicator_id for i in INDICATORS])\n         value, unit = config.display_of(\"trade_balance\", 24_137_983_294.0)\n         assert unit == \"억 달러\"\n-        assert format_phase_value(value) == \"241.38\"\n+        assert format_phase_value(value) == \"241.4\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_phase_snapshot.py",
+          "old_path": "data/tests/regime/test_phase_snapshot.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -68,7 +68,7 @@ $COMPOSE run --rm data-batch python scripts/precompute_regime.py --source macro\n ```\n \n - 재계산 범위는 배치가 정한다. 자료가 바뀐 달부터 다시 돌고, **범위마다 현재 모델 버전으로 적재한\n-  행이 없으면 그 범위는 전 구간을 다시 돈다**(data-model §6). 종합 비교가 v3(`REGIME-V3-EQ`)로 바뀐 뒤\n+  행이 없으면 그 범위는 전 구간을 다시 돈다**(data-model §6). 모델 버전이 바뀐 뒤(예: 2026-09-25 `REGIME-V3-EQ.1`·`REGIME-V1.1`)\n   첫 실행이 여기에 해당한다 — `--all`을 줄 필요가 없다.\n - 실데이터 전 구간(기준월 약 4,500개)은 로컬 실측 약 60초다.\n - 출력의 `실패` 목록이 비어 있어야 한다. 기준월 하나의 실패는 배치를 멈추지 않고 그 기준월만 이전\n@@ -79,7 +79,7 @@ $COMPOSE run --rm data-batch python scripts/precompute_regime.py --source macro\n ## 5. 확인\n \n ```bash\n-# 범위별 모델 버전과 기준월 수 — 종합(COMPOSITE)이 REGIME-V3-EQ, 분야(FIELD)가 REGIME-V1이어야 한다\n+# 범위별 모델 버전과 기준월 수 — 종합(COMPOSITE)이 REGIME-V3-EQ.1, 분야(FIELD)가 REGIME-V1.1이어야 한다\n docker exec thorp-postgres psql -U \"$(sed -n 's/^POSTGRES_USER=//p' .env.prod)\" \\\n   -d \"$(sed -n 's/^POSTGRES_DB=//p' .env.prod)\" -c \\\n   \"select mode, model_version, count(*) from regime_search_snapshot group by 1, 2 order by 1, 2\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/guides/regime-batch-operation.md",
+          "old_path": "docs/guides/regime-batch-operation.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import { describe, expect, it } from 'vitest'\n import type { PathPoint } from '@/types/marketFlow'\n-import { buildAxisDomain, recentDirection, sourceParts } from './marketFlowFormat'\n+import { buildAxisDomain, formatObservation, recentDirection, sourceParts } from './marketFlowFormat'\n \n /**\n  * 실제 지표 값으로 검증한다. 꾸며낸 숫자로는 \"환율이 평평해 보인다\"는 문제가 재현되지 않는다.\n@@ -122,3 +122,13 @@ describe('sourceParts', () => {\n     expect(sourceParts('통계청', 'KOSIS 산업활동동향')).toEqual(['출처 KOSIS 산업활동동향', '작성기관 통계청'])\n   })\n })\n+\n+describe('관측값 표기', () => {\n+  it('소수 첫째 자리까지 보인다', () => {\n+    expect(formatObservation(4.346167)).toBe('4.3')\n+    expect(formatObservation(1351.25)).toBe('1,351.3')\n+    expect(formatObservation(3)).toBe('3')\n+    expect(formatObservation(-0.04)).toBe('0')\n+    expect(formatObservation(null)).toBe('자료 없음')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.test.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,16 @@\n import type { IndicatorDisplay } from '@/types/marketFlow'\n \n-/** 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다. */\n+/**\n+ * 표시만 담당한다. 반올림한 값으로 경로나 변화 방향을 계산하지 않는다.\n+ *\n+ * 소수 첫째 자리까지 보인다(S15P21E205-447). 원천 값은 자릿수가 제각각이라(증가율 4.346167 등) 그대로 두면\n+ * 읽을 수 없다. 정밀 값은 응답에 그대로 남는다.\n+ */\n export function formatObservation(value: number | null): string {\n-  return value === null ? '자료 없음' : value.toLocaleString('ko-KR', { maximumFractionDigits: 10 })\n+  if (value === null) return '자료 없음'\n+  const text = value.toLocaleString('ko-KR', { maximumFractionDigits: 1 })\n+  // -0.04 처럼 0으로 반올림된 음수는 \"-0\"이 아니라 \"0\"이다.\n+  return text === '-0' ? '0' : text\n }\n \n export function formatUpdatedAt(value: string | null): string {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,11 +9,15 @@ describe('사례 상세', () => {\n   it('명목 비중·거리 기여와 공통 척도, 시점별 원값·z를 손계산 입력으로 보인다', () => {\n     render(<CaseDetail detail={regimeDetail()} summary={summary} mode=\"FIELD\" fieldNames={{ 'field-1': '시험 분야' }} />)\n     const detail = screen.getByRole('region', { name: '2012-03 사례 상세' })\n-    expect(detail.textContent).toContain('명목 비중 0.500000000000')\n-    expect(detail.textContent).toContain('실제 거리 기여 0.204173755344')\n-    expect(detail.textContent).toContain('중앙값 3.45 · 산포 0.593040887402')\n+    // 소수 첫째 자리(비율은 %)로 보이고, 손계산용 정밀 값은 title 에 남는다(S15P21E205-447).\n+    expect(detail.textContent).toContain('명목 비중 50%')\n+    expect(detail.textContent).toContain('실제 거리 기여 20.4%')\n+    expect(detail.textContent).toContain('중앙값 3.5 · 산포 0.6')\n+    expect(detail.querySelector('[title=\"0.593040887402\"]')?.textContent).toBe('0.6')\n+    expect(detail.textContent).not.toContain('0.593040887402')\n     expect(detail.textContent).toContain('2016-05~2026-04 (120개월)')\n-    expect(detail.textContent).toContain('-0.590178531422')\n+    expect(detail.textContent).toContain('-0.6')\n+    expect(detail.querySelector('[title=\"-0.590178531422\"]')).toBeTruthy()\n     expect(detail.textContent).toContain('3.1 %')\n     expect(detail.textContent).toContain(summary.similar[0])\n     expect(detail.textContent).toContain(summary.different[0])\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetail.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import type { ReactNode } from 'react'\n import type { RegimeCaseDetail, RegimeCaseSummary, RegimeMode } from '@/types/regime'\n import { FieldBreakdown } from './FieldBreakdown'\n+import { Num } from './Num'\n import * as copy from './fixedCopy'\n import styles from './CaseDetail.module.css'\n \n@@ -24,7 +25,7 @@ export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }\n     <section className={styles.detail} aria-label={`${detail.endMonth} 사례 상세`}>\n       <h4>사례 상세 · {detail.endMonth}</h4>\n       <p>관측 구간 {detail.observationMonths.join(' · ')}</p>\n-      <p>전체 거리 <strong>{detail.distance}</strong></p>\n+      <p>전체 거리 <strong><Num value={detail.distance} /></strong></p>\n       {mode === 'COMPOSITE' ? (\n         <FieldBreakdown detail={detail} summary={summary} fieldNames={fieldNames} />\n       ) : (\n@@ -37,11 +38,11 @@ export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }\n       {detail.indicators.map((indicator) => (\n         <section key={indicator.id} className={styles.indicator} aria-label={`${indicator.name} 계산 근거`}>\n           <h6>{indicator.name}</h6>\n-          <p>지표 거리 Eᵢ {indicator.e} · 명목 비중 {indicator.nominalWeight}\n-            {indicator.distanceShare != null && <> · 실제 거리 기여 {indicator.distanceShare}</>}\n+          <p>지표 거리 Eᵢ <Num value={indicator.e} /> · 명목 비중 <Num value={indicator.nominalWeight} as=\"share\" />\n+            {indicator.distanceShare != null && <> · 실제 거리 기여 <Num value={indicator.distanceShare} as=\"share\" /></>}\n           </p>\n           {indicator.scale ? (\n-            <p>공통 척도 · {indicator.scale.method} · 중앙값 {indicator.scale.median} · 산포 {indicator.scale.spread} · 구간 {indicator.scale.windowStart}~{indicator.scale.windowEnd} ({indicator.scale.months}개월)</p>\n+            <p>공통 척도 · {indicator.scale.method} · 중앙값 <Num value={indicator.scale.median} /> · 산포 <Num value={indicator.scale.spread} /> · 구간 {indicator.scale.windowStart}~{indicator.scale.windowEnd} ({indicator.scale.months}개월)</p>\n           ) : <p>{copy.scaleMissingNote}</p>}\n           <div className={styles.tableScroll}>\n             <table>\n@@ -50,8 +51,8 @@ export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }\n               <tbody>{indicator.comparisonMonths.map((month, index) => (\n                 <tr key={`${month}-${index}`}>\n                   <td>{month}</td><td>{indicator.caseMonths[index]}</td>\n-                  <td>{indicator.queryRaw[index]} {indicator.unit}</td><td>{indicator.caseRaw[index]} {indicator.unit}</td>\n-                  <td>{indicator.queryZ[index]}</td><td>{indicator.caseZ[index]}</td>\n+                  <td><Num value={indicator.queryRaw[index]} /> {indicator.unit}</td><td><Num value={indicator.caseRaw[index]} /> {indicator.unit}</td>\n+                  <td><Num value={indicator.queryZ[index]} /></td><td><Num value={indicator.caseZ[index]} /></td>\n                 </tr>\n               ))}</tbody>\n             </table>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import { render, screen } from '@testing-library/react'\n import { describe, expect, it } from 'vitest'\n-import { regimeDetail, regimeResult } from '@/test/regimeFixtures'\n+import { fullText, regimeDetail, regimeResult } from '@/test/regimeFixtures'\n import { FieldBreakdown } from './FieldBreakdown'\n \n const summary = regimeResult().cases[0]\n@@ -12,7 +12,7 @@ describe('종합 분야 내역', () => {\n     expect(screen.queryByText(/모든 지표의 중요성이 같다/)).toBeNull()\n     expect(screen.getByText('시험 분야')).toBeTruthy()\n     expect(screen.getByText('다른 분야')).toBeTruthy()\n-    expect(screen.getByText('실제 거리 기여 0.75')).toBeTruthy()\n+    expect(screen.getByText(fullText('실제 거리 기여 75%'))).toBeTruthy()\n     expect(screen.getByText(summary.similar[0])).toBeTruthy()\n     expect(screen.getByText(summary.different[0])).toBeTruthy()\n   })\n@@ -35,7 +35,8 @@ describe('종합 분야 내역', () => {\n     />)\n     expect(screen.getByRole('heading', { name: '경제 블록별 거리와 기여' })).toBeTruthy()\n     expect(screen.getByText('실물 경기')).toBeTruthy()\n-    expect(screen.getByText('실제 거리 기여 0.4177')).toBeTruthy()\n+    expect(screen.getByText(fullText('실제 거리 기여 41.8%'))).toBeTruthy()\n+    expect(screen.getByText(fullText('거리 2.5'))).toBeTruthy()\n     expect(screen.getAllByText(/실제 거리 기여/)).toHaveLength(1)\n     expect(screen.getByText(/경제 흐름별 블록/)).toBeTruthy()\n     expect(screen.queryByText('시험 분야')).toBeNull()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/FieldBreakdown.test.tsx",
+          "old_path": "frontend/src/components/regime/FieldBreakdown.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import type { RegimeCaseDetail, RegimeCaseSummary } from '@/types/regime'\n import * as copy from './fixedCopy'\n+import { Num } from './Num'\n import styles from './FieldBreakdown.module.css'\n \n interface Props {\n@@ -25,8 +26,8 @@ export function FieldBreakdown({ detail, summary, fieldNames }: Props) {\n             {blocks.map((block) => (\n               <li key={block.id}>\n                 <strong>{block.name}</strong>\n-                <span>거리 {block.gap}</span>\n-                {block.contribution != null && <span>실제 거리 기여 {block.contribution}</span>}\n+                <span>거리 <Num value={block.gap} /></span>\n+                {block.contribution != null && <span>실제 거리 기여 <Num value={block.contribution} as=\"share\" /></span>}\n               </li>\n             ))}\n           </ul>\n@@ -39,8 +40,8 @@ export function FieldBreakdown({ detail, summary, fieldNames }: Props) {\n             {Object.entries(detail.byField).map(([id, distance]) => (\n               <li key={id}>\n                 <strong>{fieldNames[id] ?? id}</strong>\n-                <span>거리 {distance}</span>\n-                {detail.contribution?.[id] != null && <span>실제 거리 기여 {detail.contribution[id]}</span>}\n+                <span>거리 <Num value={distance} /></span>\n+                {detail.contribution?.[id] != null && <span>실제 거리 기여 <Num value={detail.contribution[id]} as=\"share\" /></span>}\n               </li>\n             ))}\n           </ul>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/FieldBreakdown.tsx",
+          "old_path": "frontend/src/components/regime/FieldBreakdown.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+import { formatDecimal, formatShare } from './displayNumber'\n+\n+interface Props {\n+  /** API가 준 정밀 값(문자열). */\n+  value: string\n+  /** `share`면 0~1 비율을 백분율로 보인다. */\n+  as?: 'decimal' | 'share'\n+}\n+\n+/** 소수 첫째 자리로 보이고 정밀 값은 `title`에 둔다(S15P21E205-447). */\n+export function Num({ value, as = 'decimal' }: Props) {\n+  return <span title={value}>{as === 'share' ? formatShare(value) : formatDecimal(value)}</span>\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/Num.tsx",
+          "old_path": "frontend/src/components/regime/Num.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,22 @@\n+import { describe, expect, it } from 'vitest'\n+import { formatDecimal, formatShare } from './displayNumber'\n+\n+describe('경제환경 검색 숫자 표기', () => {\n+  it('소수 첫째 자리까지 보인다', () => {\n+    expect(formatDecimal('1.823757636752')).toBe('1.8')\n+    expect(formatDecimal('0.593040887402')).toBe('0.6')\n+    expect(formatDecimal('3.000000000000')).toBe('3')\n+    expect(formatDecimal('-0.040000000000')).toBe('0')\n+    expect(formatDecimal('24137983294.000000000000')).toBe('24,137,983,294')\n+  })\n+\n+  it('비율은 백분율로 보인다', () => {\n+    expect(formatShare('0.396402864300')).toBe('39.6%')\n+    expect(formatShare('1.000000000000')).toBe('100%')\n+    expect(formatShare('0.000400000000')).toBe('0%')\n+  })\n+\n+  it('숫자가 아니면 받은 그대로 둔다', () => {\n+    expect(formatDecimal('자료 없음')).toBe('자료 없음')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/displayNumber.test.ts",
+          "old_path": "frontend/src/components/regime/displayNumber.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,23 @@\n+/**\n+ * 경제환경 검색 화면의 숫자 표기(S15P21E205-447).\n+ *\n+ * API는 수기 대조를 위해 소수 12자리 문자열을 준다(spec FR-028, research R4). 화면에는 소수 첫째 자리만\n+ * 보이고, 정밀 값은 `title`로 남겨 필요하면 확인할 수 있게 한다. 값을 계산하지 않는다 — 표기만 바꾼다.\n+ */\n+const oneDecimal = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 1 })\n+\n+function tidy(text: string): string {\n+  return text === '-0' ? '0' : text\n+}\n+\n+/** 거리·z·원값 같은 수. 숫자가 아니면 받은 그대로 둔다. */\n+export function formatDecimal(text: string): string {\n+  const value = Number(text)\n+  return Number.isFinite(value) ? tidy(oneDecimal.format(value)) : text\n+}\n+\n+/** 0~1 비율(기여·비중)을 백분율로. 0.396402864300 → \"39.6%\" */\n+export function formatShare(text: string): string {\n+  const value = Number(text)\n+  return Number.isFinite(value) ? `${tidy(oneDecimal.format(value * 100))}%` : text\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/displayNumber.ts",
+          "old_path": "frontend/src/components/regime/displayNumber.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,7 @@ import { recordRegimeSearch } from '@/api/myRecords'\n import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch, getRegimeSearchById } from '@/api/regime'\n import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n import { authenticatedUser } from '@/test/authFixtures'\n-import { regimeDetail, regimeResult } from '@/test/regimeFixtures'\n+import { fullText, regimeDetail, regimeResult } from '@/test/regimeFixtures'\n import { RegimeSearchPage } from './RegimeSearchPage'\n \n vi.mock('@/api/regime', () => ({ getRegimeBaselineMonths: vi.fn(), getRegimeSearch: vi.fn(), getRegimeSearchById: vi.fn(), getRegimeCaseDetail: vi.fn() }))\n@@ -163,7 +163,7 @@ describe('경제환경 검색 화면', () => {\n     fireEvent.click(screen.getByRole('button', { name: '상세 보기' }))\n     expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()\n     expect(vi.mocked(getRegimeCaseDetail)).toHaveBeenCalledWith('2012-03', { searchId: 'search-1' }, expect.any(AbortSignal))\n-    expect(screen.getByText('실제 거리 기여 1.000000000000')).toBeTruthy()\n+    expect(screen.getByText(fullText('실제 거리 기여 100%'))).toBeTruthy()\n   })\n \n   it('과거 기준월을 지정하면 요청과 입력, 결과 제목에 그 월을 유지한다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,3 +40,8 @@ export function regimeDetail(overrides: Partial<RegimeCaseDetail> = {}): RegimeC\n     ...overrides,\n   }\n }\n+\n+\n+/** 숫자가 `<Num>`으로 나뉘어도 요소 하나의 전체 글자로 찾는다(S15P21E205-447). */\n+export const fullText = (text: string) => (_: string, element: Element | null) =>\n+  element?.textContent === text && ![...element.children].some((child) => child.textContent === text)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/regimeFixtures.ts",
+          "old_path": "frontend/src/test/regimeFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,6 +24,7 @@ export default defineConfig({\n       'src/components/marketflow/*.test.ts',\n       // 011 사례 연결. 금지 표현 정적 검사가 이 폴더의 `.test.ts`로 들어온다(011 T081).\n       'src/components/regimelink/*.test.ts',\n+      'src/components/regime/*.test.ts',\n       'src/components/result/*.test.ts',\n       'src/hooks/*.test.ts',\n       'src/components/records/*.test.ts',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,10 @@\n - Q: 사용자가 고른 섹터는 화면을 떠났다 돌아왔을 때 어디까지 유지되나요? → A: 브라우저 세션 동안 유지한다. 새로고침·다른 메뉴 왕복에도 남고 탭을 닫으면 풀리며, 로그인은 필요하지 않다.\n - Q: 기본 화면이 7개 분야 요약을 다 보여주기까지의 시간 목표는 무엇인가요? → A: 2초 이내에 7개 분야 요약을 표시한다. 뉴스·국내 시장 참고 정보는 늦게 채워져도 요약 표시를 막지 않는다.\n \n+### Session 2026-09-25 (S15P21E205-447 숫자 표기)\n+\n+- Q: 지표 값·차트·요약 문장의 숫자를 몇 자리까지 보이나? → A: 소수 첫째 자리까지다(사사오입, 꼬리 0은 덜어 낸다). 원천 값의 자릿수가 제각각이라(증가율 `4.346167` 등) 그대로 두면 읽을 수 없었다. 응답 값은 그대로이고 표기만 바꾼다 — 변화 방향과 축 범위는 반올림 전 값으로 정한다.\n+\n ### Session 2026-09-24 (S15P21E205-425 화면 글자 줄이기)\n \n - Q: 분야 목록처럼 여러 줄이 같은 갱신 시각을 되풀이할 때도 줄마다 마지막 갱신 시각을 적어야 하나요? → A: FR-011은 목록에도 적용하되 **영역 단위**로 지킨다. 목록 머리에 목록 전체의 마지막 갱신 시각을 한 번 적고, 각 줄은 대상월을 적으며 갱신 시각은 머리와 다를 때만 적는다. 열린 분야 상세는 머리에 대상월·마지막 갱신을 적고 지표 카드마다 되풀이하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/spec.md",
+          "old_path": "specs/009-market-flow-overview/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,7 +105,7 @@\n - `versions.revision`은 그 (모드·분야·기준월)에서 결과가 달라진 순번이다(data-model §2).\n - `versions.sampleData`가 `true`면 008 미구현 상태의 예시 자료다(008 FR-022). 화면은 이 표시를\n   반드시 노출한다.\n-- `distance`는 문자열이고 소수점 아래 12자리다(research R4).\n+- `distance`는 문자열이고 소수점 아래 12자리다(research R4). **화면은 소수 첫째 자리로 보이고**(비율은 %) 정밀 값은 숫자의 `title`로 남긴다(spec FR-045). 응답 값은 줄이지 않는다.\n - `counts`: `evaluated` 검토한 후보 수, `eligible` 비교 시점 입력이 완전한 후보 수,\n   `stored` 저장된 표시 후보 수(≤10), `displayed` 이번 응답에 담긴 수. **`stored`가 `displayed`보다\n   크면 '더 보기'가 남아 있다** — 화면은 이 둘로 버튼 노출을 정하고 10을 가정하지 않는다.\n@@ -113,7 +113,7 @@\n   보입니다\"* 만 보이고 **`evaluated`·`eligible` 값 자체를 내보이지 않는다**(spec FR-013, SC-004).\n   위 예시의 412는 기준월 2026-07처럼 과거가 긴 경우이며, 오래된 기준월은 수십 개로 줄어든다.\n - **유지율(retention)을 내려보내지 않는다**(spec FR-031).\n-- **종합(v3, 모델 `REGIME-V3-EQ`)만의 필드** (spec FR-042·FR-043·FR-044):\n+- **종합(v3, 모델 `REGIME-V3-EQ.1`)만의 필드** (spec FR-042·FR-043·FR-044):\n   - `phaseNote` — 지금 시점의 블록 안 엇갈림이 컸을 때의 고정 문장. 없으면 `null`이다. 분야 검색은 늘 `null`이다.\n   - `cases[].unusual` — 사례 관측 구간의 블록 안 엇갈림이 컸는지. v1 결과는 `false`다.\n   - `cases[].context` — 특이 사례의 관측 구간 안 공식 발간물·사건 `[{kind, date, title, url?, source}]`.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/contracts/regime-search-api.md",
+          "old_path": "specs/010-economic-regime-search/contracts/regime-search-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -244,8 +244,8 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 \n ## 6. 모델 버전\n \n `model_version`은 아래가 바뀌면 올린다(spec Key Entities). 값은 `REGIME-V1` 형태의 문자열이고\n-사전 계산 배치가 상수로 들고 있다. **범위마다 다를 수 있다** — 분야 검색은 `REGIME-V1`, 종합 비교는\n-설정 `data/config/regime-phase-v3.json`의 `version`(`REGIME-V3-EQ`)이다(spec FR-044). 종합은 국면 입력\n+사전 계산 배치가 상수로 들고 있다. **범위마다 다를 수 있다** — 분야 검색은 `REGIME-V1.1`, 종합 비교는\n+설정 `data/config/regime-phase-v3.json`의 `version`(`REGIME-V3-EQ.1`)이다(spec FR-044). 종합은 국면 입력\n 규칙·블록 구성·블록 요인 방식·국면 거리·잔차 문턱이 바뀌어도 올린다. 당시 맥락 표(`regime-context-v1.json`)와 문장 표기(표시 배율 등)도\n 결과 본문에 들어간다. **식별 키에는 `revision`이 없어 한 키가 한 내용만 담으므로**(§2, `UNIQUE (snapshot_key)`),\n 자료·등록표 버전이 같은데 이런 변경으로 내용이 달라지면 적재가 `VersionNotBumpedError`로 멈춘다 — 그런 변경은\n@@ -263,6 +263,10 @@ snapshot에 등장해도 값이 같다 — 척도 m·s가 t마다 달라지는 \n | 표시 개수 | FR-013 |\n | 문턱 | FR-019·FR-020 |\n | decimal 반올림 자릿수 | research R4 |\n+| **문장의 값 표기 자릿수**(기본 소수 첫째 자리, 두 값이 같게 보이면 늘림) | spec FR-045 |\n+\n+이력: `REGIME-V1`→`REGIME-V1.1`, `REGIME-V3-EQ`→`REGIME-V3-EQ.1` (2026-09-25, S15P21E205-447 — 문장 값 표기를\n+소수 첫째 자리로. 계산은 같다).\n \n **버전을 올리면 이전 snapshot을 지우지 않는다.** 이전 검색이 참조하던 결과가 그대로 남아야\n 재현이 성립한다(spec FR-031, 원칙 VIII). 모델 버전이 바뀌면 재계산 범위의 M이 계열 시작월이 되어\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/data-model.md",
+          "old_path": "specs/010-economic-regime-search/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,6 +32,7 @@\n \n - Q: Thorp 종합 비교를 v1(분야 거리 동일가중)에서 바꾸나? → A: 바꾼다. **종합 비교만 경제 국면 모델 v3-eq**(`REGIME-V3-EQ`)로 잰다. 분야 검색은 v1 그대로다. 채택 실험([v3-experiment.md](v3-experiment.md))이 결과를 보기 전에 고정한 세 조건(국면 일치율 +0.05 이상, 시대 간격 비축소, 순위 안정성 −0.05 이내)을 모두 통과했다 — 국면 일치율 0.444→0.559, 시대 간격 30→51개월, 안정성 0.745→0.719. 블록 요인은 **동일가중**이다 — constitution \"하지 않는 것\"이 기본 검색 모델의 PCA를 막는다. (FR-040~FR-044)\n - Q: constitution의 종합 비교 정의(\"7개 분야 거리 동일가중\")와 충돌하지 않나? → A: constitution을 4.1.0으로 개정했다(2026-09-25 팀 결정). 종합 비교는 경제 블록 점수의 국면 거리이고, 분야 동일가중은 분야 검색의 규칙이다. \"하지 않는 것\"은 바뀌지 않았다.\n+- Q: 화면·문장의 숫자를 몇 자리까지 보이나? → A: 소수 첫째 자리(비율은 %)다. 12자리 저장 값을 그대로 보이니 읽을 수 없었다. 저장·API는 그대로 두고 표기만 바꾼다. 두 값이 같게 보이면 자리를 늘린다. (FR-045, S15P21E205-447)\n - Q: 블록 안에서 엇갈린 움직임(잔차)을 순위에 넣나? → A: 넣지 않는다. 특이 표시와 문장으로만 알린다. 문턱은 그 기준월 척도 구간 잔차 크기의 90번째 백분위다(PD-F3 출발안). (FR-042)\n - Q: 특이 사례에 당시 맥락을 붙이나? → A: 붙인다. 관측 구간 안에 발간된 KDI 경제동향 호, 한국은행 기준금리 변경, 경기 정점·저점을 **제목·날짜·출처·링크만** 붙인다. 검색 입력이 아니다. (FR-043)\n \n@@ -173,9 +174,10 @@\n \n - **FR-040**: 종합 비교는 **국면 입력**으로 잰다. 국면 입력은 [008](../008-macro-indicator-registry/spec.md) 변환값에서 만들며, 증가율 지표는 그대로, 수준 지표는 1년 변화(`YOY_DIFF`: 실업률·국고채 3년·무역수지), 1년 변화율(`YOY_PCT`: 두바이유·원/달러 환율), 전월비는 12개월 누적(`CUM12_FROM_MOM`: 주택매매가격)으로 바꾼다. 규칙은 설정 `data/config/regime-phase-v3.json`이 갖고 계산 코드는 지표를 이름으로 알지 않는다(FR-004). **비교 시점은 t-2·t-1·t 중 17개 국면 입력이 모두 있는 달**이다 — 블록 점수가 여러 지표의 같은 달 값을 묶기 때문에 지표별로 다른 달을 쓸 수 없다. 하나도 없으면 '계산 불가'(어느 지표의 비교 시점이 하나도 없음)다. 국면 입력마다 FR-005·FR-006의 공통 척도를 그대로 쓰며, 하나라도 없으면 종합이 '계산 불가'다(FR-007).\n - **FR-041**: 지표를 **경제 블록 넷**으로 묶는다 — 실물 경기(8, 실업률은 부호 반대), 대외 거래(4), 물가(2), 금융 여건(3). 블록 점수는 블록 안 부호를 맞춘 z의 **동일가중 평균**이고, t-3에서 거슬러 블록 지표가 모두 있는 연속 달(최대 120·최소 60개월)의 표본 표준편차로 나눠 표준화한다. 모자라면 '척도 구간 60개월 미만', 0이면 '산포 0'으로 계산 불가다. **국면 거리**는 비교 시점마다 네 블록 점수 벡터의 유클리드 거리를 구해 평균한 값이다. 블록 거리는 블록 점수 차이의 비교 시점 평균이고, 블록 기여는 블록 거리 ÷ 블록 거리 합이다(합이 0이면 만들지 않는다). 후보 제한·±6개월 건너뛰기·동률·표시 개수는 FR-012~FR-014 그대로다. 블록 구성과 동일가중은 Thorp의 설계 선택이며 통계적 요인이나 KDI 공식 판단이 아님을 화면에 표시한다.\n-- **FR-042**: 종합 사례의 비슷한 점·다른 점은 **블록 단위**다. 블록 거리가 작은 쪽·큰 쪽에서 각각 최대 2개(블록 수의 절반까지)이며 겹치지 않는다. 블록 문장이 인용하는 지표는 그 블록의 판단을 대표하는 지표다 — 비슷한 블록은 z 차이가 가장 작은 지표, 다른 블록은 가장 큰 지표. 값은 **순위에 들어간 국면 입력 그대로** 소수 둘째 자리까지 말한다(FR-015). 블록 점수가 버린 엇갈림은 **잔차**(부호를 맞춘 z − 블록 점수)로 남기며 **순위에 넣지 않는다**. 잔차 차이가 가장 큰 지표 하나(블록 문장이 이미 인용한 지표 제외)를 다른 점 끝에 한 문장으로 붙인다. 사례 관측 구간의 평균 잔차 크기가 그 기준월 척도 구간 잔차 크기의 90번째 백분위를 넘으면 **특이 사례**로 표시하고 고정 문장을 하나 더한다. 지금 시점(비교 시점 중 가장 최근 달)의 잔차 크기가 같은 문턱을 넘으면 결과 옆에 지금 시점 안내를 한 문장으로 보인다.\n+- **FR-042**: 종합 사례의 비슷한 점·다른 점은 **블록 단위**다. 블록 거리가 작은 쪽·큰 쪽에서 각각 최대 2개(블록 수의 절반까지)이며 겹치지 않는다. 블록 문장이 인용하는 지표는 그 블록의 판단을 대표하는 지표다 — 비슷한 블록은 z 차이가 가장 작은 지표, 다른 블록은 가장 큰 지표. 값은 **순위에 들어간 국면 입력 그대로** 말하며 표기는 FR-045를 따른다(FR-015). 블록 점수가 버린 엇갈림은 **잔차**(부호를 맞춘 z − 블록 점수)로 남기며 **순위에 넣지 않는다**. 잔차 차이가 가장 큰 지표 하나(블록 문장이 이미 인용한 지표 제외)를 다른 점 끝에 한 문장으로 붙인다. 사례 관측 구간의 평균 잔차 크기가 그 기준월 척도 구간 잔차 크기의 90번째 백분위를 넘으면 **특이 사례**로 표시하고 고정 문장을 하나 더한다. 지금 시점(비교 시점 중 가장 최근 달)의 잔차 크기가 같은 문턱을 넘으면 결과 옆에 지금 시점 안내를 한 문장으로 보인다.\n - **FR-043**: 특이 사례에는 **당시 맥락**을 붙인다 — 사례 관측 구간(첫 달 1일~마지막 달 말일) 안에 발간된 KDI 경제동향 호, 한국은행 기준금리(2008-02까지 콜금리 목표) 변경, 국가데이터처 기준순환일의 경기 정점·저점. **제목·날짜·출처·원문 링크만** 쓰고 본문·요약은 저장하지도 보이지도 않는다. 구간 밖 사건은 붙이지 않는다 — 붙이면 사후 정보가 된다([012](../012-market-news-digest/spec.md) FR-006과 같은 규칙). 검색 입력이 아니며 사례를 고른 이유가 아님을 함께 밝힌다. 표는 `data/config/regime-context-v1.json`이고 `data/scripts/collect_regime_context.py`가 만든다.\n-- **FR-044**: 종합 결과의 모델 버전은 설정의 버전(`REGIME-V3-EQ`)이며 식별 키에 들어간다(FR-029) — v1 종합과 같은 식별이 되지 않는다. 종합 사례의 저장 본문은 v1과 같은 모양을 유지하되 `distance.byField`가 비고 `distance.blocks`(블록 id·이름·거리·표준편차)와 `distance.blockContribution`이 찬다. `indicatorValues`는 국면 입력 값과 z, 명목 비중(블록 안 `1/n` × `1/블록 수`)을 담는다. `explanation`에 `unusual`, 있으면 `queryNote`·`context`를 더한다. 분야 검색의 본문은 바뀌지 않는다.\n+- **FR-044**: 종합 결과의 모델 버전은 설정의 버전(`REGIME-V3-EQ.1`, 2026-09-25 이전 `REGIME-V3-EQ`)이며 식별 키에 들어간다(FR-029) — v1 종합과 같은 식별이 되지 않는다. 종합 사례의 저장 본문은 v1과 같은 모양을 유지하되 `distance.byField`가 비고 `distance.blocks`(블록 id·이름·거리·표준편차)와 `distance.blockContribution`이 찬다. `indicatorValues`는 국면 입력 값과 z, 명목 비중(블록 안 `1/n` × `1/블록 수`)을 담는다. `explanation`에 `unusual`, 있으면 `queryNote`·`context`를 더한다. 분야 검색의 본문은 바뀌지 않는다.\n+- **FR-045** *(Session 2026-09-25, S15P21E205-447)*: 화면과 문장에 보이는 숫자는 **소수 첫째 자리**까지다(사사오입, 꼬리 0과 `-0`은 쓰지 않는다). 기여·명목 비중처럼 0~1 비율은 백분율로 보인다. 한 문장에 지금·당시 두 값이 함께 나오는데 첫째 자리에서 같게 보이면 **다르게 보일 때까지 자리를 늘린다** — \"지금이 2.3%로 당시 2.3%보다 높습니다\"처럼 판정과 숫자가 어긋나지 않게 한다. **저장 값과 API는 12자리 그대로다**(research R4) — 수기 대조(FR-028)는 그 값으로 하며, 화면은 정밀 값을 숫자에 붙은 설명(`title`)으로 남긴다. 문장 표기 자릿수는 모델 버전의 일부라 이 변경으로 분야 `REGIME-V1`→`REGIME-V1.1`, 종합 `REGIME-V3-EQ`→`REGIME-V3-EQ.1`이 됐다(계산은 같다).\n - **FR-008**: 기준 자료가 60개월 미만이면 공통 척도를 계산하지 않고 검색 상태를 '계산 불가/후보 없음'으로 표시한다. 미래 값 추정이나 임의 보간으로 최신월을 늘리지 않는다. (§6.4.4, D21, 원칙 V)\n \n #### 거리·가중·기여도 (§6.4.4, D21, D23)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/spec.md",
+          "old_path": "specs/010-economic-regime-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2870374": []
+  }
+}

@@ -1,0 +1,482 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949110,
+    "iid": 193,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 002의 끝난 task를 닫고 남은 의문을 적는다",
+    "description": "# 작업 내용 요약\n\nspec 002의 작업 목록이 실제 코드 상태와 어긋나 있었다. 이미 구현되어 병합된 항목 열여섯 개가\n열린 채로 남아 있어, 문서만 보면 무엇이 끝나고 무엇이 남았는지 알 수 없었다. 그 결과 남은 항목\n하나가 열다섯 개 사이에 묻혀 보이지 않았다.\n\n이 MR 이후로 미완료 항목은 하나만 남으며, 그 하나가 왜 아직 열려 있는지와 언제 다시 봐야 하는지가\n문서에 적혀 있다. 코드는 바뀌지 않는다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-329](https://ssafy.atlassian.net/browse/S15P21E205-329) `[DOCS] spec 002 완료 task 정리와 남은 의문 기록`\n- 대상 문서: `specs/002-sector-weight-selection/tasks.md`\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 작업 목록을 열어 남은 일을 본다 | 미완료 17개. 무엇이 진짜인지 알 수 없다 | 미완료 1개 |\n| 그 하나가 왜 남았는지 안다 | 적혀 있지 않다. 구현이 덜 된 것으로 읽힌다 | 판단이 없어 남았다는 사실과 다시 볼 시점이 적혀 있다 |\n| 코드 동작 | — | 같다. 문서만 바뀐다 |\n\n# 주요 변경 사항\n\n## 끝난 항목을 코드로 확인하고 닫는 것\n\n**파일이 있는지로 판정하지 않았다.** 파일은 있는데 그 안의 동작이 없는 경우를 걸러 내지 못하기\n때문이다. 항목마다 요구한 동작이 실제로 있는지 확인했다. 행동을 주지 않으면 버튼을 그리지 않는 것,\n테스트 수집 경로가 넓혀져 있는 것, 동일 비중의 잔여분이 표시 순서상 첫 섹터에 붙는 것, 보관된 값이\n빠진 까닭 셋을 나눠 담는 것 같은 것들이다.\n\n## 남은 하나를 열어 두고 의문을 적는 것\n\n첫 화면 소개 섹션이 헤더 메뉴에서 뺀 두 화면을 계속 가리키는 문제다. **지금은 그대로 두기로 했다.**\n그 두 화면은 다른 spec이 완성되면 대체될 자리이고, 그때 어디로 보내야 하는지가 정해진다. 지금 옮겨\n두면 두 번 고치게 된다.\n\n다만 **판단을 내린 것이 아니라 미룬 것이므로 항목을 닫지 않았다.** 답하지 못한 물음은 \"메뉴에서 뺀\n화면을 첫 화면 본문이 계속 권해도 되는가\"이며, 그 물음과 닫는 조건을 항목 아래에 적었다. 같은\n문서의 다른 항목이 이미 같은 방식으로 판단을 기록해 둔 선례를 따랐다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19 (모두 기존 차트·UI 파일)\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npx vitest run --no-file-parallelism` — 65파일 670건 통과, **건너뜀 0**\n\n기준선은 2026-09-17 `origin/dev` 기준으로 같은 값이다. **이 MR은 코드를 고치지 않으므로 숫자가\n달라질 여지가 없고, 달라졌다면 그것 자체가 이상 신호다.** 그래서 같음을 확인하는 용도로 돌렸다.\n\n테스트를 병렬로 돌리면 이 MR과 무관한 파일이 간헐적으로 실패한다. 화면이 뜨기를 기다리는 시간이\n부하 상황에서 기본 1초를 넘기는 것이며, 위처럼 직렬로 돌리면 전체가 통과한다.\n\n# 리뷰 포인트\n\n1. **닫은 열여섯 개가 정말 끝난 것인지 표본으로 확인해 주시기 바란다.** 코드로 확인했지만 판정한\n   사람과 확인하는 사람이 다른 편이 낫다. 특히 앞쪽 묶음은 이번 스프린트보다 앞서 병합된 것이다.\n\n2. **남은 하나를 닫지 않은 선택을 봐 주시기 바란다.** 닫고 별도 항목으로 옮기는 방법도 있었지만,\n   옮기면 원래 물음이 왜 생겼는지가 끊긴다. 열어 두는 편이 맥락을 지킨다고 보았다.\n\n3. **이 MR로 spec 002의 구현이 모두 끝난다.** 기능 요구사항 열일곱 개가 전부 구현되었고, 사용성\n   관찰을 뺀 열두 개 성공 기준이 성립한다. 사용성 관찰은 사람이 화면을 쓰는 것을 지켜보는 항목이라\n   코드로 판정할 수 없고, 참여자와 일정이 아직 정해지지 않았다.",
+    "state": "merged",
+    "created_at": "2026-09-17T15:47:03.396+09:00",
+    "updated_at": "2026-09-17T15:47:12.184+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:47:12.017+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/329-close-spec002-tasks",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "150909100d8613877ab1f7b9d67ca9d545731bd1",
+    "merge_commit_sha": "7a6d3b2ba614fb70207264234f0f26023df1b0e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:47:05.160+09:00",
+    "reference": "!193",
+    "references": {
+      "short": "!193",
+      "relative": "!193",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!193"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/193",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949110,
+    "iid": 193,
+    "project_id": 1444456,
+    "title": "docs(fe): spec 002의 끝난 task를 닫고 남은 의문을 적는다",
+    "description": "# 작업 내용 요약\n\nspec 002의 작업 목록이 실제 코드 상태와 어긋나 있었다. 이미 구현되어 병합된 항목 열여섯 개가\n열린 채로 남아 있어, 문서만 보면 무엇이 끝나고 무엇이 남았는지 알 수 없었다. 그 결과 남은 항목\n하나가 열다섯 개 사이에 묻혀 보이지 않았다.\n\n이 MR 이후로 미완료 항목은 하나만 남으며, 그 하나가 왜 아직 열려 있는지와 언제 다시 봐야 하는지가\n문서에 적혀 있다. 코드는 바뀌지 않는다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-329](https://ssafy.atlassian.net/browse/S15P21E205-329) `[DOCS] spec 002 완료 task 정리와 남은 의문 기록`\n- 대상 문서: `specs/002-sector-weight-selection/tasks.md`\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| 작업 목록을 열어 남은 일을 본다 | 미완료 17개. 무엇이 진짜인지 알 수 없다 | 미완료 1개 |\n| 그 하나가 왜 남았는지 안다 | 적혀 있지 않다. 구현이 덜 된 것으로 읽힌다 | 판단이 없어 남았다는 사실과 다시 볼 시점이 적혀 있다 |\n| 코드 동작 | — | 같다. 문서만 바뀐다 |\n\n# 주요 변경 사항\n\n## 끝난 항목을 코드로 확인하고 닫는 것\n\n**파일이 있는지로 판정하지 않았다.** 파일은 있는데 그 안의 동작이 없는 경우를 걸러 내지 못하기\n때문이다. 항목마다 요구한 동작이 실제로 있는지 확인했다. 행동을 주지 않으면 버튼을 그리지 않는 것,\n테스트 수집 경로가 넓혀져 있는 것, 동일 비중의 잔여분이 표시 순서상 첫 섹터에 붙는 것, 보관된 값이\n빠진 까닭 셋을 나눠 담는 것 같은 것들이다.\n\n## 남은 하나를 열어 두고 의문을 적는 것\n\n첫 화면 소개 섹션이 헤더 메뉴에서 뺀 두 화면을 계속 가리키는 문제다. **지금은 그대로 두기로 했다.**\n그 두 화면은 다른 spec이 완성되면 대체될 자리이고, 그때 어디로 보내야 하는지가 정해진다. 지금 옮겨\n두면 두 번 고치게 된다.\n\n다만 **판단을 내린 것이 아니라 미룬 것이므로 항목을 닫지 않았다.** 답하지 못한 물음은 \"메뉴에서 뺀\n화면을 첫 화면 본문이 계속 권해도 되는가\"이며, 그 물음과 닫는 조건을 항목 아래에 적었다. 같은\n문서의 다른 항목이 이미 같은 방식으로 판단을 기록해 둔 선례를 따랐다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19 (모두 기존 차트·UI 파일)\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npx vitest run --no-file-parallelism` — 65파일 670건 통과, **건너뜀 0**\n\n기준선은 2026-09-17 `origin/dev` 기준으로 같은 값이다. **이 MR은 코드를 고치지 않으므로 숫자가\n달라질 여지가 없고, 달라졌다면 그것 자체가 이상 신호다.** 그래서 같음을 확인하는 용도로 돌렸다.\n\n테스트를 병렬로 돌리면 이 MR과 무관한 파일이 간헐적으로 실패한다. 화면이 뜨기를 기다리는 시간이\n부하 상황에서 기본 1초를 넘기는 것이며, 위처럼 직렬로 돌리면 전체가 통과한다.\n\n# 리뷰 포인트\n\n1. **닫은 열여섯 개가 정말 끝난 것인지 표본으로 확인해 주시기 바란다.** 코드로 확인했지만 판정한\n   사람과 확인하는 사람이 다른 편이 낫다. 특히 앞쪽 묶음은 이번 스프린트보다 앞서 병합된 것이다.\n\n2. **남은 하나를 닫지 않은 선택을 봐 주시기 바란다.** 닫고 별도 항목으로 옮기는 방법도 있었지만,\n   옮기면 원래 물음이 왜 생겼는지가 끊긴다. 열어 두는 편이 맥락을 지킨다고 보았다.\n\n3. **이 MR로 spec 002의 구현이 모두 끝난다.** 기능 요구사항 열일곱 개가 전부 구현되었고, 사용성\n   관찰을 뺀 열두 개 성공 기준이 성립한다. 사용성 관찰은 사람이 화면을 쓰는 것을 지켜보는 항목이라\n   코드로 판정할 수 없고, 참여자와 일정이 아직 정해지지 않았다.",
+    "state": "merged",
+    "created_at": "2026-09-17T15:47:03.396+09:00",
+    "updated_at": "2026-09-17T15:47:12.184+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-17T15:47:12.017+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/329-close-spec002-tasks",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "150909100d8613877ab1f7b9d67ca9d545731bd1",
+    "merge_commit_sha": "7a6d3b2ba614fb70207264234f0f26023df1b0e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:47:05.160+09:00",
+    "reference": "!193",
+    "references": {
+      "short": "!193",
+      "relative": "!193",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!193"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/193",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "head_sha": "150909100d8613877ab1f7b9d67ca9d545731bd1",
+      "start_sha": "c804006afc640788ddacff322332dcb97e0e2b27"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b0c2b83886c8bdc34de9a54d2e67c011c18170d7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826015,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:47:03.497+09:00",
+          "updated_at": "2026-09-17T15:47:03.500+09:00",
+          "system": true,
+          "noteable_id": 949110,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 193,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "065f053f3235252fdcb39edcc7e7f2c62179b6a8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826016,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:47:04.558+09:00",
+          "updated_at": "2026-09-17T15:47:04.687+09:00",
+          "system": true,
+          "noteable_id": 949110,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 193,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "306ef482a6d5cf33cf446039c4b8441c9178031d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826019,
+          "type": null,
+          "body": "mentioned in commit 7a6d3b2ba614fb70207264234f0f26023df1b0e1",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-17T15:47:12.058+09:00",
+          "updated_at": "2026-09-17T15:47:12.062+09:00",
+          "system": true,
+          "noteable_id": 949110,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 193,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "48600d8f6c02bddd1dd0db795556afca809b3b10",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826020,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n\n중대한 문제를 발견하지 못했습니다. 코드를 수정하지 않고 마크다운 문서(`specs/002-sector-weight-selection/tasks.md`) 내의 작업 완료 상태(`[ ]` -> `[X]`)만 갱신한 문서 변경(Documentation) Merge Request입니다. 빌드 및 테스트(Vitest) 결과도 정상적으로 유지됨이 확인되었습니다.\n\n### 테스트 제안\n\n이 MR은 코드 변경이 없는 문서 정분이므로 별도의 기능 테스트는 필요하지 않습니다. 다만 제출된 설명과 같이 다음의 무결성 검증을 수동으로 수행하는 것을 권장합니다.\n\n1. **문서 상의 완료 항목 검증**: \n   - MR 설명에 언급된 대로 닫힌 16개의 태스크(`T001` ~ `T016` 중 16개)에 해당하는 소스 파일 및 컴포넌트 구현이 실제 브랜치에 정상적으로 존재하고 동작하는지 표본 검사를 수행합니다.\n2. **리그레션 확인**:\n   - `npx vitest run --no-file-parallelism` 명령을 실행하여 기존 테스트 스위트가 실패 없이 100% 통과하는지 재확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:150909100d8613877ab1f7b9d67ca9d545731bd1 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T15:47:12.868+09:00",
+          "updated_at": "2026-09-17T15:47:12.868+09:00",
+          "system": false,
+          "noteable_id": 949110,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 193,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2214263,
+      "head_commit_sha": "150909100d8613877ab1f7b9d67ca9d545731bd1",
+      "base_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "start_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "created_at": "2026-09-17T15:47:04.020+09:00",
+      "merge_request_id": 949110,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "5ba9d1db61682a71bef99c66ea16820d25d7aefb"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2214263,
+      "head_commit_sha": "150909100d8613877ab1f7b9d67ca9d545731bd1",
+      "base_commit_sha": "4fa31841ec3720420761a8b6c534460797ac5c67",
+      "start_commit_sha": "c804006afc640788ddacff322332dcb97e0e2b27",
+      "created_at": "2026-09-17T15:47:04.020+09:00",
+      "merge_request_id": 949110,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "5ba9d1db61682a71bef99c66ea16820d25d7aefb",
+      "commits": [
+        {
+          "id": "150909100d8613877ab1f7b9d67ca9d545731bd1",
+          "short_id": "15090910",
+          "created_at": "2026-09-17T15:45:45.000+09:00",
+          "parent_ids": [
+            "4fa31841ec3720420761a8b6c534460797ac5c67"
+          ],
+          "title": "docs(fe): spec 002의 끝난 task를 닫고 남은 의문을 적는다",
+          "message": "docs(fe): spec 002의 끝난 task를 닫고 남은 의문을 적는다\n\n문서가 실제 코드 상태와 어긋나 있었다. 구현되어 병합된 task 열여섯 개가 열린 채로\n남아 있어, 문서만 보면 무엇이 남았는지 알 수 없었다.\n\n파일이 있는지가 아니라 각 task가 요구한 동작이 코드에 있는지로 확인하고 닫았다.\n행동이 없으면 버튼을 그리지 않는 것(T001), 테스트 수집 경로(T005), 잔여분을 첫\n섹터에 몰아주는 것(T011), 빠진 까닭 셋을 나눠 담는 것(T012) 같은 것들이다.\n\nT024는 열어 둔다. 코드가 아니라 판단이 없어서 남은 것이며, 지금 그대로 두기로 한\n까닭과 답하지 못한 물음, 다시 볼 시점을 task 아래에 적었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T15:45:45.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-17T15:45:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/150909100d8613877ab1f7b9d67ca9d545731bd1"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -95,22 +95,22 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n \n **Independent Test**: 저장된 상태가 없는 새 탭으로 `/`에 들어가 메뉴 넷이 모두 보이고 행동 버튼이 하나인지 확인한다. 배우기를 열면 준비 중 한 문장이 보이고 행동 버튼이 없다.\n \n-- [ ] T001 [M1] [P] [US4] [FE] 아직 줄 것이 없는 상태의 공용 표시 컴포넌트 (`frontend/src/components/common/NotReadyNotice.tsx`, `frontend/src/components/common/NotReadyNotice.test.tsx`) · Jira 미발급\n+- [X] T001 [M1] [P] [US4] [FE] 아직 줄 것이 없는 상태의 공용 표시 컴포넌트 (`frontend/src/components/common/NotReadyNotice.tsx`, `frontend/src/components/common/NotReadyNotice.test.tsx`) · Jira 미발급\n   - 받는 것은 **한 문장과 선택적인 행동 하나**뿐이다. 행동을 주지 않으면 버튼을 그리지 않는다 (research.md 결정 6)\n   - 이 컴포넌트 하나를 '아직 만들지 않은 메뉴'와 `409 SECTOR_MAP_NOT_READY`와 네트워크 실패가 함께 쓴다. 표시를 한 곳에 모아야 SC-008이 두 경우를 같은 기준으로 셀 수 있다\n   - 오류 경계(Error Boundary)나 빈 화면으로 떨어지지 않는다. 렌더링 분기는 예외가 아니라 상태 값이다\n   - 테스트: 행동을 주지 않으면 버튼 개수가 0, 주면 1. 문장이 언제나 하나 보인다\n-- [ ] T002 [M1] [US4] [FE] 아직 만들지 않은 메뉴의 정상 화면 (`frontend/src/pages/NotReadyPage.tsx`, `frontend/src/pages/NotReadyPage.module.css`) · Jira 미발급\n+- [X] T002 [M1] [US4] [FE] 아직 만들지 않은 메뉴의 정상 화면 (`frontend/src/pages/NotReadyPage.tsx`, `frontend/src/pages/NotReadyPage.module.css`) · Jira 미발급\n   - T001을 써서 한 문장만 보이고 행동 버튼은 두지 않는다. 다시 눌러도 바뀌지 않는 상태이기 때문이다 (research.md 결정 6)\n   - 첫 화면으로 돌아가는 길은 기존 내비게이션이 준다. 이 화면이 행동 버튼을 새로 만들지 않는다 (원칙 II)\n-- [ ] T003 [M1] [P] [US4] [FE] 첫 화면 개편 (`frontend/src/pages/LandingPage.tsx`, `frontend/src/pages/LandingPage.module.css`, `frontend/src/pages/LandingPage.test.tsx`) · Jira 미발급\n+- [X] T003 [M1] [P] [US4] [FE] 첫 화면 개편 (`frontend/src/pages/LandingPage.tsx`, `frontend/src/pages/LandingPage.module.css`, `frontend/src/pages/LandingPage.test.tsx`) · Jira 미발급\n   - 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와 보조 메뉴 '내 기록'을 **모두** 보인다. 아직 화면이 없는 메뉴도 숨기지 않는다 (FR-001, SC-008)\n   - 가장 중요한 행동 버튼을 '비중 비교하기' 하나로 줄인다. 지금 화면에 다른 행동 유도가 있으면 걷어낸다 (원칙 II, research.md 결정 5)\n   - 설문·숙련도 분류·사전 학습 수강을 요구하는 단계를 두지 않는다 (FR-002)\n   - 메뉴 목적지는 이미 화면이 있으면 그 경로로 잇는다. 시장 흐름은 `/home`, 내 기록은 `/records`, 배우기는 `/learn`이다. 최종 목적지 확정은 각 소유 spec의 몫이므로 여기서 정리하지 않는다 (research.md 결정 5)\n   - `/`를 옮기지 않는다. 기존 `path=\"*\"` 규칙이 모두 `/`로 보내고 있어 자리를 옮기면 그 규칙까지 흔들린다\n   - 테스트: 메뉴 링크 네 개가 모두 있고, 가장 중요한 행동 버튼이 하나이며, 그 버튼이 `/diagnosis/sectors`로 간다\n-- [ ] T004 [M1] [US4] [FE] 라우트 추가 (`frontend/src/App.tsx`) · Jira 미발급\n+- [X] T004 [M1] [US4] [FE] 라우트 추가 (`frontend/src/App.tsx`) · Jira 미발급\n   - `/learn`을 T002의 준비 중 화면에 잇는다\n   - `/diagnosis/sectors`도 **잠시** 같은 준비 중 화면에 잇는다. M2가 실제 화면으로 바꾼다. 이 연결이 없으면 '비중 비교하기'가 `path=\"*\"` 규칙에 걸려 첫 화면으로 되돌아오고, FR-001이 요구한 \"정상 화면으로 처리한다\"를 M1 혼자서는 만족하지 못한다\n   - 기존 경로(`/home`·`/dashboard`·`/backtest`·`/param-search`·`/records/*`·`/login`·`/signup`)를 **지우지 않는다.** 각각 003·006·007·009가 소유할 자리다 (research.md 결정 5)\n@@ -126,7 +126,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n \n **Independent Test**: `/diagnosis/sectors`에 들어가 섹터 목록이 표시 순서대로 보이는지, 응답의 `isSample`이 true일 때만 예시 표시가 붙는지, 409와 네트워크 실패에서 빈 목록이나 오류 화면이 아니라 한 문장 안내와 다시 불러오기 하나가 보이는지 확인한다.\n \n-- [ ] T005 [M2] [FE] 테스트 수집 경로 확장과 수집 가드 (`frontend/vite.config.ts`, `frontend/src/diagnosis/testCollection.guard.test.tsx`) · Jira 미발급\n+- [X] T005 [M2] [FE] 테스트 수집 경로 확장과 수집 가드 (`frontend/vite.config.ts`, `frontend/src/diagnosis/testCollection.guard.test.tsx`) · Jira 미발급\n   - **이 묶음의 다른 어떤 `.test.ts`보다 먼저 한다.** 현재 `test.include`는 `['src/**/*.test.tsx', 'src/api/auth.test.ts', 'src/auth/**/*.test.ts']`라서 새로 만드는 `.test.ts`는 **실패하지 않고 그냥 수집되지 않는다** (`frontend/vite.config.ts:17`, quickstart 시나리오 0)\n   - `include`에 `'src/diagnosis/**/*.test.ts'`를 더한다. 앞으로 다른 폴더에 `.test.ts`가 생기면 같은 함정이 되풀이되므로 아래 가드가 그 사실을 알린다\n   - 가드 테스트는 확장자를 **`.tsx`로 만든다.** 확장자 변경 없이도 반드시 수집되는 패턴은 `src/**/*.test.tsx` 하나뿐이고, 가드 자신이 수집되지 않으면 아무것도 지키지 못한다\n@@ -135,27 +135,27 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n   - 패턴 대조는 새 의존성 없이 처리한다. 지금 쓰는 표현은 `dir/**/*.ext`와 정확 경로 두 가지뿐이므로 그 두 형태만 해석하는 짧은 대조 함수를 같은 파일에 둔다. **해석할 수 없는 형태의 패턴이 들어오면 그 자체로 실패시킨다.** 모르는 패턴을 통과로 처리하면 검사가 조용히 사라진다\n   - 파일을 하나도 찾지 못했을 때도 실패시킨다. 현재 저장소에 `*.test.ts`가 여섯 개 있으므로(`src/api/auth.test.ts`, `src/api/market.test.ts`, `src/auth/returnTarget.test.ts`, `src/utils/` 셋) 0개는 순회가 잘못되었다는 뜻이다\n   - 확인 절차: 일부러 틀린 단언을 하나 넣어 실제로 실패가 나는지 보고 되돌린다. `npm test`의 `skipped` 수가 0인지 함께 본다 (quickstart 시나리오 0)\n-- [ ] T006 [M2] [P] [US1] [FE] 섹터 응답 타입 (`frontend/src/types/sector.ts`) · Jira 미발급\n+- [X] T006 [M2] [P] [US1] [FE] 섹터 응답 타입 (`frontend/src/types/sector.ts`) · Jira 미발급\n   - `GET /sectors` 응답을 camelCase로 1:1 옮긴다. `mapVersion`·`isSample`·`sectors[].{code,name,classification,representativeEtf{name,listedOn}}` (data-model.md 「SectorCatalog」)\n   - 필드 정의의 원본은 [001의 섹터 조회 계약](../001-etf-market-data/contracts/sector-api.md)이다. **002가 재정의하지 않는다**\n   - 계약의 불변식(\"모든 항목에 `representativeEtf`가 있다\")을 타입에서 선택 값으로 풀지 않는다. 없는 항목이 오면 그것은 계약 위반이며 화면이 숨겨서 넘기지 않는다\n-- [ ] T007 [M2] [US1] [FE] 섹터 목록 조회 (`frontend/src/api/sectors.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급\n+- [X] T007 [M2] [US1] [FE] 섹터 목록 조회 (`frontend/src/api/sectors.ts`, `frontend/src/api/sectors.test.ts`) · Jira 미발급\n   - `src/api/client.ts`의 공용 `apiClient`만 거친다. 컴포넌트에서 axios를 직접 부르지 않는다 (`frontend/CLAUDE.md`)\n   - 오류 분류는 014가 이미 만든 `normalizeApiError`의 `api | network | unexpected`를 그대로 쓴다. 002가 새 분류를 만들지 않는다 (research.md 결정 6)\n   - `409 SECTOR_MAP_NOT_READY`를 예외가 아니라 화면이 분기할 수 있는 상태 값으로 돌려준다\n   - 화면 진입마다 이 호출 **한 번**이다. `GET /sectors/evaluation-window`는 부르지 않는다 (research.md 결정 4, contracts/README.md)\n   - 선행: T005(이 파일이 `.test.ts`라 include 확장 전에는 수집되지 않는다)\n-- [ ] T008 [M2] [P] [US1] [FE] 표시 순서와 출처 문구 상수 (`frontend/src/diagnosis/sectorOrder.ts`, `frontend/src/diagnosis/sectorOrder.test.ts`, `frontend/src/diagnosis/attribution.ts`) · Jira 미발급\n+- [X] T008 [M2] [P] [US1] [FE] 표시 순서와 출처 문구 상수 (`frontend/src/diagnosis/sectorOrder.ts`, `frontend/src/diagnosis/sectorOrder.test.ts`, `frontend/src/diagnosis/attribution.ts`) · Jira 미발급\n   - 표시 순서는 `classification`(`INDUSTRY` 먼저, `THEME` 다음) 다음에 `Intl.Collator('ko')`로 이름 정렬이다 (research.md 결정 2)\n   - **서버 응답의 배열 순서에 기대지 않는다.** 001 계약이 `sectors` 배열의 정렬을 정하지 않아, 응답 순서에 기대면 백엔드 구현이 바뀔 때 화면 규칙이 조용히 따라 바뀐다\n   - 이 순서가 M3의 잔여분 자리를 정한다. 같은 집합을 다른 순서로 골라도 결과가 같아야 한다\n   - `attribution.ts`에 KRX 출처 문구 상수를 **한 곳에만** 둔다. 값을 지어내는 것이 아니라 001이 이미 고정 값처럼 내보내는 문구를 옮겨 적는 것이다 (research.md 결정 8, 원칙 X)\n   - 선행: T005\n-- [ ] T009 [M2] [US1] [FE] 섹터 목록 항목 (`frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/SectorListItem.test.tsx`) · Jira 미발급\n+- [X] T009 [M2] [US1] [FE] 섹터 목록 항목 (`frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/components/diagnosis/SectorListItem.test.tsx`) · Jira 미발급\n   - 한 항목에 섹터 이름·대표 ETF 이름·업종/테마 구분을 함께 보인다 (FR-003)\n   - 이 시점에는 표시만 한다. 체크박스는 M3의 T015가, 대표 상품 정보 펼침은 M5의 T022가 더한다\n   - 계산식·자료 공급원·거리 함수·실험 식별자·서버 설정을 보이지 않는다 (FR-011)\n-- [ ] T010 [M2] [US1] [US4] [FE] 섹터 선택 화면과 조회 상태 분기 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionPage.module.css`, `frontend/src/pages/SectorSelectionPage.test.tsx`, `frontend/src/App.tsx`) · Jira 미발급\n+- [X] T010 [M2] [US1] [US4] [FE] 섹터 선택 화면과 조회 상태 분기 (`frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionPage.module.css`, `frontend/src/pages/SectorSelectionPage.test.tsx`, `frontend/src/App.tsx`) · Jira 미발급\n   - `App.tsx`의 `/diagnosis/sectors`를 T004의 임시 연결에서 이 화면으로 바꾼다\n   - 상태 분기 네 가지를 모두 정상 화면으로 처리한다. 불러오는 중 / 목록 / `409 SECTOR_MAP_NOT_READY` / 네트워크 실패·5xx. 뒤의 둘은 T001의 컴포넌트에 다시 불러오기 행동 하나를 주어 표시한다 (FR-017, research.md 결정 6)\n   - 409 상태에서는 섹터를 고를 수 없으므로 다음 단계 버튼 자체를 두지 않는다 (FR-017)\n@@ -174,7 +174,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n \n **Independent Test**: 섹터 3개를 골라 `33.4 / 33.3 / 33.3`이 채워지는지, 한 섹터를 올렸을 때 나머지가 그대로이고 초과가 표시되는지, 새로고침 뒤에도 값이 남는지 확인한다. 비중 규칙은 화면 없이 단위 테스트로 먼저 검증한다.\n \n-- [ ] T011 [M3] [US2] [FE] 비중 정수 모형과 순수 규칙 (`frontend/src/diagnosis/weights.ts`, `frontend/src/diagnosis/weights.test.ts`) · Jira 미발급\n+- [X] T011 [M3] [US2] [FE] 비중 정수 모형과 순수 규칙 (`frontend/src/diagnosis/weights.ts`, `frontend/src/diagnosis/weights.test.ts`) · Jira 미발급\n   - 비중을 **0.1%p 단위 정수**로 다룬다. 100%가 `1000`이고 33.4%가 `334`다. 표시할 때만 10으로 나눈다 (research.md 결정 1)\n   - 합계 판정은 `sum === 1000`이라는 정수 비교다. **허용 오차(epsilon)를 두지 않는다.** 원칙 VI가 임의 epsilon으로 판정을 만드는 처리를 금지한다\n   - `distributeEven(codes)`: `q = floor(1000 / n)`, `r = 1000 - q * n`을 구해 `r`을 **표시 순서상 첫 번째** 섹터에 몰아준다. 초깃값 자동 채움과 '동일하게 나누기'가 같은 함수를 쓴다 (FR-005, FR-007, research.md 결정 2)\n@@ -182,7 +182,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n   - 빈 칸은 0으로 보지 않고 \"아직 입력 중\"으로 다룬다. 확정 시점에 이전 값을 그대로 둔다\n   - 테스트: 선택 수 2~20 전부에서 합계가 정확히 `1000`, 3개면 `334/333/333`, 6개면 `170/166×5`, 7개면 `148/142×6`. 같은 집합을 다른 순서로 넣어도 결과가 같다. 파싱 표의 행마다 한 건씩 (quickstart 시나리오 2)\n   - 선행: T005(이 파일이 `.test.ts`다), T008(표시 순서)\n-- [ ] T012 [M3] [P] [US1] [FE] 탭 세션 보관과 복원 검증 (`frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/selectionStorage.test.ts`) · Jira 미발급\n+- [X] T012 [M3] [P] [US1] [FE] 탭 세션 보관과 복원 검증 (`frontend/src/diagnosis/selectionStorage.ts`, `frontend/src/diagnosis/selectionStorage.test.ts`) · Jira 미발급\n   - `sessionStorage` 항목 **하나**에 JSON으로 저장한다. 키는 `thorp.diagnosis.sectorSelection`이며 014의 `thorp.auth.returnTarget`과 같은 이름 규칙이다 (research.md 결정 3)\n   - 페이로드 구조와 불변식의 원본은 [contracts/selection-handoff.md](./contracts/selection-handoff.md)다. `version`·`mapVersion`·`selected[]`·`weightsTouched`를 담는다\n   - **읽어 온 값을 신뢰하지 않는다.** `sessionStorage`는 사용자가 편집할 수 있다. 섹터 코드는 현재 `GET /sectors` 응답에 있는 코드만, 비중은 0 이상 1000 이하 정수만 받아들인다\n@@ -192,7 +192,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n   - 저장소 접근이 막힌 환경에서는 예외를 삼키고 메모리 상태로만 동작한다. 화면을 오류로 막지 않는다 (spec Edge Cases)\n   - 테스트: 왕복 보존, 목록에 없는 코드 제거와 `droppedCodes` 보고, 음수·1000 초과·정수가 아닌 값 거부, 0 허용, 합계 불일치 보존, `version` 상향 시 빈 상태, 저장소 예외에서 화면이 죽지 않음\n   - 선행: T005\n-- [ ] T013 [M3] [US1] [US2] [FE] 선택 상태 Context와 상태 전이 (`frontend/src/diagnosis/SectorSelectionProvider.tsx`, `frontend/src/diagnosis/SectorSelectionProvider.test.tsx`) · Jira 미발급\n+- [X] T013 [M3] [US1] [US2] [FE] 선택 상태 Context와 상태 전이 (`frontend/src/diagnosis/SectorSelectionProvider.tsx`, `frontend/src/diagnosis/SectorSelectionProvider.test.tsx`) · Jira 미발급\n   - data-model.md 「상태 전이」 표의 아홉 행을 그대로 구현한다. 분기값은 `weightsTouched`다\n   - 아직 고치지 않았으면 섹터를 더하거나 뺄 때마다 **전체를** 동일 비중으로 다시 채운다. 한 번이라도 고쳤으면 기존 값을 건드리지 않고 새 섹터에만 0을 준다 (FR-005, SC-009)\n   - 섹터를 뺄 때는 남은 값을 그대로 둔다. 합계가 100% 아래로 내려가는 것은 오류가 아니라 FR-007이 안내하는 정상 상태다\n@@ -203,7 +203,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n   - 전역 상태 라이브러리를 도입하지 않는다. React Context로 충분하다 (plan 「Structure Decision」)\n   - 테스트: 전이 표의 행마다 한 건씩. 특히 \"고친 뒤 섹터 추가\"에서 기존 값이 하나도 바뀌지 않고 새 섹터가 0인지(SC-009), 세션 복원 뒤 값이 그대로인지(SC-006)\n   - 선행: T011, T012\n-- [ ] T014 [M3] [US2] [FE] 비중 입력 칸 (`frontend/src/components/diagnosis/WeightInput.tsx`, `frontend/src/components/diagnosis/WeightInput.test.tsx`) · Jira 미발급\n+- [X] T014 [M3] [US2] [FE] 비중 입력 칸 (`frontend/src/components/diagnosis/WeightInput.tsx`, `frontend/src/components/diagnosis/WeightInput.test.tsx`) · Jira 미발급\n   - 섹터를 고르면 **같은 화면 그 자리에** 나타난다. 다른 화면으로 나누지 않는다 (spec 범위 요약, FR-005)\n   - 값 검사는 T011의 파싱 규칙 하나만 쓴다. 컴포넌트가 따로 판정하지 않는다\n   - `step`을 0.1로 두되 **붙여넣기처럼 `step`을 우회하는 경로도 같은 검사를 거친다** (research.md 결정 1)\n@@ -211,7 +211,7 @@ npm test              # test:dom(Vitest) 뒤에 test:legacy(node --test)를 차\n   - 0%를 거부하지 않는다 (FR-016, SC-010)\n   - 키보드만으로 입력과 확정을 끝낼 수 있어야 한다 (`checklists/ux.md` CHK033)\n   - 테스트: `33.45`·음수·`120`·문자 입력이 거부되고 안내가 보인다. 거부된 뒤 이전 값이 그대로다. `0` 입력이 통과한다\n-- [ ] T015 [M3] [US1] [US2] [FE] 합계 표시·동일하게 나누기·두 개 이상 제약 결선 (`frontend/src/components/diagnosis/WeightTotal.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionWeights.test.tsx`) · Jira 미발급\n+- [X] T015 [M3] [US1] [US2] [FE] 합계 표시·동일하게 나누기·두 개 이상 제약 결선 (`frontend/src/components/diagnosis/WeightTotal.tsx`, `frontend/src/components/diagnosis/SectorListItem.tsx`, `frontend/src/pages/SectorSelectionPage.tsx`, `frontend/src/pages/SectorSelectionWeights.test.tsx`) · Jira 미발급\n   - 목록 항목에 체크박스를 더하고 화면을 T013의 Context에 연결한다\n   - 합계가 1000이 아니면 **그 위치에** 남은 비중을 부족·초과로 표시한다. 별도 알림 영역으로 빼지 않는다 (FR-007, 원칙 VI, research.md 결정 7)\n   - 비중을 자동으로 정규화하거나 조정하지 않는다 (SC-002)\n@@ -419,7 +419,9 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5\n   - 세 링크를 지울지, 목적지를 메뉴와 같은 곳으로 옮길지, 그대로 둘지는 이 task가 미리 정하지 않는다. **다만 그대로 두기로 하면 왜 메뉴와 다른 곳을 가리켜도 되는지를 MR 본문에 남긴다.** 커밋 `398748f`이 \"머리 영역을 지나야 닿는 자리라 '비중 비교하기'와 자리를 다투지 않는다\"고 이미 판단한 것은 **링크를 남길지**에 대한 판단이고, 이 task가 묻는 것은 **어디를 가리킬지**다. 둘은 다른 질문이다\n   - `/dashboard`·`/backtest` 경로 자체는 지우지 않는다. 003·005가 소유할 자리다 (research.md 결정 5)\n   - 테스트: `LandingPage.test.tsx`의 \"소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다\"가 지금 목적지를 고정하고 있다. 목적지를 옮기면 이 검사도 함께 옮긴다. 검사를 지우기만 하면 다음에 같은 어긋남이 조용히 돌아온다\n-- [ ] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급\n+  - **2026-09-17 판단: 지금은 그대로 둔다. 다만 의문은 닫지 않았으므로 이 task를 열어 둔다.** 세 링크를 지우지도 옮기지도 않았다. 003·005가 `/dashboard`·`/backtest`를 실제로 대체하면 그 화면들이 어디로 가야 하는지가 그때 정해지므로, 지금 옮겨 두면 두 번 고치게 된다. **답하지 못한 물음은 이것이다 — 메뉴에서 뺀 화면을 첫 화면 본문이 계속 권해도 되는가.** 특히 헤더의 '시장 흐름'이 `/market-flow`인데 본문의 \"시장 분석 보러 가기\"는 `/dashboard`라, 같은 성격의 목적지가 둘로 갈린 상태가 그대로 남았다. 009가 들어오면서 헤더 쪽 경로가 `/home`에서 `/market-flow`로 바뀌어 간격이 처음 적었을 때보다 더 벌어졌다\n+  - **이 task를 닫는 조건**: 003·005가 각자 화면을 내어 `/dashboard`·`/backtest`의 자리를 대신할 때, 또는 그 전에 첫 화면의 안내 구조를 다시 볼 때다. 둘 중 무엇이 먼저든 그 시점에 지울지 옮길지 정한다\n+- [X] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급\n   - **남은 일이라고 판단한 근거**: 커밋 `1a5f483`이 오류 이름 목록을 인증 전용에서 서비스 공용으로 넓히면서 `ServiceApiErrorCode`·`ApiErrorCode`·`ApiEnvelope`·`ApiSuccessEnvelope`·`ApiErrorEnvelope`를 `src/types/auth.ts`에 그대로 두었다. 그 결과 **의존 방향이 꼬였다.** `types/auth.ts`가 `types/sector.ts`를 가져오고(`types/auth.ts:1`), 섹터 조회는 봉투를 얻으려고 `@/types/auth`를 가져온다(`api/sectors.ts:2`). 섹터 도메인이 인증 도메인 파일을 거쳐야 공용 봉투에 닿는다\n   - `frontend/CLAUDE.md`의 폴더 규칙은 `src/types/`를 \"백엔드 DTO와 1:1 대응 타입\"으로 정했고, 봉투는 특정 도메인의 DTO가 아니라 `common/web`의 `ApiResponse`다([001 contracts/sector-api.md](../001-etf-market-data/contracts/sector-api.md)의 「공통 규칙」). 지금 자리는 규칙이 가리키는 자리가 아니다\n   - **지금 고치는 편이 싸다.** M5의 T021이 `INSTRUMENT_PROFILE_NOT_READY`로 같은 경로를 한 번 더 쓰고, 003·005도 각자 조회를 만들 때 같은 import를 되풀이한다. 도메인이 늘수록 되돌리는 비용만 커진다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/tasks.md",
+          "old_path": "specs/002-sector-weight-selection/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2826020": []
+  }
+}

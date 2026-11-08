@@ -1,0 +1,554 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963460,
+    "iid": 370,
+    "project_id": 1444456,
+    "title": "fix(de): 데이터 테스트 중 수집 대기 시간 축소 및 개선",
+    "description": "## 작업 내용 요약\n\n늘 실패하는 원천으로 수집을 돌리는 PostgreSQL 통합 테스트 두 개가 운영 재시도 간격(요청마다 1·2초)을 실제로 기다려 하나에 45초씩 걸렸다. 시도 횟수는 운영 값 그대로 두고 대기만 0으로 만든 설정을 넘겨, 두 테스트를 98초에서 14초로 줄인다.\n\n## 주요 변경 사항\n\n- `test_failed_indicator_keeps_its_error_class`, `test_publication_is_held_but_records_still_land`가 `ingest.run`에 재시도 대기가 0인 원천 설정(`configs`)을 넘긴다. 설정은 `load_source_config`에서 `backoff_seconds`만 바꿔 만들고, 원천은 테스트가 넘기는 지표에서 고른다.\n- 운영 코드는 바뀌지 않는다.\n\n## 테스트\n\n- `ruff check src scripts tests` 통과\n- `THORP_REQUIRE_DOCKER=true pytest`: 1,266건 통과\n- 두 테스트(컨테이너 기동 포함): 98초 → 14초. 원천 호출 수(45회)와 최종 기록 `(FAILED, TransientSourceError)`는 변경 전과 같다.\n\n## 리뷰 포인트\n\n- 원천별 호출 간격(0.2초)은 운영 `RateLimiter`가 `time.sleep`으로 직접 기다려 테스트에서 줄일 수 없다. 7초대인 관세청 분할 수집 테스트 두 개도 같은 원인이라, 줄이려면 `collect`에 limiter를 주입할 자리가 필요하다(별도 작업).\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T17:56:04.423+09:00",
+    "updated_at": "2026-10-04T18:35:53.616+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:33:44.235+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(de)/macro-ingest-test-retry-wait",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "31936d1b92837ce647efff5dde55dadac550a69d",
+    "merge_commit_sha": "917b73e624bd7943e3dbf6e204ffab620ea79a90",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T17:56:05.580+09:00",
+    "reference": "!370",
+    "references": {
+      "short": "!370",
+      "relative": "!370",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!370"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/370",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963460,
+    "iid": 370,
+    "project_id": 1444456,
+    "title": "fix(de): 데이터 테스트 중 수집 대기 시간 축소 및 개선",
+    "description": "## 작업 내용 요약\n\n늘 실패하는 원천으로 수집을 돌리는 PostgreSQL 통합 테스트 두 개가 운영 재시도 간격(요청마다 1·2초)을 실제로 기다려 하나에 45초씩 걸렸다. 시도 횟수는 운영 값 그대로 두고 대기만 0으로 만든 설정을 넘겨, 두 테스트를 98초에서 14초로 줄인다.\n\n## 주요 변경 사항\n\n- `test_failed_indicator_keeps_its_error_class`, `test_publication_is_held_but_records_still_land`가 `ingest.run`에 재시도 대기가 0인 원천 설정(`configs`)을 넘긴다. 설정은 `load_source_config`에서 `backoff_seconds`만 바꿔 만들고, 원천은 테스트가 넘기는 지표에서 고른다.\n- 운영 코드는 바뀌지 않는다.\n\n## 테스트\n\n- `ruff check src scripts tests` 통과\n- `THORP_REQUIRE_DOCKER=true pytest`: 1,266건 통과\n- 두 테스트(컨테이너 기동 포함): 98초 → 14초. 원천 호출 수(45회)와 최종 기록 `(FAILED, TransientSourceError)`는 변경 전과 같다.\n\n## 리뷰 포인트\n\n- 원천별 호출 간격(0.2초)은 운영 `RateLimiter`가 `time.sleep`으로 직접 기다려 테스트에서 줄일 수 없다. 7초대인 관세청 분할 수집 테스트 두 개도 같은 원인이라, 줄이려면 `collect`에 limiter를 주입할 자리가 필요하다(별도 작업).\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T17:56:04.423+09:00",
+    "updated_at": "2026-10-04T18:35:53.616+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:33:44.235+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(de)/macro-ingest-test-retry-wait",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "31936d1b92837ce647efff5dde55dadac550a69d",
+    "merge_commit_sha": "917b73e624bd7943e3dbf6e204ffab620ea79a90",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T17:56:05.580+09:00",
+    "reference": "!370",
+    "references": {
+      "short": "!370",
+      "relative": "!370",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!370"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/370",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "4a87e4d0daec576b8209dfa5fede9792c528a4d1",
+      "head_sha": "31936d1b92837ce647efff5dde55dadac550a69d",
+      "start_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a3b841c475c89263a9edebf89e7a43433f2a774a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881340,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T17:56:04.519+09:00",
+          "updated_at": "2026-10-04T17:56:04.522+09:00",
+          "system": true,
+          "noteable_id": 963460,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 370,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "abdd4cf4ae57f0bfeff28071e499710c7151cf2e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881341,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T17:56:04.542+09:00",
+          "updated_at": "2026-10-04T17:56:04.605+09:00",
+          "system": true,
+          "noteable_id": 963460,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 370,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "316cea65081eb5025fc4e8e85f82517ba55f8866",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881342,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **테스트 성능 최적화 및 의도 명확화**: 운영 재시도 대기 시간을 0으로 설정(`backoff_seconds=0.0`)하여 테스트 실행 시간을 획기적으로 단축하면서도, 재시도 횟수 및 실패 처리 로직에 대한 검증 무결성을 유지했습니다.\n- **유지보수성 고려**: `_configs_without_backoff` 헬퍼 함수를 통해 반복되는 설정을 깔끔하게 분리하고, 함수 문서화(docstring)를 통해 테스트 설정 변경의 이유와 배경을 명확히 기록했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `backoff_seconds=0.0` 설정 적용 후에도 지정된 재시도 횟수(retry count)가 정상적으로 소진되는지, 그리고 최종적으로 `TransientSourceError`와 `FAILED` 상태가 올바르게 기록되는지 기존 통합 테스트의 어설션(assertion)을 통해 재확인하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:31936d1b92837ce647efff5dde55dadac550a69d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T17:56:12.823+09:00",
+          "updated_at": "2026-10-04T17:56:12.823+09:00",
+          "system": false,
+          "noteable_id": 963460,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 370,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "69c5886b9c420273799c677bd410f358f39b8265",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881346,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">fix(de): <span class=\"idiff left right deletion\">늘 실패하는 원천으로 수집을 돌리는 통합 테스트 두 개가 재시도 대기를 실제로 자지 않게 한다</span></code> to <code class=\"idiff\">fix(de): <span class=\"idiff left right addition\">데이터 테스트 정리</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:33:40.970+09:00",
+          "updated_at": "2026-10-04T18:33:40.977+09:00",
+          "system": true,
+          "noteable_id": 963460,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 370,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d14eadcdaab1ada1252bf9764ce6b378d82c54f8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881347,
+          "type": null,
+          "body": "mentioned in commit 917b73e624bd7943e3dbf6e204ffab620ea79a90",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:33:44.298+09:00",
+          "updated_at": "2026-10-04T18:33:44.315+09:00",
+          "system": true,
+          "noteable_id": 963460,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 370,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a0c2d93919180a1485b30df2e439fc3f35c5ea2b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881358,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">fix(de): 데이터 테스트 <span class=\"idiff left right deletion\">정리</span></code> to <code class=\"idiff\">fix(de): 데이터 테스트 <span class=\"idiff left right addition\">중 수집 대기 시간 축소 및 개선</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:35:53.696+09:00",
+          "updated_at": "2026-10-04T18:35:53.701+09:00",
+          "system": true,
+          "noteable_id": 963460,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 370,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262305,
+      "head_commit_sha": "31936d1b92837ce647efff5dde55dadac550a69d",
+      "base_commit_sha": "4a87e4d0daec576b8209dfa5fede9792c528a4d1",
+      "start_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "created_at": "2026-10-04T17:56:04.839+09:00",
+      "merge_request_id": 963460,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "875a0e3329c0dd94ffc5cd559c405088cbefcb4e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262305,
+      "head_commit_sha": "31936d1b92837ce647efff5dde55dadac550a69d",
+      "base_commit_sha": "4a87e4d0daec576b8209dfa5fede9792c528a4d1",
+      "start_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "created_at": "2026-10-04T17:56:04.839+09:00",
+      "merge_request_id": 963460,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "875a0e3329c0dd94ffc5cd559c405088cbefcb4e",
+      "commits": [
+        {
+          "id": "31936d1b92837ce647efff5dde55dadac550a69d",
+          "short_id": "31936d1b",
+          "created_at": "2026-10-04T17:31:35.000+09:00",
+          "parent_ids": [
+            "4a87e4d0daec576b8209dfa5fede9792c528a4d1"
+          ],
+          "title": "fix(de): 늘 실패하는 원천으로 수집을 돌리는 통합 테스트 두 개가 재시도 대기를 실제로 자지 않게 한다",
+          "message": "fix(de): 늘 실패하는 원천으로 수집을 돌리는 통합 테스트 두 개가 재시도 대기를 실제로 자지 않게 한다\n\n두 테스트는 운영 설정의 재시도 간격(요청마다 1·2초)을 그대로 써서 하나에 45초씩 걸렸다.\n시도 횟수는 운영 값 그대로 두고 대기만 0으로 만든 설정을 넘긴다. 재시도를 다 쓴 뒤 실패로\n기록되는 경로는 같다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:31:35.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:31:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/31936d1b92837ce647efff5dde55dadac550a69d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -17,7 +17,8 @@ from pathlib import Path\n import pytest\n from sqlalchemy import text\n \n-from data_pipeline.macro import ingest\n+from data_pipeline.macro import ingest, registry\n+from data_pipeline.macro.config import SourceConfig, load_source_config\n from data_pipeline.macro.registry import INDICATORS\n from data_pipeline.macro.sources.base import SourceObservation, TransientSourceError\n from data_pipeline.macro.versioning import (\n@@ -44,6 +45,23 @@ class StubFetcher:\n         return self._body\n \n \n+def _configs_without_backoff(\n+    indicators: tuple[registry.IndicatorDefinition, ...],\n+) -> dict[str, SourceConfig]:\n+    \"\"\"운영 설정 그대로이되 재시도 대기만 없앤다.\n+\n+    늘 실패하는 원천으로 돌리면 요청마다 재시도 대기 1·2초를 실제로 잔다(테스트 하나에 45초). 시도\n+    횟수는 운영 값을 그대로 두므로 재시도를 다 쓴 뒤 실패로 기록되는 경로는 같다. 원천별 호출\n+    간격(0.2초)은 그대로라 2초 남짓은 남는다.\n+\n+    원천은 넘기는 지표에서 고른다. 빠진 원천은 수집이 운영 설정으로 돌아가 조용히 다시 느려진다.\n+    \"\"\"\n+    return {\n+        source_id: replace(load_source_config(source_id), backoff_seconds=0.0)\n+        for source_id in registry.used_sources(indicators)\n+    }\n+\n+\n @pytest.fixture\n def dummy_keys(monkeypatch):\n     \"\"\"원천에 닿는 경로를 보려면 키가 있어야 한다. 값은 쓰이지 않는다 — 대역이 받는다.\n@@ -201,6 +219,7 @@ def test_failed_indicator_keeps_its_error_class(\n         data_root=tmp_path,\n         mode=\"regular\",\n         today=date(2026, 7, 15),\n+        configs=_configs_without_backoff(seeded_indicators),\n     )\n \n     assert report.failed, \"전부 실패했는데 실패로 안 잡혔다\"\n@@ -237,6 +256,7 @@ def test_publication_is_held_but_records_still_land(\n         data_root=tmp_path,\n         mode=\"initial\",\n         today=date(2026, 7, 15),\n+        configs=_configs_without_backoff(seeded_indicators),\n     )\n \n     assert not report.published\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_ingest_postgres.py",
+          "old_path": "data/tests/test_macro_ingest_postgres.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881342": []
+  }
+}

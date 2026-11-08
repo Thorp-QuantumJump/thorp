@@ -1,0 +1,1010 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 941180,
+    "iid": 57,
+    "project_id": 1444456,
+    "title": "feat(be): 기업행위·비용 조건·배분 규칙 모듈 추가",
+    "description": "# 작업 내용 요약\n\nspec 004 T007입니다. 워커에 배분 규칙 세 가지(고정·동일·역변동성), 비용 조건 적용, 기업행위(분배금·액면분할) 모듈을 추가했습니다. 전부 순수 모듈이라 엔진은 아직 이것들을 호출하지 않습니다 — 다종목 엔진이 붙는 T006에서 연결됩니다. 백엔드는 건드리지 않았습니다.\n\n**T006보다 먼저 한 이유**: T006의 엔진이 `compute_weights`를 호출하는데, T007은 T006에 의존하지 않습니다. 순서를 지키면 가짜 배분기를 만들었다가 다시 배선해야 합니다.\n\n| 커밋 | 내용 |\n|---|---|\n| `1590e7b` | 비용 조건 적용 모듈 신설 |\n| `61e2ae7` | 데모 엔진의 하드코딩 슬리피지를 비용 모듈로 이관(동작 변경 없음) |\n| `2bd3586` | 기업행위 모듈 신설 |\n| `99737be` | 배분 규칙 세 가지와 미확정 전략 거절 |\n| `a4d1270` | 워커 규칙 문서와 tasks.md 결정 기록 |\n\n# 관련 티켓 번호 & 링크\n- ticket # S15P21E205-140\n- link https://ssafy.atlassian.net/browse/S15P21E205-140\n- 선행: S15P21E205-128(메시지 계약 v2)\n- 뒤: S15P21E205-137(T006 다종목 엔진이 이 모듈들을 연결), S15P21E205-142(T008 지표·수기 대조)\n\n# 주요 변경 사항\n\n- **배분 `worker/src/worker/allocation/`** — `compute_weights(allocation, universe, history, as_of)` 순수 함수. 고정 비중은 지정값 그대로(`source=USER`), 동일 비중은 그날 투자 가능한 종목에 1/N, 역변동성은 관측 구간 표준편차의 역수입니다. 0 변동성과 관측 부족 종목은 제외하고 그 사실을 예외 기록으로 남깁니다. 전략 추가는 모듈 하나와 레지스트리 한 줄입니다.\n- **규칙 출처** — 규칙 값은 `allocation.rules`에서만 읽습니다. 없으면 지어내지 않고 `INVALID_REQUEST`로 멈춥니다. 역변동성 값은 전부 PD-02 대기라 특히 그렇습니다.\n- **미확정 전략 `rules_registry.py`** — `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 \"팀이 아직 정하지 않았다\"(PD-03·PD-04)로, 등록되지 않은 전략은 \"이 엔진이 구현하지 않았다\"로 거절합니다. 두 메시지가 다릅니다.\n- **비용 `costs.py`** — 수수료·호가차·슬리피지·세금을 따로 계산합니다. 호가차와 슬리피지는 체결가를 불리하게 움직이고 수수료와 세금은 현금으로 빠집니다. 주문 방향 `Side(BUY/SELL)`를 신설했습니다.\n- **기업행위 `corporate_actions.py`** — 분배금은 권리락일에 자격이 생기고 지급일에 한 번만 현금이 됩니다. 액면분할은 수량을 바꾸고 단주는 내림 후 예외로 남깁니다.\n- **데모 엔진** — `SLIPPAGE_BPS` 상수를 지우고 요청의 비용 프로필을 쓰게 했습니다. 수량 계산도 `CostModel.affordable_quantity`로 옮겼습니다.\n\n# 테스트\n\n- [x] `ruff check src tests scripts && ruff format --check src tests scripts && pytest` — 222 tests, 0 failed (189 → 222)\n- [x] 신규 `test_costs.py`(11건): 적용 방향·기준 금액·현금과 가격 충격의 분리·수량 계산\n- [x] 신규 `test_corporate_actions.py`(12건): 권리락일 자격과 지급일 현금의 분리, 중복 지급 방지, 미지급 자격, 단주 처리\n- [x] 신규 `test_allocation.py`(21건): 세 전략, 규칙 값 누락 4갈래, 상한 재분배와 불가능한 상한, 미확정 전략 거절\n- [x] 기존 데모 엔진 회귀 전부 통과 — 슬리피지 이관은 데모 프로필에서 같은 숫자가 나옵니다\n- [ ] 리뷰어: 비용 적용 방향(리뷰 포인트 첫 항목)이 팀 상식과 맞는지 봐 주세요\n\n# 리뷰 포인트\n\n- **비용 적용 방향을 제가 정했습니다.** spec은 수치(PD-07)만 결정 항목으로 두고 \"어느 쪽에 무엇을 매기는가\"는 정하지 않았는데, 방향 없이는 수치를 쓸 수 없습니다. 정한 것은 셋입니다. 수수료·호가차·슬리피지는 양방향, **세금은 매도만**, 기준 금액은 가격 충격 전 금액. 지금 등록된 데모 프로필(슬리피지만 5bps)에서는 어느 방향을 골라도 결과가 같아서 지금 바꾸는 비용이 0입니다. 이유는 `costs.py` 모듈 주석에 모아 두었습니다.\n- **하드코딩 슬리피지 제거를 이관으로 했습니다.** 상수를 지우기만 하면 데모 엔진이 깨집니다. `engine_support`에서 슬리피지 거절만 뺐고 수수료·호가차·세금 0 요구는 남겼습니다 — 그 엔진이 아직 그 셋을 계산하지 않아서, 0이 아닌 값을 받으면 비용을 0으로 보고하게 됩니다. T006이 그 제한을 걷어냅니다.\n- **주문 방향 `Side`를 새로 만들었습니다.** 계약의 `TradeSide`는 포지션 방향(LONG/SHORT)이라 다른 개념입니다. 비용이 처음 필요로 해서 `costs.py`에 두었고, T006이 더 넓게 쓰면 옮기면 됩니다.\n- **액면분할 단주는 내림하고 예외로 남깁니다.** 현금 대체 지급이 더 정확하지만 가격이 필요하고, 그 가격을 어느 시점으로 잡을지가 또 결정 항목이 됩니다. 지금 픽스처의 분할은 2:1이라 단주가 생기지 않습니다.\n- **역변동성에서 관측 구간이 모자란 종목을 제외합니다.** 짧은 표본의 표준편차는 다른 종목과 같은 척도가 아니어서, 역수를 비교하는 순간 비중이 왜곡됩니다. 제외 사실은 `INSUFFICIENT_HISTORY` 예외로 남습니다.\n- **`compute_weights`가 `parameters`를 받지만 세 전략 모두 쓰지 않습니다.** tasks.md가 T006과의 경계로 그 모양을 지정했고, 파라미터를 쓰는 전략(섹터 모멘텀)이 뒤에 옵니다.",
+    "state": "merged",
+    "created_at": "2026-09-11T15:38:16.469+09:00",
+    "updated_at": "2026-09-14T13:21:02.456+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-11T15:43:14.841+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/140-allocation-cost-corporate-actions",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "674893107151bf43cb8dca68c3f018eca3849ec0",
+    "merge_commit_sha": "ec29155fe65247abf01e45039b64fb295353de1d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T15:38:18.458+09:00",
+    "reference": "!57",
+    "references": {
+      "short": "!57",
+      "relative": "!57",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!57"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/57",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 941180,
+    "iid": 57,
+    "project_id": 1444456,
+    "title": "feat(be): 기업행위·비용 조건·배분 규칙 모듈 추가",
+    "description": "# 작업 내용 요약\n\nspec 004 T007입니다. 워커에 배분 규칙 세 가지(고정·동일·역변동성), 비용 조건 적용, 기업행위(분배금·액면분할) 모듈을 추가했습니다. 전부 순수 모듈이라 엔진은 아직 이것들을 호출하지 않습니다 — 다종목 엔진이 붙는 T006에서 연결됩니다. 백엔드는 건드리지 않았습니다.\n\n**T006보다 먼저 한 이유**: T006의 엔진이 `compute_weights`를 호출하는데, T007은 T006에 의존하지 않습니다. 순서를 지키면 가짜 배분기를 만들었다가 다시 배선해야 합니다.\n\n| 커밋 | 내용 |\n|---|---|\n| `1590e7b` | 비용 조건 적용 모듈 신설 |\n| `61e2ae7` | 데모 엔진의 하드코딩 슬리피지를 비용 모듈로 이관(동작 변경 없음) |\n| `2bd3586` | 기업행위 모듈 신설 |\n| `99737be` | 배분 규칙 세 가지와 미확정 전략 거절 |\n| `a4d1270` | 워커 규칙 문서와 tasks.md 결정 기록 |\n\n# 관련 티켓 번호 & 링크\n- ticket # S15P21E205-140\n- link https://ssafy.atlassian.net/browse/S15P21E205-140\n- 선행: S15P21E205-128(메시지 계약 v2)\n- 뒤: S15P21E205-137(T006 다종목 엔진이 이 모듈들을 연결), S15P21E205-142(T008 지표·수기 대조)\n\n# 주요 변경 사항\n\n- **배분 `worker/src/worker/allocation/`** — `compute_weights(allocation, universe, history, as_of)` 순수 함수. 고정 비중은 지정값 그대로(`source=USER`), 동일 비중은 그날 투자 가능한 종목에 1/N, 역변동성은 관측 구간 표준편차의 역수입니다. 0 변동성과 관측 부족 종목은 제외하고 그 사실을 예외 기록으로 남깁니다. 전략 추가는 모듈 하나와 레지스트리 한 줄입니다.\n- **규칙 출처** — 규칙 값은 `allocation.rules`에서만 읽습니다. 없으면 지어내지 않고 `INVALID_REQUEST`로 멈춥니다. 역변동성 값은 전부 PD-02 대기라 특히 그렇습니다.\n- **미확정 전략 `rules_registry.py`** — `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 \"팀이 아직 정하지 않았다\"(PD-03·PD-04)로, 등록되지 않은 전략은 \"이 엔진이 구현하지 않았다\"로 거절합니다. 두 메시지가 다릅니다.\n- **비용 `costs.py`** — 수수료·호가차·슬리피지·세금을 따로 계산합니다. 호가차와 슬리피지는 체결가를 불리하게 움직이고 수수료와 세금은 현금으로 빠집니다. 주문 방향 `Side(BUY/SELL)`를 신설했습니다.\n- **기업행위 `corporate_actions.py`** — 분배금은 권리락일에 자격이 생기고 지급일에 한 번만 현금이 됩니다. 액면분할은 수량을 바꾸고 단주는 내림 후 예외로 남깁니다.\n- **데모 엔진** — `SLIPPAGE_BPS` 상수를 지우고 요청의 비용 프로필을 쓰게 했습니다. 수량 계산도 `CostModel.affordable_quantity`로 옮겼습니다.\n\n# 테스트\n\n- [x] `ruff check src tests scripts && ruff format --check src tests scripts && pytest` — 222 tests, 0 failed (189 → 222)\n- [x] 신규 `test_costs.py`(11건): 적용 방향·기준 금액·현금과 가격 충격의 분리·수량 계산\n- [x] 신규 `test_corporate_actions.py`(12건): 권리락일 자격과 지급일 현금의 분리, 중복 지급 방지, 미지급 자격, 단주 처리\n- [x] 신규 `test_allocation.py`(21건): 세 전략, 규칙 값 누락 4갈래, 상한 재분배와 불가능한 상한, 미확정 전략 거절\n- [x] 기존 데모 엔진 회귀 전부 통과 — 슬리피지 이관은 데모 프로필에서 같은 숫자가 나옵니다\n- [ ] 리뷰어: 비용 적용 방향(리뷰 포인트 첫 항목)이 팀 상식과 맞는지 봐 주세요\n\n# 리뷰 포인트\n\n- **비용 적용 방향을 제가 정했습니다.** spec은 수치(PD-07)만 결정 항목으로 두고 \"어느 쪽에 무엇을 매기는가\"는 정하지 않았는데, 방향 없이는 수치를 쓸 수 없습니다. 정한 것은 셋입니다. 수수료·호가차·슬리피지는 양방향, **세금은 매도만**, 기준 금액은 가격 충격 전 금액. 지금 등록된 데모 프로필(슬리피지만 5bps)에서는 어느 방향을 골라도 결과가 같아서 지금 바꾸는 비용이 0입니다. 이유는 `costs.py` 모듈 주석에 모아 두었습니다.\n- **하드코딩 슬리피지 제거를 이관으로 했습니다.** 상수를 지우기만 하면 데모 엔진이 깨집니다. `engine_support`에서 슬리피지 거절만 뺐고 수수료·호가차·세금 0 요구는 남겼습니다 — 그 엔진이 아직 그 셋을 계산하지 않아서, 0이 아닌 값을 받으면 비용을 0으로 보고하게 됩니다. T006이 그 제한을 걷어냅니다.\n- **주문 방향 `Side`를 새로 만들었습니다.** 계약의 `TradeSide`는 포지션 방향(LONG/SHORT)이라 다른 개념입니다. 비용이 처음 필요로 해서 `costs.py`에 두었고, T006이 더 넓게 쓰면 옮기면 됩니다.\n- **액면분할 단주는 내림하고 예외로 남깁니다.** 현금 대체 지급이 더 정확하지만 가격이 필요하고, 그 가격을 어느 시점으로 잡을지가 또 결정 항목이 됩니다. 지금 픽스처의 분할은 2:1이라 단주가 생기지 않습니다.\n- **역변동성에서 관측 구간이 모자란 종목을 제외합니다.** 짧은 표본의 표준편차는 다른 종목과 같은 척도가 아니어서, 역수를 비교하는 순간 비중이 왜곡됩니다. 제외 사실은 `INSUFFICIENT_HISTORY` 예외로 남습니다.\n- **`compute_weights`가 `parameters`를 받지만 세 전략 모두 쓰지 않습니다.** tasks.md가 T006과의 경계로 그 모양을 지정했고, 파라미터를 쓰는 전략(섹터 모멘텀)이 뒤에 옵니다.",
+    "state": "merged",
+    "created_at": "2026-09-11T15:38:16.469+09:00",
+    "updated_at": "2026-09-14T13:21:02.456+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-11T15:43:14.841+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/140-allocation-cost-corporate-actions",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "674893107151bf43cb8dca68c3f018eca3849ec0",
+    "merge_commit_sha": "ec29155fe65247abf01e45039b64fb295353de1d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T15:38:18.458+09:00",
+    "reference": "!57",
+    "references": {
+      "short": "!57",
+      "relative": "!57",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!57"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/57",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "17",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "head_sha": "674893107151bf43cb8dca68c3f018eca3849ec0",
+      "start_sha": "db5668904d7b9577ba1031a823db6f7830214ff0"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "cb6a0dee94b83f4f3511a87282ac693bfea109e1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793821,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T15:38:16.702+09:00",
+          "updated_at": "2026-09-11T15:38:16.716+09:00",
+          "system": true,
+          "noteable_id": 941180,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 57,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "533f87f61ee7a2e7a3fd513bfa32d8b819504e1d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793823,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 설계 분리 및 순수 함수 원칙:** 배분, 비용, 기업행위 모듈이 외부 상태에 의존하지 않는 순수 함수 및 컴포넌트 구조로 설계되어 테스트 용이성과 재현성을 높였습니다.\n- **방어적 프로그래밍과 명확한 에러 구분:** 설정값 누락이나 미확정 전략(`SECTOR_MOMENTUM`, `MINIMUM_VARIANCE`) 호출 시 임의로 기본값을 가정하지 않고, 사용자에게 명확한 원인(`INVALID_REQUEST` vs `CONSTRAINT_VIOLATION`)과 사유를 반환하도록 예외 처리가 정교하게 구현되었습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `test_allocation.py`의 `apply_cap` 함수에 대해, 상한(`weightCap`) 값들이 소수점 연산 중 부동소수점 정밀도 한계에 부딪히거나 재분배 과정에서 루프가 수렴하지 않는 경계 조건(예: 아주 작은 비중의 다수 종목 조합) 시나리오 테스트를 추가하여 안정성을 검증할 것을 제안합니다.\n- `test_corporate_actions.py`에서 액면분할 시 보유 수량이 홀수이거나 분할 비율이 소수점 형태일 때 내림 처리(`ROUND_FLOOR`)와 예외 기록(`SPLIT_FRACTION`)이 의도대로 정확히 생성되는지 다양한 비율(예: 3:2 분할 등)로 검증하는 시나리오를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:674893107151bf43cb8dca68c3f018eca3849ec0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-11T15:38:23.630+09:00",
+          "updated_at": "2026-09-11T15:42:16.756+09:00",
+          "system": false,
+          "noteable_id": 941180,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 57,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "776bee3a82b0183263bb9284352f0c5ccf379634",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793840,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T15:39:05.560+09:00",
+          "updated_at": "2026-09-11T15:39:05.570+09:00",
+          "system": true,
+          "noteable_id": 941180,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 57,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "186a5d64bebede4e83cd9075430b5d0f77354e6d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793870,
+          "type": null,
+          "body": "added 2 commits\n\n<ul><li>4e5bc88b - fix(be): 분할 수량이 음수면 조용히 0으로 만들지 않고 멈춘다</li><li>67489310 - test(be): 관측 구간 경계와 단주 내림 방향을 좁게 고정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/57/diffs?diff_id=2187702&start_sha=a4d1270302c315131f034846686768e52c3de91a)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T15:42:08.257+09:00",
+          "updated_at": "2026-09-11T15:42:08.260+09:00",
+          "system": true,
+          "noteable_id": 941180,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 57,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "05f3a823a0e3f3c97639cf7c244324c34dacfd87",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793881,
+          "type": null,
+          "body": "mentioned in commit ec29155fe65247abf01e45039b64fb295353de1d",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-11T15:43:15.158+09:00",
+          "updated_at": "2026-09-11T15:43:15.168+09:00",
+          "system": true,
+          "noteable_id": 941180,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 57,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b7f52f841a6362b7e85b3581524bb2916b92ed52",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801393,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T13:21:02.415+09:00",
+          "updated_at": "2026-09-14T13:21:02.419+09:00",
+          "system": true,
+          "noteable_id": 941180,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 57,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2187702,
+      "head_commit_sha": "674893107151bf43cb8dca68c3f018eca3849ec0",
+      "base_commit_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "start_commit_sha": "db5668904d7b9577ba1031a823db6f7830214ff0",
+      "created_at": "2026-09-11T15:42:08.000+09:00",
+      "merge_request_id": 941180,
+      "state": "collected",
+      "real_size": "17",
+      "patch_id_sha": "1b5319e452558ff6e4a7ad83cd3832ca48edbdf8"
+    },
+    {
+      "id": 2187679,
+      "head_commit_sha": "a4d1270302c315131f034846686768e52c3de91a",
+      "base_commit_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "start_commit_sha": "db5668904d7b9577ba1031a823db6f7830214ff0",
+      "created_at": "2026-09-11T15:38:17.263+09:00",
+      "merge_request_id": 941180,
+      "state": "without_files",
+      "real_size": "17",
+      "patch_id_sha": "a26cd405976c295a802d9d11e0402a49f9a1be3c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2187702,
+      "head_commit_sha": "674893107151bf43cb8dca68c3f018eca3849ec0",
+      "base_commit_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "start_commit_sha": "db5668904d7b9577ba1031a823db6f7830214ff0",
+      "created_at": "2026-09-11T15:42:08.000+09:00",
+      "merge_request_id": 941180,
+      "state": "collected",
+      "real_size": "17",
+      "patch_id_sha": "1b5319e452558ff6e4a7ad83cd3832ca48edbdf8",
+      "commits": [
+        {
+          "id": "674893107151bf43cb8dca68c3f018eca3849ec0",
+          "short_id": "67489310",
+          "created_at": "2026-09-11T15:42:04.000+09:00",
+          "parent_ids": [
+            "4e5bc88b057f279a5ede93bf43bf92c442cc9864"
+          ],
+          "title": "test(be): 관측 구간 경계와 단주 내림 방향을 좁게 고정한다",
+          "message": "test(be): 관측 구간 경계와 단주 내림 방향을 좁게 고정한다\n\n리뷰 제안 두 가지 중 하나는 이미 덮여 있었고 하나는 실제로 비어 있었다.\n\n역변동성 관측 구간: 기존 테스트는 lookback 보다 이틀 모자란 종목을 썼다. 그러면\n경계 조건(len < lookback + 1)을 lookback 으로 잘못 써도 통과한다. 딱 하루 모자란\n종목과 딱 맞는 종목 두 갈래를 넣었다. 조건을 잘못 고치면 앞쪽이 실패한다(확인함).\n남은 종목이 투자 비중을 전부 가져가는지도 같이 본다.\n\n단주 내림: 제안한 1.5 비율·5주 조합은 이미 있었다. 대신 파라미터로 1.33 을 더해\n내림과 반올림이 갈리는 경우를 하나 늘렸다(6.65 -> 6, 반올림이면 7).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:42:04.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:42:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/674893107151bf43cb8dca68c3f018eca3849ec0"
+        },
+        {
+          "id": "4e5bc88b057f279a5ede93bf43bf92c442cc9864",
+          "short_id": "4e5bc88b",
+          "created_at": "2026-09-11T15:40:30.000+09:00",
+          "parent_ids": [
+            "a4d1270302c315131f034846686768e52c3de91a"
+          ],
+          "title": "fix(be): 분할 수량이 음수면 조용히 0으로 만들지 않고 멈춘다",
+          "message": "fix(be): 분할 수량이 음수면 조용히 0으로 만들지 않고 멈춘다\n\n리뷰 지적을 따라가다 발견했다. 지적은 \"ROUND_FLOOR 가 음수에서 의도와 다르게 돈다\"\n였고 현재 코드는 음수를 내림 앞에서 걸러내므로 그 문제는 없다. 다만 걸러내는 방식이\n조용히 0 을 돌려주는 것이었다.\n\n공매도가 없으므로(FR-012) 음수 보유는 생길 수 없다. 생겼다면 호출부가 망가진 것인데,\n0 으로 만들면 그 자리에서 포지션이 사라지고 원인을 되짚을 수 없다. 보유 없음(0)과\n있을 수 없는 상태(음수)를 갈라 뒤쪽은 거절한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:40:30.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:40:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4e5bc88b057f279a5ede93bf43bf92c442cc9864"
+        },
+        {
+          "id": "a4d1270302c315131f034846686768e52c3de91a",
+          "short_id": "a4d12703",
+          "created_at": "2026-09-11T15:11:04.000+09:00",
+          "parent_ids": [
+            "99737bedc8e17a11d97d0b7a3def2cd60b84347e"
+          ],
+          "title": "docs(be): 배분·비용·기업행위 규칙을 워커 규칙 문서에 남긴다",
+          "message": "docs(be): 배분·비용·기업행위 규칙을 워커 규칙 문서에 남긴다\n\nspec 004 T007 에서 정한 것 중 다음 작업자가 모르면 어기게 되는 것들을 적는다.\n배분은 순수 함수라는 것, 규칙 값과 비용 수치를 코드에 두지 않는다는 것, 미확정\n전략을 돌리지 않는다는 것, INVALID_REQUEST 와 CONSTRAINT_VIOLATION 의 구분,\n분배금의 권리락일·지급일 분리다.\n\ntasks.md T007 에는 구현하며 내린 결정 다섯 가지를 적었다. 특히 비용 적용 방향은\nspec 이 정하지 않은 것을 정한 것이라 리뷰에서 볼 수 있어야 한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:11:04.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:11:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a4d1270302c315131f034846686768e52c3de91a"
+        },
+        {
+          "id": "99737bedc8e17a11d97d0b7a3def2cd60b84347e",
+          "short_id": "99737bed",
+          "created_at": "2026-09-11T15:10:26.000+09:00",
+          "parent_ids": [
+            "2bd35863fbf8b31524a666fad0b5e1324166b9eb"
+          ],
+          "title": "feat(be): 배분 규칙 세 가지와 미확정 전략 거절을 추가한다",
+          "message": "feat(be): 배분 규칙 세 가지와 미확정 전략 거절을 추가한다\n\nspec 004 T007(S15P21E205-140). FR-021·FR-022·FR-023, R-08.\n\ncompute_weights 는 순수 함수다. 조정 종가 이력과 규칙 명세를 받아 목표 비중을\n돌려주고 주문도 현금도 모른다 — 같은 입력이면 언제 불러도 같은 답이 나와야 재사용\n판정(R-03)이 성립한다.\n\n고정 비중은 사용자 지정값을 그대로 쓰고(source=USER), 동일 비중은 그날 투자 가능한\n종목에 1/N 을 준다. 역변동성은 관측 구간 표준편차의 역수로 나누고, 0 변동성 종목과\n관측 구간이 모자란 종목은 제외한 뒤 그 사실을 예외 기록으로 남긴다.\n\n규칙 값은 allocation.rules 에서만 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새\n규칙 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다. 값이 없으면 지어내지 않고\nINVALID_REQUEST 로 멈춘다. 역변동성 값은 전부 PD-02 대기라 더욱 그렇다.\n\nrules_registry 는 \"팀이 아직 정하지 않았다\"와 \"이 엔진이 구현하지 않았다\"를 구분해\n말한다. 앞은 워커를 고치면 되고 뒤는 결정이 날 때까지 아무도 고칠 수 없다 — 같은\n말을 하면 사용자는 기다려야 하는지 신고해야 하는지 알 수 없다.\n\n상한을 지킬 수 없는 요청(상한 x 종목 수 < 투자 비중)은 CONSTRAINT_VIOLATION 이다.\n조용히 미달로 두면 요청한 조건과 다른 포트폴리오의 성과를 그 조건의 성과로 보여 준다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:10:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:10:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/99737bedc8e17a11d97d0b7a3def2cd60b84347e"
+        },
+        {
+          "id": "2bd35863fbf8b31524a666fad0b5e1324166b9eb",
+          "short_id": "2bd35863",
+          "created_at": "2026-09-11T15:05:04.000+09:00",
+          "parent_ids": [
+            "61e2ae72d89e5b5983993b12141c6f7007f9c058"
+          ],
+          "title": "feat(be): 분배금과 액면분할을 보유에 반영하는 모듈을 추가한다",
+          "message": "feat(be): 분배금과 액면분할을 보유에 반영하는 모듈을 추가한다\n\nspec 004 T007(S15P21E205-140). FR-013.\n\n분배금은 권리락일에 자격이 생기고 지급일에 현금이 들어온다. 둘을 같은 날로 다루면\n권리락일에 들고 있다가 판 사람에게 0 을 주고, 지급일에 새로 산 사람에게 남의 몫을\n준다. 장부가 자격을 적어 두었다가 지급일에 한 번만 현금으로 바꾼다. 지급일이 실행\n종료일 뒤인 자격은 끝내 지급되지 않는다 — 받지 못한 돈을 받은 것으로 치지 않는다.\n\nETF 내부 보수는 차감하지 않는다(FR-013). 이미 가격에 반영된 비용을 두 번 세게 된다.\n\n액면분할은 수량만 바꾼다. 정수 주만 다루므로 나누어떨어지지 않으면 내림하고 그 사실을\n예외 기록으로 남긴다 — 조용히 버리면 사용자는 자산이 준 이유를 알 수 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:05:04.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:05:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2bd35863fbf8b31524a666fad0b5e1324166b9eb"
+        },
+        {
+          "id": "61e2ae72d89e5b5983993b12141c6f7007f9c058",
+          "short_id": "61e2ae72",
+          "created_at": "2026-09-11T15:03:19.000+09:00",
+          "parent_ids": [
+            "1590e7b86ced0c37df9cfb1e82cff6d903ee938a"
+          ],
+          "title": "refactor(be): 데모 엔진의 하드코딩 슬리피지를 비용 프로필로 넘긴다",
+          "message": "refactor(be): 데모 엔진의 하드코딩 슬리피지를 비용 프로필로 넘긴다\n\n엔진이 SLIPPAGE_BPS=5 를 상수로 들고 있었고, 다른 값이 오면 engine_support 가\n실행 전에 거절했다. 등록표에 새 비용 버전이 생겨도 엔진이 받을 수 없는 구조다.\n이제 요청에 실려 온 execution.costProfile 에서 읽는다.\n\n수량 계산도 CostModel.affordable_quantity 로 넘겼다. 예전 식은 체결가만 보고\n나눠서 수수료가 0 이 아닐 때 초과 매수가 났다. 데모 프로필은 수수료가 0 이라\n지금 숫자는 그대로다.\n\nengine_support 에서 슬리피지 거절만 뺐다. 수수료·호가차·세금은 이 엔진이 아직\n계산하지 않으므로 0 요구를 남긴다 — 다종목 엔진(T006)이 그 제한을 걷어낸다.\n\n동작 변경 없음: 데모 프로필(슬리피지 5bps, 나머지 0)에서 옛 계산과 같은 값이 나오고\n기존 회귀 테스트가 그대로 통과한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:03:19.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:03:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/61e2ae72d89e5b5983993b12141c6f7007f9c058"
+        },
+        {
+          "id": "1590e7b86ced0c37df9cfb1e82cff6d903ee938a",
+          "short_id": "1590e7b8",
+          "created_at": "2026-09-11T15:01:24.000+09:00",
+          "parent_ids": [
+            "d42af44174914af1e350ba0160bb99ee58c79ad1"
+          ],
+          "title": "feat(be): 비용 조건을 체결에 적용하는 모듈을 추가한다",
+          "message": "feat(be): 비용 조건을 체결에 적용하는 모듈을 추가한다\n\nspec 004 T007(S15P21E205-140)의 첫 조각. 엔진은 비용 수치를 자체 기본값으로 갖지\n않고 요청에 실려 온 프로필에서만 읽는다 — 코드가 기본값을 들고 있으면 등록표에 새\n버전이 생겼을 때 옛 실행의 재현이 깨진다.\n\n어느 쪽에 무엇을 매기는지는 spec 이 정하지 않았다. PD-07 이 정하는 것은 수치이고,\n수치를 쓰려면 적용 규칙이 먼저 있어야 한다. 세 가지를 정해 모듈 주석에 모아 뒀다.\n수수료·호가차·슬리피지는 양방향, 세금은 매도만, 기준 금액은 가격 충격 전 금액이다.\n지금 등록된 데모 프로필(슬리피지만 5bps)에서는 어느 규칙을 골라도 결과가 같다.\n\n호가차·슬리피지는 체결가를 불리하게 움직이고 수수료·세금은 현금으로 빠진다. 둘을\n한 숫자로 합치지 않는 이유는 결과 계약이 넷을 따로 보여 주기 때문이다.\n\n주문 방향 Side(BUY/SELL) 를 여기 둔다. 계약의 TradeSide 는 포지션 방향(LONG/SHORT)\n이라 다른 개념이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:01:24.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:01:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1590e7b86ced0c37df9cfb1e82cff6d903ee938a"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -88,11 +88,12 @@\n \n **Independent Test**: quickstart S8·S9·S7. 3종목 24개월 픽스처로 세 전략을 실행해 대표 거래일 3개의 체결일·수량·현금·비용·분배금이 `manual_reconciliation.json`과 정확히 일치, 모든 체결일 = 판단일 다음 거래일, 거래 정지일 이월 `reason=HALT_DEFERRED`, 결과 시작일 = 워밍업 이후. `SECTOR_MOMENTUM` 요청은 422. 같은 입력 두 번 실행 시 EngineOutput 바이트 동일.\n \n-- [ ] T007 [P] [US2] [BE] 기업행위·비용 프로필·배분 규칙 모듈(고정·동일·역변동성) (`worker/src/worker/{corporate_actions,costs,rules_registry}.py`, `worker/src/worker/allocation/{__init__,base,fixed,equal,inverse_vol}.py`, `worker/tests/{test_corporate_actions,test_costs,test_allocation}.py`) — Jira `S15P21E205-140`\n+- [x] T007 [P] [US2] [BE] 기업행위·비용 프로필·배분 규칙 모듈(고정·동일·역변동성) (`worker/src/worker/{corporate_actions,costs,rules_registry}.py`, `worker/src/worker/allocation/{__init__,base,fixed,equal,inverse_vol}.py`, `worker/tests/{test_corporate_actions,test_costs,test_allocation}.py`) — Jira `S15P21E205-140`\n   - 분배금: 보유 중 `pay_date`에 `amount_per_share × 보유 수량` 현금 유입 1회, `portfolioSeries[].cashFlows[{type: DISTRIBUTION}]`. ETF 내부 보수 미차감(FR-013). 분할은 수량 조정\n   - 비용: `costProfile`의 commission·spread·slippage·tax bps를 체결마다 적용해 `trades[].detail`과 `costs{…,total}`. 하드코딩 `SLIPPAGE_BPS=5` 제거. `escalation`은 `scenario=COST_ESCALATION`일 때만, 미정의면 INVALID_REQUEST\n   - `compute_weights(history, params, rules) -> AllocationResult{weights, source: USER|COMPUTED, exceptions[]}` 순수 함수. FIXED_WEIGHT(source=USER), EQUAL_WEIGHT(1/N), INVERSE_VOLATILITY(`rules.lookbackDays` 63 표준편차 역수, 0 변동성은 `rules.zeroVolatility`대로 + `exceptions[{kind: ZERO_VOLATILITY}]`, `weightCap` 초과 재분배 불가 시 CONSTRAINT_VIOLATION). 규칙 값은 EngineInput `allocation.rules`에서만 읽고 자체 기본값 없음(provisional, PD-02)\n   - `rules_registry.py`: SECTOR_MOMENTUM·MINIMUM_VARIANCE 또는 rules 없음 → INVALID_REQUEST(\"RULES_NOT_REGISTERED\"). 두 전략 모듈 파일은 만들지 않음(PD-03·04 확정 후 별도 Task)\n+  - 구현 시 결정(T007): ① **비용 적용 방향을 정했다** — 수수료·호가차·슬리피지는 양방향, 세금은 매도만, 기준 금액은 가격 충격 전 금액. spec은 수치(PD-07)만 정하고 방향은 정하지 않았는데 방향 없이는 수치를 쓸 수 없다. 데모 프로필(슬리피지만 5bps)에서는 어느 방향을 골라도 결과가 같다 ② 하드코딩 `SLIPPAGE_BPS` 제거는 데모 엔진을 `CostModel`로 넘기는 방식으로 했다. `engine_support`의 수수료·호가차·세금 0 요구는 남겼다 — 그 엔진이 아직 계산하지 않으므로. 다종목 엔진(T006)이 걷어낸다 ③ 주문 방향 `Side(BUY/SELL)`를 `costs.py`에 신설했다. 계약의 `TradeSide`는 포지션 방향(LONG/SHORT)이라 다른 개념이다 ④ 액면분할 단주는 내림하고 `SPLIT_FRACTION` 예외로 남긴다(현금 대체 지급은 가격이 필요해 미도입) ⑤ 역변동성에서 관측 구간이 모자란 종목은 `INSUFFICIENT_HISTORY` 예외로 제외한다 — 짧은 표본의 표준편차는 다른 종목과 같은 척도가 아니라 역수를 비교하는 순간 비중이 왜곡된다\n - [ ] T008 [US2] [BE] 성과 지표 확장과 결정성·수기 대조 테스트(SC-002·SC-003) (`worker/src/worker/{performance,engine_runner}.py`, `worker/tests/{test_performance,test_determinism,test_manual_reconciliation}.py`, `worker/tests/fixtures/{manual_reconciliation.json,engine-input-three-etf-{fixed,equal,inverse_vol}.json}`, `docs/specs/backtest-messaging/examples/reconciliation/*.csv`) — Jira `S15P21E205-142`\n   - `performance{…, netTotalReturn, maxDrawdown, totalTradingCost}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method:\"sample-covariance-daily\"}`, `exceptions[]` 집계, `versions{mapping, rules(provisional), scenarioRules(TARGET_RISK_OVERLAY/1, 해당 시), costProfile(provisional), data, engine:\"nautilus_trader 1.219.0\", worker}`. 결정성·수기 대조 테스트에 `TARGET_RISK` 픽스처 1건 추가(quickstart S11). 부분 결과(취소·한도)는 `lastTradingDate`까지의 시계열로 같은 함수가 계산\n   - 결정성: 같은 EngineInput 두 번 실행 → `run.startedAt`·`run.finishedAt` 두 필드를 뺀 `EngineOutput.to_json()`이 바이트 동일(세 전략). 자원 사용량은 EngineOutput 밖(FINISHED payload `resource`)이라 비교 대상이 아니다. 시각 두 필드는 존재만 확인\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+\"\"\"배분 규칙 레지스트리(spec 004 T007).\n+\n+전략을 추가할 때 손댈 곳은 이 파일의 한 줄과 모듈 하나다. 엔진(T006)은 ``compute_weights`` 만\n+부르고 어떤 전략이 있는지 모른다.\n+\n+**여기 없는 전략은 임의로 계산하지 않는다.** 팀이 규칙을 확정하지 않은 전략\n+(``SECTOR_MOMENTUM``·``MINIMUM_VARIANCE``, PD-03·PD-04)을 그럴듯한 기본값으로 돌리면, 나중에\n+규칙이 정해졌을 때 같은 요청이 다른 숫자를 내고 그 차이를 아무도 설명할 수 없다. 실행을 멈추고\n+왜 멈췄는지 말한다(FR-010).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping, Sequence\n+from datetime import date\n+from typing import Any\n+\n+import pandas as pd\n+\n+from worker.allocation import equal, fixed, inverse_vol\n+from worker.allocation.base import (\n+    AllocationError,\n+    AllocationResult,\n+    AllocationRule,\n+)\n+from worker.contracts.engine_input import AllocationSpec, UniverseItem\n+from worker.rules_registry import rules_not_registered_message\n+\n+#: ``allocation.strategyId`` → 배분 함수.\n+ALLOCATION_RULES: dict[str, AllocationRule] = {\n+    fixed.STRATEGY_ID: fixed.compute,\n+    equal.STRATEGY_ID: equal.compute,\n+    inverse_vol.STRATEGY_ID: inverse_vol.compute,\n+}\n+\n+\n+def compute_weights(\n+    allocation: AllocationSpec,\n+    universe: Sequence[UniverseItem],\n+    history: pd.DataFrame,\n+    as_of: date,\n+) -> AllocationResult:\n+    \"\"\"리밸런싱 판단일의 목표 비중.\n+\n+    :param history: 조정 종가 이력(index=거래일, columns=종목). **판단일까지만** 담겨 있어야\n+        한다 — 뒷날 값이 섞여 들어오면 미래를 본 신호가 된다\n+    :param as_of: 판단일. 예외 기록의 날짜로 쓴다\n+    \"\"\"\n+    rule = ALLOCATION_RULES.get(allocation.strategy_id)\n+    if rule is None:\n+        # 팀 결정 대기인지 엔진 미구현인지를 구분해 말한다 — 사용자가 할 일이 다르다.\n+        raise AllocationError(\n+            \"INVALID_REQUEST\", rules_not_registered_message(allocation.strategy_id)\n+        )\n+    rules: Mapping[str, Any] = allocation.rules or {}\n+    if not rules:\n+        raise AllocationError(\n+            \"INVALID_REQUEST\",\n+            f\"RULES_NOT_REGISTERED: allocation.rules is empty for {allocation.strategy_id};\"\n+            \" the engine does not carry its own rule values (spec 004 R-08)\",\n+        )\n+    return rule(universe, history, allocation.parameters, rules, as_of)\n+\n+\n+__all__ = [\n+    \"ALLOCATION_RULES\",\n+    \"AllocationError\",\n+    \"AllocationResult\",\n+    \"compute_weights\",\n+]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/allocation/__init__.py",
+          "old_path": "worker/src/worker/allocation/__init__.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,142 @@\n+\"\"\"배분 모듈의 공통 타입(spec 004 T007).\n+\n+배분은 **순수 함수**다. 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려준다. 주문도 현금도\n+모르고, 같은 입력이면 언제 불러도 같은 답이 나온다 — 재사용(R-03)의 전제가 이것이다.\n+\n+**규칙 값은 요청에 실려 온 명세에서만 읽는다.** 모듈이 기본값을 들고 있으면 등록표에 새 규칙\n+버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-08). 명세에 없는 값을 쓰려 하면 실행을 멈추고\n+왜 멈췄는지 말한다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping, Sequence\n+from dataclasses import dataclass, field\n+from datetime import date\n+from decimal import Decimal\n+from typing import Any, Protocol\n+\n+import pandas as pd\n+\n+from worker.contracts.engine_input import UniverseItem\n+from worker.contracts.engine_output import ExceptionRecord, WeightsSource\n+\n+ZERO = Decimal(0)\n+ONE = Decimal(1)\n+\n+#: 결과 계약 ``exceptions[].kind``. 개방 집합이다.\n+ZERO_VOLATILITY = \"ZERO_VOLATILITY\"\n+\n+\n+class AllocationError(ValueError):\n+    \"\"\"배분을 할 수 없다. ``code`` 가 그대로 엔진 오류 코드가 된다.\n+\n+    ``INVALID_REQUEST`` 는 요청이 잘못됐다는 뜻이고 ``CONSTRAINT_VIOLATION`` 은 요청은\n+    말이 되지만 그 조건을 만족하는 배분이 존재하지 않는다는 뜻이다. 둘을 섞으면 사용자가\n+    무엇을 고쳐야 하는지 알 수 없다.\n+    \"\"\"\n+\n+    def __init__(self, code: str, message: str) -> None:\n+        super().__init__(message)\n+        self.code = code\n+\n+\n+@dataclass(frozen=True)\n+class AllocationResult:\n+    \"\"\"목표 비중과 그것을 정하며 겪은 예외.\n+\n+    :param weights: 종목 → 비중. 합은 투자 비중(기본 1)이고 나머지는 현금이다\n+    :param source: 사용자 지정(USER)인지 계산(COMPUTED)인지. 결과 화면이 이 값으로 설명을 바꾼다\n+    \"\"\"\n+\n+    weights: dict[str, Decimal]\n+    source: WeightsSource\n+    exceptions: list[ExceptionRecord] = field(default_factory=list)\n+\n+\n+class AllocationRule(Protocol):\n+    \"\"\"전략 하나의 배분 규칙.\"\"\"\n+\n+    def __call__(\n+        self,\n+        universe: Sequence[UniverseItem],\n+        history: pd.DataFrame,\n+        parameters: Mapping[str, Any],\n+        rules: Mapping[str, Any],\n+        as_of: date,\n+    ) -> AllocationResult: ...\n+\n+\n+def require_rule_value(rules: Mapping[str, Any], key: str, strategy_id: str) -> Any:\n+    \"\"\"규칙 명세에서 값을 읽는다. 없으면 기본값을 지어내지 않고 멈춘다.\"\"\"\n+    if key not in rules or rules[key] is None:\n+        raise AllocationError(\n+            \"INVALID_REQUEST\",\n+            f\"allocation.rules.{key} is required for {strategy_id};\"\n+            \" this engine has no default for it (spec 004 R-08)\",\n+        )\n+    return rules[key]\n+\n+\n+def decimal_rule(rules: Mapping[str, Any], key: str, strategy_id: str) -> Decimal:\n+    raw = require_rule_value(rules, key, strategy_id)\n+    try:\n+        return Decimal(str(raw))\n+    except (ArithmeticError, ValueError) as exc:\n+        raise AllocationError(\n+            \"INVALID_REQUEST\", f\"allocation.rules.{key} is not a decimal: {raw!r}\"\n+        ) from exc\n+\n+\n+def int_rule(rules: Mapping[str, Any], key: str, strategy_id: str) -> int:\n+    raw = require_rule_value(rules, key, strategy_id)\n+    if isinstance(raw, bool) or not isinstance(raw, int):\n+        raise AllocationError(\n+            \"INVALID_REQUEST\", f\"allocation.rules.{key} must be an integer: {raw!r}\"\n+        )\n+    return raw\n+\n+\n+def apply_cap(\n+    weights: dict[str, Decimal], cap: Decimal, invested: Decimal, strategy_id: str\n+) -> dict[str, Decimal]:\n+    \"\"\"종목별 상한을 지키도록 비중을 다시 나눈다.\n+\n+    상한에 걸린 종목은 상한으로 고정하고 남은 몫을 나머지가 원래 비율대로 나눠 갖는다. 반복하는\n+    이유는 재분배가 다른 종목을 상한 위로 밀어 올릴 수 있기 때문이다. 상한 × 종목 수가 투자 비중에\n+    못 미치면 어떤 배분으로도 조건을 만족할 수 없으므로 ``CONSTRAINT_VIOLATION`` 이다 — 조용히\n+    미달로 두면 요청한 조건과 다른 포트폴리오의 성과를 그 조건의 성과로 보여 주게 된다.\n+    \"\"\"\n+    if cap <= ZERO:\n+        raise AllocationError(\n+            \"INVALID_REQUEST\", f\"allocation.rules.weightCap must be positive: {cap}\"\n+        )\n+    if cap * len(weights) < invested:\n+        raise AllocationError(\n+            \"CONSTRAINT_VIOLATION\",\n+            f\"weightCap {cap} x {len(weights)} instruments cannot reach investedFraction\"\n+            f\" {invested} for {strategy_id}\",\n+        )\n+    capped = dict(weights)\n+    for _ in range(len(weights)):\n+        over = {key: value for key, value in capped.items() if value > cap}\n+        if not over:\n+            break\n+        spill = sum(value - cap for value in over.values())\n+        free = {key: value for key, value in capped.items() if value <= cap}\n+        room = sum(cap - value for value in free.values())\n+        for key in over:\n+            capped[key] = cap\n+        if room <= ZERO:\n+            break\n+        for key, value in free.items():\n+            capped[key] = value + spill * (cap - value) / room\n+    return capped\n+\n+\n+def normalise(weights: dict[str, Decimal], invested: Decimal) -> dict[str, Decimal]:\n+    \"\"\"합이 투자 비중이 되도록 비례 조정한다. 전부 0이면 현금 100%다.\"\"\"\n+    total = sum(weights.values())\n+    if total <= ZERO:\n+        return {key: ZERO for key in weights}\n+    return {key: value * invested / total for key, value in weights.items()}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/allocation/base.py",
+          "old_path": "worker/src/worker/allocation/base.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+\"\"\"동일 비중(FR-022). 투자 가능한 종목에 1/N.\"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping, Sequence\n+from datetime import date\n+from decimal import Decimal\n+from typing import Any\n+\n+import pandas as pd\n+\n+from worker.allocation.base import AllocationError, AllocationResult\n+from worker.contracts.engine_input import UniverseItem\n+from worker.contracts.engine_output import WeightsSource\n+\n+STRATEGY_ID = \"EQUAL_WEIGHT\"\n+\n+\n+def compute(\n+    universe: Sequence[UniverseItem],\n+    history: pd.DataFrame,\n+    parameters: Mapping[str, Any],\n+    rules: Mapping[str, Any],\n+    as_of: date,\n+) -> AllocationResult:\n+    \"\"\"1/N. 나누는 대상은 **그날 투자 가능한 종목**이다.\n+\n+    투자 가능 판정은 그날 이력 값이 있는지로 한다 — 상장 전이거나 자료가 없는 종목에 비중을 주면\n+    살 수 없는 주식에 돈을 배정한 것이 된다. 종목 수가 달라지면 비중도 달라지는 것이 이 전략의\n+    정의다(FR-022).\n+    \"\"\"\n+    investable = [\n+        item.instrument_id\n+        for item in universe\n+        if item.instrument_id in history.columns\n+        and len(history.index) > 0\n+        and pd.notna(history[item.instrument_id].iloc[-1])\n+    ]\n+    if not investable:\n+        raise AllocationError(\n+            \"CONSTRAINT_VIOLATION\", f\"no investable instrument on {as_of} for {STRATEGY_ID}\"\n+        )\n+    share = Decimal(1) / Decimal(len(investable))\n+    return AllocationResult(\n+        weights={instrument: share for instrument in investable},\n+        source=WeightsSource.COMPUTED,\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/allocation/equal.py",
+          "old_path": "worker/src/worker/allocation/equal.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,44 @@\n+\"\"\"고정 비중(FR-021). 사용자가 지정한 비중을 그대로 쓴다.\"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping, Sequence\n+from datetime import date\n+from decimal import Decimal\n+from typing import Any\n+\n+import pandas as pd\n+\n+from worker.allocation.base import AllocationError, AllocationResult\n+from worker.contracts.engine_input import UniverseItem\n+from worker.contracts.engine_output import WeightsSource\n+\n+STRATEGY_ID = \"FIXED_WEIGHT\"\n+\n+\n+def compute(\n+    universe: Sequence[UniverseItem],\n+    history: pd.DataFrame,\n+    parameters: Mapping[str, Any],\n+    rules: Mapping[str, Any],\n+    as_of: date,\n+) -> AllocationResult:\n+    \"\"\"지정 비중을 그대로 돌려준다. 계산하지 않으므로 이력도 규칙도 보지 않는다.\n+\n+    비중 합이 1인지는 접수(백엔드)가 이미 확인했다. 여기서 다시 보는 이유는 워커가 백엔드를 거치지\n+    않고도 돌 수 있기 때문이고, 무엇보다 **합이 1이 아닌 채로 계산하면 현금 비중이 사용자가\n+    의도하지 않은 값이 된다**.\n+    \"\"\"\n+    missing = [item.instrument_id for item in universe if item.target_weight is None]\n+    if missing:\n+        raise AllocationError(\n+            \"INVALID_REQUEST\",\n+            f\"{STRATEGY_ID} requires targetWeight on every universe item; missing: {missing}\",\n+        )\n+    weights = {item.instrument_id: item.target_weight for item in universe}\n+    total = sum(weights.values())\n+    if total != Decimal(1):\n+        raise AllocationError(\n+            \"INVALID_REQUEST\", f\"targetWeight must sum to 1 for {STRATEGY_ID}: {total}\"\n+        )\n+    return AllocationResult(weights=weights, source=WeightsSource.USER)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/allocation/fixed.py",
+          "old_path": "worker/src/worker/allocation/fixed.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,116 @@\n+\"\"\"역변동성(FR-023). 최근 변동성이 낮은 종목에 더 많이 싣는다.\n+\n+**규칙 값이 전부 임시다**(등록표 `provisional=true`, 결정 항목 PD-02). 관측 63거래일은 spec이\n+정했지만 0 변동성 처리·비중 상한·투자 비중 합계는 아직 팀 결정이 아니다. 그래서 이 모듈은 값을\n+하나도 갖고 있지 않고 전부 `allocation.rules` 에서 읽는다 — 값이 정해지면 등록표 행만 고치면 되고\n+코드는 그대로다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping, Sequence\n+from datetime import date\n+from decimal import Decimal\n+from typing import Any\n+\n+import pandas as pd\n+\n+from worker.allocation.base import (\n+    ZERO,\n+    ZERO_VOLATILITY,\n+    AllocationError,\n+    AllocationResult,\n+    apply_cap,\n+    decimal_rule,\n+    int_rule,\n+    normalise,\n+    require_rule_value,\n+)\n+from worker.contracts.engine_input import UniverseItem\n+from worker.contracts.engine_output import ExceptionRecord, WeightsSource\n+\n+STRATEGY_ID = \"INVERSE_VOLATILITY\"\n+\n+#: ``rules.zeroVolatility`` 가 가질 수 있는 값. 모르는 값은 임의 해석하지 않고 거절한다.\n+EXCLUDE_THEN_ALLOCATE = \"EXCLUDE_THEN_ALLOCATE\"\n+\n+\n+def compute(\n+    universe: Sequence[UniverseItem],\n+    history: pd.DataFrame,\n+    parameters: Mapping[str, Any],\n+    rules: Mapping[str, Any],\n+    as_of: date,\n+) -> AllocationResult:\n+    lookback = int_rule(rules, \"lookbackDays\", STRATEGY_ID)\n+    zero_policy = require_rule_value(rules, \"zeroVolatility\", STRATEGY_ID)\n+    cap = decimal_rule(rules, \"weightCap\", STRATEGY_ID)\n+    invested = decimal_rule(rules, \"investedFraction\", STRATEGY_ID)\n+    if zero_policy != EXCLUDE_THEN_ALLOCATE:\n+        raise AllocationError(\n+            \"INVALID_REQUEST\",\n+            f\"allocation.rules.zeroVolatility={zero_policy!r} is not implemented;\"\n+            f\" this engine only knows {EXCLUDE_THEN_ALLOCATE} (PD-02)\",\n+        )\n+\n+    volatility, exceptions = _volatilities(universe, history, lookback, as_of)\n+    investable = {instrument: value for instrument, value in volatility.items() if value > ZERO}\n+    if not investable:\n+        # 전부 0 변동성이면 제외할 대상이 남지 않는다. 임의로 동일 비중을 주면 사용자가 고른 것과\n+        # 다른 전략을 돌린 것이 되므로 멈춘다.\n+        raise AllocationError(\n+            \"CONSTRAINT_VIOLATION\",\n+            f\"every instrument has zero volatility on {as_of}; {STRATEGY_ID} has nothing to weight\",\n+        )\n+\n+    inverse = {instrument: Decimal(1) / value for instrument, value in investable.items()}\n+    weights = normalise(inverse, invested)\n+    weights = apply_cap(weights, cap, invested, STRATEGY_ID)\n+    weights = normalise(weights, invested) if sum(weights.values()) != invested else weights\n+    return AllocationResult(weights=weights, source=WeightsSource.COMPUTED, exceptions=exceptions)\n+\n+\n+def _volatilities(\n+    universe: Sequence[UniverseItem],\n+    history: pd.DataFrame,\n+    lookback: int,\n+    as_of: date,\n+) -> tuple[dict[str, Decimal], list[ExceptionRecord]]:\n+    \"\"\"관측 구간의 일별 수익률 표준편차.\n+\n+    구간이 모자란 종목은 변동성을 지어내지 않고 제외한다 — 짧은 표본으로 계산한 값은 다른 종목의\n+    값과 같은 척도가 아니어서 역수를 비교하는 순간 비중이 왜곡된다.\n+    \"\"\"\n+    volatility: dict[str, Decimal] = {}\n+    exceptions: list[ExceptionRecord] = []\n+    for item in universe:\n+        instrument = item.instrument_id\n+        if instrument not in history.columns:\n+            continue\n+        closes = history[instrument].dropna()\n+        if len(closes) < lookback + 1:\n+            exceptions.append(\n+                ExceptionRecord(\n+                    date=as_of,\n+                    instrumentId=instrument,\n+                    kind=\"INSUFFICIENT_HISTORY\",\n+                    rule=f\"lookbackDays={lookback}\",\n+                    action=\"제외 후 나머지에 배분\",\n+                )\n+            )\n+            continue\n+        returns = closes.iloc[-(lookback + 1) :].pct_change().dropna()\n+        deviation = returns.std(ddof=1)\n+        value = ZERO if pd.isna(deviation) else Decimal(str(deviation))\n+        if value <= ZERO:\n+            exceptions.append(\n+                ExceptionRecord(\n+                    date=as_of,\n+                    instrumentId=instrument,\n+                    kind=ZERO_VOLATILITY,\n+                    rule=f\"zeroVolatility={EXCLUDE_THEN_ALLOCATE}\",\n+                    action=\"제외 후 나머지에 배분\",\n+                )\n+            )\n+        volatility[instrument] = value\n+    return volatility, exceptions\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/allocation/inverse_vol.py",
+          "old_path": "worker/src/worker/allocation/inverse_vol.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,138 @@\n+\"\"\"분배금과 액면분할을 보유에 반영한다(spec 004 T007, FR-013).\n+\n+**분배금은 권리락일에 자격이 생기고 지급일에 현금이 들어온다.** 둘은 며칠 떨어져 있고, 그\n+사이에 종목을 팔아도 자격은 남는다 — 권리락일에 들고 있었으면 받는다. 지급일 보유 수량으로\n+계산하면 그날 이미 판 사람에게 0을 주고, 그날 새로 산 사람에게 남의 몫을 준다.\n+\n+**ETF 내부 보수는 차감하지 않는다**(FR-013). 기초지수 대비 추적오차의 상당 부분이 보수인데,\n+그것을 다시 빼면 이미 가격에 반영된 비용을 두 번 세게 된다.\n+\n+액면분할은 수량만 바꾼다. 정수 주만 다루므로(``portfolio.integerLots``) 나누어떨어지지 않는\n+분할은 내림하고 그 사실을 예외로 남긴다 — 조용히 버리면 사용자는 자산이 줄어든 이유를 알 수 없다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from dataclasses import dataclass\n+from datetime import date\n+from decimal import Decimal\n+\n+from worker.contracts.engine_output import CashFlow, ExceptionRecord\n+from worker.market_data import Distribution, Split\n+\n+ZERO = Decimal(0)\n+\n+#: 결과 계약 ``portfolioSeries[].cashFlows[].type``.\n+DISTRIBUTION = \"DISTRIBUTION\"\n+\n+#: 예외 기록의 ``kind``. 개방 집합이라 새 값을 더해도 계약이 깨지지 않는다.\n+SPLIT_FRACTION = \"SPLIT_FRACTION\"\n+\n+\n+@dataclass(frozen=True)\n+class Entitlement:\n+    \"\"\"권리락일에 확정된 분배금 자격. 지급일에 현금이 된다.\"\"\"\n+\n+    instrument_id: str\n+    ex_date: date\n+    pay_date: date\n+    amount_per_share: Decimal\n+    quantity: Decimal\n+\n+    @property\n+    def cash(self) -> Decimal:\n+        return self.amount_per_share * self.quantity\n+\n+\n+class DistributionLedger:\n+    \"\"\"권리락일에 자격을 적어 두고 지급일에 현금으로 돌려준다.\n+\n+    한 번 지급한 자격은 장부에서 빼므로 <b>같은 분배금이 두 번 들어오지 않는다</b>. 지급일이\n+    실행 종료일 뒤면 끝내 지급되지 않는다 — 받지 못한 돈을 받은 것으로 치지 않는다.\n+    \"\"\"\n+\n+    def __init__(self, distributions: list[Distribution]) -> None:\n+        self._by_ex_date: dict[date, list[Distribution]] = {}\n+        for distribution in distributions:\n+            self._by_ex_date.setdefault(distribution.ex_date, []).append(distribution)\n+        self._pending: list[Entitlement] = []\n+\n+    def on_ex_date(self, day: date, holdings: dict[str, Decimal]) -> list[Entitlement]:\n+        \"\"\"이 거래일이 권리락일인 분배금의 자격을 확정한다.\n+\n+        :param holdings: 이 거래일을 시작하는 시점의 보유 수량. 이날 체결될 주문은 아직 반영하지\n+            않는다 — 권리락일 당일에 산 주식은 자격이 없다.\n+        \"\"\"\n+        created = []\n+        for distribution in self._by_ex_date.get(day, []):\n+            quantity = holdings.get(distribution.instrument_id, ZERO)\n+            if quantity <= ZERO:\n+                continue\n+            entitlement = Entitlement(\n+                instrument_id=distribution.instrument_id,\n+                ex_date=distribution.ex_date,\n+                pay_date=distribution.pay_date,\n+                amount_per_share=distribution.amount,\n+                quantity=quantity,\n+            )\n+            self._pending.append(entitlement)\n+            created.append(entitlement)\n+        return created\n+\n+    def on_pay_date(self, day: date) -> list[CashFlow]:\n+        \"\"\"지급일이 된 자격을 현금 흐름으로 바꾸고 장부에서 지운다.\"\"\"\n+        due = [item for item in self._pending if item.pay_date == day]\n+        if not due:\n+            return []\n+        self._pending = [item for item in self._pending if item.pay_date != day]\n+        return [\n+            CashFlow(type=DISTRIBUTION, instrumentId=item.instrument_id, amount=item.cash)\n+            for item in due\n+        ]\n+\n+    @property\n+    def unpaid(self) -> list[Entitlement]:\n+        \"\"\"아직 지급일이 오지 않은 자격. 실행이 끝나면 그대로 버려진다.\"\"\"\n+        return list(self._pending)\n+\n+\n+@dataclass(frozen=True)\n+class SplitOutcome:\n+    quantity: Decimal\n+    exception: ExceptionRecord | None = None\n+\n+\n+def apply_split(split: Split, quantity: Decimal) -> SplitOutcome:\n+    \"\"\"분할 비율만큼 수량을 늘린다. 정수로 떨어지지 않으면 내림하고 예외를 남긴다.\n+\n+    내림은 <b>양수 보유에 대해서만</b> 뜻이 있다. 음수 보유는 이 제품에 존재할 수 없고, 있다면\n+    ``ROUND_FLOOR`` 가 절댓값을 키우는 쪽으로 돌아 더 이상한 수량이 된다 — 그래서 내림하기 전에\n+    거절한다.\n+    \"\"\"\n+    if split.ratio <= ZERO:\n+        raise ValueError(f\"split ratio must be positive: {split.ratio}\")\n+    if quantity < ZERO:\n+        # 공매도가 없으므로(FR-012) 음수 보유는 생길 수 없다. 생겼다면 호출부가 망가진 것이고,\n+        # 조용히 0 으로 만들면 그 자리에서 포지션이 사라져 원인을 되짚을 수 없다.\n+        raise ValueError(f\"holding must not be negative: {quantity}\")\n+    if quantity == ZERO:\n+        return SplitOutcome(quantity=ZERO)\n+    exact = quantity * split.ratio\n+    whole = exact.to_integral_value(rounding=\"ROUND_FLOOR\")\n+    if whole == exact:\n+        return SplitOutcome(quantity=whole)\n+    return SplitOutcome(\n+        quantity=whole,\n+        exception=ExceptionRecord(\n+            date=split.ex_date,\n+            instrumentId=split.instrument_id,\n+            kind=SPLIT_FRACTION,\n+            rule=f\"ratio={split.ratio}\",\n+            action=f\"{exact} -> {whole} (단주 버림)\",\n+        ),\n+    )\n+\n+\n+def splits_on(splits: list[Split], day: date) -> list[Split]:\n+    \"\"\"이 거래일이 권리락일인 분할. 당일 시가부터 새 수량으로 본다.\"\"\"\n+    return [split for split in splits if split.ex_date == day]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/corporate_actions.py",
+          "old_path": "worker/src/worker/corporate_actions.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,139 @@\n+\"\"\"비용 조건(``execution.costProfile``)을 체결에 적용한다(spec 004 T007, FR-019·FR-027).\n+\n+엔진은 비용 수치를 **자체 기본값으로 갖지 않는다.** 전부 요청에 실려 온 프로필에서 읽는다. 값이\n+바뀌면 등록표에 새 버전이 생기고 옛 실행은 옛 버전을 계속 참조하므로(R-07), 코드가 기본값을 들고\n+있으면 그 재현이 깨진다.\n+\n+**어느 쪽에 무엇을 매기는지는 spec이 정하지 않았다.** PD-07이 정하는 것은 *수치*이고, 그 수치를\n+쓰려면 적용 규칙이 먼저 있어야 한다. 여기서 정한 규칙은 아래 세 줄이며, 지금 등록된 데모\n+프로필(수수료·호가차·세금 0, 슬리피지 5bps)에서는 어느 규칙을 고르든 결과가 같다 — 값이 정해질 때\n+다시 볼 수 있도록 한곳에 모아 둔다.\n+\n+1. **수수료·호가차·슬리피지는 사고팔 때 모두** 낸다. 거래를 성사시키는 데 드는 비용이다.\n+2. **세금은 팔 때만** 낸다. 거래세는 처분에 매기는 세금이다. (국내 ETF는 증권거래세 비과세라\n+   데모 프로필의 0이 실제와도 맞는다.)\n+3. 비용의 기준 금액은 **가격 충격을 반영하기 전** 수량 × 기준가다. 충격 후 금액으로 매기면 비용이\n+   비용을 늘리는 순환이 생긴다.\n+\n+호가차와 슬리피지는 **가격**을 불리하게 움직이고, 수수료와 세금은 **현금**으로 빠진다. 둘을 섞어\n+한 숫자로 만들지 않는 이유는 결과 계약이 넷을 따로 보여 주기 때문이다(``costs{commission, spread,\n+slippage, tax, total}``).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from dataclasses import dataclass\n+from decimal import Decimal\n+from enum import StrEnum\n+\n+from worker.contracts.engine_input import CostProfile\n+from worker.contracts.engine_output import Costs\n+\n+BPS = Decimal(10_000)\n+ZERO = Decimal(0)\n+\n+\n+class Side(StrEnum):\n+    \"\"\"주문 방향.\n+\n+    계약의 ``TradeSide`` 는 포지션 방향(LONG/SHORT)이라 다른 개념이다. 공매도가 없는 이 제품에서\n+    포지션은 늘 LONG 이고, 비용은 그 포지션을 **열 때와 닫을 때** 각각 붙는다.\n+    \"\"\"\n+\n+    BUY = \"BUY\"\n+    SELL = \"SELL\"\n+\n+\n+@dataclass(frozen=True)\n+class FillCost:\n+    \"\"\"체결 한 건에 붙는 비용. 결과 계약의 ``costs`` 와 같은 네 갈래다.\"\"\"\n+\n+    commission: Decimal = ZERO\n+    spread: Decimal = ZERO\n+    slippage: Decimal = ZERO\n+    tax: Decimal = ZERO\n+\n+    @property\n+    def total(self) -> Decimal:\n+        return self.commission + self.spread + self.slippage + self.tax\n+\n+    @property\n+    def cash(self) -> Decimal:\n+        \"\"\"현금으로 빠지는 몫.\n+\n+        호가차·슬리피지는 체결가에 이미 들어가 있어 여기서 또 빼면 두 번 센다.\n+        \"\"\"\n+        return self.commission + self.tax\n+\n+    def __add__(self, other: FillCost) -> FillCost:\n+        return FillCost(\n+            commission=self.commission + other.commission,\n+            spread=self.spread + other.spread,\n+            slippage=self.slippage + other.slippage,\n+            tax=self.tax + other.tax,\n+        )\n+\n+\n+class CostModel:\n+    \"\"\"한 실행에 고정된 비용 조건. 실행 중에 바뀌지 않는다.\"\"\"\n+\n+    def __init__(self, profile: CostProfile) -> None:\n+        self.profile = profile\n+\n+    @property\n+    def version(self) -> str:\n+        return self.profile.version\n+\n+    @property\n+    def provisional(self) -> bool:\n+        \"\"\"팀 결정(PD-07) 전 임시값인가. 결과 ``versions`` 에 그대로 실린다.\"\"\"\n+        return self.profile.provisional\n+\n+    def _rate(self, bps: Decimal) -> Decimal:\n+        return bps / BPS\n+\n+    def effective_price(self, side: Side, reference_price: Decimal) -> Decimal:\n+        \"\"\"호가차와 슬리피지를 반영한 실제 체결가. 언제나 불리한 쪽으로 움직인다.\"\"\"\n+        impact = self._rate(self.profile.spread_bps) + self._rate(self.profile.slippage_bps)\n+        if side is Side.BUY:\n+            return reference_price * (Decimal(1) + impact)\n+        return reference_price * (Decimal(1) - impact)\n+\n+    def for_fill(self, side: Side, reference_price: Decimal, quantity: Decimal) -> FillCost:\n+        \"\"\"체결 한 건의 네 갈래 비용. 기준 금액은 가격 충격 전 수량 × 기준가다.\"\"\"\n+        notional = reference_price * quantity\n+        return FillCost(\n+            commission=notional * self._rate(self.profile.commission_bps),\n+            spread=notional * self._rate(self.profile.spread_bps),\n+            slippage=notional * self._rate(self.profile.slippage_bps),\n+            tax=(notional * self._rate(self.profile.tax_bps) if side is Side.SELL else ZERO),\n+        )\n+\n+    def affordable_quantity(self, cash: Decimal, reference_price: Decimal) -> int:\n+        \"\"\"주어진 현금으로 살 수 있는 정수 수량. 체결가와 현금 비용을 모두 감안한다.\n+\n+        레버리지가 없으므로(FR-012) 비용까지 치르고도 현금이 음수가 되면 안 된다. 체결가만 보고\n+        나누면 수수료만큼 초과 매수가 나온다.\n+        \"\"\"\n+        if reference_price <= ZERO:\n+            raise ValueError(f\"reference price must be positive: {reference_price}\")\n+        unit = self.effective_price(Side.BUY, reference_price) + reference_price * (\n+            self._rate(self.profile.commission_bps)\n+        )\n+        if unit <= ZERO:\n+            raise ValueError(f\"effective unit cost must be positive: {unit}\")\n+        return max(0, int(cash // unit))\n+\n+\n+def total_costs(fills: list[FillCost]) -> Costs:\n+    \"\"\"결과 계약의 ``costs`` 블록. 비어 있으면 0으로 채운다 — 키를 빼지 않는다.\"\"\"\n+    summed = FillCost()\n+    for fill in fills:\n+        summed = summed + fill\n+    return Costs(\n+        commission=summed.commission,\n+        spread=summed.spread,\n+        slippage=summed.slippage,\n+        tax=summed.tax,\n+        total=summed.total,\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/costs.py",
+          "old_path": "worker/src/worker/costs.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,7 +24,6 @@ from worker.contracts.engine_output import Warning as ContractWarning\n from worker.engine_support import unsupported_reasons\n from worker.market_data import DataProvider, MarketDataError, validate_prices\n from worker.nautilus_engine import (\n-    SLIPPAGE_BPS,\n     CallbackError,\n     effective_random_seed,\n     execute_nautilus,\n@@ -121,7 +120,7 @@ class NautilusMomentumEngine:\n             \"input\": request.model_dump(mode=\"json\", by_alias=True),\n             \"commissionRate\": \"0\",\n             \"taxRate\": \"0\",\n-            \"slippageBps\": SLIPPAGE_BPS,\n+            \"slippageBps\": request.execution.cost_profile.slippage_bps,\n             # 계약은 run.randomSeed 미지정을 허용하므로 실제로 쓴 값을 남긴다.\n             \"randomSeed\": effective_random_seed(request.run),\n             \"metricsVersion\": \"DAILY_252_DDOF1_RF0_V1\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/engine_runner.py",
+          "old_path": "worker/src/worker/engine_runner.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,7 +18,6 @@ spec 004의 T006~T009가 넓힌다.\n from decimal import Decimal\n \n from worker.contracts.engine_input import EngineInput, Scenario\n-from worker.nautilus_engine import SLIPPAGE_BPS\n from worker.strategies import unsupported_strategy_reason\n \n #: 엔진이 계산하는 통화. ``execute_nautilus`` 가 ``KRW_SIM``(KRW와 1:1)을 하드코딩하고\n@@ -96,11 +95,6 @@ def unsupported_reasons(request: EngineInput) -> list[str]:\n                 f\"execution.costProfile.{name} must be 0; this engine charges slippage only and \"\n                 f\"would report {name}={value} costs as zero\"\n             )\n-    if cost.slippage_bps != SLIPPAGE_BPS:\n-        reasons.append(\n-            f\"execution.costProfile.slippageBps must be {SLIPPAGE_BPS}; this engine applies a \"\n-            f\"fixed {SLIPPAGE_BPS} bps and would ignore {cost.slippage_bps}\"\n-        )\n \n     if request.execution.partial_fill:\n         reasons.append(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/engine_support.py",
+          "old_path": "worker/src/worker/engine_support.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,13 +30,10 @@ from worker.contracts.engine_output import (\n )\n from worker.contracts.engine_output import Warning as ContractWarning\n from worker.contracts.events import ProgressPoint\n+from worker.costs import CostModel, Side\n from worker.strategies import prepare_strategy\n \n ZERO = Decimal(\"0\")\n-#: 엔진이 하드코딩하는 고정 슬리피지. ``execution.slippage.bps`` 는 읽지 않고, 다른 값이 오면\n-#: ``worker.engine_support`` 가 실행 전에 거절한다.\n-SLIPPAGE_BPS = 5\n-SLIPPAGE = Decimal(SLIPPAGE_BPS) / Decimal(10000)\n PRICE_QUANTUM = Decimal(\"0.000001\")\n #: ``run.randomSeed`` 미지정(None) 시 쓰는 값. 재현성을 위해 시드 없이 실행하지 않는다.\n DEFAULT_RANDOM_SEED = 42\n@@ -80,6 +77,10 @@ class MomentumExecution(NautilusStrategy):\n         self.on_progress_callback = on_progress\n         # 전략과 준비 기간은 레지스트리(worker.strategies)가 만든다. 계약 parameters는\n         # dict[str, Any] 봉투이므로 전략별 모델로 검증된 typed_parameters를 넘긴다.\n+        # 비용은 요청에 실려 온 프로필에서만 읽는다. 예전에는 슬리피지를 이 모듈 상수로\n+        # 들고 있었고 다른 값이 오면 실행 전에 거절했다 — 등록표에 새 비용 버전이 생겨도\n+        # 엔진이 못 받는 구조였다.\n+        self.costs = CostModel(request.execution.cost_profile)\n         prepared = prepare_strategy(request.allocation)\n         self.signal_strategy = prepared.signal\n         self.required_history = prepared.required_history\n@@ -209,7 +210,7 @@ class MomentumExecution(NautilusStrategy):\n             target = int(self.signal_strategy.generate_signals(prices).iloc[-1])\n             if target and self.quantity == 0:\n                 budget = self.cash * self.max_position_pct\n-                quantity = int(budget // (close * (1 + SLIPPAGE)))\n+                quantity = self.costs.affordable_quantity(budget, close)\n                 if quantity:\n                     self._create_order(OrderSide.BUY, quantity, bar.ts_event)\n             elif not target and self.quantity:\n@@ -282,6 +283,7 @@ def execute_nautilus(\n     on_progress: ProgressCallback | None,\n ) -> MomentumExecution:\n     \"\"\"Every signal and fill is driven by a real BacktestEngine event loop.\"\"\"\n+    costs = CostModel(request.execution.cost_profile)\n     instrument_id = InstrumentId.from_str(request.universe.instrument_ids[0])\n     # Native KRW has zero decimals; a distinct simulation code preserves fractional\n     # adjusted-price costs without overwriting the process-wide real KRW definition.\n@@ -313,8 +315,8 @@ def execute_nautilus(\n         events.append(\n             QuoteTick(\n                 instrument_id,\n-                as_price(reference * (1 - SLIPPAGE)),\n-                as_price(reference * (1 + SLIPPAGE)),\n+                as_price(costs.effective_price(Side.SELL, reference)),\n+                as_price(costs.effective_price(Side.BUY, reference)),\n                 Quantity.from_str(\"18446744073\"),\n                 Quantity.from_str(\"18446744073\"),\n                 ns_open,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/nautilus_engine.py",
+          "old_path": "worker/src/worker/nautilus_engine.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,36 @@\n+\"\"\"전략 규칙이 확정됐는지 판정한다(spec 004 T007, R-08, FR-010).\n+\n+\"이 엔진이 구현하지 않았다\"와 \"팀이 아직 정하지 않았다\"는 다른 사실이고 사용자가 할 일도 다르다.\n+앞은 워커를 고치면 되고, 뒤는 아무도 고칠 수 없다 — 결정이 날 때까지 그 전략은 돌 수 없다. 두\n+경우에 같은 말을 하면 사용자는 기다려야 하는지 신고해야 하는지 알 수 없다.\n+\n+**미확정 전략을 그럴듯한 기본값으로 돌리지 않는다.** 돌리면 나중에 규칙이 정해졌을 때 같은 요청이\n+다른 숫자를 내고, 그사이 사용자가 본 결과는 아무 근거 없는 값이었던 것이 된다(FR-010).\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+#: 팀 결정을 기다리는 전략 → 결정 항목. 값이 정해지면 등록표 행을 채우고 여기서 뺀다.\n+PENDING_DECISION: dict[str, str] = {\n+    \"SECTOR_MOMENTUM\": \"PD-03\",\n+    \"MINIMUM_VARIANCE\": \"PD-04\",\n+}\n+\n+\n+def pending_decision_ref(strategy_id: str) -> str | None:\n+    \"\"\"팀 결정 대기 중이면 그 결정 항목, 아니면 None.\"\"\"\n+    return PENDING_DECISION.get(strategy_id)\n+\n+\n+def rules_not_registered_message(strategy_id: str) -> str:\n+    \"\"\"거절 사유 한 문장. 왜 막혔고 언제 풀리는지를 담는다.\"\"\"\n+    decision = pending_decision_ref(strategy_id)\n+    if decision is not None:\n+        return (\n+            f\"RULES_NOT_REGISTERED: {strategy_id} rules are not decided yet ({decision});\"\n+            \" running it with a guessed rule would produce numbers nobody can defend\"\n+        )\n+    return (\n+        f\"RULES_NOT_REGISTERED: {strategy_id} has no registered allocation rule in this engine\"\n+        \" (spec 004 R-08)\"\n+    )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/rules_registry.py",
+          "old_path": "worker/src/worker/rules_registry.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,320 @@\n+\"\"\"배분 규칙(spec 004 T007, FR-021·FR-022·FR-023, R-08).\n+\n+두 가지를 지킨다. **엔진은 규칙 값을 스스로 갖지 않는다** — 값이 없으면 지어내지 않고 멈춘다.\n+그리고 **미확정 전략은 돌리지 않는다** — 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때\n+같은 요청이 다른 숫자를 내고, 그사이 사용자가 본 결과는 근거 없는 값이었던 것이 된다.\n+\"\"\"\n+\n+from datetime import date\n+from decimal import Decimal\n+\n+import pandas as pd\n+import pytest\n+\n+from worker.allocation import compute_weights\n+from worker.allocation.base import AllocationError\n+from worker.contracts.engine_input import AllocationSpec, UniverseItem\n+from worker.contracts.engine_output import WeightsSource\n+\n+SEMI = \"091160.XKRX\"\n+BATTERY = \"305720.XKRX\"\n+BIO = \"244580.XKRX\"\n+AS_OF = date(2024, 6, 28)\n+\n+FIXED_RULES = {\"targetWeights\": \"USER_SPECIFIED\", \"weightsSource\": \"USER\"}\n+EQUAL_RULES = {\"targetWeights\": \"EQUAL_AMONG_INVESTABLE\", \"weightsSource\": \"COMPUTED\"}\n+INVERSE_RULES = {\n+    \"lookbackDays\": 3,\n+    \"zeroVolatility\": \"EXCLUDE_THEN_ALLOCATE\",\n+    \"weightCap\": \"1.0000\",\n+    \"investedFraction\": \"1.0000\",\n+    \"weightsSource\": \"COMPUTED\",\n+}\n+\n+\n+def item(instrument: str, weight: str | None = None) -> UniverseItem:\n+    payload = {\"instrumentId\": instrument}\n+    if weight is not None:\n+        payload[\"targetWeight\"] = weight\n+    return UniverseItem.model_validate(payload)\n+\n+\n+def allocation(strategy_id: str, rules: dict | None) -> AllocationSpec:\n+    return AllocationSpec.model_validate(\n+        {\"strategyId\": strategy_id, \"rulesVersion\": \"1\", \"rules\": rules, \"parameters\": {}}\n+    )\n+\n+\n+def history(**columns: list[float]) -> pd.DataFrame:\n+    \"\"\"조정 종가 이력. 짧은 계열은 앞쪽을 NaN 으로 채운다(상장이 늦은 종목과 같은 모양).\"\"\"\n+    length = max(len(values) for values in columns.values())\n+    index = pd.date_range(\"2024-06-01\", periods=length, freq=\"D\")\n+    padded = {\n+        name: [float(\"nan\")] * (length - len(values)) + list(values)\n+        for name, values in columns.items()\n+    }\n+    return pd.DataFrame(padded, index=index)\n+\n+\n+# --- 고정 비중 ----------------------------------------------------------------\n+\n+\n+def test_fixed_weight_passes_user_weights_through():\n+    result = compute_weights(\n+        allocation(\"FIXED_WEIGHT\", FIXED_RULES),\n+        [item(SEMI, \"0.4\"), item(BATTERY, \"0.6\")],\n+        history(**{SEMI: [1.0], BATTERY: [1.0]}),\n+        AS_OF,\n+    )\n+\n+    assert result.source is WeightsSource.USER\n+    assert result.weights == {SEMI: Decimal(\"0.4\"), BATTERY: Decimal(\"0.6\")}\n+\n+\n+def test_fixed_weight_rejects_missing_weight():\n+    with pytest.raises(AllocationError) as caught:\n+        compute_weights(\n+            allocation(\"FIXED_WEIGHT\", FIXED_RULES),\n+            [item(SEMI, \"0.4\"), item(BATTERY)],\n+            history(**{SEMI: [1.0], BATTERY: [1.0]}),\n+            AS_OF,\n+        )\n+\n+    assert caught.value.code == \"INVALID_REQUEST\"\n+\n+\n+def test_fixed_weight_rejects_sum_other_than_one():\n+    \"\"\"합이 1이 아니면 현금 비중이 사용자가 의도하지 않은 값이 된다.\"\"\"\n+    with pytest.raises(AllocationError, match=\"sum to 1\"):\n+        compute_weights(\n+            allocation(\"FIXED_WEIGHT\", FIXED_RULES),\n+            [item(SEMI, \"0.4\"), item(BATTERY, \"0.4\")],\n+            history(**{SEMI: [1.0], BATTERY: [1.0]}),\n+            AS_OF,\n+        )\n+\n+\n+# --- 동일 비중 ----------------------------------------------------------------\n+\n+\n+def test_equal_weight_splits_among_investable():\n+    result = compute_weights(\n+        allocation(\"EQUAL_WEIGHT\", EQUAL_RULES),\n+        [item(SEMI), item(BATTERY), item(BIO)],\n+        history(**{SEMI: [1.0], BATTERY: [1.0], BIO: [1.0]}),\n+        AS_OF,\n+    )\n+\n+    assert result.source is WeightsSource.COMPUTED\n+    assert all(weight == Decimal(1) / Decimal(3) for weight in result.weights.values())\n+\n+\n+def test_equal_weight_skips_instruments_without_data():\n+    \"\"\"상장 전이거나 자료가 없는 종목에 비중을 주면 살 수 없는 주식에 돈을 배정한 것이 된다.\"\"\"\n+    result = compute_weights(\n+        allocation(\"EQUAL_WEIGHT\", EQUAL_RULES),\n+        [item(SEMI), item(BIO)],\n+        history(**{SEMI: [1.0], BIO: [float(\"nan\")]}),\n+        AS_OF,\n+    )\n+\n+    assert set(result.weights) == {SEMI}\n+    assert result.weights[SEMI] == Decimal(1)\n+\n+\n+def test_equal_weight_without_any_investable_stops():\n+    with pytest.raises(AllocationError) as caught:\n+        compute_weights(\n+            allocation(\"EQUAL_WEIGHT\", EQUAL_RULES),\n+            [item(SEMI)],\n+            history(**{SEMI: [float(\"nan\")]}),\n+            AS_OF,\n+        )\n+\n+    assert caught.value.code == \"CONSTRAINT_VIOLATION\"\n+\n+\n+# --- 역변동성 ----------------------------------------------------------------\n+\n+\n+def test_inverse_volatility_favours_the_calmer_instrument():\n+    calm = [100.0, 100.5, 101.0, 101.5]\n+    wild = [100.0, 110.0, 95.0, 115.0]\n+\n+    result = compute_weights(\n+        allocation(\"INVERSE_VOLATILITY\", INVERSE_RULES),\n+        [item(SEMI), item(BATTERY)],\n+        history(**{SEMI: calm, BATTERY: wild}),\n+        AS_OF,\n+    )\n+\n+    assert result.source is WeightsSource.COMPUTED\n+    assert result.weights[SEMI] > result.weights[BATTERY]\n+    assert sum(result.weights.values()) == pytest.approx(Decimal(1))\n+\n+\n+def test_zero_volatility_instrument_is_excluded_and_recorded():\n+    flat = [100.0, 100.0, 100.0, 100.0]\n+    moving = [100.0, 101.0, 100.0, 102.0]\n+\n+    result = compute_weights(\n+        allocation(\"INVERSE_VOLATILITY\", INVERSE_RULES),\n+        [item(SEMI), item(BATTERY)],\n+        history(**{SEMI: flat, BATTERY: moving}),\n+        AS_OF,\n+    )\n+\n+    assert result.weights[BATTERY] == Decimal(1)\n+    assert result.weights.get(SEMI, Decimal(0)) == 0\n+    kinds = [record.kind for record in result.exceptions]\n+    assert \"ZERO_VOLATILITY\" in kinds, \"제외했다는 사실을 결과에 남겨야 한다\"\n+\n+\n+def test_short_history_is_excluded_with_a_reason():\n+    result = compute_weights(\n+        allocation(\"INVERSE_VOLATILITY\", INVERSE_RULES),\n+        [item(SEMI), item(BATTERY)],\n+        history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 101.0]}),\n+        AS_OF,\n+    )\n+\n+    assert set(result.weights) == {SEMI}\n+    assert [record.kind for record in result.exceptions] == [\"INSUFFICIENT_HISTORY\"]\n+\n+\n+def test_exactly_enough_history_is_included():\n+    \"\"\"경계: 수익률 lookback 개를 만들려면 종가가 lookback+1 개 필요하다.\"\"\"\n+    lookback = INVERSE_RULES[\"lookbackDays\"]\n+    just_enough = [100.0 + index for index in range(lookback + 1)]\n+\n+    result = compute_weights(\n+        allocation(\"INVERSE_VOLATILITY\", INVERSE_RULES),\n+        [item(SEMI)],\n+        history(**{SEMI: just_enough}),\n+        AS_OF,\n+    )\n+\n+    assert set(result.weights) == {SEMI}\n+    assert result.exceptions == []\n+\n+\n+def test_one_day_short_is_excluded_and_the_rest_renormalises():\n+    \"\"\"경계 반대쪽: 딱 하루 모자란 종목만 빠지고 남은 종목이 투자 비중을 채운다.\"\"\"\n+    lookback = INVERSE_RULES[\"lookbackDays\"]\n+    enough = [100.0, 101.0, 100.5, 102.0]\n+    one_short = [100.0 + index for index in range(lookback)]\n+\n+    result = compute_weights(\n+        allocation(\"INVERSE_VOLATILITY\", INVERSE_RULES),\n+        [item(SEMI), item(BATTERY)],\n+        history(**{SEMI: enough, BATTERY: one_short}),\n+        AS_OF,\n+    )\n+\n+    assert set(result.weights) == {SEMI}\n+    assert result.weights[SEMI] == Decimal(1), \"남은 종목이 투자 비중을 전부 가져간다\"\n+    assert [(record.kind, record.instrument_id) for record in result.exceptions] == [\n+        (\"INSUFFICIENT_HISTORY\", BATTERY)\n+    ]\n+\n+\n+def test_weight_cap_is_enforced():\n+    calm = [100.0, 100.1, 100.2, 100.3]\n+    wild = [100.0, 110.0, 95.0, 115.0]\n+    rules = {**INVERSE_RULES, \"weightCap\": \"0.6000\"}\n+\n+    result = compute_weights(\n+        allocation(\"INVERSE_VOLATILITY\", rules),\n+        [item(SEMI), item(BATTERY)],\n+        history(**{SEMI: calm, BATTERY: wild}),\n+        AS_OF,\n+    )\n+\n+    assert result.weights[SEMI] <= Decimal(\"0.6\")\n+    assert sum(result.weights.values()) == pytest.approx(Decimal(1))\n+\n+\n+def test_unreachable_cap_is_a_constraint_violation():\n+    \"\"\"상한 x 종목 수가 투자 비중에 못 미치면 어떤 배분도 조건을 만족하지 못한다.\"\"\"\n+    rules = {**INVERSE_RULES, \"weightCap\": \"0.3000\"}\n+\n+    with pytest.raises(AllocationError) as caught:\n+        compute_weights(\n+            allocation(\"INVERSE_VOLATILITY\", rules),\n+            [item(SEMI), item(BATTERY)],\n+            history(**{SEMI: [100.0, 101.0, 100.5, 102.0], BATTERY: [100.0, 99.0, 100.0, 98.0]}),\n+            AS_OF,\n+        )\n+\n+    assert caught.value.code == \"CONSTRAINT_VIOLATION\"\n+\n+\n+@pytest.mark.parametrize(\n+    \"missing\", [\"lookbackDays\", \"zeroVolatility\", \"weightCap\", \"investedFraction\"]\n+)\n+def test_missing_rule_value_stops_instead_of_guessing(missing):\n+    rules = {key: value for key, value in INVERSE_RULES.items() if key != missing}\n+\n+    with pytest.raises(AllocationError, match=missing):\n+        compute_weights(\n+            allocation(\"INVERSE_VOLATILITY\", rules),\n+            [item(SEMI)],\n+            history(**{SEMI: [100.0, 101.0, 100.5, 102.0]}),\n+            AS_OF,\n+        )\n+\n+\n+def test_unknown_zero_volatility_policy_is_rejected():\n+    rules = {**INVERSE_RULES, \"zeroVolatility\": \"SPREAD_EVENLY\"}\n+\n+    with pytest.raises(AllocationError, match=\"not implemented\"):\n+        compute_weights(\n+            allocation(\"INVERSE_VOLATILITY\", rules),\n+            [item(SEMI)],\n+            history(**{SEMI: [100.0, 101.0, 100.5, 102.0]}),\n+            AS_OF,\n+        )\n+\n+\n+# --- 레지스트리 ---------------------------------------------------------------\n+\n+\n+@pytest.mark.parametrize(\"strategy_id\", [\"SECTOR_MOMENTUM\", \"MINIMUM_VARIANCE\"])\n+def test_pending_decision_strategies_say_so(strategy_id):\n+    \"\"\"팀 결정 대기와 엔진 미구현은 사용자가 할 일이 다르다 — 메시지도 달라야 한다.\"\"\"\n+    with pytest.raises(AllocationError) as caught:\n+        compute_weights(\n+            allocation(strategy_id, {\"anything\": 1}),\n+            [item(SEMI)],\n+            history(**{SEMI: [100.0]}),\n+            AS_OF,\n+        )\n+\n+    assert caught.value.code == \"INVALID_REQUEST\"\n+    assert \"RULES_NOT_REGISTERED\" in str(caught.value)\n+    assert \"not decided yet\" in str(caught.value)\n+\n+\n+def test_unknown_strategy_is_rejected_without_a_decision_reference():\n+    with pytest.raises(AllocationError) as caught:\n+        compute_weights(\n+            allocation(\"MA_CROSSOVER\", {\"anything\": 1}),\n+            [item(SEMI)],\n+            history(**{SEMI: [100.0]}),\n+            AS_OF,\n+        )\n+\n+    assert \"RULES_NOT_REGISTERED\" in str(caught.value)\n+    assert \"not decided yet\" not in str(caught.value)\n+\n+\n+@pytest.mark.parametrize(\"rules\", [None, {}])\n+def test_empty_rules_are_rejected(rules):\n+    \"\"\"규칙 사본이 없으면 엔진이 값을 지어내야 한다. 그러느니 멈춘다.\"\"\"\n+    with pytest.raises(AllocationError, match=\"RULES_NOT_REGISTERED\"):\n+        compute_weights(\n+            allocation(\"EQUAL_WEIGHT\", rules),\n+            [item(SEMI)],\n+            history(**{SEMI: [100.0]}),\n+            AS_OF,\n+        )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_allocation.py",
+          "old_path": "worker/tests/test_allocation.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,140 @@\n+\"\"\"분배금과 액면분할 반영(spec 004 T007, FR-013).\n+\n+분배금에서 틀리기 쉬운 것은 **언제 자격이 생기고 언제 현금이 들어오는가**다. 둘을 같은 날로\n+다루면 권리락일에 팔았거나 지급일에 산 사람의 몫이 어긋난다.\n+\"\"\"\n+\n+from datetime import date\n+from decimal import Decimal\n+\n+import pytest\n+\n+from worker.corporate_actions import (\n+    DISTRIBUTION,\n+    SPLIT_FRACTION,\n+    DistributionLedger,\n+    apply_split,\n+    splits_on,\n+)\n+from worker.market_data import Distribution, Split\n+\n+ETF = \"091160.XKRX\"\n+EX_DATE = date(2024, 4, 29)\n+PAY_DATE = date(2024, 5, 2)\n+\n+\n+def distribution(amount: str = \"120\") -> Distribution:\n+    return Distribution(\n+        instrument_id=ETF, ex_date=EX_DATE, pay_date=PAY_DATE, amount=Decimal(amount)\n+    )\n+\n+\n+def test_cash_arrives_on_the_pay_date_not_the_ex_date():\n+    ledger = DistributionLedger([distribution()])\n+\n+    assert ledger.on_ex_date(EX_DATE, {ETF: Decimal(10)})\n+    assert ledger.on_pay_date(EX_DATE) == [], \"권리락일에는 현금이 없다\"\n+\n+    flows = ledger.on_pay_date(PAY_DATE)\n+\n+    assert len(flows) == 1\n+    assert flows[0].type == DISTRIBUTION\n+    assert flows[0].instrument_id == ETF\n+    assert flows[0].amount == Decimal(\"1200\")\n+\n+\n+def test_entitlement_follows_the_ex_date_holding():\n+    \"\"\"권리락일에 들고 있었으면 그 뒤에 팔아도 받는다.\"\"\"\n+    ledger = DistributionLedger([distribution()])\n+    ledger.on_ex_date(EX_DATE, {ETF: Decimal(10)})\n+\n+    # 지급일 전에 전량 매도했지만 자격은 남는다.\n+    flows = ledger.on_pay_date(PAY_DATE)\n+\n+    assert flows[0].amount == Decimal(\"1200\")\n+\n+\n+def test_buying_on_the_ex_date_earns_nothing():\n+    \"\"\"권리락일 시작 시점 보유가 0이면 자격이 없다 — 그날 사도 마찬가지다.\"\"\"\n+    ledger = DistributionLedger([distribution()])\n+\n+    assert ledger.on_ex_date(EX_DATE, {ETF: Decimal(0)}) == []\n+    assert ledger.on_pay_date(PAY_DATE) == []\n+\n+\n+def test_distribution_is_paid_once():\n+    ledger = DistributionLedger([distribution()])\n+    ledger.on_ex_date(EX_DATE, {ETF: Decimal(10)})\n+\n+    assert len(ledger.on_pay_date(PAY_DATE)) == 1\n+    assert ledger.on_pay_date(PAY_DATE) == [], \"같은 분배금이 두 번 들어오면 안 된다\"\n+\n+\n+def test_unpaid_entitlement_is_not_counted_as_cash():\n+    \"\"\"지급일이 실행 종료일 뒤면 끝내 받지 못한다. 받은 것으로 치지 않는다.\"\"\"\n+    ledger = DistributionLedger([distribution()])\n+    ledger.on_ex_date(EX_DATE, {ETF: Decimal(10)})\n+\n+    assert len(ledger.unpaid) == 1\n+    assert ledger.unpaid[0].cash == Decimal(\"1200\")\n+\n+\n+def test_unheld_instrument_earns_nothing():\n+    ledger = DistributionLedger([distribution()])\n+\n+    assert ledger.on_ex_date(EX_DATE, {\"305720.XKRX\": Decimal(10)}) == []\n+\n+\n+# --- 액면분할 -----------------------------------------------------------------\n+\n+\n+def split(ratio: str = \"2\") -> Split:\n+    return Split(instrument_id=ETF, ex_date=date(2024, 3, 4), ratio=Decimal(ratio))\n+\n+\n+def test_split_multiplies_quantity():\n+    assert apply_split(split(\"2\"), Decimal(10)).quantity == Decimal(20)\n+\n+\n+@pytest.mark.parametrize(\n+    (\"ratio\", \"held\", \"expected\", \"exact\"),\n+    [\n+        (\"1.5\", 5, 7, \"7.5\"),  # 반올림이면 8 이 된다\n+        (\"1.33\", 5, 6, \"6.65\"),  # 반올림이면 7 이 된다\n+    ],\n+)\n+def test_fractional_split_floors_and_records_why(ratio, held, expected, exact):\n+    \"\"\"정수 주만 다루므로 단주는 버린다. 조용히 버리면 자산이 준 이유를 알 수 없다.\"\"\"\n+    outcome = apply_split(split(ratio), Decimal(held))\n+\n+    assert outcome.quantity == Decimal(expected)\n+    assert outcome.exception is not None\n+    assert outcome.exception.kind == SPLIT_FRACTION\n+    assert outcome.exception.instrument_id == ETF\n+    assert exact in outcome.exception.action\n+\n+\n+def test_exact_split_has_no_exception():\n+    assert apply_split(split(\"2\"), Decimal(10)).exception is None\n+\n+\n+def test_no_holding_means_nothing_to_split():\n+    assert apply_split(split(\"2\"), Decimal(0)).quantity == 0\n+\n+\n+def test_negative_holding_is_rejected_not_zeroed():\n+    \"\"\"공매도가 없어 생길 수 없는 상태다. 조용히 0으로 만들면 포지션이 사라진 이유를 알 수 없다.\"\"\"\n+    with pytest.raises(ValueError, match=\"negative\"):\n+        apply_split(split(\"2\"), Decimal(-5))\n+\n+\n+def test_nonpositive_ratio_is_rejected():\n+    with pytest.raises(ValueError):\n+        apply_split(split(\"0\"), Decimal(10))\n+\n+\n+def test_splits_on_filters_by_ex_date():\n+    events = [split(\"2\"), Split(ETF, date(2024, 6, 3), Decimal(3))]\n+\n+    assert splits_on(events, date(2024, 3, 4)) == [events[0]]\n+    assert splits_on(events, date(2024, 3, 5)) == []\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_corporate_actions.py",
+          "old_path": "worker/tests/test_corporate_actions.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,126 @@\n+\"\"\"비용 조건 적용(spec 004 T007, FR-019·FR-027).\n+\n+여기서 고정하는 것은 **수치가 아니라 규칙**이다. 수치는 PD-07이 정하고 등록표 버전으로 들어온다.\n+규칙이 흔들리면 같은 프로필로 돌린 두 실행이 다른 비용을 보고한다.\n+\"\"\"\n+\n+from decimal import Decimal\n+\n+import pytest\n+\n+from worker.contracts.engine_input import CostProfile\n+from worker.costs import CostModel, FillCost, Side, total_costs\n+\n+\n+def profile(\n+    commission: str = \"0\", spread: str = \"0\", slippage: str = \"0\", tax: str = \"0\"\n+) -> CostProfile:\n+    return CostProfile(\n+        version=\"TEST-1\",\n+        commissionBps=Decimal(commission),\n+        spreadBps=Decimal(spread),\n+        slippageBps=Decimal(slippage),\n+        taxBps=Decimal(tax),\n+        provisional=True,\n+    )\n+\n+\n+DEMO = profile(slippage=\"5\")\n+\n+\n+def test_demo_profile_charges_slippage_only():\n+    model = CostModel(DEMO)\n+\n+    cost = model.for_fill(Side.BUY, Decimal(\"10000\"), Decimal(\"10\"))\n+\n+    assert cost.slippage == Decimal(\"50\")  # 100,000 x 5bps\n+    assert cost.commission == 0\n+    assert cost.spread == 0\n+    assert cost.tax == 0\n+    assert cost.total == Decimal(\"50\")\n+\n+\n+def test_price_impact_is_always_unfavourable():\n+    model = CostModel(profile(spread=\"10\", slippage=\"5\"))\n+\n+    buy = model.effective_price(Side.BUY, Decimal(\"10000\"))\n+    sell = model.effective_price(Side.SELL, Decimal(\"10000\"))\n+\n+    assert buy == Decimal(\"10015\")\n+    assert sell == Decimal(\"9985\")\n+\n+\n+def test_commission_applies_to_both_sides_tax_only_to_sell():\n+    model = CostModel(profile(commission=\"15\", tax=\"23\"))\n+\n+    buy = model.for_fill(Side.BUY, Decimal(\"10000\"), Decimal(\"10\"))\n+    sell = model.for_fill(Side.SELL, Decimal(\"10000\"), Decimal(\"10\"))\n+\n+    assert buy.commission == sell.commission == Decimal(\"150\")\n+    assert buy.tax == 0, \"거래세는 처분에만 매긴다\"\n+    assert sell.tax == Decimal(\"230\")\n+\n+\n+def test_cost_base_is_the_price_before_impact():\n+    \"\"\"충격 후 금액으로 매기면 비용이 비용을 늘린다.\"\"\"\n+    model = CostModel(profile(commission=\"100\", slippage=\"100\"))\n+\n+    cost = model.for_fill(Side.BUY, Decimal(\"10000\"), Decimal(\"1\"))\n+\n+    assert cost.commission == Decimal(\"100\")  # 10,000 x 100bps. 10,100 기준이 아니다\n+    assert cost.slippage == Decimal(\"100\")\n+\n+\n+def test_cash_cost_excludes_price_impact():\n+    \"\"\"호가차·슬리피지는 체결가에 이미 들어가 있다. 현금에서 또 빼면 두 번 센다.\"\"\"\n+    model = CostModel(profile(commission=\"10\", spread=\"10\", slippage=\"10\", tax=\"10\"))\n+\n+    cost = model.for_fill(Side.SELL, Decimal(\"10000\"), Decimal(\"1\"))\n+\n+    assert cost.total == Decimal(\"40\")\n+    assert cost.cash == Decimal(\"20\")\n+\n+\n+def test_affordable_quantity_leaves_room_for_commission():\n+    \"\"\"체결가만 보고 나누면 수수료만큼 초과 매수가 나온다 — 레버리지 금지(FR-012)를 어긴다.\"\"\"\n+    model = CostModel(profile(commission=\"100\", slippage=\"100\"))\n+\n+    quantity = model.affordable_quantity(Decimal(\"1000000\"), Decimal(\"10000\"))\n+\n+    unit = model.effective_price(Side.BUY, Decimal(\"10000\"))\n+    spent = unit * quantity + model.for_fill(Side.BUY, Decimal(\"10000\"), quantity).cash\n+    assert spent <= Decimal(\"1000000\")\n+    assert quantity == 98\n+\n+\n+@pytest.mark.parametrize(\"price\", [Decimal(\"0\"), Decimal(\"-1\")])\n+def test_affordable_quantity_rejects_nonpositive_price(price):\n+    with pytest.raises(ValueError):\n+        CostModel(DEMO).affordable_quantity(Decimal(\"1000\"), price)\n+\n+\n+def test_totals_sum_the_four_buckets():\n+    model = CostModel(profile(commission=\"10\", spread=\"5\", slippage=\"5\", tax=\"20\"))\n+    fills = [\n+        model.for_fill(Side.BUY, Decimal(\"10000\"), Decimal(\"1\")),\n+        model.for_fill(Side.SELL, Decimal(\"10000\"), Decimal(\"1\")),\n+    ]\n+\n+    costs = total_costs(fills)\n+\n+    assert costs.commission == Decimal(\"20\")\n+    assert costs.spread == Decimal(\"10\")\n+    assert costs.slippage == Decimal(\"10\")\n+    assert costs.tax == Decimal(\"20\")\n+    assert costs.total == Decimal(\"60\")\n+\n+\n+def test_empty_totals_are_zero_not_missing():\n+    costs = total_costs([])\n+\n+    assert costs.total == 0\n+    assert costs.commission == 0\n+\n+\n+def test_fill_costs_add_up():\n+    assert (FillCost(commission=Decimal(\"1\")) + FillCost(tax=Decimal(\"2\"))).total == Decimal(\"3\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_costs.py",
+          "old_path": "worker/tests/test_costs.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -65,11 +65,6 @@ UNSUPPORTED: list[tuple[str, dict[str, Any], str]] = [\n         {\"execution\": {\"costProfile\": {**COST_PROFILE, \"taxBps\": \"23\"}}},\n         \"execution.costProfile.taxBps\",\n     ),\n-    (\n-        \"cost-profile-slippage\",\n-        {\"execution\": {\"costProfile\": {**COST_PROFILE, \"slippageBps\": \"10\"}}},\n-        \"execution.costProfile.slippageBps\",\n-    ),\n     (\"partial-fill\", {\"execution\": {\"partialFill\": True}}, \"execution.partialFill\"),\n     (\n         \"evaluation-warmup\",\n@@ -113,7 +108,7 @@ def test_every_unsupported_field_is_reported_at_once() -> None:\n         universe={\"items\": [{\"instrumentId\": \"000660.XKRX\"}, {\"instrumentId\": \"005930.XKRX\"}]},\n         portfolio={\"currency\": \"USD\", \"leverage\": \"3\", \"shortSelling\": True},\n         execution={\n-            \"costProfile\": {**COST_PROFILE, \"commissionBps\": \"1.5\", \"slippageBps\": \"10\"},\n+            \"costProfile\": {**COST_PROFILE, \"commissionBps\": \"1.5\"},\n             \"partialFill\": True,\n         },\n         evaluation={\"liquidationAtEnd\": True},\n@@ -126,7 +121,6 @@ def test_every_unsupported_field_is_reported_at_once() -> None:\n         \"portfolio.leverage\",\n         \"portfolio.shortSelling\",\n         \"execution.costProfile.commissionBps\",\n-        \"execution.costProfile.slippageBps\",\n         \"execution.partialFill\",\n         \"evaluation.liquidationAtEnd\",\n     ):\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_engine_support.py",
+          "old_path": "worker/tests/test_engine_support.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -56,6 +56,12 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest\n   실패한다(원칙 VI). 거래일 달력은 읽어 온 자료의 합집합으로 만든다 — 워커는 KRX 달력을 갖고 있지 않다\n - 픽스처 `examples/three_etf_24m/`는 **합성 자료**다. 손으로 고치지 말고\n   `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다)\n+- **배분은 순수 함수다**(`allocation/`). 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려주고 주문·현금·시각을 모른다. 같은 입력이면 언제 불러도 같은 답이 나와야 재사용 판정(R-03)이 성립한다. 전략 추가는 모듈 하나 + `ALLOCATION_RULES` 한 줄이다\n+- **규칙 값과 비용 수치를 코드에 두지 말 것.** 전부 `allocation.rules`·`execution.costProfile`에서 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-07·R-08). 명세에 없는 값이 필요하면 지어내지 말고 `INVALID_REQUEST`로 멈춘다\n+- **팀 미확정 전략은 돌리지 않는다**(`rules_registry.py`). `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 PD-03·PD-04 대기이며, 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 낸다(FR-010). \"팀이 안 정했다\"와 \"엔진이 구현 안 했다\"는 메시지를 구분한다 — 사용자가 할 일이 다르다\n+- **`INVALID_REQUEST`와 `CONSTRAINT_VIOLATION`을 섞지 말 것.** 앞은 요청이 잘못됐다는 뜻이고 뒤는 요청은 말이 되지만 그 조건을 만족하는 배분이 없다는 뜻이다(상한 × 종목 수 < 투자 비중 등)\n+- **비용은 네 갈래를 따로 보고한다**(`costs.py`). 호가차·슬리피지는 체결가를 불리하게 움직이고 수수료·세금은 현금으로 빠진다 — 합쳐서 한 숫자로 만들면 결과 계약의 `costs{commission, spread, slippage, tax}`를 채울 수 없다. 적용 방향(양방향/매도만)과 기준 금액은 `costs.py` 모듈 주석에 모아 두었다\n+- **분배금은 권리락일에 자격이 생기고 지급일에 현금이 된다**(`corporate_actions.py`). 둘을 같은 날로 다루면 권리락일에 들고 있다가 판 사람의 몫이 사라지고 지급일에 산 사람이 남의 몫을 받는다. ETF 내부 보수는 차감하지 않는다(FR-013) — 이미 가격에 반영돼 있다\n - 브로커 연동은 **3층으로 분리**한다. 이 분리를 깨면 브로커 없이 테스트할 수 없다\n   - `messaging.py` 계약 상수(exchange·queue·routing key·control exchange, `SCHEMA_VERSION`, prefetch)와\n     경계 Protocol(`EventPublisher`, `JobAcknowledger`) + 오류 분류(`ContractViolation`, `PublishError`).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/CLAUDE.md",
+          "old_path": "worker/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2187679,
+      "head_commit_sha": "a4d1270302c315131f034846686768e52c3de91a",
+      "base_commit_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "start_commit_sha": "db5668904d7b9577ba1031a823db6f7830214ff0",
+      "created_at": "2026-09-11T15:38:17.263+09:00",
+      "merge_request_id": 941180,
+      "state": "without_files",
+      "real_size": "17",
+      "patch_id_sha": "a26cd405976c295a802d9d11e0402a49f9a1be3c",
+      "commits": [
+        {
+          "id": "a4d1270302c315131f034846686768e52c3de91a",
+          "short_id": "a4d12703",
+          "created_at": "2026-09-11T15:11:04.000+09:00",
+          "parent_ids": [
+            "99737bedc8e17a11d97d0b7a3def2cd60b84347e"
+          ],
+          "title": "docs(be): 배분·비용·기업행위 규칙을 워커 규칙 문서에 남긴다",
+          "message": "docs(be): 배분·비용·기업행위 규칙을 워커 규칙 문서에 남긴다\n\nspec 004 T007 에서 정한 것 중 다음 작업자가 모르면 어기게 되는 것들을 적는다.\n배분은 순수 함수라는 것, 규칙 값과 비용 수치를 코드에 두지 않는다는 것, 미확정\n전략을 돌리지 않는다는 것, INVALID_REQUEST 와 CONSTRAINT_VIOLATION 의 구분,\n분배금의 권리락일·지급일 분리다.\n\ntasks.md T007 에는 구현하며 내린 결정 다섯 가지를 적었다. 특히 비용 적용 방향은\nspec 이 정하지 않은 것을 정한 것이라 리뷰에서 볼 수 있어야 한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:11:04.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:11:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a4d1270302c315131f034846686768e52c3de91a"
+        },
+        {
+          "id": "99737bedc8e17a11d97d0b7a3def2cd60b84347e",
+          "short_id": "99737bed",
+          "created_at": "2026-09-11T15:10:26.000+09:00",
+          "parent_ids": [
+            "2bd35863fbf8b31524a666fad0b5e1324166b9eb"
+          ],
+          "title": "feat(be): 배분 규칙 세 가지와 미확정 전략 거절을 추가한다",
+          "message": "feat(be): 배분 규칙 세 가지와 미확정 전략 거절을 추가한다\n\nspec 004 T007(S15P21E205-140). FR-021·FR-022·FR-023, R-08.\n\ncompute_weights 는 순수 함수다. 조정 종가 이력과 규칙 명세를 받아 목표 비중을\n돌려주고 주문도 현금도 모른다 — 같은 입력이면 언제 불러도 같은 답이 나와야 재사용\n판정(R-03)이 성립한다.\n\n고정 비중은 사용자 지정값을 그대로 쓰고(source=USER), 동일 비중은 그날 투자 가능한\n종목에 1/N 을 준다. 역변동성은 관측 구간 표준편차의 역수로 나누고, 0 변동성 종목과\n관측 구간이 모자란 종목은 제외한 뒤 그 사실을 예외 기록으로 남긴다.\n\n규칙 값은 allocation.rules 에서만 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새\n규칙 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다. 값이 없으면 지어내지 않고\nINVALID_REQUEST 로 멈춘다. 역변동성 값은 전부 PD-02 대기라 더욱 그렇다.\n\nrules_registry 는 \"팀이 아직 정하지 않았다\"와 \"이 엔진이 구현하지 않았다\"를 구분해\n말한다. 앞은 워커를 고치면 되고 뒤는 결정이 날 때까지 아무도 고칠 수 없다 — 같은\n말을 하면 사용자는 기다려야 하는지 신고해야 하는지 알 수 없다.\n\n상한을 지킬 수 없는 요청(상한 x 종목 수 < 투자 비중)은 CONSTRAINT_VIOLATION 이다.\n조용히 미달로 두면 요청한 조건과 다른 포트폴리오의 성과를 그 조건의 성과로 보여 준다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:10:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:10:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/99737bedc8e17a11d97d0b7a3def2cd60b84347e"
+        },
+        {
+          "id": "2bd35863fbf8b31524a666fad0b5e1324166b9eb",
+          "short_id": "2bd35863",
+          "created_at": "2026-09-11T15:05:04.000+09:00",
+          "parent_ids": [
+            "61e2ae72d89e5b5983993b12141c6f7007f9c058"
+          ],
+          "title": "feat(be): 분배금과 액면분할을 보유에 반영하는 모듈을 추가한다",
+          "message": "feat(be): 분배금과 액면분할을 보유에 반영하는 모듈을 추가한다\n\nspec 004 T007(S15P21E205-140). FR-013.\n\n분배금은 권리락일에 자격이 생기고 지급일에 현금이 들어온다. 둘을 같은 날로 다루면\n권리락일에 들고 있다가 판 사람에게 0 을 주고, 지급일에 새로 산 사람에게 남의 몫을\n준다. 장부가 자격을 적어 두었다가 지급일에 한 번만 현금으로 바꾼다. 지급일이 실행\n종료일 뒤인 자격은 끝내 지급되지 않는다 — 받지 못한 돈을 받은 것으로 치지 않는다.\n\nETF 내부 보수는 차감하지 않는다(FR-013). 이미 가격에 반영된 비용을 두 번 세게 된다.\n\n액면분할은 수량만 바꾼다. 정수 주만 다루므로 나누어떨어지지 않으면 내림하고 그 사실을\n예외 기록으로 남긴다 — 조용히 버리면 사용자는 자산이 준 이유를 알 수 없다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:05:04.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:05:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2bd35863fbf8b31524a666fad0b5e1324166b9eb"
+        },
+        {
+          "id": "61e2ae72d89e5b5983993b12141c6f7007f9c058",
+          "short_id": "61e2ae72",
+          "created_at": "2026-09-11T15:03:19.000+09:00",
+          "parent_ids": [
+            "1590e7b86ced0c37df9cfb1e82cff6d903ee938a"
+          ],
+          "title": "refactor(be): 데모 엔진의 하드코딩 슬리피지를 비용 프로필로 넘긴다",
+          "message": "refactor(be): 데모 엔진의 하드코딩 슬리피지를 비용 프로필로 넘긴다\n\n엔진이 SLIPPAGE_BPS=5 를 상수로 들고 있었고, 다른 값이 오면 engine_support 가\n실행 전에 거절했다. 등록표에 새 비용 버전이 생겨도 엔진이 받을 수 없는 구조다.\n이제 요청에 실려 온 execution.costProfile 에서 읽는다.\n\n수량 계산도 CostModel.affordable_quantity 로 넘겼다. 예전 식은 체결가만 보고\n나눠서 수수료가 0 이 아닐 때 초과 매수가 났다. 데모 프로필은 수수료가 0 이라\n지금 숫자는 그대로다.\n\nengine_support 에서 슬리피지 거절만 뺐다. 수수료·호가차·세금은 이 엔진이 아직\n계산하지 않으므로 0 요구를 남긴다 — 다종목 엔진(T006)이 그 제한을 걷어낸다.\n\n동작 변경 없음: 데모 프로필(슬리피지 5bps, 나머지 0)에서 옛 계산과 같은 값이 나오고\n기존 회귀 테스트가 그대로 통과한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:03:19.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:03:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/61e2ae72d89e5b5983993b12141c6f7007f9c058"
+        },
+        {
+          "id": "1590e7b86ced0c37df9cfb1e82cff6d903ee938a",
+          "short_id": "1590e7b8",
+          "created_at": "2026-09-11T15:01:24.000+09:00",
+          "parent_ids": [
+            "d42af44174914af1e350ba0160bb99ee58c79ad1"
+          ],
+          "title": "feat(be): 비용 조건을 체결에 적용하는 모듈을 추가한다",
+          "message": "feat(be): 비용 조건을 체결에 적용하는 모듈을 추가한다\n\nspec 004 T007(S15P21E205-140)의 첫 조각. 엔진은 비용 수치를 자체 기본값으로 갖지\n않고 요청에 실려 온 프로필에서만 읽는다 — 코드가 기본값을 들고 있으면 등록표에 새\n버전이 생겼을 때 옛 실행의 재현이 깨진다.\n\n어느 쪽에 무엇을 매기는지는 spec 이 정하지 않았다. PD-07 이 정하는 것은 수치이고,\n수치를 쓰려면 적용 규칙이 먼저 있어야 한다. 세 가지를 정해 모듈 주석에 모아 뒀다.\n수수료·호가차·슬리피지는 양방향, 세금은 매도만, 기준 금액은 가격 충격 전 금액이다.\n지금 등록된 데모 프로필(슬리피지만 5bps)에서는 어느 규칙을 골라도 결과가 같다.\n\n호가차·슬리피지는 체결가를 불리하게 움직이고 수수료·세금은 현금으로 빠진다. 둘을\n한 숫자로 합치지 않는 이유는 결과 계약이 넷을 따로 보여 주기 때문이다.\n\n주문 방향 Side(BUY/SELL) 를 여기 둔다. 계약의 TradeSide 는 포지션 방향(LONG/SHORT)\n이라 다른 개념이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-11T15:01:24.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-11T15:01:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1590e7b86ced0c37df9cfb1e82cff6d903ee938a"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-11T15:39:05.509+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2793823": []
+  }
+}

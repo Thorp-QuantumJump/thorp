@@ -1,0 +1,655 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952470,
+    "iid": 239,
+    "project_id": 1444456,
+    "title": "chore(infra): CI uv를 해시로 검증하고 실제 Python 버전을 남김 [MR 237 후속작업]",
+    "description": "# 작업 내용 요약\n\n첫 355 MR의 코드리뷰를 보완합니다. CI Worker Setup은 이제 해시로 검증한 uv만 쓰고, 실제로 쓴 Python 버전을 빌드 로그에 남깁니다.\n\n# 관련 티켓\n\n- S15P21E205-355 (추가: 코드리뷰 보완)\n- https://ssafy.atlassian.net/browse/S15P21E205-355\n\n# 주요 변경 사항\n\n- Worker Setup이 uv 0.12.0을 `--require-hashes`로 설치합니다. 해시는 PyPI의 linux wheel 세 개(x86_64 하나, aarch64 둘)입니다. 부트스트랩 가상환경은 매번 `--clear`로 새로 만들어, 검증하지 않은 uv가 남지 않게 합니다.\n- Setup 끝에서 `.venv/bin/python -VV`로 CI가 쓴 Python 버전을 기록합니다. uv 0.12.0은 3.11.15를 받으므로 운영 이미지(3.11.16)와 패치 버전이 다를 수 있으며, 주석도 그 사실에 맞게 고쳤습니다.\n- 주석: uv 버전을 올리면 운영 이미지의 uv도 함께 맞추라고 적었고, Jenkins 이미지의 python3-venv 설치 이유를 지금 Setup에 맞게 고쳤습니다(주석만 바뀌어 CI 이미지를 다시 빌드할 필요는 없습니다).\n\n# 테스트\n\n- [x] Jenkins와 같은 Debian trixie(python3 3.13)에서 이 Setup 블록을 그대로 실행: Python 3.11.15가 로그에 찍히고 ruff 통과, pytest 403 passed\n- [x] 해시 하나를 바꾸면 pip가 \"THESE PACKAGES DO NOT MATCH THE HASHES\"로 설치를 거부합니다\n- [x] 해시 없이 설치했던 옛 부트스트랩 가상환경은 `--clear`로 비워지고 검증한 uv만 남습니다\n\n# 리뷰 포인트\n\n- Jenkins가 Jenkinsfile을 dev에서 읽고 이 MR은 `worker/`를 바꾸지 않으므로, 이 MR의 CI에서는 새 Setup이 돌지 않습니다. 머지 전에 Jenkins에서 확인하려면 Replay에 이 Jenkinsfile을 넣고 `CI_SOURCE_COMMIT = '49a8458de80bf6d3699e7e1749964193b6d3d9cd'`(351 브랜치 커밋)를 지정합니다.\n- uv를 올릴 때는 버전과 세 해시를 함께 바꿔야 합니다.\n- uv와 Python 3.11을 Jenkins 이미지에 넣으면 매 빌드의 부트스트랩과 첫 실행의 GitHub 다운로드가 사라집니다. 다만 CI 스택을 수동으로 다시 빌드해야 해서 이번에는 넣지 않았습니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** (해당 없음: CI 설정만 바꿨습니다)\n- [x] **결제·포인트·상품 선택 단계 0건** (해당 없음)\n- [x] **전략 ID 상수·전략별 분기 0건** (해당 없음)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** (해당 없음)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** (해당 없음)",
+    "state": "merged",
+    "created_at": "2026-09-19T21:14:24.158+09:00",
+    "updated_at": "2026-09-19T21:15:20.029+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-19T21:14:40.691+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/355-ci-worker-uv-lock",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+    "merge_commit_sha": "5bc22a8a738efca1f8b35a77f8c93395a22d12e3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-19T21:14:25.091+09:00",
+    "reference": "!239",
+    "references": {
+      "short": "!239",
+      "relative": "!239",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!239"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/239",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952470,
+    "iid": 239,
+    "project_id": 1444456,
+    "title": "chore(infra): CI uv를 해시로 검증하고 실제 Python 버전을 남김 [MR 237 후속작업]",
+    "description": "# 작업 내용 요약\n\n첫 355 MR의 코드리뷰를 보완합니다. CI Worker Setup은 이제 해시로 검증한 uv만 쓰고, 실제로 쓴 Python 버전을 빌드 로그에 남깁니다.\n\n# 관련 티켓\n\n- S15P21E205-355 (추가: 코드리뷰 보완)\n- https://ssafy.atlassian.net/browse/S15P21E205-355\n\n# 주요 변경 사항\n\n- Worker Setup이 uv 0.12.0을 `--require-hashes`로 설치합니다. 해시는 PyPI의 linux wheel 세 개(x86_64 하나, aarch64 둘)입니다. 부트스트랩 가상환경은 매번 `--clear`로 새로 만들어, 검증하지 않은 uv가 남지 않게 합니다.\n- Setup 끝에서 `.venv/bin/python -VV`로 CI가 쓴 Python 버전을 기록합니다. uv 0.12.0은 3.11.15를 받으므로 운영 이미지(3.11.16)와 패치 버전이 다를 수 있으며, 주석도 그 사실에 맞게 고쳤습니다.\n- 주석: uv 버전을 올리면 운영 이미지의 uv도 함께 맞추라고 적었고, Jenkins 이미지의 python3-venv 설치 이유를 지금 Setup에 맞게 고쳤습니다(주석만 바뀌어 CI 이미지를 다시 빌드할 필요는 없습니다).\n\n# 테스트\n\n- [x] Jenkins와 같은 Debian trixie(python3 3.13)에서 이 Setup 블록을 그대로 실행: Python 3.11.15가 로그에 찍히고 ruff 통과, pytest 403 passed\n- [x] 해시 하나를 바꾸면 pip가 \"THESE PACKAGES DO NOT MATCH THE HASHES\"로 설치를 거부합니다\n- [x] 해시 없이 설치했던 옛 부트스트랩 가상환경은 `--clear`로 비워지고 검증한 uv만 남습니다\n\n# 리뷰 포인트\n\n- Jenkins가 Jenkinsfile을 dev에서 읽고 이 MR은 `worker/`를 바꾸지 않으므로, 이 MR의 CI에서는 새 Setup이 돌지 않습니다. 머지 전에 Jenkins에서 확인하려면 Replay에 이 Jenkinsfile을 넣고 `CI_SOURCE_COMMIT = '49a8458de80bf6d3699e7e1749964193b6d3d9cd'`(351 브랜치 커밋)를 지정합니다.\n- uv를 올릴 때는 버전과 세 해시를 함께 바꿔야 합니다.\n- uv와 Python 3.11을 Jenkins 이미지에 넣으면 매 빌드의 부트스트랩과 첫 실행의 GitHub 다운로드가 사라집니다. 다만 CI 스택을 수동으로 다시 빌드해야 해서 이번에는 넣지 않았습니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** (해당 없음: CI 설정만 바꿨습니다)\n- [x] **결제·포인트·상품 선택 단계 0건** (해당 없음)\n- [x] **전략 ID 상수·전략별 분기 0건** (해당 없음)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** (해당 없음)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** (해당 없음)",
+    "state": "merged",
+    "created_at": "2026-09-19T21:14:24.158+09:00",
+    "updated_at": "2026-09-19T21:15:20.029+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-19T21:14:40.691+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/355-ci-worker-uv-lock",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+    "merge_commit_sha": "5bc22a8a738efca1f8b35a77f8c93395a22d12e3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-19T21:14:25.091+09:00",
+    "reference": "!239",
+    "references": {
+      "short": "!239",
+      "relative": "!239",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!239"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/239",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": "2026-09-19T21:14:33.955+09:00",
+    "latest_build_finished_at": "2026-09-19T21:14:39.967+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 208616,
+      "iid": 189,
+      "project_id": 1444456,
+      "sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+      "ref": "chore(infra)/355-ci-worker-uv-lock",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T21:14:33.837+09:00",
+      "updated_at": "2026-09-19T21:14:39.973+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208616"
+    },
+    "head_pipeline": {
+      "id": 208616,
+      "iid": 189,
+      "project_id": 1444456,
+      "sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+      "ref": "chore(infra)/355-ci-worker-uv-lock",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T21:14:33.837+09:00",
+      "updated_at": "2026-09-19T21:14:39.973+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208616",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-19T21:14:33.955+09:00",
+      "finished_at": "2026-09-19T21:14:39.967+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208616",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "head_sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+      "start_sha": "a1e59eb6bf244f26ccdf5b62f46c1f393a87dc73"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a16d3cfa39c277f9e4ffda9205573f09875823f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839324,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:14:24.279+09:00",
+          "updated_at": "2026-09-19T21:14:24.284+09:00",
+          "system": true,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1a205c8e381ed25918bf4bfc3fb280f39b94463d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839325,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:14:24.301+09:00",
+          "updated_at": "2026-09-19T21:14:24.308+09:00",
+          "system": true,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "57ec71016f5b748682050c1712a45cba72e58f7e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839327,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `--require-hashes` 옵션과 명시적인 SHA-256 해시를 도입하여 CI 환경에서 사용하는 부트스트랩 도구(`uv`)의 무결성 검증을 강화한 점이 훌륭합니다.\n- `--clear` 옵션을 추가하여 기존에 존재하던 검증되지 않은 가상환경 캐시나 잔여물을 깔끔하게 정리하고, 빌드 종료 시 `.venv/bin/python -VV`를 통해 실제 사용된 Python 패치 버전을 로그에 명시적으로 기록하여 디버깅 용이성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **해시 변조 검증 테스트**: `Jenkinsfile` 내 `uv-requirements.txt`에 지정된 해시 값 중 일부를 임의로 변경(변조)한 후 Jenkins 빌드를 실행하여, `pip install` 단계에서 `THESE PACKAGES DO NOT MATCH THE HASHES` 에러와 함께 파이프라인이 중단되는지 확인합니다.\n- **Python 버전 로깅 확인 테스트**: 정상 빌드 시 콘솔 로그에 `.venv/bin/python -VV`의 결과로 기대하는 Python 패치 버전(`Python 3.11.15` 등)이 올바르게 출력되는지 확인합니다.\n- **가상환경 초기화 테스트**: 이전에 다른 버전이나 해시 없이 생성된 부트스트랩 가상환경이 존재하는 상태에서 빌드를 수행했을 때, `--clear` 옵션에 의해 기존 환경이 안전하게 비워지고 재생성되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c84fcb8d32c8ab33bd12f8e03ee603e947692178 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-19T21:14:32.752+09:00",
+          "updated_at": "2026-09-19T21:14:32.752+09:00",
+          "system": false,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a20bac39ee59887f85ed475981c19e0f41e01189",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839328,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:14:34.556+09:00",
+          "updated_at": "2026-09-19T21:14:34.560+09:00",
+          "system": true,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2ee7d776f5f020397e9a11ec6ac2bfcc368edd82",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839329,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for c84fcb8d32c8ab33bd12f8e03ee603e947692178 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:14:39.932+09:00",
+          "updated_at": "2026-09-19T21:14:39.935+09:00",
+          "system": true,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9a80d912fc26c5c1b7128149b2fd5ac0cbca5c12",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839330,
+          "type": null,
+          "body": "mentioned in commit 5bc22a8a738efca1f8b35a77f8c93395a22d12e3",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:14:40.781+09:00",
+          "updated_at": "2026-09-19T21:14:40.789+09:00",
+          "system": true,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "df0a3bf369b8658a0fa1dc65085719f537d550a5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839332,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">chore(infra): CI uv를 해시로 검증하고 실제 Python 버전을 남김</code> to <code class=\"idiff\">chore(infra): CI uv를 해시로 검증하고 실제 Python 버전을 남김<span class=\"idiff left right addition\"> [MR 237 후속작업]</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:15:20.126+09:00",
+          "updated_at": "2026-09-19T21:15:20.131+09:00",
+          "system": true,
+          "noteable_id": 952470,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 239,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2225726,
+      "head_commit_sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+      "base_commit_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "start_commit_sha": "a1e59eb6bf244f26ccdf5b62f46c1f393a87dc73",
+      "created_at": "2026-09-19T21:14:24.551+09:00",
+      "merge_request_id": 952470,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "a1b03027850f5128f7e8544b5b5494b9eb77b549"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2225726,
+      "head_commit_sha": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+      "base_commit_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "start_commit_sha": "a1e59eb6bf244f26ccdf5b62f46c1f393a87dc73",
+      "created_at": "2026-09-19T21:14:24.551+09:00",
+      "merge_request_id": 952470,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "a1b03027850f5128f7e8544b5b5494b9eb77b549",
+      "commits": [
+        {
+          "id": "c84fcb8d32c8ab33bd12f8e03ee603e947692178",
+          "short_id": "c84fcb8d",
+          "created_at": "2026-09-19T21:08:19.000+09:00",
+          "parent_ids": [
+            "22d226047cc00f34c0a2bdc7d0f036d823c7dc54"
+          ],
+          "title": "chore(infra): CI uv를 해시로 검증하고 실제 Python 버전을 남김",
+          "message": "chore(infra): CI uv를 해시로 검증하고 실제 Python 버전을 남김\n\nS15P21E205-355 코드리뷰 보완.\n\n- Worker Setup이 uv 0.12.0을 --require-hashes로 설치한다. 해시는 PyPI의\n  linux wheel 셋(x86_64 하나, aarch64 둘). 부트스트랩 가상환경은 매번\n  --clear로 새로 만들어 검증하지 않은 uv가 남지 않게 한다.\n- CI가 쓴 Python을 로그에 남긴다(.venv/bin/python -VV). uv 0.12.0은\n  3.11.15를 받아 운영 이미지(3.11.16)와 패치 버전이 다를 수 있다. 주석의\n  \"같은 버전\"을 \"같은 마이너 버전\"으로 바로잡았다.\n- uv 버전을 올리면 운영 이미지의 uv도 함께 맞추라고 주석에 적었다.\n- Jenkins 이미지의 python3-venv 설치 이유 주석을 지금 Worker Setup에 맞췄다.\n\n리뷰의 \"--locked가 lock에 없는 setuptools로 빌드한다\"는 틀린 지적이었다.\n빈 캐시로 설치해도 setuptools를 받지 않았다.\n\n확인: Debian trixie(python3 3.13) 컨테이너에서 이 Setup 블록을 그대로 실행.\n틀린 해시는 pip가 거부하고, 해시 없이 설치한 옛 부트스트랩은 --clear로\n비워진다. Python 3.11.15가 로그에 찍히고 ruff 통과, pytest 403건 통과.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T21:08:19.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T21:08:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c84fcb8d32c8ab33bd12f8e03ee603e947692178"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -16,10 +16,11 @@ USER root\n #   2) 팀의 로컬 개발 환경이 24.x 이므로 같은 메이저를 맞춰야 CI에서만 나타나는 차이를 줄일 수 있다.\n ARG NODE_MAJOR=24\n \n-# Worker·Data CI 는 파트별로 venv 를 만들어 pip install 을 돌린다. 베이스 이미지에 python3 는\n-# 있지만 venv 모듈이 빠져 있어, 없으면 Worker Setup 이 첫 명령에서\n-# \"ensurepip is not available\" 로 끝난다. python3-venv 는 이미지의 기본 python3 버전에 맞는\n-# 것을 가져온다.\n+# Worker·Data CI 는 첫 명령에서 python3 -m venv 로 가상환경을 만든다. Data 는 그 안에서\n+# pip install 을 돌리고, Worker 는 uv 를 설치할 부트스트랩 가상환경을 만든 뒤 uv sync 로 설치한다\n+# (Jenkinsfile Worker Setup). 베이스 이미지에 python3 는 있지만 venv 모듈이 빠져 있어, 없으면 두\n+# Setup 모두 첫 명령에서 \"ensurepip is not available\" 로 끝난다. python3-venv 는 이미지의 기본\n+# python3 버전에 맞는 것을 가져온다.\n RUN apt-get update \\\n  && apt-get install -y --no-install-recommends ca-certificates curl gnupg python3-venv \\\n  && install -m 0755 -d /etc/apt/keyrings \\\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Dockerfile",
+          "old_path": "infra/jenkins/Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -460,17 +460,31 @@ pipeline {\n                         // Jenkins 이미지에는 uv 가 없어 체크아웃 밖(WORKSPACE_TMP)의 별도 가상환경에 받는다.\n                         // 워커의 .venv 에 넣으면 uv sync 가 lock 에 없는 패키지로 보고 지운다.\n                         //\n+                        // uv 는 CI 의 모든 의존성을 설치하고 lock 의 해시를 검사하는 도구라, uv 자신도 해시로\n+                        // 확인한 wheel 만 쓴다(--require-hashes). 해시는 PyPI 의 uv 0.12.0 linux wheel\n+                        // 셋(x86_64 하나, aarch64 둘)이다. 매번 --clear 로 새로 만들어 검증하지 않은 uv 가 남지\n+                        // 않게 한다. 버전을 올리면 해시를 함께 바꾸고, infra/docker/worker.Dockerfile 의 uv\n+                        // 이미지도 같은 버전으로 맞춘다.\n+                        //\n                         //   --locked             uv.lock 이 pyproject.toml 과 어긋나면 실패한다.\n-                        //   --python 3.11        운영 이미지와 같은 버전. 이 이미지의 python3 는 3.13 이고,\n+                        //   --python 3.11        운영 이미지와 같은 마이너 버전. 이 이미지의 python3 는 3.13 이고,\n                         //                        lock 은 3.11 과 3.12 이상에 서로 다른 numpy 를 고른다. 3.11 은\n-                        //                        uv 가 처음 한 번 내려받아 Jenkins 홈에 둔다.\n+                        //                        uv 가 처음 한 번 내려받아 Jenkins 홈에 둔다. 패치 버전은 uv 가\n+                        //                        아는 최신 3.11 이라 운영 이미지와 다를 수 있어(uv 0.12.0 은\n+                        //                        3.11.15), 실제로 쓴 버전을 로그에 남긴다.\n                         //   --no-install-project 워커 코드는 설치하지 않는다. 운영 이미지도 설치하지 않고\n                         //                        PYTHONPATH 로 읽으며, pytest 는 src 를 읽는다.\n                         // dev 그룹(pytest·ruff)도 기본으로 설치되어 lint·test 도구 버전도 lock 을 따른다.\n                         // 3.13 으로 만든 옛 .venv 가 남아 있으면 uv 가 지우고 3.11 로 다시 만든다.\n                         dir('worker') {\n-                            sh 'python3 -m venv \"$WORKSPACE_TMP/uv\" && \"$WORKSPACE_TMP/uv/bin/pip\" install --quiet uv==0.12.0'\n+                            sh '''\n+                                python3 -m venv --clear \"$WORKSPACE_TMP/uv\"\n+                                echo \"uv==0.12.0 --hash=sha256:cbff74f884846d794713670faf8abe10db3bd70c43b01e63223f74eb7d958689 --hash=sha256:c818bb6aead39652e2ad644583fa418ac8d92baf50b4c6f685738bb2598e33bd --hash=sha256:effc2de9f044e880306f3c52b048bf24ee4fe63429c82dd6509c9a0f3d1b8f0b\" \\\\\n+                                    > \"$WORKSPACE_TMP/uv-requirements.txt\"\n+                                \"$WORKSPACE_TMP/uv/bin/pip\" install --quiet --require-hashes -r \"$WORKSPACE_TMP/uv-requirements.txt\"\n+                            '''\n                             sh '\"$WORKSPACE_TMP/uv/bin/uv\" sync --locked --python 3.11 --no-install-project'\n+                            sh '.venv/bin/python -VV'\n                         }\n                     }\n                 }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2839327": []
+  }
+}

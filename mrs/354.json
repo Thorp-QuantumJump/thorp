@@ -1,0 +1,570 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963014,
+    "iid": 354,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름으로 과거 사례와 뉴스를 옮기고 숫자 표시를 줄인다",
+    "description": "## 작업 내용 요약\n\n시장 흐름 요약 문장에서 무역수지가 긴 달러 정수로 표시되는 문제를 수정합니다. 지표 카드와 동일하게 억·천만 단위로 줄여 표시합니다.\n\n## 주요 변경 사항\n\n- 요약 문장의 1억 이상 달러 금액을 천만 단위로 반올림합니다.\n- `34785482585미국 달러`를 `약 347억 9천만 미국 달러`로 표시합니다.\n- 1억 미만 달러 금액과 기존 소수 첫째 자리 표시를 유지하며, 원값과 계산은 변경하지 않습니다.\n\n## 테스트\n\n- [x] `npm run lint`: 오류 0, 기존 경고 26개\n- [x] `npm run build`: 통과\n- [x] `npm test`: 실패·건너뜀 0\n- [x] 요약 문장의 큰 달러 금액 축약과 소액 달러 표시 유지 검증\n\n## 리뷰 포인트\n\n- 요약 문장과 지표 카드의 달러 축약 기준이 일치하는지 확인",
+    "state": "merged",
+    "created_at": "2026-10-01T16:20:07.481+09:00",
+    "updated_at": "2026-10-01T17:46:29.015+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-10-01T17:46:28.737+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-context",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+    "merge_commit_sha": "2830823c768b12200e8409eb7f76981fb8960b10",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T16:20:08.449+09:00",
+    "reference": "!354",
+    "references": {
+      "short": "!354",
+      "relative": "!354",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!354"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/354",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963014,
+    "iid": 354,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름으로 과거 사례와 뉴스를 옮기고 숫자 표시를 줄인다",
+    "description": "## 작업 내용 요약\n\n시장 흐름 요약 문장에서 무역수지가 긴 달러 정수로 표시되는 문제를 수정합니다. 지표 카드와 동일하게 억·천만 단위로 줄여 표시합니다.\n\n## 주요 변경 사항\n\n- 요약 문장의 1억 이상 달러 금액을 천만 단위로 반올림합니다.\n- `34785482585미국 달러`를 `약 347억 9천만 미국 달러`로 표시합니다.\n- 1억 미만 달러 금액과 기존 소수 첫째 자리 표시를 유지하며, 원값과 계산은 변경하지 않습니다.\n\n## 테스트\n\n- [x] `npm run lint`: 오류 0, 기존 경고 26개\n- [x] `npm run build`: 통과\n- [x] `npm test`: 실패·건너뜀 0\n- [x] 요약 문장의 큰 달러 금액 축약과 소액 달러 표시 유지 검증\n\n## 리뷰 포인트\n\n- 요약 문장과 지표 카드의 달러 축약 기준이 일치하는지 확인",
+    "state": "merged",
+    "created_at": "2026-10-01T16:20:07.481+09:00",
+    "updated_at": "2026-10-01T17:46:29.015+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-10-01T17:46:28.737+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-context",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+    "merge_commit_sha": "2830823c768b12200e8409eb7f76981fb8960b10",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T16:20:08.449+09:00",
+    "reference": "!354",
+    "references": {
+      "short": "!354",
+      "relative": "!354",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!354"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/354",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 4
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": "2026-10-01T16:20:16.353+09:00",
+    "latest_build_finished_at": "2026-10-01T16:25:18.525+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 227950,
+      "iid": 384,
+      "project_id": 1444456,
+      "sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+      "ref": "feat(fe)/market-flow-context",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-01T16:20:16.226+09:00",
+      "updated_at": "2026-10-01T16:25:18.536+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227950"
+    },
+    "head_pipeline": {
+      "id": 227950,
+      "iid": 384,
+      "project_id": 1444456,
+      "sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+      "ref": "feat(fe)/market-flow-context",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-10-01T16:20:16.226+09:00",
+      "updated_at": "2026-10-01T16:25:18.536+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227950",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-10-01T16:20:16.353+09:00",
+      "finished_at": "2026-10-01T16:25:18.525+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/227950",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "head_sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+      "start_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ed041f26a52beda3478217157519f8ac63f0a0b4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879978,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T16:20:07.585+09:00",
+          "updated_at": "2026-10-01T16:20:07.593+09:00",
+          "system": true,
+          "noteable_id": 963014,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 354,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4ddee6d4e900fc0a45998b75b44436db08dd2b46",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879979,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `formatNarrative` 함수에서 억 단위 이상의 미국 달러 금액이 포함된 서버 요약 문장이 올바르게 '약 OO억 OO만 미국 달러' 형태로 변환되는지 테스트 시나리오를 수행합니다.\n- 억 미만의 달러 금액(예: 두바이유 등)이나 소수점이 포함된 일반 숫자가 기존 규격대로 정밀도만 줄어들고 단위가 잘못 변환되지 않는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:66c573e9cea5c65b5f55f14e89331472cd4d6f1b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-01T16:20:14.644+09:00",
+          "updated_at": "2026-10-01T16:20:14.644+09:00",
+          "system": false,
+          "noteable_id": 963014,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 354,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d1d6f2dd25de3e8308e6532b75e5d6acc21c507c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880102,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T17:46:15.558+09:00",
+          "updated_at": "2026-10-01T17:46:15.562+09:00",
+          "system": true,
+          "noteable_id": 963014,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 354,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d43e81402c76c987d69e48617dd5e5bd59ca7491",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880103,
+          "type": null,
+          "body": "mentioned in commit 2830823c768b12200e8409eb7f76981fb8960b10",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-10-01T17:46:28.769+09:00",
+          "updated_at": "2026-10-01T17:46:28.781+09:00",
+          "system": true,
+          "noteable_id": 963014,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 354,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d6c55986c6d1dcefd8ca89c0b87a849d77036266",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885072,
+          "type": null,
+          "body": "mentioned in commit cfc6339d2ec9d5a97e91b1437505ca02799a31dd",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.495+09:00",
+          "updated_at": "2026-10-13T15:16:16.527+09:00",
+          "system": true,
+          "noteable_id": 963014,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 354,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261065,
+      "head_commit_sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+      "base_commit_sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "start_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "created_at": "2026-10-01T16:20:07.753+09:00",
+      "merge_request_id": 963014,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "755ce16c18c81b65c182d20adf3a960b213699e4"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261065,
+      "head_commit_sha": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+      "base_commit_sha": "671384ec4224940878213aeed1621f8f1bd43f17",
+      "start_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "created_at": "2026-10-01T16:20:07.753+09:00",
+      "merge_request_id": 963014,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "755ce16c18c81b65c182d20adf3a960b213699e4",
+      "commits": [
+        {
+          "id": "66c573e9cea5c65b5f55f14e89331472cd4d6f1b",
+          "short_id": "66c573e9",
+          "created_at": "2026-10-01T16:20:04.000+09:00",
+          "parent_ids": [
+            "671384ec4224940878213aeed1621f8f1bd43f17"
+          ],
+          "title": "fix(fe): 시장 흐름 요약 문장의 달러 금액도 억 단위로 줄인다",
+          "message": "fix(fe): 시장 흐름 요약 문장의 달러 금액도 억 단위로 줄인다\n\n무역수지가 요약 문장에 들어가면 자릿수 구분 없는 긴 정수로 나왔다. 억 이상 달러만 카드와 같은 방식으로 줄이고,\n섹터 선택 화면에 남은 빈 줄을 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-10-01T16:20:04.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-10-01T16:20:04.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/66c573e9cea5c65b5f55f14e89331472cd4d6f1b"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -139,6 +139,13 @@ describe('시장 흐름 숫자 표시', () => {\n     expect(formatNarrative('수출은 4.346167%, 환율은 1,351.256789원입니다.')).toBe('수출은 4.3%, 환율은 1,351.3원입니다.')\n     expect(formatNarrative(null)).toBeNull()\n   })\n+  it('서버 요약 문장의 달러 금액도 억 단위로 줄인다', () => {\n+    expect(formatNarrative('무역수지가 34785482585미국 달러로 2개월 연속 높아졌습니다.')).toBe(\n+      '무역수지가 약 347억 9천만 미국 달러로 2개월 연속 높아졌습니다.',\n+    )\n+    // 억 미만 달러(두바이유 등)는 숫자만 다듬는다.\n+    expect(formatNarrative('두바이유가 87.5달러/배럴로 높아졌습니다.')).toBe('두바이유가 87.5달러/배럴로 높아졌습니다.')\n+  })\n   it('달러 금액은 천만 단위로 반올림하고 억 자리 올림과 부호를 보존한다', () => {\n     expect(formatObservation(34_785_482_585, '미국 달러')).toBe('약 347억 9천만')\n     expect(formatObservation(-34_785_482_585, '미국 달러')).toBe('약 -347억 9천만')\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.test.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,9 +19,19 @@ export function formatObservation(value: number | null, unit?: string): string {\n   return text === '-0' ? '0' : text\n }\n \n-/** 서버 요약의 문장은 유지하고 숫자의 표시 정밀도만 줄인다. */\n+/**\n+ * 서버 요약의 문장은 유지하고 숫자의 표시 정밀도만 줄인다. 달러 금액(무역수지)은 카드와 같이 억 단위로\n+ * 줄인다 — 문장에는 \"34785482585미국 달러\"처럼 자릿수 구분 없이 온다.\n+ */\n export function formatNarrative(text: string | null): string | null {\n-  return text?.replace(/-?\\d[\\d,]*\\.\\d+/g, (value) => formatObservation(Number(value.replaceAll(',', '')))) ?? null\n+  return (\n+    text\n+      ?.replace(/(-?\\d[\\d,]*(?:\\.\\d+)?)\\s?(미국 달러|달러|USD)/g, (match: string, value: string, unit: string) => {\n+        const amount = Number(value.replaceAll(',', ''))\n+        return Math.abs(amount) >= 100_000_000 ? `${formatObservation(amount, unit)} ${unit}` : match\n+      })\n+      .replace(/-?\\d[\\d,]*\\.\\d+/g, (value) => formatObservation(Number(value.replaceAll(',', '')))) ?? null\n+  )\n }\n \n export function formatUpdatedAt(value: string | null): string {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "old_path": "frontend/src/components/marketflow/marketFlowFormat.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -326,8 +326,6 @@ function InstrumentBoard({ sectors, isSample }: InstrumentBoardProps) {\n           onCancel={learningEntry.cancelOverwrite}\n         />\n       </div>\n-\n-\n     </>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2879979": []
+  }
+}

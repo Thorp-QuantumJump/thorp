@@ -1,0 +1,703 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 950131,
+    "iid": 211,
+    "project_id": 1444456,
+    "title": "feat(de): 끊긴 수집을 이어받고 서버 DB 적재 절차를 남긴다",
+    "description": "## 작업 내용 요약\n\n16년치(2010~2026) KRX 시장 자료를 실제로 모아 서버에 올리는 과정에서 막혔던 세 군데를 뚫었다. 수집이 끊겨도 이어받게 만들고, 판 번호를 지정할 길을 잇고, 로컬 자료를 서버 DB로 옮기는 절차를 남겼다.\n\n## 관련 티켓\n\n없다. spec 001 적재를 실제로 돌려 보다가 드러난 운영 작업이라 티켓을 따로 세우지 않았다.\n\n## 주요 변경 사항\n\n### 1. 끊긴 수집을 이어받는다 (`ResumableArchivingSource`)\n\n기존 `RawArchivingSource` 는 응답을 파일로 남기기는 했지만 **다시 돌리면 무조건 API를 다시 부른다.** 16년치 ETF 수집은 4,112일치를 훑는 작업이고, 실제로 2,663번째에서 끊겼다. 그대로였다면 처음부터 다시 돌려야 했다.\n\n`ResumableArchivingSource` 는 그날짜 파일이 이미 있으면 그것을 읽고, 없을 때만 API를 부른 뒤 저장한다. 끊긴 지점에서 다시 돌려 손실 없이 마쳤다.\n\n### 2. 판 번호를 지정할 길을 잇는다 (`--revision`)\n\n-203이 판 번호 규칙(`KRX_DAILY_{날짜}_R{판}`)과 `build_dataset_id(deadline, revision)` 을 만들었는데, **정작 `ingest_krx.py` 에 그 판 번호를 넘길 인자가 없었다.** 규칙만 있고 쓸 길이 없는 상태였다. 같은 마감일로 다시 모으면 `dataset_id` 가 충돌해 적재가 막힌다.\n\n`--revision` 인자를 붙였다. 더불어 `DatasetVersion.__post_init__` 의 마감일 일치 검사가 판 번호를 모르고 있어서 `KRX_DAILY_20260915_R2` 를 넣으면 `KRX_DAILY_20260915` 와 다르다며 거절했다. 식별자에서 판 번호를 읽어 같은 판으로 다시 만들어 비교하도록 고치고 테스트 2건을 붙였다.\n\n### 3. 서버 DB 적재 절차 (`data/sql/`)\n\n`data/` 는 서버에 배포되지 않고, 서버 워커는 서버 Postgres의 `MARKET_DATA_URL` 을 읽는다. 로컬에서 확인한 자료를 서버로 옮기는 절차가 필요하다.\n\n`pg_dump` 를 쓰지 않은 이유는 **자료 버전 이름을 바꿀 수 없기 때문이다.** 판 번호는 \"그 DB 안에서 몇 번째냐\"를 뜻하므로 로컬의 `_R2` 를 서버에 그대로 옮기면 안 된다. 서버가 비어 있으면 그것이 첫 판이다. 대응표 번호(`map_version_id`)도 서버에서 새로 매겨지므로 하드코딩하지 않고 `sector_etf_map_version` 을 먼저 넣은 뒤 그 id를 찾아 쓰게 만들었다.\n\n- `01-inspect-server.sql`: 넣기 전에 서버 상태를 눈으로 확인한다\n- `02-export-local.py`: 로컬에서 읽어 **한 트랜잭션짜리** 적재 SQL을 뽑는다. 발행본은 UPDATE·DELETE가 막혀 있으므로(FR-017) 절반만 들어간 상태가 가장 나쁘다\n- `README.md`: 세 단계를 순서대로 적었다\n\n생성물인 `03-load-server.sql` 은 5MB가 넘고 로컬 DB 상태에 딸린 값이라 저장소에 두면 곧 실제와 어긋나므로 `.gitignore` 에 넣었다. `02-export-local.py` 로 언제든 다시 만든다.\n\n### 4. 복원한 분배금 149건 (`data/config/corporate-actions-2010-2026.json`)\n\n다시 모으려면 KIND 공시 목록 전체를 다시 훑어야 하므로 결과를 보관한다.\n\n## 테스트\n\n```\nruff check .          → All checks passed!\nruff format --check   → 이번에 손댄 4개 파일 모두 통과\npytest -q             → 841 passed\n```\n\n실제 수집도 끝까지 돌렸다. 여덟 개 ETF의 상장일부터 2026-09-15까지, 4,112일치를 모두 모았다.\n\n## 리뷰 포인트\n\n### 고치지 않고 알리는 것: T015 폐기 근거가 실제와 어긋난다\n\n16년치 자료에서 **거래 정지 구간이 33건 나왔다.** 그런데 아직 머지되지 않은 MR !188 에는 T015를 폐기하는 근거로 \"정지 0건\"이 적혀 있다. 2년치만 봤을 때의 관찰이었고, 기간을 늘리자 뒤집혔다.\n\n이 MR의 범위 밖이라 손대지 않았다. MR !188 의 해당 문구를 고치거나 T015 판단을 다시 하는 일이 남아 있다.\n\n### 이번에 고려하지 못한 것\n\n- **이어받기가 \"파일이 있으면 읽는다\"로만 판단한다.** 절반만 쓰이다 끊긴 파일이 있으면 그것을 정상으로 보고 넘어갈 수 있다. 실제로는 `write_text` 가 한 번에 쓰므로 그럴 가능성이 낮다고 보고 검증 장치를 두지 않았다. 손상을 의심하면 해당 파일을 지우고 다시 돌리면 된다\n- **판 번호를 사람이 손으로 넣는다.** 다음 판이 몇 번인지 DB에 물어보지 않는다. 지금은 적재가 드물게 일어나 문제가 없지만, 자동화한다면 여기가 먼저 걸린다\n- **적재 SQL을 뽑은 뒤 서버에 넣는 것은 사람이 한다.** 되돌릴 수 없는 작업이라 일부러 자동화하지 않았다. 넣기 전에 반드시 백업한다\n\n### 설계의 빈틈\n\n- `ResumableArchivingSource` 와 `ArchiveReadingSource` 와 `RawArchivingSource` 가 셋 다 남아 있다. 이어받기가 앞의 둘을 사실상 대체하지만, 쓰이는 자리가 달라(`--from-raw` 는 API를 아예 부르지 않는다) 한 번에 정리하지 않았다\n- 분배금 복원 결과를 `data/config/` 에 파일로 두었다. 자료 버전에 묶여 있지 않으므로 다음에 다시 모을 때 이 파일이 최신인지 확인할 방법이 없다\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-18T09:07:23.249+09:00",
+    "updated_at": "2026-09-18T09:10:00.451+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-18T09:10:00.153+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/collect-resume",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+    "merge_commit_sha": "4e2711502ed67792d27c007f5fc82e4c452d2253",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:07:25.731+09:00",
+    "reference": "!211",
+    "references": {
+      "short": "!211",
+      "relative": "!211",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!211"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/211",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 950131,
+    "iid": 211,
+    "project_id": 1444456,
+    "title": "feat(de): 끊긴 수집을 이어받고 서버 DB 적재 절차를 남긴다",
+    "description": "## 작업 내용 요약\n\n16년치(2010~2026) KRX 시장 자료를 실제로 모아 서버에 올리는 과정에서 막혔던 세 군데를 뚫었다. 수집이 끊겨도 이어받게 만들고, 판 번호를 지정할 길을 잇고, 로컬 자료를 서버 DB로 옮기는 절차를 남겼다.\n\n## 관련 티켓\n\n없다. spec 001 적재를 실제로 돌려 보다가 드러난 운영 작업이라 티켓을 따로 세우지 않았다.\n\n## 주요 변경 사항\n\n### 1. 끊긴 수집을 이어받는다 (`ResumableArchivingSource`)\n\n기존 `RawArchivingSource` 는 응답을 파일로 남기기는 했지만 **다시 돌리면 무조건 API를 다시 부른다.** 16년치 ETF 수집은 4,112일치를 훑는 작업이고, 실제로 2,663번째에서 끊겼다. 그대로였다면 처음부터 다시 돌려야 했다.\n\n`ResumableArchivingSource` 는 그날짜 파일이 이미 있으면 그것을 읽고, 없을 때만 API를 부른 뒤 저장한다. 끊긴 지점에서 다시 돌려 손실 없이 마쳤다.\n\n### 2. 판 번호를 지정할 길을 잇는다 (`--revision`)\n\n-203이 판 번호 규칙(`KRX_DAILY_{날짜}_R{판}`)과 `build_dataset_id(deadline, revision)` 을 만들었는데, **정작 `ingest_krx.py` 에 그 판 번호를 넘길 인자가 없었다.** 규칙만 있고 쓸 길이 없는 상태였다. 같은 마감일로 다시 모으면 `dataset_id` 가 충돌해 적재가 막힌다.\n\n`--revision` 인자를 붙였다. 더불어 `DatasetVersion.__post_init__` 의 마감일 일치 검사가 판 번호를 모르고 있어서 `KRX_DAILY_20260915_R2` 를 넣으면 `KRX_DAILY_20260915` 와 다르다며 거절했다. 식별자에서 판 번호를 읽어 같은 판으로 다시 만들어 비교하도록 고치고 테스트 2건을 붙였다.\n\n### 3. 서버 DB 적재 절차 (`data/sql/`)\n\n`data/` 는 서버에 배포되지 않고, 서버 워커는 서버 Postgres의 `MARKET_DATA_URL` 을 읽는다. 로컬에서 확인한 자료를 서버로 옮기는 절차가 필요하다.\n\n`pg_dump` 를 쓰지 않은 이유는 **자료 버전 이름을 바꿀 수 없기 때문이다.** 판 번호는 \"그 DB 안에서 몇 번째냐\"를 뜻하므로 로컬의 `_R2` 를 서버에 그대로 옮기면 안 된다. 서버가 비어 있으면 그것이 첫 판이다. 대응표 번호(`map_version_id`)도 서버에서 새로 매겨지므로 하드코딩하지 않고 `sector_etf_map_version` 을 먼저 넣은 뒤 그 id를 찾아 쓰게 만들었다.\n\n- `01-inspect-server.sql`: 넣기 전에 서버 상태를 눈으로 확인한다\n- `02-export-local.py`: 로컬에서 읽어 **한 트랜잭션짜리** 적재 SQL을 뽑는다. 발행본은 UPDATE·DELETE가 막혀 있으므로(FR-017) 절반만 들어간 상태가 가장 나쁘다\n- `README.md`: 세 단계를 순서대로 적었다\n\n생성물인 `03-load-server.sql` 은 5MB가 넘고 로컬 DB 상태에 딸린 값이라 저장소에 두면 곧 실제와 어긋나므로 `.gitignore` 에 넣었다. `02-export-local.py` 로 언제든 다시 만든다.\n\n### 4. 복원한 분배금 149건 (`data/config/corporate-actions-2010-2026.json`)\n\n다시 모으려면 KIND 공시 목록 전체를 다시 훑어야 하므로 결과를 보관한다.\n\n## 테스트\n\n```\nruff check .          → All checks passed!\nruff format --check   → 이번에 손댄 4개 파일 모두 통과\npytest -q             → 841 passed\n```\n\n실제 수집도 끝까지 돌렸다. 여덟 개 ETF의 상장일부터 2026-09-15까지, 4,112일치를 모두 모았다.\n\n## 리뷰 포인트\n\n### 고치지 않고 알리는 것: T015 폐기 근거가 실제와 어긋난다\n\n16년치 자료에서 **거래 정지 구간이 33건 나왔다.** 그런데 아직 머지되지 않은 MR !188 에는 T015를 폐기하는 근거로 \"정지 0건\"이 적혀 있다. 2년치만 봤을 때의 관찰이었고, 기간을 늘리자 뒤집혔다.\n\n이 MR의 범위 밖이라 손대지 않았다. MR !188 의 해당 문구를 고치거나 T015 판단을 다시 하는 일이 남아 있다.\n\n### 이번에 고려하지 못한 것\n\n- **이어받기가 \"파일이 있으면 읽는다\"로만 판단한다.** 절반만 쓰이다 끊긴 파일이 있으면 그것을 정상으로 보고 넘어갈 수 있다. 실제로는 `write_text` 가 한 번에 쓰므로 그럴 가능성이 낮다고 보고 검증 장치를 두지 않았다. 손상을 의심하면 해당 파일을 지우고 다시 돌리면 된다\n- **판 번호를 사람이 손으로 넣는다.** 다음 판이 몇 번인지 DB에 물어보지 않는다. 지금은 적재가 드물게 일어나 문제가 없지만, 자동화한다면 여기가 먼저 걸린다\n- **적재 SQL을 뽑은 뒤 서버에 넣는 것은 사람이 한다.** 되돌릴 수 없는 작업이라 일부러 자동화하지 않았다. 넣기 전에 반드시 백업한다\n\n### 설계의 빈틈\n\n- `ResumableArchivingSource` 와 `ArchiveReadingSource` 와 `RawArchivingSource` 가 셋 다 남아 있다. 이어받기가 앞의 둘을 사실상 대체하지만, 쓰이는 자리가 달라(`--from-raw` 는 API를 아예 부르지 않는다) 한 번에 정리하지 않았다\n- 분배금 복원 결과를 `data/config/` 에 파일로 두었다. 자료 버전에 묶여 있지 않으므로 다음에 다시 모을 때 이 파일이 최신인지 확인할 방법이 없다\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-18T09:07:23.249+09:00",
+    "updated_at": "2026-09-18T09:10:00.451+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-18T09:10:00.153+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/collect-resume",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+    "merge_commit_sha": "4e2711502ed67792d27c007f5fc82e4c452d2253",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:07:25.731+09:00",
+    "reference": "!211",
+    "references": {
+      "short": "!211",
+      "relative": "!211",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!211"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/211",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": "2026-09-18T09:07:36.841+09:00",
+    "latest_build_finished_at": "2026-09-18T09:09:46.724+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 204510,
+      "iid": 144,
+      "project_id": 1444456,
+      "sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+      "ref": "feat(de)/collect-resume",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T09:07:36.709+09:00",
+      "updated_at": "2026-09-18T09:09:46.732+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204510"
+    },
+    "head_pipeline": {
+      "id": 204510,
+      "iid": 144,
+      "project_id": 1444456,
+      "sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+      "ref": "feat(de)/collect-resume",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T09:07:36.709+09:00",
+      "updated_at": "2026-09-18T09:09:46.732+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204510",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T09:07:36.841+09:00",
+      "finished_at": "2026-09-18T09:09:46.724+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/204510",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "head_sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+      "start_sha": "9177de31db3bec4981a225bda8f6336d451952b8"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "20ed9f8ca4f4e2e6abc78806d6219552039f79d0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829976,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-18T09:07:23.389+09:00",
+          "updated_at": "2026-09-18T09:07:23.392+09:00",
+          "system": true,
+          "noteable_id": 950131,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 211,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "124af6b380bdfb47e4f285b453e279f4d78d70f4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829977,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-18T09:07:23.413+09:00",
+          "updated_at": "2026-09-18T09:07:23.421+09:00",
+          "system": true,
+          "noteable_id": 950131,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 211,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b5b13aa41e68f66a4ca36d995f638783c096e3b5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2829979,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **안전한 트랜잭션 및 멱등성 설계**: `02-export-local.py`와 SQL 스크립트에서 `BEGIN`/`COMMIT` 트랜잭션 블록을 구성하고, `ON CONFLICT DO NOTHING` 처리를 적용하여 부분 적재로 인한 데이터 오염 위험을 효과적으로 차단했습니다.\n- **철저한 검증 및 테스트 커버리지**: `DatasetVersion`의 판 번호(`_R{판}`) 파싱 로직 변경에 따른 유효성 검사 테스트와 `ResumableArchivingSource`의 중복 API 호출 방지(캐싱) 동작을 검증하는 테스트 코드가 충실하게 작성되었습니다.\n\n### 발견 사항\n- [Medium] `data/sql/02-export-local.py`: `rows_of` 함수에서 매개변수 바인딩 시 `sqlalchemy.text`를 사용하고 있으나, `insert_many` 함수 등에서 `quote` 함수를 통한 수동 문자열 이스케이프(`replace(\"'\", \"''\")`)와 SQL 템플릿 문자열 조합을 사용하고 있습니다. SQLAlchemy의 바인딩 파라미터(`:param`) 기능을 일관되게 활용하지 않고 수동으로 SQL을 조합할 경우, 향후 데이터 내 특수문자나 예상치 못한 입력값으로 인해 SQL 인젝션 취약점이나 문법 오류가 발생할 여지가 있습니다. 대량 삽입 시에는 SQLAlchemy의 executemany나 정석적인 바인딩 방식을 사용하는 것을 권장합니다.\n\n### 테스트 제안\n- **판 번호 지정 수집 테스트**: `--revision` 인자를 넘겨 실행했을 때 생성되는 `dataset_id`가 지정한 판 번호(예: `_R2`)를 정확히 포함하고, 데이터베이스에 정상적으로 적재되는지 통합 테스트를 수행합니다.\n- **중단 후 재수집(Resumable) 시나리오 테스트**: 수집 도중 일부 파일만 생성된 상태(또는 의도적으로 중간에 중단된 상황)에서 `ResumableArchivingSource`를 재실행했을 때, 이미 존재하는 날짜의 API 호출을 생략하고 나머지 날짜만 정상적으로 수집하여 완료하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b23175b9e16cdf1b13583bfd7eab555f00a82e80 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T09:07:33.515+09:00",
+          "updated_at": "2026-09-18T09:07:33.515+09:00",
+          "system": false,
+          "noteable_id": 950131,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 211,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bda0f1353c742bf74cafa87bafa14b7d181641ef",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830004,
+          "type": null,
+          "body": "mentioned in commit 4e2711502ed67792d27c007f5fc82e4c452d2253",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-18T09:10:00.112+09:00",
+          "updated_at": "2026-09-18T09:10:00.120+09:00",
+          "system": true,
+          "noteable_id": 950131,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 211,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2217712,
+      "head_commit_sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+      "base_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "start_commit_sha": "9177de31db3bec4981a225bda8f6336d451952b8",
+      "created_at": "2026-09-18T09:07:23.780+09:00",
+      "merge_request_id": 950131,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "e59774373366a72e8ba5c4e140a82a39a64e9162"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2217712,
+      "head_commit_sha": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+      "base_commit_sha": "1712d8231586e7549a81773899ac74eea27aefa9",
+      "start_commit_sha": "9177de31db3bec4981a225bda8f6336d451952b8",
+      "created_at": "2026-09-18T09:07:23.780+09:00",
+      "merge_request_id": 950131,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "e59774373366a72e8ba5c4e140a82a39a64e9162",
+      "commits": [
+        {
+          "id": "b23175b9e16cdf1b13583bfd7eab555f00a82e80",
+          "short_id": "b23175b9",
+          "created_at": "2026-09-18T09:06:19.000+09:00",
+          "parent_ids": [
+            "b96e966233ef723fc9a86942330cfa28aa7562ec"
+          ],
+          "title": "chore(de): 서버 DB에 시장 자료를 옮기는 절차를 남긴다",
+          "message": "chore(de): 서버 DB에 시장 자료를 옮기는 절차를 남긴다\n\n`data/` 는 서버에 배포되지 않고, 서버 워커는 서버 Postgres 의 `MARKET_DATA_URL`\n을 읽는다. 그래서 로컬에서 확인한 자료를 서버로 옮기는 별도의 절차가 필요하다.\n\n`pg_dump` 를 쓰지 않는 이유는 자료 버전 이름을 바꿀 수 없기 때문이다. 판 번호는\n\"그 DB 안에서 몇 번째냐\"를 뜻하므로 로컬의 `_R2` 를 서버에 그대로 옮기면 안 된다.\n대응표 번호(`map_version_id`)도 서버에서 새로 매겨지므로 하드코딩하지 않고\n`sector_etf_map_version` 을 먼저 넣은 뒤 그 id 를 찾아 쓰게 만들었다.\n\n- `01-inspect-server.sql`: 넣기 전에 서버가 어떤 상태인지 눈으로 확인한다\n- `02-export-local.py`: 로컬에서 읽어 한 트랜잭션짜리 적재 SQL 을 뽑는다\n- `README.md`: 세 단계를 순서대로 적었다\n\n생성물인 `03-load-server.sql` 은 5MB 가 넘고 로컬 DB 상태에 딸린 값이라\n저장소에 두면 곧 실제와 어긋나므로 `.gitignore` 에 넣었다.\n\n2010년부터 2026년까지 복원한 분배금 149건도 함께 남긴다. 다시 모으려면 KIND\n목록 전체를 다시 훑어야 하므로 결과를 보관하는 편이 낫다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-18T09:06:19.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-18T09:06:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b23175b9e16cdf1b13583bfd7eab555f00a82e80"
+        },
+        {
+          "id": "b96e966233ef723fc9a86942330cfa28aa7562ec",
+          "short_id": "b96e9662",
+          "created_at": "2026-09-18T09:06:05.000+09:00",
+          "parent_ids": [
+            "628fc95316125b3af73bfaa6d5e526fb37540711"
+          ],
+          "title": "feat(de): 판 번호를 붙인 자료 버전으로 적재한다",
+          "message": "feat(de): 판 번호를 붙인 자료 버전으로 적재한다\n\n-203이 판 번호 규칙(`KRX_DAILY_{날짜}_R{판}`)과 `build_dataset_id` 를 만들었지만\n적재 스크립트에서 그 판 번호를 지정할 길이 없었다. 같은 마감일로 다시 모으면\n`dataset_id` 가 충돌해 적재가 막힌다. `--revision` 인자를 붙여 길을 잇는다.\n\n`DatasetVersion.__post_init__` 의 마감일 일치 검사도 판 번호를 모르고 있었다.\n`KRX_DAILY_20260915_R2` 를 넣으면 `KRX_DAILY_20260915` 와 다르다며 거절했다.\n식별자에서 판 번호를 읽어 같은 판으로 다시 만들어 비교하도록 고친다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-18T09:06:05.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-18T09:06:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b96e966233ef723fc9a86942330cfa28aa7562ec"
+        },
+        {
+          "id": "628fc95316125b3af73bfaa6d5e526fb37540711",
+          "short_id": "628fc953",
+          "created_at": "2026-09-18T08:58:44.000+09:00",
+          "parent_ids": [
+            "1712d8231586e7549a81773899ac74eea27aefa9"
+          ],
+          "title": "feat(de): 끊긴 수집을 이어받는다",
+          "message": "feat(de): 끊긴 수집을 이어받는다\n\n보관 덮개가 파일이 이미 있어도 언제나 원천을 불렀다. 하루치 수집이라면 문제가\n없지만, 2010-01-04부터 모으면 호출이 만 번에 가깝고 두세 시간이 걸린다. 그동안\n한 번이라도 끊기면 처음부터 다시 받게 되어 그 시간과 이용 한도를 다시 쓴다.\n\n보관본이 있으면 그것을 읽고 없을 때만 원천을 부르는 덮개를 둔다. 수집 진입점\n둘이 그것을 쓴다.\n\n**같은 날을 다시 받지 않아도 되는 까닭**은 발행된 자료가 바뀌지 않고(FR-017)\n원천도 지난 거래일의 값을 고치지 않기 때문이다. 원천이 값을 고쳤는지 확인하는\n일은 대조(FR-016)의 몫이지 수집의 몫이 아니다.\n\n처음부터 다시 받아야 하면 보관본을 손으로 지운다. \"무시하고 다시 받기\" 인자를\n두지 않은 까닭은, 그것이 켜진 채로 긴 수집을 돌리면 이어받기가 조용히 꺼지기\n때문이다.\n\n보관본이 망가졌으면 빈 응답으로 넘기지 않고 알린다. 빈 응답은 이 원천에서\n휴장일을 뜻하므로, 조용히 넘기면 받지 못한 날이 휴장일로 둔갑한다.\n\n보관본을 읽는 코드가 두 덮개에 흩어지지 않게 한곳으로 모았다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-17T16:23:54.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-18T08:58:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/628fc95316125b3af73bfaa6d5e526fb37540711"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,1045 @@\n+[\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2011-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2011-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2012-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2012-05-08\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2013-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"35\",\n+    \"pay_date\": \"2013-05-09\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2014-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2014-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2015-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"50\",\n+    \"pay_date\": \"2015-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"175\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"100\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"115\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"280\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"95\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"100\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"280\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"210\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"65\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"416\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"091160.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"115\",\n+    \"pay_date\": \"2026-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2010-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"70\",\n+    \"pay_date\": \"2010-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2011-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"70\",\n+    \"pay_date\": \"2011-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2012-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"135\",\n+    \"pay_date\": \"2012-05-08\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2013-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"140\",\n+    \"pay_date\": \"2013-05-09\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2014-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"70\",\n+    \"pay_date\": \"2014-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2015-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"140\",\n+    \"pay_date\": \"2015-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"180\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"240\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"265\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"300\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"330\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"260\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"370\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"360\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"350\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2024-08-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-08-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2024-09-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-09-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2024-10-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-10-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2024-11-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-11-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2024-12-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2024-12-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2025-01-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-01-24\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2025-02-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-02-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2025-03-05\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-03-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2025-04-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-05-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2025-06-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-06-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"42\",\n+    \"pay_date\": \"2025-07-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"42\",\n+    \"pay_date\": \"2025-08-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-08-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"42\",\n+    \"pay_date\": \"2025-09-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-09-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"42\",\n+    \"pay_date\": \"2025-10-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-10-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"42\",\n+    \"pay_date\": \"2025-11-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-11-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"42\",\n+    \"pay_date\": \"2025-12-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2025-12-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"45\",\n+    \"pay_date\": \"2026-01-05\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-01-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"45\",\n+    \"pay_date\": \"2026-02-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-02-26\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"50\",\n+    \"pay_date\": \"2026-03-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-03-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"52\",\n+    \"pay_date\": \"2026-04-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"59\",\n+    \"pay_date\": \"2026-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-05-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"58\",\n+    \"pay_date\": \"2026-06-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-06-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"55\",\n+    \"pay_date\": \"2026-07-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"60\",\n+    \"pay_date\": \"2026-08-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091170.XKRX\",\n+    \"ex_date\": \"2026-08-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"59\",\n+    \"pay_date\": \"2026-09-02\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2010-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"120\",\n+    \"pay_date\": \"2010-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2011-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"85\",\n+    \"pay_date\": \"2011-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2012-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"105\",\n+    \"pay_date\": \"2012-05-08\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2013-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"115\",\n+    \"pay_date\": \"2013-05-09\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2014-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"99\",\n+    \"pay_date\": \"2014-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2015-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"100\",\n+    \"pay_date\": \"2015-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"320\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"250\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"245\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"250\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"255\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"230\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"365\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"425\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"590\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"584\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2026-01-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"66\",\n+    \"pay_date\": \"2026-02-03\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"496\",\n+    \"pay_date\": \"2026-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"091180.XKRX\",\n+    \"ex_date\": \"2026-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"151\",\n+    \"pay_date\": \"2026-08-04\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2010-07-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"92\",\n+    \"pay_date\": \"2010-08-05\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2011-07-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"170\",\n+    \"pay_date\": \"2011-08-08\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2012-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"100\",\n+    \"pay_date\": \"2012-08-07\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2013-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"90\",\n+    \"pay_date\": \"2013-08-08\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2014-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"15\",\n+    \"pay_date\": \"2014-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2015-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"95\",\n+    \"pay_date\": \"2015-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"165\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"130\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"145\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"200\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"235\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"295\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"445\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"210\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"245\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"372\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"340\",\n+    \"pay_date\": \"2026-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"102970.XKRX\",\n+    \"ex_date\": \"2026-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"149\",\n+    \"pay_date\": \"2026-08-04\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2010-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"35\",\n+    \"pay_date\": \"2010-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2011-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"50\",\n+    \"pay_date\": \"2011-05-11\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2012-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"40\",\n+    \"pay_date\": \"2012-05-08\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2013-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"60\",\n+    \"pay_date\": \"2013-05-09\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2014-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"10\",\n+    \"pay_date\": \"2014-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2015-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"10\",\n+    \"pay_date\": \"2015-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"40\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"35\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"35\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"35\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"59\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"15\",\n+    \"pay_date\": \"2026-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"117700.XKRX\",\n+    \"ex_date\": \"2026-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"19\",\n+    \"pay_date\": \"2026-08-04\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2012-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"30\",\n+    \"pay_date\": \"2012-05-08\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2013-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"60\",\n+    \"pay_date\": \"2013-05-09\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2014-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"40\",\n+    \"pay_date\": \"2014-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2015-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"5\",\n+    \"pay_date\": \"2015-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"10\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2017-07-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"50\",\n+    \"pay_date\": \"2017-08-02\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"5\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"5\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"21\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"50\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2025-10-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2025-11-04\"\n+  },\n+  {\n+    \"instrument_id\": \"139230.XKRX\",\n+    \"ex_date\": \"2026-07-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"88\",\n+    \"pay_date\": \"2026-08-04\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2016-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2016-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2017-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"15\",\n+    \"pay_date\": \"2017-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2018-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"25\",\n+    \"pay_date\": \"2018-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"10\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"5\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"15\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"17\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"10\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2025-10-30\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"9\",\n+    \"pay_date\": \"2025-11-04\"\n+  },\n+  {\n+    \"instrument_id\": \"228790.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"20\",\n+    \"pay_date\": \"2026-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2019-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"113\",\n+    \"pay_date\": \"2019-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2020-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"60\",\n+    \"pay_date\": \"2020-05-06\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2021-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"60\",\n+    \"pay_date\": \"2021-05-04\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2022-04-28\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"70\",\n+    \"pay_date\": \"2022-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2023-04-27\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"35\",\n+    \"pay_date\": \"2023-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2024-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"10\",\n+    \"pay_date\": \"2024-05-03\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2025-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"80\",\n+    \"pay_date\": \"2025-05-07\"\n+  },\n+  {\n+    \"instrument_id\": \"305720.XKRX\",\n+    \"ex_date\": \"2026-04-29\",\n+    \"event_type\": \"DISTRIBUTION\",\n+    \"amount\": \"18\",\n+    \"pay_date\": \"2026-05-06\"\n+  }\n+]\n\\ No newline at end of file\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/config/corporate-actions-2010-2026.json",
+          "old_path": "data/config/corporate-actions-2010-2026.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -128,7 +128,8 @@ def run(args: argparse.Namespace) -> int:\n     candidates = index.calendar_day_range(args.start, args.until)\n \n     client = krx.KrxOpenApiClient.from_env(args.env_file)\n-    source: krx.DailyRowSource = krx.RawArchivingSource(inner=client, root=_RAW_ROOT)\n+    # 보관본이 있으면 원천을 부르지 않는다. 여러 해를 모으는 수집이 중간에 끊겨도 이어받는다.\n+    source: krx.DailyRowSource = krx.ResumableArchivingSource(inner=client, root=_RAW_ROOT)\n     if args.simulate_quota_exhausted:\n         # 한도 재현 덮개는 보관 덮개 **바깥**이다. 한도에 걸린 호출은 응답이 오지 않은\n         # 호출이라 raw/에도 남지 않아야 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_index.py",
+          "old_path": "data/scripts/ingest_index.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -191,6 +191,21 @@ def build_parser() -> argparse.ArgumentParser:\n             \"거래대금에서 계산한다 (FR-015)\"\n         ),\n     )\n+    parser.add_argument(\n+        \"--revision\",\n+        type=int,\n+        default=1,\n+        help=(\n+            \"자료 버전의 판 번호(선택, 기본 1). 같은 마감일의 자료를 \"\n+            \"**내용만 바꿔 다시 발행할 때** \"\n+            \"2 이상을 준다. 첫 판은 번호가 붙지 않고(KRX_DAILY_20260915) 두 번째부터 붙는다\"\n+            \"(KRX_DAILY_20260915_R2). 발행본은 UPDATE·DELETE가 막혀 있어(FR-017) 같은 이름으로 \"\n+            \"다시 낼 수 없으므로, 분배금을 반영하거나 구간을 넓혀 다시 낼 때 이 인자가 필요하다 \"\n+            \"(research.md 결정 4의 2026-09-17 보완). \"\n+            \"판을 올릴지는 부르는 쪽이 정한다 — 스크립트가 이미 발행된 것을 조회해 스스로 올리면 \"\n+            \"같은 명령을 두 번 부른 결과가 달라져 재현이 깨진다\"\n+        ),\n+    )\n     parser.add_argument(\n         \"--from-raw\",\n         action=\"store_true\",\n@@ -436,7 +451,8 @@ def build_source(\n             )\n         return krx.ArchiveReadingSource(root=_RAW_ROOT)\n     client = krx.KrxOpenApiClient.from_env(env_file)\n-    source: krx.DailyRowSource = krx.RawArchivingSource(inner=client, root=_RAW_ROOT)\n+    # 보관본이 있으면 원천을 부르지 않는다. 여러 해를 모으는 수집이 중간에 끊겨도 이어받는다.\n+    source: krx.DailyRowSource = krx.ResumableArchivingSource(inner=client, root=_RAW_ROOT)\n     if allowed_calls is not None:\n         source = krx.QuotaLimitedSource(inner=source, allowed_calls=allowed_calls)\n     return source\n@@ -705,7 +721,7 @@ def run(args: argparse.Namespace) -> int:\n \n     indices, etf, calendar = _collect(args, windows, instrument_ids)\n     deadline = data_deadline(etf, indices)\n-    dataset_id = build_dataset_id(deadline)\n+    dataset_id = build_dataset_id(deadline, args.revision)\n     reason = failure_reason(etf, indices)\n     tables, series = _build_tables(\n         etf,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_krx.py",
+          "old_path": "data/scripts/ingest_krx.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,69 @@\n+-- 서버 DB 상태 확인 (읽기만 한다. 아무것도 바꾸지 않는다)\n+--\n+-- 왜 먼저 보는가\n+--   발행된 자료 버전은 UPDATE·DELETE 가 트리거로 막혀 있다(FR-017). 한 번 잘못 넣으면\n+--   되돌릴 수 없으므로, 무엇을 넣을지 정하기 전에 무엇이 있는지 본다.\n+--\n+--   특히 dataset_version.map_version_id 가 대응표를 가리킨다. 서버의 대응표 번호가 로컬과\n+--   다른데 로컬 번호를 그대로 넣으면 **엉뚱한 대응표를 가리키는 자료**가 발행되고 지울 수 없다.\n+--\n+-- 쓰는 법\n+--   docker exec -i thorp-postgres psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -f - < 01-inspect-server.sql\n+--   또는 psql 에 붙여 한 줄씩 실행한다.\n+\n+\\echo '=== 1. 섹터-ETF 대응표 =========================================='\n+-- 열린 버전은 최대 하나다(uk_sector_etf_map_version_open). 자료 버전이 이 id 를 가리킨다.\n+SELECT id,\n+       version,\n+       effective_to IS NULL AS 열림,\n+       is_sample,\n+       published_at\n+  FROM sector_etf_map_version\n+ ORDER BY id;\n+\n+\\echo '=== 2. 대응표에 붙은 종목 ======================================='\n+SELECT v.version,\n+       s.code   AS 섹터,\n+       e.instrument_id,\n+       e.listed_on\n+  FROM sector_etf_map_entry m\n+  JOIN sector_etf_map_version v ON v.id = m.map_version_id\n+  JOIN sector s ON s.id = m.sector_id\n+  JOIN representative_etf e ON e.id = m.etf_id\n+ ORDER BY v.version, s.code;\n+\n+\\echo '=== 3. 발행된 자료 버전 ========================================='\n+-- 같은 마감일을 다시 발행하려면 판 번호가 필요하다(KRX_DAILY_{YYYYMMDD}[_R{판}]).\n+-- 여기 이미 있는 이름과 겹치면 적재가 거부된다.\n+SELECT dataset_id,\n+       data_deadline,\n+       complete,\n+       is_sample,\n+       source,\n+       map_version_id\n+  FROM dataset_version\n+ ORDER BY data_deadline, dataset_id;\n+\n+\\echo '=== 4. 시계열이 얼마나 있나 ====================================='\n+SELECT 'daily_price'       AS 표, count(*) AS 행수,\n+       min(date)::text     AS 처음, max(date)::text AS 마지막\n+  FROM daily_price\n+UNION ALL\n+SELECT 'daily_index', count(*), min(date)::text, max(date)::text\n+  FROM daily_index\n+UNION ALL\n+SELECT 'corporate_action', count(*), min(ex_date)::text, max(ex_date)::text\n+  FROM corporate_action\n+UNION ALL\n+SELECT 'data_gap', count(*), NULL, NULL FROM data_gap\n+UNION ALL\n+SELECT 'suspension_period', count(*), NULL, NULL FROM suspension_period\n+UNION ALL\n+SELECT 'reconciliation_record', count(*), NULL, NULL FROM reconciliation_record;\n+\n+\\echo '=== 5. 자료 버전별 분량 ========================================='\n+-- 자료 버전이 여럿이면 어느 것이 실제로 쓰이는지 여기서 보인다.\n+SELECT dataset_id, count(*) AS 일봉행수\n+  FROM daily_price\n+ GROUP BY dataset_id\n+ ORDER BY dataset_id;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/sql/01-inspect-server.sql",
+          "old_path": "data/sql/01-inspect-server.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,267 @@\n+\"\"\"로컬 DB의 시장 자료를 서버에 넣을 SQL로 뽑는다.\n+\n+## 왜 스크립트로 뽑는가\n+\n+``pg_dump``로 표 몇 개만 떠서 넣으면 **자료 버전 이름을 바꿀 수 없다.** 판 번호는 \"그 DB 안에서\n+몇 번째냐\"를 뜻하므로 로컬 이름을 서버에 그대로 옮기면 안 된다. 로컬은 2년치 1판이 있어 ``_R2``\n+지만, 서버가 비어 있으면 그것이 **첫 판**이다. 여기서 이름을 바꿔 뽑는다.\n+\n+대응표 번호(``map_version_id``)도 같은 문제다. 서버에서 새로 매겨지므로 하드코딩하지 않고\n+``sector_etf_map_version``을 먼저 넣은 뒤 그 id를 찾아 쓰게 만든다.\n+\n+## 안전 장치\n+\n+* **한 트랜잭션이다.** 중간에 실패하면 아무것도 남지 않는다. 발행본은 지울 수 없으므로(FR-017)\n+  절반만 들어간 상태가 가장 나쁘다\n+* **이미 있으면 넣지 않는다**(``ON CONFLICT DO NOTHING``). 두 번 돌려도 같은 결과다\n+* 쓰기는 하지 않고 **파일로만 뽑는다.** 서버에 넣는 것은 사람이 따로 한다\n+\n+## 쓰는 법\n+\n+    python sql/02-export-local.py --source KRX_DAILY_20260915_R2 \\\\\n+        --target KRX_DAILY_20260915 --out sql/03-load-server.sql\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import argparse\n+import sys\n+from pathlib import Path\n+\n+_DATA_ROOT = Path(__file__).resolve().parents[1]\n+if str(_DATA_ROOT / \"src\") not in sys.path:\n+    sys.path.insert(0, str(_DATA_ROOT / \"src\"))\n+\n+from sqlalchemy import create_engine, text  # noqa: E402\n+\n+from data_pipeline.dataset_version import validate_dataset_id  # noqa: E402\n+from data_pipeline.repository import database_url_from_env  # noqa: E402\n+\n+\n+def quote(value: object) -> str:\n+    \"\"\"SQL 리터럴로 바꾼다. ``None``은 NULL이고 문자열은 작은따옴표를 두 번 써서 escape한다.\"\"\"\n+    if value is None:\n+        return \"NULL\"\n+    if isinstance(value, bool):\n+        return \"TRUE\" if value else \"FALSE\"\n+    if isinstance(value, (int, float)):\n+        return str(value)\n+    return \"'\" + str(value).replace(\"'\", \"''\") + \"'\"\n+\n+\n+def rows_of(conn, sql: str, **params: object) -> list[dict[str, object]]:\n+    result = conn.execute(text(sql), params)\n+    return [dict(zip(result.keys(), row, strict=True)) for row in result]\n+\n+\n+def insert_many(\n+    out: list[str],\n+    table: str,\n+    columns: tuple[str, ...],\n+    rows: list[dict[str, object]],\n+    conflict: str,\n+) -> None:\n+    \"\"\"``INSERT ... ON CONFLICT DO NOTHING`` 을 1,000행씩 끊어 쓴다.\n+\n+    한 문장에 3만 행을 담으면 psql이 읽다가 메모리를 크게 쓴다. 끊어도 한 트랜잭션 안이라\n+    중간에 실패하면 전부 되돌아간다.\n+    \"\"\"\n+    if not rows:\n+        out.append(f\"-- {table}: 옮길 행이 없다\\n\")\n+        return\n+    out.append(f\"\\n-- {table}: {len(rows)}행\")\n+    for start in range(0, len(rows), 1000):\n+        chunk = rows[start : start + 1000]\n+        values = \",\\n  \".join(\n+            \"(\" + \", \".join(quote(row[column]) for column in columns) + \")\" for row in chunk\n+        )\n+        out.append(f\"INSERT INTO {table} ({', '.join(columns)})\\nVALUES\\n  {values}\\n{conflict};\")\n+\n+\n+def main(argv: list[str] | None = None) -> int:\n+    parser = argparse.ArgumentParser(description=__doc__)\n+    parser.add_argument(\"--source\", required=True, help=\"로컬에서 뽑을 자료 버전\")\n+    parser.add_argument(\"--target\", required=True, help=\"서버에 넣을 이름. 판 번호가 다를 수 있다\")\n+    parser.add_argument(\"--out\", required=True, type=Path)\n+    parser.add_argument(\"--env-file\", type=Path, default=Path(\".env\"))\n+    args = parser.parse_args(argv)\n+\n+    validate_dataset_id(args.source)\n+    validate_dataset_id(args.target)\n+\n+    engine = create_engine(database_url_from_env(args.env_file))\n+    out: list[str] = [\n+        \"-- 서버 DB에 시장 자료를 넣는다. 로컬에서 확인한 것을 그대로 옮긴 것이다.\",\n+        f\"-- 원본 자료 버전: {args.source}\",\n+        f\"-- 넣을 이름:      {args.target}\",\n+        \"--\",\n+        \"-- 한 트랜잭션이다. 중간에 실패하면 아무것도 남지 않는다.\",\n+        \"-- 발행본은 UPDATE·DELETE가 막혀 있으므로(FR-017) 절반만 들어간 상태가 가장 나쁘다.\",\n+        \"\",\n+        \"BEGIN;\",\n+    ]\n+\n+    with engine.connect() as conn:\n+        sectors = rows_of(\n+            conn,\n+            \"SELECT DISTINCT s.code, s.name, s.classification FROM sector s\"\n+            \" JOIN sector_etf_map_entry m ON m.sector_id = s.id ORDER BY s.code\",\n+        )\n+        insert_many(\n+            out,\n+            \"sector\",\n+            (\"code\", \"name\", \"classification\"),\n+            sectors,\n+            \"ON CONFLICT (code) DO NOTHING\",\n+        )\n+\n+        etfs = rows_of(\n+            conn,\n+            \"SELECT instrument_id, name, listed_on, delisted_on, benchmark_index, manager,\"\n+            \" leveraged, inverse FROM representative_etf ORDER BY instrument_id\",\n+        )\n+        insert_many(\n+            out,\n+            \"representative_etf\",\n+            (\n+                \"instrument_id\",\n+                \"name\",\n+                \"listed_on\",\n+                \"delisted_on\",\n+                \"benchmark_index\",\n+                \"manager\",\n+                \"leveraged\",\n+                \"inverse\",\n+            ),\n+            etfs,\n+            \"ON CONFLICT (instrument_id) DO NOTHING\",\n+        )\n+\n+        maps = rows_of(\n+            conn,\n+            \"SELECT v.version, v.effective_from, v.effective_to, v.is_sample, v.published_at\"\n+            \" FROM sector_etf_map_version v JOIN dataset_version d ON d.map_version_id = v.id\"\n+            \" WHERE d.dataset_id = :src\",\n+            src=args.source,\n+        )\n+        insert_many(\n+            out,\n+            \"sector_etf_map_version\",\n+            (\"version\", \"effective_from\", \"effective_to\", \"is_sample\", \"published_at\"),\n+            maps,\n+            \"ON CONFLICT (version) DO NOTHING\",\n+        )\n+        map_version = maps[0][\"version\"] if maps else None\n+        # 대응표 항목은 서버에서 매겨진 id를 찾아 넣는다. 로컬 id를 그대로 쓰면 엉뚱한 행을\n+        # 가리킨다.\n+        entries = rows_of(\n+            conn,\n+            \"SELECT s.code AS sector_code, e.instrument_id\"\n+            \" FROM sector_etf_map_entry m\"\n+            \" JOIN sector_etf_map_version v ON v.id = m.map_version_id\"\n+            \" JOIN sector s ON s.id = m.sector_id\"\n+            \" JOIN representative_etf e ON e.id = m.etf_id\"\n+            \" WHERE v.version = :ver ORDER BY s.code\",\n+            ver=map_version,\n+        )\n+        if entries:\n+            out.append(f\"\\n-- sector_etf_map_entry: {len(entries)}행 (id는 서버 값을 찾아 쓴다)\")\n+            pairs = \", \".join(\n+                f\"({quote(row['sector_code'])}, {quote(row['instrument_id'])})\" for row in entries\n+            )\n+            out.append(\n+                \"INSERT INTO sector_etf_map_entry (map_version_id, sector_id, etf_id)\\n\"\n+                \"SELECT v.id, s.id, e.id\\n\"\n+                f\"  FROM (VALUES {pairs}) AS pair (sector_code, instrument_id)\\n\"\n+                f\"  JOIN sector_etf_map_version v ON v.version = {quote(map_version)}\\n\"\n+                \"  JOIN sector s ON s.code = pair.sector_code\\n\"\n+                \"  JOIN representative_etf e ON e.instrument_id = pair.instrument_id\\n\"\n+                \"ON CONFLICT (map_version_id, sector_id) DO NOTHING;\"\n+            )\n+\n+        version = rows_of(\n+            conn,\n+            \"SELECT data_deadline, collected_at, last_success_at, complete, failure_reason,\"\n+            \" is_sample, source FROM dataset_version WHERE dataset_id = :src\",\n+            src=args.source,\n+        )\n+        if not version:\n+            print(f\"오류: 로컬에 {args.source} 가 없다\", file=sys.stderr)\n+            return 2\n+        row = version[0]\n+        out.append(\"\\n-- dataset_version: 1행. 이 뒤로는 되돌릴 수 없다\")\n+        out.append(\n+            \"INSERT INTO dataset_version (dataset_id, data_deadline, collected_at,\"\n+            \" last_success_at, complete, failure_reason, is_sample, source, map_version_id)\\n\"\n+            f\"SELECT {quote(args.target)}, {quote(row['data_deadline'])},\"\n+            f\" {quote(row['collected_at'])}, {quote(row['last_success_at'])},\"\n+            f\" {quote(row['complete'])}, {quote(row['failure_reason'])},\"\n+            f\" {quote(row['is_sample'])}, {quote(row['source'])}, v.id\\n\"\n+            f\"  FROM sector_etf_map_version v WHERE v.version = {quote(map_version)}\\n\"\n+            \"ON CONFLICT (dataset_id) DO NOTHING;\"\n+        )\n+\n+        for table, columns, order in (\n+            (\n+                \"daily_index\",\n+                (\"index_code\", \"date\", \"open\", \"high\", \"low\", \"close\", \"volume\", \"value\"),\n+                \"index_code, date\",\n+            ),\n+            (\n+                \"daily_price\",\n+                (\n+                    \"instrument_id\",\n+                    \"date\",\n+                    \"open\",\n+                    \"high\",\n+                    \"low\",\n+                    \"close\",\n+                    \"volume\",\n+                    \"value\",\n+                    \"adjusted_close\",\n+                    \"adjustment_factor\",\n+                    \"trading_suspended\",\n+                    \"price_carried_forward\",\n+                ),\n+                \"instrument_id, date\",\n+            ),\n+            (\n+                \"corporate_action\",\n+                (\"instrument_id\", \"ex_date\", \"pay_date\", \"event_type\", \"amount\"),\n+                \"instrument_id, ex_date\",\n+            ),\n+            (\n+                \"data_gap\",\n+                (\"instrument_id\", \"start_date\", \"end_date\", \"reason\"),\n+                \"instrument_id, start_date\",\n+            ),\n+            (\n+                \"suspension_period\",\n+                (\"instrument_id\", \"start_date\", \"end_date\", \"trading_days\"),\n+                \"instrument_id, start_date\",\n+            ),\n+        ):\n+            picked = rows_of(\n+                conn,\n+                f\"SELECT {', '.join(columns)} FROM {table}\"\n+                f\" WHERE dataset_id = :src ORDER BY {order}\",\n+                src=args.source,\n+            )\n+            for item in picked:\n+                item[\"dataset_id\"] = args.target\n+            insert_many(\n+                out,\n+                table,\n+                (\"dataset_id\", *columns),\n+                picked,\n+                \"ON CONFLICT DO NOTHING\",\n+            )\n+\n+    out.append(\"\\nCOMMIT;\")\n+    args.out.write_text(\"\\n\".join(out) + \"\\n\", encoding=\"utf-8\")\n+    print(f\"{args.out} 에 썼다\")\n+    return 0\n+\n+\n+if __name__ == \"__main__\":\n+    raise SystemExit(main())\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/sql/02-export-local.py",
+          "old_path": "data/sql/02-export-local.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,71 @@\n+# 서버 DB로 시장 자료 옮기기\n+\n+로컬에서 수집·확인한 시장 자료를 서버 PostgreSQL로 옮기는 절차다.\n+\n+## 왜 이 절차가 필요한가\n+\n+수집 파이프라인(`data/`)은 **서버에 배포되지 않는다.** 배포되는 것은 backend·worker·postgres·\n+rabbitmq·kafka·nginx뿐이고, 서버 워커는 `MARKET_DATA_URL`로 **서버 PostgreSQL에서** 시장 자료를\n+읽는다. 그래서 로컬에서 만든 자료가 서버 DB에 들어가야 화면에 실제 자료가 보인다.\n+\n+**로컬에서 먼저 적재해 확인한 뒤에 옮긴다.** 발행된 자료 버전은 UPDATE·DELETE가 트리거로 막혀\n+있어(FR-017) 서버에 잘못 넣으면 되돌릴 수 없다.\n+\n+## 순서\n+\n+### 1) 서버 상태를 본다 — `01-inspect-server.sql`\n+\n+읽기만 하는 질의다. 확인할 것은 셋이다.\n+\n+- **대응표 번호**: 자료 버전이 `map_version_id`로 대응표를 가리킨다. 서버 번호가 로컬과 다른데\n+  로컬 번호를 그대로 넣으면 **엉뚱한 대응표를 가리키는 자료**가 발행되고 지울 수 없다\n+- **이미 발행된 자료 버전 이름**: 겹치면 적재가 거부된다. 같은 마감일을 다시 내려면 판 번호를\n+  쓴다(`KRX_DAILY_{YYYYMMDD}[_R{판}]`, research.md 결정 4의 2026-09-17 보완)\n+- **대표 ETF가 있는지**: 없으면 대응표부터 옮겨야 한다\n+\n+```bash\n+docker exec -i thorp-postgres psql -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" < 01-inspect-server.sql\n+```\n+\n+### 2) 서버 DB를 백업한다\n+\n+**넣기 전에 반드시 한다.** 발행본은 지울 수 없으므로 되돌릴 방법은 백업뿐이다.\n+\n+```bash\n+docker exec thorp-postgres pg_dump -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Fc \\\n+    -f /tmp/thorp-before-market-data.dump\n+docker cp thorp-postgres:/tmp/thorp-before-market-data.dump ./\n+```\n+\n+컨테이너 밖으로 꺼내 두어야 컨테이너를 지워도 남는다.\n+\n+### 3) 로컬에서 자료를 뽑는다 — `02-export-local.sh`\n+\n+**1단계 결과를 보고 만든다.** 서버의 대응표 번호와 발행할 자료 버전 이름이 정해져야 뽑을 수\n+있으므로, 이 스크립트는 1단계 뒤에 쓴다.\n+\n+### 4) 서버에 넣는다\n+\n+한 트랜잭션으로 넣어 중간에 실패하면 아무것도 남지 않게 한다.\n+\n+### 5) 확인한다 — `03-verify-server.sql`\n+\n+조정 종가가 원시 종가와 달라졌는지, 「분배를 모른다」 구간이 사라졌는지 본다.\n+\n+## 옮기는 표와 순서\n+\n+외래키 때문에 순서를 바꿀 수 없다.\n+\n+| 순서 | 표 | 비고 |\n+|---|---|---|\n+| 1 | `sector` · `representative_etf` | 서버에 이미 있으면 건너뛴다 |\n+| 2 | `sector_etf_map_version` · `sector_etf_map_entry` | 열린 버전은 최대 하나다 |\n+| 3 | `dataset_version` | 이 뒤로는 되돌릴 수 없다 |\n+| 4 | `daily_index` · `daily_price` | 분량의 대부분 |\n+| 5 | `corporate_action` · `data_gap` · `suspension_period` | |\n+\n+## 주의할 것\n+\n+- **열린 대응표는 하나뿐이다.** 새 대응표를 열려면 기존 것을 먼저 닫는다\n+- **`dataset_version`을 넣은 뒤에는 그 행도, 그것이 가리키는 대응표 행도 지울 수 없다**\n+- 서버 시간대는 `Asia/Seoul`이다. `timestamptz` 값은 시간대를 함께 적는다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/sql/README.md",
+          "old_path": "data/sql/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -169,15 +169,18 @@ class DatasetVersion:\n     def __post_init__(self) -> None:\n         validate_dataset_id(self.dataset_id)\n         _require_aware(self.data_deadline, \"data_deadline\")\n-        # research.md 결정 4가 값 규칙을 `KRX_DAILY_{자료마감일}`로 정했으므로 둘은 같은 날을\n-        # 가리켜야 한다. 어긋나면 식별자가 말하는 날과 data_deadline 열이 말하는 날이 달라지고,\n-        # 발행된 행은 고칠 수 없어 아무도 바로잡지 못한다.\n-        derived = build_dataset_id(self.data_deadline)\n+        # research.md 결정 4가 값 규칙을 `KRX_DAILY_{자료마감일}[_R{판}]`로 정했으므로 둘은 같은\n+        # 날을 가리켜야 한다. 어긋나면 식별자가 말하는 날과 data_deadline 열이 말하는 날이\n+        # 달라지고, 발행된 행은 고칠 수 없어 아무도 바로잡지 못한다.\n+        #\n+        # **판 번호는 날짜를 바꾸지 않으므로 견줄 때 뺀다.** 같은 마감일을 내용만 바꿔 다시\n+        # 발행하는 것이 판 번호의 목적이라, 판이 붙었다고 어긋난 것으로 보면 그 목적이 막힌다.\n+        derived = build_dataset_id(self.data_deadline, dataset_revision(self.dataset_id))\n         if derived != self.dataset_id:\n             raise DatasetVersionError(\n                 f\"dataset_id와 data_deadline이 어긋난다: {self.dataset_id} ≠ {derived}\"\n                 f\" (data_deadline={self.data_deadline.isoformat()}). 값 규칙은\"\n-                \" KRX_DAILY_{자료마감일}이다 (research.md 결정 4)\"\n+                \" KRX_DAILY_{자료마감일}[_R{판}]이다 (research.md 결정 4)\"\n             )\n         _require_aware(self.collected_at, \"collected_at\")\n         _require_aware(self.last_success_at, \"last_success_at\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/dataset_version.py",
+          "old_path": "data/src/data_pipeline/dataset_version.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -309,6 +309,45 @@ class RawArchivingSource:\n         return rows\n \n \n+@dataclass\n+class ResumableArchivingSource:\n+    \"\"\"보관본이 있으면 그것을 쓰고, 없을 때만 원천을 부른다. 끊긴 수집을 이어받는 덮개다.\n+\n+    :class:`RawArchivingSource` 는 파일이 있든 없든 언제나 원천을 부른다. 하루치 수집이라면\n+    문제가 없지만, **여러 해를 한 번에 모으는 수집이 중간에 끊기면 처음부터 다시 받게 된다.**\n+    2010-01-04부터 모으면 호출이 만 번에 가깝고 두세 시간이 걸리므로, 한 번 끊길 때마다 그\n+    시간과 이용 한도를 다시 쓴다.\n+\n+    이 덮개는 그 자리에서 이렇게 갈라진다.\n+\n+    * 보관본이 **있으면** 그것을 읽어 돌려준다. 원천을 부르지 않으므로 이용 한도를 쓰지 않는다\n+    * 보관본이 **없으면** 원천을 부르고 :class:`RawArchivingSource` 와 같은 자리에 남긴다\n+\n+    **이미 받은 날을 다시 받지 않는 것이 요점이다.** 값이 달라질 걱정은 없다 — 발행된 자료는\n+    바뀌지 않고(FR-017), 원천도 지난 거래일의 값을 고치지 않는다. 원천이 값을 고쳤는지\n+    확인해야 한다면 그것은 대조(FR-016)가 할 일이지 수집이 할 일이 아니다.\n+\n+    **처음부터 다시 받아야 할 때는 보관본을 지운다.** 덮개에 \"무시하고 다시 받기\" 같은 인자를\n+    두지 않는 까닭은, 그 인자가 켜진 채로 긴 수집을 돌리면 이어받기가 조용히 꺼지기 때문이다.\n+    지우는 것은 손으로 해야 하는 일이라 실수로 일어나지 않는다.\n+    \"\"\"\n+\n+    inner: DailyRowSource\n+    root: Path\n+\n+    def rows(self, group: str, endpoint: str, bas_dd: date) -> list[Mapping[str, str]]:\n+        target = self.root / group / endpoint / f\"{bas_dd:%Y%m%d}.json\"\n+        if target.is_file():\n+            return _rows_from_archive(target)\n+        rows = self.inner.rows(group, endpoint, bas_dd)\n+        target.parent.mkdir(parents=True, exist_ok=True)\n+        target.write_text(\n+            json.dumps({RESPONSE_ROWS_KEY: rows}, ensure_ascii=False, indent=2) + \"\\n\",\n+            encoding=\"utf-8\",\n+        )\n+        return rows\n+\n+\n @dataclass\n class ArchiveReadingSource:\n     \"\"\"``raw/``의 보관본을 원천 대신 돌려준다. :class:`RawArchivingSource` 가 쓴 것을 읽는다.\n@@ -337,14 +376,23 @@ class ArchiveReadingSource:\n                 f\"{bas_dd:%Y-%m-%d}의 {group}/{endpoint} 보관본이 없다: {path}. \"\n                 \"받지 않은 날을 휴장일로 볼 수 없어 진행하지 않는다\"\n             )\n-        try:\n-            body = json.loads(path.read_text(encoding=\"utf-8\"))\n-        except ValueError as error:\n-            raise RawArchiveError(f\"보관본이 JSON이 아니다: {path} ({error})\") from error\n-        rows = body.get(RESPONSE_ROWS_KEY) if isinstance(body, Mapping) else None\n-        if not isinstance(rows, list):\n-            raise RawArchiveError(f\"보관본에 {RESPONSE_ROWS_KEY!r} 배열이 없다: {path}\")\n-        return _rows_from_payload(rows, f\"보관본 {path}\")\n+        return _rows_from_archive(path)\n+\n+\n+def _rows_from_archive(path: Path) -> list[Mapping[str, str]]:\n+    \"\"\"보관본 파일 하나를 행 목록으로 읽는다.\n+\n+    보관본을 읽는 두 덮개(:class:`ResumableArchivingSource`·:class:`ArchiveReadingSource`)가\n+    같은 규칙으로 읽도록 한곳에 둔다. 한쪽만 느슨하면 같은 파일이 덮개에 따라 다르게 읽힌다.\n+    \"\"\"\n+    try:\n+        body = json.loads(path.read_text(encoding=\"utf-8\"))\n+    except ValueError as error:\n+        raise RawArchiveError(f\"보관본이 JSON이 아니다: {path} ({error})\") from error\n+    rows = body.get(RESPONSE_ROWS_KEY) if isinstance(body, Mapping) else None\n+    if not isinstance(rows, list):\n+        raise RawArchiveError(f\"보관본에 {RESPONSE_ROWS_KEY!r} 배열이 없다: {path}\")\n+    return _rows_from_payload(rows, f\"보관본 {path}\")\n \n \n # ---------------------------------------------------------------------------\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/krx.py",
+          "old_path": "data/src/data_pipeline/krx.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -97,6 +97,17 @@ class TestRevision:\n         \"\"\"판이 달라도 담은 구간의 끝은 같다. 다른 것은 내용이다.\"\"\"\n         assert dataset_deadline_date(\"KRX_DAILY_20260911_R2\") == date(2026, 9, 11)\n \n+    def test_판이_붙어도_마감일_일치_검사를_통과한다(self) -> None:\n+        \"\"\"판 번호는 날짜를 바꾸지 않는다. 어긋난 것으로 보면 판 번호의 목적이 막힌다.\"\"\"\n+        version = make_version(dataset_id=\"KRX_DAILY_20260911_R2\")\n+\n+        assert version.dataset_id == \"KRX_DAILY_20260911_R2\"\n+\n+    def test_판이_붙어도_다른_마감일은_거부한다(self) -> None:\n+        \"\"\"판 번호를 뺀 나머지는 여전히 마감일과 같아야 한다.\"\"\"\n+        with pytest.raises(DatasetVersionError):\n+            make_version(dataset_id=\"KRX_DAILY_20260912_R2\")\n+\n     def test_나중_판이_이름_정렬에서_뒤에_온다(self) -> None:\n         \"\"\"현재 판을 고르는 규칙이 '마감 시각이 같으면 식별자 내림차순'이라 이 성질에 기댄다.\"\"\"\n         assert \"KRX_DAILY_20260911\" < \"KRX_DAILY_20260911_R2\" < \"KRX_DAILY_20260911_R3\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_dataset_version.py",
+          "old_path": "data/tests/test_dataset_version.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -361,6 +361,59 @@ class TestRawArchiving:\n         assert [row[\"ISU_CD\"] for row in kept] == [\"475270\", \"069500\", \"091160\"]\n \n \n+class CountingSource:\n+    \"\"\"원천을 몇 번 불렀는지 센다. 이어받기가 호출을 아끼는지 보려면 세야 한다.\"\"\"\n+\n+    def __init__(self) -> None:\n+        self.inner = FixtureSource()\n+        self.calls = 0\n+\n+    def rows(self, group: str, endpoint: str, bas_dd: date) -> list[Mapping[str, str]]:\n+        self.calls += 1\n+        return self.inner.rows(group, endpoint, bas_dd)\n+\n+\n+class TestResumableArchiving:\n+    \"\"\"끊긴 수집을 이어받는 덮개.\n+\n+    2010-01-04부터 모으면 호출이 만 번에 가깝고 두세 시간이 걸린다. 한 번 끊길 때마다 처음부터\n+    다시 받으면 그 시간과 이용 한도를 다시 쓴다. 그래서 **이미 받은 날은 다시 부르지 않는다.**\n+    \"\"\"\n+\n+    def test_받지_않은_날은_원천을_부르고_보관한다(self, tmp_path: Path) -> None:\n+        counting = CountingSource()\n+        source = krx.ResumableArchivingSource(inner=counting, root=tmp_path)\n+\n+        collect(days=(date(2026, 9, 10),), source=source)\n+\n+        assert counting.calls == 1\n+        assert (tmp_path / \"etp\" / \"etf_bydd_trd\" / \"20260910.json\").exists()\n+\n+    def test_이미_받은_날은_원천을_부르지_않는다(self, tmp_path: Path) -> None:\n+        \"\"\"이것이 이어받기의 요점이다. 호출을 세지 않으면 아낀 것을 확인할 수 없다.\"\"\"\n+        counting = CountingSource()\n+        source = krx.ResumableArchivingSource(inner=counting, root=tmp_path)\n+        collect(days=(date(2026, 9, 10),), source=source)\n+        assert counting.calls == 1\n+\n+        second = collect(days=(date(2026, 9, 10),), source=source)\n+\n+        assert counting.calls == 1, \"보관본이 있는데 원천을 다시 불렀다\"\n+        # 보관본에서 읽어도 원천을 부른 것과 같은 값이 나와야 한다. 호출만 아끼고 결과가\n+        # 달라지면 이어받은 수집과 한 번에 받은 수집이 서로 다른 자료가 된다.\n+        assert [quote.instrument_id for quote in second.quotes] == [\"069500.XKRX\"]\n+\n+    def test_보관본이_망가졌으면_조용히_넘기지_않는다(self, tmp_path: Path) -> None:\n+        \"\"\"망가진 파일을 빈 응답으로 읽으면 그날이 휴장일로 둔갑한다.\"\"\"\n+        target = tmp_path / \"etp\" / \"etf_bydd_trd\" / \"20260910.json\"\n+        target.parent.mkdir(parents=True)\n+        target.write_text(\"{}\", encoding=\"utf-8\")\n+        source = krx.ResumableArchivingSource(inner=CountingSource(), root=tmp_path)\n+\n+        with pytest.raises(krx.RawArchiveError):\n+            collect(days=(date(2026, 9, 10),), source=source)\n+\n+\n class TestApiKey:\n     \"\"\"인증키는 ``.env``의 ``KRX_API_KEY``에서만 읽는다 (FR-012).\"\"\"\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_krx_ingest.py",
+          "old_path": "data/tests/test_krx_ingest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,3 +84,7 @@ notes/\n \n # 요약·정리용 개인 작업 공간: 저장소에 올리지 않는다\n summary/\n+\n+# 03-load-server.sql 같은 생성물은 커밋하지 않는다. 02-export-local.py 로 언제든 다시 만든다.\n+# 5MB가 넘고 로컬 DB 상태에 딸린 값이라 저장소에 두면 곧 실제와 어긋난다.\n+data/sql/*-load-server.sql\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".gitignore",
+          "old_path": ".gitignore",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2829979": []
+  }
+}

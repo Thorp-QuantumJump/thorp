@@ -1,0 +1,940 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951901,
+    "iid": 229,
+    "project_id": 1444456,
+    "title": "feat(be): 섹터 모멘텀 비중 상한 규칙 완성",
+    "description": "## 작업 내용 요약\n\n섹터 모멘텀의 상위 비율 선정 수를 올림 계산하여 비중 상한과 함께 검증합니다. 서버와 화면이 동일한 등록표 규칙을 사용하며, 기존 `SCORE_WEIGHTED` 보관값은 자동 변환하지 않고 사용자 복원을 기다립니다.\n\n## 관련 티켓\n\n- S15P21E205-337\n\n## 주요 변경 사항\n\n- `multiplyByCeil` 피연산자 문법과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100)` 규칙 추가\n- 전략 등록표 버전을 `1.5.0`으로 변경\n- 등록표 API 계약 YAML·JSON과 프론트 타입·규칙 평가 동기화\n- 기존 `SCORE_WEIGHTED` 설정의 재검증 및 명시적 기본값 복원 보장\n\n## 테스트\n\n- `./gradlew.bat spotlessCheck --no-daemon` — 통과\n- `./gradlew.bat build -x spotlessCheck` — 1,737 통과, 4 skip\n- `npm run lint` — 오류 0, 기존 경고 20\n- `npm run build` — 통과\n- `npm test` — Vitest 1,153개 및 legacy 13개 통과\n\n## 리뷰 포인트\n\n- `multiplyByCeil`의 서버·프론트 계산 결과가 같은지\n- `TOP_PERCENT`가 아닌 선정 방식에서 관련 축이 없을 때 규칙을 건너뛰는지\n- 구버전 `SCORE_WEIGHTED` 값을 `EQUAL`로 조용히 변환하지 않는지",
+    "state": "merged",
+    "created_at": "2026-09-18T17:53:40.289+09:00",
+    "updated_at": "2026-09-18T18:15:20.186+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T18:15:20.209+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/337-momentum-allocation-rule",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+    "merge_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T17:53:44.766+09:00",
+    "reference": "!229",
+    "references": {
+      "short": "!229",
+      "relative": "!229",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!229"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/229",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951901,
+    "iid": 229,
+    "project_id": 1444456,
+    "title": "feat(be): 섹터 모멘텀 비중 상한 규칙 완성",
+    "description": "## 작업 내용 요약\n\n섹터 모멘텀의 상위 비율 선정 수를 올림 계산하여 비중 상한과 함께 검증합니다. 서버와 화면이 동일한 등록표 규칙을 사용하며, 기존 `SCORE_WEIGHTED` 보관값은 자동 변환하지 않고 사용자 복원을 기다립니다.\n\n## 관련 티켓\n\n- S15P21E205-337\n\n## 주요 변경 사항\n\n- `multiplyByCeil` 피연산자 문법과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100)` 규칙 추가\n- 전략 등록표 버전을 `1.5.0`으로 변경\n- 등록표 API 계약 YAML·JSON과 프론트 타입·규칙 평가 동기화\n- 기존 `SCORE_WEIGHTED` 설정의 재검증 및 명시적 기본값 복원 보장\n\n## 테스트\n\n- `./gradlew.bat spotlessCheck --no-daemon` — 통과\n- `./gradlew.bat build -x spotlessCheck` — 1,737 통과, 4 skip\n- `npm run lint` — 오류 0, 기존 경고 20\n- `npm run build` — 통과\n- `npm test` — Vitest 1,153개 및 legacy 13개 통과\n\n## 리뷰 포인트\n\n- `multiplyByCeil`의 서버·프론트 계산 결과가 같은지\n- `TOP_PERCENT`가 아닌 선정 방식에서 관련 축이 없을 때 규칙을 건너뛰는지\n- 구버전 `SCORE_WEIGHTED` 값을 `EQUAL`로 조용히 변환하지 않는지",
+    "state": "merged",
+    "created_at": "2026-09-18T17:53:40.289+09:00",
+    "updated_at": "2026-09-18T18:15:20.186+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T18:15:20.209+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/337-momentum-allocation-rule",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+    "merge_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T17:53:44.766+09:00",
+    "reference": "!229",
+    "references": {
+      "short": "!229",
+      "relative": "!229",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!229"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/229",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "19",
+    "latest_build_started_at": "2026-09-18T18:04:28.779+09:00",
+    "latest_build_finished_at": "2026-09-18T18:15:19.418+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 207351,
+      "iid": 173,
+      "project_id": 1444456,
+      "sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+      "ref": "feat(be)/337-momentum-allocation-rule",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T18:04:28.656+09:00",
+      "updated_at": "2026-09-18T18:15:19.426+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207351"
+    },
+    "head_pipeline": {
+      "id": 207351,
+      "iid": 173,
+      "project_id": 1444456,
+      "sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+      "ref": "feat(be)/337-momentum-allocation-rule",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T18:04:28.656+09:00",
+      "updated_at": "2026-09-18T18:15:19.426+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207351",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T18:04:28.779+09:00",
+      "finished_at": "2026-09-18T18:15:19.418+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207351",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "head_sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+      "start_sha": "e45deb813271e475401e801f2c903901ef4224b5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "897e77c5ae74a68c59cd3fd060e1419c7b2d401f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837043,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T17:53:40.411+09:00",
+          "updated_at": "2026-09-18T17:53:40.416+09:00",
+          "system": true,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "930129ce499ea3b254319e04f1bf2a8dee7748eb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837044,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T17:53:41.678+09:00",
+          "updated_at": "2026-09-18T17:53:41.693+09:00",
+          "system": true,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3ec6a104bf5c9815b48ae398cd023f8984bba09d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837045,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **계산 로직 일관성 유지**: 백엔드(`RegistryRule.java`)와 프론트엔드(`validationRules.ts`) 양쪽에서 올림(`Math.ceil` / `RoundingMode.CEILING`)과 나눗셈을 포함한 복잡한 비중 상한 규칙(`maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100)`)을 정확히 대칭적으로 구현하여 서버·클라이언트 간 검증 결과 불일치 가능성을 원천 차단했습니다.\n- **안전한 버전 마이그레이션**: 레거시 설정값인 `SCORE_WEIGHTED`를 조용히 변환(`silent migration`)하는 대신, 사용자 복원을 기다리도록 설계하여 데이터 무결성과 명시적 사용자 의도 확인을 보장했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **선정 방식별 경계값 테스트**: `selectionMode`가 `TOP_PERCENT`일 때 `topPercent`와 `UNIVERSE_SIZE`의 조합에 따른 올림 계산 결과(예: `3 * 0.5 = 1.5 -> ceil = 2`)가 프론트엔드 유효성 검사와 백엔드 검증기에서 정확히 일치하는지 확인하는 파라미터화된 테스트를 추가하세요.\n- **레거시 설정 복원 시나리오**: `SCORE_WEIGHTED` 값이 포함된 이전 버전의 저장된 설정(Store)을 로드했을 때, `invalidValues`에 올바르게 적재되고 사용자가 복원 버튼을 눌렀을 때 `EQUAL`로 안전하게 초기화되는지 확인하는 통합 테스트를 수행하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e2de623e28fd08f9213e24d546d5f1291bdac6d4 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T17:53:53.603+09:00",
+          "updated_at": "2026-09-18T17:55:38.000+09:00",
+          "system": false,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f075105f3aafc93db44082cb80707603d990751a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837067,
+          "type": null,
+          "body": "added 3 commits\n\n<ul><li>46415801...e45deb81 - 2 commits from branch <code>dev</code></li><li>e2de623e - Merge remote-tracking branch &#39;origin/dev&#39; into feat(be)/337-momentum-allocation-rule</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/229/diffs?diff_id=2223915&start_sha=464158019d261b9f94111ff003eedff473e5ece8)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T17:55:31.927+09:00",
+          "updated_at": "2026-09-18T17:55:31.930+09:00",
+          "system": true,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "21624ce85d5ab29a50254b39b76a99bf546024ad",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837072,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for e2de623e28fd08f9213e24d546d5f1291bdac6d4 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T17:55:48.826+09:00",
+          "updated_at": "2026-09-18T17:55:48.830+09:00",
+          "system": true,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "29af843371e538004b51de77eefafae876a92632",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837135,
+          "type": null,
+          "body": "mentioned in commit d21e704b7f910a4cae869f985cf1011f5db031d1",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T18:15:20.352+09:00",
+          "updated_at": "2026-09-18T18:15:20.369+09:00",
+          "system": true,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3aa787bb3c9de6b46fe60cc5f7ea6ddabd69c7d5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885052,
+          "type": null,
+          "body": "mentioned in commit 5a58073ca7773eb6b550b8f592fbcaab142761c9",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.711+09:00",
+          "updated_at": "2026-10-13T15:16:11.745+09:00",
+          "system": true,
+          "noteable_id": 951901,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 229,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2223915,
+      "head_commit_sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+      "base_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:55:31.660+09:00",
+      "merge_request_id": 951901,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "957ddf10d2a76629e6e4d485c3317721e3c516b1"
+    },
+    {
+      "id": 2223897,
+      "head_commit_sha": "464158019d261b9f94111ff003eedff473e5ece8",
+      "base_commit_sha": "b28565a07cb644d19b824e4957edd3c747af529f",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:53:41.998+09:00",
+      "merge_request_id": 951901,
+      "state": "without_files",
+      "real_size": "19",
+      "patch_id_sha": "957ddf10d2a76629e6e4d485c3317721e3c516b1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2223915,
+      "head_commit_sha": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+      "base_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:55:31.660+09:00",
+      "merge_request_id": 951901,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "957ddf10d2a76629e6e4d485c3317721e3c516b1",
+      "commits": [
+        {
+          "id": "e2de623e28fd08f9213e24d546d5f1291bdac6d4",
+          "short_id": "e2de623e",
+          "created_at": "2026-09-18T17:54:16.000+09:00",
+          "parent_ids": [
+            "464158019d261b9f94111ff003eedff473e5ece8",
+            "e45deb813271e475401e801f2c903901ef4224b5"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/337-momentum-allocation-rule",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/337-momentum-allocation-rule\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T17:54:16.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T17:54:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e2de623e28fd08f9213e24d546d5f1291bdac6d4"
+        },
+        {
+          "id": "464158019d261b9f94111ff003eedff473e5ece8",
+          "short_id": "46415801",
+          "created_at": "2026-09-18T17:18:05.000+09:00",
+          "parent_ids": [
+            "b28565a07cb644d19b824e4957edd3c747af529f"
+          ],
+          "title": "feat(be): 섹터 모멘텀 비중 상한 규칙 완성",
+          "message": "feat(be): 섹터 모멘텀 비중 상한 규칙 완성\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T17:18:05.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T17:18:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/464158019d261b9f94111ff003eedff473e5ece8"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.strategy.application.port;\n \n+import java.math.BigDecimal;\n import java.util.Objects;\n import java.util.stream.Stream;\n \n@@ -42,13 +43,16 @@ public record ValidationRule(\n      *     multiplyByContext}와 같이 쓰지 않는다. 섹터 모멘텀처럼 <b>후보 전체가 아니라 그중 몇 개에만</b> 비중이 가는 전략을 판정하려면 필요하다\n      *     — {@code maxWeight × topN}이 그 예다(PD-03, T023). 곱할 축이 그 설정에 없으면(다른 선정 방식을 골랐다) 이 규칙은 위반이\n      *     아니다\n+     * @param multiplyByCeil 축 값에 곱할 올림 비율. {@code context × axis ÷ divisor}를 올림한 뒤 곱한다. {@code\n+     *     maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)}이 그 예다. 참조 축이 그 설정에 없으면 이 규칙은 판정하지 않는다\n      */\n     public record Operand(\n             String axis,\n             String context,\n             Object value,\n             String multiplyByContext,\n-            String multiplyByAxis) {\n+            String multiplyByAxis,\n+            CeilingFactor multiplyByCeil) {\n \n         public Operand {\n             long filled = Stream.of(axis, context, value).filter(Objects::nonNull).count();\n@@ -56,30 +60,61 @@ public record ValidationRule(\n                 throw new IllegalArgumentException(\n                         \"operand must set exactly one of axis, context, value\");\n             }\n-            if ((multiplyByContext != null || multiplyByAxis != null) && axis == null) {\n+            if ((multiplyByContext != null || multiplyByAxis != null || multiplyByCeil != null)\n+                    && axis == null) {\n                 throw new IllegalArgumentException(\n-                        \"multiplyByContext/multiplyByAxis is only valid with an axis\");\n+                        \"operand multipliers are only valid with an axis\");\n             }\n-            if (multiplyByContext != null && multiplyByAxis != null) {\n-                throw new IllegalArgumentException(\n-                        \"operand cannot multiply by both a context and an axis\");\n+            long multipliers =\n+                    Stream.of(multiplyByContext, multiplyByAxis, multiplyByCeil)\n+                            .filter(Objects::nonNull)\n+                            .count();\n+            if (multipliers > 1) {\n+                throw new IllegalArgumentException(\"operand cannot set more than one multiplier\");\n             }\n         }\n \n         public static Operand ofAxis(String axis, String multiplyByContext) {\n-            return new Operand(axis, null, null, multiplyByContext, null);\n+            return new Operand(axis, null, null, multiplyByContext, null, null);\n         }\n \n         public static Operand ofAxisTimesAxis(String axis, String multiplyByAxis) {\n-            return new Operand(axis, null, null, null, multiplyByAxis);\n+            return new Operand(axis, null, null, null, multiplyByAxis, null);\n+        }\n+\n+        public static Operand ofAxisTimesCeilingFactor(\n+                String axis, String context, String factorAxis, Object divisor) {\n+            return new Operand(\n+                    axis, null, null, null, null, new CeilingFactor(context, factorAxis, divisor));\n         }\n \n         public static Operand ofContext(String context) {\n-            return new Operand(null, context, null, null, null);\n+            return new Operand(null, context, null, null, null, null);\n         }\n \n         public static Operand ofValue(Object value) {\n-            return new Operand(null, null, value, null, null);\n+            return new Operand(null, null, value, null, null, null);\n+        }\n+    }\n+\n+    /** {@code ceil(context × axis ÷ divisor)}로 계산하는 곱셈 인자. */\n+    public record CeilingFactor(String context, String axis, Object divisor) {\n+\n+        public CeilingFactor {\n+            if (context == null || context.isBlank()) {\n+                throw new IllegalArgumentException(\"ceiling factor context must not be blank\");\n+            }\n+            if (axis == null || axis.isBlank()) {\n+                throw new IllegalArgumentException(\"ceiling factor axis must not be blank\");\n+            }\n+            Objects.requireNonNull(divisor, \"ceiling factor divisor must not be null\");\n+            try {\n+                if (new BigDecimal(String.valueOf(divisor)).signum() <= 0) {\n+                    throw new IllegalArgumentException(\"ceiling factor divisor must be positive\");\n+                }\n+            } catch (NumberFormatException e) {\n+                throw new IllegalArgumentException(\"ceiling factor divisor must be a number\", e);\n+            }\n         }\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/port/ValidationRule.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/port/ValidationRule.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -168,7 +168,11 @@ public record StrategyRegistryResult(\n             String context,\n             Object value,\n             String multiplyByContext,\n-            String multiplyByAxis) {}\n+            String multiplyByAxis,\n+            CeilingFactorView multiplyByCeil) {}\n+\n+    /** {@code ceil(context × axis ÷ divisor)}로 계산해 바깥 축 값에 곱하는 인자. */\n+    public record CeilingFactorView(String context, String axis, Object divisor) {}\n \n     /** 워밍업 산출 규칙. {@code sum}의 축 이름을 현재 값으로 바꿔 모두 더한다(data-model §6). */\n     public record WarmupRuleView(List<Object> sum) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/result/StrategyRegistryResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/result/StrategyRegistryResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -203,7 +203,14 @@ public class StrategyRegistryQueryService {\n     }\n \n     private static boolean references(ValidationRule rule, String axisName) {\n-        return axisName.equals(rule.left().axis()) || axisName.equals(rule.right().axis());\n+        return references(rule.left(), axisName) || references(rule.right(), axisName);\n+    }\n+\n+    private static boolean references(ValidationRule.Operand operand, String axisName) {\n+        return axisName.equals(operand.axis())\n+                || axisName.equals(operand.multiplyByAxis())\n+                || (operand.multiplyByCeil() != null\n+                        && axisName.equals(operand.multiplyByCeil().axis()));\n     }\n \n     /**\n@@ -235,7 +242,13 @@ public class StrategyRegistryQueryService {\n                 operand.context(),\n                 operand.value(),\n                 operand.multiplyByContext(),\n-                operand.multiplyByAxis());\n+                operand.multiplyByAxis(),\n+                operand.multiplyByCeil() == null\n+                        ? null\n+                        : new StrategyRegistryResult.CeilingFactorView(\n+                                operand.multiplyByCeil().context(),\n+                                operand.multiplyByCeil().axis(),\n+                                operand.multiplyByCeil().divisor()));\n     }\n \n     private static StrategyRegistryResult.WarmupRuleView toWarmupRuleView(WarmupRule warmup) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/service/StrategyRegistryQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/application/service/StrategyRegistryQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -401,8 +401,24 @@ public class FileParameterRegistry implements ParameterRegistryPort {\n         if (operand.get(\"axis\") != null) {\n             String axis = String.valueOf(operand.get(\"axis\"));\n             String byAxis = string(operand, \"multiplyByAxis\");\n+            String byContext = string(operand, \"multiplyByContext\");\n+            Map<String, Object> byCeil = map(operand, \"multiplyByCeil\");\n+            int multiplierCount =\n+                    (byAxis == null ? 0 : 1)\n+                            + (byContext == null ? 0 : 1)\n+                            + (byCeil == null ? 0 : 1);\n+            if (multiplierCount > 1) {\n+                throw new IllegalStateException(\"operand cannot set more than one multiplier\");\n+            }\n+            if (byCeil != null) {\n+                return ValidationRule.Operand.ofAxisTimesCeilingFactor(\n+                        axis,\n+                        string(byCeil, \"context\"),\n+                        string(byCeil, \"axis\"),\n+                        byCeil.get(\"divisor\"));\n+            }\n             return byAxis == null\n-                    ? ValidationRule.Operand.ofAxis(axis, string(operand, \"multiplyByContext\"))\n+                    ? ValidationRule.Operand.ofAxis(axis, byContext)\n                     : ValidationRule.Operand.ofAxisTimesAxis(axis, byAxis);\n         }\n         if (operand.get(\"context\") != null) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistry.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistry.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.strategy.infrastructure.registry;\n import com.ssafy.thorp.strategy.application.port.SearchContext;\n import com.ssafy.thorp.strategy.application.port.ValidationRule;\n import java.math.BigDecimal;\n+import java.math.RoundingMode;\n import java.util.Map;\n import java.util.Objects;\n \n@@ -74,6 +75,23 @@ record RegistryRule(ValidationRule rule) {\n             return toNumber(value, operand.axis())\n                     .multiply(toNumber(factor, operand.multiplyByAxis()));\n         }\n+        if (operand.multiplyByCeil() != null) {\n+            ValidationRule.CeilingFactor factor = operand.multiplyByCeil();\n+            Object axisValue = parameters.get(factor.axis());\n+            // TOP_PERCENT가 아닌 선정 방식에는 topPercent가 없다. 그때 이 규칙은 무관하다.\n+            if (axisValue == null) {\n+                return null;\n+            }\n+            BigDecimal divisor = toNumber(factor.divisor(), \"multiplyByCeil.divisor\");\n+            if (divisor.signum() <= 0) {\n+                throw new IllegalArgumentException(\"multiplyByCeil divisor must be positive\");\n+            }\n+            BigDecimal selectedCount =\n+                    toNumber(contextValue(factor.context(), context), factor.context())\n+                            .multiply(toNumber(axisValue, factor.axis()))\n+                            .divide(divisor, 0, RoundingMode.CEILING);\n+            return toNumber(value, operand.axis()).multiply(selectedCount);\n+        }\n         return value;\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/RegistryRule.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/infrastructure/registry/RegistryRule.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -200,7 +200,8 @@ public record StrategyRegistryResponse(\n             String context,\n             Object value,\n             String multiplyByContext,\n-            String multiplyByAxis) {\n+            String multiplyByAxis,\n+            CeilingFactor multiplyByCeil) {\n \n         public static Operand from(StrategyRegistryResult.OperandView view) {\n             return new Operand(\n@@ -208,7 +209,19 @@ public record StrategyRegistryResponse(\n                     view.context(),\n                     view.value(),\n                     view.multiplyByContext(),\n-                    view.multiplyByAxis());\n+                    view.multiplyByAxis(),\n+                    CeilingFactor.from(view.multiplyByCeil()));\n+        }\n+    }\n+\n+    /** {@code ceil(context × axis ÷ divisor)}로 계산하는 곱셈 인자. */\n+    @JsonInclude(JsonInclude.Include.NON_NULL)\n+    public record CeilingFactor(String context, String axis, Object divisor) {\n+\n+        public static CeilingFactor from(StrategyRegistryResult.CeilingFactorView view) {\n+            return view == null\n+                    ? null\n+                    : new CeilingFactor(view.context(), view.axis(), view.divisor());\n         }\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/strategy/presentation/response/StrategyRegistryResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/strategy/presentation/response/StrategyRegistryResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -62,7 +62,9 @@\n #        ② MAX_WEIGHT_TOO_LOW_FOR_SELECTION 을 더했다. 모멘텀은 후보 전체가 아니라 topN 개에만\n #           비중이 가므로 UNIVERSE_SIZE 로 재면 topN=2·상한 40% 같은 조합을 놓친다.\n #           `maxWeight × topN` 을 재려고 operand 에 multiplyByAxis 를 더했다(계약 §1).\n-version: \"1.4.0\"\n+# 1.5.0: TOP_PERCENT 선정 수도 같은 상한 규칙으로 판정한다(spec 003 T109).\n+#        `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`을 표현하려고 multiplyByCeil을 더했다.\n+version: \"1.5.0\"\n \n # 손실 제약의 기준으로 쓸 전략(007 FR-013d). 007 코드에 기준 전략 ID를 두지 않기 위해 여기서 지정한다.\n # 비우면 하락 폭 필터를 적용하지 않고 그 사실을 결과에 표시한다.\n@@ -364,6 +366,17 @@ strategies:\n         operator: LESS_THAN\n         right:\n           value: 100\n+      - code: MAX_WEIGHT_TOO_LOW_FOR_SELECTION\n+        detail: 섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\n+        left:\n+          axis: maxWeight\n+          multiplyByCeil:\n+            context: UNIVERSE_SIZE\n+            axis: topPercent\n+            divisor: 100\n+        operator: LESS_THAN\n+        right:\n+          value: 100\n \n   - id: MINIMUM_VARIANCE\n     name: 전체 변동성을 줄이도록 배분하기\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/registry/parameter-registry.yml",
+          "old_path": "backend/src/main/resources/registry/parameter-registry.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,14 +33,14 @@ class StrategyRegistryQueryServiceTest {\n             List<StrategyRegistryResult.ChoiceView> choices =\n                     choices(service.query(2), \"SECTOR_MOMENTUM\", \"topN\");\n \n-            // 섹터가 둘이므로 3·4는 고를 수 없다. 그래도 목록에서 빠지지 않는다 —\n-            // 사라지면 사용자가 왜 고를 수 없는지 알 방법이 없다.\n+            // 섹터가 둘이면 3·4는 후보 수를 넘고, 2도 기본 상한 40%로는 전액을 배분하지 못한다.\n+            // 그래도 목록에서 빠지지 않는다 — 사라지면 사용자가 왜 고를 수 없는지 알 방법이 없다.\n             assertThat(choices)\n                     .extracting(StrategyRegistryResult.ChoiceView::value)\n                     .containsExactly(2, 3, 4);\n             assertThat(choices)\n                     .extracting(StrategyRegistryResult.ChoiceView::selectable)\n-                    .containsExactly(true, false, false);\n+                    .containsExactly(false, false, false);\n         }\n \n         @Test\n@@ -174,18 +174,21 @@ class StrategyRegistryQueryServiceTest {\n                     strategy(service.query(3), \"SECTOR_MOMENTUM\").validationRules();\n \n             assertThat(withoutSize).isEqualTo(withSize);\n-            assertThat(withoutSize)\n-                    .singleElement()\n-                    .satisfies(\n-                            rule -> {\n-                                assertThat(rule.code()).isEqualTo(\"TOP_N_EXCEEDS_UNIVERSE\");\n-                                assertThat(rule.left().axis()).isEqualTo(\"topN\");\n-                                assertThat(rule.operator())\n-                                        .isEqualTo(\n-                                                com.ssafy.thorp.strategy.application.port\n-                                                        .ValidationRule.Operator.GREATER_THAN);\n-                                assertThat(rule.right().context()).isEqualTo(\"UNIVERSE_SIZE\");\n-                            });\n+            assertThat(withoutSize).hasSize(3);\n+            StrategyRegistryResult.RuleView universeRule = withoutSize.get(0);\n+            assertThat(universeRule.code()).isEqualTo(\"TOP_N_EXCEEDS_UNIVERSE\");\n+            assertThat(universeRule.left().axis()).isEqualTo(\"topN\");\n+            assertThat(universeRule.operator())\n+                    .isEqualTo(\n+                            com.ssafy.thorp.strategy.application.port.ValidationRule.Operator\n+                                    .GREATER_THAN);\n+            assertThat(universeRule.right().context()).isEqualTo(\"UNIVERSE_SIZE\");\n+\n+            StrategyRegistryResult.CeilingFactorView percentFactor =\n+                    withoutSize.get(2).left().multiplyByCeil();\n+            assertThat(percentFactor.context()).isEqualTo(\"UNIVERSE_SIZE\");\n+            assertThat(percentFactor.axis()).isEqualTo(\"topPercent\");\n+            assertThat(percentFactor.divisor()).isEqualTo(100);\n         }\n     }\n \n@@ -239,7 +242,7 @@ class StrategyRegistryQueryServiceTest {\n \n             assertThat(modes)\n                     .extracting(StrategyRegistryResult.ChoiceView::label)\n-                    .containsExactly(\"상위 몇 개\", \"기준 수익률 이상\");\n+                    .containsExactly(\"상위 몇 개\", \"기준 수익률 이상\", \"상위 몇 퍼센트\");\n         }\n \n         @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/strategy/application/service/StrategyRegistryQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/strategy/application/service/StrategyRegistryQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -751,6 +751,40 @@ class FileParameterRegistryTest {\n                     .isTrue();\n         }\n \n+        @Test\n+        @DisplayName(\"상위 비율 선정 수는 올림한 뒤 상한과 곱한다\")\n+        void momentumRoundsUpThePercentSelectionCount() {\n+            // 후보 3개의 50%는 1.5개가 아니라 2개를 고른다. 상한 40%면 80%만 배분할 수 있고,\n+            // 상한 50%면 정확히 100%를 배분한다.\n+            assertThat(\n+                            registry.validate(\n+                                            \"SECTOR_MOMENTUM\",\n+                                            Map.of(\n+                                                    \"selectionMode\",\n+                                                    \"TOP_PERCENT\",\n+                                                    \"topPercent\",\n+                                                    50,\n+                                                    \"maxWeight\",\n+                                                    40),\n+                                            new SearchContext(3))\n+                                    .valid())\n+                    .isFalse();\n+\n+            assertThat(\n+                            registry.validate(\n+                                            \"SECTOR_MOMENTUM\",\n+                                            Map.of(\n+                                                    \"selectionMode\",\n+                                                    \"TOP_PERCENT\",\n+                                                    \"topPercent\",\n+                                                    50,\n+                                                    \"maxWeight\",\n+                                                    50),\n+                                            new SearchContext(3))\n+                                    .valid())\n+                    .isTrue();\n+        }\n+\n         @Test\n         @DisplayName(\"곱할 축이 없는 설정에서는 판정하지 않는다 — 다른 선정 방식은 무관하다\")\n         void skipsTheRuleWhenTheMultiplierAxisIsAbsent() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistryTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/strategy/infrastructure/registry/FileParameterRegistryTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -91,14 +91,21 @@ class StrategyRegistryApiIT extends IntegrationTestSupport {\n     @DisplayName(\"규칙의 곱셈 인자가 응답까지 실린다 — 빠지면 화면이 상한을 전부 막는다\")\n     void ruleOperandsKeepTheirMultiplier() throws Exception {\n         JsonNode selectionRule = null;\n+        JsonNode percentSelectionRule = null;\n         for (JsonNode strategy : data(null).get(\"strategies\")) {\n             if (!\"SECTOR_MOMENTUM\".equals(strategy.get(\"strategyId\").asText())) {\n                 continue;\n             }\n             for (JsonNode rule : strategy.get(\"validationRules\")) {\n-                if (\"MAX_WEIGHT_TOO_LOW_FOR_SELECTION\".equals(rule.get(\"code\").asText())) {\n+                if (!\"MAX_WEIGHT_TOO_LOW_FOR_SELECTION\".equals(rule.get(\"code\").asText())) {\n+                    continue;\n+                }\n+                if (rule.get(\"left\").has(\"multiplyByAxis\")) {\n                     selectionRule = rule;\n                 }\n+                if (rule.get(\"left\").has(\"multiplyByCeil\")) {\n+                    percentSelectionRule = rule;\n+                }\n             }\n         }\n \n@@ -112,6 +119,12 @@ class StrategyRegistryApiIT extends IntegrationTestSupport {\n                 .isTrue();\n         assertThat(selectionRule.get(\"left\").get(\"multiplyByAxis\").asText()).isEqualTo(\"topN\");\n         assertThat(selectionRule.get(\"right\").get(\"value\").asInt()).isEqualTo(100);\n+\n+        assertThat(percentSelectionRule).as(\"모멘텀에 상위 비율 기준 상한 규칙이 있어야 한다\").isNotNull();\n+        JsonNode factor = percentSelectionRule.get(\"left\").get(\"multiplyByCeil\");\n+        assertThat(factor.get(\"context\").asText()).isEqualTo(\"UNIVERSE_SIZE\");\n+        assertThat(factor.get(\"axis\").asText()).isEqualTo(\"topPercent\");\n+        assertThat(factor.get(\"divisor\").asInt()).isEqualTo(100);\n     }\n \n     /** 조회 응답의 {@code data}. {@code universeSize}가 null이면 붙이지 않는다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/strategy/StrategyRegistryApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/strategy/StrategyRegistryApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -117,6 +117,8 @@ strategies:\n               label: 상위 몇 개\n             - value: THRESHOLD\n               label: 기준 수익률 이상\n+            - value: TOP_PERCENT\n+              label: 상위 몇 퍼센트\n       - name: topN\n         appliesWhen: { axis: selectionMode, value: TOP_N }\n         label: 선정 섹터 수\n@@ -125,6 +127,38 @@ strategies:\n         defaultValue: 4\n         allowedRange:\n           values: [2, 3, 4]\n+      - name: topPercent\n+        appliesWhen: { axis: selectionMode, value: TOP_PERCENT }\n+        label: 상위 비율\n+        description: 선정 방식이 '상위 몇 퍼센트'일 때 후보 중 고를 비율이다.\n+        unit: 퍼센트\n+        searchValues: [50]\n+        defaultValue: 50\n+        allowedRange:\n+          min: 10\n+          max: 100\n+          step: 10\n+      - name: allocationMethod\n+        label: 배분 방식\n+        description: 고른 섹터에 금액을 나누는 방식이다.\n+        searchValues: [EQUAL]\n+        defaultValue: EQUAL\n+        allowedRange:\n+          choices:\n+            - value: EQUAL\n+              label: 똑같이 나누기\n+            - value: INVERSE_VOLATILITY\n+              label: 변동성이 낮은 섹터에 더 나누기\n+      - name: maxWeight\n+        label: 섹터당 최대 비중\n+        description: 한 섹터에 넣을 수 있는 최대 비중이다.\n+        unit: 퍼센트\n+        searchValues: [40]\n+        defaultValue: 40\n+        allowedRange:\n+          min: 10\n+          max: 100\n+          step: 5\n     validationRules:\n       - code: TOP_N_EXCEEDS_UNIVERSE\n         detail: 선정 섹터 수가 후보 섹터 집합의 크기보다 큽니다.\n@@ -133,3 +167,22 @@ strategies:\n         operator: GREATER_THAN\n         right:\n           context: UNIVERSE_SIZE\n+      - code: MAX_WEIGHT_TOO_LOW_FOR_SELECTION\n+        detail: 섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\n+        left:\n+          axis: maxWeight\n+          multiplyByAxis: topN\n+        operator: LESS_THAN\n+        right:\n+          value: 100\n+      - code: MAX_WEIGHT_TOO_LOW_FOR_SELECTION\n+        detail: 섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\n+        left:\n+          axis: maxWeight\n+          multiplyByCeil:\n+            context: UNIVERSE_SIZE\n+            axis: topPercent\n+            divisor: 100\n+        operator: LESS_THAN\n+        right:\n+          value: 100\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/resources/registry/contract-registry.yml",
+          "old_path": "backend/src/test/resources/registry/contract-registry.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -116,7 +116,8 @@\n           \"inputType\": \"CHOICE\",\n           \"choices\": [\n             { \"value\": \"TOP_N\", \"label\": \"상위 몇 개\", \"selectable\": true },\n-            { \"value\": \"THRESHOLD\", \"label\": \"기준 수익률 이상\", \"selectable\": true }\n+            { \"value\": \"THRESHOLD\", \"label\": \"기준 수익률 이상\", \"selectable\": true },\n+            { \"value\": \"TOP_PERCENT\", \"label\": \"상위 몇 퍼센트\", \"selectable\": true }\n           ],\n           \"defaultValue\": \"TOP_N\"\n         },\n@@ -126,12 +127,42 @@\n           \"description\": \"선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.\",\n           \"inputType\": \"CHOICE\",\n           \"choices\": [\n-            { \"value\": 2, \"label\": \"2\", \"selectable\": true },\n+            { \"value\": 2, \"label\": \"2\", \"selectable\": false },\n             { \"value\": 3, \"label\": \"3\", \"selectable\": true },\n             { \"value\": 4, \"label\": \"4\", \"selectable\": false }\n           ],\n           \"defaultValue\": 4,\n           \"appliesWhen\": { \"axis\": \"selectionMode\", \"value\": \"TOP_N\" }\n+        },\n+        {\n+          \"name\": \"topPercent\",\n+          \"label\": \"상위 비율\",\n+          \"description\": \"선정 방식이 '상위 몇 퍼센트'일 때 후보 중 고를 비율이다.\",\n+          \"unit\": \"퍼센트\",\n+          \"inputType\": \"NUMBER\",\n+          \"range\": { \"min\": 10, \"max\": 100, \"step\": 10 },\n+          \"defaultValue\": 50,\n+          \"appliesWhen\": { \"axis\": \"selectionMode\", \"value\": \"TOP_PERCENT\" }\n+        },\n+        {\n+          \"name\": \"allocationMethod\",\n+          \"label\": \"배분 방식\",\n+          \"description\": \"고른 섹터에 금액을 나누는 방식이다.\",\n+          \"inputType\": \"CHOICE\",\n+          \"choices\": [\n+            { \"value\": \"EQUAL\", \"label\": \"똑같이 나누기\", \"selectable\": true },\n+            { \"value\": \"INVERSE_VOLATILITY\", \"label\": \"변동성이 낮은 섹터에 더 나누기\", \"selectable\": true }\n+          ],\n+          \"defaultValue\": \"EQUAL\"\n+        },\n+        {\n+          \"name\": \"maxWeight\",\n+          \"label\": \"섹터당 최대 비중\",\n+          \"description\": \"한 섹터에 넣을 수 있는 최대 비중이다.\",\n+          \"unit\": \"퍼센트\",\n+          \"inputType\": \"NUMBER\",\n+          \"range\": { \"min\": 10, \"max\": 100, \"step\": 5 },\n+          \"defaultValue\": 40\n         }\n       ],\n       \"validationRules\": [\n@@ -141,6 +172,27 @@\n           \"left\": { \"axis\": \"topN\" },\n           \"operator\": \"GREATER_THAN\",\n           \"right\": { \"context\": \"UNIVERSE_SIZE\" }\n+        },\n+        {\n+          \"code\": \"MAX_WEIGHT_TOO_LOW_FOR_SELECTION\",\n+          \"detail\": \"섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\",\n+          \"left\": { \"axis\": \"maxWeight\", \"multiplyByAxis\": \"topN\" },\n+          \"operator\": \"LESS_THAN\",\n+          \"right\": { \"value\": 100 }\n+        },\n+        {\n+          \"code\": \"MAX_WEIGHT_TOO_LOW_FOR_SELECTION\",\n+          \"detail\": \"섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\",\n+          \"left\": {\n+            \"axis\": \"maxWeight\",\n+            \"multiplyByCeil\": {\n+              \"context\": \"UNIVERSE_SIZE\",\n+              \"axis\": \"topPercent\",\n+              \"divisor\": 100\n+            }\n+          },\n+          \"operator\": \"LESS_THAN\",\n+          \"right\": { \"value\": 100 }\n         }\n       ],\n       \"warmupRule\": { \"sum\": [\"lookbackDays\", \"skipRecentDays\"] }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/strategy-registry-api/examples/registry-response.json",
+          "old_path": "docs/specs/strategy-registry-api/examples/registry-response.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -240,6 +240,60 @@ describe('useStrategySettings', () => {\n     expect(invalid?.message).toContain(numberAxis.label)\n   })\n \n+  it('옛 SCORE_WEIGHTED 보관값은 새 배분 후보로 몰래 바꾸지 않고 복원을 기다린다', () => {\n+    const allocationAxis = {\n+      ...choiceAxis,\n+      name: 'allocationMethod',\n+      label: '배분 방식',\n+      choices: [\n+        { value: 'EQUAL', label: '똑같이 나누기', selectable: true },\n+        {\n+          value: 'INVERSE_VOLATILITY',\n+          label: '변동성이 낮은 섹터에 더 나누기',\n+          selectable: true,\n+        },\n+      ],\n+      defaultValue: 'EQUAL',\n+    }\n+    const strategy = {\n+      ...selectableStrategy,\n+      axes: [allocationAxis],\n+      warmupTradingDays: 0,\n+      warmupRule: undefined,\n+    }\n+    const registry: RegistryResponse = {\n+      ...registryFixture,\n+      registryVersion: '1.5.0',\n+      strategies: [strategy],\n+    }\n+    store({\n+      registryVersion: '1.4.0',\n+      universeSize: UNIVERSE_SIZE,\n+      selectedStrategyId: strategy.strategyId,\n+      valuesByStrategy: { [strategy.strategyId]: { allocationMethod: 'SCORE_WEIGHTED' } },\n+      analysisCondition: { minEvaluationYears: 1, scenario: 'FULL_PERIOD' },\n+      invalidValues: [],\n+    })\n+\n+    const { result } = renderSettings(registry)\n+\n+    expect(result.current.values).not.toHaveProperty('allocationMethod')\n+    expect(result.current.isComplete(strategy.strategyId)).toBe(false)\n+    expect(result.current.invalidValues).toEqual([\n+      expect.objectContaining({\n+        strategyId: strategy.strategyId,\n+        axisName: 'allocationMethod',\n+        storedValue: 'SCORE_WEIGHTED',\n+        reason: 'NOT_IN_CHOICES',\n+        restorable: true,\n+      }),\n+    ])\n+\n+    act(() => result.current.resetAxis(strategy.strategyId, 'allocationMethod'))\n+    expect(result.current.values?.allocationMethod).toBe('EQUAL')\n+    expect(result.current.invalidValues).toHaveLength(0)\n+  })\n+\n   it('비워 둔 값을 복원하면 안내가 사라지고 설정이 완성된다', () => {\n     store({\n       registryVersion: 'OLD-REGISTRY',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.test.tsx",
+          "old_path": "frontend/src/hooks/useStrategySettings.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -73,11 +73,17 @@ export type RuleContextKey = 'UNIVERSE_SIZE'\n  * 유효성 규칙의 피연산자. 축 참조·맥락 참조·상수 셋 중 하나다.\n  *\n  * 축 참조에는 곱할 것을 덧붙일 수 있다. `multiplyByContext`는 맥락(비중 상한 × 섹터 수),\n- * `multiplyByAxis`는 **다른 축**(비중 상한 × 선정 섹터 수)이다. 둘을 같이 쓰지 않는다.\n+ * `multiplyByAxis`는 **다른 축**(비중 상한 × 선정 섹터 수)이다. `multiplyByCeil`은\n+ * `ceil(맥락 × 다른 축 ÷ divisor)`를 곱한다(상위 비율로 고른 섹터 수). 셋을 같이 쓰지 않는다.\n  * 곱할 축이 그 설정에 없으면(다른 선정 방식을 골랐다) 그 규칙은 판정하지 않는다.\n  */\n export type Operand =\n-  | { axis: string; multiplyByContext?: RuleContextKey; multiplyByAxis?: string }\n+  | {\n+      axis: string\n+      multiplyByContext?: RuleContextKey\n+      multiplyByAxis?: string\n+      multiplyByCeil?: { context: RuleContextKey; axis: string; divisor: ScalarValue }\n+    }\n   | { context: RuleContextKey }\n   | { value: ScalarValue }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/strategyRegistry.ts",
+          "old_path": "frontend/src/types/strategyRegistry.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,6 +76,30 @@ describe('evaluateRules', () => {\n     expect(evaluateRules([selectionRule], { maxWeight: 10 }, context)).toEqual([])\n   })\n \n+  const percentSelectionRule = rule({\n+    code: 'MAX_WEIGHT_TOO_LOW_FOR_SELECTION',\n+    left: {\n+      axis: 'maxWeight',\n+      multiplyByCeil: { context: 'UNIVERSE_SIZE', axis: 'topPercent', divisor: 100 },\n+    },\n+    operator: 'LESS_THAN',\n+    right: { value: 100 },\n+  })\n+\n+  it('상위 비율로 고른 섹터 수를 올림한 뒤 상한과 곱한다', () => {\n+    // 후보 3개 중 50%는 1.5개가 아니라 2개를 고른다. 상한 40%로는 80%만 배분할 수 있다.\n+    expect(\n+      evaluateRules([percentSelectionRule], { maxWeight: 40, topPercent: 50 }, context),\n+    ).toEqual([percentSelectionRule])\n+    expect(\n+      evaluateRules([percentSelectionRule], { maxWeight: 50, topPercent: 50 }, context),\n+    ).toEqual([])\n+  })\n+\n+  it('상위 비율 축이 설정에 없으면 판정하지 않는다 — 다른 선정 방식은 무관하다', () => {\n+    expect(evaluateRules([percentSelectionRule], { maxWeight: 10 }, context)).toEqual([])\n+  })\n+\n   it('곱한 값이 경계와 정확히 같으면 이진 부동소수 오차로 뒤집히지 않는다', () => {\n     const decimalRule = rule({\n       left: { axis: 'ratio', multiplyByContext: 'UNIVERSE_SIZE' },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/validationRules.test.ts",
+          "old_path": "frontend/src/utils/validationRules.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -85,7 +85,29 @@ function resolve(\n \n   const value = values[operand.axis]\n   if (value === undefined || value === null) return undefined\n-  if (operand.multiplyByContext === undefined && operand.multiplyByAxis === undefined) return value\n+  if (\n+    operand.multiplyByContext === undefined &&\n+    operand.multiplyByAxis === undefined &&\n+    operand.multiplyByCeil === undefined\n+  )\n+    return value\n+\n+  if (operand.multiplyByCeil !== undefined) {\n+    const factorAxis = values[operand.multiplyByCeil.axis]\n+    if (factorAxis === undefined || factorAxis === null) return undefined\n+    const contextValue = context[operand.multiplyByCeil.context]\n+    const percent = toNumber(factorAxis)\n+    const divisor = toNumber(operand.multiplyByCeil.divisor)\n+    const numeric = toNumber(value)\n+    if (numeric === null || percent === null || divisor === null || divisor <= 0) {\n+      throw new RuleEvaluationError(\n+        `규칙 '${code}'의 올림 곱셈에 숫자가 아닌 값이 왔습니다: ${String(value)}`,\n+        code,\n+      )\n+    }\n+    const selectedCount = Math.ceil(multiply(contextValue, percent) / divisor)\n+    return multiply(numeric, selectedCount)\n+  }\n \n   // 곱할 축이 이 설정에 없으면 판정하지 않는다 — 003은 고른 선정 방식에 딸린 축 하나만 저장한다.\n   // 여기서 값 그대로 돌려주면 `maxWeight × topN < 100`이 `maxWeight < 100`이 되어 상한을 전부 막는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/validationRules.ts",
+          "old_path": "frontend/src/utils/validationRules.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -150,7 +150,8 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이\n           \"inputType\": \"CHOICE\",\n           \"choices\": [\n             { \"value\": \"TOP_N\", \"label\": \"상위 몇 개\", \"selectable\": true },\n-            { \"value\": \"THRESHOLD\", \"label\": \"기준 수익률 이상\", \"selectable\": true }\n+            { \"value\": \"THRESHOLD\", \"label\": \"기준 수익률 이상\", \"selectable\": true },\n+            { \"value\": \"TOP_PERCENT\", \"label\": \"상위 몇 퍼센트\", \"selectable\": true }\n           ],\n           \"defaultValue\": \"TOP_N\"\n         },\n@@ -160,12 +161,42 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이\n           \"description\": \"선정 방식이 '상위 몇 개'일 때 고를 섹터의 개수다.\",\n           \"inputType\": \"CHOICE\",\n           \"choices\": [\n-            { \"value\": 2, \"label\": \"2\", \"selectable\": true },\n+            { \"value\": 2, \"label\": \"2\", \"selectable\": false },\n             { \"value\": 3, \"label\": \"3\", \"selectable\": true },\n             { \"value\": 4, \"label\": \"4\", \"selectable\": false }\n           ],\n           \"defaultValue\": 4,\n           \"appliesWhen\": { \"axis\": \"selectionMode\", \"value\": \"TOP_N\" }\n+        },\n+        {\n+          \"name\": \"topPercent\",\n+          \"label\": \"상위 비율\",\n+          \"description\": \"선정 방식이 '상위 몇 퍼센트'일 때 후보 중 고를 비율이다.\",\n+          \"unit\": \"퍼센트\",\n+          \"inputType\": \"NUMBER\",\n+          \"range\": { \"min\": 10, \"max\": 100, \"step\": 10 },\n+          \"defaultValue\": 50,\n+          \"appliesWhen\": { \"axis\": \"selectionMode\", \"value\": \"TOP_PERCENT\" }\n+        },\n+        {\n+          \"name\": \"allocationMethod\",\n+          \"label\": \"배분 방식\",\n+          \"description\": \"고른 섹터에 금액을 나누는 방식이다.\",\n+          \"inputType\": \"CHOICE\",\n+          \"choices\": [\n+            { \"value\": \"EQUAL\", \"label\": \"똑같이 나누기\", \"selectable\": true },\n+            { \"value\": \"INVERSE_VOLATILITY\", \"label\": \"변동성이 낮은 섹터에 더 나누기\", \"selectable\": true }\n+          ],\n+          \"defaultValue\": \"EQUAL\"\n+        },\n+        {\n+          \"name\": \"maxWeight\",\n+          \"label\": \"섹터당 최대 비중\",\n+          \"description\": \"한 섹터에 넣을 수 있는 최대 비중이다.\",\n+          \"unit\": \"퍼센트\",\n+          \"inputType\": \"NUMBER\",\n+          \"range\": { \"min\": 10, \"max\": 100, \"step\": 5 },\n+          \"defaultValue\": 40\n         }\n       ],\n       \"validationRules\": [\n@@ -175,6 +206,27 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이\n           \"left\": { \"axis\": \"topN\" },\n           \"operator\": \"GREATER_THAN\",\n           \"right\": { \"context\": \"UNIVERSE_SIZE\" }\n+        },\n+        {\n+          \"code\": \"MAX_WEIGHT_TOO_LOW_FOR_SELECTION\",\n+          \"detail\": \"섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\",\n+          \"left\": { \"axis\": \"maxWeight\", \"multiplyByAxis\": \"topN\" },\n+          \"operator\": \"LESS_THAN\",\n+          \"right\": { \"value\": 100 }\n+        },\n+        {\n+          \"code\": \"MAX_WEIGHT_TOO_LOW_FOR_SELECTION\",\n+          \"detail\": \"섹터당 최대 비중이 낮아 선정할 섹터 수만으로 전액을 배분할 수 없습니다.\",\n+          \"left\": {\n+            \"axis\": \"maxWeight\",\n+            \"multiplyByCeil\": {\n+              \"context\": \"UNIVERSE_SIZE\",\n+              \"axis\": \"topPercent\",\n+              \"divisor\": 100\n+            }\n+          },\n+          \"operator\": \"LESS_THAN\",\n+          \"right\": { \"value\": 100 }\n         }\n       ],\n       \"warmupRule\": { \"sum\": [\"lookbackDays\", \"skipRecentDays\"] }\n@@ -227,7 +279,7 @@ error }`)를 쓰며, 이 예시는 그 안의 `data`다. 같은 내용이\n |---|---|\n | `code` | 위반 사유 코드. 화면과 서버가 같은 값을 쓴다 |\n | `detail` | 사용자에게 보일 한 문장. 화면이 문구를 만들지 않는다 |\n-| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다 |\n+| `left` / `right` | 피연산자. `{ axis: <축 이름> }`에 `multiplyByAxis: <다른 축 이름>`을 덧붙이면 두 축의 곱이다(예: `maxWeight × topN`, 등록표 `1.4.0`). `multiplyByCeil: { context, axis, divisor }`를 덧붙이면 `축 값 × ceil(맥락 값 × 다른 축 값 ÷ divisor)`다(예: `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`, 등록표 `1.5.0`). 곱할 축이 그 설정에 없으면 판정하지 않는다. `{ context: <맥락 키> }`·`{ value: <상수> }` 중 하나. `axis`에는 `multiplyByContext: <맥락 키>`를 덧붙여 곱할 수 있다. 세 곱셈 형식은 함께 쓰지 않는다 |\n | `operator` | `GREATER_THAN` \\| `GREATER_OR_EQUAL` \\| `LESS_THAN` \\| `LESS_OR_EQUAL` \\| `EQUAL` \\| `NOT_EQUAL` |\n \n **조건이 참이면 위반이다**(그 설정으로 분석을 시작하지 않는다). 맥락 키는 현재 `UNIVERSE_SIZE`(섹터 후보 집합의 크기) 하나다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/contracts/strategy-registry-api.md",
+          "old_path": "specs/003-strategy-settings/contracts/strategy-registry-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -113,7 +113,7 @@ spec의 Key Entities와 현재 구현을 연결한다. 등록표 포트·값 타\n | 섹터 모멘텀 | 임계값 (`threshold`, `selectionMode=THRESHOLD`일 때만) | 입력형 |\n | 섹터 모멘텀 | 상위 비율 (`topPercent`, `selectionMode=TOP_PERCENT`일 때만) | 입력형 |\n | 섹터 모멘텀 | 배분 방식 (`allocationMethod`) | 목록형 |\n-| 섹터 모멘텀 | 비중 상한 | 입력형 — spec FR-003 원표에 빠져 있었다. FR-019가 역변동성과 섹터 모멘텀 둘 다 상한 재배분 대상이라 명시해 이번에 추가했다 |\n+| 섹터 모멘텀 | 비중 상한 | 입력형 — spec FR-003 원표에 빠져 있었다. FR-019가 역변동성과 섹터 모멘텀 둘 다 상한 재배분 대상이라 명시해 이번에 추가했다. `TOP_N`은 `maxWeight × topN`, `TOP_PERCENT`는 `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`이 100 미만이면 실행 전에 막는다(등록표 `1.5.0`) |\n | 섹터 모멘텀 | 리밸런싱 주기 | 목록형 |\n | 최소분산 | 공분산 관측 기간 | 목록형 |\n | 최소분산 | 추정 방법 (`estimationMethod`) | 목록형 — 현재 후보 하나(표본공분산). 004 PD-04 확정값이며 추가 방법은 별도 결정한다 |\n@@ -164,7 +164,7 @@ spec의 Key Entities와 현재 구현을 연결한다. 등록표 포트·값 타\n \n **시작 금액** (`analysisConditions.initialAmount`): 입력형, 최소 1,000,000원, 최대 1,000,000,000원, 간격 1,000,000원, 기본 10,000,000원, 단위 원.\n \n-**\"007 이관\"** 값은 007이 먼저 사용하던 수치를 정식 등록표 `backend/src/main/resources/registry/parameter-registry.yml`로 승격한 것이다. **\"신규\"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.\n+**\"007 이관\"** 값은 007이 먼저 사용하던 수치를 현재 정식 등록표 `backend/src/main/resources/registry/parameter-registry.yml`로 승격한 것이다. 이 파일은 `strategy/infrastructure/registry/FileParameterRegistry`가 읽는다. **\"신규\"** 값은 이번에 새로 정했으며, 리밸런싱 주기·비중 상한처럼 범용적인 값은 기존 007 값(예: 최소분산 `maxWeight` 30/40/50)과 같은 폭·간격으로 맞췄다.\n \n **임시 등록표가 목록형과 입력형을 함께 갖던 축은 목록형으로 정리했다**(§4). `lookbackDays`의 \"10~504 간격 1\" 같은 폭은 그 시절의 흔적이며 정식 등록표에는 없다 — 관측 기간처럼 후보가 정해진 축에 입력칸을 열면 등록되지 않은 값을 고를 경로가 생긴다(FR-006).\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/data-model.md",
+          "old_path": "specs/003-strategy-settings/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -862,9 +862,9 @@ SC-004와 quickstart 7·7-1·7-2의 판정 규칙을 만족하고, 원칙 IV·VI\n 비용 버전 교체)은 T110이 dev에 들어간 뒤에만 머지할 수 있다 — 화면이 비용 버전을 명시해 보내고 있어야 기본값을 바꿔도 사용자가 본\n 조건과 적용 조건이 갈리지 않는다.\n \n-- [ ] T109 (BE) [004 T024] 섹터 모멘텀의 배분 방식 선택지를 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 선정 수·상위 비율과 비중 상한을 함께 판정하는 규칙을 더한다 per 004 PD-03 ⓪ · FR-008 · 내부 계약 §2.1 — `backend/src/main/resources/registry/parameter-registry.yml`의 섹터 모멘텀 `allocationMethod` 후보 `SCORE_WEIGHTED`를 `INVERSE_VOLATILITY`(라벨 \"변동성이 낮은 섹터에 더 나누기\")로 바꾸고 **등록표 `version`을 올린다**(현재 `1.2.0`). 자동 탐색 후보(`searchValues`)는 `[EQUAL]`을 유지한다. 같은 버전 인상에 규칙 둘을 더한다: `maxWeight × topN < 100`(`selectionMode = TOP_N`일 때)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`(`TOP_PERCENT`일 때) — 지금은 `TOP_N_EXCEEDS_UNIVERSE`만 있어 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다(004 analyze I6). 규칙이 `appliesWhen` 조건이나 `ceil`을 표현할 수 없으면 등록표 문법 확장이 먼저이므로 착수 전에 규칙 문법(계약 §1)으로 표현 가능한지 확인하고, 안 되면 그 결정을 이 태스크 메모에 적는다. 함께 고칠 것: 계약 §1 픽스처 `docs/specs/strategy-registry-api/examples/registry-response.json`, `backend/src/test/resources/registry/contract-registry.yml`, `StrategyRegistryContractTest`, data-model §4-1·§4-2의 문구. 화면 라벨은 등록표에서 오므로(T079) FE 코드는 바뀌지 않는다. **보관된 설정에 `SCORE_WEIGHTED`가 있으면** 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인한다. 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지가 있고, 자동 탐색 후보는 `[EQUAL]`이며, 화면에서 topN 2·상한 40이 규칙 위반으로 보이고, 계약 테스트가 통과한다\n+- [X] T109 (BE) [004 T024] 섹터 모멘텀의 배분 방식 선택지를 `EQUAL`/`INVERSE_VOLATILITY`로 바꾸고 선정 수·상위 비율과 비중 상한을 함께 판정하는 규칙을 더한다 per 004 PD-03 ⓪ · FR-008 · 내부 계약 §2.1 — `backend/src/main/resources/registry/parameter-registry.yml`의 섹터 모멘텀 `allocationMethod` 후보 `SCORE_WEIGHTED`를 `INVERSE_VOLATILITY`(라벨 \"변동성이 낮은 섹터에 더 나누기\")로 바꾸고 **등록표 `version`을 올린다**(현재 `1.2.0`). 자동 탐색 후보(`searchValues`)는 `[EQUAL]`을 유지한다. 같은 버전 인상에 규칙 둘을 더한다: `maxWeight × topN < 100`(`selectionMode = TOP_N`일 때)과 `maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`(`TOP_PERCENT`일 때) — 지금은 `TOP_N_EXCEEDS_UNIVERSE`만 있어 화면은 topN 2·상한 40을 통과시키고 접수가 422로 거절한다(004 analyze I6). 규칙이 `appliesWhen` 조건이나 `ceil`을 표현할 수 없으면 등록표 문법 확장이 먼저이므로 착수 전에 규칙 문법(계약 §1)으로 표현 가능한지 확인하고, 안 되면 그 결정을 이 태스크 메모에 적는다. 함께 고칠 것: 계약 §1 픽스처 `docs/specs/strategy-registry-api/examples/registry-response.json`, `backend/src/test/resources/registry/contract-registry.yml`, `StrategyRegistryContractTest`, data-model §4-1·§4-2의 문구. 화면 라벨은 등록표에서 오므로(T079) FE 코드는 바뀌지 않는다. **보관된 설정에 `SCORE_WEIGHTED`가 있으면** 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인한다. 완료 기준: 등록표 조회에 `INVERSE_VOLATILITY` 선택지가 있고, 자동 탐색 후보는 `[EQUAL]`이며, 화면에서 topN 2·상한 40이 규칙 위반으로 보이고, 계약 테스트가 통과한다\n   - **004 T023(`S15P21E205-342`)이 먼저 처리한 것 (2026-09-18)**: 등록표 `1.3.0` → `1.4.0` 에서 `allocationMethod` 후보를 `EQUAL`/`INVERSE_VOLATILITY`(라벨 \"변동성이 낮은 섹터에 더 나누기\")로 교체하고 `searchValues: [EQUAL]` 을 유지했다. 규칙 `MAX_WEIGHT_TOO_LOW_FOR_SELECTION`(`maxWeight × topN < 100`)을 더했고, 그것을 표현하려고 operand 에 `multiplyByAxis` 를 신설했다(계약 §1·응답 DTO·프론트 `validationRules.ts` 까지). 003 data-model §4-2 축 표 문구도 고쳤다. **이 티켓을 다시 착수하면 등록표 버전이 충돌한다 — 남은 것만 하거나 티켓을 닫는다.**\n-  - **남은 것 셋.** ① `TOP_PERCENT` 규칙(`maxWeight × ceil(UNIVERSE_SIZE × topPercent / 100) < 100`)은 **넣지 않았다** — 규칙 문법이 `ceil` 을 표현하지 못한다(이 태스크가 \"안 되면 메모에 적는다\"고 한 갈래다). 007 이 `selectionMode` 를 `[TOP_N]` 만 탐색하므로 묶음은 안전하고, 사용자가 직접 고른 경우는 접수 422 하나로 끝난다. 문법에 `ceil` 을 더하는 것이 값어치가 있는지는 003 이 판단한다 ② 계약 §1 픽스처(`registry-response.json`·`contract-registry.yml`)에 새 규칙 예시를 넣지 않았다 — 픽스처의 섹터 모멘텀에 `maxWeight` 축이 없어 축까지 더해야 하고, 두 파일이 완전 일치로 비교돼 다른 단언까지 흔든다. `multiplyByAxis` 직렬화는 `StrategyRegistryApiIT` 가 제품 등록표로 붙박아 두었다 ③ 보관된 설정에 `SCORE_WEIGHTED` 가 있을 때 새 버전으로 재검증되어 복원 안내가 나오는지(FR-017) 확인하지 않았다 — 003 의 설정 이력 규칙을 아는 쪽이 봐야 한다\n+  - **남은 것 셋 완료 (2026-09-18).** ① 규칙 피연산자에 `multiplyByCeil: { context, axis, divisor }`를 더해 `maxWeight × ceil(UNIVERSE_SIZE × topPercent ÷ 100)`을 서버와 화면이 같은 방식으로 판정하고 등록표를 `1.5.0`으로 올렸다. 참조 축이 없는 다른 선정 방식에서는 판정하지 않는다 ② 계약 YAML·JSON과 계약 본문의 완전 응답 예시에 `TOP_PERCENT`·`allocationMethod`·`maxWeight` 축 및 두 상한 규칙을 넣고 계약 테스트로 JSON 동치를 확인했다 ③ 옛 `SCORE_WEIGHTED` 보관값은 `NOT_IN_CHOICES`로 비우고 사용자가 기본값 복원을 눌러야 `EQUAL`이 들어가는 회귀 테스트를 더했다. 백엔드 전체 build는 1,741개 중 1,737개 통과·4개 skip, Spotless 통과, 프론트 전체는 lint 오류 0·기존 경고 20, build 통과, Vitest 1,153개와 legacy 13개 모두 통과·skip 0이다\n - [X] T110 (FE) [004 T026] 003 화면이 `GET /backtests/registry`를 소비해 규칙·비용 버전을 실어 202를 받는다 per 003 FR-010 · T039 · T059 · 004 FR-028 — 004 T026의 네 가지는 B06에서 이미 구현했다: ① 고른 전략의 `REGISTERED` 행 `rulesVersion`을 싣고 `PENDING_DECISION`이면 막는다(T039 004 결정) ② `costProfileVersion`을 받은 `defaultCostProfile.version`으로 명시한다(T105) ③ 409를 받으면 003 등록표와 `/backtests/registry`를 함께 다시 받는다(T104) ④ 임시 비용 문구는 `defaultCostProfile.provisional`로 켠다(T065 통로). 남은 일: (a) 004 T025(`feat(be)/326-backtest-registry`, `S15P21E205-326`)가 머지되면 origin/dev를 받고 `defaultAnalysisSupport`를 `connectedAnalysisSupport`로 바꾼다(T107 메모) (b) 로컬 백엔드에서 '분석하기'가 registry의 버전을 실어 202를 받고 임시 비용 문구가 registry 값으로 켜지는지 확인한다 — 이것이 004 T026의 완료 기준이다. 머지 뒤 004 담당자에게 T021을 진행해도 된다고 알린다\n   - **구현 메모 (2026-09-17, B06 브랜치)**: T025 브랜치의 `BacktestRegistryResponse`를 읽다가 **비용 수치 네 칸이 문자열 decimal(`\"0.0000\"`, `NUMERIC(8,4)`)**인 것을 확인했다. 화면의 `readBacktestRegistry`는 숫자만 받아, 그대로 머지되면 응답 전체를 읽지 못해 '분석하기'가 막혔을 것이다. 문자열 decimal을 수로 읽고(음수·지수 표기·단위가 붙은 글은 거부), 숫자로 와도 받게 고쳤다. 규칙 행의 `status`는 서버 enum 이름 그대로 문자열이라 기존 비교(`'REGISTERED'`·`'PENDING_DECISION'`)가 맞는다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/tasks.md",
+          "old_path": "specs/003-strategy-settings/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2223897,
+      "head_commit_sha": "464158019d261b9f94111ff003eedff473e5ece8",
+      "base_commit_sha": "b28565a07cb644d19b824e4957edd3c747af529f",
+      "start_commit_sha": "e45deb813271e475401e801f2c903901ef4224b5",
+      "created_at": "2026-09-18T17:53:41.998+09:00",
+      "merge_request_id": 951901,
+      "state": "without_files",
+      "real_size": "19",
+      "patch_id_sha": "957ddf10d2a76629e6e4d485c3317721e3c516b1",
+      "commits": [
+        {
+          "id": "464158019d261b9f94111ff003eedff473e5ece8",
+          "short_id": "46415801",
+          "created_at": "2026-09-18T17:18:05.000+09:00",
+          "parent_ids": [
+            "b28565a07cb644d19b824e4957edd3c747af529f"
+          ],
+          "title": "feat(be): 섹터 모멘텀 비중 상한 규칙 완성",
+          "message": "feat(be): 섹터 모멘텀 비중 상한 규칙 완성\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T17:18:05.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T17:18:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/464158019d261b9f94111ff003eedff473e5ece8"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2837045": []
+  }
+}

@@ -1,0 +1,1146 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958173,
+    "iid": 306,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면 보조 보기를 탭으로 묶는다",
+    "description": "# 작업 내용 요약\n\n결과 화면을 **제목 · 그래프 · 해석 요약 1문장 · 비교 대상 고르기 · 탭 하나**로 정리했습니다. 핵심 숫자 3개와 상태 문장은 **요약** 탭(기본 열림)으로 들어가고, 버튼으로 따로 여닫던 네 보기(자세히 보기·손실이 커진 때·지수와 비교하기·목표 위험 맞춤)도 같은 탭 줄에 붙었습니다. '자세히 보기'는 **결과 분석**(계산에서 나온 값)·**설정·근거**(넣은 조건과 근거)·**전체 거래 내역**으로 나눠, 탭은 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교 | 목표 위험 맞춤 일곱입니다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보입니다.\n\n420이 상관관계·위험 기여·손실 기여 표를 넣자 한 패널이 화면 두세 장이 되고 계산 값과 입력 조건이 번갈아 나온 것이 계기입니다. **이 브랜치는 `feat(be)/420-result-analytics` 위에 있어 420이 먼저 머지되어야 합니다.**\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-424 `[FE] 결과 화면 보조 보기를 탭으로 묶는다`\n- Story: -301(자세히 보기) / Epic: -30(백테스트) · 선행: -420\n- link: https://ssafy.atlassian.net/browse/S15P21E205-424\n\n# 주요 변경 사항\n\n- **`ResultTabs`**(새 파일). `role=\"tablist\"`·`tab`·`tabpanel`, 좌우 방향키·Home·End 이동, 열린 탭만 Tab 순서(roving tabindex). 라이브러리를 더하지 않았습니다. **탭 내용은 처음 고를 때 붙고 떠나면 숨기기만** 합니다 — 돌아와도 다시 받지 않고, 목표 위험 맞춤의 요청 상태가 남습니다. 열 수 없는 탭은 `aria-disabled`이고 사유 문장을 탭 줄 아래 두어 `aria-describedby`로 잇습니다.\n- **`ResultDetailTabs`**(새 파일). 일곱 탭 조립. 요약 탭의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘깁니다(비교 대상 같은 페이지 상태에 묶여 있어서). 그래프와 해석 문장은 탭 위에 그대로입니다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에 넘깁니다. 볼 결과가 없는 실행에는 탭 묶음을 두지 않고 페이지가 요약 내용만 그립니다 — 예전에는 지수·목표 위험 버튼이 비활성으로 남아 있었습니다.\n- **`DetailPanel.tsx`**: `DetailPanel` 하나가 `AnalysisPanel`(회복 기간·회전율·상관관계·위험/손실 기여·계산 제한, `/exceptions`)·`SettingsPanel`(비교 규칙·비용 가정·목표·실제 비중·보유 섹터 차이·대표 ETF, `/weights`)·`TradesPanel`(전체 거래 내역, `/trades`)로 갈라졌습니다. `TradeHistory`에 `alwaysOpen`을 더해 제 탭에서는 '거래 내역 보기' 버튼 없이 바로 목록을 보입니다. 닫기 버튼·Esc·초점 복귀 로직은 탭에는 없는 개념이라 지웠습니다(`NOT_PROVIDED`는 420에서 이미 삭제).\n- **`LossWindowView`·`IndexComparisonView`·`TargetRiskView`**: 자기 버튼과 여닫기 상태를 버리고 탭 내용만 남았습니다. 지수 자료가 없으면 예전처럼 닫히는 대신 표 자리에 사유를 보입니다. 목표 위험은 탭에 처음 붙을 때 한 번 요청하며 StrictMode 이중 실행은 ref로 막습니다.\n- **`ResultPage`**: 버튼 두 개·패널 두 개·보조 보기 두 개 자리에 `ResultDetailTabs` 하나. `useDisclosure`는 비교 대상 고르기에만 남습니다. 제목은 '분석 결과'에서 **'백테스트 결과'**로 바꾸고, 전략 선택 화면과 같은 모양의 뒤로 가기 링크(**'처음부터 다시 분석'** → `/diagnosis/sectors`)를 제목 위에 두었습니다. 섹터·비중부터 다시 고르는 길이며 조건은 넘기지 않습니다 — 현재 조건을 채워 가는 건 '다른 조건으로 비교'의 몫입니다. 고른 값은 탭 수명 저장소에 남아 돌아가도 비어 있지 않습니다.\n- **spec 005 개정**: FR-007(일곱 탭과 항목 배분, 요약 기본), FR-010(탭 비활성과 사유), FR-017(탭으로 제공, 지수 자료 없으면 이유를 보임), FR-022(탭 키보드), SC-001(첫 화면 자료는 상세·시계열·섹터 목록). Clarifications에 2026-09-23 세션을 더하고 tasks에 T098을 적었습니다.\n\n# 테스트\n\n- [x] `npm run lint && npm run build` 통과\n- [x] `npm test` — 새 `ResultTabs.test.tsx` 4건(지연 마운트·숨김 유지·비활성 사유·키보드), `DetailPanel.test.tsx` 20건(세 탭 구조로 옮김), `LossWindowView`·`ResultPage`·`ResultPage.auxiliary` 갱신. 전체 143파일 1367건 통과. (`InlineHelp.test.tsx` 1건이 앞선 실행에서 간헐적으로 실패했고 이 브랜치가 건드리지 않은 파일입니다.)\n- [x] 로컬 브라우저에서 저장된 결과로 일곱 탭 전환·비활성 사유·키보드 이동 확인\n- [ ] 좁은 화면(휴대폰 폭)에서 탭 줄이 두 줄로 접히는 모양\n\n# 리뷰 포인트\n\n- **첫 화면이 섹터 목록을 함께 받습니다.** 상세 탭 셋이 같이 쓰는 목록을 `ResultDetailTabs`가 마운트 때 한 번 받습니다. 탭을 고를 때까지 미루려면 탭에서 '처음 열림' 콜백을 올려야 해서 그 배선 대신 작은 GET 하나를 택했습니다. SC-001을 그렇게 고쳤습니다.\n- **핵심 숫자 3개가 그래프 아래 탭 안으로 내려갔습니다.** 그래프·해석 문장은 위에 남고 숫자는 요약 탭에 있어, 스크롤 없이 한눈에 들어오던 넷이 두 자리로 나뉩니다. 요약 탭이 기본으로 열려 있어 첫 화면에서는 모두 보이지만 다른 탭에 있을 때는 숫자가 가려집니다.\n- **`목표·실제 비중`을 설정·근거에 두었습니다.** 목표는 설정이고 실제는 결과라 반쪽씩인데, 비중 출처(`weightsSource`)와 함께 읽어야 뜻이 서서 설정 쪽으로 붙였습니다.\n- **탭 내용을 숨기기만 하고 내리지 않는 선택.** 다섯 탭을 모두 열면 DOM에 다섯 패널이 남습니다. 거래 내역 표까지 펼치면 꽤 커지지만 결과 화면 한 곳이라 문제로 보지 않았습니다. 문제가 되면 `visited`를 지우는 한 줄로 되돌릴 수 있습니다.\n- **다른 결과 화면 테스트(comparison·records·regime)는 `fetchResultExceptions`·`fetchSectorCatalog`를 mock하지 않아** 첫 화면에서 실제 함수를 부릅니다. 테스트는 통과하지만 네트워크 실패가 패널에 '다시 불러오기'로 보이는 상태로 돕니다. 이 MR에서는 손대지 않았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-23T12:28:31.762+09:00",
+    "updated_at": "2026-09-23T12:29:55.251+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-23T12:29:54.931+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/424-result-tabs",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+    "merge_commit_sha": "32147083ceb673bec955152703094efdfd02b934",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T12:28:35.974+09:00",
+    "reference": "!306",
+    "references": {
+      "short": "!306",
+      "relative": "!306",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!306"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/306",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958173,
+    "iid": 306,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면 보조 보기를 탭으로 묶는다",
+    "description": "# 작업 내용 요약\n\n결과 화면을 **제목 · 그래프 · 해석 요약 1문장 · 비교 대상 고르기 · 탭 하나**로 정리했습니다. 핵심 숫자 3개와 상태 문장은 **요약** 탭(기본 열림)으로 들어가고, 버튼으로 따로 여닫던 네 보기(자세히 보기·손실이 커진 때·지수와 비교하기·목표 위험 맞춤)도 같은 탭 줄에 붙었습니다. '자세히 보기'는 **결과 분석**(계산에서 나온 값)·**설정·근거**(넣은 조건과 근거)·**전체 거래 내역**으로 나눠, 탭은 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교 | 목표 위험 맞춤 일곱입니다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보입니다.\n\n420이 상관관계·위험 기여·손실 기여 표를 넣자 한 패널이 화면 두세 장이 되고 계산 값과 입력 조건이 번갈아 나온 것이 계기입니다. **이 브랜치는 `feat(be)/420-result-analytics` 위에 있어 420이 먼저 머지되어야 합니다.**\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-424 `[FE] 결과 화면 보조 보기를 탭으로 묶는다`\n- Story: -301(자세히 보기) / Epic: -30(백테스트) · 선행: -420\n- link: https://ssafy.atlassian.net/browse/S15P21E205-424\n\n# 주요 변경 사항\n\n- **`ResultTabs`**(새 파일). `role=\"tablist\"`·`tab`·`tabpanel`, 좌우 방향키·Home·End 이동, 열린 탭만 Tab 순서(roving tabindex). 라이브러리를 더하지 않았습니다. **탭 내용은 처음 고를 때 붙고 떠나면 숨기기만** 합니다 — 돌아와도 다시 받지 않고, 목표 위험 맞춤의 요청 상태가 남습니다. 열 수 없는 탭은 `aria-disabled`이고 사유 문장을 탭 줄 아래 두어 `aria-describedby`로 잇습니다.\n- **`ResultDetailTabs`**(새 파일). 일곱 탭 조립. 요약 탭의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘깁니다(비교 대상 같은 페이지 상태에 묶여 있어서). 그래프와 해석 문장은 탭 위에 그대로입니다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에 넘깁니다. 볼 결과가 없는 실행에는 탭 묶음을 두지 않고 페이지가 요약 내용만 그립니다 — 예전에는 지수·목표 위험 버튼이 비활성으로 남아 있었습니다.\n- **`DetailPanel.tsx`**: `DetailPanel` 하나가 `AnalysisPanel`(회복 기간·회전율·상관관계·위험/손실 기여·계산 제한, `/exceptions`)·`SettingsPanel`(비교 규칙·비용 가정·목표·실제 비중·보유 섹터 차이·대표 ETF, `/weights`)·`TradesPanel`(전체 거래 내역, `/trades`)로 갈라졌습니다. `TradeHistory`에 `alwaysOpen`을 더해 제 탭에서는 '거래 내역 보기' 버튼 없이 바로 목록을 보입니다. 닫기 버튼·Esc·초점 복귀 로직은 탭에는 없는 개념이라 지웠습니다(`NOT_PROVIDED`는 420에서 이미 삭제).\n- **`LossWindowView`·`IndexComparisonView`·`TargetRiskView`**: 자기 버튼과 여닫기 상태를 버리고 탭 내용만 남았습니다. 지수 자료가 없으면 예전처럼 닫히는 대신 표 자리에 사유를 보입니다. 목표 위험은 탭에 처음 붙을 때 한 번 요청하며 StrictMode 이중 실행은 ref로 막습니다.\n- **`ResultPage`**: 버튼 두 개·패널 두 개·보조 보기 두 개 자리에 `ResultDetailTabs` 하나. `useDisclosure`는 비교 대상 고르기에만 남습니다. 제목은 '분석 결과'에서 **'백테스트 결과'**로 바꾸고, 전략 선택 화면과 같은 모양의 뒤로 가기 링크(**'처음부터 다시 분석'** → `/diagnosis/sectors`)를 제목 위에 두었습니다. 섹터·비중부터 다시 고르는 길이며 조건은 넘기지 않습니다 — 현재 조건을 채워 가는 건 '다른 조건으로 비교'의 몫입니다. 고른 값은 탭 수명 저장소에 남아 돌아가도 비어 있지 않습니다.\n- **spec 005 개정**: FR-007(일곱 탭과 항목 배분, 요약 기본), FR-010(탭 비활성과 사유), FR-017(탭으로 제공, 지수 자료 없으면 이유를 보임), FR-022(탭 키보드), SC-001(첫 화면 자료는 상세·시계열·섹터 목록). Clarifications에 2026-09-23 세션을 더하고 tasks에 T098을 적었습니다.\n\n# 테스트\n\n- [x] `npm run lint && npm run build` 통과\n- [x] `npm test` — 새 `ResultTabs.test.tsx` 4건(지연 마운트·숨김 유지·비활성 사유·키보드), `DetailPanel.test.tsx` 20건(세 탭 구조로 옮김), `LossWindowView`·`ResultPage`·`ResultPage.auxiliary` 갱신. 전체 143파일 1367건 통과. (`InlineHelp.test.tsx` 1건이 앞선 실행에서 간헐적으로 실패했고 이 브랜치가 건드리지 않은 파일입니다.)\n- [x] 로컬 브라우저에서 저장된 결과로 일곱 탭 전환·비활성 사유·키보드 이동 확인\n- [ ] 좁은 화면(휴대폰 폭)에서 탭 줄이 두 줄로 접히는 모양\n\n# 리뷰 포인트\n\n- **첫 화면이 섹터 목록을 함께 받습니다.** 상세 탭 셋이 같이 쓰는 목록을 `ResultDetailTabs`가 마운트 때 한 번 받습니다. 탭을 고를 때까지 미루려면 탭에서 '처음 열림' 콜백을 올려야 해서 그 배선 대신 작은 GET 하나를 택했습니다. SC-001을 그렇게 고쳤습니다.\n- **핵심 숫자 3개가 그래프 아래 탭 안으로 내려갔습니다.** 그래프·해석 문장은 위에 남고 숫자는 요약 탭에 있어, 스크롤 없이 한눈에 들어오던 넷이 두 자리로 나뉩니다. 요약 탭이 기본으로 열려 있어 첫 화면에서는 모두 보이지만 다른 탭에 있을 때는 숫자가 가려집니다.\n- **`목표·실제 비중`을 설정·근거에 두었습니다.** 목표는 설정이고 실제는 결과라 반쪽씩인데, 비중 출처(`weightsSource`)와 함께 읽어야 뜻이 서서 설정 쪽으로 붙였습니다.\n- **탭 내용을 숨기기만 하고 내리지 않는 선택.** 다섯 탭을 모두 열면 DOM에 다섯 패널이 남습니다. 거래 내역 표까지 펼치면 꽤 커지지만 결과 화면 한 곳이라 문제로 보지 않았습니다. 문제가 되면 `visited`를 지우는 한 줄로 되돌릴 수 있습니다.\n- **다른 결과 화면 테스트(comparison·records·regime)는 `fetchResultExceptions`·`fetchSectorCatalog`를 mock하지 않아** 첫 화면에서 실제 함수를 부릅니다. 테스트는 통과하지만 네트워크 실패가 패널에 '다시 불러오기'로 보이는 상태로 돕니다. 이 MR에서는 손대지 않았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-23T12:28:31.762+09:00",
+    "updated_at": "2026-09-23T12:29:55.251+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-23T12:29:54.931+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/424-result-tabs",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+    "merge_commit_sha": "32147083ceb673bec955152703094efdfd02b934",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-23T12:28:35.974+09:00",
+    "reference": "!306",
+    "references": {
+      "short": "!306",
+      "relative": "!306",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!306"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/306",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "19",
+    "latest_build_started_at": "2026-09-23T12:28:44.068+09:00",
+    "latest_build_finished_at": "2026-09-23T12:44:55.499+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 219053,
+      "iid": 323,
+      "project_id": 1444456,
+      "sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "ref": "feat(fe)/424-result-tabs",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T12:28:43.948+09:00",
+      "updated_at": "2026-09-23T12:44:55.506+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219053"
+    },
+    "head_pipeline": {
+      "id": 219053,
+      "iid": 323,
+      "project_id": 1444456,
+      "sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "ref": "feat(fe)/424-result-tabs",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T12:28:43.948+09:00",
+      "updated_at": "2026-09-23T12:44:55.506+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219053",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T12:28:44.068+09:00",
+      "finished_at": "2026-09-23T12:44:55.499+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219053",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "head_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "start_sha": "efce3145972649d95f54e08f97d59815355ee030"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "44347ba0fdf4e2e5bd81f5c49ca42755be0f8823",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861917,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:28:31.875+09:00",
+          "updated_at": "2026-09-23T12:28:31.880+09:00",
+          "system": true,
+          "noteable_id": 958173,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 306,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "921ce2f5706ba0911596cb9ad8cb9adf0c7fa564",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861918,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:28:31.897+09:00",
+          "updated_at": "2026-09-23T12:28:31.905+09:00",
+          "system": true,
+          "noteable_id": 958173,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 306,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cf2cf7659c79dd9e3924e881dc78b06d3071388c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861919,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:28:35.765+09:00",
+          "updated_at": "2026-09-23T12:28:35.771+09:00",
+          "system": true,
+          "noteable_id": 958173,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 306,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a7d7e997410b5692bde44ce0249abc3557117cb9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861921,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **설계 및 접근성 개선**: 기존에 버튼으로 여닫던 여러 보조 뷰(자세히 보기, 손실 구간, 지수 비교, 목표 위험 맞춤 등)를 탭 구조(`ResultTabs`, `ResultDetailTabs`)로 일관성 있게 통합했습니다. ARIA 속성(`role=\"tab\"`, `aria-selected`, `aria-disabled`, `aria-describedby`)과 키보드 네비게이션(방향키, Home, End)을 잘 구현하여 접근성 기준을 충실히 만족시켰습니다.\n- **지연 마운트 및 성능 최적화**: 탭 내용은 처음 고를 때 마운트(`visited` 상태 관리)하고, 떠난 후에도 DOM에서 내리지 않고 숨김 처리(`hidden={tab.id !== active}`)하여 사용자의 입력 상태나 네트워크 요청 결과가 유실되지 않도록 견고하게 설계되었습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **탭 키보드 탐색 및 비활성 탭 처리 테스트**:\n  - `ResultTabs` 컴포넌트에서 비활성 탭(`disabled: true`)으로 초점이 이동했을 때, 탭이 열리지 않고 `aria-describedby`로 연결된 사유 문장이 스크린 리더 및 DOM에 올바르게 노출되는지 시나리오 테스트를 수행합니다.\n- **지연 마운트 및 상태 유지 테스트**:\n  - `목표 위험 맞춤` 또는 `결과 분석` 탭을 이동했다가 다시 돌아왔을 때, 이전의 API 요청 상태나 입력된 데이터가 초기화되지 않고 그대로 유지되는지 확인합니다.\n- **볼 결과가 없는 실행 시나리오 테스트**:\n  - 계산 중(`RUNNING`)이거나 실패한 결과 화면에서 탭 묶음이 렌더링되지 않고, 요약 내용과 필수 안내 문장만 올바르게 노출되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:921f92f8f1a40e86d9c186a851007f9e03cfe5bf -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T12:28:45.490+09:00",
+          "updated_at": "2026-09-23T12:28:45.490+09:00",
+          "system": false,
+          "noteable_id": 958173,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 306,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b41781889e055abd2de815c1f82a03e5875fdbfc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2861927,
+          "type": null,
+          "body": "mentioned in commit 32147083ceb673bec955152703094efdfd02b934",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-23T12:29:55.072+09:00",
+          "updated_at": "2026-09-23T12:29:55.116+09:00",
+          "system": true,
+          "noteable_id": 958173,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 306,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "49dbbebebce99c363a34b112639dd82951e8a626",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885063,
+          "type": null,
+          "body": "mentioned in commit 45b375672ca9017d4a7b43da58a7a1e3448df630",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:12.469+09:00",
+          "updated_at": "2026-10-13T15:16:12.500+09:00",
+          "system": true,
+          "noteable_id": 958173,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 306,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2244708,
+      "head_commit_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "base_commit_sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "start_commit_sha": "efce3145972649d95f54e08f97d59815355ee030",
+      "created_at": "2026-09-23T12:29:46.716+09:00",
+      "merge_request_id": 958173,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "6b12e8f61fa6bdc05635eebf8e8aa9fd5f89fe6d"
+    },
+    {
+      "id": 2244706,
+      "head_commit_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "created_at": "2026-09-23T12:28:32.359+09:00",
+      "merge_request_id": 958173,
+      "state": "without_files",
+      "real_size": "28",
+      "patch_id_sha": "9ba17d08abb5a1070c83d7afbf14332d92492dbe"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2244708,
+      "head_commit_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "base_commit_sha": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+      "start_commit_sha": "efce3145972649d95f54e08f97d59815355ee030",
+      "created_at": "2026-09-23T12:29:46.716+09:00",
+      "merge_request_id": 958173,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "6b12e8f61fa6bdc05635eebf8e8aa9fd5f89fe6d",
+      "commits": [
+        {
+          "id": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+          "short_id": "921f92f8",
+          "created_at": "2026-09-23T11:55:32.000+09:00",
+          "parent_ids": [
+            "cf39d8ac81faf5800851b8f317286e70427c2147"
+          ],
+          "title": "Revert \"feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다\"",
+          "message": "Revert \"feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다\"\n\nThis reverts commit cf39d8ac81faf5800851b8f317286e70427c2147.\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:55:32.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:55:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/921f92f8f1a40e86d9c186a851007f9e03cfe5bf"
+        },
+        {
+          "id": "cf39d8ac81faf5800851b8f317286e70427c2147",
+          "short_id": "cf39d8ac",
+          "created_at": "2026-09-23T11:51:54.000+09:00",
+          "parent_ids": [
+            "ae126ead2f1f31e69d8843df3855b2ea2be50c46"
+          ],
+          "title": "feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다",
+          "message": "feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다\n\n그래프(왼쪽)와 핵심 숫자 3개·해석 문장·상태 문장(오른쪽) 두 칸 배치. 숫자는\n수익률·최대 하락 폭·거래비용 짧은 이름으로 한 줄씩이고, 정의와 종료 시 청산 구분은\n이름 옆 물음표 도움말(InlineHelp)로 옮긴다. 조건 한 줄은 ConditionLine으로 떼어\n제목 아래에 둔다. 요약 탭은 없애고 결과 분석이 기본 탭이다. 좁은 화면은 세로로\n쌓이고 그래프 비율은 --result-chart-aspect 로 자리마다 정한다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:51:54.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:51:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cf39d8ac81faf5800851b8f317286e70427c2147"
+        },
+        {
+          "id": "ae126ead2f1f31e69d8843df3855b2ea2be50c46",
+          "short_id": "ae126ead",
+          "created_at": "2026-09-23T11:30:53.000+09:00",
+          "parent_ids": [
+            "d0384baa68b1ade57c3a649ababef78ac0383c4d"
+          ],
+          "title": "fix(fe): 결과 화면 뒤로 가기를 섹터 선택으로 돌리고 '처음부터 다시 분석'으로 부른다",
+          "message": "fix(fe): 결과 화면 뒤로 가기를 섹터 선택으로 돌리고 '처음부터 다시 분석'으로 부른다\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:30:53.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:30:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ae126ead2f1f31e69d8843df3855b2ea2be50c46"
+        },
+        {
+          "id": "d0384baa68b1ade57c3a649ababef78ac0383c4d",
+          "short_id": "d0384baa",
+          "created_at": "2026-09-23T11:27:29.000+09:00",
+          "parent_ids": [
+            "24c9626573ec092f5314c5eb2868366dd772a3fc"
+          ],
+          "title": "feat(fe): 결과 화면 제목을 백테스트 결과로 바꾸고 전략 선택으로 돌아가는 길을 둔다",
+          "message": "feat(fe): 결과 화면 제목을 백테스트 결과로 바꾸고 전략 선택으로 돌아가는 길을 둔다\n\n전략 선택 화면의 뒤로 가기와 같은 모양으로 제목 위에 '전략 선택' 링크를 둔다.\n경로를 직접 가리키며 조건은 넘기지 않는다(조건 인계는 '다른 조건으로 비교').\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:27:29.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:27:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d0384baa68b1ade57c3a649ababef78ac0383c4d"
+        },
+        {
+          "id": "24c9626573ec092f5314c5eb2868366dd772a3fc",
+          "short_id": "24c96265",
+          "created_at": "2026-09-23T11:23:33.000+09:00",
+          "parent_ids": [
+            "d11e827730c27a6810e4be673dc07e683b576deb"
+          ],
+          "title": "fix(fe): 그래프와 해석 문장은 탭 위 원래 자리에 둔다",
+          "message": "fix(fe): 그래프와 해석 문장은 탭 위 원래 자리에 둔다\n\n요약 탭에는 핵심 숫자와 상태 문장만 남기고, 그래프와 해석 요약 1문장은 제목 아래\n비교 대상 고르기 위로 되돌린다. spec 005 FR-007·SC-001 문장을 맞춘다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:23:33.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:23:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/24c9626573ec092f5314c5eb2868366dd772a3fc"
+        },
+        {
+          "id": "d11e827730c27a6810e4be673dc07e683b576deb",
+          "short_id": "d11e8277",
+          "created_at": "2026-09-23T11:18:28.000+09:00",
+          "parent_ids": [
+            "20c084e80b2a701ed37a015783b94012c3a71768"
+          ],
+          "title": "feat(fe): 요약을 기본 탭으로, 전체 거래 내역을 제 탭으로 둔다",
+          "message": "feat(fe): 요약을 기본 탭으로, 전체 거래 내역을 제 탭으로 둔다\n\n핵심 숫자·그래프·요약 문장을 '요약' 탭에 넣어 기본으로 열고, 전체 거래 내역을\n결과 분석에서 빼서 제 탭으로 둔다. 화면은 제목·비교 대상 고르기·탭 하나가 된다.\n볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. TradeHistory는 alwaysOpen 으로\n제 탭에서 버튼 없이 바로 목록을 보인다. spec 005 FR-007·SC-001을 맞춰 고쳤다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:18:28.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:18:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d11e827730c27a6810e4be673dc07e683b576deb"
+        },
+        {
+          "id": "20c084e80b2a701ed37a015783b94012c3a71768",
+          "short_id": "20c084e8",
+          "created_at": "2026-09-23T11:08:12.000+09:00",
+          "parent_ids": [
+            "64f2275c53e4a48bb75347e944c9a8f5d39bd639"
+          ],
+          "title": "feat(fe): 결과 화면 보조 보기를 탭으로 묶는다",
+          "message": "feat(fe): 결과 화면 보조 보기를 탭으로 묶는다\n\n자세히 보기·손실이 커진 때·지수 비교·목표 위험 맞춤을 ResultTabs 하나로 묶고,\n자세히 보기는 결과 분석(계산 값)과 설정·근거(입력 조건)로 나눈다. 첫 화면에서\n결과 분석 탭이 열려 있고 다른 탭은 처음 고를 때 자료를 받는다. 열 수 없는 탭은\naria-disabled와 사유 문장이다. spec 005 FR-007·010·017·022·SC-001을 함께 고쳤다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:08:12.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:08:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20c084e80b2a701ed37a015783b94012c3a71768"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,9 +1,6 @@\n import { render, screen, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n-import { useId } from 'react'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n-import { Button } from '@/components/ui/button'\n-import { useDisclosure } from '@/hooks/useDisclosure'\n import {\n   resultDetailCompleted,\n   resultExceptions,\n@@ -13,15 +10,17 @@ import {\n   resultWeights,\n } from '@/test/resultFixtures'\n import type { PublicResultDetail, ResultWeights } from '@/types/result'\n-import { CALCULATION_LIMITED, DetailPanel, type DetailCompareTarget } from './DetailPanel'\n+import { CALCULATION_LIMITED, type DetailCompareTarget } from './DetailPanel'\n+import { ResultDetailTabs } from './ResultDetailTabs'\n \n-/** 005 T070. FR-007~FR-009·FR-022, SC-001·SC-006. */\n+/** 005 T070·T098. FR-007~FR-009, SC-001·SC-006. 결과 분석·설정·근거 두 탭을 `ResultDetailTabs`로 붙여 본다. */\n \n const apiMocks = vi.hoisted(() => ({\n   fetchResultWeights: vi.fn(),\n   fetchResultExceptions: vi.fn(),\n   fetchResultTrades: vi.fn(),\n   fetchResultPositions: vi.fn(),\n+  fetchResultIndexComparison: vi.fn(),\n }))\n const sectorMocks = vi.hoisted(() => ({\n   fetchSectorCatalog: vi.fn(),\n@@ -39,29 +38,35 @@ vi.mock('@/api/sectors', async (importOriginal) => {\n \n const targetToken = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\n \n-function renderPanel(detail: PublicResultDetail = resultDetailCompleted, compare?: DetailCompareTarget) {\n-  const onClose = vi.fn()\n-  render(<DetailPanel id=\"detail\" token={resultToken} detail={detail} compare={compare} onClose={onClose} />)\n-  return { onClose, panel: screen.getByRole('region', { name: '자세히 보기' }) }\n+/** 요약 탭이 기본이라 결과 분석 탭을 골라 둔 상태로 돌려준다. */\n+async function renderPanel(detail: PublicResultDetail = resultDetailCompleted, compare?: DetailCompareTarget) {\n+  render(\n+    <ResultDetailTabs\n+      token={resultToken}\n+      detail={detail}\n+      summary={<p>요약 자리</p>}\n+      lossWindow={null}\n+      compare={compare}\n+    />,\n+  )\n+  const tablist = screen.getByRole('tablist', { name: '결과 보기' })\n+  await openTab('결과 분석')\n+  return { panel: tablist.parentElement as HTMLElement }\n }\n \n-/** 페이지와 같은 여닫기 방식으로 패널을 붙인 시험대. 닫은 뒤 초점이 어디로 가는지 본다. */\n-function Harness() {\n-  const panelId = useId()\n-  const view = useDisclosure(panelId)\n-  return (\n-    <>\n-      <Button type=\"button\" variant=\"outline\" {...view.toggleProps}>\n-        자세히 보기\n-      </Button>\n-      {view.open ? (\n-        <DetailPanel id={panelId} token={resultToken} detail={resultDetailCompleted} onClose={view.close} />\n-      ) : null}\n-    </>\n-  )\n+async function openTab(name: string) {\n+  await userEvent.setup().click(screen.getByRole('tab', { name }))\n+}\n+\n+/** '설정·근거' 탭을 고른다. 그때 `/weights`를 받는다. */\n+const openSettings = () => openTab('설정·근거')\n+\n+/** 숨긴 탭 패널의 제목까지 포함해 찾는다. 두 탭에 나뉜 항목을 한 번에 셀 때 쓴다. */\n+function sectionOf(panel: HTMLElement, title: string | RegExp) {\n+  return within(panel).getByRole('heading', { name: title, hidden: true }).closest('section') as HTMLElement\n }\n \n-describe('DetailPanel', () => {\n+describe('DetailPanel(결과 분석·설정·근거 탭)', () => {\n   beforeEach(() => {\n     for (const mock of [...Object.values(apiMocks), ...Object.values(sectorMocks)]) mock.mockReset()\n     apiMocks.fetchResultWeights.mockResolvedValue(resultWeights)\n@@ -70,24 +75,53 @@ describe('DetailPanel', () => {\n     sectorMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n   })\n \n-  it('열 때 비중·예외 기록과 섹터 목록을 한 번씩만 받고 거래 내역은 받지 않는다', async () => {\n-    renderPanel()\n+  it('요약 탭이 기본이고 상세 자료는 어느 탭도 고르기 전에는 받지 않는다', async () => {\n+    render(\n+      <ResultDetailTabs token={resultToken} detail={resultDetailCompleted} summary={<p>요약 자리</p>} lossWindow={null} />,\n+    )\n+\n+    expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')\n+    expect(screen.getByRole('tabpanel').textContent).toContain('요약 자리')\n+    expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n+    expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()\n+    expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()\n+    // 섹터 목록은 세 상세 탭이 같이 쓰므로 묶음이 한 번 받아 둔다.\n+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('결과 분석 탭은 예외 기록을 받고, 비중은 설정·근거를, 거래 내역은 전체 거래 내역을 고를 때 받는다', async () => {\n+    await renderPanel()\n     await screen.findByText('HALT_DEFERRED')\n \n-    expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)\n-    expect(apiMocks.fetchResultWeights.mock.calls[0][0]).toBe(resultToken)\n+    expect(screen.getByRole('tab', { name: '결과 분석' }).getAttribute('aria-selected')).toBe('true')\n     expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)\n     expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)\n+    expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()\n     expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()\n     expect(sectorMocks.fetchInstrumentProfile).not.toHaveBeenCalled()\n+    expect(apiMocks.fetchResultIndexComparison).not.toHaveBeenCalled()\n+\n+    await openSettings()\n+    await screen.findByText('44.73%')\n+    expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)\n+    expect(apiMocks.fetchResultWeights.mock.calls[0][0]).toBe(resultToken)\n+    expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()\n+\n+    await openTab('전체 거래 내역')\n+    await screen.findByRole('table', { name: '거래 내역' })\n+    expect(apiMocks.fetchResultTrades).toHaveBeenCalledTimes(1)\n+    // 섹터 목록은 부모가 한 번 받아 세 탭이 같이 쓴다.\n+    expect(sectorMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)\n   })\n \n-  it('FR-007 항목 열 가지가 모두 제목으로 있다', async () => {\n-    const { panel } = renderPanel()\n+  it('FR-007 항목이 세 탭에 나뉘어 모두 제목으로 있다', async () => {\n+    const { panel } = await renderPanel()\n     await screen.findByText('HALT_DEFERRED')\n+    await openSettings()\n+    await openTab('전체 거래 내역')\n \n     const headings = within(panel)\n-      .getAllByRole('heading')\n+      .getAllByRole('heading', { hidden: true })\n       .map((heading) => heading.textContent ?? '')\n       .join('\\n')\n     for (const item of [\n@@ -95,33 +129,41 @@ describe('DetailPanel', () => {\n       '회전율',\n       '상관관계',\n       '위험 기여',\n-      '구성종목 중복',\n+      '손실 기여',\n+      '계산 제한 항목',\n       '전체 거래 내역',\n-      '비용 가정',\n       '비교 규칙',\n+      '비용 가정',\n+      '목표·실제 비중',\n+      '구성종목 중복',\n       '대표 ETF 구성',\n       '출처',\n     ]) {\n       expect(headings, item).toContain(item)\n     }\n+    // 결과에서 나온 값은 결과 분석에, 넣은 조건은 설정·근거에, 거래는 제 탭에 있다.\n+    const analysis = screen.getAllByRole('tabpanel', { hidden: true })[1]\n+    expect(within(analysis).queryByRole('heading', { name: '비용 가정', hidden: true })).toBeNull()\n+    expect(within(analysis).queryByRole('heading', { name: '전체 거래 내역', hidden: true })).toBeNull()\n+    expect(within(analysis).getByRole('heading', { name: '상관관계', hidden: true })).not.toBeNull()\n   })\n \n   it('상관관계·위험 기여·손실 기여를 004가 준 값으로 보이고 추정 기간·산정법이 있다', async () => {\n-    const { panel } = renderPanel()\n+    const { panel } = await renderPanel()\n     await screen.findByText('HALT_DEFERRED')\n \n-    const correlation = within(panel).getByRole('heading', { name: '상관관계' }).closest('section') as HTMLElement\n+    const correlation = sectionOf(panel, '상관관계')\n     expect(within(correlation).getAllByText('-0.19')).toHaveLength(2)\n     expect(within(correlation).getAllByText('1.00')).toHaveLength(3)\n \n-    const risk = within(panel).getByRole('heading', { name: '위험 기여' }).closest('section') as HTMLElement\n+    const risk = sectionOf(panel, '위험 기여')\n     expect(within(risk).getByText('7.95%')).not.toBeNull()\n     expect(within(risk).getByText('추정 기간')).not.toBeNull()\n     expect(within(risk).getByText('2023-07-03 ~ 2024-12-31')).not.toBeNull()\n     expect(within(risk).getByText('공분산 산정법')).not.toBeNull()\n     expect(within(risk).getByText('sample-covariance-daily')).not.toBeNull()\n \n-    const loss = within(panel).getByRole('heading', { name: '손실 기여' }).closest('section') as HTMLElement\n+    const loss = sectionOf(panel, '손실 기여')\n     expect(within(loss).getByText('125.00%')).not.toBeNull()\n     expect(within(loss).getByText('-25.00%')).not.toBeNull()\n   })\n@@ -136,11 +178,11 @@ describe('DetailPanel', () => {\n         analytics: { ...analytics, correlationMatrix: null, riskContribution: null, lossContribution: null },\n       },\n     }\n-    const { panel } = renderPanel(limited)\n+    const { panel } = await renderPanel(limited)\n     await screen.findByText('HALT_DEFERRED')\n \n     for (const title of ['상관관계', '위험 기여', '손실 기여']) {\n-      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement\n+      const section = sectionOf(panel, title)\n       expect(within(section).getByText(new RegExp(`^${CALCULATION_LIMITED}`)), title).not.toBeNull()\n       expect(within(section).queryByText('0.00%'), title).toBeNull()\n       expect(within(section).queryByRole('table'), title).toBeNull()\n@@ -148,7 +190,7 @@ describe('DetailPanel', () => {\n   })\n \n   it('회복 기간·회전율을 004가 준 값으로 보인다', async () => {\n-    const { panel } = renderPanel()\n+    const { panel } = await renderPanel()\n     await screen.findByText('HALT_DEFERRED')\n \n     expect(within(panel).getByText('9거래일')).not.toBeNull()\n@@ -160,11 +202,11 @@ describe('DetailPanel', () => {\n       ...resultDetailCompleted,\n       summary: resultDetailCompleted.summary && { ...resultDetailCompleted.summary, analytics: null },\n     }\n-    const { panel } = renderPanel(withoutAnalytics)\n+    const { panel } = await renderPanel(withoutAnalytics)\n     await screen.findByText('HALT_DEFERRED')\n \n-    const recovery = within(panel).getByRole('heading', { name: '회복 기간' }).closest('section') as HTMLElement\n-    const turnover = within(panel).getByRole('heading', { name: '회전율' }).closest('section') as HTMLElement\n+    const recovery = sectionOf(panel, '회복 기간')\n+    const turnover = sectionOf(panel, '회전율')\n     for (const section of [recovery, turnover]) {\n       expect(within(section).getByText(new RegExp(CALCULATION_LIMITED))).not.toBeNull()\n     }\n@@ -181,11 +223,12 @@ describe('DetailPanel', () => {\n       summary: null,\n       summaryUnavailable: 'CANCELLED_WHILE_RUN_CONTINUED',\n     }\n-    const { panel } = renderPanel(withoutSummary)\n+    const { panel } = await renderPanel(withoutSummary)\n     await screen.findByText('HALT_DEFERRED')\n+    await openSettings()\n \n     for (const title of ['회복 기간', '회전율', '비용 가정']) {\n-      const section = within(panel).getByRole('heading', { name: title }).closest('section') as HTMLElement\n+      const section = sectionOf(panel, title)\n       expect(within(section).getByText('취소 시점까지의 지표는 계산되지 않았습니다.'), title).not.toBeNull()\n       expect(within(section).queryByText(new RegExp(CALCULATION_LIMITED)), title).toBeNull()\n     }\n@@ -196,11 +239,11 @@ describe('DetailPanel', () => {\n       ...resultWeights,\n       points: [...resultWeights.points, { date: '2024-12-30', target: {}, actual: {}, weightError: '0.000000' }],\n     })\n-    const { panel } = renderPanel()\n+    const { panel } = await renderPanel()\n+    await openSettings()\n \n     expect(await within(panel).findByText(/마지막 리밸런싱\\(2024-12-30\\)에서는 담은 종목이 없습니다/)).not.toBeNull()\n-    const weightsSection = within(panel).getByRole('heading', { name: '목표·실제 비중' }).closest('section') as HTMLElement\n-    expect(within(weightsSection).queryByRole('table')).toBeNull()\n+    expect(within(sectionOf(panel, '목표·실제 비중')).queryByRole('table')).toBeNull()\n   })\n \n   it.each([\n@@ -209,9 +252,10 @@ describe('DetailPanel', () => {\n   ])('섹터 목록이 아직 준비 중(%o)이면 섹터가 빠졌다고 하지 않고 다시 불러오기를 준다', async (result) => {\n     sectorMocks.fetchSectorCatalog.mockResolvedValueOnce(result)\n     const user = userEvent.setup()\n-    const { panel } = renderPanel()\n+    const { panel } = await renderPanel()\n+    await openSettings()\n \n-    const profile = within(panel).getByRole('heading', { name: /대표 ETF 구성/ }).closest('section') as HTMLElement\n+    const profile = sectionOf(panel, /대표 ETF 구성/)\n     expect(await within(profile).findByText(/섹터 목록이 아직 준비 중이라/)).not.toBeNull()\n     expect(within(profile).queryByText(/지금 섹터 목록에 없는 섹터라/)).toBeNull()\n \n@@ -228,29 +272,32 @@ describe('DetailPanel', () => {\n         analytics: { ...resultDetailCompleted.summary.analytics!, recoveryDays: null },\n       },\n     }\n-    const { panel } = renderPanel(unrecovered)\n+    const { panel } = await renderPanel(unrecovered)\n     await screen.findByText('HALT_DEFERRED')\n \n-    const recovery = within(panel).getByRole('heading', { name: '회복 기간' }).closest('section') as HTMLElement\n+    const recovery = sectionOf(panel, '회복 기간')\n     expect(within(recovery).getByText(/이전 고점을 되찾지 못했습니다/)).not.toBeNull()\n     expect(within(recovery).queryByText(new RegExp(CALCULATION_LIMITED))).toBeNull()\n   })\n \n-  it('비중 출처와 마지막 리밸런싱의 목표·실제 비중, 예외 기록의 종류·규칙을 그대로 보인다', async () => {\n-    const { panel } = renderPanel()\n+  it('예외 기록의 종류·규칙은 결과 분석에, 비중 출처와 마지막 리밸런싱의 목표·실제 비중은 설정·근거에 그대로 보인다', async () => {\n+    const { panel } = await renderPanel()\n     await screen.findByText('HALT_DEFERRED')\n \n-    expect(within(panel).getByText('비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.')).not.toBeNull()\n-    expect(within(panel).getByText(/마지막 리밸런싱\\(2024-12-02\\) 기준/)).not.toBeNull()\n-    expect(within(panel).getByText('45.00%')).not.toBeNull()\n-    expect(within(panel).getByText('44.73%')).not.toBeNull()\n     expect(within(panel).getByText('DEFER_TO_NEXT_TRADABLE')).not.toBeNull()\n     // 섹터 목록의 이름을 붙인다.\n     expect(within(panel).getAllByText('등대 · 합성 등대 ETF').length).toBeGreaterThan(0)\n+\n+    await openSettings()\n+    expect(await within(panel).findByText('비중은 선택한 규칙의 계산 결과이며 입력한 비중과 다릅니다.')).not.toBeNull()\n+    expect(within(panel).getByText(/마지막 리밸런싱\\(2024-12-02\\) 기준/)).not.toBeNull()\n+    expect(within(panel).getByText('45.00%')).not.toBeNull()\n+    expect(within(panel).getByText('44.73%')).not.toBeNull()\n   })\n \n-  it('대표 상품 정보가 패널 안에 섹터마다 접혀 있다', async () => {\n-    const { panel } = renderPanel()\n+  it('대표 상품 정보가 설정·근거 탭 안에 섹터마다 접혀 있다', async () => {\n+    const { panel } = await renderPanel()\n+    await openSettings()\n \n     const toggle = await within(panel).findByRole('button', { name: '항구 · 합성 항구 ETF' })\n     expect(toggle.getAttribute('aria-expanded')).toBe('false')\n@@ -260,7 +307,8 @@ describe('DetailPanel', () => {\n     const { ResultError } = await import('@/api/result')\n     apiMocks.fetchResultWeights.mockRejectedValueOnce(new ResultError('비중 기록 실패'))\n     const user = userEvent.setup()\n-    const { panel } = renderPanel()\n+    const { panel } = await renderPanel()\n+    await openSettings()\n \n     expect(await within(panel).findByText('비중 기록 실패')).not.toBeNull()\n     await user.click(within(panel).getAllByRole('button', { name: '다시 불러오기' })[0])\n@@ -269,46 +317,20 @@ describe('DetailPanel', () => {\n     expect(await within(panel).findByText('44.73%')).not.toBeNull()\n   })\n \n-  it('닫기 버튼이 닫기를 부른다', async () => {\n-    const user = userEvent.setup()\n-    const { onClose } = renderPanel()\n-    await user.click(screen.getByRole('button', { name: '닫기' }))\n-    expect(onClose).toHaveBeenCalledTimes(1)\n-  })\n-\n-  it('입력 칸에서 누른 Esc는 패널을 닫지 않는다 — 채우던 조건이 사라지지 않는다', async () => {\n+  it('전체 거래 내역 탭은 고르면 바로 목록을 보이고, 조건 칸에서 누른 Esc는 채우던 값을 지우지 않는다', async () => {\n     const user = userEvent.setup()\n-    const { onClose, panel } = renderPanel()\n-    await user.click(await within(panel).findByRole('button', { name: '거래 내역 보기' }))\n+    const { panel } = await renderPanel()\n+    await openTab('전체 거래 내역')\n+    await within(panel).findByRole('table', { name: '거래 내역' })\n+    expect(within(panel).queryByRole('button', { name: /거래 내역 (보기|접기)/ })).toBeNull()\n \n     const from = within(panel).getByLabelText('시작일')\n     await user.type(from, '2024-01-01')\n     from.focus()\n     await user.keyboard('{Escape}')\n \n-    expect(onClose).not.toHaveBeenCalled()\n     expect((from as HTMLInputElement).value).toBe('2024-01-01')\n-\n-    // 입력 칸 밖에서 누른 Esc는 그대로 닫는다.\n-    within(panel).getByRole('heading', { name: '자세히 보기' }).focus()\n-    await user.keyboard('{Escape}')\n-    expect(onClose).toHaveBeenCalledTimes(1)\n-  })\n-\n-  it('키보드만으로 열고 Esc로 닫으면 초점이 버튼으로 돌아온다', async () => {\n-    const user = userEvent.setup()\n-    render(<Harness />)\n-    const toggle = screen.getByRole('button', { name: '자세히 보기' })\n-\n-    toggle.focus()\n-    await user.keyboard('{Enter}')\n-    const panel = await screen.findByRole('region', { name: '자세히 보기' })\n-    // 열면 패널 제목으로 초점이 간다.\n-    expect(document.activeElement).toBe(within(panel).getByRole('heading', { name: '자세히 보기' }))\n-\n-    await user.keyboard('{Escape}')\n-    expect(screen.queryByRole('region', { name: '자세히 보기' })).toBeNull()\n-    expect(document.activeElement).toBe(toggle)\n+    expect(screen.getByRole('tab', { name: '전체 거래 내역' }).getAttribute('aria-selected')).toBe('true')\n   })\n \n   describe('보유 섹터 차이 (FR-008, T067)', () => {\n@@ -333,11 +355,12 @@ describe('DetailPanel', () => {\n       apiMocks.fetchResultWeights.mockImplementation(async (token: string) =>\n         token === targetToken ? targetWeights : resultWeights,\n       )\n-      const { panel } = renderPanel(resultDetailCompleted, {\n+      const { panel } = await renderPanel(resultDetailCompleted, {\n         token: targetToken,\n         name: '썰물 맞추기',\n         items: targetItems,\n       })\n+      await openSettings()\n \n       const section = (await within(panel).findByRole('heading', { name: '보유 섹터 차이' })).closest(\n         'section',\n@@ -355,20 +378,21 @@ describe('DetailPanel', () => {\n \n     it('보유 섹터가 같으면 그리지 않는다', async () => {\n       apiMocks.fetchResultWeights.mockResolvedValue(resultWeights)\n-      const { panel } = renderPanel(resultDetailCompleted, {\n+      const { panel } = await renderPanel(resultDetailCompleted, {\n         token: targetToken,\n         name: '썰물 맞추기',\n         items: resultDetailCompleted.config.items,\n       })\n-      await screen.findByText('HALT_DEFERRED')\n+      await openSettings()\n       await vi.waitFor(() => expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(2))\n \n       expect(within(panel).queryByRole('heading', { name: '보유 섹터 차이' })).toBeNull()\n     })\n \n     it('비교 대상이 없으면 비교 대상의 비중을 부르지 않는다', async () => {\n-      renderPanel()\n-      await screen.findByText('HALT_DEFERRED')\n+      await renderPanel()\n+      await openSettings()\n+      await screen.findByText('44.73%')\n \n       expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)\n     })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,7 @@\n-import { type ReactNode, useCallback, useEffect, useRef } from 'react'\n+import { type ReactNode, useCallback } from 'react'\n import { fetchResultExceptions, fetchResultWeights } from '@/api/result'\n-import { Button } from '@/components/ui/button'\n import { type ResourceState, useResource } from '@/hooks/useResource'\n-import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'\n+import type { SectorCatalogState } from '@/hooks/useSectorCatalogState'\n import type {\n   PublicResultDetail,\n   ResultConfigItem,\n@@ -13,7 +12,6 @@ import { COMPUTED_WEIGHTS_NOTE, strategyLabel } from './conditionLine'\n import { formatMoney, formatRatio } from './formatResult'\n import { HoldingDifference } from './HoldingDifference'\n import { InstrumentProfileDisclosure } from './InstrumentProfileDisclosure'\n-import { closePanelOnEscape } from './panelEscape'\n import { ResourceArea } from './ResourceArea'\n import { SUMMARY_NOT_CALCULATED } from './statusSentences'\n import { type SectorLabels, buildSectorLabels } from './sectorLabels'\n@@ -22,11 +20,15 @@ import { TradeHistory } from './TradeHistory'\n import styles from './resultDetail.module.css'\n \n /**\n- * '자세히 보기' 패널(FR-007~FR-009, T064).\n+ * '자세히 보기'가 갈라진 세 탭(FR-007~FR-009, T064·T098).\n  *\n- * <p>결과 바로 아래에서 열고 주소를 바꾸지 않는다 — 설정 화면으로 되돌리지 않는다(SC-006). 첫 화면과 함께 받지\n- * 않고, 열 때 `/weights`·`/exceptions`와 섹터 목록을 받는다(SC-001). 거래 내역과 대표 상품 정보는 패널 안에서 다시\n- * 한 번 열어야 받는다.\n+ * <p><b>결과 분석</b>은 계산에서 나온 값(회복 기간·회전율·상관관계·위험 기여·손실 기여·계산 제한), <b>설정·근거</b>는\n+ * 사용자가 넣은 조건과 그 근거(비교 규칙·비용 가정·목표·실제 비중·대표 ETF 구성·출처), <b>전체 거래 내역</b>은\n+ * 거래 목록과 조건 질의다. 한 패널에 번갈아 두면 결과에서 나온 값과 넣은 값이 섞여 읽힌다.\n+ *\n+ * <p>셋 다 주소를 바꾸지 않고 설정 화면으로 되돌리지 않는다(SC-006). 각 탭은 처음 고를 때 제 자료를 받는다 —\n+ * 결과 분석은 `/exceptions`, 설정·근거는 `/weights`, 전체 거래 내역은 `/trades`(SC-001). 대표 상품 정보는 탭 안에서\n+ * 다시 한 번 열어야 받는다. 섹터 목록은 세 탭이 같이 쓰므로 `ResultDetailTabs`가 한 번 받아 넘긴다.\n  *\n  * <p><b>값이 없으면 없다고 보인다.</b> 계산이 제한된 항목은 '계산 제한'으로 두고 0이나 임의 값으로 채우지 않는다\n  * (FR-009, 원칙 VI). 계산이 제한되었는지는 004가 판정해 준 대로(`analytics`의 항목이 `null`) 보이고 이 화면이 자료\n@@ -40,57 +42,28 @@ export type DetailCompareTarget = {\n   items: readonly ResultConfigItem[]\n }\n \n-type DetailPanelProps = {\n-  id: string\n+type PanelProps = {\n   token: string\n   detail: PublicResultDetail\n-  compare?: DetailCompareTarget | null\n-  onClose: () => void\n+  /** 섹터 이름·대표 상품을 찾는 001 목록. 부모가 한 번 받아 넘긴다 */\n+  catalog: SectorCatalogState\n }\n \n export const CALCULATION_LIMITED = '계산 제한'\n const EMPTY = '없음'\n \n-export function DetailPanel({ id, token, detail, compare = null, onClose }: DetailPanelProps) {\n-  const titleRef = useRef<HTMLHeadingElement>(null)\n-  const titleId = `${id}-title`\n-\n-  // 열면 제목으로 초점을 옮긴다. 키보드 사용자가 버튼 줄의 나머지를 건너 내려오지 않아도 된다.\n-  useEffect(() => {\n-    titleRef.current?.focus()\n-  }, [])\n-\n-  const loadWeights = useCallback(\n-    (signal: AbortSignal) => fetchResultWeights(token, signal),\n-    [token],\n-  )\n+/** '결과 분석' 탭. 계산에서 나온 값만 둔다. */\n+export function AnalysisPanel({ token, detail, catalog }: PanelProps) {\n   const loadExceptions = useCallback(\n     (signal: AbortSignal) => fetchResultExceptions(token, signal),\n     [token],\n   )\n-  const weights = useResource(loadWeights)\n   const exceptions = useResource(loadExceptions)\n-  const catalog = useSectorCatalogState()\n-\n   const { config } = detail\n-  const labels = buildSectorLabels(\n-    compare ? [...config.items, ...compare.items] : config.items,\n-    catalog.status === 'loaded' ? catalog.catalog : null,\n-  )\n-\n-  const closeOnEscape = closePanelOnEscape(onClose)\n+  const labels = buildSectorLabels(config.items, catalog.status === 'loaded' ? catalog.catalog : null)\n \n   return (\n-    <section id={id} className={styles.panel} aria-labelledby={titleId} onKeyDown={closeOnEscape}>\n-      <div className={styles.panelHeader}>\n-        <h2 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>\n-          자세히 보기\n-        </h2>\n-        <Button type=\"button\" variant=\"outline\" size=\"sm\" onClick={onClose}>\n-          닫기\n-        </Button>\n-      </div>\n-\n+    <div className={styles.stack}>\n       <div className={styles.grid}>\n         <RecoveryItem detail={detail} />\n         <TurnoverItem detail={detail} />\n@@ -116,9 +89,51 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta\n         />\n       </div>\n \n+      <Item title=\"계산 제한 항목\">\n+        <ResourceArea resource={exceptions} loadingText=\"예외 처리 기록을 불러오는 중입니다.\">\n+          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}\n+        </ResourceArea>\n+      </Item>\n+    </div>\n+  )\n+}\n+\n+/** '전체 거래 내역' 탭. 탭을 고르는 것이 여는 것이므로 목록을 바로 부른다. */\n+export function TradesPanel({ token, detail, catalog }: PanelProps) {\n+  const { config } = detail\n+  const labels = buildSectorLabels(config.items, catalog.status === 'loaded' ? catalog.catalog : null)\n+  return (\n+    <div className={styles.stack}>\n+      <Item title=\"전체 거래 내역\">\n+        <TradeHistory token={token} items={config.items} labels={labels} alwaysOpen />\n+      </Item>\n+    </div>\n+  )\n+}\n+\n+/** '설정·근거' 탭. 사용자가 넣은 조건과 그 근거를 둔다. 비교 대상이 있으면 보유 섹터 차이(FR-008)도 여기다. */\n+export function SettingsPanel({\n+  token,\n+  detail,\n+  catalog,\n+  compare = null,\n+}: PanelProps & { compare?: DetailCompareTarget | null }) {\n+  const loadWeights = useCallback(\n+    (signal: AbortSignal) => fetchResultWeights(token, signal),\n+    [token],\n+  )\n+  const weights = useResource(loadWeights)\n+  const { config } = detail\n+  const labels = buildSectorLabels(\n+    compare ? [...config.items, ...compare.items] : config.items,\n+    catalog.status === 'loaded' ? catalog.catalog : null,\n+  )\n+\n+  return (\n+    <div className={styles.stack}>\n       <div className={styles.grid}>\n-        <CostItem detail={detail} />\n         <RulesItem detail={detail} labels={labels} />\n+        <CostItem detail={detail} />\n       </div>\n \n       <Item title=\"목표·실제 비중\">\n@@ -135,23 +150,13 @@ export function DetailPanel({ id, token, detail, compare = null, onClose }: Deta\n         />\n       ) : null}\n \n-      <Item title=\"계산 제한 항목\">\n-        <ResourceArea resource={exceptions} loadingText=\"예외 처리 기록을 불러오는 중입니다.\">\n-          {(data) => <ExceptionsBody exceptions={data} labels={labels} />}\n-        </ResourceArea>\n-      </Item>\n-\n-      <Item title=\"전체 거래 내역\">\n-        <TradeHistory token={token} items={config.items} labels={labels} />\n-      </Item>\n-\n       <Item title=\"대표 ETF 구성·구성종목 중복·출처\">\n         <p className={styles.muted}>\n           실제로 담았는지와 무관하게 이 결과의 섹터 후보를 모두 둡니다. 펼친 상품만 불러옵니다.\n         </p>\n         <InstrumentProfileDisclosure items={config.items} catalog={catalog} />\n       </Item>\n-    </section>\n+    </div>\n   )\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useEffect, useId, useState } from 'react'\n+import { useEffect, useState } from 'react'\n import { fetchResultIndexComparison, normalizeResultError } from '@/api/result'\n import { Button } from '@/components/ui/button'\n import type { ResultIndexComparison } from '@/types/result'\n@@ -14,16 +14,11 @@ const unavailableReasons: Record<string, string> = {\n     '같은 기간의 KOSPI 자료를 아직 받을 수 없어 비교를 표시하지 않았습니다.',\n }\n \n-/** 사용자가 연 뒤에만 서버가 환산한 KOSPI 보조 계열을 받는다(T077). */\n-export function IndexComparisonView({\n-  token,\n-  disabled = false,\n-}: {\n-  token: string\n-  disabled?: boolean\n-}) {\n-  const panelId = useId()\n-  const [open, setOpen] = useState(false)\n+/**\n+ * 'KOSPI 비교' 탭(FR-017, T077·T098). 탭을 처음 고를 때 붙고 그때 서버가 환산한 KOSPI 보조 계열을 받는다.\n+ * 서버가 기간 자료를 얻지 못하면 표 대신 그 이유를 이 자리에 둔다 — 값을 만들어 채우지 않는다.\n+ */\n+export function IndexComparisonView({ token }: { token: string }) {\n   const [attempt, setAttempt] = useState(0)\n   const [state, setState] = useState<State>({ status: 'loading' })\n   const unavailableReason =\n@@ -33,83 +28,65 @@ export function IndexComparisonView({\n       : null\n \n   useEffect(() => {\n-    if (!open) return\n     const controller = new AbortController()\n     setState({ status: 'loading' })\n     void fetchResultIndexComparison(token, controller.signal)\n-      .then((data) => {\n-        setState({ status: 'ready', data })\n-        if (!data.available) setOpen(false)\n-      })\n+      .then((data) => setState({ status: 'ready', data }))\n       .catch((error) => {\n         if (!controller.signal.aborted) {\n           setState({ status: 'error', message: normalizeResultError(error).message })\n         }\n       })\n     return () => controller.abort()\n-  }, [attempt, open, token])\n+  }, [attempt, token])\n \n   return (\n-    <section className={styles.view}>\n-      <Button\n-        type=\"button\"\n-        variant=\"outline\"\n-        disabled={disabled || unavailableReason !== null}\n-        aria-expanded={open}\n-        aria-controls={panelId}\n-        onClick={() => setOpen((value) => !value)}\n-      >\n-        지수와 비교하기\n-      </Button>\n+    <section className={styles.view} role=\"region\" aria-label=\"지수와 비교하기\">\n+      <h2 className={styles.title}>KOSPI와 비교</h2>\n       {unavailableReason ? (\n         <p className={styles.reason} role=\"status\">\n           {unavailableReason}\n         </p>\n       ) : null}\n-      {open ? (\n-        <div id={panelId} className={styles.panel} role=\"region\" aria-label=\"지수와 비교하기\">\n-          <h2 className={styles.title}>KOSPI와 비교</h2>\n-          {state.status === 'loading' ? (\n-            <p className={styles.copy}>지수 자료를 불러오는 중입니다.</p>\n-          ) : null}\n-          {state.status === 'error' ? (\n-            <>\n-              <p className={styles.reason} role=\"alert\">\n-                {state.message}\n-              </p>\n-              <Button\n-                type=\"button\"\n-                variant=\"outline\"\n-                onClick={() => setAttempt((value) => value + 1)}\n-              >\n-                다시 불러오기\n-              </Button>\n-            </>\n-          ) : null}\n-          {state.status === 'ready' && state.data.available ? (\n-            <>\n-              <div className={styles.tableScroll}>\n-                <table className={styles.table} aria-label=\"환산한 KOSPI 값\">\n-                  <thead>\n-                    <tr>\n-                      <th scope=\"col\">날짜</th>\n-                      <th scope=\"col\">환산 값</th>\n-                    </tr>\n-                  </thead>\n-                  <tbody>\n-                    {state.data.series.map((point) => (\n-                      <tr key={point.date}>\n-                        <td>{point.date}</td>\n-                        <td>{point.value}</td>\n-                      </tr>\n-                    ))}\n-                  </tbody>\n-                </table>\n-              </div>\n-              <p className={styles.note}>지수를 시작 금액으로 환산했습니다.</p>\n-            </>\n-          ) : null}\n-        </div>\n+      {state.status === 'loading' ? (\n+        <p className={styles.copy}>지수 자료를 불러오는 중입니다.</p>\n+      ) : null}\n+      {state.status === 'error' ? (\n+        <>\n+          <p className={styles.reason} role=\"alert\">\n+            {state.message}\n+          </p>\n+          <Button\n+            type=\"button\"\n+            variant=\"outline\"\n+            onClick={() => setAttempt((value) => value + 1)}\n+          >\n+            다시 불러오기\n+          </Button>\n+        </>\n+      ) : null}\n+      {state.status === 'ready' && state.data.available ? (\n+        <>\n+          <div className={styles.tableScroll}>\n+            <table className={styles.table} aria-label=\"환산한 KOSPI 값\">\n+              <thead>\n+                <tr>\n+                  <th scope=\"col\">날짜</th>\n+                  <th scope=\"col\">환산 값</th>\n+                </tr>\n+              </thead>\n+              <tbody>\n+                {state.data.series.map((point) => (\n+                  <tr key={point.date}>\n+                    <td>{point.date}</td>\n+                    <td>{point.value}</td>\n+                  </tr>\n+                ))}\n+              </tbody>\n+            </table>\n+          </div>\n+          <p className={styles.note}>지수를 시작 금액으로 환산했습니다.</p>\n+        </>\n       ) : null}\n     </section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/IndexComparisonView.tsx",
+          "old_path": "frontend/src/components/result/IndexComparisonView.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,4 @@\n import { render, screen, within } from '@testing-library/react'\n-import userEvent from '@testing-library/user-event'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import {\n   resultDetailCompleted,\n@@ -11,7 +10,7 @@ import {\n import { TRADES_PAGE_SIZE } from './constants'\n import { LossWindowView } from './LossWindowView'\n \n-/** 005 T071(손실이 커진 때 보기). FR-010. 구간이 없을 때의 비활성은 `ResultPage.test.tsx`가 본다. */\n+/** 005 T071(손실이 커진 때 탭). FR-010. 구간이 없을 때 탭이 비활성인 것은 `ResultPage.test.tsx`가 본다. */\n \n const apiMocks = vi.hoisted(() => ({\n   fetchResultTrades: vi.fn(),\n@@ -31,17 +30,10 @@ vi.mock('@/api/sectors', async (importOriginal) => {\n const lossWindow = { peakDate: '2025-02-26', troughDate: '2025-03-24' }\n \n function renderView() {\n-  const onClose = vi.fn()\n   render(\n-    <LossWindowView\n-      id=\"loss\"\n-      token={resultToken}\n-      lossWindow={lossWindow}\n-      items={resultDetailCompleted.config.items}\n-      onClose={onClose}\n-    />,\n+    <LossWindowView token={resultToken} lossWindow={lossWindow} items={resultDetailCompleted.config.items} />,\n   )\n-  return { onClose, view: screen.getByRole('region', { name: /손실이 커진 때/ }) }\n+  return { view: screen.getByRole('region', { name: /손실이 커진 때/ }) }\n }\n \n describe('LossWindowView', () => {\n@@ -81,18 +73,6 @@ describe('LossWindowView', () => {\n     expect(within(view).queryByText(/합계/)).toBeNull()\n   })\n \n-  it('열자마자 제목으로 초점이 가고, Esc와 닫기 버튼이 닫기를 부른다', async () => {\n-    const user = userEvent.setup()\n-    const { view, onClose } = renderView()\n-    await within(view).findByRole('table', { name: '구간 거래' })\n-\n-    expect(document.activeElement).toBe(within(view).getByRole('heading', { level: 2 }))\n-    await user.keyboard('{Escape}')\n-    await user.click(within(view).getByRole('button', { name: '닫기' }))\n-\n-    expect(onClose).toHaveBeenCalledTimes(2)\n-  })\n-\n   it('부분 결과의 보유는 완료 범위까지의 기록이라고 적는다', async () => {\n     apiMocks.fetchResultPositions.mockResolvedValue({ ...resultPositions, partial: true })\n     const { view } = renderView()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/LossWindowView.test.tsx",
+          "old_path": "frontend/src/components/result/LossWindowView.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,10 @@\n-import { useCallback, useEffect, useRef } from 'react'\n+import { useCallback, useId } from 'react'\n import { fetchResultPositions } from '@/api/result'\n-import { Button } from '@/components/ui/button'\n import { useResource } from '@/hooks/useResource'\n import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'\n import type { ResultConfigItem } from '@/types/result'\n import type { DrawdownWindow } from './drawdownWindow'\n import { formatMoney, formatRatio } from './formatResult'\n-import { closePanelOnEscape } from './panelEscape'\n import { ResourceArea } from './ResourceArea'\n import { buildSectorLabels } from './sectorLabels'\n import { TradeList } from './TradeHistory'\n@@ -14,13 +12,13 @@ import { InlineHelp } from '@/components/common/InlineHelp'\n import styles from './resultDetail.module.css'\n \n /**\n- * '손실이 커진 때 보기'(FR-010, T066).\n+ * '손실이 커진 때' 탭(FR-010, T066·T098).\n  *\n  * <p>그래프 음영과 **같은** 최대 하락 구간 하나(`findDrawdownWindow`)를 보인다. 여러 구간을 고르는 임계값은\n  * 두지 않는다. 그 구간에 진입하거나 청산한 거래(`/trades?from=&to=`), 저점일의 보유(`/positions?date=`), 거래별\n  * 비용을 보인다. 구간 손익이나 비용 합계는 004가 주는 값이 없어 만들지 않는다(원칙 VI).\n  *\n- * <p>그래프 위에서 이 구간을 강조하는 일은 그래프를 그리는 B04(T044)가 이 보기의 여닫힘을 받아 한다.\n+ * <p>구간이 없으면 이 탭은 열리지 않고 그 사유는 탭 줄에 있다(`ResultDetailTabs`). 아래 두 문장이 그 사유다.\n  */\n \n export const LOSS_WINDOW_UNAVAILABLE = '최대 하락 구간을 확인할 수 없어 이 보기를 열 수 없습니다.'\n@@ -28,22 +26,14 @@ export const LOSS_WINDOW_UNAVAILABLE = '최대 하락 구간을 확인할 수 \n export const LOSS_WINDOW_NONE = '분석 기간 동안 자산가치가 줄어든 적이 없어 볼 구간이 없습니다.'\n \n type LossWindowViewProps = {\n-  id: string\n   token: string\n   lossWindow: DrawdownWindow\n   /** 결과의 섹터 후보. 종목 식별자에 섹터 이름을 붙이는 데 쓴다 */\n   items: readonly ResultConfigItem[]\n-  onClose: () => void\n }\n \n-export function LossWindowView({ id, token, lossWindow, items, onClose }: LossWindowViewProps) {\n-  const titleRef = useRef<HTMLHeadingElement>(null)\n-  const titleId = `${id}-title`\n-\n-  // 열면 제목으로 초점을 옮긴다. 키보드 사용자가 버튼 줄의 나머지를 건너 내려오지 않아도 된다.\n-  useEffect(() => {\n-    titleRef.current?.focus()\n-  }, [])\n+export function LossWindowView({ token, lossWindow, items }: LossWindowViewProps) {\n+  const titleId = useId()\n \n   const load = useCallback(\n     (signal: AbortSignal) => fetchResultPositions(token, lossWindow.troughDate, signal),\n@@ -53,23 +43,16 @@ export function LossWindowView({ id, token, lossWindow, items, onClose }: LossWi\n   const catalog = useSectorCatalogState()\n   const labels = buildSectorLabels(items, catalog.status === 'loaded' ? catalog.catalog : null)\n \n-  const closeOnEscape = closePanelOnEscape(onClose)\n-\n   return (\n-    <section id={id} className={styles.panel} aria-labelledby={titleId} onKeyDown={closeOnEscape}>\n+    <section className={styles.stack} aria-labelledby={titleId}>\n       <div className={styles.panelHeader}>\n-        <h2 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>\n+        <h2 id={titleId} className={styles.panelTitle}>\n           손실이 커진 때: {lossWindow.peakDate} ~ {lossWindow.troughDate}\n         </h2>\n-        <div className={styles.headActions}>\n-          <InlineHelp label=\"손실이 커진 때\">\n-            <p>자산가치가 가장 높았던 날부터 가장 크게 줄어든 날까지의 구간입니다.</p>\n-            <p>그래프의 음영과 같은 구간이며, 회복한 날은 넣지 않았습니다.</p>\n-          </InlineHelp>\n-          <Button type=\"button\" variant=\"outline\" size=\"sm\" onClick={onClose}>\n-            닫기\n-          </Button>\n-        </div>\n+        <InlineHelp label=\"손실이 커진 때\">\n+          <p>자산가치가 가장 높았던 날부터 가장 크게 줄어든 날까지의 구간입니다.</p>\n+          <p>그래프의 음영과 같은 구간이며, 회복한 날은 넣지 않았습니다.</p>\n+        </InlineHelp>\n       </div>\n \n       <div className={styles.item}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/LossWindowView.tsx",
+          "old_path": "frontend/src/components/result/LossWindowView.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+import type { ReactNode } from 'react'\n+import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'\n+import type { PublicResultDetail } from '@/types/result'\n+import { AnalysisPanel, type DetailCompareTarget, SettingsPanel, TradesPanel } from './DetailPanel'\n+import type { DrawdownWindow } from './drawdownWindow'\n+import { isZeroValue } from './formatResult'\n+import { IndexComparisonView } from './IndexComparisonView'\n+import { LOSS_WINDOW_NONE, LOSS_WINDOW_UNAVAILABLE, LossWindowView } from './LossWindowView'\n+import { ResultTabs } from './ResultTabs'\n+import { TargetRiskView } from './TargetRiskView'\n+\n+/**\n+ * 결과 화면의 일곱 탭(T098): 요약 | 결과 분석 | 설정·근거 | 전체 거래 내역 | 손실이 커진 때 | KOSPI 비교 | 목표 위험 맞춤.\n+ *\n+ * <p>첫 화면에서 요약이 열려 있다. 요약의 내용(핵심 숫자·상태 문장)은 페이지가 만들어 `summary`로 넘긴다 —\n+ * 비교 대상 같은 페이지 상태에 묶여 있어서다. 그래프와 해석 문장은 탭 위에 있다. 섹터 목록은 여기서 한 번 받아 상세 탭 셋에\n+ * 넘긴다 — 탭마다 받으면 같은 목록을 세 번 받는다. 볼 결과가 없는 실행(계산 중·실패)에는 이 탭 묶음을 두지 않고\n+ * 페이지가 요약 내용만 그린다.\n+ *\n+ * <p>'손실이 커진 때'는 그래프 음영과 같은 구간(`lossWindow`)이 있어야 열린다. 없으면 왜 없는지를 탭 줄 아래에\n+ * 적는다 — 하락이 없던 결과와 구간을 확인하지 못한 결과는 다른 문장이다(FR-010, R-05).\n+ */\n+export function ResultDetailTabs({\n+  token,\n+  detail,\n+  summary: summaryContent,\n+  lossWindow,\n+  compare = null,\n+}: {\n+  token: string\n+  detail: PublicResultDetail\n+  /** 요약 탭의 내용. 핵심 숫자·상태 문장 */\n+  summary: ReactNode\n+  lossWindow: DrawdownWindow | null\n+  compare?: DetailCompareTarget | null\n+}) {\n+  const catalog = useSectorCatalogState()\n+  const { summary } = detail\n+  const lossReason = lossWindow\n+    ? undefined\n+    : summary && isZeroValue(summary.maxDrawdown)\n+      ? LOSS_WINDOW_NONE\n+      : LOSS_WINDOW_UNAVAILABLE\n+\n+  return (\n+    <ResultTabs\n+      label=\"결과 보기\"\n+      defaultTab=\"summary\"\n+      tabs={[\n+        { id: 'summary', label: '요약', content: summaryContent },\n+        {\n+          id: 'analysis',\n+          label: '결과 분석',\n+          content: <AnalysisPanel token={token} detail={detail} catalog={catalog} />,\n+        },\n+        {\n+          id: 'settings',\n+          label: '설정·근거',\n+          content: (\n+            <SettingsPanel token={token} detail={detail} catalog={catalog} compare={compare} />\n+          ),\n+        },\n+        {\n+          id: 'trades',\n+          label: '전체 거래 내역',\n+          content: <TradesPanel token={token} detail={detail} catalog={catalog} />,\n+        },\n+        {\n+          id: 'loss',\n+          label: '손실이 커진 때',\n+          disabled: lossWindow === null,\n+          reason: lossReason,\n+          content: lossWindow ? (\n+            <LossWindowView token={token} lossWindow={lossWindow} items={detail.config.items} />\n+          ) : null,\n+        },\n+        { id: 'index', label: 'KOSPI 비교', content: <IndexComparisonView token={token} /> },\n+        { id: 'targetRisk', label: '목표 위험 맞춤', content: <TargetRiskView base={detail} /> },\n+      ]}\n+    />\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultDetailTabs.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,110 @@\n+import { render, screen } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { useState } from 'react'\n+import { describe, expect, it, vi } from 'vitest'\n+import { ResultTabs } from './ResultTabs'\n+\n+/** 005 T098. FR-007·FR-022 — 탭 줄의 키보드 조작·지연 마운트·비활성 사유. */\n+\n+function Counter({ name, onMount }: { name: string; onMount: (name: string) => void }) {\n+  const [mounted] = useState(() => {\n+    onMount(name)\n+    return true\n+  })\n+  return <p>{mounted ? `${name} 내용` : null}</p>\n+}\n+\n+function renderTabs(onMount = vi.fn()) {\n+  render(\n+    <ResultTabs\n+      label=\"시험 탭\"\n+      defaultTab=\"a\"\n+      tabs={[\n+        { id: 'a', label: '첫째', content: <Counter name=\"첫째\" onMount={onMount} /> },\n+        { id: 'b', label: '둘째', content: <Counter name=\"둘째\" onMount={onMount} /> },\n+        {\n+          id: 'c',\n+          label: '셋째',\n+          disabled: true,\n+          reason: '셋째는 볼 자료가 없습니다.',\n+          content: <Counter name=\"셋째\" onMount={onMount} />,\n+        },\n+        { id: 'd', label: '넷째', content: <Counter name=\"넷째\" onMount={onMount} /> },\n+      ]}\n+    />,\n+  )\n+  return { onMount }\n+}\n+\n+describe('ResultTabs', () => {\n+  it('기본 탭만 열려 있고 다른 탭의 내용은 고를 때 처음 붙는다', async () => {\n+    const user = userEvent.setup()\n+    const { onMount } = renderTabs()\n+\n+    expect(screen.getByRole('tab', { name: '첫째' }).getAttribute('aria-selected')).toBe('true')\n+    expect(screen.getByRole('tabpanel').textContent).toContain('첫째 내용')\n+    expect(onMount.mock.calls.map((call) => call[0])).toEqual(['첫째'])\n+\n+    await user.click(screen.getByRole('tab', { name: '둘째' }))\n+    expect(screen.getByRole('tabpanel').textContent).toContain('둘째 내용')\n+    expect(onMount.mock.calls.map((call) => call[0])).toEqual(['첫째', '둘째'])\n+  })\n+\n+  it('떠난 탭의 내용은 내리지 않고 숨긴다 — 돌아와도 다시 붙지 않는다', async () => {\n+    const user = userEvent.setup()\n+    const { onMount } = renderTabs()\n+\n+    await user.click(screen.getByRole('tab', { name: '둘째' }))\n+    await user.click(screen.getByRole('tab', { name: '첫째' }))\n+\n+    expect(screen.getAllByRole('tabpanel', { hidden: true })).toHaveLength(2)\n+    expect(screen.getByRole('tabpanel').textContent).toContain('첫째 내용')\n+    expect(onMount).toHaveBeenCalledTimes(2)\n+  })\n+\n+  it('비활성 탭은 눌러도 열리지 않고 사유가 탭 줄 아래에 있으며 aria-describedby로 이어진다', async () => {\n+    const user = userEvent.setup()\n+    renderTabs()\n+\n+    const disabled = screen.getByRole('tab', { name: '셋째' })\n+    expect(disabled.getAttribute('aria-disabled')).toBe('true')\n+    const reason = document.getElementById(disabled.getAttribute('aria-describedby') ?? '')\n+    expect(reason?.textContent).toBe('셋째는 볼 자료가 없습니다.')\n+\n+    await user.click(disabled)\n+    expect(screen.getByRole('tab', { name: '첫째' }).getAttribute('aria-selected')).toBe('true')\n+    expect(screen.queryByText('셋째 내용')).toBeNull()\n+  })\n+\n+  it('방향키·Home·End로 탭을 옮기면 초점이 탭에 남고 옮긴 탭이 열린다. 비활성 탭은 초점만 받는다', async () => {\n+    const user = userEvent.setup()\n+    renderTabs()\n+    const [first, second, third, fourth] = ['첫째', '둘째', '셋째', '넷째'].map((name) =>\n+      screen.getByRole('tab', { name }),\n+    )\n+\n+    first.focus()\n+    await user.keyboard('{ArrowRight}')\n+    expect(document.activeElement).toBe(second)\n+    expect(second.getAttribute('aria-selected')).toBe('true')\n+\n+    await user.keyboard('{ArrowRight}')\n+    expect(document.activeElement).toBe(third)\n+    // 비활성 탭은 열리지 않아 앞 탭이 그대로 열려 있다.\n+    expect(second.getAttribute('aria-selected')).toBe('true')\n+\n+    await user.keyboard('{End}')\n+    expect(document.activeElement).toBe(fourth)\n+    expect(fourth.getAttribute('aria-selected')).toBe('true')\n+\n+    await user.keyboard('{ArrowRight}')\n+    expect(document.activeElement).toBe(first)\n+\n+    await user.keyboard('{Home}')\n+    expect(document.activeElement).toBe(first)\n+    expect(first.getAttribute('aria-selected')).toBe('true')\n+    // 열린 탭만 Tab 순서에 있다.\n+    expect(first.getAttribute('tabindex')).toBe('0')\n+    expect(second.getAttribute('tabindex')).toBe('-1')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultTabs.test.tsx",
+          "old_path": "frontend/src/components/result/ResultTabs.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,119 @@\n+import { type KeyboardEvent, type ReactNode, useId, useRef, useState } from 'react'\n+import styles from './resultTabs.module.css'\n+\n+/**\n+ * 결과 화면의 보조 보기 탭(spec 005 FR-007·FR-010·FR-017, T098).\n+ *\n+ * <p>버튼마다 패널을 여닫던 네 보기를 탭 하나로 묶는다. 한 번에 하나만 보이고 세로로 쌓이지 않는다. 주소는\n+ * 바꾸지 않는다(SC-006).\n+ *\n+ * <p><b>탭의 내용은 처음 고를 때 그린다.</b> 그때 그 탭의 자료를 받고, 다른 탭으로 옮겨도 내리지 않고 숨긴다 —\n+ * 돌아왔을 때 다시 받지 않고, 목표 위험 맞춤처럼 요청 상태를 가진 탭이 상태를 잃지 않는다.\n+ *\n+ * <p>키보드: 좌우 방향키·Home·End로 탭을 옮기고 옮긴 탭이 바로 열린다. 열 수 없는 탭은 `aria-disabled`이고\n+ * 초점은 받되 열리지 않으며, 사유는 탭 줄 아래 문장으로 두고 `aria-describedby`로 잇는다(FR-022).\n+ */\n+export type ResultTab = {\n+  id: string\n+  label: string\n+  /** 열 수 없는 탭. `reason`과 함께 준다. 값을 0으로 채워 열지 않는다(FR-009) */\n+  disabled?: boolean\n+  reason?: string\n+  content: ReactNode\n+}\n+\n+type ResultTabsProps = {\n+  /** 탭 줄의 이름. 스크린 리더가 \"… 탭 목록\"으로 읽는다 */\n+  label: string\n+  tabs: readonly ResultTab[]\n+  defaultTab: string\n+}\n+\n+const KEY_MOVES: Record<string, (index: number, count: number) => number> = {\n+  ArrowRight: (index, count) => (index + 1) % count,\n+  ArrowLeft: (index, count) => (index - 1 + count) % count,\n+  Home: () => 0,\n+  End: (_index, count) => count - 1,\n+}\n+\n+export function ResultTabs({ label, tabs, defaultTab }: ResultTabsProps) {\n+  const baseId = useId()\n+  const [active, setActive] = useState(defaultTab)\n+  const [visited, setVisited] = useState<ReadonlySet<string>>(() => new Set([defaultTab]))\n+  const tabRefs = useRef(new Map<string, HTMLButtonElement>())\n+\n+  const tabId = (id: string) => `${baseId}-tab-${id}`\n+  const panelId = (id: string) => `${baseId}-panel-${id}`\n+  const reasonId = (id: string) => `${baseId}-reason-${id}`\n+\n+  const select = (id: string) => {\n+    const tab = tabs.find((candidate) => candidate.id === id)\n+    if (!tab || tab.disabled) return\n+    setActive(id)\n+    setVisited((current) => (current.has(id) ? current : new Set(current).add(id)))\n+  }\n+\n+  const moveByKey = (event: KeyboardEvent<HTMLDivElement>) => {\n+    const move = KEY_MOVES[event.key]\n+    if (!move) return\n+    const index = tabs.findIndex((tab) => tabId(tab.id) === (event.target as HTMLElement).id)\n+    if (index < 0) return\n+    event.preventDefault()\n+    const next = tabs[move(index, tabs.length)]\n+    tabRefs.current.get(next.id)?.focus()\n+    select(next.id)\n+  }\n+\n+  return (\n+    <div className={styles.tabs}>\n+      <div role=\"tablist\" aria-label={label} className={styles.tablist} onKeyDown={moveByKey}>\n+        {tabs.map((tab) => {\n+          const selected = tab.id === active\n+          return (\n+            <button\n+              key={tab.id}\n+              ref={(node) => {\n+                if (node) tabRefs.current.set(tab.id, node)\n+                else tabRefs.current.delete(tab.id)\n+              }}\n+              type=\"button\"\n+              role=\"tab\"\n+              id={tabId(tab.id)}\n+              className={styles.tab}\n+              aria-selected={selected}\n+              aria-controls={visited.has(tab.id) ? panelId(tab.id) : undefined}\n+              aria-disabled={tab.disabled || undefined}\n+              aria-describedby={tab.disabled && tab.reason ? reasonId(tab.id) : undefined}\n+              tabIndex={selected ? 0 : -1}\n+              onClick={() => select(tab.id)}\n+            >\n+              {tab.label}\n+            </button>\n+          )\n+        })}\n+      </div>\n+      {tabs\n+        .filter((tab) => tab.disabled && tab.reason)\n+        .map((tab) => (\n+          <p key={tab.id} id={reasonId(tab.id)} className={styles.reason}>\n+            {tab.reason}\n+          </p>\n+        ))}\n+      {tabs\n+        .filter((tab) => visited.has(tab.id))\n+        .map((tab) => (\n+          <div\n+            key={tab.id}\n+            role=\"tabpanel\"\n+            id={panelId(tab.id)}\n+            aria-labelledby={tabId(tab.id)}\n+            hidden={tab.id !== active}\n+            tabIndex={0}\n+            className={styles.panel}\n+          >\n+            {tab.content}\n+          </div>\n+        ))}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultTabs.tsx",
+          "old_path": "frontend/src/components/result/ResultTabs.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { useEffect, useId, useRef, useState } from 'react'\n+import { useEffect, useRef, useState } from 'react'\n import { BacktestRequestError, createBacktest } from '@/api/backtest'\n import { fetchStrategyRegistry } from '@/api/strategyRegistry'\n import { Button } from '@/components/ui/button'\n@@ -41,16 +41,12 @@ function targetVolatility(value: number): string {\n   return (value / 100).toFixed(4)\n }\n \n-/** 목표 위험 오버레이를 별도 실행으로 요청하는 지연 로딩 보조 보기(T078). */\n-export function TargetRiskView({\n-  base,\n-  disabled = false,\n-}: {\n-  base: PublicResultDetail\n-  disabled?: boolean\n-}) {\n-  const panelId = useId()\n-  const [open, setOpen] = useState(false)\n+/**\n+ * '목표 위험 맞춤' 탭(FR-017, T078·T098). 탭을 처음 고를 때 붙고 그때 별도 실행을 한 번 요청한다. 탭을 옮겨도\n+ * 내려가지 않으므로 요청 상태가 남고, 다시 요청은 사용자가 눌러야 한다.\n+ */\n+export function TargetRiskView({ base }: { base: PublicResultDetail }) {\n+  const started = useRef(false)\n   const [requestState, setRequestState] = useState<RequestState>({ status: 'idle' })\n   const requestRef = useRef<BacktestCreateRequest | null>(null)\n   const active = useRef(true)\n@@ -59,9 +55,15 @@ export function TargetRiskView({\n \n   useEffect(() => {\n     active.current = true\n+    // StrictMode는 마운트 효과를 두 번 돌린다. 요청은 한 번이어야 하므로 ref로 막는다.\n+    if (!started.current) {\n+      started.current = true\n+      void start()\n+    }\n     return () => {\n       active.current = false\n     }\n+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 붙을 때 한 번만 요청한다\n   }, [])\n \n   const send = async (request: BacktestCreateRequest) => {\n@@ -96,7 +98,6 @@ export function TargetRiskView({\n   }\n \n   const start = async () => {\n-    setOpen(true)\n     setRequestState({ status: 'sending' })\n     try {\n       const registry = await fetchStrategyRegistry(base.config.items.length)\n@@ -145,116 +146,98 @@ export function TargetRiskView({\n     failure && ['ESTIMATION_FAILED', 'DATA_INSUFFICIENT'].includes(failure.code)\n \n   return (\n-    <section className={styles.view}>\n-      <Button\n-        type=\"button\"\n-        variant=\"outline\"\n-        disabled={disabled || requestState.status === 'sending'}\n-        aria-expanded={open}\n-        aria-controls={panelId}\n-        onClick={() => {\n-          if (open) setOpen(false)\n-          else if (requestState.status === 'idle') void start()\n-          else setOpen(true)\n-        }}\n-      >\n-        목표 위험 맞춤\n-      </Button>\n-      {open ? (\n-        <div id={panelId} className={styles.panel} role=\"region\" aria-label=\"목표 위험 맞춤\">\n-          <h2 className={styles.title}>목표 위험 맞춤 시나리오</h2>\n-          {requestState.status === 'sending' ||\n-          (resultToken !== null && result.status === 'loading') ||\n-          inFlight ? (\n-            <p className={styles.copy} role=\"status\">\n-              별도 시나리오 결과를 준비하고 있습니다.\n-            </p>\n-          ) : null}\n-          {requestState.status === 'error' ? (\n-            <>\n-              <p className={styles.reason} role=\"alert\">\n-                {requestState.message}\n-                {requestState.retryAfterSeconds !== null\n-                  ? ` ${requestState.retryAfterSeconds}초 뒤 다시 요청할 수 있습니다.`\n-                  : ''}\n-              </p>\n-              <Button\n-                type=\"button\"\n-                variant=\"outline\"\n-                onClick={retryRequest}\n-              >\n-                다시 요청하기\n-              </Button>\n-            </>\n-          ) : null}\n-          {requestState.status === 'history' ? (\n-            <>\n-              <p className={styles.reason} role=\"alert\">\n-                {requestState.message}\n-              </p>\n-              {requestState.requiredStartDate ? (\n-                <p className={styles.reason}>\n-                  {requestState.requiredStartDate} 이후를 포함하도록 분석 기간을 다시 선택해야 합니다.\n-                </p>\n-              ) : null}\n-              {requestState.requiredWarmupTradingDays !== null &&\n-              requestState.requiredStartDate === null ? (\n-                <Button type=\"button\" variant=\"outline\" onClick={retryWithHistory}>\n-                  필요 기간으로 다시 요청하기\n-                </Button>\n-              ) : null}\n-            </>\n-          ) : null}\n-          {result.status === 'expired' || result.status === 'notFound' ? (\n-            <p className={styles.reason}>별도 시나리오 결과를 더 이상 열 수 없습니다.</p>\n-          ) : null}\n-          {result.status === 'error' ? (\n-            <>\n-              <p className={styles.reason} role=\"alert\">\n-                {result.message}\n-              </p>\n-              <Button type=\"button\" variant=\"outline\" onClick={result.retry}>\n-                결과 다시 불러오기\n-              </Button>\n-            </>\n-          ) : null}\n-          {summaryUnavailable ? (\n-            <>\n-              <p className={styles.reason} role=\"alert\">\n-                별도 시나리오가 취소되어 핵심 결과를 계산하지 못했습니다.\n-              </p>\n-              <Button type=\"button\" variant=\"outline\" onClick={retryRequest}>\n-                다시 요청하기\n-              </Button>\n-            </>\n-          ) : null}\n-          {limited && failure ? (\n+    <section className={styles.view} role=\"region\" aria-label=\"목표 위험 맞춤\">\n+      <h2 className={styles.title}>목표 위험 맞춤 시나리오</h2>\n+      {requestState.status === 'sending' ||\n+      (resultToken !== null && result.status === 'loading') ||\n+      inFlight ? (\n+        <p className={styles.copy} role=\"status\">\n+          별도 시나리오 결과를 준비하고 있습니다.\n+        </p>\n+      ) : null}\n+      {requestState.status === 'error' ? (\n+        <>\n+          <p className={styles.reason} role=\"alert\">\n+            {requestState.message}\n+            {requestState.retryAfterSeconds !== null\n+              ? ` ${requestState.retryAfterSeconds}초 뒤 다시 요청할 수 있습니다.`\n+              : ''}\n+          </p>\n+          <Button\n+            type=\"button\"\n+            variant=\"outline\"\n+            onClick={retryRequest}\n+          >\n+            다시 요청하기\n+          </Button>\n+        </>\n+      ) : null}\n+      {requestState.status === 'history' ? (\n+        <>\n+          <p className={styles.reason} role=\"alert\">\n+            {requestState.message}\n+          </p>\n+          {requestState.requiredStartDate ? (\n             <p className={styles.reason}>\n-              자료가 충분하지 않아 목표 위험을 계산하지 못했습니다. {failure.message}\n-            </p>\n-          ) : null}\n-          {failure && !limited && !summaryUnavailable ? (\n-            <p className={styles.reason} role=\"alert\">\n-              목표 위험 시나리오를 완료하지 못했습니다. {failure.message}\n+              {requestState.requiredStartDate} 이후를 포함하도록 분석 기간을 다시 선택해야 합니다.\n             </p>\n           ) : null}\n-          {detail?.summary ? (\n-            <dl className={styles.metrics} aria-label=\"목표 위험 맞춤 핵심 결과\">\n-              <div className={styles.metric}>\n-                <dt>비용 차감 후 전체 수익률</dt>\n-                <dd>{formatRatio(detail.summary.netTotalReturn)}</dd>\n-              </div>\n-              <div className={styles.metric}>\n-                <dt>가장 크게 줄었던 폭</dt>\n-                <dd>{formatRatio(detail.summary.maxDrawdown)}</dd>\n-              </div>\n-              <div className={styles.metric}>\n-                <dt>거래비용</dt>\n-                <dd>{formatMoney(detail.summary.totalTradingCost)}</dd>\n-              </div>\n-            </dl>\n+          {requestState.requiredWarmupTradingDays !== null &&\n+          requestState.requiredStartDate === null ? (\n+            <Button type=\"button\" variant=\"outline\" onClick={retryWithHistory}>\n+              필요 기간으로 다시 요청하기\n+            </Button>\n           ) : null}\n-        </div>\n+        </>\n+      ) : null}\n+      {result.status === 'expired' || result.status === 'notFound' ? (\n+        <p className={styles.reason}>별도 시나리오 결과를 더 이상 열 수 없습니다.</p>\n+      ) : null}\n+      {result.status === 'error' ? (\n+        <>\n+          <p className={styles.reason} role=\"alert\">\n+            {result.message}\n+          </p>\n+          <Button type=\"button\" variant=\"outline\" onClick={result.retry}>\n+            결과 다시 불러오기\n+          </Button>\n+        </>\n+      ) : null}\n+      {summaryUnavailable ? (\n+        <>\n+          <p className={styles.reason} role=\"alert\">\n+            별도 시나리오가 취소되어 핵심 결과를 계산하지 못했습니다.\n+          </p>\n+          <Button type=\"button\" variant=\"outline\" onClick={retryRequest}>\n+            다시 요청하기\n+          </Button>\n+        </>\n+      ) : null}\n+      {limited && failure ? (\n+        <p className={styles.reason}>\n+          자료가 충분하지 않아 목표 위험을 계산하지 못했습니다. {failure.message}\n+        </p>\n+      ) : null}\n+      {failure && !limited && !summaryUnavailable ? (\n+        <p className={styles.reason} role=\"alert\">\n+          목표 위험 시나리오를 완료하지 못했습니다. {failure.message}\n+        </p>\n+      ) : null}\n+      {detail?.summary ? (\n+        <dl className={styles.metrics} aria-label=\"목표 위험 맞춤 핵심 결과\">\n+          <div className={styles.metric}>\n+            <dt>비용 차감 후 전체 수익률</dt>\n+            <dd>{formatRatio(detail.summary.netTotalReturn)}</dd>\n+          </div>\n+          <div className={styles.metric}>\n+            <dt>가장 크게 줄었던 폭</dt>\n+            <dd>{formatRatio(detail.summary.maxDrawdown)}</dd>\n+          </div>\n+          <div className={styles.metric}>\n+            <dt>거래비용</dt>\n+            <dd>{formatMoney(detail.summary.totalTradingCost)}</dd>\n+          </div>\n+        </dl>\n       ) : null}\n     </section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/TargetRiskView.tsx",
+          "old_path": "frontend/src/components/result/TargetRiskView.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,7 +11,8 @@ import styles from './resultDetail.module.css'\n import { DateField } from '@/components/common/DateField'\n \n /**\n- * 전체 거래 내역(FR-007, T065). 상세 패널 안에서 '거래 내역 보기'를 누를 때 처음 부른다(SC-001).\n+ * 전체 거래 내역(FR-007, T065). 결과 화면에서는 제 탭에 놓여 탭을 고를 때 처음 부른다(`alwaysOpen`, T098). 다른\n+ * 자리에 접혀 들어가면 '거래 내역 보기'를 누를 때 부른다(SC-001).\n  *\n  * <p>한 번에 받는 건수는 `TRADES_PAGE_SIZE` 한 곳에서 정한다(R-11). 종목·기간·상태로 좁히는 것은 서버 질의로\n  * 넘긴다 — 받은 페이지를 화면에서 거르면 다른 페이지에 있는 거래가 빠진 것처럼 보인다(spec Edge Case).\n@@ -220,12 +221,15 @@ export function TradeHistory({\n   token,\n   items,\n   labels,\n+  alwaysOpen = false,\n }: {\n   token: string\n   items: readonly ResultConfigItem[]\n   labels: SectorLabels\n+  /** 제 탭에 놓였을 때. 열린 채로 두고 여닫기 버튼을 그리지 않는다 */\n+  alwaysOpen?: boolean\n }) {\n-  const [open, setOpen] = useState(false)\n+  const [open, setOpen] = useState(alwaysOpen)\n   const [draft, setDraft] = useState<FilterDraft>(emptyDraft)\n   const [applied, setApplied] = useState<TradeFilter>(() => toFilter(emptyDraft))\n   const [formError, setFormError] = useState<string | null>(null)\n@@ -248,18 +252,20 @@ export function TradeHistory({\n \n   return (\n     <div className={styles.item}>\n-      <div>\n-        <Button\n-          type=\"button\"\n-          variant=\"outline\"\n-          size=\"sm\"\n-          aria-expanded={open}\n-          aria-controls={open ? listId : undefined}\n-          onClick={() => setOpen((current) => !current)}\n-        >\n-          {open ? '거래 내역 접기' : '거래 내역 보기'}\n-        </Button>\n-      </div>\n+      {alwaysOpen ? null : (\n+        <div>\n+          <Button\n+            type=\"button\"\n+            variant=\"outline\"\n+            size=\"sm\"\n+            aria-expanded={open}\n+            aria-controls={open ? listId : undefined}\n+            onClick={() => setOpen((current) => !current)}\n+          >\n+            {open ? '거래 내역 접기' : '거래 내역 보기'}\n+          </Button>\n+        </div>\n+      )}\n \n       {open ? (\n         <div id={listId} className={styles.item}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/TradeHistory.tsx",
+          "old_path": "frontend/src/components/result/TradeHistory.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,11 @@\n-/* 결과 근처에서 여는 보기(자세히 보기·손실이 커진 때 보기)가 함께 쓰는 모양이다. */\n+/* 결과 탭 안의 보기(결과 분석·설정·근거·손실이 커진 때)가 함께 쓰는 모양이다. 테두리는 탭 패널이 그린다. */\n+\n+.stack {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 22px;\n+  min-width: 0;\n+}\n \n .panel {\n   display: flex;\n@@ -49,13 +56,6 @@\n   gap: 6px;\n }\n \n-/* 여는 보기의 머리에서 도움말과 닫기를 한 줄에 둔다. */\n-.headActions {\n-  display: flex;\n-  align-items: center;\n-  gap: 10px;\n-}\n-\n .itemTitle {\n   margin: 0;\n   color: var(--thorp-copy);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/resultDetail.module.css",
+          "old_path": "frontend/src/components/result/resultDetail.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,67 @@\n+/* 결과 화면 보조 보기 탭. 탭 줄은 한 줄이고 좁은 화면에서는 줄을 바꿔 쌓는다. */\n+\n+.tabs {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 12px;\n+  min-width: 0;\n+}\n+\n+.tablist {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 2px 4px;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.tab {\n+  margin: 0 0 -1px;\n+  padding: 10px 14px;\n+  border: 0;\n+  border-bottom: 2px solid transparent;\n+  background: none;\n+  color: var(--thorp-copy);\n+  font: inherit;\n+  font-size: 0.92rem;\n+  cursor: pointer;\n+}\n+\n+.tab:hover {\n+  color: var(--thorp-foreground);\n+}\n+\n+.tab[aria-selected='true'] {\n+  border-bottom-color: var(--thorp-accent);\n+  color: var(--thorp-foreground);\n+  font-weight: 600;\n+}\n+\n+.tab[aria-disabled='true'] {\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+.tab:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.reason {\n+  margin: -6px 0 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.8rem;\n+  line-height: 1.6;\n+}\n+\n+.panel {\n+  min-width: 0;\n+  padding: 22px 24px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 14px;\n+  background: var(--thorp-surface);\n+}\n+\n+.panel:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/resultTabs.module.css",
+          "old_path": "frontend/src/components/result/resultTabs.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,8 @@ import { anonymousAuthContext } from '@/test/authFixtures'\n import { BacktestRequestError } from '@/api/backtest'\n import {\n   resultDetailCompleted,\n+  resultExceptions,\n+  resultSectorCatalog,\n   resultTimeseries,\n   resultToken,\n } from '@/test/resultFixtures'\n@@ -22,6 +24,8 @@ const api = vi.hoisted(() => ({\n   index: vi.fn(),\n   registry: vi.fn(),\n   create: vi.fn(),\n+  exceptions: vi.fn(),\n+  catalog: vi.fn(),\n }))\n \n vi.mock('@/api/result', async (load) => ({\n@@ -29,6 +33,11 @@ vi.mock('@/api/result', async (load) => ({\n   fetchResult: api.detail,\n   fetchResultTimeseries: api.series,\n   fetchResultIndexComparison: api.index,\n+  fetchResultExceptions: api.exceptions,\n+}))\n+vi.mock('@/api/sectors', async (load) => ({\n+  ...(await load<typeof import('@/api/sectors')>()),\n+  fetchSectorCatalog: api.catalog,\n }))\n vi.mock('@/api/strategyRegistry', async (load) => ({\n   ...(await load<typeof import('@/api/strategyRegistry')>()),\n@@ -91,9 +100,12 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     api.series.mockResolvedValue(resultTimeseries)\n     api.registry.mockResolvedValue(registryFixture)\n     api.create.mockResolvedValue({ publicToken: targetToken, status: 'QUEUED' })\n+    // 탭 묶음이 첫 화면에서 섹터 목록을 받고, 결과 분석 탭을 고르면 예외 기록을 받는다(T098)\n+    api.exceptions.mockResolvedValue(resultExceptions)\n+    api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n   })\n \n-  it('보조 보기를 열기 전에는 API를 부르지 않고 미구현 탐색은 이유와 함께 비활성이다', async () => {\n+  it('KOSPI 비교·목표 위험 맞춤 탭을 고르기 전에는 그 API를 부르지 않고 미구현 탐색은 이유와 함께 비활성이다', async () => {\n     renderResult()\n \n     await screen.findByText('자료 출처: 한국거래소 통계정보')\n@@ -126,7 +138,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     expect(screen.queryByRole('button', { name: '이전 화면으로' })).toBeNull()\n   })\n \n-  it('지수 보기는 서버 값을 바꾸지 않고 별도 패널에 보이며 주소를 유지한다', async () => {\n+  it('KOSPI 비교 탭은 서버 값을 바꾸지 않고 그대로 보이며 주소를 유지한다', async () => {\n     api.index.mockResolvedValue({\n       available: true,\n       reason: null,\n@@ -138,7 +150,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '지수와 비교하기' }))\n+    await user.click(await screen.findByRole('tab', { name: 'KOSPI 비교' }))\n \n     const panel = await screen.findByRole('region', { name: '지수와 비교하기' })\n     expect(within(panel).getByText('10012345.67')).toBeTruthy()\n@@ -146,7 +158,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n   })\n \n-  it('지수 기간 계열을 받을 수 없으면 서버 이유에 맞는 안내를 보인다', async () => {\n+  it('지수 기간 계열을 받을 수 없으면 표 대신 서버 이유에 맞는 안내를 보이고 다시 부르지 않는다', async () => {\n     api.index.mockResolvedValue({\n       available: false,\n       reason: 'INDEX_SERIES_UNAVAILABLE',\n@@ -155,13 +167,15 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    const button = await screen.findByRole('button', { name: '지수와 비교하기' })\n-    await user.click(button)\n+    const tab = await screen.findByRole('tab', { name: 'KOSPI 비교' })\n+    await user.click(tab)\n \n-    expect(await screen.findByText(/같은 기간의 KOSPI 자료를 아직 받을 수 없어/)).toBeTruthy()\n-    expect((button as HTMLButtonElement).disabled).toBe(true)\n-    expect(button.getAttribute('aria-expanded')).toBe('false')\n-    expect(screen.queryByRole('region', { name: '지수와 비교하기' })).toBeNull()\n+    const panel = await screen.findByRole('region', { name: '지수와 비교하기' })\n+    expect(await within(panel).findByText(/같은 기간의 KOSPI 자료를 아직 받을 수 없어/)).toBeTruthy()\n+    expect(within(panel).queryByRole('table')).toBeNull()\n+    // 다른 탭으로 옮겼다 돌아와도 같은 요청을 반복하지 않는다.\n+    await user.click(screen.getByRole('tab', { name: '결과 분석' }))\n+    await user.click(tab)\n     expect(api.index).toHaveBeenCalledTimes(1)\n     expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${resultToken}`)\n   })\n@@ -170,7 +184,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))\n     expect(api.create.mock.calls[0][0].conditions).toMatchObject({\n@@ -192,7 +206,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult({ strict: true })\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     await waitFor(() => expect(api.create).toHaveBeenCalledTimes(1))\n     const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })\n@@ -213,7 +227,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n       const user = userEvent.setup()\n       renderResult()\n \n-      await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+      await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n       const panel = await screen.findByRole('region', { name: '목표 위험 맞춤' })\n       expect(\n         within(panel).getByText('별도 시나리오 결과를 준비하고 있습니다.'),\n@@ -243,7 +257,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     expect(await screen.findByText(/자료가 충분하지 않아 목표 위험을 계산하지 못했습니다/)).toBeTruthy()\n     expect(screen.queryByLabelText('목표 위험 맞춤 핵심 결과')).toBeNull()\n@@ -254,7 +268,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     expect(await screen.findByText('등록표를 불러오지 못했습니다.')).toBeTruthy()\n     expect(api.create).not.toHaveBeenCalled()\n@@ -279,7 +293,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     expect(await screen.findByText(/목표 위험 시나리오를 완료하지 못했습니다/)).toBeTruthy()\n     expect(screen.getByText(/작업 처리 중 오류가 발생했습니다/)).toBeTruthy()\n@@ -301,7 +315,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     expect(\n       await screen.findByText('별도 시나리오가 취소되어 핵심 결과를 계산하지 못했습니다.'),\n@@ -323,7 +337,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     expect(await screen.findByText('결과를 불러오지 못했습니다.')).toBeTruthy()\n     await user.click(screen.getByRole('button', { name: '결과 다시 불러오기' }))\n@@ -343,7 +357,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n     expect(await screen.findByText(/30초 뒤 다시 요청할 수 있습니다/)).toBeTruthy()\n     expect(api.create).toHaveBeenCalledTimes(1)\n \n@@ -363,7 +377,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n     expect(await screen.findByText('준비 기간이 부족합니다.')).toBeTruthy()\n     expect(api.create).toHaveBeenCalledTimes(1)\n \n@@ -387,7 +401,7 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     const user = userEvent.setup()\n     renderResult()\n \n-    await user.click(await screen.findByRole('button', { name: '목표 위험 맞춤' }))\n+    await user.click(await screen.findByRole('tab', { name: '목표 위험 맞춤' }))\n \n     expect(await screen.findByText('요청 기간 안에 평가할 수 있는 날이 없습니다.')).toBeTruthy()\n     expect(screen.getByText(/2025-01-02 이후를 포함하도록 분석 기간을 다시 선택해야 합니다/)).toBeTruthy()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,14 @@\n   padding: var(--thorp-page-top) 0 var(--thorp-page-bottom);\n }\n \n+/* 요약 탭 안의 네 요소. 결과 묶음과 같은 간격으로 쌓는다. */\n+.summaryStack {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 20px;\n+  min-width: 0;\n+}\n+\n /* 좁은 화면에서도 요소를 세로로 쌓고 가로 스크롤을 만들지 않는다. */\n .result {\n   display: flex;\n@@ -19,6 +27,26 @@\n   min-width: 0;\n }\n \n+.intro {\n+  display: grid;\n+  gap: 10px;\n+  justify-items: start;\n+}\n+\n+.backLink {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 7px;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+  font-weight: 660;\n+  text-decoration: none;\n+}\n+\n+.backLink:hover {\n+  color: var(--thorp-accent-soft);\n+}\n+\n .title {\n   margin: 0;\n   font-size: clamp(1.7rem, 4.5vw, 2.6rem);\n@@ -69,13 +97,6 @@\n   gap: 8px 10px;\n }\n \n-.hint {\n-  margin: -12px 0 0;\n-  color: var(--thorp-muted);\n-  font-size: 0.8rem;\n-  line-height: 1.6;\n-}\n-\n .source {\n   margin: 0;\n   color: var(--thorp-muted);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.module.css",
+          "old_path": "frontend/src/pages/ResultPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -65,14 +65,14 @@ describe('ResultPage from records', () => {\n     renderResult('?from=records&recordId=MR-20260918-000042')\n \n     expect(await screen.findByText(SAME_VERSION_NOTICE)).toBeTruthy()\n-    await screen.findByRole('heading', { name: '분석 결과' })\n+    await screen.findByRole('heading', { name: '백테스트 결과' })\n     expect(screen.getAllByRole('status').filter((el) => el.closest('[class*=\"origin\"]'))).toHaveLength(1)\n   })\n \n   it('기록에서 오지 않았으면 그 줄이 없고 기록 상세를 부르지 않는다', async () => {\n     renderResult('')\n \n-    await screen.findByRole('heading', { name: '분석 결과' })\n+    await screen.findByRole('heading', { name: '백테스트 결과' })\n     expect(screen.queryByText(SAME_VERSION_NOTICE)).toBeNull()\n     expect(recordMocks.fetchMyRecord).not.toHaveBeenCalled()\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.records.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.records.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -95,13 +95,15 @@ function renderResult(token = resultToken) {\n describe('ResultPage', () => {\n   beforeEach(() => {\n     for (const mock of [...Object.values(apiMocks), ...Object.values(otherMocks)]) mock.mockReset()\n+    // 탭 묶음이 섹터 목록을 첫 화면에서 한 번 받는다(T098). 개별 테스트가 덮어쓴다.\n+    otherMocks.fetchSectorCatalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n   })\n \n   afterEach(() => {\n     vi.useRealTimers()\n   })\n \n-  it('완료 결과는 상세와 시계열만 한 번씩 부르고 네 요소를 보인다', async () => {\n+  it('완료 결과는 상세·시계열·섹터 목록만 한 번씩 부르고 요약 탭에 네 요소를 보인다', async () => {\n     apiMocks.fetchResult.mockResolvedValue(resultDetailCompleted)\n     apiMocks.fetchResultTimeseries.mockResolvedValue(resultTimeseries)\n \n@@ -120,8 +122,10 @@ describe('ResultPage', () => {\n     expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()\n     expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n     expect(otherMocks.fetchStrategyRegistry).not.toHaveBeenCalled()\n-    expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()\n     expect(otherMocks.fetchInstrumentProfile).not.toHaveBeenCalled()\n+    // 탭 묶음이 상세 탭 셋을 위해 한 번 받아 둔다(SC-001, T098).\n+    expect(otherMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)\n+    expect(screen.getByRole('tab', { name: '요약' }).getAttribute('aria-selected')).toBe('true')\n   })\n \n   it('화면 어디에도 004의 내부 실행 식별자가 없다', async () => {\n@@ -373,34 +377,39 @@ describe('ResultPage', () => {\n       window.sessionStorage.clear()\n     })\n \n-    it('자세히 보기는 주소를 바꾸지 않고 결과 아래에서 열리며 그때 상세 자원을 받는다 (SC-006, quickstart 6)', async () => {\n+    it('요약 탭이 첫 화면에 열려 있고 결과 분석·설정·근거 탭은 고를 때 제 자료를 받으며 주소는 그대로다 (SC-006, T098)', async () => {\n       const user = userEvent.setup()\n       renderResult()\n-      const toggle = await screen.findByRole('button', { name: '자세히 보기' })\n+      const summaryTab = await screen.findByRole('tab', { name: '요약' })\n       const before = screen.getByLabelText('현재 주소').textContent\n \n-      await user.click(toggle)\n+      expect(summaryTab.getAttribute('aria-selected')).toBe('true')\n+      expect(within(screen.getByRole('tabpanel')).getByText('16.67%')).not.toBeNull()\n+      expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n \n-      const panel = await screen.findByRole('region', { name: '자세히 보기' })\n-      expect(screen.getByLabelText('현재 주소').textContent).toBe(before)\n-      expect(toggle.getAttribute('aria-expanded')).toBe('true')\n-      expect(await within(panel).findByText('HALT_DEFERRED')).not.toBeNull()\n-      expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)\n+      await user.click(screen.getByRole('tab', { name: '결과 분석' }))\n+      expect(await screen.findByText('HALT_DEFERRED')).not.toBeNull()\n       expect(apiMocks.fetchResultExceptions).toHaveBeenCalledTimes(1)\n-      // 대표 상품 정보도 패널 안에서 펼치고 001 화면으로 옮기지 않는다.\n+      expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()\n+\n+      await user.click(screen.getByRole('tab', { name: '설정·근거' }))\n+\n+      const panel = screen.getByRole('tabpanel')\n+      expect(await within(panel).findByText('44.73%')).not.toBeNull()\n+      expect(apiMocks.fetchResultWeights).toHaveBeenCalledTimes(1)\n+      expect(screen.getByLabelText('현재 주소').textContent).toBe(before)\n+      // 대표 상품 정보도 탭 안에서 펼치고 001 화면으로 옮기지 않는다.\n       await user.click(await within(panel).findByRole('button', { name: '항구 · 합성 항구 ETF' }))\n       expect(screen.getByLabelText('현재 주소').textContent).toBe(before)\n-\n-      await user.click(within(panel).getByRole('button', { name: '닫기' }))\n-      expect(screen.queryByRole('region', { name: '자세히 보기' })).toBeNull()\n-      expect(document.activeElement).toBe(toggle)\n+      // 지나온 탭의 내용은 내리지 않고 숨긴다.\n+      expect(screen.getAllByRole('tabpanel', { hidden: true })).toHaveLength(3)\n     })\n \n     it('손실이 커진 때 보기는 고점~저점 구간의 거래와 저점일 보유를 연다', async () => {\n       const user = userEvent.setup()\n       renderResult()\n \n-      await user.click(await screen.findByRole('button', { name: '손실이 커진 때 보기' }))\n+      await user.click(await screen.findByRole('tab', { name: '손실이 커진 때' }))\n \n       const view = await screen.findByRole('region', { name: /손실이 커진 때: .+ ~ / })\n       expect(within(view).getByRole('heading', { level: 2 }).textContent).toContain(\n@@ -422,11 +431,9 @@ describe('ResultPage', () => {\n       })\n       renderResult()\n \n-      const button = (await screen.findByRole('button', {\n-        name: '손실이 커진 때 보기',\n-      })) as HTMLButtonElement\n-      expect(button.disabled).toBe(true)\n-      const reason = document.getElementById(button.getAttribute('aria-describedby') ?? '')\n+      const tab = await screen.findByRole('tab', { name: '손실이 커진 때' })\n+      expect(tab.getAttribute('aria-disabled')).toBe('true')\n+      const reason = document.getElementById(tab.getAttribute('aria-describedby') ?? '')\n       expect(reason?.textContent).toBe(LOSS_WINDOW_NONE)\n     })\n \n@@ -441,14 +448,21 @@ describe('ResultPage', () => {\n       })\n       renderResult()\n \n-      const button = (await screen.findByRole('button', {\n-        name: '손실이 커진 때 보기',\n-      })) as HTMLButtonElement\n-      expect(button.disabled).toBe(true)\n-      const reasonId = button.getAttribute('aria-describedby') ?? ''\n+      const tab = await screen.findByRole('tab', { name: '손실이 커진 때' })\n+      expect(tab.getAttribute('aria-disabled')).toBe('true')\n+      const reasonId = tab.getAttribute('aria-describedby') ?? ''\n       expect(document.getElementById(reasonId)?.textContent).toBe(LOSS_WINDOW_UNAVAILABLE)\n     })\n \n+    it('제목은 백테스트 결과이고 섹터 선택부터 다시 시작하는 길이 있다', async () => {\n+      renderResult()\n+\n+      expect(await screen.findByRole('heading', { level: 1, name: '백테스트 결과' })).not.toBeNull()\n+      expect(screen.getByRole('link', { name: '처음부터 다시 분석' }).getAttribute('href')).toBe(\n+        '/diagnosis/sectors',\n+      )\n+    })\n+\n     it('다른 조건으로 비교는 조건을 보관하고 설정 화면으로 옮긴다', async () => {\n       const user = userEvent.setup()\n       renderResult()\n@@ -504,15 +518,25 @@ describe('ResultPage', () => {\n       expect(within(alert).queryByRole('link')).toBeNull()\n     })\n \n-    it('B07이 둔 버튼은 모두 보조 모양이다 (착수 전에 알아둘 것 ⑧)', async () => {\n+    it('주 모양 버튼은 비교 대상 고르기 하나고 나머지 보기는 탭이다 (착수 전에 알아둘 것 ⑧, T098)', async () => {\n       renderResult()\n-      await screen.findByRole('button', { name: '자세히 보기' })\n+      await screen.findByRole('tablist', { name: '결과 보기' })\n \n-      for (const name of ['자세히 보기', '손실이 커진 때 보기', '다른 조건으로 비교']) {\n-        expect(screen.getByRole('button', { name }).getAttribute('data-variant'), name).toBe(\n-          'outline',\n-        )\n+      expect(screen.getByRole('button', { name: '다른 조건으로 비교' }).getAttribute('data-variant')).toBe(\n+        'outline',\n+      )\n+      for (const name of [\n+        '요약',\n+        '결과 분석',\n+        '설정·근거',\n+        '전체 거래 내역',\n+        '손실이 커진 때',\n+        'KOSPI 비교',\n+        '목표 위험 맞춤',\n+      ]) {\n+        expect(screen.getByRole('tab', { name }), name).not.toBeNull()\n       }\n+      expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()\n       expect(\n         document.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]'),\n       ).toHaveLength(1)\n@@ -521,13 +545,15 @@ describe('ResultPage', () => {\n       ).toContain('비교 대상 고르기')\n     })\n \n-    it('볼 결과가 없으면 자세히 보기와 손실 구간 보기를 두지 않는다', async () => {\n+    it('볼 결과가 없으면 탭 없이 요약 내용만 두고 상세 자료를 받지 않는다', async () => {\n       apiMocks.fetchResult.mockResolvedValue(resultDetailRunning)\n       renderResult()\n       await screen.findByText(/전체 380거래일 중 180거래일을 마쳤습니다/)\n \n-      expect(screen.queryByRole('button', { name: '자세히 보기' })).toBeNull()\n-      expect(screen.queryByRole('button', { name: '손실이 커진 때 보기' })).toBeNull()\n+      expect(screen.queryByRole('tablist')).toBeNull()\n+      expect(screen.getByLabelText('분석 조건')).not.toBeNull()\n+      expect(apiMocks.fetchResultExceptions).not.toHaveBeenCalled()\n+      expect(otherMocks.fetchSectorCatalog).not.toHaveBeenCalled()\n       expect(screen.getByRole('button', { name: '다른 조건으로 비교' })).not.toBeNull()\n     })\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n import { useId, useMemo } from 'react'\n+import { ArrowLeft } from 'lucide-react'\n import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'\n import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n@@ -9,22 +10,15 @@ import { useCompareTarget } from '@/hooks/useCompareTarget'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'\n import { strategyLabel } from '@/components/result/conditionLine'\n-import { DetailPanel } from '@/components/result/DetailPanel'\n import { findDrawdownWindow } from '@/components/result/drawdownWindow'\n import { EquityChart, type EquityChartSeries } from '@/components/result/EquityChart'\n import { hasDrawableEquity } from '@/components/result/equityPoints'\n-import { isZeroValue } from '@/components/result/formatResult'\n-import {\n-  LOSS_WINDOW_NONE,\n-  LOSS_WINDOW_UNAVAILABLE,\n-  LossWindowView,\n-} from '@/components/result/LossWindowView'\n-import { IndexComparisonView } from '@/components/result/IndexComparisonView'\n+import { SECTOR_SELECTION_PATH } from '@/components/result/prefillStrategySettings'\n import { NextStepLinks } from '@/components/result/NextStepLinks'\n+import { ResultDetailTabs } from '@/components/result/ResultDetailTabs'\n import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'\n import { ResultStatusLine } from '@/components/result/ResultStatusLine'\n import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'\n-import { TargetRiskView } from '@/components/result/TargetRiskView'\n import { selectSummarySentence } from '@/components/result/summarySentences'\n import { Button } from '@/components/ui/button'\n import { useDisclosure } from '@/hooks/useDisclosure'\n@@ -41,8 +35,10 @@ import styles from './ResultPage.module.css'\n  *\n  * <p>로그인 없이 연다. 주소에는 공개 토큰만 있고 004의 내부 실행 식별자는 어디에도 없다(SC-009).\n  *\n- * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면\n- * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).\n+ * <p>화면은 제목·그래프·해석 요약 1문장·'비교 대상 고르기'·탭 묶음(`ResultDetailTabs`, T098) 순이다. 핵심 숫자와\n+ * 상태 문장은 기본으로 열린 '요약' 탭 안에 있고 다른 탭은 고를 때 그 자료를 받는다. 볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. 주 모양\n+ * 버튼은 '비교 대상 고르기' 하나고 '다른 조건으로 비교'(B07)는 보조 모양이다. 어느 쪽도 주소를 바꾸지\n+ * 않는다(SC-006).\n  *\n  * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.\n  */\n@@ -120,26 +116,9 @@ function ResultView({\n     [summary, timeseries],\n   )\n \n-  const detailPanelId = useId()\n-  const lossPanelId = useId()\n-  const lossReasonId = useId()\n-  const detailView = useDisclosure(detailPanelId)\n-  const lossView = useDisclosure(lossPanelId)\n-\n-  return (\n-    <article className={styles.result} aria-labelledby=\"result-title\">\n-      <h1 id=\"result-title\" className={styles.title}>\n-        분석 결과\n-      </h1>\n-      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}\n-      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}\n-\n-      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (\n-        <p className={styles.status} role=\"status\">\n-          {inFlightMessage(detail)}\n-        </p>\n-      ) : null}\n-\n+  // 요약 탭의 내용(핵심 숫자·상태 문장). 그래프와 해석 문장은 탭 위에 그대로 둔다. 볼 결과가 없으면 탭 없이 이것만 그린다.\n+  const summaryBlock = (\n+    <div className={styles.summaryStack}>\n       <ResultSummaryCard detail={detail} target={target} />\n \n       <ResultStatusLine\n@@ -155,7 +134,36 @@ function ResultView({\n         }\n       />\n \n-      <ResultChartSlot\n+    </div>\n+  )\n+\n+  return (\n+    <article className={styles.result} aria-labelledby=\"result-title\">\n+      <header className={styles.intro}>\n+        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라\n+            이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유\n+            주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에\n+            남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로\n+            비교'(B07)의 몫이다. */}\n+        <Link className={styles.backLink} to={SECTOR_SELECTION_PATH}>\n+          <ArrowLeft size={15} aria-hidden=\"true\" />\n+          처음부터 다시 분석\n+        </Link>\n+        <h1 id=\"result-title\" className={styles.title}>\n+          백테스트 결과\n+        </h1>\n+      </header>\n+      {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}\n+      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}\n+\n+      {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (\n+        <p className={styles.status} role=\"status\">\n+          {inFlightMessage(detail)}\n+        </p>\n+      ) : null}\n+\n+\n+    <ResultChartSlot\n         detail={detail}\n         timeseries={timeseries}\n         progressPoints={progressSeries.points}\n@@ -192,7 +200,7 @@ function ResultView({\n         </p>\n       ) : null}\n \n-      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}\n+      {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 나머지 보기는 아래 탭에 있다. */}\n       <div className={styles.actions}>\n         <Button\n           id={pickerButtonId}\n@@ -202,22 +210,6 @@ function ResultView({\n         >\n           비교 대상 고르기\n         </Button>\n-        {viewable ? (\n-          <Button type=\"button\" variant=\"outline\" {...detailView.toggleProps}>\n-            자세히 보기\n-          </Button>\n-        ) : null}\n-        {viewable ? (\n-          <Button\n-            type=\"button\"\n-            variant=\"outline\"\n-            disabled={lossWindow === null}\n-            aria-describedby={lossWindow === null ? lossReasonId : undefined}\n-            {...lossView.toggleProps}\n-          >\n-            손실이 커진 때 보기\n-          </Button>\n-        ) : null}\n       </div>\n       {picker.open ? (\n         <div id={pickerId}>\n@@ -267,18 +259,12 @@ function ResultView({\n           onCancel={compare.cancelPeriod}\n         />\n       ) : null}\n-      {viewable && lossWindow === null ? (\n-        <p id={lossReasonId} className={styles.hint}>\n-          {summary && isZeroValue(summary.maxDrawdown) ? LOSS_WINDOW_NONE : LOSS_WINDOW_UNAVAILABLE}\n-        </p>\n-      ) : null}\n-\n-      {detailView.open ? (\n-        <DetailPanel\n-          id={detailPanelId}\n+      {viewable ? (\n+        <ResultDetailTabs\n           token={token}\n           detail={detail}\n-          onClose={detailView.close}\n+          summary={summaryBlock}\n+          lossWindow={lossWindow}\n           compare={\n             target\n               ? {\n@@ -289,19 +275,9 @@ function ResultView({\n               : null\n           }\n         />\n-      ) : null}\n-      {lossView.open && lossWindow ? (\n-        <LossWindowView\n-          id={lossPanelId}\n-          token={token}\n-          lossWindow={lossWindow}\n-          items={detail.config.items}\n-          onClose={lossView.close}\n-        />\n-      ) : null}\n-\n-      <IndexComparisonView token={token} disabled={!viewable} />\n-      <TargetRiskView base={detail} disabled={!viewable} />\n+      ) : (\n+        summaryBlock\n+      )}\n       <NextStepLinks\n         config={detail.config}\n         token={token}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -34,6 +34,11 @@\n - Q: 비교 대상으로 요청한 분석이 실패하면 화면은 어떻게 하는가? → A: 기준 결과는 그대로 그리고, 비교 대상 자리에 실패 사실과 사유를 한 문장으로 보이며 다시 시도할 수 있는 선택을 둔다. 자동으로 다시 실행하지 않는다.\n - Q: 그래프의 두 결과를 색이 아닌 방법으로도 구분해야 하는가? → A: 그렇다. 색과 함께 선 모양이나 곡선에 직접 붙인 이름표로도 구분하고, 하락 구간 음영도 색에만 기대지 않는다.\n \n+### Session 2026-09-23\n+\n+- Q: 버튼마다 따로 열리던 자세히 보기·손실이 커진 때·지수 비교·목표 위험 맞춤을 어떻게 둘 것인가? → A: 결과 아래 탭 하나로 묶고 '자세히 보기'는 결과 분석과 설정·근거로 나눈다. 상관관계·위험 기여·손실 기여 표가 들어가자(420) 한 패널이 화면 두세 장 길이가 됐고 계산 값과 입력 조건이 번갈아 나왔기 때문이다. 주 모양 버튼은 '비교 대상 고르기' 하나로 그대로다.\n+- Q: 첫 화면의 핵심 숫자·그래프·요약 문장은 탭 밖에 두는가? → A: 그래프와 해석 요약 1문장은 제목 아래 그대로 두고, 핵심 숫자 3개와 상태 문장은 같은 탭 묶음의 '요약' 탭에 넣어 기본으로 연다. 전체 거래 내역도 결과 분석에서 빼서 제 탭으로 둔다. 화면이 제목·비교 대상 고르기·탭 하나로 정리되고, 결과가 아직 없는 실행은 탭 없이 요약 내용만 보인다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 결과 첫 화면에서 핵심을 바로 이해한다 (Priority: P1)\n@@ -146,22 +151,22 @@\n - **FR-004**: 비교 그래프는 최대 두 결과를 동시에 그린다. 기본 비교 기준은 사용자 고정 비중 또는 동일 비중이며, 비교 대상은 다섯 전략 중 다른 결과나 자동 탐색에서 고른 후보로 바꿀 수 있다. 비교 대상으로 고른 전략의 결과가 아직 없으면 기준 결과와 같은 조건(섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준과 003 FR-014의 공통 워밍업)으로 [004](../004-backtest-execution/spec.md)에 실행을 요청하고, 완료될 때까지 그래프에는 기준만 그리고 비교 대상 자리에 진행 상태를 보인다. 진행 상태는 004가 주는 단계(자료 준비·계산·저장)와 진행 비율을 보이고, 아직 대기 중이면 지금까지 기다린 시간을 보인다. 요청이 004의 대기열 상한에 걸리면(`429 EXECUTION_LIMIT`) 비교 대상 자리에 한도에 걸렸다는 사실과 004가 알려 준 다시 시도 가능 시각을 보이고, 사용자가 누를 때만 다시 요청한다. 화면이 조용히 재시도하지 않는다(원칙 IX). 비교 대상 전략의 준비 기간(워밍업)이 기준 결과보다 길면 시작일이 뒤로 밀려 같은 그래프에 겹칠 수 없으므로, 화면은 [003](../003-strategy-settings/spec.md) 등록표에 적힌 각 전략의 준비 기간을 읽어 **고르기 전에** 그 전략을 고르면 비교 기간이 짧아진다는 사실을 보이고, 고르면 FR-005의 기간 불일치 확인으로 이어간다. 화면은 등록표 값을 읽기만 하고 준비 기간을 계산하지 않으며, 004의 `INSUFFICIENT_HISTORY` 거부는 화면의 판단이 어긋났을 때 잘못된 비교를 막는 안전장치로 그대로 둔다. 이 화면은 실행을 요청할 뿐 값을 계산하지 않는다. 비교 대상을 다른 전략으로 바꿔도 앞서 요청한 실행은 취소하지 않고 끝까지 두며, 사용자가 그 전략으로 돌아오면 완료된 결과를 바로 보인다(004 FR-003의 동일 버전 재사용). 동시 실행 상한은 004의 PD-06이 관리하며 이 화면이 취소로 대신 조절하지 않는다. 결과 화면에서 가장 중요한 행동 버튼은 '비교 대상 고르기' 하나다. '자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'·보조 보기·다음 탐색 진입점은 그보다 눈에 덜 띄는 보조 모양으로 둔다(원칙 II). (§4.1, §4.2.3, D10)\n - **FR-005**: 비교하는 두 결과는 같은 섹터 후보 집합·평가 날짜·금액·비용·정보 이용 기준을 쓴다. 후보마다 유리한 과거 기간을 달리 쓰지 않으며, 기간이 다르면 겹쳐 그리지 않는다. 기간이 다를 때 화면은 공통 구간과 두 결과를 모두 다시 계산해야 한다는 사실을 보이고, 사용자가 확인하면 공통 구간을 쓰는 실행 두 건을 [004](../004-backtest-execution/spec.md)에 요청한다. 확인하기 전까지는 기준 결과만 그린다. 다시 계산한 두 건은 새 결과로 저장되어 새 비교 주소를 가지며, 원래 기준 결과와 그 주소, '내 기록' 항목은 그대로 남는다. 화면은 새 비교로 이동하고 원래 결과로 돌아가는 연결을 둔다(원칙 VI, 006의 \"설정 변경은 새 버전으로 보존하고 덮어쓰지 않는다\"와 같은 방식). (§4.2.3, §6.4.1, 원칙 IV)\n - **FR-006**: 해석 요약 1문장은 계산으로 확인된 차이만 설명한다. 추천·원인 단정·확률 표현을 담지 않는다. 이 문장은 값이 들어갈 자리만 비운 고정 문장 틀에서 결과 조건에 맞는 것을 골라 값을 채워 만들고, 화면이 매번 문장을 새로 지어내지 않는다. 틀을 고르는 축은 셋이다. 비교 대상이 있는지, 두 결과의 차이가 어느 방향인지, 부분 결과인지다. 두 결과의 수익률과 최대 하락 폭이 같을 때 그 사실만 말하는 틀과, 거래비용만 다를 때 그 차이만 말하는 틀을 따로 둔다. 틀 목록은 설계 산출물에 적어 SC-004의 검수 대상으로 둔다. (§4.2.3, 원칙 III·VI)\n-- **FR-007**: '자세히 보기'는 결과 근처에 두고 설정 화면으로 되돌리지 않는다. 상세 패널에는 회복 기간·회전율·상관관계·위험 기여(추정 기간·공분산 산정법 포함)·구성종목 중복·전체 거래 내역·비용 가정·비교 규칙·대표 ETF 구성·출처를 둔다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 상세 패널의 항목과 전체 거래 내역은 첫 화면과 함께 받지 않고 사용자가 열 때 받는다. (§4.1, §4.2.3)\n+- **FR-007**: 결과 화면은 제목·그래프 1개·해석 요약 1문장·비교 대상 고르기·탭 묶음 순이며 설정 화면으로 되돌리지 않는다. 탭은 요약·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교·목표 위험 맞춤 일곱이며 첫 화면에서 **요약**이 열려 있다. **요약**에는 FR-001의 핵심 숫자 3개·조건 한 줄과 결과 상태 문장(FR-013)을, **결과 분석**에는 회복 기간·회전율·상관관계·위험 기여·손실 기여(추정 기간·공분산 산정법 포함)·계산 제한 항목을, **설정·근거**에는 비교 규칙·비용 가정·목표·실제 비중·구성종목 중복·대표 ETF 구성·출처를, **전체 거래 내역**에는 거래 내역과 그 조건 질의를 둔다. 볼 결과가 없는 실행(계산 중·실패)은 탭 없이 요약 내용만 보인다. 계산에서 나온 값과 사용자가 넣은 조건을 한 패널에 번갈아 두지 않는다. 이 가운데 구성종목 중복·대표 ETF 구성·출처는 [001](../001-etf-market-data/spec.md) FR-015의 대표 상품 정보를 상세 패널 안에서 그대로 펼쳐 보이며, 다른 화면으로 옮기지 않는다. 펼치는 대상은 결과의 섹터 후보 집합에 든 모든 섹터의 대표 ETF이며 실제 보유 여부와 무관하다. 섹터가 여럿이면 대표 ETF별로 접어 두고 사용자가 연 것만 펼친다. 값의 정의와 한계 표시(과거 구성 이력이 없으면 현재 구성 기준임을 밝히는 것 등)는 001이 소유하고 005는 다시 정의하지 않는다. 요약 탭의 자료(상세·시계열)와 탭들이 함께 쓰는 섹터 목록은 첫 화면과 함께 받고, 다른 탭의 자료는 사용자가 그 탭을 처음 열 때 받는다. (§4.1, §4.2.3)\n - **FR-008**: 비교 대상의 실제 보유 섹터가 기준과 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n - **FR-009**: 자료가 짧거나 불안정해 계산이 제한된 상세 항목은 계산 제한을 표시하고 0이나 임의 값으로 대체하지 않는다. 계산이 제한되었는지의 판정과 그 사유는 [004](../004-backtest-execution/spec.md) FR-030에 따라 004가 결과에 담아 준다. 005는 그것을 표시할 뿐 자료 길이로 스스로 판정하지 않는다. (§4.2.3, 원칙 VI)\n-- **FR-010**: '손실이 커진 때 보기'는 FR-001의 음영과 같은 최대 하락 구간 하나를 강조하고 그 구간의 보유·거래·비용을 보인다. 여러 구간을 고르는 임계값은 두지 않는다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n+- **FR-010**: '손실이 커진 때' 탭은 FR-001의 음영과 같은 최대 하락 구간 하나를 강조하고 그 구간의 보유·거래·비용을 보인다. 여러 구간을 고르는 임계값은 두지 않는다. 구간이 없거나 확인할 수 없으면 탭을 비활성으로 두고 그 사유를 탭 옆에 적는다. '다른 조건으로 비교'는 현재 조건이 채워진 [003](../003-strategy-settings/spec.md) 화면으로 이어지고, 분석하면 새 분석으로 저장된다. (§4.2.3, §5)\n - **FR-011**: 기본 설정 비교와 자동 탐색에서 선택한 후보 비교를 구분해 표시한다. 자동 탐색 후보의 안정성·선정 이유·탈락 사유·전체 후보는 [007](../007-auto-parameter-search/spec.md)의 상세에서 본다. 후보를 비교 대상으로 놓는 진입은 007 FR-019가 소유한다. 005는 비교 주소의 비교 대상 식별자로 후보 결과의 공개 토큰을 받아 '자동 탐색 후보 비교'로 표시한다. (§4.2.3)\n - **FR-012**: **PD-12가 확정될 때까지 검증 구분을 화면에 표시하지 않는다.** 구분을 가르려면 기간을 탐색 구간과 잠금 구간으로 나눠야 하는데 그 분할 설계가 아직 없어, 모든 결과가 예외 없이 '미검증'으로 내려온다. 가를 수 없는 것을 표시하면 결과 사이를 가르지 못하면서 첫 화면의 문장 수만 늘린다(원칙 II). 응답의 `validationTier`는 계약에 그대로 두되 화면 코드는 그 값을 읽지 않는다. PD-12가 확정되고 평가 분할이 등록되면 그때 '탐색 결과 / 미사용 검증 결과' 표시를 다시 만들고, 탐색에 사용한 성과와 미사용 기간 성과를 섞지 않는다. (§4.2.3, §7.3, D11)\n - **FR-013**: 결과 의미를 바꾸는 상태는 네 갈래로 한정한다. 부분 완료(취소나 한도로 일부 기간만 계산됨), 지표 없음(핵심 숫자가 계산되지 않음), 자료 부족·계산 제한(004가 결과에 담은 예외 기록), 실행 실패다. 이 넷은 해당 결과 옆에 한 문장으로 표시하고 상세 안에만 숨기지 않으며, 이 밖의 상태는 상세에 둔다. 합류한 실행을 먼저 취소한 요청(004 R-04, `summaryUnavailable`)은 핵심 숫자 3개가 계산되지 않은 상태이므로 FR-001의 숫자 자리에 0이나 대체값을 넣지 않고 \"취소 시점까지의 지표는 계산되지 않았다\" 한 문장과 완료 범위를 표시한다. 결과 의미를 바꾸지 않는 내부 검증 미완료는 경고 목록으로 늘리지 않는다. (§4.1, §7.2, §7.4)\n - **FR-014**: 자동 배분 전략의 출력 비중은 선택한 규칙의 계산 결과로 표시하고 사용자 입력 비중과 구분한다. (§4.2.1, D13)\n - **FR-015**: 종료 시 시가평가 결과와 청산 비용 포함 결과를 구분해 표시한다. (§6.4.1)\n - **FR-016**: '추천 비중', 주문 버튼, 자동 단일 승자, 일·주·월간 우승 전략, 사용자 간 성과 랭킹, 확률로 읽힐 표현('87% 유사', '지금도 잘될 전략' 등)을 만들지 않는다. 한 항목 기준 정렬은 제공할 수 있다. (§4.2.3, D13, D16, 원칙 III)\n-- **FR-017**: 광범위 국내 주가지수와의 비교와 목표 위험을 맞춘 분석은 보조 보기로 제공한다. 지수 비교는 참고 정보이며 기본 비교 기준을 바꾸지 않고, 목표 위험 맞춤은 별도 시나리오로 표시한다. 지수를 결과와 같은 기간·시작 금액으로 환산한 계열은 서버가 만들어 주고 화면은 받은 값을 그린다. 서버가 지수의 기간 자료를 얻지 못하면 그 보기는 이유와 함께 닫힌다. (§4.2.3, §6.4.1)\n+- **FR-017**: 광범위 국내 주가지수와의 비교와 목표 위험을 맞춘 분석은 FR-007 탭 묶음의 'KOSPI 비교'·'목표 위험 맞춤' 탭으로 제공한다. 지수 비교는 참고 정보이며 기본 비교 기준을 바꾸지 않고, 목표 위험 맞춤은 별도 시나리오로 표시한다. 지수를 결과와 같은 기간·시작 금액으로 환산한 계열은 서버가 만들어 주고 화면은 받은 값을 그린다. 서버가 지수의 기간 자료를 얻지 못하면 그 탭은 값 대신 이유를 보인다. (§4.2.3, §6.4.1)\n - **FR-018**: '경제환경이 비슷했던 과거 보기' 진입점을 제공한다. 진입 시 기존 섹터·전략·설정을 유지해 [011](../011-regime-strategy-link/spec.md)로 넘긴다. 넘기는 값은 섹터 후보 집합·전략·설정값·분석 기간·금액이며, 전달 형식은 011의 진입 계약이 소유한다. 011에서 돌아오는 길은 브라우저의 뒤로 가기로 원래 결과 주소에 오는 것이다. (§4.3, D25)\n - **FR-019**: 결과는 완료 시 [006 내 기록](../006-my-records/spec.md)에 보존되고, 결과 화면에서 '설정 바꿔 비교'와 내보내기 진입점을 제공한다. 결과마다 고유 주소를 두어 로그인하지 않은 사용자도 그 주소로 결과를 다시 연다. 이 주소에 쓰는 식별자는 안전한 난수에서 얻은 최소 128비트의 추측할 수 없는 값이어야 하며, [004](../004-backtest-execution/spec.md)가 발급하는 순번 형식의 실행 식별자(`BT-20260910-000123` 꼴)를 그대로 노출하지 않는다. 화면 주소용 공개 식별자와 내부 실행 식별자는 분리해 관리한다. '내 기록' 목록에 쌓이는 것은 로그인한 사용자의 결과뿐이며, 공개 흐름인 이 화면은 [014](../014-user-auth/spec.md)의 로그인을 요구하지 않는다. 주소를 아는 사람이면 누구나 열 수 있으므로 결과에는 개인을 식별할 정보를 담지 않는다. 비교 상태도 같은 주소 체계에 담는다. 기준 결과 주소에 비교 대상 식별자를 덧붙여, 새로고침하거나 그 주소를 다시 열면 두 결과가 그대로 복원된다. 비교를 위한 별도 자원을 서버에 만들지 않는다. 비교 주소를 받은 사람이 비교 대상 식별자만 떼어 그 결과를 단독으로 여는 것은 의도된 동작이다. 결과마다 독립된 주소가 있고 주소를 아는 사람은 열 수 있다는 전제와 같다. (§5)\n - **FR-020**: KRX 자료를 쓰는 결과 화면에 '한국거래소 통계정보' 출처를 표시한다. 정보는 세 층(바로 보이는 정보 / 요청하면 펼치는 정보 / 시스템이 처리하는 정보)으로 배치하고 내부 계산 항목을 동시에 나열하지 않는다. (§4.1, §6.2)\n - **FR-021**: 로그인하지 않은 사용자의 결과 주소는 한시적이다. 정해진 유효 시간이 지나면 그 주소는 더 이상 열리지 않고 그 요청과 공개 토큰을 지운다. 요청이 가리키던 계산 결과는 [004](../004-backtest-execution/spec.md) FR-003에 따라 다른 요청과 공유될 수 있으므로, 그 결과를 가리키는 요청이 하나도 남지 않았을 때만 함께 지우고 공유 중이면 남긴다. 요청을 지워도 004가 남긴 재사용·합류 기록(동일 결과 재조회 기록)은 지우지 않고 그 요청과의 연결만 끊는다. 이 기록은 계산 원가와 동일 결과 재조회를 구분하는 측정 근거이기 때문이다(원칙 VIII·IX). 유효 시간과 삭제 시점의 값은 PD-23이며, 값이 확정되기 전에도 설정으로 뺀 만료 장치를 먼저 만들어 주소가 무기한 남지 않게 한다. 로그인한 사용자의 결과는 이 만료 대상이 아니며 [006](../006-my-records/spec.md)의 기록 정책(PD-13)을 따른다. (§5)\n-- **FR-022**: 핵심 숫자 3개와 조건 한 줄은 텍스트로 존재해 스크린 리더가 읽을 수 있고, 비교 그래프에는 세 숫자와 비교 대상 유무를 문장으로 요약한 대안 텍스트를 둔다. 상세 패널 열기, 비교 대상 선택, 다시 시도는 키보드만으로 조작할 수 있다. 이번 범위에서 확인할 수 있는 최소 요건이며, 색에 기대지 않는 구분(FR-001, SC-010)과 같은 취지다. (원칙 II)\n+- **FR-022**: 핵심 숫자 3개와 조건 한 줄은 텍스트로 존재해 스크린 리더가 읽을 수 있고, 비교 그래프에는 세 숫자와 비교 대상 유무를 문장으로 요약한 대안 텍스트를 둔다. 상세 탭 옮기기(방향키·Home·End), 비교 대상 선택, 다시 시도는 키보드만으로 조작할 수 있다. 이번 범위에서 확인할 수 있는 최소 요건이며, 색에 기대지 않는 구분(FR-001, SC-010)과 같은 취지다. (원칙 II)\n \n ### Key Entities *(include if feature involves data)*\n \n@@ -176,7 +181,7 @@\n \n ### Measurable Outcomes\n \n-- **SC-001**: 결과 첫 화면에 보이는 요소는 핵심 숫자 3개·그래프 1개·요약 1문장·조건 한 줄이며 그 외 상세는 요청해야 열린다. 첫 화면을 그리려고 받아 오는 자료도 이 범위로 한정하고, 상세 패널과 전체 거래 내역은 사용자가 열 때 따로 받는다.\n+- **SC-001**: 결과 첫 화면에 보이는 요소는 그래프 1개·요약 1문장·비교 대상 고르기와 열린 요약 탭의 핵심 숫자 3개·조건 한 줄이며, 다른 탭의 내용은 그 탭을 골라야 열린다. 첫 화면을 그리려고 받아 오는 자료는 상세·시계열·섹터 목록으로 한정하고, 다른 탭의 자료는 사용자가 그 탭을 열 때 따로 받는다.\n - **SC-002**: 사용성 관찰(전략을 검증하려는 개인 6~8명)에서 참여자가 상세 패널을 열지 않고 세 숫자의 의미, 특히 고점 대비 최대 하락과 시작 금액 대비 손실의 차이를 구분하는지 기록한다. 두 명 이상이 같은 지점에서 오해하면 요약 화면을 수정한다. (§7.2, D20)\n - **SC-003**: 한 그래프에 그려진 두 결과의 섹터 후보 집합·평가 기간·금액·비용·정보 이용 기준이 다른 사례가 0건이다.\n - **SC-004**: 추천 비중·주문·단일 승자·우승 전략·랭킹·확률 표현이 결과 화면에 0건이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/spec.md",
+          "old_path": "specs/005-result-comparison/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,7 +23,7 @@\n | `backtest_request.requester_id` nullable 완화 | **B01이 004 패키지 안에서 최소로 수행한다**(T008·T010). 004 research R-12가 열어 둔 경로다. MR 리뷰어에 004 담당을 지정한다 |\n | 접수 응답에 `publicToken` 추가 | **B01이 수행한다**(T011·T016). 재시도 응답도 같다 |\n | `summary.maxDrawdownWindow` 추가 | 004 몫. 그때까지 화면이 `drawdown` 계열에서 구간을 찾고, `summary.maxDrawdown`과 어긋나면 음영을 생략한다(T040, R-05). 004가 주면 T040의 함수를 지운다 |\n-| `analytics`의 상관관계·위험 기여·손실 기여 노출 | 004 몫. 그때까지 상세 패널의 세 항목은 \"제공되지 않음\"이다(T064) |\n+| `analytics`의 상관관계·위험 기여·손실 기여 노출 | 004가 420에서 노출했다. 상세의 세 항목은 그 값을 표로 보인다(T064·T098) |\n | 참조하는 요청이 없는 계산·결과의 정리 | 004 몫. 005의 정리 작업은 만료된 요청 행과 토큰만 지운다(T022). 재사용·합류 기록(`backtest_reuse_event`)은 지우지 않고 `request_id`만 NULL로 끊는다 — `backtest_run_metric` 집계의 `reuse_count`가 이 행을 세며 원칙 IX가 동일 결과 재조회 기록을 요구한다. 컬럼 완화는 T022가 한다. B02(318)는 재사용 기록을 지우는 방식으로 병합됐으므로 T022·T026을 다시 열었고, [S15P21E205-335](https://ssafy.atlassian.net/browse/S15P21E205-335) `fix(be)/335-keep-reuse-event-on-expiry`에서 고쳤다 |\n \n 이 tasks가 코드와 대조하다 찾은 004 접점이 둘 더 있다. 둘 다 004 소유이므로 B01·B02의 MR 리뷰어에 004 담당을 지정하고 MR 본문에 근거를 적는다.\n@@ -67,7 +67,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n ## Path Conventions\n \n-- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`은 두지 않는다(값 타입과 요청 저장은 `backtest`가 소유한다). 예외로 만료 토큰 묘비만 `result/application/repository`·`result/infrastructure/persistence`에 둔다 — 공개 열람 경계에만 뜻이 있는 005의 기록이라 `backtest`가 알 필요가 없다(T087·T090). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`\n+- 백엔드 005 소유 신규: `backend/src/main/java/com/ssafy/thorp/result/{presentation/{controller,response},application/{service,result},infrastructure/config}` — 4계층 규칙(`backend/CLAUDE.md`)을 따르되 `domain`은 두지 않는다(값 타입과 요청 저장은 `backtest`가 소유한다). 예외로 만료 토큰 묘비만 `result/application/repository`·`result/infrastructure/persistence`에 둔다 — 공개 열람 경계에만 뜻이 있는 005의 기록이라 `backtest`가 알 필요가 없다(T087·T098). 테스트는 `backend/src/test/java/com/ssafy/thorp/result/...`\n - 백엔드 004 소유 접점(최소로 손댄다): `backtest/domain/model/{BacktestRequest,PublicResultToken}.java`, `backtest/infrastructure/persistence/{BacktestRequestJpaEntity,BacktestRequestMapper,BacktestRequestRepositoryImpl}.java`, `backtest/application/service/{BacktestService,BacktestRetryService,BacktestResultQueryService,ExecutionLimitPolicy,ExecutionMetricRecorder}.java`, `backtest/application/repository/BacktestRequestRepository.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/request/TradePageQuery.java`, `backtest/presentation/response/{BacktestJobResponse,BacktestRetryResponse}.java` (모두 `backend/src/main/java/com/ssafy/thorp/` 아래)\n - 마이그레이션: `backend/src/main/resources/db/migration/V{yyyyMMddHHmmss}__public_result_token.sql` (작성 시각 타임스탬프. 현재 마지막은 `V20260916163000__widen_instrument_id_format.sql`)\n - 계약 문서·픽스처: `docs/specs/result-api/{README.md,examples/*.json}`(신규), `docs/specs/backtest-api/{README.md,examples/backtest-accepted.json}`(004 접수 응답 갱신)\n@@ -435,7 +435,7 @@ Task: \"api/result.test.ts — 경로·오류 정규화\" (T038)\n ## Phase 10: Convergence\n \n - [X] T089 (BE) CRITICAL — 비로그인 요청이 실행 한도를 건너뛰지 못하게 한다. 지금은 `POST /backtests`가 클라이언트가 보낸 `executionType`을 그대로 받아, 비로그인 요청이 `SEARCH_BUNDLE`·`REGIME_*`로 보내면 `backtest/application/service/ExecutionLimitPolicy.requireAdmission`이 한도 검사 없이 통과시키고, `POST /results/{token}/retry`도 원 요청의 `executionType`을 물려받아 같은 우회를 이어 간다. 비로그인 요청(요청자 없음)의 `executionType`이 `SINGLE`이 아니면 접수 단계에서 거절(400)하고, `ExecutionLimitApiIT`에 \"비로그인 비단건 접수는 거절되고 대기 실행이 늘지 않는다\"·\"공개 재시도도 같다\" 단언을 더한다. 004 소유 파일이라 리뷰어에 004 담당을 지정한다 per Constitution IX, T012 (contradicts)\n-- [X] T090 (DOCS) 묘비 결정을 설계 문서에 반영한다 — `plan.md` Storage(\"새 테이블을 만들지 않는다\")·`data-model.md` §1에 `expired_public_token`(토큰 SHA-256 해시·만료 시각, 보관 기한 `thorp.result.tombstone-retention`)과 그 이유(FR-021 삭제와 만료 안내 410을 함께 지킨다)를 더하고, `research.md` R-03에 정리 뒤 410 유지 방식을, 이 문서 Path Conventions에 `result/application/repository`·`result/infrastructure/persistence`(묘비 저장소만)를 적는다 per plan: storage decision, T087 (contradicts)\n+- [X] T098 (DOCS) 묘비 결정을 설계 문서에 반영한다 — `plan.md` Storage(\"새 테이블을 만들지 않는다\")·`data-model.md` §1에 `expired_public_token`(토큰 SHA-256 해시·만료 시각, 보관 기한 `thorp.result.tombstone-retention`)과 그 이유(FR-021 삭제와 만료 안내 410을 함께 지킨다)를 더하고, `research.md` R-03에 정리 뒤 410 유지 방식을, 이 문서 Path Conventions에 `result/application/repository`·`result/infrastructure/persistence`(묘비 저장소만)를 적는다 per plan: storage decision, T087 (contradicts)\n - [X] T091 (INFRA) 루트 `.env.example`에 `THORP_RESULT_PUBLIC_TOKEN_TTL`·`THORP_RESULT_EXPIRY_SWEEP_INTERVAL`·`THORP_RESULT_EXPIRY_SWEEP_BATCH_SIZE`·`THORP_RESULT_TOMBSTONE_RETENTION`·`THORP_RESULT_TRADES_PAGE_SIZE`를 `infra/.env.prod.example`과 같은 설명으로 더한다 per T004 (partial)\n \n ## Phase 11: Convergence\n@@ -453,7 +453,7 @@ Task: \"api/result.test.ts — 경로·오류 정규화\" (T038)\n B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 번호는 이어 붙이기만 하며 위의 태스크는 손대지 않는다.\n \n - [X] T089 (FE) 그릴 점이 없을 때 그래프 자리에 그 사실을 한 문장으로 알린다 — `frontend/src/pages/ResultPage.tsx`의 `ResultChartSlot`이 `timeseries.status === 'loaded'`인데 `points`가 비어 있는 경우를 따로 가른다. 지금은 `frontend/src/components/result/EquityChart.tsx`가 `null`을 돌려주고 화면에는 빈 칸만 남는다. 취소된 부분 결과처럼 거래일이 하나도 저장되지 않은 결과에서 일어난다 per 원칙 VI · FR-001 (partial)\n-- [X] T090 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)\n+- [X] T098 (FE) 세로축에 원화 금액 눈금을 보인다 — `frontend/src/components/result/EquityChart.tsx`. 축의 값은 이미 원화 자산가치지만 눈금이 없어 곡선의 높이를 금액으로 읽을 수 없고, 단서는 그래프 밖의 시작 금액 한 줄뿐이다. 차트 시스템에 `YAxis`가 없으므로 `y-axis-ticks.ts`와 `useChartStable()`의 `yScale`로 눈금을 그리거나 공용 컴포넌트를 새로 만든다. 눈금 수는 넷을 넘기지 않아 첫 화면이 복잡해지지 않게 한다(원칙 II) per FR-001 (partial)\n - [X] T091 (FE 테스트) `frontend/src/test/resultFixtures.ts`의 `resultTimeseries`와 `resultDetailCompleted.summary.maxDrawdown`을 서로 맞춘다 — 지금은 계열의 최저 하락 폭이 -0.050000인데 상세는 -0.041757이라 R-05 규칙에 걸려 픽스처로 그린 화면에 음영이 한 번도 나오지 않는다. 계약 예시(`docs/specs/result-api/examples/`)는 둘이 맞으므로 픽스처를 그쪽에 맞춘다. `resultFixtures.test.ts`·`ResultSummaryCard.test.tsx`가 계속 통과하는지 확인한다 per T002 · T006 (contradicts)\n \n ## Phase 10: Convergence\n@@ -481,3 +481,4 @@ B08의 코드 리뷰 수정까지 반영한 뒤 spec·plan·tasks와 다시 대\n \n - [X] T096 (FE) LOW — 011 진입점의 보이는 이름을 spec의 `경제환경이 비슷했던 과거 보기`로 통일하고 `frontend/src/pages/ResultPage.auxiliary.test.tsx`가 그 이름과 비활성 사유를 함께 고정하게 한다. 011의 진입 계약과 라우트가 생기기 전까지는 지금처럼 누를 수 없게 둔다 per FR-018 · US5 인수 기준 3 · T079 (partial)\n - [X] T097 (FE) MEDIUM — `frontend/src/components/result/NextStepLinks.tsx`에서 spec·tasks에 없는 `이전 화면으로` 버튼과 `navigate(-1)` 행동을 제거한다. 결과에서 011로 이동한 뒤 돌아오는 수단은 FR-018이 정한 브라우저 뒤로 가기이며, 별도 이전 화면 행동은 근거 없이 결과 화면의 보조 행동을 늘린다 per FR-018 · FR-019 · Constitution II · T079 (unrequested)\n+- [X] T098 (FE) 결과 화면을 제목·비교 대상 고르기·탭 하나로 정리한다. 요약(핵심 숫자·상태 문장, 기본 열림. 그래프·해석 문장은 탭 위)·결과 분석·설정·근거·전체 거래 내역·손실이 커진 때·KOSPI 비교·목표 위험 맞춤 일곱 탭 — `frontend/src/components/result/ResultTabs.tsx`(탭 줄·키보드·지연 마운트)와 `ResultDetailTabs.tsx`(다섯 탭 조립). '자세히 보기'는 결과 분석과 설정·근거로 나눈다(`DetailPanel.tsx`의 `AnalysisPanel`·`SettingsPanel`·`TradesPanel`). 섹터 목록은 탭 묶음이 한 번 받아 나눠 쓴다. 열 수 없는 탭은 `aria-disabled`와 사유 문장이다. 420이 상관관계·위험 기여·손실 기여 표를 넣자 한 패널이 화면 두세 장이 된 것이 계기다(Jira S15P21E205-424) per FR-007 · FR-010 · FR-017 · FR-022 · SC-001(2026-09-23 개정)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2244706,
+      "head_commit_sha": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+      "base_commit_sha": "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5",
+      "start_commit_sha": "8e59ce313b648440902d92341edddfb90f68bbc6",
+      "created_at": "2026-09-23T12:28:32.359+09:00",
+      "merge_request_id": 958173,
+      "state": "without_files",
+      "real_size": "28",
+      "patch_id_sha": "9ba17d08abb5a1070c83d7afbf14332d92492dbe",
+      "commits": [
+        {
+          "id": "921f92f8f1a40e86d9c186a851007f9e03cfe5bf",
+          "short_id": "921f92f8",
+          "created_at": "2026-09-23T11:55:32.000+09:00",
+          "parent_ids": [
+            "cf39d8ac81faf5800851b8f317286e70427c2147"
+          ],
+          "title": "Revert \"feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다\"",
+          "message": "Revert \"feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다\"\n\nThis reverts commit cf39d8ac81faf5800851b8f317286e70427c2147.\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:55:32.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:55:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/921f92f8f1a40e86d9c186a851007f9e03cfe5bf"
+        },
+        {
+          "id": "cf39d8ac81faf5800851b8f317286e70427c2147",
+          "short_id": "cf39d8ac",
+          "created_at": "2026-09-23T11:51:54.000+09:00",
+          "parent_ids": [
+            "ae126ead2f1f31e69d8843df3855b2ea2be50c46"
+          ],
+          "title": "feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다",
+          "message": "feat(fe): 그래프 옆에 핵심 숫자를 세로로 두고 정의는 도움말로 내린다\n\n그래프(왼쪽)와 핵심 숫자 3개·해석 문장·상태 문장(오른쪽) 두 칸 배치. 숫자는\n수익률·최대 하락 폭·거래비용 짧은 이름으로 한 줄씩이고, 정의와 종료 시 청산 구분은\n이름 옆 물음표 도움말(InlineHelp)로 옮긴다. 조건 한 줄은 ConditionLine으로 떼어\n제목 아래에 둔다. 요약 탭은 없애고 결과 분석이 기본 탭이다. 좁은 화면은 세로로\n쌓이고 그래프 비율은 --result-chart-aspect 로 자리마다 정한다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:51:54.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:51:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cf39d8ac81faf5800851b8f317286e70427c2147"
+        },
+        {
+          "id": "ae126ead2f1f31e69d8843df3855b2ea2be50c46",
+          "short_id": "ae126ead",
+          "created_at": "2026-09-23T11:30:53.000+09:00",
+          "parent_ids": [
+            "d0384baa68b1ade57c3a649ababef78ac0383c4d"
+          ],
+          "title": "fix(fe): 결과 화면 뒤로 가기를 섹터 선택으로 돌리고 '처음부터 다시 분석'으로 부른다",
+          "message": "fix(fe): 결과 화면 뒤로 가기를 섹터 선택으로 돌리고 '처음부터 다시 분석'으로 부른다\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:30:53.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:30:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ae126ead2f1f31e69d8843df3855b2ea2be50c46"
+        },
+        {
+          "id": "d0384baa68b1ade57c3a649ababef78ac0383c4d",
+          "short_id": "d0384baa",
+          "created_at": "2026-09-23T11:27:29.000+09:00",
+          "parent_ids": [
+            "24c9626573ec092f5314c5eb2868366dd772a3fc"
+          ],
+          "title": "feat(fe): 결과 화면 제목을 백테스트 결과로 바꾸고 전략 선택으로 돌아가는 길을 둔다",
+          "message": "feat(fe): 결과 화면 제목을 백테스트 결과로 바꾸고 전략 선택으로 돌아가는 길을 둔다\n\n전략 선택 화면의 뒤로 가기와 같은 모양으로 제목 위에 '전략 선택' 링크를 둔다.\n경로를 직접 가리키며 조건은 넘기지 않는다(조건 인계는 '다른 조건으로 비교').\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:27:29.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:27:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d0384baa68b1ade57c3a649ababef78ac0383c4d"
+        },
+        {
+          "id": "24c9626573ec092f5314c5eb2868366dd772a3fc",
+          "short_id": "24c96265",
+          "created_at": "2026-09-23T11:23:33.000+09:00",
+          "parent_ids": [
+            "d11e827730c27a6810e4be673dc07e683b576deb"
+          ],
+          "title": "fix(fe): 그래프와 해석 문장은 탭 위 원래 자리에 둔다",
+          "message": "fix(fe): 그래프와 해석 문장은 탭 위 원래 자리에 둔다\n\n요약 탭에는 핵심 숫자와 상태 문장만 남기고, 그래프와 해석 요약 1문장은 제목 아래\n비교 대상 고르기 위로 되돌린다. spec 005 FR-007·SC-001 문장을 맞춘다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:23:33.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:23:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/24c9626573ec092f5314c5eb2868366dd772a3fc"
+        },
+        {
+          "id": "d11e827730c27a6810e4be673dc07e683b576deb",
+          "short_id": "d11e8277",
+          "created_at": "2026-09-23T11:18:28.000+09:00",
+          "parent_ids": [
+            "20c084e80b2a701ed37a015783b94012c3a71768"
+          ],
+          "title": "feat(fe): 요약을 기본 탭으로, 전체 거래 내역을 제 탭으로 둔다",
+          "message": "feat(fe): 요약을 기본 탭으로, 전체 거래 내역을 제 탭으로 둔다\n\n핵심 숫자·그래프·요약 문장을 '요약' 탭에 넣어 기본으로 열고, 전체 거래 내역을\n결과 분석에서 빼서 제 탭으로 둔다. 화면은 제목·비교 대상 고르기·탭 하나가 된다.\n볼 결과가 없는 실행은 탭 없이 요약 내용만 그린다. TradeHistory는 alwaysOpen 으로\n제 탭에서 버튼 없이 바로 목록을 보인다. spec 005 FR-007·SC-001을 맞춰 고쳤다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:18:28.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:18:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d11e827730c27a6810e4be673dc07e683b576deb"
+        },
+        {
+          "id": "20c084e80b2a701ed37a015783b94012c3a71768",
+          "short_id": "20c084e8",
+          "created_at": "2026-09-23T11:08:12.000+09:00",
+          "parent_ids": [
+            "64f2275c53e4a48bb75347e944c9a8f5d39bd639"
+          ],
+          "title": "feat(fe): 결과 화면 보조 보기를 탭으로 묶는다",
+          "message": "feat(fe): 결과 화면 보조 보기를 탭으로 묶는다\n\n자세히 보기·손실이 커진 때·지수 비교·목표 위험 맞춤을 ResultTabs 하나로 묶고,\n자세히 보기는 결과 분석(계산 값)과 설정·근거(입력 조건)로 나눈다. 첫 화면에서\n결과 분석 탭이 열려 있고 다른 탭은 처음 고를 때 자료를 받는다. 열 수 없는 탭은\naria-disabled와 사유 문장이다. spec 005 FR-007·010·017·022·SC-001을 함께 고쳤다.\n\nS15P21E205-424\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T11:08:12.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T11:08:12.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/20c084e80b2a701ed37a015783b94012c3a71768"
+        },
+        {
+          "id": "64f2275c53e4a48bb75347e944c9a8f5d39bd639",
+          "short_id": "64f2275c",
+          "created_at": "2026-09-23T09:50:21.000+09:00",
+          "parent_ids": [
+            "ef1123cebaa3fe80f3c7b2d1b4ecf0de8326c8d5"
+          ],
+          "title": "feat(be): 결과 조회에 상관관계·위험 기여·손실 기여 노출",
+          "message": "feat(be): 결과 조회에 상관관계·위험 기여·손실 기여 노출\n\n워커가 저장하는 analytics 중 correlationMatrix·riskContribution·lossContribution·method를\nGET /backtests/{id}·GET /results/{token}의 summary.analytics에 내려주고, '자세히 보기'\n패널의 세 항목을 표로 채운다. 계산되지 않은 항목은 null 그대로 '계산 제한'으로 보이고\n0으로 채우지 않는다(FR-009, 원칙 VI).\n\nS15P21E205-420\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-23T09:50:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-23T09:50:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/64f2275c53e4a48bb75347e944c9a8f5d39bd639"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-23T12:28:35.715+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2861921": []
+  }
+}

@@ -1,0 +1,701 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954510,
+    "iid": 276,
+    "project_id": 1444456,
+    "title": "feat(be): 내 기록을 CSV/JSON 파일로 내보낸다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US4의 서버 몫입니다. `GET /my-records/{recordId}/export?format=json|csv`가 한 기록을 파일로 내려줍니다. JSON은 `record`·`config`·`referenceVersions`·`summary`·`timeseries`·`trades`·`fills`·`exceptions`·(탐색 묶음) `searchSpace`·`candidates`·(경제환경) `regime`, 그리고 반드시 `exclusions`를 담는 객체 하나이고, CSV는 `# 구획` 이름 줄 뒤에 표를 이어 붙인 UTF-8 BOM + CRLF 단일 파일입니다.\n\n원천 일별 시세 원값과 기사 본문은 스키마에 자리가 없고 `exclusions`에 이유를 적습니다(FR-016, 원칙 X). 006은 값을 계산하거나 다시 꺼내지 않고 005·007·010의 읽기 경로를 그대로 부릅니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-393 `[BE] 내 기록 CSV/JSON 내보내기`\n- Story: -378 / Epic: -377 · 선행: -383(BE-2)·-390(BE-6) dev 머지 완료\n\n# 주요 변경 사항\n\n- **`MyRecordExport`**(T041): 구획을 필드로 가진 record. 원천 원값·기사 본문 필드는 없습니다(012 `NewsArticleExportResponse` 방식). `sections()`가 계약 순서로 null 아닌 구획만 모아 주고, JSON·CSV 둘이 이 하나를 읽습니다. `exclusions`는 생성자에서 non-null을 강제합니다.\n- **`MyRecordExportService`**(T041): 상태가 `RUNNING`이면 409 `RESULT_NOT_READY`. `FAILED`·`CANCELLED`(·철회)는 `record`·`config`·`referenceVersions`·`failure`·`exclusions`만 담습니다(FR-015). 분석은 005 `BacktestResultQueryService`의 `getDetail`·`getTimeseries`·`getTrades`(쪽을 끝까지)·`getExceptions`를 그 기록 소유자의 요청으로 부릅니다 — 요청 선택은 목록 뷰가 결과 토큰을 고르는 규칙(취소 안 된 것 → 최근)과 같습니다. **`fills`는 `findFills`가 빈 Optional이면 키를 만들지 않고** `exclusions`에 `fills / NOT_RECORDED`를 적습니다(원칙 VI). 탐색 묶음은 007 `ParamSearchService.get`과 후보 전체(순번순), 경제환경은 010 스냅샷을 그대로(PK만 빼고) `regime`에 담고 011 연결 표가 없어 `link`는 만들지 않습니다.\n- **`CsvWriter`**(T042): 쉼표·따옴표·CR·LF만 따옴표로 감싸고 안의 따옴표는 두 번(RFC 4180). BOM·CRLF. 객체 구획은 한 줄 표, 배열은 첫 등장 순서로 열을 모으고 중첩 값은 JSON 문자열로 한 칸에 둡니다. 소수 자릿수를 보존하기 위해 정확한 `BigDecimal` 노드를 쓰는 ObjectMapper 사본으로 트리를 만듭니다 — 기본 설정은 `10000000.00`을 `1E+7`로 줄였습니다. 새 라이브러리 없음.\n- **컨트롤러**(T043): `ResponseEntity<byte[]>`, `application/json` 또는 `text/csv;charset=UTF-8`, `Content-Disposition: attachment; filename*=UTF-8''{이름}.{확장자}`(Spring `ContentDisposition`이 `filename=`도 함께 냅니다). `format`이 없거나 다른 값이면 400 `INVALID_INPUT`(공통 봉투).\n- `MyRecordQueryService.referenceVersions`를 패키지 안에서 부를 수 있게 열었습니다(상세와 파일이 같은 값).\n\n# 테스트\n\n- `./gradlew spotlessApply build` — 통과(dev 머지 뒤 재실행 6분 9초, skipped 0). ArchUnit 포함.\n- `CsvWriterTest`(3): 탈출 세 경우와 그대로 두는 경우, BOM·CRLF·`# 구획` 줄, 배열 열 합집합·빈 칸·중첩 JSON·소수 자릿수(`10000000.00` 유지).\n- `MyRecordExportIT`(8, MockMvc): 완료 분석 JSON의 구획 순서와 `config.parameters`·`config.scenario` 별도 키, `summary.netTotalReturn` 자릿수, 거래·체결·예외 각 1건, `exclusions` 두 항목, 본문에 `\"dailyPriceRaw\":`·`\"articleBody\"`·`\"rawPrices\"`·`\"worker\"`·`\"dependencies\"` 키 없음; `fills_recorded=false`면 `fills` 키 없음 + `exclusions`에 `fills`; CSV BOM·CRLF·`# trades`·`# fills`·`# exclusions`; 진행 중 409; 실패는 다섯 구획만 + `failure.code`; `format` 없음·`xlsx` 400, 남의 기록 404, 비로그인 401; 탐색 묶음(`searchSpace`·`candidates`·후보 수 = `counts.expected`); 경제환경(`config.mode/fieldId/entryPath/baselineOrigin`, `regime.status`, `regime.id`·`regime.link` 없음).\n\n# 1차 리뷰 반영 (세 번째 커밋)\n\n- **CSV 수식 주입은 막지 않는다**고 정하고 근거를 `CsvWriter` javadoc에 적었습니다 — 앞에 `'`나 탭을 붙이면 프로그램으로 읽는 쪽이 저장된 값과 다른 글자를 받고, 이 파일은 사용자가 자기 기록을 내려받아 자기가 여는 것이 기본 경로입니다(원칙 VI 우선). 배포 경로가 생기면 다시 판단합니다.\n- 파일 전체를 메모리에 만드는 상한을 `ponytail:` 주석으로 남겼습니다(거래·후보 수만 건이면 `StreamingResponseBody`).\n- `referenceVersions`를 상세 경로로 받지 않는 이유(열람 표시·실행 조회·등록표 판정이 딸려 온다)를 javadoc에 더했습니다.\n- `MyRecordExportIT`가 `Content-Disposition`을 실제 기록 이름으로 단언합니다 — `record` 구획 키가 바뀌어 `null.json`이 되면 잡힙니다.\n- BE-6(-390) 머지 뒤 dev를 받았습니다(네 번째 커밋). `MyRecordController`의 import와 메서드 삽입 자리만 충돌했고 양쪽을 살렸습니다. 생성자는 자동으로 합쳐졌습니다.\n\n# 리뷰 포인트\n\n- **`fills_recorded=false`면 `fills` 키가 없는지**(빈 배열 아님). `exclusions`에 `NOT_RECORDED`로 그 사실을 적는 것은 계약에 없는 추가입니다 — 받는 쪽이 \"왜 없나\"를 파일 안에서 읽을 수 있게 했습니다. 빼야 하면 상수 한 줄입니다.\n- **취소(`CANCELLED`) 항목도 실패와 같이 최소 구획만** 담습니다. 부분 결과가 있는 취소 실행의 시계열·거래를 넣는 것이 spec FR-015 문장(\"실패·취소 항목은 설정값·참조 버전·사유만\")과 어긋나 넣지 않았습니다.\n- `fills`는 먼저 취소한 요청의 스냅샷 자르기(005 R-04)를 거치지 않고 실행의 체결 전부입니다 — 취소 항목은 위 규칙으로 `fills`를 내보내지 않아 지금은 드러나지 않습니다.\n- 경제환경 `regime`은 010 `RegimeSnapshot`을 Jackson 트리로 바꿔 `id`만 뺀 것입니다. 010이 필드를 더하면 파일에도 그대로 나옵니다 — 계약 표의 \"지표 원값과 표준화 값·분야별 거리·자료 개정 기준·모델 버전\"이 그 안에 있습니다.\n- JSON의 소수는 숫자 그대로입니다(005 응답처럼 문자열이 아님). 파일은 표 계산 도구가 읽는 것이라 숫자로 두었습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **FE-4**: `exportMyRecordUrl(recordId, format)`은 `/my-records/{id}/export?format=csv|json`이고 응답이 봉투가 아닌 파일 본문입니다. `RUNNING`이면 409 봉투가 옵니다.\n- **011**: `regime_link_search`·`regime_link_filter` 표가 생기면 `MyRecordExportService.regime`의 `regime.link`를 채워야 합니다(계약 표 `regime.link`).\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE-4 내보내기 메뉴·이름 변경·삭제(BE-6 뒤), DOCS-1.\n- `tasks.md`의 T041~T044 체크박스는 머지 뒤에 표시합니다. 이 브랜치의 docs 커밋 둘은 이미 dev에 머지된 FE-2(T029~T031)·BE-6(T046·T047) 항목만 표시합니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-21T15:02:00.635+09:00",
+    "updated_at": "2026-09-21T15:28:55.981+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T15:28:55.778+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/393-my-record-export",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5be087325a1f21d493594190fbb2cf487088149d",
+    "merge_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T15:02:02.180+09:00",
+    "reference": "!276",
+    "references": {
+      "short": "!276",
+      "relative": "!276",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!276"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/276",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954510,
+    "iid": 276,
+    "project_id": 1444456,
+    "title": "feat(be): 내 기록을 CSV/JSON 파일로 내보낸다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US4의 서버 몫입니다. `GET /my-records/{recordId}/export?format=json|csv`가 한 기록을 파일로 내려줍니다. JSON은 `record`·`config`·`referenceVersions`·`summary`·`timeseries`·`trades`·`fills`·`exceptions`·(탐색 묶음) `searchSpace`·`candidates`·(경제환경) `regime`, 그리고 반드시 `exclusions`를 담는 객체 하나이고, CSV는 `# 구획` 이름 줄 뒤에 표를 이어 붙인 UTF-8 BOM + CRLF 단일 파일입니다.\n\n원천 일별 시세 원값과 기사 본문은 스키마에 자리가 없고 `exclusions`에 이유를 적습니다(FR-016, 원칙 X). 006은 값을 계산하거나 다시 꺼내지 않고 005·007·010의 읽기 경로를 그대로 부릅니다.\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-393 `[BE] 내 기록 CSV/JSON 내보내기`\n- Story: -378 / Epic: -377 · 선행: -383(BE-2)·-390(BE-6) dev 머지 완료\n\n# 주요 변경 사항\n\n- **`MyRecordExport`**(T041): 구획을 필드로 가진 record. 원천 원값·기사 본문 필드는 없습니다(012 `NewsArticleExportResponse` 방식). `sections()`가 계약 순서로 null 아닌 구획만 모아 주고, JSON·CSV 둘이 이 하나를 읽습니다. `exclusions`는 생성자에서 non-null을 강제합니다.\n- **`MyRecordExportService`**(T041): 상태가 `RUNNING`이면 409 `RESULT_NOT_READY`. `FAILED`·`CANCELLED`(·철회)는 `record`·`config`·`referenceVersions`·`failure`·`exclusions`만 담습니다(FR-015). 분석은 005 `BacktestResultQueryService`의 `getDetail`·`getTimeseries`·`getTrades`(쪽을 끝까지)·`getExceptions`를 그 기록 소유자의 요청으로 부릅니다 — 요청 선택은 목록 뷰가 결과 토큰을 고르는 규칙(취소 안 된 것 → 최근)과 같습니다. **`fills`는 `findFills`가 빈 Optional이면 키를 만들지 않고** `exclusions`에 `fills / NOT_RECORDED`를 적습니다(원칙 VI). 탐색 묶음은 007 `ParamSearchService.get`과 후보 전체(순번순), 경제환경은 010 스냅샷을 그대로(PK만 빼고) `regime`에 담고 011 연결 표가 없어 `link`는 만들지 않습니다.\n- **`CsvWriter`**(T042): 쉼표·따옴표·CR·LF만 따옴표로 감싸고 안의 따옴표는 두 번(RFC 4180). BOM·CRLF. 객체 구획은 한 줄 표, 배열은 첫 등장 순서로 열을 모으고 중첩 값은 JSON 문자열로 한 칸에 둡니다. 소수 자릿수를 보존하기 위해 정확한 `BigDecimal` 노드를 쓰는 ObjectMapper 사본으로 트리를 만듭니다 — 기본 설정은 `10000000.00`을 `1E+7`로 줄였습니다. 새 라이브러리 없음.\n- **컨트롤러**(T043): `ResponseEntity<byte[]>`, `application/json` 또는 `text/csv;charset=UTF-8`, `Content-Disposition: attachment; filename*=UTF-8''{이름}.{확장자}`(Spring `ContentDisposition`이 `filename=`도 함께 냅니다). `format`이 없거나 다른 값이면 400 `INVALID_INPUT`(공통 봉투).\n- `MyRecordQueryService.referenceVersions`를 패키지 안에서 부를 수 있게 열었습니다(상세와 파일이 같은 값).\n\n# 테스트\n\n- `./gradlew spotlessApply build` — 통과(dev 머지 뒤 재실행 6분 9초, skipped 0). ArchUnit 포함.\n- `CsvWriterTest`(3): 탈출 세 경우와 그대로 두는 경우, BOM·CRLF·`# 구획` 줄, 배열 열 합집합·빈 칸·중첩 JSON·소수 자릿수(`10000000.00` 유지).\n- `MyRecordExportIT`(8, MockMvc): 완료 분석 JSON의 구획 순서와 `config.parameters`·`config.scenario` 별도 키, `summary.netTotalReturn` 자릿수, 거래·체결·예외 각 1건, `exclusions` 두 항목, 본문에 `\"dailyPriceRaw\":`·`\"articleBody\"`·`\"rawPrices\"`·`\"worker\"`·`\"dependencies\"` 키 없음; `fills_recorded=false`면 `fills` 키 없음 + `exclusions`에 `fills`; CSV BOM·CRLF·`# trades`·`# fills`·`# exclusions`; 진행 중 409; 실패는 다섯 구획만 + `failure.code`; `format` 없음·`xlsx` 400, 남의 기록 404, 비로그인 401; 탐색 묶음(`searchSpace`·`candidates`·후보 수 = `counts.expected`); 경제환경(`config.mode/fieldId/entryPath/baselineOrigin`, `regime.status`, `regime.id`·`regime.link` 없음).\n\n# 1차 리뷰 반영 (세 번째 커밋)\n\n- **CSV 수식 주입은 막지 않는다**고 정하고 근거를 `CsvWriter` javadoc에 적었습니다 — 앞에 `'`나 탭을 붙이면 프로그램으로 읽는 쪽이 저장된 값과 다른 글자를 받고, 이 파일은 사용자가 자기 기록을 내려받아 자기가 여는 것이 기본 경로입니다(원칙 VI 우선). 배포 경로가 생기면 다시 판단합니다.\n- 파일 전체를 메모리에 만드는 상한을 `ponytail:` 주석으로 남겼습니다(거래·후보 수만 건이면 `StreamingResponseBody`).\n- `referenceVersions`를 상세 경로로 받지 않는 이유(열람 표시·실행 조회·등록표 판정이 딸려 온다)를 javadoc에 더했습니다.\n- `MyRecordExportIT`가 `Content-Disposition`을 실제 기록 이름으로 단언합니다 — `record` 구획 키가 바뀌어 `null.json`이 되면 잡힙니다.\n- BE-6(-390) 머지 뒤 dev를 받았습니다(네 번째 커밋). `MyRecordController`의 import와 메서드 삽입 자리만 충돌했고 양쪽을 살렸습니다. 생성자는 자동으로 합쳐졌습니다.\n\n# 리뷰 포인트\n\n- **`fills_recorded=false`면 `fills` 키가 없는지**(빈 배열 아님). `exclusions`에 `NOT_RECORDED`로 그 사실을 적는 것은 계약에 없는 추가입니다 — 받는 쪽이 \"왜 없나\"를 파일 안에서 읽을 수 있게 했습니다. 빼야 하면 상수 한 줄입니다.\n- **취소(`CANCELLED`) 항목도 실패와 같이 최소 구획만** 담습니다. 부분 결과가 있는 취소 실행의 시계열·거래를 넣는 것이 spec FR-015 문장(\"실패·취소 항목은 설정값·참조 버전·사유만\")과 어긋나 넣지 않았습니다.\n- `fills`는 먼저 취소한 요청의 스냅샷 자르기(005 R-04)를 거치지 않고 실행의 체결 전부입니다 — 취소 항목은 위 규칙으로 `fills`를 내보내지 않아 지금은 드러나지 않습니다.\n- 경제환경 `regime`은 010 `RegimeSnapshot`을 Jackson 트리로 바꿔 `id`만 뺀 것입니다. 010이 필드를 더하면 파일에도 그대로 나옵니다 — 계약 표의 \"지표 원값과 표준화 값·분야별 거리·자료 개정 기준·모델 버전\"이 그 안에 있습니다.\n- JSON의 소수는 숫자 그대로입니다(005 응답처럼 문자열이 아님). 파일은 표 계산 도구가 읽는 것이라 숫자로 두었습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **FE-4**: `exportMyRecordUrl(recordId, format)`은 `/my-records/{id}/export?format=csv|json`이고 응답이 봉투가 아닌 파일 본문입니다. `RUNNING`이면 409 봉투가 옵니다.\n- **011**: `regime_link_search`·`regime_link_filter` 표가 생기면 `MyRecordExportService.regime`의 `regime.link`를 채워야 합니다(계약 표 `regime.link`).\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE-4 내보내기 메뉴·이름 변경·삭제(BE-6 뒤), DOCS-1.\n- `tasks.md`의 T041~T044 체크박스는 머지 뒤에 표시합니다. 이 브랜치의 docs 커밋 둘은 이미 dev에 머지된 FE-2(T029~T031)·BE-6(T046·T047) 항목만 표시합니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-21T15:02:00.635+09:00",
+    "updated_at": "2026-09-21T15:28:55.981+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T15:28:55.778+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/393-my-record-export",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5be087325a1f21d493594190fbb2cf487088149d",
+    "merge_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T15:02:02.180+09:00",
+    "reference": "!276",
+    "references": {
+      "short": "!276",
+      "relative": "!276",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!276"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/276",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "adf2fd496ec9d43c6de9698708c7c7c124af4a8c",
+      "head_sha": "5be087325a1f21d493594190fbb2cf487088149d",
+      "start_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "fae1523388b22c944e73e34d36d0629f3f7e1a1b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847474,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T15:02:00.787+09:00",
+          "updated_at": "2026-09-21T15:02:00.790+09:00",
+          "system": true,
+          "noteable_id": 954510,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 276,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8a26e982c013d52b6e7e20f7c5b2d8f42a48f4ca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847475,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T15:02:00.805+09:00",
+          "updated_at": "2026-09-21T15:02:00.814+09:00",
+          "system": true,
+          "noteable_id": 954510,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 276,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "542cf08535891614d3d14002fd86b76696b09da1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847477,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **메모리 및 자릿수 보존 설계**: `CsvWriter`에서 `BigDecimal` 정확도를 보존하기 위해 별도의 `ObjectMapper` 사본(`JsonNodeFactory.withExactBigDecimals(true)`)을 사용한 점과, 일괄 조회(`allTrades`, `allCandidates`) 시 페이징을 끝까지 처리하도록 구현한 점이 돋보입니다.\n- **철저한 예외 및 상태 관리**: `RUNNING` 상태일 때 `409 RESULT_NOT_READY`를 반환하고, 실패·취소된 기록에 대해 최소 구획과 사유만 담도록 분기 처리한 점(FR-015)이 요구사항에 잘 부합합니다.\n\n### 발견 사항\n- [Medium] `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordExportService.java`: `regime(MyRecordView view)` 메서드 하단부가 잘려있거나(`conf`에서 중단됨) 미완성 상태로 커밋된 것으로 보입니다. 컴파일 오류가 발생할 수 있으니 확인이 필요합니다.\n- [Low] `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordExportIT.java`: 파일 내용이 완전히 비어 있습니다(0바이트). 주요 통합 테스트 시나리오가 구현되어야 할 위치이므로 테스트 누락 여부를 점검해야 합니다.\n\n### 테스트 제안\n- **대용량 데이터 및 스트리밍 경계값 테스트**: 거래 내역(`trades`)이나 후보 목록(`candidates`)이 수천 건 이상 존재할 때, `CsvWriter` 및 JSON 직렬화 과정에서 `OutOfMemoryError`가 발생하지 않는지 대용량 목(Mock) 데이터를 이용한 성능·부하 테스트를 권장합니다.\n- **잘못된 `format` 파라미터 테스트**: `format=xlsx`나 값이 없는 빈 요청(`format=` 또는 파라미터 누락) 시, 공통 봉투 에러(`400 INVALID_INPUT`)가 정확히 반환되는지 `MockMvc` 테스트를 추가하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:5be087325a1f21d493594190fbb2cf487088149d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T15:02:10.848+09:00",
+          "updated_at": "2026-09-21T15:02:10.848+09:00",
+          "system": false,
+          "noteable_id": 954510,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 276,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fa05d2ccf940e06bfa78d56f05618325ba73f87b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847760,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T15:26:49.419+09:00",
+          "updated_at": "2026-09-21T15:26:49.427+09:00",
+          "system": true,
+          "noteable_id": 954510,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 276,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "97d99b0ad968c122e4ba2139627cf410a15ac164",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847799,
+          "type": null,
+          "body": "mentioned in commit d44ab223fa4cbb13b043f23222b158321c6afaa1",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T15:28:56.549+09:00",
+          "updated_at": "2026-09-21T15:28:56.568+09:00",
+          "system": true,
+          "noteable_id": 954510,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 276,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2232443,
+      "head_commit_sha": "5be087325a1f21d493594190fbb2cf487088149d",
+      "base_commit_sha": "adf2fd496ec9d43c6de9698708c7c7c124af4a8c",
+      "start_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "created_at": "2026-09-21T15:02:01.236+09:00",
+      "merge_request_id": 954510,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "e2728fe600c8e0d4d8e26e75c0b8d441181a8b9f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2232443,
+      "head_commit_sha": "5be087325a1f21d493594190fbb2cf487088149d",
+      "base_commit_sha": "adf2fd496ec9d43c6de9698708c7c7c124af4a8c",
+      "start_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "created_at": "2026-09-21T15:02:01.236+09:00",
+      "merge_request_id": 954510,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "e2728fe600c8e0d4d8e26e75c0b8d441181a8b9f",
+      "commits": [
+        {
+          "id": "5be087325a1f21d493594190fbb2cf487088149d",
+          "short_id": "5be08732",
+          "created_at": "2026-09-21T14:58:48.000+09:00",
+          "parent_ids": [
+            "65ec38dc87b03e664cc5ce6c8dad4e80ebe03ed5"
+          ],
+          "title": "docs: 006 tasks.md에 dev 머지된 BE-6 항목을 표시한다",
+          "message": "docs: 006 tasks.md에 dev 머지된 BE-6 항목을 표시한다\n\nT046·T047(BE-6, -390)은 dev에 머지됐다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:58:48.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:58:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5be087325a1f21d493594190fbb2cf487088149d"
+        },
+        {
+          "id": "65ec38dc87b03e664cc5ce6c8dad4e80ebe03ed5",
+          "short_id": "65ec38dc",
+          "created_at": "2026-09-21T14:58:47.000+09:00",
+          "parent_ids": [
+            "e2b63d52c0d48374e9cb158b5281525342d2c875",
+            "adf2fd496ec9d43c6de9698708c7c7c124af4a8c"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/393-my-record-export",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/393-my-record-export\n\n# Conflicts:\n#\tbackend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:58:47.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:58:47.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/65ec38dc87b03e664cc5ce6c8dad4e80ebe03ed5"
+        },
+        {
+          "id": "e2b63d52c0d48374e9cb158b5281525342d2c875",
+          "short_id": "e2b63d52",
+          "created_at": "2026-09-21T14:50:07.000+09:00",
+          "parent_ids": [
+            "0599302abfaa43c507f9aa6558d03132523fb3ae"
+          ],
+          "title": "docs(be): 내보내기의 판단 근거를 코드에 남기고 파일 이름 회귀를 잠근다",
+          "message": "docs(be): 내보내기의 판단 근거를 코드에 남기고 파일 이름 회귀를 잠근다\n\n- CsvWriter: 수식 주입을 막지 않는 이유(자기 자료를 자기가 연다, 값을 고치지 않는다)를 javadoc 에\n- MyRecordExportService: 파일 전체를 메모리에 만드는 상한을 ponytail 주석으로\n- MyRecordQueryService.referenceVersions: 상세를 거치지 않는 이유(열람 표시·실행 조회·등록표 판정이 딸려 온다)\n- MyRecordExportIT: Content-Disposition 을 실제 기록 이름으로 단언 — record 구획 키가 바뀌어 null.json 이 되면 잡힌다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:50:07.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:50:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e2b63d52c0d48374e9cb158b5281525342d2c875"
+        },
+        {
+          "id": "0599302abfaa43c507f9aa6558d03132523fb3ae",
+          "short_id": "0599302a",
+          "created_at": "2026-09-21T14:46:36.000+09:00",
+          "parent_ids": [
+            "f3ddcaed2e3cb71b4ffe6ad0cc9e11ce85d7c1db"
+          ],
+          "title": "feat(be): 내 기록을 CSV/JSON 파일로 내보낸다",
+          "message": "feat(be): 내 기록을 CSV/JSON 파일로 내보낸다\n\n- GET /my-records/{recordId}/export?format=json|csv — 공통 봉투를 쓰지 않는 파일 본문, filename*=UTF-8''\n- MyRecordExport: 원천 시세 원값·기사 본문은 자리가 없고 exclusions 가 늘 있다(FR-016, 원칙 X). sections() 하나를 JSON·CSV 가 같이 읽는다\n- MyRecordExportService: 005·007·010 읽기 경로를 그대로 부른다. RUNNING 은 409, 실패·취소는 설정·참조 버전·사유만(FR-015). fills 는 기록한 결과에만 키가 있다(원칙 VI)\n- CsvWriter: BOM + CRLF, 쉼표·따옴표·줄바꿈만 탈출, 소수 자릿수 보존. 새 라이브러리 없음\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:46:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:46:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0599302abfaa43c507f9aa6558d03132523fb3ae"
+        },
+        {
+          "id": "f3ddcaed2e3cb71b4ffe6ad0cc9e11ce85d7c1db",
+          "short_id": "f3ddcaed",
+          "created_at": "2026-09-21T14:41:27.000+09:00",
+          "parent_ids": [
+            "935b224328315dd0dfce173c01e7c7ad25c441c1"
+          ],
+          "title": "docs: 006 tasks.md에 dev 머지된 FE-2 항목을 표시한다",
+          "message": "docs: 006 tasks.md에 dev 머지된 FE-2 항목을 표시한다\n\nT029~T031(FE-2, -391)은 dev에 머지됐다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T14:41:27.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T14:41:27.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f3ddcaed2e3cb71b4ffe6ad0cc9e11ce85d7c1db"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,91 @@\n+package com.ssafy.thorp.myrecord.application.result;\n+\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n+import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Objects;\n+\n+/**\n+ * 내보내기 파일의 내용(spec 006 contracts \"GET /my-records/{recordId}/export\", research R10).\n+ *\n+ * <p><b>원천 일별 시세의 원값과 기사 본문은 자리가 없다.</b> 값을 비우는 것이 아니라 필드 자체가 없어 실수로 채울 수 없다(원칙 X, 012 {@code\n+ * NewsArticleExportResponse}와 같은 방식). 빠진 것은 {@link #exclusions}에 이유와 함께 적는다(FR-016) — 빠진 것이 없어도 키는\n+ * 있다.\n+ *\n+ * <p>종류·상태에 따라 없는 구획은 {@code null}이고 파일에는 키가 나오지 않는다({@link #sections()}). 특히 {@code fills}는 {@code\n+ * backtest_result.fills_recorded}가 참인 결과에만 있다 — 빈 배열로 담으면 \"기록하지 않음\"이 \"체결 0건\"으로 읽힌다(원칙 VI).\n+ *\n+ * @param record 항목 자체(식별자·이름·종류·저장일·상태·사유)\n+ * @param config 저장된 설정값 원문. 분석은 005 {@code config}와 같은 모양이라 전략 파라미터({@code parameters})와\n+ *     시나리오({@code scenario}·{@code scenarioParams})가 별도 키다(FR-013)\n+ * @param referenceVersions 상세와 같은 값. {@code worker}·{@code dependencies}는 담지 않는다\n+ * @param failure 실패·취소·철회 사유. 정상 완료면 null\n+ * @param summary 핵심 결과. 분석은 005 {@code summary}, 탐색 묶음은 후보 수·선정 결과. 종류마다 모양이 달라 {@code Object}다\n+ * @param timeseries 계산된 평가 시계열(분석)\n+ * @param trades 가상 거래 내역(분석)\n+ * @param fills 개별 체결. 기록한 결과에만 있다\n+ * @param exceptions 예외 처리 기록(분석)\n+ * @param searchSpace 탐색 공간·선정 규칙(탐색 묶음)\n+ * @param candidates 후보별 결과·상태·제외 사유(탐색 묶음)\n+ * @param regime 010 스냅샷 내용(경제환경). 011 연결 표가 아직 없어 {@code link}는 없다\n+ * @param exclusions 빠진 항목과 이유. 반드시 있다\n+ */\n+public record MyRecordExport(\n+        Map<String, Object> record,\n+        Map<String, Object> config,\n+        Map<String, Object> referenceVersions,\n+        Failure failure,\n+        Object summary,\n+        List<BacktestTimeseriesResult.Point> timeseries,\n+        List<EngineOutput.TradeResult> trades,\n+        List<EngineOutput.FillResult> fills,\n+        List<EngineOutput.ExceptionRecord> exceptions,\n+        Map<String, Object> searchSpace,\n+        List<CandidatePageResult.Item> candidates,\n+        Object regime,\n+        List<Exclusion> exclusions) {\n+\n+    public MyRecordExport {\n+        Objects.requireNonNull(record, \"record must not be null\");\n+        Objects.requireNonNull(exclusions, \"exclusions must not be null\");\n+        exclusions = List.copyOf(exclusions);\n+    }\n+\n+    /** 실패·취소·철회의 사유. 코드 집합은 원본(엔진·007·010)이 소유한다. */\n+    public record Failure(String code, String message) {}\n+\n+    /** 파일에 담지 않은 항목 하나(FR-016). */\n+    public record Exclusion(String item, String reason, String message) {}\n+\n+    /**\n+     * 파일에 나가는 구획을 계약 순서대로. {@code null}인 구획은 키를 만들지 않는다.\n+     *\n+     * <p>JSON과 CSV가 이 하나를 읽어 두 형식의 구획 순서와 유무가 어긋나지 않는다.\n+     */\n+    public Map<String, Object> sections() {\n+        Map<String, Object> out = new LinkedHashMap<>();\n+        out.put(\"record\", record);\n+        put(out, \"config\", config);\n+        put(out, \"referenceVersions\", referenceVersions);\n+        put(out, \"failure\", failure);\n+        put(out, \"summary\", summary);\n+        put(out, \"timeseries\", timeseries);\n+        put(out, \"trades\", trades);\n+        put(out, \"fills\", fills);\n+        put(out, \"exceptions\", exceptions);\n+        put(out, \"searchSpace\", searchSpace);\n+        put(out, \"candidates\", candidates);\n+        put(out, \"regime\", regime);\n+        out.put(\"exclusions\", exclusions);\n+        return out;\n+    }\n+\n+    private static void put(Map<String, Object> target, String key, Object value) {\n+        if (value != null) {\n+            target.put(key, value);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordExport.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/result/MyRecordExport.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,121 @@\n+package com.ssafy.thorp.myrecord.application.service;\n+\n+import com.fasterxml.jackson.databind.DeserializationFeature;\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.node.JsonNodeFactory;\n+import java.nio.charset.StandardCharsets;\n+import java.util.ArrayList;\n+import java.util.Iterator;\n+import java.util.LinkedHashSet;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Set;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 내보내기 CSV(spec 006 research R10). 한 기록이 여러 표로 나뉘므로 {@code # 구획} 이름 줄 뒤에 표의 머리글과 행을 이어 붙인 단일 파일이다.\n+ *\n+ * <ul>\n+ *   <li><b>UTF-8 BOM</b>으로 시작한다 — 한국어 Windows 표 계산 도구가 BOM 없는 UTF-8을 로컬 인코딩으로 읽어 한글이 깨진다\n+ *   <li>줄 끝은 CRLF\n+ *   <li>값에 쉼표·따옴표·줄바꿈이 있으면 따옴표로 감싸고 안의 따옴표는 두 번 쓴다(RFC 4180). 탈출은 이 세 경우뿐이라 새 라이브러리를 넣지 않는다\n+ * </ul>\n+ *\n+ * <p>구획이 객체면 한 줄짜리 표(머리글 = 키, 한 행 = 값), 배열이면 첫 등장 순서로 키를 모아 머리글을 만든다. 중첩된 객체·배열은 그 칸에 JSON 문자열로 담는다\n+ * — 표를 더 쪼개면 \"어느 행의 것인가\"를 잃는다.\n+ *\n+ * <p><b>수식 주입({@code =}·{@code +}·{@code -}·{@code @}로 시작하는 값)은 막지 않는다.</b> 앞에 {@code '}이나 탭을 붙이면 표\n+ * 계산 도구는 안전해지지만 프로그램으로 읽는 쪽은 저장된 값과 다른 글자를 받는다. 이 파일은 사용자가 <b>자기</b> 기록을 내려받아 자기가 여는 것이 기본 경로이고, 값을\n+ * 지어내거나 고치지 않는 규칙(원칙 VI)이 우선이다. 남에게 건네는 배포 경로가 생기면 그때 다시 판단한다.\n+ */\n+@Component\n+public class CsvWriter {\n+\n+    private static final String BOM = \"﻿\";\n+    private static final String CRLF = \"\\r\\n\";\n+\n+    private final ObjectMapper mapper;\n+\n+    /**\n+     * 소수의 자릿수를 보존하는 사본을 쓴다. 기본 트리 변환은 {@code 10000000.00}을 {@code 1E+7}로 줄여 저장된 값과 다른 글자가 파일에 남는다 —\n+     * 결과 저장이 decimal 을 문자열로 두는 이유와 같다(scale 은 값의 일부다).\n+     */\n+    public CsvWriter(ObjectMapper mapper) {\n+        this.mapper =\n+                mapper.copy()\n+                        .setNodeFactory(JsonNodeFactory.withExactBigDecimals(true))\n+                        .enable(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS);\n+    }\n+\n+    public byte[] write(Map<String, Object> sections) {\n+        StringBuilder out = new StringBuilder(BOM);\n+        sections.forEach(\n+                (name, value) -> {\n+                    out.append(\"# \").append(name).append(CRLF);\n+                    JsonNode node = mapper.valueToTree(value);\n+                    List<JsonNode> rows =\n+                            node.isArray()\n+                                    ? toList(node)\n+                                    : node.isNull() ? List.of() : List.of(node);\n+                    table(out, rows);\n+                });\n+        return out.toString().getBytes(StandardCharsets.UTF_8);\n+    }\n+\n+    private static void table(StringBuilder out, List<JsonNode> rows) {\n+        Set<String> columns = new LinkedHashSet<>();\n+        for (JsonNode row : rows) {\n+            if (row.isObject()) {\n+                row.fieldNames().forEachRemaining(columns::add);\n+            } else {\n+                columns.add(\"value\");\n+            }\n+        }\n+        line(out, columns.stream().map(CsvWriter::escape).toList());\n+        for (JsonNode row : rows) {\n+            List<String> cells = new ArrayList<>(columns.size());\n+            for (String column : columns) {\n+                JsonNode cell = row.isObject() ? row.get(column) : row;\n+                cells.add(escape(text(cell)));\n+            }\n+            line(out, cells);\n+        }\n+        out.append(CRLF);\n+    }\n+\n+    private static String text(JsonNode cell) {\n+        if (cell == null || cell.isNull() || cell.isMissingNode()) {\n+            return \"\";\n+        }\n+        if (cell.isNumber()) {\n+            return cell.decimalValue().toPlainString();\n+        }\n+        return cell.isValueNode() ? cell.asText() : cell.toString();\n+    }\n+\n+    private static void line(StringBuilder out, List<String> cells) {\n+        out.append(String.join(\",\", cells)).append(CRLF);\n+    }\n+\n+    /** 쉼표·따옴표·CR·LF 가 있으면 따옴표로 감싸고 안의 따옴표는 두 번 쓴다. 그 외에는 그대로다. */\n+    public static String escape(String value) {\n+        boolean needsQuote =\n+                value.indexOf(',') >= 0\n+                        || value.indexOf('\"') >= 0\n+                        || value.indexOf('\\r') >= 0\n+                        || value.indexOf('\\n') >= 0;\n+        if (!needsQuote) {\n+            return value;\n+        }\n+        return '\"' + value.replace(\"\\\"\", \"\\\"\\\"\") + '\"';\n+    }\n+\n+    private static List<JsonNode> toList(JsonNode array) {\n+        List<JsonNode> rows = new ArrayList<>(array.size());\n+        for (Iterator<JsonNode> it = array.elements(); it.hasNext(); ) {\n+            rows.add(it.next());\n+        }\n+        return rows;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/CsvWriter.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/CsvWriter.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,343 @@\n+package com.ssafy.thorp.myrecord.application.service;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.node.ObjectNode;\n+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import com.ssafy.thorp.backtest.application.service.BacktestResultQueryService;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordExport;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordExport.Exclusion;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordExport.Failure;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordView;\n+import com.ssafy.thorp.myrecord.domain.model.RecordStatus;\n+import com.ssafy.thorp.paramsearch.application.command.FindCandidatesQuery;\n+import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.CandidateQueryService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.regime.application.repository.RegimeSnapshotRepository;\n+import com.ssafy.thorp.regime.domain.model.RegimeSnapshot;\n+import java.util.ArrayList;\n+import java.util.Comparator;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import org.springframework.stereotype.Service;\n+import org.springframework.transaction.annotation.Transactional;\n+\n+/**\n+ * 내 기록 내보내기(spec 006 US4, FR-015·FR-016, research R10). 서버가 조립한다 — 이용 범위 판정과 \"무엇을 뺐는지\"의 규칙이 한 곳에\n+ * 있어야 한다.\n+ *\n+ * <p><b>계산하지 않고 원본의 읽기 경로를 그대로 부른다.</b> 분석은 005의 {@link BacktestResultQueryService}(결과 화면과 같은 값),\n+ * 탐색 묶음은 007의 조회 서비스, 경제환경은 010 스냅샷이다. 006이 값을 다시 꺼내 모양을 맞추면 화면과 파일이 다른 값을 보이게 된다.\n+ *\n+ * <p>상태 규칙(spec FR-015): 진행 중은 409 {@code RESULT_NOT_READY}. 실패·취소(·철회)는 설정값·참조 버전·사유·{@code\n+ * exclusions}만 담는다. 완료·부분 완료는 전부 담는다.\n+ */\n+@Service\n+@Transactional(readOnly = true)\n+public class MyRecordExportService {\n+\n+    /** 재배포가 금지된 원천 항목. 스키마에 자리가 없고(원칙 X) 파일 안에 그 사실을 적는다(FR-016). 종류·상태와 무관하게 늘 들어간다. */\n+    static final List<Exclusion> SOURCE_EXCLUSIONS =\n+            List.of(\n+                    new Exclusion(\n+                            \"dailyPriceRaw\",\n+                            \"SOURCE_REDISTRIBUTION_FORBIDDEN\",\n+                            \"원천 시세의 일별 원값은 이용 조건상 내보낼 수 없습니다.\"),\n+                    new Exclusion(\n+                            \"newsArticleBody\",\n+                            \"SOURCE_REDISTRIBUTION_FORBIDDEN\",\n+                            \"뉴스 기사 본문은 이용 조건상 내보낼 수 없습니다.\"));\n+\n+    private static final Exclusion FILLS_NOT_RECORDED =\n+            new Exclusion(\"fills\", \"NOT_RECORDED\", \"이 결과는 개별 체결을 기록하지 않았습니다. 체결이 없었다는 뜻이 아닙니다.\");\n+\n+    private static final int TRADES_PAGE = 1000;\n+\n+    private final MyRecordQueryService records;\n+    private final BacktestRequestRepository requests;\n+    private final BacktestResultQueryService results;\n+    private final BacktestResultRepository resultRows;\n+    private final ParamSearchService paramSearches;\n+    private final CandidateQueryService candidates;\n+    private final RegimeSnapshotRepository snapshots;\n+    private final ObjectMapper mapper;\n+\n+    public MyRecordExportService(\n+            MyRecordQueryService records,\n+            BacktestRequestRepository requests,\n+            BacktestResultQueryService results,\n+            BacktestResultRepository resultRows,\n+            ParamSearchService paramSearches,\n+            CandidateQueryService candidates,\n+            RegimeSnapshotRepository snapshots,\n+            ObjectMapper mapper) {\n+        this.records = records;\n+        this.requests = requests;\n+        this.results = results;\n+        this.resultRows = resultRows;\n+        this.paramSearches = paramSearches;\n+        this.candidates = candidates;\n+        this.snapshots = snapshots;\n+        this.mapper = mapper;\n+    }\n+\n+    /**\n+     * 남의 것·없는 것·지운 것은 404({@code MyRecordQueryService}와 같은 문장). 열람 표시는 남기지 않는다 — 파일을 받는 것은 다시 본 것이\n+     * 아니다.\n+     */\n+    public MyRecordExport export(long ownerId, String recordId) {\n+        MyRecordView view = records.item(ownerId, recordId);\n+        if (view.status() == RecordStatus.RUNNING) {\n+            throw new BusinessException(\n+                    ErrorCode.RESULT_NOT_READY, \"진행 중인 기록은 내보낼 수 없습니다: \" + recordId);\n+        }\n+        return switch (view.kind()) {\n+            case ANALYSIS -> analysis(ownerId, view);\n+            case SEARCH_BUNDLE -> bundle(view);\n+            case REGIME_SEARCH -> regime(view);\n+        };\n+    }\n+\n+    // -- 분석 -------------------------------------------------------------------------\n+\n+    private MyRecordExport analysis(long ownerId, MyRecordView view) {\n+        BacktestRequest request = requestOf(ownerId, view);\n+        BacktestDetailResult detail = results.getDetail(request);\n+        Failure failure = failureOf(detail, view);\n+        if (!complete(view)) {\n+            return minimal(view, detail.config(), failure);\n+        }\n+\n+        List<EngineOutput.FillResult> fills =\n+                resultRows.findFills(view.analysisRunId(), null, null).orElse(null);\n+        List<Exclusion> exclusions = new ArrayList<>(SOURCE_EXCLUSIONS);\n+        if (fills == null) {\n+            exclusions.add(FILLS_NOT_RECORDED);\n+        }\n+        return new MyRecordExport(\n+                record(view),\n+                detail.config(),\n+                records.referenceVersions(view),\n+                failure,\n+                detail.summary(),\n+                results.getTimeseries(request).points(),\n+                allTrades(request),\n+                fills,\n+                results.getExceptions(request).items(),\n+                null,\n+                null,\n+                null,\n+                exclusions);\n+    }\n+\n+    /**\n+     * 기록이 가리키는 실행에 대한 <b>소유자의</b> 요청. 목록 뷰가 결과 토큰을 고르는 규칙과 같다 — 취소되지 않은 것을 먼저, 그다음 가장 최근 것.\n+     *\n+     * <p>요청이 하나도 없으면 접수 이벤트가 만든 항목과 요청 표가 어긋난 것이라 500이다. 조용히 빈 파일을 만들지 않는다.\n+     */\n+    private BacktestRequest requestOf(long ownerId, MyRecordView view) {\n+        return requests.findByRunId(view.analysisRunId()).stream()\n+                .filter(r -> r.isOwnedBy(ownerId) && r.getExecutionType() == ExecutionType.SINGLE)\n+                .min(\n+                        Comparator.comparing(BacktestRequest::isCancelled)\n+                                .thenComparing(BacktestRequest::getId, Comparator.reverseOrder()))\n+                .orElseThrow(\n+                        () ->\n+                                new IllegalStateException(\n+                                        \"기록이 가리키는 실행에 소유자의 요청이 없습니다: \" + view.recordId()));\n+    }\n+\n+    /**\n+     * 거래 전체. 005의 쪽 조회를 끝까지 넘긴다 — 파일에는 쪽이 없다.\n+     *\n+     * <p>ponytail: 파일 전체(거래·후보 목록과 CSV 문자열)를 메모리에 만든다. 지금 규모(거래 수백 건, 시계열 ~1700점, 후보는 상한이 있다)에서는\n+     * 충분하고, 거래·후보가 수만 건이 되면 {@code StreamingResponseBody}로 바꾼다.\n+     */\n+    private List<EngineOutput.TradeResult> allTrades(BacktestRequest request) {\n+        List<EngineOutput.TradeResult> all = new ArrayList<>();\n+        for (int page = 0; ; page++) {\n+            BacktestTradePageResult result =\n+                    results.getTrades(\n+                            request, new FindBacktestTradesQuery(page, TRADES_PAGE, null, null));\n+            all.addAll(result.content());\n+            if (page + 1 >= result.totalPages()) {\n+                return all;\n+            }\n+        }\n+    }\n+\n+    private static Failure failureOf(BacktestDetailResult detail, MyRecordView view) {\n+        if (detail.failure() != null) {\n+            return new Failure(detail.failure().code(), detail.failure().message());\n+        }\n+        return statusFailure(view);\n+    }\n+\n+    // -- 탐색 묶음 --------------------------------------------------------------------\n+\n+    private MyRecordExport bundle(MyRecordView view) {\n+        ParamSearchResult search = paramSearches.get(view.searchId());\n+        ParamSearchResult.Config config = search.config();\n+        Map<String, Object> configOut = new LinkedHashMap<>();\n+        configOut.put(\"strategyIds\", config.strategyIds());\n+        configOut.put(\"instrumentIds\", config.instrumentIds());\n+        configOut.put(\"searchMethod\", config.searchMethod());\n+        configOut.put(\"randomSeed\", config.randomSeed());\n+        configOut.put(\"limits\", config.limits());\n+        Failure failure = statusFailure(view);\n+        if (!complete(view)) {\n+            return minimal(view, configOut, failure);\n+        }\n+\n+        Map<String, Object> searchSpace = new LinkedHashMap<>();\n+        searchSpace.put(\"strategies\", config.space());\n+        searchSpace.put(\"selectionRule\", config.selectionRule());\n+\n+        Map<String, Object> summary = new LinkedHashMap<>();\n+        summary.put(\"status\", search.status());\n+        summary.put(\"stopReason\", search.stopReason());\n+        summary.put(\"counts\", search.counts());\n+        summary.put(\"partial\", search.partial());\n+        summary.put(\"partialNote\", search.partialNote());\n+        summary.put(\"baseline\", search.baseline());\n+        summary.put(\"validationLabel\", search.validationLabel());\n+        summary.put(\"selection\", search.selection());\n+        summary.put(\"startedAt\", search.startedAt());\n+        summary.put(\"finishedAt\", search.finishedAt());\n+\n+        return new MyRecordExport(\n+                record(view),\n+                configOut,\n+                records.referenceVersions(view),\n+                failure,\n+                summary,\n+                null,\n+                null,\n+                null,\n+                null,\n+                searchSpace,\n+                allCandidates(view.searchId()),\n+                null,\n+                SOURCE_EXCLUSIONS);\n+    }\n+\n+    /** 후보 전체를 순번 순으로. 007의 쪽 조회를 끝까지 넘긴다. */\n+    private List<CandidatePageResult.Item> allCandidates(String searchId) {\n+        List<CandidatePageResult.Item> all = new ArrayList<>();\n+        for (int page = 0; ; page++) {\n+            CandidatePageResult result =\n+                    candidates.find(\n+                            searchId,\n+                            new FindCandidatesQuery(\n+                                    page,\n+                                    FindCandidatesQuery.MAX_SIZE,\n+                                    null,\n+                                    null,\n+                                    FindCandidatesQuery.Sort.CANDIDATE_NO,\n+                                    false));\n+            all.addAll(result.content());\n+            if (page + 1 >= result.totalPages()) {\n+                return all;\n+            }\n+        }\n+    }\n+\n+    // -- 경제환경 ---------------------------------------------------------------------\n+\n+    /**\n+     * 010 스냅샷을 그대로 담는다(FR-012). 모드·분야·기준월은 {@code config}(검색 설정, FR-013 별도 축), 스냅샷 내용은 {@code\n+     * regime}이다. DB PK는 뺀다(원칙 VIII). 011 연결 표가 아직 없어 {@code link}는 만들지 않는다(원칙 VI).\n+     *\n+     * <p>철회된 항목(스냅샷 참조가 끊김)은 설정과 사유만 담는다 — 지금 최신 판을 대신 넣지 않는다(동일 버전 조회).\n+     */\n+    private MyRecordExport regime(MyRecordView view) {\n+        MyRecordView.Regime regime = view.regime();\n+        Map<String, Object> config = new LinkedHashMap<>();\n+        config.put(\"mode\", regime.key().mode());\n+        config.put(\"fieldId\", regime.key().fieldId());\n+        config.put(\"baselineMonth\", regime.key().baselineMonth());\n+        config.put(\"baselineOrigin\", regime.baselineOrigin());\n+        config.put(\"entryPath\", regime.entryPath());\n+        Failure failure = statusFailure(view);\n+        if (regime.withdrawn()) {\n+            return minimal(view, config, failure);\n+        }\n+        RegimeSnapshot snapshot =\n+                snapshots\n+                        .findByKey(regime.key().toString())\n+                        .orElseThrow(\n+                                () ->\n+                                        new IllegalStateException(\n+                                                \"기록이 가리키는 경제환경 스냅샷이 없습니다: \" + view.recordId()));\n+        ObjectNode content = mapper.valueToTree(snapshot);\n+        content.remove(\"id\");\n+        return new MyRecordExport(\n+                record(view),\n+                config,\n+                records.referenceVersions(view),\n+                failure,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                content,\n+                SOURCE_EXCLUSIONS);\n+    }\n+\n+    // -- 공통 -------------------------------------------------------------------------\n+\n+    private static boolean complete(MyRecordView view) {\n+        return view.status() != RecordStatus.FAILED && view.status() != RecordStatus.CANCELLED;\n+    }\n+\n+    /** 실패·취소 사유(FR-015). 정상 완료면 null — 사유 자리를 빈 값으로 두지 않는다. */\n+    private static Failure statusFailure(MyRecordView view) {\n+        if (complete(view) && view.status() != RecordStatus.WITHDRAWN) {\n+            return null;\n+        }\n+        String code = view.statusReason() != null ? view.statusReason() : view.status().name();\n+        return new Failure(code, null);\n+    }\n+\n+    private MyRecordExport minimal(MyRecordView view, Map<String, Object> config, Failure failure) {\n+        return new MyRecordExport(\n+                record(view),\n+                config,\n+                records.referenceVersions(view),\n+                failure,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                null,\n+                SOURCE_EXCLUSIONS);\n+    }\n+\n+    private static Map<String, Object> record(MyRecordView view) {\n+        Map<String, Object> out = new LinkedHashMap<>();\n+        out.put(\"recordId\", view.recordId());\n+        out.put(\"name\", view.name());\n+        out.put(\"kind\", view.kind());\n+        out.put(\"savedAt\", view.savedAt());\n+        out.put(\"status\", view.status());\n+        out.put(\"statusReason\", view.statusReason());\n+        return out;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordExportService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordExportService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -153,8 +153,12 @@ public class MyRecordQueryService {\n      *\n      * <p>{@code rulesVersion}·{@code costProfileVersion}은 {@code {version, provisional}} 꼴 그대로다 —\n      * 잠정 여부가 함께 보여야 사용자가 확정 규칙 결과와 임시 규칙 결과를 구분한다.\n+     *\n+     * <p>내보내기({@code MyRecordExportService})가 같은 값을 파일에 담으므로 패키지 안에서 부를 수 있다. 상세({@link #detail})를\n+     * 거쳐 받지 않는 이유: 상세는 열람 표시를 남기고 실행 조회({@code reopenPayload})와 등록표 판정({@code registryDrift})까지 딸려\n+     * 온다 — 내보내기는 '다시 보기'가 아니고 그 둘이 필요하지도 않다.\n      */\n-    private Map<String, Object> referenceVersions(MyRecordView view) {\n+    Map<String, Object> referenceVersions(MyRecordView view) {\n         Map<String, Object> out = new LinkedHashMap<>();\n         switch (view.kind()) {\n             case ANALYSIS -> {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,10 +1,17 @@\n package com.ssafy.thorp.myrecord.presentation.controller;\n \n+import com.fasterxml.jackson.core.JsonProcessingException;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n import com.ssafy.thorp.common.web.response.ApiResponse;\n import com.ssafy.thorp.myrecord.application.command.MyRecordListQuery;\n+import com.ssafy.thorp.myrecord.application.result.MyRecordExport;\n import com.ssafy.thorp.myrecord.application.result.RegimeRecordOutcome;\n+import com.ssafy.thorp.myrecord.application.service.CsvWriter;\n import com.ssafy.thorp.myrecord.application.service.MyRecordCommandService;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordExportService;\n import com.ssafy.thorp.myrecord.application.service.MyRecordQueryService;\n import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;\n import com.ssafy.thorp.myrecord.domain.model.RecordKind;\n@@ -15,11 +22,15 @@ import com.ssafy.thorp.myrecord.presentation.response.DeletedMyRecordResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordDetailResponse;\n import com.ssafy.thorp.myrecord.presentation.response.MyRecordListResponse;\n import jakarta.validation.Valid;\n+import java.nio.charset.StandardCharsets;\n import java.time.LocalDate;\n import java.util.List;\n import java.util.Set;\n import org.springframework.format.annotation.DateTimeFormat;\n+import org.springframework.http.ContentDisposition;\n+import org.springframework.http.HttpHeaders;\n import org.springframework.http.HttpStatus;\n+import org.springframework.http.MediaType;\n import org.springframework.http.ResponseEntity;\n import org.springframework.web.bind.annotation.DeleteMapping;\n import org.springframework.web.bind.annotation.GetMapping;\n@@ -44,19 +55,30 @@ import org.springframework.web.bind.annotation.RestController;\n @RequestMapping(\"/my-records\")\n public class MyRecordController {\n \n+    private static final MediaType CSV = new MediaType(\"text\", \"csv\", StandardCharsets.UTF_8);\n+\n     private final MyRecordQueryService queryService;\n     private final MyRecordCommandService commandService;\n     private final MyRecordRegistrar registrar;\n+    private final MyRecordExportService exportService;\n+    private final CsvWriter csvWriter;\n+    private final ObjectMapper json;\n     private final CurrentRequester currentRequester;\n \n     public MyRecordController(\n             MyRecordQueryService queryService,\n             MyRecordCommandService commandService,\n             MyRecordRegistrar registrar,\n+            MyRecordExportService exportService,\n+            CsvWriter csvWriter,\n+            ObjectMapper json,\n             CurrentRequester currentRequester) {\n         this.queryService = queryService;\n         this.commandService = commandService;\n         this.registrar = registrar;\n+        this.exportService = exportService;\n+        this.csvWriter = csvWriter;\n+        this.json = json;\n         this.currentRequester = currentRequester;\n     }\n \n@@ -112,6 +134,42 @@ public class MyRecordController {\n                                         queryService.item(ownerId, outcome.recordId()))));\n     }\n \n+    /**\n+     * 내보내기(spec 006 FR-015·FR-016, research R10). <b>공통 봉투를 쓰지 않는 파일 본문</b>이다 — 실패는 봉투를 쓴다.\n+     *\n+     * <p>{@code format}은 필수고 {@code json}·{@code csv}만 받는다. 빠지거나 다른 값이면 400 {@code INVALID_INPUT}이다\n+     * — 조용히 JSON 으로 바꾸지 않는다(원칙 VI). 파일 이름은 기록 이름이고 {@code filename*}로 UTF-8 그대로 싣는다.\n+     */\n+    @GetMapping(\"/{recordId}/export\")\n+    public ResponseEntity<byte[]> export(\n+            @PathVariable String recordId, @RequestParam(required = false) String format) {\n+        long ownerId = currentRequester.requireRequesterId();\n+        boolean csv = \"csv\".equals(format);\n+        if (!csv && !\"json\".equals(format)) {\n+            throw new BusinessException(\n+                    ErrorCode.INVALID_INPUT, \"format 은 json 또는 csv 여야 합니다: \" + format);\n+        }\n+        MyRecordExport export = exportService.export(ownerId, recordId);\n+        String name = String.valueOf(export.record().get(\"name\")) + (csv ? \".csv\" : \".json\");\n+        return ResponseEntity.ok()\n+                .contentType(csv ? CSV : MediaType.APPLICATION_JSON)\n+                .header(\n+                        HttpHeaders.CONTENT_DISPOSITION,\n+                        ContentDisposition.attachment()\n+                                .filename(name, StandardCharsets.UTF_8)\n+                                .build()\n+                                .toString())\n+                .body(csv ? csvWriter.write(export.sections()) : toJson(export));\n+    }\n+\n+    private byte[] toJson(MyRecordExport export) {\n+        try {\n+            return json.writeValueAsBytes(export.sections());\n+        } catch (JsonProcessingException e) {\n+            throw new IllegalStateException(\"내보내기 JSON 직렬화에 실패했습니다\", e);\n+        }\n+    }\n+\n     /**\n      * 이름 변경(FR-017). <b>이름만</b> 바뀌고 저장된 결과·참조 버전은 그대로다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+package com.ssafy.thorp.myrecord.application;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.myrecord.application.service.CsvWriter;\n+import java.math.BigDecimal;\n+import java.nio.charset.StandardCharsets;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/** spec 006 T042. 탈출 세 경우·BOM·CRLF·구획 줄. 새 라이브러리 없이 함수 하나로 끝난다(research R10). */\n+class CsvWriterTest {\n+\n+    private final CsvWriter writer = new CsvWriter(new ObjectMapper());\n+\n+    @Test\n+    @DisplayName(\"쉼표·따옴표·줄바꿈이 든 값만 따옴표로 감싸고 안의 따옴표는 두 번 쓴다\")\n+    void escapesOnlyWhenNeeded() {\n+        assertThat(CsvWriter.escape(\"plain\")).isEqualTo(\"plain\");\n+        assertThat(CsvWriter.escape(\"a,b\")).isEqualTo(\"\\\"a,b\\\"\");\n+        assertThat(CsvWriter.escape(\"say \\\"hi\\\"\")).isEqualTo(\"\\\"say \\\"\\\"hi\\\"\\\"\\\"\");\n+        assertThat(CsvWriter.escape(\"line1\\nline2\")).isEqualTo(\"\\\"line1\\nline2\\\"\");\n+        assertThat(CsvWriter.escape(\"line1\\r\\nline2\")).isEqualTo(\"\\\"line1\\r\\nline2\\\"\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"파일은 BOM 으로 시작하고 CRLF 로 끝나며 구획마다 # 이름 줄이 붙는다\")\n+    void startsWithBomAndUsesCrlf() {\n+        Map<String, Object> record = new LinkedHashMap<>();\n+        record.put(\"recordId\", \"MR-1\");\n+        record.put(\"name\", \"반도체, 2차전지\");\n+        Map<String, Object> exclusion = new LinkedHashMap<>();\n+        exclusion.put(\"item\", \"dailyPriceRaw\");\n+        exclusion.put(\"reason\", \"SOURCE_REDISTRIBUTION_FORBIDDEN\");\n+        List<Map<String, Object>> exclusions = List.of(exclusion);\n+        Map<String, Object> sections = new LinkedHashMap<>();\n+        sections.put(\"record\", record);\n+        sections.put(\"exclusions\", exclusions);\n+\n+        String csv = new String(writer.write(sections), StandardCharsets.UTF_8);\n+\n+        assertThat(csv).startsWith(\"﻿# record\\r\\n\");\n+        assertThat(csv)\n+                .contains(\"recordId,name\\r\\nMR-1,\\\"반도체, 2차전지\\\"\\r\\n\")\n+                .contains(\n+                        \"# exclusions\\r\\nitem,reason\\r\\ndailyPriceRaw,SOURCE_REDISTRIBUTION_FORBIDDEN\\r\\n\");\n+        assertThat(csv.replace(\"\\r\\n\", \"\")).doesNotContain(\"\\n\");\n+        assertThat(\n+                        new String(writer.write(sections), StandardCharsets.UTF_8)\n+                                .getBytes(StandardCharsets.UTF_8))\n+                .startsWith(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});\n+    }\n+\n+    @Test\n+    @DisplayName(\"배열 구획은 첫 등장 순서로 열을 모으고, 중첩 값은 JSON 문자열로, 없는 키는 빈 칸으로 둔다\")\n+    void arraySectionsUnionColumns() {\n+        Map<String, Object> first = new LinkedHashMap<>();\n+        first.put(\"date\", \"2024-01-02\");\n+        first.put(\"equity\", new BigDecimal(\"10000000.00\"));\n+        Map<String, Object> second = new LinkedHashMap<>();\n+        second.put(\"date\", \"2024-01-03\");\n+        second.put(\"equity\", new BigDecimal(\"10010000.50\"));\n+        Map<String, Object> cashFlow = new LinkedHashMap<>();\n+        cashFlow.put(\"type\", \"DISTRIBUTION\");\n+        cashFlow.put(\"amount\", new BigDecimal(\"5.00\"));\n+        second.put(\"cashFlows\", List.of(cashFlow));\n+        Map<String, Object> sections = new LinkedHashMap<>();\n+        sections.put(\"timeseries\", List.of(first, second));\n+\n+        String csv = new String(writer.write(sections), StandardCharsets.UTF_8);\n+\n+        assertThat(csv)\n+                .contains(\"date,equity,cashFlows\\r\\n\")\n+                .contains(\"2024-01-02,10000000.00,\\r\\n\")\n+                .contains(\n+                        \"2024-01-03,10010000.50,\\\"[{\\\"\\\"type\\\"\\\":\\\"\\\"DISTRIBUTION\\\"\\\",\\\"\\\"amount\\\"\\\":5.00}]\\\"\\r\\n\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/application/CsvWriterTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/application/CsvWriterTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,498 @@\n+package com.ssafy.thorp.myrecord;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.backtest.application.command.CreateBacktestCommand;\n+import com.ssafy.thorp.backtest.application.port.message.Scenario;\n+import com.ssafy.thorp.backtest.application.result.BacktestJobResult;\n+import com.ssafy.thorp.backtest.application.service.BacktestService;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.myrecord.application.service.MyRecordRegistrar;\n+import com.ssafy.thorp.myrecord.domain.vo.EntryPath;\n+import com.ssafy.thorp.paramsearch.SearchableStrategies;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.regime.domain.vo.BaselineOrigin;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.support.LauncherMockedIntegrationTestSupport;\n+import com.ssafy.thorp.support.Requesters;\n+import java.math.BigDecimal;\n+import java.nio.charset.StandardCharsets;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.hamcrest.Matchers;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.http.ContentDisposition;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.test.web.servlet.MvcResult;\n+\n+/**\n+ * 내보내기(spec 006 T044, FR-015·FR-016, quickstart S8).\n+ *\n+ * <p>보는 것: 구획이 계약대로 있는지, {@code exclusions}가 늘 있는지, 금지 필드가 <b>키째로</b> 없는지, {@code fills}가 기록한 결과에만\n+ * 있는지, CSV 가 BOM·CRLF 인지, 상태별(진행 중 409·실패는 설정과 사유만) 규칙과 남의 기록 404.\n+ *\n+ * <p>탐색 묶음을 접수 경로로 만들기 위해 후보 실행기를 목으로 바꾼 기반을 쓴다. <b>기간을 다른 IT와 겹치지 않게 둔다</b> — 본문이 같으면 동일 버전 키도 같아\n+ * 다른 IT가 만든 실행에 합류한다.\n+ */\n+class MyRecordExportIT extends LauncherMockedIntegrationTestSupport {\n+\n+    private static final String REGIME_KEY =\n+            \"FIELD:EXPORT:2026-06-01:FIXTURE-20260915:FIXTURE-REG-1:REGIME-V1\";\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private BacktestService backtestService;\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private MyRecordRegistrar registrar;\n+    @Autowired private CandidateJobLauncher launcher;\n+    @Autowired private JdbcTemplate jdbc;\n+    @Autowired private ObjectMapper objectMapper;\n+\n+    private final AtomicLong nextRunId = new AtomicLong(940_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertStubRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertStubRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"완료한 분석의 JSON 은 계약의 구획을 모두 담고 금지 필드는 키째로 없다\")\n+    void 완료한_분석의_JSON() throws Exception {\n+        long owner = newUser(\"json\");\n+        long runId = completedRun(owner, LocalDate.of(2024, 5, 6), true);\n+        String recordId = recordIdOf(owner);\n+        String recordName =\n+                jdbc.queryForObject(\n+                        \"SELECT name FROM my_record WHERE record_id = ?\", String.class, recordId);\n+\n+        MvcResult result =\n+                mockMvc.perform(export(recordId, \"json\").with(Requesters.as(owner)))\n+                        .andExpect(status().isOk())\n+                        .andExpect(\n+                                header().string(\n+                                                \"Content-Type\",\n+                                                Matchers.startsWith(\"application/json\")))\n+                        // 파일 이름은 기록 이름 그대로다 — record 구획의 키가 바뀌어 \"null.json\" 이 되면 여기서 잡힌다.\n+                        .andExpect(\n+                                header().string(\n+                                                \"Content-Disposition\",\n+                                                ContentDisposition.attachment()\n+                                                        .filename(\n+                                                                recordName + \".json\",\n+                                                                StandardCharsets.UTF_8)\n+                                                        .build()\n+                                                        .toString()))\n+                        .andReturn();\n+        assertThat(result.getResponse().getHeader(\"Content-Disposition\"))\n+                .startsWith(\"attachment\")\n+                .contains(\"filename*=UTF-8''\");\n+        String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);\n+        JsonNode json = objectMapper.readTree(body);\n+\n+        assertThat(fieldNames(json))\n+                .containsExactly(\n+                        \"record\",\n+                        \"config\",\n+                        \"referenceVersions\",\n+                        \"summary\",\n+                        \"timeseries\",\n+                        \"trades\",\n+                        \"fills\",\n+                        \"exceptions\",\n+                        \"exclusions\");\n+        assertThat(json.at(\"/record/recordId\").asText()).isEqualTo(recordId);\n+        assertThat(json.at(\"/record/status\").asText()).isEqualTo(\"COMPLETED\");\n+        // 전략 파라미터·시나리오는 별도 축이다(FR-013).\n+        assertThat(json.at(\"/config/parameters/rebalance\").asText()).isEqualTo(\"MONTH_END\");\n+        assertThat(json.at(\"/config/scenario\").asText()).isEqualTo(\"FULL_PERIOD\");\n+        assertThat(json.at(\"/referenceVersions/sectorEtfMapVersion\").asText())\n+                .isEqualTo(\"SECTOR-ETF-2026-09\");\n+        assertThat(json.at(\"/summary/netTotalReturn\").decimalValue())\n+                .isEqualByComparingTo(\"0.1200\");\n+        assertThat(json.get(\"timeseries\")).hasSize(1);\n+        assertThat(json.at(\"/trades/0/tradeId\").asText()).isEqualTo(\"T-\" + runId);\n+        assertThat(json.at(\"/fills/0/fillId\").asText()).isEqualTo(\"F-\" + runId);\n+        assertThat(json.at(\"/exceptions/0/kind\").asText()).isEqualTo(\"ZERO_VOLATILITY\");\n+\n+        List<String> excluded = json.get(\"exclusions\").findValuesAsText(\"item\");\n+        assertThat(excluded).contains(\"dailyPriceRaw\", \"newsArticleBody\");\n+        assertThat(json.at(\"/exclusions/0/reason\").asText())\n+                .isEqualTo(\"SOURCE_REDISTRIBUTION_FORBIDDEN\");\n+        assertThat(json.at(\"/exclusions/0/message\").asText()).isNotBlank();\n+        // 원천 원값·기사 본문·운영 정보는 자리가 없다 — 값이 빈 키도 없어야 한다(R10, S8-4·S8-8).\n+        assertThat(body)\n+                .doesNotContain(\"\\\"dailyPriceRaw\\\":\")\n+                .doesNotContain(\"\\\"articleBody\\\"\")\n+                .doesNotContain(\"\\\"rawPrices\\\"\")\n+                .doesNotContain(\"\\\"worker\\\"\")\n+                .doesNotContain(\"\\\"dependencies\\\"\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"체결을 기록하지 않은 결과에는 fills 키가 아예 없고 exclusions 가 그 사실을 적는다(원칙 VI)\")\n+    void 체결_미기록은_키가_없다() throws Exception {\n+        long owner = newUser(\"nofill\");\n+        completedRun(owner, LocalDate.of(2024, 5, 7), false);\n+\n+        JsonNode json = exportJson(owner, recordIdOf(owner));\n+\n+        assertThat(json.has(\"fills\")).isFalse();\n+        assertThat(json.has(\"trades\")).isTrue();\n+        assertThat(json.get(\"exclusions\").findValuesAsText(\"item\"))\n+                .contains(\"dailyPriceRaw\", \"newsArticleBody\", \"fills\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"CSV 는 BOM 으로 시작하고 CRLF 를 쓰며 구획마다 # 이름 줄이 있다\")\n+    void CSV() throws Exception {\n+        long owner = newUser(\"csv\");\n+        completedRun(owner, LocalDate.of(2024, 5, 8), true);\n+\n+        MvcResult result =\n+                mockMvc.perform(export(recordIdOf(owner), \"csv\").with(Requesters.as(owner)))\n+                        .andExpect(status().isOk())\n+                        .andExpect(\n+                                header().string(\n+                                                \"Content-Type\",\n+                                                Matchers.equalToIgnoringCase(\n+                                                        \"text/csv;charset=UTF-8\")))\n+                        .andExpect(\n+                                header().string(\n+                                                \"Content-Disposition\",\n+                                                Matchers.containsString(\".csv\")))\n+                        .andReturn();\n+        byte[] bytes = result.getResponse().getContentAsByteArray();\n+        String csv = new String(bytes, StandardCharsets.UTF_8);\n+\n+        assertThat(bytes).startsWith(new byte[] {(byte) 0xEF, (byte) 0xBB, (byte) 0xBF});\n+        assertThat(csv).startsWith(\"﻿# record\\r\\n\");\n+        assertThat(csv)\n+                .contains(\"# trades\\r\\n\")\n+                .contains(\"# fills\\r\\n\")\n+                .contains(\"# exclusions\\r\\n\");\n+        assertThat(csv).contains(\"dailyPriceRaw,SOURCE_REDISTRIBUTION_FORBIDDEN,\");\n+        assertThat(csv.replace(\"\\r\\n\", \"\")).doesNotContain(\"\\n\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"진행 중인 항목은 409 RESULT_NOT_READY 이고 공통 봉투를 쓴다\")\n+    void 진행_중은_409() throws Exception {\n+        long owner = newUser(\"running\");\n+        backtestService.create(request(owner, LocalDate.of(2024, 5, 9)));\n+\n+        mockMvc.perform(export(recordIdOf(owner), \"json\").with(Requesters.as(owner)))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESULT_NOT_READY\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"실패한 항목은 설정값·참조 버전·사유·exclusions 만 담는다(FR-015)\")\n+    void 실패는_설정과_사유만() throws Exception {\n+        long owner = newUser(\"failed\");\n+        long runId = runIdOf(backtestService.create(request(owner, LocalDate.of(2024, 5, 10))));\n+        jdbc.update(\n+                \"UPDATE backtest_run SET status = 'FAILED', failure_code = 'ENGINE_ERROR',\"\n+                        + \" failure_message = '엔진 오류' WHERE id = ?\",\n+                runId);\n+\n+        JsonNode json = exportJson(owner, recordIdOf(owner));\n+\n+        assertThat(fieldNames(json))\n+                .containsExactly(\"record\", \"config\", \"referenceVersions\", \"failure\", \"exclusions\");\n+        assertThat(json.at(\"/failure/code\").asText()).isEqualTo(\"ENGINE_ERROR\");\n+        assertThat(json.at(\"/record/status\").asText()).isEqualTo(\"FAILED\");\n+        assertThat(json.get(\"exclusions\")).hasSizeGreaterThanOrEqualTo(2);\n+    }\n+\n+    @Test\n+    @DisplayName(\"format 이 없거나 다른 값이면 400 이고, 남의 기록은 404 다\")\n+    void 형식_오류와_남의_기록() throws Exception {\n+        long owner = newUser(\"bad\");\n+        long other = newUser(\"other\");\n+        completedRun(owner, LocalDate.of(2024, 5, 13), false);\n+        String recordId = recordIdOf(owner);\n+\n+        mockMvc.perform(get(\"/my-records/{id}/export\", recordId).with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        mockMvc.perform(export(recordId, \"xlsx\").with(Requesters.as(owner)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+        mockMvc.perform(export(recordId, \"json\").with(Requesters.as(other)))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+        mockMvc.perform(export(recordId, \"json\")).andExpect(status().isUnauthorized());\n+    }\n+\n+    @Test\n+    @DisplayName(\"탐색 묶음은 searchSpace·candidates 를 담고 분석 전용 구획은 없다\")\n+    void 탐색_묶음() throws Exception {\n+        long owner = newUser(\"bundle\");\n+        ParamSearchResult accepted = paramSearchService.create(bundleCommand(owner));\n+        jdbc.update(\n+                \"UPDATE param_search SET status = 'COMPLETED' WHERE search_id = ?\",\n+                accepted.searchId());\n+\n+        JsonNode json = exportJson(owner, recordIdOf(owner));\n+\n+        assertThat(fieldNames(json))\n+                .containsExactly(\n+                        \"record\",\n+                        \"config\",\n+                        \"referenceVersions\",\n+                        \"summary\",\n+                        \"searchSpace\",\n+                        \"candidates\",\n+                        \"exclusions\");\n+        assertThat(json.at(\"/record/kind\").asText()).isEqualTo(\"SEARCH_BUNDLE\");\n+        assertThat(json.at(\"/config/instrumentIds\")).hasSize(2);\n+        assertThat(json.at(\"/searchSpace/strategies\").isObject()).isTrue();\n+        assertThat(json.at(\"/searchSpace/selectionRule\").isObject()).isTrue();\n+        assertThat(json.at(\"/summary/counts/expected\").asLong()).isPositive();\n+        assertThat(json.get(\"candidates\").isArray()).isTrue();\n+        assertThat(json.get(\"candidates\").size())\n+                .isEqualTo(json.at(\"/summary/counts/expected\").asInt());\n+        assertThat(json.at(\"/candidates/0/status\").asText()).isNotBlank();\n+    }\n+\n+    @Test\n+    @DisplayName(\"경제환경 기록은 검색 설정을 config 에, 스냅샷 내용을 regime 에 담고 PK 와 연결 정보는 없다\")\n+    void 경제환경() throws Exception {\n+        long owner = newUser(\"regime\");\n+        jdbc.update(\"DELETE FROM regime_search_snapshot WHERE snapshot_key = ?\", REGIME_KEY);\n+        insertSnapshot(REGIME_KEY, \"EXPORT\", \"2026-06-01\");\n+        registrar.recordRegimeSearch(owner, REGIME_KEY, EntryPath.MARKET_FLOW, BaselineOrigin.T_G);\n+\n+        JsonNode json = exportJson(owner, recordIdOf(owner));\n+\n+        assertThat(fieldNames(json))\n+                .containsExactly(\"record\", \"config\", \"referenceVersions\", \"regime\", \"exclusions\");\n+        assertThat(json.at(\"/record/kind\").asText()).isEqualTo(\"REGIME_SEARCH\");\n+        assertThat(json.at(\"/config/mode\").asText()).isEqualTo(\"FIELD\");\n+        assertThat(json.at(\"/config/fieldId\").asText()).isEqualTo(\"EXPORT\");\n+        assertThat(json.at(\"/config/entryPath\").asText()).isEqualTo(\"MARKET_FLOW\");\n+        assertThat(json.at(\"/config/baselineOrigin\").asText()).isEqualTo(\"T_G\");\n+        assertThat(json.at(\"/referenceVersions/modelVersion\").asText()).isEqualTo(\"REGIME-V1\");\n+        assertThat(json.at(\"/regime/status\").asText()).isEqualTo(\"NOT_COMPUTABLE\");\n+        assertThat(json.at(\"/regime/candidateCounts\").isObject()).isTrue();\n+        assertThat(json.at(\"/regime/id\").isMissingNode()).isTrue();\n+        assertThat(json.at(\"/regime/link\").isMissingNode()).isTrue();\n+    }\n+\n+    // -- 준비 -------------------------------------------------------------------------\n+\n+    /** 완료한 실행 하나. 결과 행·시계열 한 점·거래 한 건·예외 한 건을 넣고, {@code fills} 는 기록 여부에 따라 넣는다. */\n+    private long completedRun(long owner, LocalDate start, boolean fillsRecorded) {\n+        long runId = runIdOf(backtestService.create(request(owner, start)));\n+        jdbc.update(\"UPDATE backtest_run SET status = 'COMPLETED' WHERE id = ?\", runId);\n+        jdbc.update(\n+                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n+                        + \" finished_at, portfolio_series, diagnostics, performance, execution,\"\n+                        + \" exceptions, fills_recorded, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, ?, NOW(), NOW(), ?::jsonb, '{}'::jsonb, ?::jsonb,\"\n+                        + \" ?::jsonb, ?::jsonb, ?, NOW(), NOW())\",\n+                runId,\n+                \"EXEC-EXPORT-\" + runId,\n+                \"EVT-EXPORT-\" + runId,\n+                \"\"\"\n+                [{\"date\": \"2024-05-07\", \"equity\": \"10000000.00\", \"cash\": \"10000000.00\",\n+                  \"positionValue\": \"0\", \"dailyReturn\": \"0\", \"cumulativeReturn\": \"0\",\n+                  \"drawdown\": \"0\", \"positions\": []}]\n+                \"\"\",\n+                \"\"\"\n+                {\"initialEquity\": \"10000000.00\", \"finalEquity\": \"11200000.00\", \"currency\": \"KRW\",\n+                 \"totalReturn\": \"0.1250\", \"netTotalReturn\": \"0.1200\", \"cagr\": \"0.1000\",\n+                 \"maxDrawdown\": \"-0.0800\", \"sharpeRatio\": \"1.1\", \"volatility\": \"0.12\",\n+                 \"tradeCount\": 1, \"winRate\": \"1.0\", \"totalTradingCost\": \"0.0050\"}\n+                \"\"\",\n+                \"\"\"\n+                {\"orderCount\": 1, \"fillCount\": 1, \"rejectedOrderCount\": 0,\n+                 \"totalCommission\": \"450\", \"totalSlippageCost\": \"300\"}\n+                \"\"\",\n+                \"\"\"\n+                [{\"date\": \"2024-05-07\", \"instrumentId\": \"091160.XKRX\", \"kind\": \"ZERO_VOLATILITY\",\n+                  \"rule\": \"fallback-equal-weight\", \"action\": \"동일 비중으로 대체\"}]\n+                \"\"\",\n+                fillsRecorded);\n+        jdbc.update(\n+                \"INSERT INTO backtest_trade (id, run_id, trade_id, instrument_id, side, status,\"\n+                        + \" entry_time, exit_time, detail)\"\n+                        + \" VALUES (nextval('backtest_trade_seq'), ?, ?, '091160.XKRX', 'LONG',\"\n+                        + \" 'CLOSED', TIMESTAMPTZ '2024-05-07 09:00:00+09',\"\n+                        + \" TIMESTAMPTZ '2024-06-03 09:00:00+09', ?::jsonb)\",\n+                runId,\n+                \"T-\" + runId,\n+                \"\"\"\n+                {\"tradeId\": \"T-%d\", \"instrumentId\": \"091160.XKRX\", \"side\": \"LONG\",\n+                 \"status\": \"CLOSED\", \"entryTime\": \"2024-05-07T00:00:00Z\",\n+                 \"exitTime\": \"2024-06-03T00:00:00Z\", \"entryPrice\": \"30000\", \"exitPrice\": \"31000\",\n+                 \"quantity\": \"100\", \"grossPnl\": \"100000\", \"commission\": \"450\",\n+                 \"slippageCost\": \"300\", \"realizedPnl\": \"99250\", \"returnRate\": \"0.0331\",\n+                 \"reason\": \"REBALANCE\", \"plannedDate\": \"2024-05-07\"}\n+                \"\"\"\n+                        .formatted(runId));\n+        if (fillsRecorded) {\n+            jdbc.update(\n+                    \"INSERT INTO backtest_fill (id, run_id, fill_id, instrument_id, side, fill_time,\"\n+                            + \" detail)\"\n+                            + \" VALUES (nextval('backtest_fill_seq'), ?, ?, '091160.XKRX', 'BUY',\"\n+                            + \" TIMESTAMPTZ '2024-05-07 09:00:00+09', ?::jsonb)\",\n+                    runId,\n+                    \"F-\" + runId,\n+                    \"\"\"\n+                    {\"fillId\": \"F-%d\", \"instrumentId\": \"091160.XKRX\", \"side\": \"BUY\",\n+                     \"time\": \"2024-05-07T00:00:00Z\", \"price\": \"30000\", \"referencePrice\": \"29990\",\n+                     \"quantity\": \"100\", \"costs\": {\"commission\": \"450\", \"spread\": \"0\",\n+                     \"slippage\": \"300\", \"tax\": \"0\"}, \"cashCost\": \"3000750\",\n+                     \"reason\": \"REBALANCE\", \"plannedDate\": \"2024-05-07\"}\n+                    \"\"\"\n+                            .formatted(runId));\n+        }\n+        return runId;\n+    }\n+\n+    /** 배치가 쓰는 것과 같은 모양의 스냅샷 행. 사례는 없어도 되고 이 시험은 계산 결과를 보지 않는다({@code RegimeRecordIT}와 같다). */\n+    private void insertSnapshot(String key, String fieldId, String month) {\n+        jdbc.update(\n+                \"\"\"\n+                INSERT INTO regime_search_snapshot (\n+                    snapshot_key, mode, field_id, baseline_month, revision, content_hash,\n+                    data_version, registry_version, model_version, status, status_reason,\n+                    scale, comparison_months, ranked_candidates, candidate_counts, data_asof,\n+                    computed_at, created_at, updated_at)\n+                VALUES (?, 'FIELD', ?, ?::date, 1, ?, 'FIXTURE-20260915', 'FIXTURE-REG-1',\n+                    'REGIME-V1', 'NOT_COMPUTABLE', 'NO_CANDIDATE', '{}'::jsonb, '{}'::jsonb,\n+                    '[]'::jsonb, ?::jsonb, ?::jsonb, now(), now(), now())\n+                \"\"\",\n+                key,\n+                fieldId,\n+                month,\n+                \"e\".repeat(64),\n+                \"\"\"\n+                {\"evaluated\": 0, \"excluded\": {}}\n+                \"\"\",\n+                \"\"\"\n+                {\"indicators\": {}, \"newerReleases\": []}\n+                \"\"\");\n+    }\n+\n+    private JsonNode exportJson(long owner, String recordId) throws Exception {\n+        MvcResult result =\n+                mockMvc.perform(export(recordId, \"json\").with(Requesters.as(owner)))\n+                        .andExpect(status().isOk())\n+                        .andReturn();\n+        return objectMapper.readTree(\n+                result.getResponse().getContentAsString(StandardCharsets.UTF_8));\n+    }\n+\n+    private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder\n+            export(String recordId, String format) {\n+        return get(\"/my-records/{id}/export\", recordId).param(\"format\", format);\n+    }\n+\n+    private static List<String> fieldNames(JsonNode node) {\n+        List<String> names = new java.util.ArrayList<>();\n+        node.fieldNames().forEachRemaining(names::add);\n+        return names;\n+    }\n+\n+    private String recordIdOf(long owner) {\n+        return jdbc.queryForObject(\n+                \"SELECT record_id FROM my_record WHERE owner_id = ? AND deleted_at IS NULL\",\n+                String.class,\n+                owner);\n+    }\n+\n+    private long runIdOf(BacktestJobResult result) {\n+        return jdbc.queryForObject(\n+                \"SELECT run_id FROM backtest_request WHERE backtest_id = ?\",\n+                Long.class,\n+                result.backtestId());\n+    }\n+\n+    /** 후보 발행 대신 실행 행만 만든다. 후보·기준이 backtest_run(id)을 FK로 참조한다. */\n+    private long insertStubRun() {\n+        long id = nextRunId.getAndIncrement();\n+        jdbc.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-EXPORT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    private long newUser(String tag) {\n+        String suffix = tag + (System.nanoTime() % 1_000_000_000L);\n+        String email = \"my-record-export-\" + suffix + \"@t.test\";\n+        jdbc.update(\n+                \"INSERT INTO users (email, password_hash, nickname, phone_number, status,\"\n+                        + \" paper_ranking_enabled, live_ranking_enabled, ranking_display_nickname,\"\n+                        + \" created_at, updated_at)\"\n+                        + \" VALUES (?, 'x', ?, ?, 'ACTIVE', false, false, false, NOW(), NOW())\",\n+                email,\n+                \"e\" + suffix,\n+                suffix);\n+        return jdbc.queryForObject(\"SELECT id FROM users WHERE email = ?\", Long.class, email);\n+    }\n+\n+    private CreateParamSearchCommand bundleCommand(long requesterId) {\n+        return new CreateParamSearchCommand(\n+                requesterId,\n+                UNIVERSE,\n+                SearchableStrategies.of(registry, jdbc),\n+                null,\n+                null,\n+                null,\n+                Map.of(),\n+                registry.version());\n+    }\n+\n+    private static CreateBacktestCommand request(Long requesterId, LocalDate start) {\n+        return new CreateBacktestCommand(\n+                requesterId,\n+                ExecutionType.SINGLE,\n+                \"SECTOR-ETF-2026-09\",\n+                List.of(\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"SEMICONDUCTOR\", \"091160.XKRX\", new BigDecimal(\"0.4000\")),\n+                        new CreateBacktestCommand.AllocationItem(\n+                                \"BATTERY\", \"305720.XKRX\", new BigDecimal(\"0.6000\"))),\n+                \"FIXED_WEIGHT\",\n+                \"1\",\n+                null,\n+                Map.of(\"rebalance\", \"MONTH_END\"),\n+                start,\n+                LocalDate.of(2024, 11, 22),\n+                new BigDecimal(\"10000000.00\"),\n+                null,\n+                \"SPLIT-1\",\n+                null,\n+                Scenario.FULL_PERIOD,\n+                null);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordExportIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordExportIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -115,9 +115,9 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n - [x] T027 [US2] Add `registryDrift` to `MyRecordQueryService.detail()` in `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java`: compare the saved `config` axis values against the **current** `strategy_rules` registry (reuse the 003 registry read used by `StrategyRegistryController`), return `outOfRange` and `fields[{axis, savedValue, currentRange}]`; add `reopenSettings.available = kind == ANALYSIS && config.scenario == FULL_PERIOD` (경제환경 기록과 003이 다루지 않는 시나리오는 `false`, contracts); expose `reopenPayload` in `MyRecordDetailResponse` **in exactly the shape of 005's `PublicResultDetail.config`** (`request_spec` + `currency`·`effectiveStart`·`effectiveEnd` — `BacktestDetailResult.config(run, currency)`는 `private static`이므로 복사하지 말고 접근 범위를 넓혀(package-private 정적 헬퍼 또는 `backtest/application/result`의 공용 조립기로 추출) 006이 부른다 — 두 벌이 되면 005·006 화면이 다른 조건을 보인다) so the FE can hand it to `prefillStrategySettings` unchanged (research R4, contracts/record-handoff.md); `referenceVersions`는 `backtest_run.versions`(`data`·`mapping`·`costProfile.version`·`rules.version`·`engine`)와 `request_spec.registryVersion`에서 읽고 `worker`·`dependencies`는 담지 않는다(contracts \"referenceVersions의 출처\")\n - [x] T028 [P] [US2] Add `backend/src/test/java/com/ssafy/thorp/myrecord/application/RegistryDriftTest.java`: unchanged registry → `outOfRange=false`; narrowed range → the axis appears in `fields` with saved value untouched; regime record → `reopenSettings.available=false`\n-- [ ] T029 [US2] **Do not create a 006 builder.** Type `MyRecordDetail.reopenPayload` as 005's `ResultConfig` (`frontend/src/types/result.ts`) in `frontend/src/types/myRecords.ts`, and add one thin adapter `frontend/src/components/records/reopenSettings.ts` exporting `reopenSettings(detail, navigate, signal)` that calls 005's `prefillStrategySettings(detail.reopenPayload, navigate, signal)` (`frontend/src/components/result/prefillStrategySettings.ts`) and returns its `PrefillOutcome`; update that file's docstring line \"006의 '설정 바꿔 비교'도 이 함수를 쓴다\" to name this adapter. Unit test `frontend/src/components/records/reopenSettings.test.ts`: payload is passed through unchanged (no clamping, `warmupTradingDays` untouched), `reselectSectors` outcome is surfaced when `mappingVersion` differs from the catalog (research R4, contracts/record-handoff.md)\n-- [ ] T030 [US2] Wire '설정 바꿔 비교' in `frontend/src/components/records/RecordRow.tsx` and `RecordDetailPanel.tsx`: fetch detail if needed, call `reopenSettings(detail, navigate, signal)` (T029) with an `AbortController` tied to unmount; handle `PrefillOutcome` per contracts/record-handoff.md — `moved` nothing, `reselectSectors` show `message` in `role=\"status\"` plus a link to `/diagnosis/sectors`, `failed` show `message`, `canceled` nothing; hide the button when `reopenSettings.available === false` (model on `frontend/src/components/result/OtherConditionsButton.tsx`)\n-- [ ] T031 [US2] Fill the 006-owned proposal in `frontend/src/pages/SectorSelectionPage.tsx` (the `missingCount > 0` branch near line 57/133): keep the existing first sentence (\"이전에 골랐던 섹터 N개가 지금 목록에 없어 선택에서 빠졌습니다.\" — the screen does not know whether the user came from a record, so \"저장 당시\"/\"대응표\" would be false for a plain session restore) and append the 006 proposal \"아래 목록에서 대체 섹터를 직접 골라 주세요.\"; **do not auto-select a replacement**; keep the `unusableCount` sentence as is. Update the \"006 FR-008이 소유\" comments there and in `frontend/src/diagnosis/selectionStorage.ts` to point at this implementation. Add a case to `frontend/src/pages/SectorSelectionPage.test.tsx`\n+- [x] T029 [US2] **Do not create a 006 builder.** Type `MyRecordDetail.reopenPayload` as 005's `ResultConfig` (`frontend/src/types/result.ts`) in `frontend/src/types/myRecords.ts`, and add one thin adapter `frontend/src/components/records/reopenSettings.ts` exporting `reopenSettings(detail, navigate, signal)` that calls 005's `prefillStrategySettings(detail.reopenPayload, navigate, signal)` (`frontend/src/components/result/prefillStrategySettings.ts`) and returns its `PrefillOutcome`; update that file's docstring line \"006의 '설정 바꿔 비교'도 이 함수를 쓴다\" to name this adapter. Unit test `frontend/src/components/records/reopenSettings.test.ts`: payload is passed through unchanged (no clamping, `warmupTradingDays` untouched), `reselectSectors` outcome is surfaced when `mappingVersion` differs from the catalog (research R4, contracts/record-handoff.md)\n+- [x] T030 [US2] Wire '설정 바꿔 비교' in `frontend/src/components/records/RecordRow.tsx` and `RecordDetailPanel.tsx`: fetch detail if needed, call `reopenSettings(detail, navigate, signal)` (T029) with an `AbortController` tied to unmount; handle `PrefillOutcome` per contracts/record-handoff.md — `moved` nothing, `reselectSectors` show `message` in `role=\"status\"` plus a link to `/diagnosis/sectors`, `failed` show `message`, `canceled` nothing; hide the button when `reopenSettings.available === false` (model on `frontend/src/components/result/OtherConditionsButton.tsx`)\n+- [x] T031 [US2] Fill the 006-owned proposal in `frontend/src/pages/SectorSelectionPage.tsx` (the `missingCount > 0` branch near line 57/133): keep the existing first sentence (\"이전에 골랐던 섹터 N개가 지금 목록에 없어 선택에서 빠졌습니다.\" — the screen does not know whether the user came from a record, so \"저장 당시\"/\"대응표\" would be false for a plain session restore) and append the 006 proposal \"아래 목록에서 대체 섹터를 직접 골라 주세요.\"; **do not auto-select a replacement**; keep the `unusableCount` sentence as is. Update the \"006 FR-008이 소유\" comments there and in `frontend/src/diagnosis/selectionStorage.ts` to point at this implementation. Add a case to `frontend/src/pages/SectorSelectionPage.test.tsx`\n - [x] T032 [US2] Add `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordReopenIT.java` (extends `IntegrationTestSupport`): create record A, submit a second `SINGLE` request with one axis changed → new `my_record` row; submit identical conditions → no new row (FR-009); record A's `backtest_result` row unchanged (SC-003)\n \n **Checkpoint**: US1+US2. 설정 바꿔 비교 → 새 항목, 동일 조건 → 기존 항목, 범위 밖 값 → 003이 비움.\n@@ -174,8 +174,8 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n ### Implementation for User Story 5\n \n-- [ ] T046 [US5] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordCommandService.java` (`rename(ownerId, recordId, name)` → `RecordName` validation, `delete(ownerId, recordId)` → `deleted_at = now`, both 404 for other owners/deleted) and add `PATCH /my-records/{recordId}` (`backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RenameMyRecordRequest.java`, reject unknown keys with 400) and `DELETE /my-records/{recordId}` (200 `{recordId, deletedAt}`) to `MyRecordController.java`. **삭제는 `my_record` 행만 건드린다** — 다른 표에 DELETE를 보내지 않는다(research R6)\n-- [ ] T047 [P] [US5] Add `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordCommandIT.java`: rename changes only `name` (`backtest_result` row hash unchanged); delete sets `deleted_at`, list no longer returns it, `GET` returns 404, second DELETE → 404; **another user's record on the same run still resolves and its `resultToken` still opens** (SC-007); blank name → 400\n+- [x] T046 [US5] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordCommandService.java` (`rename(ownerId, recordId, name)` → `RecordName` validation, `delete(ownerId, recordId)` → `deleted_at = now`, both 404 for other owners/deleted) and add `PATCH /my-records/{recordId}` (`backend/src/main/java/com/ssafy/thorp/myrecord/presentation/request/RenameMyRecordRequest.java`, reject unknown keys with 400) and `DELETE /my-records/{recordId}` (200 `{recordId, deletedAt}`) to `MyRecordController.java`. **삭제는 `my_record` 행만 건드린다** — 다른 표에 DELETE를 보내지 않는다(research R6)\n+- [x] T047 [P] [US5] Add `backend/src/test/java/com/ssafy/thorp/myrecord/MyRecordCommandIT.java`: rename changes only `name` (`backtest_result` row hash unchanged); delete sets `deleted_at`, list no longer returns it, `GET` returns 404, second DELETE → 404; **another user's record on the same run still resolves and its `resultToken` still opens** (SC-007); blank name → 400\n - [ ] T048 [US5] Create `frontend/src/components/records/RenameDialog.tsx` and `DeleteConfirmDialog.tsx` (native `<dialog>`; confirm text names the record and states \"저장된 계산 결과는 남고 내 목록에서만 사라집니다\"; no undo offered), wired from the row's '더 보기' menu; on success update the list in place, announce in `role=\"status\"`; focus returns to the menu trigger (spec FR-017·FR-021)\n - [ ] T049 [US5] Extend `frontend/src/pages/MyRecordsPage.test.tsx`: rename updates the row name only; delete requires confirmation, removes the row, and no \"복구\" control exists; unknown-key/blank rename errors surface as field errors\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/tasks.md",
+          "old_path": "specs/006-my-records/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T15:26:49.363+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2847477": []
+  }
+}

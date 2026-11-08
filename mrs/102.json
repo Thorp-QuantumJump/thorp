@@ -1,0 +1,1236 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944304,
+    "iid": 102,
+    "project_id": 1444456,
+    "title": "Feat(be)/215 auth security foundation",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n인증 기능 구현을 위한 Spring Security·세션·CSRF 보안 기반과 공통 오류 응답을 구성했습니다.\n\n# 관련 티켓\n\n* ticket #BE-215\n* link: Jira BE-215\n\n# 주요 변경 사항\n\n* Spring Security 및 JDBC 세션 기반 구성\n* 상태 변경 API 전체에 CSRF 보호 적용\n* 인증·CSRF 관련 공통 오류 응답 추가\n* 세션 고정 공격 방지를 위한 로그인 시 세션 ID 변경\n* 기존 API 테스트에 CSRF 인증 조건 반영\n\n# 테스트\n\n* `.\\gradlew.bat spotlessApply build` 통과\n* 인증·CSRF 통합 테스트 통과\n* `git diff --check` 통과\n\n# 리뷰 포인트\n\n* CSRF 보호가 모든 POST·PUT·PATCH·DELETE 요청에 적용되는지\n* CSRF 오류와 일반 권한 부족 403 응답이 올바르게 구분되는지\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)",
+    "state": "merged",
+    "created_at": "2026-09-15T11:46:12.193+09:00",
+    "updated_at": "2026-09-15T15:55:51.026+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T12:03:53.874+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/215-auth-security-foundation",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a338c929566dc8aa9b633e368252337a21df1457",
+    "merge_commit_sha": "5b5281c0eae34e718cbba0e621a789aa311846e2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T11:46:14.113+09:00",
+    "reference": "!102",
+    "references": {
+      "short": "!102",
+      "relative": "!102",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!102"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/102",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944304,
+    "iid": 102,
+    "project_id": 1444456,
+    "title": "Feat(be)/215 auth security foundation",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n인증 기능 구현을 위한 Spring Security·세션·CSRF 보안 기반과 공통 오류 응답을 구성했습니다.\n\n# 관련 티켓\n\n* ticket #BE-215\n* link: Jira BE-215\n\n# 주요 변경 사항\n\n* Spring Security 및 JDBC 세션 기반 구성\n* 상태 변경 API 전체에 CSRF 보호 적용\n* 인증·CSRF 관련 공통 오류 응답 추가\n* 세션 고정 공격 방지를 위한 로그인 시 세션 ID 변경\n* 기존 API 테스트에 CSRF 인증 조건 반영\n\n# 테스트\n\n* `.\\gradlew.bat spotlessApply build` 통과\n* 인증·CSRF 통합 테스트 통과\n* `git diff --check` 통과\n\n# 리뷰 포인트\n\n* CSRF 보호가 모든 POST·PUT·PATCH·DELETE 요청에 적용되는지\n* CSRF 오류와 일반 권한 부족 403 응답이 올바르게 구분되는지\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)",
+    "state": "merged",
+    "created_at": "2026-09-15T11:46:12.193+09:00",
+    "updated_at": "2026-09-15T15:55:51.026+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T12:03:53.874+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/215-auth-security-foundation",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a338c929566dc8aa9b633e368252337a21df1457",
+    "merge_commit_sha": "5b5281c0eae34e718cbba0e621a789aa311846e2",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T11:46:14.113+09:00",
+    "reference": "!102",
+    "references": {
+      "short": "!102",
+      "relative": "!102",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!102"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/102",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "21",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T12:10:19.194+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 195106,
+      "iid": 13,
+      "project_id": 1444456,
+      "sha": "a338c929566dc8aa9b633e368252337a21df1457",
+      "ref": "feat(be)/215-auth-security-foundation",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T12:03:17.566+09:00",
+      "updated_at": "2026-09-15T12:10:19.196+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195106"
+    },
+    "head_pipeline": {
+      "id": 195106,
+      "iid": 13,
+      "project_id": 1444456,
+      "sha": "a338c929566dc8aa9b633e368252337a21df1457",
+      "ref": "feat(be)/215-auth-security-foundation",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T12:03:17.566+09:00",
+      "updated_at": "2026-09-15T12:10:19.196+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195106",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T12:10:19.194+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": 421,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195106",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "head_sha": "a338c929566dc8aa9b633e368252337a21df1457",
+      "start_sha": "a0778399c64b6760f6e332b98150fa61b38f563e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "106f6c647a71b3e153856b72351244a01e074fa6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806745,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T11:46:12.301+09:00",
+          "updated_at": "2026-09-15T11:46:12.308+09:00",
+          "system": true,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9ca7c5e0b010b9c29fb4e5b5dcdbf70bbb9a61d4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806746,
+          "type": null,
+          "body": "marked the checklist item **순위 배지·추천 표현 0건 — 우리는 진단을 하지 결과를 추천하지 않는다\\(원칙 III\\)\\. 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다\\. \\\"1위\\\", \\\"추천\\\", \\\"최적\\\", 우승 배지를 넣지 않았다** as completed",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T11:46:19.219+09:00",
+          "updated_at": "2026-09-15T11:46:19.222+09:00",
+          "system": true,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "37151257bdd5c5cba17c6856e86c8c753cfd7acb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806747,
+          "type": null,
+          "body": "marked the checklist item **순위 배지·추천 표현 0건 — 우리는 진단을 하지 결과를 추천하지 않는다\\(원칙 III\\)\\. 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다\\. \\\"1위\\\", \\\"추천\\\", \\\"최적\\\", 우승 배지를 넣지 않았다** as incomplete",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T11:46:20.344+09:00",
+          "updated_at": "2026-09-15T11:46:20.347+09:00",
+          "system": true,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ae5dc062437d7a8a75a545b25dd59300f64520f0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806748,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 보안 및 세션 설정**: Spring Security와 Spring Session JDBC를 도입하여 세션 기반 인증 환경을 체계적으로 구축했습니다. 특히 로그인 시 `ChangeSessionIdAuthenticationStrategy`를 통해 세션 고정(Session Fixation) 공격을 방어한 점이 훌륭합니다.\n- **예외 처리 및 공통 응답 표준화**: `GlobalExceptionHandler`와 `SecurityConfig`에서 인증(`AUTHENTICATION_REQUIRED`) 및 CSRF(`CSRF_TOKEN_INVALID`) 실패 시 기존의 공통 JSON 응답 포맷(`ApiResponse`)을 일관되게 반환하도록 구현하여 API 일관성을 높였습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **CSRF 토큰 누락 및 유효성 테스트**: POST, PUT, PATCH, DELETE 요청 시 유효한 `X-XSRF-TOKEN` 헤더나 쿠키가 없는 경우 `403 Forbidden`과 함께 `CSRF_TOKEN_INVALID` 에러 코드가 응답되는지 통합 테스트로 검증합니다.\n- **세션 고정 방지 테스트**: 인증 성공 전후로 세션 ID(쿠키 값)가 변경되는지 `AuthSecurityIntegrationTest`를 통해 확인합니다.\n- **공개 경로 접근 테스트**: `/auth/me` 등 인증이 필요한 보호된 경로와 달리, 공개 경로(`/markets/*`)는 로그인 없이 정상 접근(200 OK)이 가능한지 테스트합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:a338c929566dc8aa9b633e368252337a21df1457 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T11:46:21.470+09:00",
+          "updated_at": "2026-09-15T12:03:12.943+09:00",
+          "system": false,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e8f768dcfdc7fa3c76180bea1b0b00a1d99a7dd3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806766,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>4386f6ee - docs(be): Spring Session 마이그레이션 경로 정정</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/102/diffs?diff_id=2197906&start_sha=92570f2800ea8dc6a2996ed600108abca2b414e9)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T11:50:08.882+09:00",
+          "updated_at": "2026-09-15T11:50:08.885+09:00",
+          "system": true,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c275db4a7afc7bdec2f99c2b72bdb6700eb19f83",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806889,
+          "type": null,
+          "body": "added 13 commits\n\n<ul><li>4386f6ee...b7da38c8 - 12 commits from branch <code>dev</code></li><li>a338c929 - Merge remote-tracking branch &#39;origin/dev&#39; into feat(be)/215-auth-security-foundation</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/102/diffs?diff_id=2197992&start_sha=4386f6ee32992116f5f3fa833033889d89c3f5c1)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T12:03:05.343+09:00",
+          "updated_at": "2026-09-15T12:03:05.346+09:00",
+          "system": true,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "255a3c30a8adc422d540711d9bfcd7fd43b00eca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2806892,
+          "type": null,
+          "body": "mentioned in commit 5b5281c0eae34e718cbba0e621a789aa311846e2",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T12:03:53.817+09:00",
+          "updated_at": "2026-09-15T12:03:53.823+09:00",
+          "system": true,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c1b7375b690e5a5589825517fa6ecf681a978832",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2809525,
+          "type": null,
+          "body": "MR 제목 양식에 맞게 변경해주세요",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-15T15:55:51.002+09:00",
+          "updated_at": "2026-09-15T15:55:58.389+09:00",
+          "system": false,
+          "noteable_id": 944304,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 102,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2197992,
+      "head_commit_sha": "a338c929566dc8aa9b633e368252337a21df1457",
+      "base_commit_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "start_commit_sha": "a0778399c64b6760f6e332b98150fa61b38f563e",
+      "created_at": "2026-09-15T12:03:05.112+09:00",
+      "merge_request_id": 944304,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "b3d2f3f3be0f2d8159b0390ea03c4d58d489b51a"
+    },
+    {
+      "id": 2197906,
+      "head_commit_sha": "4386f6ee32992116f5f3fa833033889d89c3f5c1",
+      "base_commit_sha": "ac065179bc8e0709b5ce9129856f54d8f3964bb2",
+      "start_commit_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "created_at": "2026-09-15T11:50:08.556+09:00",
+      "merge_request_id": 944304,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "31ca79320a80b0b1d59c3a213582204223d4294b"
+    },
+    {
+      "id": 2197894,
+      "head_commit_sha": "92570f2800ea8dc6a2996ed600108abca2b414e9",
+      "base_commit_sha": "ac065179bc8e0709b5ce9129856f54d8f3964bb2",
+      "start_commit_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "created_at": "2026-09-15T11:46:12.575+09:00",
+      "merge_request_id": 944304,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "6527e348ba61f44434b959c249be62e16ba4d440"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2197992,
+      "head_commit_sha": "a338c929566dc8aa9b633e368252337a21df1457",
+      "base_commit_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "start_commit_sha": "a0778399c64b6760f6e332b98150fa61b38f563e",
+      "created_at": "2026-09-15T12:03:05.112+09:00",
+      "merge_request_id": 944304,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "b3d2f3f3be0f2d8159b0390ea03c4d58d489b51a",
+      "commits": [
+        {
+          "id": "a338c929566dc8aa9b633e368252337a21df1457",
+          "short_id": "a338c929",
+          "created_at": "2026-09-15T12:01:05.000+09:00",
+          "parent_ids": [
+            "4386f6ee32992116f5f3fa833033889d89c3f5c1",
+            "b7da38c85de028ded1c3a3852514bcd5e634952d"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation\n\n# Conflicts:\n#\tbackend/src/main/resources/application-prod.yml\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T12:01:05.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T12:01:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a338c929566dc8aa9b633e368252337a21df1457"
+        },
+        {
+          "id": "4386f6ee32992116f5f3fa833033889d89c3f5c1",
+          "short_id": "4386f6ee",
+          "created_at": "2026-09-15T11:50:01.000+09:00",
+          "parent_ids": [
+            "92570f2800ea8dc6a2996ed600108abca2b414e9"
+          ],
+          "title": "docs(be): Spring Session 마이그레이션 경로 정정",
+          "message": "docs(be): Spring Session 마이그레이션 경로 정정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:50:01.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4386f6ee32992116f5f3fa833033889d89c3f5c1"
+        },
+        {
+          "id": "92570f2800ea8dc6a2996ed600108abca2b414e9",
+          "short_id": "92570f28",
+          "created_at": "2026-09-15T11:39:05.000+09:00",
+          "parent_ids": [
+            "8ad7659c6b407903044e78d0396b81491e4d0765"
+          ],
+          "title": "fix(be): CSRF 보호 범위와 접근 거부 응답 처리 수정",
+          "message": "fix(be): CSRF 보호 범위와 접근 거부 응답 처리 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:39:05.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:39:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92570f2800ea8dc6a2996ed600108abca2b414e9"
+        },
+        {
+          "id": "8ad7659c6b407903044e78d0396b81491e4d0765",
+          "short_id": "8ad7659c",
+          "created_at": "2026-09-15T11:10:30.000+09:00",
+          "parent_ids": [
+            "049889ed89bbb4d2ef245cb2304a757c4466520a",
+            "ac065179bc8e0709b5ce9129856f54d8f3964bb2"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:10:30.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:10:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8ad7659c6b407903044e78d0396b81491e4d0765"
+        },
+        {
+          "id": "049889ed89bbb4d2ef245cb2304a757c4466520a",
+          "short_id": "049889ed",
+          "created_at": "2026-09-15T10:57:55.000+09:00",
+          "parent_ids": [
+            "343601725b271f1dbfe0fed409e2d74392833caf"
+          ],
+          "title": "feat(be): 인증 보안 기반과 공통 오류 응답 구성",
+          "message": "feat(be): 인증 보안 기반과 공통 오류 응답 구성\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T10:57:55.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T10:57:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/049889ed89bbb4d2ef245cb2304a757c4466520a"
+        },
+        {
+          "id": "343601725b271f1dbfe0fed409e2d74392833caf",
+          "short_id": "34360172",
+          "created_at": "2026-09-15T10:30:52.000+09:00",
+          "parent_ids": [
+            "46bc345012e11ad379d76b9070cd7a9d2752b204"
+          ],
+          "title": "feat(be): Spring Security 및 JDBC 세션 기반 구성",
+          "message": "feat(be): Spring Security 및 JDBC 세션 기반 구성\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T10:30:52.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T10:30:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/343601725b271f1dbfe0fed409e2d74392833caf"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,149 @@\n+package com.ssafy.thorp.common.config;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.common.web.response.ApiResponse;\n+import com.ssafy.thorp.common.web.response.ErrorResponse;\n+import jakarta.servlet.http.HttpServletRequest;\n+import jakarta.servlet.http.HttpServletResponse;\n+import java.io.IOException;\n+import java.util.function.Supplier;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.MediaType;\n+import org.springframework.security.access.AccessDeniedException;\n+import org.springframework.security.config.Customizer;\n+import org.springframework.security.config.annotation.web.builders.HttpSecurity;\n+import org.springframework.security.config.http.SessionCreationPolicy;\n+import org.springframework.security.web.SecurityFilterChain;\n+import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;\n+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;\n+import org.springframework.security.web.context.DelegatingSecurityContextRepository;\n+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;\n+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;\n+import org.springframework.security.web.context.SecurityContextRepository;\n+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;\n+import org.springframework.security.web.csrf.CsrfException;\n+import org.springframework.security.web.csrf.CsrfToken;\n+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;\n+import org.springframework.security.web.csrf.CsrfTokenRequestHandler;\n+import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;\n+\n+/** 서버 세션 인증과 브라우저 요청 보안의 공통 경계를 정의한다. */\n+@Configuration\n+public class SecurityConfig {\n+\n+    @Bean\n+    SecurityFilterChain securityFilterChain(\n+            HttpSecurity http,\n+            ObjectMapper objectMapper,\n+            SecurityContextRepository securityContextRepository,\n+            SessionAuthenticationStrategy sessionAuthenticationStrategy)\n+            throws Exception {\n+        return http.csrf(\n+                        csrf ->\n+                                csrf.csrfTokenRepository(csrfTokenRepository())\n+                                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))\n+                .authorizeHttpRequests(\n+                        authorize ->\n+                                authorize\n+                                        .requestMatchers(\"/auth/me\")\n+                                        .authenticated()\n+                                        .anyRequest()\n+                                        .permitAll())\n+                .securityContext(\n+                        context ->\n+                                context.securityContextRepository(securityContextRepository)\n+                                        .requireExplicitSave(true))\n+                .sessionManagement(\n+                        session ->\n+                                session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)\n+                                        .sessionAuthenticationStrategy(\n+                                                sessionAuthenticationStrategy))\n+                .exceptionHandling(\n+                        exceptions ->\n+                                exceptions\n+                                        .authenticationEntryPoint(\n+                                                (request, response, exception) ->\n+                                                        writeError(\n+                                                                objectMapper,\n+                                                                response,\n+                                                                ErrorCode.AUTHENTICATION_REQUIRED))\n+                                        .accessDeniedHandler(\n+                                                (request, response, exception) ->\n+                                                        handleAccessDenied(\n+                                                                objectMapper, response, exception)))\n+                .requestCache(cache -> cache.disable())\n+                .formLogin(form -> form.disable())\n+                .httpBasic(basic -> basic.disable())\n+                .logout(logout -> logout.disable())\n+                .cors(Customizer.withDefaults())\n+                .build();\n+    }\n+\n+    @Bean\n+    SecurityContextRepository securityContextRepository() {\n+        return new DelegatingSecurityContextRepository(\n+                new RequestAttributeSecurityContextRepository(),\n+                new HttpSessionSecurityContextRepository());\n+    }\n+\n+    @Bean\n+    SessionAuthenticationStrategy sessionAuthenticationStrategy() {\n+        return new ChangeSessionIdAuthenticationStrategy();\n+    }\n+\n+    private static CookieCsrfTokenRepository csrfTokenRepository() {\n+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();\n+        repository.setCookieName(\"XSRF-TOKEN\");\n+        repository.setHeaderName(\"X-XSRF-TOKEN\");\n+        repository.setCookieCustomizer(builder -> builder.path(\"/\").sameSite(\"Lax\"));\n+        return repository;\n+    }\n+\n+    private static void writeError(\n+            ObjectMapper objectMapper, HttpServletResponse response, ErrorCode errorCode)\n+            throws IOException {\n+        response.setStatus(errorCode.getStatus().value());\n+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);\n+        response.setCharacterEncoding(\"UTF-8\");\n+        objectMapper.writeValue(\n+                response.getOutputStream(), ApiResponse.fail(ErrorResponse.of(errorCode)));\n+    }\n+\n+    private static void handleAccessDenied(\n+            ObjectMapper objectMapper,\n+            HttpServletResponse response,\n+            AccessDeniedException exception)\n+            throws IOException {\n+        if (exception instanceof CsrfException) {\n+            writeError(objectMapper, response, ErrorCode.CSRF_TOKEN_INVALID);\n+            return;\n+        }\n+        response.sendError(HttpStatus.FORBIDDEN.value());\n+    }\n+\n+    /** SPA가 cookie의 원본 토큰을 header로 돌려보낼 수 있게 하면서 BREACH 방어용 XOR 토큰도 유지한다. */\n+    private static final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler {\n+\n+        private final CsrfTokenRequestHandler plain = new CsrfTokenRequestAttributeHandler();\n+        private final CsrfTokenRequestHandler xor = new XorCsrfTokenRequestAttributeHandler();\n+\n+        @Override\n+        public void handle(\n+                HttpServletRequest request,\n+                HttpServletResponse response,\n+                Supplier<CsrfToken> csrfToken) {\n+            xor.handle(request, response, csrfToken);\n+            csrfToken.get();\n+        }\n+\n+        @Override\n+        public String resolveCsrfTokenValue(HttpServletRequest request, CsrfToken csrfToken) {\n+            return request.getHeader(csrfToken.getHeaderName()) != null\n+                    ? plain.resolveCsrfTokenValue(request, csrfToken)\n+                    : xor.resolveCsrfTokenValue(request, csrfToken);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,6 +15,17 @@ public enum ErrorCode {\n     BROKER_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, \"작업 큐에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.\"),\n     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, \"서버 내부 오류가 발생했습니다.\"),\n \n+    // spec 014 사용자 인증. 계약은 specs/014-user-auth/contracts/auth-api.yaml.\n+    DUPLICATE_EMAIL(HttpStatus.BAD_REQUEST, \"이미 가입된 이메일입니다.\"),\n+    DUPLICATE_PHONE(HttpStatus.BAD_REQUEST, \"이미 가입된 전화번호입니다.\"),\n+    EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, \"이메일 인증을 완료해 주세요.\"),\n+    EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.BAD_REQUEST, \"인증 요청을 찾을 수 없습니다. 인증번호를 다시 요청해 주세요.\"),\n+    EMAIL_VERIFICATION_INVALID(HttpStatus.BAD_REQUEST, \"인증번호를 다시 확인해 주세요.\"),\n+    EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, \"인증번호가 만료되었습니다. 인증번호를 다시 요청해 주세요.\"),\n+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, \"이메일 또는 비밀번호를 확인해 주세요.\"),\n+    AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, \"로그인이 필요합니다.\"),\n+    CSRF_TOKEN_INVALID(HttpStatus.FORBIDDEN, \"요청 확인 정보가 만료되었습니다. 다시 시도해 주세요.\"),\n+\n     // spec 004 백테스트 실행. 계약은 specs/004-backtest-execution/contracts/rest-api.md \"오류 코드 추가분\".\n     RULES_NOT_REGISTERED(\n             HttpStatus.UNPROCESSABLE_ENTITY, \"아직 계산 규칙이 정해지지 않은 전략입니다. 다른 전략을 선택해 주세요.\"),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,8 @@ import org.springframework.http.HttpHeaders;\n import org.springframework.http.HttpStatus;\n import org.springframework.http.HttpStatusCode;\n import org.springframework.http.ResponseEntity;\n+import org.springframework.security.core.AuthenticationException;\n+import org.springframework.security.web.csrf.CsrfException;\n import org.springframework.web.bind.MethodArgumentNotValidException;\n import org.springframework.web.bind.annotation.ExceptionHandler;\n import org.springframework.web.bind.annotation.RestControllerAdvice;\n@@ -49,6 +51,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {\n                 .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INVALID_INPUT, e.getMessage())));\n     }\n \n+    /** 컨트롤러 또는 서비스 경계에서 발견한 미인증 요청을 공통 JSON 포맷으로 변환한다. */\n+    @ExceptionHandler(AuthenticationException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleAuthentication(AuthenticationException e) {\n+        log.warn(\"Authentication required: type={}\", e.getClass().getSimpleName());\n+        return ResponseEntity.status(ErrorCode.AUTHENTICATION_REQUIRED.getStatus())\n+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.AUTHENTICATION_REQUIRED)));\n+    }\n+\n+    /** MVC 계층까지 전달된 CSRF 검증 실패를 필터 계층과 같은 응답으로 변환한다. */\n+    @ExceptionHandler(CsrfException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleCsrf(CsrfException e) {\n+        log.warn(\"CSRF validation failed: type={}\", e.getClass().getSimpleName());\n+        return ResponseEntity.status(ErrorCode.CSRF_TOKEN_INVALID.getStatus())\n+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.CSRF_TOKEN_INVALID)));\n+    }\n+\n     /** 예상하지 못한 예외. 내부 정보가 새지 않도록 메시지는 고정 문구만 내려준다. */\n     @ExceptionHandler(Exception.class)\n     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+-- Spring Session JDBC 3.5.1 PostgreSQL schema.\n+-- Session state is stored separately from existing account data; this migration does not alter users.\n+CREATE TABLE spring_session (\n+    primary_id CHAR(36) NOT NULL,\n+    session_id CHAR(36) NOT NULL,\n+    creation_time BIGINT NOT NULL,\n+    last_access_time BIGINT NOT NULL,\n+    max_inactive_interval INT NOT NULL,\n+    expiry_time BIGINT NOT NULL,\n+    principal_name VARCHAR(100),\n+    CONSTRAINT spring_session_pk PRIMARY KEY (primary_id)\n+);\n+\n+CREATE UNIQUE INDEX spring_session_ix1 ON spring_session (session_id);\n+CREATE INDEX spring_session_ix2 ON spring_session (expiry_time);\n+CREATE INDEX spring_session_ix3 ON spring_session (principal_name);\n+\n+CREATE TABLE spring_session_attributes (\n+    session_primary_id CHAR(36) NOT NULL,\n+    attribute_name VARCHAR(200) NOT NULL,\n+    attribute_bytes BYTEA NOT NULL,\n+    CONSTRAINT spring_session_attributes_pk PRIMARY KEY (session_primary_id, attribute_name),\n+    CONSTRAINT spring_session_attributes_fk\n+        FOREIGN KEY (session_primary_id)\n+        REFERENCES spring_session (primary_id)\n+        ON DELETE CASCADE\n+);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260915092702__spring_session.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260915092702__spring_session.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,6 +18,11 @@ spring:\n   flyway:\n     enabled: false\n \n+  # 로컬은 Flyway가 꺼져 있으므로 Spring Session의 공식 PostgreSQL 스크립트로 세션 테이블을 준비한다.\n+  session:\n+    jdbc:\n+      initialize-schema: always\n+\n   # 백테스트 Job·이벤트 브로커. 토폴로지(exchange/queue/DLQ)는 BacktestRabbitConfig가 선언한다.\n   rabbitmq:\n     host: ${SPRING_RABBITMQ_HOST:localhost}\n@@ -29,6 +34,12 @@ spring:\n   kafka:\n     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}\n \n+server:\n+  servlet:\n+    session:\n+      cookie:\n+        secure: false\n+\n # 자동 탐색(spec 007) 로컬 개발값. 네 값 모두 **개발 편의값이며 팀 확정값이 아니다.**\n # API 응답의 limits.provisional에 네 항목이 모두 실려 화면에 임시값 표시가 붙는다(FR-005a).\n # 확정값은 PD-06(후보 수 상한 실측)과 PD-05 잔여(나머지 셋) 결정을 기다린다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-local.yml",
+          "old_path": "backend/src/main/resources/application-local.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -27,6 +27,11 @@ spring:\n     # constitution \"스키마 변경 규칙\": 운영 데이터베이스를 초기화하는 명령은 쓰지 않는다.\n     clean-disabled: true\n \n+  # 운영 스키마는 위 Flyway 마이그레이션만 관리한다.\n+  session:\n+    jdbc:\n+      initialize-schema: never\n+\n   rabbitmq:\n     host: ${SPRING_RABBITMQ_HOST}\n     port: ${SPRING_RABBITMQ_PORT}\n@@ -37,6 +42,12 @@ spring:\n   kafka:\n     bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}\n \n+server:\n+  servlet:\n+    session:\n+      cookie:\n+        secure: true\n+\n # 실행 한도(FR-006, R-19). **기본값을 두지 않는다** — 값이 없으면 기동이 실패한다.\n #\n # spec FR-006 은 \"상한을 정하기 전에 무제한 실행을 허용하지 않는다\"이다. 공통 설정에는 임시값이\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-prod.yml",
+          "old_path": "backend/src/main/resources/application-prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,10 @@ spring:\n   profiles:\n     default: local\n \n+  # 인증 상태는 서버가 관리하고 PostgreSQL에 저장한다. 테이블 초기화 방식은 프로필별로 정한다.\n+  session:\n+    timeout: 30m\n+\n   # 스키마 관리 정책은 프로필별로 갈린다.\n   #  - local: Hibernate ddl-auto=update (Flyway 비활성)\n   #  - prod : Flyway가 마이그레이션, Hibernate는 ddl-auto=validate로 검증만\n@@ -165,6 +169,13 @@ thorp:\n \n server:\n   port: 8080\n+  servlet:\n+    session:\n+      cookie:\n+        name: THORP_SESSION\n+        http-only: true\n+        same-site: lax\n+        path: /\n   # 결과 시계열이 이 앱에서 가장 큰 응답이다 — 5년 일봉이면 거래일 약 1,250개 × 5필드로 수백 KB고\n   # 날짜·숫자 문자열이 반복돼 압축률이 높다. 나머지 응답은 min-response-size 아래라 영향이 없다.\n   compression:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application.yml",
+          "old_path": "backend/src/main/resources/application.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,82 @@\n+package com.ssafy.thorp.account.presentation;\n+\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.common.config.SecurityConfig;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.common.web.advice.GlobalExceptionHandler;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+@WebMvcTest(controllers = AuthErrorContractTest.ContractController.class)\n+@Import({\n+    SecurityConfig.class,\n+    GlobalExceptionHandler.class,\n+    AuthErrorContractTest.ContractController.class\n+})\n+class AuthErrorContractTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+\n+    @Test\n+    @DisplayName(\"인증 비즈니스 오류도 공통 실패 응답 형식을 사용한다\")\n+    void authenticationBusinessErrorUsesCommonEnvelope() throws Exception {\n+        mockMvc.perform(get(\"/contract/auth-required\"))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"))\n+                .andExpect(jsonPath(\"$.error.message\").value(\"로그인이 필요합니다.\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"CSRF 토큰 누락은 공통 실패 응답 형식의 403으로 응답한다\")\n+    void missingCsrfTokenUsesCommonEnvelope() throws Exception {\n+        mockMvc.perform(post(\"/auth/contract/mutation\"))\n+                .andExpect(status().isForbidden())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"CSRF_TOKEN_INVALID\"))\n+                .andExpect(jsonPath(\"$.error.message\").value(\"요청 확인 정보가 만료되었습니다. 다시 시도해 주세요.\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"예상하지 못한 인증 영역 오류는 내부 메시지를 숨긴다\")\n+    void unexpectedErrorIsSanitized() throws Exception {\n+        mockMvc.perform(get(\"/contract/unexpected\"))\n+                .andExpect(status().isInternalServerError())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INTERNAL_ERROR\"))\n+                .andExpect(\n+                        jsonPath(\"$.error.message\").value(ErrorCode.INTERNAL_ERROR.getMessage()));\n+    }\n+\n+    @RestController\n+    static class ContractController {\n+\n+        @GetMapping(\"/contract/auth-required\")\n+        void authRequired() {\n+            throw new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED);\n+        }\n+\n+        @PostMapping(\"/auth/contract/mutation\")\n+        void mutate() {}\n+\n+        @GetMapping(\"/contract/unexpected\")\n+        void unexpected() {\n+            throw new IllegalStateException(\"credential-like internal detail\");\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,120 @@\n+package com.ssafy.thorp.account.security;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.common.config.SecurityConfig;\n+import jakarta.servlet.http.HttpServletRequest;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.mock.web.MockHttpServletRequest;\n+import org.springframework.mock.web.MockHttpServletResponse;\n+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;\n+import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;\n+import org.springframework.security.web.csrf.CsrfToken;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.ResponseStatus;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+@WebMvcTest(controllers = AuthSecurityIntegrationTest.SecurityProbeController.class)\n+@Import({SecurityConfig.class, AuthSecurityIntegrationTest.SecurityProbeController.class})\n+class AuthSecurityIntegrationTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private SessionAuthenticationStrategy sessionAuthenticationStrategy;\n+\n+    @Test\n+    @DisplayName(\"시장 정보 같은 공개 경로는 로그인 없이 이용할 수 있다\")\n+    void publicRouteRemainsAccessible() throws Exception {\n+        mockMvc.perform(get(\"/markets/security-probe\")).andExpect(status().isOk());\n+    }\n+\n+    @Test\n+    @DisplayName(\"현재 사용자 경로는 비로그인 요청에 JSON 401을 반환한다\")\n+    void currentUserRouteRequiresAuthentication() throws Exception {\n+        mockMvc.perform(get(\"/auth/me\"))\n+                .andExpect(status().isUnauthorized())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"AUTHENTICATION_REQUIRED\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"CSRF 준비 요청은 Axios 표준 이름과 속성의 쿠키를 만든다\")\n+    void csrfBootstrapCreatesReadableCookie() throws Exception {\n+        mockMvc.perform(get(\"/auth/csrf\"))\n+                .andExpect(status().isNoContent())\n+                .andExpect(cookie().exists(\"XSRF-TOKEN\"))\n+                .andExpect(cookie().httpOnly(\"XSRF-TOKEN\", false))\n+                .andExpect(cookie().path(\"XSRF-TOKEN\", \"/\"))\n+                .andExpect(\n+                        result ->\n+                                assertThat(\n+                                                result.getResponse()\n+                                                        .getCookie(\"XSRF-TOKEN\")\n+                                                        .getAttribute(\"SameSite\"))\n+                                        .isEqualTo(\"Lax\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"상태 변경 요청은 유효한 CSRF 토큰이 있어야 통과한다\")\n+    void mutationRequiresCsrfToken() throws Exception {\n+        mockMvc.perform(post(\"/backtests/security-probe\"))\n+                .andExpect(status().isForbidden())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"CSRF_TOKEN_INVALID\"));\n+\n+        mockMvc.perform(post(\"/backtests/security-probe\").with(csrf()))\n+                .andExpect(status().isNoContent());\n+    }\n+\n+    @Test\n+    @DisplayName(\"인증 성공 시 기존 익명 세션 식별자를 교체한다\")\n+    void authenticationRotatesSessionId() {\n+        MockHttpServletRequest request = new MockHttpServletRequest();\n+        MockHttpServletResponse response = new MockHttpServletResponse();\n+        String anonymousSessionId = request.getSession(true).getId();\n+\n+        sessionAuthenticationStrategy.onAuthentication(\n+                UsernamePasswordAuthenticationToken.authenticated(\n+                        \"member@example.com\", \"ignored\", java.util.List.of()),\n+                request,\n+                response);\n+\n+        assertThat(request.getSession(false)).isNotNull();\n+        assertThat(request.getSession(false).getId()).isNotEqualTo(anonymousSessionId);\n+    }\n+\n+    @RestController\n+    static class SecurityProbeController {\n+\n+        @GetMapping(\"/markets/security-probe\")\n+        String publicRoute() {\n+            return \"ok\";\n+        }\n+\n+        @GetMapping(\"/auth/csrf\")\n+        @ResponseStatus(HttpStatus.NO_CONTENT)\n+        void csrf(CsrfToken csrfToken) {\n+            csrfToken.getToken();\n+        }\n+\n+        @GetMapping(\"/auth/me\")\n+        String currentUser() {\n+            return \"authenticated\";\n+        }\n+\n+        @PostMapping(\"/backtests/security-probe\")\n+        @ResponseStatus(HttpStatus.NO_CONTENT)\n+        void mutate(HttpServletRequest request) {}\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;\n import static org.mockito.ArgumentMatchers.anyString;\n import static org.mockito.Mockito.never;\n import static org.mockito.Mockito.verify;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n@@ -206,6 +207,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {\n         String body =\n                 mockMvc.perform(\n                                 post(\"/backtests/{id}/cancel\", backtestId)\n+                                        .with(csrf())\n                                         .header(CurrentRequester.DEV_HEADER, user))\n                         .andExpect(status().isAccepted())\n                         .andReturn()\n@@ -610,6 +612,7 @@ class BacktestCancelFlowIT extends PostgresTestSupport {\n         // 두 번 취소는 409\n         mockMvc.perform(\n                         post(\"/backtests/{id}/cancel\", id)\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, user))\n                 .andExpect(status().isConflict())\n                 .andExpect(jsonPath(\"$.error.code\").value(\"NOT_CANCELLABLE\"));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestCancelFlowIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestCancelFlowIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.backtest.application.service;\n \n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n \n@@ -92,6 +93,7 @@ class BacktestPublishRecordIT extends PostgresTestSupport {\n                 com.jayway.jsonpath.JsonPath.read(\n                         mockMvc.perform(\n                                         post(\"/backtests\")\n+                                                .with(csrf())\n                                                 .header(CurrentRequester.DEV_HEADER, userId)\n                                                 .contentType(MediaType.APPLICATION_JSON)\n                                                 .content(body))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestPublishRecordIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestPublishRecordIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.backtest.infrastructure.messaging;\n \n import static org.assertj.core.api.Assertions.assertThat;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n@@ -97,6 +98,7 @@ class BacktestPublishAfterCommitIT extends PostgresTestSupport {\n                 com.jayway.jsonpath.JsonPath.read(\n                         mockMvc.perform(\n                                         post(\"/backtests\")\n+                                                .with(csrf())\n                                                 .header(CurrentRequester.DEV_HEADER, userId)\n                                                 .contentType(MediaType.APPLICATION_JSON)\n                                                 .content(body))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestPublishAfterCommitIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/infrastructure/messaging/BacktestPublishAfterCommitIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;\n import static org.mockito.Mockito.verify;\n import static org.mockito.Mockito.verifyNoInteractions;\n import static org.mockito.Mockito.when;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n@@ -34,6 +35,7 @@ import com.ssafy.thorp.backtest.domain.model.ProgressStage;\n import com.ssafy.thorp.backtest.domain.model.ResultSource;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.backtest.presentation.support.CurrentRequester;\n+import com.ssafy.thorp.common.config.SecurityConfig;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n import java.io.IOException;\n@@ -62,7 +64,7 @@ import org.springframework.test.web.servlet.MockMvc;\n  * <p>요청 본문의 기준은 계약 예시 파일이다. 예시가 바뀌면 이 테스트가 먼저 깨져서 문서와 코드가 갈라지지 않는다.\n  */\n @WebMvcTest(BacktestController.class)\n-@Import(CurrentRequester.class)\n+@Import({SecurityConfig.class, CurrentRequester.class})\n @TestPropertySource(properties = \"thorp.auth.trust-user-id-header=true\")\n class BacktestControllerTest {\n \n@@ -104,6 +106,7 @@ class BacktestControllerTest {\n             throws Exception {\n         return mockMvc.perform(\n                 post(\"/backtests\")\n+                        .with(csrf())\n                         .header(CurrentRequester.DEV_HEADER, USER)\n                         .contentType(MediaType.APPLICATION_JSON)\n                         .content(body));\n@@ -179,6 +182,7 @@ class BacktestControllerTest {\n     void missingRequesterHeaderIsRejected() throws Exception {\n         mockMvc.perform(\n                         post(\"/backtests\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(VALID_BODY))\n                 .andExpect(status().isBadRequest());\n@@ -345,6 +349,7 @@ class BacktestControllerTest {\n \n         mockMvc.perform(\n                         post(\"/backtests/{id}/cancel\", BACKTEST_ID)\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, USER))\n                 .andExpect(status().isAccepted())\n                 .andExpect(jsonPath(\"$.data.backtestId\").value(BACKTEST_ID))\n@@ -360,10 +365,11 @@ class BacktestControllerTest {\n \n         mockMvc.perform(\n                         post(\"/backtests/{id}/cancel\", BACKTEST_ID)\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, USER))\n                 .andExpect(status().isConflict())\n                 .andExpect(jsonPath(\"$.error.code\").value(\"NOT_CANCELLABLE\"));\n-        mockMvc.perform(post(\"/backtests/{id}/cancel\", BACKTEST_ID))\n+        mockMvc.perform(post(\"/backtests/{id}/cancel\", BACKTEST_ID).with(csrf()))\n                 .andExpect(status().isBadRequest());\n     }\n \n@@ -401,6 +407,7 @@ class BacktestControllerTest {\n \n         mockMvc.perform(\n                         post(\"/backtests/{id}/retry\", BACKTEST_ID)\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, USER))\n                 .andExpect(status().isAccepted())\n                 .andExpect(jsonPath(\"$.data.backtestId\").value(BACKTEST_ID))\n@@ -417,6 +424,7 @@ class BacktestControllerTest {\n \n         mockMvc.perform(\n                         post(\"/backtests/{id}/retry\", BACKTEST_ID)\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, USER))\n                 .andExpect(status().isConflict())\n                 .andExpect(jsonPath(\"$.error.code\").value(\"NOT_RETRYABLE\"));\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/BacktestControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,9 +42,46 @@ class ApplicationProfileConfigTest {\n                             .isEqualTo(\"update\");\n                     assertThat(context.getEnvironment().getProperty(\"spring.flyway.enabled\"))\n                             .isEqualTo(\"false\");\n+                    assertThat(\n+                                    context.getEnvironment()\n+                                            .getProperty(\"spring.session.jdbc.initialize-schema\"))\n+                            .isEqualTo(\"always\");\n+                    assertThat(\n+                                    context.getEnvironment()\n+                                            .getProperty(\"server.servlet.session.cookie.secure\"))\n+                            .isEqualTo(\"false\");\n                 });\n     }\n \n+    @Test\n+    void sharedSessionConfigUsesServerManagedThirtyMinuteSession() {\n+        contextRunner\n+                .withPropertyValues(\"spring.profiles.active=none\")\n+                .run(\n+                        context -> {\n+                            assertThat(context).hasNotFailed();\n+                            var environment = context.getEnvironment();\n+                            assertThat(environment.getProperty(\"spring.session.timeout\"))\n+                                    .isEqualTo(\"30m\");\n+                            assertThat(\n+                                            environment.getProperty(\n+                                                    \"server.servlet.session.cookie.name\"))\n+                                    .isEqualTo(\"THORP_SESSION\");\n+                            assertThat(\n+                                            environment.getProperty(\n+                                                    \"server.servlet.session.cookie.http-only\"))\n+                                    .isEqualTo(\"true\");\n+                            assertThat(\n+                                            environment.getProperty(\n+                                                    \"server.servlet.session.cookie.same-site\"))\n+                                    .isEqualTo(\"lax\");\n+                            assertThat(\n+                                            environment.getProperty(\n+                                                    \"server.servlet.session.cookie.path\"))\n+                                    .isEqualTo(\"/\");\n+                        });\n+    }\n+\n     /** 공통 설정에 ddl-auto가 남아 있으면 프로필을 지정하지 않은 실행에서 Hibernate가 스키마를 건드린다. */\n     @Test\n     void sharedConfigDoesNotDefineDdlAuto() {\n@@ -106,6 +143,14 @@ class ApplicationProfileConfigTest {\n                                     .isEqualTo(\"true\");\n                             assertThat(environment.getProperty(\"spring.flyway.clean-disabled\"))\n                                     .isEqualTo(\"true\");\n+                            assertThat(\n+                                            environment.getProperty(\n+                                                    \"spring.session.jdbc.initialize-schema\"))\n+                                    .isEqualTo(\"never\");\n+                            assertThat(\n+                                            environment.getProperty(\n+                                                    \"server.servlet.session.cookie.secure\"))\n+                                    .isEqualTo(\"true\");\n                         });\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/config/ApplicationProfileConfigTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -296,6 +296,45 @@ class FlywayMigrationTest extends PostgresTestSupport {\n                         \"created_at\");\n     }\n \n+    @Test\n+    @DisplayName(\"Spring Session 테이블이 공식 JDBC 스키마와 같은 컬럼을 갖는다\")\n+    void springSessionTablesHaveRequiredColumns() {\n+        assertThat(columnsOf(\"spring_session\"))\n+                .containsExactlyInAnyOrder(\n+                        \"primary_id\",\n+                        \"session_id\",\n+                        \"creation_time\",\n+                        \"last_access_time\",\n+                        \"max_inactive_interval\",\n+                        \"expiry_time\",\n+                        \"principal_name\");\n+        assertThat(columnsOf(\"spring_session_attributes\"))\n+                .containsExactlyInAnyOrder(\n+                        \"session_primary_id\", \"attribute_name\", \"attribute_bytes\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"Spring Session 조회 인덱스와 속성 삭제용 외래 키가 생성된다\")\n+    void springSessionIndexesAndForeignKeyExist() {\n+        List<String> indexes =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT LOWER(indexname) FROM pg_indexes\"\n+                                + \" WHERE schemaname = 'public'\"\n+                                + \" AND LOWER(tablename) = 'spring_session'\",\n+                        String.class);\n+        assertThat(indexes)\n+                .contains(\"spring_session_ix1\", \"spring_session_ix2\", \"spring_session_ix3\");\n+\n+        Integer foreignKeys =\n+                jdbcTemplate.queryForObject(\n+                        \"SELECT COUNT(*) FROM information_schema.table_constraints\"\n+                                + \" WHERE constraint_type = 'FOREIGN KEY'\"\n+                                + \" AND LOWER(table_name) = 'spring_session_attributes'\"\n+                                + \" AND LOWER(constraint_name) = 'spring_session_attributes_fk'\",\n+                        Integer.class);\n+        assertThat(foreignKeys).isEqualTo(1);\n+    }\n+\n     @Test\n     @DisplayName(\"V2가 backtest_result를 Entity 매핑과 같은 컬럼으로 만든다\")\n     void v2CreatesBacktestResultColumns() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,14 @@\n package com.ssafy.thorp.common.web.advice;\n \n import static org.hamcrest.Matchers.nullValue;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n \n+import com.ssafy.thorp.common.config.SecurityConfig;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n import jakarta.validation.Valid;\n@@ -31,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;\n  * <p>{@code @WebMvcTest} 슬라이스로 띄우므로 {@code JpaAuditingConfig}가 컨텍스트에서 제외되는지도 함께 확인된다.\n  */\n @WebMvcTest(controllers = GlobalExceptionHandlerTest.ThrowingController.class)\n-@Import(GlobalExceptionHandlerTest.ThrowingController.class)\n+@Import({SecurityConfig.class, GlobalExceptionHandlerTest.ThrowingController.class})\n class GlobalExceptionHandlerTest {\n \n     @Autowired private MockMvc mockMvc;\n@@ -52,6 +54,7 @@ class GlobalExceptionHandlerTest {\n     void validationException() throws Exception {\n         mockMvc.perform(\n                         post(\"/test/validation\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(\"{\\\"name\\\": \\\"\\\"}\"))\n                 .andExpect(status().isBadRequest())\n@@ -85,6 +88,7 @@ class GlobalExceptionHandlerTest {\n     void malformedJsonBody() throws Exception {\n         mockMvc.perform(\n                         post(\"/test/validation\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(\"{oops\"))\n                 .andExpect(status().isBadRequest())\n@@ -103,7 +107,7 @@ class GlobalExceptionHandlerTest {\n     @Test\n     @DisplayName(\"허용되지 않는 메서드는 500이 아니라 405로 응답한다\")\n     void methodNotAllowed() throws Exception {\n-        mockMvc.perform(delete(\"/test/business\"))\n+        mockMvc.perform(delete(\"/test/business\").with(csrf()))\n                 .andExpect(status().isMethodNotAllowed())\n                 .andExpect(jsonPath(\"$.success\").value(false));\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandlerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandlerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,7 @@ package com.ssafy.thorp.market.presentation.controller;\n import static org.hamcrest.Matchers.nullValue;\n import static org.mockito.ArgumentMatchers.any;\n import static org.mockito.Mockito.*;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;\n \n@@ -73,7 +74,7 @@ class MarketControllerTest {\n \n     @Test\n     void methodErrorUsesExistingCommonEnvelope() throws Exception {\n-        mvc.perform(post(\"/markets/kospi\"))\n+        mvc.perform(post(\"/markets/kospi\").with(csrf()))\n                 .andExpect(status().isMethodNotAllowed())\n                 .andExpect(jsonPath(\"$.success\").value(false))\n                 .andExpect(jsonPath(\"$.data\").value(nullValue()))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/market/presentation/controller/MarketControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/market/presentation/controller/MarketControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.paramsearch.presentation;\n \n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n@@ -80,6 +81,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n     void previewReturnsFourSections() throws Exception {\n         mockMvc.perform(\n                         post(\"/param-searches/preview\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(previewBody()))\n                 .andExpect(status().isOk())\n@@ -107,6 +109,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n         String created =\n                 mockMvc.perform(\n                                 post(\"/param-searches\")\n+                                        .with(csrf())\n                                         .header(CurrentRequester.DEV_HEADER, requesterId)\n                                         .contentType(MediaType.APPLICATION_JSON)\n                                         .content(createBody(registryVersion)))\n@@ -135,6 +138,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n     void staleVersionIsConflict() throws Exception {\n         mockMvc.perform(\n                         post(\"/param-searches\")\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, requesterId)\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(createBody(\"PROVISIONAL-19990101\")))\n@@ -161,6 +165,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n \n         mockMvc.perform(\n                         post(\"/param-searches\")\n+                                .with(csrf())\n                                 .header(CurrentRequester.DEV_HEADER, requesterId)\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(body))\n@@ -181,6 +186,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n \n         mockMvc.perform(\n                         post(\"/param-searches/preview\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(body))\n                 .andExpect(status().isBadRequest())\n@@ -196,6 +202,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n         // 요청자를 null 로 통과시키면 발행 직전에 NullPointerException 으로 죽어 사용자에게 500이 나간다.\n         mockMvc.perform(\n                         post(\"/param-searches\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(createBody(registryVersion)))\n                 .andExpect(status().isBadRequest())\n@@ -207,6 +214,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n     void previewWorksWithoutRequester() throws Exception {\n         mockMvc.perform(\n                         post(\"/param-searches/preview\")\n+                                .with(csrf())\n                                 .contentType(MediaType.APPLICATION_JSON)\n                                 .content(previewBody()))\n                 .andExpect(status().isOk())\n@@ -283,6 +291,7 @@ class ParamSearchApiIT extends PostgresTestSupport {\n         String body =\n                 mockMvc.perform(\n                                 post(\"/param-searches/preview\")\n+                                        .with(csrf())\n                                         .contentType(MediaType.APPLICATION_JSON)\n                                         .content(previewBody()))\n                         .andReturn()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/presentation/ParamSearchApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/presentation/ParamSearchApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n \n+import com.ssafy.thorp.common.config.SecurityConfig;\n import com.ssafy.thorp.paramsearch.application.exception.RegistryUnavailableException;\n import com.ssafy.thorp.paramsearch.application.exception.RegistryVersionChangedException;\n import com.ssafy.thorp.paramsearch.application.exception.StrategyNotExecutableException;\n@@ -29,7 +30,7 @@ import org.springframework.web.bind.annotation.RestController;\n  * 것을 한 번 더 확인한다.\n  */\n @WebMvcTest(controllers = ParamSearchErrorResponseTest.ThrowingController.class)\n-@Import(ParamSearchErrorResponseTest.ThrowingController.class)\n+@Import({SecurityConfig.class, ParamSearchErrorResponseTest.ThrowingController.class})\n class ParamSearchErrorResponseTest {\n \n     @Autowired private MockMvc mockMvc;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/presentation/ParamSearchErrorResponseTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/presentation/ParamSearchErrorResponseTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,7 +35,8 @@ dependencies {\n     implementation 'org.springframework.boot:spring-boot-starter-validation'\n     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'\n     implementation 'org.springframework.boot:spring-boot-starter-actuator'\n-    implementation 'org.springframework.security:spring-security-crypto'\n+    implementation 'org.springframework.boot:spring-boot-starter-security'\n+    implementation 'org.springframework.session:spring-session-jdbc'\n     implementation 'org.springframework.boot:spring-boot-starter-mail'\n     implementation 'org.springframework.kafka:spring-kafka' // 설치만. Job 전달은 RabbitMQ(starter-amqp)\n     implementation 'org.springframework.boot:spring-boot-starter-amqp'\n@@ -52,6 +53,7 @@ dependencies {\n     runtimeOnly 'org.postgresql:postgresql'\n \n     testImplementation 'org.springframework.boot:spring-boot-starter-test'\n+    testImplementation 'org.springframework.security:spring-security-test'\n     testImplementation 'org.springframework.kafka:spring-kafka-test'\n     testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'\n     // 통합 테스트용 컨테이너. 버전은 Boot BOM이 관리한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/build.gradle",
+          "old_path": "backend/build.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,9 +23,9 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n - [x] T001 [P] Add Vitest, jsdom, React Testing Library, and user-event dependencies and test scripts in `frontend/package.json` and `frontend/package-lock.json`\n - [x] T002 Configure Vitest DOM environment, aliases, and shared cleanup in `frontend/vite.config.ts` and `frontend/src/test/setup.ts` after T001\n-- [ ] T003 [P] Replace crypto-only security dependency with Spring Security starter and add Spring Session JDBC in `backend/build.gradle`\n-- [ ] T004 [P] Add PostgreSQL Spring Session tables and indexes without changing existing user data in `backend/src/main/resources/db/migration/V3__spring_session.sql`\n-- [ ] T005 Configure 30-minute inactive session timeout and `THORP_SESSION` cookie defaults per environment in `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-local.yml`, and `backend/src/main/resources/application-prod.yml`\n+- [x] T003 [P] Replace crypto-only security dependency with Spring Security starter and add Spring Session JDBC in `backend/build.gradle`\n+- [x] T004 [P] Add PostgreSQL Spring Session tables and indexes without changing existing user data in `backend/src/main/resources/db/migration/V20260915092702__spring_session.sql`\n+- [x] T005 Configure 30-minute inactive session timeout and `THORP_SESSION` cookie defaults per environment in `backend/src/main/resources/application.yml`, `backend/src/main/resources/application-local.yml`, and `backend/src/main/resources/application-prod.yml`\n \n **Checkpoint**: FE component tests and BE session-backed security code can be implemented.\n \n@@ -37,11 +37,11 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n **⚠️ CRITICAL**: 이 단계가 끝나기 전에는 사용자 스토리 구현을 병합하지 않는다.\n \n-- [ ] T006 [P] Add failing contract tests for the common authentication error envelope, CSRF 403, and sanitized 500 responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java`\n-- [ ] T007 [P] Add failing integration tests for public routes, protected authentication routes, CSRF bootstrap, cookie attributes, and session-id rotation in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java`\n+- [x] T006 [P] Add failing contract tests for the common authentication error envelope, CSRF 403, and sanitized 500 responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AuthErrorContractTest.java`\n+- [x] T007 [P] Add failing integration tests for public routes, protected authentication routes, CSRF bootstrap, cookie attributes, and session-id rotation in `backend/src/test/java/com/ssafy/thorp/account/security/AuthSecurityIntegrationTest.java`\n - [x] T008 [P] Define auth request, response, user, state, and stable error-code types from `contracts/auth-api.yaml` in `frontend/src/types/auth.ts`\n-- [ ] T009 Add stable account/auth error codes and security exception envelope handling in `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` and `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java` to satisfy T006\n-- [ ] T010 Add Spring Security session persistence, session-fixation protection, CSRF cookie repository, and JSON authentication handlers in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T007\n+- [x] T009 Add stable account/auth error codes and security exception envelope handling in `backend/src/main/java/com/ssafy/thorp/common/exception/ErrorCode.java` and `backend/src/main/java/com/ssafy/thorp/common/web/advice/GlobalExceptionHandler.java` to satisfy T006\n+- [x] T010 Add Spring Security session persistence, session-fixation protection, CSRF cookie repository, and JSON authentication handlers in `backend/src/main/java/com/ssafy/thorp/common/config/SecurityConfig.java` to satisfy T007\n - [x] T011 Extend Axios credentials, XSRF cookie/header names, CSRF bootstrap, and normalized API/network error handling in `frontend/src/api/client.ts`\n - [x] T012 [P] Add reusable auth API and provider test fixtures without storing credentials in `frontend/src/test/authFixtures.ts` and `frontend/src/test/renderWithRouter.tsx`\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2197906,
+      "head_commit_sha": "4386f6ee32992116f5f3fa833033889d89c3f5c1",
+      "base_commit_sha": "ac065179bc8e0709b5ce9129856f54d8f3964bb2",
+      "start_commit_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "created_at": "2026-09-15T11:50:08.556+09:00",
+      "merge_request_id": 944304,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "31ca79320a80b0b1d59c3a213582204223d4294b",
+      "commits": [
+        {
+          "id": "4386f6ee32992116f5f3fa833033889d89c3f5c1",
+          "short_id": "4386f6ee",
+          "created_at": "2026-09-15T11:50:01.000+09:00",
+          "parent_ids": [
+            "92570f2800ea8dc6a2996ed600108abca2b414e9"
+          ],
+          "title": "docs(be): Spring Session 마이그레이션 경로 정정",
+          "message": "docs(be): Spring Session 마이그레이션 경로 정정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:50:01.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:50:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4386f6ee32992116f5f3fa833033889d89c3f5c1"
+        },
+        {
+          "id": "92570f2800ea8dc6a2996ed600108abca2b414e9",
+          "short_id": "92570f28",
+          "created_at": "2026-09-15T11:39:05.000+09:00",
+          "parent_ids": [
+            "8ad7659c6b407903044e78d0396b81491e4d0765"
+          ],
+          "title": "fix(be): CSRF 보호 범위와 접근 거부 응답 처리 수정",
+          "message": "fix(be): CSRF 보호 범위와 접근 거부 응답 처리 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:39:05.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:39:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92570f2800ea8dc6a2996ed600108abca2b414e9"
+        },
+        {
+          "id": "8ad7659c6b407903044e78d0396b81491e4d0765",
+          "short_id": "8ad7659c",
+          "created_at": "2026-09-15T11:10:30.000+09:00",
+          "parent_ids": [
+            "049889ed89bbb4d2ef245cb2304a757c4466520a",
+            "ac065179bc8e0709b5ce9129856f54d8f3964bb2"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:10:30.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:10:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8ad7659c6b407903044e78d0396b81491e4d0765"
+        },
+        {
+          "id": "049889ed89bbb4d2ef245cb2304a757c4466520a",
+          "short_id": "049889ed",
+          "created_at": "2026-09-15T10:57:55.000+09:00",
+          "parent_ids": [
+            "343601725b271f1dbfe0fed409e2d74392833caf"
+          ],
+          "title": "feat(be): 인증 보안 기반과 공통 오류 응답 구성",
+          "message": "feat(be): 인증 보안 기반과 공통 오류 응답 구성\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T10:57:55.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T10:57:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/049889ed89bbb4d2ef245cb2304a757c4466520a"
+        },
+        {
+          "id": "343601725b271f1dbfe0fed409e2d74392833caf",
+          "short_id": "34360172",
+          "created_at": "2026-09-15T10:30:52.000+09:00",
+          "parent_ids": [
+            "46bc345012e11ad379d76b9070cd7a9d2752b204"
+          ],
+          "title": "feat(be): Spring Security 및 JDBC 세션 기반 구성",
+          "message": "feat(be): Spring Security 및 JDBC 세션 기반 구성\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T10:30:52.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T10:30:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/343601725b271f1dbfe0fed409e2d74392833caf"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2197894,
+      "head_commit_sha": "92570f2800ea8dc6a2996ed600108abca2b414e9",
+      "base_commit_sha": "ac065179bc8e0709b5ce9129856f54d8f3964bb2",
+      "start_commit_sha": "b7da38c85de028ded1c3a3852514bcd5e634952d",
+      "created_at": "2026-09-15T11:46:12.575+09:00",
+      "merge_request_id": 944304,
+      "state": "without_files",
+      "real_size": "21",
+      "patch_id_sha": "6527e348ba61f44434b959c249be62e16ba4d440",
+      "commits": [
+        {
+          "id": "92570f2800ea8dc6a2996ed600108abca2b414e9",
+          "short_id": "92570f28",
+          "created_at": "2026-09-15T11:39:05.000+09:00",
+          "parent_ids": [
+            "8ad7659c6b407903044e78d0396b81491e4d0765"
+          ],
+          "title": "fix(be): CSRF 보호 범위와 접근 거부 응답 처리 수정",
+          "message": "fix(be): CSRF 보호 범위와 접근 거부 응답 처리 수정\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:39:05.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:39:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92570f2800ea8dc6a2996ed600108abca2b414e9"
+        },
+        {
+          "id": "8ad7659c6b407903044e78d0396b81491e4d0765",
+          "short_id": "8ad7659c",
+          "created_at": "2026-09-15T11:10:30.000+09:00",
+          "parent_ids": [
+            "049889ed89bbb4d2ef245cb2304a757c4466520a",
+            "ac065179bc8e0709b5ce9129856f54d8f3964bb2"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/215-auth-security-foundation\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T11:10:30.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T11:10:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8ad7659c6b407903044e78d0396b81491e4d0765"
+        },
+        {
+          "id": "049889ed89bbb4d2ef245cb2304a757c4466520a",
+          "short_id": "049889ed",
+          "created_at": "2026-09-15T10:57:55.000+09:00",
+          "parent_ids": [
+            "343601725b271f1dbfe0fed409e2d74392833caf"
+          ],
+          "title": "feat(be): 인증 보안 기반과 공통 오류 응답 구성",
+          "message": "feat(be): 인증 보안 기반과 공통 오류 응답 구성\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T10:57:55.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T10:57:55.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/049889ed89bbb4d2ef245cb2304a757c4466520a"
+        },
+        {
+          "id": "343601725b271f1dbfe0fed409e2d74392833caf",
+          "short_id": "34360172",
+          "created_at": "2026-09-15T10:30:52.000+09:00",
+          "parent_ids": [
+            "46bc345012e11ad379d76b9070cd7a9d2752b204"
+          ],
+          "title": "feat(be): Spring Security 및 JDBC 세션 기반 구성",
+          "message": "feat(be): Spring Security 및 JDBC 세션 기반 구성\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T10:30:52.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T10:30:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/343601725b271f1dbfe0fed409e2d74392833caf"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2806748": [],
+    "2809525": []
+  }
+}

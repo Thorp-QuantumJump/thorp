@@ -1,0 +1,427 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 939841,
+    "iid": 37,
+    "project_id": 1444456,
+    "title": "docs(infra): spec 색인에 014 사용자 인증 추가",
+    "description": "# 작업 내용 요약\n\nMR !(121번 MR)로 `specs/014-user-auth/` spec 문서를 추가하면서 갱신하지 않은 `specs/README.md` spec 색인을 저장소 실제 상태와 맞춘다. 문서 사실 불일치 수정만 포함하고 spec 본문·plan·tasks·contract는 변경하지 않는다.\n\n014 사용자 인증은 기획서 §8.1의 다섯 기능 항목 중 어디에도 대응하지 않고 006 내 기록이 요구하는 기반 기능이므로, 색인의 `§8.1 항목` 열에 `기반`으로 표기해 기능 spec 13개의 전제를 유지하면서 색인에서 도달할 수 있게 했다.\n\n주요 변경 사항:\n\n- Spec 목록 표에 014 행 추가 (`§8.1 항목 = 기반 (§8.1 항목 아님)`, 우선순위 `P2 (006과 함께)`)\n- 개요·이력 서술을 \"기능 spec 13개 + 기반 spec 1개\" 구조로 정정 (실제 디렉터리 14개와 일치)\n- '기반' 표기의 의미와 우선순위 취급 규칙을 §8.1 항목 설명 아래에 명시\n- 흐름과 의존 관계에 **사용자 인증** 항목 추가: 014는 006의 진입 경계이며 001~~005·007~~013 공개 흐름은 014에 의존하지 않음\n- 우선순위 절에 \"기반 spec 014는 006보다 늦지 않게 착수\" 추가\n- 공통 가정 '이용 식별'의 소유 spec을 014로 지정하고 014 plan·research 링크 연결 → 다른 spec의 plan이 인증 방식을 다시 정하지 않도록 고정\n- 다음 단계의 plan 우선순위 순서를 `001 → 005 → 014·006·007 → 008~011 → 012·013`으로 갱신\n\n# 관련 티켓 번호 & 링크\n\n- ticket #(새 번호)\n- link: (Jira 이슈 링크)\n- 선행 MR: `docs(fe)/121-user-auth-spec` (014 spec 문서 추가, dev 머지 완료) — 해당 MR의 리뷰 포인트 8 후속 조치다.\n\n# 테스트\n\n문서 변경이므로 실행 테스트는 없고 색인 정합성 검토로 갈음한다.\n\n- [x] `specs/` 하위 spec 디렉터리 수(14)와 색인 서술(\"기능 13개 + 기반 1개\")이 일치\n- [x] 추가한 014 행의 링크 4개(`spec.md`, `plan.md`, `research.md`)가 실제 파일로 도달\n- [x] Spec 목록 표 열 수(6)가 헤더와 일치하고 표가 정상 렌더링\n- [x] 001\\~013 행·우선순위·PD 표·범위 밖 항목은 변경 없음 (diff 확인)\n- [x] 014를 `기반`으로 표기해 기존 `§8.1 항목` 열의 의미(1\\~5)가 깨지지 않음\n- [x] 공통 가정 '이용 식별'의 서술이 014 spec의 Assumptions·plan의 결정과 모순 없음\n\n# 리뷰 포인트\n\n1. **014의 색인 취급 방식**: `§8.1 항목 = 기반`으로 표에 편입하는 방식(현재 안)과 §8.1 기능 표를 13개로 유지하고 별도 절에 분리하는 방식 중 어느 쪽이 팀 기준에 맞는지. 앞으로 §8.1 밖 기반 spec이 더 생길 때의 선례가 된다.\n2. **014의 우선순위**: `P2 (006과 함께)`로 두고 \"006보다 늦지 않게 착수\"로 서술했다. 006 내 기록보다 먼저 착수해야 하는지, 병행 가능으로 볼지 확인 부탁.\n3. **인증 규칙 소유권 고정**: 공통 가정 '이용 식별'에 \"다른 spec의 plan은 인증 방식을 다시 정하지 않고 014를 따른다\"를 넣었다. 006·007 등 이후 plan 작성 시 이 제약이 과하지 않은지.\n4. **이력 서술**: 014 추가를 기존 13개 분리 이력과 같은 문단에 이어 적었다. 별도 이력 항목으로 분리할 필요가 있는지.",
+    "state": "merged",
+    "created_at": "2026-09-10T17:13:29.936+09:00",
+    "updated_at": "2026-09-10T17:14:07.494+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-10T17:14:07.301+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/{121}-spec-index-014",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e",
+    "merge_commit_sha": "1458dde880b81ae075130f06f4c1e403495bc530",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T17:13:30.980+09:00",
+    "reference": "!37",
+    "references": {
+      "short": "!37",
+      "relative": "!37",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!37"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/37",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 939841,
+    "iid": 37,
+    "project_id": 1444456,
+    "title": "docs(infra): spec 색인에 014 사용자 인증 추가",
+    "description": "# 작업 내용 요약\n\nMR !(121번 MR)로 `specs/014-user-auth/` spec 문서를 추가하면서 갱신하지 않은 `specs/README.md` spec 색인을 저장소 실제 상태와 맞춘다. 문서 사실 불일치 수정만 포함하고 spec 본문·plan·tasks·contract는 변경하지 않는다.\n\n014 사용자 인증은 기획서 §8.1의 다섯 기능 항목 중 어디에도 대응하지 않고 006 내 기록이 요구하는 기반 기능이므로, 색인의 `§8.1 항목` 열에 `기반`으로 표기해 기능 spec 13개의 전제를 유지하면서 색인에서 도달할 수 있게 했다.\n\n주요 변경 사항:\n\n- Spec 목록 표에 014 행 추가 (`§8.1 항목 = 기반 (§8.1 항목 아님)`, 우선순위 `P2 (006과 함께)`)\n- 개요·이력 서술을 \"기능 spec 13개 + 기반 spec 1개\" 구조로 정정 (실제 디렉터리 14개와 일치)\n- '기반' 표기의 의미와 우선순위 취급 규칙을 §8.1 항목 설명 아래에 명시\n- 흐름과 의존 관계에 **사용자 인증** 항목 추가: 014는 006의 진입 경계이며 001~~005·007~~013 공개 흐름은 014에 의존하지 않음\n- 우선순위 절에 \"기반 spec 014는 006보다 늦지 않게 착수\" 추가\n- 공통 가정 '이용 식별'의 소유 spec을 014로 지정하고 014 plan·research 링크 연결 → 다른 spec의 plan이 인증 방식을 다시 정하지 않도록 고정\n- 다음 단계의 plan 우선순위 순서를 `001 → 005 → 014·006·007 → 008~011 → 012·013`으로 갱신\n\n# 관련 티켓 번호 & 링크\n\n- ticket #(새 번호)\n- link: (Jira 이슈 링크)\n- 선행 MR: `docs(fe)/121-user-auth-spec` (014 spec 문서 추가, dev 머지 완료) — 해당 MR의 리뷰 포인트 8 후속 조치다.\n\n# 테스트\n\n문서 변경이므로 실행 테스트는 없고 색인 정합성 검토로 갈음한다.\n\n- [x] `specs/` 하위 spec 디렉터리 수(14)와 색인 서술(\"기능 13개 + 기반 1개\")이 일치\n- [x] 추가한 014 행의 링크 4개(`spec.md`, `plan.md`, `research.md`)가 실제 파일로 도달\n- [x] Spec 목록 표 열 수(6)가 헤더와 일치하고 표가 정상 렌더링\n- [x] 001\\~013 행·우선순위·PD 표·범위 밖 항목은 변경 없음 (diff 확인)\n- [x] 014를 `기반`으로 표기해 기존 `§8.1 항목` 열의 의미(1\\~5)가 깨지지 않음\n- [x] 공통 가정 '이용 식별'의 서술이 014 spec의 Assumptions·plan의 결정과 모순 없음\n\n# 리뷰 포인트\n\n1. **014의 색인 취급 방식**: `§8.1 항목 = 기반`으로 표에 편입하는 방식(현재 안)과 §8.1 기능 표를 13개로 유지하고 별도 절에 분리하는 방식 중 어느 쪽이 팀 기준에 맞는지. 앞으로 §8.1 밖 기반 spec이 더 생길 때의 선례가 된다.\n2. **014의 우선순위**: `P2 (006과 함께)`로 두고 \"006보다 늦지 않게 착수\"로 서술했다. 006 내 기록보다 먼저 착수해야 하는지, 병행 가능으로 볼지 확인 부탁.\n3. **인증 규칙 소유권 고정**: 공통 가정 '이용 식별'에 \"다른 spec의 plan은 인증 방식을 다시 정하지 않고 014를 따른다\"를 넣었다. 006·007 등 이후 plan 작성 시 이 제약이 과하지 않은지.\n4. **이력 서술**: 014 추가를 기존 13개 분리 이력과 같은 문단에 이어 적었다. 별도 이력 항목으로 분리할 필요가 있는지.",
+    "state": "merged",
+    "created_at": "2026-09-10T17:13:29.936+09:00",
+    "updated_at": "2026-09-10T17:14:07.494+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-10T17:14:07.301+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/{121}-spec-index-014",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e",
+    "merge_commit_sha": "1458dde880b81ae075130f06f4c1e403495bc530",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T17:13:30.980+09:00",
+    "reference": "!37",
+    "references": {
+      "short": "!37",
+      "relative": "!37",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!37"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/37",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+      "head_sha": "9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e",
+      "start_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "3e3bfcadd7977360e0f5d8c3de9bb56590bade3e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788245,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T17:13:30.074+09:00",
+          "updated_at": "2026-09-10T17:13:30.081+09:00",
+          "system": true,
+          "noteable_id": 939841,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 37,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dfa4b8416c415e8687956f62aa6d180bf73a02e6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788248,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 문서 변경 사항(색인 정합성, 기반 spec 014 추가, 의존 관계 및 공통 가정 갱신)이 설명과 정확히 일치하며 기술적·구조적 결함이 없습니다.\n\n### 테스트 제안\n- [Spec 색인 링크 검증] `specs/README.md`에 추가된 014 행의 링크 4개(`spec.md`, `plan.md`, `research.md`)가 실제 존재하는 디렉터리 경로와 정확히 매칭되는지 로컬 파일 시스템에서 확인합니다.\n- [마크다운 렌더링 검증] `specs/README.md`의 표(Table) 구문이 깨지지 않고 6개의 열(열 헤더와 행 데이터)이 정상적으로 렌더링되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-10T17:13:37.562+09:00",
+          "updated_at": "2026-09-10T17:13:37.562+09:00",
+          "system": false,
+          "noteable_id": 939841,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 37,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "49c9712ee5df372bddeabd1f1bd4e5beb5f3b439",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2788254,
+          "type": null,
+          "body": "mentioned in commit 1458dde880b81ae075130f06f4c1e403495bc530",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-10T17:14:07.389+09:00",
+          "updated_at": "2026-09-10T17:14:07.398+09:00",
+          "system": true,
+          "noteable_id": 939841,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 37,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2183308,
+      "head_commit_sha": "9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e",
+      "base_commit_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+      "start_commit_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+      "created_at": "2026-09-10T17:13:30.446+09:00",
+      "merge_request_id": 939841,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "b5ae0789502a5dd4784a8cd5f3c1deb00d0a5e6e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2183308,
+      "head_commit_sha": "9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e",
+      "base_commit_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+      "start_commit_sha": "e294f4cecb80e4f64fbcb3c623469448b31bb0ea",
+      "created_at": "2026-09-10T17:13:30.446+09:00",
+      "merge_request_id": 939841,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "b5ae0789502a5dd4784a8cd5f3c1deb00d0a5e6e",
+      "commits": [
+        {
+          "id": "9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e",
+          "short_id": "9ef0b421",
+          "created_at": "2026-09-10T17:12:23.000+09:00",
+          "parent_ids": [
+            "e294f4cecb80e4f64fbcb3c623469448b31bb0ea"
+          ],
+          "title": "docs(infra): spec 색인에 014 사용자 인증 추가",
+          "message": "docs(infra): spec 색인에 014 사용자 인증 추가\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-10T17:12:23.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-10T17:12:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9ef0b42199c51eb47f8d1e8bb6fba45e1b30584e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,10 +1,10 @@\n # Thorp Spec 색인\n \n-Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를 기능 단위 spec 13개로 나눈 색인이다. 각 spec은 `specs/NNN-name/spec.md`에 있고, 이 문서는 spec 사이의 관계·우선순위·팀이 확정해야 할 결정 항목·공통 가정·범위 밖 항목을 한 곳에 모은다. 개별 spec의 내용을 여기서 다시 정하지 않는다.\n+Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를 기능 단위 spec 13개로 나누고, §8.1 기능이 아니라 그 기능들이 요구하는 기반 spec 1개(014 사용자 인증)를 더한 색인이다. 각 spec은 `specs/NNN-name/spec.md`에 있고, 이 문서는 spec 사이의 관계·우선순위·팀이 확정해야 할 결정 항목·공통 가정·범위 밖 항목을 한 곳에 모은다. 개별 spec의 내용을 여기서 다시 정하지 않는다.\n \n **근거 문서**: Notion 기획서 \"Thorp - 퀀트 전략 분석 플랫폼\"(2026-09-09 18:03 UTC 편집판, 2026-09-10 조회)과 [constitution v1.0.0](../.specify/memory/constitution.md). 기획 근거는 절 번호(§), 결정 번호(D01~D27), 미확인 검증 항목(U01~U06)으로 인용한다. 최상위 규칙은 constitution이며, spec과 충돌하면 constitution을 따르고 spec을 고친다.\n \n-**이력**: 2026-09-10에 기획서 §8.1 전체를 담은 `001-thorp-platform` 하나로 초안을 썼고, 같은 날 spec 단위 재조정 요청에 따라 아래 13개로 분리했다. 원본의 요구사항·엣지 케이스·결정 항목은 모두 개별 spec 또는 이 문서로 옮겼다.\n+**이력**: 2026-09-10에 기획서 §8.1 전체를 담은 `001-thorp-platform` 하나로 초안을 썼고, 같은 날 spec 단위 재조정 요청에 따라 아래 13개로 분리했다. 원본의 요구사항·엣지 케이스·결정 항목은 모두 개별 spec 또는 이 문서로 옮겼다. 같은 날 006 내 기록이 요구하는 사용자 식별 흐름을 기반 spec `014-user-auth`로 추가했다.\n \n ## Spec 단위를 나눈 기준\n \n@@ -31,9 +31,12 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n | 011 | [경제환경 사례와 전략 비교 연결](011-regime-strategy-link/spec.md) | 두 진입 경로, 사후 63/21거래일 평가, 같은 조건 전략 비교, 자료 부족 처리, 비교 묶음 변경 | 4 | P3 | §4.3, D06, D25, D26 |\n | 012 | [시장 흐름 뉴스 묶음](012-market-news-digest/spec.md) | 뉴스 묶음 3개 표시, RSS·GDELT 수집·필터·묶음, 당시 뉴스 연결, 매체 허가 확인 | 5 | P4 | §4.4, §6.3, §10.1 |\n | 013 | [배우기](013-learning-pages/spec.md) | 주제별 글(질문 하나·예시 하나), 예시로 진단 시작, 용어 도움말 재사용 | 5 | P4 | §4.5, D01, D02 |\n+| 014 | [사용자 인증](014-user-auth/spec.md) | 회원가입·이메일 인증, 로그인과 상태 복원, '내 기록' 보호와 원래 위치 복귀, 로그아웃·만료 복구 | 기반 (§8.1 항목 아님) | P2 (006과 함께) | §5, 원칙 VIII, constitution 미합의 인증·인가 영역 |\n \n §8.1 항목: 1 대표 ETF·공통 자료·전략 명세와 다섯 전략 완성 / 2 섹터 선택 → 전략 확인 → 결과 비교 흐름과 상세 설정·내 기록 / 3 자동 파라미터 대량 탐색 / 4 경제환경 검색과 전략 진단 연결 / 5 시장 흐름·뉴스·배우기.\n \n+'기반'으로 표기한 spec은 기획서 §8.1의 기능 항목에 대응하지 않고, §8.1 기능이 동작하기 위해 필요한 공통 흐름을 다룬다. 기능 spec의 우선순위 계산에는 넣지 않고 의존하는 기능 spec의 우선순위를 따른다.\n+\n ## 흐름과 의존 관계\n \n - **전략 진단 흐름**: 001 자료 → 002 섹터·비중 → 003 전략·설정 → 004 실행 → 005 결과 → 006 기록. 005의 '다른 조건으로 비교'와 006의 '설정 바꿔 비교'는 003으로 돌아간다.\n@@ -41,11 +44,12 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n - **경제환경**: 008 지표 자료·기준월 → 009 시장 흐름 개요 → 010 검색(분야별·종합) → 011 사례와 전략 연결(004의 결과에서 사후 구간을 잘라 쓴다) → 006 기록. 011은 005의 '경제환경이 비슷했던 과거 보기'에서도 진입한다.\n - **뉴스**: 012는 009의 기본 화면에 놓이고, 010·011의 사례 화면에 당시 뉴스를 연결한다.\n - **배우기**: 013의 '이 예시로 비중 비교하기'는 002로 진입하고, 003·005의 용어 도움말이 013의 설명을 재사용한다.\n+- **사용자 인증**: 014는 006 내 기록의 진입 경계다. 비로그인 사용자가 '내 기록'에 접근하면 014의 로그인 흐름으로 보내고 성공 후 원래 위치로 돌려보낸다. 001~005·007~013의 공개 흐름은 014에 의존하지 않는다.\n - **공통 축**: 004의 실행 측정 기록(실행 유형별 대기 시간·처리량·원가)은 007과 010의 실행도 함께 기록한다. 001과 008의 자료 버전, 003의 등록표 버전, 004의 비용 조건 버전은 006의 재현 기록이 참조한다.\n \n ## 우선순위\n \n-constitution 원칙 I(중심 약속은 전략 진단)에 따라 전략 진단 흐름(001~005, P1) → 내 기록과 자동 탐색(006·007, P2) → 경제환경 자료·탐색과 전략 연결(008~011, P3) → 뉴스·배우기(012·013, P4) 순이다. 경제환경 검색은 자동 탐색 완료 뒤에만 착수하는 종속 작업이 아니며(§8.1), 우선순위는 병렬 개발을 막지 않는다. 각 spec 안의 사용자 스토리 우선순위(P1~P3)는 그 spec 안에서의 순서다.\n+constitution 원칙 I(중심 약속은 전략 진단)에 따라 전략 진단 흐름(001~005, P1) → 내 기록과 자동 탐색(006·007, P2) → 경제환경 자료·탐색과 전략 연결(008~011, P3) → 뉴스·배우기(012·013, P4) 순이다. 경제환경 검색은 자동 탐색 완료 뒤에만 착수하는 종속 작업이 아니며(§8.1), 우선순위는 병렬 개발을 막지 않는다. 각 spec 안의 사용자 스토리 우선순위(P1~P3)는 그 spec 안에서의 순서다. 기반 spec 014는 006이 요구하는 사용자 식별을 제공하므로 006보다 늦지 않게 착수한다.\n \n ## 공통 화면 원칙\n \n@@ -91,7 +95,7 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n \n ## 공통 가정\n \n-- **이용 식별**: 전략 진단·시장 흐름·배우기는 사용자 식별 없이 이용할 수 있고, '내 기록' 저장·재조회는 식별된 사용자 단위로 동작한다. 인증·인가 방식은 constitution \"합의되지 않은 영역\"이므로 plan에서 근거를 남기고 정한다.\n+- **이용 식별**: 전략 진단·시장 흐름·배우기는 사용자 식별 없이 이용할 수 있고, '내 기록' 저장·재조회는 식별된 사용자 단위로 동작한다. 인증·인가 방식은 constitution \"합의되지 않은 영역\"이므로 plan에서 근거를 남기고 정한다. 이 규칙의 소유 spec은 [014](014-user-auth/spec.md)이며 결정 근거는 [014 plan](014-user-auth/plan.md)과 [research](014-user-auth/research.md)에 있다. 다른 spec의 plan은 인증 방식을 다시 정하지 않고 014를 따른다.\n - **이용 환경**: 한국어 웹 서비스이며 데스크톱 브라우저를 우선한다. 모바일 대응 범위는 plan에서 정한다.\n - **계산 위치**: 백테스트·탐색·검색 계산은 서비스가 수행하고 사용자 기기에서 하지 않는다. 기준 백테스트 엔진은 constitution \"계산·데이터 규칙\"이 정한 엔진을 따르며 spec에서 다시 정하지 않는다.\n - **자료 확보 전 개발**: 대표 ETF 목록과 인증키 기반 실제 조회가 확정되기 전에는 허용된 대체 자료·명시된 예시 자료로 개발한다. 예시 자료 사용은 결과 옆에 표시한다.\n@@ -138,5 +142,5 @@ constitution \"하지 않는 것\"과 기획서 §8.2에 따라 아래 항목은 \n ## 다음 단계\n \n - `.specify/feature.json`의 `feature_directory`는 한 번에 spec 하나를 가리킨다. `/speckit-clarify`·`/speckit-plan`·`/speckit-tasks`를 실행하기 전에 대상 spec 디렉터리로 바꾼다.\n-- plan은 spec 우선순위 순서(001 → 005 → 006·007 → 008~011 → 012·013)를 기본으로 하되, 팀 배치에 따라 병렬로 진행할 수 있다. plan의 Constitution Check는 constitution을 기준으로 판정한다.\n+- plan은 spec 우선순위 순서(001 → 005 → 014·006·007 → 008~011 → 012·013)를 기본으로 하되, 팀 배치에 따라 병렬로 진행할 수 있다. plan의 Constitution Check는 constitution을 기준으로 판정한다.\n - PD 항목이 확정되면 소유 spec의 표를 갱신하고 이 문서의 상태 열도 같은 값으로 고친다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2788248": []
+  }
+}

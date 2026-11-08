@@ -1,0 +1,554 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963469,
+    "iid": 379,
+    "project_id": 1444456,
+    "title": "docs(fe): constitution 6.2.0",
+    "description": "제목: docs(fe): constitution 6.2.0 초안으로 배우기 글의 예시와 진단 연결을 글마다 고르게 한다\n\n# 작업 내용 요약\n\nconstitution '화면 구조'의 \"각 주제는 질문 하나·예시 하나·연결로 구성한다\"를 고쳐, 섹터·비중 예시와 '이 예시로 전략 진단하기' 연결을 글마다 넣을지 고르게 한다. 배우기를 27편으로 넓히며 분배금·보수·시장 흐름처럼 섹터 비중과 이어지지 않는 글이 생겼기 때문이다. 미승인 초안이라 전체 회의 승인이 필요하다.\n\n# 주요 변경 사항\n\n- '화면 구조'의 배우기 문장(6.2.0 초안): 단계별 커리큘럼으로 바꾸고, 예시와 연결은 글마다 고르며(넣는 글은 예시 하나), 연결 이름을 '이 예시로 전략 진단하기'로 맞췄다.\n- Sync Impact Report와 Version 줄의 미승인 초안 목록에 6.2.0을 더했다.\n\n# 테스트\n\n- [x] 문서 변경만 있다. `git diff --check` 통과\n\n# 리뷰 포인트\n\n- 구성 요건을 완화하는 변경을 MINOR(6.2.0)로 본 판단\n- 반려되면 spec 013 FR-003을 '모든 글이 예시와 연결을 가진다'로 되돌린다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**: 해당 없음(원칙 문서 변경)\n- [x] **결제·포인트·상품 선택 단계 0건**: 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건**: 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다**: 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다**: 해당 없음\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T19:36:53.220+09:00",
+    "updated_at": "2026-10-04T19:47:10.695+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T19:47:10.319+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/constitution-learning-example",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b1bbdde2f503825ad656a4224b2e13953fbd9dbd",
+    "merge_commit_sha": "b1cfb8aafcc2d1185410b9cac6b20e85809e103f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T19:36:54.529+09:00",
+    "reference": "!379",
+    "references": {
+      "short": "!379",
+      "relative": "!379",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!379"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/379",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963469,
+    "iid": 379,
+    "project_id": 1444456,
+    "title": "docs(fe): constitution 6.2.0",
+    "description": "제목: docs(fe): constitution 6.2.0 초안으로 배우기 글의 예시와 진단 연결을 글마다 고르게 한다\n\n# 작업 내용 요약\n\nconstitution '화면 구조'의 \"각 주제는 질문 하나·예시 하나·연결로 구성한다\"를 고쳐, 섹터·비중 예시와 '이 예시로 전략 진단하기' 연결을 글마다 넣을지 고르게 한다. 배우기를 27편으로 넓히며 분배금·보수·시장 흐름처럼 섹터 비중과 이어지지 않는 글이 생겼기 때문이다. 미승인 초안이라 전체 회의 승인이 필요하다.\n\n# 주요 변경 사항\n\n- '화면 구조'의 배우기 문장(6.2.0 초안): 단계별 커리큘럼으로 바꾸고, 예시와 연결은 글마다 고르며(넣는 글은 예시 하나), 연결 이름을 '이 예시로 전략 진단하기'로 맞췄다.\n- Sync Impact Report와 Version 줄의 미승인 초안 목록에 6.2.0을 더했다.\n\n# 테스트\n\n- [x] 문서 변경만 있다. `git diff --check` 통과\n\n# 리뷰 포인트\n\n- 구성 요건을 완화하는 변경을 MINOR(6.2.0)로 본 판단\n- 반려되면 spec 013 FR-003을 '모든 글이 예시와 연결을 가진다'로 되돌린다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건**: 해당 없음(원칙 문서 변경)\n- [x] **결제·포인트·상품 선택 단계 0건**: 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건**: 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다**: 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다**: 해당 없음\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T19:36:53.220+09:00",
+    "updated_at": "2026-10-04T19:47:10.695+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T19:47:10.319+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/constitution-learning-example",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b1bbdde2f503825ad656a4224b2e13953fbd9dbd",
+    "merge_commit_sha": "b1cfb8aafcc2d1185410b9cac6b20e85809e103f",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T19:36:54.529+09:00",
+    "reference": "!379",
+    "references": {
+      "short": "!379",
+      "relative": "!379",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!379"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/379",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+      "head_sha": "b1bbdde2f503825ad656a4224b2e13953fbd9dbd",
+      "start_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a2de3f0b5b6b7e45bb009f7e307139c9d66f7e60",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881377,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:36:53.324+09:00",
+          "updated_at": "2026-10-04T19:36:53.329+09:00",
+          "system": true,
+          "noteable_id": 963469,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 379,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f1da521c09d25697c932c3d97e3384d6e472d00a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881378,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:36:53.363+09:00",
+          "updated_at": "2026-10-04T19:36:53.398+09:00",
+          "system": true,
+          "noteable_id": 963469,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 379,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d8a6067a1a746f1f957c3f1dd84f3ba8d13adc2a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881379,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (본 Merge Request는 프로젝트의 헌법(Constitution) 문서 개정 초안을 다루는 문서 변경 건으로, 소스 코드 로직이나 보안에 영향을 미치는 변경 사항은 없습니다.)\n\n### 테스트 제안\n- 문서 변경 사항이므로 `git diff --check`를 통해 마크다운 문법이나 공백 오류가 없는지 확인합니다.\n- 헌법 개정 초안(`6.2.0`)에 명시된 대로, 전체 팀 회의를 통해 해당 변경 사항의 승인 여부를 결정하고, 반려될 경우 spec 013 FR-003 관련 조항을 원복하는 후속 조치(Follow-up)를 진행합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:b1bbdde2f503825ad656a4224b2e13953fbd9dbd -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T19:37:01.121+09:00",
+          "updated_at": "2026-10-04T19:37:01.121+09:00",
+          "system": false,
+          "noteable_id": 963469,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 379,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fcfffa60d7b7c138ac389aafa0654a23806e1c17",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881380,
+          "type": null,
+          "body": "marked this merge request as **draft**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:37:01.205+09:00",
+          "updated_at": "2026-10-04T19:37:01.209+09:00",
+          "system": true,
+          "noteable_id": 963469,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 379,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bd1e52d88db59357f6f2d3e30467bc254194edb1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881381,
+          "type": null,
+          "body": "marked this merge request as **ready**",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:47:06.762+09:00",
+          "updated_at": "2026-10-04T19:47:06.767+09:00",
+          "system": true,
+          "noteable_id": 963469,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 379,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0f3825d2e843dc8eb2b707b739505e84f70fe9f0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881382,
+          "type": null,
+          "body": "mentioned in commit b1cfb8aafcc2d1185410b9cac6b20e85809e103f",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T19:47:10.389+09:00",
+          "updated_at": "2026-10-04T19:47:10.396+09:00",
+          "system": true,
+          "noteable_id": 963469,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 379,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262325,
+      "head_commit_sha": "b1bbdde2f503825ad656a4224b2e13953fbd9dbd",
+      "base_commit_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+      "start_commit_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad",
+      "created_at": "2026-10-04T19:36:53.645+09:00",
+      "merge_request_id": 963469,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "1b213c6327b4894cb80b50f55462587a7fc92411"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262325,
+      "head_commit_sha": "b1bbdde2f503825ad656a4224b2e13953fbd9dbd",
+      "base_commit_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+      "start_commit_sha": "db9d0d845adfe3f1fa8083a965012984be58d1ad",
+      "created_at": "2026-10-04T19:36:53.645+09:00",
+      "merge_request_id": 963469,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "1b213c6327b4894cb80b50f55462587a7fc92411",
+      "commits": [
+        {
+          "id": "b1bbdde2f503825ad656a4224b2e13953fbd9dbd",
+          "short_id": "b1bbdde2",
+          "created_at": "2026-10-04T18:38:36.000+09:00",
+          "parent_ids": [
+            "fa122817274790c2f0a0737d0e364d1b63b0809f"
+          ],
+          "title": "docs(fe): constitution 6.2.0 초안으로 배우기 글의 예시와 진단 연결을 글마다 고르게 한다",
+          "message": "docs(fe): constitution 6.2.0 초안으로 배우기 글의 예시와 진단 연결을 글마다 고르게 한다\n\n'화면 구조' 절의 '각 주제는 질문 하나·예시 하나·연결로 구성한다'를 고쳐, 섹터·비중 예시와 '이 예시로 전략 진단하기' 연결은 글마다 넣을지 고르게 한다. 섹터 비중과 이어지지 않는 글에 억지 예시를 만들지 않으려는 것이다. 미승인 초안이며 전체 회의 승인이 남았다. 관련 spec 013 FR-003.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:38:36.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:38:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b1bbdde2f503825ad656a4224b2e13953fbd9dbd"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,15 @@\n <!--\n Sync Impact Report\n+- **(초안, 미승인) Version change: 6.1.0 → 6.2.0.** '화면 구조' 절의 배우기 문장을 고쳤다. \"각 주제는 질문\n+  하나·예시 하나·'이 예시로 비중 비교하기' 연결로 구성한다\"를 \"각 주제는 질문 하나를 중심으로 하고, 섹터·\n+  비중 예시와 '이 예시로 전략 진단하기' 연결은 글마다 넣을지 고른다(넣는 글은 예시 하나)\"로 바꿨다.\n+  '주제별 커리큘럼'도 '단계별 커리큘럼'으로 고쳤다. 구성 요건을 바꾸는 섹션 내용의 실질적 변경이므로\n+  MINOR다. 원칙의 삭제·재정의가 아니며, 행동 버튼이 하나뿐이라는 원칙 II는 그대로다.\n+- 6.2.0 초안의 근거: spec 013 담당자 결정(2026-10-04). 배우기를 여섯 단계 27편으로 넓히면서 분배금·보수·\n+  시장 흐름처럼 섹터 비중 예시와 이어지지 않는 글이 생겼다. 모든 글에 예시를 요구하면 억지 예시를 만들어야\n+  한다. 연결 이름은 화면과 spec에서 이미 쓰는 '이 예시로 전략 진단하기'로 맞췄다.\n+- Modified principles: 없음. Modified sections: 화면 구조(초안). Follow-up TODOs: 전체 회의 승인 또는 반려.\n+  반려되면 spec 013 FR-003을 '모든 글이 예시와 연결을 가진다'로 되돌린다.\n - **(초안, 미승인) Version change: 6.0.1 → 6.1.0.** '기록·개인정보·보관' 절에 비로그인 사용자의 브라우저\n   쪽 정보 규칙을 더했다. 비로그인 사용자의 입력·기록·화면 상태처럼 브라우저에 두는 사용자 정보는 탭 단위\n   세션 저장소에 두고 그 탭을 닫으면 모두 지워진다. 쿠키나 탭을 닫아도 남는 브라우저 저장소에 두지 않으며,\n@@ -462,8 +472,9 @@ AI(Claude 등) 모두에게 적용된다.\n - 시장 흐름은 전략을 만들지 않아도 볼 수 있는 진입 화면이며 생산·소비/투자·대외거래·노동·물가/원자재·\n   금융/주택·해외 경기의 7개 분야를 구분한다. 거시경제 API와 뉴스의 이름을 사용자가 고르게 하지 않는다.\n   경제환경 검색은 섹터 선택에 따라 바뀌지 않으며, 선택 섹터는 연결할 전략·상품·뉴스의 범위를 정한다.\n-- 배우기는 주제별 커리큘럼(블로그 글 형식)이며, 각 주제는 질문 하나·예시 하나·'이 예시로 비중\n-  비교하기' 연결로 구성한다. 진단 화면의 용어 도움말은 같은 설명을 재사용한다.\n+- 배우기는 단계별 커리큘럼(블로그 글 형식)이며, 각 주제는 질문 하나를 중심으로 한다. 섹터·비중 예시와\n+  '이 예시로 전략 진단하기' 연결은 글마다 넣을지 고르고, 넣는 글은 예시를 하나만 둔다. 진단 화면의 용어\n+  도움말은 같은 설명을 재사용한다. (초안, 6.2.0)\n \n ### 데이터 원천의 역할 (§6.2, §6.3, D12)\n \n@@ -848,4 +859,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 6.0.0 (Jira 연계 규칙 삭제; 3.5.0·5.0.0·6.0.1·6.1.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-29\n+**Version**: 6.0.0 (Jira 연계 규칙 삭제; 3.5.0·5.0.0·6.0.1·6.1.0·6.2.0 조항은 미승인 초안) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-29\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881379": []
+  }
+}

@@ -1,0 +1,903 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 955117,
+    "iid": 280,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록에 더 보기 메뉴와 이름 변경·삭제·내보내기를 단다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US4·US5의 화면 몫입니다. 목록 줄마다 '더 보기' 메뉴를 두고 그 안에 **이름 바꾸기·CSV/JSON 내보내기·지우기**를 넣었습니다. 결과 화면(005)의 비활성 '기록으로 내보내기'도 로그인 사용자에게 열었습니다.\n\nBE-5(`-393`)·BE-6(`-390`)이 만든 경로를 쓰는 첫 화면이라, **실제 서버를 띄워 브라우저로 확인**했습니다(아래 테스트).\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-394 `[FE] 내 기록 내보내기·이름 변경·삭제`\n- Story: -378 / Epic: -377 · 선행: -385(FE-1)·-390(BE-6)·-393(BE-5) 모두 dev 머지\n\n# 주요 변경 사항\n\n- **`RecordActionsMenu`**(새 파일). 줄마다 `⋯` 트리거와 `role=\"menu\"`. 메뉴를 닫으면 초점이 트리거로 돌아오고, `Esc`로도 닫힙니다(`closePanelOnEscape` 재사용). **한 번이라도 열린 뒤에만** 초점을 되돌립니다 — 마운트 때도 되돌리면 목록을 그릴 때마다 줄마다 자기 트리거를 잡아 마지막 줄이 이기고, 사용자는 화면 맨 아래에서 Tab 을 시작하게 됩니다.\n- **`RecordDialog`**(새 파일)와 그 위의 **`RenameDialog`·`DeleteConfirmDialog`**. 네이티브 `<dialog>` + `showModal()`이라 초점 가두기·`Esc`·배경 비활성을 브라우저가 합니다. 라이브러리를 더하지 않았습니다.\n- **삭제 확인 문구가 무엇이 남고 무엇이 사라지는지 말합니다** — \"저장된 계산 결과는 남고 내 목록에서만 사라집니다\". 되돌리기를 제안하지 않습니다(research R6). 이름 변경도 \"이름만 바뀝니다\"를 적습니다.\n- **목록을 다시 받지 않고 그 줄만 고치거나 없앱니다**(`useMyRecords.replaceItem`·`removeItem`). 다시 받으면 그 사이 새 항목이 끼어 사용자가 보던 자리가 움직입니다.\n- **내보내기는 받아 보고 결과를 알립니다**(`downloadMyRecordExport`). 주소를 앵커로 열면 실패를 알 수 없습니다 — 409·404·401이 와도 브라우저가 오류 본문을 파일로 받아 버리고 화면은 \"내려받습니다\"라고 말한 채 남습니다. 파일 이름은 서버의 `Content-Disposition`을 그대로 씁니다.\n- **진행 중 항목은 사유와 함께 막습니다.** `disabled` 대신 `aria-disabled`라 초점을 받아 사유가 읽힙니다.\n- **`NextStepLinks`(005)의 '기록으로 내보내기'**를 로그인 사용자에게 `/records?resultToken=…` 링크로 바꿨습니다. 비로그인에는 \"로그인이 필요합니다\"와 함께 비활성입니다. **011 경제환경 진입 로직은 그대로 두었습니다**(아래 리뷰 포인트).\n- 알림 영역(`role=\"status\"`)은 **늘 DOM 에 두고** 비웁니다 — 라이브 영역은 내용보다 먼저 있어야 보조기기가 변경을 알아챕니다. 질의가 바뀌면 앞선 알림을 비웁니다.\n\n# 테스트\n\n- `npm run lint`(0 errors) · `npm run build` · `npm test` — **1305건 통과, 139 파일**.\n- `MyRecordsPage.test.tsx` 추가분: 이름 변경이 그 줄만 고침(목록 재조회 없음), 변경 오류가 필드 오류로 보임, 삭제 확인 문구와 '복구' 조작 부재, 내보내기 두 형식 호출·진행 중 비활성, **내보내기 실패 알림**, **마운트 시 초점이 메뉴로 튀지 않음**, **Esc 로 닫히고 초점 복귀**, **대화상자를 열면 메뉴가 접힘**, **앞선 알림이 로딩 문장을 가리지 않음**.\n- `NextStepLinks.test.tsx`: 011 진입 2건(dev 것) + 006 로그인/비로그인 2건 + **011 이 006 변경과 무관하게 열려 있는지** 1건.\n- **가드를 되돌려 터지는 것을 확인한 검사 다섯**: 내보내기 실패 알림, 마운트 초점, Esc, 메뉴 접힘, 알림 비우기. 넣기만 하고 검출력을 안 본 검사는 두지 않았습니다.\n- **실서버 확인**(백엔드 `bootRun` + DB + 프런트 dev, 로그인 세션으로):\n  - `GET …/export?format=csv` → 200, `text/csv;charset=UTF-8`, **BOM + `# record` + CRLF** 확인\n  - `format=json` → 200 / `format=xml` → 400 `INVALID_INPUT` / 비로그인 → 401\n  - **한글 파일 이름**: 서버가 준 실제 헤더로 `filenameFrom` 을 돌려 `반도체 외 1 고정비중 2026-09-21.csv` 복원 확인\n  - 브라우저에서 CSV·JSON 내려받기, 이름 바꾸기, 키보드·`Esc`, 결과 화면 링크 동작 확인\n\n# 리뷰 포인트\n\n- **`showModal()`이 한 번도 불리지 않고 있었습니다.** JSX 가 `open` 속성을 먼저 달아 `dialog.open` 이 이미 참이라 조건이 거짓이 됐고, 대화상자가 **non-modal** 로 열려 메뉴와 겹쳤습니다. jsdom 에는 `showModal` 이 없어 **단위 테스트가 전부 통과하는 상태에서도 드러나지 않았습니다** — 실브라우저에서만 보이는 자리였습니다. `open` 속성을 빼고 `showModal` 만 쓰도록 고쳤고, 위치도 `position:fixed`로 잡았습니다(`.menuAnchor` 가 `position:relative` 라 그 버튼 기준으로 배치됐습니다).\n- **`005` 파일을 건드립니다.** `NextStepLinks.tsx`(006 갈래 교체), `ResultPage.tsx`(prop 하나), 그리고 테스트 4개 파일입니다. dev 머지에서 011 담당이 같은 컴포넌트를 크게 바꿔 둬 충돌이 났고, **011 로직(`token`·`compareToken`·`compareReady`·`/regime-link` 링크)은 그대로 두고 006 부분만 갈아 끼웠습니다.** 제 `resultToken` prop 은 버리고 dev 의 `token` 을 씁니다. 011 이 무관하게 열려 있는지 보는 단언을 넣었습니다.\n- **결과 화면 테스트 4개 파일에 `AuthProvider` 를 감쌌습니다.** `NextStepLinks` 가 `useAuth` 를 지나게 되면서 Provider 없이 렌더하던 테스트가 깨졌습니다. 실제 앱은 `main.tsx` 의 Provider 안에서 돌므로 테스트를 현실에 맞췄습니다 — `useAuth` 의 \"Provider 없으면 던진다\"를 우회하면 로그인 사용자에게 버튼이 안 보이는 버그가 조용히 숨습니다. 공용 `anonymousAuthContext` 를 `authFixtures` 에 뒀습니다.\n- **`/006 화면이 아직 없어/` 를 단언하던 005 테스트를 갱신했습니다.** T045a 가 바로 그 문장을 바꾸라고 한 것입니다.\n- **내보내기 실패는 일반 문장으로 알려집니다.** `responseType: 'blob'` 이라 오류 본문도 Blob 이고 `normalizeApiError` 가 서버 문장을 읽지 못합니다. 409 는 메뉴에서 미리 막으므로 남는 것은 404(다른 탭에서 지움)·400 정도입니다. 서버 문장을 살리려면 실패 갈래에서 `await cause.response.data.text()` 후 파싱하는 네 줄이면 됩니다 — 필요하다고 보시면 더하겠습니다.\n- **목록 아래 여백을 메뉴 높이만큼 두었습니다.** 마지막 줄의 메뉴가 화면 밖으로 나가 스크롤해야 했습니다. 화면 밖이면 위로 뒤집는(flip) 쪽이 정석이지만 버튼 위치·뷰포트를 재고 스크롤·리사이즈마다 다시 계산해야 해서, 자리를 미리 두는 쪽을 택했습니다.\n- **알림 영역이 페이지에 하나가 아닙니다.** 처음에 \"화면에 하나만 둔다\"고 적었는데 `RecordDetailPanel`·`SearchBundlePanel`·`RegimeRecordPanel` 이 이미 `role=\"status\"` 를 갖고 있었습니다. 주석을 \"페이지 수준 알림\"으로 고쳤고, 그 때문에 깨진 FE-2 테스트는 문장으로 자리를 집도록 수선했습니다.\n- **`role=\"menu\"` 안의 `<p>`(진행 중 사유)는 허용된 자식이 아닙니다**(`menuitem`·`group`·`separator` 만). `aria-describedby` 로 읽히기는 합니다. 고쳐야 한다고 보시면 `role=\"group\"` 으로 감싸겠습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **005 담당**: `NextStepLinks` 의 '기록으로 내보내기'가 로그인 사용자에게 열렸습니다. `ResultPage` 가 `token` 을 그대로 넘깁니다(011 이 더한 prop 을 씁니다). 결과 화면 테스트 4개 파일이 `AuthProvider` 안에서 렌더하도록 바뀌었습니다.\n- **011 담당**: `NextStepLinks` 를 006 이 함께 고쳤지만 `/regime-link` 링크 로직과 `compareToken`·`compareReady` 는 손대지 않았습니다. `NextStepLinks.test.tsx` 에 두 팀의 검사가 한 파일에 있습니다.\n- **DOCS-1 담당**: 로컬 개발 DB 가 낡아 있으면 `GET /my-records` 가 500 입니다(`backtest_request.public_token` 없음). quickstart 실행 전에 `docker compose down -v` 로 DB 를 다시 만들어야 할 수 있습니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- **DOCS-1**(T050~T053): quickstart S1~S13 통합 검증과 파트 문서 갱신. 006 구현 티켓 중 마지막입니다.\n- `tasks.md` 의 T045·T045a·T048·T049 체크박스는 머지 뒤에 표시합니다. T041~T044(BE-5 머지분)도 함께 표시하면 됩니다.\n- 내보내기 실패 시 서버 문장 되살리기(위 리뷰 포인트), `role=\"menu\"` 자식 정리.",
+    "state": "merged",
+    "created_at": "2026-09-21T17:50:06.241+09:00",
+    "updated_at": "2026-09-21T18:00:27.476+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T18:00:26.969+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/394-my-record-export-manage",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+    "merge_commit_sha": "4e8a068528023809799e65410ed66e961b3a7473",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T17:50:10.168+09:00",
+    "reference": "!280",
+    "references": {
+      "short": "!280",
+      "relative": "!280",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!280"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/280",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 955117,
+    "iid": 280,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록에 더 보기 메뉴와 이름 변경·삭제·내보내기를 단다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US4·US5의 화면 몫입니다. 목록 줄마다 '더 보기' 메뉴를 두고 그 안에 **이름 바꾸기·CSV/JSON 내보내기·지우기**를 넣었습니다. 결과 화면(005)의 비활성 '기록으로 내보내기'도 로그인 사용자에게 열었습니다.\n\nBE-5(`-393`)·BE-6(`-390`)이 만든 경로를 쓰는 첫 화면이라, **실제 서버를 띄워 브라우저로 확인**했습니다(아래 테스트).\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-394 `[FE] 내 기록 내보내기·이름 변경·삭제`\n- Story: -378 / Epic: -377 · 선행: -385(FE-1)·-390(BE-6)·-393(BE-5) 모두 dev 머지\n\n# 주요 변경 사항\n\n- **`RecordActionsMenu`**(새 파일). 줄마다 `⋯` 트리거와 `role=\"menu\"`. 메뉴를 닫으면 초점이 트리거로 돌아오고, `Esc`로도 닫힙니다(`closePanelOnEscape` 재사용). **한 번이라도 열린 뒤에만** 초점을 되돌립니다 — 마운트 때도 되돌리면 목록을 그릴 때마다 줄마다 자기 트리거를 잡아 마지막 줄이 이기고, 사용자는 화면 맨 아래에서 Tab 을 시작하게 됩니다.\n- **`RecordDialog`**(새 파일)와 그 위의 **`RenameDialog`·`DeleteConfirmDialog`**. 네이티브 `<dialog>` + `showModal()`이라 초점 가두기·`Esc`·배경 비활성을 브라우저가 합니다. 라이브러리를 더하지 않았습니다.\n- **삭제 확인 문구가 무엇이 남고 무엇이 사라지는지 말합니다** — \"저장된 계산 결과는 남고 내 목록에서만 사라집니다\". 되돌리기를 제안하지 않습니다(research R6). 이름 변경도 \"이름만 바뀝니다\"를 적습니다.\n- **목록을 다시 받지 않고 그 줄만 고치거나 없앱니다**(`useMyRecords.replaceItem`·`removeItem`). 다시 받으면 그 사이 새 항목이 끼어 사용자가 보던 자리가 움직입니다.\n- **내보내기는 받아 보고 결과를 알립니다**(`downloadMyRecordExport`). 주소를 앵커로 열면 실패를 알 수 없습니다 — 409·404·401이 와도 브라우저가 오류 본문을 파일로 받아 버리고 화면은 \"내려받습니다\"라고 말한 채 남습니다. 파일 이름은 서버의 `Content-Disposition`을 그대로 씁니다.\n- **진행 중 항목은 사유와 함께 막습니다.** `disabled` 대신 `aria-disabled`라 초점을 받아 사유가 읽힙니다.\n- **`NextStepLinks`(005)의 '기록으로 내보내기'**를 로그인 사용자에게 `/records?resultToken=…` 링크로 바꿨습니다. 비로그인에는 \"로그인이 필요합니다\"와 함께 비활성입니다. **011 경제환경 진입 로직은 그대로 두었습니다**(아래 리뷰 포인트).\n- 알림 영역(`role=\"status\"`)은 **늘 DOM 에 두고** 비웁니다 — 라이브 영역은 내용보다 먼저 있어야 보조기기가 변경을 알아챕니다. 질의가 바뀌면 앞선 알림을 비웁니다.\n\n# 테스트\n\n- `npm run lint`(0 errors) · `npm run build` · `npm test` — **1305건 통과, 139 파일**.\n- `MyRecordsPage.test.tsx` 추가분: 이름 변경이 그 줄만 고침(목록 재조회 없음), 변경 오류가 필드 오류로 보임, 삭제 확인 문구와 '복구' 조작 부재, 내보내기 두 형식 호출·진행 중 비활성, **내보내기 실패 알림**, **마운트 시 초점이 메뉴로 튀지 않음**, **Esc 로 닫히고 초점 복귀**, **대화상자를 열면 메뉴가 접힘**, **앞선 알림이 로딩 문장을 가리지 않음**.\n- `NextStepLinks.test.tsx`: 011 진입 2건(dev 것) + 006 로그인/비로그인 2건 + **011 이 006 변경과 무관하게 열려 있는지** 1건.\n- **가드를 되돌려 터지는 것을 확인한 검사 다섯**: 내보내기 실패 알림, 마운트 초점, Esc, 메뉴 접힘, 알림 비우기. 넣기만 하고 검출력을 안 본 검사는 두지 않았습니다.\n- **실서버 확인**(백엔드 `bootRun` + DB + 프런트 dev, 로그인 세션으로):\n  - `GET …/export?format=csv` → 200, `text/csv;charset=UTF-8`, **BOM + `# record` + CRLF** 확인\n  - `format=json` → 200 / `format=xml` → 400 `INVALID_INPUT` / 비로그인 → 401\n  - **한글 파일 이름**: 서버가 준 실제 헤더로 `filenameFrom` 을 돌려 `반도체 외 1 고정비중 2026-09-21.csv` 복원 확인\n  - 브라우저에서 CSV·JSON 내려받기, 이름 바꾸기, 키보드·`Esc`, 결과 화면 링크 동작 확인\n\n# 리뷰 포인트\n\n- **`showModal()`이 한 번도 불리지 않고 있었습니다.** JSX 가 `open` 속성을 먼저 달아 `dialog.open` 이 이미 참이라 조건이 거짓이 됐고, 대화상자가 **non-modal** 로 열려 메뉴와 겹쳤습니다. jsdom 에는 `showModal` 이 없어 **단위 테스트가 전부 통과하는 상태에서도 드러나지 않았습니다** — 실브라우저에서만 보이는 자리였습니다. `open` 속성을 빼고 `showModal` 만 쓰도록 고쳤고, 위치도 `position:fixed`로 잡았습니다(`.menuAnchor` 가 `position:relative` 라 그 버튼 기준으로 배치됐습니다).\n- **`005` 파일을 건드립니다.** `NextStepLinks.tsx`(006 갈래 교체), `ResultPage.tsx`(prop 하나), 그리고 테스트 4개 파일입니다. dev 머지에서 011 담당이 같은 컴포넌트를 크게 바꿔 둬 충돌이 났고, **011 로직(`token`·`compareToken`·`compareReady`·`/regime-link` 링크)은 그대로 두고 006 부분만 갈아 끼웠습니다.** 제 `resultToken` prop 은 버리고 dev 의 `token` 을 씁니다. 011 이 무관하게 열려 있는지 보는 단언을 넣었습니다.\n- **결과 화면 테스트 4개 파일에 `AuthProvider` 를 감쌌습니다.** `NextStepLinks` 가 `useAuth` 를 지나게 되면서 Provider 없이 렌더하던 테스트가 깨졌습니다. 실제 앱은 `main.tsx` 의 Provider 안에서 돌므로 테스트를 현실에 맞췄습니다 — `useAuth` 의 \"Provider 없으면 던진다\"를 우회하면 로그인 사용자에게 버튼이 안 보이는 버그가 조용히 숨습니다. 공용 `anonymousAuthContext` 를 `authFixtures` 에 뒀습니다.\n- **`/006 화면이 아직 없어/` 를 단언하던 005 테스트를 갱신했습니다.** T045a 가 바로 그 문장을 바꾸라고 한 것입니다.\n- **내보내기 실패는 일반 문장으로 알려집니다.** `responseType: 'blob'` 이라 오류 본문도 Blob 이고 `normalizeApiError` 가 서버 문장을 읽지 못합니다. 409 는 메뉴에서 미리 막으므로 남는 것은 404(다른 탭에서 지움)·400 정도입니다. 서버 문장을 살리려면 실패 갈래에서 `await cause.response.data.text()` 후 파싱하는 네 줄이면 됩니다 — 필요하다고 보시면 더하겠습니다.\n- **목록 아래 여백을 메뉴 높이만큼 두었습니다.** 마지막 줄의 메뉴가 화면 밖으로 나가 스크롤해야 했습니다. 화면 밖이면 위로 뒤집는(flip) 쪽이 정석이지만 버튼 위치·뷰포트를 재고 스크롤·리사이즈마다 다시 계산해야 해서, 자리를 미리 두는 쪽을 택했습니다.\n- **알림 영역이 페이지에 하나가 아닙니다.** 처음에 \"화면에 하나만 둔다\"고 적었는데 `RecordDetailPanel`·`SearchBundlePanel`·`RegimeRecordPanel` 이 이미 `role=\"status\"` 를 갖고 있었습니다. 주석을 \"페이지 수준 알림\"으로 고쳤고, 그 때문에 깨진 FE-2 테스트는 문장으로 자리를 집도록 수선했습니다.\n- **`role=\"menu\"` 안의 `<p>`(진행 중 사유)는 허용된 자식이 아닙니다**(`menuitem`·`group`·`separator` 만). `aria-describedby` 로 읽히기는 합니다. 고쳐야 한다고 보시면 `role=\"group\"` 으로 감싸겠습니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **005 담당**: `NextStepLinks` 의 '기록으로 내보내기'가 로그인 사용자에게 열렸습니다. `ResultPage` 가 `token` 을 그대로 넘깁니다(011 이 더한 prop 을 씁니다). 결과 화면 테스트 4개 파일이 `AuthProvider` 안에서 렌더하도록 바뀌었습니다.\n- **011 담당**: `NextStepLinks` 를 006 이 함께 고쳤지만 `/regime-link` 링크 로직과 `compareToken`·`compareReady` 는 손대지 않았습니다. `NextStepLinks.test.tsx` 에 두 팀의 검사가 한 파일에 있습니다.\n- **DOCS-1 담당**: 로컬 개발 DB 가 낡아 있으면 `GET /my-records` 가 500 입니다(`backtest_request.public_token` 없음). quickstart 실행 전에 `docker compose down -v` 로 DB 를 다시 만들어야 할 수 있습니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- **DOCS-1**(T050~T053): quickstart S1~S13 통합 검증과 파트 문서 갱신. 006 구현 티켓 중 마지막입니다.\n- `tasks.md` 의 T045·T045a·T048·T049 체크박스는 머지 뒤에 표시합니다. T041~T044(BE-5 머지분)도 함께 표시하면 됩니다.\n- 내보내기 실패 시 서버 문장 되살리기(위 리뷰 포인트), `role=\"menu\"` 자식 정리.",
+    "state": "merged",
+    "created_at": "2026-09-21T17:50:06.241+09:00",
+    "updated_at": "2026-09-21T18:00:27.476+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T18:00:26.969+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/394-my-record-export-manage",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+    "merge_commit_sha": "4e8a068528023809799e65410ed66e961b3a7473",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T17:50:10.168+09:00",
+    "reference": "!280",
+    "references": {
+      "short": "!280",
+      "relative": "!280",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!280"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/280",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "18",
+    "latest_build_started_at": "2026-09-21T17:50:22.056+09:00",
+    "latest_build_finished_at": "2026-09-21T18:16:05.215+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 213437,
+      "iid": 286,
+      "project_id": 1444456,
+      "sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+      "ref": "feat(fe)/394-my-record-export-manage",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T17:50:21.915+09:00",
+      "updated_at": "2026-09-21T18:16:05.223+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213437"
+    },
+    "head_pipeline": {
+      "id": 213437,
+      "iid": 286,
+      "project_id": 1444456,
+      "sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+      "ref": "feat(fe)/394-my-record-export-manage",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T17:50:21.915+09:00",
+      "updated_at": "2026-09-21T18:16:05.223+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213437",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T17:50:22.056+09:00",
+      "finished_at": "2026-09-21T18:16:05.215+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/213437",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "head_sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+      "start_sha": "757d3ad120097a8572a90b85ebb63ce39d922351"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "6ff7e84611309dd6e12931b6a066f1efd09c51cf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849731,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T17:50:06.400+09:00",
+          "updated_at": "2026-09-21T17:50:06.404+09:00",
+          "system": true,
+          "noteable_id": 955117,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 280,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7159fcd3a2104d1051c9425a126e91bd061e6063",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849732,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T17:50:06.421+09:00",
+          "updated_at": "2026-09-21T17:50:06.430+09:00",
+          "system": true,
+          "noteable_id": 955117,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 280,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "46c3694020a98b331552e2ef186464c17bb2a6db",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849738,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **웹 표준 활용과 접근성 고려**: `<dialog>` 엘리먼트와 `showModal()`을 사용하여 라이브러리 추가 없이 포커스 트랩, `Esc` 키 닫기, 배경 비활성화를 깔끔하게 구현했습니다. 또한 `aria-disabled`와 적절한 `aria-controls`, `role=\"menu\"` 구조로 보조기기 사용자를 세심하게 배려했습니다.\n- **불필요한 리렌더링 및 상태 흔들림 방지**: 이름 변경 시 전체 목록을 다시 조회하지 않고 `replaceItem`/`removeItem`을 통해 해당 항목만 부분 갱신하도록 설계하여 사용자 경험(스크롤 위치 유지 등)을 크게 향상시켰습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **이름 변경 실패 시나리오**: `renameMyRecord` API 호출 시 서버 에러(예: 400 Bad Request, 409 Conflict 등)가 발생할 때, 에러 메시지가 대화상자 내부에 올바르게 렌더링되고 다이얼로그가 닫히지 않는지 테스트합니다.\n- **내보내기 취소 및 네트워크 지연 시나리오**: `downloadMyRecordExport` 호출 중 대기 상태에서 사용자 인터랙션(예: 중복 클릭 또는 메뉴 닫기)이 발생했을 때의 예외 처리가 안정적으로 동작하는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7b8e2679fd821a7e98ccc31b2c800775cd2755f0 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T17:50:17.860+09:00",
+          "updated_at": "2026-09-21T17:50:17.860+09:00",
+          "system": false,
+          "noteable_id": 955117,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 280,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5d13fe0f8071e784fbf6f1d8babe33a91441c675",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849888,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T18:00:21.623+09:00",
+          "updated_at": "2026-09-21T18:00:21.631+09:00",
+          "system": true,
+          "noteable_id": 955117,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 280,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "76dd58db433aceea33b5aafc581ab7308378c297",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2849889,
+          "type": null,
+          "body": "mentioned in commit 4e8a068528023809799e65410ed66e961b3a7473",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T18:00:26.982+09:00",
+          "updated_at": "2026-09-21T18:00:26.989+09:00",
+          "system": true,
+          "noteable_id": 955117,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 280,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2234414,
+      "head_commit_sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+      "base_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "start_commit_sha": "757d3ad120097a8572a90b85ebb63ce39d922351",
+      "created_at": "2026-09-21T17:50:07.437+09:00",
+      "merge_request_id": 955117,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "7fd932c420c20245c4fffff1791777b89b5e2822"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2234414,
+      "head_commit_sha": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+      "base_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "start_commit_sha": "757d3ad120097a8572a90b85ebb63ce39d922351",
+      "created_at": "2026-09-21T17:50:07.437+09:00",
+      "merge_request_id": 955117,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "7fd932c420c20245c4fffff1791777b89b5e2822",
+      "commits": [
+        {
+          "id": "7b8e2679fd821a7e98ccc31b2c800775cd2755f0",
+          "short_id": "7b8e2679",
+          "created_at": "2026-09-21T17:46:07.000+09:00",
+          "parent_ids": [
+            "88852fa3cc9520df1f6707c68bc677774211bcbb"
+          ],
+          "title": "fix(fe): 대화상자를 실제 모달로 띄우고 메뉴와 겹치지 않게 한다",
+          "message": "fix(fe): 대화상자를 실제 모달로 띄우고 메뉴와 겹치지 않게 한다\n\n실브라우저에서 확인한 것들이다.\n\nshowModal 이 한 번도 불리지 않았다. JSX 가 open 속성을 먼저 달아 dialog.open 이 이미 참이라\n`if (open && !dialog.open)` 이 거짓이 됐다. 그래서 대화상자가 non-modal 로 열려 top layer 에\n올라가지 않았고, backdrop 도 없이 제자리에 그려져 '더 보기' 메뉴와 겹쳤다. open 속성을 JSX\n에서 빼고 showModal 만 쓴다(jsdom 에는 그 함수가 없어 그때만 속성으로 떨어진다).\n\n대화상자를 열 때 메뉴를 접는다. 둘이 함께 떠 있으면 무엇을 고르는 중인지 흐려진다.\n\nshowModal 로 열자 이번에는 왼쪽 위에 붙었다. 이 요소가 position:relative 인 .menuAnchor 안에\n있어 그 버튼을 기준으로 배치된 것이다. position:fixed + inset:0 + margin:auto 로 뷰포트\n가운데에 둔다. ::backdrop 도 덮어 뒤가 비쳐 보이지 않게 한다.\n\n목록 아래 여백을 메뉴 높이만큼 둔다. 마지막 줄의 '더 보기'를 눌렀을 때 메뉴가 화면 밖으로\n나가 스크롤해야 했다.\n\n메뉴가 접히는지 단언을 더하고, setOpen(false)를 지워 터지는 것을 확인했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T17:46:07.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T17:46:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7b8e2679fd821a7e98ccc31b2c800775cd2755f0"
+        },
+        {
+          "id": "88852fa3cc9520df1f6707c68bc677774211bcbb",
+          "short_id": "88852fa3",
+          "created_at": "2026-09-21T16:01:24.000+09:00",
+          "parent_ids": [
+            "1f791bdc6caba2f78f5be2c4388c548ba0425c95"
+          ],
+          "title": "fix(fe): 앞선 알림이 다음 조회의 불러오는 중 문장을 가리지 않게 한다",
+          "message": "fix(fe): 앞선 알림이 다음 조회의 불러오는 중 문장을 가리지 않게 한다\n\n리뷰 반영이다.\n\nnotice 를 비우는 곳이 없었다. 채우는 것은 메뉴의 announce 뿐이라, 이름을 한 번 바꾸고 나면 그\n문장이 화면이 살아 있는 내내 남고 로딩 문장과 한 자리를 쓰는 탓에 \"불러오는 중\"이 영영 뜨지\n않는다. 이미 끝난 일의 말이 다른 일을 하는 내내 남는 것도 같은 뿌리다.\n\n질의가 바뀔 때 비운다. 라이브 영역을 둘로 나누는 길도 있었지만(페이지에 role=status 가 이미\n여럿이라 모순이 아니다) 그쪽은 notice 가 영원히 남는 것을 풀지 못한다.\n\n알림을 띄운 뒤 필터를 바꾸면 로딩 문장이 뜨는 것을 검사로 둔다. 초기화를 지워 터지는 것을\n확인하고 원복했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T16:01:24.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T16:01:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/88852fa3cc9520df1f6707c68bc677774211bcbb"
+        },
+        {
+          "id": "1f791bdc6caba2f78f5be2c4388c548ba0425c95",
+          "short_id": "1f791bdc",
+          "created_at": "2026-09-21T15:52:16.000+09:00",
+          "parent_ids": [
+            "c6ba5b1a9ee95aba61c8db2f2709b5a08bf60394"
+          ],
+          "title": "fix(fe): 메뉴가 초점을 뺏지 않게 하고 Esc·라이브 영역을 고친다",
+          "message": "fix(fe): 메뉴가 초점을 뺏지 않게 하고 Esc·라이브 영역을 고친다\n\n리뷰 반영이다.\n\n초점 되돌리기 effect 가 마운트 때도 돌아, 목록을 그릴 때마다 줄마다 자기 '더 보기'를 잡고\n마지막 줄이 이겼다. 사용자는 화면 맨 아래에서 Tab 을 시작하게 되고 ?resultToken= 으로 들어온\n줄에 초점을 옮기는 006 로직과도 싸운다. 한 번이라도 열린 뒤에만 되돌린다.\n\n내려받기가 조용히 취소될 수 있었다. 앵커를 문서에 붙이지 않고 클릭했고 revokeObjectURL 을\n클릭 직후 동기로 불렀다 — blob 을 읽기 전에 주소가 죽으면 브라우저가 받다 만다. 붙였다 떼고\n해제를 다음 턴으로 미룬다. jsdom 에는 실제 다운로드가 없어 검사로는 드러나지 않는 자리다.\n\nrole=\"menu\" 를 붙여 놓고 Esc 로 닫히지 않았다. closePanelOnEscape 를 감싸개에 건다 — 메뉴를\n열어도 초점은 트리거에 남아 있어 메뉴 안쪽에만 걸면 키가 닿지 않는다.\n\n알림 영역을 조건부로 그리면 보조기기가 변경을 알아채지 못한다. 라이브 영역은 내용보다 먼저\nDOM 에 있어야 한다. 늘 그려 두고 비우며, 빈 자리는 :empty 로 감춘다. \"화면에 하나만 둔다\"는\n주석도 고쳤다 — RecordDetailPanel·SearchBundlePanel 등이 이미 자기 자리를 갖고 있어 사실이\n아니었다. 페이지 수준 알림이라는 뜻으로 적는다.\n\nrecords.module.css 에 .actions 가 두 번 선언돼 있었다(행의 버튼 줄과 메뉴 감싸개). 같은 모듈의\n같은 이름은 양쪽에 다 붙으므로 메뉴 쪽을 .menuAnchor 로 가른다.\n\n초점과 Esc 는 각각 되돌려 터지는 것을 확인하고 원복했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T15:52:16.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T15:52:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1f791bdc6caba2f78f5be2c4388c548ba0425c95"
+        },
+        {
+          "id": "c6ba5b1a9ee95aba61c8db2f2709b5a08bf60394",
+          "short_id": "c6ba5b1a",
+          "created_at": "2026-09-21T15:34:14.000+09:00",
+          "parent_ids": [
+            "4a1926a40bbca0a4b553b25cc862504ef50bfde7",
+            "d44ab223fa4cbb13b043f23222b158321c6afaa1"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/394-my-record-export-manage",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/394-my-record-export-manage\n\n# Conflicts:\n#\tfrontend/src/components/result/NextStepLinks.test.tsx\n#\tfrontend/src/components/result/NextStepLinks.tsx\n#\tfrontend/src/pages/ResultPage.tsx\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T15:34:14.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T15:34:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c6ba5b1a9ee95aba61c8db2f2709b5a08bf60394"
+        },
+        {
+          "id": "4a1926a40bbca0a4b553b25cc862504ef50bfde7",
+          "short_id": "4a1926a4",
+          "created_at": "2026-09-21T15:28:06.000+09:00",
+          "parent_ids": [
+            "4ca2f1801a0d9c82aabedd7d6add27d7993a60aa"
+          ],
+          "title": "fix(fe): 내보내기 실패를 알린다 — 앵커는 오류를 알 수 없다",
+          "message": "fix(fe): 내보내기 실패를 알린다 — 앵커는 오류를 알 수 없다\n\n주소를 앵커로 열면 실패를 감지할 방법이 없다. 그 사이 계산 상태가 바뀌어 409 가 오거나 세션이\n끊겨 401 이 와도 브라우저가 오류 본문을 파일로 받아 버리고, 화면은 \"내려받습니다\"라고 말한 채\n남는다. T045 가 시작뿐 아니라 실패도 알리라고 했는데(FR-021) 그 갈래가 비어 있었다.\n\n받아 보고 판단한다. downloadMyRecordExport 가 blob 으로 받아 Content-Disposition 의 파일\n이름을 그대로 쓰고, 실패하면 메뉴가 그 사유를 role=status 로 알린다. 파일 이름을 화면이 짓지\n않는 것은 앵커를 택했던 이유와 같다 — 서버가 붙인 이름과 갈리면 안 된다. 헤더를 읽지 못하면\nrecordId 로 대신하되 이름 하나 때문에 내려받기를 실패로 만들지 않는다.\n\nRUNNING 을 미리 막는 것은 그대로 두지만 그것만으로는 부족하다 — 목록을 받은 시점의 상태이고,\n띄워 둔 채 한참 뒤에 누르면 그 사이 바뀔 수 있다.\n\n실패를 삼키게 고쳐 새 검사가 터지는 것을 확인하고 되돌렸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T15:28:06.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T15:28:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4a1926a40bbca0a4b553b25cc862504ef50bfde7"
+        },
+        {
+          "id": "4ca2f1801a0d9c82aabedd7d6add27d7993a60aa",
+          "short_id": "4ca2f180",
+          "created_at": "2026-09-21T15:17:05.000+09:00",
+          "parent_ids": [
+            "adf2fd496ec9d43c6de9698708c7c7c124af4a8c"
+          ],
+          "title": "feat(fe): 내 기록에 더 보기 메뉴와 이름 변경·삭제·내보내기를 단다",
+          "message": "feat(fe): 내 기록에 더 보기 메뉴와 이름 변경·삭제·내보내기를 단다\n\n목록 줄마다 '더 보기'를 두고 이름 바꾸기·내보내기·지우기를 넣는다(spec 006 T045·T048·T049).\n결과 화면의 비활성 '기록으로 내보내기'도 로그인 사용자에게 연다(T045a).\n\n삭제 확인 문구가 \"저장된 계산 결과는 남고 내 목록에서만 사라집니다\"를 말한다. 되돌리기를\n제안하지 않는다 — 복구 경로를 만들지 않기로 했으므로 없는 길을 암시하는 문장도 두지 않는다.\n이름 변경도 \"이름만 바뀐다\"를 적는다. 사용자가 다시 계산되는지 걱정하지 않게 하는 한 줄이다.\n\n이름 변경·삭제는 목록을 다시 받지 않고 그 줄만 제자리에서 고치거나 없앤다(useMyRecords 의\nreplaceItem·removeItem). 다시 받으면 그 사이 새 항목이 끼어 사용자가 보던 자리가 움직인다.\n\n내보내기는 주소만 연다. 서버가 Content-Disposition: attachment 로 내려보내므로 앵커의\ndownload 가 그대로 받는다 — 여기서 받아 Blob 으로 다시 만들면 파일 이름을 화면이 짓게 되고\n서버가 정한 이름과 갈린다. 진행 중 항목은 서버가 409 로 거절하므로 눌러 보기 전에 사유와\n함께 막고, disabled 대신 aria-disabled 를 써서 초점이 사유를 읽게 한다.\n\n대화상자는 네이티브 <dialog>다. showModal()이 초점 가두기·Esc·배경 비활성을 해 주므로\n라이브러리를 더하지 않는다. 닫힌 대화상자는 DOM 에 두지 않는다 — 그 안의 저장·지우기 버튼이\n줄의 버튼으로 세어져 \"행마다 주 버튼 하나\"(원칙 II)가 깨진다.\n\nNextStepLinks 가 useAuth 를 지나게 되면서 결과 화면 테스트 넷이 AuthProvider 없이 렌더하다\n깨졌다. 실제 앱은 main.tsx 의 AuthProvider 안에서 도므로 테스트를 현실에 맞춘다 — useAuth 의\n\"Provider 없으면 던진다\"를 우회하면 로그인 사용자에게 버튼이 안 보이는 버그가 조용히 숨는다.\n공용 anonymousAuthContext 를 authFixtures 에 둔다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T15:17:05.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T15:17:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4ca2f1801a0d9c82aabedd7d6add27d7993a60aa"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -11,8 +11,8 @@ import type {\n /**\n  * spec 006 내 기록 API. 계약은 `specs/006-my-records/contracts/my-records-api.md`다.\n  *\n- * <p>부르는 화면이 있는 것만 둔다 — 목록·상세(006 화면)와 경제환경 기록(010 화면). 이름 변경·삭제·내보내기는 FE-4가 올 때\n- * 계약을 보고 더한다. 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.\n+ * <p>부르는 화면이 있는 것만 둔다 — 목록·상세(006 화면), 경제환경 기록(010 화면), 그리고 목록 줄의 '더 보기'가 쓰는 이름\n+ * 변경·삭제·내보내기. 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.\n  *\n  * <p>모든 경로가 로그인 필요다. 401은 `apiClient`의 인터셉터가 전역 인증 상태에 알리고, 화면은\n  * `ProtectedRoute`가 로그인 안내로 보낸다(S12). 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다 —\n@@ -91,3 +91,85 @@ export function recordRegimeSearch(\n     return unwrap(response.data)\n   })\n }\n+\n+/**\n+ * 이름 변경(FR-017). <b>이름만</b> 바뀌고 저장된 결과·참조 버전은 그대로다.\n+ *\n+ * <p>`name` 외의 키를 보내면 서버가 400으로 거절한다 — 무시하지 않는다. 그래서 이 함수도 다른 값을 함께 보내지 않는다.\n+ */\n+export function renameMyRecord(recordId: string, name: string): Promise<MyRecordDetail> {\n+  return runCsrfProtectedMutation(async () => {\n+    const response = await apiClient.patch<ApiEnvelope<MyRecordDetail>>(\n+      `${basePath}/${encodeURIComponent(recordId)}`,\n+      { name },\n+    )\n+    return unwrap(response.data)\n+  })\n+}\n+\n+/**\n+ * 삭제(FR-017). <b>개인 기록만 사라지고 공용 계산 결과는 남는다.</b>\n+ *\n+ * <p>확인은 화면이 받는다 — 서버는 이 요청을 받으면 바로 수행하고 되돌리는 경로가 없다. 이미 지운 항목은 404다.\n+ */\n+export function deleteMyRecord(recordId: string): Promise<{ recordId: string; deletedAt: string }> {\n+  return runCsrfProtectedMutation(async () => {\n+    const response = await apiClient.delete<ApiEnvelope<{ recordId: string; deletedAt: string }>>(\n+      `${basePath}/${encodeURIComponent(recordId)}`,\n+    )\n+    return unwrap(response.data)\n+  })\n+}\n+\n+/**\n+ * 내보내기(FR-015·FR-016·FR-021).\n+ *\n+ * <p><b>주소를 앵커로 여는 대신 받아서 내려준다.</b> 앵커는 실패를 알 수 없다 — 그 사이 계산 상태가 바뀌어 409가 오거나\n+ * 세션이 끊겨 401이 오면 브라우저가 그 오류 본문을 파일로 받아 버리고, 화면은 \"내려받습니다\"라고 말한 채로 남는다.\n+ * FR-021이 실패도 알리라고 했으므로 응답을 보고 판단한다.\n+ *\n+ * <p>파일 이름은 <b>서버가 정한 것을 그대로 쓴다</b>(`Content-Disposition`). 화면이 지으면 서버가 붙인 이름과 갈린다.\n+ */\n+export async function downloadMyRecordExport(\n+  recordId: string,\n+  format: 'csv' | 'json',\n+): Promise<void> {\n+  const response = await apiClient.get<Blob>(\n+    `${basePath}/${encodeURIComponent(recordId)}/export`,\n+    { params: { format }, responseType: 'blob' },\n+  )\n+  const name = filenameFrom(\n+    response.headers['content-disposition'],\n+    `${recordId}.${format}`,\n+  )\n+  const url = URL.createObjectURL(response.data)\n+  const anchor = document.createElement('a')\n+  anchor.href = url\n+  anchor.download = name\n+  // 문서에 붙였다 뗀다. 붙이지 않은 앵커의 click 을 무시하는 브라우저가 있다.\n+  document.body.appendChild(anchor)\n+  anchor.click()\n+  anchor.remove()\n+  // 해제를 다음 턴으로 미룬다. 클릭 직후 동기로 풀면 blob 을 읽기 전에 주소가 죽어 내려받기가\n+  // 조용히 취소된다 — jsdom 에는 실제 다운로드가 없어 검사로는 드러나지 않는 자리다.\n+  setTimeout(() => URL.revokeObjectURL(url), 0)\n+}\n+\n+/**\n+ * `Content-Disposition`의 파일 이름. `filename*`(RFC 5987)이 먼저다 — 한글 이름이 그 자리에 온다.\n+ *\n+ * <p>헤더가 없거나 읽지 못하면 부른 쪽이 준 이름을 쓴다. 이름 하나 때문에 내려받기를 실패로 만들지 않는다.\n+ */\n+function filenameFrom(disposition: unknown, fallback: string): string {\n+  if (typeof disposition !== 'string') return fallback\n+  const encoded = /filename\\*=UTF-8''([^;]+)/i.exec(disposition)\n+  if (encoded) {\n+    try {\n+      return decodeURIComponent(encoded[1])\n+    } catch {\n+      return fallback\n+    }\n+  }\n+  const plain = /filename=\"?([^\";]+)\"?/i.exec(disposition)\n+  return plain ? plain[1] : fallback\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/myRecords.ts",
+          "old_path": "frontend/src/api/myRecords.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,75 @@\n+import { useId, useState } from 'react'\n+import { normalizeApiError } from '@/api/client'\n+import { deleteMyRecord } from '@/api/myRecords'\n+import { Button } from '@/components/ui/button'\n+import { RecordDialog } from './RecordDialog'\n+import styles from './records.module.css'\n+\n+type Props = {\n+  open: boolean\n+  recordId: string\n+  recordName: string\n+  onClose: () => void\n+  /** 지운 뒤. 목록이 그 줄을 없앤다 */\n+  onDeleted: () => void\n+}\n+\n+/**\n+ * 삭제 확인(spec 006 FR-017, research R6, T048).\n+ *\n+ * <p><b>무엇이 남고 무엇이 사라지는지 말한다.</b> \"내 목록에서만 사라진다\"를 적지 않으면 사용자는 계산 결과가 지워진다고\n+ * 읽고, 그 오해는 되돌릴 수 없는 조작 앞에서 가장 나쁘다.\n+ *\n+ * <p><b>되돌리기를 제안하지 않는다.</b> 복구 경로를 만들지 않기로 했으므로(data-model §5) \"취소할 수 있습니다\" 같은 문구도\n+ * 두지 않는다 — 없는 길을 암시하는 문장이 곧 거짓이다.\n+ */\n+export function DeleteConfirmDialog({\n+  open,\n+  recordId,\n+  recordName,\n+  onClose,\n+  onDeleted,\n+}: Props) {\n+  const titleId = useId()\n+  const [error, setError] = useState<string | null>(null)\n+  const [deleting, setDeleting] = useState(false)\n+\n+  async function confirm() {\n+    setDeleting(true)\n+    setError(null)\n+    try {\n+      await deleteMyRecord(recordId)\n+      onDeleted()\n+      onClose()\n+    } catch (cause) {\n+      setError(normalizeApiError(cause).message)\n+    } finally {\n+      setDeleting(false)\n+    }\n+  }\n+\n+  return (\n+    <RecordDialog open={open} onClose={onClose} labelledBy={titleId}>\n+      <div className={styles.dialogBody}>\n+        <h2 id={titleId}>기록을 지울까요?</h2>\n+        <p>\n+          <strong>{recordName}</strong> 을(를) 내 목록에서 지웁니다.\n+        </p>\n+        <p className={styles.dialogNote}>저장된 계산 결과는 남고 내 목록에서만 사라집니다.</p>\n+        {error ? (\n+          <p role=\"alert\" className={styles.dialogError}>\n+            {error}\n+          </p>\n+        ) : null}\n+        <div className={styles.dialogActions}>\n+          <Button type=\"button\" variant=\"outline\" onClick={onClose}>\n+            취소\n+          </Button>\n+          <Button type=\"button\" onClick={confirm} disabled={deleting}>\n+            {deleting ? '지우는 중' : '지우기'}\n+          </Button>\n+        </div>\n+      </div>\n+    </RecordDialog>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/DeleteConfirmDialog.tsx",
+          "old_path": "frontend/src/components/records/DeleteConfirmDialog.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,160 @@\n+import { MoreHorizontal } from 'lucide-react'\n+import { useEffect, useId, useRef, useState } from 'react'\n+import { normalizeApiError } from '@/api/client'\n+import { downloadMyRecordExport } from '@/api/myRecords'\n+import { closePanelOnEscape } from '@/components/result/panelEscape'\n+import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'\n+import { DeleteConfirmDialog } from './DeleteConfirmDialog'\n+import { RenameDialog } from './RenameDialog'\n+import styles from './records.module.css'\n+\n+type Props = {\n+  item: MyRecordListItem\n+  onRenamed: (detail: MyRecordDetail) => void\n+  onDeleted: () => void\n+  /** 조작의 시작·실패를 알리는 자리. 화면 하나에 하나만 둔다(FR-021) */\n+  announce: (message: string) => void\n+  /** `?resultToken=`으로 들어온 줄은 메뉴를 열어 둔다(T021) */\n+  initiallyOpen?: boolean\n+}\n+\n+/**\n+ * 줄 하나의 '더 보기'(spec 006 FR-021, T045·T048).\n+ *\n+ * <p><b>내보내기는 받아 보고 결과를 알린다.</b> 주소를 앵커로 열면 실패를 알 수 없다 — 그 사이 계산 상태가 바뀌어 409가\n+ * 오거나 세션이 끊겨 401이 와도 브라우저가 오류 본문을 파일로 받아 버리고, 화면은 \"내려받습니다\"라고 말한 채 남는다.\n+ * 파일 이름은 서버가 붙인 것을 그대로 쓴다.\n+ *\n+ * <p><b>진행 중인 항목은 내보내지 않는다.</b> 결과가 아직 없어 서버가 409로 거절하므로, 눌러 본 뒤에 실패하는 대신 사유와\n+ * 함께 비활성으로 둔다. `disabled` 대신 `aria-disabled`인 이유는 초점을 받아야 사유가 읽히기 때문이다.\n+ */\n+export function RecordActionsMenu({\n+  item,\n+  onRenamed,\n+  onDeleted,\n+  announce,\n+  initiallyOpen = false,\n+}: Props) {\n+  const menuId = useId()\n+  const reasonId = useId()\n+  const triggerRef = useRef<HTMLButtonElement>(null)\n+  const [open, setOpen] = useState(initiallyOpen)\n+  const [dialog, setDialog] = useState<'rename' | 'delete' | null>(null)\n+  const running = item.status === 'RUNNING'\n+\n+  // 메뉴를 닫으면 초점이 연 버튼으로 돌아온다(FR-021). 대화상자가 열려 있는 동안에는 가져오지\n+  // 않는다 — 그러면 대화상자 안에서 입력하던 초점을 뺏는다.\n+  //\n+  // <b>한 번이라도 열린 뒤에만</b> 되돌린다. 이 effect 는 마운트 때도 도는데, 그때 초점을 주면\n+  // 목록을 그릴 때마다 줄마다 자기 트리거를 잡고 마지막 줄이 이긴다 — 사용자는 화면 맨 아래에서\n+  // Tab 을 시작하게 되고 `?resultToken=`으로 들어온 줄에 초점을 옮기는 006 로직과도 싸운다.\n+  const opened = useRef(false)\n+  useEffect(() => {\n+    if (open) {\n+      opened.current = true\n+      return\n+    }\n+    if (opened.current && dialog === null) triggerRef.current?.focus()\n+  }, [open, dialog])\n+\n+  /** 대화상자를 열 때 메뉴를 접는다. 둘이 함께 떠 있으면 무엇을 고르는 중인지 흐려진다. */\n+  function openDialog(which: 'rename' | 'delete') {\n+    setOpen(false)\n+    setDialog(which)\n+  }\n+\n+  async function startExport(format: 'csv' | 'json') {\n+    setOpen(false)\n+    announce(`${item.name} 을(를) ${format.toUpperCase()} 로 내려받습니다.`)\n+    try {\n+      await downloadMyRecordExport(item.recordId, format)\n+    } catch (cause) {\n+      announce(`내보내기에 실패했습니다. ${normalizeApiError(cause).message}`)\n+    }\n+  }\n+\n+  return (\n+    // Esc 를 감싸개에서 받는다. 메뉴를 열어도 초점은 트리거에 남아 있어 메뉴 안쪽에만 걸면\n+    // 키가 닿지 않는다.\n+    <div className={styles.menuAnchor} onKeyDown={closePanelOnEscape(() => setOpen(false))}>\n+      <button\n+        ref={triggerRef}\n+        type=\"button\"\n+        aria-label={`${item.name} 더 보기`}\n+        aria-expanded={open}\n+        aria-controls={menuId}\n+        aria-haspopup=\"true\"\n+        className={styles.menuButton}\n+        onClick={() => setOpen((current) => !current)}\n+      >\n+        <MoreHorizontal aria-hidden=\"true\" size={18} />\n+      </button>\n+\n+      {open ? (\n+        <div id={menuId} className={styles.menu} role=\"menu\">\n+          <button type=\"button\" role=\"menuitem\" onClick={() => openDialog('rename')}>\n+            이름 바꾸기\n+          </button>\n+          {running ? (\n+            <>\n+              <span role=\"menuitem\" aria-disabled=\"true\" aria-describedby={reasonId} tabIndex={0}>\n+                CSV로 내보내기\n+              </span>\n+              <span role=\"menuitem\" aria-disabled=\"true\" aria-describedby={reasonId} tabIndex={0}>\n+                JSON으로 내보내기\n+              </span>\n+              <p id={reasonId} className={styles.menuReason}>\n+                아직 계산이 끝나지 않아 내보낼 결과가 없습니다.\n+              </p>\n+            </>\n+          ) : (\n+            <>\n+              <button type=\"button\" role=\"menuitem\" onClick={() => startExport('csv')}>\n+                CSV로 내보내기\n+              </button>\n+              <button type=\"button\" role=\"menuitem\" onClick={() => startExport('json')}>\n+                JSON으로 내보내기\n+              </button>\n+            </>\n+          )}\n+          <button type=\"button\" role=\"menuitem\" onClick={() => openDialog('delete')}>\n+            지우기\n+          </button>\n+        </div>\n+      ) : null}\n+\n+      {/* 닫힌 대화상자를 DOM 에 두지 않는다 — 그 안의 저장·지우기 버튼이 줄의 버튼으로 세어져\n+          \"행마다 주 버튼 하나\"(원칙 II)가 깨진다. */}\n+      {dialog === 'rename' ? (\n+        <RenameDialog\n+        open\n+        recordId={item.recordId}\n+        currentName={item.name}\n+        onClose={() => {\n+          setDialog(null)\n+          setOpen(false)\n+        }}\n+        onRenamed={(detail) => {\n+          onRenamed(detail)\n+          announce(`이름을 ${detail.name}(으)로 바꿨습니다.`)\n+        }}\n+        />\n+      ) : null}\n+      {dialog === 'delete' ? (\n+        <DeleteConfirmDialog\n+        open\n+        recordId={item.recordId}\n+        recordName={item.name}\n+        onClose={() => {\n+          setDialog(null)\n+          setOpen(false)\n+        }}\n+        onDeleted={() => {\n+          onDeleted()\n+          announce(`${item.name} 을(를) 목록에서 지웠습니다.`)\n+        }}\n+        />\n+      ) : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordActionsMenu.tsx",
+          "old_path": "frontend/src/components/records/RecordActionsMenu.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+import { type ReactNode, useEffect, useRef } from 'react'\n+import styles from './records.module.css'\n+\n+type Props = {\n+  open: boolean\n+  /** 닫을 때 부른다. 초점은 연 버튼으로 되돌린다 — 그 일은 부른 쪽이 `returnFocusTo`로 맡긴다 */\n+  onClose: () => void\n+  labelledBy: string\n+  children: ReactNode\n+}\n+\n+/**\n+ * 네이티브 `<dialog>` 껍데기(spec 006 FR-021).\n+ *\n+ * <p><b>라이브러리를 더하지 않는다.</b> `showModal()`이 초점 가두기·`Esc` 닫기·배경 비활성을 브라우저에서 해 준다. 직접\n+ * 만들면 그 셋을 각각 다시 구현하게 되고, 하나만 빠져도 키보드 사용자가 갇힌다.\n+ *\n+ * <p>닫힘은 한 곳으로 모은다 — `Esc`와 취소 버튼이 모두 `close` 이벤트를 지나므로, 부른 쪽은 어떻게 닫혔는지 가리지 않고\n+ * 정리할 수 있다.\n+ */\n+export function RecordDialog({ open, onClose, labelledBy, children }: Props) {\n+  const ref = useRef<HTMLDialogElement>(null)\n+\n+  useEffect(() => {\n+    const dialog = ref.current\n+    if (!dialog) return\n+    if (open && !dialog.open) {\n+      // showModal 이라야 top layer 로 올라가 backdrop 이 생기고 뒤가 잠긴다. open 속성으로 여는\n+      // 것과 다르다 — 그때는 제자리에 그냥 그려져 메뉴 같은 것과 겹친다.\n+      if (typeof dialog.showModal === 'function') dialog.showModal()\n+      else dialog.setAttribute('open', '') // jsdom 에는 showModal 이 없다\n+    }\n+    if (!open && dialog.open) dialog.close()\n+  }, [open])\n+\n+  return (\n+    <dialog\n+      ref={ref}\n+      aria-labelledby={labelledBy}\n+      className={styles.dialog}\n+      onClose={onClose}\n+      onCancel={onClose}\n+    >\n+      {children}\n+    </dialog>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordDialog.tsx",
+          "old_path": "frontend/src/components/records/RecordDialog.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'\n import { Button } from '@/components/ui/button'\n import { useDisclosure } from '@/hooks/useDisclosure'\n import type { MyRecordDetail, MyRecordListItem } from '@/types/myRecords'\n+import { RecordActionsMenu } from './RecordActionsMenu'\n import { RecordDetailPanel } from './RecordDetailPanel'\n import { ReopenSettingsButton } from './ReopenSettingsButton'\n import {\n@@ -28,6 +29,12 @@ type Props = {\n   labels: RecordLabels\n   /** 처음부터 펼쳐 둔다(`?resultToken=`으로 들어온 행) */\n   initiallyOpen?: boolean\n+  /** 이름이 바뀌었다. 목록이 그 줄만 제자리에서 고친다 */\n+  onRenamed: (recordId: string, name: string) => void\n+  /** 지웠다. 목록이 그 줄을 없앤다 */\n+  onDeleted: (recordId: string) => void\n+  /** 조작의 시작·실패를 알리는 자리(FR-021) */\n+  announce: (message: string) => void\n }\n \n // `disabled` 는 초점을 받지 못해 aria-describedby 의 사유가 읽히지 않는다(FR-021). 초점은 두고 눌러도 아무 일이 없다.\n@@ -44,7 +51,7 @@ const KIND_ICON = { ANALYSIS: LineChart, SEARCH_BUNDLE: Layers, REGIME_SEARCH: C\n  * <p>상태와 사유는 성과와 다른 자리다(FR-014). 이 화면에는 성과 수치 자체가 없다.\n  */\n export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(\n-  { item, labels, initiallyOpen = false },\n+  { item, labels, initiallyOpen = false, onRenamed, onDeleted, announce },\n   ref,\n ) {\n   const panelId = useId()\n@@ -129,6 +136,13 @@ export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(\n         <Button type=\"button\" variant=\"outline\" {...detail.toggleProps}>\n           {detail.open ? '접기' : '자세히'}\n         </Button>\n+        <RecordActionsMenu\n+          item={item}\n+          initiallyOpen={initiallyOpen}\n+          announce={announce}\n+          onRenamed={(updated) => onRenamed(item.recordId, updated.name)}\n+          onDeleted={() => onDeleted(item.recordId)}\n+        />\n       </div>\n       {href ? null : (\n         <p id={reasonId} className={styles.hint}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordRow.tsx",
+          "old_path": "frontend/src/components/records/RecordRow.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,89 @@\n+import { type FormEvent, useEffect, useId, useState } from 'react'\n+import { renameMyRecord } from '@/api/myRecords'\n+import { Button } from '@/components/ui/button'\n+import { normalizeApiError } from '@/api/client'\n+import type { MyRecordDetail } from '@/types/myRecords'\n+import { RecordDialog } from './RecordDialog'\n+import styles from './records.module.css'\n+\n+type Props = {\n+  open: boolean\n+  recordId: string\n+  currentName: string\n+  onClose: () => void\n+  /** 성공했을 때 갱신된 상세. 목록이 그 줄만 제자리에서 고친다 */\n+  onRenamed: (detail: MyRecordDetail) => void\n+}\n+\n+/**\n+ * 이름 변경(spec 006 FR-017, T048).\n+ *\n+ * <p><b>이름만 바뀐다</b>는 사실을 문구로 말한다 — 저장된 계산 결과·참조 버전은 그대로다. 사용자가 \"다시 계산되나\"를 걱정하지\n+ * 않게 하는 한 문장이다.\n+ *\n+ * <p>빈 이름과 길이 초과는 서버가 400으로 거절한다. 그 문장을 그대로 필드 오류로 보인다 — 화면이 같은 규칙을 한 벌 더 적으면\n+ * 서버가 규칙을 바꿀 때 둘이 갈린다.\n+ */\n+export function RenameDialog({ open, recordId, currentName, onClose, onRenamed }: Props) {\n+  const titleId = useId()\n+  const inputId = useId()\n+  const errorId = useId()\n+  const [name, setName] = useState(currentName)\n+  const [error, setError] = useState<string | null>(null)\n+  const [saving, setSaving] = useState(false)\n+\n+  // 다시 열 때마다 지금 이름에서 시작한다. 앞서 고치다 만 값이 남아 있으면 무엇을 저장하는지 흐려진다.\n+  useEffect(() => {\n+    if (open) {\n+      setName(currentName)\n+      setError(null)\n+    }\n+  }, [open, currentName])\n+\n+  async function submit(event: FormEvent) {\n+    event.preventDefault()\n+    setSaving(true)\n+    setError(null)\n+    try {\n+      onRenamed(await renameMyRecord(recordId, name))\n+      onClose()\n+    } catch (cause) {\n+      setError(normalizeApiError(cause).message)\n+    } finally {\n+      setSaving(false)\n+    }\n+  }\n+\n+  return (\n+    <RecordDialog open={open} onClose={onClose} labelledBy={titleId}>\n+      <form className={styles.dialogBody} onSubmit={submit}>\n+        <h2 id={titleId}>이름 바꾸기</h2>\n+        <p className={styles.dialogNote}>\n+          이름만 바뀝니다. 저장된 계산 결과와 참조 버전은 그대로입니다.\n+        </p>\n+        <label htmlFor={inputId}>새 이름</label>\n+        <input\n+          id={inputId}\n+          value={name}\n+          onChange={(event) => setName(event.target.value)}\n+          aria-invalid={error ? true : undefined}\n+          aria-describedby={error ? errorId : undefined}\n+          autoFocus\n+        />\n+        {error ? (\n+          <p id={errorId} role=\"alert\" className={styles.dialogError}>\n+            {error}\n+          </p>\n+        ) : null}\n+        <div className={styles.dialogActions}>\n+          <Button type=\"button\" variant=\"outline\" onClick={onClose}>\n+            취소\n+          </Button>\n+          <Button type=\"submit\" disabled={saving}>\n+            {saving ? '저장 중' : '저장'}\n+          </Button>\n+        </div>\n+      </form>\n+    </RecordDialog>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RenameDialog.tsx",
+          "old_path": "frontend/src/components/records/RenameDialog.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -300,3 +300,110 @@\n   color: var(--thorp-muted);\n   font-weight: 600;\n }\n+\n+/* --- '더 보기' 메뉴와 대화상자 (spec 006 FR-021, T045·T048) --- */\n+\n+/* 행의 버튼 줄인 .actions 와 이름이 겹치지 않게 둔다 — 같은 모듈의 같은 이름은 양쪽에 다 붙는다. */\n+.menuAnchor {\n+  position: relative;\n+}\n+\n+.menuButton {\n+  display: inline-flex;\n+  align-items: center;\n+  justify-content: center;\n+  width: 2rem;\n+  height: 2rem;\n+  border: 1px solid var(--border, #d4d4d8);\n+  border-radius: 0.375rem;\n+  background: transparent;\n+  cursor: pointer;\n+}\n+\n+.menu {\n+  position: absolute;\n+  right: 0;\n+  z-index: 10;\n+  display: flex;\n+  flex-direction: column;\n+  min-width: 12rem;\n+  padding: 0.25rem;\n+  border: 1px solid var(--border, #d4d4d8);\n+  border-radius: 0.5rem;\n+  background: var(--background, #fff);\n+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);\n+}\n+\n+.menu > a,\n+.menu > button,\n+.menu > span {\n+  padding: 0.5rem 0.75rem;\n+  border: 0;\n+  border-radius: 0.375rem;\n+  background: transparent;\n+  color: inherit;\n+  font: inherit;\n+  text-align: left;\n+  text-decoration: none;\n+  cursor: pointer;\n+}\n+\n+.menu > [aria-disabled='true'] {\n+  opacity: 0.5;\n+  cursor: not-allowed;\n+}\n+\n+.menuReason {\n+  margin: 0;\n+  padding: 0 0.75rem 0.5rem;\n+  font-size: 0.8125rem;\n+}\n+\n+.dialog {\n+  /* 화면 가운데에 띄운다. 이 요소가 position:relative 인 .menuAnchor 안에 있어서, 자리를 정해\n+     주지 않으면 그 버튼 기준으로 배치돼 왼쪽 위에 붙는다. fixed 라야 뷰포트 기준이 된다. */\n+  position: fixed;\n+  inset: 0;\n+  margin: auto;\n+  width: min(28rem, calc(100vw - 2rem));\n+  max-height: calc(100vh - 4rem);\n+  padding: 0;\n+  border: 1px solid var(--border, #d4d4d8);\n+  border-radius: 0.75rem;\n+  background: var(--background, #fff);\n+  color: inherit;\n+}\n+\n+/* showModal 로 열어야 이 배경이 생긴다. 뒤의 메뉴·목록이 비쳐 보이지 않게 덮는다. */\n+.dialog::backdrop {\n+  background: rgb(0 0 0 / 40%);\n+}\n+\n+.dialogBody {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 0.5rem;\n+  padding: 1.25rem;\n+}\n+\n+.dialogNote {\n+  margin: 0;\n+  font-size: 0.875rem;\n+}\n+\n+.dialogError {\n+  margin: 0;\n+  font-size: 0.875rem;\n+}\n+\n+.dialogActions {\n+  display: flex;\n+  justify-content: flex-end;\n+  gap: 0.5rem;\n+  margin-top: 0.5rem;\n+}\n+\n+/* 비어 있어도 라이브 영역은 살아 있어야 한다. 자리만 차지하지 않게 감춘다. */\n+.status:empty {\n+  display: none;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/records.module.css",
+          "old_path": "frontend/src/components/records/records.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,16 +1,29 @@\n import { render, screen } from '@testing-library/react'\n import { MemoryRouter } from 'react-router-dom'\n import { describe, expect, it } from 'vitest'\n+import { AuthContext } from '@/auth/auth-context'\n+import { anonymousAuthContext, authenticatedUser } from '@/test/authFixtures'\n import { resultDetailCompleted } from '@/test/resultFixtures'\n import { NextStepLinks } from './NextStepLinks'\n \n const base = 'a'.repeat(32)\n const target = 'b'.repeat(32)\n \n-function renderLinks(props: Partial<Parameters<typeof NextStepLinks>[0]> = {}) {\n+const loggedInAuth = {\n+  ...anonymousAuthContext,\n+  user: authenticatedUser,\n+  status: 'authenticated',\n+} as typeof anonymousAuthContext\n+\n+function renderLinks(\n+  props: Partial<Parameters<typeof NextStepLinks>[0]> = {},\n+  auth = anonymousAuthContext,\n+) {\n   return render(\n     <MemoryRouter>\n-      <NextStepLinks config={resultDetailCompleted.config} token={base} {...props} />\n+      <AuthContext.Provider value={auth}>\n+        <NextStepLinks config={resultDetailCompleted.config} token={base} {...props} />\n+      </AuthContext.Provider>\n     </MemoryRouter>,\n   )\n }\n@@ -30,3 +43,34 @@ describe('결과 화면의 011 진입', () => {\n     ).toBe(`/regime-link?base=${base}`)\n   })\n })\n+\n+/**\n+ * spec 006 T045a. 기록은 로그인한 사용자에게만 있으므로(FR-020) 두 갈래를 모두 고정한다.\n+ *\n+ * <p>비로그인에서 링크가 열리면 눌러 본 뒤에 로그인 화면으로 튕긴다 — 막는 이유를 먼저 말하는 것이 014의 규칙이다.\n+ */\n+describe('NextStepLinks 기록으로 내보내기', () => {\n+  it('로그인 사용자에게는 이 결과의 기록 목록으로 가는 연결이다', () => {\n+    renderLinks({}, loggedInAuth)\n+\n+    expect(screen.getByRole('link', { name: '기록으로 내보내기' }).getAttribute('href')).toBe(\n+      `/records?resultToken=${base}`,\n+    )\n+  })\n+\n+  it('비로그인에게는 로그인이 필요하다는 사유와 함께 막힌다', () => {\n+    renderLinks()\n+\n+    expect(screen.queryByRole('link', { name: '기록으로 내보내기' })).toBeNull()\n+    const button = screen.getByRole('button', { name: '기록으로 내보내기' })\n+    expect(button.hasAttribute('disabled')).toBe(true)\n+    const reasonId = button.getAttribute('aria-describedby')\n+    expect(document.getElementById(reasonId ?? '')?.textContent).toContain('로그인이 필요합니다')\n+  })\n+\n+  it('011 진입은 006 변경과 무관하게 그대로 열려 있다', () => {\n+    renderLinks({}, loggedInAuth)\n+\n+    expect(screen.getByRole('link', { name: '경제환경이 비슷했던 과거 보기' })).toBeTruthy()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/NextStepLinks.test.tsx",
+          "old_path": "frontend/src/components/result/NextStepLinks.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { useId } from 'react'\n import { Link } from 'react-router-dom'\n+import { useAuth } from '@/auth/auth-context'\n import { Button } from '@/components/ui/button'\n import type { ResultConfig } from '@/types/result'\n import { OtherConditionsButton } from './OtherConditionsButton'\n@@ -12,7 +13,9 @@ import styles from './auxiliaryViews.module.css'\n  * 열람 가능할 때만 싣는다** — 아직 계산 중이거나 실패·만료된 토큰을 넘기면 011이\n  * `RESULT_NOT_READY`로 거절한다(계약 §2).\n  *\n- * 006 내보내기는 화면이 없어 그대로 막아 둔다.\n+ * 006 내 기록은 **로그인한 사용자에게만 열린다**(spec 006 T045a, FR-020). 기록은 식별된 사용자 단위로만\n+ * 있으므로 비로그인에게는 014의 안내와 함께 막는다 — 눌러 본 뒤에 로그인 화면으로 보내지 않는다.\n+ * 여는 주소는 목록(`/records?resultToken=`)이고, 그 결과의 줄로 초점을 옮기는 것은 006 화면이 한다.\n  */\n export function NextStepLinks({\n   config,\n@@ -26,6 +29,7 @@ export function NextStepLinks({\n   compareReady?: boolean\n }) {\n   const exportReasonId = useId()\n+  const { user } = useAuth()\n   const regimeLinkTo =\n     token && compareReady && compareToken\n       ? `/regime-link?base=${token}&compare=${compareToken}`\n@@ -45,19 +49,22 @@ export function NextStepLinks({\n             경제환경이 비슷했던 과거 보기\n           </Button>\n         )}\n-        <Button\n-          type=\"button\"\n-          variant=\"outline\"\n-          disabled\n-          aria-describedby={exportReasonId}\n-        >\n-          기록으로 내보내기\n-        </Button>\n+        {user && token ? (\n+          <Button asChild variant=\"outline\">\n+            <Link to={`/records?resultToken=${encodeURIComponent(token)}`}>기록으로 내보내기</Link>\n+          </Button>\n+        ) : (\n+          <Button type=\"button\" variant=\"outline\" disabled aria-describedby={exportReasonId}>\n+            기록으로 내보내기\n+          </Button>\n+        )}\n       </div>\n       <div className={styles.disabledReason}>\n-        <span id={exportReasonId}>\n-          결과 기록 내보내기는 006 화면이 아직 없어 사용할 수 없습니다.\n-        </span>\n+        {user && token ? null : (\n+          <span id={exportReasonId}>\n+            기록으로 내보내려면 로그인이 필요합니다. 기록은 로그인한 사용자에게만 남습니다.\n+          </span>\n+        )}\n       </div>\n     </section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/NextStepLinks.tsx",
+          "old_path": "frontend/src/components/result/NextStepLinks.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -118,5 +118,31 @@ export function useMyRecords(query: MyRecordListQuery) {\n     }\n   }, [state])\n \n-  return { ...state, retry, loadMore }\n+  /**\n+   * 한 줄만 제자리에서 고친다(이름 변경). 목록을 다시 받지 않는 이유는 그 사이 새 항목이 끼면 사용자가 보던 자리가\n+   * 움직이기 때문이다 — 바뀐 것은 이름 하나뿐이다.\n+   */\n+  const replaceItem = useCallback((recordId: string, name: string) => {\n+    setState((previous) =>\n+      previous.status === 'loaded'\n+        ? {\n+            ...previous,\n+            items: previous.items.map((item) =>\n+              item.recordId === recordId ? { ...item, name } : item,\n+            ),\n+          }\n+        : previous,\n+    )\n+  }, [])\n+\n+  /** 지운 줄을 없앤다. 되돌리는 경로가 없으므로 되돌릴 값을 들고 있지 않는다(research R6). */\n+  const removeItem = useCallback((recordId: string) => {\n+    setState((previous) =>\n+      previous.status === 'loaded'\n+        ? { ...previous, items: previous.items.filter((item) => item.recordId !== recordId) }\n+        : previous,\n+    )\n+  }, [])\n+\n+  return { ...state, retry, loadMore, replaceItem, removeItem }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useMyRecords.ts",
+          "old_path": "frontend/src/hooks/useMyRecords.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,7 +8,9 @@\n .main {\n   width: min(100% - 40px, 960px);\n   margin: 0 auto;\n-  padding: clamp(90px, 15vh, 160px) 0 80px;\n+  /* 아래 여백이 메뉴 높이만큼 있다. 마지막 줄의 '더 보기'를 눌렀을 때 메뉴가 화면 밖으로\n+     나가 스크롤해야 하는 일이 없게 미리 자리를 둔다. */\n+  padding: clamp(90px, 15vh, 160px) 0 clamp(80px, 14rem, 16rem);\n }\n \n .eyebrow {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.module.css",
+          "old_path": "frontend/src/pages/MyRecordsPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { MemoryRouter, Route, Routes } from 'react-router-dom'\n import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { ApiClientError } from '@/api/client'\n import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n import { ProtectedRoute } from '@/auth/ProtectedRoute'\n import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'\n@@ -35,6 +36,9 @@ import { EMPTY_MESSAGE, MyRecordsPage } from './MyRecordsPage'\n const apiMocks = vi.hoisted(() => ({\n   fetchMyRecords: vi.fn(),\n   fetchMyRecord: vi.fn(),\n+  renameMyRecord: vi.fn(),\n+  deleteMyRecord: vi.fn(),\n+  downloadMyRecordExport: vi.fn(),\n }))\n const otherMocks = vi.hoisted(() => ({\n   fetchSectorCatalog: vi.fn(),\n@@ -116,6 +120,10 @@ describe('MyRecordsPage', () => {\n   beforeEach(() => {\n     apiMocks.fetchMyRecords.mockReset()\n     apiMocks.fetchMyRecord.mockReset()\n+    apiMocks.renameMyRecord.mockReset()\n+    apiMocks.deleteMyRecord.mockReset()\n+    apiMocks.downloadMyRecordExport.mockReset()\n+    apiMocks.downloadMyRecordExport.mockResolvedValue(undefined)\n     otherMocks.fetchSectorCatalog.mockReset()\n     otherMocks.fetchStrategyRegistry.mockReset()\n     prefillMocks.prefillStrategySettings.mockReset()\n@@ -209,8 +217,12 @@ describe('MyRecordsPage', () => {\n     renderPage()\n     await user.click(await screen.findByRole('button', { name: '설정 바꿔 비교' }))\n \n-    const notice = await screen.findByRole('status')\n-    expect(notice.textContent).toContain('섹터는 넘기지 않았습니다')\n+    // 페이지 알림 영역(role=status)이 늘 DOM 에 있으므로 문장으로 그 자리를 집는다.\n+    const notice = (await screen.findByText(/섹터는 넘기지 않았습니다/)).closest(\n+      '[role=\"status\"]',\n+    ) as HTMLElement | null\n+    expect(notice).not.toBeNull()\n+    if (!notice) throw new Error('알림 자리를 찾지 못했다')\n     expect(within(notice).getByRole('link', { name: '섹터·비중 단계로 가기' }).getAttribute('href')).toBe(\n       SECTOR_SELECTION_PATH,\n     )\n@@ -456,4 +468,148 @@ describe('MyRecordsPage', () => {\n     expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()\n     expect(apiMocks.fetchMyRecords).not.toHaveBeenCalled()\n   })\n+\n+  // --- FE-4: 더 보기 메뉴(T045·T048·T049) ------------------------------------------\n+\n+  async function openMenu(name: string) {\n+    const user = userEvent.setup()\n+    await user.click(await screen.findByRole('button', { name: `${name} 더 보기` }))\n+    return user\n+  }\n+\n+  it('목록을 그려도 초점이 메뉴 버튼으로 튀지 않는다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)\n+\n+    renderPage()\n+    await screen.findByRole('list', { name: '내 기록' })\n+\n+    // 줄마다 있는 '더 보기'가 마운트 때 초점을 가져가면 사용자는 화면 맨 아래에서 Tab 을 시작한다.\n+    expect(document.activeElement?.getAttribute('aria-label') ?? '').not.toMatch(/더 보기$/)\n+  })\n+\n+  it('앞선 알림이 다음 조회의 불러오는 중 문장을 가리지 않는다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValueOnce({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.renameMyRecord.mockResolvedValue({ ...analysisDetail, name: '바꾼 이름' })\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))\n+    await user.click(screen.getByRole('button', { name: '저장' }))\n+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('바꾼 이름'))\n+\n+    // 다음 조회는 응답하지 않게 두어 불러오는 중 상태를 붙잡는다.\n+    apiMocks.fetchMyRecords.mockReturnValue(new Promise(() => {}))\n+    await user.click(screen.getByRole('checkbox', { name: '경제환경' }))\n+\n+    await waitFor(() =>\n+      expect(screen.getByRole('status').textContent).toContain('기록을 불러오는 중입니다.'),\n+    )\n+  })\n+\n+  it('메뉴는 Esc 로 닫히고 초점이 연 버튼으로 돌아온다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    expect(screen.getByRole('menu')).toBeTruthy()\n+\n+    await user.keyboard('{Escape}')\n+\n+    expect(screen.queryByRole('menu')).toBeNull()\n+    expect(document.activeElement?.getAttribute('aria-label')).toBe(`${analysisRecord.name} 더 보기`)\n+  })\n+\n+  it('이름을 바꾸면 그 줄의 이름만 제자리에서 바뀐다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.renameMyRecord.mockResolvedValue({ ...analysisDetail, name: '반도체 비중 높인 안' })\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))\n+\n+    // 대화상자를 열면 메뉴는 접힌다 — 둘이 겹쳐 뜨면 무엇을 고르는 중인지 흐려진다.\n+    expect(screen.queryByRole('menu')).toBeNull()\n+\n+    await user.clear(screen.getByLabelText('새 이름'))\n+    await user.type(screen.getByLabelText('새 이름'), '반도체 비중 높인 안')\n+    await user.click(screen.getByRole('button', { name: '저장' }))\n+\n+    expect(await screen.findByText('반도체 비중 높인 안')).toBeTruthy()\n+    expect(screen.queryByRole('heading', { name: analysisRecord.name })).toBeNull()\n+    expect(apiMocks.renameMyRecord).toHaveBeenCalledWith(analysisRecord.recordId, '반도체 비중 높인 안')\n+    // 목록을 다시 받지 않는다 — 처음 한 번뿐이다.\n+    expect(apiMocks.fetchMyRecords).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('이름 변경 오류는 필드 오류로 보이고 이름이 그대로다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.renameMyRecord.mockRejectedValue(\n+      new ApiClientError('api', '이름은 1자 이상이어야 합니다.', { code: 'INVALID_INPUT' }),\n+    )\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    await user.click(screen.getByRole('menuitem', { name: '이름 바꾸기' }))\n+    await user.click(screen.getByRole('button', { name: '저장' }))\n+\n+    expect((await screen.findByRole('alert')).textContent).toContain('이름은 1자 이상이어야 합니다.')\n+    expect(screen.getByLabelText('새 이름').getAttribute('aria-invalid')).toBe('true')\n+    expect(screen.getByRole('heading', { name: analysisRecord.name })).toBeTruthy()\n+  })\n+\n+  it('삭제는 확인을 거치고 그 줄을 없애며 복구를 제안하지 않는다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.deleteMyRecord.mockResolvedValue({\n+      recordId: analysisRecord.recordId,\n+      deletedAt: '2026-09-21T02:00:00Z',\n+    })\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    await user.click(screen.getByRole('menuitem', { name: '지우기' }))\n+\n+    // 무엇이 남고 무엇이 사라지는지 확인 문구가 말한다(FR-017).\n+    expect(screen.getByText('저장된 계산 결과는 남고 내 목록에서만 사라집니다.')).toBeTruthy()\n+    expect(apiMocks.deleteMyRecord).not.toHaveBeenCalled()\n+\n+    await user.click(screen.getByRole('button', { name: '지우기' }))\n+\n+    await waitFor(() => expect(screen.queryByRole('heading', { name: analysisRecord.name })).toBeNull())\n+    expect(screen.queryByText(/복구|되돌리기/)).toBeNull()\n+  })\n+\n+  it('완료 항목은 두 형식으로 내려받고 진행 중 항목은 사유와 함께 막힌다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({\n+      items: [analysisRecord, { ...analysisRecord, recordId: 'MR-20260918-000099', name: '도는 중', status: 'RUNNING' }],\n+      nextCursor: null,\n+    })\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    await user.click(screen.getByRole('menuitem', { name: 'CSV로 내보내기' }))\n+\n+    expect(apiMocks.downloadMyRecordExport).toHaveBeenCalledWith(analysisRecord.recordId, 'csv')\n+    expect((await screen.findByRole('status')).textContent).toContain('CSV')\n+\n+    await openMenu('도는 중')\n+    const running = screen.getAllByRole('menuitem', { name: 'CSV로 내보내기' }).at(-1)\n+    expect(running?.getAttribute('aria-disabled')).toBe('true')\n+    expect(screen.getByText('아직 계산이 끝나지 않아 내보낼 결과가 없습니다.')).toBeTruthy()\n+  })\n+\n+  it('내보내기가 실패하면 그 사실을 알린다 — 오류 본문을 파일로 받지 않는다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.downloadMyRecordExport.mockRejectedValue(\n+      new ApiClientError('api', '아직 결과가 준비되지 않았습니다.', { code: 'RESULT_NOT_READY' }),\n+    )\n+\n+    renderPage()\n+    const user = await openMenu(analysisRecord.name)\n+    await user.click(screen.getByRole('menuitem', { name: 'JSON으로 내보내기' }))\n+\n+    await waitFor(() =>\n+      expect(screen.getByRole('status').textContent).toContain('내보내기에 실패했습니다'),\n+    )\n+    expect(screen.getByRole('status').textContent).toContain('아직 결과가 준비되지 않았습니다.')\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -44,6 +44,10 @@ export function MyRecordsPage() {\n   const catalog = useSectorCatalogState()\n   const [strategies, setStrategies] = useState<StrategyView[] | null>(null)\n   const [regimeFields, setRegimeFields] = useState<RegimeField[] | null>(null)\n+  // 이름 변경·삭제·내보내기의 시작과 실패를 알리는 <b>페이지 수준</b> 자리(FR-021). 줄마다 두면\n+  // 보조기기가 같은 말을 여러 번 읽는다. 펼친 층의 안내(RecordDetailPanel 등)는 그 자리의 것이라\n+  // 따로 둔다.\n+  const [notice, setNotice] = useState('')\n   const highlightRef = useRef<HTMLLIElement>(null)\n   // 초점 이동은 처음 받았을 때 한 번이다. 필터를 바꿔 다시 받을 때마다 튀면 사용자가 보던 자리를 잃는다.\n   const highlightedOnce = useRef(false)\n@@ -99,16 +103,22 @@ export function MyRecordsPage() {\n \n         <RecordFilters\n           query={query}\n-          onChange={setQuery}\n+          onChange={(next) => {\n+            // 끝난 조작의 문장을 비운다. 두지 않으면 notice 가 로딩 문장을 영영 가리고(둘이 한\n+            // 자리를 쓴다), 이미 끝난 일의 말이 다른 일을 하는 내내 남는다.\n+            setNotice('')\n+            setQuery(next)\n+          }}\n           catalog={catalog.status === 'loaded' ? catalog.catalog : null}\n           strategies={strategies}\n         />\n \n-        {records.status === 'loading' ? (\n-          <p className={styles.status} role=\"status\">\n-            기록을 불러오는 중입니다.\n-          </p>\n-        ) : null}\n+        {/* 라이브 영역은 내용보다 먼저 DOM 에 있어야 보조기기가 변경을 알아챈다 — 영역과 내용이\n+            함께 생기면 많은 스크린리더가 읽지 않는다. 페이지 수준 알림과 불러오는 중이라는 말이\n+            이 한 자리를 쓰므로, 질의가 바뀔 때 앞선 알림을 비운다(FR-021). */}\n+        <p className={styles.status} role=\"status\">\n+          {notice || (records.status === 'loading' ? '기록을 불러오는 중입니다.' : '')}\n+        </p>\n \n         {records.status === 'failed' ? (\n           <div className={styles.error} role=\"alert\">\n@@ -145,6 +155,9 @@ export function MyRecordsPage() {\n                     item={item}\n                     labels={labels}\n                     initiallyOpen={highlighted}\n+                    onRenamed={records.replaceItem}\n+                    onDeleted={records.removeItem}\n+                    announce={setNotice}\n                   />\n                 )\n               })}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,6 +3,8 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n+import { AuthContext } from '@/auth/auth-context'\n+import { anonymousAuthContext } from '@/test/authFixtures'\n import { BacktestRequestError } from '@/api/backtest'\n import {\n   resultDetailCompleted,\n@@ -46,10 +48,12 @@ function LocationProbe() {\n function ResultRoute() {\n   return (\n     <MemoryRouter initialEntries={[`/results/${resultToken}`]}>\n+      <AuthContext.Provider value={anonymousAuthContext}>\n       <Routes>\n         <Route path=\"/results/:token\" element={<ResultPage />} />\n       </Routes>\n       <LocationProbe />\n+    </AuthContext.Provider>\n     </MemoryRouter>\n   )\n }\n@@ -102,7 +106,8 @@ describe('결과 보조 보기와 다음 탐색 (B08)', () => {\n     expect(\n       (screen.getByRole('button', { name: '기록으로 내보내기' }) as HTMLButtonElement).disabled,\n     ).toBe(true)\n-    expect(screen.getByText(/006 화면이 아직 없어/)).toBeTruthy()\n+    // 006 화면이 생겨 사유가 바뀌었다(spec 006 T045a) — 이 렌더는 비로그인이라 로그인 안내다.\n+    expect(screen.getByText(/로그인이 필요합니다/)).toBeTruthy()\n   })\n \n   it('011 진입은 기준 토큰을 실은 주소로 간다(T086)', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,8 @@\n import { fireEvent, render, screen, waitFor } from '@testing-library/react'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { AuthContext } from '@/auth/auth-context'\n+import { anonymousAuthContext } from '@/test/authFixtures'\n import { ResultError } from '@/api/result'\n import { resultDetailCompleted as base, resultTimeseries } from '@/test/resultFixtures'\n import type { PublicResultDetail } from '@/types/result'\n@@ -35,9 +37,11 @@ beforeEach(() => {\n function setup(search = '?compare=' + token) {\n   return render(\n     <MemoryRouter initialEntries={['/results/' + base.publicToken + search]}>\n+      <AuthContext.Provider value={anonymousAuthContext}>\n       <Routes>\n         <Route path=\"/results/:token\" element={<ResultPage />} />\n       </Routes>\n+    </AuthContext.Provider>\n     </MemoryRouter>,\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n import { render, screen } from '@testing-library/react'\n import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { AuthContext } from '@/auth/auth-context'\n+import { anonymousAuthContext } from '@/test/authFixtures'\n import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n import { SAME_VERSION_NOTICE } from '@/components/records/RecordOriginNotice'\n import { analysisDetail, analysisDetailUnjudged } from '@/test/myRecordsFixtures'\n@@ -27,9 +29,11 @@ vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>T\n function renderResult(search: string) {\n   return render(\n     <MemoryRouter initialEntries={[`/results/${resultToken}${search}`]}>\n+      <AuthContext.Provider value={anonymousAuthContext}>\n       <Routes>\n         <Route path=\"/results/:token\" element={<ResultPage />} />\n       </Routes>\n+    </AuthContext.Provider>\n     </MemoryRouter>,\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.records.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.records.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { act, render, screen, waitFor, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'\n import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n import { ResultError } from '@/api/result'\n@@ -59,6 +60,18 @@ vi.mock('@/api/sectors', async (importOriginal) => {\n })\n vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))\n \n+/**\n+ * 결과 화면은 비로그인도 여는 공개 경로지만 실제 앱에서는 `main.tsx`의 `AuthProvider` 안에서 돈다. 006의\n+ * '기록으로 내보내기'가 로그인 여부로 갈리므로(T045a) 테스트도 같은 자리에 둔다 — 비로그인이 기본이다.\n+ */\n+const anonymousAuth = {\n+  user: null,\n+  status: 'anonymous',\n+  login: async () => {},\n+  logout: async () => {},\n+  refresh: async () => {},\n+} as unknown as AuthContextValue\n+\n function LocationProbe() {\n   const location = useLocation()\n   return <output aria-label=\"현재 주소\">{location.pathname + location.search}</output>\n@@ -67,12 +80,14 @@ function LocationProbe() {\n function renderResult(token = resultToken) {\n   return render(\n     <MemoryRouter initialEntries={[`/results/${token}`]}>\n+      <AuthContext.Provider value={anonymousAuth}>\n       <Routes>\n         <Route path=\"/results/:token\" element={<ResultPage />} />\n         <Route path=\"/strategy\" element={<h1>전략 설정 화면</h1>} />\n         <Route path=\"/diagnosis/sectors\" element={<h1>섹터 선택 화면</h1>} />\n       </Routes>\n       <LocationProbe />\n+      </AuthContext.Provider>\n     </MemoryRouter>,\n   )\n }\n@@ -190,10 +205,12 @@ describe('ResultPage', () => {\n \n     render(\n       <MemoryRouter initialEntries={[`/results/${resultToken}`]}>\n-        <GoToOther />\n-        <Routes>\n-          <Route path=\"/results/:token\" element={<ResultPage />} />\n-        </Routes>\n+        <AuthContext.Provider value={anonymousAuth}>\n+          <GoToOther />\n+          <Routes>\n+            <Route path=\"/results/:token\" element={<ResultPage />} />\n+          </Routes>\n+        </AuthContext.Provider>\n       </MemoryRouter>,\n     )\n     expect(await screen.findByText('16.67%')).not.toBeNull()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,3 +35,18 @@ export function authError(\n     error: { code, message },\n   }\n }\n+\n+/**\n+ * 비로그인 상태의 인증 컨텍스트.\n+ *\n+ * <p>결과 화면(005)은 공개 토큰으로 여는 경로라 인증을 몰랐지만, 006의 '기록으로 내보내기'가 로그인 여부로 갈리면서\n+ * `useAuth`를 지난다(T045a). 실제 앱은 `main.tsx`의 `AuthProvider` 안에서 도므로 테스트도 같은 자리에 둔다 —\n+ * Provider 없이 렌더하면 `useAuth`가 던진다.\n+ */\n+export const anonymousAuthContext = {\n+  user: null,\n+  status: 'anonymous',\n+  login: async () => {},\n+  logout: async () => {},\n+  refresh: async () => {},\n+} as unknown as import('@/auth/auth-context').AuthContextValue\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/authFixtures.ts",
+          "old_path": "frontend/src/test/authFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T18:00:21.565+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2849738": []
+  }
+}

@@ -1,0 +1,547 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943273,
+    "iid": 87,
+    "project_id": 1444456,
+    "title": "docs: 계약·ADR 동기화와 quickstart 종단 확인 (S15P21E205-166)",
+    "description": "# 작업 내용 요약\n\nspec 007 자동 파라미터 탐색의 묶음 M10 `[DOCS] 계약·ADR 동기화와 quickstart 종단 확인` 이다. 6개 중 5개(T120\\~T123, T125)를 끝냈고 T126(측정값 인계)은 선행 T117 이 완료 불가라 함께 **완료 불가**로 기록했다. 코드 변경은 설정 파일 주석 하나뿐이고 나머지는 문서다.\n\nM5·M7·M9 를 거치며 **구현이 계약 문서를 앞질러 갔다.** 프론트(M4·M6·M8)가 참조할 계약이 `docs/specs/` 에 아예 없었고, quickstart 는 존재하지 않는 종목·전략 ID 로 적혀 있어 그대로는 한 줄도 돌지 않았다. 이 묶음은 그 간극을 메우고, 실제로 돌려 본 결과를 기록으로 남긴다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-166\n- link https://ssafy.atlassian.net/browse/S15P21E206-166\n\n# 주요 변경 사항\n\n- `docs/specs/param-search-api/README.md` 신설 — 004 의 `backtest-api` 와 같은 자리에 둔다. **구현을 기준으로 다시 썼다**: `selection_rule.drawdownFilter.baselineName`, `selectionReason.outcome` 다섯 어휘와 각각에 딸리는 필드, 상태 응답의 `baseline`·`validationLabel`·`validationNote`, 접수 202 에도 실리는 검증 표시, `/cancel`·`/retry-failed` 의 실제 응답, 후보 목록의 정렬 방향 규칙과 상태 파싱 관용, 요청자 헤더가 필요한 엔드포인트 구분 — 전부 원본 계약에 없던 것들이다\n- 같은 문서에 **\"알려진 차이와 한계\"** 절을 두었다. 미리보기의 전략 거부가 원본 계약(422)과 달리 200 인 것, `space` 가 등록된 후보값만 받는 것, 워커가 1종목만 계산하는 것, 실행 측정이 없는 것, 평가 분할 미등록이라 라벨이 항상 `UNVALIDATED` 인 것. 프론트가 이걸 모르면 없는 동작을 기대한다\n- `docs/adr/0005-param-search-dispatch-window.md` 신설 — 후보를 전량 발행하지 않고 발행 창만큼만 올리는 결정과 버린 대안 셋(전량 발행 + 워커 조회, 묶음 전용 큐, 우선순위 큐). 핵심은 큐 독점보다 **취소가 뜻을 갖느냐**다. 전량 발행이면 취소를 눌러도 큐에 든 후보가 끝까지 계산되어 사용자가 멈췄다고 본 뒤에도 자원이 쓰인다\n- `.gitlab/merge_request_templates/Default.md` 에 공통 확인 5항목 추가 — 순위 배지·추천 표현 0건, 결제 단계 0건, 전략 ID 상수·전략별 분기 0건, 계산 안 한 값을 0으로 채우지 않음, 미검증을 검증된 것처럼 보이지 않음. 백엔드는 테스트로 강제하지만 프론트에는 그 장치가 없어 리뷰가 유일한 방어선이다\n- `spec.md`·`specs/README.md` 의 PD 표에 **미확정 항목을 구현이 무엇으로 대신했는가**를 적었다. PD-05 잔여(동률 처리)는 Edge Case 대체 규칙으로 동작 중이고 스냅샷에 `SHOW_ALL_TIED` 로 남는다는 것, PD-12 미확정이라 전 후보가 `UNVALIDATED` 이며 이는 '통과'가 아니라 '말할 수 없음'이라는 것, PD-06 은 측정 입력 자체가 없다는 것\n- `quickstart.md` 의 낡은 값을 실제 값으로 고쳤다 — 종목 `069500`·`091170` → `091160`·`305720`(픽스처 실재 값), 전략 `momentum`·`sector-momentum` → `INVERSE_VOLATILITY`·`SECTOR_MOMENTUM`, 등록표 버전, 접수·취소에 필요한 `X-User-Id` 헤더\n- `quickstart.md` 에 수동 실행 기록 절 추가 — 7개 시나리오 결과와 실행 중 발견한 것\n- `application-local.yml` 의 거짓 주석을 바로잡았다 — `max-candidates: 24` 가 \"상한 초과 거부를 로컬에서 재현하려는 값\"이라고 적혀 있었으나 계산상 재현되지 않는다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (설정 주석 변경 반영 확인)\n- [x] **시나리오 1** 확인 화면과 한 동작 실행 — 미리보기 네 덩어리·`limits.provisional` 4항목·`UNVALIDATED`, `space` 없이 접수해 202·후보 4건·발행 창만큼만 `DISPATCHED` (SC-001)\n- [x] **시나리오 4** 취소와 부분 결과 — `202 {skipped:1, inFlight:4}`, 응답 시점 `RUNNING` 에 `stopReason=CANCELLED` 선기록, 발행분 완주 후 `PARTIAL`, 취소 뒤 발행 0건 (SC-003)\n- [x] **시나리오 5** 선정과 미검증 표시 — `displayed` 2건·`shortOfDisplayCount`·`note`, 후보마다 `UNVALIDATED`. 기준 실행이 `QUEUED` 라 `drawdownFilterApplied=false` 이고 `passedFilters` 에 `DRAWDOWN` 이 빠진다 — 걸지 않은 필터를 통과했다고 적지 않는 것을 실제로 확인 (SC-006, FR-013d)\n- [x] **시나리오 5.1** 재시도 — `202 {retried:1, remainingFailed:0}`, 묶음 수 불변, `retryCount=1`, 선정 삭제 후 재계산 (SC-009)\n- [x] **시나리오 6** 재현 — 같은 등록표 버전·범위의 두 묶음이 후보 집합과 그리드 좌표 완전 일치, `FULL_GRID`·`randomSeed=NULL` (SC-004)\n- [x] **시나리오 7** 전략 비의존성 — 007 운영 코드에 다섯 전략 ID 리터럴 **전부 0건** (SC-010)\n- [ ] **시나리오 2** 유효성 위반 사전 제외 — **실행 불가**. 사유를 문서에 기록\n- [ ] **시나리오 3** 상한 초과 거부 — **실행 불가**. 사유를 문서에 기록\n- [ ] T126 측정값 인계 — 선행 T117 이 완료 불가\n\n# 리뷰 포인트\n\n- **시나리오 2·3 이 막힌 뿌리는 하나다.** 유효성 규칙을 가진 전략(`SECTOR_이 둘 다 `PENDING_DECISION`(PD-03·PD-04)이라 실행 지원 목록에 없고, 실행가능한 셋(`EQUAL_WEIGHT`·`FIXED_WEIGHT`·`INVERSE_VOLATILITY`)에는 규칙이 아예 없다. 상한 초과도 같은 이유로 조합이 6개뿐이라 넘길 수 없다. **두 경로 모두 `ParamSearchRejectionIT\\` 가 fixture 로 검증하고 있으므로 막힌 것은 손으로 재현하는 일뿐\\*\\*이라는 구분이 맞는지 봐 달라\n- \\*\\*`application-local.yml` 의 `max-candidates: 24` 는 그대로 두고 주석만 돼도 전체가 24조합(9+9+4+1+1)이라 이 값과 같을 뿐 넘지 않는다. 재현하려면 6 미만으로 낮추거나 테스트처럼 별도 프로파일이 필요한데, **개발 편의값을 그 목적으로 더 낮출지**는 팀 판단이다\n- **계약 문서를 두 곳에 두게 됐다.** `specs/007-.../contracts/` 는 설계 근거와 결정 이력, `docs/specs/param-search-api/` 는 구현 기준이다. 새 문서 머리말에 \"둘이 어긋나면 코드와 이 문서를 먼저 맞춘 뒤 원본을 고친다\"고 적었는데, **원본을 지금 함께 고칠지 아니면 이대로 둘지** 정해 달라. 특히 미리보기의 전략 거부(200 vs 422)는 어느 쪽이 맞는지 결정이 필요하다\n- **MR 템플릿 공통 확인을 주석 없이 본문에 넣었다.** 모든 MR 에 5줄이 붙는다. 부담스러우면 주석 블록 안으로 넣어 선택 항목으로 바꿀 수 있다\n- 실행 기록에 **워커 없이 만든 것**임을 명시했다. 성과 값은 테스트가 넣은 인용하면 안 된다고 적었는데, 이 경고가 충분히 눈에 띄는지 봐 달라\n- 실행 중 발견한 세 가지를 기록만 하고 고치지 않았다 — 동일 조건 재접수 시 004 의 `500`, 계약 위반 실패 이벤트가 DLQ 로 가는 동안 007 후보가 영구 `DISPATCHED`, 낡은 빌드 산출물로 인한 `GET` `500`(재시작으로 해소). **앞의 둘은 별도 티켓이 필요해 보인다**",
+    "state": "merged",
+    "created_at": "2026-09-14T15:18:05.345+09:00",
+    "updated_at": "2026-09-15T15:50:35.725+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T15:26:31.082+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs()/166-paramsearch-docs",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8",
+    "merge_commit_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T15:18:06.908+09:00",
+    "reference": "!87",
+    "references": {
+      "short": "!87",
+      "relative": "!87",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!87"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/87",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943273,
+    "iid": 87,
+    "project_id": 1444456,
+    "title": "docs: 계약·ADR 동기화와 quickstart 종단 확인 (S15P21E205-166)",
+    "description": "# 작업 내용 요약\n\nspec 007 자동 파라미터 탐색의 묶음 M10 `[DOCS] 계약·ADR 동기화와 quickstart 종단 확인` 이다. 6개 중 5개(T120\\~T123, T125)를 끝냈고 T126(측정값 인계)은 선행 T117 이 완료 불가라 함께 **완료 불가**로 기록했다. 코드 변경은 설정 파일 주석 하나뿐이고 나머지는 문서다.\n\nM5·M7·M9 를 거치며 **구현이 계약 문서를 앞질러 갔다.** 프론트(M4·M6·M8)가 참조할 계약이 `docs/specs/` 에 아예 없었고, quickstart 는 존재하지 않는 종목·전략 ID 로 적혀 있어 그대로는 한 줄도 돌지 않았다. 이 묶음은 그 간극을 메우고, 실제로 돌려 본 결과를 기록으로 남긴다.\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-166\n- link https://ssafy.atlassian.net/browse/S15P21E206-166\n\n# 주요 변경 사항\n\n- `docs/specs/param-search-api/README.md` 신설 — 004 의 `backtest-api` 와 같은 자리에 둔다. **구현을 기준으로 다시 썼다**: `selection_rule.drawdownFilter.baselineName`, `selectionReason.outcome` 다섯 어휘와 각각에 딸리는 필드, 상태 응답의 `baseline`·`validationLabel`·`validationNote`, 접수 202 에도 실리는 검증 표시, `/cancel`·`/retry-failed` 의 실제 응답, 후보 목록의 정렬 방향 규칙과 상태 파싱 관용, 요청자 헤더가 필요한 엔드포인트 구분 — 전부 원본 계약에 없던 것들이다\n- 같은 문서에 **\"알려진 차이와 한계\"** 절을 두었다. 미리보기의 전략 거부가 원본 계약(422)과 달리 200 인 것, `space` 가 등록된 후보값만 받는 것, 워커가 1종목만 계산하는 것, 실행 측정이 없는 것, 평가 분할 미등록이라 라벨이 항상 `UNVALIDATED` 인 것. 프론트가 이걸 모르면 없는 동작을 기대한다\n- `docs/adr/0005-param-search-dispatch-window.md` 신설 — 후보를 전량 발행하지 않고 발행 창만큼만 올리는 결정과 버린 대안 셋(전량 발행 + 워커 조회, 묶음 전용 큐, 우선순위 큐). 핵심은 큐 독점보다 **취소가 뜻을 갖느냐**다. 전량 발행이면 취소를 눌러도 큐에 든 후보가 끝까지 계산되어 사용자가 멈췄다고 본 뒤에도 자원이 쓰인다\n- `.gitlab/merge_request_templates/Default.md` 에 공통 확인 5항목 추가 — 순위 배지·추천 표현 0건, 결제 단계 0건, 전략 ID 상수·전략별 분기 0건, 계산 안 한 값을 0으로 채우지 않음, 미검증을 검증된 것처럼 보이지 않음. 백엔드는 테스트로 강제하지만 프론트에는 그 장치가 없어 리뷰가 유일한 방어선이다\n- `spec.md`·`specs/README.md` 의 PD 표에 **미확정 항목을 구현이 무엇으로 대신했는가**를 적었다. PD-05 잔여(동률 처리)는 Edge Case 대체 규칙으로 동작 중이고 스냅샷에 `SHOW_ALL_TIED` 로 남는다는 것, PD-12 미확정이라 전 후보가 `UNVALIDATED` 이며 이는 '통과'가 아니라 '말할 수 없음'이라는 것, PD-06 은 측정 입력 자체가 없다는 것\n- `quickstart.md` 의 낡은 값을 실제 값으로 고쳤다 — 종목 `069500`·`091170` → `091160`·`305720`(픽스처 실재 값), 전략 `momentum`·`sector-momentum` → `INVERSE_VOLATILITY`·`SECTOR_MOMENTUM`, 등록표 버전, 접수·취소에 필요한 `X-User-Id` 헤더\n- `quickstart.md` 에 수동 실행 기록 절 추가 — 7개 시나리오 결과와 실행 중 발견한 것\n- `application-local.yml` 의 거짓 주석을 바로잡았다 — `max-candidates: 24` 가 \"상한 초과 거부를 로컬에서 재현하려는 값\"이라고 적혀 있었으나 계산상 재현되지 않는다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (설정 주석 변경 반영 확인)\n- [x] **시나리오 1** 확인 화면과 한 동작 실행 — 미리보기 네 덩어리·`limits.provisional` 4항목·`UNVALIDATED`, `space` 없이 접수해 202·후보 4건·발행 창만큼만 `DISPATCHED` (SC-001)\n- [x] **시나리오 4** 취소와 부분 결과 — `202 {skipped:1, inFlight:4}`, 응답 시점 `RUNNING` 에 `stopReason=CANCELLED` 선기록, 발행분 완주 후 `PARTIAL`, 취소 뒤 발행 0건 (SC-003)\n- [x] **시나리오 5** 선정과 미검증 표시 — `displayed` 2건·`shortOfDisplayCount`·`note`, 후보마다 `UNVALIDATED`. 기준 실행이 `QUEUED` 라 `drawdownFilterApplied=false` 이고 `passedFilters` 에 `DRAWDOWN` 이 빠진다 — 걸지 않은 필터를 통과했다고 적지 않는 것을 실제로 확인 (SC-006, FR-013d)\n- [x] **시나리오 5.1** 재시도 — `202 {retried:1, remainingFailed:0}`, 묶음 수 불변, `retryCount=1`, 선정 삭제 후 재계산 (SC-009)\n- [x] **시나리오 6** 재현 — 같은 등록표 버전·범위의 두 묶음이 후보 집합과 그리드 좌표 완전 일치, `FULL_GRID`·`randomSeed=NULL` (SC-004)\n- [x] **시나리오 7** 전략 비의존성 — 007 운영 코드에 다섯 전략 ID 리터럴 **전부 0건** (SC-010)\n- [ ] **시나리오 2** 유효성 위반 사전 제외 — **실행 불가**. 사유를 문서에 기록\n- [ ] **시나리오 3** 상한 초과 거부 — **실행 불가**. 사유를 문서에 기록\n- [ ] T126 측정값 인계 — 선행 T117 이 완료 불가\n\n# 리뷰 포인트\n\n- **시나리오 2·3 이 막힌 뿌리는 하나다.** 유효성 규칙을 가진 전략(`SECTOR_이 둘 다 `PENDING_DECISION`(PD-03·PD-04)이라 실행 지원 목록에 없고, 실행가능한 셋(`EQUAL_WEIGHT`·`FIXED_WEIGHT`·`INVERSE_VOLATILITY`)에는 규칙이 아예 없다. 상한 초과도 같은 이유로 조합이 6개뿐이라 넘길 수 없다. **두 경로 모두 `ParamSearchRejectionIT\\` 가 fixture 로 검증하고 있으므로 막힌 것은 손으로 재현하는 일뿐\\*\\*이라는 구분이 맞는지 봐 달라\n- \\*\\*`application-local.yml` 의 `max-candidates: 24` 는 그대로 두고 주석만 돼도 전체가 24조합(9+9+4+1+1)이라 이 값과 같을 뿐 넘지 않는다. 재현하려면 6 미만으로 낮추거나 테스트처럼 별도 프로파일이 필요한데, **개발 편의값을 그 목적으로 더 낮출지**는 팀 판단이다\n- **계약 문서를 두 곳에 두게 됐다.** `specs/007-.../contracts/` 는 설계 근거와 결정 이력, `docs/specs/param-search-api/` 는 구현 기준이다. 새 문서 머리말에 \"둘이 어긋나면 코드와 이 문서를 먼저 맞춘 뒤 원본을 고친다\"고 적었는데, **원본을 지금 함께 고칠지 아니면 이대로 둘지** 정해 달라. 특히 미리보기의 전략 거부(200 vs 422)는 어느 쪽이 맞는지 결정이 필요하다\n- **MR 템플릿 공통 확인을 주석 없이 본문에 넣었다.** 모든 MR 에 5줄이 붙는다. 부담스러우면 주석 블록 안으로 넣어 선택 항목으로 바꿀 수 있다\n- 실행 기록에 **워커 없이 만든 것**임을 명시했다. 성과 값은 테스트가 넣은 인용하면 안 된다고 적었는데, 이 경고가 충분히 눈에 띄는지 봐 달라\n- 실행 중 발견한 세 가지를 기록만 하고 고치지 않았다 — 동일 조건 재접수 시 004 의 `500`, 계약 위반 실패 이벤트가 DLQ 로 가는 동안 007 후보가 영구 `DISPATCHED`, 낡은 빌드 산출물로 인한 `GET` `500`(재시작으로 해소). **앞의 둘은 별도 티켓이 필요해 보인다**",
+    "state": "merged",
+    "created_at": "2026-09-14T15:18:05.345+09:00",
+    "updated_at": "2026-09-15T15:50:35.725+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T15:26:31.082+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs()/166-paramsearch-docs",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8",
+    "merge_commit_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T15:18:06.908+09:00",
+    "reference": "!87",
+    "references": {
+      "short": "!87",
+      "relative": "!87",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!87"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/87",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "8",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "head_sha": "8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8",
+      "start_sha": "eda07078e0977e612a0152566715acf61cb00286"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "029213d6dd2e148b75dae7929e76bb9729ef6b8d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802597,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서화와 제약 조건 명시**: 구현과 계약 문서 간의 간극을 메우고, 수동 실행 시나리오의 결과 및 실행 불가 사유를 `quickstart.md`에 투명하게 기록하여 프론트엔드 및 협업 팀이 현재 상태를 정확히 인지할 수 있도록 설계했습니다.\n- **아키텍처 결정 기록(ADR) 도입**: 발행 창(`dispatchWindow`) 제한 방식을 선택한 배경과 버린 대안들(전량 발행, 전용 큐 등)을 명확하게 문서화(`docs/adr/0005-param-search-dispatch-window.md`)하여 시스템 설계의 트레이드오프를 잘 남겼습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (설정 파일 주석 수정 및 문서 추가 위주의 변경으로, 런타임 코드 로직에 영향을 주는 잠재적 버그나 보안 취약점은 확인되지 않았습니다.)\n\n### 테스트 제안\n- **시나리오 1 (미리보기 및 기본 접수)**:\n  - `POST /param-searches/preview` 호출 시 `data.strategies`, `spaceSummary`, `workload`, `limits` 4가지 덩어리가 정상 반환되는지, 그리고 `validationLabel`이 `UNVALIDATED`로 표시되는지 확인합니다.\n  - `space` 필드 없이 `POST /param-searches`를 호출하여 202 응답과 함께 발행 창(dispatch window) 크기만큼만 `DISPATCHED` 상태로 전환되는지 확인합니다.\n- **시나리오 4 (취소 및 부분 결과)**:\n  - 후보가 발행 창보다 많은 묶음을 실행 중 상태(`RUNNING`)에서 `POST /param-searches/{searchId}/cancel` (X-User-Id 헤더 포함)로 취소했을 때, `stopReason=CANCELLED`가 기록되고, 이미 발행된 인프라이트 후보가 완주한 뒤 `PARTIAL` 상태로 전환되는지 검증합니다.\n- **시나리오 5.1 (실패 후보 재시도)**:\n  - 실패한 후보가 존재하는 묶음에 대해 재시도 API를 호출했을 때, `retryCount`가 증가하고 실패 항목이 올바르게 재계산 대상에 포함되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T15:18:16.130+09:00",
+          "updated_at": "2026-09-14T15:18:16.130+09:00",
+          "system": false,
+          "noteable_id": 943273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 87,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e479015fad0598b1f7bee0f56efeb6ab9cff1473",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802703,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T15:26:28.579+09:00",
+          "updated_at": "2026-09-14T15:26:28.590+09:00",
+          "system": true,
+          "noteable_id": 943273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 87,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "52b42d8fd60cf2abf8e05ea4506680bbdd55eeca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802704,
+          "type": null,
+          "body": "mentioned in commit 089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T15:26:31.786+09:00",
+          "updated_at": "2026-09-14T15:26:31.830+09:00",
+          "system": true,
+          "noteable_id": 943273,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 87,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194568,
+      "head_commit_sha": "8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8",
+      "base_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "start_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "created_at": "2026-09-14T15:18:05.752+09:00",
+      "merge_request_id": 943273,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "8e5f42cd7ba58df42f7fdf1a8e3b511abe4dec3e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194568,
+      "head_commit_sha": "8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8",
+      "base_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+      "start_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "created_at": "2026-09-14T15:18:05.752+09:00",
+      "merge_request_id": 943273,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "8e5f42cd7ba58df42f7fdf1a8e3b511abe4dec3e",
+      "commits": [
+        {
+          "id": "8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8",
+          "short_id": "8b0c9c74",
+          "created_at": "2026-09-14T15:02:25.000+09:00",
+          "parent_ids": [
+            "e28b8e82b41d4057a3381c02b0a7ccf5061fdc28"
+          ],
+          "title": "docs(infra): quickstart 를 실제 값으로 고치고 수동 실행 결과를 기록한다",
+          "message": "docs(infra): quickstart 를 실제 값으로 고치고 수동 실행 결과를 기록한다\n\nT125 (spec 007 M10). T126 은 선행이 막혀 완료 불가로 남긴다.\n\nquickstart 가 그대로는 돌아가지 않았다. 종목(069500·091170)과 전략\n(momentum·sector-momentum)이 실재하지 않는 값이었고, 등록표 버전이 낡았으며,\n접수·취소에 필요한 요청자 헤더가 빠져 있었다. 픽스처의 실제 값으로 고쳤다.\n\n시나리오 7개를 돌려 결과를 표로 남겼다. 5개 통과, 2개는 실행 불가이며 그\n사유를 해당 시나리오 옆에 적었다 — \"해봤는데 안 됐다\"와 \"할 수 없었다\"는\n다르고, 뒤엣것은 무엇이 해소돼야 돌릴 수 있는지가 기록의 몫이다.\n\n두 시나리오가 막힌 뿌리는 하나다. **유효성 규칙을 가진 전략과 실행 가능한\n전략이 겹치지 않는다.** 규칙을 가진 SECTOR_MOMENTUM·MINIMUM_VARIANCE 는\n계산 규칙이 미확정(PD-03·PD-04)이라 실행 지원 목록에 없고, 실행 가능한 셋에는\n규칙이 아예 없다. 상한 초과도 같은 이유로 조합이 6개뿐이라 넘길 수 없고,\nspace 가 등록된 후보값만 받아 넓힐 수도 없다. 두 경로 모두 구현과 테스트는\n돼 있으므로(ParamSearchRejectionIT) 막힌 것은 손으로 재현하는 일뿐이다.\n\napplication-local.yml 의 \"max-candidates: 24 는 상한 초과를 로컬에서 재현하려는\n값\"이라는 주석이 사실이 아님을 확인해 바로잡았다. PD-03·PD-04 가 확정돼도\n전체가 24조합이라 이 값과 같을 뿐 넘지 않는다.\n\n실행 중 발견한 세 가지(동일 조건 재접수 500, 계약 위반 실패 이벤트로 후보가\n영구 DISPATCHED, 낡은 빌드 산출물로 인한 GET 500)도 함께 적었다. 마지막\n것은 코드 결함이 아니라 재시작으로 해소되는 상태라는 점을 명시했다.\n\n워커 없이 만든 기록이라는 것도 남겼다. 확인된 것은 접수·발행·집계·선정·조회의\n흐름이고 엔진이 낸 숫자가 아니므로, 이 기록의 수익률을 성능 근거로 인용하면\n안 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T15:02:25.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T15:02:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8b0c9c74b1e5fd4a23a3f796c2dbaa30094e0fd8"
+        },
+        {
+          "id": "e28b8e82b41d4057a3381c02b0a7ccf5061fdc28",
+          "short_id": "e28b8e82",
+          "created_at": "2026-09-14T14:41:54.000+09:00",
+          "parent_ids": [
+            "5c0465a96506eb225655314fdee44444f3a08737"
+          ],
+          "title": "docs(infra): PD 표에 미확정 항목을 구현이 어떻게 다뤘는지 적는다",
+          "message": "docs(infra): PD 표에 미확정 항목을 구현이 어떻게 다뤘는지 적는다\n\nT123 (spec 007 M10).\n\n두 PD 표(spec.md·specs/README.md)와 application.yml 의 임시값은 이미\n일치했다(실행시간 120초·후보 수 120·발행 창 4·연속 실패 5). 빠져 있던 것은\n**아직 확정되지 않은 항목을 구현이 무엇으로 대신했는가**다.\n\n- PD-05 잔여(동률 처리): 구현은 spec Edge Case 의 대체 규칙을 쓰고 있다 —\n  동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다. 이게 적혀 있지 않으면\n  규칙을 정할 때 \"지금 무엇이 돌고 있는지\"를 코드에서 찾아야 한다. 처리 방식이\n  묶음 스냅샷에 SHOW_ALL_TIED 로 남아 규칙이 확정돼도 끝난 묶음은 안 바뀐다는\n  점도 함께 적었다.\n- PD-12(검증 설계): 분할 미등록이라 전 후보가 UNVALIDATED 다. 이것이 '검증\n  통과'가 아니라 '말할 수 없음'이라는 것을 표에도 남겼다 — 표만 보고 \"검증\n  완료\"로 읽는 일을 막는다.\n- PD-06(실행 한도): 실측 입력이 아직 없다. 004 에 측정 저장소가 없어 007 의\n  AUTO_SEARCH_BATCH 기록을 남길 곳이 없다는 사실을 소유 spec 쪽에서도 보이게\n  했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T14:41:54.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T14:41:54.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e28b8e82b41d4057a3381c02b0a7ccf5061fdc28"
+        },
+        {
+          "id": "5c0465a96506eb225655314fdee44444f3a08737",
+          "short_id": "5c0465a9",
+          "created_at": "2026-09-14T14:40:29.000+09:00",
+          "parent_ids": [
+            "dc3eff0c0d77f75d61910a71002530e99548d18c"
+          ],
+          "title": "docs(infra): 발행 창 ADR 을 남기고 MR 템플릿에 공통 확인을 더한다",
+          "message": "docs(infra): 발행 창 ADR 을 남기고 MR 템플릿에 공통 확인을 더한다\n\nT121·T122 (spec 007 M10).\n\nADR-0005 — 후보를 접수 시점에 전량 발행하지 않고 발행 창만큼만 큐에 올리는\n결정과, 버린 대안 셋(전량 발행 + 워커 조회, 묶음 전용 큐, 우선순위 큐)을\n남겼다. 지금은 그 근거가 코드 주석에만 있어 다음 사람이 \"왜 한 번에 안\n보내지?\"를 코드에서 역추적해야 한다.\n\n핵심은 큐 독점보다 **취소가 뜻을 갖느냐**다. 전량 발행이면 취소를 눌러도 이미\n큐에 든 후보가 끝까지 계산되어, 사용자가 멈췄다고 본 뒤에도 자원이 쓰이고\n결과가 늘어난다. 창 방식은 취소·실행시간 한도·연속 실패 한도 셋을 \"다음 후보를\n발행하지 않는다\" 한 경로로 만든다.\n\nMR 템플릿에는 다섯 항목을 더했다. 백엔드는 테스트로 강제하는 것들이지만\n(BaselineAbsenceTest 가 전략 ID 리터럴을, CandidateListApiIT 가 null 성과를\n막는다) 프론트에는 그런 장치가 없어 리뷰가 유일한 방어선이다. 해당 없는\n항목도 지우지 말라고 적었다 — \"없음\"을 확인한 것도 리뷰 결과다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T14:40:29.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T14:40:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5c0465a96506eb225655314fdee44444f3a08737"
+        },
+        {
+          "id": "dc3eff0c0d77f75d61910a71002530e99548d18c",
+          "short_id": "dc3eff0c",
+          "created_at": "2026-09-14T14:39:11.000+09:00",
+          "parent_ids": [
+            "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c"
+          ],
+          "title": "docs(infra): 자동 탐색 HTTP 계약을 docs/specs 로 옮기고 구현과 맞춘다",
+          "message": "docs(infra): 자동 탐색 HTTP 계약을 docs/specs 로 옮기고 구현과 맞춘다\n\nT120 (spec 007 M10).\n\nspecs/007-.../contracts/ 는 spec 작업용 문서이고, 프론트가 실제로 보고 만드는\n자리는 docs/specs/ 다(004 의 backtest-api 와 같은 위치). 007 은 그 자리가\n없어서 M4·M6·M8 프론트 작업이 참조할 계약이 없었다.\n\n옮기면서 **구현을 기준으로 다시 적었다.** M5·M7·M9 에서 계약에 없던 것이\n여럿 생겼고, 문서만 보고 만들면 어긋난다.\n\n- selection_rule.drawdownFilter.baselineName (M5)\n- selectionReason.outcome 어휘 다섯 가지와 각각에 딸리는 필드 (M5)\n- 상태 응답의 baseline 블록, validationLabel·validationNote (M5·M9)\n- 접수 202 응답에도 검증 표시가 실린다 (M9)\n- POST /cancel·/retry-failed 의 실제 응답과 의미 (M7)\n- 후보 목록의 정렬 방향 규칙(asc·desc 외 400)과 상태 파싱 관용 (M5)\n- 요청자 헤더가 필요한 엔드포인트 구분 (M3 수정)\n\n\"알려진 차이와 한계\" 절을 따로 두었다. 미리보기의 전략 거부가 원본 계약(422)과\n달리 200 인 것, space 가 등록된 후보값만 받는 것, 워커가 1종목만 계산하는 것,\n실행 측정이 없는 것, 평가 분할 미등록이라 라벨이 항상 UNVALIDATED 인 것 —\n프론트가 이걸 모르면 없는 동작을 기대한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T14:39:11.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T14:39:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dc3eff0c0d77f75d61910a71002530e99548d18c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -12,3 +12,19 @@\n \n # 리뷰 포인트\n -\n+\n+<!--\n+아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n+\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.\n+-->\n+# 공통 확인\n+- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는\n+      순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n+- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n+- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다.\n+      전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025).\n+      전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n+- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고,\n+      화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n+- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며\n+      이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".gitlab/merge_request_templates/Default.md",
+          "old_path": ".gitlab/merge_request_templates/Default.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,8 +40,11 @@ thorp:\n   param-search:\n     # 로컬은 네 값이 모두 채워져 있어 켠다. 개발 중 자동 탐색을 쓰는 곳이 여기다.\n     enabled: true\n-    # 공통 설정(1000)보다 크게 낮춘다. 상한 초과 거부(FR-005b)를 로컬에서 재현하려면\n-    # 그리드를 수천 건까지 키우지 않고도 넘길 수 있어야 한다 — quickstart 시나리오 3.\n+    # 공통 설정보다 낮춘 개발 편의값이다.\n+    # **이 값으로 상한 초과 거부(FR-005b)가 재현되지 않는다**(2026-09-14 확인). space 는 등록표에\n+    # 등록된 후보값만 받아 범위를 넓힐 수 없고, 실행 가능한 전략을 다 합쳐도 6조합이다.\n+    # PD-03·PD-04 가 확정돼 두 전략이 실행 가능해져도 전체가 24조합이라 이 값과 같을 뿐 넘지 않는다.\n+    # 그 경로는 ParamSearchRejectionIT 가 max-candidates=2 로 낮춘 프로파일에서 검증한다.\n     max-candidates: 24\n     # 발행 창. 로컬 워커가 보통 1개라 4면 큐가 비지 않으면서 취소 동작도 눈으로 확인된다.\n     dispatch-window: 4\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/application-local.yml",
+          "old_path": "backend/src/main/resources/application-local.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,69 @@\n+# ADR-0005: 자동 탐색은 후보를 발행 창만큼만 큐에 올린다\n+\n+- 상태: 승인 (2026-09-14)\n+- 대상: `backend/src/main/java/com/ssafy/thorp/paramsearch/`\n+- 선행: [ADR-0002](0002-rabbitmq-backtest-message-contract.md) 메시지 계약\n+- 근거 문서: [spec 007 research R2](../../specs/007-auto-parameter-search/research.md),\n+  [내부 계약 §4](../../specs/007-auto-parameter-search/contracts/param-search-internal.md)\n+\n+## 배경\n+\n+자동 탐색(spec 007)은 파라미터 조합 하나를 백테스트 실행 하나로 바꿔 묶음으로 돌린다. 후보 수 상한은\n+현재 임시값 120건이다(PD-06 실측 전). 이 후보들을 **언제 `backtest.jobs` 큐에 넣을지**를 정해야 한다.\n+\n+가장 단순한 방식은 접수 시점에 전량을 넣는 것이다. 그런데 큐는 단일 실행(spec 004)과 공유하고,\n+워커는 prefetch 1 + manual ACK로 소비한다. 이 구조에서 **이미 큐에 들어간 메시지는 회수할 수 없다.**\n+\n+## 결정\n+\n+**한 묶음이 동시에 큐에 올려 두는 미완료 후보 수를 설정값(`dispatchWindow`)으로 제한한다.**\n+\n+- 접수: 기준 1건을 발행하고, 이어서 `min(창 크기, 유효 후보 수)`만큼 발행한다.\n+- 후보 종료: `BacktestFinished`를 받으면 대기 후보 1건을 추가 발행해 창을 다시 채운다.\n+- 취소·한도 도달: 대기 후보를 `SKIPPED`로 확정하고 **더 발행하지 않는다.** 이미 발행된 후보는 완주한다.\n+\n+불변식은 \"한 묶음의 `DISPATCHED` 후보 수는 항상 창 크기 이하\"다.\n+\n+값은 정하지 않는다. 설정으로 빼고 `limits.provisional`에 임시값임을 실어 화면이 표시한다(FR-005a).\n+실측(PD-06) 후 코드 변경 없이 고정할 수 있다.\n+\n+## 왜 이렇게 정했나\n+\n+**하나. 한 묶음이 큐를 독점하지 않는다.** 120건을 한 번에 넣으면 그 뒤에 들어온 다른 사용자의 단일 실행이\n+120건 뒤에 선다. 워커가 둘이어도 마찬가지다 — competing consumers는 순서를 바꾸지 않는다. 창 방식은 한\n+묶음이 큐에서 차지하는 자리를 창 크기로 묶어 둔다.\n+\n+**둘. 취소가 뜻을 갖는다.** 이것이 더 중요하다. 전량 발행이면 취소를 눌러도 이미 큐에 든 120건이 끝까지\n+계산된다. 사용자가 \"멈췄다\"고 본 뒤에도 자원이 계속 쓰이고 결과가 계속 늘어난다. 창 방식에서는 취소가\n+**\"다음 후보를 발행하지 않는다\"** 라는 한 문장이 되고, 창 크기만큼만 완주한다. 실행시간·연속 실패 한도\n+도달도 같은 동작으로 처리된다 — 세 가지 멈춤이 한 경로를 쓴다.\n+\n+**셋. 값을 정하지 않고도 구조를 확정할 수 있다.** 원칙 IX는 상한을 정하기 전에 무제한 실행을 열지 말라고\n+한다. 후보 수 상한이 이미 그 조건을 만족하므로, 창 크기는 실측 뒤에 정해도 된다. 구조가 설정값을 받게\n+만들어 두면 그 결정이 코드 변경을 부르지 않는다.\n+\n+## 버린 대안\n+\n+**전량 발행 + 워커가 취소 여부를 조회한다.** 워커가 실행 전에 백엔드에 \"이 실행 아직 유효한가\"를 묻는\n+방식이다. 취소 문제는 풀리지만 워커에 상태 조회 의존이 생기고 메시지 계약이 바뀐다. 워커는 지금\n+`EngineInput`만 보고 계산하며 백엔드를 모른다 — 그 경계를 깨면 워커 단독 테스트가 어려워지고,\n+조회 실패 시 계산을 할지 말지라는 새 결정이 생긴다. 큐 독점 문제도 그대로다.\n+\n+**묶음 전용 큐를 분리한다.** `backtest.jobs`와 별도로 `search.jobs`를 두는 방식이다. 독점은 막지만\n+워커 설정이 큐마다 갈라지고, 한쪽이 비어 있어도 다른 쪽 워커가 놀게 되어 competing consumers의 이점이\n+준다. 취소 문제는 여전히 남는다 — 전용 큐에 든 메시지도 회수할 수 없다.\n+\n+**004에 우선순위 큐를 도입한다.** 단일 실행을 앞세우는 방식이다. RabbitMQ 우선순위 큐는 quorum 큐에서\n+지원되지 않고, 무엇보다 취소 문제를 풀지 못한다.\n+\n+## 결과\n+\n+- 취소·실행시간 한도·연속 실패 한도가 모두 \"발행을 멈춘다\" 하나로 구현된다\n+  (`ParamSearch.requestStop` → `CandidateDispatcher.advance`가 막음).\n+- 묶음이 끝나는 조건이 \"대기 0 && 발행 0\"으로 단순해지고, 그 지점에서 선정을 딱 한 번 계산한다.\n+- 후보 종료 이벤트마다 묶음 행을 비관적 락으로 잡아야 한다 — 락 없이 창을 채우면 동시에 도착한 두\n+  이벤트가 각각 \"자리가 있다\"고 판단해 창을 넘긴다.\n+- 재시도도 같은 제약을 받는다. 실패 후보가 창보다 많으면 창만큼만 다시 보내고 나머지는\n+  `remainingFailed`로 알린다(FR-024).\n+- **창 크기는 연속 실패 한도보다 작아야 한다.** 창에 든 후보가 한꺼번에 실패하는 일(자료 결측 등)만으로\n+  묶음이 멈추면 일시적 장애에 탐색 전체가 끊긴다. 이 관계는 설정이 지킨다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/0005-param-search-dispatch-window.md",
+          "old_path": "docs/adr/0005-param-search-dispatch-window.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,408 @@\n+# 자동 파라미터 탐색 HTTP 계약 (Backend ↔ Frontend)\n+\n+spec [007](../../../specs/007-auto-parameter-search/spec.md)의 프론트가 쓰는 HTTP 계약이다. 설계 근거와\n+결정 이력은 [`specs/007-auto-parameter-search/contracts/param-search-api.md`](../../../specs/007-auto-parameter-search/contracts/param-search-api.md)가\n+원본이고, **이 문서는 구현된 응답을 기준으로 적는다.** 둘이 어긋나면 코드와 이 문서를 먼저 맞춘 뒤 원본을 고친다.\n+\n+[`../backtest-api/README.md`](../backtest-api/README.md)의 규약을 그대로 상속한다. 다시 정하지 않는 것:\n+\n+- 응답 껍데기 `{ \"success\": bool, \"data\": ..., \"error\": ... }`\n+- 오류 포맷 `error: { code, message }`\n+- **금액·비율은 요청·응답 모두 문자열**(부동소수 오차 방지)\n+- 식별자는 문자열이며 DB PK(숫자)를 노출하지 않는다. 길이를 가정하지 않는다\n+\n+식별자 형식은 둘이다.\n+\n+- `searchId` — `PS-{yyyyMMdd}-{6자리 이상 순번}` (예: `PS-20260914-000011`)\n+- `candidateId` — `{searchId}-C{3자리 이상 순번}` (예: `PS-20260914-000011-C001`)\n+\n+## 요청자 식별\n+\n+`POST /param-searches`·`/cancel`·`/retry-failed`는 **요청자를 요구한다.** 실행이 004의 접수 유스케이스로\n+가는데 `backtest_request.requester_id`가 NOT NULL이기 때문이다(spec 004 R-12). 인증(spec 014) 전에는\n+`thorp.auth.trust-user-id-header`를 켠 환경에서 `X-User-Id` 헤더로 대신하며 **이것은 인증이 아니다**.\n+\n+미리보기와 조회는 요청자가 없어도 된다 — 아무것도 저장하지 않고 실행도 만들지 않는다.\n+\n+---\n+\n+## 1. 실행 전 확인 — `POST /param-searches/preview`\n+\n+저장하지 않고 계산만 한다. 확인 화면의 네 항목(대상 전략·탐색 범위 요약·예상 작업량·적용 한도)을 채운다.\n+**사용자에게 후보 숫자를 입력받지 않는다.**\n+\n+### 요청\n+\n+| 경로 | 타입 | 필수 | 규칙 |\n+|---|---|---|---|\n+| `universe.instrumentIds` | `string[]` | 필수 | 1~50개. `{6자리}.XKRX`. 중복 금지 |\n+| `strategy.strategyIds` | `string[]` | 필수 | 1개 이상. 각 64자 이하 |\n+| `run.start` / `run.end` | `date` | 선택 | 생략 시 공통 평가 구간을 서버가 제시한다 |\n+| `portfolio.initialCash` | `string` | 선택 | 생략 시 서버 기본값 |\n+| `space` | `object` | 선택 | 전략 ID → (축 이름 → 후보 값 배열). 생략하면 등록표 전체 범위 |\n+| `registryVersion` | `string` | 실행만 필수 | 미리보기에서는 무시한다 |\n+\n+`space`는 **전략별로 중첩**한다. 축 이름이 전략마다 겹칠 수 있기 때문이다.\n+\n+```json\n+{ \"space\": { \"INVERSE_VOLATILITY\": { \"lookbackDays\": [21, 63] } } }\n+```\n+\n+**`space`에는 등록표의 후보값만 넣을 수 있다.** `allowedRange` 안이라도 등록된 후보값이 아니면\n+`400 UNREGISTERED_PARAMETER_VALUE`다. `allowedRange`는 화면 표시용이며 입력 허용 범위가 아니다.\n+\n+### 200 응답\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"registryVersion\": \"PROVISIONAL-20260911\",\n+    \"strategies\": [\n+      { \"strategyId\": \"INVERSE_VOLATILITY\", \"name\": \"역변동성\", \"executable\": true }\n+    ],\n+    \"spaceSummary\": [\n+      {\n+        \"strategyId\": \"INVERSE_VOLATILITY\",\n+        \"strategyName\": \"역변동성\",\n+        \"axes\": [\n+          {\n+            \"axis\": \"lookbackDays\", \"label\": \"변동성 관측 기간\", \"unit\": \"거래일\",\n+            \"values\": [21, 63, 126, 252], \"defaultValue\": 63,\n+            \"allowedRange\": { \"min\": 10, \"max\": 504, \"step\": 1, \"values\": null }\n+          }\n+        ],\n+        \"combinations\": 4\n+      }\n+    ],\n+    \"workload\": {\n+      \"totalCombinations\": 4, \"validCombinations\": 4, \"excludedCombinations\": 0,\n+      \"exclusionReasons\": []\n+    },\n+    \"limits\": {\n+      \"maxCandidates\": 120, \"timeLimitSeconds\": 120,\n+      \"dispatchWindow\": 4, \"consecutiveFailureLimit\": 5,\n+      \"provisional\": [\"maxCandidates\", \"dispatchWindow\", \"timeLimitSeconds\", \"consecutiveFailureLimit\"],\n+      \"exceeded\": false\n+    },\n+    \"commonPeriod\": { \"start\": \"2015-12-22\", \"end\": \"2026-09-14\", \"shortenedBy\": \"lookbackDays\" },\n+    \"validationLabel\": \"UNVALIDATED\",\n+    \"validationNote\": \"평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다\"\n+  },\n+  \"error\": null\n+}\n+```\n+\n+- **`strategies`·`spaceSummary`의 모든 값은 등록표 조회 결과다.** 화면은 전략 이름·축 라벨·단위·기본값·\n+  후보값·허용 범위를 자체적으로 갖지 않는다(FR-025·FR-027). `executable`은 004의 실행 지원 여부다.\n+- `axes` 순서가 그리드 좌표 축 순서이고, `values` 순서가 인접 판정의 근거다(FR-029).\n+- `defaultValue`는 등록된 기본 시작값이며 **추천값이나 최적값이 아니다.** '추천'·'최적' 문구를 붙이지 않는다.\n+- `limits.provisional`에 든 항목은 임시값 표시를 붙인다. 현재 네 개 전부다.\n+- `limits.exceeded`가 `true`면 실행은 거부된다. 화면은 범위를 좁히라고 안내한다.\n+- `validationLabel`을 **실행 전에도** 준다 — 결과를 본 뒤에야 미검증을 알면 이미 오해가 생긴 뒤다(FR-015).\n+\n+**등록표에 없는 전략은 `strategies` 목록에서 빠진다.** 실행 미지원 전략은 `executable: false`로 실린다.\n+(구현 기준. 원본 계약은 미리보기에서도 422를 적어 두었으나 코드는 200으로 답한다 — 아래 \"알려진 차이\" 참고.)\n+\n+---\n+\n+## 2. 탐색 실행 — `POST /param-searches`\n+\n+요청 필드는 §1과 같고 `registryVersion`이 **필수**다. 미리보기 응답의 값을 그대로 되돌려 보낸다.\n+응답은 `202 Accepted`.\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"searchId\": \"PS-20260914-000011\", \"status\": \"RUNNING\",\n+    \"validationLabel\": \"UNVALIDATED\",\n+    \"validationNote\": \"평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다\"\n+  },\n+  \"error\": null\n+}\n+```\n+\n+접수 직후 뜻이 있는 값은 `searchId`·`status`와 검증 표시뿐이다. 나머지 필드는 `null`이며 화면은\n+`searchId`로 §3 폴링을 시작한다.\n+\n+### 거부 (실행하지 않음)\n+\n+| HTTP | `error.code` | 언제 | 묶음 저장 |\n+|---|---|---|---|\n+| 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수 > 후보 수 상한 | `REJECTED`로 저장 |\n+| 422 | `NO_VALID_COMBINATION` | 등록된 조합이 모두 유효성 제약 위반 | `REJECTED`로 저장 |\n+| 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없음 | `REJECTED`로 저장 |\n+| 422 | `STRATEGY_NOT_EXECUTABLE` | 등록됐으나 004가 실행을 지원하지 않음 | `REJECTED`로 저장 |\n+| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 `registryVersion`이 접수 시점과 다름 | 저장하지 않음 |\n+| 503 | `REGISTRY_UNAVAILABLE` | 등록 정보·실행 지원 목록 조회 실패 | 저장하지 않음 |\n+\n+앞의 넷은 **표본을 자동으로 뽑거나 간격을 넓혀 실행하지 않고** 묶음을 `REJECTED`로 저장해 사유를 남긴다\n+(FR-020) — 재현 기록이므로 조용히 버리지 않는다. 후보 행은 만들지 않는다.\n+\n+뒤의 둘은 묶음을 저장하지 않는다. 버전 드리프트는 다시 확인하면 해소되고 조회 실패는 일시적 장애다.\n+`REGISTRY_VERSION_CHANGED`를 받은 화면은 미리보기를 다시 호출해 바뀐 요약을 보이고 확인을 받은 뒤\n+다시 실행한다. **등록 정보를 캐시나 기본값으로 대체해 실행하지 않는다.**\n+\n+---\n+\n+## 3. 묶음 상태·결과 — `GET /param-searches/{searchId}`\n+\n+폴링 대상이다. **실패해도 200**이며 `status`로 판단한다.\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"searchId\": \"PS-20260914-000011\",\n+    \"status\": \"PARTIAL\",\n+    \"stopReason\": \"CANCELLED\",\n+    \"counts\": { \"expected\": 5, \"valid\": 5, \"completed\": 3, \"failed\": 1, \"excluded\": 0, \"pending\": 0, \"skipped\": 1 },\n+    \"partial\": true,\n+    \"partialNote\": \"유효 후보 5개 중 4개까지 계산했습니다. 1개는 실행되지 않았습니다\",\n+    \"config\": {\n+      \"strategyIds\": [\"INVERSE_VOLATILITY\", \"EQUAL_WEIGHT\"],\n+      \"instrumentIds\": [\"244580.XKRX\"],\n+      \"registryVersion\": \"PROVISIONAL-20260911\",\n+      \"searchMethod\": \"FULL_GRID\",\n+      \"randomSeed\": null,\n+      \"space\": {\n+        \"INVERSE_VOLATILITY\": {\n+          \"strategyName\": \"역변동성\",\n+          \"axes\": [\n+            { \"name\": \"lookbackDays\", \"label\": \"변동성 관측 기간\", \"unit\": \"거래일\", \"values\": [21, 63, 126, 252] }\n+          ]\n+        }\n+      },\n+      \"selectionRule\": {\n+        \"drawdownFilter\": {\n+          \"type\": \"NOT_WORSE_THAN_BASELINE\",\n+          \"baseline\": \"EQUAL_WEIGHT\",\n+          \"baselineName\": \"동일 비중\"\n+        },\n+        \"stabilityFilter\": { \"type\": \"BATCH_PERCENTILE\", \"keepTopPercent\": 50 },\n+        \"sortMetric\": \"NET_RETURN\",\n+        \"displayCount\": 5,\n+        \"tieHandling\": \"SHOW_ALL_TIED\",\n+        \"stabilityFormula\": { \"neighbor\": \"SINGLE_AXIS_ONE_STEP\", \"value\": \"MEAN_ABS_NET_RETURN_DIFF\" },\n+        \"provisional\": [\"displayCount\"]\n+      },\n+      \"limits\": { \"maxCandidates\": 120, \"timeLimitSeconds\": 120, \"dispatchWindow\": 4, \"consecutiveFailureLimit\": 5, \"provisional\": [\"...\"] },\n+      \"referenceVersions\": { \"marketData\": \"FIXTURE-three_etf_24m\", \"registry\": \"PROVISIONAL-20260911\", \"cost\": \"PROVISIONAL-DEMO-1\", \"engine\": \"nautilus_trader 1.219.0 / worker 2.0.0\" },\n+      \"dataVersionChanged\": false\n+    },\n+    \"baseline\": {\n+      \"strategyId\": \"EQUAL_WEIGHT\",\n+      \"strategyName\": \"동일 비중\",\n+      \"backtestId\": \"BT-20260914-000015\",\n+      \"status\": \"COMPLETED\",\n+      \"netReturn\": \"0.100000\",\n+      \"maxDrawdown\": \"-0.200000\"\n+    },\n+    \"validationLabel\": \"UNVALIDATED\",\n+    \"validationNote\": \"평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다\",\n+    \"selection\": {\n+      \"displayed\": [\"PS-20260914-000011-C001\", \"PS-20260914-000011-C002\"],\n+      \"shortOfDisplayCount\": true,\n+      \"note\": \"기준을 충족한 후보가 2개입니다\",\n+      \"drawdownFilterApplied\": false\n+    },\n+    \"startedAt\": \"2026-09-14T02:11:04Z\",\n+    \"finishedAt\": \"2026-09-14T02:19:51Z\"\n+  },\n+  \"error\": null\n+}\n+```\n+\n+### 상태\n+\n+```\n+QUEUED ─▶ RUNNING ─┬─▶ COMPLETED   모든 유효 후보가 완료 또는 실패로 끝남\n+                   ├─▶ PARTIAL     취소·한도 도달로 미실행 후보가 남음\n+                   └─▶ FAILED      접수 후 실행 자체가 불가\n+QUEUED ─▶ REJECTED                 접수 시점 거부\n+COMPLETED·PARTIAL ─▶ RUNNING       실패 후보 재시도로 다시 열림 (§5.1)\n+```\n+\n+`stopReason`은 `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` `NO_VALID_CANDIDATE`\n+`STRATEGY_NOT_REGISTERED` `STRATEGY_NOT_EXECUTABLE` 중 하나이며 그 외에는 `null`이다.\n+\n+**취소·한도로 멈춘 직후에도 `status`는 아직 `RUNNING`일 수 있다.** 이미 큐에 든 후보가 완주하는 동안은\n+그것이 사실이고, 그때 `stopReason`이 먼저 채워진다. 화면은 `stopReason != null`을 \"멈추는 중\"으로 읽는다.\n+\n+### `selection`과 `baseline`\n+\n+- `selection`은 `status`가 `COMPLETED`·`PARTIAL`일 때만 채워진다. 그 전에는 `null`이다.\n+- **`selection.displayed`는 순위가 아니다.** 정렬 지표(`sortMetric`)를 밝힌 집합이며 화면에 순위 번호를\n+  붙이지 않는다. 정렬 지표 이름을 함께 보인다.\n+- `shortOfDisplayCount`가 `true`면 기준을 충족한 후보가 `displayCount`에 못 미친 것이다. **문턱을 낮춰\n+  채우지 않는다**(원칙 VII). `note`에 몇 개가 충족했는지 문장으로 있다.\n+- `drawdownFilterApplied`가 `false`면 손실 제약을 걸지 않았다 — 등록표가 기준 전략을 지정하지 않았거나\n+  기준 실행이 끝나지 않았거나 실패한 경우다. 화면에 그 사실을 표시한다.\n+- `baseline`은 기준 실행을 만들지 않았으면 전체가 `null`이다. 만들었지만 아직 안 끝났으면 `netReturn`·\n+  `maxDrawdown`이 `null`이다. `backtestId`로 기준의 상세를 열 수 있다.\n+\n+---\n+\n+## 4. 후보 목록 — `GET /param-searches/{searchId}/candidates`\n+\n+| 파라미터 | 기본값 | 규칙 |\n+|---|---|---|\n+| `page` / `size` | `0` / `50` | `size` 1~200. 벗어나면 400 |\n+| `status` | 없음(전체) | `PENDING` `DISPATCHED` `COMPLETED` `FAILED` `EXCLUDED` `SKIPPED`. 대소문자·앞뒤 공백을 흡수하고 모르는 값은 400 |\n+| `selected` | 없음(전체) | `true` / `false` |\n+| `sort` | `candidateNo` | `candidateNo` `netReturn` `maxDrawdown` `tradingCost` `stability`만 허용. 그 외 400 |\n+\n+`sort`에 방향을 붙일 수 있다(`sort=netReturn,desc`). 생략하면 지표는 내림차순, 순번은 오름차순이다.\n+**`asc`·`desc` 외의 방향은 400이다** — 오타를 기본값으로 접으면 목록이 조용히 뒤집힌다.\n+\n+```json\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"page\": 0, \"size\": 50, \"totalElements\": 5, \"totalPages\": 1,\n+    \"content\": [\n+      {\n+        \"candidateId\": \"PS-20260914-000011-C001\",\n+        \"candidateNo\": 1,\n+        \"strategyId\": \"INVERSE_VOLATILITY\",\n+        \"parameters\": { \"lookbackDays\": 21 },\n+        \"status\": \"COMPLETED\",\n+        \"backtestId\": \"BT-20260914-000011\",\n+        \"netReturn\": \"0.300000\",\n+        \"maxDrawdown\": \"-0.100000\",\n+        \"tradingCost\": \"17078.49\",\n+        \"stability\": { \"calculable\": true, \"value\": \"0.05000000\", \"neighborCount\": 1 },\n+        \"retryCount\": 0,\n+        \"validationLabel\": \"UNVALIDATED\",\n+        \"selected\": true,\n+        \"selectionReason\": { \"outcome\": \"SELECTED\", \"tied\": false, \"passedFilters\": [\"DRAWDOWN\", \"STABILITY\"] }\n+      },\n+      {\n+        \"candidateId\": \"PS-20260914-000011-C005\",\n+        \"candidateNo\": 5,\n+        \"strategyId\": \"EQUAL_WEIGHT\",\n+        \"parameters\": {},\n+        \"status\": \"SKIPPED\",\n+        \"backtestId\": null,\n+        \"netReturn\": null, \"maxDrawdown\": null, \"tradingCost\": null,\n+        \"stability\": null,\n+        \"retryCount\": 0,\n+        \"validationLabel\": \"UNVALIDATED\",\n+        \"selected\": false,\n+        \"selectionReason\": { \"outcome\": \"NOT_EVALUATED\", \"code\": \"CANCELLED\", \"message\": \"사용자가 취소해 실행되지 않았습니다\" }\n+      }\n+    ]\n+  },\n+  \"error\": null\n+}\n+```\n+\n+**성과 필드가 `null`인 것과 0인 것은 다르다.** `EXCLUDED` `FAILED` `SKIPPED` `PENDING` 후보의\n+`netReturn`·`maxDrawdown`·`tradingCost`는 항상 `null`이고 0으로 채우지 않는다(FR-011). `stability`도\n+선정 계산 전이면 `null`, 이웃이 없으면 `calculable: false`에 `value: null`이다. **화면은 이 값을 \"0%\"가\n+아니라 사유와 함께 표시한다.**\n+\n+`backtestId`는 **요청**의 식별자다 — `GET /backtests/{id}`로 여는 값이 그것이다. 발행 전·제외 후보는 `null`이다.\n+\n+### `selectionReason.outcome`\n+\n+| 값 | 뜻 | 함께 오는 것 |\n+|---|---|---|\n+| `SELECTED` | 표시 후보 | `tied`, `passedFilters` |\n+| `NOT_IN_DISPLAY` | 두 필터를 통과했으나 표시 범위 밖 | `passedFilters` |\n+| `FILTERED_OUT` | 필터에서 탈락 | `failedFilter`(`DRAWDOWN`·`STABILITY`), `passedFilters` |\n+| `EXCLUDED_BEFORE_RUN` | 유효성 위반으로 계산 전 제외 | `code`, `message` |\n+| `NOT_EVALUATED` | 실패·미실행이라 비교 대상이 아님 | `code`, `message` |\n+\n+선정 계산 전에는 `selectionReason`이 `null`이다. `FILTERED_OUT`은 탈락이고 `NOT_IN_DISPLAY`는\n+\"떨어진 것이 아니라 표시하지 않은 것\"이다 — 화면에서 두 문구를 구분한다.\n+\n+---\n+\n+## 5. 취소 — `POST /param-searches/{searchId}/cancel`\n+\n+`202 Accepted`.\n+\n+```json\n+{ \"success\": true, \"data\": { \"searchId\": \"PS-20260914-000011\", \"status\": \"RUNNING\", \"skipped\": 1, \"inFlight\": 4 }, \"error\": null }\n+```\n+\n+발행하지 않은 후보를 `SKIPPED`('미실행')로 확정하고 더 발행하지 않는다. **이미 큐에 들어간 후보는\n+완주한다** — 발행된 메시지는 회수할 수 없다. 그래서 응답의 `status`는 아직 `RUNNING`일 수 있고,\n+`inFlight`가 몇 개가 끝까지 도는지 알려 준다. 그것이 다 끝나면 `PARTIAL`이 된다.\n+\n+이미 끝난 묶음을 취소하면 `409 ALREADY_FINISHED`, 없는 묶음이면 `404`다.\n+\n+## 5.1 실패 후보 재시도 — `POST /param-searches/{searchId}/retry-failed`\n+\n+`202 Accepted`.\n+\n+```json\n+{ \"success\": true, \"data\": { \"searchId\": \"PS-20260914-000011\", \"status\": \"RUNNING\", \"retried\": 1, \"remainingFailed\": 0 }, \"error\": null }\n+```\n+\n+`FAILED` 후보만 다시 발행한다. **묶음 시작 시점의 참조 버전·탐색 공간·선정 규칙을 그대로 쓰고 새 묶음을\n+만들지 않는다**(FR-024). `SKIPPED`는 대상이 아니다 — 취소·한도로 빠진 것을 되살리면 완료 범위 표시가\n+뜻을 잃는다.\n+\n+**발행 창을 넘겨 보내지 않는다.** 실패가 창보다 많으면 이번에 창만큼만 보내고 나머지는\n+`remainingFailed`로 알린다. 자동으로 이어 보내지 않으므로 화면은 그 수를 보고 다시 요청한다.\n+\n+다시 열린 묶음은 `selection`이 `null`로 비워진다 — 후보가 더 붙으므로 이전 선정은 사실이 아니다.\n+다시 끝나면 선정을 한 번 더 계산한다. 실패 후보가 없으면 `409 NOTHING_TO_RETRY`다.\n+\n+---\n+\n+## 6. 오류 코드 (007 신규)\n+\n+| HTTP | `error.code` | 언제 | 재시도 |\n+|---|---|---|---|\n+| 400 | `INVALID_INPUT` | 종목 수·형식, 페이징·정렬 파라미터, 요청자 헤더 누락 | 값을 고친 뒤 |\n+| 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |\n+| 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수가 상한 초과 | 범위를 좁힌 뒤 |\n+| 422 | `NO_VALID_COMBINATION` | 유효 조합 0건 | 섹터·범위를 바꾼 뒤 |\n+| 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없는 전략 | 등록 후 |\n+| 422 | `STRATEGY_NOT_EXECUTABLE` | 004가 실행을 지원하지 않는 전략 | 004 지원 후 |\n+| 409 | `REGISTRY_VERSION_CHANGED` | 미리보기와 접수 시점의 등록표 버전이 다름 | 미리보기를 다시 본 뒤 |\n+| 503 | `REGISTRY_UNAVAILABLE` | 등록 정보·지원 목록 조회 실패 | 잠시 후 |\n+| 409 | `ALREADY_FINISHED` | 끝난 묶음 취소 | 무의미 |\n+| 409 | `NOTHING_TO_RETRY` | 실패 후보가 없는 묶음에 재시도 요청 | 무의미 |\n+| 404 | `RESOURCE_NOT_FOUND` | 없는 `searchId` | 무의미 |\n+\n+004에서 올라오는 오류도 접수 경로에서 그대로 보인다 — 예를 들어 규칙이 등록되지 않은 전략은\n+`422 RULES_NOT_REGISTERED`다.\n+\n+---\n+\n+## 7. 프론트가 알아야 할 것\n+\n+- `searchId`·`candidateId`는 문자열이다. 길이를 가정하지 않는다.\n+- 같은 조건으로 다시 요청하면 **항상 새 묶음**이다. 이전 묶음의 결과와 상태 표시는 바뀌지 않는다\n+  (FR-013c). 기준을 바꿔 다시 실행하는 것은 새 실험이다.\n+- 폴링은 §3으로 한다. `selection`이 `null`이면 아직 선정 전이다.\n+- **표시 후보에 순위 번호를 붙이지 않는다.** 정렬 지표 이름을 함께 보이고, 후보마다 `validationLabel`을\n+  항상 함께 보인다(현재 값은 전부 `UNVALIDATED`).\n+- `limits.provisional`에 든 항목은 임시값 표시를 붙인다.\n+- **프론트에 전략 목록·파라미터 기본값·허용 범위·단위를 두지 않는다**(FR-025). 전략 이름·축 라벨·단위·\n+  기본값·후보값은 `spaceSummary`·`strategies`에서만 읽는다. 전략이 늘어도 화면 코드를 고치지 않는 것이\n+  이 계약의 목적이고, **`strategyId`로 분기하는 화면 코드는 리뷰에서 막는다.**\n+- 등록된 기본 시작값에 '추천'·'최적' 문구를 붙이지 않는다(원칙 III).\n+- `POST /param-searches`에는 미리보기에서 받은 `registryVersion`을 반드시 함께 보낸다.\n+- **성과가 `null`인 후보를 \"0%\"로 그리지 않는다.** 계산하지 않은 것과 0인 것은 다르다(FR-011).\n+\n+## 8. 알려진 차이와 한계\n+\n+구현이 원본 계약과 다르거나 아직 못 미치는 지점이다. 프론트가 이것을 모르면 없는 동작을 기대하게 된다.\n+\n+- **미리보기의 전략 거부가 200이다.** 원본 계약 §6은 미등록·실행 미지원 전략을 422로 적었지만, 구현은\n+  미리보기에서 예외를 던지지 않는다 — 미등록 전략은 `strategies` 목록에서 빠지고 실행 미지원 전략은\n+  `executable: false`로 실린다. 접수(`POST /param-searches`)는 계약대로 422다. **어느 쪽으로 맞출지\n+  미정이다.**\n+- **`space`는 등록된 후보값만 받는다.** `allowedRange` 안의 임의 값은 400이다. 그래서 현재 등록표로는\n+  후보 수 상한을 넘기는 요청을 만들 수 없다.\n+- **현재 워커는 1종목만 계산한다.** `universe.instrumentIds`를 2개 이상 보내면 후보 Job은 접수되고\n+  실행 단계에서 실패한다. 004의 배분 전략이 붙기 전까지의 한계다.\n+- **실행 측정(FR-023)이 없다.** 004에 측정 저장소가 아직 없어 `AUTO_SEARCH_BATCH` 기록이 남지 않는다.\n+- **평가 분할이 미등록이라 `validationLabel`은 항상 `UNVALIDATED`다.** 이것은 \"검증을 통과했다\"가\n+  아니라 \"검증 여부를 말할 수 없다\"는 뜻이다. 분할이 등록되면 후보마다 라벨이 갈린다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/param-search-api/README.md",
+          "old_path": "docs/specs/param-search-api/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -40,7 +40,7 @@ cd frontend && npm install && npm run dev\n # 실행 전 확인. 후보 숫자를 하나도 넣지 않는다\n curl -s -X POST localhost:8080/param-searches/preview \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]}}' | jq\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\"]},\"strategy\":{\"strategyIds\":[\"INVERSE_VOLATILITY\"]}}' | jq\n ```\n \n **기대**: `data.strategies`·`spaceSummary`·`workload`·`limits` 네 덩어리가 채워진다.\n@@ -50,7 +50,7 @@ curl -s -X POST localhost:8080/param-searches/preview \\\n # 같은 본문으로 실행\n curl -s -X POST localhost:8080/param-searches \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]}}' | jq\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\"]},\"strategy\":{\"strategyIds\":[\"INVERSE_VOLATILITY\"]}}' | jq\n ```\n \n **기대**: `202`, `{ \"searchId\": \"PS-...\", \"status\": \"QUEUED\" }`. `space`를 보내지 않았는데 접수됐다 —\n@@ -70,8 +70,8 @@ GROUP BY status;\n ```bash\n curl -s -X POST localhost:8080/param-searches \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\",\"091170.XKRX\"]},\n-       \"strategy\":{\"strategyIds\":[\"sector-momentum\"]},\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\",\"305720.XKRX\"]},\n+       \"strategy\":{\"strategyIds\":[\"SECTOR_MOMENTUM\"]},\n        \"space\":{\"topN\":[2,3,4]}}' | jq\n ```\n \n@@ -85,6 +85,31 @@ curl -s \"localhost:8080/param-searches/{searchId}/candidates?status=EXCLUDED\" |\n **기대**: 각 항목의 `netReturn`·`maxDrawdown`·`tradingCost`가 모두 `null`이다. **0이 아니다** —\n 0이면 SC-002·FR-011 위반이다.\n \n+> **2026-09-14 현재 이 시나리오는 돌릴 수 없다.** 위 요청은 `422 STRATEGY_NOT_EXECUTABLE` 로 끊긴다.\n+>\n+> 이 시나리오에는 **유효성 규칙을 가졌으면서 실행도 가능한 전략**이 필요한데, 임시 등록표에서 그 둘이\n+> 겹치지 않는다.\n+>\n+> | 전략 | 축·조합 | 유효성 규칙 | `strategy_rules` |\n+> |---|---|---|---|\n+> | `EQUAL_WEIGHT` | 0축·1조합 | 없음 | `REGISTERED` |\n+> | `FIXED_WEIGHT` | 0축·1조합 | 없음 | `REGISTERED` |\n+> | `INVERSE_VOLATILITY` | 1축·4조합 | 없음 | `REGISTERED` |\n+> | `SECTOR_MOMENTUM` | 2축·9조합 | `TOP_N_EXCEEDS_UNIVERSE` | **`PENDING_DECISION`** |\n+> | `MINIMUM_VARIANCE` | 2축·9조합 | `MAX_WEIGHT_TOO_LOW_FOR_UNIVERSE` | **`PENDING_DECISION`** |\n+>\n+> 규칙을 가진 둘은 계산 규칙이 팀 미확정(PD-03·PD-04)이라 004 가 실행을 지원하지 않고, 그래서\n+> `SearchTargetResolver` 가 **조합을 만들기도 전에** 거부한다(FR-026). 실행 가능한 셋에는 유효성\n+> 규칙이 아예 없어 제외될 조합 자체가 없다.\n+>\n+> **제외 경로 자체는 구현돼 있고 검증됐다** — `CandidateValidator` 가 등록표 판정을 그대로 쓰고,\n+> `ParamSearchRejectionIT.noValidCombinationIsRejectedWithTheReason` 이 모든 조합을 거르는 fixture\n+> 등록표로 그 경로를 확인한다. 막힌 것은 운영 등록표로 **손으로 재현하는 일**이다.\n+>\n+> **해소 조건**: PD-03 또는 PD-04 가 확정돼 `strategy_rules` 의 해당 행이 `REGISTERED` 가 되면 위\n+> 요청이 그대로 돈다. 그때 `space` 는 전략별 중첩이어야 한다 — 위 예시의 평면 `{\"topN\": [...]}` 는\n+> `{\"SECTOR_MOMENTUM\": {\"topN\": [...]}}` 로 고쳐야 한다(FR-027).\n+\n ## 시나리오 3 — 상한 초과 거부 (FR-005b)\n \n 임시 상한(120)을 넘는 조합을 만든다. 축 값을 늘리거나 테스트 프로파일에서 상한을 낮춰 확인한다.\n@@ -92,12 +117,33 @@ curl -s \"localhost:8080/param-searches/{searchId}/candidates?status=EXCLUDED\" |\n **기대**: `422 CANDIDATE_LIMIT_EXCEEDED`. `message`에 유효 후보 수·상한·좁히는 방법이 있고,\n `param_search` 행이 `status=REJECTED`로 남는다. 후보 행은 생기지 않고, **표본을 뽑아 실행하지 않는다.**\n \n+> **2026-09-14 현재 이 시나리오는 돌릴 수 없다.** 상한을 넘길 방법이 없다.\n+>\n+> \"축 값을 늘려\" 넘기는 길이 막혀 있다 — `space` 는 **등록표에 등록된 후보값만** 받는다.\n+> `allowedRange` 안의 값이라도 등록된 후보값이 아니면 `400 UNREGISTERED_PARAMETER_VALUE` 다(FR-002).\n+> 범위를 넓히려면 등록표를 고쳐야 하고, 그것은 quickstart 로 할 일이 아니다.\n+>\n+> 그래서 만들 수 있는 최대 조합 수가 정해져 있는데, 실행 가능한 전략을 다 합쳐도\n+> **`INVERSE_VOLATILITY` 4 + `EQUAL_WEIGHT` 1 + `FIXED_WEIGHT` 1 = 6조합**이다. 로컬 상한 24, 운영\n+> 상한 120 어느 쪽도 넘지 못한다. (`FIXED_WEIGHT` 는 목표 비중을 사용자가 줘야 하는데 007 이 그 값을\n+> 넘길 방법이 없어 실제로는 후보가 되어도 004 가 거부한다 — 실질 조합은 5다.)\n+>\n+> PD-03·PD-04 가 확정돼 두 전략이 실행 가능해져도 **전체가 24조합**이라(9+9+4+1+1) 로컬 상한 24 와\n+> 같을 뿐 넘지 않는다. 이 시나리오는 어느 경우든 **상한을 일부러 낮춘 프로파일**이 필요하다.\n+>\n+> **거부 경로 자체는 구현돼 있고 검증됐다** — `ParamSearchRejectionIT` 가 `max-candidates=2` 로 낮춘\n+> 프로파일에서 `422 CANDIDATE_LIMIT_EXCEEDED`·`REJECTED` 저장·후보 행 0건·표본 미추출을 확인한다.\n+>\n+> **`application-local.yml` 의 `max-candidates: 24` 주석이 \"상한 초과 거부를 로컬에서 재현하려고\"\n+> 라고 적고 있으나 사실이 아니다.** 위 계산대로 24 로는 재현되지 않는다. 값을 6 미만으로 낮추거나\n+> 테스트처럼 별도 프로파일을 쓰는 수밖에 없다.\n+\n ## 시나리오 4 — 취소와 부분 결과 (US3, SC-003)\n \n 후보가 여러 건인 묶음을 실행하고 진행 중에 취소한다.\n \n ```bash\n-curl -s -X POST localhost:8080/param-searches/{searchId}/cancel | jq\n+curl -s -X POST -H 'X-User-Id: 1' localhost:8080/param-searches/{searchId}/cancel | jq\n curl -s localhost:8080/param-searches/{searchId} | jq '{status, stopReason, counts, partialNote}'\n ```\n \n@@ -163,7 +209,7 @@ FROM search_candidate WHERE param_search_id IN (:a, :b) GROUP BY param_search_id\n # 1. 미리보기의 전략 목록·축·기본값이 모두 등록표에서 오는지 (FR-025, FR-027)\n curl -s -X POST localhost:8080/param-searches/preview \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]}}' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\"]},\"strategy\":{\"strategyIds\":[\"INVERSE_VOLATILITY\"]}}' \\\n   | jq '{registryVersion, strategies, spaceSummary}'\n \n # 2. 자원 파일에 여섯 번째 전략을 추가한다 (코드 수정 없음)\n@@ -174,13 +220,13 @@ curl -s -X POST localhost:8080/param-searches/preview \\\n #    전체 조합 수 = 전략별 (축별 후보 개수의 곱)의 합\n curl -s -X POST localhost:8080/param-searches/preview \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"<새-전략-id>\"]}}' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\"]},\"strategy\":{\"strategyIds\":[\"<새-전략-id>\"]}}' \\\n   | jq '.data.workload'\n \n # 4. 등록표에 없는 전략 → 422 STRATEGY_NOT_REGISTERED (SC-012)\n curl -s -o /dev/null -w '%{http_code}\\n' -X POST localhost:8080/param-searches \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"no-such-strategy\"]},\"registryVersion\":\"PROVISIONAL-2026-09-10\"}'\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\"]},\"strategy\":{\"strategyIds\":[\"no-such-strategy\"]},\"registryVersion\":\"PROVISIONAL-20260911\"}'\n \n # 5. 등록됐지만 004가 실행을 지원하지 않는 전략 → 422 STRATEGY_NOT_EXECUTABLE (SC-012)\n #    위 2단계에서 추가한 전략이 워커에 없으므로 그대로 실행을 시도하면 이 코드가 나온다.\n@@ -188,13 +234,13 @@ curl -s -o /dev/null -w '%{http_code}\\n' -X POST localhost:8080/param-searches \\\n # 6. 미리보기와 다른 registryVersion으로 실행 → 409 REGISTRY_VERSION_CHANGED (FR-028)\n curl -s -X POST localhost:8080/param-searches \\\n   -H 'Content-Type: application/json' \\\n-  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]},\"registryVersion\":\"PROVISIONAL-1999-01-01\"}' | jq '.error'\n+  -d '{\"universe\":{\"instrumentIds\":[\"091160.XKRX\"]},\"strategy\":{\"strategyIds\":[\"INVERSE_VOLATILITY\"]},\"registryVersion\":\"PROVISIONAL-1999-01-01\"}' | jq '.error'\n ```\n \n 확인:\n \n - 1단계 응답의 전략 이름·축 라벨·단위·기본값이 자원 파일 값과 일치한다. 007 소스에서\n-  `grep -rn \"momentum\" backend/src/main/java/com/ssafy/thorp/paramsearch` 결과가 **0건**이다(SC-010).\n+  `grep -rn \"INVERSE_VOLATILITY\" backend/src/main/java/com/ssafy/thorp/paramsearch` 결과가 **0건**이다(SC-010).\n - 3단계에서 축 개수·후보 개수가 다른 전략의 조합 수가 기대치와 같다(SC-011).\n - 4·5단계가 서로 다른 오류 코드로 거부되고, 묶음이 `REJECTED`로 저장되며 `stop_reason`이 구분된다.\n - 6단계는 묶음을 만들지 않는다(`param_search` 행이 늘지 않는다).\n@@ -230,3 +276,45 @@ Backend 테스트가 덮어야 하는 것(구현 Task에서 작성):\n - **미사용 검증 결과 표시** — PD-12 미확정. 전 후보가 `UNVALIDATED`이므로 SC-005는 자동 만족이며\n   이를 검증 통과로 보고하지 않는다(완료의 구분).\n - **실행 한도의 적정성** — PD-06 실측 전. 이 가이드로 얻는 측정값이 PD-06의 입력이다.\n+\n+---\n+\n+## 수동 실행 기록 (T125)\n+\n+**일시** 2026-09-14 | **대상** 묶음 M1~M9 구현 (dev 병합본) | **환경** 로컬 프로파일, 워커 없음\n+\n+돌린 결과를 그대로 적는다. 통과하지 못한 것은 사유를 함께 남긴다 — \"해봤는데 안 됐다\"와 \"할 수\n+없었다\"는 다르고, 뒤엣것은 무엇이 해소돼야 돌릴 수 있는지가 기록의 몫이다.\n+\n+| 시나리오 | 결과 | 확인한 것 |\n+|---|---|---|\n+| 1 확인 화면과 한 동작 실행 | **통과** | 미리보기가 네 덩어리를 채우고 `limits.provisional` 에 네 항목, `validationLabel=UNVALIDATED`. `space` 없이 접수해 `202`·후보 4건 생성, 발행 창만큼만 `DISPATCHED` (SC-001) |\n+| 2 유효성 위반 조합의 사전 제외 | **실행 불가** | 유효성 규칙을 가진 전략(`SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`)이 둘 다 `PENDING_DECISION` 이라 `422 STRATEGY_NOT_EXECUTABLE` 로 먼저 끊긴다. 시나리오 2의 주석 참고 |\n+| 3 상한 초과 거부 | **실행 불가** | 실행 가능한 전략을 다 합쳐 6조합. `space` 가 등록된 후보값만 받아 넓힐 수 없다. 시나리오 3의 주석 참고 |\n+| 4 취소와 부분 결과 | **통과** | 후보 5건·창 4인 묶음에서 `202 {skipped:1, inFlight:4}`, 응답 시점 `status=RUNNING` 이고 `stopReason=CANCELLED` 가 먼저 기록됨. 발행된 4건이 끝나자 `PARTIAL`, 대기 후보는 `SKIPPED`+사유, 취소 뒤 추가 발행 0건 (SC-003, 불변식 2·4) |\n+| 5 선정과 미검증 표시 | **통과** | `selection.displayed` 2건, `shortOfDisplayCount=true`, `note=\"기준을 충족한 후보가 2개입니다\"`. 후보마다 `validationLabel=UNVALIDATED`. 워커가 없어 기준 실행이 `QUEUED` 로 남아 `drawdownFilterApplied=false` 이고 `passedFilters` 에 `DRAWDOWN` 이 없다 — 걸지 않은 필터를 통과했다고 적지 않는다 (SC-006, FR-013d) |\n+| 5.1 실패 후보 재시도 | **통과** | `202 {retried:1, remainingFailed:0}`, 같은 묶음이 다시 열리고 `param_search` 행 수 불변, `retryCount=1`·이전 실패 사유 삭제, `selection` 이 비워졌다가 다시 끝날 때 재계산 (SC-009, FR-024) |\n+| 6 재현 | **통과** | 같은 등록표 버전·같은 범위의 두 묶음이 후보 집합과 그리드 좌표가 완전히 같고 `searchMethod=FULL_GRID`·`randomSeed=NULL`. 같은 조건 재접수 자체는 004 결함으로 막혀(아래) 두 묶음 대조로 대신했다 (SC-004) |\n+| 7 전략 비의존성 | **통과** | 007 운영 코드에서 다섯 전략 ID 리터럴이 **전부 0건**. 전략 이름·축 라벨·단위·기본값·후보값이 모두 등록표 조회 결과로만 응답에 실린다 (SC-010) |\n+\n+### 실행 중 발견한 것\n+\n+- **같은 조건으로 다시 접수하면 `500`이다.** 004 의 동일 버전 재사용·합류 경로에서 난다(다른 종목이면\n+  `202`). `BacktestService.joinExisting` 주석이 예고한 지점으로 보인다. 007 범위 밖이라 손대지 않았고\n+  시나리오 6 을 두 묶음 대조로 대신한 이유다.\n+- **계약을 어긴 실패 이벤트는 조용히 버려진다.** `FINISHED(FAILED)` 는 `engineOutput.run.error` 가\n+  필수인데, 성공 예시에서 `status` 만 바꾼 메시지는 검증기가 걸러 DLQ 로 보낸다. 그동안 007 후보는\n+  `DISPATCHED` 에 머물러 묶음이 닫히지 않는다. 워커가 계약을 지키면 생기지 않지만, 계약 위반이\n+  007 쪽에서는 \"영원히 진행 중\"으로 보인다는 점은 남는다.\n+- **낡은 빌드 산출물로 서버가 뜨면 `GET /param-searches/{id}` 가 `500` 이다**\n+  (`NoSuchMethodError: ParamSearchResult.validationLabel()`). 코드 결함이 아니라 부분 재컴파일\n+  상태이며 재시작으로 해소된다. 같은 증상을 다시 만나면 소스부터 의심하지 말고 재시작을 먼저 본다.\n+\n+### 워커 없이 돌린 것의 뜻\n+\n+이 기록은 **워커를 띄우지 않고** 만들었다. `daily_price` 가 비어 있어(spec 001 적재 대기) 실제 계산을\n+할 수 없으므로, 후보 완료는 계약 이벤트(`docs/specs/backtest-messaging/examples/`)를 `backtest.events`\n+에 직접 발행해 대신했다.\n+\n+따라서 확인된 것은 **접수·발행·집계·선정·조회의 흐름**이고, 확인되지 않은 것은 **엔진이 낸 숫자**다.\n+성과 값은 모두 테스트가 넣은 값이므로 이 기록의 수익률·하락 폭을 성능 근거로 인용하면 안 된다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/quickstart.md",
+          "old_path": "specs/007-auto-parameter-search/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -246,9 +246,9 @@\n \n | 번호 | 결정 항목 | 상태 | 출발안 | 근거 |\n |---|---|---|---|---|\n-| PD-05 | 자동 탐색 잔여 항목: 동률 처리 (방법·선정 구조·표시 후보 수·안정성 산식·두 필터 문턱은 2026-09-10 확정, 실행 한도 네 값은 2026-09-10 임시값 확정) | 일부 확정 | 방법=전체 그리드, 실행시간 상한=120초(임시), 후보 수 상한=120(임시), 발행 창=4(임시, 워커 수 x 2), 연속 실패 한도=5(임시, 발행 창 초과), 선정=세 축 필터 후 비용 차감 수익 정렬, 표시 후보 수=5, 안정성=1축 이웃 성과차 절댓값 평균, 문턱=동일 비중 기준 대비+상위 50% | §6.4.3, D10, D18 |\n-| PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 | 마지막 12개월 잠금 | §7.3, D11 |\n-| PD-06 | 실행 한도 (소유: [004](../004-backtest-execution/spec.md)) | 실측 후 고정 | 실측 전 임시 상한 | §6.5, D18 |\n+| PD-05 | 자동 탐색 잔여 항목: 동률 처리 (방법·선정 구조·표시 후보 수·안정성 산식·두 필터 문턱은 2026-09-10 확정, 실행 한도 네 값은 2026-09-10 임시값 확정) | 일부 확정 — **구현은 Edge Case의 대체 규칙을 적용 중**(2026-09-14): 동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다. 묶음 스냅샷에 `tieHandling: SHOW_ALL_TIED` 로 남으므로 규칙이 확정돼도 끝난 묶음의 처리는 바뀌지 않는다 | 방법=전체 그리드, 실행시간 상한=120초(임시), 후보 수 상한=120(임시), 발행 창=4(임시, 워커 수 x 2), 연속 실패 한도=5(임시, 발행 창 초과), 선정=세 축 필터 후 비용 차감 수익 정렬, 표시 후보 수=5, 안정성=1축 이웃 성과차 절댓값 평균, 문턱=동일 비중 기준 대비+상위 50% | §6.4.3, D10, D18 |\n+| PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 — **구현은 평가 분할을 등록하지 않아 전 후보가 `UNVALIDATED`**(2026-09-14). 이는 '검증 통과'가 아니라 '검증 여부를 말할 수 없음'이며 응답·화면에 항상 함께 표시한다. 분할이 등록되면 후보마다 탐색 구간과 잠금 구간 라벨이 갈린다 | 마지막 12개월 잠금 | §7.3, D11 |\n+| PD-06 | 실행 한도 (소유: [004](../004-backtest-execution/spec.md)) | 실측 후 고정 — **측정 입력이 아직 없다**(2026-09-14). 004에 실행 측정 저장소가 없어 007의 `AUTO_SEARCH_BATCH` 기록(FR-023, T117)을 남길 곳이 없다. 004 T012 뒤에 착수한다 | 실측 전 임시 상한 | §6.5, D18 |\n \n ## Out of Scope\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/spec.md",
+          "old_path": "specs/007-auto-parameter-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -375,16 +375,16 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### 문서\n \n-- [ ] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)\n-- [ ] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)\n-- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 \"순위 배지·추천 표현 0건\", \"결제·포인트·상품 선택 단계 0건\", **\"전략 ID 상수·전략별 분기 0건\"** 항목 추가 (plan 설계 제약, FR-010·FR-025)\n-- [ ] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화\n+- [X] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)\n+- [X] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)\n+- [X] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 \"순위 배지·추천 표현 0건\", \"결제·포인트·상품 선택 단계 0건\", **\"전략 ID 상수·전략별 분기 0건\"** 항목 추가 (plan 설계 제약, FR-010·FR-025)\n+- [X] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화\n \n ### 검증\n \n - [ ] T124 (BE 테스트) `cd worker && pytest` 회귀 확인 — 워커를 바꾸지 않았음을 증명한다\n-- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 7개(전략 비의존성 시나리오 7 포함)를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록\n-- [ ] T126 (DOCS) T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달\n+- [X] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 7개(전략 비의존성 시나리오 7 포함)를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록\n+- [ ] T126 (DOCS) **완료 불가(2026-09-14)** — 선행 T117 이 완료 불가라 인계할 측정값이 없다. 004 에 실행 측정 저장소가 생겨 T117 이 기록을 남기기 시작하면 그때 착수한다. 원래 내용: T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달\n \n ---\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -65,14 +65,14 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n | PD-02 | 전략별 파라미터 기본값·후보 값·범위·간격·유효성 제약 | 미확정 (출발안: 월말 리밸런싱, 역변동성 63거래일) | [003](003-strategy-settings/spec.md) | §4.2.2, §6.4.2, D04 |\n | PD-03 | 섹터 모멘텀 규칙: 상대/절대 유형·점수 산식·관측 길이·최근 구간 제외·선정 수 또는 임계값·배분 방식·동점·선정 대상 없음·현금 대기 | 미확정 | [004](004-backtest-execution/spec.md) | §6.4.2, D04 |\n | PD-04 | 최소분산: 공분산 관측 기간·추정 방법(표본/축소)·해법·추정 불안정·수치 오차·해 없음 처리 | 미확정 | [004](004-backtest-execution/spec.md) | §6.4.2, D04 |\n-| PD-05 | 자동 탐색: 방법·후보 수·실행시간·동시성 상한·중단 규칙·표시 후보 수·선정 기준·동률 처리·인접 설정 안정성 산식 | 일부 확정 (2026-09-10: 방법=전체 그리드, 선정 구조·표시 후보 수·안정성 산식·두 필터 문턱 확정, 실행 한도 네 값은 임시값. **잔여: 동률 처리**) | [007](007-auto-parameter-search/spec.md) | §6.4.3, D10, D18 |\n+| PD-05 | 자동 탐색: 방법·후보 수·실행시간·동시성 상한·중단 규칙·표시 후보 수·선정 기준·동률 처리·인접 설정 안정성 산식 | 일부 확정 (2026-09-10: 방법=전체 그리드, 선정 구조·표시 후보 수·안정성 산식·두 필터 문턱 확정, 실행 한도 네 값은 임시값. **잔여: 동률 처리** — 2026-09-14 구현 완료, 동률 처리는 Edge Case 대체 규칙(모두 표시·임의 순서 금지)으로 동작 중이며 묶음 스냅샷에 남는다) | [007](007-auto-parameter-search/spec.md) | §6.4.3, D10, D18 |\n | PD-06 | 실행 한도: 후보 수·실행시간·대기열·메모리 상한과 응답 목표, 실측 전 임시 상한 | 실측 후 고정. 값과 분리해 한도 장치(설정 가능한 상한·429)는 004 T014가 먼저 만든다(004 R-19) | [004](004-backtest-execution/spec.md) | §6.5, D18 |\n | PD-07 | 비용 수치: 수수료·호가 차이·슬리피지·세금·비용 상승 조건 | 미확정 | [004](004-backtest-execution/spec.md) | §6.4.2, D05 |\n | PD-08 | 경제환경 모델 v1: 17개 지표와 변환, 7개 분야 배치, T_g/T_all, 공통 척도(최대 120·최소 60개월, 중앙값/MAD 정규 보정, IQR 대체), 기본 거리 E, 분야 내부·분야 간 동일가중, 후보 제한(12개월 초과 이전, ±6개월 건너뛰기, 동률 오래된 월 우선), 표시 3개·최대 10개, 사후 평가 63/21거래일, 내부 대안(0.7E+0.3M, 시대별 척도) | 기획서 확정 | [010](010-economic-regime-search/spec.md) (지표·변환·분야 배치·가중은 [008](008-macro-indicator-registry/spec.md)) | §6.4.4, D21~D27 |\n | PD-09 | 유사성 임계값·분야별 큰 차이 문턱·최소 근거량·경제적 설명력 판정 기준 | 미확정 (U04 교정 후) | [010](010-economic-regime-search/spec.md) | §6.4.4, D24, U04 |\n | PD-10 | 지표별 공표 정밀도·최소 유효 척도·예외 처리 등록표 | 미확정 (U06) | [008](008-macro-indicator-registry/spec.md) | §6.4.4, D27, U06 |\n | PD-11 | 지표 등록표 실제 값: 통계표 코드·항목 코드·단위·개편 연결·과거 범위·작성기관별 이용 조건 | 미확정 (인증키 발급 후) | [008](008-macro-indicator-registry/spec.md) | §6.2, §10.1 |\n-| PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 (출발안: 마지막 12개월 잠금) | [007](007-auto-parameter-search/spec.md) (허용 오차는 004·010의 계산 대조에도 적용) | §7.3, D11 |\n+| PD-12 | 검증 설계: 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식 | 미확정 (출발안: 마지막 12개월 잠금). 2026-09-14 현재 007 구현은 분할을 등록하지 않아 전 후보가 `UNVALIDATED` 이며, 이는 검증 통과가 아니라 '말할 수 없음'이다 | [007](007-auto-parameter-search/spec.md) (허용 오차는 004·010의 계산 대조에도 적용) | §7.3, D11 |\n | PD-13 | 기록 정책: 보관 기간·삭제·연결 해제·공유 후 회수·탐색 묶음 저장 상한 | 미확정 | [006](006-my-records/spec.md) | §5, D14 |\n | PD-14 | 사용성 관찰: 참여자·과제·일정·관찰 기준 | 미확정 (출발안: 전략을 검증하려는 개인 6~8명, 경제환경 과제 포함) | 이 문서 \"공통 검증·완료 규칙\" | §7.2, D20 |\n | PD-15 | 뉴스 표시 허가: 제목·매체·발행 시각·원문 링크 표시 방식의 매체 허가 여부 | 미확인 (매체 회신 대기) | [012](012-market-news-digest/spec.md) | §6.3, §10.1 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-14T15:26:28.525+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802597": []
+  }
+}

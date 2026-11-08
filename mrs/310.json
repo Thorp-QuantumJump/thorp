@@ -1,0 +1,1387 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 958483,
+    "iid": 310,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+    "description": "# 작업 내용 요약\n\n첫 화면 첫 칸을 왼쪽 글 + 오른쪽 결과 비교 화면 예시로 바꿔, 무엇을 하는 서비스인지 첫눈에 보이게 합니다. 결과 화면의 수익률·하락 폭에 상승 빨강·하락 파랑을 입히고, 공용 버튼 모서리를 다른 버튼과 같게 맞춥니다.\n\n# 관련 티켓\n\n- ticket S15P21E205-425\n- https://ssafy.atlassian.net/browse/S15P21E205-425\n\n# 주요 변경 사항\n\n- 첫 화면 첫 칸: 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을 두고, 오른쪽에 결과 비교 화면 예시 창을 둡니다. 창에는 핵심 숫자, 곡선이 그려지는 누적 자산가치, 마지막 비중, 규칙별 표가 들어갑니다. 창 머리에 '예시 화면'을 밝히고 보조기기에서는 숨깁니다. 예시 값은 `ResultPreviewWindow` 한곳에 모았습니다.\n- 첫 화면의 시장 그래픽(셰이더) 배경과 한 칸씩 넘기는 스크롤은 그대로입니다. 1040px 이하에서는 창이 글 아래로 내려가고, 좁은 화면에서는 단어 단위로 줄을 바꿉니다.\n- 결과 화면: 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 `--thorp-up`·`--thorp-down`으로 칠합니다. 화면에 0.00%로 보이는 값과 읽을 수 없는 값에는 방향을 주지 않습니다(`ratioDirection`). 금액, 상세 표의 비중·변동성은 칠하지 않습니다.\n- 공용 버튼(`components/ui/button`)의 모서리를 `var(--thorp-radius-control, 원래 값)`으로 바꿔 새 디자인에서 6px로 맞춥니다.\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` — lint 오류 0, 1366 통과, skipped 0\n- [x] 첫 화면 첫 칸을 1440×900·1280×720·390px에서 확인 — 첫 칸이 화면 높이 안에 들어가고 가로 넘침 없음\n- [ ] 결과 화면 상승·하락 색 확인 (백테스트 실행 필요)\n- [ ] 결과·내 기록 화면의 공용 버튼 모서리 확인\n\n# 리뷰 포인트\n\n- 첫 화면 예시 창의 성과 숫자(+24.6% 등)는 어떤 실행에서도 나온 값이 아닙니다. '예시 화면'을 밝히는 것으로 두기로 정했습니다. 첫 화면 테스트의 \"실행 근거 없는 성과 수치를 보이지 않는다\" 검사는 특정 문자열만 막아 통과하지만, 그 검사의 취지와는 어긋납니다. 이 방향이 맞는지 봐 주세요.\n- 첫 칸 배치 변경은 classic 모드에도 똑같이 적용됩니다. 옛 배치와 새 배치를 함께 두면 같은 링크가 두 번 생겨, 한 벌만 둡니다.\n- 오르내림 색은 수익률 부호로만 정합니다. 상세 표는 제목에 따라 항상 양수인 값(변동성 등)이 들어가서 칠하지 않았습니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-23T14:42:36.472+09:00",
+    "updated_at": "2026-09-23T15:52:42.835+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-23T15:52:42.436+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/425-design-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "be2a227a79652080178935d380055cd675af3829",
+    "merge_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-23T14:42:37.987+09:00",
+    "reference": "!310",
+    "references": {
+      "short": "!310",
+      "relative": "!310",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!310"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/310",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 958483,
+    "iid": 310,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+    "description": "# 작업 내용 요약\n\n첫 화면 첫 칸을 왼쪽 글 + 오른쪽 결과 비교 화면 예시로 바꿔, 무엇을 하는 서비스인지 첫눈에 보이게 합니다. 결과 화면의 수익률·하락 폭에 상승 빨강·하락 파랑을 입히고, 공용 버튼 모서리를 다른 버튼과 같게 맞춥니다.\n\n# 관련 티켓\n\n- ticket S15P21E205-425\n- https://ssafy.atlassian.net/browse/S15P21E205-425\n\n# 주요 변경 사항\n\n- 첫 화면 첫 칸: 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을 두고, 오른쪽에 결과 비교 화면 예시 창을 둡니다. 창에는 핵심 숫자, 곡선이 그려지는 누적 자산가치, 마지막 비중, 규칙별 표가 들어갑니다. 창 머리에 '예시 화면'을 밝히고 보조기기에서는 숨깁니다. 예시 값은 `ResultPreviewWindow` 한곳에 모았습니다.\n- 첫 화면의 시장 그래픽(셰이더) 배경과 한 칸씩 넘기는 스크롤은 그대로입니다. 1040px 이하에서는 창이 글 아래로 내려가고, 좁은 화면에서는 단어 단위로 줄을 바꿉니다.\n- 결과 화면: 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 `--thorp-up`·`--thorp-down`으로 칠합니다. 화면에 0.00%로 보이는 값과 읽을 수 없는 값에는 방향을 주지 않습니다(`ratioDirection`). 금액, 상세 표의 비중·변동성은 칠하지 않습니다.\n- 공용 버튼(`components/ui/button`)의 모서리를 `var(--thorp-radius-control, 원래 값)`으로 바꿔 새 디자인에서 6px로 맞춥니다.\n\n# 테스트\n\n- [x] `npm run lint && npm run build && npm test` — lint 오류 0, 1366 통과, skipped 0\n- [x] 첫 화면 첫 칸을 1440×900·1280×720·390px에서 확인 — 첫 칸이 화면 높이 안에 들어가고 가로 넘침 없음\n- [ ] 결과 화면 상승·하락 색 확인 (백테스트 실행 필요)\n- [ ] 결과·내 기록 화면의 공용 버튼 모서리 확인\n\n# 리뷰 포인트\n\n- 첫 화면 예시 창의 성과 숫자(+24.6% 등)는 어떤 실행에서도 나온 값이 아닙니다. '예시 화면'을 밝히는 것으로 두기로 정했습니다. 첫 화면 테스트의 \"실행 근거 없는 성과 수치를 보이지 않는다\" 검사는 특정 문자열만 막아 통과하지만, 그 검사의 취지와는 어긋납니다. 이 방향이 맞는지 봐 주세요.\n- 첫 칸 배치 변경은 classic 모드에도 똑같이 적용됩니다. 옛 배치와 새 배치를 함께 두면 같은 링크가 두 번 생겨, 한 벌만 둡니다.\n- 오르내림 색은 수익률 부호로만 정합니다. 상세 표는 제목에 따라 항상 양수인 값(변동성 등)이 들어가서 칠하지 않았습니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-23T14:42:36.472+09:00",
+    "updated_at": "2026-09-23T15:52:42.835+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-23T15:52:42.436+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/425-design-refresh",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "be2a227a79652080178935d380055cd675af3829",
+    "merge_commit_sha": "d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": false,
+    "force_remove_source_branch": false,
+    "prepared_at": "2026-09-23T14:42:37.987+09:00",
+    "reference": "!310",
+    "references": {
+      "short": "!310",
+      "relative": "!310",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!310"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/310",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": "2026-09-23T15:48:35.513+09:00",
+    "latest_build_finished_at": "2026-09-23T15:52:15.492+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 219742,
+      "iid": 333,
+      "project_id": 1444456,
+      "sha": "be2a227a79652080178935d380055cd675af3829",
+      "ref": "feat(fe)/425-design-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T15:48:35.391+09:00",
+      "updated_at": "2026-09-23T15:52:15.500+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219742"
+    },
+    "head_pipeline": {
+      "id": 219742,
+      "iid": 333,
+      "project_id": 1444456,
+      "sha": "be2a227a79652080178935d380055cd675af3829",
+      "ref": "feat(fe)/425-design-refresh",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-23T15:48:35.391+09:00",
+      "updated_at": "2026-09-23T15:52:15.500+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219742",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-23T15:48:35.513+09:00",
+      "finished_at": "2026-09-23T15:52:15.492+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/219742",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "head_sha": "be2a227a79652080178935d380055cd675af3829",
+      "start_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0987a704685ffb266b50dc14b7ea8f367f1fc64e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2862968,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T14:42:36.585+09:00",
+          "updated_at": "2026-09-23T14:42:36.611+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "21edc31212e8168e406a193b1ab6a7240f154220",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2862969,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **예외 케이스 처리 및 테스트:** `ratioDirection` 함수에서 반올림으로 인해 `0.00%`로 표시되는 값이나 유효하지 않은 값(빈 문자열, `N/A`)에 대해서는 오르내림 색상 방향을 부여하지 않도록 예외 처리를 꼼꼼히 구현하고, 이에 대한 단위 테스트(`formatResult.test.ts`)와 컴포넌트 테스트를 잘 작성했습니다.\n- **디자인 토큰 활용:** 공용 버튼(`button.tsx`)과 결과 화면의 상승/하락 색상(`--thorp-up`, `--thorp-down`)을 CSS 변수 기반으로 유연하게 설계하여 `classic` 모드와 일반 모드 간의 호환성을 잘 유지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- 결과 화면에서 백테스트 실행 후 수익률 및 하락 폭 데이터가 양수일 때는 상승 색상(빨강), 음수일 때는 하락 색상(파랑)이 정확히 적용되는지 육안으로 확인합니다.\n- 화면 크기(1440px, 1280px, 390px 등)를 변경하며 첫 화면의 레이아웃이 깨지지 않고 텍스트 줄바꿈 및 예시 창 배치가 정상적으로 작동하는지 확인합니다.\n- `classic` 모드를 활성화한 상태에서 공용 버튼의 모서리와 결과 화면의 색상이 기존 스타일로 폴백(Fallback)되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:be2a227a79652080178935d380055cd675af3829 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-23T14:42:47.302+09:00",
+          "updated_at": "2026-09-23T15:48:32.795+09:00",
+          "system": false,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2d99a2e891b29ff131febd63659d99adbda9e2ce",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2862988,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>f21029bb - fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/310/diffs?diff_id=2245695&start_sha=2ad5a28b741705f01de399642aababf9bf6fdb74)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T14:45:33.635+09:00",
+          "updated_at": "2026-09-23T14:45:33.638+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0026e5713c56f1a9dd8b0e0ccad703df467aac52",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863087,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>29e3d992 - feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/310/diffs?diff_id=2245764&start_sha=f21029bbfe7a08c02a1dad744576eb89930d382e)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T14:58:36.922+09:00",
+          "updated_at": "2026-09-23T14:58:36.926+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6cef01149d21deafe117c981a6ef216cbcd0dcd1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863201,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>da7d5574 - feat(fe): 첫 화면 첫 칸의 글을 줄이고 지표 칸이 있는 시장 흐름 창으로 바꾼다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/310/diffs?diff_id=2245870&start_sha=29e3d992082ba7d14ce3fe8dcd96d079ddf68918)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T15:19:53.620+09:00",
+          "updated_at": "2026-09-23T15:19:53.625+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8537b6f2d9c796e33b41947faadc5ed245f3cd40",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863415,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>be2a227a - feat(fe): 첫 화면 둘째·셋째 칸을 같은 틀로 모으고 스크롤을 따라가는 움직임을 넣는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/310/diffs?diff_id=2246049&start_sha=da7d5574552c6410cbfc6d771992184ea917f2e8)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T15:48:24.146+09:00",
+          "updated_at": "2026-09-23T15:48:24.193+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "712b249e86031de3887bbff8c8f44ca324491f18",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2863446,
+          "type": null,
+          "body": "mentioned in commit d3c4b2bab861f3b0dada5faf881783839bdc2a0d",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-23T15:52:42.565+09:00",
+          "updated_at": "2026-09-23T15:52:42.588+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bf04b3411638780f2f95fc3737694329a295a3b4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885007,
+          "type": null,
+          "body": "mentioned in commit 859ab455478d613b8c60c5ae1e0b766a7ee441de",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:08.054+09:00",
+          "updated_at": "2026-10-13T15:16:08.080+09:00",
+          "system": true,
+          "noteable_id": 958483,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 310,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2246049,
+      "head_commit_sha": "be2a227a79652080178935d380055cd675af3829",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T15:48:23.868+09:00",
+      "merge_request_id": 958483,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "1af1d0217fa242baeb513d0c2f0d39968fa3d3cb"
+    },
+    {
+      "id": 2245870,
+      "head_commit_sha": "da7d5574552c6410cbfc6d771992184ea917f2e8",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T15:19:53.330+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "e062b418fdd8ee1700a2ebb8327d3dbef9088158"
+    },
+    {
+      "id": 2245764,
+      "head_commit_sha": "29e3d992082ba7d14ce3fe8dcd96d079ddf68918",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T14:58:36.659+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "b0e5df2866432c348791728e15d56afeea3b8770"
+    },
+    {
+      "id": 2245695,
+      "head_commit_sha": "f21029bbfe7a08c02a1dad744576eb89930d382e",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T14:45:33.393+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "11",
+      "patch_id_sha": "51a256952fc4afb1c78a1fe2acdb407cc845c13e"
+    },
+    {
+      "id": 2245678,
+      "head_commit_sha": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T14:42:36.850+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "961dc1451516bb8b9f038e7acf184e1df9cd45b0"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2246049,
+      "head_commit_sha": "be2a227a79652080178935d380055cd675af3829",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T15:48:23.868+09:00",
+      "merge_request_id": 958483,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "1af1d0217fa242baeb513d0c2f0d39968fa3d3cb",
+      "commits": [
+        {
+          "id": "be2a227a79652080178935d380055cd675af3829",
+          "short_id": "be2a227a",
+          "created_at": "2026-09-23T15:48:20.000+09:00",
+          "parent_ids": [
+            "da7d5574552c6410cbfc6d771992184ea917f2e8"
+          ],
+          "title": "feat(fe): 첫 화면 둘째·셋째 칸을 같은 틀로 모으고 스크롤을 따라가는 움직임을 넣는다",
+          "message": "feat(fe): 첫 화면 둘째·셋째 칸을 같은 틀로 모으고 스크롤을 따라가는 움직임을 넣는다\n\n- 시장 분석·백테스트 칸을 첫 칸과 같은 '글 + 서비스 화면 창' 틀로 바꾼다. 시장 분석 창에는 흐르는\n  지표 띠와 분야별 흐름 미리보기를, 백테스트 칸에는 결과 화면 창과 세 단계·시작 버튼을 둔다.\n  글 칸은 내용 폭만 잡아 창과 함께 가운데로 모으고, 셋째 칸은 좌우를 바꾼다.\n- 한 번 재생되던 들어옴 대신 스크롤한 만큼 따라가는 움직임을 둔다(scrollScene). 첫 칸은 글이\n  올라가며 흐려지고 창이 뒤로 기울며 작아진다. 둘째·셋째 칸은 창이 누운 채 들어와 가운데에서\n  서고, 글이 옆에서 밀려 들어오며 나갈 때는 반대로 빠진다. 움직임 줄이기면 멈춘다.\n- 오른쪽에 지금 칸을 알리는 이동 점을 둔다. 세로 섹션 번호·다음 칸 버튼과 그 CSS는 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T15:48:20.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T15:48:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/be2a227a79652080178935d380055cd675af3829"
+        },
+        {
+          "id": "da7d5574552c6410cbfc6d771992184ea917f2e8",
+          "short_id": "da7d5574",
+          "created_at": "2026-09-23T15:19:50.000+09:00",
+          "parent_ids": [
+            "29e3d992082ba7d14ce3fe8dcd96d079ddf68918"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸의 글을 줄이고 지표 칸이 있는 시장 흐름 창으로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸의 글을 줄이고 지표 칸이 있는 시장 흐름 창으로 바꾼다\n\n- 제목을 '내 전략이 얼마나 유효한지, 과거로 돌아가 확인해 볼까요?'로 바꾸고, 선택 버튼처럼 보이던\n  배지와 세 단계·작은 설명을 빼 제목·설명 두 줄·버튼 둘만 남긴다. 설명은 뜻이 나뉘는 자리에서 줄을\n  바꾸고, 글은 오른쪽 창 윗부분 높이에 맞춘다(1040px 이하에서는 위 여백 없음).\n- 오른쪽 창에 주소창과 KOSPI·KOSDAQ·원/달러·VKOSPI 200 지표 칸(누를 수 있는 탭)을 두고, 고른\n  칸의 흐름을 차트가 그린다. 차트 선·면·가격표는 흰색 계열로 바꿔 빨강·파랑 거래량 막대와 부딪히지\n  않게 한다. 좁은 화면에서는 지표 칸이 2×2다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T15:19:50.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T15:19:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da7d5574552c6410cbfc6d771992184ea917f2e8"
+        },
+        {
+          "id": "29e3d992082ba7d14ce3fe8dcd96d079ddf68918",
+          "short_id": "29e3d992",
+          "created_at": "2026-09-23T14:58:33.000+09:00",
+          "parent_ids": [
+            "f21029bbfe7a08c02a1dad744576eb89930d382e"
+          ],
+          "title": "feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다",
+          "message": "feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다\n\n- KOSPI·KOSDAQ·원/달러·VKOSPI 200 탭과 약 0.9초마다 점이 더해지는 차트(현재값·구간 등락률·\n  마지막 점 표시·가격표·거래량 막대)를 둔다. 7초마다 다음 지표로 넘어가고, 탭을 누르면 멈춘다.\n- 움직임은 만든 흐름이다. 틱 시세를 받지 않으므로 첫 화면이 받은 최신 값(없으면 예시 값)을\n  출발점으로 삼아 그 둘레를 오가게 그리고, 창에 '움직임 예시'를 밝힌다. LIVE라고 쓰지 않는다.\n- 움직임 줄이기 설정이면 멈춘 차트만, 탭이 숨겨지면 흐름을 쉰다. 아래의 같은 조건 배분 규칙\n  비교 표는 남긴다. 쓰이지 않게 된 결과 화면 예시 창은 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:58:33.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:58:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/29e3d992082ba7d14ce3fe8dcd96d079ddf68918"
+        },
+        {
+          "id": "f21029bbfe7a08c02a1dad744576eb89930d382e",
+          "short_id": "f21029bb",
+          "created_at": "2026-09-23T14:45:30.000+09:00",
+          "parent_ids": [
+            "2ad5a28b741705f01de399642aababf9bf6fdb74"
+          ],
+          "title": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다",
+          "message": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다\n\n- .previewExample::before의 content가 비어 있어(content: ;) 선언이 무효가 되어 점이 그려지지\n  않았다. content: ''로 고친다.\n- 요약 카드가 수익률·하락 폭에는 부호대로 방향을 달고, 금액과 0.00%로 보이는 값에는 달지\n  않는지 확인하는 테스트를 더한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:45:30.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:45:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f21029bbfe7a08c02a1dad744576eb89930d382e"
+        },
+        {
+          "id": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+          "short_id": "2ad5a28b",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다\n\n- 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을, 오른쪽에 결과 비교 화면\n  예시 창(핵심 숫자·누적 곡선·마지막 비중·규칙별 표)을 둔다. 창 머리에 '예시 화면'을 밝히고\n  보조기기에서는 숨긴다. 뒤의 시장 그래픽과 한 칸씩 넘기는 스크롤은 그대로다.\n- 1040px 이하에서는 창을 글 아래로 내리고, 좁은 화면에서는 단어 단위로 줄을 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ad5a28b741705f01de399642aababf9bf6fdb74"
+        },
+        {
+          "id": "fecbcc42b40130fa294fbfc6b23b5b0de04691ba",
+          "short_id": "fecbcc42",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+          ],
+          "title": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다",
+          "message": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다\n\n- components/ui/button의 rounded-lg(10px)·min(radius-md, 12px)(8px)를\n  var(--thorp-radius-control, 원래 값)으로 바꿔 새 디자인에서 6px로 모은다. classic은 원래 값이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+        },
+        {
+          "id": "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d",
+          "short_id": "238b1c60",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "0823ed538d64a3141e79dd8e81fb515691b37e32"
+          ],
+          "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+          "message": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다\n\n- 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 --thorp-up(빨강)·\n  --thorp-down(파랑)으로 보인다. 금액과 상세 표의 비중·변동성은 방향이 없는 값이라 칠하지 않는다.\n- ratioDirection은 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%거나 읽을 수 없으면 방향을\n  주지 않는다. 글과 색이 서로 다른 말을 하지 않게 한다.\n- classic은 예전처럼 한 색이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,11 +1,12 @@\n-import { ArrowDown, ArrowUpRight, FlaskConical, Radar } from 'lucide-react'\n+import { ArrowDown, ArrowUpRight } from 'lucide-react'\n import { motion, useReducedMotion } from 'motion/react'\n-import type { CSSProperties } from 'react'\n+import { useRef, type CSSProperties } from 'react'\n import { Link } from 'react-router-dom'\n import type { Indicator } from '@/types/market'\n import { IndicatorConveyor } from './IndicatorConveyor'\n import { MarketAtmosphereCanvas } from './MarketAtmosphereCanvas'\n-import { NextSectionButton } from './NextSectionButton'\n+import { MarketPreviewWindow } from './MarketPreviewWindow'\n+import { useScrollScene } from './scrollScene'\n import styles from '@/pages/LandingPage.module.css'\n \n const revealTransition = { duration: 0.78, ease: [0.22, 1, 0.36, 1] as const }\n@@ -40,9 +41,11 @@ const comparisonPaths = [\n ]\n const resultPath = buildDecorativeCurve(0.9, 96)\n \n-/** 서비스의 핵심 메시지와 시장 그래픽을 첫 화면에 배치한다. */\n-export function HeroSection() {\n+/** 왼쪽에 서비스의 핵심 메시지, 오른쪽에 시장 지표 움직임 예시를 두고 뒤에 시장 그래픽을 깐다. */\n+export function HeroSection({ indicators }: { indicators: Indicator[] }) {\n   const reducedMotion = useReducedMotion()\n+  const section = useRef<HTMLElement>(null)\n+  const scene = useScrollScene(section, 'leave')\n \n   const moveToMarket = () => {\n     document.querySelector('#market-analysis')?.scrollIntoView({\n@@ -52,7 +55,7 @@ export function HeroSection() {\n   }\n \n   return (\n-    <section className={styles.hero} aria-labelledby=\"landing-title\">\n+    <section ref={section} id=\"landing-hero\" className={styles.hero} aria-labelledby=\"landing-title\">\n       <div className={styles.heroFallback} aria-hidden=\"true\">\n         <span className={styles.heroGlow} />\n         <svg className={styles.heroChart} viewBox=\"0 0 1600 700\" preserveAspectRatio=\"none\">\n@@ -86,53 +89,64 @@ export function HeroSection() {\n       </div>\n       <MarketAtmosphereCanvas />\n \n-      <motion.div\n-        className={styles.heroContent}\n-        initial=\"hidden\"\n-        animate=\"visible\"\n-        variants={{\n-          hidden: {},\n-          visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },\n-        }}\n-      >\n-        <motion.p\n-          className={styles.eyebrow}\n-          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}\n-        >\n-          KOREA MARKET INTELLIGENCE\n-        </motion.p>\n-        <motion.h1\n-          id=\"landing-title\"\n-          variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}\n-          transition={revealTransition}\n-        >\n-          <span>시장을 확인하고</span>\n-          <span>전략을 <em>검증하세요.</em></span>\n-        </motion.h1>\n-        <motion.p\n-          className={styles.heroDescription}\n-          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n-          transition={revealTransition}\n+      <div className={styles.heroLayout}>\n+        <motion.div\n+          className={styles.heroContent}\n+          style={scene.copy}\n+          initial=\"hidden\"\n+          animate=\"visible\"\n+          variants={{\n+            hidden: {},\n+            visible: { transition: { delayChildren: 0.18, staggerChildren: 0.1 } },\n+          }}\n         >\n-          데이터로 시장을 읽고, 검증된 전략으로 판단하세요.\n-        </motion.p>\n+          <motion.h1\n+            id=\"landing-title\"\n+            variants={{ hidden: { opacity: 0, y: 26 }, visible: { opacity: 1, y: 0 } }}\n+            transition={revealTransition}\n+          >\n+            <span>내 전략이 얼마나 유효한지,</span>\n+            <span><em>과거로 돌아가</em></span>\n+            <span>확인해 볼까요?</span>\n+          </motion.h1>\n+          <motion.p\n+            className={styles.heroDescription}\n+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n+            transition={revealTransition}\n+          >\n+            {/* 뜻이 나뉘는 자리에서 줄을 바꾼다. 폭에 맡기면 '비교합니다.'만 아래로 떨어진다. */}\n+            <span>국내 섹터 ETF로 다섯 가지 배분 규칙을</span>\n+            <span>같은 조건에서 비교합니다.</span>\n+          </motion.p>\n+          <motion.div\n+            className={styles.heroActions}\n+            variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n+            transition={revealTransition}\n+          >\n+            {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라\n+                다른 화면으로 보내지 않는다. */}\n+            <Link className={styles.primaryCta} to=\"/diagnosis/sectors\">\n+              비중 비교하기\n+              <ArrowUpRight aria-hidden=\"true\" size={18} />\n+            </Link>\n+            <button type=\"button\" className={styles.secondaryCta} onClick={moveToMarket}>\n+              서비스 알아보기\n+              <ArrowDown aria-hidden=\"true\" size={17} />\n+            </button>\n+          </motion.div>\n+        </motion.div>\n+\n         <motion.div\n-          className={styles.heroActions}\n-          variants={{ hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } }}\n-          transition={revealTransition}\n+          className={styles.heroPreview}\n+          initial={{ opacity: 0, y: 24 }}\n+          animate={{ opacity: 1, y: 0 }}\n+          transition={{ ...revealTransition, delay: 0.3 }}\n         >\n-          {/* 첫 화면의 가장 중요한 행동이다. 옆의 보조 버튼은 이 페이지 안을 내려갈 뿐이라\n-              다른 화면으로 보내지 않는다. */}\n-          <Link className={styles.primaryCta} to=\"/diagnosis/sectors\">\n-            비중 비교하기\n-            <ArrowUpRight aria-hidden=\"true\" size={18} />\n-          </Link>\n-          <button type=\"button\" className={styles.secondaryCta} onClick={moveToMarket}>\n-            서비스 알아보기\n-            <ArrowDown aria-hidden=\"true\" size={17} />\n-          </button>\n+          <motion.div style={scene.window}>\n+            <MarketPreviewWindow indicators={indicators} />\n+          </motion.div>\n         </motion.div>\n-      </motion.div>\n+      </div>\n \n       <div className={styles.heroFootnote} aria-hidden=\"true\">\n         <span>01</span>\n@@ -142,72 +156,91 @@ export function HeroSection() {\n   )\n }\n \n-/** 실제 연동 지표를 비대칭 레이아웃과 무한 스트립으로 소개한다. */\n+/** 분야별 흐름 미리보기. 시장 흐름 화면이 무엇을 보이는지 모양으로 알리는 예시다. */\n+const exampleFields = [\n+  { name: '생산', note: '광공업 생산이 두 달 연속 늘었습니다.', path: [42, 48, 55] },\n+  { name: '노동', note: '실업률이 두 달 보합 뒤 0.1%p 올랐습니다.', path: [50, 50, 56] },\n+  { name: '물가·원자재', note: '근원물가 상승률이 낮아졌습니다.', path: [58, 52, 47] },\n+] as const\n+\n+/** 시장 흐름을 소개한다. 왼쪽 글, 오른쪽에 흐르는 지표 띠와 분야별 흐름 미리보기를 담은 창. */\n export function MarketAnalysisSection({ indicators }: { indicators: Indicator[] }) {\n+  const section = useRef<HTMLElement>(null)\n+  const scene = useScrollScene(section, 'pass', 'left')\n   return (\n-    <motion.section\n+    <section\n+      ref={section}\n       id=\"market-analysis\"\n-      className={`${styles.storySection} ${styles.marketSection}`}\n-      initial={{ opacity: 0, x: 72 }}\n-      whileInView={{ opacity: 1, x: 0 }}\n-      viewport={{ once: true, amount: 0.18 }}\n-      transition={revealTransition}\n+      className={`${styles.storySection} ${styles.storyLayout}`}\n       aria-labelledby=\"market-analysis-title\"\n     >\n-      <div className={styles.sectionAside}>\n-        <span className={styles.sectionNumber} aria-hidden=\"true\">\n-          01 / MARKET PULSE\n-        </span>\n-        <NextSectionButton targetId=\"backtest-service\" label=\"백테스트 소개로 이동\" />\n-      </div>\n-      <div className={styles.marketContent}>\n-        <div className={styles.sectionHeading}>\n-          <Radar aria-hidden=\"true\" size={22} strokeWidth={1.6} />\n-          <p>MARKET ANALYSIS</p>\n-          <h2 id=\"market-analysis-title\">\n-            지표를 기반으로\n-            <br />\n-            시장을 분석합니다.\n-          </h2>\n-          <span>주요 시장·거시 지표를 한곳에서 확인하고 현재 시장의 흐름을 읽어보세요.</span>\n+      <motion.div className={styles.storyCopy} style={scene.copy}>\n+        <h2 id=\"market-analysis-title\">\n+          <span>지표를 기반으로</span>\n+          <span><em>시장을 분석</em>합니다.</span>\n+        </h2>\n+        <p className={styles.heroDescription}>\n+          <span>주요 시장·거시 지표와 일곱 분야의 흐름을</span>\n+          <span>한곳에서 확인하세요.</span>\n+        </p>\n+        {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). */}\n+        <div className={styles.heroActions}>\n+          <Link className={styles.secondaryCta} to=\"/market-flow\">\n+            시장 분석 보러 가기\n+            <ArrowUpRight aria-hidden=\"true\" size={18} />\n+          </Link>\n         </div>\n+      </motion.div>\n \n-        <IndicatorConveyor indicators={indicators} />\n-\n-        {/* 헤더 메뉴의 '시장 흐름'과 같은 곳으로 보낸다(002 T024). 같은 성격의 목적지가 두\n-            곳이면 첫 화면과 메뉴가 서로 다른 화면을 가리킨다. */}\n-        <Link className={styles.textCta} to=\"/market-flow\">\n-          <span>시장 분석 보러 가기</span>\n-          <ArrowUpRight aria-hidden=\"true\" size={21} />\n-        </Link>\n-      </div>\n-    </motion.section>\n+      <motion.div className={styles.storyWindow} style={scene.window}>\n+        <div className={styles.previewWindow}>\n+          <div className={styles.previewBar} aria-hidden=\"true\">\n+            <span className={styles.previewDots}><i /><i /><i /></span>\n+            <span className={styles.previewAddress}>thorp · <b>시장 흐름</b></span>\n+            <span className={styles.previewExample}>예시 화면</span>\n+          </div>\n+          <IndicatorConveyor indicators={indicators} />\n+          <ul className={styles.fieldPreview} aria-hidden=\"true\">\n+            {exampleFields.map((field) => (\n+              <li key={field.name}>\n+                <b>{field.name}</b>\n+                <span>{field.note}</span>\n+                <svg viewBox=\"0 0 60 24\">\n+                  <polyline points={field.path.map((value, index) => `${6 + index * 24},${(70 - value) / 1.4}`).join(' ')} />\n+                  {field.path.map((value, index) => <circle key={index} cx={6 + index * 24} cy={(70 - value) / 1.4} r={2.4} />)}\n+                </svg>\n+              </li>\n+            ))}\n+          </ul>\n+        </div>\n+      </motion.div>\n+    </section>\n   )\n }\n \n-/** 진단이 무엇을 하는지 알리고 섹터 고르기로 보낸다. 성과 수치는 결과 화면에만 둔다. */\n+/** 진단이 무엇을 하는지 세 단계로 말한다. 기본값·권고가 아니라 흐름이다. */\n+const backtestSteps = [\n+  { title: '섹터를 고르고 비중을 정해요', note: '처음엔 같은 비중으로 채워 둡니다' },\n+  { title: '다섯 배분 규칙 중 하나를 골라요', note: '기본값은 출발점일 뿐입니다' },\n+  { title: '같은 조건의 결과를 나란히 비교해요', note: '비용 차감 후 수익·하락 폭·거래비용' },\n+]\n+\n+/** 진단이 무엇을 하는지 알리고 섹터 고르기로 보낸다. 왼쪽에 결과 화면 창, 오른쪽에 글과 세 단계. */\n export function BacktestIntroSection() {\n+  const section = useRef<HTMLElement>(null)\n+  const scene = useScrollScene(section, 'pass', 'right')\n   return (\n-    <motion.section\n+    <section\n+      ref={section}\n       id=\"backtest-service\"\n-      className={`${styles.storySection} ${styles.backtestSection}`}\n-      initial={{ opacity: 0, x: -72 }}\n-      whileInView={{ opacity: 1, x: 0 }}\n-      viewport={{ once: true, amount: 0.18 }}\n-      transition={revealTransition}\n+      className={`${styles.storySection} ${styles.storyLayout} ${styles.storyReverse}`}\n       aria-labelledby=\"backtest-intro-title\"\n     >\n-      <div className={styles.backtestContent}>\n-        <div className={styles.sectionHeading}>\n-          <FlaskConical aria-hidden=\"true\" size={22} strokeWidth={1.6} />\n-          <p>BACKTEST STUDIO</p>\n-          <h2 id=\"backtest-intro-title\">나의 전략을 실험해보세요.</h2>\n-        </div>\n-\n+      <motion.div className={styles.storyWindow} style={scene.window}>\n         {/* 장식이다. 자료를 읽지 않으므로 축·기간·수치를 달지 않고 보조기기에서 숨긴다. */}\n         <div className={styles.backtestVisual} aria-hidden=\"true\">\n           {/* 결과 화면 틀. 무엇을 보게 되는지 이름만 보이고 값은 비운다 — 실행하지 않은 값을\n-              채우면 첫 화면이 성과를 지어내게 된다. classic 디자인에서는 CSS가 숨긴다. */}\n+              채우면 첫 화면이 성과를 지어내게 된다. */}\n           <div className={styles.visualBar}>\n             <span className={styles.visualDots}><i /><i /><i /></span>\n             <b>결과 화면</b>\n@@ -250,20 +283,32 @@ export function BacktestIntroSection() {\n             />\n           </svg>\n         </div>\n+      </motion.div>\n \n+      <motion.div className={styles.storyCopy} style={scene.copy}>\n+        <h2 id=\"backtest-intro-title\">\n+          <span>나의 전략을</span> <span><em>실험해보세요.</em></span>\n+        </h2>\n+        <ol className={styles.storySteps}>\n+          {backtestSteps.map((step, index) => (\n+            <li key={step.title}>\n+              <b aria-hidden=\"true\">{index + 1}</b>\n+              <span>\n+                {step.title}\n+                <small>{step.note}</small>\n+              </span>\n+            </li>\n+          ))}\n+        </ol>\n         {/* 헤더 메뉴의 '전략 진단'과 같은 곳이다(002 T024). 백테스트는 섹터·전략을 고른\n             뒤에 돌리는 것이라 그 출발점으로 보낸다. */}\n-        <Link className={styles.textCta} to=\"/diagnosis/sectors\">\n-          <span>백테스트 시작하기</span>\n-          <ArrowUpRight aria-hidden=\"true\" size={21} />\n-        </Link>\n-      </div>\n-      <div className={styles.sectionAside}>\n-        <span className={styles.sectionNumber} aria-hidden=\"true\">\n-          02 / TEST THE PAST\n-        </span>\n-        <NextSectionButton targetId=\"algorithms\" label=\"알고리즘 소개로 이동\" />\n-      </div>\n-    </motion.section>\n+        <div className={styles.heroActions}>\n+          <Link className={styles.primaryCta} to=\"/diagnosis/sectors\">\n+            백테스트 시작하기\n+            <ArrowUpRight aria-hidden=\"true\" size={18} />\n+          </Link>\n+        </div>\n+      </motion.div>\n+    </section>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/LandingSections.tsx",
+          "old_path": "frontend/src/components/landing/LandingSections.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,241 @@\n+import { useEffect, useMemo, useRef, useState } from 'react'\n+import { useReducedMotion } from 'motion/react'\n+import type { Indicator } from '@/types/market'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+/*\n+  첫 화면 오른쪽 창. 국내 시장 지표를 탭으로 바꿔 가며 차트가 계속 그려지는 모습을 보인다.\n+\n+  **움직임은 만든 것이다.** 틱 단위 시세를 받지 않으므로, 첫 화면이 받은 지표 값(없으면 예시 값)을\n+  출발점으로 삼아 그 둘레를 오가는 흐름을 그린다. 그래서 창에 '움직임 예시'를 밝히고 'LIVE'라고\n+  쓰지 않는다. 실제 값과 출처는 시장 흐름 화면이 보인다.\n+*/\n+const MARKETS = [\n+  { code: 'KOSPI', label: 'KOSPI', volatility: 0.0016 },\n+  { code: 'KOSDAQ', label: 'KOSDAQ', volatility: 0.0022 },\n+  { code: 'USD_KRW', label: '원/달러', volatility: 0.0007 },\n+  // 국내판 VIX(변동성 지수)다.\n+  { code: 'VKOSPI200', label: 'VKOSPI 200', volatility: 0.006 },\n+] as const\n+\n+const POINTS = 72\n+const TICK_MS = 900\n+const ROTATE_MS = 7000\n+const plot = { width: 400, height: 190, left: 8, right: 336, top: 14, bottom: 146, barTop: 156, barBottom: 184 }\n+\n+/** 같은 출발값이면 같은 흐름이 나오도록 씨앗을 받는 난수다(렌더마다 모양이 튀지 않게). */\n+function seededRandom(seed: number) {\n+  let state = seed >>> 0\n+  return () => {\n+    state = (state + 0x6d2b79f5) >>> 0\n+    let t = state\n+    t = Math.imul(t ^ (t >>> 15), t | 1)\n+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)\n+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296\n+  }\n+}\n+\n+/** 한 걸음. 출발값에서 멀어질수록 조금씩 되돌아오게 해 화면 밖으로 흘러가지 않는다. */\n+function step(previous: number, base: number, volatility: number, random: () => number) {\n+  const shock = (random() * 2 - 1) * volatility * 1.7\n+  const pull = ((base - previous) / base) * 0.05\n+  return previous * (1 + shock + pull)\n+}\n+\n+/** 끝점이 출발값에 닿는 첫 흐름을 만든다. 창을 열었을 때 보이는 마지막 값이 받은 값과 같다. */\n+function initialSeries(base: number, volatility: number, random: () => number) {\n+  const values: number[] = []\n+  let value = base * (1 - volatility * 10 * (random() - 0.35))\n+  for (let index = 0; index < POINTS; index += 1) {\n+    value = step(value, base, volatility, random)\n+    values.push(value)\n+  }\n+  const scale = base / values[values.length - 1]\n+  return values.map((item) => item * scale)\n+}\n+\n+type Market = (typeof MARKETS)[number] & { base: number; decimals: number; unit: string }\n+\n+function toMarkets(indicators: Indicator[]): Market[] {\n+  return MARKETS.map((market) => {\n+    const indicator = indicators.find((item) => item.code === market.code)\n+    return {\n+      ...market,\n+      base: indicator && indicator.value > 0 ? indicator.value : 1,\n+      decimals: indicator?.decimals ?? 2,\n+      unit: indicator?.unit ?? '',\n+    }\n+  })\n+}\n+\n+function format(value: number, decimals: number) {\n+  return new Intl.NumberFormat('ko-KR', {\n+    minimumFractionDigits: decimals,\n+    maximumFractionDigits: decimals,\n+  }).format(value)\n+}\n+\n+export function MarketPreviewWindow({ indicators }: { indicators: Indicator[] }) {\n+  const reducedMotion = useReducedMotion()\n+  const markets = useMemo(() => toMarkets(indicators), [indicators])\n+  const [active, setActive] = useState(0)\n+  const [pinned, setPinned] = useState(false)\n+  const [, setTick] = useState(0)\n+  const series = useRef<Record<string, { base: number; values: number[]; random: () => number }>>({})\n+\n+  // 출발값이 바뀌면(최신 값을 받으면) 그 지표의 흐름을 새로 만든다.\n+  for (const market of markets) {\n+    const current = series.current[market.code]\n+    if (!current || current.base !== market.base) {\n+      const random = seededRandom(Math.round(market.base * 100) + market.code.length)\n+      series.current[market.code] = { base: market.base, values: initialSeries(market.base, market.volatility, random), random }\n+    }\n+  }\n+\n+  useEffect(() => {\n+    if (reducedMotion) return\n+    const timer = window.setInterval(() => {\n+      if (document.hidden) return\n+      const market = markets[active]\n+      const entry = series.current[market.code]\n+      const last = entry.values[entry.values.length - 1]\n+      entry.values = [...entry.values.slice(1), step(last, entry.base, market.volatility, entry.random)]\n+      setTick((value) => value + 1)\n+    }, TICK_MS)\n+    return () => window.clearInterval(timer)\n+  }, [active, markets, reducedMotion])\n+\n+  useEffect(() => {\n+    if (reducedMotion || pinned) return\n+    const timer = window.setInterval(() => {\n+      if (!document.hidden) setActive((value) => (value + 1) % markets.length)\n+    }, ROTATE_MS)\n+    return () => window.clearInterval(timer)\n+  }, [markets.length, pinned, reducedMotion])\n+\n+  const market = markets[active]\n+  const values = series.current[market.code].values\n+  const first = values[0]\n+  const last = values[values.length - 1]\n+  const change = ((last - first) / first) * 100\n+  const direction = change > 0.005 ? 'up' : change < -0.005 ? 'down' : undefined\n+\n+  const minimum = Math.min(...values)\n+  const maximum = Math.max(...values)\n+  const pad = (maximum - minimum) * 0.12 || last * 0.001\n+  const low = minimum - pad\n+  const high = maximum + pad\n+  const x = (index: number) => plot.left + (index / (POINTS - 1)) * (plot.right - plot.left)\n+  const y = (value: number) => plot.bottom - ((value - low) / (high - low)) * (plot.bottom - plot.top)\n+  const line = values.map((value, index) => `${index === 0 ? 'M' : 'L'}${x(index).toFixed(1)} ${y(value).toFixed(1)}`).join(' ')\n+  const area = `${line} L${plot.right} ${plot.bottom} L${plot.left} ${plot.bottom} Z`\n+  const moves = values.slice(1).map((value, index) => Math.abs(value - values[index]))\n+  const largestMove = Math.max(...moves) || 1\n+\n+  const quotes = markets.map((item) => {\n+    const itemValues = series.current[item.code].values\n+    const itemLast = itemValues[itemValues.length - 1]\n+    const itemChange = ((itemLast - itemValues[0]) / itemValues[0]) * 100\n+    return { ...item, last: itemLast, change: itemChange }\n+  })\n+\n+  return (\n+    <div className={styles.previewWindow} role=\"group\" aria-label=\"국내 시장 지표 움직임 예시\">\n+      <div className={styles.previewBar}>\n+        <span className={styles.previewDots} aria-hidden=\"true\"><i /><i /><i /></span>\n+        <span className={styles.previewAddress} aria-hidden=\"true\">thorp · <b>시장 흐름</b></span>\n+        <span className={styles.previewExample}>움직임 예시</span>\n+      </div>\n+\n+      <div className={styles.previewTickers}>\n+        {quotes.map((item, index) => {\n+          const itemDirection = item.change > 0.005 ? 'up' : item.change < -0.005 ? 'down' : undefined\n+          return (\n+            <button\n+              key={item.code}\n+              type=\"button\"\n+              aria-pressed={index === active}\n+              onClick={() => {\n+                setActive(index)\n+                setPinned(true)\n+              }}\n+            >\n+              <span>{item.label}</span>\n+              <strong aria-hidden=\"true\">{format(item.last, item.decimals)}</strong>\n+              <em aria-hidden=\"true\" data-direction={itemDirection}>\n+                {item.change > 0 ? '+' : ''}\n+                {item.change.toFixed(2)}%\n+              </em>\n+            </button>\n+          )\n+        })}\n+      </div>\n+\n+      <p className={styles.previewChartTitle} aria-hidden=\"true\">\n+        {market.label} <b>최근 흐름</b>\n+        <span data-direction={direction}>{format(last, market.decimals)}</span>\n+      </p>\n+      <svg className={styles.previewChart} viewBox={`0 0 ${plot.width} ${plot.height}`} aria-hidden=\"true\">\n+        {[0.25, 0.5, 0.75].map((ratio) => {\n+          const lineY = plot.top + ratio * (plot.bottom - plot.top)\n+          return <line key={ratio} className={styles.previewGrid} x1={plot.left} x2={plot.right} y1={lineY} y2={lineY} />\n+        })}\n+        {moves.map((move, index) => {\n+          const barHeight = 3 + (move / largestMove) * (plot.barBottom - plot.barTop - 3)\n+          const rising = values[index + 1] >= values[index]\n+          return (\n+            <rect\n+              key={index}\n+              className={styles.previewVolume}\n+              data-direction={rising ? 'up' : 'down'}\n+              x={x(index + 1) - 1.6}\n+              y={plot.barBottom - barHeight}\n+              width={3.2}\n+              height={barHeight}\n+            />\n+          )\n+        })}\n+        <path className={styles.previewArea} d={area} />\n+        <path className={styles.previewLine} d={line} />\n+        <line className={styles.previewLastLine} x1={plot.left} x2={plot.right + 6} y1={y(last)} y2={y(last)} />\n+        <circle className={styles.previewPulse} cx={x(POINTS - 1)} cy={y(last)} r={6} />\n+        <circle className={styles.previewPoint} cx={x(POINTS - 1)} cy={y(last)} r={3.2} />\n+        <g transform={`translate(${plot.right + 6} ${y(last) - 9})`}>\n+          <rect className={styles.previewTag} width={plot.width - plot.right - 6} height={18} rx={4} />\n+          <text className={styles.previewTagText} x={(plot.width - plot.right - 6) / 2} y={12.5} textAnchor=\"middle\">\n+            {format(last, market.decimals)}\n+          </text>\n+        </g>\n+      </svg>\n+\n+      <RuleComparison />\n+    </div>\n+  )\n+}\n+\n+/** 시장 흐름에서 전략 비교로 이어지는 자리. 값은 예시다. */\n+const EXAMPLE_RULES = [\n+  { name: '역변동성', net: '+24.6%', drawdown: '−12.1%', cost: '84,200원', selected: true },\n+  { name: '동일 비중', net: '+13.2%', drawdown: '−18.7%', cost: '61,000원' },\n+  { name: '최소분산', net: '+9.8%', drawdown: '−9.4%', cost: '72,500원' },\n+] as const\n+\n+function RuleComparison() {\n+  return (\n+    <table className={styles.previewTable} aria-hidden=\"true\">\n+      <thead>\n+        <tr><th>같은 조건의 배분 규칙</th><th>수익</th><th>하락 폭</th><th data-optional=\"true\">거래비용</th></tr>\n+      </thead>\n+      <tbody>\n+        {EXAMPLE_RULES.map((rule) => (\n+          <tr key={rule.name} data-selected={'selected' in rule ? true : undefined}>\n+            <td>{rule.name}</td>\n+            <td data-direction=\"up\">{rule.net}</td>\n+            <td data-direction=\"down\">{rule.drawdown}</td>\n+            <td data-optional=\"true\">{rule.cost}</td>\n+          </tr>\n+        ))}\n+      </tbody>\n+    </table>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "old_path": "frontend/src/components/landing/MarketPreviewWindow.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,33 +0,0 @@\n-import { ArrowDown } from 'lucide-react'\n-import { useReducedMotion } from 'motion/react'\n-import styles from '@/pages/LandingPage.module.css'\n-\n-/**\n- * 다음 이야기로 내려가는 화살표. 섹션 번호가 서 있는 옆 여백의 맨 아래에 둔다.\n- *\n- * <p><b>내려갈 수 있다는 것을 알려 주는 장치가 첫 화면에만 있었다.</b> 첫 화면에는 '시장 흐름\n- * 보기' 버튼이 있어 다음으로 이어지지만, 그 뒤 섹션들은 스크롤 말고는 다음이 있다는 신호가\n- * 없었다. 한 섹션이 화면을 가득 채우는 구성이라 끝인지 더 있는지가 화면만 보고는 구분되지\n- * 않는다.\n- *\n- * <p>옆 여백에 두는 이유는 본문을 밀지 않기 위해서다. 아래에 쌓으면 그만큼 섹션이 길어져\n- * 한 화면에 담으려던 것이 다시 깨진다.\n- *\n- * <p>마지막 섹션에는 붙이지 않는다 — 갈 곳이 없는 화살표는 눌러도 아무 일이 없다.\n- */\n-export function NextSectionButton({ targetId, label }: { targetId: string; label: string }) {\n-  const reducedMotion = useReducedMotion()\n-\n-  const moveToNext = () => {\n-    document.querySelector(`#${targetId}`)?.scrollIntoView({\n-      behavior: reducedMotion ? 'auto' : 'smooth',\n-      block: 'start',\n-    })\n-  }\n-\n-  return (\n-    <button type=\"button\" className={styles.nextSection} onClick={moveToNext} aria-label={label}>\n-      <ArrowDown aria-hidden=\"true\" size={18} strokeWidth={1.7} />\n-    </button>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/NextSectionButton.tsx",
+          "old_path": "frontend/src/components/landing/NextSectionButton.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,34 @@\n+import { useMotionValueEvent, useReducedMotion, type MotionValue } from 'motion/react'\n+import { useState } from 'react'\n+import styles from '@/pages/LandingPage.module.css'\n+\n+/** 칸마다의 이름. 점에 마우스를 올리면 보인다. */\n+const SECTIONS = ['서비스', '시장 흐름', '백테스트', '배분 규칙']\n+\n+/** 지금 몇 번째 칸인지 오른쪽에 점으로 보인다. 점을 누르면 그 칸으로 간다. */\n+export function SectionProgress({ progress, targets }: { progress: MotionValue<number>; targets: string[] }) {\n+  const reducedMotion = useReducedMotion()\n+  const [active, setActive] = useState(0)\n+\n+  useMotionValueEvent(progress, 'change', (value) => {\n+    setActive(Math.min(targets.length - 1, Math.round(value * (targets.length - 1))))\n+  })\n+\n+  return (\n+    <nav className={styles.sectionProgress} aria-label=\"첫 화면 칸 이동\">\n+      {targets.map((target, index) => (\n+        <button\n+          key={target}\n+          type=\"button\"\n+          aria-label={`${SECTIONS[index] ?? index + 1} 칸으로 이동`}\n+          aria-current={index === active ? 'true' : undefined}\n+          onClick={() =>\n+            document.getElementById(target)?.scrollIntoView({ behavior: reducedMotion ? 'auto' : 'smooth', block: 'start' })\n+          }\n+        >\n+          <span>{SECTIONS[index]}</span>\n+        </button>\n+      ))}\n+    </nav>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/SectionProgress.tsx",
+          "old_path": "frontend/src/components/landing/SectionProgress.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,47 @@\n+import { useReducedMotion, useScroll, useSpring, useTransform, type MotionStyle } from 'motion/react'\n+import { createContext, useContext, type RefObject } from 'react'\n+\n+/**\n+ * 첫 화면은 `main`이 스스로 스크롤한다(한 칸씩 넘기기). 칸들이 자기 움직임을 그 스크롤에 묶을 수\n+ * 있도록 그 요소를 나눠 준다.\n+ */\n+export const LandingScrollContext = createContext<RefObject<HTMLElement | null> | null>(null)\n+\n+type Scene = { copy: MotionStyle; window: MotionStyle }\n+\n+const still: Scene = { copy: {}, window: {} }\n+\n+/**\n+ * 스크롤한 만큼 따라가는 칸 움직임. 한 번 재생되고 끝나는 들어옴이 아니라, 올리고 내리는 만큼\n+ * 앞뒤로 따라간다.\n+ *\n+ * - `leave`: 첫 칸처럼 화면을 떠나기만 한다. 글은 올라가며 흐려지고 창은 뒤로 기울며 작아진다.\n+ * - `pass`: 아래에서 들어와 가운데 섰다가 위로 나간다. `from`은 글이 밀려 들어오는 쪽이다.\n+ */\n+export function useScrollScene(target: RefObject<HTMLElement | null>, mode: 'leave' | 'pass', from: 'left' | 'right' = 'left'): Scene {\n+  const container = useContext(LandingScrollContext)\n+  const reducedMotion = useReducedMotion()\n+  const { scrollYProgress } = useScroll({\n+    container: container ?? undefined,\n+    target,\n+    offset: mode === 'leave' ? ['start start', 'end start'] : ['start end', 'end start'],\n+  })\n+  // 휠 한 번에 튀지 않도록 살짝 늦게 따라가게 한다.\n+  const p = useSpring(scrollYProgress, { stiffness: 140, damping: 26, mass: 0.35 })\n+  const side = from === 'left' ? -1 : 1\n+\n+  const stops = mode === 'leave' ? [0, 1] : [0, 0.5, 1]\n+  const copyY = useTransform(p, stops, mode === 'leave' ? [0, -90] : [70, 0, -50])\n+  const copyX = useTransform(p, stops, mode === 'leave' ? [0, 0] : [side * 90, 0, side * -30])\n+  const copyOpacity = useTransform(p, stops, mode === 'leave' ? [1, 0.15] : [0, 1, 0.25])\n+  const windowY = useTransform(p, stops, mode === 'leave' ? [0, -40] : [140, 0, -70])\n+  const windowScale = useTransform(p, stops, mode === 'leave' ? [1, 0.88] : [0.86, 1, 0.94])\n+  const windowRotate = useTransform(p, stops, mode === 'leave' ? [0, 14] : [18, 0, -8])\n+  const windowOpacity = useTransform(p, stops, mode === 'leave' ? [1, 0.35] : [0.2, 1, 0.5])\n+\n+  if (reducedMotion) return still\n+  return {\n+    copy: { x: copyX, y: copyY, opacity: copyOpacity },\n+    window: { y: windowY, scale: windowScale, rotateX: windowRotate, opacity: windowOpacity, transformPerspective: 1400 },\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/landing/scrollScene.ts",
+          "old_path": "frontend/src/components/landing/scrollScene.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -79,3 +79,7 @@\n     grid-template-columns: minmax(0, 1fr);\n   }\n }\n+\n+/* 디자인 개편(S15P21E205-425): 수익률·하락 폭의 오르내림을 상승 빨강·하락 파랑으로 보인다. classic은 예전처럼 한 색이다. */\n+:global(:root:not([data-design='classic'])) .metricValue[data-direction='up'] { color: var(--thorp-up); }\n+:global(:root:not([data-design='classic'])) .metricValue[data-direction='down'] { color: var(--thorp-down); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,6 +19,23 @@ function withSummary(overrides: Partial<ResultSummary>): PublicResultDetail {\n }\n \n describe('ResultSummaryCard', () => {\n+  it('수익률·하락 폭에 부호대로 오르내림 방향을 달고, 금액에는 달지 않는다', () => {\n+    render(<ResultSummaryCard detail={resultDetailCompleted} />)\n+\n+    expect(screen.getByText('16.67%').getAttribute('data-direction')).toBe('up')\n+    expect(screen.getByText('-4.18%').getAttribute('data-direction')).toBe('down')\n+    expect(screen.getByText('17,078원').hasAttribute('data-direction')).toBe(false)\n+  })\n+\n+  it('0.00%로 보이는 값에는 오르내림 방향을 달지 않는다', () => {\n+    // 글은 0.00%인데 빨강·파랑이 붙으면 글과 색이 서로 다른 말을 한다.\n+    render(<ResultSummaryCard detail={withSummary({ netTotalReturn: '0.00004', maxDrawdown: '-0.00004' })} />)\n+\n+    for (const value of screen.getAllByText('0.00%')) {\n+      expect(value.hasAttribute('data-direction')).toBe(false)\n+    }\n+  })\n+\n   it('핵심 숫자 3개와 각 정의, 조건 한 줄, 청산 구분을 텍스트로 보인다', () => {\n     render(<ResultSummaryCard detail={resultDetailCompleted} />)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n import type { PublicResultDetail } from '@/types/result'\n import { buildConditionLine } from './conditionLine'\n-import { formatMoney, formatRatio, isZeroValue } from './formatResult'\n+import { formatMoney, formatRatio, isZeroValue, ratioDirection } from './formatResult'\n import styles from './ResultSummaryCard.module.css'\n \n export const METRIC_DEFINITIONS = {\n@@ -51,11 +51,13 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {\n             <Metric\n               label=\"비용 차감 후 전체 수익률\"\n               value={formatRatio(summary.netTotalReturn)}\n+              direction={ratioDirection(summary.netTotalReturn)}\n               definition={METRIC_DEFINITIONS.netTotalReturn}\n             />\n             <Metric\n               label=\"가장 크게 줄었던 폭\"\n               value={formatRatio(summary.maxDrawdown)}\n+              direction={ratioDirection(summary.maxDrawdown)}\n               definition={METRIC_DEFINITIONS.maxDrawdown}\n             />\n             <Metric\n@@ -87,16 +89,19 @@ export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {\n function Metric({\n   label,\n   value,\n+  direction,\n   definition,\n }: {\n   label: string\n   value: string\n+  /** 비율의 오르내림. 색만 바꾸며 값은 그대로다. 금액처럼 방향이 없는 값은 비운다. */\n+  direction?: 'up' | 'down'\n   definition: string\n }) {\n   return (\n     <div className={styles.metric}>\n       <dt className={styles.metricLabel}>{label}</dt>\n-      <dd className={styles.metricValue}>{value}</dd>\n+      <dd className={styles.metricValue} data-direction={direction}>{value}</dd>\n       <dd className={styles.metricDefinition}>{definition}</dd>\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,7 +6,7 @@ import { useResult } from '@/hooks/useResult'\n import type { BacktestCreateRequest } from '@/types/backtestRequest'\n import type { PublicResultDetail } from '@/types/result'\n import { buildCompareRequest } from './compareRequest'\n-import { formatMoney, formatRatio } from './formatResult'\n+import { formatMoney, formatRatio, ratioDirection } from './formatResult'\n import styles from './auxiliaryViews.module.css'\n \n type RequestState =\n@@ -227,11 +227,11 @@ export function TargetRiskView({ base }: { base: PublicResultDetail }) {\n         <dl className={styles.metrics} aria-label=\"목표 위험 맞춤 핵심 결과\">\n           <div className={styles.metric}>\n             <dt>비용 차감 후 전체 수익률</dt>\n-            <dd>{formatRatio(detail.summary.netTotalReturn)}</dd>\n+            <dd data-direction={ratioDirection(detail.summary.netTotalReturn)}>{formatRatio(detail.summary.netTotalReturn)}</dd>\n           </div>\n           <div className={styles.metric}>\n             <dt>가장 크게 줄었던 폭</dt>\n-            <dd>{formatRatio(detail.summary.maxDrawdown)}</dd>\n+            <dd data-direction={ratioDirection(detail.summary.maxDrawdown)}>{formatRatio(detail.summary.maxDrawdown)}</dd>\n           </div>\n           <div className={styles.metric}>\n             <dt>거래비용</dt>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/TargetRiskView.tsx",
+          "old_path": "frontend/src/components/result/TargetRiskView.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,3 +105,7 @@\n   font-size: 0.76rem;\n   line-height: 1.5;\n }\n+\n+/* 디자인 개편(S15P21E205-425): 목표 위험 결과의 오르내림 색. classic은 예전처럼 한 색이다. */\n+:global(:root:not([data-design='classic'])) .metric dd[data-direction='up'] { color: var(--thorp-up); }\n+:global(:root:not([data-design='classic'])) .metric dd[data-direction='down'] { color: var(--thorp-down); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "old_path": "frontend/src/components/result/auxiliaryViews.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,22 @@\n+import { describe, expect, it } from 'vitest'\n+import { formatRatio, ratioDirection } from './formatResult'\n+\n+describe('ratioDirection', () => {\n+  it('보이는 값의 부호로 오르내림을 정한다', () => {\n+    expect(ratioDirection('0.166652')).toBe('up')\n+    expect(ratioDirection('-0.041757')).toBe('down')\n+  })\n+\n+  it('반올림해 0.00%로 보이는 값에는 방향을 주지 않는다', () => {\n+    // 화면이 \"0.00%\"라고 쓰는데 빨강·파랑이 붙으면 글과 색이 서로 다른 말을 한다.\n+    expect(formatRatio('-0.00004')).toBe('0.00%')\n+    expect(ratioDirection('-0.00004')).toBeUndefined()\n+    expect(ratioDirection('0.00004')).toBeUndefined()\n+    expect(ratioDirection('0')).toBeUndefined()\n+  })\n+\n+  it('읽을 수 없는 값에는 방향을 주지 않는다', () => {\n+    expect(ratioDirection('')).toBeUndefined()\n+    expect(ratioDirection('N/A')).toBeUndefined()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/formatResult.test.ts",
+          "old_path": "frontend/src/components/result/formatResult.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,6 +15,19 @@ export function formatRatio(value: string): string {\n   return `${percent === '-0.00' ? '0.00' : percent}%`\n }\n \n+/**\n+ * 비율 값의 오르내림. 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%면 방향이 없다.\n+ * 읽을 수 없는 값도 방향이 없다 — 색을 칠할 근거가 없다.\n+ */\n+export function ratioDirection(value: string): 'up' | 'down' | undefined {\n+  const ratio = Number(value)\n+  if (value.trim() === '' || !Number.isFinite(ratio)) return undefined\n+  const percent = Number((ratio * 100).toFixed(2))\n+  if (percent > 0) return 'up'\n+  if (percent < 0) return 'down'\n+  return undefined\n+}\n+\n const moneyFormat = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 0 })\n \n /** `\"17078.49\"` → `\"17,078원\"` */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/formatResult.ts",
+          "old_path": "frontend/src/components/result/formatResult.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,8 +4,9 @@ import { Slot } from \"radix-ui\"\n \n import { cn } from \"@/lib/utils\"\n \n+// 모서리는 다른 버튼과 같은 --thorp-radius-control(6px)을 쓴다. classic에서는 토큰이 비어 원래 shadcn 값이 쓰인다.\n const buttonVariants = cva(\n-  \"group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4\",\n+  \"group/button inline-flex shrink-0 items-center justify-center rounded-[var(--thorp-radius-control,var(--radius-lg))] border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4\",\n   {\n     variants: {\n       variant: {\n@@ -23,14 +24,14 @@ const buttonVariants = cva(\n       size: {\n         default:\n           \"h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2\",\n-        xs: \"h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3\",\n-        sm: \"h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5\",\n+        xs: \"h-6 gap-1 rounded-[var(--thorp-radius-control,min(var(--radius-md),10px))] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3\",\n+        sm: \"h-7 gap-1 rounded-[var(--thorp-radius-control,min(var(--radius-md),12px))] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5\",\n         lg: \"h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2\",\n         icon: \"size-8\",\n         \"icon-xs\":\n-          \"size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3\",\n+          \"size-6 rounded-[var(--thorp-radius-control,min(var(--radius-md),10px))] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3\",\n         \"icon-sm\":\n-          \"size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg\",\n+          \"size-7 rounded-[var(--thorp-radius-control,min(var(--radius-md),12px))] in-data-[slot=button-group]:rounded-lg\",\n         \"icon-lg\": \"size-9\",\n       },\n     },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/ui/button.tsx",
+          "old_path": "frontend/src/components/ui/button.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -201,19 +201,38 @@\n   transform: translateX(-50%);\n }\n \n-.heroContent {\n+/*\n+  첫 칸은 왼쪽에 무엇을 하는 서비스인지(글), 오른쪽에 그 결과가 어떻게 보이는지(결과 화면 예시)를\n+  둔다. 글이 가운데 떠 있으면 무엇을 하는지가 그림으로 보이지 않았다. 뒤의 시장 그래픽은 그대로다.\n+*/\n+.heroLayout {\n   position: relative;\n   z-index: 2;\n-  display: flex;\n+  display: grid;\n+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);\n   align-items: center;\n+  gap: clamp(32px, 4vw, 64px);\n+  width: min(100% - 2 * clamp(24px, 4vw, 68px), 1320px);\n+  padding: clamp(40px, 6vh, 72px) 0 clamp(72px, 9vh, 104px);\n+}\n+\n+.heroContent {\n+  display: flex;\n+  align-items: flex-start;\n+  align-self: start;\n   flex-direction: column;\n-  width: min(100% - 40px, 1100px);\n-  padding: clamp(150px, 17vh, 210px) 0 120px;\n-  text-align: center;\n+  min-width: 0;\n+  /* 오른쪽 창의 윗부분(주소창·지표 칸 높이)에 맞춰 올린다. 가운데 두면 글이 화면 한가운데로 몰렸다. */\n+  padding-top: clamp(24px, 5vh, 56px);\n+  text-align: left;\n+  word-break: keep-all;\n+}\n+\n+.heroPreview {\n+  min-width: 0;\n }\n \n .eyebrow,\n-.sectionHeading > p,\n .algorithmHeader > p {\n   margin: 0;\n   color: var(--thorp-eyebrow, var(--landing-accent-soft));\n@@ -238,10 +257,10 @@\n \n .hero h1 {\n   margin: 0;\n-  font-size: clamp(3.45rem, 7.2vw, 7.1rem);\n-  font-weight: 540;\n-  letter-spacing: -0.075em;\n-  line-height: 0.98;\n+  font-size: clamp(2.2rem, 3.6vw, 3.3rem);\n+  font-weight: 700;\n+  letter-spacing: -0.045em;\n+  line-height: 1.14;\n }\n \n .hero h1 > span {\n@@ -256,19 +275,23 @@\n   text-shadow: 0 0 42px rgb(3 199 90 / 15%);\n }\n \n+.heroDescription > span {\n+  display: block;\n+}\n+\n .heroDescription {\n-  max-width: 530px;\n-  margin: 29px 0 0;\n+  margin: 22px 0 0;\n   color: var(--landing-muted);\n-  font-size: clamp(0.92rem, 1.25vw, 1.05rem);\n-  letter-spacing: -0.025em;\n+  font-size: clamp(0.95rem, 1.3vw, 1.1rem);\n+  line-height: 1.65;\n+  letter-spacing: -0.02em;\n }\n \n .heroActions {\n   display: flex;\n   align-items: center;\n   gap: 12px;\n-  margin-top: 38px;\n+  margin-top: 32px;\n }\n \n .primaryCta,\n@@ -365,136 +388,6 @@\n   content: '';\n }\n \n-.marketSection {\n-  grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);\n-}\n-\n-.marketSection::before {\n-  left: 33.5%;\n-}\n-\n-/*\n-  **이 섹션은 한 칸을 넘지 않는다고 못 박는다.** `min-height`로 두면 안의 것이 커질 때 섹션이\n-  따라 늘어나 스크롤이 한 번 더 생기는데, 스냅으로 넘기는 구성에서는 그 한 번이 '끝인 줄 알았는데\n-  더 있는' 어긋남으로 겪힌다. 키를 고정하고, 모자랄 때 줄어들 몫은 차트에만 준다.\n-*/\n-.backtestSection .sectionHeading h2 {\n-  font-size: clamp(2.2rem, 3.6vw, 4rem);\n-}\n-\n-.backtestSection {\n-  grid-template-columns: minmax(0, 0.69fr) minmax(220px, 0.31fr);\n-  height: calc(100svh - var(--landing-header-height));\n-  padding-top: clamp(64px, 8vh, 104px);\n-  padding-bottom: clamp(64px, 8vh, 104px);\n-}\n-\n-.backtestSection::before {\n-  right: 31%;\n-}\n-\n-/*\n-  섹션 번호와 '다음으로' 화살표가 함께 서는 옆 여백. 번호는 가운데, 화살표는 맨 아래다 —\n-  다음이 있다는 신호는 내려갈 방향인 아래쪽에 있어야 읽힌다.\n-*/\n-.sectionAside {\n-  display: grid;\n-  grid-template-rows: minmax(0, 1fr) auto;\n-  align-items: center;\n-  justify-items: center;\n-  align-self: stretch;\n-  gap: 18px;\n-}\n-\n-.marketSection .sectionAside {\n-  justify-self: start;\n-}\n-\n-.backtestSection .sectionAside {\n-  justify-self: end;\n-}\n-\n-.sectionNumber {\n-  color: var(--lp-14, #536158);\n-  font-size: 0.62rem;\n-  letter-spacing: 0.2em;\n-  writing-mode: vertical-rl;\n-}\n-\n-.nextSection {\n-  display: flex;\n-  align-items: center;\n-  justify-content: center;\n-  width: 44px;\n-  height: 44px;\n-  border: 1px solid rgb(3 199 90 / 55%);\n-  border-radius: 50%;\n-  background: rgb(3 199 90 / 12%);\n-  box-shadow: 0 0 0 6px rgb(3 199 90 / 6%);\n-  color: var(--landing-accent-soft);\n-  cursor: pointer;\n-  transition: border-color 180ms ease, color 180ms ease, background 180ms ease,\n-    box-shadow 180ms ease;\n-}\n-\n-.nextSection:hover {\n-  border-color: var(--landing-accent);\n-  background: rgb(3 199 90 / 22%);\n-  box-shadow: 0 0 0 9px rgb(3 199 90 / 10%);\n-  color: var(--landing-accent);\n-}\n-\n-.nextSection:focus-visible {\n-  outline: var(--thorp-focus-outline);\n-  outline-offset: 3px;\n-}\n-\n-.marketContent {\n-  align-self: center;\n-  min-width: 0;\n-}\n-\n-/*\n-  **차트가 남는 높이를 받아 가게 둔다.** 차트에 높이 하한을 박아 두었더니 제목·지표·버튼을 더한\n-  키가 화면보다 커져서, 한 칸으로 붙어야 할 섹션이 두 번 굴러야 끝났다. 고정 높이를 정해 두면\n-  화면 높이가 조금만 달라져도 다시 어긋나므로, 정해진 것들을 먼저 놓고 나머지를 차트에 준다.\n-*/\n-.backtestContent {\n-  display: flex;\n-  flex-direction: column;\n-  justify-content: center;\n-  align-self: stretch;\n-  min-width: 0;\n-  min-height: 0;\n-}\n-\n-/* 글과 버튼은 줄이지 않는다 — 줄이면 글자가 서로 겹치거나 잘린다. */\n-.backtestContent > .sectionHeading,\n-.backtestContent > .textCta {\n-  flex: 0 0 auto;\n-}\n-\n-.marketContent {\n-  padding-left: clamp(38px, 5vw, 88px);\n-}\n-\n-.backtestContent {\n-  padding-right: clamp(38px, 5vw, 88px);\n-}\n-\n-.sectionHeading {\n-  position: relative;\n-  padding-left: 46px;\n-}\n-\n-.sectionHeading > svg {\n-  position: absolute;\n-  top: 2px;\n-  left: 0;\n-  color: var(--thorp-ornament, var(--landing-accent));\n-}\n-\n-.sectionHeading h2,\n .algorithmHeader h2 {\n   margin: 16px 0 20px;\n   color: var(--landing-text);\n@@ -504,7 +397,6 @@\n   line-height: 1.04;\n }\n \n-.sectionHeading > span,\n .algorithmHeader > span {\n   display: block;\n   max-width: 650px;\n@@ -634,26 +526,6 @@\n   vector-effect: non-scaling-stroke;\n }\n \n-.textCta {\n-  display: flex;\n-  align-items: center;\n-  justify-content: space-between;\n-  width: min(100%, 720px);\n-  padding: 18px 0;\n-  border-top: 1px solid var(--landing-line);\n-  border-bottom: 1px solid var(--landing-line);\n-  color: var(--landing-text);\n-  font-size: 0.83rem;\n-  font-weight: 620;\n-  text-decoration: none;\n-  transition: color 180ms ease, padding 180ms ease;\n-}\n-\n-.textCta:hover {\n-  padding-right: 9px;\n-  color: var(--landing-accent-soft);\n-}\n-\n .backtestVisual {\n   position: relative;\n   display: flex;\n@@ -929,7 +801,6 @@\n \n .primaryCta:focus-visible,\n .secondaryCta:focus-visible,\n-.textCta:focus-visible,\n .algorithmCard > a:focus-visible,\n .cardSelectButton:focus-visible {\n   outline: var(--thorp-focus-outline-compact);\n@@ -964,34 +835,6 @@\n   }\n }\n \n-@media (max-width: 1100px) {\n-\n-  .marketSection,\n-  .backtestSection {\n-    grid-template-columns: minmax(130px, 0.22fr) minmax(0, 0.78fr);\n-  }\n-\n-  .marketSection::before {\n-    left: 21.5%;\n-  }\n-\n-  .backtestSection {\n-    grid-template-columns: minmax(0, 0.78fr) minmax(130px, 0.22fr);\n-  }\n-\n-  .backtestSection::before {\n-    right: 21.5%;\n-  }\n-\n-  .marketContent {\n-    padding-left: 42px;\n-  }\n-\n-  .backtestContent {\n-    padding-right: 42px;\n-  }\n-}\n-\n @media (max-width: 760px) {\n   .page {\n     scroll-snap-type: none;\n@@ -1003,13 +846,12 @@\n     scroll-snap-align: none;\n   }\n \n-  .heroContent {\n-    width: min(100% - 28px, 610px);\n+  .heroLayout {\n+    width: min(100% - 28px, 640px);\n   }\n \n   .hero h1 {\n-    font-size: clamp(3.2rem, 12.8vw, 5rem);\n-    line-height: 1.01;\n+    font-size: clamp(2.1rem, 8.6vw, 2.9rem);\n   }\n \n   .heroDescription {\n@@ -1028,7 +870,6 @@\n   }\n \n   .heroFootnote::before,\n-  .sectionAside,\n   .storySection::before {\n     display: none;\n   }\n@@ -1039,16 +880,6 @@\n     padding: 100px 20px;\n   }\n \n-  .marketContent,\n-  .backtestContent {\n-    padding: 0;\n-  }\n-\n-  .backtestSection {\n-    height: auto;\n-  }\n-\n-  .backtestContent,\n   .backtestVisual {\n     display: block;\n     min-height: auto;\n@@ -1059,16 +890,6 @@\n     min-height: 240px;\n   }\n \n-  .sectionHeading {\n-    padding-left: 0;\n-  }\n-\n-  .sectionHeading > svg {\n-    position: static;\n-    margin-bottom: 16px;\n-  }\n-\n-  .sectionHeading h2,\n   .algorithmHeader h2 {\n     font-size: clamp(2.5rem, 11vw, 3.7rem);\n   }\n@@ -1130,12 +951,12 @@\n \n @media (max-width: 430px) {\n \n-  .heroContent {\n-    padding-top: 118px;\n+  .heroLayout {\n+    padding-top: 32px;\n   }\n \n   .hero h1 {\n-    font-size: 2.72rem;\n+    font-size: 2rem;\n   }\n \n   .eyebrow {\n@@ -1147,7 +968,6 @@\n     left: 18px;\n   }\n \n-  .sectionHeading h2,\n   .algorithmHeader h2 {\n     font-size: 2.55rem;\n   }\n@@ -1184,12 +1004,371 @@\n \n   .primaryCta,\n   .secondaryCta,\n-  .textCta,\n   .algorithmCard > a {\n     transition: none;\n   }\n }\n \n+/*\n+  둘째·셋째 칸도 첫 칸과 같은 틀이다: 한쪽에 제목·설명·버튼, 다른 쪽에 서비스 화면을 담은 창.\n+  셋째 칸은 창과 글의 자리를 바꿔 내려가는 동안 시선이 좌우로 오가게 한다.\n+*/\n+/*\n+  글 칸은 내용 폭만큼만 잡고 창과 함께 가운데로 모은다. 두 칸을 화면 양끝까지 벌렸더니 글과 창이\n+  서로 다른 칸처럼 떨어져 보였다.\n+*/\n+.storyLayout {\n+  z-index: 1;\n+  /* 옆에서 밀려 들어오는 글이 칸 밖으로 삐져나오지 않게 가로만 자른다. */\n+  overflow-x: clip;\n+  grid-template-columns: auto minmax(0, 640px);\n+  justify-content: center;\n+  align-items: center;\n+  gap: clamp(32px, 4.5vw, 72px);\n+  width: min(100% - 2 * clamp(24px, 4vw, 68px), 1180px);\n+  padding: clamp(48px, 8vh, 96px) 0;\n+}\n+\n+.storyReverse {\n+  grid-template-columns: minmax(0, 640px) auto;\n+}\n+\n+.storyCopy {\n+  display: flex;\n+  align-items: flex-start;\n+  flex-direction: column;\n+  min-width: 0;\n+  word-break: keep-all;\n+}\n+\n+.storyCopy h2 {\n+  margin: 0;\n+  color: var(--landing-text);\n+  font-size: clamp(2rem, 3.2vw, 3rem);\n+  font-weight: 700;\n+  letter-spacing: -0.045em;\n+  line-height: 1.16;\n+}\n+\n+.storyCopy h2 > span { display: block; }\n+\n+.storyCopy h2 em {\n+  background: linear-gradient(100deg, #e8f8ed 5%, #85eea7 58%, #03c75a 112%);\n+  background-clip: text;\n+  color: transparent;\n+  font-style: normal;\n+}\n+\n+.storyWindow { min-width: 0; }\n+\n+.storySteps {\n+  display: grid;\n+  gap: 14px;\n+  margin: 26px 0 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.storySteps li {\n+  display: grid;\n+  grid-template-columns: 26px minmax(0, 1fr);\n+  align-items: baseline;\n+  gap: 12px;\n+  color: var(--landing-text);\n+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);\n+  font-weight: 600;\n+}\n+\n+.storySteps b {\n+  display: grid;\n+  width: 26px;\n+  height: 26px;\n+  place-items: center;\n+  border-radius: 50%;\n+  background: var(--thorp-accent-muted);\n+  color: var(--landing-accent-soft);\n+  font-size: 0.72rem;\n+  font-weight: 700;\n+  transform: translateY(-2px);\n+}\n+\n+.storySteps small {\n+  display: block;\n+  margin-top: 2px;\n+  color: var(--landing-muted);\n+  font-size: 0.82em;\n+  font-weight: 500;\n+}\n+\n+/* 창 안에서는 흐르는 지표 띠를 창 폭에 맞춰 줄인다. */\n+.storyWindow .conveyorViewport { margin: 0; padding-block: 14px; border-bottom: 1px solid var(--thorp-line); }\n+.storyWindow .indicatorItem { width: clamp(250px, 21vw, 300px); min-height: 132px; padding: 18px 20px; grid-template-columns: minmax(110px, 1fr) 90px; gap: 14px; }\n+.storyWindow .indicatorReading strong { font-size: 1.25rem; }\n+\n+.fieldPreview {\n+  display: grid;\n+  gap: 8px;\n+  margin: 0;\n+  padding: 14px;\n+  list-style: none;\n+}\n+\n+.fieldPreview li {\n+  display: grid;\n+  grid-template-columns: 84px minmax(0, 1fr) 60px;\n+  align-items: center;\n+  gap: 12px;\n+  padding: 12px 14px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-inset, 8px);\n+  background: var(--thorp-surface-muted);\n+}\n+\n+.fieldPreview b { color: var(--landing-text); font-size: 0.82rem; }\n+.fieldPreview span { overflow: hidden; color: var(--thorp-copy); font-size: 0.74rem; text-overflow: ellipsis; white-space: nowrap; }\n+.fieldPreview svg { width: 60px; height: 24px; overflow: visible; }\n+.fieldPreview polyline { fill: none; stroke: rgb(255 255 255 / 70%); stroke-width: 1.6; }\n+.fieldPreview circle { fill: var(--thorp-surface); stroke: var(--landing-text); stroke-width: 1.4; }\n+\n+.storyWindow .backtestVisual { margin: 0; box-shadow: 0 30px 80px rgb(0 0 0 / 45%); }\n+\n+@media (max-width: 1040px) {\n+  .storyLayout,\n+  .storyReverse { grid-template-columns: minmax(0, 1fr); justify-content: stretch; }\n+  .storyReverse .storyWindow { order: 2; }\n+}\n+\n+@media (max-width: 760px) {\n+  .storyLayout { display: grid; width: min(100% - 28px, 640px); padding: 72px 0; }\n+  .fieldPreview li { grid-template-columns: 72px minmax(0, 1fr); }\n+  .fieldPreview svg { display: none; }\n+}\n+\n+/* 지금 몇 번째 칸인지 알리는 점. 이름은 올렸을 때만 보인다. */\n+.sectionProgress {\n+  position: fixed;\n+  z-index: 25;\n+  top: 50%;\n+  right: clamp(12px, 1.6vw, 28px);\n+  display: flex;\n+  flex-direction: column;\n+  gap: 14px;\n+  transform: translateY(-50%);\n+}\n+\n+.sectionProgress button {\n+  position: relative;\n+  width: 12px;\n+  height: 12px;\n+  padding: 0;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 50%;\n+  background: transparent;\n+  cursor: pointer;\n+  transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;\n+}\n+\n+.sectionProgress button[aria-current='true'] {\n+  border-color: var(--landing-accent);\n+  background: var(--landing-accent);\n+  box-shadow: 0 0 0 4px var(--thorp-accent-muted);\n+  transform: scale(1.15);\n+}\n+\n+.sectionProgress button span {\n+  position: absolute;\n+  top: 50%;\n+  right: 22px;\n+  padding: 4px 8px;\n+  border-radius: 6px;\n+  background: var(--thorp-surface-raised);\n+  color: var(--landing-text);\n+  font-size: 0.68rem;\n+  white-space: nowrap;\n+  opacity: 0;\n+  pointer-events: none;\n+  transform: translateY(-50%);\n+  transition: opacity 160ms ease;\n+}\n+\n+.sectionProgress button:hover span,\n+.sectionProgress button:focus-visible span { opacity: 1; }\n+.sectionProgress button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: 3px; }\n+\n+@media (max-width: 760px) {\n+  .sectionProgress { display: none; }\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .sectionProgress button { transition: none; }\n+}\n+\n+/* 첫 칸 오른쪽의 결과 화면 예시 창(ResultPreviewWindow). 셰이더 위에 뜨므로 면을 채워 글이 섞이지 않게 한다. */\n+.previewWindow {\n+  overflow: hidden;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 14px;\n+  background: var(--thorp-surface);\n+  box-shadow: 0 30px 80px rgb(0 0 0 / 45%);\n+}\n+\n+.previewBar {\n+  display: flex;\n+  align-items: center;\n+  gap: 12px;\n+  padding: 11px 14px;\n+  border-bottom: 1px solid var(--thorp-line);\n+  background: var(--thorp-surface-muted);\n+}\n+\n+.previewDots { display: flex; gap: 6px; }\n+.previewDots i { display: block; width: 10px; height: 10px; border-radius: 50%; background: var(--thorp-line-strong); }\n+\n+/*\n+  주소창은 이 창이 서비스의 한 화면이라는 신호다. 지표 칸 넷은 누를 수 있는 탭이며, 고른 칸의 흐름을\n+  아래 차트가 그린다. 차트 선은 흰색 계열이다 — 아래 거래량 막대가 빨강·파랑이라 선까지 초록이면\n+  세 색이 부딪힌다.\n+*/\n+.previewAddress {\n+  flex: 1;\n+  min-width: 0;\n+  overflow: hidden;\n+  padding: 4px 12px;\n+  border-radius: 6px;\n+  background: var(--landing-background);\n+  color: var(--thorp-muted);\n+  font-size: 0.7rem;\n+  text-overflow: ellipsis;\n+  white-space: nowrap;\n+}\n+\n+.previewAddress b { color: var(--thorp-copy); font-weight: 500; }\n+\n+.previewTickers {\n+  display: grid;\n+  grid-template-columns: repeat(4, minmax(0, 1fr));\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.previewTickers button {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 2px;\n+  min-width: 0;\n+  padding: 14px 16px 12px;\n+  border: 0;\n+  border-bottom: 2px solid transparent;\n+  background: transparent;\n+  color: inherit;\n+  font: inherit;\n+  text-align: left;\n+  font-variant-numeric: tabular-nums;\n+  cursor: pointer;\n+}\n+\n+.previewTickers button + button { border-left: 1px solid var(--thorp-line); }\n+.previewTickers button:hover { background: var(--thorp-surface-muted); }\n+.previewTickers button[aria-pressed='true'] { border-bottom-color: var(--landing-accent); background: var(--thorp-surface-muted); }\n+.previewTickers button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: -2px; }\n+.previewTickers span { overflow: hidden; color: var(--thorp-muted); font-size: 0.66rem; font-weight: 600; letter-spacing: 0.05em; text-overflow: ellipsis; white-space: nowrap; }\n+.previewTickers button[aria-pressed='true'] span { color: var(--landing-accent-soft); }\n+.previewTickers strong { overflow: hidden; color: var(--landing-text); font-size: clamp(0.95rem, 1.4vw, 1.2rem); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }\n+.previewTickers em { font-size: 0.72rem; font-style: normal; font-weight: 700; }\n+\n+.previewChartTitle {\n+  display: flex;\n+  align-items: baseline;\n+  gap: 8px;\n+  margin: 0;\n+  padding: 14px 18px 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.66rem;\n+  font-weight: 600;\n+  letter-spacing: 0.06em;\n+}\n+\n+.previewChartTitle b { color: var(--thorp-copy); font-weight: 600; letter-spacing: 0; }\n+.previewChartTitle span { margin-left: auto; color: var(--landing-text); font-size: 0.8rem; font-weight: 700; letter-spacing: 0; font-variant-numeric: tabular-nums; }\n+\n+.previewChart { display: block; width: 100%; height: auto; margin: 4px 0 8px; }\n+.previewGrid { stroke: var(--chart-grid); stroke-dasharray: 3 5; }\n+.previewArea { fill: rgb(255 255 255 / 5%); }\n+.previewLine { fill: none; stroke: rgb(255 255 255 / 88%); stroke-width: 1.8; stroke-linejoin: round; }\n+.previewLastLine { stroke: rgb(255 255 255 / 45%); stroke-dasharray: 2 3; }\n+.previewPoint { fill: var(--landing-text); }\n+.previewPulse { fill: var(--landing-text); opacity: 0.35; transform-box: fill-box; transform-origin: center; animation: previewPulse 1.8s ease-out infinite; }\n+.previewTag { fill: var(--landing-text); }\n+.previewTagText { fill: var(--landing-background); font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }\n+.previewVolume { opacity: 0.45; }\n+.previewVolume[data-direction='up'] { fill: var(--thorp-up); }\n+.previewVolume[data-direction='down'] { fill: var(--thorp-down); }\n+\n+@keyframes previewPulse {\n+  from { opacity: 0.45; transform: scale(0.6); }\n+  to { opacity: 0; transform: scale(2.2); }\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .previewPulse { animation: none; opacity: 0; }\n+}\n+\n+.previewExample {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 6px;\n+  color: var(--thorp-muted);\n+  font-size: 0.64rem;\n+  font-weight: 700;\n+  letter-spacing: 0.06em;\n+  white-space: nowrap;\n+}\n+\n+.previewExample::before { width: 6px; height: 6px; border-radius: 50%; background: var(--thorp-warning); content: ''; }\n+\n+.previewWindow [data-direction='up'] { color: var(--thorp-up); }\n+.previewWindow [data-direction='down'] { color: var(--thorp-down); }\n+\n+.previewChart { display: block; width: 100%; height: auto; }\n+.previewTable {\n+  width: calc(100% - 24px);\n+  margin: 0 12px 12px;\n+  overflow: hidden;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-inset, 8px);\n+  border-collapse: separate;\n+  border-spacing: 0;\n+  font-size: 0.72rem;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.previewTable th {\n+  padding: 9px 12px;\n+  border-bottom: 1px solid var(--thorp-line);\n+  background: var(--thorp-surface-muted);\n+  color: var(--thorp-muted);\n+  font-size: 0.64rem;\n+  font-weight: 600;\n+  letter-spacing: 0.05em;\n+  text-align: left;\n+}\n+\n+.previewTable td { padding: 9px 12px; border-bottom: 1px solid var(--thorp-line); color: var(--landing-text); }\n+.previewTable tr:last-child td { border-bottom: 0; }\n+.previewTable th:not(:first-child), .previewTable td:not(:first-child) { text-align: right; }\n+.previewTable tr[data-selected='true'] td { background: var(--thorp-accent-muted); }\n+\n+@media (max-width: 1040px) {\n+  .heroLayout { grid-template-columns: 1fr; }\n+  .heroContent { padding-top: 0; }\n+}\n+\n+@media (max-width: 640px) {\n+  .previewTable [data-optional='true'] { display: none; }\n+  .previewTickers { grid-template-columns: repeat(2, minmax(0, 1fr)); }\n+  .previewTickers button:nth-child(3) { border-left: 0; }\n+  .previewTickers button:nth-child(n + 3) { border-top: 1px solid var(--thorp-line); }\n+}\n+\n /* 결과 화면 틀의 머리 막대와 지표 이름 줄. classic에는 없던 요소라 기본은 숨기고 카드 층에서 켠다. */\n .visualBar,\n .visualMetrics {\n@@ -1213,15 +1392,6 @@\n   background: var(--thorp-surface);\n }\n \n-/* 이동 링크: 위아래 선 대신 테두리 있는 한 줄 */\n-:global(:root:not([data-design='classic'])) .textCta {\n-  padding: 16px 20px;\n-  border: 1px solid var(--thorp-line-strong);\n-  border-radius: var(--thorp-radius-control);\n-  background: var(--thorp-surface);\n-}\n-:global(:root:not([data-design='classic'])) .textCta:hover { padding-right: 16px; border-color: var(--thorp-line-control-hover); background: var(--thorp-surface-muted); }\n-\n /* 백테스트 그림: 결과 화면 한 장을 담은 카드. 틀이 생기면 남는 높이가 빈 칸으로 보이므로 키는 내용에 맞추고, 화면이 낮을 때만 줄어든다. */\n :global(:root:not([data-design='classic'])) .backtestVisual {\n   flex: 0 1 auto;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +1,21 @@\n+import { useScroll } from 'motion/react'\n+import { useRef } from 'react'\n import { AlgorithmOrbit } from '@/components/landing/AlgorithmOrbit'\n import {\n   BacktestIntroSection,\n   HeroSection,\n   MarketAnalysisSection,\n } from '@/components/landing/LandingSections'\n+import { LandingScrollContext } from '@/components/landing/scrollScene'\n+import { SectionProgress } from '@/components/landing/SectionProgress'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import { marketMock } from '@/data/marketMock'\n import { useMarketIndicators } from '@/hooks/useMarketIndicators'\n import styles from './LandingPage.module.css'\n \n+/** 칸 이동 점이 가리키는 칸들. 순서가 화면 순서와 같다. */\n+const SECTION_IDS = ['landing-hero', 'market-analysis', 'backtest-service', 'algorithms']\n+\n /** 시장 분석부터 전략 검증까지 Thorp의 핵심 흐름을 순차적으로 소개한다. */\n export function LandingPage() {\n   const { marketIndicators, macroIndicators } = useMarketIndicators(\n@@ -16,17 +23,23 @@ export function LandingPage() {\n     marketMock.macroIndicators,\n   )\n   const indicators = [...marketIndicators, ...macroIndicators]\n+  // 첫 화면은 이 main이 스스로 스크롤한다(한 칸씩 넘기기). 칸들의 움직임과 칸 이동 점이 이 스크롤을 읽는다.\n+  const page = useRef<HTMLElement>(null)\n+  const { scrollYProgress } = useScroll({ container: page })\n \n   return (\n-    <main className={styles.page}>\n-      {/* 다른 화면과 같은 상단 바다. 로그인 상태를 읽으므로 로그인한 사용자에게 로그인 버튼을 보이지 않는다. */}\n-      <AppHeader />\n-      <HeroSection />\n-      <div className={styles.storyFlow}>\n-        <MarketAnalysisSection indicators={indicators} />\n-        <BacktestIntroSection />\n-        <AlgorithmOrbit />\n-      </div>\n-    </main>\n+    <LandingScrollContext.Provider value={page}>\n+      <main className={styles.page} ref={page}>\n+        {/* 다른 화면과 같은 상단 바다. 로그인 상태를 읽으므로 로그인한 사용자에게 로그인 버튼을 보이지 않는다. */}\n+        <AppHeader />\n+        <HeroSection indicators={indicators} />\n+        <SectionProgress progress={scrollYProgress} targets={SECTION_IDS} />\n+        <div className={styles.storyFlow}>\n+          <MarketAnalysisSection indicators={indicators} />\n+          <BacktestIntroSection />\n+          <AlgorithmOrbit />\n+        </div>\n+      </main>\n+    </LandingScrollContext.Provider>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.tsx",
+          "old_path": "frontend/src/pages/LandingPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2245870,
+      "head_commit_sha": "da7d5574552c6410cbfc6d771992184ea917f2e8",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T15:19:53.330+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "e062b418fdd8ee1700a2ebb8327d3dbef9088158",
+      "commits": [
+        {
+          "id": "da7d5574552c6410cbfc6d771992184ea917f2e8",
+          "short_id": "da7d5574",
+          "created_at": "2026-09-23T15:19:50.000+09:00",
+          "parent_ids": [
+            "29e3d992082ba7d14ce3fe8dcd96d079ddf68918"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸의 글을 줄이고 지표 칸이 있는 시장 흐름 창으로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸의 글을 줄이고 지표 칸이 있는 시장 흐름 창으로 바꾼다\n\n- 제목을 '내 전략이 얼마나 유효한지, 과거로 돌아가 확인해 볼까요?'로 바꾸고, 선택 버튼처럼 보이던\n  배지와 세 단계·작은 설명을 빼 제목·설명 두 줄·버튼 둘만 남긴다. 설명은 뜻이 나뉘는 자리에서 줄을\n  바꾸고, 글은 오른쪽 창 윗부분 높이에 맞춘다(1040px 이하에서는 위 여백 없음).\n- 오른쪽 창에 주소창과 KOSPI·KOSDAQ·원/달러·VKOSPI 200 지표 칸(누를 수 있는 탭)을 두고, 고른\n  칸의 흐름을 차트가 그린다. 차트 선·면·가격표는 흰색 계열로 바꿔 빨강·파랑 거래량 막대와 부딪히지\n  않게 한다. 좁은 화면에서는 지표 칸이 2×2다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T15:19:50.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T15:19:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da7d5574552c6410cbfc6d771992184ea917f2e8"
+        },
+        {
+          "id": "29e3d992082ba7d14ce3fe8dcd96d079ddf68918",
+          "short_id": "29e3d992",
+          "created_at": "2026-09-23T14:58:33.000+09:00",
+          "parent_ids": [
+            "f21029bbfe7a08c02a1dad744576eb89930d382e"
+          ],
+          "title": "feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다",
+          "message": "feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다\n\n- KOSPI·KOSDAQ·원/달러·VKOSPI 200 탭과 약 0.9초마다 점이 더해지는 차트(현재값·구간 등락률·\n  마지막 점 표시·가격표·거래량 막대)를 둔다. 7초마다 다음 지표로 넘어가고, 탭을 누르면 멈춘다.\n- 움직임은 만든 흐름이다. 틱 시세를 받지 않으므로 첫 화면이 받은 최신 값(없으면 예시 값)을\n  출발점으로 삼아 그 둘레를 오가게 그리고, 창에 '움직임 예시'를 밝힌다. LIVE라고 쓰지 않는다.\n- 움직임 줄이기 설정이면 멈춘 차트만, 탭이 숨겨지면 흐름을 쉰다. 아래의 같은 조건 배분 규칙\n  비교 표는 남긴다. 쓰이지 않게 된 결과 화면 예시 창은 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:58:33.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:58:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/29e3d992082ba7d14ce3fe8dcd96d079ddf68918"
+        },
+        {
+          "id": "f21029bbfe7a08c02a1dad744576eb89930d382e",
+          "short_id": "f21029bb",
+          "created_at": "2026-09-23T14:45:30.000+09:00",
+          "parent_ids": [
+            "2ad5a28b741705f01de399642aababf9bf6fdb74"
+          ],
+          "title": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다",
+          "message": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다\n\n- .previewExample::before의 content가 비어 있어(content: ;) 선언이 무효가 되어 점이 그려지지\n  않았다. content: ''로 고친다.\n- 요약 카드가 수익률·하락 폭에는 부호대로 방향을 달고, 금액과 0.00%로 보이는 값에는 달지\n  않는지 확인하는 테스트를 더한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:45:30.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:45:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f21029bbfe7a08c02a1dad744576eb89930d382e"
+        },
+        {
+          "id": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+          "short_id": "2ad5a28b",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다\n\n- 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을, 오른쪽에 결과 비교 화면\n  예시 창(핵심 숫자·누적 곡선·마지막 비중·규칙별 표)을 둔다. 창 머리에 '예시 화면'을 밝히고\n  보조기기에서는 숨긴다. 뒤의 시장 그래픽과 한 칸씩 넘기는 스크롤은 그대로다.\n- 1040px 이하에서는 창을 글 아래로 내리고, 좁은 화면에서는 단어 단위로 줄을 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ad5a28b741705f01de399642aababf9bf6fdb74"
+        },
+        {
+          "id": "fecbcc42b40130fa294fbfc6b23b5b0de04691ba",
+          "short_id": "fecbcc42",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+          ],
+          "title": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다",
+          "message": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다\n\n- components/ui/button의 rounded-lg(10px)·min(radius-md, 12px)(8px)를\n  var(--thorp-radius-control, 원래 값)으로 바꿔 새 디자인에서 6px로 모은다. classic은 원래 값이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+        },
+        {
+          "id": "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d",
+          "short_id": "238b1c60",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "0823ed538d64a3141e79dd8e81fb515691b37e32"
+          ],
+          "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+          "message": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다\n\n- 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 --thorp-up(빨강)·\n  --thorp-down(파랑)으로 보인다. 금액과 상세 표의 비중·변동성은 방향이 없는 값이라 칠하지 않는다.\n- ratioDirection은 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%거나 읽을 수 없으면 방향을\n  주지 않는다. 글과 색이 서로 다른 말을 하지 않게 한다.\n- classic은 예전처럼 한 색이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2245764,
+      "head_commit_sha": "29e3d992082ba7d14ce3fe8dcd96d079ddf68918",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T14:58:36.659+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "b0e5df2866432c348791728e15d56afeea3b8770",
+      "commits": [
+        {
+          "id": "29e3d992082ba7d14ce3fe8dcd96d079ddf68918",
+          "short_id": "29e3d992",
+          "created_at": "2026-09-23T14:58:33.000+09:00",
+          "parent_ids": [
+            "f21029bbfe7a08c02a1dad744576eb89930d382e"
+          ],
+          "title": "feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다",
+          "message": "feat(fe): 첫 화면 오른쪽 창을 움직이는 시장 지표 차트로 바꾼다\n\n- KOSPI·KOSDAQ·원/달러·VKOSPI 200 탭과 약 0.9초마다 점이 더해지는 차트(현재값·구간 등락률·\n  마지막 점 표시·가격표·거래량 막대)를 둔다. 7초마다 다음 지표로 넘어가고, 탭을 누르면 멈춘다.\n- 움직임은 만든 흐름이다. 틱 시세를 받지 않으므로 첫 화면이 받은 최신 값(없으면 예시 값)을\n  출발점으로 삼아 그 둘레를 오가게 그리고, 창에 '움직임 예시'를 밝힌다. LIVE라고 쓰지 않는다.\n- 움직임 줄이기 설정이면 멈춘 차트만, 탭이 숨겨지면 흐름을 쉰다. 아래의 같은 조건 배분 규칙\n  비교 표는 남긴다. 쓰이지 않게 된 결과 화면 예시 창은 지운다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:58:33.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:58:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/29e3d992082ba7d14ce3fe8dcd96d079ddf68918"
+        },
+        {
+          "id": "f21029bbfe7a08c02a1dad744576eb89930d382e",
+          "short_id": "f21029bb",
+          "created_at": "2026-09-23T14:45:30.000+09:00",
+          "parent_ids": [
+            "2ad5a28b741705f01de399642aababf9bf6fdb74"
+          ],
+          "title": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다",
+          "message": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다\n\n- .previewExample::before의 content가 비어 있어(content: ;) 선언이 무효가 되어 점이 그려지지\n  않았다. content: ''로 고친다.\n- 요약 카드가 수익률·하락 폭에는 부호대로 방향을 달고, 금액과 0.00%로 보이는 값에는 달지\n  않는지 확인하는 테스트를 더한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:45:30.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:45:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f21029bbfe7a08c02a1dad744576eb89930d382e"
+        },
+        {
+          "id": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+          "short_id": "2ad5a28b",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다\n\n- 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을, 오른쪽에 결과 비교 화면\n  예시 창(핵심 숫자·누적 곡선·마지막 비중·규칙별 표)을 둔다. 창 머리에 '예시 화면'을 밝히고\n  보조기기에서는 숨긴다. 뒤의 시장 그래픽과 한 칸씩 넘기는 스크롤은 그대로다.\n- 1040px 이하에서는 창을 글 아래로 내리고, 좁은 화면에서는 단어 단위로 줄을 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ad5a28b741705f01de399642aababf9bf6fdb74"
+        },
+        {
+          "id": "fecbcc42b40130fa294fbfc6b23b5b0de04691ba",
+          "short_id": "fecbcc42",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+          ],
+          "title": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다",
+          "message": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다\n\n- components/ui/button의 rounded-lg(10px)·min(radius-md, 12px)(8px)를\n  var(--thorp-radius-control, 원래 값)으로 바꿔 새 디자인에서 6px로 모은다. classic은 원래 값이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+        },
+        {
+          "id": "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d",
+          "short_id": "238b1c60",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "0823ed538d64a3141e79dd8e81fb515691b37e32"
+          ],
+          "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+          "message": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다\n\n- 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 --thorp-up(빨강)·\n  --thorp-down(파랑)으로 보인다. 금액과 상세 표의 비중·변동성은 방향이 없는 값이라 칠하지 않는다.\n- ratioDirection은 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%거나 읽을 수 없으면 방향을\n  주지 않는다. 글과 색이 서로 다른 말을 하지 않게 한다.\n- classic은 예전처럼 한 색이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2245695,
+      "head_commit_sha": "f21029bbfe7a08c02a1dad744576eb89930d382e",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T14:45:33.393+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "11",
+      "patch_id_sha": "51a256952fc4afb1c78a1fe2acdb407cc845c13e",
+      "commits": [
+        {
+          "id": "f21029bbfe7a08c02a1dad744576eb89930d382e",
+          "short_id": "f21029bb",
+          "created_at": "2026-09-23T14:45:30.000+09:00",
+          "parent_ids": [
+            "2ad5a28b741705f01de399642aababf9bf6fdb74"
+          ],
+          "title": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다",
+          "message": "fix(fe): 예시 화면 표시 점의 빈 content를 고치고 오르내림 방향 테스트를 더한다\n\n- .previewExample::before의 content가 비어 있어(content: ;) 선언이 무효가 되어 점이 그려지지\n  않았다. content: ''로 고친다.\n- 요약 카드가 수익률·하락 폭에는 부호대로 방향을 달고, 금액과 0.00%로 보이는 값에는 달지\n  않는지 확인하는 테스트를 더한다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:45:30.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:45:30.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f21029bbfe7a08c02a1dad744576eb89930d382e"
+        },
+        {
+          "id": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+          "short_id": "2ad5a28b",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다\n\n- 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을, 오른쪽에 결과 비교 화면\n  예시 창(핵심 숫자·누적 곡선·마지막 비중·규칙별 표)을 둔다. 창 머리에 '예시 화면'을 밝히고\n  보조기기에서는 숨긴다. 뒤의 시장 그래픽과 한 칸씩 넘기는 스크롤은 그대로다.\n- 1040px 이하에서는 창을 글 아래로 내리고, 좁은 화면에서는 단어 단위로 줄을 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ad5a28b741705f01de399642aababf9bf6fdb74"
+        },
+        {
+          "id": "fecbcc42b40130fa294fbfc6b23b5b0de04691ba",
+          "short_id": "fecbcc42",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+          ],
+          "title": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다",
+          "message": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다\n\n- components/ui/button의 rounded-lg(10px)·min(radius-md, 12px)(8px)를\n  var(--thorp-radius-control, 원래 값)으로 바꿔 새 디자인에서 6px로 모은다. classic은 원래 값이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+        },
+        {
+          "id": "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d",
+          "short_id": "238b1c60",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "0823ed538d64a3141e79dd8e81fb515691b37e32"
+          ],
+          "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+          "message": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다\n\n- 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 --thorp-up(빨강)·\n  --thorp-down(파랑)으로 보인다. 금액과 상세 표의 비중·변동성은 방향이 없는 값이라 칠하지 않는다.\n- ratioDirection은 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%거나 읽을 수 없으면 방향을\n  주지 않는다. 글과 색이 서로 다른 말을 하지 않게 한다.\n- classic은 예전처럼 한 색이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2245678,
+      "head_commit_sha": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+      "base_commit_sha": "0823ed538d64a3141e79dd8e81fb515691b37e32",
+      "start_commit_sha": "bc07a6d1157557c7ad0e16c1b972a44e9473c1d7",
+      "created_at": "2026-09-23T14:42:36.850+09:00",
+      "merge_request_id": 958483,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "961dc1451516bb8b9f038e7acf184e1df9cd45b0",
+      "commits": [
+        {
+          "id": "2ad5a28b741705f01de399642aababf9bf6fdb74",
+          "short_id": "2ad5a28b",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+          ],
+          "title": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다",
+          "message": "feat(fe): 첫 화면 첫 칸을 왼쪽 글·오른쪽 결과 화면 예시로 바꾼다\n\n- 가운데 떠 있던 제목 대신 왼쪽에 배지·제목·설명·세 단계·버튼을, 오른쪽에 결과 비교 화면\n  예시 창(핵심 숫자·누적 곡선·마지막 비중·규칙별 표)을 둔다. 창 머리에 '예시 화면'을 밝히고\n  보조기기에서는 숨긴다. 뒤의 시장 그래픽과 한 칸씩 넘기는 스크롤은 그대로다.\n- 1040px 이하에서는 창을 글 아래로 내리고, 좁은 화면에서는 단어 단위로 줄을 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/2ad5a28b741705f01de399642aababf9bf6fdb74"
+        },
+        {
+          "id": "fecbcc42b40130fa294fbfc6b23b5b0de04691ba",
+          "short_id": "fecbcc42",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+          ],
+          "title": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다",
+          "message": "fix(fe): 공용 버튼 모서리를 다른 버튼과 같은 토큰으로 맞춘다\n\n- components/ui/button의 rounded-lg(10px)·min(radius-md, 12px)(8px)를\n  var(--thorp-radius-control, 원래 값)으로 바꿔 새 디자인에서 6px로 모은다. classic은 원래 값이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fecbcc42b40130fa294fbfc6b23b5b0de04691ba"
+        },
+        {
+          "id": "238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d",
+          "short_id": "238b1c60",
+          "created_at": "2026-09-23T14:40:44.000+09:00",
+          "parent_ids": [
+            "0823ed538d64a3141e79dd8e81fb515691b37e32"
+          ],
+          "title": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다",
+          "message": "feat(fe): 결과 화면의 수익률·하락 폭에 상승·하락 색을 입힌다\n\n- 요약 카드와 목표 위험 보기의 비용 차감 후 수익률·가장 크게 줄었던 폭을 --thorp-up(빨강)·\n  --thorp-down(파랑)으로 보인다. 금액과 상세 표의 비중·변동성은 방향이 없는 값이라 칠하지 않는다.\n- ratioDirection은 화면에 보이는 값(백분율 소수 둘째 자리)이 0.00%거나 읽을 수 없으면 방향을\n  주지 않는다. 글과 색이 서로 다른 말을 하지 않게 한다.\n- classic은 예전처럼 한 색이다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-23T14:40:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-23T14:40:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/238b1c608fd32a3c7e2c4ab4d4eed7c053f8c93d"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2862969": []
+  }
+}

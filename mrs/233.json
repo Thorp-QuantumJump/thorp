@@ -1,0 +1,656 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951963,
+    "iid": 233,
+    "project_id": 1444456,
+    "title": "docs(fe): 배우기 입문 원고를 작성하고 게시 결과를 기록한다",
+    "description": "# 작업 내용 요약\n\nspec 013의 아홉 배우기 글과 열네 용어 설명을 재사용 가능한 게시 원고로 남깁니다. 운영 게시 결과와 공개 화면 검증 근거를 함께 기록해 이후 수정·재게시의 기준을 제공합니다.\n\n# 관련 티켓\n\n- [S15P21E205-348](https://ssafy.atlassian.net/browse/S15P21E205-348)\n\n# 주요 변경 사항\n\n- 기존 아홉 articleId와 열네 termId를 유지한 질문·본문·가상 계산 예·출처 원고를 추가했습니다.\n- 모든 예시 배분은 반도체와 은행의 학습용 절반 비중이며 투자 권고나 실제 성과와 구분했습니다.\n- 운영 게시 상태와 공개 목록·본문·용어·예시 진입 검증 결과를 기록했습니다.\n\n# 테스트\n\n- [x] JSON 파싱, 글 9개·고유 용어 14개, 용어 블록 대응, 예시 합계 1000 확인\n- [x] 게시 규칙의 금지 표현과 결과성 숫자 패턴 확인\n- [x] 운영에서 아홉 글 모두 PUBLISHED·공개 1판 확인\n- [x] 공개 상세 9개에서 총 14개 용어 설명과 예시 진입 확인\n\n# 리뷰 포인트\n\n- 주제 제목과 실제 전략 표시 이름의 구분, 투자 권고로 읽히지 않는 표현을 중심으로 봐 주세요.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 원고는 분석 개념을 설명하며 전략이나 비중을 추천하지 않습니다.\n- [x] **결제·포인트·상품 선택 단계 0건** — 관련 변경이 없습니다.\n- [x] **전략 ID 상수·전략별 분기 0건** — 코드 변경이 없고 운영 등록표의 표시 이름만 설명에 사용했습니다.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 계산 결과 계약을 변경하지 않습니다.\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 가상 계산과 실제 과거 성과를 명시적으로 구분했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T21:11:20.002+09:00",
+    "updated_at": "2026-09-19T19:58:41.578+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T21:11:34.579+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/348-learning-content",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+    "merge_commit_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T21:11:20.806+09:00",
+    "reference": "!233",
+    "references": {
+      "short": "!233",
+      "relative": "!233",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!233"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/233",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951963,
+    "iid": 233,
+    "project_id": 1444456,
+    "title": "docs(fe): 배우기 입문 원고를 작성하고 게시 결과를 기록한다",
+    "description": "# 작업 내용 요약\n\nspec 013의 아홉 배우기 글과 열네 용어 설명을 재사용 가능한 게시 원고로 남깁니다. 운영 게시 결과와 공개 화면 검증 근거를 함께 기록해 이후 수정·재게시의 기준을 제공합니다.\n\n# 관련 티켓\n\n- [S15P21E205-348](https://ssafy.atlassian.net/browse/S15P21E205-348)\n\n# 주요 변경 사항\n\n- 기존 아홉 articleId와 열네 termId를 유지한 질문·본문·가상 계산 예·출처 원고를 추가했습니다.\n- 모든 예시 배분은 반도체와 은행의 학습용 절반 비중이며 투자 권고나 실제 성과와 구분했습니다.\n- 운영 게시 상태와 공개 목록·본문·용어·예시 진입 검증 결과를 기록했습니다.\n\n# 테스트\n\n- [x] JSON 파싱, 글 9개·고유 용어 14개, 용어 블록 대응, 예시 합계 1000 확인\n- [x] 게시 규칙의 금지 표현과 결과성 숫자 패턴 확인\n- [x] 운영에서 아홉 글 모두 PUBLISHED·공개 1판 확인\n- [x] 공개 상세 9개에서 총 14개 용어 설명과 예시 진입 확인\n\n# 리뷰 포인트\n\n- 주제 제목과 실제 전략 표시 이름의 구분, 투자 권고로 읽히지 않는 표현을 중심으로 봐 주세요.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 원고는 분석 개념을 설명하며 전략이나 비중을 추천하지 않습니다.\n- [x] **결제·포인트·상품 선택 단계 0건** — 관련 변경이 없습니다.\n- [x] **전략 ID 상수·전략별 분기 0건** — 코드 변경이 없고 운영 등록표의 표시 이름만 설명에 사용했습니다.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 계산 결과 계약을 변경하지 않습니다.\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 가상 계산과 실제 과거 성과를 명시적으로 구분했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T21:11:20.002+09:00",
+    "updated_at": "2026-09-19T19:58:41.578+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T21:11:34.579+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/348-learning-content",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+    "merge_commit_sha": "f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T21:11:20.806+09:00",
+    "reference": "!233",
+    "references": {
+      "short": "!233",
+      "relative": "!233",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!233"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/233",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": "2026-09-18T21:11:28.893+09:00",
+    "latest_build_finished_at": "2026-09-18T21:11:33.759+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 207456,
+      "iid": 176,
+      "project_id": 1444456,
+      "sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+      "ref": "docs(fe)/348-learning-content",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T21:11:28.680+09:00",
+      "updated_at": "2026-09-18T21:11:33.767+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207456"
+    },
+    "head_pipeline": {
+      "id": 207456,
+      "iid": 176,
+      "project_id": 1444456,
+      "sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+      "ref": "docs(fe)/348-learning-content",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T21:11:28.680+09:00",
+      "updated_at": "2026-09-18T21:11:33.767+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207456",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T21:11:28.893+09:00",
+      "finished_at": "2026-09-18T21:11:33.759+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/207456",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "head_sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+      "start_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c3baeb41203008e81ed665b88b5eb704c05a7b48",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837274,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:11:20.096+09:00",
+          "updated_at": "2026-09-18T21:11:20.099+09:00",
+          "system": true,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ccc206e8934bbb9d61fa48a92e953b9619d75e88",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837275,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:11:20.113+09:00",
+          "updated_at": "2026-09-18T21:11:20.119+09:00",
+          "system": true,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2b4566ad2e70577580f769ea2eca01d637697d65",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837276,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:11:26.418+09:00",
+          "updated_at": "2026-09-18T21:11:26.422+09:00",
+          "system": true,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c99364d0dde0712352d75762626b99683fcf0ad6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837277,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Low] `docs/content/learning/articles.json` 파일의 내용이 비어 있습니다(`flags=\"new\"`이나 실제 내용은 없음). PR 설명에서 아홉 개의 글과 열네 개의 용어 설명을 담은 JSON 원고를 추가했다고 언급되어 있으므로, 빈 파일로 커밋된 것이 의도된 것인지 혹은 내용 누락인지 확인이 필요합니다.\n\n### 테스트 제안\n- `docs/content/learning/articles.json`에 실제 JSON 데이터가 포함된 후, 다음 시나리오로 테스트를 수행할 것을 제안합니다.\n  1. JSON 파일이 유효한 파싱 가능한 형태인지 검증\n  2. 글 9개, 고유 용어 14개, 예시 합계 1000 조건이 정확히 충족되는지 확인\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T21:11:27.572+09:00",
+          "updated_at": "2026-09-18T21:11:27.572+09:00",
+          "system": false,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "842885a5b08f15f113785374beeec816823a9ee5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2837278,
+          "type": null,
+          "body": "mentioned in commit f241c0c0315b8bf2d758995d1d90e0c4feca475b",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T21:11:34.695+09:00",
+          "updated_at": "2026-09-18T21:11:34.703+09:00",
+          "system": true,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fee775170dde3aca6a204e64b5ca1e904c4bad80",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839132,
+          "type": null,
+          "body": "오탐입니다. 실제 추가된 것을 UI로 확인함",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T19:58:41.552+09:00",
+          "updated_at": "2026-09-19T19:58:41.552+09:00",
+          "system": false,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "18024dd6c44220ec29d746c8571004c34e3cd79f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885057,
+          "type": null,
+          "body": "mentioned in commit 0e15c67cf713b374ab568d657ba2c252e62ae146",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.975+09:00",
+          "updated_at": "2026-10-13T15:16:12.011+09:00",
+          "system": true,
+          "noteable_id": 951963,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 233,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2224086,
+      "head_commit_sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+      "base_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "start_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "created_at": "2026-09-18T21:11:20.403+09:00",
+      "merge_request_id": 951963,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "d3138b7841634be9eeabc696efdf7e47a7dc4667"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2224086,
+      "head_commit_sha": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+      "base_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "start_commit_sha": "d21e704b7f910a4cae869f985cf1011f5db031d1",
+      "created_at": "2026-09-18T21:11:20.403+09:00",
+      "merge_request_id": 951963,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "d3138b7841634be9eeabc696efdf7e47a7dc4667",
+      "commits": [
+        {
+          "id": "65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3",
+          "short_id": "65e92a7d",
+          "created_at": "2026-09-18T21:03:01.000+09:00",
+          "parent_ids": [
+            "d21e704b7f910a4cae869f985cf1011f5db031d1"
+          ],
+          "title": "docs(fe): 배우기 입문 원고를 작성하고 게시 결과를 기록한다",
+          "message": "docs(fe): 배우기 입문 원고를 작성하고 게시 결과를 기록한다\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T21:03:01.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T21:03:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/65e92a7d69e0dd0b4c9d797ebbdc847ddaef31b3"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,40 @@\n+# 배우기 첫 원고\n+\n+`articles.json`은 spec 013의 아홉 글과 열네 용어 설명을 담은 게시 원고다.\n+2026-09-18에 운영 관리 화면으로 저장·게시하고 공개 화면에서 확인했다.\n+\n+## 원고 기준\n+\n+- 기존 아홉 `articleId`와 열네 `termId`, 읽는 순서를 유지한다. PD-16의 팀 확정을 대신하지 않는다.\n+- 글마다 질문 하나와 가상의 계산 예 하나를 중심으로 설명한다. 실제 과거 성과를 삽입하지 않는다.\n+- 본문의 용어 블록은 `terms`의 설명을 재사용한다. 각 용어는 소유한 글에 정확히 한 번 등장한다.\n+- ‘섹터 모멘텀’과 ‘최소분산’은 주제 제목으로 유지한다. 해당 용어의 표시 이름과 본문에서는 실제 운영 전략 이름 ‘흐름을 따라 배분하기’, ‘전체 변동성을 줄이도록 배분하기’를 쓴다.\n+- 모든 진입 예시는 반도체(`SEMICONDUCTOR`)·은행(`BANK`) 절반씩이다. 투자 권고나 자동 전략의 계산 결과가 아닌 학습용 입력값이다.\n+- 외부 참고 자료는 각 글의 `sources`에 남긴다. 외부 자료의 성과·가격·그래프를 복제하지 않았다. 수익·손실의 산술 예시는 자체 작성이다.\n+\n+## 게시 절차\n+\n+1. 운영 관리 권한이 있는 계정으로 로그인한다. 관리 경로는 `/admin/learning`이다.\n+2. 공개 섹터 목록에서 예시 코드가 현재도 유효한지 확인한다.\n+3. 각 기존 글의 초안을 읽고 작성된 내용이 있는지 확인한다. 다른 사람이 작성한 초안이나 공개 판을 무조건 덮어쓰지 않는다.\n+4. 원고를 저장할 때 `articleId`를 제외한 글 필드와 방금 조회한 `expectedDraftVersion`을 보낸다. `contentVersion`·최상위 `articles`는 요청 필드가 아니다.\n+5. 저장 응답의 새 `draftVersion`으로 게시한다. 서버의 게시 전 검사가 거절한 항목은 원고나 예시를 고쳐 해결한다. 검사·권한을 우회하거나 DB를 직접 수정하지 않는다.\n+6. 공개 목록에 아홉 글이 순서대로 보이는지, 글 본문·예시 진입과 열네 용어의 설명이 맞는지 확인한다.\n+7. 실제 게시 결과와 판 번호를 기록한다. 게시하지 않은 원고를 게시 완료로 표시하지 않는다.\n+\n+## 2026-09-18 게시 결과\n+\n+- 게시 전 운영 `/learn`에서 ‘아직 게시된 글이 없습니다.’ 표시를 확인했다.\n+- 사용자가 서버에서 관리자 계정과 허용 사용자 ID를 설정한 뒤, 해당 세션의 `/admin/learning` 접근 권한을 확인했다. 비밀번호는 원고나 저장소에 기록하지 않았다.\n+- 공개 `/api/sectors`: 대응표 `SEM-2026-09-16-001`, `isSample=false`, 두 예시 코드 존재를 확인했다.\n+- 공개 `/api/strategies/registry`: 위 전략 표시 이름을 확인했다.\n+- 로컬 검사: JSON 파싱, 9개 글·14개 고유 용어, 용어 블록 대응, 예시 합계 1000, 글당 가상 예시 하나, 용어 길이, 현재 게시 규칙 파일의 금지 표현·결과성 숫자 패턴을 확인했다.\n+- 기존 아홉 글은 모두 빈 초안(`draftVersion=0`)임을 확인한 뒤 원고를 저장했다.\n+- 서버 게시 검사를 통과해 아홉 글 모두 `PUBLISHED`, `draftVersion=1`, 공개 `1판`이 되었다.\n+- 운영 `/learn`에 아홉 글이 읽는 순서대로 노출되는 것을 확인했다.\n+- 아홉 공개 상세 화면에서 제목·본문·게시일, 총 열네 용어 설명, 반도체·은행 예시와 ‘이 예시로 비중 비교하기’ 버튼을 확인했다.\n+\n+현재 원고 작업은 다른 작업의 미커밋 변경을 보존하기 위해 별도 워크트리에 있다.\n+작업 티켓은 [S15P21E205-348](https://ssafy.atlassian.net/browse/S15P21E205-348),\n+브랜치는 `docs(fe)/348-learning-content`, 담당자는 우동균_E205다.\n+운영 관리자 계정 생성·권한 설정은 기존 339의 범위이며, 사용자가 서버에서 실행했다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/content/learning/README.md",
+          "old_path": "docs/content/learning/README.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,193 @@\n+{\n+  \"contentVersion\": \"learning-ko-2026-09-18-v1\",\n+  \"articles\": [\n+    {\n+      \"articleId\": \"sectors-and-etf\",\n+      \"title\": \"섹터와 ETF\",\n+      \"question\": \"반도체에 나눈다는 것은 무엇을 산다는 뜻일까요?\",\n+      \"readingOrder\": 1,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"‘반도체에 절반을 나눈다’는 말을 들으면 특정 회사 주식을 떠올리기 쉽습니다. Thorp에서는 먼저 관심 있는 산업이나 주제인 섹터를 고르고, 그 섹터에 연결된 대표 ETF의 과거 자료로 배분 규칙을 살펴봅니다.\" },\n+        { \"type\": \"term\", \"termId\": \"sector\" },\n+        { \"type\": \"paragraph\", \"text\": \"ETF는 여러 자산을 담은 펀드를 거래소에서 주식처럼 사고팔 수 있게 만든 상품입니다. 이 글에서 다루는 섹터 ETF는 특정 산업이나 주제에 속한 기업들을 묶어 담습니다. 기업 하나에만 투자하는 것과는 다르지만, 같은 산업의 기업들이 함께 영향을 받을 수 있어 섹터 ETF 하나가 시장 전체로의 분산을 뜻하지는 않습니다.\" },\n+        { \"type\": \"term\", \"termId\": \"representative-etf\" },\n+        { \"type\": \"hypothetical\", \"text\": \"설명을 위해 반도체와 은행에 100만 원을 절반씩 나눈다고 가정해 보겠습니다. 반도체에 연결된 ETF에 50만 원, 은행에 연결된 ETF에 50만 원을 배분하는 모양입니다. 실제 거래에서는 ETF 한 주의 가격과 거래비용 때문에 남는 현금이 생길 수 있습니다. 이 금액과 비중은 가상 예시이며 투자 권고가 아닙니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"같은 섹터 이름을 쓰는 ETF라도 담은 기업과 비중, 추종하는 지수가 다를 수 있습니다. 따라서 결과를 읽을 때에는 섹터 이름뿐 아니라 이번 비교에 사용된 대표 ETF도 함께 확인해야 합니다. Thorp의 대표 ETF는 비교에 쓰는 상품을 정한 것이며, 그 섹터의 모든 상품을 대신 평가한 것은 아닙니다.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 버튼을 누르면 반도체와 은행이 같은 비중으로 채워진 선택 화면이 열립니다. 각 섹터에 어떤 ETF가 연결되어 있는지 확인하고, 관심 있는 다른 섹터로 바꿔 보세요. 이 단계에서는 분석을 자동으로 실행하지 않습니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [\n+        { \"termId\": \"sector\", \"label\": \"섹터\", \"sentence\": \"비슷한 산업이나 투자 주제로 묶은 분야입니다. Thorp에서는 고른 섹터에 연결된 대표 ETF를 사용해 배분 규칙을 비교합니다.\" },\n+        { \"termId\": \"representative-etf\", \"label\": \"대표 ETF\", \"sentence\": \"Thorp가 해당 섹터의 분석 자료로 연결한 ETF입니다. 비교에 쓰는 상품을 뜻하며, 같은 섹터의 모든 ETF를 대표하는 성과나 투자 권고를 뜻하지 않습니다.\" }\n+      ],\n+      \"sources\": [{ \"label\": \"SEC Investor.gov — Exchange-Traded Funds (ETF의 구조와 위험에 관한 참고 자료)\", \"url\": \"https://www.investor.gov/introduction-investing/investing-basics/investment-products/mutual-funds-and-exchange-traded-2\" }]\n+    },\n+    {\n+      \"articleId\": \"weights-and-rebalancing\",\n+      \"title\": \"비중과 리밸런싱\",\n+      \"question\": \"처음에 절반씩 나누었는데 왜 다시 비중을 맞추나요?\",\n+      \"readingOrder\": 2,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"같은 금액으로 시작해도 두 ETF의 가격이 다르게 움직이면 전체에서 차지하는 몫이 달라집니다. 처음에 정한 비중은 시간이 지나도 저절로 유지되는 값이 아닙니다. 언제, 어떤 비중으로 되돌릴지까지 정해야 하나의 배분 규칙이 됩니다.\" },\n+        { \"type\": \"term\", \"termId\": \"weight\" },\n+        { \"type\": \"term\", \"termId\": \"rebalancing\" },\n+        { \"type\": \"hypothetical\", \"text\": \"반도체 ETF와 은행 ETF에 각각 50만 원씩 배분했다고 가정하겠습니다. 이후 반도체 쪽 평가금액이 60만 원, 은행 쪽이 40만 원이 되면 비중은 60%와 40%입니다. 수수료와 거래 단위를 생략하고 절반씩으로 되돌리려면 반도체에서 10만 원을 줄이고 은행에 10만 원을 더합니다. 실제 시장의 수익률을 나타낸 것이 아닌 가상의 계산 예입니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"리밸런싱은 ‘다음에 오를 것을 안다’는 행동이 아닙니다. 미리 정한 목표 비중이나 계산 규칙을 다시 적용하는 행동입니다. 그 과정에서 거래가 발생하면 비용이 들고, 주기와 거래 단위에 따라 실제 비중이 목표와 조금 다를 수도 있습니다.\" },\n+        { \"type\": \"term\", \"termId\": \"fixed-weight\" },\n+        { \"type\": \"term\", \"termId\": \"equal-weight\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 예시는 반도체와 은행을 절반씩 나누는 출발점입니다. ‘내가 정한 비중’에서 목표 비중을 바꾸거나, 전략 설정에서 리밸런싱 주기를 달리해 보세요. 결과를 비교할 때는 평가 기간과 비용 조건을 같게 두고, 수익뿐 아니라 비중 변화와 거래비용을 함께 확인합니다. 예시 비중은 투자 권고가 아닙니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [\n+        { \"termId\": \"weight\", \"label\": \"비중\", \"sentence\": \"전체 금액에서 한 자산에 배분하는 몫입니다. 목표 비중과 가격 변화·거래 단위를 반영한 실제 보유 비중은 다를 수 있습니다.\" },\n+        { \"termId\": \"rebalancing\", \"label\": \"리밸런싱\", \"sentence\": \"정해진 시점에 선택한 규칙의 목표 비중에 맞추도록 보유 구성을 조정하는 일입니다. 조정에 거래가 필요하면 거래비용이 발생할 수 있습니다.\" },\n+        { \"termId\": \"fixed-weight\", \"label\": \"내가 정한 비중\", \"sentence\": \"사용자가 입력한 비중을 목표로 삼고, 리밸런싱 시점에 그 비중에 맞추는 배분 규칙입니다. 가격이 움직이는 동안 실제 비중까지 항상 고정되는 것은 아닙니다.\" },\n+        { \"termId\": \"equal-weight\", \"label\": \"똑같이 나누기\", \"sentence\": \"배분 대상 섹터에 같은 금액 비중을 주는 규칙입니다. ETF를 같은 주 수만큼 사는 것과는 다릅니다.\" }\n+      ],\n+      \"sources\": [{ \"label\": \"SEC Investor.gov — Asset Allocation and Diversification (배분과 리밸런싱 참고 자료)\", \"url\": \"https://www.investor.gov/introduction-investing/getting-started/asset-allocation\" }]\n+    },\n+    {\n+      \"articleId\": \"inverse-volatility\",\n+      \"title\": \"변동성에 따라 나누기\",\n+      \"question\": \"같은 금액 대신 덜 출렁였던 섹터에 더 나누면 무엇이 달라지나요?\",\n+      \"readingOrder\": 3,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"두 섹터에 같은 금액을 넣어도 하루하루의 가격 움직임이 같지는 않습니다. 한쪽이 더 크게 출렁였다면 같은 금액으로도 전체 평가금액의 움직임에 더 큰 영향을 줄 수 있습니다. 변동성에 따라 나누기는 이런 차이를 배분에 반영하는 규칙입니다.\" },\n+        { \"type\": \"term\", \"termId\": \"volatility\" },\n+        { \"type\": \"term\", \"termId\": \"inverse-volatility\" },\n+        { \"type\": \"hypothetical\", \"text\": \"선택한 과거 구간에서 측정한 변동성을 단순한 눈금으로 나타냈을 때 반도체가 2, 은행이 1이라고 가정해 보겠습니다. 상한 등 다른 제약이 없으면 역수인 1/2과 1을 기준으로 나누므로 비중은 약 33.3%와 66.7%가 됩니다. 이 숫자는 계산 원리를 설명하려고 만든 값이며 실제 섹터의 변동성이나 현재 배분 결과가 아닙니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"이 규칙은 가격이 덜 출렁였던 쪽에 더 큰 몫을 줍니다. 하지만 그동안 조용했던 섹터가 이후에도 조용하다는 뜻은 아닙니다. 변동성은 위아래 움직임의 크기이므로, 낮은 변동성이 손실을 막아 주거나 높은 수익을 뜻하지도 않습니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"관측 기간을 바꾸면 계산에 쓰는 과거 자료가 달라집니다. 섹터당 최대 비중 같은 제약도 결과에 영향을 줍니다. 또한 각 섹터가 얼마나 출렁였는지만으로는 두 섹터가 함께 움직였는지까지 충분히 알 수 없습니다.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 버튼은 반도체와 은행을 같은 비중으로 채워 줍니다. 다음 화면에서 ‘변동성에 따라 나누기’를 선택하면 해당 규칙의 계산을 요청할 수 있습니다. 아래 비중은 입력 예시이며 자동 전략의 계산 결과가 아닙니다. 같은 조건의 ‘똑같이 나누기’와 비교하며 수익·하락 폭·비용을 살펴보세요.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [\n+        { \"termId\": \"volatility\", \"label\": \"변동성\", \"sentence\": \"정해진 과거 구간에서 수익률이 얼마나 크게 오르내렸는지를 나타내는 값입니다. 앞으로의 손실 규모나 방향을 확정하는 값은 아닙니다.\" },\n+        { \"termId\": \"inverse-volatility\", \"label\": \"변동성에 따라 나누기\", \"sentence\": \"과거 변동성의 역수를 기준으로, 덜 출렁였던 섹터에 더 큰 비중을 주는 배분 규칙입니다. 관측 기간과 비중 상한에 따라 계산된 비중이 달라집니다.\" }\n+      ],\n+      \"sources\": [{ \"label\": \"Thorp 전략 등록표 — 변동성에 따라 나누기의 설명과 설정\", \"url\": \"https://j15e205.p.ssafy.io/api/strategies/registry\" }]\n+    },\n+    {\n+      \"articleId\": \"sector-momentum\",\n+      \"title\": \"섹터 모멘텀\",\n+      \"question\": \"과거에 더 올랐던 섹터를 고르는 규칙은 어떻게 동작하나요?\",\n+      \"readingOrder\": 4,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"섹터 모멘텀은 정해 둔 과거 구간의 가격 흐름을 기준으로 배분 대상을 고르는 방식입니다. Thorp 전략 화면에서는 ‘흐름을 따라 배분하기’라는 이름으로 만날 수 있습니다. 기업의 가치를 직접 평가하는 대신, 선택한 자료와 선정 규칙으로 후보를 좁힙니다.\" },\n+        { \"type\": \"term\", \"termId\": \"sector-momentum\" },\n+        { \"type\": \"hypothetical\", \"text\": \"설명을 위해 같은 과거 구간의 수익률이 반도체 8%, 은행 3%였다고 가정하겠습니다. ‘상위 한 개’로 고르면 반도체가 선정되지만, ‘기준 수익률 2% 이상’으로 고르면 둘 다 선정됩니다. 이 값은 실제 과거 성과가 아닌 가상 예시입니다. 어느 대상을 골랐는지와 최종적으로 얼마씩 배분하는지는 별도의 단계입니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"먼저 어느 기간을 관측할지, 최근 구간을 제외할지 정합니다. 그다음 상위 몇 개나 기준 수익률 이상 같은 선정 조건을 적용합니다. 마지막으로 선정된 섹터들에 똑같이 나누거나 변동성이 낮은 쪽에 더 나누는 방식으로 비중을 계산합니다. 선정 결과가 같더라도 배분 방식과 상한이 다르면 비중도 달라질 수 있습니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"과거 상승 순위는 다음 기간의 상승 순서를 알려 주지 않습니다. 흐름이 갑자기 바뀌면 선정된 섹터가 하락할 수 있고, 잦은 교체에는 비용이 듭니다. 평가 기간을 고정한 뒤 관측 기간이나 선정 조건을 하나씩 바꿔야 무엇이 결과 차이를 만들었는지 읽기 쉽습니다.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 버튼으로 반도체와 은행을 후보에 넣고, 다음 화면에서 ‘흐름을 따라 배분하기’를 선택해 보세요. 아래의 동일 비중은 후보를 열기 위한 입력 예시이며 자동 전략의 결과나 투자 권고가 아닙니다. 선택한 후보 수에 맞는 설정을 사용하고, 화면에 표시되는 비중 상한과 입력 안내를 확인합니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [\n+        { \"termId\": \"sector-momentum\", \"label\": \"흐름을 따라 배분하기\", \"sentence\": \"정해진 과거 구간의 수익률과 선정 조건으로 섹터를 고른 뒤, 선택한 배분 방식으로 비중을 계산하는 규칙입니다. 과거 상승 흐름이 이후에도 이어진다는 보장은 없습니다.\" }\n+      ],\n+      \"sources\": [{ \"label\": \"Thorp 전략 등록표 — 흐름을 따라 배분하기의 선정·배분 설정\", \"url\": \"https://j15e205.p.ssafy.io/api/strategies/registry\" }]\n+    },\n+    {\n+      \"articleId\": \"minimum-variance\",\n+      \"title\": \"최소분산\",\n+      \"question\": \"각각 덜 출렁이는 것과 함께 담았을 때 덜 출렁이는 것은 어떻게 다를까요?\",\n+      \"readingOrder\": 5,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"두 섹터가 각각 얼마나 출렁였는지만 보면 놓치는 것이 있습니다. 두 섹터가 같은 날 함께 오르내렸는지도 전체 금액의 움직임에 영향을 줍니다. 최소분산은 개별 움직임과 함께 움직이는 관계를 같이 사용합니다. Thorp 화면의 이름은 ‘전체 변동성을 줄이도록 배분하기’입니다.\" },\n+        { \"type\": \"term\", \"termId\": \"minimum-variance\" },\n+        { \"type\": \"hypothetical\", \"text\": \"반도체와 은행을 절반씩 담고, 어느 날 반도체가 2% 오르고 은행이 2% 내렸다고 가정하면 그날 전체 수익률은 비용을 제외하고 0%입니다. 둘 다 2% 올랐다면 전체도 2% 오릅니다. 개별 변화의 크기가 같아도 움직인 방향의 조합에 따라 전체 움직임은 달라집니다. 한 날의 가상 계산 예이며, 최소분산 비중을 구하려면 여러 시점의 자료가 필요합니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"계산은 과거 구간에서 관측한 수익률의 변동과 관계를 사용해, 정해진 제약 안에서 전체 변동이 작아지는 비중을 찾습니다. 어떤 섹터가 따로 보면 더 출렁였더라도 다른 섹터와의 움직임이 달랐다면 전체 구성에서 맡는 역할은 달라질 수 있습니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"‘최소’라는 이름은 사용한 자료와 계산 조건 안에서의 목표를 말합니다. 이후 시장에서 실제 하락 폭이 가장 작다는 뜻은 아닙니다. 과거의 관계가 달라지거나 관측 기간이 짧으면 계산된 비중도 크게 바뀔 수 있습니다. 변동성을 줄이는 목표와 수익을 늘리는 목표도 같지 않습니다.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 예시로 후보를 열고 ‘전체 변동성을 줄이도록 배분하기’를 선택해 보세요. 화면이 허용하는 관측 기간과 비중 상한을 정한 뒤 같은 조건의 다른 규칙과 비교합니다. 아래 비중은 입력을 돕는 예시이며, 최소분산 계산 결과나 투자 권고가 아닙니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [\n+        { \"termId\": \"minimum-variance\", \"label\": \"전체 변동성을 줄이도록 배분하기\", \"sentence\": \"과거 수익률의 변동과 섹터들이 함께 움직인 관계를 이용해, 제약 안에서 전체 변동이 작아지는 비중을 찾는 규칙입니다. 앞으로의 수익이나 최대 하락 폭을 보장하지 않습니다.\" }\n+      ],\n+      \"sources\": [\n+        { \"label\": \"Thorp 전략 등록표 — 전체 변동성을 줄이도록 배분하기의 설정\", \"url\": \"https://j15e205.p.ssafy.io/api/strategies/registry\" },\n+        { \"label\": \"MSCI — Minimum Volatility Indexes (변동성 최소화 접근의 참고 자료이며 Thorp와 동일한 방법론을 뜻하지 않음)\", \"url\": \"https://www.msci.com/indexes/group/minimum-volatility-indexes\" }\n+      ]\n+    },\n+    {\n+      \"articleId\": \"backtest\",\n+      \"title\": \"백테스트\",\n+      \"question\": \"실제로 투자하지 않고 배분 규칙을 어떻게 비교하나요?\",\n+      \"readingOrder\": 6,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"‘그때 이 규칙을 따랐다면 어떻게 되었을까?’를 과거 자료로 계산해 볼 수 있습니다. Thorp에서는 섹터, 전략, 기간과 비용 조건을 정해 분석을 실행합니다. 결과는 그 조건을 적용한 계산이므로, 실제 계좌에서 같은 거래를 했다는 기록과는 구분해서 읽습니다.\" },\n+        { \"type\": \"term\", \"termId\": \"backtest\" },\n+        { \"type\": \"hypothetical\", \"text\": \"반도체와 은행에 가상의 100만 원을 절반씩 나눕니다. 같은 과거 기간에서 월말마다 절반씩으로 맞춘 경우와 분기말마다 맞춘 경우를 각각 계산한다고 가정해 보겠습니다. 시작 금액과 후보, 평가 기간, 비용은 같게 두고 조정 주기만 달리해야 그 선택의 차이를 비교할 수 있습니다. 이 예시는 실제 계산 결과를 제시하지 않습니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"공정한 비교에는 같은 조건이 필요합니다. 한 규칙은 상승기에, 다른 규칙은 하락기에 실행한 뒤 최종 수익만 비교하면 규칙과 기간의 차이가 섞입니다. 과거 관측 자료가 필요한 전략은 평가 시작 전 자료도 필요하므로, 실행 전에 실제 공통 평가 기간을 확인해야 합니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"과거의 각 시점에서 아직 알 수 없던 나중 가격을 이용해 결정을 내리면 결과가 왜곡됩니다. 거래비용이나 거래할 수 없던 날을 생략해도 실제와 차이가 납니다. 결과를 볼 때는 숫자와 함께 사용한 자료, 적용한 조건, 계산에서 표시한 예외를 확인하세요.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 버튼으로 후보와 예시 비중을 채운 뒤 전략과 설정을 선택해 분석을 시작합니다. 결과에서는 비용 차감 후 전체 수익률, 가장 크게 줄었던 폭, 거래비용을 함께 읽습니다. 여기서 확인하는 것은 선택한 과거 조건에서 규칙이 보인 행동이며, 다음 투자의 결과를 미리 확인하는 것은 아닙니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [{ \"termId\": \"backtest\", \"label\": \"백테스트\", \"sentence\": \"정한 투자 규칙을 과거 자료에 적용해 수익·손실·비용을 계산하는 분석입니다. 사용한 자료와 가정에 따른 결과이며, 실제 운용 기록이나 미래 성과의 보장은 아닙니다.\" }],\n+      \"sources\": [{ \"label\": \"SEC Investor.gov — Performance Claims (백테스트와 실제 성과의 구분)\", \"url\": \"https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-47\" }]\n+    },\n+    {\n+      \"articleId\": \"transaction-cost\",\n+      \"title\": \"거래비용\",\n+      \"question\": \"거래 전 성과가 같아도 남는 금액은 왜 다를까요?\",\n+      \"readingOrder\": 7,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"비중을 바꾸려면 보유한 ETF 일부를 팔고 다른 ETF를 사야 할 수 있습니다. 이때 드는 비용은 최종적으로 남는 금액에 영향을 줍니다. 가격 흐름만 보고 전략을 비교하면 거래가 많은 규칙의 부담을 놓칠 수 있습니다.\" },\n+        { \"type\": \"term\", \"termId\": \"transaction-cost\" },\n+        { \"type\": \"hypothetical\", \"text\": \"같은 100만 원에서 시작해 비용을 빼기 전에는 모두 105만 원이 된 두 가상 경로를 생각해 보겠습니다. 거래비용이 각각 1천 원과 5천 원이었다면, 다른 차이가 없다는 단순 가정에서 남는 금액은 104만 9천 원과 104만 5천 원입니다. 이는 비용의 영향을 보여 주는 계산 예이며 실제 수수료율이나 백테스트 결과가 아닙니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"비용은 거래 횟수만으로 정해지지 않습니다. 얼마를 사고팔았는지와 어떤 비용 조건을 적용했는지도 중요합니다. 비중을 자주 조정해도 실제 주문 금액이 작을 수 있고, 한 번의 큰 조정이 더 많은 비용을 만들 수도 있습니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"ETF 자체를 운용하는 데 드는 보수와 ETF를 매매할 때 드는 비용은 발생 방식이 다릅니다. Thorp의 ‘거래비용’ 숫자가 현실의 모든 비용을 따로 합산했다는 뜻으로 읽지 말고, 분석에 표시된 비용 조건을 확인하세요. 이미 비용을 차감한 수익률에서 같은 거래비용을 다시 빼면 중복 계산이 됩니다.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 예시를 열어 같은 후보와 평가 기간에서 리밸런싱 주기를 바꿔 비교해 보세요. 두 결과에 같은 비용 조건을 적용하고, 거래비용과 비용 차감 후 전체 수익률을 함께 봅니다. 비용이 작다는 이유만으로 하나의 전략을 선택하는 결론을 내리지는 않습니다. 예시 비중은 투자 권고가 아닙니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [{ \"termId\": \"transaction-cost\", \"label\": \"거래비용\", \"sentence\": \"분석에서 매매에 적용한 비용의 합계입니다. 포함한 비용과 계산 조건을 함께 확인하고, 이미 비용을 차감한 수익률에서 같은 비용을 다시 빼지 않습니다.\" }],\n+      \"sources\": [{ \"label\": \"SEC Investor.gov — Mutual Fund and ETF Fees and Expenses (상품 비용과 매매 관련 비용 참고 자료)\", \"url\": \"https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins/mutual-fund-and-etf-fees-and-expenses-investor-bulletin\" }]\n+    },\n+    {\n+      \"articleId\": \"returns-and-losses\",\n+      \"title\": \"수익과 손실\",\n+      \"question\": \"마지막에 남은 수익과 중간에 겪은 하락은 왜 함께 봐야 하나요?\",\n+      \"readingOrder\": 8,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"처음과 마지막 금액만 같다고 해서 두 투자 경로가 같은 경험인 것은 아닙니다. 한쪽은 완만하게 움직였고, 다른 쪽은 크게 올랐다가 깊게 떨어졌을 수 있습니다. Thorp 결과의 전체 수익률과 가장 크게 줄었던 폭은 서로 다른 질문에 답합니다.\" },\n+        { \"type\": \"term\", \"termId\": \"net-total-return\" },\n+        { \"type\": \"term\", \"termId\": \"max-drawdown\" },\n+        { \"type\": \"hypothetical\", \"text\": \"추가 입출금 없이 비용을 반영한 평가금액이 100만 원에서 시작해 120만 원까지 올랐다가 90만 원으로 내려가고, 마지막에 110만 원이 되었다고 가정해 보겠습니다. 전체 수익률은 시작 대비 10%입니다. 가장 크게 줄었던 폭은 고점 120만 원에서 저점 90만 원까지의 25%입니다. 시작 금액에서 90만 원까지 줄어든 10%와는 기준이 다릅니다. 이 숫자는 설명을 위한 가상의 계산 예입니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"마지막에 수익이 남아도 중간에는 큰 하락을 겪었을 수 있습니다. 반대로 전체 수익률이 낮다는 사실만으로 중간 하락이 더 컸다고 알 수는 없습니다. 비교 그래프에서 하락이 언제 시작되었는지, 얼마나 이어졌는지를 함께 보면 요약 숫자가 생긴 과정을 이해하기 쉽습니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"가장 크게 줄었던 폭은 분석한 과거 구간에서 관측한 값입니다. 앞으로 그보다 더 크게 내려가지 않는다는 한도가 아닙니다. 평가 기간이나 비용 조건이 다른 결과의 숫자를 바로 비교하지 말고, 같은 조건인지 먼저 확인하세요.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 예시로 분석을 시작한 뒤 결과의 핵심 숫자와 그래프를 같이 읽어 보세요. 먼저 시작부터 끝까지 얼마나 달라졌는지 보고, 그다음 고점에서 얼마나 줄었던 적이 있는지 살펴봅니다. 거래비용도 함께 확인합니다. 예시 비중은 투자 권고가 아닙니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [\n+        { \"termId\": \"net-total-return\", \"label\": \"비용 차감 후 전체 수익률\", \"sentence\": \"평가 기간의 시작 금액에 비해 비용을 반영한 마지막 평가금액이 얼마나 늘거나 줄었는지를 나타냅니다. 연간 수익률이나 중간에 겪은 최대 하락을 뜻하지 않습니다.\" },\n+        { \"termId\": \"max-drawdown\", \"label\": \"가장 크게 줄었던 폭\", \"sentence\": \"평가 기간 중 앞선 고점에서 이후 저점까지 평가금액이 가장 크게 줄어든 비율입니다. 시작 금액 대비 손실과 다르며, 앞으로의 하락 한도를 뜻하지 않습니다.\" }\n+      ],\n+      \"sources\": []\n+    },\n+    {\n+      \"articleId\": \"past-is-not-future\",\n+      \"title\": \"과거가 미래를 보장하지 않는 이유\",\n+      \"question\": \"과거에 잘 나온 설정을 그대로 쓰면 되는 것 아닌가요?\",\n+      \"readingOrder\": 9,\n+      \"blocks\": [\n+        { \"type\": \"paragraph\", \"text\": \"여러 설정을 비교하면 그 과거 자료에서 결과가 특히 좋았던 조합을 찾을 수 있습니다. 그러나 그 조합을 고르는 데 이미 같은 자료를 사용했다면, 좋은 결과에는 그 기간의 특징에 맞춰 고른 효과가 섞여 있습니다. 찾는 데 쓴 자료에서 좋았다는 사실과 새로운 구간에서도 작동한다는 사실은 다릅니다.\" },\n+        { \"type\": \"hypothetical\", \"text\": \"반도체와 은행을 나누는 규칙에서 관측 기간 10개와 리밸런싱 주기 5개를 조합하면 50개 설정을 비교하게 됩니다. 같은 과거 구간의 결과를 모두 본 뒤 가장 높았던 하나를 고른 상황을 가정해 보겠습니다. 이때 그 결과는 새로운 시험 한 번을 통과한 성적이 아니라, 50개를 고르는 데 사용한 성적입니다. 개수와 상황은 설명을 위한 가상 예시이며 실제 탐색 결과가 아닙니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"설정을 고르는 탐색과, 고른 설정을 다른 자료에서 확인하는 검증은 구분해야 합니다. 선택에 쓰지 않은 구간을 남겨 두고 확인하면 같은 자료에 지나치게 맞춘 결과인지 살피는 데 도움이 됩니다. 다만 그 구간까지 보고 다시 설정을 고치면, 그 구간도 선택 과정에 사용한 자료가 됩니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"시장 환경이나 섹터 간 관계가 달라지고 비용도 결과에 영향을 줍니다. 특정 설정 하나의 높은 숫자뿐 아니라 가까운 설정에서도 결과가 크게 달라지는지, 다른 평가 구간에서는 어떤 하락을 겪는지 함께 읽어 보세요. 설정을 바꿀 때마다 유리한 기간을 골라 비교하면 판단 기준이 흐려집니다.\" },\n+        { \"type\": \"paragraph\", \"text\": \"Thorp에서 과거 조합을 비교한 결과를 현재 투자에 대한 정답으로 읽지 않습니다. 선택에 쓰지 않은 자료로 확인하지 않았다면 그 사실을 남기고, 먼저 어떤 조건에서 계산된 결과인지 설명할 수 있는지 확인합니다.\" },\n+        { \"type\": \"heading\", \"text\": \"예시로 확인하기\" },\n+        { \"type\": \"paragraph\", \"text\": \"아래 예시로 진단을 열고 후보·기간·금액·비용을 정한 다음 설정을 비교해 보세요. 결과를 본 뒤에는 가장 높은 숫자 하나 대신 설정 변화에 따른 수익·하락·비용의 차이를 읽습니다. 아래 비중은 학습을 위한 출발점이며 투자 권고가 아닙니다.\" }\n+      ],\n+      \"example\": { \"sectors\": [{ \"code\": \"SEMICONDUCTOR\", \"weightTenths\": 500 }, { \"code\": \"BANK\", \"weightTenths\": 500 }] },\n+      \"terms\": [],\n+      \"sources\": [{ \"label\": \"SEC Investor.gov — Performance Claims (과거 성과와 가상 성과를 해석할 때의 유의점)\", \"url\": \"https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-47\" }]\n+    }\n+  ]\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/content/learning/articles.json",
+          "old_path": "docs/content/learning/articles.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2837277": [],
+    "2839132": []
+  }
+}

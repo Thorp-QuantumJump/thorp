@@ -1,0 +1,929 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954019,
+    "iid": 262,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록 목록 화면과 다시 보기를 만든다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US1의 화면 몫입니다. `/records`의 자리만 지키던 `MyRecordsEntryPage`를 목록 화면 `MyRecordsPage`로 갈아끼웠습니다. 목록·필터·정렬·커서 '더 보기', 행마다 '다시 보기' 하나와 펼쳐 보는 층(참조 버전·대응표 판정), 결과 화면의 \"동일 버전 조회\" 한 줄까지입니다. 서버(BE-2, `S15P21E205-383`)가 dev에 있어 fixture 없이 실연동했습니다.\n\n화면에 성과 수치가 없고 정렬에도 성과가 없습니다. 서버가 보내지 않으니 타입에도 자리가 없습니다(원칙 III).\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-385 `[FE] 내 기록 목록 화면과 다시 보기`\n- Story: -378 / Epic: -377 · 선행: -383(BE-2, dev 머지 완료)\n\n# 주요 변경 사항\n\n- **타입·클라이언트**(`types/myRecords.ts`, `api/myRecords.ts`). 계약 그대로 옮겼고 `MyRecordListItem`은 `kind`로 갈리는 union이라 `resultToken`·`searchId`·`regime`이 그 종류에만 있습니다. 오류 분류는 014의 `normalizeApiError`·`ApiClientError`를 그대로 씁니다 — 006이 새 오류 클래스를 만들지 않았습니다. 이름 변경·삭제·경제환경 기록·내보내기 주소 함수도 계약대로 두었습니다(FE-3·FE-4가 씁니다).\n- **`useMyRecords`**: 질의가 바뀌면 첫 쪽부터, '더 보기'는 이전 응답의 `nextCursor`로 다음 쪽을 받아 뒤에 붙입니다. 다음 쪽 실패는 받아 둔 항목을 지우지 않고 문장만 덧붙입니다.\n- **`RecordFilters`**: 종류·상태·섹터·전략 체크박스, 기간 두 칸, 정렬 select. 섹터는 001 목록, 전략은 003 등록표에서 받고 상수로 두지 않았습니다. **정렬 선택지는 저장일 두 방향과 이름뿐**입니다. 상태를 비우면 서버의 기본 보기라 화면이 기본값을 대신 채우지 않습니다.\n- **`RecordRow`**: 이름·종류·섹터 칩·전략·기간(경제환경은 기준월)·저장일·상태 배지(+사유). **주 모양 버튼은 '다시 보기' 하나**(`Button` 기본 변형), '설정 바꿔 비교'는 outline이고 FE-2가 연결할 때까지 비활성입니다. '다시 보기'는 종류별로 `/results/{token}?from=records&recordId=`, `/param-search?searchId=`, `/regime-search?searchId={snapshotKey}`이고 철회된 경제환경 항목은 비활성 + 이유입니다.\n- **`RecordDetailPanel`**: 참조 버전 여섯 줄(자료·대응표·등록표·비용·규칙·엔진, 경제환경은 모델 추가). `provisional`이면 ' (잠정)', 서버가 키를 안 보낸 항목은 '기록되지 않음'. `mappingDrift.changed`일 때만 서버 문장을 보이고, 키가 없으면 아무것도 안 보입니다. Esc로 닫히고 초점이 여는 버튼으로 돌아갑니다(`useDisclosure`·`closePanelOnEscape` 재사용).\n- **`ResultPage`**: `?from=records`면 `RecordOriginNotice`가 \"동일 버전 조회 — 다시 계산하지 않았다\" 한 줄을 두고, `recordId`가 있으면 상세를 받아 대응표 문장만 덧붙입니다. 005의 다른 동작은 바꾸지 않았습니다(추가 한 줄 + import).\n- `useDisclosure`에 선택 인자 `initialOpen`을 더했습니다(`?resultToken=`으로 들어온 행을 펼쳐 두기 위해). 기본값이 `false`라 기존 호출은 그대로입니다.\n- `App.tsx`의 `/records/*`가 `MyRecordsPage`를 가리키고 `MyRecordsEntryPage`(+css)는 지웠습니다.\n\n# 테스트\n\n- `npm run lint && npm run build && npm test` — **lint 오류 0(경고 21은 기존과 같은 react-refresh 류), build 통과, Vitest 121파일 1188건 통과·skipped 0, legacy 통과**. `types/api.ts`의 `ServiceApiErrorCode`에 006 코드를 이었습니다(그 파일 주석이 정한 확장 방식).\n- `MyRecordsPage.test.tsx`(9): 세 종류 렌더와 종류별 다시 보기 주소, **행마다 주 버튼 정확히 하나**, 기본 보기는 상태를 안 보내고 정렬에 성과 없음, 상태 필터가 서버 질의로 감, 빈 목록 CTA, 철회 항목 비활성, 상세 패널(잠정 표시·기록되지 않음·`dependencies` 없음·Esc 닫힘·초점 복귀), 더 보기 커서, 비로그인은 `ProtectedRoute`가 로그인으로.\n- `ResultPage.records.test.tsx`(3): 기록에서 열면 한 줄 + 서버 문장, 판정 근거 없으면 문장 없음, 기록에서 오지 않으면 상세를 부르지 않음.\n- `api/myRecords.test.ts`(7): 배열 질의 직렬화, 경로, 404 코드 유지, `success:false` 200 거절, CSRF mutation, 내보내기 주소.\n\n# 1차 리뷰 반영 (두 번째 커밋)\n\n- 이번 묶음이 부르지 않는 API(이름 변경·삭제·내보내기 주소·경제환경 기록)와 그 테스트, 미사용 타입을 지웠습니다. FE-3·FE-4가 계약을 보고 다시 씁니다.\n- 상태 사유 코드가 그대로 나가던 것을 문장으로 바꿨습니다(`reasonLabel`). 007 묶음의 사유는 그 화면의 `stopReasonText`를 그대로 쓰고, 010 사유 다섯은 한 덩어리 표, 모르는 코드(004 `failure_code`)는 코드 그대로입니다. 테스트가 `TIME_LIMIT`이 화면에 없음을 단언합니다.\n- 비활성 버튼 둘('설정 바꿔 비교', 철회 항목의 '다시 보기')을 `disabled`에서 `aria-disabled`로 바꿨습니다. 초점을 받아야 `aria-describedby`의 사유가 읽힙니다(FR-021).\n- `loadMore`가 상태 업데이터 안에서 `setMore`를 부르던 것을 상태를 읽는 `useCallback`으로, 커서 값 자체를 effect 키로 바꿨습니다. `queryKey`는 `useMemo`로 한 번만 파싱합니다.\n- `RecordOriginNotice`가 `recordId`가 바뀌면 앞 문장을 지웁니다. 기준월 문자열의 붙였다 떼기, `reviewHref`의 토큰 인코딩, `isDefault`가 기본 정렬을 조건으로 세지 않는 것, 하이라이트 초점 이동을 한 번만 하는 것도 반영했습니다.\n- **`/records/*`는 두었습니다.** 014의 `App.auth.test`(\"원래 하위 위치를 저장한다\")와 `ProtectedRoute.test`가 `/records/analysis-42?view=…` 같은 하위 주소를 돌아갈 자리로 저장하는 것을 단언합니다. 그 경로가 지금 화면에 없어도 로그인 뒤 돌아오는 주소는 남아야 하므로 006이 좁힐 것이 아닙니다.\n- `.srOnly`가 저장소 여섯 번째 사본이라는 지적은 맞습니다. 전역 유틸로 빼는 것은 별도 정리 작업으로 두고 여기서는 손대지 않았습니다.\n\n# 리뷰 포인트\n\n- **`mappingDrift`는 키가 없을 수 있습니다.** BE-2가 판정 근거가 없으면 키를 만들지 않고(`changed:false`와 다름), 화면은 \"키 없음 = 문장 없음\"입니다. 타입도 선택 필드입니다.\n- **'더 보기' 메뉴(내보내기·이름 변경·삭제)를 만들지 않았습니다.** tasks T023의 \"메뉴 트리거 자리\"를 빈 메뉴로 두는 대신 지금 있는 기능('자세히')만 버튼으로 두었고, FE-4가 메뉴로 바꿉니다. `?resultToken=`은 그 행을 펼치고 초점을 옮기는 것까지 합니다(T021).\n- **'설정 바꿔 비교'가 비활성 outline 버튼입니다.** 원칙 II 검사(주 버튼 하나)는 지금부터 고정되고 FE-2가 동작을 붙입니다. 아직 못 쓰는 버튼을 보이는 게 걸리면 FE-2 전까지 숨길 수 있습니다.\n- **`RecordDetailPanel`이 `useResource`를 안 썼습니다.** 그 훅은 실패 문장을 `ResultError`에서만 읽어 006의 `ApiClientError` 문장이 사라집니다. 훅을 고치는 대신(005 소유) 패널 안에 15줄짜리 상태를 두었습니다. 훅을 일반화하는 쪽이 낫다고 보시면 그렇게 바꾸겟습니다.\n- **`RecordFilters`가 `select multiple`이 아니라 체크박스입니다.** 키보드로 다루기 쉽고 라벨이 붙습니다(FR-021). 섹터·전략 목록이 길어지면 접는 UI가 필요할 텐데 지금은 3~10개라 두었습니다.\n\n# 2차 리뷰 반영 (네 번째 커밋)\n\n- **'더 보기'가 한 번 실패하면 죽던 회귀**를 고쳤습니다. 1차 반영에서 커서 값을 effect 키로 바꾸면서, 실패 뒤 같은 커서를 다시 넣으면 React 가 갱신을 건너뛰어 요청이 나가지 않았습니다. 실패 갈래에서 커서를 놓아 주고(`setMoreCursor(null)`), 잘못된 주석을 고쳤습니다. 검사 하나를 더했습니다 — 실패 뒤 다시 누르면 같은 커서로 두 번째 요청이 가고 항목이 붙는지.\n- `PARAM_STOP_REASONS`를 `Record<ParamSearchStopReason, true>`로 바꿔 007이 사유를 더하면 여기서 빌드가 깨지게 했습니다. `stopReasonText`의 switch 와 같은 보호입니다.\n\n# 검증 중 확인한 것\n\n- `ResultPage.test`의 \"실패 사유를 보이고 다시 시도하면 새 공개 결과 주소로 이동한다\"가 전체 실행에서 간헐적으로 실패합니다(이 브랜치 3회 중 2회). **`origin/dev` 그대로의 워크트리에서도 2회 중 1회 실패**해 이 MR과 무관한 기존 flake입니다. 원인은 검사 쪽입니다 — `await screen.findByLabelText('현재 주소')`는 이미 있는 요소를 바로 돌려주고 `.textContent`를 동기로 읽어, 클릭 뒤 `retryResult → navigate`의 마이크로태스크와 React 커밋을 기다리지 않습니다. **이 MR의 세 번째 커밋에서 `waitFor`로 감쌌습니다**(005 파일이지만 한 줄이고 동작 변경이 아니라 검사 안정화입니다). 고친 뒤 전체 실행에서 통과합니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **005**: `ResultPage`에 `useSearchParams` 한 줄과 `RecordOriginNotice` 한 줄이 들어갔습니다. `useDisclosure`에 선택 인자가 생겼습니다(기본 동작 동일). `ResultPage.test`의 재시도 케이스가 기존부터 간헐적으로 실패해 `waitFor` 한 줄로 고정했습니다(위 \"검증 중 확인한 것\"). 그 파일의 다른 검사는 그대로입니다.\n- **007·010**: 목록의 '다시 보기'가 `/param-search?searchId=`와 `/regime-search?searchId=`를 엽니다. 007 화면은 이미 받고, 010 화면의 `?searchId=` 수신은 FE-3(T039a)에서 들어갑니다 — 그때까지 경제환경 '다시 보기'는 화면이 무시합니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE-2 설정 바꿔 비교 연결, FE-3 묶음·경제환경 표시와 010 `?searchId=` 수신, FE-4 더 보기 메뉴(내보내기·이름 변경·삭제)와 005 `NextStepLinks` 활성화.\n- `tasks.md` T016·T021~T026 체크박스는 머지 뒤에 표시합니다. T017~T020은 BE-2 머지분으로 이번에 표시했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T11:47:02.554+09:00",
+    "updated_at": "2026-09-21T11:47:24.823+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T11:47:24.144+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/385-my-records-page",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+    "merge_commit_sha": "e60abd279b3b42a7879574a1d6560eff3e3e4054",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T11:47:04.808+09:00",
+    "reference": "!262",
+    "references": {
+      "short": "!262",
+      "relative": "!262",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!262"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/262",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954019,
+    "iid": 262,
+    "project_id": 1444456,
+    "title": "feat(fe): 내 기록 목록 화면과 다시 보기를 만든다",
+    "description": "# 작업 내용 요약\n\n내 기록(spec 006) US1의 화면 몫입니다. `/records`의 자리만 지키던 `MyRecordsEntryPage`를 목록 화면 `MyRecordsPage`로 갈아끼웠습니다. 목록·필터·정렬·커서 '더 보기', 행마다 '다시 보기' 하나와 펼쳐 보는 층(참조 버전·대응표 판정), 결과 화면의 \"동일 버전 조회\" 한 줄까지입니다. 서버(BE-2, `S15P21E205-383`)가 dev에 있어 fixture 없이 실연동했습니다.\n\n화면에 성과 수치가 없고 정렬에도 성과가 없습니다. 서버가 보내지 않으니 타입에도 자리가 없습니다(원칙 III).\n\n# 관련 티켓 번호\n\n- ticket # S15P21E205-385 `[FE] 내 기록 목록 화면과 다시 보기`\n- Story: -378 / Epic: -377 · 선행: -383(BE-2, dev 머지 완료)\n\n# 주요 변경 사항\n\n- **타입·클라이언트**(`types/myRecords.ts`, `api/myRecords.ts`). 계약 그대로 옮겼고 `MyRecordListItem`은 `kind`로 갈리는 union이라 `resultToken`·`searchId`·`regime`이 그 종류에만 있습니다. 오류 분류는 014의 `normalizeApiError`·`ApiClientError`를 그대로 씁니다 — 006이 새 오류 클래스를 만들지 않았습니다. 이름 변경·삭제·경제환경 기록·내보내기 주소 함수도 계약대로 두었습니다(FE-3·FE-4가 씁니다).\n- **`useMyRecords`**: 질의가 바뀌면 첫 쪽부터, '더 보기'는 이전 응답의 `nextCursor`로 다음 쪽을 받아 뒤에 붙입니다. 다음 쪽 실패는 받아 둔 항목을 지우지 않고 문장만 덧붙입니다.\n- **`RecordFilters`**: 종류·상태·섹터·전략 체크박스, 기간 두 칸, 정렬 select. 섹터는 001 목록, 전략은 003 등록표에서 받고 상수로 두지 않았습니다. **정렬 선택지는 저장일 두 방향과 이름뿐**입니다. 상태를 비우면 서버의 기본 보기라 화면이 기본값을 대신 채우지 않습니다.\n- **`RecordRow`**: 이름·종류·섹터 칩·전략·기간(경제환경은 기준월)·저장일·상태 배지(+사유). **주 모양 버튼은 '다시 보기' 하나**(`Button` 기본 변형), '설정 바꿔 비교'는 outline이고 FE-2가 연결할 때까지 비활성입니다. '다시 보기'는 종류별로 `/results/{token}?from=records&recordId=`, `/param-search?searchId=`, `/regime-search?searchId={snapshotKey}`이고 철회된 경제환경 항목은 비활성 + 이유입니다.\n- **`RecordDetailPanel`**: 참조 버전 여섯 줄(자료·대응표·등록표·비용·규칙·엔진, 경제환경은 모델 추가). `provisional`이면 ' (잠정)', 서버가 키를 안 보낸 항목은 '기록되지 않음'. `mappingDrift.changed`일 때만 서버 문장을 보이고, 키가 없으면 아무것도 안 보입니다. Esc로 닫히고 초점이 여는 버튼으로 돌아갑니다(`useDisclosure`·`closePanelOnEscape` 재사용).\n- **`ResultPage`**: `?from=records`면 `RecordOriginNotice`가 \"동일 버전 조회 — 다시 계산하지 않았다\" 한 줄을 두고, `recordId`가 있으면 상세를 받아 대응표 문장만 덧붙입니다. 005의 다른 동작은 바꾸지 않았습니다(추가 한 줄 + import).\n- `useDisclosure`에 선택 인자 `initialOpen`을 더했습니다(`?resultToken=`으로 들어온 행을 펼쳐 두기 위해). 기본값이 `false`라 기존 호출은 그대로입니다.\n- `App.tsx`의 `/records/*`가 `MyRecordsPage`를 가리키고 `MyRecordsEntryPage`(+css)는 지웠습니다.\n\n# 테스트\n\n- `npm run lint && npm run build && npm test` — **lint 오류 0(경고 21은 기존과 같은 react-refresh 류), build 통과, Vitest 121파일 1188건 통과·skipped 0, legacy 통과**. `types/api.ts`의 `ServiceApiErrorCode`에 006 코드를 이었습니다(그 파일 주석이 정한 확장 방식).\n- `MyRecordsPage.test.tsx`(9): 세 종류 렌더와 종류별 다시 보기 주소, **행마다 주 버튼 정확히 하나**, 기본 보기는 상태를 안 보내고 정렬에 성과 없음, 상태 필터가 서버 질의로 감, 빈 목록 CTA, 철회 항목 비활성, 상세 패널(잠정 표시·기록되지 않음·`dependencies` 없음·Esc 닫힘·초점 복귀), 더 보기 커서, 비로그인은 `ProtectedRoute`가 로그인으로.\n- `ResultPage.records.test.tsx`(3): 기록에서 열면 한 줄 + 서버 문장, 판정 근거 없으면 문장 없음, 기록에서 오지 않으면 상세를 부르지 않음.\n- `api/myRecords.test.ts`(7): 배열 질의 직렬화, 경로, 404 코드 유지, `success:false` 200 거절, CSRF mutation, 내보내기 주소.\n\n# 1차 리뷰 반영 (두 번째 커밋)\n\n- 이번 묶음이 부르지 않는 API(이름 변경·삭제·내보내기 주소·경제환경 기록)와 그 테스트, 미사용 타입을 지웠습니다. FE-3·FE-4가 계약을 보고 다시 씁니다.\n- 상태 사유 코드가 그대로 나가던 것을 문장으로 바꿨습니다(`reasonLabel`). 007 묶음의 사유는 그 화면의 `stopReasonText`를 그대로 쓰고, 010 사유 다섯은 한 덩어리 표, 모르는 코드(004 `failure_code`)는 코드 그대로입니다. 테스트가 `TIME_LIMIT`이 화면에 없음을 단언합니다.\n- 비활성 버튼 둘('설정 바꿔 비교', 철회 항목의 '다시 보기')을 `disabled`에서 `aria-disabled`로 바꿨습니다. 초점을 받아야 `aria-describedby`의 사유가 읽힙니다(FR-021).\n- `loadMore`가 상태 업데이터 안에서 `setMore`를 부르던 것을 상태를 읽는 `useCallback`으로, 커서 값 자체를 effect 키로 바꿨습니다. `queryKey`는 `useMemo`로 한 번만 파싱합니다.\n- `RecordOriginNotice`가 `recordId`가 바뀌면 앞 문장을 지웁니다. 기준월 문자열의 붙였다 떼기, `reviewHref`의 토큰 인코딩, `isDefault`가 기본 정렬을 조건으로 세지 않는 것, 하이라이트 초점 이동을 한 번만 하는 것도 반영했습니다.\n- **`/records/*`는 두었습니다.** 014의 `App.auth.test`(\"원래 하위 위치를 저장한다\")와 `ProtectedRoute.test`가 `/records/analysis-42?view=…` 같은 하위 주소를 돌아갈 자리로 저장하는 것을 단언합니다. 그 경로가 지금 화면에 없어도 로그인 뒤 돌아오는 주소는 남아야 하므로 006이 좁힐 것이 아닙니다.\n- `.srOnly`가 저장소 여섯 번째 사본이라는 지적은 맞습니다. 전역 유틸로 빼는 것은 별도 정리 작업으로 두고 여기서는 손대지 않았습니다.\n\n# 리뷰 포인트\n\n- **`mappingDrift`는 키가 없을 수 있습니다.** BE-2가 판정 근거가 없으면 키를 만들지 않고(`changed:false`와 다름), 화면은 \"키 없음 = 문장 없음\"입니다. 타입도 선택 필드입니다.\n- **'더 보기' 메뉴(내보내기·이름 변경·삭제)를 만들지 않았습니다.** tasks T023의 \"메뉴 트리거 자리\"를 빈 메뉴로 두는 대신 지금 있는 기능('자세히')만 버튼으로 두었고, FE-4가 메뉴로 바꿉니다. `?resultToken=`은 그 행을 펼치고 초점을 옮기는 것까지 합니다(T021).\n- **'설정 바꿔 비교'가 비활성 outline 버튼입니다.** 원칙 II 검사(주 버튼 하나)는 지금부터 고정되고 FE-2가 동작을 붙입니다. 아직 못 쓰는 버튼을 보이는 게 걸리면 FE-2 전까지 숨길 수 있습니다.\n- **`RecordDetailPanel`이 `useResource`를 안 썼습니다.** 그 훅은 실패 문장을 `ResultError`에서만 읽어 006의 `ApiClientError` 문장이 사라집니다. 훅을 고치는 대신(005 소유) 패널 안에 15줄짜리 상태를 두었습니다. 훅을 일반화하는 쪽이 낫다고 보시면 그렇게 바꾸겟습니다.\n- **`RecordFilters`가 `select multiple`이 아니라 체크박스입니다.** 키보드로 다루기 쉽고 라벨이 붙습니다(FR-021). 섹터·전략 목록이 길어지면 접는 UI가 필요할 텐데 지금은 3~10개라 두었습니다.\n\n# 2차 리뷰 반영 (네 번째 커밋)\n\n- **'더 보기'가 한 번 실패하면 죽던 회귀**를 고쳤습니다. 1차 반영에서 커서 값을 effect 키로 바꾸면서, 실패 뒤 같은 커서를 다시 넣으면 React 가 갱신을 건너뛰어 요청이 나가지 않았습니다. 실패 갈래에서 커서를 놓아 주고(`setMoreCursor(null)`), 잘못된 주석을 고쳤습니다. 검사 하나를 더했습니다 — 실패 뒤 다시 누르면 같은 커서로 두 번째 요청이 가고 항목이 붙는지.\n- `PARAM_STOP_REASONS`를 `Record<ParamSearchStopReason, true>`로 바꿔 007이 사유를 더하면 여기서 빌드가 깨지게 했습니다. `stopReasonText`의 switch 와 같은 보호입니다.\n\n# 검증 중 확인한 것\n\n- `ResultPage.test`의 \"실패 사유를 보이고 다시 시도하면 새 공개 결과 주소로 이동한다\"가 전체 실행에서 간헐적으로 실패합니다(이 브랜치 3회 중 2회). **`origin/dev` 그대로의 워크트리에서도 2회 중 1회 실패**해 이 MR과 무관한 기존 flake입니다. 원인은 검사 쪽입니다 — `await screen.findByLabelText('현재 주소')`는 이미 있는 요소를 바로 돌려주고 `.textContent`를 동기로 읽어, 클릭 뒤 `retryResult → navigate`의 마이크로태스크와 React 커밋을 기다리지 않습니다. **이 MR의 세 번째 커밋에서 `waitFor`로 감쌌습니다**(005 파일이지만 한 줄이고 동작 변경이 아니라 검사 안정화입니다). 고친 뒤 전체 실행에서 통과합니다.\n\n# 전달만 하는 것 (티켓 아님)\n\n- **005**: `ResultPage`에 `useSearchParams` 한 줄과 `RecordOriginNotice` 한 줄이 들어갔습니다. `useDisclosure`에 선택 인자가 생겼습니다(기본 동작 동일). `ResultPage.test`의 재시도 케이스가 기존부터 간헐적으로 실패해 `waitFor` 한 줄로 고정했습니다(위 \"검증 중 확인한 것\"). 그 파일의 다른 검사는 그대로입니다.\n- **007·010**: 목록의 '다시 보기'가 `/param-search?searchId=`와 `/regime-search?searchId=`를 엽니다. 007 화면은 이미 받고, 010 화면의 `?searchId=` 수신은 FE-3(T039a)에서 들어갑니다 — 그때까지 경제환경 '다시 보기'는 화면이 무시합니다.\n\n# 남은 것 (이 MR 범위 밖)\n\n- FE-2 설정 바꿔 비교 연결, FE-3 묶음·경제환경 표시와 010 `?searchId=` 수신, FE-4 더 보기 메뉴(내보내기·이름 변경·삭제)와 005 `NextStepLinks` 활성화.\n- `tasks.md` T016·T021~T026 체크박스는 머지 뒤에 표시합니다. T017~T020은 BE-2 머지분으로 이번에 표시했습니다.",
+    "state": "merged",
+    "created_at": "2026-09-21T11:47:02.554+09:00",
+    "updated_at": "2026-09-21T11:47:24.823+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-21T11:47:24.144+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/385-my-records-page",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+    "merge_commit_sha": "e60abd279b3b42a7879574a1d6560eff3e3e4054",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T11:47:04.808+09:00",
+    "reference": "!262",
+    "references": {
+      "short": "!262",
+      "relative": "!262",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!262"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/262",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "23",
+    "latest_build_started_at": "2026-09-21T11:28:59.314+09:00",
+    "latest_build_finished_at": "2026-09-21T11:47:34.050+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 211501,
+      "iid": 246,
+      "project_id": 1444456,
+      "sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+      "ref": "feat(fe)/385-my-records-page",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-21T11:28:59.201+09:00",
+      "updated_at": "2026-09-21T12:05:19.621+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211501"
+    },
+    "head_pipeline": {
+      "id": 211501,
+      "iid": 246,
+      "project_id": 1444456,
+      "sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+      "ref": "feat(fe)/385-my-records-page",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-21T11:28:59.201+09:00",
+      "updated_at": "2026-09-21T12:05:19.621+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211501",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T11:28:59.314+09:00",
+      "finished_at": "2026-09-21T12:05:19.614+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211501",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "head_sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+      "start_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "512ef36863b6f5cd7a1891c78cd25e9aa63fb295",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845462,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:47:02.725+09:00",
+          "updated_at": "2026-09-21T11:47:02.729+09:00",
+          "system": true,
+          "noteable_id": 954019,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 262,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c9c4d3b935bbf625523eff0b4d51459c4dd85701",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845463,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:47:02.746+09:00",
+          "updated_at": "2026-09-21T11:47:02.752+09:00",
+          "system": true,
+          "noteable_id": 954019,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 262,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8e2ad20ca91d49a7081d6f6cdee8995c77d3ccb3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845466,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 접근성 및 UI 원칙 준수**: `disabled` 대신 `aria-disabled`를 사용하여 비활성 버튼에서도 포커스가 유지되도록 구현하였고, 이를 통해 `aria-describedby`로 안내 사유가 스크린 리더 등에 올바르게 읽히도록 신경 쓴 점이 돋보입니다.\n- **철학적 일관성 유지**: 기록 목록 화면에서 성능 수치(수익률, MDD 등)나 순위 정렬을 의도적으로 배제하여, 사양 및 설계 원칙(원칙 III, R7)을 충실히 지켰습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (타입 계약, API 에러 핸들링, 테스트 커버리지 및 시나리오 구현이 매우 탄탄하게 작성되었습니다.)\n\n### 테스트 제안\n- **커서 페이지네이션 네트워크 오류 시나리오**: `useMyRecords` 훅에서 \"더 보기\" 요청이 실패하여 `moreError` 상태가 된 후, 사용자가 다시 \"더 보기\" 버튼을 눌렀을 때 동일한 `moreCursor`로 요청이 정상 재시도되는지 검증하는 컴포넌트 통합 테스트 시나리오 추가를 제안합니다. (현재 단위 테스트에서 일부 검증 중이나, UI 컴포넌트 관점에서 버튼 상호작용 흐름을 한 번 더 확인하면 안전합니다.)\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:5da2dab34ae9816325d45501b5f3f4fd58e0d310 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T11:47:09.279+09:00",
+          "updated_at": "2026-09-21T11:47:09.279+09:00",
+          "system": false,
+          "noteable_id": 954019,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 262,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2c7571594ff2a2a361058bda15ccc0bee61992b5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845468,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:47:18.118+09:00",
+          "updated_at": "2026-09-21T11:47:18.124+09:00",
+          "system": true,
+          "noteable_id": 954019,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 262,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ca623b675a134ad4528afa795e3e4e78fdd4f647",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845470,
+          "type": null,
+          "body": "mentioned in commit e60abd279b3b42a7879574a1d6560eff3e3e4054",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-21T11:47:24.437+09:00",
+          "updated_at": "2026-09-21T11:47:24.447+09:00",
+          "system": true,
+          "noteable_id": 954019,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 262,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2230745,
+      "head_commit_sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+      "created_at": "2026-09-21T11:47:03.119+09:00",
+      "merge_request_id": 954019,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "6800c26ad3726a3ce4a133851f1f1817fbf15f82"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2230745,
+      "head_commit_sha": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+      "created_at": "2026-09-21T11:47:03.119+09:00",
+      "merge_request_id": 954019,
+      "state": "collected",
+      "real_size": "23",
+      "patch_id_sha": "6800c26ad3726a3ce4a133851f1f1817fbf15f82",
+      "commits": [
+        {
+          "id": "5da2dab34ae9816325d45501b5f3f4fd58e0d310",
+          "short_id": "5da2dab3",
+          "created_at": "2026-09-21T11:21:45.000+09:00",
+          "parent_ids": [
+            "e0c0f0e3ec785597fc5b5c021feb42e4c04c7263"
+          ],
+          "title": "fix(fe): 더 보기가 한 번 실패한 뒤에도 다시 누르면 받게 한다",
+          "message": "fix(fe): 더 보기가 한 번 실패한 뒤에도 다시 누르면 받게 한다\n\n앞 커밋이 커서 값을 effect 키로 바꾸면서, 실패 뒤 같은 커서를 다시 넣으면 React 가 같은\n원시값이라 갱신을 건너뛰어 effect 가 돌지 않았다. 버튼은 보이고 비활성도 아닌데 눌러도 아무\n일이 없었고, 빠져나갈 길은 필터를 건드려 처음부터 다시 받는 것뿐이었다. 실패 갈래에서 커서를\n놓아 주면 다음 클릭이 null → 커서라 다시 돈다. 연달아 눌러도 한 번만 받는 것은 loadingMore\n검사가 이미 막고 있어, 그 뜻으로 적혀 있던 주석을 고친다. 실패 뒤 다시 눌러 두 번째 요청이\n가는지 검사로 잠근다.\n\n007 묶음 사유 집합을 Set<string> 에서 Record<ParamSearchStopReason, true> 로 바꾼다. 007이\n사유를 더하면 여기서 빌드가 깨져, 그 코드가 문장 없이 그대로 나가는 일이 없다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:21:45.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:21:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5da2dab34ae9816325d45501b5f3f4fd58e0d310"
+        },
+        {
+          "id": "e0c0f0e3ec785597fc5b5c021feb42e4c04c7263",
+          "short_id": "e0c0f0e3",
+          "created_at": "2026-09-21T11:14:21.000+09:00",
+          "parent_ids": [
+            "805442f80f41988a808f758d55ae2fd2ad5de86d"
+          ],
+          "title": "test(fe): 결과 재시도 검사가 주소가 바뀔 때까지 기다리게 한다",
+          "message": "test(fe): 결과 재시도 검사가 주소가 바뀔 때까지 기다리게 한다\n\n'다시 시도'를 누른 직후 현재 주소를 바로 읽었다. 주소는 retryResult → navigate → 렌더를\n거쳐 조금 뒤에 바뀌므로, 테스트 121개가 함께 도는 바쁜 실행에서는 옛 주소를 읽어 실패했다\n(이 브랜치 3회 중 2회, origin/dev 그대로도 2회 중 1회). 이미 있는 탐침을 findBy 로 찾는 것은\n기다림이 아니라 즉시 반환이다. waitFor 로 감싼다. 단언은 그대로다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:14:21.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:14:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e0c0f0e3ec785597fc5b5c021feb42e4c04c7263"
+        },
+        {
+          "id": "805442f80f41988a808f758d55ae2fd2ad5de86d",
+          "short_id": "805442f8",
+          "created_at": "2026-09-21T11:04:57.000+09:00",
+          "parent_ids": [
+            "4598e2a2e26916582ad1104b7802c314d3bb97fb"
+          ],
+          "title": "fix(fe): 내 기록 목록의 리뷰 지적을 반영한다",
+          "message": "fix(fe): 내 기록 목록의 리뷰 지적을 반영한다\n\n이번 묶음이 부르지 않는 API(이름 변경·삭제·내보내기·경제환경 기록)와 그 테스트를 지운다.\n부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드라 FE-3·FE-4 가 계약을 보고 다시 쓴다.\n\n상태 사유 코드가 화면에 그대로 나갔다(TIME_LIMIT). 상태는 이름으로 옮기면서 사유만 코드로\n두어 앞뒤가 맞지 않았다. 007 묶음의 사유는 그 화면의 문장(stopReasonText)을 그대로 쓰고,\n010 사유 다섯은 표로 두고, 모르는 코드는 코드 그대로 둔다 — 문장을 지어내지 않는다.\n\n비활성 버튼(설정 바꿔 비교, 철회 항목의 다시 보기)을 disabled 에서 aria-disabled 로 바꾼다.\ndisabled 는 초점을 받지 못해 aria-describedby 의 사유가 읽히지 않는다(FR-021).\n\nloadMore 가 상태 업데이터 안에서 다른 setState 를 부르던 것을 상태를 읽는 콜백으로 바꾼다.\n업데이터는 순수해야 하고 StrictMode 가 두 번 돌린다. RecordOriginNotice 는 기록이 바뀌면\n앞 문장을 지운다. 기본 정렬을 다시 고른 것을 조건으로 세지 않고, 하이라이트 초점 이동은\n한 번만 한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T11:04:57.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T11:04:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/805442f80f41988a808f758d55ae2fd2ad5de86d"
+        },
+        {
+          "id": "4598e2a2e26916582ad1104b7802c314d3bb97fb",
+          "short_id": "4598e2a2",
+          "created_at": "2026-09-21T10:54:40.000+09:00",
+          "parent_ids": [
+            "b36ccbab340b8b37bed4cda554cf59c906e79a81"
+          ],
+          "title": "feat(fe): 내 기록 목록 화면과 다시 보기를 만든다",
+          "message": "feat(fe): 내 기록 목록 화면과 다시 보기를 만든다\n\n/records 의 자리만 지키던 MyRecordsEntryPage 를 목록 화면 MyRecordsPage 로 갈아끼운다\n(spec 006 US1, T016·T021~T026). 목록·필터·정렬·커서 '더 보기', 행마다 '다시 보기' 하나와\n펼쳐 보는 층(참조 버전·대응표 판정), 결과 화면의 \"동일 버전 조회\" 한 줄까지다.\n\n화면에 성과 수치가 없고 정렬에도 성과가 없다 — 서버가 보내지 않으니 타입에도 자리가 없다\n(원칙 III). 행의 주 모양 버튼은 '다시 보기' 하나고 '설정 바꿔 비교'는 보조 모양이다(원칙 II).\n검사가 행마다 주 버튼 수를 단언한다.\n\n펼쳐 보는 층은 서버가 이름만 바꿔 준 참조 버전을 그대로 보이고 없는 키는 '기록되지 않음'이다.\n대응표 판정은 서버 문장을 그대로 보이며 키가 없으면(판정 근거 없음) 아무것도 덧붙이지 않는다\n— changed:false 와 다르다. 화면이 버전 문자열을 비교하지 않는다(원칙 II).\n\n005 ResultPage 에는 ?from=records 일 때의 한 줄만 더했고 다른 동작은 바꾸지 않았다.\nuseDisclosure 에 선택 인자 initialOpen 을 더했다(기본값 false, 기존 호출 동일).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-21T10:54:40.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-21T10:54:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4598e2a2e26916582ad1104b7802c314d3bb97fb"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,103 @@\n+import { AxiosError, AxiosHeaders } from 'axios'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { analysisDetail, listPage } from '@/test/myRecordsFixtures'\n+\n+/** 006 T016. contracts \"GET /my-records\"·\"오류\". */\n+\n+const clientMocks = vi.hoisted(() => ({ get: vi.fn() }))\n+\n+vi.mock('./client', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('./client')>()\n+  return { ...actual, apiClient: { get: clientMocks.get } }\n+})\n+\n+const { fetchMyRecord, fetchMyRecords, toSearchParams } = await import('./myRecords')\n+const { ApiClientError } = await import('./client')\n+\n+function ok<T>(data: T) {\n+  return { data: { success: true, data, error: null } }\n+}\n+\n+function axiosFailure(status: number, body: unknown): AxiosError {\n+  const headers = new AxiosHeaders()\n+  return new AxiosError('failed', String(status), { headers }, null, {\n+    status,\n+    statusText: '',\n+    headers,\n+    config: { headers },\n+    data: body,\n+  })\n+}\n+\n+describe('api/myRecords', () => {\n+  beforeEach(() => {\n+    clientMocks.get.mockReset()\n+  })\n+\n+  afterEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('배열 항목은 같은 이름을 여러 번 보내고 비운 값은 보내지 않는다', () => {\n+    const params = toSearchParams({\n+      kind: ['ANALYSIS', 'REGIME_SEARCH'],\n+      status: ['FAILED'],\n+      sector: [],\n+      sort: 'NAME_ASC',\n+      size: 20,\n+    })\n+\n+    expect(params.getAll('kind')).toEqual(['ANALYSIS', 'REGIME_SEARCH'])\n+    expect(params.getAll('status')).toEqual(['FAILED'])\n+    expect(params.has('sector')).toBe(false)\n+    expect(params.get('sort')).toBe('NAME_ASC')\n+    expect(params.get('size')).toBe('20')\n+    // 상태를 비우면 서버의 기본 보기다. 화면이 기본값을 대신 채우지 않는다.\n+    expect(toSearchParams({}).toString()).toBe('')\n+  })\n+\n+  it('목록은 질의 없이 기본 경로를, 있으면 질의 문자열을 붙여 부른다', async () => {\n+    clientMocks.get.mockResolvedValue(ok(listPage))\n+    const controller = new AbortController()\n+\n+    await expect(fetchMyRecords({}, controller.signal)).resolves.toEqual(listPage)\n+    expect(clientMocks.get).toHaveBeenCalledWith('/my-records', { signal: controller.signal })\n+\n+    await fetchMyRecords({ cursor: 'abc', status: ['COMPLETED', 'FAILED'] })\n+    expect(clientMocks.get).toHaveBeenLastCalledWith(\n+      '/my-records?cursor=abc&status=COMPLETED&status=FAILED',\n+      { signal: undefined },\n+    )\n+  })\n+\n+  it('상세는 식별자를 경로에 넣고 껍데기를 벗긴다', async () => {\n+    clientMocks.get.mockResolvedValue(ok(analysisDetail))\n+\n+    await expect(fetchMyRecord('MR-20260918-000042')).resolves.toEqual(analysisDetail)\n+    expect(clientMocks.get).toHaveBeenCalledWith('/my-records/MR-20260918-000042', {\n+      signal: undefined,\n+    })\n+  })\n+\n+  it('남의 기록·없는 기록은 서버 코드 그대로 404 오류다', async () => {\n+    clientMocks.get.mockRejectedValue(\n+      axiosFailure(404, {\n+        success: false,\n+        data: null,\n+        error: { code: 'RESOURCE_NOT_FOUND', message: '요청한 리소스를 찾을 수 없습니다.' },\n+      }),\n+    )\n+\n+    const error = await fetchMyRecord('MR-20260918-000099').catch((e: unknown) => e)\n+    expect(error).toBeInstanceOf(ApiClientError)\n+    expect((error as InstanceType<typeof ApiClientError>).is('RESOURCE_NOT_FOUND')).toBe(true)\n+  })\n+\n+  it('success:false 가 200으로 와도 오류다 — null 이 화면까지 내려가지 않는다', async () => {\n+    clientMocks.get.mockResolvedValue({\n+      data: { success: false, data: null, error: { code: 'INVALID_INPUT', message: '잘못된 정렬' } },\n+    })\n+\n+    await expect(fetchMyRecords({})).rejects.toMatchObject({ code: 'INVALID_INPUT' })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/myRecords.test.ts",
+          "old_path": "frontend/src/api/myRecords.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,68 @@\n+import { ApiClientError, apiClient, normalizeApiError } from './client'\n+import type { ApiEnvelope } from '@/types/api'\n+import type { MyRecordDetail, MyRecordListPage, MyRecordListQuery } from '@/types/myRecords'\n+\n+/**\n+ * spec 006 내 기록 API. 계약은 `specs/006-my-records/contracts/my-records-api.md`다.\n+ *\n+ * <p>US1이 쓰는 목록·상세만 있다. 이름 변경·삭제·내보내기·경제환경 기록은 그 화면(FE-3·FE-4)이 올 때 계약을 보고\n+ * 더한다 — 부르는 곳 없는 함수는 계약이 바뀌면 고쳐야 할 죽은 코드다.\n+ *\n+ * <p>모든 경로가 로그인 필요다. 401은 `apiClient`의 인터셉터가 전역 인증 상태에 알리고, 화면은\n+ * `ProtectedRoute`가 로그인 안내로 보낸다(S12). 오류 분류는 014의 `normalizeApiError`를 그대로 쓴다 —\n+ * 006이 새 분류를 만들지 않는다. 남의 기록은 403이 아니라 404다(FR-020).\n+ */\n+\n+const basePath = '/my-records'\n+\n+/**\n+ * 성공 껍데기를 벗긴다. `success: false`가 200으로 와도 오류로 다룬다 — `data`의 `null`이 화면까지\n+ * 내려가면 빈 목록이 \"기록이 없다\"는 거짓이 된다(원칙 VI).\n+ */\n+function unwrap<T>(body: ApiEnvelope<T>): T {\n+  if (!body.success) {\n+    throw new ApiClientError('api', body.error.message, { code: body.error.code })\n+  }\n+  if (body.data === null || body.data === undefined) {\n+    throw new ApiClientError('unexpected', '응답 본문이 비어 있습니다.')\n+  }\n+  return body.data\n+}\n+\n+/** 배열 항목은 같은 이름을 여러 번 보낸다(계약 \"여러 번 줄 수 있다\"). 비우면 보내지 않는다. */\n+export function toSearchParams(query: MyRecordListQuery): URLSearchParams {\n+  const params = new URLSearchParams()\n+  if (query.cursor) params.set('cursor', query.cursor)\n+  if (query.size !== undefined) params.set('size', String(query.size))\n+  if (query.sort) params.set('sort', query.sort)\n+  query.kind?.forEach((value) => params.append('kind', value))\n+  query.status?.forEach((value) => params.append('status', value))\n+  query.sector?.forEach((value) => params.append('sector', value))\n+  query.strategy?.forEach((value) => params.append('strategy', value))\n+  if (query.periodFrom) params.set('periodFrom', query.periodFrom)\n+  if (query.periodTo) params.set('periodTo', query.periodTo)\n+  return params\n+}\n+\n+async function getResource<T>(path: string, signal?: AbortSignal): Promise<T> {\n+  try {\n+    const response = await apiClient.get<ApiEnvelope<T>>(path, { signal })\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeApiError(error)\n+  }\n+}\n+\n+/** 목록 한 쪽. 상태를 비우면 서버의 기본 보기(완료 항목)다. */\n+export async function fetchMyRecords(\n+  query: MyRecordListQuery = {},\n+  signal?: AbortSignal,\n+): Promise<MyRecordListPage> {\n+  const params = toSearchParams(query).toString()\n+  return getResource<MyRecordListPage>(params ? `${basePath}?${params}` : basePath, signal)\n+}\n+\n+/** 상세. 남의 것·없는 것·지운 것은 모두 404 `RESOURCE_NOT_FOUND`다. */\n+export function fetchMyRecord(recordId: string, signal?: AbortSignal): Promise<MyRecordDetail> {\n+  return getResource<MyRecordDetail>(`${basePath}/${encodeURIComponent(recordId)}`, signal)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/myRecords.ts",
+          "old_path": "frontend/src/api/myRecords.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,179 @@\n+import { useEffect, useRef, useState } from 'react'\n+import { ApiClientError } from '@/api/client'\n+import { fetchMyRecord } from '@/api/myRecords'\n+import { closePanelOnEscape } from '@/components/result/panelEscape'\n+import { Button } from '@/components/ui/button'\n+import type { MyRecordDetail, MyRecordReferenceVersions } from '@/types/myRecords'\n+import type { VersionMark } from '@/types/result'\n+import type { RecordLabels } from './RecordRow'\n+import { formatSavedAt } from './recordLabels'\n+import styles from './records.module.css'\n+\n+type State =\n+  | { status: 'loading' }\n+  | { status: 'loaded'; detail: MyRecordDetail }\n+  | { status: 'failed'; message: string }\n+\n+export const NOT_RECORDED = '기록되지 않음'\n+const PROVISIONAL = ' (잠정)'\n+\n+function mark(value: VersionMark | undefined): string {\n+  return value ? `${value.version}${value.provisional ? PROVISIONAL : ''}` : NOT_RECORDED\n+}\n+\n+/** 계약 \"referenceVersions의 출처\" 순서. 없는 키는 '기록되지 않음'이다 — 값을 지어내지 않는다(원칙 VI). */\n+function versionRows(versions: MyRecordReferenceVersions): [string, string][] {\n+  const rows: [string, string][] = [\n+    ['자료', versions.datasetVersion ?? NOT_RECORDED],\n+    ['대응표', versions.sectorEtfMapVersion ?? NOT_RECORDED],\n+    ['등록표', versions.registryVersion ?? NOT_RECORDED],\n+    ['비용', mark(versions.costProfileVersion)],\n+    ['규칙', mark(versions.rulesVersion)],\n+    ['엔진', versions.engineVersion ?? NOT_RECORDED],\n+  ]\n+  if (versions.modelVersion) rows.push(['모델', versions.modelVersion])\n+  return rows\n+}\n+\n+/**\n+ * 펼쳐 보는 층(FR-005, 원칙 II 정보 세 층). 행에서 열고 Esc로 닫으며 초점은 여는 버튼으로 돌아간다(FR-021).\n+ *\n+ * <p>참조 버전은 서버가 원본에서 이름만 바꿔 준 값이다. `worker`·`dependencies`는 오지 않으므로 보일 자리도 없다.\n+ * `mappingDrift`·`registryDrift`는 서버가 판정한 문장을 그대로 보인다 — 화면이 버전 문자열을 비교하지 않는다.\n+ * 판정할 근거가 없어 키가 없으면 아무 문장도 보이지 않는다(`changed: false`와 같지 않다).\n+ */\n+export function RecordDetailPanel({\n+  id,\n+  recordId,\n+  labels,\n+  onClose,\n+}: {\n+  id: string\n+  recordId: string\n+  labels: RecordLabels\n+  onClose: () => void\n+}) {\n+  const [state, setState] = useState<State>({ status: 'loading' })\n+  const [attempt, setAttempt] = useState(0)\n+  const titleRef = useRef<HTMLHeadingElement>(null)\n+  const titleId = `${id}-title`\n+\n+  useEffect(() => {\n+    titleRef.current?.focus()\n+  }, [])\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    let active = true\n+    setState({ status: 'loading' })\n+    fetchMyRecord(recordId, controller.signal).then(\n+      (detail) => {\n+        if (active) setState({ status: 'loaded', detail })\n+      },\n+      (error: unknown) => {\n+        if (!active) return\n+        setState({\n+          status: 'failed',\n+          message:\n+            error instanceof ApiClientError\n+              ? error.message\n+              : '상세를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',\n+        })\n+      },\n+    )\n+    return () => {\n+      active = false\n+      controller.abort()\n+    }\n+  }, [recordId, attempt])\n+\n+  return (\n+    <section\n+      id={id}\n+      className={styles.panel}\n+      aria-labelledby={titleId}\n+      onKeyDown={closePanelOnEscape(onClose)}\n+    >\n+      <div className={styles.panelHead}>\n+        <h3 id={titleId} ref={titleRef} tabIndex={-1} className={styles.panelTitle}>\n+          저장 당시 조건\n+        </h3>\n+        <Button type=\"button\" variant=\"outline\" size=\"sm\" onClick={onClose}>\n+          닫기\n+        </Button>\n+      </div>\n+\n+      {state.status === 'loading' ? (\n+        <p role=\"status\" className={styles.hint}>\n+          상세를 불러오는 중입니다.\n+        </p>\n+      ) : null}\n+\n+      {state.status === 'failed' ? (\n+        <div role=\"alert\" className={styles.alert}>\n+          <p>{state.message}</p>\n+          <Button type=\"button\" variant=\"outline\" size=\"sm\" onClick={() => setAttempt((n) => n + 1)}>\n+            다시 시도\n+          </Button>\n+        </div>\n+      ) : null}\n+\n+      {state.status === 'loaded' ? <DetailBody detail={state.detail} labels={labels} /> : null}\n+    </section>\n+  )\n+}\n+\n+function DetailBody({ detail, labels }: { detail: MyRecordDetail; labels: RecordLabels }) {\n+  const drift = detail.mappingDrift\n+  const registry = detail.registryDrift\n+  const payload = detail.reopenPayload\n+\n+  return (\n+    <>\n+      {drift?.changed && drift.message ? (\n+        <p role=\"status\" className={styles.notice}>\n+          {drift.message}\n+          {drift.sectorCodes.length > 0 ? ` (${drift.sectorCodes.map(labels.sector).join(', ')})` : null}\n+        </p>\n+      ) : null}\n+      {registry?.outOfRange ? (\n+        <p role=\"status\" className={styles.notice}>\n+          저장된 설정값 중 현재 등록표 허용 범위 밖인 항목이 있습니다:{' '}\n+          {registry.fields.map((field) => field.axis).join(', ')}\n+        </p>\n+      ) : null}\n+\n+      <dl className={styles.facts}>\n+        <dt>참조 버전</dt>\n+        <dd>\n+          <dl className={styles.versions}>\n+            {versionRows(detail.referenceVersions).map(([label, value]) => (\n+              <div key={label}>\n+                <dt>{label}</dt>\n+                <dd>{value}</dd>\n+              </div>\n+            ))}\n+          </dl>\n+        </dd>\n+        {payload ? (\n+          <>\n+            <dt>실제 평가 기간</dt>\n+            <dd>\n+              {payload.effectiveStart} ~ {payload.effectiveEnd}\n+            </dd>\n+            <dt>준비 기간</dt>\n+            <dd>{payload.warmupTradingDays}거래일</dd>\n+          </>\n+        ) : null}\n+        <dt>마지막으로 본 시각</dt>\n+        <dd>\n+          {detail.lastViewedAt ? (\n+            <time dateTime={detail.lastViewedAt}>{formatSavedAt(detail.lastViewedAt)}</time>\n+          ) : (\n+            NOT_RECORDED\n+          )}\n+        </dd>\n+      </dl>\n+    </>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordDetailPanel.tsx",
+          "old_path": "frontend/src/components/records/RecordDetailPanel.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,142 @@\n+import { useId } from 'react'\n+import type { MyRecordKind, MyRecordListQuery, MyRecordSort, MyRecordStatus } from '@/types/myRecords'\n+import type { SectorCatalog } from '@/types/sector'\n+import type { StrategyView } from '@/types/strategyRegistry'\n+import { KIND_LABEL, SORT_OPTIONS, STATUS_LABEL, STATUS_OPTIONS } from './recordLabels'\n+import styles from './records.module.css'\n+\n+type Props = {\n+  query: MyRecordListQuery\n+  onChange: (next: MyRecordListQuery) => void\n+  /** 001 섹터 목록. 아직 못 받았으면 null — 코드 대신 이름이 없을 뿐 필터 자체는 둔다 */\n+  catalog: SectorCatalog | null\n+  /** 003 등록표의 전략. 못 받았으면 null */\n+  strategies: StrategyView[] | null\n+}\n+\n+const KINDS: MyRecordKind[] = ['ANALYSIS', 'SEARCH_BUNDLE', 'REGIME_SEARCH']\n+\n+function toggle<T>(list: T[] | undefined, value: T, on: boolean): T[] | undefined {\n+  const current = list ?? []\n+  const next = on ? [...new Set([...current, value])] : current.filter((item) => item !== value)\n+  return next.length === 0 ? undefined : next\n+}\n+\n+/**\n+ * 목록 필터와 정렬(FR-004). 모든 조작이 라벨 있는 표준 컨트롤이라 키보드로 다룰 수 있다(FR-021).\n+ *\n+ * <p><b>정렬 선택지에 성과가 없다.</b> 수익률·하락 폭·비용으로 늘어놓으면 순위 화면이 된다(원칙 III, R7).\n+ * 섹터·전략 선택지는 001·003에서 받은 것이고 코드에 상수로 두지 않는다.\n+ */\n+export function RecordFilters({ query, onChange, catalog, strategies }: Props) {\n+  const sortId = useId()\n+  const fromId = useId()\n+  const toId = useId()\n+\n+  return (\n+    <form className={styles.filters} aria-label=\"기록 필터\" onSubmit={(event) => event.preventDefault()}>\n+      <fieldset className={styles.group}>\n+        <legend>종류</legend>\n+        {KINDS.map((kind) => (\n+          <label key={kind} className={styles.check}>\n+            <input\n+              type=\"checkbox\"\n+              checked={query.kind?.includes(kind) ?? false}\n+              onChange={(event) => onChange({ ...query, kind: toggle(query.kind, kind, event.target.checked) })}\n+            />\n+            {KIND_LABEL[kind]}\n+          </label>\n+        ))}\n+      </fieldset>\n+\n+      <fieldset className={styles.group}>\n+        <legend>상태</legend>\n+        {STATUS_OPTIONS.map((status) => (\n+          <label key={status} className={styles.check}>\n+            <input\n+              type=\"checkbox\"\n+              checked={query.status?.includes(status) ?? false}\n+              onChange={(event) =>\n+                onChange({ ...query, status: toggle<MyRecordStatus>(query.status, status, event.target.checked) })\n+              }\n+            />\n+            {STATUS_LABEL[status]}\n+          </label>\n+        ))}\n+        <p className={styles.hint}>아무것도 고르지 않으면 완료한 항목만 보입니다.</p>\n+      </fieldset>\n+\n+      {catalog ? (\n+        <fieldset className={styles.group}>\n+          <legend>섹터</legend>\n+          {catalog.sectors.map((sector) => (\n+            <label key={sector.code} className={styles.check}>\n+              <input\n+                type=\"checkbox\"\n+                checked={query.sector?.includes(sector.code) ?? false}\n+                onChange={(event) =>\n+                  onChange({ ...query, sector: toggle(query.sector, sector.code, event.target.checked) })\n+                }\n+              />\n+              {sector.name}\n+            </label>\n+          ))}\n+        </fieldset>\n+      ) : null}\n+\n+      {strategies ? (\n+        <fieldset className={styles.group}>\n+          <legend>전략</legend>\n+          {strategies.map((strategy) => (\n+            <label key={strategy.strategyId} className={styles.check}>\n+              <input\n+                type=\"checkbox\"\n+                checked={query.strategy?.includes(strategy.strategyId) ?? false}\n+                onChange={(event) =>\n+                  onChange({\n+                    ...query,\n+                    strategy: toggle(query.strategy, strategy.strategyId, event.target.checked),\n+                  })\n+                }\n+              />\n+              {strategy.name}\n+            </label>\n+          ))}\n+        </fieldset>\n+      ) : null}\n+\n+      <fieldset className={styles.group}>\n+        <legend>분석 기간</legend>\n+        <label htmlFor={fromId}>시작</label>\n+        <input\n+          id={fromId}\n+          type=\"date\"\n+          value={query.periodFrom ?? ''}\n+          onChange={(event) => onChange({ ...query, periodFrom: event.target.value || undefined })}\n+        />\n+        <label htmlFor={toId}>끝</label>\n+        <input\n+          id={toId}\n+          type=\"date\"\n+          value={query.periodTo ?? ''}\n+          onChange={(event) => onChange({ ...query, periodTo: event.target.value || undefined })}\n+        />\n+      </fieldset>\n+\n+      <div className={styles.group}>\n+        <label htmlFor={sortId}>정렬</label>\n+        <select\n+          id={sortId}\n+          value={query.sort ?? 'SAVED_AT_DESC'}\n+          onChange={(event) => onChange({ ...query, sort: event.target.value as MyRecordSort })}\n+        >\n+          {SORT_OPTIONS.map((option) => (\n+            <option key={option.value} value={option.value}>\n+              {option.label}\n+            </option>\n+          ))}\n+        </select>\n+      </div>\n+    </form>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordFilters.tsx",
+          "old_path": "frontend/src/components/records/RecordFilters.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+import { useEffect, useState } from 'react'\n+import { fetchMyRecord } from '@/api/myRecords'\n+import styles from './records.module.css'\n+\n+export const SAME_VERSION_NOTICE = '동일 버전 조회 — 저장된 결과를 다시 계산하지 않고 그대로 보입니다.'\n+\n+/**\n+ * 결과 화면이 내 기록에서 열렸을 때의 한 줄(FR-006·FR-008, quickstart S1-6·S5).\n+ *\n+ * <p>`recordId`가 있으면 상세를 받아 서버가 판정한 대응표 변경 문장만 보인다. 화면이 버전 문자열을 비교하지\n+ * 않고(원칙 II), 판정할 근거가 없어 문장이 없으면 아무것도 덧붙이지 않는다. 상세를 받지 못해도 결과 화면은 그대로다\n+ * — 이 줄은 결과의 조건이 아니라 덧붙이는 안내다.\n+ */\n+export function RecordOriginNotice({ recordId }: { recordId: string | null }) {\n+  const [drift, setDrift] = useState<string | null>(null)\n+\n+  useEffect(() => {\n+    // 기록이 바뀌면 앞 기록의 문장부터 지운다. 새 기록에 변경이 없으면 옛 문장이 남는다.\n+    setDrift(null)\n+    if (!recordId) return\n+    const controller = new AbortController()\n+    let active = true\n+    fetchMyRecord(recordId, controller.signal).then(\n+      (detail) => {\n+        if (active && detail.mappingDrift?.changed) setDrift(detail.mappingDrift.message)\n+      },\n+      () => undefined,\n+    )\n+    return () => {\n+      active = false\n+      controller.abort()\n+    }\n+  }, [recordId])\n+\n+  return (\n+    <div className={styles.origin}>\n+      <p role=\"status\">{SAME_VERSION_NOTICE}</p>\n+      {drift ? <p role=\"status\">{drift}</p> : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordOriginNotice.tsx",
+          "old_path": "frontend/src/components/records/RecordOriginNotice.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,148 @@\n+import { CloudSun, Layers, LineChart } from 'lucide-react'\n+import { forwardRef, useId } from 'react'\n+import { Link } from 'react-router-dom'\n+import { Button } from '@/components/ui/button'\n+import { useDisclosure } from '@/hooks/useDisclosure'\n+import type { MyRecordListItem } from '@/types/myRecords'\n+import { RecordDetailPanel } from './RecordDetailPanel'\n+import {\n+  KIND_LABEL,\n+  REOPEN_NOT_YET,\n+  STATUS_LABEL,\n+  WITHDRAWN_REASON,\n+  formatSavedAt,\n+  reasonLabel,\n+  reviewHref,\n+} from './recordLabels'\n+import styles from './records.module.css'\n+\n+export type RecordLabels = {\n+  sector: (code: string) => string\n+  strategy: (id: string) => string\n+}\n+\n+type Props = {\n+  item: MyRecordListItem\n+  labels: RecordLabels\n+  /** 처음부터 펼쳐 둔다(`?resultToken=`으로 들어온 행) */\n+  initiallyOpen?: boolean\n+}\n+\n+// `disabled` 는 초점을 받지 못해 aria-describedby 의 사유가 읽히지 않는다(FR-021). 초점은 두고 눌러도 아무 일이 없다.\n+const DISABLED_LOOK = 'aria-disabled:opacity-50 aria-disabled:cursor-not-allowed'\n+\n+const KIND_ICON = { ANALYSIS: LineChart, SEARCH_BUNDLE: Layers, REGIME_SEARCH: CloudSun } as const\n+\n+/**\n+ * 목록의 한 항목(FR-001·FR-002, research R7).\n+ *\n+ * <p><b>주 모양 버튼은 '다시 보기' 하나다.</b> '설정 바꿔 비교'는 보조 모양이다 — 같은 크기 버튼 둘은 원칙 II\n+ * 위반이고 `MyRecordsPage.test`가 행마다 주 버튼 수를 단언한다.\n+ *\n+ * <p>상태와 사유는 성과와 다른 자리다(FR-014). 이 화면에는 성과 수치 자체가 없다.\n+ */\n+export const RecordRow = forwardRef<HTMLLIElement, Props>(function RecordRow(\n+  { item, labels, initiallyOpen = false },\n+  ref,\n+) {\n+  const panelId = useId()\n+  const detail = useDisclosure(panelId, initiallyOpen)\n+  const reasonId = useId()\n+  const href = reviewHref(item)\n+  const Icon = KIND_ICON[item.kind]\n+  const period = item.period\n+    ? `${item.period.start} ~ ${item.period.end}`\n+    : item.kind === 'REGIME_SEARCH'\n+      ? item.regime.baselineMonth.slice(0, 7)\n+      : null\n+\n+  return (\n+    <li ref={ref} className={styles.row} tabIndex={-1} data-record-id={item.recordId}>\n+      <div className={styles.rowHead}>\n+        <span className={styles.kind}>\n+          <Icon size={14} aria-hidden=\"true\" />\n+          {KIND_LABEL[item.kind]}\n+        </span>\n+        <h2 className={styles.name}>{item.name}</h2>\n+        <span className={styles.status} data-status={item.status}>\n+          {STATUS_LABEL[item.status]}\n+          {item.statusReason ? (\n+            <span className={styles.reason}> · {reasonLabel(item.statusReason)}</span>\n+          ) : null}\n+        </span>\n+      </div>\n+\n+      <dl className={styles.facts}>\n+        {item.sectorCodes.length > 0 ? (\n+          <>\n+            <dt>섹터</dt>\n+            <dd>\n+              <ul className={styles.chips} aria-label=\"섹터\">\n+                {item.sectorCodes.map((code) => (\n+                  <li key={code}>{labels.sector(code)}</li>\n+                ))}\n+              </ul>\n+            </dd>\n+          </>\n+        ) : null}\n+        {item.strategyIds.length > 0 ? (\n+          <>\n+            <dt>전략</dt>\n+            <dd>{item.strategyIds.map(labels.strategy).join(', ')}</dd>\n+          </>\n+        ) : null}\n+        {period ? (\n+          <>\n+            <dt>{item.kind === 'REGIME_SEARCH' ? '기준월' : '분석 기간'}</dt>\n+            <dd>{period}</dd>\n+          </>\n+        ) : null}\n+        <dt>저장일</dt>\n+        <dd>\n+          <time dateTime={item.savedAt}>{formatSavedAt(item.savedAt)}</time>\n+        </dd>\n+      </dl>\n+\n+      <div className={styles.actions}>\n+        {href ? (\n+          <Button asChild>\n+            <Link to={href}>다시 보기</Link>\n+          </Button>\n+        ) : (\n+          <Button\n+            type=\"button\"\n+            aria-disabled=\"true\"\n+            aria-describedby={reasonId}\n+            className={DISABLED_LOOK}\n+          >\n+            다시 보기\n+          </Button>\n+        )}\n+        <Button\n+          type=\"button\"\n+          variant=\"outline\"\n+          aria-disabled=\"true\"\n+          aria-describedby={`${reasonId}-reopen`}\n+          className={DISABLED_LOOK}\n+        >\n+          설정 바꿔 비교\n+        </Button>\n+        <Button type=\"button\" variant=\"outline\" {...detail.toggleProps}>\n+          {detail.open ? '접기' : '자세히'}\n+        </Button>\n+      </div>\n+      <p className={styles.srOnly} id={`${reasonId}-reopen`}>\n+        {REOPEN_NOT_YET}\n+      </p>\n+      {href ? null : (\n+        <p id={reasonId} className={styles.hint}>\n+          {WITHDRAWN_REASON}\n+        </p>\n+      )}\n+\n+      {detail.open ? (\n+        <RecordDetailPanel id={panelId} recordId={item.recordId} labels={labels} onClose={detail.close} />\n+      ) : null}\n+    </li>\n+  )\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/RecordRow.tsx",
+          "old_path": "frontend/src/components/records/RecordRow.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,105 @@\n+import type { MyRecordKind, MyRecordListItem, MyRecordStatus } from '@/types/myRecords'\n+import type { ParamSearchStopReason } from '@/types/paramSearch'\n+import { stopReasonText } from '@/utils/paramSearchLabels'\n+\n+/**\n+ * 목록이 쓰는 이름·문장. 상태 이름은 서버 값을 옮긴 것이고, 경제환경 상태는 010의 뜻을 그대로 둔다 —\n+ * '계산 불가'를 실패로 부르지 않는다(FR-004).\n+ */\n+\n+export const KIND_LABEL: Record<MyRecordKind, string> = {\n+  ANALYSIS: '분석',\n+  SEARCH_BUNDLE: '탐색 묶음',\n+  REGIME_SEARCH: '경제환경',\n+}\n+\n+export const STATUS_LABEL: Record<MyRecordStatus, string> = {\n+  COMPLETED: '완료',\n+  RUNNING: '진행 중',\n+  FAILED: '실패',\n+  CANCELLED: '취소',\n+  PARTIAL: '부분 완료',\n+  NOT_COMPUTABLE: '계산 불가',\n+  NEAREST_ONLY: '가까운 순서만',\n+  THRESHOLD_APPLIED: '문턱 적용',\n+  WITHDRAWN: '더 볼 수 없음',\n+}\n+\n+/** 상태 필터 선택지. 기본 보기(완료·문턱 적용)가 앞이다. */\n+export const STATUS_OPTIONS: MyRecordStatus[] = [\n+  'COMPLETED',\n+  'THRESHOLD_APPLIED',\n+  'RUNNING',\n+  'PARTIAL',\n+  'FAILED',\n+  'CANCELLED',\n+  'NEAREST_ONLY',\n+  'NOT_COMPUTABLE',\n+  'WITHDRAWN',\n+]\n+\n+/** 정렬 선택지. 수익률·하락 폭·비용은 없다(research R7, quickstart S13-4). */\n+export const SORT_OPTIONS = [\n+  { value: 'SAVED_AT_DESC', label: '저장일 최신순' },\n+  { value: 'SAVED_AT_ASC', label: '저장일 오래된순' },\n+  { value: 'NAME_ASC', label: '이름순' },\n+] as const\n+\n+export const WITHDRAWN_REASON = '검색 결과가 철회되어 더 볼 수 없습니다.'\n+export const REOPEN_NOT_YET = \"'설정 바꿔 비교'는 다음 묶음에서 연결됩니다.\"\n+\n+/** 서버가 준 ISO 시각을 사용자 지역 날짜·시각으로. 지어내지 않고 못 읽으면 원문을 둔다. */\n+export function formatSavedAt(value: string): string {\n+  const date = new Date(value)\n+  if (Number.isNaN(date.getTime())) return value\n+  return new Intl.DateTimeFormat('ko-KR', {\n+    year: 'numeric',\n+    month: '2-digit',\n+    day: '2-digit',\n+    hour: '2-digit',\n+    minute: '2-digit',\n+  }).format(date)\n+}\n+\n+/** '다시 보기' 목적지. 재계산하지 않고 저장된 것을 연다(FR-006). 열 수 없으면 null이다. */\n+export function reviewHref(item: MyRecordListItem): string | null {\n+  switch (item.kind) {\n+    case 'ANALYSIS':\n+      return `/results/${encodeURIComponent(item.resultToken)}?from=records&recordId=${encodeURIComponent(item.recordId)}`\n+    case 'SEARCH_BUNDLE':\n+      return `/param-search?searchId=${encodeURIComponent(item.searchId)}`\n+    case 'REGIME_SEARCH':\n+      return item.regime.withdrawn\n+        ? null\n+        : `/regime-search?searchId=${encodeURIComponent(item.regime.snapshotKey)}`\n+  }\n+}\n+\n+// 007 이 사유를 더하면 여기서 빌드가 깨진다 — 조용히 코드 그대로 나가는 일이 없다.\n+const PARAM_STOP_REASONS: Record<ParamSearchStopReason, true> = {\n+  CANCELLED: true,\n+  CANDIDATE_LIMIT: true,\n+  TIME_LIMIT: true,\n+  FAILURE_LIMIT: true,\n+  NO_VALID_CANDIDATE: true,\n+  STRATEGY_NOT_REGISTERED: true,\n+  STRATEGY_NOT_EXECUTABLE: true,\n+}\n+\n+/** 010 `statusReason`. 계산 불가의 사유가 넷으로 나뉜 것이 요점이다 — 사용자가 할 일이 사유마다 다르다. */\n+const REGIME_REASON_LABEL: Record<string, string> = {\n+  SCALE_WINDOW_TOO_SHORT: '척도 구간이 60개월에 못 미쳤습니다',\n+  SCALE_ZERO: '지표의 산포를 말할 수 없었습니다',\n+  QUERY_INPUT_MISSING: '비교 시점이 하나도 없는 지표가 있었습니다',\n+  NO_CANDIDATE: '유효 후보가 없었습니다',\n+  THRESHOLD_NOT_CALIBRATED: '문턱이 아직 교정되지 않았습니다',\n+}\n+\n+/**\n+ * 상태 사유 코드를 문장으로. 007 묶음의 사유는 그 화면의 문장(`stopReasonText`)을 그대로 쓴다. 모르는 코드(004\n+ * 실행의 `failure_code` 등)는 코드를 그대로 둔다 — 문장을 지어내지 않는다(원칙 VI).\n+ */\n+export function reasonLabel(code: string): string {\n+  if (code in PARAM_STOP_REASONS) return stopReasonText(code as ParamSearchStopReason)\n+  return REGIME_REASON_LABEL[code] ?? code\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/recordLabels.ts",
+          "old_path": "frontend/src/components/records/recordLabels.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,282 @@\n+/* 내 기록 목록·필터·펼쳐 보는 층이 함께 쓰는 모양. 카드보다 얇은 선과 간격으로 묶는다(design-system §1). */\n+\n+.filters {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 14px 28px;\n+  padding: 18px 0 22px;\n+  border-bottom: 1px solid var(--thorp-line-strong);\n+}\n+\n+.group {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  gap: 6px 12px;\n+  min-width: 0;\n+  margin: 0;\n+  padding: 0;\n+  border: 0;\n+}\n+\n+.group legend,\n+.group > label:not(.check) {\n+  width: 100%;\n+  margin: 0 0 2px;\n+  padding: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+}\n+\n+.check {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 6px;\n+  color: var(--thorp-foreground);\n+  font-size: 0.85rem;\n+}\n+\n+.group select,\n+.group input[type='date'] {\n+  min-height: 36px;\n+  padding: 4px 10px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 5px;\n+  color: var(--thorp-foreground);\n+  background: var(--thorp-surface);\n+  font: inherit;\n+}\n+\n+.group select:focus-visible,\n+.group input:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+.hint {\n+  width: 100%;\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: 0.78rem;\n+  line-height: 1.6;\n+}\n+\n+.list {\n+  display: flex;\n+  flex-direction: column;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.row {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 12px;\n+  min-width: 0;\n+  padding: 22px 0;\n+  border-bottom: 1px solid var(--thorp-line);\n+}\n+\n+.row:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+.rowHead {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: baseline;\n+  gap: 6px 14px;\n+}\n+\n+.kind {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 5px;\n+  color: var(--thorp-accent-soft);\n+  font-size: 0.72rem;\n+  font-weight: 700;\n+  letter-spacing: 0.08em;\n+}\n+\n+.name {\n+  margin: 0;\n+  font-size: 1.15rem;\n+  letter-spacing: -0.02em;\n+  overflow-wrap: anywhere;\n+}\n+\n+/* 상태는 성과와 다른 자리다(FR-014). 색만으로 뜻을 전하지 않고 글자가 함께 있다. */\n+.status {\n+  padding: 2px 8px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: 999px;\n+  color: var(--thorp-copy);\n+  font-size: 0.75rem;\n+}\n+\n+.status[data-status='FAILED'],\n+.status[data-status='CANCELLED'],\n+.status[data-status='WITHDRAWN'] {\n+  border-color: var(--thorp-negative);\n+  color: var(--thorp-negative);\n+}\n+\n+.status[data-status='RUNNING'],\n+.status[data-status='PARTIAL'],\n+.status[data-status='NEAREST_ONLY'],\n+.status[data-status='NOT_COMPUTABLE'] {\n+  border-color: var(--thorp-warning);\n+  color: var(--thorp-warning);\n+}\n+\n+.reason {\n+  color: var(--thorp-copy);\n+}\n+\n+.facts {\n+  display: grid;\n+  grid-template-columns: max-content 1fr;\n+  gap: 4px 14px;\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.85rem;\n+}\n+\n+.facts dt {\n+  color: var(--thorp-muted);\n+}\n+\n+.facts dd {\n+  margin: 0;\n+  min-width: 0;\n+  color: var(--thorp-foreground);\n+}\n+\n+.chips {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 4px 6px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.chips li {\n+  padding: 1px 8px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 4px;\n+  font-size: 0.8rem;\n+}\n+\n+.actions {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 8px 10px;\n+}\n+\n+.srOnly {\n+  position: absolute;\n+  width: 1px;\n+  height: 1px;\n+  margin: -1px;\n+  padding: 0;\n+  overflow: hidden;\n+  clip: rect(0 0 0 0);\n+  white-space: nowrap;\n+  border: 0;\n+}\n+\n+.panel {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 14px;\n+  padding: 18px 20px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 10px;\n+  background: var(--thorp-surface);\n+}\n+\n+.panelHead {\n+  display: flex;\n+  align-items: baseline;\n+  justify-content: space-between;\n+  gap: 12px;\n+}\n+\n+.panelTitle {\n+  margin: 0;\n+  font-size: 1rem;\n+}\n+\n+.panelTitle:focus-visible {\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n+}\n+\n+.versions {\n+  display: grid;\n+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));\n+  gap: 6px 18px;\n+  margin: 0;\n+}\n+\n+.versions > div {\n+  display: flex;\n+  gap: 8px;\n+}\n+\n+.versions dt {\n+  color: var(--thorp-muted);\n+}\n+\n+.versions dd {\n+  margin: 0;\n+  overflow-wrap: anywhere;\n+}\n+\n+.notice {\n+  margin: 0;\n+  padding: 10px 12px;\n+  border-left: 3px solid var(--thorp-warning);\n+  color: var(--thorp-foreground);\n+  font-size: 0.9rem;\n+  line-height: 1.6;\n+}\n+\n+.alert {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n+  gap: 8px;\n+}\n+\n+.alert p {\n+  margin: 0;\n+  color: var(--thorp-negative);\n+}\n+\n+.origin {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 4px;\n+}\n+\n+.origin p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.9rem;\n+  line-height: 1.6;\n+}\n+\n+@media (max-width: 600px) {\n+  .facts {\n+    grid-template-columns: 1fr;\n+  }\n+\n+  .actions {\n+    flex-direction: column;\n+    align-items: stretch;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/records/records.module.css",
+          "old_path": "frontend/src/components/records/records.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,8 +8,8 @@ import { useCallback, useRef, useState } from 'react'\n  *\n  * <p>주소를 바꾸지 않는다. 결과 화면을 떠나지 않고 연다(SC-006).\n  */\n-export function useDisclosure(panelId: string) {\n-  const [open, setOpen] = useState(false)\n+export function useDisclosure(panelId: string, initialOpen = false) {\n+  const [open, setOpen] = useState(initialOpen)\n   const toggleRef = useRef<HTMLButtonElement>(null)\n \n   const close = useCallback(() => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useDisclosure.ts",
+          "old_path": "frontend/src/hooks/useDisclosure.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,122 @@\n+import { useCallback, useEffect, useMemo, useState } from 'react'\n+import { fetchMyRecords } from '@/api/myRecords'\n+import { ApiClientError } from '@/api/client'\n+import type { MyRecordListItem, MyRecordListQuery } from '@/types/myRecords'\n+\n+/**\n+ * 목록 상태(spec 006 US1).\n+ *\n+ * <p>받지 못했다고 빈 목록으로 바꾸지 않는다 — 빈 목록은 \"기록이 없다\"는 거짓이 된다(원칙 VI). 첫 쪽을\n+ * 받지 못하면 `failed`, 다음 쪽을 받지 못하면 받아 둔 항목은 남기고 `moreError`만 채운다.\n+ */\n+export type MyRecordsState =\n+  | { status: 'loading' }\n+  | { status: 'failed'; message: string }\n+  | {\n+      status: 'loaded'\n+      items: MyRecordListItem[]\n+      /** 다음 쪽이 없으면 null */\n+      nextCursor: string | null\n+      loadingMore: boolean\n+      moreError: string | null\n+    }\n+\n+const FALLBACK = '기록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'\n+\n+function messageOf(error: unknown): string {\n+  return error instanceof ApiClientError ? error.message : FALLBACK\n+}\n+\n+/**\n+ * 질의가 바뀌면 첫 쪽부터 다시 받는다. `loadMore`는 이전 응답의 `nextCursor`로 다음 쪽을 받아 뒤에 붙인다 —\n+ * offset 이 아니라 커서라 사이에 새 항목이 들어와도 겹치거나 빠지지 않는다(research R14).\n+ *\n+ * <p>화면을 떠나면 요청을 끊고, 떠난 뒤 온 응답은 버린다. 실패해도 스스로 다시 부르지 않는다.\n+ *\n+ * <p>질의 객체는 화면이 매 렌더마다 새로 만들 수 있어 내용으로 견준다. 키 순서가 다르면 같은 질의도 다른\n+ * 문자열이라 다시 부르지만, 필터 컴포넌트가 한 객체를 펼쳐 고치므로 순서는 유지된다.\n+ */\n+export function useMyRecords(query: MyRecordListQuery) {\n+  const [state, setState] = useState<MyRecordsState>({ status: 'loading' })\n+  const [attempt, setAttempt] = useState(0)\n+  const [moreCursor, setMoreCursor] = useState<string | null>(null)\n+\n+  const queryKey = JSON.stringify(query)\n+  const stableQuery = useMemo(() => JSON.parse(queryKey) as MyRecordListQuery, [queryKey])\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    let active = true\n+    setState({ status: 'loading' })\n+    setMoreCursor(null)\n+    fetchMyRecords(stableQuery, controller.signal).then(\n+      (page) => {\n+        if (!active) return\n+        setState({\n+          status: 'loaded',\n+          items: page.items,\n+          nextCursor: page.nextCursor,\n+          loadingMore: false,\n+          moreError: null,\n+        })\n+      },\n+      (error: unknown) => {\n+        if (active) setState({ status: 'failed', message: messageOf(error) })\n+      },\n+    )\n+    return () => {\n+      active = false\n+      controller.abort()\n+    }\n+  }, [stableQuery, attempt])\n+\n+  useEffect(() => {\n+    if (!moreCursor) return\n+    const controller = new AbortController()\n+    let active = true\n+    setState((previous) =>\n+      previous.status === 'loaded' ? { ...previous, loadingMore: true, moreError: null } : previous,\n+    )\n+    fetchMyRecords({ ...stableQuery, cursor: moreCursor }, controller.signal).then(\n+      (page) => {\n+        if (!active) return\n+        setState((previous) =>\n+          previous.status === 'loaded'\n+            ? {\n+                status: 'loaded',\n+                items: [...previous.items, ...page.items],\n+                nextCursor: page.nextCursor,\n+                loadingMore: false,\n+                moreError: null,\n+              }\n+            : previous,\n+        )\n+      },\n+      (error: unknown) => {\n+        if (!active) return\n+        // 커서를 놓아 준다. 같은 커서를 다시 넣으면 React 가 갱신을 건너뛰어 effect 가 돌지 않고, 사용자는\n+        // 눌러도 아무 일이 없는 '더 보기'를 본다.\n+        setMoreCursor(null)\n+        setState((previous) =>\n+          previous.status === 'loaded'\n+            ? { ...previous, loadingMore: false, moreError: messageOf(error) }\n+            : previous,\n+        )\n+      },\n+    )\n+    return () => {\n+      active = false\n+      controller.abort()\n+    }\n+  }, [moreCursor, stableQuery])\n+\n+  const retry = useCallback(() => setAttempt((count) => count + 1), [])\n+  // 연달아 눌러도 한 번만 받는 것은 loadingMore 검사가 막는다.\n+  const loadMore = useCallback(() => {\n+    if (state.status === 'loaded' && state.nextCursor && !state.loadingMore) {\n+      setMoreCursor(state.nextCursor)\n+    }\n+  }, [state])\n+\n+  return { ...state, retry, loadMore }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useMyRecords.ts",
+          "old_path": "frontend/src/hooks/useMyRecords.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,37 +0,0 @@\n-import { ArrowRight, FolderClock } from 'lucide-react'\n-import { Link } from 'react-router-dom'\n-import { useAuth } from '@/auth/auth-context'\n-import { AppHeader } from '@/components/navigation/AppHeader'\n-import styles from './MyRecordsEntryPage.module.css'\n-\n-/** spec 006의 기록 목록을 구현하지 않고 인증된 내 기록 진입 경계만 제공한다. */\n-export function MyRecordsEntryPage() {\n-  const { user } = useAuth()\n-\n-  return (\n-    <div className={styles.page}>\n-      <AppHeader />\n-      <main className={styles.main} aria-labelledby=\"records-title\">\n-        <div className={styles.eyebrow}>\n-          <FolderClock size={17} aria-hidden=\"true\" />\n-          MY RECORDS\n-        </div>\n-        <h1 id=\"records-title\">{user?.nickname}님의 내 기록</h1>\n-        <p>\n-          로그인 상태가 확인되었습니다. 저장된 분석 기록과 다시보기 기능은 내 기록 기능에서\n-          이어집니다.\n-        </p>\n-        <div className={styles.actions}>\n-          <Link to=\"/backtest\">\n-            전략 검증하기\n-            <ArrowRight size={16} aria-hidden=\"true\" />\n-          </Link>\n-          <Link to=\"/market-flow\">시장 흐름 보기</Link>\n-        </div>\n-        <p className={styles.scopeNote}>\n-          이 화면은 사용자별 기록을 보호하는 진입점이며, 기록 목록은 spec 006 범위입니다.\n-        </p>\n-      </main>\n-    </div>\n-  )\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsEntryPage.tsx",
+          "old_path": "frontend/src/pages/MyRecordsEntryPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,9 +4,8 @@\n   background:\n     linear-gradient(var(--thorp-line) 1px, transparent 1px),\n     linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),\n-    radial-gradient(circle at 50% 28%, rgb(3 199 90 / 10%), transparent 34%),\n     var(--thorp-background);\n-  background-size: 72px 72px, 72px 72px, auto, auto;\n+  background-size: 72px 72px, 72px 72px, auto;\n   color: var(--thorp-foreground);\n }\n \n@@ -16,79 +15,76 @@\n   padding: clamp(90px, 15vh, 160px) 0 80px;\n }\n \n-.eyebrow,\n-.actions {\n+.eyebrow {\n   display: flex;\n   align-items: center;\n-}\n-\n-.eyebrow {\n-  gap: 9px;\n+  gap: 8px;\n+  margin: 0;\n   color: var(--thorp-accent-soft);\n   font-size: 0.72rem;\n   font-weight: 750;\n   letter-spacing: 0.16em;\n }\n \n-.main h1 {\n-  max-width: 780px;\n-  margin: 22px 0 18px;\n-  font-size: clamp(2.5rem, 7vw, 5.8rem);\n-  line-height: 0.98;\n-  letter-spacing: -0.065em;\n+.title {\n+  margin: 14px 0 6px;\n+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);\n+  line-height: 1.1;\n+  letter-spacing: -0.04em;\n }\n \n-.main > p:not(.scopeNote) {\n-  max-width: 620px;\n-  margin: 0;\n+.status {\n+  margin: 24px 0 0;\n   color: var(--thorp-copy);\n-  font-size: clamp(0.95rem, 1.8vw, 1.08rem);\n-  line-height: 1.8;\n+  font-size: 0.95rem;\n+  line-height: 1.7;\n }\n \n-.actions {\n+.error {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n   gap: 12px;\n-  margin-top: 38px;\n-  flex-wrap: wrap;\n+  margin-top: 24px;\n }\n \n-.actions a {\n-  display: inline-flex;\n-  min-height: 46px;\n-  align-items: center;\n-  gap: 20px;\n-  padding: 0 18px;\n-  border: 1px solid var(--thorp-line-strong);\n-  border-radius: 4px;\n-  color: var(--thorp-foreground);\n-  font-size: 0.82rem;\n-  font-weight: 700;\n-  text-decoration: none;\n+.error p {\n+  margin: 0;\n+  color: var(--thorp-negative);\n }\n \n-.actions a:first-child {\n-  border-color: var(--thorp-accent);\n-  background: var(--thorp-accent);\n-  color: var(--thorp-action-foreground);\n+.empty {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n+  gap: 16px;\n+  margin-top: 32px;\n }\n \n-.actions a:hover {\n-  border-color: var(--thorp-accent-soft);\n+.empty p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 1rem;\n }\n \n-.actions a:focus-visible {\n-  outline: var(--thorp-focus-outline);\n-  outline-offset: var(--thorp-focus-offset);\n+.list {\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n }\n \n-.scopeNote {\n-  max-width: 620px;\n-  margin-top: 70px;\n-  padding-top: 18px;\n-  border-top: 1px solid var(--thorp-line);\n-  color: var(--thorp-muted);\n-  font-size: 0.72rem;\n-  line-height: 1.65;\n+.more {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  gap: 12px;\n+  padding: 22px 0;\n+}\n+\n+.more p {\n+  margin: 0;\n+  color: var(--thorp-negative);\n+  font-size: 0.85rem;\n }\n \n @media (max-width: 600px) {\n@@ -96,13 +92,4 @@\n     width: min(100% - 28px, 960px);\n     padding-top: 72px;\n   }\n-\n-  .actions {\n-    align-items: stretch;\n-    flex-direction: column;\n-  }\n-\n-  .actions a {\n-    justify-content: space-between;\n-  }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.module.css",
+          "old_path": "frontend/src/pages/MyRecordsEntryPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,262 @@\n+import { render, screen, within } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import { ProtectedRoute } from '@/auth/ProtectedRoute'\n+import { NOT_RECORDED } from '@/components/records/RecordDetailPanel'\n+import { WITHDRAWN_REASON } from '@/components/records/recordLabels'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import {\n+  analysisDetail,\n+  analysisRecord,\n+  listPage,\n+  withdrawnRegimeRecord,\n+} from '@/test/myRecordsFixtures'\n+import { EMPTY_MESSAGE, MyRecordsPage } from './MyRecordsPage'\n+\n+/** 006 T026. quickstart S1·S12·S13, 원칙 II·III. */\n+\n+const apiMocks = vi.hoisted(() => ({\n+  fetchMyRecords: vi.fn(),\n+  fetchMyRecord: vi.fn(),\n+}))\n+const otherMocks = vi.hoisted(() => ({\n+  fetchSectorCatalog: vi.fn(),\n+  fetchStrategyRegistry: vi.fn(),\n+}))\n+\n+vi.mock('@/api/myRecords', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/api/myRecords')>()\n+  return { ...actual, ...apiMocks }\n+})\n+vi.mock('@/api/sectors', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/api/sectors')>()\n+  return { ...actual, fetchSectorCatalog: otherMocks.fetchSectorCatalog }\n+})\n+vi.mock('@/api/strategyRegistry', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/api/strategyRegistry')>()\n+  return { ...actual, fetchStrategyRegistry: otherMocks.fetchStrategyRegistry }\n+})\n+vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))\n+\n+const anonymousAuth: AuthContextValue = {\n+  status: 'anonymous',\n+  user: null,\n+  login: vi.fn(),\n+  logout: vi.fn(),\n+  recheck: vi.fn(),\n+}\n+const authenticatedAuth: AuthContextValue = {\n+  ...anonymousAuth,\n+  status: 'authenticated',\n+  user: authenticatedUser,\n+  recheck: vi.fn().mockResolvedValue({ status: 'authenticated', user: authenticatedUser }),\n+}\n+\n+function renderPage(path = '/records', auth = authenticatedAuth) {\n+  return render(\n+    <MemoryRouter initialEntries={[path]}>\n+      <AuthContext.Provider value={auth}>\n+        <Routes>\n+          <Route\n+            path=\"/records/*\"\n+            element={\n+              <ProtectedRoute>\n+                <MyRecordsPage />\n+              </ProtectedRoute>\n+            }\n+          />\n+          <Route path=\"/login\" element={<h1>로그인 화면</h1>} />\n+        </Routes>\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+const performanceWords = /수익률|하락 폭|비용순|MDD/\n+\n+describe('MyRecordsPage', () => {\n+  beforeEach(() => {\n+    apiMocks.fetchMyRecords.mockReset()\n+    apiMocks.fetchMyRecord.mockReset()\n+    otherMocks.fetchSectorCatalog.mockReset()\n+    otherMocks.fetchStrategyRegistry.mockReset()\n+    otherMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))\n+    otherMocks.fetchStrategyRegistry.mockReturnValue(new Promise(() => {}))\n+  })\n+\n+  afterEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('fixture 세 종류를 이름·섹터·전략·기간·저장일·상태로 보이고 종류별 다시 보기 주소를 건다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)\n+\n+    renderPage()\n+\n+    const list = await screen.findByRole('list', { name: '내 기록' })\n+    const rows = within(list).getAllByRole('listitem').filter((el) => el.hasAttribute('data-record-id'))\n+    expect(rows).toHaveLength(3)\n+    expect(within(rows[0]).getByRole('heading', { name: analysisRecord.name })).toBeTruthy()\n+    expect(within(rows[0]).getByText('SEMICONDUCTOR')).toBeTruthy()\n+    expect(within(rows[0]).getByText('2019-01-02 ~ 2026-08-29')).toBeTruthy()\n+    expect(within(rows[0]).getByText('완료')).toBeTruthy()\n+    // 상태 사유는 상태 옆에 있고 성과와 섞이지 않는다(FR-014).\n+    expect(within(rows[1]).getByText(/부분 완료/).textContent).toContain('실행 시간 한도에 닿았습니다')\n+    expect(document.body.textContent).not.toContain('TIME_LIMIT')\n+\n+    const review = (row: HTMLElement) => within(row).getByRole('link', { name: '다시 보기' })\n+    expect(review(rows[0]).getAttribute('href')).toBe(\n+      `/results/${analysisRecord.resultToken}?from=records&recordId=${analysisRecord.recordId}`,\n+    )\n+    expect(review(rows[1]).getAttribute('href')).toBe('/param-search?searchId=PS-20260917-000009')\n+    expect(review(rows[2]).getAttribute('href')).toContain('/regime-search?searchId=FIELD%3AEMPLOYMENT')\n+    expect(document.body.textContent).not.toMatch(performanceWords)\n+  })\n+\n+  it('행마다 주 모양 버튼은 다시 보기 하나다 — 설정 바꿔 비교는 보조 모양이다(원칙 II)', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)\n+\n+    renderPage()\n+\n+    const list = await screen.findByRole('list', { name: '내 기록' })\n+    const rows = within(list).getAllByRole('listitem').filter((el) => el.hasAttribute('data-record-id'))\n+    for (const row of rows) {\n+      const primary = row.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]')\n+      expect(primary).toHaveLength(1)\n+      expect(primary[0].textContent).toBe('다시 보기')\n+      const reopen = within(row).getByRole('button', { name: '설정 바꿔 비교' })\n+      expect(reopen.getAttribute('data-variant')).toBe('outline')\n+      // 아직 연결되지 않은 버튼은 disabled 가 아니라 aria-disabled 다 — 초점을 받아야 사유가 읽힌다(FR-021).\n+      expect(reopen.getAttribute('aria-disabled')).toBe('true')\n+    }\n+  })\n+\n+  it('기본 보기는 상태를 보내지 않고(서버 기본 = 완료), 정렬 선택지에 성과가 없다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)\n+\n+    renderPage()\n+    await screen.findByRole('list', { name: '내 기록' })\n+\n+    expect(apiMocks.fetchMyRecords).toHaveBeenCalledWith({}, expect.any(AbortSignal))\n+    for (const status of ['완료', '문턱 적용', '실패', '취소']) {\n+      expect((screen.getByRole('checkbox', { name: status }) as HTMLInputElement).checked).toBe(false)\n+    }\n+    const sort = screen.getByRole('combobox', { name: '정렬' })\n+    const options = within(sort)\n+      .getAllByRole('option')\n+      .map((option) => option.textContent)\n+    expect(options).toEqual(['저장일 최신순', '저장일 오래된순', '이름순'])\n+    expect(options.join(' ')).not.toMatch(performanceWords)\n+  })\n+\n+  it('상태 필터를 켜면 그 상태로 다시 부른다(S13-3)', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords.mockResolvedValue(listPage)\n+\n+    renderPage()\n+    await screen.findByRole('list', { name: '내 기록' })\n+\n+    await user.click(screen.getByRole('checkbox', { name: '실패' }))\n+\n+    expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith(\n+      { status: ['FAILED'] },\n+      expect.any(AbortSignal),\n+    )\n+  })\n+\n+  it('빈 목록은 한 문장과 전략 검증하기 연결이다(FR-001)', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [], nextCursor: null })\n+\n+    renderPage()\n+\n+    expect(await screen.findByText(EMPTY_MESSAGE)).toBeTruthy()\n+    expect(screen.getByRole('link', { name: '전략 검증하기' }).getAttribute('href')).toBe(\n+      '/diagnosis/sectors',\n+    )\n+    expect(screen.queryByRole('alert')).toBeNull()\n+  })\n+\n+  it('철회된 경제환경 항목은 다시 보기가 비활성이고 이유가 보인다', async () => {\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [withdrawnRegimeRecord], nextCursor: null })\n+\n+    renderPage()\n+\n+    const button = await screen.findByRole('button', { name: '다시 보기' })\n+    // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 사유가 읽힌다(FR-021).\n+    expect(button.getAttribute('aria-disabled')).toBe('true')\n+    expect((button as HTMLButtonElement).disabled).toBe(false)\n+    expect(screen.getByText(WITHDRAWN_REASON)).toBeTruthy()\n+    // 상태 필터의 체크박스 라벨과 겹치므로 행 안에서 찾는다.\n+    const list = screen.getByRole('list', { name: '내 기록' })\n+    expect(within(list).getByText('더 볼 수 없음')).toBeTruthy()\n+  })\n+\n+  it('자세히를 열면 참조 버전과 대응표 판정 문장이 보이고, 없는 버전은 기록되지 않음이며 Esc로 닫힌다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords.mockResolvedValue({ items: [analysisRecord], nextCursor: null })\n+    apiMocks.fetchMyRecord.mockResolvedValue(analysisDetail)\n+\n+    renderPage()\n+    const toggle = await screen.findByRole('button', { name: '자세히' })\n+    await user.click(toggle)\n+\n+    expect(await screen.findByText('2차전지 섹터의 대표 ETF가 저장 당시와 다릅니다.', { exact: false })).toBeTruthy()\n+    expect(screen.getByText('CP-2026-09-17-001 (잠정)')).toBeTruthy()\n+    // 등록표 버전은 오지 않았다. 지어내지 않고 '기록되지 않음'이다(원칙 VI).\n+    const registry = screen.getByText('등록표')\n+    expect(registry.nextElementSibling?.textContent).toBe(NOT_RECORDED)\n+    expect(document.body.textContent).not.toMatch(/dependencies|numpy|scipy/)\n+\n+    await user.keyboard('{Escape}')\n+    expect(screen.queryByRole('heading', { name: '저장 당시 조건' })).toBeNull()\n+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '자세히' }))\n+  })\n+\n+  it('더 보기는 커서로 다음 쪽을 받아 뒤에 붙인다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords\n+      .mockResolvedValueOnce({ items: [analysisRecord], nextCursor: 'c1' })\n+      .mockResolvedValueOnce({ items: [withdrawnRegimeRecord], nextCursor: null })\n+\n+    renderPage()\n+    await user.click(await screen.findByRole('button', { name: '더 보기' }))\n+\n+    expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith({ cursor: 'c1' }, expect.any(AbortSignal))\n+    const list = await screen.findByRole('list', { name: '내 기록' })\n+    expect(\n+      within(list).getAllByRole('listitem').filter((el) => el.hasAttribute('data-record-id')),\n+    ).toHaveLength(2)\n+    expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()\n+  })\n+\n+  it('더 보기가 실패하면 받아 둔 항목은 남고, 다시 누르면 같은 커서로 다시 받는다', async () => {\n+    const user = userEvent.setup()\n+    apiMocks.fetchMyRecords\n+      .mockResolvedValueOnce({ items: [analysisRecord], nextCursor: 'c1' })\n+      .mockRejectedValueOnce(new Error('network'))\n+      .mockResolvedValueOnce({ items: [withdrawnRegimeRecord], nextCursor: null })\n+\n+    renderPage()\n+    await user.click(await screen.findByRole('button', { name: '더 보기' }))\n+\n+    expect(await screen.findByRole('alert')).toBeTruthy()\n+    expect(screen.getByRole('heading', { name: analysisRecord.name })).toBeTruthy()\n+\n+    // 같은 커서를 다시 넣어도 요청이 나가야 한다. 안 나가면 눌러도 아무 일이 없는 버튼이 된다.\n+    await user.click(screen.getByRole('button', { name: '더 보기' }))\n+\n+    expect(await screen.findByRole('heading', { name: withdrawnRegimeRecord.name })).toBeTruthy()\n+    expect(apiMocks.fetchMyRecords).toHaveBeenCalledTimes(3)\n+    expect(apiMocks.fetchMyRecords).toHaveBeenLastCalledWith({ cursor: 'c1' }, expect.any(AbortSignal))\n+    expect(screen.queryByRole('alert')).toBeNull()\n+  })\n+\n+  it('비로그인은 ProtectedRoute 가 로그인으로 보내고 기록을 부르지 않는다(S12)', async () => {\n+    renderPage('/records', anonymousAuth)\n+\n+    expect(await screen.findByRole('heading', { name: '로그인 화면' })).toBeTruthy()\n+    expect(apiMocks.fetchMyRecords).not.toHaveBeenCalled()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,156 @@\n+import { FolderClock } from 'lucide-react'\n+import { useEffect, useMemo, useRef, useState } from 'react'\n+import { Link, useSearchParams } from 'react-router-dom'\n+import { fetchStrategyRegistry } from '@/api/strategyRegistry'\n+import { useAuth } from '@/auth/auth-context'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { RecordFilters } from '@/components/records/RecordFilters'\n+import { type RecordLabels, RecordRow } from '@/components/records/RecordRow'\n+import { Button } from '@/components/ui/button'\n+import { useMyRecords } from '@/hooks/useMyRecords'\n+import { useSectorCatalogState } from '@/hooks/useSectorCatalogState'\n+import type { MyRecordListQuery } from '@/types/myRecords'\n+import type { StrategyView } from '@/types/strategyRegistry'\n+import styles from './MyRecordsPage.module.css'\n+\n+export const EMPTY_MESSAGE = '아직 저장된 기록이 없습니다.'\n+export const NO_MATCH_MESSAGE = '조건에 맞는 기록이 없습니다.'\n+\n+const DEFAULT_QUERY: MyRecordListQuery = {}\n+\n+/** 기본 보기인가. 정렬 드롭다운에서 기본값을 다시 고른 것은 조건을 건 것이 아니다. */\n+function isDefault(query: MyRecordListQuery): boolean {\n+  return Object.entries(query).every(\n+    ([key, value]) => value === undefined || (key === 'sort' && value === 'SAVED_AT_DESC'),\n+  )\n+}\n+\n+/**\n+ * 내 기록 목록(`/records`, spec 006 US1). `ProtectedRoute` 안에 있어 여기 왔으면 로그인 사용자다(S12).\n+ *\n+ * <p>목록은 서버의 기본 보기(완료 항목, 저장일 최신순)를 그대로 보이고 필터·정렬은 서버에 맡긴다. 화면이 정렬하거나\n+ * 성과로 줄 세우지 않는다(원칙 III). 빈 목록은 경고가 아니라 한 문장과 진단 시작 연결이다(FR-001).\n+ *\n+ * <p>`?resultToken=`으로 들어오면(005 결과 화면의 '기록으로 내보내기', T045a) 그 항목으로 초점을 옮기고 펼쳐 둔다.\n+ */\n+export function MyRecordsPage() {\n+  const { user } = useAuth()\n+  const [params] = useSearchParams()\n+  const highlightToken = params.get('resultToken')\n+  const [query, setQuery] = useState<MyRecordListQuery>(DEFAULT_QUERY)\n+  const records = useMyRecords(query)\n+  const catalog = useSectorCatalogState()\n+  const [strategies, setStrategies] = useState<StrategyView[] | null>(null)\n+  const highlightRef = useRef<HTMLLIElement>(null)\n+  // 초점 이동은 처음 받았을 때 한 번이다. 필터를 바꿔 다시 받을 때마다 튀면 사용자가 보던 자리를 잃는다.\n+  const highlightedOnce = useRef(false)\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    fetchStrategyRegistry(undefined, controller.signal).then(\n+      (registry) => setStrategies(registry.strategies),\n+      () => setStrategies(null),\n+    )\n+    return () => controller.abort()\n+  }, [])\n+\n+  const labels = useMemo<RecordLabels>(() => {\n+    const sectors = catalog.status === 'loaded' ? catalog.catalog.sectors : []\n+    return {\n+      sector: (code) => sectors.find((sector) => sector.code === code)?.name ?? code,\n+      strategy: (id) => strategies?.find((strategy) => strategy.strategyId === id)?.name ?? id,\n+    }\n+  }, [catalog, strategies])\n+\n+  useEffect(() => {\n+    if (records.status !== 'loaded' || !highlightToken || highlightedOnce.current) return\n+    const row = highlightRef.current\n+    if (!row) return\n+    highlightedOnce.current = true\n+    row.scrollIntoView?.({ block: 'center' })\n+    row.focus()\n+  }, [records.status, highlightToken])\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main} aria-labelledby=\"records-title\">\n+        <p className={styles.eyebrow}>\n+          <FolderClock size={15} aria-hidden=\"true\" />\n+          MY RECORDS\n+        </p>\n+        <h1 id=\"records-title\" className={styles.title}>\n+          {user?.nickname}님의 내 기록\n+        </h1>\n+\n+        <RecordFilters\n+          query={query}\n+          onChange={setQuery}\n+          catalog={catalog.status === 'loaded' ? catalog.catalog : null}\n+          strategies={strategies}\n+        />\n+\n+        {records.status === 'loading' ? (\n+          <p className={styles.status} role=\"status\">\n+            기록을 불러오는 중입니다.\n+          </p>\n+        ) : null}\n+\n+        {records.status === 'failed' ? (\n+          <div className={styles.error} role=\"alert\">\n+            <p>{records.message}</p>\n+            <Button type=\"button\" variant=\"outline\" onClick={records.retry}>\n+              다시 시도\n+            </Button>\n+          </div>\n+        ) : null}\n+\n+        {records.status === 'loaded' && records.items.length === 0 ? (\n+          isDefault(query) ? (\n+            <div className={styles.empty}>\n+              <p>{EMPTY_MESSAGE}</p>\n+              <Button asChild>\n+                <Link to=\"/diagnosis/sectors\">전략 검증하기</Link>\n+              </Button>\n+            </div>\n+          ) : (\n+            <p className={styles.status}>{NO_MATCH_MESSAGE}</p>\n+          )\n+        ) : null}\n+\n+        {records.status === 'loaded' && records.items.length > 0 ? (\n+          <>\n+            <ul className={styles.list} aria-label=\"내 기록\">\n+              {records.items.map((item) => {\n+                const highlighted =\n+                  item.kind === 'ANALYSIS' && highlightToken !== null && item.resultToken === highlightToken\n+                return (\n+                  <RecordRow\n+                    key={item.recordId}\n+                    ref={highlighted ? highlightRef : undefined}\n+                    item={item}\n+                    labels={labels}\n+                    initiallyOpen={highlighted}\n+                  />\n+                )\n+              })}\n+            </ul>\n+            {records.nextCursor ? (\n+              <div className={styles.more}>\n+                <Button\n+                  type=\"button\"\n+                  variant=\"outline\"\n+                  disabled={records.loadingMore}\n+                  onClick={records.loadMore}\n+                >\n+                  {records.loadingMore ? '불러오는 중' : '더 보기'}\n+                </Button>\n+                {records.moreError ? <p role=\"alert\">{records.moreError}</p> : null}\n+              </div>\n+            ) : null}\n+          </>\n+        ) : null}\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsPage.tsx",
+          "old_path": "frontend/src/pages/MyRecordsPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,75 @@\n+import { render, screen } from '@testing-library/react'\n+import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import { SAME_VERSION_NOTICE } from '@/components/records/RecordOriginNotice'\n+import { analysisDetail, analysisDetailUnjudged } from '@/test/myRecordsFixtures'\n+import { resultDetailCompleted, resultTimeseries, resultToken } from '@/test/resultFixtures'\n+import { ResultPage } from './ResultPage'\n+\n+/** 006 T024. quickstart S1-6(동일 버전 조회)·S5(대응표 판정은 서버 문장 그대로). */\n+\n+const resultMocks = vi.hoisted(() => ({\n+  fetchResult: vi.fn(),\n+  fetchResultTimeseries: vi.fn(),\n+}))\n+const recordMocks = vi.hoisted(() => ({ fetchMyRecord: vi.fn() }))\n+\n+vi.mock('@/api/result', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/api/result')>()\n+  return { ...actual, ...resultMocks }\n+})\n+vi.mock('@/api/myRecords', async (importOriginal) => {\n+  const actual = await importOriginal<typeof import('@/api/myRecords')>()\n+  return { ...actual, ...recordMocks }\n+})\n+vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>Thorp</header> }))\n+\n+function renderResult(search: string) {\n+  return render(\n+    <MemoryRouter initialEntries={[`/results/${resultToken}${search}`]}>\n+      <Routes>\n+        <Route path=\"/results/:token\" element={<ResultPage />} />\n+      </Routes>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('ResultPage from records', () => {\n+  beforeEach(() => {\n+    resultMocks.fetchResult.mockReset().mockResolvedValue(resultDetailCompleted)\n+    resultMocks.fetchResultTimeseries.mockReset().mockResolvedValue(resultTimeseries)\n+    recordMocks.fetchMyRecord.mockReset()\n+  })\n+\n+  afterEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('기록에서 열면 동일 버전 조회 한 줄과 서버가 판정한 대응표 문장을 보인다', async () => {\n+    recordMocks.fetchMyRecord.mockResolvedValue(analysisDetail)\n+\n+    renderResult('?from=records&recordId=MR-20260918-000042')\n+\n+    expect(await screen.findByText(SAME_VERSION_NOTICE)).toBeTruthy()\n+    expect(await screen.findByText('2차전지 섹터의 대표 ETF가 저장 당시와 다릅니다.')).toBeTruthy()\n+    expect(recordMocks.fetchMyRecord).toHaveBeenCalledWith('MR-20260918-000042', expect.any(AbortSignal))\n+  })\n+\n+  it('판정 근거가 없으면(키 없음) 문장을 덧붙이지 않는다 — 버전 번호만 올랐을 때 경고가 뜨면 UI-01 위반이다', async () => {\n+    recordMocks.fetchMyRecord.mockResolvedValue(analysisDetailUnjudged)\n+\n+    renderResult('?from=records&recordId=MR-20260918-000042')\n+\n+    expect(await screen.findByText(SAME_VERSION_NOTICE)).toBeTruthy()\n+    await screen.findByRole('heading', { name: '분석 결과' })\n+    expect(screen.getAllByRole('status').filter((el) => el.closest('[class*=\"origin\"]'))).toHaveLength(1)\n+  })\n+\n+  it('기록에서 오지 않았으면 그 줄이 없고 기록 상세를 부르지 않는다', async () => {\n+    renderResult('')\n+\n+    await screen.findByRole('heading', { name: '분석 결과' })\n+    expect(screen.queryByText(SAME_VERSION_NOTICE)).toBeNull()\n+    expect(recordMocks.fetchMyRecord).not.toHaveBeenCalled()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.records.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.records.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { act, render, screen, within } from '@testing-library/react'\n+import { act, render, screen, waitFor, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'\n import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n@@ -282,7 +282,11 @@ describe('ResultPage', () => {\n     await user.click(screen.getByRole('button', { name: '다시 시도' }))\n \n     expect(apiMocks.retryResult).toHaveBeenCalledWith(resultToken)\n-    expect((await screen.findByLabelText('현재 주소')).textContent).toBe(`/results/${newToken}`)\n+    // 주소는 클릭 뒤 retryResult → navigate → 렌더를 거쳐 바뀐다. 이미 있는 탐침을 바로 읽으면 바쁜 실행에서\n+    // 옛 주소를 본다 — 바뀔 때까지 기다린다.\n+    await waitFor(() =>\n+      expect(screen.getByLabelText('현재 주소').textContent).toBe(`/results/${newToken}`),\n+    )\n   })\n \n   it.each([\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n import { useId, useMemo } from 'react'\n-import { Link, useNavigate, useParams } from 'react-router-dom'\n+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'\n import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'\n@@ -7,6 +7,7 @@ import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'\n import { PeriodMismatchDialog } from '@/components/result/PeriodMismatchDialog'\n import { useCompareTarget } from '@/hooks/useCompareTarget'\n import { AppHeader } from '@/components/navigation/AppHeader'\n+import { RecordOriginNotice } from '@/components/records/RecordOriginNotice'\n import { strategyLabel } from '@/components/result/conditionLine'\n import { DetailPanel } from '@/components/result/DetailPanel'\n import { findDrawdownWindow } from '@/components/result/drawdownWindow'\n@@ -94,6 +95,9 @@ function ResultView({\n   timeseries: TimeseriesState\n }) {\n   const navigate = useNavigate()\n+  // 내 기록에서 열었으면(006 FR-006) 재계산하지 않았다는 한 줄을 덧붙인다. 다른 동작은 바꾸지 않는다.\n+  const [searchParams] = useSearchParams()\n+  const fromRecords = searchParams.get('from') === 'records'\n   const completedThrough = completedRange(detail, timeseries)\n   const compare = useCompareTarget(detail)\n   const target = compare.compatibleTarget\n@@ -124,6 +128,7 @@ function ResultView({\n         분석 결과\n       </h1>\n       {compare.returnTo ? <Link to={compare.returnTo}>원래 결과로 돌아가기</Link> : null}\n+      {fromRecords ? <RecordOriginNotice recordId={searchParams.get('recordId')} /> : null}\n \n       {detail.status === 'QUEUED' || detail.status === 'RUNNING' ? (\n         <p className={styles.status} role=\"status\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,94 @@\n+import type { MyRecordDetail, MyRecordListItem, MyRecordListPage } from '@/types/myRecords'\n+\n+type AnalysisItem = Extract<MyRecordListItem, { kind: 'ANALYSIS' }>\n+type RegimeItem = Extract<MyRecordListItem, { kind: 'REGIME_SEARCH' }>\n+\n+/** contracts/my-records-api.md 의 예시를 옮긴 것이다. 성과 수치 필드는 계약에 없어 여기도 없다. */\n+\n+export const analysisRecord: AnalysisItem = {\n+  recordId: 'MR-20260918-000042',\n+  kind: 'ANALYSIS',\n+  name: '반도체 외 2 섹터 모멘텀 2026-09-18',\n+  sectorCodes: ['SEMICONDUCTOR', 'BATTERY', 'SHIPBUILDING'],\n+  strategyIds: ['SECTOR_MOMENTUM'],\n+  period: { start: '2019-01-02', end: '2026-08-29' },\n+  savedAt: '2026-09-18T01:12:03Z',\n+  status: 'COMPLETED',\n+  statusReason: null,\n+  resultToken: '3f1c9a7b4e0d83526af1c9d0b7e34512',\n+  isCopy: false,\n+}\n+\n+export const bundleRecord: MyRecordListItem = {\n+  recordId: 'MR-20260917-000031',\n+  kind: 'SEARCH_BUNDLE',\n+  name: '은행 역변동성 탐색 2026-09-17',\n+  sectorCodes: ['BANK'],\n+  strategyIds: ['INVERSE_VOLATILITY'],\n+  period: { start: '2019-01-02', end: '2026-08-29' },\n+  savedAt: '2026-09-17T08:40:00Z',\n+  status: 'PARTIAL',\n+  statusReason: 'TIME_LIMIT',\n+  searchId: 'PS-20260917-000009',\n+  isCopy: false,\n+}\n+\n+export const regimeRecord: RegimeItem = {\n+  recordId: 'MR-20260916-000007',\n+  kind: 'REGIME_SEARCH',\n+  name: '고용환경 2026-08 2026-09-16',\n+  sectorCodes: [],\n+  strategyIds: [],\n+  period: null,\n+  savedAt: '2026-09-16T22:05:11Z',\n+  status: 'THRESHOLD_APPLIED',\n+  statusReason: null,\n+  regime: {\n+    snapshotKey: 'FIELD:EMPLOYMENT:2026-08-01:MACRO-20260915:REG-3:REGIME-V1',\n+    mode: 'FIELD',\n+    fieldId: 'EMPLOYMENT',\n+    baselineMonth: '2026-08-01',\n+    baselineOrigin: 'T_G',\n+    entryPath: 'MARKET_FLOW',\n+    withdrawn: false,\n+  },\n+  isCopy: false,\n+}\n+\n+export const withdrawnRegimeRecord: RegimeItem = {\n+  ...regimeRecord,\n+  recordId: 'MR-20260915-000003',\n+  name: '고용환경 2026-07 2026-09-15',\n+  status: 'WITHDRAWN',\n+  regime: { ...regimeRecord.regime, withdrawn: true },\n+}\n+\n+export const listPage: MyRecordListPage = {\n+  items: [analysisRecord, bundleRecord, regimeRecord],\n+  nextCursor: null,\n+}\n+\n+export const analysisDetail: MyRecordDetail = {\n+  ...analysisRecord,\n+  lastViewedAt: '2026-09-18T03:20:00Z',\n+  referenceVersions: {\n+    datasetVersion: 'DS-2026-09-17-001',\n+    sectorEtfMapVersion: 'SEM-2026-09-16-001',\n+    costProfileVersion: { version: 'CP-2026-09-17-001', provisional: true },\n+    rulesVersion: { version: '1', provisional: false },\n+    engineVersion: 'worker-0.9.3',\n+  },\n+  mappingDrift: {\n+    changed: true,\n+    kind: 'INSTRUMENT_REPLACED',\n+    sectorCodes: ['BATTERY'],\n+    message: '2차전지 섹터의 대표 ETF가 저장 당시와 다릅니다.',\n+  },\n+}\n+\n+/** 판정할 근거가 없어 `mappingDrift` 키가 없는 상세. `changed: false`와 다르다. */\n+export const analysisDetailUnjudged: MyRecordDetail = {\n+  ...analysisRecord,\n+  lastViewedAt: null,\n+  referenceVersions: { datasetVersion: 'DS-2026-09-17-001' },\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/myRecordsFixtures.ts",
+          "old_path": "frontend/src/test/myRecordsFixtures.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import type { AuthApiErrorCode, AuthFieldError } from './auth'\n import type { LearningApiErrorCode } from './learning'\n import type { LearningAdminApiErrorCode } from './learningAdmin'\n+import type { MyRecordApiErrorCode } from './myRecords'\n import type { SectorApiErrorCode } from './sector'\n \n /**\n@@ -33,6 +34,7 @@ export type ServiceApiErrorCode =\n   | SectorApiErrorCode\n   | LearningApiErrorCode\n   | LearningAdminApiErrorCode\n+  | MyRecordApiErrorCode\n \n /**\n  * 서버가 실제로 보내는 오류 이름이다. **열려 있다.**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/api.ts",
+          "old_path": "frontend/src/types/api.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,137 @@\n+import type { ResultConfig, VersionMark } from './result'\n+\n+/**\n+ * spec 006 내 기록 API 타입. 계약은 `specs/006-my-records/contracts/my-records-api.md`다.\n+ *\n+ * <p>목록 항목에 <b>수익률·하락 폭·비용이 없다.</b> 값이 있으면 정렬이 없어도 나란히 보이는 순위 화면이\n+ * 된다(원칙 III, research R7). 서버가 그 필드를 보내지 않으므로 타입에도 자리가 없다.\n+ */\n+\n+export type MyRecordKind = 'ANALYSIS' | 'SEARCH_BUNDLE' | 'REGIME_SEARCH'\n+\n+/**\n+ * 뒤의 넷은 010이 정한 값 그대로다. 경제환경 검색의 '계산 불가'는 실패가 아니라 견줄 사례가 없었다는\n+ * 사실이라 완료/실패로 바꿔 부르지 않는다(FR-004).\n+ */\n+export type MyRecordStatus =\n+  | 'COMPLETED'\n+  | 'RUNNING'\n+  | 'FAILED'\n+  | 'CANCELLED'\n+  | 'PARTIAL'\n+  | 'NOT_COMPUTABLE'\n+  | 'NEAREST_ONLY'\n+  | 'THRESHOLD_APPLIED'\n+  | 'WITHDRAWN'\n+\n+/** 정렬. 성과 축은 없다(research R7). */\n+export type MyRecordSort = 'SAVED_AT_DESC' | 'SAVED_AT_ASC' | 'NAME_ASC'\n+\n+export type MyRecordPeriod = { start: string; end: string }\n+\n+/**\n+ * 경제환경 항목의 검색 정보. '다시 보기'는 `/regime-search?searchId={snapshotKey}`로 저장 revision 을 고정\n+ * 조회한다(research R17). `withdrawn`이면 스냅샷 참조가 끊겨 열리지 않는다(010 FR-035).\n+ */\n+export type MyRecordRegime = {\n+  snapshotKey: string\n+  mode: 'FIELD' | 'COMPOSITE' | (string & Record<never, never>)\n+  fieldId: string | null\n+  baselineMonth: string\n+  baselineOrigin: 'T_G' | 'T_ALL' | 'USER_SPECIFIED' | (string & Record<never, never>)\n+  entryPath: 'MARKET_FLOW' | 'STRATEGY_RESULT' | (string & Record<never, never>)\n+  withdrawn: boolean\n+}\n+\n+type MyRecordItemBase = {\n+  recordId: string\n+  name: string\n+  sectorCodes: string[]\n+  strategyIds: string[]\n+  /** 경제환경 항목은 없다(기준월이 그 자리를 대신한다) */\n+  period: MyRecordPeriod | null\n+  savedAt: string\n+  status: MyRecordStatus\n+  /** 실패·취소·부분 완료·계산 불가의 사유 코드. 낮은 수익과 섞지 않는다(FR-014) */\n+  statusReason: string | null\n+  isCopy: boolean\n+}\n+\n+/** 종류별 열쇠는 그 종류에만 있다. 서버도 다른 종류에는 키를 만들지 않는다. */\n+export type MyRecordListItem =\n+  | (MyRecordItemBase & { kind: 'ANALYSIS'; resultToken: string })\n+  | (MyRecordItemBase & { kind: 'SEARCH_BUNDLE'; searchId: string })\n+  | (MyRecordItemBase & { kind: 'REGIME_SEARCH'; regime: MyRecordRegime })\n+\n+/**\n+ * 저장 당시 참조 버전. 서버가 원본에 없는 키는 만들지 않는다 — 없으면 화면이 '기록되지 않음'을 보인다(원칙 VI).\n+ * `worker`·`dependencies`는 운영 정보라 오지 않는다.\n+ */\n+export type MyRecordReferenceVersions = {\n+  datasetVersion?: string\n+  sectorEtfMapVersion?: string\n+  rulesVersion?: VersionMark\n+  costProfileVersion?: VersionMark\n+  engineVersion?: string\n+  registryVersion?: string\n+  /** 경제환경 항목만 */\n+  modelVersion?: string\n+}\n+\n+/** UI-01 판정(research R8). 버전 문자열이 달라도 대응 항목이 같으면 `changed: false`다. */\n+export type MappingDrift = {\n+  changed: boolean\n+  kind: 'INSTRUMENT_REPLACED' | 'SECTOR_REMOVED' | null\n+  sectorCodes: string[]\n+  message: string | null\n+}\n+\n+export type RegistryDriftField = {\n+  axis: string\n+  savedValue: unknown\n+  currentRange: unknown\n+}\n+\n+export type RegistryDrift = { outOfRange: boolean; fields: RegistryDriftField[] }\n+\n+/**\n+ * 상세. 목록 항목에 펼쳐 보는 층을 더한다.\n+ *\n+ * <p>`mappingDrift`는 판정할 근거가 없으면 <b>키가 없다</b> — `changed: false`가 아니다. `registryDrift`·\n+ * `reopenSettings`·`reopenPayload`는 US2(설정 바꿔 비교)와 함께 온다. `reopenPayload`는 005 결과의 `config`와\n+ * 같은 모양이라 `prefillStrategySettings`에 그대로 넘긴다(research R4).\n+ */\n+export type MyRecordDetail = MyRecordListItem & {\n+  lastViewedAt: string | null\n+  referenceVersions: MyRecordReferenceVersions\n+  mappingDrift?: MappingDrift\n+  registryDrift?: RegistryDrift\n+  reopenSettings?: { available: boolean }\n+  reopenPayload?: ResultConfig\n+}\n+\n+/** `GET /my-records` 질의. 배열 항목은 같은 이름을 여러 번 보낸다. */\n+export type MyRecordListQuery = {\n+  cursor?: string\n+  size?: number\n+  sort?: MyRecordSort\n+  kind?: MyRecordKind[]\n+  status?: MyRecordStatus[]\n+  sector?: string[]\n+  strategy?: string[]\n+  periodFrom?: string\n+  periodTo?: string\n+}\n+\n+/** 전체 개수는 오지 않는다(research R14). */\n+export type MyRecordListPage = {\n+  items: MyRecordListItem[]\n+  nextCursor: string | null\n+}\n+\n+export type MyRecordApiErrorCode =\n+  | 'RECORD_LIMIT_REACHED'\n+  | 'RECORD_WITHDRAWN'\n+  | 'RESULT_NOT_READY'\n+  | 'RESOURCE_NOT_FOUND'\n+  | 'INVALID_INPUT'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/myRecords.ts",
+          "old_path": "frontend/src/types/myRecords.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,8 +11,8 @@ vi.mock('@/pages/DashboardPage', () => ({ DashboardPage: () => <h1>대시보드\n vi.mock('@/pages/BacktestPage', () => ({ BacktestPage: () => <h1>백테스트 화면</h1> }))\n vi.mock('@/pages/LoginPage', () => ({ LoginPage: () => <h1>로그인 화면</h1> }))\n vi.mock('@/pages/SignupPage', () => ({ SignupPage: () => <h1>회원가입 화면</h1> }))\n-vi.mock('@/pages/MyRecordsEntryPage', () => ({\n-  MyRecordsEntryPage: () => <h1>내 기록 화면</h1>,\n+vi.mock('@/pages/MyRecordsPage', () => ({\n+  MyRecordsPage: () => <h1>내 기록 화면</h1>,\n }))\n \n const anonymousAuth: AuthContextValue = {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.auth.test.tsx",
+          "old_path": "frontend/src/App.auth.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,9 +49,10 @@ const LoginPage = lazy(() =>\n   })),\n )\n \n-const MyRecordsEntryPage = lazy(() =>\n-  import('@/pages/MyRecordsEntryPage').then((module) => ({\n-    default: module.MyRecordsEntryPage,\n+// 내 기록(spec 006). 로그인 사용자만 보는 목록이며 보호 경로 안에 둔다.\n+const MyRecordsPage = lazy(() =>\n+  import('@/pages/MyRecordsPage').then((module) => ({\n+    default: module.MyRecordsPage,\n   })),\n )\n \n@@ -144,7 +145,7 @@ function AnimatedRoutes() {\n               path=\"/records/*\"\n               element={\n                 <ProtectedRoute>\n-                  <MyRecordsEntryPage />\n+                  <MyRecordsPage />\n                 </ProtectedRoute>\n               }\n             />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -90,10 +90,10 @@ description: \"내 기록(목록·다시 보기·설정 바꿔 비교·내보내\n \n ### Tests for User Story 1\n \n-- [ ] T017 [US1] Implement `findPage` in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java` as one native query joining `backtest_request`+`backtest_run`, `param_search`, `regime_search_log`+`regime_search_snapshot` by kind to derive `status`/`statusReason`/`resultToken`/`searchId`/`regime` fields — `ANALYSIS` 의 요청은 저장돼 있지 않으므로 취소하지 않은 최신 요청을 LATERAL 서브쿼리로 고른다(data-model §1 \"상태는 컬럼이 아니다\"), with filters kind/status/sector(`&&` on TEXT[])/strategy/period overlap, sort `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC`, keyset cursor `(saved_at, id)` encoded base64, `size` 1~50. **성과 수치 컬럼을 select에 넣지 않는다**(원칙 III)\n-- [ ] T018 [P] [US1] Add `backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordListQueryIT.java`: default view shows only COMPLETED analysis/bundle rows and THRESHOLD_APPLIED regime rows (contracts `status` 기본값); FAILED/CANCELLED appear only with status filter; RUNNING run maps to `RUNNING`; regime log with NULL snapshot_id maps to `WITHDRAWN`; sector filter matches when any code overlaps; cursor page 2 has no overlap/gap after a new row is inserted between requests; another owner's rows never appear\n-- [ ] T019 [US1] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java` (`list(ownerId, query)`, `detail(ownerId, recordId)` → 404 `RESOURCE_NOT_FOUND` for other owners/deleted, `markViewed`) and `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java` with `GET /my-records`, `GET /my-records/{recordId}` using `CurrentRequester.requireRequesterId()`; request params validated so unknown `sort|kind|status` → 400 `INVALID_INPUT` (원칙 VI, contracts 공통); responses in `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordListResponse.java`, `MyRecordDetailResponse.java`\n-- [ ] T020 [US1] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordMappingDriftChecker.java`: read the record's `sectorEtfMapVersion` from `backtest_run.versions.mapping` (접수가 확정한 값이라 FAILED 실행에도 있다; `backtest_result.versions`는 워커 보고라 실패 행에 없다) or `param_search.reference_versions`, compare each saved sector's `sector_etf_map_entry.etf_id` in that version with the current latest version; return `changed=false` when every entry matches even if the version string differs, else `INSTRUMENT_REPLACED` or `SECTOR_REMOVED` with sector codes and one Korean sentence (UI-01, research R8). Wire into `detail()` as `mappingDrift`; add `backend/src/test/java/com/ssafy/thorp/myrecord/application/MappingDriftCheckerTest.java` covering the three quickstart S5 cases\n+- [x] T017 [US1] Implement `findPage` in `backend/src/main/java/com/ssafy/thorp/myrecord/infrastructure/persistence/MyRecordRepositoryImpl.java` as one native query joining `backtest_request`+`backtest_run`, `param_search`, `regime_search_log`+`regime_search_snapshot` by kind to derive `status`/`statusReason`/`resultToken`/`searchId`/`regime` fields — `ANALYSIS` 의 요청은 저장돼 있지 않으므로 취소하지 않은 최신 요청을 LATERAL 서브쿼리로 고른다(data-model §1 \"상태는 컬럼이 아니다\"), with filters kind/status/sector(`&&` on TEXT[])/strategy/period overlap, sort `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC`, keyset cursor `(saved_at, id)` encoded base64, `size` 1~50. **성과 수치 컬럼을 select에 넣지 않는다**(원칙 III)\n+- [x] T018 [P] [US1] Add `backend/src/test/java/com/ssafy/thorp/myrecord/infrastructure/MyRecordListQueryIT.java`: default view shows only COMPLETED analysis/bundle rows and THRESHOLD_APPLIED regime rows (contracts `status` 기본값); FAILED/CANCELLED appear only with status filter; RUNNING run maps to `RUNNING`; regime log with NULL snapshot_id maps to `WITHDRAWN`; sector filter matches when any code overlaps; cursor page 2 has no overlap/gap after a new row is inserted between requests; another owner's rows never appear\n+- [x] T019 [US1] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordQueryService.java` (`list(ownerId, query)`, `detail(ownerId, recordId)` → 404 `RESOURCE_NOT_FOUND` for other owners/deleted, `markViewed`) and `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/controller/MyRecordController.java` with `GET /my-records`, `GET /my-records/{recordId}` using `CurrentRequester.requireRequesterId()`; request params validated so unknown `sort|kind|status` → 400 `INVALID_INPUT` (원칙 VI, contracts 공통); responses in `backend/src/main/java/com/ssafy/thorp/myrecord/presentation/response/MyRecordListResponse.java`, `MyRecordDetailResponse.java`\n+- [x] T020 [US1] Create `backend/src/main/java/com/ssafy/thorp/myrecord/application/service/MyRecordMappingDriftChecker.java`: read the record's `sectorEtfMapVersion` from `backtest_run.versions.mapping` (접수가 확정한 값이라 FAILED 실행에도 있다; `backtest_result.versions`는 워커 보고라 실패 행에 없다) or `param_search.reference_versions`, compare each saved sector's `sector_etf_map_entry.etf_id` in that version with the current latest version; return `changed=false` when every entry matches even if the version string differs, else `INSTRUMENT_REPLACED` or `SECTOR_REMOVED` with sector codes and one Korean sentence (UI-01, research R8). Wire into `detail()` as `mappingDrift`; add `backend/src/test/java/com/ssafy/thorp/myrecord/application/MappingDriftCheckerTest.java` covering the three quickstart S5 cases\n - [ ] T021 [US1] Replace `frontend/src/pages/MyRecordsEntryPage.tsx` with `frontend/src/pages/MyRecordsPage.tsx` (+ `.module.css`, delete the old page and its CSS, update the import in `frontend/src/App.tsx` and `frontend/src/App.auth.test.tsx`): `AppHeader`, `useAuth().user` greeting, `useMyRecords` hook (`frontend/src/hooks/useMyRecords.ts`: query state, cursor \"더 보기\", loading/error), empty state \"아직 저장된 기록이 없습니다\" + '전략 검증하기' 링크 (spec FR-001); read `?resultToken=` from `useSearchParams` and, when present, scroll to/focus the matching row and open its '더 보기' menu (T045a가 이 주소로 보낸다)\n - [ ] T022 [P] [US1] Create `frontend/src/components/records/RecordFilters.tsx`: kind/status/sector/strategy/period controls and sort select limited to `SAVED_AT_DESC|SAVED_AT_ASC|NAME_ASC` — **성과 정렬 선택지를 두지 않는다**(research R7); sectors/strategies from `fetchSectorCatalog`/`fetchStrategyRegistry` (기존 `frontend/src/api/sectors.ts`, `frontend/src/api/strategyRegistry.ts`); keyboard operable, labelled controls (spec FR-021)\n - [ ] T023 [P] [US1] Create `frontend/src/components/records/RecordRow.tsx`: name, sector chips, strategy, period, savedAt, status badge with `statusReason` shown **apart from any return figure**, kind icon; **one primary button '다시 보기'** (`Link to /results/{resultToken}?from=records` for ANALYSIS) and '설정 바꿔 비교' as a secondary-styled button (research R7, constitution 원칙 II); '더 보기' menu trigger (`aria-haspopup`) for later phases. `withdrawn` regime rows disable '다시 보기' with reason text\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/006-my-records/tasks.md",
+          "old_path": "specs/006-my-records/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-21T11:47:18.058+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2845466": []
+  }
+}

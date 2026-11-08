@@ -1,0 +1,1341 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954242,
+    "iid": 272,
+    "project_id": 1444456,
+    "title": "docs(be): spec 011 검증 기록과 계약 정합",
+    "description": "## 작업 내용 요약\n\n계약 문서와 구현이 어긋난 곳을 코드로 확인해 문서를 구현에 맞추고, quickstart 실행 기록과 미해결 항목을 남긴다.\n\n> 이 MR은 `feat(fe)/369-regime-link-page`를 기반으로 한다. 앞선 다섯이 먼저 머지되어야 한다.\n\n## 관련 티켓\n\nS15P21E205-370\n\n## 주요 변경 사항\n\n구현과 어긋나 있던 일곱 곳을 문서 쪽에서 고쳤다.\n\n- 링크 조회는 제시된 토큰 외의 토큰을 싣지 않는다. 예시 파일에 남아 있던 `originPublicToken`을 지웠다.\n- 구간 손익이 0이면 `lossContribution` 키가 **아예 없다**(`null`이 아니라 부재). 계약과 README에 명시했다.\n- `eventId`는 워커가 결정적으로 만든 UUID다. 픽스처의 `EVT-RL-000001`과 모양이 다르니 파싱하지 말라고 적었다.\n- 체결 기록이 없는 실행의 확인 요구 값(`FILLS_MISSING_CONFIRM_REQUIRED`)이 계약에 없었다. 구현에만 있던 값이라 계약 §2와 README §5에 더했다.\n- 비교 묶음 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과 분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n- §0에 조건 대조 관문을, §5에 요청 본문을 더했다.\n\n## 테스트\n\n문서 변경이라 자동 시험 대상이 아니다. quickstart 실행 기록은 다음과 같다.\n\n**실제로 돌린 것**: S1(워커 몫)·S2·S3 — `pytest tests/regime_link/{test_contracts,test_slicer,test_consumer}.py` 72 passed / 0 skipped\n\n**미실행**: S1(백엔드 몫)·S4·S5·S6·S7·S9 — 전체 기동(Postgres·RabbitMQ·백엔드·워커 둘·프론트)과 010 검색 자료가 필요하다. **S10(p95 측정)은 재지 않았고 추정치를 적지 않았다.** T089는 미완으로 남겼다.\n\n문서에 인용한 백엔드·프론트 수치는 각 MR의 검증값이다. 백엔드 skipped 4건의 정체와, 이 숫자를 인용할 때 Docker 데몬이 떠 있었는지 함께 확인하라는 경고를 기록에 적었다.\n\n## 리뷰 포인트\n\n- **가장 큰 검증 공백은 큐를 실제로 지나는 왕복을 아직 아무도 확인하지 않은 것이다.** T036 미작성과 S5 미실행이 겹쳤다. 발행과 소비를 각각 본 시험만 있다.\n- `plan.md`에 미해결 아홉 항목을 표로 모았다. `worker/config.py`의 죽은 검사, 운영 compose에 011 워커 부재, 백엔드 healthcheck 부재, 004의 `analyticsMethod` 대응값 확인 필요, 픽스처 두 벌, 응답 봉투 두 벌 등이다.\n- 보고된 불일치 중 하나는 **사실이 아니었다.** 계약 §1에 대응표를 `perRun` 근거로 드는 문장은 없었고 `research.md`에만 있었다. 지적의 실질은 맞아 문장을 새로 넣었다.\n- `checklists/review.md`에 적은 대로, **타 spec이 소유한 항목은 아직 그쪽에 전달하지 않았다.**",
+    "state": "merged",
+    "created_at": "2026-09-21T13:32:47.366+09:00",
+    "updated_at": "2026-09-21T15:42:14.806+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T15:42:14.885+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/370-regime-link-verification",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+    "merge_commit_sha": "1026639f27cd7c81a22d49951f1059a2c6b1f5e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T13:32:48.349+09:00",
+    "reference": "!272",
+    "references": {
+      "short": "!272",
+      "relative": "!272",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!272"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/272",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954242,
+    "iid": 272,
+    "project_id": 1444456,
+    "title": "docs(be): spec 011 검증 기록과 계약 정합",
+    "description": "## 작업 내용 요약\n\n계약 문서와 구현이 어긋난 곳을 코드로 확인해 문서를 구현에 맞추고, quickstart 실행 기록과 미해결 항목을 남긴다.\n\n> 이 MR은 `feat(fe)/369-regime-link-page`를 기반으로 한다. 앞선 다섯이 먼저 머지되어야 한다.\n\n## 관련 티켓\n\nS15P21E205-370\n\n## 주요 변경 사항\n\n구현과 어긋나 있던 일곱 곳을 문서 쪽에서 고쳤다.\n\n- 링크 조회는 제시된 토큰 외의 토큰을 싣지 않는다. 예시 파일에 남아 있던 `originPublicToken`을 지웠다.\n- 구간 손익이 0이면 `lossContribution` 키가 **아예 없다**(`null`이 아니라 부재). 계약과 README에 명시했다.\n- `eventId`는 워커가 결정적으로 만든 UUID다. 픽스처의 `EVT-RL-000001`과 모양이 다르니 파싱하지 말라고 적었다.\n- 체결 기록이 없는 실행의 확인 요구 값(`FILLS_MISSING_CONFIRM_REQUIRED`)이 계약에 없었다. 구현에만 있던 값이라 계약 §2와 README §5에 더했다.\n- 비교 묶음 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과 분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n- §0에 조건 대조 관문을, §5에 요청 본문을 더했다.\n\n## 테스트\n\n문서 변경이라 자동 시험 대상이 아니다. quickstart 실행 기록은 다음과 같다.\n\n**실제로 돌린 것**: S1(워커 몫)·S2·S3 — `pytest tests/regime_link/{test_contracts,test_slicer,test_consumer}.py` 72 passed / 0 skipped\n\n**미실행**: S1(백엔드 몫)·S4·S5·S6·S7·S9 — 전체 기동(Postgres·RabbitMQ·백엔드·워커 둘·프론트)과 010 검색 자료가 필요하다. **S10(p95 측정)은 재지 않았고 추정치를 적지 않았다.** T089는 미완으로 남겼다.\n\n문서에 인용한 백엔드·프론트 수치는 각 MR의 검증값이다. 백엔드 skipped 4건의 정체와, 이 숫자를 인용할 때 Docker 데몬이 떠 있었는지 함께 확인하라는 경고를 기록에 적었다.\n\n## 리뷰 포인트\n\n- **가장 큰 검증 공백은 큐를 실제로 지나는 왕복을 아직 아무도 확인하지 않은 것이다.** T036 미작성과 S5 미실행이 겹쳤다. 발행과 소비를 각각 본 시험만 있다.\n- `plan.md`에 미해결 아홉 항목을 표로 모았다. `worker/config.py`의 죽은 검사, 운영 compose에 011 워커 부재, 백엔드 healthcheck 부재, 004의 `analyticsMethod` 대응값 확인 필요, 픽스처 두 벌, 응답 봉투 두 벌 등이다.\n- 보고된 불일치 중 하나는 **사실이 아니었다.** 계약 §1에 대응표를 `perRun` 근거로 드는 문장은 없었고 `research.md`에만 있었다. 지적의 실질은 맞아 문장을 새로 넣었다.\n- `checklists/review.md`에 적은 대로, **타 spec이 소유한 항목은 아직 그쪽에 전달하지 않았다.**",
+    "state": "merged",
+    "created_at": "2026-09-21T13:32:47.366+09:00",
+    "updated_at": "2026-09-21T15:42:14.806+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T15:42:14.885+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/370-regime-link-verification",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+    "merge_commit_sha": "1026639f27cd7c81a22d49951f1059a2c6b1f5e1",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T13:32:48.349+09:00",
+    "reference": "!272",
+    "references": {
+      "short": "!272",
+      "relative": "!272",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!272"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/272",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "9",
+    "latest_build_started_at": "2026-09-21T15:42:06.727+09:00",
+    "latest_build_finished_at": "2026-09-21T15:42:13.709+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 212724,
+      "iid": 280,
+      "project_id": 1444456,
+      "sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+      "ref": "docs(be)/370-regime-link-verification",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T15:42:05.769+09:00",
+      "updated_at": "2026-09-21T15:42:13.719+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212724"
+    },
+    "head_pipeline": {
+      "id": 212724,
+      "iid": 280,
+      "project_id": 1444456,
+      "sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+      "ref": "docs(be)/370-regime-link-verification",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T15:42:05.769+09:00",
+      "updated_at": "2026-09-21T15:42:13.719+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212724",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T15:42:06.727+09:00",
+      "finished_at": "2026-09-21T15:42:13.709+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212724",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "head_sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+      "start_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5b43b34e03ee936a5680e6caee8f0bed28e749e9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846407,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:38:08.093+09:00",
+          "updated_at": "2026-09-21T13:38:08.097+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f23073c62b4d5c39dbc0e275d0d996628fee42af",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846408,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:38:08.108+09:00",
+          "updated_at": "2026-09-21T13:38:08.114+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7a3a44ef92031288cbf9b9ebbb800953c84a5b91",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846569,
+          "type": null,
+          "body": "added 39 commits\n\n<ul><li>b9877621...30fc85b2 - 38 commits from branch <code>feat(fe)/369-regime-link-page</code></li><li>89955d3f - Merge branch &#39;feat(fe)/369-regime-link-page&#39; into docs(be)/370-regime-link-verification</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/272/diffs?diff_id=2231685&start_sha=b9877621d06181d4cd268cb37faff335d0b317b1)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:52:37.267+09:00",
+          "updated_at": "2026-09-21T13:52:37.281+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0f56b5a06cd2936f42fa376a4ca81c7eb63a830a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847224,
+          "type": null,
+          "body": "added 17 commits\n\n<ul><li>89955d3f...bf11c573 - 16 commits from branch <code>feat(fe)/369-regime-link-page</code></li><li>7dba49d2 - Merge branch &#39;feat(fe)/369-regime-link-page&#39; into docs(be)/370-regime-link-verification</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/272/diffs?diff_id=2232252&start_sha=89955d3f54b4a52c3683411e2e122dd3b207260b)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T14:41:58.526+09:00",
+          "updated_at": "2026-09-21T14:41:58.530+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3101a8174cd30a9bc1d31ae5b030faf4dfec6885",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847466,
+          "type": null,
+          "body": "deleted the `feat(fe)/369-regime-link-page` branch. This merge request now targets the `dev` branch",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T15:01:27.436+09:00",
+          "updated_at": "2026-09-21T15:01:27.441+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "78a1ee3a8a3ca80ea39255ed58ed8281568a51da",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847523,
+          "type": null,
+          "body": "added 11 commits\n\n<ul><li>7dba49d2...3b5dacaa - 10 commits from branch <code>dev</code></li><li>803d4ec1 - Merge remote-tracking branch &#39;origin/dev&#39; into docs(be)/370-regime-link-verification</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/272/diffs?diff_id=2232483&start_sha=7dba49d287c1063d5d889bacdb3506c5392cc187)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T15:05:46.898+09:00",
+          "updated_at": "2026-09-21T15:05:46.901+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8910fe21ec7ad787514cbe6b77064e91391da97d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847526,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서-구현 정합성 검증**: 이번 MR은 구현과 문서 간의 불일치를 단순히 덮어두지 않고, `lossContribution` 키 부재 규칙(`null` 아님), `eventId`의 UUID 형식, `FILLS_MISSING_CONFIRM_REQUIRED` 등 실제 동작하는 코드의 특성을 명확하게 계약 및 README 문서에 반영했습니다.\n- **투명한 검증 상태 기록**: `quickstart.md`와 `plan.md`를 통해 실제 실행된 테스트와 미실행된 시나리오(종단간 큐 왕복 테스트 부재, p95 미측정 등)를 명확히 구분하여 기록함으로써, 허위 완료 상태를 방지하고 기술 부채와 검증 공백을 투명하게 드러냈습니다.\n\n### 발견 사항\n중대한 코드 버그나 보안 취약점은 발견되지 않았습니다. 본 MR은 문서 및 메타데이터 정비에 집중되어 있어 실행 가능한 백엔드/프론트엔드 코드 변경은 포함되지 않습니다.\n\n### 테스트 제안\n문서 변경 중심의 MR이나, 향후 미해결 항목 해소를 위해 다음 시나리오에 대한 테스트 보강이 필수적입니다.\n- **큐 왕복 통합 테스트 (T036)**: Testcontainers를 활용해 백엔드가 메시지를 발행하고, RabbitMQ를 거쳐 워커가 이를 소비한 뒤 처리 결과 이벤트가 정상적으로 돌아오는지 확인하는 종단간(E2E) 왕복 테스트 구현\n- **확인 필요 응답 분기 테스트**: `OUT_OF_PERIOD_CONFIRM_REQUIRED`와 `FILLS_MISSING_CONFIRM_REQUIRED` 시나리오에서 `confirmFullPeriod` 파라미터 값에 따라 계산 생략 및 재접수 흐름이 올바르게 동작하는지 검증하는 API 통합 테스트 (`OutOfPeriodFlowTest` 등)\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:60fc324b4fb90decb09941ea4de750383689b60c -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T15:05:55.419+09:00",
+          "updated_at": "2026-09-21T15:41:57.164+09:00",
+          "system": false,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1474ea0a0343712c0161f74b41a40bce1b1bc4d2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847591,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-21T15:12:46.977+09:00",
+          "updated_at": "2026-09-21T15:12:46.977+09:00",
+          "system": false,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6681694175e3bcec8bd80a5620245d16d3b3203a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847985,
+          "type": null,
+          "body": "added 10 commits\n\n<ul><li>803d4ec1...d44ab223 - 9 commits from branch <code>dev</code></li><li>60fc324b - Merge remote-tracking branch &#39;origin/dev&#39; into docs(be)/370-regime-link-verification</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/272/diffs?diff_id=2232851&start_sha=803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T15:41:48.839+09:00",
+          "updated_at": "2026-09-21T15:41:48.842+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "35353bb4df219628e994584065f887979b4a21bc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847989,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 60fc324b4fb90decb09941ea4de750383689b60c pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T15:42:13.442+09:00",
+          "updated_at": "2026-09-21T15:42:13.446+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5e5b17f3650cc3e87bc81e0eb5cd99a945447c06",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847990,
+          "type": null,
+          "body": "mentioned in commit 1026639f27cd7c81a22d49951f1059a2c6b1f5e1",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T15:42:15.061+09:00",
+          "updated_at": "2026-09-21T15:42:15.066+09:00",
+          "system": true,
+          "noteable_id": 954242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 272,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2232851,
+      "head_commit_sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+      "base_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "start_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "created_at": "2026-09-21T15:41:48.551+09:00",
+      "merge_request_id": 954242,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538"
+    },
+    {
+      "id": 2232483,
+      "head_commit_sha": "803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa",
+      "base_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "start_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "created_at": "2026-09-21T15:05:46.546+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538"
+    },
+    {
+      "id": 2232439,
+      "head_commit_sha": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+      "base_commit_sha": "bf11c573c088b418db31abd5acf4161c48f03e33",
+      "start_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "created_at": "2026-09-21T15:01:27.327+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538"
+    },
+    {
+      "id": 2232252,
+      "head_commit_sha": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+      "base_commit_sha": "bf11c573c088b418db31abd5acf4161c48f03e33",
+      "start_commit_sha": "bf11c573c088b418db31abd5acf4161c48f03e33",
+      "created_at": "2026-09-21T14:41:58.159+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538"
+    },
+    {
+      "id": 2231685,
+      "head_commit_sha": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+      "base_commit_sha": "30fc85b2b94175cb3da8fc79716b954dc3c6b596",
+      "start_commit_sha": "30fc85b2b94175cb3da8fc79716b954dc3c6b596",
+      "created_at": "2026-09-21T13:52:36.581+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "5eeaf560ad7e043afb13a17a6711cb1767f72af3"
+    },
+    {
+      "id": 2231482,
+      "head_commit_sha": "b9877621d06181d4cd268cb37faff335d0b317b1",
+      "base_commit_sha": "b70b68a9d9a27f2096bc471d1e1998d8038c0296",
+      "start_commit_sha": "b70b68a9d9a27f2096bc471d1e1998d8038c0296",
+      "created_at": "2026-09-21T13:32:47.683+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "5eeaf560ad7e043afb13a17a6711cb1767f72af3"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2232851,
+      "head_commit_sha": "60fc324b4fb90decb09941ea4de750383689b60c",
+      "base_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "start_commit_sha": "d44ab223fa4cbb13b043f23222b158321c6afaa1",
+      "created_at": "2026-09-21T15:41:48.551+09:00",
+      "merge_request_id": 954242,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538",
+      "commits": [
+        {
+          "id": "60fc324b4fb90decb09941ea4de750383689b60c",
+          "short_id": "60fc324b",
+          "created_at": "2026-09-21T15:40:09.000+09:00",
+          "parent_ids": [
+            "803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa",
+            "d44ab223fa4cbb13b043f23222b158321c6afaa1"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(be)/370-regime-link-verification",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T15:40:09.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T15:40:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/60fc324b4fb90decb09941ea4de750383689b60c"
+        },
+        {
+          "id": "803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa",
+          "short_id": "803d4ec1",
+          "created_at": "2026-09-21T15:05:24.000+09:00",
+          "parent_ids": [
+            "7dba49d287c1063d5d889bacdb3506c5392cc187",
+            "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(be)/370-regime-link-verification",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T15:05:24.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T15:05:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa"
+        },
+        {
+          "id": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+          "short_id": "7dba49d2",
+          "created_at": "2026-09-21T14:41:42.000+09:00",
+          "parent_ids": [
+            "89955d3f54b4a52c3683411e2e122dd3b207260b",
+            "bf11c573c088b418db31abd5acf4161c48f03e33"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T14:41:42.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T14:41:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7dba49d287c1063d5d889bacdb3506c5392cc187"
+        },
+        {
+          "id": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+          "short_id": "89955d3f",
+          "created_at": "2026-09-21T13:52:21.000+09:00",
+          "parent_ids": [
+            "b9877621d06181d4cd268cb37faff335d0b317b1",
+            "30fc85b2b94175cb3da8fc79716b954dc3c6b596"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:52:21.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:52:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89955d3f54b4a52c3683411e2e122dd3b207260b"
+        },
+        {
+          "id": "b9877621d06181d4cd268cb37faff335d0b317b1",
+          "short_id": "b9877621",
+          "created_at": "2026-09-21T12:50:23.000+09:00",
+          "parent_ids": [
+            "b70b68a9d9a27f2096bc471d1e1998d8038c0296"
+          ],
+          "title": "docs(be): spec 011 검증 기록과 계약 정합",
+          "message": "docs(be): spec 011 검증 기록과 계약 정합\n\n계약 문서와 구현이 어긋난 일곱 곳을 코드로 확인해 문서를 구현에 맞췄다.\n링크 조회에서 제시된 토큰 외의 토큰을 싣지 않는다는 점, 구간 손익이 0 일 때\nlossContribution 키가 아예 없다는 점, eventId 가 결정적으로 만든 UUID 라\n모양을 파싱하면 안 된다는 점, 체결 기록이 없는 실행의 확인 요구 값이\n계약에 빠져 있던 점을 채웠다.\n\n비교 묶음의 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과\n분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n\nquickstart 실행 기록은 실제로 돌린 것만 적고 나머지는 미실행으로 남겼다.\n전체 기동이 필요한 시나리오와 p95 측정은 돌리지 못했다. 미해결 항목은\nplan 에 표로 모았다 — 큐를 실제로 지나는 왕복을 아직 확인하지 않은 것이\n가장 큰 공백이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:50:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:50:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9877621d06181d4cd268cb37faff335d0b317b1"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -7,7 +7,6 @@\n     },\n     \"linkId\": \"RL-20260918-000103\",\n     \"publicToken\": \"c07d5b8e1a934627fd20a8c341eb9750\",\n-    \"originPublicToken\": \"9f2c1a7b4e0d83526af1c9d0b7e34512\",\n     \"caseId\": \"FIELD:LABOR:2026-07-01:MACRO-20260915:REG-3:REGIME-V1~2012-03\",\n     \"scenario\": \"FRESH_CASH\",\n     \"status\": \"PENDING_RUN\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/examples/link-pending-run.json",
+          "old_path": "docs/specs/regime-link-api/examples/link-pending-run.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,9 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은\n | [`examples/create-confirm-required.json`](examples/create-confirm-required.json) | 분석 기간이 사례를 덮지 않아 확인을 요구하는 응답 |\n | [`examples/case-window.json`](examples/case-window.json) | 실행 없이 읽는 사례의 사후 구간(§1a). `lastAvailable`이 있다 |\n \n-검색 기록 생성(§1b)의 예시는 그 경로를 구현하는 묶음에서 함께 추가한다.\n+검색 기록 생성(`POST /regime-link-searches`)은 예시 파일을 두지 않는다. 응답이 위 가용성 조회와 같은\n+모양에 `linkSearchId`와 변경이 있을 때만 나오는 `bundleChanged`를 더한 것뿐이라, 같은 값을 두 벌로\n+두면 한쪽만 낡는다. 백엔드·프론트엔드 모두 가용성 예시를 기준으로 쓴다.\n \n ## 1. 공통 규칙\n \n@@ -70,6 +72,12 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은\n - `OUT_OF_PERIOD`는 **필터 조건이 아니다.** `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다.\n - 필터를 건 응답은 덮는 사례가 없어도 `availableRange`를 싣고 양끝만 `null`이다. 그 키가 아예 없는 것은\n   `MARKET_FLOW` 응답뿐이다.\n+- `bundle.runs[]`의 `costProfileVersion`·`dataVersion`은 그 실행이 고정한 비용 조건 버전과 자료 버전이다.\n+  결과 머리의 \"같은 평가 날짜·비용 버전\" 표시가 이 값을 읽고, 두 실행이 같은 조건인지 서버가 대조할 때\n+  쓰는 값과 같다. 조건이 하나라도 다른 비교 묶음은 판정 전에 `400 INVALID_INPUT`으로 거절한다.\n+- **`perRun`의 판정이 실행마다 갈릴 수 있는 사유는 `WARMUP_SHORT`와 `OUT_OF_PERIOD` 둘뿐이다.**\n+  나머지 사유는 섹터 후보 집합·대응표 버전·자료 버전에서 나오는데 그 셋이 다른 묶음은 위 대조에서\n+  이미 거절되기 때문이다.\n - `bundle.instruments[]`의 `listedOn`·`delistedOn`은 ETF 이력 판정의 입력이고, 화면이 `UNLISTED`·\n   `DELISTED` 사유를 설명할 근거다. `delistedOn`은 폐지된 종목에만 있다. 사례별 `availability.delistedOn`은\n   그 사례의 사후 구간 안에서 폐지가 일어났을 때만 나오므로 둘은 다른 값이다.\n@@ -98,23 +106,32 @@ spec 011 사례 연결 화면이 쓰는 경로의 요약이다. 원본은\n   `attempt ≥ 2`에서 다시 나오면 `retryable=false`다.\n - `lossContribution`은 **종목 구간 손익 ÷ 전체 구간 손익**을 섹터별로 합산한 몫이고 합이 1이다.\n   이름이 '손실'이지만 **이익 종목도 뺀 것 없이 들어간다** — 전체 손익과 반대로 움직인 섹터가 음수\n-  몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략한다.\n+  몫으로 나온다. 전체 구간 손익이 0일 때만 이 키를 생략하며, **생략은 `null`이 아니라 키 자체의\n+  부재**다 — 화면은 키가 있는지로 표시 여부를 가른다.\n - `turnover`는 값만으로 뜻이 정해지지 않으므로 `turnoverBasis`(`ANNUALIZED_252`)를 함께 싣는다.\n   **두 구간 모두 연환산한 값이라** 구간이 짧다고 작아지지 않고, `window21`과 `window63`을 같은 단위로\n   나란히 놓을 수 있다. 수익률과 최대 하락 폭은 연환산하지 않는다.\n - `holdings`는 구간의 모든 거래일을, `trades`는 구간의 모든 거래를 담는다. 화면이 보유 비중 시계열과\n   거래 목록을 그리려면 둘 다 빠짐없이 있어야 한다.\n - `tradesPerMonth`는 `tradeCount ÷ (tradingDays ÷ 21)`을 소수 둘째 자리로 맞춘 값이다.\n-- `scenario=FRESH_CASH`의 결과는 시작 금액 기준이고 `originPublicToken`으로 기준 실행을 가리킨다.\n+- `scenario=FRESH_CASH`의 결과는 시작 금액 기준이다. **기준 실행을 가리키는 별도 토큰(`originPublicToken`)은\n+  싣지 않는다** — §1 공통 규칙대로 응답에는 제시된 토큰 외의 토큰이 없다(research R14). 화면은 주소에 이미\n+  있는 `base`·`compare`로 기준 실행을 안다.\n \n ## 5. 사례 열기 — `POST /regime-links`\n \n - 서버는 비교 묶음의 실행마다 `regime_link` 행을 찾거나 만들고, 이 검색이 그 계산을 열었다는 이용\n   기록을 남긴다. 링크 행은 여러 사용자가 공유하므로 이미 `COMPLETED`면 작업을 만들지 않고 즉시\n   결과를 돌려준다.\n-- 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는데 `confirmFullPeriod=false`면 **계산을 만들지 않고**\n-  `200 OUT_OF_PERIOD_CONFIRM_REQUIRED`를 돌려준다. 확인하면 `confirmFullPeriod=true`로 다시 보내고,\n-  서버가 004에 전체 기간 실행을 **요청한 사용자 본인의 분석 요청으로** 접수하며 링크는 `PENDING_RUN`이다.\n+- 요청 본문은 `{linkSearchId, caseId, scenario, confirmFullPeriod}`다. 비교 묶음·snapshot·검색 경로는\n+  서버가 `linkSearchId`(§1b가 만든 기록)에서 꺼내므로 토큰을 다시 보내지 않는다. 다른 사용자의 기록이나\n+  그 snapshot의 표시 후보 밖 사례는 `404`다.\n+- 계산을 만들기 전에 확인을 받는 경우가 **둘**이고 `outcome`이 가른다. `confirmFullPeriod=false`면 어느\n+  쪽이든 링크도 메시지도 만들지 않고 `200`을 돌려준다.\n+  - `OUT_OF_PERIOD_CONFIRM_REQUIRED` — 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는다.\n+  - `FILLS_MISSING_CONFIRM_REQUIRED` — 기간은 덮지만 그 실행에 개별 체결 기록이 없다(옛 워커의 결과).\n+  확인하면 `confirmFullPeriod=true`로 다시 보내고, 서버가 004에 전체 기간 실행을 **요청한 사용자 본인의\n+  분석 요청으로** 접수하며 링크는 `PENDING_RUN`이다.\n - `scenario=FRESH_CASH`도 004 접수를 거친다. 사용자가 토글을 켤 때만 만들어진다.\n \n ## 6. 오류\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-api/README.md",
+          "old_path": "docs/specs/regime-link-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -63,6 +63,9 @@\n   기대값 대조는 `examples/reconciliation/`(spec 011 T014)이 워커를 import하지 않는 독립 계산으로\n   따로 만든다 — 기대값을 워커 출력으로 채우면 대조가 아니다. `lossContribution`·`kospi`는\n   모양만 맞춘 값이다.\n+- **`eventId`의 값 모양.** 픽스처는 읽기 쉬운 `EVT-RL-000001`을 쓰지만 워커가 실제로 내보내는 값은\n+  UUID 문자열이다(`linkId`·`attempt`·이벤트 종류에서 `uuid5`로 결정적으로 뽑는다). 계약이 자유\n+  문자열로 두었으므로 둘 다 유효하며, 값의 모양을 파싱하는 코드를 두지 않는다.\n - 시장 자료(원시 종가)는 메시지에 없다. 워커가 `market_data.py`로 같은 구간을 따로 읽는다.\n - 날짜는 주말만 제외한 픽스처 자체 달력이라 실제 KRX 휴장일과 다르다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/regime-link-messaging/README.md",
+          "old_path": "docs/specs/regime-link-messaging/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -105,3 +105,14 @@\n - I1은 원천 자료/기존 실행 기간 분리, I3은 목록 확정 시 기록으로 설계를 수정했다.\n   I2는 구간 산식과 입력 게이트 DEP-004-011로 구체화했으며 입력 확보 검증은 아직 미완료다.\n   이 검토는 문서 검토이며 계산·사용성 검증 완료가 아니다.\n+\n+- 2026-09-21 / M8(T084): **교차 spec의 결정 완료와 미해결을 구분해 적은 곳은\n+  [plan.md \"교차 spec 후속\"](../plan.md#교차-spec-후속-결정-완료와-미해결-의존성-구분)이다.** 위 표가\n+  결정 완료, 그 아래 \"미해결로 남긴 것\"이 아직 해결하지 않은 것이다. 같은 목록을 이 파일에 옮겨 적지\n+  않는다 — 두 곳에 적으면 한쪽만 낡는다.\n+- 2026-09-21 / M8(T084): 이 점검표에서 **다른 spec 소유로 넘긴 항목(CHK002·004·042·057)은 아직\n+  실제로 전달하지 않았다.** 011 문서에 소유자를 적었을 뿐이므로 전달 완료로 읽지 않는다. CHK040만\n+  2026-09-20에 소유자 위임으로 해소됐다.\n+- 2026-09-21 / M8(T083·T089): quickstart 실행 기록은 S1(워커 몫)·S2·S3만 실제로 돌렸고 나머지\n+  시나리오와 T089 측정은 미실행이다. 근거와 이유는 [quickstart.md \"실행 기록\"](../quickstart.md#실행-기록)에\n+  있다. **구현 완료와 검증 완료를 같은 것으로 읽지 않는다.**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/checklists/review.md",
+          "old_path": "specs/011-regime-strategy-link/checklists/review.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,6 +15,9 @@\n - **비교 묶음**은 `base`(필수)·`compare`(선택) 두 공개 토큰(005 `publicToken`, 32자 소문자 16진)\n   이다. 서버가 005 `PublicResultService.resolve`와 같은 규칙(형식 → 존재 → 만료)으로 **분석 요청**과 그 실행으로\n   푼다. 만료된 토큰은 `410 RESULT_EXPIRED`, 없는 토큰은 `404`(005 코드 재사용).\n+- **비교 묶음 조건 대조**: 두 토큰은 주소로 직접 들어올 수 있으므로 서버가 섹터 후보 집합·대응표 버전·\n+  시작 금액·비용 조건 버전·자료 버전이 같은지 확인하고, 다르면 계산도 기록도 만들지 않고\n+  `400 INVALID_INPUT`과 어긋난 항목 이름을 돌려준다(T093). §1과 §1b가 판정보다 먼저 이 관문을 지난다.\n - 모든 응답에 `basis: {kind: \"HISTORICAL_REVISION\"}`가 있다(FR-015). 화면은 이 값을 읽어 \"최신\n   개정자료를 이용한 역사 탐색\"을 표시한다.\n - **로그인**: 유효한 공개 주소에 의한 `GET`은 익명 허용. 검색 기록 생성 POST도 인증하며 익명 검색은 GET으로 계속 제공한다. `POST`는 요청자가 없으면 기존 `401 AUTHENTICATION_REQUIRED`(014 코드 재사용, FR-025). 계산은\n@@ -47,9 +50,11 @@\n   \"bundle\": {\n     \"runs\": [\n       {\"publicToken\": \"9f2c…\", \"role\": \"BASE\", \"strategyId\": \"FIXED_WEIGHT\", \"strategyName\": \"내가 정한 비중\",\n-       \"period\": {\"start\": \"2010-01-04\", \"end\": \"2025-12-30\", \"effectiveStart\": \"2010-04-02\"}, \"warmupTradingDays\": 63},\n+       \"period\": {\"start\": \"2010-01-04\", \"end\": \"2025-12-30\", \"effectiveStart\": \"2010-04-02\"}, \"warmupTradingDays\": 63,\n+       \"costProfileVersion\": \"KR-ETF-2026-09\", \"dataVersion\": \"KRX-2026-09-09\"},\n       {\"publicToken\": \"b41e…\", \"role\": \"COMPARE\", \"strategyId\": \"INVERSE_VOLATILITY\", \"strategyName\": \"흐름을 따라 배분하기\",\n-       \"period\": {\"start\": \"2010-01-04\", \"end\": \"2025-12-30\", \"effectiveStart\": \"2010-04-02\"}, \"warmupTradingDays\": 63}\n+       \"period\": {\"start\": \"2010-01-04\", \"end\": \"2025-12-30\", \"effectiveStart\": \"2010-04-02\"}, \"warmupTradingDays\": 63,\n+       \"costProfileVersion\": \"KR-ETF-2026-09\", \"dataVersion\": \"KRX-2026-09-09\"}\n     ],\n     \"instruments\": [{\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": \"091160.XKRX\", \"listedOn\": \"2006-06-27\"},\n                     {\"sectorId\": \"BIO\", \"instrumentId\": \"244580.XKRX\", \"listedOn\": \"2006-06-27\", \"delistedOn\": \"2018-11-15\"}]\n@@ -87,6 +92,15 @@\n - `availability`는 비교 묶음 전체의 판정(가장 나쁜 실행)이고 `perRun`이 실행별이다. 우선순위:\n   `DATA_INSUFFICIENT` > `POST_INCOMPLETE` > `OUT_OF_PERIOD` > `NORMAL`. `OUT_OF_PERIOD`는 **필터\n   조건이 아니다** — `shownInFiltered`에 영향을 주지 않고 사례를 열 때 확인을 받는다(§2).\n+- **`perRun`의 판정이 실행마다 갈릴 수 있는 길은 둘뿐이다**: 전략마다 다른 워밍업 길이에서 오는\n+  `WARMUP_SHORT`와, 기존 실행의 평가 시작·결과 종료가 사례 구간을 덮지 못해 생기는 `OUT_OF_PERIOD`다.\n+  나머지 사유(`UNLISTED`·`SECTOR_UNMAPPED`·`RECENT`·`DELISTED`)는 섹터 후보 집합·대응표 버전·자료\n+  버전에서 나오는데, 서버가 §0의 비교 묶음 조건 대조에서 그 셋이 다른 묶음을 **판정 전에 거절하므로**\n+  (`400 INVALID_INPUT`, T093) 두 실행이 같은 값을 갖는다. 그래도 `perRun`을 남기는 것은 위 두 사유와\n+  실행별 `completedTradingDays`를 화면이 실행 자리마다 따로 보여야 하기 때문이다.\n+- `bundle.runs[]`의 `costProfileVersion`·`dataVersion`은 그 실행이 고정한 비용 조건 버전과 자료 버전이다.\n+  화면이 결과 머리에 \"같은 평가 날짜·비용 버전\"을 보이는 근거이고(FR-011·SC-003·T061), 비교 묶음 조건 대조의 입력과\n+  같은 값이다. 004 등록표가 값을 소유하며 011은 옮겨 싣기만 한다.\n - `postWindow.d63`은 미완성이면 `null`이고 `completedTradingDays`가 진짜 길이다. 21거래일 미만이면\n   `state=POST_INCOMPLETE`이고 기본 목록에서 빠진다(Clarifications 09-18 Q2). `postWindow`는 시장 달력 기준이고,\n   실행별 실제 확보 거래일 수는 `perRun[].completedTradingDays`다 — 구간 안 상장폐지면 폐지 전날까지로 줄고\n@@ -160,11 +174,19 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 \n }\n ```\n \n-### 응답 200 — 확인 필요 (`OUT_OF_PERIOD_CONFIRM_REQUIRED`)\n+### 응답 200 — 확인 필요 (`*_CONFIRM_REQUIRED`)\n \n-비교 묶음의 어느 실행이 사례 사후 구간을 덮지 않는데 `confirmFullPeriod=false`면 **계산을 만들지\n-않고** 아래를 돌려준다. 화면은 \"이 사례를 보려면 전체 기간으로 다시 계산합니다\"를 보이고 확인하면\n-`confirmFullPeriod=true`로 다시 보낸다(Clarifications 09-18 Q1).\n+계산을 만들기 전에 사용자의 확인이 필요한 경우가 **둘**이고, `outcome`이 그 둘을 가른다. 어느 쪽이든\n+`confirmFullPeriod=false`면 **링크도 메시지도 만들지 않고** 아래 모양을 돌려주며, 확인하면\n+`confirmFullPeriod=true`로 같은 요청을 다시 보낸다(Clarifications 09-18 Q1).\n+\n+| `outcome` | 언제 | 화면 문구의 뜻 |\n+|---|---|---|\n+| `OUT_OF_PERIOD_CONFIRM_REQUIRED` | 어느 실행의 분석 기간이 사례 사후 구간을 덮지 않는다 | \"기간이 모자라 다시 계산한다\" |\n+| `FILLS_MISSING_CONFIRM_REQUIRED` | 기간은 덮지만 그 실행에 개별 체결 기록이 없다(`backtest_result.fills_recorded=false`, 옛 워커의 결과) | \"이 결과는 사후 구간을 보려면 다시 계산한다\" |\n+\n+둘을 한 이름으로 합치지 않는 것은 사용자가 읽을 이유가 다르기 때문이다. 기간 밖을 먼저 보고, 기간이\n+덮이는 실행만 체결 기록을 본다. 본문 모양(`requiredRange`·`affected`)은 둘이 같다.\n \n ```json\n {\"outcome\": \"OUT_OF_PERIOD_CONFIRM_REQUIRED\",\n@@ -226,6 +248,9 @@ snapshotKey는 사용자가 본 010 결과로 고정하며 새 revision으로 \n - `status=QUEUED|RUNNING`이면 `result=null`, `queuedAt`·`startedAt`.\n - 계산 작업을 만들지 않은 판정(`DATA_INSUFFICIENT`·`POST_INCOMPLETE`)은 `status=COMPLETED`이지만 큐에\n   들어간 적이 없으므로 `queuedAt`·`startedAt`이 `null`이고 판정 시각만 `finishedAt`에 있다.\n+- `lossContribution`을 생략할 때는 값을 `null`로 두지 않고 **키 자체가 없다.** 워커가 키를 빼고 보내면\n+  저장된 결과에도 응답에도 그 키가 없으며, 화면은 키의 유무로 표시 여부를 가른다. 생략하는 경우는\n+  전체 구간 손익이 0일 때 하나뿐이다.\n - `turnover`는 두 구간 모두 `ANNUALIZED_252`로 환산한 값이다. 구간이 짧다고 값이 작아지지 않으므로\n   `window21`과 `window63`을 같은 단위로 나란히 놓을 수 있다.\n - `holdings`는 구간의 **모든 거래일**을, `trades`는 구간의 **모든 거래**를 담는다 — `trades`의 개수는\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/contracts/regime-link-api.md",
+          "old_path": "specs/011-regime-strategy-link/contracts/regime-link-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -77,6 +77,13 @@ routing key: 작업 `regime-link.job.requested`, 이벤트 `regime-link.event`.\n `{schemaVersion: 1, eventId, linkId, attempt, type, occurredAt, payload}`. `eventId`는 이벤트마다\n 고유하고 재발행 시 유지(멱등 키, 백테스트와 같다).\n \n+**`eventId`의 실제 형식은 UUID 문자열이다.** 워커가 고정 이름공간과 `\"{linkId}:{attempt}:{type}\"`에서\n+`uuid5`로 결정적으로 뽑으므로, 같은 작업이 재전달돼 다시 계산돼도 같은 값이 나온다(백테스트 경로처럼\n+실행마다 새 식별자를 발급하면 재전달마다 키가 달라져 같은 결과가 두 번 기록된다). 계약은 자유\n+문자열만 요구하므로 예시 파일의 `EVT-RL-000001`은 계약 위반이 아니지만 **운영에서 나오는 모양이\n+아니다** — 형식으로 값을 파싱하는 코드를 두지 않는다. 이름공간을 바꾸면 이미 발행한 이벤트와 다른\n+`eventId`가 나오므로 바꾸지 않는다.\n+\n | type | payload |\n |---|---|\n | `STARTED` | `{startedAt, resource: {pid, hostname}}` |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/contracts/regime-link-messaging.md",
+          "old_path": "specs/011-regime-strategy-link/contracts/regime-link-messaging.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -249,6 +249,23 @@ Testcontainers에 010 표 시드 행을 넣어 검증한다(R8). **011 마이그\n | 005 `PublicResultExpirySweeper` | 만료된 비로그인 요청 행을 지운다(실행은 남는다) | 011의 요청 FK는 `ON DELETE SET NULL`. 005 정리 코드는 바꾸지 않는다(R14) |\n | 003 '분석하기' | 접수 뒤 결과 화면으로 이동하지 않는다(\"이동은 준비 중\") | `case`가 있을 때만 접수 즉시 011로 이동(T047). `case` 없는 이동은 003·005 소유자 |\n \n+### 미해결로 남긴 것 (2026-09-21, M8 검증)\n+\n+위 표는 **결정이 끝난** 경계다. 아래는 011 구현을 마치며 드러났고 **아직 해결하지 않은** 것들이다.\n+각 줄은 이번에 코드로 확인했다. 해결한 것처럼 적지 않는다.\n+\n+| 항목 | 지금 상태 | 왜 남겼나 |\n+|---|---|---|\n+| 백엔드 시험 4건 미작성 | `T036`·`T060`·`T070`·`T076`이 `tasks.md`에서 아직 `[ ]`다. `FreshCashScenarioTest`·`OutOfPeriodFlowTest`·`BundleChangeTest` 파일은 `backend/src/test`에 생겨 작성 중이고, `RegimeLinkMessagingIT`는 파일도 없다 | **큐를 실제로 지나는 왕복(T036)을 아직 아무도 확인하지 않았다.** 발행과 소비를 각자 본 시험은 있으나 브로커를 끝에서 끝까지 지난 기록이 없다 |\n+| 발행 확인(publisher confirm) 없음 | `RegimeLinkJobPublisher`의 javadoc은 \"브로커가 확인한 뒤에만 정상 반환한다\"고 적지만, 저장소 어디에도 `spring.rabbitmq.publisher-confirm-type` 설정이 없다(004도 같고, `application.yml`에 \"confirm·returns 설정은 발행 신뢰성(outbox) 작업에서 추가\"라는 주석만 있다) | 실제 동작은 \"예외가 나지 않으면 성공\"이다. 004와 함께 outbox 작업에서 정하는 것이 맞아 011만 고치지 않았다. **javadoc 문장을 구현에 맞추거나 설정을 더하는 일이 남았다** |\n+| `RABBITMQ_URL` 기본값 | `worker/config.py`의 `rabbitmq_url` 기본값이 `amqp://thorp:thorp@localhost:5672/`다. `regime_link_main.main()`의 `if not settings.rabbitmq_url` 관문은 기본값이 비어 있지 않아 **결코 걸리지 않는다** | T018은 \"기본값 없음\"을 요구하지만 이 파일은 백테스트 워커와 함께 쓴다. 두 워커가 같은 설정을 읽으므로 011만 바꾸면 백테스트 쪽 기동이 달라진다 |\n+| 운영 compose에 011 워커 없음 | `docker-compose.dev.yml`에 `worker-regime-link`를 등록했으나 `infra/docker-compose.prod.yml`에는 없다 | 운영 배포 담당(INFRA)과 이미지·자원 배분을 정한 뒤 넣는다 |\n+| 백엔드 healthcheck 없음 | 토폴로지는 백엔드가 선언하는데 백엔드에 healthcheck가 없어, 011 워커의 기동 순서가 `restart: on-failure` 재시도에 기댄다(`docker-compose.dev.yml` 주석에 적어 두었다) | 재시도로 결과는 같지만 기동 로그에 실패가 남는다. healthcheck는 백엔드 소유 |\n+| 004에 `analyticsMethod`가 없다 | `BacktestRunSliceReader.analyticsMethod`가 004 `versions.engine`(엔진·워커 버전)을 그 자리에 싣는다 | \"구간 지표를 낸 방식\"과 \"엔진 버전\"이 같은 뜻인지 **확인 필요**다. 004 소유자에게 물어야 하고 아직 묻지 않았다 |\n+| 계약 픽스처가 두 벌 | `docs/specs/regime-link-messaging/generate_fixtures.py`가 원시 종가를 함께 내보내지 않아, 워커가 `worker/tests/regime_link/fixtures/`에 `*.job.json`과 `*.closes.json` 짝을 따로 둔다 | 시장 자료는 메시지에 없고 워커가 DB에서 읽는 구조라 생긴 차이다. 한 벌로 합치려면 생성기가 종가까지 내보내야 한다 |\n+| 응답 봉투가 두 벌 | 010은 `HttpApiResponse`, 011과 나머지는 `ApiResponse`를 쓴다 | 011은 자기 경로에서 `ApiResponse`로 맞췄고 010의 봉투는 바꾸지 않았다. 통일은 010·공통 소유 |\n+| T102~T111 | `tasks.md` Phase 13~16의 Convergence 후속이 `[ ]`로 남아 있다 | 이번 범위 밖이다. 특히 T103(구간 안 스냅샷 누락)·T105(워커 크기 상한)는 지금 보호가 작동하지 않는 자리다 |\n+\n ## Complexity Tracking\n \n > Constitution Check에 정당화가 필요한 위반이 없다. 이 절은 비운다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/plan.md",
+          "old_path": "specs/011-regime-strategy-link/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -130,7 +130,68 @@ cd frontend && npm run lint && npm run build && npm test   # skipped 수 확인\n \n ## 실행 기록\n \n-*(M8에서 채운다. 날짜·명령·결과·skipped 수·확인하지 못한 항목을 남긴다.)*\n+### 2026-09-21 (M8 · T083)\n+\n+**이 절은 실제로 돌린 것만 적는다.** 돌리지 못한 시나리오에는 결과를 적지 않고 \"미실행\"과 그 이유만\n+남긴다. 아래 표의 \"확인함\"은 명령을 돌려 출력을 본 것이고, \"미실행\"은 이번에 돌리지 않은 것이다.\n+\n+#### 묶음 검증 명령 (전체 합계)\n+\n+기준선은 `origin/dev` `b36ccbab`이다. 세 파트 모두 011 작업 뒤 실패 0이다.\n+\n+| 파트 | 명령 | 기준선 | 2026-09-21 |\n+|---|---|---|---|\n+| 백엔드 | `./gradlew build` | tests=1883 · failures=0 · errors=0 · **skipped=4** | tests=1918 · failures=0 · errors=0 · **skipped=4** |\n+| 워커 | `pytest` | 456 passed · **1 skipped** | 516 passed · **0 skipped** |\n+| 프론트 | `npm test` | 117 files / 1150 tests | 135 files / 1256 tests · 실패 0 |\n+| 프론트 | `npm run lint` | 오류 0 · 경고 20 | 오류 0 · 경고 20 |\n+\n+**백엔드 skipped 4건은 011과 무관하다.** `MarketLiveApiTest::realEndpointsProduceSanitizedResults`,\n+`NewsPerformanceIT` 2건, `RequiredDockerTest::Docker를 요구하는 환경에서는 Docker에 붙을 수 있다`이다.\n+이 회차에는 Docker 데몬이 떠 있어 DB 통합 시험이 실제로 돌았다 — 데몬이 꺼져 있던 앞선 회차에서는\n+592건이 조용히 건너뛰어졌으므로, 이 숫자를 인용할 때는 **Docker가 떠 있었는지를 함께 확인한다.**\n+\n+#### 시나리오별\n+\n+| 시나리오 | 결과 |\n+|---|---|\n+| S1 (워커 몫) | **확인함.** 아래 명령에 포함 |\n+| S1 (백엔드 몫) | **미실행.** `RegimeLinkMessageContractTest`를 따로 돌리려 했으나 이 작업 환경에 JDK가 없어(`JAVA_HOME` 미설정·`java` 없음) `./gradlew`가 기동하지 않았다. 백엔드 전체 `build`는 위 표대로 통과했으므로 이 시험도 그 안에서 돌았다 |\n+| S2 | **확인함** |\n+| S3 | **확인함** |\n+| S4~S7 · S9 | **미실행.** PostgreSQL·RabbitMQ·백엔드·워커 둘·프론트를 모두 띄우고 010 검색 결과가 있는 자료가 필요하다. 이번 회차에 그 기동을 하지 못했다 |\n+| S10 (T089) | **미실행.** 아래 \"T089 측정\" 참고 |\n+\n+#### 확인한 명령과 출력\n+\n+```bash\n+cd worker && uv run pytest tests/regime_link/test_contracts.py     tests/regime_link/test_slicer.py tests/regime_link/test_consumer.py -q\n+# 72 passed in 0.33s   (skipped 0)\n+```\n+\n+- S1(워커 몫): `test_contracts.py`가 `docs/specs/regime-link-messaging/examples/*.json`을 round-trip한다.\n+- S2: `test_slicer.py`가 `examples/reconciliation/manual_reconciliation.json`과 대조한다.\n+- S3: `test_consumer.py`가 오류 세 갈래(reject → DLQ / `FINISHED(FAILED)` 후 ACK / 발행 실패 requeue)를 본다.\n+\n+#### 확인 필요로 남은 것\n+\n+- **큐를 실제로 지나는 왕복은 아직 아무도 확인하지 않았다.** T036(Testcontainers RabbitMQ·PostgreSQL\n+  왕복)이 미작성이고 S5의 수동 확인도 미실행이라, 백엔드가 발행한 작업이 워커에 닿아 이벤트로 돌아오는\n+  경로 전체를 끝에서 끝까지 본 기록이 없다. 단위·통합 시험은 양쪽을 따로 볼 뿐이다.\n+- S5~S7·S9의 화면·DB 기록 항목은 자동 시험이 같은 조건을 흉내 낸 것으로 갈음했고 사람이 눈으로 본\n+  기록은 없다.\n+\n+### T089 측정 — 미실행\n+\n+S10의 두 측정(① `GET /regime-links/availability` 30회 순차 호출의 p95, ② `regime_link.queued_at →\n+finished_at`의 p95)은 **이번 회차에 재지 않았다.** 전체 기동과 010 검색 결과가 있는 자료가 있어야\n+하는데 확보하지 못했다. 목표(300ms·3초)는 측정 목표이지 통과 조건이 아니므로(원칙 IX, research R9)\n+**측정하지 않았다는 사실만 남기고 추정치를 적지 않는다.** 다시 잴 때는 S10의 명령과 함께 날짜·장비·\n+자료 규모·p50/p95를 이 절에 적는다.\n+\n+관련해 T110(가용성 조회의 반복 질의)이 미해결로 남아 있다 —\n+`DatabaseTradingCalendarAdapter.calendarQuery`가 호출마다 자료 버전을 다시 읽어 달력 질의가 두 배가\n+된다는 지적이며, 실측이 이루어지면 그 태스크의 판단 근거가 된다.\n \n ## 2026-09-20 추가 인수 시나리오 (아직 미실행)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/quickstart.md",
+          "old_path": "specs/011-regime-strategy-link/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -301,10 +301,10 @@ flowchart LR\n \n - [X] T080 (BE) 운영 설정 마무리: `application.yml`에 `thorp.regimelink.{pending-run-sweep-interval, job-max-rows, job-max-instruments}` 자리(`application-local.yml` 로컬 값, `application-prod.yml`은 **기본값 없는** 환경변수 참조), `infra/.env.prod.example`·루트 `.env.example` 항목, `RegimeLinkProperties` `@NotNull`과 미설정 시 기동 실패를 확인하는 `RegimeLinkPropertiesTest`(T037에서 옮김). 문서에 수치를 적지 않는다\n - [X] T081 (FE 테스트) **M7 머지 전에 통과해야 한다(묶음 M7).** `frontend/src/components/regimelink/forbiddenPhrases.test.ts`: `components/regimelink/`·`pages/RegimeLink*.tsx`를 디렉터리 훑기로 모아 금지 표현(SC-007 네 종류 + 010 목록 13개: \"추천\"·\"지금도\"·\"더 벌\"·\"이겼\"·\"승자\"·\"확률\"·\"유사도\"·\"%\" 유사 표현 등) 0건 고정. 대상 파일 손 목록 금지(research R11)\n-- [ ] T082 (DOCS) API·메시징 README와 contracts를 구현 결과로 동기화. REST §1a 구간 조회·§1b 검색 생성·linkSearchId 연결, DEP-004-011 입력 검증 결과, 회전율 단위와 구간 손익 정의 확인. 미완 의존성을 완료로 기록하지 않는다\n+- [X] T082 (DOCS) API·메시징 README와 contracts를 구현 결과로 동기화. REST §1a 구간 조회·§1b 검색 생성·linkSearchId 연결, DEP-004-011 입력 검증 결과, 회전율 단위와 구간 손익 정의 확인. 미완 의존성을 완료로 기록하지 않는다\n - [ ] T089 (DOCS·검증) quickstart S10 측정: 표시 후보 10개 × 실행 2개 × 연속 운용(링크 20개) 조건에서 ① `GET /regime-links/availability` 30회 순차 호출의 p95, ② `regime_link.queued_at → finished_at`의 p95(워커 1개)를 재고 장비·자료 규모와 함께 기록한다. 목표(300ms·3초)는 **측정 목표이며 통과 조건이나 타임아웃이 아니다**(원칙 IX, research R9). 넘으면 수치와 병목 추정을 남기고 구현을 막지 않는다\n-- [ ] T083 (DOCS) quickstart S1~S7·S9 실행 기록을 `quickstart.md` \"실행 기록\"에 날짜·명령·결과·**skipped 수**와 함께 남긴다. 확인하지 못한 항목은 \"확인 필요\"로\n-- [ ] T084 (DOCS) `checklists/review.md`와 plan에 003·005·010·004 미해결 후속과 검증 결과를 기록. 014 로그인 경계는 소유자의 결정 권한 위임(2026-09-20 사용자 확인)에 따라 이 작업에서 정한 항목으로 구분하며 추가 승인을 요구하지 않는다. 타 소유자에게 실제 전달하지 않은 사실을 전달 완료라고 적지 않는다\n+- [X] T083 (DOCS) quickstart S1~S7·S9 실행 기록을 `quickstart.md` \"실행 기록\"에 날짜·명령·결과·**skipped 수**와 함께 남긴다. 확인하지 못한 항목은 \"확인 필요\"로\n+- [X] T084 (DOCS) `checklists/review.md`와 plan에 003·005·010·004 미해결 후속과 검증 결과를 기록. 014 로그인 경계는 소유자의 결정 권한 위임(2026-09-20 사용자 확인)에 따라 이 작업에서 정한 항목으로 구분하며 추가 승인을 요구하지 않는다. 타 소유자에게 실제 전달하지 않은 사실을 전달 완료라고 적지 않는다\n - T085 **(삭제, 2026-09-20)** 010 읽기 대역을 두지 않게 되어(research R8) 폐기 예행연습이 필요 없다. 번호는 재사용하지 않는다\n \n ---\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2232483,
+      "head_commit_sha": "803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa",
+      "base_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "start_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "created_at": "2026-09-21T15:05:46.546+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538",
+      "commits": [
+        {
+          "id": "803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa",
+          "short_id": "803d4ec1",
+          "created_at": "2026-09-21T15:05:24.000+09:00",
+          "parent_ids": [
+            "7dba49d287c1063d5d889bacdb3506c5392cc187",
+            "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(be)/370-regime-link-verification",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T15:05:24.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T15:05:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/803d4ec1047322fa9b086fd30fc6e84e7d5ad5aa"
+        },
+        {
+          "id": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+          "short_id": "7dba49d2",
+          "created_at": "2026-09-21T14:41:42.000+09:00",
+          "parent_ids": [
+            "89955d3f54b4a52c3683411e2e122dd3b207260b",
+            "bf11c573c088b418db31abd5acf4161c48f03e33"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T14:41:42.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T14:41:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7dba49d287c1063d5d889bacdb3506c5392cc187"
+        },
+        {
+          "id": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+          "short_id": "89955d3f",
+          "created_at": "2026-09-21T13:52:21.000+09:00",
+          "parent_ids": [
+            "b9877621d06181d4cd268cb37faff335d0b317b1",
+            "30fc85b2b94175cb3da8fc79716b954dc3c6b596"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:52:21.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:52:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89955d3f54b4a52c3683411e2e122dd3b207260b"
+        },
+        {
+          "id": "b9877621d06181d4cd268cb37faff335d0b317b1",
+          "short_id": "b9877621",
+          "created_at": "2026-09-21T12:50:23.000+09:00",
+          "parent_ids": [
+            "b70b68a9d9a27f2096bc471d1e1998d8038c0296"
+          ],
+          "title": "docs(be): spec 011 검증 기록과 계약 정합",
+          "message": "docs(be): spec 011 검증 기록과 계약 정합\n\n계약 문서와 구현이 어긋난 일곱 곳을 코드로 확인해 문서를 구현에 맞췄다.\n링크 조회에서 제시된 토큰 외의 토큰을 싣지 않는다는 점, 구간 손익이 0 일 때\nlossContribution 키가 아예 없다는 점, eventId 가 결정적으로 만든 UUID 라\n모양을 파싱하면 안 된다는 점, 체결 기록이 없는 실행의 확인 요구 값이\n계약에 빠져 있던 점을 채웠다.\n\n비교 묶음의 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과\n분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n\nquickstart 실행 기록은 실제로 돌린 것만 적고 나머지는 미실행으로 남겼다.\n전체 기동이 필요한 시나리오와 p95 측정은 돌리지 못했다. 미해결 항목은\nplan 에 표로 모았다 — 큐를 실제로 지나는 왕복을 아직 확인하지 않은 것이\n가장 큰 공백이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:50:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:50:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9877621d06181d4cd268cb37faff335d0b317b1"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2232439,
+      "head_commit_sha": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+      "base_commit_sha": "bf11c573c088b418db31abd5acf4161c48f03e33",
+      "start_commit_sha": "3b5dacaabb5956525cb73a3e0ddca8c55adc0a12",
+      "created_at": "2026-09-21T15:01:27.327+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538",
+      "commits": [
+        {
+          "id": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+          "short_id": "7dba49d2",
+          "created_at": "2026-09-21T14:41:42.000+09:00",
+          "parent_ids": [
+            "89955d3f54b4a52c3683411e2e122dd3b207260b",
+            "bf11c573c088b418db31abd5acf4161c48f03e33"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T14:41:42.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T14:41:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7dba49d287c1063d5d889bacdb3506c5392cc187"
+        },
+        {
+          "id": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+          "short_id": "89955d3f",
+          "created_at": "2026-09-21T13:52:21.000+09:00",
+          "parent_ids": [
+            "b9877621d06181d4cd268cb37faff335d0b317b1",
+            "30fc85b2b94175cb3da8fc79716b954dc3c6b596"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:52:21.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:52:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89955d3f54b4a52c3683411e2e122dd3b207260b"
+        },
+        {
+          "id": "b9877621d06181d4cd268cb37faff335d0b317b1",
+          "short_id": "b9877621",
+          "created_at": "2026-09-21T12:50:23.000+09:00",
+          "parent_ids": [
+            "b70b68a9d9a27f2096bc471d1e1998d8038c0296"
+          ],
+          "title": "docs(be): spec 011 검증 기록과 계약 정합",
+          "message": "docs(be): spec 011 검증 기록과 계약 정합\n\n계약 문서와 구현이 어긋난 일곱 곳을 코드로 확인해 문서를 구현에 맞췄다.\n링크 조회에서 제시된 토큰 외의 토큰을 싣지 않는다는 점, 구간 손익이 0 일 때\nlossContribution 키가 아예 없다는 점, eventId 가 결정적으로 만든 UUID 라\n모양을 파싱하면 안 된다는 점, 체결 기록이 없는 실행의 확인 요구 값이\n계약에 빠져 있던 점을 채웠다.\n\n비교 묶음의 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과\n분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n\nquickstart 실행 기록은 실제로 돌린 것만 적고 나머지는 미실행으로 남겼다.\n전체 기동이 필요한 시나리오와 p95 측정은 돌리지 못했다. 미해결 항목은\nplan 에 표로 모았다 — 큐를 실제로 지나는 왕복을 아직 확인하지 않은 것이\n가장 큰 공백이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:50:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:50:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9877621d06181d4cd268cb37faff335d0b317b1"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2232252,
+      "head_commit_sha": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+      "base_commit_sha": "bf11c573c088b418db31abd5acf4161c48f03e33",
+      "start_commit_sha": "bf11c573c088b418db31abd5acf4161c48f03e33",
+      "created_at": "2026-09-21T14:41:58.159+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "7aa8415ca3e234638d0c237474fc275e2a731538",
+      "commits": [
+        {
+          "id": "7dba49d287c1063d5d889bacdb3506c5392cc187",
+          "short_id": "7dba49d2",
+          "created_at": "2026-09-21T14:41:42.000+09:00",
+          "parent_ids": [
+            "89955d3f54b4a52c3683411e2e122dd3b207260b",
+            "bf11c573c088b418db31abd5acf4161c48f03e33"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T14:41:42.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T14:41:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7dba49d287c1063d5d889bacdb3506c5392cc187"
+        },
+        {
+          "id": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+          "short_id": "89955d3f",
+          "created_at": "2026-09-21T13:52:21.000+09:00",
+          "parent_ids": [
+            "b9877621d06181d4cd268cb37faff335d0b317b1",
+            "30fc85b2b94175cb3da8fc79716b954dc3c6b596"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:52:21.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:52:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89955d3f54b4a52c3683411e2e122dd3b207260b"
+        },
+        {
+          "id": "b9877621d06181d4cd268cb37faff335d0b317b1",
+          "short_id": "b9877621",
+          "created_at": "2026-09-21T12:50:23.000+09:00",
+          "parent_ids": [
+            "b70b68a9d9a27f2096bc471d1e1998d8038c0296"
+          ],
+          "title": "docs(be): spec 011 검증 기록과 계약 정합",
+          "message": "docs(be): spec 011 검증 기록과 계약 정합\n\n계약 문서와 구현이 어긋난 일곱 곳을 코드로 확인해 문서를 구현에 맞췄다.\n링크 조회에서 제시된 토큰 외의 토큰을 싣지 않는다는 점, 구간 손익이 0 일 때\nlossContribution 키가 아예 없다는 점, eventId 가 결정적으로 만든 UUID 라\n모양을 파싱하면 안 된다는 점, 체결 기록이 없는 실행의 확인 요구 값이\n계약에 빠져 있던 점을 채웠다.\n\n비교 묶음의 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과\n분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n\nquickstart 실행 기록은 실제로 돌린 것만 적고 나머지는 미실행으로 남겼다.\n전체 기동이 필요한 시나리오와 p95 측정은 돌리지 못했다. 미해결 항목은\nplan 에 표로 모았다 — 큐를 실제로 지나는 왕복을 아직 확인하지 않은 것이\n가장 큰 공백이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:50:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:50:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9877621d06181d4cd268cb37faff335d0b317b1"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2231685,
+      "head_commit_sha": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+      "base_commit_sha": "30fc85b2b94175cb3da8fc79716b954dc3c6b596",
+      "start_commit_sha": "30fc85b2b94175cb3da8fc79716b954dc3c6b596",
+      "created_at": "2026-09-21T13:52:36.581+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "5eeaf560ad7e043afb13a17a6711cb1767f72af3",
+      "commits": [
+        {
+          "id": "89955d3f54b4a52c3683411e2e122dd3b207260b",
+          "short_id": "89955d3f",
+          "created_at": "2026-09-21T13:52:21.000+09:00",
+          "parent_ids": [
+            "b9877621d06181d4cd268cb37faff335d0b317b1",
+            "30fc85b2b94175cb3da8fc79716b954dc3c6b596"
+          ],
+          "title": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification",
+          "message": "Merge branch 'feat(fe)/369-regime-link-page' into docs(be)/370-regime-link-verification\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:52:21.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:52:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/89955d3f54b4a52c3683411e2e122dd3b207260b"
+        },
+        {
+          "id": "b9877621d06181d4cd268cb37faff335d0b317b1",
+          "short_id": "b9877621",
+          "created_at": "2026-09-21T12:50:23.000+09:00",
+          "parent_ids": [
+            "b70b68a9d9a27f2096bc471d1e1998d8038c0296"
+          ],
+          "title": "docs(be): spec 011 검증 기록과 계약 정합",
+          "message": "docs(be): spec 011 검증 기록과 계약 정합\n\n계약 문서와 구현이 어긋난 일곱 곳을 코드로 확인해 문서를 구현에 맞췄다.\n링크 조회에서 제시된 토큰 외의 토큰을 싣지 않는다는 점, 구간 손익이 0 일 때\nlossContribution 키가 아예 없다는 점, eventId 가 결정적으로 만든 UUID 라\n모양을 파싱하면 안 된다는 점, 체결 기록이 없는 실행의 확인 요구 값이\n계약에 빠져 있던 점을 채웠다.\n\n비교 묶음의 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과\n분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n\nquickstart 실행 기록은 실제로 돌린 것만 적고 나머지는 미실행으로 남겼다.\n전체 기동이 필요한 시나리오와 p95 측정은 돌리지 못했다. 미해결 항목은\nplan 에 표로 모았다 — 큐를 실제로 지나는 왕복을 아직 확인하지 않은 것이\n가장 큰 공백이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:50:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:50:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9877621d06181d4cd268cb37faff335d0b317b1"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2231482,
+      "head_commit_sha": "b9877621d06181d4cd268cb37faff335d0b317b1",
+      "base_commit_sha": "b70b68a9d9a27f2096bc471d1e1998d8038c0296",
+      "start_commit_sha": "b70b68a9d9a27f2096bc471d1e1998d8038c0296",
+      "created_at": "2026-09-21T13:32:47.683+09:00",
+      "merge_request_id": 954242,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "5eeaf560ad7e043afb13a17a6711cb1767f72af3",
+      "commits": [
+        {
+          "id": "b9877621d06181d4cd268cb37faff335d0b317b1",
+          "short_id": "b9877621",
+          "created_at": "2026-09-21T12:50:23.000+09:00",
+          "parent_ids": [
+            "b70b68a9d9a27f2096bc471d1e1998d8038c0296"
+          ],
+          "title": "docs(be): spec 011 검증 기록과 계약 정합",
+          "message": "docs(be): spec 011 검증 기록과 계약 정합\n\n계약 문서와 구현이 어긋난 일곱 곳을 코드로 확인해 문서를 구현에 맞췄다.\n링크 조회에서 제시된 토큰 외의 토큰을 싣지 않는다는 점, 구간 손익이 0 일 때\nlossContribution 키가 아예 없다는 점, eventId 가 결정적으로 만든 UUID 라\n모양을 파싱하면 안 된다는 점, 체결 기록이 없는 실행의 확인 요구 값이\n계약에 빠져 있던 점을 채웠다.\n\n비교 묶음의 조건 대조가 들어오면서 실행별 사유가 갈릴 수 있는 길이 워밍업과\n분석 기간 둘로 줄었다. 계약 문장을 그에 맞게 다듬었다.\n\nquickstart 실행 기록은 실제로 돌린 것만 적고 나머지는 미실행으로 남겼다.\n전체 기동이 필요한 시나리오와 p95 측정은 돌리지 못했다. 미해결 항목은\nplan 에 표로 모았다 — 큐를 실제로 지나는 왕복을 아직 확인하지 않은 것이\n가장 큰 공백이다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:50:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:50:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b9877621d06181d4cd268cb37faff335d0b317b1"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2847526": [],
+    "2847591": []
+  }
+}

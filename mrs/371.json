@@ -1,0 +1,932 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963461,
+    "iid": 371,
+    "project_id": 1444456,
+    "title": "chore(fe): 프론트 테스트 정리",
+    "description": "## 작업 내용 요약\n\n테스트 감사에서 확인된 프런트 테스트를 정리한다. 아무것도 지키지 않는 테스트·단언을 지우고, 통과는 하지만 고장을 잡지 못하던 테스트를 지금 계약에서 실패할 수 있게 고친다. 운영 코드는 바꾸지 않는다.\n\n## 주요 변경 사항\n\n- 화면에서 빠진 홈 대시보드 유틸(`utils/indicatorHistory`·`marketComparison`·`marketFormat`)만 검사하던 `node --test` 파일 셋을 지우고, `test:legacy`를 `src/api/market.test.ts` 하나로 줄인다.\n- 이미 지운 UI(순위 배지, 되돌리기 단추, 옛 안내 문장 등)의 재등장만 막던 부재 단언, 운영에서 쓰지 않는 `DataStateNotice` 검사, 쓰이지 않는 픽스처·헬퍼를 지운다.\n- 실패할 수 없던 단언을 실제 동작으로 바꾼다. 도우미 말풍선은 언마운트 대신 화면 전환으로 요청 취소를 확인한다. 학습 글 게시 취소는 확인을 거절하는 경로를 본다. 섹터 선택은 늦은 응답 차단과 주소의 질의 문자열을 관측한다.\n- 010 등록표 금지 낱말 목록을 지금 008 표기로 바꾸고, 영문 ID는 식별자 경계에서만 찾는다.\n\n## 테스트\n\n- `npm run lint`: 오류 0(경고 25건은 기존)\n- `npm run build`: 통과\n- `npm test`: Vitest 160파일 1,569건, node 4건 통과\n- 고친 테스트는 운영 코드를 일부러 바꿨을 때 실패하는 것을 하나씩 확인했다.\n\n## 리뷰 포인트\n\n- 테스트를 지우면서 아무도 쓰지 않게 된 운영 코드를 남겼다: `components/market/*`, `components/home/DataFreshnessPanel`, `utils/{indicatorHistory,marketComparison,marketFormat}.ts`, `DataStateNotice` 함수. 지울지 정해야 한다.\n- 파라미터 탐색의 `requesterId`(`X-User-Id`) 전달을 고정하는 단언 세 건은 운영 코드가 아직 그 값을 보내므로 그대로 두었다. 운영 통로를 걷어 낼 때 함께 고친다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:33:12.643+09:00",
+    "updated_at": "2026-10-04T18:33:54.061+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:33:53.534+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(fe)/unused-test-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🖥️ Frontend",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d9220243dfd2e5861389c4959fc68ae067c4dc4e",
+    "merge_commit_sha": "04dbe64d2ec64c16afbbd79f7452fd10cf5b02d6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:33:17.185+09:00",
+    "reference": "!371",
+    "references": {
+      "short": "!371",
+      "relative": "!371",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!371"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/371",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963461,
+    "iid": 371,
+    "project_id": 1444456,
+    "title": "chore(fe): 프론트 테스트 정리",
+    "description": "## 작업 내용 요약\n\n테스트 감사에서 확인된 프런트 테스트를 정리한다. 아무것도 지키지 않는 테스트·단언을 지우고, 통과는 하지만 고장을 잡지 못하던 테스트를 지금 계약에서 실패할 수 있게 고친다. 운영 코드는 바꾸지 않는다.\n\n## 주요 변경 사항\n\n- 화면에서 빠진 홈 대시보드 유틸(`utils/indicatorHistory`·`marketComparison`·`marketFormat`)만 검사하던 `node --test` 파일 셋을 지우고, `test:legacy`를 `src/api/market.test.ts` 하나로 줄인다.\n- 이미 지운 UI(순위 배지, 되돌리기 단추, 옛 안내 문장 등)의 재등장만 막던 부재 단언, 운영에서 쓰지 않는 `DataStateNotice` 검사, 쓰이지 않는 픽스처·헬퍼를 지운다.\n- 실패할 수 없던 단언을 실제 동작으로 바꾼다. 도우미 말풍선은 언마운트 대신 화면 전환으로 요청 취소를 확인한다. 학습 글 게시 취소는 확인을 거절하는 경로를 본다. 섹터 선택은 늦은 응답 차단과 주소의 질의 문자열을 관측한다.\n- 010 등록표 금지 낱말 목록을 지금 008 표기로 바꾸고, 영문 ID는 식별자 경계에서만 찾는다.\n\n## 테스트\n\n- `npm run lint`: 오류 0(경고 25건은 기존)\n- `npm run build`: 통과\n- `npm test`: Vitest 160파일 1,569건, node 4건 통과\n- 고친 테스트는 운영 코드를 일부러 바꿨을 때 실패하는 것을 하나씩 확인했다.\n\n## 리뷰 포인트\n\n- 테스트를 지우면서 아무도 쓰지 않게 된 운영 코드를 남겼다: `components/market/*`, `components/home/DataFreshnessPanel`, `utils/{indicatorHistory,marketComparison,marketFormat}.ts`, `DataStateNotice` 함수. 지울지 정해야 한다.\n- 파라미터 탐색의 `requesterId`(`X-User-Id`) 전달을 고정하는 단언 세 건은 운영 코드가 아직 그 값을 보내므로 그대로 두었다. 운영 통로를 걷어 낼 때 함께 고친다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:33:12.643+09:00",
+    "updated_at": "2026-10-04T18:33:54.061+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:33:53.534+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(fe)/unused-test-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🖥️ Frontend",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d9220243dfd2e5861389c4959fc68ae067c4dc4e",
+    "merge_commit_sha": "04dbe64d2ec64c16afbbd79f7452fd10cf5b02d6",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:33:17.185+09:00",
+    "reference": "!371",
+    "references": {
+      "short": "!371",
+      "relative": "!371",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!371"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/371",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "34",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "head_sha": "d9220243dfd2e5861389c4959fc68ae067c4dc4e",
+      "start_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "63449eaebe0d87c12e69314f554e216df3db3595",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881343,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:33:12.742+09:00",
+          "updated_at": "2026-10-04T18:33:12.745+09:00",
+          "system": true,
+          "noteable_id": 963461,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 371,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4ef2d51877ee3a92e620cde843222e56ccf3c68e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881344,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:33:12.769+09:00",
+          "updated_at": "2026-10-04T18:33:12.783+09:00",
+          "system": true,
+          "noteable_id": 963461,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 371,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b805f2ea56478d9aaa8b0b2543e509d440bf2f61",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881345,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **테스트 품질 및 엄격성 강화**: 단순히 존재 여부만 확인하거나 실패할 수 없었던 단언들을 실제 비즈니스 로직(라우트 전환, confirm 거절 경로, 늦은 응답 차단 등)을 검증할 수 있도록 견고하게 개선했습니다.\n- **정적 분석 정밀도 향상**: `indicatorAgnostic.test.tsx`에서 정규식 식별자 경계 검사(`(?<![A-Za-z0-9_])`)를 도입하여 오탐을 줄이고 도메인 상수 유입을 더 정확하게 차단하도록 설계했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **라우트 전환 시 요청 취소 테스트 (`AssistantBubble.test.tsx`)**: \n  - 시나리오: 사용자가 질문을 입력하고 답변이 생성되는 도중에 다른 결과 페이지(`/results/{OTHER_TOKEN}`)로 라우트가 전환될 때, 진행 중이던 이전 요청의 `AbortSignal`이 실제로 `aborted` 상태가 되는지 확인합니다.\n- **게시 취소 거절 경로 테스트 (`AdminLearningEditPage.test.tsx`)**: \n  - 시나리오: 관리자 학습 글 편집 페이지에서 '게시 취소' 버튼을 눌렀을 때 브라우ザー `confirm` 창에서 '취소(거절)'를 선택하면, API(`unpublishArticle`)가 호출되지 않고 버튼과 UI 상태가 유지되는지 검증합니다.\n- **레이스 컨디션 및 늦은 응답 차단 테스트 (`SectorSelectionPage.test.tsx`)**: \n  - 시나리오: `StrictMode` 환경 또는 빠른 재요청 상황에서 첫 번째 API 호출이 지연되고 두 번째 호출이 성공했을 때, 지연된 첫 번째 응답이 나중에 돌아와도 성공한 화면 상태를 덮어쓰지 않고 무시되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d9220243dfd2e5861389c4959fc68ae067c4dc4e -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T18:33:24.749+09:00",
+          "updated_at": "2026-10-04T18:33:24.749+09:00",
+          "system": false,
+          "noteable_id": 963461,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 371,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0f2ee3b614b5b483545887355ddd5b0062c1a9a0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881348,
+          "type": null,
+          "body": "mentioned in commit 04dbe64d2ec64c16afbbd79f7452fd10cf5b02d6",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:33:53.553+09:00",
+          "updated_at": "2026-10-04T18:33:53.561+09:00",
+          "system": true,
+          "noteable_id": 963461,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 371,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262307,
+      "head_commit_sha": "d9220243dfd2e5861389c4959fc68ae067c4dc4e",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "created_at": "2026-10-04T18:33:13.100+09:00",
+      "merge_request_id": 963461,
+      "state": "collected",
+      "real_size": "34",
+      "patch_id_sha": "f40bd43c71f63cbed0f3e95eda72861198da5464"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262307,
+      "head_commit_sha": "d9220243dfd2e5861389c4959fc68ae067c4dc4e",
+      "base_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "start_commit_sha": "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc",
+      "created_at": "2026-10-04T18:33:13.100+09:00",
+      "merge_request_id": 963461,
+      "state": "collected",
+      "real_size": "34",
+      "patch_id_sha": "f40bd43c71f63cbed0f3e95eda72861198da5464",
+      "commits": [
+        {
+          "id": "d9220243dfd2e5861389c4959fc68ae067c4dc4e",
+          "short_id": "d9220243",
+          "created_at": "2026-10-04T18:23:16.000+09:00",
+          "parent_ids": [
+            "8ea93b0dde8eefd700b74f50a5f76f543e8ff526"
+          ],
+          "title": "chore(fe): 등록표 ID 검사가 다른 낱말 속 글자에 걸리지 않게 식별자 경계에서만 찾는다",
+          "message": "chore(fe): 등록표 ID 검사가 다른 낱말 속 글자에 걸리지 않게 식별자 경계에서만 찾는다\n\n대소문자를 가리지 않는 부분 문자열 검색은 collaborate 속 labor처럼 엉뚱한 낱말에도 걸린다.\n영문 ID는 식별자 경계에서만 찾고, 한글 이름은 그대로 포함 여부를 본다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:23:16.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:23:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d9220243dfd2e5861389c4959fc68ae067c4dc4e"
+        },
+        {
+          "id": "8ea93b0dde8eefd700b74f50a5f76f543e8ff526",
+          "short_id": "8ea93b0d",
+          "created_at": "2026-10-04T17:44:51.000+09:00",
+          "parent_ids": [
+            "7437ac15fc5622e6f1b1649b3f9b45e129bae9cc"
+          ],
+          "title": "chore(fe): 실패할 수 없거나 낡은 프런트 테스트를 걷어내고 지금 계약으로 고친다",
+          "message": "chore(fe): 실패할 수 없거나 낡은 프런트 테스트를 걷어내고 지금 계약으로 고친다\n\n지운 표시의 재등장만 막던 부재 단언, 쓰지 않는 픽스처·헬퍼, 운영에서 닿지 않는 유틸 테스트 세 파일을 지운다. test:legacy 인자와 그 테스트를 돌리라던 문서 한 줄도 함께 정리한다.\n실패할 수 없던 단언은 고친다. 도우미는 트리를 유지한 채 경로를 바꿔 맥락 전환을 보고, 관리 경로 숨김도 확인한다.\n공통 구간 막대 개수, 목록 예시 표시 문구, 로딩 중 카드(radio), 게시 취소 확인 거절, 재로그인 안내, 기준월 후퇴 안내, 주소의 질의 문자열, StrictMode에서 취소된 요청의 늦은 응답을 실제로 검사한다.\n010 등록표 금지 낱말을 008 등록표의 현재 ID·이름으로 바꾸고, 비로그인 인증 픽스처를 AuthContextValue 계약대로 캐스트 없이 만든다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T17:44:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T17:44:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8ea93b0dde8eefd700b74f50a5f76f543e8ff526"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -17,5 +17,3 @@\n 현재 화면의 5년 표시는 60개월 mock을 전제로 한다. 실제 API 이력이 짧거나 부족하면 기간 안내 및 로딩·실패 처리는 API 연동 작업에서 실제 제공 범위에 맞게 연결한다.\n \n 날짜는 형식뿐 아니라 월별 일수·윤년도 검사한다. 잘못된 기준일은 빈 배열을 반환하고, 잘못된 개별 관측일·유한하지 않은 값은 제외한다. 월 단위 기준일은 해당 월말까지, 일 단위 기준일은 그 날짜까지만 포함한다.\n-\n-날짜 회귀 테스트: `frontend`에서 Node.js 24 기준 `node --test src/utils/indicatorHistory.test.ts` 실행. 별도 테스트 패키지는 추가하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/docs/indicator-history.md",
+          "old_path": "frontend/docs/indicator-history.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -80,18 +80,6 @@ describe('섹터 목록 조회', () => {\n     expect(calledPaths).not.toContain('/sectors/evaluation-window')\n   })\n \n-  it('봉투 안의 data를 목록으로 읽는다', async () => {\n-    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(catalogSuccess))\n-\n-    const result = await fetchSectorCatalog()\n-\n-    expect(result.status).toBe('loaded')\n-    if (result.status !== 'loaded') return\n-    expect(result.catalog.mapVersion).toBe('SEM-2026-09-10-001')\n-    expect(result.catalog.isSample).toBe(true)\n-    expect(result.catalog.sectors[0].representativeEtf.name).toBe('KODEX 반도체')\n-  })\n-\n   it('409 SECTOR_MAP_NOT_READY를 예외가 아니라 상태 값으로 돌려준다', async () => {\n     vi.spyOn(apiClient, 'get').mockRejectedValue(\n       axiosFailure(409, errorEnvelope('SECTOR_MAP_NOT_READY', '대응표가 아직 발행되지 않았다')),\n@@ -442,7 +430,7 @@ describe('공통 평가 기간 조회(T042)', () => {\n     ).rejects.toMatchObject({ kind: 'api', code: 'RESOURCE_NOT_FOUND' })\n   })\n \n-  it('합의한 필드 셋이 없는 응답(지금 001 계약의 모양)은 읽지 못한 것으로 거부한다', async () => {\n+  it('합의한 필드 셋이 없는 응답(001 계약이 넓어지기 전의 옛 모양)은 읽지 못한 것으로 거부한다', async () => {\n     const legacy = omitKeys(\n       windowBody,\n       'warmupBaseDate',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/sectors.test.ts",
+          "old_path": "frontend/src/api/sectors.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -177,9 +177,9 @@ describe('AssistantBubble', () => {\n     await user.click(within(dialog).getByRole('button', { name: EXAMPLE_QUESTIONS[0] }))\n     expect(within(dialog).getByRole('status').textContent).toContain('답을 만들고')\n \n-    // 다른 결과로 이동 — 실제 앱에서는 라우트 전환으로 `ResultPage`가 새 토큰을 등록한다.\n-    view.unmount()\n-    renderAssistant({ path: `/results/${OTHER_TOKEN}` })\n+    // 다른 결과로 이동 — 트리를 내리지 않고 라우트만 바꾼다. 실제 앱처럼 결과 화면이 새 토큰을 등록하고,\n+    // 제공자와 버튼은 그대로 남아 맥락이 바뀐 것만 보고 정리해야 한다.\n+    await view.navigate(`/results/${OTHER_TOKEN}`)\n     await screen.findByRole('button', { name: '질문하기' })\n     expect(firstSignal?.aborted).toBe(true)\n     expect(screen.queryByRole('dialog', { name: '질문하기' })).toBeNull()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantBubble.test.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantBubble.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -47,8 +47,8 @@ describe('AssistantFab', () => {\n     expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()\n   })\n \n-  it('로그인·관리 경로에서는 맥락이 있어도 버튼이 없다', async () => {\n-    renderAssistant({ path: '/login' })\n+  it.each(['/login', '/admin/learning'])('로그인·관리 경로에서는 맥락이 있어도 버튼이 없다(%s)', async (path) => {\n+    renderAssistant({ path })\n     await waitFor(() => expect(api.fetchAssistantCapabilities).toHaveBeenCalled())\n     expect(screen.queryByRole('button', { name: '질문하기' })).toBeNull()\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/AssistantFab.test.tsx",
+          "old_path": "frontend/src/components/assistant/AssistantFab.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,13 @@\n-import { render } from '@testing-library/react'\n-import { useMemo } from 'react'\n-import { MemoryRouter, Route, Routes } from 'react-router-dom'\n+import { act, render } from '@testing-library/react'\n+import { type RefObject, createRef, useEffect, useMemo } from 'react'\n+import {\n+  MemoryRouter,\n+  type NavigateFunction,\n+  Route,\n+  Routes,\n+  useNavigate,\n+  useParams,\n+} from 'react-router-dom'\n import type { AssistantAnswer } from '@/types/assistant'\n import { AssistantProvider, AssistantWidget } from './AssistantWidget'\n import { useAssistantPageContext } from './assistantPageContext'\n@@ -19,15 +26,17 @@ export const answered: AssistantAnswer = {\n }\n \n /** 결과 화면 대역. 실제 `ResultPage`처럼 자기 맥락을 등록한다. */\n-export function FakeResultPage({ token }: { token: string }) {\n+function FakeResultPage({ token }: { token: string }) {\n   const page = useMemo(() => ({ kind: 'RESULT' as const, publicToken: token }), [token])\n   useAssistantPageContext(page)\n   return <main>결과 {token.slice(0, 4)}</main>\n }\n \n export function renderAssistant({ path = `/results/${TOKEN}` }: { path?: string } = {}) {\n-  return render(\n+  const navigateRef = createRef<NavigateFunction>()\n+  const view = render(\n     <MemoryRouter initialEntries={[path]}>\n+      <NavigationHandle navigateRef={navigateRef} />\n       <AssistantProvider>\n         <Routes>\n           <Route path=\"/results/:token\" element={<RouteResult />} />\n@@ -39,11 +48,30 @@ export function renderAssistant({ path = `/results/${TOKEN}` }: { path?: string\n       </AssistantProvider>\n     </MemoryRouter>,\n   )\n+  return {\n+    ...view,\n+    /** 트리를 내리지 않고 경로만 바꾼다. 실제 앱의 라우트 전환처럼 제공자와 버튼은 그대로 남는다. */\n+    navigate: async (to: string) => {\n+      await act(async () => {\n+        await navigateRef.current?.(to)\n+      })\n+    },\n+  }\n+}\n+\n+/** 라우터의 이동 함수를 테스트가 쥐게 한다. */\n+function NavigationHandle({ navigateRef }: { navigateRef: RefObject<NavigateFunction | null> }) {\n+  const navigate = useNavigate()\n+  useEffect(() => {\n+    navigateRef.current = navigate\n+  }, [navigate, navigateRef])\n+  return null\n }\n \n function RouteResult() {\n-  // 경로에 토큰이 없으면(로그인·관리 화면 대역) 결과 하나를 등록한 채로 그 경로에 있는 상황을 흉내 낸다.\n-  const token = window.location.pathname.includes('/results/') ? TOKEN : TOKEN\n+  // 경로의 토큰으로 맥락을 등록한다. 토큰이 없으면(로그인·관리 화면 대역) 결과 하나를 등록한 채로 그 경로에\n+  // 있는 상황을 흉내 낸다.\n+  const { token = TOKEN } = useParams()\n   return <FakeResultPage token={token} />\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/assistantTestSupport.tsx",
+          "old_path": "frontend/src/components/assistant/assistantTestSupport.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -56,8 +56,11 @@ describe('비교 가능 구간 타임라인', () => {\n     const { container } = renderTimeline([반도체, 자동차, 조선])\n \n     expect(container.querySelectorAll('[data-slot=\"common-bar\"]')).toHaveLength(1)\n-    expect(container.querySelector('[data-slot=\"timeline-track\"]')).toBeNull()\n-    expect(container.querySelector('[data-slot=\"track-bar\"]')).toBeNull()\n+    // 대상이 셋이어도 줄과 막대 자리는 하나다. 대상마다 줄이나 막대를 더하면 이 개수가 늘어난다.\n+    expect(container.querySelectorAll('[data-slot=\"timeline-row\"]')).toHaveLength(1)\n+    const lanes = container.querySelectorAll('[data-slot=\"timeline-lane\"]')\n+    expect(lanes).toHaveLength(1)\n+    expect(lanes[0].children).toHaveLength(1)\n   })\n \n   it('공통 시작일과 오늘 날짜를 기본 화면에 보인다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/AvailabilityTimeline.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/AvailabilityTimeline.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -380,7 +380,7 @@ describe('대표 상품 정보 패널', () => {\n     expect(\n       cardBody()?.querySelector('[data-slot=\"profile-sample\"]'),\n     ).not.toBeNull()\n-    expect(screen.queryByText(/이 섹터 목록은 아직 확정되지 않은/)).toBeNull()\n+    expect(screen.queryByText(/예시 대응표/)).toBeNull()\n   })\n \n   it('거래대금을 자릿수 대신 읽을 수 있는 단위로 보인다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/InstrumentBrowser.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/InstrumentBrowser.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,18 +1,6 @@\n import { render, screen } from '@testing-library/react'\n import { describe, expect, it } from 'vitest'\n-import { DataStateFacts, DataStateNotice } from './DataStateNotice'\n-\n-describe('DataStateNotice', () => {\n-  it.each([\n-    ['EXAMPLE', '예시 자료'], ['EMPTY', '표시할 자료 없음'],\n-    ['COLLECTION_FAILED', '최근 수집 실패'],\n-  ] as const)('%s 상태를 오류 경계 없이 설명한다', (status, label) => {\n-    render(<DataStateNotice status={status} referenceMonth=\"2026-07\" lastUpdatedAt={null} historicalComparisonNotice=\"최신 개정자료를 이용한 역사 비교\" />)\n-    expect(screen.getByText(label)).toBeTruthy()\n-    expect(screen.getByText('최신 개정자료를 이용한 역사 비교')).toBeTruthy()\n-    expect(document.body.textContent).not.toMatch(/실시간|현재|지연/)\n-  })\n-})\n+import { DataStateFacts } from './DataStateNotice'\n \n describe('DataStateFacts', () => {\n   it('정상 공급이면 표를 달지 않고, 수집 실패·자료 없음은 확인 중입니다로 보인다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "old_path": "frontend/src/components/marketflow/DataStateNotice.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -34,7 +34,7 @@ const EXCLUDED = /\\.test\\.tsx?$|^src\\/test\\//\n \n /**\n  * 등록표의 전략 ID와 이름. 원본은\n- * `backend/src/main/resources/registry/parameter-registry-provisional.yml`이고 여기 적은 것은\n+ * `backend/src/main/resources/registry/parameter-registry.yml`이고 여기 적은 것은\n  * **화면 코드에 나타나면 안 되는 낱말 목록**이다. 등록표에 전략이 늘면 이 목록에도 더한다.\n  */\n const registryWords = [\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/paramsearch/strategyAgnostic.test.tsx",
+          "old_path": "frontend/src/components/paramsearch/strategyAgnostic.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,7 +35,6 @@ describe('사례 목록', () => {\n     const { rerender } = render(<CaseList result={result(3)} onShowMore={onShowMore} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(3)\n     expect(screen.getByText('2012-03')).toBeTruthy()\n-    expect(screen.queryByText('01')).toBeNull()\n     expect(screen.queryByText('0.412938571034')).toBeNull()\n     fireEvent.click(screen.getByRole('button', { name: '더 보기' }))\n     expect(onShowMore).toHaveBeenCalledOnce()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,15 +17,29 @@ const sources = walk('src').filter((path) =>\n     /^(src\\/components\\/marketflow\\/(FieldPastCompare|CompositePast)\\.tsx|src\\/hooks\\/usePastCases\\.ts)$/.test(path)),\n )\n \n-// 임시 등록표의 이름·ID. 검사는 화면의 도메인 상수 유입을 막는다.\n+// 008 등록표의 분야·지표 ID와 이름(data/src/data_pipeline/macro/registry.py·display.py)과 종합 비교 묶음 이름\n+// (data/config/regime-phase-v3.json). 검사는 화면의 도메인 상수 유입을 막는다. ID는 대소문자를 가리지 않고 찾아\n+// 백엔드 enum 이름(PRODUCTION 등)도 함께 막되, 식별자 경계에서만 찾아 collaborate 같은 낱말 속 labor에는 걸리지 않는다.\n+// '생산'·'노동'·'수출'·'수입'·'물가'처럼 흔한 낱말과 exports·imports는 뺐다.\n const registryWords = [\n-  'PRODUCTION', 'CONSUMPTION_INVESTMENT', 'EXTERNAL_TRADE', 'LABOR',\n-  'PRICES_COMMODITIES', 'FINANCE_HOUSING', 'GLOBAL_ECONOMY',\n-  'UNEMPLOYMENT_RATE', 'CONSUMER_PRICES', 'USD_KRW',\n-  '소비·투자', '대외 거래', '물가·원자재', '금융·주택', '세계 경제',\n-  '실업률', '소비자물가 상승률', '원/달러 환율',\n+  'production', 'consumption_investment', 'external_trade', 'labor',\n+  'prices_commodities', 'finance_housing', 'overseas',\n+  'all_industry_production', 'mining_manufacturing_production', 'service_production',\n+  'retail_sales_index', 'facility_investment_index', 'construction_completed_constant',\n+  'trade_balance', 'employed_persons', 'unemployment_rate', 'consumer_price_index',\n+  'dubai_crude', 'treasury_bond_3y', 'usd_krw_rate', 'housing_sale_price', 'g20_cli',\n+  '소비·투자', '대외거래', '물가·원자재', '금융·주택', '해외 경기',\n+  '전산업생산', '광공업생산', '서비스업생산', '소매판매액지수', '설비투자지수', '건설기성액',\n+  '무역수지', '취업자 수', '실업률', '소비자물가', '두바이유', '국고채 3년', '원/달러 환율',\n+  '주택 매매가격', 'G20 경기선행지수',\n+  '실물 경기', '대외 거래', '금융 여건',\n ]\n \n+function containsRegistryWord(source: string, word: string): boolean {\n+  if (!/^[\\w ]+$/.test(word)) return source.includes(word)\n+  return new RegExp(`(?<![A-Za-z0-9_])${word}(?![A-Za-z0-9_])`, 'i').test(source)\n+}\n+\n describe('010 화면의 등록표 경계', () => {\n   it('src를 훑어 API·타입·훅·화면·컴포넌트를 빠짐없이 검사한다', () => {\n     expect(sources).toContain('src/pages/RegimeSearchPage.tsx')\n@@ -38,7 +52,7 @@ describe('010 화면의 등록표 경계', () => {\n \n   it('지표와 분야의 등록표 ID·이름을 코드에 박지 않는다', () => {\n     const found = sources.flatMap((path) => registryWords\n-      .filter((word) => readFileSync(path, 'utf8').includes(word))\n+      .filter((word) => containsRegistryWord(readFileSync(path, 'utf8'), word))\n       .map((word) => `${path}: ${word}`))\n     expect(found).toEqual([])\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/indicatorAgnostic.test.tsx",
+          "old_path": "frontend/src/components/regime/indicatorAgnostic.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,8 +19,6 @@ const apiMocks = vi.hoisted(() => ({\n   fetchResultWeights: vi.fn(),\n   fetchResultExceptions: vi.fn(),\n   fetchResultTrades: vi.fn(),\n-  fetchResultPositions: vi.fn(),\n-  fetchResultIndexComparison: vi.fn(),\n }))\n const sectorMocks = vi.hoisted(() => ({\n   fetchSectorCatalog: vi.fn(),\n@@ -99,7 +97,6 @@ describe('DetailPanel(결과 분석·설정·근거 탭)', () => {\n     expect(apiMocks.fetchResultWeights).not.toHaveBeenCalled()\n     expect(apiMocks.fetchResultTrades).not.toHaveBeenCalled()\n     expect(sectorMocks.fetchInstrumentProfile).not.toHaveBeenCalled()\n-    expect(apiMocks.fetchResultIndexComparison).not.toHaveBeenCalled()\n \n     await openSettings()\n     await screen.findByText('44.73%')\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -328,7 +328,6 @@ describe('EquityChart', () => {\n     )\n \n     expect(container.querySelector('path[stroke-dasharray]')).toBeNull()\n-    expect(screen.queryByText('모래 고르기')).toBeNull()\n   })\n \n   it('하락 구간에 음영과 점선 경계를 함께 그린다', () => {\n@@ -556,13 +555,11 @@ const growth: EquityChartSeries = {\n }\n \n describe('EquityChart 세로축 눈금', () => {\n-  it('차트 제목과 시작 금액 범례를 가까이 두고 읽는 법 펼침은 두지 않는다', () => {\n+  it('차트 제목과 시작 금액 범례를 가까이 둔다', () => {\n     render(<EquityChart altNumbers={altNumbers} base={growth} initialCash=\"10000000.00\" />)\n \n     expect(screen.getByText('자산가치 추이')).not.toBeNull()\n     expect(screen.getByText('점선 · 시작 금액 10,000,000원')).not.toBeNull()\n-    // '차트 읽는 법' 펼침은 뺐다. 음영 구간 설명은 그림 안 도움말(title)과 대안 텍스트가 든다.\n-    expect(screen.queryByText('차트 읽는 법')).toBeNull()\n   })\n \n   it('처음에는 로그 눈금으로 그려 금액의 상용로그에 높이를 비례시킨다', () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "old_path": "frontend/src/components/result/EquityChart.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,7 +7,12 @@ import {\n } from '@/test/resultFixtures'\n import type { PublicResultDetail, ResultSummary } from '@/types/result'\n import { COMPUTED_WEIGHTS_NOTE } from './conditionLine'\n-import { METRIC_DEFINITIONS, ResultConditionLine, ResultSummaryCard } from './ResultSummaryCard'\n+import {\n+  METRIC_DEFINITIONS,\n+  ResultConditionLine,\n+  ResultSummaryCard,\n+  ResultValuationNote,\n+} from './ResultSummaryCard'\n \n /** 005 T036. FR-001~FR-003, FR-013~FR-015, quickstart 1·2. */\n \n@@ -58,10 +63,6 @@ describe('ResultSummaryCard', () => {\n       fireEvent.blur(help)\n     }\n     expect(METRIC_DEFINITIONS.maxDrawdown).toContain('시작 금액 대비 손실과 다릅니다')\n-\n-    expect(screen.queryByLabelText('분석 조건')).toBeNull()\n-    expect(screen.queryByText('이전 고점 회복까지 9거래일')).toBeNull()\n-    expect(screen.queryByText(/종료일 시가평가 기준 수익률은 16\\.67%/)).toBeNull()\n   })\n \n   it('분석 조건을 요약 탭에서 쓸 수 있도록 별도로 렌더링한다', () => {\n@@ -85,7 +86,6 @@ describe('ResultSummaryCard', () => {\n     expect(container.querySelector('section')).toBeNull()\n     // `\\b`는 한글 경계를 모르므로 금액은 숫자 바로 뒤의 '원'으로 찾는다.\n     expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n-    expect(container.textContent).not.toContain('계산되지 않았습니다')\n   })\n \n   it('수익률과 가장 크게 줄었던 폭이 모두 0이면 좋은 결과로 읽히지 않게 설명한다', () => {\n@@ -117,9 +117,11 @@ describe('ResultSummaryCard', () => {\n     expect(screen.getByText('기준 WAVE_LEVELING · 비교 대상 없음')).not.toBeNull()\n   })\n \n-  it('요약 카드는 종료일 평가 안내를 차트 위에 보이지 않는다', () => {\n-    render(<ResultSummaryCard detail={withSummary({ liquidation: null })} />)\n+  it('청산을 가정하지 않은 결과는 끝 금액이 종료일 시가평가 기준이라고 밝힌다', () => {\n+    render(<ResultValuationNote detail={withSummary({ liquidation: null })} />)\n \n-    expect(screen.queryByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).toBeNull()\n+    expect(\n+      screen.getByText('끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'),\n+    ).not.toBeNull()\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -82,14 +82,11 @@ describe(\"AxisChoiceField\", () => {\n     }\n   });\n \n-  it(\"후보만 그린다: 이름·설명·되돌리기는 설정 행이 맡아 여기 두지 않는다\", () => {\n+  it(\"후보 묶음의 이름은 설정 행 이름과 같다\", () => {\n     const drift = axisNamed(selectableStrategy.axes, \"driftWindow\");\n     renderField(drift, 15);\n \n     // 묶음 이름은 행 이름과 같다. 보이는 제목은 행 머리가 가진다.\n     expect(screen.getByRole(\"group\", { name: drift.label })).not.toBeNull();\n-    // 설명은 행 이름 옆 도움말 안에 있다(`S15P21E205-406`). 후보 자리에는 후보만 남는다.\n-    expect(screen.queryByText(drift.description ?? \"\")).toBeNull();\n-    expect(screen.queryByRole(\"button\")).toBeNull();\n   });\n });\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AxisChoiceField.test.tsx",
+          "old_path": "frontend/src/components/strategy/AxisChoiceField.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -152,12 +152,6 @@ describe(\"AxisNumberField\", () => {\n     expect(screen.getByText(/숫자로 입력해 주세요/)).not.toBeNull();\n   });\n \n-  it(\"되돌리는 단추를 두지 않는다 — 설정 행 이름 옆 아이콘이 맡는다\", () => {\n-    renderField(35);\n-\n-    expect(screen.queryByRole(\"button\", { name: /기본값 복원/ })).toBeNull();\n-  });\n-\n   it(\"재검증이 비워 둔 항목은 빈칸으로 두고 값을 넣으라고 안내한다\", () => {\n     const { input } = renderField(undefined);\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AxisNumberField.test.tsx",
+          "old_path": "frontend/src/components/strategy/AxisNumberField.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -443,9 +443,6 @@ describe(\"DetailSettingsPanel\", () => {\n       name: \"투자 대상 고르기로 돌아가세요\",\n     });\n     expect(link.getAttribute(\"href\")).toBe(\"/diagnosis/sectors\");\n-    expect(\n-      screen.queryByText(/계산 결과이며 입력한 비중과 다릅니다/),\n-    ).toBeNull();\n   });\n \n   it(\"비중을 고치면 그 값이 올라온다\", async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/DetailSettingsPanel.test.tsx",
+          "old_path": "frontend/src/components/strategy/DetailSettingsPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -351,7 +351,8 @@ describe('StrategyCardList', () => {\n   it('불러오는 중에는 고를 수 있는 카드가 없다', () => {\n     renderList({ status: 'loading' })\n \n-    expect(screen.queryAllByRole('button')).toHaveLength(0)\n+    // 카드는 `role=\"radio\"`를 단 단추라 단추가 아니라 라디오로 잡힌다.\n+    expect(screen.queryAllByRole('radio')).toHaveLength(0)\n     expect(screen.getByRole('status').textContent).toContain('불러오는 중')\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCardList.test.tsx",
+          "old_path": "frontend/src/components/strategy/StrategyCardList.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n import { describe, expect, it } from 'vitest'\n-import { CASE_PERIOD_PREFILLED_NOTE, defaultCasePeriod } from './casePeriodConstraint'\n+import { defaultCasePeriod } from './casePeriodConstraint'\n \n const constraint = { startMax: '2012-01-02', endMin: '2012-07-03', note: '' }\n \n@@ -28,8 +28,4 @@ describe('사례에서 들어왔을 때 미리 맞출 분석 기간 (S15P21E205-\n   it('범위가 사례를 덮지 못하면 맞추지 않는다', () => {\n     expect(defaultCasePeriod(constraint, { start: '2012-03-02', end: '2026-08-31' }, 0)).toBeNull()\n   })\n-\n-  it('미리 맞췄다는 문구가 있다', () => {\n-    expect(CASE_PERIOD_PREFILLED_NOTE).toContain('미리 맞춰')\n-  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/casePeriodConstraint.test.ts",
+          "old_path": "frontend/src/components/strategy/casePeriodConstraint.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -63,7 +63,6 @@ describe('AccountProfilePage', () => {\n \n     expect(screen.getByRole('heading', { level: 1, name: '회원정보 수정' })).toBeTruthy()\n     expect(screen.getByText('회원 정보를 확인하고 수정할 내용을 입력할 수 있습니다.')).toBeTruthy()\n-    expect(screen.queryByText(/계정에 표시되는 정보/)).toBeNull()\n     expect((screen.getByLabelText('이메일') as HTMLInputElement).value).toBe('user@example.com')\n     expect((screen.getByLabelText('이메일') as HTMLInputElement).readOnly).toBe(true)\n     expect((screen.getByLabelText('닉네임') as HTMLInputElement).value).toBe('쏘프사용자')\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AccountProfilePage.test.tsx",
+          "old_path": "frontend/src/pages/AccountProfilePage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -264,13 +264,21 @@ describe('AdminLearningEditPage', () => {\n       status: 'unpublished',\n       result: { articleId: 'tide-reading', status: 'DRAFT', unpublishedRevisionNo: 3 },\n     })\n-    vi.spyOn(window, 'confirm').mockReturnValue(true)\n+    // 처음 물음은 거절하고, 다시 눌렀을 때는 수락한다.\n+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValue(true)\n     const user = userEvent.setup()\n     renderEdit()\n \n     await user.click(await screen.findByRole('button', { name: '게시 취소' }))\n+    // 거절하면 요청을 보내지 않고 버튼도 그대로 둔다.\n+    expect(confirm).toHaveBeenCalledTimes(1)\n+    expect(apiMocks.unpublishArticle).not.toHaveBeenCalled()\n+\n+    await user.click(screen.getByRole('button', { name: '게시 취소' }))\n \n     expect(await screen.findByText('3판의 게시를 취소했습니다.')).not.toBeNull()\n+    expect(confirm).toHaveBeenCalledTimes(2)\n+    expect(apiMocks.unpublishArticle).toHaveBeenCalledTimes(1)\n     // 취소한 뒤에는 그 버튼이 사라진다. 상태가 DRAFT로 바뀌었다.\n     expect(screen.queryByRole('button', { name: '게시 취소' })).toBeNull()\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AdminLearningEditPage.test.tsx",
+          "old_path": "frontend/src/pages/AdminLearningEditPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -112,7 +112,7 @@ describe('AdminLearningListPage', () => {\n     renderList()\n \n     expect(await screen.findByRole('heading', { name: '다시 로그인해 주세요' })).not.toBeNull()\n-    expect(screen.queryByText(/권한이 없습니다/)).toBeNull()\n+    expect(screen.queryByText('볼 수 없는 화면입니다')).toBeNull()\n   })\n \n   it('만들기가 409면 그 자리에 안내가 보인다', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AdminLearningListPage.test.tsx",
+          "old_path": "frontend/src/pages/AdminLearningListPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,8 +22,8 @@ function renderHeader(status: AuthContextValue['status']) {\n }\n \n describe('authentication status accessibility', () => {\n-  it('360px에서도 확인 중 상태를 live status로 전달한다', () => {\n-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 360 })\n+  // jsdom은 미디어 질의를 적용하지 않고 머리글도 창 폭을 읽지 않는다. 폭과 무관한 상태 전달만 본다.\n+  it('확인 중 상태를 live status로 전달한다', () => {\n     renderHeader('checking')\n     expect(screen.getByRole('status').textContent).toContain('확인 중')\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/AuthAccessibility.test.tsx",
+          "old_path": "frontend/src/pages/AuthAccessibility.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,25 +17,6 @@ vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))\n vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn(), fetchNewsSectors: vi.fn() }))\n vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))\n \n-const sectorCatalog = {\n-  status: 'loaded' as const,\n-  catalog: {\n-    mapVersion: 'map-v1',\n-    isSample: false,\n-    sectors: [\n-      {\n-        code: 'SEMICONDUCTOR',\n-        name: '반도체',\n-        classification: 'INDUSTRY' as const,\n-        representativeEtf: {\n-          instrumentId: 'SEMI-ETF', name: '반도체 ETF',\n-          listedOn: '2015-03-02', benchmarkIndex: 'KRX 반도체',\n-        },\n-      },\n-    ],\n-  },\n-}\n-\n const fieldNames = ['생산', '소비·투자', '대외거래', '노동', '물가·원자재', '금융·주택', '해외 경기']\n const fields: FieldSummary[] = fieldNames.map((displayName, index) => ({\n   fieldId: ['production', 'consumption_investment', 'external_trade', 'labor', 'prices_commodities', 'finance_housing', 'overseas'][index] as FieldSummary['fieldId'],\n@@ -95,9 +76,6 @@ function mockFields() {\n \n describe('MarketFlowPage', () => {\n   beforeEach(() => {\n-    vi.mocked(fetchSectorCatalog).mockResolvedValue(sectorCatalog)\n-    // 참고 정보는 늦거나 빠질 수 있다. 기본값은 '없음'으로 두고 필요한 테스트만 채운다.\n-    vi.mocked(fetchMarketIndicatorsFor).mockResolvedValue({ data: {}, errors: {} })\n     vi.mocked(fetchMarketNewsDigests).mockReset()\n     vi.mocked(fetchNewsSectors).mockReset()\n     vi.mocked(getRegimeSearch).mockReset()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -88,6 +88,8 @@ describe('경제환경 검색 화면', () => {\n           expect.any(AbortSignal),\n         ),\n       )\n+      // 물러난 사실을 알린다. 알리지 않으면 고른 달의 결과로 읽힌다.\n+      expect(await screen.findByText('기준월을 2026-07로 바꾸어 새 검색을 열었습니다.')).toBeTruthy()\n     })\n \n     it('전략 진단에서 종합 비교로 넘어오면 종합 비교가 선택된 상태로 연다 (S15P21E205-450)', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,3 @@\n-import { StrictMode } from 'react'\n import { render, screen } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n@@ -13,10 +12,8 @@ import {\n   resultToken,\n } from '@/test/resultFixtures'\n import { registryFixture } from '@/test/strategyRegistryFixtures'\n-import type { PublicResultDetail } from '@/types/result'\n import { ResultPage } from './ResultPage'\n \n-const targetToken = 'b41e0c9a7d2f35618ce4a09b7f1d2c63'\n const api = vi.hoisted(() => ({\n   detail: vi.fn(),\n   series: vi.fn(),\n@@ -66,39 +63,16 @@ function ResultRoute({ search = '' }: { search?: string }) {\n   )\n }\n \n-function renderResult({ strict = false, search }: { strict?: boolean; search?: string } = {}) {\n-  const route = <ResultRoute search={search} />\n-  return render(strict ? <StrictMode>{route}</StrictMode> : route)\n-}\n-\n-function targetResult(overrides: Partial<PublicResultDetail> = {}): PublicResultDetail {\n-  return {\n-    ...resultDetailCompleted,\n-    publicToken: targetToken,\n-    config: {\n-      ...resultDetailCompleted.config,\n-      scenario: 'TARGET_RISK',\n-      scenarioParams: { targetVolatility: '0.1200' },\n-    },\n-    summary: resultDetailCompleted.summary && {\n-      ...resultDetailCompleted.summary,\n-      netTotalReturn: '0.123456',\n-      maxDrawdown: '-0.032100',\n-      totalTradingCost: '23456.78',\n-    },\n-    ...overrides,\n-  }\n+function renderResult({ search }: { search?: string } = {}) {\n+  return render(<ResultRoute search={search} />)\n }\n \n describe('결과 보조 보기 (B08)', () => {\n   beforeEach(() => {\n     Object.values(api).forEach((mock) => mock.mockReset())\n-    api.detail.mockImplementation(async (token: string) =>\n-      token === resultToken ? resultDetailCompleted : targetResult(),\n-    )\n+    api.detail.mockResolvedValue(resultDetailCompleted)\n     api.series.mockResolvedValue(resultTimeseries)\n     api.registry.mockResolvedValue(registryFixture)\n-    api.create.mockResolvedValue({ publicToken: targetToken, status: 'QUEUED' })\n     // 탭 묶음이 첫 화면에서 섹터 목록을 받고, 결과 분석 탭을 고르면 예외 기록을 받는다(T098)\n     api.exceptions.mockResolvedValue(resultExceptions)\n     api.catalog.mockResolvedValue({ status: 'loaded', catalog: resultSectorCatalog })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.auxiliary.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -74,10 +74,13 @@ const catalog: SectorCatalog = {\n \n const loaded: SectorCatalogResult = { status: 'loaded', catalog }\n \n-/** 지금 경로를 화면에 드러내 다음 단계로 실제로 이동했는지 값으로 확인한다. */\n+/**\n+ * 지금 주소를 화면에 드러내 다음 단계로 실제로 이동했는지 값으로 확인한다. 질의 문자열까지 싣는다 — 값이\n+ * 주소에 실리는 회귀는 경로가 아니라 질의 문자열에서 일어난다.\n+ */\n function PathProbe() {\n   const location = useLocation()\n-  return <output data-testid=\"path\">{location.pathname}</output>\n+  return <output data-testid=\"path\">{location.pathname + location.search}</output>\n }\n \n async function openPage() {\n@@ -270,10 +273,9 @@ describe('다음 단계 버튼과 003 인계', () => {\n \n     await user.click(proceedButton())\n \n-    // 경로에 섹터 코드나 비중이 섞이면 공유된 링크가 '추천 비중'처럼 읽힌다(원칙 III).\n+    // 주소에 섹터 코드나 비중이 섞이면 공유된 링크가 '추천 비중'처럼 읽힌다(원칙 III). 질의 문자열까지\n+    // 비어 있어야 한다.\n     expect(currentPath()).toBe('/strategy')\n-    expect(currentPath()).not.toContain('SEMICONDUCTOR')\n-    expect(currentPath()).not.toContain('500')\n   })\n \n   it('보관이 막혀 넘길 수 없으면 다음 화면으로 보내지 않고 그 사실을 알린다 (원칙 VI)', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionHandoff.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionHandoff.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'\n+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'\n import userEvent from '@testing-library/user-event'\n+import { StrictMode } from 'react'\n import { MemoryRouter } from 'react-router-dom'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import type { SectorCatalogResult } from '@/api/sectors'\n@@ -55,8 +56,11 @@ function catalog(isSample: boolean): SectorCatalog {\n   }\n }\n \n-/** AppHeader가 인증 상태를 읽으므로 화면 검증에 필요한 최소 컨텍스트만 준다. */\n-function renderPage() {\n+/**\n+ * AppHeader가 인증 상태를 읽으므로 화면 검증에 필요한 최소 컨텍스트만 준다. `strict`면 실제 앱(`main.tsx`)처럼\n+ * StrictMode로 감싼다.\n+ */\n+function renderPage({ strict = false }: { strict?: boolean } = {}) {\n   const authValue: AuthContextValue = {\n     status: 'anonymous',\n     user: null,\n@@ -66,13 +70,14 @@ function renderPage() {\n     updateNickname: vi.fn(),\n   }\n \n-  return render(\n+  const page = (\n     <MemoryRouter initialEntries={['/diagnosis/sectors']}>\n       <AuthContext.Provider value={authValue}>\n         <SectorSelectionPage />\n       </AuthContext.Provider>\n-    </MemoryRouter>,\n+    </MemoryRouter>\n   )\n+  return render(strict ? <StrictMode>{page}</StrictMode> : page)\n }\n \n function loaded(isSample: boolean): SectorCatalogResult {\n@@ -352,27 +357,26 @@ describe('SectorSelectionPage', () => {\n \n   it('취소된 요청의 응답이 뒤늦게 와도 화면을 덮지 않는다', async () => {\n     // Promise를 만드는 함수는 그 자리에서 실행되므로 이 값은 아래에서 반드시 채워져 있다.\n-    let settleSecond!: (result: SectorCatalogResult) => void\n-    const secondCall = new Promise<SectorCatalogResult>((resolve) => {\n-      settleSecond = resolve\n+    let settleFirst!: (result: SectorCatalogResult) => void\n+    const firstCall = new Promise<SectorCatalogResult>((resolve) => {\n+      settleFirst = resolve\n     })\n \n     apiMocks.fetchSectorCatalog\n-      .mockImplementationOnce(() => Promise.resolve(networkFailure))\n-      .mockImplementationOnce(() => secondCall)\n+      .mockImplementationOnce(() => firstCall)\n       .mockImplementationOnce(() => Promise.resolve(loaded(false)))\n \n-    renderPage()\n-    await userEvent.click(await screen.findByRole('button', { name: '다시 불러오기' }))\n-\n-    // 두 번째 요청이 답하지 않는 사이에 화면을 다시 마운트해 세 번째 요청이 결과를 채우게 한다.\n-    const { unmount } = renderPage()\n+    // StrictMode는 마운트 직후 효과를 한 번 정리하고 다시 돌린다. 화면 하나가 그대로 남은 채 첫 요청은\n+    // 그 정리에서 취소되고, 두 번째 요청이 목록을 채운다.\n+    renderPage({ strict: true })\n     await screen.findAllByRole('listitem')\n+    expect(apiMocks.fetchSectorCatalog).toHaveBeenCalledTimes(2)\n \n-    // 취소된 두 번째 요청이 이제야 답한다. 그 값이 화면에 반영되면 목록이 사라진다.\n-    settleSecond(networkFailure)\n-    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0))\n-\n-    unmount()\n+    // 취소된 첫 요청이 이제야 답한다. 그 값이 화면에 반영되면 목록이 실패 안내로 바뀐다.\n+    await act(async () => {\n+      settleFirst(networkFailure)\n+    })\n+    expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0)\n+    expect(screen.queryByText('투자 대상 목록을 불러오지 못했습니다.')).toBeNull()\n   })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,4 @@\n+import type { AuthContextValue } from '@/auth/auth-context'\n import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'\n import type { AuthenticatedUser, SignupResponse } from '@/types/auth'\n \n@@ -40,12 +41,18 @@ export function authError(\n  * 비로그인 상태의 인증 컨텍스트.\n  *\n  * <p>실제 앱은 `main.tsx`의 `AuthProvider` 안에서 도므로 테스트도 같은 자리에 둔다 —\n- * Provider 없이 렌더하면 `useAuth`가 던진다.\n+ * Provider 없이 렌더하면 `useAuth`가 던진다. 계약(`AuthContextValue`)의 모양을 그대로 따르므로 계약이 바뀌면\n+ * 타입 검사가 이 픽스처에서 실패한다. 다시 확인해도 비로그인이고, 로그인·닉네임 변경은 이 픽스처로 하지 않는다.\n  */\n-export const anonymousAuthContext = {\n+export const anonymousAuthContext: AuthContextValue = {\n   user: null,\n   status: 'anonymous',\n-  login: async () => {},\n+  login: async () => {\n+    throw new Error('비로그인 픽스처로는 로그인하지 않는다.')\n+  },\n   logout: async () => {},\n-  refresh: async () => {},\n-} as unknown as import('@/auth/auth-context').AuthContextValue\n+  recheck: async () => ({ status: 'anonymous', user: null }),\n+  updateNickname: async () => {\n+    throw new Error('비로그인 픽스처로는 닉네임을 바꾸지 않는다.')\n+  },\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/authFixtures.ts",
+          "old_path": "frontend/src/test/authFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,7 +1,6 @@\n import type {\n   LearningArticle,\n   LearningArticleSummary,\n-  LearningTermEntry,\n } from '@/types/learning'\n import type {\n   AdminLearningArticle,\n@@ -89,14 +88,6 @@ export const harborArticle: LearningArticle = {\n   publishedAt: '2026-09-21T01:00:00Z',\n }\n \n-export const ebbGapTerm: LearningTermEntry = {\n-  termId: 'ebb-gap',\n-  label: '썰물 간격',\n-  sentence: '합성 용어 문장이다. 줄이거나 바꾸지 않고 보여야 한다.',\n-  articleId: 'tide-reading',\n-  articleTitle: '물때 읽기',\n-}\n-\n /**\n  * 관리 화면(B05) 픽스처. 공개 조회와 같은 합성 식별자를 쓴다.\n  *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/learningFixtures.ts",
+          "old_path": "frontend/src/test/learningFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,79 +0,0 @@\n-import assert from 'node:assert/strict'\n-import { test } from 'node:test'\n-import { selectIndicatorPeriod } from './indicatorHistory.ts'\n-\n-test('기준월 포함 3개월을 정렬하고 원본은 변경하지 않는다', () => {\n-  const series = [\n-    { date: '2026-02', value: 102 },\n-    { date: '2025-11', value: 99 },\n-    { date: '2026-01', value: 101 },\n-    { date: '2025-12', value: 100 },\n-  ]\n-  const original = structuredClone(series)\n-  assert.deepEqual(selectIndicatorPeriod(series, '2026-02', 3).map((point) => point.date),\n-    ['2025-12', '2026-01', '2026-02'])\n-  assert.deepEqual(series, original)\n-})\n-\n-test('잘못된 기준일은 빈 배열을 반환한다', () => {\n-  const series = [{ date: '2026-12', value: 100 }]\n-  for (const date of ['', 'broken', '2026', '2026-1', '2026-00', '2026-13',\n-    '0000-01', '2026-01-00', '2026-02-30', '2026-04-31', '2026-01-01T00:00:00Z', ' 2026-01']) {\n-    assert.deepEqual(selectIndicatorPeriod(series, date, 3), [], date)\n-  }\n-})\n-\n-test('윤년의 2월 29일은 허용하고 평년·세기 예외는 거부한다', () => {\n-  for (const [date, valid] of [\n-    ['2024-02-29', true], ['2000-02-29', true],\n-    ['2026-02-29', false], ['1900-02-29', false], ['2100-02-29', false],\n-  ] as const) {\n-    const series = [{ date, value: 100 }]\n-    assert.equal(selectIndicatorPeriod(series, date, 3).length, valid ? 1 : 0, date)\n-  }\n-})\n-\n-test('개별 날짜가 잘못되거나 값이 유한하지 않은 데이터는 제외한다', () => {\n-  const series = [\n-    { date: '2026-02-28', value: 100 },\n-    { date: '2026-02-30', value: 101 },\n-    { date: '2026-13', value: 102 },\n-    { date: 'bad', value: 103 },\n-    { date: '2026-02-26', value: NaN },\n-    { date: '2026-02-27', value: Infinity },\n-  ]\n-  assert.deepEqual(selectIndicatorPeriod(series, '2026-03-01', 3), [series[0]])\n-})\n-\n-test('일간 기준일 뒤의 값은 제외한다', () => {\n-  const series = [\n-    { date: '2026-02-01', value: 100 },\n-    { date: '2026-02-15', value: 101 },\n-    { date: '2026-02-16', value: 102 },\n-    { date: '2026-03-01', value: 103 },\n-  ]\n-  assert.deepEqual(selectIndicatorPeriod(series, '2026-02-15', 3), series.slice(0, 2))\n-})\n-\n-test('월간 기준일은 해당 월의 마지막 날까지 포함한다', () => {\n-  const series = [{ date: '2026-02-28', value: 100 }, { date: '2026-03-01', value: 101 }]\n-  assert.deepEqual(selectIndicatorPeriod(series, '2026-02', 3), [series[0]])\n-})\n-\n-test('빈 데이터와 잘못된 기간은 빈 배열을 반환한다', () => {\n-  assert.deepEqual(selectIndicatorPeriod([], '2026-02', 3), [])\n-  for (const months of [0, -1, 1.5, NaN, Infinity]) {\n-    assert.deepEqual(selectIndicatorPeriod([{ date: '2026-02', value: 100 }], '2026-02', months), [])\n-  }\n-})\n-\n-test('5년 조회는 기준월부터 60개월만 포함한다', () => {\n-  const series = Array.from({ length: 61 }, (_, index) => ({\n-    date: new Date(Date.UTC(2021, 7 + index, 1)).toISOString().slice(0, 7),\n-    value: index,\n-  }))\n-  const result = selectIndicatorPeriod(series, '2026-08', 60)\n-  assert.equal(result.length, 60)\n-  assert.equal(result[0].date, '2021-09')\n-  assert.equal(result.at(-1)?.date, '2026-08')\n-})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/indicatorHistory.test.ts",
+          "old_path": "frontend/src/utils/indicatorHistory.test.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,29 +0,0 @@\n-import assert from 'node:assert/strict'\n-import { test } from 'node:test'\n-import type { Indicator, SimilarMarketPeriod } from '@/types/market'\n-import { withCurrentIndicatorValues } from './marketComparison.ts'\n-\n-const period = {\n-  comparisons: [\n-    { indicatorId: 'live', currentValue: 1, historicalValue: 2, unit: '%' },\n-    { indicatorId: 'failed', currentValue: 3, historicalValue: 4, unit: 'pt' },\n-  ],\n-} as SimilarMarketPeriod\n-\n-test('API로 확인된 지표만 비교 패널 현재값과 단위를 갱신한다', () => {\n-  const indicators = [\n-    { id: 'live', value: 10, unit: '% YoY', dataStatus: 'live' },\n-    { id: 'failed', value: 30, unit: '지수', dataStatus: 'error' },\n-  ] as Indicator[]\n-\n-  const result = withCurrentIndicatorValues(period, indicators)\n-\n-  assert.deepEqual(result.comparisons[0], {\n-    indicatorId: 'live',\n-    currentValue: 10,\n-    historicalValue: 2,\n-    unit: '% YoY',\n-  })\n-  assert.deepEqual(result.comparisons[1], period.comparisons[1])\n-  assert.notEqual(result, period)\n-})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketComparison.test.ts",
+          "old_path": "frontend/src/utils/marketComparison.test.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +0,0 @@\n-import assert from 'node:assert/strict'\n-import { test } from 'node:test'\n-import type { Indicator } from '@/types/market'\n-import { formatIndicatorValue } from './marketFormat.ts'\n-\n-test('월간 수출액을 10억 달러 단위로 축약한다', () => {\n-  const indicator = { value: 61_200_000_000, unit: 'USD', decimals: 0 } as Indicator\n-  assert.equal(formatIndicatorValue(indicator), '61.2B USD')\n-})\n-\n-test('M2 십억원 값을 조원 단위로 축약한다', () => {\n-  const indicator = { value: 4_200_000, unit: '십억원', decimals: 0 } as Indicator\n-  assert.equal(formatIndicatorValue(indicator), '4,200.0 조원')\n-})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/marketFormat.test.ts",
+          "old_path": "frontend/src/utils/marketFormat.test.ts",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,7 +10,7 @@\n     \"pretest\": \"node -e \\\"require('node:fs').mkdirSync('build/test-results', { recursive: true })\\\"\",\n     \"test\": \"npm run test:dom && npm run test:legacy\",\n     \"test:dom\": \"vitest run --configLoader runner --reporter=default --reporter=junit --outputFile.junit=build/test-results/vitest.xml\",\n-    \"test:legacy\": \"node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=build/test-results/node-test.xml src/api/market.test.ts src/utils/indicatorHistory.test.ts src/utils/marketComparison.test.ts src/utils/marketFormat.test.ts\",\n+    \"test:legacy\": \"node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=build/test-results/node-test.xml src/api/market.test.ts\",\n     \"check:shader\": \"vgpu check src/components/landing/market-atmosphere.wgsl --require-validation\",\n     \"preview\": \"vite preview\"\n   },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/package.json",
+          "old_path": "frontend/package.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881345": []
+  }
+}

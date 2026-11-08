@@ -1,0 +1,730 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 948688,
+    "iid": 184,
+    "project_id": 1444456,
+    "title": "feat(de): 후보를 거르고 줄 세우고 왜 비슷한지 적는다",
+    "description": "# 작업 내용 요약\n\n010 묶음 M4다. 거리가 나온 뒤 무엇을 후보로 삼고 어떤 순서로 보일지를 정하고, 각 사례의 비슷한 점·다른 점을 템플릿으로 조립한다. **M3 코드리뷰에서 나온 여섯 건도 여기서 함께 고쳤다** — M4가 그 코드 위에 놓이고, 279는 이미 머지돼 별도 티켓을 세우지 않기로 했다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-280\n- link https://ssafy.atlassian.net/browse/S15P21E205-280\n\n# 주요 변경 사항\n\n- 12개월 초과 이전만 후보로 삼는다. **아래쪽 경계는 두지 않는다**(FR-012)\n- 거리 오름차순으로 세우고 **정확한 동률은 더 오래된 종료월**이 앞이다\n- ±6개월 건너뛰기를 **하나 담을 때마다** 적용해 걸러진 만큼 아래 순위가 올라온다. **전체 유효 후보 목록에는 적용하지 않는다** — 011이 가용성 필터 뒤에 다시 적용한다(FR-030)\n- 제외를 `MISSING_INPUT`/`WITHIN_12_MONTHS`/`NEIGHBOR_SKIPPED` 셋으로 집계한다\n- 자격 조건은 비교 시점 입력뿐이다. 후보 직전 이력도 보조 척도도 조건이 아니라서 자료 시작 구간이 후보에서 사라지지 않는다(FR-012·FR-017)\n- 설명 문장은 지표 거리 양끝에서 뽑아 **변환 후 값과 단위**로 조립한다(FR-015, research R8)\n- **M3 수정**: 시대별 보조 위치 캐시 키를 `(지표, 후보월)`로 바꾼다(후보월만 쓰면 분야 검색이 먼저 채운 결과를 종합 검색이 그대로 받아 나머지 지표 설명이 사라졌다). 기여 키 생략 판정을 저장값 기준으로, 모르는 분야 id는 오류로, 어휘에 없는 척도 사유는 이름 있는 오류로, 문장 값 표기는 12자리 반올림으로(지수 표기 차단) 바꾼다\n\n# 테스트\n\n- [x] `cd data && ruff check src scripts tests && pytest` → **791 passed**\n- [x] 고친 여섯 건마다 회귀 시험을 붙였다. 잘못된 동작(캐시 dict를 그대로 돌려주는 것)을 고정하고 있던 기존 시험 하나는 교체했다\n\n# 리뷰 포인트\n\n- **같은 지표가 비슷한 점과 다른 점에 함께 들어가지 않게** 위·아래에서 `min(2, n//2)`까지만 뽑는다. R8은 개수만 정하고 겹침을 말하지 않는데, 겹치면 한 지표를 두고 \"비슷합니다\"와 \"다릅니다\"를 같이 말하게 된다. 그 대신 지표가 적으면 문장도 적게 나온다 — 이 절충이 맞는지 봐 달라\n- **인용하는 달은 비교 시점 중 가장 최근**이다. 문장이 값 하나씩을 말하니 고를 수밖에 없다. 인용한 두 값이 같으면 \"보다 높습니다\"가 틀린 문장이라 그 지표는 건너뛰고 다음으로 넘어간다\n- **금지 표현 시험이 목록을 옮겨 적지 않고 `spec.md`의 표를 읽는다.** 옮겨 적으면 spec이 한 줄 늘어도 옛 목록으로 통과한다. 표 줄 수가 13이 아니면 실패하므로, spec을 고치면 이 시험도 함께 본다\n- `display_limited`는 상한에 걸렸다는 **사실만** 내보내고 남은 후보 수는 두지 않았다(FR-013). 수가 필요한 011은 전체 목록에서 가져간다\n- 12개월 제한을 입력 검사보다 먼저 집계한다 — 범위 밖인 달에 입력 유무를 묻는 건 뜻이 없어서다. 집계 배분이 이 순서로 맞는지 확인해 달라\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 금지 표현 13가지를 spec에서 읽어 산출 문장에 검사한다. 표시 후보는 거리 오름차순 집합이고 \"1위\"·\"추천\"·\"최적\" 표기를 만들지 않는다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략을 읽지 않는다. 표시 상한·건너뛰기 폭은 spec 확정값이고 분야·지표 수는 등록표가 준 수를 쓴다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 후보가 부족하면 부족한 대로 두고 빈자리를 먼 후보로 채우지 않는다. 나눌 수 없으면 0이 아니라 키를 만들지 않는다(FR-013, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 문턱이 미교정이라 '충분히 유사' 같은 판정을 만들지 않고 거리순 집합만 낸다. 시대별 위치는 순위·거리에 섞이지 않는다(FR-020·SC-011)",
+    "state": "merged",
+    "created_at": "2026-09-17T14:02:02.628+09:00",
+    "updated_at": "2026-09-17T14:33:40.694+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-17T14:33:40.056+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/280-regime-candidates",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+    "merge_commit_sha": "de53fcf9c302bbc4a9d4b3e20f19771c0668de43",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T14:02:04.783+09:00",
+    "reference": "!184",
+    "references": {
+      "short": "!184",
+      "relative": "!184",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!184"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/184",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 948688,
+    "iid": 184,
+    "project_id": 1444456,
+    "title": "feat(de): 후보를 거르고 줄 세우고 왜 비슷한지 적는다",
+    "description": "# 작업 내용 요약\n\n010 묶음 M4다. 거리가 나온 뒤 무엇을 후보로 삼고 어떤 순서로 보일지를 정하고, 각 사례의 비슷한 점·다른 점을 템플릿으로 조립한다. **M3 코드리뷰에서 나온 여섯 건도 여기서 함께 고쳤다** — M4가 그 코드 위에 놓이고, 279는 이미 머지돼 별도 티켓을 세우지 않기로 했다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-280\n- link https://ssafy.atlassian.net/browse/S15P21E205-280\n\n# 주요 변경 사항\n\n- 12개월 초과 이전만 후보로 삼는다. **아래쪽 경계는 두지 않는다**(FR-012)\n- 거리 오름차순으로 세우고 **정확한 동률은 더 오래된 종료월**이 앞이다\n- ±6개월 건너뛰기를 **하나 담을 때마다** 적용해 걸러진 만큼 아래 순위가 올라온다. **전체 유효 후보 목록에는 적용하지 않는다** — 011이 가용성 필터 뒤에 다시 적용한다(FR-030)\n- 제외를 `MISSING_INPUT`/`WITHIN_12_MONTHS`/`NEIGHBOR_SKIPPED` 셋으로 집계한다\n- 자격 조건은 비교 시점 입력뿐이다. 후보 직전 이력도 보조 척도도 조건이 아니라서 자료 시작 구간이 후보에서 사라지지 않는다(FR-012·FR-017)\n- 설명 문장은 지표 거리 양끝에서 뽑아 **변환 후 값과 단위**로 조립한다(FR-015, research R8)\n- **M3 수정**: 시대별 보조 위치 캐시 키를 `(지표, 후보월)`로 바꾼다(후보월만 쓰면 분야 검색이 먼저 채운 결과를 종합 검색이 그대로 받아 나머지 지표 설명이 사라졌다). 기여 키 생략 판정을 저장값 기준으로, 모르는 분야 id는 오류로, 어휘에 없는 척도 사유는 이름 있는 오류로, 문장 값 표기는 12자리 반올림으로(지수 표기 차단) 바꾼다\n\n# 테스트\n\n- [x] `cd data && ruff check src scripts tests && pytest` → **791 passed**\n- [x] 고친 여섯 건마다 회귀 시험을 붙였다. 잘못된 동작(캐시 dict를 그대로 돌려주는 것)을 고정하고 있던 기존 시험 하나는 교체했다\n\n# 리뷰 포인트\n\n- **같은 지표가 비슷한 점과 다른 점에 함께 들어가지 않게** 위·아래에서 `min(2, n//2)`까지만 뽑는다. R8은 개수만 정하고 겹침을 말하지 않는데, 겹치면 한 지표를 두고 \"비슷합니다\"와 \"다릅니다\"를 같이 말하게 된다. 그 대신 지표가 적으면 문장도 적게 나온다 — 이 절충이 맞는지 봐 달라\n- **인용하는 달은 비교 시점 중 가장 최근**이다. 문장이 값 하나씩을 말하니 고를 수밖에 없다. 인용한 두 값이 같으면 \"보다 높습니다\"가 틀린 문장이라 그 지표는 건너뛰고 다음으로 넘어간다\n- **금지 표현 시험이 목록을 옮겨 적지 않고 `spec.md`의 표를 읽는다.** 옮겨 적으면 spec이 한 줄 늘어도 옛 목록으로 통과한다. 표 줄 수가 13이 아니면 실패하므로, spec을 고치면 이 시험도 함께 본다\n- `display_limited`는 상한에 걸렸다는 **사실만** 내보내고 남은 후보 수는 두지 않았다(FR-013). 수가 필요한 011은 전체 목록에서 가져간다\n- 12개월 제한을 입력 검사보다 먼저 집계한다 — 범위 밖인 달에 입력 유무를 묻는 건 뜻이 없어서다. 집계 배분이 이 순서로 맞는지 확인해 달라\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 금지 표현 13가지를 spec에서 읽어 산출 문장에 검사한다. 표시 후보는 거리 오름차순 집합이고 \"1위\"·\"추천\"·\"최적\" 표기를 만들지 않는다\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략을 읽지 않는다. 표시 상한·건너뛰기 폭은 spec 확정값이고 분야·지표 수는 등록표가 준 수를 쓴다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 후보가 부족하면 부족한 대로 두고 빈자리를 먼 후보로 채우지 않는다. 나눌 수 없으면 0이 아니라 키를 만들지 않는다(FR-013, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 문턱이 미교정이라 '충분히 유사' 같은 판정을 만들지 않고 거리순 집합만 낸다. 시대별 위치는 순위·거리에 섞이지 않는다(FR-020·SC-011)",
+    "state": "merged",
+    "created_at": "2026-09-17T14:02:02.628+09:00",
+    "updated_at": "2026-09-17T14:33:40.694+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-17T14:33:40.056+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(de)/280-regime-candidates",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "assignee": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "reviewers": [
+      {
+        "id": 30788,
+        "username": "msw714",
+        "public_email": null,
+        "name": "문성웅",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/msw714"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+    "merge_commit_sha": "de53fcf9c302bbc4a9d4b3e20f19771c0668de43",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T14:02:04.783+09:00",
+    "reference": "!184",
+    "references": {
+      "short": "!184",
+      "relative": "!184",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!184"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/184",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "9",
+    "latest_build_started_at": "2026-09-17T14:24:00.995+09:00",
+    "latest_build_finished_at": "2026-09-17T14:24:23.283+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 202305,
+      "iid": 110,
+      "project_id": 1444456,
+      "sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+      "ref": "feat(de)/280-regime-candidates",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T14:24:00.860+09:00",
+      "updated_at": "2026-09-17T14:24:23.290+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202305"
+    },
+    "head_pipeline": {
+      "id": 202305,
+      "iid": 110,
+      "project_id": 1444456,
+      "sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+      "ref": "feat(de)/280-regime-candidates",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-17T14:24:00.860+09:00",
+      "updated_at": "2026-09-17T14:24:23.290+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202305",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T14:24:00.995+09:00",
+      "finished_at": "2026-09-17T14:24:23.283+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202305",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1ad9f598e7bc17dc464c62205f10fa8001884b18",
+      "head_sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+      "start_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "588dc28b91a4ca8ee44315fd08645fb9c87ff05d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824367,
+          "type": null,
+          "body": "requested review from @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T14:02:02.753+09:00",
+          "updated_at": "2026-09-17T14:02:02.757+09:00",
+          "system": true,
+          "noteable_id": 948688,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 184,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "91ddd784301c070446d7b5d157f2f28de68055cc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824368,
+          "type": null,
+          "body": "assigned to @msw714",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T14:02:02.772+09:00",
+          "updated_at": "2026-09-17T14:02:02.779+09:00",
+          "system": true,
+          "noteable_id": 948688,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 184,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5c3c706f3f0ac688bf42d0a7cad79c84e2fd3aaf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824372,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 예외 처리 및 방어적 설계**: 부동소수점 찌꺼기로 인한 기여도 왜곡 방지(`zero_total`), 등록되지 않은 필드 입력 차단(`_requested_fields`), 그리고 캐시 오염을 막기 위해 매번 새로운 dict 객체를 반환하는 설계가 매우 견고하게 구현되었습니다.\n- **명확한 스펙 연동 테스트**: `test_explain.py`에서 하드코딩된 금지 표현 목록 대신 `spec.md`의 표를 동적으로 파싱하여 검증하도록 구현한 점은 문서와 테스트 간의 동기화 유지 관점에서 훌륭한 접근입니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `select_candidates` 함수 호출 시 `months` 인자에 중복된 날짜나 정렬되지 않은 날짜가 전달될 때, `observable_months` 외의 커스텀 월 리스트가 올바르게 정렬 및 중복 제거(`set` 처리 후 `sorted`)되어 처리되는지 확인하는 단일 테스트 케이스를 추가할 수 있습니다.\n- `explanation_for` 함수 내에서 `ordered` 리스트가 비어있거나(`ordered[0].e == 0.0`인 경우 등) 지표가 1개만 주어졌을 때 `MAX_SENTENCES` 및 슬라이싱 연산(`[:MAX_SENTENCES]`)이 인덱스 오류 없이 안전하게 빈 튜플을 반환하는지 경계값 테스트를 보완하는 것을 제안합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:0d71685f9c5625b06800e428e9012a743a8c5772 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T14:02:13.013+09:00",
+          "updated_at": "2026-09-17T14:02:13.013+09:00",
+          "system": false,
+          "noteable_id": 948688,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 184,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9111e63b24a34c448d13e03df082b8289b3c2d3a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824637,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T14:16:23.463+09:00",
+          "updated_at": "2026-09-17T14:16:23.469+09:00",
+          "system": true,
+          "noteable_id": 948688,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 184,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b32c42d6d4576da4ca45d643affe69ff367f17ca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2824909,
+          "type": null,
+          "body": "mentioned in commit de53fcf9c302bbc4a9d4b3e20f19771c0668de43",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-17T14:33:40.698+09:00",
+          "updated_at": "2026-09-17T14:33:40.709+09:00",
+          "system": true,
+          "noteable_id": 948688,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 184,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2212809,
+      "head_commit_sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+      "base_commit_sha": "1ad9f598e7bc17dc464c62205f10fa8001884b18",
+      "start_commit_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c",
+      "created_at": "2026-09-17T14:02:03.149+09:00",
+      "merge_request_id": 948688,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "ff49a18ee81f18f1c7ca4ea51163535f7e19feaa"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2212809,
+      "head_commit_sha": "0d71685f9c5625b06800e428e9012a743a8c5772",
+      "base_commit_sha": "1ad9f598e7bc17dc464c62205f10fa8001884b18",
+      "start_commit_sha": "263c180baed26ba9f33c29af48d4b092a7cbf73c",
+      "created_at": "2026-09-17T14:02:03.149+09:00",
+      "merge_request_id": 948688,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "ff49a18ee81f18f1c7ca4ea51163535f7e19feaa",
+      "commits": [
+        {
+          "id": "0d71685f9c5625b06800e428e9012a743a8c5772",
+          "short_id": "0d71685f",
+          "created_at": "2026-09-17T12:56:02.000+09:00",
+          "parent_ids": [
+            "6af9d4311dfebaad6c04733f8ecd1c91efd80ce3"
+          ],
+          "title": "docs(de): 묶음 M4 태스크 완료를 표시한다",
+          "message": "docs(de): 묶음 M4 태스크 완료를 표시한다\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T12:56:02.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T12:56:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/0d71685f9c5625b06800e428e9012a743a8c5772"
+        },
+        {
+          "id": "6af9d4311dfebaad6c04733f8ecd1c91efd80ce3",
+          "short_id": "6af9d431",
+          "created_at": "2026-09-17T12:55:56.000+09:00",
+          "parent_ids": [
+            "07a6e881df1f08ad71408bd59039dae9657eb4d9"
+          ],
+          "title": "feat(de): 후보를 거르고 줄 세우고 왜 비슷한지 적는다",
+          "message": "feat(de): 후보를 거르고 줄 세우고 왜 비슷한지 적는다\n\n12개월 초과 이전만 후보로 삼고 거리 오름차순으로 세운다. 정확한 동률은 더 오래된 종료월이\n앞이다. ±6개월 건너뛰기는 하나를 담을 때마다 적용해 걸러진 만큼 아래 순위가 올라오고,\n전체 유효 후보 목록에는 적용하지 않는다 — 011 이 가용성 필터 뒤에 다시 적용해야 한다.\n\n자격 조건은 비교 시점 입력뿐이다. 후보 직전 60개월 이력도 시대별 보조 척도도 조건에 넣지\n않아서 자료 시작 구간이 후보에서 사라지지 않는다. 그래서 이 모듈은 scale·era 를 부르지 않는다.\n\n설명은 지표 거리 양끝에서 뽑아 템플릿으로 조립한다. 같은 지표가 비슷한 점과 다른 점에 함께\n들어가지 않고, 인용한 두 값이 실제로 다를 때만 \"보다 높습니다\"를 쓴다. 금지 표현 시험은\n목록을 옮겨 적지 않고 spec 의 표를 읽는다 — 옮겨 적으면 spec 이 늘어도 옛 목록으로 통과한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T12:55:56.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T12:55:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6af9d4311dfebaad6c04733f8ecd1c91efd80ce3"
+        },
+        {
+          "id": "07a6e881df1f08ad71408bd59039dae9657eb4d9",
+          "short_id": "07a6e881",
+          "created_at": "2026-09-17T12:55:40.000+09:00",
+          "parent_ids": [
+            "1ad9f598e7bc17dc464c62205f10fa8001884b18"
+          ],
+          "title": "fix(de): 코드리뷰가 찾은 M3 결함 여섯을 고친다",
+          "message": "fix(de): 코드리뷰가 찾은 M3 결함 여섯을 고친다\n\n가장 큰 것은 시대별 보조 위치 캐시다. 후보월만 키로 써서, 분야 검색(지표 2~3개)이\n먼저 채운 결과를 종합 검색(17개)이 그대로 받아 나머지 지표의 설명이 통째로 사라졌다.\n그 빠짐이 \"만들지 못한 지표는 키가 없다\"와 생김새가 같아 아래쪽에서 알아챌 수 없었다.\n키를 (지표, 후보월)로 바꾸고 결과도 매번 새 dict 로 돌려준다.\n\n나머지는 조용히 틀린 값을 만드는 자리들이다. 기여 키 생략 판정을 반올림 전 합으로 해서\n거리는 0으로 저장되는데 기여도는 붙는 조합이 가능했고, 등록표에 없는 분야 id 가 하나라도\n맞는 게 있으면 조용히 버려졌고, SCALE_REASON_ORDER 에 없는 사유가 오면 이름 없는\nStopIteration 이 났다. 문장 값 표기는 repr 이라 5e-05 같은 지수 표기가 샜다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-17T12:55:40.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-17T12:55:40.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/07a6e881df1f08ad71408bd59039dae9657eb4d9"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -12,5 +12,160 @@\n 후보가 부족하면 부족한 대로 둔다. 빈자리를 채우지 않는다(FR-013).\n 제외한 후보는 입력 결측 / 12개월 이내 / 인접 월 건너뜀 셋으로 구분해 집계한다.\n \n-구현은 묶음 M4에서 채운다.\n+**자격 조건은 비교 시점 입력뿐이다.** 후보 직전 60개월 이력도, 시대별 보조 척도도 자격에 넣지\n+않는다(FR-012·FR-017) — 넣으면 자료 시작 구간이 통째로 후보에서 사라지고, 보조 설명 하나 때문에\n+순위가 바뀐다. 그래서 이 모듈은 `scale`·`era`를 부르지 않는다.\n \"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Iterable, Mapping\n+from dataclasses import dataclass\n+from datetime import date\n+from typing import Final\n+\n+from data_pipeline.regime.distance import CandidateDistance, DistanceModel, months_between\n+from data_pipeline.regime.macro.types import MonthlyValue, require_month\n+\n+#: 표시 상한 (spec FR-013, data-model §4). 화면이 처음 3개만 펼치는 것은 화면 규칙이다.\n+DISPLAY_LIMIT: Final[int] = 10\n+\n+#: 질의 종료월과 이만큼 **넘게** 떨어진 달만 후보다 (spec FR-012).\n+MINIMUM_GAP_MONTHS: Final[int] = 12\n+\n+#: 담은 사례의 종료월 앞뒤 이만큼은 남은 후보에서 뺀다 (spec FR-012, D09).\n+NEIGHBOR_MONTHS: Final[int] = 6\n+\n+#: 제외 사유 (data-model.md §2의 `candidate_counts`).\n+MISSING_INPUT: Final[str] = \"MISSING_INPUT\"\n+WITHIN_12_MONTHS: Final[str] = \"WITHIN_12_MONTHS\"\n+NEIGHBOR_SKIPPED: Final[str] = \"NEIGHBOR_SKIPPED\"\n+\n+EXCLUSION_REASONS: Final[tuple[str, ...]] = (MISSING_INPUT, WITHIN_12_MONTHS, NEIGHBOR_SKIPPED)\n+\n+\n+@dataclass(frozen=True)\n+class RankedCandidate:\n+    \"\"\"전체 유효 후보 목록의 한 줄 (data-model §2.3의 `{endMonth, distance, rank}`).\"\"\"\n+\n+    end_month: date\n+    distance: float\n+    rank: int\n+\n+\n+@dataclass(frozen=True)\n+class CandidateCounts:\n+    \"\"\"후보 집계 (data-model §2의 `candidate_counts`).\n+\n+    `NEIGHBOR_SKIPPED`는 **전체 유효 후보 목록에서 빠지지 않는다** — 건너뛰기는 표시할 사례를\n+    고를 때만 적용하고, 목록에는 그대로 남는다(FR-030). 그래서 이 수는 `evaluated`에서 빼는\n+    값이 아니라 \"표시에서 접힌 수\"다.\n+    \"\"\"\n+\n+    evaluated: int\n+    excluded: Mapping[str, int]\n+\n+\n+@dataclass(frozen=True)\n+class CandidateSelection:\n+    \"\"\"후보 선정 결과.\n+\n+    `display_limited`는 상한에 걸렸다는 **사실만** 말한다. 남은 후보 수를 여기 두지 않는 이유는\n+    그 수가 \"그만큼 비슷했다\"로 읽히기 때문이다(spec FR-013) — 011이 쓰는 `ranked`에는 전부\n+    들어 있고, 화면에 나가는 쪽에는 수가 없다.\n+    \"\"\"\n+\n+    ranked: tuple[RankedCandidate, ...]\n+    displayed: tuple[CandidateDistance, ...]\n+    counts: CandidateCounts\n+    display_limited: bool\n+\n+\n+def observable_months(\n+    series_by_indicator: Mapping[str, Mapping[date, MonthlyValue]],\n+) -> tuple[date, ...]:\n+    \"\"\"자료에 나타난 모든 달. 후보로 **검토할** 범위이지 후보 자격이 아니다.\n+\n+    합집합인 이유는 자격 판정을 여기서 미리 하지 않기 위해서다. 교집합으로 좁히면 어느 지표\n+    하나의 구멍이 그 달을 검토 대상에서 지워, 제외 집계에도 잡히지 않는다.\n+    \"\"\"\n+    months: set[date] = set()\n+    for series in series_by_indicator.values():\n+        months.update(series)\n+    return tuple(sorted(months))\n+\n+\n+def is_far_enough(baseline_month: date, end_month: date) -> bool:\n+    \"\"\"질의 종료월보다 12개월 **초과** 이전인가 (spec FR-012).\n+\n+    아래쪽 경계는 두지 않는다 — 오래될수록 걸러지는 규칙은 없다.\n+    \"\"\"\n+    return months_between(end_month, baseline_month) > MINIMUM_GAP_MONTHS\n+\n+\n+def select_candidates(\n+    model: DistanceModel, months: Iterable[date] | None = None\n+) -> CandidateSelection:\n+    \"\"\"후보를 거르고 줄 세우고 표시할 것을 고른다 (spec FR-012·FR-013).\n+\n+    검토 범위를 주지 않으면 자료에 있는 모든 달을 본다.\n+    \"\"\"\n+    considered = tuple(sorted(set(observable_months(model.series) if months is None else months)))\n+    excluded = dict.fromkeys(EXCLUSION_REASONS, 0)\n+\n+    valid: list[CandidateDistance] = []\n+    for month in considered:\n+        require_month(month, \"후보 종료월\")\n+        if not is_far_enough(model.baseline_month, month):\n+            # 12개월 제한을 입력 검사보다 먼저 본다. 그 달은 애초에 후보 범위 밖이라\n+            # 입력이 있는지 없는지는 물을 일이 아니다.\n+            excluded[WITHIN_12_MONTHS] += 1\n+            continue\n+        if not model.has_inputs_for(month):\n+            excluded[MISSING_INPUT] += 1\n+            continue\n+        valid.append(model.distance_for(month))\n+\n+    ordered = sorted(valid, key=lambda item: (item.value, item.end_month))\n+    ranked = tuple(\n+        RankedCandidate(end_month=item.end_month, distance=item.value, rank=index)\n+        for index, item in enumerate(ordered, start=1)\n+    )\n+\n+    displayed, skipped, leftover = _apply_neighbor_skip(ordered)\n+    excluded[NEIGHBOR_SKIPPED] = skipped\n+    return CandidateSelection(\n+        ranked=ranked,\n+        displayed=tuple(displayed),\n+        counts=CandidateCounts(evaluated=len(considered), excluded=excluded),\n+        display_limited=leftover,\n+    )\n+\n+\n+def _apply_neighbor_skip(\n+    ordered: list[CandidateDistance],\n+) -> tuple[list[CandidateDistance], int, bool]:\n+    \"\"\"±6개월 건너뛰기를 **순차로** 적용한다 (spec FR-012·FR-014).\n+\n+    하나를 담을 때마다 그 종료월 ±6개월을 남은 후보에서 빼고 다시 1위를 담는다. 상위 10개를\n+    먼저 뽑아 거르면, 같은 국면을 묶는 목적은 같으면서 그 아래 순위의 관계없는 사례까지 잃는다.\n+\n+    빈자리를 먼 후보로 채우지 않는다 — 여기서 채워지는 것은 **걸러진 만큼 올라온 다음 순위**이지\n+    모자란 수를 맞추려고 끌어온 후보가 아니다(FR-013).\n+    \"\"\"\n+    remaining = list(ordered)\n+    displayed: list[CandidateDistance] = []\n+    skipped = 0\n+    while remaining and len(displayed) < DISPLAY_LIMIT:\n+        head = remaining.pop(0)\n+        displayed.append(head)\n+        kept = [\n+            item\n+            for item in remaining\n+            if abs(months_between(item.end_month, head.end_month)) > NEIGHBOR_MONTHS\n+        ]\n+        skipped += len(remaining) - len(kept)\n+        remaining = kept\n+    # 상한에서 멈춘 뒤 남은 후보는 **제외가 아니다.** 전체 목록에 그대로 있고, 화면에는 상한이\n+    # 있다는 사실만 알린다(FR-013).\n+    return displayed, skipped, bool(remaining)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/candidates.py",
+          "old_path": "data/src/data_pipeline/regime/candidates.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,6 +51,14 @@ from data_pipeline.regime.scale import Scale, scale_for, shift_month\n SCALE_REASON_ORDER: Final[tuple[str, ...]] = (\"SCALE_WINDOW_TOO_SHORT\", \"SCALE_ZERO\")\n \n \n+class UnknownScaleReasonError(LookupError):\n+    \"\"\"`scale.py`가 `SCALE_REASON_ORDER`에 없는 사유를 돌려줬다.\n+\n+    research R7이 최소 유효 척도 사유를 더할 자리를 예고해 뒀다. 그때 이 목록을 함께 고치지\n+    않으면 사유를 고르는 자리에서 이름 없는 오류가 배치 한가운데 떨어진다.\n+    \"\"\"\n+\n+\n class CandidateInputMissingError(LookupError):\n     \"\"\"후보에게 질의 비교 시점에 대응하는 입력이 없다.\n \n@@ -192,6 +200,10 @@ class DistanceModel:\n         measured_fields = [self._measure_field(field, end_month) for field in self.fields]\n         raw_d = [field_distance for _, _, field_distance in measured_fields]\n         total_d = sum(raw_d)\n+        # **저장되는 값으로 판정한다.** 반올림 전 합이 1e-16이면 기여도는 만들어지는데 정작\n+        # 거리는 전부 0으로 저장되어 \"거리 0인데 기여 73%\"인 행이 남는다. 그 73%는 자료가\n+        # 아니라 부동소수점 찌꺼기다(research R4, spec Edge Cases).\n+        zero_total = round_for_storage(total_d) == 0.0\n         single_field = len(measured_fields) == 1\n \n         fields = tuple(\n@@ -201,7 +213,7 @@ class DistanceModel:\n                 d=round_for_storage(field_distance),\n                 contribution=(\n                     None\n-                    if single_field or total_d == 0.0\n+                    if single_field or zero_total\n                     else round_for_storage(field_distance / total_d)\n                 ),\n             )\n@@ -277,7 +289,8 @@ def _with_shares(\n     \"\"\"명목 비중과 실제 거리 기여를 채운다 (spec FR-010).\n \n     **분모는 반올림 전 E_i의 합이다.** 반올림된 값으로 나누면 몫의 합이 1에서 미세하게 어긋나고,\n-    그 어긋남은 12자리 안에 보이는 자리에서 생긴다.\n+    그 어긋남은 12자리 안에 보이는 자리에서 생긴다. 다만 **합이 0인지는 저장값으로 판정한다** —\n+    찌꺼기만 한 합을 0이 아니라고 보면 E_i가 전부 0으로 저장된 행에 기여도가 붙는다.\n     \"\"\"\n     return IndicatorDistance(\n         indicator_id=item.indicator_id,\n@@ -288,10 +301,36 @@ def _with_shares(\n         case_z=item.case_z,\n         e=item.e,\n         nominal_weight=round_for_storage(1 / count),\n-        distance_share=(None if field_total == 0.0 else round_for_storage(raw_e / field_total)),\n+        distance_share=(\n+            None\n+            if round_for_storage(field_total) == 0.0\n+            else round_for_storage(raw_e / field_total)\n+        ),\n     )\n \n \n+def _requested_fields(\n+    registry: IndicatorRegistry, field_ids: Sequence[str] | None\n+) -> tuple[FieldEntry, ...]:\n+    \"\"\"요청한 분야를 등록표 순서로 돌려준다. **모르는 id는 하나라도 있으면 막는다.**\n+\n+    아는 것만 추려 통과시키면, 오타 난 분야를 뺀 좁은 범위로 계산해 놓고 부른 쪽은 넓은 범위를\n+    받았다고 믿는다. 게다가 남은 분야가 하나면 기여도까지 사라져 결과 모양마저 달라지는데,\n+    그 답이 다른 질문의 답이라고 말해 주는 곳이 없다.\n+    \"\"\"\n+    ordered = registry.ordered_fields()\n+    if field_ids is None:\n+        return ordered\n+    wanted = tuple(dict.fromkeys(field_ids))\n+    if not wanted:\n+        raise LookupError(\"계산할 분야를 하나도 주지 않았다\")\n+    known = {field.id for field in ordered}\n+    unknown = [field_id for field_id in wanted if field_id not in known]\n+    if unknown:\n+        raise LookupError(f\"등록표에 없는 분야다: {unknown}\")\n+    return tuple(field for field in ordered if field.id in set(wanted))\n+\n+\n def build_model(\n     registry: IndicatorRegistry,\n     baseline_month: date,\n@@ -307,12 +346,7 @@ def build_model(\n     계산 불가라는 뜻이며, **문제가 있는 지표를 빼고 나머지로 계산하지 않는다**(FR-007·FR-008).\n     \"\"\"\n     require_month(baseline_month, \"기준월\")\n-    wanted = None if field_ids is None else set(field_ids)\n-    fields = tuple(\n-        field for field in registry.ordered_fields() if wanted is None or field.id in wanted\n-    )\n-    if not fields:\n-        raise LookupError(f\"등록표에 없는 분야다: {sorted(wanted or ())}\")\n+    fields = _requested_fields(registry, field_ids)\n     indicators = tuple(entry for field in fields for entry in registry.indicators_of(field.id))\n \n     comparison = comparison_for_scope(\n@@ -339,7 +373,12 @@ def build_model(\n     if failures:\n         # 사유가 섞이면 data-model §2.1 순서대로 하나를 고른다. 둘을 합친 새 사유를 만들지\n         # 않는다 — 어휘에 없는 값이 화면과 기록으로 새어 나간다.\n-        reason = next(name for name in SCALE_REASON_ORDER if name in failures)\n+        reason = next((name for name in SCALE_REASON_ORDER if name in failures), None)\n+        if reason is None:\n+            raise UnknownScaleReasonError(\n+                f\"data-model §2.1에 없는 척도 사유다: {sorted(failures)} — \"\n+                \"SCALE_REASON_ORDER에 순서를 함께 더한다\"\n+            )\n         return ModelUnavailable(\n             baseline_month=baseline_month,\n             reason=reason,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/distance.py",
+          "old_path": "data/src/data_pipeline/regime/distance.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,6 +30,7 @@ from dataclasses import dataclass\n from datetime import date\n from typing import Final\n \n+from data_pipeline.regime.explain import format_value, topic_particle\n from data_pipeline.regime.macro.types import IndicatorEntry, MonthlyValue, require_month\n from data_pipeline.regime.scale import Scale, scale_for\n \n@@ -61,31 +62,6 @@ class EraPosition:\n     months: int\n \n \n-def _topic_particle(text: str) -> str:\n-    \"\"\"앞 글자에 받침이 있으면 ``은``, 없으면 ``는``.\n-\n-    R8의 틀은 ``는``으로 적혀 있고 예시 단위가 ``%``라 그대로 맞지만, 단위가 ``명``·``원``처럼\n-    받침으로 끝나면 \"명는\"이 된다. 틀을 바꾸는 것이 아니라 같은 틀을 한국어로 옳게 적는 일이다.\n-    \"\"\"\n-    if not text:\n-        return \"는\"\n-    last = text[-1]\n-    if \"가\" <= last <= \"힣\":\n-        return \"는\" if (ord(last) - 0xAC00) % 28 == 0 else \"은\"\n-    return \"는\"\n-\n-\n-def format_value(value: float) -> str:\n-    \"\"\"문장에 넣을 값 표기.\n-\n-    **자릿수를 임의로 정하지 않는다.** 표시 자릿수 규칙은 spec에 없고, 여기서 \"소수 첫째 자리\"\n-    같은 규칙을 만들면 모델 버전에 없는 규칙이 하나 느는 셈이다. 값이 가진 자릿수를 그대로 쓰되\n-    정수로 떨어지는 값의 꼬리 ``.0``만 덜어 낸다(정보가 줄지 않는다).\n-    \"\"\"\n-    text = repr(float(value))\n-    return text[:-2] if text.endswith(\".0\") else text\n-\n-\n def verdict_for(scale: Scale, value: float) -> str:\n     \"\"\"그 시대의 자로 잰 위치 — ``높은``·``낮은``·``비슷한`` 셋 중 하나 (research R8).\n \n@@ -126,7 +102,7 @@ def era_position_for(\n         name=indicator.name,\n         value=format_value(observed.value),\n         unit=indicator.unit,\n-        particle=_topic_particle(indicator.unit),\n+        particle=topic_particle(indicator.unit),\n         verdict=verdict_for(scale, observed.value),\n     )\n     return EraPosition(\n@@ -162,6 +138,14 @@ class EraPositionCache:\n     510,000회가 되고, 월 단위로 묶으면 7,497회다. **값이 t와 무관하다는 성질이 없으면 이\n     캐시는 틀린 값을 준다** — 그래서 키에 t가 없다.\n \n+    **키는 (지표, 후보월)이다.** 후보월만으로 묶으면 분야 검색(지표 2~3개)이 먼저 채운 결과를\n+    종합 검색(17개)이 그대로 받아 나머지 지표의 설명이 통째로 사라진다. 그 빠짐은 \"만들지 못한\n+    지표는 키가 없다\"와 생김새가 같아서 아래쪽 어디에서도 알아챌 수 없다. 지표 단위로 두면\n+    모드가 달라도 겹치는 만큼 그대로 나눠 쓴다.\n+\n+    만들지 못한 지표(`None`)도 기억한다. 그러지 않으면 이력이 부족한 지표마다 120개월 척도를\n+    부르는 시도가 사례를 만날 때마다 되풀이된다.\n+\n     **버전이 바뀌면 이 객체를 버린다.** 무효화 규칙을 캐시 안에 두지 않는 이유는, 자료·등록표·\n     모델 버전을 아는 곳이 배치이기 때문이다. 여기에 두면 버전을 모르는 자리에서 낡은 문장이\n     조용히 살아남는다.\n@@ -169,18 +153,30 @@ class EraPositionCache:\n \n     def __init__(self, series_by_indicator: Mapping[str, Mapping[date, MonthlyValue]]) -> None:\n         self._series = series_by_indicator\n-        self._cached: dict[date, dict[str, EraPosition]] = {}\n+        self._cached: dict[tuple[str, date], EraPosition | None] = {}\n+\n+    def position_for(self, indicator: IndicatorEntry, end_month: date) -> EraPosition | None:\n+        key = (indicator.id, end_month)\n+        if key not in self._cached:\n+            self._cached[key] = era_position_for(\n+                indicator, end_month, self._series[indicator.id]\n+            )\n+        return self._cached[key]\n \n     def positions_for(\n         self, indicators: Iterable[IndicatorEntry], end_month: date\n     ) -> dict[str, EraPosition]:\n-        cached = self._cached.get(end_month)\n-        if cached is None:\n-            cached = era_positions_for(indicators, end_month, self._series)\n-            self._cached[end_month] = cached\n-        return cached\n+        \"\"\"그 후보월의 지표별 보조 위치. **매번 새 dict를 돌려준다.**\n+\n+        안쪽 것을 그대로 주면 부르는 쪽이 걸러 내거나 지운 결과가 캐시에 남아, 다음 사례부터\n+        조용히 줄어든 설명을 받는다.\n+        \"\"\"\n+        found = ((indicator, self.position_for(indicator, end_month)) for indicator in indicators)\n+        return {\n+            indicator.id: position for indicator, position in found if position is not None\n+        }\n \n     @property\n     def months(self) -> tuple[date, ...]:\n         \"\"\"구해 둔 후보월. 배치가 몇 번 계산했는지 기록할 때 쓴다(spec FR-033).\"\"\"\n-        return tuple(sorted(self._cached))\n+        return tuple(sorted({month for _, month in self._cached}))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/era.py",
+          "old_path": "data/src/data_pipeline/regime/era.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,8 +3,181 @@\n 지표 거리가 작은 쪽에서 최대 2개, 큰 쪽에서 최대 2개를 골라 **템플릿으로 조립한다.**\n 자유 생성하지 않는다 — 생성 문장은 같은 입력에 같은 결과를 보장하지 못해 SC-002가 깨진다.\n \n-서술은 **원값과 단위**로 하고 거리는 변환값으로 계산한다. 확률·추천·'대표 유사국면' 같은\n-표현을 만들지 않는다(FR-022).\n+서술은 **변환 후 값과 단위**로 하고 거리도 같은 값으로 계산한다(spec FR-015, D21 적용 세부).\n+증가율 지표면 증가율이지 지수 원수준이 아니다 — 설명만 원수준으로 말하면 순위와 설명이 서로\n+다른 값을 가리킨다. 확률·추천·'대표 유사국면' 같은 표현을 만들지 않는다(FR-022).\n \n-구현은 묶음 M4에서 채운다.\n+**같은 지표가 비슷한 점과 다른 점에 함께 들어가지 않는다.** 들어가면 한 화면에서 \"비슷합니다\"와\n+\"다릅니다\"를 같은 지표에 대고 말하게 된다. 그래서 위·아래에서 뽑되 겹치지 않는 선까지만 뽑고,\n+지표가 적으면 문장도 적게 나온다 — 모자란 자리를 채우려고 같은 지표를 두 번 쓰지 않는다.\n+\n+**다른 점은 인용한 두 값이 실제로 다를 때만 만든다.** 지표 거리가 0보다 커도 인용하는 달에서는\n+두 값이 같을 수 있는데, 그때 \"…보다 높습니다\"는 그냥 틀린 문장이다. 그런 지표는 건너뛰고 다음\n+지표로 넘어간다.\n+\n+문장이 인용하는 달은 **비교 시점 중 가장 최근 달**이다. 문장이 값 하나씩을 말하므로 고를 수밖에\n+없고, 그중 \"지금\"에 가장 가까운 달을 쓴다. 관측 구간 전체는 문장이 아니라 사례 자체가 보인다\n+(FR-015).\n \"\"\"\n+\n+from __future__ import annotations\n+\n+from collections.abc import Mapping\n+from dataclasses import dataclass\n+from datetime import date\n+from decimal import Decimal\n+from typing import Final\n+\n+from data_pipeline.regime.distance import CandidateDistance, IndicatorDistance\n+from data_pipeline.regime.macro.types import IndicatorEntry, MonthlyValue\n+from data_pipeline.regime.rounding import equal_at_storage, to_storage_text\n+\n+#: 한쪽에 담는 문장 수 상한 (research R8).\n+MAX_SENTENCES: Final[int] = 2\n+\n+SIMILAR_TEMPLATE: Final[str] = \"{name}{particle} {query}{unit}로 당시 {case}{unit}와 비슷합니다.\"\n+DIFFERENT_TEMPLATE: Final[str] = (\n+    \"{name}{particle} 지금이 {query}{unit}로 당시 {case}{unit}보다 {verdict}.\"\n+)\n+HIGHER: Final[str] = \"높습니다\"\n+LOWER: Final[str] = \"낮습니다\"\n+\n+\n+def topic_particle(text: str) -> str:\n+    \"\"\"앞 글자에 받침이 있으면 ``은``, 없으면 ``는``.\n+\n+    R8의 틀은 ``은``·``는`` 한쪽으로 적혀 있지만 지표명과 단위는 둘 다 올 수 있다. 틀을 바꾸는\n+    것이 아니라 같은 틀을 한국어로 옳게 적는 일이다 — \"취업자 수은\"이나 \"명는\"을 내보내지 않는다.\n+    \"\"\"\n+    if not text:\n+        return \"는\"\n+    last = text[-1]\n+    if \"가\" <= last <= \"힣\":\n+        return \"는\" if (ord(last) - 0xAC00) % 28 == 0 else \"은\"\n+    return \"는\"\n+\n+\n+def format_value(value: float) -> str:\n+    \"\"\"문장에 넣을 값 표기.\n+\n+    **표시 자릿수를 새로 정하지 않는다.** \"소수 첫째 자리\" 같은 규칙을 여기서 만들면 모델 버전에\n+    없는 규칙이 하나 느는 셈이라, 이미 모델 버전에 있는 저장 자릿수(12)를 그대로 쓴다. 그 자리에서\n+    반올림하면 `0.30000000000000004` 같은 2진 찌꺼기가 사라지고, 꼬리 0을 덜어 내면 `0.3`이 된다.\n+\n+    ``repr``을 쓰지 않는 이유는 지수 표기 때문이다 — `5e-05`가 문장에 그대로 실리면 읽는 사람이\n+    값을 읽을 수 없다.\n+    \"\"\"\n+    quantized = Decimal(to_storage_text(value)).normalize()\n+    return f\"{quantized:f}\"\n+\n+\n+@dataclass(frozen=True)\n+class Explanation:\n+    \"\"\"한 사례의 설명 문장 (data-model §4의 ``explanation``).\"\"\"\n+\n+    similar: tuple[str, ...]\n+    different: tuple[str, ...]\n+\n+\n+def _quoted_months(item: IndicatorDistance) -> tuple[date, date]:\n+    \"\"\"인용할 질의 달과 그에 대응하는 후보 달 — 비교 시점 중 가장 최근이다.\"\"\"\n+    return item.months[-1], item.case_months[-1]\n+\n+\n+def _values(\n+    item: IndicatorDistance, series: Mapping[date, MonthlyValue]\n+) -> tuple[float, float]:\n+    month, case_month = _quoted_months(item)\n+    return series[month].value, series[case_month].value\n+\n+\n+def similar_sentence(\n+    entry: IndicatorEntry, item: IndicatorDistance, series: Mapping[date, MonthlyValue]\n+) -> str:\n+    query, case = _values(item, series)\n+    return SIMILAR_TEMPLATE.format(\n+        name=entry.name,\n+        particle=topic_particle(entry.name),\n+        query=format_value(query),\n+        case=format_value(case),\n+        unit=entry.unit,\n+    )\n+\n+\n+def different_sentence(\n+    entry: IndicatorEntry, item: IndicatorDistance, series: Mapping[date, MonthlyValue]\n+) -> str:\n+    query, case = _values(item, series)\n+    return DIFFERENT_TEMPLATE.format(\n+        name=entry.name,\n+        particle=topic_particle(entry.name),\n+        query=format_value(query),\n+        case=format_value(case),\n+        unit=entry.unit,\n+        verdict=HIGHER if query > case else LOWER,\n+    )\n+\n+\n+def explanation_for(\n+    distance: CandidateDistance,\n+    entries: Mapping[str, IndicatorEntry],\n+    series_by_indicator: Mapping[str, Mapping[date, MonthlyValue]],\n+) -> Explanation:\n+    \"\"\"사례 하나의 비슷한 점·다른 점 (spec FR-015, research R8).\n+\n+    고르는 기준은 **공통 척도로 잰 지표 거리**다(FR-009). 시대별 위치는 여기에 섞지 않는다 —\n+    그쪽은 후보월 척도로 잰 다른 자이고, 기본 검색 이유에 들어가면 순위와 설명이 서로 다른 것을\n+    가리킨다(FR-017).\n+    \"\"\"\n+    ordered = sorted(\n+        (item for field in distance.fields for item in field.indicators),\n+        key=lambda item: (-item.e, item.indicator_id),\n+    )\n+    if not ordered:\n+        return Explanation(similar=(), different=())\n+\n+    def sentence_values(item: IndicatorDistance) -> tuple[float, float]:\n+        return _values(item, series_by_indicator[item.indicator_id])\n+\n+    if ordered[0].e == 0.0:\n+        # 가장 먼 지표까지 저장 자릿수로 0이다 — 다른 점이 없다. 이때 \"보다 높습니다\"를 만들면\n+        # 없는 차이를 말하게 된다.\n+        return Explanation(\n+            similar=tuple(\n+                similar_sentence(\n+                    entries[item.indicator_id], item, series_by_indicator[item.indicator_id]\n+                )\n+                for item in ordered[:MAX_SENTENCES]\n+            ),\n+            different=(),\n+        )\n+\n+    limit = min(MAX_SENTENCES, max(1, len(ordered) // 2))\n+    different: list[str] = []\n+    used: set[str] = set()\n+    for item in ordered:\n+        if len(different) == limit:\n+            break\n+        query, case = sentence_values(item)\n+        if equal_at_storage(query, case):\n+            continue\n+        different.append(\n+            different_sentence(\n+                entries[item.indicator_id], item, series_by_indicator[item.indicator_id]\n+            )\n+        )\n+        used.add(item.indicator_id)\n+\n+    similar: list[str] = []\n+    for item in reversed(ordered):\n+        if len(similar) == limit:\n+            break\n+        if item.indicator_id in used:\n+            continue\n+        similar.append(\n+            similar_sentence(\n+                entries[item.indicator_id], item, series_by_indicator[item.indicator_id]\n+            )\n+        )\n+\n+    return Explanation(similar=tuple(similar), different=tuple(different))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/regime/explain.py",
+          "old_path": "data/src/data_pipeline/regime/explain.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,208 @@\n+\"\"\"후보 제한과 순위 (spec FR-012·FR-013, tasks.md T051~T055).\n+\n+여기서 고정하는 것은 다섯이다 — 12개월 제한과 **순차** 건너뛰기, 동률을 푸는 방향, 부족하면\n+부족한 대로 두는가, 전체 목록에 건너뛰기가 **적용되지 않는가**, 그리고 후보 직전 이력이 없는\n+사례가 자격을 잃지 않는가.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+from datetime import date\n+from pathlib import Path\n+\n+from conftest import make_registry, make_series\n+\n+from data_pipeline.regime import candidates as candidates_module\n+from data_pipeline.regime.candidates import (\n+    DISPLAY_LIMIT,\n+    MISSING_INPUT,\n+    NEIGHBOR_MONTHS,\n+    NEIGHBOR_SKIPPED,\n+    WITHIN_12_MONTHS,\n+    observable_months,\n+    select_candidates,\n+)\n+from data_pipeline.regime.distance import DistanceModel, build_model, months_between\n+from data_pipeline.regime.era import era_position_for\n+\n+START = (2015, 4)\n+MONTHS = 123\n+BASELINE = date(2025, 6, 1)\n+\n+\n+def ramp(period: int, step: float, base: float = 0.0, count: int = MONTHS) -> list[float]:\n+    return [base + (index % period) * step for index in range(count)]\n+\n+\n+def build(values: dict[str, list[float | None]], layout: dict[str, list[str]] | None = None):\n+    layout = layout or {\"FIELD_A\": [\"A1\"]}\n+    model = build_model(\n+        make_registry(layout),\n+        BASELINE,\n+        {key: make_series(START, series) for key, series in values.items()},\n+    )\n+    assert isinstance(model, DistanceModel)\n+    return model\n+\n+\n+def month_at(index: int) -> date:\n+    year, month = START[0], START[1] + index\n+    return date(year + (month - 1) // 12, (month - 1) % 12 + 1, 1)\n+\n+\n+class TestTwelveMonthLimit:\n+    \"\"\"12개월 초과 이전만 후보다. **아래쪽 경계는 두지 않는다** (spec FR-012, T044).\"\"\"\n+\n+    def selection(self):\n+        return select_candidates(build({\"A1\": ramp(7, 0.5, 1.0)}))\n+\n+    def test_열두_달_이내는_후보가_아니다(self) -> None:\n+        selection = self.selection()\n+        months = {item.end_month for item in selection.ranked}\n+        assert all(months_between(month, BASELINE) > 12 for month in months)\n+        assert date(2024, 6, 1) not in months\n+        assert date(2024, 5, 1) in months\n+\n+    def test_오래됐다고_걸러지지_않는다(self) -> None:\n+        selection = self.selection()\n+        oldest = min(item.end_month for item in selection.ranked)\n+        assert oldest == date(2015, 6, 1), \"자료가 있는 전 구간이 후보다\"\n+\n+    def test_열두_달_이내는_사유로_집계된다(self) -> None:\n+        selection = self.selection()\n+        assert selection.counts.excluded[WITHIN_12_MONTHS] == 13  # t-12 ~ t\n+\n+    def test_검토_수와_집계가_맞는다(self) -> None:\n+        selection = self.selection()\n+        excluded = selection.counts.excluded\n+        assert selection.counts.evaluated == len(observable_months(build(\n+            {\"A1\": ramp(7, 0.5, 1.0)}\n+        ).series))\n+        assert (\n+            len(selection.ranked) + excluded[MISSING_INPUT] + excluded[WITHIN_12_MONTHS]\n+            == selection.counts.evaluated\n+        )\n+\n+\n+class TestNeighborSkip:\n+    \"\"\"±6개월 건너뛰기는 **하나를 담을 때마다** 적용한다 (spec FR-012·FR-014, T051).\"\"\"\n+\n+    def selection(self):\n+        return select_candidates(build({\"A1\": ramp(7, 0.5, 1.0)}))\n+\n+    def test_표시된_사례는_서로_여섯_달_넘게_떨어져_있다(self) -> None:\n+        shown = [item.end_month for item in self.selection().displayed]\n+        for earlier, later in zip(shown, shown[1:], strict=False):\n+            assert abs(months_between(earlier, later)) > NEIGHBOR_MONTHS\n+\n+    def test_걸러진_만큼_아래_순위가_올라와_채운다(self) -> None:\n+        selection = self.selection()\n+        assert len(selection.displayed) == DISPLAY_LIMIT\n+        assert selection.counts.excluded[NEIGHBOR_SKIPPED] > 0\n+\n+    def test_건너뛴_후보도_전체_목록에는_남는다(self) -> None:\n+        selection = self.selection()\n+        shown = {item.end_month for item in selection.displayed}\n+        listed = {item.end_month for item in selection.ranked}\n+        assert shown < listed\n+        skipped_neighbors = [\n+            month\n+            for month in listed - shown\n+            if any(abs(months_between(month, seen)) <= NEIGHBOR_MONTHS for seen in shown)\n+        ]\n+        assert skipped_neighbors, \"건너뛴 인접 월이 목록에서도 사라지면 011이 다시 적용할 수 없다\"\n+\n+    def test_상한에_걸린_사실만_알린다(self) -> None:\n+        selection = self.selection()\n+        assert selection.display_limited is True\n+        assert not hasattr(selection, \"remaining\")\n+\n+\n+class TestTie:\n+    \"\"\"정확한 동률은 더 오래된 종료월 우선 (spec FR-012, T052).\"\"\"\n+\n+    def test_같은_거리면_오래된_달이_앞이다(self) -> None:\n+        #: 주기 12라 12개월 간격의 후보들이 값까지 똑같아 정확한 동률이 된다.\n+        selection = select_candidates(build({\"A1\": ramp(12, 0.5, 1.0)}))\n+        for earlier, later in zip(selection.ranked, selection.ranked[1:], strict=False):\n+            if earlier.distance == later.distance:\n+                assert earlier.end_month < later.end_month\n+\n+    def test_순위는_1부터_연속이다(self) -> None:\n+        selection = select_candidates(build({\"A1\": ramp(12, 0.5, 1.0)}))\n+        assert [item.rank for item in selection.ranked] == list(\n+            range(1, len(selection.ranked) + 1)\n+        )\n+\n+\n+class TestNotPadded:\n+    \"\"\"후보가 부족하면 **부족한 대로** 돌려준다 (spec FR-013, SC-004, T053).\"\"\"\n+\n+    def test_두_개뿐이면_두_개다(self) -> None:\n+        model = build({\"A1\": ramp(7, 0.5, 1.0)})\n+        selection = select_candidates(model, [date(2016, 3, 1), date(2020, 9, 1)])\n+        assert len(selection.displayed) == 2\n+        assert len(selection.ranked) == 2\n+        assert selection.display_limited is False\n+\n+    def test_빈자리를_먼_후보로_채우지_않는다(self) -> None:\n+        model = build({\"A1\": ramp(7, 0.5, 1.0)})\n+        #: 둘은 ±6개월 안이라 하나가 접힌다. 그래도 다른 데서 끌어오지 않는다.\n+        selection = select_candidates(model, [date(2016, 3, 1), date(2016, 5, 1)])\n+        assert len(selection.displayed) == 1\n+        assert selection.counts.excluded[NEIGHBOR_SKIPPED] == 1\n+        assert len(selection.ranked) == 2\n+\n+\n+class TestRankedList:\n+    \"\"\"전체 유효 후보 목록에는 건너뛰기를 적용하지 않는다 (spec FR-030, T054).\"\"\"\n+\n+    def test_표시보다_길고_순위가_연속이다(self) -> None:\n+        selection = select_candidates(build({\"A1\": ramp(7, 0.5, 1.0)}))\n+        assert len(selection.ranked) > len(selection.displayed)\n+        assert [item.rank for item in selection.ranked] == list(\n+            range(1, len(selection.ranked) + 1)\n+        )\n+\n+    def test_거리가_오름차순이다(self) -> None:\n+        selection = select_candidates(build({\"A1\": ramp(7, 0.5, 1.0)}))\n+        distances = [item.distance for item in selection.ranked]\n+        assert distances == sorted(distances)\n+\n+    def test_인접_월이_목록에_그대로_있다(self) -> None:\n+        selection = select_candidates(build({\"A1\": ramp(7, 0.5, 1.0)}))\n+        months = sorted(item.end_month for item in selection.ranked)\n+        gaps = [months_between(a, b) for a, b in zip(months, months[1:], strict=False)]\n+        assert 1 in gaps, \"이웃한 달이 목록에서 빠지면 건너뛰기가 적용된 것이다\"\n+\n+\n+class TestEligibilityIsInputsOnly:\n+    \"\"\"자격은 비교 시점 입력뿐이다 — 이력도 보조 척도도 조건이 아니다 (FR-012·FR-017, T055).\"\"\"\n+\n+    def test_직전_이력이_없어도_후보로_남는다(self) -> None:\n+        model = build({\"A1\": ramp(7, 0.5, 1.0)})\n+        early = date(2015, 6, 1)  # 자료 시작 직후라 직전 60개월이 없다\n+        entry = model.indicators[0]\n+        assert era_position_for(entry, early, model.series[\"A1\"]) is None\n+        assert early in {item.end_month for item in select_candidates(model).ranked}\n+\n+    def test_보조_설명이_없어도_거리가_그대로다(self) -> None:\n+        model = build({\"A1\": ramp(7, 0.5, 1.0)})\n+        early = date(2015, 6, 1)\n+        listed = next(\n+            item for item in select_candidates(model).ranked if item.end_month == early\n+        )\n+        assert listed.distance == model.distance_for(early).value\n+\n+    def test_입력이_없는_달은_결측으로_집계된다(self) -> None:\n+        values = ramp(7, 0.5, 1.0)\n+        values[20] = None\n+        model = build({\"A1\": values})\n+        selection = select_candidates(model)\n+        assert selection.counts.excluded[MISSING_INPUT] > 0\n+        assert month_at(20) not in {item.end_month for item in selection.ranked}\n+\n+    def test_자격_판정이_척도와_보조_설명을_부르지_않는다(self) -> None:\n+        source = Path(candidates_module.__file__).read_text(encoding=\"utf-8\")\n+        assert \"regime.era\" not in source\n+        assert \"regime.scale\" not in source\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_candidates.py",
+          "old_path": "data/tests/regime/test_candidates.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,7 @@\n from __future__ import annotations\n \n import json\n+import math\n from datetime import date\n from pathlib import Path\n \n@@ -23,6 +24,7 @@ from data_pipeline.regime.distance import (\n     DistanceModel,\n     IndicatorDistance,\n     ModelUnavailable,\n+    UnknownScaleReasonError,\n     build_model,\n     months_between,\n )\n@@ -33,7 +35,7 @@ from data_pipeline.regime.macro.types import (\n     parse_month,\n )\n from data_pipeline.regime.rounding import to_storage_text\n-from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT\n+from data_pipeline.regime.scale import SCALE_WINDOW_TOO_SHORT, ScaleUnavailable\n \n FIXTURE = Path(__file__).parent / \"fixtures\" / \"manual_reconciliation.json\"\n \n@@ -344,3 +346,62 @@ class TestModelUnavailable:\n     def test_등록표에_없는_분야를_요구하면_멈춘다(self) -> None:\n         with pytest.raises(LookupError):\n             build({\"FIELD_A\": [\"A1\"]}, {\"A1\": ramp(7, 0.5, 1.0)}, field_ids=[\"FIELD_X\"])\n+\n+    def test_하나라도_모르는_분야가_섞이면_멈춘다(self) -> None:\n+        \"\"\"아는 것만 추려 통과시키면 부른 쪽이 다른 범위의 답을 제 것으로 믿는다.\"\"\"\n+        with pytest.raises(LookupError, match=\"FIELD_X\"):\n+            build(\n+                {\"FIELD_A\": [\"A1\"], \"FIELD_B\": [\"B1\"]},\n+                {\"A1\": ramp(7, 0.5, 1.0), \"B1\": ramp(11, 0.2)},\n+                field_ids=[\"FIELD_A\", \"FIELD_X\"],\n+            )\n+\n+    def test_분야를_하나도_주지_않으면_멈춘다(self) -> None:\n+        with pytest.raises(LookupError):\n+            build({\"FIELD_A\": [\"A1\"]}, {\"A1\": ramp(7, 0.5, 1.0)}, field_ids=[])\n+\n+    def test_어휘에_없는_척도_사유는_이름_있는_오류다(\n+        self, monkeypatch: pytest.MonkeyPatch\n+    ) -> None:\n+        \"\"\"research R7이 사유를 더할 때 순서 목록을 함께 안 고치면 여기서 잡힌다.\"\"\"\n+\n+        def unknown_reason(indicator_id: str, observation_end: date, series: object):\n+            return ScaleUnavailable(\n+                indicator_id=indicator_id,\n+                observation_end=observation_end,\n+                reason=\"SCALE_BELOW_MINIMUM\",\n+                window_length=120,\n+            )\n+\n+        monkeypatch.setattr(\"data_pipeline.regime.distance.scale_for\", unknown_reason)\n+        with pytest.raises(UnknownScaleReasonError, match=\"SCALE_BELOW_MINIMUM\"):\n+            build({\"FIELD_A\": [\"A1\"]}, {\"A1\": ramp(7, 0.5, 1.0)})\n+\n+\n+class TestNoiseIsNotDistance:\n+    \"\"\"반올림하면 0인 거리에 기여도를 붙이지 않는다 (research R4, spec Edge Cases).\"\"\"\n+\n+    LAYOUT = {\"FIELD_A\": [\"A1\", \"A2\"], \"FIELD_B\": [\"B1\"]}\n+\n+    def values(self) -> dict[str, list[float | None]]:\n+        #: 주기 12라 질의와 후보의 값이 같다. 한 달만 1 ulp 어긋뜨려 '찌꺼기 거리'를 만든다.\n+        perturbed = ramp(12, 0.5, 1.0)\n+        perturbed[MONTHS - 1] = math.nextafter(perturbed[MONTHS - 1], math.inf)\n+        return {\"A1\": perturbed, \"A2\": ramp(12, 1.25, 10.0), \"B1\": ramp(12, 0.2)}\n+\n+    def test_찌꺼기는_저장값이_0이다(self) -> None:\n+        distance = build(self.LAYOUT, self.values()).distance_for(date(2015, 6, 1))\n+        assert distance.value == 0.0\n+        assert indicator_of(distance, \"A1\").e == 0.0\n+\n+    def test_찌꺼기_합에_기여도를_붙이지_않는다(self) -> None:\n+        distance = build(self.LAYOUT, self.values()).distance_for(date(2015, 6, 1))\n+        assert distance.contribution is None\n+        assert indicator_of(distance, \"A1\").distance_share is None\n+\n+    def test_찌꺼기가_아니면_기여도가_나온다(self) -> None:\n+        distance = build(\n+            {\"FIELD_A\": [\"A1\", \"A2\"], \"FIELD_B\": [\"B1\"]},\n+            {\"A1\": ramp(7, 0.5, 1.0), \"A2\": ramp(9, 1.25, 10.0), \"B1\": ramp(11, 0.2)},\n+        ).distance_for(date(2015, 6, 1))\n+        assert distance.contribution is not None\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_distance.py",
+          "old_path": "data/tests/regime/test_distance.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -27,8 +27,8 @@ from data_pipeline.regime.era import (\n     EraPositionCache,\n     era_position_for,\n     era_positions_for,\n-    format_value,\n )\n+from data_pipeline.regime.explain import format_value\n from data_pipeline.regime.macro.types import IndicatorEntry\n from data_pipeline.regime.scale import NORMAL_QUARTILE\n \n@@ -114,6 +114,12 @@ class TestSentence:\n         assert format_value(112.0) == \"112\"\n         assert format_value(-0.25) == \"-0.25\"\n \n+    def test_지수_표기가_문장에_실리지_않는다(self) -> None:\n+        position = era_position_for(indicator(), END_MONTH, series_with(0.00005))\n+        assert position is not None\n+        assert \"e-\" not in position.sentence\n+        assert \"0.00005%\" in position.sentence\n+\n     def test_좋다_나쁘다를_쓰지_않는다(self) -> None:\n         for value in (4.0, WINDOW_MEDIAN, 20.0):\n             position = era_position_for(indicator(), END_MONTH, series_with(value))\n@@ -208,16 +214,40 @@ class TestBaselineIndependent:\n         assert first is not None and second is not None\n         assert first.window_end != second.window_end\n \n-    def test_같은_후보월은_한_번만_구한다(self) -> None:\n+    def test_같은_지표_같은_후보월은_한_번만_구한다(self) -> None:\n         cache = EraPositionCache({indicator().id: series_with(20.0)})\n-        first = cache.positions_for([indicator()], END_MONTH)\n-        second = cache.positions_for([indicator()], END_MONTH)\n+        first = cache.position_for(indicator(), END_MONTH)\n+        second = cache.position_for(indicator(), END_MONTH)\n         assert first is second, \"후보월마다 한 번만 구해 나눠 쓴다(research R3)\"\n         assert cache.months == (END_MONTH,)\n \n+    def test_지표_집합이_달라도_각_지표를_다_돌려준다(self) -> None:\n+        \"\"\"분야 검색이 먼저 채운 캐시를 종합 검색이 그대로 받으면 안 된다.\"\"\"\n+        other = IndicatorEntry(\n+            id=\"OTHER\",\n+            name=\"다른 지표\",\n+            field_id=\"FIELD_A\",\n+            unit=\"%\",\n+            transform=\"LEVEL\",\n+            display_order=2,\n+        )\n+        cache = EraPositionCache(\n+            {indicator().id: series_with(20.0), other.id: series_with(4.0)}\n+        )\n+        narrow = cache.positions_for([indicator()], END_MONTH)\n+        wide = cache.positions_for([indicator(), other], END_MONTH)\n+        assert set(narrow) == {indicator().id}\n+        assert set(wide) == {indicator().id, other.id}\n+\n+    def test_돌려준_결과를_고쳐도_캐시가_상하지_않는다(self) -> None:\n+        cache = EraPositionCache({indicator().id: series_with(20.0)})\n+        first = cache.positions_for([indicator()], END_MONTH)\n+        first.clear()\n+        assert set(cache.positions_for([indicator()], END_MONTH)) == {indicator().id}\n+\n     def test_캐시_키에_기준월이_없다(self) -> None:\n-        names = list(inspect.signature(EraPositionCache.positions_for).parameters)\n-        assert names == [\"self\", \"indicators\", \"end_month\"]\n+        names = list(inspect.signature(EraPositionCache.position_for).parameters)\n+        assert names == [\"self\", \"indicator\", \"end_month\"]\n \n \n class TestDoesNotTouchRanking:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_era.py",
+          "old_path": "data/tests/regime/test_era.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,192 @@\n+\"\"\"비슷한 점·다른 점 문장 (spec FR-015·FR-022, research R8, tasks.md T056·T057).\n+\n+여기서 고정하는 것은 셋이다 — 문장에 **실제 값과 단위**가 들어가는가, 그 값이 **변환 후 값**인가,\n+그리고 spec FR-022 ①의 금지 표현이 0건인가.\n+\n+**금지 목록을 여기에 옮겨 적지 않는다.** 시험이 제 목록을 들고 있으면 spec이 한 줄 늘어도 시험은\n+옛 목록으로 계속 통과한다. 그래서 spec.md의 표를 읽어 그대로 쓰고, 줄 수가 달라지면 실패한다.\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import ast\n+import re\n+from datetime import date\n+from pathlib import Path\n+\n+from conftest import make_registry, make_series\n+\n+from data_pipeline.regime import explain as explain_module\n+from data_pipeline.regime.distance import CandidateDistance, DistanceModel, build_model\n+from data_pipeline.regime.explain import MAX_SENTENCES, explanation_for, format_value\n+from data_pipeline.regime.macro.types import MonthlyValue\n+\n+REPO_ROOT = Path(__file__).resolve().parents[3]\n+SPEC = REPO_ROOT / \"specs\" / \"010-economic-regime-search\" / \"spec.md\"\n+REGIME_PACKAGE = REPO_ROOT / \"data\" / \"src\" / \"data_pipeline\" / \"regime\"\n+\n+START = (2015, 4)\n+MONTHS = 123\n+BASELINE = date(2025, 6, 1)\n+END_MONTH = date(2015, 6, 1)\n+\n+\n+def ramp(period: int, step: float, base: float = 0.0) -> list[float]:\n+    return [base + (index % period) * step for index in range(MONTHS)]\n+\n+\n+def banned_rows() -> list[str]:\n+    \"\"\"spec FR-022 ①의 표 줄. 목록의 주인은 spec이다.\"\"\"\n+    text = SPEC.read_text(encoding=\"utf-8\")\n+    table = re.search(r\"\\*\\*① 금지 표현 목록\\*\\*.*?((?:\\s*\\|.*\\n)+)\", text, re.S)\n+    assert table is not None, \"spec에서 금지 표현 표를 찾지 못했다\"\n+    return [line for line in table.group(1).splitlines() if re.match(r\"\\s*\\|\\s*\\d+\\s*\\|\", line)]\n+\n+\n+def banned_tokens() -> list[str]:\n+    return [token for row in banned_rows() for token in re.findall(r\"`([^`]+)`\", row)]\n+\n+\n+def explain_for(values: dict[str, list[float]], layout: dict[str, list[str]]):\n+    registry = make_registry(layout)\n+    series = {key: make_series(START, series) for key, series in values.items()}\n+    model = build_model(registry, BASELINE, series)\n+    assert isinstance(model, DistanceModel)\n+    entries = {entry.id: entry for entry in registry.indicators}\n+    return explanation_for(model.distance_for(END_MONTH), entries, series)\n+\n+\n+FOUR = {\n+    \"FIELD_A\": [\"A1\", \"A2\"],\n+    \"FIELD_B\": [\"B1\", \"B2\"],\n+}\n+FOUR_VALUES = {\n+    \"A1\": ramp(7, 0.5, 1.0),\n+    \"A2\": ramp(9, 1.25, 10.0),\n+    \"B1\": ramp(11, 0.2),\n+    \"B2\": ramp(13, 2.0, 5.0),\n+}\n+\n+\n+class TestSentences:\n+    \"\"\"실제 값과 단위로 서술하고 템플릿을 벗어나지 않는다 (spec FR-015, research R8).\"\"\"\n+\n+    def test_양쪽_모두_최대_두_문장이다(self) -> None:\n+        explanation = explain_for(FOUR_VALUES, FOUR)\n+        assert len(explanation.similar) == MAX_SENTENCES\n+        assert len(explanation.different) == MAX_SENTENCES\n+\n+    def test_같은_지표가_양쪽에_들어가지_않는다(self) -> None:\n+        explanation = explain_for(FOUR_VALUES, FOUR)\n+        names = [sentence.split()[0] for sentence in explanation.similar + explanation.different]\n+        assert len(set(names)) == len(names)\n+\n+    def test_값과_단위가_문장에_있다(self) -> None:\n+        explanation = explain_for(FOUR_VALUES, FOUR)\n+        for sentence in explanation.similar + explanation.different:\n+            assert \"%\" in sentence\n+            assert re.search(r\"\\d\", sentence)\n+\n+    def test_다른_점은_높거나_낮다고만_말한다(self) -> None:\n+        explanation = explain_for(FOUR_VALUES, FOUR)\n+        for sentence in explanation.different:\n+            assert sentence.endswith(\"높습니다.\") or sentence.endswith(\"낮습니다.\")\n+\n+    def test_지표가_적으면_문장도_적다(self) -> None:\n+        explanation = explain_for({\"A1\": ramp(7, 0.5, 1.0)}, {\"FIELD_A\": [\"A1\"]})\n+        assert len(explanation.different) == 1\n+        assert explanation.similar == ()\n+\n+    def test_모두_같으면_다른_점이_없다(self) -> None:\n+        same = {key: ramp(12, 0.5, 1.0) for key in (\"A1\", \"A2\", \"B1\", \"B2\")}\n+        explanation = explain_for(same, FOUR)\n+        assert explanation.different == ()\n+        assert explanation.similar\n+\n+    def test_받침에_맞는_조사를_쓴다(self) -> None:\n+        assert explain_module.topic_particle(\"실업률\") == \"은\"\n+        assert explain_module.topic_particle(\"소비자물가\") == \"는\"\n+\n+\n+class TestTransformedValue:\n+    \"\"\"문장의 값은 **변환 후 값**이다 (spec FR-015, D21, T057).\"\"\"\n+\n+    def series_with_raw(self) -> dict[str, dict[date, MonthlyValue]]:\n+        \"\"\"변환값과 원수준이 다른 계열 — 증가율 3.2%와 지수 112.4처럼.\"\"\"\n+        series: dict[date, MonthlyValue] = {}\n+        year, month = START\n+        for index in range(MONTHS):\n+            current = date(year, month, 1)\n+            series[current] = MonthlyValue(\n+                month=current, value=1.0 + (index % 7) * 0.5, raw=100.0 + index\n+            )\n+            year, month = (year + 1, 1) if month == 12 else (year, month + 1)\n+        return {\"A1\": series}\n+\n+    def test_지수_원수준이_문장에_들어가지_않는다(self) -> None:\n+        registry = make_registry({\"FIELD_A\": [\"A1\"]})\n+        series = self.series_with_raw()\n+        model = build_model(registry, BASELINE, series)\n+        assert isinstance(model, DistanceModel)\n+        entries = {entry.id: entry for entry in registry.indicators}\n+        explanation = explanation_for(model.distance_for(END_MONTH), entries, series)\n+\n+        sentence = explanation.different[0]\n+        raw_now = series[\"A1\"][BASELINE].raw\n+        assert format_value(series[\"A1\"][BASELINE].value) in sentence\n+        assert format_value(raw_now) not in sentence\n+\n+    def test_패키지에서_raw_series를_부르지_않는다(self) -> None:\n+        \"\"\"정의·구현이 아니라 **호출**을 센다.\n+\n+        포트는 원값을 받도록 `raw_series`를 선언하고 대역이 그것을 구현한다(계약 §1) —\n+        문자열로 세면 그 둘이 걸려서, 정작 막아야 할 호출과 구분되지 않는다.\n+        \"\"\"\n+        callers = []\n+        for path in REGIME_PACKAGE.rglob(\"*.py\"):\n+            tree = ast.parse(path.read_text(encoding=\"utf-8\"))\n+            for node in ast.walk(tree):\n+                if not isinstance(node, ast.Call):\n+                    continue\n+                target = node.func\n+                name = (\n+                    target.attr\n+                    if isinstance(target, ast.Attribute)\n+                    else getattr(target, \"id\", None)\n+                )\n+                if name == \"raw_series\":\n+                    callers.append(f\"{path.name}:{node.lineno}\")\n+        assert callers == [], \"설명·표시 경로는 변환 후 값만 쓴다(포트 계약 §1)\"\n+\n+\n+class TestBannedExpressions:\n+    \"\"\"spec FR-022 ①의 금지 표현이 산출물에 0건이다.\"\"\"\n+\n+    def test_목록은_spec이_가진_것이다(self) -> None:\n+        assert len(banned_rows()) == 13, \"spec의 금지 표현 수가 달라졌다 — 시험을 맞춰야 한다\"\n+\n+    def test_문장에_금지_표현이_없다(self) -> None:\n+        explanation = explain_for(FOUR_VALUES, FOUR)\n+        for sentence in explanation.similar + explanation.different:\n+            for token in banned_tokens():\n+                assert token not in sentence, f\"금지 표현이 문장에 있다: {token}\"\n+\n+    def test_템플릿_자체에도_금지_표현이_없다(self) -> None:\n+        templates = (explain_module.SIMILAR_TEMPLATE, explain_module.DIFFERENT_TEMPLATE)\n+        for token in banned_tokens():\n+            assert all(token not in template for template in templates)\n+\n+    def test_시대별_위치를_기본_설명에_섞지_않는다(self) -> None:\n+        explanation = explain_for(FOUR_VALUES, FOUR)\n+        for sentence in explanation.similar + explanation.different:\n+            assert \"당시로서는\" not in sentence\n+        source = Path(explain_module.__file__).read_text(encoding=\"utf-8\")\n+        assert \"regime.era\" not in source\n+\n+\n+def test_지표가_하나도_없으면_문장도_없다() -> None:\n+    \"\"\"빈 사례에 문장을 지어내지 않는다.\"\"\"\n+    empty = CandidateDistance(end_month=END_MONTH, value=0.0, fields=())\n+    explanation = explanation_for(empty, {}, {})\n+    assert explanation.similar == ()\n+    assert explanation.different == ()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/regime/test_explain.py",
+          "old_path": "data/tests/regime/test_explain.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -176,21 +176,21 @@ Foundational이 크다 — 화면과 API는 그 결과를 옮기는 일이다.\n \n **Goal**: 줄 세우고 솎아내고, 왜 비슷한지 사람 말로 적는다.\n \n-- [ ] T043 (DE) 후보 자격 판정을 `candidates.py`에 구현 — 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보만 쓴다. 후보에게 질의보다 많은 시점을 요구하지 않고, **후보 직전 60개월 이력이나 시대별 보조 척도를 자격 조건으로 쓰지 않는다**(FR-012·FR-017)\n-- [ ] T044 (DE) 12개월 초과 이전 제한을 `candidates.py`에 구현. **아래쪽 경계는 두지 않는다** — 자료가 있는 전 구간이 후보다(spec FR-012)\n-- [ ] T045 (DE) 정렬과 동률 처리를 `candidates.py`에 구현 — 거리 오름차순, **정확한 동률**(반올림된 값이 같을 때)이면 더 오래된 종료월 우선\n-- [ ] T046 (DE) ±6개월 건너뛰기를 `candidates.py`에 **순차로** 구현 — 1위를 담고 그 종료월 ±6개월을 **남은 후보에서 제외한 뒤 다시 1위를 담는** 식으로 표시 개수까지 채운다. 상위 10개를 먼저 뽑아 거르지 않는다(spec FR-012·FR-014)\n-- [ ] T047 (DE) **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 `candidates.py`에서 돌려준다 — `[{endMonth, distance, rank}]`. 건너뛰기는 순차 규칙이라 걸러 두면 011이 가용성 필터 뒤에 다시 적용할 수 없다(spec FR-030, data-model §2.3)\n-- [ ] T048 (DE) 상위 10개 추출과 **부족하면 부족한 대로** 돌려주기를 `candidates.py`에 구현 — 빈자리를 먼 후보로 채우지 않는다(spec FR-013)\n-- [ ] T049 (DE) 제외 사유별 집계를 `candidates.py`에서 돌려준다 — `MISSING_INPUT` / `WITHIN_12_MONTHS` / `NEIGHBOR_SKIPPED` 세 가지다. 시대별 보조 설명 부족은 후보 제외 사유가 아니다(FR-012·FR-017)\n-- [ ] T050 (DE) 설명 문장 조립을 `explain.py`에 구현 — 공통 척도로 계산한 지표 거리 큰 순으로 다른 점 최대 2개, 작은 순으로 비슷한 점 최대 2개를 골라 **실제 값과 단위**로 서술한다(research R8). **값은 `monthly_series()`의 변환 후 값이다 — 증가율 지표면 증가율이지 지수 원수준이 아니다**(spec FR-015). 시대별 위치는 `era.py`의 별도 보조 문장으로 두고 기본 검색 이유에 혼용하지 않는다. 자유 생성하지 않는다(FR-015·FR-017·FR-022)\n-- [ ] T051 [P] (DE 테스트) 12개월 제한과 **순차** ±6개월 건너뛰기를 `data/tests/regime/test_candidates.py`에 고정 — 인접 월이 가까운 픽스처 구간에서 하나만 남고, **걸러진 만큼 그 아래 순위가 올라와 표시 개수를 채운다**\n-- [ ] T052 [P] (DE 테스트) 동률이 오래된 월 우선으로 풀리는지 `test_candidates.py`에 고정\n-- [ ] T053 [P] (DE 테스트) 후보가 2개뿐일 때 **3개로 채우지 않음**을 `test_candidates.py`에 고정(SC-004)\n-- [ ] T054 [P] (DE 테스트) 전체 유효 후보 목록이 **상위 10개보다 길고 순위가 연속이며 건너뛰기가 적용되지 않았음**을 `test_candidates.py`에 고정\n-- [ ] T055 [P] (DE 테스트) **후보 직전 이력이 없어도 비교 입력이 있으면 후보로 남고 보조 설명만 제한됨**을 `test_candidates.py`에 고정 — 픽스처 모양 10을 쓴다. 보조 척도가 0인 경우도 후보 자격·순위·거리에 영향이 없음을 확인한다(FR-012·FR-017)\n-- [ ] T056 [P] (DE 테스트) 설명 문장에 실제 값과 단위가 들어가고 시대별 상대 위치를 기본 검색 이유로 섞지 않으며, **spec FR-022 ①의 13가지가 0건**임을 `data/tests/regime/test_explain.py`에 고정 — 금지 목록을 구현이나 태스크가 지어내지 않는다\n-- [ ] T057 [P] (DE 테스트) **증가율 지표의 문장 값이 변환 후 값임**을 `test_explain.py`에 고정 — 지수 원수준이 들어가면 실패한다. 더해 `regime` 패키지 전체에서 **`raw_series` 호출이 0건**임을 정적으로 확인한다(spec FR-015, 포트 계약 §1)\n+- [X] T043 (DE) 후보 자격 판정을 `candidates.py`에 구현 — 해당 분야의 **지표별 비교 시점** 입력이 모두 있는 후보만 쓴다. 후보에게 질의보다 많은 시점을 요구하지 않고, **후보 직전 60개월 이력이나 시대별 보조 척도를 자격 조건으로 쓰지 않는다**(FR-012·FR-017)\n+- [X] T044 (DE) 12개월 초과 이전 제한을 `candidates.py`에 구현. **아래쪽 경계는 두지 않는다** — 자료가 있는 전 구간이 후보다(spec FR-012)\n+- [X] T045 (DE) 정렬과 동률 처리를 `candidates.py`에 구현 — 거리 오름차순, **정확한 동률**(반올림된 값이 같을 때)이면 더 오래된 종료월 우선\n+- [X] T046 (DE) ±6개월 건너뛰기를 `candidates.py`에 **순차로** 구현 — 1위를 담고 그 종료월 ±6개월을 **남은 후보에서 제외한 뒤 다시 1위를 담는** 식으로 표시 개수까지 채운다. 상위 10개를 먼저 뽑아 거르지 않는다(spec FR-012·FR-014)\n+- [X] T047 (DE) **±6개월 건너뛰기를 적용하지 않은 전체 유효 후보의 순위·거리 목록**을 `candidates.py`에서 돌려준다 — `[{endMonth, distance, rank}]`. 건너뛰기는 순차 규칙이라 걸러 두면 011이 가용성 필터 뒤에 다시 적용할 수 없다(spec FR-030, data-model §2.3)\n+- [X] T048 (DE) 상위 10개 추출과 **부족하면 부족한 대로** 돌려주기를 `candidates.py`에 구현 — 빈자리를 먼 후보로 채우지 않는다(spec FR-013)\n+- [X] T049 (DE) 제외 사유별 집계를 `candidates.py`에서 돌려준다 — `MISSING_INPUT` / `WITHIN_12_MONTHS` / `NEIGHBOR_SKIPPED` 세 가지다. 시대별 보조 설명 부족은 후보 제외 사유가 아니다(FR-012·FR-017)\n+- [X] T050 (DE) 설명 문장 조립을 `explain.py`에 구현 — 공통 척도로 계산한 지표 거리 큰 순으로 다른 점 최대 2개, 작은 순으로 비슷한 점 최대 2개를 골라 **실제 값과 단위**로 서술한다(research R8). **값은 `monthly_series()`의 변환 후 값이다 — 증가율 지표면 증가율이지 지수 원수준이 아니다**(spec FR-015). 시대별 위치는 `era.py`의 별도 보조 문장으로 두고 기본 검색 이유에 혼용하지 않는다. 자유 생성하지 않는다(FR-015·FR-017·FR-022)\n+- [X] T051 [P] (DE 테스트) 12개월 제한과 **순차** ±6개월 건너뛰기를 `data/tests/regime/test_candidates.py`에 고정 — 인접 월이 가까운 픽스처 구간에서 하나만 남고, **걸러진 만큼 그 아래 순위가 올라와 표시 개수를 채운다**\n+- [X] T052 [P] (DE 테스트) 동률이 오래된 월 우선으로 풀리는지 `test_candidates.py`에 고정\n+- [X] T053 [P] (DE 테스트) 후보가 2개뿐일 때 **3개로 채우지 않음**을 `test_candidates.py`에 고정(SC-004)\n+- [X] T054 [P] (DE 테스트) 전체 유효 후보 목록이 **상위 10개보다 길고 순위가 연속이며 건너뛰기가 적용되지 않았음**을 `test_candidates.py`에 고정\n+- [X] T055 [P] (DE 테스트) **후보 직전 이력이 없어도 비교 입력이 있으면 후보로 남고 보조 설명만 제한됨**을 `test_candidates.py`에 고정 — 픽스처 모양 10을 쓴다. 보조 척도가 0인 경우도 후보 자격·순위·거리에 영향이 없음을 확인한다(FR-012·FR-017)\n+- [X] T056 [P] (DE 테스트) 설명 문장에 실제 값과 단위가 들어가고 시대별 상대 위치를 기본 검색 이유로 섞지 않으며, **spec FR-022 ①의 13가지가 0건**임을 `data/tests/regime/test_explain.py`에 고정 — 금지 목록을 구현이나 태스크가 지어내지 않는다\n+- [X] T057 [P] (DE 테스트) **증가율 지표의 문장 값이 변환 후 값임**을 `test_explain.py`에 고정 — 지수 원수준이 들어가면 실패한다. 더해 `regime` 패키지 전체에서 **`raw_series` 호출이 0건**임을 정적으로 확인한다(spec FR-015, 포트 계약 §1)\n \n **Checkpoint**: 사례 목록이 나오고, 왜 비슷한지 오해 없는 문장으로 설명된다\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/tasks.md",
+          "old_path": "specs/010-economic-regime-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-17T14:16:23.319+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2824372": []
+  }
+}

@@ -1,0 +1,626 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 950267,
+    "iid": 218,
+    "project_id": 1444456,
+    "title": "test(fe): 평가 기간 응답에서 필드를 뺄 때 void 우회 대신 omitKeys를 쓴다",
+    "description": "## 작업 내용 요약\n\nB06 MR(S15P21E205-238) 리뷰 지적을 반영하는 후속입니다. 평가 기간 응답에서 필드를 뺀 본문을 만들 때 쓰던 `void` 우회를 걷어냅니다. 테스트 코드만 바뀌고 동작은 그대로입니다.\n\n## 관련 티켓\n\n- S15P21E205-238 (머지된 B06의 리뷰 후속)\n\n## 주요 변경 사항\n\n- `api/sectors.test.ts`: 구조 분해 뒤 쓰지 않는 변수를 `void`로 넘기던 두 곳을, 키를 빼는 작은 함수 `omitKeys`로 바꿨습니다.\n- 제안대로 `...legacy`만 남기면 `@typescript-eslint/no-unused-vars`가 오류를 냅니다. 이 프로젝트는 `ignoreRestSiblings`를 켜지 않았습니다. 규칙을 이 검사 하나 때문에 넓히지 않고 검사 파일 안에서 풀었습니다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm test`: lint 오류 0건, Vitest 947건 통과\n\n## 리뷰 포인트\n\n- lint 규칙에 `ignoreRestSiblings: true`를 켜는 편이 낫다고 보시면, 이 MR 대신 설정 변경으로 푸는 방법도 있습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T09:52:09.383+09:00",
+    "updated_at": "2026-09-19T21:56:18.319+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T09:52:13.056+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/238-analysis-request-connect",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🐲 Test",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "663de33419ef0321e9106c65ca96354cd26afb15",
+    "merge_commit_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:52:11.825+09:00",
+    "reference": "!218",
+    "references": {
+      "short": "!218",
+      "relative": "!218",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!218"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/218",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 950267,
+    "iid": 218,
+    "project_id": 1444456,
+    "title": "test(fe): 평가 기간 응답에서 필드를 뺄 때 void 우회 대신 omitKeys를 쓴다",
+    "description": "## 작업 내용 요약\n\nB06 MR(S15P21E205-238) 리뷰 지적을 반영하는 후속입니다. 평가 기간 응답에서 필드를 뺀 본문을 만들 때 쓰던 `void` 우회를 걷어냅니다. 테스트 코드만 바뀌고 동작은 그대로입니다.\n\n## 관련 티켓\n\n- S15P21E205-238 (머지된 B06의 리뷰 후속)\n\n## 주요 변경 사항\n\n- `api/sectors.test.ts`: 구조 분해 뒤 쓰지 않는 변수를 `void`로 넘기던 두 곳을, 키를 빼는 작은 함수 `omitKeys`로 바꿨습니다.\n- 제안대로 `...legacy`만 남기면 `@typescript-eslint/no-unused-vars`가 오류를 냅니다. 이 프로젝트는 `ignoreRestSiblings`를 켜지 않았습니다. 규칙을 이 검사 하나 때문에 넓히지 않고 검사 파일 안에서 풀었습니다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm test`: lint 오류 0건, Vitest 947건 통과\n\n## 리뷰 포인트\n\n- lint 규칙에 `ignoreRestSiblings: true`를 켜는 편이 낫다고 보시면, 이 MR 대신 설정 변경으로 푸는 방법도 있습니다.",
+    "state": "merged",
+    "created_at": "2026-09-18T09:52:09.383+09:00",
+    "updated_at": "2026-09-19T21:56:18.319+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T09:52:13.056+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/238-analysis-request-connect",
+    "user_notes_count": 3,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🐲 Test",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "663de33419ef0321e9106c65ca96354cd26afb15",
+    "merge_commit_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T09:52:11.825+09:00",
+    "reference": "!218",
+    "references": {
+      "short": "!218",
+      "relative": "!218",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!218"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/218",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "6117231cba8d76b10fe0d99ca24566997d26c162",
+      "head_sha": "663de33419ef0321e9106c65ca96354cd26afb15",
+      "start_sha": "ed2b77361772a9e90d17b53b4f20a5ba9091b45b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e359f3b457856db0030b662ad7c1a853e9ca1f88",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830555,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:52:09.476+09:00",
+          "updated_at": "2026-09-18T09:52:09.480+09:00",
+          "system": true,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6ed712db1215efa7bf49134ba55d8d9a4483e52c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830556,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:52:09.502+09:00",
+          "updated_at": "2026-09-18T09:52:09.522+09:00",
+          "system": true,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2c47a71ed4b4e42a31e908a49eeeed0009839bee",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830560,
+          "type": null,
+          "body": "mentioned in commit 6eda80eecd60f1b96931c5742117debdf306f5cb",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T09:52:13.203+09:00",
+          "updated_at": "2026-09-18T09:52:13.212+09:00",
+          "system": true,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cd54468df585346f0c9a348144c5cb67dd1725ee",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830561,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- `void` 우회를 제거하고 명세에 맞는 객체 변환 유틸리티 함수(`omitKeys`)를 도입하여 테스트 코드의 가독성과 의도를 명확하게 개선했습니다. 불필요한 ESLint 규칙 확장 없이 테스트 파일 내에서 깔끔하게 해결한 점도 좋습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- `omitKeys` 함수가 예상대로 전달된 키들을 정확히 제거하는지(특히 존재하지 않는 키를 전달했을 때의 동작 등) 검증하는 단위 테스트를 `omitKeys` 자체에 대해 추가하는 것을 제안합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:663de33419ef0321e9106c65ca96354cd26afb15 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T09:52:17.884+09:00",
+          "updated_at": "2026-09-18T09:52:17.884+09:00",
+          "system": false,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a927488c67535a797a9c1f5188d94febe20ecda7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839133,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T20:00:18.343+09:00",
+          "updated_at": "2026-09-19T20:00:18.347+09:00",
+          "system": true,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "65bba929f45e4e4d790746b54feab0c7bc2edcb1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839143,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T20:03:35.785+09:00",
+          "updated_at": "2026-09-19T20:03:35.785+09:00",
+          "system": false,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "181bac47f29934932f13b982d08bd584eb64fe96",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839491,
+          "type": null,
+          "body": "CI 정상확인됨",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:56:18.296+09:00",
+          "updated_at": "2026-09-19T21:56:18.296+09:00",
+          "system": false,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "52d88455eecb402d1b5109de7a31166c7b48e846",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885023,
+          "type": null,
+          "body": "mentioned in commit cb9b70b6d48533e77e5ff9683a9bf2c867008bf9",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:09.024+09:00",
+          "updated_at": "2026-10-13T15:16:09.035+09:00",
+          "system": true,
+          "noteable_id": 950267,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 218,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2218252,
+      "head_commit_sha": "663de33419ef0321e9106c65ca96354cd26afb15",
+      "base_commit_sha": "6117231cba8d76b10fe0d99ca24566997d26c162",
+      "start_commit_sha": "ed2b77361772a9e90d17b53b4f20a5ba9091b45b",
+      "created_at": "2026-09-18T09:52:10.606+09:00",
+      "merge_request_id": 950267,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "ce408daf09a407058503f6811d9c9cf2811d72e1"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2218252,
+      "head_commit_sha": "663de33419ef0321e9106c65ca96354cd26afb15",
+      "base_commit_sha": "6117231cba8d76b10fe0d99ca24566997d26c162",
+      "start_commit_sha": "ed2b77361772a9e90d17b53b4f20a5ba9091b45b",
+      "created_at": "2026-09-18T09:52:10.606+09:00",
+      "merge_request_id": 950267,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "ce408daf09a407058503f6811d9c9cf2811d72e1",
+      "commits": [
+        {
+          "id": "663de33419ef0321e9106c65ca96354cd26afb15",
+          "short_id": "663de334",
+          "created_at": "2026-09-18T09:42:19.000+09:00",
+          "parent_ids": [
+            "6117231cba8d76b10fe0d99ca24566997d26c162"
+          ],
+          "title": "test(fe): 평가 기간 응답에서 필드를 뺄 때 void 우회 대신 omitKeys를 쓴다",
+          "message": "test(fe): 평가 기간 응답에서 필드를 뺄 때 void 우회 대신 omitKeys를 쓴다\n\n리뷰 지적. 구조 분해한 미사용 변수를 void로 넘기던 것을\nno-unused-vars에 걸리지 않는 작은 함수로 바꾼다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T09:42:19.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T09:42:19.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/663de33419ef0321e9106c65ca96354cd26afb15"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -374,6 +374,13 @@ describe('보유 종목 불변식', () => {\n   })\n })\n \n+/** 응답에서 키를 빼 \"그 필드가 오지 않은\" 본문을 만든다. 빈 값으로 두는 것과 키가 없는 것은 계약상 다르다. */\n+function omitKeys<T extends object>(body: T, ...keys: (keyof T)[]): Partial<T> {\n+  return Object.fromEntries(\n+    Object.entries(body).filter(([key]) => !keys.includes(key as keyof T)),\n+  ) as Partial<T>\n+}\n+\n describe('공통 평가 기간 조회(T042)', () => {\n   const windowBody = {\n     commonStart: '2024-01-04',\n@@ -429,12 +436,13 @@ describe('공통 평가 기간 조회(T042)', () => {\n   })\n \n   it('합의한 필드 셋이 없는 응답(지금 001 계약의 모양)은 읽지 못한 것으로 거부한다', async () => {\n-    const { warmupBaseDate, tradingDaysFromBase, maxWarmupTradingDays, excludedRangesFromBase, ...legacy } =\n-      windowBody\n-    void warmupBaseDate\n-    void tradingDaysFromBase\n-    void maxWarmupTradingDays\n-    void excludedRangesFromBase\n+    const legacy = omitKeys(\n+      windowBody,\n+      'warmupBaseDate',\n+      'tradingDaysFromBase',\n+      'maxWarmupTradingDays',\n+      'excludedRangesFromBase',\n+    )\n     vi.spyOn(apiClient, 'get').mockResolvedValue(\n       axiosResponse({ success: true, data: legacy, error: null }),\n     )\n@@ -465,10 +473,8 @@ describe('공통 평가 기간 조회(T042)', () => {\n   })\n \n   it('기준일이 commonEnd를 넘어 목록이 비고 상한 키가 없는 응답을 읽는다', () => {\n-    const { maxWarmupTradingDays, ...rest } = windowBody\n-    void maxWarmupTradingDays\n     const window = readEvaluationWindow({\n-      ...rest,\n+      ...omitKeys(windowBody, 'maxWarmupTradingDays'),\n       commonStart: null,\n       commonEnd: '2023-12-29',\n       evaluable: false,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/sectors.test.ts",
+          "old_path": "frontend/src/api/sectors.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2830561": [],
+    "2839143": [],
+    "2839491": []
+  }
+}

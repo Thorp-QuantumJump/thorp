@@ -1,0 +1,537 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952778,
+    "iid": 245,
+    "project_id": 1444456,
+    "title": "docs(be): spec 011 tasks에 남은 일 세 가지를 Convergence로 추가",
+    "description": "### 작업 내용 요약\n\nspec 011의 spec·plan·계약이 요구하는데 tasks에 잡히지 않았던 일 세 가지를 `Phase 9: Convergence`로 추가합니다. 구현 전이라 열려 있는 작업 90개는 다시 세지 않았고 기존 작업은 고치지 않았습니다.\n\n### 관련 티켓\n\n[S15P21E205-360](https://ssafy.atlassian.net/browse/S15P21E205-360)\n\n### 주요 변경 사항\n\n- T092: 체결 기록이 없는 실행(`fills_recorded=false`)을 확인 뒤 재계산으로 다룹니다(계약 §2 확인 응답, 백엔드 판정, 프론트 확인 화면).\n- T093: 비교 묶음 두 실행의 조건 일치를 서버가 검증합니다(005는 화면에서만 판정).\n- T094: `/regime-link`의 주소 오류·만료 토큰·없는 검색 처리.\n\n### 테스트\n\n문서 변경만 포함합니다. `tasks.md`는 추가만 했습니다(삭제 0줄). 작업 ID 중복 없음.\n\n### 리뷰 포인트\n\n- T092는 S15P21E205-359(개별 체결 저장)가 머지된 뒤에 구현할 수 있습니다.\n- T093의 \"같은 조건\" 항목(섹터 후보·대응표 버전·시작 금액·비용 버전·자료 버전)이 005의 화면 판정과 같은 기준인지 봐 주세요.\n\n### 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(작업 목록 추가).\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음.\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — T092가 체결 기록 없는 실행의 값 추정을 금지합니다.\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 구현 전 상태임을 본문에 적었습니다.",
+    "state": "merged",
+    "created_at": "2026-09-20T13:08:19.751+09:00",
+    "updated_at": "2026-09-20T13:10:13.022+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T13:10:12.680+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/360-spec-011-converge",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+    "merge_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T13:08:20.717+09:00",
+    "reference": "!245",
+    "references": {
+      "short": "!245",
+      "relative": "!245",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!245"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/245",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952778,
+    "iid": 245,
+    "project_id": 1444456,
+    "title": "docs(be): spec 011 tasks에 남은 일 세 가지를 Convergence로 추가",
+    "description": "### 작업 내용 요약\n\nspec 011의 spec·plan·계약이 요구하는데 tasks에 잡히지 않았던 일 세 가지를 `Phase 9: Convergence`로 추가합니다. 구현 전이라 열려 있는 작업 90개는 다시 세지 않았고 기존 작업은 고치지 않았습니다.\n\n### 관련 티켓\n\n[S15P21E205-360](https://ssafy.atlassian.net/browse/S15P21E205-360)\n\n### 주요 변경 사항\n\n- T092: 체결 기록이 없는 실행(`fills_recorded=false`)을 확인 뒤 재계산으로 다룹니다(계약 §2 확인 응답, 백엔드 판정, 프론트 확인 화면).\n- T093: 비교 묶음 두 실행의 조건 일치를 서버가 검증합니다(005는 화면에서만 판정).\n- T094: `/regime-link`의 주소 오류·만료 토큰·없는 검색 처리.\n\n### 테스트\n\n문서 변경만 포함합니다. `tasks.md`는 추가만 했습니다(삭제 0줄). 작업 ID 중복 없음.\n\n### 리뷰 포인트\n\n- T092는 S15P21E205-359(개별 체결 저장)가 머지된 뒤에 구현할 수 있습니다.\n- T093의 \"같은 조건\" 항목(섹터 후보·대응표 버전·시작 금액·비용 버전·자료 버전)이 005의 화면 판정과 같은 기준인지 봐 주세요.\n\n### 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(작업 목록 추가).\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음.\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — T092가 체결 기록 없는 실행의 값 추정을 금지합니다.\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 구현 전 상태임을 본문에 적었습니다.",
+    "state": "merged",
+    "created_at": "2026-09-20T13:08:19.751+09:00",
+    "updated_at": "2026-09-20T13:10:13.022+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-20T13:10:12.680+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/360-spec-011-converge",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+    "merge_commit_sha": "9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T13:08:20.717+09:00",
+    "reference": "!245",
+    "references": {
+      "short": "!245",
+      "relative": "!245",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!245"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/245",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-20T13:08:28.300+09:00",
+    "latest_build_finished_at": "2026-09-20T13:08:34.474+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 209308,
+      "iid": 203,
+      "project_id": 1444456,
+      "sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+      "ref": "docs(be)/360-spec-011-converge",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T13:08:28.201+09:00",
+      "updated_at": "2026-09-20T13:08:34.480+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209308"
+    },
+    "head_pipeline": {
+      "id": 209308,
+      "iid": 203,
+      "project_id": 1444456,
+      "sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+      "ref": "docs(be)/360-spec-011-converge",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-20T13:08:28.201+09:00",
+      "updated_at": "2026-09-20T13:08:34.480+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209308",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-20T13:08:28.300+09:00",
+      "finished_at": "2026-09-20T13:08:34.474+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/209308",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d",
+      "head_sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+      "start_sha": "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "f81a88792fabdfe984ece60ceb0e07897a58bb69",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840791,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:08:19.840+09:00",
+          "updated_at": "2026-09-20T13:08:19.844+09:00",
+          "system": true,
+          "noteable_id": 952778,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 245,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "51355fb879158266fd0c955fbc55ac1ed4882bba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840792,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:08:19.858+09:00",
+          "updated_at": "2026-09-20T13:08:19.867+09:00",
+          "system": true,
+          "noteable_id": 952778,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 245,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7e9131968c6bd52804bb0efedf18311b4c1e374f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840793,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서 동기화**: `spec 011`의 요구사항(계약 및 plan)에서 누락되었던 핵심 예외 처리 및 수렴(Convergence) 항목들을 `Phase 9`로 명확하게 정의하여 구현 전 누락을 방지했습니다.\n- **계산 무결성 원칙 준수**: T092 태스크에서 체결 기록이 없는 실행에 대해 임의의 값을 추정하여 채우지 않고 재계산 흐름을 타도록 명시한 점은 데이터 신뢰성 측면에서 매우 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (문서 수정 건으로 코드 로직 변경이 없어 실행 가능한 버그나 보안 이슈는 없습니다.)\n\n### 테스트 제안\n이 MR은 문서(`tasks.md`)만 추가하므로 직접적인 코드 테스트는 불필요하지만, 향후 해당 태스크(T092~T094) 구현 시 다음 시나리오에 대한 테스트 작성이 반드시 수반되어야 합니다.\n\n- **T092 테스트 시나리오**: `fills_recorded=false`인 백테스트 결과로 `/regime-links` 요청 시, 링크 생성 거부 및 재계산 사유(`outcome`)가 올바르게 반환되는지 백엔드 단위/통합 테스트 검증.\n- **T093 테스트 시나리오**: 비교 묶음 요청 시 섹터 후보 집합, 대응표 버전, 시작 금액, 비용 버전, 자료 버전 중 하나라도 불일치할 경우 서버가 `400 INVALID_INPUT`과 함께 어긋난 항목을 응답하는지 검증 (`AvailabilityControllerIT`).\n- **T094 테스트 시나리오**: 잘못되거나 없는 `base` 주소 입력 시 `/diagnosis/sectors` 안내, 만료된 토큰(`410`) 및 존재하지 않는 스냅샷(`404`) 발생 시 프론트엔드 에러 핸들링 및 리다이렉트 흐름 검증.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:c28b978da3b549d2bef47195665ddb80926a4572 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T13:08:29.271+09:00",
+          "updated_at": "2026-09-20T13:08:29.271+09:00",
+          "system": false,
+          "noteable_id": 952778,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 245,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "22d30a9d75dacb12ee48a0714f5ca8bc4ae33d82",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2840797,
+          "type": null,
+          "body": "mentioned in commit 9afcab5cb7dbe8288a1e477edfc15ba8a48630ba",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-20T13:10:12.743+09:00",
+          "updated_at": "2026-09-20T13:10:12.748+09:00",
+          "system": true,
+          "noteable_id": 952778,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 245,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2226752,
+      "head_commit_sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+      "base_commit_sha": "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d",
+      "start_commit_sha": "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d",
+      "created_at": "2026-09-20T13:08:20.234+09:00",
+      "merge_request_id": 952778,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "d7b405f2a2b76fcbaf15a9b7004047fc0d0ea9d6"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2226752,
+      "head_commit_sha": "c28b978da3b549d2bef47195665ddb80926a4572",
+      "base_commit_sha": "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d",
+      "start_commit_sha": "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d",
+      "created_at": "2026-09-20T13:08:20.234+09:00",
+      "merge_request_id": 952778,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "d7b405f2a2b76fcbaf15a9b7004047fc0d0ea9d6",
+      "commits": [
+        {
+          "id": "c28b978da3b549d2bef47195665ddb80926a4572",
+          "short_id": "c28b978d",
+          "created_at": "2026-09-20T13:06:03.000+09:00",
+          "parent_ids": [
+            "dc47ed2ed36b4f89efba8c4c4de2fd44e952b88d"
+          ],
+          "title": "docs(be): spec 011 tasks에 남은 일 세 가지를 Convergence로 추가",
+          "message": "docs(be): spec 011 tasks에 남은 일 세 가지를 Convergence로 추가\n\n구현 전이라 열려 있는 작업 90개는 다시 세지 않고, tasks에 없던 것만 더했다.\n- T092 체결 기록이 없는 실행을 확인 뒤 재계산으로 다룬다\n- T093 비교 묶음 두 실행의 조건 일치를 서버가 검증한다\n- T094 /regime-link 주소 오류·만료 토큰 처리\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-20T13:06:03.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-20T13:06:03.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/c28b978da3b549d2bef47195665ddb80926a4572"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -365,3 +365,9 @@ flowchart LR\n - 태스크를 끝내면 `[ ]`를 `[X]`로 바꾸고, 묶음이 끝나면 위 \"MR 체크포인트\"가 참인지 확인한 뒤 MR을 올린다\n - 태스크 설명에 적힌 값(21·63·65행·상한)은 spec·contracts가 정한 값이다. 코드에 다른 값을 두면 문서를\n   먼저 고친다\n+\n+## Phase 9: Convergence\n+\n+- [ ] T092 체결 기록이 없는 실행(`backtest_result.fills_recorded=false`, S15P21E205-359 이전에 끝난 실행·옛 워커의 결과)을 '분석 기간 밖'과 같은 확인 흐름으로 다룬다 — 계약 §2에 확인 요구 `outcome`(재계산 사유 구분)을 더하고, `POST /regime-links`가 확인 전에는 링크·메시지를 만들지 않고 확인 뒤 같은 조건의 새 실행을 004에 요청하며, `FullPeriodConfirm`·`ResultSlotState`가 \"이 결과는 사후 구간을 보려면 다시 계산합니다\"를 보인다. 값을 추정해 채우지 않는다. `OutOfPeriodFlowTest`·`FullPeriodConfirm.test.tsx`에 이 경우를 더한다 per FR-010·research R3 DEP-004-011·plan 위험 표 (missing)\n+- [ ] T093 비교 묶음의 두 실행이 같은 조건인지 서버가 검증한다 — `base`·`compare` 토큰은 주소로 직접 들어올 수 있으므로 `AvailabilityService`·`POST /regime-link-searches`가 섹터 후보 집합·대응표 버전·시작 금액·비용 버전·자료 버전이 같은지 확인하고, 다르면 계산·기록 없이 `400 INVALID_INPUT`과 어긋난 항목을 돌려준다(005는 이 판정을 화면에서만 한다). `AvailabilityControllerIT`·`BundleChangeTest`에 어긋난 묶음 거절을 더한다 per SC-003·FR-011·Constitution IV (missing)\n+- [ ] T094 `/regime-link` 주소 오류 처리 — `base`가 없거나 형식이 틀리면 빈 화면 대신 진단 시작(`/diagnosis/sectors`)으로 안내하고, 만료된 토큰(`410 RESULT_EXPIRED`)은 005의 만료 안내를 그대로 보이며, `snapshot`·`case`가 그 검색에 없으면(`404`) 분야 선택으로 되돌리고 이유 한 문장을 보인다. `RegimeLinkPage` 테스트에 세 경우를 더한다 per contracts/entry-handoff §5·FR-025 (missing)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2840793": []
+  }
+}

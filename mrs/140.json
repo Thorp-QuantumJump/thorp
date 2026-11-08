@@ -1,0 +1,1227 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 946125,
+    "iid": 140,
+    "project_id": 1444456,
+    "title": "feat(fe): 섹터 목록 조회와 표시",
+    "description": "# 작업 내용 요약\n\n첫 화면에서 '비중 비교하기'를 눌러도 준비 중이라는 한 문장만 나왔다. 전략 진단의 첫 입력인 섹터\n목록이 아직 화면에 없었기 때문이다. 또 첫 화면에서 메뉴를 눌러 다른 화면에 들어서면 위쪽 메뉴가\n통째로 다른 것으로 바뀌어, 한 번의 이동으로 서비스의 구성이 달라진 것처럼 보였다.\n\n이 MR 이후로 그 버튼은 실제 섹터 목록 화면을 연다. 각 항목에 섹터 이름·업종/테마 구분·대표 ETF\n이름이 함께 보이고, 목록을 아직 받을 수 없거나 서버에 닿지 못한 상태도 오류 화면이 아니라 한\n문장 안내가 있는 정상 화면으로 처리된다. 모든 화면의 헤더 메뉴가 같아진다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-258](https://ssafy.atlassian.net/browse/S15P21E205-258) `[FE] 섹터 목록 조회와 표시`\n- 근거: [spec 002](../../specs/002-sector-weight-selection/spec.md) `FR-003`·`FR-011`·`FR-015`·`FR-017`, `SC-007`, `SC-008`(목록 쪽)\n- 작업 묶음: `tasks.md`의 M2(T005~T010)와 `T025`\n- 계약 원본: [001 섹터 조회 계약](../../specs/001-etf-market-data/contracts/sector-api.md). 002가 재정의하지 않는다\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| '비중 비교하기'를 누른다 | 준비 중이라는 한 문장 | 섹터 목록. 이름·업종/테마·대표 ETF 이름이 함께 보인다 |\n| 대응표가 아직 발행되지 않았다 | 화면이 없었다 | 한 문장과 다시 불러오기 하나. 다음 단계로 가는 수단은 두지 않는다 |\n| 저장된 대응표가 망가져 있다 | 화면이 없었다 | **한 문장만 보이고 다시 불러오기를 두지 않는다.** 눌러도 달라지지 않는 상태다 |\n| 서버가 왜 안 되는지 알려 준다 | 아는 이름이 아니면 그 문구를 버리고 일반 문구로 바꿨다 | **서버가 보낸 문구가 그대로 남는다** |\n| 첫 화면 밖 화면의 헤더 메뉴 | 홈 / 대시보드 / 백테스트 | 전략 진단 / 시장 흐름 / 배우기 / 내 기록 |\n\n섹터를 고르는 체크박스와 비중 입력은 이 묶음에 없다. 다음 묶음이 더한다.\n\n# 주요 변경 사항\n\n## 아직 줄 것이 없는 상태를 다섯 갈래로 나눈다\n\n불러오는 중, 목록, 대응표 미발행, 섹터 0개, 실패다. 어느 경우에도 빈 목록이나 처리되지 않은 오류\n화면으로 떨어지지 않는다(`FR-017`, `원칙 VI`).\n\n**섹터 0개를 따로 둔 까닭**은 서버가 \"대응표가 아직 발행되지 않았다\"와 \"대응표는 발행되었는데\n항목이 하나도 없다\"를 일부러 다른 신호로 구분해 내보내기 때문이다. 받는 쪽이 한쪽은 신호로 다른\n쪽은 개수로 나누면 같은 성격의 판정이 두 층으로 갈라져 한쪽을 빠뜨리기 쉽다. **실제로 처음\n구현에서 빠뜨려 빈 목록이 그려졌다.** 지금은 갈래가 조회 결과의 타입에 있어, 빈 목록을 정상\n목록으로 그리려 하면 컴파일 단계에서 드러난다.\n\n**다시 눌러도 달라지지 않는 실패에는 행동을 주지 않는다.** 저장된 자료가 망가진 경우가 여기\n해당한다. 연결이 끊긴 경우와 같은 화면을 보이면 사용자가 버튼만 되풀이해 누르게 된다. 어느 신호가\n그런 성격인지는 신호 이름을 아는 조회 층이 판정한다(research.md 결정 6).\n\n## 모르는 오류 이름이 와도 서버가 보낸 문구를 잃지 않는다\n\n응답을 읽는 자리가 아는 이름인지 먼저 묻고, 모르는 이름이면 본문을 통째로 버리고 있었다. 그 결과\n서버가 보낸 안내 문구가 사라지고 화면에는 일반 문구가 대신 나갔다. **아무것도 실패하지 않은 채로\n일어난다.** 섹터 조회가 바로 이 문제에 걸려, 대응표가 아직 없다는 신호를 화면이 구분하지 못했다.\n\n담을 때는 열고 물을 때는 닫는다. 서버가 보낸 값은 문자열 그대로 담아 문구를 보존하고, 그 값을 아는\n이름과 견주는 자리에서는 닫힌 목록을 받아 오타가 컴파일에서 걸린다. 도메인이 늘 때 목록에 이름을\n더하는 것을 잊어도 안내 문구가 사라지지 않는다. 이 구조가 되돌려지면 실패하는 검사를 함께 두었다.\n\n이 변경이 공용 응답 형식을 인증 전용 파일에 남겨 의존 방향을 꼬았고, `T025`가 그것을 정리했다.\n공용이 도메인을 알고 도메인은 공용을 모르는 한 방향으로 정했다.\n\n## 표시 순서를 화면이 정한다\n\n001 계약이 응답 배열의 정렬을 정하지 않는다. 응답 순서에 기대면 서버 구현이 바뀔 때 화면 규칙이\n조용히 따라 바뀐다. 업종을 먼저 두고 그 안에서 한국어 이름으로 정렬한다(research.md 결정 2).\n**이 순서를 다음 묶음의 비중 계산이 그대로 쓴다.** 같은 섹터 집합이면 언제나 같은 순서여야 한다.\n\n## 모든 화면의 헤더 메뉴를 하나로 맞춘다\n\n'대시보드'와 '백테스트'는 메뉴에서 뺐다. 003과 005가 완성되면 대체될 임시 화면이라 언젠가 빠질\n자리이기 때문이다. **두 경로 자체는 지우지 않았고** 첫 화면 소개 섹션에서 여전히 닿는다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npm test` — 화면 테스트 29개 파일 189건 통과, 건너뜀 0. 순수 로직 13건 통과, 실패 0, 건너뜀 0\n\n기준선은 2026-09-16 `dev`(d2570c6) 기준으로 화면 테스트 24개 파일 145건(건너뜀 0), 순수 로직 13건\n(건너뜀 0)이다. 이 MR이 테스트 파일 다섯과 44건을 더했다.\n\n**테스트 수집 목록에 감시 장치를 두었다.** Vitest가 수집하는 파일 목록은 허용 목록이라, 목록에\n걸리지 않는 테스트는 실패하지 않고 조용히 수집되지 않는다. 이 MR이 목록을 넓히면서, 앞으로 빠진\n파일이 생기면 그 이름을 지목하며 실패하는 검사를 함께 두었다. 이 검사는 해석할 수 없는 형태의\n패턴이 들어오거나 파일을 하나도 찾지 못해도 실패한다. 못 찾으면 통과시키면 검사가 사라진 것을 알\n수 없기 때문이다. 목록 밖에 파일을 만들어 실제로 잡히는 것을 확인했다.\n\n# 리뷰 포인트\n\n1. **첫 화면이 헤더 메뉴에서 뺀 화면을 계속 권한다.** 헤더에서 '대시보드'와 '백테스트'를 뺐는데\n   첫 화면 소개 섹션의 링크 셋은 여전히 그 두 화면으로 보낸다. 더 좁게는 헤더의 '시장 흐름'이\n   `/home`인데 첫 화면의 \"시장 분석 보러 가기\"는 `/dashboard`라 **같은 성격의 목적지가 둘로\n   갈렸다.** 링크를 남길지는 이미 정한 사안이고 남은 질문은 어디를 가리킬지다. `tasks.md`의\n   `T024`로 세워 두었다.\n2. **표시 순서가 실행 환경의 국제화 자료에 기댄다.** 한국어 이름 대조에 쓰는 설정은 모두 명시해\n   구현마다 다른 기본값을 물려받지 않게 했지만, 로케일 자료를 갖추지 않은 실행 환경에서는 대조가\n   요청대로 동작하지 않을 수 있다. 순서 규칙 자체는 research.md 결정 2가 소유하므로 뒤집지\n   않았고, 대표 이름들의 기대 순서를 검사로 고정해 그런 환경에서 순서가 조용히 달라지는 대신\n   검사가 실패하게 했다. **다음 묶음의 비중 계산이 이 순서를 쓰므로 함께 봐 달라.**\n3. **명세 문장 하나가 원칙을 옮겨 적으면서 한정어를 떨어뜨렸다.** `FR-011`은 \"자료 공급원을\n   보이지 않는다\"인데 원칙 II 원문은 \"자료 공급원 **선택**을 사용자 기본 입력으로 요구하지\n   않는다\"이고 `SC-005`도 입력 항목만 센다. 원칙 X와 research.md 결정 8은 한국거래소 자료를 쓰는\n   화면에 출처 표시를 요구하므로, 문자 그대로 읽으면 두 요구가 부딪힌다. 구현은 출처를 표시하는\n   쪽이며 명세는 고치지 않았다.\n4. **범위 밖에서 발견한 것 둘.** 첫째, 백엔드의 공통 오류 응답에 필드별 오류를 담는 자리가\n   **없다.** 저장소 전체를 찾아도 그 이름이 나오지 않는다. 화면 쪽에는 그 값을 읽는 코드가 있어,\n   인증 입력 오류를 필드별로 붙이는 동작이 실제로는 서버 신호 없이 도는 셈이다. 둘째, 첫 화면\n   소개에 '누적 수익 +124.8%' 같은 숫자가 결과처럼 보인다. 002 이전부터 있던 소개용 값이고 002의\n   어느 요구사항도 다루지 않아 손대지 않았으나, `원칙 VI`가 걸릴 수 있는 자리다.",
+    "state": "merged",
+    "created_at": "2026-09-16T11:14:07.510+09:00",
+    "updated_at": "2026-09-16T11:33:18.556+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-16T11:33:18.647+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/258-sector-list-view",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "da870f002154463056c776ede637e11a08d87ed4",
+    "merge_commit_sha": "cc7d0fa3d2690228fc4165b02ba3eb6e47e8c8a8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T11:14:09.832+09:00",
+    "reference": "!140",
+    "references": {
+      "short": "!140",
+      "relative": "!140",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!140"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/140",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 946125,
+    "iid": 140,
+    "project_id": 1444456,
+    "title": "feat(fe): 섹터 목록 조회와 표시",
+    "description": "# 작업 내용 요약\n\n첫 화면에서 '비중 비교하기'를 눌러도 준비 중이라는 한 문장만 나왔다. 전략 진단의 첫 입력인 섹터\n목록이 아직 화면에 없었기 때문이다. 또 첫 화면에서 메뉴를 눌러 다른 화면에 들어서면 위쪽 메뉴가\n통째로 다른 것으로 바뀌어, 한 번의 이동으로 서비스의 구성이 달라진 것처럼 보였다.\n\n이 MR 이후로 그 버튼은 실제 섹터 목록 화면을 연다. 각 항목에 섹터 이름·업종/테마 구분·대표 ETF\n이름이 함께 보이고, 목록을 아직 받을 수 없거나 서버에 닿지 못한 상태도 오류 화면이 아니라 한\n문장 안내가 있는 정상 화면으로 처리된다. 모든 화면의 헤더 메뉴가 같아진다.\n\n# 관련 티켓 번호 & 링크\n\n- [S15P21E205-258](https://ssafy.atlassian.net/browse/S15P21E205-258) `[FE] 섹터 목록 조회와 표시`\n- 근거: [spec 002](../../specs/002-sector-weight-selection/spec.md) `FR-003`·`FR-011`·`FR-015`·`FR-017`, `SC-007`, `SC-008`(목록 쪽)\n- 작업 묶음: `tasks.md`의 M2(T005~T010)와 `T025`\n- 계약 원본: [001 섹터 조회 계약](../../specs/001-etf-market-data/contracts/sector-api.md). 002가 재정의하지 않는다\n\n# 무엇이 달라지나\n\n| 상황 | 전 | 후 |\n|---|---|---|\n| '비중 비교하기'를 누른다 | 준비 중이라는 한 문장 | 섹터 목록. 이름·업종/테마·대표 ETF 이름이 함께 보인다 |\n| 대응표가 아직 발행되지 않았다 | 화면이 없었다 | 한 문장과 다시 불러오기 하나. 다음 단계로 가는 수단은 두지 않는다 |\n| 저장된 대응표가 망가져 있다 | 화면이 없었다 | **한 문장만 보이고 다시 불러오기를 두지 않는다.** 눌러도 달라지지 않는 상태다 |\n| 서버가 왜 안 되는지 알려 준다 | 아는 이름이 아니면 그 문구를 버리고 일반 문구로 바꿨다 | **서버가 보낸 문구가 그대로 남는다** |\n| 첫 화면 밖 화면의 헤더 메뉴 | 홈 / 대시보드 / 백테스트 | 전략 진단 / 시장 흐름 / 배우기 / 내 기록 |\n\n섹터를 고르는 체크박스와 비중 입력은 이 묶음에 없다. 다음 묶음이 더한다.\n\n# 주요 변경 사항\n\n## 아직 줄 것이 없는 상태를 다섯 갈래로 나눈다\n\n불러오는 중, 목록, 대응표 미발행, 섹터 0개, 실패다. 어느 경우에도 빈 목록이나 처리되지 않은 오류\n화면으로 떨어지지 않는다(`FR-017`, `원칙 VI`).\n\n**섹터 0개를 따로 둔 까닭**은 서버가 \"대응표가 아직 발행되지 않았다\"와 \"대응표는 발행되었는데\n항목이 하나도 없다\"를 일부러 다른 신호로 구분해 내보내기 때문이다. 받는 쪽이 한쪽은 신호로 다른\n쪽은 개수로 나누면 같은 성격의 판정이 두 층으로 갈라져 한쪽을 빠뜨리기 쉽다. **실제로 처음\n구현에서 빠뜨려 빈 목록이 그려졌다.** 지금은 갈래가 조회 결과의 타입에 있어, 빈 목록을 정상\n목록으로 그리려 하면 컴파일 단계에서 드러난다.\n\n**다시 눌러도 달라지지 않는 실패에는 행동을 주지 않는다.** 저장된 자료가 망가진 경우가 여기\n해당한다. 연결이 끊긴 경우와 같은 화면을 보이면 사용자가 버튼만 되풀이해 누르게 된다. 어느 신호가\n그런 성격인지는 신호 이름을 아는 조회 층이 판정한다(research.md 결정 6).\n\n## 모르는 오류 이름이 와도 서버가 보낸 문구를 잃지 않는다\n\n응답을 읽는 자리가 아는 이름인지 먼저 묻고, 모르는 이름이면 본문을 통째로 버리고 있었다. 그 결과\n서버가 보낸 안내 문구가 사라지고 화면에는 일반 문구가 대신 나갔다. **아무것도 실패하지 않은 채로\n일어난다.** 섹터 조회가 바로 이 문제에 걸려, 대응표가 아직 없다는 신호를 화면이 구분하지 못했다.\n\n담을 때는 열고 물을 때는 닫는다. 서버가 보낸 값은 문자열 그대로 담아 문구를 보존하고, 그 값을 아는\n이름과 견주는 자리에서는 닫힌 목록을 받아 오타가 컴파일에서 걸린다. 도메인이 늘 때 목록에 이름을\n더하는 것을 잊어도 안내 문구가 사라지지 않는다. 이 구조가 되돌려지면 실패하는 검사를 함께 두었다.\n\n이 변경이 공용 응답 형식을 인증 전용 파일에 남겨 의존 방향을 꼬았고, `T025`가 그것을 정리했다.\n공용이 도메인을 알고 도메인은 공용을 모르는 한 방향으로 정했다.\n\n## 표시 순서를 화면이 정한다\n\n001 계약이 응답 배열의 정렬을 정하지 않는다. 응답 순서에 기대면 서버 구현이 바뀔 때 화면 규칙이\n조용히 따라 바뀐다. 업종을 먼저 두고 그 안에서 한국어 이름으로 정렬한다(research.md 결정 2).\n**이 순서를 다음 묶음의 비중 계산이 그대로 쓴다.** 같은 섹터 집합이면 언제나 같은 순서여야 한다.\n\n## 모든 화면의 헤더 메뉴를 하나로 맞춘다\n\n'대시보드'와 '백테스트'는 메뉴에서 뺐다. 003과 005가 완성되면 대체될 임시 화면이라 언젠가 빠질\n자리이기 때문이다. **두 경로 자체는 지우지 않았고** 첫 화면 소개 섹션에서 여전히 닿는다.\n\n# 테스트\n\n- [x] `frontend`: `npm run lint` — 오류 0, 경고 19\n- [x] `frontend`: `npm run build` — 통과\n- [x] `frontend`: `npm test` — 화면 테스트 29개 파일 189건 통과, 건너뜀 0. 순수 로직 13건 통과, 실패 0, 건너뜀 0\n\n기준선은 2026-09-16 `dev`(d2570c6) 기준으로 화면 테스트 24개 파일 145건(건너뜀 0), 순수 로직 13건\n(건너뜀 0)이다. 이 MR이 테스트 파일 다섯과 44건을 더했다.\n\n**테스트 수집 목록에 감시 장치를 두었다.** Vitest가 수집하는 파일 목록은 허용 목록이라, 목록에\n걸리지 않는 테스트는 실패하지 않고 조용히 수집되지 않는다. 이 MR이 목록을 넓히면서, 앞으로 빠진\n파일이 생기면 그 이름을 지목하며 실패하는 검사를 함께 두었다. 이 검사는 해석할 수 없는 형태의\n패턴이 들어오거나 파일을 하나도 찾지 못해도 실패한다. 못 찾으면 통과시키면 검사가 사라진 것을 알\n수 없기 때문이다. 목록 밖에 파일을 만들어 실제로 잡히는 것을 확인했다.\n\n# 리뷰 포인트\n\n1. **첫 화면이 헤더 메뉴에서 뺀 화면을 계속 권한다.** 헤더에서 '대시보드'와 '백테스트'를 뺐는데\n   첫 화면 소개 섹션의 링크 셋은 여전히 그 두 화면으로 보낸다. 더 좁게는 헤더의 '시장 흐름'이\n   `/home`인데 첫 화면의 \"시장 분석 보러 가기\"는 `/dashboard`라 **같은 성격의 목적지가 둘로\n   갈렸다.** 링크를 남길지는 이미 정한 사안이고 남은 질문은 어디를 가리킬지다. `tasks.md`의\n   `T024`로 세워 두었다.\n2. **표시 순서가 실행 환경의 국제화 자료에 기댄다.** 한국어 이름 대조에 쓰는 설정은 모두 명시해\n   구현마다 다른 기본값을 물려받지 않게 했지만, 로케일 자료를 갖추지 않은 실행 환경에서는 대조가\n   요청대로 동작하지 않을 수 있다. 순서 규칙 자체는 research.md 결정 2가 소유하므로 뒤집지\n   않았고, 대표 이름들의 기대 순서를 검사로 고정해 그런 환경에서 순서가 조용히 달라지는 대신\n   검사가 실패하게 했다. **다음 묶음의 비중 계산이 이 순서를 쓰므로 함께 봐 달라.**\n3. **명세 문장 하나가 원칙을 옮겨 적으면서 한정어를 떨어뜨렸다.** `FR-011`은 \"자료 공급원을\n   보이지 않는다\"인데 원칙 II 원문은 \"자료 공급원 **선택**을 사용자 기본 입력으로 요구하지\n   않는다\"이고 `SC-005`도 입력 항목만 센다. 원칙 X와 research.md 결정 8은 한국거래소 자료를 쓰는\n   화면에 출처 표시를 요구하므로, 문자 그대로 읽으면 두 요구가 부딪힌다. 구현은 출처를 표시하는\n   쪽이며 명세는 고치지 않았다.\n4. **범위 밖에서 발견한 것 둘.** 첫째, 백엔드의 공통 오류 응답에 필드별 오류를 담는 자리가\n   **없다.** 저장소 전체를 찾아도 그 이름이 나오지 않는다. 화면 쪽에는 그 값을 읽는 코드가 있어,\n   인증 입력 오류를 필드별로 붙이는 동작이 실제로는 서버 신호 없이 도는 셈이다. 둘째, 첫 화면\n   소개에 '누적 수익 +124.8%' 같은 숫자가 결과처럼 보인다. 002 이전부터 있던 소개용 값이고 002의\n   어느 요구사항도 다루지 않아 손대지 않았으나, `원칙 VI`가 걸릴 수 있는 자리다.",
+    "state": "merged",
+    "created_at": "2026-09-16T11:14:07.510+09:00",
+    "updated_at": "2026-09-16T11:33:18.556+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-16T11:33:18.647+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/258-sector-list-view",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "da870f002154463056c776ede637e11a08d87ed4",
+    "merge_commit_sha": "cc7d0fa3d2690228fc4165b02ba3eb6e47e8c8a8",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T11:14:09.832+09:00",
+    "reference": "!140",
+    "references": {
+      "short": "!140",
+      "relative": "!140",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!140"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/140",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "22",
+    "latest_build_started_at": "2026-09-16T11:31:29.591+09:00",
+    "latest_build_finished_at": "2026-09-16T11:33:17.515+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 198068,
+      "iid": 60,
+      "project_id": 1444456,
+      "sha": "da870f002154463056c776ede637e11a08d87ed4",
+      "ref": "feat(fe)/258-sector-list-view",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T11:31:29.491+09:00",
+      "updated_at": "2026-09-16T11:33:17.525+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/198068"
+    },
+    "head_pipeline": {
+      "id": 198068,
+      "iid": 60,
+      "project_id": 1444456,
+      "sha": "da870f002154463056c776ede637e11a08d87ed4",
+      "ref": "feat(fe)/258-sector-list-view",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T11:31:29.491+09:00",
+      "updated_at": "2026-09-16T11:33:17.525+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/198068",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T11:31:29.591+09:00",
+      "finished_at": "2026-09-16T11:33:17.515+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/198068",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "head_sha": "da870f002154463056c776ede637e11a08d87ed4",
+      "start_sha": "63deaa086320dc1d16efded58fa64119871b7213"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "35581f1e044b03ec122a8eadae6510a16b958052",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814125,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T11:14:07.650+09:00",
+          "updated_at": "2026-09-16T11:14:07.654+09:00",
+          "system": true,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cfc64324af13bdba54e5dde85802e8d6f7b607e7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814126,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T11:14:07.671+09:00",
+          "updated_at": "2026-09-16T11:14:07.680+09:00",
+          "system": true,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cd3f5611bca348927810bcea8c2e5fb993965c42",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814129,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n이 Merge Request는 섹터 목록 조회 기능(M2)을 안정적으로 구현하고 있으며, 특히 다음과 같은 아키텍처적 완성도가 돋보입니다.\n- **상태 기반 화면 분기**: 예외를 단순히 던지는 대신, 네트워크 오류, 409 미발행, 0개 섹터 등의 다양한 서버 상태를 도메인 객체(`SectorCatalogResult`)로 명확히 분기하여 견고한 UI를 구성했습니다.\n- **의존성 방향 정립**: 공용 API 응답 봉투 타입을 인증 전용 파일에서 분리하여(`types/api.ts`) 도메인 간의 순환 참조를 방지하고 아키텍처 규칙을 잘 준수했습니다.\n- **방어적 프로그래밍과 테스트**: Vitest 수집 경로를 강제하는 테스트 가드(`testCollection.guard.test.tsx`)를 도입하여 테스트 누락을 원천 차단하고 있으며, 한국어 정렬(`Intl.Collator`)의 환경 의존성 문제에 대비한 검사 코드가 훌륭합니다.\n\n### 테스트 제안\n변경 사항의 안정성을 검증하기 위해 다음 시나리오에 대한 테스트를 권장합니다.\n\n1. **API 응답 지연 및 경쟁 상태(Race Condition) 테스트**:\n   - 섹터 목록을 불러오는 동안 사용자가 '다시 불러오기' 버튼을 빠르게 여러 번 클릭했을 때, 이전 요청의 `AbortController`가 정상적으로 작동하여 가장 최신의 응답만 화면에 반영되는지 시나리오 테스트로 검증합니다.\n2. **국제화(Intl) 미지원 환경에서의 정렬 예외 테스트**:\n   - `Intl.Collator`를 지원하지 않거나 기본 설정이 상이한 제한된 런타임 환경 시뮬레이션에서, `sortSectorsForDisplay` 함수가 예외를 던지지 않고 안전하게Fallback 정렬을 수행하거나 정의된 기대치에 부합하는지 확인하는 단위 테스트를 추가합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:da870f002154463056c776ede637e11a08d87ed4 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T11:14:18.259+09:00",
+          "updated_at": "2026-09-16T11:31:27.345+09:00",
+          "system": false,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "779463a2600e38f2172942fa1f06bdd8fd250d12",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814313,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>da870f00 - test(fe): 다시 불러올 때 앞선 요청이 취소되는 것을 검사로 고정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/140/diffs?diff_id=2204230&start_sha=a565a051491aa8383326f8d046eec9b03efdded9)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T11:31:19.363+09:00",
+          "updated_at": "2026-09-16T11:31:19.366+09:00",
+          "system": true,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "070db55f33b6dc1e84586ddf6f2dbeb4b9cc59d8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814315,
+          "type": null,
+          "body": "`SectorSelectionPage`의 요청 취소 관련 지적을 확인했습니다. **코드는 고치지 않았고, 확인한 내용을 검사로 남겼습니다.**\n\n지적의 전제와 달리 **요청 정리는 화면이 사라질 때만 일어나지 않습니다.** 다시 불러올 때마다 앞선 요청이 먼저 취소되고 새 요청이 시작됩니다. 값이 바뀔 때 앞선 정리가 먼저 도는 것이 React의 기본 동작입니다.\n\n말로 따지는 대신 시험으로 확인했습니다.\n\n1. 요청이 받아 간 취소 신호를 모아 두고 '다시 불러오기'를 눌렀더니, **앞선 요청의 신호가 취소됨으로 바뀌어 있었습니다.**\n2. 그 검사가 실제로 무언가를 지키는지 보려고 **정리 코드를 지우고 돌려 보니 검사가 실패했습니다.** 되돌리니 통과했습니다.\n\n덧붙여 **불러오는 동안에는 '다시 불러오기' 버튼이 화면에 없습니다.** 요청이 끝나야 나타나므로 빠르게 연속으로 누르는 상황 자체가 화면에서 일어나지 않습니다.\n\n취소가 늦는 경우를 위한 방어도 한 겹 더 있습니다. 지금 살아 있는 요청인지 표시해 두고 아니면 결과를 버립니다. 이미 날아간 요청은 취소해도 응답이 도착할 수 있어 이 두 번째 방어가 필요합니다.\n\n세 가지를 모두 검사로 고정했습니다(`da870f0`). 앞으로 이 정리 코드를 지우면 바로 실패합니다.\n\n- 불러오는 동안에는 다시 불러오기를 누를 수 없다\n- 다시 불러오면 앞선 요청을 취소한다\n- 취소된 요청의 응답이 뒤늦게 와도 화면을 덮지 않는다\n\n검증: `npm run lint` 오류 0, `npm run build` 통과, `npm test` 29개 파일 192건 통과·건너뜀 0.",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T11:31:33.821+09:00",
+          "updated_at": "2026-09-16T11:35:48.676+09:00",
+          "system": false,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6810b0be555169375e10361319865cacdc3d6edd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814320,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for da870f002154463056c776ede637e11a08d87ed4 pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T11:32:09.133+09:00",
+          "updated_at": "2026-09-16T11:32:09.136+09:00",
+          "system": true,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9b51b42b61be86cdcba8ead2c4ffb319381f4b21",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814327,
+          "type": null,
+          "body": "mentioned in commit cc7d0fa3d2690228fc4165b02ba3eb6e47e8c8a8",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-16T11:33:18.642+09:00",
+          "updated_at": "2026-09-16T11:33:18.672+09:00",
+          "system": true,
+          "noteable_id": 946125,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 140,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2204230,
+      "head_commit_sha": "da870f002154463056c776ede637e11a08d87ed4",
+      "base_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "start_commit_sha": "63deaa086320dc1d16efded58fa64119871b7213",
+      "created_at": "2026-09-16T11:31:19.122+09:00",
+      "merge_request_id": 946125,
+      "state": "collected",
+      "real_size": "22",
+      "patch_id_sha": "e8141ada847933b2e7260b3a22e56143b45aff68"
+    },
+    {
+      "id": 2204060,
+      "head_commit_sha": "a565a051491aa8383326f8d046eec9b03efdded9",
+      "base_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "start_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "created_at": "2026-09-16T11:14:08.065+09:00",
+      "merge_request_id": 946125,
+      "state": "without_files",
+      "real_size": "22",
+      "patch_id_sha": "66e1cec58ff3e31a7ce5c00d7b05c246c991606e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2204230,
+      "head_commit_sha": "da870f002154463056c776ede637e11a08d87ed4",
+      "base_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "start_commit_sha": "63deaa086320dc1d16efded58fa64119871b7213",
+      "created_at": "2026-09-16T11:31:19.122+09:00",
+      "merge_request_id": 946125,
+      "state": "collected",
+      "real_size": "22",
+      "patch_id_sha": "e8141ada847933b2e7260b3a22e56143b45aff68",
+      "commits": [
+        {
+          "id": "da870f002154463056c776ede637e11a08d87ed4",
+          "short_id": "da870f00",
+          "created_at": "2026-09-16T11:31:16.000+09:00",
+          "parent_ids": [
+            "a565a051491aa8383326f8d046eec9b03efdded9"
+          ],
+          "title": "test(fe): 다시 불러올 때 앞선 요청이 취소되는 것을 검사로 고정한다",
+          "message": "test(fe): 다시 불러올 때 앞선 요청이 취소되는 것을 검사로 고정한다\n\n리뷰에서 \"요청 정리가 화면이 사라질 때만 일어나 앞뒤 요청이 겹칠 수\n있다\"는 지적이 있었다. 확인해 보니 다시 불러올 때마다 앞선 요청이 먼저\n취소되고 새 요청이 시작된다. 코드를 고치지 않고 그 사실을 검사로 남겨\n같은 의문이 다시 제기되지 않게 한다.\n\n세 가지를 고정한다. 불러오는 동안에는 다시 불러오기 자체가 화면에 없어\n요청이 겹칠 첫 길목이 막혀 있다는 것, 다시 불러오면 앞선 요청의 취소\n신호가 실제로 켜진다는 것, 취소된 요청이 뒤늦게 답해도 그 값이 화면을\n덮지 않는다는 것이다.\n\n마지막 것이 따로 필요한 까닭은 취소가 이미 날아간 요청을 되돌리지 못하는\n경우가 있어서다. 취소만으로는 늦게 온 응답을 막지 못한다.\n\n정리 코드를 지우고 돌려 검사가 실제로 실패하는 것을 확인했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T11:31:16.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T11:31:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/da870f002154463056c776ede637e11a08d87ed4"
+        },
+        {
+          "id": "a565a051491aa8383326f8d046eec9b03efdded9",
+          "short_id": "a565a051",
+          "created_at": "2026-09-16T11:12:49.000+09:00",
+          "parent_ids": [
+            "a71d1e69d96d6eb13d6f33f26a877d41f470bb4c"
+          ],
+          "title": "docs(fe): spec 002에 앞 묶음이 남긴 정리 항목을 더한다",
+          "message": "docs(fe): spec 002에 앞 묶음이 남긴 정리 항목을 더한다\n\n구현을 명세와 맞대어 본 결과다. 요구사항 수준의 어긋남은 없었고, 작업\n목록 밖에서 함께 넣은 변경 둘이 남긴 뒷정리가 나왔다.\n\n첫 화면이 헤더 메뉴에서 뺀 화면을 계속 권하는 문제와, 공용이 된 응답\n형식이 인증 파일에 남아 있던 문제다. 뒤엣것은 이 MR에서 함께 정리했다.\n\n기존 항목의 번호와 내용은 건드리지 않고 덧붙이기만 했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T11:12:49.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T11:12:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a565a051491aa8383326f8d046eec9b03efdded9"
+        },
+        {
+          "id": "a71d1e69d96d6eb13d6f33f26a877d41f470bb4c",
+          "short_id": "a71d1e69",
+          "created_at": "2026-09-16T11:12:49.000+09:00",
+          "parent_ids": [
+            "80e1900701301a73dabcea079788f7a5092f11d2"
+          ],
+          "title": "refactor(fe): 모든 도메인이 쓰는 응답 형식을 인증 파일 밖으로 옮긴다",
+          "message": "refactor(fe): 모든 도메인이 쓰는 응답 형식을 인증 파일 밖으로 옮긴다\n\n오류 이름 목록을 공용으로 넓히면서 응답 봉투와 오류 본문 타입을 인증\n전용 파일에 그대로 두었다. 그 결과 인증 파일이 섹터 파일을 가져오고\n섹터 조회는 봉투를 얻으려 인증 파일을 거치게 되어, 도메인 하나가 다른\n도메인을 지나야 공용 형식에 닿았다.\n\n공용 파일을 따로 두고 방향을 한쪽으로 정한다. 공용이 도메인을 알고\n도메인은 공용을 모른다. 아는 오류 이름의 목록이 각 도메인에 흩어져\n있어 합치는 자리가 도메인을 읽어야 하고, 반대로 두면 같은 목록이 두\n곳에 생겨 한쪽만 늘어난 채 갈라진다. 이 구조를 만들게 한 결함이 정확히\n그 모양이었다.\n\n이제 새 도메인이 오류 이름을 더할 때 자기 파일과 공용 파일만 고치면\n되고 인증 파일은 건드리지 않는다.\n\n자리만 옮기고 동작은 그대로다. 담을 때는 열고 물을 때는 닫는 구조가\n그대로 살아 있다.\n\nspec 002 T025. converge 평가 결과.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T11:12:49.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T11:12:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a71d1e69d96d6eb13d6f33f26a877d41f470bb4c"
+        },
+        {
+          "id": "80e1900701301a73dabcea079788f7a5092f11d2",
+          "short_id": "80e19007",
+          "created_at": "2026-09-16T10:26:23.000+09:00",
+          "parent_ids": [
+            "71c6ee39966bad2aa2fb28eaf3f0abacdbab0568"
+          ],
+          "title": "feat(fe): 모든 화면의 헤더 메뉴를 첫 화면과 같게 맞춘다",
+          "message": "feat(fe): 모든 화면의 헤더 메뉴를 첫 화면과 같게 맞춘다\n\n첫 화면에서 메뉴를 눌러 들어온 화면이 다른 메뉴를 보이고 있었다. 한 번의\n이동으로 서비스의 구성이 통째로 바뀐 것처럼 겪게 된다.\n\n'대시보드'와 '백테스트'는 메뉴에서 뺀다. 전략 선택과 결과 비교가\n완성되면 대체될 임시 화면이라 언젠가 빠질 자리다. 두 경로 자체는 지우지\n않았고 다른 화면에서 여전히 닿는다.\n\n'내 기록'이 메뉴에 들어가 이름까지 같은 링크가 둘이 되었으므로 하나를\n지운다. 로그인한 사람이 누구인지 알리는 자리는 목적지가 같아도 하는 일이\n달라 남긴다.\n\n하위 경로에서도 현재 위치 표시가 남게 한다.\n\nspec 002 FR-001.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:26:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:26:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/80e1900701301a73dabcea079788f7a5092f11d2"
+        },
+        {
+          "id": "71c6ee39966bad2aa2fb28eaf3f0abacdbab0568",
+          "short_id": "71c6ee39",
+          "created_at": "2026-09-16T10:26:23.000+09:00",
+          "parent_ids": [
+            "34b04128ceac49c18911bb5f2b7ba61518679eb3"
+          ],
+          "title": "feat(fe): 섹터 목록 화면을 연다",
+          "message": "feat(fe): 섹터 목록 화면을 연다\n\n첫 화면의 '비중 비교하기'가 준비 중 화면 대신 이 화면에 닿는다. 각\n항목에 섹터 이름·업종/테마 구분·대표 ETF 이름을 함께 보이고, 계산식과\n자료 공급원은 보이지 않는다.\n\n조회 상태 다섯 가지를 모두 정상 화면으로 처리한다. 불러오는 중, 목록,\n대응표 미발행, 섹터 0개, 실패다. 어느 경우에도 빈 목록이나 처리되지 않은\n오류 화면으로 떨어지지 않으며, 다시 눌러 달라질 수 있는 상태에만 행동을\n준다.\n\n예시 대응표에서 온 목록일 때만 그 사실을 표시한다. 이 문장은 비중\n초깃값이 예시라는 표시와 가리키는 대상이 다르므로 합치지 않는다.\n\n한국거래소 자료를 쓰는 화면이므로 출처를 목록에 표시한다. 펼쳐 보는 층에\n두면 목록만 보는 사용자에게는 표시하지 않은 것과 같다.\n\n목록 역할을 명시한다. 목록 표지를 없앤 목록은 일부 보조 기술에서 목록\n의미를 잃는데, 이 화면은 그 의미에 기대고 있다.\n\n섹터를 고르는 일과 비중 입력은 다음 묶음이 더한다.\n\nspec 002 FR-003, FR-011, FR-015, FR-017. T009, T010.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:26:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:26:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/71c6ee39966bad2aa2fb28eaf3f0abacdbab0568"
+        },
+        {
+          "id": "34b04128ceac49c18911bb5f2b7ba61518679eb3",
+          "short_id": "34b04128",
+          "created_at": "2026-09-16T10:26:22.000+09:00",
+          "parent_ids": [
+            "1a5f4833bdfb1c34281d56079f15f1df53e695f7"
+          ],
+          "title": "feat(fe): 섹터 목록을 받아 오고 표시 순서를 화면이 정한다",
+          "message": "feat(fe): 섹터 목록을 받아 오고 표시 순서를 화면이 정한다\n\n조회는 화면 진입마다 한 번이다. 대응표가 아직 발행되지 않은 상태와\n발행되었으나 섹터가 하나도 없는 상태를 예외가 아니라 화면이 분기할\n상태 값으로 돌려준다. 서버가 두 경우를 일부러 다른 신호로 구분해\n내보내므로 받는 자리도 한 곳에 둔다. 빈 목록을 정상 목록으로 그리는\n실수가 컴파일 단계에서 드러난다.\n\n다시 눌러도 달라지지 않는 실패를 따로 표시한다. 저장된 대응표가 망가진\n경우가 여기 해당하며, 연결이 끊긴 경우와 같은 화면을 보이면 사용자가\n버튼만 되풀이해 누르게 된다.\n\n표시 순서는 서버 응답의 배열 순서에 기대지 않고 화면이 정한다. 계약이\n정렬을 정하지 않아, 응답 순서에 기대면 서버 구현이 바뀔 때 화면 규칙이\n조용히 따라 바뀐다. 이 순서를 뒤 묶음의 비중 계산이 그대로 쓴다.\n\n한국어 이름 대조에 쓰는 설정을 모두 명시한다. 구현마다 다른 기본값을\n물려받지 않게 하려는 것이다.\n\nspec 002 FR-003, FR-017, research.md 결정 2·4·6·8. T006~T008.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:26:22.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:26:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/34b04128ceac49c18911bb5f2b7ba61518679eb3"
+        },
+        {
+          "id": "1a5f4833bdfb1c34281d56079f15f1df53e695f7",
+          "short_id": "1a5f4833",
+          "created_at": "2026-09-16T10:25:52.000+09:00",
+          "parent_ids": [
+            "9b053e099143ea9e9af673eaa39df8d6dea79f10"
+          ],
+          "title": "fix(fe): 모르는 오류 이름이 와도 서버가 보낸 안내 문구를 잃지 않는다",
+          "message": "fix(fe): 모르는 오류 이름이 와도 서버가 보낸 안내 문구를 잃지 않는다\n\n응답 봉투를 읽는 자리가 아는 이름인지 먼저 물어보고, 모르는 이름이면\n본문을 통째로 버리고 있었다. 그 결과 서버가 보낸 안내 문구가 사라지고\n화면에는 일반 문구가 대신 나갔다. 아무것도 실패하지 않은 채로 일어난다.\n\n섹터 조회가 이 문제에 걸렸다. 목록에 인증 쪽 이름만 있어 대응표가 아직\n없다는 신호를 화면이 구분하지 못했다.\n\n담을 때는 열고 물을 때는 닫는다. 서버가 보낸 값은 문자열 그대로 담아\n문구를 보존하고, 그 값을 아는 이름과 견주는 자리에서는 닫힌 목록을 받아\n오타가 컴파일에서 걸리게 한다. 도메인이 늘 때 목록에 이름을 더하는 것을\n잊어도 안내 문구가 사라지지 않는다.\n\n이 변경이 되돌려지면 실패하는 검사를 함께 둔다.\n\nspec 002 FR-017, research.md 결정 6.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:25:52.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:25:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a5f4833bdfb1c34281d56079f15f1df53e695f7"
+        },
+        {
+          "id": "9b053e099143ea9e9af673eaa39df8d6dea79f10",
+          "short_id": "9b053e09",
+          "created_at": "2026-09-16T10:25:52.000+09:00",
+          "parent_ids": [
+            "d2570c6a05f25bff626593c44102904f5cb8fbb1"
+          ],
+          "title": "test(fe): 수집되지 않는 테스트 파일을 검사가 잡아내게 한다",
+          "message": "test(fe): 수집되지 않는 테스트 파일을 검사가 잡아내게 한다\n\nVitest가 수집하는 파일 목록은 허용 목록이라, 목록에 걸리지 않는 테스트는\n실패하지 않고 조용히 수집되지 않는다. 목록을 넓히고, 앞으로 같은 일이\n되풀이되지 않도록 빠진 파일을 찾아 실패시키는 검사를 둔다.\n\n이 검사는 확장자 규칙상 반드시 수집되는 형태로 만든다. 검사 자신이\n수집되지 않으면 아무것도 지키지 못한다. 해석할 수 없는 형태의 패턴이\n들어오거나 파일을 하나도 찾지 못해도 실패한다. 못 찾으면 통과시키는\n구조로 두면 검사가 사라진 것을 알 수 없다.\n\nspec 002 T005, quickstart 시나리오 0.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:25:52.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:25:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9b053e099143ea9e9af673eaa39df8d6dea79f10"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -5,8 +5,8 @@ import {\n   resetCsrfToken,\n   runCsrfProtectedMutation,\n } from './client'\n+import type { ApiEnvelope } from '@/types/api'\n import type {\n-  ApiEnvelope,\n   AuthenticatedUser,\n   EmailVerificationConfirmRequest,\n   EmailVerificationRequest,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/auth.ts",
+          "old_path": "frontend/src/api/auth.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import axios from 'axios'\n-import type { AuthApiErrorCode, AuthFieldError } from '@/types/auth'\n+import type { ApiErrorCode, ServiceApiErrorCode } from '@/types/api'\n+import type { AuthFieldError } from '@/types/auth'\n \n /** 공용 API 클라이언트. 개발 중에는 vite proxy(/api → localhost:8080)를 탄다. */\n export const apiClient = axios.create({\n@@ -16,16 +17,31 @@ const authenticationRequiredListeners = new Set<AuthenticationRequiredListener>(\n \n type ApiClientErrorKind = 'api' | 'network' | 'unexpected'\n \n+/**\n+ * 알려진 오류 이름과 비교한다.\n+ *\n+ * 첫 인자는 서버가 보낸 열린 값이고 둘째 인자는 **닫힌 union**이라, 비교하는 쪽에서는\n+ * 자동완성이 되고 오타는 컴파일 단계에서 걸린다. 값을 담을 때만 열어 두고 물을 때는 닫아 두는\n+ * 것이 이 구조의 핵심이다.\n+ */\n+export function isApiErrorCode(\n+  value: ApiErrorCode | null | undefined,\n+  code: ServiceApiErrorCode,\n+): boolean {\n+  return value === code\n+}\n+\n export class ApiClientError extends Error {\n   readonly kind: ApiClientErrorKind\n-  readonly code: AuthApiErrorCode | null\n+  /** 서버가 보낸 문자열 그대로다. 아는 이름이 아니어도 접거나 버리지 않는다. */\n+  readonly code: ApiErrorCode | null\n   readonly fieldErrors: AuthFieldError[]\n \n   constructor(\n     kind: ApiClientErrorKind,\n     message: string,\n     options?: {\n-      code?: AuthApiErrorCode\n+      code?: ApiErrorCode\n       fieldErrors?: AuthFieldError[]\n       cause?: unknown\n     },\n@@ -36,31 +52,17 @@ export class ApiClientError extends Error {\n     this.code = options?.code ?? null\n     this.fieldErrors = options?.fieldErrors ?? []\n   }\n+\n+  /** 화면이 자주 묻는 질문 하나를 이름으로 둔다. 오타는 여기서 걸린다. */\n+  is(code: ServiceApiErrorCode): boolean {\n+    return isApiErrorCode(this.code, code)\n+  }\n }\n \n function isRecord(value: unknown): value is Record<string, unknown> {\n   return typeof value === 'object' && value !== null\n }\n \n-function isAuthApiErrorCode(value: unknown): value is AuthApiErrorCode {\n-  return (\n-    typeof value === 'string' &&\n-    [\n-      'INVALID_INPUT',\n-      'DUPLICATE_EMAIL',\n-      'DUPLICATE_PHONE',\n-      'EMAIL_VERIFICATION_REQUIRED',\n-      'EMAIL_VERIFICATION_NOT_FOUND',\n-      'EMAIL_VERIFICATION_INVALID',\n-      'EMAIL_VERIFICATION_EXPIRED',\n-      'INVALID_CREDENTIALS',\n-      'AUTHENTICATION_REQUIRED',\n-      'CSRF_TOKEN_INVALID',\n-      'INTERNAL_ERROR',\n-    ].includes(value)\n-  )\n-}\n-\n function isAuthFieldError(value: unknown): value is AuthFieldError {\n   if (!isRecord(value)) return false\n \n@@ -75,7 +77,9 @@ function readApiError(value: unknown) {\n   if (!isRecord(value) || value.success !== false || !isRecord(value.error)) return null\n   const { error } = value\n \n-  if (!isAuthApiErrorCode(error.code) || typeof error.message !== 'string') return null\n+  // **아는 이름인지 묻지 않는다.** 모르는 이름이라고 본문 전체를 버리면 서버가 보낸 안내 문구가\n+  // 함께 사라지고, 화면은 그 자리에 일반 문구를 대신 내보낸다.\n+  if (typeof error.code !== 'string' || typeof error.message !== 'string') return null\n \n   const fieldErrors = Array.isArray(error.fieldErrors)\n     ? error.fieldErrors.filter(isAuthFieldError)\n@@ -89,7 +93,7 @@ apiClient.interceptors.response.use(\n   (error: unknown) => {\n     if (axios.isAxiosError(error) && error.response?.status === 401) {\n       const apiError = readApiError(error.response.data)\n-      if (apiError?.code === 'AUTHENTICATION_REQUIRED') {\n+      if (isApiErrorCode(apiError?.code, 'AUTHENTICATION_REQUIRED')) {\n         authenticationRequiredListeners.forEach((listener) => listener())\n       }\n     }\n@@ -179,7 +183,7 @@ export async function runCsrfProtectedMutation<T>(request: () => Promise<T>): Pr\n   } catch (error) {\n     const normalizedError = normalizeApiError(error)\n \n-    if (normalizedError.code === 'CSRF_TOKEN_INVALID') {\n+    if (normalizedError.is('CSRF_TOKEN_INVALID')) {\n       resetCsrfToken()\n       try {\n         await prepareCsrfToken()\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/client.ts",
+          "old_path": "frontend/src/api/client.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,197 @@\n+import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'\n+import type { SectorCatalog } from '@/types/sector'\n+import { apiClient } from './client'\n+import { fetchSectorCatalog } from './sectors'\n+\n+function axiosResponse<T>(data: T, status = 200): AxiosResponse<T> {\n+  return {\n+    data,\n+    status,\n+    statusText: status >= 400 ? 'Error' : 'OK',\n+    headers: {},\n+    config: { headers: new AxiosHeaders() },\n+  }\n+}\n+\n+function axiosFailure(status: number, body: unknown): AxiosError {\n+  const error = new AxiosError('request failed')\n+  error.response = axiosResponse(body, status) as AxiosResponse\n+  return error\n+}\n+\n+const catalog: SectorCatalog = {\n+  mapVersion: 'SEM-2026-09-10-001',\n+  isSample: true,\n+  sectors: [\n+    {\n+      code: 'SEMICONDUCTOR',\n+      name: '반도체',\n+      classification: 'INDUSTRY',\n+      representativeEtf: {\n+        instrumentId: '091160.XKRX',\n+        name: 'KODEX 반도체',\n+        listedOn: '2006-06-27',\n+        benchmarkIndex: 'KRX 반도체',\n+      },\n+    },\n+  ],\n+}\n+\n+const catalogSuccess: ApiSuccessEnvelope<SectorCatalog> = {\n+  success: true,\n+  data: catalog,\n+  error: null,\n+}\n+\n+function errorEnvelope(code: ApiErrorEnvelope['error']['code'], message: string): ApiErrorEnvelope {\n+  return { success: false, data: null, error: { code, message } }\n+}\n+\n+describe('섹터 목록 조회', () => {\n+  beforeEach(() => {\n+    vi.restoreAllMocks()\n+  })\n+\n+  it('공용 apiClient로 GET /sectors를 한 번만 부른다', async () => {\n+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(catalogSuccess))\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(getSpy).toHaveBeenCalledOnce()\n+    expect(getSpy).toHaveBeenCalledWith('/sectors', { signal: undefined })\n+    expect(result).toEqual({ status: 'loaded', catalog })\n+  })\n+\n+  it('평가 가능 기간 엔드포인트를 부르지 않는다', async () => {\n+    const getSpy = vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(catalogSuccess))\n+\n+    await fetchSectorCatalog()\n+\n+    const calledPaths = getSpy.mock.calls.map((call) => call[0])\n+    expect(calledPaths).not.toContain('/sectors/evaluation-window')\n+  })\n+\n+  it('봉투 안의 data를 목록으로 읽는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(axiosResponse(catalogSuccess))\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result.status).toBe('loaded')\n+    if (result.status !== 'loaded') return\n+    expect(result.catalog.mapVersion).toBe('SEM-2026-09-10-001')\n+    expect(result.catalog.isSample).toBe(true)\n+    expect(result.catalog.sectors[0].representativeEtf.name).toBe('KODEX 반도체')\n+  })\n+\n+  it('409 SECTOR_MAP_NOT_READY를 예외가 아니라 상태 값으로 돌려준다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(409, errorEnvelope('SECTOR_MAP_NOT_READY', '대응표가 아직 발행되지 않았다')),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result).toEqual({ status: 'mapNotReady', message: '대응표가 아직 발행되지 않았다' })\n+  })\n+\n+  it('발행된 대응표에 섹터가 0개면 빈 목록으로 그리지 않고 따로 알린다', async () => {\n+    const empty: SectorCatalog = { mapVersion: 'SEM-2026-09-10-001', isSample: false, sectors: [] }\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      axiosResponse({ success: true, data: empty, error: null }),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    // 백엔드가 \"대응표 미발행\"(409)과 \"섹터 0개\"(200 + 빈 배열)를 일부러 구분해 내보낸다.\n+    expect(result).toEqual({ status: 'emptyCatalog', catalog: empty })\n+  })\n+\n+  it('연결 실패는 network 분류이고 다시 불러 볼 수 있다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(new AxiosError('offline'))\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result.status).toBe('failed')\n+    if (result.status !== 'failed') return\n+    expect(result.kind).toBe('network')\n+    expect(result.retryable).toBe(true)\n+  })\n+\n+  it('500 SECTOR_MAP_UNUSABLE은 api 분류이고 다시 불러도 달라지지 않는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(500, errorEnvelope('SECTOR_MAP_UNUSABLE', '대응표를 읽을 수 없다')),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result).toEqual({\n+      status: 'failed',\n+      kind: 'api',\n+      code: 'SECTOR_MAP_UNUSABLE',\n+      message: '대응표를 읽을 수 없다',\n+      retryable: false,\n+    })\n+  })\n+\n+  it('모르는 오류 이름이 와도 서버가 보낸 안내 문구를 잃지 않는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(\n+        409,\n+        errorEnvelope('FUTURE_DOMAIN_CODE', '아직 이 화면이 모르는 이유로 막혀 있습니다.'),\n+      ),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    // 공용 오류 이름 목록이 다시 닫히면, 봉투를 읽는 쪽이 이 응답을 통째로 버리고\n+    // `unexpected`와 일반 문구로 바꾼다. 그 되돌림을 이 검사가 잡는다.\n+    expect(result).toEqual({\n+      status: 'failed',\n+      kind: 'api',\n+      code: 'FUTURE_DOMAIN_CODE',\n+      message: '아직 이 화면이 모르는 이유로 막혀 있습니다.',\n+      retryable: true,\n+    })\n+  })\n+\n+  it('대응표 미발행이 아닌 409는 준비 중 상태로 다루지 않는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(\n+      axiosFailure(409, errorEnvelope('INSTRUMENT_PROFILE_NOT_READY', '상품 정보가 없다')),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result.status).toBe('failed')\n+  })\n+\n+  it('대표 ETF가 빠진 항목이 오면 숨기지 않고 응답 전체를 읽지 못한 것으로 다룬다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      axiosResponse({\n+        success: true,\n+        error: null,\n+        data: {\n+          mapVersion: 'SEM-2026-09-10-001',\n+          isSample: false,\n+          sectors: [{ code: 'BANK', name: '은행', classification: 'INDUSTRY' }],\n+        },\n+      }),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result.status).toBe('failed')\n+    if (result.status !== 'failed') return\n+    expect(result.kind).toBe('unexpected')\n+  })\n+\n+  it('200으로 온 실패 봉투도 같은 상태 값으로 옮긴다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue(\n+      axiosResponse(errorEnvelope('SECTOR_MAP_NOT_READY', '준비 중')),\n+    )\n+\n+    const result = await fetchSectorCatalog()\n+\n+    expect(result).toEqual({ status: 'mapNotReady', message: '준비 중' })\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/sectors.test.ts",
+          "old_path": "frontend/src/api/sectors.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,165 @@\n+import { ApiClientError, apiClient, normalizeApiError } from './client'\n+import type { ApiEnvelope, ApiErrorCode, ServiceApiErrorCode } from '@/types/api'\n+import type { SectorCatalog, SectorClassification, SectorSummary } from '@/types/sector'\n+\n+/**\n+ * 섹터 목록 조회의 결과다.\n+ *\n+ * \"아직 줄 것이 없다\"에 해당하는 상태를 **모두 이 층에서 갈라 놓는다.** 화면을 그리는 분기는\n+ * 예외가 아니라 상태이며(research.md 결정 6), 그래야 빈 목록이나 처리되지 않은 오류 화면 대신\n+ * 한 문장 안내를 낼 수 있다.\n+ *\n+ * `emptyCatalog`를 화면의 `sectors.length` 판정이 아니라 여기 상태 값으로 둔 까닭은 셋이다.\n+ * 첫째, 백엔드가 \"대응표 미발행\"(409)과 \"섹터 0개\"(200 + 빈 배열)를 **일부러 구분해** 내보내므로\n+ * (`SectorRepositoryImpl.findOpenSectorMap`) 그 구분을 받는 자리도 한 곳이어야 한다. 둘째,\n+ * 화면이 한쪽은 상태 값으로 다른 쪽은 배열 길이로 분기하면 같은 성격의 판정이 두 층으로 갈라져\n+ * 한쪽을 빠뜨리기 쉽다 — 실제로 빠뜨렸다. 셋째, 갈래가 타입에 있으면 빈 목록을 `loaded`로\n+ * 그리는 실수가 컴파일 단계에서 드러난다.\n+ *\n+ * 오류 분류는 014가 만든 `normalizeApiError`의 `api | network | unexpected`를 그대로 쓴다.\n+ * 002가 새 분류를 만들지 않는다.\n+ */\n+export type SectorCatalogResult =\n+  /** 보여 줄 섹터가 하나 이상 있다. */\n+  | { status: 'loaded'; catalog: SectorCatalog }\n+  /** 대응표는 발행되었는데 그 안에 섹터가 없다. 파이프라인이 채우면 달라진다. */\n+  | { status: 'emptyCatalog'; catalog: SectorCatalog }\n+  /** 대응표가 아직 발행되지 않았다(409 `SECTOR_MAP_NOT_READY`). */\n+  | { status: 'mapNotReady'; message: string }\n+  | {\n+      status: 'failed'\n+      kind: 'api' | 'network' | 'unexpected'\n+      /** 서버가 보낸 이름 그대로다. 아는 이름이 아니어도 버리지 않는다. */\n+      code: ApiErrorCode | null\n+      /** 서버가 보낸 문장이다. 화면이 쓸지 말지는 화면이 정한다. */\n+      message: string\n+      /**\n+       * 다시 불러서 달라질 수 있는가.\n+       *\n+       * research.md 결정 6이 \"다시 눌러도 바뀌지 않는 상태에는 행동을 두지 않는다\"를 요구하므로,\n+       * 그 판정을 화면이 아니라 오류 이름을 아는 이 층에서 한다.\n+       */\n+      retryable: boolean\n+    }\n+\n+/**\n+ * 다시 불러도 달라지지 않는 서버 신호다.\n+ *\n+ * `SECTOR_MAP_UNUSABLE`은 저장된 대응표가 도메인 불변식을 어겼을 때 나오는 500이다. 서버 쪽\n+ * 자료를 고쳐야 풀리므로 사용자가 버튼을 다시 누르는 것으로는 달라지지 않는다.\n+ */\n+const unretryableCodes: readonly ServiceApiErrorCode[] = ['SECTOR_MAP_UNUSABLE']\n+\n+function isRecord(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+function isClassification(value: unknown): value is SectorClassification {\n+  return value === 'INDUSTRY' || value === 'THEME'\n+}\n+\n+/**\n+ * 계약이 \"모든 항목에 `representativeEtf`가 있다\"를 보장한다. 없는 항목이 오면 계약 위반이므로\n+ * 그 항목만 숨겨서 넘기지 않고 응답 전체를 읽지 못한 것으로 다룬다.\n+ */\n+function readSector(value: unknown): SectorSummary | null {\n+  if (!isRecord(value)) return null\n+  const etf = value.representativeEtf\n+\n+  if (\n+    typeof value.code !== 'string' ||\n+    typeof value.name !== 'string' ||\n+    !isClassification(value.classification) ||\n+    !isRecord(etf) ||\n+    typeof etf.instrumentId !== 'string' ||\n+    typeof etf.name !== 'string' ||\n+    typeof etf.listedOn !== 'string' ||\n+    typeof etf.benchmarkIndex !== 'string'\n+  ) {\n+    return null\n+  }\n+\n+  return {\n+    code: value.code,\n+    name: value.name,\n+    classification: value.classification,\n+    representativeEtf: {\n+      instrumentId: etf.instrumentId,\n+      name: etf.name,\n+      listedOn: etf.listedOn,\n+      benchmarkIndex: etf.benchmarkIndex,\n+    },\n+  }\n+}\n+\n+function readSectorCatalog(value: unknown): SectorCatalog | null {\n+  if (!isRecord(value)) return null\n+  if (typeof value.mapVersion !== 'string' || typeof value.isSample !== 'boolean') return null\n+  if (!Array.isArray(value.sectors)) return null\n+\n+  const sectors: SectorSummary[] = []\n+  for (const item of value.sectors) {\n+    const sector = readSector(item)\n+    if (!sector) return null\n+    sectors.push(sector)\n+  }\n+\n+  return { mapVersion: value.mapVersion, isSample: value.isSample, sectors }\n+}\n+\n+const UNREADABLE_RESPONSE_MESSAGE = '섹터 목록을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.'\n+\n+/** 서버가 보낸 오류를 화면이 분기할 상태 값으로 옮긴다. */\n+function toFailureResult(error: ApiClientError): SectorCatalogResult {\n+  if (error.kind === 'api' && error.is('SECTOR_MAP_NOT_READY')) {\n+    return { status: 'mapNotReady', message: error.message }\n+  }\n+\n+  return {\n+    status: 'failed',\n+    kind: error.kind,\n+    code: error.code,\n+    message: error.message,\n+    retryable: !unretryableCodes.some((code) => error.is(code)),\n+  }\n+}\n+\n+/**\n+ * 섹터 목록을 한 번 받아 온다.\n+ *\n+ * 화면 진입마다 이 호출 **한 번**이다. `GET /sectors/evaluation-window`는 부르지 않는다 —\n+ * 그 산식은 003이 소유하는 워밍업 거래일 수를 필수 입력으로 받는다(research.md 결정 4).\n+ */\n+export async function fetchSectorCatalog(signal?: AbortSignal): Promise<SectorCatalogResult> {\n+  try {\n+    const response = await apiClient.get<ApiEnvelope<SectorCatalog>>('/sectors', { signal })\n+    const body = response.data\n+\n+    if (!body.success) {\n+      return toFailureResult(\n+        new ApiClientError('api', body.error.message, { code: body.error.code }),\n+      )\n+    }\n+\n+    const catalog = readSectorCatalog(body.data)\n+    if (!catalog) {\n+      return {\n+        status: 'failed',\n+        kind: 'unexpected',\n+        code: null,\n+        message: UNREADABLE_RESPONSE_MESSAGE,\n+        retryable: true,\n+      }\n+    }\n+\n+    // 발행된 대응표에 섹터가 하나도 없는 경우다. 백엔드가 이것을 409가 아니라 빈 배열로 내보내므로\n+    // 여기서 갈라 두지 않으면 화면이 빈 목록을 그린다(FR-017, spec Edge Cases).\n+    if (catalog.sectors.length === 0) {\n+      return { status: 'emptyCatalog', catalog }\n+    }\n+\n+    return { status: 'loaded', catalog }\n+  } catch (error) {\n+    return toFailureResult(normalizeApiError(error))\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/sectors.ts",
+          "old_path": "frontend/src/api/sectors.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,74 @@\n+import { render, screen, within } from '@testing-library/react'\n+import { describe, expect, it } from 'vitest'\n+import type { SectorSummary } from '@/types/sector'\n+import { SectorListItem } from './SectorListItem'\n+\n+const semiconductor: SectorSummary = {\n+  code: 'SEMICONDUCTOR',\n+  name: '반도체',\n+  classification: 'INDUSTRY',\n+  representativeEtf: {\n+    instrumentId: '091160.XKRX',\n+    name: 'KODEX 반도체',\n+    listedOn: '2006-06-27',\n+    benchmarkIndex: 'KRX 반도체',\n+  },\n+}\n+\n+const battery: SectorSummary = {\n+  code: 'BATTERY',\n+  name: '2차전지',\n+  classification: 'THEME',\n+  representativeEtf: {\n+    instrumentId: '305720.XKRX',\n+    name: 'KODEX 2차전지산업',\n+    listedOn: '2018-09-12',\n+    benchmarkIndex: 'FnGuide 2차전지산업',\n+  },\n+}\n+\n+function renderItem(sector: SectorSummary) {\n+  return render(\n+    <ul>\n+      <SectorListItem sector={sector} />\n+    </ul>,\n+  )\n+}\n+\n+describe('SectorListItem', () => {\n+  it('섹터 이름·대표 ETF 이름·업종 구분을 함께 보인다', () => {\n+    renderItem(semiconductor)\n+    const item = screen.getByRole('listitem')\n+\n+    expect(within(item).getByText('반도체')).toBeTruthy()\n+    expect(within(item).getByText('KODEX 반도체')).toBeTruthy()\n+    expect(within(item).getByText('업종')).toBeTruthy()\n+  })\n+\n+  it('테마 섹터는 테마로 구분해 보인다', () => {\n+    renderItem(battery)\n+    const item = screen.getByRole('listitem')\n+\n+    expect(within(item).getByText('2차전지')).toBeTruthy()\n+    expect(within(item).getByText('KODEX 2차전지산업')).toBeTruthy()\n+    expect(within(item).getByText('테마')).toBeTruthy()\n+  })\n+\n+  it('계산식·자료 공급원·실험 식별자·서버 설정을 보이지 않는다', () => {\n+    renderItem(semiconductor)\n+    const item = screen.getByRole('listitem')\n+\n+    for (const hidden of ['091160.XKRX', 'KRX 반도체', '2006-06-27']) {\n+      expect(within(item).queryByText(hidden)).toBeNull()\n+    }\n+  })\n+\n+  it('이 시점에는 고르는 수단을 두지 않는다', () => {\n+    renderItem(semiconductor)\n+    const item = screen.getByRole('listitem')\n+\n+    // 체크박스는 M3이, 대표 상품 정보 펼침은 M5가 더한다.\n+    expect(within(item).queryAllByRole('checkbox')).toHaveLength(0)\n+    expect(within(item).queryAllByRole('button')).toHaveLength(0)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorListItem.test.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorListItem.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+import type { SectorClassification, SectorSummary } from '@/types/sector'\n+\n+/** 목록에 보이는 업종/테마 구분 이름이다. 화면 표시 전용이라 이 파일 밖으로 내보내지 않는다. */\n+const classificationLabels: Record<SectorClassification, string> = {\n+  INDUSTRY: '업종',\n+  THEME: '테마',\n+}\n+\n+type SectorListItemProps = {\n+  sector: SectorSummary\n+  /** 놓이는 자리의 여백과 정렬은 쓰는 쪽이 정한다. */\n+  className?: string\n+}\n+\n+/**\n+ * 섹터 목록의 한 항목이다. 섹터 이름·업종/테마 구분·대표 ETF 이름을 함께 보인다(FR-003).\n+ *\n+ * **이 시점에는 표시만 한다.** 섹터를 고르는 체크박스는 M3이, 대표 상품 정보 펼침은 M5가 더한다.\n+ *\n+ * 계산식·자료 공급원·거리 함수·실험 식별자·서버 설정을 보이지 않는다(FR-011). 그래서 응답이\n+ * 함께 주는 `instrumentId`·`benchmarkIndex`·`listedOn`을 여기서 그리지 않는다. 상장일은 M4가\n+ * 안내 문장을 만드는 데 쓰고 화면에 날것으로 늘어놓지 않는다.\n+ */\n+export function SectorListItem({ sector, className }: SectorListItemProps) {\n+  return (\n+    <li className={className} data-sector-code={sector.code}>\n+      <span data-slot=\"heading\">\n+        <strong data-slot=\"name\">{sector.name}</strong>\n+        <span data-slot=\"classification\">{classificationLabels[sector.classification]}</span>\n+      </span>\n+      <span data-slot=\"etf\">\n+        <span data-slot=\"etf-label\">대표 ETF</span>\n+        <span data-slot=\"etf-name\">{sector.representativeEtf.name}</span>\n+      </span>\n+    </li>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/diagnosis/SectorListItem.tsx",
+          "old_path": "frontend/src/components/diagnosis/SectorListItem.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,6 @@\n .desktopNav,\n .desktopNav a,\n .accountLinks,\n-.recordsLink,\n .authLink,\n .authState,\n .authActions,\n@@ -167,7 +166,6 @@\n   justify-self: end;\n }\n \n-.recordsLink,\n .authLink {\n   gap: 7px;\n   color: var(--thorp-copy);\n@@ -180,10 +178,6 @@\n   padding-right: 16px;\n }\n \n-.recordsLink[aria-current='page'] {\n-  color: var(--thorp-accent-soft);\n-}\n-\n .authState {\n   justify-self: end;\n   padding-right: 16px;\n@@ -191,7 +185,6 @@\n   font-size: 0.76rem;\n }\n \n-.recordsLink:hover,\n .authLink:hover {\n   color: var(--thorp-accent-soft);\n }\n@@ -199,7 +192,6 @@\n .menuButton:focus-visible,\n .brand:focus-visible,\n .desktopNav a:focus-visible,\n-.recordsLink:focus-visible,\n .authLink:focus-visible,\n .authButton:focus-visible,\n .drawer button:focus-visible,\n@@ -354,11 +346,6 @@\n   line-height: 1.5;\n }\n \n-.drawerRecords {\n-  margin-top: 18px;\n-  border-top-color: var(--thorp-line);\n-}\n-\n @media (max-width: 1100px) {\n   .authButton {\n     width: 36px;\n@@ -384,7 +371,6 @@\n     gap: 10px;\n   }\n \n-  .recordsLink,\n   .authLink {\n     font-size: 0;\n   }\n@@ -401,7 +387,6 @@\n     font-size: 0;\n   }\n \n-  .recordsLink svg,\n   .authLink svg {\n     width: 20px;\n     height: 20px;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,11 @@\n import {\n+  BookOpen,\n   ChartNoAxesCombined,\n   FolderClock,\n-  Home,\n+  Gauge,\n   LogIn,\n   LogOut,\n   Menu,\n-  Play,\n   RefreshCw,\n   UserRound,\n   X,\n@@ -22,27 +22,47 @@ import { Link, useLocation } from 'react-router-dom'\n import { useAuth } from '@/auth/auth-context'\n import styles from './AppHeader.module.css'\n \n+/**\n+ * 첫 화면(`LandingHeader`)과 같은 메뉴 넷이다. 목적지도 같다.\n+ *\n+ * 첫 화면에서 메뉴를 눌러 들어온 화면의 헤더가 다른 메뉴를 보이면, 사용자는 한 번의 이동으로\n+ * 서비스의 구성이 통째로 바뀐 것처럼 겪는다.\n+ *\n+ * '대시보드'(`/dashboard`)와 '백테스트'(`/backtest`)는 메뉴에서 뺐다. 003·005가 완성되면\n+ * 대체될 임시 화면이라 언젠가 빠질 자리이기 때문이다. **두 경로 자체는 지우지 않았다.**\n+ */\n const navigationItems = [\n   {\n-    label: '홈',\n+    label: '전략 진단',\n+    description: '섹터와 비중을 골라 과거 성과를 같은 조건에서 비교합니다.',\n+    path: '/diagnosis/sectors',\n+    icon: Gauge,\n+  },\n+  {\n+    label: '시장 흐름',\n     description: '시장 흐름과 과거 유사 시장을 살펴봅니다.',\n     path: '/home',\n-    icon: Home,\n+    icon: ChartNoAxesCombined,\n   },\n   {\n-    label: '대시보드',\n-    description: '핵심 지표와 추천 전략을 빠르게 확인합니다.',\n-    path: '/dashboard',\n-    icon: ChartNoAxesCombined,\n+    label: '배우기',\n+    description: '투자 개념과 지표 읽는 법을 익힙니다.',\n+    path: '/learn',\n+    icon: BookOpen,\n   },\n   {\n-    label: '백테스트',\n-    description: '여러 투자 전략의 성과를 비교합니다.',\n-    path: '/backtest',\n-    icon: Play,\n+    label: '내 기록',\n+    description: '저장한 분석과 전략 검증 기록을 확인합니다.',\n+    path: '/records',\n+    icon: FolderClock,\n   },\n ]\n \n+/** 하위 경로(`/records/…`)에 있어도 그 메뉴를 현재 위치로 표시한다. */\n+function isCurrentPath(pathname: string, path: string): boolean {\n+  return pathname === path || pathname.startsWith(`${path}/`)\n+}\n+\n /** 모든 서비스 화면에서 주요 기능과 로그인 화면으로 이동할 수 있는 공통 탐색을 제공한다. */\n export function AppHeader() {\n   const location = useLocation()\n@@ -261,7 +281,7 @@ export function AppHeader() {\n           <nav className={styles.desktopNav} aria-label=\"주요 화면\">\n             {navigationItems.map((item) => {\n               const Icon = item.icon\n-              const isActive = location.pathname === item.path\n+              const isActive = isCurrentPath(location.pathname, item.path)\n \n               return (\n                 <Link\n@@ -276,17 +296,12 @@ export function AppHeader() {\n             })}\n           </nav>\n \n-          <div className={styles.accountLinks}>\n-            <Link\n-              className={styles.recordsLink}\n-              to=\"/records\"\n-              aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}\n-            >\n-              <FolderClock size={16} aria-hidden=\"true\" />\n-              내 기록\n-            </Link>\n-            {desktopAuthControl}\n-          </div>\n+          {/*\n+            '내 기록'은 위 메뉴에 있으므로 여기 같은 이름의 링크를 따로 두지 않는다.\n+            아래 로그인 표시는 목적지가 같아도 하는 일이 다르다. 메뉴 항목이 아니라 지금 누가\n+            로그인해 있는지를 알리는 자리다.\n+          */}\n+          <div className={styles.accountLinks}>{desktopAuthControl}</div>\n         </div>\n       </header>\n \n@@ -328,7 +343,7 @@ export function AppHeader() {\n               <div className={styles.drawerLinks}>\n                 {navigationItems.map((item, index) => {\n                   const Icon = item.icon\n-                  const isActive = location.pathname === item.path\n+                  const isActive = isCurrentPath(location.pathname, item.path)\n \n                   return (\n                     <Link\n@@ -351,21 +366,6 @@ export function AppHeader() {\n                 })}\n               </div>\n \n-              <Link\n-                className={`${styles.drawerLink} ${styles.drawerRecords}`}\n-                to=\"/records\"\n-                aria-current={location.pathname.startsWith('/records') ? 'page' : undefined}\n-                onClick={() => setIsMenuOpen(false)}\n-              >\n-                <span className={styles.drawerIcon}>\n-                  <FolderClock size={20} aria-hidden=\"true\" />\n-                </span>\n-                <span>\n-                  <strong>내 기록</strong>\n-                  <small>저장한 분석과 전략 검증 기록을 확인합니다.</small>\n-                </span>\n-              </Link>\n-\n               {authStatus === 'authenticated' && user ? (\n                 <div className={styles.drawerAuthActions}>\n                   <Link className={styles.drawerAuth} to=\"/records\" onClick={() => setIsMenuOpen(false)}>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "old_path": "frontend/src/components/navigation/AppHeader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+/**\n+ * KRX 자료 출처 표시 문구다. **한 곳에만 둔다.**\n+ *\n+ * 원칙 X가 \"한국거래소 자료를 쓰는 화면에는 출처를 표시한다\"를 조건 없이 요구하는데,\n+ * `GET /sectors` 응답에는 `sourceAttribution`이 없다. 그 필드는\n+ * `GET /sectors/{code}/instrument-profile`에만 있다(001의 섹터 조회 계약).\n+ *\n+ * 값을 지어내는 것이 아니라 001이 이미 고정 값처럼 내보내는 문구를 옮겨 적은 것이다.\n+ * 대표 상품 정보 패널에서는 이 상수가 아니라 응답의 `sourceAttribution`을 쓴다.\n+ *\n+ * **후속 조치**: `GET /sectors`가 같은 필드를 주면 이 파일을 지우고 응답 값으로 바꾼다.\n+ * 계약 변경은 001이 소유하므로 002에서 고치지 않는다(research.md 결정 8).\n+ */\n+export const KRX_SOURCE_ATTRIBUTION = '한국거래소 통계정보'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/attribution.ts",
+          "old_path": "frontend/src/diagnosis/attribution.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+import { describe, expect, it } from 'vitest'\n+import type { SectorClassification, SectorSummary } from '@/types/sector'\n+import { KRX_SOURCE_ATTRIBUTION } from './attribution'\n+import { compareSectorsForDisplay, sortSectorsForDisplay } from './sectorOrder'\n+\n+function sector(\n+  code: string,\n+  name: string,\n+  classification: SectorClassification,\n+  listedOn = '2020-01-02',\n+): SectorSummary {\n+  return {\n+    code,\n+    name,\n+    classification,\n+    representativeEtf: {\n+      instrumentId: `${code}.XKRX`,\n+      name: `KODEX ${name}`,\n+      listedOn,\n+      benchmarkIndex: `KRX ${name}`,\n+    },\n+  }\n+}\n+\n+const semiconductor = sector('SEMICONDUCTOR', '반도체', 'INDUSTRY')\n+const bank = sector('BANK', '은행', 'INDUSTRY')\n+const auto = sector('AUTO', '자동차', 'INDUSTRY')\n+const secondaryBattery = sector('BATTERY', '2차전지', 'THEME')\n+const ai = sector('AI', '인공지능', 'THEME')\n+\n+describe('섹터 표시 순서', () => {\n+  it('업종을 테마보다 먼저 둔다', () => {\n+    const ordered = sortSectorsForDisplay([ai, semiconductor, secondaryBattery, bank])\n+\n+    expect(ordered.map((item) => item.classification)).toEqual([\n+      'INDUSTRY',\n+      'INDUSTRY',\n+      'THEME',\n+      'THEME',\n+    ])\n+  })\n+\n+  it('같은 구분 안에서는 이름을 한국어 순으로 정렬한다', () => {\n+    const ordered = sortSectorsForDisplay([auto, semiconductor, bank])\n+\n+    expect(ordered.map((item) => item.name)).toEqual(['반도체', '은행', '자동차'])\n+  })\n+\n+  it('서버 응답의 배열 순서에 기대지 않는다', () => {\n+    const forward = sortSectorsForDisplay([semiconductor, bank, auto, ai, secondaryBattery])\n+    const reversed = sortSectorsForDisplay([secondaryBattery, ai, auto, bank, semiconductor])\n+\n+    expect(reversed.map((item) => item.code)).toEqual(forward.map((item) => item.code))\n+  })\n+\n+  it('같은 집합이면 어떤 순서로 넣어도 같은 순서가 나온다', () => {\n+    const input = [semiconductor, bank, auto, ai, secondaryBattery]\n+    const expected = sortSectorsForDisplay(input).map((item) => item.code)\n+\n+    // 잔여분이 표시 순서상 첫 번째 섹터에 붙으므로 이 안정성이 M3의 비중 계산을 떠받친다.\n+    const shuffles = [\n+      [ai, auto, bank, secondaryBattery, semiconductor],\n+      [bank, semiconductor, secondaryBattery, auto, ai],\n+      [secondaryBattery, semiconductor, ai, bank, auto],\n+    ]\n+\n+    for (const shuffle of shuffles) {\n+      expect(sortSectorsForDisplay(shuffle).map((item) => item.code)).toEqual(expected)\n+    }\n+  })\n+\n+  it('이름이 같아도 코드로 순서를 고정한다', () => {\n+    const first = sector('ALPHA', '같은이름', 'INDUSTRY')\n+    const second = sector('BETA', '같은이름', 'INDUSTRY')\n+\n+    expect(compareSectorsForDisplay(first, second)).toBeLessThan(0)\n+    expect(compareSectorsForDisplay(second, first)).toBeGreaterThan(0)\n+    expect(compareSectorsForDisplay(first, first)).toBe(0)\n+  })\n+\n+  it('한국어 이름 대조가 실행 환경에 따라 달라지지 않는지 고정한다', () => {\n+    // 로케일 자료를 갖추지 않은 런타임에서 순서가 조용히 달라지는 대신 이 검사가 실패한다.\n+    const names = ['헬스케어', '반도체', '2차전지', '은행', '자동차', '인터넷', 'IT']\n+    const ordered = sortSectorsForDisplay(\n+      names.map((name, index) => sector(`CODE${index}`, name, 'INDUSTRY')),\n+    )\n+\n+    // 숫자로 시작하는 이름이 앞, 한글이 그다음, 로마자가 뒤다. `ko` 대조의 성질이며\n+    // 이 기대값이 깨지면 실행 환경의 대조가 달라졌다는 뜻이다.\n+    expect(ordered.map((item) => item.name)).toEqual([\n+      '2차전지',\n+      '반도체',\n+      '은행',\n+      '인터넷',\n+      '자동차',\n+      '헬스케어',\n+      'IT',\n+    ])\n+  })\n+\n+  it('받은 배열을 제자리에서 바꾸지 않는다', () => {\n+    const input = [secondaryBattery, semiconductor]\n+    sortSectorsForDisplay(input)\n+\n+    expect(input.map((item) => item.code)).toEqual(['BATTERY', 'SEMICONDUCTOR'])\n+  })\n+})\n+\n+describe('출처 문구', () => {\n+  it('001이 내보내는 문구와 같은 값을 한 곳에 둔다', () => {\n+    expect(KRX_SOURCE_ATTRIBUTION).toBe('한국거래소 통계정보')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/sectorOrder.test.ts",
+          "old_path": "frontend/src/diagnosis/sectorOrder.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,55 @@\n+import type { SectorClassification, SectorSummary } from '@/types/sector'\n+\n+/**\n+ * 섹터의 표시 순서를 화면이 결정론적으로 정한다(research.md 결정 2).\n+ *\n+ * **서버 응답의 배열 순서에 기대지 않는다.** 001 계약이 `sectors` 배열의 정렬을 정하지 않아,\n+ * 응답 순서에 기대면 백엔드 구현이 바뀔 때 화면 규칙이 조용히 따라 바뀐다.\n+ *\n+ * 이 순서는 목록 표시만의 것이 아니다. M3의 동일 비중 초깃값이 나눠떨어지지 않을 때 남는\n+ * 잔여분을 **표시 순서상 첫 번째** 섹터에 몰아주므로, 같은 섹터 집합이면 사용자가 어떤 순서로\n+ * 골랐든 언제나 같은 순서가 나와야 한다.\n+ */\n+\n+/** 업종을 테마보다 먼저 둔다. FR-003이 요구한 업종/테마 구분을 목록 자체로 드러내기 위해서다. */\n+const classificationRank: Record<SectorClassification, number> = {\n+  INDUSTRY: 0,\n+  THEME: 1,\n+}\n+\n+/**\n+ * 섹터 코드(영문) 정렬보다 사용자가 항목을 찾기 쉽다.\n+ *\n+ * 옵션을 모두 적어 둔 까닭은 구현마다 다른 기본값을 물려받지 않기 위해서다. 정렬 순서를 M3의\n+ * 잔여분 자리가 그대로 쓰므로 실행 환경에 따라 순서가 달라지면 비중 계산까지 따라 달라진다.\n+ *\n+ * **남는 위험**: 옵션을 고정해도 로케일 자료(ICU)를 갖추지 않은 런타임에서는 `ko` 대조가\n+ * 요청한 대로 동작하지 않을 수 있다. 순서 규칙 자체는 research.md 결정 2가 소유하므로 여기서\n+ * 뒤집지 않고, `sectorOrder.test.ts`가 대표 이름 집합의 기대 순서를 고정해 그런 환경에서\n+ * 조용히 달라지는 대신 검사가 실패하게 한다.\n+ */\n+const koreanNameCollator = new Intl.Collator('ko', {\n+  usage: 'sort',\n+  sensitivity: 'variant',\n+  numeric: false,\n+  caseFirst: 'false',\n+  ignorePunctuation: false,\n+})\n+\n+/** 1차 키는 업종/테마 구분, 2차 키는 이름의 한국어 정렬이다. */\n+export function compareSectorsForDisplay(left: SectorSummary, right: SectorSummary): number {\n+  const byClassification =\n+    classificationRank[left.classification] - classificationRank[right.classification]\n+  if (byClassification !== 0) return byClassification\n+\n+  const byName = koreanNameCollator.compare(left.name, right.name)\n+  if (byName !== 0) return byName\n+\n+  // 이름이 같은 섹터가 둘 이상이어도 순서가 흔들리지 않게 코드로 마지막 자리를 고정한다.\n+  return left.code < right.code ? -1 : left.code > right.code ? 1 : 0\n+}\n+\n+/** 받은 배열을 건드리지 않고 표시 순서로 정렬한 새 배열을 돌려준다. */\n+export function sortSectorsForDisplay(sectors: readonly SectorSummary[]): SectorSummary[] {\n+  return [...sectors].sort(compareSectorsForDisplay)\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/sectorOrder.ts",
+          "old_path": "frontend/src/diagnosis/sectorOrder.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,169 @@\n+import { readdirSync, readFileSync } from 'node:fs'\n+import { dirname, resolve } from 'node:path'\n+import { fileURLToPath } from 'node:url'\n+import { describe, expect, it } from 'vitest'\n+\n+/**\n+ * 테스트 수집 경로가 조용히 빠지는 것을 막는 가드다.\n+ *\n+ * Vitest가 수집하는 파일은 `vite.config.ts`의 `test.include`가 정하는데 이 값이 허용 목록이라,\n+ * 목록에 걸리지 않는 `.test.ts`는 **실패하지 않고 그냥 수집되지 않는다.** `node --test`로 도는\n+ * 파일도 `package.json`의 `test:legacy` 인자 목록에 적힌 것만 실행된다. 두 목록 어디에도 걸리지\n+ * 않는 테스트 파일이 있으면 그 파일은 있으나 마나 하므로 여기서 실패시킨다.\n+ *\n+ * 이 파일의 확장자가 `.tsx`인 까닭은, 목록을 고치지 않아도 반드시 수집되는 패턴이\n+ * `src/**` + `*.test.tsx` 하나뿐이기 때문이다. 가드 자신이 수집되지 않으면 아무것도 지키지 못한다.\n+ */\n+\n+const frontendRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')\n+const sourceRoot = resolve(frontendRoot, 'src')\n+\n+/** 어느 운영체제에서든 같은 문자열로 비교하기 위해 경로 구분자를 슬래시로 맞춘다. */\n+function toPosix(value: string): string {\n+  return value.replace(/\\\\/g, '/')\n+}\n+\n+/** `src` 아래를 재귀로 훑어 확장자가 `.test.ts`인 파일의 상대 경로를 모은다. */\n+function collectPlainTypeScriptTests(directory: string = sourceRoot): string[] {\n+  const found: string[] = []\n+\n+  for (const entry of readdirSync(directory, { withFileTypes: true })) {\n+    const absolutePath = resolve(directory, entry.name)\n+\n+    if (entry.isDirectory()) {\n+      found.push(...collectPlainTypeScriptTests(absolutePath))\n+      continue\n+    }\n+\n+    if (entry.isFile() && entry.name.endsWith('.test.ts')) {\n+      found.push(toPosix(absolutePath.slice(frontendRoot.length + 1)))\n+    }\n+  }\n+\n+  return found\n+}\n+\n+type PatternMatcher = (relativePath: string) => boolean\n+\n+/**\n+ * 지금 쓰는 표현은 `dir/**` + `/*.ext`와 정확 경로 두 가지뿐이다. 그 둘만 해석하고,\n+ * **해석할 수 없는 형태가 들어오면 통과시키지 않고 예외를 던진다.** 모르는 패턴을 통과로\n+ * 처리하면 검사가 조용히 사라진다.\n+ */\n+export function compilePattern(pattern: string): PatternMatcher {\n+  const globToken = '**/*'\n+  const globIndex = pattern.indexOf(globToken)\n+\n+  if (globIndex === -1) {\n+    if (pattern.includes('*') || pattern.includes('{') || pattern.includes('?')) {\n+      throw new Error(`해석할 수 없는 수집 패턴이다: ${pattern}`)\n+    }\n+    return (relativePath) => relativePath === pattern\n+  }\n+\n+  const prefix = pattern.slice(0, globIndex)\n+  const suffix = pattern.slice(globIndex + globToken.length)\n+\n+  if (!prefix.endsWith('/') || prefix.includes('*') || suffix.includes('*') || suffix.includes('{')) {\n+    throw new Error(`해석할 수 없는 수집 패턴이다: ${pattern}`)\n+  }\n+\n+  return (relativePath) =>\n+    relativePath.startsWith(prefix) &&\n+    relativePath.endsWith(suffix) &&\n+    relativePath.length > prefix.length + suffix.length\n+}\n+\n+/**\n+ * `test.include` 값을 읽는다. 설정 모듈을 가져오는 쪽을 먼저 쓰고, 플러그인 실행이 막히면\n+ * 파일을 텍스트로 읽어 배열 리터럴을 뽑는다. **둘 다 실패하면 건너뛰지 않고 예외를 던진다.**\n+ */\n+async function readViteIncludePatterns(): Promise<string[]> {\n+  try {\n+    const configModule = (await import('../../vite.config')) as {\n+      default?: { test?: { include?: unknown } }\n+    }\n+    const include = configModule.default?.test?.include\n+\n+    if (Array.isArray(include) && include.every((value) => typeof value === 'string')) {\n+      return include as string[]\n+    }\n+  } catch {\n+    // 플러그인 실행이 막힌 경우다. 아래의 텍스트 해석으로 내려간다.\n+  }\n+\n+  const source = readFileSync(resolve(frontendRoot, 'vite.config.ts'), 'utf8')\n+  const arrayLiteral = /include:\\s*\\[([\\s\\S]*?)\\]/.exec(source)\n+\n+  if (!arrayLiteral) {\n+    throw new Error('vite.config.ts에서 test.include 배열을 읽지 못했다. 이 검사를 건너뛰지 않는다.')\n+  }\n+\n+  const patterns = [...arrayLiteral[1].matchAll(/'([^']+)'|\"([^\"]+)\"/g)].map(\n+    (match) => match[1] ?? match[2],\n+  )\n+\n+  if (patterns.length === 0) {\n+    throw new Error('vite.config.ts의 test.include가 비어 있다. 이 검사를 건너뛰지 않는다.')\n+  }\n+\n+  return patterns\n+}\n+\n+/** `test:legacy`가 `node --test`에 넘기는 파일 목록을 읽는다. */\n+function readLegacyTestFiles(): string[] {\n+  const manifest = JSON.parse(readFileSync(resolve(frontendRoot, 'package.json'), 'utf8')) as {\n+    scripts?: Record<string, string>\n+  }\n+  const script = manifest.scripts?.['test:legacy']\n+\n+  if (typeof script !== 'string') {\n+    throw new Error('package.json에 test:legacy 스크립트가 없다. 이 검사를 건너뛰지 않는다.')\n+  }\n+\n+  const files = script.split(/\\s+/).filter((token) => token.endsWith('.test.ts'))\n+\n+  if (files.length === 0) {\n+    throw new Error('test:legacy 인자에서 테스트 파일을 하나도 찾지 못했다.')\n+  }\n+\n+  return files\n+}\n+\n+describe('테스트 수집 경로', () => {\n+  it('src 아래의 .test.ts를 실제로 찾아낸다', () => {\n+    const files = collectPlainTypeScriptTests()\n+\n+    // 0개는 순회가 잘못되었다는 뜻이다. 빈 목록으로 통과시키면 아래 검사가 사라진다.\n+    expect(files.length).toBeGreaterThan(0)\n+  })\n+\n+  it('모든 .test.ts가 Vitest include나 test:legacy 목록 가운데 하나에 걸린다', async () => {\n+    const files = collectPlainTypeScriptTests()\n+    const matchers = [\n+      ...(await readViteIncludePatterns()).map(compilePattern),\n+      ...readLegacyTestFiles().map(compilePattern),\n+    ]\n+\n+    const uncollected = files.filter((file) => !matchers.some((matches) => matches(file)))\n+\n+    expect(uncollected).toEqual([])\n+  })\n+\n+  it('해석할 수 없는 형태의 패턴은 통과시키지 않고 실패시킨다', () => {\n+    expect(() => compilePattern('src/**/{a,b}.test.ts')).toThrow()\n+    expect(() => compilePattern('src/*.test.ts')).toThrow()\n+    expect(() => compilePattern('src/api/?.test.ts')).toThrow()\n+  })\n+\n+  it('알고 있는 두 형태를 바르게 해석한다', () => {\n+    const glob = compilePattern('src/**/*.test.tsx')\n+    expect(glob('src/pages/LandingPage.test.tsx')).toBe(true)\n+    expect(glob('src/pages/LandingPage.test.ts')).toBe(false)\n+    expect(glob('src/.test.tsx')).toBe(false)\n+\n+    const exact = compilePattern('src/api/auth.test.ts')\n+    expect(exact('src/api/auth.test.ts')).toBe(true)\n+    expect(exact('src/api/sectors.test.ts')).toBe(false)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/diagnosis/testCollection.guard.test.tsx",
+          "old_path": "frontend/src/diagnosis/testCollection.guard.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,169 @@\n+.page {\n+  min-height: 100svh;\n+  overflow-x: clip;\n+  background:\n+    linear-gradient(var(--thorp-line) 1px, transparent 1px),\n+    linear-gradient(90deg, var(--thorp-line) 1px, transparent 1px),\n+    var(--thorp-background);\n+  background-size: 72px 72px, 72px 72px, auto;\n+  color: var(--thorp-foreground);\n+}\n+\n+.main {\n+  width: min(100% - 40px, 760px);\n+  margin: 0 auto;\n+  padding: clamp(90px, 15vh, 160px) 0 80px;\n+}\n+\n+.title {\n+  margin: 0 0 12px;\n+  font-size: clamp(1.7rem, 4.4vw, 2.6rem);\n+  line-height: 1.1;\n+  letter-spacing: -0.04em;\n+}\n+\n+.lead {\n+  margin: 0 0 28px;\n+  color: var(--thorp-copy);\n+  font-size: clamp(0.92rem, 1.7vw, 1rem);\n+  line-height: 1.7;\n+}\n+\n+.loading {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.95rem;\n+}\n+\n+/* 아직 줄 것이 없는 상태의 한 문장과 다시 불러오기 행동 하나가 놓이는 자리다. */\n+.notice {\n+  display: flex;\n+  flex-direction: column;\n+  align-items: flex-start;\n+  gap: 14px;\n+  padding: 22px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 14px;\n+}\n+\n+.notice p {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.95rem;\n+  line-height: 1.7;\n+}\n+\n+.notice button {\n+  padding: 9px 16px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 999px;\n+  background: transparent;\n+  color: inherit;\n+  font: inherit;\n+  font-size: 0.88rem;\n+  cursor: pointer;\n+}\n+\n+.notice button:hover {\n+  border-color: currentColor;\n+}\n+\n+.catalog {\n+  display: flex;\n+  flex-direction: column;\n+  gap: 14px;\n+}\n+\n+.listTitle {\n+  margin: 0;\n+  font-size: 1.05rem;\n+  letter-spacing: -0.02em;\n+}\n+\n+/* 목록이 예시 대응표에서 왔다는 표시다. 비중 초깃값 예시 표시와는 다른 자리에 둔다. */\n+.sampleNotice {\n+  margin: 0;\n+  padding: 10px 14px;\n+  border: 1px dashed var(--thorp-line);\n+  border-radius: 10px;\n+  color: var(--thorp-copy);\n+  font-size: 0.86rem;\n+  line-height: 1.6;\n+}\n+\n+.list {\n+  display: grid;\n+  gap: 10px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+/* 360px에서도 한 줄로 눌려 넘치지 않게 좁아지면 두 줄로 쌓는다. */\n+.item {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: baseline;\n+  justify-content: space-between;\n+  gap: 6px 12px;\n+  padding: 14px 16px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 12px;\n+}\n+\n+.item [data-slot='heading'] {\n+  display: inline-flex;\n+  align-items: baseline;\n+  gap: 8px;\n+  min-width: 0;\n+}\n+\n+.item [data-slot='name'] {\n+  font-size: 0.98rem;\n+  letter-spacing: -0.01em;\n+}\n+\n+.item [data-slot='classification'] {\n+  padding: 2px 8px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: 999px;\n+  color: var(--thorp-copy);\n+  font-size: 0.72rem;\n+  white-space: nowrap;\n+}\n+\n+.item [data-slot='etf'] {\n+  display: inline-flex;\n+  align-items: baseline;\n+  gap: 6px;\n+  min-width: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.86rem;\n+}\n+\n+.item [data-slot='etf-label'] {\n+  font-size: 0.72rem;\n+  opacity: 0.75;\n+}\n+\n+.item [data-slot='etf-name'] {\n+  overflow-wrap: anywhere;\n+}\n+\n+.attribution {\n+  margin: 4px 0 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.78rem;\n+}\n+\n+@media (max-width: 600px) {\n+  .main {\n+    width: min(100% - 28px, 760px);\n+    padding-top: 72px;\n+  }\n+\n+  .item {\n+    flex-direction: column;\n+    align-items: flex-start;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "old_path": "frontend/src/pages/SectorSelectionPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,329 @@\n+import { render, screen, waitFor, within } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import type { SectorCatalogResult } from '@/api/sectors'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import type { SectorCatalog, SectorSummary } from '@/types/sector'\n+import { SectorSelectionPage } from './SectorSelectionPage'\n+\n+const apiMocks = vi.hoisted(() => ({ fetchSectorCatalog: vi.fn() }))\n+\n+vi.mock('@/api/sectors', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/sectors')>('@/api/sectors')\n+  return { ...actual, ...apiMocks }\n+})\n+\n+function sector(\n+  code: string,\n+  name: string,\n+  classification: SectorSummary['classification'],\n+): SectorSummary {\n+  return {\n+    code,\n+    name,\n+    classification,\n+    representativeEtf: {\n+      instrumentId: `${code}.XKRX`,\n+      name: `KODEX ${name}`,\n+      listedOn: '2018-09-12',\n+      benchmarkIndex: `KRX ${name}`,\n+    },\n+  }\n+}\n+\n+function catalog(isSample: boolean): SectorCatalog {\n+  return {\n+    mapVersion: 'SEM-2026-09-10-001',\n+    isSample,\n+    sectors: [\n+      sector('BATTERY', '2차전지', 'THEME'),\n+      sector('AUTO', '자동차', 'INDUSTRY'),\n+      sector('SEMICONDUCTOR', '반도체', 'INDUSTRY'),\n+    ],\n+  }\n+}\n+\n+/** AppHeader가 인증 상태를 읽으므로 화면 검증에 필요한 최소 컨텍스트만 준다. */\n+function renderPage() {\n+  const authValue: AuthContextValue = {\n+    status: 'anonymous',\n+    user: null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+\n+  return render(\n+    <MemoryRouter initialEntries={['/diagnosis/sectors']}>\n+      <AuthContext.Provider value={authValue}>\n+        <SectorSelectionPage />\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+function loaded(isSample: boolean): SectorCatalogResult {\n+  return { status: 'loaded', catalog: catalog(isSample) }\n+}\n+\n+const networkFailure: SectorCatalogResult = {\n+  status: 'failed',\n+  kind: 'network',\n+  code: null,\n+  message: '연결 실패',\n+  retryable: true,\n+}\n+\n+describe('SectorSelectionPage', () => {\n+  beforeEach(() => {\n+    vi.clearAllMocks()\n+  })\n+\n+  it('목록을 표시 순서대로 보인다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+\n+    const items = await screen.findAllByRole('listitem')\n+    // 업종이 먼저, 그 안에서 한국어 이름 순이다. 응답 배열 순서와 다르다.\n+    expect(items.map((item) => item.getAttribute('data-sector-code'))).toEqual([\n+      'SEMICONDUCTOR',\n+      'AUTO',\n+      'BATTERY',\n+    ])\n+  })\n+\n+  it('섹터 이름과 대표 ETF 이름을 함께 보인다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+\n+    const items = await screen.findAllByRole('listitem')\n+    expect(within(items[0]).getByText('반도체')).toBeTruthy()\n+    expect(within(items[0]).getByText('KODEX 반도체')).toBeTruthy()\n+  })\n+\n+  it('목록 역할을 명시해 스타일이 의미를 지우지 못하게 한다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+\n+    // `list-style: none`이 걸린 `<ul>`은 일부 브라우저·보조 기술 조합에서 목록 역할을 잃는다.\n+    const list = await screen.findByRole('list')\n+    expect(list.tagName).toBe('UL')\n+    expect(list.getAttribute('role')).toBe('list')\n+  })\n+\n+  it('화면 진입에 섹터 목록을 한 번만 부른다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+\n+    await screen.findAllByRole('listitem')\n+    expect(apiMocks.fetchSectorCatalog).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('isSample이 true일 때만 예시 대응표 표시가 보인다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(true))\n+    const { unmount } = renderPage()\n+\n+    expect(await screen.findByText(/예시 대응표/)).toBeTruthy()\n+    unmount()\n+\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+\n+    await screen.findAllByRole('listitem')\n+    expect(screen.queryByText(/예시 대응표/)).toBeNull()\n+  })\n+\n+  it('예시 표시와 비중 초깃값 예시 표시를 한 문장으로 합치지 않는다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(true))\n+    renderPage()\n+\n+    const sampleNotice = await screen.findByText(/예시 대응표/)\n+    // 비중 초깃값 예시 표시는 M3이 비중 입력 묶음의 머리에 따로 둔다.\n+    expect(sampleNotice.textContent).not.toMatch(/비중/)\n+  })\n+\n+  it('KRX 출처를 목록 화면에 표시한다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+\n+    expect(await screen.findByText(/한국거래소 통계정보/)).toBeTruthy()\n+  })\n+\n+  it('대응표 미발행에서 빈 목록도 오류 화면도 아닌 한 문장과 행동 하나를 보인다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue({ status: 'mapNotReady', message: '준비 중' })\n+    renderPage()\n+\n+    expect(await screen.findByRole('button', { name: '다시 불러오기' })).toBeTruthy()\n+    expect(screen.queryAllByRole('list')).toHaveLength(0)\n+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)\n+    expect(screen.queryAllByRole('alert')).toHaveLength(0)\n+  })\n+\n+  it('대응표 미발행 상태에서는 다음 단계로 가는 수단을 두지 않는다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue({ status: 'mapNotReady', message: '준비 중' })\n+    renderPage()\n+\n+    await screen.findByRole('button', { name: '다시 불러오기' })\n+    expect(screen.queryByRole('button', { name: /다음/ })).toBeNull()\n+    expect(screen.queryByRole('link', { name: /다음/ })).toBeNull()\n+  })\n+\n+  it('발행된 대응표에 섹터가 0개면 빈 목록 대신 한 문장과 행동 하나를 보인다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue({\n+      status: 'emptyCatalog',\n+      catalog: { mapVersion: 'SEM-2026-09-10-001', isSample: false, sectors: [] },\n+    })\n+    renderPage()\n+\n+    expect(await screen.findByRole('button', { name: '다시 불러오기' })).toBeTruthy()\n+    // 빈 `<ul>`도, 목록 제목도, 출처 문장만 남은 화면도 그리지 않는다.\n+    expect(screen.queryAllByRole('list')).toHaveLength(0)\n+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)\n+    expect(screen.queryByText(/한국거래소 통계정보/)).toBeNull()\n+  })\n+\n+  it('연결 실패에서도 같은 형태로 처리한다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(networkFailure)\n+    renderPage()\n+\n+    expect(await screen.findByRole('button', { name: '다시 불러오기' })).toBeTruthy()\n+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)\n+  })\n+\n+  it('다시 불러도 달라지지 않는 실패에는 행동을 두지 않는다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue({\n+      status: 'failed',\n+      kind: 'api',\n+      code: 'SECTOR_MAP_UNUSABLE',\n+      message: '대응표를 읽을 수 없다',\n+      retryable: false,\n+    })\n+    renderPage()\n+\n+    // 문장은 보이되 버튼은 없다. 눌러도 달라지지 않는 상태이기 때문이다.\n+    expect(await screen.findByRole('status')).toBeTruthy()\n+    expect(screen.queryByRole('button', { name: '다시 불러오기' })).toBeNull()\n+  })\n+\n+  it('일시적 실패와 영구적 실패의 문장이 서로 다르다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(networkFailure)\n+    const { unmount } = renderPage()\n+    const retryableMessage = (await screen.findByRole('status')).textContent\n+    unmount()\n+\n+    apiMocks.fetchSectorCatalog.mockResolvedValue({\n+      status: 'failed',\n+      kind: 'api',\n+      code: 'SECTOR_MAP_UNUSABLE',\n+      message: '대응표를 읽을 수 없다',\n+      retryable: false,\n+    })\n+    renderPage()\n+    const unretryableMessage = (await screen.findByText(/서버에 저장된/)).textContent\n+\n+    expect(unretryableMessage).not.toBe(retryableMessage)\n+  })\n+\n+  it('다시 불러오기를 누르면 목록을 한 번 더 받는다', async () => {\n+    apiMocks.fetchSectorCatalog\n+      .mockResolvedValueOnce(networkFailure)\n+      .mockResolvedValueOnce(loaded(false))\n+    const user = userEvent.setup()\n+    renderPage()\n+\n+    await user.click(await screen.findByRole('button', { name: '다시 불러오기' }))\n+\n+    expect(await screen.findAllByRole('listitem')).toHaveLength(3)\n+    await waitFor(() => expect(apiMocks.fetchSectorCatalog).toHaveBeenCalledTimes(2))\n+  })\n+\n+  it('공통 헤더의 메뉴가 첫 화면과 같은 넷이고 목적지도 같다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+    await screen.findAllByRole('listitem')\n+\n+    const navigation = screen.getByRole('navigation', { name: '주요 화면' })\n+    const links = within(navigation).getAllByRole('link')\n+\n+    expect(\n+      links.map((link) => [link.textContent, link.getAttribute('href')]),\n+    ).toEqual([\n+      ['전략 진단', '/diagnosis/sectors'],\n+      ['시장 흐름', '/home'],\n+      ['배우기', '/learn'],\n+      ['내 기록', '/records'],\n+    ])\n+  })\n+\n+  it('헤더에 같은 이름의 내 기록 링크를 둘 두지 않는다', async () => {\n+    apiMocks.fetchSectorCatalog.mockResolvedValue(loaded(false))\n+    renderPage()\n+    await screen.findAllByRole('listitem')\n+\n+    expect(screen.getAllByRole('link', { name: '내 기록' })).toHaveLength(1)\n+  })\n+\n+  it('불러오는 동안에도 빈 화면이 아니라 상태를 알린다', async () => {\n+    apiMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))\n+    renderPage()\n+\n+    expect(screen.getByRole('status').textContent).toContain('불러오는 중')\n+  })\n+\n+  it('불러오는 동안에는 다시 불러오기를 누를 수 없다', async () => {\n+    apiMocks.fetchSectorCatalog.mockReturnValue(new Promise(() => {}))\n+    renderPage()\n+\n+    // 요청이 겹칠 수 있는 첫 번째 길목을 화면 구조가 막는다. 앞선 요청이 끝나야 행동이 나타난다.\n+    expect(screen.queryByRole('button', { name: '다시 불러오기' })).toBeNull()\n+  })\n+\n+  it('다시 불러오면 앞선 요청을 취소한다', async () => {\n+    const signals: AbortSignal[] = []\n+    apiMocks.fetchSectorCatalog.mockImplementation((signal?: AbortSignal) => {\n+      if (signal) signals.push(signal)\n+      return Promise.resolve(networkFailure)\n+    })\n+\n+    renderPage()\n+    const retry = await screen.findByRole('button', { name: '다시 불러오기' })\n+    expect(signals).toHaveLength(1)\n+    expect(signals[0].aborted).toBe(false)\n+\n+    await userEvent.click(retry)\n+    await waitFor(() => expect(signals).toHaveLength(2))\n+\n+    // 요청을 정리하는 일은 화면이 사라질 때만 하는 것이 아니다. 다시 불러올 때마다 앞선 요청이\n+    // 먼저 취소되고 새 요청이 시작된다. 이 순서가 깨지면 앞선 응답이 뒤늦게 도착해 새 결과를\n+    // 덮을 수 있다.\n+    expect(signals[0].aborted).toBe(true)\n+    expect(signals[1].aborted).toBe(false)\n+  })\n+\n+  it('취소된 요청의 응답이 뒤늦게 와도 화면을 덮지 않는다', async () => {\n+    // Promise를 만드는 함수는 그 자리에서 실행되므로 이 값은 아래에서 반드시 채워져 있다.\n+    let settleSecond!: (result: SectorCatalogResult) => void\n+    const secondCall = new Promise<SectorCatalogResult>((resolve) => {\n+      settleSecond = resolve\n+    })\n+\n+    apiMocks.fetchSectorCatalog\n+      .mockImplementationOnce(() => Promise.resolve(networkFailure))\n+      .mockImplementationOnce(() => secondCall)\n+      .mockImplementationOnce(() => Promise.resolve(loaded(false)))\n+\n+    renderPage()\n+    await userEvent.click(await screen.findByRole('button', { name: '다시 불러오기' }))\n+\n+    // 두 번째 요청이 답하지 않는 사이에 화면을 다시 마운트해 세 번째 요청이 결과를 채우게 한다.\n+    const { unmount } = renderPage()\n+    await screen.findAllByRole('listitem')\n+\n+    // 취소된 두 번째 요청이 이제야 답한다. 그 값이 화면에 반영되면 목록이 사라진다.\n+    settleSecond(networkFailure)\n+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0))\n+\n+    unmount()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.test.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,153 @@\n+import { useCallback, useEffect, useMemo, useState } from 'react'\n+import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'\n+import { NotReadyNotice } from '@/components/common/NotReadyNotice'\n+import { SectorListItem } from '@/components/diagnosis/SectorListItem'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { KRX_SOURCE_ATTRIBUTION } from '@/diagnosis/attribution'\n+import { sortSectorsForDisplay } from '@/diagnosis/sectorOrder'\n+import styles from './SectorSelectionPage.module.css'\n+\n+/**\n+ * 전략 진단의 첫 화면이다. 섹터 목록을 받아 이름·대표 ETF 이름·업종/테마 구분과 함께 보인다.\n+ *\n+ * 조회 상태를 **모두 정상 화면으로** 처리한다. 불러오는 중 / 목록 / 발행됐지만 섹터 0개 /\n+ * 대응표 미발행 / 실패. 어느 경우에도 빈 목록이나 처리되지 않은 오류 화면으로 떨어지지 않는다\n+ * (FR-017, spec Edge Cases).\n+ *\n+ * 행동 버튼은 **다시 눌러 달라질 수 있는 상태에만** 준다(research.md 결정 6). 그 판정은 오류\n+ * 이름을 아는 조회 모듈이 `retryable`로 실어 온다. 저장된 대응표가 망가진 500처럼 다시 눌러도\n+ * 달라지지 않는 상태에서는 버튼을 두지 않는다 — 두면 사용자가 같은 버튼만 반복해 누르게 된다.\n+ *\n+ * 이 묶음은 **목록을 보이는 데까지**가 완결이다. 섹터를 고르는 체크박스와 비중 입력은 M3이,\n+ * 대표 상품 정보 펼침은 M5가, 다음 단계 버튼은 M4가 더한다.\n+ *\n+ * 화면 문구는 이 작업이 확정하지 않는다. 문장이 놓일 자리와 나타나는 조건까지만 만들었고\n+ * 문구는 UI 결정 항목이 정해질 때 채운다.\n+ */\n+export function SectorSelectionPage() {\n+  // null은 아직 결과가 없는 상태, 곧 불러오는 중이다.\n+  const [result, setResult] = useState<SectorCatalogResult | null>(null)\n+  const [reloadCount, setReloadCount] = useState(0)\n+\n+  useEffect(() => {\n+    const controller = new AbortController()\n+    let isCurrent = true\n+\n+    setResult(null)\n+    void fetchSectorCatalog(controller.signal).then((next) => {\n+      if (isCurrent) setResult(next)\n+    })\n+\n+    return () => {\n+      isCurrent = false\n+      controller.abort()\n+    }\n+  }, [reloadCount])\n+\n+  const reload = useCallback(() => setReloadCount((count) => count + 1), [])\n+\n+  // 서버 응답의 배열 순서에 기대지 않고 화면이 표시 순서를 정한다(research.md 결정 2).\n+  const orderedSectors = useMemo(\n+    () => (result?.status === 'loaded' ? sortSectorsForDisplay(result.catalog.sectors) : []),\n+    [result],\n+  )\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main} aria-labelledby=\"sector-selection-title\">\n+        <h1 id=\"sector-selection-title\" className={styles.title}>\n+          섹터 고르기\n+        </h1>\n+        <p className={styles.lead}>비교하고 싶은 섹터를 고릅니다.</p>\n+\n+        {result === null ? (\n+          <p className={styles.loading} role=\"status\">\n+            섹터 목록을 불러오는 중입니다.\n+          </p>\n+        ) : null}\n+\n+        {/*\n+          대응표 미발행과 연결 실패는 같은 표시 컴포넌트를 쓰고 문장만 다르다. 둘 다 다시\n+          시도하면 달라질 수 있는 상태이므로 행동 하나를 준다. 이 상태에서는 섹터를 고를 수\n+          없으므로 다음 단계로 가는 수단 자체를 두지 않는다(FR-017).\n+        */}\n+        {result?.status === 'mapNotReady' ? (\n+          <NotReadyNotice\n+            className={styles.notice}\n+            message=\"섹터 목록이 아직 준비 중입니다.\"\n+            action={{ label: '다시 불러오기', onAction: reload }}\n+          />\n+        ) : null}\n+\n+        {/*\n+          대응표는 발행되었는데 그 안에 섹터가 없는 경우다. 백엔드가 대응표 미발행과 일부러\n+          구분해 내보내므로 화면도 따로 알린다. 파이프라인이 항목을 채우면 달라지는 상태라\n+          다시 불러오기를 준다.\n+        */}\n+        {result?.status === 'emptyCatalog' ? (\n+          <NotReadyNotice\n+            className={styles.notice}\n+            message=\"섹터 목록이 아직 비어 있습니다.\"\n+            action={{ label: '다시 불러오기', onAction: reload }}\n+          />\n+        ) : null}\n+\n+        {/*\n+          실패는 두 갈래다. 다시 불러 달라질 수 있으면 행동을 주고, 서버 자료가 망가진 경우처럼\n+          달라지지 않으면 행동 없이 문장만 둔다. **문구는 이 작업이 확정하지 않는다.** 갈래와\n+          나타나는 조건까지만 만들고 문장은 UI 결정 항목이 정해질 때 채운다.\n+        */}\n+        {result?.status === 'failed' ? (\n+          <NotReadyNotice\n+            className={styles.notice}\n+            message={\n+              result.retryable\n+                ? '섹터 목록을 불러오지 못했습니다.'\n+                : '서버에 저장된 섹터 자료에 문제가 있어 지금은 목록을 보여드릴 수 없습니다.'\n+            }\n+            action={\n+              result.retryable ? { label: '다시 불러오기', onAction: reload } : undefined\n+            }\n+          />\n+        ) : null}\n+\n+        {result?.status === 'loaded' ? (\n+          <section className={styles.catalog} aria-labelledby=\"sector-list-title\">\n+            <h2 id=\"sector-list-title\" className={styles.listTitle}>\n+              섹터 목록\n+            </h2>\n+\n+            {/*\n+              목록이 예시 대응표에서 왔다는 표시다(FR-015). 이 문장은 FR-005의 \"비중 초깃값이\n+              예시\"라는 표시와 가리키는 대상이 다르므로 한 문장으로 합치지 않는다. 합치면\n+              SC-007 위반이다. 초깃값 쪽 표시는 M3이 비중 입력 묶음의 머리에 따로 둔다.\n+            */}\n+            {result.catalog.isSample ? (\n+              <p className={styles.sampleNotice}>\n+                이 섹터 목록은 아직 확정되지 않은 예시 대응표에서 왔습니다.\n+              </p>\n+            ) : null}\n+\n+            {/*\n+              `list-style: none`이 걸리면 Safari와 VoiceOver 조합에서 `<ul>`의 목록 역할이\n+              사라진다. 이 화면은 목록 의미에 기대고 있으므로(항목이 `<li>`다) 역할을 명시해\n+              보조 기술 사용자만 \"목록, 항목 몇 개\" 안내를 못 받는 일이 없게 한다.\n+            */}\n+            <ul className={styles.list} role=\"list\">\n+              {orderedSectors.map((sector) => (\n+                <SectorListItem key={sector.code} className={styles.item} sector={sector} />\n+              ))}\n+            </ul>\n+\n+            {/*\n+              KRX 자료를 쓰는 화면에는 출처를 표시한다(원칙 X). 대표 상품 정보 패널을 펼쳐야만\n+              보이는 구조는 목록만 보는 사용자에게 미표시와 같으므로 목록 화면에 둔다.\n+            */}\n+            <p className={styles.attribution}>출처: {KRX_SOURCE_ATTRIBUTION}</p>\n+          </section>\n+        ) : null}\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +1,5 @@\n-import type {\n-  ApiErrorEnvelope,\n-  ApiSuccessEnvelope,\n-  AuthenticatedUser,\n-  SignupResponse,\n-} from '@/types/auth'\n+import type { ApiErrorEnvelope, ApiSuccessEnvelope } from '@/types/api'\n+import type { AuthenticatedUser, SignupResponse } from '@/types/auth'\n \n export const authenticatedUser: AuthenticatedUser = {\n   userId: 7,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/test/authFixtures.ts",
+          "old_path": "frontend/src/test/authFixtures.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,73 @@\n+import type { AuthApiErrorCode, AuthFieldError } from './auth'\n+import type { SectorApiErrorCode } from './sector'\n+\n+/**\n+ * 백엔드가 **모든 응답에 두르는 공통 형식**이다. 특정 도메인의 자료 구조가 아니다.\n+ *\n+ * 원본은 `backend/.../common/web/response/ApiResponse.java`와 그 안의 `ErrorResponse`다.\n+ * 성공이면 `{ success: true, data, error: null }`, 실패면 `{ success: false, data: null, error }`.\n+ *\n+ * ## 의존 방향\n+ *\n+ * **공용 파일이 도메인 파일을 안다. 그 반대가 아니다.** `types/auth.ts`와 `types/sector.ts`는\n+ * 이 파일을 가져오지 않는다.\n+ *\n+ * 이 방향을 고른 까닭은 아는 오류 이름의 목록이 각 도메인에 흩어져 있기 때문이다. 반대로 두면\n+ * (도메인이 공용을 가져오면) 공용 파일이 도메인의 이름 목록을 스스로 다시 적어야 하고, 같은\n+ * 목록이 두 곳에 생겨 한쪽만 늘어난 채로 갈라진다 — 이 구조를 만들게 한 결함이 정확히 그것이었다.\n+ * 둘 다 가져오면 순환 참조가 되어 지금보다 나빠진다.\n+ *\n+ * 새 도메인이 오류 이름을 더할 때 고치는 파일은 자기 도메인 파일과 이 파일 둘이다.\n+ * **인증 파일은 고치지 않는다.**\n+ */\n+\n+/**\n+ * 지금 **알고 있는** 서버 오류 신호 이름이다. 도메인이 늘면 그 도메인의 union을 여기에 잇는다.\n+ *\n+ * 화면이 \"이 오류인가?\"를 물을 때 쓴다. 닫혀 있어서 자동완성이 되고 오타가 걸린다.\n+ */\n+export type ServiceApiErrorCode = AuthApiErrorCode | SectorApiErrorCode\n+\n+/**\n+ * 서버가 실제로 보내는 오류 이름이다. **열려 있다.**\n+ *\n+ * 목록을 닫아 두면 모르는 이름이 왔을 때 봉투를 읽는 쪽이 그 응답을 통째로 '예상 못한 것'으로\n+ * 떨어뜨리고 **서버가 보낸 안내 문구가 일반 문구로 바뀐다.** 다음 도메인이 자기 이름을 목록에\n+ * 더하는 것을 잊어도 빌드도 검사도 아무것도 실패하지 않으므로, 그 실수는 사용자가 잘못된 안내를\n+ * 받고 나서야 드러난다. `src/api/paramSearch.ts`가 같은 까닭으로 오류 이름을 열린 문자열로 두고\n+ * \"모르는 코드를 아는 코드로 접으면 화면이 잘못된 안내를 하게 된다\"고 적어 두었다.\n+ *\n+ * `string & Record<never, never>`는 문자열을 모두 받으면서도 위 union의 자동완성을 살려 두는\n+ * 표기다. 그냥 `string`으로 두면 알려진 이름의 자동완성이 사라진다.\n+ *\n+ * **담을 때는 열고 물을 때는 닫는다.** 값의 타입은 이것이고, 견주는 쪽은\n+ * `ServiceApiErrorCode`를 받는다(`api/client.ts`의 `isApiErrorCode`·`ApiClientError.is`).\n+ */\n+export type ApiErrorCode = ServiceApiErrorCode | (string & Record<never, never>)\n+\n+/**\n+ * 실패 봉투가 실어 오는 오류 본문이다.\n+ *\n+ * `fieldErrors`는 지금 인증 입력 검증만 쓰며 그래서 필드 이름이 인증의 union이다. 공용 형식이\n+ * 도메인 타입 하나를 아는 셈이라 깔끔하지 않지만, 이번 작업은 자리만 옮기고 동작을 바꾸지\n+ * 않는다. 다른 도메인이 같은 모양을 쓰게 되면 그때 필드 이름을 넓힌다.\n+ */\n+export type ApiError = {\n+  code: ApiErrorCode\n+  message: string\n+  fieldErrors?: AuthFieldError[]\n+}\n+\n+export type ApiSuccessEnvelope<T> = {\n+  success: true\n+  data: T\n+  error: null\n+}\n+\n+export type ApiErrorEnvelope = {\n+  success: false\n+  data: null\n+  error: ApiError\n+}\n+\n+export type ApiEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/api.ts",
+          "old_path": "frontend/src/types/api.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,13 @@\n+/**\n+ * 인증 도메인의 타입이다.\n+ *\n+ * **이 파일은 응답 봉투를 갖지 않는다.** 봉투와 서버 오류 이름의 공용 타입은 모든 도메인이 함께\n+ * 쓰는 것이라 `./api`에 있다. 그쪽이 이 파일을 가져오고 이 파일은 그쪽을 가져오지 않는다 —\n+ * 방향을 한쪽으로 고정해 순환 참조를 막는다. 까닭은 `types/api.ts`의 「의존 방향」에 적었다.\n+ *\n+ * 여기 남은 것은 인증에만 속하는 이름이다. 다른 도메인이 오류 이름을 더할 때 이 파일을 고칠\n+ * 일은 없다.\n+ */\n export const authApiErrorCodes = [\n   'INVALID_INPUT',\n   'DUPLICATE_EMAIL',\n@@ -27,26 +37,6 @@ export type AuthFieldError = {\n   message: string\n }\n \n-export type AuthApiError = {\n-  code: AuthApiErrorCode\n-  message: string\n-  fieldErrors?: AuthFieldError[]\n-}\n-\n-export type ApiSuccessEnvelope<T> = {\n-  success: true\n-  data: T\n-  error: null\n-}\n-\n-export type ApiErrorEnvelope = {\n-  success: false\n-  data: null\n-  error: AuthApiError\n-}\n-\n-export type ApiEnvelope<T> = ApiSuccessEnvelope<T> | ApiErrorEnvelope\n-\n export type EmailVerificationRequest = {\n   email: string\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/auth.ts",
+          "old_path": "frontend/src/types/auth.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,56 @@\n+/**\n+ * `GET /sectors` 응답을 camelCase로 1:1 옮긴 타입이다.\n+ *\n+ * 필드 정의의 원본은 001의 섹터 조회 계약(`specs/001-etf-market-data/contracts/sector-api.md`)이며\n+ * 002는 그 정의를 다시 쓰지 않는다.\n+ */\n+\n+/** 업종과 테마 두 가지다. 목록의 1차 표시 순서 키이기도 하다. */\n+export type SectorClassification = 'INDUSTRY' | 'THEME'\n+\n+/**\n+ * 섹터에 연결된 대표 ETF.\n+ *\n+ * 계약의 불변식이 \"모든 항목에 `representativeEtf`가 있다\"를 보장하므로 선택 값으로 풀지 않는다.\n+ * 없는 항목이 오면 그것은 계약 위반이며, 화면이 숨겨서 넘기지 않는다.\n+ */\n+export type RepresentativeEtf = {\n+  instrumentId: string\n+  name: string\n+  /** ISO 날짜 문자열(`YYYY-MM-DD`). 공통 비교 시작일 산출에 쓴다. */\n+  listedOn: string\n+  benchmarkIndex: string\n+}\n+\n+/** 섹터 목록의 한 항목. */\n+export type SectorSummary = {\n+  code: string\n+  name: string\n+  classification: SectorClassification\n+  representativeEtf: RepresentativeEtf\n+}\n+\n+/** 섹터 목록 한 벌. `isSample`은 **대응표 버전**이 예시인지를 가리킨다. */\n+export type SectorCatalog = {\n+  mapVersion: string\n+  isSample: boolean\n+  sectors: SectorSummary[]\n+}\n+\n+/**\n+ * 섹터 도메인이 내보내는 서버 오류 신호 이름이다.\n+ *\n+ * 값의 원본은 백엔드의 `SectorExceptionHandler`이며 그 파일에 있는 넷을 그대로 옮겼다.\n+ * 계약 문서(`contracts/sector-api.md`)의 오류 표에는 `SECTOR_MAP_UNUSABLE`이 빠져 있다.\n+ *\n+ * 이 목록을 공용 `ServiceApiErrorCode`에 잇는 쪽은 `./api`다. **이 파일은 `./api`를 가져오지\n+ * 않는다** — 공용이 도메인을 알고 도메인은 공용을 모르는 한 방향이라 순환 참조가 생기지 않는다.\n+ */\n+export const sectorApiErrorCodes = [\n+  'SECTOR_MAP_NOT_READY',\n+  'SECTOR_MAP_UNUSABLE',\n+  'SECTOR_NOT_FOUND',\n+  'INSTRUMENT_PROFILE_NOT_READY',\n+] as const\n+\n+export type SectorApiErrorCode = (typeof sectorApiErrorCodes)[number]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/sector.ts",
+          "old_path": "frontend/src/types/sector.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -57,6 +57,13 @@ const NotReadyPage = lazy(() =>\n   })),\n )\n \n+// 전략 진단의 첫 단계다. 섹터 목록을 받아 보이는 화면이며 접근 시점에 불러온다.\n+const SectorSelectionPage = lazy(() =>\n+  import('@/pages/SectorSelectionPage').then((module) => ({\n+    default: module.SectorSelectionPage,\n+  })),\n+)\n+\n /** 현재 경로에 맞는 페이지를 전환 애니메이션과 함께 렌더링한다. */\n function AnimatedRoutes() {\n   const location = useLocation()\n@@ -84,11 +91,8 @@ function AnimatedRoutes() {\n             <Route path=\"/param-search\" element={<ParamSearchPage />} />\n             {/* 배우기는 아직 화면이 없다. 메뉴에서 빼지 않고 준비 중 화면으로 받는다. */}\n             <Route path=\"/learn\" element={<NotReadyPage />} />\n-            {/*\n-              섹터·비중 선택 화면이 붙기 전까지만 준비 중 화면으로 받는다. 이 경로가 없으면\n-              '비중 비교하기'가 아래 path=\"*\" 규칙에 걸려 첫 화면으로 되돌아온다.\n-            */}\n-            <Route path=\"/diagnosis/sectors\" element={<NotReadyPage />} />\n+            {/* 첫 화면의 '비중 비교하기'가 닿는 자리다. 준비 중 화면을 대신한다. */}\n+            <Route path=\"/diagnosis/sectors\" element={<SectorSelectionPage />} />\n             <Route\n               path=\"/records/*\"\n               element={\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,16 @@ export default defineConfig({\n   },\n   test: {\n     environment: 'jsdom',\n-    include: ['src/**/*.test.tsx', 'src/api/auth.test.ts', 'src/auth/**/*.test.ts'],\n+    // 허용 목록이다. 여기에 걸리지 않는 테스트 파일은 실패하지 않고 조용히 수집되지 않으므로,\n+    // 새 `.test.ts`를 만들 때마다 이 목록을 함께 넓힌다.\n+    // `src/diagnosis/testCollection.guard.test.tsx`가 빠진 파일을 찾아 실패시킨다.\n+    include: [\n+      'src/**/*.test.tsx',\n+      'src/api/auth.test.ts',\n+      'src/api/sectors.test.ts',\n+      'src/auth/**/*.test.ts',\n+      'src/diagnosis/**/*.test.ts',\n+    ],\n     setupFiles: ['./src/test/setup.ts'],\n   },\n   server: {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -404,3 +404,27 @@ M1 ──> M2 ──> M3 ──> M4 ──> M5\n - 002는 `frontend/` 밖을 고치지 않는다. `backend/`·`worker/`·`data/`·`infra/`에 변경이 없다 (research.md 결정 4)\n - 구현 중 묶음 범위가 달라지면 그 사유와 새 구성을 MR 본문에 남긴다 (constitution 「Jira 연계」)\n - 화면 문구는 이 tasks가 정하지 않는다. 각 task는 문장이 놓일 자리와 나타나는 조건까지 만든다\n+\n+---\n+\n+## Phase 6: Convergence (M6: 앞 묶음이 남긴 정리)\n+\n+`/speckit-converge`가 M1·M2가 병합·커밋된 상태의 코드를 spec·plan·tasks와 맞대어 본 결과다. **M3~M5가 아직 없는 것은 예정된 순서이므로 여기 담지 않는다.** 아래 두 항목은 M1·M2를 하면서 tasks.md 밖에서 함께 넣은 변경이 남긴 뒷정리이며, 근거를 항목마다 적었다. 기존 T001~T023의 번호와 내용은 건드리지 않았다.\n+\n+검증 기준선(2026-09-16, 이 브랜치): `npm run lint` 오류 0(경고 19, 모두 기존 차트·UI 파일), `npm run build` 통과, `npm test` Vitest 29파일 189건 통과·`skipped` 0, `test:legacy` 13건 통과·`skipped` 0. `src/diagnosis/`의 테스트가 수집 목록에 있다(quickstart 시나리오 0 충족). 아래 두 항목을 마친 뒤에도 이 숫자가 줄지 않아야 한다.\n+\n+- [ ] T024 [M6] [US4] [FE] 첫 화면 소개 섹션의 행동 유도 목적지를 헤더 메뉴와 맞춘다 (`frontend/src/components/landing/LandingSections.tsx`, `frontend/src/components/landing/AlgorithmOrbit.tsx`, `frontend/src/pages/LandingPage.test.tsx`) · FR-001 / research.md 결정 5 (contradicts) · Jira 미발급\n+  - **남은 일이라고 판단한 근거**: 이 브랜치의 커밋 `80e1900`이 `AppHeader`에서 '대시보드'와 '백테스트'를 뺐고 그 사유를 \"003·005가 완성되면 대체될 임시 화면\"이라고 적었다. 그런데 같은 첫 화면이 여전히 그 두 화면을 소개 경로로 안내한다. `LandingSections.tsx:171`이 `/dashboard`로(\"시장 분석 보러 가기\"), `LandingSections.tsx:256`과 `AlgorithmOrbit.tsx:203`이 `/backtest`로 보낸다. 메뉴에서 뺀 화면을 첫 화면이 계속 권하면 두 판단이 서로를 무효로 만든다\n+  - 더 좁게 어긋난 자리가 하나 있다. 헤더의 '시장 흐름' 메뉴는 `/home`인데 첫 화면의 \"시장 분석 보러 가기\"는 `/dashboard`다. **같은 성격의 목적지가 둘로 갈렸다.** research.md 결정 5가 \"메뉴의 목적지는 이미 화면이 있으면 그 경로로 연결한다(시장 흐름은 `/home`)\"고 정한 자리다\n+  - 세 링크를 지울지, 목적지를 메뉴와 같은 곳으로 옮길지, 그대로 둘지는 이 task가 미리 정하지 않는다. **다만 그대로 두기로 하면 왜 메뉴와 다른 곳을 가리켜도 되는지를 MR 본문에 남긴다.** 커밋 `398748f`이 \"머리 영역을 지나야 닿는 자리라 '비중 비교하기'와 자리를 다투지 않는다\"고 이미 판단한 것은 **링크를 남길지**에 대한 판단이고, 이 task가 묻는 것은 **어디를 가리킬지**다. 둘은 다른 질문이다\n+  - `/dashboard`·`/backtest` 경로 자체는 지우지 않는다. 003·005가 소유할 자리다 (research.md 결정 5)\n+  - 테스트: `LandingPage.test.tsx`의 \"소개 섹션의 링크는 머리 영역을 지나야 나오므로 그대로 둔다\"가 지금 목적지를 고정하고 있다. 목적지를 옮기면 이 검사도 함께 옮긴다. 검사를 지우기만 하면 다음에 같은 어긋남이 조용히 돌아온다\n+- [ ] T025 [M6] [FE] 서비스 공용이 된 응답 봉투·오류 이름 타입을 인증 전용 파일에서 분리한다 (`frontend/src/types/api.ts` 신설, `frontend/src/types/auth.ts`, `frontend/src/types/sector.ts`, `frontend/src/api/client.ts`, `frontend/src/api/sectors.ts`) · plan 「Structure Decision」 / `frontend/CLAUDE.md` 폴더 규칙 (partial) · Jira 미발급\n+  - **남은 일이라고 판단한 근거**: 커밋 `1a5f483`이 오류 이름 목록을 인증 전용에서 서비스 공용으로 넓히면서 `ServiceApiErrorCode`·`ApiErrorCode`·`ApiEnvelope`·`ApiSuccessEnvelope`·`ApiErrorEnvelope`를 `src/types/auth.ts`에 그대로 두었다. 그 결과 **의존 방향이 꼬였다.** `types/auth.ts`가 `types/sector.ts`를 가져오고(`types/auth.ts:1`), 섹터 조회는 봉투를 얻으려고 `@/types/auth`를 가져온다(`api/sectors.ts:2`). 섹터 도메인이 인증 도메인 파일을 거쳐야 공용 봉투에 닿는다\n+  - `frontend/CLAUDE.md`의 폴더 규칙은 `src/types/`를 \"백엔드 DTO와 1:1 대응 타입\"으로 정했고, 봉투는 특정 도메인의 DTO가 아니라 `common/web`의 `ApiResponse`다([001 contracts/sector-api.md](../001-etf-market-data/contracts/sector-api.md)의 「공통 규칙」). 지금 자리는 규칙이 가리키는 자리가 아니다\n+  - **지금 고치는 편이 싸다.** M5의 T021이 `INSTRUMENT_PROFILE_NOT_READY`로 같은 경로를 한 번 더 쓰고, 003·005도 각자 조회를 만들 때 같은 import를 되풀이한다. 도메인이 늘수록 되돌리는 비용만 커진다\n+  - 옮기는 것은 **자리뿐이고 동작은 그대로 둔다.** 열린 `ApiErrorCode`와 닫힌 `ServiceApiErrorCode`를 나눈 구조(`1a5f483`이 세운 것)를 흔들지 않는다. `AuthApiErrorCode`·`AuthFieldError`·`AuthApiError`는 인증의 것이므로 `types/auth.ts`에 남긴다\n+  - 옮긴 뒤 `types/auth.ts`가 `types/sector.ts`를 가져오지 않게 된다. 새 도메인이 오류 이름을 더할 때 인증 파일을 고치지 않아도 되는지 함께 확인한다\n+  - 테스트: 새 검사를 만들기보다 기존 `src/api/sectors.test.ts`와 `src/api/auth.test.ts`가 그대로 통과하는지로 받는다. 타입 자리 이동이라 `npm run build`(`tsc -b`)가 실질적인 검사다\n+\n+**Checkpoint**: 첫 화면의 메뉴와 소개 섹션이 같은 곳을 가리키고, 공용 봉투 타입이 도메인 파일 밖에 있다. 위 검증 기준선의 숫자가 그대로다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/002-sector-weight-selection/tasks.md",
+          "old_path": "specs/002-sector-weight-selection/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2204060,
+      "head_commit_sha": "a565a051491aa8383326f8d046eec9b03efdded9",
+      "base_commit_sha": "d2570c6a05f25bff626593c44102904f5cb8fbb1",
+      "start_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "created_at": "2026-09-16T11:14:08.065+09:00",
+      "merge_request_id": 946125,
+      "state": "without_files",
+      "real_size": "22",
+      "patch_id_sha": "66e1cec58ff3e31a7ce5c00d7b05c246c991606e",
+      "commits": [
+        {
+          "id": "a565a051491aa8383326f8d046eec9b03efdded9",
+          "short_id": "a565a051",
+          "created_at": "2026-09-16T11:12:49.000+09:00",
+          "parent_ids": [
+            "a71d1e69d96d6eb13d6f33f26a877d41f470bb4c"
+          ],
+          "title": "docs(fe): spec 002에 앞 묶음이 남긴 정리 항목을 더한다",
+          "message": "docs(fe): spec 002에 앞 묶음이 남긴 정리 항목을 더한다\n\n구현을 명세와 맞대어 본 결과다. 요구사항 수준의 어긋남은 없었고, 작업\n목록 밖에서 함께 넣은 변경 둘이 남긴 뒷정리가 나왔다.\n\n첫 화면이 헤더 메뉴에서 뺀 화면을 계속 권하는 문제와, 공용이 된 응답\n형식이 인증 파일에 남아 있던 문제다. 뒤엣것은 이 MR에서 함께 정리했다.\n\n기존 항목의 번호와 내용은 건드리지 않고 덧붙이기만 했다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T11:12:49.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T11:12:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a565a051491aa8383326f8d046eec9b03efdded9"
+        },
+        {
+          "id": "a71d1e69d96d6eb13d6f33f26a877d41f470bb4c",
+          "short_id": "a71d1e69",
+          "created_at": "2026-09-16T11:12:49.000+09:00",
+          "parent_ids": [
+            "80e1900701301a73dabcea079788f7a5092f11d2"
+          ],
+          "title": "refactor(fe): 모든 도메인이 쓰는 응답 형식을 인증 파일 밖으로 옮긴다",
+          "message": "refactor(fe): 모든 도메인이 쓰는 응답 형식을 인증 파일 밖으로 옮긴다\n\n오류 이름 목록을 공용으로 넓히면서 응답 봉투와 오류 본문 타입을 인증\n전용 파일에 그대로 두었다. 그 결과 인증 파일이 섹터 파일을 가져오고\n섹터 조회는 봉투를 얻으려 인증 파일을 거치게 되어, 도메인 하나가 다른\n도메인을 지나야 공용 형식에 닿았다.\n\n공용 파일을 따로 두고 방향을 한쪽으로 정한다. 공용이 도메인을 알고\n도메인은 공용을 모른다. 아는 오류 이름의 목록이 각 도메인에 흩어져\n있어 합치는 자리가 도메인을 읽어야 하고, 반대로 두면 같은 목록이 두\n곳에 생겨 한쪽만 늘어난 채 갈라진다. 이 구조를 만들게 한 결함이 정확히\n그 모양이었다.\n\n이제 새 도메인이 오류 이름을 더할 때 자기 파일과 공용 파일만 고치면\n되고 인증 파일은 건드리지 않는다.\n\n자리만 옮기고 동작은 그대로다. 담을 때는 열고 물을 때는 닫는 구조가\n그대로 살아 있다.\n\nspec 002 T025. converge 평가 결과.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T11:12:49.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T11:12:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a71d1e69d96d6eb13d6f33f26a877d41f470bb4c"
+        },
+        {
+          "id": "80e1900701301a73dabcea079788f7a5092f11d2",
+          "short_id": "80e19007",
+          "created_at": "2026-09-16T10:26:23.000+09:00",
+          "parent_ids": [
+            "71c6ee39966bad2aa2fb28eaf3f0abacdbab0568"
+          ],
+          "title": "feat(fe): 모든 화면의 헤더 메뉴를 첫 화면과 같게 맞춘다",
+          "message": "feat(fe): 모든 화면의 헤더 메뉴를 첫 화면과 같게 맞춘다\n\n첫 화면에서 메뉴를 눌러 들어온 화면이 다른 메뉴를 보이고 있었다. 한 번의\n이동으로 서비스의 구성이 통째로 바뀐 것처럼 겪게 된다.\n\n'대시보드'와 '백테스트'는 메뉴에서 뺀다. 전략 선택과 결과 비교가\n완성되면 대체될 임시 화면이라 언젠가 빠질 자리다. 두 경로 자체는 지우지\n않았고 다른 화면에서 여전히 닿는다.\n\n'내 기록'이 메뉴에 들어가 이름까지 같은 링크가 둘이 되었으므로 하나를\n지운다. 로그인한 사람이 누구인지 알리는 자리는 목적지가 같아도 하는 일이\n달라 남긴다.\n\n하위 경로에서도 현재 위치 표시가 남게 한다.\n\nspec 002 FR-001.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:26:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:26:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/80e1900701301a73dabcea079788f7a5092f11d2"
+        },
+        {
+          "id": "71c6ee39966bad2aa2fb28eaf3f0abacdbab0568",
+          "short_id": "71c6ee39",
+          "created_at": "2026-09-16T10:26:23.000+09:00",
+          "parent_ids": [
+            "34b04128ceac49c18911bb5f2b7ba61518679eb3"
+          ],
+          "title": "feat(fe): 섹터 목록 화면을 연다",
+          "message": "feat(fe): 섹터 목록 화면을 연다\n\n첫 화면의 '비중 비교하기'가 준비 중 화면 대신 이 화면에 닿는다. 각\n항목에 섹터 이름·업종/테마 구분·대표 ETF 이름을 함께 보이고, 계산식과\n자료 공급원은 보이지 않는다.\n\n조회 상태 다섯 가지를 모두 정상 화면으로 처리한다. 불러오는 중, 목록,\n대응표 미발행, 섹터 0개, 실패다. 어느 경우에도 빈 목록이나 처리되지 않은\n오류 화면으로 떨어지지 않으며, 다시 눌러 달라질 수 있는 상태에만 행동을\n준다.\n\n예시 대응표에서 온 목록일 때만 그 사실을 표시한다. 이 문장은 비중\n초깃값이 예시라는 표시와 가리키는 대상이 다르므로 합치지 않는다.\n\n한국거래소 자료를 쓰는 화면이므로 출처를 목록에 표시한다. 펼쳐 보는 층에\n두면 목록만 보는 사용자에게는 표시하지 않은 것과 같다.\n\n목록 역할을 명시한다. 목록 표지를 없앤 목록은 일부 보조 기술에서 목록\n의미를 잃는데, 이 화면은 그 의미에 기대고 있다.\n\n섹터를 고르는 일과 비중 입력은 다음 묶음이 더한다.\n\nspec 002 FR-003, FR-011, FR-015, FR-017. T009, T010.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:26:23.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:26:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/71c6ee39966bad2aa2fb28eaf3f0abacdbab0568"
+        },
+        {
+          "id": "34b04128ceac49c18911bb5f2b7ba61518679eb3",
+          "short_id": "34b04128",
+          "created_at": "2026-09-16T10:26:22.000+09:00",
+          "parent_ids": [
+            "1a5f4833bdfb1c34281d56079f15f1df53e695f7"
+          ],
+          "title": "feat(fe): 섹터 목록을 받아 오고 표시 순서를 화면이 정한다",
+          "message": "feat(fe): 섹터 목록을 받아 오고 표시 순서를 화면이 정한다\n\n조회는 화면 진입마다 한 번이다. 대응표가 아직 발행되지 않은 상태와\n발행되었으나 섹터가 하나도 없는 상태를 예외가 아니라 화면이 분기할\n상태 값으로 돌려준다. 서버가 두 경우를 일부러 다른 신호로 구분해\n내보내므로 받는 자리도 한 곳에 둔다. 빈 목록을 정상 목록으로 그리는\n실수가 컴파일 단계에서 드러난다.\n\n다시 눌러도 달라지지 않는 실패를 따로 표시한다. 저장된 대응표가 망가진\n경우가 여기 해당하며, 연결이 끊긴 경우와 같은 화면을 보이면 사용자가\n버튼만 되풀이해 누르게 된다.\n\n표시 순서는 서버 응답의 배열 순서에 기대지 않고 화면이 정한다. 계약이\n정렬을 정하지 않아, 응답 순서에 기대면 서버 구현이 바뀔 때 화면 규칙이\n조용히 따라 바뀐다. 이 순서를 뒤 묶음의 비중 계산이 그대로 쓴다.\n\n한국어 이름 대조에 쓰는 설정을 모두 명시한다. 구현마다 다른 기본값을\n물려받지 않게 하려는 것이다.\n\nspec 002 FR-003, FR-017, research.md 결정 2·4·6·8. T006~T008.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:26:22.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:26:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/34b04128ceac49c18911bb5f2b7ba61518679eb3"
+        },
+        {
+          "id": "1a5f4833bdfb1c34281d56079f15f1df53e695f7",
+          "short_id": "1a5f4833",
+          "created_at": "2026-09-16T10:25:52.000+09:00",
+          "parent_ids": [
+            "9b053e099143ea9e9af673eaa39df8d6dea79f10"
+          ],
+          "title": "fix(fe): 모르는 오류 이름이 와도 서버가 보낸 안내 문구를 잃지 않는다",
+          "message": "fix(fe): 모르는 오류 이름이 와도 서버가 보낸 안내 문구를 잃지 않는다\n\n응답 봉투를 읽는 자리가 아는 이름인지 먼저 물어보고, 모르는 이름이면\n본문을 통째로 버리고 있었다. 그 결과 서버가 보낸 안내 문구가 사라지고\n화면에는 일반 문구가 대신 나갔다. 아무것도 실패하지 않은 채로 일어난다.\n\n섹터 조회가 이 문제에 걸렸다. 목록에 인증 쪽 이름만 있어 대응표가 아직\n없다는 신호를 화면이 구분하지 못했다.\n\n담을 때는 열고 물을 때는 닫는다. 서버가 보낸 값은 문자열 그대로 담아\n문구를 보존하고, 그 값을 아는 이름과 견주는 자리에서는 닫힌 목록을 받아\n오타가 컴파일에서 걸리게 한다. 도메인이 늘 때 목록에 이름을 더하는 것을\n잊어도 안내 문구가 사라지지 않는다.\n\n이 변경이 되돌려지면 실패하는 검사를 함께 둔다.\n\nspec 002 FR-017, research.md 결정 6.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:25:52.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:25:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1a5f4833bdfb1c34281d56079f15f1df53e695f7"
+        },
+        {
+          "id": "9b053e099143ea9e9af673eaa39df8d6dea79f10",
+          "short_id": "9b053e09",
+          "created_at": "2026-09-16T10:25:52.000+09:00",
+          "parent_ids": [
+            "d2570c6a05f25bff626593c44102904f5cb8fbb1"
+          ],
+          "title": "test(fe): 수집되지 않는 테스트 파일을 검사가 잡아내게 한다",
+          "message": "test(fe): 수집되지 않는 테스트 파일을 검사가 잡아내게 한다\n\nVitest가 수집하는 파일 목록은 허용 목록이라, 목록에 걸리지 않는 테스트는\n실패하지 않고 조용히 수집되지 않는다. 목록을 넓히고, 앞으로 같은 일이\n되풀이되지 않도록 빠진 파일을 찾아 실패시키는 검사를 둔다.\n\n이 검사는 확장자 규칙상 반드시 수집되는 형태로 만든다. 검사 자신이\n수집되지 않으면 아무것도 지키지 못한다. 해석할 수 없는 형태의 패턴이\n들어오거나 파일을 하나도 찾지 못해도 실패한다. 못 찾으면 통과시키는\n구조로 두면 검사가 사라진 것을 알 수 없다.\n\nspec 002 T005, quickstart 시나리오 0.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-16T10:25:52.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-16T10:25:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9b053e099143ea9e9af673eaa39df8d6dea79f10"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2814129": [],
+    "2814315": [
+      {
+        "id": 66038,
+        "name": "grin",
+        "user": {
+          "id": 30869,
+          "username": "wdg0434",
+          "public_email": "",
+          "name": "우동균",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+          "web_url": "https://lab.ssafy.com/wdg0434"
+        },
+        "created_at": "2026-09-16T11:35:48.674+09:00",
+        "updated_at": "2026-09-16T11:35:48.674+09:00",
+        "awardable_id": 2814315,
+        "awardable_type": "Note",
+        "url": null
+      }
+    ]
+  }
+}

@@ -1,0 +1,753 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942694,
+    "iid": 77,
+    "project_id": 1444456,
+    "title": "refac(fe)/193 design token alignment",
+    "description": "# 작업 내용 요약\n\nThorp 프론트엔드의 공통 디자인 토큰을 정리하고, 검정·초록 테마가 모든 화면에서 일관되게 적용되도록 개선했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* FE-193\n* Jira 링크 첨부 예정\n\n# 주요 변경 사항\n\n* 브랜드 색상과 테마 의미 토큰 분리\n* `.dark` 테마의 회색·파란색 충돌 제거\n* Pretendard·Geist·고정폭 글꼴 역할 정리\n* Focus Ring과 주요 버튼 전경색 공통 토큰 적용\n* 랜딩·차트·shadcn 색상을 Thorp 토큰과 연결\n* 향후 Light Theme 추가가 가능한 토큰 구조 마련\n\n# 테스트\n\n* 테스트 56개 통과\n* Lint 오류 0개\n* Production Build 성공\n* 데스크톱·360px 주요 화면 렌더링 확인\n* 색상 대비 WCAG AA 충족\n* `git diff --check` 통과\n\n# 리뷰 포인트\n\n* 화면 구조와 기능 변경 없이 색상·글꼴·포커스 토큰만 정리했습니다.\n* 실제 Light Theme와 테마 전환 기능은 이번 작업에서 제외했습니다.\n* 기존 차트 관련 Lint 경고 19개는 이번 변경과 무관합니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T10:56:37.821+09:00",
+    "updated_at": "2026-09-14T15:01:40.114+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-14T11:07:34.669+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/193-design-token-alignment",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea",
+    "merge_commit_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T10:56:38.635+09:00",
+    "reference": "!77",
+    "references": {
+      "short": "!77",
+      "relative": "!77",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!77"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/77",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942694,
+    "iid": 77,
+    "project_id": 1444456,
+    "title": "refac(fe)/193 design token alignment",
+    "description": "# 작업 내용 요약\n\nThorp 프론트엔드의 공통 디자인 토큰을 정리하고, 검정·초록 테마가 모든 화면에서 일관되게 적용되도록 개선했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* FE-193\n* Jira 링크 첨부 예정\n\n# 주요 변경 사항\n\n* 브랜드 색상과 테마 의미 토큰 분리\n* `.dark` 테마의 회색·파란색 충돌 제거\n* Pretendard·Geist·고정폭 글꼴 역할 정리\n* Focus Ring과 주요 버튼 전경색 공통 토큰 적용\n* 랜딩·차트·shadcn 색상을 Thorp 토큰과 연결\n* 향후 Light Theme 추가가 가능한 토큰 구조 마련\n\n# 테스트\n\n* 테스트 56개 통과\n* Lint 오류 0개\n* Production Build 성공\n* 데스크톱·360px 주요 화면 렌더링 확인\n* 색상 대비 WCAG AA 충족\n* `git diff --check` 통과\n\n# 리뷰 포인트\n\n* 화면 구조와 기능 변경 없이 색상·글꼴·포커스 토큰만 정리했습니다.\n* 실제 Light Theme와 테마 전환 기능은 이번 작업에서 제외했습니다.\n* 기존 차트 관련 Lint 경고 19개는 이번 변경과 무관합니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T10:56:37.821+09:00",
+    "updated_at": "2026-09-14T15:01:40.114+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-14T11:07:34.669+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(fe)/193-design-token-alignment",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "♻️ Refactor",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea",
+    "merge_commit_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T10:56:38.635+09:00",
+    "reference": "!77",
+    "references": {
+      "short": "!77",
+      "relative": "!77",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!77"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/77",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "19",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "head_sha": "a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea",
+      "start_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "698e51eba6219718986bb4bdd449c15bd11ee083",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800248,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T10:56:37.988+09:00",
+          "updated_at": "2026-09-14T10:56:37.997+09:00",
+          "system": true,
+          "noteable_id": 942694,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 77,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fc85586063b9841461bc4c2dc838fd78e9ef1a1a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800255,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>a410a99a - refactor(fe): Thorp 디자인 토큰과 테마 정합성 개선</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/77/diffs?diff_id=2192497&start_sha=2881b76fde4c7602646f067477e861af7c917812)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T10:57:24.219+09:00",
+          "updated_at": "2026-09-14T10:57:24.223+09:00",
+          "system": true,
+          "noteable_id": 942694,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 77,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "15f1785c1a0301a56bdaeb468af5e383ea37f190",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800260,
+          "type": null,
+          "body": "marked this merge request as **ready**",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T10:58:38.363+09:00",
+          "updated_at": "2026-09-14T10:58:38.366+09:00",
+          "system": true,
+          "noteable_id": 942694,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 77,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7f08dcabf7e9bb09150907a15e8dd92d6b1fe401",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800350,
+          "type": null,
+          "body": "mentioned in commit 5c5c585ef033ea8535dd18c594e865797c5b673c",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-14T11:07:34.895+09:00",
+          "updated_at": "2026-09-14T11:07:34.914+09:00",
+          "system": true,
+          "noteable_id": 942694,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 77,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cc316a1f089a40e4fe57c9cb9c3aa8063823d60c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802450,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\"><span class=\"idiff left deletion\">R</span>efac<span class=\"idiff right deletion\">tor</span>(fe)/193 design token alignment</code> to <code class=\"idiff\"><span class=\"idiff left right addition\">r</span>efac(fe)/193 design token alignment</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:01:40.201+09:00",
+          "updated_at": "2026-09-14T15:01:40.206+09:00",
+          "system": true,
+          "noteable_id": 942694,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 77,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2192497,
+      "head_commit_sha": "a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea",
+      "base_commit_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "start_commit_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "created_at": "2026-09-14T10:57:23.934+09:00",
+      "merge_request_id": 942694,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "5eb525f1acefcd189d334a3e1e1ad875885e0c31"
+    },
+    {
+      "id": 2192490,
+      "head_commit_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "base_commit_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "start_commit_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "created_at": "2026-09-14T10:56:38.192+09:00",
+      "merge_request_id": 942694,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2192497,
+      "head_commit_sha": "a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea",
+      "base_commit_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "start_commit_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "created_at": "2026-09-14T10:57:23.934+09:00",
+      "merge_request_id": 942694,
+      "state": "collected",
+      "real_size": "19",
+      "patch_id_sha": "5eb525f1acefcd189d334a3e1e1ad875885e0c31",
+      "commits": [
+        {
+          "id": "a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea",
+          "short_id": "a410a99a",
+          "created_at": "2026-09-14T10:57:16.000+09:00",
+          "parent_ids": [
+            "2881b76fde4c7602646f067477e861af7c917812"
+          ],
+          "title": "refactor(fe): Thorp 디자인 토큰과 테마 정합성 개선",
+          "message": "refactor(fe): Thorp 디자인 토큰과 테마 정합성 개선\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-14T10:57:16.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-14T10:57:16.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a410a99aa80e43d43dfbbd53b82d7f638cc9f1ea"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -33,6 +33,8 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n \n | 토큰 | 현재 값 | 용도 |\n |---|---:|---|\n+| `--thorp-brand-primary` | `rgb(3 199 90)` | 테마와 무관한 Thorp 브랜드 원색 |\n+| `--thorp-brand-soft` | `#86f2a8` | 브랜드 보조 원색 |\n | `--thorp-background` | `#030805` | 페이지 최하단 배경 |\n | `--thorp-surface` | `#07110b` | 내비게이션, 입력, 기본 표면 |\n | `--thorp-surface-raised` | `#0b1710` | 패널, 팝오버, 떠 있는 표면 |\n@@ -42,15 +44,19 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n | `--thorp-muted` | `#718278` | 메타데이터, 비활성 정보 |\n | `--thorp-line` | `rgb(134 242 168 / 14%)` | 약한 구분선과 격자 |\n | `--thorp-line-strong` | `rgb(134 242 168 / 24%)` | 입력 테두리와 강한 경계 |\n-| `--thorp-accent` | `rgb(3 199 90)` | 핵심 행동, 선택, 브랜드 |\n-| `--thorp-accent-soft` | `#86f2a8` | 어두운 배경 위 강조 텍스트 |\n+| `--thorp-accent` | `var(--thorp-brand-primary)` | 핵심 행동과 현재 테마의 강조색 |\n+| `--thorp-accent-soft` | `var(--thorp-brand-soft)` | 어두운 배경 위 강조 텍스트 |\n | `--thorp-accent-muted` | `rgb(3 199 90 / 12%)` | 선택 배경과 약한 강조 |\n+| `--thorp-action-foreground` | `#021108` | 밝은 주요 행동 표면 위 전경 |\n | `--thorp-positive` | `#63dc8a` | 긍정 상태와 상승 의미 |\n | `--thorp-negative` | `#ef8a68` | 부정 상태, 하락, 오류 |\n | `--thorp-warning` | `#e8bd72` | 경고, 주의, 위험 상태 |\n | `--thorp-neutral` | `#8fa198` | 방향성이 없는 변화 |\n | `--thorp-shadow` | `0 22px 58px rgb(0 0 0 / 34%)` | 실제로 떠 있어야 하는 표면 |\n \n+글꼴은 `--thorp-font-body`, `--thorp-font-display`, `--thorp-font-mono`로 역할을 구분한다. 포커스는\n+`--thorp-focus-outline*`, `--thorp-focus-offset*`, `--thorp-focus-shadow*` 토큰을 사용한다.\n+\n ### 2.2 표면과 텍스트 계층\n \n ```text\n@@ -66,8 +72,8 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n \n - 표면을 구분할 때 먼저 `--thorp-line`과 간격을 사용한다.\n - 배경 단계가 꼭 필요한 입력, 팝오버, 상태 메시지에만 별도 표면색을 사용한다.\n-- 핵심 초록색 위의 텍스트는 현재 `#021108`을 사용한다. 공통 의미는 Tailwind의\n-  `--primary-foreground`에 연결되어 있다.\n+- 핵심 초록색 위의 텍스트는 `--thorp-action-foreground`를 사용한다. Tailwind의\n+  `--primary-foreground`도 이 토큰을 참조한다.\n - 본문에 `--thorp-muted`를 사용할 때는 작은 크기와 낮은 대비가 겹치지 않도록 확인한다.\n \n ### 2.3 상태 색상\n@@ -87,10 +93,11 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n \n ### 3.1 글꼴\n \n-- 전역 기본 글꼴은 `Pretendard`, 시스템 UI 글꼴 순서다.\n-- Tailwind의 `--font-sans`와 랜딩 페이지는 `Geist Variable`을 우선 사용한다.\n+- 전역 본문은 `--thorp-font-body`의 `Pretendard`와 시스템 UI 글꼴 순서를 사용한다.\n+- 랜딩처럼 큰 메시지가 중심인 화면은 `--thorp-font-display`의 `Geist Variable`을 사용한다.\n+- Tailwind의 `--font-sans`와 `--font-heading`은 각각 본문과 디스플레이 토큰을 참조한다.\n - 수치 표와 지표 값은 `font-variant-numeric: tabular-nums`를 사용해 자릿수를 정렬한다.\n-- 차트 축과 특정 시장 수치는 현재 `ui-monospace`, `SFMono-Regular`, `Consolas`, `monospace`를 사용한다.\n+- 차트 축과 특정 시장 수치는 `--thorp-font-mono`를 사용한다.\n - 한 컴포넌트 안에서 장식 목적 없이 서로 다른 본문 글꼴을 섞지 않는다.\n \n ### 3.2 현재 확인된 계층\n@@ -238,7 +245,8 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n - 입력, 버튼, 링크의 짧은 전환은 주로 `160ms`~`220ms`다.\n - 스크롤 헤더의 위치와 모서리 전환은 약 `220ms`~`280ms`다.\n - 콘텐츠 Reveal은 약 `900ms`, 배경 호흡과 자동 순환은 `4s`~`38s` 범위의 장식 모션을 사용한다.\n-- React 기반 복합 애니메이션은 현재 설치된 `motion/react`를 우선 사용한다.\n+- React 기반 복합 애니메이션은 현재 설치된 `motion/react`를 우선 사용하고, `App.tsx`의 최상위\n+  `MotionConfig reducedMotion=\"user\"` 설정을 공유한다.\n \n ### 8.2 사용 원칙\n \n@@ -261,6 +269,20 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n - 성공·오류·상승·하락을 색만으로 구분하지 않는다.\n - CSS 색상값만 보고 대비 준수를 단정하지 않고 변경한 조합을 실제 도구와 화면에서 확인한다.\n \n+### 9.1 현재 테마 대비 확인\n+\n+FE-193에서 아래 대표 조합을 WCAG 상대 휘도 방식으로 확인했다. **일반 텍스트 기준인 4.5:1을 모두 충족한다.**\n+\n+| 조합 | 대비율 |\n+|---|---:|\n+| `--thorp-foreground` / `--thorp-background` | `18.61:1` |\n+| `--thorp-copy` / `--thorp-background` | `9.43:1` |\n+| `--thorp-muted` / `--thorp-background` | `4.96:1` |\n+| `--thorp-action-foreground` / `--thorp-accent` | `8.58:1` |\n+| `--thorp-accent-soft` / `--thorp-background` | `14.68:1` |\n+| 오류색 / `--thorp-background` | `7.91:1` |\n+| 경고색 / `--thorp-background` | `12.02:1` |\n+\n ## 10. 반응형 기준\n \n - 현재 레이아웃 전환은 주로 `1050px`~`1180px`, `720px`~`900px`, `420px`~`600px` 구간에서 일어난다.\n@@ -289,34 +311,24 @@ Thorp는 **검정에 가까운 짙은 녹색 바탕과 선명한 초록색을 \n \n ## 12. 정리 필요\n \n-다음 항목은 현재 코드에서 일관된 단일 기준을 확인할 수 없어 이 문서에서 임의로 확정하지 않는다.\n+FE-193에서 `.dark`의 회색·파란색 재정의, 랜딩의 공통 의미 색상 중복, 글꼴 역할, 포커스 토큰과\n+주요 행동 전경을 정리했다. 랜딩의 Glow·Gradient 등 장식 전용 색은 의도적으로 유지한다. 다음 항목은\n+아직 일관된 단일 기준을 확인할 수 없어 임의로 확정하지 않는다.\n \n-1. **`.dark` 토큰 충돌**: `index.css`의 기본 Thorp 토큰은 검정·초록 계열이지만 `.dark`는 회색 계열과\n-   파란색 Sidebar Primary를 다시 정의한다. `.dark`의 실제 사용 여부를 확인한 뒤 Thorp 토큰과 통합해야 한다.\n-2. **랜딩 전용 색상 중복**: `LandingPage.module.css`의 `--landing-*`와 다수의 하드코딩 색상이\n-   `--thorp-*`와 의미상 겹친다. 시각 효과용 고유 색과 공통 의미 색을 구분해 정리해야 한다.\n-3. **글꼴 역할 중복**: 전역은 Pretendard, Tailwind와 랜딩은 Geist 우선이다. 제목과 본문에 적용할\n-   공식 글꼴 역할이 아직 공통 토큰으로 분리되어 있지 않다.\n-4. **타이포그래피 단계 과다**: `0.62rem`~`0.78rem` 사이에 유사한 크기가 다수 존재한다. 접근성 검증과\n+1. **타이포그래피 단계 과다**: `0.62rem`~`0.78rem` 사이에 유사한 크기가 다수 존재한다. 접근성 검증과\n    함께 공통 단계로 줄일 필요가 있다.\n-5. **간격 토큰 부재**: 반복 간격이 숫자로 직접 작성되어 있으나 공통 Spacing Token은 없다.\n+2. **간격 토큰 부재**: 반복 간격이 숫자로 직접 작성되어 있으나 공통 Spacing Token은 없다.\n    실제 반복 빈도와 화면 밀도를 검토한 뒤 별도 작업으로 정해야 한다.\n-6. **컨테이너 폭 분산**: `1320px`, `1400px`, `1440px`, `1520px`이 화면별로 사용된다. 목적에 따른\n+3. **컨테이너 폭 분산**: `1320px`, `1400px`, `1440px`, `1520px`이 화면별로 사용된다. 목적에 따른\n    차이인지 과거 구현 차이인지 확인하기 전에는 일괄 통일하지 않는다.\n-7. **브레이크포인트 분산**: `420px`부터 `1180px`까지 많은 값이 사용된다. 기존 화면을 깨지 않도록\n+4. **브레이크포인트 분산**: `420px`부터 `1180px`까지 많은 값이 사용된다. 기존 화면을 깨지 않도록\n    시각 회귀 검증과 함께 공통 구간을 정해야 한다.\n-8. **모서리 값 분산**: `3px`~`13px`와 여러 Pill 값이 혼재한다. 정보 패널과 떠 있는 Overlay를 구분한\n+5. **모서리 값 분산**: `3px`~`13px`와 여러 Pill 값이 혼재한다. 정보 패널과 떠 있는 Overlay를 구분한\n    뒤 의미 토큰 도입을 검토한다.\n-9. **포커스 링 반복**: 유사한 초록색 outline과 shadow가 여러 CSS Module에 하드코딩되어 있다.\n-   공통 포커스 토큰 후보지만 실제 배경별 대비를 먼저 검증해야 한다.\n-10. **모션 전역 설정 불일치**: 가이드에는 최상위 `MotionConfig` 사용을 권장하지만 현재 `main.tsx`에는\n-    해당 설정이 없다. CSS의 Reduced Motion 대응과 React Motion 설정을 함께 정리해야 한다.\n-11. **터치 영역 최소 기준 미확정**: 현재 조작 요소 높이는 약 `28px`~`48px`로 다양하다. 모바일 접근성에\n+6. **터치 영역 최소 기준 미확정**: 현재 조작 요소 높이는 약 `28px`~`48px`로 다양하다. 모바일 접근성에\n     사용할 팀 공통 최소값은 별도 합의가 필요하다.\n-12. **색상 대비 실측 기록 부재**: 현재 토큰의 역할은 정의되어 있지만 조합별 대비 측정 결과는 문서화되어\n-    있지 않다. 특히 작은 `--thorp-muted` 텍스트를 우선 확인해야 한다.\n \n-이 항목은 FE-191에서 코드를 변경하지 않는다. 이후 정리 작업은 기능 변경과 분리된 Jira Task와 브랜치로\n+남은 항목은 기능 변경과 분리된 Jira Task와 브랜치로\n 진행하고, 관련 화면의 시각 회귀와 접근성 검증을 함께 수행한다.\n \n ## 13. 신규 화면 체크리스트\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/docs/design-system.md",
+          "old_path": "frontend/docs/design-system.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,7 +35,7 @@\n .field input:focus-visible {\n   border-color: var(--thorp-accent);\n   background: var(--thorp-surface);\n-  box-shadow: 0 0 0 3px rgb(3 199 90 / 16%);\n+  box-shadow: var(--thorp-focus-shadow-subtle);\n }\n \n .field input[aria-invalid='true'] {\n@@ -104,7 +104,7 @@\n .submitButton {\n   border: 1px solid var(--thorp-accent);\n   background: var(--thorp-accent);\n-  color: #021108;\n+  color: var(--thorp-action-foreground);\n }\n \n .secondaryButton {\n@@ -125,8 +125,8 @@\n \n .submitButton:focus-visible,\n .secondaryButton:focus-visible {\n-  outline: 3px solid rgb(3 199 90 / 30%);\n-  outline-offset: 3px;\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n }\n \n .submitButton:disabled,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/auth/AuthForm.module.css",
+          "old_path": "frontend/src/components/auth/AuthForm.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -58,8 +58,8 @@\n \n .strategyButton:focus-visible {\n   border-radius: 4px;\n-  outline: 2px solid var(--thorp-accent);\n-  outline-offset: 3px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset);\n }\n \n .dot,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/ResultTable.module.css",
+          "old_path": "frontend/src/components/backtest/ResultTable.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,8 +24,8 @@\n }\n \n .strategy:focus-visible {\n-  outline: 3px solid rgb(3 199 90 / 26%);\n-  outline-offset: 2px;\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset-compact);\n }\n \n .marker {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/backtest/StrategySelector.module.css",
+          "old_path": "frontend/src/components/backtest/StrategySelector.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,8 +51,8 @@\n }\n \n .toggle button:focus-visible {\n-  outline: 2px solid var(--market-brand);\n-  outline-offset: 2px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n }\n \n .grid {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.module.css",
+          "old_path": "frontend/src/components/dashboard/DashboardIndicatorStrip.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -99,8 +99,8 @@\n }\n \n .detailLink:focus-visible {\n-  outline: 2px solid var(--market-brand);\n-  outline-offset: 4px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-wide);\n }\n \n @media (max-width: 720px) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/dashboard/MarketStatusSummary.module.css",
+          "old_path": "frontend/src/components/dashboard/MarketStatusSummary.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,7 +25,7 @@\n }\n \n .details summary:focus-visible {\n-  outline: 3px solid rgb(3 199 90 / 28%);\n+  outline: var(--thorp-focus-outline);\n   outline-offset: -3px;\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/DataFreshnessPanel.module.css",
+          "old_path": "frontend/src/components/home/DataFreshnessPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -90,8 +90,8 @@\n \n .chartTabs button:focus-visible,\n .pauseButton:focus-visible {\n-  outline: 2px solid rgb(3 199 90 / 38%);\n-  outline-offset: 2px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n }\n \n .pauseButton {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketOverviewCarousel.module.css",
+          "old_path": "frontend/src/components/home/MarketOverviewCarousel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,7 +37,7 @@\n .xTick,\n .indexLabel {\n   fill: var(--market-muted);\n-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;\n+  font-family: var(--thorp-font-mono);\n   font-size: 10px;\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeChart.module.css",
+          "old_path": "frontend/src/components/home/MarketRegimeChart.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -93,7 +93,7 @@\n \n .driver > span {\n   color: var(--market-muted);\n-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;\n+  font-family: var(--thorp-font-mono);\n   font-size: 0.63rem;\n   font-weight: 650;\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/home/MarketRegimeHero.module.css",
+          "old_path": "frontend/src/components/home/MarketRegimeHero.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -48,8 +48,8 @@\n \n .expandButton:focus-visible,\n .closeButton:focus-visible {\n-  outline: 2px solid var(--market-brand);\n-  outline-offset: 4px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-wide);\n }\n \n .slot:focus-within .panel {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/IndicatorHistoryCard.module.css",
+          "old_path": "frontend/src/components/market/IndicatorHistoryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,8 +32,8 @@\n }\n \n .notice button:focus-visible {\n-  outline: 2px solid var(--market-brand);\n-  outline-offset: 2px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n }\n \n .notice button:disabled svg {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/market/MarketDataStatus.module.css",
+          "old_path": "frontend/src/components/market/MarketDataStatus.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -161,8 +161,8 @@\n .drawer button:focus-visible,\n .drawer a:focus-visible {\n   border-radius: 8px;\n-  outline: 3px solid rgb(3 199 90 / 30%);\n-  outline-offset: 3px;\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n }\n \n .menuLayer {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "old_path": "frontend/src/components/navigation/AppHeader.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,7 +2,6 @@\n   min-height: 100svh;\n   background: var(--thorp-background);\n   color: var(--thorp-foreground);\n-  color-scheme: dark;\n   --surface: var(--thorp-surface-raised);\n   --line: var(--thorp-line);\n   --muted: var(--thorp-muted);\n@@ -243,7 +242,7 @@\n .fieldGroup select:focus,\n .fieldGroup input:focus {\n   border-color: var(--brand);\n-  box-shadow: 0 0 0 3px rgb(3 199 90 / 14%);\n+  box-shadow: var(--thorp-focus-shadow-subtle);\n }\n \n .dateGrid {\n@@ -312,7 +311,7 @@\n   border: 0;\n   border-radius: 7px;\n   background: var(--brand);\n-  color: #021108;\n+  color: var(--thorp-action-foreground);\n   cursor: pointer;\n   font-size: 0.76rem;\n   font-weight: 680;\n@@ -332,8 +331,8 @@\n .runButton:focus-visible,\n .resetButton:focus-visible {\n   border-radius: 6px;\n-  outline: 3px solid rgb(3 199 90 / 28%);\n-  outline-offset: 3px;\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n }\n \n .configNote {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/BacktestPage.module.css",
+          "old_path": "frontend/src/pages/BacktestPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,16 +1,16 @@\n .page {\n-  --landing-background: #030806;\n-  --landing-surface: #08110d;\n-  --landing-surface-strong: #0b1510;\n-  --landing-accent: #03c75a;\n-  --landing-accent-soft: #86f2a8;\n-  --landing-text: #f3f7f4;\n-  --landing-muted: #91a097;\n-  --landing-line: rgb(160 190 173 / 14%);\n-  --landing-positive: #45dc7d;\n-  --landing-negative: #ef8a68;\n-  --landing-warning: #e8bd72;\n-  --landing-neutral: #9caaa1;\n+  --landing-background: var(--thorp-background);\n+  --landing-surface: var(--thorp-surface);\n+  --landing-surface-strong: var(--thorp-surface-raised);\n+  --landing-accent: var(--thorp-accent);\n+  --landing-accent-soft: var(--thorp-accent-soft);\n+  --landing-text: var(--thorp-foreground);\n+  --landing-muted: var(--thorp-copy);\n+  --landing-line: var(--thorp-line);\n+  --landing-positive: var(--thorp-positive);\n+  --landing-negative: var(--thorp-negative);\n+  --landing-warning: var(--thorp-warning);\n+  --landing-neutral: var(--thorp-neutral);\n   position: relative;\n   height: 100svh;\n   min-height: 100vh;\n@@ -22,7 +22,7 @@\n     radial-gradient(circle at 80% 22%, rgb(3 199 90 / 7%), transparent 27rem),\n     linear-gradient(180deg, #030806 0%, #050b08 45%, #030806 100%);\n   color: var(--landing-text);\n-  font-family: 'Geist Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;\n+  font-family: var(--thorp-font-display);\n }\n \n .page::before {\n@@ -116,7 +116,7 @@\n   padding: 0 16px;\n   border-radius: 8px;\n   background: var(--landing-text);\n-  color: #061009;\n+  color: var(--thorp-action-foreground);\n   font-size: 0.76rem;\n   font-weight: 680;\n   text-decoration: none;\n@@ -358,7 +358,7 @@\n \n .primaryCta {\n   background: var(--landing-accent);\n-  color: #021108;\n+  color: var(--thorp-action-foreground);\n }\n \n .secondaryCta {\n@@ -950,7 +950,7 @@\n   min-height: 36px;\n   padding: 0 12px;\n   background: var(--landing-accent);\n-  color: #031008;\n+  color: var(--thorp-action-foreground);\n   font-size: 0.61rem;\n   font-weight: 680;\n   text-decoration: none;\n@@ -991,8 +991,8 @@\n .algorithmCard > a:focus-visible,\n .cardSelectButton:focus-visible,\n .menuButton:focus-visible {\n-  outline: 2px solid var(--landing-accent-soft);\n-  outline-offset: 4px;\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-wide);\n }\n \n @keyframes glowBreath {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/LandingPage.module.css",
+          "old_path": "frontend/src/pages/LandingPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -69,7 +69,7 @@\n .actions a:first-child {\n   border-color: var(--thorp-accent);\n   background: var(--thorp-accent);\n-  color: #021108;\n+  color: var(--thorp-action-foreground);\n }\n \n .actions a:hover {\n@@ -77,8 +77,8 @@\n }\n \n .actions a:focus-visible {\n-  outline: 3px solid rgb(3 199 90 / 30%);\n-  outline-offset: 3px;\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n }\n \n .scopeNote {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MyRecordsEntryPage.module.css",
+          "old_path": "frontend/src/pages/MyRecordsEntryPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -108,7 +108,7 @@\n \n .intro h1:focus-visible {\n   border-radius: 4px;\n-  box-shadow: 0 0 0 3px rgb(3 199 90 / 28%);\n+  box-shadow: var(--thorp-focus-shadow);\n }\n \n .intro p {\n@@ -141,7 +141,7 @@\n \n .panelHeading h2:focus-visible {\n   border-radius: 3px;\n-  box-shadow: 0 0 0 3px rgb(3 199 90 / 28%);\n+  box-shadow: var(--thorp-focus-shadow);\n }\n \n .stepProgress {\n@@ -298,8 +298,8 @@\n .backLink:focus-visible,\n .loginPrompt a:focus-visible {\n   border-radius: 4px;\n-  outline: 3px solid rgb(3 199 90 / 30%);\n-  outline-offset: 3px;\n+  outline: var(--thorp-focus-outline);\n+  outline-offset: var(--thorp-focus-offset);\n }\n \n @media (max-width: 900px) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SignupPage.module.css",
+          "old_path": "frontend/src/pages/SignupPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,7 +5,6 @@\n   overflow-x: clip;\n   background: var(--thorp-background);\n   color: var(--thorp-foreground);\n-  color-scheme: dark;\n   --market-surface: var(--thorp-surface-raised);\n   --market-ink: var(--thorp-foreground);\n   --market-copy: var(--thorp-copy);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/styles/MarketLayout.module.css",
+          "old_path": "frontend/src/styles/MarketLayout.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,9 +7,17 @@\n @custom-variant dark (&:is(.dark *));\n \n :root {\n+  color-scheme: dark;\n   font-size: 17px;\n-  font-family: 'Pretendard', -apple-system, 'Segoe UI', Roboto, sans-serif;\n+  font-family: var(--thorp-font-body);\n   line-height: 1.5;\n+  /* 브랜드 원색은 테마와 무관하며, 컴포넌트는 아래 의미 토큰을 사용한다. */\n+  --thorp-brand-primary: rgb(3 199 90);\n+  --thorp-brand-soft: #86f2a8;\n+  --thorp-font-body: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;\n+  --thorp-font-display: 'Geist Variable', var(--thorp-font-body);\n+  --thorp-font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;\n+  /* 현재 기본 테마는 dark다. 향후 light는 이 의미 토큰 묶음만 루트에서 재정의한다. */\n   --thorp-background: #030805;\n   --thorp-surface: #07110b;\n   --thorp-surface-raised: #0b1710;\n@@ -19,14 +27,22 @@\n   --thorp-muted: #718278;\n   --thorp-line: rgb(134 242 168 / 14%);\n   --thorp-line-strong: rgb(134 242 168 / 24%);\n-  --thorp-accent: rgb(3 199 90);\n-  --thorp-accent-soft: #86f2a8;\n+  --thorp-accent: var(--thorp-brand-primary);\n+  --thorp-accent-soft: var(--thorp-brand-soft);\n   --thorp-accent-muted: rgb(3 199 90 / 12%);\n+  --thorp-action-foreground: #021108;\n   --thorp-positive: #63dc8a;\n   --thorp-negative: #ef8a68;\n   --thorp-warning: #e8bd72;\n   --thorp-neutral: #8fa198;\n   --thorp-shadow: 0 22px 58px rgb(0 0 0 / 34%);\n+  --thorp-focus-outline: 3px solid rgb(3 199 90 / 30%);\n+  --thorp-focus-outline-compact: 2px solid var(--thorp-accent-soft);\n+  --thorp-focus-offset: 3px;\n+  --thorp-focus-offset-compact: 2px;\n+  --thorp-focus-offset-wide: 4px;\n+  --thorp-focus-shadow: 0 0 0 3px rgb(3 199 90 / 28%);\n+  --thorp-focus-shadow-subtle: 0 0 0 3px rgb(3 199 90 / 16%);\n   --background: var(--thorp-background);\n   --foreground: var(--thorp-foreground);\n   --card: var(--thorp-surface-raised);\n@@ -34,7 +50,7 @@\n   --popover: var(--thorp-surface-raised);\n   --popover-foreground: var(--thorp-foreground);\n   --primary: var(--thorp-accent);\n-  --primary-foreground: #021108;\n+  --primary-foreground: var(--thorp-action-foreground);\n   --secondary: var(--thorp-surface-muted);\n   --secondary-foreground: var(--thorp-foreground);\n   --muted: var(--thorp-surface-muted);\n@@ -54,7 +70,7 @@\n   --sidebar: var(--thorp-surface);\n   --sidebar-foreground: var(--thorp-foreground);\n   --sidebar-primary: var(--thorp-accent);\n-  --sidebar-primary-foreground: #021108;\n+  --sidebar-primary-foreground: var(--thorp-action-foreground);\n   --sidebar-accent: var(--thorp-accent-muted);\n   --sidebar-accent-foreground: var(--thorp-accent-soft);\n   --sidebar-border: var(--thorp-line);\n@@ -101,8 +117,8 @@ textarea {\n \n /* CSS 변수를 Tailwind 유틸리티에서 사용할 수 있는 테마 값으로 연결한다. */\n @theme inline {\n-  --font-heading: var(--font-sans);\n-  --font-sans: 'Geist Variable', sans-serif;\n+  --font-heading: var(--thorp-font-display);\n+  --font-sans: var(--thorp-font-body);\n   --color-sidebar-ring: var(--sidebar-ring);\n   --color-sidebar-border: var(--sidebar-border);\n   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);\n@@ -143,55 +159,9 @@ textarea {\n   --radius-4xl: calc(var(--radius) * 2.6);\n }\n \n-/* 다크 테마에서 공통 UI와 차트가 사용할 디자인 토큰을 재정의한다. */\n+/* shadcn의 dark variant 호환 클래스는 루트의 Thorp 의미 토큰을 그대로 상속한다. */\n .dark {\n-  --background: oklch(0.145 0 0);\n-  --foreground: oklch(0.985 0 0);\n-  --card: oklch(0.205 0 0);\n-  --card-foreground: oklch(0.985 0 0);\n-  --popover: oklch(0.205 0 0);\n-  --popover-foreground: oklch(0.985 0 0);\n-  --primary: oklch(0.922 0 0);\n-  --primary-foreground: oklch(0.205 0 0);\n-  --secondary: oklch(0.269 0 0);\n-  --secondary-foreground: oklch(0.985 0 0);\n-  --muted: oklch(0.269 0 0);\n-  --muted-foreground: oklch(0.708 0 0);\n-  --accent: oklch(0.269 0 0);\n-  --accent-foreground: oklch(0.985 0 0);\n-  --destructive: oklch(0.704 0.191 22.216);\n-  --border: oklch(1 0 0 / 10%);\n-  --input: oklch(1 0 0 / 15%);\n-  --ring: oklch(0.556 0 0);\n-  --chart-1: oklch(0.87 0 0);\n-  --chart-2: oklch(0.556 0 0);\n-  --chart-3: oklch(0.439 0 0);\n-  --chart-4: oklch(0.371 0 0);\n-  --chart-5: oklch(0.269 0 0);\n-  --sidebar: oklch(0.205 0 0);\n-  --sidebar-foreground: oklch(0.985 0 0);\n-  --sidebar-primary: oklch(0.488 0.243 264.376);\n-  --sidebar-primary-foreground: oklch(0.985 0 0);\n-  --sidebar-accent: oklch(0.269 0 0);\n-  --sidebar-accent-foreground: oklch(0.985 0 0);\n-  --sidebar-border: oklch(1 0 0 / 10%);\n-  --sidebar-ring: oklch(0.556 0 0);\n-  --chart-background: oklch(0.145 0 0);\n-  --chart-foreground: oklch(0.45 0 0);\n-  --chart-foreground-muted: oklch(0.65 0.01 260);\n-  --chart-crosshair: oklch(0.45 0 0);\n-  --chart-grid: oklch(0.25 0 0);\n-  --chart-brush-border: var(--chart-grid);\n-  --chart-marker-background: oklch(0.25 0.01 260);\n-  --chart-marker-border: oklch(0.4 0.01 260);\n-  --chart-marker-foreground: oklch(0.9 0 0);\n-  --chart-label: oklch(0.75 0.01 260);\n-  --chart-scale-01: oklch(0.28 0.03 270);\n-  --chart-scale-02: oklch(0.38 0.04 270);\n-  --chart-scale-03: oklch(0.48 0.05 270);\n-  --chart-scale-04: oklch(0.58 0.06 270);\n-  --chart-scale-05: oklch(0.68 0.07 270);\n-  --chart-scale-pattern-color: oklch(0.145 0 0);\n+  color-scheme: dark;\n }\n \n /* Tailwind 기반 기본 요소에 공통 테두리와 색상 토큰을 적용한다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/index.css",
+          "old_path": "frontend/src/index.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2192490,
+      "head_commit_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "base_commit_sha": "2881b76fde4c7602646f067477e861af7c917812",
+      "start_commit_sha": "aeda4c9a1dd3c456d8817b346b6ac567f596bb34",
+      "created_at": "2026-09-14T10:56:38.192+09:00",
+      "merge_request_id": 942694,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null,
+      "commits": [],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

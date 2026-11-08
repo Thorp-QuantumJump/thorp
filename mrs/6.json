@@ -1,0 +1,1090 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 932820,
+    "iid": 6,
+    "project_id": 1444456,
+    "title": "chore(be): 패키지 구조를 도메인별 계층형 아키텍처로 전환",
+    "description": "# 작업 내용 요약\n\n백엔드 패키지 구조를 도메인별 계층형 아키텍처로 전환했다. `backtest` 도메인 안에 `presentation / application / domain / infrastructure` 4계층을 두고, 공통 응답 포맷·전역 예외 처리·`BaseEntity`를 `common`에 모았다. 의존 방향은 문서로만 두지 않고 ArchUnit 테스트로 강제한다.\n\n기능 개발이 시작되기 전에 경계를 확정해, 이후 도메인(strategy, user, notification)이 같은 형태로 자라게 하는 것이 목적이다. 백테스트 비즈니스 로직은 이 MR의 범위가 아니며 서비스·리포지토리는 스켈레톤까지만 만들었다.\n\n# 관련 이슈\n\n- close #\n\n# 주요 변경 사항\n\n- ADR 작성: `docs/adr/0001-be-layered-package-architecture.md` (계층 분리 단위, 리포지토리 위치, 도메인 모델과 JPA Entity 분리, DTO 경계 결정과 근거)\n- `backend/CLAUDE.md` 「패키지 규칙」 교체: 4계층 역할표, 의존 방향, 새 도메인 추가 체크리스트. Kafka 문구를 루트 CLAUDE.md 기준(RabbitMQ 예정, Kafka는 설치만)으로 정정\n- `common` 골격 추가: `ErrorCode`, `BusinessException`, `ApiResponse<T>`, `ErrorResponse`, `GlobalExceptionHandler`, `BaseEntity`, `JpaAuditingConfig`\n- `backtest` 도메인 재배치\n  - presentation: `BacktestController`, `BacktestJobRequest`(이동), `BacktestJobResponse`(신규)\n  - application: `BacktestService` 스켈레톤, `CreateBacktestCommand`, `BacktestJobResult`, `BacktestJobRepository`·`BacktestJobPublisher` 인터페이스\n  - domain: `BacktestJob`, `BacktestStatus`, `BacktestPeriod`, `BacktestNotFoundException` (프레임워크 의존 없음)\n  - infrastructure: `BacktestJobJpaEntity`(`backtest_job`), `BacktestJobJpaRepository`, `BacktestJobMapper`, `BacktestJobRepositoryImpl`\n- 컨트롤러가 `ApiResponse`로 감싸 응답. `POST /backtests` → 202, `GET /backtests/{id}` → 200. 경로·필드명·상태값은 기존 계약 그대로\n- ArchUnit(`archunit-junit5:1.3.0`) 도입, `ArchitectureTest`에 5개 규칙 추가\n- 브로커 미정 구간을 메우는 임시 `LoggingBacktestJobPublisher` 추가 (아래 리뷰 포인트 참고)\n\n## 이 MR에서 결정하지 않은 것\n\n- 백테스트 Job 생성·조회의 실제 비즈니스 로직\n- `BacktestService.create`의 트랜잭션 경계와 publish 실패 처리 (코드에 TODO로 남김)\n- 메시지 브로커 선택. 의존성과 `application.yml`은 손대지 않았고 문구만 루트 기준으로 통일했다\n- 루트 패키지명(`com.thorp.api` 유지), Flyway 도입, 인증·보안 설정\n- `strategy`, `user`, `notification` 도메인 폴더. 해당 기능 티켓에서 ADR 구조를 따라 만든다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과. 테스트 32개 전부 성공 (Architecture 5, BacktestService 4, BacktestController 5, BacktestPeriod 3, BacktestJob 3, BacktestJobRepositoryImpl 3, GlobalExceptionHandler 8, Application 1)\n- [x] ArchUnit 규칙이 실제로 위반을 잡는지 확인. 도메인 클래스에 Spring 애노테이션을 붙이고, 응용 계층에 JPA Entity 필드를 넣고, `common`에 `@Entity` 겸 `@RestController` 클래스를 두어 5개 규칙이 모두 실패하는 것을 확인한 뒤 되돌렸다\n- [x] PostgreSQL 16 기동 상태에서 `bootRun` 성공. DataSource 연결과 `backtest_job` 테이블 자동 생성 확인\n- [x] `created_at`, `updated_at`이 JPA Auditing으로 채워지는 것을 실제 저장 행에서 확인\n- [x] `status` 컬럼에 `QUEUED/RUNNING/COMPLETED/FAILED` CHECK 제약이 생성되는 것 확인\n- [x] `worker/src/worker/models.py`의 `BacktestJob` 필드(jobId, strategy, startDate, endDate)와 요청 DTO 필드 불일치 없음 (이 MR은 스키마를 바꾸지 않아 확인만)\n\n## 실제 HTTP 응답 확인\n\n| 요청 | 상태 | 본문 |\n|----|----|----|\n| `POST /backtests` 정상 | 202 | `{\"success\":true,\"data\":{\"backtestId\":3,\"status\":\"QUEUED\"},\"error\":null}` |\n| `GET /backtests/3` | 200 | `{\"success\":true,\"data\":{\"backtestId\":3,\"status\":\"QUEUED\"},\"error\":null}` |\n| `GET /backtests/999` | 404 | `error.code = RESOURCE_NOT_FOUND` |\n| `POST` startDate \\> endDate | 400 | `error.code = INVALID_INPUT` |\n| `POST` strategy 누락 | 400 | `error.code = INVALID_INPUT`, `\"strategy: 공백일 수 없습니다\"` |\n| `GET /backtests/abc` | 400 | `error.code = INVALID_INPUT` |\n| `POST` 깨진 JSON | 400 | `error.code = INVALID_INPUT` |\n| `POST` 날짜 형식 오류 | 400 | `error.code = INVALID_INPUT` |\n| `DELETE /backtests/1` | 405 | `error.code = INVALID_INPUT` |\n| `GET /nope` | 404 | `error.code = RESOURCE_NOT_FOUND` |\n\n# 리뷰 포인트\n\n## 1. 검증 중 발견해 고친 결함 — 전역 예외 처리가 클라이언트 오류를 500으로 응답\n\n`bootRun` 후 실제 요청을 보내다 발견했다. `startDate > endDate`가 400이 아니라 **500**으로 응답했다. `BacktestPeriod`가 던지는 `IllegalArgumentException`이 catch-all(`@ExceptionHandler(Exception.class)`)로 떨어졌기 때문이다.\n\n같은 원인으로 깨진 JSON, 날짜 형식 오류, 경로 변수 타입 불일치, 허용되지 않는 메서드까지 전부 500이었다. catch-all이 Spring MVC 표준 예외를 먼저 삼키는 구조라 개별 케이스를 추가하는 방식으로는 또 샌다.\n\n`GlobalExceptionHandler`가 `ResponseEntityExceptionHandler`를 상속하도록 바꿨다. 상태 코드는 Spring이 정한 값을 그대로 쓰고 본문만 `ApiResponse`로 감싼다. `IllegalArgumentException` → 400 핸들러도 추가했다.\n\n- `error.code`는 상태에 따른 큰 분류(400·405 → `INVALID_INPUT`, 404 → `RESOURCE_NOT_FOUND`)만 담고, 정확한 원인은 HTTP 상태 코드가 나타내게 했다. 405에 `INVALID_INPUT`이 붙는 게 어색하다면 `ErrorCode`를 늘리는 방향도 있다.\n- 표준 예외의 메시지는 파서 내부 정보가 섞일 수 있어 노출하지 않고 `ErrorCode` 기본 문구를 쓴다.\n- `IllegalArgumentException`을 일괄 400으로 보는 것이 맞는지 봐주면 좋겠다. 대안은 도메인 전용 예외(`InvalidBacktestPeriodException extends BusinessException`)를 만드는 것인데, 값 객체가 표준 예외를 던지는 형태를 유지하려고 핸들러 쪽에서 처리했다.\n\n## 2. `ApiResponse` 래퍼 도입 여부\n\n인터페이스 설계서에 응답 래퍼 규정이 없어 설계안대로 `{ success, data, error }`를 도입했다. 프론트와 계약을 맞춰야 하므로 이 형태로 확정할지 확인이 필요하다. 되돌린다면 지금이 가장 싸다.\n\n## 3. 임시 `LoggingBacktestJobPublisher`\n\n브로커가 정해지지 않아 컨텍스트 기동용으로 로그만 남기는 구현체를 뒀다. **이대로 배포되면 Job이 Worker에 전달되지 않는다.** 클래스 Javadoc에 `TODO(broker-decision)`으로 명시했다. 브로커 결정 티켓의 완료 조건에 \"이 클래스 삭제\"를 넣어야 한다. 티켓 번호가 정해지면 TODO에 채워 넣겠다.\n\n## 4. 도메인 모델과 JPA Entity 분리 수준\n\nMVP 규모 대비 과한지 봐달라. Mapper는 정적 메서드 2개(`toEntity`, `toDomain`)로 제한했고, MapStruct는 도메인이 3개를 넘을 때 재검토하기로 했다.\n\n## 5. `application/port` 네이밍\n\n`repository`(저장소)와 `port`(외부 발행)를 나란히 뒀다. 저장소도 결국 포트라 `port` 하나로 합치는 쪽이 나은지 의견을 듣고 싶다.\n\n## 6. ArchUnit 규칙 4가 너무 엄격한지\n\n`common`이 어떤 도메인 패키지도 참조하지 못하게 막았다. 공통 유틸이 특정 도메인 타입을 알아야 하는 상황이 생기면 이 규칙이 먼저 걸린다. 그때는 코드가 아니라 ADR을 고치는 흐름을 의도했다.\n\n# 검증 환경 메모\n\n- 로컬 5432에는 팀 compose와 무관한 PostgreSQL이 이미 떠 있어 계정이 맞지 않았다. compose와 같은 `postgres:16-alpine` 이미지로 55432 포트에 임시 컨테이너를 띄워 검증하고 삭제했다.\n- `ddl-auto: update`로 테이블이 자동 생성되는 것에 의존해 검증했다. Flyway 전환은 별도 티켓.",
+    "state": "merged",
+    "created_at": "2026-09-03T11:58:55.915+09:00",
+    "updated_at": "2026-09-14T14:33:10.930+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-03T12:00:04.431+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(be)/87-package-architecture-setup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e304802962346e366385110d2ae5f2471bb697b5",
+    "merge_commit_sha": "e12dd5ba4905828f5edb3ba78c60e404abaa076e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-03T11:58:57.329+09:00",
+    "reference": "!6",
+    "references": {
+      "short": "!6",
+      "relative": "!6",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!6"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/6",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 932820,
+    "iid": 6,
+    "project_id": 1444456,
+    "title": "chore(be): 패키지 구조를 도메인별 계층형 아키텍처로 전환",
+    "description": "# 작업 내용 요약\n\n백엔드 패키지 구조를 도메인별 계층형 아키텍처로 전환했다. `backtest` 도메인 안에 `presentation / application / domain / infrastructure` 4계층을 두고, 공통 응답 포맷·전역 예외 처리·`BaseEntity`를 `common`에 모았다. 의존 방향은 문서로만 두지 않고 ArchUnit 테스트로 강제한다.\n\n기능 개발이 시작되기 전에 경계를 확정해, 이후 도메인(strategy, user, notification)이 같은 형태로 자라게 하는 것이 목적이다. 백테스트 비즈니스 로직은 이 MR의 범위가 아니며 서비스·리포지토리는 스켈레톤까지만 만들었다.\n\n# 관련 이슈\n\n- close #\n\n# 주요 변경 사항\n\n- ADR 작성: `docs/adr/0001-be-layered-package-architecture.md` (계층 분리 단위, 리포지토리 위치, 도메인 모델과 JPA Entity 분리, DTO 경계 결정과 근거)\n- `backend/CLAUDE.md` 「패키지 규칙」 교체: 4계층 역할표, 의존 방향, 새 도메인 추가 체크리스트. Kafka 문구를 루트 CLAUDE.md 기준(RabbitMQ 예정, Kafka는 설치만)으로 정정\n- `common` 골격 추가: `ErrorCode`, `BusinessException`, `ApiResponse<T>`, `ErrorResponse`, `GlobalExceptionHandler`, `BaseEntity`, `JpaAuditingConfig`\n- `backtest` 도메인 재배치\n  - presentation: `BacktestController`, `BacktestJobRequest`(이동), `BacktestJobResponse`(신규)\n  - application: `BacktestService` 스켈레톤, `CreateBacktestCommand`, `BacktestJobResult`, `BacktestJobRepository`·`BacktestJobPublisher` 인터페이스\n  - domain: `BacktestJob`, `BacktestStatus`, `BacktestPeriod`, `BacktestNotFoundException` (프레임워크 의존 없음)\n  - infrastructure: `BacktestJobJpaEntity`(`backtest_job`), `BacktestJobJpaRepository`, `BacktestJobMapper`, `BacktestJobRepositoryImpl`\n- 컨트롤러가 `ApiResponse`로 감싸 응답. `POST /backtests` → 202, `GET /backtests/{id}` → 200. 경로·필드명·상태값은 기존 계약 그대로\n- ArchUnit(`archunit-junit5:1.3.0`) 도입, `ArchitectureTest`에 5개 규칙 추가\n- 브로커 미정 구간을 메우는 임시 `LoggingBacktestJobPublisher` 추가 (아래 리뷰 포인트 참고)\n\n## 이 MR에서 결정하지 않은 것\n\n- 백테스트 Job 생성·조회의 실제 비즈니스 로직\n- `BacktestService.create`의 트랜잭션 경계와 publish 실패 처리 (코드에 TODO로 남김)\n- 메시지 브로커 선택. 의존성과 `application.yml`은 손대지 않았고 문구만 루트 기준으로 통일했다\n- 루트 패키지명(`com.thorp.api` 유지), Flyway 도입, 인증·보안 설정\n- `strategy`, `user`, `notification` 도메인 폴더. 해당 기능 티켓에서 ADR 구조를 따라 만든다\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과. 테스트 32개 전부 성공 (Architecture 5, BacktestService 4, BacktestController 5, BacktestPeriod 3, BacktestJob 3, BacktestJobRepositoryImpl 3, GlobalExceptionHandler 8, Application 1)\n- [x] ArchUnit 규칙이 실제로 위반을 잡는지 확인. 도메인 클래스에 Spring 애노테이션을 붙이고, 응용 계층에 JPA Entity 필드를 넣고, `common`에 `@Entity` 겸 `@RestController` 클래스를 두어 5개 규칙이 모두 실패하는 것을 확인한 뒤 되돌렸다\n- [x] PostgreSQL 16 기동 상태에서 `bootRun` 성공. DataSource 연결과 `backtest_job` 테이블 자동 생성 확인\n- [x] `created_at`, `updated_at`이 JPA Auditing으로 채워지는 것을 실제 저장 행에서 확인\n- [x] `status` 컬럼에 `QUEUED/RUNNING/COMPLETED/FAILED` CHECK 제약이 생성되는 것 확인\n- [x] `worker/src/worker/models.py`의 `BacktestJob` 필드(jobId, strategy, startDate, endDate)와 요청 DTO 필드 불일치 없음 (이 MR은 스키마를 바꾸지 않아 확인만)\n\n## 실제 HTTP 응답 확인\n\n| 요청 | 상태 | 본문 |\n|----|----|----|\n| `POST /backtests` 정상 | 202 | `{\"success\":true,\"data\":{\"backtestId\":3,\"status\":\"QUEUED\"},\"error\":null}` |\n| `GET /backtests/3` | 200 | `{\"success\":true,\"data\":{\"backtestId\":3,\"status\":\"QUEUED\"},\"error\":null}` |\n| `GET /backtests/999` | 404 | `error.code = RESOURCE_NOT_FOUND` |\n| `POST` startDate \\> endDate | 400 | `error.code = INVALID_INPUT` |\n| `POST` strategy 누락 | 400 | `error.code = INVALID_INPUT`, `\"strategy: 공백일 수 없습니다\"` |\n| `GET /backtests/abc` | 400 | `error.code = INVALID_INPUT` |\n| `POST` 깨진 JSON | 400 | `error.code = INVALID_INPUT` |\n| `POST` 날짜 형식 오류 | 400 | `error.code = INVALID_INPUT` |\n| `DELETE /backtests/1` | 405 | `error.code = INVALID_INPUT` |\n| `GET /nope` | 404 | `error.code = RESOURCE_NOT_FOUND` |\n\n# 리뷰 포인트\n\n## 1. 검증 중 발견해 고친 결함 — 전역 예외 처리가 클라이언트 오류를 500으로 응답\n\n`bootRun` 후 실제 요청을 보내다 발견했다. `startDate > endDate`가 400이 아니라 **500**으로 응답했다. `BacktestPeriod`가 던지는 `IllegalArgumentException`이 catch-all(`@ExceptionHandler(Exception.class)`)로 떨어졌기 때문이다.\n\n같은 원인으로 깨진 JSON, 날짜 형식 오류, 경로 변수 타입 불일치, 허용되지 않는 메서드까지 전부 500이었다. catch-all이 Spring MVC 표준 예외를 먼저 삼키는 구조라 개별 케이스를 추가하는 방식으로는 또 샌다.\n\n`GlobalExceptionHandler`가 `ResponseEntityExceptionHandler`를 상속하도록 바꿨다. 상태 코드는 Spring이 정한 값을 그대로 쓰고 본문만 `ApiResponse`로 감싼다. `IllegalArgumentException` → 400 핸들러도 추가했다.\n\n- `error.code`는 상태에 따른 큰 분류(400·405 → `INVALID_INPUT`, 404 → `RESOURCE_NOT_FOUND`)만 담고, 정확한 원인은 HTTP 상태 코드가 나타내게 했다. 405에 `INVALID_INPUT`이 붙는 게 어색하다면 `ErrorCode`를 늘리는 방향도 있다.\n- 표준 예외의 메시지는 파서 내부 정보가 섞일 수 있어 노출하지 않고 `ErrorCode` 기본 문구를 쓴다.\n- `IllegalArgumentException`을 일괄 400으로 보는 것이 맞는지 봐주면 좋겠다. 대안은 도메인 전용 예외(`InvalidBacktestPeriodException extends BusinessException`)를 만드는 것인데, 값 객체가 표준 예외를 던지는 형태를 유지하려고 핸들러 쪽에서 처리했다.\n\n## 2. `ApiResponse` 래퍼 도입 여부\n\n인터페이스 설계서에 응답 래퍼 규정이 없어 설계안대로 `{ success, data, error }`를 도입했다. 프론트와 계약을 맞춰야 하므로 이 형태로 확정할지 확인이 필요하다. 되돌린다면 지금이 가장 싸다.\n\n## 3. 임시 `LoggingBacktestJobPublisher`\n\n브로커가 정해지지 않아 컨텍스트 기동용으로 로그만 남기는 구현체를 뒀다. **이대로 배포되면 Job이 Worker에 전달되지 않는다.** 클래스 Javadoc에 `TODO(broker-decision)`으로 명시했다. 브로커 결정 티켓의 완료 조건에 \"이 클래스 삭제\"를 넣어야 한다. 티켓 번호가 정해지면 TODO에 채워 넣겠다.\n\n## 4. 도메인 모델과 JPA Entity 분리 수준\n\nMVP 규모 대비 과한지 봐달라. Mapper는 정적 메서드 2개(`toEntity`, `toDomain`)로 제한했고, MapStruct는 도메인이 3개를 넘을 때 재검토하기로 했다.\n\n## 5. `application/port` 네이밍\n\n`repository`(저장소)와 `port`(외부 발행)를 나란히 뒀다. 저장소도 결국 포트라 `port` 하나로 합치는 쪽이 나은지 의견을 듣고 싶다.\n\n## 6. ArchUnit 규칙 4가 너무 엄격한지\n\n`common`이 어떤 도메인 패키지도 참조하지 못하게 막았다. 공통 유틸이 특정 도메인 타입을 알아야 하는 상황이 생기면 이 규칙이 먼저 걸린다. 그때는 코드가 아니라 ADR을 고치는 흐름을 의도했다.\n\n# 검증 환경 메모\n\n- 로컬 5432에는 팀 compose와 무관한 PostgreSQL이 이미 떠 있어 계정이 맞지 않았다. compose와 같은 `postgres:16-alpine` 이미지로 55432 포트에 임시 컨테이너를 띄워 검증하고 삭제했다.\n- `ddl-auto: update`로 테이블이 자동 생성되는 것에 의존해 검증했다. Flyway 전환은 별도 티켓.",
+    "state": "merged",
+    "created_at": "2026-09-03T11:58:55.915+09:00",
+    "updated_at": "2026-09-14T14:33:10.930+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-03T12:00:04.431+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(be)/87-package-architecture-setup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e304802962346e366385110d2ae5f2471bb697b5",
+    "merge_commit_sha": "e12dd5ba4905828f5edb3ba78c60e404abaa076e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-03T11:58:57.329+09:00",
+    "reference": "!6",
+    "references": {
+      "short": "!6",
+      "relative": "!6",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!6"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/6",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "38",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "396ce4dc94f52b34f724a78a045a9d5ea549c7e5",
+      "head_sha": "e304802962346e366385110d2ae5f2471bb697b5",
+      "start_sha": "cd2977b5d15f510a5712b5386923af9c79d934e8"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e25bd69c7c1b7f9139223a063f73ed98fb2fee62",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760714,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-03T11:58:56.119+09:00",
+          "updated_at": "2026-09-03T11:58:56.128+09:00",
+          "system": true,
+          "noteable_id": 932820,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 6,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "778e41d05bd92e377d84b403b63de810c3b9c575",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760715,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **도메인 중심 계층형 아키텍처 및 ArchUnit 도입**: 도메인(domain), 응용(application), 표현(presentation), 인프라(infrastructure) 계층을 명확히 분리하고, 이를 ArchUnit 테스트로 강제하여 아키텍처 부채가 쌓이는 것을 방지한 점이 매우 훌륭합니다.\n- **전역 예외 처리 개선**: `ResponseEntityExceptionHandler`를 상속하여 Spring MVC 표준 예외를 누락 없이 표준 공통 응답 포맷(`ApiResponse`)으로 감싸도록 개선한 점이 돋보입니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **메시지 브로커 발행 실패 시나리오 테스트**: 현재 `BacktestService.create`에서 데이터베이스 저장 후 `publisher.publish(saved)`를 호출하고 있습니다. 향후 브로커 연동 시 발행 실패가 발생할 경우의 트랜잭션 롤백 정책이나 `FAILED` 상태 마킹 처리에 대한 단위/통합 테스트 시나리오를 미리 준비해 두는 것을 제안합니다.\n- **ArchUnit 위반 검증 테스트**: 설명에 언급하신 것처럼, 의도적으로 계층 규칙을 위반하는 클래스(예: 도메인 계층에서 Spring JPA 어노테이션 사용 등)를 일시적으로 배치했을 때 ArchUnit 테스트가 정확히 실패하는지 확인하는 검증 과정을 CI 파이프라인에 포함하는 것을 권장합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e304802962346e366385110d2ae5f2471bb697b5 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-03T11:59:05.332+09:00",
+          "updated_at": "2026-09-03T11:59:05.332+09:00",
+          "system": false,
+          "noteable_id": 932820,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 6,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "128396d112f33018a96d325471c482b540f6af01",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760718,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-03T11:59:58.792+09:00",
+          "updated_at": "2026-09-03T11:59:58.813+09:00",
+          "system": true,
+          "noteable_id": 932820,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 6,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c1dd2e9ce0bf4975cc06a26a2c857a7c16127266",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2760719,
+          "type": null,
+          "body": "mentioned in commit e12dd5ba4905828f5edb3ba78c60e404abaa076e",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-03T12:00:04.797+09:00",
+          "updated_at": "2026-09-03T12:00:04.813+09:00",
+          "system": true,
+          "noteable_id": 932820,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 6,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "570c31cb4b8ab406309f9613f990a8180668afd4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802146,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:33:12.373+09:00",
+          "updated_at": "2026-09-14T14:33:12.377+09:00",
+          "system": true,
+          "noteable_id": 932820,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 6,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2160722,
+      "head_commit_sha": "e304802962346e366385110d2ae5f2471bb697b5",
+      "base_commit_sha": "396ce4dc94f52b34f724a78a045a9d5ea549c7e5",
+      "start_commit_sha": "cd2977b5d15f510a5712b5386923af9c79d934e8",
+      "created_at": "2026-09-03T11:58:56.403+09:00",
+      "merge_request_id": 932820,
+      "state": "collected",
+      "real_size": "38",
+      "patch_id_sha": "f61bbac7d4154e044caa1490e0156c7ec56614b3"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2160722,
+      "head_commit_sha": "e304802962346e366385110d2ae5f2471bb697b5",
+      "base_commit_sha": "396ce4dc94f52b34f724a78a045a9d5ea549c7e5",
+      "start_commit_sha": "cd2977b5d15f510a5712b5386923af9c79d934e8",
+      "created_at": "2026-09-03T11:58:56.403+09:00",
+      "merge_request_id": 932820,
+      "state": "collected",
+      "real_size": "38",
+      "patch_id_sha": "f61bbac7d4154e044caa1490e0156c7ec56614b3",
+      "commits": [
+        {
+          "id": "e304802962346e366385110d2ae5f2471bb697b5",
+          "short_id": "e3048029",
+          "created_at": "2026-09-03T11:56:32.000+09:00",
+          "parent_ids": [
+            "ba9285ff21f04d2d83210d85e1867d304c9d59a0"
+          ],
+          "title": "fix(be): 클라이언트 입력 오류가 500으로 응답되던 문제 수정",
+          "message": "fix(be): 클라이언트 입력 오류가 500으로 응답되던 문제 수정\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-03T11:56:32.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-03T11:56:32.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e304802962346e366385110d2ae5f2471bb697b5"
+        },
+        {
+          "id": "ba9285ff21f04d2d83210d85e1867d304c9d59a0",
+          "short_id": "ba9285ff",
+          "created_at": "2026-09-03T11:43:06.000+09:00",
+          "parent_ids": [
+            "66a841ba97ac272cd27357ef30a58c3aff433f77"
+          ],
+          "title": "chore(be): ArchUnit 계층 의존 규칙 테스트 추가",
+          "message": "chore(be): ArchUnit 계층 의존 규칙 테스트 추가\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-03T11:43:06.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-03T11:43:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ba9285ff21f04d2d83210d85e1867d304c9d59a0"
+        },
+        {
+          "id": "66a841ba97ac272cd27357ef30a58c3aff433f77",
+          "short_id": "66a841ba",
+          "created_at": "2026-09-03T11:38:02.000+09:00",
+          "parent_ids": [
+            "84544752b4f1ba029b3e75abe6904621562f4fe7"
+          ],
+          "title": "refactor(be): backtest 도메인을 presentation/application/domain/infrastructure 로 재배치",
+          "message": "refactor(be): backtest 도메인을 presentation/application/domain/infrastructure 로 재배치\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-03T11:38:02.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-03T11:38:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/66a841ba97ac272cd27357ef30a58c3aff433f77"
+        },
+        {
+          "id": "84544752b4f1ba029b3e75abe6904621562f4fe7",
+          "short_id": "84544752",
+          "created_at": "2026-09-03T11:31:13.000+09:00",
+          "parent_ids": [
+            "8c2958175db2ea5a0669fa3b426dac22e50fa0b4"
+          ],
+          "title": "chore(be): common 계층 골격 추가 (응답 포맷, 전역 예외 처리, BaseEntity)",
+          "message": "chore(be): common 계층 골격 추가 (응답 포맷, 전역 예외 처리, BaseEntity)\n\n- ErrorCode / BusinessException\n- ApiResponse<T> / ErrorResponse, GlobalExceptionHandler(@RestControllerAdvice)\n- BaseEntity(JPA Auditing) / JpaAuditingConfig (Application 클래스와 분리해 슬라이스 테스트 보호)\n- 계획서 외 추가: NoResourceFoundException → 404. catch-all 핸들러가 없는 경로를 500으로 바꾸는 것을 방지\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-03T11:31:13.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-03T11:31:13.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/84544752b4f1ba029b3e75abe6904621562f4fe7"
+        },
+        {
+          "id": "8c2958175db2ea5a0669fa3b426dac22e50fa0b4",
+          "short_id": "8c295817",
+          "created_at": "2026-09-03T11:26:26.000+09:00",
+          "parent_ids": [
+            "396ce4dc94f52b34f724a78a045a9d5ea549c7e5"
+          ],
+          "title": "docs(be): 패키지 계층 구조 ADR 작성 및 CLAUDE.md 규칙 갱신",
+          "message": "docs(be): 패키지 계층 구조 ADR 작성 및 CLAUDE.md 규칙 갱신\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-03T11:26:26.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-03T11:26:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c2958175db2ea5a0669fa3b426dac22e50fa0b4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,6 @@\n+package com.thorp.api.backtest.application.command;\n+\n+import java.time.LocalDate;\n+\n+/** 백테스트 생성 유스케이스 입력. HTTP 요청 DTO와 분리한다. */\n+public record CreateBacktestCommand(String strategy, LocalDate startDate, LocalDate endDate) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/application/command/CreateBacktestCommand.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/application/command/CreateBacktestCommand.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.thorp.api.backtest.application.port;\n+\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+\n+/**\n+ * 백테스트 Job을 Worker에 전달하는 출력 포트.\n+ *\n+ * <p>브로커(RabbitMQ/Kafka)는 아직 결정되지 않았다. 구현은 {@code infrastructure.messaging}에 두고 application 계층은 이\n+ * 인터페이스만 안다.\n+ */\n+public interface BacktestJobPublisher {\n+\n+    void publish(BacktestJob job);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/application/port/BacktestJobPublisher.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/application/port/BacktestJobPublisher.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,13 @@\n+package com.thorp.api.backtest.application.repository;\n+\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import java.util.Optional;\n+\n+/** 백테스트 Job 저장소 포트. 구현은 {@code infrastructure.persistence}에 둔다. */\n+public interface BacktestJobRepository {\n+\n+    /** 저장 후 id가 채워진 Job을 돌려준다. */\n+    BacktestJob save(BacktestJob job);\n+\n+    Optional<BacktestJob> findById(Long id);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/application/repository/BacktestJobRepository.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/application/repository/BacktestJobRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,19 @@\n+package com.thorp.api.backtest.application.result;\n+\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import com.thorp.api.backtest.domain.model.BacktestStatus;\n+import java.time.LocalDate;\n+\n+/** 백테스트 유스케이스 출력. HTTP 응답 DTO와 분리한다. */\n+public record BacktestJobResult(\n+        Long id, String strategy, LocalDate startDate, LocalDate endDate, BacktestStatus status) {\n+\n+    public static BacktestJobResult from(BacktestJob job) {\n+        return new BacktestJobResult(\n+                job.getId(),\n+                job.getStrategy(),\n+                job.getPeriod().startDate(),\n+                job.getPeriod().endDate(),\n+                job.getStatus());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/application/result/BacktestJobResult.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/application/result/BacktestJobResult.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,41 @@\n+package com.thorp.api.backtest.application.service;\n+\n+import com.thorp.api.backtest.application.command.CreateBacktestCommand;\n+import com.thorp.api.backtest.application.port.BacktestJobPublisher;\n+import com.thorp.api.backtest.application.repository.BacktestJobRepository;\n+import com.thorp.api.backtest.application.result.BacktestJobResult;\n+import com.thorp.api.backtest.domain.exception.BacktestNotFoundException;\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import com.thorp.api.backtest.domain.vo.BacktestPeriod;\n+import org.springframework.stereotype.Service;\n+\n+/** 백테스트 Job 생성·조회 유스케이스. 계산은 하지 않고 Job을 저장한 뒤 Worker에 발행한다. */\n+@Service\n+public class BacktestService {\n+\n+    private final BacktestJobRepository repository;\n+    private final BacktestJobPublisher publisher;\n+\n+    public BacktestService(BacktestJobRepository repository, BacktestJobPublisher publisher) {\n+        this.repository = repository;\n+        this.publisher = publisher;\n+    }\n+\n+    // TODO: 트랜잭션 경계와 publish 실패 처리(저장 롤백 vs FAILED 마킹 vs outbox)는 브로커 결정 후 확정한다.\n+    public BacktestJobResult create(CreateBacktestCommand command) {\n+        BacktestJob job =\n+                BacktestJob.create(\n+                        command.strategy(),\n+                        new BacktestPeriod(command.startDate(), command.endDate()));\n+        BacktestJob saved = repository.save(job);\n+        publisher.publish(saved);\n+        return BacktestJobResult.from(saved);\n+    }\n+\n+    public BacktestJobResult get(Long backtestId) {\n+        return repository\n+                .findById(backtestId)\n+                .map(BacktestJobResult::from)\n+                .orElseThrow(() -> new BacktestNotFoundException(backtestId));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/application/service/BacktestService.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/application/service/BacktestService.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,11 @@\n+package com.thorp.api.backtest.domain.exception;\n+\n+import com.thorp.api.common.exception.BusinessException;\n+import com.thorp.api.common.exception.ErrorCode;\n+\n+public class BacktestNotFoundException extends BusinessException {\n+\n+    public BacktestNotFoundException(Long backtestId) {\n+        super(ErrorCode.RESOURCE_NOT_FOUND, \"백테스트를 찾을 수 없습니다: id=\" + backtestId);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/domain/exception/BacktestNotFoundException.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/domain/exception/BacktestNotFoundException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,54 @@\n+package com.thorp.api.backtest.domain.model;\n+\n+import com.thorp.api.backtest.domain.vo.BacktestPeriod;\n+import java.util.Objects;\n+\n+/**\n+ * 백테스트 작업 단위. 순수 도메인 모델이며 JPA Entity({@code BacktestJobJpaEntity})와 분리한다.\n+ *\n+ * <p>{@code id}는 저장 전에는 null이다.\n+ */\n+public class BacktestJob {\n+\n+    private final Long id;\n+    private final String strategy;\n+    private final BacktestPeriod period;\n+    private final BacktestStatus status;\n+\n+    private BacktestJob(Long id, String strategy, BacktestPeriod period, BacktestStatus status) {\n+        this.id = id;\n+        this.strategy = Objects.requireNonNull(strategy, \"strategy must not be null\");\n+        this.period = Objects.requireNonNull(period, \"period must not be null\");\n+        this.status = Objects.requireNonNull(status, \"status must not be null\");\n+    }\n+\n+    /** 새 Job 생성. 항상 QUEUED 상태로 시작한다. */\n+    public static BacktestJob create(String strategy, BacktestPeriod period) {\n+        if (strategy.isBlank()) {\n+            throw new IllegalArgumentException(\"strategy must not be blank\");\n+        }\n+        return new BacktestJob(null, strategy, period, BacktestStatus.QUEUED);\n+    }\n+\n+    /** 저장소에서 읽어온 상태를 복원한다. 불변식 검증 없이 값을 그대로 담는다. */\n+    public static BacktestJob restore(\n+            Long id, String strategy, BacktestPeriod period, BacktestStatus status) {\n+        return new BacktestJob(id, strategy, period, status);\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public String getStrategy() {\n+        return strategy;\n+    }\n+\n+    public BacktestPeriod getPeriod() {\n+        return period;\n+    }\n+\n+    public BacktestStatus getStatus() {\n+        return status;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/domain/model/BacktestJob.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/domain/model/BacktestJob.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,9 @@\n+package com.thorp.api.backtest.domain.model;\n+\n+/** 백테스트 Job 상태. 흐름: QUEUED → RUNNING → COMPLETED | FAILED (RUNNING 이후는 Worker가 갱신). */\n+public enum BacktestStatus {\n+    QUEUED,\n+    RUNNING,\n+    COMPLETED,\n+    FAILED\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/domain/model/BacktestStatus.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/domain/model/BacktestStatus.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.thorp.api.backtest.domain.vo;\n+\n+import java.time.LocalDate;\n+import java.util.Objects;\n+\n+/** 백테스트 기간. 시작일이 종료일보다 늦을 수 없다. */\n+public record BacktestPeriod(LocalDate startDate, LocalDate endDate) {\n+\n+    public BacktestPeriod {\n+        Objects.requireNonNull(startDate, \"startDate must not be null\");\n+        Objects.requireNonNull(endDate, \"endDate must not be null\");\n+        if (startDate.isAfter(endDate)) {\n+            throw new IllegalArgumentException(\n+                    \"startDate must not be after endDate: \" + startDate + \" > \" + endDate);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/domain/vo/BacktestPeriod.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/domain/vo/BacktestPeriod.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.thorp.api.backtest.infrastructure.messaging;\n+\n+import com.thorp.api.backtest.application.port.BacktestJobPublisher;\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 임시 발행 구현. 브로커가 결정되기 전까지 컨텍스트 기동을 위해 로그만 남긴다.\n+ *\n+ * <p><b>프로덕션에 남기면 Job이 Worker에 전달되지 않는다.</b>\n+ *\n+ * <p>TODO(broker-decision): 브로커 결정 티켓에서 실제 Publisher로 교체하고 이 클래스를 삭제한다. 해당 티켓의 완료 조건에 \"이 클래스 삭제\"를\n+ * 포함한다.\n+ */\n+@Component\n+public class LoggingBacktestJobPublisher implements BacktestJobPublisher {\n+\n+    private static final Logger log = LoggerFactory.getLogger(LoggingBacktestJobPublisher.class);\n+\n+    @Override\n+    public void publish(BacktestJob job) {\n+        log.warn(\n+                \"[TEMP] Broker not configured. Job not delivered to worker: id={}, strategy={}, period={}~{}\",\n+                job.getId(),\n+                job.getStrategy(),\n+                job.getPeriod().startDate(),\n+                job.getPeriod().endDate());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/messaging/LoggingBacktestJobPublisher.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/messaging/LoggingBacktestJobPublisher.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,6 @@\n+/**\n+ * 백테스트 Job 발행({@code application.port.BacktestJobPublisher}) 구현 위치.\n+ *\n+ * <p>브로커(RabbitMQ 예정, Kafka는 설치만)가 결정되면 실제 구현을 여기에 두고 {@code LoggingBacktestJobPublisher}를 삭제한다.\n+ */\n+package com.thorp.api.backtest.infrastructure.messaging;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/messaging/package-info.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/messaging/package-info.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,71 @@\n+package com.thorp.api.backtest.infrastructure.persistence;\n+\n+import com.thorp.api.backtest.domain.model.BacktestStatus;\n+import com.thorp.api.common.persistence.BaseEntity;\n+import jakarta.persistence.Column;\n+import jakarta.persistence.Entity;\n+import jakarta.persistence.EnumType;\n+import jakarta.persistence.Enumerated;\n+import jakarta.persistence.GeneratedValue;\n+import jakarta.persistence.GenerationType;\n+import jakarta.persistence.Id;\n+import jakarta.persistence.Table;\n+import java.time.LocalDate;\n+\n+/** {@code backtest_job} 테이블 매핑. 도메인 모델과는 {@link BacktestJobMapper}로 변환한다. */\n+@Entity\n+@Table(name = \"backtest_job\")\n+public class BacktestJobJpaEntity extends BaseEntity {\n+\n+    @Id\n+    @GeneratedValue(strategy = GenerationType.IDENTITY)\n+    private Long id;\n+\n+    @Column(nullable = false)\n+    private String strategy;\n+\n+    @Column(nullable = false)\n+    private LocalDate startDate;\n+\n+    @Column(nullable = false)\n+    private LocalDate endDate;\n+\n+    @Enumerated(EnumType.STRING)\n+    @Column(nullable = false, length = 20)\n+    private BacktestStatus status;\n+\n+    protected BacktestJobJpaEntity() {}\n+\n+    BacktestJobJpaEntity(\n+            Long id,\n+            String strategy,\n+            LocalDate startDate,\n+            LocalDate endDate,\n+            BacktestStatus status) {\n+        this.id = id;\n+        this.strategy = strategy;\n+        this.startDate = startDate;\n+        this.endDate = endDate;\n+        this.status = status;\n+    }\n+\n+    public Long getId() {\n+        return id;\n+    }\n+\n+    public String getStrategy() {\n+        return strategy;\n+    }\n+\n+    public LocalDate getStartDate() {\n+        return startDate;\n+    }\n+\n+    public LocalDate getEndDate() {\n+        return endDate;\n+    }\n+\n+    public BacktestStatus getStatus() {\n+        return status;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobJpaEntity.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobJpaEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,5 @@\n+package com.thorp.api.backtest.infrastructure.persistence;\n+\n+import org.springframework.data.jpa.repository.JpaRepository;\n+\n+interface BacktestJobJpaRepository extends JpaRepository<BacktestJobJpaEntity, Long> {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobJpaRepository.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobJpaRepository.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,27 @@\n+package com.thorp.api.backtest.infrastructure.persistence;\n+\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import com.thorp.api.backtest.domain.vo.BacktestPeriod;\n+\n+/** 도메인 모델 ↔ JPA Entity 변환. 메서드는 이 둘로 제한한다(MapStruct는 도메인 3개 초과 시 재검토). */\n+final class BacktestJobMapper {\n+\n+    private BacktestJobMapper() {}\n+\n+    static BacktestJobJpaEntity toEntity(BacktestJob job) {\n+        return new BacktestJobJpaEntity(\n+                job.getId(),\n+                job.getStrategy(),\n+                job.getPeriod().startDate(),\n+                job.getPeriod().endDate(),\n+                job.getStatus());\n+    }\n+\n+    static BacktestJob toDomain(BacktestJobJpaEntity entity) {\n+        return BacktestJob.restore(\n+                entity.getId(),\n+                entity.getStrategy(),\n+                new BacktestPeriod(entity.getStartDate(), entity.getEndDate()),\n+                entity.getStatus());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobMapper.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobMapper.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+package com.thorp.api.backtest.infrastructure.persistence;\n+\n+import com.thorp.api.backtest.application.repository.BacktestJobRepository;\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import java.util.Optional;\n+import org.springframework.stereotype.Repository;\n+\n+@Repository\n+public class BacktestJobRepositoryImpl implements BacktestJobRepository {\n+\n+    private final BacktestJobJpaRepository jpaRepository;\n+\n+    public BacktestJobRepositoryImpl(BacktestJobJpaRepository jpaRepository) {\n+        this.jpaRepository = jpaRepository;\n+    }\n+\n+    @Override\n+    public BacktestJob save(BacktestJob job) {\n+        return BacktestJobMapper.toDomain(jpaRepository.save(BacktestJobMapper.toEntity(job)));\n+    }\n+\n+    @Override\n+    public Optional<BacktestJob> findById(Long id) {\n+        return jpaRepository.findById(id).map(BacktestJobMapper::toDomain);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobRepositoryImpl.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,51 @@\n+package com.thorp.api.backtest.presentation.controller;\n+\n+import com.thorp.api.backtest.application.command.CreateBacktestCommand;\n+import com.thorp.api.backtest.application.result.BacktestJobResult;\n+import com.thorp.api.backtest.application.service.BacktestService;\n+import com.thorp.api.backtest.presentation.request.BacktestJobRequest;\n+import com.thorp.api.backtest.presentation.response.BacktestJobResponse;\n+import com.thorp.api.common.web.response.ApiResponse;\n+import jakarta.validation.Valid;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PathVariable;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RequestBody;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 백테스트 Job API.\n+ *\n+ * <p>POST /backtests → Job 저장(QUEUED) 후 Worker에 발행, 202와 { backtestId, status: QUEUED } 즉시 반환. GET\n+ * /backtests/{id} → 상태 조회 (QUEUED → RUNNING → COMPLETED | FAILED).\n+ */\n+@RestController\n+@RequestMapping(\"/backtests\")\n+public class BacktestController {\n+\n+    private final BacktestService backtestService;\n+\n+    public BacktestController(BacktestService backtestService) {\n+        this.backtestService = backtestService;\n+    }\n+\n+    @PostMapping\n+    public ResponseEntity<ApiResponse<BacktestJobResponse>> create(\n+            @Valid @RequestBody BacktestJobRequest request) {\n+        BacktestJobResult result =\n+                backtestService.create(\n+                        new CreateBacktestCommand(\n+                                request.strategy(), request.startDate(), request.endDate()));\n+        return ResponseEntity.status(HttpStatus.ACCEPTED)\n+                .body(ApiResponse.ok(BacktestJobResponse.from(result)));\n+    }\n+\n+    @GetMapping(\"/{backtestId}\")\n+    public ResponseEntity<ApiResponse<BacktestJobResponse>> get(@PathVariable Long backtestId) {\n+        BacktestJobResult result = backtestService.get(backtestId);\n+        return ResponseEntity.ok(ApiResponse.ok(BacktestJobResponse.from(result)));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/presentation/controller/BacktestController.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/presentation/controller/BacktestController.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-package com.thorp.api.backtest;\n+package com.thorp.api.backtest.presentation.request;\n \n import jakarta.validation.constraints.NotBlank;\n import jakarta.validation.constraints.NotNull;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/presentation/request/BacktestJobRequest.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/BacktestJobRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": true,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,12 @@\n+package com.thorp.api.backtest.presentation.response;\n+\n+import com.thorp.api.backtest.application.result.BacktestJobResult;\n+import com.thorp.api.backtest.domain.model.BacktestStatus;\n+\n+/** 백테스트 Job 응답. 비동기 계약: {@code { backtestId, status }}. */\n+public record BacktestJobResponse(Long backtestId, BacktestStatus status) {\n+\n+    public static BacktestJobResponse from(BacktestJobResult result) {\n+        return new BacktestJobResponse(result.id(), result.status());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/presentation/response/BacktestJobResponse.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/presentation/response/BacktestJobResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,36 +0,0 @@\n-package com.thorp.api.backtest;\n-\n-import jakarta.validation.Valid;\n-import org.springframework.http.HttpStatus;\n-import org.springframework.http.ResponseEntity;\n-import org.springframework.web.bind.annotation.GetMapping;\n-import org.springframework.web.bind.annotation.PathVariable;\n-import org.springframework.web.bind.annotation.PostMapping;\n-import org.springframework.web.bind.annotation.RequestBody;\n-import org.springframework.web.bind.annotation.RequestMapping;\n-import org.springframework.web.bind.annotation.RestController;\n-\n-/**\n- * 백테스트 Job API (스캐폴딩 초안).\n- *\n- * <p>POST /backtests → Job 생성 후 Kafka로 전달, 즉시 { backtestId, status: QUEUED } 반환 GET /backtests/{id}\n- * → 상태/결과 조회 (QUEUED → RUNNING → COMPLETED | FAILED)\n- */\n-@RestController\n-@RequestMapping(\"/backtests\")\n-public class BacktestController {\n-\n-    // TODO: BacktestService 주입 후 실제 구현으로 교체\n-\n-    @PostMapping\n-    public ResponseEntity<Void> create(@Valid @RequestBody BacktestJobRequest request) {\n-        // TODO: Job 저장(QUEUED) → Kafka publish → { backtestId, status } 반환\n-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();\n-    }\n-\n-    @GetMapping(\"/{backtestId}\")\n-    public ResponseEntity<Void> get(@PathVariable Long backtestId) {\n-        // TODO: 상태/결과 조회\n-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).build();\n-    }\n-}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/backtest/BacktestController.java",
+          "old_path": "backend/src/main/java/com/thorp/api/backtest/BacktestController.java",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,14 @@\n+package com.thorp.api.common.config;\n+\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;\n+\n+/**\n+ * JPA Auditing 활성화.\n+ *\n+ * <p>Application 클래스에 {@code @EnableJpaAuditing}을 붙이면 {@code @WebMvcTest} 같은 슬라이스 테스트에서 JPA 빈을 찾지\n+ * 못해 컨텍스트가 깨진다. 별도 설정 클래스로 분리해 슬라이스 테스트에서는 자동 제외되게 한다.\n+ */\n+@Configuration\n+@EnableJpaAuditing\n+public class JpaAuditingConfig {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/config/JpaAuditingConfig.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/config/JpaAuditingConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,25 @@\n+package com.thorp.api.common.exception;\n+\n+/**\n+ * 비즈니스 규칙 위반을 나타내는 최상위 예외.\n+ *\n+ * <p>도메인 예외는 이 클래스를 상속하고 {@link ErrorCode}를 지정한다. {@code GlobalExceptionHandler}가 ErrorCode의 HTTP\n+ * 상태와 메시지로 응답을 만든다.\n+ */\n+public class BusinessException extends RuntimeException {\n+\n+    private final ErrorCode errorCode;\n+\n+    public BusinessException(ErrorCode errorCode) {\n+        this(errorCode, errorCode.getMessage());\n+    }\n+\n+    public BusinessException(ErrorCode errorCode, String message) {\n+        super(message);\n+        this.errorCode = errorCode;\n+    }\n+\n+    public ErrorCode getErrorCode() {\n+        return errorCode;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/exception/BusinessException.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/exception/BusinessException.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,31 @@\n+package com.thorp.api.common.exception;\n+\n+import org.springframework.http.HttpStatus;\n+\n+/**\n+ * 비즈니스 예외의 종류와 HTTP 상태 매핑.\n+ *\n+ * <p>응답의 {@code error.code}에는 enum 이름이 그대로 실린다. 도메인별 세부 코드가 필요해지면 여기에 추가한다.\n+ */\n+public enum ErrorCode {\n+    INVALID_INPUT(HttpStatus.BAD_REQUEST, \"입력값이 올바르지 않습니다.\"),\n+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, \"요청한 리소스를 찾을 수 없습니다.\"),\n+    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, \"서버 내부 오류가 발생했습니다.\");\n+\n+    private final HttpStatus status;\n+    private final String message;\n+\n+    ErrorCode(HttpStatus status, String message) {\n+        this.status = status;\n+        this.message = message;\n+    }\n+\n+    public HttpStatus getStatus() {\n+        return status;\n+    }\n+\n+    /** 클라이언트에 노출되는 기본 메시지. */\n+    public String getMessage() {\n+        return message;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/exception/ErrorCode.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/exception/ErrorCode.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+package com.thorp.api.common.persistence;\n+\n+import jakarta.persistence.Column;\n+import jakarta.persistence.EntityListeners;\n+import jakarta.persistence.MappedSuperclass;\n+import java.time.LocalDateTime;\n+import org.springframework.data.annotation.CreatedDate;\n+import org.springframework.data.annotation.LastModifiedDate;\n+import org.springframework.data.jpa.domain.support.AuditingEntityListener;\n+\n+/**\n+ * 모든 JPA Entity의 공통 부모. 생성·수정 시각을 JPA Auditing으로 자동 기록한다.\n+ *\n+ * <p>Auditing 활성화는 {@code common.config.JpaAuditingConfig}가 담당한다.\n+ */\n+@MappedSuperclass\n+@EntityListeners(AuditingEntityListener.class)\n+public abstract class BaseEntity {\n+\n+    @CreatedDate\n+    @Column(nullable = false, updatable = false)\n+    private LocalDateTime createdAt;\n+\n+    @LastModifiedDate\n+    @Column(nullable = false)\n+    private LocalDateTime updatedAt;\n+\n+    public LocalDateTime getCreatedAt() {\n+        return createdAt;\n+    }\n+\n+    public LocalDateTime getUpdatedAt() {\n+        return updatedAt;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/persistence/BaseEntity.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/persistence/BaseEntity.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,107 @@\n+package com.thorp.api.common.web.advice;\n+\n+import com.thorp.api.common.exception.BusinessException;\n+import com.thorp.api.common.exception.ErrorCode;\n+import com.thorp.api.common.web.response.ApiResponse;\n+import com.thorp.api.common.web.response.ErrorResponse;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.http.HttpHeaders;\n+import org.springframework.http.HttpStatus;\n+import org.springframework.http.HttpStatusCode;\n+import org.springframework.http.ResponseEntity;\n+import org.springframework.web.bind.MethodArgumentNotValidException;\n+import org.springframework.web.bind.annotation.ExceptionHandler;\n+import org.springframework.web.bind.annotation.RestControllerAdvice;\n+import org.springframework.web.context.request.WebRequest;\n+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;\n+\n+/**\n+ * 컨트롤러 밖으로 나온 예외를 {@link ApiResponse} 실패 포맷으로 변환한다.\n+ *\n+ * <p>{@link ResponseEntityExceptionHandler}를 상속해 Spring MVC 표준 예외(잘못된 JSON, 경로 변수 타입 불일치, 허용되지 않는\n+ * 메서드 등)가 catch-all 핸들러로 떨어져 500이 되는 것을 막는다. 상태 코드는 Spring이 정한 값을 그대로 쓰고 본문만 우리 포맷으로 감싼다.\n+ */\n+@RestControllerAdvice\n+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {\n+\n+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);\n+\n+    @ExceptionHandler(BusinessException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException e) {\n+        ErrorCode errorCode = e.getErrorCode();\n+        log.warn(\"Business exception: code={}, message={}\", errorCode, e.getMessage());\n+        return ResponseEntity.status(errorCode.getStatus())\n+                .body(ApiResponse.fail(ErrorResponse.of(errorCode, e.getMessage())));\n+    }\n+\n+    /**\n+     * 도메인 불변식 위반. 값 객체·도메인 모델이 잘못된 인자를 거부할 때 던지며, 대부분 클라이언트 입력이 원인이므로 400으로 응답한다.\n+     *\n+     * <p>Bean Validation으로 잡히지 않는 필드 간 제약(예: startDate > endDate)이 여기로 온다.\n+     */\n+    @ExceptionHandler(IllegalArgumentException.class)\n+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException e) {\n+        log.warn(\"Domain constraint violated: {}\", e.getMessage());\n+        return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus())\n+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INVALID_INPUT, e.getMessage())));\n+    }\n+\n+    /** 예상하지 못한 예외. 내부 정보가 새지 않도록 메시지는 고정 문구만 내려준다. */\n+    @ExceptionHandler(Exception.class)\n+    public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {\n+        log.error(\"Unhandled exception\", e);\n+        return ResponseEntity.status(ErrorCode.INTERNAL_ERROR.getStatus())\n+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INTERNAL_ERROR)));\n+    }\n+\n+    /** 요청 DTO 검증 실패. 어느 필드가 왜 틀렸는지 첫 번째 오류만 알려준다. */\n+    @Override\n+    protected ResponseEntity<Object> handleMethodArgumentNotValid(\n+            MethodArgumentNotValidException ex,\n+            HttpHeaders headers,\n+            HttpStatusCode status,\n+            WebRequest request) {\n+        String message =\n+                ex.getBindingResult().getFieldErrors().stream()\n+                        .findFirst()\n+                        .map(error -> error.getField() + \": \" + error.getDefaultMessage())\n+                        .orElse(ErrorCode.INVALID_INPUT.getMessage());\n+        return ResponseEntity.status(ErrorCode.INVALID_INPUT.getStatus())\n+                .body(ApiResponse.fail(ErrorResponse.of(ErrorCode.INVALID_INPUT, message)));\n+    }\n+\n+    /**\n+     * Spring MVC 표준 예외의 공통 출구. 상태 코드는 Spring이 정한 값을 유지하고 본문만 {@link ApiResponse}로 감싼다.\n+     *\n+     * <p>{@code error.code}는 상태에 따른 큰 분류만 담는다. 정확한 원인은 HTTP 상태 코드가 나타낸다. 예외 메시지에는 파서 내부 정보가 섞일 수 있어\n+     * 노출하지 않는다.\n+     */\n+    @Override\n+    protected ResponseEntity<Object> handleExceptionInternal(\n+            Exception ex,\n+            Object body,\n+            HttpHeaders headers,\n+            HttpStatusCode statusCode,\n+            WebRequest request) {\n+        ErrorCode errorCode = toErrorCode(statusCode);\n+        if (statusCode.is5xxServerError()) {\n+            log.error(\"Spring MVC exception: status={}\", statusCode, ex);\n+        } else {\n+            log.warn(\n+                    \"Spring MVC exception: status={}, type={}\",\n+                    statusCode,\n+                    ex.getClass().getSimpleName());\n+        }\n+        return ResponseEntity.status(statusCode)\n+                .headers(headers)\n+                .body(ApiResponse.fail(ErrorResponse.of(errorCode)));\n+    }\n+\n+    private static ErrorCode toErrorCode(HttpStatusCode statusCode) {\n+        if (statusCode.isSameCodeAs(HttpStatus.NOT_FOUND)) {\n+            return ErrorCode.RESOURCE_NOT_FOUND;\n+        }\n+        return statusCode.is4xxClientError() ? ErrorCode.INVALID_INPUT : ErrorCode.INTERNAL_ERROR;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/web/advice/GlobalExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/web/advice/GlobalExceptionHandler.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,18 @@\n+package com.thorp.api.common.web.response;\n+\n+/**\n+ * 모든 API 응답의 공통 포맷.\n+ *\n+ * <p>성공: {@code { success: true, data: ..., error: null }} / 실패: {@code { success: false, data:\n+ * null, error: { code, message } }}\n+ */\n+public record ApiResponse<T>(boolean success, T data, ErrorResponse error) {\n+\n+    public static <T> ApiResponse<T> ok(T data) {\n+        return new ApiResponse<>(true, data, null);\n+    }\n+\n+    public static <T> ApiResponse<T> fail(ErrorResponse error) {\n+        return new ApiResponse<>(false, null, error);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/web/response/ApiResponse.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/web/response/ApiResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,15 @@\n+package com.thorp.api.common.web.response;\n+\n+import com.thorp.api.common.exception.ErrorCode;\n+\n+/** 실패 응답의 {@code error} 필드. */\n+public record ErrorResponse(String code, String message) {\n+\n+    public static ErrorResponse of(ErrorCode errorCode) {\n+        return new ErrorResponse(errorCode.name(), errorCode.getMessage());\n+    }\n+\n+    public static ErrorResponse of(ErrorCode errorCode, String message) {\n+        return new ErrorResponse(errorCode.name(), message);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/web/response/ErrorResponse.java",
+          "old_path": "backend/src/main/java/com/thorp/api/common/web/response/ErrorResponse.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/thorp/api/common/.gitkeep",
+          "old_path": "backend/src/main/java/com/thorp/api/common/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,97 @@\n+package com.thorp.api.backtest.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+\n+import com.thorp.api.backtest.application.command.CreateBacktestCommand;\n+import com.thorp.api.backtest.application.port.BacktestJobPublisher;\n+import com.thorp.api.backtest.application.repository.BacktestJobRepository;\n+import com.thorp.api.backtest.application.result.BacktestJobResult;\n+import com.thorp.api.backtest.domain.exception.BacktestNotFoundException;\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import com.thorp.api.backtest.domain.model.BacktestStatus;\n+import com.thorp.api.backtest.domain.vo.BacktestPeriod;\n+import java.time.LocalDate;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.extension.ExtendWith;\n+import org.mockito.ArgumentCaptor;\n+import org.mockito.InjectMocks;\n+import org.mockito.Mock;\n+import org.mockito.junit.jupiter.MockitoExtension;\n+\n+@ExtendWith(MockitoExtension.class)\n+class BacktestServiceTest {\n+\n+    private static final LocalDate START = LocalDate.of(2019, 1, 1);\n+    private static final LocalDate END = LocalDate.of(2023, 12, 31);\n+\n+    @Mock private BacktestJobRepository repository;\n+    @Mock private BacktestJobPublisher publisher;\n+    @InjectMocks private BacktestService service;\n+\n+    @Test\n+    @DisplayName(\"create는 QUEUED Job을 저장한 뒤 저장된 Job을 발행하고 결과를 돌려준다\")\n+    void createSavesThenPublishes() {\n+        BacktestJob saved =\n+                BacktestJob.restore(\n+                        1L, \"sma-cross\", new BacktestPeriod(START, END), BacktestStatus.QUEUED);\n+        when(repository.save(any(BacktestJob.class))).thenReturn(saved);\n+\n+        BacktestJobResult result =\n+                service.create(new CreateBacktestCommand(\"sma-cross\", START, END));\n+\n+        ArgumentCaptor<BacktestJob> captor = ArgumentCaptor.forClass(BacktestJob.class);\n+        verify(repository).save(captor.capture());\n+        assertThat(captor.getValue().getId()).isNull();\n+        assertThat(captor.getValue().getStatus()).isEqualTo(BacktestStatus.QUEUED);\n+\n+        verify(publisher).publish(saved);\n+        assertThat(result.id()).isEqualTo(1L);\n+        assertThat(result.strategy()).isEqualTo(\"sma-cross\");\n+        assertThat(result.startDate()).isEqualTo(START);\n+        assertThat(result.endDate()).isEqualTo(END);\n+        assertThat(result.status()).isEqualTo(BacktestStatus.QUEUED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"기간이 잘못되면 저장·발행 없이 실패한다\")\n+    void createRejectsInvalidPeriodBeforeSaving() {\n+        assertThatThrownBy(() -> service.create(new CreateBacktestCommand(\"sma-cross\", END, START)))\n+                .isInstanceOf(IllegalArgumentException.class);\n+\n+        verify(repository, never()).save(any());\n+        verify(publisher, never()).publish(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"get은 저장된 Job을 결과로 돌려준다\")\n+    void getReturnsResult() {\n+        when(repository.findById(1L))\n+                .thenReturn(\n+                        Optional.of(\n+                                BacktestJob.restore(\n+                                        1L,\n+                                        \"sma-cross\",\n+                                        new BacktestPeriod(START, END),\n+                                        BacktestStatus.RUNNING)));\n+\n+        BacktestJobResult result = service.get(1L);\n+\n+        assertThat(result.id()).isEqualTo(1L);\n+        assertThat(result.status()).isEqualTo(BacktestStatus.RUNNING);\n+    }\n+\n+    @Test\n+    @DisplayName(\"get은 없는 id면 BacktestNotFoundException을 던진다\")\n+    void getThrowsWhenMissing() {\n+        when(repository.findById(999L)).thenReturn(Optional.empty());\n+\n+        assertThatThrownBy(() -> service.get(999L)).isInstanceOf(BacktestNotFoundException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/backtest/application/service/BacktestServiceTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/backtest/application/service/BacktestServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,42 @@\n+package com.thorp.api.backtest.domain.model;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.thorp.api.backtest.domain.vo.BacktestPeriod;\n+import java.time.LocalDate;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+class BacktestJobTest {\n+\n+    private static final BacktestPeriod PERIOD =\n+            new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));\n+\n+    @Test\n+    @DisplayName(\"create는 id 없이 QUEUED 상태로 만든다\")\n+    void createStartsQueuedWithoutId() {\n+        BacktestJob job = BacktestJob.create(\"sma-cross\", PERIOD);\n+\n+        assertThat(job.getId()).isNull();\n+        assertThat(job.getStrategy()).isEqualTo(\"sma-cross\");\n+        assertThat(job.getPeriod()).isEqualTo(PERIOD);\n+        assertThat(job.getStatus()).isEqualTo(BacktestStatus.QUEUED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"create는 빈 전략명을 거부한다\")\n+    void createRejectsBlankStrategy() {\n+        assertThatThrownBy(() -> BacktestJob.create(\" \", PERIOD))\n+                .isInstanceOf(IllegalArgumentException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"restore는 저장된 id와 상태를 그대로 복원한다\")\n+    void restoreKeepsIdAndStatus() {\n+        BacktestJob job = BacktestJob.restore(7L, \"sma-cross\", PERIOD, BacktestStatus.RUNNING);\n+\n+        assertThat(job.getId()).isEqualTo(7L);\n+        assertThat(job.getStatus()).isEqualTo(BacktestStatus.RUNNING);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/backtest/domain/model/BacktestJobTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/backtest/domain/model/BacktestJobTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,39 @@\n+package com.thorp.api.backtest.domain.vo;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import java.time.LocalDate;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+class BacktestPeriodTest {\n+\n+    @Test\n+    @DisplayName(\"시작일이 종료일보다 늦으면 생성할 수 없다\")\n+    void rejectsStartAfterEnd() {\n+        assertThatThrownBy(\n+                        () ->\n+                                new BacktestPeriod(\n+                                        LocalDate.of(2024, 1, 2), LocalDate.of(2024, 1, 1)))\n+                .isInstanceOf(IllegalArgumentException.class);\n+    }\n+\n+    @Test\n+    @DisplayName(\"시작일과 종료일이 같은 하루 기간은 허용한다\")\n+    void allowsSameDay() {\n+        LocalDate day = LocalDate.of(2024, 1, 1);\n+        BacktestPeriod period = new BacktestPeriod(day, day);\n+        assertThat(period.startDate()).isEqualTo(day);\n+        assertThat(period.endDate()).isEqualTo(day);\n+    }\n+\n+    @Test\n+    @DisplayName(\"null 날짜는 허용하지 않는다\")\n+    void rejectsNull() {\n+        assertThatThrownBy(() -> new BacktestPeriod(null, LocalDate.of(2024, 1, 1)))\n+                .isInstanceOf(NullPointerException.class);\n+        assertThatThrownBy(() -> new BacktestPeriod(LocalDate.of(2024, 1, 1), null))\n+                .isInstanceOf(NullPointerException.class);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/backtest/domain/vo/BacktestPeriodTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/backtest/domain/vo/BacktestPeriodTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,68 @@\n+package com.thorp.api.backtest.infrastructure.persistence;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.thorp.api.backtest.domain.model.BacktestJob;\n+import com.thorp.api.backtest.domain.model.BacktestStatus;\n+import com.thorp.api.backtest.domain.vo.BacktestPeriod;\n+import com.thorp.api.common.config.JpaAuditingConfig;\n+import java.time.LocalDate;\n+import java.util.Optional;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;\n+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;\n+import org.springframework.context.annotation.Import;\n+\n+/**\n+ * H2 라운드트립. {@code @DataJpaTest}는 {@code @Configuration}·{@code @Repository} 구현체를 스캔하지 않으므로 둘을 명시\n+ * 등록한다. Auditing이 없으면 {@code created_at NOT NULL} 제약에 걸려 저장이 실패한다.\n+ */\n+@DataJpaTest\n+@Import({JpaAuditingConfig.class, BacktestJobRepositoryImpl.class})\n+class BacktestJobRepositoryImplTest {\n+\n+    @Autowired private BacktestJobRepositoryImpl repository;\n+    @Autowired private TestEntityManager entityManager;\n+\n+    @Test\n+    @DisplayName(\"save 후 findById로 같은 Job을 읽어온다\")\n+    void saveThenFindById() {\n+        BacktestPeriod period =\n+                new BacktestPeriod(LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31));\n+\n+        BacktestJob saved = repository.save(BacktestJob.create(\"sma-cross\", period));\n+        entityManager.flush();\n+        entityManager.clear();\n+\n+        assertThat(saved.getId()).isNotNull();\n+        Optional<BacktestJob> found = repository.findById(saved.getId());\n+        assertThat(found).isPresent();\n+        assertThat(found.get().getStrategy()).isEqualTo(\"sma-cross\");\n+        assertThat(found.get().getPeriod()).isEqualTo(period);\n+        assertThat(found.get().getStatus()).isEqualTo(BacktestStatus.QUEUED);\n+    }\n+\n+    @Test\n+    @DisplayName(\"BaseEntity의 생성·수정 시각이 Auditing으로 채워진다\")\n+    void auditingFieldsArePopulated() {\n+        BacktestJob saved =\n+                repository.save(\n+                        BacktestJob.create(\n+                                \"sma-cross\",\n+                                new BacktestPeriod(\n+                                        LocalDate.of(2019, 1, 1), LocalDate.of(2023, 12, 31))));\n+        entityManager.flush();\n+\n+        BacktestJobJpaEntity entity = entityManager.find(BacktestJobJpaEntity.class, saved.getId());\n+        assertThat(entity.getCreatedAt()).isNotNull();\n+        assertThat(entity.getUpdatedAt()).isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"없는 id는 빈 Optional을 돌려준다\")\n+    void findByIdReturnsEmptyWhenMissing() {\n+        assertThat(repository.findById(999L)).isEmpty();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobRepositoryImplTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/backtest/infrastructure/persistence/BacktestJobRepositoryImplTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,113 @@\n+package com.thorp.api.backtest.presentation.controller;\n+\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.thorp.api.backtest.application.command.CreateBacktestCommand;\n+import com.thorp.api.backtest.application.result.BacktestJobResult;\n+import com.thorp.api.backtest.application.service.BacktestService;\n+import com.thorp.api.backtest.domain.exception.BacktestNotFoundException;\n+import com.thorp.api.backtest.domain.model.BacktestStatus;\n+import java.time.LocalDate;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.http.MediaType;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+@WebMvcTest(BacktestController.class)\n+class BacktestControllerTest {\n+\n+    private static final LocalDate START = LocalDate.of(2019, 1, 1);\n+    private static final LocalDate END = LocalDate.of(2023, 12, 31);\n+\n+    @Autowired private MockMvc mockMvc;\n+    @MockitoBean private BacktestService backtestService;\n+\n+    @Test\n+    @DisplayName(\"POST /backtests → 202 + { backtestId, status: QUEUED }\")\n+    void createReturnsAccepted() throws Exception {\n+        when(backtestService.create(new CreateBacktestCommand(\"sma-cross\", START, END)))\n+                .thenReturn(\n+                        new BacktestJobResult(1L, \"sma-cross\", START, END, BacktestStatus.QUEUED));\n+\n+        mockMvc.perform(\n+                        post(\"/backtests\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\n+                                        \"\"\"\n+                                        {\"strategy\":\"sma-cross\",\"startDate\":\"2019-01-01\",\"endDate\":\"2023-12-31\"}\n+                                        \"\"\"))\n+                .andExpect(status().isAccepted())\n+                .andExpect(jsonPath(\"$.success\").value(true))\n+                .andExpect(jsonPath(\"$.data.backtestId\").value(1))\n+                .andExpect(jsonPath(\"$.data.status\").value(\"QUEUED\"))\n+                .andExpect(jsonPath(\"$.error\").isEmpty());\n+    }\n+\n+    @Test\n+    @DisplayName(\"POST /backtests 필수 필드 누락 → 400, 서비스 호출 없음\")\n+    void createRejectsInvalidBody() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/backtests\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\"{\\\"strategy\\\":\\\"\\\",\\\"startDate\\\":\\\"2019-01-01\\\"}\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+\n+        verify(backtestService, never()).create(any());\n+    }\n+\n+    @Test\n+    @DisplayName(\"POST /backtests startDate > endDate → 400\")\n+    void createRejectsInvertedPeriod() throws Exception {\n+        when(backtestService.create(any()))\n+                .thenThrow(new IllegalArgumentException(\"startDate must not be after endDate\"));\n+\n+        mockMvc.perform(\n+                        post(\"/backtests\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\n+                                        \"\"\"\n+                                        {\"strategy\":\"sma-cross\",\"startDate\":\"2023-12-31\",\"endDate\":\"2019-01-01\"}\n+                                        \"\"\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"GET /backtests/{id} → 200 + 현재 상태\")\n+    void getReturnsStatus() throws Exception {\n+        when(backtestService.get(1L))\n+                .thenReturn(\n+                        new BacktestJobResult(1L, \"sma-cross\", START, END, BacktestStatus.RUNNING));\n+\n+        mockMvc.perform(get(\"/backtests/1\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.success\").value(true))\n+                .andExpect(jsonPath(\"$.data.backtestId\").value(1))\n+                .andExpect(jsonPath(\"$.data.status\").value(\"RUNNING\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"GET /backtests/{id} 없는 id → 404 + RESOURCE_NOT_FOUND\")\n+    void getReturnsNotFound() throws Exception {\n+        when(backtestService.get(999L)).thenThrow(new BacktestNotFoundException(999L));\n+\n+        mockMvc.perform(get(\"/backtests/999\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").isEmpty())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/backtest/presentation/controller/BacktestControllerTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/backtest/presentation/controller/BacktestControllerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,149 @@\n+package com.thorp.api.common.web.advice;\n+\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.thorp.api.common.exception.BusinessException;\n+import com.thorp.api.common.exception.ErrorCode;\n+import jakarta.validation.Valid;\n+import jakarta.validation.constraints.NotBlank;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.http.MediaType;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.web.bind.annotation.GetMapping;\n+import org.springframework.web.bind.annotation.PathVariable;\n+import org.springframework.web.bind.annotation.PostMapping;\n+import org.springframework.web.bind.annotation.RequestBody;\n+import org.springframework.web.bind.annotation.RequestMapping;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 전역 예외 처리 응답 포맷 검증.\n+ *\n+ * <p>{@code @WebMvcTest} 슬라이스로 띄우므로 {@code JpaAuditingConfig}가 컨텍스트에서 제외되는지도 함께 확인된다.\n+ */\n+@WebMvcTest(controllers = GlobalExceptionHandlerTest.ThrowingController.class)\n+@Import(GlobalExceptionHandlerTest.ThrowingController.class)\n+class GlobalExceptionHandlerTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+\n+    @Test\n+    @DisplayName(\"BusinessException은 ErrorCode의 HTTP 상태와 코드로 응답한다\")\n+    void businessException() throws Exception {\n+        mockMvc.perform(get(\"/test/business\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.data\").value(nullValue()))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"))\n+                .andExpect(jsonPath(\"$.error.message\").value(\"백테스트 없음\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"요청 검증 실패는 400과 첫 필드 오류 메시지로 응답한다\")\n+    void validationException() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/test/validation\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\"{\\\"name\\\": \\\"\\\"}\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"))\n+                .andExpect(jsonPath(\"$.error.message\").value(\"name: 이름은 필수입니다\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"도메인 불변식 위반(IllegalArgumentException)은 400으로 응답한다\")\n+    void illegalArgumentException() throws Exception {\n+        mockMvc.perform(get(\"/test/illegal-argument\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"))\n+                .andExpect(\n+                        jsonPath(\"$.error.message\").value(\"startDate must not be after endDate\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"존재하지 않는 경로는 500이 아니라 404로 응답한다\")\n+    void unknownPath() throws Exception {\n+        mockMvc.perform(get(\"/test/no-such-path\"))\n+                .andExpect(status().isNotFound())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESOURCE_NOT_FOUND\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"깨진 JSON 본문은 500이 아니라 400으로 응답한다\")\n+    void malformedJsonBody() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/test/validation\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\"{oops\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"경로 변수 타입 불일치는 500이 아니라 400으로 응답한다\")\n+    void pathVariableTypeMismatch() throws Exception {\n+        mockMvc.perform(get(\"/test/number/abc\"))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"허용되지 않는 메서드는 500이 아니라 405로 응답한다\")\n+    void methodNotAllowed() throws Exception {\n+        mockMvc.perform(delete(\"/test/business\"))\n+                .andExpect(status().isMethodNotAllowed())\n+                .andExpect(jsonPath(\"$.success\").value(false));\n+    }\n+\n+    @Test\n+    @DisplayName(\"예상하지 못한 예외는 500과 고정 메시지로 응답하고 내부 메시지를 노출하지 않는다\")\n+    void unexpectedException() throws Exception {\n+        mockMvc.perform(get(\"/test/unexpected\"))\n+                .andExpect(status().isInternalServerError())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INTERNAL_ERROR\"))\n+                .andExpect(\n+                        jsonPath(\"$.error.message\").value(ErrorCode.INTERNAL_ERROR.getMessage()));\n+    }\n+\n+    @RestController\n+    @RequestMapping(\"/test\")\n+    static class ThrowingController {\n+\n+        @GetMapping(\"/business\")\n+        void business() {\n+            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, \"백테스트 없음\");\n+        }\n+\n+        @PostMapping(\"/validation\")\n+        void validation(@Valid @RequestBody SampleRequest request) {}\n+\n+        @GetMapping(\"/number/{value}\")\n+        void number(@PathVariable Long value) {}\n+\n+        @GetMapping(\"/illegal-argument\")\n+        void illegalArgument() {\n+            throw new IllegalArgumentException(\"startDate must not be after endDate\");\n+        }\n+\n+        @GetMapping(\"/unexpected\")\n+        void unexpected() {\n+            throw new IllegalStateException(\"internal detail that must not leak\");\n+        }\n+    }\n+\n+    record SampleRequest(@NotBlank(message = \"이름은 필수입니다\") String name) {}\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/common/web/advice/GlobalExceptionHandlerTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/common/web/advice/GlobalExceptionHandlerTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,94 @@\n+package com.thorp.api;\n+\n+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;\n+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideOutsideOfPackage;\n+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;\n+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;\n+import static com.tngtech.archunit.library.Architectures.layeredArchitecture;\n+\n+import com.tngtech.archunit.core.importer.ImportOption;\n+import com.tngtech.archunit.junit.AnalyzeClasses;\n+import com.tngtech.archunit.junit.ArchTest;\n+import com.tngtech.archunit.lang.ArchRule;\n+import jakarta.persistence.Entity;\n+import org.springframework.web.bind.annotation.RestController;\n+\n+/**\n+ * 패키지 계층 의존 규칙 검증. 근거: docs/adr/0001-be-layered-package-architecture.md.\n+ *\n+ * <p>규칙은 패키지 이름 패턴(`..presentation..` 등) 기반이라 새 도메인 패키지를 추가하면 별도 등록 없이 자동으로 검사 대상이 된다.\n+ *\n+ * <p>테스트 클래스는 제외한다. 슬라이스 테스트가 계층 밖에 더미 컨트롤러를 두는 경우가 있어 프로덕션 코드만 검사한다.\n+ */\n+@AnalyzeClasses(packages = \"com.thorp.api\", importOptions = ImportOption.DoNotIncludeTests.class)\n+class ArchitectureTest {\n+\n+    private static final String ROOT = \"com.thorp.api\";\n+    private static final String COMMON = ROOT + \".common..\";\n+\n+    /** 규칙 1~3: presentation → application → domain, infrastructure → application/domain 만 허용. */\n+    @ArchTest\n+    static final ArchRule 계층_의존_방향 =\n+            layeredArchitecture()\n+                    .consideringOnlyDependenciesInLayers()\n+                    .layer(\"Presentation\")\n+                    .definedBy(\"..presentation..\")\n+                    .layer(\"Application\")\n+                    .definedBy(\"..application..\")\n+                    .layer(\"Domain\")\n+                    .definedBy(\"..domain..\")\n+                    .layer(\"Infrastructure\")\n+                    .definedBy(\"..infrastructure..\")\n+                    .whereLayer(\"Presentation\")\n+                    .mayNotBeAccessedByAnyLayer()\n+                    .whereLayer(\"Infrastructure\")\n+                    .mayNotBeAccessedByAnyLayer()\n+                    .whereLayer(\"Application\")\n+                    .mayOnlyBeAccessedByLayers(\"Presentation\", \"Infrastructure\")\n+                    .whereLayer(\"Domain\")\n+                    .mayOnlyBeAccessedByLayers(\"Presentation\", \"Application\", \"Infrastructure\");\n+\n+    /** 규칙 1(보강): 도메인 계층은 프레임워크에 의존하지 않는다. */\n+    @ArchTest\n+    static final ArchRule 도메인은_프레임워크에_의존하지_않는다 =\n+            noClasses()\n+                    .that()\n+                    .resideInAPackage(\"..domain..\")\n+                    .should()\n+                    .dependOnClassesThat()\n+                    .resideInAnyPackage(\n+                            \"..application..\",\n+                            \"..infrastructure..\",\n+                            \"..presentation..\",\n+                            \"org.springframework..\",\n+                            \"jakarta.persistence..\",\n+                            \"com.fasterxml..\");\n+\n+    /** 규칙 4: common은 어떤 도메인 패키지도 참조하지 않는다. */\n+    @ArchTest\n+    static final ArchRule common은_도메인을_참조하지_않는다 =\n+            noClasses()\n+                    .that()\n+                    .resideInAPackage(COMMON)\n+                    .should()\n+                    .dependOnClassesThat(\n+                            resideInAPackage(ROOT + \"..\").and(resideOutsideOfPackage(COMMON)));\n+\n+    /** 규칙 5: JPA Entity는 infrastructure.persistence 에만 둔다. */\n+    @ArchTest\n+    static final ArchRule 엔티티는_infrastructure_persistence에만_있다 =\n+            classes()\n+                    .that()\n+                    .areAnnotatedWith(Entity.class)\n+                    .should()\n+                    .resideInAPackage(\"..infrastructure.persistence..\");\n+\n+    /** 규칙 6: 컨트롤러는 presentation.controller 에만 둔다. */\n+    @ArchTest\n+    static final ArchRule 컨트롤러는_presentation_controller에만_있다 =\n+            classes()\n+                    .that()\n+                    .areAnnotatedWith(RestController.class)\n+                    .should()\n+                    .resideInAPackage(\"..presentation.controller..\");\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/thorp/api/ArchitectureTest.java",
+          "old_path": "backend/src/test/java/com/thorp/api/ArchitectureTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n # CLAUDE.md — backend (BACK 파트)\n \n-Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API. **백테스트 계산은 하지 않는다** — Job을 Kafka(`backtest.jobs`)에 넣으면 Worker가 처리.\n+Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API. **백테스트 계산은 하지 않는다** — Job을 브로커(현재 RabbitMQ 예정, Kafka는 설치만)에 넣으면 Worker가 처리. 브로커 결정은 루트 `CLAUDE.md`를 따른다.\n \n ## 검증 명령 (작업 후 반드시 실행)\n \n@@ -10,8 +10,45 @@ Spring Boot 3.5 / Java 21 / Gradle. 백테스트 Job 생성·상태·결과 API.\n \n ## 패키지 규칙 (`com.thorp.api`)\n \n-- 도메인별 패키지(`backtest/`, ...) 안에 controller·service·repository·dto를 함께 둔다 (계층별 상위 폴더 X)\n-- `config/` 공통 설정, `common/` 공통 예외·응답 포맷\n+근거: [ADR-0001](../docs/adr/0001-be-layered-package-architecture.md). 규칙은 `ArchitectureTest`(ArchUnit)가 검증하며, 위반 시 빌드가 실패한다.\n+\n+### 도메인별 4계층\n+\n+도메인 패키지(`backtest/`, `strategy/`, …) 안에 아래 4계층을 둔다. 계층별 상위 폴더는 만들지 않는다.\n+\n+| 계층 | 하위 패키지 | 역할 |\n+|---|---|---|\n+| `presentation` | `controller` `request` `response` | HTTP 입출력. `@RestController`는 여기에만. request→command, result→response 변환은 컨트롤러가 한다 |\n+| `application` | `service` `command` `result` `repository` `port` | 유스케이스 조합·트랜잭션 경계. `repository`·`port`는 인터페이스만 둔다 |\n+| `domain` | `model` `vo` `exception` | 순수 Java 도메인 모델과 불변식. Spring·JPA·Jackson import 금지 |\n+| `infrastructure` | `persistence` `messaging` | `application` 인터페이스의 구현. `@Entity`·Spring Data·브로커 클라이언트는 여기에만 |\n+\n+### 공통 (`common/`)\n+\n+- `common/web` 응답 포맷(`ApiResponse`, `ErrorResponse`)·전역 예외 처리(`GlobalExceptionHandler`)\n+- `common/exception` `BusinessException`, `ErrorCode`\n+- `common/persistence` `BaseEntity`(createdAt, updatedAt)\n+- `common/config` 공통 설정(`JpaAuditingConfig` 등). 최상위 `config/`는 두지 않는다.\n+- `common`은 어떤 도메인 패키지도 참조하지 않는다.\n+\n+### 의존 방향 (허용되는 화살표만)\n+\n+```\n+presentation ──▶ application ──▶ domain\n+                    ▲                ▲\n+infrastructure ─────┴────────────────┘\n+common: 모든 계층에서 참조 가능\n+```\n+\n+- 도메인 모델(`domain/model`)과 JPA Entity(`infrastructure/persistence/*JpaEntity`)는 분리하고 `*Mapper`(정적 `toEntity`/`toDomain`)로 변환한다.\n+- 컨트롤러 DTO(`request`/`response`)를 서비스 시그니처에 쓰지 않는다. 서비스는 `command`/`result`만 받고 돌려준다.\n+\n+### 새 도메인 추가 체크리스트\n+\n+1. `com.thorp.api.{domain}/` 아래 `presentation` `application` `domain` `infrastructure` 폴더 생성\n+2. 리포지토리·외부 발행은 `application/repository`·`application/port`에 인터페이스, `infrastructure`에 구현\n+3. `./gradlew test`로 `ArchitectureTest` 통과 확인 — 규칙은 `layeredArchitecture()` 기반이라 새 도메인에 자동 적용된다. 별도 등록 불필요\n+4. 구조를 벗어나야 하면 코드가 아니라 ADR을 먼저 갱신한다\n \n ## 규칙\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -38,6 +38,7 @@ dependencies {\n \n     testImplementation 'org.springframework.boot:spring-boot-starter-test'\n     testImplementation 'org.springframework.kafka:spring-kafka-test'\n+    testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'\n     testRuntimeOnly 'com.h2database:h2'\n     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/build.gradle",
+          "old_path": "backend/build.gradle",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/.gitkeep",
+          "old_path": "docs/adr/.gitkeep",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,131 @@\n+# ADR-0001: 백엔드 패키지 구조 — 도메인별 계층형 아키텍처\n+\n+- 상태: 승인 (2026-09-03)\n+- 대상: `backend/` (`com.thorp.api`)\n+- 관련 이슈: #87\n+\n+## 배경\n+\n+백엔드는 `com.thorp.api` 아래 `backtest/`(컨트롤러 1개, 요청 DTO 1개)와 빈 `common/`만 있는\n+스캐폴딩 상태다. 기존 `backend/CLAUDE.md`는 \"도메인 패키지 안에 controller·service·repository·dto를\n+함께 둔다\"고만 정해 두었고, 계층 간 의존 방향은 규정하지 않았다.\n+\n+앞으로 도메인이 backtest → strategy, user, notification 순으로 늘어나고, 알고리즘도 20개+로\n+확장된다(v0.1.2). 기능 개발이 시작되기 전에 패키지 경계와 의존 방향을 확정해 두지 않으면\n+도메인마다 구조가 달라지고, 컨트롤러 DTO가 서비스 시그니처에 새거나 도메인 객체가 JPA에\n+묶이는 문제가 생긴다.\n+\n+아키텍처 원칙(루트 `CLAUDE.md`)상 백엔드는 계산하지 않고 Job을 브로커에 넣기만 하며, 브로커는\n+아직 확정하지 않았다(현재 RabbitMQ 예정, Kafka는 설치만). 저장소도 Parquet 등으로 바뀔 여지를\n+남겨야 한다. 외부 기술에 대한 의존을 한곳에 격리할 필요가 있다.\n+\n+## 결정\n+\n+도메인 패키지 안에 `presentation / application / domain / infrastructure` 4계층을 둔다.\n+공통 요소는 `common`에 모으고, 의존 방향은 ArchUnit 테스트로 강제한다.\n+\n+| 항목 | 결정 | 이유 |\n+|---|---|---|\n+| 계층 분리 단위 | 도메인 패키지 안에 4계층 (`backtest/presentation`, `backtest/application`, …) | 도메인이 늘어날 때 도메인 단위로 응집. 계층별 상위 폴더로 나누면 도메인 하나를 읽을 때 4곳을 오가야 한다 |\n+| 리포지토리 위치 | 인터페이스는 `application/repository`, 구현체는 `infrastructure/persistence` | 도메인·응용 계층이 JPA에 의존하지 않게 함. Parquet/다른 저장소로 교체 여지 |\n+| 도메인 모델 vs JPA Entity | 분리. `domain/model`은 순수 Java, `infrastructure/persistence`에 `*JpaEntity` + `*Mapper` | 도메인 객체에 `@Entity`가 붙으면 계층 분리가 형식에 그친다 |\n+| 외부 발행(메시징) | `application/port` 인터페이스(`BacktestJobPublisher`) → `infrastructure/messaging` 구현 | 브로커 결정 유보 원칙과 맞물림. 브로커를 바꿔도 application 이상은 수정 없음 |\n+| DTO 경계 | `presentation/request·response`는 HTTP 전용. `application/command·result`는 유스케이스 입출력. 컨트롤러가 request→command, result→response 변환 | 컨트롤러 DTO가 서비스 시그니처에 새는 것을 차단 |\n+| 공통 요소 | `common/web`(응답 포맷·전역 예외 처리), `common/exception`, `common/persistence`(`BaseEntity`), `common/config` | 최상위 `config/`는 두지 않고 `common` 아래로 흡수 |\n+| 루트 패키지 | `com.thorp.api` 유지 | 변경 시 Application 클래스·테스트·Docker 설정까지 흔들리는데 얻는 것이 없다 |\n+| 의존 강제 | ArchUnit (`archunit-junit5`), `layeredArchitecture()` 기반 | 규칙이 문서에만 있으면 무너진다. 도메인이 늘어도 규칙에 자동 포함되게 한다 |\n+\n+### 의존 방향 (허용되는 화살표만)\n+\n+```\n+presentation ──▶ application ──▶ domain\n+                    ▲                ▲\n+infrastructure ─────┴────────────────┘\n+\n+common: 모든 계층에서 참조 가능. common은 어떤 도메인 패키지도 참조하지 않음.\n+domain: Spring·JPA·Jackson 등 프레임워크 import 금지 (java.*, 자신의 패키지, common.* 만)\n+```\n+\n+### 각 계층의 역할\n+\n+| 계층 | 하위 패키지 | 역할 |\n+|---|---|---|\n+| `presentation` | `controller`, `request`, `response` | HTTP 입출력. `@RestController`는 여기에만 둔다. request→command, result→response 변환 |\n+| `application` | `service`, `command`, `result`, `repository`, `port` | 유스케이스 조합과 트랜잭션 경계. 저장소·외부 시스템은 인터페이스로만 안다 |\n+| `domain` | `model`, `vo`, `exception` | 순수 Java 도메인 모델과 불변식. 프레임워크에 의존하지 않는다 |\n+| `infrastructure` | `persistence`, `messaging` | `application`의 인터페이스 구현. `@Entity`, Spring Data, 브로커 클라이언트는 여기에만 둔다 |\n+\n+### 목표 패키지 트리 (backtest 기준)\n+\n+```\n+com.thorp.api\n+├── ThorpApplication.java\n+├── backtest\n+│   ├── presentation\n+│   │   ├── controller/BacktestController.java\n+│   │   ├── request/BacktestJobRequest.java\n+│   │   └── response/BacktestJobResponse.java\n+│   ├── application\n+│   │   ├── service/BacktestService.java\n+│   │   ├── command/CreateBacktestCommand.java\n+│   │   ├── result/BacktestJobResult.java\n+│   │   ├── repository/BacktestJobRepository.java       (인터페이스)\n+│   │   └── port/BacktestJobPublisher.java              (인터페이스)\n+│   ├── domain\n+│   │   ├── model/BacktestJob.java\n+│   │   ├── model/BacktestStatus.java\n+│   │   ├── vo/BacktestPeriod.java\n+│   │   └── exception/BacktestNotFoundException.java\n+│   └── infrastructure\n+│       ├── persistence\n+│       │   ├── BacktestJobJpaEntity.java\n+│       │   ├── BacktestJobJpaRepository.java\n+│       │   ├── BacktestJobRepositoryImpl.java\n+│       │   └── BacktestJobMapper.java\n+│       └── messaging/                                  (브로커 결정 후 구현)\n+└── common\n+    ├── web\n+    │   ├── response/ApiResponse.java\n+    │   ├── response/ErrorResponse.java\n+    │   └── advice/GlobalExceptionHandler.java\n+    ├── exception\n+    │   ├── BusinessException.java\n+    │   └── ErrorCode.java\n+    ├── config/JpaAuditingConfig.java\n+    └── persistence/BaseEntity.java\n+```\n+\n+### ArchUnit으로 강제하는 규칙\n+\n+1. `..domain..`은 `..application..`, `..infrastructure..`, `..presentation..`, `org.springframework..`,\n+   `jakarta.persistence..`, `com.fasterxml..`에 의존하지 않는다.\n+2. `..application..`은 `..infrastructure..`, `..presentation..`에 의존하지 않는다.\n+3. `..presentation..`은 `..infrastructure..`에 의존하지 않는다.\n+4. `..common..`은 어떤 도메인 패키지(`com.thorp.api.(?!common).*`)에도 의존하지 않는다.\n+5. `@Entity` 클래스는 `..infrastructure.persistence..`에만 위치한다.\n+6. `@RestController` 클래스는 `..presentation.controller..`에만 위치한다.\n+\n+## 결과\n+\n+**장점**\n+\n+- 새 도메인을 추가할 때 구조를 고민하지 않는다. 4계층 폴더를 만들면 ArchUnit 규칙에 자동 포함된다.\n+- 브로커(Kafka/RabbitMQ)와 저장소(JPA/Parquet) 결정을 미루거나 바꿔도 `infrastructure`만 수정한다.\n+- 도메인 모델을 프레임워크 없이 단위 테스트할 수 있다.\n+\n+**단점 / 감수하는 비용**\n+\n+- 도메인 모델과 JPA Entity를 분리하므로 Mapper 보일러플레이트가 생긴다. Mapper는 정적 메서드\n+  `toEntity`, `toDomain` 2개로 제한한다. MapStruct 도입은 도메인이 3개를 넘을 때 재검토한다.\n+- 유스케이스 하나에 request/command/result/response 4종의 DTO가 생긴다. MVP 규모에서는 과할 수\n+  있으나, DTO 경계가 무너진 뒤에 되돌리는 비용이 더 크다고 판단했다.\n+- 브로커 구현체가 비어 있는 동안 컨텍스트 기동을 위해 임시 로깅 구현체(`LoggingBacktestJobPublisher`)를\n+  둔다. 브로커 결정 티켓의 완료 조건에 \"이 클래스 삭제\"를 포함한다.\n+\n+**이 결정에서 다루지 않는 것**\n+\n+- 백테스트 Job 생성/조회의 실제 비즈니스 로직, 트랜잭션 경계와 publish 실패 처리.\n+- 메시지 브로커 선택. 루트 `CLAUDE.md`(RabbitMQ)와 `application.yml`(Kafka)의 불일치는 브로커 결정\n+  티켓에서 의존성·설정을 함께 정리한다.\n+- `strategy`, `user`, `notification` 도메인 폴더 생성. 해당 기능 티켓에서 이 ADR의 구조를 따라 만든다.\n+- Flyway 도입, 인증/보안 설정.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/adr/0001-be-layered-package-architecture.md",
+          "old_path": "docs/adr/0001-be-layered-package-architecture.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-03T11:59:58.753+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2760715": []
+  }
+}

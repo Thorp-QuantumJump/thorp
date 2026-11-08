@@ -1,0 +1,19 @@
+{
+  "states": {
+    "merged": 412,
+    "closed": 10
+  },
+  "records": {
+    "mrs": 422,
+    "human_notes": 532,
+    "system_notes": 1914,
+    "inline_notes": 0,
+    "threads": 2437,
+    "versions": 672,
+    "unavailable_diff_details": 0,
+    "unavailable_approvals": 0,
+    "unavailable_mr_reactions": 0,
+    "unavailable_note_reactions": 0
+  },
+  "errors": []
+}

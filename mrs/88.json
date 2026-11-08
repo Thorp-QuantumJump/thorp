@@ -1,0 +1,624 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943325,
+    "iid": 88,
+    "project_id": 1444456,
+    "title": "feat(infra): CI 결과를 GitLab MR 화면에 파트별로 나타나게 합니다.",
+    "description": "### 작업 내용 요약\n\nCI 결과가 Jenkins 안에만 남아 있어서, **MR 화면만 보아서는 통과했는지 알 수 없습니다.** 확인하려면 SSH 터널을 열고 Jenkins에 들어가야 합니다.\n\n각 파트 스테이지가 끝날 때 그 결과를 GitLab에 보고하도록 했습니다. MR의 커밋 옆에 여섯 줄이 나열되어, 어느 파트가 깨졌는지 MR에서 바로 보입니다.\n\n### 관련 티켓 번호 & 링크\n\nticket #201 (Jira S15P21E205-201 · GitLab 이슈는 사용하지 않습니다)\\\nlink https://ssafy.atlassian.net/browse/S15P21E205-201\n\n### 주요 변경 사항\n\n#### `Jenkinsfile` — 스테이지별 커밋 상태 보고\n\n여섯 스테이지(`Merge with dev`, `Migration version`, `Frontend`, `Backend`, `Worker`, `Data`) 각각에 `post` 블록을 넣었습니다.\n\npost {     success { updateGitlabCommitStatus(name: 'Frontend', state: 'success') }     failure { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }     unstable { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') } }\n\n파이프라인 전체로 한 번만 보고할 수도 있지만, 그렇게 하면 빨간불 하나만 보이고 **어느 파트가 깨졌는지는 결국 Jenkins에 들어가야 알 수 있습니다.** 파트별로 나눈 이유입니다.\n\n`unstable`을 실패로 보냅니다. 테스트가 깨지면 빌드는 노란색(UNSTABLE)으로 끝나는데, 이것을 성공으로 보고하면 테스트가 깨진 채로 머지할 수 있게 됩니다.\n\n#### 건너뛴 파트는 표시되지 않습니다\n\n`when` 조건에 걸려 실행되지 않은 파트는 `post`가 돌지 않아 GitLab에 아무것도 보내지 않습니다. 프론트만 고친 MR에는 `Frontend`만 나타납니다.\n\n돌지 않은 것을 성공으로 보고하지 않기 위해 이렇게 두었습니다.\n\n### 코드 외 설정 (이미 완료)\n\nJenkins → Manage Jenkins → System의 GitLab Connection에 `api` 스코프 토큰을 연결하고 **Test Connection 성공**을 확인했습니다. 이 설정이 없으면 `updateGitlabCommitStatus`가 조용히 아무 일도 하지 않습니다.\n\n### 테스트\n\n* `Jenkinsfile` 중괄호 균형 확인 (116쌍)\n* `updateGitlabCommitStatus` 18개 = 6스테이지 × 3상태\n* GitLab Connection Test Connection 성공\n* **MR 화면에 파트별 결과 표시 — 이 MR의 빌드에서 확인합니다**\n\n### 리뷰 포인트\n\n1. **\"Pipelines must succeed\"는 이 MR을 머지한 다음에 켜야 합니다.** GitLab Settings → Merge requests에서 켜는 설정인데, 지금 켜면 이 코드가 아직 dev에 없어서 열려 있는 MR들이 전부 머지 불가가 됩니다. 순서를 지켜 주십시오.\n2. **이미 갈라진 브랜치는 이 설정이 적용되지 않습니다.** CI는 MR 소스 브랜치의 `Jenkinsfile`로 돌기 때문에, 각자 브랜치에서 dev를 반영해야 커밋 상태가 보고됩니다. 머지 후 공지하겠습니다.\n3. **파트별로 나눈 단위가 적절한지 봐 주세요.** 지금은 여섯 줄이 나열됩니다. 너무 많다고 판단되면 `Merge with dev`와 `Migration version`을 합치는 선택지가 있습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T15:39:02.339+09:00",
+    "updated_at": "2026-09-14T15:39:33.878+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T15:39:33.665+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/201-gitlab-commit-status",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ba96be116c0601d7f703af92b416aea3ef1879b7",
+    "merge_commit_sha": "d868e73fee83fa2307c6ec743ae13b5c6beb0e55",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T15:39:03.161+09:00",
+    "reference": "!88",
+    "references": {
+      "short": "!88",
+      "relative": "!88",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!88"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/88",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943325,
+    "iid": 88,
+    "project_id": 1444456,
+    "title": "feat(infra): CI 결과를 GitLab MR 화면에 파트별로 나타나게 합니다.",
+    "description": "### 작업 내용 요약\n\nCI 결과가 Jenkins 안에만 남아 있어서, **MR 화면만 보아서는 통과했는지 알 수 없습니다.** 확인하려면 SSH 터널을 열고 Jenkins에 들어가야 합니다.\n\n각 파트 스테이지가 끝날 때 그 결과를 GitLab에 보고하도록 했습니다. MR의 커밋 옆에 여섯 줄이 나열되어, 어느 파트가 깨졌는지 MR에서 바로 보입니다.\n\n### 관련 티켓 번호 & 링크\n\nticket #201 (Jira S15P21E205-201 · GitLab 이슈는 사용하지 않습니다)\\\nlink https://ssafy.atlassian.net/browse/S15P21E205-201\n\n### 주요 변경 사항\n\n#### `Jenkinsfile` — 스테이지별 커밋 상태 보고\n\n여섯 스테이지(`Merge with dev`, `Migration version`, `Frontend`, `Backend`, `Worker`, `Data`) 각각에 `post` 블록을 넣었습니다.\n\npost {     success { updateGitlabCommitStatus(name: 'Frontend', state: 'success') }     failure { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }     unstable { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') } }\n\n파이프라인 전체로 한 번만 보고할 수도 있지만, 그렇게 하면 빨간불 하나만 보이고 **어느 파트가 깨졌는지는 결국 Jenkins에 들어가야 알 수 있습니다.** 파트별로 나눈 이유입니다.\n\n`unstable`을 실패로 보냅니다. 테스트가 깨지면 빌드는 노란색(UNSTABLE)으로 끝나는데, 이것을 성공으로 보고하면 테스트가 깨진 채로 머지할 수 있게 됩니다.\n\n#### 건너뛴 파트는 표시되지 않습니다\n\n`when` 조건에 걸려 실행되지 않은 파트는 `post`가 돌지 않아 GitLab에 아무것도 보내지 않습니다. 프론트만 고친 MR에는 `Frontend`만 나타납니다.\n\n돌지 않은 것을 성공으로 보고하지 않기 위해 이렇게 두었습니다.\n\n### 코드 외 설정 (이미 완료)\n\nJenkins → Manage Jenkins → System의 GitLab Connection에 `api` 스코프 토큰을 연결하고 **Test Connection 성공**을 확인했습니다. 이 설정이 없으면 `updateGitlabCommitStatus`가 조용히 아무 일도 하지 않습니다.\n\n### 테스트\n\n* `Jenkinsfile` 중괄호 균형 확인 (116쌍)\n* `updateGitlabCommitStatus` 18개 = 6스테이지 × 3상태\n* GitLab Connection Test Connection 성공\n* **MR 화면에 파트별 결과 표시 — 이 MR의 빌드에서 확인합니다**\n\n### 리뷰 포인트\n\n1. **\"Pipelines must succeed\"는 이 MR을 머지한 다음에 켜야 합니다.** GitLab Settings → Merge requests에서 켜는 설정인데, 지금 켜면 이 코드가 아직 dev에 없어서 열려 있는 MR들이 전부 머지 불가가 됩니다. 순서를 지켜 주십시오.\n2. **이미 갈라진 브랜치는 이 설정이 적용되지 않습니다.** CI는 MR 소스 브랜치의 `Jenkinsfile`로 돌기 때문에, 각자 브랜치에서 dev를 반영해야 커밋 상태가 보고됩니다. 머지 후 공지하겠습니다.\n3. **파트별로 나눈 단위가 적절한지 봐 주세요.** 지금은 여섯 줄이 나열됩니다. 너무 많다고 판단되면 `Merge with dev`와 `Migration version`을 합치는 선택지가 있습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T15:39:02.339+09:00",
+    "updated_at": "2026-09-14T15:39:33.878+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T15:39:33.665+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/201-gitlab-commit-status",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ba96be116c0601d7f703af92b416aea3ef1879b7",
+    "merge_commit_sha": "d868e73fee83fa2307c6ec743ae13b5c6beb0e55",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T15:39:03.161+09:00",
+    "reference": "!88",
+    "references": {
+      "short": "!88",
+      "relative": "!88",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!88"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/88",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "head_sha": "ba96be116c0601d7f703af92b416aea3ef1879b7",
+      "start_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "1f1d0666ef46b61e21e5a8891629cc9cfb263d6f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802794,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:39:02.447+09:00",
+          "updated_at": "2026-09-14T15:39:02.451+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ebd3bfcc610f98905c0175b051ef45cb715f80bc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802795,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:39:02.472+09:00",
+          "updated_at": "2026-09-14T15:39:02.483+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "93c17732359cb4bf557adc4c21502d82804fba33",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802796,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **가독성과 유지보수성**: 각 스테이지마다 `post` 블록을 활용하여 명확하게 책임을 분리하였고, 주석을 통해 `when` 조건으로 인해 건너뛴 파트가 표시되지 않는 이유와 설계 의도를 상세히 기록한 점이 매우 훌륭합니다.\n- **예외 상태 처리**: `unstable` 상태를 `failure`로 명시적으로 매핑하여, 테스트 실패 등으로 인한 경고(UNSTABLE)가 발생했을 때 암묵적인 성공으로 처리되지 않도록 방지한 접근은 보안 및 품질 관점에서 올바른 선택입니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **성공 시나리오 테스트**: 모든 스테이지(`Merge with dev`, `Migration version`, `Frontend`, `Backend`, `Worker`, `Data`)가 정상적으로 완료되었을 때, GitLab MR 화면의 커밋 상태에 6개의 성공(`success`) 항목이 모두 올바르게 노출되는지 확인합니다.\n- **실패/불안정 시나리오 테스트**: 특정 스테이지(예: `Frontend` 또는 `Worker`)에서 의도적으로 빌드 실패나 `unstable`(테스트 실패) 상태를 발생시킨 뒤, 해당 파트만 `failed` 상태로 정확히 보고되고 다른 스테이지와의 상태 구분이 명확히 이루어지는지 검증합니다.\n- **조건부 건너뛰기 테스트**: `when` 조건에 의해 실행되지 않은 스테이지가 있을 때, 해당 스테이지가 GitLab MR 커밋 상태 목록에 노출되지 않고 생략되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ba96be116c0601d7f703af92b416aea3ef1879b7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T15:39:11.281+09:00",
+          "updated_at": "2026-09-14T15:39:11.281+09:00",
+          "system": false,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "721c5ec956bf2fcd626d69e5b31f135ca2e9805f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802800,
+          "type": null,
+          "body": "mentioned in commit d868e73fee83fa2307c6ec743ae13b5c6beb0e55",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:39:33.952+09:00",
+          "updated_at": "2026-09-14T15:39:33.962+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "faff6013b8ccc7cb675b5db523b8308698967f3d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804305,
+          "type": null,
+          "body": "mentioned in commit 7501bb488922fefeee7f515f0c6bb365bea867e6",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T19:18:42.195+09:00",
+          "updated_at": "2026-09-14T19:18:42.199+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "40db84a6af618318444ed5f87da41adc5ebe47ea",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804309,
+          "type": null,
+          "body": "mentioned in merge request !94",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T19:22:49.469+09:00",
+          "updated_at": "2026-09-14T19:22:49.473+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0378c1423e55f80ec89fd065bdc3e13beb8583c9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804340,
+          "type": null,
+          "body": "mentioned in commit b93ae49c04d6827aa67861b4f3799b94ec370d42",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T19:47:25.025+09:00",
+          "updated_at": "2026-09-14T19:47:25.030+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "06a731abfe17aca705624a28c5b101f1fc1eec56",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804362,
+          "type": null,
+          "body": "mentioned in merge request !95",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T20:06:15.502+09:00",
+          "updated_at": "2026-09-14T20:06:15.507+09:00",
+          "system": true,
+          "noteable_id": 943325,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 88,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194735,
+      "head_commit_sha": "ba96be116c0601d7f703af92b416aea3ef1879b7",
+      "base_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "start_commit_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+      "created_at": "2026-09-14T15:39:02.736+09:00",
+      "merge_request_id": 943325,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "0400023f21fdf90d502e5bfd9c038e15c54b7d79"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194735,
+      "head_commit_sha": "ba96be116c0601d7f703af92b416aea3ef1879b7",
+      "base_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+      "start_commit_sha": "089b66c6b9237fc7b4f94e12bbc4648e8b18a3e1",
+      "created_at": "2026-09-14T15:39:02.736+09:00",
+      "merge_request_id": 943325,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "0400023f21fdf90d502e5bfd9c038e15c54b7d79",
+      "commits": [
+        {
+          "id": "ba96be116c0601d7f703af92b416aea3ef1879b7",
+          "short_id": "ba96be11",
+          "created_at": "2026-09-14T15:23:17.000+09:00",
+          "parent_ids": [
+            "eda07078e0977e612a0152566715acf61cb00286"
+          ],
+          "title": "feat(infra): CI 결과를 GitLab MR 화면에 파트별로 되돌려준다",
+          "message": "feat(infra): CI 결과를 GitLab MR 화면에 파트별로 되돌려준다\n\nMR 위젯에 'Looks like there is no pipeline here' 가 뜨고, 결과를 알려면 Mattermost 알림을 보거나 Jenkins 에 직접 들어가야 했다. 더 큰 문제는 CI 가 빨간불이어도 머지 버튼이 그대로 눌린다는 점이다. '머지 전에 CI 를 확인한다' 가 규칙일 뿐 강제가 아니었다.\n\nupdateGitlabCommitStatus 로 여섯 파트(Merge with dev, Migration version, Frontend, Backend, Worker, Data)의 결과를 GitLab 에 되돌려준다. GitLab 이 이것을 외부 파이프라인으로 취급해 MR 화면에 목록으로 보여주므로, 어느 파트가 깨졌는지 Jenkins 에 들어가지 않고 알 수 있다.\n\n중첩 스테이지까지 모두 보고하면 열세 줄이 되어 오히려 읽기 어려워, 파트 단위 여섯으로 묶었다. when 조건에 걸려 건너뛴 파트는 post 가 돌지 않아 아예 표시되지 않는다 - 돌지 않은 것을 성공으로 보고하는 것보다 낫다.\n\n이 보고가 쌓여야 GitLab 의 Merge checks 가 빨간불일 때 머지를 막을 수 있다. 토큰 발급과 그 설정은 별도 수동 작업이다(티켓 201).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T15:23:17.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T15:23:17.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ba96be116c0601d7f703af92b416aea3ef1879b7"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -83,12 +83,30 @@ pipeline {\n                     '''\n                 }\n             }\n+\n+            // GitLab MR 화면에 이 파트의 결과를 되돌려준다. 여섯 파트가 각각 한 줄로 나열되어,\n+            // Jenkins 에 들어가지 않고도 어느 파트가 깨졌는지 MR 에서 바로 보인다.\n+            // 보고가 쌓이면 GitLab 의 Merge checks 가 빨간불일 때 머지 버튼을 막는다.\n+            //\n+            // when 조건에 걸려 건너뛴 파트는 post 가 돌지 않아 아예 표시되지 않는다.\n+            // 돌지 않은 것을 성공으로 보고하는 것보다 낫다.\n+            post {\n+                success { updateGitlabCommitStatus(name: 'Merge with dev', state: 'success') }\n+                failure { updateGitlabCommitStatus(name: 'Merge with dev', state: 'failed') }\n+                unstable { updateGitlabCommitStatus(name: 'Merge with dev', state: 'failed') }\n+            }\n         }\n \n         stage('Migration version') {\n             steps {\n                 sh 'bash infra/scripts/check-migration-version.sh origin/dev'\n             }\n+\n+            post {\n+                success { updateGitlabCommitStatus(name: 'Migration version', state: 'success') }\n+                failure { updateGitlabCommitStatus(name: 'Migration version', state: 'failed') }\n+                unstable { updateGitlabCommitStatus(name: 'Migration version', state: 'failed') }\n+            }\n         }\n \n         stage('Frontend') {\n@@ -146,6 +164,12 @@ pipeline {\n                     }\n                 }\n             }\n+\n+            post {\n+                success { updateGitlabCommitStatus(name: 'Frontend', state: 'success') }\n+                failure { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }\n+                unstable { updateGitlabCommitStatus(name: 'Frontend', state: 'failed') }\n+            }\n         }\n \n         stage('Backend') {\n@@ -196,6 +220,12 @@ pipeline {\n                     }\n                 }\n             }\n+\n+            post {\n+                success { updateGitlabCommitStatus(name: 'Backend', state: 'success') }\n+                failure { updateGitlabCommitStatus(name: 'Backend', state: 'failed') }\n+                unstable { updateGitlabCommitStatus(name: 'Backend', state: 'failed') }\n+            }\n         }\n \n         stage('Worker') {\n@@ -242,6 +272,12 @@ pipeline {\n                     }\n                 }\n             }\n+\n+            post {\n+                success { updateGitlabCommitStatus(name: 'Worker', state: 'success') }\n+                failure { updateGitlabCommitStatus(name: 'Worker', state: 'failed') }\n+                unstable { updateGitlabCommitStatus(name: 'Worker', state: 'failed') }\n+            }\n         }\n \n         stage('Data') {\n@@ -287,6 +323,12 @@ pipeline {\n                     }\n                 }\n             }\n+\n+            post {\n+                success { updateGitlabCommitStatus(name: 'Data', state: 'success') }\n+                failure { updateGitlabCommitStatus(name: 'Data', state: 'failed') }\n+                unstable { updateGitlabCommitStatus(name: 'Data', state: 'failed') }\n+            }\n         }\n     }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802796": []
+  }
+}

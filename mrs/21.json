@@ -1,0 +1,491 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 936761,
+    "iid": 21,
+    "project_id": 1444456,
+    "title": "fix(infra,db)109-infra-postgresql-flyway",
+    "description": "# 작업내용\n\n배포 파일 오타 확인 안하고 merge 해서 fix합니다..",
+    "state": "merged",
+    "created_at": "2026-09-08T16:07:45.162+09:00",
+    "updated_at": "2026-09-14T12:55:40.401+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-08T16:08:10.429+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra,db)/109-infra-postgresql-flyway",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8a806cac552f51372e249627f1e0d8a72bf567a5",
+    "merge_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T16:07:46.704+09:00",
+    "reference": "!21",
+    "references": {
+      "short": "!21",
+      "relative": "!21",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!21"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/21",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 936761,
+    "iid": 21,
+    "project_id": 1444456,
+    "title": "fix(infra,db)109-infra-postgresql-flyway",
+    "description": "# 작업내용\n\n배포 파일 오타 확인 안하고 merge 해서 fix합니다..",
+    "state": "merged",
+    "created_at": "2026-09-08T16:07:45.162+09:00",
+    "updated_at": "2026-09-14T12:55:40.401+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-08T16:08:10.429+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra,db)/109-infra-postgresql-flyway",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8a806cac552f51372e249627f1e0d8a72bf567a5",
+    "merge_commit_sha": "ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-08T16:07:46.704+09:00",
+    "reference": "!21",
+    "references": {
+      "short": "!21",
+      "relative": "!21",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!21"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/21",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "669846f2d09e8181ae58b80a3566881830069f22",
+      "head_sha": "8a806cac552f51372e249627f1e0d8a72bf567a5",
+      "start_sha": "688d38a80d938931ac9e55f29fcb674eb45295c6"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "73b6ac56b3055cb09d29111771bcf20d764287f4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2775147,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-08T16:07:45.311+09:00",
+          "updated_at": "2026-09-08T16:07:45.318+09:00",
+          "system": true,
+          "noteable_id": 936761,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 21,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f75a51e8e984037b877966b8162dd647cf652955",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2775149,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Low] `infra/jenkins/Jenkinsfile.deploy`: `failure` 블록 내에서 `sh(returnStatus: true, ...)`를 사용하고 있습니다. 만약 내부의 `docker compose ps` 명령어가 실패(exit code 비정상)하더라도 `returnStatus: true`로 인해 해당 `sh` 단계 전체가 실패로 처리되지 않고 종료됩니다. 다만 이 명령어가 실패하더라도 후속 `mattermostSend` 알림 전송에는 직접적인 영향을 주지 않으려 한 의도일 수 있으나, 의도된 동작인지 확인이 필요합니다.\n\n### 테스트 제안\n- Jenkins 파이프라인 시뮬레이션 테스트: 배포 실패(`failure`), 불안정(`unstable`), 성공(`success`) 각 상황에서 Mattermost 알림이 정상적으로 전송되는지 확인합니다.\n- `infra/jenkins/Jenkinsfile.deploy`의 `failure` 후크 내 `sh` 스크립트 실행 시 오류 발생 여부와 관계없이 알림 스텝(`mattermostSend`)이 정상 수행되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8a806cac552f51372e249627f1e0d8a72bf567a5 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-08T16:07:53.939+09:00",
+          "updated_at": "2026-09-08T16:07:53.939+09:00",
+          "system": false,
+          "noteable_id": 936761,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 21,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2596f39bd401b433150f0f0c260cd4f619ec3779",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2775151,
+          "type": null,
+          "body": "mentioned in commit ba30d4dc5cf0567d09e335dbce212f1f821d0beb",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-08T16:08:10.488+09:00",
+          "updated_at": "2026-09-08T16:08:10.491+09:00",
+          "system": true,
+          "noteable_id": 936761,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 21,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8512c655ca2d0948268dedd54718ce8efe773c55",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801190,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:55:40.359+09:00",
+          "updated_at": "2026-09-14T12:55:40.363+09:00",
+          "system": true,
+          "noteable_id": 936761,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 21,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2173080,
+      "head_commit_sha": "8a806cac552f51372e249627f1e0d8a72bf567a5",
+      "base_commit_sha": "669846f2d09e8181ae58b80a3566881830069f22",
+      "start_commit_sha": "688d38a80d938931ac9e55f29fcb674eb45295c6",
+      "created_at": "2026-09-08T16:07:46.213+09:00",
+      "merge_request_id": 936761,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "b7b4b2fd03afdcca5e4a34554434e885eb8e5ac2"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2173080,
+      "head_commit_sha": "8a806cac552f51372e249627f1e0d8a72bf567a5",
+      "base_commit_sha": "669846f2d09e8181ae58b80a3566881830069f22",
+      "start_commit_sha": "688d38a80d938931ac9e55f29fcb674eb45295c6",
+      "created_at": "2026-09-08T16:07:46.213+09:00",
+      "merge_request_id": 936761,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "b7b4b2fd03afdcca5e4a34554434e885eb8e5ac2",
+      "commits": [
+        {
+          "id": "8a806cac552f51372e249627f1e0d8a72bf567a5",
+          "short_id": "8a806cac",
+          "created_at": "2026-09-08T16:06:50.000+09:00",
+          "parent_ids": [
+            "669846f2d09e8181ae58b80a3566881830069f22"
+          ],
+          "title": "fix(infra,db)109-infra-postgresql-flyway",
+          "message": "fix(infra,db)109-infra-postgresql-flyway\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-08T16:06:50.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-08T16:06:50.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8a806cac552f51372e249627f1e0d8a72bf567a5"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -107,46 +107,38 @@ pipeline {\n     }\n \n     post {\n-        failure {\n-            // 컨테이너 로그를 빌드 로그로 옮기지 않는다. 애플리케이션이 접속 URL이나\n-            // 설정값을 예외 메시지에 담아 출력하면 비밀번호가 Jenkins 콘솔에 남는다.\n-            // 상태만 남기고, 로그는 서버에서 직접 본다.\n-            sh '''\n+    failure {\n+        sh(\n+            returnStatus: true,\n+            script: '''\n                 cd \"$DEPLOY_DIR/infra\"\n-                docker compose -f docker-compose.prod.yml --env-file .env.prod ps\n+                docker compose \\\n+                    -f docker-compose.prod.yml \\\n+                    --env-file .env.prod \\\n+                    ps\n+\n                 echo \"로그 확인: ssh 접속 후 cd $DEPLOY_DIR/infra && docker compose -f docker-compose.prod.yml --env-file .env.prod logs --tail 200 <서비스명>\"\n             '''\n-        }\n-    }\n-    post {\n-        failure {\n-            echo 'Mattermost 실패 알림 전송 시작'\n-\n-            mattermostSend(\n-                color: 'danger',\n-                failOnError: true,\n-                message: \"❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n-            )\n-        }\n-\n-        unstable {\n-            echo 'Mattermost 빌드 불안정 알림 전송 시작'\n+        )\n \n-            mattermostSend(\n-                color: 'warning',\n-                failOnError: true,\n-                message: \"⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n-            )\n-        }\n+        mattermostSend(\n+            color: 'danger',\n+            message: \"❌ 배포 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+        )\n+    }\n \n-        success {\n-            echo 'Mattermost 성공 알림 전송 시작'\n+    unstable {\n+        mattermostSend(\n+            color: 'warning',\n+            message: \"⚠️ 배포 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+        )\n+    }\n \n-            mattermostSend(\n-                color: 'good',\n-                failOnError: true,\n-                message: \"✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n-            )\n-        }\n+    success {\n+        mattermostSend(\n+            color: 'good',\n+            message: \"✅ 배포 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+        )\n     }\n }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Jenkinsfile.deploy",
+          "old_path": "infra/jenkins/Jenkinsfile.deploy",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,26 +50,5 @@ pipeline {\n         }\n     }\n \n-    post {\n-        failure {\n-            mattermostSend(\n-                color: 'danger',\n-                message: \"❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n-            )\n-        }\n-\n-        unstable {\n-            mattermostSend(\n-                color: 'warning',\n-                message: \"⚠️ 빌드 불안정: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n-            )\n-        }\n-\n-        success {\n-            mattermostSend(\n-                color: 'good',\n-                message: \"✅ 빌드 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n-            )\n-        }\n-    }\n+    \n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2775149": []
+  }
+}

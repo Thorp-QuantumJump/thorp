@@ -1,9 +1,0 @@
-.error { border-left: 2px solid var(--thorp-negative); padding: 18px 20px; background: var(--thorp-surface); }
-.error h2 { margin: 0 0 8px; color: var(--thorp-negative); font-size: 1.08rem; }
-.error p { margin: 0 0 16px; color: var(--thorp-copy); font-size: .84rem; }
-.error button { min-height: 42px; padding: 7px 14px; border: 1px solid var(--thorp-line-strong); color: var(--thorp-foreground); background: var(--thorp-surface-raised); cursor: pointer; }
-.error button:focus-visible { outline: var(--thorp-focus-outline-compact); outline-offset: var(--thorp-focus-offset-compact); }
-
-/* 디자인 개편 카드 층(S15P21E205-425). 위 선 나눔은 classic 그대로이고, 새 디자인에서만 구역을 카드로 묶는다. */
-:global(:root:not([data-design='classic'])) .error { border: 1px solid var(--thorp-line); border-left: 3px solid var(--thorp-negative); border-radius: var(--thorp-radius-card); padding: var(--thorp-pad-card); }
-:global(:root:not([data-design='classic'])) .error button { border-radius: var(--thorp-radius-control); }

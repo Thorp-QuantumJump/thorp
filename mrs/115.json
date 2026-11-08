@@ -1,0 +1,708 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 944769,
+    "iid": 115,
+    "project_id": 1444456,
+    "title": "feat(be): 이메일 정규화 및 회원가입 인증 계약 정비",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n회원가입과 이메일 인증 과정의 이메일 정규화 및 API 계약을 정비했습니다.\n\n# 관련 티켓\n\n* ticket #208\n\n# 주요 변경 사항\n\n* 이메일 공백 제거 및 소문자 정규화\n* 회원가입·이메일 인증 오류 응답 세분화\n* 전화번호 검증 및 API 내부 경로 정비\n* Service·Controller 계약 테스트 추가\n\n# 테스트\n\n* Backend 전체 테스트 1,100개 통과\n* Spotless·Build·Postman 응답 확인 완료\n\n# 리뷰 포인트\n\n* 실제 이메일 발송은 SMTP 환경변수 설정이 필요합니다.\n* 정식 CSRF 발급 API는 후속 Task에서 구현합니다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-15T14:49:10.676+09:00",
+    "updated_at": "2026-09-15T15:16:06.122+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T15:16:05.825+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/208-email-normalization",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+    "merge_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T14:49:11.674+09:00",
+    "reference": "!115",
+    "references": {
+      "short": "!115",
+      "relative": "!115",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!115"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/115",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 944769,
+    "iid": 115,
+    "project_id": 1444456,
+    "title": "feat(be): 이메일 정규화 및 회원가입 인증 계약 정비",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\n회원가입과 이메일 인증 과정의 이메일 정규화 및 API 계약을 정비했습니다.\n\n# 관련 티켓\n\n* ticket #208\n\n# 주요 변경 사항\n\n* 이메일 공백 제거 및 소문자 정규화\n* 회원가입·이메일 인증 오류 응답 세분화\n* 전화번호 검증 및 API 내부 경로 정비\n* Service·Controller 계약 테스트 추가\n\n# 테스트\n\n* Backend 전체 테스트 1,100개 통과\n* Spotless·Build·Postman 응답 확인 완료\n\n# 리뷰 포인트\n\n* 실제 이메일 발송은 SMTP 환경변수 설정이 필요합니다.\n* 정식 CSRF 발급 API는 후속 Task에서 구현합니다.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-15T14:49:10.676+09:00",
+    "updated_at": "2026-09-15T15:16:06.122+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-15T15:16:05.825+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/208-email-normalization",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+    "merge_commit_sha": "331eb727a356bbcbf08dd282328ea6e36055fe83",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-15T14:49:11.674+09:00",
+    "reference": "!115",
+    "references": {
+      "short": "!115",
+      "relative": "!115",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!115"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/115",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "11",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-15T15:23:14.680+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 195917,
+      "iid": 28,
+      "project_id": 1444456,
+      "sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+      "ref": "feat(be)/208-email-normalization",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T15:14:27.773+09:00",
+      "updated_at": "2026-09-15T15:23:14.681+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195917"
+    },
+    "head_pipeline": {
+      "id": 195917,
+      "iid": 28,
+      "project_id": 1444456,
+      "sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+      "ref": "feat(be)/208-email-normalization",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-15T15:14:27.773+09:00",
+      "updated_at": "2026-09-15T15:23:14.681+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195917",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-15T15:23:14.680+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": 526,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/195917",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "cfa57c217db4e49f8fb978495648a510809a5196",
+      "head_sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+      "start_sha": "0d2f309985520d3c356aea01faf8cd5dfccd1d1f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c9776843263db3705d596bd22c06653e27769146",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808685,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T14:49:10.843+09:00",
+          "updated_at": "2026-09-15T14:49:10.850+09:00",
+          "system": true,
+          "noteable_id": 944769,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 115,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cb1261f4adbc1ccf337f3ac74145e4d6831e2929",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808686,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 이메일 정규화(Normalization):** `EmailNormalizer` 공통 유틸리티를 도입하고, DTO의 `@JsonSetter`와 서비스 레이어 양쪽에서 이메일 공백 제거 및 소문자 변환을 일관되게 처리하여 대소문자 혼재나 공백으로 인한 인증/가입 오류 가능성을 원천 차단했습니다.\n- **철저한 테스트 커버리지:** 서비스 단위 테스트(`SignupAndEmailVerificationServiceTest`)와 컨트롤러 계약 테스트(`AccountControllerContractTest`)를 세밀하게 작성하여, 정상 시나리오뿐만 아니라 다양한 예외 상황(중복 이메일, 인증 만료, 전화번호 형식 오류 등)을 확실하게 검증하고 있습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **이메일 대소문자 및 공백 혼합 요청 테스트:** 대문자와 공백이 포함된 이메일(` \"  User@Example.COM \" `)으로 인증 코드를 요청한 뒤, 정확히 동일한 정규화된 형태(`user@example.com`)로 DB에 저장 및 조회되는지 통합 테스트 시나리오로 확인하세요.\n- **전화번호 경계값 검증 테스트:** 국내 휴대폰 번호 정규식(`^01[016789]\\d{7,8}$`)에 대해 허용되는 번호(`01012345678`, `0111234567`)와 차단되어야 하는 번호(`010-1234-5678`, `0212345678`, `0101234567`)가 의도대로 동작하는지 확인하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7171ea6205a0c77514122c866b6baf6c2e0ddcd8 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-15T14:49:19.214+09:00",
+          "updated_at": "2026-09-15T15:14:25.019+09:00",
+          "system": false,
+          "noteable_id": 944769,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 115,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fa566f7d24d651fdfa77dfee174390f2119bbdb7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808939,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>7171ea62 - fix(be): 이메일 입력 정규화를 검증 전 적용</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/115/diffs?diff_id=2199767&start_sha=bc28afaee982db7dfae235b063f2a3f4820d677b)",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T15:14:16.336+09:00",
+          "updated_at": "2026-09-15T15:14:16.339+09:00",
+          "system": true,
+          "noteable_id": 944769,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 115,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8376afc6289b1b5ea7514092ed0a4d8d965bbc07",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2808965,
+          "type": null,
+          "body": "mentioned in commit 331eb727a356bbcbf08dd282328ea6e36055fe83",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-15T15:16:05.851+09:00",
+          "updated_at": "2026-09-15T15:16:05.856+09:00",
+          "system": true,
+          "noteable_id": 944769,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 115,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2199767,
+      "head_commit_sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+      "base_commit_sha": "cfa57c217db4e49f8fb978495648a510809a5196",
+      "start_commit_sha": "0d2f309985520d3c356aea01faf8cd5dfccd1d1f",
+      "created_at": "2026-09-15T15:14:16.101+09:00",
+      "merge_request_id": 944769,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "400e4dd3a0706b83cf3da9dbb17aa5ba740f5e04"
+    },
+    {
+      "id": 2199545,
+      "head_commit_sha": "bc28afaee982db7dfae235b063f2a3f4820d677b",
+      "base_commit_sha": "cfa57c217db4e49f8fb978495648a510809a5196",
+      "start_commit_sha": "9f96e850facffe76b213218e25b65c87b33e8733",
+      "created_at": "2026-09-15T14:49:10.995+09:00",
+      "merge_request_id": 944769,
+      "state": "without_files",
+      "real_size": "8",
+      "patch_id_sha": "554ed40fc808644aeb564e6fa3f0fd3234462a4f"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2199767,
+      "head_commit_sha": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+      "base_commit_sha": "cfa57c217db4e49f8fb978495648a510809a5196",
+      "start_commit_sha": "0d2f309985520d3c356aea01faf8cd5dfccd1d1f",
+      "created_at": "2026-09-15T15:14:16.101+09:00",
+      "merge_request_id": 944769,
+      "state": "collected",
+      "real_size": "11",
+      "patch_id_sha": "400e4dd3a0706b83cf3da9dbb17aa5ba740f5e04",
+      "commits": [
+        {
+          "id": "7171ea6205a0c77514122c866b6baf6c2e0ddcd8",
+          "short_id": "7171ea62",
+          "created_at": "2026-09-15T15:14:09.000+09:00",
+          "parent_ids": [
+            "bc28afaee982db7dfae235b063f2a3f4820d677b"
+          ],
+          "title": "fix(be): 이메일 입력 정규화를 검증 전 적용",
+          "message": "fix(be): 이메일 입력 정규화를 검증 전 적용\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T15:14:09.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T15:14:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7171ea6205a0c77514122c866b6baf6c2e0ddcd8"
+        },
+        {
+          "id": "bc28afaee982db7dfae235b063f2a3f4820d677b",
+          "short_id": "bc28afae",
+          "created_at": "2026-09-15T14:46:36.000+09:00",
+          "parent_ids": [
+            "cfa57c217db4e49f8fb978495648a510809a5196"
+          ],
+          "title": "feat(be): 이메일 정규화 및 회원가입 인증 계약을 정비",
+          "message": "feat(be): 이메일 정규화 및 회원가입 인증 계약을 정비\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T14:46:36.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T14:46:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bc28afaee982db7dfae235b063f2a3f4820d677b"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.account.application.service;\n \n+import com.ssafy.thorp.account.application.EmailNormalizer;\n import com.ssafy.thorp.account.application.port.VerificationMailSender;\n import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;\n import com.ssafy.thorp.account.application.repository.UserRepository;\n@@ -55,15 +56,16 @@ public class EmailVerificationService {\n      * 동안 DB 커넥션을 잡고 있으면 커넥션 풀이 마른다. 그래서 DB 작업만 트랜잭션으로 묶어 먼저 커밋하고, 메일 발송은 트랜잭션 밖에서 한다.\n      */\n     public void createVerificationCode(String email) {\n-        String verificationCode = transactionTemplate.execute(status -> issueCode(email));\n+        String canonicalEmail = EmailNormalizer.normalize(email);\n+        String verificationCode = transactionTemplate.execute(status -> issueCode(canonicalEmail));\n \n-        verificationMailSender.sendVerificationCode(email, verificationCode);\n+        verificationMailSender.sendVerificationCode(canonicalEmail, verificationCode);\n     }\n \n     /** 인증번호를 만들어 해시로 저장하고 원문을 돌려준다. DB 작업만 하는 트랜잭션 단위. */\n     private String issueCode(String email) {\n         if (userRepository.existsByEmail(email)) {\n-            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이미 가입된 이메일입니다.\");\n+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);\n         }\n \n         emailVerificationRepository.deleteByEmail(email);\n@@ -83,13 +85,14 @@ public class EmailVerificationService {\n     /** 인증번호가 일치하고 만료되지 않았을 때만 인증 완료로 기록한다. */\n     @Transactional\n     public void verifyCode(String email, String verificationCode) {\n+        String canonicalEmail = EmailNormalizer.normalize(email);\n         EmailVerification verification =\n                 emailVerificationRepository\n-                        .findLatestByEmail(email)\n+                        .findLatestByEmail(canonicalEmail)\n                         .orElseThrow(\n                                 () ->\n                                         new BusinessException(\n-                                                ErrorCode.INVALID_INPUT, \"이메일 인증 요청을 찾을 수 없습니다.\"));\n+                                                ErrorCode.EMAIL_VERIFICATION_NOT_FOUND));\n \n         // 이미 인증을 마친 요청을 다시 확인해도 실패시키지 않는다.\n         if (verification.isVerified()) {\n@@ -99,11 +102,11 @@ public class EmailVerificationService {\n         Instant now = Instant.now();\n \n         if (verification.isExpired(now)) {\n-            throw new BusinessException(ErrorCode.INVALID_INPUT, \"인증번호가 만료되었습니다.\");\n+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_EXPIRED);\n         }\n \n         if (!passwordEncoder.matches(verificationCode, verification.getVerificationCodeHash())) {\n-            throw new BusinessException(ErrorCode.INVALID_INPUT, \"인증번호가 올바르지 않습니다.\");\n+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_INVALID);\n         }\n \n         verification.verify(now);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n package com.ssafy.thorp.account.application.service;\n \n+import com.ssafy.thorp.account.application.EmailNormalizer;\n import com.ssafy.thorp.account.application.command.SignupCommand;\n import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;\n import com.ssafy.thorp.account.application.repository.UserRepository;\n@@ -8,6 +9,7 @@ import com.ssafy.thorp.account.domain.model.EmailVerification;\n import com.ssafy.thorp.account.domain.model.User;\n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.util.regex.Pattern;\n import org.springframework.security.crypto.password.PasswordEncoder;\n import org.springframework.stereotype.Service;\n import org.springframework.transaction.annotation.Transactional;\n@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;\n @Service\n public class SignupService {\n \n+    private static final Pattern PHONE_NUMBER_PATTERN = Pattern.compile(\"^01[016789]\\\\d{7,8}$\");\n+\n     private final UserRepository userRepository;\n     private final EmailVerificationRepository emailVerificationRepository;\n     private final PasswordEncoder passwordEncoder;\n@@ -31,35 +35,39 @@ public class SignupService {\n     /** 이메일 인증을 마친 사용자만 가입시킨다. 가입에 쓴 인증 기록은 재사용하지 못하도록 지운다. */\n     @Transactional\n     public SignupResult signup(SignupCommand command) {\n-        if (userRepository.existsByEmail(command.email())) {\n-            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이미 가입된 이메일입니다.\");\n+        String email = EmailNormalizer.normalize(command.email());\n+\n+        if (command.phoneNumber() == null\n+                || !PHONE_NUMBER_PATTERN.matcher(command.phoneNumber()).matches()) {\n+            throw new BusinessException(\n+                    ErrorCode.INVALID_INPUT, \"국내 휴대폰 번호 형식이어야 합니다. 예: 01012345678\");\n+        }\n+\n+        if (userRepository.existsByEmail(email)) {\n+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);\n         }\n \n         if (userRepository.existsByPhoneNumber(command.phoneNumber())) {\n-            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이미 가입된 전화번호입니다.\");\n+            throw new BusinessException(ErrorCode.DUPLICATE_PHONE);\n         }\n \n         EmailVerification verification =\n                 emailVerificationRepository\n-                        .findLatestByEmail(command.email())\n+                        .findLatestByEmail(email)\n                         .orElseThrow(\n-                                () ->\n-                                        new BusinessException(\n-                                                ErrorCode.INVALID_INPUT, \"이메일 인증이 필요합니다.\"));\n+                                () -> new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED));\n \n         if (!verification.isVerified()) {\n-            throw new BusinessException(ErrorCode.INVALID_INPUT, \"이메일 인증이 완료되지 않았습니다.\");\n+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED);\n         }\n \n         String passwordHash = passwordEncoder.encode(command.password());\n \n-        User user =\n-                User.register(\n-                        command.email(), passwordHash, command.nickname(), command.phoneNumber());\n+        User user = User.register(email, passwordHash, command.nickname(), command.phoneNumber());\n \n         User savedUser = userRepository.save(user);\n \n-        emailVerificationRepository.deleteByEmail(command.email());\n+        emailVerificationRepository.deleteByEmail(email);\n \n         return new SignupResult(\n                 savedUser.getId(),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,17 @@\n+package com.ssafy.thorp.account.application;\n+\n+import java.util.Locale;\n+\n+/** 계정 식별에 사용하는 이메일을 하나의 비교·저장 형태로 바꾼다. */\n+public final class EmailNormalizer {\n+\n+    private EmailNormalizer() {}\n+\n+    /** 앞뒤 공백을 제거하고 로케일에 영향받지 않는 소문자로 변환한다. */\n+    public static String normalize(String email) {\n+        if (email == null) {\n+            throw new IllegalArgumentException(\"email must not be null\");\n+        }\n+        return email.strip().toLowerCase(Locale.ROOT);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;\n import org.springframework.web.bind.annotation.RestController;\n \n @RestController\n-@RequestMapping(\"/api/accounts/email-verifications\")\n+@RequestMapping(\"/accounts/email-verifications\")\n public class EmailVerificationController {\n     private final EmailVerificationService emailVerificationService;\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;\n import org.springframework.web.bind.annotation.RestController;\n \n @RestController\n-@RequestMapping(\"/api/accounts\")\n+@RequestMapping(\"/accounts\")\n public class SignupController {\n \n     private final SignupService signupService;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n package com.ssafy.thorp.account.presentation.request;\n \n+import com.fasterxml.jackson.annotation.JsonSetter;\n+import com.ssafy.thorp.account.application.EmailNormalizer;\n import jakarta.validation.constraints.Email;\n import jakarta.validation.constraints.NotBlank;\n import jakarta.validation.constraints.Pattern;\n@@ -16,6 +18,11 @@ public class EmailVerificationConfirmRequest {\n         return email;\n     }\n \n+    @JsonSetter\n+    public void setEmail(String email) {\n+        this.email = email == null ? null : EmailNormalizer.normalize(email);\n+    }\n+\n     public String getVerificationCode() {\n         return verificationCode;\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationConfirmRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationConfirmRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n package com.ssafy.thorp.account.presentation.request;\n \n+import com.fasterxml.jackson.annotation.JsonSetter;\n+import com.ssafy.thorp.account.application.EmailNormalizer;\n import jakarta.validation.constraints.Email;\n import jakarta.validation.constraints.NotBlank;\n \n@@ -10,4 +12,9 @@ public class EmailVerificationRequest {\n     public String getEmail() {\n         return email;\n     }\n+\n+    @JsonSetter\n+    public void setEmail(String email) {\n+        this.email = email == null ? null : EmailNormalizer.normalize(email);\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/EmailVerificationRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,7 @@\n package com.ssafy.thorp.account.presentation.request;\n \n+import com.fasterxml.jackson.annotation.JsonSetter;\n+import com.ssafy.thorp.account.application.EmailNormalizer;\n import jakarta.validation.constraints.Email;\n import jakarta.validation.constraints.NotBlank;\n import jakarta.validation.constraints.Pattern;\n@@ -31,6 +33,11 @@ public class SignupRequest {\n         return email;\n     }\n \n+    @JsonSetter\n+    public void setEmail(String email) {\n+        this.email = email == null ? null : EmailNormalizer.normalize(email);\n+    }\n+\n     public String getPassword() {\n         return password;\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/SignupRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/account/presentation/request/SignupRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,244 @@\n+package com.ssafy.thorp.account.application;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.anyString;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.account.application.command.SignupCommand;\n+import com.ssafy.thorp.account.application.port.VerificationMailSender;\n+import com.ssafy.thorp.account.application.repository.EmailVerificationRepository;\n+import com.ssafy.thorp.account.application.repository.UserRepository;\n+import com.ssafy.thorp.account.application.result.SignupResult;\n+import com.ssafy.thorp.account.application.service.EmailVerificationService;\n+import com.ssafy.thorp.account.application.service.SignupService;\n+import com.ssafy.thorp.account.domain.model.EmailVerification;\n+import com.ssafy.thorp.account.domain.model.User;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.time.Instant;\n+import java.util.Optional;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentCaptor;\n+import org.springframework.security.crypto.password.PasswordEncoder;\n+import org.springframework.transaction.TransactionStatus;\n+import org.springframework.transaction.support.TransactionCallback;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+class SignupAndEmailVerificationServiceTest {\n+\n+    private static final String CANONICAL_EMAIL = \"member@example.com\";\n+\n+    private final UserRepository userRepository = mock(UserRepository.class);\n+    private final EmailVerificationRepository verificationRepository =\n+            mock(EmailVerificationRepository.class);\n+    private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);\n+    private final VerificationMailSender mailSender = mock(VerificationMailSender.class);\n+    private final TransactionTemplate transactionTemplate = mock(TransactionTemplate.class);\n+\n+    private SignupService signupService;\n+    private EmailVerificationService verificationService;\n+\n+    @BeforeEach\n+    void setUp() {\n+        signupService = new SignupService(userRepository, verificationRepository, passwordEncoder);\n+        verificationService =\n+                new EmailVerificationService(\n+                        verificationRepository,\n+                        userRepository,\n+                        passwordEncoder,\n+                        mailSender,\n+                        transactionTemplate);\n+\n+        when(transactionTemplate.execute(any()))\n+                .thenAnswer(\n+                        invocation -> {\n+                            @SuppressWarnings(\"unchecked\")\n+                            TransactionCallback<String> callback = invocation.getArgument(0);\n+                            return callback.doInTransaction(mock(TransactionStatus.class));\n+                        });\n+    }\n+\n+    @Test\n+    void signupUsesCanonicalEmailForEveryAccountOperation() {\n+        EmailVerification verified = verified(CANONICAL_EMAIL);\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(verified));\n+        when(passwordEncoder.encode(\"password123\")).thenReturn(\"password-hash\");\n+        when(userRepository.save(any(User.class)))\n+                .thenAnswer(\n+                        invocation -> {\n+                            User user = invocation.getArgument(0);\n+                            return savedUser(user);\n+                        });\n+\n+        SignupResult result =\n+                signupService.signup(\n+                        new SignupCommand(\n+                                \"  MEMBER@Example.COM \", \"password123\", \"회원\", \"01012345678\"));\n+\n+        ArgumentCaptor<User> saved = ArgumentCaptor.forClass(User.class);\n+        verify(userRepository).existsByEmail(CANONICAL_EMAIL);\n+        verify(verificationRepository).findLatestByEmail(CANONICAL_EMAIL);\n+        verify(userRepository).save(saved.capture());\n+        verify(verificationRepository).deleteByEmail(CANONICAL_EMAIL);\n+        assertThat(saved.getValue().getEmail()).isEqualTo(CANONICAL_EMAIL);\n+        assertThat(result.email()).isEqualTo(CANONICAL_EMAIL);\n+    }\n+\n+    @Test\n+    void signupRejectsInvalidPhoneAtServiceBoundary() {\n+        assertBusinessCode(\n+                () ->\n+                        signupService.signup(\n+                                new SignupCommand(\n+                                        CANONICAL_EMAIL, \"password123\", \"회원\", \"010-1234-5678\")),\n+                ErrorCode.INVALID_INPUT);\n+\n+        verify(userRepository, never()).save(any());\n+    }\n+\n+    @Test\n+    void signupUsesStableDuplicateAndVerificationErrorCodes() {\n+        when(userRepository.existsByEmail(CANONICAL_EMAIL)).thenReturn(true);\n+        assertBusinessCode(() -> signup(CANONICAL_EMAIL, \"01012345678\"), ErrorCode.DUPLICATE_EMAIL);\n+\n+        when(userRepository.existsByEmail(CANONICAL_EMAIL)).thenReturn(false);\n+        when(userRepository.existsByPhoneNumber(\"01012345678\")).thenReturn(true);\n+        assertBusinessCode(() -> signup(CANONICAL_EMAIL, \"01012345678\"), ErrorCode.DUPLICATE_PHONE);\n+\n+        when(userRepository.existsByPhoneNumber(\"01012345678\")).thenReturn(false);\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.empty());\n+        assertBusinessCode(\n+                () -> signup(CANONICAL_EMAIL, \"01012345678\"),\n+                ErrorCode.EMAIL_VERIFICATION_REQUIRED);\n+\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(issued(CANONICAL_EMAIL, Instant.now().plusSeconds(60))));\n+        assertBusinessCode(\n+                () -> signup(CANONICAL_EMAIL, \"01012345678\"),\n+                ErrorCode.EMAIL_VERIFICATION_REQUIRED);\n+    }\n+\n+    @Test\n+    void requestingCodeUsesCanonicalEmailAndStableDuplicateCode() {\n+        when(passwordEncoder.encode(anyString())).thenReturn(\"code-hash\");\n+\n+        verificationService.createVerificationCode(\"  MEMBER@Example.COM \");\n+\n+        ArgumentCaptor<EmailVerification> saved = ArgumentCaptor.forClass(EmailVerification.class);\n+        ArgumentCaptor<String> mailedCode = ArgumentCaptor.forClass(String.class);\n+        verify(userRepository).existsByEmail(CANONICAL_EMAIL);\n+        verify(verificationRepository).deleteByEmail(CANONICAL_EMAIL);\n+        verify(verificationRepository).save(saved.capture());\n+        verify(mailSender)\n+                .sendVerificationCode(\n+                        org.mockito.ArgumentMatchers.eq(CANONICAL_EMAIL), mailedCode.capture());\n+        assertThat(saved.getValue().getEmail()).isEqualTo(CANONICAL_EMAIL);\n+        assertThat(mailedCode.getValue()).matches(\"\\\\d{6}\");\n+\n+        when(userRepository.existsByEmail(CANONICAL_EMAIL)).thenReturn(true);\n+        assertBusinessCode(\n+                () -> verificationService.createVerificationCode(CANONICAL_EMAIL),\n+                ErrorCode.DUPLICATE_EMAIL);\n+    }\n+\n+    @Test\n+    void confirmingCodeUsesCanonicalEmailAndDetailedLifecycleCodes() {\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.empty());\n+        assertBusinessCode(\n+                () -> verificationService.verifyCode(\" MEMBER@example.com \", \"123456\"),\n+                ErrorCode.EMAIL_VERIFICATION_NOT_FOUND);\n+\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(issued(CANONICAL_EMAIL, Instant.now().minusSeconds(1))));\n+        assertBusinessCode(\n+                () -> verificationService.verifyCode(CANONICAL_EMAIL, \"123456\"),\n+                ErrorCode.EMAIL_VERIFICATION_EXPIRED);\n+\n+        EmailVerification active = issued(CANONICAL_EMAIL, Instant.now().plusSeconds(60));\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(active));\n+        when(passwordEncoder.matches(\"123456\", \"code-hash\")).thenReturn(false);\n+        assertBusinessCode(\n+                () -> verificationService.verifyCode(CANONICAL_EMAIL, \"123456\"),\n+                ErrorCode.EMAIL_VERIFICATION_INVALID);\n+    }\n+\n+    @Test\n+    void confirmingValidCodeMarksRequestVerified() {\n+        EmailVerification active = issued(CANONICAL_EMAIL, Instant.now().plusSeconds(60));\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(active));\n+        when(passwordEncoder.matches(\"123456\", \"code-hash\")).thenReturn(true);\n+\n+        verificationService.verifyCode(\" MEMBER@example.com \", \"123456\");\n+\n+        ArgumentCaptor<EmailVerification> saved = ArgumentCaptor.forClass(EmailVerification.class);\n+        verify(verificationRepository).save(saved.capture());\n+        assertThat(saved.getValue().isVerified()).isTrue();\n+    }\n+\n+    @Test\n+    void confirmingAlreadyVerifiedRequestIsIdempotent() {\n+        EmailVerification verified = verified(CANONICAL_EMAIL);\n+        when(verificationRepository.findLatestByEmail(CANONICAL_EMAIL))\n+                .thenReturn(Optional.of(verified));\n+\n+        verificationService.verifyCode(\" MEMBER@example.com \", \"000000\");\n+\n+        verify(passwordEncoder, never()).matches(anyString(), anyString());\n+        verify(verificationRepository, never()).save(any());\n+    }\n+\n+    private void signup(String email, String phoneNumber) {\n+        signupService.signup(new SignupCommand(email, \"password123\", \"회원\", phoneNumber));\n+    }\n+\n+    private static EmailVerification issued(String email, Instant expiresAt) {\n+        return new EmailVerification(\n+                1L, email, \"code-hash\", expiresAt, null, Instant.now().minusSeconds(10));\n+    }\n+\n+    private static EmailVerification verified(String email) {\n+        return new EmailVerification(\n+                1L,\n+                email,\n+                \"code-hash\",\n+                Instant.now().plusSeconds(60),\n+                Instant.now(),\n+                Instant.now().minusSeconds(10));\n+    }\n+\n+    private static User savedUser(User user) {\n+        return new User(\n+                1L,\n+                user.getEmail(),\n+                user.getPasswordHash(),\n+                user.getNickname(),\n+                user.getPhoneNumber(),\n+                null,\n+                user.getStatus(),\n+                false,\n+                false,\n+                false,\n+                null,\n+                Instant.now(),\n+                Instant.now(),\n+                null);\n+    }\n+\n+    private static void assertBusinessCode(Runnable invocation, ErrorCode expected) {\n+        assertThatThrownBy(invocation::run)\n+                .isInstanceOf(BusinessException.class)\n+                .extracting(error -> ((BusinessException) error).getErrorCode())\n+                .isEqualTo(expected);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,150 @@\n+package com.ssafy.thorp.account.presentation;\n+\n+import static org.hamcrest.Matchers.nullValue;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.ssafy.thorp.account.application.command.SignupCommand;\n+import com.ssafy.thorp.account.application.result.SignupResult;\n+import com.ssafy.thorp.account.application.service.EmailVerificationService;\n+import com.ssafy.thorp.account.application.service.SignupService;\n+import com.ssafy.thorp.account.presentation.controller.EmailVerificationController;\n+import com.ssafy.thorp.account.presentation.controller.SignupController;\n+import com.ssafy.thorp.common.config.SecurityConfig;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.common.web.advice.GlobalExceptionHandler;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.ValueSource;\n+import org.mockito.ArgumentCaptor;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;\n+import org.springframework.context.annotation.Import;\n+import org.springframework.http.MediaType;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.test.web.servlet.MockMvc;\n+\n+@WebMvcTest(controllers = {SignupController.class, EmailVerificationController.class})\n+@Import({SecurityConfig.class, GlobalExceptionHandler.class})\n+class AccountControllerContractTest {\n+\n+    @Autowired private MockMvc mockMvc;\n+\n+    @MockitoBean private SignupService signupService;\n+    @MockitoBean private EmailVerificationService emailVerificationService;\n+\n+    @Test\n+    void emailVerificationOperationsUseInternalProxyPathsAnd204() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/accounts/email-verifications\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\"{\\\"email\\\":\\\" MEMBER@Example.COM \\\"}\"))\n+                .andExpect(status().isNoContent());\n+\n+        mockMvc.perform(\n+                        post(\"/accounts/email-verifications/confirm\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\n+                                        \"{\\\"email\\\":\\\" MEMBER@Example.COM \\\"\"\n+                                                + \",\\\"verificationCode\\\":\\\"123456\\\"}\"))\n+                .andExpect(status().isNoContent());\n+\n+        verify(emailVerificationService).createVerificationCode(\"member@example.com\");\n+        verify(emailVerificationService).verifyCode(\"member@example.com\", \"123456\");\n+    }\n+\n+    @Test\n+    void signupUsesInternalProxyPathAnd201Envelope() throws Exception {\n+        when(signupService.signup(any()))\n+                .thenReturn(new SignupResult(1L, \"member@example.com\", \"회원\", \"ACTIVE\"));\n+\n+        mockMvc.perform(\n+                        post(\"/accounts\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(signupJson(\" MEMBER@Example.COM \", \"01012345678\")))\n+                .andExpect(status().isCreated())\n+                .andExpect(jsonPath(\"$.success\").value(true))\n+                .andExpect(jsonPath(\"$.data.userId\").value(1))\n+                .andExpect(jsonPath(\"$.data.email\").value(\"member@example.com\"))\n+                .andExpect(jsonPath(\"$.data.nickname\").value(\"회원\"))\n+                .andExpect(jsonPath(\"$.data.status\").value(\"ACTIVE\"))\n+                .andExpect(jsonPath(\"$.error\").value(nullValue()));\n+\n+        ArgumentCaptor<SignupCommand> command = ArgumentCaptor.forClass(SignupCommand.class);\n+        verify(signupService).signup(command.capture());\n+        org.assertj.core.api.Assertions.assertThat(command.getValue().email())\n+                .isEqualTo(\"member@example.com\");\n+    }\n+\n+    @Test\n+    void legacyDoubleApiPathIsNotExposed() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/api/accounts\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(signupJson(\"01012345678\")))\n+                .andExpect(status().isNotFound());\n+    }\n+\n+    @Test\n+    void accountMutationsRequireCsrf() throws Exception {\n+        mockMvc.perform(\n+                        post(\"/accounts/email-verifications\")\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(\"{\\\"email\\\":\\\"member@example.com\\\"}\"))\n+                .andExpect(status().isForbidden())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"CSRF_TOKEN_INVALID\"));\n+    }\n+\n+    @ParameterizedTest\n+    @ValueSource(strings = {\"010-1234-5678\", \"0212345678\", \"010 1234 5678\", \"010123456\"})\n+    void invalidPhoneNumbersUseStableInvalidInputCode(String phoneNumber) throws Exception {\n+        mockMvc.perform(\n+                        post(\"/accounts\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(signupJson(phoneNumber)))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"INVALID_INPUT\"));\n+    }\n+\n+    @Test\n+    void businessErrorsUseStableContractCodes() throws Exception {\n+        when(signupService.signup(any()))\n+                .thenThrow(new BusinessException(ErrorCode.DUPLICATE_EMAIL));\n+        mockMvc.perform(\n+                        post(\"/accounts\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(signupJson(\"01012345678\")))\n+                .andExpect(status().isBadRequest())\n+                .andExpect(jsonPath(\"$.success\").value(false))\n+                .andExpect(jsonPath(\"$.error.code\").value(\"DUPLICATE_EMAIL\"))\n+                .andExpect(jsonPath(\"$.error.message\").value(\"이미 가입된 이메일입니다.\"));\n+    }\n+\n+    private static String signupJson(String phoneNumber) {\n+        return signupJson(\"member@example.com\", phoneNumber);\n+    }\n+\n+    private static String signupJson(String email, String phoneNumber) {\n+        return \"\"\"\n+                {\n+                  \"email\": \"%s\",\n+                  \"password\": \"password123\",\n+                  \"nickname\": \"회원\",\n+                  \"phoneNumber\": \"%s\"\n+                }\n+                \"\"\"\n+                .formatted(email, phoneNumber);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -57,15 +57,15 @@ description: \"로그인·회원가입·로그아웃 사용자 기능의 실행 \n \n ### Tests for User Story 1\n \n-- [ ] T013 [P] [US1] Add failing service tests for canonical email use, phone validation, verification lifecycle, and detailed account error codes in `backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java`\n-- [ ] T014 [P] [US1] Add failing controller tests for the three existing account operations, internal proxy paths, CSRF, and contract responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java`\n+- [x] T013 [P] [US1] Add failing service tests for canonical email use, phone validation, verification lifecycle, and detailed account error codes in `backend/src/test/java/com/ssafy/thorp/account/application/SignupAndEmailVerificationServiceTest.java`\n+- [x] T014 [P] [US1] Add failing controller tests for the three existing account operations, internal proxy paths, CSRF, and contract responses in `backend/src/test/java/com/ssafy/thorp/account/presentation/AccountControllerContractTest.java`\n - [x] T015 [P] [US1] Add failing component tests for validation, send/confirm/signup pending states, duplicate submission, accessible errors, and email-only handoff in `frontend/src/pages/SignupPage.test.tsx`\n - [x] T016 [P] [US1] Add failing auth client tests for email verification and signup success/error envelopes in `frontend/src/api/auth.test.ts`\n \n ### Implementation for User Story 1\n \n-- [ ] T017 [US1] Implement trim-and-lowercase email normalization at the Backend trust boundary in `backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java`, `backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java`\n-- [ ] T018 [US1] Normalize Account controller mappings to internal `/accounts`, return the stable rejection codes, and preserve 204/201 success contracts in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java` and `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java`\n+- [x] T017 [US1] Implement trim-and-lowercase email normalization at the Backend trust boundary in `backend/src/main/java/com/ssafy/thorp/account/application/EmailNormalizer.java`, `backend/src/main/java/com/ssafy/thorp/account/application/service/SignupService.java`, and `backend/src/main/java/com/ssafy/thorp/account/application/service/EmailVerificationService.java`\n+- [x] T018 [US1] Normalize Account controller mappings to internal `/accounts`, return the stable rejection codes, and preserve 204/201 success contracts in `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/SignupController.java` and `backend/src/main/java/com/ssafy/thorp/account/presentation/controller/EmailVerificationController.java`\n - [x] T019 [P] [US1] Implement CSRF-aware email verification and signup client functions in `frontend/src/api/auth.ts`\n - [x] T020 [P] [US1] Implement reusable labeled auth fields, status announcements, first-error focus, and submit controls in `frontend/src/components/auth/AuthField.tsx`, `frontend/src/components/auth/AuthStatus.tsx`, and `frontend/src/components/auth/AuthForm.module.css`\n - [x] T021 [US1] Implement the responsive email verification and signup flow with request identity guards in `frontend/src/pages/SignupPage.tsx` and `frontend/src/pages/SignupPage.module.css` after T019 and T020\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/014-user-auth/tasks.md",
+          "old_path": "specs/014-user-auth/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2199545,
+      "head_commit_sha": "bc28afaee982db7dfae235b063f2a3f4820d677b",
+      "base_commit_sha": "cfa57c217db4e49f8fb978495648a510809a5196",
+      "start_commit_sha": "9f96e850facffe76b213218e25b65c87b33e8733",
+      "created_at": "2026-09-15T14:49:10.995+09:00",
+      "merge_request_id": 944769,
+      "state": "without_files",
+      "real_size": "8",
+      "patch_id_sha": "554ed40fc808644aeb564e6fa3f0fd3234462a4f",
+      "commits": [
+        {
+          "id": "bc28afaee982db7dfae235b063f2a3f4820d677b",
+          "short_id": "bc28afae",
+          "created_at": "2026-09-15T14:46:36.000+09:00",
+          "parent_ids": [
+            "cfa57c217db4e49f8fb978495648a510809a5196"
+          ],
+          "title": "feat(be): 이메일 정규화 및 회원가입 인증 계약을 정비",
+          "message": "feat(be): 이메일 정규화 및 회원가입 인증 계약을 정비\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-15T14:46:36.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-15T14:46:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/bc28afaee982db7dfae235b063f2a3f4820d677b"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2808686": []
+  }
+}

@@ -1,8 +1,0 @@
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "ASSISTANT_UNAVAILABLE",
-    "message": "지금은 질문에 답할 수 없어요. 잠시 후 다시 시도해 주세요."
-  }
-}

@@ -1,0 +1,1043 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942138,
+    "iid": 66,
+    "project_id": 1444456,
+    "title": "feat(be): 파생 지표 계산 모듈 — 회복 기간·회전율·상관·위험 기여·손실 기여·비중 오차",
+    "description": "# 작업 내용 요약\n\nspec 004 T008입니다. 결과 계약의 `analytics` 블록(회복 기간·회전율·상관·위험 기여·손실 기여·비중 오차)을 채우고, `versions.worker`·`rules.provisional`을 실었으며, SC-002(결정성)·SC-003(수기 대조)·SC-004(체결 규칙) 테스트를 전략별 픽스처로 고정했습니다. 결과 조립은 `engine_runner.assemble_output` 하나로 떼어 T011(취소)·T014(한도)의 부분 결과가 같은 함수로 나오게 했습니다.\n\n**커밋을 일곱으로 나눴습니다.** 지표 모듈 → 러너 배선 → 결정성·체결 규칙 테스트 → 수기 대조 → 문서 → 리뷰 반영 2건.\n\n| 커밋 | 내용 |\n|---|---|\n| `6cd47ec` | `performance.calculate_analytics` 신설, `calculate_performance`가 `netTotalReturn`·`totalTradingCost` 직접 채움. 손으로 만든 입력으로 정의를 고정한 `test_performance.py` 11건 |\n| `d461199` | `assemble_output(request, market, execution, started, status=, partial=)` 추출, `analytics` 배선, `versions.worker`·`rules.provisional`, `reference_versions` |\n| `06ba3b4` | `test_determinism.py`: 전략별 EngineInput 픽스처 4개(고정·동일·역변동성·TARGET_RISK)로 바이트 동일 + SC-004(체결일·`plannedDate`·정수 수량·look-ahead 0건) |\n| `f64ba64` | `test_manual_reconciliation.py` + `reconcile.py`(독립 계산기) + CSV 원본 + JSON 기대값. 허용 오차 0에서 전부 일치 |\n| `58cd1ea` | tasks.md T008 완료·결정 ①~⑤, 워커 README·CLAUDE.md, 메시징 계약 README |\n| `d2d19b0` | 리뷰 2: 손익 기여에서 미청산 보유분의 매수 수수료 차감 |\n| `38c7473` | 리뷰 1·3: `worker.__version__` 단일 원본(pyproject dynamic), `stop_after` 조기 종료 훅과 멈춘 날 보유 스냅샷 |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-142\n- link https://ssafy.atlassian.net/browse/S15P21E205-142\n- 선행: S15P21E205-137(T006 엔진), S15P21E205-140(T007 배분·비용)\n- 뒤: S15P21E205-146(T009 결과 API — `summary.analytics{recoveryDays, turnover}`), S15P21E205-149(T011 취소 — `assemble_output(status=CANCELLED, partial=True)`)\n\n# 주요 변경 사항\n\n- **`analytics` 정의를 정했습니다**(spec은 이름만 정함). 원본은 `calculate_analytics` docstring이고 tasks.md 결정 ①에도 적었습니다.\n  - `recoveryDays`: 최대 하락 저점 → 전 고점을 다시 넘은 첫날까지 **거래일 수**. 하락 없음 0, 미회복 키 생략.\n  - `turnover`: (매수 대금 + 매도 대금) / 2 / 평균 자산 × 252 / 평가 거래일 수. 대금은 체결가 × 수량.\n  - `correlationMatrix`·`riskContribution`: 평가 기간 조정 종가 일별 수익률의 표본 공분산(ddof=1). 위험 기여는 wᵢ(Σw)ᵢ / wᵀΣw, w는 리밸런싱 기록의 **실제 비중 평균**. `method=\"sample-covariance-daily\"`.\n  - `lossContribution`: 종목별(실현 + 종료일 미실현 − 미청산 매수 수수료 + 분배금) / 전체 손익. 합 1, 손익 합 = 자산 증감. 전체 0이면 키 생략.\n  - `weightError`: 리밸런싱마다 기록한 Σ|target − actual|의 평균.\n  - 계산 불가는 전부 키 생략(계약 §5). 0·NaN을 넣지 않습니다.\n- **`assemble_output`** — `run_with_artifacts`에서 결과 조립을 떼어 모듈 함수로. `series`가 `lastTradingDate`까지만 담긴 실행을 `status=CANCELLED, partial=True`로 넘기면 같은 지표·비용·비중·분석이 그 시계열로 나옵니다(테스트: `stop_after`로 1/5에 실제로 멈춘 실행을 조립 → `run.partial`, `lastTradingDate`, 마지막 보유 스냅샷, 손익 항등식 확인). T011은 취소 Event를 `execute_portfolio(..., stop_after=)`에 연결하고 이 함수만 부르면 됩니다.\n- **`versions`** — `worker=\"thorp-worker 0.1.1\"`(`worker.__version__` 단일 원본, pyproject `dynamic`), `rules.provisional`은 규칙 사본(`allocation.rules`)에 `provisional` 키가 bool로 있을 때만 싣고 없으면 생략합니다(아래 리뷰 포인트).\n- **결정성 픽스처** `worker/tests/fixtures/engine-input-three-etf-{fixed,equal,inverse_vol,target-risk}.json` — 2023-08-01~2024-06-28, 전 비용 프로필, 청산 포함. 두 번 실행해 `startedAt`·`finishedAt`을 뺀 `to_json()`이 바이트 동일. 기존 단일 결정성 테스트는 여기로 옮겼습니다.\n- **SC-004** — REBALANCE 체결 = 판단일 다음 거래일, HALT_DEFERRED는 `plannedDate`가 그 날이고 체결은 그 뒤, 정수 수량, `effectiveStart` = 첫 스냅샷. look-ahead는 `compute_weights`를 감싸는 스파이로 \"넘긴 이력의 마지막 날짜 ≤ 판단일\"을 매 호출 확인(역변동성 픽스처, 실제 함수를 그대로 호출).\n- **수기 대조** — \"스프레드시트\"를 `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`로 두었습니다. **워커를 import하지 않고** 표준 라이브러리만으로 픽스처 CSV 원본에서 규칙(문서에서 옮겨 적음)대로 계산해 CSV 출력(`*.csv`, `*_cash.csv`)과 JSON 기대값(`tests/fixtures/manual_reconciliation.json`)을 만듭니다. 대표 거래일 3개:\n\n  | 사례 | 판단 → 체결 | 확인한 것 |\n  |---|---|---|\n  | 첫 리밸런싱 | 2024-01-02 → 01-03 | 3종목 수량·체결가(6자리)·수수료·호가차+슬리피지, 체결 후 현금 37,967.4638 |\n  | 분배금 지급 | 04-01 → 04-02 체결, 04-29 권리락, 05-02 지급 | 권리락일 보유 × 85원 = 지급액, 현금 흐름 종목·금액 |\n  | 정지 이월 | 06-10 → 06-11 예정, 반도체 정지 → 06-12 체결 | `plannedDate=06-11`·체결 06-12, 06-11 현금 4,024,683.2943 → 06-12 현금 42,700.48345 |\n\n  `PROVISIONAL_TOLERANCE = Decimal(\"0\")`에서 전부 일치했습니다. PD-12가 정해지면 상수만 바꿉니다.\n\n# 테스트\n\n- [x] 워커 `ruff check src tests scripts && ruff format --check src tests scripts && pytest` — **275 passed**(250 → 275: `test_performance` 12, 러너 배선 3, `test_determinism` 7, `test_manual_reconciliation` 4, 기존 결정성 1건 이동)\n- [x] TDD: `test_performance.py`는 ImportError(함수 없음)로, 러너 배선 테스트는 `analytics is None`·`assemble_output` ImportError로 먼저 실패하는 것을 확인한 뒤 구현\n- [x] 결정성·SC-004·수기 대조는 기존 동작을 고정하는 검증 테스트라 처음부터 통과 — 수기 대조는 독립 계산이 엔진과 첫 실행에서 오차 0으로 일치\n- [x] `git diff --check origin/dev...HEAD` 통과\n- [x] 백엔드 변경 없음(워커·문서만)\n- 환경: Windows `uv sync --python 3.13`(`uv.lock`에 cp313 win_amd64 wheel 있음). 앞선 리뷰의 \"`.venv`에 Python 없음\"은 WSL venv 심볼릭링크가 깨진 것이었습니다.\n\n# 리뷰 반영 (1차)\n\n- **[P1] Docker 에서 `package_version(\"thorp-worker\")` 실패** — 지적대로였습니다. `worker.Dockerfile` 은 requirements 만 설치하고 `src` 를 복사하므로 패키지 메타데이터가 없어 `PackageNotFoundError` 가 결과 조립과 실패 결과 경로 양쪽에서 났을 것입니다. `importlib.metadata` 를 버리고 `worker/__init__.py` 의 `__version__` 을 단일 원본으로 삼았습니다. pyproject 는 `dynamic = [\"version\"]` + `[tool.setuptools.dynamic] version = {attr = \"worker.__version__\"}` 로 같은 값을 읽습니다(`uv.lock` 은 정적 version 줄만 빠짐). 테스트는 `versions.worker == f\"thorp-worker {worker.__version__}\"`.\n- **[P2] 미청산 보유분 매수 수수료 누락** — 지적대로였습니다. OPEN 거래의 `commission` 을 종목별로 빼서 Σ실현 + Σ(미실현 − 매수 수수료) + 분배금 == 자산 증감이 성립합니다. 단위 테스트(수수료 5 인 OPEN 거래)와, 아래 부분 결과 테스트에서 실제 실행 데이터로 이 항등식을 정확히(Decimal 동치) 확인합니다.\n- **[P2] 부분 결과에서 마지막 날 보유 스냅샷 부재** — 지적대로였고, 지적하신 \"실제 중단 상태를 검증하지 못한다\" 도 맞았습니다. `execute_portfolio(..., stop_after=lambda day: bool)` 훅을 넣었습니다: 그날 평가·진행 콜백을 마친 뒤 판단하지 않고 `self.stop()` 하고, **멈추는 날을 종료일로 보아 보유 스냅샷을 남깁니다**(계약의 \"시작일 + 종료일\" 규칙 그대로). `execute_portfolio` 의 스냅샷 수 검사는 조기 종료면 건너뜁니다. T011 은 취소 Event 를 이 훅에 연결하면 됩니다. 테스트는 시계열을 자르는 대신 1/5 에 실제로 멈추고, 마지막 스냅샷의 `positions` 존재·`lossContribution` 존재·손익 항등식을 확인합니다.\n\n# 리뷰 포인트\n\n- **`analytics` 정의 5개는 제가 정했습니다.** 특히 ① `lossContribution`을 \"손실\"이 아니라 **전체 손익에 대한 종목별 비율**(합 1)로 읽었습니다 — 이익이 난 실행에서도 값이 나오게 하려는 선택입니다. \"손실 구간에서의 기여\"로 바꾸려면 `_loss_contribution` 하나만 고치면 됩니다. ② `riskContribution`의 w를 실제 비중 평균으로 했습니다(대안: 마지막 리밸런싱 비중, 목표 비중).\n- **`versions.rules.provisional`을 워커가 채울 수 없습니다.** 등록표 `strategy_rules.provisional` 열은 백엔드에 있고 `EngineInputAssembler`가 규칙 사본(`spec` JSONB)에 그 키를 넣지 않습니다. 워커는 사본에 키가 있으면 싣고 없으면 생략합니다. 백엔드가 사본에 `provisional`을 합쳐 보내거나 결과 저장 시 등록표에서 채우는 것이 후속이며 T009에서 보는 것을 제안합니다(tasks.md 결정 ③).\n- **수기 대조의 독립성.** `reconcile.py`는 엔진 규칙을 문서에서 다시 구현한 것이라 \"같은 사람이 두 번 쓴\" 계산입니다. 스프레드시트도 같은 성질이긴 하지만, 팀이 규칙을 다르게 읽는지 확인하려면 다른 사람이 `reconcile.py`의 규칙 주석(모듈 docstring 6줄)만 보고 한 사례를 직접 계산해 보는 것이 가장 값진 리뷰입니다.\n- **`test_determinism.py`의 SC-004 검사는 픽스처 실행 결과를 훑는 방식**이라 \"판단일 이후 자료 사용 0건\"을 배분 모듈 입력에서만 확인합니다. TARGET_RISK 오버레이의 `history`도 같은 객체를 받으므로 함께 커버되지만 별도 스파이는 두지 않았습니다.\n- `test_placeholder.py`(CI 배선용 `assert True`)는 T013 정리 몫으로 두고 건드리지 않았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-13T19:35:49.221+09:00",
+    "updated_at": "2026-09-14T14:34:23.397+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-13T19:44:19.620+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/142-performance-determinism-reconciliation",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "38c747333aa00e45edf8ffe925eab011e44a4161",
+    "merge_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T19:35:53.210+09:00",
+    "reference": "!66",
+    "references": {
+      "short": "!66",
+      "relative": "!66",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!66"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/66",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942138,
+    "iid": 66,
+    "project_id": 1444456,
+    "title": "feat(be): 파생 지표 계산 모듈 — 회복 기간·회전율·상관·위험 기여·손실 기여·비중 오차",
+    "description": "# 작업 내용 요약\n\nspec 004 T008입니다. 결과 계약의 `analytics` 블록(회복 기간·회전율·상관·위험 기여·손실 기여·비중 오차)을 채우고, `versions.worker`·`rules.provisional`을 실었으며, SC-002(결정성)·SC-003(수기 대조)·SC-004(체결 규칙) 테스트를 전략별 픽스처로 고정했습니다. 결과 조립은 `engine_runner.assemble_output` 하나로 떼어 T011(취소)·T014(한도)의 부분 결과가 같은 함수로 나오게 했습니다.\n\n**커밋을 일곱으로 나눴습니다.** 지표 모듈 → 러너 배선 → 결정성·체결 규칙 테스트 → 수기 대조 → 문서 → 리뷰 반영 2건.\n\n| 커밋 | 내용 |\n|---|---|\n| `6cd47ec` | `performance.calculate_analytics` 신설, `calculate_performance`가 `netTotalReturn`·`totalTradingCost` 직접 채움. 손으로 만든 입력으로 정의를 고정한 `test_performance.py` 11건 |\n| `d461199` | `assemble_output(request, market, execution, started, status=, partial=)` 추출, `analytics` 배선, `versions.worker`·`rules.provisional`, `reference_versions` |\n| `06ba3b4` | `test_determinism.py`: 전략별 EngineInput 픽스처 4개(고정·동일·역변동성·TARGET_RISK)로 바이트 동일 + SC-004(체결일·`plannedDate`·정수 수량·look-ahead 0건) |\n| `f64ba64` | `test_manual_reconciliation.py` + `reconcile.py`(독립 계산기) + CSV 원본 + JSON 기대값. 허용 오차 0에서 전부 일치 |\n| `58cd1ea` | tasks.md T008 완료·결정 ①~⑤, 워커 README·CLAUDE.md, 메시징 계약 README |\n| `d2d19b0` | 리뷰 2: 손익 기여에서 미청산 보유분의 매수 수수료 차감 |\n| `38c7473` | 리뷰 1·3: `worker.__version__` 단일 원본(pyproject dynamic), `stop_after` 조기 종료 훅과 멈춘 날 보유 스냅샷 |\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-142\n- link https://ssafy.atlassian.net/browse/S15P21E205-142\n- 선행: S15P21E205-137(T006 엔진), S15P21E205-140(T007 배분·비용)\n- 뒤: S15P21E205-146(T009 결과 API — `summary.analytics{recoveryDays, turnover}`), S15P21E205-149(T011 취소 — `assemble_output(status=CANCELLED, partial=True)`)\n\n# 주요 변경 사항\n\n- **`analytics` 정의를 정했습니다**(spec은 이름만 정함). 원본은 `calculate_analytics` docstring이고 tasks.md 결정 ①에도 적었습니다.\n  - `recoveryDays`: 최대 하락 저점 → 전 고점을 다시 넘은 첫날까지 **거래일 수**. 하락 없음 0, 미회복 키 생략.\n  - `turnover`: (매수 대금 + 매도 대금) / 2 / 평균 자산 × 252 / 평가 거래일 수. 대금은 체결가 × 수량.\n  - `correlationMatrix`·`riskContribution`: 평가 기간 조정 종가 일별 수익률의 표본 공분산(ddof=1). 위험 기여는 wᵢ(Σw)ᵢ / wᵀΣw, w는 리밸런싱 기록의 **실제 비중 평균**. `method=\"sample-covariance-daily\"`.\n  - `lossContribution`: 종목별(실현 + 종료일 미실현 − 미청산 매수 수수료 + 분배금) / 전체 손익. 합 1, 손익 합 = 자산 증감. 전체 0이면 키 생략.\n  - `weightError`: 리밸런싱마다 기록한 Σ|target − actual|의 평균.\n  - 계산 불가는 전부 키 생략(계약 §5). 0·NaN을 넣지 않습니다.\n- **`assemble_output`** — `run_with_artifacts`에서 결과 조립을 떼어 모듈 함수로. `series`가 `lastTradingDate`까지만 담긴 실행을 `status=CANCELLED, partial=True`로 넘기면 같은 지표·비용·비중·분석이 그 시계열로 나옵니다(테스트: `stop_after`로 1/5에 실제로 멈춘 실행을 조립 → `run.partial`, `lastTradingDate`, 마지막 보유 스냅샷, 손익 항등식 확인). T011은 취소 Event를 `execute_portfolio(..., stop_after=)`에 연결하고 이 함수만 부르면 됩니다.\n- **`versions`** — `worker=\"thorp-worker 0.1.1\"`(`worker.__version__` 단일 원본, pyproject `dynamic`), `rules.provisional`은 규칙 사본(`allocation.rules`)에 `provisional` 키가 bool로 있을 때만 싣고 없으면 생략합니다(아래 리뷰 포인트).\n- **결정성 픽스처** `worker/tests/fixtures/engine-input-three-etf-{fixed,equal,inverse_vol,target-risk}.json` — 2023-08-01~2024-06-28, 전 비용 프로필, 청산 포함. 두 번 실행해 `startedAt`·`finishedAt`을 뺀 `to_json()`이 바이트 동일. 기존 단일 결정성 테스트는 여기로 옮겼습니다.\n- **SC-004** — REBALANCE 체결 = 판단일 다음 거래일, HALT_DEFERRED는 `plannedDate`가 그 날이고 체결은 그 뒤, 정수 수량, `effectiveStart` = 첫 스냅샷. look-ahead는 `compute_weights`를 감싸는 스파이로 \"넘긴 이력의 마지막 날짜 ≤ 판단일\"을 매 호출 확인(역변동성 픽스처, 실제 함수를 그대로 호출).\n- **수기 대조** — \"스프레드시트\"를 `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`로 두었습니다. **워커를 import하지 않고** 표준 라이브러리만으로 픽스처 CSV 원본에서 규칙(문서에서 옮겨 적음)대로 계산해 CSV 출력(`*.csv`, `*_cash.csv`)과 JSON 기대값(`tests/fixtures/manual_reconciliation.json`)을 만듭니다. 대표 거래일 3개:\n\n  | 사례 | 판단 → 체결 | 확인한 것 |\n  |---|---|---|\n  | 첫 리밸런싱 | 2024-01-02 → 01-03 | 3종목 수량·체결가(6자리)·수수료·호가차+슬리피지, 체결 후 현금 37,967.4638 |\n  | 분배금 지급 | 04-01 → 04-02 체결, 04-29 권리락, 05-02 지급 | 권리락일 보유 × 85원 = 지급액, 현금 흐름 종목·금액 |\n  | 정지 이월 | 06-10 → 06-11 예정, 반도체 정지 → 06-12 체결 | `plannedDate=06-11`·체결 06-12, 06-11 현금 4,024,683.2943 → 06-12 현금 42,700.48345 |\n\n  `PROVISIONAL_TOLERANCE = Decimal(\"0\")`에서 전부 일치했습니다. PD-12가 정해지면 상수만 바꿉니다.\n\n# 테스트\n\n- [x] 워커 `ruff check src tests scripts && ruff format --check src tests scripts && pytest` — **275 passed**(250 → 275: `test_performance` 12, 러너 배선 3, `test_determinism` 7, `test_manual_reconciliation` 4, 기존 결정성 1건 이동)\n- [x] TDD: `test_performance.py`는 ImportError(함수 없음)로, 러너 배선 테스트는 `analytics is None`·`assemble_output` ImportError로 먼저 실패하는 것을 확인한 뒤 구현\n- [x] 결정성·SC-004·수기 대조는 기존 동작을 고정하는 검증 테스트라 처음부터 통과 — 수기 대조는 독립 계산이 엔진과 첫 실행에서 오차 0으로 일치\n- [x] `git diff --check origin/dev...HEAD` 통과\n- [x] 백엔드 변경 없음(워커·문서만)\n- 환경: Windows `uv sync --python 3.13`(`uv.lock`에 cp313 win_amd64 wheel 있음). 앞선 리뷰의 \"`.venv`에 Python 없음\"은 WSL venv 심볼릭링크가 깨진 것이었습니다.\n\n# 리뷰 반영 (1차)\n\n- **[P1] Docker 에서 `package_version(\"thorp-worker\")` 실패** — 지적대로였습니다. `worker.Dockerfile` 은 requirements 만 설치하고 `src` 를 복사하므로 패키지 메타데이터가 없어 `PackageNotFoundError` 가 결과 조립과 실패 결과 경로 양쪽에서 났을 것입니다. `importlib.metadata` 를 버리고 `worker/__init__.py` 의 `__version__` 을 단일 원본으로 삼았습니다. pyproject 는 `dynamic = [\"version\"]` + `[tool.setuptools.dynamic] version = {attr = \"worker.__version__\"}` 로 같은 값을 읽습니다(`uv.lock` 은 정적 version 줄만 빠짐). 테스트는 `versions.worker == f\"thorp-worker {worker.__version__}\"`.\n- **[P2] 미청산 보유분 매수 수수료 누락** — 지적대로였습니다. OPEN 거래의 `commission` 을 종목별로 빼서 Σ실현 + Σ(미실현 − 매수 수수료) + 분배금 == 자산 증감이 성립합니다. 단위 테스트(수수료 5 인 OPEN 거래)와, 아래 부분 결과 테스트에서 실제 실행 데이터로 이 항등식을 정확히(Decimal 동치) 확인합니다.\n- **[P2] 부분 결과에서 마지막 날 보유 스냅샷 부재** — 지적대로였고, 지적하신 \"실제 중단 상태를 검증하지 못한다\" 도 맞았습니다. `execute_portfolio(..., stop_after=lambda day: bool)` 훅을 넣었습니다: 그날 평가·진행 콜백을 마친 뒤 판단하지 않고 `self.stop()` 하고, **멈추는 날을 종료일로 보아 보유 스냅샷을 남깁니다**(계약의 \"시작일 + 종료일\" 규칙 그대로). `execute_portfolio` 의 스냅샷 수 검사는 조기 종료면 건너뜁니다. T011 은 취소 Event 를 이 훅에 연결하면 됩니다. 테스트는 시계열을 자르는 대신 1/5 에 실제로 멈추고, 마지막 스냅샷의 `positions` 존재·`lossContribution` 존재·손익 항등식을 확인합니다.\n\n# 리뷰 포인트\n\n- **`analytics` 정의 5개는 제가 정했습니다.** 특히 ① `lossContribution`을 \"손실\"이 아니라 **전체 손익에 대한 종목별 비율**(합 1)로 읽었습니다 — 이익이 난 실행에서도 값이 나오게 하려는 선택입니다. \"손실 구간에서의 기여\"로 바꾸려면 `_loss_contribution` 하나만 고치면 됩니다. ② `riskContribution`의 w를 실제 비중 평균으로 했습니다(대안: 마지막 리밸런싱 비중, 목표 비중).\n- **`versions.rules.provisional`을 워커가 채울 수 없습니다.** 등록표 `strategy_rules.provisional` 열은 백엔드에 있고 `EngineInputAssembler`가 규칙 사본(`spec` JSONB)에 그 키를 넣지 않습니다. 워커는 사본에 키가 있으면 싣고 없으면 생략합니다. 백엔드가 사본에 `provisional`을 합쳐 보내거나 결과 저장 시 등록표에서 채우는 것이 후속이며 T009에서 보는 것을 제안합니다(tasks.md 결정 ③).\n- **수기 대조의 독립성.** `reconcile.py`는 엔진 규칙을 문서에서 다시 구현한 것이라 \"같은 사람이 두 번 쓴\" 계산입니다. 스프레드시트도 같은 성질이긴 하지만, 팀이 규칙을 다르게 읽는지 확인하려면 다른 사람이 `reconcile.py`의 규칙 주석(모듈 docstring 6줄)만 보고 한 사례를 직접 계산해 보는 것이 가장 값진 리뷰입니다.\n- **`test_determinism.py`의 SC-004 검사는 픽스처 실행 결과를 훑는 방식**이라 \"판단일 이후 자료 사용 0건\"을 배분 모듈 입력에서만 확인합니다. TARGET_RISK 오버레이의 `history`도 같은 객체를 받으므로 함께 커버되지만 별도 스파이는 두지 않았습니다.\n- `test_placeholder.py`(CI 배선용 `assert True`)는 T013 정리 몫으로 두고 건드리지 않았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-13T19:35:49.221+09:00",
+    "updated_at": "2026-09-14T14:34:23.397+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-13T19:44:19.620+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/142-performance-determinism-reconciliation",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "38c747333aa00e45edf8ffe925eab011e44a4161",
+    "merge_commit_sha": "9403dbe4a2169e3d84ea68d311349c2354d1f669",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-13T19:35:53.210+09:00",
+    "reference": "!66",
+    "references": {
+      "short": "!66",
+      "relative": "!66",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!66"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/66",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "26",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "3601f7b239593a752e82732028b8effc207c6523",
+      "head_sha": "38c747333aa00e45edf8ffe925eab011e44a4161",
+      "start_sha": "676e4191ec4920dd9ae3678af6bcc1bb7ecd37c7"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "847709f788a1e7164873e264bcc68ad22c04153a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2797988,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T19:35:49.469+09:00",
+          "updated_at": "2026-09-13T19:35:49.476+09:00",
+          "system": true,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "887acb341c8df956133484f01aedf671f22d8213",
+      "individual_note": false,
+      "resolvable": true,
+      "resolved": false,
+      "notes": [
+        {
+          "id": 2797990,
+          "type": "DiscussionNote",
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 결정성 및 수기 대조 검증:** 백테스트 엔진의 결과 계약 채우기에 그치지 않고, 바이트 단위 동일성을 검증하는 결정성 테스트(`test_determinism.py`)와 표준 라이브러리 기반 독립 계산기를 통한 수기 대조 테스트(`test_manual_reconciliation.py`)를 함께 구현하여 수치적 신뢰성을 높였습니다.\n- **아키텍처 및 관심사 분리:** 결과 조립 로직을 `assemble_output` 함수로 추출하여 향후 구현될 취소(T011) 및 한도(T014) 처리 시에도 동일한 시계열 파이프라인을 재사용할 수 있도록 설계된 점이 훌륭합니다.\n\n### 발견 사항\n- [Low] `worker/src/worker/performance.py`: `_turnover` 함수에서 `len(series)`가 0일 경우 발생할 수 있는 `ZeroDivisionError`에 대한 방어 로직이 명시적으로 보이지 않습니다. 일별 스냅샷 리스트가 비어있지 않다는 전제가 있더라도 방어적으로 `if not series:` 체크를 추가하는 것이 안전합니다.\n\n### 테스트 제안\n- `stop_after`를 통한 조기 종료(부분 결과 생성) 시, 지정된 종료일에 정확히 실행이 멈추고 `last_trading_date` 및 보유 스냅샷이 올바르게 유지되는지 확인하는 통합 테스트 시나리오를 추가하세요.\n- `loss_contribution` 계산 시 전체 손익 합이 정확히 0이 되는 극단적인 케이스에서 `None`을 안전하게 반환하는지 검증하는 단위 테스트를 보완하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:38c747333aa00e45edf8ffe925eab011e44a4161 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-13T19:36:00.874+09:00",
+          "updated_at": "2026-09-13T19:44:07.471+09:00",
+          "system": false,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        },
+        {
+          "id": 2798002,
+          "type": "DiscussionNote",
+          "body": "빈 시계열은 그 함수까지 도달하지 못합니다.\n\n- 평가일이 없으면 evaluation_start가 먼저 DATA_INSUFFICIENT로 멈춥니다(engine_runner.py:58, 83).\n- execute_portfolio는 스냅샷 수가 평가일 수와 다르면 EngineFailure를 냅니다. 조기 종료도 스냅샷을 먼저 기록한 뒤 멈추므로 최소 1개는 있습니다(portfolio_execution.py:860).\n- 그래도 비어 있다면 assemble_output의 series\\[0\\].date(engine_runner.py:154)에서 \\_turnover 호출 전에 이미 IndexError가 납니다.\n\n한 함수에만 가드를 두면 일관성이 깨집니다. 같은 전제를 쓰는 곳이 calculate_performance의 series\\[-1\\]·min(drawdown), \\_loss_contribution의 series\\[-1\\], \\_liquidation까지 다섯 군데입니다. \\_turnover에만 if not series를 넣으면 \"여기는 빈 입력을 허용한다\"는 잘못된 신호가 되고, 나머지는 여전히 터집니다. 전부에 가드를 넣는 것은 도달 불가능한 경로를 위한 코드입니다.\n\n비어 있을 때 결정적 결함으로 터지는 현재 동작은 러너의 광역 except가 ENGINE_ERROR 결과로 바꾸므로(재전달·DLQ 없음) 안전한 실패입니다.",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T19:44:07.423+09:00",
+          "updated_at": "2026-09-13T19:44:07.423+09:00",
+          "system": false,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "55d389ecff51e61fa6c39cc80b46beb32a8d1509",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798003,
+          "type": null,
+          "body": "left review comments",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T19:44:07.557+09:00",
+          "updated_at": "2026-09-13T19:44:07.560+09:00",
+          "system": true,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "66e6d4aa56608adb353bd2a63496d0fa9ef7adb5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798004,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T19:44:17.979+09:00",
+          "updated_at": "2026-09-13T19:44:17.988+09:00",
+          "system": true,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f4cf966df59b1c870afdb95d8507f85480ee7c18",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2798005,
+          "type": null,
+          "body": "mentioned in commit 9403dbe4a2169e3d84ea68d311349c2354d1f669",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-13T19:44:20.101+09:00",
+          "updated_at": "2026-09-13T19:44:20.105+09:00",
+          "system": true,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6baba98978913838ad8a5ad455f450170be78296",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802167,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-14T14:34:23.359+09:00",
+          "updated_at": "2026-09-14T14:34:23.364+09:00",
+          "system": true,
+          "noteable_id": 942138,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 66,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2190729,
+      "head_commit_sha": "38c747333aa00e45edf8ffe925eab011e44a4161",
+      "base_commit_sha": "3601f7b239593a752e82732028b8effc207c6523",
+      "start_commit_sha": "676e4191ec4920dd9ae3678af6bcc1bb7ecd37c7",
+      "created_at": "2026-09-13T19:35:50.049+09:00",
+      "merge_request_id": 942138,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "7248bf4c35618ff5a78c11b74b0c0dfe8f0c6e5e"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2190729,
+      "head_commit_sha": "38c747333aa00e45edf8ffe925eab011e44a4161",
+      "base_commit_sha": "3601f7b239593a752e82732028b8effc207c6523",
+      "start_commit_sha": "676e4191ec4920dd9ae3678af6bcc1bb7ecd37c7",
+      "created_at": "2026-09-13T19:35:50.049+09:00",
+      "merge_request_id": 942138,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "7248bf4c35618ff5a78c11b74b0c0dfe8f0c6e5e",
+      "commits": [
+        {
+          "id": "38c747333aa00e45edf8ffe925eab011e44a4161",
+          "short_id": "38c74733",
+          "created_at": "2026-09-13T17:25:39.000+09:00",
+          "parent_ids": [
+            "d2d19b08c39acc1125b5cd5bb64f260ca6e949f1"
+          ],
+          "title": "fix(be): 워커 버전을 worker.__version__ 한 곳에서 읽고, 조기 종료 훅으로 멈춘 날 보유 스냅샷을 남긴다",
+          "message": "fix(be): 워커 버전을 worker.__version__ 한 곳에서 읽고, 조기 종료 훅으로 멈춘 날 보유 스냅샷을 남긴다\n\n리뷰 1: 운영 이미지는 패키지를 설치하지 않고 src 를 복사하므로 importlib.metadata 는\nPackageNotFoundError 를 냈다. worker/__init__.py 의 __version__ 을 단일 원본으로 두고 pyproject 는\ndynamic 으로 읽는다.\n리뷰 3: 부분 결과(T011·T014)에서 마지막 날 positions 가 없으면 미실현 손익이 손익 기여에서 빠졌다.\nexecute_portfolio(stop_after=) 로 그날 평가를 마친 뒤 멈추고, 멈추는 날을 종료일로 보아 보유\n스냅샷을 남긴다. 테스트는 시계열을 자르는 대신 실제로 멈추고 손익 항등식을 확인한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T17:25:39.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T17:25:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/38c747333aa00e45edf8ffe925eab011e44a4161"
+        },
+        {
+          "id": "d2d19b08c39acc1125b5cd5bb64f260ca6e949f1",
+          "short_id": "d2d19b08",
+          "created_at": "2026-09-13T17:24:10.000+09:00",
+          "parent_ids": [
+            "58cd1ea1b5975a628df32feb8402ec1cb6104c1c"
+          ],
+          "title": "fix(be): 손익 기여에서 미청산 보유분의 매수 수수료를 뺀다",
+          "message": "fix(be): 손익 기여에서 미청산 보유분의 매수 수수료를 뺀다\n\n미실현 손익 (종가 − 매수가) × 수량에는 매수 수수료가 없어 종목별 손익 합이 실제 자산 증감보다\n수수료만큼 컸다(2차 리뷰 2). OPEN 거래의 commission 을 종목별로 차감해 Σ실현 + Σ(미실현 − 매수\n수수료) + 분배금 == 자산 증감이 성립한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T17:24:10.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T17:24:10.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d2d19b08c39acc1125b5cd5bb64f260ca6e949f1"
+        },
+        {
+          "id": "58cd1ea1b5975a628df32feb8402ec1cb6104c1c",
+          "short_id": "58cd1ea1",
+          "created_at": "2026-09-13T12:03:49.000+09:00",
+          "parent_ids": [
+            "f64ba645a1e9bd9cb1f52d5f631a9e4e9b8b6dc3"
+          ],
+          "title": "docs(be): T008 완료 표시와 결정 기록 — analytics 정의·assemble_output·rules.provisional·수기 대조 방식",
+          "message": "docs(be): T008 완료 표시와 결정 기록 — analytics 정의·assemble_output·rules.provisional·수기 대조 방식\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T12:03:09.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T12:03:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/58cd1ea1b5975a628df32feb8402ec1cb6104c1c"
+        },
+        {
+          "id": "f64ba645a1e9bd9cb1f52d5f631a9e4e9b8b6dc3",
+          "short_id": "f64ba645",
+          "created_at": "2026-09-13T12:03:49.000+09:00",
+          "parent_ids": [
+            "06ba3b40b7e30c4b84fe67a6b6d2d6b01e2bcbb5"
+          ],
+          "title": "test(be): 수기 대조(SC-003) — 첫 리밸런싱·분배금 지급·거래 정지 이월일을 독립 계산과 맞춘다",
+          "message": "test(be): 수기 대조(SC-003) — 첫 리밸런싱·분배금 지급·거래 정지 이월일을 독립 계산과 맞춘다\n\n기대값은 워커 코드를 import 하지 않는 reconcile.py 가 픽스처 CSV 원본에서 표준 라이브러리만으로\n계산해 JSON 으로 고정했고, 스프레드시트 대신 그 계산의 CSV 출력을 같은 디렉터리에 보관한다.\n체결일·수량·체결가·수수료·호가차+슬리피지·현금 잔고·분배금 금액이 PROVISIONAL_TOLERANCE = 0 에서\n일치한다(PD-12 확정 시 상수만 바꾼다).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T12:03:09.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T12:03:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f64ba645a1e9bd9cb1f52d5f631a9e4e9b8b6dc3"
+        },
+        {
+          "id": "06ba3b40b7e30c4b84fe67a6b6d2d6b01e2bcbb5",
+          "short_id": "06ba3b40",
+          "created_at": "2026-09-13T11:57:26.000+09:00",
+          "parent_ids": [
+            "d461199889d01b42fddb8ebbe57bb4308da08481"
+          ],
+          "title": "test(be): 결정성(SC-002)·체결 규칙(SC-004) 검증을 전략별 EngineInput 픽스처로 고정",
+          "message": "test(be): 결정성(SC-002)·체결 규칙(SC-004) 검증을 전략별 EngineInput 픽스처로 고정\n\n세 전략 + TARGET_RISK 오버레이 픽스처를 두 번 실행해 시각 두 필드를 뺀 to_json 이 바이트\n동일한지, 체결일 = 판단일 다음 거래일(HALT_DEFERRED 는 plannedDate 가 그 날이고 체결은 그 뒤),\n정수 수량, 결과 시작일 = effectiveStart, 배분 모듈이 판단일 이후 이력을 받지 않는지(look-ahead\n0건) 확인한다. 기존 단일 결정성 테스트는 여기로 옮겼다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:57:26.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:57:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/06ba3b40b7e30c4b84fe67a6b6d2d6b01e2bcbb5"
+        },
+        {
+          "id": "d461199889d01b42fddb8ebbe57bb4308da08481",
+          "short_id": "d4611998",
+          "created_at": "2026-09-13T11:55:22.000+09:00",
+          "parent_ids": [
+            "6cd47eca92962a24226947b7e388019ef67f2679"
+          ],
+          "title": "feat(be): 결과 조립을 assemble_output 으로 떼고 analytics·versions.worker·rules.provisional 을 채운다",
+          "message": "feat(be): 결과 조립을 assemble_output 으로 떼고 analytics·versions.worker·rules.provisional 을 채운다\n\n완료 결과와 취소·한도의 부분 결과(T011·T014)가 같은 함수로 만들어진다 — 부분 결과는 series 가\nlastTradingDate 까지만 담겨 있다는 것 외에 다르지 않다. analytics 는 평가 기간 조정 종가\n수익률로 계산한다. versions.worker 는 패키지 메타데이터, rules.provisional 은 규칙 사본에\nprovisional 키가 있을 때만 싣는다(등록표 열은 백엔드에 있고 조립기가 아직 사본에 넣지 않는다).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:55:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:55:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d461199889d01b42fddb8ebbe57bb4308da08481"
+        },
+        {
+          "id": "6cd47eca92962a24226947b7e388019ef67f2679",
+          "short_id": "6cd47eca",
+          "created_at": "2026-09-13T11:53:01.000+09:00",
+          "parent_ids": [
+            "3601f7b239593a752e82732028b8effc207c6523"
+          ],
+          "title": "feat(be): 파생 지표 계산 모듈 — 회복 기간·회전율·상관·위험 기여·손실 기여·비중 오차",
+          "message": "feat(be): 파생 지표 계산 모듈 — 회복 기간·회전율·상관·위험 기여·손실 기여·비중 오차\n\nspec 004 FR-027 analytics 블록. spec 은 이름만 정했으므로 정의를 calculate_analytics docstring 에\n고정하고 손으로 만든 작은 입력으로 검증한다(T008). 계산 불가는 0 이 아니라 None 이다.\ncalculate_performance 는 netTotalReturn(= totalReturn, 자산 곡선이 비용 차감 후)과\ntotalTradingCost 를 직접 채운다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-13T11:53:01.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-13T11:53:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6cd47eca92962a24226947b7e388019ef67f2679"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+instrumentId,fillDate,plannedDate,quantity,fillPrice,commission,spread,slippage\n+091160.XKRX,2024-04-02,2024-04-02,119,33391.357600,595.61880,794.1584,1985.3960\n+244580.XKRX,2024-04-02,2024-04-02,489,6131.288900,449.41545,599.2206,1498.0515\n+305720.XKRX,2024-04-02,2024-04-02,161,18561.984300,447.95835,597.2778,1493.1945\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/distribution.csv",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/distribution.csv",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,2 @@\n+date,cashAfter\n+2024-04-02,38255.708600\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/distribution_cash.csv",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/distribution_cash.csv",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+instrumentId,fillDate,plannedDate,quantity,fillPrice,commission,spread,slippage\n+091160.XKRX,2024-01-03,2024-01-03,122,32528.754200,594.85980,793.1464,1982.8660\n+244580.XKRX,2024-01-03,2024-01-03,209,14284.992500,447.52125,596.6950,1491.7375\n+305720.XKRX,2024-01-03,2024-01-03,155,19396.568100,450.65475,600.8730,1502.1825\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/first_rebalance.csv",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/first_rebalance.csv",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,2 @@\n+date,cashAfter\n+2024-01-03,37967.463800\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/first_rebalance_cash.csv",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/first_rebalance_cash.csv",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,4 @@\n+instrumentId,fillDate,plannedDate,quantity,fillPrice,commission,spread,slippage\n+244580.XKRX,2024-06-11,2024-06-11,445,6718.699800,448.15950,597.5460,1493.8650\n+305720.XKRX,2024-06-11,2024-06-11,169,17660.353600,447.37680,596.5024,1491.2560\n+091160.XKRX,2024-06-12,2024-06-11,131,30392.259700,596.79015,795.7202,1989.3005\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/halt_deferral.csv",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/halt_deferral.csv",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,3 @@\n+date,cashAfter\n+2024-06-11,4024683.294300\n+2024-06-12,42700.483450\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/halt_deferral_cash.csv",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/halt_deferral_cash.csv",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,275 @@\n+\"\"\"수기 대조 기대값 계산기(spec 004 SC-003, T008) — 워커 코드를 import 하지 않는다.\n+\n+스프레드시트 대신 표준 라이브러리만으로 3종목 픽스처의 대표 거래일 세 개를 계산한다.\n+① 첫 리밸런싱 체결일 ② 분배금 지급일 ③ 거래 정지 이월일. 입력은 픽스처 CSV 원본, 규칙은 아래\n+문서에서 옮겨 적은 것이다.\n+\n+- 판단(판단일 종가): 수량 = floor(자산 × 목표 비중 ÷ (종가 × (1 + 호가차 + 슬리피지) + 종가 × 수수료율))\n+  (spec 004 T007 결정 ①: 비용 방향, `costs.py` affordable_quantity)\n+- 체결(다음 거래일 시가): 체결가 = 시가 × (1 + 호가차 + 슬리피지) 를 소수 6자리로 반올림(Nautilus 가격\n+  정밀도), 수수료·호가차·슬리피지·세금의 기준 금액은 가격 충격 전 시가 × 수량. 현금에서 빠지는 것은\n+  체결가 × 수량 + 수수료(+ 매도면 세금). 호가차·슬리피지는 체결가에 들어 있다\n+- 제출 직전 예상 현금으로 살 수 있는 만큼만 산다(종목 이름순 매수, 매도 먼저) — T006 결정 ②\n+- 분배금: 권리락일 **시작 시점** 보유 × 주당 금액이 지급일에 현금으로 들어온다(FR-013)\n+- 거래 정지일 주문은 다음 거래 가능일 시가로 미룬다(HALT_DEFERRED, plannedDate = 원래 체결 예정일)\n+\n+실행: `python reconcile.py <worker/examples/three_etf_24m> <출력 디렉터리> <worker/tests/fixtures/manual_reconciliation.json>`\n+\"\"\"\n+\n+from __future__ import annotations\n+\n+import csv\n+import json\n+import sys\n+from dataclasses import dataclass\n+from datetime import date\n+from decimal import ROUND_FLOOR, Decimal\n+from pathlib import Path\n+\n+BPS = Decimal(10_000)\n+PRICE_QUANTUM = Decimal(\"0.000001\")\n+SEMICONDUCTOR, BATTERY, BIO = \"091160.XKRX\", \"305720.XKRX\", \"244580.XKRX\"\n+WEIGHTS = {SEMICONDUCTOR: Decimal(\"0.4\"), BATTERY: Decimal(\"0.3\"), BIO: Decimal(\"0.3\")}\n+INITIAL_CASH = Decimal(10_000_000)\n+COSTS = {\"commissionBps\": \"1.5\", \"spreadBps\": \"2\", \"slippageBps\": \"5\", \"taxBps\": \"23\"}\n+COST_PROFILE = {\"version\": \"PROVISIONAL-FULL-1\", **COSTS, \"provisional\": True}\n+\n+\n+@dataclass(frozen=True)\n+class Row:\n+    open: Decimal\n+    close: Decimal\n+    suspended: bool\n+\n+\n+def load_prices(fixture_dir: Path) -> dict[str, dict[date, Row]]:\n+    prices: dict[str, dict[date, Row]] = {}\n+    with (fixture_dir / \"prices_raw.csv\").open(encoding=\"utf-8\", newline=\"\") as handle:\n+        for record in csv.DictReader(handle):\n+            prices.setdefault(record[\"instrument_id\"], {})[date.fromisoformat(record[\"date\"])] = Row(\n+                Decimal(record[\"open\"]),\n+                Decimal(record[\"close\"]),\n+                record[\"trading_suspended\"].lower() == \"true\",\n+            )\n+    return prices\n+\n+\n+def trading_days(prices: dict[str, dict[date, Row]]) -> list[date]:\n+    return sorted({day for rows in prices.values() for day in rows})\n+\n+\n+def rate(key: str) -> Decimal:\n+    return Decimal(COSTS[key]) / BPS\n+\n+\n+IMPACT = rate(\"spreadBps\") + rate(\"slippageBps\")\n+COMMISSION = rate(\"commissionBps\")\n+\n+\n+def affordable(cash: Decimal, reference: Decimal) -> int:\n+    unit = reference * (1 + IMPACT) + reference * COMMISSION\n+    return max(0, int((cash / unit).to_integral_value(rounding=ROUND_FLOOR)))\n+\n+\n+def decide(equity: Decimal, closes: dict[str, Decimal]) -> dict[str, int]:\n+    return {iid: affordable(equity * weight, closes[iid]) for iid, weight in WEIGHTS.items()}\n+\n+\n+@dataclass\n+class Fill:\n+    instrument_id: str\n+    date: date\n+    planned_date: date\n+    quantity: int\n+    price: Decimal\n+    commission: Decimal\n+    spread: Decimal\n+    slippage: Decimal\n+\n+    def as_record(self) -> dict[str, str]:\n+        return {\n+            \"instrumentId\": self.instrument_id,\n+            \"fillDate\": self.date.isoformat(),\n+            \"plannedDate\": self.planned_date.isoformat(),\n+            \"quantity\": str(self.quantity),\n+            \"fillPrice\": str(self.price),\n+            \"commission\": str(self.commission),\n+            \"spread\": str(self.spread),\n+            \"slippage\": str(self.slippage),\n+        }\n+\n+\n+def buy_day(\n+    day: date,\n+    cash: Decimal,\n+    pending: dict[str, tuple[int, date]],\n+    prices: dict[str, dict[date, Row]],\n+) -> tuple[Decimal, list[Fill], dict[str, tuple[int, date]]]:\n+    \"\"\"하루의 매수 제출·체결. 정지 종목은 그대로 남긴다(다음 날 다시 시도).\"\"\"\n+    fills: list[Fill] = []\n+    deferred: dict[str, tuple[int, date]] = {}\n+    spent = Decimal(0)\n+    for iid in sorted(pending):\n+        quantity, planned = pending[iid]\n+        row = prices[iid][day]\n+        if row.suspended:\n+            deferred[iid] = (quantity, planned)\n+            continue\n+        quantity = min(quantity, affordable(cash - spent, row.open))\n+        if quantity == 0:\n+            continue\n+        price = (row.open * (1 + IMPACT)).quantize(PRICE_QUANTUM)\n+        notional = row.open * quantity\n+        commission = notional * COMMISSION\n+        spent += price * quantity + commission\n+        fills.append(\n+            Fill(iid, day, planned, quantity, price, commission,\n+                 notional * rate(\"spreadBps\"), notional * rate(\"slippageBps\"))\n+        )\n+    return cash - spent, fills, deferred\n+\n+\n+def next_day(calendar: list[date], day: date) -> date:\n+    return calendar[calendar.index(day) + 1]\n+\n+\n+def request(run_id: str, start: str, end: str, **run_extra: object) -> dict[str, object]:\n+    return {\n+        \"run\": {\"runId\": run_id, \"start\": start, \"end\": end, \"randomSeed\": 42,\n+                \"scenario\": \"FULL_PERIOD\", **run_extra},\n+        \"universe\": {\n+            \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+            \"items\": [\n+                {\"sectorId\": \"SEMICONDUCTOR\", \"instrumentId\": SEMICONDUCTOR, \"targetWeight\": \"0.4\"},\n+                {\"sectorId\": \"BATTERY\", \"instrumentId\": BATTERY, \"targetWeight\": \"0.3\"},\n+                {\"sectorId\": \"BIO\", \"instrumentId\": BIO, \"targetWeight\": \"0.3\"},\n+            ],\n+        },\n+        \"marketData\": {\"datasetId\": \"KRX_DAILY_V1\", \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+                       \"interval\": \"1D\", \"adjustment\": \"SPLIT_ADJUSTED\", \"priceType\": \"LAST\",\n+                       \"fillPrice\": \"RAW\", \"signalPrice\": \"ADJUSTED\",\n+                       \"distributions\": \"CASH_ON_PAY_DATE\"},\n+        \"allocation\": {\"strategyId\": \"FIXED_WEIGHT\", \"rulesVersion\": \"1\",\n+                       \"rules\": {\"targetWeights\": \"USER_SPECIFIED\", \"weightsSource\": \"USER\"},\n+                       \"parameters\": {\"rebalance\": \"MONTH_END\"}},\n+        \"portfolio\": {\"initialCash\": str(INITIAL_CASH), \"currency\": \"KRW\",\n+                      \"positionSizing\": {\"type\": \"STRATEGY_DEFINED\"}, \"shortSelling\": False,\n+                      \"leverage\": \"1\", \"integerLots\": True},\n+        \"execution\": {\"signalTiming\": \"BAR_CLOSE\", \"executionTiming\": \"NEXT_BAR_OPEN\",\n+                      \"orderTypes\": [\"MARKET\"], \"costProfile\": COST_PROFILE, \"partialFill\": False,\n+                      \"liquidity\": {\"model\": \"UNLIMITED\"}, \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+                      \"delisting\": \"CAUSE_BASED\"},\n+        \"evaluation\": {\"warmupTradingDays\": 0, \"liquidationAtEnd\": False},\n+        \"progress\": {\"batchTradingDays\": 20},\n+    }\n+\n+\n+def first_rebalance(prices: dict[str, dict[date, Row]], calendar: list[date]) -> dict[str, object]:\n+    \"\"\"① 2024-01-02 판단 → 2024-01-03 시가 체결.\"\"\"\n+    decision = date(2024, 1, 2)\n+    fill_day = next_day(calendar, decision)\n+    targets = decide(INITIAL_CASH, {iid: prices[iid][decision].close for iid in WEIGHTS})\n+    cash, fills, deferred = buy_day(fill_day, INITIAL_CASH, {iid: (q, fill_day) for iid, q in targets.items()}, prices)\n+    assert not deferred\n+    return {\n+        \"name\": \"first_rebalance\",\n+        \"engineInput\": request(\"RECON-FIRST\", \"2024-01-02\", \"2024-01-05\"),\n+        \"fills\": [f.as_record() for f in fills],\n+        \"cashAfter\": {fill_day.isoformat(): str(cash)},\n+    }\n+\n+\n+def distribution(prices: dict[str, dict[date, Row]], calendar: list[date], fixture_dir: Path) -> dict[str, object]:\n+    \"\"\"② 2024-04-01 판단 → 04-02 체결, 04-29 권리락 보유 × 85원 → 05-02 지급.\"\"\"\n+    decision = date(2024, 4, 1)\n+    fill_day = next_day(calendar, decision)\n+    targets = decide(INITIAL_CASH, {iid: prices[iid][decision].close for iid in WEIGHTS})\n+    cash, fills, deferred = buy_day(fill_day, INITIAL_CASH, {iid: (q, fill_day) for iid, q in targets.items()}, prices)\n+    assert not deferred\n+    with (fixture_dir / \"distributions.csv\").open(encoding=\"utf-8\", newline=\"\") as handle:\n+        rows = [r for r in csv.DictReader(handle) if r[\"instrument_id\"] == BATTERY]\n+    (row,) = rows\n+    assert row[\"ex_date\"] == \"2024-04-29\" and row[\"pay_date\"] == \"2024-05-02\"\n+    held = next(f.quantity for f in fills if f.instrument_id == BATTERY)\n+    amount = Decimal(row[\"amount\"]) * held\n+    return {\n+        \"name\": \"distribution\",\n+        \"engineInput\": request(\"RECON-DIST\", \"2024-04-01\", \"2024-04-26\"),\n+        \"fills\": [f.as_record() for f in fills],\n+        \"cashAfter\": {fill_day.isoformat(): str(cash)},\n+        # 지급일은 별도 실행으로 본다 — 4월 말 리밸런싱이 끼어도 권리락일 보유는 04-02 체결분이다.\n+        \"distribution\": {\n+            \"engineInput\": request(\"RECON-DIST-PAY\", \"2024-04-01\", \"2024-05-03\"),\n+            \"instrumentId\": BATTERY,\n+            \"exDate\": row[\"ex_date\"],\n+            \"payDate\": row[\"pay_date\"],\n+            \"heldOnExDate\": str(held),\n+            \"amount\": str(amount),\n+        },\n+    }\n+\n+\n+def halt_deferral(prices: dict[str, dict[date, Row]], calendar: list[date]) -> dict[str, object]:\n+    \"\"\"③ 2024-06-10 판단 → 06-11 체결 예정, 반도체 ETF 정지 → 06-12 시가 체결.\"\"\"\n+    decision = date(2024, 6, 10)\n+    fill_day = next_day(calendar, decision)\n+    assert prices[SEMICONDUCTOR][fill_day].suspended\n+    targets = decide(INITIAL_CASH, {iid: prices[iid][decision].close for iid in WEIGHTS})\n+    cash, fills, deferred = buy_day(fill_day, INITIAL_CASH, {iid: (q, fill_day) for iid, q in targets.items()}, prices)\n+    assert set(deferred) == {SEMICONDUCTOR}\n+    cash_after: dict[str, str] = {fill_day.isoformat(): str(cash)}\n+    day = next_day(calendar, fill_day)\n+    cash, late, deferred = buy_day(day, cash, deferred, prices)\n+    assert not deferred and len(late) == 1\n+    cash_after[day.isoformat()] = str(cash)\n+    return {\n+        \"name\": \"halt_deferral\",\n+        \"engineInput\": request(\"RECON-HALT\", \"2024-06-03\", \"2024-06-14\", effectiveStart=\"2024-06-10\"),\n+        \"fills\": [f.as_record() for f in fills + late],\n+        \"cashAfter\": cash_after,\n+    }\n+\n+\n+def write_csv(out_dir: Path, case: dict[str, object]) -> None:\n+    fills = case[\"fills\"]\n+    assert isinstance(fills, list)\n+    with (out_dir / f\"{case['name']}.csv\").open(\"w\", encoding=\"utf-8\", newline=\"\") as handle:\n+        writer = csv.DictWriter(handle, fieldnames=list(fills[0]), lineterminator=\"\\n\")\n+        writer.writeheader()\n+        writer.writerows(fills)\n+    cash_after = case[\"cashAfter\"]\n+    assert isinstance(cash_after, dict)\n+    with (out_dir / f\"{case['name']}_cash.csv\").open(\"w\", encoding=\"utf-8\", newline=\"\") as handle:\n+        writer = csv.writer(handle, lineterminator=\"\\n\")\n+        writer.writerow([\"date\", \"cashAfter\"])\n+        writer.writerows(cash_after.items())\n+\n+\n+def main(fixture_dir: Path, out_dir: Path, json_path: Path) -> None:\n+    prices = load_prices(fixture_dir)\n+    calendar = trading_days(prices)\n+    cases = [\n+        first_rebalance(prices, calendar),\n+        distribution(prices, calendar, fixture_dir),\n+        halt_deferral(prices, calendar),\n+    ]\n+    out_dir.mkdir(parents=True, exist_ok=True)\n+    for case in cases:\n+        write_csv(out_dir, case)\n+    payload = {\n+        \"source\": \"docs/specs/backtest-messaging/examples/reconciliation/reconcile.py\",\n+        \"dataset\": \"FIXTURE-three_etf_24m\",\n+        \"tolerance\": \"0\",\n+        \"cases\": cases,\n+    }\n+    json_path.write_text(\n+        json.dumps(payload, ensure_ascii=False, indent=2) + \"\\n\",\n+        encoding=\"utf-8\",\n+        newline=\"\\n\",\n+    )\n+    for case in cases:\n+        print(case[\"name\"], case[\"cashAfter\"])\n+\n+\n+if __name__ == \"__main__\":\n+    main(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/reconciliation/reconcile.py",
+          "old_path": "docs/specs/backtest-messaging/examples/reconciliation/reconcile.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -146,6 +146,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 \n - `costs { commission, spread, slippage, tax, total }` 비용 합계(FR-027). `performance.netTotalReturn`·`totalTradingCost`와 짝.\n - `liquidation { markToMarket { finalEquity, totalReturn }, liquidated { finalEquity, totalReturn, liquidationCost } }` — `evaluation.liquidationAtEnd=true`일 때(FR-017).\n - `analytics { recoveryDays?, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method }` 파생 지표(FR-027).\n+  정의는 워커 `performance.calculate_analytics` docstring(T008 결정)이 원본이고 `method=\"sample-covariance-daily\"`. 계산 불가 항목은 키 생략.\n - `exceptions[] { date, instrumentId?, kind, rule, action }` 예외 처리 기록(FR-020·FR-030). `kind`는 `ZERO_VOLATILITY`, `NO_SELECTION`, `ESTIMATION_FAILED`,\n   `CONSTRAINT_VIOLATION`, `HALT_DEFERRED`, `WEIGHT_ROUNDING` 등 개방 집합.\n - `versions { mapping?, rules { version, provisional }, scenarioRules?, costProfile { version, provisional }, data, engine, worker }` 참조 버전(FR-028).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/README.md",
+          "old_path": "docs/specs/backtest-messaging/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -95,11 +95,12 @@\n   - `compute_weights(history, params, rules) -> AllocationResult{weights, source: USER|COMPUTED, exceptions[]}` 순수 함수. FIXED_WEIGHT(source=USER), EQUAL_WEIGHT(1/N), INVERSE_VOLATILITY(`rules.lookbackDays` 63 표준편차 역수, 0 변동성은 `rules.zeroVolatility`대로 + `exceptions[{kind: ZERO_VOLATILITY}]`, `weightCap` 초과 재분배 불가 시 CONSTRAINT_VIOLATION). 규칙 값은 EngineInput `allocation.rules`에서만 읽고 자체 기본값 없음(provisional, PD-02)\n   - `rules_registry.py`: SECTOR_MOMENTUM·MINIMUM_VARIANCE 또는 rules 없음 → INVALID_REQUEST(\"RULES_NOT_REGISTERED\"). 두 전략 모듈 파일은 만들지 않음(PD-03·04 확정 후 별도 Task)\n   - 구현 시 결정(T007): ① **비용 적용 방향을 정했다** — 수수료·호가차·슬리피지는 양방향, 세금은 매도만, 기준 금액은 가격 충격 전 금액. spec은 수치(PD-07)만 정하고 방향은 정하지 않았는데 방향 없이는 수치를 쓸 수 없다. 데모 프로필(슬리피지만 5bps)에서는 어느 방향을 골라도 결과가 같다 ② 하드코딩 `SLIPPAGE_BPS` 제거는 데모 엔진을 `CostModel`로 넘기는 방식으로 했다. `engine_support`의 수수료·호가차·세금 0 요구는 남겼다 — 그 엔진이 아직 계산하지 않으므로. 다종목 엔진(T006)이 걷어낸다 ③ 주문 방향 `Side(BUY/SELL)`를 `costs.py`에 신설했다. 계약의 `TradeSide`는 포지션 방향(LONG/SHORT)이라 다른 개념이다 ④ 액면분할 단주는 내림하고 `SPLIT_FRACTION` 예외로 남긴다(현금 대체 지급은 가격이 필요해 미도입) ⑤ 역변동성에서 관측 구간이 모자란 종목은 `INSUFFICIENT_HISTORY` 예외로 제외한다 — 짧은 표본의 표준편차는 다른 종목과 같은 척도가 아니라 역수를 비교하는 순간 비중이 왜곡된다\n-- [ ] T008 [US2] [BE] 성과 지표 확장과 결정성·수기 대조 테스트(SC-002·SC-003) (`worker/src/worker/{performance,engine_runner}.py`, `worker/tests/{test_performance,test_determinism,test_manual_reconciliation}.py`, `worker/tests/fixtures/{manual_reconciliation.json,engine-input-three-etf-{fixed,equal,inverse_vol}.json}`, `docs/specs/backtest-messaging/examples/reconciliation/*.csv`) — Jira `S15P21E205-142`\n+- [x] T008 [US2] [BE] 성과 지표 확장과 결정성·수기 대조 테스트(SC-002·SC-003) (`worker/src/worker/{performance,engine_runner}.py`, `worker/tests/{test_performance,test_determinism,test_manual_reconciliation}.py`, `worker/tests/fixtures/{manual_reconciliation.json,engine-input-three-etf-{fixed,equal,inverse_vol}.json}`, `docs/specs/backtest-messaging/examples/reconciliation/*.csv`) — Jira `S15P21E205-142`\n   - `performance{…, netTotalReturn, maxDrawdown, totalTradingCost}`, `analytics{recoveryDays, turnover, correlationMatrix, riskContribution, lossContribution, weightError, method:\"sample-covariance-daily\"}`, `exceptions[]` 집계, `versions{mapping, rules(provisional), scenarioRules(TARGET_RISK_OVERLAY/1, 해당 시), costProfile(provisional), data, engine:\"nautilus_trader 1.219.0\", worker}`. 결정성·수기 대조 테스트에 `TARGET_RISK` 픽스처 1건 추가(quickstart S11). 부분 결과(취소·한도)는 `lastTradingDate`까지의 시계열로 같은 함수가 계산\n   - 결정성: 같은 EngineInput 두 번 실행 → `run.startedAt`·`run.finishedAt` 두 필드를 뺀 `EngineOutput.to_json()`이 바이트 동일(세 전략). 자원 사용량은 EngineOutput 밖(FINISHED payload `resource`)이라 비교 대상이 아니다. 시각 두 필드는 존재만 확인\n   - 수기 대조: 스프레드시트로 계산한 대표 거래일 3개(첫 리밸런싱·분배금 지급일·거래 정지 이월일)의 체결일·수량·현금·비용·분배금을 JSON으로 고정, `PROVISIONAL_TOLERANCE = 0`(PD-12 확정 시 상수만 변경). 스프레드시트 원본 CSV 보관\n   - 검증(SC-004 \"판단일 다음 거래일 이후\"): `reason ∈ {SIGNAL, REBALANCE, LIQUIDATION}`인 체결은 체결일 = 판단일 다음 거래일, `reason=HALT_DEFERRED`인 체결은 `plannedDate` = 판단일 다음 거래일이고 체결일 = 그 이후 첫 거래 가능일. 두 경우 모두 신호에 판단일 이후 자료를 쓰지 않았는지(look-ahead 0건) 확인. 정수 수량, 결과 시작일 = effectiveStart\n+  - 구현 시 결정(T008): ① **`analytics` 정의는 spec 이 이름만 정했으므로 `performance.calculate_analytics` docstring 을 원본으로 삼았다** — `recoveryDays` 는 최대 하락 저점에서 전 고점을 다시 넘은 첫날까지의 거래일 수(하락 없으면 0, 미회복 None), `turnover` 는 (매수+매도 대금)/2/평균 자산 × 252/평가일수, `correlationMatrix`·`riskContribution`(wᵢ(Σw)ᵢ/wᵀΣw, w = 리밸런싱 실제 비중 평균)은 평가 기간 조정 종가 일별 수익률의 표본 공분산(`method=\"sample-covariance-daily\"`), `lossContribution` 은 종목별(실현+종료일 미실현−미청산 매수 수수료+분배금)/전체 손익(합 1, 손익 합 = 자산 증감, 전체 0 이면 None — 2차 리뷰 2), `weightError` 는 리밸런싱 기록의 평균. 계산 불가는 키 생략 ② **결과 조립을 `engine_runner.assemble_output(request, market, execution, started, status=, partial=)` 로 뗐다.** T011·T014 는 `execute_portfolio(..., stop_after=lambda day: ...)` 로 그날 평가를 마친 뒤 멈추고(멈춘 날은 종료일이라 보유 스냅샷을 남긴다 — 없으면 부분 결과의 미실현 손익이 손익 기여에서 빠진다, 2차 리뷰 3) 이 함수에 `status=CANCELLED, partial=True` 로 넘기면 `lastTradingDate` 까지의 시계열로 같은 지표가 나온다 ③ **`versions.rules.provisional` 은 규칙 사본(`allocation.rules`)에 `provisional` 키가 있을 때만 싣는다.** 등록표의 `provisional` 열은 백엔드에 있고 `EngineInputAssembler` 가 사본에 넣지 않으므로 워커는 모른다 — 백엔드가 사본에 그 키를 합치거나 저장 시 등록표에서 채우는 것이 후속(T009 검토). `versions.worker` 는 `worker.__version__`(`thorp-worker 0.1.1`) — 운영 이미지는 패키지를 설치하지 않고 `src` 를 복사하므로 `importlib.metadata` 는 `PackageNotFoundError` 다(2차 리뷰 1). pyproject 는 `dynamic = [\"version\"]` 으로 그 값을 읽는다 ④ **수기 대조의 '스프레드시트' 는 워커를 import 하지 않는 표준 라이브러리 스크립트다**(`docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`). 규칙을 문서에서 옮겨 적어 픽스처 CSV 원본에서 계산하고 CSV 출력과 JSON 기대값을 남긴다. 대표 거래일: 2024-01-03 첫 체결, 2024-05-02 분배금 지급(04-29 권리락 보유 × 85원), 2024-06-11 정지 → 06-12 이월 체결. `PROVISIONAL_TOLERANCE = 0` 에서 전부 일치했다 ⑤ 결정성 픽스처는 `tests/fixtures/engine-input-three-etf-{fixed,equal,inverse_vol,target-risk}.json`(2023-08-01~2024-06-28, 전 비용 프로필, 청산 포함). 워커 로컬 테스트 환경은 Windows 에서 `uv sync --python 3.13` 으로 만든다(`uv.lock` 에 cp313 win_amd64 wheel 있음)\n - [ ] T009 [US2] [BE] 결과 v2 저장·조회 API(비중·예외·거래 사유·현금 흐름) (`backtest/application/service/BacktestResultQueryService.java`, `backtest/presentation/controller/BacktestController.java`, `backtest/presentation/response/{BacktestWeightsResponse,BacktestExceptionsResponse,BacktestTimeseriesResponse,BacktestTradePageResponse}.java`, `backtest/infrastructure/persistence/BacktestResultJpaEntity.java`, `backend/src/test/.../BacktestResultApiIT.java`) — Jira `S15P21E205-146`\n   - FINISHED payload의 v2 필드를 `backtest_result` JSONB 열에 저장(T005 저장 경로 확장)\n   - `GET /backtests/{id}/weights`(weightsSource 포함), `GET /backtests/{id}/exceptions`, `/trades` 항목 reason·plannedDate, `/timeseries` 항목 cashFlows\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,6 @@\n+\"\"\"Thorp 백테스트 워커. 버전은 여기 한 곳이 원본이다 — pyproject 는 이 값을 읽고(dynamic), 결과\n+``versions.worker`` 도 이 값을 싣는다. 운영 이미지는 패키지를 설치하지 않고 src 를 복사하므로\n+importlib.metadata 로는 버전을 알 수 없다.\n+\"\"\"\n+\n+__version__ = \"0.1.1\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/__init__.py",
+          "old_path": "worker/src/worker/__init__.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,7 +5,9 @@ from datetime import UTC, date, datetime\n from decimal import Decimal\n \n import nautilus_trader\n+import pandas as pd\n \n+from worker import __version__ as worker_version\n from worker.allocation import AllocationError\n from worker.artifacts import OrderRecord, RunArtifacts\n from worker.contracts.engine import ProgressCallback\n@@ -27,7 +29,7 @@ from worker.contracts.engine_output import Warning as ContractWarning\n from worker.costs import CostModel, Side, total_costs\n from worker.engine_support import unsupported_reasons\n from worker.market_data import MarketData, MarketDataError, MarketDataProvider\n-from worker.performance import calculate_performance\n+from worker.performance import calculate_analytics, calculate_performance\n from worker.portfolio_execution import (\n     REBALANCE_MONTH_END,\n     CallbackError,\n@@ -132,6 +134,97 @@ def _liquidation(request: EngineInput, execution: PortfolioRebalanceExecution) -\n     )\n \n \n+def assemble_output(\n+    request: EngineInput,\n+    market: MarketData,\n+    execution: PortfolioRebalanceExecution,\n+    started: datetime,\n+    *,\n+    status: RunStatus = RunStatus.COMPLETED,\n+    partial: bool = False,\n+) -> EngineOutput:\n+    \"\"\"실행 상태 → 결과 계약. 완료도, 취소·한도의 부분 결과(T011·T014)도 같은 함수가 만든다.\n+\n+    부분 결과는 ``execution.series`` 가 ``lastTradingDate`` 까지만 담겨 있다는 것 외에 다르지 않다 —\n+    지표·비용·비중·분석 블록을 그 시계열로 똑같이 계산한다.\n+    \"\"\"\n+    series = execution.series\n+    orders = execution.orders\n+    costs = total_costs(execution.fills)\n+    first, last = series[0].date, series[-1].date\n+    # 평가 기간 종목 일별 수익률(조정 종가). 상관·위험 기여의 입력이다.\n+    evaluated = execution.signal_history.loc[pd.Timestamp(first) : pd.Timestamp(last)]\n+    instrument_returns = evaluated.pct_change().dropna()\n+    return EngineOutput(\n+        run=RunResult(\n+            run_id=request.run.run_id,\n+            status=status,\n+            started_at=started,\n+            finished_at=datetime.now(UTC),\n+            partial=partial,\n+            last_trading_date=last,\n+            effective_start=first,\n+            effective_end=last,\n+        ),\n+        performance=calculate_performance(\n+            request.portfolio.initial_cash,\n+            series,\n+            execution.trades,\n+            request.portfolio.currency,\n+            total_trading_cost=costs.total,\n+        ),\n+        portfolio_series=series,\n+        weights_series=execution.weights_series,\n+        weights_source=execution.weights_source,\n+        trades=execution.trades,\n+        execution=ExecutionResult(\n+            order_count=len(orders),\n+            fill_count=sum(order.status == \"FILLED\" for order in orders),\n+            rejected_order_count=sum(order.status == \"REJECTED\" for order in orders),\n+            total_commission=costs.commission,\n+            total_slippage_cost=costs.spread + costs.slippage,\n+        ),\n+        costs=costs,\n+        liquidation=(\n+            _liquidation(request, execution) if request.evaluation.liquidation_at_end else None\n+        ),\n+        analytics=calculate_analytics(\n+            series, execution.weights_series, execution.trades, instrument_returns\n+        ),\n+        exceptions=execution.exceptions,\n+        versions=reference_versions(request, market),\n+        diagnostics=Diagnostics(warnings=_run_level_warnings(request, first) + execution.warnings),\n+    )\n+\n+\n+def reference_versions(request: EngineInput, market: MarketData | None) -> Versions:\n+    \"\"\"참조 버전(FR-028). 거절 결과에도 붙으므로 검증하지 않고 있는 값만 읽는다.\n+\n+    ``rules.provisional`` 은 규칙 사본에 ``provisional`` 키가 있을 때만 싣는다 — 등록표 열은\n+    백엔드에 있고 조립기가 아직 사본에 넣지 않으므로, 없으면 모른다고(키 생략) 둔다.\n+    \"\"\"\n+    cost = request.execution.cost_profile\n+    overlay_version = (request.run.scenario_rules or {}).get(\"version\")\n+    scenario_rules = (\n+        str(overlay_version)\n+        if request.run.scenario is Scenario.TARGET_RISK and overlay_version is not None\n+        else None\n+    )\n+    provisional = (request.allocation.rules or {}).get(\"provisional\")\n+    return Versions(\n+        mapping=request.universe.mapping_version,\n+        rules=RuleVersion(\n+            version=request.allocation.rules_version,\n+            provisional=provisional if isinstance(provisional, bool) else None,\n+        ),\n+        scenario_rules=scenario_rules,\n+        cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),\n+        data=market.dataset_id if market is not None else None,\n+        engine=f\"nautilus_trader {nautilus_trader.__version__}\",\n+        worker=f\"thorp-worker {worker_version}\",\n+    )\n+\n+\n class PortfolioBacktestEngine:\n     \"\"\"다종목 리밸런싱 엔진. 공급자는 인스턴스의 성질이므로 생성자로 주입한다(기본값 없음, R-09).\"\"\"\n \n@@ -213,55 +306,7 @@ class PortfolioBacktestEngine:\n             )\n             execution = execute_portfolio(request, market, plan, on_progress)\n             orders = execution.orders\n-            costs = total_costs(execution.fills)\n-            performance = calculate_performance(\n-                request.portfolio.initial_cash,\n-                execution.series,\n-                execution.trades,\n-                request.portfolio.currency,\n-            )\n-            output = EngineOutput(\n-                run=RunResult(\n-                    run_id=request.run.run_id,\n-                    status=RunStatus.COMPLETED,\n-                    started_at=started,\n-                    finished_at=datetime.now(UTC),\n-                    partial=False,\n-                    last_trading_date=execution.series[-1].date,\n-                    effective_start=execution.series[0].date,\n-                    effective_end=execution.series[-1].date,\n-                ),\n-                # 자산 곡선이 이미 비용을 뺀 값이라 총수익률이 곧 순수익률이다. 지표 확장은 T008.\n-                performance=performance.model_copy(\n-                    update={\n-                        \"net_total_return\": performance.total_return,\n-                        \"total_trading_cost\": costs.total,\n-                    }\n-                ),\n-                portfolio_series=execution.series,\n-                weights_series=execution.weights_series,\n-                weights_source=execution.weights_source,\n-                trades=execution.trades,\n-                execution=ExecutionResult(\n-                    order_count=len(orders),\n-                    fill_count=sum(order.status == \"FILLED\" for order in orders),\n-                    rejected_order_count=sum(order.status == \"REJECTED\" for order in orders),\n-                    total_commission=costs.commission,\n-                    total_slippage_cost=costs.spread + costs.slippage,\n-                ),\n-                costs=costs,\n-                liquidation=(\n-                    _liquidation(request, execution)\n-                    if request.evaluation.liquidation_at_end\n-                    else None\n-                ),\n-                exceptions=execution.exceptions,\n-                versions=self._versions(request, market),\n-                diagnostics=Diagnostics(\n-                    warnings=_run_level_warnings(request, execution.series[0].date)\n-                    + execution.warnings\n-                ),\n-            )\n+            output = assemble_output(request, market, execution, started)\n         except CallbackError:\n             raise\n         except AllocationError as exc:\n@@ -279,25 +324,6 @@ class PortfolioBacktestEngine:\n             )\n         return output, RunArtifacts(orders=orders, metadata=metadata)\n \n-    @staticmethod\n-    def _versions(request: EngineInput, market: MarketData | None) -> Versions:\n-        cost = request.execution.cost_profile\n-        # 거절 결과에도 versions 가 붙으므로 여기서는 검증하지 않고 있는 값만 읽는다.\n-        overlay_version = (request.run.scenario_rules or {}).get(\"version\")\n-        scenario_rules = (\n-            str(overlay_version)\n-            if request.run.scenario is Scenario.TARGET_RISK and overlay_version is not None\n-            else None\n-        )\n-        return Versions(\n-            mapping=request.universe.mapping_version,\n-            rules=RuleVersion(version=request.allocation.rules_version),\n-            scenario_rules=scenario_rules,\n-            cost_profile=RuleVersion(version=cost.version, provisional=cost.provisional),\n-            data=market.dataset_id if market is not None else None,\n-            engine=f\"nautilus_trader {nautilus_trader.__version__}\",\n-        )\n-\n     @classmethod\n     def _rejected(\n         cls,\n@@ -319,6 +345,6 @@ class PortfolioBacktestEngine:\n             ),\n             portfolio_series=[],\n             trades=[],\n-            versions=cls._versions(request, market),\n+            versions=reference_versions(request, market),\n             diagnostics=Diagnostics(warnings=[]),\n         )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/engine_runner.py",
+          "old_path": "worker/src/worker/engine_runner.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,24 +1,48 @@\n-\"\"\"Design-document metrics calculated from daily closing equity, not engine defaults.\"\"\"\n+\"\"\"성과 지표와 파생 지표(spec 004 FR-027). 일별 종가 자산 곡선에서 계산하고 엔진 기본값을 쓰지\n+않는다.\n+\n+계산 규약(계약 §5): 연환산 252, ddof=1, 무위험수익률 0, CAGR 은 달력 일수, ``tradeCount`` 는\n+CLOSED 만.\n+계산 불가는 0 이 아니라 None 이다 — 존재하지 않는 성과를 지어내지 않는다.\n+\"\"\"\n \n from decimal import Decimal\n \n import numpy as np\n+import pandas as pd\n \n from worker.contracts.engine_output import (\n+    Analytics,\n     PerformanceResult,\n     PortfolioSnapshot,\n     TradeResult,\n     TradeStatus,\n+    WeightsPoint,\n )\n \n+TRADING_DAYS_PER_YEAR = 252\n+#: ``analytics.method`` — 상관·위험 기여는 평가 기간 일별 수익률의 표본 공분산(ddof=1)이다\n+#: (spec 004 research).\n+METHOD = \"sample-covariance-daily\"\n+QUANTUM = Decimal(\"0.00000001\")\n+ZERO = Decimal(0)\n+\n+\n+def _dec(value: float) -> Decimal:\n+    return Decimal(repr(float(value))).quantize(QUANTUM)\n+\n \n def calculate_performance(\n     initial: Decimal,\n     series: list[PortfolioSnapshot],\n     trades: list[TradeResult],\n     currency: str,\n+    total_trading_cost: Decimal | None = None,\n ) -> PerformanceResult:\n-    \"\"\"``currency``는 요청의 ``portfolio.currency``를 그대로 싣는다 (계약 필수 필드).\"\"\"\n+    \"\"\"``currency``는 요청의 ``portfolio.currency``를 그대로 싣는다 (계약 필수 필드).\n+\n+    자산 곡선이 이미 비용을 뺀 값이라 ``netTotalReturn`` 은 ``totalReturn`` 과 같다(FR-027).\n+    \"\"\"\n     final = series[-1].equity\n     returns = np.array([float(point.daily_return) for point in series])\n     volatility = float(returns.std(ddof=1) * np.sqrt(252)) if len(returns) >= 2 else None\n@@ -27,15 +51,138 @@ def calculate_performance(\n     cagr = (final / initial) ** (Decimal(365) / elapsed) - 1 if elapsed > 0 else None\n     closed = [trade for trade in trades if trade.status == TradeStatus.CLOSED]\n     winners = sum(trade.realized_pnl > 0 for trade in closed)\n+    total_return = final / initial - 1\n     return PerformanceResult(\n         initial_equity=initial,\n         final_equity=final,\n         currency=currency,\n-        total_return=final / initial - 1,\n+        total_return=total_return,\n+        net_total_return=total_return,\n         cagr=cagr,\n         max_drawdown=min(point.drawdown for point in series),\n         sharpe_ratio=Decimal(str(sharpe)) if sharpe is not None else None,\n         volatility=Decimal(str(volatility)) if volatility is not None else None,\n         trade_count=len(closed),\n         win_rate=Decimal(winners) / len(closed) if closed else None,\n+        total_trading_cost=total_trading_cost,\n+    )\n+\n+\n+def calculate_analytics(\n+    series: list[PortfolioSnapshot],\n+    weights_series: list[WeightsPoint],\n+    trades: list[TradeResult],\n+    instrument_returns: pd.DataFrame,\n+) -> Analytics:\n+    \"\"\"파생 지표(FR-027). spec 은 이름만 정했으므로 정의는 여기(T008 결정)다.\n+\n+    - ``recoveryDays``: 최대 하락 폭의 저점에서 그 전 고점을 다시 넘은 첫날까지의 **거래일 수**.\n+      하락이 없으면 0, 끝까지 회복하지 못하면 None.\n+    - ``turnover``: (매수 대금 + 매도 대금) / 2 / 평균 자산 × 252 / 평가 거래일 수. 대금은\n+      체결가 × 수량이다.\n+    - ``correlationMatrix``: 평가 기간 종목 일별(조정 종가) 수익률의 표본 상관. 정의되지 않는\n+      쌍(변동성 0)은 키를 뺀다.\n+    - ``riskContribution``: wᵢ(Σw)ᵢ / wᵀΣw. w 는 리밸런싱 기록의 실제 비중 평균, Σ 는 표본 공분산.\n+      기록이 없거나 포트폴리오 분산이 0 이면 None.\n+    - ``lossContribution``: 종목별 손익(실현 + 종료일 미실현 − 미청산 매수 수수료 + 분배금)이 전체\n+      손익에서 차지하는 비율. 합은 1 이고 손익 합은 자산 증감과 같다. 전체 손익이 0 이면 None.\n+    - ``weightError``: 리밸런싱마다 기록한 Σ|target − actual| 의 평균.\n+    \"\"\"\n+    return Analytics(\n+        recovery_days=_recovery_days(series),\n+        turnover=_turnover(series, trades),\n+        correlation_matrix=_correlation(instrument_returns),\n+        risk_contribution=_risk_contribution(instrument_returns, weights_series),\n+        loss_contribution=_loss_contribution(series, trades),\n+        weight_error=_mean_weight_error(weights_series),\n+        method=METHOD,\n     )\n+\n+\n+def _recovery_days(series: list[PortfolioSnapshot]) -> int | None:\n+    drawdowns = [point.drawdown for point in series]\n+    trough = drawdowns.index(min(drawdowns))\n+    if drawdowns[trough] == ZERO:\n+        return 0\n+    peak = max(point.equity for point in series[: trough + 1])\n+    for offset, point in enumerate(series[trough + 1 :], start=1):\n+        if point.equity >= peak:\n+            return offset\n+    return None\n+\n+\n+def _turnover(series: list[PortfolioSnapshot], trades: list[TradeResult]) -> Decimal | None:\n+    notional = ZERO\n+    for trade in trades:\n+        notional += trade.entry_price * trade.quantity\n+        if trade.exit_price is not None:\n+            notional += trade.exit_price * trade.quantity\n+    mean_equity = sum((point.equity for point in series), ZERO) / len(series)\n+    if mean_equity <= ZERO:\n+        return None\n+    annualised = notional / 2 / mean_equity * TRADING_DAYS_PER_YEAR / len(series)\n+    return annualised.quantize(QUANTUM)\n+\n+\n+def _correlation(returns: pd.DataFrame) -> dict[str, dict[str, Decimal]] | None:\n+    if returns.shape[1] == 0 or len(returns) < 2:\n+        return None\n+    matrix = returns.corr()\n+    return {\n+        str(row): {\n+            str(col): _dec(value) for col, value in matrix.loc[row].items() if pd.notna(value)\n+        }\n+        for row in matrix.index\n+    }\n+\n+\n+def _risk_contribution(\n+    returns: pd.DataFrame, weights_series: list[WeightsPoint]\n+) -> dict[str, Decimal] | None:\n+    if not weights_series or len(returns) < 2:\n+        return None\n+    columns = [str(c) for c in returns.columns]\n+    averaged = {\n+        iid: sum((point.actual.get(iid, ZERO) for point in weights_series), ZERO)\n+        / len(weights_series)\n+        for iid in columns\n+    }\n+    weights = np.array([float(averaged[iid]) for iid in columns])\n+    covariance = returns.cov().to_numpy()\n+    marginal = covariance @ weights\n+    variance = float(weights @ marginal)\n+    if variance <= 0:\n+        return None\n+    return {iid: _dec(weights[i] * marginal[i] / variance) for i, iid in enumerate(columns)}\n+\n+\n+def _loss_contribution(\n+    series: list[PortfolioSnapshot], trades: list[TradeResult]\n+) -> dict[str, Decimal] | None:\n+    pnl: dict[str, Decimal] = {}\n+    for trade in trades:\n+        if trade.realized_pnl is not None:\n+            pnl[trade.instrument_id] = pnl.get(trade.instrument_id, ZERO) + trade.realized_pnl\n+        else:\n+            # OPEN 거래의 미실현 손익 (종가 − 매수가) × 수량에는 매수 수수료가 없다. 빼야 손익 합이\n+            # 자산 증감과 같다(호가차·슬리피지는 매수가에 이미 들어 있다).\n+            pnl[trade.instrument_id] = pnl.get(trade.instrument_id, ZERO) - trade.commission\n+    for position in series[-1].positions or []:\n+        pnl[position.instrument_id] = (\n+            pnl.get(position.instrument_id, ZERO) + position.unrealized_pnl\n+        )\n+    for point in series:\n+        for flow in point.cash_flows or []:\n+            if flow.instrument_id is not None:\n+                pnl[flow.instrument_id] = pnl.get(flow.instrument_id, ZERO) + flow.amount\n+    total = sum(pnl.values(), ZERO)\n+    if total == ZERO:\n+        return None\n+    return {iid: (value / total).quantize(QUANTUM) for iid, value in sorted(pnl.items())}\n+\n+\n+def _mean_weight_error(weights_series: list[WeightsPoint]) -> Decimal | None:\n+    errors = [point.weight_error for point in weights_series if point.weight_error is not None]\n+    if not errors:\n+        return None\n+    return (sum(errors, ZERO) / len(errors)).quantize(QUANTUM)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/performance.py",
+          "old_path": "worker/src/worker/performance.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -279,6 +279,7 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n         prepared: MarketEvents,\n         plan: DayPlan,\n         on_progress: ProgressCallback | None,\n+        stop_after: Callable[[date], bool] | None = None,\n     ) -> None:\n         super().__init__(StrategyConfig(strategy_id=\"PORTFOLIO-001\"))\n         self.request = request\n@@ -287,6 +288,8 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n         self.instrument_ids = sorted(prepared.instruments)\n         self.plan = plan\n         self.on_progress_callback = on_progress\n+        self.stop_after = stop_after\n+        self.stopped_early = False\n         self.costs = CostModel(request.execution.cost_profile)\n         self.ledger = DistributionLedger(list(market.distributions))\n         # 신호용 조정 종가(signalPrice=ADJUSTED). 판단일까지만 잘라 넘긴다 — 미래 참조 금지.\n@@ -640,7 +643,9 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n         equity = self.cash + position_value\n         self.peak = max(self.peak, equity)\n         is_first = not self.series\n-        is_last = day == self.plan.evaluation_days[-1]\n+        stopping = self.stop_after is not None and self.stop_after(day)\n+        # 멈추는 날은 이 실행의 종료일이다 — 보유 스냅샷이 있어야 부분 결과의 미실현 손익이 남는다.\n+        is_last = day == self.plan.evaluation_days[-1] or stopping\n         positions = None\n         if is_first or self.changed or is_last:\n             positions = [\n@@ -679,6 +684,11 @@ class PortfolioRebalanceExecution(NautilusStrategy):\n             self.pending_target = None\n         self.changed = False\n         self._report_progress(snapshot)\n+        if stopping:\n+            # 취소·한도(T011·T014): 판단하지 않고 여기서 멈춘다. 결과는 이날까지의 시계열이다.\n+            self.stopped_early = True\n+            self.stop()\n+            return\n         if day in self.plan.decision_days:\n             self._decide(day, ns_close, equity)\n \n@@ -811,8 +821,12 @@ def execute_portfolio(\n     market: MarketData,\n     plan: DayPlan,\n     on_progress: ProgressCallback | None,\n+    stop_after: Callable[[date], bool] | None = None,\n ) -> PortfolioRebalanceExecution:\n-    \"\"\"모든 판단과 체결은 실제 BacktestEngine 이벤트 루프가 이끈다.\"\"\"\n+    \"\"\"모든 판단과 체결은 실제 BacktestEngine 이벤트 루프가 이끈다.\n+\n+    ``stop_after(day)`` 가 참이면 그날 평가를 마친 뒤 멈춘다(취소·한도의 부분 결과, T011·T014).\n+    \"\"\"\n     prepared = build_market_events(request, market)\n     engine = BacktestEngine(\n         BacktestEngineConfig(logging=LoggingConfig(bypass_logging=True), run_analysis=False)\n@@ -829,7 +843,9 @@ def execute_portfolio(\n     for instrument in prepared.instruments.values():\n         engine.add_instrument(instrument)\n     engine.add_data(prepared.events)\n-    execution = PortfolioRebalanceExecution(request, market, prepared, plan, on_progress)\n+    execution = PortfolioRebalanceExecution(\n+        request, market, prepared, plan, on_progress, stop_after\n+    )\n     engine.add_strategy(execution)\n     try:\n         engine.run()\n@@ -841,7 +857,7 @@ def execute_portfolio(\n             raise EngineFailure(\n                 f\"{type(execution.failure).__name__}: {execution.failure}\"\n             ) from execution.failure\n-        if len(execution.series) != len(plan.evaluation_days):\n+        if not execution.stopped_early and len(execution.series) != len(plan.evaluation_days):\n             raise EngineFailure(\n                 f\"{len(execution.series)} snapshots for {len(plan.evaluation_days)} evaluation days\"\n             )\n@@ -849,7 +865,7 @@ def execute_portfolio(\n             # 마지막 판단일 뒤 거래 가능일이 없어 끝내 체결하지 못한 주문. 버리지 않고 남긴다.\n             execution.warnings.append(\n                 ContractWarning(\n-                    date=plan.evaluation_days[-1],\n+                    date=execution.series[-1].date,\n                     instrument_id=order.instrument_id,\n                     code=\"ORDER_NOT_FILLED\",\n                     message=(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/portfolio_execution.py",
+          "old_path": "worker/src/worker/portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,88 @@\n+{\n+  \"run\": {\n+    \"runId\": \"DET-EQUAL\",\n+    \"start\": \"2023-08-01\",\n+    \"end\": \"2024-06-28\",\n+    \"randomSeed\": 42,\n+    \"scenario\": \"FULL_PERIOD\"\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"targetWeight\": \"0.4\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_V1\",\n+    \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+    \"interval\": \"1D\",\n+    \"adjustment\": \"SPLIT_ADJUSTED\",\n+    \"priceType\": \"LAST\",\n+    \"fillPrice\": \"RAW\",\n+    \"signalPrice\": \"ADJUSTED\",\n+    \"distributions\": \"CASH_ON_PAY_DATE\"\n+  },\n+  \"allocation\": {\n+    \"strategyId\": \"EQUAL_WEIGHT\",\n+    \"rulesVersion\": \"1\",\n+    \"rules\": {\n+      \"targetWeights\": \"EQUAL_AMONG_INVESTABLE\",\n+      \"weightsSource\": \"COMPUTED\"\n+    },\n+    \"parameters\": {\n+      \"rebalance\": \"MONTH_END\"\n+    }\n+  },\n+  \"portfolio\": {\n+    \"initialCash\": \"10000000\",\n+    \"currency\": \"KRW\",\n+    \"positionSizing\": {\n+      \"type\": \"STRATEGY_DEFINED\"\n+    },\n+    \"shortSelling\": false,\n+    \"leverage\": \"1\",\n+    \"integerLots\": true\n+  },\n+  \"execution\": {\n+    \"signalTiming\": \"BAR_CLOSE\",\n+    \"executionTiming\": \"NEXT_BAR_OPEN\",\n+    \"orderTypes\": [\n+      \"MARKET\"\n+    ],\n+    \"costProfile\": {\n+      \"version\": \"PROVISIONAL-FULL-1\",\n+      \"commissionBps\": \"1.5\",\n+      \"spreadBps\": \"2\",\n+      \"slippageBps\": \"5\",\n+      \"taxBps\": \"23\",\n+      \"provisional\": true\n+    },\n+    \"partialFill\": false,\n+    \"liquidity\": {\n+      \"model\": \"UNLIMITED\"\n+    },\n+    \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+    \"delisting\": \"CAUSE_BASED\"\n+  },\n+  \"evaluation\": {\n+    \"warmupTradingDays\": null,\n+    \"liquidationAtEnd\": true\n+  },\n+  \"progress\": {\n+    \"batchTradingDays\": 20\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixtures/engine-input-three-etf-equal.json",
+          "old_path": "worker/tests/fixtures/engine-input-three-etf-equal.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,88 @@\n+{\n+  \"run\": {\n+    \"runId\": \"DET-FIXED\",\n+    \"start\": \"2023-08-01\",\n+    \"end\": \"2024-06-28\",\n+    \"randomSeed\": 42,\n+    \"scenario\": \"FULL_PERIOD\"\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"targetWeight\": \"0.4\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_V1\",\n+    \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+    \"interval\": \"1D\",\n+    \"adjustment\": \"SPLIT_ADJUSTED\",\n+    \"priceType\": \"LAST\",\n+    \"fillPrice\": \"RAW\",\n+    \"signalPrice\": \"ADJUSTED\",\n+    \"distributions\": \"CASH_ON_PAY_DATE\"\n+  },\n+  \"allocation\": {\n+    \"strategyId\": \"FIXED_WEIGHT\",\n+    \"rulesVersion\": \"1\",\n+    \"rules\": {\n+      \"targetWeights\": \"USER_SPECIFIED\",\n+      \"weightsSource\": \"USER\"\n+    },\n+    \"parameters\": {\n+      \"rebalance\": \"MONTH_END\"\n+    }\n+  },\n+  \"portfolio\": {\n+    \"initialCash\": \"10000000\",\n+    \"currency\": \"KRW\",\n+    \"positionSizing\": {\n+      \"type\": \"STRATEGY_DEFINED\"\n+    },\n+    \"shortSelling\": false,\n+    \"leverage\": \"1\",\n+    \"integerLots\": true\n+  },\n+  \"execution\": {\n+    \"signalTiming\": \"BAR_CLOSE\",\n+    \"executionTiming\": \"NEXT_BAR_OPEN\",\n+    \"orderTypes\": [\n+      \"MARKET\"\n+    ],\n+    \"costProfile\": {\n+      \"version\": \"PROVISIONAL-FULL-1\",\n+      \"commissionBps\": \"1.5\",\n+      \"spreadBps\": \"2\",\n+      \"slippageBps\": \"5\",\n+      \"taxBps\": \"23\",\n+      \"provisional\": true\n+    },\n+    \"partialFill\": false,\n+    \"liquidity\": {\n+      \"model\": \"UNLIMITED\"\n+    },\n+    \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+    \"delisting\": \"CAUSE_BASED\"\n+  },\n+  \"evaluation\": {\n+    \"warmupTradingDays\": null,\n+    \"liquidationAtEnd\": true\n+  },\n+  \"progress\": {\n+    \"batchTradingDays\": 20\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixtures/engine-input-three-etf-fixed.json",
+          "old_path": "worker/tests/fixtures/engine-input-three-etf-fixed.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,92 @@\n+{\n+  \"run\": {\n+    \"runId\": \"DET-INVERSE-VOL\",\n+    \"start\": \"2023-08-01\",\n+    \"end\": \"2024-06-28\",\n+    \"randomSeed\": 42,\n+    \"scenario\": \"FULL_PERIOD\"\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"targetWeight\": \"0.4\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_V1\",\n+    \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+    \"interval\": \"1D\",\n+    \"adjustment\": \"SPLIT_ADJUSTED\",\n+    \"priceType\": \"LAST\",\n+    \"fillPrice\": \"RAW\",\n+    \"signalPrice\": \"ADJUSTED\",\n+    \"distributions\": \"CASH_ON_PAY_DATE\"\n+  },\n+  \"allocation\": {\n+    \"strategyId\": \"INVERSE_VOLATILITY\",\n+    \"rulesVersion\": \"1\",\n+    \"rules\": {\n+      \"lookbackDays\": 63,\n+      \"zeroVolatility\": \"EXCLUDE_THEN_ALLOCATE\",\n+      \"weightCap\": \"1.0000\",\n+      \"investedFraction\": \"1.0000\",\n+      \"weightsSource\": \"COMPUTED\",\n+      \"provisional\": true\n+    },\n+    \"parameters\": {\n+      \"rebalance\": \"MONTH_END\"\n+    }\n+  },\n+  \"portfolio\": {\n+    \"initialCash\": \"10000000\",\n+    \"currency\": \"KRW\",\n+    \"positionSizing\": {\n+      \"type\": \"STRATEGY_DEFINED\"\n+    },\n+    \"shortSelling\": false,\n+    \"leverage\": \"1\",\n+    \"integerLots\": true\n+  },\n+  \"execution\": {\n+    \"signalTiming\": \"BAR_CLOSE\",\n+    \"executionTiming\": \"NEXT_BAR_OPEN\",\n+    \"orderTypes\": [\n+      \"MARKET\"\n+    ],\n+    \"costProfile\": {\n+      \"version\": \"PROVISIONAL-FULL-1\",\n+      \"commissionBps\": \"1.5\",\n+      \"spreadBps\": \"2\",\n+      \"slippageBps\": \"5\",\n+      \"taxBps\": \"23\",\n+      \"provisional\": true\n+    },\n+    \"partialFill\": false,\n+    \"liquidity\": {\n+      \"model\": \"UNLIMITED\"\n+    },\n+    \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+    \"delisting\": \"CAUSE_BASED\"\n+  },\n+  \"evaluation\": {\n+    \"warmupTradingDays\": null,\n+    \"liquidationAtEnd\": true\n+  },\n+  \"progress\": {\n+    \"batchTradingDays\": 20\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixtures/engine-input-three-etf-inverse_vol.json",
+          "old_path": "worker/tests/fixtures/engine-input-three-etf-inverse_vol.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,97 @@\n+{\n+  \"run\": {\n+    \"runId\": \"DET-TARGET-RISK\",\n+    \"start\": \"2023-08-01\",\n+    \"end\": \"2024-06-28\",\n+    \"randomSeed\": 42,\n+    \"scenario\": \"TARGET_RISK\",\n+    \"scenarioParams\": {\n+      \"targetVolatility\": \"0.0500\"\n+    },\n+    \"scenarioRules\": {\n+      \"version\": \"TARGET_RISK_OVERLAY/1\",\n+      \"lookbackDays\": 63,\n+      \"adjustAt\": \"REBALANCE\",\n+      \"scaleDownOnly\": true\n+    }\n+  },\n+  \"universe\": {\n+    \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+    \"items\": [\n+      {\n+        \"sectorId\": \"SEMICONDUCTOR\",\n+        \"instrumentId\": \"091160.XKRX\",\n+        \"targetWeight\": \"0.4\"\n+      },\n+      {\n+        \"sectorId\": \"BATTERY\",\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      },\n+      {\n+        \"sectorId\": \"BIO\",\n+        \"instrumentId\": \"244580.XKRX\",\n+        \"targetWeight\": \"0.3\"\n+      }\n+    ]\n+  },\n+  \"marketData\": {\n+    \"datasetId\": \"KRX_DAILY_V1\",\n+    \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+    \"interval\": \"1D\",\n+    \"adjustment\": \"SPLIT_ADJUSTED\",\n+    \"priceType\": \"LAST\",\n+    \"fillPrice\": \"RAW\",\n+    \"signalPrice\": \"ADJUSTED\",\n+    \"distributions\": \"CASH_ON_PAY_DATE\"\n+  },\n+  \"allocation\": {\n+    \"strategyId\": \"FIXED_WEIGHT\",\n+    \"rulesVersion\": \"1\",\n+    \"rules\": {\n+      \"targetWeights\": \"USER_SPECIFIED\",\n+      \"weightsSource\": \"USER\"\n+    },\n+    \"parameters\": {\n+      \"rebalance\": \"MONTH_END\"\n+    }\n+  },\n+  \"portfolio\": {\n+    \"initialCash\": \"10000000\",\n+    \"currency\": \"KRW\",\n+    \"positionSizing\": {\n+      \"type\": \"STRATEGY_DEFINED\"\n+    },\n+    \"shortSelling\": false,\n+    \"leverage\": \"1\",\n+    \"integerLots\": true\n+  },\n+  \"execution\": {\n+    \"signalTiming\": \"BAR_CLOSE\",\n+    \"executionTiming\": \"NEXT_BAR_OPEN\",\n+    \"orderTypes\": [\n+      \"MARKET\"\n+    ],\n+    \"costProfile\": {\n+      \"version\": \"PROVISIONAL-FULL-1\",\n+      \"commissionBps\": \"1.5\",\n+      \"spreadBps\": \"2\",\n+      \"slippageBps\": \"5\",\n+      \"taxBps\": \"23\",\n+      \"provisional\": true\n+    },\n+    \"partialFill\": false,\n+    \"liquidity\": {\n+      \"model\": \"UNLIMITED\"\n+    },\n+    \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+    \"delisting\": \"CAUSE_BASED\"\n+  },\n+  \"evaluation\": {\n+    \"warmupTradingDays\": null,\n+    \"liquidationAtEnd\": true\n+  },\n+  \"progress\": {\n+    \"batchTradingDays\": 20\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixtures/engine-input-three-etf-target-risk.json",
+          "old_path": "worker/tests/fixtures/engine-input-three-etf-target-risk.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,482 @@\n+{\n+  \"source\": \"docs/specs/backtest-messaging/examples/reconciliation/reconcile.py\",\n+  \"dataset\": \"FIXTURE-three_etf_24m\",\n+  \"tolerance\": \"0\",\n+  \"cases\": [\n+    {\n+      \"name\": \"first_rebalance\",\n+      \"engineInput\": {\n+        \"run\": {\n+          \"runId\": \"RECON-FIRST\",\n+          \"start\": \"2024-01-02\",\n+          \"end\": \"2024-01-05\",\n+          \"randomSeed\": 42,\n+          \"scenario\": \"FULL_PERIOD\"\n+        },\n+        \"universe\": {\n+          \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+          \"items\": [\n+            {\n+              \"sectorId\": \"SEMICONDUCTOR\",\n+              \"instrumentId\": \"091160.XKRX\",\n+              \"targetWeight\": \"0.4\"\n+            },\n+            {\n+              \"sectorId\": \"BATTERY\",\n+              \"instrumentId\": \"305720.XKRX\",\n+              \"targetWeight\": \"0.3\"\n+            },\n+            {\n+              \"sectorId\": \"BIO\",\n+              \"instrumentId\": \"244580.XKRX\",\n+              \"targetWeight\": \"0.3\"\n+            }\n+          ]\n+        },\n+        \"marketData\": {\n+          \"datasetId\": \"KRX_DAILY_V1\",\n+          \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+          \"interval\": \"1D\",\n+          \"adjustment\": \"SPLIT_ADJUSTED\",\n+          \"priceType\": \"LAST\",\n+          \"fillPrice\": \"RAW\",\n+          \"signalPrice\": \"ADJUSTED\",\n+          \"distributions\": \"CASH_ON_PAY_DATE\"\n+        },\n+        \"allocation\": {\n+          \"strategyId\": \"FIXED_WEIGHT\",\n+          \"rulesVersion\": \"1\",\n+          \"rules\": {\n+            \"targetWeights\": \"USER_SPECIFIED\",\n+            \"weightsSource\": \"USER\"\n+          },\n+          \"parameters\": {\n+            \"rebalance\": \"MONTH_END\"\n+          }\n+        },\n+        \"portfolio\": {\n+          \"initialCash\": \"10000000\",\n+          \"currency\": \"KRW\",\n+          \"positionSizing\": {\n+            \"type\": \"STRATEGY_DEFINED\"\n+          },\n+          \"shortSelling\": false,\n+          \"leverage\": \"1\",\n+          \"integerLots\": true\n+        },\n+        \"execution\": {\n+          \"signalTiming\": \"BAR_CLOSE\",\n+          \"executionTiming\": \"NEXT_BAR_OPEN\",\n+          \"orderTypes\": [\n+            \"MARKET\"\n+          ],\n+          \"costProfile\": {\n+            \"version\": \"PROVISIONAL-FULL-1\",\n+            \"commissionBps\": \"1.5\",\n+            \"spreadBps\": \"2\",\n+            \"slippageBps\": \"5\",\n+            \"taxBps\": \"23\",\n+            \"provisional\": true\n+          },\n+          \"partialFill\": false,\n+          \"liquidity\": {\n+            \"model\": \"UNLIMITED\"\n+          },\n+          \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+          \"delisting\": \"CAUSE_BASED\"\n+        },\n+        \"evaluation\": {\n+          \"warmupTradingDays\": 0,\n+          \"liquidationAtEnd\": false\n+        },\n+        \"progress\": {\n+          \"batchTradingDays\": 20\n+        }\n+      },\n+      \"fills\": [\n+        {\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"fillDate\": \"2024-01-03\",\n+          \"plannedDate\": \"2024-01-03\",\n+          \"quantity\": \"122\",\n+          \"fillPrice\": \"32528.754200\",\n+          \"commission\": \"594.85980\",\n+          \"spread\": \"793.1464\",\n+          \"slippage\": \"1982.8660\"\n+        },\n+        {\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"fillDate\": \"2024-01-03\",\n+          \"plannedDate\": \"2024-01-03\",\n+          \"quantity\": \"209\",\n+          \"fillPrice\": \"14284.992500\",\n+          \"commission\": \"447.52125\",\n+          \"spread\": \"596.6950\",\n+          \"slippage\": \"1491.7375\"\n+        },\n+        {\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"fillDate\": \"2024-01-03\",\n+          \"plannedDate\": \"2024-01-03\",\n+          \"quantity\": \"155\",\n+          \"fillPrice\": \"19396.568100\",\n+          \"commission\": \"450.65475\",\n+          \"spread\": \"600.8730\",\n+          \"slippage\": \"1502.1825\"\n+        }\n+      ],\n+      \"cashAfter\": {\n+        \"2024-01-03\": \"37967.463800\"\n+      }\n+    },\n+    {\n+      \"name\": \"distribution\",\n+      \"engineInput\": {\n+        \"run\": {\n+          \"runId\": \"RECON-DIST\",\n+          \"start\": \"2024-04-01\",\n+          \"end\": \"2024-04-26\",\n+          \"randomSeed\": 42,\n+          \"scenario\": \"FULL_PERIOD\"\n+        },\n+        \"universe\": {\n+          \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+          \"items\": [\n+            {\n+              \"sectorId\": \"SEMICONDUCTOR\",\n+              \"instrumentId\": \"091160.XKRX\",\n+              \"targetWeight\": \"0.4\"\n+            },\n+            {\n+              \"sectorId\": \"BATTERY\",\n+              \"instrumentId\": \"305720.XKRX\",\n+              \"targetWeight\": \"0.3\"\n+            },\n+            {\n+              \"sectorId\": \"BIO\",\n+              \"instrumentId\": \"244580.XKRX\",\n+              \"targetWeight\": \"0.3\"\n+            }\n+          ]\n+        },\n+        \"marketData\": {\n+          \"datasetId\": \"KRX_DAILY_V1\",\n+          \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+          \"interval\": \"1D\",\n+          \"adjustment\": \"SPLIT_ADJUSTED\",\n+          \"priceType\": \"LAST\",\n+          \"fillPrice\": \"RAW\",\n+          \"signalPrice\": \"ADJUSTED\",\n+          \"distributions\": \"CASH_ON_PAY_DATE\"\n+        },\n+        \"allocation\": {\n+          \"strategyId\": \"FIXED_WEIGHT\",\n+          \"rulesVersion\": \"1\",\n+          \"rules\": {\n+            \"targetWeights\": \"USER_SPECIFIED\",\n+            \"weightsSource\": \"USER\"\n+          },\n+          \"parameters\": {\n+            \"rebalance\": \"MONTH_END\"\n+          }\n+        },\n+        \"portfolio\": {\n+          \"initialCash\": \"10000000\",\n+          \"currency\": \"KRW\",\n+          \"positionSizing\": {\n+            \"type\": \"STRATEGY_DEFINED\"\n+          },\n+          \"shortSelling\": false,\n+          \"leverage\": \"1\",\n+          \"integerLots\": true\n+        },\n+        \"execution\": {\n+          \"signalTiming\": \"BAR_CLOSE\",\n+          \"executionTiming\": \"NEXT_BAR_OPEN\",\n+          \"orderTypes\": [\n+            \"MARKET\"\n+          ],\n+          \"costProfile\": {\n+            \"version\": \"PROVISIONAL-FULL-1\",\n+            \"commissionBps\": \"1.5\",\n+            \"spreadBps\": \"2\",\n+            \"slippageBps\": \"5\",\n+            \"taxBps\": \"23\",\n+            \"provisional\": true\n+          },\n+          \"partialFill\": false,\n+          \"liquidity\": {\n+            \"model\": \"UNLIMITED\"\n+          },\n+          \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+          \"delisting\": \"CAUSE_BASED\"\n+        },\n+        \"evaluation\": {\n+          \"warmupTradingDays\": 0,\n+          \"liquidationAtEnd\": false\n+        },\n+        \"progress\": {\n+          \"batchTradingDays\": 20\n+        }\n+      },\n+      \"fills\": [\n+        {\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"fillDate\": \"2024-04-02\",\n+          \"plannedDate\": \"2024-04-02\",\n+          \"quantity\": \"119\",\n+          \"fillPrice\": \"33391.357600\",\n+          \"commission\": \"595.61880\",\n+          \"spread\": \"794.1584\",\n+          \"slippage\": \"1985.3960\"\n+        },\n+        {\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"fillDate\": \"2024-04-02\",\n+          \"plannedDate\": \"2024-04-02\",\n+          \"quantity\": \"489\",\n+          \"fillPrice\": \"6131.288900\",\n+          \"commission\": \"449.41545\",\n+          \"spread\": \"599.2206\",\n+          \"slippage\": \"1498.0515\"\n+        },\n+        {\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"fillDate\": \"2024-04-02\",\n+          \"plannedDate\": \"2024-04-02\",\n+          \"quantity\": \"161\",\n+          \"fillPrice\": \"18561.984300\",\n+          \"commission\": \"447.95835\",\n+          \"spread\": \"597.2778\",\n+          \"slippage\": \"1493.1945\"\n+        }\n+      ],\n+      \"cashAfter\": {\n+        \"2024-04-02\": \"38255.708600\"\n+      },\n+      \"distribution\": {\n+        \"engineInput\": {\n+          \"run\": {\n+            \"runId\": \"RECON-DIST-PAY\",\n+            \"start\": \"2024-04-01\",\n+            \"end\": \"2024-05-03\",\n+            \"randomSeed\": 42,\n+            \"scenario\": \"FULL_PERIOD\"\n+          },\n+          \"universe\": {\n+            \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+            \"items\": [\n+              {\n+                \"sectorId\": \"SEMICONDUCTOR\",\n+                \"instrumentId\": \"091160.XKRX\",\n+                \"targetWeight\": \"0.4\"\n+              },\n+              {\n+                \"sectorId\": \"BATTERY\",\n+                \"instrumentId\": \"305720.XKRX\",\n+                \"targetWeight\": \"0.3\"\n+              },\n+              {\n+                \"sectorId\": \"BIO\",\n+                \"instrumentId\": \"244580.XKRX\",\n+                \"targetWeight\": \"0.3\"\n+              }\n+            ]\n+          },\n+          \"marketData\": {\n+            \"datasetId\": \"KRX_DAILY_V1\",\n+            \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+            \"interval\": \"1D\",\n+            \"adjustment\": \"SPLIT_ADJUSTED\",\n+            \"priceType\": \"LAST\",\n+            \"fillPrice\": \"RAW\",\n+            \"signalPrice\": \"ADJUSTED\",\n+            \"distributions\": \"CASH_ON_PAY_DATE\"\n+          },\n+          \"allocation\": {\n+            \"strategyId\": \"FIXED_WEIGHT\",\n+            \"rulesVersion\": \"1\",\n+            \"rules\": {\n+              \"targetWeights\": \"USER_SPECIFIED\",\n+              \"weightsSource\": \"USER\"\n+            },\n+            \"parameters\": {\n+              \"rebalance\": \"MONTH_END\"\n+            }\n+          },\n+          \"portfolio\": {\n+            \"initialCash\": \"10000000\",\n+            \"currency\": \"KRW\",\n+            \"positionSizing\": {\n+              \"type\": \"STRATEGY_DEFINED\"\n+            },\n+            \"shortSelling\": false,\n+            \"leverage\": \"1\",\n+            \"integerLots\": true\n+          },\n+          \"execution\": {\n+            \"signalTiming\": \"BAR_CLOSE\",\n+            \"executionTiming\": \"NEXT_BAR_OPEN\",\n+            \"orderTypes\": [\n+              \"MARKET\"\n+            ],\n+            \"costProfile\": {\n+              \"version\": \"PROVISIONAL-FULL-1\",\n+              \"commissionBps\": \"1.5\",\n+              \"spreadBps\": \"2\",\n+              \"slippageBps\": \"5\",\n+              \"taxBps\": \"23\",\n+              \"provisional\": true\n+            },\n+            \"partialFill\": false,\n+            \"liquidity\": {\n+              \"model\": \"UNLIMITED\"\n+            },\n+            \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+            \"delisting\": \"CAUSE_BASED\"\n+          },\n+          \"evaluation\": {\n+            \"warmupTradingDays\": 0,\n+            \"liquidationAtEnd\": false\n+          },\n+          \"progress\": {\n+            \"batchTradingDays\": 20\n+          }\n+        },\n+        \"instrumentId\": \"305720.XKRX\",\n+        \"exDate\": \"2024-04-29\",\n+        \"payDate\": \"2024-05-02\",\n+        \"heldOnExDate\": \"161\",\n+        \"amount\": \"13685\"\n+      }\n+    },\n+    {\n+      \"name\": \"halt_deferral\",\n+      \"engineInput\": {\n+        \"run\": {\n+          \"runId\": \"RECON-HALT\",\n+          \"start\": \"2024-06-03\",\n+          \"end\": \"2024-06-14\",\n+          \"randomSeed\": 42,\n+          \"scenario\": \"FULL_PERIOD\",\n+          \"effectiveStart\": \"2024-06-10\"\n+        },\n+        \"universe\": {\n+          \"mappingVersion\": \"SECTOR-ETF-2026-09\",\n+          \"items\": [\n+            {\n+              \"sectorId\": \"SEMICONDUCTOR\",\n+              \"instrumentId\": \"091160.XKRX\",\n+              \"targetWeight\": \"0.4\"\n+            },\n+            {\n+              \"sectorId\": \"BATTERY\",\n+              \"instrumentId\": \"305720.XKRX\",\n+              \"targetWeight\": \"0.3\"\n+            },\n+            {\n+              \"sectorId\": \"BIO\",\n+              \"instrumentId\": \"244580.XKRX\",\n+              \"targetWeight\": \"0.3\"\n+            }\n+          ]\n+        },\n+        \"marketData\": {\n+          \"datasetId\": \"KRX_DAILY_V1\",\n+          \"dataVersion\": \"FIXTURE-three_etf_24m\",\n+          \"interval\": \"1D\",\n+          \"adjustment\": \"SPLIT_ADJUSTED\",\n+          \"priceType\": \"LAST\",\n+          \"fillPrice\": \"RAW\",\n+          \"signalPrice\": \"ADJUSTED\",\n+          \"distributions\": \"CASH_ON_PAY_DATE\"\n+        },\n+        \"allocation\": {\n+          \"strategyId\": \"FIXED_WEIGHT\",\n+          \"rulesVersion\": \"1\",\n+          \"rules\": {\n+            \"targetWeights\": \"USER_SPECIFIED\",\n+            \"weightsSource\": \"USER\"\n+          },\n+          \"parameters\": {\n+            \"rebalance\": \"MONTH_END\"\n+          }\n+        },\n+        \"portfolio\": {\n+          \"initialCash\": \"10000000\",\n+          \"currency\": \"KRW\",\n+          \"positionSizing\": {\n+            \"type\": \"STRATEGY_DEFINED\"\n+          },\n+          \"shortSelling\": false,\n+          \"leverage\": \"1\",\n+          \"integerLots\": true\n+        },\n+        \"execution\": {\n+          \"signalTiming\": \"BAR_CLOSE\",\n+          \"executionTiming\": \"NEXT_BAR_OPEN\",\n+          \"orderTypes\": [\n+            \"MARKET\"\n+          ],\n+          \"costProfile\": {\n+            \"version\": \"PROVISIONAL-FULL-1\",\n+            \"commissionBps\": \"1.5\",\n+            \"spreadBps\": \"2\",\n+            \"slippageBps\": \"5\",\n+            \"taxBps\": \"23\",\n+            \"provisional\": true\n+          },\n+          \"partialFill\": false,\n+          \"liquidity\": {\n+            \"model\": \"UNLIMITED\"\n+          },\n+          \"tradingHalt\": \"DEFER_TO_NEXT_TRADABLE\",\n+          \"delisting\": \"CAUSE_BASED\"\n+        },\n+        \"evaluation\": {\n+          \"warmupTradingDays\": 0,\n+          \"liquidationAtEnd\": false\n+        },\n+        \"progress\": {\n+          \"batchTradingDays\": 20\n+        }\n+      },\n+      \"fills\": [\n+        {\n+          \"instrumentId\": \"244580.XKRX\",\n+          \"fillDate\": \"2024-06-11\",\n+          \"plannedDate\": \"2024-06-11\",\n+          \"quantity\": \"445\",\n+          \"fillPrice\": \"6718.699800\",\n+          \"commission\": \"448.15950\",\n+          \"spread\": \"597.5460\",\n+          \"slippage\": \"1493.8650\"\n+        },\n+        {\n+          \"instrumentId\": \"305720.XKRX\",\n+          \"fillDate\": \"2024-06-11\",\n+          \"plannedDate\": \"2024-06-11\",\n+          \"quantity\": \"169\",\n+          \"fillPrice\": \"17660.353600\",\n+          \"commission\": \"447.37680\",\n+          \"spread\": \"596.5024\",\n+          \"slippage\": \"1491.2560\"\n+        },\n+        {\n+          \"instrumentId\": \"091160.XKRX\",\n+          \"fillDate\": \"2024-06-12\",\n+          \"plannedDate\": \"2024-06-11\",\n+          \"quantity\": \"131\",\n+          \"fillPrice\": \"30392.259700\",\n+          \"commission\": \"596.79015\",\n+          \"spread\": \"795.7202\",\n+          \"slippage\": \"1989.3005\"\n+        }\n+      ],\n+      \"cashAfter\": {\n+        \"2024-06-11\": \"4024683.294300\",\n+        \"2024-06-12\": \"42700.483450\"\n+      }\n+    }\n+  ]\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/fixtures/manual_reconciliation.json",
+          "old_path": "worker/tests/fixtures/manual_reconciliation.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,109 @@\n+\"\"\"결정성(SC-002)과 체결 규칙 검증(SC-004) — spec 004 T008.\n+\n+같은 EngineInput 을 두 번 실행하면 ``run.startedAt``·``run.finishedAt`` 두 필드를 뺀\n+``EngineOutput.to_json()`` 이 **바이트 동일**해야 한다(세 전략 + TARGET_RISK 오버레이).\n+자원 사용량은 EngineOutput 밖(FINISHED payload ``resource``)이라 비교 대상이 아니다.\n+\n+SC-004: 판단일 이후 자료가 판단에 쓰인 사례 0건, 모든 체결은 판단일 다음 거래일 이후.\n+\"\"\"\n+\n+import json\n+from datetime import timedelta\n+from pathlib import Path\n+from typing import Any\n+\n+import pytest\n+from conftest import THREE_ETF_DIR\n+\n+import worker.portfolio_execution as execution_module\n+from worker.contracts.engine_output import EngineOutput, RunStatus, TradeReason\n+from worker.engine_runner import PortfolioBacktestEngine\n+from worker.market_data import CsvMarketDataProvider\n+\n+FIXTURES = Path(__file__).resolve().parent / \"fixtures\"\n+STRATEGY_FIXTURES = [\n+    \"engine-input-three-etf-fixed.json\",\n+    \"engine-input-three-etf-equal.json\",\n+    \"engine-input-three-etf-inverse_vol.json\",\n+    \"engine-input-three-etf-target-risk.json\",\n+]\n+\n+\n+def load(name: str) -> dict[str, Any]:\n+    return json.loads((FIXTURES / name).read_text(encoding=\"utf-8\"))\n+\n+\n+def run(body: dict[str, Any]) -> EngineOutput:\n+    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(body)\n+    assert output.run.status is RunStatus.COMPLETED, output.run.error\n+    return output\n+\n+\n+def without_clock(output: EngineOutput) -> bytes:\n+    payload = json.loads(output.to_json())\n+    for field in (\"startedAt\", \"finishedAt\"):\n+        assert payload[\"run\"].pop(field)  # 존재만 확인한다\n+    return json.dumps(payload, ensure_ascii=False, separators=(\",\", \":\")).encode()\n+\n+\n+# --- SC-002 결정성 -----------------------------------------------------------------------\n+\n+\n+@pytest.mark.parametrize(\"name\", STRATEGY_FIXTURES)\n+def test_same_engine_input_twice_is_byte_identical(name: str) -> None:\n+    first, second = run(load(name)), run(load(name))\n+    assert without_clock(first) == without_clock(second)\n+    assert first.analytics is not None and first.versions is not None\n+    assert first.versions.data == \"FIXTURE-three_etf_24m\"\n+\n+\n+def test_target_risk_fixture_records_the_overlay_version_and_scaling() -> None:\n+    output = run(load(\"engine-input-three-etf-target-risk.json\"))\n+    assert output.versions is not None\n+    assert output.versions.scenario_rules == \"TARGET_RISK_OVERLAY/1\"\n+    assert any(\n+        point.risk_scale is not None and point.risk_scale < 1\n+        for point in output.weights_series or []\n+    )\n+\n+\n+# --- SC-004 체결 규칙 ----------------------------------------------------------------------\n+\n+\n+def test_every_fill_is_on_or_after_the_trading_day_after_its_decision() -> None:\n+    \"\"\"REBALANCE·SIGNAL·LIQUIDATION 체결은 판단일 다음 거래일, HALT_DEFERRED 는 plannedDate 가\n+    판단일 다음 거래일이고 체결일은 그 뒤 첫 거래 가능일이다.\"\"\"\n+    body = load(\"engine-input-three-etf-fixed.json\")\n+    body[\"run\"] = {\n+        **body[\"run\"],\n+        \"start\": \"2024-06-03\",\n+        \"end\": \"2024-06-28\",\n+        \"effectiveStart\": \"2024-06-10\",\n+    }\n+    output = run(body)\n+    calendar = [snapshot.date for snapshot in output.portfolio_series]\n+    fill_days = {calendar[i + 1] for i in range(len(calendar) - 1)}  # 판단일 다음 거래일 집합\n+    for trade in output.trades:\n+        entry_day = (trade.entry_time + timedelta(hours=9)).date()\n+        if trade.reason is TradeReason.HALT_DEFERRED:\n+            assert trade.planned_date in fill_days\n+            assert entry_day > trade.planned_date\n+        else:\n+            assert entry_day in fill_days\n+        assert trade.quantity == trade.quantity.to_integral_value()\n+    assert output.run.effective_start == calendar[0] == output.portfolio_series[0].date\n+\n+\n+def test_allocation_never_sees_data_after_the_decision_day(monkeypatch: pytest.MonkeyPatch) -> None:\n+    \"\"\"look-ahead 0건: 배분 모듈에 넘기는 이력의 마지막 날짜가 판단일을 넘지 않는다.\"\"\"\n+    seen: list[tuple[Any, Any]] = []\n+    original = execution_module.compute_weights\n+\n+    def spy(allocation: Any, items: Any, history: Any, as_of: Any) -> Any:\n+        seen.append((history.index.max().date(), as_of))\n+        return original(allocation, items, history, as_of)\n+\n+    monkeypatch.setattr(execution_module, \"compute_weights\", spy)\n+    run(load(\"engine-input-three-etf-inverse_vol.json\"))\n+    assert seen, \"판단이 한 번도 없었다\"\n+    assert all(last <= as_of for last, as_of in seen)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_determinism.py",
+          "old_path": "worker/tests/test_determinism.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,89 @@\n+\"\"\"수기 대조(SC-003, T008): 대표 거래일 세 개의 체결·수량·현금·비용·분배금을 독립 계산과 맞춘다.\n+\n+기대값은 ``tests/fixtures/manual_reconciliation.json`` 에 고정돼 있다. 그 값은 워커 코드를 import\n+하지 않는 ``docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`` 가 픽스처 CSV\n+원본에서 계산한 것이고, 원본 CSV 도 같은 디렉터리에 보관한다. 허용 오차는 PD-12 전까지 0 이다.\n+\"\"\"\n+\n+import json\n+from datetime import date, timedelta\n+from decimal import Decimal\n+from pathlib import Path\n+from typing import Any\n+\n+import pytest\n+from conftest import THREE_ETF_DIR\n+\n+from worker.contracts.engine_output import EngineOutput, RunStatus, TradeReason\n+from worker.engine_runner import PortfolioBacktestEngine\n+from worker.market_data import CsvMarketDataProvider\n+\n+#: PD-12 확정 시 이 상수만 바꾼다.\n+PROVISIONAL_TOLERANCE = Decimal(\"0\")\n+FIXTURE = Path(__file__).resolve().parent / \"fixtures\" / \"manual_reconciliation.json\"\n+RECONCILIATION = json.loads(FIXTURE.read_text(encoding=\"utf-8\"))\n+CASES = {case[\"name\"]: case for case in RECONCILIATION[\"cases\"]}\n+\n+\n+def run(body: dict[str, Any]) -> EngineOutput:\n+    output = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR)).run(body)\n+    assert output.run.status is RunStatus.COMPLETED, output.run.error\n+    return output\n+\n+\n+def close_enough(actual: Decimal, expected: str) -> bool:\n+    return abs(actual - Decimal(expected)) <= PROVISIONAL_TOLERANCE\n+\n+\n+def kst(when: Any) -> date:\n+    return (when + timedelta(hours=9)).date()\n+\n+\n+def cash_on(output: EngineOutput, day: str) -> Decimal:\n+    return next(s.cash for s in output.portfolio_series if s.date == date.fromisoformat(day))\n+\n+\n+@pytest.mark.parametrize(\"name\", [\"first_rebalance\", \"distribution\", \"halt_deferral\"])\n+def test_fills_match_the_independent_calculation(name: str) -> None:\n+    case = CASES[name]\n+    output = run(case[\"engineInput\"])\n+    for expected in case[\"fills\"]:\n+        fill_day = date.fromisoformat(expected[\"fillDate\"])\n+        trade = next(\n+            t\n+            for t in output.trades\n+            if t.instrument_id == expected[\"instrumentId\"] and kst(t.entry_time) == fill_day\n+        )\n+        assert trade.quantity == Decimal(expected[\"quantity\"])\n+        assert close_enough(trade.entry_price, expected[\"fillPrice\"])\n+        assert close_enough(trade.commission, expected[\"commission\"])\n+        spread_and_slippage = Decimal(expected[\"spread\"]) + Decimal(expected[\"slippage\"])\n+        assert close_enough(trade.slippage_cost, str(spread_and_slippage))\n+        planned = date.fromisoformat(expected[\"plannedDate\"])\n+        if planned != fill_day:\n+            assert trade.reason is TradeReason.HALT_DEFERRED and trade.planned_date == planned\n+        else:\n+            assert trade.reason is TradeReason.REBALANCE and trade.planned_date is None\n+    assert len(output.trades) == len(case[\"fills\"])\n+    for day, expected_cash in case[\"cashAfter\"].items():\n+        assert close_enough(cash_on(output, day), expected_cash), (day, cash_on(output, day))\n+\n+\n+def test_distribution_pays_ex_date_holdings_times_the_declared_amount() -> None:\n+    expected = CASES[\"distribution\"][\"distribution\"]\n+    output = run(expected[\"engineInput\"])\n+    pay_day = next(\n+        s for s in output.portfolio_series if s.date == date.fromisoformat(expected[\"payDate\"])\n+    )\n+    (flow,) = [f for f in pay_day.cash_flows or [] if f.type == \"DISTRIBUTION\"]\n+    assert flow.instrument_id == expected[\"instrumentId\"]\n+    assert close_enough(flow.amount, expected[\"amount\"])\n+    # 권리락일 보유는 04-02 체결분 그대로다(그 사이 리밸런싱 없음).\n+    ex_day = date.fromisoformat(expected[\"exDate\"])\n+    held = next(\n+        p.quantity\n+        for s in reversed([s for s in output.portfolio_series if s.date <= ex_day and s.positions])\n+        for p in s.positions or []\n+        if p.instrument_id == expected[\"instrumentId\"]\n+    )\n+    assert held == Decimal(expected[\"heldOnExDate\"])\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_manual_reconciliation.py",
+          "old_path": "worker/tests/test_manual_reconciliation.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,221 @@\n+\"\"\"파생 지표(spec 004 FR-027 ``analytics``, T008) — 손으로 만든 작은 입력으로 정의를 고정한다.\n+\n+각 지표의 정의는 ``performance.calculate_analytics`` docstring 에 있다. 여기서는 그 정의대로\n+계산되는지와 계산 불가일 때 0 을 지어내지 않고 None 을 내는지를 본다.\n+\"\"\"\n+\n+from datetime import UTC, date, datetime, timedelta\n+from decimal import Decimal\n+\n+import pandas as pd\n+\n+from worker.contracts.engine_output import (\n+    CashFlow,\n+    PortfolioSnapshot,\n+    PositionSnapshot,\n+    TradeResult,\n+    TradeSide,\n+    TradeStatus,\n+    WeightsPoint,\n+)\n+from worker.performance import METHOD, calculate_analytics\n+\n+A, B = \"000001.XKRX\", \"000002.XKRX\"\n+DAY0 = date(2024, 1, 2)\n+T0 = datetime(2024, 1, 2, tzinfo=UTC)\n+\n+\n+def snapshots(\n+    equities: list[int],\n+    positions_last: list[PositionSnapshot] | None = None,\n+    cash_flows: dict[int, list[CashFlow]] | None = None,\n+) -> list[PortfolioSnapshot]:\n+    out: list[PortfolioSnapshot] = []\n+    peak = Decimal(0)\n+    for i, value in enumerate(equities):\n+        equity = Decimal(value)\n+        peak = max(peak, equity)\n+        out.append(\n+            PortfolioSnapshot(\n+                date=DAY0 + timedelta(days=i),\n+                equity=equity,\n+                cash=equity,\n+                position_value=Decimal(0),\n+                daily_return=equity / Decimal(equities[i - 1]) - 1 if i else Decimal(0),\n+                cumulative_return=equity / Decimal(equities[0]) - 1,\n+                drawdown=equity / peak - 1,\n+                positions=positions_last if i == len(equities) - 1 else None,\n+                cash_flows=(cash_flows or {}).get(i),\n+            )\n+        )\n+    return out\n+\n+\n+def trade(\n+    iid: str, qty: int, entry: int, exit_: int | None = None, pnl: int | None = None\n+) -> TradeResult:\n+    closed = exit_ is not None\n+    return TradeResult(\n+        trade_id=f\"TR-{iid}-{entry}\",\n+        instrument_id=iid,\n+        side=TradeSide.LONG,\n+        status=TradeStatus.CLOSED if closed else TradeStatus.OPEN,\n+        entry_time=T0,\n+        exit_time=T0 if closed else None,\n+        entry_price=Decimal(entry),\n+        exit_price=Decimal(exit_) if closed else None,\n+        quantity=Decimal(qty),\n+        commission=Decimal(0),\n+        slippage_cost=Decimal(0),\n+        realized_pnl=Decimal(pnl) if closed else None,\n+    )\n+\n+\n+def returns(frame: dict[str, list[float]]) -> pd.DataFrame:\n+    index = pd.bdate_range(DAY0, periods=len(next(iter(frame.values()))))\n+    return pd.DataFrame(frame, index=index)\n+\n+\n+NO_RETURNS = returns({A: [0.0, 0.0], B: [0.0, 0.0]})\n+\n+\n+def analytics(**overrides):  # noqa: ANN003, ANN201 - 테스트 편의\n+    base = dict(\n+        series=snapshots([100, 100]),\n+        weights_series=[],\n+        trades=[],\n+        instrument_returns=NO_RETURNS,\n+    )\n+    return calculate_analytics(**{**base, **overrides})\n+\n+\n+# --- recoveryDays -----------------------------------------------------------------------\n+\n+\n+def test_recovery_days_counts_trading_days_from_the_trough_back_to_the_prior_peak() -> None:\n+    # 고점 100 → 저점 90(1일째) → 95 → 100(3일째) 회복. 저점에서 회복까지 2 거래일.\n+    assert analytics(series=snapshots([100, 90, 95, 100, 101])).recovery_days == 2\n+\n+\n+def test_recovery_days_is_none_when_the_drawdown_never_recovers() -> None:\n+    assert analytics(series=snapshots([100, 90, 95, 99])).recovery_days is None\n+\n+\n+def test_recovery_days_is_zero_without_any_drawdown() -> None:\n+    assert analytics(series=snapshots([100, 101, 102])).recovery_days == 0\n+\n+\n+# --- turnover -----------------------------------------------------------------------------\n+\n+\n+def test_turnover_is_half_the_traded_notional_over_mean_equity_annualised() -> None:\n+    # 매수 1,000 → 편도 거래대금 1,000 / 2 = 500. 평균 자산 1,000. 2 거래일 → × 252/2.\n+    result = analytics(series=snapshots([1000, 1000]), trades=[trade(A, 10, 100)])\n+    assert result.turnover == Decimal(\"63\")\n+\n+\n+def test_turnover_counts_both_legs_of_a_closed_trade() -> None:\n+    # 100 에 10주 사고 110 에 팔았다: 1,000 + 1,100 = 2,100 / 2 = 1,050 / 1,000 × 252/2 = 132.3\n+    result = analytics(series=snapshots([1000, 1000]), trades=[trade(A, 10, 100, 110, 100)])\n+    assert result.turnover == Decimal(\"132.3\")\n+\n+\n+# --- correlationMatrix · riskContribution --------------------------------------------------\n+\n+\n+def test_correlation_and_risk_contribution_come_from_the_sample_covariance() -> None:\n+    frame = returns({A: [0.01, -0.01, 0.02], B: [0.02, -0.02, 0.04]})  # B = 2A\n+    weights = [\n+        WeightsPoint(\n+            date=DAY0,\n+            target={A: Decimal(\"0.5\"), B: Decimal(\"0.5\")},\n+            actual={A: Decimal(\"0.5\"), B: Decimal(\"0.5\")},\n+        )\n+    ]\n+    result = analytics(instrument_returns=frame, weights_series=weights)\n+    assert result.correlation_matrix == {\n+        A: {A: Decimal(\"1.00000000\"), B: Decimal(\"1.00000000\")},\n+        B: {A: Decimal(\"1.00000000\"), B: Decimal(\"1.00000000\")},\n+    }\n+    # Σ = v·[[1,2],[2,4]], w = (½,½): wᵢ(Σw)ᵢ = (0.75v, 1.5v) → 1/3, 2/3\n+    assert result.risk_contribution == {A: Decimal(\"0.33333333\"), B: Decimal(\"0.66666667\")}\n+    assert result.method == METHOD == \"sample-covariance-daily\"\n+\n+\n+def test_risk_contribution_is_none_without_recorded_weights_or_variance() -> None:\n+    frame = returns({A: [0.01, -0.01, 0.02], B: [0.02, -0.02, 0.04]})\n+    assert analytics(instrument_returns=frame).risk_contribution is None\n+    weights = [WeightsPoint(date=DAY0, target={A: Decimal(1)}, actual={A: Decimal(1)})]\n+    flat = returns({A: [0.0, 0.0, 0.0]})\n+    assert analytics(instrument_returns=flat, weights_series=weights).risk_contribution is None\n+\n+\n+def test_risk_contribution_uses_the_average_actual_weight_across_rebalances() -> None:\n+    frame = returns({A: [0.01, -0.01, 0.02], B: [0.02, -0.02, 0.04]})\n+    weights = [\n+        WeightsPoint(date=DAY0, target={}, actual={A: Decimal(1), B: Decimal(0)}),\n+        WeightsPoint(date=DAY0, target={}, actual={A: Decimal(0), B: Decimal(1)}),\n+    ]  # 평균 (½, ½) → 위와 같은 답\n+    result = analytics(instrument_returns=frame, weights_series=weights)\n+    assert result.risk_contribution == {A: Decimal(\"0.33333333\"), B: Decimal(\"0.66666667\")}\n+\n+\n+# --- lossContribution ---------------------------------------------------------------------\n+\n+\n+def test_loss_contribution_is_each_instruments_share_of_total_pnl() -> None:\n+    # A: 실현 +30, 분배금 +10 = 40. B: 실현 -10, 미실현 +20 = 10. 합 50 → 0.8 / 0.2\n+    last_positions = [\n+        PositionSnapshot(\n+            instrument_id=B,\n+            quantity=Decimal(1),\n+            market_value=Decimal(1),\n+            weight=Decimal(1),\n+            unrealized_pnl=Decimal(20),\n+        )\n+    ]\n+    series = snapshots(\n+        [100, 100, 150],\n+        last_positions,\n+        {1: [CashFlow(type=\"DISTRIBUTION\", instrument_id=A, amount=Decimal(10))]},\n+    )\n+    trades = [trade(A, 1, 100, 130, 30), trade(B, 1, 100, 90, -10), trade(B, 1, 100)]\n+    result = analytics(series=series, trades=trades)\n+    assert result.loss_contribution == {A: Decimal(\"0.8\"), B: Decimal(\"0.2\")}\n+\n+\n+def test_loss_contribution_subtracts_the_entry_commission_of_open_trades() -> None:\n+    \"\"\"미실현 손익 (종가 − 매수가) × 수량에는 매수 수수료가 없다. 빼지 않으면 손익 합이 실제 자산\n+    증감과 어긋난다(2차 리뷰 2).\"\"\"\n+    open_b = trade(B, 1, 100)\n+    open_b.commission = Decimal(5)\n+    last_positions = [\n+        PositionSnapshot(\n+            instrument_id=B,\n+            quantity=Decimal(1),\n+            market_value=Decimal(1),\n+            weight=Decimal(1),\n+            unrealized_pnl=Decimal(20),\n+        )\n+    ]\n+    series = snapshots([100, 100, 145], last_positions)\n+    # A: 실현 +30. B: 미실현 +20 − 수수료 5 = 15. 합 45 = 자산 증감(145 − 100)\n+    result = analytics(series=series, trades=[trade(A, 1, 100, 130, 30), open_b])\n+    assert result.loss_contribution == {A: Decimal(\"0.66666667\"), B: Decimal(\"0.33333333\")}\n+\n+\n+def test_loss_contribution_is_none_when_total_pnl_is_zero() -> None:\n+    trades = [trade(A, 1, 100, 110, 10), trade(B, 1, 100, 90, -10)]\n+    assert analytics(trades=trades).loss_contribution is None\n+\n+\n+# --- weightError --------------------------------------------------------------------------\n+\n+\n+def test_weight_error_is_the_mean_over_rebalances() -> None:\n+    weights = [\n+        WeightsPoint(date=DAY0, target={}, actual={}, weight_error=Decimal(\"0.01\")),\n+        WeightsPoint(date=DAY0, target={}, actual={}, weight_error=Decimal(\"0.03\")),\n+    ]\n+    assert analytics(weights_series=weights).weight_error == Decimal(\"0.02\")\n+    assert analytics().weight_error is None\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_performance.py",
+          "old_path": "worker/tests/test_performance.py",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,7 +5,6 @@\n T008 이 맡는다.\n \"\"\"\n \n-import json\n from collections.abc import Callable\n from dataclasses import replace\n from datetime import date, timedelta\n@@ -33,6 +32,7 @@ from worker.portfolio_execution import (\n     WEIGHT_ROUNDING,\n     CallbackError,\n     EngineFailure,\n+    execute_portfolio,\n     plan_days,\n )\n \n@@ -476,16 +476,6 @@ def test_progress_callback_failure_surfaces_as_callback_error() -> None:\n         run(broken)\n \n \n-def test_same_input_gives_byte_identical_output() -> None:\n-    body = three_etf(\"2024-01-02\", \"2024-06-28\", execution={\"costProfile\": FULL_COSTS})\n-    first = json.loads(completed(**body).to_json())\n-    second = json.loads(completed(**body).to_json())\n-    for payload in (first, second):\n-        payload[\"run\"].pop(\"startedAt\")\n-        payload[\"run\"].pop(\"finishedAt\")\n-    assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)\n-\n-\n def test_artifacts_hold_orders_and_reproducibility_metadata() -> None:\n     output, artifacts = engine().run_with_artifacts(engine_input_body())\n     assert output.run.status is RunStatus.COMPLETED\n@@ -498,6 +488,104 @@ def test_artifacts_hold_orders_and_reproducibility_metadata() -> None:\n     assert output.versions.mapping == \"SECTOR-ETF-2026-09\"\n \n \n+# --- 지표·참조 버전(T008) --------------------------------------------------------------------\n+\n+\n+def test_completed_output_carries_analytics_and_reference_versions() -> None:\n+    output = completed(\n+        **three_etf(\n+            \"2024-01-02\",\n+            \"2024-06-28\",\n+            execution={\"costProfile\": FULL_COSTS},\n+            allocation={\n+                \"strategyId\": \"FIXED_WEIGHT\",\n+                \"rulesVersion\": \"1\",\n+                \"rules\": {\"investedFraction\": \"1.0000\", \"provisional\": True},\n+                \"parameters\": {\"rebalance\": \"MONTH_END\"},\n+            },\n+        )\n+    )\n+    analytics = output.analytics\n+    assert analytics is not None and analytics.method == \"sample-covariance-daily\"\n+    instruments = {SEMICONDUCTOR, BATTERY, BIO}\n+    assert analytics.correlation_matrix is not None\n+    assert set(analytics.correlation_matrix) == instruments\n+    assert analytics.risk_contribution is not None\n+    assert set(analytics.risk_contribution) == instruments\n+    assert abs(sum(analytics.risk_contribution.values()) - 1) < Decimal(\"1e-6\")\n+    assert analytics.loss_contribution is not None\n+    assert abs(sum(analytics.loss_contribution.values()) - 1) < Decimal(\"1e-6\")\n+    assert analytics.turnover is not None and analytics.turnover > 0\n+    assert analytics.weight_error is not None and analytics.weight_error >= 0\n+    assert analytics.recovery_days is None or analytics.recovery_days >= 0\n+\n+    versions = output.versions\n+    assert versions is not None\n+    import worker\n+\n+    assert versions.worker == f\"thorp-worker {worker.__version__}\" == \"thorp-worker 0.1.1\"\n+    assert versions.rules is not None and versions.rules.provisional is True\n+    assert versions.engine == \"nautilus_trader 1.219.0\"\n+\n+\n+def test_rules_provisional_is_omitted_when_the_rules_copy_does_not_say() -> None:\n+    output = completed(**three_etf(\"2024-01-02\", \"2024-03-29\"))\n+    assert output.versions is not None and output.versions.rules is not None\n+    assert output.versions.rules.provisional is None\n+\n+\n+def test_partial_output_after_an_early_stop_keeps_the_holdings_of_the_stop_day() -> None:\n+    \"\"\"취소·한도(T011·T014)는 판단 전에 엔진을 멈추고 lastTradingDate 까지의 시계열로 결과를 만든다.\n+\n+    멈춘 날은 그 실행의 종료일이므로 보유 스냅샷이 있어야 한다 — 없으면 미실현 손익이 손익 기여에서\n+    빠진다(2차 리뷰 3). 손익 합은 자산 증감과 정확히 같다.\n+    \"\"\"\n+    from datetime import UTC, datetime\n+\n+    from worker.engine_runner import assemble_output\n+\n+    request = EngineInput.model_validate(\n+        engine_input_body(\n+            **three_etf(\"2024-01-02\", \"2024-03-29\", execution={\"costProfile\": FULL_COSTS})\n+        )\n+    )\n+    market = CsvMarketDataProvider(THREE_ETF_DIR).load(\n+        request.universe.instrument_ids, request.run.start, request.run.end\n+    )\n+    calendar = market.trading_days\n+    plan = plan_days(calendar, evaluation_start(request, calendar), request.run.end, \"MONTH_END\")\n+    stop_day = date(2024, 1, 5)\n+    execution = execute_portfolio(\n+        request, market, plan, None, stop_after=lambda day: day >= stop_day\n+    )\n+    assert execution.series[-1].date == stop_day\n+    assert execution.series[-1].positions, \"멈춘 날은 종료일이라 보유 스냅샷이 있어야 한다\"\n+\n+    output = assemble_output(\n+        request, market, execution, datetime.now(UTC), status=RunStatus.CANCELLED, partial=True\n+    )\n+    assert output.run.status is RunStatus.CANCELLED and output.run.partial is True\n+    assert output.run.last_trading_date == output.run.effective_end == stop_day\n+    assert output.performance is not None\n+    assert output.performance.final_equity == execution.series[-1].equity\n+    assert output.analytics is not None and output.analytics.loss_contribution is not None\n+    assert abs(sum(output.analytics.loss_contribution.values()) - 1) < Decimal(\"1e-6\")\n+\n+    # 손익 항등식: Σ실현 + Σ(미실현 − 매수 수수료) + 분배금 == 자산 증감\n+    realized = sum(\n+        (t.realized_pnl for t in output.trades if t.realized_pnl is not None), Decimal(0)\n+    )\n+    open_commission = sum(\n+        (t.commission for t in output.trades if t.status is TradeStatus.OPEN), Decimal(0)\n+    )\n+    unrealized = sum(\n+        (p.unrealized_pnl for p in output.portfolio_series[-1].positions or []), Decimal(0)\n+    )\n+    paid = sum((f.amount for s in output.portfolio_series for f in s.cash_flows or []), Decimal(0))\n+    equity_change = output.performance.final_equity - output.performance.initial_equity\n+    assert realized + unrealized - open_commission + paid == equity_change\n+\n+\n # --- 리뷰 반영 (1차) ----------------------------------------------------------------------------\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_portfolio_execution.py",
+          "old_path": "worker/tests/test_portfolio_execution.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -20,7 +20,9 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest\n \n - **실행은 `portfolio_execution.PortfolioRebalanceExecution` 하나다**(R-01). 배분 전략이 몇 개든\n   Nautilus 전략은 이것 하나이고, 전략 차이는 `allocation/compute_weights`가 돌려주는 비중에만 있다.\n-  체결·현금·분배금·분할 회계는 여기, 지표 산출은 `performance.py` — 이 분리를 깨지 말 것.\n+  체결·현금·분배금·분할 회계는 여기, 지표 산출은 `performance.py`, 결과 조립은\n+  `engine_runner.assemble_output` — 이 분리를 깨지 말 것. 파생 지표(`analytics`)의 정의 원본은\n+  `calculate_analytics` docstring 이다(spec 은 이름만 정했다).\n   하루 순서(09:00 틱: 기업행위 → 매도·매수 제출 / 15:30 봉: 평가 → 판단)와 Nautilus 제약(체결\n   콜백은 핸들러 뒤에 온다, 계좌는 MARGIN, 장부가 원장이다)은 그 모듈 주석에 있다\n - **엔진이 실행할 수 있는 전략은 `allocation/ALLOCATION_RULES`가 정한다.**\n@@ -68,7 +70,10 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest\n   OHLC 전부 직전 종가) 실행은 계속된다. 거래일 행이 빠지면 보간하지 않고 `DataInsufficientError`로\n   실패한다(원칙 VI). 거래일 달력은 읽어 온 자료의 합집합으로 만든다 — 워커는 KRX 달력을 갖고 있지 않다\n - 픽스처 `examples/three_etf_24m/`는 **합성 자료**다. 손으로 고치지 말고\n-  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다)\n+  `scripts/make_three_etf_fixture.py`를 고쳐 다시 만든다(수기 대조 기대값이 픽스처에 묶인다).\n+  다시 만들면 `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py` 도 다시 돌려\n+  `tests/fixtures/manual_reconciliation.json` 을 갱신한다 — 이 스크립트는 워커를 import 하지 않는\n+  독립 계산이라 기대값을 엔진 출력으로 채우면 대조가 아니다\n - **배분은 순수 함수다**(`allocation/`). 조정 종가 이력과 규칙 명세를 받아 목표 비중을 돌려주고 주문·현금·시각을 모른다. 같은 입력이면 언제 불러도 같은 답이 나와야 재사용 판정(R-03)이 성립한다. 전략 추가는 모듈 하나 + `ALLOCATION_RULES` 한 줄이다\n - **규칙 값과 비용 수치를 코드에 두지 말 것.** 전부 `allocation.rules`·`execution.costProfile`에서 읽는다. 모듈이 기본값을 들고 있으면 등록표에 새 버전이 생겼을 때 옛 실행의 해석이 조용히 달라진다(R-07·R-08). 명세에 없는 값이 필요하면 지어내지 말고 `INVALID_REQUEST`로 멈춘다\n - **팀 미확정 전략은 돌리지 않는다**(`rules_registry.py`). `SECTOR_MOMENTUM`·`MINIMUM_VARIANCE`는 PD-03·PD-04 대기이며, 그럴듯한 기본값으로 돌리면 나중에 규칙이 정해졌을 때 같은 요청이 다른 숫자를 낸다(FR-010). \"팀이 안 정했다\"와 \"엔진이 구현 안 했다\"는 메시지를 구분한다 — 사용자가 할 일이 다르다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/CLAUDE.md",
+          "old_path": "worker/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -108,7 +108,19 @@ output.to_json()  # camelCase, 계산 불가 값은 키 생략\n - **결정성.** 이벤트는 날짜 → 종목 이름순으로 넣고 주문도 같은 순서라, 같은 입력은\n   `run.startedAt/finishedAt` 을 뺀 `EngineOutput` 이 바이트 단위로 같다.\n - 지표(`performance.py`): Sharpe 252일·RF 0·ddof 1, CAGR 은 달력 일수, MDD 음수, CLOSED 만\n-  거래 수·승률. 확장(순수익률·분석 블록·수기 대조)은 T008.\n+  거래 수·승률. `netTotalReturn` 은 `totalReturn` 과 같다(자산 곡선이 비용 차감 후).\n+- **분석 블록**(`analytics`, `calculate_analytics` docstring 이 정의 원본): 회복 기간(저점 → 전 고점\n+  회복까지 거래일), 회전율((매수+매도 대금)/2/평균 자산, 연환산), 종목 수익률 표본 상관, 위험 기여\n+  wᵢ(Σw)ᵢ/wᵀΣw(실제 비중 평균), 손실 기여(종목별 실현+미실현+분배금 / 전체 손익), 비중 오차 평균.\n+  `method=\"sample-covariance-daily\"`. 계산 불가는 키 생략.\n+- **결과 조립은 `engine_runner.assemble_output` 하나**다. 완료도, 취소·한도의 부분 결과(T011·T014)도\n+  같은 함수로 만든다 — `execute_portfolio(..., stop_after=lambda day: ...)` 가 그날 평가를 마친 뒤\n+  멈추고(멈춘 날은 종료일이라 보유 스냅샷을 남긴다) `status=CANCELLED, partial=True` 로 조립한다.\n+- 버전은 `worker.__version__` 한 곳이 원본이다(pyproject `dynamic`). 운영 이미지는 패키지를 설치하지\n+  않으므로 `importlib.metadata` 를 쓰지 않는다.\n+- **수기 대조**(SC-003): `tests/fixtures/manual_reconciliation.json` 의 기대값은\n+  `docs/specs/backtest-messaging/examples/reconciliation/reconcile.py`(워커 import 없음, 표준 라이브러리)가\n+  픽스처 CSV 에서 계산한 것이다. 픽스처를 다시 만들면 이 스크립트도 다시 돌린다. 허용 오차 0(PD-12 전).\n \n 필수 검증:\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/README.md",
+          "old_path": "worker/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,6 @@\n [project]\n name = \"thorp-worker\"\n-version = \"0.1.1\"\n+dynamic = [\"version\"]\n description = \"Backtest worker: RabbitMQ backtest.jobs를 소비해 백테스트 엔진을 실행하고 이벤트를 발행한다\"\n requires-python = \">=3.11\"\n dependencies = [\n@@ -36,3 +36,6 @@ select = [\"E\", \"F\", \"I\", \"UP\", \"B\"]\n [tool.pytest.ini_options]\n testpaths = [\"tests\"]\n pythonpath = [\"src\"]\n+\n+[tool.setuptools.dynamic]\n+version = {attr = \"worker.__version__\"}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/pyproject.toml",
+          "old_path": "worker/pyproject.toml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -832,7 +832,6 @@ wheels = [\n \n [[package]]\n name = \"thorp-worker\"\n-version = \"0.1.1\"\n source = { editable = \".\" }\n dependencies = [\n     { name = \"nautilus-trader\" },\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/uv.lock",
+          "old_path": "worker/uv.lock",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": true
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-13T19:44:17.937+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2797990": [],
+    "2798002": []
+  }
+}

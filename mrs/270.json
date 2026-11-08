@@ -1,0 +1,1109 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 954238,
+    "iid": 270,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약",
+    "description": "## 작업 내용 요약\n\n010 사례 상세에서 011로 들어가는 진입 화면을 넣고, 고른 사례가 002·003·004를 지나 결과 화면까지 유지되게 한다. 003의 분석 기간은 그 사례의 사후 구간을 덮도록 좁힌다.\n\n## 관련 티켓\n\nS15P21E205-368\n\n## 주요 변경 사항\n\n- `/regime-link/start` 라우트와 `RegimeLinkStartPage`. `case`·`sector`를 읽어 익명이면 로그인 안내 뒤 같은 주소로 돌아오고, 형식 오류나 없는 사례면 시장 흐름으로 보내며 한 문장으로 알린다.\n- `useLoginRedirect` 훅. 현재 경로를 저장하고 `/login`으로 보낸다. 014와 같은 방식이다.\n- `casePeriodConstraint`(순수 함수)로 시작일 상한과 종료일 하한을 만든다. 001 달력을 세어 구하며, **못 세면 값을 지어내지 않고 사유를 돌려준다.**\n- `AnalysisConditionsPanel`에 선택적 `caseConstraint`. 직접 친 날짜도 같은 잣대로 거르고 왜 좁아졌는지 한 문장으로 보인다.\n- 003에서 분석이 **접수되는 즉시** `/regime-link?base&case`로 옮겨 기준 실행의 진행 상태를 보여 준다. 004 요청 본문에 `case`를 싣지 않는다.\n- `types/regimeLink.ts`·`api/regimeLink.ts`(신규). 011 응답 봉투는 `ApiResponse`라 010의 `HttpApiResponse` 클라이언트를 재사용하지 않았다.\n- 010의 `CaseList`·`CaseDetail`에는 `postPeriodSlot` prop만 더했다. 주지 않으면 기존 동작 그대로다.\n\n## 테스트\n\n```\ncd frontend && npm run lint && npm run build && npm test\n✖ 20 problems (0 errors, 20 warnings)   ← 기준선과 같다\n✓ built in 6.45s\nTest Files 4 passed (4) · Tests 29 passed (29)   ← 이 브랜치가 더한 시험\n```\n\n이 브랜치만으로 빌드와 시험이 서는 것을 확인했다. 전체 스위트는 369에서 함께 돈다.\n\n## 리뷰 포인트\n\n- **유지율·차이값·`originPublicToken`은 타입에 자리를 만들지 않았다.** 담을 곳이 없으면 화면에 닿을 수 없다.\n- **003에서 \"사후 구간을 덮을 수 없는 전략\"을 카드 단위로 비활성화하지 못했다.** 카드 판정이 `judgeWarmup` 산식 안에 있어 손대면 003 판정 규약 전체에 닿는다. 대신 '분석하기'를 이유와 함께 막았다. 사례를 바꾸거나 빼지는 않는다(FR-017).\n- **001 응답의 거래일 목록이 `warmupBaseDate`~`commonEnd` 구간만 담는다.** 사례의 `d0`가 그 앞에 있으면 제약을 계산하지 못하고 '분석하기'가 막힌다. 실제 자료에서 이 경우가 얼마나 생기는지 확인이 필요하다.\n- `RegimeSearchPage.test.tsx`가 라우터 없이 `render`하고 있어 링크를 넣자 깨졌다. `renderWithRouter`로 바꿨다. 010 화면이 지금까지 라우터 밖에서 검사돼 왔다는 뜻이다.",
+    "state": "merged",
+    "created_at": "2026-09-21T13:31:51.640+09:00",
+    "updated_at": "2026-09-21T14:50:50.709+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T14:50:50.738+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/368-regime-link-start",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+    "merge_commit_sha": "adf2fd496ec9d43c6de9698708c7c7c124af4a8c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T13:31:54.674+09:00",
+    "reference": "!270",
+    "references": {
+      "short": "!270",
+      "relative": "!270",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!270"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/270",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 954238,
+    "iid": 270,
+    "project_id": 1444456,
+    "title": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약",
+    "description": "## 작업 내용 요약\n\n010 사례 상세에서 011로 들어가는 진입 화면을 넣고, 고른 사례가 002·003·004를 지나 결과 화면까지 유지되게 한다. 003의 분석 기간은 그 사례의 사후 구간을 덮도록 좁힌다.\n\n## 관련 티켓\n\nS15P21E205-368\n\n## 주요 변경 사항\n\n- `/regime-link/start` 라우트와 `RegimeLinkStartPage`. `case`·`sector`를 읽어 익명이면 로그인 안내 뒤 같은 주소로 돌아오고, 형식 오류나 없는 사례면 시장 흐름으로 보내며 한 문장으로 알린다.\n- `useLoginRedirect` 훅. 현재 경로를 저장하고 `/login`으로 보낸다. 014와 같은 방식이다.\n- `casePeriodConstraint`(순수 함수)로 시작일 상한과 종료일 하한을 만든다. 001 달력을 세어 구하며, **못 세면 값을 지어내지 않고 사유를 돌려준다.**\n- `AnalysisConditionsPanel`에 선택적 `caseConstraint`. 직접 친 날짜도 같은 잣대로 거르고 왜 좁아졌는지 한 문장으로 보인다.\n- 003에서 분석이 **접수되는 즉시** `/regime-link?base&case`로 옮겨 기준 실행의 진행 상태를 보여 준다. 004 요청 본문에 `case`를 싣지 않는다.\n- `types/regimeLink.ts`·`api/regimeLink.ts`(신규). 011 응답 봉투는 `ApiResponse`라 010의 `HttpApiResponse` 클라이언트를 재사용하지 않았다.\n- 010의 `CaseList`·`CaseDetail`에는 `postPeriodSlot` prop만 더했다. 주지 않으면 기존 동작 그대로다.\n\n## 테스트\n\n```\ncd frontend && npm run lint && npm run build && npm test\n✖ 20 problems (0 errors, 20 warnings)   ← 기준선과 같다\n✓ built in 6.45s\nTest Files 4 passed (4) · Tests 29 passed (29)   ← 이 브랜치가 더한 시험\n```\n\n이 브랜치만으로 빌드와 시험이 서는 것을 확인했다. 전체 스위트는 369에서 함께 돈다.\n\n## 리뷰 포인트\n\n- **유지율·차이값·`originPublicToken`은 타입에 자리를 만들지 않았다.** 담을 곳이 없으면 화면에 닿을 수 없다.\n- **003에서 \"사후 구간을 덮을 수 없는 전략\"을 카드 단위로 비활성화하지 못했다.** 카드 판정이 `judgeWarmup` 산식 안에 있어 손대면 003 판정 규약 전체에 닿는다. 대신 '분석하기'를 이유와 함께 막았다. 사례를 바꾸거나 빼지는 않는다(FR-017).\n- **001 응답의 거래일 목록이 `warmupBaseDate`~`commonEnd` 구간만 담는다.** 사례의 `d0`가 그 앞에 있으면 제약을 계산하지 못하고 '분석하기'가 막힌다. 실제 자료에서 이 경우가 얼마나 생기는지 확인이 필요하다.\n- `RegimeSearchPage.test.tsx`가 라우터 없이 `render`하고 있어 링크를 넣자 깨졌다. `renderWithRouter`로 바꿨다. 010 화면이 지금까지 라우터 밖에서 검사돼 왔다는 뜻이다.",
+    "state": "merged",
+    "created_at": "2026-09-21T13:31:51.640+09:00",
+    "updated_at": "2026-09-21T14:50:50.709+09:00",
+    "merged_by": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merge_user": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "merged_at": "2026-09-21T14:50:50.738+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/368-regime-link-start",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "assignees": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "assignee": {
+      "id": 30857,
+      "username": "gyunh01",
+      "public_email": "",
+      "name": "김균호",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+      "web_url": "https://lab.ssafy.com/gyunh01"
+    },
+    "reviewers": [
+      {
+        "id": 30857,
+        "username": "gyunh01",
+        "public_email": "",
+        "name": "김균호",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+        "web_url": "https://lab.ssafy.com/gyunh01"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+    "merge_commit_sha": "adf2fd496ec9d43c6de9698708c7c7c124af4a8c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-21T13:31:54.674+09:00",
+    "reference": "!270",
+    "references": {
+      "short": "!270",
+      "relative": "!270",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!270"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/270",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "26",
+    "latest_build_started_at": "2026-09-21T14:42:02.249+09:00",
+    "latest_build_finished_at": "2026-09-21T14:50:49.929+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 212404,
+      "iid": 274,
+      "project_id": 1444456,
+      "sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+      "ref": "feat(fe)/368-regime-link-start",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T14:42:02.105+09:00",
+      "updated_at": "2026-09-21T14:50:49.935+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212404"
+    },
+    "head_pipeline": {
+      "id": 212404,
+      "iid": 274,
+      "project_id": 1444456,
+      "sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+      "ref": "feat(fe)/368-regime-link-start",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T14:42:02.105+09:00",
+      "updated_at": "2026-09-21T14:50:49.935+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212404",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T14:42:02.249+09:00",
+      "finished_at": "2026-09-21T14:50:49.929+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/212404",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "3316e32d5b438416f5ea5aee8885ae884e31ce62",
+      "head_sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+      "start_sha": "3316e32d5b438416f5ea5aee8885ae884e31ce62"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "d2160272e57a3b5fcc546cfd27c65a7775c2d4c4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846355,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 계약 기반 개발 및 타입 설계**: `frontend/src/types/regimeLink.ts`에서 서버 API 계약과 1:1로 일치하는 타입을 정의하고, 불필요하거나 오해를 유발할 수 있는 파생 지표(유지율, 차이값 등)를 의도적으로 배제하여 명확한 경계를 설정했습니다.\n- **안전한 에러 및 엣지 케이스 처리**: `buildCasePeriodConstraint` 등의 순수 함수에서 날짜 및 거래일 계산 실패 시 임의의 값을 지어내지 않고 사유(`calendarTooShort`, `postWindowUnknown`)를 반환하도록 구현하여 데이터 신뢰성을 높였습니다.\n\n### 발견 사항\n- [Medium] `frontend/src/pages/SectorSelectionPage.tsx`\n  - `useEffect` 내부에서 `toggleSector`를 호출할 때 의존성 배열에 `toggleSector`가 포함되어 있습니다. 만약 상위 컴포넌트나 훅에서 `toggleSector` 함수의 레퍼런스가 안정적이지 않다면(memoized되지 않았다면) 무한 렌더링이나 불필요한 실행이 발생할 수 있습니다. `toggleSector`가 `useCallback`으로 감싸져 있는지 확인이 필요합니다.\n\n### 테스트 제안\n- **익명 사용자 세션 복귀 테스트**: `RegimeLinkStartPage` 진입 시 익명 상태에서 `useLoginRedirect`가 현재 경로와 쿼리 파라미터를 정확히 저장(`sessionStorage`)하고 `/login`으로 리다이렉트하는지 검증하는 시나리오 테스트를 추가하세요.\n- **분석 기간 제약 경계값 테스트**: `StrategySettingsPage`에서 `caseConstraint`가 적용되었을 때, `startMax`와 `endMin` 경계에 정확히 일치하는 날짜와 그 경계를 미세하게 벗어나는 날짜(하루 전/후)를 입력했을 때 각각 정상 통과 및 차단(오류 문구 노출)되는지 확인하는 UI 테스트를 수행하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-21T13:32:02.200+09:00",
+          "updated_at": "2026-09-21T14:42:02.304+09:00",
+          "system": false,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "12e15d76c5d8dea69e7eb5e6bbfb881221845f54",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846403,
+          "type": null,
+          "body": "requested review from @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:38:05.980+09:00",
+          "updated_at": "2026-09-21T13:38:05.984+09:00",
+          "system": true,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "967950a27342def6ac33225a8f9aa8d8240366df",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846404,
+          "type": null,
+          "body": "assigned to @gyunh01",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:38:06.011+09:00",
+          "updated_at": "2026-09-21T13:38:06.020+09:00",
+          "system": true,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1077afc13739c0af2a697c411f8dd945e8a283d2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2846567,
+          "type": null,
+          "body": "added 37 commits\n\n<ul><li>eec4804b...7b2d7bd1 - 36 commits from branch <code>dev</code></li><li>87557756 - Merge remote-tracking branch &#39;origin/dev&#39; into feat(fe)/368-regime-link-start</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/270/diffs?diff_id=2231682&start_sha=eec4804beec8bad788e7b60a895a547e1154f678)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T13:52:34.252+09:00",
+          "updated_at": "2026-09-21T13:52:34.256+09:00",
+          "system": true,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1ccbd4bc67cfd56c6f17bae069a55343091037b0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847222,
+          "type": null,
+          "body": "added 15 commits\n\n<ul><li>87557756...3316e32d - 14 commits from branch <code>dev</code></li><li>ebfa0d18 - Merge remote-tracking branch &#39;origin/dev&#39; into feat(fe)/368-regime-link-start</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/270/diffs?diff_id=2232249&start_sha=8755775616df2dfda414e171627dec944c500d09)",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T14:41:53.389+09:00",
+          "updated_at": "2026-09-21T14:41:53.392+09:00",
+          "system": true,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ac71a5b9816186b9aa2ec0f1087db970d65494e7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847234,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7 pass",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T14:42:50.775+09:00",
+          "updated_at": "2026-09-21T14:42:50.778+09:00",
+          "system": true,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "aa70d868b40b4b3f571abca5c747528689c52c40",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2847350,
+          "type": null,
+          "body": "mentioned in commit adf2fd496ec9d43c6de9698708c7c7c124af4a8c",
+          "author": {
+            "id": 30857,
+            "username": "gyunh01",
+            "public_email": "",
+            "name": "김균호",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30857/avatar.png",
+            "web_url": "https://lab.ssafy.com/gyunh01"
+          },
+          "created_at": "2026-09-21T14:50:50.767+09:00",
+          "updated_at": "2026-09-21T14:50:50.775+09:00",
+          "system": true,
+          "noteable_id": 954238,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 270,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2232249,
+      "head_commit_sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+      "base_commit_sha": "3316e32d5b438416f5ea5aee8885ae884e31ce62",
+      "start_commit_sha": "3316e32d5b438416f5ea5aee8885ae884e31ce62",
+      "created_at": "2026-09-21T14:41:53.053+09:00",
+      "merge_request_id": 954238,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "c574d08a9db213460f02eaac74247a7a0a6ae052"
+    },
+    {
+      "id": 2231682,
+      "head_commit_sha": "8755775616df2dfda414e171627dec944c500d09",
+      "base_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "start_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "created_at": "2026-09-21T13:52:33.328+09:00",
+      "merge_request_id": 954238,
+      "state": "without_files",
+      "real_size": "26",
+      "patch_id_sha": "f163c14834002e6e8a77633a3b8a5218a69dc755"
+    },
+    {
+      "id": 2231472,
+      "head_commit_sha": "eec4804beec8bad788e7b60a895a547e1154f678",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "created_at": "2026-09-21T13:31:52.028+09:00",
+      "merge_request_id": 954238,
+      "state": "without_files",
+      "real_size": "26",
+      "patch_id_sha": "fbf82add24c0056848a9b8a34b556de8cbe02eb3"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2232249,
+      "head_commit_sha": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+      "base_commit_sha": "3316e32d5b438416f5ea5aee8885ae884e31ce62",
+      "start_commit_sha": "3316e32d5b438416f5ea5aee8885ae884e31ce62",
+      "created_at": "2026-09-21T14:41:53.053+09:00",
+      "merge_request_id": 954238,
+      "state": "collected",
+      "real_size": "26",
+      "patch_id_sha": "c574d08a9db213460f02eaac74247a7a0a6ae052",
+      "commits": [
+        {
+          "id": "ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7",
+          "short_id": "ebfa0d18",
+          "created_at": "2026-09-21T14:38:39.000+09:00",
+          "parent_ids": [
+            "8755775616df2dfda414e171627dec944c500d09",
+            "3316e32d5b438416f5ea5aee8885ae884e31ce62"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/368-regime-link-start",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/368-regime-link-start\n\n# Conflicts:\n#\tspecs/011-regime-strategy-link/tasks.md\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T14:38:39.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T14:38:39.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ebfa0d18ea3a0b7a066e036b8fbf538ca325cae7"
+        },
+        {
+          "id": "8755775616df2dfda414e171627dec944c500d09",
+          "short_id": "87557756",
+          "created_at": "2026-09-21T13:50:57.000+09:00",
+          "parent_ids": [
+            "eec4804beec8bad788e7b60a895a547e1154f678",
+            "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/368-regime-link-start",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/368-regime-link-start\n\n# Conflicts:\n#\tfrontend/src/pages/RegimeSearchPage.test.tsx\n#\tfrontend/src/pages/RegimeSearchPage.tsx\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:50:57.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:50:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8755775616df2dfda414e171627dec944c500d09"
+        },
+        {
+          "id": "eec4804beec8bad788e7b60a895a547e1154f678",
+          "short_id": "eec4804b",
+          "created_at": "2026-09-21T12:48:22.000+09:00",
+          "parent_ids": [
+            "b36ccbab340b8b37bed4cda554cf59c906e79a81"
+          ],
+          "title": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약",
+          "message": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약\n\n010 사례 상세에서 011 시작 주소로 이어지는 진입 화면을 넣고, 고른 사례가\n003·004 를 지나 결과 화면까지 유지되게 한다. 익명이면 로그인 안내 뒤 같은\n주소로 돌아온다.\n\n003 은 사례가 있을 때만 분석 기간의 상·하한을 좁히고 한 문장으로 이유를\n보인다. 기간을 못 세면 값을 지어내지 않고 '분석하기'를 막는다. 분석이\n접수되는 즉시 결과 화면으로 옮겨 기준 실행의 진행 상태를 보여 준다.\n\n011 API 응답 봉투는 ApiResponse 라 010 클라이언트를 재사용하지 않고 따로\n두었다. 유지율·차이값은 타입에 자리를 만들지 않아 화면에 닿을 수 없다.\n\n010 목록·상세 컴포넌트에는 슬롯만 더해 기존 동작을 그대로 두었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:48:22.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:48:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/eec4804beec8bad788e7b60a895a547e1154f678"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,151 @@\n+import { AxiosError, AxiosHeaders, type AxiosResponse } from 'axios'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { apiClient } from './client'\n+import {\n+  createRegimeLinkSearch,\n+  createRegimeLinks,\n+  fetchAvailability,\n+  fetchCaseWindow,\n+  fetchRegimeLink,\n+  listRegimeLinks,\n+  normalizeRegimeLinkError,\n+  retryRegimeLink,\n+  RegimeLinkError,\n+} from './regimeLink'\n+\n+function response(data: unknown, status = 200): AxiosResponse {\n+  return {\n+    data: { success: true, data, error: null },\n+    status,\n+    statusText: 'OK',\n+    headers: {},\n+    config: { headers: new AxiosHeaders() },\n+  }\n+}\n+\n+function failure(status: number, code: string, message: string): AxiosError {\n+  const error = new AxiosError(message)\n+  error.response = {\n+    data: { success: false, data: null, error: { code, message } },\n+    status,\n+    statusText: 'ERR',\n+    headers: {},\n+    config: { headers: new AxiosHeaders() },\n+  }\n+  return error\n+}\n+\n+const caseWindow = {\n+  basis: { kind: 'HISTORICAL_REVISION' },\n+  caseId: 'FIELD:LABOR:2026-07-01:MACRO-1:REG-3:REGIME-V1~2012-03',\n+  endMonth: '2012-03',\n+  postWindow: {\n+    d0: '2012-04-02',\n+    d21: '2012-05-02',\n+    d63: '2012-07-03',\n+    lastAvailable: '2012-07-03',\n+    completedTradingDays: 63,\n+    complete21: true,\n+    complete63: true,\n+  },\n+}\n+\n+describe('사례 연결 API 통로', () => {\n+  beforeEach(() => vi.restoreAllMocks())\n+\n+  it('조회 경로를 공용 클라이언트로 부르고 질의를 그대로 싣는다', async () => {\n+    const get = vi\n+      .spyOn(apiClient, 'get')\n+      .mockResolvedValueOnce(response({ basis: { kind: 'HISTORICAL_REVISION' }, cases: [] }))\n+      .mockResolvedValueOnce(response(caseWindow))\n+      .mockResolvedValueOnce(response({ linkId: 'RL-1', status: 'QUEUED' }))\n+      .mockResolvedValueOnce(response([]))\n+\n+    await fetchAvailability({ base: '9f2c', entryPath: 'MARKET_FLOW' })\n+    const window = await fetchCaseWindow(caseWindow.caseId)\n+    await fetchRegimeLink('RL-1', '9f2c')\n+    await listRegimeLinks({ base: '9f2c', caseId: caseWindow.caseId })\n+\n+    expect(get).toHaveBeenNthCalledWith(1, '/regime-links/availability', {\n+      params: { base: '9f2c', entryPath: 'MARKET_FLOW' },\n+      signal: undefined,\n+    })\n+    expect(get).toHaveBeenNthCalledWith(2, '/regime-links/case-window', {\n+      params: { caseId: caseWindow.caseId },\n+      signal: undefined,\n+    })\n+    expect(get).toHaveBeenNthCalledWith(3, '/regime-links/RL-1', {\n+      params: { token: '9f2c' },\n+      signal: undefined,\n+    })\n+    expect(get).toHaveBeenNthCalledWith(4, '/regime-links', {\n+      params: { base: '9f2c', caseId: caseWindow.caseId },\n+      signal: undefined,\n+    })\n+    // 003이 종료일 하한을 잡는 값이다. §1a에만 있으므로 여기서 사라지면 제약이 조용히 풀린다.\n+    expect(window.postWindow.lastAvailable).toBe('2012-07-03')\n+  })\n+\n+  it('쓰기 경로는 본문을 그대로 보낸다', async () => {\n+    const post = vi\n+      .spyOn(apiClient, 'post')\n+      .mockResolvedValueOnce(response({ linkSearchId: 'RLS-1', cases: [] }, 201))\n+      .mockResolvedValueOnce(response({ linkSearchId: 'RLS-1', links: [] }, 202))\n+      .mockResolvedValueOnce(response({ linkId: 'RL-1', status: 'QUEUED' }, 202))\n+\n+    const search = { clientRequestId: 'c-1', snapshotKey: 'FIELD:LABOR', base: '9f2c', entryPath: 'MARKET_FLOW' as const, fullSearchShown: false }\n+    await createRegimeLinkSearch(search)\n+    const create = { linkSearchId: 'RLS-1', caseId: caseWindow.caseId, scenario: 'CONTINUOUS' as const, confirmFullPeriod: false }\n+    await createRegimeLinks(create)\n+    await retryRegimeLink('RL-1')\n+\n+    expect(post).toHaveBeenNthCalledWith(1, '/regime-link-searches', search)\n+    expect(post).toHaveBeenNthCalledWith(2, '/regime-links', create)\n+    expect(post).toHaveBeenNthCalledWith(3, '/regime-links/RL-1/retry', null)\n+  })\n+\n+  it('확인이 필요한 200 응답을 접수와 같은 자리로 돌려준다', async () => {\n+    vi.spyOn(apiClient, 'post').mockResolvedValue(\n+      response({\n+        outcome: 'OUT_OF_PERIOD_CONFIRM_REQUIRED',\n+        requiredRange: { start: '2006-10-02', end: '2025-12-30' },\n+        affected: [],\n+      }),\n+    )\n+\n+    const outcome = await createRegimeLinks({\n+      linkSearchId: 'RLS-1',\n+      caseId: caseWindow.caseId,\n+      scenario: 'CONTINUOUS',\n+      confirmFullPeriod: false,\n+    })\n+\n+    expect(outcome.outcome).toBe('OUT_OF_PERIOD_CONFIRM_REQUIRED')\n+  })\n+\n+  it('서버 오류 이름과 상태 코드를 잃지 않는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockRejectedValue(failure(404, 'RESOURCE_NOT_FOUND', '사례를 찾을 수 없습니다.'))\n+\n+    await expect(fetchCaseWindow('없는-사례~2012-03')).rejects.toMatchObject({\n+      code: 'RESOURCE_NOT_FOUND',\n+      status: 404,\n+      message: '사례를 찾을 수 없습니다.',\n+    })\n+  })\n+\n+  it('success가 false인 200 응답을 빈 결과로 넘기지 않는다', async () => {\n+    vi.spyOn(apiClient, 'get').mockResolvedValue({\n+      data: { success: false, data: null, error: { code: 'INVALID_INPUT', message: '형식이 틀렸습니다.' } },\n+      status: 200,\n+      statusText: 'OK',\n+      headers: {},\n+      config: { headers: new AxiosHeaders() },\n+    } as AxiosResponse)\n+\n+    await expect(fetchCaseWindow('bad')).rejects.toBeInstanceOf(RegimeLinkError)\n+  })\n+\n+  it('응답 없는 오류는 연결 문제로 말한다', () => {\n+    expect(normalizeRegimeLinkError(new AxiosError('네트워크')).code).toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/regimeLink.test.ts",
+          "old_path": "frontend/src/api/regimeLink.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,182 @@\n+import axios from 'axios'\n+import { apiClient, ApiClientError } from './client'\n+import type { ResultEnvelope } from '@/types/result'\n+import type {\n+  RegimeLinkAccepted,\n+  RegimeLinkAvailabilityQuery,\n+  RegimeLinkAvailabilityResult,\n+  RegimeLinkCaseWindow,\n+  RegimeLinkCreateOutcome,\n+  RegimeLinkCreateRequest,\n+  RegimeLinkRetryAccepted,\n+  RegimeLinkSearchCreateRequest,\n+  RegimeLinkSearchCreated,\n+  RegimeLinkView,\n+} from '@/types/regimeLink'\n+\n+/**\n+ * 011 사례 연결 API 통로 (contracts `regime-link-api.md`).\n+ *\n+ * <p><b>봉투는 005와 같다</b>(`ApiResponse` = `{success, data, error}`). 010의 `regime.ts`가 쓰는 봉투는\n+ * 다른 모양이라 여기서 재사용하지 않는다 — 두 봉투를 한 함수로 다루면 어느 쪽이 깨져도 드러나지 않는다.\n+ *\n+ * <p><b>CSRF와 로그인 복귀는 `apiClient`가 이미 한다.</b> `withCredentials`와 `XSRF-TOKEN` 설정이 거기\n+ * 있으므로 이 파일은 경로와 본문만 안다.\n+ */\n+\n+const basePath = '/regime-links'\n+const searchPath = '/regime-link-searches'\n+\n+const unreachableMessage = '서버에 연결할 수 없습니다. 연결 상태를 확인한 뒤 다시 시도해 주세요.'\n+const unexpectedMessage = '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.'\n+\n+/** 화면이 분기할 수 있는 011 오류. `code`는 서버가 보낸 이름 그대로다. */\n+export class RegimeLinkError extends Error {\n+  readonly code: string | null\n+  readonly status: number | null\n+  readonly retryAfterSeconds: number | null\n+\n+  constructor(\n+    message: string,\n+    options?: { code?: string | null; status?: number | null; retryAfterSeconds?: number | null; cause?: unknown },\n+  ) {\n+    super(message, { cause: options?.cause })\n+    this.name = 'RegimeLinkError'\n+    this.code = options?.code ?? null\n+    this.status = options?.status ?? null\n+    this.retryAfterSeconds = options?.retryAfterSeconds ?? null\n+  }\n+}\n+\n+function isObject(value: unknown): value is Record<string, unknown> {\n+  return typeof value === 'object' && value !== null\n+}\n+\n+function readErrorBody(\n+  data: unknown,\n+): { code: string | null; message: string | null; retryAfterSeconds: number | null } | null {\n+  if (!isObject(data)) return null\n+  const error = isObject(data.error) ? data.error : null\n+  if (!error) return null\n+  return {\n+    code: typeof error.code === 'string' ? error.code : null,\n+    message: typeof error.message === 'string' ? error.message : null,\n+    retryAfterSeconds:\n+      typeof error.retryAfterSeconds === 'number'\n+        ? error.retryAfterSeconds\n+        : typeof data.retryAfterSeconds === 'number'\n+          ? data.retryAfterSeconds\n+          : null,\n+  }\n+}\n+\n+/** Axios·공용 오류를 011 오류로 옮긴다. 서버가 보낸 이름과 상태 코드를 잃지 않는다. */\n+export function normalizeRegimeLinkError(error: unknown): RegimeLinkError {\n+  if (error instanceof RegimeLinkError) return error\n+\n+  if (error instanceof ApiClientError && axios.isAxiosError(error.cause)) {\n+    return normalizeRegimeLinkError(error.cause)\n+  }\n+\n+  if (axios.isAxiosError(error)) {\n+    if (!error.response) return new RegimeLinkError(unreachableMessage, { cause: error })\n+    const body = readErrorBody(error.response.data)\n+    return new RegimeLinkError(body?.message ?? unexpectedMessage, {\n+      code: body?.code ?? null,\n+      status: error.response.status,\n+      retryAfterSeconds: body?.retryAfterSeconds ?? null,\n+      cause: error,\n+    })\n+  }\n+\n+  if (error instanceof ApiClientError) {\n+    return new RegimeLinkError(error.message, { code: error.code, cause: error })\n+  }\n+\n+  return new RegimeLinkError(unexpectedMessage, { cause: error })\n+}\n+\n+/** `success: false`가 200으로 와도 오류다 — 빈 `data`가 화면까지 내려가면 빈 정상 화면이 그려진다. */\n+function unwrap<T>(body: ResultEnvelope<T>): T {\n+  if (!body || !body.success || body.data === null || body.data === undefined) {\n+    throw new RegimeLinkError(body?.success ? '응답 본문이 비어 있습니다.' : (body?.error?.message ?? unexpectedMessage), {\n+      code: body?.success ? null : (body?.error?.code ?? null),\n+    })\n+  }\n+  return body.data\n+}\n+\n+async function get<T>(path: string, params: Record<string, unknown>, signal?: AbortSignal): Promise<T> {\n+  try {\n+    const response = await apiClient.get<ResultEnvelope<T>>(path, { params, signal })\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeRegimeLinkError(error)\n+  }\n+}\n+\n+async function post<T>(path: string, body: unknown): Promise<T> {\n+  try {\n+    const response = await apiClient.post<ResultEnvelope<T>>(path, body)\n+    return unwrap(response.data)\n+  } catch (error) {\n+    throw normalizeRegimeLinkError(error)\n+  }\n+}\n+\n+/** §1 — 표시 후보에 가용성 판정을 붙인다. 익명도 부를 수 있다. */\n+export function fetchAvailability(\n+  query: RegimeLinkAvailabilityQuery,\n+  signal?: AbortSignal,\n+): Promise<RegimeLinkAvailabilityResult> {\n+  return get<RegimeLinkAvailabilityResult>(`${basePath}/availability`, { ...query }, signal)\n+}\n+\n+/**\n+ * §1a — 실행 토큰 없이 사례의 사후 구간을 읽는다.\n+ *\n+ * 003이 분석 기간을 고르기 **전에** 부르므로 비교 묶음을 요구하지 않는다.\n+ */\n+export function fetchCaseWindow(caseId: string, signal?: AbortSignal): Promise<RegimeLinkCaseWindow> {\n+  return get<RegimeLinkCaseWindow>(`${basePath}/case-window`, { caseId }, signal)\n+}\n+\n+/** §1b — 목록을 확정하고 변경을 기록한다(로그인 필요). */\n+export function createRegimeLinkSearch(\n+  request: RegimeLinkSearchCreateRequest,\n+): Promise<RegimeLinkSearchCreated> {\n+  return post<RegimeLinkSearchCreated>(searchPath, request)\n+}\n+\n+/**\n+ * §2 — 사례의 전략 결과를 연다(로그인 필요).\n+ *\n+ * 202 접수와 200 확인 필요가 같은 자리로 온다. 부르는 쪽은 `outcome`을 보고 갈라야 한다.\n+ */\n+export function createRegimeLinks(request: RegimeLinkCreateRequest): Promise<RegimeLinkCreateOutcome> {\n+  return post<RegimeLinkCreateOutcome>(basePath, request)\n+}\n+\n+/** §3 — 링크 하나의 상태와 결과. `token`은 이 링크를 연 분석의 공개 토큰이다. */\n+export function fetchRegimeLink(\n+  linkId: string,\n+  token: string,\n+  signal?: AbortSignal,\n+): Promise<RegimeLinkView> {\n+  return get<RegimeLinkView>(`${basePath}/${encodeURIComponent(linkId)}`, { token }, signal)\n+}\n+\n+/** §4 — 사례 하나의 링크 묶음. 비교 묶음 순서(기준 → 비교 대상)로 온다. */\n+export function listRegimeLinks(\n+  query: { base: string; compare?: string; caseId: string },\n+  signal?: AbortSignal,\n+): Promise<RegimeLinkView[]> {\n+  return get<RegimeLinkView[]>(basePath, { ...query }, signal)\n+}\n+\n+/** §5 — 실패한 링크를 다시 시도한다(로그인 필요). `retryable=true`일 때만 부른다. */\n+export function retryRegimeLink(linkId: string): Promise<RegimeLinkRetryAccepted> {\n+  return post<RegimeLinkRetryAccepted>(`${basePath}/${encodeURIComponent(linkId)}/retry`, null)\n+}\n+\n+export type { RegimeLinkAccepted }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/api/regimeLink.ts",
+          "old_path": "frontend/src/api/regimeLink.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -27,4 +27,26 @@ describe('사례 상세', () => {\n     expect(screen.getByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()\n     expect(within(screen.getByRole('region', { name: '2012-03 사례 상세' })).getByText('전체 거리', { exact: false })).toBeTruthy()\n   })\n+\n+  /** 011 T087: 자리를 주지 않으면 010이 내려 준 문구가 그대로 보인다(010 동작 보존). */\n+  it('사후 구간 자리를 주지 않으면 010의 문구를 그대로 그린다', () => {\n+    render(<CaseDetail detail={regimeDetail()} summary={summary} mode=\"FIELD\" fieldNames={{}} />)\n+\n+    expect(screen.getByText('사례 이후 결과는 아직 연결되지 않았습니다.')).toBeTruthy()\n+  })\n+\n+  it('사후 구간 자리를 주면 그 자리에 끼워 넣고 010 문구를 대신한다', () => {\n+    render(\n+      <CaseDetail\n+        detail={regimeDetail()}\n+        summary={summary}\n+        mode=\"FIELD\"\n+        fieldNames={{}}\n+        postPeriodSlot={<span>끼워 넣은 자리</span>}\n+      />,\n+    )\n+\n+    expect(screen.getByText('끼워 넣은 자리')).toBeTruthy()\n+    expect(screen.queryByText('사례 이후 결과는 아직 연결되지 않았습니다.')).toBeNull()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetail.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,3 +1,4 @@\n+import type { ReactNode } from 'react'\n import type { RegimeCaseDetail, RegimeCaseSummary, RegimeMode } from '@/types/regime'\n import { FieldBreakdown } from './FieldBreakdown'\n import * as copy from './fixedCopy'\n@@ -8,10 +9,17 @@ interface Props {\n   summary: RegimeCaseSummary\n   mode: RegimeMode\n   fieldNames: Record<string, string>\n+  /**\n+   * 사후 구간 자리에 끼워 넣을 것(011 진입 계약 §4).\n+   *\n+   * 없으면 010이 내려 준 `postPeriod.note`를 그대로 그린다 — 010 동작을 그대로 둔다. 010 검색 화면은\n+   * 여기에 '이 기간으로 전략 비교' 링크를, 011 화면은 전략 결과 영역을 넣는다.\n+   */\n+  postPeriodSlot?: ReactNode\n }\n \n /** 저장된 계산 입력과 척도를 그대로 보여 손계산 대조가 가능하게 한다. */\n-export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {\n+export function CaseDetail({ detail, summary, mode, fieldNames, postPeriodSlot }: Props) {\n   return (\n     <section className={styles.detail} aria-label={`${detail.endMonth} 사례 상세`}>\n       <h4>사례 상세 · {detail.endMonth}</h4>\n@@ -54,7 +62,7 @@ export function CaseDetail({ detail, summary, mode, fieldNames }: Props) {\n           </div>\n         </section>\n       ))}\n-      <p>{detail.postPeriod.note}</p>\n+      {postPeriodSlot === undefined ? <p>{detail.postPeriod.note}</p> : postPeriodSlot}\n     </section>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetail.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,14 +1,14 @@\n-import { useEffect, useState } from 'react'\n+import { useEffect, useState, type ReactNode } from 'react'\n import { getRegimeCaseDetail } from '@/api/regime'\n import type { RegimeCaseDetail as Detail, RegimeCaseSummary, RegimeMode } from '@/types/regime'\n import { CaseDetail } from './CaseDetail'\n import * as copy from './fixedCopy'\n import { LoadError } from './LoadError'\n \n-interface Props { searchId: string; summary: RegimeCaseSummary; mode: RegimeMode; fieldNames: Record<string, string> }\n+interface Props { searchId: string; summary: RegimeCaseSummary; mode: RegimeMode; fieldNames: Record<string, string>; postPeriodSlot?: ReactNode }\n \n /** 상세 요청은 검색 식별자에 고정해 다른 기준월의 같은 사례를 섞지 않는다. */\n-export function CaseDetailLoader({ searchId, summary, mode, fieldNames }: Props) {\n+export function CaseDetailLoader({ searchId, summary, mode, fieldNames, postPeriodSlot }: Props) {\n   const [detail, setDetail] = useState<Detail | null>(null)\n   const [error, setError] = useState<unknown>(null)\n   const [retry, setRetry] = useState(0)\n@@ -31,5 +31,5 @@ export function CaseDetailLoader({ searchId, summary, mode, fieldNames }: Props)\n \n   if (error) return <LoadError error={error} onRetry={() => setRetry((value) => value + 1)} />\n   if (!detail) return <p role=\"status\">{copy.loadingCaseDetail}</p>\n-  return <CaseDetail detail={detail} summary={summary} mode={mode} fieldNames={fieldNames} />\n+  return <CaseDetail detail={detail} summary={summary} mode={mode} fieldNames={fieldNames} postPeriodSlot={postPeriodSlot} />\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseDetailLoader.tsx",
+          "old_path": "frontend/src/components/regime/CaseDetailLoader.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n-import { useState } from 'react'\n-import type { RegimeSearchResult } from '@/types/regime'\n+import { useState, type ReactNode } from 'react'\n+import type { RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'\n import { CaseDetailLoader } from './CaseDetailLoader'\n import { Disclosure } from './Disclosure'\n import styles from './CaseList.module.css'\n@@ -10,10 +10,16 @@ interface CaseListProps {\n   isLoading: boolean\n   context: string\n   fieldNames: Record<string, string>\n+  /**\n+   * 사례 상세의 사후 구간 자리에 끼워 넣을 것을 만든다(011 진입 계약 §4).\n+   *\n+   * 없으면 010이 내려 준 문구를 그대로 그린다. 사례마다 다른 것을 넣어야 해서 값이 아니라 함수다.\n+   */\n+  postPeriodSlot?: (summary: RegimeCaseSummary) => ReactNode\n }\n \n /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */\n-export function CaseList({ result, onShowMore, isLoading, context, fieldNames }: CaseListProps) {\n+export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot }: CaseListProps) {\n   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)\n   return (\n     <section aria-labelledby=\"regime-cases-title\" className={styles.list}>\n@@ -59,7 +65,7 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames }:\n             )}\n             {selectedEndMonth === item.endMonth && (\n               <div id={`regime-detail-${item.endMonth}`} className={styles.detailSlot}>\n-                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} />\n+                <CaseDetailLoader searchId={result.searchId} summary={item} mode={result.mode} fieldNames={fieldNames} postPeriodSlot={postPeriodSlot?.(item)} />\n               </div>\n             )}\n           </li>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,7 @@ import {\n   isWithin,\n   type AnalysisPeriod,\n } from '@/utils/analysisPeriod'\n+import type { CasePeriodConstraint } from './casePeriodConstraint'\n import styles from './AnalysisConditionsPanel.module.css'\n import fieldStyles from './AxisField.module.css'\n import type { CostRates } from './analysisSupport'\n@@ -33,6 +34,11 @@ interface AnalysisConditionsPanelProps {\n   period: AnalysisPeriod | null\n   /** 사용자가 기간을 직접 골랐는가. 참일 때만 '범위 전체로 되돌리기'를 보인다 */\n   periodChosen: boolean\n+  /**\n+   * 011 사례 경로에서만 오는 추가 제약(011 진입 계약 §3). 주소에 `case`가 없으면 `null`이고 동작이\n+   * 지금과 같다. 있으면 시작일에 상한이, 종료일에 하한이 더 걸리고 고정 문구를 보인다\n+   */\n+  caseConstraint?: CasePeriodConstraint | null\n   /** 지금 쓰이는 시작 금액. 재검증이 비워 두고 복원을 기다리면 `undefined`다 */\n   initialAmount: number | undefined\n   minEvaluationYears: number\n@@ -68,10 +74,22 @@ interface PeriodFieldProps {\n   rangeUnavailableMessage: string\n   period: AnalysisPeriod | null\n   periodChosen: boolean\n+  caseConstraint: CasePeriodConstraint | null\n   onChange: (period: AnalysisPeriod) => void\n   onReset: () => void\n }\n \n+/** 사례 제약을 어겼는가. 어겼으면 고정 문구, 아니면 `null`이다(011 진입 계약 §3). */\n+function checkCaseConstraint(\n+  draft: AnalysisPeriod,\n+  constraint: CasePeriodConstraint | null,\n+): string | null {\n+  if (constraint === null) return null\n+  if (!isIsoDate(draft.start) || !isIsoDate(draft.end)) return null\n+  if (draft.start > constraint.startMax || draft.end < constraint.endMin) return constraint.note\n+  return null\n+}\n+\n /**\n  * 분석 기간(FR-009).\n  *\n@@ -89,6 +107,7 @@ function PeriodField({\n   rangeUnavailableMessage,\n   period,\n   periodChosen,\n+  caseConstraint,\n   onChange,\n   onReset,\n }: PeriodFieldProps) {\n@@ -109,13 +128,19 @@ function PeriodField({\n     setDraft(period ?? { start: '', end: '' })\n   }\n \n+  /** 범위 검사에 사례 제약을 겹친다. 되돌리기 판정도 같은 잣대를 써야 두 길이 갈리지 않는다. */\n+  const check = (next: AnalysisPeriod): string | null =>\n+    range === null\n+      ? rangeUnavailableMessage\n+      : (checkPeriodInput(next.start, next.end, range) ?? checkCaseConstraint(next, caseConstraint))\n+\n   const draftIsCurrent = draft.start === period?.start && draft.end === period?.end\n   const problem =\n     range === null\n       ? rangeUnavailableMessage\n-      : draftIsCurrent && period !== null && isWithin(period, range)\n+      : draftIsCurrent && period !== null && isWithin(period, range) && checkCaseConstraint(period, caseConstraint) === null\n         ? null\n-        : checkPeriodInput(draft.start, draft.end, range)\n+        : check(draft)\n \n   // 어느 칸이 문제인지 가른다. 순서가 뒤집힌 경우만 둘 다 문제다.\n   const badDate = (date: string) =>\n@@ -131,7 +156,7 @@ function PeriodField({\n   const update = (next: AnalysisPeriod) => {\n     setDraft(next)\n     if (range === null) return\n-    if (checkPeriodInput(next.start, next.end, range) !== null) {\n+    if (check(next) !== null) {\n       const before = atEditStart.current\n       if (before.chosen && before.period) {\n         if (before.period.start !== period?.start || before.period.end !== period?.end) {\n@@ -150,6 +175,14 @@ function PeriodField({\n     onChange(next)\n   }\n \n+  /*\n+    달력의 `min`·`max`는 고르는 것을 돕기만 한다. 직접 친 날짜는 위 검사가 다시 거른다.\n+  */\n+  const startMax =\n+    caseConstraint && range ? (caseConstraint.startMax < range.end ? caseConstraint.startMax : range.end) : range?.end\n+  const endMin =\n+    caseConstraint && range ? (caseConstraint.endMin > range.start ? caseConstraint.endMin : range.start) : range?.start\n+\n   const hint = range ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.` : rangeUnavailableMessage\n \n   return (\n@@ -166,7 +199,7 @@ function PeriodField({\n           className={fieldStyles.input}\n           type=\"date\"\n           min={range?.start}\n-          max={range?.end}\n+          max={startMax}\n           value={draft.start}\n           disabled={range === null}\n           aria-invalid={startInvalid ? 'true' : 'false'}\n@@ -181,7 +214,7 @@ function PeriodField({\n           id={endId}\n           className={fieldStyles.input}\n           type=\"date\"\n-          min={range?.start}\n+          min={endMin}\n           max={range?.end}\n           value={draft.end}\n           disabled={range === null}\n@@ -207,6 +240,8 @@ function PeriodField({\n       <p id={messageId} className={problem && range ? fieldStyles.problem : fieldStyles.hint} aria-live=\"polite\">\n         {problem && range ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}` : hint}\n       </p>\n+      {/* 사례 경로의 고정 문구다. 어겼을 때만이 아니라 늘 보인다 — 왜 좁아졌는지가 먼저다. */}\n+      {caseConstraint ? <p className={fieldStyles.hint}>{caseConstraint.note}</p> : null}\n     </fieldset>\n   )\n }\n@@ -230,6 +265,7 @@ export function AnalysisConditionsPanel({\n   rangeUnavailableMessage = RANGE_UNAVAILABLE,\n   period,\n   periodChosen,\n+  caseConstraint = null,\n   initialAmount,\n   minEvaluationYears,\n   cost,\n@@ -261,6 +297,7 @@ export function AnalysisConditionsPanel({\n             rangeUnavailableMessage={rangeUnavailableMessage}\n             period={period}\n             periodChosen={periodChosen}\n+            caseConstraint={caseConstraint}\n             onChange={(next) => onChange({ periodStart: next.start, periodEnd: next.end })}\n             onReset={() => onReset('period')}\n           />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,81 @@\n+/**\n+ * 011 사례 경로에서 003이 더 지키는 분석 기간 제약(011 `contracts/entry-handoff.md` §3).\n+ *\n+ * <p>사례의 사후 구간(`d0`~`d63`)을 결과가 덮어야 하므로 분석 기간의 <b>시작일에는 상한</b>이,\n+ * <b>종료일에는 하한</b>이 생긴다. 상한은 `d0 − 선택 전략의 워밍업 거래일`, 하한은 `d63`(사후 구간이\n+ * 미완성이면 자료 마감일 `lastAvailable`)이다.\n+ *\n+ * <p><b>거래일을 세는 달력은 만들지 않는다.</b> 001 `GET /sectors/evaluation-window`가 준\n+ * `tradingDaysFromBase`(오름차순 거래일 목록)를 그대로 훑는다. 화면이 영업일을 추정하면 서버 판정과\n+ * 갈리는 날짜가 생기고, 사용자는 고를 수 있다고 안내받은 기간으로 분석이 거절되는 것을 본다.\n+ */\n+\n+export type CasePeriodConstraint = {\n+  /** 분석 기간 시작일의 상한. 이 날보다 늦게 시작하면 워밍업이 사후 구간을 먹는다. */\n+  startMax: string\n+  /** 분석 기간 종료일의 하한. 이 날보다 일찍 끝나면 사후 구간이 잘린다. */\n+  endMin: string\n+  /** 화면에 그대로 보이는 고정 문구(진입 계약 §3). */\n+  note: string\n+}\n+\n+/** 제약을 계산할 수 없는 까닭. 값이 없는 것과 \"덮을 수 없다\"를 가른다. */\n+export type CasePeriodConstraintProblem = 'calendarTooShort' | 'postWindowUnknown'\n+\n+export type CasePeriodConstraintInput = {\n+  /** §1a `GET /regime-links/case-window` 응답의 `postWindow`. */\n+  postWindow: { d0: string; d63: string | null; lastAvailable?: string | null }\n+  /** 사례의 관측 종료월 `YYYY-MM`. 안내 문구에 들어간다. */\n+  endMonth: string\n+  /** 지금 고른 전략·설정의 워밍업 거래일 수. */\n+  warmupTradingDays: number\n+  /** 001이 준 거래일 목록. 오름차순이며 시장 달력이다. */\n+  tradingDays: readonly string[]\n+}\n+\n+/** 고정 문구다. 사례 월을 빼면 사용자는 어느 사례 때문에 좁아졌는지 알 수 없다. */\n+export function caseConstraintNote(endMonth: string): string {\n+  const match = /^(\\d{4})-(\\d{2})$/.exec(endMonth)\n+  const label = match ? `${match[1]}년 ${Number(match[2])}월` : endMonth\n+  return `이 사례(${label}) 직후 구간을 포함해야 하므로 기간을 여기까지만 줄일 수 있습니다.`\n+}\n+\n+/**\n+ * 제약을 만든다. 만들 수 없으면 까닭을 돌려준다.\n+ *\n+ * <p>`d0`가 거래일 목록에 없을 수 있다(사례가 달력 앞쪽이거나 휴장일 판정이 다를 때). 그때는 `d0`\n+ * <b>이하</b>의 마지막 거래일에서 세기 시작한다 — 워밍업은 `d0` 전에 끝나 있어야 하므로 그쪽이 안전하다.\n+ */\n+export function buildCasePeriodConstraint(\n+  input: CasePeriodConstraintInput,\n+): CasePeriodConstraint | CasePeriodConstraintProblem {\n+  const endMin = input.postWindow.d63 ?? input.postWindow.lastAvailable ?? null\n+  if (endMin === null) return 'postWindowUnknown'\n+\n+  // `d0` 이하의 마지막 거래일 자리. 목록이 오름차순이라 뒤에서 찾는다.\n+  let at = -1\n+  for (let index = input.tradingDays.length - 1; index >= 0; index -= 1) {\n+    if (input.tradingDays[index] <= input.postWindow.d0) {\n+      at = index\n+      break\n+    }\n+  }\n+  if (at < 0) return 'calendarTooShort'\n+\n+  const startIndex = at - input.warmupTradingDays\n+  if (startIndex < 0) return 'calendarTooShort'\n+\n+  return {\n+    startMax: input.tradingDays[startIndex],\n+    endMin,\n+    note: caseConstraintNote(input.endMonth),\n+  }\n+}\n+\n+/** 공통 평가 가능 범위가 이 제약을 채울 수 있는가(진입 계약 §3의 세 번째 항목). */\n+export function rangeCoversCase(\n+  range: { start: string; end: string },\n+  constraint: CasePeriodConstraint,\n+): boolean {\n+  return range.start <= constraint.startMax && range.end >= constraint.endMin\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/casePeriodConstraint.ts",
+          "old_path": "frontend/src/components/strategy/casePeriodConstraint.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,26 @@\n+import { useCallback } from 'react'\n+import { useLocation, useNavigate } from 'react-router-dom'\n+import { saveReturnTarget } from '@/auth/returnTarget'\n+\n+/**\n+ * 익명 사용자를 로그인으로 보내고 **같은 주소로** 돌려보낸다(011 FR-025, 014 FR-011 방식).\n+ *\n+ * <p><b>주소를 인자로 넘기지 않는다.</b> 014의 `ProtectedRoute`와 같은 자리(`auth/returnTarget`)에\n+ * 지금 주소를 저장하고 `/login`으로 간다. 로그인 뒤에는 `AuthEntryGuard`가 그 값을 소비해 돌려보낸다.\n+ * 주소를 질의 인자로 실으면 복귀 위치가 두 벌이 되고, 외부에서 넣은 주소로 튕겨 보낼 길이 열린다.\n+ *\n+ * <p>011은 `ProtectedRoute` 밖에서 로그인을 요구하는 첫 화면이다(익명도 GET은 볼 수 있어 경로 전체를\n+ * 막을 수 없다). 그래서 이 동작을 훅 하나로 묶어 011의 여러 자리가 같은 길을 쓰게 한다.\n+ */\n+export function useLoginRedirect(): { redirectToLogin: () => void } {\n+  const navigate = useNavigate()\n+  const location = useLocation()\n+  const target = `${location.pathname}${location.search}${location.hash}`\n+\n+  const redirectToLogin = useCallback(() => {\n+    saveReturnTarget(target)\n+    void navigate('/login', { replace: true })\n+  }, [navigate, target])\n+\n+  return { redirectToLogin }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useLoginRedirect.ts",
+          "old_path": "frontend/src/hooks/useLoginRedirect.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,10 @@\n import { describe, expect, it } from 'vitest'\n-import { buildSimilarPeriodHandoff, buildStrategyComparisonHandoff } from './handoff'\n+import {\n+  buildCaseId,\n+  buildRegimeLinkStartPath,\n+  buildSimilarPeriodHandoff,\n+  buildStrategyComparisonHandoff,\n+} from './handoff'\n \n describe('비슷했던 때 보기로 넘기는 값 (FR-009)', () => {\n   it('분야와 그 분야의 기준월을 넘긴다', () => {\n@@ -55,3 +60,40 @@ describe('이 기간으로 전략 비교로 넘기는 값 (FR-018)', () => {\n     expect(buildStrategyComparisonHandoff({ sectorCode: null, caseId: null })).toBeNull()\n   })\n })\n+\n+describe('사례 식별자 조립 (011 계약 §0)', () => {\n+  it('010 searchId와 관측 종료월을 물결로 잇는다', () => {\n+    expect(buildCaseId('FIELD:LABOR:2026-07-01:MACRO-1:REG-3:REGIME-V1', '2012-03')).toBe(\n+      'FIELD:LABOR:2026-07-01:MACRO-1:REG-3:REGIME-V1~2012-03',\n+    )\n+  })\n+\n+  // 서버는 마지막 물결로 나눈다. 키 안에 구분자가 있으면 키가 잘리므로 값을 만들지 않는다.\n+  it('검색 식별자에 구분자가 있으면 값을 만들지 않는다', () => {\n+    expect(buildCaseId('FIELD~LABOR', '2012-03')).toBeNull()\n+  })\n+\n+  it('종료월 모양이 아니면 값을 만들지 않는다', () => {\n+    expect(buildCaseId('FIELD:LABOR', '2012-3')).toBeNull()\n+    expect(buildCaseId('', '2012-03')).toBeNull()\n+  })\n+})\n+\n+describe('011 시작 주소 (진입 계약 §2)', () => {\n+  it('사례만으로 열 수 있다', () => {\n+    expect(buildRegimeLinkStartPath({ caseId: 'FIELD:LABOR~2012-03' })).toBe(\n+      '/regime-link/start?case=FIELD%3ALABOR%7E2012-03',\n+    )\n+  })\n+\n+  it('섹터가 있으면 002 초기 선택으로 함께 싣는다', () => {\n+    expect(buildRegimeLinkStartPath({ caseId: 'K~2012-03', sectorCode: 'SEMICONDUCTOR' })).toBe(\n+      '/regime-link/start?case=K%7E2012-03&sector=SEMICONDUCTOR',\n+    )\n+  })\n+\n+  // 010 사례 상세에서 들어오는 길은 섹터를 알 수 없다. 빈 값을 주소에 남기지 않는다.\n+  it('섹터가 없으면 인자를 만들지 않는다', () => {\n+    expect(buildRegimeLinkStartPath({ caseId: 'K~2012-03', sectorCode: null })).not.toContain('sector')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/marketflow/handoff.test.ts",
+          "old_path": "frontend/src/marketflow/handoff.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,9 +3,9 @@ import type { MarketFlowFieldId } from '@/types/marketFlow'\n /**\n  * 시장 흐름에서 바깥 화면으로 넘기는 값을 만든다.\n  *\n- * 010(경제환경 검색)과 011(전략 비교)이 아직 없으므로 **넘길 값이 무엇인지까지만** 정한다.\n- * 목적지 화면과 이동 방법은 그 spec들이 소유한다. 여기서 임의의 목적지를 만들면 나중에\n- * 두 벌의 계약이 생긴다.\n+ * 010(경제환경 검색)으로 넘기는 값은 **무엇을 넘기는지까지만** 정하고 목적지는 010이 소유한다.\n+ * 011(전략 비교)의 목적지 주소는 011 진입 계약(`contracts/entry-handoff.md` §2)이 정했으므로\n+ * 여기서 그 주소를 만든다. 주소를 만드는 자리를 한 곳에 두어 두 벌의 계약이 생기지 않게 한다.\n  *\n  * 값을 만들 수 없으면 `null`이다. 빈 문자열이나 대체값으로 채우지 않는다(원칙 VI).\n  */\n@@ -49,3 +49,67 @@ export function buildStrategyComparisonHandoff(input: {\n   if (input.caseId === null) return null\n   return { sectorCode: input.sectorCode, caseId: input.caseId }\n }\n+\n+/**\n+ * 사례 식별자를 만든다. `{010 searchId}~{endMonth}`다(011 계약 §0).\n+ *\n+ * 010의 `searchId`가 곧 011이 말하는 `snapshotKey`다. **011은 그 키를 분해하지 않는다** — 조각의 뜻은\n+ * 010이 소유한다. 서버는 **마지막** `~`로 나눠 읽으므로 키 안에 구분자가 있으면 값을 만들지 않는다.\n+ */\n+export function buildCaseId(searchId: string, endMonth: string): string | null {\n+  if (searchId === '' || searchId.includes('~')) return null\n+  if (!/^\\d{4}-\\d{2}$/.test(endMonth)) return null\n+  return `${searchId}~${endMonth}`\n+}\n+\n+/**\n+ * 011 시작 화면의 주소다(진입 계약 §2).\n+ *\n+ * `sector`는 002 화면의 **초기 선택**으로만 쓰이며 사례 순위와 무관하다(FR-005). 010 사례 상세에서\n+ * 들어오는 길은 섹터를 알 수 없어 싣지 않는다.\n+ */\n+export function buildRegimeLinkStartPath(input: {\n+  caseId: string\n+  sectorCode?: string | null\n+}): string {\n+  const query = new URLSearchParams({ case: input.caseId })\n+  if (input.sectorCode) query.set('sector', input.sectorCode)\n+  return `/regime-link/start?${query.toString()}`\n+}\n+\n+/**\n+ * `caseId`를 되돌린다. 모양이 아니면 `null`이고 부르는 쪽이 안내로 바꾼다(011 계약 §0).\n+ *\n+ * **마지막 `~`로 나눈다** — 서버와 같은 규약이다. 앞에서 나누면 snapshot 키가 잘린다.\n+ */\n+export function parseCaseId(value: string | null | undefined): { snapshotKey: string; endMonth: string } | null {\n+  if (typeof value !== 'string' || value === '') return null\n+  const at = value.lastIndexOf('~')\n+  if (at <= 0 || at === value.length - 1) return null\n+  const endMonth = value.slice(at + 1)\n+  if (!/^\\d{4}-(0[1-9]|1[0-2])$/.test(endMonth)) return null\n+  return { snapshotKey: value.slice(0, at), endMonth }\n+}\n+\n+/**\n+ * 011 시작 화면이 002로 넘길 주소다(진입 계약 §2).\n+ *\n+ * `case`는 003까지 주소로 다니고, `sector`는 002의 초기 선택으로만 쓰인다.\n+ */\n+export function buildSectorSelectionPath(caseId: string, sectorCode: string | null): string {\n+  const query = new URLSearchParams({ case: caseId })\n+  if (sectorCode) query.set('sector', sectorCode)\n+  return `/diagnosis/sectors?${query.toString()}`\n+}\n+\n+/**\n+ * 002가 003으로 넘어갈 때 사례를 주소에 유지한다(진입 계약 §2).\n+ *\n+ * <p><b>선택 인계 방식은 그대로 둔다.</b> 섹터·비중은 지금처럼 같은 탭의 `sessionStorage`로 넘기고\n+ * `case`만 주소에 남긴다. 새 진단을 시작할 때 이전 사례의 기간 제약이 말없이 남지 않게 하려는\n+ * 것이며, 새로고침에도 남아야 하므로 상태가 아니라 주소다.\n+ */\n+export function appendCaseToPath(path: string, caseId: string | null): string {\n+  if (caseId === null || caseId === '') return path\n+  return `${path}?${new URLSearchParams({ case: caseId }).toString()}`\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/marketflow/handoff.ts",
+          "old_path": "frontend/src/marketflow/handoff.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,6 +51,7 @@\n .connectionGrid p { margin: 0; min-height: 3.3em; color: var(--thorp-copy); font-size: .8rem; line-height: 1.65; word-break: keep-all; }\n .connectionGrid button { display: flex; width: 100%; align-items: center; gap: 8px; border: 0; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; background: transparent; color: var(--thorp-copy); text-align: left; font: 500 .8rem/1.4 var(--thorp-font-body); cursor: not-allowed; }\n .connectionGrid button small { margin-left: auto; white-space: nowrap; font-size: .65rem; }\n+.connectionLink { display: flex; width: 100%; align-items: center; gap: 8px; border-top: 1px solid var(--thorp-line); margin-top: 22px; padding: 14px 0 0; color: var(--thorp-copy); text-decoration: none; font: 500 .8rem/1.4 var(--thorp-font-body); }\n .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }\n @media (max-width: 1100px) {\n   .main { width: calc(100% - 48px); }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "old_path": "frontend/src/pages/MarketFlowPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -203,15 +203,18 @@ describe('MarketFlowPage', () => {\n       expect(JSON.parse(handoffAfter ?? 'null')).not.toHaveProperty('sectorCode')\n     })\n \n-    // 010이 붙기 전에는 고를 사례가 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어간다(FR-018).\n-    it('사례가 없으면 전략 비교로 넘길 값을 만들지 않는다', async () => {\n+    // 사례 없이 011을 열지 않는다(FR-018). 이 화면은 사례를 고르는 010으로만 안내한다.\n+    it('사례가 없으면 전략 비교로 넘길 값을 만들지 않고 사례 고르기로 안내한다', async () => {\n       await renderWithSectors()\n       fireEvent.click(screen.getByRole('button', { name: '반도체' }))\n       await waitFor(() => expect(screen.getByRole('button', { name: '반도체' }).getAttribute('aria-pressed')).toBe('true'))\n \n-      expect(\n-        screen.getByRole('button', { name: /전략 비교로 이어가기/ }).getAttribute('data-handoff'),\n-      ).toBeNull()\n+      const link = screen.getByRole('link', { name: /과거 사례 고르러 가기/ })\n+      expect(link.getAttribute('data-handoff')).toBeNull()\n+      expect(link.getAttribute('href')).toBe('/regime-search')\n+      expect(screen.getByText(/사례를 먼저 고릅니다/)).toBeTruthy()\n+      // 011 주소를 이 화면에서 직접 열지 않는다.\n+      expect(document.body.innerHTML).not.toContain('/regime-link')\n     })\n \n     // FR-017: 참고 정보와 뉴스는 분야 요약보다 늦게 채워질 수 있고 요약 표시를 막지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import { Activity, ArrowDown, ArrowUpRight, ChartNoAxesCombined, Newspaper, RefreshCw, Waypoints } from 'lucide-react'\n import { LayoutGroup, motion, useReducedMotion } from 'motion/react'\n import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'\n+import { Link } from 'react-router-dom'\n import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n import { FieldDetail } from '@/components/marketflow/FieldDetail'\n import { DomesticMarketReference } from '@/components/marketflow/DomesticMarketReference'\n@@ -89,8 +90,9 @@ export function MarketFlowPage() {\n   }\n \n   /**\n-   * 011로 넘길 값이다. 사례는 010의 검색 결과에서 고르는 값이라 010이 붙기 전에는 언제나\n-   * `null`이고, 따라서 지금은 넘길 값이 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어간다.\n+   * 011로 넘길 값이다. 사례는 010의 검색 결과에서 고르는 값이라 이 화면에서는 언제나 `null`이고,\n+   * 따라서 넘길 값이 없다. 섹터만으로 열면 '이 기간'이 빠진 채 넘어가므로(009 FR-018) 이 카드는\n+   * 011을 직접 열지 않고 사례를 고르는 010으로 안내한다. 011 진입 버튼은 010 사례 상세에 있다.\n    */\n   const strategyComparison = buildStrategyComparisonHandoff({ sectorCode, caseId: null })\n   const displayedDetail = detail?.fieldId === selectedFieldId ? detail : null\n@@ -159,7 +161,7 @@ export function MarketFlowPage() {\n           <div className={styles.connectionGrid}>\n             <article><ChartNoAxesCombined size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>MARKET CONTEXT</span><h3>국내 시장 참고 정보</h3><p>분야별 경제 흐름과는 별개로, 국내 주가지수의 수준과 변동성을 참고로 둡니다.</p><DomesticMarketReference /></article>\n             <article><Newspaper size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>BEHIND THE NUMBERS</span><h3>시장 흐름 뉴스</h3><p>지표와 관련된 소식입니다. 무엇을 싣고 어떻게 묶을지는 뉴스 묶음이 정합니다.</p><NewsDigestSection sectorCode={sectorCode} /></article>\n-            <article><Waypoints size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>과거 사례를 선택한 뒤, 같은 기간에서 전략의 차이를 비교할 수 있도록 준비합니다.</p><button type=\"button\" disabled data-handoff={strategyComparison === null ? undefined : JSON.stringify(strategyComparison)}>전략 비교로 이어가기 <ArrowUpRight size={17} aria-hidden=\"true\" /><small>준비 중</small></button></article>\n+            <article><Waypoints size={22} aria-hidden=\"true\" /><span className={styles.connectionLabel}>TEST YOUR STRATEGY</span><h3>이 기간으로 전략 비교</h3><p>사례를 먼저 고릅니다. 가까운 과거 사례를 고른 뒤 그 사례의 상세에서 전략 비교로 이어갈 수 있습니다.</p><Link to=\"/regime-search\" className={styles.connectionLink} data-handoff={strategyComparison === null ? undefined : JSON.stringify(strategyComparison)}>과거 사례 고르러 가기 <ArrowUpRight size={17} aria-hidden=\"true\" /></Link></article>\n           </div>\n         </section>\n       </main>\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,5 @@\n+.page { min-height: 100vh; background: var(--thorp-bg); }\n+.main { width: min(720px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0; }\n+.title { margin: 0 0 16px; font-size: 1.4rem; }\n+.blocked { display: grid; gap: 12px; justify-items: start; border: 1px solid var(--thorp-line-strong); padding: 20px; }\n+.blocked p { margin: 0; color: var(--thorp-copy); line-height: 1.7; word-break: keep-all; }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeLinkStartPage.module.css",
+          "old_path": "frontend/src/pages/RegimeLinkStartPage.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,111 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import type { AuthStateStatus } from '@/types/auth'\n+import { RegimeLinkStartPage } from './RegimeLinkStartPage'\n+\n+const authMock = vi.hoisted(() => ({ status: 'authenticated' as AuthStateStatus }))\n+\n+vi.mock('@/auth/auth-context', () => ({\n+  useAuth: () => ({\n+    status: authMock.status,\n+    user: authMock.status === 'authenticated' ? authenticatedUser : null,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }),\n+}))\n+\n+vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => null }))\n+\n+vi.mock('@/api/regimeLink', () => ({ fetchCaseWindow: vi.fn() }))\n+\n+const { fetchCaseWindow } = await import('@/api/regimeLink')\n+\n+const CASE_ID = 'FIELD:LABOR:2026-07-01:MACRO-1:REG-3:REGIME-V1~2012-03'\n+\n+/** 이동한 주소를 그대로 읽어 본다. 인계가 주소로 이어지는 것이 이 화면의 일이다. */\n+function Landed({ label }: { label: string }) {\n+  const location = useLocation()\n+  return <p>{`${label}:${location.pathname}${location.search}`}</p>\n+}\n+\n+function renderStart(entry: string) {\n+  return render(\n+    <MemoryRouter initialEntries={[entry]}>\n+      <Routes>\n+        <Route path=\"/regime-link/start\" element={<RegimeLinkStartPage />} />\n+        <Route path=\"/diagnosis/sectors\" element={<Landed label=\"002\" />} />\n+        <Route path=\"/login\" element={<Landed label=\"로그인\" />} />\n+        <Route path=\"/market-flow\" element={<Landed label=\"시장 흐름\" />} />\n+      </Routes>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+describe('011 시작 화면 (진입 계약 §2)', () => {\n+  beforeEach(() => {\n+    authMock.status = 'authenticated'\n+    vi.mocked(fetchCaseWindow).mockReset()\n+    window.sessionStorage.clear()\n+  })\n+\n+  it('사례가 확인되면 002로 사례와 섹터를 주소에 실어 넘긴다', async () => {\n+    vi.mocked(fetchCaseWindow).mockResolvedValue({\n+      basis: { kind: 'HISTORICAL_REVISION' },\n+      caseId: CASE_ID,\n+      endMonth: '2012-03',\n+      postWindow: {\n+        d0: '2012-04-02', d21: '2012-05-02', d63: '2012-07-03', lastAvailable: '2012-07-03',\n+        completedTradingDays: 63, complete21: true, complete63: true,\n+      },\n+    })\n+\n+    renderStart(`/regime-link/start?case=${encodeURIComponent(CASE_ID)}&sector=SEMICONDUCTOR`)\n+\n+    const landed = await screen.findByText(/^002:/)\n+    expect(landed.textContent).toContain('/diagnosis/sectors')\n+    expect(new URLSearchParams(landed.textContent?.split('?')[1] ?? '').get('case')).toBe(CASE_ID)\n+    expect(landed.textContent).toContain('sector=SEMICONDUCTOR')\n+  })\n+\n+  /** FR-025·014 FR-011: 주소를 인자로 싣지 않고 복귀 위치를 저장한 뒤 로그인으로 보낸다. */\n+  it('익명이면 같은 주소를 복귀 위치로 저장하고 로그인으로 보낸다', async () => {\n+    authMock.status = 'anonymous'\n+\n+    renderStart(`/regime-link/start?case=${encodeURIComponent(CASE_ID)}`)\n+\n+    const landed = await screen.findByText(/^로그인:/)\n+    expect(landed.textContent).not.toContain('returnTo')\n+    expect(window.sessionStorage.getItem('thorp.auth.returnTarget')).toBe(\n+      `/regime-link/start?case=${encodeURIComponent(CASE_ID)}`,\n+    )\n+    expect(fetchCaseWindow).not.toHaveBeenCalled()\n+  })\n+\n+  it('사례 형식이 틀리면 시장 흐름으로 안내하고 이유를 한 문장으로 말한다', async () => {\n+    renderStart('/regime-link/start?case=only-a-key')\n+\n+    expect(await screen.findByRole('alert')).toBeTruthy()\n+    expect(screen.getByRole('link', { name: '시장 흐름으로 가기' }).getAttribute('href')).toBe('/market-flow')\n+    expect(fetchCaseWindow).not.toHaveBeenCalled()\n+  })\n+\n+  it('사례가 아예 없으면 빈 화면을 만들지 않는다', async () => {\n+    renderStart('/regime-link/start')\n+\n+    expect((await screen.findByRole('alert')).textContent).toContain('사례가 주소에 없습니다')\n+  })\n+\n+  it('없는 사례(404)는 다시 고르라고 안내한다', async () => {\n+    vi.mocked(fetchCaseWindow).mockRejectedValue(\n+      Object.assign(new Error('없음'), { status: 404, code: 'RESOURCE_NOT_FOUND' }),\n+    )\n+\n+    renderStart(`/regime-link/start?case=${encodeURIComponent(CASE_ID)}`)\n+\n+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('더는 찾을 수 없습니다'))\n+    expect(screen.queryByText(/^002:/)).toBeNull()\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeLinkStartPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeLinkStartPage.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,107 @@\n+import { useEffect, useState } from 'react'\n+import { Link, useNavigate, useSearchParams } from 'react-router-dom'\n+import { fetchCaseWindow } from '@/api/regimeLink'\n+import { useAuth } from '@/auth/auth-context'\n+import { AppHeader } from '@/components/navigation/AppHeader'\n+import { useLoginRedirect } from '@/hooks/useLoginRedirect'\n+import { buildSectorSelectionPath, parseCaseId } from '@/marketflow/handoff'\n+import styles from './RegimeLinkStartPage.module.css'\n+\n+/**\n+ * 시장 흐름 경로의 011 진입 화면이다(진입 계약 §2).\n+ *\n+ * <p>하는 일은 셋뿐이다. ① 익명이면 로그인으로 보내고 같은 주소로 돌아오게 한다, ② `case`가 읽을 수 있는\n+ * 값이고 실제로 있는 사례인지 확인한다, ③ 확인되면 002(섹터·비중)로 넘긴다. <b>화면을 그리는 것이\n+ * 목적이 아니라 이어 주는 것이 목적이다.</b>\n+ *\n+ * <p><b>사례 없이 011을 열지 않는다.</b> `case`가 없거나 형식이 틀리거나 010 표시 후보에 없으면\n+ * 시장 흐름으로 안내하고 이유를 한 문장으로 말한다(진입 계약 §5).\n+ */\n+\n+const CASE_MISSING =\n+  '전략을 비교할 과거 사례가 주소에 없습니다. 시장 흐름에서 사례를 먼저 고른 뒤 다시 시도해 주세요.'\n+const CASE_MALFORMED =\n+  '주소에 담긴 사례를 읽을 수 없습니다. 시장 흐름에서 사례를 먼저 고른 뒤 다시 시도해 주세요.'\n+const CASE_NOT_FOUND =\n+  '그 사례를 더는 찾을 수 없습니다. 시장 흐름에서 사례를 다시 고른 뒤 이어가 주세요.'\n+const CASE_UNAVAILABLE =\n+  '사례를 확인하지 못했습니다. 잠시 후 시장 흐름에서 다시 시도해 주세요.'\n+\n+type Phase = { status: 'checking' } | { status: 'blocked'; message: string }\n+\n+export function RegimeLinkStartPage() {\n+  const [params] = useSearchParams()\n+  const navigate = useNavigate()\n+  const auth = useAuth()\n+  const { redirectToLogin } = useLoginRedirect()\n+\n+  const caseId = params.get('case')\n+  const sectorCode = params.get('sector')\n+  /** 형식만 본다. 있는 사례인지는 서버가 답한다. 의존성으로 쓸 수 있게 불린 하나로 좁힌다. */\n+  const caseMalformed = caseId !== null && caseId !== '' && parseCaseId(caseId) === null\n+\n+  const [phase, setPhase] = useState<Phase>({ status: 'checking' })\n+\n+  // 익명이면 로그인 뒤 같은 주소로 돌아온다. 주소를 인자로 넘기지 않는다(014 방식).\n+  useEffect(() => {\n+    if (auth.status === 'anonymous' || auth.status === 'expired') redirectToLogin()\n+  }, [auth.status, redirectToLogin])\n+\n+  useEffect(() => {\n+    if (auth.status !== 'authenticated') return\n+    if (caseId === null || caseId === '') {\n+      setPhase({ status: 'blocked', message: CASE_MISSING })\n+      return\n+    }\n+    if (caseMalformed) {\n+      setPhase({ status: 'blocked', message: CASE_MALFORMED })\n+      return\n+    }\n+\n+    const controller = new AbortController()\n+    setPhase({ status: 'checking' })\n+    fetchCaseWindow(caseId, controller.signal)\n+      .then(() => {\n+        if (controller.signal.aborted) return\n+        // 확인된 사례만 다음 화면으로 넘긴다. 뒤로 가기가 이 화면으로 되돌아오지 않게 대체한다.\n+        void navigate(buildSectorSelectionPath(caseId, sectorCode), { replace: true })\n+      })\n+      .catch((error: unknown) => {\n+        if (controller.signal.aborted) return\n+        const status = typeof error === 'object' && error !== null ? (error as { status?: number }).status : null\n+        setPhase({\n+          status: 'blocked',\n+          message: status === 404 || status === 400 ? CASE_NOT_FOUND : CASE_UNAVAILABLE,\n+        })\n+      })\n+    return () => controller.abort()\n+  }, [auth.status, caseId, caseMalformed, navigate, sectorCode])\n+\n+  if (auth.status === 'anonymous' || auth.status === 'expired') {\n+    return (\n+      <div className={styles.page}>\n+        <AppHeader />\n+        <main className={styles.main}>\n+          <p role=\"status\">전략 비교를 시작하려면 로그인이 필요합니다. 로그인 화면으로 이동하고 있습니다.</p>\n+        </main>\n+      </div>\n+    )\n+  }\n+\n+  return (\n+    <div className={styles.page}>\n+      <AppHeader />\n+      <main className={styles.main}>\n+        <h1 className={styles.title}>이 기간으로 전략 비교</h1>\n+        {phase.status === 'checking' ? (\n+          <p role=\"status\">고른 사례를 확인하고 있습니다.</p>\n+        ) : (\n+          <div className={styles.blocked} role=\"alert\">\n+            <p>{phase.message}</p>\n+            <Link to=\"/market-flow\">시장 흐름으로 가기</Link>\n+          </div>\n+        )}\n+      </main>\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeLinkStartPage.tsx",
+          "old_path": "frontend/src/pages/RegimeLinkStartPage.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -203,6 +203,21 @@ describe('경제환경 검색 화면', () => {\n     expect(await screen.findByRole('region', { name: '2012-03 사례 상세' })).toBeTruthy()\n   })\n \n+  /** 011 T087: 사례 상세의 사후 구간 자리에서 011 시작 주소로 간다. 섹터는 알 수 없어 싣지 않는다. */\n+  it('사례 상세에서 011 시작 주소로 가는 링크를 보인다', async () => {\n+    vi.mocked(getRegimeSearch).mockResolvedValue(regimeResult())\n+    vi.mocked(getRegimeCaseDetail).mockResolvedValue(regimeDetail())\n+    await search()\n+\n+    fireEvent.click(await screen.findByRole('button', { name: '상세 보기' }))\n+    const link = await screen.findByRole('link', { name: '이 기간으로 전략 비교' })\n+\n+    const url = new URL(link.getAttribute('href') ?? '', 'http://localhost')\n+    expect(url.pathname).toBe('/regime-link/start')\n+    expect(url.searchParams.get('case')).toBe('search-1~2012-03')\n+    expect(url.searchParams.has('sector')).toBe(false)\n+  })\n+\n   it('?searchId= 로 열면 저장된 판을 고정 조회하고 폼 검색 API 는 부르지 않는다(006 R17)', async () => {\n     vi.mocked(getRegimeSearchById).mockResolvedValue(regimeResult({ searchId: 'saved-1' }))\n     renderPage({ entries: ['/regime-search?searchId=saved-1'], user: authenticatedUser })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n import { useEffect, useRef, useState, type FormEvent } from 'react'\n-import { useLocation, useSearchParams } from 'react-router-dom'\n+import { Link, useLocation, useSearchParams } from 'react-router-dom'\n import { recordRegimeSearch } from '@/api/myRecords'\n import { getRegimeBaselineMonths } from '@/api/regime'\n import { useAuth } from '@/auth/auth-context'\n@@ -16,6 +16,7 @@ import { LoadError } from '@/components/regime/LoadError'\n import { NewerReleases } from '@/components/regime/NewerReleases'\n import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'\n import { useRegimeSearch } from '@/hooks/useRegimeSearch'\n+import { buildCaseId, buildRegimeLinkStartPath } from '@/marketflow/handoff'\n import type { MyRecordRegime } from '@/types/myRecords'\n import type { RegimeBaselineMonths, RegimeSearchQuery } from '@/types/regime'\n import styles from './RegimeSearchPage.module.css'\n@@ -202,7 +203,28 @@ export function RegimeSearchPage() {\n                 {result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (\n                   <EmptyResult result={result} />\n                 ) : (\n-                  <CaseList key={result.searchId} result={result} onShowMore={showMore} isLoading={isLoading} context={context} fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])} />\n+                  <CaseList\n+                    key={result.searchId}\n+                    result={result}\n+                    onShowMore={showMore}\n+                    isLoading={isLoading}\n+                    context={context}\n+                    fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])}\n+                    /*\n+                      사후 구간 자리에 011 진입을 둔다(011 T087). 이 길은 섹터를 알 수 없어 `sector`를\n+                      싣지 않는다 — 009에서 010으로 오는 인계에 섹터가 없다. 사례 식별자를 만들 수 없으면\n+                      010이 내려 준 문구를 그대로 둔다(빈 링크를 만들지 않는다).\n+                    */\n+                    postPeriodSlot={(item) => {\n+                      const caseId = buildCaseId(result.searchId, item.endMonth)\n+                      if (caseId === null) return undefined\n+                      return (\n+                        <p>\n+                          <Link to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 전략 비교</Link>\n+                        </p>\n+                      )\n+                    }}\n+                  />\n                 )}\n               </>\n             )}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n-import { useCallback, useEffect, useMemo, useState } from 'react'\n-import { useNavigate } from 'react-router-dom'\n+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'\n+import { useNavigate, useSearchParams } from 'react-router-dom'\n import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'\n import { NotReadyNotice } from '@/components/common/NotReadyNotice'\n import { ListingWindowNotice } from '@/components/diagnosis/ListingWindowNotice'\n@@ -15,6 +15,7 @@ import { useSectorSelection } from '@/diagnosis/sector-selection-context'\n import { SectorSelectionProvider } from '@/diagnosis/SectorSelectionProvider'\n import { sortSectorsForDisplay } from '@/diagnosis/sectorOrder'\n import { writeStoredSelection } from '@/diagnosis/selectionStorage'\n+import { appendCaseToPath } from '@/marketflow/handoff'\n import type { SectorSummary } from '@/types/sector'\n import styles from './SectorSelectionPage.module.css'\n \n@@ -41,9 +42,27 @@ type SectorCatalogBoardProps = {\n  */\n function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {\n   const navigate = useNavigate()\n+  const [params] = useSearchParams()\n+  const caseId = params.get('case')\n+  const initialSector = params.get('sector')\n   const selection = useSectorSelection()\n   const selectedCount = selection.selectedCodes.length\n \n+  /*\n+    011 진입이 실어 온 섹터는 **초기 선택**일 뿐이다(011 FR-005). 사용자가 이미 고른 것이 있으면\n+    건드리지 않는다 — 초기 선택이 사용자의 선택을 덮으면 사례 순위와 무관한 값이 입력을 지운다.\n+    목록에 없는 코드는 상태가 받지 않으므로 여기서 먼저 거른다.\n+  */\n+  const appliedInitialSector = useRef(false)\n+  const { toggleSector } = selection\n+  useEffect(() => {\n+    if (appliedInitialSector.current) return\n+    if (initialSector === null || selectedCount > 0) return\n+    if (!sectors.some((sector) => sector.code === initialSector)) return\n+    appliedInitialSector.current = true\n+    toggleSector(initialSector, true)\n+  }, [initialSector, sectors, selectedCount, toggleSector])\n+\n   // 배우기(013)에서 예시를 밀어 넣는 경로다. 013이 아직 없어도 입구는 여기 있다.\n   const learningEntry = useLearningExampleEntry(sectors)\n \n@@ -109,8 +128,8 @@ function SectorCatalogBoard({ sectors, isSample }: SectorCatalogBoardProps) {\n     }\n \n     setHandoffBlocked(false)\n-    void navigate(NEXT_STEP_PATH)\n-  }, [navigate, selection])\n+    void navigate(appendCaseToPath(NEXT_STEP_PATH, caseId))\n+  }, [caseId, navigate, selection])\n \n   return (\n     <section className={styles.catalog} aria-labelledby=\"sector-list-title\">\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "old_path": "frontend/src/pages/SectorSelectionPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,291 @@\n+import { render, screen, waitFor } from '@testing-library/react'\n+import userEvent from '@testing-library/user-event'\n+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'\n+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'\n+import type { SectorCatalogResult } from '@/api/sectors'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import type {\n+  AnalysisSupport,\n+  AnalysisVersions,\n+  WarmupJudgement,\n+} from '@/components/strategy/analysisSupport'\n+import {\n+  SECTOR_SELECTION_PAYLOAD_VERSION,\n+  SECTOR_SELECTION_STORAGE_KEY,\n+} from '@/diagnosis/selectionStorage'\n+import { authenticatedUser } from '@/test/authFixtures'\n+import { registryFixture, selectableStrategy } from '@/test/strategyRegistryFixtures'\n+import type { SectorSummary } from '@/types/sector'\n+import { StrategySettingsPage } from './StrategySettingsPage'\n+\n+/**\n+ * 011 사례 경로에서만 걸리는 003 분석 기간 제약(011 진입 계약 §3, T046·T047·T049).\n+ *\n+ * <p>주소에 `case`가 없으면 003은 지금과 같다. 그 사실도 여기서 함께 못 박는다 — 제약이 사례 없는\n+ * 진단까지 좁히면 003의 기존 흐름이 조용히 막힌다.\n+ */\n+\n+const apiMocks = vi.hoisted(() => ({\n+  fetchSectorCatalog: vi.fn(),\n+  fetchStrategyRegistry: vi.fn(),\n+  fetchEvaluationWindow: vi.fn(),\n+  fetchCaseWindow: vi.fn(),\n+}))\n+\n+vi.mock('@/api/sectors', async () => {\n+  const actual = await vi.importActual<typeof import('@/api/sectors')>('@/api/sectors')\n+  return { ...actual, fetchSectorCatalog: apiMocks.fetchSectorCatalog }\n+})\n+\n+vi.mock('@/api/strategyRegistry', async () => {\n+  const actual =\n+    await vi.importActual<typeof import('@/api/strategyRegistry')>('@/api/strategyRegistry')\n+  return { ...actual, fetchStrategyRegistry: apiMocks.fetchStrategyRegistry }\n+})\n+\n+vi.mock('@/api/regimeLink', () => ({ fetchCaseWindow: apiMocks.fetchCaseWindow }))\n+\n+function sector(code: string, name: string): SectorSummary {\n+  return {\n+    code,\n+    name,\n+    classification: 'INDUSTRY',\n+    representativeEtf: {\n+      instrumentId: `${code}.XKRX`,\n+      name: `KODEX ${name}`,\n+      listedOn: '2018-09-12',\n+      benchmarkIndex: `KRX ${name}`,\n+    },\n+  }\n+}\n+\n+const loadedCatalog: SectorCatalogResult = {\n+  status: 'loaded',\n+  catalog: {\n+    mapVersion: 'SEM-TEST-1',\n+    isSample: false,\n+    sectors: [sector('ALPHA', '가섹터'), sector('BETA', '나섹터'), sector('GAMMA', '다섹터')],\n+  },\n+}\n+\n+function storeSelection() {\n+  window.sessionStorage.setItem(\n+    SECTOR_SELECTION_STORAGE_KEY,\n+    JSON.stringify({\n+      version: SECTOR_SELECTION_PAYLOAD_VERSION,\n+      mapVersion: 'SEM-TEST-1',\n+      selected: [\n+        { code: 'ALPHA', weightTenths: 334 },\n+        { code: 'BETA', weightTenths: 333 },\n+        { code: 'GAMMA', weightTenths: 333 },\n+      ],\n+      weightsTouched: true,\n+    }),\n+  )\n+}\n+\n+const RULES_VERSION = 'RULES-TEST-1'\n+const versionsFixture: AnalysisVersions = {\n+  strategyRules: registryFixture.strategies.map((strategy) => ({\n+    strategyId: strategy.strategyId,\n+    rulesVersion: RULES_VERSION,\n+    status: 'REGISTERED',\n+    provisional: true,\n+  })),\n+  costProfileVersion: 'PROVISIONAL-DEMO-1',\n+  costProfileProvisional: true,\n+  costRates: { commissionBps: 1.5, spreadBps: 5, slippageBps: 2, taxBps: 20 },\n+}\n+\n+/** 평가 가능 범위와 거래일 달력. 사례의 `d0`는 이 안에 있다. */\n+const RANGE = { start: '2011-01-03', end: '2012-12-28' }\n+\n+/**\n+ * 거래일 달력. 2011~2012년의 평일을 담아 워밍업 45거래일을 셀 수 있게 한다.\n+ *\n+ * 휴장일을 반영하지 않은 대역이다 — 이 검사가 보는 것은 **화면이 달력 목록을 세는가**이지 어떤 날이\n+ * 휴장인가가 아니다. 휴장 판정은 001이 하고 목록으로 내려온다.\n+ */\n+const TRADING_DAYS = ((): string[] => {\n+  const days: string[] = []\n+  for (let time = Date.UTC(2011, 0, 3); time <= Date.UTC(2012, 11, 28); time += 86_400_000) {\n+    const day = new Date(time)\n+    const weekday = day.getUTCDay()\n+    if (weekday === 0 || weekday === 6) continue\n+    days.push(day.toISOString().slice(0, 10))\n+  }\n+  return days\n+})()\n+\n+/** 사례의 `d0`. 달력 안에 있어야 워밍업을 셀 수 있다. */\n+const CASE_D0 = '2012-04-02'\n+const WARMUP = selectableStrategy.warmupTradingDays\n+/** 화면이 내야 할 시작일 상한: `d0`에서 워밍업만큼 앞선 거래일. */\n+const EXPECTED_START_MAX = TRADING_DAYS[TRADING_DAYS.indexOf(CASE_D0) - WARMUP]\n+\n+const CASE_ID = 'FIELD:LABOR:2026-07-01:MACRO-1:REG-3:REGIME-V1~2012-03'\n+\n+const caseWindowResponse = {\n+  basis: { kind: 'HISTORICAL_REVISION' as const },\n+  caseId: CASE_ID,\n+  endMonth: '2012-03',\n+  postWindow: {\n+    d0: CASE_D0,\n+    d21: '2012-05-02',\n+    d63: '2012-07-03',\n+    lastAvailable: '2012-07-03',\n+    completedTradingDays: 63,\n+    complete21: true,\n+    complete63: true,\n+  },\n+}\n+\n+function makeSupport(overrides: Partial<AnalysisSupport> = {}) {\n+  const support: AnalysisSupport = {\n+    fetchAnalysisVersions: async () => versionsFixture,\n+    fetchEvaluationWindow: async () => ({\n+      commonStart: RANGE.start,\n+      commonEnd: RANGE.end,\n+      warmupTradingDays: WARMUP,\n+      bindingCandidate: 'ALPHA.XKRX',\n+      bindingSector: 'ALPHA',\n+      excludedRanges: [],\n+      evaluable: true,\n+      datasetId: 'KRX-TEST',\n+      warmupBaseDate: TRADING_DAYS[0],\n+      tradingDaysFromBase: TRADING_DAYS,\n+      maxWarmupTradingDays: TRADING_DAYS.length - 1,\n+      excludedRangesFromBase: [],\n+    }),\n+    judgeWarmup: (): WarmupJudgement => ({ verdict: { state: 'ok' }, window: RANGE, reduction: null }),\n+    createBacktest: async () => ({\n+      backtestId: 'BT-20260916-000001',\n+      publicToken: '9f2cabcdef0123456789abcdef012345',\n+      status: 'QUEUED' as const,\n+    }),\n+    ...overrides,\n+  }\n+  return support\n+}\n+\n+/** 어디로 이동했는지만 읽는다. 011 화면 자체는 이 검사의 관심 밖이다. */\n+function Landed() {\n+  const location = useLocation()\n+  return <p data-testid=\"landed\">{location.pathname + location.search}</p>\n+}\n+\n+function renderPage(entry: string, support: AnalysisSupport) {\n+  const authValue: AuthContextValue = {\n+    status: 'authenticated',\n+    user: authenticatedUser,\n+    login: vi.fn(),\n+    logout: vi.fn(),\n+    recheck: vi.fn(),\n+  }\n+\n+  return render(\n+    <MemoryRouter initialEntries={[entry]}>\n+      <AuthContext.Provider value={authValue}>\n+        <Routes>\n+          <Route path=\"/strategy\" element={<StrategySettingsPage support={support} />} />\n+          <Route path=\"/regime-link\" element={<Landed />} />\n+        </Routes>\n+      </AuthContext.Provider>\n+    </MemoryRouter>,\n+  )\n+}\n+\n+/** 전략 카드를 고르고 '기간·금액·조건'을 펼친다. */\n+async function openConditions(user: ReturnType<typeof userEvent.setup>) {\n+  await user.click(await screen.findByRole('button', { name: new RegExp(selectableStrategy.name) }))\n+  await user.click(screen.getByRole('button', { name: '기간·금액·조건' }))\n+}\n+\n+beforeEach(() => {\n+  apiMocks.fetchSectorCatalog.mockResolvedValue(loadedCatalog)\n+  apiMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture)\n+  apiMocks.fetchCaseWindow.mockResolvedValue(caseWindowResponse)\n+  storeSelection()\n+})\n+\n+afterEach(() => {\n+  vi.clearAllMocks()\n+  window.sessionStorage.clear()\n+})\n+\n+describe('003 분석 기간의 사례 제약 (011 진입 계약 §3)', () => {\n+  it('사례가 있으면 시작일 상한과 종료일 하한을 달력에서 세어 걸고 고정 문구를 보인다', async () => {\n+    const user = userEvent.setup()\n+    renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport())\n+    await openConditions(user)\n+\n+    await waitFor(() => expect(apiMocks.fetchCaseWindow).toHaveBeenCalledWith(CASE_ID, expect.any(AbortSignal)))\n+\n+    const start = await screen.findByLabelText('시작일')\n+    const end = screen.getByLabelText('종료일')\n+    // 화면이 날짜를 만들지 않는다. 받은 달력에서 워밍업만큼 거슬러 센 날이어야 한다.\n+    await waitFor(() => expect(start.getAttribute('max')).toBe(EXPECTED_START_MAX))\n+    expect(EXPECTED_START_MAX < CASE_D0).toBe(true)\n+    expect(end.getAttribute('min')).toBe('2012-07-03')\n+    expect(screen.getByText(/이 사례\\(2012년 3월\\) 직후 구간을 포함해야 하므로/)).toBeTruthy()\n+  })\n+\n+  it('하한 밖 기간을 고르면 저장하지 않고 이유를 말한다', async () => {\n+    const user = userEvent.setup()\n+    renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport())\n+    await openConditions(user)\n+    const end = await screen.findByLabelText('종료일')\n+    await waitFor(() => expect(end.getAttribute('min')).toBe('2012-07-03'))\n+\n+    // 사후 구간이 끝나기 전에 분석을 끝내는 기간이다. 계약이 막으라고 정한 자리다.\n+    await user.clear(end)\n+    await user.type(end, '2012-05-04')\n+\n+    await waitFor(() =>\n+      expect(document.body.textContent).toContain('이 기간은 저장하지 않았습니다'),\n+    )\n+  })\n+\n+  it('접수되면 곧바로 011 화면으로 base와 case를 들고 간다', async () => {\n+    const user = userEvent.setup()\n+    renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport())\n+    await user.click(await screen.findByRole('button', { name: new RegExp(selectableStrategy.name) }))\n+\n+    const analyze = await screen.findByRole('button', { name: '분석하기' })\n+    await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('false'))\n+    await user.click(analyze)\n+\n+    const landed = await screen.findByTestId('landed')\n+    const url = new URL(landed.textContent ?? '', 'http://localhost')\n+    expect(url.pathname).toBe('/regime-link')\n+    expect(url.searchParams.get('base')).toBe('9f2cabcdef0123456789abcdef012345')\n+    expect(url.searchParams.get('case')).toBe(CASE_ID)\n+  })\n+\n+  it('사례가 없으면 구간을 묻지도 않고 기간 제약도 걸지 않는다', async () => {\n+    const user = userEvent.setup()\n+    renderPage('/strategy', makeSupport())\n+    await openConditions(user)\n+\n+    const start = await screen.findByLabelText('시작일')\n+    expect(start.getAttribute('max')).toBe(RANGE.end)\n+    expect(apiMocks.fetchCaseWindow).not.toHaveBeenCalled()\n+    expect(screen.queryByText(/직후 구간을 포함해야 하므로/)).toBeNull()\n+  })\n+\n+  it('공통 평가 가능 범위가 사후 구간을 덮지 못하면 분석을 막고 이유를 보인다', async () => {\n+    const user = userEvent.setup()\n+    const narrow = { start: '2012-01-02', end: '2012-05-02' }\n+    renderPage(\n+      `/strategy?case=${encodeURIComponent(CASE_ID)}`,\n+      makeSupport({\n+        judgeWarmup: (): WarmupJudgement => ({ verdict: { state: 'ok' }, window: narrow, reduction: null }),\n+      }),\n+    )\n+    await user.click(await screen.findByRole('button', { name: new RegExp(selectableStrategy.name) }))\n+\n+    const analyze = await screen.findByRole('button', { name: '분석하기' })\n+    await waitFor(() => expect(analyze.getAttribute('aria-disabled')).toBe('true'))\n+    expect(document.body.textContent).toContain('고른 사례의 직후 구간을 덮을 수 없습니다')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.caseWindow.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.caseWindow.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { useCallback, useEffect, useMemo, useRef, useState } from 'react'\n-import { useNavigate } from 'react-router-dom'\n+import { useNavigate, useSearchParams } from 'react-router-dom'\n+import { fetchCaseWindow } from '@/api/regimeLink'\n import { fetchSectorCatalog, type SectorCatalogResult } from '@/api/sectors'\n import { fetchStrategyRegistry, normalizeStrategyRegistryError } from '@/api/strategyRegistry'\n import { NotReadyNotice } from '@/components/common/NotReadyNotice'\n@@ -20,6 +21,11 @@ import {\n   type BacktestRejection,\n   type WarmupJudgement,\n } from '@/components/strategy/analysisSupport'\n+import {\n+  buildCasePeriodConstraint,\n+  rangeCoversCase,\n+  type CasePeriodConstraint,\n+} from '@/components/strategy/casePeriodConstraint'\n import { ConditionSummaryLine } from '@/components/strategy/ConditionSummaryLine'\n import { defaultAnalysisSupport } from '@/components/strategy/connectedAnalysisSupport'\n import { DetailSettingsPanel } from '@/components/strategy/DetailSettingsPanel'\n@@ -29,6 +35,7 @@ import {\n   type ReducedPeriodInput,\n   type WarmupCause,\n } from '@/components/strategy/reducedPeriod'\n+import type { RegimeLinkCaseWindow } from '@/types/regimeLink'\n import type { TargetWeightRow } from '@/components/strategy/ReadOnlyTargetWeights'\n import {\n   RegistryChangedNotice,\n@@ -95,6 +102,18 @@ function periodTooShortMessage(label: string): string {\n \n const RANGE_NEEDS_STRATEGY = '전략을 고르면 평가할 수 있는 범위가 정해지고 그 안에서 기간을 바꿀 수 있습니다.'\n \n+/**\n+ * 011 사례 경로에서만 쓰는 문장들(011 진입 계약 §3).\n+ *\n+ * 공통 평가 가능 범위가 사후 구간을 덮지 못하면 그 전략으로는 이 사례를 볼 수 없다. 사례를 바꾸거나\n+ * 빼지 않고(FR-017) 왜 고를 수 없는지만 말한다.\n+ */\n+const CASE_WINDOW_LOADING = '고른 사례의 직후 구간을 확인하는 중입니다.'\n+const CASE_WINDOW_UNAVAILABLE =\n+  '고른 사례의 직후 구간을 확인하지 못해 분석을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.'\n+const CASE_RANGE_UNCOVERABLE =\n+  '이 전략의 자료로는 고른 사례의 직후 구간을 덮을 수 없습니다. 다른 전략을 고르거나 시장 흐름에서 사례를 다시 골라 주세요.'\n+\n const REQUEST_BUILD_FAILED =\n   '분석 요청을 만들지 못했습니다. 화면을 새로 고친 뒤 조건을 다시 확인해 주세요.'\n \n@@ -187,6 +206,31 @@ function InvalidValueList({ label, entries, onRestore }: InvalidValueListProps)\n export function StrategySettingsPage({ support = defaultAnalysisSupport }: StrategySettingsPageProps) {\n   const navigate = useNavigate()\n \n+  // --- 011 사례 경로(진입 계약 §2·§3) ------------------------------------------------------\n+  //\n+  // 주소에 `case`가 없으면 이 절은 통째로 잠들어 있고 003의 동작은 지금과 같다. 있으면 사례의 사후\n+  // 구간을 한 번 읽어 분석 기간의 상한·하한을 더하고, 접수되면 011 화면으로 이어 간다.\n+  const [params] = useSearchParams()\n+  const caseId = params.get('case')\n+  const [caseWindow, setCaseWindow] = useState<\n+    { status: 'loading' } | { status: 'loaded'; postWindow: RegimeLinkCaseWindow['postWindow']; endMonth: string } | { status: 'unavailable' }\n+  >({ status: 'loading' })\n+\n+  useEffect(() => {\n+    if (caseId === null || caseId === '') return\n+    const controller = new AbortController()\n+    setCaseWindow({ status: 'loading' })\n+    fetchCaseWindow(caseId, controller.signal)\n+      .then((next) => {\n+        if (controller.signal.aborted) return\n+        setCaseWindow({ status: 'loaded', postWindow: next.postWindow, endMonth: next.endMonth })\n+      })\n+      .catch(() => {\n+        if (!controller.signal.aborted) setCaseWindow({ status: 'unavailable' })\n+      })\n+    return () => controller.abort()\n+  }, [caseId])\n+\n   // --- 002 경계: 섹터 목록을 받아 앞 단계의 선택을 확인한다 ---------------------------------\n   const [catalog, setCatalog] = useState<SectorCatalogResult | null>(null)\n   const [catalogReload, setCatalogReload] = useState(0)\n@@ -528,6 +572,38 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n    * 잘라 맞추면 사용자가 고르지 않은 기간으로 분석이 나간다(FR-017).\n    */\n   const evaluableRange = selectedJudgement?.window ?? null\n+\n+  /**\n+   * 011 사례 경로의 추가 제약(진입 계약 §3). `case`가 없으면 `null`이고 003은 지금과 같다.\n+   *\n+   * <p>거래일 셈은 001이 준 거래일 목록으로만 한다. 계산할 수 없으면 값을 지어내지 않고 그 사실을\n+   * `'uncomputable'`로 남겨 '분석하기'가 이유와 함께 막히게 한다.\n+   */\n+  const caseConstraint = useMemo((): CasePeriodConstraint | 'uncomputable' | null => {\n+    if (caseId === null || caseId === '') return null\n+    if (caseWindow.status !== 'loaded') return 'uncomputable'\n+    if (evaluationWindow.status !== 'loaded' || settings.warmupTradingDays === null) return 'uncomputable'\n+    const built = buildCasePeriodConstraint({\n+      postWindow: caseWindow.postWindow,\n+      endMonth: caseWindow.endMonth,\n+      warmupTradingDays: settings.warmupTradingDays,\n+      tradingDays: evaluationWindow.window.tradingDaysFromBase,\n+    })\n+    return typeof built === 'string' ? 'uncomputable' : built\n+  }, [caseId, caseWindow, evaluationWindow, settings.warmupTradingDays])\n+\n+  /** 공통 평가 가능 범위가 이 제약을 채우지 못하면 그 전략으로는 이 사례를 볼 수 없다. */\n+  const caseBlocker = ((): string | null => {\n+    if (caseId === null || caseId === '') return null\n+    if (caseWindow.status === 'unavailable') return CASE_WINDOW_UNAVAILABLE\n+    if (caseWindow.status === 'loading') return CASE_WINDOW_LOADING\n+    if (caseConstraint === null) return null\n+    if (caseConstraint === 'uncomputable') return CASE_WINDOW_UNAVAILABLE\n+    if (evaluableRange === null) return null\n+    return rangeCoversCase(evaluableRange, caseConstraint) ? null : CASE_RANGE_UNCOVERABLE\n+  })()\n+\n+  const activeCaseConstraint = caseConstraint === 'uncomputable' ? null : caseConstraint\n   const { periodStart, periodEnd } = settings.analysisCondition\n   const chosenPeriod = useMemo(\n     (): AnalysisPeriod | null =>\n@@ -632,6 +708,15 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n     if (!selectedJudgement.window) return EVALUATION_WINDOW_UNAVAILABLE\n     if (periodOutOfRange) return periodOutOfRangeMessage(selectedJudgement.window)\n     if (periodTooShort) return periodTooShortMessage(minEvaluationYearsLabel)\n+    // 011 사례 경로의 제약(진입 계약 §3). 사례가 없으면 `caseBlocker`가 늘 `null`이라 지금과 같다.\n+    if (caseBlocker !== null) return caseBlocker\n+    if (\n+      activeCaseConstraint !== null &&\n+      period !== null &&\n+      (period.start > activeCaseConstraint.startMax || period.end < activeCaseConstraint.endMin)\n+    ) {\n+      return activeCaseConstraint.note\n+    }\n     if (versions === 'loading') return VERSIONS_LOADING\n     if (versions === null) return ANALYSIS_VERSIONS_UNAVAILABLE\n     if (rulesVersion?.status === 'pendingDecision') return RULES_PENDING_DECISION\n@@ -749,6 +834,19 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n     try {\n       const accepted = await support.createBacktest(request)\n       setSubmission({ status: 'accepted', accepted })\n+      /*\n+        011 사례 경로는 **접수되면 곧바로** 011 화면으로 간다(진입 계약 §2). 003은 지금 접수 뒤 결과\n+        화면으로 이동하지 않으므로 완료를 여기서 기다리지 않는다 — 기준 실행의 진행 상태는 011 화면이\n+        005와 같은 방식으로 보인다. `case`가 없으면 지금 동작 그대로다.\n+\n+        004 요청 본문에는 `case`를 싣지 않았다. 004 계약을 바꾸지 않고 화면이 주소로 들고 다닌다.\n+        공개 토큰이 없는 옛 접수 응답이면 이동할 곳이 없으므로 접수 안내에 머문다.\n+      */\n+      if (caseId !== null && caseId !== '' && accepted.publicToken) {\n+        void navigate(\n+          `/regime-link?${new URLSearchParams({ base: accepted.publicToken, case: caseId }).toString()}`,\n+        )\n+      }\n     } catch (error) {\n       // 거절마다 계약 §2가 정한 처리를 한다. **어느 경우에도 요청을 다시 보내지 않는다** — 다시 보낼지는\n       // 사용자가 바뀐 내용을 보고 정한다.\n@@ -793,6 +891,8 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n     }\n   }, [\n     analyzeBlocker,\n+    caseId,\n+    navigate,\n     prepared,\n     submission.status,\n     settings.analysisCondition,\n@@ -1089,6 +1189,7 @@ export function StrategySettingsPage({ support = defaultAnalysisSupport }: Strat\n                 rangeUnavailableMessage={settings.selectedStrategy ? undefined : RANGE_NEEDS_STRATEGY}\n                 period={period}\n                 periodChosen={chosenPeriod !== null}\n+                caseConstraint={activeCaseConstraint}\n                 initialAmount={initialAmount ?? undefined}\n                 minEvaluationYears={minEvaluationYears}\n                 cost={costAssumption}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,291 @@\n+/**\n+ * 011 사례 연결 REST 계약(§1·§1a·§1b·§2~§4)과 1:1로 맞춘 타입이다.\n+ *\n+ * 원본은 `specs/011-regime-strategy-link/contracts/regime-link-api.md`다.\n+ *\n+ * <p><b>여기에 없는 것이 계약의 핵심이다</b>(계약 §6). 유지율(`retention`), 전략 − KOSPI 차이·초과수익·승패,\n+ * 사후 성과순 정렬 키, 연율화 수익률, 내부 PK는 담을 자리를 만들지 않는다. 자리가 없으면 실수로도 화면에\n+ * 그릴 수 없다.\n+ *\n+ * <p>소수는 서버가 문자열로 보낸다. 숫자로 바꾸지 않고 문자열 그대로 다룬다 — 화면은 보여 주기만 하고\n+ * 다시 계산하지 않는다.\n+ */\n+\n+/** 모든 응답에 붙는 근거 표기(FR-015). */\n+export type RegimeLinkBasis = {\n+  kind: 'HISTORICAL_REVISION'\n+  dataVersion?: string\n+}\n+\n+/** 011 화면이 들어온 길. `MARKET_FLOW`면 필터를 걸지 않고 판정만 붙는다(FR-002). */\n+export type RegimeLinkEntryPath = 'MARKET_FLOW' | 'STRATEGY_RESULT'\n+\n+export type RegimeLinkAvailabilityState =\n+  | 'NORMAL'\n+  | 'DATA_INSUFFICIENT'\n+  | 'POST_INCOMPLETE'\n+  | 'OUT_OF_PERIOD'\n+\n+export type RegimeLinkAvailabilityReason =\n+  | 'UNLISTED'\n+  | 'WARMUP_SHORT'\n+  | 'SECTOR_UNMAPPED'\n+  | 'RECENT'\n+  | 'DELISTED'\n+\n+export type RegimeLinkScenario = 'CONTINUOUS' | 'FRESH_CASH'\n+\n+export type RegimeLinkStatus =\n+  | 'PENDING_RUN'\n+  | 'QUEUED'\n+  | 'RUNNING'\n+  | 'COMPLETED'\n+  | 'FAILED'\n+\n+/**\n+ * 사례의 사후 구간. `d21`·`d63`은 판정 기준일을 넘어가면 **명시적 `null`**이고 그때\n+ * `completedTradingDays`가 진짜 길이다.\n+ *\n+ * `lastAvailable`은 §1a 응답에만 있다(§1 목록에는 싣지 않는다).\n+ */\n+export type RegimeLinkPostWindow = {\n+  d0: string\n+  d21: string | null\n+  d63: string | null\n+  lastAvailable?: string | null\n+  completedTradingDays: number\n+  complete21: boolean\n+  complete63: boolean\n+}\n+\n+export type RegimeLinkAvailability = {\n+  state: RegimeLinkAvailabilityState\n+  reason?: RegimeLinkAvailabilityReason\n+  /** 구간 안 상장폐지이지만 21거래일 이상 확보한 경우에만 참이다. */\n+  partial?: boolean\n+  delistedOn?: string\n+}\n+\n+/** §1a `GET /regime-links/case-window?caseId=` 응답. 003이 분석 기간 제약에 쓴다. */\n+export type RegimeLinkCaseWindow = {\n+  basis: RegimeLinkBasis\n+  caseId: string\n+  endMonth: string\n+  postWindow: RegimeLinkPostWindow\n+}\n+\n+export type RegimeLinkRunRole = 'BASE' | 'COMPARE'\n+\n+export type RegimeLinkRun = {\n+  publicToken: string\n+  role: RegimeLinkRunRole\n+  strategyId: string\n+  strategyName: string\n+  period: { start: string; end: string; effectiveStart?: string }\n+  warmupTradingDays: number\n+}\n+\n+export type RegimeLinkInstrument = {\n+  sectorId?: string\n+  instrumentId: string\n+  listedOn: string\n+  /** 폐지된 종목에만 있다. 키가 없으면 상장이 유지되고 있다는 뜻이다. */\n+  delistedOn?: string\n+}\n+\n+export type RegimeLinkFilter = {\n+  applied: boolean\n+  filterKey?: string\n+  /** 필터를 건 응답에는 범위가 비어도 키가 남고 양끝이 `null`이다. */\n+  availableRange?: { firstCaseEndMonth: string | null; lastCaseEndMonth: string | null }\n+  excludedCount?: number\n+  minPostTradingDays: number\n+}\n+\n+export type RegimeLinkRunState = {\n+  publicToken: string\n+  state: RegimeLinkAvailabilityState\n+  reason?: RegimeLinkAvailabilityReason\n+  partial?: boolean\n+  delistedOn?: string\n+  /** 그 실행이 실제로 확보한 거래일 수. 시장 달력의 `postWindow`와 다를 수 있다. */\n+  completedTradingDays: number\n+}\n+\n+export type RegimeLinkCase = {\n+  caseId: string\n+  endMonth: string\n+  rank: number\n+  /** 소수는 문자열 그대로다. */\n+  distance: string\n+  postWindow: RegimeLinkPostWindow\n+  availability: RegimeLinkAvailability\n+  perRun: RegimeLinkRunState[]\n+  shownInFiltered: boolean\n+}\n+\n+export type RegimeLinkSearchInfo = {\n+  snapshotKey: string\n+  mode?: string\n+  field?: string\n+  baselineMonth?: string\n+  status?: string\n+}\n+\n+/** §1 `GET /regime-links/availability` 응답. */\n+export type RegimeLinkAvailabilityResult = {\n+  basis: RegimeLinkBasis\n+  search: RegimeLinkSearchInfo\n+  bundle: { runs: RegimeLinkRun[]; instruments: RegimeLinkInstrument[] }\n+  filter: RegimeLinkFilter\n+  cases: RegimeLinkCase[]\n+}\n+\n+export type RegimeLinkAvailabilityQuery = {\n+  base: string\n+  compare?: string\n+  snapshotKey?: string\n+  mode?: 'field' | 'composite'\n+  field?: string\n+  baselineMonth?: string\n+  entryPath: RegimeLinkEntryPath\n+}\n+\n+/** §1b 요청. `clientRequestId`는 같은 본문 재시도를 하나로 묶는 멱등 키다. */\n+export type RegimeLinkSearchCreateRequest = {\n+  clientRequestId: string\n+  snapshotKey: string\n+  base: string\n+  compare?: string\n+  entryPath: RegimeLinkEntryPath\n+  fullSearchShown: boolean\n+  previousLinkSearchId?: string\n+}\n+\n+/** 비교 묶음이 달라졌을 때만 온다. */\n+export type RegimeLinkBundleChanged = {\n+  added: string[]\n+  removed: string[]\n+  excludedCount: number\n+}\n+\n+/** §1b 응답. §1 응답에 `linkSearchId`와 변경 알림을 더한 모양이다. */\n+export type RegimeLinkSearchCreated = RegimeLinkAvailabilityResult & {\n+  linkSearchId: string\n+  bundleChanged?: RegimeLinkBundleChanged\n+}\n+\n+/** §2 요청. */\n+export type RegimeLinkCreateRequest = {\n+  linkSearchId: string\n+  caseId: string\n+  scenario: RegimeLinkScenario\n+  confirmFullPeriod: boolean\n+}\n+\n+export type RegimeLinkAccepted = {\n+  basis: RegimeLinkBasis\n+  linkSearchId: string\n+  links: {\n+    linkId: string\n+    publicToken: string\n+    scenario: RegimeLinkScenario\n+    status: RegimeLinkStatus\n+  }[]\n+}\n+\n+/**\n+ * §2의 200 응답. 계산을 만들지 않고 확인을 받는다(Clarifications 09-18 Q1).\n+ *\n+ * 접수(202)와 한 union으로 두어, 부르는 쪽이 `outcome`을 보지 않고 결과를 쓰지 못하게 한다.\n+ */\n+export type RegimeLinkConfirmRequired = {\n+  outcome: 'OUT_OF_PERIOD_CONFIRM_REQUIRED'\n+  requiredRange: { start: string; end: string }\n+  affected: { publicToken: string; period: { start: string; end: string } }[]\n+}\n+\n+export type RegimeLinkCreateOutcome = RegimeLinkConfirmRequired | (RegimeLinkAccepted & { outcome?: undefined })\n+\n+/** 004 실행이 아직 끝나지 않은 링크의 진행 상태(005 비교 대상과 같은 표시). */\n+export type RegimeLinkRunProgress = {\n+  status: string\n+  progress?: number | null\n+  queueWaitSeconds?: number | null\n+}\n+\n+export type RegimeLinkFailure = {\n+  code: string\n+  message: string\n+  /** 거짓이면 '다시 시도'를 두지 않는다. */\n+  retryable: boolean\n+}\n+\n+export type RegimeLinkCosts = {\n+  commission: string\n+  spread: string\n+  slippage: string\n+  tax: string\n+  total: string\n+}\n+\n+export type RegimeLinkWindowResult = {\n+  tradingDays: number\n+  return: string\n+  maxDrawdown: string\n+  tradeCount: number\n+  tradesPerMonth: string\n+  turnover: string\n+  turnoverBasis: string\n+  costs: RegimeLinkCosts\n+  lossContribution: Record<string, string>\n+  complete: boolean\n+}\n+\n+export type RegimeLinkHolding = { date: string; actual: Record<string, string> }\n+\n+export type RegimeLinkTrade = {\n+  date: string\n+  instrumentId: string\n+  side: 'BUY' | 'SELL'\n+  quantity: number\n+  price: string\n+  cost: string\n+  reason: string\n+}\n+\n+export type RegimeLinkKospi = {\n+  window63?: { return: string; maxDrawdown: string }\n+  window21?: { return: string; maxDrawdown: string }\n+}\n+\n+export type RegimeLinkResult = {\n+  window63: RegimeLinkWindowResult | null\n+  window21: RegimeLinkWindowResult | null\n+  holdings: RegimeLinkHolding[]\n+  trades: RegimeLinkTrade[]\n+  kospi: RegimeLinkKospi\n+}\n+\n+/** §3 `GET /regime-links/{linkId}?token=` 응답. §4는 이 모양의 배열이다. */\n+export type RegimeLinkView = {\n+  basis: RegimeLinkBasis\n+  linkId: string\n+  publicToken: string\n+  caseId: string\n+  scenario: RegimeLinkScenario\n+  status: RegimeLinkStatus\n+  postWindow: RegimeLinkPostWindow\n+  availability: RegimeLinkAvailability\n+  runProgress: RegimeLinkRunProgress | null\n+  failure: RegimeLinkFailure | null\n+  result: RegimeLinkResult | null\n+  queuedAt?: string | null\n+  startedAt?: string | null\n+  finishedAt?: string | null\n+}\n+\n+export type RegimeLinkRetryAccepted = {\n+  linkId: string\n+  status: RegimeLinkStatus\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/regimeLink.ts",
+          "old_path": "frontend/src/types/regimeLink.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -6,6 +6,13 @@ import { ProtectedRoute } from '@/auth/ProtectedRoute'\n import { LandingPage } from '@/pages/LandingPage'\n \n // 초기 진입 번들을 줄이기 위해 백테스트 화면은 접근 시점에 불러온다.\n+// 011 시장 흐름 경로의 진입 화면이다. 사례를 확인한 뒤 002로 넘긴다(011 진입 계약 §2).\n+const RegimeLinkStartPage = lazy(() =>\n+  import('@/pages/RegimeLinkStartPage').then((module) => ({\n+    default: module.RegimeLinkStartPage,\n+  })),\n+)\n+\n const BacktestPage = lazy(() =>\n   import('@/pages/BacktestPage').then((module) => ({\n     default: module.BacktestPage,\n@@ -125,6 +132,12 @@ function AnimatedRoutes() {\n       >\n         <Suspense fallback={<div role=\"status\" aria-label=\"페이지를 불러오는 중\" />}>\n           <Routes location={location}>\n+            {/*\n+              011 진입은 로그인을 요구하지만 `ProtectedRoute`로 감싸지 않는다. 011 경로에는 익명이\n+              볼 수 있는 자리가 있어 경로 전체를 막을 수 없고, 복귀 위치 저장은 `useLoginRedirect`가\n+              014와 같은 방식으로 한다(FR-025).\n+            */}\n+            <Route path=\"/regime-link/start\" element={<RegimeLinkStartPage />} />\n             <Route path=\"/\" element={<LandingPage />} />\n             <Route path=\"/market-flow\" element={<MarketFlowPage />} />\n             <Route path=\"/regime-search\" element={<RegimeSearchPage />} />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/App.tsx",
+          "old_path": "frontend/src/App.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,6 +18,8 @@ export default defineConfig({\n     // 새 `.test.ts`를 만들 때마다 이 목록을 함께 넓힌다.\n     // `src/diagnosis/testCollection.guard.test.tsx`가 빠진 파일을 찾아 실패시킨다.\n     include: [\n+      // 011 진입 훅 검사가 들어온다(011 T044).\n+      'src/hooks/*.test.ts',\n       'src/**/*.test.tsx',\n       'src/api/*.test.ts',\n       'src/auth/**/*.test.ts',\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/vite.config.ts",
+          "old_path": "frontend/vite.config.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -206,16 +206,16 @@ flowchart LR\n - [X] T038 [US1] (BE) `presentation/controller/RegimeLinkController` + `GET /regime-links/availability`(`entryPath=MARKET_FLOW`): 필터 없음(`filter.applied=false`), 모든 `shownInFiltered=true`, 사례별 `availability`·`perRun`은 붙인다. 응답은 계약 §1·`docs/specs/regime-link-api/examples/availability-market-flow.json`과 일치\n - [X] T039 [US1] (BE) `POST /regime-links`: 요청자 확인 후 소유한 linkSearchId에서 비교 요청·실행·snapshot·경로 해석. 검색 기록을 새로 만들지 않는다. caseId가 snapshot 표시 후보 밖이거나 다른 사용자 linkSearchId면 404. 실행×사례×시나리오 링크를 재사용하고 이 검색의 `regime_link_use`(역할·원래 실행·원래 요청)를 남긴다 — 두 사용자가 같은 계산을 열면 링크 행 1개·use 2개. DATA_INSUFFICIENT·POST_INCOMPLETE는 결과 없는 COMPLETED, 계산 가능 시 T031 발행. 익명은 401이며 행·메시지 0\n - [X] T040 [US1] (BE) `GET /regime-links/{linkId}?token=`(계약 §3: `token` 필수 — 없으면 400, 만료 410, 제시된 토큰의 요청이 그 링크의 `regime_link_use`나 실행과 맞지 않으면 404. 응답에 제시된 토큰 외의 토큰 없음. `runProgress`는 `PENDING_RUN`일 때 004 상태 그대로, `result`는 `COMPLETED`일 때만, `DATA_INSUFFICIENT`·`POST_INCOMPLETE`는 `result=null`+사유, `failure.retryable`)와 `GET /regime-links?base&compare&caseId`(계약 §4, 토큰 검증 같음, 기준→비교 대상 순서, 없는 조합은 요소 없음). 테스트: 토큰 없음·다른 실행의 토큰·만료 토큰·정상 공유 주소\n-- [ ] T041 [P] [US1] (FE) `types/regimeLink.ts`: REST §1·1a·1b·2~4 타입과 검색 생성 요청(clientRequestId·previousLinkSearchId)·응답(linkSearchId·bundleChanged) 정의. 유지율·차이 값·`originPublicToken` 필드 없음, `failure.retryable`·`perRun[].completedTradingDays` 있음. `vite.config.ts`의 `test.include`는 허용 목록이라 `src/components/regimelink/*.test.ts`·`src/hooks/*.test.ts`를 추가한다(`src/**/*.test.tsx`·`src/api/*.test.ts`·`src/marketflow/**`는 이미 있다. 빠지면 `testCollection.guard.test.tsx`가 실패한다)\n-- [ ] T042 [P] [US1] (FE) `api/regimeLink.ts`: fetchAvailability·fetchCaseWindow·createRegimeLinkSearch·createRegimeLinks(linkSearchId)·fetchRegimeLink·listRegimeLinks·retryRegimeLink. apiClient 및 CSRF·로그인 복귀 계약 재사용. API 테스트\n-- [ ] T043 [P] [US1] (FE) `frontend/src/marketflow/handoff.ts`: `buildRegimeLinkStartPath({caseId, sectorCode})` → `/regime-link/start?case=…[&sector=…]`와 `buildCaseId(searchId, endMonth)` → `{010 searchId}~{endMonth}` 추가(계약 §0: 010의 `searchId` = snapshotKey). 009 `MarketFlowPage`의 '이 기간으로 전략 비교' 카드는 `disabled`·\"준비 중\" 대신 \"사례를 먼저 고릅니다\" 안내와 `/regime-search` 이동으로 바꾼다 — 사례 없이 011을 열지 않는다(009 FR-018). 009의 '비슷했던 때 보기' 연결은 건드리지 않는다(009·010 소유). `handoff.test.ts`·`MarketFlowPage.test.tsx` 갱신\n-- [ ] T044 [US1] (FE) `frontend/src/pages/RegimeLinkStartPage.tsx` + 라우트 `/regime-link/start` + `hooks/useLoginRedirect.ts`: `case`·`sector` 파싱, 익명이면 014 `auth/returnTarget`의 `saveReturnTarget(현재 path+query)` 뒤 `/login`으로 이동하고 로그인 뒤 `AuthEntryGuard`가 같은 주소로 돌려보낸다(014 방식, 주소 인자를 쓰지 않는다. `ProtectedRoute` 밖의 첫 호출처라 훅으로 묶어 T048·T054·T062·T072가 같이 쓴다). `case` 형식 오류·404면 `/market-flow`로 안내와 한 문장, 정상이면 `/diagnosis/sectors?case=…&sector=…`로 이동(`sector`는 002 초기 선택)\n+- [X] T041 [P] [US1] (FE) `types/regimeLink.ts`: REST §1·1a·1b·2~4 타입과 검색 생성 요청(clientRequestId·previousLinkSearchId)·응답(linkSearchId·bundleChanged) 정의. 유지율·차이 값·`originPublicToken` 필드 없음, `failure.retryable`·`perRun[].completedTradingDays` 있음. `vite.config.ts`의 `test.include`는 허용 목록이라 `src/components/regimelink/*.test.ts`·`src/hooks/*.test.ts`를 추가한다(`src/**/*.test.tsx`·`src/api/*.test.ts`·`src/marketflow/**`는 이미 있다. 빠지면 `testCollection.guard.test.tsx`가 실패한다)\n+- [X] T042 [P] [US1] (FE) `api/regimeLink.ts`: fetchAvailability·fetchCaseWindow·createRegimeLinkSearch·createRegimeLinks(linkSearchId)·fetchRegimeLink·listRegimeLinks·retryRegimeLink. apiClient 및 CSRF·로그인 복귀 계약 재사용. API 테스트\n+- [X] T043 [P] [US1] (FE) `frontend/src/marketflow/handoff.ts`: `buildRegimeLinkStartPath({caseId, sectorCode})` → `/regime-link/start?case=…[&sector=…]`와 `buildCaseId(searchId, endMonth)` → `{010 searchId}~{endMonth}` 추가(계약 §0: 010의 `searchId` = snapshotKey). 009 `MarketFlowPage`의 '이 기간으로 전략 비교' 카드는 `disabled`·\"준비 중\" 대신 \"사례를 먼저 고릅니다\" 안내와 `/regime-search` 이동으로 바꾼다 — 사례 없이 011을 열지 않는다(009 FR-018). 009의 '비슷했던 때 보기' 연결은 건드리지 않는다(009·010 소유). `handoff.test.ts`·`MarketFlowPage.test.tsx` 갱신\n+- [X] T044 [US1] (FE) `frontend/src/pages/RegimeLinkStartPage.tsx` + 라우트 `/regime-link/start` + `hooks/useLoginRedirect.ts`: `case`·`sector` 파싱, 익명이면 014 `auth/returnTarget`의 `saveReturnTarget(현재 path+query)` 뒤 `/login`으로 이동하고 로그인 뒤 `AuthEntryGuard`가 같은 주소로 돌려보낸다(014 방식, 주소 인자를 쓰지 않는다. `ProtectedRoute` 밖의 첫 호출처라 훅으로 묶어 T048·T054·T062·T072가 같이 쓴다). `case` 형식 오류·404면 `/market-flow`로 안내와 한 문장, 정상이면 `/diagnosis/sectors?case=…&sector=…`로 이동(`sector`는 002 초기 선택)\n - [X] T045 [US1] (BE) REST §1a `GET /regime-links/case-window?caseId=`: 실행 토큰 없이 snapshot 고정 postWindow 반환. 003 사전 기간 제약용이며 공개 조회. 계약 예시 파일 작성\n-- [ ] T046 [US1] (FE) `frontend/src/pages/SectorSelectionPage.tsx`·`StrategySettingsPage.tsx`: 두 화면은 지금 질의 인자를 읽지 않고 선택 인계를 sessionStorage로 한다 — 그 방식은 그대로 두고 `useSearchParams`로 `case`·`sector`만 읽어 다음 화면 주소로 그대로 넘긴다(`navigate('/strategy?case=…')`, 새로고침 유지). 003 '기간·금액·조건'(`AnalysisConditionsPanel`의 `PeriodField`)에서 `case`가 있으면 T045로 `postWindow`를 읽어 시작일 상한 `d0 − 워밍업`·종료일 하한 `d63(또는 lastAvailable)`을 기존 공통 평가 가능 범위의 `min`·`max`에 더해 그 밖을 선택 불가로 하고 고정 문구를 보인다(entry-handoff §3). 공통 평가 가능 범위가 제약을 못 채우면 003 기존 규칙대로 카드 비활성 + 이유. `case`가 없으면 동작이 지금과 같다\n-- [ ] T047 [US1] (FE) 003 '분석하기'가 **접수되면**(`createBacktest` 응답의 `publicToken`) `case`가 있을 때만 곧바로 `/regime-link?base={publicToken}&case={caseId}`로 이동한다. 003은 지금 접수 뒤 결과 화면으로 이동하지 않으므로(\"이동은 준비 중\") 완료를 003에서 기다리지 않는다. `case`가 없으면 지금 동작 그대로다. 004 요청 본문에는 `case`를 싣지 않는다(entry-handoff §2)\n+- [X] T046 [US1] (FE) `frontend/src/pages/SectorSelectionPage.tsx`·`StrategySettingsPage.tsx`: 두 화면은 지금 질의 인자를 읽지 않고 선택 인계를 sessionStorage로 한다 — 그 방식은 그대로 두고 `useSearchParams`로 `case`·`sector`만 읽어 다음 화면 주소로 그대로 넘긴다(`navigate('/strategy?case=…')`, 새로고침 유지). 003 '기간·금액·조건'(`AnalysisConditionsPanel`의 `PeriodField`)에서 `case`가 있으면 T045로 `postWindow`를 읽어 시작일 상한 `d0 − 워밍업`·종료일 하한 `d63(또는 lastAvailable)`을 기존 공통 평가 가능 범위의 `min`·`max`에 더해 그 밖을 선택 불가로 하고 고정 문구를 보인다(entry-handoff §3). 공통 평가 가능 범위가 제약을 못 채우면 003 기존 규칙대로 카드 비활성 + 이유. `case`가 없으면 동작이 지금과 같다\n+- [X] T047 [US1] (FE) 003 '분석하기'가 **접수되면**(`createBacktest` 응답의 `publicToken`) `case`가 있을 때만 곧바로 `/regime-link?base={publicToken}&case={caseId}`로 이동한다. 003은 지금 접수 뒤 결과 화면으로 이동하지 않으므로(\"이동은 준비 중\") 완료를 003에서 기다리지 않는다. `case`가 없으면 지금 동작 그대로다. 004 요청 본문에는 `case`를 싣지 않는다(entry-handoff §2)\n - [ ] T048 [US1] (FE) `RegimeLinkPage` MARKET_FLOW: base·case의 snapshot 유지. 기준 실행이 아직 끝나지 않았으면 005와 같은 방식으로 그 진행 상태(단계·진행 비율·기다린 시간)를 보이고 완료되면 이어 간다(실패·취소는 그 사실과 005 결과 주소 안내). 로그인 사용자는 createRegimeLinkSearch로 목록을 확정한 뒤 linkSearchId로 계산 생성. 익명은 GET 및 기존 공개 결과 조회만(링크 조회에 주소의 토큰을 `token`으로 넘긴다), 새 계산이 필요하면 로그인 안내(T044 훅). 63 기본 결과·진행 상태·전체 기간 핵심 숫자를 같은 화면에 표시. 010 `CaseList`·`CaseDetail`을 사후 구간 자리 prop으로 재사용(T087). useRegimeLink 폴링\n-- [ ] T049 [US1] (FE 테스트) `RegimeLinkStartPage.test.tsx`(익명 복귀·형식 오류 안내·정상 이동)·`RegimeLinkPage.marketflow.test.tsx`(사례 유지, 결과 영역, 전체 기간 요약 동반, 진행 상태)·`StrategySettingsPage` 제약 테스트(하한 밖 선택 불가·문구)\n-- [ ] T087 [US1] (FE) `components/regime/CaseList.tsx`·`CaseDetail.tsx`에 사후 구간 자리 prop(`postPeriodSlot`)을 추가한다. prop이 없으면 지금처럼 `postPeriod.note`를 그린다(010 동작 보존). `RegimeSearchPage`는 그 자리에 '이 기간으로 전략 비교' 링크(T043 `buildRegimeLinkStartPath`·`buildCaseId(result.searchId, endMonth)`)를 넣는다 — 이 길은 섹터를 알 수 없어 `sector`를 싣지 않는다. 010 백엔드 응답(`postPeriod.available`·문구)은 고치지 않는다(010 소유). `CaseDetail.test.tsx`·`RegimeSearchPage.test.tsx`에 목적지 주소와 caseId 조립, prop 없을 때 기존 표시 검증\n+- [X] T049 [US1] (FE 테스트) `RegimeLinkStartPage.test.tsx`(익명 복귀·형식 오류 안내·정상 이동)·`RegimeLinkPage.marketflow.test.tsx`(사례 유지, 결과 영역, 전체 기간 요약 동반, 진행 상태)·`StrategySettingsPage` 제약 테스트(하한 밖 선택 불가·문구)\n+- [X] T087 [US1] (FE) `components/regime/CaseList.tsx`·`CaseDetail.tsx`에 사후 구간 자리 prop(`postPeriodSlot`)을 추가한다. prop이 없으면 지금처럼 `postPeriod.note`를 그린다(010 동작 보존). `RegimeSearchPage`는 그 자리에 '이 기간으로 전략 비교' 링크(T043 `buildRegimeLinkStartPath`·`buildCaseId(result.searchId, endMonth)`)를 넣는다 — 이 길은 섹터를 알 수 없어 `sector`를 싣지 않는다. 010 백엔드 응답(`postPeriod.available`·문구)은 고치지 않는다(010 소유). `CaseDetail.test.tsx`·`RegimeSearchPage.test.tsx`에 목적지 주소와 caseId 조립, prop 없을 때 기존 표시 검증\n \n **Checkpoint**: MVP — 시장 흐름에서 들어와 한 전략의 사후 구간 결과를 본다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/011-regime-strategy-link/tasks.md",
+          "old_path": "specs/011-regime-strategy-link/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2231682,
+      "head_commit_sha": "8755775616df2dfda414e171627dec944c500d09",
+      "base_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "start_commit_sha": "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c",
+      "created_at": "2026-09-21T13:52:33.328+09:00",
+      "merge_request_id": 954238,
+      "state": "without_files",
+      "real_size": "26",
+      "patch_id_sha": "f163c14834002e6e8a77633a3b8a5218a69dc755",
+      "commits": [
+        {
+          "id": "8755775616df2dfda414e171627dec944c500d09",
+          "short_id": "87557756",
+          "created_at": "2026-09-21T13:50:57.000+09:00",
+          "parent_ids": [
+            "eec4804beec8bad788e7b60a895a547e1154f678",
+            "7b2d7bd192d3635ed6b6c0095955b27acb52ee8c"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/368-regime-link-start",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/368-regime-link-start\n\n# Conflicts:\n#\tfrontend/src/pages/RegimeSearchPage.test.tsx\n#\tfrontend/src/pages/RegimeSearchPage.tsx\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T13:50:57.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T13:50:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8755775616df2dfda414e171627dec944c500d09"
+        },
+        {
+          "id": "eec4804beec8bad788e7b60a895a547e1154f678",
+          "short_id": "eec4804b",
+          "created_at": "2026-09-21T12:48:22.000+09:00",
+          "parent_ids": [
+            "b36ccbab340b8b37bed4cda554cf59c906e79a81"
+          ],
+          "title": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약",
+          "message": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약\n\n010 사례 상세에서 011 시작 주소로 이어지는 진입 화면을 넣고, 고른 사례가\n003·004 를 지나 결과 화면까지 유지되게 한다. 익명이면 로그인 안내 뒤 같은\n주소로 돌아온다.\n\n003 은 사례가 있을 때만 분석 기간의 상·하한을 좁히고 한 문장으로 이유를\n보인다. 기간을 못 세면 값을 지어내지 않고 '분석하기'를 막는다. 분석이\n접수되는 즉시 결과 화면으로 옮겨 기준 실행의 진행 상태를 보여 준다.\n\n011 API 응답 봉투는 ApiResponse 라 010 클라이언트를 재사용하지 않고 따로\n두었다. 유지율·차이값은 타입에 자리를 만들지 않아 화면에 닿을 수 없다.\n\n010 목록·상세 컴포넌트에는 슬롯만 더해 기존 동작을 그대로 두었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:48:22.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:48:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/eec4804beec8bad788e7b60a895a547e1154f678"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2231472,
+      "head_commit_sha": "eec4804beec8bad788e7b60a895a547e1154f678",
+      "base_commit_sha": "b36ccbab340b8b37bed4cda554cf59c906e79a81",
+      "start_commit_sha": "86c50debc354907aded62cf2b0a715aee93db69e",
+      "created_at": "2026-09-21T13:31:52.028+09:00",
+      "merge_request_id": 954238,
+      "state": "without_files",
+      "real_size": "26",
+      "patch_id_sha": "fbf82add24c0056848a9b8a34b556de8cbe02eb3",
+      "commits": [
+        {
+          "id": "eec4804beec8bad788e7b60a895a547e1154f678",
+          "short_id": "eec4804b",
+          "created_at": "2026-09-21T12:48:22.000+09:00",
+          "parent_ids": [
+            "b36ccbab340b8b37bed4cda554cf59c906e79a81"
+          ],
+          "title": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약",
+          "message": "feat(fe): 시장 흐름 진입과 003 분석 기간 제약\n\n010 사례 상세에서 011 시작 주소로 이어지는 진입 화면을 넣고, 고른 사례가\n003·004 를 지나 결과 화면까지 유지되게 한다. 익명이면 로그인 안내 뒤 같은\n주소로 돌아온다.\n\n003 은 사례가 있을 때만 분석 기간의 상·하한을 좁히고 한 문장으로 이유를\n보인다. 기간을 못 세면 값을 지어내지 않고 '분석하기'를 막는다. 분석이\n접수되는 즉시 결과 화면으로 옮겨 기준 실행의 진행 상태를 보여 준다.\n\n011 API 응답 봉투는 ApiResponse 라 010 클라이언트를 재사용하지 않고 따로\n두었다. 유지율·차이값은 타입에 자리를 만들지 않아 화면에 닿을 수 없다.\n\n010 목록·상세 컴포넌트에는 슬롯만 더해 기존 동작을 그대로 두었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "gyunh01",
+          "author_email": "gyunh01@naver.com",
+          "authored_date": "2026-09-21T12:48:22.000+09:00",
+          "committer_name": "gyunh01",
+          "committer_email": "gyunh01@naver.com",
+          "committed_date": "2026-09-21T12:48:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/eec4804beec8bad788e7b60a895a547e1154f678"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2846355": []
+  }
+}

@@ -1,0 +1,529 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963465,
+    "iid": 375,
+    "project_id": 1444456,
+    "title": "chore(infra): 운영 이미지 크기를 줄임",
+    "description": "# 작업 내용 요약\n\nbackend·worker·data 운영 이미지에서 실행에 쓰지 않는 부분을 걷어 낸다. 맥미니로 옮긴 뒤의 디스크 사용량과 이미지 전송량을 줄이려는 것이고, 앱의 동작은 바뀌지 않는다.\n\n# 주요 변경 사항\n\n- backend: JRE 전체 대신, 앱이 쓰는 Java 모듈만 jlink 로 묶은 런타임(61MB)을 Alpine 위에 올린다. 모듈은 jdeps 가 고르고, 서비스 로더로만 찾아 jdeps 가 보지 못하는 모듈(TLS 의 EC, 문자셋, ko 로캘, JVM 지표, zipfs)은 직접 더한다.\n- worker·data: 가상환경에서 패키지 자체의 테스트, C·Cython 소스와 헤더, 공유 라이브러리의 디버그 정보를 지운다. 지운 뒤 주요 패키지를 import 해 보고, 실패하면 이미지를 만들지 않는다.\n- data: 가상환경만 실행 이미지로 옮기는 2단계 빌드로 바꾼다.\n\n| 이미지 | 이전 | 이후 (amd64, 레이어 합) |\n|-----|----|-------------------|\n| backend | 426MB | 161MB |\n| worker | 970MB | 834MB |\n| data | 681MB | 550MB |\n\n# 테스트\n\n- [x] amd64(옛 운영 서버)와 arm64(맥미니)에서 기존 빌더(`DOCKER_BUILDKIT=0`)로 세 이미지 모두 빌드된다\n- [x] 맥미니에서 옛 운영 DB 덤프를 복원하고 backend 가 기동한다(13.5초, Flyway 검증 통과)\n- [x] worker 가 큐를 받아 백테스트 1건(동일 비중, 2종목)을 완료한다\n- [x] backend 가 외부 TLS 연결(SMTP)을 맺고, 로그 시각이 Asia/Seoul(+09:00)로 찍힌다\n- [ ] Jenkins 서버가 회수되어 이 MR 에서는 CI 가 돌지 않는다. 위 항목은 직접 확인했다\n\n# 리뷰 포인트\n\n- backend 실행 이미지에는 jdeps 가 고른 모듈만 있다. 리플렉션이나 서비스 로더로만 쓰는 모듈이 빠지면, 빌드는 통과하고 그 기능을 처음 쓰는 순간 실패한다. 직접 더한 5개 말고도 그런 모듈이 떠오르면 알려 주면 좋겠다.\n- worker 는 동일 비중 경로만 실제로 돌려 봤다. scipy 를 쓰는 역변동성·최소분산 경로는 import 확인까지만 했다.\n- `alpine:3.22` 와 Temurin 이미지는 기존 backend 처럼 태그로만 지정한다. worker·data 의 digest 고정은 그대로 유지한다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:38:07.483+09:00",
+    "updated_at": "2026-10-04T18:38:11.150+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:38:10.845+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/slim-images",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "08be7c677bfd69dfb8dfd9d9173904148ef071e3",
+    "merge_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:38:08.559+09:00",
+    "reference": "!375",
+    "references": {
+      "short": "!375",
+      "relative": "!375",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!375"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/375",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963465,
+    "iid": 375,
+    "project_id": 1444456,
+    "title": "chore(infra): 운영 이미지 크기를 줄임",
+    "description": "# 작업 내용 요약\n\nbackend·worker·data 운영 이미지에서 실행에 쓰지 않는 부분을 걷어 낸다. 맥미니로 옮긴 뒤의 디스크 사용량과 이미지 전송량을 줄이려는 것이고, 앱의 동작은 바뀌지 않는다.\n\n# 주요 변경 사항\n\n- backend: JRE 전체 대신, 앱이 쓰는 Java 모듈만 jlink 로 묶은 런타임(61MB)을 Alpine 위에 올린다. 모듈은 jdeps 가 고르고, 서비스 로더로만 찾아 jdeps 가 보지 못하는 모듈(TLS 의 EC, 문자셋, ko 로캘, JVM 지표, zipfs)은 직접 더한다.\n- worker·data: 가상환경에서 패키지 자체의 테스트, C·Cython 소스와 헤더, 공유 라이브러리의 디버그 정보를 지운다. 지운 뒤 주요 패키지를 import 해 보고, 실패하면 이미지를 만들지 않는다.\n- data: 가상환경만 실행 이미지로 옮기는 2단계 빌드로 바꾼다.\n\n| 이미지 | 이전 | 이후 (amd64, 레이어 합) |\n|-----|----|-------------------|\n| backend | 426MB | 161MB |\n| worker | 970MB | 834MB |\n| data | 681MB | 550MB |\n\n# 테스트\n\n- [x] amd64(옛 운영 서버)와 arm64(맥미니)에서 기존 빌더(`DOCKER_BUILDKIT=0`)로 세 이미지 모두 빌드된다\n- [x] 맥미니에서 옛 운영 DB 덤프를 복원하고 backend 가 기동한다(13.5초, Flyway 검증 통과)\n- [x] worker 가 큐를 받아 백테스트 1건(동일 비중, 2종목)을 완료한다\n- [x] backend 가 외부 TLS 연결(SMTP)을 맺고, 로그 시각이 Asia/Seoul(+09:00)로 찍힌다\n- [ ] Jenkins 서버가 회수되어 이 MR 에서는 CI 가 돌지 않는다. 위 항목은 직접 확인했다\n\n# 리뷰 포인트\n\n- backend 실행 이미지에는 jdeps 가 고른 모듈만 있다. 리플렉션이나 서비스 로더로만 쓰는 모듈이 빠지면, 빌드는 통과하고 그 기능을 처음 쓰는 순간 실패한다. 직접 더한 5개 말고도 그런 모듈이 떠오르면 알려 주면 좋겠다.\n- worker 는 동일 비중 경로만 실제로 돌려 봤다. scipy 를 쓰는 역변동성·최소분산 경로는 import 확인까지만 했다.\n- `alpine:3.22` 와 Temurin 이미지는 기존 backend 처럼 태그로만 지정한다. worker·data 의 digest 고정은 그대로 유지한다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-04T18:38:07.483+09:00",
+    "updated_at": "2026-10-04T18:38:11.150+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T18:38:10.845+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/slim-images",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "08be7c677bfd69dfb8dfd9d9173904148ef071e3",
+    "merge_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T18:38:08.559+09:00",
+    "reference": "!375",
+    "references": {
+      "short": "!375",
+      "relative": "!375",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!375"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/375",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "9987ff6be283c38a619a517dc3a95abccabae2de",
+      "head_sha": "08be7c677bfd69dfb8dfd9d9173904148ef071e3",
+      "start_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "3258ddc312a7437b506e33257d03c6216229b9e3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881363,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:38:07.600+09:00",
+          "updated_at": "2026-10-04T18:38:07.605+09:00",
+          "system": true,
+          "noteable_id": 963465,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 375,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2c027aed0a92fca0658f5539e99aeb9b94b28e2b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881364,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:38:07.633+09:00",
+          "updated_at": "2026-10-04T18:38:07.658+09:00",
+          "system": true,
+          "noteable_id": 963465,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 375,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f523831795717b3a25d2154c8316981b404598e8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881365,
+          "type": null,
+          "body": "mentioned in commit e88aedab374ff7590d552cdc9c0f9a65072d0818",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T18:38:11.263+09:00",
+          "updated_at": "2026-10-04T18:38:11.286+09:00",
+          "system": true,
+          "noteable_id": 963465,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 375,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5c06a1dddff7a581ea78d61b0535657d19cedbd9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881366,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n변경 사항으로 인해 발생할 수 있는 런타임 오류를 검증하기 위해 다음 시나리오로 테스트를 수행할 것을 제안합니다.\n\n1. **Backend 모듈 누락 검증 (특히 리플렉션/서비스 로더)**:\n   - 애플리케이션의 모든 주요 기능(데이터베이스 마이그레이션, Actuator 엔드포인트 호출, 외부 SMTP TLS 전송, 한글 데이터 포함 응답 생성 등)을 실제로 호출하여 `NoClassDefFoundError`나 `ClassNotFoundException`이 발생하지 않는지 확인합니다.\n2. **Worker/Data Python 라이브러리 무결성 검증**:\n   - `strip` 명령과 테스트 파일 삭제 이후에 `scipy`의 역변동성·최소분산 경로 및 `numpy`, `pandas`, `pyarrow`, `psycopg` 등의 연산 기능이 정상 작동하는지 통합 테스트를 통해 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:08be7c677bfd69dfb8dfd9d9173904148ef071e3 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T18:38:15.602+09:00",
+          "updated_at": "2026-10-04T18:38:15.602+09:00",
+          "system": false,
+          "noteable_id": 963465,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 375,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262316,
+      "head_commit_sha": "08be7c677bfd69dfb8dfd9d9173904148ef071e3",
+      "base_commit_sha": "9987ff6be283c38a619a517dc3a95abccabae2de",
+      "start_commit_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+      "created_at": "2026-10-04T18:38:08.018+09:00",
+      "merge_request_id": 963465,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "9f1ad383c09f230d3dcd373fe526fed3da1d1e22"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262316,
+      "head_commit_sha": "08be7c677bfd69dfb8dfd9d9173904148ef071e3",
+      "base_commit_sha": "9987ff6be283c38a619a517dc3a95abccabae2de",
+      "start_commit_sha": "fa122817274790c2f0a0737d0e364d1b63b0809f",
+      "created_at": "2026-10-04T18:38:08.018+09:00",
+      "merge_request_id": 963465,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "9f1ad383c09f230d3dcd373fe526fed3da1d1e22",
+      "commits": [
+        {
+          "id": "08be7c677bfd69dfb8dfd9d9173904148ef071e3",
+          "short_id": "08be7c67",
+          "created_at": "2026-10-04T18:07:31.000+09:00",
+          "parent_ids": [
+            "1c9c1f9b69164838d2dcb28b1027d15f8ee811df"
+          ],
+          "title": "chore(infra): jlink 에 jdk.zipfs 를 넣는 이유를 바로잡는다",
+          "message": "chore(infra): jlink 에 jdk.zipfs 를 넣는 이유를 바로잡는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T18:07:31.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T18:07:31.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/08be7c677bfd69dfb8dfd9d9173904148ef071e3"
+        },
+        {
+          "id": "1c9c1f9b69164838d2dcb28b1027d15f8ee811df",
+          "short_id": "1c9c1f9b",
+          "created_at": "2026-10-02T16:15:02.000+09:00",
+          "parent_ids": [
+            "9987ff6be283c38a619a517dc3a95abccabae2de"
+          ],
+          "title": "chore(infra): 운영 이미지 크기를 줄인다",
+          "message": "chore(infra): 운영 이미지 크기를 줄인다\n\nbackend 는 JRE 전체 대신 jlink 로 쓰는 모듈만 묶어 Alpine 위에 올린다.\nworker·data 는 가상환경에서 패키지 테스트·소스·헤더를 지우고 공유 라이브러리의\n디버그 정보를 걷어 낸 뒤 import 로 확인한다. data 는 가상환경을 옮기는 2단계 빌드로 바꾼다.\n\namd64 기준 backend 426MB → 161MB, worker 970MB → 834MB, data 681MB → 550MB.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T16:15:02.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T16:15:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/1c9c1f9b69164838d2dcb28b1027d15f8ee811df"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -12,8 +12,33 @@ RUN ./gradlew dependencies --no-daemon --console=plain > /dev/null || true\n COPY src ./src\n RUN ./gradlew bootJar --no-daemon\n \n+# --- jre stage ---\n+# 실행 이미지에 JRE 전체(eclipse-temurin:21-jre, 약 460MB)를 싣지 않고 앱이 쓰는 모듈만 jlink 로 묶는다.\n+# 실행 이미지가 Alpine(musl)이라 jlink 도 Alpine JDK 로 돌린다. glibc JDK 로 만든 런타임은 Alpine 에서 뜨지 않는다.\n+# 모듈 목록은 jdeps 가 jar 의 클래스와 라이브러리를 읽어 정한다. jdeps 가 보지 못하는 것만 직접 더한다.\n+#   jdk.crypto.ec    외부 API·SMTP 의 TLS 가 EC 키 교환을 쓴다. 서비스 로더로 찾으므로 jdeps 에 잡히지 않는다\n+#   jdk.charsets     응답의 Content-Type 이 EUC-KR 같은 비표준 문자셋이면 이 모듈이 있어야 디코딩된다\n+#   jdk.localedata   ko 로캘 서식. 없으면 오류 없이 기본 로캘로 내려가 출력만 달라지므로 미리 넣는다\n+#   jdk.management   Actuator 의 JVM 지표가 com.sun.management 를 리플렉션으로 읽는다\n+#   jdk.zipfs        jar·zip 을 파일 시스템으로 열 때 서비스 로더로 찾는 모듈이라 jdeps 에 잡히지 않는다. 작아서 미리 넣는다\n+FROM eclipse-temurin:21-jdk-alpine AS jre\n+WORKDIR /work\n+COPY --from=build /app/build/libs/*.jar app.jar\n+RUN jar xf app.jar \\\n+ && jdeps --ignore-missing-deps -q --recursive --multi-release 21 --print-module-deps \\\n+        --class-path 'BOOT-INF/lib/*' BOOT-INF/classes > modules.txt \\\n+ && echo \"jdeps modules: $(cat modules.txt)\" \\\n+ && jlink --add-modules \"$(cat modules.txt),jdk.crypto.ec,jdk.charsets,jdk.localedata,jdk.management,jdk.zipfs\" \\\n+        --include-locales=en,ko \\\n+        --strip-debug --no-man-pages --no-header-files --compress=zip-6 \\\n+        --output /opt/jre \\\n+ && /opt/jre/bin/java -version\n+\n # --- runtime stage ---\n-FROM eclipse-temurin:21-jre\n+FROM alpine:3.22\n+ENV JAVA_HOME=/opt/jre \\\n+    PATH=\"/opt/jre/bin:$PATH\"\n+COPY --from=jre /opt/jre /opt/jre\n WORKDIR /app\n COPY --from=build /app/build/libs/*.jar app.jar\n EXPOSE 8080\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker/backend.Dockerfile",
+          "old_path": "infra/docker/backend.Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,14 +5,34 @@\n # 기반 이미지는 worker.Dockerfile 과 같은 digest 로 고정한다(spec 004 T027). 보안 패치를 받으려면 두 파일을 함께 올린다.\n ARG PYTHON_IMAGE=python:3.11.16-slim-trixie@sha256:da047cb8f9d1d98e5c070f5300ba9f7274e33b8fc0e5be5ed88740aed1b95ba9\n \n-FROM ${PYTHON_IMAGE}\n+# --- build stage ---\n+FROM ${PYTHON_IMAGE} AS build\n WORKDIR /app\n \n # data 파트는 아직 lock 이 없다(uv.lock 에 의존성이 비어 있다). requirements.txt 의 하한으로 설치하므로\n # 이미지를 다시 빌드하면 패키지 버전이 오를 수 있다. 설치 뒤 pip check 로 의존 조건만 확인한다.\n+# 가상환경에 설치해 실행 단계로 그것만 옮긴다. 설치가 끝나면 가상환경의 pip 도 지운다.\n COPY requirements.txt ./\n-RUN pip install --no-cache-dir -r requirements.txt \\\n- && pip check\n+RUN python -m venv /opt/venv \\\n+ && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt \\\n+ && /opt/venv/bin/pip check \\\n+ && /opt/venv/bin/pip uninstall -y -q pip\n+\n+# 실행에 쓰지 않는 파일을 걷어 낸다. 기준과 이유는 worker.Dockerfile 의 같은 단계와 같다.\n+RUN apt-get update \\\n+ && apt-get install -y --no-install-recommends binutils \\\n+ && find /opt/venv -depth -type d \\( -name tests -o -name test \\) -exec rm -rf {} + \\\n+ && find /opt/venv -type f \\( -name '*.pyx' -o -name '*.pxd' -o -name '*.pyi' -o -name '*.c' -o -name '*.cpp' \\\n+        -o -name '*.h' -o -name '*.hpp' \\) -delete \\\n+ && find /opt/venv -type f -name '*.so*' -not -path '*.libs/*' -exec strip --strip-debug {} + \\\n+ && /opt/venv/bin/python -c \"import numpy, scipy, pandas, pyarrow.parquet, sqlalchemy, psycopg, requests, dotenv\"\n+\n+# --- runtime stage ---\n+# 가상환경의 python 은 기반 이미지의 /usr/local/bin/python3.11 을 가리키므로 두 단계는 같은 기반 이미지여야 한다.\n+FROM ${PYTHON_IMAGE}\n+WORKDIR /app\n+COPY --from=build /opt/venv /opt/venv\n+ENV PATH=\"/opt/venv/bin:$PATH\"\n \n # 스크립트는 parents[1] 로 data 뿌리를 찾는다 — /app 아래에 config·src·scripts 를 같은 모양으로 둔다.\n COPY config ./config\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker/data.Dockerfile",
+          "old_path": "infra/docker/data.Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,6 +30,20 @@ COPY pyproject.toml uv.lock ./\n RUN uv sync --frozen --no-dev --no-install-project \\\n  && uv pip check --python /app/.venv/bin/python\n \n+# 실행에 쓰지 않는 파일을 걷어 내 이미지를 줄인다. 실행 단계는 이 가상환경을 그대로 복사한다.\n+#   tests/test 폴더        패키지 자체의 테스트(pandas·scipy·pyarrow 등, 약 95MB)\n+#   .pyx .pxd .pyi .c .h 등  컴파일과 타입 검사에만 쓰는 소스·헤더·스텁\n+#   공유 라이브러리 디버그 정보  strip --strip-debug 로 지운다. *.libs 폴더는 auditwheel 이 patchelf 로 고친\n+#                           라이브러리라 strip 이 깨뜨릴 수 있어 건드리지 않는다\n+# 지운 뒤 실제로 쓰는 패키지를 import 해 본다. 라이브러리가 깨졌으면 여기서 이미지를 만들지 않는다.\n+RUN apt-get update \\\n+ && apt-get install -y --no-install-recommends binutils \\\n+ && find /app/.venv -depth -type d \\( -name tests -o -name test \\) -exec rm -rf {} + \\\n+ && find /app/.venv -type f \\( -name '*.pyx' -o -name '*.pxd' -o -name '*.pyi' -o -name '*.c' -o -name '*.cpp' \\\n+        -o -name '*.h' -o -name '*.hpp' \\) -delete \\\n+ && find /app/.venv -type f -name '*.so*' -not -path '*.libs/*' -exec strip --strip-debug {} + \\\n+ && /app/.venv/bin/python -c \"import numpy, scipy, pandas, pyarrow.parquet, psycopg, nautilus_trader.backtest.engine\"\n+\n # --- runtime stage ---\n # 설치를 마친 가상환경만 옮기고 uv 는 싣지 않는다. 가상환경의 python 은 기반 이미지의\n # /usr/local/bin/python3.11 을 가리키므로 두 단계는 같은 기반 이미지여야 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker/worker.Dockerfile",
+          "old_path": "infra/docker/worker.Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881366": []
+  }
+}

@@ -1,0 +1,1000 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 947542,
+    "iid": 161,
+    "project_id": 1444456,
+    "title": "feat(be): 실행 측정에 데이터 원가(읽은 자료 행 수·바이트)를 기록한다",
+    "description": "# 작업 내용 요약\n\nspec 004 **T019**(Phase 8 Convergence)입니다. FR-008과 constitution IX는 \"계산·데이터·저장 원가\"를 구분해 기록하라고 하는데, `backtest_run_metric`에는\n계산(`cpu_seconds`·`peak_rss_mb`)과 저장(`result_bytes`)만 있고 **데이터 칸이 없었습니다**(R-10·data-model이 열을 정할 때 빠짐, converge F4).\n\n이제 워커가 실행마다 **읽은 자료의 양**을 FINISHED `resource.dataRows`·`dataBytes`로 실어 오고, 백엔드가 `data_rows`·`data_bytes`로 기록하며, 뷰와 운영자 API가\n중앙값(`dataRowsP50`·`dataBytesP50`)을 냅니다. 금액 단가는 넣지 않았습니다(PD-06·D19) — 원단위만.\n\n**커밋 넷.** 계약 → 워커 → 백엔드 → 문서.\n\n| 커밋 | 내용 |\n|---|---|\n| `91e0526` | 계약: 메시징 README §4.2, 픽스처(완료·취소 예시만, 실패 예시는 자료를 읽지 못해 없음), 생성기, Python `ResourceUsage`·Java `FinishedPayload.ResourceUsage`에 `dataRows`·`dataBytes` 선택 필드 |\n| `4e29faa` | 워커: `MarketData.usage()`, 엔진 `last_data_usage` 선택 속성, 소비자가 FINISHED에 싣기, 테스트 4 |\n| `31defc5` | 백엔드: 마이그레이션(두 열 + 뷰 끝에 중앙값 둘), `ExecutionMetricRecord`·`Recorder`·`RepositoryImpl`(INSERT·`SUMMARY_BODY`)·`Summary`·응답, 테스트 |\n| `d712155` | API README §1.10, data-model, tasks T019 `[x]` + 구현 시 결정 |\n\n# 관련 티켓\n\n- S15P21E205-252 `[BE] 실행 측정에 데이터 원가(읽은 자료 행 수·바이트)를 기록한다` (T019)\n- 관련: -246(Phase 8 Convergence) — 이 Task를 만든 수렴 평가, -153(T012 측정 기록) — 열을 더한 표\n\n# 주요 변경 사항\n\n- **값의 정의**: `rows` = 읽은 가격 행 + 분배금 + 분할 행 수, `bytes` = 가격 프레임 `memory_usage(deep=True)` 합. 저장소가 실제로 읽은 바이트가 아니라 **워커가 메모리에 든 크기**라\n  근사값이고, 같은 요청이면 같은 값이 나옵니다(결정성). 원가 비교용 대표값으로 충분하다고 봤습니다.\n- **엔진 경계 Protocol은 그대로입니다.** `BacktestEngine.run`은 `EngineOutput`만 돌려주고 자원 사용은 메시지 밖입니다(CLAUDE.md). 엔진이 `last_data_usage`를 선택 속성으로\n  내놓고 소비자가 `getattr(engine, \"last_data_usage\", None)`으로 읽습니다. 거절·적재 실패 실행은 `None`이고 매 실행 시작에 지워 앞 실행 값이 남지 않습니다.\n- **뷰는 끝에 두 열만 덧붙였습니다.** `CREATE OR REPLACE VIEW`는 기존 열의 이름·순서·타입을 바꾸지 못하므로 새 마이그레이션이 같은 SELECT에 두 열을 더합니다.\n  `ExecutionMetricRepositoryImpl.SUMMARY_BODY`도 같은 자리에 같은 문장 — `ExecutionMetricsApiIT`가 API = 뷰를 대조합니다.\n- 집계는 **중앙값 하나(p50)** 만 냅니다. 원가는 대표값이 필요하고 분포 꼬리는 아직 쓸 곳이 없습니다.\n- 자료를 읽지 못한 종결(거절·DLQ·강제 종결)은 `null`입니다. 0으로 채우지 않습니다(원칙 VI).\n\n# 테스트\n\n- 백엔드 전체: `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — **1199 tests, 0 failures, 1 skipped**(1179 → 1199; 최종 트리 `d712155`)\n- 워커: `ruff check && ruff format --check && pytest` — **361 passed**(dev 병합·리뷰 반영 후 재실행)\n- 새로 추가·고친 테스트\n  - 워커: 엔진이 자료를 읽은 실행에만 `last_data_usage`가 있고 거절 실행은 `None`(`test_engine_support`), 소비자가 속성이 있으면 싣고 없으면 키 없음 + 실제 엔진 경로(`test_consumer` 3건)\n  - `ExecutionMetricRecorderTest`: resource의 `dataRows`·`dataBytes`가 기록으로 옮겨진다\n  - `ExecutionMetricsApiIT`: `dataRowsP50`이 뷰 `data_rows_p50`과 같다(픽스처가 값을 실어 와 null 아님)\n  - `FlywayMigrationTest`: 표 두 열·뷰 두 열\n\n# 리뷰 포인트\n\n- **`getattr` 덕 타이핑으로 엔진에서 값을 꺼내는 것.** Protocol에 메서드를 더하면 테스트의 가짜 엔진이 전부 깨지고, 값을 `EngineOutput`에 넣으면 계약(결과)과 측정이 섞입니다.\n  선택 속성 하나가 가장 작은 변경이라 택했고, 소비자 주석에 이유를 적었습니다. 더 명시적인 경계가 필요해지면 `BacktestEngine`에 `last_data_usage` 속성을 Protocol 멤버로 올리는\n  것이 다음 단계입니다.\n- **`bytes`가 근사값인 것.** 001 저장소에서 읽은 바이트를 정확히 재려면 psycopg 커서 단에서 세어야 해서 공급자 구현마다 갈립니다. 워커 메모리 크기는 공급자와 무관하게 같은 뜻이고\n  결정적입니다. 이름을 `dataBytes`로 두되 계약 문서에 \"근사\"라고 적었습니다.\n- **실패 예시 픽스처에는 값이 없습니다.** `DATA_INSUFFICIENT`는 자료 적재 단계에서 나므로 읽은 양이 없다는 게 맞고, 선택 필드임을 예시가 보여 줍니다.\n- 마이그레이션 파일명은 **`V20260916190000`**입니다. 처음 `V20260915190000`으로 적었다가 리뷰에서 **버전 역전**이 걸려 올렸습니다(아래 참고).\n\n# 리뷰 반영 (AI 코드리뷰, 2026-09-16)\n\n- **[P2, 2차] `dataRows` 에서 지수가 통째로 빠져 있었다** — tasks T019 는 `rows` 를 \"가격·지수·기업행위\" 행 수로 정했는데 `MarketData.usage()` 는 가격·분배금·분할만\n  더했습니다. 운영 공급자는 `daily_index` 를 워밍업 시작일 역산과 **거래일 달력**으로 실제로 읽습니다(`market_data.py` `_warmup_start`·`_calendar`). 24개월이면 달력만\n  500행대라 3종목 가격 1,400행대 옆에서 무시할 크기가 아니고, **구간이 길수록 원가가 꾸준히 작게 기록됩니다** — 그 값으로 PD-06 을 정하게 됩니다.\n  `MarketData.index_rows` 를 두고 빌더가 달력 길이를 넘깁니다. 지수는 `rows` 에만 넣고 `bytes` 에는 넣지 않습니다(달력으로 쓰고 버려 메모리에 없습니다).\n  기존 테스트가 `rows > 0` 만 봐서 못 잡았으므로, 가짜 DB 공급자로 가격 5·지수 5·기업행위 2 를 고정하고 **합이 12** 인지 보는 테스트를 더했습니다. 문서 네 곳의 정의도\n  되돌렸습니다.\n\n브랜치를 9월 15일에 만들어 두고 병합하지 않은 채 dev가 156커밋 앞서간 상태였습니다. **dev를 이 브랜치에 병합한 뒤** 두 건을 고쳤습니다.\n\n- **[HIGH] 마이그레이션 버전 역전** — `V20260915190000`이 dev의 `V20260916104500`·`V20260916143350`·`V20260916163000`보다 낮았습니다. `application-prod.yml`이\n  `validate-on-migrate: true`이고 `out-of-order`는 꺼져 있어(Flyway 기본값), 0916 마이그레이션이 이미 적용된 DB에서는 부팅이\n  `Detected resolved migration not applied to database`로 막힙니다. 운영뿐 아니라 팀원 로컬 DB도 같습니다. **빈 DB Testcontainers는 전부 통과하므로 이 브랜치의\n  테스트로는 잡히지 않고**, `infra/scripts/check-migration-version.sh`가 CI에서 막습니다. 파일명만 `V20260916190000`으로 올렸고 내용은 그대로입니다\n  (backend/CLAUDE.md: 아직 어느 운영 환경에도 적용되지 않은 파일은 병합 뒤라도 버전을 올릴 수 있다).\n- **[LOW] 엔진이 실행 간 상태를 든다** — `run_with_artifacts` 독스트링이 \"상태는 전부 지역 변수다\"라고 적어 둔 채 `self.last_data_usage`를 씁니다. 지금은\n  프로세스당 엔진 하나·단일 스레드 소비라 맞지만, 한 인스턴스를 두 작업이 공유하면 뒤 실행의 FINISHED가 앞 실행의 자료량을 싣고 **데이터 원가가 엉뚱한 실행에\n  붙습니다**(값이 그럴듯해 아무도 못 알아챕니다). 속성을 걷어내려면 엔진 Protocol을 바꿔야 해서, 이번에는 **독스트링을 사실과 맞추고 그 전제(인스턴스 하나는 한 번에\n  한 작업)를 명시**했습니다. 동시 실행을 도입한다면 이 속성부터 걷어내야 한다고 적어 뒀습니다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 운영자 집계만\n- [x] **결제·포인트·상품 선택 단계 0건** — 금액 단가 없음(D19)\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 자료를 읽지 못한 종결은 null, 표본 없는 중앙값도 null\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `bytes`는 근사값임을 계약·data-model에 명시",
+    "state": "merged",
+    "created_at": "2026-09-16T21:18:29.249+09:00",
+    "updated_at": "2026-09-17T01:04:30.745+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-17T01:04:30.455+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/252-data-cost-metric",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+    "merge_commit_sha": "9e741bd6b41bf93b64a68b9001a2050192b7cb53",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T21:18:32.242+09:00",
+    "reference": "!161",
+    "references": {
+      "short": "!161",
+      "relative": "!161",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!161"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/161",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 947542,
+    "iid": 161,
+    "project_id": 1444456,
+    "title": "feat(be): 실행 측정에 데이터 원가(읽은 자료 행 수·바이트)를 기록한다",
+    "description": "# 작업 내용 요약\n\nspec 004 **T019**(Phase 8 Convergence)입니다. FR-008과 constitution IX는 \"계산·데이터·저장 원가\"를 구분해 기록하라고 하는데, `backtest_run_metric`에는\n계산(`cpu_seconds`·`peak_rss_mb`)과 저장(`result_bytes`)만 있고 **데이터 칸이 없었습니다**(R-10·data-model이 열을 정할 때 빠짐, converge F4).\n\n이제 워커가 실행마다 **읽은 자료의 양**을 FINISHED `resource.dataRows`·`dataBytes`로 실어 오고, 백엔드가 `data_rows`·`data_bytes`로 기록하며, 뷰와 운영자 API가\n중앙값(`dataRowsP50`·`dataBytesP50`)을 냅니다. 금액 단가는 넣지 않았습니다(PD-06·D19) — 원단위만.\n\n**커밋 넷.** 계약 → 워커 → 백엔드 → 문서.\n\n| 커밋 | 내용 |\n|---|---|\n| `91e0526` | 계약: 메시징 README §4.2, 픽스처(완료·취소 예시만, 실패 예시는 자료를 읽지 못해 없음), 생성기, Python `ResourceUsage`·Java `FinishedPayload.ResourceUsage`에 `dataRows`·`dataBytes` 선택 필드 |\n| `4e29faa` | 워커: `MarketData.usage()`, 엔진 `last_data_usage` 선택 속성, 소비자가 FINISHED에 싣기, 테스트 4 |\n| `31defc5` | 백엔드: 마이그레이션(두 열 + 뷰 끝에 중앙값 둘), `ExecutionMetricRecord`·`Recorder`·`RepositoryImpl`(INSERT·`SUMMARY_BODY`)·`Summary`·응답, 테스트 |\n| `d712155` | API README §1.10, data-model, tasks T019 `[x]` + 구현 시 결정 |\n\n# 관련 티켓\n\n- S15P21E205-252 `[BE] 실행 측정에 데이터 원가(읽은 자료 행 수·바이트)를 기록한다` (T019)\n- 관련: -246(Phase 8 Convergence) — 이 Task를 만든 수렴 평가, -153(T012 측정 기록) — 열을 더한 표\n\n# 주요 변경 사항\n\n- **값의 정의**: `rows` = 읽은 가격 행 + 분배금 + 분할 행 수, `bytes` = 가격 프레임 `memory_usage(deep=True)` 합. 저장소가 실제로 읽은 바이트가 아니라 **워커가 메모리에 든 크기**라\n  근사값이고, 같은 요청이면 같은 값이 나옵니다(결정성). 원가 비교용 대표값으로 충분하다고 봤습니다.\n- **엔진 경계 Protocol은 그대로입니다.** `BacktestEngine.run`은 `EngineOutput`만 돌려주고 자원 사용은 메시지 밖입니다(CLAUDE.md). 엔진이 `last_data_usage`를 선택 속성으로\n  내놓고 소비자가 `getattr(engine, \"last_data_usage\", None)`으로 읽습니다. 거절·적재 실패 실행은 `None`이고 매 실행 시작에 지워 앞 실행 값이 남지 않습니다.\n- **뷰는 끝에 두 열만 덧붙였습니다.** `CREATE OR REPLACE VIEW`는 기존 열의 이름·순서·타입을 바꾸지 못하므로 새 마이그레이션이 같은 SELECT에 두 열을 더합니다.\n  `ExecutionMetricRepositoryImpl.SUMMARY_BODY`도 같은 자리에 같은 문장 — `ExecutionMetricsApiIT`가 API = 뷰를 대조합니다.\n- 집계는 **중앙값 하나(p50)** 만 냅니다. 원가는 대표값이 필요하고 분포 꼬리는 아직 쓸 곳이 없습니다.\n- 자료를 읽지 못한 종결(거절·DLQ·강제 종결)은 `null`입니다. 0으로 채우지 않습니다(원칙 VI).\n\n# 테스트\n\n- 백엔드 전체: `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck build` — **1199 tests, 0 failures, 1 skipped**(1179 → 1199; 최종 트리 `d712155`)\n- 워커: `ruff check && ruff format --check && pytest` — **361 passed**(dev 병합·리뷰 반영 후 재실행)\n- 새로 추가·고친 테스트\n  - 워커: 엔진이 자료를 읽은 실행에만 `last_data_usage`가 있고 거절 실행은 `None`(`test_engine_support`), 소비자가 속성이 있으면 싣고 없으면 키 없음 + 실제 엔진 경로(`test_consumer` 3건)\n  - `ExecutionMetricRecorderTest`: resource의 `dataRows`·`dataBytes`가 기록으로 옮겨진다\n  - `ExecutionMetricsApiIT`: `dataRowsP50`이 뷰 `data_rows_p50`과 같다(픽스처가 값을 실어 와 null 아님)\n  - `FlywayMigrationTest`: 표 두 열·뷰 두 열\n\n# 리뷰 포인트\n\n- **`getattr` 덕 타이핑으로 엔진에서 값을 꺼내는 것.** Protocol에 메서드를 더하면 테스트의 가짜 엔진이 전부 깨지고, 값을 `EngineOutput`에 넣으면 계약(결과)과 측정이 섞입니다.\n  선택 속성 하나가 가장 작은 변경이라 택했고, 소비자 주석에 이유를 적었습니다. 더 명시적인 경계가 필요해지면 `BacktestEngine`에 `last_data_usage` 속성을 Protocol 멤버로 올리는\n  것이 다음 단계입니다.\n- **`bytes`가 근사값인 것.** 001 저장소에서 읽은 바이트를 정확히 재려면 psycopg 커서 단에서 세어야 해서 공급자 구현마다 갈립니다. 워커 메모리 크기는 공급자와 무관하게 같은 뜻이고\n  결정적입니다. 이름을 `dataBytes`로 두되 계약 문서에 \"근사\"라고 적었습니다.\n- **실패 예시 픽스처에는 값이 없습니다.** `DATA_INSUFFICIENT`는 자료 적재 단계에서 나므로 읽은 양이 없다는 게 맞고, 선택 필드임을 예시가 보여 줍니다.\n- 마이그레이션 파일명은 **`V20260916190000`**입니다. 처음 `V20260915190000`으로 적었다가 리뷰에서 **버전 역전**이 걸려 올렸습니다(아래 참고).\n\n# 리뷰 반영 (AI 코드리뷰, 2026-09-16)\n\n- **[P2, 2차] `dataRows` 에서 지수가 통째로 빠져 있었다** — tasks T019 는 `rows` 를 \"가격·지수·기업행위\" 행 수로 정했는데 `MarketData.usage()` 는 가격·분배금·분할만\n  더했습니다. 운영 공급자는 `daily_index` 를 워밍업 시작일 역산과 **거래일 달력**으로 실제로 읽습니다(`market_data.py` `_warmup_start`·`_calendar`). 24개월이면 달력만\n  500행대라 3종목 가격 1,400행대 옆에서 무시할 크기가 아니고, **구간이 길수록 원가가 꾸준히 작게 기록됩니다** — 그 값으로 PD-06 을 정하게 됩니다.\n  `MarketData.index_rows` 를 두고 빌더가 달력 길이를 넘깁니다. 지수는 `rows` 에만 넣고 `bytes` 에는 넣지 않습니다(달력으로 쓰고 버려 메모리에 없습니다).\n  기존 테스트가 `rows > 0` 만 봐서 못 잡았으므로, 가짜 DB 공급자로 가격 5·지수 5·기업행위 2 를 고정하고 **합이 12** 인지 보는 테스트를 더했습니다. 문서 네 곳의 정의도\n  되돌렸습니다.\n\n브랜치를 9월 15일에 만들어 두고 병합하지 않은 채 dev가 156커밋 앞서간 상태였습니다. **dev를 이 브랜치에 병합한 뒤** 두 건을 고쳤습니다.\n\n- **[HIGH] 마이그레이션 버전 역전** — `V20260915190000`이 dev의 `V20260916104500`·`V20260916143350`·`V20260916163000`보다 낮았습니다. `application-prod.yml`이\n  `validate-on-migrate: true`이고 `out-of-order`는 꺼져 있어(Flyway 기본값), 0916 마이그레이션이 이미 적용된 DB에서는 부팅이\n  `Detected resolved migration not applied to database`로 막힙니다. 운영뿐 아니라 팀원 로컬 DB도 같습니다. **빈 DB Testcontainers는 전부 통과하므로 이 브랜치의\n  테스트로는 잡히지 않고**, `infra/scripts/check-migration-version.sh`가 CI에서 막습니다. 파일명만 `V20260916190000`으로 올렸고 내용은 그대로입니다\n  (backend/CLAUDE.md: 아직 어느 운영 환경에도 적용되지 않은 파일은 병합 뒤라도 버전을 올릴 수 있다).\n- **[LOW] 엔진이 실행 간 상태를 든다** — `run_with_artifacts` 독스트링이 \"상태는 전부 지역 변수다\"라고 적어 둔 채 `self.last_data_usage`를 씁니다. 지금은\n  프로세스당 엔진 하나·단일 스레드 소비라 맞지만, 한 인스턴스를 두 작업이 공유하면 뒤 실행의 FINISHED가 앞 실행의 자료량을 싣고 **데이터 원가가 엉뚱한 실행에\n  붙습니다**(값이 그럴듯해 아무도 못 알아챕니다). 속성을 걷어내려면 엔진 Protocol을 바꿔야 해서, 이번에는 **독스트링을 사실과 맞추고 그 전제(인스턴스 하나는 한 번에\n  한 작업)를 명시**했습니다. 동시 실행을 도입한다면 이 속성부터 걷어내야 한다고 적어 뒀습니다.\n\n# 공통 확인\n- [x] **순위 배지·추천 표현 0건** — 운영자 집계만\n- [x] **결제·포인트·상품 선택 단계 0건** — 금액 단가 없음(D19)\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 자료를 읽지 못한 종결은 null, 표본 없는 중앙값도 null\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — `bytes`는 근사값임을 계약·data-model에 명시",
+    "state": "merged",
+    "created_at": "2026-09-16T21:18:29.249+09:00",
+    "updated_at": "2026-09-17T01:04:30.745+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-17T01:04:30.455+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/252-data-cost-metric",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+    "merge_commit_sha": "9e741bd6b41bf93b64a68b9001a2050192b7cb53",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T21:18:32.242+09:00",
+    "reference": "!161",
+    "references": {
+      "short": "!161",
+      "relative": "!161",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!161"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/161",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 5
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "24",
+    "latest_build_started_at": "2026-09-16T21:18:40.560+09:00",
+    "latest_build_finished_at": "2026-09-16T21:33:47.761+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 200238,
+      "iid": 84,
+      "project_id": 1444456,
+      "sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+      "ref": "feat(be)/252-data-cost-metric",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T21:18:40.444+09:00",
+      "updated_at": "2026-09-16T21:33:47.768+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200238"
+    },
+    "head_pipeline": {
+      "id": 200238,
+      "iid": 84,
+      "project_id": 1444456,
+      "sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+      "ref": "feat(be)/252-data-cost-metric",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T21:18:40.444+09:00",
+      "updated_at": "2026-09-16T21:33:47.768+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200238",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T21:18:40.560+09:00",
+      "finished_at": "2026-09-16T21:33:47.761+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/200238",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "head_sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+      "start_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "06219c1bc176bb0767cdfefb44c340232faa0bf5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819874,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-16T21:18:29.446+09:00",
+          "updated_at": "2026-09-16T21:18:29.451+09:00",
+          "system": true,
+          "noteable_id": 947542,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 161,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3534aaf5e10ce1efa6d05a7583a313e19ed819e9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819875,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-16T21:18:29.467+09:00",
+          "updated_at": "2026-09-16T21:18:29.488+09:00",
+          "system": true,
+          "noteable_id": 947542,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 161,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6eb8b7b55ead8b9cbf8469ec80f16fc03930b537",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819876,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 계약, 워커, 백엔드, DB 마이그레이션, 문서 및 테스트까지 일관성 있게 잘 구현되었습니다.\n\n### 테스트 제안\n- **동시성 및 스레드 안정성 검증**: 워커 엔진(`PortfolioBacktestEngine`)이 `self.last_data_usage` 인스턴스 변수를 사용하여 상태를 유지하므로, 향후 워커가 멀티스레딩 환경이나 비동기 동시 실행 구조로 확장될 경우 데이터 레이스(Data Race)로 인해 다른 작업의 데이터 원가가 엉뚱한 결과에 섞이는지 검증하는 다중 스레드 시나리오 테스트를 추가할 것을 권장합니다.\n- **Null 값 경계값 테스트**: 데이터 적재 실패(`DATA_INSUFFICIENT`)나 강제 종결 시 `resource` 객체 내부의 `dataRows`와 `dataBytes`가 정확히 `null`로 적재되고, 백엔드 요약 통계(`v_run_metric_summary` 및 API 응답)에서 중앙값 계산 시 `null` 값들이 안전하게 제외되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:fd602ee91f690886ca23b865c4d538d91bf0a829 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T21:18:39.785+09:00",
+          "updated_at": "2026-09-16T21:18:39.785+09:00",
+          "system": false,
+          "noteable_id": 947542,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 161,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "812052902a37623dc97f99121ec61625b7bc4960",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2819883,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-16T21:21:28.047+09:00",
+          "updated_at": "2026-09-16T21:21:28.059+09:00",
+          "system": true,
+          "noteable_id": 947542,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 161,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3abaf075a4f6977ce20ae5fd0a95c0bd616316d3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2820455,
+          "type": null,
+          "body": "mentioned in commit 9e741bd6b41bf93b64a68b9001a2050192b7cb53",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-17T01:04:30.521+09:00",
+          "updated_at": "2026-09-17T01:04:30.526+09:00",
+          "system": true,
+          "noteable_id": 947542,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 161,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2208825,
+      "head_commit_sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+      "base_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "start_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "created_at": "2026-09-16T21:18:29.758+09:00",
+      "merge_request_id": 947542,
+      "state": "collected",
+      "real_size": "24",
+      "patch_id_sha": "73e57c269405a4f4b38ea87b6a13862184c73d4b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2208825,
+      "head_commit_sha": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+      "base_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "start_commit_sha": "1748dbc8f71b0ec3dc5a72765c571103bb93e050",
+      "created_at": "2026-09-16T21:18:29.758+09:00",
+      "merge_request_id": 947542,
+      "state": "collected",
+      "real_size": "24",
+      "patch_id_sha": "73e57c269405a4f4b38ea87b6a13862184c73d4b",
+      "commits": [
+        {
+          "id": "fd602ee91f690886ca23b865c4d538d91bf0a829",
+          "short_id": "fd602ee9",
+          "created_at": "2026-09-16T21:08:57.000+09:00",
+          "parent_ids": [
+            "62844d52e707a615e7a9c87b011e61573ea26fd2"
+          ],
+          "title": "fix(be): 데이터 원가에 지수(거래일 달력) 행 수를 더한다",
+          "message": "fix(be): 데이터 원가에 지수(거래일 달력) 행 수를 더한다\n\nAI 코드리뷰 2차 지적. tasks T019 는 rows 를 \"가격·지수·기업행위\" 행 수로 정했는데\nMarketData.usage() 가 가격·분배금·분할만 더했다. 운영 공급자는 daily_index 를 워밍업\n시작일 역산과 거래일 달력으로 실제로 읽는다 — 24개월이면 달력만 500행대라 3종목\n가격 1,400행대 옆에서 무시할 크기가 아니고, 구간이 길수록 원가가 꾸준히 작게\n기록된다. 그 값으로 PD-06 을 정하게 된다.\n\nMarketData 에 index_rows 를 두고 빌더가 달력 길이를 넘긴다. 지수는 rows 에만 넣고\nbytes 에는 넣지 않는다 — 달력으로 쓰고 버려 메모리에 남지 않는다. 읽은 행은\n원가이고, 들고 있지 않은 바이트는 지어내지 않는다. 픽스처 공급자는 지수를 읽지\n않으므로 0 이다.\n\n기존 테스트는 rows > 0 만 봐서 이 누락을 잡지 못했다. 가짜 DB 공급자로 가격 5·지수\n5·기업행위 2 를 고정하고 합이 12 인지 확인하는 테스트를 더했다. 문서 네 곳(메시징\nREADME·API README·data-model·tasks 구현 시 결정)의 정의도 되돌렸다.\n\nJira: S15P21E205-252 (spec 004 T019)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-16T21:08:57.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-16T21:08:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/fd602ee91f690886ca23b865c4d538d91bf0a829"
+        },
+        {
+          "id": "62844d52e707a615e7a9c87b011e61573ea26fd2",
+          "short_id": "62844d52",
+          "created_at": "2026-09-16T20:58:05.000+09:00",
+          "parent_ids": [
+            "16f738a34e3df09e2da239a5a70f29a89ad9d294"
+          ],
+          "title": "fix(be): 데이터 원가 마이그레이션 버전을 dev 위로 올리고 엔진 상태 전제를 적는다",
+          "message": "fix(be): 데이터 원가 마이그레이션 버전을 dev 위로 올리고 엔진 상태 전제를 적는다\n\nAI 코드리뷰 반영. 브랜치를 9월 15일에 만들어 둔 사이 dev 가 156커밋 앞서갔다.\n\n마이그레이션 V20260915190000 이 dev 의 V20260916104500·V20260916143350·\nV20260916163000 보다 낮았다. prod 는 validate-on-migrate 가 켜져 있고 out-of-order\n는 꺼져 있어(Flyway 기본값), 0916 마이그레이션이 이미 적용된 DB 에서는 부팅이\n막힌다 — 운영뿐 아니라 팀원 로컬도 같다. 빈 DB Testcontainers 는 전부 통과하므로\n이 브랜치 테스트로는 잡히지 않고 check-migration-version.sh 가 CI 에서 막는다.\n파일명만 V20260916190000 으로 올렸고 내용은 그대로다.\n\nrun_with_artifacts 독스트링이 \"상태는 전부 지역 변수다\"라고 적어 둔 채\nself.last_data_usage 를 쓴다. 지금은 프로세스당 엔진 하나·단일 스레드 소비라\n맞지만, 한 인스턴스를 두 작업이 공유하면 뒤 실행의 FINISHED 가 앞 실행의 자료량을\n싣고 데이터 원가가 엉뚱한 실행에 붙는다. 속성을 걷어내려면 엔진 Protocol 을 바꿔야\n해서 이번에는 독스트링을 사실과 맞추고 그 전제를 명시했다.\n\nJira: S15P21E205-252 (spec 004 T019)\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-16T20:58:05.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-16T20:58:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/62844d52e707a615e7a9c87b011e61573ea26fd2"
+        },
+        {
+          "id": "16f738a34e3df09e2da239a5a70f29a89ad9d294",
+          "short_id": "16f738a3",
+          "created_at": "2026-09-16T20:52:33.000+09:00",
+          "parent_ids": [
+            "d7121553dc13bf88bb26bcef38a4293fdf1439bd",
+            "1748dbc8f71b0ec3dc5a72765c571103bb93e050"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(be)/252-data-cost-metric",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(be)/252-data-cost-metric\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-16T20:52:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-16T20:52:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/16f738a34e3df09e2da239a5a70f29a89ad9d294"
+        },
+        {
+          "id": "d7121553dc13bf88bb26bcef38a4293fdf1439bd",
+          "short_id": "d7121553",
+          "created_at": "2026-09-15T17:46:36.000+09:00",
+          "parent_ids": [
+            "31defc54023e71bca688be6defa3892a0f65b778"
+          ],
+          "title": "docs(be): 데이터 원가 항목을 API README·data-model 에 적고 T019 를 닫는다",
+          "message": "docs(be): 데이터 원가 항목을 API README·data-model 에 적고 T019 를 닫는다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T17:46:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T17:46:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d7121553dc13bf88bb26bcef38a4293fdf1439bd"
+        },
+        {
+          "id": "31defc54023e71bca688be6defa3892a0f65b778",
+          "short_id": "31defc54",
+          "created_at": "2026-09-15T17:46:36.000+09:00",
+          "parent_ids": [
+            "4e29faa2d0955f70ea484d63539a99f688f7b457"
+          ],
+          "title": "feat(be): 실행 측정에 데이터 원가 두 열과 뷰 중앙값을 더한다",
+          "message": "feat(be): 실행 측정에 데이터 원가 두 열과 뷰 중앙값을 더한다\n\nbacktest_run_metric.data_rows·data_bytes(FINISHED resource 그대로, 없으면 null),\nv_run_metric_summary 끝에 data_rows_p50·data_bytes_p50, SUMMARY_BODY 도 같은 자리에\n같은 문장, GET /internal/execution-metrics 응답 두 필드. FR-008·원칙 IX 의\n\"계산·데이터·저장 원가\" 세 갈래가 이제 다 있다. 금액 단가는 없다(PD-06·D19).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T17:46:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T17:46:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/31defc54023e71bca688be6defa3892a0f65b778"
+        },
+        {
+          "id": "4e29faa2d0955f70ea484d63539a99f688f7b457",
+          "short_id": "4e29faa2",
+          "created_at": "2026-09-15T17:46:36.000+09:00",
+          "parent_ids": [
+            "91e0526bd1c622564a7a7eb5fafa4e13e58d9de3"
+          ],
+          "title": "feat(be): 워커가 읽은 자료의 행 수·바이트를 재고 FINISHED 에 싣는다",
+          "message": "feat(be): 워커가 읽은 자료의 행 수·바이트를 재고 FINISHED 에 싣는다\n\nMarketData.usage() = 가격·분배금·분할 행 수 + 가격 프레임 memory_usage(deep). 엔진은\nlast_data_usage 선택 속성으로 내놓고(Protocol 은 EngineOutput 만 돌려준다), 소비자가\ngetattr 로 읽어 resource 에 싣는다. 거절·적재 실패 실행은 None — 매 실행 시작에 지운다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T17:46:36.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T17:46:36.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4e29faa2d0955f70ea484d63539a99f688f7b457"
+        },
+        {
+          "id": "91e0526bd1c622564a7a7eb5fafa4e13e58d9de3",
+          "short_id": "91e0526b",
+          "created_at": "2026-09-15T17:46:35.000+09:00",
+          "parent_ids": [
+            "05ce05c9bce325167157106853248c5702abe822"
+          ],
+          "title": "feat(be): FINISHED resource 에 읽은 자료의 양(dataRows·dataBytes)을 선택 필드로 더한다",
+          "message": "feat(be): FINISHED resource 에 읽은 자료의 양(dataRows·dataBytes)을 선택 필드로 더한다\n\n계약 v2 안의 선택 필드다. 메시징 README §4.2, 픽스처(완료·취소 예시만, 실패 예시는\n자료를 읽지 못해 없음), 생성기, Python·Java 레코드를 한 커밋에 둔다(계약 변경 규칙).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "sje",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-15T17:46:35.000+09:00",
+          "committer_name": "sje",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-15T17:46:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/91e0526bd1c622564a7a7eb5fafa4e13e58d9de3"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -26,6 +26,8 @@ public record ExecutionMetricRecord(\n         BigDecimal cpuSeconds,\n         boolean autoRetried,\n         long resultBytes,\n+        Long dataRows,\n+        Long dataBytes,\n         String servedQueue,\n         String workerRole,\n         Instant recordedAt) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/command/ExecutionMetricRecord.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/command/ExecutionMetricRecord.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,11 +24,15 @@ public record FinishedPayload(\n      * @param queue 이 실행을 <b>끝낸</b> 워커가 집었던 큐. 중복 실행(R-18)에서는 마지막 STARTED 의 워커와 결과를 낸 워커가 다를 수 있어 종결\n      *     이벤트가 직접 싣는다(T012). 선택\n      * @param role 끝낸 워커의 역할({@code single}/{@code flex}). 선택\n+     * @param dataRows 이 실행이 읽은 자료 행 수(가격·분배금·분할). 데이터 원가(FR-008, T019). 자료를 읽지 못한 실행은 null\n+     * @param dataBytes 읽은 가격 프레임이 워커 메모리에서 차지한 바이트(근사). 선택\n      */\n     public record ResourceUsage(\n             BigDecimal peakRssMb,\n             BigDecimal cpuSeconds,\n             BigDecimal wallSeconds,\n             String queue,\n-            String role) {}\n+            String role,\n+            Long dataRows,\n+            Long dataBytes) {}\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/message/FinishedPayload.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/port/message/FinishedPayload.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,6 +11,8 @@ import java.math.BigDecimal;\n  * @param flexServedRate 공용(flex) 워커가 집은 비율. 단건 유형에서 이 값이 \"공용 워커가 단건을 도운 비율\"이다\n  * @param reuseCount 이 유형의 요청이 새 계산 없이 합류·재사용한 수(FR-008)\n  * @param limitHitCount 이 유형이 한도에 닿은 수(접수 거절 + 실행 정지)\n+ * @param dataRowsP50 실행이 읽은 자료 행 수의 중앙값(데이터 원가, FR-008·T019). 표본 없으면 null\n+ * @param dataBytesP50 읽은 가격 프레임 바이트의 중앙값. 표본 없으면 null\n  */\n public record ExecutionMetricSummary(\n         ExecutionType executionType,\n@@ -26,4 +28,6 @@ public record ExecutionMetricSummary(\n         BigDecimal peakRssP95Mb,\n         BigDecimal flexServedRate,\n         long reuseCount,\n-        long limitHitCount) {}\n+        long limitHitCount,\n+        BigDecimal dataRowsP50,\n+        BigDecimal dataBytesP50) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/ExecutionMetricSummary.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/ExecutionMetricSummary.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -72,6 +72,9 @@ public class ExecutionMetricRecorder {\n                         // 재발행으로 생긴 중복 실행은 재시도가 아니다 — 시도 수가 발행 수를 넘은 만큼만 재시도다(R-18).\n                         run.getAttempt() > lc.publishCount(),\n                         repository.resultBytes(run.getId()),\n+                        // 데이터 원가(FR-008, T019). 워커가 자료를 읽은 실행에만 있다 — 없으면 null 그대로.\n+                        resource == null ? null : resource.dataRows(),\n+                        resource == null ? null : resource.dataBytes(),\n                         worker.queue(),\n                         worker.role(),\n                         clock.instant());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/ExecutionMetricRecorder.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/service/ExecutionMetricRecorder.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -43,7 +43,9 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository\n                    (SELECT count(*) FROM backtest_limit_hit h\n                      WHERE h.execution_type = m.execution_type\n                        AND (CAST(:from AS timestamptz) IS NULL OR h.at >= :from)\n-                       AND (CAST(:to AS timestamptz) IS NULL OR h.at < :to))   AS limit_hit_count\n+                       AND (CAST(:to AS timestamptz) IS NULL OR h.at < :to))   AS limit_hit_count,\n+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY m.data_rows)    AS data_rows_p50,\n+                   percentile_cont(0.5) WITHIN GROUP (ORDER BY m.data_bytes)   AS data_bytes_p50\n               FROM backtest_run_metric m\n              WHERE (CAST(:type AS varchar) IS NULL OR m.execution_type = :type)\n                AND (CAST(:from AS timestamptz) IS NULL OR m.recorded_at >= :from)\n@@ -68,11 +70,13 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository\n                                         + \" status, failure_code, queued_at, started_at,\"\n                                         + \" finished_at, wait_ms, run_ms, concurrent_running,\"\n                                         + \" peak_rss_mb, cpu_seconds, auto_retried, result_bytes,\"\n+                                        + \" data_rows, data_bytes,\"\n                                         + \" served_queue, worker_role, recorded_at)\"\n                                         + \" VALUES (nextval('backtest_run_metric_seq'), :runId,\"\n                                         + \" :type, :status, :failureCode, :queuedAt, :startedAt,\"\n                                         + \" :finishedAt, :waitMs, :runMs, :concurrent,\"\n                                         + \" :peakRssMb, :cpuSeconds, :autoRetried, :resultBytes,\"\n+                                        + \" :dataRows, :dataBytes,\"\n                                         + \" :servedQueue, :workerRole, :recordedAt)\"\n                                         + \" ON CONFLICT (run_id) DO NOTHING\")\n                         .setParameter(\"runId\", m.runId())\n@@ -89,6 +93,8 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository\n                         .setParameter(\"cpuSeconds\", m.cpuSeconds())\n                         .setParameter(\"autoRetried\", m.autoRetried())\n                         .setParameter(\"resultBytes\", m.resultBytes())\n+                        .setParameter(\"dataRows\", m.dataRows())\n+                        .setParameter(\"dataBytes\", m.dataBytes())\n                         .setParameter(\"servedQueue\", m.servedQueue())\n                         .setParameter(\"workerRole\", m.workerRole())\n                         .setParameter(\"recordedAt\", m.recordedAt())\n@@ -184,7 +190,9 @@ public class ExecutionMetricRepositoryImpl implements ExecutionMetricRepository\n                 decimal(r[10]),\n                 decimal(r[11]),\n                 ((Number) r[12]).longValue(),\n-                ((Number) r[13]).longValue());\n+                ((Number) r[13]).longValue(),\n+                decimal(r[14]),\n+                decimal(r[15]));\n     }\n \n     /** percentile_cont 는 double, avg 는 numeric 으로 온다. 표본이 없으면 null 그대로 — 0 으로 채우지 않는다(원칙 VI). */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/ExecutionMetricRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/ExecutionMetricRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,7 +37,9 @@ public record ExecutionMetricsResponse(Instant from, Instant to, List<Row> rows)\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal peakRssP95Mb,\n             @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal flexServedRate,\n             long reuseCount,\n-            long limitHitCount) {\n+            long limitHitCount,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal dataRowsP50,\n+            @JsonSerialize(using = PlainBigDecimalSerializer.class) BigDecimal dataBytesP50) {\n \n         static Row of(ExecutionMetricSummary s) {\n             return new Row(\n@@ -54,7 +56,9 @@ public record ExecutionMetricsResponse(Instant from, Instant to, List<Row> rows)\n                     s.peakRssP95Mb(),\n                     s.flexServedRate(),\n                     s.reuseCount(),\n-                    s.limitHitCount());\n+                    s.limitHitCount(),\n+                    s.dataRowsP50(),\n+                    s.dataBytesP50());\n         }\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/ExecutionMetricsResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/presentation/response/ExecutionMetricsResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,39 @@\n+-- spec 004 T019: 데이터 원가(FR-008·constitution IX \"계산·데이터·저장 원가\").\n+-- 측정 기록에 계산(cpu_seconds·peak_rss_mb)·저장(result_bytes)만 있고 데이터 칸이 없었다.\n+-- 워커가 FINISHED resource.dataRows·dataBytes 로 실어 오는 값을 그대로 둔다. 자료를 읽지 못한\n+-- 종결(거절·DLQ·강제 종결)은 null 이다 — 0 으로 채우지 않는다(원칙 VI).\n+ALTER TABLE backtest_run_metric\n+    ADD COLUMN data_rows  BIGINT,\n+    ADD COLUMN data_bytes BIGINT;\n+\n+COMMENT ON COLUMN backtest_run_metric.data_rows IS\n+    '이 실행이 읽은 자료 행 수(가격·분배금·분할). FINISHED resource.dataRows. 자료를 읽지 못한 종결은 null';\n+COMMENT ON COLUMN backtest_run_metric.data_bytes IS\n+    '읽은 가격 프레임이 워커 메모리에서 차지한 바이트(근사). FINISHED resource.dataBytes';\n+\n+-- 뷰는 열을 끝에 덧붙이기만 한다(CREATE OR REPLACE VIEW 는 기존 열의 이름·순서·타입을 바꾸지 못한다).\n+-- 앞부분은 V20260915150000 의 SELECT 와 같고, ExecutionMetricRepositoryImpl.SUMMARY_BODY 와도 같은 문장이어야 한다.\n+CREATE OR REPLACE VIEW v_run_metric_summary AS\n+SELECT m.execution_type,\n+       count(*)                                                              AS count,\n+       avg(CASE WHEN m.status = 'FAILED' THEN 1.0 ELSE 0.0 END)              AS fail_rate,\n+       avg(CASE WHEN m.status = 'CANCELLED' THEN 1.0 ELSE 0.0 END)           AS cancel_rate,\n+       avg(CASE WHEN m.auto_retried THEN 1.0 ELSE 0.0 END)                   AS auto_retry_rate,\n+       percentile_cont(0.5) WITHIN GROUP (ORDER BY m.wait_ms)                AS wait_p50_ms,\n+       percentile_cont(0.95) WITHIN GROUP (ORDER BY m.wait_ms)               AS wait_p95_ms,\n+       percentile_cont(0.99) WITHIN GROUP (ORDER BY m.wait_ms)               AS wait_p99_ms,\n+       percentile_cont(0.5) WITHIN GROUP (ORDER BY m.run_ms)                 AS run_p50_ms,\n+       percentile_cont(0.95) WITHIN GROUP (ORDER BY m.run_ms)                AS run_p95_ms,\n+       percentile_cont(0.95) WITHIN GROUP (ORDER BY m.peak_rss_mb)           AS peak_rss_p95_mb,\n+       avg(CASE WHEN m.worker_role = 'flex' THEN 1.0 ELSE 0.0 END)           AS flex_served_rate,\n+       (SELECT count(*) FROM backtest_reuse_event e\n+         WHERE e.request_execution_type = m.execution_type)                  AS reuse_count,\n+       (SELECT count(*) FROM backtest_limit_hit h\n+         WHERE h.execution_type = m.execution_type)                          AS limit_hit_count,\n+       percentile_cont(0.5) WITHIN GROUP (ORDER BY m.data_rows)              AS data_rows_p50,\n+       percentile_cont(0.5) WITHIN GROUP (ORDER BY m.data_bytes)             AS data_bytes_p50\n+  FROM backtest_run_metric m\n+ GROUP BY m.execution_type;\n+\n+COMMENT ON VIEW v_run_metric_summary IS\n+    '실행 유형별 대기·소요 분포, 실패·취소·자동 재시도율, flex 워커 지원 비율, 재사용·한도 도달 수, 데이터 원가 중앙값. PD-06 결정 자료(R-10·T019)';\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260916190000__backtest_run_metric_data_cost.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260916190000__backtest_run_metric_data_cost.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -103,7 +103,9 @@ class ExecutionMetricRecorderTest {\n                         new BigDecimal(\"3.210\"),\n                         new BigDecimal(\"4.0\"),\n                         null,\n-                        null));\n+                        null,\n+                        1_439L,\n+                        245_760L));\n \n         ExecutionMetricRecord m = recorded();\n         assertThat(m.runId()).isEqualTo(11L);\n@@ -115,6 +117,9 @@ class ExecutionMetricRecorderTest {\n         assertThat(m.peakRssMb()).isEqualByComparingTo(\"512.5\");\n         assertThat(m.cpuSeconds()).isEqualByComparingTo(\"3.210\");\n         assertThat(m.resultBytes()).isEqualTo(4096L);\n+        // 데이터 원가(T019)는 FINISHED resource 에서 그대로 옮긴다.\n+        assertThat(m.dataRows()).isEqualTo(1_439L);\n+        assertThat(m.dataBytes()).isEqualTo(245_760L);\n         assertThat(m.servedQueue()).isEqualTo(\"backtest.jobs\");\n         assertThat(m.workerRole()).isEqualTo(\"flex\");\n         assertThat(m.recordedAt()).isEqualTo(NOW);\n@@ -132,7 +137,9 @@ class ExecutionMetricRecorderTest {\n                         new BigDecimal(\"1.000\"),\n                         new BigDecimal(\"1.0\"),\n                         \"backtest.jobs\",\n-                        \"single\"));\n+                        \"single\",\n+                        null,\n+                        null));\n \n         ExecutionMetricRecord m = recorded();\n         assertThat(m.workerRole()).isEqualTo(\"single\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionMetricRecorderTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/ExecutionMetricRecorderTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -139,6 +139,10 @@ class ExecutionMetricsApiIT extends PostgresTestSupport {\n         assertThat(p99).isGreaterThanOrEqualTo(p95);\n         assertThat(new BigDecimal(row.path(\"flexServedRate\").asText()))\n                 .isBetween(BigDecimal.ZERO, BigDecimal.ONE);\n+        // 데이터 원가 중앙값(T019)도 뷰와 같다. 픽스처 FINISHED 가 dataRows 를 실어 오므로 null 이 아니다.\n+        assertThat(new BigDecimal(row.path(\"dataRowsP50\").asText()))\n+                .isEqualByComparingTo(new BigDecimal(view.get(\"data_rows_p50\").toString()));\n+        assertThat(row.path(\"dataBytesP50\").isTextual()).isTrue();\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/ExecutionMetricsApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/presentation/controller/ExecutionMetricsApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -230,6 +230,9 @@ class FlywayMigrationTest extends PostgresTestSupport {\n                         \"cpu_seconds\",\n                         \"auto_retried\",\n                         \"result_bytes\",\n+                        // 데이터 원가 (FR-008, T019)\n+                        \"data_rows\",\n+                        \"data_bytes\",\n                         // 어느 큐·어느 워커가 집었나 (R-20)\n                         \"served_queue\",\n                         \"worker_role\",\n@@ -269,7 +272,10 @@ class FlywayMigrationTest extends PostgresTestSupport {\n                         \"peak_rss_p95_mb\",\n                         \"flex_served_rate\",\n                         \"reuse_count\",\n-                        \"limit_hit_count\");\n+                        \"limit_hit_count\",\n+                        // 데이터 원가 중앙값 (T019) — 뷰는 끝에만 열을 더할 수 있다\n+                        \"data_rows_p50\",\n+                        \"data_bytes_p50\");\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -193,7 +193,8 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 \n                         \"failRate\": \"0.0476\", \"cancelRate\": \"0.0238\", \"autoRetryRate\": \"0.0238\",\n                         \"waitP50Ms\": \"812\", \"waitP95Ms\": \"4310\", \"waitP99Ms\": \"9020\",\n                         \"runP50Ms\": \"31200\", \"runP95Ms\": \"88000\", \"peakRssP95Mb\": \"512.5\",\n-                        \"flexServedRate\": \"0.1904\", \"reuseCount\": 7, \"limitHitCount\": 3 } ] },\n+                        \"flexServedRate\": \"0.1904\", \"reuseCount\": 7, \"limitHitCount\": 3,\n+                        \"dataRowsP50\": \"1439\", \"dataBytesP50\": \"245760\" } ] },\n   \"error\": null }\n ```\n \n@@ -201,6 +202,7 @@ PROGRESS가 계속 오는 긴 실행은 정체로 보지 않는다. 그것을 \n   채우지 않는다.\n - `flexServedRate`는 공용(flex) 워커가 집은 비율이다. `SINGLE`에서 이 값이 곧 \"공용 워커가 단건을 도운 비율\"(R-20)이다.\n - `limitHitCount`는 접수 거절(429)과 실행 시간 상한 정지를 합친 수다. 종류별로 보려면 `backtest_limit_hit.kind`를 본다.\n+- `dataRowsP50`·`dataBytesP50`은 실행이 읽은 자료의 양(가격·지수·기업행위 행 수, 가격 프레임 바이트)의 중앙값 — 데이터 원가(FR-008·원칙 IX)다. 계산(`peakRssP95Mb`)·저장(`result_bytes`)과 함께 건당 원가의 세 갈래를 이룬다. 금액 단가는 없다(PD-06·D19).\n - 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 여기 없다 — RabbitMQ 관리 UI.\n \n ## 2. 결과 조회\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-api/README.md",
+          "old_path": "docs/specs/backtest-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -797,7 +797,9 @@\n       \"cpuSeconds\": \"1.500\",\n       \"wallSeconds\": \"2.100\",\n       \"queue\": \"backtest.jobs\",\n-      \"role\": \"single\"\n+      \"role\": \"single\",\n+      \"dataRows\": 258,\n+      \"dataBytes\": 61920\n     }\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/event-finished-cancelled.json",
+          "old_path": "docs/specs/backtest-messaging/examples/event-finished-cancelled.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1455,7 +1455,9 @@\n       \"cpuSeconds\": \"3.210\",\n       \"wallSeconds\": \"4.000\",\n       \"queue\": \"backtest.jobs\",\n-      \"role\": \"single\"\n+      \"role\": \"single\",\n+      \"dataRows\": 258,\n+      \"dataBytes\": 61920\n     }\n   }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/examples/event-finished-completed.json",
+          "old_path": "docs/specs/backtest-messaging/examples/event-finished-completed.json",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -139,7 +139,7 @@ v1(`schemaVersion=1`) 메시지는 양쪽 모두 계약 오류로 거절한다 \n |---|---|---|\n | `STARTED` | `{ startedAt, stage=PREPARING_DATA, resource? { pid, hostname, queue?, role? } }` — `queue`는 집은 작업 큐 이름, `role`은 워커 역할(`single`/`flex`). 둘 다 선택이며 백엔드는 측정 기록(`served_queue`·`worker_role`, spec 004 T012)에만 쓴다 | [`event-started.json`](examples/event-started.json) |\n | `PROGRESS` | `{ stage=COMPUTING, completedTradingDays, totalTradingDays, lastTradingDate, portfolioSeries[] { date, equity, cumulativeReturn, drawdown } }` — `progress.batchTradingDays` 단위, 이번 구간에서 새로 계산한 포인트만, 마지막 잔여 구간도 발행. `lastTradingDate`는 취소·한도 시 완료 범위 | [`event-progress.json`](examples/event-progress.json) |\n-| `FINISHED` | `{ status, partial, lastTradingDate?, engineOutput, resource? { peakRssMb, cpuSeconds, wallSeconds, queue?, role? } }` — `status`는 `engineOutput.run.status`와 같아야 한다. `partial=true`는 CANCELLED에서만. `peakRssMb`는 **이 실행 동안** STARTED·PROGRESS·FINISHED 시점에 표본으로 잰 상주 메모리의 최댓값이다(프로세스 누적 최고값이 아니다 — 워커가 실행을 순차 처리하므로 누적값이면 큰 실행 뒤의 작은 실행이 모두 그 값이 된다). `queue`·`role`은 **이 결과를 낸** 워커의 것이다 — 중복 실행(R-18)에서는 마지막 STARTED 의 워커와 다를 수 있어 백엔드 측정 기록은 FINISHED 의 값을 먼저 쓴다(T012) | [`event-finished-completed.json`](examples/event-finished-completed.json), [`event-finished-failed.json`](examples/event-finished-failed.json), [`event-finished-cancelled.json`](examples/event-finished-cancelled.json) |\n+| `FINISHED` | `{ status, partial, lastTradingDate?, engineOutput, resource? { peakRssMb, cpuSeconds, wallSeconds, queue?, role?, dataRows?, dataBytes? } }` — `status`는 `engineOutput.run.status`와 같아야 한다. `dataRows`·`dataBytes`는 이 실행이 읽은 자료의 양(가격·지수·기업행위 행 수, 가격 프레임 메모리 바이트 — 데이터 원가, spec 004 FR-008·T019. 지수는 거래일 달력으로 읽고 버리므로 행 수에만 들어간다)이며 자료를 읽지 못한 실행(거절·적재 실패)에는 없다. `partial=true`는 CANCELLED에서만. `peakRssMb`는 **이 실행 동안** STARTED·PROGRESS·FINISHED 시점에 표본으로 잰 상주 메모리의 최댓값이다(프로세스 누적 최고값이 아니다 — 워커가 실행을 순차 처리하므로 누적값이면 큰 실행 뒤의 작은 실행이 모두 그 값이 된다). `queue`·`role`은 **이 결과를 낸** 워커의 것이다 — 중복 실행(R-18)에서는 마지막 STARTED 의 워커와 다를 수 있어 백엔드 측정 기록은 FINISHED 의 값을 먼저 쓴다(T012) | [`event-finished-completed.json`](examples/event-finished-completed.json), [`event-finished-failed.json`](examples/event-finished-failed.json), [`event-finished-cancelled.json`](examples/event-finished-cancelled.json) |\n \n ### 4.3 `EngineOutput`\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/README.md",
+          "old_path": "docs/specs/backtest-messaging/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,7 +50,15 @@ COST_PROFILE = {\n }\n # queue·role 은 어느 큐에서 어느 역할의 워커가 집었나(spec 004 T012·T015). STARTED·FINISHED 모두 싣는다.\n SERVED = {\"queue\": \"backtest.jobs\", \"role\": \"single\"}\n-RESOURCE = {\"peakRssMb\": \"512.5\", \"cpuSeconds\": \"3.210\", \"wallSeconds\": \"4.000\", **SERVED}\n+# dataRows·dataBytes 는 읽은 자료의 양(데이터 원가, T019). 자료를 읽지 못한 실패 예시에는 없다.\n+DATA_USAGE = {\"dataRows\": 258, \"dataBytes\": 61920}\n+RESOURCE = {\n+    \"peakRssMb\": \"512.5\",\n+    \"cpuSeconds\": \"3.210\",\n+    \"wallSeconds\": \"4.000\",\n+    **SERVED,\n+    **DATA_USAGE,\n+}\n \n \n def money(x: Decimal) -> str:\n@@ -638,7 +646,13 @@ finished_cancelled = envelope(\n         \"partial\": True,\n         \"lastTradingDate\": partial[\"lastTradingDate\"],\n         \"engineOutput\": engine_output(partial, \"CANCELLED\", True, \"2026-09-07T01:00:03Z\"),\n-        \"resource\": {\"peakRssMb\": \"400.0\", \"cpuSeconds\": \"1.500\", \"wallSeconds\": \"2.100\", **SERVED},\n+        \"resource\": {\n+            \"peakRssMb\": \"400.0\",\n+            \"cpuSeconds\": \"1.500\",\n+            \"wallSeconds\": \"2.100\",\n+            **SERVED,\n+            **DATA_USAGE,\n+        },\n     },\n )\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/backtest-messaging/generate_fixtures.py",
+          "old_path": "docs/specs/backtest-messaging/generate_fixtures.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -151,6 +151,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET\n | peak_rss_mb / cpu_seconds | NUMERIC(12,1) / NUMERIC(12,3) (FINISHED payload `resource`. DLQ·강제 종결은 null) |\n | auto_retried | BOOLEAN (attempt > publish_count, R-18 — 재발행 중복은 재시도가 아니다) |\n | result_bytes | BIGINT (`backtest_result` 행의 `pg_column_size`. 결과 없는 종결은 0) |\n+| data_rows / data_bytes | BIGINT (FINISHED `resource.dataRows`·`dataBytes` — 읽은 가격·지수·기업행위 행 수(지수는 달력으로 읽고 버려 행 수에만), 가격 프레임 메모리 바이트. 데이터 원가(FR-008, T019). 자료를 읽지 못한 종결은 null) |\n | served_queue / worker_role | VARCHAR(40) / VARCHAR(10) (어느 큐에서 어느 역할의 워커가 **결과를 냈나** — R-20 N/M 비율 조정 근거. FINISHED `resource.queue`·`role`이 먼저고, FINISHED 가 없는 종결은 STARTED 가 실행 행에 남긴 값) |\n | recorded_at | TIMESTAMPTZ |\n \n@@ -176,7 +177,7 @@ QUEUED ──STARTED──▶ RUNNING ──FINISHED(COMPLETED)──▶ COMPLET\n \n ## v_run_metric_summary (뷰)\n \n-`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count`. `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 \"공용 워커가 단건을 지원한 비율\"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.\n+`execution_type`별 `count, fail_rate, cancel_rate, auto_retry_rate, wait_p50_ms, wait_p95_ms, wait_p99_ms, run_p50_ms, run_p95_ms, peak_rss_p95_mb, flex_served_rate, reuse_count, limit_hit_count, data_rows_p50, data_bytes_p50`(뒤 둘은 T019가 끝에 덧붙였다 — 뷰는 열을 끝에만 더할 수 있다). `percentile_cont` 사용. `reuse_count`는 `backtest_reuse_event.request_execution_type`으로, `limit_hit_count`는 `backtest_limit_hit.execution_type`으로 조인한다. `flex_served_rate`는 `worker_role='flex'`인 행의 비율 — 단건 유형에서 이 값이 곧 \"공용 워커가 단건을 지원한 비율\"(R-20)이다. 이 뷰가 PD-06 상한 결정과 N/M 워커 비율 조정의 근거 자료다. `GET /internal/execution-metrics?type=&from=&to=`는 같은 집계를 `recorded_at` 범위로 잘라 돌려주고(뷰는 전체 기간), 범위를 주지 않으면 뷰와 값이 같다. 큐별 **현재** 대기 수는 기록이 아니라 브로커 상태라 RabbitMQ 관리 UI로 본다.\n \n ## 검증 규칙 (요청 접수 시, 백엔드)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/data-model.md",
+          "old_path": "specs/004-backtest-execution/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -253,10 +253,11 @@\n   - 할 일: ① 계획 `versions.rules`를 `{version, provisional}`로, `mapping`·`evaluationSplit`·`worker`(FINISHED 뒤 채움)를 추가 ② `EngineInputAssembler`가 규칙 사본에 `provisional`을 합쳐 워커 `versions.rules.provisional`이 저장 결과에도 남게 한다 ③ API README §2.1과 예시(`backtest-detail.json`의 `\"versions\": null`은 README \"202와 같은 값\"과 어긋난다)를 함께 고친다. `DedupKeyCalculator` 입력은 바꾸지 않는다(키는 버전 문자열만 본다)\n   - 완료 기준: `BacktestResultApiIT`가 상세 `versions.rules.provisional=true`(역변동성)와 `false`(고정 비중)를 단언, 예시 JSON round-trip 통과\n   - 구현 시 결정(T018, 2026-09-15, Jira `S15P21E205-250`): ① 계획 `versions`는 `BacktestService.versions()` 한 곳에서 `{mapping, rules{version, provisional}, scenarioRules?, costProfile{version, provisional}, data, engine, evaluationSplit}`로 만든다 — 워커 결과의 `versions`와 같은 모양이라 두 값을 나란히 놓고 비교할 수 있다. `scenarioRules`는 오버레이가 있을 때만 키를 둔다(null 채우지 않음) ② **`worker`는 접수가 아니라 조회가 채운다.** 어느 워커가 계산할지는 접수 시점에 모르므로 결과 행 `versions ->> 'worker'`를 요약 프로젝션(`BacktestResultSummary.workerVersion`)에 한 열 더 읽어 `BacktestDetailResult.of`가 계획 위에 얹는다. 결과가 없으면 키가 없다 — 실행 행(`backtest_run.versions`)은 접수 소유 컬럼이라 종결 때 UPDATE 하지 않는다 ③ 규칙 사본에 `provisional`을 합치는 자리는 `EngineInputAssembler.rulesCopy` 하나. 배분 모듈은 아는 키만 읽어 계산이 바뀌지 않고, 결정성 픽스처(`tests/fixtures/engine-input-three-etf-*.json`)는 그대로다(키 없으면 워커가 생략) ④ `DedupKeyCalculator`는 손대지 않았다 — 키는 버전 문자열만 본다 ⑤ 실제 등록표로 확인하는 IT `BacktestVersionsApiIT`(역변동성 true·고정 비중 false, 202와 상세 JSON 경로). 프론트는 `versions`를 읽지 않아(005 미착수) 모양 변경 통지 대상이 없다 ⑥ `backtest-detail.json` 예시의 `config`가 아직 v1(MA_CROSSOVER)이다 — `versions`만 고쳤고 나머지는 이 Task 범위 밖 ⑦ **요청이 주지 않은 버전은 키를 만들지 않는다.** 첫 전체 빌드에서 `ParamSearchLaunchIT` 4건이 NPE 로 깨졌다 — 007 launcher 가 `evaluationSplitVersion` 을 비워 보내고 `RunPlan` 이 `Map.copyOf` 로 사본을 뜨므로 null 값이 곧 NPE 다. 대상 테스트만 돌린 뒤 전체 빌드를 건너뛰었으면 놓쳤을 결함이라, 접수 경로를 건드린 MR 은 전체 빌드가 통과한 뒤에만 푸시한다 ⑧ **결과 행 `backtest_result.versions`에도 `evaluationSplit`이 남는다**(2차 리뷰 P2): 결과 행은 워커 출력 그대로라 워커 `Versions` 계약에 `evaluationSplit`(요청 `evaluation.splitVersion` 사본)을 더했다 — 상세가 실행 행 값을 쓰는 탓에 테스트가 이 누락을 가렸다. `BacktestResultRepositoryImplTest`가 DB JSONB 키(`versions ->> 'evaluationSplit'`)를 직접 본다. `worker`·`engine`(실측)과 달리 요청값 사본이라 워커가 되돌려 주는 것이 맞고, 백엔드가 저장 때 합치면 결과 행이 두 원천을 갖게 돼 택하지 않았다\n-- [ ] T019 [BE] 실행 측정에 데이터 원가(읽은 가격·기업행위 행 수와 바이트)를 더한다 per FR-008·constitution IX \"계산·데이터·저장 원가\" (partial) — LOW\n+- [x] T019 [BE] 실행 측정에 데이터 원가(읽은 가격·기업행위 행 수와 바이트)를 더한다 per FR-008·constitution IX \"계산·데이터·저장 원가\" (partial) — LOW\n   - `backtest_run_metric`은 계산(`cpu_seconds`·`peak_rss_mb`)과 저장(`result_bytes`)만 있고 데이터 원가 칸이 없다. R-10·data-model이 열을 정할 때 빠졌다\n   - 할 일: 워커 `MarketDataProvider.load` 결과의 행 수(가격·지수·기업행위)와 대략 바이트를 FINISHED `resource.dataRows`·`dataBytes`(선택 필드, 계약 v2 안)에 실어 `backtest_run_metric.data_rows`·`data_bytes`로 기록하고 뷰에 `data_rows_p50`을 더한다. 금액 단가는 넣지 않는다(PD-06·D19)\n   - 완료 기준: `ExecutionMetricRecorderTest`·`ExecutionMetricsApiIT` 갱신, 메시징 README §4.2 선택 필드 추가\n+  - 구현 시 결정(T019, 2026-09-15, Jira `S15P21E205-252`): ① **엔진 경계 Protocol 은 그대로다.** `BacktestEngine.run` 은 EngineOutput 만 돌려주고 자원 사용은 메시지 밖이라, 엔진이 `last_data_usage` 선택 속성으로 내놓고 소비자가 `getattr(engine, \"last_data_usage\", None)` 으로 읽는다 — Protocol 에 메서드를 더하면 테스트의 가짜 엔진이 전부 깨지고, 값을 EngineOutput 에 넣으면 계약(결과)과 측정이 섞인다. 거절·적재 실패 실행은 None(앞 실행 값이 남지 않게 매 실행 시작에 지운다) ② 값의 정의: `rows` = 읽은 가격 행 + **지수(거래일 달력) 행** + 분배금 + 분할, `bytes` = 가격 프레임 `memory_usage(deep=True)` 합. **지수는 `rows` 에만 들어간다** — 달력으로 쓰고 버려 메모리에 남지 않으므로 `bytes` 에는 없다(리뷰 지적, 2026-09-16: 처음엔 지수를 빼 놓아 구간이 길수록 원가가 꾸준히 작게 기록됐다. 읽은 행은 원가이고, 들고 있지 않은 바이트는 지어내지 않는다). 픽스처 공급자는 지수를 읽지 않아 0 이다. 저장소가 실제로 읽은 바이트가 아니라 워커가 든 크기라 **근사값**이고 같은 요청이면 같다. 금액 단가 없음(PD-06·D19) ③ 뷰는 `CREATE OR REPLACE VIEW` 로 끝에 두 열만 덧붙였다(기존 열 순서 변경 불가) — `SUMMARY_BODY` 상수도 같은 자리에 같은 문장. 집계는 중앙값 하나(p50)만 — 원가는 대표값이 필요하고 분포 꼬리는 아직 쓸 곳이 없다 ④ 픽스처는 완료·취소 예시에만 값을 두고 실패(DATA_INSUFFICIENT) 예시에는 없다 — 선택 필드임을 예시가 보여 준다. 생성기(`generate_fixtures.py`)에 넣고 재생성\n \n **고치지 않은 어긋남 (converge는 기존 항목을 고치지 않는다 — 다음 문서 커밋에서 손본다)**\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,8 @@ from decimal import Decimal\n from enum import StrEnum\n from typing import Generic, TypeVar\n \n+from pydantic import Field\n+\n from worker.contracts.base import ContractModel, UtcDatetime\n from worker.contracts.engine_output import EngineOutput, RunStatus\n \n@@ -77,6 +79,9 @@ class ResourceUsage(ContractModel):\n     wall_seconds: Decimal | None = None\n     queue: str | None = None\n     role: str | None = None\n+    # 읽은 자료의 양(데이터 원가, FR-008·T019). 가격·분배금·분할 행 수와 가격 프레임 바이트.\n+    data_rows: int | None = Field(default=None, ge=0)\n+    data_bytes: int | None = Field(default=None, ge=0)\n \n \n class FinishedPayload(ContractModel):\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/contracts/events.py",
+          "old_path": "worker/src/worker/contracts/events.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,6 +42,7 @@ from worker.contracts.events import (\n     StartedPayload,\n )\n from worker.control import CancelRegistry\n+from worker.market_data import DataUsage\n from worker.messaging import (\n     JOBS_QUEUE,\n     SCHEMA_VERSION,\n@@ -178,7 +179,7 @@ class _EventStream:\n         self._sample_rss()\n         self._emit(BacktestEventType.PROGRESS, payload, self._clock())\n \n-    def finished(self, output: EngineOutput) -> None:\n+    def finished(self, output: EngineOutput, data_usage: DataUsage | None = None) -> None:\n         self._sample_rss()\n         usage = ResourceUsage(\n             peak_rss_mb=self._peak_rss_mb,\n@@ -187,6 +188,9 @@ class _EventStream:\n             # 이 결과를 낸 워커. 중복 실행(R-18)에서 마지막 STARTED 와 다를 수 있어 다시 싣는다.\n             queue=self._queue,\n             role=self._role,\n+            # 데이터 원가(T019). 자료를 읽지 못한 실행(거절·적재 실패)에는 없다 — 지어내지 않는다.\n+            data_rows=None if data_usage is None else data_usage.rows,\n+            data_bytes=None if data_usage is None else data_usage.bytes,\n         )\n         payload = FinishedPayload(\n             status=output.run.status,\n@@ -362,7 +366,9 @@ class BacktestJobConsumer:\n             batcher = _ProgressBatcher(stream, engine_input.progress.batch_trading_days)\n             output = self._engine.run(engine_input, batcher.on_progress)\n             batcher.flush()\n-            stream.finished(output)\n+            # 엔진 경계(Protocol)는 EngineOutput 만 돌려준다. 읽은 자료의 양은 메시지 밖 자원\n+            # 사용이라 엔진이 선택 속성으로 내놓고, 없으면(가짜 엔진·옛 엔진) 싣지 않는다.\n+            stream.finished(output, getattr(self._engine, \"last_data_usage\", None))\n             return output\n         finally:\n             if self._registry is not None:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/consumer.py",
+          "old_path": "worker/src/worker/consumer.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,7 @@ from worker.contracts.engine_output import Warning as ContractWarning\n from worker.control import CancelRegistry\n from worker.costs import CostModel, Side, total_costs\n from worker.engine_support import unsupported_reasons\n-from worker.market_data import MarketData, MarketDataError, MarketDataProvider\n+from worker.market_data import DataUsage, MarketData, MarketDataError, MarketDataProvider\n from worker.performance import calculate_analytics, calculate_performance\n from worker.portfolio_execution import (\n     REBALANCE_MONTH_END,\n@@ -305,6 +305,9 @@ class PortfolioBacktestEngine:\n     ) -> None:\n         self.market_data = market_data\n         self.cancel_registry = cancel_registry\n+        # 마지막 실행이 읽은 자료의 양(T019). 소비자가 FINISHED resource 에 싣는다 — 엔진 경계\n+        # Protocol 은 EngineOutput 만 돌려주고 자원 사용은 메시지 밖이라, 있으면 읽는 선택 속성이다.\n+        self.last_data_usage: DataUsage | None = None\n \n     def run(\n         self,\n@@ -320,9 +323,20 @@ class PortfolioBacktestEngine:\n         engine_input: EngineInput | dict,\n         on_progress: ProgressCallback | None = None,\n     ) -> tuple[EngineOutput, RunArtifacts]:\n-        \"\"\"계약 메시지와 로컬 진단 산출물을 함께 돌려준다. 상태는 전부 지역 변수다.\"\"\"\n+        \"\"\"계약 메시지와 로컬 진단 산출물을 함께 돌려준다.\n+\n+        계산 상태는 전부 지역 변수다. **예외는 ``last_data_usage`` 하나**다(T019) — 소비자가\n+        ``run()`` 이 끝난 뒤 읽어 FINISHED ``resource`` 에 싣는다. 엔진 Protocol 이\n+        ``EngineOutput`` 만 돌려주고 자원 사용은 메시지 밖이라 반환값에 태울 자리가 없다.\n+\n+        그래서 **엔진 인스턴스 하나는 한 번에 한 작업만 돌려야 한다.** 소비자가 프로세스당 인스턴스\n+        하나를 단일 스레드로 쓰는 지금 구조가 그 전제다. 두 작업이 한 인스턴스를 공유하면 뒤 실행의\n+        FINISHED 가 앞 실행의 자료량을 싣고, 데이터 원가가 엉뚱한 실행에 붙는다 — 값이 그럴듯해서\n+        아무도 알아채지 못한다. 동시 실행을 도입한다면 이 속성부터 걷어내야 한다.\n+        \"\"\"\n         request = EngineInput.model_validate(engine_input)\n         started = datetime.now(UTC)\n+        self.last_data_usage = None\n         metadata = {\n             \"engineVersion\": nautilus_trader.__version__,\n             \"inputHash\": \"sha256:\"\n@@ -378,6 +392,7 @@ class PortfolioBacktestEngine:\n                 self._rejected(request, None, started, \"DATA_INSUFFICIENT\", str(exc)),\n                 RunArtifacts(orders=orders, metadata=metadata),\n             )\n+        self.last_data_usage = market.usage()\n         try:\n             calendar = market.trading_days\n             first_day = evaluation_start(request, calendar)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/engine_runner.py",
+          "old_path": "worker/src/worker/engine_runner.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -127,6 +127,22 @@ class SectorMapping:\n     effective_to: date | None = None\n \n \n+@dataclass(frozen=True)\n+class DataUsage:\n+    \"\"\"한 실행이 읽은 자료의 양(데이터 원가, FR-008·원칙 IX). 금액이 아니라 원단위다.\n+\n+    ``rows`` 는 읽은 가격·지수·기업행위(분배금·분할) 행 수의 합이고, ``bytes`` 는 메모리에 오른\n+    가격 프레임의 크기(``DataFrame.memory_usage(deep=True)``)다. 저장소가 실제로 읽은 바이트가\n+    아니라 워커가 들고 있는 크기라 근사값이고, 같은 요청이면 같은 값이 나온다.\n+\n+    지수는 ``rows`` 에만 들어가고 ``bytes`` 에는 없다 — 달력으로 쓰고 버려서 메모리에 남지\n+    않는다. 읽은 행은 원가이므로 세고, 들고 있지 않은 바이트는 지어내지 않는다.\n+    \"\"\"\n+\n+    rows: int\n+    bytes: int\n+\n+\n @dataclass(frozen=True)\n class MarketData:\n     \"\"\"한 실행이 읽는 자료 전부. 같은 ``dataset_id`` 로 일관된다.\n@@ -144,6 +160,22 @@ class MarketData:\n     splits: tuple[Split, ...] = ()\n     mappings: tuple[SectorMapping, ...] = ()\n     metadata: dict[str, Any] = field(default_factory=dict)\n+    # 달력으로 읽은 지수 행 수(T019 데이터 원가). 행만 세고 프레임은 들고 있지 않다.\n+    # 픽스처 공급자는 지수를 읽지 않으므로 0이다.\n+    index_rows: int = 0\n+\n+    def usage(self) -> DataUsage:\n+        \"\"\"읽은 자료의 양. FINISHED ``resource.dataRows``·``dataBytes`` 로 나간다(T019).\n+\n+        ``rows`` 는 가격·지수·기업행위 셋을 모두 센다(tasks T019). 지수(거래일 달력)는 이 실행이\n+        읽은 자료이므로 원가에 들어간다 — 프레임으로 들고 있지 않다는 것은 ``bytes`` 의 사정이지\n+        읽지 않았다는 뜻이 아니다.\n+        \"\"\"\n+        rows = sum(len(frame) for frame in self.prices.values())\n+        rows += self.index_rows\n+        rows += len(self.distributions) + len(self.splits)\n+        size = sum(int(frame.memory_usage(deep=True).sum()) for frame in self.prices.values())\n+        return DataUsage(rows=rows, bytes=size)\n \n     @property\n     def trading_days(self) -> list[date]:\n@@ -406,6 +438,7 @@ def _build(\n         splits=tuple(splits),\n         mappings=tuple(mappings),\n         metadata=dict(metadata or {}),\n+        index_rows=len(calendar or ()),\n     )\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/src/worker/market_data.py",
+          "old_path": "worker/src/worker/market_data.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,7 +32,7 @@ from worker.contracts.events import (\n     StartedPayload,\n )\n from worker.engine_runner import PortfolioBacktestEngine\n-from worker.market_data import CsvMarketDataProvider\n+from worker.market_data import CsvMarketDataProvider, DataUsage\n from worker.messaging import SCHEMA_VERSION, PublishError\n \n #: 기준 본문(2023-01-02 ~ 01-10)의 평가 거래일 수.\n@@ -464,3 +464,33 @@ def test_real_engine_output_rides_the_finished_event() -> None:\n     assert output.portfolio_series[0].cash == Decimal(\"10000000\")\n     assert len(output.portfolio_series) == EVALUATION_TRADING_DAYS\n     assert output.trades and output.weights_series\n+\n+\n+def test_finished_carries_data_usage_when_the_engine_exposes_it() -> None:\n+    \"\"\"데이터 원가(T019): 엔진이 읽은 자료의 양을 선택 속성으로 내놓으면 FINISHED 에 싣는다.\"\"\"\n+    engine = FakeEngine(trading_days=3)\n+    engine.last_data_usage = DataUsage(rows=1_439, bytes=245_760)  # type: ignore[attr-defined]\n+\n+    _, publisher = handle(engine=engine)\n+\n+    resource = publisher.of_type(BacktestEventType.FINISHED)[0].payload.resource\n+    assert resource is not None\n+    assert resource.data_rows == 1_439 and resource.data_bytes == 245_760\n+\n+\n+def test_finished_omits_data_usage_when_the_engine_has_none() -> None:\n+    \"\"\"가짜·옛 엔진처럼 속성이 없으면 지어내지 않는다 — 키가 없다.\"\"\"\n+    _, publisher = handle(engine=FakeEngine(trading_days=3))\n+\n+    resource = publisher.of_type(BacktestEventType.FINISHED)[0].payload.resource\n+    assert resource is not None\n+    assert resource.data_rows is None and resource.data_bytes is None\n+\n+\n+def test_real_engine_reports_data_usage_in_finished() -> None:\n+    _, publisher = handle()\n+\n+    resource = publisher.of_type(BacktestEventType.FINISHED)[0].payload.resource\n+    assert resource is not None\n+    assert resource.data_rows is not None and resource.data_rows > 0\n+    assert resource.data_bytes is not None and resource.data_bytes > 0\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_consumer.py",
+          "old_path": "worker/tests/test_consumer.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -207,3 +207,15 @@ def test_versions_carry_the_requested_evaluation_split() -> None:\n     # 결과 행은 실행 행 없이도 재현 기준을 다 가져야 한다(data-model: run.versions 사본, T018).\n     assert run(evaluation={\"splitVersion\": \"SPLIT-1\"}).versions.evaluation_split == \"SPLIT-1\"\n     assert run().versions.evaluation_split is None\n+\n+\n+def test_engine_exposes_how_much_data_the_last_run_read() -> None:\n+    # 소비자가 FINISHED resource.dataRows·dataBytes 로 싣는 값(T019). 자료를 읽은 실행에만 있다.\n+    engine = PortfolioBacktestEngine(CsvMarketDataProvider(THREE_ETF_DIR))\n+    assert engine.last_data_usage is None\n+    engine.run(EngineInput.model_validate(engine_input_body()))\n+    usage = engine.last_data_usage\n+    assert usage is not None and usage.rows > 0 and usage.bytes > 0\n+    # 거절된 실행은 자료에 닿지 않았으므로 값이 없다 — 앞 실행의 값이 남아 있으면 안 된다.\n+    engine.run(EngineInput.model_validate(engine_input_body(run={\"scenario\": \"COST_ESCALATION\"})))\n+    assert engine.last_data_usage is None\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_engine_support.py",
+          "old_path": "worker/tests/test_engine_support.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -601,3 +601,25 @@ def test_window_beyond_the_data_deadline_is_rejected() -> None:\n     with pytest.raises(MarketDataError) as caught:\n         provider.load([SEMICONDUCTOR], START, date(2030, 1, 1), DATASET)\n     assert \"data deadline\" in str(caught.value) or \"complete through\" in str(caught.value)\n+\n+\n+def test_data_usage_counts_prices_index_and_corporate_actions() -> None:\n+    \"\"\"데이터 원가(T019)는 가격·지수·기업행위 셋을 모두 센다.\n+\n+    지수(거래일 달력)는 프레임으로 들고 있지 않아 ``bytes`` 에는 없지만, 공급자가 실제로 읽은\n+    행이므로 ``rows`` 에는 들어간다. 빠뜨리면 실행 구간이 길수록 원가가 꾸준히 작게 기록되고,\n+    그 값으로 PD-06 을 정하게 된다.\n+    \"\"\"\n+    provider, _ = make_provider(build_database())\n+\n+    data = provider.load([SEMICONDUCTOR], START, END, DATASET)\n+\n+    window = [day for day in CALENDAR if START <= day <= END]\n+    assert len(window) == 5\n+    assert len(data.prices[SEMICONDUCTOR]) == 5  # 가격\n+    assert data.index_rows == 5  # 지수(달력)\n+    assert len(data.distributions) + len(data.splits) == 2  # 기업행위\n+\n+    usage = data.usage()\n+    assert usage.rows == 12  # 5 + 5 + 2\n+    assert usage.bytes > 0\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_repository_provider.py",
+          "old_path": "worker/tests/test_repository_provider.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-16T21:21:27.983+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2819876": []
+  }
+}

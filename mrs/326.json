@@ -1,0 +1,1202 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959520,
+    "iid": 326,
+    "project_id": 1444456,
+    "title": "# feat(be): 도우미 모델 포트를 GMS Chat Completions에 붙인다",
+    "description": "## 작업 내용 요약\n\n묶음 2가 세운 `AssistantModelPort` 뒤에 진짜 모델을 붙인다. GMS 게이트웨이(`api.openai.com` 중계, `gpt-5-mini`)를 Chat Completions 형식으로 부르고, 도구 라운드 이력을 다시 담아 보내며, 응답을 도구 요청 또는 최종 초안으로 읽는다. 어댑터는 키·주소·모델명이 모두 있을 때만 뜨므로 머지해도 배포 환경에서는 여전히 꺼져 있다.\n\n## 관련 티켓\n\n- S15P21E205-439 (Story S15P21E205-433 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **모델 요청**(계약 §2.1): `model`·`store:false`·`developer`(프롬프트)·`user`(질문 + 근거 팩 `Fn label (asOf) = value` 원문) 메시지, 도구가 있을 때만 `tools`(function·strict, 날짜 인자만)·`tool_choice:auto`·`parallel_tool_calls:false`, `response_format` strict JSON Schema(§2.3). 라운드마다 이전 `assistant(tool_calls)`·`tool` 메시지를 다시 담고, 도구로 얻은 근거는 `tool` 메시지에만 있어 사용자 메시지와 중복되지 않는다.\n- **응답 해석**: `tool_calls` → `ToolCall`(인자가 JSON 객체가 아니면 검증에 걸리는 값으로 넘겨 루프가 \"사용할 수 없음\"으로 돌려준다), 본문 JSON → `ModelDraft`. 거부(`refusal`)·빈 본문(HTTP 200의 빈 응답 포함)·스키마 불일치(`factIds`에 문자열이 아닌 원소 포함)·2xx 아님·시간 초과는 모두 503 `ASSISTANT_UNAVAILABLE`이고 응답 문구는 코드의 고정 문장이다. 사유는 로그에만 남는다.\n- **조건부 빈**(계약 §4): `AssistantModelConfig`는 키·주소·모델명 셋이 모두 비어 있지 않을 때만 뜬다(SpEL 대신 `Condition` 코드 — 키 문자열을 표현식에 끼우지 않는다). 하나라도 비면 어댑터가 없고 `capabilities.enabled=false`이며 기동은 정상이다. prod yml의 네 값이 `${VAR:}` 빈 기본값인지도 테스트가 고정한다.\n- **프롬프트** `resources/assistant/prompts/answer-ko.txt`: 자리표시자 규칙(숫자·날짜·URL·경로 금지, 한글 수사 허용, 빈 `factIds` 금지), 도구 지침(되묻지 말고 요청, 최대 2회, 기간 밖은 없다고 답), 부분 결과 접두는 서버가 붙임, 추천·미래·확률·원인 단정 금지, 범위 밖은 `OUT_OF_SCOPE`.\n- **로그**: 호출마다 지연·prompt/completion 토큰 수·도구 요청 수만 남긴다. 질문·답·근거 원문과 키는 남기지 않는다(ADR-0008 D3).\n- **묶음 2 결함 수정**: `ToolLoop`가 503을 던질 때 내부 사유를 예외 메시지에 넣어 그대로 응답 본문에 나갔다. 사유는 로그로 옮기고 응답은 고정 문구로 고정했다(컨트롤러 테스트가 예시 JSON과 대조).\n- **배포 영향**: `infra/docker-compose.prod.yml`·`infra/.env.prod.example`에 `THORP_ASSISTANT_*` 넷을 넘긴다(묶음 2에서 빠졌던 것). 모두 `:-` 빈 기본값이라 `.env.prod`를 지금 건드리지 않아도 기동한다. 켤 때 넣을 값: `API_KEY`(GMS 키), `BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com`, `MODEL=gpt-5-mini`, 그리고 품질 관문 뒤 `ENABLED_SCOPES=RESULT`.\n\n## 테스트\n\n- `./gradlew spotlessApply build` — 2113 tests, 0 failed, 5 skipped(opt-in: `AssistantLiveTest`·`MarketLiveApiTest`·`NewsPerformanceIT`·`RequiredDockerTest`).\n- 어댑터 테스트는 로컬 가짜 HTTP 서버로 요청 본문 모양·헤더·이력·응답 파싱·오류 매핑(거부·빈 본문·스키마 불일치·401/429/500·시간 초과·예산 0)을 고정한다. 직렬화된 요청에 토큰·`backtestId` 문자열이 없음을 단언한다.\n- 자동 테스트 밖: 실제 GMS에 한 번 통과시켰다(`AssistantLiveTest`, `ASSISTANT_LIVE_TEST=true`와 키가 있을 때만 돌고 CI에서는 skip). \"2024년 3월 4일에 자산은 얼마였어?\"에 모델이 `getEquityOn(2024-03-04)`를 요청했고, 도구 근거로 `{{F4}}` 자리표시자 답을 만들었으며, 검증기가 \"10,523,000원\"으로 치환했다. 두 호출 지연은 6.7초·8.3초였다 — 15초였던 예산을 2분으로 늘린 근거다.\n\n## 리뷰 포인트\n\n- **도구 인자가 JSON이 아닐 때** 빈 인자로 넘기지 않고 `_unparsed` 키 하나로 넘긴다. 루프의 \"인자 집합이 정의와 같아야 한다\" 검증에 걸려 모델에 \"사용할 수 없음\"으로 돌아간다. 별도 코드 경로 대신 기존 검증을 태운 것이다.\n- **`tools`가 비면 도구 관련 필드를 아예 보내지 않는다.** 묶음 4 전까지는 근거 빌더가 없어 이 경로로 간다. 빈 `tools` 배열을 거절하는 제공업체가 있어 그렇게 뒀다.\n- **프롬프트는 초안이다.** 묶음 6 표본 30개를 돌려 보고 다듬는다. 특히 빈 `factIds` 금지 때문에 모델이 연결 문장을 못 쓰는 문제가 표본에서 보이면 검증 규칙 쪽을 다시 본다.\n\n## 전달만 하는 것\n\n- 묶음 4(근거 팩·도구)가 머지되기 전까지 실제 결과에 대한 답은 나올 수 없다. 이 MR만으로 켜도 근거가 비어 있어 항상 근거 부족이다.\n\n## 남은 것\n\n- 없음. tasks.md T020~T023 완료 표시했다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-25T01:27:59.549+09:00",
+    "updated_at": "2026-09-25T01:41:55.828+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T01:41:55.588+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/439-assistant-model-adapter",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+    "merge_commit_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T01:28:01.073+09:00",
+    "reference": "!326",
+    "references": {
+      "short": "!326",
+      "relative": "!326",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!326"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/326",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959520,
+    "iid": 326,
+    "project_id": 1444456,
+    "title": "# feat(be): 도우미 모델 포트를 GMS Chat Completions에 붙인다",
+    "description": "## 작업 내용 요약\n\n묶음 2가 세운 `AssistantModelPort` 뒤에 진짜 모델을 붙인다. GMS 게이트웨이(`api.openai.com` 중계, `gpt-5-mini`)를 Chat Completions 형식으로 부르고, 도구 라운드 이력을 다시 담아 보내며, 응답을 도구 요청 또는 최종 초안으로 읽는다. 어댑터는 키·주소·모델명이 모두 있을 때만 뜨므로 머지해도 배포 환경에서는 여전히 꺼져 있다.\n\n## 관련 티켓\n\n- S15P21E205-439 (Story S15P21E205-433 relates, Epic 30)\n\n## 주요 변경 사항\n\n- **모델 요청**(계약 §2.1): `model`·`store:false`·`developer`(프롬프트)·`user`(질문 + 근거 팩 `Fn label (asOf) = value` 원문) 메시지, 도구가 있을 때만 `tools`(function·strict, 날짜 인자만)·`tool_choice:auto`·`parallel_tool_calls:false`, `response_format` strict JSON Schema(§2.3). 라운드마다 이전 `assistant(tool_calls)`·`tool` 메시지를 다시 담고, 도구로 얻은 근거는 `tool` 메시지에만 있어 사용자 메시지와 중복되지 않는다.\n- **응답 해석**: `tool_calls` → `ToolCall`(인자가 JSON 객체가 아니면 검증에 걸리는 값으로 넘겨 루프가 \"사용할 수 없음\"으로 돌려준다), 본문 JSON → `ModelDraft`. 거부(`refusal`)·빈 본문(HTTP 200의 빈 응답 포함)·스키마 불일치(`factIds`에 문자열이 아닌 원소 포함)·2xx 아님·시간 초과는 모두 503 `ASSISTANT_UNAVAILABLE`이고 응답 문구는 코드의 고정 문장이다. 사유는 로그에만 남는다.\n- **조건부 빈**(계약 §4): `AssistantModelConfig`는 키·주소·모델명 셋이 모두 비어 있지 않을 때만 뜬다(SpEL 대신 `Condition` 코드 — 키 문자열을 표현식에 끼우지 않는다). 하나라도 비면 어댑터가 없고 `capabilities.enabled=false`이며 기동은 정상이다. prod yml의 네 값이 `${VAR:}` 빈 기본값인지도 테스트가 고정한다.\n- **프롬프트** `resources/assistant/prompts/answer-ko.txt`: 자리표시자 규칙(숫자·날짜·URL·경로 금지, 한글 수사 허용, 빈 `factIds` 금지), 도구 지침(되묻지 말고 요청, 최대 2회, 기간 밖은 없다고 답), 부분 결과 접두는 서버가 붙임, 추천·미래·확률·원인 단정 금지, 범위 밖은 `OUT_OF_SCOPE`.\n- **로그**: 호출마다 지연·prompt/completion 토큰 수·도구 요청 수만 남긴다. 질문·답·근거 원문과 키는 남기지 않는다(ADR-0008 D3).\n- **묶음 2 결함 수정**: `ToolLoop`가 503을 던질 때 내부 사유를 예외 메시지에 넣어 그대로 응답 본문에 나갔다. 사유는 로그로 옮기고 응답은 고정 문구로 고정했다(컨트롤러 테스트가 예시 JSON과 대조).\n- **배포 영향**: `infra/docker-compose.prod.yml`·`infra/.env.prod.example`에 `THORP_ASSISTANT_*` 넷을 넘긴다(묶음 2에서 빠졌던 것). 모두 `:-` 빈 기본값이라 `.env.prod`를 지금 건드리지 않아도 기동한다. 켤 때 넣을 값: `API_KEY`(GMS 키), `BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com`, `MODEL=gpt-5-mini`, 그리고 품질 관문 뒤 `ENABLED_SCOPES=RESULT`.\n\n## 테스트\n\n- `./gradlew spotlessApply build` — 2113 tests, 0 failed, 5 skipped(opt-in: `AssistantLiveTest`·`MarketLiveApiTest`·`NewsPerformanceIT`·`RequiredDockerTest`).\n- 어댑터 테스트는 로컬 가짜 HTTP 서버로 요청 본문 모양·헤더·이력·응답 파싱·오류 매핑(거부·빈 본문·스키마 불일치·401/429/500·시간 초과·예산 0)을 고정한다. 직렬화된 요청에 토큰·`backtestId` 문자열이 없음을 단언한다.\n- 자동 테스트 밖: 실제 GMS에 한 번 통과시켰다(`AssistantLiveTest`, `ASSISTANT_LIVE_TEST=true`와 키가 있을 때만 돌고 CI에서는 skip). \"2024년 3월 4일에 자산은 얼마였어?\"에 모델이 `getEquityOn(2024-03-04)`를 요청했고, 도구 근거로 `{{F4}}` 자리표시자 답을 만들었으며, 검증기가 \"10,523,000원\"으로 치환했다. 두 호출 지연은 6.7초·8.3초였다 — 15초였던 예산을 2분으로 늘린 근거다.\n\n## 리뷰 포인트\n\n- **도구 인자가 JSON이 아닐 때** 빈 인자로 넘기지 않고 `_unparsed` 키 하나로 넘긴다. 루프의 \"인자 집합이 정의와 같아야 한다\" 검증에 걸려 모델에 \"사용할 수 없음\"으로 돌아간다. 별도 코드 경로 대신 기존 검증을 태운 것이다.\n- **`tools`가 비면 도구 관련 필드를 아예 보내지 않는다.** 묶음 4 전까지는 근거 빌더가 없어 이 경로로 간다. 빈 `tools` 배열을 거절하는 제공업체가 있어 그렇게 뒀다.\n- **프롬프트는 초안이다.** 묶음 6 표본 30개를 돌려 보고 다듬는다. 특히 빈 `factIds` 금지 때문에 모델이 연결 문장을 못 쓰는 문제가 표본에서 보이면 검증 규칙 쪽을 다시 본다.\n\n## 전달만 하는 것\n\n- 묶음 4(근거 팩·도구)가 머지되기 전까지 실제 결과에 대한 답은 나올 수 없다. 이 MR만으로 켜도 근거가 비어 있어 항상 근거 부족이다.\n\n## 남은 것\n\n- 없음. tasks.md T020~T023 완료 표시했다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-25T01:27:59.549+09:00",
+    "updated_at": "2026-09-25T01:41:55.828+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T01:41:55.588+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/439-assistant-model-adapter",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+    "merge_commit_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T01:28:01.073+09:00",
+    "reference": "!326",
+    "references": {
+      "short": "!326",
+      "relative": "!326",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!326"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/326",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "12",
+    "latest_build_started_at": "2026-09-25T01:41:52.235+09:00",
+    "latest_build_finished_at": "2026-09-25T01:48:53.863+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221608,
+      "iid": 355,
+      "project_id": 1444456,
+      "sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+      "ref": "feat(be)/439-assistant-model-adapter",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-25T01:41:52.108+09:00",
+      "updated_at": "2026-09-25T01:48:53.870+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221608"
+    },
+    "head_pipeline": {
+      "id": 221608,
+      "iid": 355,
+      "project_id": 1444456,
+      "sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+      "ref": "feat(be)/439-assistant-model-adapter",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-25T01:41:52.108+09:00",
+      "updated_at": "2026-09-25T01:48:53.870+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221608",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-25T01:41:52.235+09:00",
+      "finished_at": "2026-09-25T01:48:53.863+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221608",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "head_sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+      "start_sha": "4f80eda901dae5037727cbb05a33ae2f267df052"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "93f4fd104c665189de37d194854e2bb2c6fe67db",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867058,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T01:27:59.679+09:00",
+          "updated_at": "2026-09-25T01:27:59.682+09:00",
+          "system": true,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f821a77c104813c54074cd995aaa1570636ed569",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867059,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T01:27:59.702+09:00",
+          "updated_at": "2026-09-25T01:27:59.712+09:00",
+          "system": true,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "1cf8f51ed7e4340c5a71d1dfee8041b541bde049",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867061,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T01:28:20.143+09:00",
+          "updated_at": "2026-09-25T01:28:20.149+09:00",
+          "system": true,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "923017cf06aa159181671d4af8ee8947732002fd",
+      "individual_note": false,
+      "resolvable": true,
+      "resolved": false,
+      "notes": [
+        {
+          "id": 2867064,
+          "type": "DiscussionNote",
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 예외 및 에러 매핑**: 외부 모델 호출 시 발생할 수 있는 타임아웃, 빈 응답, 스키마 불일치, HTTP 오류 등 다양한 장애 상황을 `ASSISTANT_UNAVAILABLE`(503) 하나로 일관되게 추상화하면서, 민감한 내부 사유는 로그로만 남기고 사용자에게는 고정 문구를 전달하도록 설계되어 보안과 에러 핸들링 측면에서 매우 훌륭합니다.\n- **조건부 빈 설정 (Condition)**: SpEL 표현식 대신 `Condition` 인터페이스를 직접 구현하여 키 문자열이 표현식에 노출되는 것을 방지하고, 설정값이 하나라도 비어 있을 경우 어댑터 빈을 안전하게 비활성화하면서 애플리케이션 기동은 유지하도록 구현한 점이 매우 안정적입니다.\n\n### 발견 사항\n- [Medium] `backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClient.java`: `parse` 메서드 내에서 JSON 스키마 검증 실패 시 예외를 던지는 로직 중 문자열 리터럴이 잘리거나(`part does not match ...`) 미완성으로 보이는 코드가 있습니다. 컴파일 오류가 발생할 수 있으니 해당 예외 메시지(`throw AssistantHttpClient.unavailable(...)`)가 온전한지 확인이 필요합니다.\n- [Low] `backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/client/AssistantHttpClient.java`: `HttpClient`를 생성할 때 커넥트 타임아웃(`CONNECT_TIMEOUT = Duration.ofSeconds(5)`)만 설정되어 있고 개별 요청(`HttpRequest`)에 설정된 `timeout`은 읽기(Read) 타임아웃 역할을 합니다. 다만, Java 표준 `HttpClient`는 요청별 타임아웃 설정이 `CompletableFuture` 기반 비동기 API에서 다르게 동작하거나 동기(`client.send`) 호출 시 타임아웃 예외(`HttpTimeoutException`)가 의도대로 정확히 잡히는지 대상 Java 런타임 버전에 따라 검증이 필요할 수 있습니다.\n\n### 테스트 제안\n- **타임아웃 및 지연 시나리오 테스트**: `OpenAiChatCompletionsClientTest` 등에 가상 서버 응답 지연 시간을 전체 데드라인 또는 라운드 예산보다 길게 주어 `HttpTimeoutException`이 발생할 때 503 `ASSISTANT_UNAVAILABLE` 예외로 올바르게 매핑되는지 검증하는 테스트를 추가합니다.\n- **스키마 불일치 응답 테스트**: 모델이 반환한 JSON 응답의 `status` 값이 `ANSWERED`가 아니거나 `answerParts` 내부의 `factIds`가 배열이 아닌 문자열 형태 등으로 잘못 들어왔을 때, 의도대로 `ASSISTANT_UNAVAILABLE` 예외가 발생하고 원인 사유가 로그에만 기록되는지 확인하는 테스트를 보강합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:8c9008b2046c69d9c8c57da55782e507f0cf1997 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-25T01:28:47.043+09:00",
+          "updated_at": "2026-09-25T01:42:03.091+09:00",
+          "system": false,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        },
+        {
+          "id": 2867096,
+          "type": "DiscussionNote",
+          "body": "확인했다. 결론은 아래와 같고, 테스트 하나를 더해 8c9008b2로 커밋했다. 푸시는 하지 않았다.\n\n\\[Medium\\] parse 코드가 잘려 있다는 지적 — 사실이 아니다. 파일을 열어 보면 parse는 refusal → tool_calls → content → draft 순으로 온전하고, 전체 빌드도 통과했다. 리뷰어가 본 diff가 잘린 것으로 보인다. 코드 변경 없음.\n\n\\[Low\\] 예외를 한 종류로 묶는다는 지적 — 의도된 설계가 맞고 리뷰어도 그렇게 봤다. 사유는 로그에 종류별로 남는다(timeout after …ms, http status 401, io failure: …). 변경 없음.\n\n테스트 제안 둘\n\n- HTTP 401·429·500과 빈 본문의 503 매핑은 이미 테스트에 있다(httpErrorsAreUnavailable, unusableResponsesAreUnavailable).\n- 페이로드의 토큰·backtestId 누출 단언도 이미 있다. 없던 것은 로그 쪽이라, 성공 호출과 401 실패 호출을 한 번씩 돌린 뒤 로그 출력 전체에 키·공개 토큰·질문 원문·근거 값이 없음을 단언하는 테스트를 추가했다.\n\n검증 — ./gradlew spotlessApply build 통과. 테스트 2114건(+1), 실패 0, skipped 5.",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T01:41:44.343+09:00",
+          "updated_at": "2026-09-25T01:41:44.343+09:00",
+          "system": false,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "abe048a61823303e7298defa98117bce9585d5a7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867094,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>8c9008b2 - feat(be): 어댑터 로그에 키·토큰·원문이 남지 않음을 테스트로 고정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/326/diffs?diff_id=2249232&start_sha=53a99246ff409c6d29b2c718166befcd42aaa107)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T01:41:35.449+09:00",
+          "updated_at": "2026-09-25T01:41:35.452+09:00",
+          "system": true,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "94d77022f8655fdbeb01365c6800f3b90c055c75",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867099,
+          "type": null,
+          "body": "mentioned in commit 42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T01:41:55.673+09:00",
+          "updated_at": "2026-09-25T01:41:55.677+09:00",
+          "system": true,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fb8d654e1bc953949f593cd96df9d6efcd4637f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885030,
+          "type": null,
+          "body": "mentioned in commit 0e83cd9b293bf6afb5d70746ddb8eb704fb68bd4",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:09.563+09:00",
+          "updated_at": "2026-10-13T15:16:09.607+09:00",
+          "system": true,
+          "noteable_id": 959520,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 326,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2249232,
+      "head_commit_sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+      "base_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "start_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "created_at": "2026-09-25T01:41:34.929+09:00",
+      "merge_request_id": 959520,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "d51e20345911c0287464c2fcc0e5f5808785ed83"
+    },
+    {
+      "id": 2249196,
+      "head_commit_sha": "53a99246ff409c6d29b2c718166befcd42aaa107",
+      "base_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "start_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "created_at": "2026-09-25T01:28:00.038+09:00",
+      "merge_request_id": 959520,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "324d5cc06c4d353bf331881b9a44f5eee63552f6"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2249232,
+      "head_commit_sha": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+      "base_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "start_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "created_at": "2026-09-25T01:41:34.929+09:00",
+      "merge_request_id": 959520,
+      "state": "collected",
+      "real_size": "12",
+      "patch_id_sha": "d51e20345911c0287464c2fcc0e5f5808785ed83",
+      "commits": [
+        {
+          "id": "8c9008b2046c69d9c8c57da55782e507f0cf1997",
+          "short_id": "8c9008b2",
+          "created_at": "2026-09-25T01:39:49.000+09:00",
+          "parent_ids": [
+            "53a99246ff409c6d29b2c718166befcd42aaa107"
+          ],
+          "title": "feat(be): 어댑터 로그에 키·토큰·원문이 남지 않음을 테스트로 고정한다",
+          "message": "feat(be): 어댑터 로그에 키·토큰·원문이 남지 않음을 테스트로 고정한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:39:49.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:39:49.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8c9008b2046c69d9c8c57da55782e507f0cf1997"
+        },
+        {
+          "id": "53a99246ff409c6d29b2c718166befcd42aaa107",
+          "short_id": "53a99246",
+          "created_at": "2026-09-25T01:24:20.000+09:00",
+          "parent_ids": [
+            "3cca77a55b295419f6041e1248e8a58e0bf67cc2"
+          ],
+          "title": "fix(be): 빈 모델 응답과 문자열 아닌 factIds 를 스키마 오류(503)로 다룬다",
+          "message": "fix(be): 빈 모델 응답과 문자열 아닌 factIds 를 스키마 오류(503)로 다룬다\n\n- HTTP 200 의 빈 본문·null 본문은 파싱 전에 503. 도구 인자가 빈 문자열이어도 검증에 걸리는 값으로 넘긴다\n- answerParts.factIds 원소가 문자열이 아니면 답변 검증으로 넘기지 않고 503\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:24:20.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:24:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/53a99246ff409c6d29b2c718166befcd42aaa107"
+        },
+        {
+          "id": "3cca77a55b295419f6041e1248e8a58e0bf67cc2",
+          "short_id": "3cca77a5",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "59eb994c19a95c2578815b5825513c4e98ca9377"
+          ],
+          "title": "docs: 묶음 3(T020~T023) 완료를 표시한다",
+          "message": "docs: 묶음 3(T020~T023) 완료를 표시한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3cca77a55b295419f6041e1248e8a58e0bf67cc2"
+        },
+        {
+          "id": "59eb994c19a95c2578815b5825513c4e98ca9377",
+          "short_id": "59eb994c",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "14a085cc64dbc3ea13f996cfe9f58c25992b2332"
+          ],
+          "title": "fix(be): 도우미 503 응답에 내부 사유 대신 고정 문구를 싣는다",
+          "message": "fix(be): 도우미 503 응답에 내부 사유 대신 고정 문구를 싣는다\n\n- 전역 처리기가 예외 메시지를 그대로 응답에 싣는다. 사유는 로그로 옮긴다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/59eb994c19a95c2578815b5825513c4e98ca9377"
+        },
+        {
+          "id": "14a085cc64dbc3ea13f996cfe9f58c25992b2332",
+          "short_id": "14a085cc",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "62d054118af204227de094e6b41ad804f64a66ac"
+          ],
+          "title": "feat(be): 어댑터 요청·이력·오류 매핑과 조건부 빈을 테스트로 고정한다",
+          "message": "feat(be): 어댑터 요청·이력·오류 매핑과 조건부 빈을 테스트로 고정한다\n\n- 가짜 HTTP 서버로 계약 §2.1~§2.3 대조, 식별자 비노출, 401/429/500·시간 초과·예산 0 → 503\n- prod yml 네 값이 빈 기본값인지 확인\n- ASSISTANT_LIVE_TEST=true 일 때만 도는 라이브 테스트(CI 는 skip)\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14a085cc64dbc3ea13f996cfe9f58c25992b2332"
+        },
+        {
+          "id": "62d054118af204227de094e6b41ad804f64a66ac",
+          "short_id": "62d05411",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "98d096287a3ab8c92c6275bfc5469902b7df19c1"
+          ],
+          "title": "feat(be): 키·주소·모델명이 다 있을 때만 어댑터 빈을 띄운다",
+          "message": "feat(be): 키·주소·모델명이 다 있을 때만 어댑터 빈을 띄운다\n\n- Condition 코드로 판정한다. 하나라도 비면 어댑터가 없고 capabilities.enabled=false, 기동은 정상\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/62d054118af204227de094e6b41ad804f64a66ac"
+        },
+        {
+          "id": "98d096287a3ab8c92c6275bfc5469902b7df19c1",
+          "short_id": "98d09628",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "f3e26a50f4457fbfa28edf40a591a0d6bf2693c5"
+          ],
+          "title": "feat(be): GMS Chat Completions 어댑터와 HTTP 클라이언트를 만든다",
+          "message": "feat(be): GMS Chat Completions 어댑터와 HTTP 클라이언트를 만든다\n\n- 요청: model·store:false·developer/user 메시지·도구 정의(strict, 날짜 인자만)·strict 응답 스키마, 라운드 이력 재전송\n- 응답: tool_calls → ToolCall(JSON 아닌 인자는 검증에 걸리게), 본문 → ModelDraft, 그 밖은 503 고정 문구\n- 로그는 지연·토큰 수·도구 요청 수만\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/98d096287a3ab8c92c6275bfc5469902b7df19c1"
+        },
+        {
+          "id": "f3e26a50f4457fbfa28edf40a591a0d6bf2693c5",
+          "short_id": "f3e26a50",
+          "created_at": "2026-09-25T01:03:51.000+09:00",
+          "parent_ids": [
+            "237d4fb4a667b6f35d5fef283e397a6d9f99dca2"
+          ],
+          "title": "feat(be): 도우미 답변 프롬프트를 둔다",
+          "message": "feat(be): 도우미 답변 프롬프트를 둔다\n\n- 자리표시자 규칙·도구 지침(최대 2회, 기간 밖은 없음)·부분 결과 접두는 서버 몫·금지 표현·범위 밖 안내\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f3e26a50f4457fbfa28edf40a591a0d6bf2693c5"
+        },
+        {
+          "id": "237d4fb4a667b6f35d5fef283e397a6d9f99dca2",
+          "short_id": "237d4fb4",
+          "created_at": "2026-09-25T00:48:02.000+09:00",
+          "parent_ids": [
+            "277c1feae2a23994ad323af3a3ac2e07f2996d4e"
+          ],
+          "title": "docs: 묶음 3 티켓 번호를 tasks 에 적는다",
+          "message": "docs: 묶음 3 티켓 번호를 tasks 에 적는다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T00:48:02.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T00:48:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/237d4fb4a667b6f35d5fef283e397a6d9f99dca2"
+        },
+        {
+          "id": "277c1feae2a23994ad323af3a3ac2e07f2996d4e",
+          "short_id": "277c1fea",
+          "created_at": "2026-09-25T00:48:02.000+09:00",
+          "parent_ids": [
+            "4f80eda901dae5037727cbb05a33ae2f267df052"
+          ],
+          "title": "chore(infra): 도우미 환경 변수 넷을 prod compose와 .env.prod.example에 넘긴다",
+          "message": "chore(infra): 도우미 환경 변수 넷을 prod compose와 .env.prod.example에 넘긴다\n\n- 빈 기본값(:-)이라 .env.prod 에 없어도 기동하고 기능만 꺼진다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T00:42:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T00:48:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/277c1feae2a23994ad323af3a3ac2e07f2996d4e"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -28,6 +28,8 @@ import java.util.LinkedHashMap;\n import java.util.List;\n import java.util.Map;\n import java.util.Set;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n import org.springframework.stereotype.Component;\n \n /**\n@@ -40,6 +42,7 @@ import org.springframework.stereotype.Component;\n  */\n @Component\n public class ToolLoop {\n+    private static final Logger log = LoggerFactory.getLogger(ToolLoop.class);\n     static final String UNAVAILABLE_PREFIX = \"사용할 수 없음: \";\n     static final String TRUNCATED_LABEL = \"읽은 범위\";\n     static final String TRUNCATED_VALUE = \"일부만 읽음\";\n@@ -151,8 +154,10 @@ public class ToolLoop {\n         return null;\n     }\n \n+    /** 사유는 로그에만. 예외 메시지는 응답 본문에 실리므로 코드의 고정 문구를 쓴다(계약 §1). */\n     private static BusinessException unavailable(String reason) {\n-        return new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE, reason);\n+        log.warn(\"assistant loop unavailable: {}\", reason);\n+        return new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE);\n     }\n \n     /** id를 {@code F1}부터 매기며 상한을 지키는 팩. 잘리면 마지막 자리에 \"일부만 읽음\" 근거를 둔다. */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/ToolLoop.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/ToolLoop.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,100 @@\n+package com.ssafy.thorp.assistant.infrastructure.client;\n+\n+import com.fasterxml.jackson.core.JsonProcessingException;\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.assistant.infrastructure.config.AssistantModelProperties;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import java.io.IOException;\n+import java.net.URI;\n+import java.net.http.HttpClient;\n+import java.net.http.HttpRequest;\n+import java.net.http.HttpResponse;\n+import java.net.http.HttpTimeoutException;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Duration;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+\n+/**\n+ * GMS 게이트웨이로 JSON을 POST 한다({@code MarketHttpClient} 관례). 호출마다 받은 {@code timeout}이 곧 읽기 제한이다 — 전체\n+ * 데드라인의 남은 시간과 라운드 예산 중 작은 쪽을 루프가 넘긴다.\n+ *\n+ * <p>어떤 실패도 {@code ASSISTANT_UNAVAILABLE}(503) 하나다. 예외 메시지는 그대로 응답 본문에 실리므로 사유는 로그에만 남기고 메시지는 코드의\n+ * 고정 문구를 쓴다. 로그에도 요청·응답 본문과 키는 남기지 않는다(ADR-0008 D3).\n+ */\n+public class AssistantHttpClient {\n+    private static final Logger log = LoggerFactory.getLogger(AssistantHttpClient.class);\n+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);\n+\n+    private final HttpClient client;\n+    private final ObjectMapper mapper;\n+    private final URI endpoint;\n+    private final String authorization;\n+\n+    public AssistantHttpClient(AssistantModelProperties properties, ObjectMapper mapper) {\n+        this.client =\n+                HttpClient.newBuilder()\n+                        .connectTimeout(CONNECT_TIMEOUT)\n+                        .followRedirects(HttpClient.Redirect.NEVER)\n+                        .build();\n+        this.mapper = mapper;\n+        String base = properties.getBaseUrl().strip();\n+        while (base.endsWith(\"/\")) {\n+            base = base.substring(0, base.length() - 1);\n+        }\n+        this.endpoint = URI.create(base + \"/v1/chat/completions\");\n+        this.authorization = \"Bearer \" + properties.getApiKey().strip();\n+    }\n+\n+    public JsonNode post(JsonNode body, Duration timeout) {\n+        if (timeout == null || timeout.isZero() || timeout.isNegative()) {\n+            throw unavailable(\"no time budget left\");\n+        }\n+        String payload;\n+        try {\n+            payload = mapper.writeValueAsString(body);\n+        } catch (JsonProcessingException exc) {\n+            throw unavailable(\"request serialization failed\");\n+        }\n+        HttpRequest request =\n+                HttpRequest.newBuilder(endpoint)\n+                        .timeout(timeout)\n+                        .header(\"Authorization\", authorization)\n+                        .header(\"Content-Type\", \"application/json\")\n+                        .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))\n+                        .build();\n+        HttpResponse<String> response;\n+        try {\n+            response =\n+                    client.send(\n+                            request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));\n+        } catch (HttpTimeoutException exc) {\n+            throw unavailable(\"timeout after \" + timeout.toMillis() + \"ms\");\n+        } catch (InterruptedException exc) {\n+            Thread.currentThread().interrupt();\n+            throw unavailable(\"interrupted\");\n+        } catch (IOException | IllegalArgumentException exc) {\n+            throw unavailable(\"io failure: \" + exc.getClass().getSimpleName());\n+        }\n+        int status = response.statusCode();\n+        if (status < 200 || status >= 300) {\n+            throw unavailable(\"http status \" + status);\n+        }\n+        try {\n+            JsonNode node = mapper.readTree(response.body());\n+            if (node == null || node.isMissingNode() || node.isNull()) {\n+                throw unavailable(\"empty response body\");\n+            }\n+            return node;\n+        } catch (IOException | IllegalArgumentException exc) {\n+            throw unavailable(\"response is not json\");\n+        }\n+    }\n+\n+    static BusinessException unavailable(String reason) {\n+        log.warn(\"assistant model unavailable: {}\", reason);\n+        return new BusinessException(ErrorCode.ASSISTANT_UNAVAILABLE);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/client/AssistantHttpClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/client/AssistantHttpClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,329 @@\n+package com.ssafy.thorp.assistant.infrastructure.client;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.fasterxml.jackson.databind.node.ArrayNode;\n+import com.fasterxml.jackson.databind.node.ObjectNode;\n+import com.ssafy.thorp.assistant.application.port.AssistantModelPort;\n+import com.ssafy.thorp.assistant.application.result.AnswerStatus;\n+import com.ssafy.thorp.assistant.application.result.Conversation;\n+import com.ssafy.thorp.assistant.application.result.Conversation.Exchange;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.ModelDraft;\n+import com.ssafy.thorp.assistant.application.result.ModelDraft.AnswerPart;\n+import com.ssafy.thorp.assistant.application.result.ModelTurn;\n+import com.ssafy.thorp.assistant.application.result.ToolCall;\n+import com.ssafy.thorp.assistant.application.result.ToolRequests;\n+import com.ssafy.thorp.assistant.application.result.ToolResult;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.assistant.infrastructure.config.AssistantModelProperties;\n+import java.io.IOException;\n+import java.io.InputStream;\n+import java.io.UncheckedIOException;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Duration;\n+import java.util.ArrayList;\n+import java.util.HashSet;\n+import java.util.Iterator;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Set;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+\n+/**\n+ * Chat Completions 형식의 {@link AssistantModelPort}(계약 §2.1~§2.3, ADR-0008 D2).\n+ *\n+ * <p>요청에는 질문·근거 팩·도구 목록·이전 라운드의 도구 요청과 결과만 들어간다. {@code store:false}라 이력은 매번 여기서 다시 담는다. 응답은 {@code\n+ * tool_calls}면 {@link ToolRequests}, JSON 본문이면 {@link ModelDraft}로 읽고, 그 밖(거부·빈 본문·스키마 불일치)은 503이다.\n+ *\n+ * <p>로그에는 지연·토큰 사용량·도구 요청 수만 남긴다. 질문·답·근거 원문은 남기지 않는다(FR-014).\n+ */\n+public class OpenAiChatCompletionsClient implements AssistantModelPort {\n+    static final String PROMPT_RESOURCE = \"assistant/prompts/answer-ko.txt\";\n+    static final String RESPONSE_SCHEMA_NAME = \"assistant_answer\";\n+    static final String UNPARSED_ARGUMENTS_KEY = \"_unparsed\";\n+    private static final Logger log = LoggerFactory.getLogger(OpenAiChatCompletionsClient.class);\n+\n+    private final AssistantHttpClient http;\n+    private final ObjectMapper mapper;\n+    private final String model;\n+    private final String prompt;\n+    private final JsonNode responseFormat;\n+\n+    public OpenAiChatCompletionsClient(\n+            AssistantHttpClient http, AssistantModelProperties properties, ObjectMapper mapper) {\n+        this.http = http;\n+        this.mapper = mapper;\n+        this.model = properties.getModel().strip();\n+        this.prompt = loadResource(PROMPT_RESOURCE);\n+        this.responseFormat = responseFormat(mapper);\n+    }\n+\n+    @Override\n+    public ModelTurn step(\n+            Conversation conversation,\n+            List<Evidence> facts,\n+            List<ToolSpec> tools,\n+            Duration timeout) {\n+        ObjectNode body = request(conversation, facts, tools);\n+        long started = System.nanoTime();\n+        JsonNode response = http.post(body, timeout);\n+        ModelTurn turn = parse(response);\n+        JsonNode usage = response.path(\"usage\");\n+        log.info(\n+                \"assistant model call: latencyMs={} promptTokens={} completionTokens={} toolCalls={}\",\n+                (System.nanoTime() - started) / 1_000_000,\n+                usage.path(\"prompt_tokens\").asInt(-1),\n+                usage.path(\"completion_tokens\").asInt(-1),\n+                turn instanceof ToolRequests requests ? requests.calls().size() : 0);\n+        return turn;\n+    }\n+\n+    // ---- 요청\n+\n+    ObjectNode request(Conversation conversation, List<Evidence> facts, List<ToolSpec> tools) {\n+        ObjectNode body = mapper.createObjectNode();\n+        body.put(\"model\", model);\n+        body.put(\"store\", false);\n+        ArrayNode messages = body.putArray(\"messages\");\n+        messages.addObject().put(\"role\", \"developer\").put(\"content\", prompt);\n+        messages.addObject()\n+                .put(\"role\", \"user\")\n+                .put(\n+                        \"content\",\n+                        userContent(conversation.question(), initialFacts(conversation, facts)));\n+        for (Exchange exchange : conversation.exchanges()) {\n+            ObjectNode assistant = messages.addObject().put(\"role\", \"assistant\");\n+            assistant.putNull(\"content\");\n+            ArrayNode calls = assistant.putArray(\"tool_calls\");\n+            for (ToolCall call : exchange.calls()) {\n+                ObjectNode node = calls.addObject().put(\"id\", call.id()).put(\"type\", \"function\");\n+                node.putObject(\"function\")\n+                        .put(\"name\", call.name())\n+                        .put(\"arguments\", argumentsJson(call.arguments()));\n+            }\n+            for (ToolResult result : exchange.results()) {\n+                messages.addObject()\n+                        .put(\"role\", \"tool\")\n+                        .put(\"tool_call_id\", result.callId())\n+                        .put(\"content\", toolContent(result));\n+            }\n+        }\n+        if (!tools.isEmpty()) {\n+            ArrayNode definitions = body.putArray(\"tools\");\n+            for (ToolSpec spec : tools) {\n+                definitions.add(toolDefinition(spec));\n+            }\n+            body.put(\"tool_choice\", \"auto\");\n+            body.put(\"parallel_tool_calls\", false);\n+        }\n+        body.set(\"response_format\", responseFormat);\n+        return body;\n+    }\n+\n+    /** 이력의 도구 결과로 들어온 근거는 {@code tool} 메시지에 이미 있으므로 사용자 메시지에는 처음 팩만 싣는다. */\n+    private static List<Evidence> initialFacts(Conversation conversation, List<Evidence> facts) {\n+        Set<String> fromTools = new HashSet<>();\n+        for (Exchange exchange : conversation.exchanges()) {\n+            for (ToolResult result : exchange.results()) {\n+                for (Evidence fact : result.facts()) {\n+                    fromTools.add(fact.id());\n+                }\n+            }\n+        }\n+        return facts.stream().filter(fact -> !fromTools.contains(fact.id())).toList();\n+    }\n+\n+    private static String userContent(String question, List<Evidence> facts) {\n+        StringBuilder text = new StringBuilder(\"질문:\\n\").append(question).append(\"\\n\\n근거:\\n\");\n+        if (facts.isEmpty()) {\n+            text.append(\"(없음)\\n\");\n+        }\n+        for (Evidence fact : facts) {\n+            text.append(factLine(fact)).append('\\n');\n+        }\n+        return text.toString();\n+    }\n+\n+    /** {@code Fn label (asOf) = value}. 값은 원문 문자열이다 — 모델이 표기를 바꾸지 않게 한다(계약 §2.1). */\n+    static String factLine(Evidence fact) {\n+        StringBuilder line = new StringBuilder(fact.id()).append(' ').append(fact.label());\n+        if (fact.asOf() != null) {\n+            line.append(\" (\").append(fact.asOf()).append(')');\n+        }\n+        return line.append(\" = \").append(fact.value()).toString();\n+    }\n+\n+    private static String toolContent(ToolResult result) {\n+        if (result.unavailable()) {\n+            return result.unavailableReason();\n+        }\n+        if (result.facts().isEmpty()) {\n+            return \"읽은 자료가 없습니다\";\n+        }\n+        StringBuilder text = new StringBuilder();\n+        for (Evidence fact : result.facts()) {\n+            text.append(factLine(fact)).append('\\n');\n+        }\n+        return text.toString();\n+    }\n+\n+    private String argumentsJson(Map<String, String> arguments) {\n+        ObjectNode node = mapper.createObjectNode();\n+        if (arguments != null) {\n+            arguments.forEach(node::put);\n+        }\n+        return node.toString();\n+    }\n+\n+    private ObjectNode toolDefinition(ToolSpec spec) {\n+        ObjectNode definition = mapper.createObjectNode().put(\"type\", \"function\");\n+        ObjectNode function = definition.putObject(\"function\");\n+        function.put(\"name\", spec.name())\n+                .put(\"description\", spec.description())\n+                .put(\"strict\", true);\n+        ObjectNode parameters = function.putObject(\"parameters\").put(\"type\", \"object\");\n+        ObjectNode properties = parameters.putObject(\"properties\");\n+        ArrayNode required = parameters.putArray(\"required\");\n+        for (String argument : spec.dateArguments()) {\n+            properties.putObject(argument).put(\"type\", \"string\").put(\"description\", \"YYYY-MM-DD\");\n+            required.add(argument);\n+        }\n+        parameters.put(\"additionalProperties\", false);\n+        return definition;\n+    }\n+\n+    // ---- 응답\n+\n+    ModelTurn parse(JsonNode response) {\n+        JsonNode message = response.path(\"choices\").path(0).path(\"message\");\n+        if (message.isMissingNode()) {\n+            throw AssistantHttpClient.unavailable(\"response has no message\");\n+        }\n+        JsonNode refusal = message.path(\"refusal\");\n+        if (refusal.isTextual() && !refusal.asText().isBlank()) {\n+            throw AssistantHttpClient.unavailable(\"model refused\");\n+        }\n+        JsonNode toolCalls = message.path(\"tool_calls\");\n+        if (toolCalls.isArray() && !toolCalls.isEmpty()) {\n+            List<ToolCall> calls = new ArrayList<>();\n+            for (JsonNode node : toolCalls) {\n+                JsonNode function = node.path(\"function\");\n+                calls.add(\n+                        new ToolCall(\n+                                node.path(\"id\").asText(\"\"),\n+                                function.path(\"name\").asText(\"\"),\n+                                arguments(function.path(\"arguments\").asText(\"\"))));\n+            }\n+            return new ToolRequests(calls);\n+        }\n+        String content = message.path(\"content\").asText(\"\");\n+        if (content.isBlank()) {\n+            throw AssistantHttpClient.unavailable(\"empty content\");\n+        }\n+        return draft(content);\n+    }\n+\n+    /** JSON 객체가 아니면 빈 인자가 아니라 검증에 걸리는 값으로 넘긴다 — 루프가 \"인자가 맞지 않음\"으로 거절한다. */\n+    private Map<String, String> arguments(String raw) {\n+        try {\n+            JsonNode node = mapper.readTree(raw);\n+            if (node == null || !node.isObject()) {\n+                return Map.of(UNPARSED_ARGUMENTS_KEY, raw);\n+            }\n+            Map<String, String> arguments = new LinkedHashMap<>();\n+            for (Iterator<Map.Entry<String, JsonNode>> it = node.fields(); it.hasNext(); ) {\n+                Map.Entry<String, JsonNode> entry = it.next();\n+                JsonNode value = entry.getValue();\n+                arguments.put(\n+                        entry.getKey(), value.isTextual() ? value.asText() : value.toString());\n+            }\n+            return arguments;\n+        } catch (IOException | IllegalArgumentException exc) {\n+            return Map.of(UNPARSED_ARGUMENTS_KEY, raw);\n+        }\n+    }\n+\n+    private ModelDraft draft(String content) {\n+        JsonNode node;\n+        try {\n+            node = mapper.readTree(content);\n+        } catch (IOException | IllegalArgumentException exc) {\n+            throw AssistantHttpClient.unavailable(\"content is not json\");\n+        }\n+        JsonNode statusNode = node.path(\"status\");\n+        JsonNode partsNode = node.path(\"answerParts\");\n+        if (!statusNode.isTextual() || !partsNode.isArray()) {\n+            throw AssistantHttpClient.unavailable(\"content does not match schema\");\n+        }\n+        AnswerStatus status;\n+        try {\n+            status = AnswerStatus.valueOf(statusNode.asText());\n+        } catch (IllegalArgumentException exc) {\n+            throw AssistantHttpClient.unavailable(\"unknown status\");\n+        }\n+        List<AnswerPart> parts = new ArrayList<>();\n+        for (JsonNode part : partsNode) {\n+            JsonNode text = part.path(\"text\");\n+            JsonNode factIds = part.path(\"factIds\");\n+            if (!text.isTextual() || !factIds.isArray()) {\n+                throw AssistantHttpClient.unavailable(\"part does not match schema\");\n+            }\n+            List<String> ids = new ArrayList<>();\n+            for (JsonNode id : factIds) {\n+                if (!id.isTextual()) {\n+                    throw AssistantHttpClient.unavailable(\"factIds must be strings\");\n+                }\n+                ids.add(id.asText());\n+            }\n+            parts.add(new AnswerPart(text.asText(), ids));\n+        }\n+        return new ModelDraft(status, parts);\n+    }\n+\n+    // ---- 고정 자원\n+\n+    private static JsonNode responseFormat(ObjectMapper mapper) {\n+        ObjectNode part = mapper.createObjectNode().put(\"type\", \"object\");\n+        ObjectNode partProperties = part.putObject(\"properties\");\n+        partProperties.putObject(\"text\").put(\"type\", \"string\");\n+        partProperties\n+                .putObject(\"factIds\")\n+                .put(\"type\", \"array\")\n+                .putObject(\"items\")\n+                .put(\"type\", \"string\");\n+        part.putArray(\"required\").add(\"text\").add(\"factIds\");\n+        part.put(\"additionalProperties\", false);\n+\n+        ObjectNode schema = mapper.createObjectNode().put(\"type\", \"object\");\n+        ObjectNode properties = schema.putObject(\"properties\");\n+        ArrayNode statuses = properties.putObject(\"status\").put(\"type\", \"string\").putArray(\"enum\");\n+        for (AnswerStatus status : AnswerStatus.values()) {\n+            statuses.add(status.name());\n+        }\n+        properties.putObject(\"answerParts\").put(\"type\", \"array\").set(\"items\", part);\n+        schema.putArray(\"required\").add(\"status\").add(\"answerParts\");\n+        schema.put(\"additionalProperties\", false);\n+\n+        ObjectNode format = mapper.createObjectNode().put(\"type\", \"json_schema\");\n+        format.putObject(\"json_schema\")\n+                .put(\"name\", RESPONSE_SCHEMA_NAME)\n+                .put(\"strict\", true)\n+                .set(\"schema\", schema);\n+        return format;\n+    }\n+\n+    static String loadResource(String path) {\n+        try (InputStream in =\n+                OpenAiChatCompletionsClient.class.getClassLoader().getResourceAsStream(path)) {\n+            if (in == null) {\n+                throw new IllegalStateException(\"리소스가 없습니다: \" + path);\n+            }\n+            return new String(in.readAllBytes(), StandardCharsets.UTF_8).strip();\n+        } catch (IOException exc) {\n+            throw new UncheckedIOException(exc);\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClient.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClient.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,55 @@\n+package com.ssafy.thorp.assistant.infrastructure.config;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.assistant.application.port.AssistantModelPort;\n+import com.ssafy.thorp.assistant.infrastructure.client.AssistantHttpClient;\n+import com.ssafy.thorp.assistant.infrastructure.client.OpenAiChatCompletionsClient;\n+import org.springframework.context.annotation.Bean;\n+import org.springframework.context.annotation.Condition;\n+import org.springframework.context.annotation.ConditionContext;\n+import org.springframework.context.annotation.Conditional;\n+import org.springframework.context.annotation.Configuration;\n+import org.springframework.core.env.Environment;\n+import org.springframework.core.type.AnnotatedTypeMetadata;\n+\n+/**\n+ * 모델 어댑터는 키·주소·모델명이 <b>모두</b> 있을 때만 뜬다. 하나라도 비면 이 설정 전체가 빠지고 {@code\n+ * AssistantCapabilities.enabled()}가 false 다 — 기동은 정상이다(FR-016, 계약 §4).\n+ */\n+@Configuration\n+@Conditional(AssistantModelConfig.ModelConfigured.class)\n+public class AssistantModelConfig {\n+\n+    @Bean\n+    public AssistantHttpClient assistantHttpClient(\n+            AssistantModelProperties properties, ObjectMapper mapper) {\n+        return new AssistantHttpClient(properties, mapper);\n+    }\n+\n+    @Bean\n+    public AssistantModelPort openAiChatCompletionsClient(\n+            AssistantHttpClient http, AssistantModelProperties properties, ObjectMapper mapper) {\n+        return new OpenAiChatCompletionsClient(http, properties, mapper);\n+    }\n+\n+    /** SpEL 대신 코드로 판정한다 — 키 문자열을 표현식에 끼워 넣지 않기 위해서다. */\n+    static class ModelConfigured implements Condition {\n+        static final String[] KEYS = {\n+            \"thorp.assistant.model.api-key\",\n+            \"thorp.assistant.model.base-url\",\n+            \"thorp.assistant.model.model\"\n+        };\n+\n+        @Override\n+        public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {\n+            Environment environment = context.getEnvironment();\n+            for (String key : KEYS) {\n+                String value = environment.getProperty(key, \"\");\n+                if (value.isBlank()) {\n+                    return false;\n+                }\n+            }\n+            return true;\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/config/AssistantModelConfig.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/infrastructure/config/AssistantModelConfig.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,37 @@\n+너는 Thorp의 결과 화면 도우미다. 사용자가 지금 보고 있는 백테스트 결과(과거 기록)에 대해 묻는다. 너의 일은 \"근거\" 목록에 있는 값을 한국어로 설명하는 것뿐이다. 근거에 없는 사실을 만들지 않는다.\n+\n+[출력 형식]\n+- 응답은 주어진 JSON 스키마 하나로만 한다: {\"status\": ..., \"answerParts\": [{\"text\": ..., \"factIds\": [...]}, ...]}.\n+- status는 셋 중 하나다.\n+  - ANSWERED: 근거만으로 답할 수 있다.\n+  - INSUFFICIENT_EVIDENCE: 근거가 없거나 부족하다. answerParts는 비운다.\n+  - OUT_OF_SCOPE: 이 결과의 기록을 설명하는 범위 밖이다. answerParts는 비운다.\n+- answerParts는 문장 조각 목록이다. 최대 5개, 전체 600자 이내.\n+\n+[값은 자리표시자로만 쓴다 — 가장 중요한 규칙]\n+- text 안의 모든 숫자·날짜·금액·비율·횟수는 근거의 ID를 {{F3}}처럼 이중 중괄호로 적는다. 서버가 그 자리를 실제 값으로 채운다.\n+- text에 아라비아 숫자(0-9), %, 원, 날짜(2024-03-04, 3월 4일 등), URL이나 경로를 직접 적으면 답 전체가 버려진다.\n+- \"두 번\", \"세 종목\", \"첫째\" 같은 한글 수사는 써도 된다.\n+- 각 part의 factIds에는 그 part의 text에 쓴 자리표시자 ID를 빠짐없이, 그리고 그것만 적는다.\n+- factIds가 빈 part는 허용되지 않는다. 연결 문장은 근거가 있는 문장에 붙여 한 part로 쓴다.\n+- 근거의 값을 다른 단위로 바꿔 적지 않는다. 합계·차이·비율을 새로 계산하지 않는다.\n+\n+[도구]\n+- 특정 날짜의 자산, 어떤 구간의 흐름, 구간의 거래, 특정 날짜의 보유, 가장 크게 줄었던 구간은 근거 목록에 없다. 도구를 요청해 읽는다.\n+- 사용자가 말한 날짜를 되묻지 말고 도구를 요청한다. 날짜 인자는 YYYY-MM-DD 형식이고, 도구는 날짜 인자만 받는다.\n+- 도구는 한 질문에 최대 두 번까지만 요청할 수 있다. 세 번째는 거절되니 두 번 안에 끝낸다.\n+- 도구가 \"사용할 수 없음\"을 돌려주면(결과 기간 밖, 인자 오류, 자료 없음) 그 자료는 없는 것이다. 값을 추측하지 말고 INSUFFICIENT_EVIDENCE로 답하거나, 남은 근거로만 답한다.\n+- 결과 기간 밖의 날짜를 물으면 그 날짜의 자료가 없다고 답한다.\n+\n+[부분 결과]\n+- 결과가 부분 결과인지와 완료 끝 날짜는 서버가 답의 첫 문장으로 붙인다. 너는 그 문장을 쓰지 않는다.\n+\n+[하지 않는 것]\n+- 투자 추천, 매수·매도 권유, 이 전략을 써도 되는지에 대한 판단을 하지 않는다. 물으면 OUT_OF_SCOPE.\n+- 앞으로의 성과, 오를지 내릴지, 확률·가능성을 말하지 않는다. 물으면 OUT_OF_SCOPE.\n+- \"왜 손실이 났나\" 같은 원인 질문에는 원인을 단정하지 않는다. 그 기간에 관측된 보유·거래·손익 변화만 근거로 제시한다.\n+- 비교 대상, KOSPI 참고선, 다른 결과, 뉴스나 경제 상황은 이 도우미의 범위 밖이다. 물으면 OUT_OF_SCOPE.\n+- 근거를 지어내거나, 근거에 없는 항목을 있다고 말하지 않는다.\n+\n+[말투]\n+- 한국어 존댓말, 짧은 문장. 값을 나열할 때는 무엇의 값인지 근거의 이름을 함께 말한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/assistant/prompts/answer-ko.txt",
+          "old_path": "backend/src/main/resources/assistant/prompts/answer-ko.txt",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,388 @@\n+package com.ssafy.thorp.assistant.infrastructure.client;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.assistant.application.result.AnswerStatus;\n+import com.ssafy.thorp.assistant.application.result.Conversation;\n+import com.ssafy.thorp.assistant.application.result.Conversation.Exchange;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.ModelDraft;\n+import com.ssafy.thorp.assistant.application.result.ModelTurn;\n+import com.ssafy.thorp.assistant.application.result.ToolCall;\n+import com.ssafy.thorp.assistant.application.result.ToolRequests;\n+import com.ssafy.thorp.assistant.application.result.ToolResult;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.assistant.infrastructure.config.AssistantModelProperties;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.sun.net.httpserver.HttpServer;\n+import java.io.OutputStream;\n+import java.net.InetSocketAddress;\n+import java.nio.charset.StandardCharsets;\n+import java.time.Duration;\n+import java.time.LocalDate;\n+import java.util.ArrayDeque;\n+import java.util.ArrayList;\n+import java.util.Deque;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.AfterEach;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.extension.ExtendWith;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.ValueSource;\n+import org.springframework.boot.test.system.CapturedOutput;\n+import org.springframework.boot.test.system.OutputCaptureExtension;\n+\n+/** 계약 §2.1~§2.3(T020). 가짜 HTTP 서버가 받은 본문과 돌려준 응답으로 요청 조립·이력·파싱·오류 매핑을 고정한다. */\n+@ExtendWith(OutputCaptureExtension.class)\n+class OpenAiChatCompletionsClientTest {\n+    static final String TOKEN = \"0123456789abcdef0123456789abcdef\";\n+    static final String TOOL_CALLS_RESPONSE =\n+            \"\"\"\n+            {\"choices\":[{\"finish_reason\":\"tool_calls\",\"message\":{\"role\":\"assistant\",\"content\":null,\n+              \"tool_calls\":[{\"id\":\"call_1\",\"type\":\"function\",\"function\":{\"name\":\"getEquityOn\",\"arguments\":\"{\\\\\"date\\\\\":\\\\\"2024-03-04\\\\\"}\"}}]}}],\n+             \"usage\":{\"prompt_tokens\":289,\"completion_tokens\":286,\"total_tokens\":575}}\n+            \"\"\";\n+    static final String DRAFT_RESPONSE =\n+            \"\"\"\n+            {\"choices\":[{\"finish_reason\":\"stop\",\"message\":{\"role\":\"assistant\",\n+              \"content\":\"{\\\\\"status\\\\\":\\\\\"ANSWERED\\\\\",\\\\\"answerParts\\\\\":[{\\\\\"text\\\\\":\\\\\"비용을 뺀 전체 수익률은 {{F1}}입니다.\\\\\",\\\\\"factIds\\\\\":[\\\\\"F1\\\\\"]}]}\"}}],\n+             \"usage\":{\"prompt_tokens\":300,\"completion_tokens\":40,\"total_tokens\":340}}\n+            \"\"\";\n+\n+    record Scripted(int status, String body, Duration delay) {\n+        static Scripted ok(String body) {\n+            return new Scripted(200, body, Duration.ZERO);\n+        }\n+    }\n+\n+    private final ObjectMapper mapper = new ObjectMapper();\n+    private final List<JsonNode> received = new ArrayList<>();\n+    private final List<String> authorizations = new ArrayList<>();\n+    private final Deque<Scripted> responses = new ArrayDeque<>();\n+    private HttpServer server;\n+    private OpenAiChatCompletionsClient client;\n+\n+    @BeforeEach\n+    void startServer() throws Exception {\n+        server = HttpServer.create(new InetSocketAddress(\"127.0.0.1\", 0), 0);\n+        server.createContext(\n+                \"/v1/chat/completions\",\n+                exchange -> {\n+                    received.add(mapper.readTree(exchange.getRequestBody()));\n+                    authorizations.add(exchange.getRequestHeaders().getFirst(\"Authorization\"));\n+                    Scripted scripted = responses.poll();\n+                    if (scripted == null) {\n+                        scripted = new Scripted(500, \"{}\", Duration.ZERO);\n+                    }\n+                    try {\n+                        Thread.sleep(scripted.delay().toMillis());\n+                    } catch (InterruptedException exc) {\n+                        Thread.currentThread().interrupt();\n+                    }\n+                    byte[] bytes = scripted.body().getBytes(StandardCharsets.UTF_8);\n+                    exchange.sendResponseHeaders(scripted.status(), bytes.length);\n+                    try (OutputStream out = exchange.getResponseBody()) {\n+                        out.write(bytes);\n+                    }\n+                });\n+        server.start();\n+        AssistantModelProperties properties = new AssistantModelProperties();\n+        properties.setApiKey(\"test-key\");\n+        properties.setBaseUrl(\"http://127.0.0.1:\" + server.getAddress().getPort() + \"/\");\n+        properties.setModel(\"gpt-5-mini\");\n+        client =\n+                new OpenAiChatCompletionsClient(\n+                        new AssistantHttpClient(properties, mapper), properties, mapper);\n+    }\n+\n+    @AfterEach\n+    void stopServer() {\n+        server.stop(0);\n+    }\n+\n+    static Evidence fact(String id, String label, String value, LocalDate asOf) {\n+        return new Evidence(id, label, value, asOf, \"summary\", EvidenceKind.RATIO);\n+    }\n+\n+    static final List<Evidence> FACTS =\n+            List.of(\n+                    fact(\"F1\", \"비용 차감 후 전체 수익률\", \"0.166652\", LocalDate.of(2024, 12, 31)),\n+                    fact(\"F2\", \"거래비용 합계\", \"17078\", null));\n+    static final List<ToolSpec> TOOLS =\n+            List.of(\n+                    new ToolSpec(\"getEquityOn\", \"특정 날짜의 시계열 점\", List.of(\"date\")),\n+                    new ToolSpec(\"getEquityRange\", \"구간의 첫·끝·최고·최저 점\", List.of(\"from\", \"to\")));\n+\n+    ModelTurn step(Conversation conversation, List<Evidence> facts, List<ToolSpec> tools) {\n+        return client.step(conversation, facts, tools, Duration.ofSeconds(5));\n+    }\n+\n+    static Conversation question(String question) {\n+        return new Conversation(question, List.of());\n+    }\n+\n+    @Test\n+    @DisplayName(\n+            \"요청은 model·store:false·parallel_tool_calls:false·strict 응답 스키마·서버 도구만 담고, 질문과 근거 팩을 developer/user 로 나눈다\")\n+    void requestShape() {\n+        responses.add(Scripted.ok(TOOL_CALLS_RESPONSE));\n+\n+        step(question(\"거래비용은 어떻게 구성됐어?\"), FACTS, TOOLS);\n+\n+        JsonNode body = received.get(0);\n+        assertThat(body.get(\"model\").asText()).isEqualTo(\"gpt-5-mini\");\n+        assertThat(body.get(\"store\").asBoolean()).isFalse();\n+        assertThat(body.get(\"parallel_tool_calls\").asBoolean()).isFalse();\n+        assertThat(body.get(\"tool_choice\").asText()).isEqualTo(\"auto\");\n+        JsonNode format = body.get(\"response_format\");\n+        assertThat(format.get(\"type\").asText()).isEqualTo(\"json_schema\");\n+        assertThat(format.get(\"json_schema\").get(\"strict\").asBoolean()).isTrue();\n+        assertThat(format.get(\"json_schema\").get(\"name\").asText()).isEqualTo(\"assistant_answer\");\n+        JsonNode schema = format.get(\"json_schema\").get(\"schema\");\n+        assertThat(schema.get(\"properties\").get(\"status\").get(\"enum\"))\n+                .extracting(JsonNode::asText)\n+                .containsExactly(\"ANSWERED\", \"INSUFFICIENT_EVIDENCE\", \"OUT_OF_SCOPE\");\n+        assertThat(schema.get(\"additionalProperties\").asBoolean()).isFalse();\n+\n+        JsonNode tools = body.get(\"tools\");\n+        assertThat(tools).hasSize(2);\n+        for (JsonNode tool : tools) {\n+            assertThat(tool.get(\"type\").asText()).isEqualTo(\"function\");\n+            assertThat(tool.get(\"function\").get(\"strict\").asBoolean()).isTrue();\n+            assertThat(\n+                            tool.get(\"function\")\n+                                    .get(\"parameters\")\n+                                    .get(\"additionalProperties\")\n+                                    .asBoolean())\n+                    .isFalse();\n+        }\n+        assertThat(tools.get(1).get(\"function\").get(\"parameters\").get(\"required\"))\n+                .extracting(JsonNode::asText)\n+                .containsExactly(\"from\", \"to\");\n+\n+        JsonNode messages = body.get(\"messages\");\n+        assertThat(messages).hasSize(2);\n+        assertThat(messages.get(0).get(\"role\").asText()).isEqualTo(\"developer\");\n+        assertThat(messages.get(0).get(\"content\").asText()).contains(\"자리표시자\");\n+        assertThat(messages.get(1).get(\"role\").asText()).isEqualTo(\"user\");\n+        assertThat(messages.get(1).get(\"content\").asText())\n+                .contains(\"질문:\\n거래비용은 어떻게 구성됐어?\")\n+                .contains(\"F1 비용 차감 후 전체 수익률 (2024-12-31) = 0.166652\")\n+                .contains(\"F2 거래비용 합계 = 17078\");\n+        assertThat(authorizations.get(0)).isEqualTo(\"Bearer test-key\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"직렬화된 요청 어디에도 공개 토큰·backtestId 가 없다 — 입력에 없으니 나갈 수 없다\")\n+    void requestCarriesNoIdentifiers() {\n+        responses.add(Scripted.ok(DRAFT_RESPONSE));\n+\n+        step(question(\"수익률?\"), FACTS, TOOLS);\n+\n+        assertThat(received.get(0).toString())\n+                .doesNotContain(TOKEN, \"BT-\", \"backtestId\", \"publicToken\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"성공·실패 호출의 로그에 키·공개 토큰·질문 원문이 남지 않는다\")\n+    void logsCarryNoSecretsOrText(CapturedOutput output) {\n+        responses.add(Scripted.ok(TOOL_CALLS_RESPONSE));\n+        responses.add(\n+                new Scripted(401, \"{\\\"error\\\":{\\\"message\\\":\\\"bad key test-key\\\"}}\", Duration.ZERO));\n+        String question = \"토큰 \" + TOKEN + \" 결과의 거래비용은?\";\n+\n+        step(question(question), FACTS, TOOLS);\n+        assertThatThrownBy(() -> step(question(question), FACTS, TOOLS))\n+                .isInstanceOf(BusinessException.class);\n+\n+        assertThat(output.getAll())\n+                .contains(\"assistant model call\")\n+                .contains(\"assistant model unavailable\")\n+                .doesNotContain(\"test-key\", TOKEN, \"거래비용은?\", \"0.166652\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"tool_calls 는 ToolCall(id·name·arguments) 로 읽는다\")\n+    void parsesToolCalls() {\n+        responses.add(Scripted.ok(TOOL_CALLS_RESPONSE));\n+\n+        ModelTurn turn = step(question(\"그날 자산은?\"), FACTS, TOOLS);\n+\n+        assertThat(turn)\n+                .isInstanceOfSatisfying(\n+                        ToolRequests.class,\n+                        requests ->\n+                                assertThat(requests.calls())\n+                                        .containsExactly(\n+                                                new ToolCall(\n+                                                        \"call_1\",\n+                                                        \"getEquityOn\",\n+                                                        Map.of(\"date\", \"2024-03-04\"))));\n+    }\n+\n+    @Test\n+    @DisplayName(\"arguments 가 JSON 객체가 아니면 빈 인자가 아니라 검증에 걸리는 값으로 넘긴다\")\n+    void nonJsonArgumentsFailValidation() {\n+        responses.add(\n+                Scripted.ok(\n+                        TOOL_CALLS_RESPONSE.replace(\"{\\\\\\\"date\\\\\\\":\\\\\\\"2024-03-04\\\\\\\"}\", \"어제 자산\")));\n+\n+        ToolRequests requests = (ToolRequests) step(question(\"q\"), FACTS, TOOLS);\n+\n+        Map<String, String> arguments = requests.calls().get(0).arguments();\n+        assertThat(arguments).doesNotContainKey(\"date\").isNotEmpty();\n+        assertThat(arguments).containsKey(OpenAiChatCompletionsClient.UNPARSED_ARGUMENTS_KEY);\n+    }\n+\n+    @Test\n+    @DisplayName(\"arguments 가 빈 문자열이어도 500 이 아니라 검증에 걸리는 값으로 넘긴다\")\n+    void emptyArgumentsFailValidation() {\n+        responses.add(\n+                Scripted.ok(TOOL_CALLS_RESPONSE.replace(\"{\\\\\\\"date\\\\\\\":\\\\\\\"2024-03-04\\\\\\\"}\", \"\")));\n+\n+        ToolRequests requests = (ToolRequests) step(question(\"q\"), FACTS, TOOLS);\n+\n+        assertThat(requests.calls().get(0).arguments())\n+                .containsKey(OpenAiChatCompletionsClient.UNPARSED_ARGUMENTS_KEY);\n+    }\n+\n+    @Test\n+    @DisplayName(\n+            \"두 번째 라운드 요청에는 이전 assistant(tool_calls)·tool 메시지가 들어 있고, 도구로 얻은 근거는 사용자 메시지에 중복되지 않는다\")\n+    void secondRoundCarriesHistory() {\n+        responses.add(Scripted.ok(DRAFT_RESPONSE));\n+        Evidence fromTool = fact(\"F3\", \"자산가치\", \"10500000\", LocalDate.of(2024, 3, 4));\n+        Exchange exchange =\n+                new Exchange(\n+                        List.of(\n+                                new ToolCall(\"call_1\", \"getEquityOn\", Map.of(\"date\", \"2024-03-04\")),\n+                                new ToolCall(\"call_2\", \"deleteEverything\", Map.of())),\n+                        List.of(\n+                                new ToolResult(\"call_1\", List.of(fromTool), null),\n+                                ToolResult.unavailable(\"call_2\", \"사용할 수 없음: 그런 도구가 없습니다\")));\n+        List<Evidence> facts = List.of(FACTS.get(0), FACTS.get(1), fromTool);\n+\n+        step(new Conversation(\"그날 자산은?\", List.of(exchange)), facts, TOOLS);\n+\n+        JsonNode messages = received.get(0).get(\"messages\");\n+        assertThat(messages)\n+                .extracting(m -> m.get(\"role\").asText())\n+                .containsExactly(\"developer\", \"user\", \"assistant\", \"tool\", \"tool\");\n+        assertThat(messages.get(1).get(\"content\").asText())\n+                .contains(\"F1 \", \"F2 \")\n+                .doesNotContain(\"F3 \");\n+        JsonNode assistant = messages.get(2);\n+        assertThat(assistant.get(\"content\").isNull()).isTrue();\n+        assertThat(assistant.get(\"tool_calls\")).hasSize(2);\n+        JsonNode first = assistant.get(\"tool_calls\").get(0);\n+        assertThat(first.get(\"id\").asText()).isEqualTo(\"call_1\");\n+        assertThat(first.get(\"type\").asText()).isEqualTo(\"function\");\n+        assertThat(first.get(\"function\").get(\"name\").asText()).isEqualTo(\"getEquityOn\");\n+        assertThat(first.get(\"function\").get(\"arguments\").asText())\n+                .isEqualTo(\"{\\\"date\\\":\\\"2024-03-04\\\"}\");\n+        assertThat(messages.get(3).get(\"tool_call_id\").asText()).isEqualTo(\"call_1\");\n+        assertThat(messages.get(3).get(\"content\").asText())\n+                .contains(\"F3 자산가치 (2024-03-04) = 10500000\");\n+        assertThat(messages.get(4).get(\"tool_call_id\").asText()).isEqualTo(\"call_2\");\n+        assertThat(messages.get(4).get(\"content\").asText()).isEqualTo(\"사용할 수 없음: 그런 도구가 없습니다\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"최종 본문은 ModelDraft(status·answerParts) 로 읽는다\")\n+    void parsesDraft() {\n+        responses.add(Scripted.ok(DRAFT_RESPONSE));\n+\n+        ModelTurn turn = step(question(\"수익률?\"), FACTS, TOOLS);\n+\n+        assertThat(turn)\n+                .isInstanceOfSatisfying(\n+                        ModelDraft.class,\n+                        draft -> {\n+                            assertThat(draft.status()).isEqualTo(AnswerStatus.ANSWERED);\n+                            assertThat(draft.parts()).hasSize(1);\n+                            assertThat(draft.parts().get(0).text())\n+                                    .isEqualTo(\"비용을 뺀 전체 수익률은 {{F1}}입니다.\");\n+                            assertThat(draft.parts().get(0).factIds()).containsExactly(\"F1\");\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"도구가 없으면 tools·tool_choice·parallel_tool_calls 를 보내지 않는다\")\n+    void noToolsOmitsToolFields() {\n+        responses.add(Scripted.ok(DRAFT_RESPONSE));\n+\n+        step(question(\"수익률?\"), FACTS, List.of());\n+\n+        JsonNode body = received.get(0);\n+        assertThat(body.has(\"tools\")).isFalse();\n+        assertThat(body.has(\"tool_choice\")).isFalse();\n+        assertThat(body.has(\"parallel_tool_calls\")).isFalse();\n+    }\n+\n+    @ParameterizedTest(name = \"[{index}] {0}\")\n+    @ValueSource(\n+            strings = {\n+                \"{\\\"choices\\\":[{\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":null,\\\"refusal\\\":\\\"답할 수 없습니다\\\"}}]}\",\n+                \"{\\\"choices\\\":[{\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":\\\"\\\"}}]}\",\n+                \"{\\\"choices\\\":[{\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":\\\"그냥 문장\\\"}}]}\",\n+                \"{\\\"choices\\\":[{\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":\\\"{\\\\\\\"status\\\\\\\":\\\\\\\"MAYBE\\\\\\\",\\\\\\\"answerParts\\\\\\\":[]}\\\"}}]}\",\n+                \"{\\\"choices\\\":[{\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":\\\"{\\\\\\\"status\\\\\\\":\\\\\\\"ANSWERED\\\\\\\"}\\\"}}]}\",\n+                \"{\\\"choices\\\":[]}\",\n+                \"not json at all\",\n+                \"\",\n+                \"null\",\n+                \"{\\\"choices\\\":[{\\\"message\\\":{\\\"role\\\":\\\"assistant\\\",\\\"content\\\":\\\"{\\\\\\\"status\\\\\\\":\\\\\\\"OUT_OF_SCOPE\\\\\\\",\\\\\\\"answerParts\\\\\\\":[{\\\\\\\"text\\\\\\\":\\\\\\\"x\\\\\\\",\\\\\\\"factIds\\\\\\\":[1]}]}\\\"}}]}\"\n+            })\n+    @DisplayName(\"거부·빈 본문·스키마 불일치·JSON 아님은 모두 503 ASSISTANT_UNAVAILABLE 이고 메시지는 고정 문구다\")\n+    void unusableResponsesAreUnavailable(String body) {\n+        responses.add(Scripted.ok(body));\n+\n+        assertUnavailable(() -> step(question(\"q\"), FACTS, TOOLS));\n+    }\n+\n+    @ParameterizedTest(name = \"HTTP {0}\")\n+    @ValueSource(ints = {401, 429, 500})\n+    @DisplayName(\"2xx 가 아니면 503 이다\")\n+    void httpErrorsAreUnavailable(int status) {\n+        responses.add(new Scripted(status, \"{\\\"error\\\":{\\\"message\\\":\\\"nope\\\"}}\", Duration.ZERO));\n+\n+        assertUnavailable(() -> step(question(\"q\"), FACTS, TOOLS));\n+    }\n+\n+    @Test\n+    @DisplayName(\"라운드 예산을 넘기면 503 이다\")\n+    void timeoutIsUnavailable() {\n+        responses.add(new Scripted(200, DRAFT_RESPONSE, Duration.ofSeconds(2)));\n+\n+        assertUnavailable(() -> client.step(question(\"q\"), FACTS, TOOLS, Duration.ofMillis(300)));\n+    }\n+\n+    @Test\n+    @DisplayName(\"남은 예산이 0 이면 호출하지 않고 503 이다\")\n+    void zeroBudgetSkipsCall() {\n+        assertUnavailable(() -> client.step(question(\"q\"), FACTS, TOOLS, Duration.ZERO));\n+\n+        assertThat(received).isEmpty();\n+    }\n+\n+    private static void assertUnavailable(\n+            org.assertj.core.api.ThrowableAssert.ThrowingCallable call) {\n+        assertThatThrownBy(call)\n+                .isInstanceOfSatisfying(\n+                        BusinessException.class,\n+                        exc -> {\n+                            assertThat(exc.getErrorCode())\n+                                    .isEqualTo(ErrorCode.ASSISTANT_UNAVAILABLE);\n+                            assertThat(exc.getMessage())\n+                                    .isEqualTo(ErrorCode.ASSISTANT_UNAVAILABLE.getMessage());\n+                        });\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,101 @@\n+package com.ssafy.thorp.assistant.infrastructure.config;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.assistant.application.port.AssistantModelPort;\n+import com.ssafy.thorp.assistant.application.service.AssistantCapabilities;\n+import java.io.IOException;\n+import java.io.InputStream;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.params.ParameterizedTest;\n+import org.junit.jupiter.params.provider.ValueSource;\n+import org.springframework.boot.autoconfigure.AutoConfigurations;\n+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration;\n+import org.springframework.boot.test.context.runner.ApplicationContextRunner;\n+import org.springframework.core.io.ClassPathResource;\n+import org.yaml.snakeyaml.Yaml;\n+\n+/** 키·주소·모델명이 다 있을 때만 어댑터가 뜨고, 비어도 기동은 성공한다(T023, FR-016). */\n+class AssistantModelConfigTest {\n+    private static final String[] CONFIGURED = {\n+        \"thorp.assistant.enabled-scopes=RESULT\",\n+        \"thorp.assistant.model.api-key=test-key\",\n+        \"thorp.assistant.model.base-url=http://127.0.0.1:9/\",\n+        \"thorp.assistant.model.model=gpt-5-mini\"\n+    };\n+\n+    private final ApplicationContextRunner runner =\n+            new ApplicationContextRunner()\n+                    .withConfiguration(AutoConfigurations.of(JacksonAutoConfiguration.class))\n+                    .withUserConfiguration(\n+                            AssistantConfig.class,\n+                            AssistantModelConfig.class,\n+                            AssistantCapabilities.class);\n+\n+    @Test\n+    @DisplayName(\"셋 다 있으면 어댑터 빈이 뜨고 capabilities 가 켜진다\")\n+    void configuredEnablesAdapter() {\n+        runner.withPropertyValues(CONFIGURED)\n+                .run(\n+                        context -> {\n+                            assertThat(context)\n+                                    .hasNotFailed()\n+                                    .hasSingleBean(AssistantModelPort.class);\n+                            assertThat(context.getBean(AssistantCapabilities.class).enabled())\n+                                    .isTrue();\n+                        });\n+    }\n+\n+    @ParameterizedTest(name = \"{0} 이 비면\")\n+    @ValueSource(\n+            strings = {\n+                \"thorp.assistant.model.api-key\",\n+                \"thorp.assistant.model.base-url\",\n+                \"thorp.assistant.model.model\"\n+            })\n+    @DisplayName(\"하나라도 비면 어댑터 빈이 없고 capabilities 는 꺼지며 컨텍스트는 뜬다\")\n+    void missingValueDisablesWithoutFailing(String blankKey) {\n+        runner.withPropertyValues(CONFIGURED)\n+                .withPropertyValues(blankKey + \"=\")\n+                .run(\n+                        context -> {\n+                            assertThat(context)\n+                                    .hasNotFailed()\n+                                    .doesNotHaveBean(AssistantModelPort.class);\n+                            assertThat(context.getBean(AssistantCapabilities.class).enabled())\n+                                    .isFalse();\n+                            assertThat(context.getBean(AssistantCapabilities.class).scopes())\n+                                    .isEmpty();\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"아무 설정이 없어도(기본값) 컨텍스트는 뜨고 기능은 꺼져 있다\")\n+    void defaultsAreDisabled() {\n+        runner.run(\n+                context -> {\n+                    assertThat(context).hasNotFailed().doesNotHaveBean(AssistantModelPort.class);\n+                    assertThat(context.getBean(AssistantCapabilities.class).enabled()).isFalse();\n+                });\n+    }\n+\n+    @Test\n+    @DisplayName(\"prod 설정은 넷 모두 빈 기본값(${VAR:})이라 환경 변수가 없어도 기동한다\")\n+    @SuppressWarnings(\"unchecked\")\n+    void prodYamlUsesEmptyDefaults() throws IOException {\n+        Map<String, Object> root;\n+        try (InputStream in = new ClassPathResource(\"application-prod.yml\").getInputStream()) {\n+            root = new Yaml().load(in);\n+        }\n+        Map<String, Object> assistant =\n+                (Map<String, Object>) ((Map<String, Object>) root.get(\"thorp\")).get(\"assistant\");\n+        Map<String, Object> model = (Map<String, Object>) assistant.get(\"model\");\n+\n+        assertThat(assistant.get(\"enabled-scopes\")).isEqualTo(\"${THORP_ASSISTANT_ENABLED_SCOPES:}\");\n+        assertThat(model.get(\"api-key\")).isEqualTo(\"${THORP_ASSISTANT_API_KEY:}\");\n+        assertThat(model.get(\"base-url\")).isEqualTo(\"${THORP_ASSISTANT_BASE_URL:}\");\n+        assertThat(model.get(\"model\")).isEqualTo(\"${THORP_ASSISTANT_MODEL:}\");\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/infrastructure/config/AssistantModelConfigTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/infrastructure/config/AssistantModelConfigTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -409,10 +409,9 @@ class AssistantControllerTest {\n     void slowEvidenceBuilderIsUnavailable() throws Exception {\n         fakes.slowBuilder.set(true);\n \n-        askOk(\"10.0.4.2\", TOKEN)\n-                .andExpect(status().isServiceUnavailable())\n-                .andExpect(jsonPath(\"$.error.code\").value(\"ASSISTANT_UNAVAILABLE\"));\n+        ResultActions actions = askOk(\"10.0.4.2\", TOKEN).andExpect(status().isServiceUnavailable());\n \n+        assertThat(json(actions)).isEqualTo(example(\"error-unavailable.json\"));\n         assertThat(fakes.modelCalls.get()).isZero();\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,140 @@\n+package com.ssafy.thorp.assistant;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.assistant.application.port.AssistantSettings;\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.AnswerStatus;\n+import com.ssafy.thorp.assistant.application.result.Deadline;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceBundle;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.PageKind;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.assistant.application.service.AnswerValidator;\n+import com.ssafy.thorp.assistant.application.service.ToolLoop;\n+import com.ssafy.thorp.assistant.infrastructure.client.AssistantHttpClient;\n+import com.ssafy.thorp.assistant.infrastructure.client.OpenAiChatCompletionsClient;\n+import com.ssafy.thorp.assistant.infrastructure.config.AssistantModelProperties;\n+import java.time.Clock;\n+import java.time.Duration;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Set;\n+import java.util.concurrent.atomic.AtomicInteger;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;\n+\n+/**\n+ * 진짜 GMS 게이트웨이에 어댑터·루프·검증기를 한 번 통과시킨다. {@code ASSISTANT_LIVE_TEST=true}와 {@code THORP_ASSISTANT_*}\n+ * 환경 변수가 있을 때만 돈다 — CI 에서는 skip 이다({@code MarketLiveApiTest}와 같은 방식). 답 원문은 출력하되 키는 출력하지 않는다.\n+ */\n+@EnabledIfEnvironmentVariable(named = \"ASSISTANT_LIVE_TEST\", matches = \"true\")\n+class AssistantLiveTest {\n+\n+    @Test\n+    @DisplayName(\"날짜 질문에 도구를 요청하고, 도구 근거로 자리표시자 답을 만들며, 검증기를 통과한다\")\n+    void dateQuestionGoesThroughToolAndValidator() {\n+        AssistantModelProperties properties = new AssistantModelProperties();\n+        properties.setApiKey(System.getenv(\"THORP_ASSISTANT_API_KEY\"));\n+        properties.setBaseUrl(System.getenv(\"THORP_ASSISTANT_BASE_URL\"));\n+        properties.setModel(System.getenv(\"THORP_ASSISTANT_MODEL\"));\n+        ObjectMapper mapper = new ObjectMapper();\n+        OpenAiChatCompletionsClient model =\n+                new OpenAiChatCompletionsClient(\n+                        new AssistantHttpClient(properties, mapper), properties, mapper);\n+        AssistantSettings settings =\n+                new AssistantSettings(\n+                        Set.of(PageKind.RESULT),\n+                        8,\n+                        5,\n+                        1000,\n+                        300,\n+                        Duration.ofMinutes(2),\n+                        Duration.ofSeconds(60),\n+                        Duration.ofSeconds(30),\n+                        2,\n+                        60,\n+                        30,\n+                        600,\n+                        5);\n+        AtomicInteger toolRuns = new AtomicInteger();\n+        AssistantTool equityOn =\n+                new AssistantTool() {\n+                    @Override\n+                    public ToolSpec spec() {\n+                        return new ToolSpec(\n+                                \"getEquityOn\", \"특정 날짜의 자산가치·누적 수익률·하락 폭\", List.of(\"date\"));\n+                    }\n+\n+                    @Override\n+                    public List<Evidence> run(Map<String, String> arguments) {\n+                        toolRuns.incrementAndGet();\n+                        LocalDate date = LocalDate.parse(arguments.get(\"date\"));\n+                        return List.of(\n+                                new Evidence(\n+                                        null,\n+                                        \"자산가치\",\n+                                        \"10523000\",\n+                                        date,\n+                                        \"summary\",\n+                                        EvidenceKind.MONEY),\n+                                new Evidence(\n+                                        null,\n+                                        \"누적 수익률\",\n+                                        \"0.0523\",\n+                                        date,\n+                                        \"summary\",\n+                                        EvidenceKind.RATIO));\n+                    }\n+                };\n+        EvidenceBundle bundle =\n+                new EvidenceBundle(\n+                        List.of(\n+                                new Evidence(\n+                                        null,\n+                                        \"비용 차감 후 전체 수익률\",\n+                                        \"0.166652\",\n+                                        LocalDate.of(2024, 12, 31),\n+                                        \"summary\",\n+                                        EvidenceKind.RATIO),\n+                                new Evidence(\n+                                        null,\n+                                        \"평가 시작일\",\n+                                        \"2024-01-02\",\n+                                        null,\n+                                        \"settings\",\n+                                        EvidenceKind.DATE),\n+                                new Evidence(\n+                                        null,\n+                                        \"평가 종료일\",\n+                                        \"2024-12-31\",\n+                                        null,\n+                                        \"settings\",\n+                                        EvidenceKind.DATE)),\n+                        List.of(equityOn),\n+                        null);\n+\n+        ToolLoop.Outcome outcome =\n+                new ToolLoop(settings)\n+                        .run(\n+                                model,\n+                                \"2024년 3월 4일에 자산은 얼마였어?\",\n+                                bundle,\n+                                new Deadline(Clock.systemUTC(), settings.totalBudget()));\n+        AnswerValidator.Rendered rendered =\n+                new AnswerValidator(settings).render(outcome.draft(), outcome.facts());\n+\n+        System.out.println(\"[LIVE] rounds=\" + outcome.rounds() + \" toolRuns=\" + toolRuns.get());\n+        System.out.println(\"[LIVE] draft=\" + outcome.draft());\n+        System.out.println(\"[LIVE] status=\" + rendered.status() + \" answer=\" + rendered.answer());\n+        System.out.println(\"[LIVE] evidence=\" + rendered.evidence());\n+\n+        assertThat(toolRuns.get()).isGreaterThanOrEqualTo(1);\n+        assertThat(rendered.status()).isEqualTo(AnswerStatus.ANSWERED);\n+        assertThat(rendered.evidence()).isNotEmpty();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/AssistantLiveTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/AssistantLiveTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -97,3 +97,10 @@ THORP_REGIMELINK_PENDING_RUN_SWEEP_INTERVAL=PT30S\n # 작업 메시지 크기 상한. 넘으면 발행하지 않고 INPUT_TOO_LARGE 로 실패시킨다(재시도하지 않는다).\n THORP_REGIMELINK_JOB_MAX_ROWS=65\n THORP_REGIMELINK_JOB_MAX_INSTRUMENTS=8\n+\n+# 화면 맥락 도우미(spec 015, ADR-0008). 넷 다 비어 있어도 백엔드는 뜬다. 하나라도 비면 기능이 꺼진다(capabilities.enabled=false).\n+# 켜는 것은 품질 관문(spec 015 T053) 뒤다. 키는 GMS 게이트웨이 키이고 서버에만 둔다.\n+THORP_ASSISTANT_ENABLED_SCOPES=\n+THORP_ASSISTANT_API_KEY=\n+THORP_ASSISTANT_BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com\n+THORP_ASSISTANT_MODEL=gpt-5-mini\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/.env.prod.example",
+          "old_path": "infra/.env.prod.example",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -145,6 +145,12 @@ services:\n       THORP_LEARNING_ADMIN_USER_IDS: ${THORP_LEARNING_ADMIN_USER_IDS?.env.prod 에 THORP_LEARNING_ADMIN_USER_IDS 를 넣으세요. 빈 값이면 관리자 없음}\n       # 운영자 경로(/internal/execution-metrics)의 토큰(spec 004 T012). 비우면 그 경로는 404 다 — 기동은 된다.\n       THORP_OPS_TOKEN: ${THORP_OPS_TOKEN:-}\n+      # 화면 맥락 도우미(spec 015). 넷 다 비어 있어도 기동하고 기능만 꺼진다(capabilities.enabled=false) — 그래서 :- 기본값이다.\n+      # 켜는 것은 품질 관문 뒤이고, 그때 ENABLED_SCOPES=RESULT 와 GMS 키·주소·모델명을 .env.prod 에 넣는다.\n+      THORP_ASSISTANT_ENABLED_SCOPES: ${THORP_ASSISTANT_ENABLED_SCOPES:-}\n+      THORP_ASSISTANT_API_KEY: ${THORP_ASSISTANT_API_KEY:-}\n+      THORP_ASSISTANT_BASE_URL: ${THORP_ASSISTANT_BASE_URL:-}\n+      THORP_ASSISTANT_MODEL: ${THORP_ASSISTANT_MODEL:-}\n       # Market 조회 정책. 기본값은 MarketApiProperties의 코드 기본값과 같게 맞춘다.\n       # MarketConfig가 환경변수를 그대로 읽으므로, 값을 비워서 넘기면 코드 기본값이 아니라\n       # 빈 문자열이 들어간다. 미설정 시에도 기본값이 유지되도록 여기서 :- 기본값을 준다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker-compose.prod.yml",
+          "old_path": "infra/docker-compose.prod.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -71,10 +71,10 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n \n **Independent Test**: 로컬 가짜 HTTP 서버가 `tool_calls`를 한 번 돌려주고 두 번째에 최종 답변을 주는 시나리오에서 요청 본문·이력·응답 파싱이 계약대로인지 확인한다.\n \n-- [ ] T020 [P] [US1] 실패 테스트 `.../assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java`(가짜 HTTP) — 요청에 `model`·`store:false`·`parallel_tool_calls:false`·`response_format` strict·`tools` 5개만(내장 도구 없음); developer·user 메시지가 질문과 근거 팩을 분리; 응답 `tool_calls`를 `ToolCall`로 읽고 `arguments`가 JSON이 아니면 검증 실패로 넘김; 두 번째 라운드 요청에 이전 `assistant(tool_calls)`·`tool` 메시지가 들어 있음; `refusal`·빈 `content`·스키마 불일치·시간 초과 → `ASSISTANT_UNAVAILABLE`; 직렬화 결과 어디에도 토큰·`backtestId` 문자열 없음\n-- [ ] T021 [US1] `AssistantHttpClient`(`MarketHttpClient` 관례, 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽)·`OpenAiChatCompletionsClient implements AssistantModelPort`·`AssistantModelProperties`(`THORP_ASSISTANT_API_KEY`·`THORP_ASSISTANT_BASE_URL`·`THORP_ASSISTANT_MODEL`, 비어 있으면 비활성). 응답의 `usage` 토큰 수·라운드 수·지연을 운영 로그에 남긴다(원문·식별자는 없이)\n-- [ ] T022 [US1] 프롬프트 `backend/src/main/resources/assistant/prompts/answer-ko.txt` — 자리표시자 규칙, 도구 사용 지침(모르는 날짜는 묻지 말고 도구로 확인, 기간 밖은 없다고 답, 최대 2회), 부분 결과 접두, 헌장 III 금지 문구, 범위 밖 안내 문구\n-- [ ] T023 [US1] 키·주소·모델명 중 하나라도 비어 있으면 어댑터 빈이 뜨지 않고 `capabilities.enabled=false`이며 **컨텍스트 기동은 성공**하는지 설정 테스트로 고정(prod 프로파일의 빈 기본값 포함). `spotlessApply build`\n+- [x] T020 [P] [US1] 실패 테스트 `.../assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java`(가짜 HTTP) — 요청에 `model`·`store:false`·`parallel_tool_calls:false`·`response_format` strict·`tools` 5개만(내장 도구 없음); developer·user 메시지가 질문과 근거 팩을 분리; 응답 `tool_calls`를 `ToolCall`로 읽고 `arguments`가 JSON이 아니면 검증 실패로 넘김; 두 번째 라운드 요청에 이전 `assistant(tool_calls)`·`tool` 메시지가 들어 있음; `refusal`·빈 `content`·스키마 불일치·시간 초과 → `ASSISTANT_UNAVAILABLE`; 직렬화 결과 어디에도 토큰·`backtestId` 문자열 없음\n+- [x] T021 [US1] `AssistantHttpClient`(`MarketHttpClient` 관례, 전체 데드라인의 남은 시간과 라운드 예산 중 작은 쪽)·`OpenAiChatCompletionsClient implements AssistantModelPort`·`AssistantModelProperties`(`THORP_ASSISTANT_API_KEY`·`THORP_ASSISTANT_BASE_URL`·`THORP_ASSISTANT_MODEL`, 비어 있으면 비활성). 응답의 `usage` 토큰 수·라운드 수·지연을 운영 로그에 남긴다(원문·식별자는 없이)\n+- [x] T022 [US1] 프롬프트 `backend/src/main/resources/assistant/prompts/answer-ko.txt` — 자리표시자 규칙, 도구 사용 지침(모르는 날짜는 묻지 말고 도구로 확인, 기간 밖은 없다고 답, 최대 2회), 부분 결과 접두, 헌장 III 금지 문구, 범위 밖 안내 문구\n+- [x] T023 [US1] 키·주소·모델명 중 하나라도 비어 있으면 어댑터 빈이 뜨지 않고 `capabilities.enabled=false`이며 **컨텍스트 기동은 성공**하는지 설정 테스트로 고정(prod 프로파일의 빈 기본값 포함). `spotlessApply build`\n \n ---\n \n@@ -131,7 +131,7 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n |---|---|---|---|---|---|\n | 1 | `[DOCS] 화면 맥락 도우미 ADR·spec 015·계약을 적는다` (S15P21E205-434) | `docs/434-assistant-spec` | 3 | T001~T005 | — |\n | 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |\n-| 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` | `feat(be)/{N}-assistant-model-adapter` | 3 | T020~T023 | 2 |\n+| 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |\n | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` | `feat(be)/{N}-assistant-result-evidence` | 3 | T030~T035 | 2 |\n | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |\n | 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/tasks.md",
+          "old_path": "specs/015-context-assistant/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2249196,
+      "head_commit_sha": "53a99246ff409c6d29b2c718166befcd42aaa107",
+      "base_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "start_commit_sha": "4f80eda901dae5037727cbb05a33ae2f267df052",
+      "created_at": "2026-09-25T01:28:00.038+09:00",
+      "merge_request_id": 959520,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "324d5cc06c4d353bf331881b9a44f5eee63552f6",
+      "commits": [
+        {
+          "id": "53a99246ff409c6d29b2c718166befcd42aaa107",
+          "short_id": "53a99246",
+          "created_at": "2026-09-25T01:24:20.000+09:00",
+          "parent_ids": [
+            "3cca77a55b295419f6041e1248e8a58e0bf67cc2"
+          ],
+          "title": "fix(be): 빈 모델 응답과 문자열 아닌 factIds 를 스키마 오류(503)로 다룬다",
+          "message": "fix(be): 빈 모델 응답과 문자열 아닌 factIds 를 스키마 오류(503)로 다룬다\n\n- HTTP 200 의 빈 본문·null 본문은 파싱 전에 503. 도구 인자가 빈 문자열이어도 검증에 걸리는 값으로 넘긴다\n- answerParts.factIds 원소가 문자열이 아니면 답변 검증으로 넘기지 않고 503\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:24:20.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:24:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/53a99246ff409c6d29b2c718166befcd42aaa107"
+        },
+        {
+          "id": "3cca77a55b295419f6041e1248e8a58e0bf67cc2",
+          "short_id": "3cca77a5",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "59eb994c19a95c2578815b5825513c4e98ca9377"
+          ],
+          "title": "docs: 묶음 3(T020~T023) 완료를 표시한다",
+          "message": "docs: 묶음 3(T020~T023) 완료를 표시한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3cca77a55b295419f6041e1248e8a58e0bf67cc2"
+        },
+        {
+          "id": "59eb994c19a95c2578815b5825513c4e98ca9377",
+          "short_id": "59eb994c",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "14a085cc64dbc3ea13f996cfe9f58c25992b2332"
+          ],
+          "title": "fix(be): 도우미 503 응답에 내부 사유 대신 고정 문구를 싣는다",
+          "message": "fix(be): 도우미 503 응답에 내부 사유 대신 고정 문구를 싣는다\n\n- 전역 처리기가 예외 메시지를 그대로 응답에 싣는다. 사유는 로그로 옮긴다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/59eb994c19a95c2578815b5825513c4e98ca9377"
+        },
+        {
+          "id": "14a085cc64dbc3ea13f996cfe9f58c25992b2332",
+          "short_id": "14a085cc",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "62d054118af204227de094e6b41ad804f64a66ac"
+          ],
+          "title": "feat(be): 어댑터 요청·이력·오류 매핑과 조건부 빈을 테스트로 고정한다",
+          "message": "feat(be): 어댑터 요청·이력·오류 매핑과 조건부 빈을 테스트로 고정한다\n\n- 가짜 HTTP 서버로 계약 §2.1~§2.3 대조, 식별자 비노출, 401/429/500·시간 초과·예산 0 → 503\n- prod yml 네 값이 빈 기본값인지 확인\n- ASSISTANT_LIVE_TEST=true 일 때만 도는 라이브 테스트(CI 는 skip)\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14a085cc64dbc3ea13f996cfe9f58c25992b2332"
+        },
+        {
+          "id": "62d054118af204227de094e6b41ad804f64a66ac",
+          "short_id": "62d05411",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "98d096287a3ab8c92c6275bfc5469902b7df19c1"
+          ],
+          "title": "feat(be): 키·주소·모델명이 다 있을 때만 어댑터 빈을 띄운다",
+          "message": "feat(be): 키·주소·모델명이 다 있을 때만 어댑터 빈을 띄운다\n\n- Condition 코드로 판정한다. 하나라도 비면 어댑터가 없고 capabilities.enabled=false, 기동은 정상\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/62d054118af204227de094e6b41ad804f64a66ac"
+        },
+        {
+          "id": "98d096287a3ab8c92c6275bfc5469902b7df19c1",
+          "short_id": "98d09628",
+          "created_at": "2026-09-25T01:03:52.000+09:00",
+          "parent_ids": [
+            "f3e26a50f4457fbfa28edf40a591a0d6bf2693c5"
+          ],
+          "title": "feat(be): GMS Chat Completions 어댑터와 HTTP 클라이언트를 만든다",
+          "message": "feat(be): GMS Chat Completions 어댑터와 HTTP 클라이언트를 만든다\n\n- 요청: model·store:false·developer/user 메시지·도구 정의(strict, 날짜 인자만)·strict 응답 스키마, 라운드 이력 재전송\n- 응답: tool_calls → ToolCall(JSON 아닌 인자는 검증에 걸리게), 본문 → ModelDraft, 그 밖은 503 고정 문구\n- 로그는 지연·토큰 수·도구 요청 수만\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:52.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:52.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/98d096287a3ab8c92c6275bfc5469902b7df19c1"
+        },
+        {
+          "id": "f3e26a50f4457fbfa28edf40a591a0d6bf2693c5",
+          "short_id": "f3e26a50",
+          "created_at": "2026-09-25T01:03:51.000+09:00",
+          "parent_ids": [
+            "237d4fb4a667b6f35d5fef283e397a6d9f99dca2"
+          ],
+          "title": "feat(be): 도우미 답변 프롬프트를 둔다",
+          "message": "feat(be): 도우미 답변 프롬프트를 둔다\n\n- 자리표시자 규칙·도구 지침(최대 2회, 기간 밖은 없음)·부분 결과 접두는 서버 몫·금지 표현·범위 밖 안내\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:03:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:03:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f3e26a50f4457fbfa28edf40a591a0d6bf2693c5"
+        },
+        {
+          "id": "237d4fb4a667b6f35d5fef283e397a6d9f99dca2",
+          "short_id": "237d4fb4",
+          "created_at": "2026-09-25T00:48:02.000+09:00",
+          "parent_ids": [
+            "277c1feae2a23994ad323af3a3ac2e07f2996d4e"
+          ],
+          "title": "docs: 묶음 3 티켓 번호를 tasks 에 적는다",
+          "message": "docs: 묶음 3 티켓 번호를 tasks 에 적는다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T00:48:02.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T00:48:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/237d4fb4a667b6f35d5fef283e397a6d9f99dca2"
+        },
+        {
+          "id": "277c1feae2a23994ad323af3a3ac2e07f2996d4e",
+          "short_id": "277c1fea",
+          "created_at": "2026-09-25T00:48:02.000+09:00",
+          "parent_ids": [
+            "4f80eda901dae5037727cbb05a33ae2f267df052"
+          ],
+          "title": "chore(infra): 도우미 환경 변수 넷을 prod compose와 .env.prod.example에 넘긴다",
+          "message": "chore(infra): 도우미 환경 변수 넷을 prod compose와 .env.prod.example에 넘긴다\n\n- 빈 기본값(:-)이라 .env.prod 에 없어도 기동하고 기능만 꺼진다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T00:42:22.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T00:48:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/277c1feae2a23994ad323af3a3ac2e07f2996d4e"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-25T01:28:20.074+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2867064": [],
+    "2867096": []
+  }
+}

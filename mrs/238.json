@@ -1,0 +1,835 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 952452,
+    "iid": 238,
+    "project_id": 1444456,
+    "title": "chore(infra): 워커 이미지를 uv.lock과 digest로 잠금",
+    "description": "# 작업 내용 요약\n\n워커 이미지가 `requirements.txt` 대신 `uv.lock`에서 설치하고, 기반 이미지와 uv를 digest로 고정합니다. 이제 운영 컨테이너의 numpy·scipy·nautilus_trader 버전은 언제나 lock과 같습니다. S15P21E205-355가 먼저 머지되어야 이 MR의 CI가 돕니다.\n\n# 관련 티켓\n\n- S15P21E205-351 (spec 004 T027), 선행 S15P21E205-355\n- https://ssafy.atlassian.net/browse/S15P21E205-351\n\n# 주요 변경 사항\n\n- 기반 이미지를 `python:3.11.16-slim-trixie@sha256:da047cb8…`(멀티 아키텍처 index)로, uv를 `ghcr.io/astral-sh/uv:0.12.0@sha256:606e70c7…`로 고정했습니다.\n- 빌드 단계는 `uv sync --frozen --no-dev --no-install-project`로 설치하고, `uv pip check`가 실패하면 빌드를 멈춥니다. 실행 이미지에는 완성된 가상환경만 옮기며 uv는 싣지 않습니다.\n- 워커 코드는 전처럼 설치하지 않고 `PYTHONPATH=/app/src`로 읽습니다. 따라서 `versions.worker` 값은 바뀌지 않습니다.\n- `requirements.txt`·`requirements-dev.txt`를 지웠습니다. 고정 버전 대조 테스트는 pyproject와 `uv.lock`을 대조하도록 바꿨습니다.\n- 로컬 `.venv`·캐시·`*.egg-info`를 빌드 컨텍스트에서 제외합니다.\n- 문서: 의존성 버전은 uv.lock 하나가 정한다는 규칙과 digest 갱신 절차를 worker 문서에 적었습니다.\n\n# 테스트\n\n- [x] 옛 빌더(`DOCKER_BUILDKIT=0`, 운영 배포와 같음)와 BuildKit 모두 빌드 성공\n- [x] 실행 이미지: Python 3.11.16, numpy 2.4.6·scipy 1.17.1·nautilus_trader 1.219.0이 lock과 같습니다. uv와 egg-info는 없습니다\n- [x] 빌드 단계 `uv sync --frozen --check`: Would make no changes\n- [x] 컨테이너에서 최소분산 픽스처가 COMPLETED로 끝났습니다. 기본 CMD는 `MARKET_DATA_URL` 누락을 알리고 멈춥니다\n- [x] 워커 ruff 통과, pytest 402 passed (Python 3.11). pyproject 고정 버전만 바꾸면 대조 테스트가 실패하는 것도 확인했습니다\n\n# 리뷰 포인트\n\n- `RUN --mount` 대신 멀티 스테이지를 택했습니다. 배포는 Jenkins 컨테이너의 docker compose가 buildx 플러그인 없이 옛 빌더로 빌드하기 때문입니다.\n- 현재 운영 워커도 이미 같은 Debian trixie, Python 3.11.16, numpy 2.4.6, scipy 1.17.1을 씁니다. 따라서 이 배포로 계산 환경은 바뀌지 않습니다.\n- digest는 저절로 갱신되지 않습니다. README에 절차는 적었지만 갱신 주기는 정하지 않았습니다.\n- 오래된 브랜치 `feat(be)/54-baseline-runner`(9/4)가 `requirements.txt`를 수정하고 있어서, 그 브랜치를 병합하면 충돌합니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** (해당 없음: 실행 이미지만 바꿨습니다)\n- [x] **결제·포인트·상품 선택 단계 0건** (해당 없음)\n- [x] **전략 ID 상수·전략별 분기 0건** (해당 없음)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** (해당 없음)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** (해당 없음)",
+    "state": "merged",
+    "created_at": "2026-09-19T20:43:05.175+09:00",
+    "updated_at": "2026-09-19T21:13:16.208+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-19T21:13:16.238+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/351-worker-uv-lock",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+    "merge_commit_sha": "a1e59eb6bf244f26ccdf5b62f46c1f393a87dc73",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-19T20:43:06.382+09:00",
+    "reference": "!238",
+    "references": {
+      "short": "!238",
+      "relative": "!238",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!238"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/238",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 952452,
+    "iid": 238,
+    "project_id": 1444456,
+    "title": "chore(infra): 워커 이미지를 uv.lock과 digest로 잠금",
+    "description": "# 작업 내용 요약\n\n워커 이미지가 `requirements.txt` 대신 `uv.lock`에서 설치하고, 기반 이미지와 uv를 digest로 고정합니다. 이제 운영 컨테이너의 numpy·scipy·nautilus_trader 버전은 언제나 lock과 같습니다. S15P21E205-355가 먼저 머지되어야 이 MR의 CI가 돕니다.\n\n# 관련 티켓\n\n- S15P21E205-351 (spec 004 T027), 선행 S15P21E205-355\n- https://ssafy.atlassian.net/browse/S15P21E205-351\n\n# 주요 변경 사항\n\n- 기반 이미지를 `python:3.11.16-slim-trixie@sha256:da047cb8…`(멀티 아키텍처 index)로, uv를 `ghcr.io/astral-sh/uv:0.12.0@sha256:606e70c7…`로 고정했습니다.\n- 빌드 단계는 `uv sync --frozen --no-dev --no-install-project`로 설치하고, `uv pip check`가 실패하면 빌드를 멈춥니다. 실행 이미지에는 완성된 가상환경만 옮기며 uv는 싣지 않습니다.\n- 워커 코드는 전처럼 설치하지 않고 `PYTHONPATH=/app/src`로 읽습니다. 따라서 `versions.worker` 값은 바뀌지 않습니다.\n- `requirements.txt`·`requirements-dev.txt`를 지웠습니다. 고정 버전 대조 테스트는 pyproject와 `uv.lock`을 대조하도록 바꿨습니다.\n- 로컬 `.venv`·캐시·`*.egg-info`를 빌드 컨텍스트에서 제외합니다.\n- 문서: 의존성 버전은 uv.lock 하나가 정한다는 규칙과 digest 갱신 절차를 worker 문서에 적었습니다.\n\n# 테스트\n\n- [x] 옛 빌더(`DOCKER_BUILDKIT=0`, 운영 배포와 같음)와 BuildKit 모두 빌드 성공\n- [x] 실행 이미지: Python 3.11.16, numpy 2.4.6·scipy 1.17.1·nautilus_trader 1.219.0이 lock과 같습니다. uv와 egg-info는 없습니다\n- [x] 빌드 단계 `uv sync --frozen --check`: Would make no changes\n- [x] 컨테이너에서 최소분산 픽스처가 COMPLETED로 끝났습니다. 기본 CMD는 `MARKET_DATA_URL` 누락을 알리고 멈춥니다\n- [x] 워커 ruff 통과, pytest 402 passed (Python 3.11). pyproject 고정 버전만 바꾸면 대조 테스트가 실패하는 것도 확인했습니다\n\n# 리뷰 포인트\n\n- `RUN --mount` 대신 멀티 스테이지를 택했습니다. 배포는 Jenkins 컨테이너의 docker compose가 buildx 플러그인 없이 옛 빌더로 빌드하기 때문입니다.\n- 현재 운영 워커도 이미 같은 Debian trixie, Python 3.11.16, numpy 2.4.6, scipy 1.17.1을 씁니다. 따라서 이 배포로 계산 환경은 바뀌지 않습니다.\n- digest는 저절로 갱신되지 않습니다. README에 절차는 적었지만 갱신 주기는 정하지 않았습니다.\n- 오래된 브랜치 `feat(be)/54-baseline-runner`(9/4)가 `requirements.txt`를 수정하고 있어서, 그 브랜치를 병합하면 충돌합니다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** (해당 없음: 실행 이미지만 바꿨습니다)\n- [x] **결제·포인트·상품 선택 단계 0건** (해당 없음)\n- [x] **전략 ID 상수·전략별 분기 0건** (해당 없음)\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** (해당 없음)\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** (해당 없음)",
+    "state": "merged",
+    "created_at": "2026-09-19T20:43:05.175+09:00",
+    "updated_at": "2026-09-19T21:13:16.208+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-19T21:13:16.238+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "chore(infra)/351-worker-uv-lock",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🧹chore"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+    "merge_commit_sha": "a1e59eb6bf244f26ccdf5b62f46c1f393a87dc73",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-19T20:43:06.382+09:00",
+    "reference": "!238",
+    "references": {
+      "short": "!238",
+      "relative": "!238",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!238"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/238",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 10,
+      "completed_count": 10
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "8",
+    "latest_build_started_at": "2026-09-19T21:12:29.440+09:00",
+    "latest_build_finished_at": "2026-09-19T21:13:15.417+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 208609,
+      "iid": 187,
+      "project_id": 1444456,
+      "sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+      "ref": "chore(infra)/351-worker-uv-lock",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T21:12:29.338+09:00",
+      "updated_at": "2026-09-19T21:13:15.423+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208609"
+    },
+    "head_pipeline": {
+      "id": 208609,
+      "iid": 187,
+      "project_id": 1444456,
+      "sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+      "ref": "chore(infra)/351-worker-uv-lock",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-19T21:12:29.338+09:00",
+      "updated_at": "2026-09-19T21:13:15.423+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208609",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-19T21:12:29.440+09:00",
+      "finished_at": "2026-09-19T21:13:15.417+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/208609",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "head_sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+      "start_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "e0e554a4148f5a4fd77eb03fb6e6f9e1607e9512",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839241,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T20:43:05.296+09:00",
+          "updated_at": "2026-09-19T20:43:05.299+09:00",
+          "system": true,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a56298a1bd2ba8725cbf477636de29eec4f48724",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839242,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T20:43:05.318+09:00",
+          "updated_at": "2026-09-19T20:43:05.327+09:00",
+          "system": true,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6ff4acaeb64a1c3c007c05a9279dae0911d3df23",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839243,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **안전한 빌드 및 의존성 고정**: `uv.lock`과 명시적 `digest`를 활용하여 빌드 재현성과 보안성을 크게 강화했습니다. 특히 `UV_PYTHON_DOWNLOADS=never` 설정을 통해 의도하지 않은 외부 Python 다운로드를 차단하고 빌드 안정성을 높인 점이 훌륭합니다.\n- **멀티 스테이지 빌드 활용**: 빌드 도구인 `uv`를 런타임 이미지에 포함시키지 않고, 가상환경 결과물만 최종 이미지로 복사하여 이미지 크기를 줄이고 공격 표면적을 최소화했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **의존성 불일치 테스트 검증**: `pyproject.toml`에 명시된 고정 버전과 `uv.lock`의 버전이 의도적으로 어긋나게 수정한 뒤, `pytest`를 실행하여 `test_pinned_versions_match_between_pyproject_and_lock` 테스트가 올바르게 실패하는지 확인합니다.\n- **오프라인 빌드 검증**: 네트워크가 차단된 환경(또는 엄격한 격리 환경)에서 `infra/docker/worker.Dockerfile`이 캐시와 `UV_PYTHON_DOWNLOADS=never` 제약 조건 하에 정상적으로 빌드되는지 시뮬레이션합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:49a8458de80bf6d3699e7e1749964193b6d3d9cd -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-19T20:43:15.202+09:00",
+          "updated_at": "2026-09-19T20:56:34.451+09:00",
+          "system": false,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "95debc7f62594b35e1839ca880a8f65157643229",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839263,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T20:52:37.900+09:00",
+          "updated_at": "2026-09-19T20:52:37.904+09:00",
+          "system": true,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "41c0c0539968815abb2f2bffeb0e251a0584b1be",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839274,
+          "type": null,
+          "body": "added 56 commits\n\n<ul><li>caf27af3...22d22604 - 55 commits from branch <code>dev</code></li><li>49a8458d - Merge remote-tracking branch &#39;origin/dev&#39; into chore(infra)/351-worker-uv-lock</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/238/diffs?diff_id=2225683&start_sha=caf27af3ce80e598b7270349cea057eb935b7761)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T20:56:26.728+09:00",
+          "updated_at": "2026-09-19T20:56:26.731+09:00",
+          "system": true,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7ff7c994cc79099cfeaf96f32800c427704ecdf6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839285,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 49a8458de80bf6d3699e7e1749964193b6d3d9cd pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:03:17.666+09:00",
+          "updated_at": "2026-09-19T21:03:17.670+09:00",
+          "system": true,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6218e7769ddec7f839f5ed10643e2f1508a443be",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2839319,
+          "type": null,
+          "body": "mentioned in commit a1e59eb6bf244f26ccdf5b62f46c1f393a87dc73",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-19T21:13:16.529+09:00",
+          "updated_at": "2026-09-19T21:13:16.595+09:00",
+          "system": true,
+          "noteable_id": 952452,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 238,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2225683,
+      "head_commit_sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+      "base_commit_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "start_commit_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "created_at": "2026-09-19T20:56:26.452+09:00",
+      "merge_request_id": 952452,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "bce332e8128adbda24fc039b27456348c65bf22b"
+    },
+    {
+      "id": 2225655,
+      "head_commit_sha": "caf27af3ce80e598b7270349cea057eb935b7761",
+      "base_commit_sha": "6607af2dab9a58f6134394af44f630f97557e72b",
+      "start_commit_sha": "603ab94ef00458c3bd74bbaf75ef600af0550d95",
+      "created_at": "2026-09-19T20:43:05.620+09:00",
+      "merge_request_id": 952452,
+      "state": "without_files",
+      "real_size": "8",
+      "patch_id_sha": "bce332e8128adbda24fc039b27456348c65bf22b"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2225683,
+      "head_commit_sha": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+      "base_commit_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "start_commit_sha": "22d226047cc00f34c0a2bdc7d0f036d823c7dc54",
+      "created_at": "2026-09-19T20:56:26.452+09:00",
+      "merge_request_id": 952452,
+      "state": "collected",
+      "real_size": "8",
+      "patch_id_sha": "bce332e8128adbda24fc039b27456348c65bf22b",
+      "commits": [
+        {
+          "id": "49a8458de80bf6d3699e7e1749964193b6d3d9cd",
+          "short_id": "49a8458d",
+          "created_at": "2026-09-19T20:56:22.000+09:00",
+          "parent_ids": [
+            "caf27af3ce80e598b7270349cea057eb935b7761",
+            "22d226047cc00f34c0a2bdc7d0f036d823c7dc54"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into chore(infra)/351-worker-uv-lock",
+          "message": "Merge remote-tracking branch 'origin/dev' into chore(infra)/351-worker-uv-lock\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T20:56:22.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T20:56:22.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/49a8458de80bf6d3699e7e1749964193b6d3d9cd"
+        },
+        {
+          "id": "caf27af3ce80e598b7270349cea057eb935b7761",
+          "short_id": "caf27af3",
+          "created_at": "2026-09-19T20:16:44.000+09:00",
+          "parent_ids": [
+            "3f73e07c177cecf240d4e4fc1bbcbe4b91982d79"
+          ],
+          "title": "chore(infra): 워커 이미지에서 uv를 빼고 lock 대조 테스트를 되살림",
+          "message": "chore(infra): 워커 이미지에서 uv를 빼고 lock 대조 테스트를 되살림\n\n코드리뷰 지적 반영.\n\n- 멀티 스테이지로 바꿔 빌드 단계의 가상환경만 실행 이미지로 옮긴다. uv는\n  실행 이미지에 싣지 않는다. RUN --mount는 BuildKit이 필요한데 배포(Jenkins의\n  docker compose)는 buildx 플러그인이 없어 옛 빌더로 빌드한다(배포 #249 로그).\n- test_dependency_pins.py를 pyproject와 uv.lock 대조로 되살렸다. 이미지는\n  --frozen이라 낡은 lock도 조용히 설치하므로 CI의 --locked에만 기대지 않는다.\n  pyproject의 scipy 고정만 바꾼 변이에서 실패하는 것을 확인했다.\n- .dockerignore에 *.egg-info를 더했다. 로컬 편집 설치가 src에 만든 메타데이터가\n  들어가면 로컬에서 빌드한 이미지만 importlib.metadata로 워커를 찾는다.\n- worker/README.md에 기반 이미지·uv digest 갱신 절차를 적었다.\n\n확인: 옛 빌더(DOCKER_BUILDKIT=0)와 BuildKit 모두 빌드 성공. 실행 이미지에\nuv·egg-info가 없고 Python 3.11.16·numpy 2.4.6·scipy 1.17.1·nautilus_trader\n1.219.0이 lock과 같다. 빌드 단계 uv sync --frozen --check는 \"Would make no\nchanges\", 최소분산 픽스처 COMPLETED. 워커 ruff 통과, pytest 402건 통과.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T20:16:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T20:16:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/caf27af3ce80e598b7270349cea057eb935b7761"
+        },
+        {
+          "id": "3f73e07c177cecf240d4e4fc1bbcbe4b91982d79",
+          "short_id": "3f73e07c",
+          "created_at": "2026-09-19T19:59:29.000+09:00",
+          "parent_ids": [
+            "6607af2dab9a58f6134394af44f630f97557e72b"
+          ],
+          "title": "chore(infra): 워커 이미지를 uv.lock과 digest로 잠금",
+          "message": "chore(infra): 워커 이미지를 uv.lock과 digest로 잠금\n\n워커 이미지가 requirements.txt 대신 worker/uv.lock에서 uv sync --frozen\n--no-dev로 설치하고 그 가상환경으로 실행한다. 기반 이미지는\npython:3.11.16-slim-trixie의 index digest, uv는 0.12.0 digest로 고정했다.\n빌드가 uv pip check까지 돌고, UV_PYTHON_DOWNLOADS=never로 이미지 밖 python을\n쓰지 않는다. 워커 코드는 전처럼 설치하지 않고 PYTHONPATH로 읽는다.\n\nrequirements.txt·requirements-dev.txt와 두 파일의 고정 버전을 대조하던\ntest_dependency_pins.py를 지웠다. CI가 uv sync --locked로 같은 lock에서\n설치하는 S15P21E205-355가 먼저 머지되어야 한다.\n\n확인: 로컬 docker build 성공. 컨테이너 안 Python 3.11.16, numpy 2.4.6,\nscipy 1.17.1, nautilus_trader 1.219.0이 lock과 같고 uv sync --frozen\n--check가 \"Would make no changes\". 최소분산 픽스처가 컨테이너에서\nCOMPLETED, 기본 CMD는 MARKET_DATA_URL 누락을 알리고 멈춘다. 서버에서\nghcr.io에 접근할 수 있다. 워커 pytest 401건 통과(Python 3.11).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T19:59:29.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T19:59:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3f73e07c177cecf240d4e4fc1bbcbe4b91982d79"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,7 +1,44 @@\n-FROM python:3.11-slim\n+# 기반 이미지와 uv 를 digest 로 고정한다(spec 004 T027). 태그는 읽는 사람을 위해 남긴 것이고 이미지는\n+# digest 가 정한다 — 같은 태그도 보안 패치로 다시 올라오면 다른 이미지가 된다. 멀티 아키텍처 index\n+# digest 라 amd64 서버와 arm64 개발기가 이 한 줄을 같이 쓴다. 자동으로 갱신되지 않으므로 보안 패치를\n+# 받으려면 사람이 올린다(절차는 worker/README.md \"실행환경 잠금\").\n+ARG PYTHON_IMAGE=python:3.11.16-slim-trixie@sha256:da047cb8f9d1d98e5c070f5300ba9f7274e33b8fc0e5be5ed88740aed1b95ba9\n+\n+# --- build stage ---\n+FROM ${PYTHON_IMAGE} AS build\n+\n+# uv 도 digest 로 고정한다. 설치할 버전은 lock 이 정하므로 uv 버전은 설치 결과를 바꾸지 않는다.\n+COPY --from=ghcr.io/astral-sh/uv:0.12.0@sha256:606e70c71c852d03f611b1e56a195d08648507018a7057fab82c4974c4eae105 /uv /usr/local/bin/uv\n+\n WORKDIR /app\n-COPY requirements.txt ./\n-RUN pip install --no-cache-dir -r requirements.txt\n+\n+# UV_PYTHON_DOWNLOADS=never: 이미지의 python 을 못 찾으면 받아 오지 않고 실패한다. uv 가 받은 python 으로\n+#                            가상환경을 만들면 기반 이미지를 고정한 의미가 없다.\n+# UV_NO_CACHE              : 내려받은 패키지를 레이어에 남기지 않는다(pip 의 --no-cache-dir).\n+# UV_COMPILE_BYTECODE      : pip 처럼 설치할 때 .pyc 를 만들어 둔다.\n+ENV UV_PYTHON_DOWNLOADS=never \\\n+    UV_NO_CACHE=1 \\\n+    UV_COMPILE_BYTECODE=1\n+\n+# 소스보다 먼저 의존성만 설치해 레이어로 굳힌다. 소스만 바뀐 빌드는 이 레이어를 재사용한다.\n+#   --frozen             uv.lock 을 고치지 않고 그대로 설치한다. pyproject.toml 의 고정 버전과 lock 이\n+#                        어긋나면 tests/test_dependency_pins.py 가 실패한다.\n+#   --no-install-project 워커 코드는 설치하지 않고 PYTHONPATH 로 읽는다. 설치하려면 빌드 백엔드\n+#                        (setuptools)를 받아야 하는데 그 버전은 lock 에 없다.\n+#   uv pip check         설치된 패키지끼리 의존 조건이 맞는지 본다. 어긋나면 이미지를 만들지 않는다.\n+COPY pyproject.toml uv.lock ./\n+RUN uv sync --frozen --no-dev --no-install-project \\\n+ && uv pip check --python /app/.venv/bin/python\n+\n+# --- runtime stage ---\n+# 설치를 마친 가상환경만 옮기고 uv 는 싣지 않는다. 가상환경의 python 은 기반 이미지의\n+# /usr/local/bin/python3.11 을 가리키므로 두 단계는 같은 기반 이미지여야 한다.\n+# uv 를 RUN --mount 로 빌드에만 붙이는 방법은 BuildKit 이 필요한데, 배포(Jenkins 의 docker compose)는\n+# buildx 가 없어 옛 빌더로 빌드한다.\n+FROM ${PYTHON_IMAGE}\n+WORKDIR /app\n+COPY --from=build /app/.venv /app/.venv\n COPY src ./src\n-ENV PYTHONPATH=/app/src\n+ENV PYTHONPATH=/app/src \\\n+    PATH=\"/app/.venv/bin:$PATH\"\n CMD [\"python\", \"-m\", \"worker.main\"]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/docker/worker.Dockerfile",
+          "old_path": "infra/docker/worker.Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -347,7 +347,8 @@\n \n Phase 9에서 뺀 것이다. 정확성이 아니라 **다른 환경·다른 시점과의 재현**을 위한 작업이며, 결정 내용은 spec PD-04 표의 \"발표 후\" 문구에 남아 있다(팀 결정 기록 원본은 저장소 밖 결정 문서). 착수 조건: 보존해야 할 실제 결과가 생기기 전에 규칙 버전 수명주기(아래 ③)를 먼저 넣는다.\n \n-- [ ] T027 [INFRA] 워커 실행환경 잠금 — Docker가 `pyproject.toml`·`uv.lock`을 복사해 `uv sync --frozen --no-dev`로 설치하고 그 가상환경으로 실행, `worker/requirements.txt` 삭제, 기반 이미지 `python:3.11-slim`을 digest로 고정. 완료 기준: `uv sync --frozen` 성공·`uv pip check` 통과·컨테이너 안 numpy·scipy·nautilus_trader 버전이 lock과 일치\n+- [X] T027 [INFRA] 워커 실행환경 잠금 — Docker가 `pyproject.toml`·`uv.lock`을 복사해 `uv sync --frozen --no-dev`로 설치하고 그 가상환경으로 실행, `worker/requirements.txt` 삭제, 기반 이미지 `python:3.11-slim`을 digest로 고정. 완료 기준: `uv sync --frozen` 성공·`uv pip check` 통과·컨테이너 안 numpy·scipy·nautilus_trader 버전이 lock과 일치 — Jira `S15P21E205-351`\n+  - 구현 시 결정: ① 기반 이미지는 `python:3.11.16-slim-trixie`의 멀티 아키텍처 index digest, uv는 `ghcr.io/astral-sh/uv:0.12.0` digest로 고정했다. 이미지 빌드가 `uv pip check`까지 돌고, `UV_PYTHON_DOWNLOADS=never`로 이미지 밖 python을 쓰지 못하게 했다. 빌드 단계에서 설치한 가상환경만 실행 이미지로 옮겨 uv는 싣지 않는다 — `RUN --mount`로 uv를 빌드에만 붙이는 방법은 BuildKit이 필요한데, 배포(Jenkins의 docker compose)는 buildx 플러그인이 없어 옛 빌더로 빌드한다(2026-09-19 배포 #249 로그). digest는 저절로 갱신되지 않으므로 올리는 절차를 `worker/README.md` \"실행환경 잠금\"에 적었다 ② 워커 코드는 설치하지 않고(`--no-install-project`) 전처럼 `PYTHONPATH`로 읽는다 — 설치하려면 lock에 없는 setuptools를 받아야 한다 ③ **CI 전환은 선행 티켓 `S15P21E205-355`로 나눴다.** `requirements.txt`를 지우면 Jenkins Worker Setup이 설치할 곳이 없어지는데, Jenkins는 Jenkinsfile을 dev에서 읽으므로 CI 변경이 먼저 dev에 있어야 이 MR의 CI가 돈다. 355는 Worker Setup을 `uv sync --locked --python 3.11 --no-install-project`로 바꾼다 — Jenkins python3가 3.13이라 지금까지 CI는 운영(3.11)과 다른 numpy로 워커를 검사했다(lock은 3.11에 numpy 2.4.6, 3.12 이상에 2.5.3을 고른다). 355 이후 쓰는 곳이 없는 `requirements-dev.txt`도 여기서 지웠다. `test_dependency_pins.py`(T022)는 pyproject와 `requirements.txt` 대조에서 pyproject와 `uv.lock` 대조로 바꿨다 — 이미지는 `--frozen`이라 lock이 낡아도 조용히 설치하므로, CI의 `--locked`에만 기대지 않고 어디서 pytest를 돌려도 어긋남이 드러나게 한다. 로컬 편집 설치가 `src`에 만드는 `*.egg-info`는 `.dockerignore`로 뺐다(들어가면 로컬에서 빌드한 이미지만 `importlib.metadata`로 워커를 찾는다) ④ 확인: 옛 빌더(`DOCKER_BUILDKIT=0`)와 BuildKit 모두 빌드 성공. 실행 이미지 안 Python 3.11.16·numpy 2.4.6·scipy 1.17.1·nautilus_trader 1.219.0이 lock과 같고, 빌드 단계의 `uv sync --frozen --check`가 \"Would make no changes\", 실행 이미지에 uv·egg-info 없음, 최소분산 픽스처가 컨테이너에서 COMPLETED. 운영 워커(2026-09-19)도 이미 같은 Debian trixie·Python·numpy·scipy라 배포로 계산 환경이 바뀌지 않는다. 워커 pytest 402건 통과(Python 3.11)\n - [ ] T028 [BE] 의존성 버전 기록 — 결과 `versions.dependencies{numpy, scipy}`(메시징 계약 §4 선택 필드, 워커 `contracts/engine_output.py Versions`·백엔드 `EngineOutput.Versions`·data-model `backtest_run.versions`·픽스처 함께), 재현 키 쪽은 `thorp.backtest.engine-version` 설정 문자열에 워커 이미지 digest 또는 `uv.lock` fingerprint를 포함(재현 키는 워커 실행 전에 만들어져 결과 값을 쓸 수 없다). 실제 numpy·scipy 버전은 **`backtest_result.versions`에 기록한다** — `backtest_run.versions`는 실행 전 계획 정보라 실제 워커 환경을 알 수 없다. 상세 조회에서 둘을 어떻게 합쳐 보일지 함께 정한다\n - [ ] T029 [BE] 규칙 버전 수명주기 — 규칙이 바뀌면 새 버전 행(`/2`)을 더하고 옛 행은 `SUPERSEDED`(CHECK 제약 확장). 검사를 둘로: 신규 접수 `requireCurrent`(REGISTERED만, PENDING 422, SUPERSEDED `409 REGISTRY_VERSION_CHANGED` — 화면은 두 등록표를 다시 받는다) / 저장된 실행의 조립·재발행·실패·취소 재시도 `requireExecutable`(SUPERSEDED 통과, README §1.6 동일 버전 재시도 계약). 과거 버전 재실행에는 전략 규칙뿐 아니라 **003의 과거 `registryVersion` 검증도 포함**한다 — 재시도가 신규 접수용 등록표 검증(`StrategySettingsValidator`)에 걸려 거절되지 않도록 같은 방식으로 검사를 분리한다. 워커는 `capOverflow`·`weightUnit` 규칙 키로 분기하고 버전별 골든을 나란히 둔다. registry 조회는 SUPERSEDED를 뺀다\n - [ ] T030 [BE] 환경 간 재현 검증 — 다른 OS·CPU·이미지에서 같은 입력의 결과 해시 비교, 의존성·이미지 변경 시 골든 재생성 정책을 worker/CLAUDE.md에\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/004-backtest-execution/tasks.md",
+          "old_path": "specs/004-backtest-execution/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,8 +1,9 @@\n-\"\"\"고정한 의존성 버전이 두 파일에서 같은지(spec 004 T022).\n+\"\"\"pyproject 에 정확한 버전으로 고정한 의존성을 uv.lock 이 그대로 따르는지(spec 004 T022·T027).\n \n-운영 이미지는 ``requirements.txt`` 로 설치하고 개발은 ``pyproject.toml``/``uv.lock`` 으로 맞춘다.\n-한쪽만 고정하면 **운영에서만 다른 버전이 돌고** 그때 결과가 마지막 자리에서 갈린다 — 재현을\n-믿을 수 없게 되는데 테스트는 전부 통과한다. 그래서 어긋남을 여기서 잡는다.\n+운영 이미지는 ``uv sync --frozen`` 으로 lock 만 보고 설치한다. pyproject 의 고정 버전을 바꾸고\n+``uv lock`` 을 잊으면 이미지는 옛 버전을 조용히 설치하는데 테스트는 전부 통과한다 — 재현을 믿을 수\n+없게 된다. CI 의 ``uv sync --locked`` 도 이 어긋남을 잡지만, 이 테스트는 어디서 pytest 를 돌려도\n+잡는다.\n \"\"\"\n \n import re\n@@ -13,19 +14,36 @@ WORKER = Path(__file__).resolve().parents[1]\n PIN = re.compile(r\"^(?P<name>[A-Za-z0-9_.\\-]+)(?P<extras>\\[[^\\]]*\\])?==(?P<version>[^\\s;]+)$\")\n \n \n-def _pins(lines: list[str]) -> dict[str, str]:\n+def _normalise(name: str) -> str:\n+    return re.sub(r\"[-_.]+\", \"-\", name).lower()\n+\n+\n+def _pins(requirements: list[str]) -> dict[str, str]:\n     found = {}\n-    for line in lines:\n-        match = PIN.match(line.strip())\n+    for requirement in requirements:\n+        match = PIN.match(requirement.strip())\n         if match:\n-            found[match[\"name\"].lower().replace(\"_\", \"-\")] = match[\"version\"]\n+            found[_normalise(match[\"name\"])] = match[\"version\"]\n     return found\n \n \n-def test_pinned_versions_match_between_pyproject_and_requirements() -> None:\n+def _locked_versions() -> dict[str, set[str]]:\n+    lock = tomllib.loads((WORKER / \"uv.lock\").read_text(encoding=\"utf-8\"))\n+    locked: dict[str, set[str]] = {}\n+    for package in lock[\"package\"]:\n+        # 워커 자신(편집 설치, 동적 버전)은 version 이 없다.\n+        if \"version\" in package:\n+            locked.setdefault(_normalise(package[\"name\"]), set()).add(package[\"version\"])\n+    return locked\n+\n+\n+def test_pinned_versions_match_between_pyproject_and_lock() -> None:\n     pyproject = tomllib.loads((WORKER / \"pyproject.toml\").read_text(encoding=\"utf-8\"))\n     declared = _pins(pyproject[\"project\"][\"dependencies\"])\n-    installed = _pins((WORKER / \"requirements.txt\").read_text(encoding=\"utf-8\").splitlines())\n+    locked = _locked_versions()\n \n     assert declared, \"pyproject 에 정확한 버전으로 고정한 의존성이 하나도 없다\"\n-    assert {name: installed.get(name) for name in declared} == declared\n+    # lock 은 Python 버전마다 다른 판을 고를 수 있으므로(numpy) 고정한 패키지는 판이 하나여야 한다.\n+    assert {name: locked.get(name) for name in declared} == {\n+        name: {version} for name, version in declared.items()\n+    }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/tests/test_dependency_pins.py",
+          "old_path": "worker/tests/test_dependency_pins.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+# 이미지는 pyproject.toml·uv.lock·src 만 복사한다(infra/docker/worker.Dockerfile).\n+# 로컬 가상환경과 캐시, 로컬 설치가 만든 메타데이터가 빌드 컨텍스트로 넘어가지 않게 한다.\n+# egg-info 는 uv sync 가 워커를 편집 모드로 설치할 때 src 안에 생긴다. 이미지에 들어가면 로컬에서\n+# 빌드한 이미지만 importlib.metadata 로 thorp-worker 를 찾아 운영 이미지와 달라진다.\n+.venv/\n+**/__pycache__/\n+**/*.egg-info/\n+.pytest_cache/\n+.ruff_cache/\n+build/\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/.dockerignore",
+          "old_path": "worker/.dockerignore",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -126,6 +126,11 @@ ruff check src tests scripts && ruff format --check src tests scripts && pytest\n ## 규칙\n \n - 타입 힌트 필수, 라인 100자 (ruff가 강제)\n+- **의존성 버전은 `uv.lock` 하나가 정한다**(spec 004 T027). 운영 이미지는 `uv sync --frozen`, CI는\n+  `uv sync --locked --python 3.11`로 같은 lock에서 설치한다. `requirements.txt`를 다시 만들지 말 것 — 두 곳에서\n+  관리하면 운영만 다른 numpy·scipy로 돌아 결과가 마지막 자리에서 갈리는데 테스트는 통과한다. `pyproject.toml`을\n+  고치면 `uv lock`으로 lock을 함께 갱신한다 — 고정 버전(`==`)과 lock이 어긋나면\n+  `tests/test_dependency_pins.py`가 실패한다. 기반 이미지·uv digest 갱신 절차는 `worker/README.md` \"실행환경 잠금\"\n - 수치 계산은 pandas/numpy 벡터 연산 우선, Python 루프 지양\n - 브로커 ACK는 처리와 필수 발행이 완료된 뒤 수행한다(at-least-once). 구체적으로 **FINISHED\n   발행이 브로커에서 확인된 뒤에만 작업 메시지를 ACK한다**(계약 §7). 이 순서를 뒤집으면 결과를\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/CLAUDE.md",
+          "old_path": "worker/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,7 +32,36 @@ uv run python -m worker.demo --input <EngineInput.json> --output engine-output.j\n 분할, 2024-06-11 거래 정지 1일). 손으로 고치지 말고 `scripts/make_three_etf_fixture.py` 를 고쳐 다시\n 만든다. 결과의 `versions.data = \"FIXTURE-three_etf_24m\"` 가 픽스처임을 표시한다.\n \n-uv 없이 설치하려면 `python -m pip install -e . -r requirements-dev.txt`를 사용할 수 있다.\n+### 실행환경 잠금\n+\n+의존성 버전은 `uv.lock` 하나가 정한다(spec 004 T027). 운영 이미지(`infra/docker/worker.Dockerfile`)와 CI도\n+같은 lock에서 `uv sync`로 설치하므로 `requirements.txt`는 두지 않는다. `pyproject.toml`의 의존성을 고치면\n+`uv lock`으로 lock을 갱신해 함께 커밋한다. 고정 버전(`==`)과 lock이 어긋나면\n+`tests/test_dependency_pins.py`가 실패하고, CI의 `uv sync --locked`는 그 밖의 어긋남도 잡는다. 운영 이미지는\n+Python 3.11이고 lock은 3.11과 3.12 이상에 서로 다른 numpy를 고르므로, 운영과 같은 버전으로 확인하려면\n+`--python 3.11`로 만든다.\n+\n+기반 이미지와 uv는 digest로 고정되어 있어 저절로 갱신되지 않는다. 보안 패치를 받으려면 아래 순서로 올린다.\n+\n+1. 새 digest와 그 digest의 정확한 태그를 확인한다.\n+\n+   ```bash\n+   docker buildx imagetools inspect python:3.11-slim        # Digest: 줄\n+   docker buildx imagetools inspect python:3.11-slim --raw \\\n+     | grep -o '\"org.opencontainers.image.version\":\"[^\"]*\"' | head -1\n+   docker buildx imagetools inspect ghcr.io/astral-sh/uv:<버전>\n+   ```\n+\n+2. Dockerfile의 `PYTHON_IMAGE`는 태그(`3.11.x-slim-<debian>`)와 digest를 함께 바꾼다. 태그만 두고 digest를\n+   바꾸면 태그가 실제 이미지와 달라진다.\n+3. 저장소 루트에서 이미지를 빌드하고 컨테이너 안의 버전이 lock과 같은지 본다. 기반 이미지의 Python이\n+   3.12 이상으로 바뀌면 lock이 다른 numpy를 고르므로 결과 재현 여부부터 따진다.\n+\n+   ```bash\n+   docker build -f infra/docker/worker.Dockerfile -t thorp-worker:check worker\n+   docker run --rm thorp-worker:check python -c \\\n+     \"import sys, numpy, scipy, nautilus_trader; print(sys.version, numpy.__version__, scipy.__version__, nautilus_trader.__version__)\"\n+   ```\n \n ### 엔진을 직접 호출하기\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/README.md",
+          "old_path": "worker/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,2 +0,0 @@\n-pytest>=8.3\n-ruff>=0.6\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/requirements-dev.txt",
+          "old_path": "worker/requirements-dev.txt",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +0,0 @@\n-pandas>=2.2\n-numpy>=1.26\n-pika>=1.3,<2\n-psycopg[binary]>=3.2\n-pydantic>=2.8\n-pydantic-settings>=2.4\n-python-dotenv>=1.0\n-nautilus_trader==1.219.0\n-scipy==1.17.1\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "worker/requirements.txt",
+          "old_path": "worker/requirements.txt",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2225655,
+      "head_commit_sha": "caf27af3ce80e598b7270349cea057eb935b7761",
+      "base_commit_sha": "6607af2dab9a58f6134394af44f630f97557e72b",
+      "start_commit_sha": "603ab94ef00458c3bd74bbaf75ef600af0550d95",
+      "created_at": "2026-09-19T20:43:05.620+09:00",
+      "merge_request_id": 952452,
+      "state": "without_files",
+      "real_size": "8",
+      "patch_id_sha": "bce332e8128adbda24fc039b27456348c65bf22b",
+      "commits": [
+        {
+          "id": "caf27af3ce80e598b7270349cea057eb935b7761",
+          "short_id": "caf27af3",
+          "created_at": "2026-09-19T20:16:44.000+09:00",
+          "parent_ids": [
+            "3f73e07c177cecf240d4e4fc1bbcbe4b91982d79"
+          ],
+          "title": "chore(infra): 워커 이미지에서 uv를 빼고 lock 대조 테스트를 되살림",
+          "message": "chore(infra): 워커 이미지에서 uv를 빼고 lock 대조 테스트를 되살림\n\n코드리뷰 지적 반영.\n\n- 멀티 스테이지로 바꿔 빌드 단계의 가상환경만 실행 이미지로 옮긴다. uv는\n  실행 이미지에 싣지 않는다. RUN --mount는 BuildKit이 필요한데 배포(Jenkins의\n  docker compose)는 buildx 플러그인이 없어 옛 빌더로 빌드한다(배포 #249 로그).\n- test_dependency_pins.py를 pyproject와 uv.lock 대조로 되살렸다. 이미지는\n  --frozen이라 낡은 lock도 조용히 설치하므로 CI의 --locked에만 기대지 않는다.\n  pyproject의 scipy 고정만 바꾼 변이에서 실패하는 것을 확인했다.\n- .dockerignore에 *.egg-info를 더했다. 로컬 편집 설치가 src에 만든 메타데이터가\n  들어가면 로컬에서 빌드한 이미지만 importlib.metadata로 워커를 찾는다.\n- worker/README.md에 기반 이미지·uv digest 갱신 절차를 적었다.\n\n확인: 옛 빌더(DOCKER_BUILDKIT=0)와 BuildKit 모두 빌드 성공. 실행 이미지에\nuv·egg-info가 없고 Python 3.11.16·numpy 2.4.6·scipy 1.17.1·nautilus_trader\n1.219.0이 lock과 같다. 빌드 단계 uv sync --frozen --check는 \"Would make no\nchanges\", 최소분산 픽스처 COMPLETED. 워커 ruff 통과, pytest 402건 통과.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T20:16:44.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T20:16:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/caf27af3ce80e598b7270349cea057eb935b7761"
+        },
+        {
+          "id": "3f73e07c177cecf240d4e4fc1bbcbe4b91982d79",
+          "short_id": "3f73e07c",
+          "created_at": "2026-09-19T19:59:29.000+09:00",
+          "parent_ids": [
+            "6607af2dab9a58f6134394af44f630f97557e72b"
+          ],
+          "title": "chore(infra): 워커 이미지를 uv.lock과 digest로 잠금",
+          "message": "chore(infra): 워커 이미지를 uv.lock과 digest로 잠금\n\n워커 이미지가 requirements.txt 대신 worker/uv.lock에서 uv sync --frozen\n--no-dev로 설치하고 그 가상환경으로 실행한다. 기반 이미지는\npython:3.11.16-slim-trixie의 index digest, uv는 0.12.0 digest로 고정했다.\n빌드가 uv pip check까지 돌고, UV_PYTHON_DOWNLOADS=never로 이미지 밖 python을\n쓰지 않는다. 워커 코드는 전처럼 설치하지 않고 PYTHONPATH로 읽는다.\n\nrequirements.txt·requirements-dev.txt와 두 파일의 고정 버전을 대조하던\ntest_dependency_pins.py를 지웠다. CI가 uv sync --locked로 같은 lock에서\n설치하는 S15P21E205-355가 먼저 머지되어야 한다.\n\n확인: 로컬 docker build 성공. 컨테이너 안 Python 3.11.16, numpy 2.4.6,\nscipy 1.17.1, nautilus_trader 1.219.0이 lock과 같고 uv sync --frozen\n--check가 \"Would make no changes\". 최소분산 픽스처가 컨테이너에서\nCOMPLETED, 기본 CMD는 MARKET_DATA_URL 누락을 알리고 멈춘다. 서버에서\nghcr.io에 접근할 수 있다. 워커 pytest 401건 통과(Python 3.11).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-19T19:59:29.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-19T19:59:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3f73e07c177cecf240d4e4fc1bbcbe4b91982d79"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2839243": []
+  }
+}

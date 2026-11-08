@@ -1,0 +1,1006 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959574,
+    "iid": 327,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 화면의 근거 팩과 읽기 도구 다섯 개를 만든다",
+    "description": "## 작업 내용 요약\n\n도우미가 실제 결과 자료로 답할 수 있게 한다. 공개 결과의 비중·상세 응답에서 계약 §2.1 포함 표의 항목만 한국어 라벨의 근거로 옮기고, 시계열·거래·보유를 읽는 도구 다섯 개를 요청의 결과에 묶어 모델에 준다. 서버는 값을 계산하지 않고 응답 값 그대로와 그 안에서 고른 것만 넘긴다. 플래그는 여전히 꺼져 있어 사용자에게 보이는 변화는 없다.\n\n## 관련 티켓\n\n- S15P21E205-440 (Story S15P21E205-433 relates, Epic 30) \n\n## 주요 변경 사항\n\n- **초기 근거 팩**(계약 §2.1): 조회 순서는 `getWeights` → `getDetail`이라 계산 중·실패·시작 전 취소의 409는 첫 조회에서 그대로 난다. 요약·비용(수수료·스프레드·슬리피지·세금)·분석 값(회복 기간·회전율·비중 오차·추정 방법)·조건(요청/평가 기간·준비 기간·시작 금액)·전략과 설정 축(003 등록표 라벨)·섹터별 대표 ETF·목표 비중·마지막 점의 실제 비중·비중 출처·예외 종류·부분 결과 상태만 담는다. `publicToken`·`expiresAt`·`versions`·`progress`·상관 행렬은 없다. 섹터 이름은 001 `SectorService`에서 찾고 못 찾으면 id 원문이다.\n- **근거 알갱이**: 시계열 점 1개는 근거 3개(자산가치·누적 수익률·하락 폭 — 값 종류가 달라 따로 치환), 거래 1건과 보유 종목 1개는 각각 근거 1개. 계약 §2.2 문구를 이 규칙으로 맞췄다(라운드 30개 = 점 10개 또는 보유 30종목).\n- **60 상한**: 섹터별 위험·손실 기여는 팩이 60을 넘을 때만 빼고 \"일부 분석 값은 싣지 않음\" 근거를 하나 남긴다. 목표·실제 비중은 항상 싣는다(섹터 8개 픽스처로 고정).\n- **도구 다섯 개**(계약 §2.2, 인자는 날짜뿐): `getEquityOn`(휴장일은 직전 거래일로 바꾸고 라벨에 적음), `getEquityRange`(1년 이하, 첫·끝·최고·최저 점만), `getTradesBetween`(첫 페이지 공개 상한, 거래 1건=근거 1개, 잘리면 \"일부 거래\" 근거), `getPositionsOn`(종목당 비중 근거 1개, 직전 스냅샷이면 라벨에 적음, 전부 현금이면 그렇게 말함), `getDeepestDrawdownWindow`(005 `drawdownWindow.ts`와 같은 정의, 요약과 어긋나면 빈 결과). 결과 기간 밖·뒤집힌 구간은 실행하지 않고 \"사용할 수 없음\"이다. 부분 결과에서는 도구의 허용 기간이 계획된 종료일이 아니라 **완료 끝 날짜**까지다 — 미계산 날짜를 휴장일로 설명하지 않는다. 시계열의 `benchmarkReturn`·`cashFlows`와 `backtestId`는 어느 근거에도 없다.\n- **의존 방향**: `assistant → result`·`backtest`·`sector`·`strategy` 넷. ArchUnit 규칙 12를 `strategy`까지 넓혔다.\n\n## 테스트\n\n- `./gradlew spotlessApply build` — 2140 tests, 0 failed, 5 skipped(opt-in: `AssistantLiveTest`·`MarketLiveApiTest`·`NewsPerformanceIT`·`RequiredDockerTest`).\n- 근거 빌더 단위 테스트는 포함 표의 라벨 집합을 그대로 단언하고, 식별자·제외 필드 부재, 409 전파(상세 미조회), 8섹터 60 이하, 부분 결과 끝 날짜, 이름 원천 장애 시 id 대체를 본다. 도구 테스트는 다섯 도구의 거절 조건·고르기·라벨을 본다.\n- `AssistantResultIT`(PostgreSQL Testcontainers, 모델만 가짜): 완료 픽스처에 \"2025년 3월 19일 자산은?\"을 물어 근거 팩 → 도구 요청 → 도구 실행 → 자리표시자 답 → 치환이 200으로 끝나고, 응답과 모델 입력 어디에도 토큰·`backtestId`가 없음을 본다. 계산 중 결과는 409이고 모델 무호출. `ResultApiIT`는 손대지 않았다.\n\n## 리뷰 포인트\n\n- **거래비용 페이지 상한**은 새 설정을 두지 않고 005의 `thorp.result.trades-page-size`(100)를 그대로 읽는다. 값을 두 곳에 두면 어긋난다고 봤다.\n- **거래 한 건의 근거 값**은 \"진입가 53,700원, 수량 90주, 청산 …, 실현 손익 …원\" 한 문장(TEXT)이고 안의 금액·수량은 화면과 같은 표기다. 항목마다 근거를 쪼개면 거래 열 건에 근거 50개가 되어 라운드 상한(30)을 바로 넘는다. 모델이 이 문장을 그대로 인용하는 것이 의도다.\n- **섹터 이름·등록표 라벨 조회 실패**는 예외를 삼키고 id 원문으로 간다. 도우미 답이 부가 기능이라 이름 원천 장애로 500을 내지 않는 쪽을 택했다. 로그에는 남는다.\n- 하락 구간 정의가 화면과 서버 두 벌인 것은 spec에 적힌 빚이다. 워커가 날짜를 담으면 둘 다 지운다.\n\n## 전달만 하는 것\n\n- 배포 영향 없음. 새 환경 변수·마이그레이션·큐 변경이 없다. 기능은 `THORP_ASSISTANT_ENABLED_SCOPES`가 비어 있는 한 꺼진 채다.\n- 다음은 묶음 5(FE 버튼·말풍선)와 묶음 6(품질 표본·평가·관문)이다.\n\n## 남은 것\n\n- 없음. tasks.md T030\\~T035 완료 표시했다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-25T03:00:17.469+09:00",
+    "updated_at": "2026-09-25T08:17:21.623+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T03:07:40.496+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/440-assistant-result-evidence",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+    "merge_commit_sha": "7114240c37d908a057c7fff41c3b88eaaeae6e7e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T03:00:19.016+09:00",
+    "reference": "!327",
+    "references": {
+      "short": "!327",
+      "relative": "!327",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!327"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/327",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959574,
+    "iid": 327,
+    "project_id": 1444456,
+    "title": "feat(be): 결과 화면의 근거 팩과 읽기 도구 다섯 개를 만든다",
+    "description": "## 작업 내용 요약\n\n도우미가 실제 결과 자료로 답할 수 있게 한다. 공개 결과의 비중·상세 응답에서 계약 §2.1 포함 표의 항목만 한국어 라벨의 근거로 옮기고, 시계열·거래·보유를 읽는 도구 다섯 개를 요청의 결과에 묶어 모델에 준다. 서버는 값을 계산하지 않고 응답 값 그대로와 그 안에서 고른 것만 넘긴다. 플래그는 여전히 꺼져 있어 사용자에게 보이는 변화는 없다.\n\n## 관련 티켓\n\n- S15P21E205-440 (Story S15P21E205-433 relates, Epic 30) \n\n## 주요 변경 사항\n\n- **초기 근거 팩**(계약 §2.1): 조회 순서는 `getWeights` → `getDetail`이라 계산 중·실패·시작 전 취소의 409는 첫 조회에서 그대로 난다. 요약·비용(수수료·스프레드·슬리피지·세금)·분석 값(회복 기간·회전율·비중 오차·추정 방법)·조건(요청/평가 기간·준비 기간·시작 금액)·전략과 설정 축(003 등록표 라벨)·섹터별 대표 ETF·목표 비중·마지막 점의 실제 비중·비중 출처·예외 종류·부분 결과 상태만 담는다. `publicToken`·`expiresAt`·`versions`·`progress`·상관 행렬은 없다. 섹터 이름은 001 `SectorService`에서 찾고 못 찾으면 id 원문이다.\n- **근거 알갱이**: 시계열 점 1개는 근거 3개(자산가치·누적 수익률·하락 폭 — 값 종류가 달라 따로 치환), 거래 1건과 보유 종목 1개는 각각 근거 1개. 계약 §2.2 문구를 이 규칙으로 맞췄다(라운드 30개 = 점 10개 또는 보유 30종목).\n- **60 상한**: 섹터별 위험·손실 기여는 팩이 60을 넘을 때만 빼고 \"일부 분석 값은 싣지 않음\" 근거를 하나 남긴다. 목표·실제 비중은 항상 싣는다(섹터 8개 픽스처로 고정).\n- **도구 다섯 개**(계약 §2.2, 인자는 날짜뿐): `getEquityOn`(휴장일은 직전 거래일로 바꾸고 라벨에 적음), `getEquityRange`(1년 이하, 첫·끝·최고·최저 점만), `getTradesBetween`(첫 페이지 공개 상한, 거래 1건=근거 1개, 잘리면 \"일부 거래\" 근거), `getPositionsOn`(종목당 비중 근거 1개, 직전 스냅샷이면 라벨에 적음, 전부 현금이면 그렇게 말함), `getDeepestDrawdownWindow`(005 `drawdownWindow.ts`와 같은 정의, 요약과 어긋나면 빈 결과). 결과 기간 밖·뒤집힌 구간은 실행하지 않고 \"사용할 수 없음\"이다. 부분 결과에서는 도구의 허용 기간이 계획된 종료일이 아니라 **완료 끝 날짜**까지다 — 미계산 날짜를 휴장일로 설명하지 않는다. 시계열의 `benchmarkReturn`·`cashFlows`와 `backtestId`는 어느 근거에도 없다.\n- **의존 방향**: `assistant → result`·`backtest`·`sector`·`strategy` 넷. ArchUnit 규칙 12를 `strategy`까지 넓혔다.\n\n## 테스트\n\n- `./gradlew spotlessApply build` — 2140 tests, 0 failed, 5 skipped(opt-in: `AssistantLiveTest`·`MarketLiveApiTest`·`NewsPerformanceIT`·`RequiredDockerTest`).\n- 근거 빌더 단위 테스트는 포함 표의 라벨 집합을 그대로 단언하고, 식별자·제외 필드 부재, 409 전파(상세 미조회), 8섹터 60 이하, 부분 결과 끝 날짜, 이름 원천 장애 시 id 대체를 본다. 도구 테스트는 다섯 도구의 거절 조건·고르기·라벨을 본다.\n- `AssistantResultIT`(PostgreSQL Testcontainers, 모델만 가짜): 완료 픽스처에 \"2025년 3월 19일 자산은?\"을 물어 근거 팩 → 도구 요청 → 도구 실행 → 자리표시자 답 → 치환이 200으로 끝나고, 응답과 모델 입력 어디에도 토큰·`backtestId`가 없음을 본다. 계산 중 결과는 409이고 모델 무호출. `ResultApiIT`는 손대지 않았다.\n\n## 리뷰 포인트\n\n- **거래비용 페이지 상한**은 새 설정을 두지 않고 005의 `thorp.result.trades-page-size`(100)를 그대로 읽는다. 값을 두 곳에 두면 어긋난다고 봤다.\n- **거래 한 건의 근거 값**은 \"진입가 53,700원, 수량 90주, 청산 …, 실현 손익 …원\" 한 문장(TEXT)이고 안의 금액·수량은 화면과 같은 표기다. 항목마다 근거를 쪼개면 거래 열 건에 근거 50개가 되어 라운드 상한(30)을 바로 넘는다. 모델이 이 문장을 그대로 인용하는 것이 의도다.\n- **섹터 이름·등록표 라벨 조회 실패**는 예외를 삼키고 id 원문으로 간다. 도우미 답이 부가 기능이라 이름 원천 장애로 500을 내지 않는 쪽을 택했다. 로그에는 남는다.\n- 하락 구간 정의가 화면과 서버 두 벌인 것은 spec에 적힌 빚이다. 워커가 날짜를 담으면 둘 다 지운다.\n\n## 전달만 하는 것\n\n- 배포 영향 없음. 새 환경 변수·마이그레이션·큐 변경이 없다. 기능은 `THORP_ASSISTANT_ENABLED_SCOPES`가 비어 있는 한 꺼진 채다.\n- 다음은 묶음 5(FE 버튼·말풍선)와 묶음 6(품질 표본·평가·관문)이다.\n\n## 남은 것\n\n- 없음. tasks.md T030\\~T035 완료 표시했다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-25T03:00:17.469+09:00",
+    "updated_at": "2026-09-25T08:17:21.623+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T03:07:40.496+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/440-assistant-result-evidence",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+    "merge_commit_sha": "7114240c37d908a057c7fff41c3b88eaaeae6e7e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T03:00:19.016+09:00",
+    "reference": "!327",
+    "references": {
+      "short": "!327",
+      "relative": "!327",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!327"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/327",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "15",
+    "latest_build_started_at": "2026-09-25T03:00:27.483+09:00",
+    "latest_build_finished_at": "2026-09-25T03:07:39.698+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 221713,
+      "iid": 356,
+      "project_id": 1444456,
+      "sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+      "ref": "feat(be)/440-assistant-result-evidence",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-25T03:00:27.370+09:00",
+      "updated_at": "2026-09-25T03:07:44.416+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221713"
+    },
+    "head_pipeline": {
+      "id": 221713,
+      "iid": 356,
+      "project_id": 1444456,
+      "sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+      "ref": "feat(be)/440-assistant-result-evidence",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-25T03:00:27.370+09:00",
+      "updated_at": "2026-09-25T03:07:44.416+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221713",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-25T03:00:27.483+09:00",
+      "finished_at": "2026-09-25T03:07:44.406+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/221713",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+      "head_sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+      "start_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "05479653265a53af9569b9e6a8f60715f40fe659",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867275,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T03:00:17.581+09:00",
+          "updated_at": "2026-09-25T03:00:17.585+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de85188566c7ace38bbb57b46dee983ac531a5a3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867276,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T03:00:17.600+09:00",
+          "updated_at": "2026-09-25T03:00:17.607+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f4cbce99769b6ce5a2dae2e94a1936f4c3d4df8f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867277,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T03:00:28.197+09:00",
+          "updated_at": "2026-09-25T03:00:28.210+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5191b7eb5579f452cb743801f1a5bcae6be026c9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867278,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n* [Critical] `backend/src/main/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilder.java` 파일이 중간에 잘려 있으며(`private st`), 컴파일 에러를 유발합니다. 빌드 검증을 철저히 거쳐 전체 소스 코드가 포함되도록 확인이 필요합니다.\n\n### 테스트 제안\n* 코드 잘림 현상이 수정된 후, `ResultEvidenceBuilderTest`와 `AssistantResultIT`가 정상적으로 컴파일되고 전체 테스트가 통과하는지(`./gradlew build`) 검증해야 합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:115f13ddf7d2059bff950d2dd49333a1a33edc07 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-25T03:00:29.221+09:00",
+          "updated_at": "2026-09-25T03:00:29.221+09:00",
+          "system": false,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c1c2b35ff48e9b8e92dbc98eb66c48c88d2c2876",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867282,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 115f13ddf7d2059bff950d2dd49333a1a33edc07 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T03:02:31.653+09:00",
+          "updated_at": "2026-09-25T03:02:31.656+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f2d39f9ff1dbacfa102731bbdbb33dbd2d1bfdfd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867292,
+          "type": null,
+          "body": "mentioned in commit 7114240c37d908a057c7fff41c3b88eaaeae6e7e",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T03:07:40.583+09:00",
+          "updated_at": "2026-09-25T03:07:40.588+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "46594b080d40185d365e6da3443a11d5d7c46b2f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867494,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-25T08:17:21.742+09:00",
+          "updated_at": "2026-09-25T08:17:21.746+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9c1c99fc736a857cf0d4e2437ee7e4cb6f8a0681",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885024,
+          "type": null,
+          "body": "mentioned in commit a95b95895cce2377dbe9bea825c09a70066f5d7e",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:09.134+09:00",
+          "updated_at": "2026-10-13T15:16:09.137+09:00",
+          "system": true,
+          "noteable_id": 959574,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 327,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2249357,
+      "head_commit_sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+      "base_commit_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+      "start_commit_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+      "created_at": "2026-09-25T03:00:17.899+09:00",
+      "merge_request_id": 959574,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "446dfd73aa0d3a9d504395128ba2c1e28ca1348d"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2249357,
+      "head_commit_sha": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+      "base_commit_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+      "start_commit_sha": "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40",
+      "created_at": "2026-09-25T03:00:17.899+09:00",
+      "merge_request_id": 959574,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "446dfd73aa0d3a9d504395128ba2c1e28ca1348d",
+      "commits": [
+        {
+          "id": "115f13ddf7d2059bff950d2dd49333a1a33edc07",
+          "short_id": "115f13dd",
+          "created_at": "2026-09-25T02:57:51.000+09:00",
+          "parent_ids": [
+            "4930e0d820ffaab49af0b272f9d883b82f3ae722"
+          ],
+          "title": "fix(be): 부분 결과의 도구 기간을 완료 끝 날짜로 자르고 근거 알갱이·거래 표기를 계약에 맞춘다",
+          "message": "fix(be): 부분 결과의 도구 기간을 완료 끝 날짜로 자르고 근거 알갱이·거래 표기를 계약에 맞춘다\n\n- 부분 결과는 도구 허용 기간을 completed-until 까지로 — 미계산 날짜를 휴장일로 설명하지 않는다\n- 보유 종목 1개 = 근거 1개(비중). 시계열 점 1개 = 근거 3개는 계약 문구를 그렇게 맞췄다\n- 거래 문장 안의 금액·수량을 화면과 같은 표기(천 단위·정수 반올림)로\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T02:57:51.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T02:57:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/115f13ddf7d2059bff950d2dd49333a1a33edc07"
+        },
+        {
+          "id": "4930e0d820ffaab49af0b272f9d883b82f3ae722",
+          "short_id": "4930e0d8",
+          "created_at": "2026-09-25T01:59:56.000+09:00",
+          "parent_ids": [
+            "10f5ec6052f6dcdab0b098671541a7f22b5ef378"
+          ],
+          "title": "docs: 묶음 4(T030~T035) 완료를 표시한다",
+          "message": "docs: 묶음 4(T030~T035) 완료를 표시한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:59:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:59:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/4930e0d820ffaab49af0b272f9d883b82f3ae722"
+        },
+        {
+          "id": "10f5ec6052f6dcdab0b098671541a7f22b5ef378",
+          "short_id": "10f5ec60",
+          "created_at": "2026-09-25T01:59:56.000+09:00",
+          "parent_ids": [
+            "6e870daa0cf3e8b63c40fa62ba440b3bf048559a"
+          ],
+          "title": "chore(be): 규칙 12 를 strategy 까지 넓히고 plan 의 의존 목록을 맞춘다",
+          "message": "chore(be): 규칙 12 를 strategy 까지 넓히고 plan 의 의존 목록을 맞춘다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:59:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:59:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/10f5ec6052f6dcdab0b098671541a7f22b5ef378"
+        },
+        {
+          "id": "6e870daa0cf3e8b63c40fa62ba440b3bf048559a",
+          "short_id": "6e870daa",
+          "created_at": "2026-09-25T01:59:56.000+09:00",
+          "parent_ids": [
+            "32b76e5f53781f90f40153bf31675347085902ba"
+          ],
+          "title": "feat(be): 완료 결과로 도우미가 끝까지 흐르는 IT 를 둔다",
+          "message": "feat(be): 완료 결과로 도우미가 끝까지 흐르는 IT 를 둔다\n\n- 공개 토큰 → 근거 팩 → 도구 요청·실행 → 자리표시자 답 → 치환. 계산 중 결과는 409 이고 모델 무호출\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:59:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:59:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6e870daa0cf3e8b63c40fa62ba440b3bf048559a"
+        },
+        {
+          "id": "32b76e5f53781f90f40153bf31675347085902ba",
+          "short_id": "32b76e5f",
+          "created_at": "2026-09-25T01:59:56.000+09:00",
+          "parent_ids": [
+            "abbba0c39375a57ffefa5a45463122ee03806e1e"
+          ],
+          "title": "feat(be): 근거 팩과 도구 다섯 개를 단위 테스트로 고정한다",
+          "message": "feat(be): 근거 팩과 도구 다섯 개를 단위 테스트로 고정한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:59:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:59:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/32b76e5f53781f90f40153bf31675347085902ba"
+        },
+        {
+          "id": "abbba0c39375a57ffefa5a45463122ee03806e1e",
+          "short_id": "abbba0c3",
+          "created_at": "2026-09-25T01:59:56.000+09:00",
+          "parent_ids": [
+            "cd3a9ffa6152fc4a2fd41bf20bf5d764c5d5728a"
+          ],
+          "title": "feat(be): 결과 화면의 초기 근거 팩을 계약 포함 표대로 만든다",
+          "message": "feat(be): 결과 화면의 초기 근거 팩을 계약 포함 표대로 만든다\n\n- getWeights → getDetail 순서라 결과 없음 409 는 첫 조회에서 난다\n- 표의 항목만 한국어 라벨로, 섹터는 001 이름(없으면 id), 설정 축은 003 등록표 라벨\n- 60 을 넘으면 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:59:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:59:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/abbba0c39375a57ffefa5a45463122ee03806e1e"
+        },
+        {
+          "id": "cd3a9ffa6152fc4a2fd41bf20bf5d764c5d5728a",
+          "short_id": "cd3a9ffa",
+          "created_at": "2026-09-25T01:59:56.000+09:00",
+          "parent_ids": [
+            "003d614dc5da5a5a5085e1f1b7ae5551a3bef68d"
+          ],
+          "title": "feat(be): 결과에 묶이는 읽기 도구 다섯 개를 만든다",
+          "message": "feat(be): 결과에 묶이는 읽기 도구 다섯 개를 만든다\n\n- 특정 날짜 점(휴장일은 직전 거래일)·구간 첫·끝·최고·최저·구간 거래 첫 페이지·특정 날짜 보유·하락 구간(005 drawdownWindow.ts 와 같은 정의)\n- 인자는 날짜뿐이고 결과 기간 밖·뒤집힌 구간·1년 초과는 실행하지 않는다. benchmarkReturn·cashFlows·backtestId 는 근거에 없다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:59:56.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:59:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/cd3a9ffa6152fc4a2fd41bf20bf5d764c5d5728a"
+        },
+        {
+          "id": "003d614dc5da5a5a5085e1f1b7ae5551a3bef68d",
+          "short_id": "003d614d",
+          "created_at": "2026-09-25T01:44:05.000+09:00",
+          "parent_ids": [
+            "42812d2976ac8c2b67ef6f0ab7abbeff93b54a40"
+          ],
+          "title": "docs: 묶음 4 티켓 번호를 tasks 에 적는다",
+          "message": "docs: 묶음 4 티켓 번호를 tasks 에 적는다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T01:44:05.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T01:44:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/003d614dc5da5a5a5085e1f1b7ae5551a3bef68d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,99 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult.Point;\n+import java.math.BigDecimal;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * 하락 폭이 가장 낮은 날과 그 앞 고점 날(계약 §2.2).\n+ *\n+ * <p><b>정의는 005 화면의 {@code frontend/src/components/result/drawdownWindow.ts}와 같다</b>: 가장 낮은 {@code\n+ * drawdown}의 첫날이 저점, 그 앞에서 마지막으로 {@code drawdown >= 0}인 날이 고점(없으면 첫 점). 저점 값이 {@code\n+ * summary.maxDrawdown}과 다르면 구간을 정하지 않고 빈 결과다 — 화면과 다른 구간을 만들지 않는다. 두 벌인 것은 빚이고, 워커가 {@code\n+ * analytics.maxDrawdownWindow}를 담으면 둘 다 그 값을 읽는다 (plan \"후속\").\n+ */\n+public class DeepestDrawdownWindowTool implements AssistantTool {\n+    static final String NAME = \"getDeepestDrawdownWindow\";\n+    private final ResultToolContext context;\n+\n+    public DeepestDrawdownWindowTool(ResultToolContext context) {\n+        this.context = context;\n+    }\n+\n+    @Override\n+    public ToolSpec spec() {\n+        return new ToolSpec(NAME, \"자산이 가장 크게 줄었던 구간: 그 앞 고점 날과 가장 낮은 날. 인자 없음\", List.of());\n+    }\n+\n+    @Override\n+    public List<Evidence> run(Map<String, String> arguments) {\n+        BigDecimal expected = context.maxDrawdown();\n+        if (expected == null) {\n+            return List.of();\n+        }\n+        List<Point> points = context.publicResults().getTimeseries(context.token()).points();\n+        int troughIndex = -1;\n+        BigDecimal troughValue = null;\n+        for (int i = 0; i < points.size(); i++) {\n+            BigDecimal drawdown = points.get(i).drawdown();\n+            if (drawdown != null && (troughValue == null || drawdown.compareTo(troughValue) < 0)) {\n+                troughValue = drawdown;\n+                troughIndex = i;\n+            }\n+        }\n+        if (troughIndex < 0 || troughValue.signum() >= 0 || troughValue.compareTo(expected) != 0) {\n+            return List.of();\n+        }\n+        int peakIndex = 0;\n+        for (int i = troughIndex - 1; i >= 0; i--) {\n+            BigDecimal drawdown = points.get(i).drawdown();\n+            if (drawdown != null && drawdown.signum() >= 0) {\n+                peakIndex = i;\n+                break;\n+            }\n+        }\n+        Point peak = points.get(peakIndex);\n+        Point trough = points.get(troughIndex);\n+        return List.of(\n+                new Evidence(\n+                        null,\n+                        \"하락 시작(고점) 날짜\",\n+                        peak.date().toString(),\n+                        peak.date(),\n+                        \"loss\",\n+                        EvidenceKind.DATE),\n+                new Evidence(\n+                        null,\n+                        \"고점 자산가치\",\n+                        ResultToolContext.plain(peak.equity()),\n+                        peak.date(),\n+                        \"loss\",\n+                        EvidenceKind.MONEY),\n+                new Evidence(\n+                        null,\n+                        \"가장 크게 줄어든 날짜\",\n+                        trough.date().toString(),\n+                        trough.date(),\n+                        \"loss\",\n+                        EvidenceKind.DATE),\n+                new Evidence(\n+                        null,\n+                        \"저점 자산가치\",\n+                        ResultToolContext.plain(trough.equity()),\n+                        trough.date(),\n+                        \"loss\",\n+                        EvidenceKind.MONEY),\n+                new Evidence(\n+                        null,\n+                        \"저점 하락 폭\",\n+                        ResultToolContext.plain(trough.drawdown()),\n+                        trough.date(),\n+                        \"loss\",\n+                        EvidenceKind.RATIO));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/DeepestDrawdownWindowTool.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/DeepestDrawdownWindowTool.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import com.ssafy.thorp.assistant.application.exception.ToolUnavailableException;\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult.Point;\n+import java.time.LocalDate;\n+import java.util.List;\n+import java.util.Map;\n+\n+/** 특정 날짜의 시계열 점 하나(계약 §2.2). 시계열에 없는 날(휴장)은 직전 거래일로 바꾸고 라벨에 적는다. */\n+public class EquityOnTool implements AssistantTool {\n+    static final String NAME = \"getEquityOn\";\n+    private final ResultToolContext context;\n+\n+    public EquityOnTool(ResultToolContext context) {\n+        this.context = context;\n+    }\n+\n+    @Override\n+    public ToolSpec spec() {\n+        return new ToolSpec(NAME, \"특정 날짜의 자산가치·누적 수익률·하락 폭. 휴장일이면 직전 거래일 값\", List.of(\"date\"));\n+    }\n+\n+    @Override\n+    public List<Evidence> run(Map<String, String> arguments) {\n+        LocalDate date = context.requireInPeriod(LocalDate.parse(arguments.get(\"date\")), \"date\");\n+        List<Point> points = context.publicResults().getTimeseries(context.token()).points();\n+        Point picked = null;\n+        for (Point point : points) {\n+            if (point.date().isAfter(date)) {\n+                break;\n+            }\n+            picked = point;\n+        }\n+        if (picked == null) {\n+            throw new ToolUnavailableException(\"그 날짜 앞의 시계열 자료가 없습니다\");\n+        }\n+        String note = picked.date().equals(date) ? \"\" : \" (휴장일이라 직전 거래일 값)\";\n+        return pointFacts(picked, \"\", note);\n+    }\n+\n+    /** 점 하나를 자산가치·누적 수익률·하락 폭 세 근거로. {@code benchmarkReturn}·{@code cashFlows}는 넣지 않는다(계약 §3). */\n+    static List<Evidence> pointFacts(Point point, String prefix, String suffix) {\n+        return List.of(\n+                new Evidence(\n+                        null,\n+                        prefix + \"자산가치\" + suffix,\n+                        ResultToolContext.plain(point.equity()),\n+                        point.date(),\n+                        \"summary\",\n+                        EvidenceKind.MONEY),\n+                new Evidence(\n+                        null,\n+                        prefix + \"누적 수익률\" + suffix,\n+                        ResultToolContext.plain(point.cumulativeReturn()),\n+                        point.date(),\n+                        \"summary\",\n+                        EvidenceKind.RATIO),\n+                new Evidence(\n+                        null,\n+                        prefix + \"하락 폭\" + suffix,\n+                        ResultToolContext.plain(point.drawdown()),\n+                        point.date(),\n+                        \"loss\",\n+                        EvidenceKind.RATIO));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/EquityOnTool.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/EquityOnTool.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,63 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import com.ssafy.thorp.assistant.application.exception.ToolUnavailableException;\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult.Point;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+\n+/** 구간의 첫·끝·최고·최저 점 넷(계약 §2.2). 응답 값에서 <b>고르기만</b> 한다 — 새 점이나 구간 수익률을 만들지 않는다(아키텍처 원칙 1). */\n+public class EquityRangeTool implements AssistantTool {\n+    static final String NAME = \"getEquityRange\";\n+    private final ResultToolContext context;\n+\n+    public EquityRangeTool(ResultToolContext context) {\n+        this.context = context;\n+    }\n+\n+    @Override\n+    public ToolSpec spec() {\n+        return new ToolSpec(NAME, \"구간(최대 1년)의 첫날·마지막 날·자산가치 최고일·최저일 점\", List.of(\"from\", \"to\"));\n+    }\n+\n+    @Override\n+    public List<Evidence> run(Map<String, String> arguments) {\n+        LocalDate from = context.requireInPeriod(LocalDate.parse(arguments.get(\"from\")), \"from\");\n+        LocalDate to = context.requireInPeriod(LocalDate.parse(arguments.get(\"to\")), \"to\");\n+        context.requireOrdered(from, to);\n+        if (from.plusYears(1).isBefore(to)) {\n+            throw new ToolUnavailableException(\"구간은 1년 이하여야 합니다\");\n+        }\n+        List<Point> inRange = new ArrayList<>();\n+        for (Point point : context.publicResults().getTimeseries(context.token()).points()) {\n+            if (!point.date().isBefore(from) && !point.date().isAfter(to)) {\n+                inRange.add(point);\n+            }\n+        }\n+        if (inRange.isEmpty()) {\n+            throw new ToolUnavailableException(\"그 구간의 시계열 자료가 없습니다\");\n+        }\n+        Point first = inRange.get(0);\n+        Point last = inRange.get(inRange.size() - 1);\n+        Point highest = first;\n+        Point lowest = first;\n+        for (Point point : inRange) {\n+            if (point.equity() != null && point.equity().compareTo(highest.equity()) > 0) {\n+                highest = point;\n+            }\n+            if (point.equity() != null && point.equity().compareTo(lowest.equity()) < 0) {\n+                lowest = point;\n+            }\n+        }\n+        List<Evidence> facts = new ArrayList<>();\n+        facts.addAll(EquityOnTool.pointFacts(first, \"구간 첫날 \", \"\"));\n+        facts.addAll(EquityOnTool.pointFacts(last, \"구간 마지막 날 \", \"\"));\n+        facts.addAll(EquityOnTool.pointFacts(highest, \"구간 최고일 \", \"\"));\n+        facts.addAll(EquityOnTool.pointFacts(lowest, \"구간 최저일 \", \"\"));\n+        return facts;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/EquityRangeTool.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/EquityRangeTool.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,57 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult.Position;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * 특정 날짜의 보유 종목·비중(계약 §2.2). 보유 종목 1개 = 근거 1개(비중). 스냅샷이 없는 날은 005와 같이 직전 스냅샷이고, 그 날짜가 {@code asOf}다.\n+ */\n+public class PositionsOnTool implements AssistantTool {\n+    static final String NAME = \"getPositionsOn\";\n+    private final ResultToolContext context;\n+\n+    public PositionsOnTool(ResultToolContext context) {\n+        this.context = context;\n+    }\n+\n+    @Override\n+    public ToolSpec spec() {\n+        return new ToolSpec(NAME, \"특정 날짜의 보유 종목과 비중\", List.of(\"date\"));\n+    }\n+\n+    @Override\n+    public List<Evidence> run(Map<String, String> arguments) {\n+        LocalDate date = context.requireInPeriod(LocalDate.parse(arguments.get(\"date\")), \"date\");\n+        BacktestPositionsResult result =\n+                context.publicResults().getPositions(context.token(), date);\n+        LocalDate asOf = result.snapshotDate() == null ? date : result.snapshotDate();\n+        String note = asOf.equals(date) ? \"\" : \" (직전 보유 기준)\";\n+        List<Evidence> facts = new ArrayList<>();\n+        if (result.positions().isEmpty()) {\n+            facts.add(\n+                    new Evidence(\n+                            null, \"보유 종목\" + note, \"없음 (전부 현금)\", asOf, \"trades\", EvidenceKind.TEXT));\n+            return facts;\n+        }\n+        for (Position position : result.positions()) {\n+            String name = context.label(position.instrumentId());\n+            facts.add(\n+                    new Evidence(\n+                            null,\n+                            name + \" 보유 비중\" + note,\n+                            ResultToolContext.plain(position.weight()),\n+                            asOf,\n+                            \"trades\",\n+                            EvidenceKind.RATIO));\n+        }\n+        return facts;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/PositionsOnTool.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/PositionsOnTool.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,50 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import com.ssafy.thorp.assistant.application.exception.ToolUnavailableException;\n+import com.ssafy.thorp.result.application.service.PublicResultService;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.util.Map;\n+\n+/**\n+ * 요청 시작 때 풀린 결과에 도구를 묶는 값들. 도구는 이 컨텍스트로 결과를 읽으므로 인자에 식별자가 없다(FR-007).\n+ *\n+ * @param token 공개 토큰. 서버 안에서만 쓰이고 근거·모델 어디에도 나가지 않는다\n+ * @param start 평가 시작일({@code effectiveStart}). 도구 인자는 이 구간 안이어야 한다\n+ * @param labels 종목 코드 → 섹터 이름. 라벨에 코드가 아니라 이름을 쓰기 위한 표(없으면 코드 원문)\n+ * @param maxDrawdown {@code summary.maxDrawdown}. 하락 구간 도구가 화면(005)과 같은 정의로 대조한다\n+ * @param tradesPageSize 거래 첫 페이지의 공개 상한({@code thorp.result.trades-page-size})\n+ */\n+public record ResultToolContext(\n+        PublicResultService publicResults,\n+        String token,\n+        LocalDate start,\n+        LocalDate end,\n+        Map<String, String> labels,\n+        BigDecimal maxDrawdown,\n+        int tradesPageSize) {\n+\n+    public String label(String instrumentId) {\n+        String name = labels.get(instrumentId);\n+        return name == null || name.isBlank() ? instrumentId : name;\n+    }\n+\n+    /** 결과 기간 밖이면 실행하지 않는다 — 없는 날짜의 값을 만들지 않는다(원칙 VI). */\n+    public LocalDate requireInPeriod(LocalDate date, String argument) {\n+        if (date.isBefore(start) || date.isAfter(end)) {\n+            throw new ToolUnavailableException(\n+                    argument + \"가 결과 기간(\" + start + \"~\" + end + \") 밖입니다\");\n+        }\n+        return date;\n+    }\n+\n+    public void requireOrdered(LocalDate from, LocalDate to) {\n+        if (from.isAfter(to)) {\n+            throw new ToolUnavailableException(\"from 이 to 보다 늦습니다\");\n+        }\n+    }\n+\n+    static String plain(BigDecimal value) {\n+        return value == null ? \"\" : value.toPlainString();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/ResultToolContext.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/ResultToolContext.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,116 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput.TradeResult;\n+import com.ssafy.thorp.backtest.application.port.message.TradeSide;\n+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.ZoneId;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+\n+/**\n+ * 구간의 거래 첫 페이지(계약 §2.2). 거래 1건 = 근거 1개. 페이지가 잘렸으면 \"일부 거래\" 근거를 하나 더 둔다.\n+ *\n+ * <p>날짜는 005 거래 응답과 같이 거래소 현지(Asia/Seoul) 기준이다.\n+ */\n+public class TradesBetweenTool implements AssistantTool {\n+    static final String NAME = \"getTradesBetween\";\n+    static final String PARTIAL_LABEL = \"거래 읽은 범위\";\n+    private static final ZoneId EXCHANGE = ZoneId.of(\"Asia/Seoul\");\n+    private final ResultToolContext context;\n+\n+    public TradesBetweenTool(ResultToolContext context) {\n+        this.context = context;\n+    }\n+\n+    @Override\n+    public ToolSpec spec() {\n+        return new ToolSpec(NAME, \"구간에 진입한 거래 목록(첫 페이지). 많으면 구간을 좁혀 다시 요청\", List.of(\"from\", \"to\"));\n+    }\n+\n+    @Override\n+    public List<Evidence> run(Map<String, String> arguments) {\n+        LocalDate from = context.requireInPeriod(LocalDate.parse(arguments.get(\"from\")), \"from\");\n+        LocalDate to = context.requireInPeriod(LocalDate.parse(arguments.get(\"to\")), \"to\");\n+        context.requireOrdered(from, to);\n+        BacktestTradePageResult page =\n+                context.publicResults()\n+                        .getTrades(\n+                                context.token(),\n+                                new FindBacktestTradesQuery(\n+                                        0, context.tradesPageSize(), null, null, from, to));\n+        List<Evidence> facts = new ArrayList<>();\n+        for (TradeResult trade : page.content()) {\n+            LocalDate entered = localDate(trade.entryTime());\n+            String label =\n+                    context.label(trade.instrumentId())\n+                            + \" \"\n+                            + side(trade.side())\n+                            + \" 거래 (진입 \"\n+                            + entered\n+                            + \")\";\n+            facts.add(\n+                    new Evidence(\n+                            null, label, describe(trade), entered, \"trades\", EvidenceKind.TEXT));\n+        }\n+        if (page.totalElements() > page.content().size()) {\n+            facts.add(\n+                    new Evidence(\n+                            null,\n+                            PARTIAL_LABEL,\n+                            \"일부 거래 (전체 \"\n+                                    + page.totalElements()\n+                                    + \"건 중 \"\n+                                    + page.content().size()\n+                                    + \"건)\",\n+                            null,\n+                            \"trades\",\n+                            EvidenceKind.TEXT));\n+        }\n+        return facts;\n+    }\n+\n+    /** 합성 문장 안의 금액·수량도 화면과 같은 표기다(계약 §2.4) — 근거 카드와 거래 탭이 어긋나지 않게. */\n+    private static String describe(TradeResult trade) {\n+        StringBuilder text =\n+                new StringBuilder()\n+                        .append(\"진입가 \")\n+                        .append(money(trade.entryPrice()))\n+                        .append(\", 수량 \")\n+                        .append(\n+                                EvidenceKind.INTEGER.format(\n+                                        ResultToolContext.plain(trade.quantity())))\n+                        .append(\"주\");\n+        if (trade.status() == TradeStatus.CLOSED) {\n+            text.append(\", 청산 \")\n+                    .append(localDate(trade.exitTime()))\n+                    .append(\" 청산가 \")\n+                    .append(money(trade.exitPrice()))\n+                    .append(\", 실현 손익 \")\n+                    .append(money(trade.realizedPnl()));\n+        } else {\n+            text.append(\", 보유 중\");\n+        }\n+        return text.toString();\n+    }\n+\n+    private static String money(java.math.BigDecimal value) {\n+        return EvidenceKind.MONEY.format(ResultToolContext.plain(value));\n+    }\n+\n+    private static String side(TradeSide side) {\n+        return side == TradeSide.SHORT ? \"매도\" : \"매수\";\n+    }\n+\n+    private static LocalDate localDate(Instant instant) {\n+        return instant == null ? null : instant.atZone(EXCHANGE).toLocalDate();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/TradesBetweenTool.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/tools/TradesBetweenTool.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,422 @@\n+package com.ssafy.thorp.assistant.application.service;\n+\n+import com.ssafy.thorp.assistant.application.port.AssistantSettings;\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.port.EvidenceBuilder;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceBundle;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.assistant.application.result.PageContext;\n+import com.ssafy.thorp.assistant.application.result.PageKind;\n+import com.ssafy.thorp.assistant.application.service.tools.DeepestDrawdownWindowTool;\n+import com.ssafy.thorp.assistant.application.service.tools.EquityOnTool;\n+import com.ssafy.thorp.assistant.application.service.tools.EquityRangeTool;\n+import com.ssafy.thorp.assistant.application.service.tools.PositionsOnTool;\n+import com.ssafy.thorp.assistant.application.service.tools.ResultToolContext;\n+import com.ssafy.thorp.assistant.application.service.tools.TradesBetweenTool;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n+import com.ssafy.thorp.result.application.result.PublicResultDetail;\n+import com.ssafy.thorp.result.application.service.PublicResultService;\n+import com.ssafy.thorp.sector.application.service.SectorService;\n+import com.ssafy.thorp.sector.domain.model.Sector;\n+import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import java.math.BigDecimal;\n+import java.time.LocalDate;\n+import java.time.format.DateTimeParseException;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import org.slf4j.Logger;\n+import org.slf4j.LoggerFactory;\n+import org.springframework.beans.factory.annotation.Value;\n+import org.springframework.stereotype.Component;\n+\n+/**\n+ * 결과 화면의 근거 팩(FR-006, 계약 §2.1 포함 표)과 도구 다섯 개(FR-007).\n+ *\n+ * <p>초기 조회는 {@code getWeights} → {@code getDetail} 두 번이다. {@code getWeights}가 005 {@code\n+ * requireResultReady}의 409(계산 중·실패·시작 전 취소)를 그대로 던지므로 결과 없음 판정을 따로 만들지 않는다. 결과 타입 record 를 통째로 옮기지\n+ * 않고 표의 항목만 필드 단위로 옮긴다 — {@code publicToken}·{@code expiresAt}·{@code versions}·{@code progress}·상관\n+ * 행렬은 넣지 않는다.\n+ *\n+ * <p>팩 상한을 넘으면 섹터별 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거 하나를 남긴다. 목표·실제 비중은 항상 싣는다.\n+ */\n+@Component\n+public class ResultEvidenceBuilder implements EvidenceBuilder {\n+    static final String TRIMMED_LABEL = \"분석 값 읽은 범위\";\n+    static final String TRIMMED_VALUE = \"일부 분석 값은 싣지 않음\";\n+    private static final Logger log = LoggerFactory.getLogger(ResultEvidenceBuilder.class);\n+    private static final String SUMMARY = \"summary\";\n+    private static final String ANALYSIS = \"analysis\";\n+    private static final String SETTINGS = \"settings\";\n+\n+    private final PublicResultService publicResults;\n+    private final SectorService sectors;\n+    private final ParameterRegistryPort registry;\n+    private final AssistantSettings settings;\n+    private final int tradesPageSize;\n+\n+    public ResultEvidenceBuilder(\n+            PublicResultService publicResults,\n+            SectorService sectors,\n+            ParameterRegistryPort registry,\n+            AssistantSettings settings,\n+            @Value(\"${thorp.result.trades-page-size}\") int tradesPageSize) {\n+        this.publicResults = publicResults;\n+        this.sectors = sectors;\n+        this.registry = registry;\n+        this.settings = settings;\n+        this.tradesPageSize = tradesPageSize;\n+    }\n+\n+    @Override\n+    public boolean supports(PageKind kind) {\n+        return kind == PageKind.RESULT;\n+    }\n+\n+    @Override\n+    public EvidenceBundle build(PageContext context) {\n+        String token = context.publicToken();\n+        BacktestWeightsResult weights = publicResults.getWeights(token);\n+        PublicResultDetail detail = publicResults.getDetail(token);\n+        Map<String, Object> config = detail.config() == null ? Map.of() : detail.config();\n+        Map<String, String> sectorNames = sectorNames();\n+        List<Item> items = items(config, sectorNames);\n+        Map<String, String> labels = new LinkedHashMap<>();\n+        for (Item item : items) {\n+            labels.put(item.instrumentId(), item.name());\n+        }\n+\n+        Facts fixed = new Facts();\n+        Facts perSector = new Facts();\n+        Facts contributions = new Facts();\n+        BacktestDetailResult.Summary summary = detail.summary();\n+        summaryFacts(summary, fixed);\n+        configFacts(config, detail, fixed);\n+        for (Item item : items) {\n+            perSector.add(\n+                    item.name() + \" 대표 ETF\",\n+                    item.instrumentId(),\n+                    null,\n+                    SETTINGS,\n+                    EvidenceKind.TEXT);\n+            perSector.add(\n+                    item.name() + \" 목표 비중\",\n+                    item.targetWeight(),\n+                    null,\n+                    SETTINGS,\n+                    EvidenceKind.RATIO);\n+        }\n+        weightsFacts(weights, detail, labels, fixed, perSector);\n+        if (summary != null && summary.analytics() != null) {\n+            contributionFacts(summary.analytics(), labels, contributions);\n+        }\n+        if (detail.exceptionKinds() != null && !detail.exceptionKinds().isEmpty()) {\n+            fixed.add(\n+                    \"계산 중 예외\",\n+                    String.join(\"·\", detail.exceptionKinds()),\n+                    null,\n+                    ANALYSIS,\n+                    EvidenceKind.TEXT);\n+        }\n+        LocalDate partialUntil = null;\n+        if (detail.partial()) {\n+            partialUntil = lastTimeseriesDate(token);\n+            fixed.add(\"결과 상태\", \"완료 끝 날짜까지의 부분 결과\", null, SUMMARY, EvidenceKind.TEXT);\n+            if (partialUntil != null) {\n+                fixed.add(\n+                        \"완료 끝 날짜\",\n+                        partialUntil.toString(),\n+                        partialUntil,\n+                        SUMMARY,\n+                        EvidenceKind.DATE);\n+            }\n+        }\n+\n+        List<Evidence> all = new ArrayList<>(fixed.list);\n+        all.addAll(perSector.list);\n+        if (all.size() + contributions.list.size() <= settings.maxFacts()) {\n+            all.addAll(contributions.list);\n+        } else if (!contributions.list.isEmpty()) {\n+            all.add(\n+                    new Evidence(\n+                            null, TRIMMED_LABEL, TRIMMED_VALUE, null, ANALYSIS, EvidenceKind.TEXT));\n+            log.info(\n+                    \"assistant evidence trimmed: sectors={} fixed={} contributions dropped={}\",\n+                    items.size(),\n+                    fixed.list.size(),\n+                    contributions.list.size());\n+        }\n+\n+        ResultToolContext toolContext =\n+                new ResultToolContext(\n+                        publicResults,\n+                        token,\n+                        date(config, \"effectiveStart\", \"start\", LocalDate.MIN),\n+                        // 부분 결과는 완료 끝 날짜까지만 읽는다 — 계획된 종료일까지 열어 두면 미계산 날짜를 휴장일로 설명한다.\n+                        partialUntil != null\n+                                ? partialUntil\n+                                : date(config, \"effectiveEnd\", \"end\", LocalDate.MAX),\n+                        labels,\n+                        summary == null ? null : summary.maxDrawdown(),\n+                        tradesPageSize);\n+        List<AssistantTool> tools =\n+                List.of(\n+                        new EquityOnTool(toolContext),\n+                        new EquityRangeTool(toolContext),\n+                        new TradesBetweenTool(toolContext),\n+                        new PositionsOnTool(toolContext),\n+                        new DeepestDrawdownWindowTool(toolContext));\n+        return new EvidenceBundle(all, tools, partialUntil);\n+    }\n+\n+    // ---- 포함 표\n+\n+    private static void summaryFacts(BacktestDetailResult.Summary summary, Facts facts) {\n+        if (summary == null) {\n+            return;\n+        }\n+        facts.add(\"시작 자산\", summary.initialEquity(), null, SUMMARY, EvidenceKind.MONEY);\n+        facts.add(\"종료 자산\", summary.finalEquity(), null, SUMMARY, EvidenceKind.MONEY);\n+        facts.add(\"전체 수익률\", summary.totalReturn(), null, SUMMARY, EvidenceKind.RATIO);\n+        facts.add(\"비용 차감 후 전체 수익률\", summary.netTotalReturn(), null, SUMMARY, EvidenceKind.RATIO);\n+        facts.add(\"연복리 수익률\", summary.cagr(), null, SUMMARY, EvidenceKind.RATIO);\n+        facts.add(\"가장 크게 줄었던 폭\", summary.maxDrawdown(), null, SUMMARY, EvidenceKind.RATIO);\n+        facts.add(\"변동성\", summary.volatility(), null, SUMMARY, EvidenceKind.RATIO);\n+        facts.add(\"승률\", summary.winRate(), null, SUMMARY, EvidenceKind.RATIO);\n+        facts.add(\"샤프 비율\", summary.sharpeRatio(), null, SUMMARY, EvidenceKind.DECIMAL2);\n+        facts.add(\n+                \"거래 횟수\", String.valueOf(summary.tradeCount()), null, SUMMARY, EvidenceKind.INTEGER);\n+        facts.add(\"거래비용 합계\", summary.totalTradingCost(), null, SETTINGS, EvidenceKind.MONEY);\n+        EngineOutput.Costs costs = summary.costs();\n+        if (costs != null) {\n+            facts.add(\"수수료\", costs.commission(), null, SETTINGS, EvidenceKind.MONEY);\n+            facts.add(\"스프레드\", costs.spread(), null, SETTINGS, EvidenceKind.MONEY);\n+            facts.add(\"슬리피지\", costs.slippage(), null, SETTINGS, EvidenceKind.MONEY);\n+            facts.add(\"세금\", costs.tax(), null, SETTINGS, EvidenceKind.MONEY);\n+        }\n+        EngineOutput.Analytics analytics = summary.analytics();\n+        if (analytics != null) {\n+            facts.add(\n+                    \"회복 기간(거래일)\",\n+                    analytics.recoveryDays() == null\n+                            ? null\n+                            : String.valueOf(analytics.recoveryDays()),\n+                    null,\n+                    ANALYSIS,\n+                    EvidenceKind.INTEGER);\n+            facts.add(\"회전율\", analytics.turnover(), null, ANALYSIS, EvidenceKind.RATIO);\n+            facts.add(\"비중 오차\", analytics.weightError(), null, ANALYSIS, EvidenceKind.RATIO);\n+            facts.add(\"추정 방법\", analytics.method(), null, ANALYSIS, EvidenceKind.TEXT);\n+        }\n+    }\n+\n+    private void configFacts(Map<String, Object> config, PublicResultDetail detail, Facts facts) {\n+        facts.add(\"요청 시작일\", text(config.get(\"start\")), null, SETTINGS, EvidenceKind.DATE);\n+        facts.add(\"요청 종료일\", text(config.get(\"end\")), null, SETTINGS, EvidenceKind.DATE);\n+        facts.add(\"평가 시작일\", text(config.get(\"effectiveStart\")), null, SETTINGS, EvidenceKind.DATE);\n+        facts.add(\"평가 종료일\", text(config.get(\"effectiveEnd\")), null, SETTINGS, EvidenceKind.DATE);\n+        facts.add(\n+                \"준비 기간(거래일)\",\n+                text(config.get(\"warmupTradingDays\")),\n+                null,\n+                SETTINGS,\n+                EvidenceKind.INTEGER);\n+        facts.add(\"시작 금액\", text(config.get(\"initialCash\")), null, SETTINGS, EvidenceKind.MONEY);\n+        String strategyId = text(config.get(\"strategyId\"));\n+        String strategyName = detail.strategyName() == null ? strategyId : detail.strategyName();\n+        facts.add(\"전략\", strategyName, null, SETTINGS, EvidenceKind.TEXT);\n+        Map<String, Object> parameters = mapOf(config.get(\"parameters\"));\n+        Map<String, String> axisLabels = axisLabels(strategyId, parameters);\n+        for (Map.Entry<String, Object> entry : parameters.entrySet()) {\n+            String label = axisLabels.getOrDefault(entry.getKey(), entry.getKey());\n+            facts.add(label, text(entry.getValue()), null, SETTINGS, EvidenceKind.TEXT);\n+        }\n+    }\n+\n+    private static void weightsFacts(\n+            BacktestWeightsResult weights,\n+            PublicResultDetail detail,\n+            Map<String, String> labels,\n+            Facts fixed,\n+            Facts perSector) {\n+        WeightsSource source =\n+                detail.weightsSource() != null ? detail.weightsSource() : weights.weightsSource();\n+        if (source != null) {\n+            fixed.add(\n+                    \"비중 출처\",\n+                    source == WeightsSource.USER ? \"사용자 입력\" : \"전략 계산\",\n+                    null,\n+                    SETTINGS,\n+                    EvidenceKind.TEXT);\n+        }\n+        List<EngineOutput.WeightsPoint> points = weights.points();\n+        if (points == null || points.isEmpty()) {\n+            return;\n+        }\n+        EngineOutput.WeightsPoint last = points.get(points.size() - 1);\n+        if (last.actual() == null) {\n+            return;\n+        }\n+        for (Map.Entry<String, BigDecimal> entry : last.actual().entrySet()) {\n+            perSector.add(\n+                    name(labels, entry.getKey()) + \" 실제 비중\",\n+                    entry.getValue(),\n+                    last.date(),\n+                    SETTINGS,\n+                    EvidenceKind.RATIO);\n+        }\n+    }\n+\n+    private static void contributionFacts(\n+            EngineOutput.Analytics analytics, Map<String, String> labels, Facts facts) {\n+        if (analytics.riskContribution() != null) {\n+            for (Map.Entry<String, BigDecimal> entry : analytics.riskContribution().entrySet()) {\n+                facts.add(\n+                        name(labels, entry.getKey()) + \" 위험 기여\",\n+                        entry.getValue(),\n+                        null,\n+                        ANALYSIS,\n+                        EvidenceKind.RATIO);\n+            }\n+        }\n+        if (analytics.lossContribution() != null) {\n+            for (Map.Entry<String, BigDecimal> entry : analytics.lossContribution().entrySet()) {\n+                facts.add(\n+                        name(labels, entry.getKey()) + \" 손실 기여\",\n+                        entry.getValue(),\n+                        null,\n+                        ANALYSIS,\n+                        EvidenceKind.RATIO);\n+            }\n+        }\n+    }\n+\n+    // ---- 이름 원천\n+\n+    /** 001 섹터 목록. 못 읽으면 빈 표 — 라벨은 id 원문으로 간다(지어내지 않는다). */\n+    private Map<String, String> sectorNames() {\n+        try {\n+            Map<String, String> names = new LinkedHashMap<>();\n+            for (Sector sector : sectors.getSectors().sectors()) {\n+                names.put(sector.code().value(), sector.name());\n+            }\n+            return names;\n+        } catch (RuntimeException exc) {\n+            log.info(\n+                    \"assistant evidence: sector names unavailable ({})\",\n+                    exc.getClass().getSimpleName());\n+            return Map.of();\n+        }\n+    }\n+\n+    /** 003 등록표의 축 라벨. 등록표를 못 읽거나 전략이 없으면 축 이름 그대로 쓴다. */\n+    private Map<String, String> axisLabels(String strategyId, Map<String, Object> parameters) {\n+        Map<String, String> labels = new LinkedHashMap<>();\n+        if (strategyId == null) {\n+            return labels;\n+        }\n+        try {\n+            registry.find(strategyId)\n+                    .ifPresent(\n+                            registration -> {\n+                                for (ParameterAxis axis : registration.applicableAxes(parameters)) {\n+                                    String unit =\n+                                            axis.unit() == null || axis.unit().isBlank()\n+                                                    ? \"\"\n+                                                    : \" (\" + axis.unit() + \")\";\n+                                    labels.put(axis.name(), axis.label() + unit);\n+                                }\n+                            });\n+        } catch (RuntimeException exc) {\n+            log.info(\n+                    \"assistant evidence: axis labels unavailable ({})\",\n+                    exc.getClass().getSimpleName());\n+        }\n+        return labels;\n+    }\n+\n+    private static List<Item> items(Map<String, Object> config, Map<String, String> sectorNames) {\n+        List<Item> items = new ArrayList<>();\n+        if (config.get(\"items\") instanceof List<?> rows) {\n+            for (Object row : rows) {\n+                Map<String, Object> item = mapOf(row);\n+                String sectorId = text(item.get(\"sectorId\"));\n+                String instrumentId = text(item.get(\"instrumentId\"));\n+                if (instrumentId == null) {\n+                    continue;\n+                }\n+                String name =\n+                        sectorId == null\n+                                ? instrumentId\n+                                : sectorNames.getOrDefault(sectorId, sectorId);\n+                items.add(new Item(sectorId, instrumentId, text(item.get(\"targetWeight\")), name));\n+            }\n+        }\n+        return items;\n+    }\n+\n+    private static String name(Map<String, String> labels, String instrumentId) {\n+        String name = labels.get(instrumentId);\n+        return name == null ? instrumentId : name;\n+    }\n+\n+    private LocalDate lastTimeseriesDate(String token) {\n+        List<BacktestTimeseriesResult.Point> points = publicResults.getTimeseries(token).points();\n+        return points == null || points.isEmpty() ? null : points.get(points.size() - 1).date();\n+    }\n+\n+    private static LocalDate date(\n+            Map<String, Object> config, String key, String fallbackKey, LocalDate absent) {\n+        String raw =\n+                Optional.ofNullable(text(config.get(key))).orElse(text(config.get(fallbackKey)));\n+        if (raw == null) {\n+            return absent;\n+        }\n+        try {\n+            return LocalDate.parse(raw);\n+        } catch (DateTimeParseException exc) {\n+            return absent;\n+        }\n+    }\n+\n+    @SuppressWarnings(\"unchecked\")\n+    private static Map<String, Object> mapOf(Object value) {\n+        return value instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();\n+    }\n+\n+    private static String text(Object value) {\n+        if (value == null) {\n+            return null;\n+        }\n+        if (value instanceof BigDecimal decimal) {\n+            return decimal.toPlainString();\n+        }\n+        return String.valueOf(value);\n+    }\n+\n+    private record Item(String sectorId, String instrumentId, String targetWeight, String name) {}\n+\n+    /** 값이 비어 있으면 근거를 만들지 않는다 — 없는 값에 자리를 주지 않는다. */\n+    private static final class Facts {\n+        final List<Evidence> list = new ArrayList<>();\n+\n+        void add(String label, BigDecimal value, LocalDate asOf, String tab, EvidenceKind kind) {\n+            add(label, value == null ? null : value.toPlainString(), asOf, tab, kind);\n+        }\n+\n+        void add(String label, String value, LocalDate asOf, String tab, EvidenceKind kind) {\n+            if (value == null || value.isBlank()) {\n+                return;\n+            }\n+            list.add(new Evidence(null, label, value, asOf, tab, kind));\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilder.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilder.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,381 @@\n+package com.ssafy.thorp.assistant.application.service.tools;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.eq;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.assistant.application.exception.ToolUnavailableException;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceKind;\n+import com.ssafy.thorp.backtest.application.command.FindBacktestTradesQuery;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput.TradeResult;\n+import com.ssafy.thorp.backtest.application.port.message.TradeReason;\n+import com.ssafy.thorp.backtest.application.port.message.TradeSide;\n+import com.ssafy.thorp.backtest.application.port.message.TradeStatus;\n+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestPositionsResult.Position;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult.Point;\n+import com.ssafy.thorp.backtest.application.result.BacktestTradePageResult;\n+import com.ssafy.thorp.result.application.service.PublicResultService;\n+import java.math.BigDecimal;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Nested;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentCaptor;\n+\n+/** 읽기 도구 다섯 개(T031). 고르기만 하고, 기간 밖·규칙 위반은 실행하지 않으며, 식별자·참고선 값은 근거에 없다. */\n+class ResultToolsTest {\n+    static final String TOKEN = \"0123456789abcdef0123456789abcdef\";\n+    static final LocalDate START = LocalDate.of(2025, 1, 2);\n+    static final LocalDate END = LocalDate.of(2025, 6, 30);\n+\n+    private final PublicResultService publicResults = mock(PublicResultService.class);\n+    private final ResultToolContext context =\n+            new ResultToolContext(\n+                    publicResults,\n+                    TOKEN,\n+                    START,\n+                    END,\n+                    Map.of(\"005930.XKRX\", \"반도체\"),\n+                    new BigDecimal(\"-0.041757\"),\n+                    100);\n+\n+    /** 거래일 점. 벤치마크·현금 흐름은 도구 근거에 나가면 안 되는 값이라 일부러 채운다. */\n+    static Point point(String date, String equity, String cumulative, String drawdown) {\n+        return new Point(\n+                LocalDate.parse(date),\n+                new BigDecimal(equity),\n+                new BigDecimal(cumulative),\n+                new BigDecimal(drawdown),\n+                new BigDecimal(\"0.123456\"),\n+                List.of());\n+    }\n+\n+    /** 2025-03-17(월)~03-21(금)에 03-19 가 저점인 주간 + 앞뒤. 03-20 은 휴장. */\n+    static List<Point> series() {\n+        return List.of(\n+                point(\"2025-01-02\", \"10000000\", \"0.000000\", \"0.000000\"),\n+                point(\"2025-03-17\", \"10400000\", \"0.040000\", \"0.000000\"),\n+                point(\"2025-03-18\", \"10200000\", \"0.020000\", \"-0.019231\"),\n+                point(\"2025-03-19\", \"9965727\", \"-0.003427\", \"-0.041757\"),\n+                point(\"2025-03-21\", \"10100000\", \"0.010000\", \"-0.028846\"),\n+                point(\"2025-04-01\", \"10300000\", \"0.030000\", \"-0.009615\"),\n+                point(\"2025-06-30\", \"11666521\", \"0.166652\", \"0.000000\"));\n+    }\n+\n+    void stubSeries(List<Point> points) {\n+        when(publicResults.getTimeseries(TOKEN))\n+                .thenReturn(new BacktestTimeseriesResult(\"BT-20260907-000001\", false, points));\n+    }\n+\n+    static String dump(List<Evidence> facts) {\n+        return facts.toString();\n+    }\n+\n+    @Nested\n+    @DisplayName(\"getEquityOn\")\n+    class EquityOn {\n+        private final EquityOnTool tool = new EquityOnTool(context);\n+\n+        @Test\n+        void picksThePointOfThatDay() {\n+            stubSeries(series());\n+\n+            List<Evidence> facts = tool.run(Map.of(\"date\", \"2025-03-19\"));\n+\n+            assertThat(facts).extracting(Evidence::label).containsExactly(\"자산가치\", \"누적 수익률\", \"하락 폭\");\n+            assertThat(facts.get(0).value()).isEqualTo(\"9965727\");\n+            assertThat(facts.get(0).kind()).isEqualTo(EvidenceKind.MONEY);\n+            assertThat(facts)\n+                    .allSatisfy(\n+                            fact -> assertThat(fact.asOf()).isEqualTo(LocalDate.of(2025, 3, 19)));\n+            assertThat(dump(facts)).doesNotContain(\"0.123456\", \"BT-\", TOKEN);\n+        }\n+\n+        @Test\n+        void holidayFallsBackToPreviousTradingDayAndSaysSo() {\n+            stubSeries(series());\n+\n+            List<Evidence> facts = tool.run(Map.of(\"date\", \"2025-03-20\"));\n+\n+            assertThat(facts.get(0).label()).isEqualTo(\"자산가치 (휴장일이라 직전 거래일 값)\");\n+            assertThat(facts.get(0).asOf()).isEqualTo(LocalDate.of(2025, 3, 19));\n+        }\n+\n+        @Test\n+        void rejectsDatesOutsideThePeriodWithoutReading() {\n+            assertThatThrownBy(() -> tool.run(Map.of(\"date\", \"2024-12-31\")))\n+                    .isInstanceOf(ToolUnavailableException.class)\n+                    .hasMessageContaining(\"결과 기간\");\n+            assertThatThrownBy(() -> tool.run(Map.of(\"date\", \"2025-07-01\")))\n+                    .isInstanceOf(ToolUnavailableException.class);\n+            verify(publicResults, never()).getTimeseries(any());\n+        }\n+    }\n+\n+    @Nested\n+    @DisplayName(\"getEquityRange\")\n+    class EquityRange {\n+        private final EquityRangeTool tool = new EquityRangeTool(context);\n+\n+        @Test\n+        void picksFirstLastHighestLowestOnly() {\n+            stubSeries(series());\n+\n+            List<Evidence> facts = tool.run(Map.of(\"from\", \"2025-03-01\", \"to\", \"2025-03-31\"));\n+\n+            assertThat(facts).hasSize(12);\n+            assertThat(facts)\n+                    .extracting(Evidence::label)\n+                    .contains(\"구간 첫날 자산가치\", \"구간 마지막 날 자산가치\", \"구간 최고일 자산가치\", \"구간 최저일 자산가치\");\n+            assertThat(facts.get(0).asOf()).isEqualTo(LocalDate.of(2025, 3, 17));\n+            assertThat(facts.get(3).asOf()).isEqualTo(LocalDate.of(2025, 3, 21));\n+            assertThat(facts.get(6).asOf()).isEqualTo(LocalDate.of(2025, 3, 17));\n+            assertThat(facts.get(9).asOf()).isEqualTo(LocalDate.of(2025, 3, 19));\n+            assertThat(facts)\n+                    .extracting(Evidence::value)\n+                    .contains(\"10400000\", \"9965727\")\n+                    .doesNotContain(\"0.123456\");\n+        }\n+\n+        @Test\n+        void rejectsReversedAndOverlongRanges() {\n+            assertThatThrownBy(() -> tool.run(Map.of(\"from\", \"2025-03-31\", \"to\", \"2025-03-01\")))\n+                    .isInstanceOf(ToolUnavailableException.class)\n+                    .hasMessageContaining(\"from\");\n+            ResultToolContext wide =\n+                    new ResultToolContext(\n+                            publicResults,\n+                            TOKEN,\n+                            LocalDate.of(2020, 1, 1),\n+                            LocalDate.of(2025, 12, 31),\n+                            Map.of(),\n+                            null,\n+                            100);\n+            assertThatThrownBy(\n+                            () ->\n+                                    new EquityRangeTool(wide)\n+                                            .run(Map.of(\"from\", \"2024-01-01\", \"to\", \"2025-06-30\")))\n+                    .isInstanceOf(ToolUnavailableException.class)\n+                    .hasMessageContaining(\"1년\");\n+            verify(publicResults, never()).getTimeseries(any());\n+        }\n+\n+        @Test\n+        void emptyRangeIsUnavailable() {\n+            stubSeries(series());\n+\n+            assertThatThrownBy(() -> tool.run(Map.of(\"from\", \"2025-05-01\", \"to\", \"2025-05-31\")))\n+                    .isInstanceOf(ToolUnavailableException.class);\n+        }\n+    }\n+\n+    @Nested\n+    @DisplayName(\"getTradesBetween\")\n+    class TradesBetween {\n+        private final TradesBetweenTool tool = new TradesBetweenTool(context);\n+\n+        TradeResult trade(String id, String entry, String exit) {\n+            return new TradeResult(\n+                    id,\n+                    \"005930.XKRX\",\n+                    TradeSide.LONG,\n+                    exit == null ? TradeStatus.OPEN : TradeStatus.CLOSED,\n+                    Instant.parse(entry),\n+                    exit == null ? null : Instant.parse(exit),\n+                    new BigDecimal(\"53700.00\"),\n+                    exit == null ? null : new BigDecimal(\"52800.00\"),\n+                    new BigDecimal(\"90\"),\n+                    new BigDecimal(\"-81000.00\"),\n+                    new BigDecimal(\"1437.75\"),\n+                    new BigDecimal(\"4791.00\"),\n+                    new BigDecimal(\"-87228.75\"),\n+                    new BigDecimal(\"-0.018\"),\n+                    TradeReason.SIGNAL,\n+                    null);\n+        }\n+\n+        @Test\n+        void oneTradeIsOneFactAndFirstPageOnlyWithinCap() {\n+            List<TradeResult> content =\n+                    List.of(\n+                            trade(\"TRD-1\", \"2025-01-22T00:00:00Z\", \"2025-03-12T00:00:00Z\"),\n+                            trade(\"TRD-2\", \"2025-04-02T00:00:00Z\", null));\n+            when(publicResults.getTrades(eq(TOKEN), any()))\n+                    .thenReturn(\n+                            new BacktestTradePageResult(\n+                                    \"BT-20260907-000001\", false, 0, 100, 2, 1, content));\n+\n+            List<Evidence> facts = tool.run(Map.of(\"from\", \"2025-01-02\", \"to\", \"2025-06-30\"));\n+\n+            ArgumentCaptor<FindBacktestTradesQuery> query =\n+                    ArgumentCaptor.forClass(FindBacktestTradesQuery.class);\n+            verify(publicResults).getTrades(eq(TOKEN), query.capture());\n+            assertThat(query.getValue().page()).isZero();\n+            assertThat(query.getValue().size()).isEqualTo(100);\n+            assertThat(query.getValue().from()).isEqualTo(LocalDate.of(2025, 1, 2));\n+            assertThat(facts).hasSize(2);\n+            assertThat(facts.get(0).label()).isEqualTo(\"반도체 매수 거래 (진입 2025-01-22)\");\n+            assertThat(facts.get(0).value())\n+                    .contains(\n+                            \"진입가 53,700원\",\n+                            \"수량 90주\",\n+                            \"청산 2025-03-12\",\n+                            \"청산가 52,800원\",\n+                            \"실현 손익 -87,229원\");\n+            assertThat(facts.get(1).value()).contains(\"보유 중\");\n+            assertThat(facts).allSatisfy(fact -> assertThat(fact.tab()).isEqualTo(\"trades\"));\n+            assertThat(dump(facts)).doesNotContain(\"BT-\", \"TRD-\", TOKEN);\n+        }\n+\n+        @Test\n+        void truncatedPageLeavesAPartialMarker() {\n+            List<TradeResult> content = new ArrayList<>();\n+            for (int i = 0; i < 100; i++) {\n+                content.add(trade(\"TRD-\" + i, \"2025-02-03T00:00:00Z\", null));\n+            }\n+            when(publicResults.getTrades(eq(TOKEN), any()))\n+                    .thenReturn(\n+                            new BacktestTradePageResult(\"BT-1\", false, 0, 100, 240, 3, content));\n+\n+            List<Evidence> facts = tool.run(Map.of(\"from\", \"2025-01-02\", \"to\", \"2025-06-30\"));\n+\n+            assertThat(facts).hasSize(101);\n+            assertThat(facts.get(100).label()).isEqualTo(TradesBetweenTool.PARTIAL_LABEL);\n+            assertThat(facts.get(100).value()).contains(\"전체 240건 중 100건\");\n+        }\n+\n+        @Test\n+        void rejectsOutsideAndReversed() {\n+            assertThatThrownBy(() -> tool.run(Map.of(\"from\", \"2024-12-01\", \"to\", \"2025-01-31\")))\n+                    .isInstanceOf(ToolUnavailableException.class);\n+            assertThatThrownBy(() -> tool.run(Map.of(\"from\", \"2025-03-01\", \"to\", \"2025-02-01\")))\n+                    .isInstanceOf(ToolUnavailableException.class);\n+            verify(publicResults, never()).getTrades(any(), any());\n+        }\n+    }\n+\n+    @Nested\n+    @DisplayName(\"getPositionsOn\")\n+    class PositionsOn {\n+        private final PositionsOnTool tool = new PositionsOnTool(context);\n+\n+        @Test\n+        void readsHoldingsWithPreviousSnapshotNote() {\n+            when(publicResults.getPositions(TOKEN, LocalDate.of(2025, 3, 20)))\n+                    .thenReturn(\n+                            new BacktestPositionsResult(\n+                                    \"BT-1\",\n+                                    false,\n+                                    LocalDate.of(2025, 3, 20),\n+                                    LocalDate.of(2025, 3, 19),\n+                                    List.of(\n+                                            new Position(\n+                                                    \"005930.XKRX\",\n+                                                    new BigDecimal(\"90\"),\n+                                                    new BigDecimal(\"4752000\"),\n+                                                    new BigDecimal(\"0.4769\"),\n+                                                    new BigDecimal(\"-81000\")))));\n+\n+            List<Evidence> facts = tool.run(Map.of(\"date\", \"2025-03-20\"));\n+\n+            assertThat(facts).extracting(Evidence::label).containsExactly(\"반도체 보유 비중 (직전 보유 기준)\");\n+            assertThat(facts.get(0).value()).isEqualTo(\"0.4769\");\n+            assertThat(facts)\n+                    .allSatisfy(\n+                            fact -> assertThat(fact.asOf()).isEqualTo(LocalDate.of(2025, 3, 19)));\n+        }\n+\n+        @Test\n+        void allCashIsSaidExplicitly() {\n+            when(publicResults.getPositions(TOKEN, LocalDate.of(2025, 1, 2)))\n+                    .thenReturn(\n+                            new BacktestPositionsResult(\n+                                    \"BT-1\",\n+                                    false,\n+                                    LocalDate.of(2025, 1, 2),\n+                                    LocalDate.of(2025, 1, 2),\n+                                    List.of()));\n+\n+            List<Evidence> facts = tool.run(Map.of(\"date\", \"2025-01-02\"));\n+\n+            assertThat(facts).hasSize(1);\n+            assertThat(facts.get(0).value()).contains(\"현금\");\n+        }\n+\n+        @Test\n+        void rejectsOutsideThePeriod() {\n+            assertThatThrownBy(() -> tool.run(Map.of(\"date\", \"2025-12-25\")))\n+                    .isInstanceOf(ToolUnavailableException.class);\n+            verify(publicResults, never()).getPositions(any(), any());\n+        }\n+    }\n+\n+    @Nested\n+    @DisplayName(\"getDeepestDrawdownWindow\")\n+    class DeepestDrawdown {\n+        private final DeepestDrawdownWindowTool tool = new DeepestDrawdownWindowTool(context);\n+\n+        @Test\n+        void picksSameDatesAsDrawdownWindowTs() {\n+            stubSeries(series());\n+\n+            List<Evidence> facts = tool.run(Map.of());\n+\n+            assertThat(facts)\n+                    .extracting(Evidence::label)\n+                    .containsExactly(\n+                            \"하락 시작(고점) 날짜\", \"고점 자산가치\", \"가장 크게 줄어든 날짜\", \"저점 자산가치\", \"저점 하락 폭\");\n+            assertThat(facts.get(0).value()).isEqualTo(\"2025-03-17\");\n+            assertThat(facts.get(2).value()).isEqualTo(\"2025-03-19\");\n+            assertThat(facts.get(4).value()).isEqualTo(\"-0.041757\");\n+            assertThat(facts).allSatisfy(fact -> assertThat(fact.tab()).isEqualTo(\"loss\"));\n+        }\n+\n+        @Test\n+        void firstOccurrenceWinsWhenTied() {\n+            List<Point> tied = new ArrayList<>(series());\n+            tied.add(point(\"2025-05-02\", \"9965727\", \"-0.003427\", \"-0.041757\"));\n+            stubSeries(tied);\n+\n+            assertThat(tool.run(Map.of()).get(2).value()).isEqualTo(\"2025-03-19\");\n+        }\n+\n+        @Test\n+        void mismatchWithSummaryYieldsNothing() {\n+            ResultToolContext other =\n+                    new ResultToolContext(\n+                            publicResults,\n+                            TOKEN,\n+                            START,\n+                            END,\n+                            Map.of(),\n+                            new BigDecimal(\"-0.05\"),\n+                            100);\n+            stubSeries(series());\n+\n+            assertThat(new DeepestDrawdownWindowTool(other).run(Map.of())).isEmpty();\n+        }\n+\n+        @Test\n+        void noDrawdownYieldsNothing() {\n+            stubSeries(\n+                    List.of(\n+                            point(\"2025-01-02\", \"1\", \"0\", \"0.000000\"),\n+                            point(\"2025-06-30\", \"2\", \"1\", \"0.000000\")));\n+\n+            assertThat(tool.run(Map.of())).isEmpty();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/tools/ResultToolsTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/tools/ResultToolsTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,442 @@\n+package com.ssafy.thorp.assistant.application.service;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.assertj.core.api.Assertions.assertThatThrownBy;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.ArgumentMatchers.anyString;\n+import static org.mockito.Mockito.mock;\n+import static org.mockito.Mockito.never;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.when;\n+\n+import com.ssafy.thorp.assistant.application.exception.ToolUnavailableException;\n+import com.ssafy.thorp.assistant.application.port.AssistantSettings;\n+import com.ssafy.thorp.assistant.application.port.AssistantTool;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.EvidenceBundle;\n+import com.ssafy.thorp.assistant.application.result.PageContext;\n+import com.ssafy.thorp.assistant.application.result.PageKind;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n+import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n+import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.common.exception.BusinessException;\n+import com.ssafy.thorp.common.exception.ErrorCode;\n+import com.ssafy.thorp.result.application.result.PublicResultDetail;\n+import com.ssafy.thorp.result.application.result.ValidationTier;\n+import com.ssafy.thorp.result.application.service.PublicResultService;\n+import com.ssafy.thorp.sector.application.exception.SectorMapNotReadyException;\n+import com.ssafy.thorp.sector.application.result.SectorListResult;\n+import com.ssafy.thorp.sector.application.service.SectorService;\n+import com.ssafy.thorp.sector.domain.model.Sector;\n+import com.ssafy.thorp.sector.domain.vo.SectorCode;\n+import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n+import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n+import java.math.BigDecimal;\n+import java.time.Duration;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.Optional;\n+import java.util.Set;\n+import java.util.stream.IntStream;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/** 계약 §2.1 포함 표(T030). 표의 항목만, 한국어 라벨로, 60개 안에서. */\n+class ResultEvidenceBuilderTest {\n+    static final String TOKEN = \"0123456789abcdef0123456789abcdef\";\n+    static final Set<String> TABS = Set.of(\"summary\", \"analysis\", \"settings\", \"trades\", \"loss\");\n+    static final AssistantSettings SETTINGS =\n+            new AssistantSettings(\n+                    Set.of(PageKind.RESULT),\n+                    8,\n+                    5,\n+                    1000,\n+                    300,\n+                    Duration.ofMinutes(2),\n+                    Duration.ofSeconds(60),\n+                    Duration.ofSeconds(30),\n+                    2,\n+                    60,\n+                    30,\n+                    600,\n+                    5);\n+\n+    private final PublicResultService publicResults = mock(PublicResultService.class);\n+    private final SectorService sectors = mock(SectorService.class);\n+    private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);\n+    private final ResultEvidenceBuilder builder =\n+            new ResultEvidenceBuilder(publicResults, sectors, registry, SETTINGS, 100);\n+\n+    @BeforeEach\n+    void stubs() {\n+        Sector semiconductor = mock(Sector.class);\n+        when(semiconductor.code()).thenReturn(new SectorCode(\"SEMICONDUCTOR\"));\n+        when(semiconductor.name()).thenReturn(\"반도체\");\n+        Sector battery = mock(Sector.class);\n+        when(battery.code()).thenReturn(new SectorCode(\"BATTERY\"));\n+        when(battery.name()).thenReturn(\"이차전지\");\n+        when(sectors.getSectors())\n+                .thenReturn(\n+                        new SectorListResult(\n+                                \"SECTOR-ETF-2026-09\", false, List.of(semiconductor, battery)));\n+        ParameterAxis axis = mock(ParameterAxis.class);\n+        when(axis.name()).thenReturn(\"rebalance\");\n+        when(axis.label()).thenReturn(\"리밸런싱 주기\");\n+        when(axis.unit()).thenReturn(null);\n+        StrategyRegistration registration = mock(StrategyRegistration.class);\n+        when(registration.applicableAxes(any())).thenReturn(List.of(axis));\n+        when(registry.find(\"EQUAL_WEIGHT\")).thenReturn(Optional.of(registration));\n+    }\n+\n+    static Map<String, Object> item(String sectorId, String instrumentId, String weight) {\n+        Map<String, Object> item = new LinkedHashMap<>();\n+        item.put(\"sectorId\", sectorId);\n+        item.put(\"instrumentId\", instrumentId);\n+        item.put(\"targetWeight\", weight);\n+        return item;\n+    }\n+\n+    static Map<String, Object> config(List<Map<String, Object>> items) {\n+        Map<String, Object> config = new LinkedHashMap<>();\n+        config.put(\"strategyId\", \"EQUAL_WEIGHT\");\n+        config.put(\"parameters\", Map.of(\"rebalance\", \"MONTH_END\"));\n+        config.put(\"items\", items);\n+        config.put(\"start\", \"2023-07-01\");\n+        config.put(\"end\", \"2024-12-31\");\n+        config.put(\"effectiveStart\", \"2023-07-03\");\n+        config.put(\"effectiveEnd\", \"2024-12-31\");\n+        config.put(\"warmupTradingDays\", 0);\n+        config.put(\"initialCash\", new BigDecimal(\"11110000.00\"));\n+        return config;\n+    }\n+\n+    static BacktestDetailResult.Summary summary(List<String> instruments) {\n+        Map<String, BigDecimal> risk = new LinkedHashMap<>();\n+        Map<String, BigDecimal> loss = new LinkedHashMap<>();\n+        Map<String, Map<String, BigDecimal>> corr = new LinkedHashMap<>();\n+        for (String id : instruments) {\n+            risk.put(id, new BigDecimal(\"0.5\"));\n+            loss.put(id, new BigDecimal(\"0.5\"));\n+            corr.put(id, Map.of(id, BigDecimal.ONE));\n+        }\n+        return new BacktestDetailResult.Summary(\n+                new BigDecimal(\"11110000.00\"),\n+                new BigDecimal(\"12961538.71\"),\n+                \"KRW\",\n+                new BigDecimal(\"0.168000\"),\n+                new BigDecimal(\"0.110000\"),\n+                new BigDecimal(\"-0.041757\"),\n+                new BigDecimal(\"1.2345\"),\n+                new BigDecimal(\"0.150000\"),\n+                24,\n+                new BigDecimal(\"0.583333\"),\n+                new BigDecimal(\"12000\"),\n+                new BigDecimal(\"5078\"),\n+                new BigDecimal(\"0.166652\"),\n+                new BigDecimal(\"17078.49\"),\n+                new EngineOutput.Costs(\n+                        new BigDecimal(\"12000\"),\n+                        new BigDecimal(\"0.00\"),\n+                        new BigDecimal(\"5078.49\"),\n+                        new BigDecimal(\"0.00\"),\n+                        new BigDecimal(\"17078.49\")),\n+                null,\n+                new EngineOutput.Analytics(\n+                        9,\n+                        new BigDecimal(\"1.219991\"),\n+                        corr,\n+                        risk,\n+                        loss,\n+                        new BigDecimal(\"0.000000\"),\n+                        \"sample-covariance-daily\"),\n+                1);\n+    }\n+\n+    static PublicResultDetail detail(\n+            Map<String, Object> config, BacktestDetailResult.Summary summary, boolean partial) {\n+        return new PublicResultDetail(\n+                TOKEN,\n+                partial ? RunStatus.CANCELLED : RunStatus.COMPLETED,\n+                ResultSource.NEW,\n+                partial,\n+                false,\n+                Instant.parse(\"2026-09-30T00:00:00Z\"),\n+                null,\n+                Instant.parse(\"2026-09-24T00:00:00Z\"),\n+                null,\n+                null,\n+                null,\n+                config,\n+                Map.of(\"engine\", \"nautilus 1.219.0\", \"rules\", Map.of(\"version\", \"1\")),\n+                summary,\n+                null,\n+                null,\n+                ValidationTier.UNVALIDATED,\n+                \"똑같이 나누기\",\n+                WeightsSource.COMPUTED,\n+                List.of(\"HALT_DEFERRED\"));\n+    }\n+\n+    static BacktestWeightsResult weights(List<String> instruments) {\n+        Map<String, BigDecimal> actual = new LinkedHashMap<>();\n+        for (String id : instruments) {\n+            actual.put(id, new BigDecimal(\"0.4000\"));\n+        }\n+        return new BacktestWeightsResult(\n+                \"BT-20260907-000001\",\n+                false,\n+                WeightsSource.COMPUTED,\n+                List.of(\n+                        new EngineOutput.WeightsPoint(\n+                                LocalDate.of(2024, 6, 28),\n+                                Map.of(),\n+                                Map.of(\"091160.XKRX\", BigDecimal.ONE),\n+                                null,\n+                                null,\n+                                null),\n+                        new EngineOutput.WeightsPoint(\n+                                LocalDate.of(2024, 12, 31),\n+                                Map.of(),\n+                                actual,\n+                                BigDecimal.ZERO,\n+                                null,\n+                                null)));\n+    }\n+\n+    static List<Map<String, Object>> twoItems() {\n+        return List.of(\n+                item(\"SEMICONDUCTOR\", \"091160.XKRX\", \"0.4000\"),\n+                item(\"BATTERY\", \"305720.XKRX\", \"0.6000\"));\n+    }\n+\n+    private EvidenceBundle buildCompleted() {\n+        when(publicResults.getWeights(TOKEN))\n+                .thenReturn(weights(List.of(\"091160.XKRX\", \"305720.XKRX\")));\n+        when(publicResults.getDetail(TOKEN))\n+                .thenReturn(\n+                        detail(\n+                                config(twoItems()),\n+                                summary(List.of(\"091160.XKRX\", \"305720.XKRX\")),\n+                                false));\n+        return builder.build(new PageContext(PageKind.RESULT, TOKEN));\n+    }\n+\n+    static Map<String, Evidence> byLabel(EvidenceBundle bundle) {\n+        Map<String, Evidence> map = new LinkedHashMap<>();\n+        for (Evidence fact : bundle.facts()) {\n+            map.put(fact.label(), fact);\n+        }\n+        return map;\n+    }\n+\n+    @Test\n+    @DisplayName(\"초기 팩은 포함 표의 항목만 한국어 라벨로 담고, 값은 원문이며 표기는 formatResult.ts 와 같다\")\n+    void packMatchesInclusionTable() {\n+        EvidenceBundle bundle = buildCompleted();\n+        Map<String, Evidence> facts = byLabel(bundle);\n+\n+        assertThat(facts.keySet())\n+                .containsExactlyInAnyOrder(\n+                        \"시작 자산\",\n+                        \"종료 자산\",\n+                        \"전체 수익률\",\n+                        \"비용 차감 후 전체 수익률\",\n+                        \"연복리 수익률\",\n+                        \"가장 크게 줄었던 폭\",\n+                        \"변동성\",\n+                        \"승률\",\n+                        \"샤프 비율\",\n+                        \"거래 횟수\",\n+                        \"거래비용 합계\",\n+                        \"수수료\",\n+                        \"스프레드\",\n+                        \"슬리피지\",\n+                        \"세금\",\n+                        \"회복 기간(거래일)\",\n+                        \"회전율\",\n+                        \"비중 오차\",\n+                        \"추정 방법\",\n+                        \"요청 시작일\",\n+                        \"요청 종료일\",\n+                        \"평가 시작일\",\n+                        \"평가 종료일\",\n+                        \"준비 기간(거래일)\",\n+                        \"시작 금액\",\n+                        \"전략\",\n+                        \"리밸런싱 주기\",\n+                        \"반도체 대표 ETF\",\n+                        \"반도체 목표 비중\",\n+                        \"이차전지 대표 ETF\",\n+                        \"이차전지 목표 비중\",\n+                        \"비중 출처\",\n+                        \"반도체 실제 비중\",\n+                        \"이차전지 실제 비중\",\n+                        \"반도체 위험 기여\",\n+                        \"이차전지 위험 기여\",\n+                        \"반도체 손실 기여\",\n+                        \"이차전지 손실 기여\",\n+                        \"계산 중 예외\");\n+        assertThat(facts.get(\"비용 차감 후 전체 수익률\").value()).isEqualTo(\"0.166652\");\n+        assertThat(facts.get(\"비용 차감 후 전체 수익률\").formattedValue()).isEqualTo(\"16.67%\");\n+        assertThat(facts.get(\"거래비용 합계\").formattedValue()).isEqualTo(\"17,078원\");\n+        assertThat(facts.get(\"샤프 비율\").formattedValue()).isEqualTo(\"1.23\");\n+        assertThat(facts.get(\"거래 횟수\").formattedValue()).isEqualTo(\"24\");\n+        assertThat(facts.get(\"평가 종료일\").formattedValue()).isEqualTo(\"2024-12-31\");\n+        assertThat(facts.get(\"시작 금액\").formattedValue()).isEqualTo(\"11,110,000원\");\n+        assertThat(facts.get(\"전략\").value()).isEqualTo(\"똑같이 나누기\");\n+        assertThat(facts.get(\"리밸런싱 주기\").value()).isEqualTo(\"MONTH_END\");\n+        assertThat(facts.get(\"비중 출처\").value()).isEqualTo(\"전략 계산\");\n+        assertThat(facts.get(\"반도체 실제 비중\").asOf()).isEqualTo(LocalDate.of(2024, 12, 31));\n+        assertThat(facts.get(\"반도체 실제 비중\").value()).isEqualTo(\"0.4000\");\n+        assertThat(facts.get(\"계산 중 예외\").value()).isEqualTo(\"HALT_DEFERRED\");\n+        assertThat(bundle.facts()).allSatisfy(fact -> assertThat(TABS).contains(fact.tab()));\n+        assertThat(bundle.facts()).allSatisfy(fact -> assertThat(fact.id()).isNull());\n+        assertThat(bundle.partialUntil()).isNull();\n+        verify(publicResults, never()).getTimeseries(anyString());\n+    }\n+\n+    @Test\n+    @DisplayName(\"공개 토큰·만료·버전·진행·backtestId·상관 행렬은 어디에도 없다\")\n+    void packCarriesNoIdentifiersOrExcludedFields() {\n+        EvidenceBundle bundle = buildCompleted();\n+\n+        String everything = bundle.facts().toString();\n+        assertThat(everything)\n+                .doesNotContain(\n+                        TOKEN,\n+                        \"BT-\",\n+                        \"backtestId\",\n+                        \"publicToken\",\n+                        \"expiresAt\",\n+                        \"nautilus\",\n+                        \"2026-09-30\",\n+                        \"상관\");\n+        assertThat(byLabel(bundle).keySet()).noneMatch(label -> label.matches(\".*[a-z][A-Z].*\"));\n+    }\n+\n+    @Test\n+    @DisplayName(\"첫 조회는 getWeights 라 결과 없음(409)이면 상세를 읽지 않고 그대로 던진다\")\n+    void notReadyPropagatesBeforeDetail() {\n+        when(publicResults.getWeights(TOKEN))\n+                .thenThrow(new BusinessException(ErrorCode.RESULT_NOT_READY));\n+\n+        assertThatThrownBy(() -> builder.build(new PageContext(PageKind.RESULT, TOKEN)))\n+                .isInstanceOfSatisfying(\n+                        BusinessException.class,\n+                        exc ->\n+                                assertThat(exc.getErrorCode())\n+                                        .isEqualTo(ErrorCode.RESULT_NOT_READY));\n+        verify(publicResults, never()).getDetail(anyString());\n+    }\n+\n+    @Test\n+    @DisplayName(\"섹터 8개여도 60개 이하 — 위험·손실 기여를 빼고 '일부 분석 값은 싣지 않음' 근거를 남기며 비중은 다 싣는다\")\n+    void trimsContributionsAtCapacity() {\n+        List<Map<String, Object>> items = new ArrayList<>();\n+        List<String> instruments = new ArrayList<>();\n+        IntStream.range(0, 8)\n+                .forEach(\n+                        i -> {\n+                            String id = \"00000\" + i + \".XKRX\";\n+                            instruments.add(id);\n+                            items.add(item(\"SECTOR_\" + i, id, \"0.125\"));\n+                        });\n+        when(publicResults.getWeights(TOKEN)).thenReturn(weights(instruments));\n+        when(publicResults.getDetail(TOKEN))\n+                .thenReturn(detail(config(items), summary(instruments), false));\n+\n+        EvidenceBundle bundle = builder.build(new PageContext(PageKind.RESULT, TOKEN));\n+\n+        assertThat(bundle.facts()).hasSizeLessThanOrEqualTo(60);\n+        Map<String, Evidence> facts = byLabel(bundle);\n+        assertThat(facts.keySet())\n+                .noneMatch(label -> label.endsWith(\"위험 기여\") || label.endsWith(\"손실 기여\"));\n+        assertThat(facts).containsKey(ResultEvidenceBuilder.TRIMMED_LABEL);\n+        assertThat(facts.keySet().stream().filter(label -> label.endsWith(\"실제 비중\"))).hasSize(8);\n+        assertThat(facts.keySet().stream().filter(label -> label.endsWith(\"목표 비중\"))).hasSize(8);\n+        assertThat(facts.get(\"SECTOR_7 대표 ETF\").value()).isEqualTo(\"000007.XKRX\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"부분 결과면 시계열 마지막 날짜가 완료 끝 날짜이고, 도구도 그 날짜 뒤를 읽지 않는다\")\n+    void partialUsesLastTimeseriesDate() {\n+        when(publicResults.getWeights(TOKEN)).thenReturn(weights(List.of(\"091160.XKRX\")));\n+        when(publicResults.getDetail(TOKEN))\n+                .thenReturn(detail(config(twoItems()), summary(List.of(\"091160.XKRX\")), true));\n+        when(publicResults.getTimeseries(TOKEN))\n+                .thenReturn(\n+                        new BacktestTimeseriesResult(\n+                                \"BT-1\",\n+                                true,\n+                                List.of(\n+                                        new BacktestTimeseriesResult.Point(\n+                                                LocalDate.of(2024, 3, 4),\n+                                                BigDecimal.TEN,\n+                                                BigDecimal.ZERO,\n+                                                BigDecimal.ZERO,\n+                                                null,\n+                                                null),\n+                                        new BacktestTimeseriesResult.Point(\n+                                                LocalDate.of(2024, 3, 5),\n+                                                BigDecimal.TEN,\n+                                                BigDecimal.ZERO,\n+                                                BigDecimal.ZERO,\n+                                                null,\n+                                                null))));\n+\n+        EvidenceBundle bundle = builder.build(new PageContext(PageKind.RESULT, TOKEN));\n+\n+        assertThat(bundle.partialUntil()).isEqualTo(LocalDate.of(2024, 3, 5));\n+        assertThat(byLabel(bundle).get(\"완료 끝 날짜\").value()).isEqualTo(\"2024-03-05\");\n+        assertThat(byLabel(bundle)).containsKey(\"결과 상태\");\n+        AssistantTool equityOn = bundle.tools().get(0);\n+        assertThatThrownBy(() -> equityOn.run(Map.of(\"date\", \"2024-06-03\")))\n+                .isInstanceOf(ToolUnavailableException.class)\n+                .hasMessageContaining(\"결과 기간\");\n+        verify(publicResults).getTimeseries(TOKEN);\n+    }\n+\n+    @Test\n+    @DisplayName(\"섹터 목록·등록표를 못 읽으면 id 원문을 라벨에 쓰고 팩은 만든다\")\n+    void fallsBackToIdsWhenNamesUnavailable() {\n+        when(sectors.getSectors()).thenThrow(new SectorMapNotReadyException());\n+        when(registry.find(anyString())).thenReturn(Optional.empty());\n+\n+        Map<String, Evidence> facts = byLabel(buildCompleted());\n+\n+        assertThat(facts).containsKeys(\"SEMICONDUCTOR 대표 ETF\", \"BATTERY 실제 비중\", \"rebalance\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"도구 다섯 개가 이 요청의 결과에 묶여 만들어지고 인자는 날짜뿐이다\")\n+    void bundlesFiveDateOnlyTools() {\n+        EvidenceBundle bundle = buildCompleted();\n+\n+        List<ToolSpec> specs = bundle.tools().stream().map(AssistantTool::spec).toList();\n+        assertThat(specs)\n+                .extracting(ToolSpec::name)\n+                .containsExactly(\n+                        \"getEquityOn\",\n+                        \"getEquityRange\",\n+                        \"getTradesBetween\",\n+                        \"getPositionsOn\",\n+                        \"getDeepestDrawdownWindow\");\n+        assertThat(specs)\n+                .allSatisfy(\n+                        spec ->\n+                                assertThat(spec.dateArguments())\n+                                        .allMatch(\n+                                                arg -> Set.of(\"date\", \"from\", \"to\").contains(arg)));\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilderTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilderTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,265 @@\n+package com.ssafy.thorp.assistant;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+import static org.mockito.ArgumentMatchers.any;\n+import static org.mockito.Mockito.verify;\n+import static org.mockito.Mockito.verifyNoInteractions;\n+import static org.mockito.Mockito.when;\n+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;\n+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;\n+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;\n+\n+import com.fasterxml.jackson.databind.JsonNode;\n+import com.fasterxml.jackson.databind.ObjectMapper;\n+import com.ssafy.thorp.assistant.application.port.AssistantModelPort;\n+import com.ssafy.thorp.assistant.application.result.AnswerStatus;\n+import com.ssafy.thorp.assistant.application.result.Conversation;\n+import com.ssafy.thorp.assistant.application.result.Evidence;\n+import com.ssafy.thorp.assistant.application.result.ModelDraft;\n+import com.ssafy.thorp.assistant.application.result.ModelDraft.AnswerPart;\n+import com.ssafy.thorp.assistant.application.result.ToolCall;\n+import com.ssafy.thorp.assistant.application.result.ToolRequests;\n+import com.ssafy.thorp.assistant.application.result.ToolSpec;\n+import com.ssafy.thorp.backtest.application.command.SaveBacktestResultCommand;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRequestRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestResultRepository;\n+import com.ssafy.thorp.backtest.application.repository.BacktestRunRepository;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRequest;\n+import com.ssafy.thorp.backtest.domain.model.BacktestRun;\n+import com.ssafy.thorp.backtest.domain.model.ExecutionType;\n+import com.ssafy.thorp.backtest.domain.model.PositionSizingMode;\n+import com.ssafy.thorp.backtest.domain.model.PublicResultToken;\n+import com.ssafy.thorp.backtest.domain.model.ResultSource;\n+import com.ssafy.thorp.backtest.domain.model.RunPlan;\n+import com.ssafy.thorp.backtest.domain.vo.BacktestPeriod;\n+import com.ssafy.thorp.backtest.domain.vo.InstrumentId;\n+import com.ssafy.thorp.backtest.infrastructure.messaging.MessageFixtures;\n+import com.ssafy.thorp.support.PortMockedIntegrationTestSupport;\n+import java.math.BigDecimal;\n+import java.nio.file.Files;\n+import java.nio.file.Path;\n+import java.time.Instant;\n+import java.time.LocalDate;\n+import java.time.temporal.ChronoUnit;\n+import java.util.ArrayList;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicInteger;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.http.MediaType;\n+import org.springframework.test.context.TestPropertySource;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.test.web.servlet.MockMvc;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 완료 결과 하나로 끝까지 흐른다(T035): 공개 토큰 → 근거 팩 → 가짜 모델의 도구 요청 → 도구 실행 → 자리표시자 답 → 치환. 모델만 가짜다. 응답은 {@code\n+ * examples/answer-answered.json}과 같은 모양이다. {@code ResultApiIT}는 건드리지 않는다.\n+ */\n+@MockitoBean(types = AssistantModelPort.class)\n+@TestPropertySource(properties = \"thorp.assistant.enabled-scopes=RESULT\")\n+class AssistantResultIT extends PortMockedIntegrationTestSupport {\n+    static final Path EXAMPLES = Path.of(\"..\", \"docs\", \"specs\", \"assistant-api\", \"examples\");\n+\n+    @Autowired private MockMvc mockMvc;\n+    @Autowired private ObjectMapper objectMapper;\n+    @Autowired private BacktestRunRepository runRepository;\n+    @Autowired private BacktestRequestRepository requestRepository;\n+    @Autowired private BacktestResultRepository resultRepository;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+    @Autowired private AssistantModelPort model;\n+\n+    private BacktestRun newRun() {\n+        Map<String, Object> versions = new LinkedHashMap<>();\n+        versions.put(\"mapping\", \"SECTOR-ETF-2026-09\");\n+        versions.put(\"rules\", Map.of(\"version\", \"1\", \"provisional\", false));\n+        versions.put(\"costProfile\", Map.of(\"version\", \"PROVISIONAL-DEMO-1\", \"provisional\", true));\n+        versions.put(\"data\", \"FIXTURE-three_etf_24m\");\n+        versions.put(\"engine\", \"nautilus_trader 1.219.0 / worker 2.3.0 / uv.lock 8e8a6be0a6a8\");\n+        versions.put(\"evaluationSplit\", \"SPLIT-1\");\n+        return runRepository.save(\n+                BacktestRun.create(\n+                                \"EQUAL_WEIGHT\",\n+                                \"1.0.0\",\n+                                Map.of(\"rebalancePeriod\", \"MONTHLY\"),\n+                                List.of(\n+                                        new InstrumentId(\"005930.XKRX\"),\n+                                        new InstrumentId(\"000660.XKRX\")),\n+                                new BacktestPeriod(\n+                                        LocalDate.of(2025, 1, 1), LocalDate.of(2025, 6, 30)),\n+                                new BigDecimal(\"10000000\"),\n+                                PositionSizingMode.STRATEGY_DEFINED,\n+                                new BigDecimal(\"0.50\"),\n+                                new InstrumentId(\"069500.XKRX\"),\n+                                42)\n+                        .withPlan(\n+                                new RunPlan(\n+                                        null,\n+                                        null,\n+                                        null,\n+                                        null,\n+                                        LocalDate.of(2025, 1, 1),\n+                                        LocalDate.of(2025, 6, 30),\n+                                        0,\n+                                        null,\n+                                        versions,\n+                                        null)));\n+    }\n+\n+    private BacktestRun completedRun() {\n+        return transactionTemplate.execute(\n+                status -> {\n+                    BacktestRun run = newRun();\n+                    var event = MessageFixtures.finishedCompleted();\n+                    resultRepository.save(\n+                            new SaveBacktestResultCommand(\n+                                    run.getId(),\n+                                    event.executionId(),\n+                                    event.eventId(),\n+                                    event.payload().engineOutput(),\n+                                    null));\n+                    return runRepository.update(run.markCompleted());\n+                });\n+    }\n+\n+    private String anonymousTokenFor(BacktestRun run) {\n+        PublicResultToken token = PublicResultToken.generate();\n+        requestRepository.save(\n+                BacktestRequest.create(\n+                        run.getId(),\n+                        null,\n+                        ExecutionType.SINGLE,\n+                        ResultSource.NEW,\n+                        null,\n+                        token,\n+                        Instant.now().plus(1, ChronoUnit.DAYS)));\n+        return token.value();\n+    }\n+\n+    private static String body(String question, String token) {\n+        return \"{\\\"question\\\":\\\"\"\n+                + question\n+                + \"\\\",\\\"context\\\":{\\\"kind\\\":\\\"RESULT\\\",\\\"publicToken\\\":\\\"\"\n+                + token\n+                + \"\\\"}}\";\n+    }\n+\n+    @Test\n+    @DisplayName(\"완료 결과에 날짜를 물으면 근거 팩 → 도구 → 자리표시자 답이 예시 모양의 200 으로 끝난다\")\n+    void completedResultAnswersThroughTools() throws Exception {\n+        String token = anonymousTokenFor(completedRun());\n+        List<List<Evidence>> seenFacts = new ArrayList<>();\n+        List<List<ToolSpec>> seenTools = new ArrayList<>();\n+        AtomicInteger calls = new AtomicInteger();\n+        when(model.step(any(Conversation.class), any(), any(), any()))\n+                .thenAnswer(\n+                        invocation -> {\n+                            List<Evidence> facts = invocation.getArgument(1);\n+                            seenFacts.add(facts);\n+                            seenTools.add(invocation.getArgument(2));\n+                            if (calls.incrementAndGet() == 1) {\n+                                return new ToolRequests(\n+                                        List.of(\n+                                                new ToolCall(\n+                                                        \"call_1\",\n+                                                        \"getEquityOn\",\n+                                                        Map.of(\"date\", \"2025-03-19\"))));\n+                            }\n+                            Evidence equity =\n+                                    facts.stream()\n+                                            .filter(f -> f.label().equals(\"자산가치\"))\n+                                            .findFirst()\n+                                            .orElseThrow();\n+                            Evidence net =\n+                                    facts.stream()\n+                                            .filter(f -> f.label().equals(\"비용 차감 후 전체 수익률\"))\n+                                            .findFirst()\n+                                            .orElseThrow();\n+                            return new ModelDraft(\n+                                    AnswerStatus.ANSWERED,\n+                                    List.of(\n+                                            new AnswerPart(\n+                                                    \"그날 자산가치는 {{\"\n+                                                            + equity.id()\n+                                                            + \"}}였고, 전체 기간 비용 차감 후 수익률은 {{\"\n+                                                            + net.id()\n+                                                            + \"}}입니다.\",\n+                                                    List.of(equity.id(), net.id()))));\n+                        });\n+\n+        String response =\n+                mockMvc.perform(\n+                                post(\"/assistant/questions\")\n+                                        .with(csrf())\n+                                        .contentType(MediaType.APPLICATION_JSON)\n+                                        .content(body(\"2025년 3월 19일 자산은 얼마였어?\", token)))\n+                        .andExpect(status().isOk())\n+                        .andReturn()\n+                        .getResponse()\n+                        .getContentAsString();\n+\n+        JsonNode actual = objectMapper.readTree(response);\n+        JsonNode example =\n+                objectMapper.readTree(Files.readString(EXAMPLES.resolve(\"answer-answered.json\")));\n+        assertThat(actual.get(\"success\").asBoolean()).isTrue();\n+        JsonNode data = actual.get(\"data\");\n+        assertThat(data.fieldNames())\n+                .toIterable()\n+                .containsExactlyInAnyOrderElementsOf(() -> example.get(\"data\").fieldNames());\n+        assertThat(data.get(\"status\").asText()).isEqualTo(\"ANSWERED\");\n+        assertThat(data.get(\"page\").get(\"kind\").asText()).isEqualTo(\"RESULT\");\n+        assertThat(data.get(\"evidence\")).hasSize(2);\n+        JsonNode equity = data.get(\"evidence\").get(0);\n+        assertThat(equity.get(\"label\").asText()).isEqualTo(\"자산가치\");\n+        assertThat(equity.get(\"asOf\").asText()).isEqualTo(\"2025-03-19\");\n+        assertThat(equity.get(\"value\").asText()).endsWith(\"원\");\n+        assertThat(data.get(\"answer\").asText())\n+                .contains(equity.get(\"value\").asText())\n+                .contains(\"16.67%\");\n+        assertThat(response).doesNotContain(token, \"BT-\", \"backtestId\");\n+\n+        assertThat(seenFacts).hasSize(2);\n+        assertThat(seenTools.get(0))\n+                .extracting(ToolSpec::name)\n+                .contains(\"getEquityOn\", \"getDeepestDrawdownWindow\");\n+        assertThat(seenFacts.get(0).toString()).doesNotContain(token, \"BT-\");\n+        assertThat(seenFacts.get(0))\n+                .extracting(Evidence::label)\n+                .contains(\"비용 차감 후 전체 수익률\", \"거래비용 합계\", \"전략\");\n+        assertThat(seenFacts.get(1).size()).isEqualTo(seenFacts.get(0).size() + 3);\n+    }\n+\n+    @Test\n+    @DisplayName(\"계산 중인 결과는 409 이고 모델을 부르지 않는다\")\n+    void notReadyResultIsConflictWithoutModel() throws Exception {\n+        String token = anonymousTokenFor(transactionTemplate.execute(status -> newRun()));\n+\n+        mockMvc.perform(\n+                        post(\"/assistant/questions\")\n+                                .with(csrf())\n+                                .contentType(MediaType.APPLICATION_JSON)\n+                                .content(body(\"수익률은?\", token)))\n+                .andExpect(status().isConflict())\n+                .andExpect(jsonPath(\"$.error.code\").value(\"RESULT_NOT_READY\"));\n+\n+        verifyNoInteractions(model);\n+    }\n+\n+    @Test\n+    @DisplayName(\"capabilities 는 켜져 있고 결과 화면 경로도 그대로다\")\n+    void capabilitiesAndResultRoutesCoexist() throws Exception {\n+        String token = anonymousTokenFor(completedRun());\n+\n+        mockMvc.perform(get(\"/assistant/capabilities\"))\n+                .andExpect(status().isOk())\n+                .andExpect(jsonPath(\"$.data.enabled\").value(true))\n+                .andExpect(jsonPath(\"$.data.scopes[0]\").value(\"RESULT\"));\n+        mockMvc.perform(get(\"/results/\" + token)).andExpect(status().isOk());\n+        verify(model, org.mockito.Mockito.never()).step(any(), any(), any(), any());\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/AssistantResultIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/AssistantResultIT.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -176,11 +176,14 @@ class ArchitectureTest {\n      * specs/015-context-assistant/plan.md \"Structure Decision\".\n      */\n     @ArchTest\n-    static final ArchRule result_backtest_sector는_assistant를_참조하지_않는다 =\n+    static final ArchRule result_backtest_sector_strategy는_assistant를_참조하지_않는다 =\n             noClasses()\n                     .that()\n                     .resideInAnyPackage(\n-                            ROOT + \".result..\", ROOT + \".backtest..\", ROOT + \".sector..\")\n+                            ROOT + \".result..\",\n+                            ROOT + \".backtest..\",\n+                            ROOT + \".sector..\",\n+                            ROOT + \".strategy..\")\n                     .should()\n                     .dependOnClassesThat()\n                     .resideInAPackage(ROOT + \".assistant..\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/ArchitectureTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -120,7 +120,7 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d\n \n 검증 실패·모르는 이름은 실행하지 않고 `tool` 메시지로 \"사용할 수 없음: {이유}\"를 돌려준다.\n \n-근거 알갱이: 시계열 점 1개·거래 1건·보유 종목 1개가 각각 근거 1개다. 라운드당 30개, 팩 전체 60개. 넘으면 **도구 결과의 뒤를 자르고 초기 팩은 보존**하며 \"일부만 읽음\" 근거를 남긴다(자리가 아예 없으면 그 호출은 \"사용할 수 없음: 근거 자리가 가득 참\"으로 돌려준다 — 빈 성공으로 보이면 모델이 자료가 없었다고 읽는다)(거래 첫 페이지는 공개 상한 100건이라 거의 항상 잘린다 — 그래서 `getTradesBetween`은 구간을 좁혀 다시 부르라는 안내를 프롬프트에 둔다). 도구 결과는 결과 record를 통째로 옮기지 않고 필드 단위로 만든다 — `backtestId`, 시계열 점의 `benchmarkReturn`·`cashFlows`는 넣지 않는다.\n+근거 알갱이: 시계열 점 1개는 근거 3개(자산가치·누적 수익률·하락 폭 — 값의 종류가 달라 따로 치환한다), 거래 1건은 근거 1개(한 문장, 안의 금액은 화면과 같은 표기), 보유 종목 1개는 근거 1개(비중)다. 라운드 30개면 점 10개 또는 보유 30종목이다. 라운드당 30개, 팩 전체 60개. 넘으면 **도구 결과의 뒤를 자르고 초기 팩은 보존**하며 \"일부만 읽음\" 근거를 남긴다(자리가 아예 없으면 그 호출은 \"사용할 수 없음: 근거 자리가 가득 참\"으로 돌려준다 — 빈 성공으로 보이면 모델이 자료가 없었다고 읽는다)(거래 첫 페이지는 공개 상한 100건이라 거의 항상 잘린다 — 그래서 `getTradesBetween`은 구간을 좁혀 다시 부르라는 안내를 프롬프트에 둔다). 도구 결과는 결과 record를 통째로 옮기지 않고 필드 단위로 만든다 — `backtestId`, 시계열 점의 `benchmarkReturn`·`cashFlows`는 넣지 않는다.\n \n ### 2.3 응답 스키마 (strict)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/contracts/assistant-api.md",
+          "old_path": "specs/015-context-assistant/contracts/assistant-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -89,7 +89,7 @@ frontend/src/api/assistant.ts, frontend/src/types/assistant.ts\n frontend/src/App.tsx (버튼·말풍선 마운트), frontend/src/pages/ResultPage.tsx (페이지 맥락 등록)\n ```\n \n-**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회), `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입), `assistant → sector`(`SectorService.getSectors()`로 `sectorId → 섹터 이름`; 013의 `SectorServiceSectorMapAdapter`와 같은 방식 — `config.items`에는 id만 있다) 셋이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`·`sector`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.\n+**Structure Decision**: 백엔드는 ADR-0001의 도메인별 4계층을 그대로 따른다(`domain` 계층은 값 타입이 `result`·`backtest`에 있어 두지 않는다 — 005와 같은 예외). 새 의존은 `assistant → result`(공개 조회), `assistant → backtest`(`BacktestTimeseriesResult`·`FindBacktestTradesQuery` 등 결과 타입), `assistant → sector`(`SectorService.getSectors()`로 `sectorId → 섹터 이름`; 013의 `SectorServiceSectorMapAdapter`와 같은 방식 — `config.items`에는 id만 있다), `assistant → strategy`(`ParameterRegistryPort`의 설정 축 라벨) 넷이다. 반대 방향은 ArchUnit 규칙 12로 막는다: `result`·`backtest`·`sector`·`strategy`는 `assistant`를 참조하지 않는다. 프론트는 `components/assistant/` 한 폴더, `App` 마운트, 그리고 `ResultTabs`에 바깥에서 탭을 바꾸는 제어 prop 하나다.\n \n ## Design Decisions\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/plan.md",
+          "old_path": "specs/015-context-assistant/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -125,7 +125,7 @@\n - **FR-004**: 말풍선에는 현재 맥락 표시(`기준 결과에 질문`), 예시 질문 2~3개, 300자 이내 자유 입력 하나가 있다. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 외부 AI 처리 서비스로 전달된다는 안내를 보이고, 전송은 사용자가 제출할 때만 한다.\n - **FR-005**: 서버는 요청마다 공개 토큰을 005와 같은 규칙으로 판정한다(400/404/410). 결과가 없는 상태는 005 하위 자원과 같은 판정으로 409다 — 계산 중 `RESULT_NOT_READY`, 실패 `BACKTEST_FAILED`, 완료 거래일 없는 취소 `NO_PARTIAL_RESULT`. 이 판정은 근거 팩의 첫 조회(`getWeights`)가 이미 하므로 따로 만들지 않는다. 이 판정은 모델 호출 전에 끝나고, 실패하면 모델을 부르지 않는다.\n - **FR-006**: 서버는 결과 상세 응답과 비중 응답에 이미 있는 값 가운데 **계약 §2.1의 포함 표에 있는 항목만** 근거 팩으로 만든다(요약·비용·조건·설정값·분석 값·목표/실제 비중·예외 종류·`partial`). 라벨은 표의 한국어 고정 문자열이고 결과 필드 이름을 쓰지 않는다. 섹터는 001 섹터 목록의 이름으로 부른다(없으면 id 원문). 공개 토큰·만료 시각·버전·진행 상태·실행 시각·실패 메시지·상관 행렬은 넣지 않는다. 팩 상한은 60개이고, 섹터가 많아 넘치면 섹터별 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다. 목표·실제 비중은 항상 싣는다. 서버는 새 합계·비율·구간을 계산하지 않는다(아키텍처 원칙 1). 시계열 전체·거래 목록 전체는 팩에 넣지 않는다.\n-- **FR-007**: 서버는 읽기 도구 다섯 개를 정한다 — 특정 날짜의 시계열 점, 구간의 첫·끝·최고·최저 점, 구간의 거래 첫 페이지, 특정 날짜의 보유, 하락 폭이 가장 낮은 날과 그 앞 고점 날. 도구는 날짜 인자만 받고 어느 결과를 읽는지는 요청 시작 때 서버가 묶는다. 모델은 도구 사용을 요청할 수 있을 뿐 실행하지 못한다. 서버는 도구 이름이 목록에 있는지, 인자가 결과 기간 안이고 규칙(구간 최대 1년, 첫 페이지 상한)에 맞는지 검증한 뒤 실행하고, 실패하면 실행하지 않고 \"사용할 수 없음\"을 돌려준다. 도구 라운드는 요청당 최대 2회, 라운드당 근거 최대 30개다. 근거 알갱이는 시계열 점 1개·거래 1건·보유 종목 1개가 각각 근거 1개이며, 상한을 넘으면 도구 결과를 자르고 초기 팩은 보존한다.\n+- **FR-007**: 서버는 읽기 도구 다섯 개를 정한다 — 특정 날짜의 시계열 점, 구간의 첫·끝·최고·최저 점, 구간의 거래 첫 페이지, 특정 날짜의 보유, 하락 폭이 가장 낮은 날과 그 앞 고점 날. 도구는 날짜 인자만 받고 어느 결과를 읽는지는 요청 시작 때 서버가 묶는다. 모델은 도구 사용을 요청할 수 있을 뿐 실행하지 못한다. 서버는 도구 이름이 목록에 있는지, 인자가 결과 기간 안이고 규칙(구간 최대 1년, 첫 페이지 상한)에 맞는지 검증한 뒤 실행하고, 실패하면 실행하지 않고 \"사용할 수 없음\"을 돌려준다. 도구 라운드는 요청당 최대 2회, 라운드당 근거 최대 30개다. 근거 알갱이는 시계열 점 1개가 근거 3개(자산가치·누적 수익률·하락 폭), 거래 1건·보유 종목 1개가 각각 근거 1개이며, 상한을 넘으면 도구 결과를 자르고 초기 팩은 보존한다. 부분 결과에서는 도구도 완료 끝 날짜까지만 읽는다.\n - **FR-008**: 모델에는 질문, 근거 팩, 도구 목록만 보낸다. 공개 토큰·`backtestId`·계정 식별자·브라우저 화면 상태는 어느 입력(프롬프트·도구 인자·이력)에도 넣지 않는다. 근거 ID는 요청마다 `F1`, `F2`…로 새로 매겨 결과 필드 이름을 노출하지 않는다.\n - **FR-009**: 모델의 최종 답변은 `status`와 `answerParts[{text, factIds}]` 구조다. `text` 안의 숫자·날짜·금액은 `{{Fn}}` 자리표시자로만 들어오고 서버가 근거 값의 표기 함수로 채운다. 서버는 다음을 검증하고 하나라도 걸리면 답변 전체를 버리고 근거 부족 안내로 바꾼다: 모르는 `factId`, `text`의 자리표시자와 `factIds` 불일치, 자리표시자 밖의 아라비아 숫자·`%`·`원`·날짜·URL(한글 수사는 허용), 근거 없는 `ANSWERED`, 길이·part 수 상한, 금지 표현 목록(권고·확률·원인 단정 — 보조 검사).\n - **FR-010**: 응답 `status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE` 셋이다. 근거 카드는 답변에 실제로 쓰인 근거만 보이고, 값·기준 날짜·그 값이 있는 탭을 가리킨다. 카드를 누르면 결과 화면의 그 탭이 열린다 — 결과 탭 묶음은 바깥에서 탭을 바꿀 수 있어야 한다(지금은 첫 탭만 받는다). 부분 결과면 답의 첫 문장에 완료 끝 날짜까지의 부분 결과임을 서버가 붙인다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/spec.md",
+          "old_path": "specs/015-context-assistant/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -84,12 +84,12 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n \n **Independent Test**: 완료·부분·계산 중·실패·만료 결과 픽스처로 근거 팩과 도구 5개의 검증·반환을 확인한다. 모델은 가짜다.\n \n-- [ ] T030 [P] [US1] 실패 테스트 `.../assistant/application/service/ResultEvidenceBuilderTest.java` — 400/404/410 토큰이면 모델 포트 `verifyNoInteractions`; 계산 중·실패·시작 전 취소는 409; 초기 팩이 계약 §2.1 포함 표와 정확히 같고(라벨은 표의 한국어, 필드명 아님; 섹터 라벨은 `SectorService` 이름, 못 찾으면 `sectorId` 원문) 섹터 8개 픽스처에서도 60개 이하이며 상관 행렬은 없고 위험·손실 기여가 빠지면 \"일부 분석 값은 싣지 않음\" 근거가 있음; 실제 비중은 `getWeights` 마지막 점의 `actual`이고 `asOf`가 그 날짜; `getWeights`가 409를 던지면 모델 포트 `verifyNoInteractions`; `publicToken`·`expiresAt`·`versions`·`progress`·`cancelRequested`·실행 시각·`failure`는 근거에 없음; 표기 결과가 `frontend/src/components/result/formatResult.ts`의 `formatMoney`·`formatRatio` 출력과 같은 픽스처 쌍(예: `17078.49`→`17,078원`, `0.166652`→`16.67%`, 경계값 `0.12345`→`12.35%` HALF_UP)으로 대조; 날짜는 ISO 원문 그대로(탭과 같다); `partial=true`면 완료 끝 날짜 근거와 접두 문장; 근거·도구 인자 어디에도 `backtestId`·토큰 없음; `tab`이 결과 탭 id 중 하나\n-- [ ] T031 [P] [US2] 실패 테스트 `.../assistant/application/service/tools/*ToolTest.java` — `getEquityOn` 기간 밖 거절·휴장일은 직전 거래일과 라벨 표시; `getEquityRange` 1년 초과·뒤집힌 구간 거절, 첫·끝·최고·최저 넷만(새 점 없음); `getTradesBetween` 거래 1건=근거 1개, 라운드 상한 30을 넘으면 뒤를 자르고 \"일부 거래\" 근거; 시계열 점의 `benchmarkReturn`·`cashFlows`는 어느 도구 근거에도 없음; 도구 결과에 `backtestId` 문자열 없음(record 통째 복사 금지); `getPositionsOn` 기간 밖 거절; `getDeepestDrawdownWindow`가 `frontend/src/components/result/drawdownWindow.ts` 예시와 같은 날짜를 고르고 `summary.maxDrawdown`과 어긋나면 빈 결과; 어느 도구에도 식별자 인자가 없음\n-- [ ] T032 [US1] `ResultEvidenceBuilder implements EvidenceBuilder` — `getWeights`(먼저, 409 판정 포함)와 `getDetail`에서 계약 §2.1 포함 표의 항목만 필드 단위로 `Evidence`로 옮긴다(record 통째 복사 금지). 상관 행렬은 넣지 않고, 60을 넘으면 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다. 섹터 라벨은 `SectorService.getSectors()`의 이름(없으면 `sectorId`). 값은 API 문자열 그대로, 표기 함수(금액·비율·날짜·정수)를 종류별로 붙인다. 설정값 축의 라벨은 003 등록표(`ParameterRegistryPort`)의 라벨을 쓴다. 도구 5개를 이 요청의 토큰에 묶어 `EvidenceBundle.tools`로\n-- [ ] T033 [US2] 도구 4개 `EquityOnTool`·`EquityRangeTool`·`TradesBetweenTool`·`PositionsOnTool` — `getTimeseries`·`getTrades(from,to)`·`getPositions(date)`를 묶인 토큰으로 읽고 고르기만. 결과 record를 통째로 옮기지 않고 필드 단위로 `Evidence`를 만든다(`backtestId` 제외, 점의 `benchmarkReturn`·`cashFlows` 제외)\n-- [ ] T034 [US2] `DeepestDrawdownWindowTool` — `drawdownWindow.ts`와 같은 정의(가장 낮은 `drawdown`의 첫날, 그 앞 고점 날, `summary.maxDrawdown` 불일치면 없음). 두 벌임을 주석에 적고 후속(워커 값)으로 연결\n-- [ ] T035 [US1] `.../assistant/AssistantResultIT.java`(`PortMockedIntegrationTestSupport`, 가짜 모델) — 완료 결과로 끝까지 흐르고 응답이 `examples/answer-answered.json` 모양; `ResultApiIT` 불변 확인; `spotlessApply build`\n+- [x] T030 [P] [US1] 실패 테스트 `.../assistant/application/service/ResultEvidenceBuilderTest.java` — 400/404/410 토큰이면 모델 포트 `verifyNoInteractions`; 계산 중·실패·시작 전 취소는 409; 초기 팩이 계약 §2.1 포함 표와 정확히 같고(라벨은 표의 한국어, 필드명 아님; 섹터 라벨은 `SectorService` 이름, 못 찾으면 `sectorId` 원문) 섹터 8개 픽스처에서도 60개 이하이며 상관 행렬은 없고 위험·손실 기여가 빠지면 \"일부 분석 값은 싣지 않음\" 근거가 있음; 실제 비중은 `getWeights` 마지막 점의 `actual`이고 `asOf`가 그 날짜; `getWeights`가 409를 던지면 모델 포트 `verifyNoInteractions`; `publicToken`·`expiresAt`·`versions`·`progress`·`cancelRequested`·실행 시각·`failure`는 근거에 없음; 표기 결과가 `frontend/src/components/result/formatResult.ts`의 `formatMoney`·`formatRatio` 출력과 같은 픽스처 쌍(예: `17078.49`→`17,078원`, `0.166652`→`16.67%`, 경계값 `0.12345`→`12.35%` HALF_UP)으로 대조; 날짜는 ISO 원문 그대로(탭과 같다); `partial=true`면 완료 끝 날짜 근거와 접두 문장; 근거·도구 인자 어디에도 `backtestId`·토큰 없음; `tab`이 결과 탭 id 중 하나\n+- [x] T031 [P] [US2] 실패 테스트 `.../assistant/application/service/tools/*ToolTest.java` — `getEquityOn` 기간 밖 거절·휴장일은 직전 거래일과 라벨 표시; `getEquityRange` 1년 초과·뒤집힌 구간 거절, 첫·끝·최고·최저 넷만(새 점 없음); `getTradesBetween` 거래 1건=근거 1개, 라운드 상한 30을 넘으면 뒤를 자르고 \"일부 거래\" 근거; 시계열 점의 `benchmarkReturn`·`cashFlows`는 어느 도구 근거에도 없음; 도구 결과에 `backtestId` 문자열 없음(record 통째 복사 금지); `getPositionsOn` 기간 밖 거절; `getDeepestDrawdownWindow`가 `frontend/src/components/result/drawdownWindow.ts` 예시와 같은 날짜를 고르고 `summary.maxDrawdown`과 어긋나면 빈 결과; 어느 도구에도 식별자 인자가 없음\n+- [x] T032 [US1] `ResultEvidenceBuilder implements EvidenceBuilder` — `getWeights`(먼저, 409 판정 포함)와 `getDetail`에서 계약 §2.1 포함 표의 항목만 필드 단위로 `Evidence`로 옮긴다(record 통째 복사 금지). 상관 행렬은 넣지 않고, 60을 넘으면 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다. 섹터 라벨은 `SectorService.getSectors()`의 이름(없으면 `sectorId`). 값은 API 문자열 그대로, 표기 함수(금액·비율·날짜·정수)를 종류별로 붙인다. 설정값 축의 라벨은 003 등록표(`ParameterRegistryPort`)의 라벨을 쓴다. 도구 5개를 이 요청의 토큰에 묶어 `EvidenceBundle.tools`로\n+- [x] T033 [US2] 도구 4개 `EquityOnTool`·`EquityRangeTool`·`TradesBetweenTool`·`PositionsOnTool` — `getTimeseries`·`getTrades(from,to)`·`getPositions(date)`를 묶인 토큰으로 읽고 고르기만. 결과 record를 통째로 옮기지 않고 필드 단위로 `Evidence`를 만든다(`backtestId` 제외, 점의 `benchmarkReturn`·`cashFlows` 제외)\n+- [x] T034 [US2] `DeepestDrawdownWindowTool` — `drawdownWindow.ts`와 같은 정의(가장 낮은 `drawdown`의 첫날, 그 앞 고점 날, `summary.maxDrawdown` 불일치면 없음). 두 벌임을 주석에 적고 후속(워커 값)으로 연결\n+- [x] T035 [US1] `.../assistant/AssistantResultIT.java`(`PortMockedIntegrationTestSupport`, 가짜 모델) — 완료 결과로 끝까지 흐르고 응답이 `examples/answer-answered.json` 모양; `ResultApiIT` 불변 확인; `spotlessApply build`\n \n ---\n \n@@ -132,7 +132,7 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n | 1 | `[DOCS] 화면 맥락 도우미 ADR·spec 015·계약을 적는다` (S15P21E205-434) | `docs/434-assistant-spec` | 3 | T001~T005 | — |\n | 2 | `[BE] 도우미 API 계약·기능 플래그·답변 검증기·도구 실행 틀 (모델 없이)` (S15P21E205-438) | `feat(be)/438-assistant-contract` | 3 | T010~T017 | 1 |\n | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |\n-| 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` | `feat(be)/{N}-assistant-result-evidence` | 3 | T030~T035 | 2 |\n+| 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |\n | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` | `feat(fe)/{N}-assistant-bubble` | 5 | T040~T046 | 1 |\n | 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/tasks.md",
+          "old_path": "specs/015-context-assistant/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-25T03:00:28.134+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2867278": []
+  }
+}

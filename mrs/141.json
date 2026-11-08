@@ -1,0 +1,478 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 946149,
+    "iid": 141,
+    "project_id": 1444456,
+    "title": "docs: spec009-clarify",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\nspec 009 시장 흐름 개요의 표시 규칙 모호함 5건을 clarify로 확정하고 spec.md에 반영했다.\n\n- 변화 요약 문장이 다룰 지표: 분야에서 최근 3개월 경로 변화가 가장 큰 1\\~2개를 지목 (FR-004)\n- T_g보다 최신인 지표 값: 해당 지표 행 아래 한 줄로 경로와 분리 표시 (FR-008)\n- 자료 '지연' 판정 폐기: 수집 실패·자료 없음만 상태로 두고 대상월·마지막 갱신 시각 상시 표시 (FR-011, SC-005)\n- 선택 섹터 유지 범위: 브라우저 세션 동안, 로그인 불필요 (FR-016)\n- 기본 화면 성능 목표 신설: 진입 후 2초 이내 7개 분야 요약 (SC-007)\n\n# 관련 티켓\n\n- ticket #260\n- link\n\n# 주요 변경 사항\n\n- \n\n# 테스트\n\n- [ ]\n\n# 리뷰 포인트\n\n- \n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T11:23:02.935+09:00",
+    "updated_at": "2026-09-16T11:23:24.304+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T11:23:23.908+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/260-spec-009-clarify",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+    "merge_commit_sha": "63deaa086320dc1d16efded58fa64119871b7213",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T11:23:03.729+09:00",
+    "reference": "!141",
+    "references": {
+      "short": "!141",
+      "relative": "!141",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!141"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/141",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 946149,
+    "iid": 141,
+    "project_id": 1444456,
+    "title": "docs: spec009-clarify",
+    "description": "<!--티켓에는 무엇을 왜 하는지와 완료 기준만 둔다. 어떻게 했는지, 왜 그렇게 판단했는지,\n다른 선택지를 왜 버렸는지, 리뷰어가 주의할 점은 여기에 쓴다. 티켓을 읽고 이 MR 을\n읽으면 맥락이 이어지도록 한다.-->\n\n# 작업 내용 요약\n\nspec 009 시장 흐름 개요의 표시 규칙 모호함 5건을 clarify로 확정하고 spec.md에 반영했다.\n\n- 변화 요약 문장이 다룰 지표: 분야에서 최근 3개월 경로 변화가 가장 큰 1\\~2개를 지목 (FR-004)\n- T_g보다 최신인 지표 값: 해당 지표 행 아래 한 줄로 경로와 분리 표시 (FR-008)\n- 자료 '지연' 판정 폐기: 수집 실패·자료 없음만 상태로 두고 대상월·마지막 갱신 시각 상시 표시 (FR-011, SC-005)\n- 선택 섹터 유지 범위: 브라우저 세션 동안, 로그인 불필요 (FR-016)\n- 기본 화면 성능 목표 신설: 진입 후 2초 이내 7개 분야 요약 (SC-007)\n\n# 관련 티켓\n\n- ticket #260\n- link\n\n# 주요 변경 사항\n\n- \n\n# 테스트\n\n- [ ]\n\n# 리뷰 포인트\n\n- \n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [ ] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다\n- [ ] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010)\n- [ ] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId` 로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다\n- [ ] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null` 이고, 화면은 그것을 \"0%\" 가 아니라 사유와 함께 보인다(FR-011, 원칙 VI)\n- [ ] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED` 이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII)",
+    "state": "merged",
+    "created_at": "2026-09-16T11:23:02.935+09:00",
+    "updated_at": "2026-09-16T11:23:24.304+09:00",
+    "merged_by": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merge_user": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "merged_at": "2026-09-16T11:23:23.908+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(be)/260-spec-009-clarify",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "assignees": [
+      {
+        "id": 30791,
+        "username": "zzangbat95",
+        "public_email": null,
+        "name": "박준성",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/zzangbat95"
+      }
+    ],
+    "assignee": {
+      "id": 30791,
+      "username": "zzangbat95",
+      "public_email": null,
+      "name": "박준성",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/zzangbat95"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+    "merge_commit_sha": "63deaa086320dc1d16efded58fa64119871b7213",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-16T11:23:03.729+09:00",
+    "reference": "!141",
+    "references": {
+      "short": "!141",
+      "relative": "!141",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!141"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/141",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-16T11:23:14.334+09:00",
+    "latest_build_finished_at": "2026-09-16T11:23:17.780+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 198038,
+      "iid": 59,
+      "project_id": 1444456,
+      "sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+      "ref": "docs(be)/260-spec-009-clarify",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T11:23:14.238+09:00",
+      "updated_at": "2026-09-16T11:23:17.787+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/198038"
+    },
+    "head_pipeline": {
+      "id": 198038,
+      "iid": 59,
+      "project_id": 1444456,
+      "sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+      "ref": "docs(be)/260-spec-009-clarify",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-16T11:23:14.238+09:00",
+      "updated_at": "2026-09-16T11:23:17.787+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/198038",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-16T11:23:14.334+09:00",
+      "finished_at": "2026-09-16T11:23:17.780+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/198038",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "head_sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+      "start_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "15ce65c8021f6d6d77a5dbaa93d583d705ba3bf6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814244,
+          "type": null,
+          "body": "assigned to @zzangbat95",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T11:23:03.052+09:00",
+          "updated_at": "2026-09-16T11:23:03.059+09:00",
+          "system": true,
+          "noteable_id": 946149,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 141,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "48459cbb750105ac47d5df34c4693991bce96170",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814245,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 스펙 구체화(Clarification 기록):** 모호할 수 있었던 요구사항(변화 요약 대상 지표 선정 기준, 최신 대상월 값 표시 방식, '지연' 상태 폐기 및 상시 시각 표시, 세션 기반 섹터 유지 범위, 성능 목표)을 문서 내에 명확하게 정의하여 향후 구현 시 발생할 수 있는 혼선을 잘 방지했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (문서(docs) 변경 사항으로, 비즈니스 규칙과 요구사항 구체화가 일관성 있게 잘 반영되었습니다.)\n\n### 테스트 제안\n변경 사항이 문서(spec.md)에 한정되므로, 향후 이 스펙을 구현할 때 수행해야 할 구체적인 검증 시나리오는 다음과 같습니다.\n\n1. **변화 요약 검증 시나리오**:\n   - Given: 시장 흐름 기본 화면에 진입했을 때,\n   - Then: 각 분야의 변화 요약이 해당 분야에서 최근 3개월 경로 변화가 가장 큰 1~2개 지표의 실제 값 변화만 설명하고 있는지, 순위나 '좋다/나쁘다' 등의 판정 문구가 포함되지 않는지 확인합니다.\n2. **최신 대상월 값 분리 표시 시나리오**:\n   - Given: 특정 지표가 분야 기준월 $T_g$보다 더 최신 대상월 값을 가지고 있을 때,\n   - Then: 해당 값이 $t-2 \\cdot t-1 \\cdot t$ 경로와 섞이지 않고, 지표 행 바로 아래에 `'T_g 이후 발표: {대상월} {값}{단위}'` 형식으로 독립되어 출력되는지 확인합니다.\n3. **자료 상태 및 시각 표시 시나리오**:\n   - Given: 수집이 실패했거나 자료가 없는 지표/분야가 존재할 때,\n   - Then: 시스템이 이를 '지연'으로 판정해 표시하지 않고, 대상월과 마지막 갱신 시각이 항상 함께 노출되며 오류 화면이 발생하지 않는지 확인합니다.\n4. **섹터 선택 세션 유지 시나리오**:\n   - Given: 로그인하지 않은 상태에서 특정 섹터를 선택한 뒤,\n   - Then: 브라우저 새로고침이나 다른 메뉴 왕복 후에도 선택한 섹터와 관련 범위(전략·상품·뉴스)가 유지되는지, 반대로 브라우저 탭을 닫았다가 다시 열면 선택이 초기화되는지 확인합니다.\n5. **성능 목표 시나리오 (SC-007)**:\n   - Given: 네트워크 지연이나 뉴스/참고 정보 수집 지연이 발생하더라도,\n   - Then: 진입 후 2초 이내에 7개 분야 요약 카드가 먼저 렌더링되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:366b712324c3640c142ec2d57cf5a044a8cb409b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-16T11:23:11.313+09:00",
+          "updated_at": "2026-09-16T11:23:11.313+09:00",
+          "system": false,
+          "noteable_id": 946149,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 141,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e6ec9ebe3d22759ac37fa4db351c93911262e736",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2814246,
+          "type": null,
+          "body": "mentioned in commit 63deaa086320dc1d16efded58fa64119871b7213",
+          "author": {
+            "id": 30791,
+            "username": "zzangbat95",
+            "public_email": null,
+            "name": "박준성",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/6213a15d9bf7c9c8d3060fe4235c70abe0027bf0a08fd043d7589802415c4597?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/zzangbat95"
+          },
+          "created_at": "2026-09-16T11:23:24.061+09:00",
+          "updated_at": "2026-09-16T11:23:24.066+09:00",
+          "system": true,
+          "noteable_id": 946149,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 141,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2204168,
+      "head_commit_sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+      "base_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "start_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "created_at": "2026-09-16T11:23:03.240+09:00",
+      "merge_request_id": 946149,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "fbcd260121b2b9f31eac54b73bd04e5c486ae4ba"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2204168,
+      "head_commit_sha": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+      "base_commit_sha": "bcf6585181485b8c449e03b8ad8f0b9750732f5e",
+      "start_commit_sha": "b57836d37dcc2c2ed914d72d56ad801d2bb99f26",
+      "created_at": "2026-09-16T11:23:03.240+09:00",
+      "merge_request_id": 946149,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "fbcd260121b2b9f31eac54b73bd04e5c486ae4ba",
+      "commits": [
+        {
+          "id": "366b712324c3640c142ec2d57cf5a044a8cb409b",
+          "short_id": "366b7123",
+          "created_at": "2026-09-16T11:20:07.000+09:00",
+          "parent_ids": [
+            "bcf6585181485b8c449e03b8ad8f0b9750732f5e"
+          ],
+          "title": "docs: spec009-clarify",
+          "message": "docs: spec009-clarify\n",
+          "author_name": "jun-s1016",
+          "author_email": "zzangbat95@naver.com",
+          "authored_date": "2026-09-16T11:20:07.000+09:00",
+          "committer_name": "jun-s1016",
+          "committer_email": "zzangbat95@naver.com",
+          "committed_date": "2026-09-16T11:20:07.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/366b712324c3640c142ec2d57cf5a044a8cb409b"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -16,6 +16,16 @@\n \n 주요 메뉴 '시장 흐름'의 기본 화면이다. 전략을 정하지 않은 사용자가 7개 분야의 이름과 짧은 변화 요약을 보고, 관심 분야를 열어 개별 지표의 실제 값·단위·최근 3개월 경로와 그 분야의 기준월을 확인하며, '비슷했던 때 보기'로 경제환경 검색에 들어가는 진입 화면이다. 경제 전체를 하나의 점수로 줄이지 않고, 자료 지연을 실시간 정보로 표시하지 않으며, 섹터 선택은 경제환경 표시를 바꾸지 않고 연결할 전략·상품·뉴스의 범위만 좁힌다. (§4.4, D08, D12)\n \n+## Clarifications\n+\n+### Session 2026-09-16\n+\n+- Q: 분야의 짧은 '변화 요약' 한 문장은 그 분야에 속한 지표 중 무엇을 다뤄야 하나요? → A: 그 분야에서 최근 3개월 경로 변화가 가장 큰 지표 1~2개를 골라 그 지표의 이름·값 변화로 서술한다.\n+- Q: 어느 지표가 분야 기준월 T_g보다 최신 대상월 값을 가질 때 그 값을 어디에 어떻게 표시하나요? → A: 해당 지표 행 바로 아래에 'T_g 이후 발표: {대상월} {값}{단위}' 한 줄을 3개월 경로와 구분된 서식으로 붙인다.\n+- Q: 지표 자료가 '오래됐다'고 보고 지연 상태로 표시하는 기준은 무엇인가요? → A: 지연 여부를 판정하지 않는다. 수집 실패·자료 없음만 상태로 표시하고, 그 외에는 대상월과 마지막 갱신 시각을 항상 함께 보여 사용자가 시점을 직접 판단한다.\n+- Q: 사용자가 고른 섹터는 화면을 떠났다 돌아왔을 때 어디까지 유지되나요? → A: 브라우저 세션 동안 유지한다. 새로고침·다른 메뉴 왕복에도 남고 탭을 닫으면 풀리며, 로그인은 필요하지 않다.\n+- Q: 기본 화면이 7개 분야 요약을 다 보여주기까지의 시간 목표는 무엇인가요? → A: 2초 이내에 7개 분야 요약을 표시한다. 뉴스·국내 시장 참고 정보는 늦게 채워져도 요약 표시를 막지 않는다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 7개 분야의 변화 요약을 한눈에 본다 (Priority: P1)\n@@ -29,7 +39,7 @@\n **Acceptance Scenarios**:\n \n 1. **Given** 시장 흐름에 진입하면, **Then** 7개 분야 이름과 분야별 짧은 변화 요약이 보이고, 경제 전체를 하나의 좋고 나쁜 점수나 등급으로 요약한 표시는 없다.\n-2. **Given** 각 분야의 변화 요약은, **Then** 그 분야 지표의 실제 값 변화를 지표의 말로 설명하고(예: \"취업자 수 증가율이 3개월 연속 낮아졌습니다\") 좋다·나쁘다 같은 판정이나 전망 문구를 담지 않는다.\n+2. **Given** 각 분야의 변화 요약은, **Then** 그 분야에서 최근 3개월 경로 변화가 가장 큰 지표 1~2개를 이름과 함께 지목해 실제 값 변화를 지표의 말로 설명하고(예: \"취업자 수 증가율이 3개월 연속 낮아졌습니다\"), 좋다·나쁘다 같은 판정이나 전망 문구, 분야 지표 방향의 개수 요약을 담지 않는다.\n 3. **Given** 시장 흐름 화면에서, **Then** 가장 중요한 행동 버튼은 하나이며, 사용자에게 거시경제 API나 자료 공급원 이름을 고르게 하지 않는다.\n 4. **Given** 처음 방문한 사용자가, **When** 시장 흐름에 들어오면, **Then** 설문·숙련도 분류·전략 선택 없이 바로 분야 요약이 보인다.\n \n@@ -48,14 +58,14 @@\n 1. **Given** 분야 요약에서, **When** 관심 분야를 열면, **Then** 그 분야에 속한 지표마다 실제 값·단위·최근 3개월 경로(t-2·t-1·t)와 대상월·출처·작성기관이 보인다.\n 2. **Given** 열린 분야에서, **Then** 그 분야의 기준월 T_g가 표시되고, 분야마다 T_g가 다를 수 있다는 점이 한 문장으로 안내된다.\n 3. **Given** 열린 분야에서, **When** '비슷했던 때 보기'를 누르면, **Then** 그 분야와 기준월 T_g가 유지된 채 [010](../010-economic-regime-search/spec.md)의 분야 검색이 열린다.\n-4. **Given** 어느 지표가 분야의 T_g보다 더 최신 대상월 값을 갖고 있으면, **Then** 그 값은 별도 정보로 표시되고 T_g 기준 3개월 경로와 섞이지 않는다.\n+4. **Given** 어느 지표가 분야의 T_g보다 더 최신 대상월 값을 갖고 있으면, **Then** 그 값은 해당 지표 행 바로 아래 'T_g 이후 발표: {대상월} {값}{단위}' 한 줄로 3개월 경로와 구분된 서식으로 보이고, t-2·t-1·t 경로 안에는 들어가지 않는다.\n 5. **Given** 어느 화면에서도, **Then** 지표 값을 표준화 점수나 거리 값으로 바꿔 보이지 않고 실제 값과 단위를 유지한다.\n \n ---\n \n ### User Story 3 - 자료의 시점과 상태를 오해하지 않는다 (Priority: P2)\n \n-[거시경제·뉴스 관심 사용자]는 오래된 자료를 지금 상황으로 오해하지 않기 위하여 화면에서 대상월·발표일·마지막 갱신 시각을 구분해 보고, 수집이 지연·실패했을 때 그 사실을 알며, 표시된 값이 최신 개정자료를 이용한 역사 비교라는 점을 확인할 수 있다. (§4.4, §6.1, D12, D22)\n+[거시경제·뉴스 관심 사용자]는 오래된 자료를 지금 상황으로 오해하지 않기 위하여 지표마다 대상월·발표일·마지막 갱신 시각을 구분해 보고, 수집이 실패했거나 자료가 없을 때 그 사실을 알며, 표시된 값이 최신 개정자료를 이용한 역사 비교라는 점을 확인할 수 있다. 서비스는 자료가 오래됐는지를 대신 판정해 주지 않는다. (§4.4, §6.1, D12, D22)\n \n **Why this priority**: 데이터 제공 지연이 있는 항목을 실시간 정보로 표시하지 않는 것은 원칙 VI의 요구다. 요약 화면이 있어야 그 위에 표시할 수 있다.\n \n@@ -63,10 +73,10 @@\n \n **Acceptance Scenarios**:\n \n-1. **Given** 지표 자료가 오래됐거나 수집이 실패한 상태에서, **Then** 해당 분야 또는 지표에 마지막 갱신 시각이 보이고 '실시간'·'현재' 같은 표현이 붙지 않는다.\n+1. **Given** 지표 자료가 오래된 상태에서, **Then** 그 지표의 대상월과 마지막 갱신 시각이 그대로 보이고 '실시간'·'현재' 같은 표현이 붙지 않으며, 서비스가 '지연'으로 판정한 표시는 붙지 않는다.\n 2. **Given** 시장 흐름 화면에서, **Then** 표시된 값이 최신 개정자료를 이용한 역사 비교라는 표시가 있고, 당시 발표값을 재현한 것으로 표현하지 않는다.\n 3. **Given** 지표 값 옆에서, **Then** 대상월(자료가 가리키는 달)과 발표일(기관이 공표한 날)이 구분되어 보인다.\n-4. **Given** 어느 분야의 지표가 전부 결측이거나 예시 자료이면, **Then** 그 분야는 빈 요약 대신 '자료 없음' 또는 '예시 자료' 상태로 표시되고 오류 화면이 되지 않는다.\n+4. **Given** 어느 분야의 지표가 전부 결측이거나 예시 자료이거나 최근 수집이 실패했으면, **Then** 그 분야는 빈 요약 대신 '자료 없음'·'예시 자료'·'수집 실패' 상태로 표시되고 오류 화면이 되지 않는다.\n \n ---\n \n@@ -76,7 +86,7 @@\n \n **Why this priority**: 경제환경 검색은 섹터 선택에 따라 바뀌지 않는다는 규칙(원칙 IV)을 화면에서 지키는 부분이다. 진입 화면과 검색이 먼저 있어야 한다.\n \n-**Independent Test**: 섹터를 선택하기 전후로 분야 요약·지표 값·'비슷했던 때 보기' 결과가 같은지, 연결되는 전략·상품·뉴스만 좁아지는지 확인한다.\n+**Independent Test**: 섹터를 선택하기 전후로 분야 요약·지표 값·'비슷했던 때 보기' 결과가 같은지, 연결되는 전략·상품·뉴스만 좁아지는지, 새로고침 후에도 선택이 남고 탭을 다시 열면 풀리는지 확인한다.\n \n **Acceptance Scenarios**:\n \n@@ -84,6 +94,7 @@\n 2. **Given** 섹터를 선택한 상태에서, **When** '비슷했던 때 보기'를 누르면, **Then** 검색 결과 순위는 섹터를 선택하지 않았을 때와 같다.\n 3. **Given** 시장 흐름에서, **When** 국내 시장 참고 정보를 열면, **Then** 광범위 국내 주가지수의 가격 추세·변동성이 경제환경 지표와 구분된 별도 참고 정보로 보이고 검색 입력으로 쓰이지 않는다.\n 4. **Given** 시장 흐름에서 사례를 고른 상태에서, **When** '이 기간으로 전략 비교'를 누르면, **Then** 선택한 섹터(있으면)가 채워진 채 [011](../011-regime-strategy-link/spec.md)의 흐름이 열린다.\n+5. **Given** 섹터를 선택한 사용자가, **When** 화면을 새로고침하거나 다른 메뉴에 갔다가 시장 흐름으로 돌아오면, **Then** 로그인하지 않았어도 선택 섹터가 그대로 남아 있고, 탭을 닫았다가 새로 열면 선택이 풀린 상태로 시작한다.\n \n ---\n \n@@ -106,20 +117,20 @@\n - **FR-001**: 시장 흐름은 주요 메뉴이며 전략을 만들지 않아도 들어갈 수 있다. 시작 절차로 설문·숙련도 분류·전략 선택을 요구하지 않는다. (§3.2, §4.4, D02)\n - **FR-002**: 기본 화면은 생산·소비/투자·대외거래·노동·물가/원자재·금융/주택·해외 경기 7개 분야 이름과 분야별 짧은 변화 요약을 보인다. 분야 이름·배치는 [008](../008-macro-indicator-registry/spec.md)의 화면 분류 버전을 따른다. (§4.4, D07)\n - **FR-003**: 경제 전체를 하나의 좋고 나쁜 점수·등급·신호등으로 요약한 표시를 만들지 않는다. (§4.4, D08, 원칙 II)\n-- **FR-004**: 변화 요약은 그 분야 지표의 실제 값 변화(방향·크기·지속 기간)를 지표의 말로 설명한다. 확보한 자료에만 근거하고, 좋다·나쁘다 판정·전망·투자 시사점을 담지 않는다. 요약 문장의 생성 규칙은 등록된 서술 규칙을 따르며 확인할 수 없는 내용을 만들지 않는다. (§4.4, §6.3, 원칙 III·VI)\n+- **FR-004**: 변화 요약은 그 분야에서 최근 3개월 경로 변화가 가장 큰 지표 1~2개를 골라, 그 지표의 이름과 실제 값 변화(방향·크기·지속 기간)를 지표의 말로 설명한다. 분야에 속한 지표의 방향을 세거나 합쳐 분야 단위 신호·개수 요약으로 바꾸지 않는다. 확보한 자료에만 근거하고, 좋다·나쁘다 판정·전망·투자 시사점을 담지 않는다. 요약 문장의 생성 규칙은 등록된 서술 규칙을 따르며 확인할 수 없는 내용을 만들지 않는다. (§4.4, §6.3, 원칙 II·III·VI, D08)\n - **FR-005**: 화면마다 가장 중요한 행동 버튼을 하나만 둔다. 기본 화면은 분야 열기, 열린 분야에서는 '비슷했던 때 보기'다. (§4.1)\n - **FR-006**: 사용자에게 거시경제 API·자료 공급원·뉴스원의 이름을 고르게 하지 않는다. (§4.4, 원칙 II)\n \n #### 분야 상세 (§4.4, D21, D22)\n \n - **FR-007**: 관심 분야를 열면 그 분야 지표마다 실제 값·단위·최근 3개월 경로(t-2·t-1·t)·대상월·발표일·출처·작성기관을 보인다. 값을 표준화 점수나 거리로 바꿔 보이지 않는다. (§4.4, D21)\n-- **FR-008**: 열린 분야에 그 분야의 기준월 T_g를 표시하고, 분야마다 기준월이 다를 수 있음을 한 문장으로 안내한다. 어느 지표가 T_g보다 최신 대상월 값을 가지면 별도 정보로 표시하고 3개월 경로와 섞지 않는다. (§4.4, D22)\n+- **FR-008**: 열린 분야에 그 분야의 기준월 T_g를 표시하고, 분야마다 기준월이 다를 수 있음을 한 문장으로 안내한다. 어느 지표가 T_g보다 최신 대상월 값을 가지면 그 지표 행 바로 아래에 'T_g 이후 발표: {대상월} {값}{단위}' 한 줄을 3개월 경로와 구분된 서식으로 붙인다. 이 값은 t-2·t-1·t 경로에 넣지 않고 변화 요약의 근거로도 쓰지 않는다. (§4.4, D22)\n - **FR-009**: 열린 분야에서 '비슷했던 때 보기'로 [010](../010-economic-regime-search/spec.md)의 분야 검색에 진입한다. 진입 시 분야 g와 기준월 T_g를 유지한다. (§4.3, §4.4)\n - **FR-010**: 'Thorp 종합 비교'는 기본 화면에 강제로 노출하지 않고, 사용자가 선택해서 열 수 있는 진입점으로 둔다. 종합 비교의 동작은 [010](../010-economic-regime-search/spec.md)이 정한다. (§4.3, D08)\n \n #### 자료 시점과 상태 (§4.4, §6.1, D12)\n \n-- **FR-011**: 지표 자료가 오래됐거나 수집이 실패했으면 마지막 갱신 시각을 보이고, 데이터 제공 지연이 있는 항목을 실시간 정보라고 표시하지 않는다. (§4.4, 원칙 VI)\n+- **FR-011**: 지표를 표시하는 모든 영역에 대상월과 마지막 갱신 시각을 함께 보이고, 데이터 제공 지연이 있는 항목을 실시간 정보라고 표시하지 않는다. 자료가 오래됐는지를 서비스가 판정해 '지연' 상태로 표시하지 않는다. 상태로 표시하는 것은 수집 실패와 자료 없음뿐이며, 그 밖에는 사용자가 대상월과 마지막 갱신 시각으로 시점을 직접 판단한다. (§4.4, 원칙 VI)\n - **FR-012**: 화면에 '최신 개정자료를 이용한 역사 비교'임을 표시한다. 당시 발표값을 재현한 것으로 표현하지 않는다. (§6.1, D12, 원칙 V)\n - **FR-013**: 대상월·발표일·자료 갱신 기준을 구분해 표시한다. (§4.4, D22)\n - **FR-014**: 자료 없음·예시 자료·전부 결측 상태의 분야는 오류 화면이 아닌 상태 표시로 처리한다. 예시 자료는 예시임을 표시한다. (§6.2, §7.1)\n@@ -127,17 +138,17 @@\n \n #### 섹터 연결과 참고 정보 (§4.4, D07, D26)\n \n-- **FR-016**: 사용자가 섹터를 선택해도 경제환경 표시·지표 값·기준월·사례 순위는 바뀌지 않는다. 선택 섹터는 연결할 전략·대표 상품·뉴스의 범위만 좁힌다. (§4.4, D07, 원칙 IV)\n-- **FR-017**: 국내 시장의 가격 추세·변동성은 광범위 국내 주가지수([001](../001-etf-market-data/spec.md)의 KOSPI 시리즈)로 별도 참고 정보로 표시하고 경제환경 검색 입력에 쓰지 않는다. (§4.4, §6.4.4)\n+- **FR-016**: 사용자가 섹터를 선택해도 경제환경 표시·지표 값·기준월·사례 순위는 바뀌지 않는다. 선택 섹터는 연결할 전략·대표 상품·뉴스의 범위만 좁힌다. 선택 섹터는 브라우저 세션 동안 유지되어 새로고침과 다른 메뉴 왕복에도 남고, 탭을 닫으면 풀린다. 유지에 로그인을 요구하지 않는다. (§4.4, D02, D07, 원칙 IV)\n+- **FR-017**: 국내 시장의 가격 추세·변동성은 광범위 국내 주가지수([001](../001-etf-market-data/spec.md)의 KOSPI 시리즈)로 별도 참고 정보로 표시하고 경제환경 검색 입력에 쓰지 않는다. 이 영역과 뉴스 묶음 영역은 분야 요약보다 늦게 채워질 수 있으며 분야 요약 표시를 막지 않는다. (§4.4, §6.4.4)\n - **FR-018**: 시장 흐름에서 고른 사례에 대해 '이 기간으로 전략 비교' 진입점을 제공한다. 진입 시 선택 섹터(있으면)와 사례 식별자를 [011](../011-regime-strategy-link/spec.md)로 넘긴다. (§4.3, D25)\n - **FR-019**: 뉴스 묶음 영역은 같은 기본 화면에 두되 내용·수집·표시 규칙은 [012](../012-market-news-digest/spec.md)가 정한다. 뉴스가 없어도 분야 요약은 정상 표시한다. (§4.4)\n \n ### Key Entities *(include if feature involves data)*\n \n-- **분야 요약 카드**: 분야 이름·변화 요약 문장·기준월 T_g·상태(정상/지연/자료 없음/예시)·마지막 갱신 시각이다.\n-- **지표 표시 항목**: 지표 이름·실제 값·단위·최근 3개월 경로·대상월·발표일·출처·작성기관·T_g 이후 최신 값(있으면)이다.\n-- **변화 요약 서술 규칙(버전)**: 지표 값 변화를 문장으로 만드는 등록된 규칙이다. 판정·전망 표현을 포함하지 않는다.\n-- **섹터 연결 상태**: 선택 섹터와 그로 좁혀진 전략·상품·뉴스 범위다. 경제환경 표시와 분리된다.\n+- **분야 요약 카드**: 분야 이름·변화 요약 문장·기준월 T_g·상태(정상/수집 실패/자료 없음/예시)·마지막 갱신 시각이다. 지연은 상태 값으로 두지 않는다.\n+- **지표 표시 항목**: 지표 이름·실제 값·단위·최근 3개월 경로·대상월·발표일·출처·작성기관·T_g 이후 발표 값(있으면 대상월과 값·단위를 경로와 분리해 보관)이다.\n+- **변화 요약 서술 규칙(버전)**: 분야에서 서술 대상 지표를 고르는 기준(최근 3개월 경로 변화 크기)과 그 지표 값 변화를 문장으로 만드는 등록된 규칙이다. 판정·전망 표현을 포함하지 않는다.\n+- **섹터 연결 상태**: 선택 섹터와 그로 좁혀진 전략·상품·뉴스 범위다. 경제환경 표시와 분리되며, 브라우저 세션 범위에서만 보관하고 계정에 저장하지 않는다.\n - **국내 시장 참고 정보**: 광범위 국내 주가지수의 가격 추세·변동성과 출처다.\n \n ## Success Criteria *(mandatory)*\n@@ -148,12 +159,13 @@\n - **SC-002**: 화면에 경제 전체를 하나의 점수·등급으로 요약한 요소가 0개이고, 변화 요약 문장에 판정·전망·투자 시사점 표현이 0건이다.\n - **SC-003**: 열린 분야의 모든 지표에 실제 값·단위·대상월·출처가 표시되고, 표준화 점수나 거리로만 표시된 지표가 0개다.\n - **SC-004**: 섹터 선택 전후로 분야 요약·지표 값·기준월·검색 순위가 다른 사례가 0건이다.\n-- **SC-005**: 수집 지연·실패·자료 없음 상태의 100%가 오류 화면 없이 마지막 갱신 시각 또는 상태 표시로 처리된다.\n+- **SC-005**: 수집 실패·자료 없음·예시 자료 상태의 100%가 오류 화면 없이 상태 표시로 처리되고, 지표를 표시하는 모든 영역에서 대상월과 마지막 갱신 시각이 함께 보인다. 서비스가 자료를 '지연'으로 판정해 붙인 표시는 0건이다.\n - **SC-006**: 사용성 관찰에서 참여자가 분야 유사성을 경제 전체의 일치로 오해하지 않는지, 관심 분야의 지표 값을 설명 없이 찾는지 기록하고 두 명 이상이 오해하면 화면을 수정한다. (§7.2, D20)\n+- **SC-007**: 시장 흐름 기본 화면에 진입한 뒤 2초 이내에 7개 분야 요약이 모두 보인다. 뉴스 묶음과 국내 시장 참고 정보는 늦게 채워져도 분야 요약 표시를 막지 않는다.\n \n ## Assumptions\n \n-- 변화 요약은 등록된 서술 규칙으로 만든 문장이며, 방향(상승/하락/보합)·변화 폭·지속 기간을 지표의 실제 값으로 설명한다. 구체 규칙은 plan에서 정하고, 자유 생성 문장은 쓰지 않는다.\n+- 변화 요약은 등록된 서술 규칙으로 만든 문장이며, 방향(상승/하락/보합)·변화 폭·지속 기간을 지표의 실제 값으로 설명한다. 서술 대상 지표를 고르는 기준은 FR-004가 정한다. 변화 크기를 비교하는 방법(단위가 다른 지표 간 비교)과 문장 형식의 구체 규칙은 plan에서 정하고, 자유 생성 문장은 쓰지 않는다.\n - 기본 화면의 분야 순서는 [008](../008-macro-indicator-registry/spec.md) FR-001의 순서를 따른다. 사용자 정렬 기능은 두지 않는다.\n - 섹터 선택은 [002](../002-sector-weight-selection/spec.md)와 같은 섹터 목록을 쓴다.\n - 한국어 웹 화면이며 데스크톱 브라우저를 우선한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/spec.md",
+          "old_path": "specs/009-market-flow-overview/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2814245": []
+  }
+}

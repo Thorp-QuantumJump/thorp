@@ -1,0 +1,497 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963650,
+    "iid": 404,
+    "project_id": 1444456,
+    "title": "docs(fe): spec013개선-B09 converge",
+    "description": "# 작업 내용 요약\n\nB09 converge(2026-10-07)에서 찾은 빈자리 가운데 다른 묶음에 속하는 하나를 tasks.md Phase 28의 T204(B13)로 덧붙인다. 완료 카드의 그림 장면(T193)이 쓸 레벨 문턱·보이는 레벨·다음 배지 진행은 완료 응답(§4)에 없고 `GET /learning/me`에만 있다. B09 MR에 있어야 했던 빈자리는 B09 브랜치에서 채웠다.\n\n# 주요 변경 사항\n\n- `specs/013-learning-pages/tasks.md`에 Phase 28 Convergence와 T204 ‹B13›를 더한다. 기존 태스크는 바꾸지 않는다.\n\n# 테스트\n\n- [x] 문서만 바꿨다. 코드와 테스트는 그대로다.\n\n# 리뷰 포인트\n\n- T204는 두 방법(완료 응답을 받은 뒤 `GET /learning/me`를 한 번 더 부름 / §4 응답에 레벨과 다음 배지 조각을 더함) 가운데 하나를 B13이 고르게 둔다. 뒤쪽을 고르면 B09의 응답·픽스처·IT를 같은 MR에서 고친다.\n- B09 MR(`feat(be)/learning-records`)을 먼저 병합하는 편이 자연스럽다. T204가 B09의 픽스처와 IT를 가리킨다. 두 MR은 tasks.md의 다른 자리를 고쳐 충돌하지 않는다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(태스크 문서)\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-10-07T13:41:12.232+09:00",
+    "updated_at": "2026-10-07T13:41:26.650+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-07T13:41:26.185+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/spec-013-b09-converge",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe",
+    "merge_commit_sha": "0b3a7d29cc4a04ebea449a504834c4cc82f5708d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-07T13:41:13.215+09:00",
+    "reference": "!404",
+    "references": {
+      "short": "!404",
+      "relative": "!404",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!404"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/404",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963650,
+    "iid": 404,
+    "project_id": 1444456,
+    "title": "docs(fe): spec013개선-B09 converge",
+    "description": "# 작업 내용 요약\n\nB09 converge(2026-10-07)에서 찾은 빈자리 가운데 다른 묶음에 속하는 하나를 tasks.md Phase 28의 T204(B13)로 덧붙인다. 완료 카드의 그림 장면(T193)이 쓸 레벨 문턱·보이는 레벨·다음 배지 진행은 완료 응답(§4)에 없고 `GET /learning/me`에만 있다. B09 MR에 있어야 했던 빈자리는 B09 브랜치에서 채웠다.\n\n# 주요 변경 사항\n\n- `specs/013-learning-pages/tasks.md`에 Phase 28 Convergence와 T204 ‹B13›를 더한다. 기존 태스크는 바꾸지 않는다.\n\n# 테스트\n\n- [x] 문서만 바꿨다. 코드와 테스트는 그대로다.\n\n# 리뷰 포인트\n\n- T204는 두 방법(완료 응답을 받은 뒤 `GET /learning/me`를 한 번 더 부름 / §4 응답에 레벨과 다음 배지 조각을 더함) 가운데 하나를 B13이 고르게 둔다. 뒤쪽을 고르면 B09의 응답·픽스처·IT를 같은 MR에서 고친다.\n- B09 MR(`feat(be)/learning-records`)을 먼저 병합하는 편이 자연스럽다. T204가 B09의 픽스처와 IT를 가리킨다. 두 MR은 tasks.md의 다른 자리를 고쳐 충돌하지 않는다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(태스크 문서)\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 해당 없음\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-10-07T13:41:12.232+09:00",
+    "updated_at": "2026-10-07T13:41:26.650+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-07T13:41:26.185+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/spec-013-b09-converge",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe",
+    "merge_commit_sha": "0b3a7d29cc4a04ebea449a504834c4cc82f5708d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-07T13:41:13.215+09:00",
+    "reference": "!404",
+    "references": {
+      "short": "!404",
+      "relative": "!404",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!404"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/404",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 6,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "2afb07f1179239ad92ec1767ac3f7cb2bf4809f3",
+      "head_sha": "6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe",
+      "start_sha": "f0fa7f18bca0a68cebc87bf8d75e63140d43cc4e"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "6d897d616b8b811f943ded47f0c97d5f02154d21",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882091,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T13:41:12.356+09:00",
+          "updated_at": "2026-10-07T13:41:12.364+09:00",
+          "system": true,
+          "noteable_id": 963650,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 404,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "83eb5f55ae2f0f205a34c187c87179d8deef5197",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882092,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (문서는 태스크 정의 추가만 포함하고 있으며, 코드나 설정의 오류를 유발할 만한 사항은 없습니다.)\n\n### 테스트 제안\n- [ ] 문서 수정 사항이므로 별도의 자동화 테스트는 필요하지 않습니다. `specs/013-learning-pages/tasks.md`의 마크다운 형식 및 철자, 태스크 번호(T204) 중복 여부 등이 올바르게 작성되었는지 수동으로 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-07T13:41:19.757+09:00",
+          "updated_at": "2026-10-07T13:41:19.757+09:00",
+          "system": false,
+          "noteable_id": 963650,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 404,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6f7dc76215e965eec39ff135f089fce55e2d1555",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882093,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T13:41:22.326+09:00",
+          "updated_at": "2026-10-07T13:41:22.329+09:00",
+          "system": true,
+          "noteable_id": 963650,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 404,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b8509632582e803b35aef37cd9ebd0d65b7a0f24",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882094,
+          "type": null,
+          "body": "mentioned in commit 0b3a7d29cc4a04ebea449a504834c4cc82f5708d",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T13:41:26.210+09:00",
+          "updated_at": "2026-10-07T13:41:26.215+09:00",
+          "system": true,
+          "noteable_id": 963650,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 404,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7f86a62652cb52c2fc57bb4ce2d5cfbaa2ed4665",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884981,
+          "type": null,
+          "body": "mentioned in commit 435bb61334d59d84e74e6be60c7c663e8a3efa57",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:05.790+09:00",
+          "updated_at": "2026-10-13T15:16:05.841+09:00",
+          "system": true,
+          "noteable_id": 963650,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 404,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262804,
+      "head_commit_sha": "6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe",
+      "base_commit_sha": "2afb07f1179239ad92ec1767ac3f7cb2bf4809f3",
+      "start_commit_sha": "f0fa7f18bca0a68cebc87bf8d75e63140d43cc4e",
+      "created_at": "2026-10-07T13:41:12.570+09:00",
+      "merge_request_id": 963650,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "bb89fe4d4bb580b49f744e96d08ecaf686ff7583"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262804,
+      "head_commit_sha": "6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe",
+      "base_commit_sha": "2afb07f1179239ad92ec1767ac3f7cb2bf4809f3",
+      "start_commit_sha": "f0fa7f18bca0a68cebc87bf8d75e63140d43cc4e",
+      "created_at": "2026-10-07T13:41:12.570+09:00",
+      "merge_request_id": 963650,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "bb89fe4d4bb580b49f744e96d08ecaf686ff7583",
+      "commits": [
+        {
+          "id": "6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe",
+          "short_id": "6a9f6d8c",
+          "created_at": "2026-10-07T11:18:37.000+09:00",
+          "parent_ids": [
+            "2afb07f1179239ad92ec1767ac3f7cb2bf4809f3"
+          ],
+          "title": "docs(fe): spec 013 B09 converge에서 찾은 B13 빈자리를 T204로 덧붙인다",
+          "message": "docs(fe): spec 013 B09 converge에서 찾은 B13 빈자리를 T204로 덧붙인다\n\n완료 카드의 그림 장면(T193)이 쓸 레벨 문턱·보이는 레벨·다음 배지 진행은 완료 응답(§4)에 없고\nGET /learning/me에만 있다. 어느 쪽에서 받을지 정하는 일을 B13 묶음의 Phase 28 태스크로 둔다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-07T11:18:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-07T11:18:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6a9f6d8cf40a43e6be25a9e63f4e60ae33f30afe"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -892,3 +892,9 @@ Task: \"T188 QuizPanel 로그인 모드\" → \"T189 글 화면 연결\" → \"T190 \n \n - [ ] T202 [US6] (FE) `frontend/src/components/learning/article/ArticleEnd.tsx`의 비로그인 글 끝에 있는 '로그인하면 학습 기록이 남습니다.' 한 줄과 로그인 연결을 T140이 만드는 `frontend/src/components/learning/me/GuestSample.tsx`(견본 그림·한 줄·로그인 연결)로 바꾼다. 확인 문제 → 다음 글 → 견본 순서와, 로그인 상태를 다시 확인하는 동안 부품을 내리지 않고 숨기기만 하는 처리(`concealed`, research R33)를 그대로 둔다. `frontend/src/pages/LearningArticlePage.test.tsx`에 비로그인 글 끝의 견본(그림은 `aria-hidden`, 숫자·상태 모양 없음)을 더한다 per design-notes §3.5, 목업 '글 끝'의 `guestSample('end')`, FR-031 (missing) ‹B11›\n - [ ] T203 [US1] (FE) `frontend/src/pages/LearningArticlePage.tsx` 글 머리 경로의 단계 연결('n단계 · 이름', B10에서는 `/learn`으로 간다)을 커리큘럼 보기의 그 단계 자리로 잇고, 받은 `learningReturn`을 그대로 싣는다. 단계 자리를 가리키는 방식은 T139의 '○단계 보기' 연결과 같게 한다 per 목업 '글 끝'의 경로(`data-to=\"stage-n\"`), FR-031 (partial) ‹B11›\n+\n+## Phase 28: Convergence\n+\n+**Purpose**: B09 converge(2026-10-07)에서 찾은 빈자리 가운데 다른 묶음에 속하는 것. B09 MR에 있어야 했던 빈자리는 B09 브랜치(`feat(be)/learning-records`)에서 바로 채웠다. 아래 태스크는 B13 묶음에 담는다.\n+\n+- [ ] T204 [US6] (FE) 완료 카드의 그림 장면(T193의 레벨 표장·레벨 길·다음 배지 메달)이 쓸 값을 어디서 받을지 정하고 그대로 잇는다. 완료 응답([learning-me-api](contracts/learning-me-api.md) §4)에는 `gained.levelBefore`·`levelAfter`와 단계 진행만 있고, 경험치 합계·레벨 문턱(`milestones`)·보이는 가장 높은 레벨·다음 배지의 진행은 `GET /learning/me`(§1)에만 있다. 완료 응답을 받은 뒤 `GET /learning/me`를 한 번 더 불러 그리는 방법과, §4 응답에 레벨과 다음 배지 조각을 더하는 방법 가운데 하나를 고른다. 뒤쪽이면 서버 응답·`docs/specs/learning-api/examples/me-completion.json`·`LearnerApiIT`를 같은 MR에서 고친다. 앞쪽이면 그 요청이 실패해도 T187의 글자 정보는 그대로 두고 그림 자리만 비운다. 고른 방법을 계약 §4와 T187·T193에 적는다 per FR-030, T193 (missing) ‹B13›\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/tasks.md",
+          "old_path": "specs/013-learning-pages/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2882092": []
+  }
+}

@@ -1,0 +1,741 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949112,
+    "iid": 194,
+    "project_id": 1444456,
+    "title": "fix(be): 테스트 커넥션 풀이 모자라 30초씩 기다리지 않게 한다",
+    "description": "## 작업 내용 요약\n\nDB 테스트의 커넥션 풀(2개)이 모자라 ParamSearchLaunchIT·BacktestVersionsApiIT가 30초씩 기다리던 것을 없앴다. 풀을 4개로 늘리고, 쉬는 커넥션을 10초 뒤 닫아 연결 수 초과를 막는다.\n\n## 관련 티켓\n\nS15P21E205-327\n\n## 주요 변경 사항\n\n- `PostgresTestSupport`: `maximum-pool-size` 2 → 4, `idle-timeout=10000` 추가, 2개로 모자란 이유를 주석으로 남김\n\n## 테스트\n\n- 로컬 전체 실행 전후 비교: `Connection is not available` 6 → 0건, `too many clients` 0건\n- ParamSearchLaunchIT 34.4s → 3.5s, BacktestVersionsApiIT 30.8s → 0.5s\n- 실패 12개(LearningPublicApiIT 10, ResultApiIT 2)는 변경 전과 같은 테스트이며 이 MR과 무관하다. 그래서 로컬 `./gradlew build`는 실패한다.\n\n## 리뷰 포인트\n\n- 원인은 테스트 스레드 하나가 커넥션 3개를 동시에 쓰는 경로다: 접수 트랜잭션이 쥔 채 커밋 후 발행이 REQUIRES_NEW로 하나 더, 그 안의 조회가 또 하나. 운영 풀은 기본 10개라 운영 영향은 없다.\n- 풀을 키우는 대신 idle-timeout을 짧게 둬서, 캐시에 남은 컨텍스트들이 연결을 쥐고 있지 않게 했다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T15:47:21.510+09:00",
+    "updated_at": "2026-09-18T10:23:08.608+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T10:23:08.370+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/327-test-connection-wait",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d",
+    "merge_commit_sha": "f1c9648365ef7149aa71a380fe416b8e563d1bb0",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:47:22.456+09:00",
+    "reference": "!194",
+    "references": {
+      "short": "!194",
+      "relative": "!194",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!194"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/194",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949112,
+    "iid": 194,
+    "project_id": 1444456,
+    "title": "fix(be): 테스트 커넥션 풀이 모자라 30초씩 기다리지 않게 한다",
+    "description": "## 작업 내용 요약\n\nDB 테스트의 커넥션 풀(2개)이 모자라 ParamSearchLaunchIT·BacktestVersionsApiIT가 30초씩 기다리던 것을 없앴다. 풀을 4개로 늘리고, 쉬는 커넥션을 10초 뒤 닫아 연결 수 초과를 막는다.\n\n## 관련 티켓\n\nS15P21E205-327\n\n## 주요 변경 사항\n\n- `PostgresTestSupport`: `maximum-pool-size` 2 → 4, `idle-timeout=10000` 추가, 2개로 모자란 이유를 주석으로 남김\n\n## 테스트\n\n- 로컬 전체 실행 전후 비교: `Connection is not available` 6 → 0건, `too many clients` 0건\n- ParamSearchLaunchIT 34.4s → 3.5s, BacktestVersionsApiIT 30.8s → 0.5s\n- 실패 12개(LearningPublicApiIT 10, ResultApiIT 2)는 변경 전과 같은 테스트이며 이 MR과 무관하다. 그래서 로컬 `./gradlew build`는 실패한다.\n\n## 리뷰 포인트\n\n- 원인은 테스트 스레드 하나가 커넥션 3개를 동시에 쓰는 경로다: 접수 트랜잭션이 쥔 채 커밋 후 발행이 REQUIRES_NEW로 하나 더, 그 안의 조회가 또 하나. 운영 풀은 기본 10개라 운영 영향은 없다.\n- 풀을 키우는 대신 idle-timeout을 짧게 둬서, 캐시에 남은 컨텍스트들이 연결을 쥐고 있지 않게 했다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-09-17T15:47:21.510+09:00",
+    "updated_at": "2026-09-18T10:23:08.608+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T10:23:08.370+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/327-test-connection-wait",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d",
+    "merge_commit_sha": "f1c9648365ef7149aa71a380fe416b8e563d1bb0",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T15:47:22.456+09:00",
+    "reference": "!194",
+    "references": {
+      "short": "!194",
+      "relative": "!194",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!194"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/194",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "1",
+    "latest_build_started_at": "2026-09-17T15:47:32.932+09:00",
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 202806,
+      "iid": 118,
+      "project_id": 1444456,
+      "sha": "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+      "ref": "fix(be)/327-test-connection-wait",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T15:47:32.821+09:00",
+      "updated_at": "2026-09-17T15:57:23.552+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202806"
+    },
+    "head_pipeline": {
+      "id": 202806,
+      "iid": 118,
+      "project_id": 1444456,
+      "sha": "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+      "ref": "fix(be)/327-test-connection-wait",
+      "status": "failed",
+      "source": "external",
+      "created_at": "2026-09-17T15:47:32.821+09:00",
+      "updated_at": "2026-09-17T15:57:23.552+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202806",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-17T15:47:32.932+09:00",
+      "finished_at": "2026-09-17T15:57:23.546+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_failed",
+        "text": "Failed",
+        "label": "failed",
+        "group": "failed",
+        "tooltip": "failed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/202806",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_failed-41304d7f7e3828808b0c26771f0309e55296819a9beea3ea9fbf6689d9857c12.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+      "head_sha": "85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d",
+      "start_sha": "0274a1fd1a59ef7d6b1caf41871a66c994911515"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "287ccb9389db6bd0c1aab459b2c6211ebb111704",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826022,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T15:47:21.601+09:00",
+          "updated_at": "2026-09-17T15:47:21.605+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3c668095ac40308309b14e1c470c3bee38205cfb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826023,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T15:47:21.621+09:00",
+          "updated_at": "2026-09-17T15:47:21.629+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d726089c2784054ee38f207021fb955cb932cb61",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826024,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **명확한 원인 분석과 문서화**: 테스트 환경에서 발생한 커넥션 풀 고갈 원인(`REQUIRES_NEW` 전파, 스케줄러 겹침 등)을 상세한 주석으로 남겨 향후 유지보수성을 크게 높였습니다.\n- **자원 고갈 방지 대책**: `maximum-pool-size`를 단순히 늘리는 것에 그치지 않고, `idle-timeout=10000`을 추가하여 유휴 커넥션을 빠르게 반환하도록 설계함으로써 PostgreSQL의 `max_connections` 초과 문제를 지혜롭게 예방했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **동시성 및 풀 고갈 테스트 시나리오**:\n  - `ParamSearchLaunchIT`와 `BacktestVersionsApiIT`를 단독 실행 및 병렬(Parallel) 실행하여 30초 대기 시간(`Connection is not available`)이 발생하지 않고 즉시 수행되는지 확인합니다.\n  - 다수의 통합 테스트를 동시에 실행했을 때 PostgreSQL 컨테이너에서 `too many clients already` 에러가 발생하지 않는지 최종 빌드(`./gradlew test` 등)를 통해 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T15:47:26.435+09:00",
+          "updated_at": "2026-09-18T10:22:48.914+09:00",
+          "system": false,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e9b14fb9cf948cdf244c407c027aa186ef70d1d1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2826061,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-17T15:49:46.557+09:00",
+          "updated_at": "2026-09-17T15:49:46.560+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7cad99a9be3a28742dcf6a4468684b8471bbf1dc",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830983,
+          "type": null,
+          "body": "aborted the automatic merge because the source branch was updated. [Learn more](https://lab.ssafy.com/help/ci/pipelines/merge_trains.md#merge-request-dropped-from-the-merge-train).",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T10:22:41.415+09:00",
+          "updated_at": "2026-09-18T10:22:41.460+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d171ceb58cf84bb51261b65841a97def9f62dd65",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830984,
+          "type": null,
+          "body": "added 158 commits\n\n<ul><li>8a2e8f67...6eda80ee - 157 commits from branch <code>dev</code></li><li>85ab984c - Merge remote-tracking branch &#39;origin/dev&#39; into fix(be)/327-test-connection-wait</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/194/diffs?diff_id=2218621&start_sha=8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T10:22:41.677+09:00",
+          "updated_at": "2026-09-18T10:22:41.713+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ce02abefdbcccc5a13b1e0cb1f04e2cfc5f614f9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2830990,
+          "type": null,
+          "body": "mentioned in commit f1c9648365ef7149aa71a380fe416b8e563d1bb0",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T10:23:08.446+09:00",
+          "updated_at": "2026-09-18T10:23:08.451+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a9f1348d3eae407b3bfd5d746bef13383ecf37ba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885041,
+          "type": null,
+          "body": "mentioned in commit 90524da540bd5ca64acd5688997d7167cbcf48bb",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.086+09:00",
+          "updated_at": "2026-10-13T15:16:11.097+09:00",
+          "system": true,
+          "noteable_id": 949112,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 194,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2218621,
+      "head_commit_sha": "85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d",
+      "base_commit_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+      "start_commit_sha": "0274a1fd1a59ef7d6b1caf41871a66c994911515",
+      "created_at": "2026-09-18T10:22:40.588+09:00",
+      "merge_request_id": 949112,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "be37bd4eb59f47d2aeea006e36b87f3a270b0ad3"
+    },
+    {
+      "id": 2214268,
+      "head_commit_sha": "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+      "base_commit_sha": "4906e42f3df177a5c00c76bbdb56044869080ea2",
+      "start_commit_sha": "7a6d3b2ba614fb70207264234f0f26023df1b0e1",
+      "created_at": "2026-09-17T15:47:21.883+09:00",
+      "merge_request_id": 949112,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "90da4263a1c7ed02ab922a5dc9a5f37f427e5b50"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2218621,
+      "head_commit_sha": "85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d",
+      "base_commit_sha": "6eda80eecd60f1b96931c5742117debdf306f5cb",
+      "start_commit_sha": "0274a1fd1a59ef7d6b1caf41871a66c994911515",
+      "created_at": "2026-09-18T10:22:40.588+09:00",
+      "merge_request_id": 949112,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "be37bd4eb59f47d2aeea006e36b87f3a270b0ad3",
+      "commits": [
+        {
+          "id": "85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d",
+          "short_id": "85ab984c",
+          "created_at": "2026-09-18T10:22:26.000+09:00",
+          "parent_ids": [
+            "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+            "6eda80eecd60f1b96931c5742117debdf306f5cb"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into fix(be)/327-test-connection-wait",
+          "message": "Merge remote-tracking branch 'origin/dev' into fix(be)/327-test-connection-wait\n\n# Conflicts:\n#\tbackend/src/test/java/com/ssafy/thorp/support/PostgresTestSupport.java\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T10:22:26.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T10:22:26.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/85ab984cc81f7a1dcedd7de3789a6fa003bbdb2d"
+        },
+        {
+          "id": "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+          "short_id": "8a2e8f67",
+          "created_at": "2026-09-17T15:42:37.000+09:00",
+          "parent_ids": [
+            "4906e42f3df177a5c00c76bbdb56044869080ea2"
+          ],
+          "title": "fix(be): 테스트 커넥션 풀이 모자라 30초씩 기다리지 않게 한다",
+          "message": "fix(be): 테스트 커넥션 풀이 모자라 30초씩 기다리지 않게 한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T15:42:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T15:42:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -40,9 +40,19 @@ import org.testcontainers.junit.jupiter.Testcontainers;\n             \"spring.jpa.hibernate.ddl-auto=validate\",\n             // 컨텍스트마다 Hikari 기본 10개를 잡으면 DB 테스트 클래스가 늘수록\n             // PostgreSQL 기본 max_connections(100)를 넘겨 \"too many clients already\"가 난다.\n-            // 테스트는 단일 스레드라 컨텍스트당 2개로 충분하다.\n-            \"spring.datasource.hikari.maximum-pool-size=2\",\n+            //\n+            // 그렇다고 2개로는 모자란다. 테스트 스레드 하나가 동시에 3개를 쥐는 경로가 있다 — 바깥\n+            // 트랜잭션이 커넥션을 쥔 채 커밋 후 발행(BacktestJobDispatcher)이 REQUIRES_NEW 로 하나를\n+            // 더 열고, 그 안의 조회가 또 하나를 쓴다. 여기에 같은 컨텍스트의 스케줄러(RunLivenessSweeper\n+            // 등)가 겹친다. 2개일 때 ParamSearchLaunchIT·BacktestVersionsApiIT 가 풀을 30초씩 기다렸다\n+            // (S15P21E205-327).\n+            //\n+            // 대신 쉬는 커넥션을 빨리 닫는다. 캐시에 남은 컨텍스트들이 풀을 쥐고 있지 않게 해서, 동시에\n+            // 열려 있는 연결이 지금 도는 컨텍스트 몇 개의 몫을 넘지 않게 한다. 10초는 Hikari 가 허용하는\n+            // 최솟값이다.\n+            \"spring.datasource.hikari.maximum-pool-size=4\",\n             \"spring.datasource.hikari.minimum-idle=0\",\n+            \"spring.datasource.hikari.idle-timeout=10000\",\n             // 배우기 관리 IT(spec 013 B02)의 관리 계정. 클래스마다 속성을 따로 주면 컨텍스트가 갈라져 공용 컨테이너의\n             // 연결이 모자라므로 여기 한 곳에 둔다. 다른 도메인은 이 값을 읽지 않는다.\n             \"thorp.learning.admin-user-ids=7\"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/support/PostgresTestSupport.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/support/PostgresTestSupport.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2214268,
+      "head_commit_sha": "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+      "base_commit_sha": "4906e42f3df177a5c00c76bbdb56044869080ea2",
+      "start_commit_sha": "7a6d3b2ba614fb70207264234f0f26023df1b0e1",
+      "created_at": "2026-09-17T15:47:21.883+09:00",
+      "merge_request_id": 949112,
+      "state": "without_files",
+      "real_size": "1",
+      "patch_id_sha": "90da4263a1c7ed02ab922a5dc9a5f37f427e5b50",
+      "commits": [
+        {
+          "id": "8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c",
+          "short_id": "8a2e8f67",
+          "created_at": "2026-09-17T15:42:37.000+09:00",
+          "parent_ids": [
+            "4906e42f3df177a5c00c76bbdb56044869080ea2"
+          ],
+          "title": "fix(be): 테스트 커넥션 풀이 모자라 30초씩 기다리지 않게 한다",
+          "message": "fix(be): 테스트 커넥션 풀이 모자라 30초씩 기다리지 않게 한다\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-17T15:42:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-17T15:42:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8a2e8f670057bcc1588e04ffb50dd9f7c8a9ef1c"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2826024": []
+  }
+}

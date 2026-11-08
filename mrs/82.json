@@ -1,0 +1,513 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943106,
+    "iid": 82,
+    "project_id": 1444456,
+    "title": "feat(be): 검증 라벨·선정 규칙 불변성과 실행 측정 (S15P21E205-165)",
+    "description": "# 작업 내용 요약\n\nspec 007 자동 파라미터 탐색의 묶음 M9 `[BE] 검증 라벨·선정 규칙 불변성과 실행 측정` 을 구현했다. 8개 중 7개(T108\\~T113, T117a)를 끝냈고 T117(실행 측정)은 **완료 불가**로 사유와 함께 기록했다.\n\n관통하는 것은 **\"말하지 않은 것을 말한 것처럼 두지 않는다\"** 이다. 미검증을 검증 통과로 읽히게 두지 않고(FR-015), 끝난 묶음의 기준을 나중에 고칠 수 있게 두지 않으며(FR-013c), 잠금 구간 값이 선정에 새어 들 통로를 열어 두지 않는다(SC-005).\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-165\n- link https://ssafy.atlassian.net/browse/S15P21E205-165\n\n# 주요 변경 사항\n\n- `ValidationStatus` 신설 — 검증 라벨과 그 이유 한 문장을 평가 분할 스냅샷에서 함께 만든다. 같은 사실을 실행 전(미리보기)·실행 중(상태 조회)·결과(후보 목록) 세 곳이 말하는데 문구가 서비스 안에 박혀 있어 한 곳만 고쳐질 수 있었다\n- **상태 조회 응답에 `validationLabel`·`validationNote` 가 아예 없던 것을 채웠다.** 미리보기에만 있어서 폴링 중인 화면은 미검증임을 알 방법이 없었다 — 결과를 본 뒤에 알게 되면 이미 오해가 생긴 뒤다(FR-015). 접수 직후 202 응답에도 실어 화면이 폴링을 시작하기 전부터 배지를 띄울 수 있게 했다\n- 평가 분할이 등록되는 경우의 라벨 분기는 예외로 막아 뒀다 — 조용히 `UNVALIDATED` 로 떨어뜨리면 분할이 생긴 날 전 후보가 미검증으로 표시된다\n- `SelectionRuleImmutabilityTest` — 범위를 좁혀 다시 접수하면 새 `searchId` 가 나오고 이전 묶음의 상태·선정·스냅샷이 그대로인지, 그리고 `applyProgress` 본문에 `selectionRule`·`searchSpace`·`limits`·`referenceVersions` 를 쓰는 줄이 없는지 **코드에서 직접** 확인한다. \"지금은 그런 경로가 없다\"만으로는 다음 사람이 무심코 추가하는 것을 막지 못한다\n- `HeldOutExclusionTest` — 지금은 평가 분할이 미등록이라 샐 값 자체가 없으므로, \"지금 새는가\"가 아니라 **분할이 생겼을 때 샐 통로가 있는가**를 본다: 선정 경로 네 파일이 구간별 성과를 아예 읽지 않는지, 선정이 받는 성과 타입에 구간 구분이 없는지, 구간별 성과를 정반대 값으로 채워도 결과가 그대로인지\n- `ParamSearchRecordCompletenessTest` — 완료·부분 완료 묶음이 FR-020 항목(탐색 공간·방법·전체 후보·미실행 수·선정 규칙·참조 버전·등록표 버전·기준 실행·평가 분리·시드·시각)을 빠짐없이 갖는지, 계산하지 않은 후보도 사유를 남기는지, 저장된 탐색 공간만으로 후보 집합이 재구성되는지 확인한다\n- T111(검증 라벨 기본값·구간별 성과 자리 예약)과 T113(선정 이미 구현돼 있어 테스트로 고정만 했다\n- **T117 은 완료 불가로 표시하고 사유를 tasks.md 에 남겼다**(아래 리뷰 포인트 참고)\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (커밋 단계마다 재확인)\n- [x] `ParamSearchValidationLabelTest` 4건 — 전 후보 `UNVALIDATED`, 구간별 성과 자리 비움, 세 자리가 같은 라벨·같은 문장, 문구가 이유를 말함\n- [x] `SelectionRuleImmutabilityTest` 4건 — 새 묶음 생성과 이전 묶음 불변, 각자의 스냅샷, 갱신 경로 부재(코드 검사), 도메인에 규칙 변경 메서드 없음\n- [x] `HeldOutExclusionTest` 3건 — 선정 경로가 구간별 성과 미참조, 성과 타입에 구간 구분 없음, 구간별 성과를 채워도 결과 동일\n- [x] `ParamSearchRecordCompletenessTest` 4건 — 완료 묶음 기록 완전성, 취소 묶음도 동일, 미계산 후보 사유, 탐색 공간으로 후보 집합 재구성\n- [x] 테스트 javadoc 에 \"이 테스트의 통과를 검증 통과로 읽지 말라\"를 명시 — '아직 나누지 않았다'와 '나눠서 통과했다'는 정반대다(원칙 VII) - \\[ \\] T117 실행 측정 — 완료 불가. 아래 사유\n- [ ] 워커를 띄운 실제 계산으로 확인 — `daily_price` 가 비어 있어 아직 불가(spec 001 적재 대기) # 리뷰 포인트\n- [ ] **T117 을 완료 불가로 두었다.** 막는 것이 둘이다. (1) 저장할 곳이 없다 — `backtest` 에 측정 클래스·테이블이 하나도 없고 `ExecutionType` 에 `AUTO_SEARCH_BATCH` 도 없다. `backtest_run` 의 `queued_at`·`started_at`·`finished_at`·`publish_count` 는 측정의 **입력**이지 측정 기록이 아니다. 내부 계약 §5 가 \"007이 새 측정 저장소를 만들지 않는다\"고 (2) 건당 원가를 정할 수 없다 — 무엇을 원가로 셀지(CPU초·워커시간·스토리지)가 미정이라 임의로 정하면 PD-06 결정의 입력 원 사용은 워커 몫이라 007 범위 밖이다. **소요 시간·동시처리 수·실패 건수는 007 이 이미 만들 수 있으므로 004 T012(S15P21E205-127)가 저장소를 열면 포트만 붙이면 된다** — 이 판단이 맞는지 봐 달라\n  * 상태 조회 응답에 `validationLabel`·`validationNote` 를 더한 것은 계약 §3 예시에 없던 필드다. T112 가 \"preview·상태·후보 응답에 노출\"을 요구해 넣었는데, **계약 문서를 함께 고칠지** 확인이 필요하다(M10\n  * 평가 분할이 등록된 경우의 라벨 분기를 `IllegalStateException` 으로 막아 두었다. 조용히 `UNVALIDATED` 로 떨어뜨리는 쪽이 안전해 보일 수 있지만, 그러면 분할이 생긴 날 전 후보가 미검증으로 표시되고 아무도 판단\\*\\*인데 동의하는지 봐 달라\n  * 불변성·잠금 구간 검증에 **소스 코드를 읽는 테스트**를 썼다(`applyProgress` 본문, 선정 경로 파일). ArchUnit 규칙으로 옮기는 편이 나은지 의견을 달라\n  * `HeldOutExclusionTest` 는 구간별 성과가 채워지는 날 깨지도록 설계했다. 그때는 어느 구간을 선정에 넣을지 명시적으로 고르는 변경이 필요하고 조용히 통과하면 안 된다 — **깨지는 테스트를 남기는 것**이 이 저장소에서 받아들여지는 방식인지 확인해 달라",
+    "state": "merged",
+    "created_at": "2026-09-14T14:18:51.627+09:00",
+    "updated_at": "2026-09-14T14:25:49.491+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T14:19:11.086+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/{165}-validation-label-metrics",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e12471de3ca0175e55f90dfb18b106d992e0f94b",
+    "merge_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:18:53.437+09:00",
+    "reference": "!82",
+    "references": {
+      "short": "!82",
+      "relative": "!82",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!82"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/82",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943106,
+    "iid": 82,
+    "project_id": 1444456,
+    "title": "feat(be): 검증 라벨·선정 규칙 불변성과 실행 측정 (S15P21E205-165)",
+    "description": "# 작업 내용 요약\n\nspec 007 자동 파라미터 탐색의 묶음 M9 `[BE] 검증 라벨·선정 규칙 불변성과 실행 측정` 을 구현했다. 8개 중 7개(T108\\~T113, T117a)를 끝냈고 T117(실행 측정)은 **완료 불가**로 사유와 함께 기록했다.\n\n관통하는 것은 **\"말하지 않은 것을 말한 것처럼 두지 않는다\"** 이다. 미검증을 검증 통과로 읽히게 두지 않고(FR-015), 끝난 묶음의 기준을 나중에 고칠 수 있게 두지 않으며(FR-013c), 잠금 구간 값이 선정에 새어 들 통로를 열어 두지 않는다(SC-005).\n\n# 관련 티켓 번호 & 링크\n\n- ticket # S15P21E205-165\n- link https://ssafy.atlassian.net/browse/S15P21E205-165\n\n# 주요 변경 사항\n\n- `ValidationStatus` 신설 — 검증 라벨과 그 이유 한 문장을 평가 분할 스냅샷에서 함께 만든다. 같은 사실을 실행 전(미리보기)·실행 중(상태 조회)·결과(후보 목록) 세 곳이 말하는데 문구가 서비스 안에 박혀 있어 한 곳만 고쳐질 수 있었다\n- **상태 조회 응답에 `validationLabel`·`validationNote` 가 아예 없던 것을 채웠다.** 미리보기에만 있어서 폴링 중인 화면은 미검증임을 알 방법이 없었다 — 결과를 본 뒤에 알게 되면 이미 오해가 생긴 뒤다(FR-015). 접수 직후 202 응답에도 실어 화면이 폴링을 시작하기 전부터 배지를 띄울 수 있게 했다\n- 평가 분할이 등록되는 경우의 라벨 분기는 예외로 막아 뒀다 — 조용히 `UNVALIDATED` 로 떨어뜨리면 분할이 생긴 날 전 후보가 미검증으로 표시된다\n- `SelectionRuleImmutabilityTest` — 범위를 좁혀 다시 접수하면 새 `searchId` 가 나오고 이전 묶음의 상태·선정·스냅샷이 그대로인지, 그리고 `applyProgress` 본문에 `selectionRule`·`searchSpace`·`limits`·`referenceVersions` 를 쓰는 줄이 없는지 **코드에서 직접** 확인한다. \"지금은 그런 경로가 없다\"만으로는 다음 사람이 무심코 추가하는 것을 막지 못한다\n- `HeldOutExclusionTest` — 지금은 평가 분할이 미등록이라 샐 값 자체가 없으므로, \"지금 새는가\"가 아니라 **분할이 생겼을 때 샐 통로가 있는가**를 본다: 선정 경로 네 파일이 구간별 성과를 아예 읽지 않는지, 선정이 받는 성과 타입에 구간 구분이 없는지, 구간별 성과를 정반대 값으로 채워도 결과가 그대로인지\n- `ParamSearchRecordCompletenessTest` — 완료·부분 완료 묶음이 FR-020 항목(탐색 공간·방법·전체 후보·미실행 수·선정 규칙·참조 버전·등록표 버전·기준 실행·평가 분리·시드·시각)을 빠짐없이 갖는지, 계산하지 않은 후보도 사유를 남기는지, 저장된 탐색 공간만으로 후보 집합이 재구성되는지 확인한다\n- T111(검증 라벨 기본값·구간별 성과 자리 예약)과 T113(선정 이미 구현돼 있어 테스트로 고정만 했다\n- **T117 은 완료 불가로 표시하고 사유를 tasks.md 에 남겼다**(아래 리뷰 포인트 참고)\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build` 통과 (커밋 단계마다 재확인)\n- [x] `ParamSearchValidationLabelTest` 4건 — 전 후보 `UNVALIDATED`, 구간별 성과 자리 비움, 세 자리가 같은 라벨·같은 문장, 문구가 이유를 말함\n- [x] `SelectionRuleImmutabilityTest` 4건 — 새 묶음 생성과 이전 묶음 불변, 각자의 스냅샷, 갱신 경로 부재(코드 검사), 도메인에 규칙 변경 메서드 없음\n- [x] `HeldOutExclusionTest` 3건 — 선정 경로가 구간별 성과 미참조, 성과 타입에 구간 구분 없음, 구간별 성과를 채워도 결과 동일\n- [x] `ParamSearchRecordCompletenessTest` 4건 — 완료 묶음 기록 완전성, 취소 묶음도 동일, 미계산 후보 사유, 탐색 공간으로 후보 집합 재구성\n- [x] 테스트 javadoc 에 \"이 테스트의 통과를 검증 통과로 읽지 말라\"를 명시 — '아직 나누지 않았다'와 '나눠서 통과했다'는 정반대다(원칙 VII) - \\[ \\] T117 실행 측정 — 완료 불가. 아래 사유\n- [ ] 워커를 띄운 실제 계산으로 확인 — `daily_price` 가 비어 있어 아직 불가(spec 001 적재 대기) # 리뷰 포인트\n- [ ] **T117 을 완료 불가로 두었다.** 막는 것이 둘이다. (1) 저장할 곳이 없다 — `backtest` 에 측정 클래스·테이블이 하나도 없고 `ExecutionType` 에 `AUTO_SEARCH_BATCH` 도 없다. `backtest_run` 의 `queued_at`·`started_at`·`finished_at`·`publish_count` 는 측정의 **입력**이지 측정 기록이 아니다. 내부 계약 §5 가 \"007이 새 측정 저장소를 만들지 않는다\"고 (2) 건당 원가를 정할 수 없다 — 무엇을 원가로 셀지(CPU초·워커시간·스토리지)가 미정이라 임의로 정하면 PD-06 결정의 입력 원 사용은 워커 몫이라 007 범위 밖이다. **소요 시간·동시처리 수·실패 건수는 007 이 이미 만들 수 있으므로 004 T012(S15P21E205-127)가 저장소를 열면 포트만 붙이면 된다** — 이 판단이 맞는지 봐 달라\n  * 상태 조회 응답에 `validationLabel`·`validationNote` 를 더한 것은 계약 §3 예시에 없던 필드다. T112 가 \"preview·상태·후보 응답에 노출\"을 요구해 넣었는데, **계약 문서를 함께 고칠지** 확인이 필요하다(M10\n  * 평가 분할이 등록된 경우의 라벨 분기를 `IllegalStateException` 으로 막아 두었다. 조용히 `UNVALIDATED` 로 떨어뜨리는 쪽이 안전해 보일 수 있지만, 그러면 분할이 생긴 날 전 후보가 미검증으로 표시되고 아무도 판단\\*\\*인데 동의하는지 봐 달라\n  * 불변성·잠금 구간 검증에 **소스 코드를 읽는 테스트**를 썼다(`applyProgress` 본문, 선정 경로 파일). ArchUnit 규칙으로 옮기는 편이 나은지 의견을 달라\n  * `HeldOutExclusionTest` 는 구간별 성과가 채워지는 날 깨지도록 설계했다. 그때는 어느 구간을 선정에 넣을지 명시적으로 고르는 변경이 필요하고 조용히 통과하면 안 된다 — **깨지는 테스트를 남기는 것**이 이 저장소에서 받아들여지는 방식인지 확인해 달라",
+    "state": "merged",
+    "created_at": "2026-09-14T14:18:51.627+09:00",
+    "updated_at": "2026-09-14T14:25:49.491+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-14T14:19:11.086+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/{165}-validation-label-metrics",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e12471de3ca0175e55f90dfb18b106d992e0f94b",
+    "merge_commit_sha": "ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T14:18:53.437+09:00",
+    "reference": "!82",
+    "references": {
+      "short": "!82",
+      "relative": "!82",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!82"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/82",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 6
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "9",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "de6f38f44a62dbdae315a4251c56e11f8822e483",
+      "head_sha": "e12471de3ca0175e55f90dfb18b106d992e0f94b",
+      "start_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "c6e9d6b8a5a03d7c021e409fd6e520048e5fc4cd",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802011,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 도메인 불변성 테스트 구현**: `SelectionRuleImmutabilityTest`와 `HeldOutExclusionTest`에서 단순히 비즈니스 로직의 결과뿐만 아니라, 소스 코드 내 문자열 검사 및 리플렉션을 활용해 잘못된 갱신 경로와 잠금 구간(held-out) 침투 가능성을 원천 차단하려 한 설계가 매우 돋보입니다.\n- **방어적 예외 처리 및 명확한 상태 정의**: `ValidationStatus`를 통해 검증 라벨과 사유를 일원화하고, 평가 분할 미등록 시 `UNVALIDATED` 상태를 강제하여 미검증 데이터가 검증된 결과로 오인되는 것을 방지한 점(원칙 VII 준수)이 훌륭합니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (T117의 '완료 불가' 사유와 계약 문서 싱크 맞추기 등의 질문 사항은 PR 본문의 설명과 코드 주석에 이미 타당한 근거가 잘 기술되어 있습니다.)\n\n### 테스트 제안\n1. **평가 분할 등록 시나리오 (미래 시점 테스트)**\n   - 추후 PD-12 확정으로 평가 분할이 실제로 도입되었을 때, `ValidationStatus.of(evaluationSplit)`이 예외(`IllegalStateException`)를 던지는 대신 올바르게 탐색/잠금 구간별 성과를 기반으로 라벨을 분기하는지 검증하는 단위 테스트 시나리오 추가 필요.\n2. **동시성 및 폴링 상태 일관성 테스트**\n   - 다수의 탐색 요청이 동시에 들어오거나 폴링 중 상태 조회(Get)를 수행할 때, `validationLabel`과 `validationNote`가 응답 객체 (`ParamSearchResponse`, `ParamSearchResult`)에 누락 없이 일관되게 반환되는지 확인하는 통합 테스트.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e12471de3ca0175e55f90dfb18b106d992e0f94b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T14:18:57.239+09:00",
+          "updated_at": "2026-09-14T14:18:57.239+09:00",
+          "system": false,
+          "noteable_id": 943106,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 82,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "94aea717ef6085078d7100fc4e722e44e7cdd9a7",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802013,
+          "type": null,
+          "body": "mentioned in commit ab0d5f9bee67a5e1fc9a595a27ba1a99a31ee28c",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-14T14:19:11.289+09:00",
+          "updated_at": "2026-09-14T14:19:11.307+09:00",
+          "system": true,
+          "noteable_id": 943106,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 82,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194007,
+      "head_commit_sha": "e12471de3ca0175e55f90dfb18b106d992e0f94b",
+      "base_commit_sha": "de6f38f44a62dbdae315a4251c56e11f8822e483",
+      "start_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "created_at": "2026-09-14T14:18:52.020+09:00",
+      "merge_request_id": 943106,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "339441b11e2a0ff3bf15828f42c50eed6fb51bfe"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194007,
+      "head_commit_sha": "e12471de3ca0175e55f90dfb18b106d992e0f94b",
+      "base_commit_sha": "de6f38f44a62dbdae315a4251c56e11f8822e483",
+      "start_commit_sha": "e8a9003bef9b4fd54f29faf96e85a89d2b009f77",
+      "created_at": "2026-09-14T14:18:52.020+09:00",
+      "merge_request_id": 943106,
+      "state": "collected",
+      "real_size": "9",
+      "patch_id_sha": "339441b11e2a0ff3bf15828f42c50eed6fb51bfe",
+      "commits": [
+        {
+          "id": "e12471de3ca0175e55f90dfb18b106d992e0f94b",
+          "short_id": "e12471de",
+          "created_at": "2026-09-14T14:16:34.000+09:00",
+          "parent_ids": [
+            "9f9b06bc6a85b0ccea549d6460d31e571a851412"
+          ],
+          "title": "docs(be): T117 을 완료 불가로 표시하고 막는 두 가지를 기록한다",
+          "message": "docs(be): T117 을 완료 불가로 표시하고 막는 두 가지를 기록한다\n\nspec 007 M9. 이번 묶음에서 끝낼 수 없는 이유를 다음 사람이 다시 조사하지\n않도록 태스크 옆에 남긴다.\n\n(1) 저장할 곳이 없다 — backtest 에 측정 클래스·테이블이 하나도 없고\nExecutionType 에 AUTO_SEARCH_BATCH 도 없다. backtest_run 의 queued_at·\nstarted_at·finished_at·publish_count 는 측정의 입력이지 측정 기록이 아니다.\n내부 계약 §5 가 \"007이 새 측정 저장소를 만들지 않는다\"고 정해 007 안에\n만들 수도 없다.\n\n(2) 건당 원가를 정할 수 없다 — 무엇을 원가로 셀지가 미정이라 임의로 정하면\nPD-06 결정의 입력을 지어내는 셈이다(원칙 IX). 자원 사용은 워커 몫이라 007\n범위 밖이다.\n\n소요 시간·동시 처리 수·실패 건수는 007 이 이미 만들 수 있어, 004 T012\n(S15P21E205-127)가 저장소를 열면 포트만 붙이면 된다는 것도 함께 적었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T14:16:34.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T14:16:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e12471de3ca0175e55f90dfb18b106d992e0f94b"
+        },
+        {
+          "id": "9f9b06bc6a85b0ccea549d6460d31e571a851412",
+          "short_id": "9f9b06bc",
+          "created_at": "2026-09-14T12:44:14.000+09:00",
+          "parent_ids": [
+            "21db21e4e31f6a0feae6170c4617b1fd756e9d19"
+          ],
+          "title": "test(be): 끝난 묶음이 FR-020 기록 항목을 빠짐없이 갖는지 고정한다",
+          "message": "test(be): 끝난 묶음이 FR-020 기록 항목을 빠짐없이 갖는지 고정한다\n\nT117a (spec 007 M9, SC-007·FR-022, 원칙 VIII).\n\n여기서 보는 것은 화면이 아니라 저장 상태다. FR-022 의 \"한 묶음으로 다시\n열린다\"에서 007 의 책임은 조회가 가능한 형태로 저장하는 것까지이고 목록·펼침\n화면은 006 이 소유한다.\n\n항목 하나가 비면 그 묶음은 나중에 다시 읽을 수 없다 — 등록표가 바뀐 뒤 무엇을\n탐색했는지 재구성하려면 실제 사용한 후보값이 있어야 하고, 왜 이 후보가 빠졌는지\n답하려면 계산하지 않은 후보의 사유까지 남아야 한다. 재현 기록은 전부 있거나\n없거나다. 그래서 탐색 공간·방법·전체 후보·미실행 수·선정 규칙·참조 버전(등록표\n버전 포함)·기준 실행·평가 분리·시드·시각을 항목별로 단언한다.\n\n취소로 끝난 묶음도 같은 기준으로 본다. 기록이 덜 남으면 사용자가 \"여기까지\n계산했다\"를 되짚을 수 없다.\n\nT117(실행 측정)은 막혀서 남긴다. 004 에 실행 측정 저장소가 아예 없고\n(ExecutionMetric·테이블·AUTO_SEARCH_BATCH 전부 부재) 내부 계약 §5 가 \"007이\n새 측정 저장소를 만들지 않는다\"고 정해 우회 구현도 막힌다. 사유와 선행 티켓을\ntasks.md 에 적었다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T12:44:14.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T12:44:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9f9b06bc6a85b0ccea549d6460d31e571a851412"
+        },
+        {
+          "id": "21db21e4e31f6a0feae6170c4617b1fd756e9d19",
+          "short_id": "21db21e4",
+          "created_at": "2026-09-14T12:37:51.000+09:00",
+          "parent_ids": [
+            "6d73fcd88de0311989e597f0326403f736e3e7a6"
+          ],
+          "title": "test(be): 선정 규칙 불변성과 잠금 구간 제외를 테스트로 고정한다",
+          "message": "test(be): 선정 규칙 불변성과 잠금 구간 제외를 테스트로 고정한다\n\nT109·T110·T113 (spec 007 M9, FR-013c·SC-005, 원칙 VII·VIII).\nT113(불변성)은 저장 경로에 스냅샷 자리를 두지 않는 방식으로 이미 지켜지고\n있어, 그 사실 자체를 테스트로 못 박았다.\n\n기준을 바꿔 다시 보는 것은 새 실험이다. 끝난 묶음의 규칙이나 범위를 고쳐 결과를\n다시 그리면 \"무엇을 기준으로 무엇을 탐색했는가\"의 답이 시간에 따라 달라진다.\n범위를 좁혀 다시 접수하면 새 searchId 가 나오고 이전 묶음의 상태·선정·스냅샷이\n그대로인지 보고, applyProgress 본문에 selectionRule·searchSpace·limits·\nreferenceVersions 를 쓰는 줄이 없는지 코드에서 직접 확인한다. \"지금은 그런\n경로가 없다\"만으로는 다음 사람이 무심코 추가하는 것을 막지 못한다.\n\n잠금 구간이 선정에 새면 검증이 검증이 아니게 된다 — 그 값으로 후보를 고르면\n그 구간도 탐색에 쓴 셈이라 남는 검증 구간이 없다. 지금은 평가 분할이 미등록이라\n샐 값 자체가 없으므로, 테스트는 \"지금 새는가\"가 아니라 **분할이 생겼을 때 샐\n통로가 있는가**를 본다: 선정 경로가 구간별 성과를 아예 읽지 않는지, 선정이 받는\n성과 타입에 구간 구분이 없는지, 구간별 성과를 정반대 값으로 채워도 결과가\n그대로인지.\n\n구간별 성과가 채워지는 날 이 테스트가 깨지면 그것이 신호다. 그때는 어느 구간을\n선정에 넣을지 명시적으로 고르는 변경이 필요하고, 조용히 통과하면 안 된다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T12:37:51.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T12:37:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/21db21e4e31f6a0feae6170c4617b1fd756e9d19"
+        },
+        {
+          "id": "6d73fcd88de0311989e597f0326403f736e3e7a6",
+          "short_id": "6d73fcd8",
+          "created_at": "2026-09-14T12:31:29.000+09:00",
+          "parent_ids": [
+            "de6f38f44a62dbdae315a4251c56e11f8822e483"
+          ],
+          "title": "feat(be): 미검증 표시를 한 곳에서 만들어 세 응답이 같은 말을 하게 한다",
+          "message": "feat(be): 미검증 표시를 한 곳에서 만들어 세 응답이 같은 말을 하게 한다\n\nT108·T111·T112 (spec 007 M9, FR-014·FR-015, research R5).\n\n같은 사실을 실행 전(미리보기)·실행 중(상태 조회)·결과(후보 목록) 세 곳이\n말한다. 문구가 서비스 안에 박혀 있어 한 곳만 고쳐지면 \"실행 전에는 미검증이라더니\n결과에서는 아무 말이 없는\" 상태가 된다. 사용자가 미검증임을 결과를 본 뒤에야\n알게 되면 그것은 이미 오해가 생긴 뒤다.\n\nValidationStatus 를 도메인에 두고 평가 분할 스냅샷에서 라벨과 문장을 함께\n만든다. 상태 조회 응답에 validationLabel·validationNote 가 없던 것을 채웠고,\n접수 직후 202 응답에도 실어 화면이 폴링을 시작하기 전부터 배지를 띄울 수 있게\n했다.\n\n분할이 등록되면 라벨이 후보마다 갈리므로 그 가지는 지금 예외로 막아 둔다 —\n조용히 UNVALIDATED 로 떨어뜨리면 분할이 생긴 날 전 후보가 미검증으로 표시된다.\n\nT111(기본값·자리 예약)은 M1 에서 이미 구현돼 있어 테스트로 고정만 했다.\n테스트 javadoc 에 \"이 테스트의 통과를 검증 통과로 읽지 말라\"를 명시했다 —\n'아직 나누지 않았다'와 '나눠서 통과했다'는 정반대다(원칙 VII).\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-14T12:31:29.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-14T12:31:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6d73fcd88de0311989e597f0326403f736e3e7a6"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -4,6 +4,7 @@ import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;\n import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n+import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;\n import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n import java.math.BigDecimal;\n import java.time.Instant;\n@@ -27,6 +28,8 @@ public record ParamSearchResult(\n         String partialNote,\n         Config config,\n         Baseline baseline,\n+        String validationLabel,\n+        String validationNote,\n         Map<String, Object> selection,\n         Instant startedAt,\n         Instant finishedAt) {\n@@ -90,6 +93,8 @@ public record ParamSearchResult(\n      */\n     public static ParamSearchResult from(ParamSearch search, Baseline baseline) {\n         SearchCounts counts = search.getCounts();\n+        // 실행 중에도, 끝난 뒤에도 같은 문장을 쓴다. 세 응답이 각자 문구를 들면 한 곳만 고쳐진다(FR-015).\n+        ValidationStatus validation = ValidationStatus.of(search.getEvaluationSplit());\n         boolean partial = search.getStatus() == ParamSearchStatus.PARTIAL;\n         return new ParamSearchResult(\n                 search.getSearchId() == null ? null : search.getSearchId().value(),\n@@ -110,6 +115,8 @@ public record ParamSearchResult(\n                         search.getReferenceVersions(),\n                         search.isDataVersionChanged()),\n                 baseline,\n+                validation.label().name(),\n+                validation.note(),\n                 search.getSelection(),\n                 search.getStartedAt(),\n                 search.getFinishedAt());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchResult.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/result/ParamSearchResult.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,7 @@ import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n import com.ssafy.thorp.paramsearch.domain.model.SearchCounts;\n import com.ssafy.thorp.paramsearch.domain.model.SelectionRule;\n import com.ssafy.thorp.paramsearch.domain.model.StopReason;\n-import com.ssafy.thorp.paramsearch.domain.model.ValidationLabel;\n+import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;\n import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n import java.math.BigDecimal;\n import java.time.Clock;\n@@ -600,6 +600,8 @@ public class ParamSearchService {\n \n         ParamSearchPreviewResult toPreviewResult(SearchLimits limits) {\n             long valid = validCount();\n+            // 실행 전에도 미검증임을 알린다 — 결과를 본 뒤에야 알게 되면 그것은 이미 오해가 생긴 뒤다(FR-015).\n+            ValidationStatus validation = ValidationStatus.unvalidated();\n             return new ParamSearchPreviewResult(\n                     registryVersion(),\n                     strategySummaries(),\n@@ -616,8 +618,8 @@ public class ParamSearchService {\n                             ? null\n                             : new ParamSearchPreviewResult.CommonPeriod(\n                                     period.start(), period.end(), period.shortenedBy()),\n-                    ValidationLabel.UNVALIDATED.name(),\n-                    \"평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다\");\n+                    validation.label().name(),\n+                    validation.note());\n         }\n \n         private List<ParamSearchPreviewResult.StrategySummary> strategySummaries() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/application/service/ParamSearchService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,46 @@\n+package com.ssafy.thorp.paramsearch.domain.model;\n+\n+import java.util.Map;\n+import java.util.Objects;\n+\n+/**\n+ * 묶음의 검증 상태 — 라벨과 그 라벨이 붙은 이유 한 문장(FR-014·FR-015, research R5).\n+ *\n+ * <p><b>왜 한곳에 모으는가</b>: 같은 사실을 실행 전(미리보기)·실행 중(상태 조회)·결과(후보 목록) 세 곳이 말한다. 문구가 흩어져 있으면 한 곳만 고쳐져 \"실행\n+ * 전에는 미검증이라더니 결과에서는 아무 말이 없는\" 상태가 된다. 사용자가 미검증임을 <b>결과를 본 뒤에야</b> 알게 되면 그것은 이미 오해가 생긴 뒤다.\n+ *\n+ * <p><b>평가 분할이 라벨을 정한다.</b> 분할이 등록되지 않으면 어느 구간이 탐색용이고 어느 구간이 잠금인지 말할 수 없으므로 검증 여부 자체를 말할 수 없다 — 그때가\n+ * {@link ValidationLabel#UNVALIDATED}다. PD-12가 확정돼 분할이 등록되면 그때부터 후보마다 탐색 구간 성과와 잠금 구간 성과가 갈린다.\n+ *\n+ * <p><b>미검증을 검증 통과로 바꿔 말하지 않는다</b>(원칙 VII). \"아직 나누지 않았다\"와 \"나눠서 통과했다\"는 정반대이고, 전자를 후자로 읽히게 두면 사용자는 탐색\n+ * 성과를 검증된 성과로 믿는다.\n+ */\n+public record ValidationStatus(ValidationLabel label, String note) {\n+\n+    private static final String NO_SPLIT_NOTE = \"평가 분할이 등록되지 않아 결과는 모두 미검증으로 표시됩니다\";\n+\n+    public ValidationStatus {\n+        Objects.requireNonNull(label, \"label must not be null\");\n+        Objects.requireNonNull(note, \"note must not be null\");\n+    }\n+\n+    /**\n+     * 묶음의 평가 분할 스냅샷으로 검증 상태를 정한다.\n+     *\n+     * @param evaluationSplit 접수 시점에 고정한 평가 분할. 미등록이면 null이다(research R5)\n+     */\n+    public static ValidationStatus of(Map<String, Object> evaluationSplit) {\n+        if (evaluationSplit == null || evaluationSplit.isEmpty()) {\n+            return new ValidationStatus(ValidationLabel.UNVALIDATED, NO_SPLIT_NOTE);\n+        }\n+        // PD-12 확정 전까지 도달하지 않는 가지다. 분할이 생기면 구간별 성과로 라벨이 갈리며,\n+        // 그 판정은 후보마다 다르므로 여기가 아니라 후보 쪽으로 옮겨 간다.\n+        throw new IllegalStateException(\n+                \"evaluation split is registered but labelling is not implemented yet (PD-12)\");\n+    }\n+\n+    /** 분할이 없는 현재의 상태. 미리보기처럼 묶음이 아직 없는 자리가 쓴다. */\n+    public static ValidationStatus unvalidated() {\n+        return new ValidationStatus(ValidationLabel.UNVALIDATED, NO_SPLIT_NOTE);\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ValidationStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/domain/model/ValidationStatus.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;\n import com.ssafy.thorp.common.json.PlainBigDecimalSerializer;\n import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ValidationStatus;\n import java.math.BigDecimal;\n import java.time.Instant;\n import java.util.Map;\n@@ -24,6 +25,8 @@ public record ParamSearchResponse(\n         String partialNote,\n         Config config,\n         Baseline baseline,\n+        String validationLabel,\n+        String validationNote,\n         Map<String, Object> selection,\n         Instant startedAt,\n         Instant finishedAt) {\n@@ -73,6 +76,9 @@ public record ParamSearchResponse(\n                 null,\n                 null,\n                 null,\n+                // 접수 직후에도 미검증임을 알린다. 화면이 폴링을 시작하기 전부터 배지를 띄울 수 있어야 한다.\n+                ValidationStatus.unvalidated().label().name(),\n+                ValidationStatus.unvalidated().note(),\n                 null,\n                 null,\n                 null);\n@@ -105,6 +111,8 @@ public record ParamSearchResponse(\n                         result.config().referenceVersions(),\n                         result.config().dataVersionChanged()),\n                 baselineOf(result),\n+                result.validationLabel(),\n+                result.validationNote(),\n                 result.selection(),\n                 result.startedAt(),\n                 result.finishedAt());\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchResponse.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/paramsearch/presentation/response/ParamSearchResponse.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,144 @@\n+package com.ssafy.thorp.paramsearch.selection;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.paramsearch.application.port.CandidatePerformance;\n+import com.ssafy.thorp.paramsearch.application.result.SelectionResult;\n+import com.ssafy.thorp.paramsearch.application.service.CandidateSelector;\n+import com.ssafy.thorp.paramsearch.application.service.NeighborStabilityCalculator;\n+import com.ssafy.thorp.paramsearch.application.service.selection.DrawdownFilter;\n+import com.ssafy.thorp.paramsearch.application.service.selection.StabilityFilter;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.paramsearch.domain.vo.StabilityScore;\n+import java.io.IOException;\n+import java.lang.reflect.Method;\n+import java.math.BigDecimal;\n+import java.nio.charset.StandardCharsets;\n+import java.nio.file.Files;\n+import java.nio.file.Path;\n+import java.util.Arrays;\n+import java.util.LinkedHashMap;\n+import java.util.List;\n+import java.util.Map;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+\n+/**\n+ * 잠금 구간 성과는 선정에 들어가지 않는다(T109, SC-005, FR-014·FR-015).\n+ *\n+ * <p><b>이것이 지켜지지 않으면 검증이 검증이 아니게 된다.</b> 잠금 구간은 \"탐색에 쓰지 않은 구간\"이라서 값이 있다 — 그 값으로 후보를 고르면 그 구간도 탐색에 쓴\n+ * 셈이 되고, 남는 검증 구간이 없다. 그래서 선정이 보는 성과는 <b>탐색 구간의 것 하나</b>여야 한다.\n+ *\n+ * <p>지금은 평가 분할(PD-12)이 미등록이라 잠금 구간 자체가 없고 {@code periodPerformance}는 비어 있다. 그래서 이 테스트는 \"지금 새는가\"가\n+ * 아니라 <b>분할이 생겼을 때 샐 수 있는 통로가 있는가</b>를 본다 — 선정 경로가 후보의 구간별 성과를 아예 읽지 않는지, 그리고 구간별 성과를 채워 두어도 결과가\n+ * 달라지지 않는지.\n+ *\n+ * <p>구간별 성과가 채워지는 날 이 테스트가 깨지면 그것이 신호다. 그때는 라벨별로 성과를 갈라 선정에 넣을 것을 명시적으로 고르는 변경이 필요하고, 조용히 통과하면 안\n+ * 된다.\n+ */\n+class HeldOutExclusionTest {\n+\n+    /** 선정 경로의 코드. 여기에 구간별 성과를 읽는 곳이 있으면 잠금 구간이 샌다. */\n+    private static final List<Path> SELECTION_SOURCES =\n+            List.of(\n+                    Path.of(\n+                            \"src/main/java/com/ssafy/thorp/paramsearch/application/service/CandidateSelector.java\"),\n+                    Path.of(\n+                            \"src/main/java/com/ssafy/thorp/paramsearch/application/service/NeighborStabilityCalculator.java\"),\n+                    Path.of(\n+                            \"src/main/java/com/ssafy/thorp/paramsearch/application/service/selection/DrawdownFilter.java\"),\n+                    Path.of(\n+                            \"src/main/java/com/ssafy/thorp/paramsearch/application/service/selection/StabilityFilter.java\"));\n+\n+    private final CandidateSelector selector =\n+            new CandidateSelector(new DrawdownFilter(), new StabilityFilter());\n+    private final NeighborStabilityCalculator stabilityCalculator =\n+            new NeighborStabilityCalculator();\n+\n+    @Test\n+    @DisplayName(\"선정 경로 어디에서도 구간별 성과를 읽지 않는다\")\n+    void selectionNeverReadsPeriodPerformance() throws IOException {\n+        for (Path source : SELECTION_SOURCES) {\n+            String code = Files.readString(source, StandardCharsets.UTF_8);\n+            assertThat(code)\n+                    .as(\"%s 가 구간별 성과를 읽으면 잠금 구간이 선정에 새어 든다(SC-005)\", source.getFileName())\n+                    .doesNotContain(\"getPeriodPerformance\")\n+                    .doesNotContain(\"periodPerformance\");\n+        }\n+    }\n+\n+    @Test\n+    @DisplayName(\"선정이 받는 성과 타입에는 구간 구분이 없다 — 섞일 자리가 없다\")\n+    void theSelectionInputCarriesOneSetOfNumbers() {\n+        List<String> accessors =\n+                Arrays.stream(CandidatePerformance.class.getRecordComponents())\n+                        .map(component -> component.getName())\n+                        .toList();\n+\n+        assertThat(accessors)\n+                .as(\"선정은 탐색 구간 성과 하나만 본다. 구간별 항목이 생기면 어느 것을 쓸지 명시해야 한다\")\n+                .containsExactly(\"netReturn\", \"maxDrawdown\", \"tradingCost\");\n+        assertThat(\n+                        Arrays.stream(CandidateSelector.class.getMethods())\n+                                .map(Method::getName)\n+                                .filter(name -> name.toLowerCase().contains(\"period\"))\n+                                .toList())\n+                .isEmpty();\n+    }\n+\n+    @Test\n+    @DisplayName(\"후보에 구간별 성과를 채워 두어도 선정 결과가 달라지지 않는다\")\n+    void fillingPeriodPerformanceDoesNotChangeTheOutcome() {\n+        List<SearchCandidate> plain =\n+                List.of(\n+                        SelectionFixtures.completed(1L),\n+                        SelectionFixtures.completed(2L),\n+                        SelectionFixtures.completed(3L));\n+        // 같은 후보에 잠금 구간 성과를 붙인다. 값은 탐색 구간과 정반대로 둬서, 새면 순서가 뒤집히게 한다.\n+        List<SearchCandidate> withHeldOut =\n+                List.of(\n+                        plain.get(0)\n+                                .withPeriodPerformance(\n+                                        heldOut(\"0.0100\"), plain.get(0).getValidationLabel()),\n+                        plain.get(1)\n+                                .withPeriodPerformance(\n+                                        heldOut(\"0.5000\"), plain.get(1).getValidationLabel()),\n+                        plain.get(2)\n+                                .withPeriodPerformance(\n+                                        heldOut(\"0.9000\"), plain.get(2).getValidationLabel()));\n+\n+        SelectionResult before = select(plain);\n+        SelectionResult after = select(withHeldOut);\n+\n+        assertThat(after.displayedCandidateNos())\n+                .as(\"잠금 구간 값이 선정에 새면 순서가 뒤집힌다\")\n+                .isEqualTo(before.displayedCandidateNos());\n+        assertThat(after.selectionReasonByCandidateId())\n+                .isEqualTo(before.selectionReasonByCandidateId());\n+    }\n+\n+    /** 탐색 구간 성과만으로 선정한다 — 안정성도 같은 숫자에서 나온다. */\n+    private SelectionResult select(List<SearchCandidate> candidates) {\n+        Map<Long, CandidatePerformance> performance = new LinkedHashMap<>();\n+        Map<Long, BigDecimal> netReturns = new LinkedHashMap<>();\n+        String[] searchPeriodReturns = {\"0.3000\", \"0.2000\", \"0.1000\"};\n+        for (int i = 0; i < candidates.size(); i++) {\n+            long id = candidates.get(i).getId();\n+            performance.put(id, SelectionFixtures.performance(searchPeriodReturns[i], \"-0.1000\"));\n+            netReturns.put(id, new BigDecimal(searchPeriodReturns[i]));\n+        }\n+        Map<Long, StabilityScore> stability = stabilityCalculator.calculate(candidates, netReturns);\n+        return selector.select(\n+                SelectionFixtures.ruleWithBaseline(),\n+                candidates,\n+                performance,\n+                stability,\n+                new BigDecimal(\"-0.2000\"));\n+    }\n+\n+    private static Map<String, Object> heldOut(String netReturn) {\n+        Map<String, Object> period = new LinkedHashMap<>();\n+        period.put(\"heldOut\", Map.of(\"netReturn\", netReturn));\n+        return period;\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,260 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.backtest.application.event.BacktestFinished;\n+import com.ssafy.thorp.backtest.domain.model.RunStatus;\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchCancelService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.CandidateStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.context.ApplicationEventPublisher;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+import org.springframework.transaction.support.TransactionTemplate;\n+\n+/**\n+ * 끝난 묶음이 FR-020 기록 항목을 빠짐없이 갖는지(T117a, SC-007·FR-022, 원칙 VIII).\n+ *\n+ * <p><b>여기서 보는 것은 화면이 아니라 저장 상태다.</b> FR-022가 요구하는 \"한 묶음으로 다시 열린다\"를 007이 책임지는 범위는 <b>그 조회가 가능한 형태로\n+ * 저장하는 것</b>까지이고, 목록·펼침 화면은 006이 소유한다. 그래서 응답 모양이 아니라 저장된 값이 갖춰졌는지를 본다.\n+ *\n+ * <p>항목 하나가 비면 그 묶음은 나중에 다시 읽을 수 없다 — 등록표가 바뀐 뒤 \"무엇을 탐색했는가\"를 재구성하려면 실제 사용한 후보값이 있어야 하고, \"왜 이 후보가\n+ * 빠졌는가\"를 답하려면 계산하지 않은 후보의 사유까지 남아 있어야 한다. 재현 기록은 전부 있거나 없거나다.\n+ *\n+ * <p>완료와 부분 완료 둘 다 본다. 취소된 묶음이라고 기록이 덜 남으면, 사용자가 \"여기까지 계산했다\"를 되짚을 수 없다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            \"thorp.param-search.dispatch-window=1\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class ParamSearchRecordCompletenessTest extends PostgresTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParamSearchCancelService cancelService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+    @Autowired private ApplicationEventPublisher events;\n+    @Autowired private TransactionTemplate transactionTemplate;\n+\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextJobId = new AtomicLong(990_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextJobId.set(990_000L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"완료된 묶음이 FR-020 기록 항목을 전부 갖는다\")\n+    void aCompletedBundleCarriesEveryRecordItem() {\n+        ParamSearch search = finishEverything(accept());\n+\n+        assertThat(search.getStatus()).isEqualTo(ParamSearchStatus.COMPLETED);\n+        assertRecordIsComplete(search);\n+        assertThat(search.getSelection())\n+                .as(\"정렬 및 선정 규칙을 적용한 결과가 남아야 '왜 이 후보들인가'를 답할 수 있다\")\n+                .isNotNull();\n+    }\n+\n+    @Test\n+    @DisplayName(\"취소로 끝난 묶음도 기록이 덜하지 않다\")\n+    void aPartialBundleCarriesEveryRecordItemToo() {\n+        ParamSearch accepted = accept();\n+        cancelService.cancel(accepted.getSearchId().value());\n+        ParamSearch search = finishEverything(accepted);\n+\n+        assertThat(search.getStatus()).isEqualTo(ParamSearchStatus.PARTIAL);\n+        assertRecordIsComplete(search);\n+        assertThat(search.getStopReason()).as(\"왜 멈췄는지가 없으면 '여기까지'의 이유를 되짚을 수 없다\").isNotNull();\n+        assertThat(search.getCounts().skipped()).as(\"미실행 후보 수는 완료 범위 표시의 근거다(FR-020)\").isPositive();\n+    }\n+\n+    @Test\n+    @DisplayName(\"계산하지 않은 후보도 사유를 남긴다\")\n+    void uncomputedCandidatesKeepTheirReason() {\n+        ParamSearch accepted = accept();\n+        cancelService.cancel(accepted.getSearchId().value());\n+        ParamSearch search = finishEverything(accepted);\n+\n+        List<SearchCandidate> uncomputed =\n+                candidateRepository.findByParamSearchId(search.getId()).stream()\n+                        .filter(candidate -> candidate.getStatus().isUncomputed())\n+                        .toList();\n+        assertThat(uncomputed).as(\"취소했으므로 계산하지 않은 후보가 있어야 한다\").isNotEmpty();\n+        assertThat(uncomputed)\n+                .allSatisfy(\n+                        candidate -> {\n+                            assertThat(candidate.getReasonCode())\n+                                    .as(\"후보 %d 의 사유 코드\", candidate.getCandidateNo())\n+                                    .isNotBlank();\n+                            assertThat(candidate.getReasonDetail())\n+                                    .as(\"코드만으로는 화면이 '왜 빠졌는지'를 설명할 수 없다\")\n+                                    .isNotBlank();\n+                        });\n+    }\n+\n+    @Test\n+    @DisplayName(\"저장된 탐색 공간으로 후보 집합을 다시 만들 수 있다\")\n+    void theStoredSpaceReconstructsTheCandidateSet() {\n+        ParamSearch search = finishEverything(accept());\n+\n+        SearchSpace space = search.getSearchSpace();\n+        long combinationsFromSpace = space.combinationCount();\n+        long storedCandidates = candidateRepository.findByParamSearchId(search.getId()).size();\n+\n+        assertThat(combinationsFromSpace)\n+                .as(\"등록표가 바뀐 뒤에도 이 값만으로 그 묶음의 후보 집합이 재구성돼야 한다(FR-020)\")\n+                .isEqualTo(storedCandidates);\n+        assertThat(space.strategyIds())\n+                .as(\"전략별로 축과 후보값이 남아 있어야 한다\")\n+                .isEqualTo(search.getStrategyIds());\n+    }\n+\n+    /** FR-020이 요구하는 항목을 하나씩 본다. 비면 그 묶음은 나중에 다시 읽을 수 없다. */\n+    private void assertRecordIsComplete(ParamSearch search) {\n+        assertThat(search.getSearchSpace()).as(\"탐색 공간\").isNotNull();\n+        assertThat(search.getSearchSpace().isEmpty()).as(\"탐색 공간이 비어 있다\").isFalse();\n+        assertThat(search.getSearchMethod()).as(\"탐색 방법\").isNotNull();\n+        assertThat(search.getCounts().expected()).as(\"실행한 전체 후보\").isPositive();\n+        assertThat(search.getCounts().skipped()).as(\"미실행 후보 수\").isNotNegative();\n+        assertThat(search.getSelectionRule()).as(\"정렬 및 선정 규칙\").isNotNull();\n+        assertThat(search.getReferenceVersions()).as(\"참조 버전\").isNotEmpty();\n+        assertThat(search.getReferenceVersions())\n+                .as(\"조회한 등록표 버전이 참조 버전에 들어 있어야 한다(FR-020·FR-028)\")\n+                .containsKey(\"registry\");\n+        assertThat(search.getRegistryVersion()).as(\"등록표 버전\").isNotBlank();\n+        assertThat(search.getBaselineJobId()).as(\"동일 비중 기준 결과 — 무엇과 비교했는지가 선정의 근거다\").isNotNull();\n+        assertThat(search.getEvaluationSplit())\n+                .as(\"평가 분리는 미등록이라 비어 있다. 비어 있다는 것 자체가 기록이다(research R5)\")\n+                .isNull();\n+        assertThat(search.getRandomSeed()).as(\"현재 방법은 난수를 쓰지 않아 시드가 없다(FR-020)\").isNull();\n+        assertThat(search.getStartedAt()).as(\"시작 시각\").isNotNull();\n+        assertThat(search.getFinishedAt()).as(\"종료 시각\").isNotNull();\n+    }\n+\n+    /** 발행된 후보가 없어질 때까지 결과를 흘린다 — 창이 좁아 여러 차례에 나눠 나간다. */\n+    private ParamSearch finishEverything(ParamSearch search) {\n+        List<SearchCandidate> inFlight = dispatched(search);\n+        while (!inFlight.isEmpty()) {\n+            inFlight.forEach(this::finish);\n+            inFlight = dispatched(search);\n+        }\n+        return paramSearchRepository.findById(search.getId()).orElseThrow();\n+    }\n+\n+    private List<SearchCandidate> dispatched(ParamSearch search) {\n+        return candidateRepository.findByParamSearchIdAndStatus(\n+                search.getId(), CandidateStatus.DISPATCHED);\n+    }\n+\n+    private void finish(SearchCandidate candidate) {\n+        insertResult(candidate.getBacktestJobId());\n+        transactionTemplate.executeWithoutResult(\n+                status ->\n+                        events.publishEvent(\n+                                new BacktestFinished(\n+                                        candidate.getBacktestJobId(),\n+                                        \"BT-STUB-\" + candidate.getBacktestJobId(),\n+                                        RunStatus.COMPLETED,\n+                                        null)));\n+    }\n+\n+    private ParamSearch accept() {\n+        ParamSearchResult accepted =\n+                paramSearchService.create(\n+                        new CreateParamSearchCommand(\n+                                null,\n+                                UNIVERSE,\n+                                searchableStrategyIds(),\n+                                null,\n+                                null,\n+                                null,\n+                                Map.of(),\n+                                registry.version()));\n+        return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();\n+    }\n+\n+    private long insertRun() {\n+        long id = nextJobId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    private void insertResult(long runId) {\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_result (run_id, execution_id, finished_event_id, started_at,\"\n+                        + \" finished_at, portfolio_series, diagnostics, performance, created_at,\"\n+                        + \" updated_at)\"\n+                        + \" VALUES (?, ?, ?, NOW(), NOW(), '[]'::jsonb, '{}'::jsonb, ?::jsonb,\"\n+                        + \" NOW(), NOW())\"\n+                        + \" ON CONFLICT (run_id) DO NOTHING\",\n+                runId,\n+                \"EXEC-\" + runId,\n+                \"EVT-\" + runId,\n+                \"\"\"\n+                {\"netTotalReturn\": \"0.1000\", \"maxDrawdown\": \"-0.1000\", \"totalTradingCost\": \"0.0100\"}\n+                \"\"\");\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n+    private List<String> searchableStrategyIds() {\n+        List<String> registered =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n+                                + \" 'REGISTERED'\",\n+                        String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> !registration.axes().isEmpty())\n+                .map(StrategyRegistration::strategyId)\n+                .filter(registered::contains)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,196 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.command.FindCandidatesQuery;\n+import com.ssafy.thorp.paramsearch.application.command.PreviewParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.repository.SearchCandidateRepository;\n+import com.ssafy.thorp.paramsearch.application.result.CandidatePageResult;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchPreviewResult;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.CandidateQueryService;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.SearchCandidate;\n+import com.ssafy.thorp.paramsearch.domain.model.ValidationLabel;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+\n+/**\n+ * 검증 상태 라벨(T108·T111·T112, FR-014·FR-015, research R5).\n+ *\n+ * <p><b>이 테스트가 통과한다고 해서 후보들이 검증을 통과한 것이 아니다.</b> 정반대다 — 평가 분할(PD-12)이 등록되지 않아 어느 구간이 탐색용이고 어느 구간이\n+ * 잠금인지 말할 수 없고, 그래서 전 후보가 {@code UNVALIDATED}다. 여기서 확인하는 것은 <b>그 사실이 빠짐없이 전달되는가</b>이지 성과의 품질이 아니다.\n+ *\n+ * <p>\"아직 나누지 않았다\"를 \"나눠서 통과했다\"로 읽히게 두면 사용자는 탐색 성과를 검증된 성과로 믿는다(원칙 VII). 그래서 실행 전·실행 중·결과 세 자리 모두에서\n+ * 같은 라벨과 같은 문장이 나오는지 본다 — 한 자리만 빠져도 사용자는 그 화면에서 미검증임을 모른다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class ParamSearchValidationLabelTest extends PostgresTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private CandidateQueryService candidateQueryService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private SearchCandidateRepository candidateRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextJobId = new AtomicLong(970_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextJobId.set(970_000L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"평가 분할이 미등록이면 접수된 후보가 전부 UNVALIDATED다\")\n+    void everyCandidateIsUnvalidatedWithoutASplit() {\n+        ParamSearch search = accept();\n+\n+        assertThat(search.getEvaluationSplit())\n+                .as(\"분할이 등록되지 않았다는 것이 이 라벨의 이유다(research R5)\")\n+                .isNull();\n+        List<SearchCandidate> candidates = candidateRepository.findByParamSearchId(search.getId());\n+        assertThat(candidates).isNotEmpty();\n+        assertThat(candidates)\n+                .allSatisfy(\n+                        candidate ->\n+                                assertThat(candidate.getValidationLabel())\n+                                        .isEqualTo(ValidationLabel.UNVALIDATED));\n+        assertThat(ValidationLabel.UNVALIDATED.isValidated())\n+                .as(\"미검증은 검증 통과가 아니다 — 이 테스트의 통과를 그렇게 읽으면 안 된다\")\n+                .isFalse();\n+    }\n+\n+    @Test\n+    @DisplayName(\"구간별 성과 자리는 비워 둔다 — 탐색 성과와 섞지 않는다\")\n+    void periodPerformanceStaysEmpty() {\n+        ParamSearch search = accept();\n+\n+        assertThat(candidateRepository.findByParamSearchId(search.getId()))\n+                .allSatisfy(\n+                        candidate ->\n+                                assertThat(candidate.getPeriodPerformance())\n+                                        .as(\"분할이 없는데 구간별 성과를 채우면 없는 구분을 만들어 낸다\")\n+                                        .isNull());\n+    }\n+\n+    @Test\n+    @DisplayName(\"실행 전·실행 중·결과 세 자리가 같은 라벨과 같은 문장을 말한다\")\n+    void allThreeSurfacesSayTheSameThing() {\n+        ParamSearchPreviewResult preview = paramSearchService.preview(previewCommand());\n+        ParamSearch search = accept();\n+        ParamSearchResult status = paramSearchService.get(search.getSearchId().value());\n+        CandidatePageResult candidates =\n+                candidateQueryService.find(\n+                        search.getSearchId().value(),\n+                        FindCandidatesQuery.of(null, null, null, null, null));\n+\n+        assertThat(preview.validationLabel()).isEqualTo(ValidationLabel.UNVALIDATED.name());\n+        assertThat(status.validationLabel())\n+                .as(\"폴링 중인 화면도 미검증임을 알아야 한다 — 결과를 본 뒤에 알면 늦다\")\n+                .isEqualTo(preview.validationLabel());\n+        assertThat(status.validationNote())\n+                .as(\"문구가 흩어져 있으면 한 곳만 고쳐진다\")\n+                .isEqualTo(preview.validationNote());\n+        assertThat(candidates.content())\n+                .allSatisfy(\n+                        item ->\n+                                assertThat(item.validationLabel())\n+                                        .isEqualTo(preview.validationLabel()));\n+    }\n+\n+    @Test\n+    @DisplayName(\"검증 문구는 왜 미검증인지를 말한다\")\n+    void theNoteExplainsWhy() {\n+        ParamSearchPreviewResult preview = paramSearchService.preview(previewCommand());\n+\n+        assertThat(preview.validationNote())\n+                .as(\"'미검증'이라고만 하면 사용자는 무엇이 빠졌는지 모른다\")\n+                .contains(\"평가 분할\")\n+                .contains(\"미검증\");\n+    }\n+\n+    private ParamSearch accept() {\n+        ParamSearchResult accepted =\n+                paramSearchService.create(\n+                        new CreateParamSearchCommand(\n+                                null,\n+                                UNIVERSE,\n+                                searchableStrategyIds(),\n+                                null,\n+                                null,\n+                                null,\n+                                Map.of(),\n+                                registry.version()));\n+        return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();\n+    }\n+\n+    private PreviewParamSearchCommand previewCommand() {\n+        return new PreviewParamSearchCommand(\n+                null, UNIVERSE, searchableStrategyIds(), null, null, null, Map.of());\n+    }\n+\n+    private long insertRun() {\n+        long id = nextJobId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n+    private List<String> searchableStrategyIds() {\n+        List<String> registered =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n+                                + \" 'REGISTERED'\",\n+                        String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> !registration.axes().isEmpty())\n+                .map(StrategyRegistration::strategyId)\n+                .filter(registered::contains)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchValidationLabelTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchValidationLabelTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,220 @@\n+package com.ssafy.thorp.paramsearch;\n+\n+import static org.assertj.core.api.Assertions.assertThat;\n+\n+import com.ssafy.thorp.paramsearch.application.command.CreateParamSearchCommand;\n+import com.ssafy.thorp.paramsearch.application.port.CandidateJobLauncher;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterAxis;\n+import com.ssafy.thorp.paramsearch.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.paramsearch.application.port.StrategyRegistration;\n+import com.ssafy.thorp.paramsearch.application.repository.ParamSearchRepository;\n+import com.ssafy.thorp.paramsearch.application.result.ParamSearchResult;\n+import com.ssafy.thorp.paramsearch.application.service.ParamSearchService;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearch;\n+import com.ssafy.thorp.paramsearch.domain.model.ParamSearchStatus;\n+import com.ssafy.thorp.paramsearch.domain.vo.SearchSpace;\n+import com.ssafy.thorp.support.PostgresTestSupport;\n+import java.io.IOException;\n+import java.nio.charset.StandardCharsets;\n+import java.nio.file.Files;\n+import java.nio.file.Path;\n+import java.util.ArrayList;\n+import java.util.List;\n+import java.util.Map;\n+import java.util.concurrent.atomic.AtomicLong;\n+import org.junit.jupiter.api.BeforeEach;\n+import org.junit.jupiter.api.DisplayName;\n+import org.junit.jupiter.api.Test;\n+import org.mockito.ArgumentMatchers;\n+import org.mockito.Mockito;\n+import org.springframework.beans.factory.annotation.Autowired;\n+import org.springframework.boot.test.context.SpringBootTest;\n+import org.springframework.jdbc.core.JdbcTemplate;\n+import org.springframework.test.context.bean.override.mockito.MockitoBean;\n+\n+/**\n+ * 선정 규칙과 탐색 범위의 불변성(T110·T113, FR-013c, 원칙 VII).\n+ *\n+ * <p><b>기준을 바꿔 다시 보는 것은 새 실험이다.</b> 이미 끝난 묶음의 선정 규칙이나 범위를 고쳐 결과를 다시 그리면, 그 묶음이 \"무엇을 기준으로 무엇을\n+ * 탐색했는가\"에 대한 답이 시간에 따라 달라진다. 재현 기록이 기록이려면 한 번 적힌 값이 그대로 있어야 한다(원칙 VIII).\n+ *\n+ * <p>그래서 변경은 <b>새 묶음으로만</b> 일어난다. 여기서 보는 것이 둘이다 — 범위를 바꿔 다시 접수하면 새 {@code searchId}가 나오고 이전 묶음의\n+ * 상태·선정·스냅샷이 그대로인가, 그리고 <b>기존 묶음의 선정 규칙을 고치는 경로가 코드에 아예 없는가</b>.\n+ *\n+ * <p>뒤엣것을 코드에서 직접 확인하는 이유: \"지금은 그런 경로가 없다\"는 것만으로는 다음 사람이 무심코 추가하는 것을 막지 못한다. 저장 경로에 그 자리가 없다는 사실\n+ * 자체를 테스트로 고정한다.\n+ */\n+@SpringBootTest(\n+        properties = {\n+            \"spring.rabbitmq.listener.simple.auto-startup=false\",\n+            \"thorp.backtest.republish.enabled=false\",\n+            \"thorp.param-search.enabled=true\",\n+            \"spring.mail.username=test@example.com\",\n+            \"spring.mail.password=test\"\n+        })\n+class SelectionRuleImmutabilityTest extends PostgresTestSupport {\n+\n+    private static final List<String> UNIVERSE = List.of(\"091160.XKRX\", \"305720.XKRX\");\n+\n+    /** 묶음을 갱신하는 유일한 저장 경로. 여기에 스냅샷 항목이 들어오면 불변성이 깨진다. */\n+    private static final Path UPDATE_PATH =\n+            Path.of(\n+                    \"src/main/java/com/ssafy/thorp/paramsearch/infrastructure/persistence/ParamSearchJpaEntity.java\");\n+\n+    @Autowired private ParamSearchService paramSearchService;\n+    @Autowired private ParamSearchRepository paramSearchRepository;\n+    @Autowired private ParameterRegistryPort registry;\n+    @Autowired private JdbcTemplate jdbcTemplate;\n+\n+    @MockitoBean private CandidateJobLauncher launcher;\n+\n+    private final AtomicLong nextJobId = new AtomicLong(980_000L);\n+\n+    @BeforeEach\n+    void prepare() {\n+        jdbcTemplate.update(\"DELETE FROM search_candidate\");\n+        jdbcTemplate.update(\"DELETE FROM param_search\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_result WHERE run_id >= 900000\");\n+        jdbcTemplate.update(\"DELETE FROM backtest_run WHERE id >= 900000\");\n+        nextJobId.set(980_000L);\n+        Mockito.when(launcher.launchCandidate(ArgumentMatchers.any(), ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+        Mockito.when(launcher.launchBaseline(ArgumentMatchers.any()))\n+                .thenAnswer(invocation -> insertRun());\n+    }\n+\n+    @Test\n+    @DisplayName(\"범위를 바꿔 다시 접수하면 새 묶음이 생기고 이전 묶음은 그대로다\")\n+    void narrowingTheRangeCreatesANewBundle() {\n+        ParamSearch first = accept(Map.of());\n+        SearchSpace spaceBefore = first.getSearchSpace();\n+        Map<String, Object> ruleBefore = first.getSelectionRule().toMap();\n+        ParamSearchStatus statusBefore = first.getStatus();\n+\n+        ParamSearch second = accept(narrowedSpace());\n+\n+        assertThat(second.getSearchId().value())\n+                .as(\"기준을 바꿔 다시 보는 것은 새 실험이다(FR-013c)\")\n+                .isNotEqualTo(first.getSearchId().value());\n+        assertThat(second.getSearchSpace())\n+                .as(\"좁힌 범위가 실제로 달라야 이 검증이 성립한다\")\n+                .isNotEqualTo(spaceBefore);\n+\n+        ParamSearch reloaded = paramSearchRepository.findById(first.getId()).orElseThrow();\n+        assertThat(reloaded.getSearchSpace()).isEqualTo(spaceBefore);\n+        assertThat(reloaded.getSelectionRule().toMap()).isEqualTo(ruleBefore);\n+        assertThat(reloaded.getStatus())\n+                .as(\"이전 묶음의 상태 표시가 뒤늦게 달라지면 사용자가 본 화면이 거짓이 된다\")\n+                .isEqualTo(statusBefore);\n+    }\n+\n+    @Test\n+    @DisplayName(\"두 묶음은 각자의 스냅샷을 갖는다 — 나중 접수가 앞 묶음을 덮지 않는다\")\n+    void eachBundleKeepsItsOwnSnapshot() {\n+        ParamSearch first = accept(Map.of());\n+        ParamSearch second = accept(narrowedSpace());\n+\n+        ParamSearch firstReloaded = paramSearchRepository.findById(first.getId()).orElseThrow();\n+        ParamSearch secondReloaded = paramSearchRepository.findById(second.getId()).orElseThrow();\n+\n+        assertThat(firstReloaded.getSearchSpace()).isNotEqualTo(secondReloaded.getSearchSpace());\n+        assertThat(firstReloaded.getRegistryVersion())\n+                .isEqualTo(secondReloaded.getRegistryVersion());\n+    }\n+\n+    @Test\n+    @DisplayName(\"기존 묶음의 선정 규칙을 고치는 저장 경로가 없다\")\n+    void thereIsNoUpdatePathForTheSelectionRule() throws IOException {\n+        String source = Files.readString(UPDATE_PATH, StandardCharsets.UTF_8);\n+        // import 줄에도 같은 낱말이 있어 메서드 뒤부터 끝을 찾는다.\n+        int start = source.indexOf(\"void applyProgress(\");\n+        assertThat(start).as(\"갱신 경로의 이름이 바뀌면 이 검증이 조용히 무력해진다\").isNotNegative();\n+        int end = source.indexOf(\"@PrePersist\", start);\n+        String applyProgress = source.substring(start, end < 0 ? source.length() : end);\n+\n+        for (String snapshotField :\n+                List.of(\"selectionRule\", \"searchSpace\", \"limits\", \"referenceVersions\")) {\n+            assertThat(applyProgress)\n+                    .as(\"%s 는 접수 시점에 고정된다. 갱신 경로가 생기면 재현 기록이 시간에 따라 달라진다\", snapshotField)\n+                    .doesNotContain(\"this.\" + snapshotField + \" =\");\n+        }\n+    }\n+\n+    @Test\n+    @DisplayName(\"선정 규칙은 접수 때 한 번 정해지고 그 뒤 도메인에 바꾸는 메서드가 없다\")\n+    void theDomainExposesNoRuleMutator() {\n+        ParamSearch search = accept(Map.of());\n+\n+        assertThat(\n+                        java.util.Arrays.stream(ParamSearch.class.getMethods())\n+                                .map(java.lang.reflect.Method::getName)\n+                                .filter(name -> name.toLowerCase().contains(\"selectionrule\"))\n+                                .toList())\n+                .as(\"읽는 것 말고 바꾸는 메서드가 있으면 안 된다\")\n+                .containsExactly(\"getSelectionRule\");\n+        assertThat(search.getSelectionRule()).isNotNull();\n+    }\n+\n+    /** 등록된 후보값 중 앞의 둘만 남겨 범위를 좁힌다. 등록표 밖 값은 400이므로 안에서만 고른다(FR-002). */\n+    private Map<String, Map<String, List<Object>>> narrowedSpace() {\n+        Map<String, Map<String, List<Object>>> space = new java.util.LinkedHashMap<>();\n+        for (String strategyId : searchableStrategyIds()) {\n+            StrategyRegistration registration = registry.find(strategyId).orElseThrow();\n+            Map<String, List<Object>> axes = new java.util.LinkedHashMap<>();\n+            for (ParameterAxis axis : registration.axes()) {\n+                List<Object> values = new ArrayList<>(axis.searchValues());\n+                if (values.size() > 2) {\n+                    values = values.subList(0, 2);\n+                }\n+                axes.put(axis.name(), values);\n+            }\n+            if (!axes.isEmpty()) {\n+                space.put(strategyId, axes);\n+            }\n+        }\n+        return space;\n+    }\n+\n+    private ParamSearch accept(Map<String, Map<String, List<Object>>> space) {\n+        ParamSearchResult accepted =\n+                paramSearchService.create(\n+                        new CreateParamSearchCommand(\n+                                null,\n+                                UNIVERSE,\n+                                searchableStrategyIds(),\n+                                null,\n+                                null,\n+                                null,\n+                                space,\n+                                registry.version()));\n+        return paramSearchRepository.findBySearchId(accepted.searchId()).orElseThrow();\n+    }\n+\n+    private long insertRun() {\n+        long id = nextJobId.getAndIncrement();\n+        jdbcTemplate.update(\n+                \"INSERT INTO backtest_run (id, backtest_id, strategy_id, strategy_version,\"\n+                        + \" parameters, instrument_ids, start_date, end_date, initial_cash,\"\n+                        + \" position_sizing_type, random_seed, status, created_at, updated_at)\"\n+                        + \" VALUES (?, ?, 'STUB', '1', '{}'::jsonb, '[\\\"091160.XKRX\\\"]'::jsonb,\"\n+                        + \" DATE '2020-01-02', DATE '2026-08-31', 10000000.00,\"\n+                        + \" 'STRATEGY_DEFINED', 42, 'QUEUED', NOW(), NOW())\",\n+                id,\n+                \"BT-STUB-\" + id);\n+        return id;\n+    }\n+\n+    /** 등록표 활성 ∩ 004 지원 ∩ 축 보유. 전략 ID를 테스트에 적지 않는다(FR-025). */\n+    private List<String> searchableStrategyIds() {\n+        List<String> registered =\n+                jdbcTemplate.queryForList(\n+                        \"SELECT DISTINCT strategy_id FROM strategy_rules WHERE status =\"\n+                                + \" 'REGISTERED'\",\n+                        String.class);\n+        return registry.activeStrategies().stream()\n+                .filter(registration -> !registration.axes().isEmpty())\n+                .map(StrategyRegistration::strategyId)\n+                .filter(registered::contains)\n+                .toList();\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SelectionRuleImmutabilityTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/paramsearch/SelectionRuleImmutabilityTest.java",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -309,15 +309,15 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Tests for User Story 4\n \n-- [ ] T108 [P] [US4] (BE 테스트) 평가 분할 미등록이면 전 후보가 `UNVALIDATED`인지 검증하고, **이를 검증 통과로 보고하지 않는다는 주석**을 테스트에 남긴다 (research R5, 완료의 구분)\n-- [ ] T109 [P] [US4] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java` — 잠금 구간 성과가 선정 계산에 입력되지 않는지 검증 (SC-005)\n-- [ ] T110 [P] [US4] (BE 테스트) 선정 기준·범위를 바꿔 재실행하면 새 `searchId`가 생기고 이전 묶음의 `selection`·상태가 불변인지 통합 테스트 (FR-013c)\n+- [X] T108 [P] [US4] (BE 테스트) 평가 분할 미등록이면 전 후보가 `UNVALIDATED`인지 검증하고, **이를 검증 통과로 보고하지 않는다는 주석**을 테스트에 남긴다 (research R5, 완료의 구분)\n+- [X] T109 [P] [US4] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/HeldOutExclusionTest.java` — 잠금 구간 성과가 선정 계산에 입력되지 않는지 검증 (SC-005)\n+- [X] T110 [P] [US4] (BE 테스트) 선정 기준·범위를 바꿔 재실행하면 새 `searchId`가 생기고 이전 묶음의 `selection`·상태가 불변인지 통합 테스트 (FR-013c)\n \n ### Implementation for User Story 4 — Backend\n \n-- [ ] T111 [P] [US4] (BE) 후보 생성 시 `validation_label` 기본값 `UNVALIDATED` 적용과 `period_performance` JSONB 자리 예약 (FR-014, research R5)\n-- [ ] T112 [US4] (BE) preview·상태·후보 응답에 `validationLabel`과 `validationNote` 노출 — 실행 전에도 미검증임을 알린다. 탐색 성과와 미사용 구간 성과를 섞지 않는다 (FR-015)\n-- [ ] T113 [US4] (BE) 선정 규칙 스냅샷 불변성 보장 — 기존 묶음의 `selection_rule`을 수정하는 경로를 만들지 않고, 변경은 새 묶음으로만 (FR-013c, 원칙 VII)\n+- [X] T111 [P] [US4] (BE) 후보 생성 시 `validation_label` 기본값 `UNVALIDATED` 적용과 `period_performance` JSONB 자리 예약 (FR-014, research R5)\n+- [X] T112 [US4] (BE) preview·상태·후보 응답에 `validationLabel`과 `validationNote` 노출 — 실행 전에도 미검증임을 알린다. 탐색 성과와 미사용 구간 성과를 섞지 않는다 (FR-015)\n+- [X] T113 [US4] (BE) 선정 규칙 스냅샷 불변성 보장 — 기존 묶음의 `selection_rule`을 수정하는 경로를 만들지 않고, 변경은 새 묶음으로만 (FR-013c, 원칙 VII)\n \n ### Implementation for User Story 4 — Frontend\n \n@@ -365,8 +365,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Backend\n \n-- [ ] T117 (BE) 실행 측정 기록 — 실행 유형 `AUTO_SEARCH_BATCH`로 대기 포함 소요 시간·동시 처리 수·실패·건당 원가 기록. 계산·데이터·저장 원가를 구분한다 (FR-010, FR-023, [contracts/param-search-internal.md](contracts/param-search-internal.md) §5). **측정값을 목표로 제시하지 않는다**\n-- [ ] T117a (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java` — 완료·부분 완료 묶음이 FR-020 기록 항목 전체(탐색 공간·탐색 방법·전체 후보·미실행 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전)를 갖는지, 제외 후보도 사유를 남기는지 검증. 이것이 FR-022가 요구하는 '한 묶음으로 다시 열리는' 저장 상태이며 006 화면 구성은 범위 밖이다 (SC-007, FR-022, 원칙 VIII)\n+- [ ] T117 (BE) **완료 불가(2026-09-14)** — 이번 묶음에서 끝낼 수 없다. 막는 것이 둘이다. (1) **저장할 곳이 없다**: `backtest`에 측정 클래스·테이블이 하나도 없고 `ExecutionType`에 `AUTO_SEARCH_BATCH`도 없다. `backtest_run`의 `queued_at`·`started_at`·`finished_at`·`publish_count`는 측정의 **입력**이지 측정 기록이 아니다. 내부 계약 §5가 \"007이 새 측정 저장소를 만들지 않는다\"고 정해 007 안에 만들 수도 없다. (2) **건당 원가를 정할 수 없다**: 무엇을 원가로 셀지(CPU초·워커 시간·스토리지)가 미정이라 임의로 정하면 PD-06 결정의 입력을 지어내는 셈이다(원칙 IX, constitution \"실행 전 결정 임의 확정 금지\"). 자원 사용은 워커가 기록할 몫이라 007 범위 밖이다. 소요 시간·동시 처리 수·실패 건수는 007이 이미 만들 수 있으므로, 004 T012(S15P21E205-127)가 저장소를 열면 포트만 붙이면 된다. 원래 내용: 실행 측정 기록 — 실행 유형 `AUTO_SEARCH_BATCH`로 대기 포함 소요 시간·동시 처리 수·실패·건당 원가 기록. 계산·데이터·저장 원가를 구분한다 (FR-010, FR-023, [contracts/param-search-internal.md](contracts/param-search-internal.md) §5). **측정값을 목표로 제시하지 않는다**\n+- [X] T117a (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchRecordCompletenessTest.java` — 완료·부분 완료 묶음이 FR-020 기록 항목 전체(탐색 공간·탐색 방법·전체 후보·미실행 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전)를 갖는지, 제외 후보도 사유를 남기는지 검증. 이것이 FR-022가 요구하는 '한 묶음으로 다시 열리는' 저장 상태이며 006 화면 구성은 범위 밖이다 (SC-007, FR-022, 원칙 VIII)\n - [ ] T118 (BE) `./gradlew spotlessApply` 적용과 `./gradlew test` 통과 확인\n \n ### Frontend\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802011": []
+  }
+}

@@ -1,0 +1,362 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 940945,
+    "iid": 53,
+    "project_id": 1444456,
+    "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+    "description": "# 작업 내용 요약\n\n# 관련 티켓 번호 & 링크\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-",
+    "state": "merged",
+    "created_at": "2026-09-11T14:19:49.240+09:00",
+    "updated_at": "2026-09-14T14:26:09.264+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-11T14:19:58.898+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "docs(infra)/169-007-spec-strategy-independence",
+    "source_branch": "docs(infra)/169-constitution-user-strategy",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b628c63288612c1593019d0df9596d8c4c529ed0",
+    "merge_commit_sha": "3943726c8172754d37ff6e7ac206eb65d832cbb4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T14:19:49.920+09:00",
+    "reference": "!53",
+    "references": {
+      "short": "!53",
+      "relative": "!53",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!53"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/53",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 940945,
+    "iid": 53,
+    "project_id": 1444456,
+    "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+    "description": "# 작업 내용 요약\n\n# 관련 티켓 번호 & 링크\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-",
+    "state": "merged",
+    "created_at": "2026-09-11T14:19:49.240+09:00",
+    "updated_at": "2026-09-14T14:26:09.264+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-11T14:19:58.898+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "docs(infra)/169-007-spec-strategy-independence",
+    "source_branch": "docs(infra)/169-constitution-user-strategy",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "b628c63288612c1593019d0df9596d8c4c529ed0",
+    "merge_commit_sha": "3943726c8172754d37ff6e7ac206eb65d832cbb4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T14:19:49.920+09:00",
+    "reference": "!53",
+    "references": {
+      "short": "!53",
+      "relative": "!53",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!53"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/53",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "1",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "head_sha": "b628c63288612c1593019d0df9596d8c4c529ed0",
+      "start_sha": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7bace3eaa82afe2d0fef0241b0e331074d3b123b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792911,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T14:19:56.529+09:00",
+          "updated_at": "2026-09-11T14:19:56.560+09:00",
+          "system": true,
+          "noteable_id": 940945,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 53,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3c2ddc49c503a9c9f1b1a82c1504a641e96fa0e6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792915,
+          "type": null,
+          "body": "mentioned in commit 3943726c8172754d37ff6e7ac206eb65d832cbb4",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T14:19:58.855+09:00",
+          "updated_at": "2026-09-11T14:19:58.858+09:00",
+          "system": true,
+          "noteable_id": 940945,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 53,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2186933,
+      "head_commit_sha": "b628c63288612c1593019d0df9596d8c4c529ed0",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+      "created_at": "2026-09-11T14:19:49.487+09:00",
+      "merge_request_id": 940945,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "6ac3097f9271783e0b6ad26e63c27ce335ec3fe9"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2186933,
+      "head_commit_sha": "b628c63288612c1593019d0df9596d8c4c529ed0",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+      "created_at": "2026-09-11T14:19:49.487+09:00",
+      "merge_request_id": 940945,
+      "state": "collected",
+      "real_size": "1",
+      "patch_id_sha": "6ac3097f9271783e0b6ad26e63c27ce335ec3fe9",
+      "commits": [
+        {
+          "id": "b628c63288612c1593019d0df9596d8c4c529ed0",
+          "short_id": "b628c632",
+          "created_at": "2026-09-11T14:07:42.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+          "message": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\n\"하지 않는 것(범위 경계)\"에서 '숙련 퀀트용 자유 코드 입력'과 '전략 공유'를 범위\n안으로 옮긴다. 사용자가 등록한 전략 코드와 그 전략의 재사용을 다루려면 constitution\n개정이 선행돼야 하므로(기존 352행이 spec·plan·코드 추가를 금지) 초안을 먼저 올린다.\n\n- 유지한 금지: 사용자 간 성과 랭킹, 전략 공유 커뮤니티 피드, 숙련 퀀트용 전용 연구 화면\n- 함께 둔 조건 셋: (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동\n  탐색이 전략별 코드 수정 없이 동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도\n  안에서만 할 것, (3) 순위·추천·인기 목록으로 표시하지 않을 것(원칙 III)\n- 버전: 3.0.0 -> 3.1.0. 금지를 지우는 실질적 확대이고 기존 구현을 무효화하지 않아 MINOR\n- Sync Impact Report에 미승인 표시와 기획서 결정(D번호) 부재를 명시\n\n전체 회의 승인 전까지 효력이 없다(Governance 개정 절차). 승인 요청과 함께 기획서에\n결정을 추가해야 하고, 승인되면 specs/README.md의 같은 목록과 각 spec의 plan\nConstitution Check를 뒤따라 고쳐야 한다. 세부 기능은 별도 spec에서 정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:07:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:07:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b628c63288612c1593019d0df9596d8c4c529ed0"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,10 @@\n <!--\n Sync Impact Report\n+- **(초안, 미승인) Version change: 3.0.0 → 3.1.0.** \"하지 않는 것\"에서 숙련 퀀트용 자유 코드 입력과\n+  전략 공유를 범위 안으로 옮겼다. 금지를 지우는 실질적 확대이고 기존 결과·구현을 무효화하지 않으므로\n+  MINOR다. 사용자 간 성과 랭킹·전략 공유 커뮤니티 피드·전용 연구 화면 금지는 그대로 둔다.\n+  **전체 회의 승인 전까지 효력이 없다(Governance 개정 절차).** 근거가 될 기획서 결정(D번호)은 아직\n+  없으며, 승인 요청과 함께 기획서에 추가해야 한다.\n - Version change: 2.0.0 → 3.0.0. 추적 단위를 \"1 Task = 1 Branch = 1 MR\"에서 \"작업 묶음 = 1 Branch =\n   1 MR\"로 재정의했다. 기존 1:1 규칙을 폐기하는 하위 비호환 거버넌스 변경이므로 MAJOR를 올린다.\n   비준은 전체 회의 승인 후 merge로 확정한다.\n@@ -349,7 +354,11 @@ AI(Claude 등) 모두에게 적용된다.\n ### 하지 않는 것 (범위 경계) (§2, §8.2, D13, D15, D16, D20)\n \n - 맞춤형 투자 추천, 증권사 연동·자동 주문·실계좌 연동, 상시 성과 추적·알림, 사용자 간 성과 랭킹,\n-  숙련 퀀트용 자유 코드 입력·전용 연구 화면, 전략 공유 커뮤니티, 진단 화면 안의 결제 단계.\n+  숙련 퀀트용 전용 연구 화면, 전략 공유 커뮤니티 피드, 진단 화면 안의 결제 단계.\n+- **v3.1.0에서 범위 안으로 옮긴 것**: 사용자가 등록한 전략 코드와 그 전략의 재사용. 조건 셋을 함께\n+  둔다 — (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동 탐색이 전략별 코드 수정 없이\n+  동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도 안에서만 할 것, (3) 순위·추천·인기 목록으로\n+  표시하지 않을 것(원칙 III). 세부는 spec에서 정한다.\n - QuantConnect 비교와 동등 기능 구현, 고객군별 재방문·전환율 측정, 결제 실험.\n - 현재 경제를 하나의 좋고 나쁜 점수로 평가하는 화면. 마할라노비스·PCA·RRF를 기본 검색 모델에 넣는 것.\n   (§4.3, §6.4.4, D08)\n@@ -669,4 +678,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 3.0.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-10\n+**Version**: 3.1.0 (초안 — 전체 회의 승인 전) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-11 (초안)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-11T14:19:56.424+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

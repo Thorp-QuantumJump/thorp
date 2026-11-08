@@ -1,0 +1,502 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963101,
+    "iid": 357,
+    "project_id": 1444456,
+    "title": "fix(fe): 최대 범위에서 시작한 날짜 입력이 무효로 끝나도 되돌리기 아이콘의 복귀 지점을 지키게 한다",
+    "description": "## 작업 내용 요약\n\n'최대 범위 선택' 상태에서 날짜를 치다가 무효로 끝나면, 되돌리기 아이콘이 원래 고른 기간이 아니라 입력 도중의 중간 날짜로 돌아가던 문제를 고칩니다.\n\n## 주요 변경 사항\n\n- 무효 입력에서 최대 범위로 돌아가는 경로를 '최대 범위 선택' 단추와 분리했다. 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다(`onRestoreFullRange`).\n\n## 테스트\n\n- frontend `npm run lint && npm run build && npm test`: 통과(1500 passed, skipped 0)\n- 회귀 테스트: 직접 고른 기간 → 최대 범위 선택 → 중간 날짜를 거친 범위 밖 입력 → 되돌리기. 수정 전에는 실패하고 수정 후에는 통과한다.\n\n## 리뷰 포인트\n\n- `feat(fe)/strategy-settings-period-polish` 위에 쌓은 브랜치다. 그 MR이 먼저 병합되어야 이 MR의 변경이 커밋 하나로만 보인다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-02T08:41:15.148+09:00",
+    "updated_at": "2026-10-02T08:41:26.187+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T08:41:25.932+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/period-full-undo-target",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8",
+    "merge_commit_sha": "2a83cd62ad1fbc55096bb9277262530c18a03814",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T08:41:16.870+09:00",
+    "reference": "!357",
+    "references": {
+      "short": "!357",
+      "relative": "!357",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!357"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/357",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963101,
+    "iid": 357,
+    "project_id": 1444456,
+    "title": "fix(fe): 최대 범위에서 시작한 날짜 입력이 무효로 끝나도 되돌리기 아이콘의 복귀 지점을 지키게 한다",
+    "description": "## 작업 내용 요약\n\n'최대 범위 선택' 상태에서 날짜를 치다가 무효로 끝나면, 되돌리기 아이콘이 원래 고른 기간이 아니라 입력 도중의 중간 날짜로 돌아가던 문제를 고칩니다.\n\n## 주요 변경 사항\n\n- 무효 입력에서 최대 범위로 돌아가는 경로를 '최대 범위 선택' 단추와 분리했다. 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다(`onRestoreFullRange`).\n\n## 테스트\n\n- frontend `npm run lint && npm run build && npm test`: 통과(1500 passed, skipped 0)\n- 회귀 테스트: 직접 고른 기간 → 최대 범위 선택 → 중간 날짜를 거친 범위 밖 입력 → 되돌리기. 수정 전에는 실패하고 수정 후에는 통과한다.\n\n## 리뷰 포인트\n\n- `feat(fe)/strategy-settings-period-polish` 위에 쌓은 브랜치다. 그 MR이 먼저 병합되어야 이 MR의 변경이 커밋 하나로만 보인다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-02T08:41:15.148+09:00",
+    "updated_at": "2026-10-02T08:41:26.187+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T08:41:25.932+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(fe)/period-full-undo-target",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8",
+    "merge_commit_sha": "2a83cd62ad1fbc55096bb9277262530c18a03814",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T08:41:16.870+09:00",
+    "reference": "!357",
+    "references": {
+      "short": "!357",
+      "relative": "!357",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!357"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/357",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+      "head_sha": "ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8",
+      "start_sha": "f10ab1a3c9b77413827d576671cd57a80a22b27c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "b9f2cd458cb211a5a54e3c788530fc9387fe5923",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880224,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T08:41:15.248+09:00",
+          "updated_at": "2026-10-02T08:41:15.255+09:00",
+          "system": true,
+          "noteable_id": 963101,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 357,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "dc67156640589dfd970e65025a72472ed6d95945",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880225,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T08:41:15.268+09:00",
+          "updated_at": "2026-10-02T08:41:15.294+09:00",
+          "system": true,
+          "noteable_id": 963101,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 357,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8623b2b36106b03aed3e8a784994be345c1ba0d2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880226,
+          "type": null,
+          "body": "mentioned in commit 2a83cd62ad1fbc55096bb9277262530c18a03814",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T08:41:25.757+09:00",
+          "updated_at": "2026-10-02T08:41:25.763+09:00",
+          "system": true,
+          "noteable_id": 963101,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 357,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "d9b87e68e8e9770ea2bf380370c541ceb8ab296e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885077,
+          "type": null,
+          "body": "mentioned in commit 0ec13e39adf916f85f8306151b9c5e5d35d79a00",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.608+09:00",
+          "updated_at": "2026-10-13T15:16:16.643+09:00",
+          "system": true,
+          "noteable_id": 963101,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 357,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261317,
+      "head_commit_sha": "ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8",
+      "base_commit_sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+      "start_commit_sha": "f10ab1a3c9b77413827d576671cd57a80a22b27c",
+      "created_at": "2026-10-02T08:41:15.570+09:00",
+      "merge_request_id": 963101,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "f651f92ef2789c0e2324be0a338a57f6798cf971"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261317,
+      "head_commit_sha": "ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8",
+      "base_commit_sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+      "start_commit_sha": "f10ab1a3c9b77413827d576671cd57a80a22b27c",
+      "created_at": "2026-10-02T08:41:15.570+09:00",
+      "merge_request_id": 963101,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "f651f92ef2789c0e2324be0a338a57f6798cf971",
+      "commits": [
+        {
+          "id": "ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8",
+          "short_id": "ccf236a1",
+          "created_at": "2026-10-01T16:31:11.000+09:00",
+          "parent_ids": [
+            "7559308d778af4267575e0b4d2c96581dbf876aa"
+          ],
+          "title": "fix(fe): 최대 범위에서 시작한 날짜 입력이 무효로 끝나도 되돌리기 아이콘의 복귀 지점을 지키게 한다",
+          "message": "fix(fe): 최대 범위에서 시작한 날짜 입력이 무효로 끝나도 되돌리기 아이콘의 복귀 지점을 지키게 한다\n\n무효 입력에서 최대 범위로 돌아갈 때 '최대 범위 선택' 단추와 같은 경로를 써서, 입력 도중 잠깐 반영된\n중간 날짜가 되돌릴 곳으로 기억되었다. 돌아가는 경로를 따로 두어 되돌릴 곳을 건드리지 않는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-01T16:31:11.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-01T16:31:11.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ccf236a1afcf6847f53dfeac76c3b4df4ee1f9a8"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -59,6 +59,8 @@ function Harness({\n           beforeFull.current = chosen;\n           settings.setAnalysisCondition({ periodFull: true });\n         }}\n+        // 화면처럼 무효 입력에서 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다.\n+        onRestoreFullRange={() => settings.setAnalysisCondition({ periodFull: true })}\n         onUndoFullRange={() => {\n           const before = beforeFull.current;\n           if (before === null) settings.resetAnalysisCondition(\"period\");\n@@ -399,6 +401,29 @@ describe(\"AnalysisConditionsPanel\", () => {\n     expect(fullButton().disabled).toBe(false);\n   });\n \n+  it(\"최대 범위에서 시작한 입력이 중간 날짜를 거쳐 무효로 끝나도, 되돌리기는 '최대 범위 선택' 직전 기간으로 간다\", async () => {\n+    const { user } = await renderOpen();\n+    const start = screen.getByLabelText(\"시작일\");\n+    const end = screen.getByLabelText(\"종료일\");\n+\n+    // 날짜를 직접 고른 뒤 '최대 범위 선택'을 누른다. 되돌릴 곳은 이 기간이다.\n+    fireEvent.change(start, { target: { value: \"2021-01-04\" } });\n+    await user.click(screen.getByRole(\"button\", { name: \"최대 범위 선택\" }));\n+    expect(stateCondition().periodFull).toBe(true);\n+\n+    // 최대 범위에서 종료일을 친다. 범위 안인 중간 날짜가 먼저 반영되었다가 범위 밖 날짜로 끝난다.\n+    fireEvent.focus(end);\n+    fireEvent.change(end, { target: { value: \"2023-06-30\" } });\n+    fireEvent.change(end, { target: { value: \"2025-06-30\" } });\n+    // 입력이 무효라 최대 범위로 돌아갔다.\n+    expect(stateCondition().periodFull).toBe(true);\n+    expect(stateCondition().periodStart).toBeUndefined();\n+\n+    // 되돌리면 입력 도중의 중간 날짜가 아니라 '최대 범위 선택'을 누르기 직전 기간이다.\n+    await user.click(screen.getByRole(\"button\", { name: \"최대 범위 선택 되돌리기\" }));\n+    expect(stateCondition()).toMatchObject({ periodStart: \"2021-01-04\", periodEnd: range.end });\n+  });\n+\n   it.each([\n     [\"빈 값\", \"\"],\n     [\"숫자가 아닌 글\", \"천만원\"],\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,6 +51,12 @@ interface AnalysisConditionsPanelProps {\n   periodMode: PeriodMode;\n   /** '최대 범위 선택'. 평가 가능 범위 전체를 쓴다 */\n   onSelectFullRange: () => void;\n+  /**\n+   * '최대 범위 선택' 상태로 돌아간다. 단추를 누른 것이 아니라, 그 상태에서 시작한 날짜 입력이 무효로 끝나 되돌릴\n+   * 때 쓴다. 되돌리기 아이콘이 기억하는 '누르기 직전 상태'를 건드리지 않는다 — 건드리면 입력 도중에 잠깐 반영된\n+   * 중간 날짜가 그 자리를 차지한다\n+   */\n+  onRestoreFullRange: () => void;\n   /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다 */\n   onUndoFullRange: () => void;\n   /**\n@@ -155,6 +161,8 @@ interface PeriodFieldProps {\n   onChange: (period: AnalysisPeriod) => void;\n   /** '최대 범위 선택'. 평가 가능 범위 전체를 쓰고, 범위가 바뀌면 그 범위를 따른다 */\n   onSelectFull: () => void;\n+  /** '최대 범위 선택' 상태로 돌아간다. 그 상태에서 시작한 입력이 무효로 끝났을 때 쓴다(`onRestoreFullRange`) */\n+  onRestoreFull: () => void;\n   /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다. 단추 옆 되돌리기 아이콘이 부른다 */\n   onUndoFull: () => void;\n   /** 기간을 정하지 않은 상태로 되돌린다. 아무것도 정하지 않은 데서 시작한 입력이 무효가 되었을 때 쓴다 */\n@@ -194,6 +202,7 @@ function PeriodField({\n   caseConstraint,\n   onChange,\n   onSelectFull,\n+  onRestoreFull,\n   onUndoFull,\n   onClear,\n   onDraftInvalid,\n@@ -275,7 +284,7 @@ function PeriodField({\n       } else if (before.mode === \"full\") {\n         if (periodMode !== \"full\") {\n           setSynced(range);\n-          onSelectFull();\n+          onRestoreFull();\n         }\n       } else if (periodMode !== \"unset\") {\n         // 정하지 않은 상태에서 시작했으면 되돌릴 곳도 정하지 않은 상태다. 범위 전체로 대신 채우지 않는다.\n@@ -431,6 +440,7 @@ export function AnalysisConditionsPanel({\n   period,\n   periodMode,\n   onSelectFullRange,\n+  onRestoreFullRange,\n   onUndoFullRange,\n   onPeriodDraftInvalid,\n   caseConstraint = null,\n@@ -490,6 +500,7 @@ export function AnalysisConditionsPanel({\n               onChange({ periodStart: next.start, periodEnd: next.end })\n             }\n             onSelectFull={onSelectFullRange}\n+            onRestoreFull={onRestoreFullRange}\n             onUndoFull={onUndoFullRange}\n             onClear={() => onReset(\"period\")}\n             onDraftInvalid={onPeriodDraftInvalid}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -890,6 +890,11 @@ export function StrategySettingsPage({\n     periodBeforeFullRef.current = chosenPeriod;\n     settings.setAnalysisCondition({ periodFull: true });\n   }, [chosenPeriod, settings]);\n+  // 입력이 무효로 끝나 '최대 범위' 상태로 돌아갈 때는 되돌릴 곳을 새로 기억하지 않는다. 그 순간의 `chosenPeriod`는\n+  // 입력 도중에 잠깐 반영된 중간 날짜라, 기억하면 되돌리기 아이콘이 사용자가 고른 적 없는 기간으로 간다.\n+  const restoreFullRange = useCallback(() => {\n+    settings.setAnalysisCondition({ periodFull: true });\n+  }, [settings]);\n   const undoFullRange = useCallback(() => {\n     const before = periodBeforeFullRef.current;\n     periodBeforeFullRef.current = null;\n@@ -1654,6 +1659,7 @@ export function StrategySettingsPage({\n                       period={period}\n                       periodMode={periodMode}\n                       onSelectFullRange={selectFullRange}\n+                      onRestoreFullRange={restoreFullRange}\n                       onUndoFullRange={undoFullRange}\n                       onPeriodDraftInvalid={setPeriodDraftInvalid}\n                       caseConstraint={activeCaseConstraint}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

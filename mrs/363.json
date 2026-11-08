@@ -1,0 +1,510 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963193,
+    "iid": 363,
+    "project_id": 1444456,
+    "title": "docs(fe): 과거 뉴스 원천을 들여 투자 대상 그래프에 당시 뉴스를 붙이는 spec 016을 향후 확장으로 써 둔다",
+    "description": "## 작업 내용 요약\n\n투자 대상 가격 그래프를 가리키면 그 달·그 섹터의 당시 뉴스를 보여 주는 기능을 spec 016으로 써 둔다. 저장된 뉴스가 2026-09-16 이후분뿐이라 지금은 만들지 않고, 과거 원천 선택(PD-24)을 착수 조건으로 둔다.\n\n## 주요 변경 사항\n\n- spec 016: 그래프 가리킴·시점 고정 목록, '자료 없음'과 '뉴스 없음' 구분, 원천별 월 단위 수집 상태 기록\n- 표시·연결 규칙(발행 시각 확인·섹터 연결·본문 미저장·매체 허가)은 012를 따르고 다시 정하지 않는다\n- specs/README.md: 016 행, PD-24(원천)·PD-25(공개 기준)·PD-26(보관 기간)\n\n## 테스트\n\n- 문서 변경만 있다. spec 품질 체크리스트 통과\n\n## 리뷰 포인트\n\n- 기간 단위를 달로 고정한 것(FR-003)\n- 지금의 구성 종목 목록으로 과거 기사를 찾지 않는다는 규칙(Edge Cases)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-02T13:35:20.456+09:00",
+    "updated_at": "2026-10-02T13:35:25.736+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T13:35:25.129+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/spec-016-historical-news",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9c31a579ca6724c858646ab1e070aca73ca8b9ad",
+    "merge_commit_sha": "21eb561e1fe0306c669e3afb1c09553252b3ffaf",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T13:35:21.592+09:00",
+    "reference": "!363",
+    "references": {
+      "short": "!363",
+      "relative": "!363",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!363"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/363",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963193,
+    "iid": 363,
+    "project_id": 1444456,
+    "title": "docs(fe): 과거 뉴스 원천을 들여 투자 대상 그래프에 당시 뉴스를 붙이는 spec 016을 향후 확장으로 써 둔다",
+    "description": "## 작업 내용 요약\n\n투자 대상 가격 그래프를 가리키면 그 달·그 섹터의 당시 뉴스를 보여 주는 기능을 spec 016으로 써 둔다. 저장된 뉴스가 2026-09-16 이후분뿐이라 지금은 만들지 않고, 과거 원천 선택(PD-24)을 착수 조건으로 둔다.\n\n## 주요 변경 사항\n\n- spec 016: 그래프 가리킴·시점 고정 목록, '자료 없음'과 '뉴스 없음' 구분, 원천별 월 단위 수집 상태 기록\n- 표시·연결 규칙(발행 시각 확인·섹터 연결·본문 미저장·매체 허가)은 012를 따르고 다시 정하지 않는다\n- specs/README.md: 016 행, PD-24(원천)·PD-25(공개 기준)·PD-26(보관 기간)\n\n## 테스트\n\n- 문서 변경만 있다. spec 품질 체크리스트 통과\n\n## 리뷰 포인트\n\n- 기간 단위를 달로 고정한 것(FR-003)\n- 지금의 구성 종목 목록으로 과거 기사를 찾지 않는다는 규칙(Edge Cases)\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-02T13:35:20.456+09:00",
+    "updated_at": "2026-10-02T13:35:25.736+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-02T13:35:25.129+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(fe)/spec-016-historical-news",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "9c31a579ca6724c858646ab1e070aca73ca8b9ad",
+    "merge_commit_sha": "21eb561e1fe0306c669e3afb1c09553252b3ffaf",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-02T13:35:21.592+09:00",
+    "reference": "!363",
+    "references": {
+      "short": "!363",
+      "relative": "!363",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!363"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/363",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "3",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "26a3c2ac45a253669c70296046922624d9c2dd7d",
+      "head_sha": "9c31a579ca6724c858646ab1e070aca73ca8b9ad",
+      "start_sha": "26a3c2ac45a253669c70296046922624d9c2dd7d"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "68ea1f76cf0987a056ce8ab155b72cd515bd4311",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880566,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T13:35:20.590+09:00",
+          "updated_at": "2026-10-02T13:35:20.604+09:00",
+          "system": true,
+          "noteable_id": 963193,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 363,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "de0742d07881384157329a73df85955f0275172b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880567,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T13:35:20.612+09:00",
+          "updated_at": "2026-10-02T13:35:20.622+09:00",
+          "system": true,
+          "noteable_id": 963193,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 363,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3eadaff1409d820569efc646cb9c1ae49ed88e4c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880568,
+          "type": null,
+          "body": "mentioned in commit 21eb561e1fe0306c669e3afb1c09553252b3ffaf",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-02T13:35:25.355+09:00",
+          "updated_at": "2026-10-02T13:35:25.407+09:00",
+          "system": true,
+          "noteable_id": 963193,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 363,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b771cf730ec0e33d304ceb772f5bf2bcc4abdd4d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2880570,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 문서화와 제약 조건 설정**: 향후 확장이 필요한 기능(spec 016)에 대해 구현 코드를 작성하기 전, 요구사항과 예외 케이스, 선행 조건(PD-24~PD-26)을 명확하게 정의하여 기술적 부채와 혼선을 방지했습니다.\n- **기존 스펙과의 일관성 유지**: 독립된 새로운 스펙 문서이면서도 공통 규칙은 기존 스펙(012, 002 등)을 참조하도록 설계하여 중복을 피하고 정합성을 높였습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다. (문서 변경 사항만 포함된 MR로, 실행 가능한 코드나 보안 취약점 등은 존재하지 않습니다.)\n\n### 테스트 제안\n문서 변경 사항이므로 별도의 코드 테스트 대신 다음 체크리스트 기반의 검증 시나리오를 수행할 것을 제안합니다.\n\n1. **스펙 품질 검증 시나리오**:\n   - `specs/016-historical-news/checklists/requirements.md`의 모든 항목이 체크되어 있으며, 구현 세부사항(특정 언어, 프레임워크, API 등)이 문서에 누출되지 않았는지 검토합니다.\n2. **착수 조건(Prerequisites) 검증 시나리오**:\n   - PD-24(과거 뉴스 원천 선택)가 확정되기 전에는 팀 내에서 해당 기능의 구현 단계(`/speckit-plan`)로 진입하지 않는지 관리적 프로세스가 정상 작동하는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:9c31a579ca6724c858646ab1e070aca73ca8b9ad -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-02T13:35:29.487+09:00",
+          "updated_at": "2026-10-02T13:35:29.487+09:00",
+          "system": false,
+          "noteable_id": 963193,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 363,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261619,
+      "head_commit_sha": "9c31a579ca6724c858646ab1e070aca73ca8b9ad",
+      "base_commit_sha": "26a3c2ac45a253669c70296046922624d9c2dd7d",
+      "start_commit_sha": "26a3c2ac45a253669c70296046922624d9c2dd7d",
+      "created_at": "2026-10-02T13:35:20.937+09:00",
+      "merge_request_id": 963193,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "96904d53ed3f258c727ddfb4a7b1c4b59a742973"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261619,
+      "head_commit_sha": "9c31a579ca6724c858646ab1e070aca73ca8b9ad",
+      "base_commit_sha": "26a3c2ac45a253669c70296046922624d9c2dd7d",
+      "start_commit_sha": "26a3c2ac45a253669c70296046922624d9c2dd7d",
+      "created_at": "2026-10-02T13:35:20.937+09:00",
+      "merge_request_id": 963193,
+      "state": "collected",
+      "real_size": "3",
+      "patch_id_sha": "96904d53ed3f258c727ddfb4a7b1c4b59a742973",
+      "commits": [
+        {
+          "id": "9c31a579ca6724c858646ab1e070aca73ca8b9ad",
+          "short_id": "9c31a579",
+          "created_at": "2026-10-02T13:29:25.000+09:00",
+          "parent_ids": [
+            "26a3c2ac45a253669c70296046922624d9c2dd7d"
+          ],
+          "title": "docs(fe): 과거 뉴스 원천을 들여 투자 대상 그래프에 당시 뉴스를 붙이는 spec 016을 향후 확장으로 써 둔다",
+          "message": "docs(fe): 과거 뉴스 원천을 들여 투자 대상 그래프에 당시 뉴스를 붙이는 spec 016을 향후 확장으로 써 둔다\n\n저장된 뉴스가 2026-09-16 이후분뿐이라 지금은 만들 수 없다. 원천 선택(PD-24)을 착수 조건으로 두고,\n표시·연결 규칙은 012를 따른다. specs/README.md 색인에 016과 PD-24~PD-26을 올린다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-02T13:29:25.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-02T13:29:25.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/9c31a579ca6724c858646ab1e070aca73ca8b9ad"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,38 @@\n+# Specification Quality Checklist: 투자 대상 그래프의 당시 뉴스\n+\n+**Purpose**: Validate specification completeness and quality before proceeding to planning\n+**Created**: 2026-10-02\n+**Feature**: [spec.md](../spec.md)\n+\n+## Content Quality\n+\n+- [x] No implementation details (languages, frameworks, APIs)\n+- [x] Focused on user value and business needs\n+- [x] Written for non-technical stakeholders\n+- [x] All mandatory sections completed\n+\n+## Requirement Completeness\n+\n+- [x] No [NEEDS CLARIFICATION] markers remain\n+- [x] Requirements are testable and unambiguous\n+- [x] Success criteria are measurable\n+- [x] Success criteria are technology-agnostic (no implementation details)\n+- [x] All acceptance scenarios are defined\n+- [x] Edge cases are identified\n+- [x] Scope is clearly bounded\n+- [x] Dependencies and assumptions identified\n+\n+## Feature Readiness\n+\n+- [x] All functional requirements have clear acceptance criteria\n+- [x] User scenarios cover primary flows\n+- [x] Feature meets measurable outcomes defined in Success Criteria\n+- [x] No implementation details leak into specification\n+\n+## Notes\n+\n+- Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`\n+- 2026-10-02 검증: 향후 확장 spec이라 착수 조건(PD-24 과거 원천 선택)을 범위 요약과 결정 항목 표에 함께 적었다. 원천을 정하기 전에는 `/speckit-plan`으로 넘어가지 않는다.\n+- 미정 값(원천·공개 기준·보관 기간)은 [NEEDS CLARIFICATION] 대신 PD-24~PD-26으로 두었다. 지금 정할 수 없고 원천을 고를 때 함께 정해지는 값이기 때문이다.\n+- GDELT·기사 아카이브는 원천 후보로만 Assumptions에 적었다. 원천의 실제 제공 범위는 확인 전이다.\n+- 표시·연결 규칙(발행 시각 확인, 섹터 연결, 본문 미저장, 매체 허가)은 012를 따른다고 쓰고 다시 정하지 않았다(specs/README.md \"Spec 작성 규칙\").\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/016-historical-news/checklists/requirements.md",
+          "old_path": "specs/016-historical-news/checklists/requirements.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,179 @@\n+# Feature Specification: 투자 대상 그래프의 당시 뉴스\n+\n+**Feature Branch**: `016-historical-news` (spec 디렉터리 식별자다. 구현 Task의 Git 브랜치는 `{type}({position})/{description}` 형식으로 따로 만든다.)\n+\n+**Created**: 2026-10-02\n+\n+**Status**: Draft (향후 확장, 착수 시점 미정)\n+\n+**Input**: User description: \"전략 진단 '투자 대상 고르기'로 현재 시장 뉴스를 옮기고 내용을 다시 짠다. 과거 시점 뉴스(가격 그래프 호버)는 향후 확장으로 남긴다.\" 같은 날 사용자 결정에 따라 현재 뉴스의 이동은 기존 spec([002](../002-sector-weight-selection/spec.md)·[009](../009-market-flow-overview/spec.md)·[012](../012-market-news-digest/spec.md))을 고쳐 다루고, 이 spec은 **과거 뉴스 원천을 실제로 들이는 경우**만 상정해 써 둔다.\n+\n+**근거 문서**: 2026-10-02 사용자 결정(아래 Clarifications). 뉴스 표시·연결의 공통 규칙은 [012 시장 흐름 뉴스 묶음](../012-market-news-digest/spec.md)이 소유하며 이 spec은 그 규칙을 따른다.\n+\n+**관련 spec**: 그래프는 [002 섹터·비중 선택](../002-sector-weight-selection/spec.md)의 투자 대상 탐색 카드에 있는 대표 ETF 가격 그래프이고, 가격 자료는 [001](../001-etf-market-data/spec.md)이 제공한다. 과거 사례에 당시 뉴스를 붙이는 규칙은 [012](../012-market-news-digest/spec.md) User Story 3·FR-006이며, 이 spec이 들이는 과거 원천은 그 화면([010](../010-economic-regime-search/spec.md)·[011](../011-regime-strategy-link/spec.md))도 함께 쓸 수 있다.\n+\n+## 범위 요약\n+\n+투자 대상 고르기에서 대표 ETF의 가격 그래프를 보던 사용자가 그래프의 한 시점을 가리키면, 그 시점이 속한 달에 그 ETF가 대표하는 섹터에 관해 **당시 발행된** 뉴스를 본다. 시점을 고정하면 그 달의 뉴스 묶음 목록이 그래프 아래에 열리고 원문으로 이동할 수 있다. 이를 위해 2010년부터의 과거 뉴스 원천을 새로 등록·적재하고, 원천마다 제공 기간·수집 구간·이용 조건을 기록해 \"자료가 없는 기간\"과 \"뉴스가 없던 기간\"을 구분한다.\n+\n+**지금은 만들 수 없다.** 2026-10-02 배포 서버 조회 기준으로 저장된 뉴스는 2026-09-16 이후분뿐이고, 현재 뉴스원(국내 RSS·GDELT 보완원, 012 FR-009·FR-013)은 최근 기사를 받는 구조라 2010년부터 그려지는 그래프에 붙일 자료가 없다. 착수는 과거 원천과 그 이용 조건(PD-24)이 정해진 뒤다.\n+\n+## Clarifications\n+\n+### Session 2026-10-02\n+\n+- Q: 과거 시점 뉴스를 지금 범위에 넣나요? → A: 넣지 않는다. 지금은 과거 뉴스 자료가 없으므로 향후 확장으로 남기고 spec 문서만 써 둔다.\n+- Q: 사용자는 어디서 과거 뉴스를 보나요? → A: 투자 대상 고르기의 가격 그래프다. 그래프를 가리키면 그 시점(과거)의 그 종목에 대한 뉴스를 보여 준다.\n+- Q: 기존 012를 고치나, 새 spec을 두나요? → A: 현재 뉴스의 자리·구성은 012·002·009를 고친다. 과거 뉴스는 원천·수집 방식·이용 조건이 새로 생기므로 새 spec(이 문서)으로 둔다. 표시·연결 규칙은 012를 따르고 여기서 다시 정하지 않는다.\n+\n+## User Scenarios & Testing *(mandatory)*\n+\n+### User Story 1 - 그래프의 한 시점을 가리켜 그 무렵 뉴스를 훑어본다 (Priority: P1)\n+\n+[전략을 검증하려는 개인]은 섹터 ETF의 과거 가격 움직임을 당시 맥락과 함께 이해하기 위하여, 투자 대상 그래프의 한 시점을 가리켜 그 달에 그 섹터에 관해 보도된 뉴스의 건수와 대표 제목을 볼 수 있다.\n+\n+**Why this priority**: 이 기능의 핵심 가치다. 가격 그래프의 급등·급락 지점에서 \"그때 무슨 일이 있었나\"를 화면을 떠나지 않고 확인하게 한다. 이것만 있어도 독립적으로 쓸모가 있다.\n+\n+**Independent Test**: 과거 뉴스가 적재된 섹터의 그래프에서 임의의 달을 가리키고, 그 달·그 섹터의 뉴스 건수와 대표 제목이 보이는지, 표시된 기사가 모두 그 달에 발행된 것인지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 과거 뉴스가 적재된 섹터의 그래프를 보는 중에, **When** 그래프의 한 지점을 가리키면, **Then** 그 지점의 날짜·가격과 함께 그 날짜가 속한 달의 '당시 뉴스' 건수와 대표 제목(최대 3개)이 보인다.\n+2. **Given** 그 달에 수집은 했지만 그 섹터와 연결된 기사가 없으면, **Then** \"이 달에는 이 섹터 관련 뉴스가 없습니다\"를 보인다.\n+3. **Given** 그 달이 과거 원천의 제공 기간 밖이거나 수집하지 않은 구간이면, **Then** \"이 기간의 뉴스 자료가 없습니다\"를 보이며 '뉴스 없음'으로 표시하지 않는다.\n+4. **Given** 키보드만 쓰는 사용자가, **When** 그래프에 초점을 두고 좌우 화살표로 시점을 옮기면, **Then** 가리킬 때와 같은 내용이 보이고 보조기기에도 읽힌다.\n+\n+---\n+\n+### User Story 2 - 시점을 고정해 그 달의 뉴스 목록과 원문을 본다 (Priority: P1)\n+\n+[전략을 검증하려는 개인]은 그 무렵 뉴스를 원문으로 확인하기 위하여, 그래프의 시점을 고정해 그 달의 뉴스 묶음 목록을 열고 원문 링크로 이동할 수 있다.\n+\n+**Why this priority**: 가리킴 말풍선 안의 링크는 누를 수 없고 터치 기기에는 가리킴이 없다. 고정해서 여는 목록이 있어야 원문 확인과 터치 기기 이용이 성립한다.\n+\n+**Independent Test**: 한 달을 눌러 고정하고, 그래프 아래 목록에 그 달의 뉴스 묶음이 대표 제목·매체·발행일·원문 링크와 함께 보이는지, 원문 링크가 새 창으로 열리는지, 해제하면 목록이 닫히는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 그래프의 한 달을 누르거나(터치 기기는 탭) 키보드로 Enter를 누르면, **Then** 그래프 아래에 그 달의 뉴스 묶음 목록이 열리고 그래프에는 고정한 달이 표시된다.\n+2. **Given** 목록이 열린 상태에서, **When** 같은 달을 다시 누르거나 Esc를 누르면, **Then** 목록이 닫히고 초점은 그래프로 돌아간다.\n+3. **Given** 그 달의 뉴스 묶음이 목록 상한보다 많으면, **Then** 주요도 순으로 상한까지 보이고 나머지 건수를 밝힌다. 다른 달의 기사로 채우지 않는다.\n+4. **Given** 원문 링크가 오래되어 더 이상 열리지 않을 수 있는 기사도, **Then** 제목·매체·발행일은 그대로 보이고 원문이 바뀌었거나 사라졌을 수 있다는 안내를 목록에 한 번 둔다.\n+\n+---\n+\n+### User Story 3 - 운영자가 과거 원천의 제공 범위를 기록한다 (Priority: P2)\n+\n+[서비스 운영자]는 과거 뉴스를 믿을 수 있게 내보내기 위하여, 과거 뉴스 원천을 등록하고 원천마다 제공 기간·수집 완료 구간·누락 구간·이용 조건을 기록할 수 있다.\n+\n+**Why this priority**: User Story 1의 \"자료 없음\"과 \"뉴스 없음\" 구분은 이 기록에서만 나온다. 기록이 없으면 수집하지 않은 기간이 뉴스가 없던 기간처럼 보인다.\n+\n+**Independent Test**: 원천 하나를 등록하고 일부 구간만 적재한 뒤, 적재한 구간·실패한 구간·적재하지 않은 구간이 각각 다른 상태로 기록되고 화면에도 다르게 보이는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 원천을 등록하면, **Then** 제공 기간·이용 조건·허가 상태가 함께 기록되고 허가가 확인되지 않은 원천의 기사는 공개 화면에 보이지 않는다.\n+2. **Given** 적재가 어느 달에서 중간에 실패하면, **Then** 그 달은 '부분 수집'으로 기록되고 완전 수집으로 표시하지 않으며, 다시 시도할 때 그 달만 다시 받는다.\n+3. **Given** 적재를 마친 달은, **Then** 다시 적재하지 않는다. 같은 달을 다시 받아야 하면 운영자가 그 달을 명시해 다시 연다.\n+\n+---\n+\n+### User Story 4 - 그래프에서 뉴스가 있는 달을 미리 알아본다 (Priority: P3)\n+\n+[전략을 검증하려는 개인]은 어디를 가리켜야 할지 알기 위하여, 그래프 아래의 얇은 띠에서 당시 뉴스가 적재된 달과 자료가 없는 달을 구분해 볼 수 있다.\n+\n+**Why this priority**: 16년치 그래프에서 아무 곳이나 가리켜 보는 수고를 줄인다. 없어도 User Story 1·2는 동작한다.\n+\n+**Independent Test**: 자료가 있는 달과 없는 달이 섞인 섹터에서 띠의 두 표시가 원천 기록(User Story 3)과 일치하는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 그래프 아래 띠에서, **Then** 자료가 있는 달과 자료가 없는 달이 다른 모양으로 보인다.\n+2. **Given** 띠를 볼 때, **Then** 기사 수의 많고 적음은 크기·진하기로 나타내지 않는다. 원천이 해마다 다루는 매체 수가 달라 생기는 차이를 사건의 크기로 오해하지 않게 하기 위해서다.\n+\n+---\n+\n+### Edge Cases\n+\n+- 대표 ETF 상장 전 기간은 그래프가 없으므로 과거 뉴스도 가리킬 수 없다. 그래프 범위는 001의 가격 자료가 정한다.\n+- ETF 자체를 다룬 기사는 드물다. 연결은 그 ETF가 대표하는 섹터 기준이며, 012의 섹터·기업·주제 연결 규칙(FR-010)을 쓴다. **지금의 구성 종목 목록으로 과거 기사를 찾지 않는다.** 당시 구성 종목은 지금과 다를 수 있다.\n+- 과거에는 섹터를 부르는 말이 지금과 달랐을 수 있다(예: 2010년대 초의 2차전지 관련 보도). 제목 키워드 규칙의 재현율이 시기마다 다를 수 있으므로 정밀도·재현율을 시기별 표본으로 잰다(FR-007).\n+- 발행 시각을 확인할 수 없는 기사, 원천 기록 시각만 있는 기사는 과거 뉴스에 연결하지 않는다(012 FR-006·FR-012).\n+- 같은 사건을 여러 날에 걸쳐 보도하면 012의 묶음 규칙을 따른다. 달 경계를 넘는 묶음은 각 기사의 발행 달에 나눠 보인다.\n+- 한 원천이 어느 매체의 기사를 일부 기간만 제공하면, 그 기간 밖은 그 매체 기준으로 자료 없음이다. 달의 수집 상태는 그 달에 등록된 원천 전체의 기록으로 정한다(FR-011).\n+- 과거 뉴스 조회가 실패해도 그래프·섹터 선택·다음 단계 이동은 막히지 않는다. 뉴스 영역에만 실패 안내와 다시 시도를 둔다.\n+- 아주 큰 달(사건이 몰린 달)은 목록 상한까지만 보이고 나머지 건수를 밝힌다.\n+\n+## Requirements *(mandatory)*\n+\n+### Functional Requirements\n+\n+#### 그래프에서 보기\n+\n+- **FR-001**: 투자 대상 탐색 카드의 대표 ETF 가격 그래프에서 시점을 가리키면(마우스 가리킴, 키보드 초점 이동) 그 시점의 날짜·가격과 함께, 그 날짜가 속한 달에 그 ETF가 대표하는 섹터와 연결된 당시 뉴스의 건수와 대표 제목을 최대 3개 보인다.\n+- **FR-002**: 시점을 누르거나 탭하거나 Enter로 고정하면 그래프 아래에 그 달의 뉴스 묶음 목록을 연다. 목록은 대표 제목·매체·발행일·원문 링크를 보이며 같은 시점을 다시 누르거나 Esc로 닫는다. 닫으면 초점은 그래프로 돌아간다.\n+- **FR-003**: 묶는 기간 단위는 달이다. 그래프가 16년을 한 화면에 그리므로 날짜 하나보다 달이 가리키기 쉽고, 경제환경 검색(010)의 월 단위와도 맞는다.\n+- **FR-004**: 과거 뉴스 영역에는 '당시 뉴스'임을 표시해 투자 대상 고르기의 현재 뉴스와 구분한다. 뉴스가 그래프의 가격 움직임을 일으켰다고 단정하는 문구를 쓰지 않는다(012 User Story 3 시나리오 4와 같은 규칙).\n+- **FR-005**: 자료가 없는 달과 뉴스가 없던 달을 다른 문장으로 보인다. 원천의 제공 기간 밖이거나 수집하지 않은 달은 \"이 기간의 뉴스 자료가 없습니다\", 수집을 마쳤으나 그 섹터와 연결된 기사가 없으면 \"이 달에는 이 섹터 관련 뉴스가 없습니다\"다. 부분 수집한 달은 받은 기사를 보이되 일부만 수집했음을 밝힌다.\n+\n+#### 연결과 표시 규칙\n+\n+- **FR-006**: 그 달 안에 발행된 것이 확인된 기사만 연결한다. 발행 시각 확인 기준과 미확인 기사 제외는 012 FR-006·FR-012를 따른다.\n+- **FR-007**: 섹터 연결은 012 FR-010의 버전 관리되는 섹터·기업·주제 연결 규칙을 과거 기사에도 그대로 적용하고, 적용한 규칙 버전을 기사마다 남긴다. 규칙의 정밀도·재현율은 사람이 검수한 과거 표본으로 시기별로 재며, 공개 기준(PD-25)을 넘는 섹터·시기만 공개한다.\n+- **FR-008**: 기사 본문을 저장·표시·재배포하지 않고 제목·매체·발행 시각·원문 링크만 다룬다(012 FR-002). 대표 제목·사실 요약·주요도·중복 처리는 012의 규칙(FR-003·FR-004·FR-011)을 따른다.\n+- **FR-009**: 공개 화면에는 이용 조건과 표시 허가가 확인된 원천·매체의 기사만 보인다. 허가 확인과 기록 방식은 012 FR-015(PD-15)를 과거 원천에 넓혀 적용한다.\n+\n+#### 과거 원천과 적재\n+\n+- **FR-010**: 과거 뉴스 원천을 등록할 때 원천 이름·제공 기간·다루는 매체·이용 조건·허가 상태를 함께 기록한다. 원천 선택은 PD-24다.\n+- **FR-011**: 적재는 원천·달 단위로 나눠 진행하고 달마다 상태를 `완전 수집`·`부분 수집`·`실패`·`미수집`으로 기록한다. 부분 수집과 실패한 달은 다시 시도할 수 있으며, 완전 수집한 달은 운영자가 명시해 다시 열기 전까지 다시 받지 않는다.\n+- **FR-012**: 원천이 결과 상한 등으로 한 달의 기사를 다 주지 못하면 기간을 나눠 다시 받고, 끝내 다 받지 못한 달은 `부분 수집`으로 둔다. 부분 수집한 달을 완전 수집으로 기록하거나 표시하지 않는다(012 FR-013과 같은 원리).\n+- **FR-013**: 과거 뉴스의 보관 기간과 삭제 시점은 PD-26으로 정한다. 012 FR-019의 일괄 삭제 규칙이 과거 원천 자료에도 그대로 적용되는지 착수 때 함께 정한다.\n+\n+#### 실패와 다른 화면\n+\n+- **FR-014**: 과거 뉴스 조회가 실패하거나 늦어도 그래프 표시·섹터 선택·다음 단계 이동은 그대로 동작한다. 뉴스 영역에만 실패 안내와 다시 시도를 둔다.\n+- **FR-015**: 이 spec이 적재한 과거 뉴스는 012 FR-006의 과거 사례 '당시 뉴스'(010·011 사례 화면)에도 같은 연결·표시 규칙으로 쓸 수 있다. 사례 화면의 표시 자리는 그 spec이 정한다.\n+\n+### Key Entities *(include if feature involves data)*\n+\n+- **과거 뉴스 원천**: 원천 이름·제공 기간·다루는 매체·이용 조건·허가 상태와 그 이력이다.\n+- **수집 구간 기록**: 원천·달·상태(`완전 수집`·`부분 수집`·`실패`·`미수집`)·마지막 시도 시각이다. \"자료 없음\"과 \"뉴스 없음\"을 가르는 유일한 근거다.\n+- **과거 뉴스 항목**: 012의 뉴스 항목과 같은 필드(원문 URL·매체·제목·발행 시각과 확인 여부·관련 섹터/주제·중복·묶음 식별자)에 원천과 적용한 연결 규칙 버전을 더한 것이다. 본문은 없다.\n+- **달별 섹터 뉴스 요약**: 섹터·달·연결된 기사 수·대표 묶음(최대 3개)·수집 상태다. 그래프 가리킴이 읽는 값이다.\n+\n+## Success Criteria *(mandatory)*\n+\n+### Measurable Outcomes\n+\n+- **SC-001**: 그래프의 한 시점을 가리킨 뒤 1초 안에 그 달의 뉴스 요약, \"뉴스 없음\", \"자료 없음\" 중 하나가 보인다.\n+- **SC-002**: 화면에 보인 과거 뉴스 중 발행 시각이 그 달 밖이거나 미확인인 항목이 0건이다.\n+- **SC-003**: 수집하지 않았거나 실패한 달이 \"뉴스 없음\"으로 보인 경우가 0건이다.\n+- **SC-004**: 과거 뉴스 영역에 뉴스가 가격 움직임의 원인이었다고 단정하는 문구가 0건이다.\n+- **SC-005**: 키보드만으로 시점 이동·고정·목록 열기·원문 열기·닫기를 모두 할 수 있다.\n+- **SC-006**: 과거 뉴스 조회 실패 중에도 그래프 표시와 섹터 선택이 막힌 경우가 0건이다.\n+- **SC-007**: 공개한 섹터·시기마다 섹터 연결 정밀도를 검수 표본으로 잰 기록이 있고, 그 값이 PD-25의 기준 이상이다.\n+\n+## Assumptions\n+\n+- 2026-10-02 현재 저장된 뉴스는 2026-09-16 이후분뿐이다(배포 서버의 과거 구간 조회 결과). 이 spec은 과거 원천을 새로 들이는 경우를 상정한 문서이며 착수 시점은 정하지 않았다.\n+- 그래프는 002 투자 대상 탐색 카드의 대표 ETF 수정 종가 그래프이며, 001 자료의 하한(2010-01-04)부터 그려진다. 과거 원천이 그보다 짧으면 그 앞은 \"자료 없음\"이다.\n+- 현재 뉴스의 자리·구성(투자 대상 고르기 하단)은 002·012가 정하고 이 spec은 다루지 않는다.\n+- 원천 후보로는 언론 기사 아카이브 서비스와 GDELT의 과거 배포 파일 등을 검토할 수 있다. 각 원천이 실제로 제공하는 기간·매체·이용 조건은 확인 전이며 PD-24에서 정한다.\n+- 데스크톱 브라우저를 우선하되, 가리킴이 없는 터치 기기는 탭으로 고정해 같은 내용을 본다(FR-002).\n+\n+## Pre-Implementation Decisions *(팀 확정 필요)*\n+\n+| 번호 | 결정 항목 | 상태 | 확정 전 동작 | 근거 |\n+|---|---|---|---|---|\n+| PD-24 | 과거 뉴스 원천 선택: 원천·제공 기간·다루는 매체·이용 조건(재표시 허가 포함) | 미확정 | 착수하지 않는다 | 2026-10-02 사용자 결정, 012 FR-015 |\n+| PD-25 | 과거 뉴스 공개 기준: 섹터 연결 정밀도의 최소값과 검수 표본 크기·시기 구분 | 미확정 | 기준을 넘지 못한 섹터·시기는 공개하지 않는다 | 012 FR-010 |\n+| PD-26 | 과거 뉴스 보관 기간·삭제 시점과 012 FR-019 일괄 삭제와의 관계 | 미확정 | 012 FR-019를 그대로 따른다 | 012 FR-019 |\n+\n+## Out of Scope\n+\n+- 현재 뉴스의 자리·구성·개수([012](../012-market-news-digest/spec.md)·[002](../002-sector-weight-selection/spec.md))\n+- 기사 본문의 저장·요약·재배포 (012와 같다)\n+- 뉴스를 전략 신호·경제환경 검색 입력·가격 예측에 쓰는 것\n+- 기사 수·감성으로 그래프에 사건의 크기를 매기는 표시\n+- 날짜 하나 단위의 뉴스 연결과 그래프 확대(기간 단위는 달로 고정, FR-003)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/016-historical-news/spec.md",
+          "old_path": "specs/016-historical-news/spec.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,6 +33,7 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n | 013 | [배우기](013-learning-pages/spec.md) | 주제별 글(질문 하나·예시 하나), 예시로 진단 시작, 용어 도움말 재사용 | 5 | P4 | §4.5, D01, D02 |\n | 014 | [사용자 인증](014-user-auth/spec.md) | 회원가입·이메일 인증, 로그인과 상태 복원, '내 기록' 보호와 원래 위치 복귀, 로그아웃·만료 복구 | 기반 (§8.1 항목 아님) | P2 (006과 함께) | §5, 원칙 VIII, constitution 미합의 인증·인가 영역 |\n | 015 | [화면 맥락 도우미](015-context-assistant/spec.md) | 결과 화면의 플로팅 버튼·말풍선으로 그 결과의 값을 자연어로 묻고, 서버가 읽은 근거로 채운 답을 받는다. 1차는 결과 화면만 | 보조 (§8.1 항목 아님, 2026-09-24 추가) | P3 (005 뒤) | 원칙 II·III·VI, [ADR-0008](../docs/adr/0008-external-llm-via-gms.md) |\n+| 016 | [투자 대상 그래프의 당시 뉴스](016-historical-news/spec.md) | 투자 대상 가격 그래프를 가리키면 그 달·그 섹터의 당시 뉴스, 과거 뉴스 원천 등록·월 단위 적재·수집 상태 기록. **향후 확장, 착수 미정**(과거 원천 PD-24 확정 후) | 확장 (§8.1 항목 아님, 2026-10-02 추가) | 미정 | 2026-10-02 사용자 결정, 012 FR-006·FR-010 |\n \n §8.1 항목: 1 대표 ETF·공통 자료·전략 명세와 다섯 전략 완성 / 2 섹터 선택 → 전략 확인 → 결과 비교 흐름과 상세 설정·내 기록 / 3 자동 파라미터 대량 탐색 / 4 경제환경 검색과 전략 진단 연결 / 5 시장 흐름·뉴스·배우기.\n \n@@ -47,6 +48,7 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n - **배우기**: 013의 '이 예시로 전략 진단하기'는 002로 진입하고, 003·005의 용어 도움말이 013의 설명을 재사용한다.\n - **사용자 인증**: 014는 006 내 기록의 진입 경계다. 비로그인 사용자가 '내 기록'에 접근하면 014의 로그인 흐름으로 보내고 성공 후 원래 위치로 돌려보낸다. 001~005·007~013의 공개 흐름은 로그인 없이 이용한다. 단 011의 계산 생성·재계산·재시도·개인 검색 기록 저장 및 시장 흐름의 전략 비교 진입은 014 인증·복귀 흐름을 사용한다(2026-09-20 결정, 014 소유자의 권한 위임). 경제환경 검색·사례 열람·유효한 공개 주소의 기존 결과 조회는 공개한다.\n - **화면 맥락 도우미**: 015는 005 결과 화면 위에 놓이는 보조 기능이다. 005의 공개 결과 조회를 근거 원천으로 그대로 쓰고 004·005의 응답 모양을 바꾸지 않는다. 외부 LLM은 서버가 읽은 값을 설명만 하며(ADR-0008), 배우기·시장 흐름으로 넓힐지는 1차를 내보낸 뒤 정한다.\n+- **과거 뉴스(향후 확장)**: 016은 과거 뉴스 원천을 새로 들여 002 투자 대상 그래프에 그 달의 당시 뉴스를 붙인다. 표시·연결 규칙은 012를 따르고, 적재한 과거 뉴스는 012 FR-006의 사례 화면 '당시 뉴스'에도 쓸 수 있다.\n - **공통 축**: 004의 실행 측정 기록(실행 유형별 대기 시간·처리량·원가)은 007과 010의 실행도 함께 기록한다. 001과 008의 자료 버전, 003의 등록표 버전, 004의 비용 조건 버전은 006의 재현 기록이 참조한다.\n \n ## 우선순위\n@@ -57,7 +59,7 @@ constitution 원칙 I(중심 약속은 전략 진단)에 따라 전략 진단 \n \n constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 spec이 자기 화면에 적용한다. 주요 메뉴 '전략 진단 / 시장 흐름 / 배우기'와 보조 메뉴 '내 기록', 화면마다 행동 버튼 하나, 정보 세 층 배치, 결과 첫 화면 구성, '자세히 보기'의 위치, 결과 옆 한 문장 상태 표시, 계산식·공급원·거리 함수·실험 식별자·서버 설정을 요구하지 않는 규칙이 여기에 속한다. 개별 spec은 이 규칙을 반복하되 여기서 새로 정하지 않는다.\n \n-## 실행 전 결정 항목 (PD-01~PD-23)\n+## 실행 전 결정 항목 (PD-01~PD-26)\n \n 기획서가 \"실행 전 결정 항목\"으로 남긴 값이다. '미확정' 항목은 팀이 확정한 뒤 구현하며, AI는 임의로 값을 정하지 않는다. '기획서 확정' 항목은 그대로 적용하고 변경은 새 버전으로 제안한다. 각 항목의 상세 조건은 소유 spec의 표에 있다.\n \n@@ -86,6 +88,9 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n | PD-21 | 대표 상품 정보의 추적 차이 계산 정의 (지수 대비인지 순자산가치 대비인지, 분배금 재투자 포함 여부, 기간) | 미확정. 확정 전까지 표시하지 않는다 | [001](001-etf-market-data/spec.md) Out of Scope | §3.3 |\n | PD-22 | 결과 해석 보조 AI 해설: 제공 여부, 모델에 넘길 값의 범위, 금지 표현과 그 검사 방법, 근거가 될 기획서 결정 번호 | 미확정 (2026-09-16 등록). 기획서에 근거 결정이 없어 확정 전까지 만들지 않는다 | [005](005-result-comparison/spec.md) Out of Scope | 원칙 III, 005 FR-006·SC-004 |\n | PD-23 | 비로그인 결과 주소의 유효 시간, 결과 삭제 시점, 만료 판단 기준(생성 시각 기준인지 마지막 열람 시각 기준인지) | 미확정 (2026-09-16 등록). 값과 분리해 만료 장치는 먼저 만든다 | [005](005-result-comparison/spec.md) | 005 FR-019·FR-021, PD-13과 경계 |\n+| PD-24 | 과거 뉴스 원천 선택: 원천·제공 기간·다루는 매체·이용 조건(재표시 허가 포함) | 미확정 (2026-10-02 등록). 확정 전에는 016을 착수하지 않는다 | [016](016-historical-news/spec.md) | 2026-10-02 사용자 결정, 012 FR-015 |\n+| PD-25 | 과거 뉴스 공개 기준: 섹터 연결 정밀도의 최소값, 검수 표본 크기·시기 구분 | 미확정 (2026-10-02 등록) | [016](016-historical-news/spec.md) | 012 FR-010 |\n+| PD-26 | 과거 뉴스 보관 기간·삭제 시점과 012 FR-019 일괄 삭제와의 관계 | 미확정 (2026-10-02 등록). 확정 전에는 012 FR-019를 따른다 | [016](016-historical-news/spec.md) | 012 FR-019 |\n \n ## UI 구성 후 결정 항목 (UI-01~)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2880570": []
+  }
+}

@@ -1,0 +1,497 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942829,
+    "iid": 79,
+    "project_id": 1444456,
+    "title": "fix(infra): 코드리뷰 지적 반영 — Data Test 들여쓰기와 Node 키 수신 방식을 고친다",
+    "description": "## 작업 내용 요약\n\nMR !73(티켓 183)이 **코드리뷰 지적을 반영하기 전에 머지되어**, 반영분만 따로 올립니다.\n\n지적은 세 건이었고 모두 검토했습니다. **파이프라인 동작을 깨뜨리는 것은 없었습니다.** 그래서 머지된 !73을 되돌리지 않고, 반영분만 얹는 방식으로 처리합니다. 되돌렸다가 다시 올리면 dev 이력에 머지·되돌림·재머지가 세 번 남고, 되돌린 뒤에는 같은 브랜치를 재머지해도 파일이 복원되지 않아 별도 조치가 필요합니다. 얻는 것 없이 과정만 늘어나는 선택이라 택하지 않았습니다.\n\n변경은 `Jenkinsfile` 7줄, `infra/jenkins/Dockerfile` 5줄입니다.\n\n## 관련 티켓 번호 & 링크\n\nticket #183 (Jira S15P21E205-183 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-183\n\n선행 MR: !73 (머지 커밋 `e396534`)\n\n## 주요 변경 사항\n\n### 1. Node GPG 키 수신에서 파이프 제거 — `infra/jenkins/Dockerfile`\n\n리뷰 지적 중 유일하게 실질적인 개선입니다.\n\n```dockerfile\n# 이전 — curl 이 실패해도 종료 코드는 gpg 의 것이 된다\n&& curl -fsSL ...nodesource-repo.gpg.key | gpg --dearmor -o ...nodesource.gpg\n\n# 이후 — 같은 파일의 docker 키와 같은 방식\n&& curl -fsSL ...nodesource-repo.gpg.key -o /tmp/nodesource.key\n&& gpg --dearmor -o ...nodesource.gpg /tmp/nodesource.key\n&& rm /tmp/nodesource.key\n```\n\n파이프라인의 종료 코드는 마지막 명령의 것입니다. `gpg --dearmor`는 빈 입력에도 `0`을 돌려주고 빈 파일을 만들기 때문에, `curl`이 네트워크 오류로 실패해도 빈 키 파일이 만들어진 채 다음 단계로 넘어갑니다. 그러면 한참 뒤 `apt-get install`에서야 실패해 원인을 찾기 어렵습니다. 이제 `curl`이 실패하면 그 자리에서 빌드가 멈춥니다.\n\n키가 바뀌는 경우에 대한 방어는 원래 되어 있었습니다. `signed-by=`로 키를 지정하고 있어 서명이 맞지 않으면 apt가 거부합니다.\n\n### 2. `Data Test` 들여쓰기 복구 — `Jenkinsfile`\n\n`sh` 줄이 열 맞춤 없이 맨 앞에 붙어 있었습니다. !73에서 pytest 예외 처리를 지울 때 생긴 것입니다. Groovy 동작에는 영향이 없지만 같은 블록의 다른 줄과 맞지 않습니다.\n\n### 3. JUnit 경로 기준을 밝히는 주석 추가 — `Jenkinsfile`\n\n리뷰에서 `Worker`·`Data` 스테이지의 XML 생성 경로와 수집 경로가 어긋나 보인다는 지적이 있었습니다. **확인 결과 경로는 일치합니다.**\n\n```groovy\nsteps { dir('worker') { sh 'pytest --junitxml=build/test-results/pytest.xml' } }\n                          생성: <workspace>/worker/build/test-results/pytest.xml\n\npost  { junit(testResults: 'worker/build/test-results/pytest.xml') }\n                          post 는 steps 밖 → 워크스페이스 루트 기준 → 같은 파일\n```\n\n`post` 블록은 `steps` 바깥이라 `dir()` 스코프에 들어가지 않으므로 루트 기준 경로가 맞습니다. 다만 두 줄만 놓고 보면 의심하게 되므로, `FE Test`에만 있던 설명 주석을 `Worker Test`·`Data Test`에도 붙였습니다.\n\n## 테스트\n\n- [x] `Jenkinsfile` 중괄호 균형 확인 (69쌍)\n- [x] 모든 들여쓰기가 4의 배수인지 확인\n- [x] dev와 충돌 없음 확인 (dev가 29커밋 앞섰으나 두 파일을 건드린 작업이 없습니다)\n- [ ] Jenkins 이미지 재빌드 후 Node 설치가 정상인지 확인 필요 (리뷰 포인트 1)\n\n## 리뷰 포인트\n\n1. **Dockerfile 변경은 이미지를 다시 빌드해야 확인됩니다.** 키 수신 방식만 바뀌었고 설치되는 것은 그대로라 결과는 같아야 하지만, 재빌드할 때 Node 설치 단계가 정상인지 봐 주세요.\n2. **`warnings-ng`는 여전히 설치만 된 상태입니다.** !73에서 넣었고 이 MR은 건드리지 않았습니다. `Jenkinsfile`에서 `recordIssues`로 각 lint 출력을 연결하는 일은 후속으로 남아 있습니다.\n3. **머지 전 리뷰 확인 순서를 정해 두면 좋겠습니다.** 이번 일은 리뷰 결과가 나오기 전에 머지된 것이 원인입니다. 루트 `CLAUDE.md`가 \"MR 올리기 전 AI 코드리뷰를 수행하고, 발견된 문제를 해결한 뒤 Merge한다\"고 정하고 있으니, 그 순서를 지킬 방법을 팀에서 합의하면 같은 일이 반복되지 않습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T12:12:21.184+09:00",
+    "updated_at": "2026-09-14T13:02:16.938+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T12:12:35.289+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/183-jenkins-pipeline-visibility",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "efff9e127450dcbf31a7e52b915d24c014310704",
+    "merge_commit_sha": "747761d41586d788a65d3adbcec73faa2d67e84a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T12:12:22.264+09:00",
+    "reference": "!79",
+    "references": {
+      "short": "!79",
+      "relative": "!79",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!79"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/79",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942829,
+    "iid": 79,
+    "project_id": 1444456,
+    "title": "fix(infra): 코드리뷰 지적 반영 — Data Test 들여쓰기와 Node 키 수신 방식을 고친다",
+    "description": "## 작업 내용 요약\n\nMR !73(티켓 183)이 **코드리뷰 지적을 반영하기 전에 머지되어**, 반영분만 따로 올립니다.\n\n지적은 세 건이었고 모두 검토했습니다. **파이프라인 동작을 깨뜨리는 것은 없었습니다.** 그래서 머지된 !73을 되돌리지 않고, 반영분만 얹는 방식으로 처리합니다. 되돌렸다가 다시 올리면 dev 이력에 머지·되돌림·재머지가 세 번 남고, 되돌린 뒤에는 같은 브랜치를 재머지해도 파일이 복원되지 않아 별도 조치가 필요합니다. 얻는 것 없이 과정만 늘어나는 선택이라 택하지 않았습니다.\n\n변경은 `Jenkinsfile` 7줄, `infra/jenkins/Dockerfile` 5줄입니다.\n\n## 관련 티켓 번호 & 링크\n\nticket #183 (Jira S15P21E205-183 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-183\n\n선행 MR: !73 (머지 커밋 `e396534`)\n\n## 주요 변경 사항\n\n### 1. Node GPG 키 수신에서 파이프 제거 — `infra/jenkins/Dockerfile`\n\n리뷰 지적 중 유일하게 실질적인 개선입니다.\n\n```dockerfile\n# 이전 — curl 이 실패해도 종료 코드는 gpg 의 것이 된다\n&& curl -fsSL ...nodesource-repo.gpg.key | gpg --dearmor -o ...nodesource.gpg\n\n# 이후 — 같은 파일의 docker 키와 같은 방식\n&& curl -fsSL ...nodesource-repo.gpg.key -o /tmp/nodesource.key\n&& gpg --dearmor -o ...nodesource.gpg /tmp/nodesource.key\n&& rm /tmp/nodesource.key\n```\n\n파이프라인의 종료 코드는 마지막 명령의 것입니다. `gpg --dearmor`는 빈 입력에도 `0`을 돌려주고 빈 파일을 만들기 때문에, `curl`이 네트워크 오류로 실패해도 빈 키 파일이 만들어진 채 다음 단계로 넘어갑니다. 그러면 한참 뒤 `apt-get install`에서야 실패해 원인을 찾기 어렵습니다. 이제 `curl`이 실패하면 그 자리에서 빌드가 멈춥니다.\n\n키가 바뀌는 경우에 대한 방어는 원래 되어 있었습니다. `signed-by=`로 키를 지정하고 있어 서명이 맞지 않으면 apt가 거부합니다.\n\n### 2. `Data Test` 들여쓰기 복구 — `Jenkinsfile`\n\n`sh` 줄이 열 맞춤 없이 맨 앞에 붙어 있었습니다. !73에서 pytest 예외 처리를 지울 때 생긴 것입니다. Groovy 동작에는 영향이 없지만 같은 블록의 다른 줄과 맞지 않습니다.\n\n### 3. JUnit 경로 기준을 밝히는 주석 추가 — `Jenkinsfile`\n\n리뷰에서 `Worker`·`Data` 스테이지의 XML 생성 경로와 수집 경로가 어긋나 보인다는 지적이 있었습니다. **확인 결과 경로는 일치합니다.**\n\n```groovy\nsteps { dir('worker') { sh 'pytest --junitxml=build/test-results/pytest.xml' } }\n                          생성: <workspace>/worker/build/test-results/pytest.xml\n\npost  { junit(testResults: 'worker/build/test-results/pytest.xml') }\n                          post 는 steps 밖 → 워크스페이스 루트 기준 → 같은 파일\n```\n\n`post` 블록은 `steps` 바깥이라 `dir()` 스코프에 들어가지 않으므로 루트 기준 경로가 맞습니다. 다만 두 줄만 놓고 보면 의심하게 되므로, `FE Test`에만 있던 설명 주석을 `Worker Test`·`Data Test`에도 붙였습니다.\n\n## 테스트\n\n- [x] `Jenkinsfile` 중괄호 균형 확인 (69쌍)\n- [x] 모든 들여쓰기가 4의 배수인지 확인\n- [x] dev와 충돌 없음 확인 (dev가 29커밋 앞섰으나 두 파일을 건드린 작업이 없습니다)\n- [ ] Jenkins 이미지 재빌드 후 Node 설치가 정상인지 확인 필요 (리뷰 포인트 1)\n\n## 리뷰 포인트\n\n1. **Dockerfile 변경은 이미지를 다시 빌드해야 확인됩니다.** 키 수신 방식만 바뀌었고 설치되는 것은 그대로라 결과는 같아야 하지만, 재빌드할 때 Node 설치 단계가 정상인지 봐 주세요.\n2. **`warnings-ng`는 여전히 설치만 된 상태입니다.** !73에서 넣었고 이 MR은 건드리지 않았습니다. `Jenkinsfile`에서 `recordIssues`로 각 lint 출력을 연결하는 일은 후속으로 남아 있습니다.\n3. **머지 전 리뷰 확인 순서를 정해 두면 좋겠습니다.** 이번 일은 리뷰 결과가 나오기 전에 머지된 것이 원인입니다. 루트 `CLAUDE.md`가 \"MR 올리기 전 AI 코드리뷰를 수행하고, 발견된 문제를 해결한 뒤 Merge한다\"고 정하고 있으니, 그 순서를 지킬 방법을 팀에서 합의하면 같은 일이 반복되지 않습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T12:12:21.184+09:00",
+    "updated_at": "2026-09-14T13:02:16.938+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T12:12:35.289+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/183-jenkins-pipeline-visibility",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "efff9e127450dcbf31a7e52b915d24c014310704",
+    "merge_commit_sha": "747761d41586d788a65d3adbcec73faa2d67e84a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T12:12:22.264+09:00",
+    "reference": "!79",
+    "references": {
+      "short": "!79",
+      "relative": "!79",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!79"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/79",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 3
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "62f3b58591397abe345998bb8fc8dd8e41cbda51",
+      "head_sha": "efff9e127450dcbf31a7e52b915d24c014310704",
+      "start_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2a031bcc790b46b2cc377235f7887be35d67d1a9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800851,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:12:21.331+09:00",
+          "updated_at": "2026-09-14T12:12:21.335+09:00",
+          "system": true,
+          "noteable_id": 942829,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 79,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "970687d89474434cc8d919a9b3380c2178f347eb",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800852,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:12:21.348+09:00",
+          "updated_at": "2026-09-14T12:12:21.355+09:00",
+          "system": true,
+          "noteable_id": 942829,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 79,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a0b35e5383396b49fe0bf245d37526d5389e7d27",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800854,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. Dockerfile에서 파이프를 제거하여 `curl` 실패 시 빌드가 조기에 중단되도록 개선한 점과, Groovy 파이프라인의 가독성을 높인 점이 적절하게 반영되었습니다.\n\n### 테스트 제안\n1. **Jenkins 이미지 재빌드 및 Node 설치 검증**\n   - 변경된 `infra/jenkins/Dockerfile`을 기반으로 Jenkins 이미지를 빌드하여 Node.js 및 GPG 키 설정 단계가 정상적으로 완료되는지 확인합니다.\n2. **파이프라인 실패 감지 테스트 (네트워크 오류 시나리오)**\n   - 임시로 `infra/jenkins/Dockerfile`의 Node.js GPG 키 URL을 잘못된 경로로 수정하여 빌드할 때, 파이프라인이 `curl` 단계에서 즉시 실패하고 종료되는지 확인합니다.\n3. **JUnit XML 리포트 수집 확인**\n   - `Worker Test` 및 `Data Test` 실행 후 `junit` 스텝이 지정된 경로(`worker/build/test-results/pytest.xml`, `data/build/test-results/pytest.xml`)에서 결과 파일을 정상적으로 읽어들이는지 테스트합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:efff9e127450dcbf31a7e52b915d24c014310704 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T12:12:25.006+09:00",
+          "updated_at": "2026-09-14T12:12:25.006+09:00",
+          "system": false,
+          "noteable_id": 942829,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 79,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "94dea98f3daa3ada6d18f92728e0be82f3478457",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2800855,
+          "type": null,
+          "body": "mentioned in commit 747761d41586d788a65d3adbcec73faa2d67e84a",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:12:35.305+09:00",
+          "updated_at": "2026-09-14T12:12:35.311+09:00",
+          "system": true,
+          "noteable_id": 942829,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 79,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2193065,
+      "head_commit_sha": "efff9e127450dcbf31a7e52b915d24c014310704",
+      "base_commit_sha": "62f3b58591397abe345998bb8fc8dd8e41cbda51",
+      "start_commit_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c",
+      "created_at": "2026-09-14T12:12:21.678+09:00",
+      "merge_request_id": 942829,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "829e43acd043fce8cf2c9cfda3b41928a21a8a6c"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2193065,
+      "head_commit_sha": "efff9e127450dcbf31a7e52b915d24c014310704",
+      "base_commit_sha": "62f3b58591397abe345998bb8fc8dd8e41cbda51",
+      "start_commit_sha": "5c5c585ef033ea8535dd18c594e865797c5b673c",
+      "created_at": "2026-09-14T12:12:21.678+09:00",
+      "merge_request_id": 942829,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "829e43acd043fce8cf2c9cfda3b41928a21a8a6c",
+      "commits": [
+        {
+          "id": "efff9e127450dcbf31a7e52b915d24c014310704",
+          "short_id": "efff9e12",
+          "created_at": "2026-09-14T11:05:57.000+09:00",
+          "parent_ids": [
+            "62f3b58591397abe345998bb8fc8dd8e41cbda51"
+          ],
+          "title": "fix(infra): 코드리뷰 지적 반영 — Data Test 들여쓰기와 Node 키 수신 방식을 고친다",
+          "message": "fix(infra): 코드리뷰 지적 반영 — Data Test 들여쓰기와 Node 키 수신 방식을 고친다\n\nData Test 스테이지의 sh 줄 들여쓰기가 어긋나 있었다. pytest 예외 처리를 지울 때 생긴 것이고, Groovy 문법상 동작은 하지만 같은 블록의 다른 줄과 열이 맞지 않는다.\n\nNode GPG 키를 curl | gpg 파이프로 받고 있었다. 파이프라인의 종료 코드는 마지막 명령의 것이므로 curl 이 실패해도 gpg 가 빈 입력에 0 을 돌려주면 빈 키 파일이 만들어진 채 다음 단계로 넘어간다. 그러면 apt-get install 에서야 실패해 원인을 찾기 어렵다. 같은 파일의 docker 키처럼 -o 로 받아 두고 gpg 를 따로 돌린다 — 이제 curl 이 실패하면 그 자리에서 빌드가 멈춘다.\n\nWorker·Data 의 junit 경로에 기준을 적는 주석을 넣었다. pytest 는 dir() 안에서, junit 은 워크스페이스 루트 기준으로 경로를 쓰기 때문에 같은 파일을 가리키는데도 달라 보인다는 리뷰 지적이 있었다. FE Test 에만 있던 설명을 나머지에도 맞췄다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T11:05:57.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T11:05:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/efff9e127450dcbf31a7e52b915d24c014310704"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -23,8 +23,9 @@ RUN apt-get update \\\n  && chmod a+r /etc/apt/keyrings/docker.asc \\\n  && echo \"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable\" \\\n     > /etc/apt/sources.list.d/docker.list \\\n- && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \\\n-    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \\\n+ && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key -o /tmp/nodesource.key \\\n+ && gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg /tmp/nodesource.key \\\n+ && rm /tmp/nodesource.key \\\n  && chmod a+r /etc/apt/keyrings/nodesource.gpg \\\n  && echo \"deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_${NODE_MAJOR}.x nodistro main\" \\\n     > /etc/apt/sources.list.d/nodesource.list \\\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Dockerfile",
+          "old_path": "infra/jenkins/Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -184,6 +184,9 @@ pipeline {\n                     }\n                     post {\n                         always {\n+                            // pytest 는 dir('worker') 안에서 돌아 worker/build/... 에 XML 을 남기고,\n+                            // post 블록은 dir() 바깥이라 워크스페이스 루트 기준 경로를 쓴다. 두 경로가\n+                            // 가리키는 파일은 같다.\n                             junit(\n                                 allowEmptyResults: true,\n                                 testResults: 'worker/build/test-results/pytest.xml'\n@@ -217,11 +220,13 @@ pipeline {\n                 stage('Data Test') {\n                     steps {\n                         dir('data') {\n-sh '. .venv/bin/activate && pytest --junitxml=build/test-results/pytest.xml'\n+                            sh '. .venv/bin/activate && pytest --junitxml=build/test-results/pytest.xml'\n                         }\n                     }\n                     post {\n                         always {\n+                            // Worker Test 와 같다. pytest 는 dir('data') 안에서, junit 은 워크스페이스\n+                            // 루트 기준으로 같은 파일을 가리킨다.\n                             junit(\n                                 allowEmptyResults: true,\n                                 testResults: 'data/build/test-results/pytest.xml'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2800854": []
+  }
+}

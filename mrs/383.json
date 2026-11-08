@@ -1,0 +1,742 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963473,
+    "iid": 383,
+    "project_id": 1444456,
+    "title": "refactor(be): 운영이나 테스트에서 호출하지 않는 않는 백테스트/ 뉴스 멤버 삭제",
+    "description": "## 작업 내용 요약\n\n시험 정리 뒤 운영 코드와 시험 어디에서도 부르지 않게 된 백테스트·뉴스 멤버를 지운다. API 응답과 DB 스키마는 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- `BacktestRequest#isAnonymous`, `NewsDigest.Projection#publisherIds`, `RssChannelHints#isEmpty`, `NewsProperties#isPublic`을 지운다.\n- 결과 요약(`BacktestResultSummary`)에서 읽는 곳이 없는 벤치마크 스칼라 둘과 `hasBenchmark()`를 지우고, 요약 조회 SQL이 `benchmark ->>` 두 열을 더 뽑지 않게 한다.\n- 시험이 처리기를 끼울 자리로만 두었던 빈 하위 클래스 `NewsArticleExportExceptionHandler`를 지운다.\n- decimal을 문자열로 받아 복원하는 이유를 적은 javadoc을, 지금 그 일을 하는 `BacktestResultPerformanceRow`로 옮긴다.\n\n## 테스트\n\n- `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck cleanTest test`: 2,286건 통과, 실패 0. 건너뜀 4건은 외부 API·성능 실측을 따로 켜야 도는 시험(`AssistantLiveTest`, `MarketLiveApiTest`, `NewsPerformanceIT`)이다.\n\n## 리뷰 포인트\n\n- 요약 조회 SQL에서 열 두 개가 빠진다. `BacktestResultSummary`는 직렬화되지 않고 `BacktestDetailResult.Summary`로 옮겨 담기는데, 그 record에는 벤치마크 구성요소가 없어 상세·공개 결과·내보내기 응답이 그대로다.\n- `NewsArticleExportExceptionHandler`에는 애너테이션이 없었다. `@RestControllerAdvice`·`@ControllerAdvice`·`@Component`는 `@Inherited`가 아니라서 이 클래스가 빈으로 등록된 적은 없다.",
+    "state": "merged",
+    "created_at": "2026-10-04T21:47:25.312+09:00",
+    "updated_at": "2026-10-04T21:47:48.275+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T21:47:47.967+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(be)/orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6cc6a5ad081218f2cbb2848cf66921a8aaca9101",
+    "merge_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T21:47:27.953+09:00",
+    "reference": "!383",
+    "references": {
+      "short": "!383",
+      "relative": "!383",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!383"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/383",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963473,
+    "iid": 383,
+    "project_id": 1444456,
+    "title": "refactor(be): 운영이나 테스트에서 호출하지 않는 않는 백테스트/ 뉴스 멤버 삭제",
+    "description": "## 작업 내용 요약\n\n시험 정리 뒤 운영 코드와 시험 어디에서도 부르지 않게 된 백테스트·뉴스 멤버를 지운다. API 응답과 DB 스키마는 바뀌지 않는다.\n\n## 주요 변경 사항\n\n- `BacktestRequest#isAnonymous`, `NewsDigest.Projection#publisherIds`, `RssChannelHints#isEmpty`, `NewsProperties#isPublic`을 지운다.\n- 결과 요약(`BacktestResultSummary`)에서 읽는 곳이 없는 벤치마크 스칼라 둘과 `hasBenchmark()`를 지우고, 요약 조회 SQL이 `benchmark ->>` 두 열을 더 뽑지 않게 한다.\n- 시험이 처리기를 끼울 자리로만 두었던 빈 하위 클래스 `NewsArticleExportExceptionHandler`를 지운다.\n- decimal을 문자열로 받아 복원하는 이유를 적은 javadoc을, 지금 그 일을 하는 `BacktestResultPerformanceRow`로 옮긴다.\n\n## 테스트\n\n- `THORP_REQUIRE_DOCKER=true ./gradlew spotlessCheck cleanTest test`: 2,286건 통과, 실패 0. 건너뜀 4건은 외부 API·성능 실측을 따로 켜야 도는 시험(`AssistantLiveTest`, `MarketLiveApiTest`, `NewsPerformanceIT`)이다.\n\n## 리뷰 포인트\n\n- 요약 조회 SQL에서 열 두 개가 빠진다. `BacktestResultSummary`는 직렬화되지 않고 `BacktestDetailResult.Summary`로 옮겨 담기는데, 그 record에는 벤치마크 구성요소가 없어 상세·공개 결과·내보내기 응답이 그대로다.\n- `NewsArticleExportExceptionHandler`에는 애너테이션이 없었다. `@RestControllerAdvice`·`@ControllerAdvice`·`@Component`는 `@Inherited`가 아니라서 이 클래스가 빈으로 등록된 적은 없다.",
+    "state": "merged",
+    "created_at": "2026-10-04T21:47:25.312+09:00",
+    "updated_at": "2026-10-04T21:47:48.275+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-04T21:47:47.967+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "refactor(be)/orphaned-code-cleanup",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "6cc6a5ad081218f2cbb2848cf66921a8aaca9101",
+    "merge_commit_sha": "6b6bda13998dcfacbac71a6d51b249b768b27143",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-04T21:47:27.953+09:00",
+    "reference": "!383",
+    "references": {
+      "short": "!383",
+      "relative": "!383",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!383"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/383",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "13",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "head_sha": "6cc6a5ad081218f2cbb2848cf66921a8aaca9101",
+      "start_sha": "05322c25a480a0be7c28479a92b654f69f3cdef4"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "7badcc26aff98aab1e68846bb021a0b2f180993e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881401,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:47:25.404+09:00",
+          "updated_at": "2026-10-04T21:47:25.408+09:00",
+          "system": true,
+          "noteable_id": 963473,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 383,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "af94403b98bee5147d6e5861b33525a717cd305e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881402,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:47:25.427+09:00",
+          "updated_at": "2026-10-04T21:47:25.436+09:00",
+          "system": true,
+          "noteable_id": 963473,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 383,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c8682cdf2deb6485df62423e0ea6810a8bc02961",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881403,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. 미사용 코드를 깔끔하게 제거하고 관련 문서(Javadoc)와 테스트 코드를 알맞게 정비한 안전한 리팩터링입니다.\n\n### 테스트 제안\n- **백테스트 요약 조회 회귀 테스트**: `BacktestResultQueryServiceTest` 및 관련 리포지토리 테스트(`BacktestResultJpaRepository` 등)를 실행하여, 벤치마크 필드가 제거된 쿼리가 예외 없이 정상 동작하고 기존 결과 객체로 올바르게 매핑되는지 확인합니다.\n- **뉴스 내보내기 예외 처리 테스트**: `NewsArticleExportExceptionHandler` 삭제 후, 뉴스 내보내기 엔드포인트에서 예외 발생 시 기존 `NewsDigestExceptionHandler`를 통해 정상적으로 에러 응답이 핸들링되는지 통합 테스트로 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:6cc6a5ad081218f2cbb2848cf66921a8aaca9101 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-04T21:47:34.636+09:00",
+          "updated_at": "2026-10-04T21:47:34.636+09:00",
+          "system": false,
+          "noteable_id": 963473,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 383,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "6e34b6315e7bdb588a4d3d401a0ca3f8060eb9e4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881404,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">refactor(be): 운영이나 테스트에서 호출하지 않는 않는 백테스트/ 뉴스 멤버 삭</code> to <code class=\"idiff\">refactor(be): 운영이나 테스트에서 호출하지 않는 않는 백테스트/ 뉴스 멤버 삭<span class=\"idiff left right addition\">제</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:47:43.401+09:00",
+          "updated_at": "2026-10-04T21:47:43.405+09:00",
+          "system": true,
+          "noteable_id": 963473,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 383,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "243c20b89a94261ff3cc367623f384b70e8c6541",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881405,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:47:43.432+09:00",
+          "updated_at": "2026-10-04T21:47:43.435+09:00",
+          "system": true,
+          "noteable_id": 963473,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 383,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a33480b5bf90e4c96d4301e86b4a3896d752e8b1",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2881406,
+          "type": null,
+          "body": "mentioned in commit 6b6bda13998dcfacbac71a6d51b249b768b27143",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-04T21:47:48.003+09:00",
+          "updated_at": "2026-10-04T21:47:48.014+09:00",
+          "system": true,
+          "noteable_id": 963473,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 383,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262335,
+      "head_commit_sha": "6cc6a5ad081218f2cbb2848cf66921a8aaca9101",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "05322c25a480a0be7c28479a92b654f69f3cdef4",
+      "created_at": "2026-10-04T21:47:25.785+09:00",
+      "merge_request_id": 963473,
+      "state": "collected",
+      "real_size": "13",
+      "patch_id_sha": "f5c3f6396e05a5561bec1afe09cdb1451ce355eb"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262335,
+      "head_commit_sha": "6cc6a5ad081218f2cbb2848cf66921a8aaca9101",
+      "base_commit_sha": "e88aedab374ff7590d552cdc9c0f9a65072d0818",
+      "start_commit_sha": "05322c25a480a0be7c28479a92b654f69f3cdef4",
+      "created_at": "2026-10-04T21:47:25.785+09:00",
+      "merge_request_id": 963473,
+      "state": "collected",
+      "real_size": "13",
+      "patch_id_sha": "f5c3f6396e05a5561bec1afe09cdb1451ce355eb",
+      "commits": [
+        {
+          "id": "6cc6a5ad081218f2cbb2848cf66921a8aaca9101",
+          "short_id": "6cc6a5ad",
+          "created_at": "2026-10-04T21:24:45.000+09:00",
+          "parent_ids": [
+            "ae5bf7fb5b37923f86489670b92532d897ebb938"
+          ],
+          "title": "refactor(be): 요약 조회가 벤치마크를 읽지 않는다는 주석 표현을 맞춘다",
+          "message": "refactor(be): 요약 조회가 벤치마크를 읽지 않는다는 주석 표현을 맞춘다\n\n벤치마크 스칼라를 지운 뒤에도 \"벤치마크 시계열은 읽지 않는다\", \"benchmark 전체가 없는\"이라는 표현이\n남아 요약 조회가 스칼라는 읽는 것처럼 보였다. BacktestResultSummary 주석과 같은 표현으로 고친다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T21:24:45.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T21:24:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/6cc6a5ad081218f2cbb2848cf66921a8aaca9101"
+        },
+        {
+          "id": "ae5bf7fb5b37923f86489670b92532d897ebb938",
+          "short_id": "ae5bf7fb",
+          "created_at": "2026-10-04T21:09:06.000+09:00",
+          "parent_ids": [
+            "010061394d72168c3b8cf8338d4f6e6707e9a706"
+          ],
+          "title": "refactor(be): decimal 문자열 복원 근거를 그 일을 하는 프로젝션으로 옮긴다",
+          "message": "refactor(be): decimal 문자열 복원 근거를 그 일을 하는 프로젝션으로 옮긴다\n\n벤치마크 스칼라를 지운 뒤 요약 프로젝션에는 문자열로 꺼내 BigDecimal로 복원하는 열이 남지 않았다.\n그 근거 문단을 요약 프로젝션에서 지우고, 실제로 복원하는 성과 프로젝션이 혼자 설명하게 한다.\n목록 실행 뷰의 참조도 성과 프로젝션으로 바꾼다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T21:09:06.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T21:09:06.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ae5bf7fb5b37923f86489670b92532d897ebb938"
+        },
+        {
+          "id": "010061394d72168c3b8cf8338d4f6e6707e9a706",
+          "short_id": "01006139",
+          "created_at": "2026-10-04T20:32:56.000+09:00",
+          "parent_ids": [
+            "e88aedab374ff7590d552cdc9c0f9a65072d0818"
+          ],
+          "title": "refactor(be): 운영도 시험도 부르지 않는 백테스트·뉴스 멤버를 지운다",
+          "message": "refactor(be): 운영도 시험도 부르지 않는 백테스트·뉴스 멤버를 지운다\n\n10-04 시험 정리가 아래 멤버만 고정하던 단언을 지운 뒤로 운영 코드와 시험 어디에서도 이들을 부르지 않는다.\n응답·메시지·저장 형식은 바뀌지 않는다.\n\n- BacktestRequest#isAnonymous: 호출하는 곳이 없다. 도메인 모델이라 JSON으로 직렬화되지도 않는다.\n- BacktestResultSummary의 벤치마크 스칼라 둘과 hasBenchmark: 요약을 읽는 BacktestDetailResult가 이 값을 쓰지 않고, 상세 응답의 요약에도 벤치마크 필드가 없다. 요약 조회 SQL이 뽑던 두 열과 프로젝션 getter를 함께 지운다. 시계열의 benchmarkReturn은 다른 조회라 그대로이고, 스키마는 바꾸지 않는다.\n- NewsDigest.Projection#publisherIds, RssChannelHints#isEmpty, NewsProperties#isPublic: 호출하는 곳이 없고, JSON으로 나가거나 SpEL·설정 노출에서 이름으로 읽히는 곳도 없다.\n- NewsArticleExportExceptionHandler: 애너테이션 없는 빈 하위 클래스다. @RestControllerAdvice는 상속되지 않아 빈으로 등록된 적이 없고, 내보내기 경로는 NewsDigestExceptionHandler가 이미 맡는다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-04T20:32:56.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-04T20:32:56.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/010061394d72168c3b8cf8338d4f6e6707e9a706"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -31,7 +31,7 @@ public interface BacktestResultRepository {\n     void save(SaveBacktestResultCommand command);\n \n     /**\n-     * 요약에 필요한 스칼라만 읽는다. {@code portfolio_series}와 벤치마크 시계열은 읽지 않는다.\n+     * 요약에 필요한 스칼라만 읽는다. {@code portfolio_series}와 {@code benchmark}는 읽지 않는다.\n      *\n      * <p>빈 {@link Optional} = 결과 행이 없다. 호출자가 Job 상태와 맞춰 해석한다 — {@code QUEUED}·{@code RUNNING}이면\n      * 정상이고, {@code COMPLETED}·{@code FAILED}면 저장 트랜잭션이 깨진 데이터 손상이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/repository/BacktestResultRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,20 +1,17 @@\n package com.ssafy.thorp.backtest.application.result;\n \n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n-import java.math.BigDecimal;\n import java.time.Instant;\n \n /**\n  * 결과 행에서 요약에 필요한 것만 읽은 값. 저장소가 채운다.\n  *\n- * <p>시계열({@code portfolio_series})과 벤치마크 전체는 **읽지 않는다.** 5년치면 수백 KB이고 이 값을 쓰는 {@code GET\n- * /backtests/{id}}는 프론트가 폴링하는 리소스다. 벤치마크는 스칼라 두 개만 뽑아 온다.\n+ * <p>시계열({@code portfolio_series})과 벤치마크는 **읽지 않는다.** 5년치면 수백 KB이고 이 값을 쓰는 {@code GET\n+ * /backtests/{id}}는 프론트가 폴링하는 리소스다.\n  *\n  * @param errorCode null = 성공한 실행\n  * @param performance null = 실패로 계산 불가\n  * @param execution null = 실패로 계산 불가\n- * @param benchmarkInstrumentId null = 결과에 벤치마크가 없음. **요청에 지정했더라도** 워커가 계산하지 않았으면 null이다\n- * @param benchmarkTotalReturn null = 위와 같음\n  * @param costs 비용 합계(FR-027). null = 실패 또는 v2 이전 결과\n  * @param liquidation 청산 가정치(FR-017). null = 요청이 청산을 끄거나 실패\n  * @param analytics 파생 지표(FR-027). null = 실패 또는 v2 이전 결과\n@@ -30,17 +27,9 @@ public record BacktestResultSummary(\n         Instant finishedAt,\n         EngineOutput.PerformanceResult performance,\n         EngineOutput.ExecutionResult execution,\n-        String benchmarkInstrumentId,\n-        BigDecimal benchmarkTotalReturn,\n         EngineOutput.Costs costs,\n         EngineOutput.Liquidation liquidation,\n         EngineOutput.Analytics analytics,\n         int exceptionCount,\n         String workerVersion,\n-        EngineOutput.Dependencies dependencies) {\n-\n-    /** 벤치마크 스칼라 둘이 모두 있을 때만 벤치마크가 산출된 것으로 본다. */\n-    public boolean hasBenchmark() {\n-        return benchmarkInstrumentId != null && benchmarkTotalReturn != null;\n-    }\n-}\n+        EngineOutput.Dependencies dependencies) {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultSummary.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/application/result/BacktestResultSummary.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -160,11 +160,6 @@ public class BacktestRequest {\n         return cancelledAt != null;\n     }\n \n-    /** 로그인하지 않고 낸 요청인가. */\n-    public boolean isAnonymous() {\n-        return requesterId == null;\n-    }\n-\n     /**\n      * 이 사람이 낸 요청인가. 비로그인 요청은 누구의 것도 아니다 — 소유자 경로({@code /backtests/**})로는 열리지 않고 공개 토큰으로만 본다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/BacktestRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,11 +14,8 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt\n     Optional<Boolean> findFillsRecorded(@Param(\"runId\") Long runId);\n \n     /**\n-     * 요약 조회. **select 목록에 {@code portfolio_series}와 {@code benchmark} 전체가 없는 것이 이 쿼리의 존재 이유다** —\n-     * 엔티티를 읽으면 5년치 수백 KB가 함께 온다. 이 값을 쓰는 엔드포인트는 프론트가 폴링한다.\n-     *\n-     * <p>벤치마크는 스칼라 두 개만 {@code ->>}로 꺼낸다. {@code ::numeric} 캐스팅을 하지 않는 이유는 {@link\n-     * BacktestResultSummaryRow} javadoc에 있다.\n+     * 요약 조회. **select 목록에 {@code portfolio_series}와 {@code benchmark}가 없는 것이 이 쿼리의 존재 이유다** — 엔티티를\n+     * 읽으면 5년치 수백 KB가 함께 온다. 이 값을 쓰는 엔드포인트는 프론트가 폴링한다.\n      */\n     @Query(\n             value =\n@@ -29,8 +26,6 @@ interface BacktestResultJpaRepository extends JpaRepository<BacktestResultJpaEnt\n                            finished_at       AS \"finishedAt\",\n                            performance::text AS \"performance\",\n                            execution::text   AS \"execution\",\n-                           benchmark ->> 'instrumentId' AS \"benchmarkInstrumentId\",\n-                           benchmark ->> 'totalReturn'  AS \"benchmarkTotalReturn\",\n                            costs::text       AS \"costs\",\n                            liquidation::text AS \"liquidation\",\n                            analytics::text   AS \"analytics\",\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultJpaRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,9 +3,8 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;\n /**\n  * 핵심 숫자 셋만 읽는 native 프로젝션.\n  *\n- * <p>decimal을 {@code String}으로 받는 이유는 {@link BacktestResultSummaryRow}와 같다 — 저장이 {@code jsonb}의 숫자\n- * 정규화를 피하려고 문자열로 넣었으므로 {@code ->>}로 꺼내 {@code new BigDecimal(...)}로 복원해야 scale이 보존된다. {@code\n- * ::numeric} 캐스팅은 그 문제를 되불러온다.\n+ * <p>decimal을 {@code String}으로 받는다. 저장이 {@code jsonb}의 숫자 정규화를 피하려고 문자열로 넣었으므로 {@code ->>}로 꺼내\n+ * {@code new BigDecimal(...)}로 복원해야 scale이 보존된다. {@code ::numeric} 캐스팅은 그 문제를 되불러온다.\n  *\n  * <p>alias는 따옴표로 감싼다 — PostgreSQL이 인용하지 않은 식별자를 소문자로 접어 매핑이 깨진다.\n  */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultPerformanceRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultPerformanceRow.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -119,8 +119,6 @@ public class BacktestResultRepositoryImpl implements BacktestResultRepository {\n                                         read(\n                                                 row.getExecution(),\n                                                 EngineOutput.ExecutionResult.class),\n-                                        row.getBenchmarkInstrumentId(),\n-                                        decimal(row.getBenchmarkTotalReturn()),\n                                         read(row.getCosts(), EngineOutput.Costs.class),\n                                         read(row.getLiquidation(), EngineOutput.Liquidation.class),\n                                         read(row.getAnalytics(), EngineOutput.Analytics.class),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,10 +5,6 @@ import java.time.Instant;\n /**\n  * 요약 조회의 native 프로젝션. JSON 컬럼은 **문자열로 받아** 구현체가 메시지 ObjectMapper로 파싱한다.\n  *\n- * <p>{@code BigDecimal}로 받지 않는 이유: 결과 저장이 {@code jsonb}의 숫자 정규화를 피하려고 decimal을 문자열로 넣는다. SQL에서\n- * {@code ::numeric}으로 캐스팅하면 그 문제를 되불러오므로 {@code ->>}로 문자열을 꺼내 {@code new BigDecimal(...)}로 복원한다 —\n- * scale이 정확히 보존된다.\n- *\n  * <p>getter 이름과 SQL alias가 맞아야 한다. **alias는 따옴표로 감싼다** — PostgreSQL은 인용하지 않은 식별자를 소문자로 접어 {@code\n  * errorcode}가 되고 여기 매핑이 깨진다.\n  */\n@@ -28,12 +24,6 @@ interface BacktestResultSummaryRow {\n     /** {@code execution} JSONB 전체. 5필드. */\n     String getExecution();\n \n-    /** {@code benchmark ->> 'instrumentId'}. 결과에 벤치마크가 없으면 null */\n-    String getBenchmarkInstrumentId();\n-\n-    /** {@code benchmark ->> 'totalReturn'}. 문자열 그대로 */\n-    String getBenchmarkTotalReturn();\n-\n     /** {@code costs} JSONB 전체. 5필드. null = 미저장 */\n     String getCosts();\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultSummaryRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestResultSummaryRow.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,8 +3,8 @@ package com.ssafy.thorp.backtest.infrastructure.persistence;\n /**\n  * 목록용 실행 뷰의 native 프로젝션.\n  *\n- * <p>decimal을 {@code String}으로 받는 이유는 {@link BacktestResultSummaryRow}와 같다 — {@code ::numeric} 캐스팅은\n- * 저장 때 피한 {@code jsonb} 숫자 정규화를 되불러온다.\n+ * <p>decimal을 {@code String}으로 받는 이유는 {@link BacktestResultPerformanceRow}와 같다 — {@code ::numeric}\n+ * 캐스팅은 저장 때 피한 {@code jsonb} 숫자 정규화를 되불러온다.\n  *\n  * <p>alias는 따옴표로 감싼다 — PostgreSQL이 인용하지 않은 식별자를 소문자로 접는다.\n  */\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunViewRow.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/BacktestRunViewRow.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,10 +33,6 @@ public record RssChannelHints(Duration ttl, Set<Integer> skipHours, Set<String>\n                         .collect(java.util.stream.Collectors.toUnmodifiableSet());\n     }\n \n-    public boolean isEmpty() {\n-        return ttl == null && skipHours.isEmpty() && skipDays.isEmpty();\n-    }\n-\n     /**\n      * 다음에 부를 시각을 정한다.\n      *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/application/result/RssChannelHints.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/application/result/RssChannelHints.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -282,13 +282,6 @@ public class NewsDigest {\n         public boolean hasVerifiedPublishedAt() {\n             return latestPublishedAt != null;\n         }\n-\n-        /** 이 묶음이 다루는 매체 식별자. */\n-        public Set<Long> publisherIds() {\n-            return articles.stream()\n-                    .map(NewsArticle::getPublisherId)\n-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());\n-        }\n     }\n \n     public Long getId() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsDigest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/domain/model/NewsDigest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -110,9 +110,4 @@ public record NewsProperties(\n             throw new IllegalArgumentException(\"leaseTtl은 0보다 커야 한다: \" + leaseTtl);\n         }\n     }\n-\n-    /** 공개 노출 모드인지 여부. 공개 모드에서는 허가된 매체의 항목만 보인다(spec FR-016). */\n-    public boolean isPublic() {\n-        return exposureMode.requiresPermissionFilter();\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsProperties.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/infrastructure/config/NewsProperties.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,9 +0,0 @@\n-package com.ssafy.thorp.news.presentation.controller;\n-\n-/**\n- * 내보내기 엔드포인트의 오류 매핑.\n- *\n- * <p>두 엔드포인트가 같은 컨트롤러에 있어 {@link NewsDigestExceptionHandler}가 이미 덮는다. 이 타입은 시험이 처리기를 따로 끼울 자리로만 둔다\n- * — standalone MockMvc는 컨트롤러 하나에 처리기 하나를 붙이는 편이 무엇을 시험하는지 분명하다.\n- */\n-public class NewsArticleExportExceptionHandler extends NewsDigestExceptionHandler {}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsArticleExportExceptionHandler.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/news/presentation/controller/NewsArticleExportExceptionHandler.java",
+          "a_mode": "100644",
+          "b_mode": "0",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": true,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -140,7 +140,7 @@ class BacktestResultQueryServiceTest {\n                 6, 6, 0, new BigDecimal(\"3941.19\"), new BigDecimal(\"13137.30\"));\n     }\n \n-    private static BacktestResultSummary summary(String errorCode, boolean benchmark) {\n+    private static BacktestResultSummary summary(String errorCode) {\n         return new BacktestResultSummary(\n                 errorCode,\n                 errorCode == null ? null : \"no data\",\n@@ -148,8 +148,6 @@ class BacktestResultQueryServiceTest {\n                 Instant.parse(\"2026-09-07T01:00:12Z\"),\n                 errorCode == null ? performance() : null,\n                 errorCode == null ? execution() : null,\n-                benchmark ? \"069500.XKRX\" : null,\n-                benchmark ? new BigDecimal(\"0.053292\") : null,\n                 errorCode == null ? costs() : null,\n                 errorCode == null ? liquidation() : null,\n                 errorCode == null ? analytics() : null,\n@@ -249,7 +247,7 @@ class BacktestResultQueryServiceTest {\n     @DisplayName(\"COMPLETED는 performance·execution을 summary로 합친다\")\n     void detailCompleted() {\n         given(RunStatus.COMPLETED);\n-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, true)));\n+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null)));\n \n         BacktestDetailResult.Summary summary = service.getDetail(BACKTEST_ID, REQUESTER).summary();\n \n@@ -282,7 +280,7 @@ class BacktestResultQueryServiceTest {\n                 .thenReturn(Optional.of(requestFor(REQUESTER)));\n         when(jobRepository.findById(JOB_ID))\n                 .thenReturn(Optional.of(jobIn(RunStatus.COMPLETED).withPlan(plannedVersions())));\n-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));\n+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null)));\n \n         Map<String, Object> versions = service.getDetail(BACKTEST_ID, REQUESTER).versions();\n \n@@ -349,7 +347,7 @@ class BacktestResultQueryServiceTest {\n                 .thenReturn(Optional.of(stoppedRequest()));\n         when(jobRepository.findById(JOB_ID))\n                 .thenReturn(Optional.of(cancelledRun(LocalDate.parse(\"2025-03-25\"))));\n-        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null, false)));\n+        when(resultRepository.findSummary(JOB_ID)).thenReturn(Optional.of(summary(null)));\n \n         BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);\n \n@@ -609,7 +607,7 @@ class BacktestResultQueryServiceTest {\n     void detailFailed() {\n         given(RunStatus.FAILED);\n         when(resultRepository.findSummary(JOB_ID))\n-                .thenReturn(Optional.of(summary(\"DATA_INSUFFICIENT\", false)));\n+                .thenReturn(Optional.of(summary(\"DATA_INSUFFICIENT\")));\n \n         BacktestDetailResult result = service.getDetail(BACKTEST_ID, REQUESTER);\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestResultQueryServiceTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2881403": []
+  }
+}

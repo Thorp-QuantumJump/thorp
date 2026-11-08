@@ -1,0 +1,1372 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 953242,
+    "iid": 252,
+    "project_id": 1444456,
+    "title": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다",
+    "description": "# 작업 내용 요약\n\n등록표에 비어 있던 네 칸(전 구간 적재 완료 판정, 걸러낸 합계 행 수, 원천별 호출 규칙, 재조회 구간 N의 근거)을 채우고, 증가율이 개편 단절을 넘을 때 등록표의 연결 규칙을 확인하게 했다. 확정할 수 없는 둘(N, 채권·외환 거래일 달력)은 값을 지어내지 않고 미확인으로 닫되 왜 비었는지를 코드에 남겼다. 앞의 두 커밋은 실제 원천 호출에서 드러난 결함이고, 뒤의 두 커밋은 이 작업이 만든 결함을 converge가 잡아 고친 것이다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-375\n- link: https://ssafy.atlassian.net/browse/S15P21E205-375\n\n# 주요 변경 사항\n\n**동작**\n\n- 증가율이 구간을 본다. 등록표가 잇지 않은 단절을 넘는 비교는 값을 만들지 않고 `BREAK_SEGMENT_EXCLUDED`로 둔다. 구간을 모르는 달은 이어졌다고 보지 않는다\n- 이어 붙인 값이 어느 표에서 왔는지가 `macro_observation.break_segment`에 실제로 저장된다 (전에는 컬럼만 있고 NULL 고정)\n- 전 구간 적재가 기대 대상월 수에 못 미치면 발행하지 않는다. 기대 개수는 상수가 아니라 지표별 공표 지연에서 계산하고, 가장 최근 한 달은 미달로 보지 않는다\n- **발행을 막은 실행이 성공한 실행처럼 보이지 않는다.** 시도 행이 `HELD`와 사유로 남는다. 전에는 지표 열일곱이 다 성공하면 아무것도 발행되지 않아도 `SUCCEEDED`였고, 보류 사유는 로그에만 있었다\n- 관세청에서 걸러낸 `<year>총계</year>` 행 수가 수집 기록에 남는다\n- 재시도 횟수·간격과 원천이 공표한 호출 한도를 등록표가 들고, 발행 때 등록표 버전과 함께 저장된다\n- ECOS 일별 계열이 `YYYYMMDD`로, OECD 응답이 SDMX-JSON 2.0으로 조회된다 (실행에서 드러난 결함)\n\n**계약**\n\n- `transform.monthly.apply`·`normalize.normalize`에 `break_segments`·`linked_segments` 선택 인자 추가. 주지 않으면 단절이 없는 지표로 보고 기존과 같이 동작한다\n- `macro_collection_attempt.status`에 `HELD` 추가. **008 계약(`openapi.yaml`)의 `collectionState.status` enum에 이미 있던 값**이라 응답 계약은 그대로다\n\n**스펙** — 구현하며 내린 판단이 문구를 벗어나 문구를 고쳤다(코드가 아니라)\n\n- FR-011b(3): 기대 대상월 수는 개수를 적지 않고 공표 지연에서 계산하며, 가장 최근 한 달이 모자란 것은 미달로 보지 않는다\n- FR-006b: 거래일 달력은 그 판정이 **필요한 지표에 한해** 기록한다\n\n**스키마** — `V20260920140000__macro_registry_gaps.sql`\n\n- `macro_collection_item_status.excluded_row_count` (NOT NULL DEFAULT 0)\n- `macro_indicator_definition.publication_lag_months` (nullable)\n- `macro_calculation_registry_version.source_policy` (JSONB, nullable)\n- `macro_calculation_registry_version.refresh_months_basis` (nullable)\n- `macro_collection_attempt.hold_reason` (nullable) + status CHECK에 `HELD` 추가. 사유 없는 `HELD`는 CHECK가 막는다\n- **되돌릴 수 없는 변경 없음** — 컬럼·허용값 추가만 있고 삭제·타입 변경·기존 행이 위반하는 제약 추가가 없다. 앞선 두 macro 마이그레이션은 손대지 않았다\n- 테스트가 마이그레이션 목록을 손으로 들고 있어 새 판을 놓쳤다. 파일 이름으로 찾도록 바꿨다\n\n# 테스트\n\n- [x] `cd data && .venv/bin/ruff check src scripts tests` → 통과\n- [x] `cd data && THORP_REQUIRE_DOCKER=true .venv/bin/pytest` → **1141 passed, skipped 0**\n- [x] `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply test --tests '*Macro*' --tests '*Migration*'` → BUILD SUCCESSFUL, macro 21건 **skipped 0**\n- [x] `bash infra/scripts/check-migration-version.sh` → 통과 (20260920140000 \\> 기준 20260920080000)\n- [x] 자동 테스트 밖: 앞의 두 커밋을 서버에서 실제 원천으로 확인했다. 버릴 DB에 전 구간 수집을 돌려 17개 지표 전부 성공, 관측 14,049건, 자료 버전 발행까지 갔다. 저장된 소수는 전부 JSONB 문자열이었고 G20 경기선행지수 증가율이 원값 두 달에서 손으로 계산한 값과 일치했다. **뒤의 네 커밋은 아직 운영 규모 자료로 돌려보지 않았다 — 머지 후 리허설을 한 번 더 돌린 뒤 운영에 적재할 계획이다**\n- [x] 등록표의 공표 지연 17개가 그 수집이 실제로 넣은 지표별 건수와 일치하는 것을 테스트로 고정했다. 지연을 잘못 적으면 여기서 깨진다\n- [x] 단절 가드를 제거하면 테스트 3개가 깨지는 것을 확인했다\n\n# 리뷰 포인트\n\n- **`HELD`가 `PARTIAL`을 덮는 것이 맞는지.** 발행기는 지표 일부가 실패하면 시도 행을 `PARTIAL`로 두는데, `record_item_status`가 그것을 `HELD` + 사유로 덮는다. 어느 지표가 실패했는지는 `item_status`가 이미 들고 있으니 여기 status는 \"결과가 밖으로 나갔는가\"에 답하는 편이 낫다고 봤다\n- **`excluded_row_count`를 NOT NULL DEFAULT 0으로 둔 것.** 이 컬럼이 생기기 전의 수집은 \"걸러낸 행이 없었다\"가 아니라 \"세지 않았다\"인데 둘 다 0으로 보인다. 셋을 구분하는 값을 만들면 읽는 쪽이 매번 갈라야 해서 추세를 보는 자리로 두었다\n- **`publication_lag_months`·`source_policy`를 값 지문(`value_rule_fingerprint`)에 넣지 않았다.** 둘 다 같은 자료에서 같은 값을 내므로, 지문에 넣으면 간격 한 번 조정한 것이 새 등록표 버전이 되고 멀쩡한 자료가 옛 버전으로 밀린다고 봤다\n- **스펙 문구 두 곳을 고친 것에 동의하는지.** 코드를 스펙에 맞추는 대신 스펙을 고쳤다. 어느 쪽이든 판정이 꼬리 한 달을 못 보는 것은 같아서, 왜 여유가 필요한지가 스펙에 남는 쪽을 골랐다\n\n# 지금 손대지 않은 것 (티켓 세우지 않음)\n\n- 관세청 12개월 상한이 `registry.SOURCE_POLICIES`와 `sources/base.MAX_MONTHS_CUSTOMS` 두 곳에 있다. 분할 호출은 뒤엣것만 읽으므로 등록표 값은 기록용이다 → **T058** 범위\n- 008 계약의 `collectionState.status` enum에 `PARTIAL`이 없는데 DB는 허용하고 백엔드가 DB 값을 응답에 그대로 싣는다. 이번 변경으로 `run()` 경로에서는 `PARTIAL`이 나오지 않지만 값 자체는 남아 있다. 고칠 자리가 `data/`가 아니라 백엔드라 이번 범위 밖이다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 수집·변환 경로이고 표시 코드가 없다\n- [x] **결제·포인트·상품 선택 단계 0건** — 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 지표별 분기도 두지 않았다. 공표 지연·호출 한도· 거래일 달력 모두 등록표의 값이고 `indicator_id`로 `switch`·`if` 하지 않는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 잇지 못한 단절을 넘는 비교는 0이 아니라 `null` + `BREAK_SEGMENT_EXCLUDED`이고, 기대 대상월 수를 못 채우면 짧은 자료를 내보내는 대신 발행을 멈추며 그 사실이 DB에 남는다. 예외는 위 리뷰 포인트의 `excluded_row_count` 하나다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 재조회 구간 N은 잠정값임을 `refresh_months_basis`에 적어 자료와 함께 저장하고, 거래일 달력의 미확인 사실은 `validate`의 거부 메시지에 실어 그것을 필요로 하는 사람이 반드시 읽게 했다",
+    "state": "merged",
+    "created_at": "2026-09-20T23:04:49.284+09:00",
+    "updated_at": "2026-09-21T12:13:57.812+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-21T12:13:57.570+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(de)/375-macro-registry-gaps",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+    "merge_commit_sha": "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T23:04:52.512+09:00",
+    "reference": "!252",
+    "references": {
+      "short": "!252",
+      "relative": "!252",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!252"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/252",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 12,
+      "completed_count": 12
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 953242,
+    "iid": 252,
+    "project_id": 1444456,
+    "title": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다",
+    "description": "# 작업 내용 요약\n\n등록표에 비어 있던 네 칸(전 구간 적재 완료 판정, 걸러낸 합계 행 수, 원천별 호출 규칙, 재조회 구간 N의 근거)을 채우고, 증가율이 개편 단절을 넘을 때 등록표의 연결 규칙을 확인하게 했다. 확정할 수 없는 둘(N, 채권·외환 거래일 달력)은 값을 지어내지 않고 미확인으로 닫되 왜 비었는지를 코드에 남겼다. 앞의 두 커밋은 실제 원천 호출에서 드러난 결함이고, 뒤의 두 커밋은 이 작업이 만든 결함을 converge가 잡아 고친 것이다.\n\n# 관련 티켓\n\n- ticket # S15P21E205-375\n- link: https://ssafy.atlassian.net/browse/S15P21E205-375\n\n# 주요 변경 사항\n\n**동작**\n\n- 증가율이 구간을 본다. 등록표가 잇지 않은 단절을 넘는 비교는 값을 만들지 않고 `BREAK_SEGMENT_EXCLUDED`로 둔다. 구간을 모르는 달은 이어졌다고 보지 않는다\n- 이어 붙인 값이 어느 표에서 왔는지가 `macro_observation.break_segment`에 실제로 저장된다 (전에는 컬럼만 있고 NULL 고정)\n- 전 구간 적재가 기대 대상월 수에 못 미치면 발행하지 않는다. 기대 개수는 상수가 아니라 지표별 공표 지연에서 계산하고, 가장 최근 한 달은 미달로 보지 않는다\n- **발행을 막은 실행이 성공한 실행처럼 보이지 않는다.** 시도 행이 `HELD`와 사유로 남는다. 전에는 지표 열일곱이 다 성공하면 아무것도 발행되지 않아도 `SUCCEEDED`였고, 보류 사유는 로그에만 있었다\n- 관세청에서 걸러낸 `<year>총계</year>` 행 수가 수집 기록에 남는다\n- 재시도 횟수·간격과 원천이 공표한 호출 한도를 등록표가 들고, 발행 때 등록표 버전과 함께 저장된다\n- ECOS 일별 계열이 `YYYYMMDD`로, OECD 응답이 SDMX-JSON 2.0으로 조회된다 (실행에서 드러난 결함)\n\n**계약**\n\n- `transform.monthly.apply`·`normalize.normalize`에 `break_segments`·`linked_segments` 선택 인자 추가. 주지 않으면 단절이 없는 지표로 보고 기존과 같이 동작한다\n- `macro_collection_attempt.status`에 `HELD` 추가. **008 계약(`openapi.yaml`)의 `collectionState.status` enum에 이미 있던 값**이라 응답 계약은 그대로다\n\n**스펙** — 구현하며 내린 판단이 문구를 벗어나 문구를 고쳤다(코드가 아니라)\n\n- FR-011b(3): 기대 대상월 수는 개수를 적지 않고 공표 지연에서 계산하며, 가장 최근 한 달이 모자란 것은 미달로 보지 않는다\n- FR-006b: 거래일 달력은 그 판정이 **필요한 지표에 한해** 기록한다\n\n**스키마** — `V20260920140000__macro_registry_gaps.sql`\n\n- `macro_collection_item_status.excluded_row_count` (NOT NULL DEFAULT 0)\n- `macro_indicator_definition.publication_lag_months` (nullable)\n- `macro_calculation_registry_version.source_policy` (JSONB, nullable)\n- `macro_calculation_registry_version.refresh_months_basis` (nullable)\n- `macro_collection_attempt.hold_reason` (nullable) + status CHECK에 `HELD` 추가. 사유 없는 `HELD`는 CHECK가 막는다\n- **되돌릴 수 없는 변경 없음** — 컬럼·허용값 추가만 있고 삭제·타입 변경·기존 행이 위반하는 제약 추가가 없다. 앞선 두 macro 마이그레이션은 손대지 않았다\n- 테스트가 마이그레이션 목록을 손으로 들고 있어 새 판을 놓쳤다. 파일 이름으로 찾도록 바꿨다\n\n# 테스트\n\n- [x] `cd data && .venv/bin/ruff check src scripts tests` → 통과\n- [x] `cd data && THORP_REQUIRE_DOCKER=true .venv/bin/pytest` → **1141 passed, skipped 0**\n- [x] `cd backend && THORP_REQUIRE_DOCKER=true ./gradlew spotlessApply test --tests '*Macro*' --tests '*Migration*'` → BUILD SUCCESSFUL, macro 21건 **skipped 0**\n- [x] `bash infra/scripts/check-migration-version.sh` → 통과 (20260920140000 \\> 기준 20260920080000)\n- [x] 자동 테스트 밖: 앞의 두 커밋을 서버에서 실제 원천으로 확인했다. 버릴 DB에 전 구간 수집을 돌려 17개 지표 전부 성공, 관측 14,049건, 자료 버전 발행까지 갔다. 저장된 소수는 전부 JSONB 문자열이었고 G20 경기선행지수 증가율이 원값 두 달에서 손으로 계산한 값과 일치했다. **뒤의 네 커밋은 아직 운영 규모 자료로 돌려보지 않았다 — 머지 후 리허설을 한 번 더 돌린 뒤 운영에 적재할 계획이다**\n- [x] 등록표의 공표 지연 17개가 그 수집이 실제로 넣은 지표별 건수와 일치하는 것을 테스트로 고정했다. 지연을 잘못 적으면 여기서 깨진다\n- [x] 단절 가드를 제거하면 테스트 3개가 깨지는 것을 확인했다\n\n# 리뷰 포인트\n\n- **`HELD`가 `PARTIAL`을 덮는 것이 맞는지.** 발행기는 지표 일부가 실패하면 시도 행을 `PARTIAL`로 두는데, `record_item_status`가 그것을 `HELD` + 사유로 덮는다. 어느 지표가 실패했는지는 `item_status`가 이미 들고 있으니 여기 status는 \"결과가 밖으로 나갔는가\"에 답하는 편이 낫다고 봤다\n- **`excluded_row_count`를 NOT NULL DEFAULT 0으로 둔 것.** 이 컬럼이 생기기 전의 수집은 \"걸러낸 행이 없었다\"가 아니라 \"세지 않았다\"인데 둘 다 0으로 보인다. 셋을 구분하는 값을 만들면 읽는 쪽이 매번 갈라야 해서 추세를 보는 자리로 두었다\n- **`publication_lag_months`·`source_policy`를 값 지문(`value_rule_fingerprint`)에 넣지 않았다.** 둘 다 같은 자료에서 같은 값을 내므로, 지문에 넣으면 간격 한 번 조정한 것이 새 등록표 버전이 되고 멀쩡한 자료가 옛 버전으로 밀린다고 봤다\n- **스펙 문구 두 곳을 고친 것에 동의하는지.** 코드를 스펙에 맞추는 대신 스펙을 고쳤다. 어느 쪽이든 판정이 꼬리 한 달을 못 보는 것은 같아서, 왜 여유가 필요한지가 스펙에 남는 쪽을 골랐다\n\n# 지금 손대지 않은 것 (티켓 세우지 않음)\n\n- 관세청 12개월 상한이 `registry.SOURCE_POLICIES`와 `sources/base.MAX_MONTHS_CUSTOMS` 두 곳에 있다. 분할 호출은 뒤엣것만 읽으므로 등록표 값은 기록용이다 → **T058** 범위\n- 008 계약의 `collectionState.status` enum에 `PARTIAL`이 없는데 DB는 허용하고 백엔드가 DB 값을 응답에 그대로 싣는다. 이번 변경으로 `run()` 경로에서는 `PARTIAL`이 나오지 않지만 값 자체는 남아 있다. 고칠 자리가 `data/`가 아니라 백엔드라 이번 범위 밖이다\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 수집·변환 경로이고 표시 코드가 없다\n- [x] **결제·포인트·상품 선택 단계 0건** — 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 지표별 분기도 두지 않았다. 공표 지연·호출 한도· 거래일 달력 모두 등록표의 값이고 `indicator_id`로 `switch`·`if` 하지 않는다\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 잇지 못한 단절을 넘는 비교는 0이 아니라 `null` + `BREAK_SEGMENT_EXCLUDED`이고, 기대 대상월 수를 못 채우면 짧은 자료를 내보내는 대신 발행을 멈추며 그 사실이 DB에 남는다. 예외는 위 리뷰 포인트의 `excluded_row_count` 하나다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 재조회 구간 N은 잠정값임을 `refresh_months_basis`에 적어 자료와 함께 저장하고, 거래일 달력의 미확인 사실은 `validate`의 거부 메시지에 실어 그것을 필요로 하는 사람이 반드시 읽게 했다",
+    "state": "merged",
+    "created_at": "2026-09-20T23:04:49.284+09:00",
+    "updated_at": "2026-09-21T12:13:57.812+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-21T12:13:57.570+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(de)/375-macro-registry-gaps",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+    "merge_commit_sha": "0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-20T23:04:52.512+09:00",
+    "reference": "!252",
+    "references": {
+      "short": "!252",
+      "relative": "!252",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!252"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/252",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 12,
+      "completed_count": 12
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "18",
+    "latest_build_started_at": "2026-09-21T11:47:42.671+09:00",
+    "latest_build_finished_at": "2026-09-21T12:05:12.414+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 211581,
+      "iid": 249,
+      "project_id": 1444456,
+      "sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+      "ref": "fix(de)/375-macro-registry-gaps",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T11:47:42.563+09:00",
+      "updated_at": "2026-09-21T12:05:12.423+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211581"
+    },
+    "head_pipeline": {
+      "id": 211581,
+      "iid": 249,
+      "project_id": 1444456,
+      "sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+      "ref": "fix(de)/375-macro-registry-gaps",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-21T11:47:42.563+09:00",
+      "updated_at": "2026-09-21T12:05:12.423+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211581",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-21T11:47:42.671+09:00",
+      "finished_at": "2026-09-21T12:05:12.414+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/211581",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "head_sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+      "start_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2c36fc9a5aff92aae826191122cfff7590d9af0a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842617,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T23:04:49.430+09:00",
+          "updated_at": "2026-09-20T23:04:49.437+09:00",
+          "system": true,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2c29a775f965c2a9ee3f5b27cc32295afff1171e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842619,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **철저한 예외 상황 및 메타데이터 추적**: 수집 발행 보류(`HELD`) 상태 도입, 관세청 총계 행 수(`excluded_row_count`) 추적, SDMX 2.0 버전 및 일별 날짜 형식(`YYYYMMDD`) 규격 준수 등 현업 운영 관점에서 발생할 수 있는 데이터 정합성 결함을 체계적으로 식별하고 반영하였습니다.\n- **방어적 설계와 유연한 검증 분리**: `value_rule_fingerprint`에 호출 정책이나 공표 지연 등 계산 결과에 영향을 주지 않는 환경/운영 인자를 제외하여 불필요한 버전 분기를 방지한 설계가 돋보입니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (작성된 코드와 스펙, 마이그레이션 스크립트 간의 정합성이 탄탄하게 유지되고 있으며, 테스트 코드 커버리지가 매우 우수합니다.)\n\n### 테스트 제안\n- **SDMX-JSON 2.0 응답 헤더 및 파싱 테스트**: OECD 원천 요청 시 `Accept: application/vnd.sdmx.data+json;version=2.0.0` 헤더 누락이나 1.0/2.0 구조 혼선 시나리오에서 어댑터가 의도대로 예외를 던지거나 정상 파싱하는지 검증하는 통합 시나리오 테스트를 추가합니다.\n- **`HELD` 상태와 재시도/재개 시나리오 테스트**: 전 구간 적재 미달(`shortfalls`)로 인해 `HELD` 상태로 기록된 수집 건에 대해, 누락된 데이터가 채워진 후 재실행(`initial` 혹은 `regular` 모드)했을 때 정상적으로 `SUCCEEDED` 상태로 전이되고 자료 버전이 발행되는지 확인하는 시나리오를 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:e7f27d9110f706fa40a71100989e65afc64bdffe -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-20T23:05:00.904+09:00",
+          "updated_at": "2026-09-21T11:40:43.710+09:00",
+          "system": false,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0e40224ebd95871416d48c59b922fdce3827a5de",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842821,
+          "type": null,
+          "body": "added 2 commits\n\n<ul><li>42583b3a - fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다</li><li>88e10e20 - docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/252/diffs?diff_id=2228450&start_sha=7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T23:41:43.588+09:00",
+          "updated_at": "2026-09-20T23:41:43.607+09:00",
+          "system": true,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "b2a144710c5f9be7cf7b8094ba454a4536891c56",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2842852,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-20T23:44:11.369+09:00",
+          "updated_at": "2026-09-20T23:44:11.373+09:00",
+          "system": true,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0d189c920a088edb7abb99436bab9a8789f3f62a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845316,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>ff6842e7 - fix(de): 발행이 터져도 지표별 수집 기록을 잃지 않는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/252/diffs?diff_id=2230609&start_sha=88e10e20f64b2fd4e2b3361534597c826ff58cf3)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T11:29:52.231+09:00",
+          "updated_at": "2026-09-21T11:29:52.234+09:00",
+          "system": true,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "cb38117015d325964d9c8686e2a18ec3fb2b733c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845408,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>e7f27d91 - fix(de): 거시지표 마이그레이션 버전을 기준 브랜치 뒤로 올린다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/252/diffs?diff_id=2230689&start_sha=ff6842e746208181b1fca0f9d403196b16ad4071)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T11:40:35.043+09:00",
+          "updated_at": "2026-09-21T11:40:35.046+09:00",
+          "system": true,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "efb99e64c355b31cd963df62c952efc2f8123d72",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2845603,
+          "type": null,
+          "body": "mentioned in commit 0d79d9b67e3a7c4f33ed86fa4d3dd03113b0ddb4",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-21T12:13:57.559+09:00",
+          "updated_at": "2026-09-21T12:13:57.564+09:00",
+          "system": true,
+          "noteable_id": 953242,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 252,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2230689,
+      "head_commit_sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+      "created_at": "2026-09-21T11:40:34.766+09:00",
+      "merge_request_id": 953242,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "b6bf9228eb8731d77bc4d903bd0dccc765a2214d"
+    },
+    {
+      "id": 2230609,
+      "head_commit_sha": "ff6842e746208181b1fca0f9d403196b16ad4071",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+      "created_at": "2026-09-21T11:29:51.982+09:00",
+      "merge_request_id": 953242,
+      "state": "without_files",
+      "real_size": "18",
+      "patch_id_sha": "fdef4cc5ad3047ecad2ede2e0f22098493629c90"
+    },
+    {
+      "id": 2228450,
+      "head_commit_sha": "88e10e20f64b2fd4e2b3361534597c826ff58cf3",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "a2b333604e93a232b88f57d153aa62cd6c181c4f",
+      "created_at": "2026-09-20T23:41:43.052+09:00",
+      "merge_request_id": 953242,
+      "state": "without_files",
+      "real_size": "18",
+      "patch_id_sha": "3b18532c02bf5674b7d0bea02c38a17c16560239"
+    },
+    {
+      "id": 2228252,
+      "head_commit_sha": "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "created_at": "2026-09-20T23:04:49.775+09:00",
+      "merge_request_id": 953242,
+      "state": "without_files",
+      "real_size": "17",
+      "patch_id_sha": "5b23c346be8ac52b4fb6dc0e2c64998e7a71a3f9"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2230689,
+      "head_commit_sha": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "b6b320911fcea2b5f8c40c5a2fa4d340e1c708ad",
+      "created_at": "2026-09-21T11:40:34.766+09:00",
+      "merge_request_id": 953242,
+      "state": "collected",
+      "real_size": "18",
+      "patch_id_sha": "b6bf9228eb8731d77bc4d903bd0dccc765a2214d",
+      "commits": [
+        {
+          "id": "e7f27d9110f706fa40a71100989e65afc64bdffe",
+          "short_id": "e7f27d91",
+          "created_at": "2026-09-21T11:40:09.000+09:00",
+          "parent_ids": [
+            "ff6842e746208181b1fca0f9d403196b16ad4071"
+          ],
+          "title": "fix(de): 거시지표 마이그레이션 버전을 기준 브랜치 뒤로 올린다",
+          "message": "fix(de): 거시지표 마이그레이션 버전을 기준 브랜치 뒤로 올린다\n\nMR 을 연 뒤 dev 에 `V20260921010000__regime_link.sql` 이 들어와 이 판이 기준 최대값보다\n낮아졌다. 기준이 먼저 배포되면 운영에서 '이미 지나간 번호'가 되어 기동이 막힌다.\n\n파일 이름만 올렸고 내용은 그대로다. 아직 dev·운영 어디에도 적용된 적이 없어 Flyway 이력이\n깨지지 않는다. 이 버전을 참조하는 코드·문서·테스트는 없다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T11:40:09.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T11:40:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e7f27d9110f706fa40a71100989e65afc64bdffe"
+        },
+        {
+          "id": "ff6842e746208181b1fca0f9d403196b16ad4071",
+          "short_id": "ff6842e7",
+          "created_at": "2026-09-21T11:29:21.000+09:00",
+          "parent_ids": [
+            "88e10e20f64b2fd4e2b3361534597c826ff58cf3"
+          ],
+          "title": "fix(de): 발행이 터져도 지표별 수집 기록을 잃지 않는다",
+          "message": "fix(de): 발행이 터져도 지표별 수집 기록을 잃지 않는다\n\n`run()` 은 발행이 보류(`PublishError`)로 끝날 때만 그것을 잡았고, 파일 봉인 실패나 DB\n오류처럼 다른 예외로 죽으면 그대로 올려보냈다. 그러면 아래의 `record_item_status` 가\n건너뛰어져 **무엇을 받았고 무엇이 실패했는지가 통째로 사라진다**(FR-011). 발행기가\n시도 행을 FAILED 로 적어 주므로 실행이 실패했다는 사실 자체는 남지만, 남는 것이\n\"실패했다\" 한 줄뿐이라 다음 실행에서 무엇을 다시 받아야 하는지 알 수 없다.\n\n앞선 커밋이 \"발행 전 거절에서 수집 기록을 잃지 않는다\"로 닫은 것과 같은 성격의 구멍이\n하나 더 있었다.\n\n`crashed` 를 보류와 따로 둔다. 처음에는 `held=None` 으로만 불렀는데, 발행기가 시도 행을\n만들기 **전에** 터지면 행이 없어 `record_item_status` 가 새로 만들며 SUCCEEDED 로\n적었다 — 터져 죽은 실행이 성공으로 남았다. 회귀 테스트가 그것을 잡았다.\n\n보류와 실패를 한 값으로 묶지 않는 이유는 다음에 할 일이 달라서다. 보류는 우리가 규칙대로\n막은 것이라 모자란 자료를 채우면 되고, 터진 것은 우리가 죽은 것이라 원인을 찾아야 한다.\n둘을 함께 적으려 하면 거부한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T11:29:21.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T11:29:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ff6842e746208181b1fca0f9d403196b16ad4071"
+        },
+        {
+          "id": "88e10e20f64b2fd4e2b3361534597c826ff58cf3",
+          "short_id": "88e10e20",
+          "created_at": "2026-09-20T23:41:35.000+09:00",
+          "parent_ids": [
+            "42583b3a17663497f0fbdf4059b6bc4c0e0d7839"
+          ],
+          "title": "docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다",
+          "message": "docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다\n\nconverge 가 스펙과 코드가 어긋난 두 곳을 잡았다. 둘 다 구현하며 내린 판단이\n스펙 문구를 벗어난 것이라, 코드가 아니라 문구를 고친다.\n\n전 구간 완료 판정은 기대 개수를 적지 않고 계열 시작월과 공표 지연에서 계산하며,\n가장 최근 한 달이 모자란 것은 미달로 보지 않는다. 공표 지연은 관측으로 정하는\n값이라 달마다 정확히 맞지 않는데, 여유가 없으면 발표가 하루 이틀 밀린 날의\n실행이 지표 전체의 발행을 막는다. 이 판정이 막으려는 것은 계열 앞쪽이 통째로\n짧은 경우라 한 달 여유로 가려지지 않는다.\n\n거래일 달력은 그 판정이 필요한 지표에 한해 기록한다. 원천이 이미 월 평균을\n주거나 변환이 월 기말이면 달력 없이 규칙이 성립하고, 쓰이지 않는 칸을 확인\n없이 채우면 그 값이 나중에 근거 있는 값처럼 읽힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:41:35.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:41:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/88e10e20f64b2fd4e2b3361534597c826ff58cf3"
+        },
+        {
+          "id": "42583b3a17663497f0fbdf4059b6bc4c0e0d7839",
+          "short_id": "42583b3a",
+          "created_at": "2026-09-20T23:41:23.000+09:00",
+          "parent_ids": [
+            "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+          ],
+          "title": "fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다",
+          "message": "fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다\n\n전 구간이 기대 대상월 수에 못 미쳐 발행을 막아도, 지표 열일곱이 모두 성공했으면\n시도 행이 SUCCEEDED 로 남았다. 지표가 다 성공한 것은 사실이지만 아무것도\n발행되지 않았고, DB 만 보는 사람은 그 둘을 구분하지 못한다. 보류 사유는 로그에만\n있었고 로그는 지나간다.\n\n시도 행에 HELD 와 사유를 남긴다. PARTIAL 로 대신할 수 없다 — 그것은 \"일부 지표만\n성공\"이라 지표가 다 성공한 이 경우를 말하지 못하고, 어느 지표가 실패했는지는\nitem_status 가 이미 들고 있다. 여기 status 가 답해야 하는 물음은 \"이 실행의 결과가\n밖으로 나갔는가\"다. HELD 는 008 계약의 수집 상태 값에 이미 있다.\n\n발행기가 시도 행을 만든 뒤 보류로 끝난 경우도 덮는다. 발행기는 상태만 적고 사유는\n예외로 올리므로, 여기서 붙이지 않으면 사유가 어디에도 남지 않는다.\n\n마이그레이션은 이번 판에 덧붙였다. 아직 어느 운영 환경에도 적용되지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:41:23.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:41:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42583b3a17663497f0fbdf4059b6bc4c0e0d7839"
+        },
+        {
+          "id": "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78",
+          "short_id": "7e37e7e5",
+          "created_at": "2026-09-20T23:02:44.000+09:00",
+          "parent_ids": [
+            "79f1c6971046418c8b67c66750220a4099f46d31"
+          ],
+          "title": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다",
+          "message": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다\n\n전 구간 적재 완료 판정, 걸러낸 합계 행 수, 원천별 호출 규칙, 재조회 구간 N 의\n근거가 모두 비어 있었다.\n\n기대 대상월 수는 상수로 적지 않고 공표 지연을 적어 계산한다. 개수는 달마다\n늘어나므로 박아 두면 다음 달에 틀리고, 기대가 실제보다 작으면 무엇이 빠졌든\n판정이 늘 통과한다. 지연 값 열일곱은 2026-09-20 전 구간 수집의 실측이고,\n계산 결과가 그 실행이 넣은 지표별 건수와 일치한다. 꼬리 한 달은 미달로 보지\n않는다 — 하루치 관측으로 정한 값이라 발표가 하루 이틀 밀린 날의 실행이 17개\n전부를 발행하지 못하게 되고, 전 구간이 통째로 짧은 경우는 한 달 여유로 가려\n지지 않는다.\n\n재조회 구간 N 과 채권·외환 거래일 달력은 확정하지 않고 미확인으로 닫았다.\n관측 없이 적은 수는 확정이 아니라 추측이고, 등록표에 적힌 추측은 나중에 근거\n있는 값처럼 읽힌다. 거래일 달력은 지금 답이 필요 없다는 것이 답이었다 —\n월 평균을 일별 원천에서 접는 지표가 17개 중 없다. 닿는 지표가 생기면\nregistry.validate 가 등록을 거부한다.\n\n마이그레이션은 컬럼 추가만 있다. 앞선 두 판은 손대지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:44.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+        },
+        {
+          "id": "79f1c6971046418c8b67c66750220a4099f46d31",
+          "short_id": "79f1c697",
+          "created_at": "2026-09-20T23:02:29.000+09:00",
+          "parent_ids": [
+            "ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+          ],
+          "title": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다",
+          "message": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다\n\n증가율이 구간을 보지 않아, 등록표가 잇지 않은 단절을 넘는 비교도 값을 만들었다.\n그 값은 경기 변화가 아니라 두 표가 각각 100 으로 잡은 서로 다른 기준을 견준\n것인데, 모양이 멀쩡한 증가율이라 값만 봐서는 구분되지 않는다. 구간을 모르는\n달은 이어졌다고 보지 않는다 — 모르는 것과 이어진 것을 같이 두면 구간 정보가\n빠지는 순간 모든 비교가 조용히 허용된다.\n\n이어 붙인 값이 어느 표에서 왔는지도 남지 않았다. macro_observation.break_segment\n는 표에 있었지만 NULL 로 박혀 있어, 우리가 곱한 계수를 나중에 원천의 개정으로\n읽게 된다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/79f1c6971046418c8b67c66750220a4099f46d31"
+        },
+        {
+          "id": "ab232997d17c801d4b7be21f4f994fd21d8bd42a",
+          "short_id": "ab232997",
+          "created_at": "2026-09-20T20:38:01.000+09:00",
+          "parent_ids": [
+            "d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+          ],
+          "title": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다",
+          "message": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다\n\n헤더를 붙이니 JSON 은 왔는데 어댑터가 \"응답에 structures 가 없다\"로 거절했다.\n1.0 은 최상위에 structure 하나를 두고 2.0 은 structures 배열을 둔다. Accept 에\n1.0 을 먼저 적어 원천이 그쪽을 준 것이다.\n\n표본의 meta.schema 가 2.0.0 이므로 어댑터가 읽는 모양도 2.0 이다. 판본을 비워\n두면 원천이 어느 쪽을 줄지 우리가 정하지 못하므로 고정한다. 표본이 정말\n2.0 인지도 함께 단언해, 나중에 표본이 바뀌면 이 고정이 먼저 깨지게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:38:01.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:38:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+        },
+        {
+          "id": "d3a6320c8d7c0df8f895f6aa1b671246d40a7535",
+          "short_id": "d3a6320c",
+          "created_at": "2026-09-20T20:26:29.000+09:00",
+          "parent_ids": [
+            "445c46529540519c1d28ace32d50e2b56cc2dc3e"
+          ],
+          "title": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다",
+          "message": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다\n\n운영 리허설에서 17개 중 다섯이 실패했다. 관세청 셋은 인증키 판이 잘못 들어간\n설정 문제였고, 나머지 둘이 코드 결함이다.\n\n국고채는 일별 계열인데 조회 구간을 여섯 자리로 넘겨 한국은행이 \"주기와 다른\n형식의 날짜 형식\"이라며 거절했다. 어댑터는 주기별 자릿수를 알고 있었고\n부르는 쪽이 몰랐다. 끝 달은 말일까지 연다 — 좁히면 그달 마지막 거래일을\n놓쳐 월 기말이 한 달 밀린다.\n\n경제협력개발기구 SDMX 는 기본 응답이 XML 이다. 달라고 하지 않으면 JSON 을\n주지 않아 파서가 그대로 터졌다. 전송 계층에 헤더를 넘길 자리가 없어 함께\n넣었다. 형식을 질의 인자가 아니라 헤더로 고르는 것이 SDMX 규약이다.\n\nFetcher 서명이 바뀌어 테스트 대역도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:26:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:26:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,87 @@\n+-- 008 등록표·수집 기록의 빈 칸 셋을 채운다 (T075·T077·T079).\n+--\n+-- 앞선 두 변경(V20260918120000, V20260918153100)은 손대지 않고 덧붙인다 — 운영에 이미\n+-- 적용되었을 수 있고, 적용 기록과 내용이 어긋나면 그 다음 배포가 모두 막힌다\n+-- (constitution \"스키마 변경 규칙\").\n+--\n+-- 셋 다 **추가만** 한다. 지우는 것도, 기존 행이 위반하게 되는 제약도 없다.\n+\n+-- ---------------------------------------------------------------------------\n+-- 1. 걸러낸 행 수 (T075, FR-017a)\n+-- ---------------------------------------------------------------------------\n+-- 관세청 응답에는 <year>총계</year> 합계 행이 섞여 온다. 월별 관측값으로 세면 그 해가 한 번\n+-- 더, 그것도 열두 배 큰 값으로 들어가므로 걸러낸다. **걸러낸 수를 남기지 않으면 \"9개월치를\n+-- 받았다\"와 \"10행을 받아 1행을 뺐다\"가 같은 모양이 된다** — 원천이 합계 행의 모양을 바꿔\n+-- 걸러지지 않게 됐을 때 그 사실이 드러나지 않는다.\n+--\n+-- 기존 행은 0 으로 채운다. 그 수집들이 아무것도 걸러내지 않았다는 뜻이 아니라 세지 않았다는\n+-- 뜻이지만, 세지 않은 것과 0 을 구분하는 값을 새로 만들면 읽는 쪽이 매번 셋을 갈라야 한다.\n+-- 이 칸은 추세를 보는 자리이지 과거를 소급하는 자리가 아니다.\n+ALTER TABLE macro_collection_item_status\n+    ADD COLUMN excluded_row_count INTEGER NOT NULL DEFAULT 0;\n+\n+ALTER TABLE macro_collection_item_status\n+    ADD CONSTRAINT ck_macro_item_excluded_rows CHECK (excluded_row_count >= 0);\n+\n+-- ---------------------------------------------------------------------------\n+-- 2. 공표 지연 (T077, FR-011b(3))\n+-- ---------------------------------------------------------------------------\n+-- 전 구간 적재가 끝났는지 판정하려면 \"몇 달치가 와야 하는가\"를 알아야 한다. 그 수는 상수가\n+-- 아니라 달마다 늘어나므로 **개수 대신 지연을 적고 개수는 계산한다** — 오늘이 2026-09 인데\n+-- 최신 대상월이 2026-07 이면 2다. 개수를 박아 두면 다음 달에 곧바로 틀리고, 기대가 실제보다\n+-- 작으면 무엇이 빠졌든 판정은 늘 통과한다.\n+--\n+-- NULL 을 허용하는 이유는 이 컬럼이 생기기 전에 발행된 등록표 버전이 있을 수 있어서다. 발행된\n+-- 등록표는 불변이므로 뒤에서 값을 채우지 않는다(FR-003).\n+ALTER TABLE macro_indicator_definition\n+    ADD COLUMN publication_lag_months INTEGER;\n+\n+ALTER TABLE macro_indicator_definition\n+    ADD CONSTRAINT ck_macro_indicator_publication_lag\n+    CHECK (publication_lag_months IS NULL OR publication_lag_months >= 0);\n+\n+-- ---------------------------------------------------------------------------\n+-- 3. 원천별 호출 규칙 (T079, FR-011b(1)·FR-017a)\n+-- ---------------------------------------------------------------------------\n+-- 재시도 횟수·간격과 원천이 공표한 호출 한도를 등록표 버전과 함께 남긴다. 계산 등록표 쪽에\n+-- 두는 이유는 이 값이 지표가 아니라 원천의 성질이고, 바뀌면 그때부터 수집이 다르게 돌기\n+-- 때문이다 — 값이 왜 달라졌는지 되짚을 때 어떤 규칙으로 받았는지가 함께 있어야 한다.\n+ALTER TABLE macro_calculation_registry_version\n+    ADD COLUMN source_policy JSONB;\n+\n+-- ---------------------------------------------------------------------------\n+-- 4. 재조회 구간 N 의 근거 (T073, FR-017)\n+-- ---------------------------------------------------------------------------\n+-- N 이 왜 그 값인지, 무엇을 봐야 확정되는지, 틀릴 때 어느 쪽으로 틀리는 편이 나은지를 등록표\n+-- 버전과 함께 남긴다. `change_reason` 에 섞지 않는 이유는 그 칸이 \"이 버전을 왜 만들었나\"이지\n+-- \"N 을 왜 그렇게 정했나\"가 아니어서다 — 섞으면 다음 버전에서 근거가 사라진다.\n+--\n+-- 지금 들어갈 값은 **잠정이며 미확인으로 닫은 것**이다. 근거 없는 칸을 비워 두는 대신, 비어\n+-- 있는 이유까지 적어 둔다(constitution 미확인 항목 처리).\n+ALTER TABLE macro_calculation_registry_version\n+    ADD COLUMN refresh_months_basis TEXT;\n+\n+-- ---------------------------------------------------------------------------\n+-- 5. 발행 보류를 수집 기록에 남긴다 (T083, FR-011·FR-011b(3))\n+-- ---------------------------------------------------------------------------\n+-- 17개를 다 받았는데 전 구간이 기대 대상월 수에 못 미쳐 발행을 막은 실행은, 지금까지 시도 행이\n+-- `SUCCEEDED` 로 남았다. 지표는 정말 다 성공했으니 거짓은 아니지만, **아무것도 발행되지 않았는데\n+-- DB 만 보면 완전히 성공한 실행과 구분되지 않는다.** 보류 사유는 로그에만 있고 로그는 지나간다.\n+--\n+-- `PARTIAL` 로 대신할 수 없다. 그것은 \"일부 지표만 성공\"이라 지표가 다 성공한 이 경우를 말하지\n+-- 못하고, 어차피 어느 지표가 실패했는지는 item_status 가 이미 들고 있다. 여기 status 가 답해야\n+-- 하는 물음은 \"이 실행의 결과가 밖으로 나갔는가\"다.\n+--\n+-- 사유를 status 와 함께 두는 이유는, 보류를 본 사람이 곧바로 다음에 무엇을 볼지 알아야 하기\n+-- 때문이다 — 지표가 덜 찬 것과 전 구간이 짧은 것은 고칠 자리가 다르다.\n+ALTER TABLE macro_collection_attempt DROP CONSTRAINT ck_macro_collection_attempt_status;\n+ALTER TABLE macro_collection_attempt\n+    ADD CONSTRAINT ck_macro_collection_attempt_status CHECK (\n+        status IN ('RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED', 'HELD'));\n+\n+ALTER TABLE macro_collection_attempt ADD COLUMN hold_reason TEXT;\n+\n+-- 사유 없는 보류는 로그로 돌아가라는 말과 같다.\n+ALTER TABLE macro_collection_attempt\n+    ADD CONSTRAINT ck_macro_collection_attempt_hold_reason\n+    CHECK (status <> 'HELD' OR hold_reason IS NOT NULL);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260921120000__macro_registry_gaps.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260921120000__macro_registry_gaps.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -155,7 +155,9 @@ def main(argv: list[str] | None = None) -> int:\n         return 1\n     if not report.published:\n         print(f\"발행 보류: {report.publication_held}\")\n-        print(\"17개가 모두 찬 뒤에만 공개한다(FR-011). 수집 기록은 남았다\")\n+        # 보류 이유는 둘이다. 지표가 덜 찬 것(FR-011)과 전 구간이 짧은 것(FR-011b(3))인데,\n+        # 대응이 다르다 — 앞엣것은 실패한 지표를 고치고 뒤엣것은 공표 지연이나 원천 구간을 본다.\n+        print(\"17개가 다 차고 전 구간이 기대 대상월 수를 채운 뒤에만 공개한다. 수집 기록은 남았다\")\n         return 1\n     print(f\"자료 버전 {report.dataset_version_id} 를 발행했다\")\n     return 0\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/scripts/ingest_macro.py",
+          "old_path": "data/scripts/ingest_macro.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -51,6 +51,12 @@ MISSING_SERIES_START: Final[str] = \"SERIES_START\"\n MISSING_INCOMPLETE_MONTH: Final[str] = \"INCOMPLETE_MONTH\"\n \"\"\"그 달의 거래일이 다 모이지 않았다. 부분 표본으로 만든 값은 다른 달과 같은 뜻이 아니다.\"\"\"\n \n+MISSING_BREAK_EXCLUDED: Final[str] = \"BREAK_SEGMENT_EXCLUDED\"\n+\"\"\"개편으로 단절된 구간을 넘는 비교인데 등록표에 그 둘을 잇는 규칙이 없다 (FR-006).\n+\n+이을 규칙 없이 두 구간을 견주면 두 표가 각각 100 으로 잡은 서로 다른 기준을 견주는 것이 된다.\n+그 결과는 경기 변화가 아니라 기준 변경이고, 값의 모양은 멀쩡한 증가율이라 구분되지 않는다.\"\"\"\n+\n #: 증가율을 어디서 끊을지. 재현성(SC-004)을 위해 고정한다 — 자리를 정하지 않으면 같은 자료로\n #: 다시 돌려도 끝자리가 흔들린다.\n GROWTH_EXPONENT: Final[Decimal] = Decimal(\"0.000001\")\n@@ -207,9 +213,19 @@ def _id(observations: Sequence[SourceObservation]) -> str:\n # 증가율\n # --------------------------------------------------------------------------\n def _growth(\n-    monthly: Sequence[MonthlyValue], *, lag: int, series_start: str\n+    monthly: Sequence[MonthlyValue],\n+    *,\n+    lag: int,\n+    series_start: str,\n+    break_segments: Mapping[str, str] | None = None,\n+    linked_segments: frozenset[str] = frozenset(),\n ) -> list[MonthlyValue]:\n-    \"\"\"``lag`` 달 전과 견준 증가율. 비교월은 고정이며 가장 가까운 값으로 대신하지 않는다.\"\"\"\n+    \"\"\"``lag`` 달 전과 견준 증가율. 비교월은 고정이며 가장 가까운 값으로 대신하지 않는다.\n+\n+    ``break_segments`` 는 달마다 그 값을 준 구간(개편 전후로 나뉜 통계표)의 식별자다.\n+    ``linked_segments`` 는 그중 등록표의 연결 규칙으로 이어진 구간들이다. 둘 다 주지 않으면\n+    단절이 없는 지표라는 뜻이고, 그때는 모든 비교가 허용된다.\n+    \"\"\"\n     by_period = {value.period: value for value in monthly}\n \n     result: list[MonthlyValue] = []\n@@ -230,6 +246,18 @@ def _growth(\n                 _missing(current.indicator_id, current.period, MISSING_NOT_TRANSFORMABLE)\n             )\n             continue\n+        if break_segments is not None and not _comparable(\n+            current.period, base_period, break_segments, linked_segments\n+        ):\n+            result.append(\n+                _missing(\n+                    current.indicator_id,\n+                    current.period,\n+                    MISSING_BREAK_EXCLUDED,\n+                    [base_period, current.period],\n+                )\n+            )\n+            continue\n         ratio = (current.value - base.value) / base.value * _HUNDRED\n         result.append(\n             MonthlyValue(\n@@ -244,18 +272,63 @@ def _growth(\n     return result\n \n \n-def year_over_year(monthly: Sequence[MonthlyValue], *, series_start: str) -> list[MonthlyValue]:\n+def _comparable(\n+    current_period: str,\n+    base_period: str,\n+    break_segments: Mapping[str, str],\n+    linked_segments: frozenset[str],\n+) -> bool:\n+    \"\"\"두 달을 견줘도 되는가. **같은 구간 안이거나, 둘 다 이어진 구간일 때만 참이다.**\n+\n+    구간을 모르는 달은 이어졌다고 보지 않는다 — 모르는 것과 이어진 것을 같이 두면, 구간\n+    정보가 빠진 순간 모든 비교가 조용히 허용된다.\n+    \"\"\"\n+    current_segment = break_segments.get(current_period)\n+    base_segment = break_segments.get(base_period)\n+    if current_segment is not None and current_segment == base_segment:\n+        return True\n+    return (\n+        current_segment in linked_segments\n+        and base_segment in linked_segments\n+    )\n+\n+\n+def year_over_year(\n+    monthly: Sequence[MonthlyValue],\n+    *,\n+    series_start: str,\n+    break_segments: Mapping[str, str] | None = None,\n+    linked_segments: frozenset[str] = frozenset(),\n+) -> list[MonthlyValue]:\n     \"\"\"전년동월 대비. **비교월은 t-12 로 고정한다** (FR-006).\n \n     t-12 가 비었다고 t-11 이나 t-13 으로 물러서지 않는다. 그렇게 만든 값은 다른 달의 전년동월\n     대비와 같은 뜻이 아닌데 표에서는 같은 열에 나란히 놓인다.\n     \"\"\"\n-    return _growth(monthly, lag=12, series_start=series_start)\n+    return _growth(\n+        monthly,\n+        lag=12,\n+        series_start=series_start,\n+        break_segments=break_segments,\n+        linked_segments=linked_segments,\n+    )\n \n \n-def month_over_month(monthly: Sequence[MonthlyValue], *, series_start: str) -> list[MonthlyValue]:\n-    \"\"\"전월 대비. 주택가격이 쓴다.\"\"\"\n-    return _growth(monthly, lag=1, series_start=series_start)\n+def month_over_month(\n+    monthly: Sequence[MonthlyValue],\n+    *,\n+    series_start: str,\n+    break_segments: Mapping[str, str] | None = None,\n+    linked_segments: frozenset[str] = frozenset(),\n+) -> list[MonthlyValue]:\n+    \"\"\"전월 대비. 주택가격이 쓴다 — 이어 붙인 이음매를 바로 넘는 비교라 단절 확인이 중요하다.\"\"\"\n+    return _growth(\n+        monthly,\n+        lag=1,\n+        series_start=series_start,\n+        break_segments=break_segments,\n+        linked_segments=linked_segments,\n+    )\n \n \n # --------------------------------------------------------------------------\n@@ -326,6 +399,8 @@ def apply(\n     *,\n     as_of: date | None = None,\n     trading_days: Mapping[str, Sequence[str]] | None = None,\n+    break_segments: Mapping[str, str] | None = None,\n+    linked_segments: frozenset[str] = frozenset(),\n ) -> list[MonthlyValue]:\n     \"\"\"등록표의 ``transform_rule`` 이 정한 변환을 건다. **여기서 규칙을 고르지 않는다**(FR-005).\n \n@@ -366,6 +441,11 @@ def apply(\n             )\n         levels = passthrough(observations)\n         growth = year_over_year if rule == TRANSFORM_YOY else month_over_month\n-        return growth(levels, series_start=indicator.series_start)\n+        return growth(\n+            levels,\n+            series_start=indicator.series_start,\n+            break_segments=break_segments,\n+            linked_segments=linked_segments,\n+        )\n \n     raise ValueError(f\"{indicator.indicator_id}: 모르는 변환 규칙이다({rule})\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/transform/monthly.py",
+          "old_path": "data/src/data_pipeline/macro/transform/monthly.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -39,7 +39,12 @@ _RETRYABLE_STATUS: Final[frozenset[int]] = frozenset({408, 500, 502, 503, 504})\n class Fetcher(Protocol):\n     \"\"\"요청 하나를 보내고 본문을 문자열로 돌려준다.\"\"\"\n \n-    def get(self, url: str, params: dict[str, str] | None = None) -> str: ...\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str: ...\n \n \n class RequestsFetcher:\n@@ -48,11 +53,18 @@ class RequestsFetcher:\n     def __init__(self, timeout_seconds: float) -> None:\n         self._timeout = timeout_seconds\n \n-    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str:\n         import requests  # 지연 임포트 — 표본만 읽는 테스트는 이 의존을 건드리지 않는다\n \n         try:\n-            response = requests.get(url, params=params, timeout=self._timeout)\n+            response = requests.get(\n+                url, params=params, headers=headers, timeout=self._timeout\n+            )\n         except requests.Timeout as error:\n             raise TransientSourceError(f\"시간 초과: {_safe(url)}\") from error\n         except requests.RequestException as error:\n@@ -85,6 +97,7 @@ def fetch_text(\n     *,\n     needs_key: bool = True,\n     key_param: str | None = None,\n+    headers: dict[str, str] | None = None,\n ) -> str:\n     \"\"\"설정된 재시도 안에서 한 요청을 끝낸다.\n \n@@ -107,7 +120,7 @@ def fetch_text(\n \n     url = f\"{config.base_url}/{request_path.lstrip('/')}\" if request_path else config.base_url\n     return fetch_with_retry(\n-        lambda: fetcher.get(url, request_params or None), config\n+        lambda: fetcher.get(url, request_params or None, headers), config\n     )\n \n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/fetch.py",
+          "old_path": "data/src/data_pipeline/macro/fetch.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,7 @@ from collections.abc import Mapping, Sequence\n from dataclasses import dataclass, field\n from datetime import UTC, date, datetime\n from pathlib import Path\n+from typing import Final\n \n from sqlalchemy import text\n from sqlalchemy.engine import Engine\n@@ -64,6 +65,15 @@ STATUS_KEY_NOT_ISSUED = \"KEY_NOT_ISSUED\"\n STATUS_RIGHTS_PENDING = \"RIGHTS_PENDING\"\n STATUS_RIGHTS_UNVERIFIED = \"RIGHTS_UNVERIFIED\"\n \n+#: 경제협력개발기구 SDMX 에 JSON 을 요청하는 헤더.\n+#:\n+#: **판본을 2.0 으로 못 박는다.** 1.0 은 최상위에 ``structure`` 하나를 두고 2.0 은\n+#: ``structures`` 배열을 둔다. 어댑터는 2.0 모양을 읽으므로 판본을 비워 두거나 1.0 을 먼저\n+#: 적으면 원천이 1.0 을 주고 \"응답에 structures 가 없다\"로 끝난다 — 리허설에서 그렇게 걸렸다.\n+_SDMX_JSON_HEADERS: Final[dict[str, str]] = {\n+    \"Accept\": \"application/vnd.sdmx.data+json;version=2.0.0\"\n+}\n+\n \n @dataclass(frozen=True)\n class RawDocument:\n@@ -87,7 +97,12 @@ class IndicatorOutcome:\n     observations: list[SourceObservation] = field(default_factory=list)\n     raw_documents: list[RawDocument] = field(default_factory=list)\n     error_class: str | None = None\n+    #: 응답에서 관측값이 아니어서 뺀 행의 수 (FR-017a). 관세청의 ``<year>총계</year>`` 가 여기다.\n     excluded_rows: int = 0\n+    #: 달마다 그 값을 준 구간. 개편으로 나뉜 계열만 채워진다 (FR-010).\n+    break_segments: dict[str, str] = field(default_factory=dict)\n+    #: 그중 등록표의 연결 규칙으로 이어진 구간들. 이어지지 않은 구간을 넘는 비교는 결측이다.\n+    linked_segments: frozenset[str] = frozenset()\n \n     @property\n     def succeeded(self) -> bool:\n@@ -117,6 +132,33 @@ def _compact(period: str) -> str:\n     return period.replace(\"-\", \"\")\n \n \n+#: 한 달의 마지막 날. 일별 조회의 끝을 그 달 말일로 잡는다.\n+_MONTH_END_DAY: Final[dict[int, int]] = {1: 31, 3: 31, 5: 31, 7: 31, 8: 31, 10: 31, 12: 31}\n+\n+\n+def _ecos_period(period: str, cycle: str, *, end: bool) -> str:\n+    \"\"\"한국은행이 받는 조회 구간 표기. **주기마다 자릿수가 다르다**.\n+\n+    일별 계열에 ``YYYYMM`` 을 주면 ``[ERROR-101] 주기와 다른 형식의 날짜 형식입니다`` 가\n+    돌아온다. 국고채가 유일한 일별 계열인데, 그 사실은 등록표의 ``source_cycle`` 이 들고\n+    있으므로 여기서 통계표 코드로 추측하지 않는다(FR-005).\n+\n+    끝 달은 말일까지 연다. 그 달의 며칠까지 자료가 있는지는 원천이 알고, 우리가 좁히면\n+    그달 마지막 거래일을 놓쳐 월 기말이 한 달 밀린다(FR-006a).\n+    \"\"\"\n+    compact = _compact(period)\n+    if cycle != \"D\":\n+        return compact\n+    year, month = int(period[:4]), int(period[5:7])\n+    if not end:\n+        return f\"{compact}01\"\n+    if month == 2:\n+        last = 29 if (year % 4 == 0 and year % 100 != 0) or year % 400 == 0 else 28\n+    else:\n+        last = _MONTH_END_DAY.get(month, 30)\n+    return f\"{compact}{last:02d}\"\n+\n+\n def _save_raw(\n     outcome: IndicatorOutcome,\n     data_root: Path,\n@@ -232,7 +274,12 @@ def _collect_one(\n                 indicator, fetcher, config, data_root, start, end, received_at, outcome\n             )\n         elif indicator.primary_source == SOURCE_ECOS:\n-            path = ecos.build_path(indicator, _compact(start), _compact(end))\n+            cycle = ecos.cycle_for(indicator)\n+            path = ecos.build_path(\n+                indicator,\n+                _ecos_period(start, cycle, end=False),\n+                _ecos_period(end, cycle, end=True),\n+            )\n             body = transport.fetch_text(fetcher, config, path)\n             _save_raw(\n                 outcome, data_root, config.source_id, indicator.indicator_id, body, received_at\n@@ -247,7 +294,12 @@ def _collect_one(\n             outcome.observations = kosis.parse(indicator, _as_json(body, config))\n         elif indicator.primary_source == SOURCE_OECD:\n             path = oecd.build_path(indicator)\n-            body = transport.fetch_text(fetcher, config, path, needs_key=False)\n+            # SDMX 는 **기본이 XML 이다.** 달라고 하지 않으면 JSON 을 주지 않는다 — 그대로\n+            # 파서에 넣으면 \"응답이 JSON 이 아니다\"로 끝난다. 형식을 질의 인자가 아니라\n+            # 헤더로 고르는 이유는 그것이 SDMX 규약이고, 인자는 판마다 이름이 달라서다.\n+            body = transport.fetch_text(\n+                fetcher, config, path, needs_key=False, headers=_SDMX_JSON_HEADERS\n+            )\n             _save_raw(\n                 outcome, data_root, config.source_id, indicator.indicator_id, body, received_at\n             )\n@@ -295,6 +347,14 @@ def _collect_linked(\n \n     segments = housing.segments_from(values_by_base_month, indicator.link_chain)\n     linked = housing.link(segments)\n+    # 어느 표가 어느 달을 줬는지 변환까지 들고 간다. 증가율이 이음매를 넘을 때 그 둘이\n+    # 실제로 이어진 구간인지 확인해야 하기 때문이다(FR-006).\n+    outcome.break_segments = {\n+        point.period: point.source_base_month for point in linked.points\n+    }\n+    outcome.linked_segments = frozenset(\n+        {segments[0].base_month} | {link.from_base_month for link in linked.links}\n+    )\n     return [\n         SourceObservation(\n             indicator_id=indicator.indicator_id,\n@@ -400,6 +460,8 @@ def normalize_outcomes(\n             as_of=as_of,\n             trading_days=trading_days,\n             received_at=received_at,\n+            break_segments=outcome.break_segments or None,\n+            linked_segments=outcome.linked_segments,\n         )\n     return result\n \n@@ -513,11 +575,26 @@ def record_item_status(\n     outcomes: Sequence[IndicatorOutcome],\n     *,\n     mode: str = \"REGULAR\",\n+    held: str | None = None,\n+    crashed: bool = False,\n ) -> None:\n-    \"\"\"지표별 수집 결과를 남긴다 (T082, FR-011).\n+    \"\"\"지표별 수집 결과와 **발행 보류 여부**를 남긴다 (T082·T083, FR-011).\n \n     008 조회가 이 표에서 실패 지표 목록을 읽는다. 쓰지 않으면 화면은 늘 \"실패 없음\"으로 보인다.\n+\n+    ``held`` 가 있으면 시도 행을 ``HELD`` 와 그 사유로 남긴다. **지표가 다 성공해도 그렇다** —\n+    전 구간이 기대 대상월 수에 못 미쳐 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이지만\n+    아무것도 발행되지 않았고, 그 둘을 같은 ``SUCCEEDED`` 로 적으면 DB 만 보는 사람은 구분하지\n+    못한다. 보류 사유가 로그에만 있으면 로그가 지나간 뒤에는 아무 데도 없다.\n+\n+    ``crashed`` 는 **보류와 다른 것**이다. 보류는 우리가 규칙대로 막은 것이고 터진 것은 우리가\n+    죽은 것이라, 다음에 할 일이 다르다 — 앞은 모자란 자료를 채우면 되고 뒤는 원인을 찾아야\n+    한다. 발행기가 시도 행을 이미 ``FAILED`` 로 적었으면 그대로 두고, 행을 만들기 전에 터져\n+    아직 없으면 여기서 ``FAILED`` 로 만든다. 이 자리가 없으면 터진 실행이 ``SUCCEEDED`` 로\n+    남는다.\n     \"\"\"\n+    if crashed and held is not None:\n+        raise ValueError(\"보류와 실패를 함께 적을 수 없다 — 둘은 다음에 할 일이 다르다\")\n     now = datetime.now(UTC)\n     with engine.begin() as connection:\n         attempt_id = connection.execute(\n@@ -529,33 +606,53 @@ def record_item_status(\n             # 먼저 하고 시도 행을 나중에 만드는데, 그 판정에서 던지면 붙을 자리가 없어진다.\n             # 그때 기록까지 버리면 무엇을 받았고 무엇이 실패했는지가 통째로 사라진다(FR-011).\n             failed = any(not outcome.succeeded for outcome in outcomes)\n+            if crashed:\n+                status = \"FAILED\"\n+            elif held:\n+                status = \"HELD\"\n+            else:\n+                status = \"PARTIAL\" if failed else \"SUCCEEDED\"\n             attempt_id = connection.execute(\n                 text(\n                     \"INSERT INTO macro_collection_attempt\"\n-                    \" (attempt_key, mode, started_at, finished_at, status)\"\n-                    \" VALUES (:key, :mode, :now, :now, :status) RETURNING id\"\n+                    \" (attempt_key, mode, started_at, finished_at, status, hold_reason)\"\n+                    \" VALUES (:key, :mode, :now, :now, :status, :hold) RETURNING id\"\n                 ),\n                 {\n                     \"key\": attempt_key,\n                     \"mode\": mode,\n                     \"now\": now,\n-                    \"status\": \"PARTIAL\" if failed else \"SUCCEEDED\",\n+                    \"status\": status,\n+                    \"hold\": held,\n                 },\n             ).scalar_one()\n+        elif held is not None:\n+            # 발행기가 시도 행을 만든 뒤 보류로 끝난 경우다. 발행기는 상태만 적고 사유는\n+            # 예외로 올리므로, 그 사유가 여기서 행에 붙지 않으면 어디에도 남지 않는다.\n+            connection.execute(\n+                text(\n+                    \"UPDATE macro_collection_attempt\"\n+                    \" SET status = 'HELD', hold_reason = :hold, finished_at = :now\"\n+                    \" WHERE id = :id\"\n+                ),\n+                {\"hold\": held, \"now\": now, \"id\": attempt_id},\n+            )\n         for outcome in outcomes:\n             connection.execute(\n                 text(\n                     \"INSERT INTO macro_collection_item_status\"\n                     \" (attempt_id, indicator_id, source, status, last_success_at,\"\n-                    \"  last_error_at, error_class, quota_exhausted, raw_location)\"\n+                    \"  last_error_at, error_class, quota_exhausted, raw_location,\"\n+                    \"  excluded_row_count)\"\n                     \" VALUES (:attempt, :indicator, :source, :status, :success,\"\n-                    \"  :error_at, :error_class, :quota, :raw)\"\n+                    \"  :error_at, :error_class, :quota, :raw, :excluded)\"\n                     \" ON CONFLICT (attempt_id, indicator_id) DO UPDATE SET\"\n                     \"  status = EXCLUDED.status, last_success_at = EXCLUDED.last_success_at,\"\n                     \"  last_error_at = EXCLUDED.last_error_at,\"\n                     \"  error_class = EXCLUDED.error_class,\"\n                     \"  quota_exhausted = EXCLUDED.quota_exhausted,\"\n-                    \"  raw_location = EXCLUDED.raw_location\"\n+                    \"  raw_location = EXCLUDED.raw_location,\"\n+                    \"  excluded_row_count = EXCLUDED.excluded_row_count\"\n                 ),\n                 {\n                     \"attempt\": attempt_id,\n@@ -569,6 +666,7 @@ def record_item_status(\n                     \"raw\": str(outcome.raw_documents[-1].path)\n                     if outcome.raw_documents\n                     else None,\n+                    \"excluded\": outcome.excluded_rows,\n                 },\n             )\n \n@@ -602,6 +700,67 @@ class IngestReport:\n         return self.dataset_version_id is not None\n \n \n+@dataclass(frozen=True)\n+class Shortfall:\n+    \"\"\"전 구간 적재가 기대에 못 미친 지표 하나 (FR-011b(3)).\"\"\"\n+\n+    indicator_id: str\n+    expected_months: int\n+    received_months: int\n+    expected_end_month: str\n+\n+    def __str__(self) -> str:\n+        return (\n+            f\"{self.indicator_id} {self.received_months}/{self.expected_months}개월\"\n+            f\" (~{self.expected_end_month})\"\n+        )\n+\n+\n+#: 꼬리 쪽 한 달은 미달로 보지 않는다 (FR-011b(3)).\n+#:\n+#: 등록표의 공표 지연은 **2026-09-20 하루치 관측**으로 정한 값이다. 그날 관세청은 이번 달치를\n+#: 이미 내고 있었지만 달 초에는 아직 없고, 통계청 산업활동동향도 발표가 하루 이틀 밀리는 달이\n+#: 있다. 여유 없이 걸면 그런 날의 실행이 17개 전부를 발행하지 못한다.\n+#:\n+#: 여유를 두어 잃는 것은 작다. 이 판정이 막으려는 것은 **전 구간이 통째로 짧은 것**이다 —\n+#: 주택가격이 2000-01 대신 2021-06 부터만 오면 260개월이 빈다. 한 달의 여유로는 그런 구멍이\n+#: 가려지지 않는다. 반대로 여유가 없으면 발표 하루 차이가 발행 전체를 멈춘다.\n+TAIL_SLACK_MONTHS: Final[int] = 1\n+\n+\n+def shortfalls(\n+    indicators: Sequence[IndicatorDefinition],\n+    observations: Mapping[str, Sequence[NormalizedObservation]],\n+    as_of: str,\n+    *,\n+    slack_months: int = TAIL_SLACK_MONTHS,\n+) -> list[Shortfall]:\n+    \"\"\"기대 대상월 수에 못 미친 지표들 (FR-011b(3)).\n+\n+    **받은 대상월을 센다. 값이 있는 달이 아니다.** 전년동월 대비의 첫 열두 달은 비교월이 없어\n+    결측이지만 그 달들도 받은 대상월이고, 값만 세면 증가율 지표가 영영 미달로 남는다.\n+\n+    기대보다 **많은** 것은 미달이 아니다 — 원천이 이번 달치를 먼저 낸 경우가 그렇고, 그것은\n+    문제가 아니라 공표 지연이 우리가 적어 둔 것보다 짧았다는 뜻이다.\n+\n+    ``slack_months`` 만큼은 모자라도 넘어간다. 이유는 :data:`TAIL_SLACK_MONTHS` 에 있다.\n+    \"\"\"\n+    result: list[Shortfall] = []\n+    for indicator in indicators:\n+        expected = registry.expected_month_count(indicator, as_of)\n+        received = len(observations.get(indicator.indicator_id, ()))\n+        if received < expected - slack_months:\n+            result.append(\n+                Shortfall(\n+                    indicator_id=indicator.indicator_id,\n+                    expected_months=expected,\n+                    received_months=received,\n+                    expected_end_month=registry.expected_end_month(indicator, as_of),\n+                )\n+            )\n+    return result\n+\n+\n def run(\n     engine: Engine,\n     indicators: Sequence[IndicatorDefinition],\n@@ -659,6 +818,14 @@ def run(\n \n     dataset_id: int | None = None\n     held: str | None = None\n+    # **전 구간 적재는 기대 대상월 수를 채워야 완료다**(FR-011b(3)). 한 지표라도 모자라면\n+    # 발행하지 않는다 — 짧은 계열로 낸 스냅샷은 응답도 값도 멀쩡해서, 과거가 잘려 있다는\n+    # 사실이 화면 어디에도 드러나지 않는다. 정기 수집은 최근 N개월만 받으므로 해당 없다.\n+    missing_months = (\n+        shortfalls(indicators, observations, f\"{today.year:04d}-{today.month:02d}\")\n+        if mode == \"initial\"\n+        else []\n+    )\n     if len(indicators) != registry.EXPECTED_INDICATOR_COUNT:\n         # **일부만 받은 실행은 발행을 시도하지 않는다.** 발행은 17개가 함께여야 성립하므로\n         # (FR-011) 부분 집합으로 부르면 판정기가 그 자리에서 거절한다. 그것을 실패로 적으면\n@@ -668,14 +835,27 @@ def run(\n             f\" (발행은 {registry.EXPECTED_INDICATOR_COUNT}개가 함께여야 한다)\"\n         )\n         logger.info(\"%s\", held)\n+    elif missing_months:\n+        held = \"전 구간 적재가 기대에 못 미쳐 발행하지 않는다: \" + \", \".join(\n+            str(shortfall) for shortfall in missing_months\n+        )\n+        logger.warning(\"%s\", held)\n     else:\n         try:\n             dataset_id = publish.publish_atomically(engine, request)\n         except publish.PublishError as error:\n             held = str(error)\n             logger.warning(\"발행 보류: %s\", error)\n-\n-    record_item_status(engine, attempt_key, outcomes, mode=mode.upper())\n+        except Exception:\n+            # **발행이 어떻게 죽든 지표별 기록은 남긴다.** 발행기가 시도 행을 FAILED 로\n+            # 적어 주므로 실행이 실패했다는 사실 자체는 사라지지 않지만, 여기서 그냥\n+            # 올려보내면 아래의 기록이 건너뛰어져 **무엇을 받았고 무엇이 실패했는지가\n+            # 통째로 없어진다**(FR-011). 그러면 남는 것은 \"실패했다\" 한 줄뿐이라 다음\n+            # 실행에서 무엇을 다시 받아야 하는지 알 수 없다.\n+            record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), crashed=True)\n+            raise\n+\n+    record_item_status(engine, attempt_key, outcomes, mode=mode.upper(), held=held)\n \n     return IngestReport(\n         attempt_key=attempt_key,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/ingest.py",
+          "old_path": "data/src/data_pipeline/macro/ingest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,6 +54,12 @@ class NormalizedObservation:\n     source_updated_at: str | None\n     #: 우리가 받은 때. 발표일 자리에 넣지 않는다.\n     received_at: datetime | None = None\n+    #: 이 달의 값을 준 구간. 개편으로 나뉜 계열만 채워지고 나머지는 ``None`` 이다 (FR-010).\n+    #:\n+    #: 이 칸이 자료에 남아야 \"2012년 값은 어느 표에서 왔나\"를 되짚을 수 있다. 이어 붙인 값은\n+    #: 계수를 곱한 것이라 원천이 그 달에 대해 직접 말한 값과 다르고, 둘을 구분하지 못하면\n+    #: 개정 대조에서 우리가 곱한 계수를 원천의 개정으로 읽는다.\n+    break_segment: str | None = None\n \n     @property\n     def is_missing(self) -> bool:\n@@ -71,6 +77,8 @@ def normalize(\n     as_of: date | None = None,\n     trading_days: Mapping[str, Sequence[str]] | None = None,\n     received_at: datetime | None = None,\n+    break_segments: Mapping[str, str] | None = None,\n+    linked_segments: frozenset[str] = frozenset(),\n ) -> list[NormalizedObservation]:\n     \"\"\"원천 관측을 변환하고, 그 결과를 원값·계보와 한 줄로 묶는다.\n \n@@ -79,7 +87,12 @@ def normalize(\n     \"\"\"\n     raw_by_period = {observation.period: observation for observation in observations}\n     values = monthly.apply(\n-        indicator, observations, as_of=as_of, trading_days=trading_days\n+        indicator,\n+        observations,\n+        as_of=as_of,\n+        trading_days=trading_days,\n+        break_segments=break_segments,\n+        linked_segments=linked_segments,\n     )\n \n     result: list[NormalizedObservation] = []\n@@ -96,6 +109,9 @@ def normalize(\n                 transformed_unit=indicator.transformed_unit,\n                 source_updated_at=_updated_at(value, raw_by_period),\n                 received_at=received_at,\n+                break_segment=(\n+                    None if break_segments is None else break_segments.get(value.period)\n+                ),\n             )\n         )\n     return result\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/normalize.py",
+          "old_path": "data/src/data_pipeline/macro/normalize.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -548,11 +548,12 @@ def publish_atomically(\n                              \"transformed_value, released_at, received_at, break_segment, \"\n                              \"missing_reason) VALUES (:dataset, :indicator, :month, \"\n                              f\"{raw_expression}, {transformed_expression}, NULL, :received, \"\n-                             \"NULL, :missing)\"),\n+                             \":segment, :missing)\"),\n                         {\"dataset\": dataset_id, \"indicator\": indicator.indicator_id,\n                          \"month\": _month_date(observation.period), \"raw_value\": raw_value,\n                          \"transformed_value\": transformed,\n                          \"received\": observation.received_at or now,\n+                         \"segment\": observation.break_segment,\n                          \"missing\": observation.missing_reason},\n                     )\n             for baseline in decision.baselines:\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/publish.py",
+          "old_path": "data/src/data_pipeline/macro/publish.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,8 +16,7 @@\n \n     published_precision      T069 — 공표 정밀도\n     minimum_effective_scale  010 소유 (PD-10). 008은 채우지 않는다 (FR-015)\n-    trading_calendar         거래일 달력 출처가 PD-11에서 확정되지 않았다\n-    refresh_months_n         T073 — 정기 수집을 몇 달 관찰한 뒤 실제 개정 관행에 맞춘다\n+    trading_calendar         월 평균 경로에 닿는 지표에만 필요하다. `TRADING_CALENDAR_*` 참고\n \"\"\"\n \n from __future__ import annotations\n@@ -26,7 +25,13 @@ from dataclasses import dataclass\n from decimal import Decimal\n from typing import Final\n \n-from data_pipeline.macro.config import SOURCE_CUSTOMS, SOURCE_ECOS, SOURCE_KOSIS, SOURCE_OECD\n+from data_pipeline.macro.config import (\n+    SOURCE_CUSTOMS,\n+    SOURCE_ECOS,\n+    SOURCE_KOSIS,\n+    SOURCE_OECD,\n+    load_source_config,\n+)\n \n #: 7개 분야. 009 계약과 같은 식별자다(data-model §1).\n FIELD_PRODUCTION: Final[str] = \"production\"\n@@ -67,18 +72,132 @@ REVIEW_VERIFIED: Final[str] = \"VERIFIED\"\n REVIEW_PENDING_RIGHTS: Final[str] = \"PENDING_RIGHTS\"\n REVIEW_UNVERIFIED: Final[str] = \"UNVERIFIED\"\n \n-#: 정기 재조회 구간의 잠정 기본값 (T012, FR-017). 관찰 뒤 T073 이 지표별로 조정한다.\n-#:\n-#: 관세청은 **매월 15일경 전월까지의 자료를 정정**한다고 안내한다(pd11 §4). 3개월은 그 주기보다\n-#: 짧지 않으므로 세 지표 모두 기본값을 그대로 쓴다. 몇 달치가 함께 정정되는지는 갱신을 봐야\n-#: 알 수 있고, 그것이 T073 의 일이다.\n+#: 정기 재조회 구간 N (FR-017). **잠정값이며 미확인으로 닫는다** — 근거는 아래에 있다.\n DEFAULT_REFRESH_MONTHS_N: Final[int] = 3\n \n+#: N 을 왜 3으로 두고 왜 여기서 확정하지 않는지 (T073, FR-017, constitution 미확인 항목 처리).\n+#:\n+#: **확정하지 못한 이유.** N 은 \"원천이 과거 몇 달치를 함께 정정하는가\"를 묻는 값이고, 그것은\n+#: 정기 수집을 여러 달 돌려 같은 달의 값이 언제 바뀌는지 세어야 비로소 보인다. 지금 가진 것은\n+#: 한 시점의 전 구간 한 벌뿐이라 개정을 한 건도 관측하지 못했다. 관측 없이 지표마다 다른 수를\n+#: 적으면 그것은 확정이 아니라 추측이고, 등록표에 추측을 적으면 나중에 그 칸이 근거 있는 값처럼\n+#: 읽힌다.\n+#:\n+#: **왜 3인가.** 관세청은 매월 15일경 전월까지의 자료를 정정한다고 안내한다(pd11 §4). 3개월은\n+#: 그 주기보다 짧지 않다. 국가통계포털·한국은행·경제협력개발기구는 정정 주기를 수치로 밝히지\n+#: 않아 근거로 쓸 것이 없으므로 같은 값을 쓴다.\n+#:\n+#: **확정에 필요한 것.** 정기 수집을 최소 N+3 개월 돌린 뒤, `macro_raw_revision` 에서 지표별로\n+#: (a) N 안에서 잡힌 개정과 (b) N 밖에서 뒤늦게 발견된 개정을 센다. (b) 가 이어지는 지표는 N 을\n+#: 늘린다(FR-017).\n+#:\n+#: **의심스러우면 늘린다.** 틀리는 방향이 대칭이 아니다 — N 이 길면 이미 확정된 달을 몇 번 더\n+#: 받을 뿐이고 그 비용은 호출 몇 번이다. N 이 짧으면 정정을 통째로 놓치고, 놓친 값은 다음 전\n+#: 구간 재적재까지 틀린 채로 남으며 그 사실이 어디에도 드러나지 않는다.\n+REFRESH_MONTHS_BASIS: Final[str] = (\n+    \"잠정값 3개월. 관세청의 매월 정정 안내(pd11 §4)보다 짧지 않게 잡은 값이며, 나머지 세 원천은\"\n+    \" 정정 주기를 수치로 밝히지 않아 같은 값을 쓴다. 실제 개정 관행은 정기 수집을 여러 달 돌려\"\n+    \" macro_raw_revision 에서 N 밖 개정을 세어야 확정되므로 이번 범위에서는 미확인으로 닫는다.\"\n+    \" 조정 방향은 한쪽으로만 연다 — 의심스러우면 늘린다. N 이 길면 이미 확정된 달을 다시 받는\"\n+    \" 호출 몇 번이 비용이지만, N 이 짧으면 정정을 놓치고 놓친 사실조차 드러나지 않는다.\"\n+)\n+\n \n class RegistryError(ValueError):\n     \"\"\"등록표가 지켜야 할 불변식을 어겼다.\"\"\"\n \n \n+#: 거래일 달력 식별자 (FR-006b). **월 평균 경로에 닿는 지표만 이 값이 필요하다.**\n+#:\n+#: `transform.monthly` 에서 달력을 읽는 곳은 `fold_month_average` 하나뿐이고, 거기에 닿으려면\n+#: 변환이 월 평균이면서 원천이 일별로 줘야 한다. 월 기말은 원천이 장이 선 날만 행을 주므로\n+#: 그 달의 마지막 행이 곧 마지막 거래일이고, 달력 없이 규칙이 성립한다(FR-006a).\n+#:\n+#: **지금 17개 중 월 평균 경로에 닿는 지표는 없다.** 두바이유는 변환이 월 평균이지만 한국은행이\n+#: 월 평균을 이미 내 주므로 주기가 월별이고 그대로 통과한다. 국고채만 일별인데 변환이 월 기말이다.\n+#: 그래서 이 칸이 비어 있어도 결측이 생기지 않으며, 실제로 2026-09-20 전 구간 수집에서 두 지표\n+#: 모두 결측 0건이었다. 비어 있는 칸을 채우는 대신 **닿는 지표가 생기면 등록이 거부되도록**\n+#: `validate` 에 불변식을 두었다.\n+#:\n+#: 달력 식별자는 상수로 미리 두지 않는다 — 쓰는 지표가 없는데 이름만 있으면 다음 사람이 그중\n+#: 하나를 확인 없이 고른다. 값은 그 지표를 더할 때 근거와 함께 정한다.\n+TRADING_CALENDAR_UNVERIFIED: Final[str] = (\n+    \"채권·외환 계열의 휴장일이 KRX 주식 달력과 같은지는 확인하지 못했다. 같다고 가정하고 KRX\"\n+    \" 달력을 걸면, 두 달력이 하루라도 다른 달마다 평균이 조용히 다른 표본으로 만들어진다.\"\n+    \" 원천의 휴장일 안내를 먼저 확인한다\"\n+)\n+\n+#: 원천별 호출 한도·재시도 (FR-011b(1), FR-017a). **등록표가 들고 어댑터가 따른다.**\n+#:\n+#: 재시도 수치의 출처는 `config` 다 — 환경변수로 덮을 수 있어야 하고, 그 읽기는 접속 설정의\n+#: 일이기 때문이다. 등록표는 그 값을 참조하면서 **원천이 공표한 한도**를 함께 든다. 한도는\n+#: 환경변수로 바뀔 성질이 아니라 원천이 정하는 사실이라 여기가 제자리다.\n+#:\n+#: 한도를 수치로 공표하지 않는 원천은 '수치 한도 없음'으로 **확인된 것**이지 미확인이 아니다\n+#: (FR-017a). 둘을 구분하지 않으면 확인된 원천까지 정기 수집에서 빠진다.\n+@dataclass(frozen=True)\n+class SourcePolicy:\n+    \"\"\"원천 하나의 호출 규칙. 재시도는 `config` 값을 참조하고 한도는 여기서 든다.\"\"\"\n+\n+    source_id: str\n+    #: 원천이 공표한 호출 한도. 수치로 밝히지 않으면 그 사실을 문장으로 적는다.\n+    rate_limit: str\n+    #: 요청 하나가 담을 수 있는 개월 수. `None` 이면 상한이 없다.\n+    max_months_per_request: int | None\n+    #: 한도의 출처. 어디서 읽었는지 없으면 나중에 이 값이 추측인지 확인값인지 갈리지 않는다.\n+    basis: str\n+\n+    @property\n+    def max_attempts(self) -> int:\n+        return load_source_config(self.source_id).max_attempts\n+\n+    @property\n+    def backoff_seconds(self) -> tuple[float, ...]:\n+        \"\"\"재시도 사이에 기다릴 초를 차례대로. 기본은 1·2초(3회 시도라 간격은 둘)다.\"\"\"\n+        loaded = load_source_config(self.source_id)\n+        return tuple(loaded.backoff_for(n) for n in range(1, loaded.max_attempts))\n+\n+\n+SOURCE_POLICIES: Final[dict[str, SourcePolicy]] = {\n+    SOURCE_ECOS: SourcePolicy(\n+        source_id=SOURCE_ECOS,\n+        rate_limit=\"수치 한도 없음, 과다 호출 시 제한 가능\",\n+        max_months_per_request=None,\n+        basis=\"한국은행 오픈API 이용안내에 호출 수 상한이 수치로 없다 (pd11 §1)\",\n+    ),\n+    SOURCE_KOSIS: SourcePolicy(\n+        source_id=SOURCE_KOSIS,\n+        rate_limit=\"분당 200회, 요청당 40,000셀\",\n+        max_months_per_request=None,\n+        basis=\"국가통계포털 공유서비스 이용약관의 공표 한도 (FR-017, pd11 §2)\",\n+    ),\n+    SOURCE_CUSTOMS: SourcePolicy(\n+        source_id=SOURCE_CUSTOMS,\n+        rate_limit=\"수치 한도 없음, 과다 호출 시 제한 가능\",\n+        max_months_per_request=12,\n+        basis=\"공공데이터포털이 호출 수를 수치로 밝히지 않는다. 조회 기간 12개월 상한은\"\n+        \" 실제 응답으로 확인했다 (pd11 §4)\",\n+    ),\n+    SOURCE_OECD: SourcePolicy(\n+        source_id=SOURCE_OECD,\n+        rate_limit=\"수치 한도 없음, 과다 호출 시 제한 가능\",\n+        max_months_per_request=None,\n+        basis=\"SDMX 공개 종단점에 공표된 수치 한도가 없다 (pd11 §3)\",\n+    ),\n+}\n+\n+\n+def source_policy(source_id: str) -> SourcePolicy:\n+    \"\"\"원천 하나의 호출 규칙. 등록표에 없는 원천은 쓰지 않는다.\"\"\"\n+    try:\n+        return SOURCE_POLICIES[source_id]\n+    except KeyError:\n+        raise RegistryError(\n+            f\"등록표에 호출 규칙이 없는 원천이다: {source_id!r}.\"\n+            f\" 쓸 수 있는 값은 {', '.join(sorted(SOURCE_POLICIES))}\"\n+        ) from None\n+\n+\n @dataclass(frozen=True)\n class IndicatorDefinition:\n     \"\"\"지표 하나의 등록 정보. 컬럼 이름은 `macro_indicator_definition` 과 같다.\"\"\"\n@@ -107,6 +226,15 @@ class IndicatorDefinition:\n     license_review_status: str\n     series_start: str\n     revision_history_available: bool\n+    #: 원천이 **몇 달 뒤늦게** 값을 내는가. 오늘이 2026-09 일 때 최신 대상월이 2026-07 이면 2다.\n+    #:\n+    #: 전 구간 적재가 끝났는지 판정하려면 \"몇 달치가 와야 하는가\"를 알아야 하는데(FR-011b(3)),\n+    #: 그 수는 상수가 아니라 달마다 늘어난다. 그래서 개수를 적는 대신 **지연을 적고 개수는\n+    #: 계산한다** — `expected_month_count` 가 그 일을 한다. 개수를 적어 두면 다음 달에 바로\n+    #: 틀리고, 틀린 기대값은 미완료를 정상으로 보이게 만든다.\n+    #:\n+    #: 값의 출처는 2026-09-20 전 구간 수집의 실제 최신 대상월이다(원칙 IX). 추정이 아니다.\n+    publication_lag_months: int\n     release_rule: str | None = None\n     break_link_rule: str | None = None\n     missing_rule: str | None = None\n@@ -243,6 +371,7 @@ def _kosis(\n     raw_unit: str,\n     transform_rule: str,\n     series_start: str,\n+    publication_lag_months: int,\n     *,\n     agency: str = _STATISTICS_KOREA,\n     org_id: str = ORG_STATISTICS_KOREA,\n@@ -265,6 +394,7 @@ def _kosis(\n         license_review_status=REVIEW_VERIFIED,\n         series_start=series_start,\n         revision_history_available=True,\n+        publication_lag_months=publication_lag_months,\n         release_rule=_TABLE_UPDATED_AT,\n     )\n \n@@ -273,19 +403,19 @@ def _kosis(\n INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n     # --- 생산 (pd11 §2) ---\n     _kosis(\"all_industry_production\", FIELD_PRODUCTION, \"DT_1JH20201\", \"T1\",\n-           ((\"objL1\", \"0\"),), \"2020=100\", TRANSFORM_YOY, \"2000-01\"),\n+           ((\"objL1\", \"0\"),), \"2020=100\", TRANSFORM_YOY, \"2000-01\", 2),\n     _kosis(\"mining_manufacturing_production\", FIELD_PRODUCTION, \"DT_1F02001\", \"T10\",\n-           ((\"objL1\", \"00\"), (\"objL2\", \"0\")), \"2020=100\", TRANSFORM_YOY, \"1980-01\"),\n+           ((\"objL1\", \"00\"), (\"objL2\", \"0\")), \"2020=100\", TRANSFORM_YOY, \"1980-01\", 2),\n     _kosis(\"service_production\", FIELD_PRODUCTION, \"DT_1KC2020\", \"T1\",\n-           ((\"objL1\", \"T\"),), \"2020=100\", TRANSFORM_YOY, \"2000-01\"),\n+           ((\"objL1\", \"T\"),), \"2020=100\", TRANSFORM_YOY, \"2000-01\", 2),\n     # --- 소비·투자 (pd11 §2) ---\n     _kosis(\"retail_sales_index\", FIELD_CONSUMPTION_INVESTMENT, \"DT_1K41012\", \"T1\",\n-           ((\"objL1\", \"G0\"),), \"2020=100\", TRANSFORM_YOY, \"1995-01\"),\n+           ((\"objL1\", \"G0\"),), \"2020=100\", TRANSFORM_YOY, \"1995-01\", 2),\n     # 설비투자지수는 분류가 objL2 하나뿐이다. objL1 을 지어내 채우지 않는다.\n     _kosis(\"facility_investment_index\", FIELD_CONSUMPTION_INVESTMENT, \"DT_1F70011\", \"T3\",\n-           ((\"objL2\", \"C\"),), \"2020=100\", TRANSFORM_YOY, \"1995-02\"),\n+           ((\"objL2\", \"C\"),), \"2020=100\", TRANSFORM_YOY, \"1995-02\", 2),\n     _kosis(\"construction_completed_constant\", FIELD_CONSUMPTION_INVESTMENT, \"DT_1G18011\", \"T10\",\n-           ((\"objL1\", \"0\"),), \"백만원\", TRANSFORM_YOY, \"1997-07\"),\n+           ((\"objL1\", \"0\"),), \"백만원\", TRANSFORM_YOY, \"1997-07\", 2),\n     # --- 대외거래 (pd11 §4). 무역수지는 원천이 주는 공식 값이며 수출-수입 파생식이 아니다 ---\n     IndicatorDefinition(\n         indicator_id=\"exports\", field_id=FIELD_EXTERNAL_TRADE, primary_source=SOURCE_CUSTOMS,\n@@ -293,7 +423,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         raw_unit=\"미국 달러\", transformed_unit=\"%\",\n         transform_rule=TRANSFORM_YOY, agency=\"관세청\", attribution=\"관세청 수출입총괄\",\n         license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n     ),\n     IndicatorDefinition(\n@@ -302,7 +432,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         raw_unit=\"미국 달러\", transformed_unit=\"%\",\n         transform_rule=TRANSFORM_YOY, agency=\"관세청\", attribution=\"관세청 수출입총괄\",\n         license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"응답의 <year>총계</year> 합계 행은 관측값으로 세지 않는다\",\n     ),\n     IndicatorDefinition(\n@@ -312,12 +442,12 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         transformed_unit=\"미국 달러\", transform_rule=TRANSFORM_OFFICIAL_AMOUNT, agency=\"관세청\",\n         attribution=\"관세청 수출입총괄\", license_status=\"ALLOWED\",\n         license_review_status=REVIEW_VERIFIED, series_start=\"1989-01\",\n-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        revision_history_available=False, publication_lag_months=0, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"원천 제공값이다. 수출에서 수입을 빼 만들지 않는다\",\n     ),\n     # --- 노동 (pd11 §2). 실업률은 원천이 계절조정한 값이라 우리가 다시 조정하지 않는다 ---\n     _kosis(\"employed_persons\", FIELD_LABOR, \"DT_1DA7001S\", \"T30\",\n-           ((\"objL1\", \"0\"),), \"천명\", TRANSFORM_YOY, \"1999-06\"),\n+           ((\"objL1\", \"0\"),), \"천명\", TRANSFORM_YOY, \"1999-06\", 1),\n     IndicatorDefinition(\n         indicator_id=\"unemployment_rate\", field_id=FIELD_LABOR, primary_source=SOURCE_KOSIS,\n         table_code=\"DT_1DA9001S\", item_code=\"T80\", org_id=ORG_STATISTICS_KOREA,\n@@ -325,12 +455,12 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         transform_rule=TRANSFORM_SEASONAL_RATE, agency=_STATISTICS_KOREA,\n         attribution=_KOSIS_ATTRIBUTION, license_status=\"ALLOWED\",\n         license_review_status=REVIEW_VERIFIED, series_start=\"1999-06\",\n-        revision_history_available=True, release_rule=_TABLE_UPDATED_AT,\n+        revision_history_available=True, publication_lag_months=1, release_rule=_TABLE_UPDATED_AT,\n         missing_rule=\"원천이 계절조정한 값을 그대로 쓴다. 우리가 계절조정하지 않는다\",\n     ),\n     # --- 물가·원자재 ---\n     _kosis(\"consumer_price_index\", FIELD_PRICES_COMMODITIES, \"DT_1J22003\", \"T\",\n-           ((\"objL1\", \"T10\"),), \"2020=100\", TRANSFORM_YOY, \"1980-01\"),\n+           ((\"objL1\", \"T10\"),), \"2020=100\", TRANSFORM_YOY, \"1980-01\", 1),\n     IndicatorDefinition(\n         indicator_id=\"dubai_crude\", field_id=FIELD_PRICES_COMMODITIES, primary_source=SOURCE_ECOS,\n         table_code=\"902Y003\", item_code=\"010102\", org_id=None, classification=(),\n@@ -341,7 +471,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         # 대상인지 물을 창구가 없다(pd11 §1). 조건 자체를 모르는 UNVERIFIED 와 구분해 두고\n         # 쓴다 — 하나로 묶으면 발행이 보류되어 나머지 16개까지 멈춘다.\n         license_review_status=REVIEW_PENDING_RIGHTS, series_start=\"1992-01\",\n-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,\n     ),\n     # --- 금융·주택 ---\n     IndicatorDefinition(\n@@ -351,7 +481,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         transformed_unit=\"연%\", transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\",\n         attribution=_ECOS_ATTRIBUTION, license_status=\"ALLOWED\",\n         license_review_status=REVIEW_VERIFIED, series_start=\"1998-11\",\n-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"일별 계열이다. 그 달 마지막 거래일 값을 쓰고 휴장일 값을 만들지 않는다\",\n     ),\n     IndicatorDefinition(\n@@ -362,7 +492,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         raw_unit=\"원\", transformed_unit=\"원\",\n         transform_rule=TRANSFORM_MONTH_END, agency=\"한국은행\", attribution=_ECOS_ATTRIBUTION,\n         license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1964-05\",\n-        revision_history_available=False, release_rule=_NO_RELEASE_DATE,\n+        revision_history_available=False, publication_lag_months=1, release_rule=_NO_RELEASE_DATE,\n         missing_rule=\"항목2 0000200 말일자료다. 평균자료(0000100)와 섞지 않는다\",\n     ),\n     IndicatorDefinition(\n@@ -374,7 +504,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         license_review_status=REVIEW_VERIFIED,\n         # 현행 표 하나는 2021-06 부터지만 연결 사슬을 거치면 2000-01 까지 닿는다.\n         series_start=\"2000-01\",\n-        revision_history_available=True, release_rule=_TABLE_UPDATED_AT,\n+        revision_history_available=True, publication_lag_months=2, release_rule=_TABLE_UPDATED_AT,\n         break_link_rule=_HOUSING_BREAK_LINK_RULE,\n         link_chain=HOUSING_LINK_CHAIN,\n     ),\n@@ -385,7 +515,7 @@ INDICATORS: Final[tuple[IndicatorDefinition, ...]] = (\n         classification=(), raw_unit=\"지수\", transformed_unit=\"%\", transform_rule=TRANSFORM_YOY,\n         agency=\"경제협력개발기구(OECD)\", attribution=\"OECD Composite Leading Indicators\",\n         license_status=\"ALLOWED\", license_review_status=REVIEW_VERIFIED, series_start=\"1961-01\",\n-        revision_history_available=True,\n+        revision_history_available=True, publication_lag_months=1,\n         release_rule=\"응답 헤더 Last-Modified 를 데이터셋 갱신일로 쓴다.\"\n         \" SDMX 헤더의 Prepared 는 응답 생성 시각이라 개정 식별자로 쓰지 않는다\",\n         missing_rule=\"증가율은 지수에서 직접 계산한다. 원천의 TR/GY 계열을 쓰지 않는다 (FR-019)\",\n@@ -423,6 +553,33 @@ def nominal_weights(\n     return weights\n \n \n+def _month_index(period: str) -> int:\n+    return int(period[:4]) * 12 + int(period[5:7]) - 1\n+\n+\n+def expected_end_month(indicator: IndicatorDefinition, as_of: str) -> str:\n+    \"\"\"``as_of`` 달 기준으로 **값이 와 있어야 할 가장 최근 대상월** (FR-011b(3)).\n+\n+    ``as_of`` 는 ``YYYY-MM`` 이다. 원천이 뒤늦게 내는 만큼 뒤로 물린다.\n+    \"\"\"\n+    index = _month_index(as_of) - indicator.publication_lag_months\n+    return f\"{index // 12:04d}-{index % 12 + 1:02d}\"\n+\n+\n+def expected_month_count(indicator: IndicatorDefinition, as_of: str) -> int:\n+    \"\"\"전 구간 적재가 끝났다면 있어야 할 **대상월 수** (FR-011b(3)).\n+\n+    개수를 등록표에 상수로 적지 않는 이유는 그 수가 달마다 늘기 때문이다. 상수로 적으면 다음\n+    달에 곧바로 틀리고, 틀린 기대값은 미완료를 정상으로 보이게 한다 — 기대가 실제보다 작으면\n+    무엇이 빠졌든 판정은 늘 통과한다.\n+\n+    **변환값이 아니라 대상월을 센다.** 전년동월 대비의 첫 열두 달은 비교월이 없어 결측이지만\n+    그 달들도 받은 대상월이다. 값이 있는 달만 세면 증가율 지표가 영영 미완료로 남는다.\n+    \"\"\"\n+    start, end = indicator.series_start[:7], expected_end_month(indicator, as_of)\n+    return max(_month_index(end) - _month_index(start) + 1, 0)\n+\n+\n def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:\n     \"\"\"등록표 단위의 불변식을 본다. 행 단위 제약으로는 표현할 수 없는 것들이다.\n \n@@ -447,6 +604,29 @@ def validate(indicators: tuple[IndicatorDefinition, ...] = INDICATORS) -> None:\n                 f\"{indicator.indicator_id}의 주기가 {', '.join(CYCLE_IDS)} 밖이다:\"\n                 f\" {indicator.source_cycle}\"\n             )\n+        if indicator.publication_lag_months < 0:\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}의 공표 지연이 음수다:\"\n+                f\" {indicator.publication_lag_months}. 원천이 미래를 낼 수는 없다\"\n+            )\n+        if indicator.primary_source not in SOURCE_POLICIES:\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}의 원천 {indicator.primary_source!r} 에 호출 규칙이\"\n+                \" 없다. 한도를 모르는 원천은 정기 수집에 올리지 않는다 (FR-017a)\"\n+            )\n+        # 월 평균은 그 달 거래일이 다 모였는지로 값을 낼지 정하는데, 달력이 없으면 그 판정을\n+        # 할 수 없어 매달 결측이 된다(FR-006b). 지금 여기 걸리는 지표는 없다 — 걸리는 지표를\n+        # 나중에 더할 때 조용히 빈 칸으로 들어오지 않게 막는 자리다.\n+        if (\n+            indicator.transform_rule == TRANSFORM_MONTH_AVERAGE\n+            and indicator.source_cycle == CYCLE_DAILY\n+            and not indicator.trading_calendar\n+        ):\n+            raise RegistryError(\n+                f\"{indicator.indicator_id}: 일별 계열의 월 평균은 거래일 달력이 있어야 한다\"\n+                \" (FR-006b). 달력 없이는 그 달이 다 모였는지 판정할 수 없어 매달 결측이 된다.\"\n+                f\" {TRADING_CALENDAR_UNVERIFIED}\"\n+            )\n \n     used_fields = {indicator.field_id for indicator in indicators}\n     missing = set(FIELD_IDS) - used_fields\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/registry.py",
+          "old_path": "data/src/data_pipeline/macro/registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,6 +13,8 @@ from sqlalchemy import Engine, text\n from data_pipeline.macro.registry import (\n     FIELD_IDS,\n     NOMINAL_WEIGHT_POLICY,\n+    REFRESH_MONTHS_BASIS,\n+    SOURCE_POLICIES,\n     IndicatorDefinition,\n     nominal_weights,\n     validate,\n@@ -68,6 +70,29 @@ def _value_rule(indicator: IndicatorDefinition) -> dict[str, object]:\n     }\n \n \n+def _source_policy_payload(\n+    indicators: Sequence[IndicatorDefinition],\n+) -> dict[str, dict[str, object]]:\n+    \"\"\"등록표가 실제로 쓰는 원천의 호출 규칙 (FR-011b(1), FR-017a).\n+\n+    **값 지문에는 넣지 않는다.** 재시도 횟수나 호출 한도가 달라져도 같은 자료에서 같은 값이\n+    나온다 — 달라지는 것은 받아 오는 방법이지 계산이 아니다. 지문에 넣으면 간격 한 번 조정한\n+    것이 새 등록표 버전이 되고, 그러면 멀쩡한 자료가 옛 버전 것으로 밀린다.\n+    \"\"\"\n+    used = {indicator.primary_source for indicator in indicators}\n+    return {\n+        source_id: {\n+            \"rate_limit\": policy.rate_limit,\n+            \"max_months_per_request\": policy.max_months_per_request,\n+            \"max_attempts\": policy.max_attempts,\n+            \"backoff_seconds\": list(policy.backoff_seconds),\n+            \"basis\": policy.basis,\n+        }\n+        for source_id, policy in sorted(SOURCE_POLICIES.items())\n+        if source_id in used\n+    }\n+\n+\n def value_rule_fingerprint(indicators: Sequence[IndicatorDefinition]) -> str:\n     \"\"\"17개 값 규칙의 순서 독립 SHA-256 지문.\"\"\"\n     validate(tuple(indicators))\n@@ -137,15 +162,23 @@ def register_calculation_version(\n         \"CAST(:link_chain AS JSONB)\"\n         if engine.dialect.name == \"postgresql\" else \":link_chain\"\n     )\n+    policy_expression = (\n+        \"CAST(:source_policy AS JSONB)\"\n+        if engine.dialect.name == \"postgresql\" else \":source_policy\"\n+    )\n     with engine.begin() as connection:\n         registry_id = connection.execute(\n             text(\"INSERT INTO macro_calculation_registry_version \"\n                  \"(version_key, value_rule_fingerprint, change_reason, \"\n-                 \"nominal_weight_policy, status, created_at) \"\n-                 \"VALUES (:key, :fingerprint, :reason, :policy, 'PUBLISHED', CURRENT_TIMESTAMP) \"\n+                 \"nominal_weight_policy, source_policy, refresh_months_basis, \"\n+                 \"status, created_at) \"\n+                 f\"VALUES (:key, :fingerprint, :reason, :policy, {policy_expression}, \"\n+                 \":refresh_basis, 'PUBLISHED', CURRENT_TIMESTAMP) \"\n                  \"RETURNING id\"),\n             {\"key\": version_key, \"fingerprint\": fingerprint, \"reason\": change_reason,\n-             \"policy\": weight_policy or NOMINAL_WEIGHT_POLICY},\n+             \"policy\": weight_policy or NOMINAL_WEIGHT_POLICY,\n+             \"source_policy\": json.dumps(_source_policy_payload(indicators)),\n+             \"refresh_basis\": REFRESH_MONTHS_BASIS},\n         ).scalar_one()\n         for indicator in indicators:\n             connection.execute(\n@@ -156,14 +189,14 @@ def register_calculation_version(\n                      \"release_rule, break_link_rule, missing_rule, agency, attribution, \"\n                      \"license_status, license_review_status, published_precision, \"\n                      \"refresh_months_n, nominal_weight, trading_calendar, \"\n-                     \"revision_history_available) VALUES \"\n+                     \"publication_lag_months, revision_history_available) VALUES \"\n                      \"(:registry, :indicator, :field, :source, :table_code, :item_code, \"\n                      f\":org_id, {classification_expression}, :source_cycle, :series_start, \"\n                      f\"{links_expression}, :raw_unit, :transformed_unit, :transform_rule, \"\n                      \":release_rule, \"\n                      \":break_link_rule, :missing_rule, :agency, :attribution, :license_status, \"\n                      f\":license_review_status, :precision, :refresh, {weight_expression}, \"\n-                     \":trading_calendar, :revision_history)\"),\n+                     \":trading_calendar, :publication_lag, :revision_history)\"),\n                 {\"registry\": registry_id, \"indicator\": indicator.indicator_id,\n                  \"field\": indicator.field_id, \"source\": indicator.primary_source,\n                  \"table_code\": indicator.table_code, \"item_code\": indicator.item_code,\n@@ -185,6 +218,7 @@ def register_calculation_version(\n                  \"refresh\": indicator.refresh_months_n,\n                  \"weight\": json.dumps(str(chosen_weights[indicator.indicator_id])),\n                  \"trading_calendar\": indicator.trading_calendar,\n+                 \"publication_lag\": indicator.publication_lag_months,\n                  \"revision_history\": indicator.revision_history_available},\n             )\n     return registry_id\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/src/data_pipeline/macro/versioning.py",
+          "old_path": "data/src/data_pipeline/macro/versioning.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,11 +21,18 @@ from sqlalchemy import create_engine\n from sqlalchemy.engine import URL\n from sqlalchemy.exc import OperationalError\n \n-MIGRATIONS = (\n-    \"V20260918120000__macro_registry.sql\",\n-    \"V20260918153100__macro_normalized_missing_reasons.sql\",\n+#: macro 스키마 마이그레이션을 담은 곳. 목록을 손으로 적지 않고 **파일 이름으로 찾는다** —\n+#: 적어 두면 새 마이그레이션을 더할 때마다 여기를 같이 고쳐야 하고, 잊으면 테스트만 옛 스키마로\n+#: 돌아 통과한다. 그 통과는 운영이 새 컬럼으로 도는 사실을 감춘다.\n+MIGRATION_DIR = (\n+    Path(__file__).resolve().parents[2]\n+    / \"backend\" / \"src\" / \"main\" / \"resources\" / \"db\" / \"migration\"\n )\n \n+#: 이름순이 곧 판 번호순이다(``V<타임스탬프>__``).\n+def macro_migrations() -> list[Path]:\n+    return sorted(MIGRATION_DIR.glob(\"V*__macro_*.sql\"))\n+\n \n def _docker(*arguments: str) -> str:\n     result = subprocess.run(\n@@ -101,14 +108,12 @@ def postgres_engine():\n                 if time.monotonic() >= deadline:\n                     raise\n                 time.sleep(0.25)\n-        migration_dir = Path(__file__).resolve().parents[2] / \"backend\" / \"src\" / \"main\" \\\n-            / \"resources\" / \"db\" / \"migration\"\n         with psycopg.connect(\n             host=host, port=port, dbname=\"macro_test\",\n             user=\"postgres\", password=password,\n         ) as connection:\n-            for migration in MIGRATIONS:\n-                connection.execute((migration_dir / migration).read_text(encoding=\"utf-8\"))\n+            for migration in macro_migrations():\n+                connection.execute(migration.read_text(encoding=\"utf-8\"))\n         yield engine\n     finally:\n         if \"engine\" in locals():\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/conftest.py",
+          "old_path": "data/tests/conftest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,6 +12,7 @@ from __future__ import annotations\n \n import json\n import pathlib\n+from dataclasses import replace\n from datetime import date\n \n import pytest\n@@ -35,7 +36,12 @@ class FixtureFetcher:\n         self._default = default\n         self.calls: list[tuple[str, dict[str, str] | None]] = []\n \n-    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str:\n         self.calls.append((url, params))\n         for marker, body in self._bodies.items():\n             if marker in url or (params and marker in str(params)):\n@@ -49,7 +55,12 @@ class FailingFetcher:\n     def __init__(self, error: Exception) -> None:\n         self._error = error\n \n-    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str:\n         raise self._error\n \n \n@@ -122,7 +133,7 @@ def test_failure_does_not_stop_other_indicators(tmp_path):\n     bad = _indicator(\"treasury_bond_3y\")\n \n     class Selective:\n-        def get(self, url, params=None):\n+        def get(self, url, params=None, headers=None):\n             if \"817Y002\" in url:\n                 raise TransientSourceError(\"끊김\")\n             return _ecos_body()\n@@ -290,3 +301,185 @@ def test_json_body_that_is_not_json_stops_instead_of_emptying(tmp_path):\n def test_fixture_bodies_are_valid_json():\n     \"\"\"표본이 깨지면 이 파일의 다른 시험이 엉뚱한 이유로 실패한다. 먼저 확인한다.\"\"\"\n     json.loads(_ecos_body())\n+\n+\n+def test_daily_series_is_asked_with_eight_digit_dates(tmp_path):\n+    \"\"\"일별 계열은 ``YYYYMMDD`` 로 묻는다 (FR-005).\n+\n+    운영에서 국고채가 `[ERROR-101] 주기와 다른 형식의 날짜 형식입니다` 로 거절당한 자리다.\n+    어댑터는 주기별 자릿수를 알고 있었고 부르는 쪽이 여섯 자리를 넘기고 있었다.\n+    \"\"\"\n+    indicator = _indicator(\"treasury_bond_3y\")\n+    assert indicator.source_cycle == \"D\", \"표본 전제가 바뀌었다\"\n+    fetcher = FixtureFetcher(\n+        {}, default=(FIXTURES / \"ecos\" / \"treasury_bond_3y_daily.json\").read_text(encoding=\"utf-8\")\n+    )\n+\n+    ingest.collect(\n+        [indicator],\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    url = fetcher.calls[0][0]\n+    assert \"/19981101/20260930/\" in url, url\n+\n+\n+def test_monthly_series_keeps_six_digit_dates(tmp_path):\n+    \"\"\"월별 계열은 여섯 자리 그대로다. 일별 고치면서 같이 늘어나면 안 된다.\"\"\"\n+    fetcher = FixtureFetcher({}, default=_ecos_body())\n+\n+    ingest.collect(\n+        [_indicator(\"dubai_crude\")],\n+        fetcher=fetcher,\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"ecos\": _config(\"ecos\")},\n+    )\n+\n+    url = fetcher.calls[0][0]\n+    assert \"/199201/202609/\" in url, url\n+\n+\n+def test_month_end_day_is_correct_for_february():\n+    \"\"\"일별 조회의 끝은 그 달 말일이다. 좁히면 마지막 거래일을 놓친다 (FR-006a).\"\"\"\n+    from data_pipeline.macro.ingest import _ecos_period\n+\n+    assert _ecos_period(\"2024-02\", \"D\", end=True) == \"20240229\"  # 윤년\n+    assert _ecos_period(\"2026-02\", \"D\", end=True) == \"20260228\"\n+    assert _ecos_period(\"2000-02\", \"D\", end=True) == \"20000229\"  # 400 으로 나뉘는 해\n+    assert _ecos_period(\"1900-02\", \"D\", end=True) == \"19000228\"  # 100 으로만 나뉘는 해\n+    assert _ecos_period(\"2026-04\", \"D\", end=True) == \"20260430\"\n+\n+\n+def test_sdmx_is_asked_for_json(tmp_path):\n+    \"\"\"경제협력개발기구는 달라고 해야 JSON 을 준다.\n+\n+    기본 응답이 XML 이라 헤더 없이 부르면 \"응답이 JSON 이 아니다\"로 끝난다. 운영에서\n+    g20_cli 가 그렇게 실패했다.\n+    \"\"\"\n+    captured: list[dict[str, str] | None] = []\n+\n+    class HeaderSpy:\n+        def get(self, url, params=None, headers=None):\n+            captured.append(headers)\n+            return \"{}\"\n+\n+    ingest.collect(\n+        [_indicator(\"g20_cli\")],\n+        fetcher=HeaderSpy(),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 9, 20),\n+        configs={\"oecd\": _config(\"oecd\")},\n+    )\n+\n+    assert captured, \"요청이 나가지 않았다\"\n+    accept = (captured[0] or {}).get(\"Accept\", \"\")\n+    assert \"json\" in accept.lower(), f\"JSON 을 요청하지 않았다: {accept!r}\"\n+    # 판본까지 못 박는다. 1.0 은 structure 하나를, 2.0 은 structures 배열을 준다 —\n+    # 어댑터는 2.0 을 읽으므로 판본을 비우면 원천이 1.0 을 주고 파싱이 실패한다.\n+    assert \"2.0.0\" in accept, f\"SDMX 판본을 고정하지 않았다: {accept!r}\"\n+\n+\n+def test_oecd_fixture_is_sdmx_json_2(tmp_path):\n+    \"\"\"표본이 2.0 판본인지 확인한다. 이 전제가 깨지면 위 헤더 고정이 틀린 것이 된다.\"\"\"\n+    import json\n+\n+    payload = json.loads((FIXTURES / \"oecd\" / \"g20_cli_aa_ix.json\").read_text(encoding=\"utf-8\"))\n+\n+    assert \"2.0.0\" in payload[\"meta\"][\"schema\"]\n+    assert \"structures\" in payload[\"data\"]\n+\n+\n+# ---------------------------------------------------------------------------\n+# 전 구간 적재 완료 판정 (T077, FR-011b(3))\n+# ---------------------------------------------------------------------------\n+def _observations(indicator_id: str, count: int) -> list[object]:\n+    \"\"\"대상월 ``count`` 개를 흉내 낸다. 개수만 세므로 내용은 보지 않는다.\"\"\"\n+    return [object()] * count\n+\n+\n+def test_shortfall_is_reported_when_a_series_arrives_short():\n+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == \"consumer_price_index\")\n+    expected = registry.expected_month_count(cpi, \"2026-09\")\n+    missing = ingest.shortfalls(\n+        [cpi], {\"consumer_price_index\": _observations(\"consumer_price_index\", expected - 5)},\n+        \"2026-09\",\n+    )\n+    assert len(missing) == 1\n+    assert missing[0].indicator_id == \"consumer_price_index\"\n+    assert missing[0].expected_months == expected\n+    assert missing[0].received_months == expected - 5\n+    assert missing[0].expected_end_month == \"2026-08\"\n+\n+\n+def test_a_full_series_is_not_a_shortfall():\n+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == \"consumer_price_index\")\n+    expected = registry.expected_month_count(cpi, \"2026-09\")\n+    assert ingest.shortfalls(\n+        [cpi], {\"consumer_price_index\": _observations(\"consumer_price_index\", expected)},\n+        \"2026-09\",\n+    ) == []\n+\n+\n+def test_extra_months_are_not_a_shortfall():\n+    \"\"\"원천이 이번 달치를 먼저 내면 기대보다 많다. 그것은 문제가 아니다.\"\"\"\n+    bond = next(i for i in registry.INDICATORS if i.indicator_id == \"treasury_bond_3y\")\n+    expected = registry.expected_month_count(bond, \"2026-09\")\n+    assert ingest.shortfalls(\n+        [bond], {\"treasury_bond_3y\": _observations(\"treasury_bond_3y\", expected + 1)}, \"2026-09\"\n+    ) == []\n+\n+\n+def test_an_indicator_that_got_nothing_is_a_shortfall():\n+    \"\"\"수집이 통째로 실패한 지표도 미달이다 — 빈 목록을 완료로 보면 안 된다.\"\"\"\n+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == \"consumer_price_index\")\n+    missing = ingest.shortfalls([cpi], {}, \"2026-09\")\n+    assert len(missing) == 1\n+    assert missing[0].received_months == 0\n+\n+\n+def test_one_missing_tail_month_is_tolerated():\n+    \"\"\"발표가 하루 이틀 밀린 날의 실행이 17개 전부를 막지 않는다.\n+\n+    등록표의 공표 지연은 하루치 관측으로 정한 값이라 달마다 정확히 맞지 않는다. 여유 없이\n+    걸면 그 차이가 곧 발행 중단이 된다.\n+    \"\"\"\n+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == \"consumer_price_index\")\n+    expected = registry.expected_month_count(cpi, \"2026-09\")\n+    assert ingest.shortfalls(\n+        [cpi], {\"consumer_price_index\": _observations(\"consumer_price_index\", expected - 1)},\n+        \"2026-09\",\n+    ) == []\n+\n+\n+def test_two_missing_tail_months_are_not_tolerated():\n+    \"\"\"여유는 한 달이다. 두 달이 비면 발표 지연이 아니라 다른 문제다.\"\"\"\n+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == \"consumer_price_index\")\n+    expected = registry.expected_month_count(cpi, \"2026-09\")\n+    missing = ingest.shortfalls(\n+        [cpi], {\"consumer_price_index\": _observations(\"consumer_price_index\", expected - 2)},\n+        \"2026-09\",\n+    )\n+    assert len(missing) == 1\n+\n+\n+def test_slack_does_not_hide_a_truncated_history():\n+    \"\"\"이 판정이 정말로 막으려는 것 — 전 구간이 통째로 짧은 경우는 여유로 가려지지 않는다.\"\"\"\n+    housing = next(i for i in registry.INDICATORS if i.indicator_id == \"housing_sale_price\")\n+    # 연결 사슬 없이 현행 표만 받으면 2021-06 부터다. 2000-01 부터여야 하는데 260개월이 빈다.\n+    only_current_table = registry.expected_month_count(\n+        replace(housing, series_start=\"2021-06\"), \"2026-09\"\n+    )\n+    missing = ingest.shortfalls(\n+        [housing],\n+        {\"housing_sale_price\": _observations(\"housing_sale_price\", only_current_table)},\n+        \"2026-09\",\n+    )\n+    assert len(missing) == 1\n+    assert missing[0].expected_months - missing[0].received_months > 200\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_ingest.py",
+          "old_path": "data/tests/test_macro_ingest.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,7 +35,12 @@ class StubFetcher:\n     def __init__(self, body: str = '{\"ok\": true}') -> None:\n         self._body = body\n \n-    def get(self, url: str, params: dict[str, str] | None = None) -> str:\n+    def get(\n+        self,\n+        url: str,\n+        params: dict[str, str] | None = None,\n+        headers: dict[str, str] | None = None,\n+    ) -> str:\n         return self._body\n \n \n@@ -186,7 +191,7 @@ def test_failed_indicator_keeps_its_error_class(\n     _prepare_registry(postgres_engine, seeded_indicators)\n \n     class AlwaysFails:\n-        def get(self, url, params=None):\n+        def get(self, url, params=None, headers=None):\n             raise TransientSourceError(\"끊김\")\n \n     report = ingest.run(\n@@ -222,7 +227,7 @@ def test_publication_is_held_but_records_still_land(\n     _prepare_registry(postgres_engine, seeded_indicators)\n \n     class AlwaysFails:\n-        def get(self, url, params=None):\n+        def get(self, url, params=None, headers=None):\n             raise TransientSourceError(\"끊김\")\n \n     report = ingest.run(\n@@ -238,14 +243,19 @@ def test_publication_is_held_but_records_still_land(\n     assert report.publication_held is not None\n     with postgres_engine.begin() as connection:\n         attempts = connection.execute(\n-            text(\"SELECT status FROM macro_collection_attempt WHERE attempt_key = :key\"),\n+            text(\"SELECT status, hold_reason FROM macro_collection_attempt\"\n+                 \" WHERE attempt_key = :key\"),\n             {\"key\": report.attempt_key},\n-        ).scalars().all()\n+        ).all()\n         items = connection.execute(\n             text(\"SELECT count(*) FROM macro_collection_item_status\")\n         ).scalar_one()\n \n-    assert attempts == [\"PARTIAL\"]\n+    # 아무것도 발행되지 않았으므로 성공이 아니고, 왜 막혔는지가 행에 함께 남는다 (T083).\n+    assert len(attempts) == 1\n+    status, hold_reason = attempts[0]\n+    assert status == \"HELD\"\n+    assert hold_reason, \"보류했는데 사유가 DB 에 없다. 로그는 지나간다\"\n     assert items == len(seeded_indicators)\n \n \n@@ -412,7 +422,7 @@ def test_quota_stops_collection_and_keeps_what_arrived(\n         def __init__(self) -> None:\n             self.calls = 0\n \n-        def get(self, url, params=None):\n+        def get(self, url, params=None, headers=None):\n             self.calls += 1\n             if self.calls > allowed:\n                 raise QuotaExhaustedError(\"한도 도달\")\n@@ -449,7 +459,7 @@ def test_quota_is_recorded_and_publication_is_held(\n     _prepare_registry(postgres_engine, indicators)\n \n     class AlwaysQuota:\n-        def get(self, url, params=None):\n+        def get(self, url, params=None, headers=None):\n             raise QuotaExhaustedError(\"한도 도달\")\n \n     report = ingest.run(\n@@ -533,3 +543,296 @@ def test_item_status_creates_the_attempt_when_publication_never_started(\n \n     assert attempt == (\"INITIAL\", \"PARTIAL\")\n     assert items == [(\"all_industry_production\", ingest.STATUS_FAILED)]\n+\n+\n+# ---------------------------------------------------------------------------\n+# 걸러낸 행 수 (T075, FR-017a)\n+# ---------------------------------------------------------------------------\n+def test_excluded_total_rows_land_in_the_collection_record(postgres_engine) -> None:\n+    \"\"\"관세청 합계 행을 몇 개 뺐는지가 수집 기록에 남는다.\n+\n+    남지 않으면 \"9개월치를 받았다\"와 \"10행을 받아 1행을 뺐다\"가 같은 모양이 된다 — 원천이\n+    합계 행의 모양을 바꿔 걸러지지 않게 됐을 때 그 사실이 드러나지 않는다.\n+    \"\"\"\n+    exports = _outcome(\"exports\")\n+    exports.source = \"customs\"\n+    exports.excluded_rows = 37\n+    imports = _outcome(\"imports\")\n+    imports.source = \"customs\"\n+\n+    ingest.record_item_status(postgres_engine, \"attempt-excluded\", [exports, imports])\n+\n+    with postgres_engine.begin() as connection:\n+        rows = dict(\n+            connection.execute(\n+                text(\n+                    \"SELECT indicator_id, excluded_row_count\"\n+                    \" FROM macro_collection_item_status\"\n+                    \" WHERE attempt_id = (SELECT id FROM macro_collection_attempt\"\n+                    \"                     WHERE attempt_key = 'attempt-excluded')\"\n+                )\n+            ).all()\n+        )\n+    assert rows[\"exports\"] == 37\n+    # 아무것도 걸러내지 않은 지표는 0 이다. NULL 로 두면 \"세지 않았다\"와 구분되지 않는다.\n+    assert rows[\"imports\"] == 0\n+\n+\n+# ---------------------------------------------------------------------------\n+# 전 구간 적재 완료 판정 (T077, FR-011b(3))\n+# ---------------------------------------------------------------------------\n+def test_initial_load_short_of_the_expected_months_is_not_published(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"기대 대상월 수를 못 채우면 발행하지 않는다.\n+\n+    짧은 계열로 낸 스냅샷은 응답도 값도 멀쩡하다 — 과거가 잘려 있다는 사실이 화면 어디에도\n+    드러나지 않으므로, 발행 전에 막지 않으면 아무도 알아채지 못한다.\n+    \"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    # 표본은 2024-01 부터인데 등록표는 2000-01 부터라고 말한다. 스무 해가 비는 상황이다.\n+    indicators = tuple(\n+        replace(_ecos_shaped(indicator), series_start=\"2000-01\") for indicator in INDICATORS\n+    )\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        indicators,\n+        fetcher=StubFetcher(body),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 8, 15),\n+    )\n+\n+    assert report.publication_held is not None\n+    assert \"기대에 못 미쳐\" in report.publication_held\n+    assert not report.published\n+    # 발행은 막았지만 무엇을 받았는지는 남는다 (FR-011).\n+    with postgres_engine.begin() as connection:\n+        recorded = connection.execute(\n+            text(\n+                \"SELECT count(*) FROM macro_collection_item_status\"\n+                \" WHERE attempt_id = (SELECT id FROM macro_collection_attempt\"\n+                \"                     WHERE attempt_key = :key)\"\n+            ),\n+            {\"key\": report.attempt_key},\n+        ).scalar_one()\n+    assert recorded == len(indicators)\n+\n+\n+def test_regular_mode_is_not_judged_by_the_full_range(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"정기 수집은 최근 N개월만 받으므로 전 구간 판정을 걸지 않는다.\n+\n+    걸면 정기 수집이 매번 미달로 보류되고, 그 보류가 쌓이면 진짜 미달을 구분하지 못한다.\n+    \"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    indicators = tuple(\n+        replace(_ecos_shaped(indicator), series_start=\"2000-01\") for indicator in INDICATORS\n+    )\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        indicators,\n+        fetcher=StubFetcher(body),\n+        data_root=tmp_path,\n+        mode=\"regular\",\n+        today=date(2026, 8, 15),\n+    )\n+\n+    assert report.publication_held is None or \"기대에 못 미쳐\" not in report.publication_held\n+\n+\n+def test_a_held_load_does_not_look_like_a_successful_one(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"지표가 다 성공해도 발행을 막았으면 시도 행이 성공으로 남지 않는다 (T083).\n+\n+    적재 미달로 막은 실행은 지표 열일곱이 모두 성공한 것이 사실이다. 그 사실만 적으면 DB 를\n+    읽는 사람은 아무것도 발행되지 않았다는 것을 알 수 없고, 사유는 로그와 함께 지나간다.\n+    \"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    indicators = tuple(\n+        replace(_ecos_shaped(indicator), series_start=\"2000-01\") for indicator in INDICATORS\n+    )\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        indicators,\n+        fetcher=StubFetcher(body),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 8, 15),\n+    )\n+\n+    with postgres_engine.begin() as connection:\n+        status, hold_reason = connection.execute(\n+            text(\"SELECT status, hold_reason FROM macro_collection_attempt\"\n+                 \" WHERE attempt_key = :key\"),\n+            {\"key\": report.attempt_key},\n+        ).one()\n+        item_statuses = set(\n+            connection.execute(\n+                text(\"SELECT status FROM macro_collection_item_status\"\n+                     \" WHERE attempt_id = (SELECT id FROM macro_collection_attempt\"\n+                     \"                     WHERE attempt_key = :key)\"),\n+                {\"key\": report.attempt_key},\n+            ).scalars().all()\n+        )\n+\n+    assert status == \"HELD\"\n+    assert \"기대에 못 미쳐\" in hold_reason\n+    # 지표별로는 성공이 맞다. 둘을 함께 읽어야 무슨 일이 있었는지가 드러난다.\n+    assert item_statuses == {ingest.STATUS_SUCCEEDED}\n+\n+\n+def test_a_diagnostic_partial_run_is_held_with_its_reason(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"`--indicator` 진단 실행도 보류로 남는다. 발행하지 않았다는 사실은 같다.\"\"\"\n+    indicators = tuple(replace(i, series_start=\"2026-05\") for i in INDICATORS)\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        (indicators[0],),\n+        fetcher=StubFetcher(),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 7, 15),\n+    )\n+\n+    with postgres_engine.begin() as connection:\n+        status, hold_reason = connection.execute(\n+            text(\"SELECT status, hold_reason FROM macro_collection_attempt\"\n+                 \" WHERE attempt_key = :key\"),\n+            {\"key\": report.attempt_key},\n+        ).one()\n+\n+    assert status == \"HELD\"\n+    assert \"부분 수집\" in hold_reason\n+\n+\n+def test_a_published_run_keeps_its_successful_attempt(\n+    postgres_engine, tmp_path: Path, dummy_keys\n+) -> None:\n+    \"\"\"발행에 성공한 실행은 건드리지 않는다 — 보류 기록이 성공까지 덮으면 안 된다.\"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    report = ingest.run(\n+        postgres_engine,\n+        indicators,\n+        fetcher=StubFetcher(body),\n+        data_root=tmp_path,\n+        mode=\"initial\",\n+        today=date(2026, 8, 15),\n+    )\n+\n+    assert report.published, report.publication_held\n+    with postgres_engine.begin() as connection:\n+        status, hold_reason = connection.execute(\n+            text(\"SELECT status, hold_reason FROM macro_collection_attempt\"\n+                 \" WHERE attempt_key = :key\"),\n+            {\"key\": report.attempt_key},\n+        ).one()\n+    assert status == \"SUCCEEDED\"\n+    assert hold_reason is None\n+\n+\n+def test_a_hard_publish_failure_still_records_what_arrived(\n+    postgres_engine, tmp_path: Path, dummy_keys, monkeypatch\n+) -> None:\n+    \"\"\"발행이 보류가 아니라 **터져서** 죽어도 지표별 기록은 남는다 (FR-011).\n+\n+    발행기가 시도 행을 FAILED 로 적어 주므로 실행이 실패했다는 사실은 남지만, 그것만으로는\n+    무엇을 받았고 무엇이 실패했는지 알 수 없다. 다음 실행에서 무엇을 다시 받아야 하는지를\n+    답하는 것은 지표별 기록이다.\n+    \"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    def explode(*args: object, **kwargs: object) -> int:\n+        raise RuntimeError(\"파일 봉인이 터졌다\")\n+\n+    monkeypatch.setattr(ingest.publish, \"publish_atomically\", explode)\n+\n+    with pytest.raises(RuntimeError, match=\"파일 봉인이 터졌다\"):\n+        ingest.run(\n+            postgres_engine,\n+            indicators,\n+            fetcher=StubFetcher(body),\n+            data_root=tmp_path,\n+            mode=\"initial\",\n+            today=date(2026, 8, 15),\n+        )\n+\n+    with postgres_engine.begin() as connection:\n+        recorded = connection.execute(\n+            text(\n+                \"SELECT count(*) FROM macro_collection_item_status s\"\n+                \" JOIN macro_collection_attempt a ON a.id = s.attempt_id\"\n+            )\n+        ).scalar_one()\n+    assert recorded == len(indicators), \"발행이 터지면서 지표별 기록이 통째로 사라졌다\"\n+\n+\n+def test_a_hard_publish_failure_is_not_relabelled_as_a_hold(\n+    postgres_engine, tmp_path: Path, dummy_keys, monkeypatch\n+) -> None:\n+    \"\"\"터진 실행을 보류로 적지 않는다. 보류는 우리가 막은 것이고 실패는 우리가 죽은 것이다.\"\"\"\n+    from pathlib import Path as _Path\n+\n+    body = (\n+        _Path(__file__).parent / \"fixtures\" / \"macro\" / \"ecos\" / \"dubai_crude_monthly.json\"\n+    ).read_text(encoding=\"utf-8\")\n+    indicators = tuple(_ecos_shaped(indicator) for indicator in INDICATORS)\n+    _prepare_registry(postgres_engine, indicators)\n+\n+    def explode(*args: object, **kwargs: object) -> int:\n+        raise RuntimeError(\"파일 봉인이 터졌다\")\n+\n+    monkeypatch.setattr(ingest.publish, \"publish_atomically\", explode)\n+\n+    with pytest.raises(RuntimeError):\n+        ingest.run(\n+            postgres_engine,\n+            indicators,\n+            fetcher=StubFetcher(body),\n+            data_root=tmp_path,\n+            mode=\"initial\",\n+            today=date(2026, 8, 15),\n+        )\n+\n+    with postgres_engine.begin() as connection:\n+        status, hold_reason = connection.execute(\n+            text(\"SELECT status, hold_reason FROM macro_collection_attempt\")\n+        ).one()\n+    assert status == \"FAILED\"\n+    assert hold_reason is None\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_ingest_postgres.py",
+          "old_path": "data/tests/test_macro_ingest_postgres.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,6 +49,9 @@ def test_atomic_publish_against_postgresql(postgres_engine, tmp_path: Path) -> N\n                 raw_values=((\"2026-07\", Decimal(\"1.25\")),),\n                 transform_rule=indicator.transform_rule, raw_unit=indicator.raw_unit,\n                 transformed_unit=indicator.transformed_unit, source_updated_at=None,\n+                # 개편으로 나뉜 계열만 채워지는 칸이다. 여기서는 저장되는지만 본다.\n+                break_segment=\"2021-06\" if indicator.indicator_id == \"housing_sale_price\"\n+                else None,\n             )\n         ]\n         for indicator in indicators\n@@ -68,6 +71,17 @@ def test_atomic_publish_against_postgresql(postgres_engine, tmp_path: Path) -> N\n             text(\"SELECT count(*) FROM macro_observation WHERE dataset_version_id=:id\"),\n             {\"id\": dataset_id},\n         ).scalar_one() == 17\n+        # 어느 표가 이 달을 줬는지가 자료에 남는다 (T076, FR-010). NULL 로 박혀 있으면\n+        # 이어 붙인 값과 원천이 직접 말한 값을 나중에 구분할 수 없다.\n+        segments = dict(\n+            connection.execute(\n+                text(\"SELECT indicator_id, break_segment FROM macro_observation\"\n+                     \" WHERE dataset_version_id=:id\"),\n+                {\"id\": dataset_id},\n+            ).all()\n+        )\n+        assert segments[\"housing_sale_price\"] == \"2021-06\"\n+        assert segments[\"consumer_price_index\"] is None\n         assert connection.execute(\n             text(\"SELECT count(*) FROM macro_baseline WHERE dataset_version_id=:id\"),\n             {\"id\": dataset_id},\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_publish_postgres.py",
+          "old_path": "data/tests/test_macro_publish_postgres.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@ from decimal import Decimal\n \n import pytest\n \n-from data_pipeline.macro import registry\n+from data_pipeline.macro import config, registry\n \n \n def test_has_exactly_seventeen_indicators():\n@@ -159,3 +159,131 @@ def test_validate_rejects_duplicate_indicator_id():\n \n     with pytest.raises(registry.RegistryError, match=\"겹친다\"):\n         registry.validate(duplicated)\n+\n+\n+# ---------------------------------------------------------------------------\n+# 기대 대상월 수 (T077, FR-011b(3))\n+# ---------------------------------------------------------------------------\n+#: 2026-09-20 전 구간 수집이 실제로 넣은 지표별 대상월 수. **추정이 아니라 측정값이다**\n+#: (원칙 IX) — 리허설 DB 에서 ``SELECT indicator_id, count(*) FROM macro_observation\n+#: GROUP BY indicator_id`` 로 읽었다. 공표 지연을 잘못 적으면 여기서 어긋난다.\n+MEASURED_2026_09 = {\n+    \"all_industry_production\": 319,\n+    \"construction_completed_constant\": 349,\n+    \"consumer_price_index\": 560,\n+    \"dubai_crude\": 416,\n+    \"employed_persons\": 327,\n+    \"exports\": 453,\n+    \"facility_investment_index\": 378,\n+    \"g20_cli\": 788,\n+    \"housing_sale_price\": 319,\n+    \"imports\": 453,\n+    \"mining_manufacturing_production\": 559,\n+    \"retail_sales_index\": 379,\n+    \"service_production\": 319,\n+    \"trade_balance\": 453,\n+    \"treasury_bond_3y\": 335,\n+    \"unemployment_rate\": 327,\n+    \"usd_krw_rate\": 748,\n+}\n+\n+\n+def test_expected_month_count_matches_what_the_sources_actually_gave():\n+    \"\"\"등록표의 공표 지연이 2026-09-20 실측과 맞는가.\n+\n+    기대가 실제보다 크면 멀쩡한 적재가 늘 미달로 보이고, 작으면 무엇이 빠졌든 판정이 늘\n+    통과한다. 둘 다 판정을 쓸모없게 만든다.\n+    \"\"\"\n+    for indicator in registry.INDICATORS:\n+        expected = registry.expected_month_count(indicator, \"2026-09\")\n+        measured = MEASURED_2026_09[indicator.indicator_id]\n+        assert expected <= measured, (\n+            f\"{indicator.indicator_id}: 기대 {expected}개월인데 실제로는 {measured}개월만 왔다\"\n+        )\n+        # 실제가 기대보다 많을 수 있는 경우는 하나뿐이다 — 아직 끝나지 않은 이번 달이 들어온\n+        # 것이고, 그 달은 결측으로 남는다. 두 달 이상 벌어지면 지연을 잘못 적은 것이다.\n+        assert measured - expected <= 1, (\n+            f\"{indicator.indicator_id}: 기대 {expected}, 실제 {measured}.\"\n+            \" 공표 지연이 실제보다 길게 적혀 있다\"\n+        )\n+\n+\n+def test_expected_month_count_grows_with_the_calendar():\n+    \"\"\"기대 개수는 상수가 아니다. 다음 달이 오면 하나 는다.\"\"\"\n+    cpi = next(i for i in registry.INDICATORS if i.indicator_id == \"consumer_price_index\")\n+    assert (\n+        registry.expected_month_count(cpi, \"2026-10\")\n+        == registry.expected_month_count(cpi, \"2026-09\") + 1\n+    )\n+\n+\n+def test_expected_end_month_steps_back_by_the_publication_lag():\n+    production = next(\n+        i for i in registry.INDICATORS if i.indicator_id == \"all_industry_production\"\n+    )\n+    assert production.publication_lag_months == 2\n+    assert registry.expected_end_month(production, \"2026-09\") == \"2026-07\"\n+    # 해를 넘어가도 물러선다.\n+    assert registry.expected_end_month(production, \"2026-01\") == \"2025-11\"\n+\n+\n+def test_negative_publication_lag_is_refused():\n+    broken = dataclasses.replace(registry.INDICATORS[0], publication_lag_months=-1)\n+    with pytest.raises(registry.RegistryError, match=\"공표 지연\"):\n+        registry.validate((broken,) + registry.INDICATORS[1:])\n+\n+\n+# ---------------------------------------------------------------------------\n+# 거래일 달력 (T078, FR-006b)\n+# ---------------------------------------------------------------------------\n+def test_no_shipped_indicator_reaches_the_month_average_fold():\n+    \"\"\"달력이 비어 있어도 결측이 생기지 않는 이유를 고정한다.\n+\n+    월 평균을 **일별 원천에서** 접을 때만 달력이 필요하다. 두바이유는 변환이 월 평균이지만\n+    한국은행이 월 평균을 이미 내 주므로 주기가 월별이고 그대로 통과한다.\n+    \"\"\"\n+    reaching = [\n+        indicator.indicator_id\n+        for indicator in registry.INDICATORS\n+        if indicator.transform_rule == registry.TRANSFORM_MONTH_AVERAGE\n+        and indicator.source_cycle == registry.CYCLE_DAILY\n+    ]\n+    assert reaching == []\n+\n+\n+def test_daily_month_average_without_a_calendar_is_refused():\n+    \"\"\"달력이 필요한 지표가 생기면 등록 자체가 거부된다.\n+\n+    막지 않으면 그 지표는 매달 조용히 결측이 되고, 화면에는 \"자료 없음\"으로만 보인다.\n+    \"\"\"\n+    broken = dataclasses.replace(\n+        registry.INDICATORS[0],\n+        transform_rule=registry.TRANSFORM_MONTH_AVERAGE,\n+        source_cycle=registry.CYCLE_DAILY,\n+        trading_calendar=None,\n+    )\n+    with pytest.raises(registry.RegistryError, match=\"거래일 달력\"):\n+        registry.validate((broken,) + registry.INDICATORS[1:])\n+\n+\n+# ---------------------------------------------------------------------------\n+# 원천별 호출 규칙 (T079, FR-011b(1)·FR-017a)\n+# ---------------------------------------------------------------------------\n+def test_every_used_source_has_a_call_policy():\n+    for source_id in registry.used_sources():\n+        policy = registry.source_policy(source_id)\n+        assert policy.rate_limit\n+        assert policy.basis, f\"{source_id}: 한도의 출처가 없으면 확인값인지 추측인지 갈리지 않는다\"\n+\n+\n+def test_call_policy_reads_retry_numbers_from_config():\n+    \"\"\"재시도 수치는 `config` 가 들고 등록표는 참조한다 — 두 벌이 되면 언젠가 갈라진다.\"\"\"\n+    policy = registry.source_policy(registry.SOURCE_KOSIS)\n+    assert policy.max_attempts == config.DEFAULT_MAX_ATTEMPTS\n+    # 3회 시도면 사이 간격은 둘이다 (1·2초).\n+    assert policy.backoff_seconds == (1.0, 2.0)\n+\n+\n+def test_unknown_source_has_no_policy():\n+    with pytest.raises(registry.RegistryError, match=\"호출 규칙이 없는 원천\"):\n+        registry.source_policy(\"wikipedia\")\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_registry.py",
+          "old_path": "data/tests/test_macro_registry.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -349,3 +349,84 @@ class TestShiftMonths:\n     )\n     def test_달을_옮긴다(self, period: str, months_: int, expected: str) -> None:\n         assert monthly.shift_months(period, months_) == expected\n+\n+\n+# ---------------------------------------------------------------------------\n+# 개편 단절을 넘는 비교 (T076, FR-006)\n+# ---------------------------------------------------------------------------\n+def test_growth_within_one_segment_is_allowed():\n+    values = months(\"housing_sale_price\", \"2026-01\", [\"100\", \"101\"])\n+    segments = {\"2026-01\": \"A\", \"2026-02\": \"A\"}\n+    result = monthly.month_over_month(\n+        values,\n+        series_start=\"2026-01\",\n+        break_segments=segments,\n+        linked_segments=frozenset({\"A\"}),\n+    )\n+    assert result[-1].value == Decimal(\"1\")\n+    assert result[-1].missing_reason is None\n+\n+\n+def test_growth_across_linked_segments_is_allowed():\n+    \"\"\"등록표가 이은 구간끼리는 견줄 수 있다 — 주택가격이 실제로 이 경로다.\"\"\"\n+    values = months(\"housing_sale_price\", \"2026-01\", [\"100\", \"101\"])\n+    result = monthly.month_over_month(\n+        values,\n+        series_start=\"2026-01\",\n+        break_segments={\"2026-01\": \"옛표\", \"2026-02\": \"현행\"},\n+        linked_segments=frozenset({\"옛표\", \"현행\"}),\n+    )\n+    assert result[-1].value == Decimal(\"1\")\n+\n+\n+def test_growth_across_an_unlinked_break_is_missing():\n+    \"\"\"연결 규칙이 없는 단절을 넘으면 값을 만들지 않는다.\n+\n+    이 값이 나오면 경기 변화가 아니라 두 표가 각각 100 으로 잡은 서로 다른 기준을 견준 것이다.\n+    모양은 멀쩡한 증가율이라 값만 봐서는 구분되지 않는다.\n+    \"\"\"\n+    values = months(\"housing_sale_price\", \"2026-01\", [\"100\", \"101\"])\n+    result = monthly.month_over_month(\n+        values,\n+        series_start=\"2026-01\",\n+        break_segments={\"2026-01\": \"옛표\", \"2026-02\": \"현행\"},\n+        linked_segments=frozenset({\"현행\"}),  # 옛 표는 잇지 못했다\n+    )\n+    assert result[-1].value is None\n+    assert result[-1].missing_reason == monthly.MISSING_BREAK_EXCLUDED\n+    # 어느 두 달을 견주려다 막혔는지 남는다.\n+    assert result[-1].lineage == (\"2026-01\", \"2026-02\")\n+\n+\n+def test_unknown_segment_is_not_treated_as_linked():\n+    \"\"\"구간을 모르는 달은 이어졌다고 보지 않는다.\n+\n+    모르는 것과 이어진 것을 같이 두면, 구간 정보가 빠지는 순간 모든 비교가 조용히 허용된다.\n+    \"\"\"\n+    values = months(\"housing_sale_price\", \"2026-01\", [\"100\", \"101\"])\n+    result = monthly.month_over_month(\n+        values,\n+        series_start=\"2026-01\",\n+        break_segments={\"2026-02\": \"현행\"},  # 2026-01 은 어느 표에서 왔는지 모른다\n+        linked_segments=frozenset({\"현행\"}),\n+    )\n+    assert result[-1].missing_reason == monthly.MISSING_BREAK_EXCLUDED\n+\n+\n+def test_indicators_without_segments_compare_as_before():\n+    \"\"\"단절이 없는 지표는 구간을 주지 않는다. 그때는 모든 비교가 허용된다.\"\"\"\n+    values = months(\"consumer_price_index\", \"2026-01\", [\"100\", \"101\"])\n+    result = monthly.month_over_month(values, series_start=\"2026-01\")\n+    assert result[-1].value == Decimal(\"1\")\n+\n+\n+def test_year_over_year_also_checks_the_break():\n+    values = months(\"g20_cli\", \"2025-01\", [\"100\"] + [None] * 11 + [\"110\"])\n+    values = [v for v in values if v.value is not None]\n+    result = monthly.year_over_year(\n+        values,\n+        series_start=\"2025-01\",\n+        break_segments={\"2025-01\": \"옛표\", \"2026-01\": \"현행\"},\n+        linked_segments=frozenset({\"현행\"}),\n+    )\n+    assert result[-1].missing_reason == monthly.MISSING_BREAK_EXCLUDED\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_transform.py",
+          "old_path": "data/tests/test_macro_transform.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -101,7 +101,8 @@ def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:\n             \"CREATE TABLE macro_calculation_registry_version \"\n             \"(id INTEGER PRIMARY KEY AUTOINCREMENT, \"\n             \"version_key TEXT, value_rule_fingerprint TEXT, change_reason TEXT, \"\n-            \"nominal_weight_policy TEXT, status TEXT, created_at TEXT)\"\n+            \"nominal_weight_policy TEXT, source_policy TEXT, refresh_months_basis TEXT, \"\n+            \"status TEXT, created_at TEXT)\"\n         ))\n         connection.execute(text(\n             \"CREATE TABLE macro_indicator_definition (registry_version_id INTEGER, \"\n@@ -112,7 +113,8 @@ def test_registry_versions_persist_weights_and_thorp_policy(tmp_path) -> None:\n             \"release_rule TEXT, break_link_rule TEXT, missing_rule TEXT, agency TEXT, \"\n             \"attribution TEXT, license_status TEXT, license_review_status TEXT, \"\n             \"published_precision INTEGER, refresh_months_n INTEGER, nominal_weight TEXT, \"\n-            \"trading_calendar TEXT, revision_history_available INTEGER)\"\n+            \"trading_calendar TEXT, publication_lag_months INTEGER, \"\n+            \"revision_history_available INTEGER)\"\n         ))\n         connection.execute(text(\n             \"CREATE TABLE macro_display_version (id INTEGER PRIMARY KEY AUTOINCREMENT, \"\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "data/tests/test_macro_versioning.py",
+          "old_path": "data/tests/test_macro_versioning.py",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -172,7 +172,7 @@\n \n - **FR-006**: 지표 값은 **ECOS·KOSIS를 기본 원천으로** 수집하고 FR-001의 변환을 적용한다. ECOS는 금리·환율·원자재, KOSIS는 생산·소비·투자·노동·물가 등 국가 통계를 맡는다. 이 둘로 얻지 못하는 지표만 원천을 더한다 — 수출·수입·무역수지는 관세청, G20 경기선행지수는 OECD다(FR-019). 무역수지는 관세청이 응답에 독립 필드로 제공하는 공식 값을 쓰고 수출에서 수입을 빼서 만들지 않는다 — 값이 같더라도 원천이 정의를 바꾸면 파생식은 조용히 어긋난다. 변환 전 원값과 변환 후 값을 **모두 보존한다** — 변환값만 저장하면 변환 규칙이 바뀔 때 다시 만들 수 없다. 전년동월 대비 증가율의 비교 대상월 값이 결측이거나 0이면 그 달의 변환값을 만들지 않고 결측으로 남기며 사유를 '변환 불가'로 기록한다 — 다른 달을 비교 대상으로 대체하거나 수준 차이 같은 다른 값으로 바꾸지 않는다. 계열이 시작한 직후라 비교 대상월 자체가 존재하지 않는 구간도 같은 규칙으로 결측이며, 그만큼 그 지표의 사용 가능 구간이 늦게 시작한다. 계산식은 대상월 값을 12개월 전 같은 달 값으로 나눠 1을 뺀 값이며, 비교 대상월은 **t-12로 고정한다** — 값이 없다고 가장 가까운 달로 옮기지 않는다. 개편으로 단절된 구간을 넘는 비교는 **등록표의 연결 규칙으로 이은 경우에만** 허용하고, 연결 규칙이 없으면 그 비교는 결측이다. 완결 자료 버전 발행과 기준월 산출에 쓰는 유효 관측값은 등록표의 변환을 거쳐 사용 가능한 월별 변환값이며, 원값만 있는 월은 세지 않는다. (§6.2)\n - **FR-006a**: 일별로 발표되는 지표의 '월 기말' 값은 그 달의 마지막 거래일 값을 쓴다. 마지막 달력일이 휴장일이어도 그날 값을 만들지 않고 직전 거래일 값을 그 달의 기말값으로 삼는다. 그 달에 거래일이 하나도 없으면 결측으로 둔다. (§6.1)\n-- **FR-006b**: '월 평균' 지표는 그 달 거래일의 일별 값이 모두 확보되었을 때만 평균을 낸다. 하루라도 빠지면 부분 표본으로 평균을 만들지 않고 그 달을 결측으로 두며 사유를 기록한다 — 표본 수가 다른 달의 평균을 같은 값으로 취급하면 그 달만 과거 비교에서 왜곡된다. 확보 여부 판정 기준(거래일 달력)은 등록표에 지표별로 기록한다. (§6.1, 원칙 VI)\n+- **FR-006b**: '월 평균' 지표는 그 달 거래일의 일별 값이 모두 확보되었을 때만 평균을 낸다. 하루라도 빠지면 부분 표본으로 평균을 만들지 않고 그 달을 결측으로 두며 사유를 기록한다 — 표본 수가 다른 달의 평균을 같은 값으로 취급하면 그 달만 과거 비교에서 왜곡된다. 확보 여부 판정 기준(거래일 달력)은 **그 판정이 필요한 지표에 한해** 등록표에 기록한다 — 원천이 이미 월 평균을 주거나 변환이 월 기말이면 달력 없이 규칙이 성립하므로, 쓰이지 않는 칸을 확인 없이 채우면 그 값이 나중에 근거 있는 값처럼 읽힌다. 달력이 필요한 지표는 값 없이 등록될 수 없다. (§6.1, 원칙 VI)\n \n - **FR-007**: 지표 자료마다 대상월·발표일·자료 갱신 기준(수신 시점·개정 기준)을 구분해 기록한다. 원천이 발표일을 주지 않으면 **미제공으로 기록하고 수신 시각을 발표일로 대신 쓰지 않는다**. 원천이 주는 갱신일이 통계표 전체의 갱신일이면 그 단위로 기록하고 관측치별 발표일로 취급하지 않는다 — 둘을 섞으면 어느 달이 언제 나왔는지가 틀린다. (§4.4, D22)\n - **FR-008**: 결측은 임의 보간하지 않는다. 미래 값 추정이나 보간으로 최신월을 늘리지 않는다. (§6.4.4, 원칙 V·VI)\n@@ -180,7 +180,7 @@\n - **FR-010**: 통계표 개편으로 시계열이 단절되면 등록표의 개편 연결 규칙대로 연결하고 연결 지점을 기록한다. 규칙이 없는 구간은 사용 가능 범위에서 제외한다. **개편으로 통계표가 여러 개로 나뉜 계열은 각 표를 따로 받아 겹치는 구간의 비율로 잇고, 연결 지점과 연결 계수를 자료에 남긴다.** 겹치는 구간이 없으면 잇지 않고 그 이전을 사용 가능 범위에서 뺀다.\n - **FR-011**: 수집이 실패하거나 지연되면 마지막 갱신 시각을 기록하고 오래된 자료를 최신 자료로 표시하지 않는다. 호출 한도에 도달하거나 여러 원천 중 일부만 성공하면 성공한 원본 응답은 재처리를 위해 보관하되 완결 자료 버전을 발행하지 않는다. 모든 예정 지표의 처리가 끝나도 지표 하나의 유효한 월별 변환값이 0건이면 원값 유무와 관계없이 새 완결 자료 버전 발행을 보류한다. 009·010은 직전 완결 자료 버전이 있으면 계속 읽고, 없으면 등록 정보와 자료 없음·수집 실패 상태를 제공하되 값·기준월을 비워 둔다. 실패분을 보완하고 17개 지표 각각에서 유효한 월별 변환값을 1건 이상 확보한 뒤에만 새 자료 버전을 공개한다. (§4.4)\n - **FR-011a**: 자료 버전 발행이 도중에 중단되면 공개 중인 버전을 그대로 두고 완성되지 않은 버전을 공개하지 않는다. 두 수집 작업이 동시에 새 버전을 발행하려 하면 한 번에 하나만 반영되도록 직렬화하고, 밀린 쪽은 실패로 기록한다. 어느 공개 버전도 참조하지 않게 된 중간 산출물은 공개 대상이 아니며 정리 대상으로 남긴다. (§4.4, 원칙 VIII)\n-- **FR-011b**: 수집 실행은 다음을 지킨다. (1) **재시도와 포기**: 원천의 일시적 오류나 응답 없음에는 간격을 늘려가며 정해진 횟수만큼 다시 시도하고, 그 뒤에는 포기하고 실패로 기록한다. 횟수와 간격은 원천별로 등록표에 적는다. 인증 거부나 없는 경로처럼 다시 시도해도 같은 결과인 오류는 재시도하지 않는다. (2) **다시 돌려도 안전하게**: 수집이 중간에 끊긴 뒤 다시 실행하면 이미 받은 구간을 중복으로 쌓지 않고 이어서 받는다. 같은 구간을 다시 받은 경우 원천 응답이 같으면 새 이력을 만들지 않고, 다르면 개정으로 기록한다(FR-009). (3) **전 구간 적재 완료 판정**: 지표마다 기대 시작월과 기대 대상월 수를 등록표에 적고, 실제로 받은 대상월 수가 그에 미치지 못하면 적재를 완료로 보지 않는다. (4) **원천 변경 감지**: 응답의 구조나 식별자가 등록표에 적힌 것과 달라지면 실패로 기록하고 사람이 확인할 때까지 그 지표의 자동 수집을 멈춘다 — 원천이 경로나 항목을 바꾸면 인증 오류처럼 보이는 응답이 오기도 하므로, 실패 원인을 인증 문제로 단정하지 않는다. (§4.4, §6.5, 원칙 VIII)\n+- **FR-011b**: 수집 실행은 다음을 지킨다. (1) **재시도와 포기**: 원천의 일시적 오류나 응답 없음에는 간격을 늘려가며 정해진 횟수만큼 다시 시도하고, 그 뒤에는 포기하고 실패로 기록한다. 횟수와 간격은 원천별로 등록표에 적는다. 인증 거부나 없는 경로처럼 다시 시도해도 같은 결과인 오류는 재시도하지 않는다. (2) **다시 돌려도 안전하게**: 수집이 중간에 끊긴 뒤 다시 실행하면 이미 받은 구간을 중복으로 쌓지 않고 이어서 받는다. 같은 구간을 다시 받은 경우 원천 응답이 같으면 새 이력을 만들지 않고, 다르면 개정으로 기록한다(FR-009). (3) **전 구간 적재 완료 판정**: 지표마다 기대 시작월과 기대 대상월 수를 등록표에 적고, 실제로 받은 대상월 수가 그에 미치지 못하면 적재를 완료로 보지 않는다. 기대 대상월 수는 개수를 직접 적지 않고 계열 시작월과 **원천의 공표 지연**에서 계산한다 — 개수는 달마다 늘어나므로 적어 두면 다음 달에 틀리고, 기대가 실제보다 작으면 무엇이 빠졌든 판정이 늘 통과한다. 공표 지연은 관측으로 정하는 값이라 달마다 정확히 맞지 않으므로 **가장 최근 한 달이 모자란 것은 미달로 보지 않는다** — 발표가 하루 이틀 밀린 날의 실행이 지표 전체의 발행을 막으면 안 되고, 이 판정이 막으려는 것은 계열 앞쪽이 통째로 짧은 경우라 한 달의 여유로 가려지지 않는다. (4) **원천 변경 감지**: 응답의 구조나 식별자가 등록표에 적힌 것과 달라지면 실패로 기록하고 사람이 확인할 때까지 그 지표의 자동 수집을 멈춘다 — 원천이 경로나 항목을 바꾸면 인증 오류처럼 보이는 응답이 오기도 하므로, 실패 원인을 인증 문제로 단정하지 않는다. (§4.4, §6.5, 원칙 VIII)\n - **FR-012**: 자료는 최신 개정자료로 과거 경제환경을 비교하는 역사 탐색용임을 기본으로 하고, 화면에 '최신 개정자료를 이용한 역사 비교'로 표시할 수 있는 정보를 제공한다. 발표 시차만 적용한 최신 개정값을 당시 자료로 간주하지 않는다. 당시 발표·수정값(빈티지)은 별도 확보 대상이며 확보 전에는 당시 재현 분석을 제공하지 않는다. (§6.1, D12, 원칙 V)\n \n #### 기준월 산출 (§4.4, §6.4.4, D22)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/spec.md",
+          "old_path": "specs/008-macro-indicator-registry/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -192,7 +192,7 @@ plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`\n - [ ] T070 `backend/src/main/java/com/ssafy/thorp/regime/infrastructure/macro/`의 `PendingMacroIndicatorAdapter`를 008 등록표를 읽는 구현으로 바꾼다. 010 contracts/macro-indicator-port.md §2의 `registryVersion`·`fields`·`indicator` 세 메서드를 채우고, 픽스처 대역이 운영 프로필에서 선택되지 않는지 확인한다\n - [ ] T071 008이 실제 자료를 내보내기 시작하면 임시 대역을 걷어낸다. `backend/src/main/resources/application.yml`·`application-local.yml`의 `thorp.regime.macro.source`를 `macro`로 돌리고, `regime/infrastructure/macro/fixture/`와 `data/src/data_pipeline/regime/macro/fixture/`, `marketflow/infrastructure/example/`와 `marketflow/macro-indicators-example-v1.json`을 지운다. 지우고 나서 기동과 계약 테스트가 통과해야 한다 (010 contracts/macro-indicator-port.md §4.3)\n - [ ] T072 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 여섯 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다. 주택가격은 이어 붙인 이음매에서 전월 대비를, 실업률은 원천 계절조정값을 그대로 둔 것을 각각 확인한다. 허용 오차는 PD-12가 확정되기 전까지 정확 일치(오차 0)다 (SC-007, PD-12)\n-- [ ] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)\n+- [X] T073 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간 N을 잠정값으로 확정하고 근거를 등록표에 남긴다. 실제 개정 관행은 정기 수집을 여러 달 돌려야 보이므로 이번 범위에서 확정하지 않고 **미확인으로 닫는다**(constitution 미확인 항목 처리). 현재 3개월과 그 근거(관세청 매월 정정 안내, pd11 §4), 확정에 무엇이 필요한지, 그리고 **틀릴 때 짧은 쪽이 정정을 놓쳐 더 나쁘므로 의심스러우면 늘린다**는 것을 함께 적는다 (FR-017)\n \n ---\n \n@@ -276,7 +276,11 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기\n \n ## 주의\n \n-- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T073), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)\n+- 남은 미확정은 셋이고 모두 **닫아 두었다**(constitution 미확인 항목 처리) — 비운 것이 아니라 왜 비었는지와 무엇을 봐야 채워지는지를 코드에 적었다\n+  - 지표별 재조회 구간 N: 잠정 3개월. 개정을 한 건도 관측하지 못해 확정하지 않는다. 정기 수집을 N+3개월 돌린 뒤 `macro_raw_revision`에서 N 밖 개정을 세어 정한다. 근거는 `registry.REFRESH_MONTHS_BASIS`이고 발행 때 `macro_calculation_registry_version.refresh_months_basis`에 함께 남는다 (T073)\n+  - 채권·외환 휴장일이 KRX 주식 달력과 같은가: 확인하지 못했다. **지금은 답이 필요 없다** — FR-006b 를 \"판정이 필요한 지표에 한해\"로 좁혔다(T085) — 거래일 달력을 읽는 곳은 월 평균을 일별 원천에서 접을 때뿐이고 17개 중 그 경로에 닿는 지표가 없다. 닿는 지표가 생기면 `registry.validate`가 등록을 거부한다 (T078)\n+  - 주택가격 연결 계수: 겹침 구간에서 산출해야 한다 (T026)\n+- **T078의 원래 전제는 실제와 달랐다.** \"17개 모두 `trading_calendar`가 비어 있어 월 평균 경로가 항상 결측\"이라고 적었지만, 두바이유는 한국은행이 월 평균을 이미 내 줘 주기가 월별이고 그대로 통과한다. 2026-09-20 전 구간 수집에서 두바이유·국고채 모두 결측 0건이었다\n - 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)\n - 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다\n \n@@ -287,11 +291,11 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기\n **Purpose**: 묶음 A·B를 구현하고 나서 spec·plan과 코드 사이에 남은 것을 메운다\n \n - [X] T074 `data/src/data_pipeline/macro/registry.py`의 `housing_sale_price`에 T026이 산출한 연결 결과를 반영한다. 연결 지점·계수·겹침 비율 편차를 `break_link_rule`에 적고 `series_start`를 2000-01로 옮긴다. 지금은 \"연결 규칙을 정하기 전까지 2021-06 이전 제외\"로 남아 있어 발행이 5년치만 쓴다 per FR-010, plan \"등록표 확정\" (partial)\n-- [ ] T075 `data/src/data_pipeline/macro/sources/customs.py`에서 걸러낸 `<year>총계</year>` 행 수를 반환값에 싣고 수집 기록에 남긴다. 지금은 건너뛰기만 해 몇 행을 뺐는지 남지 않는다 per FR-017a (partial)\n-- [ ] T076 `data/src/data_pipeline/macro/transform/monthly.py`의 증가율에 개편 연결 확인을 넣는다. 등록표의 연결 규칙으로 이은 구간이 아니면 단절을 넘는 비교를 결측으로 둔다 per FR-006 (missing)\n-- [ ] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)\n-- [ ] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)\n-- [ ] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)\n+- [X] T075 `data/src/data_pipeline/macro/sources/customs.py`에서 걸러낸 `<year>총계</year>` 행 수를 반환값에 싣고 수집 기록에 남긴다. 지금은 건너뛰기만 해 몇 행을 뺐는지 남지 않는다 per FR-017a (partial)\n+- [X] T076 `data/src/data_pipeline/macro/transform/monthly.py`의 증가율에 개편 연결 확인을 넣는다. 등록표의 연결 규칙으로 이은 구간이 아니면 단절을 넘는 비교를 결측으로 둔다 per FR-006 (missing)\n+- [X] T077 `data/src/data_pipeline/macro/registry.py`에 지표별 기대 대상월 수를 넣는다. T049의 전 구간 적재 완료 판정이 이 값을 전제하는데 지금은 `series_start`만 있다 per FR-011b(3) (missing)\n+- [X] T078 `data/src/data_pipeline/macro/registry.py`의 `trading_calendar`를 지표별로 채운다. 지금은 17개 모두 비어 있어 월 평균 경로가 항상 결측이다. KRX 주식 달력(`gaps.py`의 `daily_index` 규약)이 채권·외환 계열의 휴장일과 같은지 먼저 확인한다 per FR-006b (partial)\n+- [X] T079 `data/src/data_pipeline/macro/registry.py`에 원천별 재시도 횟수·간격을 적거나 `config.py`의 값을 등록표가 참조하게 한다. 스펙은 등록표에 적으라고 한다 per FR-011b(1) (partial)\n \n ---\n \n@@ -302,3 +306,9 @@ A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기\n - [X] T080 CRITICAL `data/src/data_pipeline/macro/` 에 원본 봉인과 개정 이력 기록을 넣는다. `storage.raw_path()` 로 원천 응답을 그대로 남기고 `macro_raw_revision` 에 지표·대상월·수신시각·해시·순번을 append-only 로 쌓는다. 지금은 두 자리 모두 부르는 코드가 없어 원본이 저장되지 않고, 그러면 값이 왜 달라졌는지 되짚을 수 없으며 `macro_observation_lineage` 의 `raw_revision_id` 도 가리킬 행이 없다 per Constitution VIII·FR-009 (missing)\n - [X] T081 `data/src/data_pipeline/macro/ingest.py` 를 만들어 어댑터·변환·정규화·발행을 순서대로 잇고 `scripts/ingest_macro.py` 가 그것을 부르게 한다. 지금 진입점은 등록표만 읽어 계획을 출력하고 끝나므로 전 구간 수집도 정기 수집도 실행할 수 없다. T048·T049 는 이 모듈이 있다고 전제한다 per FR-017 (missing)\n - [X] T082 `macro_collection_item_status` 에 지표별 수집 결과를 남긴다. 성공·실패·한도 도달과 키 미발급·승인 대기·권리 확인 대기·권리 미확인을 구분해 쓰고, 마지막 성공 시각과 오류 분류도 함께 남긴다. 표는 있는데 쓰는 코드가 없어 008 조회의 실패 지표 목록과 지표 상태가 늘 비어 나간다 per FR-011 (missing)\n+\n+## Phase 10: Convergence\n+\n+- [X] T083 `data/src/data_pipeline/macro/ingest.py` 의 `record_item_status` 가 발행 보류 사실을 수집 기록에 남기게 한다. 지금은 17개가 다 성공하면 적재가 기대 대상월 수에 못 미쳐 발행을 막은 실행도 시도 행이 `SUCCEEDED` 로 남아, DB 만 보면 완전히 성공한 실행과 구분되지 않는다. 보류 사유는 stdout 과 로그에만 있고 로그는 지나간다 per FR-011, FR-011b(3) (partial)\n+- [X] T084 `data/src/data_pipeline/macro/ingest.py` 의 `TAIL_SLACK_MONTHS` 를 스펙과 맞춘다. FR-011b(3) 은 받은 대상월 수가 기대에 미치지 못하면 완료로 보지 않는다고 하는데 코드는 한 달 미달을 통과시킨다. 여유를 걷고 지표별 공표 지연을 보수적으로 늘리든, 스펙에 허용 여유를 명시하든 한쪽으로 정하고 근거를 남긴다 per FR-011b(3) (contradicts)\n+- [X] T085 `data/src/data_pipeline/macro/registry.py` 의 `trading_calendar` 를 FR-006b 와 맞춘다. 스펙은 판정 기준을 지표별로 기록하라고 하는데 17개 모두 비어 있다. 지금은 월 평균을 일별 원천에서 접는 지표가 없어 실질 영향이 없고 `validate` 가 그런 지표의 등록을 거부하므로, 스펙 문구를 실제 필요 범위로 좁히든 채권·외환 휴장일을 확인해 채우든 정한다 per FR-006b (partial)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2230609,
+      "head_commit_sha": "ff6842e746208181b1fca0f9d403196b16ad4071",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "6d4cb4210fb212dcb0740afac6b09df0d4b7ed9e",
+      "created_at": "2026-09-21T11:29:51.982+09:00",
+      "merge_request_id": 953242,
+      "state": "without_files",
+      "real_size": "18",
+      "patch_id_sha": "fdef4cc5ad3047ecad2ede2e0f22098493629c90",
+      "commits": [
+        {
+          "id": "ff6842e746208181b1fca0f9d403196b16ad4071",
+          "short_id": "ff6842e7",
+          "created_at": "2026-09-21T11:29:21.000+09:00",
+          "parent_ids": [
+            "88e10e20f64b2fd4e2b3361534597c826ff58cf3"
+          ],
+          "title": "fix(de): 발행이 터져도 지표별 수집 기록을 잃지 않는다",
+          "message": "fix(de): 발행이 터져도 지표별 수집 기록을 잃지 않는다\n\n`run()` 은 발행이 보류(`PublishError`)로 끝날 때만 그것을 잡았고, 파일 봉인 실패나 DB\n오류처럼 다른 예외로 죽으면 그대로 올려보냈다. 그러면 아래의 `record_item_status` 가\n건너뛰어져 **무엇을 받았고 무엇이 실패했는지가 통째로 사라진다**(FR-011). 발행기가\n시도 행을 FAILED 로 적어 주므로 실행이 실패했다는 사실 자체는 남지만, 남는 것이\n\"실패했다\" 한 줄뿐이라 다음 실행에서 무엇을 다시 받아야 하는지 알 수 없다.\n\n앞선 커밋이 \"발행 전 거절에서 수집 기록을 잃지 않는다\"로 닫은 것과 같은 성격의 구멍이\n하나 더 있었다.\n\n`crashed` 를 보류와 따로 둔다. 처음에는 `held=None` 으로만 불렀는데, 발행기가 시도 행을\n만들기 **전에** 터지면 행이 없어 `record_item_status` 가 새로 만들며 SUCCEEDED 로\n적었다 — 터져 죽은 실행이 성공으로 남았다. 회귀 테스트가 그것을 잡았다.\n\n보류와 실패를 한 값으로 묶지 않는 이유는 다음에 할 일이 달라서다. 보류는 우리가 규칙대로\n막은 것이라 모자란 자료를 채우면 되고, 터진 것은 우리가 죽은 것이라 원인을 찾아야 한다.\n둘을 함께 적으려 하면 거부한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-21T11:29:21.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-21T11:29:21.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ff6842e746208181b1fca0f9d403196b16ad4071"
+        },
+        {
+          "id": "88e10e20f64b2fd4e2b3361534597c826ff58cf3",
+          "short_id": "88e10e20",
+          "created_at": "2026-09-20T23:41:35.000+09:00",
+          "parent_ids": [
+            "42583b3a17663497f0fbdf4059b6bc4c0e0d7839"
+          ],
+          "title": "docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다",
+          "message": "docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다\n\nconverge 가 스펙과 코드가 어긋난 두 곳을 잡았다. 둘 다 구현하며 내린 판단이\n스펙 문구를 벗어난 것이라, 코드가 아니라 문구를 고친다.\n\n전 구간 완료 판정은 기대 개수를 적지 않고 계열 시작월과 공표 지연에서 계산하며,\n가장 최근 한 달이 모자란 것은 미달로 보지 않는다. 공표 지연은 관측으로 정하는\n값이라 달마다 정확히 맞지 않는데, 여유가 없으면 발표가 하루 이틀 밀린 날의\n실행이 지표 전체의 발행을 막는다. 이 판정이 막으려는 것은 계열 앞쪽이 통째로\n짧은 경우라 한 달 여유로 가려지지 않는다.\n\n거래일 달력은 그 판정이 필요한 지표에 한해 기록한다. 원천이 이미 월 평균을\n주거나 변환이 월 기말이면 달력 없이 규칙이 성립하고, 쓰이지 않는 칸을 확인\n없이 채우면 그 값이 나중에 근거 있는 값처럼 읽힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:41:35.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:41:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/88e10e20f64b2fd4e2b3361534597c826ff58cf3"
+        },
+        {
+          "id": "42583b3a17663497f0fbdf4059b6bc4c0e0d7839",
+          "short_id": "42583b3a",
+          "created_at": "2026-09-20T23:41:23.000+09:00",
+          "parent_ids": [
+            "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+          ],
+          "title": "fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다",
+          "message": "fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다\n\n전 구간이 기대 대상월 수에 못 미쳐 발행을 막아도, 지표 열일곱이 모두 성공했으면\n시도 행이 SUCCEEDED 로 남았다. 지표가 다 성공한 것은 사실이지만 아무것도\n발행되지 않았고, DB 만 보는 사람은 그 둘을 구분하지 못한다. 보류 사유는 로그에만\n있었고 로그는 지나간다.\n\n시도 행에 HELD 와 사유를 남긴다. PARTIAL 로 대신할 수 없다 — 그것은 \"일부 지표만\n성공\"이라 지표가 다 성공한 이 경우를 말하지 못하고, 어느 지표가 실패했는지는\nitem_status 가 이미 들고 있다. 여기 status 가 답해야 하는 물음은 \"이 실행의 결과가\n밖으로 나갔는가\"다. HELD 는 008 계약의 수집 상태 값에 이미 있다.\n\n발행기가 시도 행을 만든 뒤 보류로 끝난 경우도 덮는다. 발행기는 상태만 적고 사유는\n예외로 올리므로, 여기서 붙이지 않으면 사유가 어디에도 남지 않는다.\n\n마이그레이션은 이번 판에 덧붙였다. 아직 어느 운영 환경에도 적용되지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:41:23.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:41:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42583b3a17663497f0fbdf4059b6bc4c0e0d7839"
+        },
+        {
+          "id": "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78",
+          "short_id": "7e37e7e5",
+          "created_at": "2026-09-20T23:02:44.000+09:00",
+          "parent_ids": [
+            "79f1c6971046418c8b67c66750220a4099f46d31"
+          ],
+          "title": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다",
+          "message": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다\n\n전 구간 적재 완료 판정, 걸러낸 합계 행 수, 원천별 호출 규칙, 재조회 구간 N 의\n근거가 모두 비어 있었다.\n\n기대 대상월 수는 상수로 적지 않고 공표 지연을 적어 계산한다. 개수는 달마다\n늘어나므로 박아 두면 다음 달에 틀리고, 기대가 실제보다 작으면 무엇이 빠졌든\n판정이 늘 통과한다. 지연 값 열일곱은 2026-09-20 전 구간 수집의 실측이고,\n계산 결과가 그 실행이 넣은 지표별 건수와 일치한다. 꼬리 한 달은 미달로 보지\n않는다 — 하루치 관측으로 정한 값이라 발표가 하루 이틀 밀린 날의 실행이 17개\n전부를 발행하지 못하게 되고, 전 구간이 통째로 짧은 경우는 한 달 여유로 가려\n지지 않는다.\n\n재조회 구간 N 과 채권·외환 거래일 달력은 확정하지 않고 미확인으로 닫았다.\n관측 없이 적은 수는 확정이 아니라 추측이고, 등록표에 적힌 추측은 나중에 근거\n있는 값처럼 읽힌다. 거래일 달력은 지금 답이 필요 없다는 것이 답이었다 —\n월 평균을 일별 원천에서 접는 지표가 17개 중 없다. 닿는 지표가 생기면\nregistry.validate 가 등록을 거부한다.\n\n마이그레이션은 컬럼 추가만 있다. 앞선 두 판은 손대지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:44.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+        },
+        {
+          "id": "79f1c6971046418c8b67c66750220a4099f46d31",
+          "short_id": "79f1c697",
+          "created_at": "2026-09-20T23:02:29.000+09:00",
+          "parent_ids": [
+            "ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+          ],
+          "title": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다",
+          "message": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다\n\n증가율이 구간을 보지 않아, 등록표가 잇지 않은 단절을 넘는 비교도 값을 만들었다.\n그 값은 경기 변화가 아니라 두 표가 각각 100 으로 잡은 서로 다른 기준을 견준\n것인데, 모양이 멀쩡한 증가율이라 값만 봐서는 구분되지 않는다. 구간을 모르는\n달은 이어졌다고 보지 않는다 — 모르는 것과 이어진 것을 같이 두면 구간 정보가\n빠지는 순간 모든 비교가 조용히 허용된다.\n\n이어 붙인 값이 어느 표에서 왔는지도 남지 않았다. macro_observation.break_segment\n는 표에 있었지만 NULL 로 박혀 있어, 우리가 곱한 계수를 나중에 원천의 개정으로\n읽게 된다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/79f1c6971046418c8b67c66750220a4099f46d31"
+        },
+        {
+          "id": "ab232997d17c801d4b7be21f4f994fd21d8bd42a",
+          "short_id": "ab232997",
+          "created_at": "2026-09-20T20:38:01.000+09:00",
+          "parent_ids": [
+            "d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+          ],
+          "title": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다",
+          "message": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다\n\n헤더를 붙이니 JSON 은 왔는데 어댑터가 \"응답에 structures 가 없다\"로 거절했다.\n1.0 은 최상위에 structure 하나를 두고 2.0 은 structures 배열을 둔다. Accept 에\n1.0 을 먼저 적어 원천이 그쪽을 준 것이다.\n\n표본의 meta.schema 가 2.0.0 이므로 어댑터가 읽는 모양도 2.0 이다. 판본을 비워\n두면 원천이 어느 쪽을 줄지 우리가 정하지 못하므로 고정한다. 표본이 정말\n2.0 인지도 함께 단언해, 나중에 표본이 바뀌면 이 고정이 먼저 깨지게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:38:01.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:38:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+        },
+        {
+          "id": "d3a6320c8d7c0df8f895f6aa1b671246d40a7535",
+          "short_id": "d3a6320c",
+          "created_at": "2026-09-20T20:26:29.000+09:00",
+          "parent_ids": [
+            "445c46529540519c1d28ace32d50e2b56cc2dc3e"
+          ],
+          "title": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다",
+          "message": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다\n\n운영 리허설에서 17개 중 다섯이 실패했다. 관세청 셋은 인증키 판이 잘못 들어간\n설정 문제였고, 나머지 둘이 코드 결함이다.\n\n국고채는 일별 계열인데 조회 구간을 여섯 자리로 넘겨 한국은행이 \"주기와 다른\n형식의 날짜 형식\"이라며 거절했다. 어댑터는 주기별 자릿수를 알고 있었고\n부르는 쪽이 몰랐다. 끝 달은 말일까지 연다 — 좁히면 그달 마지막 거래일을\n놓쳐 월 기말이 한 달 밀린다.\n\n경제협력개발기구 SDMX 는 기본 응답이 XML 이다. 달라고 하지 않으면 JSON 을\n주지 않아 파서가 그대로 터졌다. 전송 계층에 헤더를 넘길 자리가 없어 함께\n넣었다. 형식을 질의 인자가 아니라 헤더로 고르는 것이 SDMX 규약이다.\n\nFetcher 서명이 바뀌어 테스트 대역도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:26:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:26:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2228450,
+      "head_commit_sha": "88e10e20f64b2fd4e2b3361534597c826ff58cf3",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "a2b333604e93a232b88f57d153aa62cd6c181c4f",
+      "created_at": "2026-09-20T23:41:43.052+09:00",
+      "merge_request_id": 953242,
+      "state": "without_files",
+      "real_size": "18",
+      "patch_id_sha": "3b18532c02bf5674b7d0bea02c38a17c16560239",
+      "commits": [
+        {
+          "id": "88e10e20f64b2fd4e2b3361534597c826ff58cf3",
+          "short_id": "88e10e20",
+          "created_at": "2026-09-20T23:41:35.000+09:00",
+          "parent_ids": [
+            "42583b3a17663497f0fbdf4059b6bc4c0e0d7839"
+          ],
+          "title": "docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다",
+          "message": "docs(de): 완료 판정과 거래일 달력의 스펙 문구를 구현과 맞춘다\n\nconverge 가 스펙과 코드가 어긋난 두 곳을 잡았다. 둘 다 구현하며 내린 판단이\n스펙 문구를 벗어난 것이라, 코드가 아니라 문구를 고친다.\n\n전 구간 완료 판정은 기대 개수를 적지 않고 계열 시작월과 공표 지연에서 계산하며,\n가장 최근 한 달이 모자란 것은 미달로 보지 않는다. 공표 지연은 관측으로 정하는\n값이라 달마다 정확히 맞지 않는데, 여유가 없으면 발표가 하루 이틀 밀린 날의\n실행이 지표 전체의 발행을 막는다. 이 판정이 막으려는 것은 계열 앞쪽이 통째로\n짧은 경우라 한 달 여유로 가려지지 않는다.\n\n거래일 달력은 그 판정이 필요한 지표에 한해 기록한다. 원천이 이미 월 평균을\n주거나 변환이 월 기말이면 달력 없이 규칙이 성립하고, 쓰이지 않는 칸을 확인\n없이 채우면 그 값이 나중에 근거 있는 값처럼 읽힌다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:41:35.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:41:35.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/88e10e20f64b2fd4e2b3361534597c826ff58cf3"
+        },
+        {
+          "id": "42583b3a17663497f0fbdf4059b6bc4c0e0d7839",
+          "short_id": "42583b3a",
+          "created_at": "2026-09-20T23:41:23.000+09:00",
+          "parent_ids": [
+            "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+          ],
+          "title": "fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다",
+          "message": "fix(de): 발행을 막은 실행이 성공한 실행처럼 보이지 않게 한다\n\n전 구간이 기대 대상월 수에 못 미쳐 발행을 막아도, 지표 열일곱이 모두 성공했으면\n시도 행이 SUCCEEDED 로 남았다. 지표가 다 성공한 것은 사실이지만 아무것도\n발행되지 않았고, DB 만 보는 사람은 그 둘을 구분하지 못한다. 보류 사유는 로그에만\n있었고 로그는 지나간다.\n\n시도 행에 HELD 와 사유를 남긴다. PARTIAL 로 대신할 수 없다 — 그것은 \"일부 지표만\n성공\"이라 지표가 다 성공한 이 경우를 말하지 못하고, 어느 지표가 실패했는지는\nitem_status 가 이미 들고 있다. 여기 status 가 답해야 하는 물음은 \"이 실행의 결과가\n밖으로 나갔는가\"다. HELD 는 008 계약의 수집 상태 값에 이미 있다.\n\n발행기가 시도 행을 만든 뒤 보류로 끝난 경우도 덮는다. 발행기는 상태만 적고 사유는\n예외로 올리므로, 여기서 붙이지 않으면 사유가 어디에도 남지 않는다.\n\n마이그레이션은 이번 판에 덧붙였다. 아직 어느 운영 환경에도 적용되지 않았다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:41:23.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:41:23.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/42583b3a17663497f0fbdf4059b6bc4c0e0d7839"
+        },
+        {
+          "id": "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78",
+          "short_id": "7e37e7e5",
+          "created_at": "2026-09-20T23:02:44.000+09:00",
+          "parent_ids": [
+            "79f1c6971046418c8b67c66750220a4099f46d31"
+          ],
+          "title": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다",
+          "message": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다\n\n전 구간 적재 완료 판정, 걸러낸 합계 행 수, 원천별 호출 규칙, 재조회 구간 N 의\n근거가 모두 비어 있었다.\n\n기대 대상월 수는 상수로 적지 않고 공표 지연을 적어 계산한다. 개수는 달마다\n늘어나므로 박아 두면 다음 달에 틀리고, 기대가 실제보다 작으면 무엇이 빠졌든\n판정이 늘 통과한다. 지연 값 열일곱은 2026-09-20 전 구간 수집의 실측이고,\n계산 결과가 그 실행이 넣은 지표별 건수와 일치한다. 꼬리 한 달은 미달로 보지\n않는다 — 하루치 관측으로 정한 값이라 발표가 하루 이틀 밀린 날의 실행이 17개\n전부를 발행하지 못하게 되고, 전 구간이 통째로 짧은 경우는 한 달 여유로 가려\n지지 않는다.\n\n재조회 구간 N 과 채권·외환 거래일 달력은 확정하지 않고 미확인으로 닫았다.\n관측 없이 적은 수는 확정이 아니라 추측이고, 등록표에 적힌 추측은 나중에 근거\n있는 값처럼 읽힌다. 거래일 달력은 지금 답이 필요 없다는 것이 답이었다 —\n월 평균을 일별 원천에서 접는 지표가 17개 중 없다. 닿는 지표가 생기면\nregistry.validate 가 등록을 거부한다.\n\n마이그레이션은 컬럼 추가만 있다. 앞선 두 판은 손대지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:44.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+        },
+        {
+          "id": "79f1c6971046418c8b67c66750220a4099f46d31",
+          "short_id": "79f1c697",
+          "created_at": "2026-09-20T23:02:29.000+09:00",
+          "parent_ids": [
+            "ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+          ],
+          "title": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다",
+          "message": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다\n\n증가율이 구간을 보지 않아, 등록표가 잇지 않은 단절을 넘는 비교도 값을 만들었다.\n그 값은 경기 변화가 아니라 두 표가 각각 100 으로 잡은 서로 다른 기준을 견준\n것인데, 모양이 멀쩡한 증가율이라 값만 봐서는 구분되지 않는다. 구간을 모르는\n달은 이어졌다고 보지 않는다 — 모르는 것과 이어진 것을 같이 두면 구간 정보가\n빠지는 순간 모든 비교가 조용히 허용된다.\n\n이어 붙인 값이 어느 표에서 왔는지도 남지 않았다. macro_observation.break_segment\n는 표에 있었지만 NULL 로 박혀 있어, 우리가 곱한 계수를 나중에 원천의 개정으로\n읽게 된다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/79f1c6971046418c8b67c66750220a4099f46d31"
+        },
+        {
+          "id": "ab232997d17c801d4b7be21f4f994fd21d8bd42a",
+          "short_id": "ab232997",
+          "created_at": "2026-09-20T20:38:01.000+09:00",
+          "parent_ids": [
+            "d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+          ],
+          "title": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다",
+          "message": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다\n\n헤더를 붙이니 JSON 은 왔는데 어댑터가 \"응답에 structures 가 없다\"로 거절했다.\n1.0 은 최상위에 structure 하나를 두고 2.0 은 structures 배열을 둔다. Accept 에\n1.0 을 먼저 적어 원천이 그쪽을 준 것이다.\n\n표본의 meta.schema 가 2.0.0 이므로 어댑터가 읽는 모양도 2.0 이다. 판본을 비워\n두면 원천이 어느 쪽을 줄지 우리가 정하지 못하므로 고정한다. 표본이 정말\n2.0 인지도 함께 단언해, 나중에 표본이 바뀌면 이 고정이 먼저 깨지게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:38:01.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:38:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+        },
+        {
+          "id": "d3a6320c8d7c0df8f895f6aa1b671246d40a7535",
+          "short_id": "d3a6320c",
+          "created_at": "2026-09-20T20:26:29.000+09:00",
+          "parent_ids": [
+            "445c46529540519c1d28ace32d50e2b56cc2dc3e"
+          ],
+          "title": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다",
+          "message": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다\n\n운영 리허설에서 17개 중 다섯이 실패했다. 관세청 셋은 인증키 판이 잘못 들어간\n설정 문제였고, 나머지 둘이 코드 결함이다.\n\n국고채는 일별 계열인데 조회 구간을 여섯 자리로 넘겨 한국은행이 \"주기와 다른\n형식의 날짜 형식\"이라며 거절했다. 어댑터는 주기별 자릿수를 알고 있었고\n부르는 쪽이 몰랐다. 끝 달은 말일까지 연다 — 좁히면 그달 마지막 거래일을\n놓쳐 월 기말이 한 달 밀린다.\n\n경제협력개발기구 SDMX 는 기본 응답이 XML 이다. 달라고 하지 않으면 JSON 을\n주지 않아 파서가 그대로 터졌다. 전송 계층에 헤더를 넘길 자리가 없어 함께\n넣었다. 형식을 질의 인자가 아니라 헤더로 고르는 것이 SDMX 규약이다.\n\nFetcher 서명이 바뀌어 테스트 대역도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:26:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:26:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2228252,
+      "head_commit_sha": "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78",
+      "base_commit_sha": "445c46529540519c1d28ace32d50e2b56cc2dc3e",
+      "start_commit_sha": "aa48fd5f424d422e75e806d89f37b58bbfbe8557",
+      "created_at": "2026-09-20T23:04:49.775+09:00",
+      "merge_request_id": 953242,
+      "state": "without_files",
+      "real_size": "17",
+      "patch_id_sha": "5b23c346be8ac52b4fb6dc0e2c64998e7a71a3f9",
+      "commits": [
+        {
+          "id": "7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78",
+          "short_id": "7e37e7e5",
+          "created_at": "2026-09-20T23:02:44.000+09:00",
+          "parent_ids": [
+            "79f1c6971046418c8b67c66750220a4099f46d31"
+          ],
+          "title": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다",
+          "message": "feat(de): 등록표의 빈 칸 넷을 근거와 함께 채운다\n\n전 구간 적재 완료 판정, 걸러낸 합계 행 수, 원천별 호출 규칙, 재조회 구간 N 의\n근거가 모두 비어 있었다.\n\n기대 대상월 수는 상수로 적지 않고 공표 지연을 적어 계산한다. 개수는 달마다\n늘어나므로 박아 두면 다음 달에 틀리고, 기대가 실제보다 작으면 무엇이 빠졌든\n판정이 늘 통과한다. 지연 값 열일곱은 2026-09-20 전 구간 수집의 실측이고,\n계산 결과가 그 실행이 넣은 지표별 건수와 일치한다. 꼬리 한 달은 미달로 보지\n않는다 — 하루치 관측으로 정한 값이라 발표가 하루 이틀 밀린 날의 실행이 17개\n전부를 발행하지 못하게 되고, 전 구간이 통째로 짧은 경우는 한 달 여유로 가려\n지지 않는다.\n\n재조회 구간 N 과 채권·외환 거래일 달력은 확정하지 않고 미확인으로 닫았다.\n관측 없이 적은 수는 확정이 아니라 추측이고, 등록표에 적힌 추측은 나중에 근거\n있는 값처럼 읽힌다. 거래일 달력은 지금 답이 필요 없다는 것이 답이었다 —\n월 평균을 일별 원천에서 접는 지표가 17개 중 없다. 닿는 지표가 생기면\nregistry.validate 가 등록을 거부한다.\n\n마이그레이션은 컬럼 추가만 있다. 앞선 두 판은 손대지 않는다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:44.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7e37e7e5ba0cd4741199d0de1c8367d4e6d52d78"
+        },
+        {
+          "id": "79f1c6971046418c8b67c66750220a4099f46d31",
+          "short_id": "79f1c697",
+          "created_at": "2026-09-20T23:02:29.000+09:00",
+          "parent_ids": [
+            "ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+          ],
+          "title": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다",
+          "message": "fix(de): 개편 단절을 넘는 증가율과 구간 출처를 자료에 남긴다\n\n증가율이 구간을 보지 않아, 등록표가 잇지 않은 단절을 넘는 비교도 값을 만들었다.\n그 값은 경기 변화가 아니라 두 표가 각각 100 으로 잡은 서로 다른 기준을 견준\n것인데, 모양이 멀쩡한 증가율이라 값만 봐서는 구분되지 않는다. 구간을 모르는\n달은 이어졌다고 보지 않는다 — 모르는 것과 이어진 것을 같이 두면 구간 정보가\n빠지는 순간 모든 비교가 조용히 허용된다.\n\n이어 붙인 값이 어느 표에서 왔는지도 남지 않았다. macro_observation.break_segment\n는 표에 있었지만 NULL 로 박혀 있어, 우리가 곱한 계수를 나중에 원천의 개정으로\n읽게 된다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T23:02:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T23:02:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/79f1c6971046418c8b67c66750220a4099f46d31"
+        },
+        {
+          "id": "ab232997d17c801d4b7be21f4f994fd21d8bd42a",
+          "short_id": "ab232997",
+          "created_at": "2026-09-20T20:38:01.000+09:00",
+          "parent_ids": [
+            "d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+          ],
+          "title": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다",
+          "message": "fix(de): SDMX 응답 판본을 2.0 으로 못 박는다\n\n헤더를 붙이니 JSON 은 왔는데 어댑터가 \"응답에 structures 가 없다\"로 거절했다.\n1.0 은 최상위에 structure 하나를 두고 2.0 은 structures 배열을 둔다. Accept 에\n1.0 을 먼저 적어 원천이 그쪽을 준 것이다.\n\n표본의 meta.schema 가 2.0.0 이므로 어댑터가 읽는 모양도 2.0 이다. 판본을 비워\n두면 원천이 어느 쪽을 줄지 우리가 정하지 못하므로 고정한다. 표본이 정말\n2.0 인지도 함께 단언해, 나중에 표본이 바뀌면 이 고정이 먼저 깨지게 한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:38:01.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:38:01.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab232997d17c801d4b7be21f4f994fd21d8bd42a"
+        },
+        {
+          "id": "d3a6320c8d7c0df8f895f6aa1b671246d40a7535",
+          "short_id": "d3a6320c",
+          "created_at": "2026-09-20T20:26:29.000+09:00",
+          "parent_ids": [
+            "445c46529540519c1d28ace32d50e2b56cc2dc3e"
+          ],
+          "title": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다",
+          "message": "fix(de): 일별 계열 조회 구간과 SDMX 응답 형식을 원천에 맞춘다\n\n운영 리허설에서 17개 중 다섯이 실패했다. 관세청 셋은 인증키 판이 잘못 들어간\n설정 문제였고, 나머지 둘이 코드 결함이다.\n\n국고채는 일별 계열인데 조회 구간을 여섯 자리로 넘겨 한국은행이 \"주기와 다른\n형식의 날짜 형식\"이라며 거절했다. 어댑터는 주기별 자릿수를 알고 있었고\n부르는 쪽이 몰랐다. 끝 달은 말일까지 연다 — 좁히면 그달 마지막 거래일을\n놓쳐 월 기말이 한 달 밀린다.\n\n경제협력개발기구 SDMX 는 기본 응답이 XML 이다. 달라고 하지 않으면 JSON 을\n주지 않아 파서가 그대로 터졌다. 전송 계층에 헤더를 넘길 자리가 없어 함께\n넣었다. 형식을 질의 인자가 아니라 헤더로 고르는 것이 SDMX 규약이다.\n\nFetcher 서명이 바뀌어 테스트 대역도 함께 고쳤다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "Eunseo",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-20T20:26:29.000+09:00",
+          "committer_name": "Eunseo",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-20T20:26:29.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d3a6320c8d7c0df8f895f6aa1b671246d40a7535"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2842619": []
+  }
+}

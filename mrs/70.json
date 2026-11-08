@@ -1,0 +1,227 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 942495,
+    "iid": 70,
+    "project_id": 1444456,
+    "title": "Draft: Docs/169 007spec correction",
+    "description": "# 작업 내용 요약\n\n# 관련 티켓 번호 & 링크\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-",
+    "state": "closed",
+    "created_at": "2026-09-14T09:45:22.206+09:00",
+    "updated_at": "2026-09-14T14:25:31.356+09:00",
+    "merged_by": null,
+    "merge_user": null,
+    "merged_at": null,
+    "closed_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "closed_at": "2026-09-14T09:45:43.719+09:00",
+    "target_branch": "dev",
+    "source_branch": "docs/169-007spec_correction",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": true,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": true,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "cannot_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+    "merge_commit_sha": null,
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T09:45:22.735+09:00",
+    "reference": "!70",
+    "references": {
+      "short": "!70",
+      "relative": "!70",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!70"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/70",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": true,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 942495,
+    "iid": 70,
+    "project_id": 1444456,
+    "title": "Draft: Docs/169 007spec correction",
+    "description": "# 작업 내용 요약\n\n# 관련 티켓 번호 & 링크\n- ticket #\n- link\n\n# 주요 변경 사항\n-\n\n# 테스트\n- [ ]\n\n# 리뷰 포인트\n-",
+    "state": "closed",
+    "created_at": "2026-09-14T09:45:22.206+09:00",
+    "updated_at": "2026-09-14T14:25:31.356+09:00",
+    "merged_by": null,
+    "merge_user": null,
+    "merged_at": null,
+    "closed_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "closed_at": "2026-09-14T09:45:43.719+09:00",
+    "target_branch": "dev",
+    "source_branch": "docs/169-007spec_correction",
+    "user_notes_count": 0,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs",
+      "🛠️ Fix"
+    ],
+    "draft": true,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": true,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "cannot_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+    "merge_commit_sha": null,
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": null,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T09:45:22.735+09:00",
+    "reference": "!70",
+    "references": {
+      "short": "!70",
+      "relative": "!70",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!70"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/70",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 1,
+      "completed_count": 0
+    },
+    "has_conflicts": true,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": null,
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "head_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [],
+  "versions": [
+    {
+      "id": 2191859,
+      "head_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T09:45:22.515+09:00",
+      "merge_request_id": 942495,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2191859,
+      "head_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "57fd0d1b0b2463d80294b005b7c27e3fb9f1a3eb",
+      "created_at": "2026-09-14T09:45:22.515+09:00",
+      "merge_request_id": 942495,
+      "state": "empty",
+      "real_size": null,
+      "patch_id_sha": null,
+      "commits": [],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {}
+}

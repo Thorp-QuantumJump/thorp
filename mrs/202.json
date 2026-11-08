@@ -1,0 +1,933 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 949554,
+    "iid": 202,
+    "project_id": 1444456,
+    "title": "docs(de): spec 008 plan과 계약·점검표를 작성한다",
+    "description": "## 작업 내용 요약\n\nSpec 008의 계획 산출물과 계약을 만들고 17개 지표의 원천을 실제 조회로 확정했다. 병합되면 착수에 필요한 통계표·항목 코드·확보 구간·이용 조건이 모두 문서에 있고, 작업 68개가 병합 요청 묶음 아홉 개로 나뉘어 첫 티켓을 바로 뗄 수 있다.\n\n## 관련 티켓\n\n* S15P21E205-275\n* https://ssafy.atlassian.net/browse/S15P21E205-275\n\n## 주요 변경 사항\n\n* 17개 지표의 원천·통계표·항목·단위·확보 구간·이용 조건을 확정했다. 가장 짧은 계열이 2000-01이라 17개가 함께 갖춰지는 구간은 2001년부터다\n* 관세청 기준 주소를 `1220000/Newtrade`로 고쳤다. 8월 12일 개편으로 옛 경로가 폐기됐고, 폐기 경로는 키가 정상이어도 미등록 키 오류를 돌려준다\n* 무역수지를 원천 제공값 `balPayments`로 정했다. 수출에서 수입을 빼지 않는다 — 값이 같아도 원천이 정의를 바꾸면 파생식은 조용히 어긋난다\n* 원/달러를 일별 표에서 월별 표의 말일자료로 바꿨다. 일별 표는 서울외국환중개 작성이라 제3자 저작권이 걸린다\n* 주택가격은 기준월별 표 다섯 개를 겹침 구간 비율로 잇는 것으로 정했다. 현행 표만으로는 2021-06까지밖에 없다\n* 변환 경계 네 가지를 결측으로 고정했다. 증가율 분모가 없거나 0인 달, 계열 시작 직후, 월 기말의 휴장일, 월 평균의 부분 표본\n* 수집 실패 규칙(FR-011b)을 세웠다. 재시도와 포기, 중단 후 재실행, 전 구간 적재 완료 판정, 원천 구조 변경 감지\n* 이용 조건 규칙을 세웠다. 작성기관 조건이 제공기관 조건보다 우선하고, 권한이 철회되면 그 지표만 중단하며 과거 자료 버전은 보존한다\n* 008 조회 계약과 010 시계열 읽기 계약을 확정했다. 009는 요청당 스냅샷을 한 번만 읽는다\n\n## 테스트\n\n* [x] 네 원천을 인증키로 호출해 17개 계열 전부에서 200 응답과 값을 확인했다. 기록은 `pd11-source-verification.md`\n* [x] 원/달러 월별 말일자료가 일별 표의 마지막 거래일과 일치함을 확인했다 (2026-08 둘 다 1376.5)\n* [x] 두바이유 대체 후보 두 곳을 8개월치로 대조해 서로 다른 계열임을 확인했다 (최대 10.1% 차이)\n* [x] 코드 변경이 없어 자동 테스트는 돌리지 않았다\n\n## 리뷰 포인트\n\n* **두바이유의 권리 위험을 감수하기로 했다.** 국제통화기금 작성이고 상업 이용 제한 대상인지 확인할 창구가 없다. 대체 후보는 확보 구간이 짧고 경로가 비공식이며 이용 조건 표기가 없어 더 나빴다. 현행 유지에 동의하는지 봐 달라\n* **009의 수정이 008 작업에 들어왔다.** 지표 식별자, 무자료 응답, 검색 진입 기준월 셋이 어긋나 T061\\~T064에서 함께 고친다. 009 담당자와 경계를 확인해 달라\n* **브랜치 이름이 규약과 다르다.** 파트 표기가 빠졌다. 저장소에 전례가 있어 그대로 뒀다\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 008은 지표 값만 제공하고 순위나 추천을 만들지 않는다\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음. 008은 전략을 다루지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 변환 불가·결측·미수집을 모두 값 없음과 사유로 두도록 정했다. 0과 구별한다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 두바이유를 '권리 확인 대기'로 표시하고, 발표일을 주지 않는 원천은 수신 시각으로 대체하지 않는다",
+    "state": "merged",
+    "created_at": "2026-09-17T17:46:47.795+09:00",
+    "updated_at": "2026-09-17T17:56:04.682+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-17T17:55:43.518+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/275-spec008-plan-task",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "afa54f8c053d817d6e18a03b8ff1735f9b2cc14d",
+    "merge_commit_sha": "6ab3d3ebc193230494ff8db463c811ec561b6d6d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:46:49.567+09:00",
+    "reference": "!202",
+    "references": {
+      "short": "!202",
+      "relative": "!202",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!202"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/202",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 949554,
+    "iid": 202,
+    "project_id": 1444456,
+    "title": "docs(de): spec 008 plan과 계약·점검표를 작성한다",
+    "description": "## 작업 내용 요약\n\nSpec 008의 계획 산출물과 계약을 만들고 17개 지표의 원천을 실제 조회로 확정했다. 병합되면 착수에 필요한 통계표·항목 코드·확보 구간·이용 조건이 모두 문서에 있고, 작업 68개가 병합 요청 묶음 아홉 개로 나뉘어 첫 티켓을 바로 뗄 수 있다.\n\n## 관련 티켓\n\n* S15P21E205-275\n* https://ssafy.atlassian.net/browse/S15P21E205-275\n\n## 주요 변경 사항\n\n* 17개 지표의 원천·통계표·항목·단위·확보 구간·이용 조건을 확정했다. 가장 짧은 계열이 2000-01이라 17개가 함께 갖춰지는 구간은 2001년부터다\n* 관세청 기준 주소를 `1220000/Newtrade`로 고쳤다. 8월 12일 개편으로 옛 경로가 폐기됐고, 폐기 경로는 키가 정상이어도 미등록 키 오류를 돌려준다\n* 무역수지를 원천 제공값 `balPayments`로 정했다. 수출에서 수입을 빼지 않는다 — 값이 같아도 원천이 정의를 바꾸면 파생식은 조용히 어긋난다\n* 원/달러를 일별 표에서 월별 표의 말일자료로 바꿨다. 일별 표는 서울외국환중개 작성이라 제3자 저작권이 걸린다\n* 주택가격은 기준월별 표 다섯 개를 겹침 구간 비율로 잇는 것으로 정했다. 현행 표만으로는 2021-06까지밖에 없다\n* 변환 경계 네 가지를 결측으로 고정했다. 증가율 분모가 없거나 0인 달, 계열 시작 직후, 월 기말의 휴장일, 월 평균의 부분 표본\n* 수집 실패 규칙(FR-011b)을 세웠다. 재시도와 포기, 중단 후 재실행, 전 구간 적재 완료 판정, 원천 구조 변경 감지\n* 이용 조건 규칙을 세웠다. 작성기관 조건이 제공기관 조건보다 우선하고, 권한이 철회되면 그 지표만 중단하며 과거 자료 버전은 보존한다\n* 008 조회 계약과 010 시계열 읽기 계약을 확정했다. 009는 요청당 스냅샷을 한 번만 읽는다\n\n## 테스트\n\n* [x] 네 원천을 인증키로 호출해 17개 계열 전부에서 200 응답과 값을 확인했다. 기록은 `pd11-source-verification.md`\n* [x] 원/달러 월별 말일자료가 일별 표의 마지막 거래일과 일치함을 확인했다 (2026-08 둘 다 1376.5)\n* [x] 두바이유 대체 후보 두 곳을 8개월치로 대조해 서로 다른 계열임을 확인했다 (최대 10.1% 차이)\n* [x] 코드 변경이 없어 자동 테스트는 돌리지 않았다\n\n## 리뷰 포인트\n\n* **두바이유의 권리 위험을 감수하기로 했다.** 국제통화기금 작성이고 상업 이용 제한 대상인지 확인할 창구가 없다. 대체 후보는 확보 구간이 짧고 경로가 비공식이며 이용 조건 표기가 없어 더 나빴다. 현행 유지에 동의하는지 봐 달라\n* **009의 수정이 008 작업에 들어왔다.** 지표 식별자, 무자료 응답, 검색 진입 기준월 셋이 어긋나 T061\\~T064에서 함께 고친다. 009 담당자와 경계를 확인해 달라\n* **브랜치 이름이 규약과 다르다.** 파트 표기가 빠졌다. 저장소에 전례가 있어 그대로 뒀다\n\n## 공통 확인\n\n* [x] 순위 배지·추천 표현 0건 — 008은 지표 값만 제공하고 순위나 추천을 만들지 않는다\n* [x] 결제·포인트·상품 선택 단계 0건 — 해당 없음\n* [x] 전략 ID 상수·전략별 분기 0건 — 해당 없음. 008은 전략을 다루지 않는다\n* [x] 계산하지 않은 값을 0으로 채우지 않았다 — 변환 불가·결측·미수집을 모두 값 없음과 사유로 두도록 정했다. 0과 구별한다\n* [x] 검증되지 않은 것을 검증된 것처럼 보이지 않는다 — 두바이유를 '권리 확인 대기'로 표시하고, 발표일을 주지 않는 원천은 수신 시각으로 대체하지 않는다",
+    "state": "merged",
+    "created_at": "2026-09-17T17:46:47.795+09:00",
+    "updated_at": "2026-09-17T17:56:04.682+09:00",
+    "merged_by": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merge_user": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "merged_at": "2026-09-17T17:55:43.518+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs/275-spec008-plan-task",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "assignees": [
+      {
+        "id": 30842,
+        "username": "kendyjenny",
+        "public_email": null,
+        "name": "오은서",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/kendyjenny"
+      }
+    ],
+    "assignee": {
+      "id": 30842,
+      "username": "kendyjenny",
+      "public_email": null,
+      "name": "오은서",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/kendyjenny"
+    },
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "💾 Data",
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "afa54f8c053d817d6e18a03b8ff1735f9b2cc14d",
+    "merge_commit_sha": "6ab3d3ebc193230494ff8db463c811ec561b6d6d",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-17T17:46:49.567+09:00",
+    "reference": "!202",
+    "references": {
+      "short": "!202",
+      "relative": "!202",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!202"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/202",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 9,
+      "completed_count": 9
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "15",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "head_sha": "afa54f8c053d817d6e18a03b8ff1735f9b2cc14d",
+      "start_sha": "3491c10a0a7c00954c6fc3ffe211391379c9904b"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "27cc712c4629b84419705b79d106c2fad921e7ea",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827743,
+          "type": null,
+          "body": "assigned to @kendyjenny",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-17T17:46:47.919+09:00",
+          "updated_at": "2026-09-17T17:46:47.927+09:00",
+          "system": true,
+          "noteable_id": 949554,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 202,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0f7c7b0657d0100972878cfddd361d977c0e6960",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827748,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Critical] `specs/008-macro-indicator-registry/spec.md` 파일이 빈 파일(`size: 0`)로 생성되어 있습니다. 이 기능(Spec 008)의 핵심 명세서가 비어 있으면 후속 구현이나 요구사항 추적이 불가능하므로 반드시 내용을 작성해야 합니다.\n- [High] `specs/008-macro-indicator-registry/tasks.md` 파일 역시 비어 있습니다. implementation plan에서 예고한 대로 `/speckit-tasks` 등을 통해 구체적인 작업 단위와 의존성이 채워져야 합니다.\n\n### 테스트 제안\n- `spec.md`와 `tasks.md`가 정상적으로 작성된 후, 17개 지표의 실제 원천(ECOS, KOSIS, 관세청, OECD) 연동 및 008/009/010 계약 테스트 시나리오(`quickstart.md`)가 모두 수행될 수 있는지 검증하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:afa54f8c053d817d6e18a03b8ff1735f9b2cc14d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-17T17:46:58.762+09:00",
+          "updated_at": "2026-09-17T17:55:16.844+09:00",
+          "system": false,
+          "noteable_id": 949554,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 202,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "95e5266abb11463ca8c2445fd56cab484a51d527",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827890,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>afa54f8c - docs(de): 분할 호출 도중 한도에 걸리는 경우를 T051에 넣는다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/202/diffs?diff_id=2215935&start_sha=51c1aea7e726e8d9259f4b387992ed94590d46c0)",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-17T17:55:09.083+09:00",
+          "updated_at": "2026-09-17T17:55:09.087+09:00",
+          "system": true,
+          "noteable_id": 949554,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 202,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9f309a8f764f27f0275bc3e9eab09c52660ec463",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827896,
+          "type": null,
+          "body": "빈 파일에 대한 지적은 사실이 아닙니다. 오탐입니다. 브랜치 명명은 현재 그대로 진행하겠습니다.",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-17T17:55:39.975+09:00",
+          "updated_at": "2026-09-17T17:55:39.975+09:00",
+          "system": false,
+          "noteable_id": 949554,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 202,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a10704c54b1fb200f83811f853b01e07af9c4382",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2827898,
+          "type": null,
+          "body": "mentioned in commit 6ab3d3ebc193230494ff8db463c811ec561b6d6d",
+          "author": {
+            "id": 30842,
+            "username": "kendyjenny",
+            "public_email": null,
+            "name": "오은서",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/baf8ad96f718404faa2a46511f05e2ddbdb89a3b41179ca4dbf3448bd7dc7d2d?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/kendyjenny"
+          },
+          "created_at": "2026-09-17T17:55:43.561+09:00",
+          "updated_at": "2026-09-17T17:55:43.567+09:00",
+          "system": true,
+          "noteable_id": 949554,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 202,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2215935,
+      "head_commit_sha": "afa54f8c053d817d6e18a03b8ff1735f9b2cc14d",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "3491c10a0a7c00954c6fc3ffe211391379c9904b",
+      "created_at": "2026-09-17T17:55:08.797+09:00",
+      "merge_request_id": 949554,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "18d3d1a18edb74e143af99728284941a706a9810"
+    },
+    {
+      "id": 2215793,
+      "head_commit_sha": "51c1aea7e726e8d9259f4b387992ed94590d46c0",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "3491c10a0a7c00954c6fc3ffe211391379c9904b",
+      "created_at": "2026-09-17T17:46:48.429+09:00",
+      "merge_request_id": 949554,
+      "state": "without_files",
+      "real_size": "15",
+      "patch_id_sha": "339265688b928756a4ac4da48526442defbe9a13"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2215935,
+      "head_commit_sha": "afa54f8c053d817d6e18a03b8ff1735f9b2cc14d",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "3491c10a0a7c00954c6fc3ffe211391379c9904b",
+      "created_at": "2026-09-17T17:55:08.797+09:00",
+      "merge_request_id": 949554,
+      "state": "collected",
+      "real_size": "15",
+      "patch_id_sha": "18d3d1a18edb74e143af99728284941a706a9810",
+      "commits": [
+        {
+          "id": "afa54f8c053d817d6e18a03b8ff1735f9b2cc14d",
+          "short_id": "afa54f8c",
+          "created_at": "2026-09-17T17:55:05.000+09:00",
+          "parent_ids": [
+            "51c1aea7e726e8d9259f4b387992ed94590d46c0"
+          ],
+          "title": "docs(de): 분할 호출 도중 한도에 걸리는 경우를 T051에 넣는다",
+          "message": "docs(de): 분할 호출 도중 한도에 걸리는 경우를 T051에 넣는다\n\nS15P21E205-275\n\n리뷰 지적을 받아 T051의 범위를 넓혔다. 기존 작업은 한도 도달을 단일 호출\n실패로만 다뤘는데, 관세청은 전 구간을 연 단위로 37회 넘게 나눠 받으므로\n중간에 끊길 수 있다.\n\n이미 받은 연도의 원본이 보존되는지, 새 완결 버전이 발행되지 않는지,\n다시 실행하면 못 받은 연도부터 이어받는지를 확인하도록 적었다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T17:55:05.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T17:55:05.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/afa54f8c053d817d6e18a03b8ff1735f9b2cc14d"
+        },
+        {
+          "id": "51c1aea7e726e8d9259f4b387992ed94590d46c0",
+          "short_id": "51c1aea7",
+          "created_at": "2026-09-17T17:41:59.000+09:00",
+          "parent_ids": [
+            "5c814b03eaebe3f05d611acd97c1b2e13ff507c2"
+          ],
+          "title": "docs(de): spec 008 작업 목록과 병합 요청 경계를 만든다",
+          "message": "docs(de): spec 008 작업 목록과 병합 요청 경계를 만든다\n\nS15P21E205-275\n\n68개 작업을 사용자 스토리별 일곱 단계로 나누고, 병합 요청 단위가 될 작업 묶음\n아홉 개를 따로 적었다. 단계는 의존 순서이고 묶음이 티켓·브랜치·MR 단위다.\n\n- 최소 완성본은 US1이다. 준비·기반·US1을 마치면 17개 지표를 받아 변환하고\n  한 응답으로 조회할 수 있다. 009 화면과 010 검색이 소비할 자료가 그때 생긴다\n- US1이 작업 18개로 커서 한 MR에 담으면 리뷰가 안 된다. 수집·발행·조회로 나눴다\n- 실조회로 확정한 통계표·항목 코드, 관세청 새 기준 주소와 연 단위 분할, 주택가격\n  표 다섯 개 연결, 환율 말일자료 항목을 작업 설명에 그대로 넣었다\n\n남은 미확정 둘은 착수를 막지 않는다. 재조회 구간은 기본값 3개월로 시작해\n관찰 뒤 조정하고(T067), 주택가격 연결 계수는 구현하며 산출한다(T026).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T17:41:59.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T17:41:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/51c1aea7e726e8d9259f4b387992ed94590d46c0"
+        },
+        {
+          "id": "5c814b03eaebe3f05d611acd97c1b2e13ff507c2",
+          "short_id": "5c814b03",
+          "created_at": "2026-09-17T17:15:33.000+09:00",
+          "parent_ids": [
+            "ed18b475f6c3e99a5b81052971b464a82bb3c3fe"
+          ],
+          "title": "docs(de): spec 008 원천 17개를 실조회로 확정하고 수집 규칙을 채운다",
+          "message": "docs(de): spec 008 원천 17개를 실조회로 확정하고 수집 규칙을 채운다\n\nS15P21E205-275\n\nPD-11을 실제 API 조회로 끝냈다. 17개 지표의 통계표·항목·단위·구간·이용 조건을\npd11-source-verification.md 에 남겼다.\n\n원천 확정에서 바뀐 것:\n- 원/달러는 일별 표 대신 월별 표의 말일자료를 쓴다. 일별 표는 서울외국환중개\n  작성이라 제3자 저작권이 걸리고, 월별 말일자료는 한국은행 작성이면서 같은\n  값을 준다. 일별 마지막 거래일과 대조해 일치를 확인했다\n- 관세청 기준 주소가 8월 12일 개편으로 Newtrade 로 바뀌었다. 폐기된 경로는\n  키가 정상이어도 미등록 키 오류를 돌려준다. 이걸 키 문제로 오진했었다\n- 무역수지는 원천이 balPayments 로 직접 준다. 파생값이 아니다\n- 두바이유는 국제통화기금 작성이라 권리 확인이 필요하나 확인 창구가 없다.\n  대체 후보 셋을 실측 대조했더니 서로 다른 계열이고 모두 현행보다 불투명해\n  현행을 유지하고 '권리 확인 대기'로 표시한다. 감수하는 위험으로 기록했다\n\n새로 채운 수집 규칙(FR-011b):\n- 재시도와 포기 기준. 인증 거부나 없는 경로는 재시도하지 않는다\n- 중단 후 재실행 시 중복 없이 이어받기\n- 전 구간 적재 완료 판정 기준\n- 원천 구조·식별자 변경 감지. 실패 원인을 인증 문제로 단정하지 않는다\n\n그 밖에 작성기관 우선 원칙, 권한 철회 시 처리, 소비 경로별 이용 경계,\n증가율 비교월 t-12 고정, 조회 기간 상한에 맞춘 분할을 요구사항에 넣었다.\n\n점검표 110문항 모두 검토 완료. 수집 파이프라인 점검표를 새로 만들었다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T17:15:33.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T17:15:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5c814b03eaebe3f05d611acd97c1b2e13ff507c2"
+        },
+        {
+          "id": "ed18b475f6c3e99a5b81052971b464a82bb3c3fe",
+          "short_id": "ed18b475",
+          "created_at": "2026-09-17T12:22:28.000+09:00",
+          "parent_ids": [
+            "34f13ab1f9707ef8b9a1ad3c6d47dcc72a351646"
+          ],
+          "title": "docs(de): spec 008 변환·권리 규칙을 정하고 점검표를 정리한다",
+          "message": "docs(de): spec 008 변환·권리 규칙을 정하고 점검표를 정리한다\n\nS15P21E205-275\n\n명확화 다섯 건을 spec과 계획 산출물 전체에 반영하고, 점검표에서 지적된 빈틈 중\n팀 결정 없이 메울 수 있는 것을 고쳤다.\n\n정한 규칙:\n- 전년동월 대비의 비교 대상월이 결측이거나 0이면 그 달은 결측이고 사유를 남긴다.\n  계열 시작 직후라 비교할 달이 없는 구간도 같다\n- 월 기말은 그 달 마지막 거래일 값, 월 평균은 그 달 거래일이 모두 모였을 때만 낸다\n- 이용 권리를 확인하지 못한 지표는 공개 자료 버전에 넣지 않고 발행을 보류한다\n\n함께 채운 것:\n- 발행 중단과 동시 수집 충돌 처리를 FR-011a로 올렸다. 설계 문서에만 있어\n  무엇이 약속인지 spec에서 읽을 수 없었다\n- 분야 기준월이 없을 때의 지표별 경로와 기준월을 물린 지표를 FR-023에 넣었다\n- OECD는 공식 계열 확인과 제3자 권리 확인을 별개 조건으로 나눴다\n- PD-11 확인 근거를 pd11-source-verification.md에 남기도록 정했다\n\n점검표 90문항 중 76개 확인, 14개 미체크. 남은 것은 PD-11 실조회나 팀 결정이\n있어야 메워진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T12:22:28.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T12:22:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ed18b475f6c3e99a5b81052971b464a82bb3c3fe"
+        },
+        {
+          "id": "34f13ab1f9707ef8b9a1ad3c6d47dcc72a351646",
+          "short_id": "34f13ab1",
+          "created_at": "2026-09-17T11:26:57.000+09:00",
+          "parent_ids": [
+            "e6fcedd50324f8b789c775738de4379cacc49daa"
+          ],
+          "title": "docs(de): spec 008 점검표를 검토하고 어긋난 문서를 고친다",
+          "message": "docs(de): spec 008 점검표를 검토하고 어긋난 문서를 고친다\n\nS15P21E205-275\n\n점검표 54문항을 spec·plan·data-model과 대조해 36개를 확인하고 18개를 미체크로\n남겼다. 미체크 항목마다 판단 근거와 고칠 문서를 표로 적었다.\n\n- 범위 요약의 공식 원천 목록에 관세청을 넣어 FR-006과 맞췄다\n- SC-001의 등록표 필수 항목에 최소 유효 척도와 정기 재조회 구간 N을 넣어\n  FR-002와 맞췄다. 없으면 두 칸이 비어도 성공 기준을 통과한다\n\n남은 18개 중 절반은 PD-11을 실제로 조회해야 메울 수 있고, 나머지는 문장으로\n정할 수 있으나 팀 결정이 필요하다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T11:26:57.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T11:26:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/34f13ab1f9707ef8b9a1ad3c6d47dcc72a351646"
+        },
+        {
+          "id": "e6fcedd50324f8b789c775738de4379cacc49daa",
+          "short_id": "e6fcedd5",
+          "created_at": "2026-09-17T11:22:53.000+09:00",
+          "parent_ids": [
+            "ff447101fff99fb60e7e903faa6f840b64bfbef0"
+          ],
+          "title": "docs(de): spec 008 plan과 계약·점검표를 작성한다",
+          "message": "docs(de): spec 008 plan과 계약·점검표를 작성한다\n\nS15P21E205-275\n\nspec 008의 plan 단계 산출물을 만든다. research·data-model·contracts·quickstart를\n함께 두어 17개 지표의 수집·변환·불변 스냅샷 발행 경계를 정했다.\n\n- spec.md의 Clarifications에 남아 있던 REST·DB·경로 같은 구현 문구를 기능 책임\n  서술로 바꾸고, 기술 합의는 plan과 research로 옮겼다\n- 자료·소비 계약 점검표와 원천·이용 조건 점검표를 새로 두었다. 두 목록은 모두\n  미체크이며 요구사항 문장 품질을 묻는 질문이지 구현 완료 표시가 아니다\n- CLAUDE-HANDOFF.md에 현재 상태와 남은 결정(PD-10·PD-11)을 적었다\n\ntasks.md는 아직 만들지 않았다. 구현 티켓과 브랜치는 작업 묶음을 정한 뒤에 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T11:22:53.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T11:22:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6fcedd50324f8b789c775738de4379cacc49daa"
+        },
+        {
+          "id": "ff447101fff99fb60e7e903faa6f840b64bfbef0",
+          "short_id": "ff447101",
+          "created_at": "2026-09-16T17:27:44.000+09:00",
+          "parent_ids": [
+            "738a9f02ffd12718d641d4811fb952fa15dd356d"
+          ],
+          "title": "docs(de): spec 008 명확화 결정 반영",
+          "message": "docs(de): spec 008 명확화 결정 반영\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T17:27:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T17:27:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ff447101fff99fb60e7e903faa6f840b64bfbef0"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -0,0 +1,70 @@\n+# Ingestion Pipeline Checklist: 경제지표 등록·수집\n+\n+**Purpose**: 원천에서 자료를 받아 적재하기까지의 요구사항이 빠짐없고 한 가지로 읽히는지 검토한다. 원천별 제약, 재조회 범위, 실패와 재시도, 멱등성이 대상이다.\n+**Created**: 2026-09-17\n+**Feature**: [spec.md](../spec.md) · [plan.md](../plan.md) · [research.md](../research.md) · [pd11-source-verification.md](../pd11-source-verification.md)\n+\n+**Note**: 이 점검표는 수집이 실제로 동작하는지 시험하지 않는다. 수집 규칙을 적은 문장의 품질을 검토한다.\n+**Review Ownership**: 검토자가 요구사항 품질을 판단해 항목을 확인한다. 새 항목은 모두 미체크 상태다.\n+**Marker Semantics**: `[x]`는 요구사항 품질이 검토·충족되었다는 뜻이며 구현이나 실제 수집 완료를 뜻하지 않는다.\n+\n+## Requirement Completeness\n+\n+- [x] CHK001 원천마다 다른 조회 제약(요청당 기간·행·셀 상한)을 등록표에 적고 그에 맞춰 요청을 나누라는 요구가 있는가? [Completeness, Spec §FR-017, §FR-017a]\n+- [x] CHK002 최초 전 구간 적재와 이후 정기 재조회를 서로 다른 실행으로 구분하고, 각각의 범위를 정하는 요구가 있는가? [Completeness, Spec §FR-017]\n+- [x] CHK003 응답에 섞여 오는 합계·소계 행처럼 월별 관측값이 아닌 행을 걸러내라는 요구가 있는가? [Gap, Verification §4]\n+- [x] CHK004 기준월이 바뀌며 표가 나뉘는 계열을 여러 표에서 받아 잇는 절차가 요구사항으로 적혀 있는가? [Completeness, Spec §FR-010, Verification §2]\n+- [x] CHK005 원천이 발표일을 주지 않는 경우에 무엇을 대신 기록할지와 무엇으로 대체하면 안 되는지가 정해져 있는가? [Completeness, Spec §FR-007]\n+\n+## Requirement Clarity\n+\n+- [x] CHK006 정기 재조회 구간 `N`을 지표별로 정하는 근거와 정하기 전까지의 기본값이 분명한가? [Clarity, Spec §FR-002, §FR-017]\n+- [x] CHK007 `N` 밖의 과거 개정을 확인하는 경로(원천 공지·메타데이터·갱신일)와 확인했을 때의 재조회 범위가 분명한가? [Clarity, Spec §FR-017]\n+- [x] CHK008 전 구간 재적재를 촉발하는 조건(기준연도 개편, 값 규칙 변경)과 부분 재조회로 충분한 조건이 구별되는가? [Clarity, Spec §FR-003, §FR-017]\n+- [x] CHK009 원천이 주는 갱신일이 통계표 단위인지 관측치 단위인지 구별해 쓰라는 요구가 분명한가? [Ambiguity, Spec §FR-007, Verification §2]\n+- [x] CHK010 이용 권리가 '확인 완료'·'권리 확인 대기'·'미확인'인 지표의 수집과 발행 절차가 서로 어떻게 다른지 분명한가? [Clarity, Spec §FR-016a, §FR-016b]\n+\n+## Requirement Consistency\n+\n+- [x] CHK011 사용자 요청 중 원천을 호출하지 않는다는 요구가 수집·조회 양쪽 서술에서 같은 뜻으로 쓰였는가? [Consistency, Spec §FR-017, §FR-023]\n+- [x] CHK012 호출 한도 도달 시의 중단 요구와 전 구간 적재에 필요한 다회 호출 요구가 서로 모순되지 않는가? [Consistency, Spec §FR-011, §FR-017a]\n+- [x] CHK013 한도를 확인하지 못한 원천을 정기 수집에 올리지 않는다는 요구가 17개 전부를 수집해야 완결 버전이 난다는 요구와 양립하는가? [Conflict, Spec §FR-011, §FR-017a]\n+\n+## Acceptance Criteria Quality\n+\n+- [x] CHK014 같은 기간을 다시 수집했을 때 무엇이 같아야 하고 무엇이 새로 생겨도 되는지(개정 행) 측정 가능하게 적혔는가? [Measurability, Spec §FR-009, §SC-004]\n+- [x] CHK015 전 구간 적재가 끝났음을 판정할 기준(지표별 기대 시작월과 대상월 수)이 정해져 있는가? [Measurability, Gap, Verification §1~4]\n+- [x] CHK016 `N`이 적절했는지 사후에 판정할 근거(놓친 개정 건수 등)를 남기라는 요구가 있는가? [Measurability, Gap, Spec §FR-017]\n+\n+## Scenario & Edge Case Coverage\n+\n+- [x] CHK017 원천이 일시적 오류나 응답 없음을 돌려줄 때의 재시도와 포기 기준이 요구사항에 있는가? [Coverage, Gap, Spec §FR-011]\n+- [x] CHK018 같은 수집 실행을 중간에 끊고 다시 돌렸을 때 중복 없이 이어지도록 하라는 요구가 있는가? [Recovery, Gap, Spec §FR-011]\n+- [x] CHK019 원천이 경로나 식별자를 바꿔 기존 호출이 실패하는 경우를 어떻게 알아채고 다루는지 정해져 있는가? [Edge Case, Gap, Verification §4]\n+- [x] CHK020 개발 환경의 예시 자료 수집과 운영 수집이 같은 경로를 쓰지 않도록 분리 조건이 정의되어 있는가? [Coverage, Spec §FR-022]\n+\n+## 검토 메모 (2026-09-17)\n+\n+20문항을 spec·plan과 대조했다. 8개는 요구사항 자체가 없어 걸렸고, 모두 spec에 채운 뒤 확인했다.\n+\n+| 항목 | 무엇이 없었나 | 어디에 채웠나 |\n+|---|---|---|\n+| CHK001·CHK003 | 요청당 조회 기간 상한에 맞춘 분할, 응답에 섞인 합계 행 제외 | FR-017a |\n+| CHK004 | 개편으로 표가 여러 개로 나뉜 계열을 겹침 구간 비율로 잇는 절차 | FR-010 |\n+| CHK005·CHK009 | 발표일 미제공 시 처리, 통계표 단위 갱신일을 관측치 발표일로 쓰지 않기 | FR-007 |\n+| CHK006·CHK016 | 재조회 구간 N의 기본값과 사후 적절성 판정 근거 | FR-017 |\n+| CHK013 | 한도 미확인 원천 제외와 17개 완결성의 충돌 해소 | FR-017a |\n+| CHK015·CHK017·CHK018·CHK019 | 전 구간 적재 완료 판정, 재시도와 포기, 중단 후 재실행, 원천 변경 감지 | **FR-011b 신설** |\n+\n+CHK010은 한시적 대체 원천 예외가 철회되어 문항을 현행 권리 판정 상태(확인 완료·권리 확인 대기·미확인) 기준으로 고쳐 읽었다.\n+\n+FR-011b의 원천 변경 감지는 2026-09-17에 관세청 기준 주소가 바뀐 것을 인증키 문제로 오진한 경험에서 나왔다. 원천이 경로를 바꾸면 인증 오류처럼 보이는 응답이 오므로, 실패 원인을 인증 문제로 단정하지 않도록 요구에 적었다.\n+\n+\n+## Notes\n+\n+- 항목을 `[x]`로 바꾸는 것은 검토자의 요구사항 품질 승인이다. 구현·수집 완료 표시가 아니다.\n+- 충족하지 않은 항목은 고칠 문서와 판단 근거를 옆에 적고 미체크로 둔다.\n+- `$speckit-implement`는 체크 상태를 읽지만 이 표식을 수정하지 않는다.\n+- `checklists/requirements.md`는 `$speckit-specify`·`$speckit-clarify`가 관리하는 별도 기본 점검표다.\n+- 변환 규칙은 [transformation.md](transformation.md), 이용 조건은 [source-compliance.md](source-compliance.md), 자료·소비 계약은 [macro-data.md](macro-data.md)가 다룬다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/checklists/ingestion.md",
+          "old_path": "specs/008-macro-indicator-registry/checklists/ingestion.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,81 @@\n+# Macro Data & Consumer Contract Checklist: 경제지표 등록·수집\n+\n+**Purpose**: Spec 008의 원천·월별 자료·버전 발행과 009/010 소비 경계에 관한 요구사항의 완전성·명료성·일관성을 검토한다.\n+**Created**: 2026-09-17\n+**Feature**: [spec.md](../spec.md) · [plan.md](../plan.md)\n+\n+**Note**: 이 점검표는 구현 동작 시험이 아니라 요구사항 문장의 품질을 검토한다.\n+**Review Ownership**: 검토자가 요구사항 품질을 판단해 항목을 확인한다. 새 항목은 모두 미체크 상태다.\n+**Marker Semantics**: `[x]`는 요구사항 품질이 검토·충족되었다는 뜻이며 구현 완료를 뜻하지 않는다.\n+\n+## Requirement Completeness\n+\n+- [x] CHK001 17개 지표 각각의 분야·변환·주 원천을 빠짐없이 특정하고, 같은 지표의 공급원 중복 처리 기준을 정의했는가? [Completeness, Spec §FR-001, §FR-005, §FR-006]\n+- [x] CHK002 등록표의 필수 속성, 미확인 값의 표기, 실자료 완료 전 확정할 항목을 서로 구별해 문서화했는가? [Completeness, Spec §FR-002, §SC-001, §PD-11]\n+- [x] CHK003 일별 원천을 월 기말·월 평균으로 바꾸거나 전년동월 대비 값을 만드는 데 필요한 원값·비교월·발표 근거의 보존 범위를 명시했는가? [Completeness, Spec §FR-001, §FR-006, §FR-007]\n+- [x] CHK004 지표별 원천 권리·작성기관·출처 표기·재배포 제한의 확인 항목과 미확인 시 제공 범위를 정의했는가? [Completeness, Spec §FR-016, §FR-018, §FR-019, §PD-11]\n+- [x] CHK005 008이 009와 010에 제공해야 할 값·메타데이터·버전·수집 상태의 범위를 각각 빠짐없이 정했는가? [Completeness, Spec §FR-013, §FR-014, §FR-023]\n+\n+## Requirement Clarity\n+\n+- [x] CHK006 '유효한 월별 변환값'의 판정에 원값만 존재하는 월, 결측, 분모 부재·0, 개편 단절이 어떻게 포함 또는 제외되는지 명확한가? [Clarity, Spec §FR-006, §FR-008, §FR-010, §FR-011]\n+- [x] CHK007 대상월·기관 발표일·수신 시각·개정 기준의 서로 다른 의미와 원천이 날짜·개정 식별자를 제공하지 않을 때의 표기가 분명한가? [Clarity, Spec §FR-007, §FR-012]\n+- [x] CHK008 지표별 재조회 구간 `N`의 결정 근거와 `N` 밖 개정 발견 시 필요한 재조회 범위가 구분되어 있는가? [Clarity, Spec §FR-002, §FR-017]\n+- [x] CHK009 원천·통계 항목·단위·변환·연결·결측 규칙의 변경과 매핑·가중·화면 문구 변경이 각각 어떤 버전을 바꾸는지 모호함 없이 분리되어 있는가? [Clarity, Spec §FR-003, §SC-005]\n+- [x] CHK010 `T_g`, `T_all`, 지표별 최신월 및 검색 계산 완료월의 정의·null 의미가 서로 구별되어 있는가? [Clarity, Spec §FR-013, §FR-023]\n+\n+## Requirement Consistency\n+\n+- [x] CHK011 17개 전부의 유효값이 필요한 발행 조건과 공통월 `T_all`이 없어도 발행한다는 조건이 같은 용어·판정 순서로 서술되어 있는가? [Consistency, Spec §FR-011, §FR-013, §SC-008]\n+- [x] CHK012 계산 등록표·표시 분류·자료 버전을 독립 변경한다는 요구와 동일 버전 재조회 시 재현성이 유지된다는 기준이 양립하도록 서술되어 있는가? [Consistency, Spec §FR-003, §FR-009, §SC-004, §SC-005]\n+- [x] CHK013 첫 완결 버전이 없는 상태의 17개 등록 정보 제공 요구와 값·기준월·자료 버전 부재 요구가 서로 모순되지 않는가? [Consistency, Spec §FR-011, §FR-023, §SC-008]\n+- [x] CHK014 008의 최신 자료월 표시와 010의 검색 완료월만 검색 진입에 쓴다는 원칙이 009의 관련 요구·계약에도 동일하게 반영되도록 변경 범위가 정의되어 있는가? [Conflict, Spec §FR-013, Plan §Integration Risks and Exit Criteria]\n+- [x] CHK015 무자료 또는 `T_g=null`일 때 최근 경로·기준월·지연 원인 지표의 의미가 008 제공 정보와 009 화면 요구에서 일관되는가? [Consistency, Spec §FR-023, Plan §Integration Risks and Exit Criteria]\n+- [x] CHK016 010의 종합 공통월 부재·검색 계산 불가와 분야별 검색 유지 요구가 008의 null 기준월 정의와 충돌 없이 서술되어 있는가? [Conflict, Spec §FR-013, Plan §Integration Risks and Exit Criteria]\n+\n+## Acceptance Criteria Quality\n+\n+- [x] CHK017 17개 지표·7개 분야·필수 등록 항목의 누락 여부를 객관적으로 판정할 기준이 명시되어 있는가? [Measurability, Spec §SC-001, §SC-008]\n+- [x] CHK018 원값에서 변환값을 독립 대조할 표본 대상월·변환 유형·허용 오차를 정할 책임과 시점이 명시되어 있는가? [Measurability, Spec §SC-007, §PD-11]\n+- [x] CHK019 자료 버전과 등록표 버전이 같을 때 무엇이 동일해야 하는지(관측값·기준월·표시 정보·수집 상태)를 구분해 측정 가능하게 적었는가? [Measurability, Spec §SC-004, §FR-003, §FR-011]\n+- [x] CHK020 '완결 자료 버전'의 17개 처리 완료·유효값 조건과 발행 보류 사유를 개별적으로 판정할 수 있는가? [Measurability, Spec §FR-011, §SC-008]\n+- [x] CHK021 PD-10·PD-11이 미확정일 때의 허용된 중간 상태와 각 결정이 완료될 때의 증거·판정 책임이 명시되어 있는가? [Acceptance Criteria, Spec §FR-015, §FR-022, §PD-10, §PD-11]\n+\n+## Scenario & Edge Case Coverage\n+\n+- [x] CHK022 최초 전 구간 확보, 정상 증분 재조회, 과거 개정, 기준연도 개편의 서로 다른 요구 흐름을 모두 다루는가? [Coverage, Spec §FR-009, §FR-010, §FR-017]\n+- [x] CHK023 일부 원천 성공·인증 실패·호출 한도 도달·전체 변환값 0건에 대해 원본 보존과 공개 버전 유지/보류 기준이 정의되어 있는가? [Coverage, Spec §FR-011, §FR-022]\n+- [x] CHK024 각 지표에는 유효값이 있으나 한 분야 또는 전체의 공통 대상월이 없는 경우의 제공 정보와 검색 가능 범위를 다루는가? [Edge Case, Spec §FR-013, §FR-023]\n+- [x] CHK025 지표의 최신월이 분야 `T_g`보다 뒤선 경우와 최근 세 달 중 한 달이 결측인 경우를 구분해 표시 정보 요구를 정했는가? [Edge Case, Spec §FR-008, §FR-014, §FR-023]\n+- [x] CHK026 발행 도중 중단되거나 중복 수집이 겹치는 상황에서 어느 완결 버전을 소비자에게 유지할지 요구사항으로 명시했는가? [Recovery, Gap, Spec §FR-009, §FR-011]\n+- [x] CHK027 개정 자료를 이용한 역사 탐색과 당시 발표자료 재현의 범위·표시 문구·금지된 해석이 예외 없이 구별되어 있는가? [Coverage, Spec §FR-012, §Assumptions]\n+\n+## Non-Functional Requirements\n+\n+- [x] CHK028 사용자 조회 시 원천을 호출하지 않는 조건과 원천별 호출 한도·지연 시 제공 상태가 요구사항에 명시되어 있는가? [Non-Functional, Spec §FR-011, §FR-017]\n+- [x] CHK029 인증키의 사용자 비노출, 개발 예시 자료의 명시적 사용, 운영 자동 대체 금지가 한 흐름으로 정의되어 있는가? [Security, Spec §FR-021, §FR-022]\n+- [x] CHK030 수집·발행·조회 성능의 측정 대상과 수치 상한을 실측 후 정한다는 결정이 서로 구분되어 있는가? [Performance, Plan §Technical Context, Constitution §IX]\n+- [x] CHK031 원본·개정 이력·과거 공개 버전의 보존 필요성과 보관/삭제 정책의 미확정 범위가 명시되어 있는가? [Non-Functional, Spec §FR-009, Plan §Architecture and Data Flow]\n+\n+## Dependencies & Assumptions\n+\n+- [x] CHK032 실제 원천의 항목 코드·과거 범위·이용 조건을 확인하기 전 예시 자료를 실제 자료로 오인하지 않도록 하는 완료 경계가 분명한가? [Dependency, Spec §FR-022, §PD-11]\n+- [x] CHK033 관세청 무역수지의 공식 제공값 여부와 OECD G20 계열·권리 조건처럼 실조회가 필요한 결정이 미확정 상태로 추적되는가? [Assumption, Spec §FR-006, §FR-019, §PD-11]\n+- [x] CHK034 기존 시장 카드용 11개 지표와 008의 월별 17개 지표, 010의 검색 계산 책임 사이의 범위 경계가 충분히 명시되어 있는가? [Dependency, Spec §Out of Scope, §FR-023]\n+\n+## 미충족 항목 메모 (2026-09-17 검토, 명확화 반영)\n+\n+34개 중 27개는 spec·plan·data-model에 근거가 있어 확인했다. 아래 7개는 근거를 찾지 못해\n+미체크로 둔다. 옆에 고칠 문서와 판단 근거를 적는다.\n+\n+| 항목 | 판단 근거 | 고칠 문서 |\n+|---|---|---|\n+\n+2026-09-17 명확화 세션과 그에 따른 spec 수정으로 CHK004·CHK006·CHK015·CHK026이 해소되어 위 표에서 뺐다.\n+\n+## Notes\n+\n+- 항목을 `[x]`로 바꾸는 것은 검토자의 요구사항 품질 승인이다. 구현·테스트 완료 표시가 아니다.\n+- 충족하지 않은 항목은 수정할 문서와 판단 근거를 옆에 적고 미체크로 둔다.\n+- `$speckit-implement`는 체크 상태를 읽지만 이 표식을 수정하지 않는다.\n+- `checklists/requirements.md`는 `$speckit-specify`·`$speckit-clarify`가 관리하는 별도 기본 점검표다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/checklists/macro-data.md",
+          "old_path": "specs/008-macro-indicator-registry/checklists/macro-data.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -35,3 +35,4 @@\n - 2026-09-10 검증: ECOS·KOSIS·OECD·KDI·DATA_GO_KR은 기획서 §6.2가 확정한 자료 원천이며 시스템 구현 기술이 아니므로 구현 세부로 보지 않았다. KOSIS 호출 한도(분당 200회·요청당 40,000셀)는 원천의 이용 조건이다. 저장 형식·갱신 주기·호출 방식은 plan으로 넘겼다.\n - 17개 지표·변환·분야 배치·동일가중은 기획서가 확정한 모델 v1 값(PD-08 일부)이라 그대로 적었다. 통계표 코드 등 실제 값(PD-11)과 최소 유효 척도(PD-10)는 결정 항목 표로 관리한다.\n - 당시 발표·수정값(빈티지)은 범위 밖으로 명시했다. 역사 탐색만 제공한다는 가정을 Assumptions에 적었다.\n+- 2026-09-17 plan 착수 검증: Clarifications 이력에 남아 있던 REST·DB·`data/` 등 구현 경계 문구를 기능 책임으로 바꾸고, 기존 기술 합의는 plan/research로 이관했다. `API`는 원천 제공 서비스·인증키의 이용 조건 또는 사용자 비노출 요구를 뜻할 때만 남겼다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/checklists/requirements.md",
+          "old_path": "specs/008-macro-indicator-registry/checklists/requirements.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,61 @@\n+# Source Eligibility & Use-Conditions Checklist: 경제지표 원천 검증\n+\n+**Purpose**: Spec 008의 17개 계열을 실제 원천으로 확정하기 전에, 원천 선택·이용 권리·출처 전달·미확정 상태에 관한 요구사항의 완전성·명료성·일관성을 검토한다.\n+**Created**: 2026-09-17\n+**Feature**: [spec.md](../spec.md) · [plan.md](../plan.md) · [research.md](../research.md)\n+\n+**Note**: 이 점검표는 원천 접속이나 구현 동작 시험이 아니라 요구사항 문장의 품질을 검토한다.\n+**Review Ownership**: 작성자와 자료 이용 조건을 검토할 담당자가 구현·완료 판정 전에 검토한다. 새 항목은 모두 미체크 상태다.\n+**Marker Semantics**: `[x]`는 요구사항 품질이 검토·충족되었다는 뜻이며 실제 원천 검증이나 구현 완료를 뜻하지 않는다.\n+\n+## Evidence Requirements\n+\n+- [x] CHK001 17개 계열마다 PD-11의 실제 응답·항목 식별자·조회 조건·확인 일시·이용 조건 근거를 어떤 기록에 남길지 요구사항에 명시되어 있는가? [Completeness, Spec §FR-002, §FR-022, §PD-11]\n+- [x] CHK002 동일 통계의 작성기관, API 제공기관, 권리자를 서로 다르게 판정해야 할 때 어느 주체의 조건을 우선 확인할지 정의되어 있는가? [Gap, Spec §FR-016, §PD-11]\n+- [x] CHK003 지표별 최초·최종 관측월과 변환에 필요한 원값의 실제 가용 범위를 확인할 증거 기준이 정의되어 있는가? [Completeness, Spec §FR-006, §FR-022, §PD-11]\n+- [x] CHK004 API 문서상의 일반 허용 조건과 실제 선택한 계열의 예외 조건을 구별해 PD-11에 기록하도록 요구하는가? [Clarity, Spec §FR-016, §FR-019, §PD-11]\n+\n+## Source Decision Clarity\n+\n+- [x] CHK005 ECOS·KOSIS 양쪽에 후보 계열이 있을 때 주 원천의 선택 근거와 대체 시 새 등록표 버전이 필요한 경계를 명확히 정의하는가? [Clarity, Spec §FR-002, §FR-005]\n+- [x] CHK006 관세청 무역수지가 별도 공식 값인지 파생값인지에 따라 출처·계산 근거·검증 기준을 어떻게 달리 기록할지 정해져 있는가? [Gap, Spec §FR-006, §PD-11, Research §1]\n+- [x] CHK007 OECD G20 계열의 공식 원천 확인과 제3자 권리 확인을 서로 독립된 완료 조건으로 구별하는가? [Gap, Spec §FR-019, §PD-11, Research §1]\n+- [x] CHK008 DATA_GO_KR 보완 자료가 실제 운영 주 원천으로 승격될 수 있는지, 가능하다면 어떤 별도 결정이 필요한지 경계가 분명한가? [Clarity, Spec §FR-019]\n+\n+## Rights & Distribution Boundaries\n+\n+- [x] CHK009 ECOS의 한국은행 작성 통계와 타 기관 작성 통계에 서로 다른 이용 조건을 적용하는 판정 기준이 명확한가? [Clarity, Spec §FR-016]\n+- [x] CHK010 KOSIS 국제통계·북한통계 예외에 해당하는지를 각 선택 계열별로 판정하고, 제한이 있으면 어떤 제공 형태를 보류할지 요구하는가? [Coverage, Spec §FR-016, §PD-11]\n+- [x] CHK011 화면 표시, 008/009 API 응답, 010 계산 입력, 006 내보내기, 원자료 재배포의 권리 범위를 혼동하지 않도록 각각의 이용 경계를 정의하는가? [Gap, Spec §FR-016, §FR-018, §FR-023]\n+- [x] CHK012 원값을 변환하거나 무역수지를 파생해도 작성기관·원천·가공 사실을 어떤 소비 경로까지 전달해야 하는지 명시되어 있는가? [Completeness, Spec §FR-006, §FR-016, §FR-023]\n+- [x] CHK013 원천 이용 조건이 바뀌거나 권한이 철회되었을 때 이미 발행한 스냅샷·API 제공·내보내기의 유지 또는 중단 범위를 정의하는가? [Gap, Spec §FR-011, §FR-016, §FR-018]\n+\n+## Restricted & Unavailable Sources\n+\n+- [x] CHK014 인증키 미발급, 승인 대기, 라이선스 미확인, 실제 조회 실패를 서로 다른 미확정 상태로 구분하고 각각의 발행 보류 기준을 명시하는가? [Coverage, Spec §FR-011, §FR-022, §PD-11]\n+- [x] CHK015 원천별 호출 한도·요청 크기·캐시 조건이 확인되지 않았을 때 해당 원천의 수집 가능 여부와 완료 판정이 어떻게 달라지는지 정의하는가? [Gap, Spec §FR-017, §FR-019, §PD-11]\n+- [x] CHK016 예시 자료가 실제 통계와 섞이거나 운영의 결손을 메우는 것으로 해석되지 않도록 환경·표시·버전의 분리 조건을 요구하는가? [Consistency, Spec §FR-011, §FR-022, §FR-023]\n+- [x] CHK017 KDI 자료를 해석 근거로 인용하는 경우에도 수치 대조·검색 입력·KDI 공식 모델로의 오인을 금지하는 범위가 일관되게 명시되어 있는가? [Consistency, Spec §FR-020]\n+\n+## Acceptance & Ownership\n+\n+- [x] CHK018 PD-11을 ‘17개 후보를 등록했다’가 아니라 ‘17개 실제 응답과 계열별 이용 조건을 확인했다’로 판정할 수 있는 완료 기준이 있는가? [Measurability, Spec §FR-022, §PD-11]\n+- [x] CHK019 출처와 작성기관이 필요한 모든 소비 화면으로 전달되었는지 판정할 대상 목록과 책임 경계가 명시되어 있는가? [Measurability, Spec §FR-016, §FR-023, §SC-006]\n+- [x] CHK020 이용 조건의 재확인 시점·담당자·근거 갱신 책임과 조건 변경 시 재판정해야 할 자료 버전의 범위가 정해져 있는가? [Gap, Spec §FR-002, §FR-016, §PD-11]\n+\n+## 미충족 항목 메모 (2026-09-17 검토, 명확화 반영)\n+\n+20개 중 9개는 확인했다. 아래 11개는 미체크로 둔다. 대부분 작성자가 이미 `[Gap]`으로 표시한\n+항목이며, PD-11을 실제로 조회하기 전에는 문장만으로 메울 수 없는 것도 섞여 있다.\n+\n+| 항목 | 판단 근거 | 고칠 문서 |\n+|---|---|---|\n+\n+같은 날 CHK001·CHK007·CHK010·CHK014가 해소되어 위 표에서 뺐다. 남은 항목은 PD-11 실조회나 팀 결정이 있어야 메워진다.\n+\n+## Notes\n+\n+- 충족하지 않은 항목은 수정할 요구사항 문서와 확인 근거를 적고 미체크로 둔다.\n+- 이 목록은 앞서 만든 [macro-data.md](macro-data.md)의 자료·버전·소비 계약 전반 점검을 대체하지 않는다.\n+- `$speckit-implement`는 체크 상태를 읽지만 이 표식을 수정하지 않는다.\n+- `checklists/requirements.md`는 `$speckit-specify`·`$speckit-clarify`가 관리하는 별도 기본 점검표다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/checklists/source-compliance.md",
+          "old_path": "specs/008-macro-indicator-registry/checklists/source-compliance.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,60 @@\n+# Transformation & Missing-Value Rules Checklist: 경제지표 등록·수집\n+\n+**Purpose**: Spec 008의 원값→월별 변환 규칙과 결측·개편 처리에 관한 요구사항의 완전성·명료성·일관성을 검토한다.\n+**Created**: 2026-09-17\n+**Feature**: [spec.md](../spec.md) · [plan.md](../plan.md) · [research.md](../research.md) · [data-model.md](../data-model.md)\n+\n+**Note**: 이 점검표는 변환 결과가 맞는지 시험하지 않는다. 변환 규칙을 적은 문장이 빠짐없고 한 가지로 읽히는지 검토한다.\n+**Review Ownership**: 검토자가 요구사항 품질을 판단해 항목을 확인한다. 새 항목은 모두 미체크 상태다.\n+**Marker Semantics**: `[x]`는 요구사항 품질이 검토·충족되었다는 뜻이며 구현이나 실자료 검증 완료를 뜻하지 않는다.\n+\n+## Requirement Completeness\n+\n+- [x] CHK001 17개 지표마다 적용할 변환이 FR-001 표의 유형 중 정확히 하나로 특정되고, 등록표에 지표별로 기록하도록 요구하는가? [Completeness, Spec §FR-001, §FR-002]\n+- [x] CHK002 일별 원천을 월값으로 만들 때 '월 기말'이 마지막 영업일인지 마지막 달력일인지, 그 달의 거래일이 없으면 어떻게 하는지 정의되어 있는가? [Gap, Spec §FR-001, §Assumptions]\n+- [x] CHK003 전년동월 대비 증가율의 계산식과 비교 대상월 선정 규칙(t-12 고정 여부, 개편 전후를 넘는 비교 허용 여부)이 명시되어 있는가? [Gap, Spec §FR-001, §FR-006, §FR-010]\n+- [x] CHK004 실업률의 계절조정 비율이 원천 제공값인지 자체 조정값인지 구별해 기록하도록 요구하는가? [Gap, Spec §FR-001, §FR-002]\n+- [x] CHK005 무역수지가 원천 공식값인지 수출에서 수입을 뺀 파생값인지에 따라 변환 기록과 검증 근거를 달리 남기도록 요구하는가? [Completeness, Spec §FR-006, Research §R1]\n+\n+## Requirement Clarity\n+\n+- [x] CHK006 전년동월 값이 결측이거나 0인 달의 변환값을 어떻게 처리하는지 정의되어 있는가? [Gap, Spec §FR-006, §FR-008]\n+- [x] CHK007 '유효한 월별 변환값'과 '원값만 있는 월'의 판정 경계가 한 가지로만 읽히는가? [Clarity, Spec §FR-006, §FR-011]\n+- [x] CHK008 결측 사유(원천 미발표, 수집 실패, 변환 불가, 개편 구간 제외)를 서로 구분해 기록하도록 요구하는가? [Clarity, Spec §FR-008, Data Model §1]\n+- [x] CHK009 공표 정밀도에 따른 반올림을 저장값과 표시값에 각각 어떻게 적용하는지 구분되어 있는가? [Clarity, Spec §FR-015, Data Model §1]\n+- [x] CHK010 단위 환산(지수 기준연도 변경, 금액 단위 통일)이 변환 규칙에 포함되는지 별개 항목인지 분명한가? [Ambiguity, Spec §FR-001, §FR-002]\n+\n+## Requirement Consistency\n+\n+- [x] CHK011 변환 규칙 변경이 새 계산 등록표 버전과 전 구간 재처리를 함께 요구한다는 서술이 여러 문서에서 같은 뜻으로 쓰였는가? [Consistency, Spec §FR-003, §FR-017, Research §R3]\n+- [x] CHK012 개편 연결 규칙으로 이은 구간과 규칙이 없어 제외한 구간이 유효 변환값 집합과 기준월 산출에서 같은 기준으로 다뤄지는가? [Consistency, Spec §FR-010, §FR-013]\n+- [x] CHK013 보간 금지 요구가 변환 단계 안(월 평균을 낼 때 빠진 날을 어떻게 둘지)에도 같게 적용되는지 분명한가? [Conflict, Spec §FR-008, §FR-001]\n+- [x] CHK014 최근 3개월 경로에서 결측을 그대로 보이라는 요구와 기준월 산출에서 결측월을 빼라는 요구가 서로 모순되지 않는가? [Consistency, Spec §FR-013, §FR-014]\n+\n+## Acceptance Criteria Quality\n+\n+- [x] CHK015 원값 대조 검증의 표본 대상월·변환 유형·허용 오차를 누가 언제 정하는지 명시되어 있는가? [Measurability, Spec §SC-007]\n+- [x] CHK016 변환값을 원값에서 다시 만들 수 있는지 판정할 계보 보존 범위가 측정 가능하게 적혔는가? [Measurability, Spec §FR-006, Data Model §2]\n+- [x] CHK017 '보간된 값으로 채운 사례 0건'을 어떤 기록으로 판정하는지 정의되어 있는가? [Measurability, Spec §SC-003]\n+\n+## Edge Case Coverage\n+\n+- [x] CHK018 전년 대비 변환에 필요한 과거 구간이 없는 계열 초기 12개월의 취급이 정해져 있는가? [Edge Case, Gap, Spec §FR-006]\n+- [x] CHK019 한 달의 일별 표본이 일부만 확보된 경우 월값을 산출할지 결측으로 둘지의 최소 표본 조건이 있는가? [Edge Case, Gap, Spec §FR-001, §FR-008]\n+- [x] CHK020 원천 개정으로 원값이 바뀌어 변환값의 유효 여부나 부호가 달라진 경우 이전 변환값을 어떻게 남길지 요구하는가? [Edge Case, Spec §FR-009]\n+\n+## 미충족 항목 메모 (2026-09-17 검토)\n+\n+20개 중 16개는 spec·plan·data-model·계약에 근거가 있어 확인했다. 남은 4개는 미체크로 둔다.\n+\n+| 항목 | 판단 근거 | 고칠 문서 |\n+|---|---|---|\n+\n+\n+## Notes\n+\n+- 항목을 `[x]`로 바꾸는 것은 검토자의 요구사항 품질 승인이다. 구현·테스트 완료 표시가 아니다.\n+- 충족하지 않은 항목은 고칠 문서와 판단 근거를 옆에 적고 미체크로 둔다.\n+- `$speckit-implement`는 체크 상태를 읽지만 이 표식을 수정하지 않는다.\n+- `checklists/requirements.md`는 `$speckit-specify`·`$speckit-clarify`가 관리하는 별도 기본 점검표다.\n+- 자료·버전·소비 계약 전반은 [macro-data.md](macro-data.md), 원천·이용 조건은 [source-compliance.md](source-compliance.md)가 다룬다. 이 목록은 그 둘을 대체하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/checklists/transformation.md",
+          "old_path": "specs/008-macro-indicator-registry/checklists/transformation.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,29 @@\n+# 내부 소비자 계약: 008 → 010/009\n+\n+**상태**: 계획 계약. [010의 기존 포트 계약](../../010-economic-regime-search/contracts/macro-indicator-port.md)과 함께 구현 시 계약 테스트로 고정한다. [공개 REST 계약](openapi.yaml)은 008 소유다.\n+\n+## 010 `data/` 계산 입력: `MacroIndicatorSource`\n+\n+010은 Python 배치에서 008의 **공개 완료된** `(data_version, calculation_registry_version)` 조합 하나를 읽는다. Backend가 시계열·척도·거리 계산을 대신하지 않는다.\n+\n+| 연산 | 반환/조건 |\n+|---|---|\n+| `registry(version)` | 17개 안정 ID, 원천/단위/변환/공표 정밀도, 지표→7개 분야 매핑과 명목 가중. 표시 분류 버전은 별도 |\n+| `raw_series(indicator_id, data_version)` | 대상월→원값, 결측은 null/없음으로 구분; 전 가용 구간 |\n+| `monthly_series(indicator_id, data_version)` | 대상월→변환값, 유효값 없는 월은 값 없음과 사유(원천 미발표·수집 실패·변환 불가·개편 제외)를 함께 반환; 임의 보간 금지. 비교 대상월 결측·0, 계열 시작 이전, 월 평균 표본 미완성은 모두 '변환 불가'다 |\n+| `publication(indicator_id, month, data_version)` | 원천 발표일(없으면 unknown), 수신 시각, 원천 개정/자체 개정 식별자, 원본 근거 |\n+| `baseline_months(data_version, registry_version)` | 분야별 `T_g`, 전체 `T_all` (null 가능). 자료 확보월이며 검색 계산 완료월이 아님 |\n+| `changed_since(previous_data_version, target_data_version)` | 고정한 두 버전 사이에 값·사용 가능성 변경이 발생한 **가장 오래된 대상월**. 정확히 판정 불가 시 `None`으로 전 구간 재계산 요구 |\n+| `is_sample_data(data_version)` | 예시 데이터 여부. 운영 검색에 fixture 결과를 조용히 섞지 않음 |\n+\n+호출 시작 시 current 포인터를 한 번 읽어 자료·계산·표시 버전을 고정한다. 배치 도중 새 발행이 생겨도 같은 target 버전을 끝까지 읽는다. `changed_since`는 동일 값 규칙끼리만 비교하고 값 규칙이 바뀌면 전 구간 재계산을 요구한다. 매핑·가중 변경은 시계열 재처리 없이 010의 모델/검색 계산 재실행 대상이다. 010은 결과에 사용한 자료·등록표·모델 버전을 기록한다. `T_all=null`이면 종합 검색은 계산 불가이며, 유효 `T_g`를 가진 분야 검색은 유지한다. 010의 `regime_baseline_month`는 사전 계산이 끝난 검색 가능월의 근거로서 008 `T_g`와 별도다. 현 010 테이블의 `baseline_month NOT NULL`을 유지하려면 null 범위의 완료월 행을 만들지 않고, `baseline-months` 응답에서 `composite:null`/분야 `baselineMonth:null`을 명시하며 해당 검색을 `NOT_COMPUTABLE`로 처리하도록 010 계약을 갱신한다. 기존 010 계약의 인자 없는 `registry()`·`data_version()`과 현재 표시명 조회는 버전 고정 규칙에 맞춰 정합화해야 한다.\n+\n+## 010 Backend 표시 등록표\n+\n+010의 `MacroIndicatorPort`는 008의 표시/계산 등록표 조회 경계를 통해 `registryVersion()`, `fields()`, `indicator(id)`를 제공한다. 화면 이름·순서는 표시 분류 버전, 계산 매핑·가중은 계산 등록표 버전에서 읽는다. 010 Backend는 `macro_observation`을 직접 조회하거나 계산하지 않는다. 포트가 실패하면 fixture 이름으로 자동 대체하지 않는다.\n+\n+## 009 Backend 화면 조립\n+\n+009의 기존 `GET /market-flow/fields`와 `GET /market-flow/fields/{fieldId}`는 유지한다. 두 요청은 008 `GET /macro-indicators/snapshot`의 같은 응답 구조를 소비한다. 현재 합의의 기본 구현은 REST 호출이며, 009는 `macro_*` 저장소 직접 접근이 없다. 현재 009의 4회 분리 조회 포트는 포인터 교체 중 버전 혼합 위험이 있으므로 요청당 **한 번의 008 스냅샷 조회**로 교체한다. 변화 요약은 009가 소유하지만 숫자·단위·월·출처·작성기관·기준월 지연 원인 지표는 008 응답에서만 가져온다. 009의 검색 링크는 010의 계산 완료월을 별도 확인한다. 008의 `T_g`만으로 링크를 활성화하지 않는다.\n+\n+연동 전 009 OpenAPI의 무자료 `datasetVersion`/`referenceMonth` nullable 및 빈 경로, 010의 field ID casing, 표시 버전별 009 서술 재빌드와 수집 상태의 요청별 반영, fixture 운영 격리 규칙을 갱신하고 양쪽 계약 테스트를 둔다. 008·009의 응답 봉투는 신규 `HttpApiResponse`로 동일하다. 이는 008 단독 문서가 009·010을 이미 변경했다는 뜻이 아니다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/contracts/macro-indicator-source.md",
+          "old_path": "specs/008-macro-indicator-registry/contracts/macro-indicator-source.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,193 @@\n+openapi: 3.1.0\n+info:\n+  title: Thorp Macro Indicator Snapshot API (Spec 008)\n+  version: 0.1.0\n+  description: >-\n+    17개 월별 지표와 7개 분야 기준월을 하나의 공개 자료 버전에서 조회한다.\n+    /api는 기존 프록시가 제거하고 Spring controller 경로는 /macro-indicators이다.\n+    009는 이 응답을 사용해 기존 두 화면 전용 API를 조립하며 macro_* 저장소를 직접 조회하지 않는다.\n+    역사 비교는 최신 개정자료 기준이며 당시 발표값 재현이 아니다.\n+servers:\n+  - url: /api\n+paths:\n+  /macro-indicators/snapshot:\n+    get:\n+      operationId: getMacroIndicatorSnapshot\n+      summary: 17개 지표·7개 분야의 현재 공개 스냅샷\n+      description: >-\n+        사용자 인증이나 원천 키가 필요 없는 저장 자료 조회. 완결 자료 버전이 없어도 200으로\n+        17개 등록 정보, null 값/기준월, 수집 상태를 반환한다. 응답 전체는 하나의 current\n+        포인터에서 읽는다. 원천 API 호출·계산 작업은 이 요청에서 실행하지 않는다.\n+      responses:\n+        '200':\n+          description: 완결 자료 존재·무자료·최근 수집 실패 모두 정상적인 조회 상태\n+          content:\n+            application/json:\n+              schema:\n+                $ref: '#/components/schemas/SnapshotEnvelope'\n+        '500':\n+          description: 저장소 자체의 조회 장애 (자료 없음/수집 실패와 다름)\n+          content:\n+            application/json:\n+              schema:\n+                $ref: '#/components/schemas/ErrorEnvelope'\n+components:\n+  schemas:\n+    Month:\n+      type: string\n+      pattern: '^\\d{4}-(0[1-9]|1[0-2])$'\n+      example: '2026-07'\n+    NullableMonth:\n+      type: [string, 'null']\n+      pattern: '^\\d{4}-(0[1-9]|1[0-2])$'\n+    FieldId:\n+      type: string\n+      enum: [production, consumption_investment, external_trade, labor, prices_commodities, finance_housing, overseas]\n+    SnapshotEnvelope:\n+      type: object\n+      description: Backend 신규 API의 HttpApiResponse 형식. 009 화면 API와 같은 봉투.\n+      required: [httpStatus, isSuccess, message, code, result]\n+      properties:\n+        httpStatus: {type: string, const: OK}\n+        isSuccess: {type: boolean, const: true}\n+        message: {type: string}\n+        code: {type: integer, const: 200}\n+        result: {$ref: '#/components/schemas/Snapshot'}\n+    ErrorEnvelope:\n+      type: object\n+      required: [httpStatus, isSuccess, message, code, result]\n+      properties:\n+        httpStatus: {type: string}\n+        isSuccess: {type: boolean, const: false}\n+        message: {type: string}\n+        code: {type: integer}\n+        result: {type: 'null'}\n+    Snapshot:\n+      type: object\n+      required: [dataVersion, calculationRegistryVersion, displayVersion, isExampleData, historicalComparisonNotice, overallReferenceMonth, collection, fields, indicators]\n+      properties:\n+        dataVersion:\n+          type: [string, 'null']\n+          description: 완결 자료 버전이 없으면 null. 불변 17개 전체 스냅샷 식별자.\n+        calculationRegistryVersion:\n+          type: string\n+          description: 지표 정의·분야 매핑·명목 가중 버전.\n+        displayVersion:\n+          type: string\n+          description: 분야/지표 표시명·순서·설명 버전.\n+        isExampleData:\n+          type: boolean\n+          description: 개발용 명시적 fixture에만 true. 운영 자동 대체 금지.\n+        historicalComparisonNotice:\n+          type: string\n+          const: 최신 개정자료를 이용한 역사 비교입니다. 당시 발표값을 재현한 값이 아닙니다.\n+        overallReferenceMonth:\n+          $ref: '#/components/schemas/NullableMonth'\n+        collection:\n+          $ref: '#/components/schemas/CollectionState'\n+        fields:\n+          type: array\n+          minItems: 7\n+          maxItems: 7\n+          items: {$ref: '#/components/schemas/Field'}\n+        indicators:\n+          type: array\n+          minItems: 17\n+          maxItems: 17\n+          items: {$ref: '#/components/schemas/Indicator'}\n+    CollectionState:\n+      type: object\n+      description: 수집 시도 상태는 공개 자료 버전의 상태와 별개다. 실패 중에도 이전 자료 버전은 유지할 수 있다.\n+      required: [status, lastSuccessfulAt, lastAttemptAt, failedIndicatorIds, quotaLimited]\n+      properties:\n+        status: {type: string, enum: [NEVER_COLLECTED, SUCCEEDED, RUNNING, FAILED, HELD]}\n+        licenseUnverifiedIndicatorIds:\n+          description: 이용 권리를 확인하지 못해 공개 자료 버전에 넣지 않은 지표. 비어 있지 않으면 완결 버전 발행이 보류된다.\n+          type: array\n+          items: {type: string}\n+        lastSuccessfulAt: {type: [string, 'null'], format: date-time}\n+        lastAttemptAt: {type: [string, 'null'], format: date-time}\n+        failedIndicatorIds:\n+          type: array\n+          uniqueItems: true\n+          items: {type: string}\n+        quotaLimited: {type: boolean}\n+    Field:\n+      type: object\n+      required: [fieldId, displayName, displayOrder, description, referenceMonth, referenceMonthHeldBackBy, indicatorIds]\n+      properties:\n+        fieldId: {$ref: '#/components/schemas/FieldId'}\n+        displayName: {type: string}\n+        displayOrder: {type: integer, minimum: 1, maximum: 7}\n+        description: {type: string}\n+        referenceMonth:\n+          $ref: '#/components/schemas/NullableMonth'\n+        referenceMonthHeldBackBy:\n+          type: array\n+          description: 해당 분야의 최신 후보 월에 유효 변환값이 없어 T_g를 물러나게 한 지표 ID. T_g가 최신 후보 월이면 빈 배열.\n+          uniqueItems: true\n+          items: {type: string}\n+        indicatorIds:\n+          type: array\n+          minItems: 1\n+          uniqueItems: true\n+          items: {type: string}\n+    Indicator:\n+      type: object\n+      required: [indicatorId, fieldId, displayName, displayOrder, source, agency, rawUnit, transformedUnit, transform, status, referenceMonth, referenceValue, latest, path, latestPath, lastUpdatedAt]\n+      properties:\n+        indicatorId: {type: string, pattern: '^[a-z][a-z0-9_]*$'}\n+        fieldId: {$ref: '#/components/schemas/FieldId'}\n+        displayName: {type: string}\n+        displayOrder: {type: integer, minimum: 1}\n+        source: {type: string, description: 공식 출처 표기. 화면은 작성기관과 함께 표시한다.}\n+        agency: {type: string, description: 작성기관. 출처와 다를 수 있다.}\n+        rawUnit: {type: string}\n+        transformedUnit: {type: string}\n+        transform: {type: string, description: 전년동월 대비·월 기말·월 평균 등 등록된 변환.}\n+        status: {type: string, enum: [READY, NO_DATA, COLLECTION_FAILED, EXAMPLE]}\n+        referenceMonth:\n+          $ref: '#/components/schemas/NullableMonth'\n+        referenceValue:\n+          description: 분야 T_g 대상월의 원값/변환값. T_g가 없거나 해당 월 결측이면 null.\n+          oneOf:\n+            - {$ref: '#/components/schemas/ObservationValue'}\n+            - {type: 'null'}\n+        latest:\n+          description: 분야 T_g 이후 발표분을 포함한 지표별 최신 유효 변환값. 없으면 null.\n+          oneOf:\n+            - {$ref: '#/components/schemas/ObservationValue'}\n+            - {type: 'null'}\n+        path:\n+          type: array\n+          description: 009 변화 요약용. T_g가 있으면 t-2,t-1,t 달력상 연속 3개월; 없으면 빈 배열. 빠진 월은 null 값으로 표시.\n+          minItems: 0\n+          maxItems: 3\n+          items: {$ref: '#/components/schemas/PathPoint'}\n+        latestPath:\n+          type: array\n+          description: 지표 자체의 최신 유효 대상월 기준 t-2,t-1,t. 완결 자료 버전이 없으면 빈 배열. 분야 T_g가 없어도 지표별 최근 경로는 유지한다.\n+          minItems: 0\n+          maxItems: 3\n+          items: {$ref: '#/components/schemas/PathPoint'}\n+        lastUpdatedAt: {type: [string, 'null'], format: date-time}\n+    ObservationValue:\n+      type: object\n+      required: [targetMonth, rawValue, transformedValue, releaseDate]\n+      properties:\n+        targetMonth: {$ref: '#/components/schemas/Month'}\n+        rawValue: {type: [number, 'null']}\n+        transformedValue: {type: number}\n+        releaseDate: {type: [string, 'null'], format: date}\n+    PathPoint:\n+      type: object\n+      required: [targetMonth, rawValue, transformedValue, releaseDate]\n+      properties:\n+        targetMonth: {$ref: '#/components/schemas/Month'}\n+        rawValue: {type: [number, 'null']}\n+        transformedValue: {type: [number, 'null']}\n+        releaseDate: {type: [string, 'null'], format: date}\n+        missingReason:\n+          description: transformedValue 가 null 인 이유. 값이 있으면 생략한다. 원천 미발표와 변환 불가를 구분한다.\n+          type: [string, 'null']\n+          enum: [NOT_RELEASED, COLLECTION_FAILED, NOT_TRANSFORMABLE, BREAK_EXCLUDED, null]\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/contracts/openapi.yaml",
+          "old_path": "specs/008-macro-indicator-registry/contracts/openapi.yaml",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,164 @@\n+# Claude 인수인계 — Spec 008 경제지표 등록·수집 (2026-09-17)\n+\n+> 이 문서는 다음 작업을 위한 상태 기록이다. 원본 요구사항은 [spec.md](spec.md), 설계는 [plan.md](plan.md)를 따른다. 충돌하면 constitution → spec → plan → tasks 순으로 다시 확인한다. 로컬 `summary/2026-09-16-008-macro-indicator-registry.md`는 plan 작성 전 기록이므로 현재 상태로 사용하지 않는다. `summary/`는 현 `.gitignore`에서 제외되므로 인수인계 본문은 이 추적 가능한 경로에 둔다.\n+\n+## 0. 한눈에\n+\n+| 항목 | 현재 상태 |\n+|---|---|\n+| 범위 | 17개 월별 경제지표를 7개 분야에 등록하고 ECOS·KOSIS·관세청·OECD 원천에서 수집·변환·버전 발행한다. 008은 009 표시용 단일 스냅샷과 010 계산용 시계열을 제공한다. |\n+| 범위 밖 | 009 화면 구현, 010의 척도·거리·순위 계산, 기존 시장 카드용 최신값 11개, KOSPI/ETF 시세, 뉴스, 당시 발표값 빈티지, 18번째 지표다. |\n+| 사용자 스토리 | 실제 값·출처 조회, 등록표/자료 재현, 지연·개정·결측 구분, 이용 조건 준수의 4개다. |\n+| 문서 단계 | `spec.md`와 plan 산출물 `research.md`·`data-model.md`·`contracts/`·`quickstart.md`가 있다. 구현은 시작하지 않았고 `tasks.md`는 없다. |\n+| 실행 Task / Jira·Branch·MR | 실행 Task 수와 작업 묶음은 미정이다. 현재 문서 브랜치는 `docs/275-spec008-plan-task`이며, 후속 구현 티켓·브랜치·MR은 아직 만들지 않았다. |\n+| 결정 대기 | `PD-10` 최소 유효 척도, `PD-11` 실제 17개 계열의 항목·과거 범위·이용 조건이다. 원천 인증키/신청과 지표별 재조회 `N`도 실증이 필요하다. |\n+| 검증 | 설계/계약 문서는 작성됐으나 코드 테스트나 실자료 17/17 검증을 실행한 상태가 아니다. [quickstart.md](quickstart.md)는 구현 후 시나리오다. |\n+| Git | `ff44710` (`docs(de): spec 008 명확화 결정 반영`) 위에 spec과 기본 체크리스트 수정, plan 및 체크리스트 등 새 파일이 작업 트리에 남아 있다. 이 인수인계 작성 시 커밋·push는 하지 않았다. |\n+\n+한 줄 요약: 다음 단계는 요구사항 품질 검토를 마무리하고 `/speckit-tasks`로 독립 검증 가능한 작업을 나누는 것이다. 계획 작성이나 fixture 검증을 Spec 008 완료로 선언하면 안 된다.\n+\n+---\n+\n+## 0.1 구현 후 사용자가 할 수 있는 일\n+\n+사용자는 자료 공급원을 고르거나 인증키를 입력하지 않고, 17개 지표의 실제 값·단위·대상월·출처·작성기관과 최근 경로를 확인한다. 수집 실패·지연·결측·예시 자료 여부도 구분한다. 최신 개정자료를 이용한 역사 비교라는 사실을 볼 수 있다. 008 자체가 시장 흐름 화면이나 유사 경제환경 검색을 완성하는 것은 아니며, 009 화면과 010 계산이 이 자료를 소비해야 한다.\n+\n+---\n+\n+## 1. 무엇을 만드는가\n+\n+```text\n+현재: KRX data/ → PostgreSQL → Backend/Worker\n+      009 카드용 최신값 11개 ── 별도 경로\n+      008 월별 17개 ── 미구현\n+\n+목표: ECOS·KOSIS·관세청·OECD\n+        → data/ raw → 월별 processed Parquet → macro_* PostgreSQL\n+        → 17개 전체 불변 스냅샷 + 원자적 current 포인터\n+        ├→ 008 Backend 단일 조회 → 009의 기존 화면 API 2개\n+        └→ 010 data/ MacroIndicatorSource → 검색 사전 계산\n+```\n+\n+기존 ETF `dataset_version`이나 009의 `market_flow_field_summary`를 거시자료 저장소로 재사용하지 않는다. 계산 등록표 버전, 화면 표시 버전, 자료 버전을 분리한다. 원값과 변환값, 원천 개정 이력, 발표일·수신 시각을 보존한다. Backend는 검색 계산과 원천 수집을 맡지 않는다.\n+\n+### 1.5 기능 흐름과 상태\n+\n+```text\n+① PD-11 계열 검증 ── 어느 원천·항목·조건을 실제로 쓸 수 있는가?\n+  ↓\n+② 최초 전 구간 / 이후 새 발표분+최근 N개월 수집 ── 개정·한도를 어떻게 다루는가?\n+  ↓\n+③ 원본 보존·월별 변환 ── 대상월과 발표/수신 시각, 결측을 구별했는가?\n+  ↓\n+④ 17개 유효 변환값 검증 ── 지표마다 1건 이상 있는가?\n+  ↓\n+⑤ 전 구간 스냅샷·T_g/T_all·manifest 봉인 ── 한 자료 버전으로 재현되는가?\n+  ↓\n+⑥ DB current 포인터 원자적 교체 ── 이전/새 자료가 섞이지 않는가?\n+  ↓\n+⑦ 008 조회 / 009 화면 / 010 계산 ── 각각 같은 고정 버전을 읽는가?\n+```\n+\n+```text\n+COLLECTING → NORMALIZING → VALIDATING → PUBLISHING → PUBLISHED\n+     └────────────── 각 단계 실패/보류 ──────────────→ FAILED / HELD\n+```\n+\n+| 사건 | 처리 |\n+|---|---|\n+| 17개 처리 성공, 각 지표의 유효 월별 변환값 ≥1건 | 새 완결 스냅샷을 발행한다. |\n+| 원천 실패·한도 도달·일부 성공 | 성공 raw와 실패 상태는 남기되 새 공개 버전은 만들지 않는다. 이전 완결 버전을 유지한다. |\n+| 한 지표에 원값만 있고 유효 변환값 0건 | `HELD`로 발행을 보류한다. |\n+| 각 지표에는 값이 있지만 전체 공통월 없음 | 발행은 허용하고 `T_all=null`로 둔다. 종합 검색만 계산 불가다. |\n+| 첫 완결 버전 없음 | 17개 등록 정보와 무자료/실패 상태를 제공하고 값·기준월·자료 버전은 비운다. 운영 fixture 자동 대체는 금지한다. |\n+| 한 지표의 과거 값 개정 | 전체 17개로 새 불변 자료 버전을 발행하고 이전 결과의 참조 버전은 보존한다. |\n+\n+---\n+\n+## 2. 다음 Task 지도\n+\n+`tasks.md`가 없어 번호·개수·선행 관계·MVP 경계는 아직 확정되지 않았다. [plan.md의 Delivery Slices](plan.md)는 분할 입력일 뿐 Jira 티켓 목록이 아니다.\n+\n+```text\n+실자료 검증·등록표\n+       ↓\n+수집·정규화·개정 → 저장·원자적 발행 → 008 단일 조회 → 009·010 연동\n+```\n+\n+Claude가 이어서 할 일은 다음 순서가 적절하다.\n+\n+1. [기본 체크리스트](checklists/requirements.md)와 새 [자료·소비 계약 점검표](checklists/macro-data.md), [원천·이용 조건 점검표](checklists/source-compliance.md)를 읽는다. 새 두 목록은 각각 34개·20개 모두 미체크이며, 구현 완료 표시가 아닌 **요구사항 문장 품질 질문**이다. 검토 없이 일괄 체크하지 않는다.\n+2. 누락·충돌로 확인된 항목만 소유 문서에 반영한다. 특히 이용 조건과 009/010 계약은 해당 spec/계약의 소유 경계를 지킨다. 미확인 실자료 값을 추측해서 채우지 않는다.\n+3. 사용자가 작업 분할을 요청하면 `/speckit-tasks`로 `tasks.md`를 작성한다. 각 task의 파일·검증·의존성을 명시하고, 독립 검증/롤백 가능한 **작업 묶음** 후보를 구분한다. 이후 `/speckit-analyze`로 spec·plan·tasks 정합성을 확인한다.\n+4. Jira Task와 구현 브랜치는 작업 묶음 확정 후, 실제 착수할 묶음에 대해서만 만든다. 1 Jira Task = 1 Branch = 1 MR이다. 사용자가 선택한 현재 문서 브랜치를 임의로 바꾸지 않는다.\n+\n+---\n+\n+## 3. 팀 결정 대기\n+\n+| 항목 | 상태와 영향 | 임시 처리 |\n+|---|---|---|\n+| `PD-10` 공표 정밀도·최소 유효 척도 | `U06` 미확정. 임의 수치/epsilon을 등록하면 안 된다. | 010의 `MAD → IQR → 계산 불가` 규칙을 유지한다. |\n+| `PD-11` 17개 실제 계열 | 통계표/항목 코드, 단위, 과거 범위, 개편 연결, 작성기관별 이용 조건, 원천별 `N`을 실제 응답·약관으로 확인해야 한다. Spec 008 완료의 필수 게이트다. | 확인 전에는 `미확인`으로 두고 명시적 개발 환경의 예시 자료만 사용한다. |\n+| 원천 인증·승인 | 팀이 발급/신청해야 실제 계열 조회가 가능하다. 키를 파일·로그·응답에 쓰지 않는다. | 인증 전 fixture를 실제 검증 증거로 승격하지 않는다. |\n+| 관세청 무역수지·OECD G20 | 무역수지 공식 제공값 여부, G20 실제 SDMX 키 및 제3자 권리는 확인 필요다. | 추정 코드나 파생식을 확정으로 기록하지 않는다. |\n+| 009·010 계약 정합화 | 현재 문서/예시와 008 계약 사이에 null·분야 ID·검색 완료월·지표 ID·버전 고정 충돌이 남아 있다. | 008 문서만 작성했다고 타 spec 변경이 끝난 것으로 간주하지 않는다. |\n+| 현재 브랜치 형식 | `docs/275-spec008-plan-task`는 constitution의 `{type}({position})/{JIRA_NUMBER}-{description}`과 다르다. | MR 전 팀에 확인한다. 사용자 선택 브랜치를 자동 변경하지 않는다. |\n+\n+---\n+\n+## 4. 지켜야 할 설계 결정\n+\n+| 근거 | 결정과 이유 |\n+|---|---|\n+| Research R1, `FR-005/006/019/020` | ECOS·KOSIS가 기본, 관세청 대외거래, OECD G20이다. KDI는 후보·해석 참고일 뿐 수치 원천/대조가 아니다. 같은 지표를 여러 원천에서 합산하지 않는다. |\n+| Research R2, `FR-017` | `data/`에서 최초 전 구간, 이후 새 발표분+최근 지표별 `N`개월을 재조회한다. `N` 밖 개정 공지는 별도 재조회한다. 사용자 GET에서 원천을 호출하지 않는다. |\n+| Research R3, `FR-003`, `SC-005` | 표시 이름만 바뀌면 표시 버전, 매핑/가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 자료 버전을 바꾼다. |\n+| Research R4/R5, `FR-009/011/013`, `SC-004/008` | 17개 전체 불변 스냅샷과 단일 current 포인터를 쓴다. `T_g/T_all`은 변환 유효월 교집합이며 빈 교집합은 null이다. `T_all=null`만으로 발행을 막지 않는다. |\n+| Research R6, `FR-023` | 008은 단일 REST 조회를 소유한다. 009는 기존 화면 API 2개를 유지하고 요청당 008 스냅샷 한 번을 소비하며 `macro_*`를 직접 읽지 않는다. 현재 기본안은 실제 REST 호출이다. 이를 바꾸려면 팀 합의와 계약을 먼저 갱신한다. 010 계산은 `data/`에 둔다. |\n+| Research R7/R8, `FR-016/022`, `SC-006` | 운영에서 fixture로 자동 대체하지 않는다. 출처·작성기관을 표시한다. 17/17 실자료·권리 확인 전에는 완료로 판정하지 않는다. |\n+\n+---\n+\n+## 5. 검증 시나리오와 현재 증거\n+\n+[quickstart.md](quickstart.md)의 계약·자료 검증 표는 첫 완결 전, 정상 발행, raw만 존재, 공통월 없음, 부분 실패, 과거 개정, 증분 보존, `N` 밖 개정, 월별 변환 계보, 세 버전의 독립 변경, 동시 조회/발행, 파일/DB 경계, 009/010 연동을 다룬다. 구현 후 `data/`는 `ruff check src scripts tests`와 `pytest`, Backend는 `spotlessApply build` 및 Docker를 요구하는 DB 통합 테스트로 검증한다. skipped 시험은 통과로 세지 않는다.\n+\n+가장 준비 비용이 큰 검증은 `PD-11`의 **17/17 실제 API 응답과 계열별 이용 조건 확인**이다. 이 문서 작성 시에는 수집기·API 구현, 실제 원천 조회, 계약 통합 테스트, 성능 측정이 수행되지 않았다. 문서 존재나 체크리스트 항목 수를 검증 완료로 보고하지 않는다.\n+\n+---\n+\n+## 6. 다음 작업 착수 전 확인\n+\n+- [ ] 현재 브랜치·작업 트리·`ff44710` 이후 변경을 다시 확인한다. 이 문서의 Git 상태는 작성 시점 스냅샷이다.\n+- [ ] `.specify/feature.json`이 `specs/008-macro-indicator-registry`를 가리키는지 확인한다.\n+- [ ] constitution, 루트 `AGENTS.md`, 수정 대상의 `data/CLAUDE.md`·`backend/CLAUDE.md`를 읽는다.\n+- [ ] 두 새 체크리스트를 검토하되, 실제 근거가 없는 문항을 `[x]`로 바꾸지 않는다.\n+- [ ] 009·010 계약 충돌의 수정 소유자와 canonical 분야/지표 ID를 작업 묶음에 명시한다.\n+- [ ] `PD-11`을 근거 없이 채우거나 `PD-10` 최소 척도를 임의로 정하지 않는다.\n+- [ ] task 분할 전에는 Jira 티켓·구현 브랜치 수를 추정하거나 생성하지 않는다.\n+\n+---\n+\n+## 7. 변경 영역과 현재 파일\n+\n+| 구분 | 경로/주의 |\n+|---|---|\n+| 현재 문서 변경 | `specs/008-macro-indicator-registry/spec.md`, `checklists/requirements.md`는 수정 상태다. `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/openapi.yaml`, `contracts/macro-indicator-source.md`, `checklists/macro-data.md`, `checklists/source-compliance.md`, 이 인수인계 문서는 새 파일로 작업 트리에 있다. |\n+| 향후 구현 | `data/src/data_pipeline/macro/`, `data/scripts/`, `data/tests/`, Backend `macro/`와 Flyway 마이그레이션, 009 소비 어댑터가 계획 경계다. 현재 구현 파일이 있다는 뜻은 아니다. |\n+| 읽기/계약 대조 | 009·010의 spec/계약, 006 내보내기 계약, 기존 `data/`·Backend 파트 규칙을 읽는다. 연동 수정은 해당 소유 범위를 분명히 나눈다. |\n+| 건드리지 않을 경계 | 기존 009 카드용 11개 원천을 008에 흡수하지 않는다. `worker/`를 거시 원천 수집기로 쓰지 않는다. 원천 키나 raw/Parquet 데이터 파일은 커밋하지 않는다. |\n+\n+---\n+\n+## 8. 관련 spec\n+\n+| spec | 의존 방향 |\n+|---|---|\n+| 001 ETF 시장자료 | KOSPI/ETF 시세를 소유한다. 008의 17개와 구분한다. |\n+| 006 내 기록 | 자료 내보내기의 이용 범위 표시를 소유한다. |\n+| 009 시장 흐름 개요 | 008 스냅샷을 받아 화면 API를 조립한다. 검색 진입은 008 `T_g`가 아니라 010 계산 완료월에 따른다. |\n+| 010 경제환경 검색 | 008의 고정 자료·계산 등록표 버전 시계열을 소비해 검색을 계산한다. 008은 그 계산을 하지 않는다. |\n+| 012 시장 흐름 뉴스 | 뉴스 자료를 별도로 소유한다. |\n+\n+의존 방향은 공식 원천 → 008 → 009·010이다. 이 인수인계는 구현 지시를 확정하는 `tasks.md`가 아니며, 원본 spec·plan·계약을 대체하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/CLAUDE-HANDOFF.md",
+          "old_path": "specs/008-macro-indicator-registry/CLAUDE-HANDOFF.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,62 @@\n+# Data Model: 경제지표 등록·수집\n+\n+**기준**: [spec.md](spec.md) FR-001~023. 아래 이름은 구현 설계안이며 Flyway 적용 시 실제 명명·제약을 계약 테스트로 고정한다. `macro_*`는 기존 ETF `dataset_version` 및 009 화면 요약 테이블과 독립이다.\n+\n+## 1. 식별자와 시간\n+\n+- `indicator_id`: 17개 지표의 안정적인 영문 snake_case ID. 이름·원천 코드는 바뀔 수 있어 PK로 사용하지 않는다. 009의 기존 예시 ID는 연동 시 대조하고, PD-11의 실제 항목 코드와 혼동하지 않는다.\n+- `field_id`: 009 계약과 같은 `production`, `consumption_investment`, `external_trade`, `labor`, `prices_commodities`, `finance_housing`, `overseas`. 010의 대문자 예시는 경계에서 정규화한다.\n+- `target_month`: ISO `YYYY-MM` (저장 시 매월 1일 `date` 또는 연·월 쌍 중 하나로 고정). `released_at`(원천 발표 시각/날짜), `received_at`(수신 시각), `source_revision_key`(원천 제공 시), `observed_revision`(자체 수신 순번)을 별개로 둔다. 원천에 발표일/개정 ID가 없으면 null 및 근거 상태로 기록하며 수신시각을 발표일로 위조하지 않는다.\n+- 숫자는 변환 전후 모두 고정밀 decimal로 보존하고 표시 반올림은 공표 정밀도에 따른다. 소수 자릿수/범위는 PD-11 실응답 확인 뒤 정한다. 결측은 값 null과 사유 코드로 기록하며 0과 구별한다. 사유 코드는 최소한 원천 미발표, 수집 실패, 변환 불가(비교 대상월 결측·0, 계열 시작 이전, 월 평균 표본 미완성), 개편 구간 제외를 서로 구분한다. `trading_calendar`는 월 기말·월 평균 판정에 쓰는 지표별 거래일 달력의 출처다. `license_review_status`는 이용 권리 판정 상태다 — 확인 완료, **권리 확인 대기**(조건은 공개되어 있으나 해당 계열이 어느 쪽인지 확인할 창구가 없음), 미확인(조건 자체를 모름)을 구분한다. 미확인만 발행 보류 대상이다. `revision_history_available`은 그 원천이 과거 값 개정을 추적할 수 있게 주는지를 나타낸다 — 거짓이면 그 지표는 FR-009의 개정 이력 보장 대상이 아니다.\n+\n+## 2. 엔터티\n+\n+| 엔터티 (예상 테이블) | 핵심 필드 | 제약/책임 |\n+|---|---|---|\n+| `macro_calculation_registry_version` | `id`, `created_at`, `value_rule_fingerprint`, `change_reason`, `status` | 발행 후 불변. 값 규칙과 매핑·명목 가중을 포함한 계산 등록표 버전 |\n+| `macro_indicator_definition` | `(registry_version_id, indicator_id)`, `field_id`, `primary_source`, `table_code`, `item_code`, `raw_unit`, `transformed_unit`, `transform_rule`, `release_rule`, `break_link_rule`, `missing_rule`, `agency`, `attribution`, `license_status`, `published_precision`, `minimum_effective_scale`, `refresh_months_n`, `nominal_weight`, `trading_calendar`, `license_review_status`, `revision_history_available` | 버전마다 정확히 17개, 각 지표는 정확히 한 분야. 미확인 PD-10/11은 값 대신 상태/근거로 구분; 공개 실자료 버전에는 필수 PD-11 검증 완료 |\n+| `macro_display_version` / `macro_display_field` | `id`, `field_id`, `display_name`, `display_order`, `description`; 지표 표시명/순서 | 버전마다 7개 분야와 17개 지표 표시. 계산 규칙·자료에 영향 없음 |\n+| `macro_collection_attempt` / `macro_collection_item_status` | `attempt_id`, 시작/종료 시각, 원천/지표, `status`, `last_success_at`, `last_error_at`, `error_class`, quota 상태, raw 위치 | mutable 운영 상태. 공개 버전과 별도. 원본은 일부 성공해도 보존 |\n+| `macro_raw_revision` | `indicator_id`, `source`, `target_month`, 원본 값/단위, `released_at`, `received_at`, `source_revision_key`, raw 경로·해시, 순번 | append-only 원천별·지표별 이력. 동일 응답 재수집은 해시/원천 키로 중복 제거하되 실제 개정은 새 행. 일별 원천은 월별 변환에 기여한 여러 행을 보존 |\n+| `macro_dataset_version` | `id`, `processing_registry_version_id`, `value_rule_fingerprint`, `published_at`, `complete_indicator_count=17`, `is_sample_data`, 봉인된 raw/processed manifest 해시 | 발행 후 불변. 처리 당시 등록표를 provenance로 기록하되, 같은 fingerprint의 이후 계산 등록표와도 결합 가능. 전체 가용 구간의 17개 스냅샷; 정기 수집의 최근 `N`월만 담지 않음 |\n+| `macro_observation` / `macro_observation_lineage` | `(dataset_version_id, indicator_id, target_month)`, `raw_value`, `transformed_value`, `released_at`, `received_at`, `break_segment`, `missing_reason`; 기여 원본 revision/processed manifest의 다대다 연결 | 버전·지표·월 당 최대 1개. 월 기말/평균·전년동월 대비의 입력 월 또는 일별 표본 계보를 남긴다. 월 기말은 그 달 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 가진다 — 거래일이 하나라도 빠지면 변환값을 만들지 않고 사유를 '변환 불가'로 남긴다. 변환 가능 월만 기준월·발행 게이트에 사용. 원값만 있는 월은 보존하지만 유효 건수 0에 포함 |\n+| `macro_baseline` | `(dataset_version_id, registry_version_id, scope_id)`, `reference_month`, `reference_month_held_back_by`, 산출 시각 | `scope_id`는 7개 분야 ID 또는 `ALL`인 NOT NULL 키. 7개 `T_g`와 1개 `T_all`을 담고 교집합이 비면 `reference_month`만 null. 분야별 held-back 지표 ID도 고정한다. 매핑만 바뀐 새 계산 등록표와 동일 자료 버전의 조합도 별도 저장 |\n+| `macro_current_publication` | singleton key, `dataset_version_id`(첫 발행 전 null), `registry_version_id`, `display_version_id`, `switched_at` | 포인터 교체는 발행 트랜잭션 마지막. 독자는 한 트랜잭션 스냅샷/한 SQL query에서 이 세 ID를 먼저 고정 |\n+\n+`minimum_effective_scale`은 PD-10 확정 전 null이고, 계산은 010의 임시 MAD→IQR→계산 불가 정책에 맡긴다. `source_revision_key`를 원천이 주지 않으면 `(원천, 지표, 월, 원본 값/메타 해시, 수신 순번)`으로 이력을 구별한다. 발표일 미제공 시 `released_at`을 수신 시각으로 대체하지 않는다.\n+\n+## 3. 관계와 불변식\n+\n+```text\n+calculation_registry_version 1─17 indicator_definition ─1 field_id\n+display_version              1─7 display_field (+ 17 indicator labels)\n+collection_attempt           1─N collection_item_status ─N raw_revision\n+dataset_version              1─N observation ─N lineage ─N raw_revision/processed_manifest\n+dataset_version + calculation_registry_version ─8 baseline\n+current_publication          ─1 dataset_version + calculation_registry_version + display_version\n+```\n+\n+1. 값 규칙 fingerprint가 다른 계산 등록표와 자료 버전은 current 포인터에서 결합하지 않는다. `processing_registry_version_id`는 처리 당시의 provenance이지 유일한 호환 등록표가 아니다. 매핑·가중만 바뀌면 fingerprint는 유지하고 새 `(dataset, registry)` 기준월 조합을 재산출한다. 표시 버전 변경은 관측값/계산 등록표/자료 버전을 변경하지 않는다. 이 결합을 DB/통합 테스트로 검증한다.\n+2. 새 자료 버전 후보는 17개 지표 전부의 수집·정규화가 완료되고 지표마다 사용 가능한 월별 **변환값이 ≥1건**이어야 한다. 여기에 더해 17개 전부의 `license_status`가 확인 완료여야 한다 — 권리 미확인 계열이 하나라도 있으면 발행을 보류한다(FR-016a). 인증키 미발급·승인 대기와 권리 미확인은 `macro_collection_item_status`에서 서로 다른 상태로 남긴다. 이는 행별 DB `CHECK`만으로 보장되지 않으므로 발행 서비스의 검증 + 트랜잭션/통합 테스트(필요하면 deferred trigger)로 강제한다.\n+3. `T_g = max(∩ 해당 분야 지표의 유효 변환값 대상월 집합)`, `T_all = max(∩ 17개 지표 집합)`. 빈 교집합은 null. 원값만 있는 월, 개편 연결 규칙이 없어 제외한 월, 결측 월은 집합에 넣지 않는다. `reference_month_held_back_by`는 그 분야 지표별 최신 유효월 중 최대인 후보 월에 유효 변환값이 없는 지표 ID다. 후보 월이 곧 `T_g`이면 빈 배열이고 `T_g=null`이어도 후보 월이 있으면 부족 지표를 기록한다.\n+4. 불변 스냅샷 생성 중 기존 버전의 행을 update/delete하지 않는다. raw/processed 파일을 먼저 완성·봉인하고 해시 manifest를 기록한 뒤 DB 발행을 시작한다. DB가 rollback되면 미참조 파일은 공개되지 않고 재시도/정리 대상으로 남긴다. 공개 스냅샷이 참조하는 파일은 보존한다. 같은 입력+규칙에서 같은 월별 값/기준월을 재현하며, 공개 후 원천 개정을 발견하면 17개 전체 새 버전을 발행한다.\n+5. 현재 포인터를 통한 단일 읽기에서 지표/기준월/버전이 섞이지 않는다. 수집 시도 상태는 그 시점의 운영 상태라 공개 자료 버전보다 새 실패를 나타낼 수 있으며 응답에서 자료 상태와 수집 상태를 구분한다.\n+\n+## 4. 발행 상태 전이\n+\n+```text\n+COLLECTING → NORMALIZING → VALIDATING → PUBLISHING → PUBLISHED\n+     │             │            │              │\n+     └─────────────┴────────────┴──────────────┴──▶ FAILED / HELD\n+```\n+\n+- `FAILED`: 원천·인증·한도·정규화 오류. 성공한 raw는 남기고 현재 포인터 유지.\n+- `HELD`: 예정 처리는 끝났지만 17개 중 변환 유효값 0건이거나 권리 미확인 계열이 남아 공개 조건 미충족. 현재 포인터 유지. `T_all=null` 자체는 HELD 조건이 아니다.\n+- `PUBLISHING`: 봉인된 raw/Parquet manifest를 참조해 새 완결 스냅샷 전체와 8개 기준월을 쓰고 fingerprint/건수를 검증한 뒤 같은 DB 트랜잭션에서 current 포인터를 교체한다. 파일 쓰기는 이 트랜잭션 밖이므로 포인터 이전 장애 복구와 미참조 파일 정리를 별도로 검증한다. 잠금/낙관적 버전으로 두 수집 작업의 동시 교체를 직렬화한다.\n+- `PUBLISHED`: 이전 스냅샷은 보존해 010 기존 결과의 참조가 변하지 않는다. 원본/Parquet 수명·저장 비용 정책은 구현 시 보관 요건과 원천 이용 조건에 맞춰 정한다.\n+\n+## 5. 소비자 투영\n+\n+- **008 REST**: current 포인터의 세 버전을 고정해 17개 지표·7개 분야·`T_g/T_all`·지표별 최신월/값·출처/작성기관을 한 응답으로 조립한다. 009 변화 요약용 경로는 분야 `T_g`에, 지표 자체의 최근 3개월 경로는 그 지표의 최신 유효월에 각각 고정한다. `T_g=null`이어도 지표별 경로는 제공한다. 첫 공개 전에는 등록표/표시 버전만 사용하고 자료 버전과 모든 값/기준월을 null, 경로를 빈 배열로 보낸다. 수집 실패는 별도 상태로 보낸다.\n+- **009**: 이 투영만 소비한다. 화면 전용 두 API의 서술/검색 링크는 009 소유이며 검색 링크는 010의 실제 완료월을 참조한다. 009의 `market_flow_field_summary`는 008의 정규화 시계열 저장소가 아니다.\n+- **010 `data/`**: 선택한 자료 버전·계산 등록표 버전의 전 구간 원값/변환값, 발표·개정 메타, `changed_since`를 사용한다. 기존 계산 결과는 고정된 버전 키를 보유한다. Backend의 010 표시용 등록표 포트는 008 등록표 조회를 사용하며 시계열 계산을 하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/data-model.md",
+          "old_path": "specs/008-macro-indicator-registry/data-model.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,192 @@\n+# PD-11 원천 검증표\n+\n+**확인일**: 2026-09-17. **방법**: 각 원천 API를 실제로 호출해 200 응답과 값을 읽었다.\n+**기준**: [spec.md](spec.md) FR-002가 요구하는 등록표 항목의 확인 근거다. 등록표는 이 표의 결과를 참조한다.\n+\n+**표기**: **확인**은 실제 응답에서 읽은 것. **문서상**은 공개 문서에서 읽었을 뿐 응답으로 확인하지 못한 것.\n+**미확인**은 호출하지 못했거나 응답으로 판정할 수 없는 것이다. 미확인 항목을 추측으로 채우지 않는다.\n+\n+## 요약\n+\n+17개 전부 확인됐다.\n+\n+| 원천 | 지표 수 | 상태 |\n+|---|---|---|\n+| ECOS (한국은행) | 3 | 확인 |\n+| KOSIS (통계청·한국부동산원) | 10 | 확인 |\n+| OECD | 1 | 계열·기간·이용 조건 확인. 계열 선택만 결정 필요 |\n+| 관세청 (data.go.kr) | 3 | 확인 |\n+\n+## 1. ECOS — 확인\n+\n+인증키는 `.env`의 `ECOS_API_KEY`다. 조회 경로는 `StatisticSearch/{key}/json/kr/{시작행}/{끝행}/{통계표}/{주기}/{시작}/{끝}/{항목}`이다.\n+\n+| 지표 | 통계표 | 항목 | 작성기관 | 단위 | 주기 | 확보 구간 | 최근 값 |\n+|---|---|---|---|---|---|---|---|\n+| 국고채 3년 | 817Y002 시장금리(일별) | 010200000 국고채(3년) | **한국은행** | 연% | 일 | 1998-11-13 ~ 2026-09-16 | 2026-09-07 3.900 |\n+| 원/달러 환율 | 731Y004 주요국 통화의 대원화환율(월) | 0000001 원/미국달러, 항목2 `0000200` **말일자료** | **한국은행** | 원 | 월 | 1964-05 ~ 2026-08 | 2026-08 1376.5 |\n+| 두바이유 | 902Y003 국제상품가격 | 010102 원유- Dubai | **국제통화기금(IMF)** | 달러/배럴 | 월 | 1992-01 ~ 2026-08 | 2026-08 87.50 |\n+\n+### 작성기관이 한국은행이 아닌 통계가 섞여 있다 (확인)\n+\n+ECOS 통계표 목록의 `ORG_NAME`으로 작성기관을 확인했다. 세 계열 중 **국고채만 한국은행 작성**이고 나머지는 다르다.\n+\n+| 통계표 | 작성기관 |\n+|---|---|\n+| 817Y002 시장금리(일별) | 한국은행 |\n+| 721Y001 시장금리(월) | 한국은행 |\n+| 731Y001 대원화환율(일별) | **서울외국환중개** |\n+| 731Y004 대원화환율(월) | **한국은행** |\n+| 902Y003 국제상품가격 | **국제통화기금(IMF)** |\n+\n+ECOS 이용약관(원문 확인)이 이 구분을 중요하게 만든다. 제2조 5호는 통계작성기관을 \"해당 통계에 대한 **저작권을 보유**하고 있는 기관\"으로 정의하고, 제5조 ①은 \"상업적인 이용을 제한하는 통계정보를 상업적인 목적으로 이용하고자 하는 경우에는 **해당 통계 작성기관의 승인**을 받은 후에 이용하여야\" 한다고 정한다. 즉 한국은행이 제공한다는 사실만으로 이용 가능 여부가 결정되지 않는다.\n+\n+**원/달러는 원천을 바꿔 해결했다.** 처음에 고른 일별 표(731Y001)는 서울외국환중개 작성이지만, 월별 표(731Y004)는 한국은행 작성이면서 항목2에 `0000100 평균자료`와 `0000200 말일자료`를 나눠 제공한다. 말일자료를 쓰면 FR-006a의 월 기말 규칙을 그대로 충족하면서 제3자 작성 통계를 피한다. 값도 대조했다 — 731Y004 말일자료 2026-08은 1376.5이고, 일별 표의 그달 마지막 거래일(2026-08-31)도 1376.5로 일치한다(확인).\n+\n+**두바이유는 남는다.** 902Y003은 IMF 작성이고, 대체 원천을 따로 조사했으나 쓸 만한 것이 없었다.\n+\n+| 후보 | 결과 |\n+|---|---|\n+| ECOS 안의 다른 국제유가 표 | 없음. 839개 통계표 중 한국은행이 작성한 국제유가 표가 없다(확인) |\n+| 오피넷(한국석유공사) 국제유가 | 월평균 달러/배럴을 2008-01 ~ 2026-09 제공(확인). 다만 공식 OpenAPI가 아니라 화면용 CSV 경로이고, 화면 각주가 '싱가포르 거래 Dubai 현물 **추정가**'라 정의가 다르다. 값도 어긋난다 — 2026-08 기준 오피넷 84.52 대 ECOS 87.50. 상업 이용 약관을 찾지 못했다 |\n+| 공공데이터포털 한국석유공사 API | 주유소 소매가·지역코드뿐. 월별 국제유가 없음(확인) |\n+| 국가통계포털 에너지 주제 | 유가 가격 통계표 없음. 물량 통계뿐이고 그마저 9개월 지연(확인) |\n+| 에너지경제연구원·한국에너지공단 | 가격 통계표 없음. 월보의 국제유가는 해외 자료 인용(문서상) |\n+\n+오피넷으로 바꾸면 세 가지를 잃는다. 확보 구간이 1992-01에서 2008-01로 **16년 짧아져** 검색할 수 있는 과거 사례가 2018년 이후로 줄고, 값의 정의가 달라 **과거 시계열 전체가 바뀌며**, 공식 API가 아닌 화면용 경로라 이용 조건을 문서로 입증하기 더 어렵다. 원칙 X 관점에서 오히려 후퇴다.\n+\n+**검토 경과**: 공식 원천의 제한 여부를 확인할 창구가 없어 대체 원천을 찾았다. 월간 경제동향 보고서 부표와 오피넷을 실제로 받아 확인한 결과는 아래와 같다.\n+\n+### 세 원천은 서로 다른 계열이다 (2026-09-17 실측 대조)\n+\n+보고서 본문이 국제유가의 자료를 **한국석유공사**라고 밝히기에, 한국석유공사(오피넷)가 한국은행 게재 계열과 같은 값을 주는지 2026년 1~8월로 대조했다. **같지 않다.**\n+\n+| 대상월 | 한국은행 게재(IMF 작성) | 오피넷(한국석유공사) | 차이 | 보고서 부표 |\n+|---|---|---|---|---|\n+| 2026-01 | 62.73 | 61.97 | -1.2% | - |\n+| 2026-02 | 68.51 | 61.56 | **-10.1%** | - |\n+| 2026-03 | 126.71 | 128.52 | +1.4% | - |\n+| 2026-04 | 105.30 | 105.69 | +0.4% | - |\n+| 2026-05 | 100.36 | 93.32 | **-7.0%** | - |\n+| 2026-06 | 79.54 | 75.84 | -4.7% | 79.45 |\n+| 2026-07 | 77.13 | 76.74 | -0.5% | 76.75 |\n+| 2026-08 | 87.50 | 84.52 | -3.4% | 88.75 |\n+\n+여덟 달 중 일치하는 달이 없고 차이의 방향과 크기가 제각각이라 반올림이나 시점 차이로 설명되지 않는다. 보고서 부표 값도 6·7월은 한국은행 쪽에 가깝지만 8월은 둘 다에서 벗어나 **세 번째 계열**로 보인다.\n+\n+따라서 한국석유공사로 가는 것은 같은 값을 다른 창구에서 받는 것이 아니라 **원천 교체**이며, 과거 시계열 전체와 그에 기반한 경제환경 검색 결과가 달라진다. 오피넷은 확보 구간이 2008-01부터이고 공식 API가 아닌 화면용 CSV 경로이며 이용 약관을 찾지 못했다.\n+\n+**결정(2026-09-17)**: **한국은행 게재 계열(902Y003 / 010102)을 그대로 쓴다.** 대체 후보가 모두 현행보다 불투명하기 때문이다 — 확보 구간이 1992-01에서 2008-01 또는 2019-02로 줄고, 공식 API가 아닌 경로이며, 이용 조건 표기가 아예 없고, 월간 PDF 경로는 개정 이력을 추적할 수 없다. 권리를 확인하려다 더 나쁜 자리로 옮기는 셈이 된다.\n+\n+대신 이 지표를 등록표에 **'권리 확인 대기'**로 표시한다. 조건 자체를 모르는 '미확인'과 구분되는 상태이며, 발행을 보류하지 않는다. 한국은행 약관은 공개되어 있고 다만 이 계열이 상업 이용 제한 대상인지를 확인할 창구가 없을 뿐이다. 확인이 가능해지면 그때 판정하고, 제한 대상으로 밝혀지면 FR-016b대로 이 지표만 중단하고 과거 자료 버전은 보존한다. 두바이유가 빠져도 나머지 6개 분야 검색은 유지된다.\n+\n+이것은 해소한 문제가 아니라 **팀이 받아들이기로 한 위험**이다. plan의 Complexity Tracking에 같은 내용을 적었다.\n+\n+- **국고채는 일별 표를 쓴다**. 월별 표(721Y001)는 항목2 구분이 없는 평균값이라 FR-006a의 월 기말을 얻을 수 없다. 일별 표에서 그 달 마지막 거래일 값을 고른다. **환율은 월별 표의 말일자료를 쓴다**(위 참조).\n+- 두바이유는 **원천이 월값을 직접 준다**. FR-006b의 자체 월 평균 산출 대신 원천 월값을 쓰고, 등록표에 그 사실을 적는다.\n+- **인증키 이용기간 2년**(약관 제4조 ③, 원문 확인). 만료 전 연장 요청이 없으면 수집이 끊긴다. 이용 조건 재확인 주기의 실제 근거다.\n+- **호출 한도는 수치로 정해져 있지 않다**(개발명세서·약관 원문 확인). 대신 과다 호출 시 서비스 중단이 가능하고(약관 제6조 ① 4호), `에러-602 과도한 OpenAPI호출로 이용이 제한` 코드가 있다. 검색 범위가 넓으면 60초 타임아웃(`에러-400`)이 난다.\n+- **제공 지속을 보장하지 않는다**(약관 제9조 ⑤, 원문 확인). 통계 제공이 중단될 수 있음을 전제해야 한다.\n+- **출처 표시 의무**(약관 제7조 ②): ECOS에서 제공된 정보임을 표시해야 한다.\n+- **발표일 미제공**: `StatisticSearch` 응답에는 발표일이나 개정 식별자가 없다. FR-007의 발표일은 이 원천에서 얻을 수 없으므로 미제공으로 기록하고 수신 시각을 발표일로 대체하지 않는다.\n+\n+## 2. KOSIS — 확인\n+\n+인증키는 `.env`의 `KOSIS_API_KEY`다. 조회 경로는 `Param/statisticsParameterData.do`이며 기관·통계표·항목·분류를 지정한다.\n+\n+| 지표 | 기관 | 통계표 | 항목 | 분류 | 단위 | 확보 구간 | 개월 | 최근 값 |\n+|---|---|---|---|---|---|---|---|---|\n+| 전산업생산 | 101 | DT_1JH20201 전산업생산지수(원지수) | T1 원지수 | objL1=0 농림어업 제외 | 2020=100 | 2000-01 ~ 2026-07 | 319 | 117.9 |\n+| 광공업생산 | 101 | DT_1F02001 시도/산업별 광공업생산지수 | T10 생산지수(원지수) | objL1=00 전국, objL2=0 총지수 | 2020=100 | 1980-01 ~ 2026-07 | 559 | 120.4 |\n+| 서비스업생산 | 101 | DT_1KC2020 산업별 서비스업생산지수 | T1 경상지수 | objL1=T 총지수 | 2020=100 | 2000-01 ~ 2026-07 | 319 | 145.1 |\n+| 소매판매액지수 | 101 | DT_1K41012 재별 및 상품군별 소매판매액지수 | T1 경상지수 | objL1=G0 총지수 | 2020=100 | 1995-01 ~ 2026-07 | 379 | 122.9 |\n+| 설비투자지수 | 101 | DT_1F70011 설비투자지수 | T3 원지수 | objL2=C 총지수 | 2020=100 | 1995-02 ~ 2026-07 | 378 | 143.4 |\n+| 건설기성액(불변) | 101 | DT_1G18011 공종별 건설기성액(불변) | T10 기성액(불변) | objL1=0 계 | 백만원 | 1997-07 ~ 2026-07 | 349 | 8,820,913 |\n+| 취업자 수 | 101 | DT_1DA7001S 성별 경제활동인구 총괄 | T30 취업자 | objL1=0 계 | 천명 | 1999-06 ~ 2026-08 | 327 | 29,151 |\n+| 실업률 | 101 | DT_1DA9001S 계절조정 경제활동인구 총괄 | T80 실업률 | objL1=00 계 | % | 1999-06 ~ 2026-08 | 327 | 2.7 |\n+| 소비자물가 | 101 | DT_1J22003 소비자물가지수(2020=100) | T 총지수 | objL1=T10 전국 | 2020=100 | 1980-01 ~ 2026-08 | 560 | 120.05 |\n+| 주택 매매가격 | 408 | DT_30404_C012 유형별 매매가격지수 | sales 매매가격 | objL1=00 종합, objL2=a0 전국 | 2026.6=100.0 | 2021-06 ~ 2026-07 | 62 | 100.354 |\n+\n+- **발표일 대용 확인**: 모든 응답이 `LST_CHN_DE`(최종 갱신일)를 준다. FR-007의 개정 기준으로 쓸 수 있다. 다만 이것은 통계표 갱신일이지 관측치별 발표일이 아니므로 그대로 발표일이라고 적지 않는다.\n+- **실업률은 계절조정 값을 원천이 직접 준다**. 우리가 계절조정을 하지 않는다. 등록표에 원천 제공값임을 적는다.\n+- **주택가격은 개편 연결이 필요하고, 연결은 가능하다**(확인). 기준월이 바뀔 때마다 표가 새로 만들어지고 지수가 재기준화된다. 확인한 표와 구간은 다음과 같다.\n+\n+  | 기준월 | 통계표 | 항목 | 확보 구간 | 개월 |\n+  |---|---|---|---|---|\n+  | 2026.6 (현행) | DT_30404_C012 | sales | 2021-06 ~ 2026-07 | 62 |\n+  | 2026.1 | DT_30404_B012 | sales | 2021-06 ~ 2026-06 | 61 |\n+  | 2025.3 | DT_30404_A012 | sales | 2021-06 ~ 2026-01 | 56 |\n+  | 2021.6 | DT_40803_N0001 | sales | 2003-11 ~ 2025-03 | 257 |\n+  | 2011.6 | DT_304N_04_00001 | 16304304_01 | 2000-01 ~ 2012-12 | 156 |\n+\n+  현행 표와 2021.6 표는 2021-06~2025-03이 겹치고, 2021.6 표와 2011.6 표는 2003-11~2012-12가 겹친다. 겹치는 구간의 비율로 이어 붙이면 **2000-01부터 현재까지 연결된다**. 연결 기준월과 연결 계수는 등록표에 기록하고, 연결한 구간임을 자료에 남긴다(FR-010). 연결 규칙을 정하기 전까지는 2021-06 이전을 사용 가능 범위에서 제외한다.\n+\n+## 3. OECD G20 경기선행지수 — 확인\n+\n+- 엔드포인트(확인): `https://sdmx.oecd.org/public/rest/data/OECD.SDD.STES,DSD_STES@DF_CLI,/{key}` — 인증키 불필요.\n+- 데이터플로우(확인): `OECD.SDD.STES:DSD_STES@DF_CLI(4.1)`. 고정 차원 `REF_AREA=G20`, `FREQ=M`, `MEASURE=LI`, `METHODOLOGY=H`.\n+- 계열 네 종이 존재한다(확인).\n+\n+| 조합 | 의미 | 확보 구간 |\n+|---|---|---|\n+| AA / IX | 진폭조정 지수 | 1961-01 ~ 2026-08 |\n+| NOR / IX | 정규화 지수 | 1961-01 ~ 2026-08 |\n+| TR / IX | 추세복원 지수 | 1961-01 ~ 2026-05 |\n+| TR / GY | 전년동월 대비 증가율 | 1962-01 ~ 2026-02 |\n+\n+- **결정(2026-09-17)**: 등록표에는 **AA/IX 진폭조정 지수**를 주 계열로 적고, 전년동월 대비 증가율은 FR-006에 따라 우리가 원값에서 직접 계산한다. OECD가 주는 TR/GY 증가율은 최신월이 2026-02로 지수보다 여섯 달 늦어 해외 경기 분야의 T_g와 전체 T_all을 그만큼 물리기 때문이다. TR/GY는 우리 계산값을 대조하는 참고용으로만 쓸 수 있고 수집 대상이 아니다.\n+- 발표일(부분 확인): 응답 헤더 `Last-Modified`를 데이터셋 갱신일로 쓸 수 있다. 관측치별 발표일은 없고 `OBS_STATUS=A`만 있다. SDMX 헤더의 `Prepared`는 응답 생성 시각이라 개정 식별자로 쓰면 안 된다.\n+- 공식 제공 계열 여부: **확인**. OECD 부서가 배포하는 공식 데이터플로우다.\n+- 이용 조건(**약관 원문 확인**, 2024-07-01 최종 개정). 앞선 조사가 CC BY 4.0이라고 본 것은 검색 요약이었고, 약관 본문에 자료에 대한 CC BY 표기는 없다. 본문이 정하는 것은 다음과 같다.\n+  - 상업 이용: **허용**. \"you can extract from, download, copy, adapt, print, distribute, share and embed Data for any purpose, even for commercial use.\"\n+  - 출처 표시: **의무**. 형식은 `OECD (연도), (데이터셋 이름), (출처) DOI 또는 URL (접근일)`이다. 재배포·하위 라이선스에도 같은 표시 의무를 승계시켜야 한다.\n+  - 제3자 권리: 확인 방법이 약관에 있다. 이용자가 **메타데이터나 데이터셋의 source 항목에서 직접 확인할 책임**이 있고, OECD는 모든 자료의 권리를 보유·통제한다고 보증하지 않는다.\n+- 제3자 권리 확인 결과: 해당 데이터플로우의 SDMX 구조 메타데이터 전체(1.9MB)를 받아 확인했다. **제3자 권리나 별도 라이선스를 표기한 주석이 없다**(확인). 즉 이 계열에 대해 OECD가 별도 제한을 선언하지 않았다. 다만 위의 일반 면책은 모든 자료에 적용되므로, 팀이 위험을 어디까지 감수할지는 판단이 필요하다.\n+- 호출 한도: **수치 한도 없음**(약관 원문 확인). 약관은 분당·일별 호출 수를 정하지 않는 대신, 과도한 부하를 주면 OECD가 **예고 없이 IP 접근을 제한·중단할 수 있다**고 정한다. API는 무보증 제공이며 언제든 중단될 수 있다. 응답에 한도 헤더는 없고 캐시 헤더는 2시간이다. 단일 호출로 전 구간 3,131행을 받는 데 성공했으므로 월 1회 전 구간 수집으로 충분하다.\n+\n+## 4. 관세청 수출·수입·무역수지 — 확인\n+\n+인증키는 `.env`의 `DATA_GO_KR_SERVICE_KEY`다. 서비스는 공공데이터포털 **관세청_수출입총괄(GW)**, 서비스 번호 `15102108`이다.\n+\n+**앞선 조사가 실패한 원인은 키가 아니라 옛 주소였다.** 이 서비스는 2026-08-12에 수정되면서 기준 주소가 `1220000/Itemtrade`에서 **`1220000/Newtrade`**로 바뀌었다. 폐기된 경로로 부르면 키가 정상이어도 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`가 돌아온다. 이 오류를 키 문제로 읽으면 안 된다.\n+\n+- 엔드포인트(확인): `https://apis.data.go.kr/1220000/Newtrade/getNewtradeList`\n+- 인자: `serviceKey`, `strtYymm`, `endYymm` (YYYYMM)\n+- 응답: XML. `<resultCode>00</resultCode> 정상서비스.`\n+\n+| 지표 | 응답 필드 | 단위 | 확보 구간 | 최근 값(2026-08) |\n+|---|---|---|---|---|\n+| 수출 | `expDlr` 신고 미화금액(FOB) | 미국 달러 | 1989-01 ~ 2026-09 | 98,282,430,140 |\n+| 수입 | `impDlr` 과세가격 미화금액(CIF) | 미국 달러 | 1989-01 ~ 2026-09 | 63,496,947,555 |\n+| 무역수지 | `balPayments` | 미국 달러 | 1989-01 ~ 2026-09 | 34,785,482,585 |\n+\n+같은 응답에 건수 `expCnt`·`impCnt`도 있다. 1988년 이전은 응답이 비어 있어 **1989-01이 실제 시작월**이다(확인).\n+\n+### 무역수지는 원천이 직접 주는 공식 값이다 (확인)\n+\n+`balPayments`가 응답에 독립 필드로 들어온다. 수출에서 수입을 빼서 만들 필요가 없다. 확인한 세 달 모두 `expDlr - impDlr`과 정확히 일치하지만, **등록표에는 원천 제공값으로 적고 파생식으로 적지 않는다**. 값이 같더라도 출처가 다르고, 원천이 정의를 바꾸면 파생식은 조용히 어긋난다. FR-006의 '공식 금액' 표기가 이로써 확정된다.\n+\n+### 구현에 영향을 주는 제약 (확인)\n+\n+- **조회 기간은 1년 이내로 제한된다.** 더 넓게 요청하면 `시작과 종료의 조회기간은 1년이내 기간만 가능합니다`가 돌아오고 자료가 오지 않는다. 최초 전 구간(1989-01~현재, 약 37년)을 받으려면 **연 단위로 나눠 37회 이상 호출**해야 한다. FR-017의 요청 분할이 이 원천에서 실제로 필요하다.\n+- **응답에 `<year>총계</year>` 합계 행이 섞여 온다.** 월별 관측값으로 세면 안 된다. 파싱에서 제외한다.\n+- 대상월 표기는 `2026.06` 형식이라 `YYYY-MM`으로 바꿔야 한다.\n+- 개발계정 트래픽은 일 10,000회다(서비스 안내 페이지). 연 단위 37회 호출은 한도 안이다.\n+\n+### 발표일과 개정 (확인·문서상)\n+\n+- 응답에 관측치별 발표일이나 개정 식별자가 **없다**(확인). FR-007의 발표일은 이 원천에서 얻을 수 없다.\n+- **매월 15일경 수출입 신고의 정정·취하를 반영해 전월까지의 자료를 현행화한다**(서비스 안내 페이지). 이것이 FR-017의 정기 재조회 구간 N의 근거다. 새 발표분만 받으면 정정을 놓친다. 몇 달치가 함께 정정되는지는 갱신을 관찰해 N을 정한다.\n+\n+### 이용 조건 (서비스 안내 페이지)\n+\n+- 비용 무료, **이용허락범위 제한 없음**, 개발·운영 단계 모두 자동승인.\n+- 출처는 관세청, 관리부서는 데이터담당관이다.\n+\n+## 남은 미확인과 다음 할 일\n+\n+| 항목 | 막힌 이유 | 해소 방법 |\n+|---|---|---|\n+| 주택가격 개편 연결 계수 | 연결 가능함은 확인, 계수는 미산출 | 겹치는 구간의 비율로 산출해 등록표에 기록 |\n+| 지표별 정기 재조회 구간 N | 개정 관행을 한 번의 조회로 알 수 없음 | 일정 기간 갱신일을 관찰해 정함 |\n+| 공표 정밀도·최소 유효 척도 (PD-10) | 별도 결정 항목 | 010의 대체 규칙 유지 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/pd11-source-verification.md",
+          "old_path": "specs/008-macro-indicator-registry/pd11-source-verification.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,124 @@\n+# Implementation Plan: 경제지표 등록·수집 (Spec 008)\n+\n+**Branch**: `docs/275-spec008-plan-task` (현재 문서 작업 브랜치; 기능 식별자 `008-macro-indicator-registry`) | **Date**: 2026-09-17 | **Spec**: [spec.md](spec.md)\n+\n+**Input**: `specs/008-macro-indicator-registry/spec.md`. 계획 산출물은 [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [quickstart.md](quickstart.md)다. 구현 작업 분할과 Jira 티켓은 후속 `/speckit-tasks` 단계에서 정한다.\n+\n+## Summary\n+\n+17개 월별 경제지표를 공식 원천에서 수집·변환하고, 원본·개정 이력을 보존하며, 17개가 모두 처리된 불변 자료 스냅샷만 공개한다. 계산 등록표, 화면 분류, 자료 버전을 분리한다. 변환 경계(증가율 분모 결측·0, 계열 시작 구간, 월 기말 휴장일, 월 평균 부분 표본)는 모두 결측과 사유로 남기고 값을 만들지 않는다. 이용 권리 미확인 계열이 남아 있으면 완결 버전을 발행하지 않는다. `T_g`와 `T_all`을 자료 버전에 고정하고, 008의 단일 조회 응답이 009 화면에 필요한 17개 지표·최근 3개월·수집 상태를 한 버전에서 제공한다. 010의 계산용 시계열은 `data/`에서 읽고 Backend에서는 계산하지 않는다. PD-10/PD-11은 미확정으로 유지하며 실제 원천 검증 전에는 구현 완료를 선언하지 않는다.\n+\n+## Technical Context\n+\n+**Language/Version**: Python 3.11 (`data/`), Java 21 (Spring Boot 3.5 Backend). 009 화면 소비자는 TypeScript/React 19이나 이 spec의 화면 구현 범위는 아니다.  \n+**Primary Dependencies**: 기존 `data/`의 requests·pandas·PyArrow·SQLAlchemy/psycopg 계열을 재사용하고 필요한 버전은 구현 시 lockfile/`pyproject.toml`에서 확정한다. Backend는 기존 Spring Web·JPA·Flyway를 사용한다.  \n+**Storage**: `data/raw/` 원본과 `data/processed/` Parquet, 공개 조회용 PostgreSQL 16 `macro_*` 전용 테이블. 기존 ETF `dataset_version` 및 009 `market_flow_field_summary`는 재사용하지 않는다.  \n+**Testing**: `ruff check src scripts tests`, `pytest`, `./gradlew spotlessApply build`, PostgreSQL Testcontainers 및 008/009/010 계약 테스트. 테스트가 실행되지 않아 skip되면 통과로 간주하지 않는다.  \n+**Target Platform**: Linux 컨테이너 기반 배치·Spring 서비스; 개발용 로컬 Docker Compose.  \n+**Project Type**: 모노레포의 데이터 수집 배치 + 읽기 전용 Backend REST 서비스.  \n+**Performance Goals**: 17개 계열 전체 발행의 소요 시간, 원천 호출 수, 008 조회 p50/p95를 실측해 작업별 기준을 확정한다. 근거 없는 고정 지연 목표를 선제 지정하지 않는다.  \n+**Constraints**: KOSIS 분당 200회·요청당 40,000셀; 관세청 **조회 기간 1년 제한**(전 구간 수집에 연 단위 37회 이상 호출)과 응답의 합계 행 제외; ECOS·OECD는 수치 한도 없이 과다 호출 시 제한; ECOS 인증키 2년 만기; 사용자 요청 중 원천 호출 금지; 부분 발행·보간·운영 fixture fallback 금지; Backend 계산 금지; 시크릿 비노출.  \n+**Scale/Scope**: 고정 17개 지표/7개 분야, 대상월별 전 가용 구간(PD-11 확인 전 길이 미정), 지표별 최근 재조회 `N`(미정), 조회 시 최근 3개월과 지표별 최신값. 18번째 지표와 빈티지 확보는 범위 밖.\n+\n+## Constitution Check\n+\n+*GATE: Phase 0 이전 판정, Phase 1 산출물 작성 후 재판정. 기준: `.specify/memory/constitution.md`의 현재 본문. 상단 Sync Impact Report는 3.4.0 승인 완료라고 하나 footer는 초안으로 표기되어 메타데이터가 불일치한다. 이 plan은 현재 본문의 더 엄격한 기준으로 검증하며, 헌장 표기 정합화는 별도 문서 작업으로 남긴다.*\n+\n+| 원칙/규칙 | 계획상 대응 | 판정 |\n+|---|---|---|\n+| I 전략 진단 중심 | 008은 검색·시장 맥락용 입력만 공급, 효과 입증 주장 없음 | 통과 |\n+| II 단순 화면 | 공급원/인증키 선택을 사용자에게 요구하지 않고 개별 실제 값 유지 | 통과 |\n+| III 추천 아님 | 지표 수집·노출만 하며 투자 권고/점수화 없음 | 통과 |\n+| IV 같은 조건 | 검색 소비자가 하나의 불변 자료·계산 등록표 버전을 사용 | 통과 |\n+| V 당시 정보·역사 탐색 구분 | 최신 개정자료 역사 탐색으로 명시, 빈티지/당시 재현 주장 없음 | 통과 |\n+| VI 없는 결과 금지 | 결측 null, `T_all` null, 무자료/실패, 이전 완결 버전 유지. 변환 경계 네 가지를 값 생성 없이 결측 처리(R9) | 통과 |\n+| VII 탐색·검증 구분 | 008은 검색 결과나 효과 검증을 만들지 않음; PD-10/11 미확정 표시 | 통과 |\n+| VIII 재현성 | raw 개정 이력, 값 규칙 fingerprint, 불변 자료·등록표 버전, 포인터 원자적 발행. 17개 모두 공식 원천에서 받아 개정 이력을 보존한다 | 통과 |\n+| IX 실측 실행 한도 | 배치·조회 성능 수치 사전 고정 없음; 원천 한도와 실측 근거 기록 | 통과 |\n+| X 이용 조건 | 17개 작성기관·출처·조건을 실조회로 확인 완료(PD-11). 권리 미확인 계열은 공개 버전 제외·발행 보류(R10). 두바이유는 '권리 확인 대기'로 표시해 쓴다 | 조건부 통과 — Complexity Tracking의 감수 위험 |\n+| 스키마 협업 | 구현 시 각 작업 묶음 1 Ticket·Branch·MR, Flyway 변경과 코드·검증 동일 MR | 통과 |\n+| 현재 Git 브랜치 형식 | 사용자가 지정한 `docs/275-spec008-plan-task`는 헌장의 `{type}({position})/{JIRA_NUMBER}-{description}`과 불일치. 이 plan에서 임의 변경하지 않으며 MR 전 팀 확인 필요 | 보류 |\n+\n+**Phase 1 재판정 (2026-09-17 갱신)**: [data-model.md](data-model.md)의 완결성 검증·원자적 포인터·대체 원천 표시, [contracts/openapi.yaml](contracts/openapi.yaml)의 무자료·출처·결측 사유·버전, [contracts/macro-indicator-source.md](contracts/macro-indicator-source.md)의 010 경계를 대조했다. PD-11은 17개 실조회로 완료했고, PD-10은 [010](../010-economic-regime-search/spec.md) 소유로 넘겼다. 새로 생긴 유일한 긴장은 두바이유 한 계열의 개정 이력 미보장이며 Complexity Tracking에 근거와 좁히는 방법을 적었다. 브랜치 명명 게이트는 여전히 보류다.\n+\n+## Architecture and Data Flow\n+\n+```text\n+ECOS / KOSIS / 관세청 / OECD\n+       │ (인증·한도·원본 개정 보존)\n+       ▼\n+data/ raw → 월별 정규화·변환 → processed/ Parquet ──▶ macro_* PostgreSQL\n+                                                       (새 완결 스냅샷 + 기준월,\n+                                                        원자적 current 포인터)\n+                                  ├──▶ 008 Backend 조회 REST ──▶ 009의 기존 두 화면 API ──▶ 화면\n+                                  └──▶ 010 data/ MacroIndicatorSource ──▶ 검색 사전계산\n+```\n+\n+- 수집 실패는 원본·시도 상태를 남기고 현재 포인터를 움직이지 않는다. raw→Parquet→DB 한 방향으로만 적재한다. 값 규칙 변경은 전 구간 재처리, 매핑·가중만 변경되면 계산 등록표/기준월 재산출, 화면 문구만 변경되면 표시 버전만 올린다. 정기 `N`개월 밖 개정은 원천 공지·메타데이터 감지 시 해당 범위를 재조회한다.\n+- 발행 게이트는 두 가지다. 17개 각각에 유효 월별 변환값이 1건 이상이어야 하고, 17개 전부의 이용 권리가 확인되어야 한다. 둘 중 하나라도 어긋나면 `HELD`로 두고 current 포인터를 움직이지 않는다.\n+- 008 사용자 조회는 17개 메타데이터·값·3개월 경로·7개 `T_g`·`T_all`·수집 상태·세 버전을 단일 응답으로 고정한다. 009는 `macro_*`를 직접 읽지 않는다. 현재 plan의 기본 구현안은 009→008 REST 호출이다. 동일 프로세스 호출 방식 변경 시 사용자 합의와 계약을 먼저 갱신한다.\n+- 010의 검색 가능 기준월은 검색 배치가 완료한 결과에서 판정한다. 008의 최신 `T_g`/`T_all`을 검색 진입 가능월로 간주하지 않는다. 009·010 문서/계약의 기존 충돌은 연동 작업에서 별도 정합화한다.\n+\n+## Delivery Slices (tasks.md 작성 전 설계 경계)\n+\n+1. **등록표 확정**: PD-11 검증 결과를 등록표에 옮기고 지표별 `N`과 주택가격 연결 계수를 정한다. 실조회는 끝났으므로 이 묶음은 조사 작업이 아니라 등록 작업이다.\n+2. **수집·정규화·개정**: 원천 어댑터, raw/Parquet, 원값/변환값과 다중 원본 계보, 발표일/대상월/수신시각, 개편·결측 규칙, 호출 한도/실패 복구, `N` 밖 개정 감지·재조회.\n+3. **저장·발행**: 버전 분리, 전 구간 불변 스냅샷, 17개 유효 변환값 게이트, `T_g`/`T_all`, 파일 manifest 봉인과 원자적 DB 포인터, 장애 복구, Flyway·통합 테스트.\n+4. **008 조회**: 단일 스냅샷 REST, 무자료/실패 응답, 출처·작성기관·예시 표시, 버전 일관성/계약 테스트.\n+5. **009·010 연동**: 009 직접 저장소/fixture 경계 교체와 두 화면 API 유지, 010 Python source 및 Backend 등록표 포트 연결, 검색 완료월 구분, 계약 충돌 정정.\n+\n+각 slice는 작업 종속 관계를 보여줄 뿐 Jira Task/브랜치 수를 확정하지 않는다. `/speckit-tasks`에서 독립 검증 가능한 작업 묶음으로 분할한다.\n+\n+## Project Structure\n+\n+### Documentation (this feature)\n+\n+```text\n+specs/008-macro-indicator-registry/\n+├── spec.md\n+├── plan.md\n+├── research.md\n+├── data-model.md\n+├── quickstart.md\n+├── contracts/\n+│   ├── openapi.yaml\n+│   └── macro-indicator-source.md\n+└── tasks.md                 # /speckit-tasks에서만 생성\n+```\n+\n+### Source Code (planned, no implementation in this turn)\n+\n+```text\n+data/\n+├── src/data_pipeline/macro/      # 원천 어댑터·정규화·변환·발행·010 source\n+├── scripts/                      # 명시적 초기/정기 수집 실행점\n+└── tests/                        # 원천 fixture·변환·발행·010 계약\n+backend/\n+├── src/main/java/com/ssafy/thorp/macro/  # 008 controller/application/domain/infrastructure\n+├── src/main/resources/db/migration/      # macro_* Flyway migration\n+└── src/test/                           # REST/DB/아키텍처 계약\n+backend/src/main/java/com/ssafy/thorp/marketflow/  # 009의 소비 adapter 정합화\n+```\n+\n+**Structure Decision**: 기존 `data/`·Backend 패키지와 파트 규칙을 따른다. 신규 서비스나 브로커를 추가하지 않는다. 스키마 마이그레이션과 이를 이용하는 Python/Java 코드 및 검증을 동일 변경 묶음에 포함한다.\n+\n+## Integration Risks and Exit Criteria\n+\n+- **PD-11**: **2026-09-17 완료**. 17개 전부 실조회로 확인했고 결과는 [pd11-source-verification.md](pd11-source-verification.md)에 있다. 남은 것은 값 확인이 아니라 지표별 재조회 구간 `N`(갱신 관찰 필요)과 주택가격 개편 연결 계수(산출 필요)다.\n+- **PD-10**: 최소 유효 척도를 008이 추정하지 않는다. 확정 전 010의 MAD→IQR→계산 불가 규칙을 유지한다.\n+- **009 계약 충돌**: 009 spec의 최신 `T_g` 검색 진입, OpenAPI의 무자료 non-null 기준월·상세 경로 길이가 008 계약과 다르다. 009 예시의 `dubai_crude`와 Backend fixture의 `dubai_oil` ID도 불일치한다. 기존 4회 분리 조회 포트는 단일 스냅샷 조회로 교체한다. 저장된 변화 서술의 키는 자료·계산·표시·서술 규칙 버전을 포함하고, 수집 상태/마지막 시도는 008 현재 응답으로 덧씌운다. 008 REST 응답 봉투는 009 및 신규 Backend API의 `HttpApiResponse`와 일치시킨다. 연동 전 canonical ID 확정·수정·공동 계약 테스트가 필요하다.\n+- **010 계약 충돌**: 기존 010 포트의 자료/등록표 버전과 008의 표시 버전, 분야 ID 표기, `changed_since(previous,target)` 정의를 고정한다. `T_all=null`이면 010의 `baseline_month NOT NULL` 테이블에 종합 완료월 행을 만들지 않고, baseline-months API는 `composite:null`, 종합 검색은 `NOT_COMPUTABLE`로 명시한다. 010 계산은 오직 `data/`에 둔다.\n+- **원천별 수집 제약**: 관세청은 연 단위 분할 호출과 합계 행 제외, 주택가격은 기준월별 표 5개의 겹침 구간 비율 연결, 원/달러는 월별 표의 말일자료 항목, 국고채는 일별 표에서 마지막 거래일 선택, 두바이유는 한국은행 게재 계열을 쓰되 등록표에 '권리 확인 대기'로 표시한다. 각각 계약·단위 테스트로 고정한다.\n+- **운영 대역**: 009 `ExampleMacroIndicatorSnapshotAdapter`와 010 fixture 결과는 운영에서 선택되지 않도록 검증한다.\n+- **변환 경계**: 증가율 분모 결측·0, 계열 시작 구간, 월 기말 휴장일, 월 평균 부분 표본에서 값을 만들지 않고 사유를 남기는지 계약·단위 테스트로 고정한다. 지표별 거래일 달력의 출처는 PD-11에서 확정한다.\n+- **완료 판정**: [quickstart.md](quickstart.md)의 실패·무자료·개정·동시 조회·`T_all=null`·실자료 검증 시나리오를 통과하고 출처/작성기관을 전 화면으로 전달한다. 계획 문서 작성 자체는 구현/실자료 검증 완료가 아니다.\n+\n+## Complexity Tracking\n+\n+| 항목 | 헌장과의 긴장 | 왜 받아들이는가 | 어떻게 좁히는가 |\n+|---|---|---|---|\n+| 두바이유의 권리 확인 대기 | 원칙 X은 이용 조건 안에서만 쓰라고 한다. 이 계열은 국제통화기금 작성이고, 한국은행 약관이 상업 이용 제한 계열에 작성기관 승인을 요구하는데 이 계열이 제한 대상인지 확인할 창구가 없다 | 대체 후보 셋을 실측 대조한 결과 서로 다른 계열이었고 모두 현행보다 불투명했다(확보 구간 축소, 비공식 경로, 이용 조건 미표기, 개정 이력 없음). 권리를 확인하려다 더 나쁜 자리로 옮기는 셈이 된다 | 17개 중 하나에만 해당한다. 등록표에 '권리 확인 대기'로 표시해 숨기지 않는다(원칙 VI). 확인이 가능해지면 판정하고, 제한 대상이면 FR-016b대로 그 지표만 중단하고 과거 버전은 보존한다. 그래도 나머지 6개 분야 검색은 유지된다 |\n+\n+**이 항목의 성격**: 해소 가능한 게이트가 아니라 **받아들이기로 한 위험**이다. 확인 창구가 없다는 것이 전제이므로 착수를 막지 않는다. 근거와 대조 결과는 [pd11-source-verification.md](pd11-source-verification.md)에 남겼다.\n+\n+설계 복잡성을 요구하는 그 밖의 Constitution 위반은 없다. 별도 `macro_*` 모델은 기존 ETF 버전 모델과 자료 종류·원자적 완결성 조건이 달라 필요한 분리이며, 신규 인프라 도입은 아니다. 현재 브랜치 이름의 헌장 형식 불일치는 위 게이트에 기록했고 문서 작성 과정에서 브랜치를 임의로 변경하지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/plan.md",
+          "old_path": "specs/008-macro-indicator-registry/plan.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,66 @@\n+# Quickstart / 검증 시나리오: Spec 008\n+\n+이 문서는 **구현 후 실행할 검증 절차**다. 현재 plan 단계에서 수집기·API가 이미 동작한다는 뜻이 아니다. 실제 원천 인증키·이용 승인은 팀이 별도로 확보한다. 키를 파일/로그/응답에 적지 않는다.\n+\n+## 준비\n+\n+1. [spec.md](spec.md)의 FR-001 17개 지표와 [research.md](research.md)의 PD-11 항목을 대조한다. 지표별 공식 원천, 통계표/항목 코드, 원/변환 단위, 과거 시작월, 발표일 제공 여부, 작성기관/계열별 상업 이용·재배포 예외, 개편 연결, 정기 재조회 `N`의 근거를 실제 응답·약관 증거와 함께 확정한다. 관세청 무역수지는 직접 제공값인지 파생값인지 확인한다. 17개 중 하나라도 미확인이면 실자료 완료 판정은 중단한다.\n+2. 개발 DB가 필요하면 저장소 루트에서 `docker compose -f docker-compose.dev.yml up -d postgres`로 PostgreSQL 16을 준비한다. 기존 개인 데이터가 있을 수 있으므로 볼륨 삭제·초기화 명령은 이 절차에 없다.\n+3. Python은 `data/requirements.txt`/`requirements-dev.txt`, Backend는 기존 Gradle 설정을 사용한다. 구현 시 초기/정기 수집 스크립트의 실제 명령과 필요한 비밀 환경변수 이름을 여기에 확정한다. 아직 존재하지 않는 스크립트 이름을 실행 지침처럼 쓰지 않는다.\n+\n+## 계약·자료 검증\n+\n+| 시나리오 | 입력/행동 | 기대 결과 |\n+|---|---|---|\n+| 첫 완결 전 | 등록표만 있고 첫 수집 일부 실패 | `GET /api/macro-indicators/snapshot` 200; 17개 등록 정보/7개 분야, `dataVersion=null`, 모든 값·기준월 null, 수집 실패 명시, 운영 fixture 자동 대체 없음 |\n+| 정상 발행 | 17개 각 1건 이상 유효 월별 변환값 | 하나의 새 자료 버전과 세 버전 ID, 7개 `T_g`, `T_all`(있으면 월), 최근 경로·출처·작성기관 제공 |\n+| raw만 존재 | 한 지표의 원값만 있고 변환 유효값 0건 | 발행 보류; 기존 current 포인터 그대로, 수집 시도 상태는 HELD/실패 근거 |\n+| 공통월 없음 | 17개 유효값은 각각 있으나 전 지표 월 교집합 없음 | 발행 성공, `T_all=null`, 가능한 `T_g` 유지. 010 종합은 계산 불가, 분야 검색은 가능한 범위에서 유지 |\n+| 부분 수집 실패 | 몇 원천은 성공, 하나는 실패/한도 도달 | 성공 raw·시도 기록 보존, 새 버전 없음, 이전 버전 읽기 가능. 원천 호출은 사용자 GET에서 발생하지 않음 |\n+| 과거 개정 | 한 지표의 이전 대상월 값 변경 | 원본 개정 이력 추가, 전체 17개 새 불변 자료 버전 발행, 이전 버전 값 변화 없음, `changed_since`가 가장 오래된 변경 월 반환 |\n+| 증분 수집 보존 | 첫 전 구간 발행 뒤 최근 `N`개월만 재조회 | 새 공개 버전에도 `N`개월보다 오래된 17개 계열 관측값이 그대로 남음 |\n+| `N` 밖 개정 | 원천 공지·메타데이터에서 과거월 개정 확인 | 해당 과거 범위 별도 재조회와 새 17개 버전 발행; `N`만으로 모든 개정을 포착했다고 주장하지 않음 |\n+| 월별 변환 계보 | 일별 월 기말/평균과 전년동월 대비 표본, 분모 0·결측·개편 경계 | 기여 원본/processed manifest 추적, 수기 계산 일치, 계산 불가 값은 null로 유지 |\n+| 매핑/가중 변경 | 값 규칙 유지 | 계산 등록표 버전 변경, 자료 버전/관측 시계열 재처리 없음, 기준월 조합 재산출 |\n+| 표시 변경 | 분야 이름·배치·설명 변경 | 표시 버전만 변경, 계산/자료 버전 그대로 |\n+| 값 규칙 변경 | 원천/항목/단위/변환/개편/결측 규칙 변경 | 계산 등록표와 자료 버전 변경, 전 가용 구간 재처리; 이전 결과 불변 |\n+| 동시 조회/발행 | 008 GET이 발행 포인터 교체와 겹침 | 응답 전체가 이전 또는 새 버전 중 하나만 참조; 17개 값·기준월 혼합 없음 |\n+| 파일/DB 발행 경계 | Parquet manifest 봉인 전후 또는 DB 포인터 교체 전 장애 주입 | 공개 포인터는 완결 버전만 가리킴; 미참조 파일은 복구/정리 가능, 공개 파일은 보존 |\n+| 증가율 분모 경계 | 전년 같은 달이 결측인 월, 0인 월, 계열 시작 첫 12개월 | 세 경우 모두 변환값 null, 사유 `NOT_TRANSFORMABLE`. 다른 달로 비교 대상을 옮기거나 수준 차이로 대체한 값이 없음. 그만큼 그 지표의 사용 가능 구간 시작월이 늦어짐 |\n+| 월 기말 휴장 | 마지막 달력일이 주말·공휴일인 달, 거래일이 하나도 없는 달 | 앞의 경우 직전 거래일 값이 기말값, 뒤의 경우 결측. 마지막 달력일에 값을 만들어 넣지 않음 |\n+| 월 평균 부분 표본 | 그 달 거래일 중 일부만 수집된 상태 | 평균을 만들지 않고 결측으로 유지. 거래일 전부가 채워진 뒤 재처리에서 값이 생김 |\n+| 권리 확인 대기 | 두바이유를 적재하고 발행 | 등록표에 '권리 확인 대기'와 작성기관(국제통화기금)이 남는다. 이 상태는 발행을 막지 않는다. 조건 자체를 모르는 '미확인' 지표가 있으면 그때는 발행이 보류된다 |\n+| 관세청 연 단위 분할 | 1989-01~현재 전 구간 최초 적재 | 연 단위로 나눠 호출하고 합계 행을 제외한다. 월별 관측값 수가 호출 횟수와 무관하게 대상월 수와 일치한다 |\n+| 주택가격 개편 연결 | 기준월이 다른 표 5개를 연결 | 겹치는 구간의 비율로 이어 2000-01까지 연속이고, 연결 지점과 계수가 기록된다. 연결 규칙이 없는 구간은 사용 가능 범위에서 빠진다 |\n+| 권리 미확인 | 한 지표의 `license_status`가 미확인인 채로 17개 수집·변환 성공 | 발행 보류(HELD), current 포인터 유지. 수집 상태에 해당 지표가 권리 미확인으로 표시되고, 인증키 미발급·승인 대기와 구분됨. 값이 '확인 중' 표시와 함께 나가지 않음 |\n+| 009 연동 | 기존 두 화면 API 호출·표시 버전 변경·기존 자료 유지 중 수집 실패 | 요청당 008 스냅샷 한 번만 읽고 동일 숫자·단위·출처·버전/상태·지연 원인을 반영; `macro_*` 직접 조회 없음. 검색 진입은 010 완료월만 사용 |\n+| 010 연동 | 동일 자료·등록표 버전의 검색 재실행 및 중간에 새 버전 발행 | 시작에 고정한 target 버전만 끝까지 읽어 결과 재현. Backend 계산 없음; `T_all=null` 종합 처리와 분야 처리 분리 |\n+\n+009 변화 요약용 `path`는 해당 분야 기준월 `T_g=t`의 달력상 `t-2,t-1,t` 세 칸이다. `T_g`가 없으면 빈 배열이다. 지표 자체의 `latestPath`는 지표별 최신 유효월을 기준으로 하므로 `T_g`가 없어도 완결 자료 버전이 있다면 세 칸을 제공한다. 빠진 월은 null로 확인한다. 발표일 미제공과 미수신은 구분하며 수신 시각을 발표일로 표시하지 않는다.\n+\n+## 정적·자동 검증 명령\n+\n+```powershell\n+Push-Location data\n+ruff check src scripts tests\n+pytest\n+Pop-Location\n+```\n+\n+```powershell\n+Push-Location backend\n+$env:THORP_REQUIRE_DOCKER = 'true'\n+.\\gradlew spotlessApply build\n+Remove-Item Env:THORP_REQUIRE_DOCKER\n+Pop-Location\n+```\n+\n+명령은 저장소 루트에서 실행한다. DB 통합 테스트는 Docker가 준비된 환경에서 `THORP_REQUIRE_DOCKER=true`로 실행하고 Gradle 결과의 skipped 건수를 확인한다. 단순히 빌드가 초록색이라는 이유로 DB 검증을 통과했다고 세지 않는다. 위 명령은 향후 구현 검증용이며 이 문서 작성만으로 통과했다고 주장하지 않는다.\n+\n+## 완료 게이트\n+\n+- 17/17 실제 계열의 PD-11 항목·이용 조건 검증과 기록, 0개 미확인.\n+- 변환 경계 네 가지(증가율 분모 결측·0, 계열 시작 구간, 월 기말 휴장일, 월 평균 부분 표본)가 모두 결측과 사유로 남는지 확인. 이 경계에서 만들어진 값이 0건.\n+- 미보간·개정 이력·원자적 발행·무자료·실패·`T_all=null`·버전 독립 테스트 통과.\n+- 008/009/010 계약과 화면 출처·작성기관·예시 표시 확인. 009의 기존 계약 충돌 정정 및 운영 fixture 비활성 확인.\n+- PD-10 확정 여부를 명시한다. 미확정이면 010 대체 규칙을 그대로 사용하고 임의 최소 척도를 넣지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/quickstart.md",
+          "old_path": "specs/008-macro-indicator-registry/quickstart.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,77 @@\n+# Research: 경제지표 등록·수집 (Spec 008)\n+\n+**작성일**: 2026-09-17  \n+**범위**: [spec.md](spec.md)의 FR-001~023을 구현하기 위한 기술 결정. 실제 통계 항목·과거 범위·이용 조건(PD-11)과 최소 유효 척도(PD-10)는 미확정이다. 이 문서는 원천 응답을 검증한 증거가 아니다.\n+\n+## R1. 원천과 실자료 검증\n+\n+- **Decision**: ECOS·KOSIS를 기본으로, 수출·수입·무역수지는 관세청, G20 경기선행지수는 OECD 공식 자료로 연결한다. 지표마다 주 원천 하나를 등록한다. KDI 월간 경제동향은 후보·해석 문맥만 참고하고 수치 또는 교차검증 원천으로 쓰지 않는다. 17개 각각의 통계표/항목 코드, 단위, 작성기관, 이용 조건과 재배포 예외, 최초 관측월, 발표일·개정 식별 가능성, 개편 연결 규칙은 인증키와 실제 응답으로 PD-11 검증표에 기록한 뒤에만 실자료 완료로 표시한다. 관세청 무역수지는 공식 응답에 별도 값이 있는지 확인하고, 파생이 필요하면 수출·수입의 동일 단위/시점과 공식 값 일치 여부를 검증하기 전까지 확정하지 않는다.\n+- **Rationale**: 기획서와 FR-005/006/019/020의 원천 역할을 유지하면서 미확인 응답 구조를 사실로 포장하지 않는다. 기존 [시장 카드 API 조사](../../docs/specs/market-api.md)는 11개 최신값 조사이며 17개 월별 시계열의 증거가 아니다.\n+- **Alternatives considered**: KDI의 표를 수치로 병합하거나 ECOS·KOSIS 양쪽 값을 합산하는 방식은 출처 및 중복 문제로 기각. 개발 대역을 실자료로 간주하는 방식은 FR-022에 반한다.\n+- **검증 근거/남은 일**: [KOSIS API 소개](https://kosis.kr/openapi/introduce/introduce_01List.do), [KOSIS FAQ](https://kosis.kr/openapi/community/community_0401List.do), [OECD API](https://www.oecd.org/en/data/insights/data-explainers/2024/09/api.html), [OECD 이용 조건](https://www.oecd.org/en/about/terms-conditions.html), [관세청 월별 무역통계 API](https://www.data.go.kr/data/15102108/openapi.do), [ECOS API 포털](https://ecos.bok.or.kr/api/). KOSIS FAQ는 일반 사용과 달리 일부 국제·북한통계에 비상업/재배포 금지 예외를 명시한다. OECD는 계열별 제3자 권리도 확인해야 한다. ECOS 포털의 이용 세부는 이 조사에서 독립 검증되지 않았다. 이 문서들만으로 개별 계열의 항목 코드·전 구간·조건을 확정하지 않는다.\n+\n+## R2. 수집과 재조회\n+\n+- **Decision**: `data/`에 원천별 어댑터와 월별 정규화/변환 파이프라인을 둔다. 최초는 확인된 가용 전 구간, 정기는 새 발표분과 지표별 `N`개월을 재조회한다. `N`은 모든 과거 개정을 잡는 보장이 아니라 정기 탐지 구간이다. 원천의 개정 공지·메타데이터로 바깥 구간의 변경을 확인하면 해당 범위를 별도 재조회한다. 원천별 호출 한도에 맞춘 요청 분할, 속도 제한, 재시도/중단 상태를 기록한다. 기준연도 개편 또는 값 규칙 변경에는 전 구간 재처리한다. 일정·실행 방식은 배포 환경 작업 묶음에서 확정하되 사용자 GET 경로에서는 원천을 호출하지 않는다.\n+- **Rationale**: `data/CLAUDE.md`의 raw → processed(Parquet) → PostgreSQL 경계를 따른다. 거시 지표는 기존 자산/연도 파티션의 자산 축에 대응하는 지표/연도 파티션으로 두되, 파트 규칙 변경이 필요하면 구현 전에 합의한다. 최근분 재조회는 그 구간의 개정을 잡고 저장된 전 구간과 합쳐 전체 버전을 만든다. 원천 응답 실패 시 성공한 raw 파일은 재처리를 위해 남기되 공개 버전은 만들지 않는다.\n+- **Alternatives considered**: Backend 요청 시 호출은 지연·한도·재현성 문제로 기각. 정기 실행마다 전 구간 다운로드는 한도와 비용 측면에서 기각. 새 월만 append하는 방식은 개정을 놓친다.\n+- **검증 근거/남은 일**: KOSIS는 [API 소개](https://kosis.kr/openapi/introduce/introduce_01List.do)의 분당 200회·요청당 40,000셀 조건을 상한으로 둔다. [OECD API 권고](https://www.oecd.org/en/data/insights/data-explainers/2024/11/Api-best-practices-and-recommendations.html)의 다운로드·캐싱 조건을 적용한다. 관세청 API는 [공식 안내](https://www.data.go.kr/data/15102108/openapi.do)의 수정 시점·호출 한도를 확인한다. ECOS와 지표별 실제 개정 관행을 확인하기 전에는 `N`을 임의 고정하지 않는다.\n+\n+## R3. 등록표·버전의 분리\n+\n+- **Decision**: 계산 등록표 버전(17개 정의·값 규칙·분야 매핑·명목 가중)과 표시 분류 버전(7개 분야의 이름·순서·설명)을 따로 둔다. 계산 등록표 안에 값/유효 구간 규칙의 fingerprint를 저장한다. 화면 문구만 바뀌면 표시 버전만, 매핑·가중만 바뀌면 계산 버전만 새로 만든다. 원천·항목·단위·변환·연결·결측 규칙이 바뀌면 계산 버전과 전 구간 재처리 자료 버전을 함께 새로 만든다.\n+- **Rationale**: FR-003을 버전 관계로 집행한다. `dataVersion + calculationRegistryVersion`을 재현성 키로 사용하고, 자료 버전의 value-rule fingerprint와 계산 등록표 fingerprint가 맞아야 결합한다. 매핑·가중만 바뀐 경우 fingerprint는 같고 관측 시계열 재처리는 없다.\n+- **Alternatives considered**: 단일 버전은 화면 문구 수정만으로 검색 재계산을 유발한다. 자료 버전만 저장하면 계산 정의의 변화를 재현할 수 없다.\n+\n+## R4. 불변 스냅샷과 원자적 발행\n+\n+- **Decision**: 기존 ETF `dataset_version`을 재사용하지 않고 `macro_*` 전용 모델을 둔다. 원본 개정 이력·월별 변환에 기여한 여러 원본의 계보·정규화 관측값을 보존한다. 공개 자료 버전은 17개 지표의 전체 가용 구간을 담는 불변 스냅샷이다. raw/Parquet manifest를 먼저 봉인·해시한 다음, 지표별 유효 월별 **변환값**이 각각 최소 1건이고 17개 처리 모두 성공했을 때 한 PostgreSQL 트랜잭션에서 스냅샷·기준월을 기록하고 단일 current 포인터를 교체한다. 파일은 DB 트랜잭션 밖이므로 장애 시 미참조 파일 복구/정리와 공개 파일 보존을 별도 검증한다. `T_all = null`만으로 발행을 막지 않는다.\n+- **Rationale**: 부분 성공·버전 혼합 조회를 막는다. 001의 기존 KRX 데이터 버전 경로는 목적과 완결성 조건이 다르다. 직전 공개 버전은 실패 중에도 유지한다. 수집 시도 상태는 공개 포인터와 별도로 갱신한다.\n+- **Alternatives considered**: 지표별 최신 행을 조합한 조회는 한 시점의 17개 상태를 보장하지 않는다. 부분 발행은 FR-011 위반. 최근 `N`개월만 복사한 스냅샷은 과거 검색 이력을 소실한다.\n+\n+## R5. 기준월과 시간 의미\n+\n+- **Decision**: 월 키는 `YYYY-MM` 대상월, 발표일과 수신 시각은 별도 필드다. 사용 가능한 변환값의 월 집합 교집합으로 분야별 `T_g`와 17개 전체 `T_all`을 계산하고 최대 월을 저장한다. 교집합이 비면 null로 둔다. 조회용 최근 3개월 `t-2,t-1,t`는 달력상 연속 월로 제공하여 결측을 null로 명시한다. `T_g` 이후 새로 나온 지표별 최신값도 구분한다.\n+- **Rationale**: 같은 월의 서로 다른 발표 시차와 월별 결측을 숨기지 않는다. 010의 검색 완료월은 008의 자료 확보월과 별개이며 `regime_baseline_month` 등 010 결과에서 판정한다.\n+- **Alternatives considered**: 최대 관측월을 기준월로 대체하거나 결측을 이전 값으로 채우는 방식은 FR-008/013 위반이다.\n+\n+## R9. 월별 변환 규칙의 경계 조건\n+\n+- **Decision**: 2026-09-17 clarification으로 네 경계를 고정한다. (1) 전년동월 대비 증가율은 비교 대상월 값이 결측이거나 0이면 그 달을 결측으로 두고 사유를 '변환 불가'로 남긴다. 다른 달로 비교 대상을 옮기거나 수준 차이로 대체하지 않는다. (2) 계열 시작 직후라 비교 대상월이 아예 없는 구간도 같은 규칙의 결측이며, 그만큼 그 지표의 사용 가능 구간이 늦게 시작한다. (3) 일별 지표의 '월 기말'은 그 달의 마지막 거래일 값이다. 마지막 달력일이 휴장일이면 직전 거래일 값을 기말값으로 삼고, 거래일이 하나도 없는 달은 결측이다. (4) '월 평균'은 그 달 거래일의 일별 값이 모두 확보된 경우에만 산출한다. 하루라도 빠지면 부분 표본 평균을 만들지 않고 결측으로 둔다.\n+- **Rationale**: 분모가 0이면 값이 발산하고, 표본 수가 다른 달의 평균을 같은 값으로 취급하면 그 달만 과거 비교에서 왜곡된다. 네 규칙 모두 결측을 결측으로 두는 쪽이라 FR-008과 원칙 VI에 일관되고, 유효 변환값 집합에서 자동으로 빠져 `T_g`/`T_all`이 스스로 물러난다. 별도 예외 분기를 만들지 않는다.\n+- **Alternatives considered**: 가장 가까운 유효월을 분모로 삼는 방식은 서로 다른 기간의 증가율을 한 열에 섞는다. 부분 표본 평균에 표본 수를 함께 기록하는 방식은 소비자가 그 수를 보고 걸러야 하므로 판정 책임을 010으로 떠넘긴다. 마지막 달력일 기준은 휴장일에 값이 없어 빈 달을 만든다.\n+- **검증 근거/남은 일**: 거래일 달력의 출처(지표별 시장·기관 휴일)를 등록표에 지표별로 기록해야 한다. 원천이 이미 월 단위 기말값·평균값을 제공하는 계열은 PD-11 확인 시 자체 산출과 값이 일치하는지 대조한다.\n+\n+## R11. 실제 원천 확정 결과 (2026-09-17 검증 반영)\n+\n+- **Decision**: [pd11-source-verification.md](pd11-source-verification.md)의 실조회 결과로 17개 계열을 확정했다. R1이 세운 원천 배정 중 세 가지를 고친다. (1) **원/달러는 일별 표가 아니라 월별 표 731Y004의 항목2 `0000200 말일자료`를 쓴다** — 일별 표 731Y001은 서울외국환중개 작성이라 제3자 저작권이 걸리고, 월별 말일자료는 한국은행 작성이면서 같은 값을 준다(일별 마지막 거래일과 대조 일치). (2) **두바이유는 IMF 작성이지만 한국은행 게재 계열을 그대로 쓰고 '권리 확인 대기'로 표시한다** — 대체 후보(오피넷·월간 보고서 부표)를 실측 대조한 결과 서로 다른 계열이었고, 확보 구간·경로 공식성·이용 조건 표기 모두 현행보다 나빴다. (3) **관세청 기준 주소는 `1220000/Newtrade`다** — 2026-08-12 개편으로 옛 `Itemtrade` 경로가 폐기됐고, 폐기 경로는 키가 정상이어도 미등록 키 오류를 돌려준다.\n+- **Rationale**: ECOS 이용약관 제2조 5호는 통계작성기관을 저작권 보유자로 정하고 제5조 ①은 상업 이용 제한 계열에 작성기관 승인을 요구한다. 제공 창구가 한국은행이라는 사실만으로 이용 가능 여부가 결정되지 않으므로, 계열별 `ORG_NAME`을 확인해 작성기관 기준으로 판정했다.\n+- **Alternatives considered**: 두바이유를 오피넷으로 바꾸는 방안은 확보 구간이 1992-01에서 2008-01로 줄고 값 정의가 추정가로 달라지며 공식 API가 아닌 화면용 경로라 기각했다. 환율을 일별 표로 유지하면서 제3자 조건을 확인하는 방안은, 같은 값을 주는 한국은행 작성 계열이 있으므로 불필요하다.\n+- **구현에 영향**: 관세청은 조회 기간이 1년으로 제한되어 전 구간(1989-01~) 수집에 연 단위 37회 이상 호출이 필요하고 응답에 합계 행이 섞여 온다. 주택가격은 기준월별 표 5개를 겹치는 구간의 비율로 이어야 2000-01까지 닿는다. 발표일을 주는 원천은 KOSIS(`LST_CHN_DE`)뿐이고 ECOS·관세청은 주지 않는다.\n+\n+## R10. 이용 권리 미확인 계열의 취급\n+\n+- **Decision**: 이용 권리와 표시 조건을 확인하지 못한 지표는 수집·보관까지만 하고 공개 자료 버전에 넣지 않는다. 17개 중 하나라도 권리 미확인이면 완결 자료 버전 발행을 보류한다. 인증키 미발급·승인 대기(자료를 아직 받지 못한 상태)와 권리 미확인(자료는 받았으나 쓸 수 있는 범위를 모르는 상태)을 수집 상태에서 구분해 기록한다. 권리 미확인 지표의 값을 '확인 중' 표시와 함께 내보내지 않는다.\n+- **Rationale**: 원칙 X는 허용 범위를 넘긴 자료로 만든 결과가 출시 시점에 통째로 무효가 된다고 본다. 표시를 붙여도 내보내는 순간 이용 범위를 벗어난 사용이므로 표시로 갈음할 수 없다. 발행 게이트에 권리 확인을 넣으면 미확인 계열이 섞인 버전이 구조적으로 만들어지지 않는다.\n+- **구분**: 조건 자체를 모르는 '미확인'과, 조건은 공개되어 있으나 해당 계열이 어느 쪽인지 확인할 창구가 없는 '권리 확인 대기'를 나눈다. 발행을 보류하는 것은 전자뿐이다. 현재 후자에 해당하는 것은 두바이유 하나다.\n+- **Alternatives considered**: 값과 함께 '권리 확인 중' 배지를 붙이는 방식은 이용 범위 위반을 표시로 덮는 것이라 기각. 권리 미확인 지표만 빼고 16개로 발행하는 방식은 17개 완결성 조건(FR-011)과 충돌한다.\n+- **검증 근거/남은 일**: 계열별 권리 확인 결과를 PD-11 검증표의 독립 항목으로 둔다. R1의 KOSIS 국제·북한통계 예외와 OECD 제3자 권리가 여기에 해당한다.\n+\n+## R6. 008·009·010 기술 경계\n+\n+- **Decision**: 이전 clarifications의 합의대로 008은 사용자용 지표 REST 조회를 소유하고, 009의 두 화면 전용 REST API는 유지한다. 009는 008의 단일 스냅샷 응답 계약을 소비해 화면 정보와 변화 요약을 조립하며 `macro_*` DB를 직접 읽지 않는다. 동일 Backend 프로세스 안에서의 호출 구현은 **현재 합의 문구의 문자적 해석인 실제 HTTP 호출을 기본안**으로 둔다. 010의 시계열 계산 입력은 `data/` Python 경계로, Backend의 표시용 등록표는 008 조회 경계로 받는다. Backend에서 거리·척도 계산을 하지 않는다.\n+- **Rationale**: 사용자 합의 및 AGENTS의 Backend 비계산 원칙을 지키고, 009 응답을 한 자료 버전으로 고정한다. 009의 현재 `MacroIndicatorSnapshotPort`/예시 어댑터는 이 계약으로 교체해야 한다. 010의 최신 검색 가능월은 010 계산 결과에서 별도 제공한다.\n+- **Alternatives considered**: 009의 직접 DB 읽기는 명시적으로 기각. 같은 프로세스의 008 애플리케이션 조회 서비스 직접 호출은 네트워크 비용이 적고 응답 계약을 공유할 수 있으나, 기존의 '008 API만 사용' 표현을 완화하는 선택이어서 팀 확인 전 기본안으로 채택하지 않는다. 009가 별도 원천을 수집하는 방식도 기각.\n+- **연동 문서 보정**: 009 spec의 검색 진입 최신 `T_g` 표현은 010의 검색 완료월 기준으로 정정한다. 009 OpenAPI의 자료 버전/기준월 non-null 및 상세 경로 3개 필수와 실제 무자료/T_g=null 상태를 맞춘다. 신규 API 봉투는 Backend의 `HttpApiResponse<T>` 및 009 계약과 같은 `{httpStatus,isSuccess,message,code,result}`를 쓴다. 구형 `ApiResponse<T>`는 이 경계의 근거가 아니다. 현재 009의 4회 분리 조회 포트는 요청당 008 스냅샷 1회 조회로 바꿔 포인터 교체 중 버전 혼합을 막는다. 009 요약 read model은 `(dataVersion, calculationRegistryVersion, displayVersion, narrativeRuleVersion)`에 고정한 서술만 캐시하고, 변동 가능한 수집 상태/마지막 시도는 008 현재 응답에서 매 요청 덧씌운다. 009의 분야 ID(lower snake)와 010 예시의 대문자 ID는 canonical ID와 변환 책임을 확정한다. 009 계약 예시의 두바이유 ID `dubai_crude`와 현재 Backend fixture의 `dubai_oil`도 일치시킨다. fixture에 쓴 원천명·단위·수치는 PD-11 검증 근거가 아니다. 이는 009/010 계약 정합화 작업이며 008 문서만으로 완료했다고 보지 않는다.\n+\n+## R7. 예시 자료와 운영 전환\n+\n+- **Decision**: 예시 입력은 명시적 개발 프로필에서만 사용하고 자료 버전/응답에 `sampleData`를 남긴다. 운영에서는 무자료·수집 실패를 그대로 노출하고 자동 대체하지 않는다. 009의 `ExampleMacroIndicatorSnapshotAdapter`는 실 008 연결 시 운영 등록에서 빠지고, 010의 fixture 데이터로 계산된 결과도 운영 노출되지 않아야 한다.\n+- **Rationale**: FR-022와 원칙 VI/X를 지킨다. 기존 대역이 `@Component`로 남아 잘못 선택되는 위험을 차단한다.\n+- **Alternatives considered**: 연결 실패 시 조용히 fixture로 fallback하는 것은 실제 통계로 오인될 수 있어 기각.\n+\n+## R8. 검증과 미확정 게이트\n+\n+- **Decision**: Python은 `ruff check src scripts tests`와 `pytest`, Backend는 Spotless/Gradle build 및 PostgreSQL Testcontainers 통합 테스트로 검증한다. 공개 원자성·실패 후 이전 버전 유지·개정 감지·무자료·`T_all=null`·분류/계산 버전 독립·009/010 계약 테스트를 포함한다. Flyway 마이그레이션과 이를 사용하는 코드/검증은 같은 MR에 둔다. PD-11의 실제 17개 계열 검증 전에는 Spec 008을 완료 처리하지 않는다. PD-10 확정 전에는 최소 유효 척도를 꾸며내지 않는다.\n+- **Rationale**: constitution의 재현성·미확인 항목·스키마 변경 규칙과 파트별 검증 명령을 충족한다.\n+- **Alternatives considered**: fixture 통과만으로 완료 판정하거나 테스트에서 Docker 필수 검증을 조용히 skip하는 방식은 실제 통합 위험을 가린다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/research.md",
+          "old_path": "specs/008-macro-indicator-registry/research.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,16 +14,42 @@\n \n ## 범위 요약\n \n-경제환경 검색과 시장 흐름 화면이 쓰는 17개 입력 지표를 7개 분야에 고정하고, 지표별 원천·통계표·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도를 등록표로 버전 관리하며, 공식 원천(ECOS·KOSIS·OECD)에서 이용 조건 안에서 수집해 분야별 기준월(T_g)과 17개 지표 공통 기준월(T_all)을 산출하는 기능이다. 사용자는 자료 공급원을 고르거나 API 이름을 보지 않는다. 지표 등록·분야 매핑·계산 가중은 화면 분류와 별도 버전으로 관리한다. (§6.2, §6.4.4, D23)\n+경제환경 검색과 시장 흐름 화면이 쓰는 17개 입력 지표를 7개 분야에 고정하고, 지표별 원천·통계표·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도를 등록표로 버전 관리하며, 공식 원천(ECOS·KOSIS·관세청·OECD)에서 이용 조건 안에서 수집해 분야별 기준월(T_g)과 17개 지표 공통 기준월(T_all)을 산출하는 기능이다. 사용자는 자료 공급원을 고르거나 API 이름을 보지 않는다. 지표 등록·분야 매핑·계산 가중은 화면 분류와 별도 버전으로 관리한다. (§6.2, §6.4.4, D23)\n \n ## Clarifications\n \n ### Session 2026-09-15\n \n - Q: 원천 자료를 어느 범위로 받아 두나? → A: 최초 1회 전 구간을 적재하고, 이후에는 새 발표분과 최근 N개월만 다시 받는다. 사용자 요청 시에는 원천을 호출하지 않는다\n-- Q: 지표 17개를 어느 원천에서 받나? → A: ECOS·KOSIS를 기본으로 하고, 이 둘로 얻지 못하는 지표(수출·수입·무역수지, G20 경기선행지수)만 관세청·OECD를 더한다. KDI는 원천으로도 대조용으로도 쓰지 않는다\n-- Q: 이미 있는 `market` 도메인의 지표 11개도 008이 다루나? → A: 아니다. 008은 FR-001의 17개만 다룬다. 기존 11개(009 화면 카드용 최신값)는 그대로 두고 008 범위 밖이다\n-- Q: 수집 배치를 어디에 두나? → A: `data/` 파이프라인. 001의 KRX 수집과 같은 자리·같은 방식이며, 백엔드는 적재된 자료를 읽어 제공하는 역할만 한다\n+- Q: 지표 17개를 어느 원천에서 받나? → A: ECOS·KOSIS를 기본으로 하고, 이 둘로 얻지 못하는 지표(수출·수입·무역수지, G20 경기선행지수)만 관세청·OECD를 더한다. KDI는 수치 원천이나 값 대조에 쓰지 않는다\n+- Q: 기존 시장 화면 카드용 지표 11개도 008이 다루나? → A: 아니다. 008은 FR-001의 17개만 다룬다. 기존 11개(009 화면 카드용 최신값)는 그대로 두고 008 범위 밖이다\n+- Q: 수집과 조회의 책임은 어떻게 나누나? → A: 자료 수집·변환은 008이 맡고, 사용자 조회는 저장된 자료를 사용한다. 구현 위치는 plan에서 정한다\n+\n+### Session 2026-09-16\n+\n+- Q: 여러 원천 중 일부만 수집에 성공한 배치는 어떻게 보관하고 공개해야 하나? → A: 성공한 원본은 재처리를 위해 보관하되, 모든 예정 지표의 처리가 끝난 완결 자료 버전만 009·010에 공개한다\n+- Q: 인증키나 이용 승인이 늦어 실제 원천을 확인하지 못한 지표가 남아 있을 때 Spec 008의 완료 상태를 어떻게 판단해야 하나? → A: 17개 지표 모두 실제 원천을 검증하기 전에는 Spec 008을 완료로 보지 않는다\n+- Q: 한 지표의 과거 값만 개정되어도 17개 지표 전체를 묶은 새 자료 버전을 발행해야 하나? → A: 원천별·지표별 개정 이력은 보존하되 009·010이 참조하는 공개 자료 버전은 17개 전체의 새 불변 스냅샷으로 발행한다\n+- Q: Spec 008과 009의 사용자 기능 책임은 어떻게 나누나? → A: 008이 사용자용 지표 조회 정보를 제공하고 009가 그 정보를 사용하는 시장 흐름 화면을 소유한다. 제공 방식은 plan에서 정한다\n+- Q: 009 화면에 필요한 최근 3개월 경로·T_g/T_all·수집 상태는 누가 제공하나? → A: 008이 지표 데이터와 상태를 모두 제공하고 009는 이를 이용해 화면 응답을 구성한다. 저장소 접근 경계는 plan에서 정한다\n+- Q: KDI 월간 경제동향은 008에서 어떤 역할까지 허용해야 하나? → A: 지표 후보와 해석 맥락을 정할 때만 참고하고 수치 수집·값 검증·검색 입력에는 사용하지 않는다\n+- Q: 지표 등록표가 바뀌면 어떤 변경까지 17개 자료를 다시 처리해 새 자료 버전을 발행해야 하나? → A: 값이나 사용 가능 구간을 바꾸는 원천·통계 항목·단위·변환·개편 연결·결측 규칙 변경만 전 구간을 다시 처리하고 새 자료 버전을 발행한다\n+- Q: 008이 새 T_g/T_all을 공개했지만 010의 검색 배치가 그 달 결과를 아직 만들지 않았을 때 009의 검색 진입은 어떤 기준월을 사용해야 하나? → A: 008은 자료가 확보된 최신 T_g/T_all을 표시하고, 009의 검색 진입은 010이 계산 완료한 검색 가능 기준월을 별도로 사용한다\n+- Q: 009에 이미 계획된 화면 전용 조회 두 개는 008의 사용자용 지표 조회가 생긴 뒤에도 유지해야 하나? → A: 009의 화면 전용 조회를 유지하되 008이 제공하는 지표 정보로 변화 요약과 화면용 응답을 조립한다\n+- Q: 첫 수집이 일부 실패해 아직 완결 자료 버전이 하나도 없을 때 008은 무엇을 제공해야 하나? → A: 17개 지표의 등록 정보와 자료 없음·수집 실패 상태를 제공하고 값·기준월은 비워 둔다. 운영에서 예시 자료로 자동 대체하지 않는다\n+- Q: 008·009 사이의 구체적 전달 방식과 저장소 접근 경계는 어느 문서에 기록할까? → A: plan에 기록한다. 009의 화면 전용 조회 두 개 유지도 함께 기록하고, spec 본문은 제공 정보와 008·009의 기능 책임을 정의한다\n+- Q: 실제 원천을 확인했더라도 17개 지표 중 하나의 유효 관측값이 전혀 없으면 첫 완결 자료 버전을 공개할까? → A: 발행을 보류한다\n+- Q: 17개 지표마다 유효한 값은 있지만 모두에게 공통인 대상월(T_all)이 전혀 없으면 자료 버전을 공개할까? → A: 공개한다. T_all은 자료 없음으로 두고 종합 검색은 010의 '계산 불가'로 표시하며, 가능한 분야 검색은 유지한다\n+- Q: 원값은 있지만 검색에 쓰는 변환값이 모든 월에서 비어 있는 지표를 유효 관측값이 있는 지표로 볼까? → A: 아니다. 등록표의 변환을 거친 유효한 월별 변환값을 기준으로 한다\n+\n+### Session 2026-09-17\n+\n+- Q: 전년동월 대비 증가율의 비교 대상월 값이 없거나 0이면 그 달의 변환값을 어떻게 두나? → A: 결측으로 남기고 사유를 '변환 불가'로 기록한다. 대체 비교월이나 다른 지표로 바꾸지 않는다\n+- Q: 일별 지표의 '월 기말' 값은 어느 날을 쓰나? → A: 그 달의 마지막 거래일 값을 쓴다. 그 달에 거래일이 없으면 결측으로 둔다\n+- Q: 월 평균 지표의 일별 값이 일부만 모이면 평균을 내나? → A: 그 달 거래일 전부가 모였을 때만 평균을 낸다. 하루라도 빠지면 결측으로 둔다\n+- Q: 계열이 시작한 직후라 비교 대상월이 아예 없는 첫 열두 달은 어떻게 두나? → A: 결측으로 둔다. 분모가 없는 경우와 같은 규칙으로 다룬다\n+- Q: 이용 권리를 확인하지 못한 지표를 화면에 보여도 되나? → A: 아니다. 수집·보관은 하되 공개 자료 버전에 넣지 않고, 권리가 확인될 때까지 완결 버전 발행을 보류한다\n+- Q: 두바이유의 공식 원천(한국은행 게재, 국제통화기금 작성)이 상업적 이용 제한 대상인지 확인할 수 없다. 어떻게 하나? → A: 대체 원천 셋을 실측 대조한 결과 서로 다른 계열이고 대체 후보가 더 불투명해, 한국은행 게재 계열을 그대로 쓰고 그 지표를 '권리 확인 대기'로 표시한다\n \n ## User Scenarios & Testing *(mandatory)*\n \n@@ -33,7 +59,7 @@\n \n **Why this priority**: 지표 자료가 없으면 시장 흐름(009)도 경제환경 검색(010)도 시작할 수 없다. 기획서 §8.1 네 번째 항목의 출발점이다.\n \n-**Independent Test**: 17개 지표 각각의 최신 확보값을 조회해 값·단위·대상월·변환·출처·작성기관이 모두 채워져 있고, 어느 화면에도 API 이름이나 공급원 선택 항목이 없는지 확인한다. 화면 없이 등록표와 자료만으로 검증할 수 있다.\n+**Independent Test**: 008이 제공하는 17개 지표 각각을 조회해 확보한 값의 단위·대상월·변환·출처·작성기관이 채워져 있고, 미확보 값은 자료 없음으로 구분되며 어느 화면에도 공급원 선택 항목이 없는지 확인한다. 009 화면 없이 등록표와 자료만으로 검증할 수 있다.\n \n **Acceptance Scenarios**:\n \n@@ -41,6 +67,10 @@\n 2. **Given** 17개 지표는, **Then** 생산·소비/투자·대외거래·노동·물가/원자재·금융/주택·해외 경기 7개 분야 중 정확히 하나에 속하고 KOSPI는 지표에 포함되지 않는다.\n 3. **Given** 어느 화면에서도, **Then** 사용자에게 거시경제 API나 자료 공급원의 이름을 고르게 하지 않는다.\n 4. **Given** ECOS·KOSIS 통계를 표시하는 화면이면, **Then** 출처와 작성기관이 표시된다.\n+5. **Given** 완결 자료 버전이 공개되어 있을 때, **When** 008의 지표 정보를 조회하면, **Then** 17개 지표의 표시 정보·최근 3개월 경로·지표별 최신값·분야별 T_g·전체 T_all·수집 상태가 제공된다. 009는 이 정보를 바탕으로 화면의 변화 요약을 제공한다.\n+6. **Given** 첫 수집이 일부 실패해 완결 자료 버전이 없을 때, **When** 008의 지표 정보를 조회하면, **Then** 17개 지표의 등록 정보와 자료 없음·수집 실패 상태가 제공되고 값·기준월은 비어 있으며 운영에서 예시 자료로 자동 대체하지 않는다.\n+7. **Given** 원천 처리가 끝났지만 지표 하나의 유효한 월별 변환값이 0건일 때, **When** 자료 공개 여부를 판단하면, **Then** 원값이 있더라도 새 완결 자료 버전의 발행을 보류하고 직전 완결 버전이 있으면 그대로 유지한다.\n+8. **Given** 17개 지표마다 유효 관측값이 있지만 공통 대상월이 없을 때, **When** 자료 공개 여부를 판단하면, **Then** 완결 자료 버전을 공개하고 T_all은 자료 없음으로 제공한다. 010은 종합 검색을 '계산 불가'로 표시하되 검색 가능한 분야까지 막지 않는다.\n \n ---\n \n@@ -93,7 +123,7 @@\n 2. **Given** KOSIS 자료를 수집할 때, **Then** 분당 200회·요청당 40,000셀 한도 안에서 사전 집계하고 사용자 요청마다 원천을 다시 호출하지 않는다.\n 3. **Given** 같은 지표를 ECOS와 KOSIS가 모두 제공하면, **Then** 주 공급원 하나가 등록표에 정해져 있고 두 원천 값을 합산하지 않는다.\n 4. **Given** 어느 화면에서도, **Then** 서비스 이용자에게 인증키를 요구하지 않는다.\n-5. **Given** KDI 월간 경제동향을 참고할 때, **Then** 지표 후보 선정과 해석의 참고 근거로만 쓰고 Thorp의 분야 분류·가중·거리를 KDI 공식 모델로 표현하지 않는다.\n+5. **Given** KDI 월간 경제동향을 참고할 때, **Then** 지표 후보 선정과 해석 맥락의 참고 근거로만 쓰고 수치 수집·공식 원천 값의 대조·검색 입력에는 사용하지 않으며 Thorp의 분야 분류·가중·거리를 KDI 공식 모델로 표현하지 않는다.\n \n ---\n \n@@ -101,10 +131,17 @@\n \n - 통계표 개편으로 시계열이 단절되면 등록표의 개편 연결 규칙대로 연결하고 연결 지점을 기록한다. 연결 규칙이 없으면 그 이전 구간을 사용 가능 범위에서 제외한다.\n - 기관별 발표 지연으로 분야마다 최신월이 다르면 분야별 T_g가 서로 다를 수 있다. 17개 지표 공통 최신월 T_all은 가장 늦은 지표를 따른다.\n+- 17개 지표 각각에 유효 관측값이 있어도 모든 지표에 공통인 대상월이 없으면 완결 자료 버전을 공개하고 T_all은 자료 없음으로 둔다. 이때 010의 종합 검색은 '계산 불가'로 표시하며, T_g와 검색 준비가 완료된 분야의 검색은 계속 제공한다.\n+- 008의 새 T_g/T_all을 공개한 뒤 010의 검색 배치가 아직 완료되지 않았으면 009에는 008의 최신 자료월을 그대로 표시하되, '비슷했던 때 보기'의 진입 기준월은 010이 계산 완료한 검색 가능월을 사용한다. 두 월을 같은 뜻으로 표시하거나 008의 최신월로 010 검색 결과가 이미 있다고 가정하지 않는다.\n - 지표 하나가 장기간 결측이면 그 분야의 T_g가 계속 물러난다. 이 상태는 [009](../009-market-flow-overview/spec.md)에 마지막 갱신 시각과 함께 표시한다.\n - 기준연도 변경 등으로 지수 단위가 바뀌면 새 등록표 버전으로 처리하고 이전 버전 자료를 새 단위로 몰래 환산하지 않는다.\n+- 원천·통계 항목·단위·변환·개편 연결·결측 규칙처럼 관측 시계열의 값이나 유효 구간에 영향을 주는 등록표 항목이 바뀌면 전 구간을 새 규칙으로 다시 처리해 새 자료 버전을 발행한다. 화면 이름·배치·설명만 바뀌면 화면 분류 버전만 올리고 계산 등록표·자료 버전은 유지한다. 분야-지표 매핑이나 계산 가중만 바뀌면 계산 등록표 버전을 올리되 관측 시계열을 다시 처리하거나 자료 버전을 올리지 않는다.\n - 원천 호출 한도에 도달하면 수집을 중단하고 마지막 갱신 시각을 기록한다. 부분 갱신 상태를 최신으로 표시하지 않는다.\n+- 여러 원천 중 일부만 성공하면 성공한 원본 응답은 재처리를 위해 보관하되 완결 자료 버전을 발행하지 않는다. 009·010은 직전 완결 자료 버전을 계속 읽고, 실패분을 보완해 모든 예정 지표의 처리가 끝난 뒤에만 새 자료 버전을 공개한다.\n+- 원천 처리가 모두 끝나도 17개 지표 중 유효한 월별 변환값이 전혀 없는 지표가 있으면 새 완결 자료 버전 발행을 보류한다. 원값만 있는 경우는 유효 관측값으로 세지 않는다. 어느 대상월의 변환값만 비어 있는 결측과 전체 변환 시계열이 비어 있는 상태를 구분하며, 009·010은 직전 완결 자료 버전이 있으면 계속 사용한다.\n+- 직전 완결 자료 버전도 없는 첫 수집 실패에서는 17개 등록 정보와 자료 없음·수집 실패 상태를 제공하고 값·기준월을 비워 둔다. 운영에서 예시 자료를 실제 자료 대신 자동으로 제공하지 않는다.\n - 원천이 같은 대상월의 값을 여러 번 개정하면 각 개정을 자료 버전으로 남기고 최신 개정값을 역사 비교의 기본으로 쓴다.\n+- 한 지표의 값만 개정되어도 공개 시점의 17개 지표 전체를 묶은 새 불변 자료 버전을 발행한다. 원천별·지표별 개정 이력은 별도로 보존하고, 009·010은 조회 시점에 지표별 최신값을 조합하지 않고 하나의 공개 자료 버전을 참조한다.\n - 인증키 조회로 확인하기 전에는 개별 통계표의 응답 항목과 과거 범위를 확정된 것으로 쓰지 않는다. 확인 결과는 등록표에 채운다.\n - 공표 정밀도에 비해 산포가 지나치게 작은 지표(U06)는 등록표의 최소 유효 척도 기준에 따라 표시하고, 기준 미확정 상태에서는 [010](../010-economic-regime-search/spec.md)의 MAD→IQR→계산 불가 규칙만 적용한다.\n \n@@ -126,45 +163,56 @@\n   | 금융·주택 | 국고채 3년·원/달러 환율 / 주택가격 | 월 기말 / 전월 대비 증가율 |\n   | 해외 경기 | G20 경기선행지수 | 전년동월 대비 증가율 |\n \n-- **FR-002**: 지표 등록표에 지표별 원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도·**정기 재조회 구간 N**(FR-017)을 기록하고 버전으로 관리한다. 통계표 코드·항목 코드·과거 범위 등 실제 값은 인증키 발급 후 확인해 채우는 결정 항목 PD-11이다. (§6.2, §6.4.4)\n-- **FR-003**: 지표 등록·분야-지표 매핑·계산 가중은 화면 분류(분야 이름·배치)와 별도 버전으로 관리한다. 화면 이름이나 배치를 바꿨다는 이유로 계산 가중이 자동으로 바뀌지 않는다. (§6.4.4, D23)\n+- **FR-002**: 지표 등록표에 지표별 원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도·**정기 재조회 구간 N**(FR-017)을 기록하고 버전으로 관리한다. 통계표 코드·항목 코드·과거 범위 등 실제 값은 인증키 발급 후 확인해 채우는 결정 항목 PD-11이다. PD-11의 확인 근거(실제 응답에서 읽은 항목 식별자, 조회 조건, 확인 일시, 이용 조건의 출처)는 지표별로 `pd11-source-verification.md`에 남기고 등록표는 그 결과를 참조한다 — 001이 `pd01-etf-candidates.md`를 둔 것과 같은 자리다. (§6.2, §6.4.4)\n+- **FR-003**: 지표 등록·분야-지표 매핑·계산 가중은 화면 분류(분야 이름·배치·설명)와 별도 버전으로 관리한다. 화면 이름·배치·설명만 바뀌면 화면 분류 버전만 올리고 계산 등록표·자료 버전은 유지한다. 분야-지표 매핑이나 계산 가중만 바뀌면 계산 등록표 버전을 올리되 관측 시계열을 다시 처리하거나 자료 버전을 올리지 않는다. 원천·통계 항목·단위·변환·개편 연결·결측 규칙처럼 관측 시계열의 값이나 유효 구간을 바꾸는 항목이 바뀌면 새 계산 등록표 버전과 함께 전 구간을 다시 처리해 새 자료 버전을 발행한다. (§6.4.4, D23)\n - **FR-004**: 분야 내부 지표 동일가중과 분야 간 1/7 동일가중을 초기 기본 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택이며 경제적 중요성의 동일함이 아님을 등록표에 기록한다. (§6.4.4, D23, U02)\n - **FR-005**: 같은 지표를 여러 공급원에서 중복 합산하지 않는다. ECOS·KOSIS가 중복되는 지표는 주 공급원을 하나 정해 등록표에 기록한다. (§6.2)\n \n #### 수집·변환·결측 (§6.1, §6.4.4, D12, D22)\n \n-- **FR-006**: 지표 값은 **ECOS·KOSIS를 기본 원천으로** 수집하고 FR-001의 변환을 적용한다. ECOS는 금리·환율·원자재, KOSIS는 생산·소비·투자·노동·물가 등 국가 통계를 맡는다. 이 둘로 얻지 못하는 지표만 원천을 더한다 — 수출·수입·무역수지는 관세청, G20 경기선행지수는 OECD다(FR-019). 변환 전 원값과 변환 후 값을 **모두 보존한다** — 변환값만 저장하면 변환 규칙이 바뀔 때 다시 만들 수 없다. (§6.2)\n-- **FR-007**: 지표 자료마다 대상월·발표일·자료 갱신 기준(수신 시점·개정 기준)을 구분해 기록한다. (§4.4, D22)\n+- **FR-006**: 지표 값은 **ECOS·KOSIS를 기본 원천으로** 수집하고 FR-001의 변환을 적용한다. ECOS는 금리·환율·원자재, KOSIS는 생산·소비·투자·노동·물가 등 국가 통계를 맡는다. 이 둘로 얻지 못하는 지표만 원천을 더한다 — 수출·수입·무역수지는 관세청, G20 경기선행지수는 OECD다(FR-019). 무역수지는 관세청이 응답에 독립 필드로 제공하는 공식 값을 쓰고 수출에서 수입을 빼서 만들지 않는다 — 값이 같더라도 원천이 정의를 바꾸면 파생식은 조용히 어긋난다. 변환 전 원값과 변환 후 값을 **모두 보존한다** — 변환값만 저장하면 변환 규칙이 바뀔 때 다시 만들 수 없다. 전년동월 대비 증가율의 비교 대상월 값이 결측이거나 0이면 그 달의 변환값을 만들지 않고 결측으로 남기며 사유를 '변환 불가'로 기록한다 — 다른 달을 비교 대상으로 대체하거나 수준 차이 같은 다른 값으로 바꾸지 않는다. 계열이 시작한 직후라 비교 대상월 자체가 존재하지 않는 구간도 같은 규칙으로 결측이며, 그만큼 그 지표의 사용 가능 구간이 늦게 시작한다. 계산식은 대상월 값을 12개월 전 같은 달 값으로 나눠 1을 뺀 값이며, 비교 대상월은 **t-12로 고정한다** — 값이 없다고 가장 가까운 달로 옮기지 않는다. 개편으로 단절된 구간을 넘는 비교는 **등록표의 연결 규칙으로 이은 경우에만** 허용하고, 연결 규칙이 없으면 그 비교는 결측이다. 완결 자료 버전 발행과 기준월 산출에 쓰는 유효 관측값은 등록표의 변환을 거쳐 사용 가능한 월별 변환값이며, 원값만 있는 월은 세지 않는다. (§6.2)\n+- **FR-006a**: 일별로 발표되는 지표의 '월 기말' 값은 그 달의 마지막 거래일 값을 쓴다. 마지막 달력일이 휴장일이어도 그날 값을 만들지 않고 직전 거래일 값을 그 달의 기말값으로 삼는다. 그 달에 거래일이 하나도 없으면 결측으로 둔다. (§6.1)\n+- **FR-006b**: '월 평균' 지표는 그 달 거래일의 일별 값이 모두 확보되었을 때만 평균을 낸다. 하루라도 빠지면 부분 표본으로 평균을 만들지 않고 그 달을 결측으로 두며 사유를 기록한다 — 표본 수가 다른 달의 평균을 같은 값으로 취급하면 그 달만 과거 비교에서 왜곡된다. 확보 여부 판정 기준(거래일 달력)은 등록표에 지표별로 기록한다. (§6.1, 원칙 VI)\n+\n+- **FR-007**: 지표 자료마다 대상월·발표일·자료 갱신 기준(수신 시점·개정 기준)을 구분해 기록한다. 원천이 발표일을 주지 않으면 **미제공으로 기록하고 수신 시각을 발표일로 대신 쓰지 않는다**. 원천이 주는 갱신일이 통계표 전체의 갱신일이면 그 단위로 기록하고 관측치별 발표일로 취급하지 않는다 — 둘을 섞으면 어느 달이 언제 나왔는지가 틀린다. (§4.4, D22)\n - **FR-008**: 결측은 임의 보간하지 않는다. 미래 값 추정이나 보간으로 최신월을 늘리지 않는다. (§6.4.4, 원칙 V·VI)\n-- **FR-009**: 원천 개정으로 과거 값이 바뀌면 새 자료 버전으로 기록한다. 검색·화면은 어느 자료 버전을 썼는지 참조하고, 이전 버전을 참조한 결과는 바뀌지 않는다. (§5, D14)\n-- **FR-010**: 통계표 개편으로 시계열이 단절되면 등록표의 개편 연결 규칙대로 연결하고 연결 지점을 기록한다. 규칙이 없는 구간은 사용 가능 범위에서 제외한다.\n-- **FR-011**: 수집이 실패하거나 지연되면 마지막 갱신 시각을 기록하고 오래된 자료를 최신 자료로 표시하지 않는다. 호출 한도에 도달하면 수집을 중단하고 부분 갱신 상태를 최신으로 표시하지 않는다. (§4.4)\n+- **FR-009**: 원천 개정으로 어느 한 지표의 과거 값이 바뀌면 원천별·지표별 개정 이력을 보존하고, 공개 시점의 17개 지표 전체를 묶은 새 불변 자료 버전을 발행한다. 검색·화면은 조회 시점에 지표별 최신 버전을 조합하지 않고 하나의 공개 자료 버전을 참조하며, 이전 버전을 참조한 결과는 바뀌지 않는다. (§5, D14)\n+- **FR-010**: 통계표 개편으로 시계열이 단절되면 등록표의 개편 연결 규칙대로 연결하고 연결 지점을 기록한다. 규칙이 없는 구간은 사용 가능 범위에서 제외한다. **개편으로 통계표가 여러 개로 나뉜 계열은 각 표를 따로 받아 겹치는 구간의 비율로 잇고, 연결 지점과 연결 계수를 자료에 남긴다.** 겹치는 구간이 없으면 잇지 않고 그 이전을 사용 가능 범위에서 뺀다.\n+- **FR-011**: 수집이 실패하거나 지연되면 마지막 갱신 시각을 기록하고 오래된 자료를 최신 자료로 표시하지 않는다. 호출 한도에 도달하거나 여러 원천 중 일부만 성공하면 성공한 원본 응답은 재처리를 위해 보관하되 완결 자료 버전을 발행하지 않는다. 모든 예정 지표의 처리가 끝나도 지표 하나의 유효한 월별 변환값이 0건이면 원값 유무와 관계없이 새 완결 자료 버전 발행을 보류한다. 009·010은 직전 완결 자료 버전이 있으면 계속 읽고, 없으면 등록 정보와 자료 없음·수집 실패 상태를 제공하되 값·기준월을 비워 둔다. 실패분을 보완하고 17개 지표 각각에서 유효한 월별 변환값을 1건 이상 확보한 뒤에만 새 자료 버전을 공개한다. (§4.4)\n+- **FR-011a**: 자료 버전 발행이 도중에 중단되면 공개 중인 버전을 그대로 두고 완성되지 않은 버전을 공개하지 않는다. 두 수집 작업이 동시에 새 버전을 발행하려 하면 한 번에 하나만 반영되도록 직렬화하고, 밀린 쪽은 실패로 기록한다. 어느 공개 버전도 참조하지 않게 된 중간 산출물은 공개 대상이 아니며 정리 대상으로 남긴다. (§4.4, 원칙 VIII)\n+- **FR-011b**: 수집 실행은 다음을 지킨다. (1) **재시도와 포기**: 원천의 일시적 오류나 응답 없음에는 간격을 늘려가며 정해진 횟수만큼 다시 시도하고, 그 뒤에는 포기하고 실패로 기록한다. 횟수와 간격은 원천별로 등록표에 적는다. 인증 거부나 없는 경로처럼 다시 시도해도 같은 결과인 오류는 재시도하지 않는다. (2) **다시 돌려도 안전하게**: 수집이 중간에 끊긴 뒤 다시 실행하면 이미 받은 구간을 중복으로 쌓지 않고 이어서 받는다. 같은 구간을 다시 받은 경우 원천 응답이 같으면 새 이력을 만들지 않고, 다르면 개정으로 기록한다(FR-009). (3) **전 구간 적재 완료 판정**: 지표마다 기대 시작월과 기대 대상월 수를 등록표에 적고, 실제로 받은 대상월 수가 그에 미치지 못하면 적재를 완료로 보지 않는다. (4) **원천 변경 감지**: 응답의 구조나 식별자가 등록표에 적힌 것과 달라지면 실패로 기록하고 사람이 확인할 때까지 그 지표의 자동 수집을 멈춘다 — 원천이 경로나 항목을 바꾸면 인증 오류처럼 보이는 응답이 오기도 하므로, 실패 원인을 인증 문제로 단정하지 않는다. (§4.4, §6.5, 원칙 VIII)\n - **FR-012**: 자료는 최신 개정자료로 과거 경제환경을 비교하는 역사 탐색용임을 기본으로 하고, 화면에 '최신 개정자료를 이용한 역사 비교'로 표시할 수 있는 정보를 제공한다. 발표 시차만 적용한 최신 개정값을 당시 자료로 간주하지 않는다. 당시 발표·수정값(빈티지)은 별도 확보 대상이며 확보 전에는 당시 재현 분석을 제공하지 않는다. (§6.1, D12, 원칙 V)\n \n #### 기준월 산출 (§4.4, §6.4.4, D22)\n \n-- **FR-013**: 분야 g마다 그 분야 지표들이 함께 확보된 최신월 T_g를 산출하고, 17개 지표가 함께 확보된 최신월 T_all을 산출한다. 두 값과 지표별 최신 확보월을 [009](../009-market-flow-overview/spec.md)와 [010](../010-economic-regime-search/spec.md)에 제공한다. (§4.4, D22)\n+- **FR-013**: 분야 g마다 그 분야 지표들의 유효한 월별 변환값이 함께 확보된 최신월 T_g를 산출하고, 17개 지표의 유효한 월별 변환값이 함께 확보된 최신월 T_all을 산출한다. 17개 각각에 유효 관측값이 있어 완결 자료 버전을 공개했더라도 공통 대상월이 없으면 T_all을 자료 없음으로 제공한다. 두 기준월과 지표별 최신 확보월을 [009](../009-market-flow-overview/spec.md)와 [010](../010-economic-regime-search/spec.md)에 제공한다. 008의 T_g/T_all은 자료 확보 기준월이며 010의 검색 결과 완료 여부를 뜻하지 않는다. T_all이 없으면 010의 종합 검색은 '계산 불가'로 표시하지만 검색 가능한 분야는 유지한다. 009는 최신 자료월 표시에는 008의 값을, '비슷했던 때 보기' 진입에는 010이 계산 완료한 검색 가능 기준월을 사용한다. (§4.4, D22)\n - **FR-014**: 지표별로 최근 3개월(t-2·t-1·t) 값과 공통 척도 산출용 과거 구간(t-122부터 t-3까지 최대 120개월)을 임의 기준월 t에 대해 제공한다. 척도 계산 자체는 [010](../010-economic-regime-search/spec.md)이 정한다. (§6.4.4, D21)\n-- **FR-015**: 지표별 공표 정밀도와 최소 유효 척도 기준·예외 처리는 결정 항목 PD-10(U06)이다. 확정 전에는 등록표에 공표 정밀도만 기록하고 척도 판정은 [010](../010-economic-regime-search/spec.md)의 규칙에 맡긴다. (§6.4.4, D27, U06)\n+- **FR-015**: 008은 **지표별 공표 정밀도만 등록표에 기록한다** — 원천이 몇 자리까지 공표하는지는 자료를 받는 쪽이 아는 사실이다. 최소 유효 척도 기준과 예외 처리(PD-10, U06)는 검색 계산 규칙이므로 [010](../010-economic-regime-search/spec.md)이 소유하고 정한다. 008은 그 값을 추정하거나 대신 정하지 않는다. (§6.4.4, D27, U06)\n \n #### 이용 조건과 출처 (§6.2, §10.1, 원칙 X)\n \n-- **FR-016**: ECOS 통계는 출처 표시를 전제로 상업 이용·가공·재배포가 허용되며(한국은행 작성 통계), 다른 기관이 작성한 ECOS 통계는 해당 기관의 조건을 따른다. KOSIS 통계는 출처 표시 조건으로 쓴다. 지표를 표시하는 모든 화면에 출처와 작성기관을 표시한다. (§6.2)\n-- **FR-017**: KOSIS는 분당 200회·요청당 40,000셀 한도 안에서 수집한다. **최초 1회 전 구간을 적재하고, 이후에는 새 발표분과 최근 N개월만 다시 받는다** — 뒤쪽 구간을 함께 받는 것은 잠정치가 확정치로 개정된 것을 잡기 위해서다(FR-009). 새 발표분만 덧붙이면 과거 값의 개정을 탐지할 수 없고, 그렇다고 매번 전 구간을 다시 받을 이유도 없다 — 개정은 대부분 최근 몇 달 안에서 일어난다. N은 지표별 개정 관행에 따라 등록표에 기록한다. 기준연도 개편처럼 계열 전체가 바뀌는 경우에만 전 구간을 다시 적재하고 새 등록표 버전으로 처리한다. **사용자 요청 시에는 원천을 호출하지 않고 저장된 자료만 읽는다.** (§6.2, §6.5)\n-- **FR-018**: KOSIS·ECOS 제공 정보를 플랫폼 없이 그대로 제3자에게 유료 제공하지 않는다. 내보내기 시 이용 범위 표시는 [006](../006-my-records/spec.md)이 따른다. (§6.2)\n-- **FR-019**: OECD G20 경기선행지수는 해외 경기 분야의 공식 원천으로 관리하고 이용 조건을 등록표에 기록한다. DATA_GO_KR은 부족한 공공 통계의 개발 단계 보완 자료로만 쓴다. (§6.2)\n-- **FR-020**: KDI 월간 경제동향은 지표 후보 선정과 분야별 해석의 참고 근거로만 쓴다. 분야 분류·가중치·거리·사례 선택은 Thorp 설계로 표현하고 KDI 공식 모델로 표현하지 않는다. 원천 차이가 해소되지 않은 지표를 KDI 보고서와 완전히 같은 값이라고 표현하지 않으며, KDI 보고서 문장은 외부 대조에만 쓰고 검색 입력으로 쓰지 않는다. (§6.2, §7.3, U02)\n+- **FR-016**: 이용 조건은 **통계를 작성한 기관의 조건을 먼저 본다**. 제공 창구가 어디든 저작권은 작성기관에 있고, 제공기관의 약관은 그 위에 얹히는 조건이다. 한 통계표 안에서도 계열마다 작성기관이 다를 수 있으므로 지표별로 작성기관을 확인해 등록표에 적는다. 작성기관과 제공기관이 다르면 둘의 조건을 모두 기록한다. (§6.2, 원칙 X)\n+- **FR-016**: ECOS 한국은행 작성 통계는 기획서·constitution이 출처 표시를 전제로 상업 이용·가공·재배포 허용으로 분류하고, 다른 기관 작성 통계는 해당 기관의 조건을 따른다. 실제 계열의 권리와 표시 조건은 이용 전에 확인한다(PD-11). KOSIS 일반 통계는 출처 표시 조건으로 쓰되, 라이선스 제한이 있는 국제통계·북한통계의 비상업/재배포 금지 예외를 지표별로 확인한다. 지표를 표시하는 모든 화면에 출처와 작성기관을 표시한다. **대상은 지표 값이 보이는 모든 곳이다** — [009](../009-market-flow-overview/spec.md)의 시장 흐름 화면과 분야 상세, [010](../010-economic-regime-search/spec.md)의 검색 결과와 상세, [006](../006-my-records/spec.md)의 기록과 내보내기다. 008은 출처와 작성기관을 조회 응답에 실어 보내는 데까지 책임지고, 화면에 실제로 띄우는 책임은 그 화면을 소유한 spec에 있다. (§6.2)\n+- **FR-016a**: 이용 권리와 표시 조건을 확인하지 못한 지표는 수집과 보관은 하되 공개 자료 버전에 넣지 않고, 권리 확인 전까지 완결 자료 버전 발행을 보류한다. 인증키 미발급·승인 대기는 자료를 아직 받지 못한 상태이고 권리 미확인은 자료는 받았으나 쓸 수 있는 범위를 모르는 상태이므로 서로 구분해 기록한다. 권리 미확인 지표의 값을 '확인 중' 표시와 함께 내보내지 않는다 — 표시를 붙여도 이용 범위를 벗어난 사용이다. 다만 공식 원천이 조건을 공개하고 있으나 해당 계열이 그 조건의 어느 쪽인지 확인할 창구가 없는 경우에는, 그 지표를 **권리 확인 대기**로 등록표에 표시하고 수집·공개를 이어간다. 확인이 가능해지면 그때 판정하고, 제한 대상으로 밝혀지면 FR-016b를 적용한다. 이는 조건 자체를 모르는 상태와 구분되는 별도 상태다. (§6.2, §10.1, 원칙 X)\n+- **FR-016b**: 원천의 이용 조건이 바뀌거나 이용 권한이 철회되면 **그 지표의 새 수집과 공개를 중단하고, 화면·조회·내보내기에서 그 지표를 뺀다**. 이미 발행한 과거 자료 버전은 지우지 않고 보존한다 — 과거 검색 결과의 재현이 깨지기 때문이다. 중단 사유와 시점을 기록하고, 그 지표가 빠진 상태임을 이용자에게 알린다. (§6.2, 원칙 VIII·X)\n+- **FR-017**: KOSIS는 분당 200회·요청당 40,000셀 한도 안에서 수집한다. **최초 1회 전 구간을 적재하고, 이후에는 새 발표분과 최근 N개월만 정기 재조회한다** — 뒤쪽 구간을 함께 받는 것은 잠정치가 확정치로 개정된 것을 잡기 위해서다(FR-009). N은 지표별 개정 관행과 실제 원천 근거에 따라 등록표에 기록한다. **관행을 관찰하기 전 기본값은 3개월로 두고 잠정임을 표시한다** — 원천이 밝힌 정정 주기(예: 매월 전월까지 정정)보다 짧게 잡지 않는다. 정기 재조회에서 N 안에 들어온 개정과 N 밖에서 뒤늦게 발견한 개정을 각각 세어 남기고, 뒤엣것이 이어지면 그 지표의 N을 늘린다. N개월 밖의 과거 개정이 원천 공지·메타데이터 등으로 확인되면 해당 범위를 별도로 재조회한다. 기준연도 개편처럼 계열 전체가 바뀌는 경우에는 전 구간을 다시 적재하고 새 등록표 버전으로 처리한다. **사용자 요청 시에는 원천을 호출하지 않고 저장된 자료만 읽는다.** (§6.2, §6.5)\n+- **FR-017a**: 원천별 호출 한도와 요청 크기 제한을 등록표에 적고 그 안에서 수집한다. **요청당 조회 기간 상한이 있는 원천은 그 상한을 등록표에 적고 전 구간을 그 단위로 나눠 호출한다.** 응답에 합계·소계처럼 월별 관측값이 아닌 행이 섞여 오면 적재 전에 걸러내고, 걸러낸 행 수를 수집 기록에 남긴다. 수치 한도를 공표하지 않는 원천은 '수치 한도 없음, 과다 호출 시 제한 가능'으로 적고 재시도 간격과 요청 분할을 보수적으로 잡는다. **한도를 확인하지 못한 원천은 정기 수집 대상으로 올리지 않는다** — 한도를 모르고 반복 호출하면 차단될 수 있고, 차단은 그 지표의 자료를 끊는다. 이 경우 그 지표는 자료를 얻지 못한 상태가 되어 완결 자료 버전이 발행되지 않는다(FR-011). 한도를 수치로 공표하지 않는 원천은 '수치 한도 없음'으로 **확인된 것**이므로 이 제외 대상이 아니다. (§6.2, §6.5)\n+- **FR-018**: 소비 경로마다 허용 범위가 다르므로 구분해서 다룬다. **내부 계산 입력**([010](../010-economic-regime-search/spec.md)이 척도·거리를 구하는 데 쓰는 것)은 가공에 해당하며 원자료를 밖으로 내보내지 않는다. **화면 표시와 조회 응답**은 출처·작성기관을 함께 붙여 내보낸다. **사용자 내보내기**([006](../006-my-records/spec.md))는 원자료가 파일로 빠져나가는 경로라 이용 범위 표시를 함께 싣는다. **원자료 재배포**, 곧 수집한 통계를 플랫폼 없이 그대로 제3자에게 넘기거나 유료로 제공하는 것은 하지 않는다. 경로가 달라도 작성기관이 상업적 이용을 제한한 계열은 어느 경로로도 내보내지 않는다(FR-016a). (§6.2)\n+- **FR-018a**: 이용 조건과 인증 자격은 정해진 시점에 다시 확인한다. 최소한 **인증키 이용기간이 만료되기 전**(ECOS는 발급일로부터 2년)과 **원천이 약관·서비스 명세를 개정했을 때** 다시 확인하고 확인 일시를 등록표에 남긴다. 재확인에서 조건이 달라졌으면 FR-016b를 적용하고, 이후 발행하는 자료 버전부터 새 조건을 반영한다. 이미 발행한 버전을 소급해 다시 판정하지 않는다. (§6.2, 원칙 X)\n+- **FR-019**: OECD G20 경기선행지수는 해외 경기 분야의 공식 원천으로 관리한다. 전년동월 대비 증가율을 원천이 직접 제공하더라도 그 계열의 최신월이 지수보다 늦으면 지수를 받아 FR-006의 변환을 직접 적용한다 — 원천 제공 증가율을 쓰느라 기준월을 물리지 않는다. 해당 계열이 OECD 공식 제공 계열인지 확인하는 것과 그 계열에 제3자 권리가 걸려 있는지 확인하는 것은 서로 다른 확인이며, 둘 다 끝나야 이용 조건 확인 완료로 본다. 두 결과를 등록표에 각각 기록한다. DATA_GO_KR은 부족한 공공 통계의 개발 단계 보완 자료로만 쓰며 운영의 주 원천으로 승격하지 않는다. (§6.2)\n+- **FR-020**: 월간 경제동향 보고서(재정경제부 경제정책국 발간, KDI 경제정보센터 게재)는 지표 후보 선정과 분야별 해석 맥락의 참고 근거로만 쓴다. 이 보고서의 수치를 수집하거나 공식 원천 값의 대조·검증, 검색 입력에 사용하지 않는다. 분야 분류·가중치·거리·사례 선택은 Thorp 설계로 표현하고 이 보고서의 공식 모델로 표현하지 않는다. (§6.2, §7.3, U02)\n - **FR-021**: API 인증키는 서버에서 관리하고 서비스 이용자에게 요구하지 않는다. 사용자에게 거시경제 API나 자료 공급원의 이름을 고르게 하지 않는다. (§4.4, §6.2)\n-- **FR-022**: 인증키 발급 전이거나 자료를 이용할 수 없으면 명시된 예시 자료로 개발하고 예시 자료임을 화면에 표시한다. 인증키가 필요한 실제 조회로 확인하기 전에는 개별 통계표의 응답과 과거 범위를 확정된 것으로 쓰지 않는다. (§6.2, §10.1)\n+- **FR-022**: 인증키 발급 전이거나 자료를 이용할 수 없으면 명시적으로 설정한 개발 환경에서 예시 자료로 개발하고 예시 자료임을 화면에 표시한다. 운영 환경에서는 수집 실패나 자료 부재를 이유로 예시 자료로 자동 대체하지 않는다. 인증키가 필요한 실제 조회로 확인하기 전에는 개별 통계표의 응답과 과거 범위를 확정된 것으로 쓰지 않는다. 예시 자료 기반 구현은 중간 개발 상태이며, 17개 지표 모두의 실제 원천·통계표 항목·단위·과거 범위와 이용 조건을 실제 조회로 검증하기 전에는 이 spec을 완료로 판정하지 않는다. (§6.2, §10.1)\n+- **FR-023**: 008은 17개 지표의 사용자 표시 정보를 조회할 수 있게 한다. 완결 자료 버전이 있으면 그 버전의 지표명·분야·실제 값·단위·대상월·발표일·변환 방식·최근 3개월 경로(t-2·t-1·t)·T_g 이후 발표된 지표별 최신값·출처·작성기관·마지막 갱신 시각·분야별 T_g·전체 T_all·수집 성공/실패/자료 없음 상태·자료 버전·예시 자료 여부를 제공한다. 특정 지표의 어느 대상월 관측값이 없으면 해당 값은 결측으로 표시한다. 어느 분야의 T_g가 없어도 그 분야 지표의 최신 유효월 기준 최근 3개월 경로는 그대로 제공한다. 분야마다 T_g를 뒤로 물린 지표가 무엇인지도 함께 제공해 어느 지표 때문에 기준월이 밀렸는지 알 수 있게 한다. 완결 자료 버전은 있지만 공통 대상월이 없으면 자료 버전과 지표별 값은 제공하고 T_all만 자료 없음으로 구분한다. 완결 자료 버전이 하나도 없으면 17개 등록 정보와 자료 없음·수집 실패 상태를 제공하고 값·기준월·자료 버전은 비워 둔다. 009는 008이 제공하는 지표 정보를 바탕으로 화면과 변화 요약을 구성하며, 지표 자료의 별도 원천을 만들지 않는다. **009의 기존 문서·계약이 이 spec과 어긋나는 부분은 008 작업에서 함께 고친다** — 지표와 분야 식별자 표기, 자료가 없을 때의 응답 형태, 검색 진입에 쓰는 기준월의 출처 셋이다. 008만 고치고 009를 그대로 두면 같은 자료가 두 벌로 갈린다. 합의한 정보 전달 방식과 저장소 접근 경계는 plan에 기록한다.\n \n ### Key Entities *(include if feature involves data)*\n \n - **경제지표**: 17개 중 하나. 이름·분야·원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도·이용 조건을 가진다.\n-- **지표 등록표(버전)**: 17개 지표 정의와 분야-지표 매핑, 명목 계산 가중(분야 내부·분야 간)의 묶음이다. 화면 분류와 별도 버전이다.\n-- **분야**: 7개 화면 분야. 이름·배치·설명을 가진다. 계산 가중과 분리된다.\n-- **지표 관측값**: 지표·대상월·원값·변환값·발표일·수신 시점·자료 버전(개정 기준)이다. 결측은 결측으로 남는다.\n-- **자료 버전**: 수집 시점과 개정 기준을 식별하는 값이다. 검색 결과와 화면이 참조한다.\n-- **기준월 산출값**: 분야별 T_g, 17개 지표 공통 T_all, 지표별 최신 확보월, 산출 시점과 자료 버전이다.\n+- **지표 등록표(버전)**: 17개 지표 정의와 분야-지표 매핑, 명목 계산 가중(분야 내부·분야 간)의 묶음이다. 화면 분류 버전과 별도로 식별한다.\n+- **분야(화면 분류 버전)**: 7개 화면 분야의 이름·배치·설명을 가진다. 계산 등록표와 별도로 식별한다.\n+- **지표 관측값**: 지표·대상월·원값·변환값·발표일·수신 시점·자료 버전(개정 기준)이다. 결측은 결측으로 남는다. 발행 조건과 기준월에 쓰는 유효 관측값은 사용 가능한 월별 변환값이다.\n+- **자료 버전**: 공개 시점의 17개 지표 전체 관측값을 묶은 불변 스냅샷 식별자다. 원천별·지표별 개정 이력과 구분하며, 검색 결과와 화면은 하나의 자료 버전을 참조한다.\n+- **기준월 산출값**: 분야별 T_g, 17개 지표 공통 T_all, 지표별 최신 확보월, 산출 시점과 자료 버전이다. 공통 대상월이 없으면 T_all은 자료 없음으로 구분하며 자료 버전 자체는 유지한다.\n - **수집 상태**: 원천별 마지막 갱신 시각·성공/실패·호출 한도 도달 여부다.\n - **예시 자료 표시**: 인증키 발급 전 예시 자료 사용 여부와 대상 지표다.\n \n@@ -172,13 +220,14 @@\n \n ### Measurable Outcomes\n \n-- **SC-001**: 17개 지표 모두가 7개 분야 중 하나에 매핑되어 있고, 등록표의 필수 항목(원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도)이 빈칸인 지표가 0개다. 인증키 확인 전 항목은 '미확인'으로 표시되어 빈칸과 구분된다.\n+- **SC-001**: 17개 지표 모두가 7개 분야 중 하나에 매핑되어 있고, 등록표의 필수 항목(원천·통계표·항목·단위·변환·발표 시점·개편 연결·결측 처리·작성기관·공표 정밀도·최소 유효 척도·정기 재조회 구간 N)이 빈칸인 지표가 0개다. 개발 중 인증키 확인 전 항목은 '미확인'으로 표시해 빈칸과 구분하며, 완료 판정 시 '미확인'인 지표가 0개다.\n - **SC-002**: 사용자 화면에 자료 공급원·API 이름 선택 항목과 인증키 입력이 0개다.\n - **SC-003**: 결측월이 보간된 값으로 채워진 사례가 0건이다.\n - **SC-004**: 같은 자료 버전·등록표 버전으로 다시 조회하면 값과 기준월 산출값이 100% 같다.\n-- **SC-005**: 화면 분야 이름·배치를 바꾼 뒤 계산 가중·매핑 버전이 바뀐 사례가 0건이다.\n+- **SC-005**: 화면 분야 이름·배치·설명만 바꾼 뒤 계산 등록표·자료 버전이 바뀐 사례가 0건이다. 분야-지표 매핑 또는 계산 가중만 바꾼 뒤 관측 시계열 재처리나 자료 버전 변경이 발생한 사례가 0건이고, 관측 시계열의 값이나 유효 구간을 바꾸는 등록표 항목 변경 뒤 전 구간 재처리와 새 자료 버전 발행이 누락된 사례가 0건이다.\n - **SC-006**: 지표를 표시하는 화면의 100%에 출처와 작성기관이 표시되고, 예시 자료를 쓰는 화면의 100%에 예시 표시가 있다.\n-- **SC-007**: 팀이 정한 표본 대상월에서 변환값(전년동월 대비 증가율 등)이 원값으로부터 수기 계산한 값과 일치한다.\n+- **SC-007**: 표본 대상월에서 변환값이 원값으로부터 독립 계산한 값과 허용 오차 안에서 일치한다. 표본은 17개 지표마다 서로 다른 대상월 3개를 고르되, 네 변환 유형(전년동월 대비 증가율·월 기말·월 평균·공식 금액)이 각각 최소 한 번 포함되고, **개편 연결 구간의 달과 결측 직후의 달을 반드시 포함한다** — 거기가 틀리기 쉬운 자리다. 허용 오차는 [010](../010-economic-regime-search/spec.md)의 PD-12(수기 대조 허용 오차, 소유 [007](../007-auto-parameter-search/spec.md))를 따르고, 확정 전에는 정확 일치(오차 0)로 대조한다. 표본 대상월 목록은 구현 담당자가 tasks 단계에서 확정해 기록한다.\n+- **SC-008**: 008의 조회 결과에 17개 지표의 등록 정보가 모두 제공된다. 완결 자료 버전이 있을 때 FR-023의 확보 가능한 값·최근 3개월 경로·분야별 T_g·T_all 상태·수집 상태가 누락된 지표가 0개이고, 유효한 월별 변환값이 전체 구간에서 0건인 지표가 0개다. 원값만 있는 지표를 유효 관측값으로 세어 발행한 사례가 0건이다. 공통 대상월이 없는 완결 버전에서 자료 버전이나 확보한 지표 값이 누락되거나 T_all을 실제 월로 표시한 사례가 0건이다. 첫 완결 버전이 없을 때 값·기준월·자료 버전이 채워진 지표가 0개이고, 자료 없음·수집 실패 상태가 누락된 지표가 0개다. 같은 자료 버전에서 008의 지표 정보와 009 화면의 지표 정보가 서로 다른 사례가 0건이다.\n \n ## Assumptions\n \n@@ -186,22 +235,23 @@\n - 인증키 발급과 서비스별 이용신청은 개발 단계에 팀이 수행한다. 발급 전에는 예시 자료로 개발한다.\n - 당시 발표·수정값(빈티지)은 이번 범위에서 확보하지 않는다. 역사 탐색만 제공하고 당시 재현은 빈티지 확보 후 별도 spec으로 다룬다.\n - 자료 보관 형식과 갱신 주기는 plan에서 정한다. 갱신 **범위**는 FR-017이 정한다(최초 전 구간, 이후 새 발표분과 최근 N개월).\n-- 수집 파이프라인은 [001](../001-etf-market-data/spec.md)의 KRX 수집과 같은 자리(`data/`)에 둔다. 외부 원천에서 받아 정제해 적재하는 같은 종류의 일이기 때문이다. 백엔드는 적재된 자료를 읽어 제공하는 역할만 하며 수집 주체가 아니다(루트 CLAUDE.md \"Backend는 계산하지 않는다\"). 기존 `market` 도메인의 Java 클라이언트는 009용으로 남는다. CLAUDE.md 아키텍처 원칙(Parquet 친화적 저장, 연산 로직은 Worker 내부에 격리)을 따른다.\n+- 지표 수집과 사용자 조회의 구현 경계는 plan에서 정한다. 008이 확보·공개한 완결 자료 버전을 009·010의 지표 원천으로 사용하고, 기존 009용 최신값 11개는 008의 17개 지표와 구분한다.\n - 해외 경기(G20 경기선행지수)의 발표 시차가 다른 분야보다 길어 T_all이 T_g들보다 이를 수 있다는 점을 전제로 한다.\n \n ## Pre-Implementation Decisions *(팀 확정 필요)*\n \n | 번호 | 결정 항목 | 상태 | 출발안 / 기획서 확정값 | 근거 |\n |---|---|---|---|---|\n-| PD-10 | 지표별 공표 정밀도·최소 유효 척도·예외 처리 등록표 | 미확정 (U06) | 확정 전 MAD→IQR 대체, 0이면 계산 불가([010](../010-economic-regime-search/spec.md)) | §6.4.4, D27, U06 |\n-| PD-11 | 지표 등록표 실제 값: 통계표 코드·항목 코드·단위·개편 연결·과거 범위·작성기관별 이용 조건 | 미확정 (인증키 발급 후) | 없음 | §6.2, §10.1 |\n+| PD-10 | 최소 유효 척도·예외 처리 | 미확정 (U06). **소유는 [010](../010-economic-regime-search/spec.md)** | 008은 공표 정밀도만 기록하고 척도 판정에 관여하지 않는다. 확정 전 MAD→IQR 대체, 0이면 계산 불가 | §6.4.4, D27, U06 |\n+| PD-11 | 지표 등록표 실제 값: 통계표 코드·항목 코드·단위·개편 연결·과거 범위·작성기관별 이용 조건 | **확인 완료 (2026-09-17, 17/17)** | [pd11-source-verification.md](pd11-source-verification.md). 남은 것은 지표별 재조회 구간 N과 주택가격 연결 계수이며, 둘 다 값 확인이 아니라 관찰·산출이 필요한 항목이다 | §6.2, §10.1 |\n+| PD-12 (참조) | 수기 대조 허용 오차 | 미확정 (소유 [007](../007-auto-parameter-search/spec.md), 004·010 공용) | 008도 같은 값을 따른다. 확정 전에는 정확 일치(오차 0). 008이 별도 오차를 만들지 않는다 | §7.1, SC-007 |\n | PD-08 (일부) | 17개 지표와 변환, 7개 분야 배치, 분야 내부·분야 간 동일가중 | 기획서 확정 | FR-001·FR-004에 반영. 나머지 모델 v1 항목은 [010](../010-economic-regime-search/spec.md) 소유 | §6.4.4, D21, D23 |\n \n ## Out of Scope\n \n - 공통 척도·거리·후보 정렬 계산 ([010](../010-economic-regime-search/spec.md))\n-- 시장 흐름 화면 구성 ([009](../009-market-flow-overview/spec.md))\n-- 기존 `market` 도메인의 시장·거시 지표 11개(KOSPI·KOSDAQ·V-KOSPI200·동행/선행지수·경제심리지수·M2 등, 009 화면 카드용 **최신값** 조회). **이 spec은 FR-001의 17개만 다룬다** — 둘은 목적이 다르다. 기존 쪽은 화면에 오늘 값 하나를 보이는 것이고, 008은 [010](../010-economic-regime-search/spec.md)이 계산에 쓸 월별 시계열을 등록표와 자료 버전으로 관리하는 것이다. 지표가 겹쳐도(환율·국고채 3년) 저장을 합치지 않는다\n+- 시장 흐름 화면 구성 ([009](../009-market-flow-overview/spec.md)). 008은 그 화면에 필요한 17개 지표 정보를 제공한다\n+- 기존 시장·거시 지표 11개(KOSPI·KOSDAQ·V-KOSPI200·동행/선행지수·경제심리지수·M2 등, 009 화면 카드용 **최신값** 조회). **이 spec은 FR-001의 17개만 다룬다** — 둘은 목적이 다르다. 기존 쪽은 화면에 오늘 값 하나를 보이는 것이고, 008은 [010](../010-economic-regime-search/spec.md)이 계산에 쓸 월별 시계열을 등록표와 자료 버전으로 관리하는 것이다. 지표가 겹쳐도 두 자료의 책임을 합치지 않는다\n - KOSPI·ETF 시세 확보 ([001](../001-etf-market-data/spec.md))\n - 뉴스 수집 ([012](../012-market-news-digest/spec.md))\n - 당시 발표·수정값(빈티지) 확보와 당시 재현 분석 (별도 spec)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/spec.md",
+          "old_path": "specs/008-macro-indicator-registry/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,260 @@\n+---\n+\n+description: \"Task list for Spec 008 경제지표 등록·수집\"\n+---\n+\n+# Tasks: 경제지표 등록·수집 (Spec 008)\n+\n+**Input**: `specs/008-macro-indicator-registry/`의 설계 문서\n+\n+**Prerequisites**: [plan.md](plan.md), [spec.md](spec.md), [research.md](research.md), [data-model.md](data-model.md), [contracts/](contracts/), [pd11-source-verification.md](pd11-source-verification.md)\n+\n+**Tests**: 테스트 작업을 포함한다. research R8과 [quickstart.md](quickstart.md)가 계약·통합 검증을 요구하고, constitution \"검증과 완료 기준\"이 이를 완료 조건으로 둔다.\n+\n+**Organization**: 사용자 스토리별로 묶어 각 스토리를 따로 구현하고 따로 검증할 수 있게 한다.\n+\n+## Format: `[ID] [P?] [Story] 설명`\n+\n+- **[P]**: 병렬 가능 (다른 파일, 선행 작업 없음)\n+- **[Story]**: 속한 사용자 스토리 (US1~US4)\n+- 설명에 정확한 파일 경로를 적는다\n+\n+## Path Conventions\n+\n+plan.md의 구조를 따른다. 수집·계산은 `data/`, 조회는 `backend/`다.\n+\n+- `data/src/data_pipeline/macro/` 원천 어댑터·정규화·변환·발행\n+- `data/scripts/` 실행 진입점 (argparse)\n+- `data/tests/` 파이썬 테스트\n+- `backend/src/main/java/com/ssafy/thorp/macro/` 008 조회\n+- `backend/src/main/resources/db/migration/` Flyway\n+- `backend/src/test/` 백엔드 테스트\n+\n+**검증 명령**: `data/`는 `ruff check src scripts tests`와 `pytest`, `backend/`는 `./gradlew spotlessApply build`. DB 통합 테스트는 `THORP_REQUIRE_DOCKER=true`로 실행하고 skip 건수를 확인한다.\n+\n+---\n+\n+## Phase 1: Setup (공용 기반)\n+\n+**Purpose**: 패키지 뼈대와 접속 정보를 준비한다\n+\n+- [ ] T001 `data/src/data_pipeline/macro/` 패키지를 만들고 `__init__.py`와 하위 모듈 자리(`sources/`, `transform/`, `publish/`)를 둔다\n+- [ ] T002 `data/.env.example`에 `ECOS_API_KEY`·`KOSIS_API_KEY`·`DATA_GO_KR_SERVICE_KEY` 이름을 추가한다. 키 값은 적지 않는다\n+- [ ] T003 [P] `data/src/data_pipeline/macro/config.py`에 원천별 기본 URL·타임아웃·재시도 설정을 환경변수에서 읽는 구조로 둔다\n+- [ ] T004 [P] `data/tests/fixtures/macro/`에 원천별 응답 표본을 둘 자리를 만들고 실제 키가 없어도 테스트가 돌도록 한다\n+- [ ] T005 [P] `backend/src/main/java/com/ssafy/thorp/macro/` 패키지를 controller·application·domain·infrastructure 계층으로 만든다\n+\n+---\n+\n+## Phase 2: Foundational (모든 스토리의 선행 조건)\n+\n+**Purpose**: 등록표와 저장소가 없으면 어느 스토리도 시작할 수 없다\n+\n+**이 단계를 마쳐야 사용자 스토리에 들어갈 수 있다**\n+\n+- [ ] T006 `backend/src/main/resources/db/migration/`에 Flyway 마이그레이션으로 `macro_calculation_registry_version`·`macro_indicator_definition` 테이블을 만든다. 컬럼은 data-model.md 2절을 따르고 `license_review_status`·`revision_history_available`·`trading_calendar`·`refresh_months_n`을 포함한다\n+- [ ] T007 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_display_version`·`macro_display_field`를 만든다. 계산 등록표와 별도 버전이다\n+- [ ] T008 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_collection_attempt`·`macro_collection_item_status`를 만든다. 인증키 미발급·승인 대기·권리 확인 대기·미확인을 구분하는 상태 컬럼을 둔다\n+- [ ] T009 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_raw_revision`·`macro_observation`·`macro_observation_lineage`를 만든다. 원값과 변환값을 모두 보존하고 결측 사유 코드를 둔다\n+- [ ] T010 `backend/src/main/resources/db/migration/`의 같은 마이그레이션 묶음에 `macro_dataset_version`·`macro_baseline`·`macro_current_publication`을 만든다. `macro_baseline`의 `scope_id`는 7개 분야 또는 ALL이다\n+- [ ] T011 `data/src/data_pipeline/macro/registry.py`에 등록표 적재기를 만든다. pd11-source-verification.md의 17개 지표 확정값(원천·통계표·항목·단위·작성기관·확보 구간)을 읽어 계산 등록표 버전 1을 발행한다\n+- [ ] T012 `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 `refresh_months_n` 기본값 3개월을 잠정으로 채운다. 관세청 세 지표는 원천이 밝힌 매월 정정 주기보다 짧게 잡지 않는다 (FR-017)\n+- [ ] T013 [P] `data/src/data_pipeline/macro/sources/base.py`에 원천 어댑터 공통 규약을 둔다. 재시도·포기·요청 분할·응답 구조 검증을 여기서 다룬다 (FR-011b)\n+- [ ] T014 [P] `data/src/data_pipeline/macro/storage.py`에 raw에서 processed Parquet으로 가는 경로 규칙을 지표/연도 파티션으로 둔다. `data/CLAUDE.md`의 한 방향 적재 규칙을 지킨다\n+- [ ] T015 [P] `data/tests/test_macro_registry.py`에 등록표 적재 테스트를 둔다. 17개가 정확히 등록되고 각 지표가 7개 분야 중 하나에 속하는지 확인한다 (SC-001)\n+- [ ] T016 [P] `backend/src/test/java/com/ssafy/thorp/macro/MacroSchemaIntegrationTest.java`에 스키마 통합 테스트를 둔다. Testcontainers로 PostgreSQL을 띄워 마이그레이션이 적용되는지 확인한다\n+- [ ] T017 `data/scripts/ingest_macro.py`에 실행 진입점을 argparse로 만든다. `--mode initial|regular`, `--indicator`, `--dry-run`을 받는다\n+\n+**Checkpoint**: 등록표와 저장소가 준비되어 원천 수집을 붙일 수 있다\n+\n+---\n+\n+## Phase 3: User Story 1 - 공급원을 고르지 않고 실제 값·단위·출처가 있는 지표를 본다 (Priority: P1) 🎯 MVP\n+\n+**Goal**: 17개 지표를 공식 원천에서 받아 변환하고, 값·단위·대상월·출처·작성기관과 함께 조회할 수 있게 한다\n+\n+**Independent Test**: 17개 지표 각각의 최신 확보값을 조회해 값·단위·대상월·변환·출처·작성기관이 모두 채워져 있고, 어느 응답에도 공급원 선택 항목이나 인증키 요구가 없는지 확인한다. 화면 없이 등록표와 자료만으로 검증된다\n+\n+### Tests for User Story 1\n+\n+- [ ] T018 [P] [US1] `data/tests/test_macro_sources_ecos.py`에 한국은행 어댑터 계약 테스트를 둔다. 저장된 응답 표본으로 국고채·환율·두바이유 세 계열의 파싱을 확인한다\n+- [ ] T019 [P] [US1] `data/tests/test_macro_sources_kosis.py`에 국가통계포털 어댑터 계약 테스트를 둔다. 10개 표의 항목·분류 코드 파싱을 확인한다\n+- [ ] T020 [P] [US1] `data/tests/test_macro_sources_customs.py`에 관세청 어댑터 테스트를 둔다. 연 단위 분할과 총계 행 제외를 확인한다 (FR-017a)\n+- [ ] T021 [P] [US1] `data/tests/test_macro_transform.py`에 변환 테스트를 둔다. 전년동월 대비·월 기말·월 평균·공식 금액 네 유형과 분모 결측·0, 계열 시작 구간, 휴장일, 부분 표본 경계를 다룬다 (FR-006, FR-006a, FR-006b)\n+\n+### Implementation for User Story 1\n+\n+- [ ] T022 [P] [US1] `data/src/data_pipeline/macro/sources/ecos.py`에 한국은행 어댑터를 만든다. 국고채는 통계표 817Y002 항목 010200000 일별, 환율은 731Y004 항목 0000001에 항목2 0000200 말일자료, 두바이유는 902Y003 항목 010102 월별이다\n+- [ ] T023 [P] [US1] `data/src/data_pipeline/macro/sources/kosis.py`에 국가통계포털 어댑터를 만든다. 10개 표의 기관·통계표·항목·분류는 pd11-source-verification.md 2절 표를 따른다\n+- [ ] T024 [P] [US1] `data/src/data_pipeline/macro/sources/customs.py`에 관세청 어댑터를 만든다. 기준 주소는 1220000/Newtrade이고 무역수지는 `balPayments`를 그대로 쓰며 수출에서 수입을 빼지 않는다\n+- [ ] T025 [P] [US1] `data/src/data_pipeline/macro/sources/oecd.py`에 경제협력개발기구 어댑터를 만든다. DSD_STES@DF_CLI의 G20.M.LI 중 AA/IX 지수를 받고 증가율은 직접 계산한다 (FR-019)\n+- [ ] T026 [US1] `data/src/data_pipeline/macro/sources/housing.py`에 주택가격 연결기를 만든다. 기준월별 표 5개를 받아 겹치는 구간의 비율로 이어 2000년 1월까지 만들고 연결 지점과 계수를 남긴다 (FR-010)\n+- [ ] T027 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 변환기를 만든다. 전년동월 대비는 비교월을 t-12로 고정하고, 분모가 결측이거나 0이면 결측으로 두고 사유를 변환 불가로 남긴다\n+- [ ] T028 [US1] `data/src/data_pipeline/macro/transform/monthly.py`에 월 기말과 월 평균을 넣는다. 월 기말은 그 달 마지막 거래일, 월 평균은 그 달 거래일이 모두 모였을 때만 산출한다. 원천이 월값을 직접 주면 그 값을 쓰고 등록표에 그 사실을 적는다\n+- [ ] T029 [US1] `data/src/data_pipeline/macro/normalize.py`에 원값·변환값 동시 보존과 계보 기록을 넣는다. 월 기말은 마지막 거래일 행을, 월 평균은 그 달 거래일 전부를 계보로 남긴다\n+- [ ] T030 [US1] `data/src/data_pipeline/macro/publish.py`에 발행기를 만든다. 17개 전부의 유효 변환값이 1건 이상이고 권리 상태가 미확인이 아닐 때만 스냅샷을 발행한다 (FR-011, FR-016a)\n+- [ ] T031 [US1] `data/src/data_pipeline/macro/publish.py`에 분야별 T_g와 전체 T_all 산출을 넣는다. 유효 변환값 대상월 집합의 교집합에서 최대월을 고르고 빈 교집합은 자료 없음으로 둔다 (FR-013)\n+- [ ] T032 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`에 단일 스냅샷 조회를 만든다. 응답은 contracts/openapi.yaml을 따르고 현재 포인터의 세 버전을 먼저 고정한 뒤 조립한다 (FR-023)\n+- [ ] T033 [US1] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 지표별 출처와 작성기관을 싣는다. 두바이유의 작성기관은 국제통화기금, 주택가격은 한국부동산원처럼 제공기관과 다를 수 있다 (FR-016)\n+- [ ] T034 [US1] `backend/src/test/java/com/ssafy/thorp/macro/MacroSnapshotContractTest.java`에 조회 계약 테스트를 둔다. 17개 등록 정보가 모두 오고 값·단위·대상월·변환·출처·작성기관이 빈 지표가 0개인지 확인한다 (SC-008)\n+- [ ] T035 [US1] `data/tests/test_macro_publish.py`에 발행 테스트를 둔다. 17개 중 하나라도 유효 변환값이 0건이면 발행이 보류되는지 확인한다\n+\n+**Checkpoint**: 17개 지표를 받아 변환하고 한 응답으로 조회할 수 있다. 여기까지가 최소 완성본이다\n+\n+---\n+\n+## Phase 4: User Story 2 - 등록표가 버전으로 관리되어 계산이 화면 변경에 흔들리지 않는다 (Priority: P1)\n+\n+**Goal**: 계산 등록표·화면 분류·자료 버전을 따로 올리고, 같은 버전 조합이면 같은 결과가 나오게 한다\n+\n+**Independent Test**: 화면 분야 이름을 바꾼 뒤 계산 등록표와 자료 버전이 그대로인지, 변환 규칙을 바꾸면 새 자료 버전이 생기고 이전 검색 결과의 참조 버전은 유지되는지 확인한다\n+\n+- [ ] T036 [P] [US2] `data/src/data_pipeline/macro/versioning.py`에 값 규칙 지문 산출을 만든다. 원천·항목·단위·변환·개편 연결·결측 규칙을 재료로 삼는다 (research R3)\n+- [ ] T037 [US2] `data/src/data_pipeline/macro/versioning.py`에 세 버전의 변경 경로를 나눈다. 화면 문구만 바뀌면 표시 버전, 매핑·가중만 바뀌면 계산 등록표 버전, 값 규칙이 바뀌면 계산 등록표와 전 구간 재처리 자료 버전을 함께 올린다 (FR-003)\n+- [ ] T038 [US2] `data/src/data_pipeline/macro/publish.py`에 원자적 발행을 넣는다. 파일 매니페스트를 먼저 봉인·해시하고 한 트랜잭션에서 스냅샷·기준월을 쓴 뒤 현재 포인터를 교체한다 (research R4)\n+- [ ] T039 [US2] `data/src/data_pipeline/macro/publish.py`에 동시 발행 직렬화를 넣는다. 두 수집 작업이 겹치면 하나만 반영되고 밀린 쪽은 실패로 기록된다 (FR-011a)\n+- [ ] T040 [US2] `data/src/data_pipeline/macro/registry.py`에 분야 내부 동일가중과 분야 간 7분의 1 동일가중을 명목 비중으로 등록하고, 이것이 Thorp의 설계 선택임을 함께 기록한다 (FR-004)\n+- [ ] T041 [P] [US2] `data/tests/test_macro_versioning.py`에 버전 독립 테스트를 둔다. 세 버전을 각각 바꿔 보고 나머지가 그대로인지 확인한다 (SC-005)\n+- [ ] T042 [P] [US2] `data/tests/test_macro_publish_atomic.py`에 원자성 테스트를 둔다. 포인터 교체 전 장애를 주입해 공개 버전이 섞이지 않는지, 미참조 파일이 공개되지 않는지 확인한다\n+- [ ] T043 [US2] `backend/src/test/java/com/ssafy/thorp/macro/MacroReproducibilityTest.java`에 재현성 테스트를 둔다. 같은 자료·등록표 버전으로 다시 조회하면 값과 기준월이 같은지 확인한다 (SC-004)\n+\n+**Checkpoint**: 버전이 독립적으로 움직이고 같은 조합이면 같은 결과가 나온다\n+\n+---\n+\n+## Phase 5: User Story 3 - 자료 지연·개정·결측이 숨겨지지 않는다 (Priority: P2)\n+\n+**Goal**: 대상월·발표일·수신 시각을 구분하고, 결측과 개정과 수집 실패를 그대로 드러낸다\n+\n+**Independent Test**: 어느 지표의 수집을 실패시켜 마지막 갱신 시각이 기록되는지, 결측월이 빈 값으로 남고 그 분야 기준월이 물러나는지 확인한다\n+\n+- [ ] T044 [P] [US3] `data/src/data_pipeline/macro/normalize.py`에 대상월·발표일·수신 시각 분리를 넣는다. 발표일을 주지 않는 원천은 미제공으로 남기고 수신 시각으로 대체하지 않는다 (FR-007)\n+- [ ] T045 [US3] `data/src/data_pipeline/macro/sources/kosis.py`에서 `LST_CHN_DE`를 통계표 단위 갱신일로 기록한다. 관측치별 발표일로 쓰지 않는다\n+- [ ] T046 [US3] `data/src/data_pipeline/macro/sources/base.py`에 재시도와 포기를 넣는다. 간격을 늘려가며 정해진 횟수만큼 시도하고, 인증 거부나 없는 경로는 재시도하지 않는다 (FR-011b)\n+- [ ] T047 [US3] `data/src/data_pipeline/macro/sources/base.py`에 원천 변경 감지를 넣는다. 응답 구조나 식별자가 등록표와 다르면 실패로 기록하고 그 지표의 자동 수집을 멈춘다. 실패 원인을 인증 문제로 단정하지 않는다\n+- [ ] T048 [US3] `data/src/data_pipeline/macro/ingest.py`에 재실행 안전성을 넣는다. 중간에 끊긴 뒤 다시 돌리면 중복 없이 이어받고, 같은 응답은 새 이력을 만들지 않으며 다르면 개정으로 기록한다\n+- [ ] T049 [US3] `data/src/data_pipeline/macro/ingest.py`에 전 구간 적재 완료 판정을 넣는다. 등록표의 기대 시작월과 기대 대상월 수에 미치지 못하면 완료로 보지 않는다\n+- [ ] T050 [US3] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 마지막 갱신 시각·수집 성공/실패/자료 없음 상태와 기준월을 물린 지표를 싣는다 (FR-023)\n+- [ ] T051 [P] [US3] `data/tests/test_macro_failure.py`에 실패 처리 테스트를 둔다. 부분 실패·한도 도달·원천 구조 변경 각각에서 이전 완결 버전이 유지되는지 확인한다. **연 단위로 나눠 호출하는 도중 한도에 걸린 경우를 따로 다룬다** — 관세청은 전 구간을 37회 넘게 나눠 받으므로 중간에 끊길 수 있다. 이때 이미 받은 연도의 원본은 보존되고, 새 완결 버전은 발행되지 않으며, 다시 실행하면 못 받은 연도부터 이어받는지 확인한다 (FR-011, FR-011b, FR-017a)\n+- [ ] T052 [P] [US3] `data/tests/test_macro_revision.py`에 개정 테스트를 둔다. 과거 값이 바뀌면 17개 전체로 새 불변 버전이 나오고 이전 버전 값은 그대로인지 확인한다 (FR-009)\n+\n+**Checkpoint**: 지연·실패·결측·개정이 값에 섞이지 않고 상태로 드러난다\n+\n+---\n+\n+## Phase 6: User Story 4 - 이용 조건 안에서 수집한다 (Priority: P2)\n+\n+**Goal**: 원천별 한도와 권리 조건을 지키고, 개발용 예시 자료가 운영에 새지 않게 한다\n+\n+**Independent Test**: 인증키 없는 개발 환경에서 예시 자료로 지표가 제공되고 예시 표시가 붙는지, 운영에서는 자동 대체가 일어나지 않는지 확인한다\n+\n+- [ ] T053 [P] [US4] `data/src/data_pipeline/macro/registry.py`에 지표별 이용 조건을 기록한다. 작성기관·출처 표기·상업 이용 가부·재배포 제한·권리 판정 상태를 넣는다 (FR-016)\n+- [ ] T054 [US4] `data/src/data_pipeline/macro/registry.py`에서 두바이유를 권리 확인 대기로 표시한다. 조건 자체를 모르는 미확인과 구분되며 발행을 보류하지 않는다 (FR-016a)\n+- [ ] T055 [US4] `data/src/data_pipeline/macro/sources/base.py`에 원천별 한도 준수를 넣는다. 국가통계포털은 분당 200회·요청당 40,000셀, 관세청은 조회 기간 1년, 한국은행과 경제협력개발기구는 수치 한도 없이 보수적 간격이다 (FR-017a)\n+- [ ] T056 [US4] `data/scripts/ingest_macro.py`에 개발 프로필을 분리한다. 예시 자료는 명시적으로 켠 개발 환경에서만 쓰이고 운영 경로에서는 선택되지 않는다 (FR-022)\n+- [ ] T057 [US4] `backend/src/main/java/com/ssafy/thorp/macro/`의 조회 응답에 예시 자료 여부를 싣고, 운영에서 수집 실패를 예시 자료로 자동 대체하지 않는다\n+- [ ] T058 [US4] `data/src/data_pipeline/macro/config.py`에서 인증키를 환경변수로만 읽고 로그·응답·오류 메시지에 남기지 않도록 한다 (FR-021)\n+- [ ] T059 [P] [US4] `data/tests/test_macro_compliance.py`에 이용 조건 테스트를 둔다. 한도 초과 요청이 만들어지지 않는지, 권리 미확인 지표가 공개 버전에 들어가지 않는지 확인한다\n+- [ ] T060 [P] [US4] `backend/src/test/java/com/ssafy/thorp/macro/MacroSampleDataIsolationTest.java`에 예시 자료 격리 테스트를 둔다. 운영 프로필에서 예시 어댑터가 선택되지 않는지 확인한다\n+\n+**Checkpoint**: 이용 조건을 지키며 수집하고 개발 대역이 운영에 섞이지 않는다\n+\n+---\n+\n+## Phase 7: Polish & 연동\n+\n+**Purpose**: 009·010 연동 정합화와 남은 결정 마무리\n+\n+- [ ] T061 `backend/src/main/java/com/ssafy/thorp/marketflow/`의 지표 조회 경로를 008 스냅샷 한 번 읽기로 바꾼다. 기존 4회 분리 조회는 포인터 교체 중 버전이 섞인다\n+- [ ] T062 `specs/009-market-flow-overview/`의 spec과 계약에서 지표·분야 식별자를 008과 맞춘다. 두바이유 식별자 표기 불일치와 분야 식별자 대소문자를 정리한다\n+- [ ] T063 `specs/009-market-flow-overview/spec.md`의 검색 진입 기준월을 010의 계산 완료월로 바꾼다. 008의 T_g를 검색 가능월로 쓰지 않는다 (FR-013)\n+- [ ] T064 `specs/009-market-flow-overview/contracts/`에서 자료가 없을 때의 응답을 008과 맞춘다. 자료 버전과 기준월이 비어 있을 수 있고 경로가 빈 배열일 수 있다\n+- [ ] T065 [P] `data/src/data_pipeline/macro/source_port.py`에 010이 쓸 시계열 읽기를 만든다. contracts/macro-indicator-source.md를 따르고 결측 사유를 함께 돌려준다\n+- [ ] T066 [P] `data/src/data_pipeline/macro/registry.py`의 등록표에 지표별 공표 정밀도를 채운다. 최소 유효 척도는 010 소유이므로 008이 정하지 않는다 (FR-015)\n+- [ ] T067 정기 수집을 몇 달 돌린 뒤 `data/src/data_pipeline/macro/registry.py`의 지표별 재조회 구간을 실제 개정 관행에 맞춰 조정하고 근거를 등록표에 남긴다 (FR-017)\n+- [ ] T068 quickstart.md의 검증 시나리오를 처음부터 끝까지 수행하고 결과를 기록한다. 원값 대조 표본은 지표마다 3개월, 네 변환 유형과 개편 연결 구간·결측 직후 달을 포함한다 (SC-007)\n+\n+---\n+\n+## Dependencies & Execution Order\n+\n+### Phase Dependencies\n+\n+- **Setup (Phase 1)**: 선행 없음\n+- **Foundational (Phase 2)**: Setup 완료 후. 모든 사용자 스토리를 막는다\n+- **User Stories (Phase 3~6)**: Foundational 완료 후 시작\n+- **Polish (Phase 7)**: US1이 끝나야 의미가 있다. 009·010 연동은 조회가 있어야 붙는다\n+\n+### User Story Dependencies\n+\n+- **US1 (P1)**: Foundational만 필요하다. 혼자 완결된다\n+- **US2 (P1)**: US1의 발행기를 확장한다. US1 뒤에 온다\n+- **US3 (P2)**: US1의 수집·정규화를 확장한다. US2와 병렬 가능하다\n+- **US4 (P2)**: US1의 어댑터를 확장한다. US2·US3과 병렬 가능하다\n+\n+### Within Each User Story\n+\n+어댑터에서 변환으로, 정규화로, 발행으로, 조회로 간다. 테스트는 해당 구현과 같은 작업 묶음에 둔다\n+\n+### Parallel Opportunities\n+\n+- Phase 1의 T003·T004·T005는 함께 진행할 수 있다\n+- Phase 2의 T013·T014·T015·T016은 스키마 작업(T006~T010) 뒤에 함께 진행할 수 있다\n+- Phase 3의 네 어댑터 T022·T023·T024·T025는 서로 다른 파일이라 함께 진행할 수 있다\n+- US2·US3·US4는 US1이 끝난 뒤 세 갈래로 나눠 진행할 수 있다\n+\n+## Parallel Example: User Story 1\n+\n+```text\n+T018·T019·T020·T021 (테스트 네 개, 서로 다른 파일)\n+  다음\n+T022·T023·T024·T025 (어댑터 네 개, 서로 다른 파일)\n+  다음\n+T026 → T027 → T028 → T029 (연결·변환·정규화는 같은 흐름이라 순차)\n+  다음\n+T030 → T031 (발행과 기준월)\n+  다음\n+T032 → T033 → T034·T035\n+```\n+\n+## 작업 묶음과 병합 요청 경계\n+\n+단계는 의존 순서이고, 아래 묶음이 티켓·브랜치·병합 요청의 단위다. 규약이 1 티켓 = 1 브랜치 = 1 병합 요청이므로 묶음 수가 곧 병합 요청 수다. 각 묶음은 따로 검증되고 따로 되돌릴 수 있어야 한다.\n+\n+| 묶음 | 작업 | 파트 | 왜 여기서 끊나 |\n+|---|---|---|---|\n+| A. 스키마와 등록표 | T001~T017 | DE | 마이그레이션과 그것을 쓰는 코드·검증은 같은 병합 요청에 둔다(헌장 스키마 변경 규칙). 17개 등록값이 여기서 확정된다 |\n+| B. 원천 수집과 변환 | T018~T029 | DE | 어댑터 넷과 연결기와 변환기. 저장에 붙기 전이라 표본 응답만으로 검증된다 |\n+| C. 발행과 기준월 | T030·T031·T035 | DE | 불변 스냅샷과 `T_g`·`T_all`. 앞 묶음의 변환값이 있어야 의미가 있다 |\n+| D. 008 조회 | T032·T033·T034 | BE | 백엔드 단일 스냅샷 응답. 009가 소비할 계약이 여기서 고정된다 |\n+| E. 버전 독립 | T036~T043 | DE·BE | US2 전체. 세 버전 분리와 원자적 발행 |\n+| F. 상태 드러내기 | T044~T052 | DE·BE | US3 전체. 지연·실패·결측·개정 |\n+| G. 이용 조건 | T053~T060 | DE·BE | US4 전체. 한도 준수와 예시 자료 격리 |\n+| H. 009 연동 | T061~T064 | BE | 009의 코드와 문서를 함께 고친다. 008 단독으로 끝나지 않는다 |\n+| I. 010 연동과 마무리 | T065~T068 | DE | 시계열 읽기와 최종 검증 |\n+\n+아홉 묶음이다. 단계가 일곱인데 묶음이 아홉인 이유는 US1이 작업 18개로 너무 커서다. 어댑터 넷과 변환과 발행과 조회를 한 병합 요청에 담으면 리뷰가 되지 않아 B·C·D로 나눴다.\n+\n+### 더 쪼갤 수 있는 곳\n+\n+B는 어댑터별로 넷(T022·T023·T024·T025)으로 더 나눠도 각각 표본 응답으로 검증된다. 사람이 여럿 붙으면 그렇게 나눈다. 다만 T026~T029의 연결·변환·정규화는 한 흐름이라 쪼개면 중간 상태가 검증되지 않는다.\n+\n+### 순서\n+\n+A가 모든 묶음을 막는다. B·C·D는 순서대로 가야 하고, 여기까지가 최소 완성본이다. E·F·G는 D가 끝나면 세 갈래로 나뉜다. H는 D 뒤, I는 C 뒤면 시작할 수 있다.\n+\n+---\n+\n+## Implementation Strategy\n+\n+**최소 완성본은 US1이다.** Phase 1·2·3을 마치면 17개 지표를 받아 변환하고 한 응답으로 조회할 수 있다. 009 화면과 010 검색이 소비할 자료가 이 시점에 생긴다.\n+\n+그 뒤는 US2로 버전 독립과 재현성을 세우고, US3과 US4를 병렬로 붙인다. Polish의 009·010 연동은 마지막에 둔다. 양쪽 문서를 함께 고쳐야 해서 혼자 끝나지 않는다.\n+\n+**Jira 티켓과 브랜치는 실제로 착수할 묶음에 대해서만 만든다.** 1 티켓 = 1 브랜치 = 1 MR이다.\n+\n+## 주의\n+\n+- 남은 미확정은 둘이다. 지표별 재조회 구간은 갱신을 관찰해야 정해지고(T067), 주택가격 연결 계수는 겹침 구간에서 산출해야 한다(T026)\n+- 두바이유는 권리 확인 대기 상태로 진행한다. 나중에 상업 이용 제한 대상으로 밝혀지면 그 지표만 중단하고 과거 자료 버전은 보존한다 (FR-016b)\n+- 문서 작성이나 표본 자료 통과를 구현 완료로 세지 않는다. 테스트가 skip되면 통과로 세지 않는다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/008-macro-indicator-registry/tasks.md",
+          "old_path": "specs/008-macro-indicator-registry/tasks.md",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2215793,
+      "head_commit_sha": "51c1aea7e726e8d9259f4b387992ed94590d46c0",
+      "base_commit_sha": "738a9f02ffd12718d641d4811fb952fa15dd356d",
+      "start_commit_sha": "3491c10a0a7c00954c6fc3ffe211391379c9904b",
+      "created_at": "2026-09-17T17:46:48.429+09:00",
+      "merge_request_id": 949554,
+      "state": "without_files",
+      "real_size": "15",
+      "patch_id_sha": "339265688b928756a4ac4da48526442defbe9a13",
+      "commits": [
+        {
+          "id": "51c1aea7e726e8d9259f4b387992ed94590d46c0",
+          "short_id": "51c1aea7",
+          "created_at": "2026-09-17T17:41:59.000+09:00",
+          "parent_ids": [
+            "5c814b03eaebe3f05d611acd97c1b2e13ff507c2"
+          ],
+          "title": "docs(de): spec 008 작업 목록과 병합 요청 경계를 만든다",
+          "message": "docs(de): spec 008 작업 목록과 병합 요청 경계를 만든다\n\nS15P21E205-275\n\n68개 작업을 사용자 스토리별 일곱 단계로 나누고, 병합 요청 단위가 될 작업 묶음\n아홉 개를 따로 적었다. 단계는 의존 순서이고 묶음이 티켓·브랜치·MR 단위다.\n\n- 최소 완성본은 US1이다. 준비·기반·US1을 마치면 17개 지표를 받아 변환하고\n  한 응답으로 조회할 수 있다. 009 화면과 010 검색이 소비할 자료가 그때 생긴다\n- US1이 작업 18개로 커서 한 MR에 담으면 리뷰가 안 된다. 수집·발행·조회로 나눴다\n- 실조회로 확정한 통계표·항목 코드, 관세청 새 기준 주소와 연 단위 분할, 주택가격\n  표 다섯 개 연결, 환율 말일자료 항목을 작업 설명에 그대로 넣었다\n\n남은 미확정 둘은 착수를 막지 않는다. 재조회 구간은 기본값 3개월로 시작해\n관찰 뒤 조정하고(T067), 주택가격 연결 계수는 구현하며 산출한다(T026).\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T17:41:59.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T17:41:59.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/51c1aea7e726e8d9259f4b387992ed94590d46c0"
+        },
+        {
+          "id": "5c814b03eaebe3f05d611acd97c1b2e13ff507c2",
+          "short_id": "5c814b03",
+          "created_at": "2026-09-17T17:15:33.000+09:00",
+          "parent_ids": [
+            "ed18b475f6c3e99a5b81052971b464a82bb3c3fe"
+          ],
+          "title": "docs(de): spec 008 원천 17개를 실조회로 확정하고 수집 규칙을 채운다",
+          "message": "docs(de): spec 008 원천 17개를 실조회로 확정하고 수집 규칙을 채운다\n\nS15P21E205-275\n\nPD-11을 실제 API 조회로 끝냈다. 17개 지표의 통계표·항목·단위·구간·이용 조건을\npd11-source-verification.md 에 남겼다.\n\n원천 확정에서 바뀐 것:\n- 원/달러는 일별 표 대신 월별 표의 말일자료를 쓴다. 일별 표는 서울외국환중개\n  작성이라 제3자 저작권이 걸리고, 월별 말일자료는 한국은행 작성이면서 같은\n  값을 준다. 일별 마지막 거래일과 대조해 일치를 확인했다\n- 관세청 기준 주소가 8월 12일 개편으로 Newtrade 로 바뀌었다. 폐기된 경로는\n  키가 정상이어도 미등록 키 오류를 돌려준다. 이걸 키 문제로 오진했었다\n- 무역수지는 원천이 balPayments 로 직접 준다. 파생값이 아니다\n- 두바이유는 국제통화기금 작성이라 권리 확인이 필요하나 확인 창구가 없다.\n  대체 후보 셋을 실측 대조했더니 서로 다른 계열이고 모두 현행보다 불투명해\n  현행을 유지하고 '권리 확인 대기'로 표시한다. 감수하는 위험으로 기록했다\n\n새로 채운 수집 규칙(FR-011b):\n- 재시도와 포기 기준. 인증 거부나 없는 경로는 재시도하지 않는다\n- 중단 후 재실행 시 중복 없이 이어받기\n- 전 구간 적재 완료 판정 기준\n- 원천 구조·식별자 변경 감지. 실패 원인을 인증 문제로 단정하지 않는다\n\n그 밖에 작성기관 우선 원칙, 권한 철회 시 처리, 소비 경로별 이용 경계,\n증가율 비교월 t-12 고정, 조회 기간 상한에 맞춘 분할을 요구사항에 넣었다.\n\n점검표 110문항 모두 검토 완료. 수집 파이프라인 점검표를 새로 만들었다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T17:15:33.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T17:15:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5c814b03eaebe3f05d611acd97c1b2e13ff507c2"
+        },
+        {
+          "id": "ed18b475f6c3e99a5b81052971b464a82bb3c3fe",
+          "short_id": "ed18b475",
+          "created_at": "2026-09-17T12:22:28.000+09:00",
+          "parent_ids": [
+            "34f13ab1f9707ef8b9a1ad3c6d47dcc72a351646"
+          ],
+          "title": "docs(de): spec 008 변환·권리 규칙을 정하고 점검표를 정리한다",
+          "message": "docs(de): spec 008 변환·권리 규칙을 정하고 점검표를 정리한다\n\nS15P21E205-275\n\n명확화 다섯 건을 spec과 계획 산출물 전체에 반영하고, 점검표에서 지적된 빈틈 중\n팀 결정 없이 메울 수 있는 것을 고쳤다.\n\n정한 규칙:\n- 전년동월 대비의 비교 대상월이 결측이거나 0이면 그 달은 결측이고 사유를 남긴다.\n  계열 시작 직후라 비교할 달이 없는 구간도 같다\n- 월 기말은 그 달 마지막 거래일 값, 월 평균은 그 달 거래일이 모두 모였을 때만 낸다\n- 이용 권리를 확인하지 못한 지표는 공개 자료 버전에 넣지 않고 발행을 보류한다\n\n함께 채운 것:\n- 발행 중단과 동시 수집 충돌 처리를 FR-011a로 올렸다. 설계 문서에만 있어\n  무엇이 약속인지 spec에서 읽을 수 없었다\n- 분야 기준월이 없을 때의 지표별 경로와 기준월을 물린 지표를 FR-023에 넣었다\n- OECD는 공식 계열 확인과 제3자 권리 확인을 별개 조건으로 나눴다\n- PD-11 확인 근거를 pd11-source-verification.md에 남기도록 정했다\n\n점검표 90문항 중 76개 확인, 14개 미체크. 남은 것은 PD-11 실조회나 팀 결정이\n있어야 메워진다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T12:22:28.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T12:22:28.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ed18b475f6c3e99a5b81052971b464a82bb3c3fe"
+        },
+        {
+          "id": "34f13ab1f9707ef8b9a1ad3c6d47dcc72a351646",
+          "short_id": "34f13ab1",
+          "created_at": "2026-09-17T11:26:57.000+09:00",
+          "parent_ids": [
+            "e6fcedd50324f8b789c775738de4379cacc49daa"
+          ],
+          "title": "docs(de): spec 008 점검표를 검토하고 어긋난 문서를 고친다",
+          "message": "docs(de): spec 008 점검표를 검토하고 어긋난 문서를 고친다\n\nS15P21E205-275\n\n점검표 54문항을 spec·plan·data-model과 대조해 36개를 확인하고 18개를 미체크로\n남겼다. 미체크 항목마다 판단 근거와 고칠 문서를 표로 적었다.\n\n- 범위 요약의 공식 원천 목록에 관세청을 넣어 FR-006과 맞췄다\n- SC-001의 등록표 필수 항목에 최소 유효 척도와 정기 재조회 구간 N을 넣어\n  FR-002와 맞췄다. 없으면 두 칸이 비어도 성공 기준을 통과한다\n\n남은 18개 중 절반은 PD-11을 실제로 조회해야 메울 수 있고, 나머지는 문장으로\n정할 수 있으나 팀 결정이 필요하다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T11:26:57.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T11:26:57.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/34f13ab1f9707ef8b9a1ad3c6d47dcc72a351646"
+        },
+        {
+          "id": "e6fcedd50324f8b789c775738de4379cacc49daa",
+          "short_id": "e6fcedd5",
+          "created_at": "2026-09-17T11:22:53.000+09:00",
+          "parent_ids": [
+            "ff447101fff99fb60e7e903faa6f840b64bfbef0"
+          ],
+          "title": "docs(de): spec 008 plan과 계약·점검표를 작성한다",
+          "message": "docs(de): spec 008 plan과 계약·점검표를 작성한다\n\nS15P21E205-275\n\nspec 008의 plan 단계 산출물을 만든다. research·data-model·contracts·quickstart를\n함께 두어 17개 지표의 수집·변환·불변 스냅샷 발행 경계를 정했다.\n\n- spec.md의 Clarifications에 남아 있던 REST·DB·경로 같은 구현 문구를 기능 책임\n  서술로 바꾸고, 기술 합의는 plan과 research로 옮겼다\n- 자료·소비 계약 점검표와 원천·이용 조건 점검표를 새로 두었다. 두 목록은 모두\n  미체크이며 요구사항 문장 품질을 묻는 질문이지 구현 완료 표시가 아니다\n- CLAUDE-HANDOFF.md에 현재 상태와 남은 결정(PD-10·PD-11)을 적었다\n\ntasks.md는 아직 만들지 않았다. 구현 티켓과 브랜치는 작업 묶음을 정한 뒤에 만든다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-17T11:22:53.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-17T11:22:53.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e6fcedd50324f8b789c775738de4379cacc49daa"
+        },
+        {
+          "id": "ff447101fff99fb60e7e903faa6f840b64bfbef0",
+          "short_id": "ff447101",
+          "created_at": "2026-09-16T17:27:44.000+09:00",
+          "parent_ids": [
+            "738a9f02ffd12718d641d4811fb952fa15dd356d"
+          ],
+          "title": "docs(de): spec 008 명확화 결정 반영",
+          "message": "docs(de): spec 008 명확화 결정 반영\n",
+          "author_name": "kendyjenny",
+          "author_email": "kendyjenny@naver.com",
+          "authored_date": "2026-09-16T17:27:44.000+09:00",
+          "committer_name": "kendyjenny",
+          "committer_email": "kendyjenny@naver.com",
+          "committed_date": "2026-09-16T17:27:44.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ff447101fff99fb60e7e903faa6f840b64bfbef0"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2827748": [],
+    "2827896": []
+  }
+}

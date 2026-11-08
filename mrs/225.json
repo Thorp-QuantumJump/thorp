@@ -1,0 +1,946 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 951277,
+    "iid": 225,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 상태와 한계를 한 문장으로 표시",
+    "description": "# 작업 내용 요약\n\n결과 요약 바로 아래에 검증 구분과 부분 완료·지표 없음·자료 부족·실행 실패를 한 문장으로 표시합니다. 실패 결과는 사용자가 눌렀을 때만 같은 조건으로 다시 요청하고 새 결과 주소로 이동합니다.\n\n# 관련 티켓\n\n- [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346)\n\n# 주요 변경 사항\n\n- 상태별 고정 문장 틀에서 적용 가능한 문장을 한 단락으로 조합하고 추천·순위 표현을 검사합니다.\n- 핵심 지표가 없는 취소 결과는 숫자 대체값을 만들지 않으며, 계산 시작 전 취소는 부분 결과로 표현하지 않습니다.\n- 실패 사유와 사용자 주도 재시도를 결과 옆에 두고 재요청 중 중복 실행을 막습니다.\n\n# 테스트\n\n- [x] `npm run lint` — 오류 0건, 기존 경고 20건\n- [x] `npm run build`\n- [x] `npm test` — Vitest 1,111개와 Node 13개 통과, skipped 0\n\n# 리뷰 포인트\n\n- 여러 상태가 함께 있을 때 한 단락 안에서 의미가 중복되거나 모순되지 않는지 확인해 주세요.\n- 실패 결과의 재시도가 사용자 동작으로만 실행되고 새 공개 토큰 주소로 이동하는지 확인해 주세요.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다.\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010).\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId`로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null`이고, 화면은 그것을 \"0%\"가 아니라 사유와 함께 보인다(FR-011, 원칙 VI).\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED`이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII).",
+    "state": "merged",
+    "created_at": "2026-09-18T15:19:19.258+09:00",
+    "updated_at": "2026-09-18T15:34:05.622+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T15:34:05.679+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/346-result-status-line",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+    "merge_commit_sha": "081ede5317c20362899eac3451f1ec7065dd6299",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T15:19:21.167+09:00",
+    "reference": "!225",
+    "references": {
+      "short": "!225",
+      "relative": "!225",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!225"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/225",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 951277,
+    "iid": 225,
+    "project_id": 1444456,
+    "title": "feat(fe): 결과 상태와 한계를 한 문장으로 표시",
+    "description": "# 작업 내용 요약\n\n결과 요약 바로 아래에 검증 구분과 부분 완료·지표 없음·자료 부족·실행 실패를 한 문장으로 표시합니다. 실패 결과는 사용자가 눌렀을 때만 같은 조건으로 다시 요청하고 새 결과 주소로 이동합니다.\n\n# 관련 티켓\n\n- [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346)\n\n# 주요 변경 사항\n\n- 상태별 고정 문장 틀에서 적용 가능한 문장을 한 단락으로 조합하고 추천·순위 표현을 검사합니다.\n- 핵심 지표가 없는 취소 결과는 숫자 대체값을 만들지 않으며, 계산 시작 전 취소는 부분 결과로 표현하지 않습니다.\n- 실패 사유와 사용자 주도 재시도를 결과 옆에 두고 재요청 중 중복 실행을 막습니다.\n\n# 테스트\n\n- [x] `npm run lint` — 오류 0건, 기존 경고 20건\n- [x] `npm run build`\n- [x] `npm test` — Vitest 1,111개와 Node 13개 통과, skipped 0\n\n# 리뷰 포인트\n\n- 여러 상태가 함께 있을 때 한 단락 안에서 의미가 중복되거나 모순되지 않는지 확인해 주세요.\n- 실패 결과의 재시도가 사용자 동작으로만 실행되고 새 공개 토큰 주소로 이동하는지 확인해 주세요.\n\n<!--아래는 제품 약속을 지키는지 보는 공통 확인이다. 해당 없는 항목은 지우지 말고 그대로 둔다 —\n\"없음\"을 확인한 것도 리뷰 결과다. 근거는 .specify/memory/constitution.md 와 각 spec 의 설계 제약.-->\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 우리는 진단을 하지 결과를 추천하지 않는다(원칙 III). 표시 후보는 순서 있는 목록이 아니라 정렬 지표를 밝힌 집합이다. \"1위\", \"추천\", \"최적\", 우승 배지를 넣지 않았다.\n- [x] **결제·포인트·상품 선택 단계 0건** — 이번 범위의 \"하지 않는 것\"이다(FR-010).\n- [x] **전략 ID 상수·전략별 분기 0건** — 전략 목록·파라미터 기본값·허용 범위·단위를 코드에 두지 않았다. 전략은 등록표가 돌려주는 값으로만 다루며 `strategyId`로 `switch`·`if` 분기하지 않았다(FR-025). 전략이 늘어도 이 코드를 고치지 않아도 되는지 확인했다.\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 제외·실패·미실행 후보의 성과는 `null`이고, 화면은 그것을 \"0%\"가 아니라 사유와 함께 보인다(FR-011, 원칙 VI).\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 평가 분할이 없으면 `UNVALIDATED`이며 이는 \"통과\"가 아니라 \"말할 수 없음\"이다. 라벨을 결과와 항상 함께 보인다(FR-015, 원칙 VII).",
+    "state": "merged",
+    "created_at": "2026-09-18T15:19:19.258+09:00",
+    "updated_at": "2026-09-18T15:34:05.622+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-18T15:34:05.679+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/346-result-status-line",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+    "merge_commit_sha": "081ede5317c20362899eac3451f1ec7065dd6299",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-18T15:19:21.167+09:00",
+    "reference": "!225",
+    "references": {
+      "short": "!225",
+      "relative": "!225",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!225"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/225",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 8,
+      "completed_count": 8
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "14",
+    "latest_build_started_at": "2026-09-18T15:29:21.746+09:00",
+    "latest_build_finished_at": "2026-09-18T15:46:11.258+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 206376,
+      "iid": 167,
+      "project_id": 1444456,
+      "sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+      "ref": "feat(fe)/346-result-status-line",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T15:29:21.640+09:00",
+      "updated_at": "2026-09-18T15:46:11.266+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/206376"
+    },
+    "head_pipeline": {
+      "id": 206376,
+      "iid": 167,
+      "project_id": 1444456,
+      "sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+      "ref": "feat(fe)/346-result-status-line",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-18T15:29:21.640+09:00",
+      "updated_at": "2026-09-18T15:46:11.266+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/206376",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-18T15:29:21.746+09:00",
+      "finished_at": "2026-09-18T15:46:11.258+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/206376",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "head_sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+      "start_sha": "6494ccca1374b318b5f324a0048398e11d58d41f"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "0155ae9435ce6495d0e71f9277cca9a58f94f353",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834674,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:19:19.390+09:00",
+          "updated_at": "2026-09-18T15:19:19.404+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f7301dc43256571a45ede63d752a0b4d90401f8a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834676,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 테스트 커버리지**: `statusSentences.ts`를 통해 상태 문장 템플릿과 조합 로직을 순수 함수로 분리하여 단위 테스트(`statusSentences.test.ts`, `ResultStatusLine.test.tsx`) 작성이 매우 용이해졌으며, 금지 어휘 검사 및 엣지 케이스가 충실히 검증되었습니다.\n- **방어적 재시도 처리**: `ResultStatusLine` 컴포넌트에서 비동기 재시도 중복 실행 방지(`retrying` 상태 관리)와 에러 핸들링이 깔끔하게 구현되었습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **실패 재시도 네트워크 에러 시나리오**: `ResultPage.test.tsx`에서 `retryResult` API가 실패(`reject`)를 반환할 때, `ResultStatusLine` 내부의 `retryError` 상태가 활성화되어 화면에 에러 메시지가 올바르게 노출되는지 확인하는 테스트를 추가할 수 있습니다.\n- **부분 완료 날짜 포맷 시나리오**: `completedThrough` prop으로 유효한 날짜 문자열이 전달될 때와 `null`일 때 각각 템플릿이 문맥에 맞게 정상 치환되는지 렌더링 검증 시나리오를 보강합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:54fd753179c37b0895f2641fa5ff0e0e0c859ca2 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-18T15:19:28.882+09:00",
+          "updated_at": "2026-09-18T15:29:19.092+09:00",
+          "system": false,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "3cdd1f10ba64b8e69d79a9c9fbd4b97cb384242e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834727,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:23:21.183+09:00",
+          "updated_at": "2026-09-18T15:23:21.187+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ec092df5a656d366f5b9778be376cba10574e2ad",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834825,
+          "type": null,
+          "body": "added 33 commits\n\n<ul><li>33d6f770...6494ccca - 32 commits from branch <code>dev</code></li><li>54fd7531 - Merge remote-tracking branch &#39;origin/dev&#39; into feat(fe)/346-result-status-line</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/225/diffs?diff_id=2221901&start_sha=33d6f770d3a3c78e07d1f14f674c28906dc5c722)",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:29:11.334+09:00",
+          "updated_at": "2026-09-18T15:29:11.343+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "88a4b53d975864530421a912b26cee3d53ac6de9",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834833,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for 54fd753179c37b0895f2641fa5ff0e0e0c859ca2 pass",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:29:48.614+09:00",
+          "updated_at": "2026-09-18T15:29:48.617+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0735228b5e6ba79d006fd19b940718f2bc9b9ae0",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834837,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:30:03.746+09:00",
+          "updated_at": "2026-09-18T15:30:03.749+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9c36edc43bbf0911109e75fa70527935a567e61c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834920,
+          "type": null,
+          "body": "mentioned in commit 081ede5317c20362899eac3451f1ec7065dd6299",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:34:05.730+09:00",
+          "updated_at": "2026-09-18T15:34:05.738+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "92f2c7a074cf6222d352f8546c8f0e3128a3d269",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2834922,
+          "type": null,
+          "body": "Jenkins please retry a build",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-18T15:34:15.744+09:00",
+          "updated_at": "2026-09-18T15:34:15.744+09:00",
+          "system": false,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "fc340eeba60df40a6a950f3c2fef16fae0340df4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885048,
+          "type": null,
+          "body": "mentioned in commit fcf1357d3c9c1d747666805108a63c28b004db3d",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:11.340+09:00",
+          "updated_at": "2026-10-13T15:16:11.391+09:00",
+          "system": true,
+          "noteable_id": 951277,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 225,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2221901,
+      "head_commit_sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+      "base_commit_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "start_commit_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "created_at": "2026-09-18T15:29:10.844+09:00",
+      "merge_request_id": 951277,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "d6718c5b3097c4e37526d4e6eb916c95aab39bfe"
+    },
+    {
+      "id": 2221787,
+      "head_commit_sha": "33d6f770d3a3c78e07d1f14f674c28906dc5c722",
+      "base_commit_sha": "26ec510a40c15869980b6ab0b62a816f0f62e589",
+      "start_commit_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "created_at": "2026-09-18T15:19:19.677+09:00",
+      "merge_request_id": 951277,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "70373427eaacdfee53d11b50e3427b96aaedeb20"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2221901,
+      "head_commit_sha": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+      "base_commit_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "start_commit_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "created_at": "2026-09-18T15:29:10.844+09:00",
+      "merge_request_id": 951277,
+      "state": "collected",
+      "real_size": "14",
+      "patch_id_sha": "d6718c5b3097c4e37526d4e6eb916c95aab39bfe",
+      "commits": [
+        {
+          "id": "54fd753179c37b0895f2641fa5ff0e0e0c859ca2",
+          "short_id": "54fd7531",
+          "created_at": "2026-09-18T15:28:48.000+09:00",
+          "parent_ids": [
+            "33d6f770d3a3c78e07d1f14f674c28906dc5c722",
+            "6494ccca1374b318b5f324a0048398e11d58d41f"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/346-result-status-line",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/346-result-status-line\n\n# Conflicts:\n#\tfrontend/src/components/result/ResultSummaryCard.tsx\n#\tfrontend/src/pages/ResultPage.tsx\n#\tspecs/005-result-comparison/tasks.md\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T15:28:48.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T15:28:48.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/54fd753179c37b0895f2641fa5ff0e0e0c859ca2"
+        },
+        {
+          "id": "33d6f770d3a3c78e07d1f14f674c28906dc5c722",
+          "short_id": "33d6f770",
+          "created_at": "2026-09-18T15:18:42.000+09:00",
+          "parent_ids": [
+            "26ec510a40c15869980b6ab0b62a816f0f62e589"
+          ],
+          "title": "feat(fe): 결과 상태와 한계를 한 문장으로 표시",
+          "message": "feat(fe): 결과 상태와 한계를 한 문장으로 표시\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T15:18:42.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T15:18:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/33d6f770d3a3c78e07d1f14f674c28906dc5c722"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,6 +1,7 @@\n import { Button } from '@/components/ui/button'\n import type { CompareTargetState } from '@/hooks/useCompareTarget'\n import { strategyLabel } from './conditionLine'\n+import { ResultStatusLine } from './ResultStatusLine'\n import styles from './comparison.module.css'\n \n export function CompareTargetSlot({\n@@ -17,6 +18,11 @@ export function CompareTargetSlot({\n   if (state.targetState === 'NONE') return null\n   const detail = state.detail\n   const progress = detail?.progress\n+  const completedThrough =\n+    progress?.lastTradingDate ??\n+    (state.timeseries.status === 'loaded'\n+      ? (state.timeseries.data.points[state.timeseries.data.points.length - 1]?.date ?? null)\n+      : null)\n   const stages: Record<string, string> = {\n     PREPARING_DATA: '자료 준비',\n     COMPUTING: '분석 계산',\n@@ -61,6 +67,9 @@ export function CompareTargetSlot({\n         ) : null}\n         {state.targetState === 'READY' && detail ? <p>비교 대상: {strategyLabel(detail)}</p> : null}\n       </div>\n+      {state.targetState === 'READY' && detail ? (\n+        <ResultStatusLine detail={detail} completedThrough={completedThrough} />\n+      ) : null}\n       <div className={styles.actions}>\n         {state.retryable &&\n         (state.targetState === 'FAILED' || state.targetState === 'EXECUTION_LIMIT') ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/CompareTargetSlot.tsx",
+          "old_path": "frontend/src/components/result/CompareTargetSlot.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -15,7 +15,7 @@ import { HoldingDifference } from './HoldingDifference'\n import { InstrumentProfileDisclosure } from './InstrumentProfileDisclosure'\n import { closePanelOnEscape } from './panelEscape'\n import { ResourceArea } from './ResourceArea'\n-import { SUMMARY_NOT_CALCULATED } from './ResultSummaryCard'\n+import { SUMMARY_NOT_CALCULATED } from './statusSentences'\n import { type SectorLabels, buildSectorLabels } from './sectorLabels'\n import { TradeHistory } from './TradeHistory'\n import styles from './resultDetail.module.css'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/DetailPanel.tsx",
+          "old_path": "frontend/src/components/result/DetailPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,23 @@\n+.line {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  gap: 10px 14px;\n+  padding: 14px 16px;\n+  border-left: 3px solid var(--thorp-line-strong);\n+  background: var(--thorp-surface-raised);\n+}\n+\n+.sentence,\n+.retryError {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: 0.9rem;\n+  line-height: 1.7;\n+  overflow-wrap: anywhere;\n+}\n+\n+.retryError {\n+  flex-basis: 100%;\n+  color: var(--thorp-foreground);\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultStatusLine.module.css",
+          "old_path": "frontend/src/components/result/ResultStatusLine.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,93 @@\n+import { fireEvent, render, screen } from '@testing-library/react'\n+import { describe, expect, it, vi } from 'vitest'\n+import { resultDetailCompleted } from '@/test/resultFixtures'\n+import type { PublicResultDetail } from '@/types/result'\n+import { ResultStatusLine } from './ResultStatusLine'\n+\n+/** 005 T076. FR-012~FR-013, SC-005, quickstart 5. */\n+\n+function detail(overrides: Partial<PublicResultDetail>): PublicResultDetail {\n+  return { ...resultDetailCompleted, ...overrides }\n+}\n+\n+describe('ResultStatusLine', () => {\n+  it('취소 결과는 완료 범위와 계산되지 않은 지표를 한 문장으로 보이고 숫자 0을 만들지 않는다', () => {\n+    const cancelled = detail({\n+      status: 'CANCELLED',\n+      partial: true,\n+      summary: null,\n+      summaryUnavailable: 'CANCELLED_WHILE_RUN_CONTINUED',\n+      exceptionKinds: null,\n+    })\n+    const { container } = render(\n+      <ResultStatusLine detail={cancelled} completedThrough=\"2025-03-19\" />,\n+    )\n+\n+    const line = screen.getByRole('status')\n+    expect(line.textContent).toContain('2025-03-19까지 계산된 부분 결과입니다.')\n+    expect(line.textContent).toContain('취소 시점까지의 지표는 계산되지 않았습니다.')\n+    expect(container.textContent).not.toMatch(/0%|0원/)\n+    expect(container.querySelector('ul')).toBeNull()\n+  })\n+\n+  it('계산 시작 전 취소는 완료 거래일이 없다고만 밝히고 부분 결과라고 하지 않는다', () => {\n+    const cancelled = detail({\n+      status: 'CANCELLED',\n+      partial: true,\n+      summary: null,\n+      summaryUnavailable: 'CANCELLED_BEFORE_START',\n+      exceptionKinds: null,\n+    })\n+    const { container } = render(\n+      <ResultStatusLine detail={cancelled} completedThrough={null} />,\n+    )\n+\n+    const line = screen.getByRole('status')\n+    expect(line.textContent).not.toContain('부분 결과')\n+    expect(line.textContent).toContain('계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.')\n+    expect(container.textContent).not.toMatch(/0%|0원/)\n+  })\n+\n+  it('예외가 있으면 목록을 만들지 않고 한 문장 안에 이어 쓴다', () => {\n+    const { container } = render(\n+      <ResultStatusLine detail={resultDetailCompleted} completedThrough={null} />,\n+    )\n+\n+    expect(screen.getByRole('status').textContent).toContain('자료 부족·계산 제한 기록이 1건 있습니다.')\n+    expect(container.querySelector('ul')).toBeNull()\n+  })\n+\n+  it('예외가 없으면 자료 부족 문장이 없다', () => {\n+    render(\n+      <ResultStatusLine\n+        detail={detail({\n+          exceptionKinds: [],\n+          summary: { ...resultDetailCompleted.summary!, exceptionCount: 0 },\n+        })}\n+        completedThrough={null}\n+      />,\n+    )\n+\n+    expect(screen.getByRole('status').textContent).not.toContain('자료 부족')\n+  })\n+\n+  it('실패 사유와 사용자가 누르는 다시 시도를 보인다', () => {\n+    const onRetry = vi.fn()\n+    render(\n+      <ResultStatusLine\n+        detail={detail({\n+          status: 'FAILED',\n+          summary: null,\n+          exceptionKinds: null,\n+          failure: { code: 'ENGINE_ERROR', message: '계산 엔진이 응답하지 않았습니다.' },\n+        })}\n+        completedThrough={null}\n+        onRetry={onRetry}\n+      />,\n+    )\n+\n+    expect(screen.getByRole('status').textContent).toContain('계산 엔진이 응답하지 않았습니다.')\n+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))\n+    expect(onRetry).toHaveBeenCalledTimes(1)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultStatusLine.test.tsx",
+          "old_path": "frontend/src/components/result/ResultStatusLine.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,53 @@\n+import { useState } from 'react'\n+import type { PublicResultDetail } from '@/types/result'\n+import { Button } from '@/components/ui/button'\n+import { selectStatusSentence } from './statusSentences'\n+import styles from './ResultStatusLine.module.css'\n+\n+type ResultStatusLineProps = {\n+  detail: PublicResultDetail\n+  completedThrough: string | null\n+  /** 실패 결과를 사용자가 명시적으로 다시 요청한다. 비교 대상도 같은 컴포넌트를 재사용한다 */\n+  onRetry?: () => void | Promise<void>\n+}\n+\n+/** 결과 의미를 바꾸는 상태와 검증 구분을 결과 옆 한 문장으로 보인다(FR-012~FR-013). */\n+export function ResultStatusLine({\n+  detail,\n+  completedThrough,\n+  onRetry,\n+}: ResultStatusLineProps) {\n+  const [retrying, setRetrying] = useState(false)\n+  const [retryError, setRetryError] = useState<string | null>(null)\n+\n+  const retry = async () => {\n+    if (!onRetry || retrying) return\n+    setRetrying(true)\n+    setRetryError(null)\n+    try {\n+      await onRetry()\n+    } catch (error) {\n+      setRetryError(error instanceof Error ? error.message : '다시 시도하지 못했습니다.')\n+    } finally {\n+      setRetrying(false)\n+    }\n+  }\n+\n+  return (\n+    <div className={styles.line}>\n+      <p className={styles.sentence} role=\"status\">\n+        {selectStatusSentence(detail, completedThrough)}\n+      </p>\n+      {detail.status === 'FAILED' && onRetry ? (\n+        <Button type=\"button\" variant=\"outline\" disabled={retrying} onClick={() => void retry()}>\n+          {retrying ? '다시 요청하는 중' : '다시 시도'}\n+        </Button>\n+      ) : null}\n+      {retryError ? (\n+        <p className={styles.retryError} role=\"alert\">\n+          {retryError}\n+        </p>\n+      ) : null}\n+    </div>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultStatusLine.tsx",
+          "old_path": "frontend/src/components/result/ResultStatusLine.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -63,8 +63,7 @@\n   line-height: 1.55;\n }\n \n-.note,\n-.unavailable {\n+.note {\n   margin: 0;\n   color: var(--thorp-copy);\n   font-size: 0.88rem;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,7 +7,7 @@ import {\n } from '@/test/resultFixtures'\n import type { PublicResultDetail, ResultSummary } from '@/types/result'\n import { COMPUTED_WEIGHTS_NOTE } from './conditionLine'\n-import { METRIC_DEFINITIONS, ResultSummaryCard, SUMMARY_NOT_CALCULATED } from './ResultSummaryCard'\n+import { METRIC_DEFINITIONS, ResultSummaryCard } from './ResultSummaryCard'\n \n /** 005 T036. FR-001~FR-003, FR-013~FR-015, quickstart 1·2. */\n \n@@ -20,7 +20,7 @@ function withSummary(overrides: Partial<ResultSummary>): PublicResultDetail {\n \n describe('ResultSummaryCard', () => {\n   it('핵심 숫자 3개와 각 정의, 조건 한 줄, 청산 구분을 텍스트로 보인다', () => {\n-    render(<ResultSummaryCard detail={resultDetailCompleted} completedThrough=\"2024-12-31\" />)\n+    render(<ResultSummaryCard detail={resultDetailCompleted} />)\n \n     expect(screen.getByText('16.67%')).not.toBeNull()\n     expect(screen.getByText('-4.18%')).not.toBeNull()\n@@ -44,39 +44,19 @@ describe('ResultSummaryCard', () => {\n     )\n   })\n \n-  it('요약이 없으면 숫자 자리를 그리지 않고 계산되지 않았다고 쓴다', () => {\n-    const { container } = render(\n-      <ResultSummaryCard detail={resultDetailCancelledNoSummary} completedThrough={null} />,\n-    )\n+  it('요약이 없으면 숫자 자리를 그리지 않고 상태 문장이 쓸 자리를 비워 둔다', () => {\n+    const { container } = render(<ResultSummaryCard detail={resultDetailCancelledNoSummary} />)\n \n     expect(screen.queryByRole('definition')).toBeNull()\n     // `\\b`는 한글 경계를 모르므로 금액은 숫자 바로 뒤의 '원'으로 찾는다.\n     expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n-    expect(container.textContent).toContain(SUMMARY_NOT_CALCULATED)\n-    expect(container.textContent).toContain('완료된 거래일이 없습니다')\n-  })\n-\n-  it('실행이 계속 돈 취소 결과는 완료 범위를 날짜로 밝힌다', () => {\n-    const detail: PublicResultDetail = {\n-      ...resultDetailCancelledNoSummary,\n-      summaryUnavailable: 'CANCELLED_WHILE_RUN_CONTINUED',\n-    }\n-\n-    const { container, rerender } = render(\n-      <ResultSummaryCard detail={detail} completedThrough=\"2024-03-29\" />,\n-    )\n-    expect(container.textContent).toContain(SUMMARY_NOT_CALCULATED)\n-    expect(container.textContent).toContain('2024-03-29까지 계산이 진행되었습니다.')\n-\n-    rerender(<ResultSummaryCard detail={detail} completedThrough={null} />)\n-    expect(container.textContent).toContain('완료 범위는 확인할 수 없습니다.')\n+    expect(container.textContent).not.toContain('계산되지 않았습니다')\n   })\n \n   it('수익률과 가장 크게 줄었던 폭이 모두 0이면 좋은 결과로 읽히지 않게 설명한다', () => {\n     const { container } = render(\n       <ResultSummaryCard\n         detail={withSummary({ netTotalReturn: '0.000000', maxDrawdown: '0.000000', tradeCount: 0 })}\n-        completedThrough={null}\n       />,\n     )\n \n@@ -85,35 +65,25 @@ describe('ResultSummaryCard', () => {\n   })\n \n   it('규칙이 계산한 비중이면 출처 문장을 보이고 사용자 비중이면 보이지 않는다', () => {\n-    const { rerender } = render(\n-      <ResultSummaryCard detail={resultDetailCompleted} completedThrough={null} />,\n-    )\n+    const { rerender } = render(<ResultSummaryCard detail={resultDetailCompleted} />)\n     expect(screen.getByText(COMPUTED_WEIGHTS_NOTE)).not.toBeNull()\n \n     rerender(\n-      <ResultSummaryCard\n-        detail={{ ...resultDetailCompleted, weightsSource: 'USER' }}\n-        completedThrough={null}\n-      />,\n+      <ResultSummaryCard detail={{ ...resultDetailCompleted, weightsSource: 'USER' }} />,\n     )\n     expect(screen.queryByText(COMPUTED_WEIGHTS_NOTE)).toBeNull()\n   })\n \n   it('등록표에서 이름을 찾지 못하면 전략 식별자를 그대로 보인다', () => {\n     render(\n-      <ResultSummaryCard\n-        detail={{ ...resultDetailCompleted, strategyName: null }}\n-        completedThrough={null}\n-      />,\n+      <ResultSummaryCard detail={{ ...resultDetailCompleted, strategyName: null }} />,\n     )\n \n     expect(screen.getByText('기준 WAVE_LEVELING · 비교 대상 없음')).not.toBeNull()\n   })\n \n   it('청산을 가정하지 않은 결과는 시가평가 기준이라고 밝힌다', () => {\n-    render(\n-      <ResultSummaryCard detail={withSummary({ liquidation: null })} completedThrough={null} />,\n-    )\n+    render(<ResultSummaryCard detail={withSummary({ liquidation: null })} />)\n \n     expect(screen.getByText(/종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다/)).not.toBeNull()\n   })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -11,17 +11,9 @@ export const METRIC_DEFINITIONS = {\n   totalTradingCost: '분석 기간 동안 사고팔며 낸 수수료·스프레드·슬리피지·세금의 합계입니다.',\n } as const\n \n-export const SUMMARY_NOT_CALCULATED = '취소 시점까지의 지표는 계산되지 않았습니다.'\n-\n type ResultSummaryCardProps = {\n   detail: PublicResultDetail\n   target?: PublicResultDetail | null\n-  /**\n-   * 부분 결과·취소 결과의 완료 범위(마지막으로 계산한 거래일). 모르면 `null`이다.\n-   *\n-   * 공개 상세는 계산 중일 때만 `progress`를 담으므로, 화면이 시계열의 마지막 날짜로 채운다.\n-   */\n-  completedThrough: string | null\n }\n \n /**\n@@ -32,7 +24,7 @@ type ResultSummaryCardProps = {\n  *\n  * <p>숫자와 조건 한 줄은 텍스트라 스크린 리더가 읽는다(FR-022).\n  */\n-export function ResultSummaryCard({ detail, completedThrough, target }: ResultSummaryCardProps) {\n+export function ResultSummaryCard({ detail, target }: ResultSummaryCardProps) {\n   const condition = buildConditionLine({\n     ...detail,\n     targetName: target?.strategyName ?? target?.config.strategyId,\n@@ -87,15 +79,6 @@ export function ResultSummaryCard({ detail, completedThrough, target }: ResultSu\n               : '끝 금액은 종료일 시가평가 기준이며 종료일에 모두 파는 경우를 가정하지 않았습니다.'}\n           </p>\n         </>\n-      ) : detail.summaryUnavailable ? (\n-        <p className={styles.unavailable}>\n-          {SUMMARY_NOT_CALCULATED}{' '}\n-          {detail.summaryUnavailable === 'CANCELLED_BEFORE_START'\n-            ? '계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.'\n-            : completedThrough\n-              ? `${completedThrough}까지 계산이 진행되었습니다.`\n-              : '완료 범위는 확인할 수 없습니다.'}\n-        </p>\n       ) : null}\n     </section>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "old_path": "frontend/src/components/result/ResultSummaryCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,111 @@\n+import { describe, expect, it } from 'vitest'\n+import { resultDetailCompleted } from '@/test/resultFixtures'\n+import type { PublicResultDetail } from '@/types/result'\n+import {\n+  STATUS_SENTENCE_TEMPLATES,\n+  VALIDATION_SENTENCE_TEMPLATES,\n+  selectStatusSentence,\n+} from './statusSentences'\n+\n+/** 005 T076. FR-012~FR-013, SC-004~SC-005, quickstart 5. */\n+\n+const forbiddenWords = ['추천', '최적', '승자', '우승', '유리', '좋다', '할 것', '유사', '확률']\n+\n+function detail(overrides: Partial<PublicResultDetail>): PublicResultDetail {\n+  return { ...resultDetailCompleted, ...overrides }\n+}\n+\n+describe('결과 상태 문장 틀', () => {\n+  it('틀 전체 문자열에 금지 어휘가 하나도 없다', () => {\n+    const allTemplates = [\n+      ...Object.values(STATUS_SENTENCE_TEMPLATES),\n+      ...Object.values(VALIDATION_SENTENCE_TEMPLATES),\n+    ].join('\\n')\n+\n+    for (const word of forbiddenWords) {\n+      expect(allTemplates, word).not.toContain(word)\n+    }\n+  })\n+\n+  it('부분 결과는 완료 범위를 날짜로 밝힌다', () => {\n+    expect(selectStatusSentence(detail({ partial: true }), '2025-03-19')).toContain(\n+      '2025-03-19까지 계산된 부분 결과입니다.',\n+    )\n+    expect(selectStatusSentence(detail({ partial: true }), null)).toContain(\n+      '완료 범위를 확인할 수 있는 데까지만 계산된 부분 결과입니다.',\n+    )\n+  })\n+\n+  it.each([\n+    ['CANCELLED_WHILE_RUN_CONTINUED', '취소 시점까지의 지표는 계산되지 않았습니다.'],\n+    [\n+      'CANCEL_UNANSWERED',\n+      '취소 시점까지의 지표는 계산되지 않았습니다. 취소 요청에 대한 실행 상태를 확인하지 못했습니다.',\n+    ],\n+    [\n+      'CANCELLED_BEFORE_START',\n+      '취소 시점까지의 지표는 계산되지 않았습니다. 계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.',\n+    ],\n+  ] as const)('지표 없음 사유 %s를 0으로 대신하지 않는다', (reason, expected) => {\n+    expect(\n+      selectStatusSentence(\n+        detail({ status: 'CANCELLED', summary: null, summaryUnavailable: reason }),\n+        null,\n+      ),\n+    ).toContain(expected)\n+  })\n+\n+  it('계산 시작 전 취소는 부분 결과가 있다고 표현하지 않는다', () => {\n+    const sentence = selectStatusSentence(\n+      detail({\n+        status: 'CANCELLED',\n+        partial: true,\n+        summary: null,\n+        summaryUnavailable: 'CANCELLED_BEFORE_START',\n+        exceptionKinds: null,\n+      }),\n+      null,\n+    )\n+\n+    expect(sentence).not.toContain('부분 결과')\n+    expect(sentence).toContain('계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.')\n+    expect(sentence).not.toMatch(/0%|0원/)\n+  })\n+\n+  it('자료 부족·계산 제한은 종류와 전체 건수를 함께 밝힌다', () => {\n+    const sentence = selectStatusSentence(\n+      detail({ exceptionKinds: ['HALT_DEFERRED', 'MISSING_PRICE'] }),\n+      null,\n+    )\n+\n+    expect(sentence).toContain('자료 부족·계산 제한 기록이 1건 있습니다.')\n+    expect(sentence).toContain('종류: HALT_DEFERRED, MISSING_PRICE.')\n+  })\n+\n+  it('예외가 없으면 자료 부족·계산 제한 문장을 만들지 않는다', () => {\n+    expect(selectStatusSentence(detail({ exceptionKinds: [], summary: { ...resultDetailCompleted.summary!, exceptionCount: 0 } }), null)).not.toContain(\n+      '자료 부족',\n+    )\n+  })\n+\n+  it('실행 실패는 코드와 서버가 준 사유를 낮은 수익으로 바꾸지 않는다', () => {\n+    expect(\n+      selectStatusSentence(\n+        detail({\n+          status: 'FAILED',\n+          summary: null,\n+          exceptionKinds: null,\n+          failure: { code: 'ENGINE_ERROR', message: '계산 엔진이 응답하지 않았습니다.' },\n+        }),\n+        null,\n+      ),\n+    ).toContain('실행이 끝나지 못했습니다(ENGINE_ERROR): 계산 엔진이 응답하지 않았습니다.')\n+  })\n+\n+  it('미검증은 판정 기준이 정해지지 않았다는 이유와 항상 함께 있다', () => {\n+    const sentence = selectStatusSentence(resultDetailCompleted, null)\n+\n+    expect(sentence).toContain('검증되지 않았습니다.')\n+    expect(sentence).toContain('판정 기준이 아직 정해지지 않았습니다.')\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/statusSentences.test.ts",
+          "old_path": "frontend/src/components/result/statusSentences.test.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,107 @@\n+import type { PublicResultDetail, ValidationTier } from '@/types/result'\n+\n+export const SUMMARY_NOT_CALCULATED = '취소 시점까지의 지표는 계산되지 않았습니다.'\n+\n+/**\n+ * 결과 의미를 바꾸는 상태의 고정 문장 틀(FR-012~FR-013, data-model §3-4).\n+ *\n+ * <p>이 파일은 SC-004의 검수 대상이다. 컴포넌트는 문장을 만들지 않고 이 틀의 값 자리만 채운다.\n+ */\n+export const STATUS_SENTENCE_TEMPLATES = {\n+  partialWithDate: '{completedThrough}까지 계산된 부분 결과입니다.',\n+  partialWithoutDate: '완료 범위를 확인할 수 있는 데까지만 계산된 부분 결과입니다.',\n+  cancelledWhileRunContinued: SUMMARY_NOT_CALCULATED,\n+  cancelUnanswered:\n+    '취소 시점까지의 지표는 계산되지 않았습니다. 취소 요청에 대한 실행 상태를 확인하지 못했습니다.',\n+  cancelledBeforeStart:\n+    '취소 시점까지의 지표는 계산되지 않았습니다. 계산을 시작하기 전에 취소되어 완료된 거래일이 없습니다.',\n+  summaryUnavailable: '핵심 지표는 계산되지 않았습니다.',\n+  limitations: '자료 부족·계산 제한 기록이 {count}건 있습니다.',\n+  limitationKinds: '종류: {kinds}.',\n+  failure: '실행이 끝나지 못했습니다({code}): {message}',\n+  failureWithoutDetail: '실행이 끝나지 못했습니다.',\n+} as const\n+\n+export const VALIDATION_SENTENCE_TEMPLATES = {\n+  SEARCH_RESULT: '탐색 결과입니다.',\n+  HELD_OUT_RESULT: '미사용 검증 결과입니다.',\n+  UNVALIDATED: '검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다.',\n+  unknown: '검증 구분을 확인할 수 없습니다.',\n+} as const\n+\n+function fill(template: string, values: Record<string, string>): string {\n+  return template.replace(/\\{(\\w+)\\}/g, (placeholder, key: string) => values[key] ?? placeholder)\n+}\n+\n+function validationSentence(tier: ValidationTier): string {\n+  if (tier === 'SEARCH_RESULT') return VALIDATION_SENTENCE_TEMPLATES.SEARCH_RESULT\n+  if (tier === 'HELD_OUT_RESULT') return VALIDATION_SENTENCE_TEMPLATES.HELD_OUT_RESULT\n+  if (tier === 'UNVALIDATED') return VALIDATION_SENTENCE_TEMPLATES.UNVALIDATED\n+  return VALIDATION_SENTENCE_TEMPLATES.unknown\n+}\n+\n+function summaryUnavailableSentence(detail: PublicResultDetail): string | null {\n+  switch (detail.summaryUnavailable) {\n+    case null:\n+      return null\n+    case 'CANCELLED_WHILE_RUN_CONTINUED':\n+      return STATUS_SENTENCE_TEMPLATES.cancelledWhileRunContinued\n+    case 'CANCEL_UNANSWERED':\n+      return STATUS_SENTENCE_TEMPLATES.cancelUnanswered\n+    case 'CANCELLED_BEFORE_START':\n+      return STATUS_SENTENCE_TEMPLATES.cancelledBeforeStart\n+    default:\n+      return STATUS_SENTENCE_TEMPLATES.summaryUnavailable\n+  }\n+}\n+\n+/**\n+ * 결과 의미를 바꾸는 상태와 검증 구분을 한 단락으로 만든다.\n+ *\n+ * <p>여러 상태가 함께 있으면 문장을 이어 쓰되 경고 목록으로 늘리지 않는다. 서버가 주지 않은 사유나\n+ * 완료 범위를 지어내지 않는다.\n+ */\n+export function selectStatusSentence(\n+  detail: PublicResultDetail,\n+  completedThrough: string | null,\n+): string {\n+  const parts: string[] = []\n+\n+  if (detail.partial && detail.summaryUnavailable !== 'CANCELLED_BEFORE_START') {\n+    parts.push(\n+      completedThrough\n+        ? fill(STATUS_SENTENCE_TEMPLATES.partialWithDate, { completedThrough })\n+        : STATUS_SENTENCE_TEMPLATES.partialWithoutDate,\n+    )\n+  }\n+\n+  const unavailable = summaryUnavailableSentence(detail)\n+  if (unavailable) parts.push(unavailable)\n+\n+  const kinds = detail.exceptionKinds ?? []\n+  const exceptionCount = detail.summary?.exceptionCount ?? 0\n+  if (exceptionCount > 0 || kinds.length > 0) {\n+    parts.push(\n+      fill(STATUS_SENTENCE_TEMPLATES.limitations, {\n+        count: String(exceptionCount || kinds.length),\n+      }),\n+    )\n+    if (kinds.length > 0) {\n+      parts.push(fill(STATUS_SENTENCE_TEMPLATES.limitationKinds, { kinds: kinds.join(', ') }))\n+    }\n+  }\n+\n+  if (detail.status === 'FAILED') {\n+    parts.push(\n+      detail.failure\n+        ? fill(STATUS_SENTENCE_TEMPLATES.failure, {\n+            code: detail.failure.code,\n+            message: detail.failure.message,\n+          })\n+        : STATUS_SENTENCE_TEMPLATES.failureWithoutDetail,\n+    )\n+  }\n+\n+  parts.push(validationSentence(detail.validationTier))\n+  return parts.join(' ')\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/result/statusSentences.ts",
+          "old_path": "frontend/src/components/result/statusSentences.ts",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -50,6 +50,7 @@ describe('결과 화면의 비교 연결 (T061)', () => {\n     )\n     expect(screen.getByLabelText('분석 조건').textContent).toContain('비교 대상 비교용 전략')\n     expect(screen.getByText(/비교 대상의 비중도/)).toBeTruthy()\n+    expect(screen.getAllByText(/판정 기준이 아직 정해지지 않았습니다/)).toHaveLength(2)\n     expect(container.querySelectorAll('[data-slot=\"button\"][data-variant=\"default\"]')).toHaveLength(\n       1,\n     )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.comparison.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -256,6 +256,35 @@ describe('ResultPage', () => {\n     expect(container.textContent).not.toMatch(/\\d%|\\d원/)\n   })\n \n+  it('실패 사유를 보이고 다시 시도하면 새 공개 결과 주소로 이동한다', async () => {\n+    const newToken = 'b41e0c9a7d2f35618ce4a09b7f1d2c63'\n+    const failed: PublicResultDetail = {\n+      ...resultDetailCompleted,\n+      status: 'FAILED',\n+      summary: null,\n+      failure: { code: 'ENGINE_ERROR', message: '계산 엔진이 응답하지 않았습니다.' },\n+      weightsSource: null,\n+      exceptionKinds: null,\n+    }\n+    apiMocks.fetchResult\n+      .mockResolvedValueOnce(failed)\n+      .mockResolvedValueOnce({ ...resultDetailRunning, publicToken: newToken })\n+    apiMocks.retryResult.mockResolvedValue({\n+      publicToken: newToken,\n+      status: 'QUEUED',\n+      resultSource: 'NEW',\n+      retryOfToken: resultToken,\n+    })\n+    const user = userEvent.setup()\n+\n+    renderResult()\n+    expect(await screen.findByText(/계산 엔진이 응답하지 않았습니다/)).not.toBeNull()\n+    await user.click(screen.getByRole('button', { name: '다시 시도' }))\n+\n+    expect(apiMocks.retryResult).toHaveBeenCalledWith(resultToken)\n+    expect((await screen.findByLabelText('현재 주소')).textContent).toBe(`/results/${newToken}`)\n+  })\n+\n   it.each([\n     ['점이 하나도 없으면', []],\n     [\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.test.tsx",
+          "old_path": "frontend/src/pages/ResultPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { useId, useMemo } from 'react'\n-import { Link, useParams } from 'react-router-dom'\n+import { Link, useNavigate, useParams } from 'react-router-dom'\n+import { retryResult } from '@/api/result'\n import { ComparisonKindBadge } from '@/components/result/ComparisonKindBadge'\n import { CompareTargetPicker } from '@/components/result/CompareTargetPicker'\n import { CompareTargetSlot } from '@/components/result/CompareTargetSlot'\n@@ -19,6 +20,7 @@ import {\n } from '@/components/result/LossWindowView'\n import { OtherConditionsButton } from '@/components/result/OtherConditionsButton'\n import { ResultSummaryCard } from '@/components/result/ResultSummaryCard'\n+import { ResultStatusLine } from '@/components/result/ResultStatusLine'\n import { ResultUnavailableNotice } from '@/components/result/ResultUnavailableNotice'\n import { selectSummarySentence } from '@/components/result/summarySentences'\n import { Button } from '@/components/ui/button'\n@@ -38,7 +40,7 @@ import styles from './ResultPage.module.css'\n  * <p>'자세히 보기'·'손실이 커진 때 보기'·'다른 조건으로 비교'(B07)는 보조 모양 버튼이고, 누르면 이 화면\n  * 안에서 열거나 설정 화면으로 옮긴다. 주소는 바꾸지 않는다(SC-006).\n  *\n- * <p>상태 한 문장(B06 T075)·비교(B05 T050)는 뒤 묶음이 표시한 자리에 끼운다.\n+ * <p>상태 한 문장(B06 T075)은 요약 카드 바로 아래에 두고, 비교(B05 T050)는 뒤 묶음이 이어 붙인다.\n  */\n export function ResultPage() {\n   const { token = '' } = useParams()\n@@ -89,6 +91,7 @@ function ResultView({\n   detail: PublicResultDetail\n   timeseries: TimeseriesState\n }) {\n+  const navigate = useNavigate()\n   const completedThrough = completedRange(detail, timeseries)\n   const compare = useCompareTarget(detail)\n   const target = compare.compatibleTarget\n@@ -126,11 +129,20 @@ function ResultView({\n         </p>\n       ) : null}\n \n-      {detail.status === 'FAILED' ? (\n-        <p className={styles.status}>분석이 끝나지 못해 결과 숫자가 없습니다.</p>\n-      ) : null}\n+      <ResultSummaryCard detail={detail} target={target} />\n \n-      <ResultSummaryCard detail={detail} completedThrough={completedThrough} target={target} />\n+      <ResultStatusLine\n+        detail={detail}\n+        completedThrough={completedThrough}\n+        onRetry={\n+          detail.status === 'FAILED'\n+            ? async () => {\n+                const accepted = await retryResult(token)\n+                await navigate(`/results/${accepted.publicToken}`)\n+              }\n+            : undefined\n+        }\n+      />\n \n       <ResultChartSlot\n         detail={detail}\n@@ -168,8 +180,6 @@ function ResultView({\n         </p>\n       ) : null}\n \n-      {/* B06 T075: 결과 의미를 바꾸는 상태의 한 문장이 이 자리에 온다. */}\n-\n       {/* 결과 화면의 주 모양 버튼은 비교 대상 고르기(B05 T050) 하나다. 여기 버튼은 모두 보조 모양이다. */}\n       <div className={styles.actions}>\n         <Button\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -236,10 +236,10 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n \n **Independent Test**: quickstart 5. 실행 도중 취소한 요청을 열어 숫자 자리가 0으로 채워지지 않고 \"계산되지 않았습니다\"와 완료 범위가 보이는지, 자료가 부족한 결과에 한 문장이 있는지, 내부 검증 미완료가 경고로 나열되지 않는지 확인한다.\n \n-- [ ] T073 [US4] (FE) `frontend/src/components/result/statusSentences.ts` — 네 갈래(FR-013, R-12)의 고정 문장 틀: 부분 완료(`partial` + `progress.lastTradingDate`로 완료 범위를 날짜로), 지표 없음(`summaryUnavailable`의 `CANCELLED_WHILE_RUN_CONTINUED`·`CANCEL_UNANSWERED`), 자료 부족·계산 제한(`exceptionKinds`와 `summary.exceptionCount`로 종류·건수), 실행 실패(`failure.code`·`message`. 낮은 수익으로 표현하지 않는다). 검증 구분(`validationTier`)은 \"검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다\"(FR-012, PD-12 확정 전). 값 자리만 비운 틀이며 T035와 같은 금지 어휘 검사를 받는다\n-- [ ] T074 [US4] (FE) `frontend/src/components/result/ResultStatusLine.tsx` — 결과 옆(요약 카드 바로 아래) 한 문장 자리. 해당하는 갈래만 보이고, 여럿이면 문장을 이어 쓰되 목록으로 늘리지 않는다. 결과 의미를 바꾸지 않는 항목(내부 검증 미완료 등)은 여기 두지 않는다(FR-013 후단). 검증 구분은 항상 보인다. 비교 대상 자리에도 대상의 상태 문장을 같은 틀로 보인다\n-- [ ] T075 [US4] (FE) `frontend/src/pages/ResultPage.tsx`에 `ResultStatusLine`을 끼우고 취소 결과·실패 결과·부분 결과의 화면 흐름을 맞춘다 — 취소(`CANCELLED`)는 카드가 완료 범위까지의 값을 보이고, `summaryUnavailable`이면 숫자 없이 문장만(T031), 실패(`FAILED`)는 사유와 '다시 시도'(`retryResult`)가 결과 자리에 있다. 종료 시 평가 구분(FR-015)·비중 출처(FR-014)·'미검증' 표시가 카드와 상태 줄에서 한 번씩만 보인다\n-- [ ] T076 [US4] (FE 테스트) `frontend/src/components/result/statusSentences.test.ts`(네 갈래 문장, 금지 어휘 0건, '미검증' 문구에 이유가 함께 있다, FR-012)와 `frontend/src/components/result/ResultStatusLine.test.tsx`(취소 결과에 완료 범위 날짜와 \"계산되지 않았습니다\"가 있고 숫자 '0'이 없다 — quickstart 5, SC-005; 예외가 있으면 한 문장; 예외가 없으면 자료 부족 문장이 없다; 실패면 사유와 '다시 시도'; `<ul>` 형태의 경고 목록이 없다)\n+- [X] T073 [US4] (FE) `frontend/src/components/result/statusSentences.ts` — 네 갈래(FR-013, R-12)의 고정 문장 틀: 부분 완료(`partial` + `progress.lastTradingDate`로 완료 범위를 날짜로), 지표 없음(`summaryUnavailable`의 `CANCELLED_WHILE_RUN_CONTINUED`·`CANCEL_UNANSWERED`), 자료 부족·계산 제한(`exceptionKinds`와 `summary.exceptionCount`로 종류·건수), 실행 실패(`failure.code`·`message`. 낮은 수익으로 표현하지 않는다). 검증 구분(`validationTier`)은 \"검증되지 않았습니다. 판정 기준이 아직 정해지지 않았습니다\"(FR-012, PD-12 확정 전). 값 자리만 비운 틀이며 T035와 같은 금지 어휘 검사를 받는다\n+- [X] T074 [US4] (FE) `frontend/src/components/result/ResultStatusLine.tsx` — 결과 옆(요약 카드 바로 아래) 한 문장 자리. 해당하는 갈래만 보이고, 여럿이면 문장을 이어 쓰되 목록으로 늘리지 않는다. 결과 의미를 바꾸지 않는 항목(내부 검증 미완료 등)은 여기 두지 않는다(FR-013 후단). 검증 구분은 항상 보인다. 비교 대상 자리에도 대상의 상태 문장을 같은 틀로 보인다\n+- [X] T075 [US4] (FE) `frontend/src/pages/ResultPage.tsx`에 `ResultStatusLine`을 끼우고 취소 결과·실패 결과·부분 결과의 화면 흐름을 맞춘다 — 취소(`CANCELLED`)는 카드가 완료 범위까지의 값을 보이고, `summaryUnavailable`이면 숫자 없이 문장만(T031), 실패(`FAILED`)는 사유와 '다시 시도'(`retryResult`)가 결과 자리에 있다. 종료 시 평가 구분(FR-015)·비중 출처(FR-014)·'미검증' 표시가 카드와 상태 줄에서 한 번씩만 보인다\n+- [X] T076 [US4] (FE 테스트) `frontend/src/components/result/statusSentences.test.ts`(네 갈래 문장, 금지 어휘 0건, '미검증' 문구에 이유가 함께 있다, FR-012)와 `frontend/src/components/result/ResultStatusLine.test.tsx`(취소 결과에 완료 범위 날짜와 \"계산되지 않았습니다\"가 있고 숫자 '0'이 없다 — quickstart 5, SC-005; 예외가 있으면 한 문장; 예외가 없으면 자료 부족 문장이 없다; 실패면 사유와 '다시 시도'; `<ul>` 형태의 경고 목록이 없다)\n \n **Checkpoint**: 결과 의미를 바꾸는 상태가 결과 옆에 한 문장으로 보이고 상세에만 숨지 않는다.\n \n@@ -316,7 +316,7 @@ Worker(`worker/`)와 `data/`는 이번 범위에서 **변경하지 않는다**.\n | B03 · 미발급 | `[FE] 결과 첫 화면에서 핵심을 읽는다` | T005, T006, T007, T027~T039 | 16 | `fe` · `feat` | B02의 계약(T001·T002) |\n | B04 · 미발급 | `[FE] 자산가치 곡선과 하락 구간을 색에 기대지 않고 그린다` | T040~T044, T055, T056 (T040·T055는 B07이 먼저 만들었다) | 7 | `fe` · `feat` | B03 |\n | B05 · [S15P21E205-309](https://ssafy.atlassian.net/browse/S15P21E205-309) · `feat(fe)/309-result-comparison` | `[FE] 비교 대상을 골라 같은 조건으로 요청한다` | T045~T054, T057~T061 | 15 | `fe` · `feat` | B04 (+ 003 B06과 파일 조율) |\n-| B06 · 미발급 | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |\n+| B06 · [S15P21E205-346](https://ssafy.atlassian.net/browse/S15P21E205-346) `feat(fe)/346-result-status-line` | `[FE] 결과 옆 한 문장으로 상태와 한계를 보인다` | T073~T076 | 4 | `fe` · `feat` | B03 |\n | B07 · [S15P21E205-311](https://ssafy.atlassian.net/browse/S15P21E205-311) `feat(fe)/311-result-detail-panel` | `[FE] 자세히 보기에서 근거를 찾는다` | T062~T072 | 11 | `fe` · `feat` | B03 (+ 001·003 소유 파일 리뷰) |\n | B08 · 미발급 | `[FE] 보조 보기와 다음 탐색으로 이어간다` | T077~T080, T087, T088 | 6 | `fe` · `feat` | B05, B07 (+ 001 소유 조회 리뷰) |\n | B09 · 미발급 | `[DOCS] 문서 동기화와 최종 검증` | T081~T086(T083a 포함) | 7 | `fe` · `docs` | 전부 |\n@@ -459,3 +459,9 @@ B04(T040~T044, T055, T056)를 코드에 넣은 뒤 spec·plan·tasks와 대조\n Phase 9를 마친 뒤 B04 범위를 다시 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.\n \n - [X] T092 (FE) 곡선 끝 이름표가 등록된 다섯 전략 이름을 자르지 않고 보이게 한다 — `frontend/src/components/result/SeriesEndLabel.tsx`는 여섯 글자에서 이름을 자르는데, 서버가 채우는 `strategyName`(`backend/src/main/resources/registry/parameter-registry.yml`)은 7~17자라 다섯 모두 \"변동성에 …\"처럼 잘린다. 같은 파일 주석의 \"등록된 다섯 전략 이름이 모두 여기 들어간다\"도 사실과 다르다. 17자는 오른쪽 여백 한 줄에 들어가지 않으므로 여러 줄로 나누거나 이름표를 그림 영역 안으로 옮기는 등 배치를 바꾸고, 폭 360px에서도 두 이름표가 서로·축과 겹치지 않게 한다. `EquityChart.test.tsx`에 17자 합성 이름을 넣어 전체 이름이 DOM에 그대로 있는지 확인한다 per SC-010 · R-09 · T043 (partial)\n+\n+## Phase 11: Convergence\n+\n+B06(T073~T076)을 코드에 넣은 뒤 spec·plan·tasks와 대조해 남은 일을 적었다. 위의 태스크는 손대지 않는다.\n+\n+- [X] T093 (FE) 계산을 시작하기 전에 취소된 결과에는 계산된 부분 결과라는 문장을 표시하지 않는다 — `frontend/src/components/result/statusSentences.ts`에서 `summaryUnavailable === 'CANCELLED_BEFORE_START'`이면 `partial: true`여도 부분 완료 문장을 생략하고 완료 거래일이 없다는 사유와 검증 구분만 이어 쓴다. `frontend/src/components/result/statusSentences.test.ts`와 `frontend/src/components/result/ResultStatusLine.test.tsx`에 실제 조합(`partial: true`, 완료 범위 없음)을 넣어 \"부분 결과\"가 없고 숫자 대체값도 없는지 검증한다 per 원칙 VI · FR-013 (contradicts)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/005-result-comparison/tasks.md",
+          "old_path": "specs/005-result-comparison/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2221787,
+      "head_commit_sha": "33d6f770d3a3c78e07d1f14f674c28906dc5c722",
+      "base_commit_sha": "26ec510a40c15869980b6ab0b62a816f0f62e589",
+      "start_commit_sha": "6494ccca1374b318b5f324a0048398e11d58d41f",
+      "created_at": "2026-09-18T15:19:19.677+09:00",
+      "merge_request_id": 951277,
+      "state": "without_files",
+      "real_size": "12",
+      "patch_id_sha": "70373427eaacdfee53d11b50e3427b96aaedeb20",
+      "commits": [
+        {
+          "id": "33d6f770d3a3c78e07d1f14f674c28906dc5c722",
+          "short_id": "33d6f770",
+          "created_at": "2026-09-18T15:18:42.000+09:00",
+          "parent_ids": [
+            "26ec510a40c15869980b6ab0b62a816f0f62e589"
+          ],
+          "title": "feat(fe): 결과 상태와 한계를 한 문장으로 표시",
+          "message": "feat(fe): 결과 상태와 한계를 한 문장으로 표시\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-18T15:18:42.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-18T15:18:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/33d6f770d3a3c78e07d1f14f674c28906dc5c722"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2834676": [],
+    "2834922": []
+  }
+}

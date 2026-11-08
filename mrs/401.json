@@ -1,0 +1,884 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963618,
+    "iid": 401,
+    "project_id": 1444456,
+    "title": "feat(fe): Thorp종합비교 UI/UX 개선",
+    "description": "## 작업 내용 요약\n\n010 검색 화면의 내용(가까운 사례·사례 상세·기준월 지정·신뢰 범위 표시)을 시장 흐름의 분야 상세와 Thorp 종합 비교 아래 '가까운 과거 사례' 구역에서 바로 보인다. 종합 비교가 비어 보인 원인은 교정된 기준을 넘는 사례가 0건인데 참고 사례를 그리지 않아서였고, 이제 그 자리에 참고 사례를 바로 펼친다.\n\n## 주요 변경 사항\n\n- 분야 상세·종합 비교 바닥에 PastCaseExplorer: 가까운 사례 먼저, 상세는 그 자리에서, 기준월 지정과 최신 기준월 복귀, 신뢰 범위 표시와 자료 기준 시점은 아래.\n- 줄의 '자세히'·'모두 보기'는 화면 안 이동. 010 화면으로 넘기는 주소 빌더 삭제. regime-search는 내 기록 '다시 보기'로만 연다.\n- 종합 비교의 머리 문장과 '분야별로 살펴보기'·'참고 사례 보기' 삭제. 충족 사례가 없으면 참고 사례를 바로 펼친다(spec 010 FR-021·FR-046 갱신).\n- 로그인 사용자가 기준월을 지정해 연 검색만 내 기록에 남긴다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm test`: 오류 0(경고 24 기존), build 통과, Vitest 1721 통과, legacy 4 통과, skipped 0.\n- 운영 API에 붙인 미리보기로 생산 분야·종합 비교·상세 펼치기·375px 폭 확인.\n\n## 리뷰 포인트\n\n- 충족 사례가 없을 때 참고 사례를 바로 펼치는 결정(FR-046 변경)이 등급 매기기로 읽히지 않는지.\n- 자동으로 열리는 최신 검색은 내 기록에 남기지 않고 기준월 지정 검색만 남기는 범위가 맞는지.",
+    "state": "merged",
+    "created_at": "2026-10-07T10:37:40.455+09:00",
+    "updated_at": "2026-10-07T10:39:08.419+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-07T10:37:45.635+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-past-cases",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "656db1628c9b4a0a17c929509c8843343e246bbe",
+    "merge_commit_sha": "2afb07f1179239ad92ec1767ac3f7cb2bf4809f3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-07T10:37:43.862+09:00",
+    "reference": "!401",
+    "references": {
+      "short": "!401",
+      "relative": "!401",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!401"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/401",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963618,
+    "iid": 401,
+    "project_id": 1444456,
+    "title": "feat(fe): Thorp종합비교 UI/UX 개선",
+    "description": "## 작업 내용 요약\n\n010 검색 화면의 내용(가까운 사례·사례 상세·기준월 지정·신뢰 범위 표시)을 시장 흐름의 분야 상세와 Thorp 종합 비교 아래 '가까운 과거 사례' 구역에서 바로 보인다. 종합 비교가 비어 보인 원인은 교정된 기준을 넘는 사례가 0건인데 참고 사례를 그리지 않아서였고, 이제 그 자리에 참고 사례를 바로 펼친다.\n\n## 주요 변경 사항\n\n- 분야 상세·종합 비교 바닥에 PastCaseExplorer: 가까운 사례 먼저, 상세는 그 자리에서, 기준월 지정과 최신 기준월 복귀, 신뢰 범위 표시와 자료 기준 시점은 아래.\n- 줄의 '자세히'·'모두 보기'는 화면 안 이동. 010 화면으로 넘기는 주소 빌더 삭제. regime-search는 내 기록 '다시 보기'로만 연다.\n- 종합 비교의 머리 문장과 '분야별로 살펴보기'·'참고 사례 보기' 삭제. 충족 사례가 없으면 참고 사례를 바로 펼친다(spec 010 FR-021·FR-046 갱신).\n- 로그인 사용자가 기준월을 지정해 연 검색만 내 기록에 남긴다.\n\n## 테스트\n\n- `npm run lint && npm run build && npm test`: 오류 0(경고 24 기존), build 통과, Vitest 1721 통과, legacy 4 통과, skipped 0.\n- 운영 API에 붙인 미리보기로 생산 분야·종합 비교·상세 펼치기·375px 폭 확인.\n\n## 리뷰 포인트\n\n- 충족 사례가 없을 때 참고 사례를 바로 펼치는 결정(FR-046 변경)이 등급 매기기로 읽히지 않는지.\n- 자동으로 열리는 최신 검색은 내 기록에 남기지 않고 기준월 지정 검색만 남기는 범위가 맞는지.",
+    "state": "merged",
+    "created_at": "2026-10-07T10:37:40.455+09:00",
+    "updated_at": "2026-10-07T10:39:08.419+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-07T10:37:45.635+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/market-flow-past-cases",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "656db1628c9b4a0a17c929509c8843343e246bbe",
+    "merge_commit_sha": "2afb07f1179239ad92ec1767ac3f7cb2bf4809f3",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-07T10:37:43.862+09:00",
+    "reference": "!401",
+    "references": {
+      "short": "!401",
+      "relative": "!401",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!401"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/401",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "21",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "645dc81a60acacf648b45a7493c812c290b1b016",
+      "head_sha": "656db1628c9b4a0a17c929509c8843343e246bbe",
+      "start_sha": "645dc81a60acacf648b45a7493c812c290b1b016"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "5b645098294e1a578e62f7dfb968e56346bb2d7d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882005,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T10:37:40.543+09:00",
+          "updated_at": "2026-10-07T10:37:40.547+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4aa5d4e9864712fdb930e7731faaed97a57e62a8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882006,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T10:37:40.566+09:00",
+          "updated_at": "2026-10-07T10:37:40.595+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5e83fa0e0d4cf5ed541f097163f46cfba5219775",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882007,
+          "type": null,
+          "body": "mentioned in commit 2afb07f1179239ad92ec1767ac3f7cb2bf4809f3",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T10:37:45.684+09:00",
+          "updated_at": "2026-10-07T10:37:45.698+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e0542175dcd0aae6ff75986309ba458bfae19e8b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882008,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 재사용성 향상**: 010 검색 화면의 핵심 로직과 UI(가까운 사례 목록, 상세 보기, 기준월 지정, 신뢰 범위 표시)를 `PastCaseExplorer`로 추출하여, 시장 흐름의 분야 상세와 종합 비교(`CompositePast`)에서 일관되게 재사용할 수 있도록 설계했습니다.\n- **사용자 경험(UX) 및 접근성 고려**: '모두 보기'나 '자세히' 동작 시 별도의 페이지 이동(010 화면) 대신 동일 페이지 내 하단 구역으로 부드럽게 스크롤 및 초점을 이동하도록 구현하여 문맥 단절을 최소화했습니다. 특히 `focusRequest`와 `nonce` 패턴을 통해 동일한 요소를 연속으로 선택해도 상태와 포커스가 안정적으로 갱신되도록 꼼꼼히 처리했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **기준월 지정 및 예외 시나리오 테스트**:\n  - 최신 계산월보다 미래의 달을 `기준월 지정` 입력창에 넣고 검색을 시도했을 때, 최신 계산월로 자동 물러나며 불필요한 API 호출이 발생하지 않는지 확인합니다 (`PastCaseExplorer.test.tsx`의 010 FR-031 검증 시나리오).\n  - 로그인 상태 및 비로그인 상태에서 기준월을 지정해 검색을 수행했을 때, 내 기록 저장 API(`recordRegimeSearch`)가 올바르게 호출되거나 생략되는지 확인합니다.\n- **종합 비교 미충족 사례 펼침 테스트**:\n  - 종합 비교 결과 충족 사례(`eligible > 0`, `stored = 0` 등)가 0건일 때, '기준 미충족 참고 사례'가 사용자 상호작용 없이 곧바로(자동으로) 펼쳐져서 렌더링되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:656db1628c9b4a0a17c929509c8843343e246bbe -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-07T10:37:54.101+09:00",
+          "updated_at": "2026-10-07T10:37:54.101+09:00",
+          "system": false,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0986ad3cae4af9de21ea29ecdb5b1d9936c41601",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882009,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">feat(fe): <span class=\"idiff left right deletion\">시장 흐름의 분야 상세와 종합 비교 아래에 과거 사례 검색을 두고 010 화면으로 넘기지 않는다</span></code> to <code class=\"idiff\">feat(fe): <span class=\"idiff left right addition\">spec013개선-B09</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T10:38:22.789+09:00",
+          "updated_at": "2026-10-07T10:38:22.793+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "133e37e0bf3fcba7b9649c8c581313771181ac69",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882010,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T10:38:22.821+09:00",
+          "updated_at": "2026-10-07T10:38:22.825+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "71712cb40760eab291804286ec921547e8b7a60b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882011,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\">feat(fe): <span class=\"idiff left right deletion\">spec013개선-B09</span></code> to <code class=\"idiff\">feat(fe): <span class=\"idiff left right addition\">Thorp종합비교 UI/UX 개선</span></code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T10:39:08.493+09:00",
+          "updated_at": "2026-10-07T10:39:08.497+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ea340fd552d43c65d182e23bcdf3cdf14f580b4f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884990,
+          "type": null,
+          "body": "mentioned in commit c083fc0a06adc93800b313100032793f90a2741e",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:05.834+09:00",
+          "updated_at": "2026-10-13T15:16:05.890+09:00",
+          "system": true,
+          "noteable_id": 963618,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 401,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262733,
+      "head_commit_sha": "656db1628c9b4a0a17c929509c8843343e246bbe",
+      "base_commit_sha": "645dc81a60acacf648b45a7493c812c290b1b016",
+      "start_commit_sha": "645dc81a60acacf648b45a7493c812c290b1b016",
+      "created_at": "2026-10-07T10:37:40.954+09:00",
+      "merge_request_id": 963618,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "6021c76ee1392b62bbe7c979b56a96ff3a0bc5aa"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262733,
+      "head_commit_sha": "656db1628c9b4a0a17c929509c8843343e246bbe",
+      "base_commit_sha": "645dc81a60acacf648b45a7493c812c290b1b016",
+      "start_commit_sha": "645dc81a60acacf648b45a7493c812c290b1b016",
+      "created_at": "2026-10-07T10:37:40.954+09:00",
+      "merge_request_id": 963618,
+      "state": "collected",
+      "real_size": "21",
+      "patch_id_sha": "6021c76ee1392b62bbe7c979b56a96ff3a0bc5aa",
+      "commits": [
+        {
+          "id": "656db1628c9b4a0a17c929509c8843343e246bbe",
+          "short_id": "656db162",
+          "created_at": "2026-10-07T10:21:20.000+09:00",
+          "parent_ids": [
+            "645dc81a60acacf648b45a7493c812c290b1b016"
+          ],
+          "title": "feat(fe): 시장 흐름의 분야 상세와 종합 비교 아래에 과거 사례 검색을 두고 010 화면으로 넘기지 않는다",
+          "message": "feat(fe): 시장 흐름의 분야 상세와 종합 비교 아래에 과거 사례 검색을 두고 010 화면으로 넘기지 않는다\n\n010 검색 화면이 보이던 것(가까운 사례와 비슷한 점·다른 점, 사례 상세, 기준월 지정, 신뢰 범위 표시,\n자료 기준 시점)을 분야 상세와 종합 비교의 바닥 '가까운 과거 사례' 구역(PastCaseExplorer)에서 바로\n보인다. 줄의 '자세히'·'모두 보기'는 그 구역으로 옮기고, 종합 비교의 머리 문장과 '분야별로 살펴보기'·\n'참고 사례 보기'는 없앤다. 기준 충족 사례가 없으면 참고 사례를 바로 펼친다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-07T10:21:20.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-07T10:21:20.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/656db1628c9b4a0a17c929509c8843343e246bbe"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -2,20 +2,30 @@ import { fireEvent, screen, waitFor } from '@testing-library/react'\n import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { getRegimeSearch } from '@/api/regime'\n import { renderWithRouter } from '@/test/renderWithRouter'\n-import type { RegimeSearchResult } from '@/types/regime'\n+import type { RegimeBaselineMonths, RegimeSearchResult } from '@/types/regime'\n import { CompositePast } from './CompositePast'\n \n vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))\n \n+const baselines: RegimeBaselineMonths = {\n+  byField: [{ id: 'f1', name: '시험 분야', baselineMonth: '2026-07' }],\n+  composite: '2026-07',\n+  range: { earliest: '1962-01', latest: '2026-08' },\n+  note: '전체 분야를 맞추기 위해 비교 기준월이 바뀝니다.',\n+}\n+\n function compositeResult(overrides: Partial<RegimeSearchResult> = {}): RegimeSearchResult {\n   return {\n     searchId: 'C-1',\n     mode: 'COMPOSITE',\n     field: null,\n     baselineMonth: '2026-07',\n+    baselineOrigin: 'T_ALL',\n     status: 'NEAREST_ONLY',\n     statusNote: '가까운 순서만 제공합니다.',\n     caseLabel: null,\n+    basis: { kind: 'HISTORICAL_REVISION', note: '최신 개정자료를 이용한 역사 비교입니다.' },\n+    counts: { evaluated: 10, eligible: 3, stored: 1, displayed: 1 },\n     versions: { data: 'd', registry: 'r', model: 'm', revision: 1, sampleData: false, sampleRegistry: false },\n     comparisonMonths: [],\n     dataAsOf: { indicators: [], note: null, revisions: [], newerReleases: [] },\n@@ -26,36 +36,51 @@ function compositeResult(overrides: Partial<RegimeSearchResult> = {}): RegimeSea\n   } as RegimeSearchResult\n }\n \n+function renderComposite() {\n+  return renderWithRouter(<CompositePast baselines={baselines} fieldNames={{ f1: '시험 분야' }} />)\n+}\n+\n describe('CompositePast (009 FR-019, 010 US3)', () => {\n   beforeEach(() => {\n     vi.mocked(getRegimeSearch).mockReset()\n     vi.mocked(getRegimeSearch).mockResolvedValue(compositeResult())\n   })\n \n-  it('종합 비교를 고른 동안에만 조회하고 사례마다 비슷한 점·다른 점과 백테스트를 보인다', async () => {\n-    renderWithRouter(<CompositePast onShowFields={vi.fn()} />)\n+  it('종합 비교를 고른 동안에만 조회하고 사례마다 비슷한 점·다른 점·백테스트·상세를 그 자리에서 보인다', async () => {\n+    renderComposite()\n \n     expect(await screen.findByText('2019-06 ~ 2019-08')).toBeTruthy()\n     expect(vi.mocked(getRegimeSearch).mock.calls[0][0]).toEqual({ mode: 'composite', limit: 3 })\n     expect(screen.getByRole('heading', { level: 2, name: 'Thorp 종합 비교' })).toBeTruthy()\n+    expect(screen.getByRole('heading', { level: 3, name: '가까운 과거 사례' })).toBeTruthy()\n     expect(screen.getByText('생산 분야가 비슷했습니다.')).toBeTruthy()\n     expect(screen.getByRole('link', { name: '이 기간으로 백테스트' }).getAttribute('href')).toBe('/regime-link/start?case=C-1%7E2019-08')\n-    expect(screen.getByRole('link', { name: '자세히' }).getAttribute('href')).toBe('/regime-search?mode=composite')\n+    // 010 검색 화면으로 넘기는 길은 없다. 상세는 같은 자리에서 펼친다(2026-10-07).\n+    expect(screen.getByRole('button', { name: '상세 보기' })).toBeTruthy()\n+    expect(screen.queryByRole('link', { name: '자세히' })).toBeNull()\n+    expect(document.querySelector('a[href^=\"/regime-search\"]')).toBeNull()\n+    // 예전 머리 문장은 두지 않는다.\n+    expect(screen.queryByText(/일곱 분야를 함께 견준/)).toBeNull()\n   })\n \n-  it('기준 충족 사례가 없으면 안내와 분야별로 살펴보기·참고 사례 보기를 보인다', async () => {\n+  it('기준 충족 사례가 없으면 안내와 함께 기준 미충족 참고 사례를 바로 펼치고 분야별 탐색 버튼은 두지 않는다', async () => {\n     vi.mocked(getRegimeSearch).mockResolvedValue(compositeResult({\n       status: 'THRESHOLD_APPLIED',\n       cases: [],\n+      counts: { evaluated: 10, eligible: 3, stored: 0, displayed: 0 },\n       thresholdNote: '설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다.',\n+      referenceLabel: '기준 미충족 참고 사례',\n+      referenceCases: compositeResult().cases,\n     }))\n-    const onShowFields = vi.fn()\n-    renderWithRouter(<CompositePast onShowFields={onShowFields} />)\n+    renderComposite()\n \n     expect(await screen.findByText(/설정된 종합 유사성 기준을 충족하는 사례가 없습니다/)).toBeTruthy()\n-    expect(screen.getByRole('link', { name: /참고 사례 보기/ }).getAttribute('href')).toBe('/regime-search?mode=composite')\n-    fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))\n-    expect(onShowFields).toHaveBeenCalled()\n+    expect(screen.getByRole('heading', { level: 4, name: '기준 미충족 참고 사례' })).toBeTruthy()\n+    expect(screen.getByText('Thorp가 정한 유사성 기준을 넘지 못한, 가까운 순서의 참고 사례입니다.')).toBeTruthy()\n+    expect(screen.getByText('2019-06 ~ 2019-08')).toBeTruthy()\n+    expect(screen.queryByRole('button', { name: '분야별로 살펴보기' })).toBeNull()\n+    expect(screen.queryByRole('link', { name: /참고 사례 보기/ })).toBeNull()\n+    expect(screen.queryByRole('button', { name: /참고 사례 보기/ })).toBeNull()\n   })\n \n   it('서버가 실패 사유를 주면 그 문장을 그대로 보인다 (종합 기준월이 아직 없을 때)', async () => {\n@@ -63,7 +88,7 @@ describe('CompositePast (009 FR-019, 010 US3)', () => {\n       isAxiosError: true,\n       response: { status: 404, data: { isSuccess: false, message: '아직 계산된 기준월이 없습니다.' } },\n     })\n-    renderWithRouter(<CompositePast onShowFields={vi.fn()} />)\n+    renderComposite()\n \n     expect(await screen.findByText('아직 계산된 기준월이 없습니다.')).toBeTruthy()\n     expect(screen.queryByText('과거 사례를 불러오지 못했습니다.')).toBeNull()\n@@ -73,14 +98,14 @@ describe('CompositePast (009 FR-019, 010 US3)', () => {\n     vi.mocked(getRegimeSearch).mockResolvedValue(compositeResult({\n       versions: { data: 'd', registry: 'r', model: 'm', revision: 1, sampleData: true, sampleRegistry: false },\n     }))\n-    renderWithRouter(<CompositePast onShowFields={vi.fn()} />)\n+    renderComposite()\n \n     expect(await screen.findByText('이 결과는 아직 확정되지 않은 예시 자료로 계산되었습니다.')).toBeTruthy()\n   })\n \n   it('받지 못해도 경고로 막지 않고 다시 시도를 둔다', async () => {\n     vi.mocked(getRegimeSearch).mockRejectedValueOnce(new Error('offline'))\n-    renderWithRouter(<CompositePast onShowFields={vi.fn()} />)\n+    renderComposite()\n \n     expect(await screen.findByText('과거 사례를 불러오지 못했습니다.')).toBeTruthy()\n     expect(screen.queryByRole('alert')).toBeNull()\n@@ -88,4 +113,15 @@ describe('CompositePast (009 FR-019, 010 US3)', () => {\n     await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledTimes(2))\n     expect(await screen.findByText('2019-06 ~ 2019-08')).toBeTruthy()\n   })\n+\n+  it('기준월을 지정하면 그 달로 종합 검색을 다시 연다', async () => {\n+    renderComposite()\n+    await screen.findByText('2019-06 ~ 2019-08')\n+\n+    fireEvent.change(screen.getByLabelText('기준월 지정'), { target: { value: '2015-03' } })\n+    fireEvent.click(screen.getByRole('button', { name: '이 달로 찾기' }))\n+\n+    await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'composite', baselineMonth: '2015-03', limit: 3 }, expect.any(AbortSignal)))\n+    expect(await screen.findByText('기준월을 2015-03로 바꾸어 새 검색을 열었습니다.')).toBeTruthy()\n+  })\n })\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/CompositePast.test.tsx",
+          "old_path": "frontend/src/components/marketflow/CompositePast.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,126 +1,40 @@\n-import { ArrowUpRight } from 'lucide-react'\n-import { Link } from 'react-router-dom'\n-import { InlineHelp } from '@/components/common/InlineHelp'\n-import { ComparisonMonthsNotice } from '@/components/regime/ComparisonMonthsNotice'\n-import { Disclosure } from '@/components/regime/Disclosure'\n-import * as copy from '@/components/regime/fixedCopy'\n import { usePastSearch } from '@/hooks/usePastCases'\n-import { buildCaseId, buildCompositeSearchPath, buildRegimeLinkStartPath } from '@/marketflow/handoff'\n-import { observationRange } from './pastFormat'\n+import type { RegimeBaselineMonths } from '@/types/regime'\n+import { PastCaseExplorer, type CaseFocusRequest } from './PastCaseExplorer'\n import styles from './PastCompare.module.css'\n \n const COMPOSITE_QUERY = { mode: 'composite', limit: 3 } as const\n \n /**\n  * 분야 메뉴의 'Thorp 종합 비교'를 고르면 상세 상자에 서는 화면(009 FR-019, 010 US3). 일곱 분야를 함께 견주므로\n- * 한 분야의 지표 그래프에 겹칠 수 없다. 그래서 사례마다 관측 구간과 비슷한 점·다른 점을 목록으로 보인다.\n- * 누를 때만 조회한다 — 이 컴포넌트는 종합 비교를 고른 동안에만 그려진다.\n+ * 한 분야의 지표 그래프에 겹칠 수 없다. 그래서 가까운 사례 목록과 사례 상세·기준월 지정·신뢰 범위 표시를 담은\n+ * '가까운 과거 사례' 구역이 바로 선다. 누를 때만 조회한다 — 이 컴포넌트는 종합 비교를 고른 동안에만 그려진다.\n  *\n- * 010의 신뢰 범위 표시(예시 자료·빠진 비교 시점·자료 기준 시점)는 분야 줄과 같이 문구로 늘 보인다(010 FR-037).\n  * 실패하면 서버가 실은 문장을 그대로 보인다 — 종합 기준월이 아직 계산되지 않은 환경에서는 다시 시도해도 같은\n- * 결과라 그 사유를 알려야 한다.\n+ * 결과라 그 사유를 알려야 한다(010 FR-037).\n  */\n-export function CompositePast({ onShowFields }: { onShowFields: () => void }) {\n+export function CompositePast({ baselines, fieldNames, focusRequest = null }: {\n+  baselines: RegimeBaselineMonths | null\n+  fieldNames: Record<string, string>\n+  focusRequest?: CaseFocusRequest | null\n+}) {\n   const { state, retry } = usePastSearch(COMPOSITE_QUERY)\n-  const result = state.status === 'ready' ? state.result : null\n-  const context = result ? `종합 ${result.baselineMonth} 검색 결과` : ''\n \n   return (\n     <section className={styles.composite} aria-labelledby=\"composite-past-title\">\n       <header className={styles.compositeHead}>\n-        <div className={styles.titleGroup}>\n-          <h2 id=\"composite-past-title\">Thorp 종합 비교</h2>\n-          {result ? (\n-            <InlineHelp label={`검색 상태${result.caseLabel ? '와 사례 구분' : ''}`} mark=\"i\" side=\"bottom\">\n-              <p><b>검색 상태</b> {result.statusNote}</p>\n-              {result.caseLabel ? <p><b>사례 구분</b> {result.caseLabel}</p> : null}\n-            </InlineHelp>\n-          ) : null}\n-        </div>\n-        {result ? <p className={styles.basis}>비교 기준월 {result.baselineMonth} · 가까운 순</p> : null}\n+        <h2 id=\"composite-past-title\">Thorp 종합 비교</h2>\n       </header>\n-      <p className={styles.compositeLead}>{copy.compositeLead}</p>\n-\n-      {state.status === 'loading' || state.status === 'idle' ? (\n-        <p className={styles.loading} role=\"status\">{copy.loadingCases}</p>\n-      ) : state.status === 'failed' ? (\n-        <div className={styles.failure} role=\"status\">\n-          <p>{state.message ?? copy.compositeLoadFailed}</p>\n-          <button type=\"button\" className={styles.inlineAction} onClick={retry}>다시 시도</button>\n-        </div>\n-      ) : result ? (\n-        <>\n-          {/* 제목 옆 i 표시를 펼치지 않아도 보조기기에 읽히도록 같은 문장을 알림 영역에 남긴다(010 FR-037). */}\n-          <p\n-            className=\"sr-only\"\n-            role=\"status\"\n-            aria-live=\"polite\"\n-            aria-label={`${context}: 검색 상태${result.caseLabel ? '와 사례 구분' : ''}`}\n-          >\n-            검색 상태: {result.statusNote}\n-            {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}\n-          </p>\n-          <div className={styles.trust}>\n-            {result.versions.sampleData ? (\n-              <Disclosure label=\"예시 자료\" context={context} tone=\"warning\">\n-                <p>{copy.sampleDataNote}</p>\n-              </Disclosure>\n-            ) : null}\n-            <ComparisonMonthsNotice comparisonMonths={result.comparisonMonths} context={context} />\n-            {result.dataAsOf.note ? (\n-              <div className={styles.dataAsOf} aria-label={`${context}: 자료 기준 시점`}><p>{result.dataAsOf.note}</p></div>\n-            ) : null}\n-          </div>\n-          {result.status !== 'NOT_COMPUTABLE' && result.cases.length === 0 && result.thresholdNote ? (\n-            // 교정된 기준을 넘는 사례가 없다(010 US3 시나리오 4). 참고 사례는 검색 화면에서 따로 연다.\n-            <Disclosure label=\"유사성 기준\" context={context} tone=\"warning\">\n-              <p>{result.thresholdNote}</p>\n-              <p className={styles.caseActions}>\n-                <button type=\"button\" className={styles.detailButton} onClick={onShowFields}>분야별로 살펴보기</button>\n-                <Link className={styles.detailButton} to={buildCompositeSearchPath()}>\n-                  참고 사례 보기 <ArrowUpRight size={14} aria-hidden=\"true\" />\n-                </Link>\n-              </p>\n-            </Disclosure>\n-          ) : result.status === 'NOT_COMPUTABLE' || result.cases.length === 0 ? (\n-            <p className={styles.emptyNote}>{result.statusNote}</p>\n-          ) : (\n-            <ol className={styles.cases} aria-label=\"가까운 과거 사례\">\n-              {result.cases.map((item) => {\n-                const caseId = buildCaseId(result.searchId, item.endMonth)\n-                return (\n-                  <li key={item.endMonth} className={styles.case}>\n-                    <div className={styles.caseBody}>\n-                      <p className={styles.caseRange}>\n-                        <span>관측 구간</span>\n-                        <strong>{observationRange(item)}</strong>\n-                      </p>\n-                      {item.similar.map((text) => (\n-                        <p key={text} className={styles.reason}>\n-                          <b className={styles.similarLabel}>비슷한 점</b>\n-                          <span className={styles.similarText}>{text}</span>\n-                        </p>\n-                      ))}\n-                      {item.different.map((text) => (\n-                        <p key={text} className={styles.reason}>\n-                          <b className={styles.differentLabel}>다른 점</b>\n-                          <span className={styles.differentText}>{text}</span>\n-                        </p>\n-                      ))}\n-                    </div>\n-                    <div className={styles.caseActions}>\n-                      {caseId === null ? null : (\n-                        <Link className={styles.pick} to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 백테스트</Link>\n-                      )}\n-                      <Link className={styles.detailButton} to={buildCompositeSearchPath()}>자세히</Link>\n-                    </div>\n-                  </li>\n-                )\n-              })}\n-            </ol>\n-          )}\n-        </>\n-      ) : null}\n+      <PastCaseExplorer\n+        id=\"market-flow-past-cases\"\n+        mode=\"composite\"\n+        scopeName=\"종합\"\n+        base={state}\n+        onRetryBase={retry}\n+        baselines={baselines}\n+        fieldNames={fieldNames}\n+        focusRequest={focusRequest}\n+      />\n     </section>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/CompositePast.tsx",
+          "old_path": "frontend/src/components/marketflow/CompositePast.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -13,9 +13,10 @@ import styles from './MarketFlow.module.css'\n  * 선택한 분야의 원자료와 3개월 경로를 가공 점수 없이 보여 준다.\n  *\n  * `compare`는 머리와 지표 칸 사이에 서는 '지금과 비슷했던 과거' 줄이고, `pasts`는 그 줄에서 고른 과거 구간을\n- * 지표마다 겹칠 값이다(009 FR-019). 둘 다 없으면 지금의 지표만 보인다.\n+ * 지표마다 겹칠 값이다(009 FR-019). 둘 다 없으면 지금의 지표만 보인다. `explorer`는 지표 칸 아래 바닥에 서는\n+ * '가까운 과거 사례' 구역이다(2026-10-07).\n  */\n-export function FieldDetail({ detail, historyNotice, compare = null, pasts = null, showBand = false, comparing = false }: {\n+export function FieldDetail({ detail, historyNotice, compare = null, pasts = null, showBand = false, comparing = false, explorer = null }: {\n   detail: FieldDetailResult\n   /** 서버(목록 응답)가 정한 역사 비교 안내 문장(FR-012). 있을 때만 시점 줄에 짧은 표시를 단다 */\n   historyNotice?: string | null\n@@ -25,6 +26,7 @@ export function FieldDetail({ detail, historyNotice, compare = null, pasts = nul\n   showBand?: boolean\n   /** 과거 구간을 고른 상태. 당시 경로를 받는 중에도 그래프 높이를 그대로 둔다. */\n   comparing?: boolean\n+  explorer?: ReactNode\n }) {\n   const reducedMotion = useReducedMotion()\n   const titleId = `field-${detail.fieldId}-title`\n@@ -109,6 +111,7 @@ export function FieldDetail({ detail, historyNotice, compare = null, pasts = nul\n           </p>\n         </div>\n       ) : null}\n+      {explorer}\n     </motion.section>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldDetail.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,7 +30,6 @@ type Props = ComponentProps<typeof FieldPastCompare>\n \n function renderCompare(overrides: Partial<Props> = {}) {\n   const props: Props = {\n-    fieldId: 'production',\n     fieldName: '생산',\n     referenceMonth: '2026-07',\n     nowMonths: ['2026-05', '2026-06', '2026-07'],\n@@ -46,6 +45,8 @@ function renderCompare(overrides: Partial<Props> = {}) {\n     showBand: false,\n     onToggleBand: vi.fn(),\n     unplaced: [],\n+    onShowAll: vi.fn(),\n+    onShowDetail: vi.fn(),\n     ...overrides,\n   }\n   return { props, ...renderWithRouter(<FieldPastCompare {...props} />) }\n@@ -67,16 +68,18 @@ describe('FieldPastCompare (009 FR-019)', () => {\n     expect(props.onSelect).toHaveBeenLastCalledWith(null)\n   })\n \n-  it('백테스트는 011 진입 계약으로, 자세히·모두 보기는 010 검색을 분야와 010 기준월로 연다', () => {\n-    renderCompare({ referenceMonth: '2026-08' })\n+  it('백테스트는 011 진입 계약으로 열고, 자세히·모두 보기는 같은 상자 바닥의 사례 구역으로 옮긴다', () => {\n+    const { props } = renderCompare({ referenceMonth: '2026-08' })\n \n     expect(screen.getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe(\n       '/regime-link/start?case=FIELD%3Aproduction%3A2026-07-01%3Amacro-1%3Acalc-1%3AREGIME-V1.1%7E2001-03',\n     )\n-    // 저장된 판(?searchId=)으로 열면 010은 '내 기록 다시 보기'로 다뤄 기록하지 않고 분야도 비워 둔다(010 FR-032).\n-    // 기준월은 분야 상세의 대상월이 아니라 010이 계산한 달이다(009 FR-009).\n-    expect(screen.getByRole('link', { name: '자세히' }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')\n-    expect(screen.getByRole('link', { name: /모두 보기/ }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')\n+    // 010 검색 화면으로 넘기지 않는다(2026-10-07). 고른 사례의 상세는 아래 구역에서 펼친다.\n+    fireEvent.click(screen.getByRole('button', { name: '자세히' }))\n+    expect(props.onShowDetail).toHaveBeenCalledWith('2001-03')\n+    fireEvent.click(screen.getByRole('button', { name: /모두 보기/ }))\n+    expect(props.onShowAll).toHaveBeenCalled()\n+    expect(document.querySelector('a[href^=\"/regime-search\"]')).toBeNull()\n   })\n \n   it('지금만을 고르면 두 행동을 누를 수 없지만 보통 범위는 켤 수 있다', () => {\n@@ -115,14 +118,14 @@ describe('FieldPastCompare (009 FR-019)', () => {\n     expect(screen.getByText('이 사례는 지표별 당시 경로를 볼 수 없습니다.')).toBeTruthy()\n   })\n \n-  it('검색을 받지 못해도 경고로 막지 않고, 010으로 가는 길은 분야와 대상월로 남긴다', () => {\n+  it('검색을 받지 못해도 경고로 막지 않고, 보낼 결과가 없으므로 모두 보기를 두지 않는다', () => {\n     const { props } = renderCompare({ search: { status: 'failed', message: null } })\n \n     expect(screen.getByText('과거 사례를 불러오지 못했습니다. 분야 지표는 그대로 볼 수 있습니다.')).toBeTruthy()\n     expect(screen.queryByRole('alert')).toBeNull()\n     fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))\n     expect(props.onRetrySearch).toHaveBeenCalled()\n-    expect(screen.getByRole('link', { name: /모두 보기/ }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')\n+    expect(screen.queryByRole('button', { name: /모두 보기/ })).toBeNull()\n   })\n \n   it('검색 상태는 i 표시 뒤로 내리고 보조기기에는 늘 읽히며, 분야만의 유사성임을 밝힌다 (010 FR-037)', async () => {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldPastCompare.test.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldPastCompare.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,4 @@\n-import { ArrowUpRight, History } from 'lucide-react'\n+import { ArrowDown, History } from 'lucide-react'\n import { useId, type CSSProperties } from 'react'\n import { Link } from 'react-router-dom'\n import { InlineHelp } from '@/components/common/InlineHelp'\n@@ -7,15 +7,13 @@ import { Disclosure } from '@/components/regime/Disclosure'\n import * as copy from '@/components/regime/fixedCopy'\n import { NewerReleases } from '@/components/regime/NewerReleases'\n import type { CaseDetailState, PastSearchState } from '@/hooks/usePastCases'\n-import { buildCaseId, buildRegimeLinkStartPath, buildRegimeSearchPath, buildSimilarPeriodHandoff } from '@/marketflow/handoff'\n-import type { MarketFlowFieldId } from '@/types/marketFlow'\n+import { buildCaseId, buildRegimeLinkStartPath } from '@/marketflow/handoff'\n import type { RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'\n import { observationRange, shortRange } from './pastFormat'\n import type { PastVerdict } from './pastOverlay'\n import styles from './PastCompare.module.css'\n \n interface FieldPastCompareProps {\n-  fieldId: MarketFlowFieldId\n   fieldName: string\n   /** 분야 상세의 대상월. 010의 비교 기준월과 다르면 그 사실을 밝힌다(009 FR-009). */\n   referenceMonth: string | null\n@@ -37,17 +35,10 @@ interface FieldPastCompareProps {\n   onToggleBand: (show: boolean) => void\n   /** 어느 지표 칸에도 붙지 못한 비슷한 점·다른 점 문장. */\n   unplaced: readonly PastVerdict[]\n-}\n-\n-/**\n- * 010 검색 화면으로 이어 가는 주소. 분야와 **010이 계산한 기준월**을 싣는다(009 FR-009).\n- *\n- * `?searchId=`로 열면 010 화면은 그것을 내 기록의 '다시 보기'로 다뤄, 시장 흐름에서 온 검색이 기록되지 않고 분야\n- * 선택도 비어 있다(010 FR-032, 006 R17). 그래서 저장된 판이 아니라 분야·기준월로 연다. 결과를 아직 받지 못했으면\n- * 분야 상세의 대상월로 연다 — 010 화면이 그 달을 그 분야의 최신 계산월과 견줘 물러난다(010 FR-031).\n- */\n-function regimeEntryPath(fieldId: MarketFlowFieldId, month: string | null): string | null {\n-  return buildRegimeSearchPath(buildSimilarPeriodHandoff({ fieldId, referenceMonth: month }))\n+  /** '모두 보기'. 아래 '가까운 과거 사례' 구역으로 옮긴다(2026-10-07, 다른 화면으로 넘기지 않는다). */\n+  onShowAll: () => void\n+  /** '자세히'. 고른 사례의 상세를 아래 구역에서 펼친다. */\n+  onShowDetail: (endMonth: string) => void\n }\n \n /**\n@@ -55,19 +46,19 @@ function regimeEntryPath(fieldId: MarketFlowFieldId, month: string | null): stri\n  *\n  * 010 분야 검색의 가까운 사례 세 개와 '지금만'을 라디오로 고르면, 고른 사례의 같은 지표 경로가 아래 지표\n  * 그래프에 점선으로 겹친다. 사례 칸에는 관측 구간만 적는다 — 무엇이 비슷하고 다른지는 그 지표 칸에 붙는다.\n- * 행동(이 기간으로 백테스트·자세히)은 고른 사례에 딸린 것이라 같은 줄 오른쪽에 둔다.\n+ * 행동(이 기간으로 백테스트·자세히)은 고른 사례에 딸린 것이라 같은 줄 오른쪽에 둔다. '자세히'와 '모두 보기'는\n+ * 같은 상자 바닥의 '가까운 과거 사례' 구역으로 옮긴다 — 010 검색 화면으로 넘기지 않는다(2026-10-07).\n  *\n  * 010의 신뢰 범위 표시는 숨기지 않는다(010 FR-037·FR-038·FR-031). 검색 상태와 사례 구분만 i 표시 뒤로 내리고\n  * (보조기기에는 늘 읽힌다), 예시 자료·빠진 비교 시점·더 최신 발표·자료 기준 시점은 문구로 늘 보인다. 문장은\n  * 응답이나 010의 fixedCopy에서만 온다(010 FR-022 ②).\n  */\n export function FieldPastCompare(props: FieldPastCompareProps) {\n-  const { fieldId, fieldName, referenceMonth, nowMonths, search, onRetrySearch } = props\n+  const { fieldName, referenceMonth, nowMonths, search, onRetrySearch, onShowAll } = props\n   const titleId = useId()\n   const groupName = useId()\n   const result = search.status === 'ready' ? search.result : null\n   const context = result ? `${fieldName} ${result.baselineMonth} 검색 결과` : ''\n-  const entryPath = regimeEntryPath(fieldId, result?.baselineMonth ?? referenceMonth)\n   const hasCases = result !== null && result.status !== 'NOT_COMPUTABLE' && result.cases.length > 0\n \n   return (\n@@ -88,10 +79,10 @@ export function FieldPastCompare(props: FieldPastCompareProps) {\n         </div>\n         <p className={styles.compareMeta}>\n           {result ? <span>비교 기준월 {result.baselineMonth} · 가까운 순</span> : null}\n-          {entryPath ? (\n-            <Link className={styles.allLink} to={entryPath}>\n-              모두 보기 <ArrowUpRight size={13} aria-hidden=\"true\" />\n-            </Link>\n+          {result ? (\n+            <button type=\"button\" className={styles.allLink} onClick={onShowAll}>\n+              모두 보기 <ArrowDown size={13} aria-hidden=\"true\" />\n+            </button>\n           ) : null}\n         </p>\n       </div>\n@@ -116,7 +107,7 @@ export function FieldPastCompare(props: FieldPastCompareProps) {\n             {result.caseLabel ? ` · 사례 구분: ${result.caseLabel}` : null}\n           </p>\n           {hasCases ? (\n-            <CaseChooser {...props} groupName={groupName} cases={result.cases} searchId={result.searchId} entryPath={entryPath} />\n+            <CaseChooser {...props} groupName={groupName} cases={result.cases} searchId={result.searchId} />\n           ) : result.status !== 'NOT_COMPUTABLE' && result.thresholdNote ? (\n             <Disclosure label=\"유사성 기준\" context={context} tone=\"warning\">\n               <p>{result.thresholdNote}</p>\n@@ -160,11 +151,10 @@ function TrustNotes({ result, context }: { result: RegimeSearchResult; context:\n   )\n }\n \n-function CaseChooser({ cases, searchId, entryPath, groupName, selected, onSelect, unplaced }: FieldPastCompareProps & {\n+function CaseChooser({ cases, searchId, groupName, selected, onSelect, onShowDetail, unplaced }: FieldPastCompareProps & {\n   groupName: string\n   cases: RegimeCaseSummary[]\n   searchId: string\n-  entryPath: string | null\n }) {\n   const chosen = cases.find((item) => item.endMonth === selected) ?? null\n   const caseId = chosen ? buildCaseId(searchId, chosen.endMonth) : null\n@@ -205,11 +195,9 @@ function CaseChooser({ cases, searchId, entryPath, groupName, selected, onSelect\n               <small>{chosen ? observationRange(chosen) : '과거 구간을 고르세요'}</small>\n             </button>\n           )}\n-          {chosen && entryPath ? (\n-            <Link className={styles.secondary} to={entryPath}>자세히</Link>\n-          ) : (\n-            <button type=\"button\" className={styles.secondary} disabled>자세히</button>\n-          )}\n+          <button type=\"button\" className={styles.secondary} disabled={chosen === null} onClick={() => chosen && onShowDetail(chosen.endMonth)}>\n+            자세히\n+          </button>\n         </div>\n       </div>\n       {unplaced.length > 0 ? (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/FieldPastCompare.tsx",
+          "old_path": "frontend/src/components/marketflow/FieldPastCompare.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,438 @@\n+/*\n+  분야 상세·종합 비교 바닥의 '가까운 과거 사례' 구역(009 FR-019, 2026-10-07). 010 검색 화면의 사례 목록·사례 상세·\n+  기준월 지정·신뢰 범위 표시가 그 분야 아래로 들어온 자리다. 사례 카드는 위 '지금과 비슷했던 과거' 줄과 같은\n+  이름표(비슷한 점 초록·다른 점 노랑)와 행동 버튼 모양(PastCompare.module.css)을 쓴다.\n+*/\n+.explorer {\n+  display: grid;\n+  gap: 16px;\n+  margin-top: 28px;\n+  padding-top: 22px;\n+  border-top: 1px solid var(--thorp-line-strong);\n+  /* 위 줄의 '모두 보기'로 올 때 고정 머리글 아래에 선다. */\n+  scroll-margin-top: calc(var(--thorp-header-height, 82px) + 16px);\n+}\n+\n+.explorer:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-wide, 6px);\n+}\n+\n+/* 머리: 왼쪽 제목·기준월, 오른쪽 기준월 지정 칸. 좁아지면 지정 칸이 아랫줄로 내려간다. */\n+.head {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: flex-end;\n+  justify-content: space-between;\n+  gap: 12px 24px;\n+}\n+\n+.titleGroup {\n+  display: grid;\n+  gap: 4px;\n+  min-width: 0;\n+}\n+\n+.kicker {\n+  margin: 0;\n+  color: var(--thorp-eyebrow, var(--thorp-accent-soft));\n+  font: 600 var(--thorp-text-label, 0.65rem)/1.4 var(--thorp-font-display);\n+  letter-spacing: 0.16em;\n+}\n+\n+.title {\n+  display: flex;\n+  align-items: center;\n+  gap: 8px;\n+  margin: 0;\n+  font-size: var(--thorp-text-heading, 1.08rem);\n+  font-weight: 650;\n+  letter-spacing: -0.02em;\n+}\n+\n+.title svg {\n+  flex-shrink: 0;\n+  color: var(--thorp-accent-soft);\n+}\n+\n+.meta {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: var(--thorp-text-caption, 0.72rem);\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.meta strong {\n+  color: var(--thorp-foreground);\n+  font-weight: 650;\n+}\n+\n+/* 기준월 지정. 달 입력과 찾기 버튼이 한 줄에 서고, 지정한 동안만 '최신 기준월로'가 그 옆에 선다. */\n+.monthForm {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: flex-end;\n+  gap: 8px;\n+}\n+\n+.monthField {\n+  display: grid;\n+  gap: 5px;\n+}\n+\n+.monthLabel {\n+  display: inline-flex;\n+  align-items: center;\n+  gap: 2px;\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-caption, 0.74rem);\n+}\n+\n+.monthField input {\n+  min-height: var(--thorp-control, 42px);\n+  padding: 6px 12px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 6px);\n+  color: var(--thorp-foreground);\n+  background: var(--thorp-surface-muted, transparent);\n+  font: inherit;\n+  font-size: var(--thorp-text-body, 0.88rem);\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.monthField input:hover {\n+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));\n+}\n+\n+.monthField input::-webkit-calendar-picker-indicator {\n+  filter: invert(0.7);\n+  cursor: pointer;\n+}\n+\n+.findButton,\n+.resetButton {\n+  display: inline-flex;\n+  align-items: center;\n+  min-height: var(--thorp-control, 42px);\n+  padding: 6px 16px;\n+  border-radius: var(--thorp-radius-control, 6px);\n+  font: inherit;\n+  font-size: var(--thorp-control-font, 0.84rem);\n+  font-weight: var(--thorp-control-weight, 650);\n+  white-space: nowrap;\n+  cursor: pointer;\n+  transition: background-color 180ms ease, border-color 150ms ease, color 150ms ease;\n+}\n+\n+.findButton {\n+  border: 1px solid var(--thorp-accent);\n+  background: var(--thorp-accent);\n+  color: var(--thorp-action-foreground);\n+}\n+\n+.findButton:hover:not(:disabled) {\n+  background: var(--thorp-accent-hover, var(--thorp-accent-soft));\n+}\n+\n+.findButton:disabled {\n+  opacity: 0.4;\n+  cursor: not-allowed;\n+}\n+\n+.resetButton {\n+  border: 1px solid var(--thorp-line-strong);\n+  background: transparent;\n+  color: var(--thorp-copy);\n+}\n+\n+.resetButton:hover {\n+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));\n+  color: var(--thorp-foreground);\n+}\n+\n+.monthField input:focus-visible,\n+.findButton:focus-visible,\n+.resetButton:focus-visible,\n+.moreReasons:focus-visible,\n+.toggleReferences:focus-visible,\n+.more:focus-visible,\n+.context a:focus-visible {\n+  outline: var(--thorp-focus-outline-compact);\n+  outline-offset: var(--thorp-focus-offset-compact);\n+}\n+\n+/* 사례 목록. 순위·본문·행동 세 열이고, 펼친 상세는 그 아래 전체 폭이다. */\n+.cases {\n+  display: grid;\n+  gap: 10px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.case {\n+  display: grid;\n+  grid-template-columns: auto minmax(0, 1fr) auto;\n+  grid-template-areas: 'rank body actions' 'detail detail detail';\n+  align-items: start;\n+  gap: 12px 16px;\n+  padding: var(--thorp-pad-inset, 14px 16px);\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-inset, 8px);\n+  background: var(--thorp-surface-muted);\n+  scroll-margin-top: calc(var(--thorp-header-height, 82px) + 16px);\n+}\n+\n+.rank {\n+  grid-area: rank;\n+  display: inline-grid;\n+  place-items: center;\n+  width: 24px;\n+  height: 24px;\n+  margin-top: 1px;\n+  border-radius: 50%;\n+  background: var(--thorp-line);\n+  color: var(--thorp-foreground);\n+  font-size: 0.7rem;\n+  font-weight: 700;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.caseBody {\n+  grid-area: body;\n+  display: grid;\n+  gap: 5px;\n+  min-width: 0;\n+}\n+\n+.caseRange {\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: baseline;\n+  gap: 8px;\n+  margin: 0 0 2px;\n+}\n+\n+.caseRange span {\n+  color: var(--thorp-muted);\n+  font-size: var(--thorp-text-caption, 0.72rem);\n+}\n+\n+.caseRange strong {\n+  color: var(--thorp-foreground);\n+  font-size: var(--thorp-text-body, 0.9rem);\n+  font-weight: 650;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.moreReasons {\n+  justify-self: start;\n+  padding: 0;\n+  border: 0;\n+  background: none;\n+  color: var(--thorp-copy);\n+  font: inherit;\n+  font-size: var(--thorp-text-caption, 0.74rem);\n+  text-decoration: underline;\n+  text-underline-offset: 2px;\n+  cursor: pointer;\n+}\n+\n+.moreReasons:hover {\n+  color: var(--thorp-foreground);\n+}\n+\n+.context {\n+  margin-top: 6px;\n+  padding-top: 8px;\n+  border-top: 1px solid var(--thorp-line);\n+}\n+\n+.context h5 {\n+  margin: 0 0 4px;\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-caption, 0.74rem);\n+  font-weight: 650;\n+}\n+\n+.context p {\n+  margin: 0 0 6px;\n+  color: var(--thorp-muted);\n+  font-size: var(--thorp-text-caption, 0.72rem);\n+  line-height: 1.5;\n+}\n+\n+.context ul {\n+  margin: 0;\n+  padding-left: 17px;\n+  font-size: var(--thorp-text-small, 0.8rem);\n+  line-height: 1.6;\n+}\n+\n+.context time {\n+  color: var(--thorp-copy);\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+.context a {\n+  color: var(--thorp-foreground);\n+  text-decoration: underline;\n+  text-underline-offset: 2px;\n+}\n+\n+.contextSource {\n+  color: var(--thorp-muted);\n+}\n+\n+.caseActions {\n+  grid-area: actions;\n+  display: flex;\n+  flex-wrap: wrap;\n+  align-items: center;\n+  justify-content: flex-end;\n+  gap: 8px;\n+}\n+\n+.detailSlot {\n+  grid-area: detail;\n+  min-width: 0;\n+}\n+\n+.postPeriod {\n+  margin: 14px 0 0;\n+}\n+\n+/* 기준 미충족 참고 사례. 충족 사례가 없으면 바로 펼쳐지고, 있으면 눌러야 열린다. */\n+.references {\n+  display: grid;\n+  gap: 10px;\n+}\n+\n+.references h4 {\n+  margin: 4px 0 0;\n+  color: var(--thorp-warning);\n+  font-size: var(--thorp-text-body, 0.92rem);\n+  font-weight: 650;\n+}\n+\n+.referenceNote {\n+  margin: 0;\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  line-height: 1.55;\n+}\n+\n+.toggleReferences,\n+.more {\n+  display: block;\n+  width: 100%;\n+  min-height: var(--thorp-control, 44px);\n+  padding: 8px 16px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 6px);\n+  background: var(--thorp-surface-raised, transparent);\n+  color: var(--thorp-foreground);\n+  font: inherit;\n+  font-size: var(--thorp-control-font, 0.84rem);\n+  font-weight: 600;\n+  cursor: pointer;\n+}\n+\n+.toggleReferences:hover,\n+.more:hover:not(:disabled) {\n+  border-color: var(--thorp-line-control-hover, var(--thorp-copy));\n+}\n+\n+.more:disabled {\n+  opacity: 0.6;\n+  cursor: wait;\n+}\n+\n+.limitNote {\n+  margin: 0;\n+  color: var(--thorp-muted);\n+  font-size: var(--thorp-text-caption, 0.74rem);\n+}\n+\n+/* 신뢰 범위 표시. 넓은 화면에서는 두 열로 서서 사례보다 낮게 자리한다. */\n+.trust {\n+  display: grid;\n+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));\n+  align-items: start;\n+  gap: 8px;\n+  margin-top: 6px;\n+}\n+\n+.asOf {\n+  padding: 12px 14px;\n+  border: 1px solid var(--thorp-line);\n+  border-radius: var(--thorp-radius-inset, 8px);\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-caption, 0.74rem);\n+  line-height: 1.55;\n+}\n+\n+.asOf h4 {\n+  margin: 0 0 6px;\n+  color: var(--thorp-foreground);\n+  font-size: var(--thorp-text-small, 0.8rem);\n+  font-weight: 650;\n+}\n+\n+.asOf p {\n+  margin: 0 0 6px;\n+}\n+\n+.asOf dl {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 4px 18px;\n+  margin: 0;\n+}\n+\n+.asOf dl > div {\n+  display: flex;\n+  flex-wrap: wrap;\n+  gap: 4px 6px;\n+}\n+\n+.asOf dt {\n+  color: var(--thorp-foreground);\n+}\n+\n+.asOf dd {\n+  margin: 0;\n+  font-variant-numeric: tabular-nums;\n+}\n+\n+@media (max-width: 800px) {\n+  .case {\n+    grid-template-columns: auto minmax(0, 1fr);\n+    grid-template-areas: 'rank body' 'actions actions' 'detail detail';\n+  }\n+\n+  .caseActions {\n+    justify-content: flex-start;\n+  }\n+}\n+\n+@media (max-width: 420px) {\n+  .monthForm,\n+  .monthField,\n+  .findButton,\n+  .resetButton {\n+    width: 100%;\n+  }\n+\n+  .findButton,\n+  .resetButton {\n+    justify-content: center;\n+  }\n+}\n+\n+@media (prefers-reduced-motion: reduce) {\n+  .findButton,\n+  .resetButton {\n+    transition: none;\n+  }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/PastCaseExplorer.module.css",
+          "old_path": "frontend/src/components/marketflow/PastCaseExplorer.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,261 @@\n+import { fireEvent, screen, waitFor, within } from '@testing-library/react'\n+import { beforeEach, describe, expect, it, vi } from 'vitest'\n+import { recordRegimeSearch } from '@/api/myRecords'\n+import { getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'\n+import { AuthContext, type AuthContextValue } from '@/auth/auth-context'\n+import { MemoryRouter } from 'react-router-dom'\n+import { renderWithRouter } from '@/test/renderWithRouter'\n+import type { RegimeBaselineMonths, RegimeCaseDetail, RegimeCaseSummary, RegimeSearchResult } from '@/types/regime'\n+import { PastCaseExplorer } from './PastCaseExplorer'\n+\n+vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))\n+vi.mock('@/api/myRecords', () => ({ recordRegimeSearch: vi.fn() }))\n+\n+const baselines: RegimeBaselineMonths = {\n+  byField: [{ id: 'production', name: '생산', baselineMonth: '2026-07' }],\n+  composite: '2026-07',\n+  range: { earliest: '1962-01', latest: '2026-08' },\n+  note: '전체 분야를 맞추기 위해 비교 기준월이 바뀝니다.',\n+}\n+\n+function cases(count: number): RegimeCaseSummary[] {\n+  return Array.from({ length: count }, (_, index) => ({\n+    endMonth: `2012-${String(index + 1).padStart(2, '0')}`,\n+    rank: index + 1,\n+    observationMonths: [`2011-${String(index + 11).padStart(2, '0')}`, `2012-${String(index + 1).padStart(2, '0')}`],\n+    distance: '0.41',\n+    similar: [`비슷한 점 ${index + 1}`, `비슷한 점 ${index + 1}의 둘째 문장`],\n+    different: [`다른 점 ${index + 1}`],\n+    detailAvailable: true,\n+  }))\n+}\n+\n+function searchResult(overrides: Partial<RegimeSearchResult> = {}): RegimeSearchResult {\n+  return {\n+    searchId: 'S-1',\n+    mode: 'FIELD',\n+    field: { id: 'production', name: '생산' },\n+    baselineMonth: '2026-07',\n+    baselineOrigin: 'T_G',\n+    observationMonths: [],\n+    comparisonMonths: [],\n+    status: 'NEAREST_ONLY',\n+    statusReason: 'THRESHOLD_NOT_CALIBRATED',\n+    statusNote: '가까운 순서만 제공합니다. 유사성은 아직 판정하지 않습니다.',\n+    caseLabel: '최근접 참고 사례',\n+    displayLimitNote: '가까운 순서로 10개까지 보입니다.',\n+    basis: { kind: 'HISTORICAL_REVISION', note: '최신 개정자료를 이용한 역사 비교입니다.' },\n+    dataAsOf: {\n+      indicators: [{ indicatorId: 'i1', indicator: '시험 지표', targetMonth: '2026-07', publishedAt: '2026-08-30' }],\n+      note: '생산 지표는 2026년 7월분까지 반영되어 있습니다.',\n+      revisions: [],\n+      newerReleases: [],\n+    },\n+    versions: { data: 'v1', registry: 'r1', model: 'm1', revision: 1, sampleData: false, sampleRegistry: false },\n+    counts: { evaluated: 400, eligible: 12, stored: 10, displayed: 3 },\n+    cases: cases(3),\n+    ...overrides,\n+  }\n+}\n+\n+function caseDetail(searchId: string, endMonth: string): RegimeCaseDetail {\n+  return {\n+    searchId, endMonth, observationMonths: ['2011-11', endMonth], distance: '0.41', byField: {}, indicators: [], eraPosition: null,\n+    postPeriod: { endMonth, available: false, note: '사후 구간은 전략 연결에서 봅니다.' },\n+  } as unknown as RegimeCaseDetail\n+}\n+\n+type Props = Parameters<typeof PastCaseExplorer>[0]\n+\n+function renderExplorer(overrides: Partial<Props> = {}, user: AuthContextValue['user'] = null) {\n+  const props: Props = {\n+    id: 'past-cases',\n+    mode: 'field',\n+    fieldId: 'production',\n+    scopeName: '생산',\n+    base: { status: 'ready', result: searchResult() },\n+    onRetryBase: vi.fn(),\n+    baselines,\n+    fieldNames: { production: '생산' },\n+    ...overrides,\n+  }\n+  const auth = user ? ({ status: 'authenticated', user, login: vi.fn(), logout: vi.fn(), recheck: vi.fn(), updateNickname: vi.fn() } as unknown as AuthContextValue) : null\n+  return { props, ...renderWithRouter(<AuthContext.Provider value={auth}><PastCaseExplorer {...props} /></AuthContext.Provider>) }\n+}\n+\n+describe('PastCaseExplorer (009 FR-019, 2026-10-07)', () => {\n+  beforeEach(() => {\n+    vi.mocked(getRegimeSearch).mockReset()\n+    vi.mocked(getRegimeCaseDetail).mockReset()\n+    vi.mocked(getRegimeCaseDetail).mockImplementation(async (endMonth, context) => caseDetail('searchId' in context ? context.searchId : '', endMonth))\n+    vi.mocked(recordRegimeSearch).mockReset()\n+  })\n+\n+  it('가까운 사례를 먼저 보이고, 신뢰 범위 표시와 자료 기준 시점은 그 아래 늘 펼쳐 둔다 (010 FR-037)', () => {\n+    renderExplorer()\n+\n+    const list = screen.getByRole('list', { name: '생산 2026-07 검색 결과: 가까운 과거 사례' })\n+    expect(within(list).getAllByRole('listitem')).toHaveLength(3)\n+    expect(within(list).getByText('2011-11 ~ 2012-01')).toBeTruthy()\n+    // 문장이 많은 사례는 한 문장씩 먼저 보이고 '설명 더 보기'로 펼친다.\n+    expect(within(list).getByText('비슷한 점 1')).toBeTruthy()\n+    expect(within(list).queryByText('비슷한 점 1의 둘째 문장')).toBeNull()\n+    fireEvent.click(within(list).getAllByRole('button', { name: '설명 더 보기' })[0])\n+    expect(within(list).getByText('비슷한 점 1의 둘째 문장')).toBeTruthy()\n+\n+    const status = screen.getByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태' })\n+    expect(status.textContent).toContain('가까운 순서만 제공합니다.')\n+    expect(screen.getByRole('status', { name: '생산 2026-07 검색 결과: 사례 구분' }).textContent).toContain('최근접 참고 사례')\n+    expect(screen.getByRole('status', { name: '생산 2026-07 검색 결과: 역사 비교' }).textContent).toContain('역사 비교입니다.')\n+    const asOf = screen.getByRole('region', { name: '생산 2026-07 검색 결과: 자료 기준 시점' })\n+    expect(asOf.textContent).toContain('생산 지표는 2026년 7월분까지 반영되어 있습니다.')\n+    expect(asOf.textContent).toContain('대상월 2026-07 · 발표일 2026-08-30')\n+    // 사례가 신뢰 범위 표시보다 먼저 선다.\n+    expect(list.compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()\n+    expect(screen.getByText('가까운 순서로 10개까지 보입니다.')).toBeTruthy()\n+  })\n+\n+  it('기준월을 지정하면 그 달로 따로 조회하고 바뀐 사실을 알리며, 최신 기준월로 돌아갈 수 있다', async () => {\n+    vi.mocked(getRegimeSearch).mockResolvedValue(searchResult({ searchId: 'S-2015', baselineMonth: '2015-03', baselineOrigin: 'USER_SPECIFIED', cases: cases(1) }))\n+    renderExplorer()\n+\n+    const input = screen.getByLabelText('기준월 지정')\n+    expect(input.getAttribute('min')).toBe('1962-01')\n+    expect(input.getAttribute('max')).toBe('2026-07')\n+    const find = screen.getByRole('button', { name: '이 달로 찾기' })\n+    expect(find).toHaveProperty('disabled', true)\n+    fireEvent.change(input, { target: { value: '2015-03' } })\n+    fireEvent.click(find)\n+\n+    await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'field', field: 'production', baselineMonth: '2015-03', limit: 3 }, expect.any(AbortSignal)))\n+    expect(await screen.findByText('기준월을 2015-03로 바꾸어 새 검색을 열었습니다.')).toBeTruthy()\n+    expect(screen.getByText('2015-03', { selector: 'strong' })).toBeTruthy()\n+    expect(screen.getAllByRole('listitem')).toHaveLength(1)\n+\n+    fireEvent.click(screen.getByRole('button', { name: '최신 기준월로' }))\n+    expect(screen.getByText('기준월을 2026-07로 바꾸어 새 검색을 열었습니다.')).toBeTruthy()\n+    expect(within(screen.getByRole('list', { name: /가까운 과거 사례/ })).getAllByRole('listitem')).toHaveLength(3)\n+    expect(screen.queryByRole('button', { name: '최신 기준월로' })).toBeNull()\n+    // 최신 기준월은 페이지가 받은 검색을 그대로 쓴다 — 다시 받지 않는다.\n+    expect(getRegimeSearch).toHaveBeenCalledTimes(1)\n+  })\n+\n+  it('최신 계산월보다 뒤의 달을 지정하면 최신 계산월로 물러나고 따로 조회하지 않는다 (010 FR-031)', () => {\n+    renderExplorer()\n+\n+    const input = screen.getByLabelText('기준월 지정') as HTMLInputElement\n+    fireEvent.change(input, { target: { value: '2026-12' } })\n+    fireEvent.click(screen.getByRole('button', { name: '이 달로 찾기' }))\n+\n+    expect(input.value).toBe('2026-07')\n+    expect(getRegimeSearch).not.toHaveBeenCalled()\n+    expect(screen.queryByRole('button', { name: '최신 기준월로' })).toBeNull()\n+  })\n+\n+  it('더 보기는 열 개를 받는 동안 받아 둔 세 개를 그대로 두고, 받으면 열 개를 보인다', async () => {\n+    let resolveMore: (value: RegimeSearchResult) => void = () => {}\n+    vi.mocked(getRegimeSearch).mockImplementation(() => new Promise((resolve) => { resolveMore = resolve }))\n+    renderExplorer()\n+\n+    fireEvent.click(screen.getByRole('button', { name: '더 보기' }))\n+    await waitFor(() => expect(getRegimeSearch).toHaveBeenCalledWith({ mode: 'field', field: 'production', limit: 10 }, expect.any(AbortSignal)))\n+    expect(screen.getByRole('button', { name: '불러오는 중' })).toHaveProperty('disabled', true)\n+    expect(screen.getAllByRole('listitem')).toHaveLength(3)\n+\n+    resolveMore(searchResult({ counts: { evaluated: 400, eligible: 12, stored: 10, displayed: 10 }, cases: cases(10) }))\n+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(10))\n+    expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()\n+    expect(screen.queryByRole('button', { name: '불러오는 중' })).toBeNull()\n+  })\n+\n+  it('상세 보기는 그 자리에서 사례 상세를 펼치고 사후 구간 자리에 백테스트 진입을 둔다 (011 진입 계약 §4)', async () => {\n+    renderExplorer()\n+\n+    const first = screen.getAllByRole('listitem')[0]\n+    fireEvent.click(within(first).getByRole('button', { name: '상세 보기' }))\n+    await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2012-01', { searchId: 'S-1' }, expect.any(AbortSignal)))\n+    expect(await within(first).findByRole('heading', { level: 4, name: '사례 상세 · 2012-01' })).toBeTruthy()\n+    expect(within(first).getAllByRole('link', { name: '이 기간으로 백테스트' })).toHaveLength(2)\n+    expect(within(first).getByRole('button', { name: '상세 닫기' }).getAttribute('aria-expanded')).toBe('true')\n+  })\n+\n+  it('위 줄의 자세히 요청을 받으면 그 사례의 상세를 펼치고 초점을 옮기며, 지정한 달은 푼다', async () => {\n+    const { props, rerender } = renderExplorer()\n+    expect(screen.queryByRole('button', { name: '상세 닫기' })).toBeNull()\n+\n+    rerender(\n+      <MemoryRouter>\n+        <AuthContext.Provider value={null}>\n+          <PastCaseExplorer {...props} focusRequest={{ scope: 'production', endMonth: '2012-02', nonce: 1 }} />\n+        </AuthContext.Provider>\n+      </MemoryRouter>,\n+    )\n+\n+    const second = screen.getAllByRole('listitem')[1]\n+    const toggle = await within(second).findByRole('button', { name: '상세 닫기' })\n+    await waitFor(() => expect(document.activeElement).toBe(toggle))\n+    await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2012-02', { searchId: 'S-1' }, expect.any(AbortSignal)))\n+  })\n+\n+  it('다른 범위로 보낸 요청은 무시한다', () => {\n+    renderExplorer({ focusRequest: { scope: 'composite', endMonth: '2012-02', nonce: 1 } })\n+\n+    expect(screen.queryByRole('button', { name: '상세 닫기' })).toBeNull()\n+  })\n+\n+  it('종합 비교에서 충족 사례가 있으면 참고 사례는 눌러야 열린다 (010 FR-021)', () => {\n+    renderExplorer({\n+      mode: 'composite',\n+      fieldId: undefined,\n+      scopeName: '종합',\n+      base: {\n+        status: 'ready',\n+        result: searchResult({\n+          mode: 'COMPOSITE', field: null, status: 'THRESHOLD_APPLIED', statusReason: null, caseLabel: null,\n+          statusNote: 'Thorp가 정한 유사성 기준으로 사례를 나눴습니다.',\n+          counts: { evaluated: 400, eligible: 12, stored: 1, displayed: 1 }, cases: cases(1),\n+          referenceLabel: '기준 미충족 참고 사례', referenceCases: cases(3).slice(1),\n+        }),\n+      },\n+    })\n+\n+    expect(screen.getAllByRole('listitem')).toHaveLength(1)\n+    fireEvent.click(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' }))\n+    expect(screen.getAllByRole('listitem')).toHaveLength(3)\n+    expect(screen.getByText('Thorp가 정한 유사성 기준을 넘지 못한, 가까운 순서의 참고 사례입니다.')).toBeTruthy()\n+    fireEvent.click(screen.getByRole('button', { name: '기준 미충족 참고 사례 접기' }))\n+    expect(screen.getAllByRole('listitem')).toHaveLength(1)\n+  })\n+\n+  it('계산 불가면 사례 목록 없이 검색 상태 상자가 그 사유를 말한다', () => {\n+    renderExplorer({\n+      base: { status: 'ready', result: searchResult({ status: 'NOT_COMPUTABLE', statusReason: 'NO_CANDIDATE', statusNote: '비교할 수 있는 과거 시점이 없습니다.', cases: [], caseLabel: null, counts: { evaluated: 0, eligible: 0, stored: 0, displayed: 0 } }) },\n+    })\n+\n+    expect(screen.getByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태' }).textContent).toContain('비교할 수 있는 과거 시점이 없습니다.')\n+    expect(screen.getAllByText('비교할 수 있는 과거 시점이 없습니다.')).toHaveLength(1)\n+    expect(screen.queryByRole('list', { name: /가까운 과거 사례/ })).toBeNull()\n+    expect(screen.queryByRole('button', { name: '더 보기' })).toBeNull()\n+  })\n+\n+  it('최신 검색을 받지 못하면 그 자리에서 다시 시도한다', () => {\n+    const { props } = renderExplorer({ base: { status: 'failed', message: null } })\n+\n+    expect(screen.getByText('과거 사례를 불러오지 못했습니다. 분야 지표는 그대로 볼 수 있습니다.')).toBeTruthy()\n+    fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))\n+    expect(props.onRetryBase).toHaveBeenCalled()\n+  })\n+\n+  it('로그인 사용자가 기준월을 지정해 연 검색만 내 기록에 남긴다 (010 FR-032)', async () => {\n+    vi.mocked(getRegimeSearch).mockResolvedValue(searchResult({ searchId: 'S-2015', baselineMonth: '2015-03', baselineOrigin: 'USER_SPECIFIED', cases: cases(1) }))\n+    vi.mocked(recordRegimeSearch).mockResolvedValue({} as never)\n+    renderExplorer({}, { id: 7, email: 'u@example.com', nickname: '부캉이' } as unknown as AuthContextValue['user'])\n+\n+    expect(recordRegimeSearch).not.toHaveBeenCalled()\n+    fireEvent.change(screen.getByLabelText('기준월 지정'), { target: { value: '2015-03' } })\n+    fireEvent.click(screen.getByRole('button', { name: '이 달로 찾기' }))\n+\n+    await waitFor(() => expect(recordRegimeSearch).toHaveBeenCalledWith('S-2015', 'MARKET_FLOW', 'USER_SPECIFIED'))\n+    expect(recordRegimeSearch).toHaveBeenCalledTimes(1)\n+  })\n+})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/PastCaseExplorer.test.tsx",
+          "old_path": "frontend/src/components/marketflow/PastCaseExplorer.test.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,408 @@\n+import { History } from 'lucide-react'\n+import { useReducedMotion } from 'motion/react'\n+import { useContext, useEffect, useId, useRef, useState, type FormEvent } from 'react'\n+import { Link } from 'react-router-dom'\n+import { recordRegimeSearch } from '@/api/myRecords'\n+import { AuthContext } from '@/auth/auth-context'\n+import { InlineHelp } from '@/components/common/InlineHelp'\n+import { BaselineChangeNotice } from '@/components/regime/BaselineChangeNotice'\n+import { BasisNotice } from '@/components/regime/BasisNotice'\n+import { CaseDetailLoader } from '@/components/regime/CaseDetailLoader'\n+import { ComparisonMonthsNotice } from '@/components/regime/ComparisonMonthsNotice'\n+import { Disclosure } from '@/components/regime/Disclosure'\n+import * as copy from '@/components/regime/fixedCopy'\n+import { NewerReleases } from '@/components/regime/NewerReleases'\n+import { SearchStatusBadge } from '@/components/regime/SearchStatusBadge'\n+import { usePastSearch, type PastSearchState } from '@/hooks/usePastCases'\n+import { buildCaseId, buildRegimeLinkStartPath } from '@/marketflow/handoff'\n+import type { MarketFlowFieldId } from '@/types/marketFlow'\n+import type { RegimeBaselineMonths, RegimeCaseSummary, RegimeSearchQuery, RegimeSearchResult } from '@/types/regime'\n+import { observationRange } from './pastFormat'\n+import past from './PastCompare.module.css'\n+import styles from './PastCaseExplorer.module.css'\n+\n+/**\n+ * 위 '지금과 비슷했던 과거' 줄이 이 구역에 보내는 요청. `endMonth`가 있으면 그 사례의 상세를 펼치고, 없으면 구역\n+ * 머리로 간다. 같은 사례를 다시 눌러도 반응하도록 `nonce`를 올린다. `scope`가 다른 구역은 무시한다.\n+ */\n+export type CaseFocusRequest = { scope: string; endMonth: string | null; nonce: number }\n+\n+interface PastCaseExplorerProps {\n+  /** 화면 안 이동의 목적지 id. 분야 상세와 종합 비교가 같은 자리를 쓰므로 하나만 그려진다. */\n+  id: string\n+  mode: 'field' | 'composite'\n+  fieldId?: MarketFlowFieldId\n+  /** 제목과 보조기기 문맥에 적는 범위 이름(분야 이름 또는 종합). 응답이나 분야 목록에서 온다. */\n+  scopeName: string\n+  /** 최신 기준월 검색. 분야 상세의 위 줄과 같은 결과라 페이지가 한 번만 받아 건넨다. */\n+  base: PastSearchState\n+  onRetryBase: () => void\n+  /** 010이 계산을 마친 달 목록. 없으면 기준월 지정 칸을 두지 않고 최신 결과만 보인다. */\n+  baselines: RegimeBaselineMonths | null\n+  fieldNames: Record<string, string>\n+  focusRequest?: CaseFocusRequest | null\n+}\n+\n+/**\n+ * 분야 상세와 종합 비교의 바닥에 서는 '가까운 과거 사례' 구역(009 FR-019, 2026-10-07).\n+ *\n+ * 010 검색 화면이 보이던 것 — 가까운 사례와 비슷한 점·다른 점, 사례 상세(계산 근거), 기준월 지정, 신뢰 범위 표시 —\n+ * 을 그 분야 아래에서 바로 본다. 다른 화면으로 넘기지 않는다. **가까운 사례가 먼저** 서고 신뢰 범위 표시는 그 아래다.\n+ *\n+ * 기준월을 지정하지 않은 동안은 페이지가 받은 최신 검색(`base`)을 그대로 쓴다 — 위 줄과 같은 결과를 두 번 받지\n+ * 않는다. 기준월을 지정하거나 '더 보기'로 열 개를 받을 때만 따로 조회한다. 지정한 달이 그 범위의 최신 계산월보다\n+ * 뒤면 최신 계산월로 물러나고 그 사실을 알린다(010 FR-031).\n+ *\n+ * 종합 비교에서 기준 충족 사례가 없으면(010 FR-021·FR-046) 안내와 함께 **기준 미충족 참고 사례를 바로 펼쳐** 보인다\n+ * — 충족 사례가 있을 때는 섞이지 않게 눌러야 열린다. 분야별 탐색 버튼은 두지 않는다. 분야 메뉴가 바로 위에 있다.\n+ *\n+ * 문장은 응답이나 010의 fixedCopy에서만 온다(010 FR-022 ②). 로그인 사용자가 기준월을 지정해 검색한 것은 내 기록에\n+ * 남긴다(010 FR-032). 자동으로 열리는 최신 검색은 사용자가 고른 검색이 아니라 남기지 않는다.\n+ */\n+export function PastCaseExplorer({ id, mode, fieldId, scopeName, base, onRetryBase, baselines, fieldNames, focusRequest = null }: PastCaseExplorerProps) {\n+  const reducedMotion = useReducedMotion()\n+  const titleId = useId()\n+  const monthInputId = useId()\n+  const sectionRef = useRef<HTMLElement>(null)\n+  const caseRefs = useRef(new Map<string, HTMLLIElement>())\n+  const detailButtonRefs = useRef(new Map<string, HTMLButtonElement>())\n+  const scope = fieldId ?? 'composite'\n+\n+  const [draft, setDraft] = useState('')\n+  /** 지정한 기준월. null이면 최신 계산월이다. */\n+  const [month, setMonth] = useState<string | null>(null)\n+  const [expanded, setExpanded] = useState(false)\n+  const [openCase, setOpenCase] = useState<string | null>(null)\n+  const [openReasons, setOpenReasons] = useState<ReadonlySet<string>>(() => new Set())\n+  const [showReferences, setShowReferences] = useState(false)\n+  const [changeNote, setChangeNote] = useState<string | null>(null)\n+  const [recordFailed, setRecordFailed] = useState(false)\n+  const [pendingFocus, setPendingFocus] = useState<CaseFocusRequest | null>(null)\n+\n+  const baseResult = base.status === 'ready' ? base.result : null\n+  const latestMonth = (mode === 'composite' ? baselines?.composite : baselines?.byField.find((field) => field.id === fieldId)?.baselineMonth)\n+    ?? baseResult?.baselineMonth ?? null\n+\n+  // 지정한 달이나 열 개 보기만 따로 받는다. 둘 다 아니면 페이지가 받은 최신 검색을 그대로 쓴다.\n+  const ownQuery: RegimeSearchQuery | null = month !== null || expanded\n+    ? { mode, ...(fieldId ? { field: fieldId } : {}), ...(month !== null ? { baselineMonth: month } : {}), limit: expanded ? 10 : 3 }\n+    : null\n+  const { state: ownState, retry: retryOwn } = usePastSearch(ownQuery)\n+  // 같은 달의 열 개를 받는 동안은 받아 둔 세 개를 그대로 두고 '더 보기' 버튼만 기다린다 — 목록이 사라졌다 돌아오지 않게.\n+  const loadingMore = ownQuery !== null && month === null && ownState.status === 'loading'\n+  const search: PastSearchState = ownQuery === null ? base : loadingMore && baseResult ? base : ownState\n+  const retry = ownQuery === null ? onRetryBase : retryOwn\n+  const result = search.status === 'ready' ? search.result : null\n+  const context = result ? `${scopeName} ${result.baselineMonth} 검색 결과` : ''\n+\n+  // 로그인 사용자가 기준월을 지정해 연 검색만 내 기록에 남긴다(010 FR-032). 같은 검색은 한 번만 보낸다.\n+  const auth = useContext(AuthContext)\n+  const user = auth?.user ?? null\n+  const recorded = useRef(new Set<string>())\n+  useEffect(() => {\n+    if (!user || month === null || !result || recorded.current.has(result.searchId)) return\n+    const { searchId, baselineOrigin } = result\n+    recorded.current.add(searchId)\n+    recordRegimeSearch(searchId, 'MARKET_FLOW', baselineOrigin).then(\n+      () => setRecordFailed(false),\n+      () => {\n+        recorded.current.delete(searchId)\n+        setRecordFailed(true)\n+      },\n+    )\n+  }, [user, month, result])\n+\n+  // 위 줄의 '자세히'·'모두 보기'. 위 줄은 최신 검색의 사례를 말하므로 지정한 달은 푼다. 그리고 그 사례가 그려진 뒤 옮긴다.\n+  useEffect(() => {\n+    if (!focusRequest || focusRequest.scope !== scope) return\n+    setMonth(null)\n+    setDraft('')\n+    setChangeNote(null)\n+    if (focusRequest.endMonth !== null) setOpenCase(focusRequest.endMonth)\n+    setPendingFocus(focusRequest)\n+  }, [focusRequest, scope])\n+  useEffect(() => {\n+    if (!pendingFocus || !result) return\n+    const behavior: ScrollBehavior = reducedMotion ? 'auto' : 'smooth'\n+    const target = pendingFocus.endMonth !== null ? caseRefs.current.get(pendingFocus.endMonth) ?? null : sectionRef.current\n+    if (!target) return\n+    target.scrollIntoView?.({ behavior, block: 'start' })\n+    const focusTarget = pendingFocus.endMonth !== null ? detailButtonRefs.current.get(pendingFocus.endMonth) ?? target : target\n+    focusTarget.focus({ preventScroll: true })\n+    setPendingFocus(null)\n+  }, [pendingFocus, result, reducedMotion])\n+\n+  function applyMonth(next: string | null) {\n+    const current = result?.baselineMonth ?? null\n+    const applied = next ?? latestMonth\n+    setChangeNote(applied !== null && applied !== current ? copy.baselineMonthChangedNote(applied) : null)\n+    setMonth(next !== null && next !== latestMonth ? next : null)\n+    setDraft(next ?? '')\n+    setExpanded(false)\n+    setOpenCase(null)\n+    setShowReferences(false)\n+  }\n+\n+  function submit(event: FormEvent<HTMLFormElement>) {\n+    event.preventDefault()\n+    if (!draft) return\n+    // 화면이 고를 수 있는 달은 결과가 실제로 있는 달뿐이다(010 FR-031). 뒤면 최신 계산월로 물러난다.\n+    applyMonth(latestMonth !== null && draft > latestMonth ? latestMonth : draft)\n+  }\n+\n+  const toggleReasons = (endMonth: string) =>\n+    setOpenReasons((current) => {\n+      const next = new Set(current)\n+      if (next.has(endMonth)) next.delete(endMonth)\n+      else next.add(endMonth)\n+      return next\n+    })\n+\n+  const renderCase = (item: RegimeCaseSummary, index: number, searchResult: RegimeSearchResult) => {\n+    const caseId = buildCaseId(searchResult.searchId, item.endMonth)\n+    const detailId = `${id}-case-${item.endMonth}`\n+    const reasonsOpen = openReasons.has(item.endMonth)\n+    const hidden = Math.max(0, item.similar.length - 1) + Math.max(0, item.different.length - 1)\n+    const similar = reasonsOpen ? item.similar : item.similar.slice(0, 1)\n+    const different = reasonsOpen ? item.different : item.different.slice(0, 1)\n+    const contextLinks = item.context ?? []\n+    const open = openCase === item.endMonth\n+    return (\n+      <li\n+        key={item.endMonth}\n+        className={styles.case}\n+        ref={(element) => {\n+          if (element) caseRefs.current.set(item.endMonth, element)\n+          else caseRefs.current.delete(item.endMonth)\n+        }}\n+      >\n+        <span className={styles.rank} aria-hidden=\"true\">{index + 1}</span>\n+        <div className={styles.caseBody}>\n+          <p className={styles.caseRange}>\n+            <span>관측 구간</span>\n+            <strong>{observationRange(item)}</strong>\n+          </p>\n+          {/* 문장이 많은 사례(종합 비교)는 한 문장씩만 먼저 보인다. 문장은 서버가 만든 그대로다. */}\n+          {similar.map((text) => (\n+            <p key={text} className={past.reason}>\n+              <b className={past.similarLabel}>비슷한 점</b>\n+              <span className={past.similarText}>{text}</span>\n+            </p>\n+          ))}\n+          {different.map((text) => (\n+            <p key={text} className={past.reason}>\n+              <b className={past.differentLabel}>다른 점</b>\n+              <span className={past.differentText}>{text}</span>\n+            </p>\n+          ))}\n+          {hidden > 0 || contextLinks.length > 0 ? (\n+            <button type=\"button\" className={styles.moreReasons} aria-expanded={reasonsOpen} onClick={() => toggleReasons(item.endMonth)}>\n+              {reasonsOpen ? '설명 접기' : '설명 더 보기'}\n+            </button>\n+          ) : null}\n+          {reasonsOpen && contextLinks.length > 0 ? (\n+            <section className={styles.context} aria-label={`${item.endMonth} 당시 맥락`}>\n+              <h5>당시 맥락</h5>\n+              <p>{copy.contextNote}</p>\n+              <ul>\n+                {contextLinks.map((link) => (\n+                  <li key={`${link.kind}-${link.date}-${link.title}`}>\n+                    <time dateTime={link.date}>{link.date}</time>{' '}\n+                    {link.url ? <a href={link.url} target=\"_blank\" rel=\"noopener noreferrer\">{link.title}</a> : <span>{link.title}</span>}\n+                    <span className={styles.contextSource}> · {link.source}</span>\n+                  </li>\n+                ))}\n+              </ul>\n+            </section>\n+          ) : null}\n+        </div>\n+        <div className={styles.caseActions}>\n+          {caseId === null ? null : (\n+            <Link className={past.pick} to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 백테스트</Link>\n+          )}\n+          {item.detailAvailable ? (\n+            <button\n+              type=\"button\"\n+              className={past.detailButton}\n+              aria-expanded={open}\n+              aria-controls={detailId}\n+              ref={(element) => {\n+                if (element) detailButtonRefs.current.set(item.endMonth, element)\n+                else detailButtonRefs.current.delete(item.endMonth)\n+              }}\n+              onClick={() => setOpenCase((current) => (current === item.endMonth ? null : item.endMonth))}\n+            >\n+              {open ? '상세 닫기' : '상세 보기'}\n+            </button>\n+          ) : null}\n+        </div>\n+        {open ? (\n+          <div id={detailId} className={styles.detailSlot}>\n+            <CaseDetailLoader\n+              searchId={searchResult.searchId}\n+              summary={item}\n+              mode={searchResult.mode}\n+              fieldNames={fieldNames}\n+              /* 사후 구간 자리에 011 진입을 둔다(011 진입 계약 §4). 섹터는 이 길에서 알 수 없어 싣지 않는다. */\n+              postPeriodSlot={caseId === null ? undefined : (\n+                <p className={styles.postPeriod}>\n+                  <Link className={past.pick} to={buildRegimeLinkStartPath({ caseId })}>이 기간으로 백테스트</Link>\n+                </p>\n+              )}\n+            />\n+          </div>\n+        ) : null}\n+      </li>\n+    )\n+  }\n+\n+  const references = result?.referenceCases ?? []\n+  const referenceLabel = result?.referenceLabel ?? copy.referenceLabel\n+  const showMonthControl = baselines?.range?.earliest != null && latestMonth !== null\n+\n+  return (\n+    <section id={id} ref={sectionRef} className={styles.explorer} aria-labelledby={titleId} tabIndex={-1}>\n+      <header className={styles.head}>\n+        <div className={styles.titleGroup}>\n+          <p className={styles.kicker} aria-hidden=\"true\">HISTORICAL CASES</p>\n+          <h3 id={titleId} className={styles.title}>\n+            <History size={17} aria-hidden=\"true\" />\n+            가까운 과거 사례\n+          </h3>\n+          {result ? (\n+            <p className={styles.meta}>\n+              기준월 <strong>{result.baselineMonth}</strong> · 가까운 순\n+            </p>\n+          ) : null}\n+        </div>\n+        {showMonthControl ? (\n+          <form className={styles.monthForm} onSubmit={submit} noValidate aria-label={`${scopeName} 기준월 지정`}>\n+            <div className={styles.monthField}>\n+              <div className={styles.monthLabel}>\n+                <label htmlFor={monthInputId}>기준월 지정</label>\n+                <InlineHelp label=\"기준월 지정\" side=\"bottom\"><p>{copy.monthPickNote}</p></InlineHelp>\n+              </div>\n+              <input\n+                id={monthInputId}\n+                type=\"month\"\n+                min={baselines?.range?.earliest ?? undefined}\n+                max={latestMonth ?? undefined}\n+                value={draft}\n+                onChange={(event) => setDraft(event.target.value)}\n+              />\n+            </div>\n+            <button type=\"submit\" className={styles.findButton} disabled={!draft || draft === (month ?? latestMonth)}>\n+              이 달로 찾기\n+            </button>\n+            {month !== null ? (\n+              <button type=\"button\" className={styles.resetButton} onClick={() => applyMonth(null)}>최신 기준월로</button>\n+            ) : null}\n+          </form>\n+        ) : null}\n+      </header>\n+\n+      {changeNote ? <BaselineChangeNotice note={changeNote} context={context} /> : null}\n+\n+      {search.status === 'loading' || search.status === 'idle' ? (\n+        <p className={past.loading} role=\"status\">{copy.loadingCases}</p>\n+      ) : search.status === 'failed' ? (\n+        <div className={past.failure} role=\"status\">\n+          <p>{search.message ?? (mode === 'composite' ? copy.compositeLoadFailed : copy.pastCasesLoadFailed)}</p>\n+          <button type=\"button\" className={past.inlineAction} onClick={retry}>다시 시도</button>\n+        </div>\n+      ) : result ? (\n+        <>\n+          {result.status === 'NOT_COMPUTABLE' ? null : (\n+            <>\n+              {result.thresholdNote ? (\n+                <Disclosure label=\"유사성 기준\" context={context} tone=\"warning\">\n+                  <p>{result.thresholdNote}</p>\n+                </Disclosure>\n+              ) : null}\n+              {result.cases.length > 0 ? (\n+                <ol className={styles.cases} aria-label={`${context}: 가까운 과거 사례`}>\n+                  {result.cases.map((item, index) => renderCase(item, index, result))}\n+                </ol>\n+              ) : null}\n+              {references.length > 0 ? (\n+                result.cases.length === 0 ? (\n+                  // 충족 사례가 없으면 참고 사례만 남으므로 바로 펼친다. 섞일 목록이 없다(2026-10-07).\n+                  <section className={styles.references} aria-label={`${context}: ${referenceLabel}`}>\n+                    <h4>{referenceLabel}</h4>\n+                    <p className={styles.referenceNote}>{copy.referenceNote}</p>\n+                    <ol className={styles.cases}>{references.map((item, index) => renderCase(item, index, result))}</ol>\n+                  </section>\n+                ) : (\n+                  <section className={styles.references} aria-label={`${context}: ${referenceLabel}`}>\n+                    <button\n+                      type=\"button\"\n+                      className={styles.toggleReferences}\n+                      aria-expanded={showReferences}\n+                      aria-controls={`${id}-references`}\n+                      onClick={() => setShowReferences((current) => !current)}\n+                    >\n+                      {showReferences ? `${referenceLabel} 접기` : `${referenceLabel} 보기`}\n+                    </button>\n+                    {showReferences ? (\n+                      <>\n+                        <p className={styles.referenceNote}>{copy.referenceNote}</p>\n+                        <ol id={`${id}-references`} className={styles.cases}>{references.map((item, index) => renderCase(item, index, result))}</ol>\n+                      </>\n+                    ) : null}\n+                  </section>\n+                )\n+              ) : null}\n+              {result.counts.stored > result.counts.displayed ? (\n+                <button type=\"button\" className={styles.more} onClick={() => setExpanded(true)} disabled={loadingMore}>\n+                  {loadingMore ? '불러오는 중' : '더 보기'}\n+                </button>\n+              ) : null}\n+              {result.counts.eligible > result.counts.stored && result.displayLimitNote ? (\n+                <p className={styles.limitNote}>{result.displayLimitNote}</p>\n+              ) : null}\n+            </>\n+          )}\n+\n+          {/* 신뢰 범위 표시는 사례 아래에 늘 펼쳐 둔다(010 FR-037). 검색 화면과 같은 컴포넌트와 문구다. 계산 불가나 빈 결과의\n+              사유도 여기 '검색 상태'가 말하므로 사례 자리에 같은 문장을 다시 적지 않는다. */}\n+          <div className={styles.trust}>\n+            <SearchStatusBadge result={result} context={context} />\n+            {result.caseLabel ? (\n+              <Disclosure label=\"사례 구분\" context={context} tone=\"warning\"><p>{result.caseLabel}</p></Disclosure>\n+            ) : null}\n+            {result.phaseNote ? (\n+              <Disclosure label=\"지금 시점\" context={context} tone=\"warning\"><p>{result.phaseNote}</p></Disclosure>\n+            ) : null}\n+            {result.versions.sampleData ? (\n+              <Disclosure label=\"예시 자료\" context={context} tone=\"warning\"><p>{copy.sampleDataNote}</p></Disclosure>\n+            ) : null}\n+            <ComparisonMonthsNotice comparisonMonths={result.comparisonMonths} context={context} />\n+            <BasisNotice basis={result.basis} context={context} />\n+            <NewerReleases releases={result.dataAsOf.newerReleases} context={context} />\n+            {recordFailed ? (\n+              <Disclosure label=\"내 기록\" context={context} tone=\"warning\"><p>{copy.recordFailedNote}</p></Disclosure>\n+            ) : null}\n+          </div>\n+          {/* 결과가 반영한 대상월과 발표일(010 FR-031). 지표가 많아도 접지 않고 짧은 칸으로 늘어놓는다. */}\n+          <section className={styles.asOf} aria-label={`${context}: 자료 기준 시점`}>\n+            <h4>자료 기준 시점</h4>\n+            {result.dataAsOf.note ? <p>{result.dataAsOf.note}</p> : null}\n+            {result.dataAsOf.indicators.length > 0 ? (\n+              <dl>\n+                {result.dataAsOf.indicators.map((item) => (\n+                  <div key={item.indicatorId}>\n+                    <dt>{item.indicator}</dt>\n+                    <dd>대상월 {item.targetMonth ?? '—'} · 발표일 {item.publishedAt ?? '—'}</dd>\n+                  </div>\n+                ))}\n+              </dl>\n+            ) : null}\n+            {result.dataAsOf.revisions.map((item) => (\n+              <p key={`${item.indicatorId}-${item.month}`}>개정 · {item.indicator} {item.month} · {item.revisedAt}</p>\n+            ))}\n+          </section>\n+        </>\n+      ) : null}\n+    </section>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/PastCaseExplorer.tsx",
+          "old_path": "frontend/src/components/marketflow/PastCaseExplorer.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -49,13 +49,20 @@\n   font-variant-numeric: tabular-nums;\n }\n \n+/* '모두 보기'는 같은 상자 바닥의 '가까운 과거 사례' 구역으로 옮기는 버튼이다. 글자 링크 모양을 유지한다. */\n .allLink {\n   display: inline-flex;\n   align-items: center;\n   gap: 4px;\n+  padding: 0;\n+  border: 0;\n   border-bottom: 1px solid var(--thorp-line-strong);\n+  border-radius: 0;\n+  background: none;\n   color: var(--thorp-copy);\n+  font: inherit;\n   text-decoration: none;\n+  cursor: pointer;\n }\n \n .allLink:hover {\n@@ -367,10 +374,10 @@\n   color: var(--thorp-warning);\n }\n \n-/* 종합 비교. 분야 하나의 지표가 없으므로 예전 사례 목록 모양으로 보인다. */\n+/* 종합 비교. 분야 하나의 지표가 없으므로 제목 아래 '가까운 과거 사례' 구역이 바로 선다(그 구역이 윗선을 긋는다). */\n .composite {\n   display: grid;\n-  gap: 16px;\n+  gap: 0;\n }\n \n .compositeHead {\n@@ -379,8 +386,6 @@\n   align-items: baseline;\n   justify-content: space-between;\n   gap: 6px 20px;\n-  padding-bottom: 16px;\n-  border-bottom: 1px solid var(--thorp-line);\n }\n \n .compositeHead h2 {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/marketflow/PastCompare.module.css",
+          "old_path": "frontend/src/components/marketflow/PastCompare.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -109,9 +109,8 @@ describe('사례 목록', () => {\n     expect(screen.queryByText('더 보기')).toBeNull()\n   })\n \n-  it('기준 충족 사례가 없으면 안내와 분야별 탐색을 보인다', () => {\n+  it('기준 충족 사례가 없으면 안내를 보이고 참고 사례를 따로 연다', () => {\n     const base = result(1, 1, 1)\n-    const onBrowseFields = vi.fn()\n     const none: RegimeSearchResult = {\n       ...base,\n       mode: 'COMPOSITE',\n@@ -124,10 +123,10 @@ describe('사례 목록', () => {\n       referenceCases: base.cases,\n       counts: { ...base.counts, stored: 0, displayed: 0 },\n     }\n-    render(<CaseList result={none} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" fieldNames={{}} onBrowseFields={onBrowseFields} />)\n+    render(<CaseList result={none} onShowMore={vi.fn()} isLoading={false} context=\"시험 검색\" fieldNames={{}} />)\n     expect(screen.getByText(/충족하는 사례가 없습니다/)).toBeTruthy()\n-    fireEvent.click(screen.getByRole('button', { name: '분야별로 살펴보기' }))\n-    expect(onBrowseFields).toHaveBeenCalledOnce()\n+    // 분야별 탐색 버튼은 두지 않는다(2026-10-07). 시장 흐름에서는 분야 메뉴가 그 길이다.\n+    expect(screen.queryByRole('button', { name: '분야별로 살펴보기' })).toBeNull()\n     expect(screen.getByRole('button', { name: '기준 미충족 참고 사례 보기' })).toBeTruthy()\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,12 +17,10 @@ interface CaseListProps {\n    * 없으면 010이 내려 준 문구를 그대로 그린다. 사례마다 다른 것을 넣어야 해서 값이 아니라 함수다.\n    */\n   postPeriodSlot?: (summary: RegimeCaseSummary) => ReactNode\n-  /** 기준 충족 사례가 없는 종합 결과에서 분야별 탐색으로 잇는다(spec US3 시나리오 4). */\n-  onBrowseFields?: () => void\n }\n \n /** 사례 목록은 관측 구간과 설명을 먼저 보인다. 거리와 기여는 M8 상세의 몫이다. */\n-export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot, onBrowseFields }: CaseListProps) {\n+export function CaseList({ result, onShowMore, isLoading, context, fieldNames, postPeriodSlot }: CaseListProps) {\n   const [selectedEndMonth, setSelectedEndMonth] = useState<string | null>(null)\n   const [showReferences, setShowReferences] = useState(false)\n   const [expandedCases, setExpandedCases] = useState<Set<string>>(() => new Set())\n@@ -134,11 +132,6 @@ export function CaseList({ result, onShowMore, isLoading, context, fieldNames, p\n       {result.thresholdNote && (\n         <Disclosure label=\"유사성 기준\" context={context} tone=\"warning\">\n           <p>{result.thresholdNote}</p>\n-          {onBrowseFields && (\n-            <button type=\"button\" className={styles.detailButton} onClick={onBrowseFields}>\n-              분야별로 살펴보기\n-            </button>\n-          )}\n         </Disclosure>\n       )}\n       {references.length > 0 && (\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/CaseList.tsx",
+          "old_path": "frontend/src/components/regime/CaseList.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -110,5 +110,9 @@ export const pastPathLoadFailed = '당시 경로를 불러오지 못했습니다\n /** 상세를 열 수 없는 사례를 골랐을 때(spec FR-029). 순위와 문장은 그대로 보인다. */\n export const pastPathUnavailable = '이 사례는 지표별 당시 경로를 볼 수 없습니다.'\n \n-/** 종합 비교를 고른 상자의 머리 문장(009 FR-019, spec US3). 무엇을 볼 수 있는지만 말하고 결과를 서술하지 않는다. */\n-export const compositeLead = '일곱 분야를 함께 견준 가까운 과거입니다. 분야 하나의 지표와 견주려면 분야 메뉴에서 고르세요.'\n+/**\n+ * 분야 상세·종합 비교 아래 '가까운 과거 사례' 구역의 기준월 지정 도움말(009 FR-019, spec FR-031). 010 검색 화면의\n+ * 기준월 지정이 이 구역으로 들어오면서(2026-10-07) 무엇을 고르면 무엇이 바뀌는지만 말한다 — 결과를 서술하지 않는다.\n+ */\n+export const monthPickNote =\n+    '기준월을 지정하면 그 달을 기준으로 가까운 과거 구간을 찾습니다. 비워 두면 가장 최근에 계산을 마친 달이 기준입니다.'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/fixedCopy.ts",
+          "old_path": "frontend/src/components/regime/fixedCopy.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@ const sources = walk('src').filter((path) =>\n   !/\\.test\\.tsx?$|^src\\/test\\//.test(path) &&\n   (/^src\\/components\\/regime\\//.test(path) || /^(src\\/(api|types)\\/regime\\.ts|src\\/hooks\\/useRegimeSearch\\.ts|src\\/pages\\/RegimeSearchPage\\.tsx)$/.test(path) ||\n     // 시장 흐름 분야 상세 안에서 010 결과를 보이는 자리(009 FR-019)도 같은 경계를 따른다.\n-    /^(src\\/components\\/marketflow\\/(FieldPastCompare|CompositePast)\\.tsx|src\\/hooks\\/usePastCases\\.ts)$/.test(path)),\n+    /^(src\\/components\\/marketflow\\/(FieldPastCompare|CompositePast|PastCaseExplorer)\\.tsx|src\\/hooks\\/usePastCases\\.ts)$/.test(path)),\n )\n \n // 008 등록표의 분야·지표 ID와 이름(data/src/data_pipeline/macro/registry.py·display.py)과 종합 비교 묶음 이름\n@@ -47,6 +47,7 @@ describe('010 화면의 등록표 경계', () => {\n     expect(sources).toContain('src/api/regime.ts')\n     expect(sources).toContain('src/components/marketflow/FieldPastCompare.tsx')\n     expect(sources).toContain('src/components/marketflow/CompositePast.tsx')\n+    expect(sources).toContain('src/components/marketflow/PastCaseExplorer.tsx')\n     expect(sources.length).toBeGreaterThan(10)\n   })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/regime/indicatorAgnostic.test.tsx",
+          "old_path": "frontend/src/components/regime/indicatorAgnostic.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,42 +1,5 @@\n import { describe, expect, it } from 'vitest'\n-import {\n-  buildCaseId,\n-  buildRegimeLinkStartPath,\n-  buildCompositeSearchPath,\n-  buildSimilarPeriodHandoff,\n-} from './handoff'\n-\n-describe('비슷했던 때 보기로 넘기는 값 (FR-009)', () => {\n-  it('분야와 그 분야의 기준월을 넘긴다', () => {\n-    expect(buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: '2026-07' })).toEqual({\n-      fieldId: 'labor',\n-      referenceMonth: '2026-07',\n-    })\n-  })\n-\n-  it('기준월이 없으면 넘길 값이 없다', () => {\n-    // 기준월 없이 넘기면 010이 \"언제와 비슷한지\"를 모르는 채 검색하게 된다.\n-    expect(buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: null })).toBeNull()\n-  })\n-\n-  it('분야마다 다른 기준월을 그대로 유지한다', () => {\n-    const production = buildSimilarPeriodHandoff({ fieldId: 'production', referenceMonth: '2026-08' })\n-    const labor = buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: '2026-06' })\n-\n-    expect(production?.referenceMonth).toBe('2026-08')\n-    expect(labor?.referenceMonth).toBe('2026-06')\n-  })\n-\n-  /**\n-   * FR-016이 \"섹터를 골랐어도 넘기는 분야·기준월은 달라지지 않는다\"를 요구한다.\n-   * 이 함수는 섹터를 받는 자리가 아예 없어서 실수로도 실을 수 없다. 그것을 여기서 못 박는다.\n-   */\n-  it('섹터를 실을 자리가 없다', () => {\n-    const handoff = buildSimilarPeriodHandoff({ fieldId: 'labor', referenceMonth: '2026-07' })\n-\n-    expect(Object.keys(handoff ?? {}).sort()).toEqual(['fieldId', 'referenceMonth'])\n-  })\n-})\n+import { buildCaseId, buildRegimeLinkStartPath } from './handoff'\n \n describe('사례 식별자 조립 (011 계약 §0)', () => {\n   it('010 searchId와 관측 종료월을 물결로 잇는다', () => {\n@@ -75,8 +38,3 @@ describe('011 시작 주소 (진입 계약 §2)', () => {\n   })\n })\n \n-describe('종합 비교를 010에서 이어 보는 주소 (009 FR-018)', () => {\n-  it('종합 비교가 선택된 상태로 연다', () => {\n-    expect(buildCompositeSearchPath()).toBe('/regime-search?mode=composite')\n-  })\n-})\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/marketflow/handoff.test.ts",
+          "old_path": "frontend/src/marketflow/handoff.test.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,59 +1,13 @@\n-import type { MarketFlowFieldId } from '@/types/marketFlow'\n-\n /**\n  * 시장 흐름에서 바깥 화면으로 넘기는 값을 만든다.\n  *\n- * 010(경제환경 검색)·011(전략 비교)의 목적지 주소를 여기서 만든다. 주소를 만드는 자리를 한 곳에\n- * 두어 두 벌의 계약이 생기지 않게 한다. 011은 진입 계약(`contracts/entry-handoff.md` §2)이 주소를\n- * 정했고, 010은 화면이 분야·기준월을 주소에서 읽는다.\n+ * 011(전략 비교)의 목적지 주소를 여기서 만든다. 주소를 만드는 자리를 한 곳에 두어 두 벌의 계약이\n+ * 생기지 않게 한다. 011은 진입 계약(`contracts/entry-handoff.md` §2)이 주소를 정했다. 010(경제환경 검색)의\n+ * 내용은 시장 흐름의 분야 상세 안에서 바로 보이므로(009 FR-019, 2026-10-07) 010으로 넘기는 주소는 없다.\n  *\n  * 값을 만들 수 없으면 `null`이다. 빈 문자열이나 대체값으로 채우지 않는다(원칙 VI).\n  */\n \n-/** 010으로 넘기는 값. 분야 하나와 그 분야의 기준월 T_g다(FR-009). */\n-export type SimilarPeriodHandoff = {\n-  fieldId: MarketFlowFieldId\n-  /** 그 분야의 기준월 `YYYY-MM`. 분야마다 다를 수 있다. */\n-  referenceMonth: string\n-}\n-\n-/**\n- * **섹터를 받지 않는다.** 이것이 FR-016의 \"섹터를 골라도 넘기는 분야·기준월은 달라지지\n- * 않는다\"를 지키는 방식이다. 인자에 자리가 없으면 실수로도 실을 수 없다.\n- */\n-export function buildSimilarPeriodHandoff(field: {\n-  fieldId: MarketFlowFieldId\n-  referenceMonth: string | null\n-}): SimilarPeriodHandoff | null {\n-  if (field.referenceMonth === null) return null\n-  return { fieldId: field.fieldId, referenceMonth: field.referenceMonth }\n-}\n-\n-/**\n- * 010 검색 화면의 주소다.\n- *\n- * 분야와 기준월을 **주소에** 싣는다. 상태로 넘기면 새로고침에 사라져 사용자가 같은 화면을 다시\n- * 열 수 없고, 주소를 건네 같은 검색을 보여줄 수도 없다. 011이 `?case=`를 주소로 다니는 것과\n- * 같은 방식이다.\n- *\n- * 값을 만들 수 없으면 `null`이라 부르는 쪽이 진입점을 열지 않는다.\n- */\n-export function buildRegimeSearchPath(handoff: SimilarPeriodHandoff | null): string | null {\n-  if (handoff === null) return null\n-  const query = new URLSearchParams({ field: handoff.fieldId, month: handoff.referenceMonth })\n-  return `/regime-search?${query.toString()}`\n-}\n-\n-/**\n- * 종합 비교가 선택된 상태로 010 검색 화면을 여는 주소다(S15P21E205-450, 009 FR-018).\n- *\n- * 분야 검색은 `buildRegimeSearchPath`로 분야와 010 기준월을 실어 연다. 저장된 판(`?searchId=`)으로 열면 010 화면은\n- * 그것을 내 기록의 '다시 보기'로 다뤄 기록하지 않고 분야 선택도 비워 둔다(010 FR-032, 006 R17).\n- */\n-export function buildCompositeSearchPath(): string {\n-  return '/regime-search?mode=composite'\n-}\n-\n /**\n  * 사례 식별자를 만든다. `{010 searchId}~{endMonth}`다(011 계약 §0).\n  *\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/marketflow/handoff.ts",
+          "old_path": "frontend/src/marketflow/handoff.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'\n import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n import { fetchMarketIndicatorsFor } from '@/api/market'\n import { fetchMarketNewsDigests, fetchNewsSectors } from '@/api/marketNews'\n-import { getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'\n+import { getRegimeBaselineMonths, getRegimeCaseDetail, getRegimeSearch } from '@/api/regime'\n import { fetchSectorCatalog } from '@/api/sectors'\n import { renderWithRouter } from '@/test/renderWithRouter'\n import type { FieldDetailResult, FieldSummary } from '@/types/marketFlow'\n-import type { RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'\n+import type { RegimeBaselineMonths, RegimeCaseDetail, RegimeSearchResult } from '@/types/regime'\n import { MarketFlowPage } from './MarketFlowPage'\n \n vi.mock('@/api/marketFlow', () => ({ fetchMarketFlowFields: vi.fn(), fetchMarketFlowField: vi.fn() }))\n@@ -15,7 +15,7 @@ vi.mock('@/components/navigation/AppHeader', () => ({ AppHeader: () => <header>T\n vi.mock('@/api/sectors', () => ({ fetchSectorCatalog: vi.fn() }))\n vi.mock('@/api/market', () => ({ fetchMarketIndicatorsFor: vi.fn() }))\n vi.mock('@/api/marketNews', () => ({ fetchMarketNewsDigests: vi.fn(), fetchNewsSectors: vi.fn() }))\n-vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn() }))\n+vi.mock('@/api/regime', () => ({ getRegimeSearch: vi.fn(), getRegimeCaseDetail: vi.fn(), getRegimeBaselineMonths: vi.fn() }))\n \n const fieldNames = ['생산', '소비·투자', '대외거래', '노동', '물가·원자재', '금융·주택', '해외 경기']\n const fields: FieldSummary[] = fieldNames.map((displayName, index) => ({\n@@ -44,10 +44,12 @@ const productionDetail: FieldDetailResult = {\n }\n \n const fieldSearch = {\n-  searchId: 'S-1', mode: 'FIELD', field: { id: 'production', name: '생산' }, baselineMonth: '2026-07',\n+  searchId: 'S-1', mode: 'FIELD', field: { id: 'production', name: '생산' }, baselineMonth: '2026-07', baselineOrigin: 'T_G',\n   status: 'NEAREST_ONLY', statusNote: '가까운 순서만 제공합니다.', caseLabel: '최근접 참고 사례',\n   // api/regime.ts의 응답 검사가 요구하는 칸이다. 실제 응답은 늘 이 칸을 싣는다.\n   versions: { data: 'macro-1', registry: 'calc-1', model: 'REGIME-V1.1', revision: 1, sampleData: false, sampleRegistry: false },\n+  basis: { kind: 'HISTORICAL_REVISION', note: '최신 개정자료를 이용한 역사 비교입니다.' },\n+  counts: { evaluated: 300, eligible: 12, stored: 2, displayed: 2 },\n   comparisonMonths: [],\n   dataAsOf: { indicators: [], note: '생산 지표는 2026년 7월분까지 반영되어 있습니다.', revisions: [], newerReleases: [] },\n   cases: [\n@@ -67,7 +69,19 @@ function caseDetail(endMonth: string, caseMonths: string[], raw: [string[], stri\n   } as unknown as RegimeCaseDetail\n }\n \n+const baselines: RegimeBaselineMonths = {\n+  byField: fields.map((field) => ({ id: field.fieldId, name: field.displayName, baselineMonth: '2026-07' })),\n+  composite: '2026-07',\n+  range: { earliest: '1962-01', latest: '2026-08' },\n+  note: '전체 분야를 맞추기 위해 비교 기준월이 바뀝니다.',\n+}\n+\n+/** 분야 상세 안 '지금과 비슷했던 과거' 줄. 바닥의 사례 구역에도 같은 사례가 서므로 줄 안에서만 찾는다. */\n+const compareRow = () => screen.getByRole('region', { name: '지금과 비슷했던 과거' })\n+const indicatorCard = (name: string) => screen.getByRole('heading', { level: 3, name }).closest('article') as HTMLElement\n+\n function mockFields() {\n+  vi.mocked(getRegimeBaselineMonths).mockResolvedValue(baselines)\n   vi.mocked(fetchMarketFlowFields).mockResolvedValue({ registryVersion: 'r1', datasetVersion: 'd1', narrativeRuleVersion: 'n1', historicalComparisonNotice: '최신 개정자료를 이용한 역사 비교입니다.', fields })\n   vi.mocked(fetchMarketFlowField).mockImplementation(async (fieldId) => (\n     fieldId === 'production' ? productionDetail : { ...fields.find((item) => item.fieldId === fieldId)!, multipleReferenceMonthNotice: '분야마다 기준월이 다를 수 있습니다.', indicators: [] }\n@@ -127,16 +141,16 @@ describe('MarketFlowPage', () => {\n       const service = within(detail).getByRole('heading', { level: 3, name: '서비스업생산' }).closest('article') as HTMLElement\n       expect(within(allIndustry).getByText('비슷한 점')).toBeTruthy()\n       expect(within(service).getByText('다른 점')).toBeTruthy()\n-      expect(screen.getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe('/regime-link/start?case=S-1%7E2001-03')\n+      expect(within(compareRow()).getByRole('link', { name: /이 기간으로 백테스트/ }).getAttribute('href')).toBe('/regime-link/start?case=S-1%7E2001-03')\n     })\n \n     it('지금만을 고르면 겹친 경로와 문장을 걷고, 다른 사례를 고르면 그 사례의 상세를 받는다', async () => {\n       mockFields()\n       renderWithRouter(<MarketFlowPage />)\n-      await screen.findByText('비슷한 점')\n+      await screen.findAllByText('비슷한 점')\n \n       fireEvent.click(screen.getByRole('radio', { name: '지금만' }))\n-      expect(screen.queryByText('비슷한 점')).toBeNull()\n+      expect(within(indicatorCard('전산업생산')).queryByText('비슷한 점')).toBeNull()\n       expect(screen.getByRole('list', { name: '전산업생산 3개월 경로' }).textContent).not.toContain('당시')\n       expect(screen.getByRole('button', { name: /이 기간으로 백테스트/ })).toHaveProperty('disabled', true)\n \n@@ -144,11 +158,11 @@ describe('MarketFlowPage', () => {\n       await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2011-10', { searchId: 'S-1' }, expect.any(AbortSignal)))\n       await waitFor(() => expect(screen.getByRole('list', { name: '전산업생산 3개월 경로' }).textContent).toContain('당시 2011-10 3.5 %'))\n       // 이 사례에는 문장이 없어 지금 값과 당시 값만 적는다.\n-      expect(screen.queryByText('비슷한 점')).toBeNull()\n+      expect(within(indicatorCard('전산업생산')).queryByText('비슷한 점')).toBeNull()\n       expect(screen.getByText(/지금 3\\.1% · 당시/).textContent).toBe('지금 3.1% · 당시 3.5%')\n     })\n \n-    it('사례를 골라도 라디오의 초점이 그대로이고, 010 검색은 분야와 010 기준월로 연다', async () => {\n+    it('사례를 골라도 라디오의 초점이 그대로이고, 010 검색 화면으로 넘기는 링크는 없다', async () => {\n       mockFields()\n       renderWithRouter(<MarketFlowPage />)\n       const second = await screen.findByRole('radio', { name: '2011-08 ~ 2011-10' })\n@@ -158,13 +172,36 @@ describe('MarketFlowPage', () => {\n       await waitFor(() => expect(getRegimeCaseDetail).toHaveBeenCalledWith('2011-10', { searchId: 'S-1' }, expect.any(AbortSignal)))\n       // 다시 그려도 라디오를 새로 만들지 않는다. 새로 만들면 키보드 사용자의 초점이 문서 처음으로 떨어진다.\n       expect(document.activeElement).toBe(second)\n-      expect(screen.getByRole('link', { name: /모두 보기/ }).getAttribute('href')).toBe('/regime-search?field=production&month=2026-07')\n+      expect(document.querySelector('a[href^=\"/regime-search\"]')).toBeNull()\n+    })\n+\n+    it('분야 상세 바닥에 가까운 과거 사례 구역이 서고, 자세히는 그 구역에서 고른 사례의 상세를 펼친다 (2026-10-07)', async () => {\n+      mockFields()\n+      renderWithRouter(<MarketFlowPage />)\n+      await screen.findByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })\n+\n+      const detail = document.getElementById('market-flow-detail') as HTMLElement\n+      const explorer = within(detail).getByRole('region', { name: '가까운 과거 사례' })\n+      // 지표 칸 아래에 선다.\n+      expect(indicatorCard('서비스업생산').compareDocumentPosition(explorer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()\n+      expect(within(explorer).getAllByRole('listitem')).toHaveLength(2)\n+      expect(within(explorer).getByLabelText('기준월 지정')).toBeTruthy()\n+      expect(within(explorer).getByRole('status', { name: '생산 2026-07 검색 결과: 검색 상태' })).toBeTruthy()\n+      expect(within(explorer).queryByRole('button', { name: '상세 닫기' })).toBeNull()\n+\n+      fireEvent.click(within(compareRow()).getByRole('button', { name: '자세히' }))\n+      const toggle = await within(explorer).findByRole('button', { name: '상세 닫기' })\n+      expect(toggle.closest('li')?.textContent).toContain('2001-01 ~ 2001-03')\n+      await waitFor(() => expect(document.activeElement).toBe(toggle))\n+\n+      fireEvent.click(within(compareRow()).getByRole('button', { name: /모두 보기/ }))\n+      await waitFor(() => expect(document.activeElement).toBe(explorer))\n     })\n \n     it('보통 범위를 켜면 지표마다 띠를 그리고, 지금만이어도 켜 둘 수 있다', async () => {\n       mockFields()\n       const { container } = renderWithRouter(<MarketFlowPage />)\n-      await screen.findByText('비슷한 점')\n+      await screen.findAllByText('비슷한 점')\n \n       fireEvent.click(await screen.findByRole('checkbox', { name: /지난 10년 보통 범위/ }))\n       expect(container.querySelectorAll('rect[data-band]')).toHaveLength(2)\n@@ -196,9 +233,10 @@ describe('MarketFlowPage', () => {\n       vi.mocked(getRegimeSearch).mockRejectedValueOnce(new Error('offline'))\n       renderWithRouter(<MarketFlowPage />)\n \n-      expect(await screen.findByText(/과거 사례를 불러오지 못했습니다/)).toBeTruthy()\n+      // 줄과 바닥 구역이 같은 문장으로 알린다. 분야 지표는 그대로다.\n+      expect(await screen.findAllByText(/과거 사례를 불러오지 못했습니다/)).toHaveLength(2)\n       expect(screen.getByRole('heading', { level: 3, name: '전산업생산' })).toBeTruthy()\n-      fireEvent.click(screen.getByRole('button', { name: '다시 시도' }))\n+      fireEvent.click(within(compareRow()).getByRole('button', { name: '다시 시도' }))\n       expect(await screen.findByRole('radio', { name: '2001-01 ~ 2001-03, 가장 가까운 사례' })).toBeTruthy()\n     })\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,14 +2,17 @@ import { Activity, RefreshCw } from 'lucide-react'\n import { LayoutGroup, motion, useReducedMotion } from 'motion/react'\n import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'\n import { fetchMarketFlowField, fetchMarketFlowFields } from '@/api/marketFlow'\n+import { getRegimeBaselineMonths } from '@/api/regime'\n import { CompositePast } from '@/components/marketflow/CompositePast'\n import { FieldDetail } from '@/components/marketflow/FieldDetail'\n import { FieldPastCompare } from '@/components/marketflow/FieldPastCompare'\n import { CompositeSummaryCard, FieldSummaryCard } from '@/components/marketflow/FieldSummaryCard'\n+import { PastCaseExplorer, type CaseFocusRequest } from '@/components/marketflow/PastCaseExplorer'\n import { bandLabel, bandOf, pastForIndicator, unplacedVerdicts } from '@/components/marketflow/pastOverlay'\n import { useCaseDetail, usePastSearch } from '@/hooks/usePastCases'\n import { AppHeader } from '@/components/navigation/AppHeader'\n import type { FieldDetailResult, FieldSummary, FieldSummaryResult, MarketFlowFieldId } from '@/types/marketFlow'\n+import type { RegimeBaselineMonths } from '@/types/regime'\n import heading from '@/components/common/PageHeading.module.css'\n import styles from './MarketFlowPage.module.css'\n \n@@ -42,9 +45,12 @@ export function MarketFlowPage() {\n   const [detailRequest, setDetailRequest] = useState(0)\n   const [caseChoices, setCaseChoices] = useState<CaseChoices>({})\n   const [showBand, setShowBand] = useState(false)\n+  // 010이 계산을 마친 달 목록. 바닥 '가까운 과거 사례' 구역의 기준월 지정 범위다. 못 받으면 지정 칸 없이 최신만 보인다.\n+  const [baselines, setBaselines] = useState<RegimeBaselineMonths | null>(null)\n+  // 위 줄의 '자세히'·'모두 보기'가 바닥 구역으로 보내는 요청. 같은 사례를 다시 눌러도 옮기도록 횟수를 올린다.\n+  const [focusRequest, setFocusRequest] = useState<CaseFocusRequest | null>(null)\n   // 마지막으로 상세를 받은 분야와 그때의 다시 불러오기 횟수. 종합 비교를 보다 같은 분야로 돌아오면 다시 받지 않는다.\n   const loadedDetail = useRef<{ fieldId: MarketFlowFieldId; request: number } | null>(null)\n-  const fieldListRef = useRef<HTMLDivElement>(null)\n   const compositeOpen = selectedId === 'composite'\n   const selected = compositeOpen ? undefined : summary?.fields.find((field) => field.fieldId === selectedId) ?? summary?.fields[0]\n   const selectedFieldId = selected?.fieldId\n@@ -64,6 +70,27 @@ export function MarketFlowPage() {\n     return () => controller.abort()\n   }, [summaryRequest])\n \n+  useEffect(() => {\n+    const controller = new AbortController()\n+    getRegimeBaselineMonths(controller.signal)\n+      .then((result) => {\n+        if (!controller.signal.aborted) setBaselines(result)\n+      })\n+      .catch(() => {\n+        // 기준월 목록이 없어도 사례 구역은 최신 검색으로 선다. 지정 칸만 두지 않는다.\n+      })\n+    return () => controller.abort()\n+  }, [])\n+\n+  const fieldNames = useMemo(\n+    () => Object.fromEntries(summary?.fields.map((field) => [field.fieldId, field.displayName]) ?? []),\n+    [summary],\n+  )\n+\n+  const requestCaseFocus = useCallback((scope: string, endMonth: string | null) => {\n+    setFocusRequest((current) => ({ scope, endMonth, nonce: (current?.nonce ?? 0) + 1 }))\n+  }, [])\n+\n   const openField = useCallback((field: FieldSummary) => {\n     // 같은 분야의 선택은 조회/차트 애니메이션을 다시 시작하지 않는다.\n     if (field.fieldId !== selectedFieldId) setSelectedId(field.fieldId)\n@@ -175,7 +202,7 @@ export function MarketFlowPage() {\n                 마지막 갱신 시각은 말풍선마다 적고(FR-011), 고른 분야의 시각은 상세 머리 오른쪽에 있다.\n                 메뉴는 분야 수만큼 같은 폭으로 나누고 끝에 종합 비교 칸 하나를 더해 아래 상세 카드와 폭을 맞춘다.\n               */}\n-              <div ref={fieldListRef} className={styles.fieldList} style={{ '--field-count': summary.fields.length } as CSSProperties}>\n+              <div className={styles.fieldList} style={{ '--field-count': summary.fields.length } as CSSProperties}>\n                 <LayoutGroup id={selectionGroup}>\n                   {summary.fields.map((field) => <FieldSummaryCard key={field.fieldId} field={field} selected={selectedFieldId === field.fieldId} onOpen={openField} />)}\n                   <CompositeSummaryCard selected={compositeOpen} onOpen={() => setSelectedId('composite')} />\n@@ -185,13 +212,7 @@ export function MarketFlowPage() {\n             <div id=\"market-flow-detail\" className={styles.detailPanel} tabIndex={-1} aria-label=\"선택한 분야 상세\">\n               <p className={styles.srOnly} role=\"status\">{shownDetail ? `${selected?.displayName} 분야 상세를 불러왔습니다.` : ''}</p>\n               {compositeOpen ? (\n-                <CompositePast\n-                  onShowFields={() => {\n-                    setSelectedId(summary.fields[0]?.fieldId ?? null)\n-                    // 누른 버튼이 사라지므로 초점을 첫 분야 버튼으로 옮긴다. 그대로 두면 초점이 문서 처음으로 떨어진다.\n-                    fieldListRef.current?.querySelector<HTMLButtonElement>('button[aria-controls=\"market-flow-detail\"]')?.focus()\n-                  }}\n-                />\n+                <CompositePast baselines={baselines} fieldNames={fieldNames} focusRequest={focusRequest} />\n               ) : shownDetail && displayedDetail ? (\n                 // 퇴장 애니메이션으로 이전 분야가 남지 않도록 새 선택을 즉시 반영한다.\n                 <FieldDetail\n@@ -203,7 +224,6 @@ export function MarketFlowPage() {\n                   comparing={chosenCase !== null}\n                   compare={(\n                     <FieldPastCompare\n-                      fieldId={shownDetail.fieldId}\n                       fieldName={shownDetail.displayName}\n                       referenceMonth={shownDetail.referenceMonth}\n                       nowMonths={shownDetail.indicators[0]?.path.map((point) => point.month) ?? []}\n@@ -221,6 +241,26 @@ export function MarketFlowPage() {\n                       showBand={showBand}\n                       onToggleBand={setShowBand}\n                       unplaced={chosenCase ? unplacedVerdicts(shownDetail.indicators, chosenCase) : []}\n+                      onShowAll={() => requestCaseFocus(shownDetail.fieldId, null)}\n+                      onShowDetail={(endMonth) => requestCaseFocus(shownDetail.fieldId, endMonth)}\n+                    />\n+                  )}\n+                  /*\n+                    010 검색 화면의 내용(가까운 사례·사례 상세·기준월 지정·신뢰 범위 표시)은 이 분야 아래에서 바로 본다\n+                    (2026-10-07). 분야가 바뀌면 지정한 달과 펼친 상세를 새로 시작한다.\n+                  */\n+                  explorer={(\n+                    <PastCaseExplorer\n+                      key={shownDetail.fieldId}\n+                      id=\"market-flow-past-cases\"\n+                      mode=\"field\"\n+                      fieldId={shownDetail.fieldId}\n+                      scopeName={shownDetail.displayName}\n+                      base={pastSearch}\n+                      onRetryBase={retryPastSearch}\n+                      baselines={baselines}\n+                      fieldNames={fieldNames}\n+                      focusRequest={focusRequest}\n                     />\n                   )}\n                 />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "old_path": "frontend/src/pages/MarketFlowPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -257,11 +257,6 @@ export function RegimeSearchPage() {\n                     isLoading={isLoading}\n                     context={context}\n                     fieldNames={Object.fromEntries(baselines?.byField.map((field) => [field.id, field.name]) ?? [])}\n-                    onBrowseFields={\n-                      result.mode === 'COMPOSITE' && baselines?.byField[0]\n-                        ? () => setQuery({ mode: 'field', field: baselines.byField[0].id })\n-                        : undefined\n-                    }\n                     /*\n                       사후 구간 자리에 011 진입을 둔다(011 T087). 이 길은 섹터를 알 수 없어 `sector`를\n                       싣지 않는다 — 009에서 010으로 오는 인계에 섹터가 없다. 사례 식별자를 만들 수 없으면\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "old_path": "frontend/src/pages/RegimeSearchPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -157,7 +157,7 @@\n \n - **FR-007**: 관심 분야를 열면 그 분야 지표마다 실제 값·단위·최근 3개월 경로(t-2·t-1·t)·대상월·발표일(원천이 줄 때)·출처·작성기관을 보인다. 경로 값은 그래프 점 옆에, 출처·작성기관은 카드 바닥 한 줄에 잇고 대상월은 분야 머리에 둔다(Session 2026-09-24). 값을 표준화 점수나 거리로 바꿔 보이지 않는다. (§4.4, D21)\n - **FR-008**: 열린 분야에 그 분야의 기준월 T_g를 표시하고, 분야마다 기준월이 다를 수 있음은 분야마다 머리에 보이는 대상월로 드러낸다(별도 안내 문장은 두지 않는다, Session 2026-09-29). 어느 지표가 T_g보다 최신 대상월 값을 가지면 그 지표 행 바로 아래에 'T_g 이후 발표: {대상월} {값}{단위}' 한 줄을 3개월 경로와 구분된 서식으로 붙인다. 이 값은 t-2·t-1·t 경로에 넣지 않고 변화 요약의 근거로도 쓰지 않는다. (§4.4, D22)\n-- **FR-009**: 열린 분야의 '지금과 비슷했던 과거' 줄(FR-019)에서 '모두 보기'로 [010](../010-economic-regime-search/spec.md)의 분야 검색에 진입한다(2026-10-02, 예전의 '비슷했던 때 보기' 버튼을 대신한다). 진입 시 분야 g를 유지한다. **진입 기준월은 008의 T_g가 아니라 010이 계산을 마친 달이다.** 008은 새 발표분이 들어오는 즉시 T_g를 올리지만 010의 사전 계산 배치는 그 뒤에 돌므로, 008의 T_g로 진입하면 아직 결과가 없는 달을 골라 404가 난다. 화면이 고를 수 있는 달은 **결과가 실제로 있는 달**이어야 한다 ([010 contracts/macro-indicator-port.md](../010-economic-regime-search/contracts/macro-indicator-port.md) §0.2). 두 달이 다르면 화면은 008의 T_g를 분야 기준월로 보이되 검색은 010이 계산한 달로 연다. (§4.3, §4.4)\n+- **FR-009**: 열린 분야의 '지금과 비슷했던 과거' 줄(FR-019)의 '모두 보기'는 같은 상자 바닥의 '가까운 과거 사례' 구역으로 옮긴다(2026-10-07, 사용자 결정. 2026-10-02~10-06에는 [010](../010-economic-regime-search/spec.md) 검색 화면으로 넘겼다). 그 구역이 010 분야 검색의 내용(가까운 사례와 비슷한 점·다른 점, 사례 상세, 기준월 지정, 신뢰 범위 표시, 자료 기준 시점)을 그 분야 아래에서 보인다 — 다른 화면으로 넘기지 않는다. 기준월을 지정하지 않으면 **010이 계산을 마친 달**이 기준이다. 008은 새 발표분이 들어오는 즉시 T_g를 올리지만 010의 사전 계산 배치는 그 뒤에 돌므로, 화면이 고를 수 있는 달은 **결과가 실제로 있는 달**이어야 한다 ([010 contracts/macro-indicator-port.md](../010-economic-regime-search/contracts/macro-indicator-port.md) §0.2). 두 달이 다르면 화면은 008의 T_g를 분야 기준월로 보이되 검색은 010이 계산한 달로 연다. 지정한 달이 그 범위의 최신 계산월보다 뒤면 최신 계산월로 물러나고 그 사실을 알린다(010 FR-031). (§4.3, §4.4)\n - **FR-010**: 'Thorp 종합 비교'는 기본 화면에 강제로 노출하지 않고, 사용자가 선택해서 열 수 있는 진입점으로 둔다. 종합 비교의 동작은 [010](../010-economic-regime-search/spec.md)이 정한다. (§4.3, D08)\n \n #### 자료 시점과 상태 (§4.4, §6.1, D12)\n@@ -172,16 +172,17 @@\n \n - **FR-016**: (2026-10-02 삭제) 시장 흐름에는 뉴스를 두지 않는다. 뉴스 섹터 고르기는 투자 대상 고르기의 뉴스 구역([012](../012-market-news-digest/spec.md) FR-005)으로 옮겼다.\n - **FR-017**: 국내 시장의 가격 추세·변동성 참고 정보(KOSPI·VKOSPI)는 시장 흐름이 아니라 투자 대상 고르기의 탐색 카드 아래 띠([002](../002-sector-weight-selection/spec.md) FR-018)에 둔다. 경제환경 검색 입력에 쓰지 않는다는 규칙은 그대로다(Session 2026-09-24). (§4.4, §6.4.4)\n-- **FR-018**: 시장 흐름에서 과거 사례로 가는 길은 분야 상세의 '지금과 비슷했던 과거' 줄(FR-019)이다. 그 줄의 '이 기간으로 백테스트'는 [011](../011-regime-strategy-link/spec.md) 진입 계약을 따르고, '자세히'와 '모두 보기'는 [010](../010-economic-regime-search/spec.md) 검색 화면을 연다(Session 2026-10-02). (§4.3, D25)\n+- **FR-018**: 시장 흐름에서 과거 사례로 가는 길은 분야 상세의 '지금과 비슷했던 과거' 줄(FR-019)과 그 상자 바닥의 '가까운 과거 사례' 구역이다. 줄과 구역의 '이 기간으로 백테스트'는 [011](../011-regime-strategy-link/spec.md) 진입 계약을 따른다. 줄의 '자세히'는 바닥 구역에서 고른 사례의 상세를 펼치고 '모두 보기'는 그 구역으로 옮긴다 — [010](../010-economic-regime-search/spec.md) 검색 화면으로 넘기지 않는다(2026-10-07, 사용자 결정. Session 2026-10-02의 '010 검색 화면을 연다'를 대신한다). 010 검색 화면은 내 기록의 '다시 보기'(`?searchId=`)로만 연다. (§4.3, D25)\n - **FR-019**: 지금과 비슷했던 과거는 분야 상세 상자 안에 둔다(Session 2026-10-02).\n   - 상자 머리(분야 이름·기준 시점·변화 요약) 아래 '지금과 비슷했던 과거' 줄에 [지금만]과 010 분야 검색의 가까운 사례 3개를 고를 수 있게 두고, 처음에는 가장 가까운 사례를 고른다. 사례마다 관측 구간만 적는다.\n   - 고른 사례의 같은 지표 경로를 각 지표 그래프에 점선으로 겹친다. 달은 010의 비교 순서대로 맞대고 그래프 아래에 당시 달을 함께 적는다. 010의 비교 달이 그래프의 달과 다르면 맞는 달만 겹치고 비교 기준월을 밝힌다.\n   - 010이 준 비슷한 점·다른 점 문장은 그 문장이 다루는 지표 칸에 붙인다. 다른 지표 칸에는 지금 값과 당시 값만 적는다.\n   - '이 기간으로 백테스트'와 '자세히'는 선택 줄 오른쪽에 둔다(FR-018). '지금만'을 고르면 둘 다 누를 수 없다.\n+  - 지표 칸 아래 바닥에 '가까운 과거 사례' 구역을 둔다(2026-10-07). 010 분야 검색의 가까운 사례(처음 3개, '더 보기'로 10개)를 **먼저** 보이고 사례마다 관측 구간·비슷한 점·다른 점(문장이 많으면 한 문장씩 먼저)·'이 기간으로 백테스트'·'상세 보기'(그 자리에서 010 사례 상세를 펼친다)를 둔다. 그 아래에 010의 신뢰 범위 표시(검색 상태·사례 구분·예시 자료·빠진 비교 시점·역사 비교·더 최신 발표)를 늘 펼쳐 두고, 마지막에 자료 기준 시점을 둔다(010 FR-031·FR-037). 구역 머리 오른쪽의 '기준월 지정'으로 다른 달을 기준으로 다시 찾을 수 있고 '최신 기준월로'로 돌아온다(FR-009). 기준월을 지정하지 않은 동안은 위 줄과 같은 검색 결과를 쓰고, 로그인 사용자가 기준월을 지정해 연 검색만 내 기록에 남긴다(010 FR-032). 분야를 바꾸면 지정한 달과 펼친 상세는 새로 시작한다.\n   - 지표마다 010 공통 척도의 중앙값 ± 산포를 '보통 범위' 띠로 켜고 끌 수 있다. 처음에는 끈다.\n-  - 'Thorp 종합 비교'는 분야 메뉴의 여덟째 칸이며 누를 때만 연다(010 US3). 고르면 상자에 종합 비교의 가까운 사례 목록을 보인다.\n+  - 'Thorp 종합 비교'는 분야 메뉴의 여덟째 칸이며 누를 때만 연다(010 US3). 고르면 상자에 제목 'Thorp 종합 비교'와 같은 '가까운 과거 사례' 구역(종합 검색)이 선다. 머리 문장('일곱 분야를 함께 견준…')과 '분야별로 살펴보기'·'참고 사례 보기'는 두지 않는다(2026-10-07) — 분야 메뉴가 바로 위에 있고 참고 사례는 그 자리에서 보인다. 기준 충족 사례가 없으면 안내와 함께 '기준 미충족 참고 사례'를 바로 펼친다(010 FR-021).\n   - 과거 사례·당시 경로 조회가 실패하거나 늦어도 분야 요약·상세와 지표 그래프는 그대로 보이고, 그 줄에만 안내와 다시 시도를 둔다.\n-  - 010의 신뢰 범위 표시는 010 화면과 같은 문구로 이 줄에도 보인다. 검색 상태와 사례 구분만 i 표시 뒤로 내리고(보조기기에는 늘 읽힌다), 예시 자료·빠진 비교 시점·더 최신 발표·자료 기준 시점은 늘 보인다(010 FR-031·FR-037·FR-038). '모두 보기'와 '자세히'는 저장된 판이 아니라 분야와 010 기준월로 010 검색을 연다 — 저장된 판으로 열면 내 기록의 '다시 보기'로 다뤄진다(010 FR-032).\n+  - 010의 신뢰 범위 표시는 010 화면과 같은 문구로 이 줄에도 보인다. 검색 상태와 사례 구분만 i 표시 뒤로 내리고(보조기기에는 늘 읽힌다), 예시 자료·빠진 비교 시점·더 최신 발표·자료 기준 시점은 늘 보인다(010 FR-031·FR-037·FR-038). 바닥 구역에서는 다섯 표시 모두 이름표가 있는 안내 상자로 늘 펼쳐 둔다.\n   - 뉴스는 두지 않는다. 지금 시장 뉴스는 투자 대상 고르기 하단의 뉴스 구역에 있다(002 FR-019, 012 FR-001).\n \n ### Key Entities *(include if feature involves data)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/spec.md",
+          "old_path": "specs/009-market-flow-overview/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -283,3 +283,10 @@ WB04는 User Story 4(P3)와 바깥 spec 연결이다. 010·011이 아직 없어\n - [x] MF-05 단일 지표 분야를 두 지표 분야와 같은 폭의 왼쪽 한 칸에 배치한다. (2026-10-02 MF-07이 대신한다)\n - [x] MF-06 과거 사례를 분야 상세 안으로 옮겨, 고른 과거 구간의 같은 지표 경로를 그래프에 겹치고 비슷한 점·다른 점을 그 지표 칸에 붙인다. 'Thorp 종합 비교'는 분야 메뉴의 여덟째 칸으로 둔다(FR-019).\n - [x] MF-07 단일 지표 분야를 세 지표 분야와 같은 폭의 왼쪽 한 칸에 배치한다(MF-05를 대신한다).\n+\n+## 과거 사례 검색을 분야 아래로 (2026-10-07)\n+\n+브랜치: `feat(fe)/market-flow-past-cases`. 대상 spec: 009 FR-009·FR-018·FR-019, 연계 010 US3·FR-021·FR-046.\n+\n+- [x] MF-08 010 검색 화면의 내용(가까운 사례·사례 상세·기준월 지정·신뢰 범위 표시·자료 기준 시점)을 분야 상세와 종합 비교의 바닥 '가까운 과거 사례' 구역으로 옮긴다. 줄의 '자세히'·'모두 보기'는 그 구역으로 옮기고 010 화면으로 넘기지 않는다.\n+- [x] MF-09 종합 비교의 머리 문장과 '분야별로 살펴보기'·'참고 사례 보기'를 없애고, 기준 충족 사례가 없으면 참고 사례를 바로 펼친다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/009-market-flow-overview/tasks.md",
+          "old_path": "specs/009-market-flow-overview/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -110,7 +110,7 @@\n 1. **Given** 분야 보기 상태에서, **When** 'Thorp 종합 비교'를 선택하면, **Then** 종합 보기가 열리고 기준월이 17개 지표의 공통 최신월 T_all로 바뀌며 T_g와 다르면 \"전체 분야를 맞추기 위해 비교 기준월이 바뀝니다\"라고 한 문장으로 알린다.\n 2. **Given** 종합 사례에서, **Then** 경제 블록별 거리·기여도가 함께 보이고 \"대외 거래 흐름은 비슷했습니다\", \"금융 여건 흐름은 달랐습니다\"처럼 블록 단위로 닮은 점과 차이를 함께 설명한다(FR-042). *(2026-09-25 v3 개정 전에는 분야 단위였다.)*\n 3. **Given** 종합 사례 안에서 분야별 설명을 보면, **Then** 기준월은 T_all로 유지되고 분야별 최신 질의값이 섞이지 않으며 더 최신인 개별 발표는 별도 정보로 표시된다.\n-4. **Given** 유사성 기준이 교정된 뒤 충족 사례가 없으면, **Then** \"설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다\"라는 안내와 함께 분야별 탐색으로 연결되고 미충족 참고 사례는 별도로 열 수 있다.\n+4. **Given** 유사성 기준이 교정된 뒤 충족 사례가 없으면, **Then** \"설정된 종합 유사성 기준을 충족하는 사례가 없습니다. 분야별로 살펴볼 수 있습니다\"라는 안내와 함께 미충족 참고 사례가 바로 펼쳐진다(2026-10-07. 그 전에는 눌러야 열렸고 '분야별로 살펴보기' 버튼이 있었다). 분야별 탐색은 바로 위 분야 메뉴로 하므로 따로 버튼을 두지 않는다([009](../009-market-flow-overview/spec.md) FR-019).\n 5. **Given** 종합 비교 화면에서, **Then** 블록 구성과 동일가중이 Thorp의 설계 선택이라는 표시가 있고 \"모든 지표의 중요성이 같다\"는 표현은 없다.\n 6. **Given** 어느 지표의 국면 입력이나 블록 척도를 만들 수 없으면, **Then** 종합 검색도 '계산 불가'로 표시되고 그 지표나 블록을 빼고 계산하지 않는다(FR-040).\n 7. **Given** 사례의 블록 안 엇갈림이 컸으면, **Then** 그 사실이 한 문장으로 표시되고, 관측 구간 안의 KDI 경제동향·기준금리 변경·경기 전환점이 검색 근거가 아니라는 안내와 함께 링크로 붙는다(FR-042·FR-043).\n@@ -179,7 +179,7 @@\n - **FR-043**: 특이 사례에는 **당시 맥락**을 붙인다 — 사례 관측 구간(첫 달 1일~마지막 달 말일) 안에 발간된 KDI 경제동향 호, 한국은행 기준금리(2008-02까지 콜금리 목표) 변경, 국가데이터처 기준순환일의 경기 정점·저점. **제목·날짜·출처·원문 링크만** 쓰고 본문·요약은 저장하지도 보이지도 않는다. 구간 밖 사건은 붙이지 않는다 — 붙이면 사후 정보가 된다([012](../012-market-news-digest/spec.md) FR-006과 같은 규칙). 검색 입력이 아니며 사례를 고른 이유가 아님을 함께 밝힌다. 표는 `data/config/regime-context-v1.json`이고 `data/scripts/collect_regime_context.py`가 만든다.\n - **FR-044**: 종합 결과의 모델 버전은 설정의 버전(`REGIME-V3-EQ.2` — `.1` 문장 표기, `.2` 교정된 유사성 기준. 처음은 `REGIME-V3-EQ`)이며 식별 키에 들어간다(FR-029) — v1 종합과 같은 식별이 되지 않는다. 종합 사례의 저장 본문은 v1과 같은 모양을 유지하되 `distance.byField`가 비고 `distance.blocks`(블록 id·이름·거리·표준편차)와 `distance.blockContribution`이 찬다. `indicatorValues`는 국면 입력 값과 z, 명목 비중(블록 안 `1/n` × `1/블록 수`)을 담는다. `explanation`에 `unusual`, 있으면 `queryNote`·`context`를 더한다. 분야 검색의 본문은 바뀌지 않는다.\n - **FR-045** *(Session 2026-09-25, S15P21E205-447)*: 화면과 문장에 보이는 숫자는 **소수 첫째 자리**까지다(사사오입, 꼬리 0과 `-0`은 쓰지 않는다). 기여·명목 비중처럼 0~1 비율은 백분율로 보인다. 한 문장에 지금·당시 두 값이 함께 나오는데 첫째 자리에서 같게 보이면 **다르게 보일 때까지 자리를 늘린다** — \"지금이 2.3%로 당시 2.3%보다 높습니다\"처럼 판정과 숫자가 어긋나지 않게 한다. **저장 값과 API는 12자리 그대로다**(research R4) — 수기 대조(FR-028)는 그 값으로 하며, 화면은 정밀 값을 숫자에 붙은 설명(`title`)으로 남긴다. 문장 표기 자릿수는 모델 버전의 일부라 이 변경으로 분야 `REGIME-V1`→`REGIME-V1.1`, 종합 `REGIME-V3-EQ`→`REGIME-V3-EQ.1`이 됐다(계산은 같다).\n-- **FR-046** *(Session 2026-09-25, S15P21E205-448)*: **종합 비교는 교정된 유사성 기준을 쓴다**(PD-09 확정, [threshold-calibration.md](threshold-calibration.md) §7.1). 사례는 국면 거리 ≤ τ(1.5109237468134005), 블록 거리 모두 ≤ δ(1.0), 비교 시점 3개월을 모두 만족할 때 '기준 충족'이다. 종합 결과의 상태는 '교정된 기준 충족 여부'(`THRESHOLD_APPLIED`, 사유 없음)이고 FR-021대로 목록을 나눈다 — 기준 충족 사례가 기본 목록, 나머지 표시 후보가 '기준 미충족 참고 사례'이며 눌러야 열린다. 기준 충족 사례가 없으면 US3 시나리오 4의 안내와 분야별 탐색 연결을 보인다. **순위와 표시 후보(최대 10개)는 바뀌지 않는다** — 나눌 표시만 더한다. **분야 검색은 교정에 실패해(§7.2) 지금처럼 '가까운 순서만 제공·유사성 미판정'이다.** 교정 전에 '최근접 참고 사례'로 기록된 검색은 그 표시를 유지한다(Edge Cases).\n+- **FR-046** *(Session 2026-09-25, S15P21E205-448)*: **종합 비교는 교정된 유사성 기준을 쓴다**(PD-09 확정, [threshold-calibration.md](threshold-calibration.md) §7.1). 사례는 국면 거리 ≤ τ(1.5109237468134005), 블록 거리 모두 ≤ δ(1.0), 비교 시점 3개월을 모두 만족할 때 '기준 충족'이다. 종합 결과의 상태는 '교정된 기준 충족 여부'(`THRESHOLD_APPLIED`, 사유 없음)이고 FR-021대로 목록을 나눈다 — 기준 충족 사례가 기본 목록, 나머지 표시 후보가 '기준 미충족 참고 사례'이며 충족 사례가 있을 때는 눌러야 열린다. 기준 충족 사례가 없으면 US3 시나리오 4의 안내와 함께 참고 사례를 바로 펼친다(2026-10-07). **순위와 표시 후보(최대 10개)는 바뀌지 않는다** — 나눌 표시만 더한다. **분야 검색은 교정에 실패해(§7.2) 지금처럼 '가까운 순서만 제공·유사성 미판정'이다.** 교정 전에 '최근접 참고 사례'로 기록된 검색은 그 표시를 유지한다(Edge Cases).\n - **FR-008**: 기준 자료가 60개월 미만이면 공통 척도를 계산하지 않고 검색 상태를 '계산 불가/후보 없음'으로 표시한다. 미래 값 추정이나 임의 보간으로 최신월을 늘리지 않는다. (§6.4.4, D21, 원칙 V)\n \n #### 거리·가중·기여도 (§6.4.4, D21, D23)\n@@ -203,7 +203,7 @@\n - **FR-037**: **결과의 신뢰 범위를 말하는 표시는 전달 수단에 의존하지 않는다.** 대상은 다섯이다 — 검색 상태와 사유(FR-019), '최근접 참고 사례'(FR-020), 예시 자료 표시, 비교 시점에서 빠진 지표·월(FR-031), 역사 비교 표시(FR-027). 이 다섯은 ① **문구가 함께 보인다** — 색·아이콘·마우스 호버에만 의존하지 않는다, ② **키보드만으로** 검색·더 보기·모드 전환·상세 열기를 할 수 있고 그 과정에서 다섯이 모두 도달 가능하다, ③ **보조기술이 읽을 수 있다** — 각 표시가 어느 결과에 대한 것인지 프로그램적으로 연결되고, 상태가 바뀌면 그 사실이 전달된다, ④ 본문 대비 **명암비 4.5:1 이상**(굵은 큰 글자는 3:1 이상), ⑤ **좁은 폭에서도 잘리거나 접히지 않는다** — 화면이 좁다는 이유로 접어 두는 자리에 이 다섯을 넣지 않는다. **표시의 형태는 자리에 따라 다를 수 있다** — 검색 화면처럼 결과가 주인공인 자리는 이름표('검색 상태'·'사례 구분' 등)가 있는 안내 상자로 두고, [002](../002-sector-weight-selection/spec.md) 시장 흐름의 '지금과 비슷했던 과거 시장'처럼 결과를 곁들여 보이는 요약 카드는 검색 상태와 사례 구분을 사례 목록 위 i 표시 뒤로 내릴 수 있다. 이때 ① 대신 세 가지를 지킨다 — i 표시는 마우스를 얹을 때뿐 아니라 **키보드 초점으로도** 그 자리에 펼쳐지고, 보조기술에는 펼치지 않아도 같은 문장이 결과와 연결된 알림으로 읽히며, 같은 결과를 여는 '비슷했던 때 보기' 화면에서는 문구가 늘 펼쳐져 있다. ②~⑤는 어느 형태든 그대로 지킨다(constitution 원칙 II, 미승인 초안 단서). 010은 통계로만 분석하므로 *\"이 결과를 어디까지 믿어도 되는가\"* 가 결과 자체만큼 중요하고, 그 말이 전달 수단 때문에 약해지면 spec이 가장 경계하는 오독이 그대로 일어난다. (§4.3, §7.2, 원칙 VI)\n - **FR-019**: 검색 상태를 '계산 불가/후보 없음' / '가까운 순서만 제공·유사성 미판정' / '교정된 기준 충족 여부' 세 가지로 구분해 결과 옆에 표시한다. '계산 불가/후보 없음'일 때는 **사유 넷을 구분해** 표시한다 — 척도 구간 60개월 미만(FR-005·FR-008) / MAD·IQR 둘 다 0(FR-006) / 어느 지표의 비교 시점이 하나도 없음(FR-001·FR-007) / 유효 후보 0건(FR-012). 화면 문구는 [contracts/regime-search-api.md](contracts/regime-search-api.md) §1이 고정한다. (§4.3, D24)\n - **FR-020**: 유사성 문턱을 교정하기 전에는 사례를 '최근접 참고 사례'로 표시하고 '충분히 유사' 배지를 붙이지 않으며, 미교정이라는 이유로 '충분한 사례가 없다'고 단정하지 않는다. 임계값·분야별 큰 차이 문턱·최소 근거량·경제적 설명력 판정 기준은 결정 항목 PD-09(U04)다. (§4.3, D24, U04)\n-- **FR-021**: 교정 뒤에는 **목록을 나눈다** — 기준을 충족한 사례만 기본 목록에 보이고, **미충족 참고 사례는 별도로 열 수 있게** 한다. 한 목록에 섞어 '기준 충족' 배지를 다는 방식을 쓰지 않는다: 배지를 다는 순간 나머지가 '덜 유사한 것'으로 읽혀 FR-018이 막으려던 등급 매기기가 그대로 생긴다. 충족 사례가 하나도 없으면 같은 모양으로 미충족 참고 사례만 별도로 열리고 분야별 탐색으로 연결한다. **문턱 값은 PD-09이며 값이 정해지기 전에는 이 상태에 도달하지 않는다**(FR-020) — 화면 모양은 값과 무관하므로 여기서 고정한다. (§4.3, D24, PD-09)\n+- **FR-021**: 교정 뒤에는 **목록을 나눈다** — 기준을 충족한 사례만 기본 목록에 보이고, **미충족 참고 사례는 별도로 열 수 있게** 한다. 한 목록에 섞어 '기준 충족' 배지를 다는 방식을 쓰지 않는다: 배지를 다는 순간 나머지가 '덜 유사한 것'으로 읽혀 FR-018이 막으려던 등급 매기기가 그대로 생긴다. 충족 사례가 하나도 없으면 섞일 목록이 없으므로 미충족 참고 사례를 그 이름표와 안내 문구 아래 **바로 펼쳐** 보인다(2026-10-07, 사용자 결정. 그 전에는 눌러야 열렸고 분야별 탐색 버튼을 두었다 — 시장 흐름에서는 분야 메뉴가 그 길이라 버튼을 두지 않는다). **문턱 값은 PD-09이며 값이 정해지기 전에는 이 상태에 도달하지 않는다**(FR-020) — 화면 모양은 값과 무관하므로 여기서 고정한다. (§4.3, D24, PD-09)\n - **FR-022**: 거리·순위·유지율을 투자 성공 확률이나 확률적 신뢰도로 변환하지 않고, 경제환경의 유사성이 특정 전략 수익의 원인이라고 단정하지 않는다. **두 층으로 막는다.**\n \n   **① 금지 표현 목록** — 사전 계산 산출물(설명 문장·상태 문구)과 계약이 고정한 문구에 아래가 나타나지 않는다. 문자열로 판정한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/010-economic-regime-search/spec.md",
+          "old_path": "specs/010-economic-regime-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2882008": []
+  }
+}

@@ -1,5 +1,0 @@
-.page { min-height: 100vh; background: var(--thorp-bg); }
-.main { width: min(720px, calc(100% - 48px)); margin: 0 auto; padding: 48px 0; }
-.title { margin: 0 0 16px; font-size: 1.4rem; }
-.blocked { display: grid; gap: 12px; justify-items: start; border: 1px solid var(--thorp-line-strong); padding: 20px; }
-.blocked p { margin: 0; color: var(--thorp-copy); line-height: 1.7; word-break: keep-all; }

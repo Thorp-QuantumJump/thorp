@@ -1,0 +1,550 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943735,
+    "iid": 97,
+    "project_id": 1444456,
+    "title": "fix(infra): dev 기준을 fetch 결과 하나로 모은다",
+    "description": "## **작업 내용 요약**\n\nCI의 `Merge with dev` 스테이지는 **\"내 브랜치에 dev가 이미 들어가 있나?\"** 를 묻고, 들어가 있으면 병합을 건너뜁니다.\n\n그런데 그 질문에 쓰는 dev가 **방금 받아온 dev가 아닐 수 있습니다.** 그러면 오래된 dev와 비교하게 되어, 실제로는 병합이 필요한데도 \"이미 들어가 있다\"고 판단하고 그냥 통과시킵니다.\n\n방금 받아온 커밋을 직접 쓰도록 고쳤습니다.\n\n## **관련 티켓**\n\nticket #211 link https://ssafy.atlassian.net/browse/S15P21E205-211\n\n## **주요 변경 사항**\n\n### **무엇이 문제였나**\n\n기존 코드입니다.\n\n`git fetch --no-tags origin devgit merge-base --is-ancestor origin/dev HEAD`\n\n**두 줄이 같은 dev를 본다고 보이지만, 그렇지 않을 수 있습니다.**\n\n`git fetch origin dev`가 반드시 갱신하는 것은 `FETCH_HEAD`라는 임시 표시 하나뿐입니다. `origin/dev`라는 이름까지 갱신될지는 **Jenkins Job에 설정된 refspec**(어떤 브랜치를 어디로 가져올지 정한 규칙)에 달려 있습니다. 그 규칙이 dev를 포함하지 않으면 `origin/dev`는 예전 값 그대로 남습니다.\n\n그러면 이런 일이 생깁니다.\n\n1. `origin/dev`가 일주일 전 커밋을 가리킨 채 멈춰 있다\n2. 그 사이 누군가 dev에 `V3` 마이그레이션을 넣었다\n3. 내 브랜치는 일주일 전 dev에서 갈라졌으니 **\"이미 포함한다\"가 참이 된다**\n4. 병합을 건너뛰고 성공으로 보고한다\n5. 마이그레이션 검사도 일주일 전 dev를 기준으로 삼아 중복을 못 본다\n6. 머지하는 순간 dev가 기동하지 못한다\n\n**2026-09-11에 겪은 사고가 재현될 위험이 있었습니다.** 스테이지는 초록불로 통과하는 것처럼 보여도 그게 실제로 통과한 것이 아닌 경우를 막은 작업입니다.\n\n여태까지 괜찮았던 이유 : Job이 `+refs/heads/*:refs/remotes/origin/*`로 모든 브랜치를 가져오도록 설정돼 있어 `origin/dev`가 최신인 상황만 연출되었음.\n\n### **어떻게 고쳤나**\n\n`fetch` 직후에 받아온 커밋을 확정해 변수에 담습니다.\n\n`env.DEV_BASE = sh(returnStdout: true, script: '''    git ... fetch --no-tags origin dev >&2    git rev-parse FETCH_HEAD''').trim()`\n\n`FETCH_HEAD`는 방금 받아온 것을 가리키므로 Job 설정과 무관합니다. 이 값을 쓰는 세곳은 아래 표와 같습니다.\n\n| **쓰는 곳** | **전** | **후** |\n|----------|-------|-------|\n| 병합 여부 판단 | `origin/dev` | `$DEV_BASE` |\n| 마이그레이션 검사 | `origin/dev` | `$DEV_BASE` |\n| 바뀐 파트 선별 | `origin/dev` | `$DEV_BASE` |\n\n이제 셋이 같은 커밋을 봅니다.\n\n`fetch`의 출력은 `>&2`로 보냅니다. `returnStdout`으로 받는 값에 섞이면 SHA가 아닌 문자열이 들어갑니다.\n\n### **파트 선별을 옮긴 이유**\n\n**티켓 210 MR의 코드리뷰에서 나온 지적입니다.**\n\n바뀐 파트를 고르는 계산이 `environment` 블록에 있었는데, 그 블록은 **`fetch`보다 먼저** 실행됩니다. 그래서 이 계산만 또 다른 시점의 dev를 보고 있었습니다.\n\n`fetch` 뒤로 옮겨 같은 기준을 쓰게 했습니다. 덤으로, 나중에 어느 스테이지에 전용 `agent`를 붙여도 값이 흔들리지 않습니다.\n\n옮겨도 결과는 같습니다. 병합은 `--no-commit`이라 HEAD를 움직이지 않고, 비교는 커밋끼리 하기 때문입니다.\n\n### **로그에서 구분되게**\n\n전에는 병합했는지 건너뛰었는지가 로그에서 잘 드러나지 않았습니다.\n\n`[병합] 이 브랜치가 기준 dev 를 이미 포함한다. 병합하지 않고 소스 그대로 검증한다.[병합] 기준 dev 를 합친 결과로 검증한다.[병합] 기준 dev 와 충돌한다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.`\n\n바뀐 파일 목록도 남깁니다. **어떤 파트를 왜 건너뛰었는지 로그만 보고 알 수 있습니다.**\n\n`[파트 선별] 기준 대비 바뀐 파일:Jenkinsfileinfra/scripts/check-migration-version.sh`\n\n### **`check-migration-version.sh`**\n\n출력 문구를 `기준 브랜치:`에서 `기준:`으로 바꿨습니다. 이제 인자로 브랜치 이름이 아니라 커밋 SHA가 들어갑니다.\n\n## **테스트**\n\n* 완료중괄호 균형 확인 (124쌍)\n* 완료`origin/dev` 를 기준으로 쓰는 자리가 남아 있지 않음\n* 완료실제 커밋 SHA로 셸 명령을 직접 실행해 확인\n\n  `기준: d06de6e094eb1fe22ad65b50ebc347b446e913e5  버전 중복 없음 (11개 파일)[통과] 마이그레이션 버전 검사`\n* 미완료**이 MR의 빌드 로그에서 세 가지를 확인합니다**\n  * `기준 dev = <SHA>` 가 찍히는가\n  * `[병합]` 줄이 어느 경로인지 보이는가\n  * `[파트 선별]` 에 바뀐 파일이 나열되는가\n\n## **리뷰 포인트**\n\n1. **`env.DEV_BASE`로 스테이지 사이에 값을 넘깁니다.** Declarative Pipeline에서 스테이지 간에 값을 전달하려면 이 방법뿐입니다. 파일에 적는 방법도 있지만 워크스페이스를 더럽힙니다.\n2. **`Merge with dev`가 실패하면 뒤 스테이지는 아예 돌지 않습니다.** `skipped due to earlier failure(s)`가 되므로, `DEV_BASE`가 비어 있는 채로 다음 단계가 도는 경우는 없습니다.\n3. **MR 대상이 dev가 아닌 경우는 여전히 지원하지 않습니다.** 세 지점 모두 dev를 전제로 고정돼 있습니다. 새로 생긴 제약은 아니지만, hotfix를 main으로 보내는 흐름이 생기면 세 곳을 함께 고쳐야 합니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T21:02:46.652+09:00",
+    "updated_at": "2026-09-14T21:03:45.250+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T21:03:44.939+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/211-single-dev-baseline",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+    "merge_commit_sha": "f4c50a7aa3e11d47b41ec1e2dc7776275e412291",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T21:02:47.707+09:00",
+    "reference": "!97",
+    "references": {
+      "short": "!97",
+      "relative": "!97",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!97"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/97",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943735,
+    "iid": 97,
+    "project_id": 1444456,
+    "title": "fix(infra): dev 기준을 fetch 결과 하나로 모은다",
+    "description": "## **작업 내용 요약**\n\nCI의 `Merge with dev` 스테이지는 **\"내 브랜치에 dev가 이미 들어가 있나?\"** 를 묻고, 들어가 있으면 병합을 건너뜁니다.\n\n그런데 그 질문에 쓰는 dev가 **방금 받아온 dev가 아닐 수 있습니다.** 그러면 오래된 dev와 비교하게 되어, 실제로는 병합이 필요한데도 \"이미 들어가 있다\"고 판단하고 그냥 통과시킵니다.\n\n방금 받아온 커밋을 직접 쓰도록 고쳤습니다.\n\n## **관련 티켓**\n\nticket #211 link https://ssafy.atlassian.net/browse/S15P21E205-211\n\n## **주요 변경 사항**\n\n### **무엇이 문제였나**\n\n기존 코드입니다.\n\n`git fetch --no-tags origin devgit merge-base --is-ancestor origin/dev HEAD`\n\n**두 줄이 같은 dev를 본다고 보이지만, 그렇지 않을 수 있습니다.**\n\n`git fetch origin dev`가 반드시 갱신하는 것은 `FETCH_HEAD`라는 임시 표시 하나뿐입니다. `origin/dev`라는 이름까지 갱신될지는 **Jenkins Job에 설정된 refspec**(어떤 브랜치를 어디로 가져올지 정한 규칙)에 달려 있습니다. 그 규칙이 dev를 포함하지 않으면 `origin/dev`는 예전 값 그대로 남습니다.\n\n그러면 이런 일이 생깁니다.\n\n1. `origin/dev`가 일주일 전 커밋을 가리킨 채 멈춰 있다\n2. 그 사이 누군가 dev에 `V3` 마이그레이션을 넣었다\n3. 내 브랜치는 일주일 전 dev에서 갈라졌으니 **\"이미 포함한다\"가 참이 된다**\n4. 병합을 건너뛰고 성공으로 보고한다\n5. 마이그레이션 검사도 일주일 전 dev를 기준으로 삼아 중복을 못 본다\n6. 머지하는 순간 dev가 기동하지 못한다\n\n**2026-09-11에 겪은 사고가 재현될 위험이 있었습니다.** 스테이지는 초록불로 통과하는 것처럼 보여도 그게 실제로 통과한 것이 아닌 경우를 막은 작업입니다.\n\n여태까지 괜찮았던 이유 : Job이 `+refs/heads/*:refs/remotes/origin/*`로 모든 브랜치를 가져오도록 설정돼 있어 `origin/dev`가 최신인 상황만 연출되었음.\n\n### **어떻게 고쳤나**\n\n`fetch` 직후에 받아온 커밋을 확정해 변수에 담습니다.\n\n`env.DEV_BASE = sh(returnStdout: true, script: '''    git ... fetch --no-tags origin dev >&2    git rev-parse FETCH_HEAD''').trim()`\n\n`FETCH_HEAD`는 방금 받아온 것을 가리키므로 Job 설정과 무관합니다. 이 값을 쓰는 세곳은 아래 표와 같습니다.\n\n| **쓰는 곳** | **전** | **후** |\n|----------|-------|-------|\n| 병합 여부 판단 | `origin/dev` | `$DEV_BASE` |\n| 마이그레이션 검사 | `origin/dev` | `$DEV_BASE` |\n| 바뀐 파트 선별 | `origin/dev` | `$DEV_BASE` |\n\n이제 셋이 같은 커밋을 봅니다.\n\n`fetch`의 출력은 `>&2`로 보냅니다. `returnStdout`으로 받는 값에 섞이면 SHA가 아닌 문자열이 들어갑니다.\n\n### **파트 선별을 옮긴 이유**\n\n**티켓 210 MR의 코드리뷰에서 나온 지적입니다.**\n\n바뀐 파트를 고르는 계산이 `environment` 블록에 있었는데, 그 블록은 **`fetch`보다 먼저** 실행됩니다. 그래서 이 계산만 또 다른 시점의 dev를 보고 있었습니다.\n\n`fetch` 뒤로 옮겨 같은 기준을 쓰게 했습니다. 덤으로, 나중에 어느 스테이지에 전용 `agent`를 붙여도 값이 흔들리지 않습니다.\n\n옮겨도 결과는 같습니다. 병합은 `--no-commit`이라 HEAD를 움직이지 않고, 비교는 커밋끼리 하기 때문입니다.\n\n### **로그에서 구분되게**\n\n전에는 병합했는지 건너뛰었는지가 로그에서 잘 드러나지 않았습니다.\n\n`[병합] 이 브랜치가 기준 dev 를 이미 포함한다. 병합하지 않고 소스 그대로 검증한다.[병합] 기준 dev 를 합친 결과로 검증한다.[병합] 기준 dev 와 충돌한다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.`\n\n바뀐 파일 목록도 남깁니다. **어떤 파트를 왜 건너뛰었는지 로그만 보고 알 수 있습니다.**\n\n`[파트 선별] 기준 대비 바뀐 파일:Jenkinsfileinfra/scripts/check-migration-version.sh`\n\n### **`check-migration-version.sh`**\n\n출력 문구를 `기준 브랜치:`에서 `기준:`으로 바꿨습니다. 이제 인자로 브랜치 이름이 아니라 커밋 SHA가 들어갑니다.\n\n## **테스트**\n\n* 완료중괄호 균형 확인 (124쌍)\n* 완료`origin/dev` 를 기준으로 쓰는 자리가 남아 있지 않음\n* 완료실제 커밋 SHA로 셸 명령을 직접 실행해 확인\n\n  `기준: d06de6e094eb1fe22ad65b50ebc347b446e913e5  버전 중복 없음 (11개 파일)[통과] 마이그레이션 버전 검사`\n* 미완료**이 MR의 빌드 로그에서 세 가지를 확인합니다**\n  * `기준 dev = <SHA>` 가 찍히는가\n  * `[병합]` 줄이 어느 경로인지 보이는가\n  * `[파트 선별]` 에 바뀐 파일이 나열되는가\n\n## **리뷰 포인트**\n\n1. **`env.DEV_BASE`로 스테이지 사이에 값을 넘깁니다.** Declarative Pipeline에서 스테이지 간에 값을 전달하려면 이 방법뿐입니다. 파일에 적는 방법도 있지만 워크스페이스를 더럽힙니다.\n2. **`Merge with dev`가 실패하면 뒤 스테이지는 아예 돌지 않습니다.** `skipped due to earlier failure(s)`가 되므로, `DEV_BASE`가 비어 있는 채로 다음 단계가 도는 경우는 없습니다.\n3. **MR 대상이 dev가 아닌 경우는 여전히 지원하지 않습니다.** 세 지점 모두 dev를 전제로 고정돼 있습니다. 새로 생긴 제약은 아니지만, hotfix를 main으로 보내는 흐름이 생기면 세 곳을 함께 고쳐야 합니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T21:02:46.652+09:00",
+    "updated_at": "2026-09-14T21:03:45.250+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T21:03:44.939+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(infra)/211-single-dev-baseline",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+    "merge_commit_sha": "f4c50a7aa3e11d47b41ec1e2dc7776275e412291",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T21:02:47.707+09:00",
+    "reference": "!97",
+    "references": {
+      "short": "!97",
+      "relative": "!97",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!97"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/97",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": "2026-09-14T21:03:02.377+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 194071,
+      "iid": 5,
+      "project_id": 1444456,
+      "sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+      "ref": "fix(infra)/211-single-dev-baseline",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-14T21:03:01.507+09:00",
+      "updated_at": "2026-09-14T21:03:02.378+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/194071"
+    },
+    "head_pipeline": {
+      "id": 194071,
+      "iid": 5,
+      "project_id": 1444456,
+      "sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+      "ref": "fix(infra)/211-single-dev-baseline",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-14T21:03:01.507+09:00",
+      "updated_at": "2026-09-14T21:03:02.378+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/194071",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": null,
+      "finished_at": "2026-09-14T21:03:02.377+09:00",
+      "committed_at": null,
+      "duration": null,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/194071",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "d06de6e094eb1fe22ad65b50ebc347b446e913e5",
+      "head_sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+      "start_sha": "d06de6e094eb1fe22ad65b50ebc347b446e913e5"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "429b8123d259fbbd70e2771b1afab7db34238c65",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804457,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T21:02:46.809+09:00",
+          "updated_at": "2026-09-14T21:02:46.813+09:00",
+          "system": true,
+          "noteable_id": 943735,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 97,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "138dac9d6706be97f5601549da78ae4807c9a3d4",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804458,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T21:02:46.829+09:00",
+          "updated_at": "2026-09-14T21:02:46.852+09:00",
+          "system": true,
+          "noteable_id": 943735,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 97,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "38900860098a6e1787e5c37331e544ef5ca6c81e",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804460,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **근본 원인 분석 및 일관성 확보**: `origin/dev` 브랜치 참조 대신 `git fetch` 직후의 `FETCH_HEAD` 커밋 SHA(`$DEV_BASE`)를 명시적으로 변수에 담아 병합, 파트 선별, 마이그레이션 검사 전 단계에 단일 기준으로 적용한 설계가 매우 훌륭합니다. 이를 통해 과거 장애를 방지하고 파이프라인의 신뢰성을 높였습니다.\n- **가독성 및 디버깅 개선**: 표준 출력(`stdout`)과 표준 에러(`stderr`)를 철저히 분리하여 `env.DEV_BASE`와 `env.CHANGED_FILES`에 순수한 데이터만 담기게 하고, 디버깅용 로그는 `>&2`로 처리해 가독성과 안정성을 동시에 챙겼습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **정상 병합 시나리오**: `dev` 브랜치와 충돌이 없고 아직 병합되지 않은 피처 브랜치에서 CI를 실행하여, `기준 dev = <SHA>` 로그가 정상 출력되고 `[병합] 기준 dev 를 합친 결과로 검증한다` 메시지와 함께 빌드가 성공하는지 확인합니다.\n- **이미 병합된 브랜치 시나리오**: `dev` 브랜치가 이미 반영된 브랜치에서 CI를 실행하여, `[병합] 이 브랜치가 기준 dev 를 이미 포함한다. 병합하지 않고 소스 그대로 검증한다` 로그와 함께 불필요한 머지 과정을 건너뛰는지 확인합니다.\n- **충돌 발생 시나리오**: `dev`와 충돌이 발생하는 브랜치에서 CI를 실행하여, `[병합] 기준 dev 와 충돌한다` 메시지와 함께 스테이지가 실패(`exit 1`) 처리가 정확히 이루어지는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:d1ad2245d85f68237ec390b02989e9ed17a8566d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T21:02:55.243+09:00",
+          "updated_at": "2026-09-14T21:02:55.243+09:00",
+          "system": false,
+          "noteable_id": 943735,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 97,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "0bcff7bbccf56e5e00ec3e988c2fb9582e27bd5c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2804465,
+          "type": null,
+          "body": "mentioned in commit f4c50a7aa3e11d47b41ec1e2dc7776275e412291",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T21:03:44.991+09:00",
+          "updated_at": "2026-09-14T21:03:44.995+09:00",
+          "system": true,
+          "noteable_id": 943735,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 97,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2196012,
+      "head_commit_sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+      "base_commit_sha": "d06de6e094eb1fe22ad65b50ebc347b446e913e5",
+      "start_commit_sha": "d06de6e094eb1fe22ad65b50ebc347b446e913e5",
+      "created_at": "2026-09-14T21:02:47.108+09:00",
+      "merge_request_id": 943735,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "8d5f0a4e39af9d6cf549ae4502e6ae6fe9071098"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2196012,
+      "head_commit_sha": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+      "base_commit_sha": "d06de6e094eb1fe22ad65b50ebc347b446e913e5",
+      "start_commit_sha": "d06de6e094eb1fe22ad65b50ebc347b446e913e5",
+      "created_at": "2026-09-14T21:02:47.108+09:00",
+      "merge_request_id": 943735,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "8d5f0a4e39af9d6cf549ae4502e6ae6fe9071098",
+      "commits": [
+        {
+          "id": "d1ad2245d85f68237ec390b02989e9ed17a8566d",
+          "short_id": "d1ad2245",
+          "created_at": "2026-09-14T20:55:09.000+09:00",
+          "parent_ids": [
+            "d06de6e094eb1fe22ad65b50ebc347b446e913e5"
+          ],
+          "title": "fix(infra): dev 기준을 fetch 결과 하나로 모은다",
+          "message": "fix(infra): dev 기준을 fetch 결과 하나로 모은다\n\nCI 가 dev 를 기준으로 삼는 곳이 세 군데인데 서로 다른 시점의 값을 봤다.\n병합 판단과 마이그레이션 검사는 이름 origin/dev 를, 파트 선별은 Checkout\nSCM 시점의 origin/dev 를 썼다.\n\ngit fetch 가 확정적으로 갱신하는 것은 FETCH_HEAD 뿐이다.\nrefs/remotes/origin/dev 갱신은 Job 에 설정된 refspec 이 refs/heads/dev 를\n덮을 때만 일어나는 부수 효과다. 그 이름이 낡으면 --is-ancestor 가 참이\n되어 병합하지 않은 채 성공으로 끝난다. 병합 결과를 검증하겠다는 스테이지가\n검증 없이 초록불을 주게 된다.\n\nfetch 직후 git rev-parse FETCH_HEAD 로 기준 커밋을 확정하고, 병합·마이그\n레이션 검사·파트 선별이 모두 그 값을 쓴다. Job 의 refspec 설정과 무관해진다.\n\n파트 선별 계산도 environment 블록에서 이 스테이지 안으로 옮긴다.\nenvironment 는 fetch 보다 먼저 평가되어 기준이 갈라지는 원인이었다.\n스테이지 안에 두면 어느 스테이지에 전용 agent 를 붙여도 값이 흔들리지\n않는다. 이 부분은 티켓 210 MR 의 코드리뷰에서 나온 지적이다.\n\n병합을 건너뛴 경우와 실제로 병합한 경우, 그리고 어떤 파일이 바뀌었는지를\n로그에 남긴다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T20:55:09.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T20:55:09.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d1ad2245d85f68237ec390b02989e9ed17a8566d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -39,7 +39,7 @@ if ! git rev-parse --verify --quiet \"$BASE_REF\" >/dev/null; then\n     fail \"기준 ref '$BASE_REF' 를 찾지 못했다. 먼저 git fetch 하거나 기준 ref를 인자로 넘긴다.\"\n fi\n \n-echo \"기준 브랜치: $BASE_REF\"\n+echo \"기준: $BASE_REF\"\n \n # ---------------------------------------------------------------------------\n # 1) 현재 트리의 버전 중복\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/check-migration-version.sh",
+          "old_path": "infra/scripts/check-migration-version.sh",
+          "a_mode": "100755",
+          "b_mode": "100755",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -81,23 +81,6 @@ pipeline {\n         // 그럴 때 커밋 메시지에 [ci-all] 을 넣으면 걸러내기를 건너뛰고 모두 실행한다.\n         //   git commit --allow-empty -m \"chore: CI 전체 확인 [ci-all]\"\n         CI_RUN_ALL = sh(returnStdout: true, script: 'git log -1 --pretty=%B | grep -qF \"[ci-all]\" && echo true || echo false').trim()\n-\n-        // 어느 파트가 바뀌었는지는 기준 브랜치와 직접 비교해서 정한다. partChanged 가 이 값을\n-        // 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이 dev 에\n-        // 들어온 남의 변경은 세지 않는다.\n-        //\n-        // origin/dev 는 Checkout SCM 이 refs/remotes/origin/* 를 통째로 가져오므로 이 시점에\n-        // 이미 있다. 그래도 실패할 수 있으니 || true 로 받아, 실패하면 빈 값이 되어 전체가 돈다.\n-\n-        // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고\n-        // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가\n-        // data/ 로 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다.\n-        // 틀리는 방향이 건너뛰는 쪽이라 위험하므로 인용을 끈다.\n-        //\n-        // 이 값은 첫 스테이지 전에 한 번만 평가된다. 모든 스테이지가 최상위 agent 를 함께 쓰기\n-        // 때문이다. 어느 스테이지에 전용 agent 나 전용 environment 를 붙이면 그 컨텍스트에서\n-        // 다시 평가되고, 체크아웃 전 워크스페이스에서 값이 정해질 수 있다.\n-        CHANGED_FILES = sh(returnStdout: true, script: 'git -c core.quotePath=false diff --name-only --no-renames origin/dev...HEAD || true').trim()\n     }\n \n     stages {\n@@ -114,30 +97,76 @@ pipeline {\n                     usernameVariable: 'GIT_USERNAME',\n                     passwordVariable: 'GIT_PASSWORD'\n                 )]) {\n-                    sh '''\n-                        set -e\n-\n-                        # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.\n-                        # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.\n-                        git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev\n-\n-                        if git merge-base --is-ancestor origin/dev HEAD; then\n-                            echo \"이미 origin/dev 를 포함한다. 병합을 건너뛴다.\"\n-                            exit 0\n-                        fi\n-\n-                        # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.\n-                        #              post 단계에서 git merge --abort 로 되돌린다.\n-                        # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.\n-                        # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는\n-                        #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로\n-                        #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.\n-                        if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff origin/dev; then\n-                            echo \"origin/dev 와 병합할 수 없다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.\" >&2\n-                            exit 1\n-                        fi\n-                        echo \"origin/dev 를 병합한 결과로 검증한다.\"\n-                    '''\n+                    // 기준을 이름이 아니라 커밋으로 확정한다.\n+                    //\n+                    // git fetch 가 확정적으로 갱신하는 것은 FETCH_HEAD 뿐이다. refs/remotes/origin/dev\n+                    // 갱신은 Job 에 설정된 refspec 이 refs/heads/dev 를 덮을 때만 일어나는 부수 효과다.\n+                    // 이름 origin/dev 를 그대로 쓰면 그 설정에 따라 낡은 커밋을 기준으로 삼게 되고,\n+                    // 그러면 아래 --is-ancestor 가 참이 되어 병합하지 않은 채 성공으로 끝난다.\n+                    // 병합 결과를 검증하겠다는 스테이지가 검증 없이 초록불을 주는 셈이다.\n+                    script {\n+                        env.DEV_BASE = sh(returnStdout: true, script: '''\n+                            set -e\n+\n+                            # 토큰을 remote URL 에 넣으면 .git/config 와 콘솔 로그에 남는다.\n+                            # 이 명령에서만 살아 있는 credential helper 로 넘겨 흔적을 남기지 않는다.\n+                            # fetch 의 출력은 stderr 로 보내 반환값을 더럽히지 않는다.\n+                            git -c credential.helper='!f() { echo username=$GIT_USERNAME; echo password=$GIT_PASSWORD; }; f' fetch --no-tags origin dev >&2\n+\n+                            git rev-parse FETCH_HEAD\n+                        ''').trim()\n+                    }\n+                }\n+\n+                echo \"기준 dev = ${env.DEV_BASE}\"\n+\n+                sh '''\n+                    set -e\n+\n+                    if git merge-base --is-ancestor \"$DEV_BASE\" HEAD; then\n+                        echo \"[병합] 이 브랜치가 기준 dev 를 이미 포함한다. 병합하지 않고 소스 그대로 검증한다.\"\n+                        exit 0\n+                    fi\n+\n+                    # --no-commit: 워크스페이스에 병합 결과만 만들고 커밋은 남기지 않는다.\n+                    #              post 단계에서 git merge --abort 로 되돌린다.\n+                    # --no-ff    : fast-forward 로 슬쩍 넘어가지 않고 실제 병합을 수행한다.\n+                    # -c user.*  : Jenkins 컨테이너에는 git identity 가 없다. merge 는\n+                    #              --no-commit 이어도 커밋을 만들 수 있는 상태로 들어가므로\n+                    #              committer 를 요구한다. 전역 설정을 건드리지 않고 이 명령에만 준다.\n+                    if ! git -c user.email=ci@thorp.local -c user.name=thorp-ci merge --no-commit --no-ff \"$DEV_BASE\"; then\n+                        echo \"[병합] 기준 dev 와 충돌한다. 브랜치에서 먼저 dev 를 반영하고 충돌을 해소한다.\" >&2\n+                        exit 1\n+                    fi\n+                    echo \"[병합] 기준 dev 를 합친 결과로 검증한다.\"\n+                '''\n+\n+                // 어느 파트가 바뀌었는지는 위에서 확정한 기준과 직접 비교해서 정한다. partChanged 가\n+                // 이 값을 읽는다. 세 점 표기는 갈라진 지점부터 이 브랜치가 바꾼 것만 고르며, 그 사이\n+                // dev 에 들어온 남의 변경은 세지 않는다.\n+                //\n+                // environment 블록이 아니라 여기서 계산하는 이유는 기준을 하나로 두기 위해서다.\n+                // environment 는 fetch 보다 먼저 평가되어 Checkout SCM 시점의 값을 보게 된다.\n+                // 스테이지 안에 두면 어느 스테이지에 전용 agent 를 붙여도 값이 흔들리지 않는다.\n+                //\n+                // core.quotePath=false: git 은 기본값에서 ASCII 가 아닌 경로를 따옴표로 감싸고\n+                // 8진수로 이스케이프해 내놓는다. 그러면 한글 이름을 가진 파일의 경로가 data/ 로\n+                // 시작하지 않게 되어, 바뀐 파트가 안 바뀐 것으로 읽힌다. 틀리는 방향이 건너뛰는\n+                // 쪽이라 위험하므로 인용을 끈다.\n+                //\n+                // 병합은 --no-commit 이라 HEAD 를 움직이지 않는다. 커밋 사이의 비교이므로 이 값은\n+                // 병합 전후 어디서 계산해도 같다.\n+                script {\n+                    env.CHANGED_FILES = sh(returnStdout: true, script: '''\n+                        changed=$(git -c core.quotePath=false diff --name-only --no-renames \"$DEV_BASE...HEAD\" 2>/dev/null || true)\n+\n+                        # 값은 stdout 하나뿐이어야 하므로 사람이 읽을 줄은 stderr 로 보낸다.\n+                        # 왜 어떤 파트를 건너뛰었는지가 빌드 로그에 남는다.\n+                        echo \"[파트 선별] 기준 대비 바뀐 파일:\" >&2\n+                        echo \"$changed\" >&2\n+\n+                        printf '%s' \"$changed\"\n+                    ''').trim()\n                 }\n             }\n \n@@ -156,7 +185,9 @@ pipeline {\n \n         stage('Migration version') {\n             steps {\n-                sh 'bash infra/scripts/check-migration-version.sh origin/dev'\n+                // Merge with dev 가 확정한 기준을 그대로 쓴다. 이름 origin/dev 를 다시 쓰면\n+                // 검사 기준과 병합 기준이 서로 다른 커밋이 될 수 있다.\n+                sh 'bash infra/scripts/check-migration-version.sh \"$DEV_BASE\"'\n             }\n \n             post {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2804460": []
+  }
+}

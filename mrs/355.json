@@ -1,0 +1,925 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963016,
+    "iid": 355,
+    "project_id": 1444456,
+    "title": "feat(fe): 전략 선택에서 분석 기간을 사용자가 정하게 하고, 머리·상세 설정·안내의 자리를 다듬는다",
+    "description": "## 작업 내용 요약\n\n전략 선택 화면에서 분석 기간을 평가 가능 범위 전체로 저절로 채우지 않고, 사용자가 정해야 분석할 수 있게 합니다. 화면 머리를 다른 주요 화면과 같은 짜임으로 맞추고, 늘 보이던 범위·비용 수치·허용 범위 문장은 필요할 때 보이는 자리로 옮깁니다.\n\n## 주요 변경 사항\n\n- 분석 기간: 처음에는 '정해지지 않음'이다. 날짜를 고르거나 '최대 범위 선택'을 눌러야 정해진다. 누르면 단추가 비활성화되고, 되돌리기 아이콘으로 누르기 직전 상태로 돌아간다.\n- 분석하기: 기간을 정하지 않았거나 날짜 칸이 무효인 동안 막힌다. 미선택이면 회색이 되고, 마우스를 올리면 사유를 보인다. 초록으로 열릴 때 떠오르는 애니메이션이 다시 재생된다.\n- 저장 상태: `thorp.strategySettings`의 분석 조건에 `periodFull`을 추가했다. 날짜와 동시에 존재하지 않는다.\n- 머리: 제목은 왼쪽, 안내는 오른쪽에 두고 위쪽에 맞췄다. 카드 사유 목록은 제목 아래로 옮기고, 안내의 오른쪽 끝은 카드 줄 끝을 따라간다.\n- 상세 설정: 'OO 상세 설정' 순서로 바꾸고 전략 이름을 강조했다. 기본값 안내를 줄이고 구분선을 넣었다.\n- 평가 가능 범위는 카드 말풍선으로, 비용 수치는 '비용 가정' 도움말 안으로, 시작 금액의 허용 범위는 입력칸 초점 말풍선으로 옮겼다.\n- 고른 전략 카드를 다시 누르면 선택이 해제된다.\n- 등록표 문구: 최소 평가 기간을 '제한 없음(완화)·1년(기본)·3년(엄격)', 리밸런싱 주기의 기본을 '월말(기본)'로 바꿨다. 값은 그대로라 version은 올리지 않았다.\n- spec 003: US1·US3·FR-009·FR-011과 2026-10-01 결정을 갱신했다.\n\n## 테스트\n\n- frontend `npm run lint && npm run build && npm test`: 통과(1499 passed, skipped 0)\n- backend `./gradlew test`: 통과\n- 로컬 프론트·백엔드에서 기간 미선택 막힘, 최대 범위 선택과 되돌리기, 범위 밖 날짜 막힘, 안내 오른쪽 끝 맞춤(원 단계별), 카드 범위 말풍선을 확인했다.\n\n## 리뷰 포인트\n\n- 기간을 정하기 전에는 분석할 수 없어서 '기본 설정으로 바로 분석'에 한 번의 조작이 더해진다(spec 003 US1 개정).\n- '월말(기본)'은 등록표 문구라 결과 화면·도우미 답변에도 그대로 나온다. 설정 화면에서만 붙일지 판단이 필요하다.\n- 프론트엔드 브랜치에 백엔드 등록표 문구 변경(`fix(be)` 커밋 하나)이 함께 있다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-01T16:23:23.799+09:00",
+    "updated_at": "2026-10-01T16:23:30.209+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-01T16:23:28.975+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/strategy-settings-period-polish",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+    "merge_commit_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T16:23:30.205+09:00",
+    "reference": "!355",
+    "references": {
+      "short": "!355",
+      "relative": "!355",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!355"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/355",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963016,
+    "iid": 355,
+    "project_id": 1444456,
+    "title": "feat(fe): 전략 선택에서 분석 기간을 사용자가 정하게 하고, 머리·상세 설정·안내의 자리를 다듬는다",
+    "description": "## 작업 내용 요약\n\n전략 선택 화면에서 분석 기간을 평가 가능 범위 전체로 저절로 채우지 않고, 사용자가 정해야 분석할 수 있게 합니다. 화면 머리를 다른 주요 화면과 같은 짜임으로 맞추고, 늘 보이던 범위·비용 수치·허용 범위 문장은 필요할 때 보이는 자리로 옮깁니다.\n\n## 주요 변경 사항\n\n- 분석 기간: 처음에는 '정해지지 않음'이다. 날짜를 고르거나 '최대 범위 선택'을 눌러야 정해진다. 누르면 단추가 비활성화되고, 되돌리기 아이콘으로 누르기 직전 상태로 돌아간다.\n- 분석하기: 기간을 정하지 않았거나 날짜 칸이 무효인 동안 막힌다. 미선택이면 회색이 되고, 마우스를 올리면 사유를 보인다. 초록으로 열릴 때 떠오르는 애니메이션이 다시 재생된다.\n- 저장 상태: `thorp.strategySettings`의 분석 조건에 `periodFull`을 추가했다. 날짜와 동시에 존재하지 않는다.\n- 머리: 제목은 왼쪽, 안내는 오른쪽에 두고 위쪽에 맞췄다. 카드 사유 목록은 제목 아래로 옮기고, 안내의 오른쪽 끝은 카드 줄 끝을 따라간다.\n- 상세 설정: 'OO 상세 설정' 순서로 바꾸고 전략 이름을 강조했다. 기본값 안내를 줄이고 구분선을 넣었다.\n- 평가 가능 범위는 카드 말풍선으로, 비용 수치는 '비용 가정' 도움말 안으로, 시작 금액의 허용 범위는 입력칸 초점 말풍선으로 옮겼다.\n- 고른 전략 카드를 다시 누르면 선택이 해제된다.\n- 등록표 문구: 최소 평가 기간을 '제한 없음(완화)·1년(기본)·3년(엄격)', 리밸런싱 주기의 기본을 '월말(기본)'로 바꿨다. 값은 그대로라 version은 올리지 않았다.\n- spec 003: US1·US3·FR-009·FR-011과 2026-10-01 결정을 갱신했다.\n\n## 테스트\n\n- frontend `npm run lint && npm run build && npm test`: 통과(1499 passed, skipped 0)\n- backend `./gradlew test`: 통과\n- 로컬 프론트·백엔드에서 기간 미선택 막힘, 최대 범위 선택과 되돌리기, 범위 밖 날짜 막힘, 안내 오른쪽 끝 맞춤(원 단계별), 카드 범위 말풍선을 확인했다.\n\n## 리뷰 포인트\n\n- 기간을 정하기 전에는 분석할 수 없어서 '기본 설정으로 바로 분석'에 한 번의 조작이 더해진다(spec 003 US1 개정).\n- '월말(기본)'은 등록표 문구라 결과 화면·도우미 답변에도 그대로 나온다. 설정 화면에서만 붙일지 판단이 필요하다.\n- 프론트엔드 브랜치에 백엔드 등록표 문구 변경(`fix(be)` 커밋 하나)이 함께 있다.\n\n:robot: Generated with [Claude Code](https://claude.com/claude-code)",
+    "state": "merged",
+    "created_at": "2026-10-01T16:23:23.799+09:00",
+    "updated_at": "2026-10-01T16:23:30.209+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-01T16:23:28.975+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(fe)/strategy-settings-period-polish",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🖥️ Frontend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+    "merge_commit_sha": "79b7563b2150c3e26d10789abaf9709bd838c33e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-01T16:23:30.205+09:00",
+    "reference": "!355",
+    "references": {
+      "short": "!355",
+      "relative": "!355",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!355"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/355",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "25",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "head_sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+      "start_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "14ba8b8cede19d95b8185e6c2fcbb09f16de01fe",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879980,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-01T16:23:23.896+09:00",
+          "updated_at": "2026-10-01T16:23:23.900+09:00",
+          "system": true,
+          "noteable_id": 963016,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 355,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "44c5c96a12b5a64fab90e3762506c527351a2f4d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879981,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-01T16:23:23.914+09:00",
+          "updated_at": "2026-10-01T16:23:23.920+09:00",
+          "system": true,
+          "noteable_id": 963016,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 355,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "42908fc46d650dab91fcda7288ed22018c87b7ba",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879982,
+          "type": null,
+          "body": "mentioned in commit 79b7563b2150c3e26d10789abaf9709bd838c33e",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-01T16:23:29.073+09:00",
+          "updated_at": "2026-10-01T16:23:29.078+09:00",
+          "system": true,
+          "noteable_id": 963016,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 355,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "99349db26330498eef396f0cff0a0d665d09899b",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879984,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **컴포넌트 책임 분리 및 접근성 개선**: 전략 카드의 사유 목록을 화면 머리(`StrategyNoticeList`)로 깔끔하게 분리하고, `aria-describedby`를 통해 보조기술 지원을 견고하게 유지한 점이 훌륭합니다.\n- **상태 관리 및 사용자 의도 반영**: 분석 기간을 임의로 자동 채우지 않고 '정해지지 않음', '최대 범위', '사용자 지정'의 명확한 상태 머신(`PeriodMode`)으로 설계하여 사용자의 명시적 의도 없이는 분석 요청이 나가지 않도록 한 점이 비즈니스 로직 요구사항에 정확히 부합합니다.\n\n### 발견 사항\n- [Low] `frontend/src/pages/StrategySettingsPage.tsx` 파일명은 존재하나 diff 내용이 비어 있습니다. 해당 파일에 대한 변경 사항이 누락되었거나 의도치 않은 빈 파일 커밋인지 확인이 필요합니다.\n- [Low] `frontend/src/components/strategy/AnalysisConditionsPanel.tsx` 내 `cost !==` 구문에서 diff가 잘려 코드 라인이 불완전하게 끝나는 부분이 관찰됩니다. 실제 빌드 및 런타임에 문제가 없는지 확인을 권장합니다.\n\n### 테스트 제안\n- **기간 미선택 상태 분석 제한 시나리오**:\n  1. 전략을 선택하고 분석 기간을 '정해지지 않음' 상태로 둡니다.\n  2. '분석하기' 버튼이 비활성화(회색)되며, 마우스 오버 시 \"분석 기간을 정해 주세요\"라는 안내가 올바르게 뜨는지 확인합니다.\n  3. 버튼 클릭 시 분석 요청 API가 호출되지 않는지 검증합니다.\n- **최대 범위 선택 및 되돌리기 시나리오**:\n  1. '최대 범위 선택'을 눌러 기간을 채운 뒤, 되돌리기 아이콘을 눌렀을 때 직전 상태(또는 정하지 않은 상태)로 올바르게 복원되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:7559308d778af4267575e0b4d2c96581dbf876aa -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-01T16:23:35.288+09:00",
+          "updated_at": "2026-10-01T16:23:35.288+09:00",
+          "system": false,
+          "noteable_id": 963016,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 355,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "5c538d9e8a8c35e038bb7eeb6480060b6e22a146",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2879985,
+          "type": null,
+          "body": "오탐입니다",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-01T16:23:52.150+09:00",
+          "updated_at": "2026-10-01T16:23:52.150+09:00",
+          "system": false,
+          "noteable_id": 963016,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 355,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "abbefca62c48aa89fe588ca56926e5a17a803565",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885076,
+          "type": null,
+          "body": "mentioned in commit fe552ad1ebd94a52b63cc19edbd74a66ce0025f7",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:16.577+09:00",
+          "updated_at": "2026-10-13T15:16:16.588+09:00",
+          "system": true,
+          "noteable_id": 963016,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 355,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2261069,
+      "head_commit_sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+      "base_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "start_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "created_at": "2026-10-01T16:23:24.301+09:00",
+      "merge_request_id": 963016,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "0f69720c3c029554a890271e4f23d829247ba651"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2261069,
+      "head_commit_sha": "7559308d778af4267575e0b4d2c96581dbf876aa",
+      "base_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "start_commit_sha": "d1f244475e11e9d9e8946f4a110010732e3686e3",
+      "created_at": "2026-10-01T16:23:24.301+09:00",
+      "merge_request_id": 963016,
+      "state": "collected",
+      "real_size": "25",
+      "patch_id_sha": "0f69720c3c029554a890271e4f23d829247ba651",
+      "commits": [
+        {
+          "id": "7559308d778af4267575e0b4d2c96581dbf876aa",
+          "short_id": "7559308d",
+          "created_at": "2026-10-01T16:19:45.000+09:00",
+          "parent_ids": [
+            "d41851e583c1d0f1b2b716149acb7c5813b06b0e",
+            "d1f244475e11e9d9e8946f4a110010732e3686e3"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into feat(fe)/strategy-settings-period-polish",
+          "message": "Merge remote-tracking branch 'origin/dev' into feat(fe)/strategy-settings-period-polish\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-01T16:19:45.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-01T16:19:45.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/7559308d778af4267575e0b4d2c96581dbf876aa"
+        },
+        {
+          "id": "d41851e583c1d0f1b2b716149acb7c5813b06b0e",
+          "short_id": "d41851e5",
+          "created_at": "2026-10-01T16:19:38.000+09:00",
+          "parent_ids": [
+            "e5c0c758792d4625945926742900da1408687a4f"
+          ],
+          "title": "feat(fe): 전략 선택에서 분석 기간을 사용자가 정하게 하고, 머리·상세 설정·안내의 자리를 다듬는다",
+          "message": "feat(fe): 전략 선택에서 분석 기간을 사용자가 정하게 하고, 머리·상세 설정·안내의 자리를 다듬는다\n\n- 분석 기간은 날짜를 고르거나 '최대 범위 선택'을 눌러야 정해지고, 그 전이나 날짜가 무효인 동안 분석하기를 막는다\n- 머리는 제목 왼쪽·안내 오른쪽 짜임으로 위쪽에 맞추고, 카드 사유 목록은 제목 아래로 옮긴다\n- 평가 가능 범위는 카드 말풍선으로, 비용 수치는 도움말 안으로, 시작 금액 범위는 초점 말풍선으로 옮긴다\n- 고른 카드를 다시 누르면 선택을 내려놓는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-01T16:19:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-01T16:19:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/d41851e583c1d0f1b2b716149acb7c5813b06b0e"
+        },
+        {
+          "id": "e5c0c758792d4625945926742900da1408687a4f",
+          "short_id": "e5c0c758",
+          "created_at": "2026-10-01T16:19:38.000+09:00",
+          "parent_ids": [
+            "dae09bcbe1629a2b8fbaff723e38cbd89ea760e4"
+          ],
+          "title": "fix(be): 최소 평가 기간과 리밸런싱 주기의 선택지 문구에 값과 기본을 앞세운다",
+          "message": "fix(be): 최소 평가 기간과 리밸런싱 주기의 선택지 문구에 값과 기본을 앞세운다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-01T16:19:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-01T16:19:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/e5c0c758792d4625945926742900da1408687a4f"
+        },
+        {
+          "id": "dae09bcbe1629a2b8fbaff723e38cbd89ea760e4",
+          "short_id": "dae09bcb",
+          "created_at": "2026-10-01T16:19:38.000+09:00",
+          "parent_ids": [
+            "38efbf62ac8d5af5fbc56dd912931cdc7f13196f"
+          ],
+          "title": "docs(fe): spec 003에 분석 기간 직접 정하기, 머리 짜임, 사유 목록·범위·비용 수치의 자리를 적는다",
+          "message": "docs(fe): spec 003에 분석 기간 직접 정하기, 머리 짜임, 사유 목록·범위·비용 수치의 자리를 적는다\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-01T16:19:38.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-01T16:19:38.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/dae09bcbe1629a2b8fbaff723e38cbd89ea760e4"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -91,11 +91,11 @@ analysisConditions:\n   minEvaluationYears:\n     choices:\n       - value: 0\n-        label: 완화(제한 없음)\n+        label: 제한 없음(완화)\n       - value: 1\n-        label: 기본(1년)\n+        label: 1년(기본)\n       - value: 3\n-        label: 엄격(3년)\n+        label: 3년(엄격)\n     default: 1\n     unit: 년\n \n@@ -118,7 +118,7 @@ strategies:\n         allowedRange:\n           choices:\n             - value: { mode: CALENDAR, unit: MONTH_END }\n-              label: 월말\n+              label: 월말(기본)\n             - value: { mode: CALENDAR, unit: QUARTER_END }\n               label: 분기말\n             - value: { mode: TRADING_DAYS, days: 21 }\n@@ -167,7 +167,7 @@ strategies:\n         allowedRange:\n           choices:\n             - value: { mode: CALENDAR, unit: MONTH_END }\n-              label: 월말\n+              label: 월말(기본)\n             - value: { mode: CALENDAR, unit: QUARTER_END }\n               label: 분기말\n             - value: { mode: TRADING_DAYS, days: 21 }\n@@ -202,7 +202,7 @@ strategies:\n         allowedRange:\n           choices:\n             - value: { mode: CALENDAR, unit: MONTH_END }\n-              label: 월말\n+              label: 월말(기본)\n             - value: { mode: CALENDAR, unit: QUARTER_END }\n               label: 분기말\n             - value: { mode: TRADING_DAYS, days: 21 }\n@@ -338,7 +338,7 @@ strategies:\n         allowedRange:\n           choices:\n             - value: { mode: CALENDAR, unit: MONTH_END }\n-              label: 월말\n+              label: 월말(기본)\n             - value: { mode: CALENDAR, unit: QUARTER_END }\n               label: 분기말\n             - value: { mode: TRADING_DAYS, days: 21 }\n@@ -427,7 +427,7 @@ strategies:\n         allowedRange:\n           choices:\n             - value: { mode: CALENDAR, unit: MONTH_END }\n-              label: 월말\n+              label: 월말(기본)\n             - value: { mode: CALENDAR, unit: QUARTER_END }\n               label: 분기말\n             - value: { mode: TRADING_DAYS, days: 21 }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/registry/parameter-registry.yml",
+          "old_path": "backend/src/main/resources/registry/parameter-registry.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -262,6 +262,14 @@\n   animation: orb-recede var(--orb-motion);\n }\n \n+/*\n+  회색(대기)에서 초록으로 열릴 때도 출렁임이 다시 돈다. 대기도 단계는 2라 이름이 같으면 색만 바뀌고 움직임이\n+  없으므로, 대기에는 같은 움직임을 다른 이름으로 준다. 열리는 순간 이름이 바뀌어 처음부터 다시 돈다.\n+*/\n+.orb[data-stage='2'][data-pending='true'] .fill {\n+  animation: orb-emerge-pending var(--orb-motion);\n+}\n+\n @keyframes orb-nudge {\n   0% {\n     border-radius: 50%;\n@@ -301,6 +309,29 @@\n   }\n }\n \n+/* orb-emerge와 같은 움직임이다. 위 대기 규칙의 까닭 참고. */\n+@keyframes orb-emerge-pending {\n+  0% {\n+    border-radius: 50%;\n+    transform: scale(0.92);\n+  }\n+\n+  38% {\n+    border-radius: 60% 40% 46% 54% / 44% 58% 42% 56%;\n+    transform: scale(1.07, 0.94);\n+  }\n+\n+  68% {\n+    border-radius: 38% 62% 60% 40% / 56% 44% 56% 44%;\n+    transform: scale(0.98, 1.03);\n+  }\n+\n+  100% {\n+    border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;\n+    transform: none;\n+  }\n+}\n+\n @keyframes orb-recede {\n   0% {\n     border-radius: 44% 56% 56% 44% / 50% 50% 50% 50%;\n@@ -339,3 +370,46 @@\n     transform: none;\n   }\n }\n+\n+/*\n+  다 드러났지만 아직 누를 수 없는 원(2026-10-01). 남은 것이 사용자가 아직 고르지 않은 항목뿐일 때다. 위 세 단계와\n+  달리 초록 계열에서 벗어난 회색으로 둔다 — 열리기 직전의 초록과 갈라야 \"눌러도 아무 일이 없다\"가 한눈에 읽힌다.\n+  마우스를 올리거나 초점이 오면 무엇을 골라야 하는지 원 왼쪽 말풍선이 알린다. 그래서 이 상태만은 포인터를 받는다.\n+*/\n+.orb[data-pending='true'] {\n+  color: var(--thorp-muted);\n+  cursor: not-allowed;\n+}\n+\n+.orb[data-pending='true'] .fill {\n+  --thorp-orb-fill: color-mix(in oklab, var(--thorp-muted) 34%, var(--thorp-surface-raised, #1f2321));\n+\n+  border-color: color-mix(in oklab, var(--thorp-muted) 50%, transparent);\n+}\n+\n+.pendingHint {\n+  position: absolute;\n+  top: 50%;\n+  right: calc(100% + 10px);\n+  z-index: 2;\n+  width: max-content;\n+  max-width: 260px;\n+  padding: 7px 10px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 8px);\n+  background: var(--thorp-surface-raised, #1f2321);\n+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  line-height: 1.5;\n+  opacity: 0;\n+  pointer-events: none;\n+  transform: translateY(-50%);\n+  transition: opacity 0.14s ease;\n+  word-break: keep-all;\n+}\n+\n+.orb[data-pending='true']:hover ~ .pendingHint,\n+.orb[data-pending='true']:focus-visible ~ .pendingHint {\n+  opacity: 1;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/StepOrbButton.module.css",
+          "old_path": "frontend/src/components/common/StepOrbButton.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,6 +21,13 @@ type StepOrbButtonProps = Omit<\n   children?: ReactNode\n   /** 원이 놓이는 칸(dock)에 더할 클래스. 격자 자리와 위아래 여백은 쓰는 화면이 정한다. */\n   className?: string\n+  /**\n+   * 다 드러났지만 아직 누를 수 없는 원(2026-10-01). 주면 원을 회색으로 두고, 마우스를 올리거나 초점이 오면 이\n+   * 문장을 원 왼쪽 말풍선으로 띄운다. 남은 것이 사용자가 아직 고르지 않은 항목뿐일 때 쓴다 — 무엇을 고르면\n+   * 열리는지가 원 바로 옆에서 읽힌다. `stage`는 2, `aria-disabled`는 참으로 함께 넘긴다. 말풍선은 보조기술에\n+   * 숨긴다: 같은 문장을 `aria-describedby`로 가리키는 쪽이 읽힌다.\n+   */\n+  pendingHint?: string\n   'data-action'?: string\n }\n \n@@ -45,11 +52,18 @@ export function StepOrbButton({\n   label,\n   children,\n   className,\n+  pendingHint,\n   ...buttonProps\n }: StepOrbButtonProps) {\n   return (\n     <div className={className ? `${styles.dock} ${className}` : styles.dock} data-stage={stage}>\n-      <button type=\"button\" className={styles.orb} data-stage={stage} {...buttonProps}>\n+      <button\n+        type=\"button\"\n+        className={styles.orb}\n+        data-stage={stage}\n+        data-pending={pendingHint ? 'true' : undefined}\n+        {...buttonProps}\n+      >\n         {/*\n           원의 채움·테두리·흐림은 이 장식 요소가 맡는다. 단추 자체에 흐림 가림막을 걸면 가림막이 초점 테두리까지\n           잘라 내, 이 화면의 주된 행동에 초점이 왔는지 보이지 않는다(WCAG 2.4.7).\n@@ -63,6 +77,11 @@ export function StepOrbButton({\n         </span>\n         <ArrowRight className={styles.arrow} size={16} strokeWidth={2.2} aria-hidden=\"true\" />\n       </button>\n+      {pendingHint ? (\n+        <span className={styles.pendingHint} aria-hidden=\"true\">\n+          {pendingHint}\n+        </span>\n+      ) : null}\n       {children}\n     </div>\n   )\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/common/StepOrbButton.tsx",
+          "old_path": "frontend/src/components/common/StepOrbButton.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -4,13 +4,45 @@\n   font-size: var(--thorp-text-small, 0.82rem);\n }\n \n-/* 비용 수치 한 줄. 값 아래에서 오른쪽 끝에 맞춘다. */\n+/* '최대 범위 선택'을 되돌리는 아이콘. 행 이름 옆 기본값 복원 아이콘(SettingRow .reset)과 같은 모양이다. */\n+.undoFull {\n+  display: inline-grid;\n+  flex: none;\n+  place-items: center;\n+  width: 26px;\n+  height: 26px;\n+  padding: 0;\n+  border: 1px solid var(--thorp-line-control, var(--thorp-line));\n+  border-radius: 50%;\n+  background: transparent;\n+  color: var(--thorp-muted);\n+  cursor: pointer;\n+}\n+\n+.undoFull:hover {\n+  border-color: currentColor;\n+  color: var(--thorp-foreground);\n+}\n+\n+.undoFull:focus-visible {\n+  outline: var(--thorp-focus-outline-compact, var(--thorp-focus-outline));\n+  outline-offset: 2px;\n+}\n+\n+/* 비용 가정 도움말의 기준 문장. 아래 수치 줄과 줄을 나눈다. */\n+.costBasis {\n+  display: block;\n+}\n+\n+/* 비용 수치 한 줄. 비용 가정 도움말 안, 기준 문장 아래에 조금 작게 둔다. */\n .rates {\n-  display: inline-flex;\n+  display: flex;\n   flex-wrap: wrap;\n-  justify-content: flex-end;\n-  gap: 2px 12px;\n+  gap: 2px 10px;\n+  margin-top: 4px;\n+  font-size: 0.92em;\n   font-variant-numeric: tabular-nums;\n+  opacity: 0.86;\n }\n \n .provisionalNote {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.module.css",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n import { fireEvent, render, screen, within } from \"@testing-library/react\";\n import userEvent from \"@testing-library/user-event\";\n+import { useRef } from \"react\";\n import { afterEach, beforeEach, describe, expect, it, vi } from \"vitest\";\n import {\n   STRATEGY_SETTINGS_STORAGE_KEY,\n@@ -38,19 +39,35 @@ function Harness({\n   costView?: CostAssumptionView | \"loading\" | null;\n }) {\n   const settings = useStrategySettings(registryFixture, 3);\n+  // 화면처럼 '최대 범위 선택'을 누르기 직전의 기간을 기억해 되돌리기에 쓴다.\n+  const beforeFull = useRef<{ start: string; end: string } | null>(null);\n   if (!settings.ready) return <p>준비 중</p>;\n   const condition = settings.analysisCondition;\n   const chosen =\n     condition.periodStart !== undefined && condition.periodEnd !== undefined\n       ? { start: condition.periodStart, end: condition.periodEnd }\n       : null;\n+  const full = condition.periodFull === true;\n   return (\n     <>\n       <AnalysisConditionsPanel\n         conditions={registryFixture.analysisConditions}\n         range={range}\n-        period={chosen ?? range}\n-        periodChosen={chosen !== null}\n+        period={chosen ?? (full ? range : null)}\n+        periodMode={chosen !== null ? \"custom\" : full ? \"full\" : \"unset\"}\n+        onSelectFullRange={() => {\n+          beforeFull.current = chosen;\n+          settings.setAnalysisCondition({ periodFull: true });\n+        }}\n+        onUndoFullRange={() => {\n+          const before = beforeFull.current;\n+          if (before === null) settings.resetAnalysisCondition(\"period\");\n+          else\n+            settings.setAnalysisCondition({\n+              periodStart: before.start,\n+              periodEnd: before.end,\n+            });\n+        }}\n         sectorCount={3}\n         initialAmount={condition.initialAmount ?? amount.default}\n         minEvaluationYears={condition.minEvaluationYears}\n@@ -121,8 +138,32 @@ async function renderOpen(costView?: CostAssumptionView | \"loading\" | null) {\n   return { onChange, user, panel };\n }\n \n+/**\n+ * '최대 범위 선택'을 눌러 둔 채 시작한다. 2026-10-01부터 기간은 저절로 정해지지 않는데, 이 파일의 검사 대부분은\n+ * 기간이 정해진 화면을 본다. 정하지 않은 상태는 그것을 보는 검사가 저장소를 비우고 따로 본다.\n+ */\n+function seedFullRange() {\n+  window.sessionStorage.setItem(\n+    STRATEGY_SETTINGS_STORAGE_KEY,\n+    JSON.stringify({\n+      version: 1,\n+      registryVersion: registryFixture.registryVersion,\n+      universeSize: 3,\n+      selectedStrategyId: null,\n+      valuesByStrategy: {},\n+      analysisCondition: {\n+        minEvaluationYears: 1,\n+        scenario: \"FULL_PERIOD\",\n+        periodFull: true,\n+      },\n+      invalidValues: [],\n+    }),\n+  );\n+}\n+\n beforeEach(() => {\n   window.sessionStorage.clear();\n+  seedFullRange();\n });\n \n afterEach(() => {\n@@ -184,7 +225,7 @@ describe(\"AnalysisConditionsPanel\", () => {\n     const panel = await screen.findByRole(\"region\", { name: \"분석 조건\" });\n \n     // 바꾼 것이 없으면 되돌리기가 하나도 없다.\n-    expect(within(panel).queryByRole(\"button\", { name: /기본값 복원|범위 전체로/ })).toBeNull();\n+    expect(within(panel).queryByRole(\"button\", { name: /기본값 복원|되돌리기/ })).toBeNull();\n \n     // 짧은 선택: 최소 평가 기간\n     await user.click(within(panel).getByRole(\"radio\", { name: \"엄격(3년)\" }));\n@@ -214,27 +255,23 @@ describe(\"AnalysisConditionsPanel\", () => {\n     expect(document.activeElement).toBe(within(panel).getByRole(\"radio\", { name: \"쓰지 않음\" }));\n   });\n \n-  it(\"범위 전체와 같은 날짜를 골라 둔 채 입력을 망가뜨려도, 되돌리면 입력칸이 범위 전체로 다시 맞춰진다\", async () => {\n-    const { user } = await renderOpen();\n+  it(\"최대 범위에서 시작한 입력이 무효로 끝나면 최대 범위로 돌아가고 입력칸의 글은 그대로 둔다\", async () => {\n+    await renderOpen();\n     const start = () => screen.getByLabelText(\"시작일\") as HTMLInputElement;\n \n-    // 고른 기간이 범위 전체와 같아지게 한다. 사용자가 고른 기간이라 되돌리기가 있다.\n     fireEvent.focus(start());\n     fireEvent.change(start(), { target: { value: \"2021-01-04\" } });\n-    fireEvent.change(start(), { target: { value: range.start } });\n-    expect(stateCondition()).toMatchObject({ periodStart: range.start, periodEnd: range.end });\n+    expect(stateCondition()).toMatchObject({ periodStart: \"2021-01-04\", periodEnd: range.end });\n+    expect(stateCondition().periodFull).toBeUndefined();\n \n-    // 그 상태에서 시작일을 지운다. 되돌릴 기간이 지금과 같아 바깥 값은 그대로다.\n-    fireEvent.focus(start());\n     fireEvent.change(start(), { target: { value: \"\" } });\n-    expect(start().getAttribute(\"aria-invalid\")).toBe(\"true\");\n-\n-    await user.click(screen.getByRole(\"button\", { name: \"범위 전체로 되돌리기\" }));\n \n+    expect(stateCondition().periodFull).toBe(true);\n     expect(stateCondition().periodStart).toBeUndefined();\n-    expect(start().value).toBe(range.start);\n-    expect(start().getAttribute(\"aria-invalid\")).toBe(\"false\");\n-    expect(screen.queryByText(/저장하지 않았습니다/)).toBeNull();\n+    expect(storedCondition().periodFull).toBe(true);\n+    // 사용자가 친 글은 지우지 않고 문제를 알린다.\n+    expect(start().value).toBe(\"\");\n+    expect(start().getAttribute(\"aria-invalid\")).toBe(\"true\");\n   });\n \n   it(\"입력 도중 반영된 날짜는 마지막 날짜가 무효가 되면 입력 전 기간으로 되돌린다\", async () => {\n@@ -269,17 +306,25 @@ describe(\"AnalysisConditionsPanel\", () => {\n     expect(onChange).toHaveBeenCalled();\n   });\n \n-  it(\"고르지 않은 상태에서 시작한 입력이 무효로 끝나면 범위 전체로 돌아간다\", async () => {\n+  it(\"정하지 않은 상태에서 시작한 입력이 무효로 끝나면 정하지 않은 상태로 돌아간다\", async () => {\n+    window.sessionStorage.clear();\n     await renderOpen();\n     const start = screen.getByLabelText(\"시작일\") as HTMLInputElement;\n+    const end = screen.getByLabelText(\"종료일\") as HTMLInputElement;\n+    // 기간이 저절로 채워지지 않는다.\n+    expect(start.value).toBe(\"\");\n+    expect(end.value).toBe(\"\");\n+    expect(screen.queryByText(/저장하지 않았습니다/)).toBeNull();\n \n     fireEvent.focus(start);\n     fireEvent.change(start, { target: { value: \"2021-01-04\" } });\n-    expect(stateCondition().periodStart).toBe(\"2021-01-04\");\n+    fireEvent.change(end, { target: { value: \"2023-12-28\" } });\n+    expect(stateCondition()).toMatchObject({ periodStart: \"2021-01-04\", periodEnd: \"2023-12-28\" });\n     fireEvent.change(start, { target: { value: \"\" } });\n \n     expect(stateCondition().periodStart).toBeUndefined();\n     expect(stateCondition().periodEnd).toBeUndefined();\n+    expect(stateCondition().periodFull).toBeUndefined();\n     expect(storedCondition().periodStart).toBeUndefined();\n     expect(start.value).toBe(\"\");\n   });\n@@ -303,7 +348,7 @@ describe(\"AnalysisConditionsPanel\", () => {\n     expect(start.value).toBe(\"2020-01-01\");\n     expect(\n       screen.getByText(\n-        /범위\\(2020-01-02 ~ 2024-12-30\\) 밖의 날짜는 고를 수 없습니다/,\n+        /평가 가능 범위\\(2020-01-02 ~ 2024-12-30\\) 밖의 날짜입니다/,\n       ),\n     ).toBeTruthy();\n \n@@ -327,24 +372,31 @@ describe(\"AnalysisConditionsPanel\", () => {\n     });\n   });\n \n-  it(\"고른 기간을 범위 전체로 되돌리면 두 날짜를 함께 지운다\", async () => {\n+  it(\"고른 기간에서 '최대 범위 선택'을 누르면 두 날짜를 지우고 범위 전체를 쓰며, 되돌리면 고른 기간으로 돌아간다\", async () => {\n     const { user } = await renderOpen();\n+    const fullButton = () =>\n+      screen.getByRole(\"button\", { name: \"최대 범위 선택\" }) as HTMLButtonElement;\n+    // 최대 범위로 시작했으므로 단추는 막혀 있고 되돌리기 아이콘이 있다.\n+    expect(fullButton().disabled).toBe(true);\n \n-    expect(\n-      screen.queryByRole(\"button\", { name: \"범위 전체로 되돌리기\" }),\n-    ).toBeNull();\n     fireEvent.change(screen.getByLabelText(\"시작일\"), {\n       target: { value: \"2021-01-04\" },\n     });\n-    await user.click(\n-      screen.getByRole(\"button\", { name: \"범위 전체로 되돌리기\" }),\n-    );\n+    // 날짜를 직접 고르면 단추가 다시 열리고 아이콘은 사라진다.\n+    expect(fullButton().disabled).toBe(false);\n+    expect(screen.queryByRole(\"button\", { name: \"최대 범위 선택 되돌리기\" })).toBeNull();\n \n+    await user.click(fullButton());\n     expect(stateCondition().periodStart).toBeUndefined();\n     expect(stateCondition().periodEnd).toBeUndefined();\n-    expect((screen.getByLabelText(\"시작일\") as HTMLInputElement).value).toBe(\n-      range.start,\n-    );\n+    expect(stateCondition().periodFull).toBe(true);\n+    expect((screen.getByLabelText(\"시작일\") as HTMLInputElement).value).toBe(range.start);\n+    expect(fullButton().disabled).toBe(true);\n+\n+    await user.click(screen.getByRole(\"button\", { name: \"최대 범위 선택 되돌리기\" }));\n+    expect(stateCondition()).toMatchObject({ periodStart: \"2021-01-04\", periodEnd: range.end });\n+    expect(stateCondition().periodFull).toBeUndefined();\n+    expect(fullButton().disabled).toBe(false);\n   });\n \n   it.each([\n@@ -406,14 +458,20 @@ describe(\"AnalysisConditionsPanel\", () => {\n   });\n \n   it(\"비용 수치·버전·임시 여부를 읽기 전용으로 함께 보인다\", async () => {\n+    const user = userEvent.setup();\n     const { panel } = await renderOpen();\n \n     const group = within(panel).getByRole(\"group\", { name: \"비용 가정\" });\n     const text = group.textContent ?? \"\";\n-    expect(text).toContain(\"수수료 1.5bp\");\n-    expect(text).toContain(\"호가 차이 5bp\");\n-    expect(text).toContain(\"슬리피지 2.25bp\");\n-    expect(text).toContain(\"세금 20bp\");\n+    // 행에는 버전과 임시 여부만 서고, 수치는 물음표 도움말 안 기준 문장 아래에 있다(2026-10-01).\n+    expect(text).not.toContain(\"수수료\");\n+    await user.hover(within(group).getByRole(\"button\", { name: \"비용 가정 도움말\" }));\n+    const help = (await screen.findByRole(\"tooltip\", { name: \"비용 가정 도움말\" })).textContent ?? \"\";\n+    expect(help).toContain(\"2026년 한국 ETF 거래 적용 기준과 동일\");\n+    expect(help).toContain(\"수수료 1.5bp\");\n+    expect(help).toContain(\"호가 차이 5bp\");\n+    expect(help).toContain(\"슬리피지 2.25bp\");\n+    expect(help).toContain(\"세금 20bp\");\n     expect(text).toContain(\"SYN-COST-1\");\n     expect(text).toContain(\"임시값\");\n     // 비용은 고칠 수단이 없다. 하나뿐인 버튼은 값을 바꾸는 것이 아니라 도움말이다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,4 +1,5 @@\n-import { useId, useRef, useState, type ReactNode } from \"react\";\n+import { RotateCcw } from \"lucide-react\";\n+import { useEffect, useId, useRef, useState, type ReactNode } from \"react\";\n import { DateField } from \"@/components/common/DateField\";\n import { InlineHelp } from \"@/components/common/InlineHelp\";\n import { ProvisionalBadge } from \"@/components/paramsearch/ProvisionalBadge\";\n@@ -44,10 +45,19 @@ interface AnalysisConditionsPanelProps {\n   range: AnalysisPeriod | null;\n   /** `range`가 없을 때 그 까닭. 없으면 \"아직 확인하지 못했다\"는 일반 문장을 쓴다 */\n   rangeUnavailableMessage?: string;\n-  /** 지금 쓰이는 분석 기간. 사용자가 고르지 않았으면 `range`와 같다 */\n+  /** 지금 쓰이는 분석 기간. '최대 범위 선택'이면 `range`와 같고, 아직 정하지 않았으면 `null`이다 */\n   period: AnalysisPeriod | null;\n-  /** 사용자가 기간을 직접 골랐는가. 참일 때만 '범위 전체로 되돌리기'를 보인다 */\n-  periodChosen: boolean;\n+  /** 분석 기간의 상태. 정하지 않았으면 `period`가 `null`이다 */\n+  periodMode: PeriodMode;\n+  /** '최대 범위 선택'. 평가 가능 범위 전체를 쓴다 */\n+  onSelectFullRange: () => void;\n+  /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다 */\n+  onUndoFullRange: () => void;\n+  /**\n+   * 날짜 칸에 반영하지 않은 무효 날짜가 남아 있는지 알린다. 칸이 무효인 동안 '분석하기'를 막는 데 쓴다 — 막지\n+   * 않으면 칸에는 고친 날짜가 보이는데 요청은 그 전 기간으로 나간다(2026-10-01)\n+   */\n+  onPeriodDraftInvalid?: (invalid: boolean) => void;\n   /**\n    * 011 사례 경로에서만 오는 추가 제약(011 진입 계약 §3). 주소에 `case`가 없으면 `null`이고 동작이\n    * 지금과 같다. 있으면 시작일에 상한이, 종료일에 하한이 더 걸리고 고정 문구를 보인다\n@@ -78,7 +88,7 @@ interface AnalysisConditionsPanelProps {\n export const COST_UNAVAILABLE =\n   \"비용 조건을 확인할 수 없습니다. 확인하기 전에는 분석을 시작할 수 없습니다.\";\n /** 비용 수치가 어디서 온 값인지. 사용자가 고칠 수 있는 값이 아니라는 사실을 문구가 대신 말한다(FR-010). */\n-const COST_BASIS = \"2026년 한국 ETF 거래에 적용되는 기준과 같습니다.\";\n+const COST_BASIS = \"2026년 한국 ETF 거래 적용 기준과 동일\";\n \n export const COST_LOADING = \"비용 조건을 확인하는 중입니다.\";\n \n@@ -111,7 +121,7 @@ function rangeChoices({ min, max, step }: { min: number; max: number; step: numb\n const RANGE_UNAVAILABLE =\n   \"평가할 수 있는 범위를 아직 확인하지 못해 기간을 바꿀 수 없습니다.\";\n \n-/** 범위가 없어 기간이 아직 정해지지 않았을 때의 값. 고장이 아니라 정해지기 전이다. */\n+/** 기간이 아직 정해지지 않았을 때의 값. 범위를 모르거나, 사용자가 아직 고르지 않았다. 고장이 아니라 정해지기 전이다. */\n const PERIOD_UNSET = \"정해지지 않음\";\n \n function toNumber(value: unknown): number | null {\n@@ -130,15 +140,26 @@ function formatBps(value: number): string {\n   return `${value.toLocaleString(\"ko-KR\", { maximumFractionDigits: 4 })}bp`;\n }\n \n+/**\n+ * 분석 기간이 지금 어느 상태인가(2026-10-01). `unset`은 아직 정하지 않음, `full`은 '최대 범위 선택'으로 평가 가능\n+ * 범위 전체를 따름, `custom`은 사용자가 날짜를 직접 고름이다.\n+ */\n+export type PeriodMode = \"unset\" | \"full\" | \"custom\";\n+\n interface PeriodFieldProps {\n   range: AnalysisPeriod | null;\n   rangeUnavailableMessage: string;\n   period: AnalysisPeriod | null;\n-  periodChosen: boolean;\n+  periodMode: PeriodMode;\n   caseConstraint: CasePeriodConstraint | null;\n   onChange: (period: AnalysisPeriod) => void;\n-  /** 범위 전체로 되돌린다. 단추는 행 끝의 되돌리기 아이콘이고, 입력 도중 무효가 되었을 때도 이 길을 쓴다 */\n-  onReset: () => void;\n+  /** '최대 범위 선택'. 평가 가능 범위 전체를 쓰고, 범위가 바뀌면 그 범위를 따른다 */\n+  onSelectFull: () => void;\n+  /** '최대 범위 선택'을 누르기 직전 상태로 되돌린다. 단추 옆 되돌리기 아이콘이 부른다 */\n+  onUndoFull: () => void;\n+  /** 기간을 정하지 않은 상태로 되돌린다. 아무것도 정하지 않은 데서 시작한 입력이 무효가 되었을 때 쓴다 */\n+  onClear: () => void;\n+  onDraftInvalid?: (invalid: boolean) => void;\n }\n \n /** 사례 제약을 어겼는가. 어겼으면 고정 문구, 아니면 `null`이다(011 진입 계약 §3). */\n@@ -169,10 +190,13 @@ function PeriodField({\n   range,\n   rangeUnavailableMessage,\n   period,\n-  periodChosen,\n+  periodMode,\n   caseConstraint,\n   onChange,\n-  onReset,\n+  onSelectFull,\n+  onUndoFull,\n+  onClear,\n+  onDraftInvalid,\n }: PeriodFieldProps) {\n   const startId = useId();\n   const endId = useId();\n@@ -181,16 +205,16 @@ function PeriodField({\n     period ?? { start: \"\", end: \"\" },\n   );\n   const [synced, setSynced] = useState(period);\n-  /** 입력을 시작할 때의 기간과, 그것이 사용자가 고른 기간이었는지 */\n+  /** 입력을 시작할 때의 기간과 그때의 상태. 입력이 무효가 되면 이리로 되돌린다 */\n   const atEditStart = useRef<{\n     period: AnalysisPeriod | null;\n-    chosen: boolean;\n+    mode: PeriodMode;\n   }>({\n     period,\n-    chosen: periodChosen,\n+    mode: periodMode,\n   });\n \n-  // 바깥에서 기간이 바뀌면(범위 전체로 되돌리기, 전략·워밍업이 바뀌어 범위가 달라짐) 입력칸을 맞춘다.\n+  // 바깥에서 기간이 바뀌면('최대 범위 선택'과 그 되돌리기, 전략·워밍업이 바뀌어 범위가 달라짐) 입력칸을 맞춘다.\n   if (period?.start !== synced?.start || period?.end !== synced?.end) {\n     setSynced(period);\n     setDraft(period ?? { start: \"\", end: \"\" });\n@@ -205,15 +229,19 @@ function PeriodField({\n \n   const draftIsCurrent =\n     draft.start === period?.start && draft.end === period?.end;\n+  // 아직 정하지 않았고 칸도 비어 있으면 고칠 것이 없다. 무엇을 정해야 하는지는 '분석하기'가 알린다.\n+  const untouched = period === null && draft.start === \"\" && draft.end === \"\";\n   const problem =\n     range === null\n       ? rangeUnavailableMessage\n-      : draftIsCurrent &&\n+      : untouched\n+        ? null\n+        : draftIsCurrent &&\n           period !== null &&\n           isWithin(period, range) &&\n           checkCaseConstraint(period, caseConstraint) === null\n-        ? null\n-        : check(draft);\n+          ? null\n+          : check(draft);\n \n   // 어느 칸이 문제인지 가른다. 순서가 뒤집힌 경우만 둘 다 문제다.\n   const badDate = (date: string) =>\n@@ -227,27 +255,32 @@ function PeriodField({\n     problem !== null && range !== null && (badDate(draft.end) || reversed);\n \n   const rememberEditStart = () => {\n-    atEditStart.current = { period, chosen: periodChosen };\n+    atEditStart.current = { period, mode: periodMode };\n   };\n \n   const update = (next: AnalysisPeriod) => {\n     setDraft(next);\n     if (range === null) return;\n     if (check(next) !== null) {\n+      // 되돌린 값이 바깥에서 돌아와도 입력칸의 글은 사용자가 친 그대로 둔다. 그래서 `synced`를 먼저 맞춘다.\n       const before = atEditStart.current;\n-      if (before.chosen && before.period) {\n+      if (before.mode === \"custom\" && before.period) {\n         if (\n           before.period.start !== period?.start ||\n           before.period.end !== period?.end\n         ) {\n-          // 되돌린 값이 바깥에서 돌아와도 입력칸의 글은 사용자가 친 그대로 둔다.\n           setSynced(before.period);\n           onChange(before.period);\n         }\n-      } else if (periodChosen) {\n-        // 고르지 않은 상태에서 시작했으면 되돌릴 곳은 범위 전체다.\n-        setSynced(range);\n-        onReset();\n+      } else if (before.mode === \"full\") {\n+        if (periodMode !== \"full\") {\n+          setSynced(range);\n+          onSelectFull();\n+        }\n+      } else if (periodMode !== \"unset\") {\n+        // 정하지 않은 상태에서 시작했으면 되돌릴 곳도 정하지 않은 상태다. 범위 전체로 대신 채우지 않는다.\n+        setSynced(null);\n+        onClear();\n       }\n       return;\n     }\n@@ -285,9 +318,13 @@ function PeriodField({\n       ? draft.start\n       : rangeEndMin;\n \n-  const hint = range\n-    ? `평가할 수 있는 범위는 ${range.start} ~ ${range.end}입니다.`\n-    : rangeUnavailableMessage;\n+  // 칸에 반영하지 않은 무효 날짜가 남았는지 알린다. 칸이 사라지면(행을 접음) 무효 날짜도 함께 사라진다. 칸이\n+  // 저장된 기간 그대로인데 범위가 줄어 밖으로 밀려난 것은 여기서 알리지 않는다 — 화면이 그 사유를 따로 말한다.\n+  const draftInvalid = problem !== null && range !== null && !draftIsCurrent;\n+  useEffect(() => {\n+    onDraftInvalid?.(draftInvalid);\n+  }, [draftInvalid, onDraftInvalid]);\n+  useEffect(() => () => onDraftInvalid?.(false), [onDraftInvalid]);\n \n   return (\n     <fieldset className={fieldStyles.field} aria-label=\"분석 기간\">\n@@ -324,15 +361,41 @@ function PeriodField({\n           onFocus={rememberEditStart}\n           onChange={(next) => update({ ...draft, end: next })}\n         />\n+        {/*\n+          '최대 범위 선택'(2026-10-01). 예전에는 범위 전체가 저절로 기간이 되고 그 범위를 문장으로 적었는데, 사용자가\n+          고르지 않은 기간으로 분석이 나갔다. 이제 범위는 단추가 품고, 누르면 범위 전체를 쓴다. 누른 뒤에는 다시 누를\n+          일이 없어 막고, 누르기 직전 상태로 돌아가는 아이콘을 옆에 둔다. 날짜를 직접 고른 동안에는 단추가 열려 있다.\n+        */}\n+        <button\n+          type=\"button\"\n+          className={fieldStyles.quickAddButton}\n+          disabled={range === null || periodMode === \"full\"}\n+          aria-pressed={periodMode === \"full\"}\n+          title={range ? `${range.start} ~ ${range.end}` : undefined}\n+          onClick={onSelectFull}\n+        >\n+          최대 범위 선택\n+        </button>\n+        {periodMode === \"full\" ? (\n+          <button\n+            type=\"button\"\n+            className={styles.undoFull}\n+            aria-label=\"최대 범위 선택 되돌리기\"\n+            title=\"최대 범위 선택 되돌리기\"\n+            onClick={onUndoFull}\n+          >\n+            <RotateCcw size={12} strokeWidth={2.2} aria-hidden=\"true\" />\n+          </button>\n+        ) : null}\n       </div>\n       <p\n         id={messageId}\n         className={problem && range ? fieldStyles.problem : fieldStyles.hint}\n         aria-live=\"polite\"\n       >\n-        {problem && range\n-          ? `${problem} 이 기간은 저장하지 않았습니다. ${hint}`\n-          : hint}\n+        {/* 문제가 없으면 비워 둔다. 범위는 '최대 범위 선택' 단추가 품고, 행 아래 설명이 적는다. */}\n+        {/* 무엇이 잘못됐는지만 짧게 적는다. 반영하지 않았다는 사실은 막힌 '분석하기'가 함께 말한다. */}\n+        {problem && range ? problem : range ? \"\" : rangeUnavailableMessage}\n       </p>\n       {/* 사례 경로의 고정 문구다. 어겼을 때만이 아니라 늘 보인다 — 왜 좁아졌는지가 먼저다. */}\n       {caseConstraint ? (\n@@ -366,7 +429,10 @@ export function AnalysisConditionsPanel({\n   range,\n   rangeUnavailableMessage = RANGE_UNAVAILABLE,\n   period,\n-  periodChosen,\n+  periodMode,\n+  onSelectFullRange,\n+  onUndoFullRange,\n+  onPeriodDraftInvalid,\n   caseConstraint = null,\n   sectorCount,\n   initialAmount,\n@@ -382,12 +448,9 @@ export function AnalysisConditionsPanel({\n   const volatility = conditions.targetVolatility;\n   const years = conditions.minEvaluationYears;\n \n-  // 사용자가 기간을 직접 골랐을 때만 범위를 한 줄로 덧붙인다. 고르지 않았으면 값이 곧 범위라 같은 말이 된다.\n-  const periodCaption =\n-    periodChosen && range\n-      ? `평가 가능 범위 ${range.start} ~ ${range.end}`\n-      : undefined;\n-\n+  // 평가 가능 범위는 행 아래에 적지 않는다(2026-10-01). 범위는 전략 카드에 마우스를 올리면 보이고, 날짜 칸 옆\n+  // '최대 범위 선택'이 그 범위를 품는다.\n+  //\n   // 범위가 없으면 기간을 고칠 수 없다. 펼칠 폼이 없으니 읽기 전용 행으로 두고 까닭을 행 아래에 늘 보인다(FR-003).\n   const periodUnavailableCaption = range ? undefined : (\n     <>\n@@ -413,29 +476,23 @@ export function AnalysisConditionsPanel({\n       <SettingRow\n         label=\"분석 기간\"\n         help={range ? rangeReason : undefined}\n-        value={\n-          period\n-            ? `${period.start} ~ ${period.end}`\n-            : range\n-              ? UNAVAILABLE\n-              : PERIOD_UNSET\n-        }\n-        caption={range ? periodCaption : periodUnavailableCaption}\n-        modified={periodChosen}\n-        onReset={() => onReset(\"period\")}\n-        resetLabel=\"범위 전체로 되돌리기\"\n+        value={period ? `${period.start} ~ ${period.end}` : PERIOD_UNSET}\n+        caption={range ? undefined : periodUnavailableCaption}\n       >\n         {range ? (\n           <PeriodField\n             range={range}\n             rangeUnavailableMessage={rangeUnavailableMessage}\n             period={period}\n-            periodChosen={periodChosen}\n+            periodMode={periodMode}\n             caseConstraint={caseConstraint}\n             onChange={(next) =>\n               onChange({ periodStart: next.start, periodEnd: next.end })\n             }\n-            onReset={() => onReset(\"period\")}\n+            onSelectFull={onSelectFullRange}\n+            onUndoFull={onUndoFullRange}\n+            onClear={() => onReset(\"period\")}\n+            onDraftInvalid={onPeriodDraftInvalid}\n           />\n         ) : null}\n       </SettingRow>\n@@ -458,6 +515,7 @@ export function AnalysisConditionsPanel({\n           value={initialAmount}\n           groupDigits\n           roundToStep\n+          rangeHint={false}\n           quickAdd={buildAmountQuickAdds(\n             amount.step,\n             amount.max - amount.min,\n@@ -560,7 +618,12 @@ export function AnalysisConditionsPanel({\n           label=\"비용 가정\"\n           help={\n             <InlineHelp label=\"비용 가정\" on=\"hover\">\n-              {COST_BASIS}\n+              {/*\n+                비용 수치는 행 아래가 아니라 이 도움말 안, 기준 문장 다음 줄에 작게 둔다(2026-10-01). 행에는 버전과\n+                임시 여부만 남아 읽기 전용 값이라는 것이 한눈에 보이고, 수치는 물음표 하나로 닿는다(FR-010).\n+              */}\n+              <span className={styles.costBasis}>{COST_BASIS}</span>\n+              {costRates}\n             </InlineHelp>\n           }\n           value={\n@@ -582,15 +645,10 @@ export function AnalysisConditionsPanel({\n               <span className={fieldStyles.problem} role=\"status\">\n                 {COST_UNAVAILABLE}\n               </span>\n-            ) : cost !== \"loading\" ? (\n-              <>\n-                {costRates}\n-                {cost.provisional ? (\n-                  <span className={styles.provisionalNote}>\n-                    팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지 마세요.\n-                  </span>\n-                ) : null}\n-              </>\n+            ) : cost !== \"loading\" && cost.provisional ? (\n+              <span className={styles.provisionalNote}>\n+                팀 확정 전 임시 비용입니다. 결과를 확정된 비용 기준으로 읽지 마세요.\n+              </span>\n             ) : undefined\n           }\n         />\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "old_path": "frontend/src/components/strategy/AnalysisConditionsPanel.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -30,6 +30,36 @@\n   border-color: var(--thorp-warning);\n }\n \n+/* 입력칸 위에 뜨는 허용 범위 말풍선의 기준 자리. 칸의 폭을 그대로 따른다. */\n+.inputAnchor {\n+  position: relative;\n+  display: inline-flex;\n+  min-width: 0;\n+}\n+\n+/*\n+  허용 범위를 늘 적지 않는 칸(시작 금액)에서, 칸에 초점이 있는 동안만 칸 위 오른쪽 끝에 뜨는 안내. 아래 문제 안내\n+  자리를 가리지 않도록 위로 띄우고, 포인터를 받지 않아 칸 위 요소의 클릭을 가로채지 않는다.\n+*/\n+.rangeTooltip {\n+  position: absolute;\n+  right: 0;\n+  bottom: calc(100% + 8px);\n+  z-index: 5;\n+  width: max-content;\n+  max-width: min(440px, 80vw);\n+  padding: 7px 10px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 8px);\n+  background: var(--thorp-surface-raised, var(--thorp-surface));\n+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  line-height: 1.5;\n+  pointer-events: none;\n+  word-break: keep-all;\n+}\n+\n .inputRow {\n   display: flex;\n   flex-wrap: wrap;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AxisField.module.css",
+          "old_path": "frontend/src/components/strategy/AxisField.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -46,6 +46,45 @@ function renderField(initial: number | undefined) {\n }\n \n describe(\"AxisNumberField\", () => {\n+  it(\"범위 문장을 늘 적지 않는 칸은 초점이 있는 동안만 안내 말풍선으로 범위를 보인다\", async () => {\n+    const user = userEvent.setup();\n+    render(\n+      <AxisNumberField\n+        label=\"합성 금액\"\n+        unit=\"원\"\n+        range={{ min: 1000000, max: 1000000000, step: 1000000 }}\n+        defaultValue={10000000}\n+        value={10000000}\n+        groupDigits\n+        rangeHint={false}\n+        onChange={vi.fn()}\n+      />,\n+    );\n+    const input = screen.getByRole(\"textbox\", { name: /합성 금액/ });\n+\n+    // 초점이 없으면 범위 문장이 어디에도 없다.\n+    expect(screen.queryByText(/허용 범위는/)).toBeNull();\n+\n+    await user.click(input);\n+    const tooltip = screen.getByRole(\"tooltip\");\n+    // 금액은 칸과 같은 모양(쉼표)으로 적고, 보조기술에는 칸의 설명으로 읽힌다.\n+    expect(tooltip.textContent).toBe(\n+      \"허용 범위는 1,000,000~1,000,000,000원, 1,000,000원 간격입니다.\",\n+    );\n+    expect(input.getAttribute(\"aria-describedby\")).toContain(tooltip.id);\n+\n+    // 간격에 맞지 않는 값을 넣으면 말풍선 대신 칸 아래 안내가 범위를 함께 말한다.\n+    await user.clear(input);\n+    await user.type(input, \"1500000\");\n+    expect(screen.queryByRole(\"tooltip\")).toBeNull();\n+    expect(screen.getByText(/간격에 맞지 않습니다/).textContent).toContain(\n+      \"허용 범위는 1,000,000~1,000,000,000원\",\n+    );\n+\n+    await user.tab();\n+    expect(screen.queryByRole(\"tooltip\")).toBeNull();\n+  });\n+\n   it(\"범위 밖 값은 허용 범위를 안내하고 반영하지 않으며 최솟값으로 잘라 넣지 않는다\", async () => {\n     const user = userEvent.setup();\n     const { onChange, input } = renderField(20);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AxisNumberField.test.tsx",
+          "old_path": "frontend/src/components/strategy/AxisNumberField.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -25,6 +25,12 @@ interface AxisNumberFieldProps {\n   roundToStep?: boolean;\n   /** 누르면 그만큼 더하는 단추들. 주지 않으면 그리지 않는다 */\n   quickAdd?: readonly QuickAdd[];\n+  /**\n+   * 문제가 없을 때도 허용 범위 문장을 칸 아래에 늘 보인다. 기본값은 켜짐이다. 끄면 그 문장은 입력칸에 초점이\n+   * 있는 동안만 칸 위 안내 말풍선으로 뜨고, 범위 밖·간격 밖 값을 넣었을 때는 칸 아래 안내가 범위를 함께\n+   * 말한다(US2 시나리오 3). 빠른 더하기가 있어 범위를 늘 읽을 일이 적은 시작 금액이 끈다(2026-10-01)\n+   */\n+  rangeHint?: boolean;\n }\n \n /** 간격의 소수 자릿수. 반올림한 값에 부동소수 찌꺼기가 남지 않게 다시 자른다. */\n@@ -79,8 +85,11 @@ export function AxisNumberField({\n   groupDigits = false,\n   roundToStep = false,\n   quickAdd,\n+  rangeHint = true,\n }: AxisNumberFieldProps) {\n   const messageId = useId();\n+  const tooltipId = useId();\n+  const [focused, setFocused] = useState(false);\n \n   /** 칸에 적을 모양. 쉼표는 보기 위한 것이고 `parseDraft`가 읽을 때 걷어 낸다. */\n   const show = (next: number) =>\n@@ -107,7 +116,8 @@ export function AxisNumberField({\n   }\n \n   const unitText = unit ?? \"\";\n-  const rangeText = `허용 범위는 ${range.min}~${range.max}${unitText}, ${range.step}${unitText} 간격입니다.`;\n+  // 금액처럼 자릿수가 큰 칸은 범위도 칸과 같은 모양(쉼표)으로 적는다. `1000000000`은 몇 자리인지 읽히지 않는다.\n+  const rangeText = `허용 범위는 ${show(range.min)}~${show(range.max)}${unitText}, ${show(range.step)}${unitText} 간격입니다.`;\n \n   const parsed = parseDraft(draft);\n   const problem = ((): string | null => {\n@@ -178,8 +188,10 @@ export function AxisNumberField({\n     commit(snapToStep(next, range));\n   };\n \n-  // 설명 문단은 도움말로 내려 사라졌다. 남은 것은 범위·문제 안내 한 줄이다.\n-  const describedBy = messageId;\n+  // 설명 문단은 도움말로 내려 사라졌다. 남은 것은 범위·문제 안내 한 줄이다. 말풍선은 문제가 없을 때만 뜬다 —\n+  // 문제 안내가 이미 범위를 말하므로 같은 문장을 두 번 띄우지 않는다.\n+  const showTooltip = !rangeHint && focused && problem === null;\n+  const describedBy = showTooltip ? `${messageId} ${tooltipId}` : messageId;\n \n   return (\n     <div className={styles.field}>\n@@ -202,21 +214,32 @@ export function AxisNumberField({\n             ))}\n           </div>\n         ) : null}\n-        <input\n-          className={styles.input}\n-          type=\"text\"\n-          inputMode=\"decimal\"\n-          autoComplete=\"off\"\n-          value={draft}\n-          aria-label={label}\n-          aria-invalid={problem ? \"true\" : \"false\"}\n-          aria-describedby={describedBy}\n-          onFocus={() => {\n-            valueAtEditStart.current = value;\n-          }}\n-          onChange={(event) => handleChange(event.target.value)}\n-          onBlur={handleBlur}\n-        />\n+        <span className={styles.inputAnchor}>\n+          <input\n+            className={styles.input}\n+            type=\"text\"\n+            inputMode=\"decimal\"\n+            autoComplete=\"off\"\n+            value={draft}\n+            aria-label={label}\n+            aria-invalid={problem ? \"true\" : \"false\"}\n+            aria-describedby={describedBy}\n+            onFocus={() => {\n+              valueAtEditStart.current = value;\n+              setFocused(true);\n+            }}\n+            onChange={(event) => handleChange(event.target.value)}\n+            onBlur={() => {\n+              setFocused(false);\n+              handleBlur();\n+            }}\n+          />\n+          {showTooltip ? (\n+            <span id={tooltipId} role=\"tooltip\" className={styles.rangeTooltip}>\n+              {rangeText}\n+            </span>\n+          ) : null}\n+        </span>\n       </div>\n \n       {/* 자리를 늘 두고 글만 바꾼다. 안내가 생길 때 자리가 새로 붙으면 보조기술이 읽지 않을 수 있다. */}\n@@ -225,7 +248,7 @@ export function AxisNumberField({\n         className={problem ? styles.problem : styles.hint}\n         aria-live=\"polite\"\n       >\n-        {problem ?? rangeText}\n+        {problem ?? (rangeHint ? rangeText : null)}\n       </p>\n     </div>\n   );\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/AxisNumberField.tsx",
+          "old_path": "frontend/src/components/strategy/AxisNumberField.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,6 @@\n /* 가로로 늘어선 전략 하나. 빠르게 견주는 자리라 이름과 한 줄 설명만 둔다. */\n .card {\n+  position: relative;\n   display: grid;\n   grid-template-columns: max-content minmax(0, 1fr);\n   align-items: start;\n@@ -180,3 +181,35 @@\n   border-color: var(--thorp-line-strong);\n   color: var(--thorp-muted);\n }\n+\n+/*\n+  이 전략으로 평가할 수 있는 범위. 마우스를 올리거나 초점이 오면 카드 위에 말풍선으로 뜬다(2026-10-01). 분석 기간\n+  행 아래에 늘 적던 문장을 옮겼다 — 범위는 전략마다 다르므로 견주는 자리에서 읽히는 편이 낫다.\n+*/\n+.rangeTip {\n+  position: absolute;\n+  bottom: calc(100% + 8px);\n+  left: 50%;\n+  z-index: 5;\n+  width: max-content;\n+  max-width: min(320px, 80vw);\n+  padding: 6px 10px;\n+  border: 1px solid var(--thorp-line-strong);\n+  border-radius: var(--thorp-radius-control, 8px);\n+  background: var(--thorp-surface-raised, var(--thorp-surface));\n+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-small, 0.78rem);\n+  font-variant-numeric: tabular-nums;\n+  line-height: 1.5;\n+  opacity: 0;\n+  pointer-events: none;\n+  transform: translateX(-50%);\n+  transition: opacity 0.14s ease;\n+  white-space: nowrap;\n+}\n+\n+.card:hover > .rangeTip,\n+.card:focus-visible > .rangeTip {\n+  opacity: 1;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCard.module.css",
+          "old_path": "frontend/src/components/strategy/StrategyCard.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,6 +23,11 @@ interface StrategyCardProps {\n    * 않으면(카드 하나만 쓰는 자리) 안내를 카드 안에 적는다\n    */\n   shared?: ReadonlyMap<string, SharedNoticeRef>;\n+  /**\n+   * 이 전략으로 평가할 수 있는 범위(기본 설정 기준). 주면 카드에 마우스를 올리거나 초점이 올 때 말풍선으로\n+   * 보인다(2026-10-01). 아직 모르면 주지 않는다\n+   */\n+  range?: { start: string; end: string } | null;\n }\n \n /**\n@@ -50,6 +55,7 @@ export function StrategyCard({\n   onSelect,\n   tabIndex,\n   shared,\n+  range,\n }: StrategyCardProps) {\n   const all = collectNotices(strategy, warmup);\n   // 목록 아래에 모은 안내는 카드 안에 번호만 두고, 문장은 그 한 곳에서 읽힌다.\n@@ -67,9 +73,11 @@ export function StrategyCard({\n       ? `strategy-card-notice-${strategy.strategyId}`\n       : undefined;\n   const descriptionId = `strategy-card-description-${strategy.strategyId}`;\n+  const rangeId = range ? `strategy-card-range-${strategy.strategyId}` : undefined;\n   const describedBy = [\n     descriptionId,\n     noticeId,\n+    rangeId,\n     ...sharedRefs.map((ref) => ref.id),\n   ]\n     .filter(Boolean)\n@@ -93,7 +101,8 @@ export function StrategyCard({\n       data-selectable={selectable ? \"true\" : \"false\"}\n       data-warmup={warmup.state}\n       onClick={() => {\n-        if (selectable) onSelect();\n+        // 고른 카드는 고를 수 없게 된 뒤에도 눌러 내려놓을 수 있어야 한다. 고르는 쪽만 막는다.\n+        if (selectable || selected) onSelect();\n       }}\n     >\n       <span className={styles.indicator} aria-hidden=\"true\" />\n@@ -127,6 +136,11 @@ export function StrategyCard({\n           </span>\n         )}\n       </span>\n+      {range ? (\n+        <span id={rangeId} className={styles.rangeTip}>\n+          평가 가능 범위 {range.start} ~ {range.end}\n+        </span>\n+      ) : null}\n     </button>\n   );\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCard.tsx",
+          "old_path": "frontend/src/components/strategy/StrategyCard.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -57,57 +57,6 @@\n   outline-offset: var(--thorp-focus-offset-compact);\n }\n \n-/*\n-  카드 줄 아래에 모아 적은 사유. 카드의 번호와 같은 번호로 한 번씩 적고, 걸린 전략 이름을 앞에 둔다. 오른쪽 끝은\n-  카드와 같이 '분석하기' 원이 걸치는 만큼 비워 둔다.\n-*/\n-.shared {\n-  display: grid;\n-  gap: 4px;\n-  margin: 0;\n-  padding: 0 22px 0 0;\n-  list-style: none;\n-}\n-\n-.sharedItem {\n-  display: flex;\n-  align-items: flex-start;\n-  gap: 8px;\n-  color: var(--thorp-copy);\n-  font-size: var(--thorp-text-small, 0.8rem);\n-  line-height: 1.55;\n-  word-break: keep-all;\n-  overflow-wrap: break-word;\n-  text-wrap: pretty;\n-}\n-\n-.sharedNumber {\n-  display: inline-grid;\n-  flex: none;\n-  place-items: center;\n-  width: 18px;\n-  height: 18px;\n-  margin-top: 1px;\n-  border: 1px solid var(--thorp-warning);\n-  border-radius: 50%;\n-  color: var(--thorp-warning);\n-  font-size: 0.66rem;\n-  font-weight: 700;\n-  font-variant-numeric: tabular-nums;\n-  line-height: 1;\n-}\n-\n-/* 판정하지 못했을 뿐 고를 수 있는 사유. 경고색을 쓰지 않는다. */\n-.sharedNumber[data-tone='pending'] {\n-  border-color: var(--thorp-line-strong);\n-  color: var(--thorp-muted);\n-}\n-\n-.sharedNames {\n-  color: var(--thorp-foreground);\n-  font-weight: 600;\n-}\n-\n .loading {\n   margin: 0;\n   color: var(--thorp-muted);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCardList.module.css",
+          "old_path": "frontend/src/components/strategy/StrategyCardList.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -7,8 +7,9 @@ import {\n   unselectableStrategy,\n } from '@/test/strategyRegistryFixtures'\n import type { StrategyView } from '@/types/strategyRegistry'\n-import type { WarmupVerdict } from './cardNotices'\n+import { collectSharedNotices, type WarmupVerdict } from './cardNotices'\n import { StrategyCardList, type RegistryViewState } from './StrategyCardList'\n+import { StrategyNoticeList } from './StrategyNoticeList'\n \n /**\n  * 카드는 응답만 보고 그린다(FR-001, FR-005, FR-018, quickstart 9).\n@@ -32,6 +33,29 @@ function cardNamed(name: string): HTMLElement {\n /** 워밍업을 따지지 않는 검사에서 쓰는 판정. 아무 전략에나 통과를 준다. */\n const allOk = () => ({ state: 'ok' }) as WarmupVerdict\n \n+type ListProps = Omit<Parameters<typeof StrategyCardList>[0], 'notices'>\n+\n+/**\n+ * 화면처럼 카드 목록과 사유 목록을 같은 결과로 함께 그린다. 사유 문장은 화면 머리가 적고 카드는 번호와 `id`로\n+ * 가리키므로(2026-10-01), 둘을 따로 그리면 카드의 설명이 가리킬 문장이 문서에 없다.\n+ */\n+function ListWithNotices(props: ListProps) {\n+  const notices =\n+    props.state.status === 'loaded'\n+      ? collectSharedNotices(\n+          props.state.registry.strategies,\n+          props.state.registry.strategies.map((strategy) => props.judgeWarmup(strategy)),\n+          'test',\n+        )\n+      : []\n+  return (\n+    <>\n+      <StrategyNoticeList notices={notices} />\n+      <StrategyCardList {...props} notices={notices} />\n+    </>\n+  )\n+}\n+\n function renderList(\n   state: RegistryViewState,\n   overrides: {\n@@ -44,7 +68,7 @@ function renderList(\n   const onSelect = overrides.onSelect ?? vi.fn()\n   const onRetry = overrides.onRetry ?? vi.fn()\n   const result = render(\n-    <StrategyCardList\n+    <ListWithNotices\n       state={state}\n       selectedStrategyId={overrides.selectedStrategyId ?? null}\n       onSelect={onSelect}\n@@ -55,7 +79,7 @@ function renderList(\n   return { ...result, onSelect, onRetry }\n }\n \n-/** 카드가 보조기술에 전하는 설명 전체. 사유 문장은 목록 아래 한 곳에 있고 카드는 `aria-describedby`로 가리킨다. */\n+/** 카드가 보조기술에 전하는 설명 전체. 사유 문장은 카드 밖 한 곳에 있고 카드는 `aria-describedby`로 가리킨다. */\n function descriptionOf(card: HTMLElement): string {\n   return (card.getAttribute('aria-describedby') ?? '')\n     .split(' ')\n@@ -64,7 +88,7 @@ function descriptionOf(card: HTMLElement): string {\n     .join(' ')\n }\n \n-/** 카드 줄 아래에 모아 적은 사유 목록의 항목들. */\n+/** 카드 밖 한 곳에 모아 적은 사유 목록의 항목들. */\n function sharedItems(): HTMLElement[] {\n   return screen.queryAllByRole('listitem')\n }\n@@ -117,7 +141,7 @@ describe('StrategyCardList', () => {\n     expect(onSelect).toHaveBeenCalledWith(selectableStrategy.strategyId)\n \n     rerender(\n-      <StrategyCardList\n+      <ListWithNotices\n         state={loaded}\n         selectedStrategyId={selectableStrategy.strategyId}\n         onSelect={onSelect}\n@@ -138,7 +162,7 @@ describe('StrategyCardList', () => {\n     // disabled 가 아니라 aria-disabled 다 — 초점을 받아야 이유를 읽을 수 있다.\n     expect(card.getAttribute('aria-disabled')).toBe('true')\n     expect(card.getAttribute('aria-checked')).toBe('false')\n-    // 사유는 카드 줄 아래 목록에 전략 이름과 함께 적히고, 카드는 번호와 설명 연결로 그 문장을 가리킨다.\n+    // 사유는 카드 밖 목록에 전략 이름과 함께 적히고, 카드는 번호와 설명 연결로 그 문장을 가리킨다.\n     expect(descriptionOf(card)).toContain(unselectableStrategy.unselectableReason)\n     const item = sharedItems().find((node) =>\n       node.textContent?.includes(unselectableStrategy.unselectableReason ?? '∅'),\n@@ -205,7 +229,7 @@ describe('StrategyCardList', () => {\n     expect(document.activeElement).not.toBe(screen.getByRole('button', { name: '다시 시도' }))\n \n     rerender(\n-      <StrategyCardList\n+      <ListWithNotices\n         state={{ status: 'failed', failureCount: 2, retrying: false }}\n         selectedStrategyId={null}\n         onSelect={vi.fn()}\n@@ -221,7 +245,7 @@ describe('StrategyCardList', () => {\n     const { rerender } = renderList({ status: 'failed', failureCount: 1, retrying: false })\n \n     rerender(\n-      <StrategyCardList\n+      <ListWithNotices\n         state={loaded}\n         selectedStrategyId={null}\n         onSelect={vi.fn()}\n@@ -289,7 +313,7 @@ describe('StrategyCardList', () => {\n     expect(descriptionOf(card)).toContain('고를 수 없는 이유를 확인하지 못했습니다.')\n   })\n \n-  it('사유는 카드마다 되풀이하지 않고 번호를 붙여 목록 아래에 한 번씩 적는다', () => {\n+  it('사유는 카드마다 되풀이하지 않고 번호를 붙여 카드 밖 목록에 한 번씩 적는다', () => {\n     const shared = '같은 사유 문장입니다.'\n     renderList(loaded, {\n       judgeWarmup: () => ({ state: 'blocked', message: shared }),\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCardList.test.tsx",
+          "old_path": "frontend/src/components/strategy/StrategyCardList.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,11 +1,6 @@\n-import { type KeyboardEvent, useEffect, useId, useRef } from 'react'\n+import { type KeyboardEvent, useEffect, useRef } from 'react'\n import { RegistryUnavailableNotice } from './RegistryUnavailableNotice'\n-import {\n-  collectNotices,\n-  type NoticeTone,\n-  type SharedNoticeRef,\n-  type WarmupVerdict,\n-} from './cardNotices'\n+import type { SharedNotice, SharedNoticeRef, WarmupVerdict } from './cardNotices'\n import { StrategyCard } from './StrategyCard'\n import type { RegistryResponse, StrategyView } from '@/types/strategyRegistry'\n import styles from './StrategyCardList.module.css'\n@@ -47,6 +42,14 @@ interface StrategyCardListProps {\n    * 동안에는 `unknown`을 돌려주어 그 사실이 화면에 남게 한다.\n    */\n   judgeWarmup: (strategy: StrategyView) => WarmupVerdict\n+  /**\n+   * 한 곳에 모아 적은 사유(`collectSharedNotices`). **문장은 이 목록이 그리지 않는다** — 화면 머리의 제목 아래에서\n+   * `StrategyNoticeList`가 적고, 카드는 번호와 `id`로 그 문장을 가리킨다. 같은 결과를 두 자리에 넘겨야 번호와\n+   * 문장이 어긋나지 않는다.\n+   */\n+  notices: readonly SharedNotice[]\n+  /** 카드에 마우스를 올리면 보일 그 전략의 평가 가능 범위. 모르면 `null`이고, 주지 않으면 띄우지 않는다 */\n+  rangeOf?: (strategy: StrategyView) => { start: string; end: string } | null\n }\n \n /**\n@@ -85,12 +88,11 @@ const FOCUS_STEP: Record<string, number> = {\n  * <p><b>고른 전략의 상세는 이 목록이 그리지 않는다.</b> 목록 사이에 상세를 끼워 넣으면 고를 때마다\n  * 아래 항목이 밀려 내려가 견주던 자리를 잃는다. 상세는 목록 아래 카드가 맡는다.\n  *\n- * <p><b>사유는 목록 아래 한 곳에 모아 적는다.</b> 고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는데,\n+ * <p><b>사유는 카드 밖 한 곳에 모아 적는다.</b> 고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는데,\n  * 그 문장을 카드마다 되풀이하면 무엇 때문에 막혔는지보다 경고가 많다는 인상만 남는다. 카드 한 장에만 걸린 사유도\n- * 같은 자리에 모아, 사유가 있는 카드만 높아져 줄이 들쭉날쭉하지 않게 한다. 문장마다 번호를 붙이고 해당 전략\n- * 이름을 앞에 두며, 카드는 이름 옆에 그 번호만 보인다. 보조기술에는 카드의 설명으로 그 문장이 그대로\n- * 읽힌다(`aria-describedby`). 같은 문장은 한 번만 적고, 어떤 문장이 겹치는지는 문장이 같은지만 본다 — 전략을\n- * 보고 정하지 않는다. 판정하지 못했을 뿐 고를 수 있는 사유는 경고색을 쓰지 않는다.\n+ * 같은 자리에 모아, 사유가 있는 카드만 높아져 줄이 들쭉날쭉하지 않게 한다. 카드는 이름 옆에 번호만 보이고,\n+ * 보조기술에는 카드의 설명으로 그 문장이 그대로 읽힌다(`aria-describedby`). 문장은 화면 머리의 제목 아래에\n+ * 적힌다(`StrategyNoticeList`, 2026-10-01).\n  */\n export function StrategyCardList({\n   state,\n@@ -98,10 +100,11 @@ export function StrategyCardList({\n   onSelect,\n   onRetry,\n   judgeWarmup,\n+  notices,\n+  rangeOf,\n }: StrategyCardListProps) {\n   const listRef = useRef<HTMLDivElement>(null)\n   const recoveredFromFailure = useRef(false)\n-  const sharedIdBase = useId()\n \n   useEffect(() => {\n     if (state.status === 'failed') {\n@@ -145,23 +148,8 @@ export function StrategyCardList({\n   const strategies = state.registry.strategies\n   const verdicts = strategies.map((strategy) => judgeWarmup(strategy))\n \n-  // 문장마다 걸린 전략을 모은다. 순서는 처음 나온 차례다. 같은 문장이 막힘과 판정 불가로 함께 쓰였다면\n-  // 막힘으로 적는다 — 실제로 막힌 것을 중립으로 보이면 안 된다.\n-  const owners = new Map<string, { names: string[]; tone: NoticeTone }>()\n-  strategies.forEach((strategy, index) => {\n-    for (const notice of collectNotices(strategy, verdicts[index])) {\n-      const entry = owners.get(notice.text) ?? { names: [], tone: notice.tone }\n-      entry.names.push(strategy.name)\n-      if (notice.tone === 'blocking') entry.tone = 'blocking'\n-      owners.set(notice.text, entry)\n-    }\n-  })\n-  const sharedList = [...owners.entries()]\n   const shared = new Map<string, SharedNoticeRef>(\n-    sharedList.map(([text, entry], index) => [\n-      text,\n-      { id: `${sharedIdBase}-shared-${index}`, number: index + 1, tone: entry.tone },\n-    ]),\n+    notices.map((notice) => [notice.text, notice]),\n   )\n \n   const selectedIndex = strategies.findIndex(\n@@ -202,29 +190,10 @@ export function StrategyCardList({\n             onSelect={() => onSelect(strategy.strategyId)}\n             tabIndex={index === tabStopIndex ? 0 : -1}\n             shared={shared}\n+            range={rangeOf?.(strategy)}\n           />\n         ))}\n       </div>\n-\n-      {sharedList.length > 0 ? (\n-        <ol className={styles.shared}>\n-          {sharedList.map(([text, entry], index) => (\n-            <li key={text} className={styles.sharedItem}>\n-              <span\n-                className={styles.sharedNumber}\n-                data-tone={entry.tone}\n-                aria-hidden=\"true\"\n-              >\n-                {index + 1}\n-              </span>\n-              <span>\n-                <span className={styles.sharedNames}>{entry.names.join(' · ')}</span>{' '}\n-                <span id={`${sharedIdBase}-shared-${index}`}>{text}</span>\n-              </span>\n-            </li>\n-          ))}\n-        </ol>\n-      ) : null}\n     </div>\n   )\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyCardList.tsx",
+          "old_path": "frontend/src/components/strategy/StrategyCardList.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,50 @@\n+/*\n+  화면 머리의 제목 아래에 모아 적은 사유. 카드의 번호와 같은 번호로 한 번씩 적고, 걸린 전략 이름을\n+  앞에 둔다.\n+*/\n+.list {\n+  display: grid;\n+  gap: 4px;\n+  margin: 0;\n+  padding: 0;\n+  list-style: none;\n+}\n+\n+.item {\n+  display: flex;\n+  align-items: flex-start;\n+  gap: 8px;\n+  color: var(--thorp-copy);\n+  font-size: var(--thorp-text-small, 0.8rem);\n+  line-height: 1.55;\n+  word-break: keep-all;\n+  overflow-wrap: break-word;\n+  text-wrap: pretty;\n+}\n+\n+.number {\n+  display: inline-grid;\n+  flex: none;\n+  place-items: center;\n+  width: 18px;\n+  height: 18px;\n+  margin-top: 1px;\n+  border: 1px solid var(--thorp-warning);\n+  border-radius: 50%;\n+  color: var(--thorp-warning);\n+  font-size: 0.66rem;\n+  font-weight: 700;\n+  font-variant-numeric: tabular-nums;\n+  line-height: 1;\n+}\n+\n+/* 판정하지 못했을 뿐 고를 수 있는 사유. 경고색을 쓰지 않는다. */\n+.number[data-tone='pending'] {\n+  border-color: var(--thorp-line-strong);\n+  color: var(--thorp-muted);\n+}\n+\n+.names {\n+  color: var(--thorp-foreground);\n+  font-weight: 600;\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyNoticeList.module.css",
+          "old_path": "frontend/src/components/strategy/StrategyNoticeList.module.css",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,35 @@\n+import type { SharedNotice } from './cardNotices'\n+import styles from './StrategyNoticeList.module.css'\n+\n+interface StrategyNoticeListProps {\n+  notices: readonly SharedNotice[]\n+}\n+\n+/**\n+ * 전략 카드의 사유를 한 곳에 모아 적은 번호 목록(FR-011).\n+ *\n+ * <p><b>화면 머리의 제목 아래에 선다(2026-10-01).</b> 다른 주요 화면처럼 제목은 왼쪽, 설명은 오른쪽에\n+ * 두는 짜임에 맞추고, 카드 줄 바로 아래를 비워 카드에서 상세 설정으로 곧장 이어지게 한다. 카드는 이름\n+ * 옆에 같은 번호만 보이고, 보조기술에는 카드의 설명으로 이 문장이 그대로 읽힌다(`aria-describedby` → 항목의\n+ * `id`). 그래서 문장의 `id`는 카드 목록과 같은 결과(`collectSharedNotices`)에서 받는다.\n+ *\n+ * <p>사유가 없으면 아무것도 그리지 않는다. 판정하지 못했을 뿐 고를 수 있는 사유는 경고색을 쓰지 않는다.\n+ */\n+export function StrategyNoticeList({ notices }: StrategyNoticeListProps) {\n+  if (notices.length === 0) return null\n+  return (\n+    <ol className={styles.list} aria-label=\"전략 카드의 사유\">\n+      {notices.map((notice) => (\n+        <li key={notice.id} className={styles.item}>\n+          <span className={styles.number} data-tone={notice.tone} aria-hidden=\"true\">\n+            {notice.number}\n+          </span>\n+          <span>\n+            <span className={styles.names}>{notice.names.join(' · ')}</span>{' '}\n+            <span id={notice.id}>{notice.text}</span>\n+          </span>\n+        </li>\n+      ))}\n+    </ol>\n+  )\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/StrategyNoticeList.tsx",
+          "old_path": "frontend/src/components/strategy/StrategyNoticeList.tsx",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,3 +76,39 @@ export function collectNotices(\n   return notices;\n }\n \n+\n+/** 한 곳에 모아 적는 안내 한 줄. 같은 문장이 걸린 전략 이름을 처음 나온 차례로 모은다. */\n+export type SharedNotice = SharedNoticeRef & { text: string; names: string[] };\n+\n+/**\n+ * 카드마다 붙을 안내를 문장 단위로 모아 번호를 매긴다.\n+ *\n+ * <p>고른 섹터가 적으면 상한 규칙 하나가 여러 전략을 함께 막는다. 그 문장을 카드마다 되풀이하지 않고 한 번만\n+ * 적으며, 어떤 문장이 겹치는지는 문장이 같은지만 본다 — 전략을 보고 정하지 않는다. 같은 문장이 막힘과 판정\n+ * 불가로 함께 쓰였다면 막힘으로 적는다: 실제로 막힌 것을 중립으로 보이면 안 된다.\n+ *\n+ * <p>카드 목록과 화면 머리가 같은 결과를 나눠 쓴다. 카드는 번호와 `id`로 가리키고, 문장은 머리의 제목 아래에\n+ * 한 번 적힌다. `idBase`는 한 화면 안에서 겹치지 않는 값(`useId`)이어야 한다.\n+ */\n+export function collectSharedNotices(\n+  strategies: readonly StrategyView[],\n+  verdicts: readonly WarmupVerdict[],\n+  idBase: string,\n+): SharedNotice[] {\n+  const owners = new Map<string, { names: string[]; tone: NoticeTone }>();\n+  strategies.forEach((strategy, index) => {\n+    for (const notice of collectNotices(strategy, verdicts[index])) {\n+      const entry = owners.get(notice.text) ?? { names: [], tone: notice.tone };\n+      entry.names.push(strategy.name);\n+      if (notice.tone === \"blocking\") entry.tone = \"blocking\";\n+      owners.set(notice.text, entry);\n+    }\n+  });\n+  return [...owners.entries()].map(([text, entry], index) => ({\n+    id: `${idBase}-shared-${index}`,\n+    number: index + 1,\n+    tone: entry.tone,\n+    text,\n+    names: entry.names,\n+  }));\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/strategy/cardNotices.ts",
+          "old_path": "frontend/src/components/strategy/cardNotices.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -42,12 +42,17 @@ export type AxisValues = Record<string, AxisValue>;\n /**\n  * 분석 조건(data-model §9).\n  *\n- * <p><b>`periodStart`·`periodEnd`·`initialAmount`는 사용자가 바꿨을 때만 담는다.</b> 없으면 화면은 기간을\n- * 001의 평가 가능 범위 전체로, 금액을 등록표 `default`로 쓴다(T067). 처음 값을 상태에 복사해 두지 않는\n- * 까닭은 평가 가능 범위가 고른 전략과 워밍업에 따라 바뀌기 때문이다 — 복사해 두면 사용자가 고른 적 없는\n- * 옛 범위가 \"사용자가 바꾼 기간\"처럼 남는다. 등록표 기본값도 같은 이유로 복사하지 않는다.\n+ * <p><b>`periodStart`·`periodEnd`·`initialAmount`는 사용자가 바꿨을 때만 담는다.</b> 금액이 없으면 화면은\n+ * 등록표 `default`를 쓴다(T067). 등록표 기본값을 상태에 복사해 두지 않는 까닭은 등록표가 바뀌면 사용자가 고른\n+ * 적 없는 옛 값이 \"사용자가 바꾼 값\"처럼 남기 때문이다.\n  *\n- * <p>기간은 두 날짜가 늘 함께 있거나 함께 없다.\n+ * <p><b>분석 기간은 세 상태다(2026-10-01).</b> 두 날짜가 있으면 사용자가 고른 기간이고, `periodFull`이 서 있으면\n+ * '최대 범위 선택'을 눌러 평가 가능 범위 전체를 쓰는 상태이며, 둘 다 없으면 아직 정하지 않은 상태다. 정하지 않은\n+ * 기간을 범위 전체로 대신 쓰지 않는다 — 사용자가 고르지 않은 기간으로 분석이 나간다. 범위 전체도 날짜로 복사해\n+ * 두지 않는다: 평가 가능 범위는 고른 전략과 워밍업에 따라 바뀌므로, 복사하면 옛 범위가 \"사용자가 고른 기간\"처럼\n+ * 남는다.\n+ *\n+ * <p>기간은 두 날짜가 늘 함께 있거나 함께 없고, 날짜와 `periodFull`은 함께 서지 않는다.\n  */\n export type AnalysisCondition = {\n   /** 등록표 `analysisConditions.minEvaluationYears` 후보 중 하나. `0`은 제한 없음이다(FR-011a) */\n@@ -61,6 +66,8 @@ export type AnalysisCondition = {\n   targetVolatility?: number;\n   periodStart?: string;\n   periodEnd?: string;\n+  /** 평가 가능 범위 전체를 쓴다. 날짜와 함께 서지 않는다. 범위가 바뀌면 그 범위를 따른다 */\n+  periodFull?: true;\n   initialAmount?: number;\n };\n \n@@ -225,8 +232,8 @@ export function checkNumberInRange(\n  *\n  * <p><b>분석 기간은 이 재검증이 범위를 판정하지 않는다.</b> 범위는 001의 평가 가능 범위이고 고른 전략과\n  * 워밍업마다 달라서, 등록표를 받는 시점에는 알 수 없다. 여기서는 날짜로 읽히는지만 보고, 범위 밖인지는\n- * 화면이 판정한 범위를 받을 때마다 본다(`StrategySettingsPage`). `period`를 복원하면 두 날짜를 함께 지워\n- * 평가 가능 범위 전체로 돌아간다.\n+ * 화면이 판정한 범위를 받을 때마다 본다(`StrategySettingsPage`). `period`를 복원하면 두 날짜와 `periodFull`을\n+ * 함께 지워 기간을 정하지 않은 상태로 돌아간다.\n  */\n export type RestorableCondition = \"initialAmount\" | \"period\";\n \n@@ -338,6 +345,7 @@ export function readStoredStrategySettings(): StoredStrategySettings | null {\n     analysisCondition.periodStart = condition.periodStart;\n   if (typeof condition.periodEnd === \"string\")\n     analysisCondition.periodEnd = condition.periodEnd;\n+  if (condition.periodFull === true) analysisCondition.periodFull = true;\n   if (typeof condition.initialAmount === \"number\") {\n     analysisCondition.initialAmount = condition.initialAmount;\n   }\n@@ -667,7 +675,7 @@ export function reconcileStoredSettings(\n   // --- 분석 기간 ---------------------------------------------------------------------------\n   //\n   // 날짜로 읽을 수 없거나, 한쪽만 있거나, 시작이 종료보다 늦으면 사용자가 고른 기간이 무엇이었는지\n-  // 말할 수 없다. 둘 다 지우고 알린다 — 지우면 평가 가능 범위 전체가 쓰이므로 알리지 않으면 조용히\n+  // 말할 수 없다. 둘 다 지우고 알린다 — 지우면 기간을 정하지 않은 상태가 되므로 알리지 않으면 조용히\n   // 바뀐 것과 같다(FR-017). 되돌릴 값이 곧 지운 상태라 복원 버튼은 두지 않는다.\n   const {\n     initialAmount: storedAmount,\n@@ -711,7 +719,7 @@ export function reconcileStoredSettings(\n         storedValue: { periodStart: storedStart, periodEnd: storedEnd },\n         reason: \"PERIOD_UNREADABLE\",\n         message:\n-          \"저장된 분석 기간을 읽을 수 없어 지웠습니다. 평가 가능한 범위 전체로 시작합니다.\",\n+          \"저장된 분석 기간을 읽을 수 없어 지웠습니다. 분석 기간을 다시 정해 주세요.\",\n         restorable: false,\n       });\n     }\n@@ -763,7 +771,11 @@ export function reconcileStoredSettings(\n     analysisCondition.targetVolatility = targetVolatility;\n   if (initialAmount !== undefined)\n     analysisCondition.initialAmount = initialAmount;\n-  if (period !== null) Object.assign(analysisCondition, period);\n+  // 날짜가 살아남았으면 그것이 사용자가 고른 기간이다. 함께 남은 `periodFull`은 편집된 저장소의 흔적이라 버린다.\n+  if (period !== null) {\n+    Object.assign(analysisCondition, period);\n+    delete analysisCondition.periodFull;\n+  }\n \n   return {\n     registryVersion: registry.registryVersion,\n@@ -1103,10 +1115,26 @@ export function useStrategySettings(\n               next.periodEnd = current.analysisCondition.periodEnd;\n             }\n           } else {\n+            // 날짜를 직접 골랐으면 '최대 범위 선택' 상태가 아니다.\n+            delete next.periodFull;\n             // 새 기간을 받았으면 \"읽을 수 없어 지웠다\"는 옛 안내는 지금 기간과 어긋나는 말이 된다.\n             invalidValues = withoutCondition(invalidValues, \"period\");\n           }\n         }\n+        // '최대 범위 선택'은 날짜를 지우고 범위 전체를 따른다. `true`만 받는다 — 끄는 길은 날짜를 고르거나\n+        // 기간을 지우는 것(`resetAnalysisCondition(\"period\")`)이다.\n+        if (\"periodFull\" in patch) {\n+          if (patch.periodFull === true) {\n+            delete next.periodStart;\n+            delete next.periodEnd;\n+            next.periodFull = true;\n+            invalidValues = withoutCondition(invalidValues, \"period\");\n+          } else if (current.analysisCondition.periodFull === true) {\n+            next.periodFull = true;\n+          } else {\n+            delete next.periodFull;\n+          }\n+        }\n         // 시작 금액도 보관값 재검증과 같은 잣대로 본다. 입력 경로와 복원 경로가 다른 잣대를 쓰면\n         // 한쪽으로 범위 밖 값이 들어온다(SC-002). 받아들인 값은 그 항목의 무효 안내를 지운다.\n         if (\"initialAmount\" in patch) {\n@@ -1137,8 +1165,10 @@ export function useStrategySettings(\n       // 고른 값이다 — 재검증이 비워 둔 상태와 달리 안내도 함께 지운다.\n       const analysisCondition = { ...current.analysisCondition };\n       if (name === \"period\") {\n+        // 기간을 정하지 않은 상태로 되돌린다. 범위 전체가 아니다(2026-10-01).\n         delete analysisCondition.periodStart;\n         delete analysisCondition.periodEnd;\n+        delete analysisCondition.periodFull;\n       } else {\n         delete analysisCondition[name];\n       }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/hooks/useStrategySettings.ts",
+          "old_path": "frontend/src/hooks/useStrategySettings.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -215,7 +215,7 @@ function ResultView({\n   return (\n     <article className={styles.result} aria-labelledby=\"result-title\">\n       <header className={styles.intro}>\n-        {/* 처음 단계(섹터·비중 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라\n+        {/* 처음 단계(투자 대상 고르기)로 돌아가는 길. 전략 선택 화면의 뒤로 가기와 같은 모양이고, 행동이 아니라\n             이동이라 버튼 줄에 두지 않는다. 브라우저 뒤로 가기가 아니라 경로를 직접 가리킨다 — 내 기록·공유\n             주소로 들어온 사용자는 한 칸 뒤가 섹터 선택이 아니다. 고른 섹터·비중과 전략 설정은 탭 수명 저장소에\n             남아 있어 돌아가도 비어 있지 않다. 현재 조건을 채워 전략 선택으로 넘기는 것은 '다른 조건으로\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/ResultPage.tsx",
+          "old_path": "frontend/src/pages/ResultPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -295,9 +295,10 @@ describe(\"003 분석 기간의 사례 제약 (011 진입 계약 §3)\", () => {\n     await user.clear(end);\n     await user.type(end, \"2012-05-04\");\n \n+    // 칸의 날짜를 반영하지 않았으니 '분석하기'가 그 사실을 말하며 막힌다(2026-10-01).\n     await waitFor(() =>\n       expect(document.body.textContent).toContain(\n-        \"이 기간은 저장하지 않았습니다\",\n+        \"분석 기간의 날짜를 다시 확인해 주세요.\",\n       ),\n     );\n   });\n@@ -330,7 +331,7 @@ describe(\"003 분석 기간의 사례 제약 (011 진입 계약 §3)\", () => {\n     // 사례를 떨구고 돌아가면 기간 제약이 말없이 풀린 채 다른 흐름으로 빠진다(진입 계약 §2).\n     renderPage(`/strategy?case=${encodeURIComponent(CASE_ID)}`, makeSupport());\n \n-    const back = await screen.findByRole(\"link\", { name: /섹터·비중 고르기/ });\n+    const back = await screen.findByRole(\"link\", { name: /투자 대상 고르기/ });\n     const href = back.getAttribute(\"href\") ?? \"\";\n     expect(href.startsWith(\"/diagnosis/sectors?\")).toBe(true);\n     // 글자가 아니라 값으로 본다. 인코딩 규약이 달라도 들고 가는 사례는 같아야 한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.caseWindow.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.caseWindow.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,15 +26,72 @@\n   font-weight: 700;\n }\n \n+/*\n+  머리 두 칸을 위쪽에 맞춘다. 왼쪽 칸은 제목과 그 아래 카드의 사유 목록이라 사유 수에 따라 높이가 바뀌는데,\n+  공용 머리처럼 아래쪽에 맞추면 그만큼 제목이 아래로 밀린다.\n+*/\n+.introHero {\n+  align-items: start;\n+}\n+\n+.introMain {\n+  display: grid;\n+  gap: 14px;\n+  min-width: 0;\n+}\n+\n+/*\n+  머리 오른쪽 칸의 안내 문장. 투자 대상 고르기·배우기와 같은 인용 모양이며 오른쪽 끝에 붙인다. 위쪽에 맞춘 제목과\n+  첫 줄이 어긋나지 않게 작은 제목(STEP 02) 높이만큼 내린다. 오른쪽 끝은 짜임 끝이 아니라 카드 줄 끝에 맞춘다:\n+  짜임 오른쪽에는 '분석하기' 원의 칸이 있어, 카드 줄은 그 칸 폭에서 원이 카드에 걸치는 18px을 뺀 만큼 안쪽에서\n+  끝난다. 칸 폭은 원의 단계마다 60·96·132px이라(StepOrbButton .dock) 안내도 단계를 따라 같은 시간·곡선으로\n+  옮겨 간다. 좁은 화면과 classic에서는 제목 아래로 쌓고 인용 선을 뗀다(공용 머리 PageHeading의 .hero와 같은 기준).\n+*/\n .lead {\n-  margin: -6px 0 2px;\n+  justify-self: end;\n+  max-width: 560px;\n+  margin: 26px 42px 0 0;\n+  padding: 0 0 3px 22px;\n+  transition: margin-right 620ms cubic-bezier(0.22, 1, 0.36, 1);\n+  border-left: 1px solid var(--thorp-line-strong);\n   color: var(--thorp-copy);\n-  font-size: var(--thorp-text-lead, clamp(0.92rem, 1.7vw, 1rem));\n-  line-height: 1.7;\n+  font-size: var(--thorp-text-body, 0.84rem);\n+  line-height: 1.65;\n   word-break: keep-all;\n   overflow-wrap: break-word;\n }\n \n+.lead span {\n+  display: block;\n+}\n+\n+.main[data-orb-stage='1'] .lead {\n+  margin-right: 78px;\n+}\n+\n+.main[data-orb-stage='2'] .lead {\n+  margin-right: 114px;\n+}\n+\n+:global(:root[data-design='classic']) .lead,\n+:global(:root[data-design='classic']) .main[data-orb-stage] .lead {\n+  justify-self: start;\n+  margin: 0;\n+  padding: 0;\n+  border: 0;\n+}\n+\n+@media (max-width: 800px) {\n+  .lead,\n+  .main[data-orb-stage] .lead {\n+    justify-self: start;\n+    max-width: 540px;\n+    margin: 0;\n+    padding: 0;\n+    border: 0;\n+  }\n+}\n+\n .loading {\n   margin: 0;\n   color: var(--thorp-copy);\n@@ -205,7 +262,6 @@\n   display: none;\n }\n \n-.columnTitle,\n .detailTitle {\n   margin: 0;\n   color: var(--thorp-foreground);\n@@ -214,17 +270,25 @@\n   letter-spacing: -0.02em;\n }\n \n+/* 고른 전략 이름. 제목 앞에 같은 크기로 서고 강조색으로 갈라, '동일 비중 상세 설정'처럼 한 덩이로 읽힌다. */\n .detailStrategy {\n-  color: var(--thorp-copy);\n-  font-size: var(--thorp-text-body, 0.88rem);\n-  font-weight: 600;\n+  margin-right: -6px;\n+  color: var(--thorp-accent-soft, var(--thorp-accent));\n+  font-size: var(--thorp-text-heading, 1.05rem);\n+  font-weight: 700;\n+  letter-spacing: -0.02em;\n }\n \n-/* 기본값이 출발점이라는 말(FR-004)과 자동 배분 설명(FR-012). 두 열 위에 늘 보인다. */\n+/*\n+  기본값이 출발점이라는 말(FR-004)과 자동 배분 설명(FR-012). 두 열 위에 늘 보이고, 아래 구분선이 머리와 설정 행을\n+  가른다.\n+*/\n .detailNotes {\n   display: grid;\n   gap: 2px;\n   margin-top: -8px;\n+  padding-bottom: 14px;\n+  border-bottom: 1px solid var(--thorp-line);\n }\n \n .detailNote {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.module.css",
+          "old_path": "frontend/src/pages/StrategySettingsPage.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -457,10 +457,35 @@ function descriptionOf(card: HTMLElement): string {\n }\n \n \n+/**\n+ * 분석 기간을 '최대 범위 선택'으로 정해 둔 채 시작한다. 2026-10-01부터 기간은 저절로 정해지지 않아, 정하지 않으면\n+ * '분석하기'가 막힌다. 이 파일의 검사 대부분은 요청 조립과 막힘 판정을 보며 기간을 고르는 일은 보지 않으므로 그\n+ * 한 단계를 미리 해 둔다. 정하지 않은 상태의 동작은 그것을 보는 검사가 이 값을 지우고 따로 확인한다.\n+ */\n+function storeFullRangePeriod() {\n+  window.sessionStorage.setItem(\n+    STRATEGY_SETTINGS_STORAGE_KEY,\n+    JSON.stringify({\n+      version: 1,\n+      registryVersion: registryFixture.registryVersion,\n+      universeSize: null,\n+      selectedStrategyId: null,\n+      valuesByStrategy: {},\n+      analysisCondition: {\n+        minEvaluationYears: 1,\n+        scenario: \"FULL_PERIOD\",\n+        periodFull: true,\n+      },\n+      invalidValues: [],\n+    }),\n+  );\n+}\n+\n beforeEach(() => {\n   apiMocks.fetchSectorCatalog.mockResolvedValue(loadedCatalog);\n   apiMocks.fetchStrategyRegistry.mockResolvedValue(registryFixture);\n   storeSelection();\n+  storeFullRangePeriod();\n });\n \n afterEach(() => {\n@@ -777,6 +802,29 @@ describe(\"StrategySettingsPage\", () => {\n     }\n   });\n \n+  it(\"고른 카드를 다시 누르면 선택을 내려놓고, 카드는 그 전략의 평가 가능 범위를 설명으로 싣는다\", async () => {\n+    const user = userEvent.setup();\n+    const { support } = makeSupport();\n+    renderPage(support);\n+\n+    const card = await findCardNamed(selectableStrategy.name);\n+    // 범위는 카드에 마우스를 올리면 뜨는 말풍선이고, 보조기술에는 카드의 설명으로 읽힌다(2026-10-01).\n+    await waitFor(() => {\n+      const describedBy = card.getAttribute(\"aria-describedby\") ?? \"\";\n+      const text = describedBy\n+        .split(\" \")\n+        .map((id) => document.getElementById(id)?.textContent ?? \"\")\n+        .join(\" \");\n+      expect(text).toContain(`평가 가능 범위 ${windowFixture.start} ~ ${windowFixture.end}`);\n+    });\n+\n+    await user.click(card);\n+    expect((await findCardNamed(selectableStrategy.name)).getAttribute(\"aria-checked\")).toBe(\"true\");\n+    await user.click(await findCardNamed(selectableStrategy.name));\n+    expect((await findCardNamed(selectableStrategy.name)).getAttribute(\"aria-checked\")).toBe(\"false\");\n+    expect(screen.getByText(\"위에서 전략을 고르면 여기에 전략 설정이 나타납니다.\")).toBeTruthy();\n+  });\n+\n   it(\"상세 설정 카드는 제목이 고정이고, 두 열 위에 기본값 안내와 자동 배분 설명을 둔다\", async () => {\n     const user = userEvent.setup();\n     const { support } = makeSupport();\n@@ -841,7 +889,7 @@ describe(\"StrategySettingsPage\", () => {\n     const { support } = makeSupport();\n     renderPage(support);\n \n-    const back = await screen.findByRole(\"link\", { name: /섹터·비중 고르기/ });\n+    const back = await screen.findByRole(\"link\", { name: /투자 대상 고르기/ });\n     expect(back.getAttribute(\"href\")).toBe(\"/diagnosis/sectors\");\n     expect(\n       back.compareDocumentPosition(\n@@ -1177,7 +1225,7 @@ describe(\"StrategySettingsPage\", () => {\n         valuesByStrategy: {\n           [selectableStrategy.strategyId]: { [numberAxis.name]: 999 },\n         },\n-        analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\" },\n+        analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\", periodFull: true },\n         invalidValues: [],\n       }),\n     );\n@@ -1263,6 +1311,7 @@ describe(\"StrategySettingsPage\", () => {\n         analysisCondition: {\n           minEvaluationYears: notAChoice,\n           scenario: \"FULL_PERIOD\",\n+          periodFull: true,\n         },\n         invalidValues: [],\n       }),\n@@ -1393,6 +1442,7 @@ describe(\"StrategySettingsPage\", () => {\n           minEvaluationYears:\n             registryFixture.analysisConditions.minEvaluationYears.default,\n           scenario: \"FULL_PERIOD\",\n+          periodFull: true,\n           initialAmount: outOfRange,\n         },\n         invalidValues: [],\n@@ -1529,7 +1579,7 @@ describe(\"StrategySettingsPage\", () => {\n         valuesByStrategy: {\n           [selectableStrategy.strategyId]: { [numberAxis.name]: 9_999 },\n         },\n-        analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\" },\n+        analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\", periodFull: true },\n         invalidValues: [],\n       }),\n     );\n@@ -1691,7 +1741,7 @@ describe(\"StrategySettingsPage\", () => {\n           universeSize: 3,\n           selectedStrategyId: unselectableStrategy.strategyId,\n           valuesByStrategy: {},\n-          analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\" },\n+          analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\", periodFull: true },\n           invalidValues: [],\n         }),\n       );\n@@ -2203,7 +2253,7 @@ describe(\"StrategySettingsPage\", () => {\n           valuesByStrategy: {\n             [selectableStrategy.strategyId]: { [warmupAxis.name]: 60 },\n           },\n-          analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\" },\n+          analysisCondition: { minEvaluationYears: 1, scenario: \"FULL_PERIOD\", periodFull: true },\n           invalidValues: [],\n         }),\n       );\n@@ -2458,6 +2508,89 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n     return panel;\n   }\n \n+  it(\"분석 기간은 저절로 정해지지 않고, 정하기 전에는 분석하기가 회색으로 막혀 무엇을 고를지 알린다\", async () => {\n+    // 2026-10-01. 사용자가 고르지 않은 기간(범위 전체)으로 분석이 나가지 않는다.\n+    const user = userEvent.setup();\n+    storeCondition({});\n+    const { support, requests } = makeSupport();\n+    renderPage(support);\n+\n+    await user.click(await findCardNamed(selectableStrategy.name));\n+    const analyze = actionButton(\"분석하기\");\n+    await waitFor(() =>\n+      expect(reasonOf(analyze)).toContain(\"분석 기간을 정해 주세요.\"),\n+    );\n+    expect(analyze.getAttribute(\"aria-disabled\")).toBe(\"true\");\n+    // 남은 것이 기간 고르기뿐이라 원은 다 드러나되 회색이다.\n+    expect(analyze.getAttribute(\"data-stage\")).toBe(\"2\");\n+    expect(analyze.getAttribute(\"data-pending\")).toBe(\"true\");\n+    const panel = screen.getByRole(\"region\", { name: \"분석 조건\" });\n+    expect(panel.textContent).toContain(\"정해지지 않음\");\n+\n+    await user.click(analyze);\n+    expect(requests).toHaveLength(0);\n+  });\n+\n+  it(\"'최대 범위 선택'은 누르면 막히고 되돌리기 아이콘이 생기며, 되돌리면 누르기 직전 상태로 돌아간다\", async () => {\n+    const user = userEvent.setup();\n+    storeCondition({ periodStart: \"2021-01-04\", periodEnd: \"2023-12-28\" });\n+    const { support, requests } = makeSupport();\n+    renderPage(support);\n+\n+    await user.click(await findCardNamed(selectableStrategy.name));\n+    const panel = await openConditions(user);\n+    const full = within(panel).getByRole(\"button\", { name: \"최대 범위 선택\" });\n+    // 날짜를 직접 고른 동안에는 열려 있고 되돌리기 아이콘은 없다.\n+    expect((full as HTMLButtonElement).disabled).toBe(false);\n+    expect(\n+      within(panel).queryByRole(\"button\", { name: \"최대 범위 선택 되돌리기\" }),\n+    ).toBeNull();\n+\n+    await user.click(full);\n+    expect((full as HTMLButtonElement).disabled).toBe(true);\n+    expect(panel.textContent).toContain(\n+      `${windowFixture.start} ~ ${windowFixture.end}`,\n+    );\n+    await user.click(\n+      within(panel).getByRole(\"button\", { name: \"최대 범위 선택 되돌리기\" }),\n+    );\n+\n+    // 누르기 직전에 고른 날짜로 돌아가고, 그 기간으로 분석한다.\n+    await waitFor(() =>\n+      expect(panel.textContent).toContain(\"2021-01-04 ~ 2023-12-28\"),\n+    );\n+    expect(\n+      (within(panel).getByRole(\"button\", { name: \"최대 범위 선택\" }) as HTMLButtonElement)\n+        .disabled,\n+    ).toBe(false);\n+    await user.click(actionButton(\"분석하기\"));\n+    await waitFor(() => expect(requests).toHaveLength(1));\n+    expect(requests[0].conditions.start).toBe(\"2021-01-04\");\n+    expect(requests[0].conditions.end).toBe(\"2023-12-28\");\n+  });\n+\n+  it(\"정하지 않은 채 '최대 범위 선택'을 누르고 되돌리면 다시 정하지 않은 상태가 된다\", async () => {\n+    const user = userEvent.setup();\n+    storeCondition({});\n+    const { support } = makeSupport();\n+    renderPage(support);\n+\n+    await user.click(await findCardNamed(selectableStrategy.name));\n+    const panel = await openConditions(user);\n+    await user.click(within(panel).getByRole(\"button\", { name: \"최대 범위 선택\" }));\n+    await waitFor(() =>\n+      expect(actionButton(\"분석하기\").getAttribute(\"aria-disabled\")).toBe(\"false\"),\n+    );\n+\n+    await user.click(\n+      within(panel).getByRole(\"button\", { name: \"최대 범위 선택 되돌리기\" }),\n+    );\n+    await waitFor(() =>\n+      expect(reasonOf(actionButton(\"분석하기\"))).toContain(\"분석 기간을 정해 주세요.\"),\n+    );\n+    expect(panel.textContent).toContain(\"정해지지 않음\");\n+  });\n+\n   it(\"분석 조건에서 바꾼 기간과 금액이 그 행 값과 요청에 함께 실린다\", async () => {\n     const user = userEvent.setup();\n     const { support, requests } = makeSupport();\n@@ -2510,9 +2643,12 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n       ).toContain(versionsFixture.costProfileVersion),\n     );\n     const group = within(panel).getByRole(\"group\", { name: \"비용 가정\" });\n-    expect(group.textContent).toContain(\"수수료 1.5bp\");\n-    expect(group.textContent).toContain(\"세금 20bp\");\n     expect(group.textContent).toContain(\"임시값\");\n+    // 수치는 물음표 도움말 안에 있다(2026-10-01).\n+    await user.hover(within(group).getByRole(\"button\", { name: \"비용 가정 도움말\" }));\n+    const help = await screen.findByRole(\"tooltip\", { name: \"비용 가정 도움말\" });\n+    expect(help.textContent).toContain(\"수수료 1.5bp\");\n+    expect(help.textContent).toContain(\"세금 20bp\");\n   });\n \n   it(\"비용 조건을 확인할 수 없으면 패널이 그 사실을 말하고 분석하기가 막힌다\", async () => {\n@@ -2543,8 +2679,9 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n     await user.click(await findCardNamed(selectableStrategy.name));\n     const panel = await openConditions(user);\n \n-    const range = `평가할 수 있는 범위는 ${windowFixture.start} ~ ${windowFixture.end}입니다.`;\n-    expect(within(panel).getByText(range, { exact: false })).toBeTruthy();\n+    // '최대 범위 선택'이면 행의 값이 곧 평가할 수 있는 범위다(2026-10-01).\n+    const range = `${windowFixture.start} ~ ${windowFixture.end}`;\n+    expect(panel.textContent).toContain(range);\n     // 고른 적 없는 범위를 두고 \"줄었다\"고 말하지 않는다.\n     expect(panel.textContent).not.toContain(\"줄었\");\n \n@@ -2643,7 +2780,7 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n     expect(requests[0].conditions.end).toBe(\"2022-06-30\");\n   });\n \n-  it(\"보관된 기간이 지금 범위를 벗어나면 잘라 맞추지 않고 막으며, 되돌리면 범위 전체로 보낸다\", async () => {\n+  it(\"보관된 기간이 지금 범위를 벗어나면 잘라 맞추지 않고 막으며, 최대 범위를 고르면 범위 전체로 보낸다\", async () => {\n     // FR-017. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다.\n     const user = userEvent.setup();\n     storeCondition({ periodStart: \"2019-03-04\", periodEnd: \"2023-12-28\" });\n@@ -2666,7 +2803,7 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n     expect(notice).toBeTruthy();\n     await user.click(\n       within(notice as HTMLElement).getByRole(\"button\", {\n-        name: \"범위 전체로 되돌리기\",\n+        name: \"최대 범위 선택\",\n       }),\n     );\n \n@@ -2696,12 +2833,9 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n     await user.click(await findCardNamed(selectableStrategy.name));\n     const panel = await openConditions(user);\n \n-    expect(\n-      within(panel).getByText(\n-        `평가할 수 있는 범위는 ${windowFixture.start} ~ ${windowFixture.end}입니다.`,\n-        { exact: false },\n-      ),\n-    ).toBeTruthy();\n+    expect(panel.textContent).toContain(\n+      `${windowFixture.start} ~ ${windowFixture.end}`,\n+    );\n     expect(\n       within(panel).queryByRole(\"button\", {\n         name: \"평가할 수 있는 범위 도움말\",\n@@ -2709,7 +2843,7 @@ describe(\"StrategySettingsPage 분석 조건(T065~T067, quickstart 7-2·8, SC-00\n     ).toBeNull();\n   });\n \n-  it(\"고르지 않은 기간(범위 전체)은 화면이 최소 평가 기간으로 다시 판정하지 않는다\", async () => {\n+  it(\"'최대 범위 선택'의 기간(범위 전체)은 화면이 최소 평가 기간으로 다시 판정하지 않는다\", async () => {\n     // 범위 전체의 판정은 001 산식을 따르는 카드 판정이 맡는다. 달력 규약으로는 하루 모자라는 범위다.\n     const user = userEvent.setup();\n     const shortWindow = { start: \"2023-06-01\", end: \"2024-05-31\" };\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.test.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,5 +1,5 @@\n import { ArrowLeft } from \"lucide-react\";\n-import { useCallback, useEffect, useMemo, useRef, useState } from \"react\";\n+import { useCallback, useEffect, useId, useMemo, useRef, useState } from \"react\";\n import { Link, useNavigate, useSearchParams } from \"react-router-dom\";\n import { fetchCaseWindow } from \"@/api/regimeLink\";\n import { fetchSectorCatalog, type SectorCatalogResult } from \"@/api/sectors\";\n@@ -18,7 +18,10 @@ import { buildSectorSelectionPath } from \"@/marketflow/handoff\";\n import { AppHeader } from \"@/components/navigation/AppHeader\";\n import { ProvisionalBadge } from \"@/components/paramsearch/ProvisionalBadge\";\n import { ActionButtons } from \"@/components/strategy/ActionButtons\";\n-import { AnalysisConditionsPanel } from \"@/components/strategy/AnalysisConditionsPanel\";\n+import {\n+  AnalysisConditionsPanel,\n+  type PeriodMode,\n+} from \"@/components/strategy/AnalysisConditionsPanel\";\n import {\n   ANALYSIS_VERSIONS_UNAVAILABLE,\n   EVALUATION_WINDOW_UNAVAILABLE,\n@@ -52,11 +55,15 @@ import {\n   RegistryChangedNotice,\n   type RegistryReloadPhase,\n } from \"@/components/strategy/RegistryChangedNotice\";\n-import type { WarmupVerdict } from \"@/components/strategy/cardNotices\";\n+import {\n+  collectSharedNotices,\n+  type WarmupVerdict,\n+} from \"@/components/strategy/cardNotices\";\n import {\n   StrategyCardList,\n   type RegistryViewState,\n } from \"@/components/strategy/StrategyCardList\";\n+import { StrategyNoticeList } from \"@/components/strategy/StrategyNoticeList\";\n import { writeStoredSelection } from \"@/diagnosis/selectionStorage\";\n import {\n   distributeEven,\n@@ -108,6 +115,11 @@ const statusText: Record<BacktestRequestStatus, string> = {\n const REGISTRY_NOT_LOADED =\n   \"전략 설정을 불러오기 전에는 분석을 시작할 수 없습니다.\";\n const SELECT_STRATEGY_FIRST = \"전략 카드를 먼저 골라 주세요.\";\n+/** 분석 기간을 아직 정하지 않았다(2026-10-01). 범위 전체로 대신 채우지 않는다 */\n+const PERIOD_NOT_CHOSEN =\n+  \"분석 기간을 정해 주세요. 날짜를 고르거나 '최대 범위 선택'을 누르면 됩니다.\";\n+/** 날짜 칸에 반영하지 않은 무효 날짜가 남았다. 칸에 보이는 날짜와 보낼 기간이 갈리므로 막는다(2026-10-01) */\n+const PERIOD_DRAFT_INVALID = \"분석 기간의 날짜를 다시 확인해 주세요.\";\n const REASON_MISSING = \"이 전략을 고를 수 없는 이유를 확인하지 못했습니다.\";\n const INVALID_STORED_VALUES =\n   \"이전에 저장한 설정값 중 현재 등록표에서 쓸 수 없는 값이 있습니다. 기본값을 복원해 주세요.\";\n@@ -123,7 +135,7 @@ const PARAMETER_REJECTED_GENERAL =\n   \"설정값이 허용 범위 밖이라 접수되지 않았습니다. 전략 설정과 분석 조건을 확인해 주세요.\";\n /** 고른 기간이 지금 평가할 수 있는 범위 밖이다. 범위는 전략·워밍업을 따라 바뀌므로 고른 뒤에 벗어날 수 있다 */\n function periodOutOfRangeMessage(range: AnalysisPeriod): string {\n-  return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 범위 전체로 되돌려 주세요.`;\n+  return `고른 분석 기간이 지금 평가할 수 있는 범위(${range.start} ~ ${range.end}) 밖입니다. 기간을 다시 고르거나 '최대 범위 선택'을 눌러 주세요.`;\n }\n \n /** 고른 기간이 최소 평가 기간보다 짧다(FR-011a). 후보의 라벨은 등록표에서 그대로 온다 */\n@@ -645,14 +657,12 @@ export function StrategySettingsPage({\n    * <p><b>값을 만질 때 서버에 묻지 않는다.</b> 판정은 이미 받은 평가 기간으로 화면 안에서 한다 —\n    * 값마다 서버를 오가면 늦게 온 응답이 이미 바뀐 값을 판정한다(research R7-1).\n    */\n-  const judgeWarmup = useCallback(\n-    (strategy: StrategyView): WarmupVerdict => {\n+  /** 카드 하나의 판정. 워밍업을 지금 계산할 수 없는 고른 카드는 `null`이다(아래 `judgeWarmup`이 `unknown`으로 읽는다) */\n+  const judgeCard = useCallback(\n+    (strategy: StrategyView) => {\n       const selected = strategy.strategyId === selectedStrategyId;\n-      // `unknown`은 고를 수 없다는 뜻이 아니다. 카드는 눌린 채 남고 복원하면 지금 설정으로 다시 판정한다.\n-      if (selected && currentWarmup === null) {\n-        return { state: \"unknown\", message: WARMUP_UNCOMPUTABLE };\n-      }\n-      const verdict = support.judgeWarmup({\n+      if (selected && currentWarmup === null) return null;\n+      return support.judgeWarmup({\n         strategy,\n         evaluationWindow,\n         warmupTradingDays:\n@@ -660,10 +670,7 @@ export function StrategySettingsPage({\n             ? currentWarmup\n             : strategy.warmupTradingDays,\n         minEvaluationYears,\n-      }).verdict;\n-      // 'reduced'의 문장은 이제 아무도 그리지 않는다 — 카드는 고를 수 없는 사유만 적고, 왜 이 범위인지는\n-      // 분석 조건의 '평가할 수 있는 범위' 옆 도움말이 말한다(`S15P21E205-406`).\n-      return verdict;\n+      });\n     },\n     [\n       support,\n@@ -674,6 +681,44 @@ export function StrategySettingsPage({\n     ],\n   );\n \n+  const judgeWarmup = useCallback(\n+    (strategy: StrategyView): WarmupVerdict => {\n+      const judgement = judgeCard(strategy);\n+      // `unknown`은 고를 수 없다는 뜻이 아니다. 카드는 눌린 채 남고 복원하면 지금 설정으로 다시 판정한다.\n+      if (judgement === null) {\n+        return { state: \"unknown\", message: WARMUP_UNCOMPUTABLE };\n+      }\n+      // 'reduced'의 문장은 이제 아무도 그리지 않는다 — 카드는 고를 수 없는 사유만 적고, 왜 이 범위인지는\n+      // 분석 조건의 '평가할 수 있는 범위' 옆 도움말이 말한다(`S15P21E205-406`).\n+      return judgement.verdict;\n+    },\n+    [judgeCard],\n+  );\n+\n+  /**\n+   * 카드에 마우스를 올리면 보일 평가 가능 범위(2026-10-01). 분석 기간 행 아래에 늘 적던 문장을 카드로 옮겼다 —\n+   * 범위는 전략마다 다르므로 견주는 자리에서 읽힌다. 판정과 같은 입력으로 구해 두 말이 갈리지 않는다.\n+   */\n+  const rangeOfCard = useCallback(\n+    (strategy: StrategyView) => judgeCard(strategy)?.window ?? null,\n+    [judgeCard],\n+  );\n+\n+  /*\n+    카드의 사유는 카드 밖 한 곳, 화면 머리의 제목 아래에 모아 적는다(FR-011, 2026-10-01). 카드 목록과 그 칸이 같은\n+    결과를 나눠 써야 카드의 번호와 머리의 문장이 어긋나지 않는다.\n+  */\n+  const noticeIdBase = useId();\n+  const cardNotices = useMemo(() => {\n+    if (registryState.status !== \"loaded\") return [];\n+    const { strategies } = registryState.registry;\n+    return collectSharedNotices(\n+      strategies,\n+      strategies.map((strategy) => judgeWarmup(strategy)),\n+      noticeIdBase,\n+    );\n+  }, [registryState, judgeWarmup, noticeIdBase]);\n+\n   // --- 다시 확인할 보관값 -------------------------------------------------------------------\n   //\n   // **두 자리로 가른다.** 전략에 딸린 값은 그 전략을 고른 뒤에 보여야 뜻이 통하지만, 전략과\n@@ -769,7 +814,8 @@ export function StrategySettingsPage({\n   /**\n    * 분석 기간(FR-009, T067). **분석 조건 행·요청이 이 값 하나를 함께 읽는다.**\n    *\n-   * <p>사용자가 고르지 않았으면 평가 가능 범위 전체다. 골랐으면 그 기간이다. 범위가 나중에 바뀌어(다른\n+   * <p>날짜를 골랐으면 그 기간이고, '최대 범위 선택'이면 평가 가능 범위 전체다. 아직 정하지 않았으면 `null`이고\n+   * 범위 전체로 대신 채우지 않는다(2026-10-01). 골랐으면 그 기간이다. 범위가 나중에 바뀌어(다른\n    * 워밍업, 다른 전략) 고른 기간이 범위를 벗어나도 <b>잘라 맞추지 않는다.</b> 막고 되돌릴 길을 보인다.\n    * 잘라 맞추면 사용자가 고르지 않은 기간으로 분석이 나간다(FR-017).\n    */\n@@ -830,7 +876,30 @@ export function StrategySettingsPage({\n         : null,\n     [periodStart, periodEnd],\n   );\n-  const period = chosenPeriod ?? evaluableRange;\n+  const periodFull = settings.analysisCondition.periodFull === true;\n+  const periodMode: PeriodMode =\n+    chosenPeriod !== null ? \"custom\" : periodFull ? \"full\" : \"unset\";\n+  const period = chosenPeriod ?? (periodFull ? evaluableRange : null);\n+\n+  /*\n+    '최대 범위 선택'을 누르기 직전의 기간. 되돌리기 아이콘이 이리로 돌아간다 — 날짜를 골라 두었으면 그 날짜, 아니면\n+    정하지 않은 상태다. 화면 안에서만 기억한다: 새로 고친 뒤에는 되돌릴 곳을 모르므로 정하지 않은 상태로 간다.\n+  */\n+  const periodBeforeFullRef = useRef<AnalysisPeriod | null>(null);\n+  const selectFullRange = useCallback(() => {\n+    periodBeforeFullRef.current = chosenPeriod;\n+    settings.setAnalysisCondition({ periodFull: true });\n+  }, [chosenPeriod, settings]);\n+  const undoFullRange = useCallback(() => {\n+    const before = periodBeforeFullRef.current;\n+    periodBeforeFullRef.current = null;\n+    if (before === null) settings.resetAnalysisCondition(\"period\");\n+    else\n+      settings.setAnalysisCondition({\n+        periodStart: before.start,\n+        periodEnd: before.end,\n+      });\n+  }, [settings]);\n \n   // 사례에서 들어왔고 아직 기간을 고르지 않았으면 사례 직후 구간을 포함하는 기간으로 미리 맞춘다(S15P21E205-450).\n   // 한 사례에 한 번만 한다 — 사용자가 기간을 지우거나 바꾸면 그 선택을 다시 덮지 않는다.\n@@ -841,6 +910,7 @@ export function StrategySettingsPage({\n       baseCaseConstraint === null ||\n       evaluableRange === null ||\n       chosenPeriod !== null ||\n+      periodFull ||\n       prefilledCaseRef.current === caseId\n     )\n       return;\n@@ -853,7 +923,7 @@ export function StrategySettingsPage({\n     if (next === null) return;\n     settings.setAnalysisCondition({ periodStart: next.start, periodEnd: next.end });\n     setCasePeriodPrefilled(true);\n-  }, [caseId, baseCaseConstraint, evaluableRange, chosenPeriod, minEvaluationYears, settings]);\n+  }, [caseId, baseCaseConstraint, evaluableRange, chosenPeriod, periodFull, minEvaluationYears, settings]);\n   const periodOutOfRange =\n     chosenPeriod !== null &&\n     evaluableRange !== null &&\n@@ -942,6 +1012,7 @@ export function StrategySettingsPage({\n     rulesVersion,\n   ]);\n \n+  const [periodDraftInvalid, setPeriodDraftInvalid] = useState(false);\n   const analyzeBlocker = ((): string | null => {\n     if (registry === null || !settings.ready) return REGISTRY_NOT_LOADED;\n     const strategy = settings.selectedStrategy;\n@@ -960,11 +1031,14 @@ export function StrategySettingsPage({\n     if (verdict.state === \"blocked\" || verdict.state === \"unknown\")\n       return verdict.message;\n     if (!selectedJudgement.window) return EVALUATION_WINDOW_UNAVAILABLE;\n+    if (periodDraftInvalid) return PERIOD_DRAFT_INVALID;\n     if (periodOutOfRange)\n       return periodOutOfRangeMessage(selectedJudgement.window);\n     if (periodTooShort) return periodTooShortMessage(minEvaluationYearsLabel);\n     // 011 사례 경로의 제약(진입 계약 §3). 사례가 없으면 `caseBlocker`가 늘 `null`이라 지금과 같다.\n     if (caseBlocker !== null) return caseBlocker;\n+    // 범위가 사례를 덮지 못하는 것처럼 고를 수 없는 사정이 먼저다. 그다음이 아직 고르지 않은 기간이다.\n+    if (period === null) return PERIOD_NOT_CHOSEN;\n     if (\n       activeCaseConstraint !== null &&\n       period !== null &&\n@@ -1052,9 +1126,14 @@ export function StrategySettingsPage({\n     selectedStrategyIdRef.current = settings.selectedStrategyId;\n   }, [settings.selectedStrategyId]);\n \n+  /*\n+    고른 카드를 다시 누르면 선택을 내려놓는다(2026-10-01). 전략별로 바꿔 둔 값은 지우지 않아 다시 고르면 그대로\n+    돌아온다(`clearSelection`). 내려놓을 길이 없으면 전략을 고르지 않은 처음 화면으로 돌아갈 수 없다.\n+  */\n   const handleSelect = useCallback(\n     (strategyId: string) => {\n-      settings.select(strategyId);\n+      if (strategyId === settings.selectedStrategyId) settings.clearSelection();\n+      else settings.select(strategyId);\n       setSubmission({ status: \"idle\" });\n     },\n     [settings],\n@@ -1241,17 +1320,25 @@ export function StrategySettingsPage({\n   */\n   const analyzeBusy = submission.status === \"sending\";\n   const analyzeBlocked = analyzeBlocker !== null || analyzeBusy;\n+  // 남은 것이 분석 기간을 고르는 일뿐이면 원은 다 드러나되 회색이고, 마우스를 올리면 무엇을 고를지 알린다\n+  // (2026-10-01). 다른 막힘은 고칠 것이 있다는 뜻이라 지금처럼 절반만 나온다.\n+  const analyzePending = analyzeBlocker === PERIOD_NOT_CHOSEN;\n   const analyzeStage: StepOrbStage =\n     !settings.selectedStrategy || selectedId === null\n       ? 0\n-      : analyzeBlocker !== null\n+      : analyzeBlocker !== null && !analyzePending\n         ? 1\n         : 2;\n \n   return (\n     <div className={styles.page}>\n       <AppHeader />\n-      <main className={styles.main} aria-labelledby=\"strategy-settings-title\">\n+      <main\n+        className={styles.main}\n+        aria-labelledby=\"strategy-settings-title\"\n+        // 머리 오른쪽 안내가 원의 단계를 따라 카드 줄 끝에 맞춘다(.lead).\n+        data-orb-stage={analyzeStage}\n+      >\n         <header className={styles.intro}>\n           {/*\n             앞 단계로 돌아가는 길이다. 행동 버튼 줄에 두지 않는다 — 이 화면의 주된 행동은 '분석하기'\n@@ -1272,16 +1359,32 @@ export function StrategySettingsPage({\n             }\n           >\n             <ArrowLeft size={15} aria-hidden=\"true\" />\n-            섹터·비중 고르기\n+            투자 대상 고르기\n           </Link>\n-          <p className={heading.eyebrow} aria-hidden=\"true\">STEP 02</p>\n-          <h1 id=\"strategy-settings-title\" className={styles.title}>\n-            <em className={heading.emphasis}>전략</em> 선택\n-          </h1>\n-          <p className={styles.lead}>\n-            고른 섹터로 어떤 전략을 돌려 볼지 고릅니다. 그대로 바로 분석할 수\n-            있습니다.\n-          </p>\n+          {/*\n+            투자 대상 고르기·배우기와 같은 머리: 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다. 다만 두 칸을 위쪽에\n+            맞추고, 카드의 사유 목록은 제목 아래에 둔다 — 사유가 늘어도 제목이 아래로 밀리지 않고, 카드 줄 바로 아래가\n+            비어 고른 카드에서 상세 설정으로 곧장 이어진다.\n+          */}\n+          <div className={`${heading.hero} ${styles.introHero}`}>\n+            <div className={styles.introMain}>\n+              <div>\n+                <p className={heading.eyebrow} aria-hidden=\"true\">STEP 02</p>\n+                <h1 id=\"strategy-settings-title\" className={styles.title}>\n+                  <em className={heading.emphasis}>전략</em> 선택\n+                </h1>\n+              </div>\n+              {/* 카드가 서는 동안만 적는다. 앞 단계를 마치지 않았으면 가리킬 카드가 없다. */}\n+              <StrategyNoticeList\n+                notices={selection.status === \"ready\" ? cardNotices : []}\n+              />\n+            </div>\n+            <p className={styles.lead}>\n+              {/* 뜻이 나뉘는 자리에서 줄을 바꾼다. 줄마다 span 하나다. */}\n+              <span>고른 섹터로 어떤 전략을 돌려 볼지 고릅니다.</span>\n+              <span>그대로 바로 분석할 수 있습니다.</span>\n+            </p>\n+          </div>\n         </header>\n \n         {catalog === null ? (\n@@ -1367,12 +1470,11 @@ export function StrategySettingsPage({\n               <section\n                 ref={strategyCardsRef}\n                 className={styles.master}\n-                aria-labelledby=\"strategy-cards-title\"\n+                // 눈에 보이는 소제목은 두지 않는다(2026-10-01). 카드 줄이 무엇인지는 화면 제목 '전략 선택'이 이미\n+                // 말한다. 보조기술에는 같은 이름의 구역으로 알린다.\n+                aria-label=\"전략\"\n                 tabIndex={-1}\n               >\n-                <h2 id=\"strategy-cards-title\" className={styles.columnTitle}>\n-                  전략\n-                </h2>\n \n                 {/*\n                   평가 기간을 받지 못하면 카드마다 판정하지 못했다는 문장이 붙는다. 그 상태는 자료가 적재되는 중\n@@ -1403,6 +1505,8 @@ export function StrategySettingsPage({\n                   onSelect={handleSelect}\n                   onRetry={reloadRegistry}\n                   judgeWarmup={judgeWarmup}\n+                  rangeOf={rangeOfCard}\n+                  notices={cardNotices}\n                 />\n               </section>\n \n@@ -1413,7 +1517,8 @@ export function StrategySettingsPage({\n                 <div className={styles.detailBody}>\n                   {/*\n                     제목은 '상세 설정'으로 고정이다(2026-09-30). 제목이 전략마다 바뀌면 이 카드가 무엇을 하는\n-                    자리인지가 이름에 묻힌다. 고른 전략의 이름은 제목 옆에 두고, 설명은 바로 위 고른 카드가 이미\n+                    자리인지가 이름에 묻힌다. 고른 전략의 이름은 제목 앞에 강조색으로 두어 '동일 비중 상세 설정'으로\n+                    읽히게 하고(2026-10-01), 설명은 바로 위 고른 카드가 이미\n                     보이므로 되풀이하지 않는다. 제목을 카드 안에 두어 카드 줄과 이 카드 사이 틈이 비고, 분석하기\n                     원이 그 틈에 걸친다.\n \n@@ -1422,14 +1527,14 @@ export function StrategySettingsPage({\n                     읽힌다. 스스로 알리지는 않는다: 같은 문장을 카드 안 안내가 이미 알린다.\n                   */}\n                   <div className={styles.detailHead}>\n-                    <h2 id=\"selected-strategy-title\" className={styles.detailTitle}>\n-                      상세 설정\n-                    </h2>\n                     {settings.selectedStrategy ? (\n                       <strong className={styles.detailStrategy}>\n                         {settings.selectedStrategy.name}\n                       </strong>\n                     ) : null}\n+                    <h2 id=\"selected-strategy-title\" className={styles.detailTitle}>\n+                      상세 설정\n+                    </h2>\n                     <p id={ANALYZE_REASON_ID} className={styles.detailReason}>\n                       {analyzeBlocker ?? \"\"}\n                     </p>\n@@ -1443,8 +1548,8 @@ export function StrategySettingsPage({\n                   {registry !== null && settings.ready ? (\n                     <div className={styles.detailNotes}>\n                       <p className={styles.detailNote}>\n-                        처음 보이는 값은 등록표의 기본값입니다. 편의용 출발점이며\n-                        최적값이나 투자 권고가 아닙니다.\n+                        기본값은 편의용 출발점이며 최적값이나 투자 권고가\n+                        아닙니다.\n                       </p>\n                       {settings.selectedStrategy?.targetWeightSource ===\n                       \"COMPUTED\" ? (\n@@ -1508,13 +1613,8 @@ export function StrategySettingsPage({\n                               : periodTooShortMessage(minEvaluationYearsLabel)}\n                           </p>\n                           {chosenPeriod !== null ? (\n-                            <button\n-                              type=\"button\"\n-                              onClick={() =>\n-                                settings.resetAnalysisCondition(\"period\")\n-                              }\n-                            >\n-                              범위 전체로 되돌리기\n+                            <button type=\"button\" onClick={selectFullRange}>\n+                              최대 범위 선택\n                             </button>\n                           ) : null}\n                         </div>\n@@ -1552,7 +1652,10 @@ export function StrategySettingsPage({\n                           : RANGE_NEEDS_STRATEGY\n                       }\n                       period={period}\n-                      periodChosen={chosenPeriod !== null}\n+                      periodMode={periodMode}\n+                      onSelectFullRange={selectFullRange}\n+                      onUndoFullRange={undoFullRange}\n+                      onPeriodDraftInvalid={setPeriodDraftInvalid}\n                       caseConstraint={activeCaseConstraint}\n                       initialAmount={initialAmount ?? undefined}\n                       minEvaluationYears={minEvaluationYears}\n@@ -1639,6 +1742,7 @@ export function StrategySettingsPage({\n               <StepOrbButton\n                 className={styles.analyzeDock}\n                 stage={analyzeStage}\n+                pendingHint={analyzePending ? PERIOD_NOT_CHOSEN : undefined}\n                 step=\"STEP 03\"\n                 label={analyzeBusy ? \"보내는 중\" : \"분석하기\"}\n                 aria-label={analyzeBusy ? \"분석 요청을 보내는 중\" : \"분석하기\"}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "old_path": "frontend/src/pages/StrategySettingsPage.tsx",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -77,7 +77,7 @@ export function checkPeriodInput(\n   }\n   if (start > end) return '시작일이 종료일보다 늦습니다.'\n   if (!isWithin({ start, end }, range)) {\n-    return `평가 가능한 범위(${range.start} ~ ${range.end}) 밖의 날짜는 고를 수 없습니다.`\n+    return `평가 가능 범위(${range.start} ~ ${range.end}) 밖의 날짜입니다.`\n   }\n   return null\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/utils/analysisPeriod.ts",
+          "old_path": "frontend/src/utils/analysisPeriod.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -83,11 +83,20 @@\n - Q: 고를 수 없는 전략 카드의 사유는 어디에 적는가? → A: 카드 줄 아래 번호 목록에 전략 이름과 함께 적고, 카드에는 번호만 둔다. 같은 문장이 여러 카드에 걸리면 한 번만 적는다. 자료를 아직 받지 못해 판정할 수 없는 사유는 경고색이 아닌 중립 표시다(FR-011).\n - Q: '분석하기' 원형 단추는 어디에 서는가? → A: 투자 대상 고르기(002)의 다음 단계 단추와 같다. 전략 카드 줄과 '상세 설정' 카드 사이 틈에 원의 가운데를 맞춰 오른쪽 끝에 서고, 막힌 이유는 원 바로 왼쪽에 적는다. 폭이 좁으면 카드 아래 오른쪽으로 내려간다(FR-002).\n \n+### Session 2026-10-01\n+\n+- Q: 화면 머리는 어떤 짜임인가? → A: 투자 대상 고르기(002)·배우기(013)와 같다. 작은 제목(STEP 02)과 제목은 왼쪽, 안내 문장은 오른쪽 인용 모양이다. 두 칸은 위쪽에 맞춘다. 앞 단계로 돌아가는 연결('투자 대상 고르기')은 그 위에 둔다. 좁은 화면에서는 안내 문장을 제목 아래로 쌓는다.\n+- Q: 고를 수 없는 전략 카드의 사유 목록은 그대로 카드 줄 아래인가? → A: 아니다. 머리 왼쪽, 제목 아래로 옮긴다. 번호·전략 이름·한 번만 적기·중립 표시 규칙은 그대로다. 카드 줄 바로 아래가 비어 고른 카드에서 '상세 설정'으로 곧장 이어지고, 두 칸을 위쪽에 맞춰 사유가 늘어도 제목이 밀리지 않는다(FR-011).\n+- Q: 분석 기간은 여전히 평가 가능 범위 전체로 저절로 정해지는가? → A: 아니다. 처음에는 정해지지 않은 상태이고, 사용자가 날짜를 직접 고르거나 날짜 칸 오른쪽의 '최대 범위 선택'을 눌러야 정해진다. 사용자가 고르지 않은 기간으로 분석이 나가지 않게 한다. '최대 범위 선택'을 누르면 그 단추는 비활성화되고 옆에 누르기 직전 상태로 돌아가는 아이콘이 나타난다. 날짜를 직접 고른 동안에는 단추를 계속 누를 수 있다. 정하지 않은 동안 '분석하기'는 회색으로 막히고, 마우스를 올리면 무엇을 정해야 하는지 알린다(FR-009).\n+- Q: 날짜 칸에 범위 밖이나 뒤집힌 날짜를 넣으면? → A: 그 날짜를 반영하지 않고 '분석하기'를 막는다. 안내는 무엇이 잘못됐는지만 한 문장으로 적는다. 칸에 보이는 날짜와 보낼 기간이 갈리지 않게 한다.\n+- Q: 평가 가능 범위 문장과 비용 수치는 어디에 보이는가? → A: 평가 가능 범위는 분석 기간 행 아래에 늘 적지 않고, 전략 카드에 마우스를 올리면 그 전략의 범위를 말풍선으로 보인다. 비용 수치(수수료·호가 차이·슬리피지·세금)는 비용 가정 행 아래가 아니라 '비용 가정' 도움말 안 기준 문장 아래에 작게 둔다. 행에는 버전·임시 여부가 남는다(FR-010).\n+- Q: 고른 전략 카드를 다시 누르면? → A: 선택을 내려놓는다. 전략별로 바꿔 둔 값은 남아, 다시 고르면 그대로 돌아온다.\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 전략 카드를 고르고 기본 설정으로 분석한다 (Priority: P1)\n \n-[전략을 검증하려는 개인]은 복잡한 설정을 읽지 않고 첫 분석을 시작하기 위하여 쉬운 이름과 한 줄 설명만 있는 전략 카드에서 하나를 고르고 '기본 설정 사용'으로 바로 '분석하기'를 누를 수 있다. (§4.2.2, D04)\n+[전략을 검증하려는 개인]은 복잡한 설정을 읽지 않고 첫 분석을 시작하기 위하여 쉬운 이름과 한 줄 설명만 있는 전략 카드에서 하나를 고르고 '기본 설정 사용'으로 바로 '분석하기'를 누를 수 있다. 분석 기간은 날짜를 고르거나 '최대 범위 선택'을 한 번 눌러 정한다(2026-10-01). (§4.2.2, D04)\n \n **Why this priority**: 기획서가 첫 화면 단순함을 가장 중요한 설계 원칙으로 못 박았다(§2). 설명 없이 첫 분석을 마치는지가 사용성 확인의 첫 질문이다(§7.2).\n \n@@ -124,15 +133,15 @@\n \n ### User Story 3 - 기간·금액·조건을 확인하고 바꾼다 (Priority: P2)\n \n-[전략을 검증하려는 개인]은 비교 조건을 이해하고 필요할 때 바꾸기 위하여 '기간·금액·조건'에서 자동 제시된 분석 기간과 시작 금액을 허용 범위 안에서 변경하고, 004가 등록한 비용 가정은 수치·버전·임시 여부를 읽기 전용으로 확인한다. (§4.2.2, §6.4.1, D10)\n+[전략을 검증하려는 개인]은 비교 조건을 이해하고 필요할 때 바꾸기 위하여 '기간·금액·조건'에서 분석 기간을 평가 가능 범위 안에서 정하고 시작 금액을 허용 범위 안에서 변경하고, 004가 등록한 비용 가정은 수치·버전·임시 여부를 읽기 전용으로 확인한다. (§4.2.2, §6.4.1, D10)\n \n **Why this priority**: 분석 기간·비교 대상·비용 적용 여부는 아무것도 펼치지 않아도 늘 보여야 한다(§4.1, constitution 원칙 II의 '요약 한 줄'. 이 화면에서의 해석은 Clarifications 2026-09-30). 조건을 모르면 결과를 오해한다.\n \n-**Independent Test**: 상장일이 다른 섹터를 섞어 선택한 뒤 자동 제시된 분석 기간이 공통 평가 가능 범위와 같은지, 시작 금액을 허용 범위 안에서 바꿀 수 있는지, 비용 가정이 읽기 전용으로만 보이고 이 화면에서 고칠 수단이 없는지 확인한다.\n+**Independent Test**: 상장일이 다른 섹터를 섞어 선택한 뒤 '최대 범위 선택'으로 정한 분석 기간이 공통 평가 가능 범위와 같은지, 시작 금액을 허용 범위 안에서 바꿀 수 있는지, 비용 가정이 읽기 전용으로만 보이고 이 화면에서 고칠 수단이 없는지 확인한다.\n \n **Acceptance Scenarios**:\n \n-1. **Given** 섹터와 전략을 정한 상태에서, **Then** '분석 조건'의 분석 기간·시작 금액 행에 비교 후보가 공통으로 평가 가능한 범위에서 자동 제시된 값이 늘 보이고, 비용 가정 행에는 004가 등록한 버전·임시 여부가 값으로, 수치(수수료·세금 등)가 그 아래 한 줄로 읽기 전용으로 보인다(2026-09-30).\n+1. **Given** 섹터와 전략을 정한 상태에서, **Then** '분석 조건'의 분석 기간 행은 정하기 전까지 '정해지지 않음'을, 정한 뒤에는 그 기간을 늘 보이고, 시작 금액 행은 지금 금액을 보인다. 비용 가정 행에는 004가 등록한 버전·임시 여부가 값으로 보이고, 수치(수수료·세금 등)는 그 행의 도움말 안에 읽기 전용으로 있다(2026-10-01).\n 2. **Given** 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄어들면, **When** 분석을 시작하려 하면, **Then** 실행 전에 줄어든 구간과 원인을 알린다.\n 3. **Given** '기간·금액·조건'에서, **When** 분석 기간을 공통 평가 가능 범위 안에서 바꾸면, **Then** 반영되고 범위 밖 기간은 선택할 수 없다.\n 4. **Given** 어느 화면에서도, **Then** 수수료·세금·평가 기간을 수익이 높아지는 방향으로 자동 최적화하는 선택지는 없다.\n@@ -220,9 +229,9 @@\n - **FR-006**: 설정 항목은 등록표가 정한 방식에 따라 후보 목록에서 고르거나(목록형) 값을 직접 입력한다(입력형). 목록형 항목에는 등록된 후보만 보이므로 등록되지 않은 값을 고를 경로가 없다. 입력형 항목에서 허용 범위 밖이거나 등록된 간격에 맞지 않는 값을 입력하면 허용 범위를 안내하고 저장하지 않으며 몰래 잘라 넣지 않는다. 화면의 안내는 사용자를 돕기 위한 것이고, 분석 요청을 받는 서버는 화면 경유 여부와 무관하게 실행 직전에 등록표로 같은 검증을 다시 수행해 위반한 요청을 거절한다. 기존 요청 호환을 위해 검증을 우회하는 과도기 경로는 이 요구사항을 충족한 것으로 보지 않는다. (원칙 VI)\n - **FR-007**: 공통 출발 설정은 월말 리밸런싱과 역변동성 63거래일 관측이다. 이 값은 출발안이며 승인된 후보 범위 안에서 변경·탐색할 수 있다. 리밸런싱 주기의 후보 값은 달력 기준(월말·분기말 등)과 거래일 수 기준(21거래일·63거래일 등)을 함께 담으며, 사용자는 두 방식 가운데 하나를 골라 그 후보 값 중에서 고른다. 003은 사용자가 고른 주기를 분석 요청에 담아 넘기기만 하고, 그 주기에 언제 판단하고 언제 체결하는지는 [004](../004-backtest-execution/spec.md) FR-011이 정한다(월말 정보 확인 후 다음 거래일 체결). (§4.2.2, §6.4.2)\n - **FR-008**: 비중 상한은 선택한 모든 섹터에 똑같이 걸리는 값 하나이며 섹터마다 다른 상한을 두지 않는다. 유효성 제약(모멘텀 선정 수가 가용 섹터 수를 넘는 경우, 상한에 섹터 수를 곱한 값이 투자 비중에 못 미쳐 비중을 채울 수 없는 조합 등)을 위반하는 설정은 실행 전에 안내하고 분석을 시작하지 않는다. (§6.4.2, §6.4.3)\n-- **FR-009**: 분석 기간은 비교 후보가 공통으로 평가 가능한 범위([001](../001-etf-market-data/spec.md)의 산출값)에서 자동 제시한다. 단일 전략 분석의 비교 후보는 선택한 섹터들이고, 여러 전략을 같은 조건으로 비교할 때는 해당 전략과 섹터 조합 모두가 공통으로 평가되는 범위를 쓴다. 사용자는 그 범위 안에서만 기간을 바꿀 수 있다. (§4.2.2, §6.4.1)\n+- **FR-009**: 분석 기간은 비교 후보가 공통으로 평가 가능한 범위([001](../001-etf-market-data/spec.md)의 산출값) 안에서 정한다. 2026-10-01부터 범위 전체를 저절로 쓰지 않고, 사용자가 날짜를 고르거나 '최대 범위 선택'을 눌러야 정해지며, 정하기 전에는 분석을 시작할 수 없다. 단일 전략 분석의 비교 후보는 선택한 섹터들이고, 여러 전략을 같은 조건으로 비교할 때는 해당 전략과 섹터 조합 모두가 공통으로 평가되는 범위를 쓴다. 사용자는 그 범위 안에서만 기간을 바꿀 수 있다. (§4.2.2, §6.4.1)\n - **FR-010**: '기간·금액·조건'에서 분석 기간과 시작 금액은 변경하고, 비용 가정은 004가 등록한 현재 버전의 수치·버전·임시 여부를 **읽기 전용**으로 확인한다. 사용자가 이 화면에서 수수료·세금 수치를 임의로 바꾸지 않으며, 비용 상승은 004의 별도 시나리오가 소유한다. 시작 금액의 최소·최대·간격·기본값은 등록표가 담고 다른 설정 항목과 같은 방식으로 검증하며, 100만 원~10억 원, 100만 원 간격, 기본 1,000만 원이다(PD-02, 2026-09-15 확정). 004의 PD-18(확정)이 목표 변동성(기본 연 10%, 5~20%, 1% 간격)을 003 등록표 항목으로 지정했으므로 등록표에 자리를 두고, 분석 조건의 '변동성 제한'을 켰을 때 그 범위 안에서 고른다(2026-09-24). 끄면 주 분석(`FULL_PERIOD`)이다. PD-07 확정 전에는 004가 명시한 임시 비용 프로필을 그대로 표시하고 확정값처럼 보이지 않게 한다. 수수료·세금·평가 기간을 수익을 높이는 방향으로 자동 최적화하는 선택지는 제공하지 않는다. (§4.2.2, §6.4.3, 원칙 IV)\n-- **FR-011**: 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄면 실행 전에 줄어든 구간과 원인을 알린다. 필요한 워밍업 기간은 등록표가 담은 전략별 산출 규칙에 현재 설정값을 넣어 계산하며, 설정값을 바꿀 때마다 다시 계산해 판정한다. 카드 목록에서는 각 전략의 기본 설정을 기준으로 판정한다. 공통 평가 가능 범위가 필요한 워밍업을 채우고도 FR-011a가 정한 최소 평가 기간만큼 남으면 그 전략을 고를 수 있고, 줄어든 기간을 카드와 실행 전 안내에 알린다. 워밍업조차 채우지 못하거나 남는 기간이 최소 평가 기간에 못 미치면 그 전략 카드를 고를 수 없는 상태로 두고 분석할 수 없는 이유를 한 문장으로 표시한다. 2026-09-30부터 이 문장은 카드 줄 아래 번호 목록에 전략 이름과 함께 적고, 카드에는 번호만 남긴다. 같은 문장이 여러 카드에 걸리면 한 번만 적고, 보조기술에는 카드의 설명으로 문장이 그대로 읽힌다. 자료를 아직 받지 못해 판정할 수 없는 사유는 고를 수 없는 사유와 구분해 중립 표시로 둔다. 카드마다 같은 문장이 늘어서면 카드 줄이 글로 덮이고 카드 높이가 제각각이 된다. (§6.4.1, 원칙 IV)\n+- **FR-011**: 후보 중 긴 관측 기간 때문에 공통 평가 구간이 줄면 실행 전에 줄어든 구간과 원인을 알린다. 필요한 워밍업 기간은 등록표가 담은 전략별 산출 규칙에 현재 설정값을 넣어 계산하며, 설정값을 바꿀 때마다 다시 계산해 판정한다. 카드 목록에서는 각 전략의 기본 설정을 기준으로 판정한다. 공통 평가 가능 범위가 필요한 워밍업을 채우고도 FR-011a가 정한 최소 평가 기간만큼 남으면 그 전략을 고를 수 있고, 줄어든 기간을 카드와 실행 전 안내에 알린다. 워밍업조차 채우지 못하거나 남는 기간이 최소 평가 기간에 못 미치면 그 전략 카드를 고를 수 없는 상태로 두고 분석할 수 없는 이유를 한 문장으로 표시한다. 이 문장은 번호 목록에 전략 이름과 함께 적고, 카드에는 번호만 남긴다(2026-09-30). 2026-10-01부터 그 목록은 카드 줄 아래가 아니라 화면 머리의 제목 아래에 둔다. 같은 문장이 여러 카드에 걸리면 한 번만 적고, 보조기술에는 카드의 설명으로 문장이 그대로 읽힌다. 자료를 아직 받지 못해 판정할 수 없는 사유는 고를 수 없는 사유와 구분해 중립 표시로 둔다. 카드마다 같은 문장이 늘어서면 카드 줄이 글로 덮이고 카드 높이가 제각각이 된다. (§6.4.1, 원칙 IV)\n - **FR-011a**: '기간·금액·조건'에서 최소 평가 기간을 사용자가 고른다 — 완화(제한 없음)·기본(1년)·엄격(3년) 세 후보 중 하나이며 등록표 항목이다(analysisConditions.minEvaluationYears). 팀이 값 하나로 고정하지 않는 이유는, 짧은 평가 구간에서 나온 수익률이 통계적으로 무의미한데도 화면이 이를 막지 않으면 오해를 부르지만, 신생 섹터를 다루고 싶은 사용자에게는 그 판단을 맡기는 편이 낫기 때문이다. 기본값은 1년(리밸런싱이 월말이면 최소 12회 판단)이다. 이 값은 워밍업과 별개로 적용되며, FR-011의 \"평가할 구간이 남으면\"의 기준이 된다. (§6.4.1, 원칙 IV, PD-02 2026-09-15 확정)\n - **FR-012**: 자동 배분 전략(역변동성·섹터 모멘텀·최소분산)을 선택하면 출력 비중이 선택한 규칙의 계산 결과이며 사용자 입력 비중과 구분된다는 설명을 보인다. 2026-09-30부터 이 설명은 '상세 설정' 카드 머리에 FR-004 문장과 함께 선다. (§4.2.1, D13)\n - **FR-013**: '설정 조합 자동 비교'를 실행 영역에 늘 보이는 행동으로 제공하되 '분석하기'보다 무게를 낮춘다(FR-002). 2026-09-30부터 자리는 '상세 설정' 카드 안 전략 설정 아래이며, 전략을 고르기 전에도 그 자리에 보인다. 접거나 메뉴 안에 감추지 않는다. 진입 시 사용자가 방금 고른 전략 하나와 섹터 후보 집합을 고정해 [007](../007-auto-parameter-search/spec.md)의 실행 전 확인 화면으로 넘기며, 003은 여러 전략을 한 번에 넘기지 않는다. 전략 선택 없이 자동 비교로 들어갈 수는 없다. (§4.2.2)\n@@ -240,7 +249,7 @@\n - **전략 카드**: 화면 이름·전략 종류·한 줄 설명·선택 가능 여부와 안내 문장이다. 등록표가 활성으로 표시한 전략만 카드로 보인다.\n - **파라미터 등록표(버전)**: 전략별 설정 항목마다 의미·후보 값 또는 범위·간격·기본값·유효성 제약을 가진다. 항목마다 목록형인지 입력형인지도 함께 담으며, 전략 설정뿐 아니라 시작 금액과 목표 변동성의 최소·최대·간격·기본값도 여기에 둔다. 비중 상한은 섹터별 목록이 아니라 값 하나로 담고, 리밸런싱 주기 후보는 달력 기준과 거래일 수 기준을 구분해 담는다. 여기에 더해 전략별로 필요한 워밍업 기간을 설정값에서 산출하는 규칙과 활성 여부도 함께 가진다. 서버가 보관하며 버전 식별자를 가지고, 화면은 조회 기능으로 현재 버전을 받아 온다.\n - **전략 설정값**: 사용자가 확정한 전략 종류와 항목별 값, 기본값 사용 여부, 등록표 버전이다. 섹터별 목표 비중은 여기에 따로 두지 않고 [002](../002-sector-weight-selection/spec.md)가 확정한 값을 참조한다. 분석 요청으로 전달되기 전까지는 브라우저 탭 수명 동안만 보관한다.\n-- **분석 조건**: 분석 기간(자동 제시값과 사용자 변경값)·시작 금액·비용 가정(읽기 전용 버전과 임시 여부)·시나리오(연속 운용 기본)다. '변동성 제한'(004 '목표 위험 맞춤')을 켜면 목표 변동성이 더해진다(004 PD-18, 2026-09-24).\n+- **분석 조건**: 분석 기간(정하지 않음·최대 범위·사용자가 고른 날짜 중 하나)·시작 금액·비용 가정(읽기 전용 버전과 임시 여부)·시나리오(연속 운용 기본)다. '변동성 제한'(004 '목표 위험 맞춤')을 켜면 목표 변동성이 더해진다(004 PD-18, 2026-09-24).\n - **분석 요청**: 섹터·비중([002](../002-sector-weight-selection/spec.md)) + 전략 설정값 + 분석 조건 + 참조 버전(대응표·등록표·자료)이다.\n \n ## Success Criteria *(mandatory)*\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/003-strategy-settings/spec.md",
+          "old_path": "specs/003-strategy-settings/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2879984": [],
+    "2879985": []
+  }
+}

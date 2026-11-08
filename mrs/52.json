@@ -1,0 +1,928 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 940927,
+    "iid": 52,
+    "project_id": 1444456,
+    "title": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정",
+    "description": "# 작업 내용 요약\n\n007 자동 파라미터 탐색이 특정 전략에 의존하지 않도록 스펙과 설계 문서를 개정했습니다.\\\n003에 전략이 등록되고 004가 실행을 지원하면, 007 코드 변경 없이 해당 전략을 자동 탐색할 수 있도록 계약·데이터 모델·API·작업 목록을 정리했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* ticket # `[169]`\n* link: `[`https://ssafy.atlassian.net/browse/S15P21E205-169`]`\n\n# 주요 변경 사항\n\n* 007 운영 코드에서 전략 ID·전략명·파라미터·기본값·허용 범위 하드코딩을 금지하도록 요구사항 추가\n* 003의 전략·파라미터 등록표를 조회하는 `ParameterRegistryPort` 계약 확장\n* 004의 실행 지원 전략을 조회하는 `StrategyExecutionSupportPort` 계약 추가\n* `003 활성 전략 ∩ 004 실행 지원 전략`만 탐색 대상으로 판정하도록 정의\n* 임시 등록표를 Java 상수가 아닌 `parameter-registry-provisional.yml`에서 읽도록 설계 변경\n* 여러 전략의 서로 다른 파라미터 축을 지원하도록 `search_space`를 전략별 중첩 구조로 변경\n* 전체 조합 수를 `전략별 축 후보 개수의 곱을 합산`하는 방식으로 명확화\n* 등록표 버전을 미리보기와 실행 요청 사이에 검증하도록 API 계약 추가\n* 미등록 전략·실행 미지원·등록표 변경·조회 실패 오류를 구분하도록 정의\n* 여섯 번째 테스트 전략을 추가해도 007 코드 수정 없이 동작하는 US5와 검증 작업 추가\n* 관련 `spec.md`, `plan.md`, `research.md`, `data-model.md`, API·내부 계약, `quickstart.md`, `tasks.md` 동기화\n\n# 테스트\n\n* [x] 문서 변경 작업으로 코드 자동 테스트는 실행하지 않음\n* [ ] 요구사항 체크리스트 기준 문서 정합성 검토\n* [ ] `quickstart.md`에 전략 비의존성 검증 시나리오 추가\n* [ ] 향후 여섯 번째 fixture 전략으로 미리보기·조합 생성·미등록/미지원 거부를 검증하도록 테스트 작업 정의\n\n# 리뷰 포인트\n\n* 전략과 파라미터 정보의 소유자를 003, 실행 가능 여부의 소유자를 004로 둔 책임 경계가 적절한지\n* 007 백엔드와 프론트에 전략별 상수나 `strategyId` 분기가 남지 않도록 한 제약이 충분한지\n* 다중 전략 `search_space` 구조와 조합 수 계산 방식이 적절한지\n* 등록표 버전 변경 시 `409`, 조회 실패 시 `503`으로 실행을 차단하는 정책이 적절한지\n* 미등록·실행 미지원은 `REJECTED`로 저장하고, 버전 변경·조회 실패는 묶음을 저장하지 않는 구분이 적절한지\n* 미리보기 단계에서 실행 미지원 전략을 즉시 거부할지, `executable=false`로 표시할지 최종 확인 필요",
+    "state": "merged",
+    "created_at": "2026-09-11T14:12:37.089+09:00",
+    "updated_at": "2026-09-14T14:25:10.180+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-11T15:19:37.907+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/169-007-spec-strategy-independence",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ccffbaf4becde7a50166e66fba34ba3b98383ac6",
+    "merge_commit_sha": "db5668904d7b9577ba1031a823db6f7830214ff0",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T14:12:39.198+09:00",
+    "reference": "!52",
+    "references": {
+      "short": "!52",
+      "relative": "!52",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!52"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/52",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 940927,
+    "iid": 52,
+    "project_id": 1444456,
+    "title": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정",
+    "description": "# 작업 내용 요약\n\n007 자동 파라미터 탐색이 특정 전략에 의존하지 않도록 스펙과 설계 문서를 개정했습니다.\\\n003에 전략이 등록되고 004가 실행을 지원하면, 007 코드 변경 없이 해당 전략을 자동 탐색할 수 있도록 계약·데이터 모델·API·작업 목록을 정리했습니다.\n\n# 관련 티켓 번호 & 링크\n\n* ticket # `[169]`\n* link: `[`https://ssafy.atlassian.net/browse/S15P21E205-169`]`\n\n# 주요 변경 사항\n\n* 007 운영 코드에서 전략 ID·전략명·파라미터·기본값·허용 범위 하드코딩을 금지하도록 요구사항 추가\n* 003의 전략·파라미터 등록표를 조회하는 `ParameterRegistryPort` 계약 확장\n* 004의 실행 지원 전략을 조회하는 `StrategyExecutionSupportPort` 계약 추가\n* `003 활성 전략 ∩ 004 실행 지원 전략`만 탐색 대상으로 판정하도록 정의\n* 임시 등록표를 Java 상수가 아닌 `parameter-registry-provisional.yml`에서 읽도록 설계 변경\n* 여러 전략의 서로 다른 파라미터 축을 지원하도록 `search_space`를 전략별 중첩 구조로 변경\n* 전체 조합 수를 `전략별 축 후보 개수의 곱을 합산`하는 방식으로 명확화\n* 등록표 버전을 미리보기와 실행 요청 사이에 검증하도록 API 계약 추가\n* 미등록 전략·실행 미지원·등록표 변경·조회 실패 오류를 구분하도록 정의\n* 여섯 번째 테스트 전략을 추가해도 007 코드 수정 없이 동작하는 US5와 검증 작업 추가\n* 관련 `spec.md`, `plan.md`, `research.md`, `data-model.md`, API·내부 계약, `quickstart.md`, `tasks.md` 동기화\n\n# 테스트\n\n* [x] 문서 변경 작업으로 코드 자동 테스트는 실행하지 않음\n* [ ] 요구사항 체크리스트 기준 문서 정합성 검토\n* [ ] `quickstart.md`에 전략 비의존성 검증 시나리오 추가\n* [ ] 향후 여섯 번째 fixture 전략으로 미리보기·조합 생성·미등록/미지원 거부를 검증하도록 테스트 작업 정의\n\n# 리뷰 포인트\n\n* 전략과 파라미터 정보의 소유자를 003, 실행 가능 여부의 소유자를 004로 둔 책임 경계가 적절한지\n* 007 백엔드와 프론트에 전략별 상수나 `strategyId` 분기가 남지 않도록 한 제약이 충분한지\n* 다중 전략 `search_space` 구조와 조합 수 계산 방식이 적절한지\n* 등록표 버전 변경 시 `409`, 조회 실패 시 `503`으로 실행을 차단하는 정책이 적절한지\n* 미등록·실행 미지원은 `REJECTED`로 저장하고, 버전 변경·조회 실패는 묶음을 저장하지 않는 구분이 적절한지\n* 미리보기 단계에서 실행 미지원 전략을 즉시 거부할지, `executable=false`로 표시할지 최종 확인 필요",
+    "state": "merged",
+    "created_at": "2026-09-11T14:12:37.089+09:00",
+    "updated_at": "2026-09-14T14:25:10.180+09:00",
+    "merged_by": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merge_user": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "merged_at": "2026-09-11T15:19:37.907+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "docs(infra)/169-007-spec-strategy-independence",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30788,
+      "username": "msw714",
+      "public_email": null,
+      "name": "문성웅",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+      "web_url": "https://lab.ssafy.com/msw714"
+    },
+    "assignees": [],
+    "assignee": null,
+    "reviewers": [],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "📜 Docs"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "ccffbaf4becde7a50166e66fba34ba3b98383ac6",
+    "merge_commit_sha": "db5668904d7b9577ba1031a823db6f7830214ff0",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-11T14:12:39.198+09:00",
+    "reference": "!52",
+    "references": {
+      "short": "!52",
+      "relative": "!52",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!52"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/52",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 4,
+      "completed_count": 1
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": false,
+    "changes_count": "10",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "1f482f35d62dc484778cfc75fce6be38e82aae5c",
+      "head_sha": "ccffbaf4becde7a50166e66fba34ba3b98383ac6",
+      "start_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "ae248c64eed5f30d7c352a34534b8ce4b2d01ca6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792825,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **전략 비의존적 설계 (Strategy-Independence Architecture):** 007 운영 코드에서 특정 전략(예: `momentum`)이나 파라미터를 하드코딩하지 않고, `ParameterRegistryPort`와 `StrategyExecutionSupportPort`를 통해 003(등록표) 및 004(실행 지원)의 계약 기반으로만 동작하도록 책임 경계를 명확히 분리한 점이 매우 훌륭합니다.\n- **예외 상태 및 재현성 보장:** 버전 드리프트(`409 REGISTRY_VERSION_CHANGED`), 조회 실패(`503 REGISTRY_UNAVAILABLE`), 미등록/실행 미지원 전략에 대한 거부 정책과 저장 여부(`REJECTED` 상태 기록 vs 묶음 미생성)를 명확하게 정의하여 감사이력 및 재현성(원칙 VIII)을 견고하게 확보했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다. (모든 변경 사항이 문서 및 사양 정의, 설계 계약, 아키텍처 원칙 동기화에 집중되어 있어 실행 가능한 런타임 버그나 보안 취약점 코드가 포함되어 있지 않습니다.)\n\n### 테스트 제안\n- **전략 추가 독립성 테스트 (SC-010):** 007 소스 코드를 전혀 수정하지 않고, `parameter-registry-provisional.yml`에 새로운 여섯 번째 가짜 전략을 추가한 뒤 미리보기 및 조합 생성 API가 정상 작동하는지 검증합니다.\n- **버전 드리프트 정합성 검증 (FR-028):** 미리보기 시점의 `registryVersion`과 실제 `POST /param-searches` 접수 시점의 버전이 다를 때, `409` 응답과 함께 묶음이 생성되지 않는지(DB에 적재되지 않는지) 확인하는 통합 테스트 시나리오를 작성합니다.\n- **실행 미지원 전략 차단 검증 (FR-026):** 등록표에는 존재하지만 004의 실행 지원 목록(`StrategyExecutionSupportPort`)에는 없는 전략으로 탐색을 요청할 때, 조합 생성 전 단계에서 `422 STRATEGY_NOT_EXECUTABLE` 에러로 차단되고 사유가 `REJECTED`로 기록되는지 검증합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:ccffbaf4becde7a50166e66fba34ba3b98383ac6 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-11T14:12:43.895+09:00",
+          "updated_at": "2026-09-11T15:19:28.490+09:00",
+          "system": false,
+          "noteable_id": 940927,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 52,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "9ed658cd8a16e69a11b997ed5674aec147d8c96d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792910,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>ab2c13ee - docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/52/diffs?diff_id=2186932&start_sha=5155c345093ae5b8dac20f50f1c5e67b466f31bc)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T14:19:46.984+09:00",
+          "updated_at": "2026-09-11T14:19:46.989+09:00",
+          "system": true,
+          "noteable_id": 940927,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 52,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "e726e4f509be83d9a77985d72e67d087bd46bd5f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2792916,
+          "type": null,
+          "body": "added 2 commits\n\n<ul><li>b628c632 - docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)</li><li>3943726c - Merge branch &#39;docs(infra)/169-constitution-user-strategy&#39; into...</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/52/diffs?diff_id=2186935&start_sha=ab2c13eee6989b92a221eb9b8681bf08f9a65b2b)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T14:19:59.250+09:00",
+          "updated_at": "2026-09-11T14:19:59.254+09:00",
+          "system": true,
+          "noteable_id": 940927,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 52,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "12662197a16f7017008b8183a16798c7249e4df8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793600,
+          "type": null,
+          "body": "added 36 commits\n\n<ul><li>3943726c...1f482f35 - 34 commits from branch <code>dev</code></li><li>14a2fa9e - Merge remote-tracking branch &#39;origin/dev&#39; into docs(infra)/169-007-spec-strategy-independence</li><li>ccffbaf4 - Merge branch &#39;docs(infra)/169-007-spec-strategy-independence&#39; of...</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/52/diffs?diff_id=2187493&start_sha=3943726c8172754d37ff6e7ac206eb65d832cbb4)",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T15:19:19.515+09:00",
+          "updated_at": "2026-09-11T15:19:19.521+09:00",
+          "system": true,
+          "noteable_id": 940927,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 52,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8b985b0df2e6311bbf7b7368d8d173e249083194",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793603,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T15:19:36.507+09:00",
+          "updated_at": "2026-09-11T15:19:36.516+09:00",
+          "system": true,
+          "noteable_id": 940927,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 52,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "30cf2c8a8805786af7f4e6661c8ca954cbd533fa",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2793605,
+          "type": null,
+          "body": "mentioned in commit db5668904d7b9577ba1031a823db6f7830214ff0",
+          "author": {
+            "id": 30788,
+            "username": "msw714",
+            "public_email": null,
+            "name": "문성웅",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+            "web_url": "https://lab.ssafy.com/msw714"
+          },
+          "created_at": "2026-09-11T15:19:38.067+09:00",
+          "updated_at": "2026-09-11T15:19:38.073+09:00",
+          "system": true,
+          "noteable_id": 940927,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 52,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2187493,
+      "head_commit_sha": "ccffbaf4becde7a50166e66fba34ba3b98383ac6",
+      "base_commit_sha": "1f482f35d62dc484778cfc75fce6be38e82aae5c",
+      "start_commit_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "created_at": "2026-09-11T15:19:18.793+09:00",
+      "merge_request_id": 940927,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "d8bff6fec7ed2a6b5ef4772bc140640e1c5f8441"
+    },
+    {
+      "id": 2186935,
+      "head_commit_sha": "3943726c8172754d37ff6e7ac206eb65d832cbb4",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+      "created_at": "2026-09-11T14:19:59.082+09:00",
+      "merge_request_id": 940927,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "9bcad509a4566c660680dca7680b2dc01f77b2d0"
+    },
+    {
+      "id": 2186932,
+      "head_commit_sha": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+      "created_at": "2026-09-11T14:19:46.692+09:00",
+      "merge_request_id": 940927,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "9bcad509a4566c660680dca7680b2dc01f77b2d0"
+    },
+    {
+      "id": 2186872,
+      "head_commit_sha": "5155c345093ae5b8dac20f50f1c5e67b466f31bc",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+      "created_at": "2026-09-11T14:12:38.192+09:00",
+      "merge_request_id": 940927,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "3107cc8a11e5f327fb150a390549b0dce98a72e7"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2187493,
+      "head_commit_sha": "ccffbaf4becde7a50166e66fba34ba3b98383ac6",
+      "base_commit_sha": "1f482f35d62dc484778cfc75fce6be38e82aae5c",
+      "start_commit_sha": "d42af44174914af1e350ba0160bb99ee58c79ad1",
+      "created_at": "2026-09-11T15:19:18.793+09:00",
+      "merge_request_id": 940927,
+      "state": "collected",
+      "real_size": "10",
+      "patch_id_sha": "d8bff6fec7ed2a6b5ef4772bc140640e1c5f8441",
+      "commits": [
+        {
+          "id": "ccffbaf4becde7a50166e66fba34ba3b98383ac6",
+          "short_id": "ccffbaf4",
+          "created_at": "2026-09-11T15:19:14.000+09:00",
+          "parent_ids": [
+            "14a2fa9eba3b37e71ee101341a2a7ccaa380f138",
+            "3943726c8172754d37ff6e7ac206eb65d832cbb4"
+          ],
+          "title": "Merge branch 'docs(infra)/169-007-spec-strategy-independence' of https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205 into docs(infra)/169-007-spec-strategy-independence",
+          "message": "Merge branch 'docs(infra)/169-007-spec-strategy-independence' of https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205 into docs(infra)/169-007-spec-strategy-independence\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T15:19:14.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T15:19:14.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ccffbaf4becde7a50166e66fba34ba3b98383ac6"
+        },
+        {
+          "id": "14a2fa9eba3b37e71ee101341a2a7ccaa380f138",
+          "short_id": "14a2fa9e",
+          "created_at": "2026-09-11T15:17:27.000+09:00",
+          "parent_ids": [
+            "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+            "1f482f35d62dc484778cfc75fce6be38e82aae5c"
+          ],
+          "title": "Merge remote-tracking branch 'origin/dev' into docs(infra)/169-007-spec-strategy-independence",
+          "message": "Merge remote-tracking branch 'origin/dev' into docs(infra)/169-007-spec-strategy-independence\n\nconstitution.md 충돌 해소: dev의 3.1.0(스키마 변경 규칙)을 확정 이력으로 두고,\n사용자 등록 전략 범위 확대 초안을 그 위에 3.2.0(미승인)으로 올렸다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T15:17:13.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T15:17:27.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/14a2fa9eba3b37e71ee101341a2a7ccaa380f138"
+        },
+        {
+          "id": "3943726c8172754d37ff6e7ac206eb65d832cbb4",
+          "short_id": "3943726c",
+          "created_at": "2026-09-11T14:19:58.000+09:00",
+          "parent_ids": [
+            "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+            "b628c63288612c1593019d0df9596d8c4c529ed0"
+          ],
+          "title": "Merge branch 'docs(infra)/169-constitution-user-strategy' into 'docs(infra)/169-007-spec-strategy-independence'",
+          "message": "Merge branch 'docs(infra)/169-constitution-user-strategy' into 'docs(infra)/169-007-spec-strategy-independence'\n\ndocs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\nSee merge request s15-bigdata-dist-sub1/S15P21E205!53",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-11T14:19:58.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-11T14:19:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3943726c8172754d37ff6e7ac206eb65d832cbb4"
+        },
+        {
+          "id": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+          "short_id": "ab2c13ee",
+          "created_at": "2026-09-11T14:19:34.000+09:00",
+          "parent_ids": [
+            "5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+          ],
+          "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+          "message": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\n\"하지 않는 것(범위 경계)\"에서 '숙련 퀀트용 자유 코드 입력'과 '전략 공유'를 범위\n안으로 옮긴다. 사용자가 등록한 전략 코드와 그 전략의 재사용을 다루려면 constitution\n개정이 선행돼야 하므로(기존 352행이 spec·plan·코드 추가를 금지) 초안을 먼저 올린다.\n\n- 유지한 금지: 사용자 간 성과 랭킹, 전략 공유 커뮤니티 피드, 숙련 퀀트용 전용 연구 화면\n- 함께 둔 조건 셋: (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동\n  탐색이 전략별 코드 수정 없이 동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도\n  안에서만 할 것, (3) 순위·추천·인기 목록으로 표시하지 않을 것(원칙 III)\n- 버전: 3.0.0 -> 3.1.0. 금지를 지우는 실질적 확대이고 기존 구현을 무효화하지 않아 MINOR\n- Sync Impact Report에 미승인 표시와 기획서 결정(D번호) 부재를 명시\n\n전체 회의 승인 전까지 효력이 없다(Governance 개정 절차). 승인 요청과 함께 기획서에\n결정을 추가해야 하고, 승인되면 specs/README.md의 같은 목록과 각 spec의 plan\nConstitution Check를 뒤따라 고쳐야 한다. 세부 기능은 별도 spec에서 정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:07:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:19:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab2c13eee6989b92a221eb9b8681bf08f9a65b2b"
+        },
+        {
+          "id": "b628c63288612c1593019d0df9596d8c4c529ed0",
+          "short_id": "b628c632",
+          "created_at": "2026-09-11T14:07:42.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+          "message": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\n\"하지 않는 것(범위 경계)\"에서 '숙련 퀀트용 자유 코드 입력'과 '전략 공유'를 범위\n안으로 옮긴다. 사용자가 등록한 전략 코드와 그 전략의 재사용을 다루려면 constitution\n개정이 선행돼야 하므로(기존 352행이 spec·plan·코드 추가를 금지) 초안을 먼저 올린다.\n\n- 유지한 금지: 사용자 간 성과 랭킹, 전략 공유 커뮤니티 피드, 숙련 퀀트용 전용 연구 화면\n- 함께 둔 조건 셋: (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동\n  탐색이 전략별 코드 수정 없이 동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도\n  안에서만 할 것, (3) 순위·추천·인기 목록으로 표시하지 않을 것(원칙 III)\n- 버전: 3.0.0 -> 3.1.0. 금지를 지우는 실질적 확대이고 기존 구현을 무효화하지 않아 MINOR\n- Sync Impact Report에 미승인 표시와 기획서 결정(D번호) 부재를 명시\n\n전체 회의 승인 전까지 효력이 없다(Governance 개정 절차). 승인 요청과 함께 기획서에\n결정을 추가해야 하고, 승인되면 specs/README.md의 같은 목록과 각 spec의 plan\nConstitution Check를 뒤따라 고쳐야 한다. 세부 기능은 별도 spec에서 정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:07:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:07:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b628c63288612c1593019d0df9596d8c4c529ed0"
+        },
+        {
+          "id": "5155c345093ae5b8dac20f50f1c5e67b466f31bc",
+          "short_id": "5155c345",
+          "created_at": "2026-09-11T14:06:02.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정",
+          "message": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정\n\n007이 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·\n유효성 규칙을 자체 보유하지 않고, 003 등록표와 004 실행 지원 목록을 계약으로\n조회해 쓰도록 spec 이하 문서를 고쳤다. 003에 활성 전략이 추가되고 004가 그 실행을\n지원하면 007은 전략별 코드 수정 없이 그 전략을 탐색 대상으로 얻는다.\n\n주요 변경:\n- spec: FR-025~FR-029 신설, US5(전략 비의존성) 추가, SC-010~SC-012 추가.\n  FR-006·FR-013a·FR-013d·FR-020의 전략별 하드코딩 표현 제거\n- research: R1 개정(코드 상수 -> 자원 파일), R8(실행 지원 원천), R9(버전 드리프트·조회 실패)\n- data-model: search_space를 전략 -> 축 -> 값 중첩으로, 축을 배열로 저장(jsonb 키 순서 미보존),\n  stop_reason에 미등록·실행 미지원 추가\n- contracts: ParameterRegistryPort 확장(활성 전략·기본 시작값·허용 범위·기준 전략 역할),\n  StrategyExecutionSupportPort 신설, 오류 코드 5종 추가\n- tasks: 153 -> 157개. 등록표 포트·실행 지원 포트·SearchTargetResolver·6번째 전략 fixture·\n  하드코딩 정적 검사 추가. 묶음은 M2·M3·M4·M7이 나눠 가져 새 묶음 없음\n- speckit-analyze 지적 F1(기준 전략 리터럴)·F4(등록표 경계 화면)·F5·F6·F7·F8·F9 해소\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:06:02.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:06:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,5 +1,10 @@\n <!--\n Sync Impact Report\n+- **(초안, 미승인) Version change: 3.1.0 → 3.2.0.** \"하지 않는 것\"에서 숙련 퀀트용 자유 코드 입력과\n+  전략 공유를 범위 안으로 옮겼다. 금지를 지우는 실질적 확대이고 기존 결과·구현을 무효화하지 않으므로\n+  MINOR다. 사용자 간 성과 랭킹·전략 공유 커뮤니티 피드·전용 연구 화면 금지는 그대로 둔다.\n+  **전체 회의 승인 전까지 효력이 없다(Governance 개정 절차).** 근거가 될 기획서 결정(D번호)은 아직\n+  없으며, 승인 요청과 함께 기획서에 추가해야 한다.\n - Version change: 3.0.0 → 3.1.0. \"스키마 변경 규칙\" 절을 신설했다. 원칙·섹션 추가이므로 MINOR를\n   올린다. 비준은 전체 회의 승인 후 merge로 확정한다.\n - 3.1.0에서 바뀐 절: (신설) \"스키마 변경 규칙\" 다섯 항. \"합의되지 않아 이 판에 넣지 않은 영역\"에서\n@@ -359,7 +364,11 @@ AI(Claude 등) 모두에게 적용된다.\n ### 하지 않는 것 (범위 경계) (§2, §8.2, D13, D15, D16, D20)\n \n - 맞춤형 투자 추천, 증권사 연동·자동 주문·실계좌 연동, 상시 성과 추적·알림, 사용자 간 성과 랭킹,\n-  숙련 퀀트용 자유 코드 입력·전용 연구 화면, 전략 공유 커뮤니티, 진단 화면 안의 결제 단계.\n+  숙련 퀀트용 전용 연구 화면, 전략 공유 커뮤니티 피드, 진단 화면 안의 결제 단계.\n+- **v3.2.0에서 범위 안으로 옮긴 것**: 사용자가 등록한 전략 코드와 그 전략의 재사용. 조건 셋을 함께\n+  둔다 — (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동 탐색이 전략별 코드 수정 없이\n+  동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도 안에서만 할 것, (3) 순위·추천·인기 목록으로\n+  표시하지 않을 것(원칙 III). 세부는 spec에서 정한다.\n - QuantConnect 비교와 동등 기능 구현, 고객군별 재방문·전환율 측정, 결제 실험.\n - 현재 경제를 하나의 좋고 나쁜 점수로 평가하는 화면. 마할라노비스·PCA·RRF를 기본 검색 모델에 넣는 것.\n   (§4.3, §6.4.4, D08)\n@@ -714,4 +723,4 @@ task는 실행 지시의 최소 단위라서 그 하나하나를 브랜치와 MR\n - **근거 자료 변경**: 기획서의 \"확정한 방향\"이나 Git·Jira Convention이 바뀌면 이 문서를 같은 절차로\n   개정한다. 근거 문서끼리 어긋나면(예: 브랜치 형식) 더 최신인 동결 문서를 따르고 팀에 알린다.\n \n-**Version**: 3.1.0 | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-11\n+**Version**: 3.2.0 (초안 — 전체 회의 승인 전) | **Ratified**: 2026-09-09 | **Last Amended**: 2026-09-11 (초안)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": ".specify/memory/constitution.md",
+          "old_path": ".specify/memory/constitution.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -27,10 +27,18 @@\n | `strategy.strategyIds` | `string[]` | 필수 | 1개 이상. 각 64자 이하 |\n | `run.start` / `run.end` | `date` | 선택 | 생략 시 공통 평가 구간을 서버가 제시한다 |\n | `portfolio.initialCash` | `string` (decimal) | 선택 | 생략 시 서버 기본값 |\n-| `space` | `object` | 선택 | 축 이름 → 후보 값 배열. **생략하면 등록표 전체 범위**를 쓴다 |\n+| `space` | `object` | 선택 | 전략 ID → (축 이름 → 후보 값 배열). **생략하면 등록표 전체 범위**를 쓴다 |\n+| `registryVersion` | `string` | 실행만 필수 | 미리보기 응답에서 받은 값을 그대로 되돌려 보낸다. 미리보기에서는 무시한다 |\n+\n+`space`는 **전략별로 중첩**한다 — 전략마다 축 구성이 다르고 축 이름이 겹칠 수 있다(FR-027).\n+\n+```json\n+{ \"space\": { \"sector-momentum\": { \"lookbackDays\": [20, 60], \"topN\": [2, 3] } } }\n+```\n \n `space`에 등록표에 없는 값을 넣으면 `400 INVALID_INPUT`이다(FR-002, US1 시나리오 3). 범위를 좁히거나\n-넓히는 것은 등록표 안에서만 가능하다.\n+넓히는 것은 등록표 안에서만 가능하다. 허용 범위·기본 시작값·후보값은 모두 등록표가 정하며 서버는\n+그 값을 그대로 검증에 쓴다(FR-027).\n \n ### 200 응답\n \n@@ -39,10 +47,27 @@\n   \"success\": true,\n   \"data\": {\n     \"registryVersion\": \"PROVISIONAL-2026-09-10\",\n-    \"strategies\": [{ \"strategyId\": \"sector-momentum\", \"name\": \"섹터 모멘텀\" }],\n+    \"strategies\": [\n+      { \"strategyId\": \"sector-momentum\", \"name\": \"섹터 모멘텀\", \"executable\": true }\n+    ],\n     \"spaceSummary\": [\n-      { \"axis\": \"lookbackDays\", \"label\": \"관측 기간\", \"values\": [20, 60, 120], \"unit\": \"거래일\" },\n-      { \"axis\": \"topN\", \"label\": \"선정 섹터 수\", \"values\": [2, 3, 4] }\n+      {\n+        \"strategyId\": \"sector-momentum\",\n+        \"strategyName\": \"섹터 모멘텀\",\n+        \"axes\": [\n+          {\n+            \"axis\": \"lookbackDays\", \"label\": \"관측 기간\", \"unit\": \"거래일\",\n+            \"values\": [20, 60, 120], \"defaultValue\": 60,\n+            \"allowedRange\": { \"min\": 5, \"max\": 250, \"step\": 1, \"values\": null }\n+          },\n+          {\n+            \"axis\": \"topN\", \"label\": \"선정 섹터 수\", \"unit\": null,\n+            \"values\": [2, 3, 4], \"defaultValue\": 3,\n+            \"allowedRange\": { \"min\": 1, \"max\": 50, \"step\": 1, \"values\": null }\n+          }\n+        ],\n+        \"combinations\": 9\n+      }\n     ],\n     \"workload\": {\n       \"totalCombinations\": 9,\n@@ -54,7 +79,7 @@\n     },\n     \"limits\": {\n       \"maxCandidates\": 120,\n-      \"provisional\": [\"maxCandidates\", \"timeLimitSeconds\", \"dispatchWindow\"],\n+      \"provisional\": [\"maxCandidates\", \"timeLimitSeconds\", \"dispatchWindow\", \"consecutiveFailureLimit\"],\n       \"exceeded\": false\n     },\n     \"commonPeriod\": { \"start\": \"2015-01-02\", \"end\": \"2026-08-31\", \"shortenedBy\": null },\n@@ -65,7 +90,15 @@\n }\n ```\n \n+- **`strategies`·`spaceSummary`의 모든 값은 등록표 조회 결과다.** 서버도 화면도 전략 이름·라벨·\n+  단위·기본값·후보값·허용 범위를 자체적으로 갖지 않는다(FR-025·FR-027). `executable`은 004의 실행\n+  지원 여부다(FR-026).\n+- `spaceSummary`는 **전략별 배열**이고 `axes` 안의 순서가 그리드 좌표 축 순서다. `values` 배열의\n+  순서가 인접 판정의 근거다(FR-029). `totalCombinations`는 전략별 `combinations`의 합이다.\n+- `defaultValue`는 등록된 기본 시작값을 그대로 옮긴 것이며 **추천값이나 최적값이 아니다**(원칙 III).\n+  화면에 '추천'·'최적' 문구를 붙이지 않는다.\n - `limits.provisional`은 임시값인 항목 이름이다. 화면은 이 항목에 임시값 표시를 붙인다(FR-005a).\n+  **네 한도 전부가 임시값이므로 네 이름이 모두 들어간다** — 실측 후 PD-06에서 고정하면 그때 줄어든다.\n - `limits.exceeded`가 `true`면 실행은 거부된다(§2). 화면은 범위를 좁히라고 안내한다(FR-005b).\n - `commonPeriod.shortenedBy`는 긴 관측 기간을 요구하는 후보 때문에 공통 구간이 줄었을 때 그 축\n   이름을 담는다(Edge Case). 모든 후보는 같은 공통 구간으로 평가한다.\n@@ -86,9 +119,19 @@\n |---|---|---|\n | 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수 > 후보 수 상한. `message`에 유효 수·상한·좁히는 방법 (FR-005b) |\n | 422 | `NO_VALID_COMBINATION` | 등록된 조합이 모두 유효성 제약 위반. `message`에 어느 제약인지 한 문장 (Edge Case) |\n+| 422 | `STRATEGY_NOT_REGISTERED` | 요청 전략이 등록표의 활성 전략에 없음. `message`에 어느 전략인지 (FR-026) |\n+| 422 | `STRATEGY_NOT_EXECUTABLE` | 등록돼 있으나 004가 실행을 지원하지 않음 (FR-026) |\n+| 409 | `REGISTRY_VERSION_CHANGED` | 요청의 `registryVersion`이 접수 시점 등록표 버전과 다름 (FR-028) |\n+| 503 | `REGISTRY_UNAVAILABLE` | 등록 정보 또는 실행 지원 목록 조회 실패 (FR-028) |\n+\n+앞의 네 가지는 표본을 자동으로 뽑거나 간격을 넓혀 실행하지 않고, **묶음을 `REJECTED` 상태로 저장해\n+사유를 남긴다**(FR-020) — 재현 기록이므로 조용히 버리지 않는다. 전략 거부는 두 사유를 구분해\n+저장한다(`stop_reason`).\n \n-둘 다 표본을 자동으로 뽑거나 간격을 넓혀 실행하지 않는다. **묶음은 `REJECTED` 상태로 저장되어\n-사유가 남는다**(FR-020) — 재현 기록이므로 조용히 버리지 않는다.\n+뒤의 두 가지는 **묶음을 저장하지 않는다.** 버전 드리프트는 사용자가 다시 확인하면 해소되고, 조회\n+실패는 일시적 장애다 — `BROKER_UNAVAILABLE`을 묶음으로 남기지 않는 것과 같은 기준이다(R9).\n+`REGISTRY_VERSION_CHANGED`를 받은 화면은 미리보기를 다시 호출해 바뀐 요약(후보값·조합 수)을 보이고\n+확인을 받은 뒤 다시 실행한다. 등록 정보를 캐시나 기본값으로 대체해 실행하지 않는다(FR-028).\n \n ## 3. 묶음 상태·결과 — `GET /param-searches/{searchId}`\n \n@@ -110,7 +153,15 @@\n       \"registryVersion\": \"PROVISIONAL-2026-09-10\",\n       \"searchMethod\": \"FULL_GRID\",\n       \"randomSeed\": null,\n-      \"space\": { \"lookbackDays\": [20, 60, 120], \"topN\": [2, 3, 4] },\n+      \"space\": {\n+        \"sector-momentum\": {\n+          \"strategyName\": \"섹터 모멘텀\",\n+          \"axes\": [\n+            { \"name\": \"lookbackDays\", \"label\": \"관측 기간\", \"unit\": \"거래일\", \"values\": [20, 60, 120] },\n+            { \"name\": \"topN\", \"label\": \"선정 섹터 수\", \"unit\": null, \"values\": [2, 3, 4] }\n+          ]\n+        }\n+      },\n       \"selectionRule\": {\n         \"drawdownFilter\": \"NOT_WORSE_THAN_BASELINE\",\n         \"stabilityFilter\": \"BATCH_PERCENTILE_TOP_50\",\n@@ -118,12 +169,16 @@\n         \"displayCount\": 5,\n         \"tieHandling\": \"SHOW_ALL_TIED\"\n       },\n-      \"limits\": { \"maxCandidates\": 120, \"provisional\": [\"maxCandidates\"] },\n+      \"limits\": {\n+        \"maxCandidates\": 120, \"timeLimitSeconds\": 120, \"dispatchWindow\": 4, \"consecutiveFailureLimit\": 5,\n+        \"provisional\": [\"maxCandidates\", \"timeLimitSeconds\", \"dispatchWindow\", \"consecutiveFailureLimit\"]\n+      },\n       \"referenceVersions\": { \"marketData\": \"2026-08-31\", \"cost\": \"v1\", \"engine\": \"nautilus-0.1\" },\n       \"dataVersionChanged\": false\n     },\n     \"baseline\": {\n-      \"kind\": \"EQUAL_WEIGHT\",\n+      \"strategyId\": \"<등록표가 기준 전략으로 지정한 ID>\",\n+      \"strategyName\": \"동일 비중\",\n       \"backtestId\": \"BT-20260910-000042\",\n       \"status\": \"COMPLETED\",\n       \"netReturn\": \"0.1421\",\n@@ -245,6 +300,10 @@\n | 422 | `CANDIDATE_LIMIT_EXCEEDED` | 유효 후보 수가 상한 초과 | 범위를 좁힌 뒤 |\n | 422 | `NO_VALID_COMBINATION` | 유효 조합 0건 | 섹터·범위를 바꾼 뒤 |\n | 400 | `UNREGISTERED_PARAMETER_VALUE` | `space`에 등록표 밖 값 | 등록표 안의 값으로 |\n+| 422 | `STRATEGY_NOT_REGISTERED` | 등록표 활성 전략에 없는 전략 | 등록 후 |\n+| 422 | `STRATEGY_NOT_EXECUTABLE` | 004가 실행을 지원하지 않는 전략 | 004 지원 후 |\n+| 409 | `REGISTRY_VERSION_CHANGED` | 미리보기와 접수 시점의 등록표 버전이 다름 | 미리보기를 다시 본 뒤 |\n+| 503 | `REGISTRY_UNAVAILABLE` | 등록 정보·지원 목록 조회 실패 | 잠시 후 |\n | 409 | `ALREADY_FINISHED` | 끝난 묶음 취소 | 무의미 |\n | 409 | `NOTHING_TO_RETRY` | 실패 후보가 없는 묶음에 재시도 요청 | 무의미 |\n | 404 | `RESOURCE_NOT_FOUND` | 없는 `searchId` | 무의미 |\n@@ -258,6 +317,12 @@\n - **표시 후보에 순위 번호를 붙이지 않는다.** 정렬 지표 이름을 함께 보이고, 후보마다\n   `validationLabel`을 항상 함께 보인다(현재 값은 전부 `UNVALIDATED`).\n - `limits.provisional`에 든 항목은 임시값 표시를 붙인다.\n+- **프론트에 전략 목록·파라미터 기본값·허용 범위·단위를 두지 않는다**(FR-025). 전략 이름·축 라벨·\n+  단위·기본값·후보값은 `spaceSummary`·`strategies`에서만 읽는다. 전략이 늘어도 화면 코드를 고치지\n+  않는 것이 이 계약의 목적이고, `strategyId`로 분기하는 화면 코드는 리뷰에서 막는다.\n+- 등록된 기본 시작값에 '추천'·'최적' 문구를 붙이지 않는다(원칙 III).\n+- `POST /param-searches`에는 미리보기에서 받은 `registryVersion`을 반드시 함께 보낸다. `409\n+  REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 바뀐 요약을 보이고 확인을 받는다.\n - **현재 워커는 1종목만 계산한다.** `universe.instrumentIds`를 2개 이상 보내면 후보 Job은 접수되고\n   실행 단계에서 `FAILED`가 된다(`backtest-api` §4와 같은 한계). 004의 배분 전략이 붙기 전까지 007의\n   종단 확인은 1종목·momentum으로만 가능하다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,9 +8,10 @@\n \n ---\n \n-## 1. `ParameterRegistryPort` — 003과의 경계 (research R1)\n+## 1. `ParameterRegistryPort` — 003과의 경계 (research R1, 2026-09-11 개정)\n \n-003이 소유한 파라미터 등록표를 007이 읽는 유일한 통로다. 003 완성 시 구현체만 교체한다.\n+003이 소유한 전략·파라미터 등록표를 007이 읽는 **유일한** 통로다. 003 완성 시 구현체만 교체한다.\n+007은 이 포트가 돌려주는 값 외에 전략에 대해 아무것도 알지 못한다(FR-025).\n \n ```java\n public interface ParameterRegistryPort {\n@@ -18,20 +19,38 @@ public interface ParameterRegistryPort {\n     /** 등록표 버전. 임시 구현은 \"PROVISIONAL-\" 로 시작한다. */\n     String version();\n \n-    /** 전략의 탐색 축 목록. 순서는 안정적이어야 한다 — 그리드 좌표의 축 순서가 된다. */\n-    List<ParameterAxis> axes(String strategyId);\n+    /** 활성 전략 전체. 007은 전략 목록을 자체적으로 갖지 않는다(FR-025·FR-026). */\n+    List<StrategyRegistration> activeStrategies();\n \n-    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다. */\n+    /** 전략 하나의 등록 정보. 등록되지 않았으면 empty — 호출자가 거부 사유로 옮긴다(FR-026). */\n+    Optional<StrategyRegistration> find(String strategyId);\n+\n+    /** 조합 하나가 유효성 제약을 만족하는지. 위반 시 사유 코드를 담아 반환한다(FR-006). */\n     ValidationVerdict validate(String strategyId, ParameterCombination combination, SearchContext context);\n+\n+    /** 손실 제약 기준으로 쓸 전략. 등록표가 '기준 전략' 역할로 지정한다(FR-013d). 지정이 없으면 empty. */\n+    Optional<String> baselineStrategyId();\n }\n \n+public record StrategyRegistration(\n+        String strategyId,          // \"sector-momentum\"\n+        String name,                // \"섹터 모멘텀\" — 표시용. 007이 만들지 않는다\n+        String description,         // 표시용, null 허용\n+        List<ParameterAxis> axes    // 순서 보존. 축이 없으면 빈 목록(조합 1건)\n+) {}\n+\n public record ParameterAxis(\n-        String name,        // \"lookbackDays\"\n-        String label,       // \"관측 기간\"\n-        String unit,        // \"거래일\", null 허용\n-        List<Object> values // 등록된 후보 값. 인덱스가 그리드 좌표다\n+        String name,            // \"lookbackDays\"\n+        String label,           // \"관측 기간\"\n+        String unit,            // \"거래일\", null 허용\n+        List<Object> searchValues,   // 자동 탐색 후보값. 인덱스가 그리드 좌표다\n+        Object defaultValue,         // 기본 시작값. 007이 정하지 않는다(FR-027)\n+        AllowedRange allowedRange    // 입력 허용 범위. 상세 변경의 경계(FR-027)\n ) {}\n \n+/** 입력 허용 범위. 열거형 축은 values만, 수치형 축은 min·max·step을 쓴다. 등록표가 준 형태를 그대로 옮긴다. */\n+public record AllowedRange(Object min, Object max, Object step, List<Object> values) {}\n+\n public record ValidationVerdict(boolean valid, String reasonCode, String reasonDetail) {}\n \n /** 유효성 판정에 필요한 묶음 맥락 (섹터 수 등). */\n@@ -40,15 +59,50 @@ public record SearchContext(int universeSize) {}\n \n **규약**\n \n-- `axes()`의 반환 순서와 `values`의 인덱스는 같은 `version()` 안에서 안정적이어야 한다. 인덱스가\n-  흔들리면 `grid_coordinates`가 뜻을 잃고 재현이 깨진다(FR-020).\n-- `validate()`는 계산 없이 판정할 수 있는 것만 본다. 알려진 위반은 최소 두 가지다 — 모멘텀 선정 수가\n-  가용 섹터 수 초과, 비중 상한들의 합계로 투자 비중을 채울 수 없음(FR-006).\n+- `axes()`의 반환 순서와 `searchValues`의 인덱스는 같은 `version()` 안에서 안정적이어야 한다.\n+  인덱스가 흔들리면 `grid_coordinates`가 뜻을 잃고 재현이 깨진다(FR-020·FR-029).\n+- **인접 판정은 `searchValues`의 인덱스만 쓴다.** 007은 값을 해석해 순서를 만들지 않으므로 숫자가\n+  아닌 축(범주형)도 전략별 분기 없이 같은 규칙으로 다뤄진다(FR-029).\n+- `validate()`는 계산 없이 판정할 수 있는 것만 본다. **어떤 제약이 있는지는 등록표가 정한다** —\n+  007은 제약의 종류를 알지 못하고 `reasonCode`를 그대로 저장·표시한다(FR-006·FR-025). 제약 목록과\n+  그 값은 [003](../../003-strategy-settings/spec.md)의 PD-02다.\n+- `defaultValue`·`allowedRange`는 상세 변경 화면과 범위 검증이 그대로 쓴다. 007에 기본값 상수나\n+  범위 상수를 두지 않는다(FR-027). 기본값을 \"추천\"이나 \"최적값\"으로 표시하지 않는다(원칙 III).\n - 007은 등록표에 없는 값을 절대 만들지 않는다(FR-002). `space`에 등록표 밖 값이 오면 400이다.\n+- 조회가 실패하면(구현체 예외) 접수를 거부한다 — `503 REGISTRY_UNAVAILABLE`. 캐시된 등록 정보나\n+  내부 기본값으로 대체하지 않는다(FR-028, R9).\n+- `baselineStrategyId()`가 empty이면 하락 폭 필터를 적용하지 않고 그 사실을 결과에 표시한다\n+  (`drawdownFilterApplied = false`). **007이 어느 전략이 기준인지 추정하지 않는다** — 기준 전략 ID를\n+  코드에 두면 그것이 FR-025 위반이고, 사용자 등록 전략이 늘어나면 곧바로 깨진다 (FR-013d·FR-025).\n+\n+**임시 구현 `ProvisionalFileParameterRegistry`**: `version()`이 `PROVISIONAL-{날짜}`를 돌려주고,\n+전략·축·후보값·기본값·허용 범위·유효성 규칙은 자원 파일\n+`backend/src/main/resources/registry/parameter-registry-provisional.yml`에서 읽는다. **Java 코드\n+상수로 두지 않는다** — 그것이 곧 007의 하드코딩이다(FR-025). PD-02가 확정되지 않았으므로 **이 값은\n+팀 확정값이 아니다**: API 응답의 `registryVersion`과 화면 표시로 임시임을 밝힌다.\n+\n+테스트는 같은 포트의 fixture 구현으로 한다. 여섯 번째 가짜 전략을 넣은 fixture로 미리보기·후보 조합\n+생성이 운영 코드 변경 없이 동작함을 검증한다(SC-010).\n+\n+## 1.1 `StrategyExecutionSupportPort` — 004와의 경계 (research R8)\n+\n+\"이 전략을 실행할 수 있는가\"는 004의 사실이므로 004에 묻는다. 007도 003도 대신 선언하지 않는다.\n+\n+```java\n+public interface StrategyExecutionSupportPort {\n+\n+    /** 004가 현재 실행을 지원하는 전략 ID 전체. */\n+    Set<String> supportedStrategyIds();\n+}\n+```\n+\n+**규약**\n \n-**임시 구현 `FixedParameterRegistry`**: `version()`이 `PROVISIONAL-{날짜}`를 돌려주고, 축과 값은\n-코드 상수로 둔다. PD-02가 확정되지 않았으므로 **이 값은 팀 확정값이 아니다** — API 응답의\n-`registryVersion`과 화면 표시로 임시임을 밝힌다.\n+- 탐색 대상 = `activeStrategies()` ∩ `supportedStrategyIds()`. 요청 전략이 앞에 없으면\n+  `STRATEGY_NOT_REGISTERED`, 뒤에 없으면 `STRATEGY_NOT_EXECUTABLE`로 **조합 생성 전에** 거부하고\n+  두 사유를 구분해 표시·저장한다(FR-026).\n+- 004가 워커에 전략을 추가하고 이 목록에 넣으면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.\n+- 조회 실패는 등록표 조회 실패와 같이 다룬다(`503 REGISTRY_UNAVAILABLE`).\n \n ## 2. `CandidateJobLauncher` — 004와의 경계\n \n@@ -70,6 +124,8 @@ public interface CandidateJobLauncher {\n \n - 두 메서드는 묶음 스냅샷(`ParamSearchSnapshot`)만 보고 조립한다. 현재 시각의 자료 버전·비용 설정을\n   다시 읽지 않는다 — 묶음은 시작 시점 버전으로 끝까지 계산한다(FR-012).\n+- `launchBaseline()`은 스냅샷의 `baselineStrategyId`와 그 전략의 **등록된 기본 시작값**으로 조립한다.\n+  어느 전략이 기준인지, 그 전략의 파라미터가 무엇인지 007은 알지 못한다(FR-013d·FR-025).\n - 후보와 기준은 같은 섹터 집합·공통 평가 구간·금액·비용·참조 버전을 쓴다(FR-007, 원칙 IV). 묶음 시작 시 후보 전략 전체의 최대 관측 기간(+최근 제외 구간)을 스냅샷에 `warmupTradingDays`로 고정하고 모든 후보와 기준 실행에 동일하게 넘긴다(004 R-15). 004는 이 값이 해당 전략의 요구값보다 작으면 422로 거부하므로 스냅샷 계산이 틀리면 묶음이 시작 단계에서 드러난다.\n - 발행 실패(브로커 장애)는 후보를 `PENDING`으로 남기고 다음 시도에 다시 발행한다. `FAILED`로 바꾸지\n   않는다 — 계산 실패와 발행 실패는 다르다(FR-011).\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/contracts/param-search-internal.md",
+          "old_path": "specs/007-auto-parameter-search/contracts/param-search-internal.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -32,8 +32,8 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원\n | `owner_user_id` | BIGINT NULL | 인증 도입 전 NULL (R4) |\n | `strategy_ids` | JSONB NOT NULL | 고정한 전략군 |\n | `instrument_ids` | JSONB NOT NULL | 고정한 섹터 후보 집합 |\n-| `registry_version` | VARCHAR(64) NOT NULL | 등록표 버전. 임시 구현은 `PROVISIONAL-*` (R1) |\n-| `search_space` | JSONB NOT NULL | 축 이름 → 선택한 후보 값 목록. 탐색 공간 기록(FR-020) |\n+| `registry_version` | VARCHAR(64) NOT NULL | 조회한 등록표 버전. **접수 시점에 고정한다**(FR-028). 임시 구현은 `PROVISIONAL-*` (R1) |\n+| `search_space` | JSONB NOT NULL | 전략별 축과 **실제 사용한 탐색 후보값**. 아래 §2.1 (FR-020, FR-028) |\n | `search_method` | VARCHAR(32) NOT NULL | 현재 `FULL_GRID` 고정 (FR-005) |\n | `random_seed` | INTEGER NULL | 현재 항상 NULL. 무작위 표본 도입 시 채운다(FR-020) |\n | `selection_rule` | JSONB NOT NULL | 접수 시점 스냅샷. 아래 §5 |\n@@ -42,7 +42,7 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원\n | `reference_versions` | JSONB NOT NULL | 시작 시점의 자료·등록표·비용·엔진 버전 (FR-012) |\n | `baseline_job_id` | BIGINT NULL FK → `backtest_job(id)` | 동일 비중 기준 (FR-013d) |\n | `status` | VARCHAR(20) NOT NULL | §3 상태 |\n-| `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` |\n+| `stop_reason` | VARCHAR(32) NULL | `CANCELLED` `CANDIDATE_LIMIT` `TIME_LIMIT` `FAILURE_LIMIT` `NO_VALID_CANDIDATE` `STRATEGY_NOT_REGISTERED` `STRATEGY_NOT_EXECUTABLE` (뒤 둘은 2026-09-11 추가, FR-026) |\n | `counts` | JSONB NOT NULL | 예상·유효·완료·실패·제외·미실행 (FR-008) |\n | `selection` | JSONB NULL | 선정 결과 스냅샷. 완료 후 1회 계산해 저장 |\n | `data_version_changed` | BOOLEAN NOT NULL | 계산 중 자료 갱신 발생 표시 (FR-012) |\n@@ -54,17 +54,44 @@ backtest_job 1 ──── 0..1 backtest_result (기존)  성과 숫자의 원\n **`counts`를 컬럼이 아니라 JSONB로 두는 이유**: 6개 값이 함께 갱신되고 개별 필터·정렬 대상이 아니다.\n 표시용 묶음이므로 V2 규약의 \"표시용 값은 JSONB\"에 해당한다.\n \n+### 2.1 `search_space` 구조 (2026-09-11 개정, FR-027·FR-028)\n+\n+한 묶음이 전략 여러 개를 담을 수 있고 전략마다 축 구성이 다르므로 **전략별로 축을 따로 저장한다.**\n+초판의 평면 구조(`축 → 값`)는 전략이 둘 이상이면 축 이름이 충돌한다.\n+\n+```json\n+{\n+  \"sector-momentum\": {\n+    \"strategyName\": \"섹터 모멘텀\",\n+    \"axes\": [\n+      { \"name\": \"lookbackDays\", \"label\": \"관측 기간\", \"unit\": \"거래일\", \"values\": [20, 60, 120] },\n+      { \"name\": \"topN\", \"label\": \"선정 섹터 수\", \"unit\": null, \"values\": [2, 3, 4] }\n+    ]\n+  }\n+}\n+```\n+\n+- **축을 배열로 저장하는 이유**: `jsonb`는 객체 키 순서를 보존하지 않는다(정렬해 저장한다). 축을\n+  객체 키로 두면 순서가 흔들린다. 배열은 순서를 지키고, **각 축 `values` 배열의 순서가\n+  `grid_coordinates` 인덱스의 뜻**이다(R7, FR-029).\n+- 값은 등록표가 돌려준 후보값을 **그대로** 담는다. 007이 정렬·보간·단위 변환을 하지 않는다(FR-025).\n+- `label`·`unit`·`strategyName`을 함께 남기는 이유: 등록표 버전이 올라가 축 이름이나 표시 문구가\n+  바뀐 뒤에도 그 묶음이 무엇을 탐색했는지 읽을 수 있어야 한다(FR-020, 원칙 VIII).\n+- **전체 조합 수는 전략별 (축별 값 개수의 곱)의 합**이다. 전략 하나뿐일 때 초판 계산과 같다.\n+- 등록표에 축이 없는 전략(파라미터 없음)은 `axes: []`이고 조합 1건이다.\n+\n ## 3. `param_search.status` 상태 전이\n \n ```text\n QUEUED ──▶ RUNNING ──▶ COMPLETED          모든 유효 후보가 완료 또는 실패로 끝남\n                    ├─▶ PARTIAL            취소·한도 도달로 미실행 후보가 남음\n                    └─▶ FAILED             접수 후 실행 자체가 불가 (기준 발행 실패 등)\n-QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초과·유효 조합 0건)\n+QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략)\n ```\n \n-- `REJECTED`는 저장하되 후보를 만들지 않는다. 상한 초과(FR-005b)와 유효 조합 전무(Edge Case)가 여기\n-  들어가며 `stop_reason`에 사유가 남는다.\n+- `REJECTED`는 저장하되 후보를 만들지 않는다. 상한 초과(FR-005b), 유효 조합 전무(Edge Case),\n+  미등록 전략과 실행 미지원 전략(FR-026)이 여기 들어가며 `stop_reason`에 사유가 남는다. 등록표\n+  조회 실패는 여기 들어가지 않는다 — 일시적 장애라 묶음을 만들지 않고 503만 돌려준다(research R9).\n - `PARTIAL`은 부분 결과임과 완료 범위를 표시하는 근거다(FR-009).\n - `COMPLETED`와 `PARTIAL` 둘 다 선정 계산을 수행한다. 취소된 묶음도 완료된 후보로 비교할 수 있다.\n \n@@ -77,7 +104,7 @@ QUEUED ──▶ REJECTED                       접수 시점 거부 (상한 초\n | `candidate_no` | INTEGER NOT NULL | 묶음 내 순번. `(param_search_id, candidate_no)` UNIQUE |\n | `strategy_id` | VARCHAR(64) NOT NULL | |\n | `parameters` | JSONB NOT NULL | 파라미터 조합 하나 |\n-| `grid_coordinates` | JSONB NOT NULL | 축 이름 → 등록표 인덱스. 이웃 판정의 근거 (R7) |\n+| `grid_coordinates` | JSONB NOT NULL | 축 이름 → `search_space`의 값 인덱스. 이웃 판정의 근거 (R7). 좌표의 뜻은 `strategy_id` 안에서만 유효하다 — 이웃은 같은 전략 안에서만 찾는다 |\n | `backtest_job_id` | BIGINT NULL FK → `backtest_job(id)` | 발행 전·제외 후보는 NULL |\n | `status` | VARCHAR(20) NOT NULL | §4.1 |\n | `reason_code` | VARCHAR(64) NULL | 제외·실패 사유 코드 |\n@@ -118,7 +145,11 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr\n \n ```json\n {\n-  \"drawdownFilter\": { \"type\": \"NOT_WORSE_THAN_BASELINE\", \"baseline\": \"EQUAL_WEIGHT\" },\n+  \"drawdownFilter\": {\n+    \"type\": \"NOT_WORSE_THAN_BASELINE\",\n+    \"baselineStrategyId\": \"<등록표가 기준 전략 역할로 지정한 ID>\",\n+    \"baselineStrategyName\": \"<표시용. 등록표 값>\"\n+  },\n   \"stabilityFilter\": { \"type\": \"BATCH_PERCENTILE\", \"keepTopPercent\": 50 },\n   \"sortMetric\": \"NET_RETURN\",\n   \"displayCount\": 5,\n@@ -138,7 +169,13 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr\n | 규칙 | 근거 | 적용 지점 |\n |---|---|---|\n | 유효 후보 수 > 후보 수 상한이면 접수 거부, 표본 추출·간격 확대 금지 | FR-005b | `ParamSearchService.create` 전 `GridExpander` 결과 검사 |\n-| 유효성 위반 조합은 계산 전 `EXCLUDED` + 사유 | FR-006 | `CandidateValidator` |\n+| 유효성 위반 조합은 계산 전 `EXCLUDED` + 사유 | FR-006 | `CandidateValidator`가 `ParameterRegistryPort.validate()` 결과를 그대로 쓴다. 판정 규칙을 007에 두지 않는다(FR-025) |\n+| 등록표에 없는 전략은 조합 생성 전 거부, `status=REJECTED` + `stop_reason=STRATEGY_NOT_REGISTERED` | FR-026 | `SearchTargetResolver` |\n+| 004가 실행을 지원하지 않는 전략은 조합 생성 전 거부, `stop_reason=STRATEGY_NOT_EXECUTABLE` | FR-026 | 같은 지점. 두 사유를 구분해 남긴다 |\n+| 등록 정보·지원 목록 조회 실패는 묶음을 저장하지 않고 `503 REGISTRY_UNAVAILABLE`. 캐시·기본값으로 대체 실행 금지 | FR-028, R9 | 접수 진입점 |\n+| 미리보기 때 본 등록표 버전과 접수 시점 버전이 다르면 `409 REGISTRY_VERSION_CHANGED` | FR-028, R9 | 접수 진입점 |\n+| 기본 시작값·입력 허용 범위는 등록표 값을 그대로 쓴다 | FR-027 | 007에 기본값 상수를 두지 않는다 |\n+| 이웃 인덱스의 뜻은 등록표가 준 후보값 순서에서만 온다 | FR-029 | `search_space.axes[].values` 순서 |\n | 유효 조합 0건이면 실행하지 않고 어느 제약 때문인지 한 문장 | Edge Case | 같은 지점, `status=REJECTED` |\n | 모든 후보와 기준이 같은 섹터 집합·공통 구간·공통 워밍업(`warmupTradingDays`)·금액·비용·참조 버전 | FR-007, FR-013d, 004 R-15 | `CandidateJobLauncher`가 묶음 스냅샷만 보고 조립 |\n | 묶음은 시작 시점 참조 버전으로 끝까지 계산 | FR-012 | `reference_versions` 스냅샷 + 갱신 시 `data_version_changed` |\n@@ -146,6 +183,7 @@ FAILED  ──▶ DISPATCHED                    사용자 요청 재시도. retr\n | 문턱 통과 후보 < 5면 그 수만, 0이면 '기준 충족 후보 없음' | Edge Case | `CandidateSelector` |\n | 동률은 전부 표시, 임의 순서 금지 | Edge Case, R3 | `CandidateSelector` |\n | 기준 백테스트 실패 시 하락 폭 필터 미적용 + 사실 표시 | Edge Case | `CandidateSelector` |\n+| 기준 전략 역할이 등록표에 지정돼 있지 않으면 하락 폭 필터 미적용 + 사실 표시. 기준 전략을 007이 추정하지 않는다 | FR-013d, FR-025 | 접수 시 스냅샷 고정, `CandidateSelector` |\n | 평가 분할 미등록이면 전 후보 `UNVALIDATED` | FR-014, R5 | 후보 생성 시 기본값 |\n | 재시도는 시작 시점 스냅샷을 재사용하고 새 묶음을 만들지 않는다 | FR-024 | `ParamSearchService.retryFailed` |\n | 재시도 완료 후 선정을 다시 계산하되 선정 규칙은 바꾸지 않는다 | FR-024, FR-013c | `CandidateSelector` 재실행 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/data-model.md",
+          "old_path": "specs/007-auto-parameter-search/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,7 +12,10 @@\n 기술 접근은 **새 계산 경로를 만들지 않는 오케스트레이션**이다. 후보 1건 = 기존 `backtest_job` 1행 +\n `backtest.jobs` 메시지 1건이고, Worker는 변경하지 않는다. 007이 새로 만드는 것은 그리드 전개와\n 유효성 사전 제외, 발행 창(window) 기반 실행 관리, 결과 집계, 완료 후 1회 선정 계산, 재현 기록이다.\n-004가 다섯 배분 전략을 워커에 추가하면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.\n+\n+**전략은 007이 갖지 않는다.** 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·\n+단위·유효성 규칙은 003 등록표에서, 실행 지원 여부는 004에서 조회한다(FR-025~FR-029). 003에 활성\n+전략이 추가되고 004가 그 실행을 지원하면 007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다.\n \n ## Technical Context\n \n@@ -40,7 +43,9 @@ Phase 0에서 5건을 해소했다. 상세 근거는 [research.md](research.md).\n \n | 항목 | 결론 |\n |---|---|\n-| 파라미터 등록표 원천 (PD-02·003 미구현) | `ParameterRegistryPort` + 임시 구현체. 003 완성 시 구현체 교체 (R1) |\n+| 파라미터 등록표 원천 (PD-02·003 미구현) | `ParameterRegistryPort` + 자원 파일 기반 임시 구현체. 003 완성 시 구현체 교체 (R1, 2026-09-11 개정) |\n+| 실행 지원 전략의 원천 (FR-026) | `StrategyExecutionSupportPort`로 004에 조회. 등록 전략 ∩ 실행 지원 전략만 탐색 대상 (R8) |\n+| 등록표 버전 드리프트·조회 실패 (FR-028) | 접수 시점 버전 고정. 미리보기와 다르면 409, 조회 실패는 503으로 거부하고 대체값을 쓰지 않는다 (R9) |\n | 실행시간·동시성 상한·중단 규칙 (PD-05 잔여) | 값 미확정. 발행 창 구조로 값과 무관하게 동작 (R2) |\n | 동률 처리 (PD-05 잔여) | spec의 대체 규칙 사용 — 전부 표시, 임의 순서 금지 (R3) |\n | 묶음 소유자 (인증 미구현) | `owner_user_id` nullable, 현재 NULL (R4) |\n@@ -86,6 +91,28 @@ plan / tasks 항목, \"AI 작업 방식\"의 브랜치·Task 생성 항목이다.\n 3. 정렬 지표 이름(\"비용 차감 후 수익\")을 화면에 명시한다. 한 항목 기준 정렬은 FR-017이 허용한다.\n 4. MR 리뷰 체크리스트에 \"순위 배지·추천 표현 0건\"을 넣는다(공통 성공 기준).\n \n+### 설계 제약 (전략 비의존성 — FR-025~FR-029, 2026-09-11 결정)\n+\n+007은 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙을 갖지\n+않고, 003 등록표와 004 실행 지원 목록을 조회해 쓰기만 한다. 코드·리뷰에서 다음을 고정한다.\n+\n+1. `paramsearch` 패키지의 운영 코드에 전략 ID 상수·전략 목록 enum·`strategyId` 분기(`switch`/`if`)·\n+   전략별 파라미터 기본값을 두지 않는다. 전략은 `ParameterRegistryPort`가 돌려주는 값으로만 다룬다.\n+2. 임시 등록표(003 완성 전)의 축·후보값·기본값·허용 범위·유효성 규칙은 **자원 파일**\n+   (`backend/src/main/resources/registry/parameter-registry-provisional.yml`)에 두고, 로더는 그\n+   파일을 전략별 해석 없이 읽는다. Java 상수로 박으면 그것이 곧 007의 하드코딩이다(FR-025).\n+3. 프론트도 같다. 전략 이름·파라미터 라벨·단위·기본값·후보값은 응답에서만 읽고 `frontend/src/`\n+   어디에도 전략 목록이나 파라미터 기본값을 두지 않는다.\n+4. 테스트는 등록표 fixture로 한다. 여섯 번째 가짜 전략을 넣은 fixture로 미리보기·후보 조합 생성이\n+   운영 코드 변경 없이 동작함을 검증한다(SC-010, spec US5 시나리오 2). fixture는 FR-025의 예외다.\n+5. MR 리뷰 체크리스트에 \"전략 ID 상수·전략별 분기 0건\"을 넣는다(위 순위 배지 규칙과 같은 자리).\n+\n+**다중 전략의 축 분리**: 한 묶음이 전략 여러 개를 담을 수 있으므로(spec Assumptions) 탐색 공간은\n+전략별로 축을 따로 갖는다. 전체 조합 수는 전략별 (축별 후보 개수의 곱)의 **합**이고, 인접 이웃\n+판정은 **같은 전략 안에서만** 한다 — 전략이 다른 후보는 파라미터 축 자체가 다르므로 이웃이 아니다.\n+M1에서 이미 구현한 `SearchSpace` VO가 평면 `축 → 값`이라 이 개정으로 `전략 → 축 → 값`으로 바꾼다\n+(JSONB 컬럼이라 마이그레이션은 없다. [data-model.md](data-model.md) §2.1 참조).\n+\n ## Project Structure\n \n ### Documentation (this feature)\n@@ -111,13 +138,16 @@ specs/007-auto-parameter-search/\n backend/src/main/java/com/ssafy/thorp/paramsearch/     # 신규 모듈\n ├── application/\n │   ├── command/      CreateParamSearchCommand, PreviewParamSearchCommand\n-│   ├── port/         ParameterRegistryPort, CandidateJobLauncher\n+│   ├── port/         ParameterRegistryPort      # 003 등록표 조회 (FR-025)\n+│   │                 StrategyExecutionSupportPort # 004 실행 지원 조회 (FR-026)\n+│   │                 CandidateJobLauncher\n │   ├── repository/   ParamSearchRepository, SearchCandidateRepository\n │   ├── result/       ParamSearchPreviewResult, ParamSearchResult,\n │   │                 ParamSearchDetailResult, CandidatePageResult\n │   ├── service/      ParamSearchService          # 접수·취소·재시도 유스케이스 (FR-024)\n │   │                 GridExpander                # 조합 전개 + 그리드 좌표\n-│   │                 CandidateValidator          # 유효성 사전 제외 (FR-006)\n+│   │                 SearchTargetResolver        # 등록 ∩ 실행 지원 판정·거부 (FR-026)\n+│   │                 CandidateValidator          # 등록 규칙 호출로 사전 제외 (FR-006)\n │   │                 CandidateDispatcher         # 발행 창 관리 (R2)\n │   │                 ParamSearchProgressService  # 결과 이벤트 집계\n │   │                 NeighborStabilityCalculator # 인접 안정성 (FR-013a)\n@@ -134,7 +164,8 @@ backend/src/main/java/com/ssafy/thorp/paramsearch/     # 신규 모듈\n ├── infrastructure/\n │   ├── persistence/  ParamSearchJpaEntity, SearchCandidateJpaEntity, *JpaRepository,\n │   │                 *Mapper, *RepositoryImpl\n-│   ├── registry/     FixedParameterRegistry      # 003 완성 전 임시 구현 (R1)\n+│   ├── registry/     ProvisionalFileParameterRegistry # 003 완성 전 임시 구현. 자원 파일 로더 (R1)\n+│   ├── support/      StrategyExecutionSupportAdapter  # 004 지원 전략 조회 (R8)\n │   ├── launcher/     CandidateJobLauncherImpl    # 004 접수 유스케이스 호출\n │   ├── config/       ParamSearchProperties       # 한도·발행 창 설정\n │   └── listener/     BacktestFinishedListener    # 인메모리 이벤트 수신 (R6)\n@@ -150,6 +181,11 @@ backend/src/main/java/com/ssafy/thorp/backtest/         # 기존 모듈 최소 \n backend/src/main/resources/db/migration/\n └── V3__param_search.sql                                # 신규\n \n+backend/src/main/resources/registry/\n+└── parameter-registry-provisional.yml                  # 신규. 003 완성 전 임시 등록표 데이터\n+                                                        # (전략·축·후보값·기본값·허용 범위·유효성 규칙)\n+                                                        # 007 운영 코드에는 이 값이 들어가지 않는다\n+\n backend/src/test/java/com/ssafy/thorp/paramsearch/       # 단위 + 통합 테스트\n \n frontend/src/\n@@ -181,6 +217,7 @@ infrastructure`)을 그대로 쓰고, 007을 **별도 최상위 도메인 패키\n | VI | PASS 강화 | 미완료·제외·실패 후보의 성과 필드를 `null`로 고정했다. 0으로 채울 경로가 없다 |\n | VIII | PASS | `REJECTED` 묶음도 저장해 실행하지 않은 이유가 남는다. `random_seed`는 현재 NULL이고 그 사실을 기록한다 |\n | IX | PASS 강화 | 발행 창 불변식(한 묶음의 `DISPATCHED` ≤ 창 크기)이 큐 독점을 구조로 막는다 |\n+| IV·VIII (2026-09-11 개정) | PASS 강화 | 전략 목록·파라미터·유효성 규칙의 원천이 003 등록표 하나로 좁혀졌다. 007이 같은 규칙을 두 번째로 정의할 경로가 설계에서 사라지고, 묶음이 등록표 버전과 실제 사용한 후보값을 함께 저장해 등록표가 바뀐 뒤에도 후보 집합을 재구성할 수 있다(FR-028) |\n \n **`/speckit-analyze` 이후 해소한 사항** — constitution \"실행·캐시\"가 \"진행·취소·**재시도**와 동일 결과\n 재사용을 제공한다\"를 요구하는데 초판에는 재시도가 없었다. spec에 FR-024(실패 후보 재시도)와 SC-009를\n@@ -206,21 +243,36 @@ constitution v3.0.0 \"Jira 연계\"가 **`작업 묶음 = 1 Branch = 1 MR`** 이\n | 묶음 | Jira Task 요약 | 브랜치 | 포함 T### | 수 |\n |---|---|---|---|---|\n | M1 | `[BE] 자동 탐색 기반 — 골격·도메인·스키마·영속화` | `feat(be)/157-paramsearch-foundation` | T001~T004, T007~T026, T020a | 25 |\n-| M2 | `[BE] 경계 포트·오류 매핑과 그리드 전개·유효성` | `feat(be)/{N}-paramsearch-boundary-grid` | T027~T039, T089, T090 | 15 |\n-| M3 | `[BE] 탐색 접수 유스케이스와 HTTP API` | `feat(be)/{N}-paramsearch-intake` | T040~T057, T049a | 19 |\n-| M4 | `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` | `feat(fe)/{N}-paramsearch-preflight` | T005, T006, T058~T064 | 9 |\n-| M5 | `[BE] 후보 선정 계산과 조회 API` | `feat(be)/{N}-candidate-selection` | T065~T081 | 17 |\n+| M2 | `[BE] 경계 포트·오류 매핑과 그리드 전개·유효성·전략 비의존성` | `feat(be)/{N}-paramsearch-boundary-grid` | T026a~T026c, T027~T039, T028a, T036a~T036d, T089, T090, T127~T133 | 30 |\n+| M3 | `[BE] 탐색 접수 유스케이스와 HTTP API` | `feat(be)/{N}-paramsearch-intake` | T040~T057, T049a~T049c | 21 |\n+| M4 | `[FE] 탐색 실행 전 확인·상세 변경·진행 상태` | `feat(fe)/{N}-paramsearch-preflight` | T005, T006, T058~T064, T063a, T063b, T135, T136 | 13 |\n+| M5 | `[BE] 후보 선정 계산과 조회 API` | `feat(be)/{N}-candidate-selection` | T065~T081, T074a | 18 |\n | M6 | `[FE] 탐색 결과 화면과 비교 연결` | `feat(fe)/{N}-paramsearch-result` | T082~T088 | 7 |\n-| M7 | `[BE] 거부·취소·재시도·부분 결과와 실행 한도` | `feat(be)/{N}-paramsearch-reject-cancel-limits` | T091~T103, T098a, T098b, T098c, T101a | 17 |\n+| M7 | `[BE] 거부·취소·재시도·부분 결과와 실행 한도` | `feat(be)/{N}-paramsearch-reject-cancel-limits` | T091~T103, T098a, T098b, T098c, T101a, T134 | 18 |\n | M8 | `[FE] 거부·부분 결과 표시와 검증 배지` | `feat(fe)/{N}-paramsearch-notices-badge` | T104~T107, T107a, T114~T116 | 8 |\n | M9 | `[BE] 검증 라벨·선정 규칙 불변성과 실행 측정` | `feat(be)/{N}-validation-label-metrics` | T108~T113, T117, T117a | 8 |\n | M10 | `[DOCS] 계약·ADR 동기화와 quickstart 종단 확인` | `docs(infra)/{N}-paramsearch-docs` | T120~T123, T125, T126 | 6 |\n \n-**묶음 10개 = 브랜치 10개 = MR 10개.** tasks.md의 134개 중 131개를 덮고, 아래 3개는 의도적으로 뺐다.\n+**묶음 10개 = 브랜치 10개 = MR 10개.** tasks.md의 157개 중 154개를 덮고, 아래 3개는 의도적으로 뺐다.\n+2026-09-11 개정으로 23개가 늘었고 그 전부를 M2·M3·M4·M7이 나눠 가졌다 — **새 묶음은 만들지 않았다.**\n \n 각 묶음의 Jira Task가 없으면 **브랜치·MR을 만들기 전에** Task를 먼저 만들고 그 Ticket 번호로\n 브랜치를 만든다. `{N}`이 그 자리다. 개별 `T###` 번호는 MR 본문의 \"주요 변경 사항\"에 나열한다.\n \n+### 2026-09-11 개정이 묶음에 주는 영향\n+\n+전략 비의존성 결정(FR-025~FR-029)은 **묶음 경계를 바꾸지 않는다.** 범위가 늘어난 곳은 두 곳이다.\n+\n+- **M1**(기반): `SearchSpace` VO를 `전략 → 축 → 값`으로 바꾸고 `StopReason`에 미등록·실행 미지원\n+  값을 추가한다. 이미 머지된 묶음이므로 이 변경은 M2 브랜치에서 함께 처리하고 MR 본문에 사유를\n+  남긴다. JSONB 컬럼이라 V3 마이그레이션은 다시 만들지 않는다.\n+- **M2**(경계 포트·전개·유효성): `ParameterRegistryPort` 확장(활성 전략 목록·표시 정보·기본 시작값·\n+  허용 범위), `StrategyExecutionSupportPort` 신설, `SearchTargetResolver`(미등록·미지원 거부),\n+  자원 파일 기반 임시 등록표, 6번째 전략 fixture 테스트가 여기로 들어간다.\n+\n+`tasks.md`는 이 개정 전에 생성된 것이라 위 항목의 `T###`가 없다. **`/speckit-tasks`를 다시 돌려\n+태스크를 갱신한 뒤 M2에 착수한다.**\n+\n ### 묶음 구성 개정 이력 (24개 → 10개)\n \n 초판은 묶음을 24개(B01~B24)로 뒀다. 구현 착수 시점에 **10개(M1~M10)로 합쳤다.** constitution\n@@ -270,7 +322,9 @@ MR 본문에 남긴다\"에 따라 사유를 남긴다. **T### 범위는 하나\n \n ### 남은 크기 위험\n \n-M1(25)·M3(19)·M5(17)·M7(17)은 조건 3(리뷰어가 한 번에 읽을 수 있는 범위)의 경계에 있다. M1은\n+M2(30)·M1(25)·M3(21)·M5(18)·M7(18)은 조건 3(리뷰어가 한 번에 읽을 수 있는 범위)의 경계에 있다.\n+2026-09-11 개정으로 M2가 가장 커졌다 — **분량이 문제가 되면 M2에서 US5 검증(T127~T133)을 떼어\n+별 묶음으로 두는 것이 첫 번째 후퇴선이고**, 그 태스크들은 fixture만 쓰므로 독립 검증·롤백이 된다. M1은\n T011~T017이 enum·VO 단발 파일이라 실질 분량이 작다고 보고 합쳤다. **리뷰에서 분량이 문제가 되면\n 첫 번째 후퇴선은 M1에서 B04(T008~T010, T021~T026)를 다시 떼는 것이고**, 그때는 이 절에 다시 기록한다.\n \n@@ -290,22 +344,26 @@ T011~T017이 enum·VO 단발 파일이라 실질 분량이 작다고 보고 합\n \n ## 이 plan이 다루지 않는 것\n \n-- 후보 하나의 계산 규칙과 다섯 배분 전략 구현 — [004](../004-backtest-execution/spec.md) 소유.\n+- 후보 하나의 계산 규칙과 배분 전략 구현, 그리고 어느 전략의 실행을 지원하는지 —\n+  [004](../004-backtest-execution/spec.md) 소유. 007은 지원 목록을 조회만 한다(FR-026).\n   **007의 종단 검증은 004 없이는 momentum 단일 전략으로만 가능하다.**\n-- 파라미터 등록표의 실제 값(PD-02) — [003](../003-strategy-settings/spec.md) 소유\n+- 전략 목록·표시 정보·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙과 그\n+  실제 값(PD-02) — [003](../003-strategy-settings/spec.md) 소유. 007은 조회해 쓰기만 한다(FR-025)\n - 비교 화면 구성 — [005](../005-result-comparison/spec.md) 소유. 007은 후보를 비교 대상으로 넘기는\n   연결만 만든다(FR-019)\n - 내 기록 목록·보관 정책(PD-13) — [006](../006-my-records/spec.md) 소유\n - 인증·인가 도입 — 소유 spec 없음. 007은 nullable 소유자 컬럼만 준비한다(R4)\n - 실행 한도의 확정값(PD-06)과 검증 설계(PD-12) — 실측·팀 확정 대기\n \n-**PD-05 잔여 세 값이 확정될 때까지 자동 탐색 모듈은 기능 플래그로 꺼져 있다.**\n-`thorp.param-search.enabled`가 `false`면 `ParamSearchConfig`가 로드되지 않는다. 공통 설정의 기본값이\n-`false`이고 로컬만 `true`다. `ParamSearchProperties`의 네 한도가 `@NotNull`이라 플래그 없이 무조건\n-로드하면 값을 채우지 않은 환경에서 **애플리케이션 전체가 기동에 실패**한다 — 007이 아직 엔드포인트를\n-노출하지 않는 단계에서 기존 기능까지 내려가는 것은 받아들일 수 없다. 값을 추측해 코드 기본값으로 박는\n-것(constitution \"AI 작업 방식\" 위반)과 배포를 깨는 것 사이의 세 번째 선택이다.\n-\n-`dispatch-window`·`time-limit-seconds`·`consecutive-failure-limit`가 정해지면 그 값을 설정에 넣고\n-플래그를 켠다. 스키마(V3)는 플래그와 무관하게 Flyway가 적용하므로 나중에 켜도 마이그레이션을 다시\n-할 일이 없다. `ParamSearchProperties`를 주입하는 빈은 같은 플래그 조건을 가져야 한다(M3 이후).\n+**자동 탐색 모듈은 기능 플래그로 꺼져 있다.** `thorp.param-search.enabled`가 `false`면\n+`ParamSearchConfig`가 로드되지 않는다. 공통 설정의 기본값이 `false`이고 로컬만 `true`다. 실행 한도\n+네 값(후보 수·실행시간·발행 창·연속 실패)은 2026-09-10 임시값으로 확정해 설정에 넣었으므로 플래그를\n+켜도 기동이 실패하지는 않는다. 그래도 공통 기본값을 `false`로 두는 이유는 007이 아직 엔드포인트를\n+노출하지 않기 때문이다(M1 단계) — 미완성 모듈을 운영에서 켜 둘 이유가 없다. HTTP API가 붙는 M3에서\n+`true`로 바꾼다.\n+\n+`ParamSearchProperties`의 네 한도는 `@NotNull`이라 **플래그를 켠 채 값을 비우면 애플리케이션 전체가\n+기동에 실패**한다. 값을 지울 때는 플래그도 함께 끈다. 스키마(V3)는 플래그와 무관하게 Flyway가\n+적용하므로 나중에 켜도 마이그레이션을 다시 할 일이 없다. `ParamSearchProperties`를 주입하는 빈은 같은\n+플래그 조건을 가져야 한다(M3 이후). 남은 팀 결정은 동률 처리 하나이며(PD-05), 그 값은 spec Edge\n+Cases의 대체 규칙(전부 표시·임의 순서 금지, R3)으로 대신하고 있어 착수를 막지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/plan.md",
+          "old_path": "specs/007-auto-parameter-search/plan.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -9,7 +9,11 @@\n ## 사전 조건\n \n **004가 아직 없다는 것을 전제로 한 절차다.** 현재 워커는 단일 종목 momentum만 계산하므로 이 가이드는\n-섹터 1종목으로 확인한다. 다섯 배분 전략이 붙으면 `instrumentIds`를 늘려 같은 절차를 반복한다.\n+섹터 1종목으로 확인한다. 004가 배분 전략을 추가하고 실행 지원 목록에 넣으면 `instrumentIds`를 늘려\n+같은 절차를 반복한다 — **007 코드를 고치지 않는다**(FR-026).\n+\n+등록표 데이터는 `backend/src/main/resources/registry/parameter-registry-provisional.yml`에 있다.\n+축·후보값·기본값을 바꿔 보려면 그 파일만 고친다. 007 코드에는 전략·파라미터값이 없다(FR-025).\n \n ```bash\n # 1. 인프라\n@@ -151,6 +155,50 @@ FROM search_candidate WHERE param_search_id IN (:a, :b) GROUP BY param_search_id\n \n `searchId`는 다르다. 같은 조건 재실행은 항상 새 묶음이다(FR-013c).\n \n+## 시나리오 7 — 전략 비의존성 (US5, SC-010·SC-011·SC-012)\n+\n+**등록표만 바꿔서 새 전략이 탐색 대상이 되는지** 확인한다. 007 소스는 한 줄도 고치지 않는다.\n+\n+```bash\n+# 1. 미리보기의 전략 목록·축·기본값이 모두 등록표에서 오는지 (FR-025, FR-027)\n+curl -s -X POST localhost:8080/param-searches/preview \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]}}' \\\n+  | jq '{registryVersion, strategies, spaceSummary}'\n+\n+# 2. 자원 파일에 여섯 번째 전략을 추가한다 (코드 수정 없음)\n+#    backend/src/main/resources/registry/parameter-registry-provisional.yml 에\n+#    축 개수와 후보 개수가 기존 전략과 다른 전략 하나를 넣고 백엔드를 재기동한다.\n+\n+# 3. 그 전략으로 미리보기가 동작하고 조합 수가 맞는지 (SC-010, SC-011)\n+#    전체 조합 수 = 전략별 (축별 후보 개수의 곱)의 합\n+curl -s -X POST localhost:8080/param-searches/preview \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"<새-전략-id>\"]}}' \\\n+  | jq '.data.workload'\n+\n+# 4. 등록표에 없는 전략 → 422 STRATEGY_NOT_REGISTERED (SC-012)\n+curl -s -o /dev/null -w '%{http_code}\\n' -X POST localhost:8080/param-searches \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"no-such-strategy\"]},\"registryVersion\":\"PROVISIONAL-2026-09-10\"}'\n+\n+# 5. 등록됐지만 004가 실행을 지원하지 않는 전략 → 422 STRATEGY_NOT_EXECUTABLE (SC-012)\n+#    위 2단계에서 추가한 전략이 워커에 없으므로 그대로 실행을 시도하면 이 코드가 나온다.\n+\n+# 6. 미리보기와 다른 registryVersion으로 실행 → 409 REGISTRY_VERSION_CHANGED (FR-028)\n+curl -s -X POST localhost:8080/param-searches \\\n+  -H 'Content-Type: application/json' \\\n+  -d '{\"universe\":{\"instrumentIds\":[\"069500.XKRX\"]},\"strategy\":{\"strategyIds\":[\"momentum\"]},\"registryVersion\":\"PROVISIONAL-1999-01-01\"}' | jq '.error'\n+```\n+\n+확인:\n+\n+- 1단계 응답의 전략 이름·축 라벨·단위·기본값이 자원 파일 값과 일치한다. 007 소스에서\n+  `grep -rn \"momentum\" backend/src/main/java/com/ssafy/thorp/paramsearch` 결과가 **0건**이다(SC-010).\n+- 3단계에서 축 개수·후보 개수가 다른 전략의 조합 수가 기대치와 같다(SC-011).\n+- 4·5단계가 서로 다른 오류 코드로 거부되고, 묶음이 `REJECTED`로 저장되며 `stop_reason`이 구분된다.\n+- 6단계는 묶음을 만들지 않는다(`param_search` 행이 늘지 않는다).\n+\n ## 자동 테스트\n \n ```bash\n@@ -176,7 +224,7 @@ Backend 테스트가 덮어야 하는 것(구현 Task에서 작성):\n \n ## 아직 확인할 수 없는 것\n \n-- **다섯 배분 전략의 탐색** — 004 미구현. 2종목 이상은 후보 Job이 `FAILED`가 된다.\n+- **배분 전략의 탐색** — 004 미구현이라 실행 지원 목록이 momentum뿐이다. 2종목 이상은 후보 Job이 `FAILED`가 된다.\n - **파라미터 등록표의 실제 값** — PD-02 미확정. `registryVersion`이 `PROVISIONAL-*`인 동안의 결과는\n   팀 확정 등록표의 결과가 아니다.\n - **미사용 검증 결과 표시** — PD-12 미확정. 전 후보가 `UNVALIDATED`이므로 SC-005는 자동 만족이며\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/quickstart.md",
+          "old_path": "specs/007-auto-parameter-search/quickstart.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -23,6 +23,72 @@ FR-005a가 이미 요구한다.\n - 003 완성까지 007 착수 보류 — 병렬 개발을 막는다(specs/README \"우선순위는 병렬 개발을 막지 않는다\").\n - 등록표를 007이 소유 — spec 003과 소유권이 충돌하고 같은 규칙이 두 곳에 생긴다.\n \n+### R1 개정 (2026-09-11, spec FR-025·FR-027)\n+\n+**무엇이 바뀌었나**: 초판의 임시 구현체 `FixedParameterRegistry`는 축과 후보값을 **Java 코드 상수**로\n+뒀다. spec이 \"007 운영 코드에 전략 목록 상수·전략별 파라미터값을 두지 않는다\"(FR-025)를 요구하게\n+되었으므로 그 구현은 규칙 위반이다.\n+\n+**Decision**: 임시 구현체를 `ProvisionalFileParameterRegistry`로 바꾼다. 등록표 데이터는\n+`backend/src/main/resources/registry/parameter-registry-provisional.yml` 한 파일에 두고, 로더는\n+전략별 해석 없이 파일 구조만 읽는다. 포트 반환형도 spec이 요구하는 항목을 모두 담도록 넓힌다 —\n+활성 전략 목록, 전략명·표시 정보, 축별 **입력 허용 범위**와 **기본 시작값**, **자동 탐색 후보값**,\n+단위, 전략별 유효성 규칙 호출(계약은\n+[contracts/param-search-internal.md](contracts/param-search-internal.md) §1).\n+\n+**Rationale**: 값이 자원 파일에 있으면 003이 완성될 때 로더 대신 003 구현체로 바꾸기만 하면 되고,\n+그 전까지도 007 운영 코드에는 전략 이름이 한 번도 나타나지 않는다. 자원 파일은 003 등록표의\n+대역(stand-in)이며 007이 소유권을 주장하는 값이 아니다 — `version()`이 `PROVISIONAL-*`를 돌려주는\n+것으로 그 사실을 계속 표시한다.\n+\n+**Alternatives considered**:\n+- 코드 상수 유지 + \"예외적 허용\" 문구 — FR-025를 문서로 무력화한다. 거부.\n+- 임시 등록표를 DB 테이블로 — 003이 소유할 스키마를 007이 먼저 만들어 소유권이 뒤집힌다. 거부.\n+- 등록표 없이 007 착수 보류 — R1 초판과 같은 이유로 거부.\n+\n+---\n+\n+## R8. 실행 지원 전략의 원천 (2026-09-11, spec FR-026)\n+\n+**Decision**: `StrategyExecutionSupportPort`를 007 안에 정의하고 `backtest`(004) 모듈의 구현체가\n+지원 전략 목록을 돌려준다. 탐색 대상은 **003 등록표의 활성 전략 ∩ 004 지원 전략**이며, 어느 한쪽에\n+없으면 조합 생성 전에 거부한다(`STRATEGY_NOT_REGISTERED` / `STRATEGY_NOT_EXECUTABLE`).\n+\n+**Rationale**: 전략 목록은 003의 사실이고 실행 가능 여부는 004의 사실이다. 한쪽이 다른 쪽을 대신\n+선언하면 같은 사실이 두 문서에 갈라진다. 007이 자체 목록으로 판정하면 FR-025 위반이다. 004가 워커에\n+전략을 추가할 때 지원 목록만 늘어나면 007은 코드 변경 없이 그 전략을 얻는다.\n+\n+**거부를 조합 생성 앞에 두는 이유**: 미지원 전략을 그대로 발행하면 후보 전량이 `FAILED`로 끝나\n+\"제약 위반·실행 불가\"와 \"낮은 수익\"의 구분이 흐려진다(원칙 VI, FR-011). 실행 자원도 버린다.\n+\n+**Alternatives considered**:\n+- 003 등록표에 실행 지원 표시를 넣는다 — 003이 004의 능력을 선언하게 되어 소유권이 섞인다. 거부\n+  (2026-09-11 spec Clarifications에서 같은 이유로 기각).\n+- 004 발행 결과의 오류 코드로 사후 판정 — 위 \"거부를 앞에 두는 이유\"와 충돌. 거부.\n+\n+---\n+\n+## R9. 등록표 버전 드리프트와 조회 실패 (2026-09-11, spec FR-028)\n+\n+**Decision**: 등록표 버전은 **실행 접수 시점**에 고정한다. 미리보기 응답의 `registryVersion`을\n+실행 요청이 되돌려 보내고, 접수 시점 버전과 다르면 `409 REGISTRY_VERSION_CHANGED`로 거부하며 다시\n+조회한 요약을 화면이 보여 확인을 받는다. 등록 정보·지원 목록 조회가 실패하면\n+`503 REGISTRY_UNAVAILABLE`로 거부하고 캐시·내부 기본값으로 대체하지 않는다.\n+\n+**Rationale**: 미리보기에서 본 조합 수·유효 후보 수와 실제 실행된 후보 집합이 다르면 재현 기록이\n+거짓이 된다(원칙 VIII). 버전을 요청에 담으면 낙관적 검사 한 번으로 그 불일치를 접수 단계에서\n+드러낼 수 있다. 대체값 실행을 막는 이유는 원칙 VI다 — 없는 등록 정보를 추정해 채우면 그 묶음의\n+참조 버전이 뜻을 잃는다.\n+\n+**저장 여부의 구분**: 미등록·실행 미지원·상한 초과·유효 조합 0건은 사용자의 선택이 남긴 결과이므로\n+묶음을 `REJECTED`로 **저장**한다(FR-020). 조회 실패는 일시적 인프라 장애이므로 저장하지 않고 503만\n+돌려준다 — `BROKER_UNAVAILABLE`을 묶음으로 남기지 않는 것과 같은 기준이다.\n+\n+**Alternatives considered**:\n+- 접수 시점에 조용히 최신 버전으로 다시 계산 — 사용자가 확인한 작업량과 다른 것을 실행한다. 거부.\n+- 미리보기 결과를 서버가 캐시해 토큰으로 재사용 — 상태를 늘리고, 캐시가 낡으면 같은 문제가 다시\n+  생긴다. 버전 비교로 충분하다. 거부.\n+\n ---\n \n ## R2. 실행시간 상한·동시성 상한·중단 규칙 (PD-05 잔여, 팀 확정 대기)\n@@ -103,8 +169,8 @@ JSONB)를 미리 둔다.\n \n **Rationale**: FR-007이 \"후보 하나의 계산은 004의 공통 거래·평가 규칙을 따른다\"고 요구한다. 같은\n 규칙을 두 번 구현하면 004와 007의 결과가 갈릴 수 있고, CLAUDE.md 아키텍처 원칙 1(Backend는 계산하지\n-않는다)·2(같은 워커 코드 수평 확장)에 맞는다. 004가 5개 배분 전략을 워커에 추가하면 007은 코드 변경\n-없이 그 전략들을 탐색 대상으로 얻는다.\n+않는다)·2(같은 워커 코드 수평 확장)에 맞는다. 004가 배분 전략을 워커에 추가하고 지원 목록에 넣으면\n+007은 코드 변경 없이 그 전략을 탐색 대상으로 얻는다(R8, FR-026).\n \n **결과 이벤트 수신 경로**: `backtest.events` 큐에는 이미 `BacktestEventListener`가 붙어 있다. 같은\n 큐에 두 번째 컨슈머를 붙이면 competing consumers라 메시지가 분배되어 둘 다 일부만 받는다. 따라서\n@@ -130,3 +196,9 @@ JSONB)를 미리 둔다.\n \n **계산 시점**: 묶음이 끝난(완료·부분 완료) 뒤 1회. 안정성 필터가 묶음 내 상대 분위(상위 50%)라\n 전체 완료 후보가 모여야 판정할 수 있다(FR-013).\n+\n+**2026-09-11 보강 — 축 순서와 전략 경계**: 인덱스의 뜻은 등록표가 돌려준 후보값 목록의 순서에서\n+온다. 007이 값을 해석해 순서를 새로 만들지 않으며, 등록표가 순서·인접 정보를 주면 그 값을 그대로\n+쓴다(FR-029). 이 덕분에 숫자가 아닌 축(범주형)도 전략별 분기 없이 같은 규칙으로 다뤄진다. 또한\n+이웃은 **같은 `strategy_id` 안에서만** 찾는다 — 전략이 다르면 축 구성 자체가 달라 \"한 축만 한 칸\n+다름\"이 정의되지 않는다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/research.md",
+          "old_path": "specs/007-auto-parameter-search/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -14,7 +14,7 @@\n \n ## 범위 요약\n \n-사용자가 설정을 하나씩 바꿔 반복 계산하지 않도록, 전략군과 섹터 후보 집합을 고정한 뒤 사전 등록된 유효 파라미터 조합을 서버가 실행·비교하는 기능이다. 실행 전 확인, 유효성 위반 조합의 사전 제외, 실행 한도와 부분 완료 처리, 사전 기준에 따른 소수 후보 선정, 탐색 성과와 미사용 검증의 구분 표시, 재현 가능한 기록이 범위다. 무제한 전수 탐색이나 개인별 투자 추천으로 표현하지 않는다. (§4.2.2, §6.4.3)\n+사용자가 설정을 하나씩 바꿔 반복 계산하지 않도록, 전략군과 섹터 후보 집합을 고정한 뒤 사전 등록된 유효 파라미터 조합을 서버가 실행·비교하는 기능이다. 실행 전 확인, 유효성 위반 조합의 사전 제외, 실행 한도와 부분 완료 처리, 사전 기준에 따른 소수 후보 선정, 탐색 성과와 미사용 검증의 구분 표시, 재현 가능한 기록이 범위다. 무제한 전수 탐색이나 개인별 투자 추천으로 표현하지 않는다. 탐색 대상 전략과 파라미터 자체는 007이 갖지 않는다 — 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙은 [003](../003-strategy-settings/spec.md)이 소유한 버전형 등록표에서 계약으로 조회하고, 실행 지원 여부는 [004](../004-backtest-execution/spec.md)에서 조회한다. 007은 그 등록 정보를 소비해 조합 생성·실행 관리·선정·기록만 맡는다. (§4.2.2, §6.4.3)\n \n ## Clarifications\n \n@@ -26,6 +26,13 @@\n - Q: \"인접 설정 안정성\"을 무엇으로 계산할까 — 어떤 조합을 '이웃'으로 보고, 이웃과 비교해 무슨 값을 낼까? (FR-013, PD-05) → A: 이웃은 파라미터 축 하나만 한 칸 다른 조합이다. 값은 이웃들과의 비용 차감 후 수익 차 절댓값 평균이며 작을수록 안정이다. 이웃이 없어 '계산 불가'인 후보는 안정성 필터를 통과 처리한다.\n - Q: 두 필터의 문턱을 어떻게 정할까 — 고정된 숫자로 걸까, 아니면 묶음 안에서 상대적으로 걸까? (FR-013, PD-05) → A: 절대 숫자를 만들지 않는다. 하락 폭은 동일 비중 기준보다 크지 않은 후보만 통과시키고, 안정성은 묶음 내 상위 50%만 통과시킨다. 이를 위해 묶음마다 동일 비중 기준 백테스트 1건을 같은 조건으로 함께 실행한다.\n \n+### Session 2026-09-11\n+\n+- Q: 007은 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙을 자체 코드나 문서에 전략별로 갖는가? (FR-002, FR-025) → A: 갖지 않는다. 현재 다섯 전략을 포함해 어떤 전략도 007에 하드코딩하지 않고, 003이 소유한 버전형 전략·파라미터 등록표를 계약으로 조회해 그 값을 그대로 쓴다. 003에 활성 전략이 추가되고 004가 그 전략의 실행을 지원하면 007은 전략별 코드 수정 없이 그 전략을 자동 탐색 대상으로 처리한다. 테스트용 fixture만 예외다.\n+- Q: '실행을 지원하는 전략'이라는 사실을 007은 어디서 확인하는가? (FR-026) → A: 등록 정보(전략 목록·표시 정보·파라미터 축·허용 범위·기본 시작값·탐색 후보값·단위·유효성 규칙)는 003에, 실행 지원 여부는 004에 각각 조회하고 두 집합의 교집합만 탐색 대상으로 삼는다. 각 사실을 원래 소유자에게 직접 묻는 방식이며 007은 어느 쪽도 대신 선언하거나 자체 목록으로 판정하지 않는다. (2026-09-11 사용자 위임으로 권고안 적용)\n+- Q: 등록표 후보값 목록이 숫자가 아니거나 순서 의미가 약한 축에서 '한 칸 다른 이웃'을 어떻게 정의하는가? (FR-013a) → A: 축 종류를 구분하지 않고, 등록표가 준 후보값 목록에서 위치가 1만큼 다른 값을 이웃으로 본다. 등록표가 인접·순서 정보를 함께 주면 그 값을 그대로 쓰고 007이 순서를 새로 만들지 않는다. 전략별 이웃 규칙을 007에 두지 않는다. (2026-09-11 사용자 위임으로 권고안 적용)\n+- Q: 미리보기와 실행 접수 사이에 등록표 버전이 바뀌거나 등록 정보 조회가 실패하면 어떻게 하는가? (FR-027, FR-028) → A: 등록표 버전은 실행 접수 시점에 고정한다. 미리보기 때와 버전이 다르면 접수하지 않고 다시 조회한 요약을 보여 확인을 받는다. 조회가 실패하면 실행 전에 거부하고 사유를 표시하며, 캐시된 값이나 007 내부 기본값으로 대체해 실행하지 않는다. (2026-09-11 사용자 위임으로 권고안 적용)\n+\n ## User Scenarios & Testing *(mandatory)*\n \n ### User Story 1 - 실행 전 확인만 하고 한 동작으로 탐색을 실행한다 (Priority: P1)\n@@ -40,7 +47,7 @@\n \n 1. **Given** 전략군과 섹터 후보 집합을 고정한 상태에서, **When** '설정 조합 자동 비교'를 선택하면, **Then** 실행 전에 대상 전략·탐색 범위 요약·예상 작업량·적용 한도가 간단히 보이고 후보 숫자를 직접 입력하라고 요구하지 않는다.\n 2. **Given** 확인 화면에서, **When** 상세 변경을 열지 않고 실행하면, **Then** 등록된 탐색 공간으로 탐색 묶음이 접수되고 진행 상태가 보인다.\n-3. **Given** 확인 화면에서, **When** 상세 변경을 열면, **Then** 등록된 후보 범위 안에서 탐색 범위를 좁히거나 넓힐 수 있고 범위 밖 값은 입력할 수 없다.\n+3. **Given** 확인 화면에서, **When** 상세 변경을 열면, **Then** 등록된 후보 범위 안에서 탐색 범위를 좁히거나 넓힐 수 있고 범위 밖 값은 입력할 수 없다. 표시되는 허용 범위·기본 시작값·후보값·단위는 등록표에서 조회한 값이며 007이 따로 정하지 않는다.\n 4. **Given** 탐색 설정에서, **Then** 수수료·세금·평가 기간은 탐색 변수로 제공되지 않는다.\n \n ---\n@@ -70,11 +77,11 @@\n \n **Why this priority**: 제약 위반·자료 부족·계산 실패를 낮은 수익과 구분하는 것은 결과 신뢰의 조건이다(원칙 VI). 실행 한도는 다른 사용자의 진단을 지키는 장치다(원칙 IX).\n \n-**Independent Test**: 선정 수가 섹터 수보다 큰 조합을 포함한 탐색을 실행해 그 조합이 '제외' 상태와 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다.\n+**Independent Test**: 등록표의 유효성 규칙이 거부하는 조합을 포함한 탐색을 실행해 그 조합이 '제외' 상태와 등록표가 돌려준 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다.\n \n **Acceptance Scenarios**:\n \n-1. **Given** 등록된 조합 중 유효성 제약을 위반하는 조합(모멘텀 선정 수가 가용 섹터 수를 넘는 경우, 비중 상한들의 합계로 투자 비중을 채울 수 없는 경우)이 있을 때, **When** 실행하면, **Then** 그 조합은 계산 전에 제외되고 제외 사유가 기록된다.\n+1. **Given** 등록표의 전략별 유효성 규칙을 위반하는 조합이 있을 때, **When** 실행하면, **Then** 그 조합은 계산 전에 제외되고 규칙이 돌려준 제외 사유가 기록된다. 007은 위반 여부를 직접 판정하지 않고 등록된 규칙을 호출한 결과를 그대로 쓴다.\n 2. **Given** 실행 중인 탐색에서, **When** 사용자가 취소하면, **Then** 실행이 멈추고 부분 결과임과 완료한 범위(완료·미실행 후보 수)가 표시된다.\n 3. **Given** 실행 중 후보 수·실행시간·동시성 한도에 도달하면, **Then** 이유를 짧게 알리고 완료한 범위를 명시하며 미실행 후보는 '미실행' 상태로 남는다.\n 4. **Given** 어느 후보의 계산이 실패하거나 자료가 부족하면, **Then** 그 후보는 '실패' 상태와 사유로 기록되고 낮은 수익으로 표시되지 않는다.\n@@ -99,11 +106,30 @@\n \n ---\n \n+### User Story 5 - 전략이 추가돼도 007을 고치지 않고 탐색 대상이 된다 (Priority: P1)\n+\n+[플랫폼을 넓히는 팀]은 전략을 늘릴 때 자동 탐색을 다시 만들지 않기 위하여 003 등록표에 활성 전략을 추가하고 004가 그 전략의 실행을 지원하기만 하면 007의 코드 변경 없이 그 전략이 미리보기와 후보 조합 생성에 나타나게 할 수 있다. (§6.4.2, §6.4.3, 원칙 IV)\n+\n+**Why this priority**: 007이 전략 목록과 파라미터값을 자체 보유하면 같은 사실이 여러 문서로 갈라져 어긋나고, 전략이 늘 때마다 007을 함께 고쳐야 한다. 등록표 계약 하나만 소비하는 구조가 아니면 아래 다섯 시나리오가 전략 수만큼 다시 작성된다.\n+\n+**Independent Test**: 테스트 등록표에 여섯 번째 전략을 넣고 007 운영 코드를 한 줄도 바꾸지 않은 채 미리보기와 후보 조합 생성이 동작하는지 확인한다.\n+\n+**Acceptance Scenarios**:\n+\n+1. **Given** 현재 활성 전략 전부(현재 다섯 개)를 탐색 대상으로 고르면, **Then** 어느 전략도 예외 경로를 타지 않고 모두 같은 등록표 계약을 통해 등록 정보를 조회·처리한다.\n+2. **Given** 테스트 등록표에 여섯 번째 전략을 추가하고 실행 지원 목록에도 넣으면, **When** 그 전략으로 자동 비교에 들어가면, **Then** 007 운영 코드 변경 없이 미리보기(대상 전략·탐색 범위 요약·예상 작업량·적용 한도)와 후보 조합 생성이 동작한다.\n+3. **Given** 전략마다 파라미터 축 개수와 축별 후보 개수가 다르면, **Then** 각 전략의 등록된 후보값으로 만든 전체 조합 수와 유효·제외 후보 수가 축 구성과 무관하게 올바르게 계산된다.\n+4. **Given** 등록표에 없는 전략 또는 실행을 지원하지 않는 전략이 요청되면, **Then** 조합 생성·계산을 시작하기 전에 거부되고 거부 이유(미등록 / 실행 미지원)가 구분돼 표시된다.\n+5. **Given** 같은 등록표 버전과 같은 선택 범위로 다시 실행하면, **Then** 같은 후보 집합이 만들어지고 묶음에 그 등록표 버전과 실제 사용한 탐색 후보값이 남는다.\n+\n+---\n+\n ### Edge Cases\n \n - 등록된 조합이 모두 유효성 제약을 위반하면 실행하지 않고 어느 제약 때문인지 한 문장으로 알린다.\n - 유효 조합이 하나뿐이면 비교 없이 그 결과 하나를 보이되 '탐색 결과'로 표시하고 단일 승자로 표현하지 않는다.\n - 후보 계산 도중 자료 버전이 갱신되어도 묶음은 시작 시점의 자료 버전으로 끝까지 계산한다. 갱신 사실은 결과에 표시한다.\n+- 등록표에 '기준 전략' 역할이 지정돼 있지 않으면 손실 제약 필터를 적용하지 않고 안정성 필터만 적용한다. 어느 전략이 기준인지 007이 추정해 채우지 않는다(FR-013d).\n - 동일 비중 기준 백테스트가 실패하거나 계산 불가면 손실 제약 필터를 적용하지 않고 안정성 필터만 적용한다. 기준 없이 선정했다는 사실을 결과에 표시하며 기준값을 추정해 채우지 않는다.\n - 문턱을 통과한 후보가 5개보다 적으면 통과한 수만 표시하고 부족 사실을 알린다. 0개면 '기준을 충족한 후보 없음'으로 표시하고 전체 후보 목록과 탈락 사유를 제공한다. 결과를 본 뒤 문턱을 낮춰 화면을 채우지 않는다(원칙 VII).\n - 선정 기준의 동률은 등록된 동률 규칙(PD-05)으로 처리하고 처리 결과를 기록한다. 규칙이 없으면 동률 후보를 모두 표시하고 순서를 임의로 정하지 않는다.\n@@ -115,6 +141,11 @@\n - 재시도해도 같은 사유로 실패하면 재시도 횟수와 마지막 사유를 남기고 자동으로 반복하지 않는다. 재시도는 사용자가 요청할 때만 일어난다.\n - 재시도로 후보가 완료되면 그 묶음의 선정을 다시 계산한다. 선정 규칙은 시작 시점 스냅샷을 그대로 쓰고 바꾸지 않는다(FR-013c).\n - 결과를 확인한 뒤 기준을 바꾸면 새 실험으로 기록한다. 이전 묶음의 결과와 상태 표시는 바꾸지 않는다.\n+- 등록표에 없는 전략 ID가 요청되면 '미등록 전략'으로, 등록돼 있으나 실행이 지원되지 않으면 '실행 미지원 전략'으로 구분해 조합 생성 전에 거부한다. 두 경우 모두 007 내부 목록과 비교해 판정하지 않는다.\n+- 등록 정보 조회나 실행 지원 여부 조회가 실패하면 실행 전에 거부하고 조회 실패임을 알린다. 캐시된 등록 정보나 007 내부 기본값으로 대체해 실행하지 않으며, 조회 실패를 '유효성 위반'이나 '후보 실패'로 기록하지 않는다.\n+- 미리보기 때 조회한 등록표 버전이 실행 접수 시점과 다르면 접수하지 않고 다시 조회한 요약(변경된 후보값·조합 수)을 보여 확인을 받는다.\n+- 어떤 전략의 등록된 탐색 후보값이 축마다 한 값뿐이면 그 전략의 조합은 1개다. 007은 후보값을 보충하거나 범위를 넓혀 채우지 않는다.\n+- 등록표가 어떤 축의 후보값 순서나 인접 정보를 주지 않으면 등록표가 돌려준 목록 순서를 그대로 인접 기준으로 쓴다. 007이 값을 해석해 순서를 새로 만들지 않는다(FR-013a).\n \n ## Requirements *(mandatory)*\n \n@@ -123,21 +154,29 @@\n #### 탐색 정의와 실행 전 확인 (§4.2.2, §6.4.3, D04)\n \n - **FR-001**: 사용자가 선택한 전략군과 섹터 후보 집합을 고정한 뒤, 사전 등록된 유효 파라미터 조합을 서버가 실행·비교한다. 무제한 전수 탐색이나 개인별 투자 추천으로 표현하지 않는다. (§6.4.3)\n-- **FR-002**: 탐색 공간은 [003](../003-strategy-settings/spec.md)의 파라미터 등록표(후보 값·범위·간격·유효성 제약·기본값)에서만 만든다. 등록되지 않은 값은 탐색 대상이 되지 않는다. (§6.4.2)\n+- **FR-002**: 탐색 공간은 [003](../003-strategy-settings/spec.md)의 파라미터 등록표(후보 값·범위·간격·유효성 제약·기본값)에서만 만든다. 등록되지 않은 값은 탐색 대상이 되지 않는다. 007은 이 등록표를 계약으로 조회하며 같은 정보를 자체적으로 다시 정의하지 않는다(FR-025). (§6.4.2)\n - **FR-003**: 실행 전에 대상 전략·탐색 범위 요약·예상 작업량·적용 한도를 간단히 확인한다. 모든 후보 숫자를 직접 입력하게 하지 않으며 상세 변경은 선택 사항이다. (§6.4.3)\n - **FR-004**: 수수료·세금·평가 기간은 탐색 변수로 제공하지 않는다. (§6.4.3, 원칙 IV)\n - **FR-005**: 탐색 방법은 전체 그리드다. 등록표에서 선택한 후보 값의 모든 조합을 계산하고 일부만 표본으로 뽑지 않는다. 이는 후보 수 상한 안에서의 전수 계산이며, 범위 요약이 배제한 '무제한 전수 탐색'이 아니다. 난수를 쓰지 않으므로 같은 등록표·같은 선택 범위는 항상 같은 후보 집합을 만든다. 후속 버전에서 무작위 표본을 도입하면 시드를 저장한다. (§6.4.3, D18)\n - **FR-005a**: 실행 한도 네 값은 2026-09-10 임시값으로 확정했다. 확정 전까지 네 항목 모두 확인 화면과 결과에 임시값임을 표시하고, 실측 후 [004](../004-backtest-execution/spec.md)의 PD-06에서 고정한다. (§6.4.3, §6.5, D18)\n   - **실행시간 상한 = 120초.** 사용자가 결과를 기다리는 시간의 상한이다. 도달하면 발행을 멈추고 실행 중 후보는 완주시킨 뒤 부분 결과로 끝낸다(FR-009). 007은 접수 즉시 접수 상태를 반환하고 진행 상태를 조회하는 비동기 설계라 요청이 막히지는 않는다 — 이 값은 \"언제 남은 후보를 포기할지\"를 정한다.\n-  - **후보 수 상한 = 120개** (1000개에서 줄였다). 실행시간 상한과 함께 정해야 하는 값이다 — 예산 120초 × 워커 2개 = 240 후보초이므로 건당 2초 가정에서 120개가 들어간다. 1000개면 건당 2초라도 약 16분이라 대부분의 묶음이 늘 부분 결과로 끝난다. **건당 2초는 가정이며 측정값이 아니다**: 워커가 nautilus_trader 기반이고 007이 쓸 다섯 배분 전략은 004 소유로 아직 없어 현재 측정해도 실제 수치가 나오지 않는다. 실측(T117) 후 두 값을 함께 조정한다.\n+  - **후보 수 상한 = 120개** (1000개에서 줄였다). 실행시간 상한과 함께 정해야 하는 값이다 — 예산 120초 × 워커 2개 = 240 후보초이므로 건당 2초 가정에서 120개가 들어간다. 1000개면 건당 2초라도 약 16분이라 대부분의 묶음이 늘 부분 결과로 끝난다. **건당 2초는 가정이며 측정값이 아니다**: 워커가 nautilus_trader 기반이고 007이 탐색할 배분 전략의 계산 로직은 004 소유로 아직 없어 현재 측정해도 실제 수치가 나오지 않는다. 실측(T117) 후 두 값을 함께 조정한다.\n   - **동시성 상한(발행 창) = 4.** prod 워커 수(2)의 2배다. 각 워커가 1건을 처리하는 동안 1건이 앞에 대기해 큐가 비지 않고, 더 키우면 한 묶음이 작업 큐를 오래 점유해 다른 사용자의 단일 실행이 뒤로 밀린다.\n   - **중단 규칙(연속 실패 한도) = 5회.** 발행 창(4)보다 크게 둔다 — 창에 든 4건이 한꺼번에 실패하는 일만으로 묶음이 멈추면 산발적 실패에 과민 반응한다.\n   - 남은 결정 항목은 동률 처리 하나다(PD-05).\n - **FR-005b**: 유효 후보 수가 후보 수 상한(임시 120개)을 넘으면 실행하지 않는다. 초과 사실과 상한, 탐색 범위를 좁히는 방법을 한 문장으로 알린다. 표본을 자동으로 뽑거나 파라미터 간격을 임의로 넓혀 실행하지 않는다. (§6.5, D18, 원칙 IX)\n \n+#### 등록표 계약과 전략 비의존성 (§6.4.2, §6.4.3, 원칙 IV)\n+\n+- **FR-025**: 007은 전략 ID·전략명·표시 정보·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙을 자체 코드나 문서에 전략별로 하드코딩하지 않는다. 현재 활성 전략(현재 다섯 개)도 예외가 아니다. 이 정보는 전부 [003](../003-strategy-settings/spec.md)이 소유한 버전형 전략·파라미터 등록표를 계약으로 조회해 얻는다. 테스트용 fixture는 예외이며, 운영 코드에는 전략 목록 상수·전략별 파라미터값·strategyId 조건문·전략별 파라미터 분기를 두지 않는다. (§6.4.2)\n+- **FR-026**: 탐색 대상 전략은 '003 등록표의 활성 전략'과 '004가 실행을 지원하는 전략'의 교집합이다. 등록 정보는 003에, 실행 지원 여부는 004에 각각 조회하고 007은 어느 쪽도 대신 선언하지 않는다. 등록되지 않은 전략과 실행을 지원하지 않는 전략은 조합 생성·계산을 시작하기 전에 거부하고 거부 이유를 '미등록 전략 / 실행 미지원 전략'으로 구분해 표시한다. 003에 활성 전략이 추가되고 004가 그 실행을 지원하면 007은 전략별 코드 수정 없이 그 전략을 자동 탐색 대상으로 처리한다. (§6.4.2, §6.4.3)\n+- **FR-027**: 007이 등록 정보로 하는 일은 네 가지다. (1) 전달받은 전략 ID별 등록 정보를 조회한다. (2) 등록된 자동 탐색 후보값으로 전체 조합을 생성한다 — 전략마다 파라미터 축 개수와 축별 후보 개수가 달라도 같은 절차로 조합 수를 계산한다. (3) 등록된 전략별 유효성 규칙을 호출해 유효 후보 수와 제외 후보 수를 계산한다. (4) 기본 시작값과 입력 허용 범위는 직접 결정하지 않고 등록표 값을 그대로 표시·적용한다. 기본값은 투자 추천이나 최적값으로 표현하지 않는다. (§6.4.2, §6.4.3, 원칙 III)\n+- **FR-028**: 등록표 버전은 실행 접수 시점에 고정하고, 묶음에 그 등록표 버전과 실제 사용한 탐색 후보값을 저장한다(FR-020). 미리보기 때 조회한 버전이 접수 시점과 다르면 접수하지 않고 다시 조회한 요약을 보여 확인을 받는다. 등록 정보나 실행 지원 여부 조회가 실패하면 실행 전에 거부하고 사유를 표시하며, 캐시된 등록 정보나 007 내부 기본값으로 대체해 실행하지 않는다. (§5, §6.4.2)\n+- **FR-029**: 같은 등록표 버전·같은 선택 범위는 항상 같은 후보 집합을 만든다. 조합 생성 순서와 인접 판정은 등록표가 돌려준 후보값 목록의 순서를 그대로 쓰고 007이 순서를 새로 만들지 않는다. (§6.4.3, D18)\n+\n #### 유효성과 실행 관리 (§6.4.3, §6.5, D18, D19)\n \n-- **FR-006**: 유효성 제약을 위반하는 조합(모멘텀 선정 수가 가용 섹터 수를 넘는 경우, 비중 상한들의 합계로 투자 비중을 채울 수 없는 조합 등)은 계산 전에 제외하고 제외 사유를 기록한다. (§6.4.3)\n+- **FR-006**: 등록표의 전략별 유효성 규칙을 호출해 위반 조합을 계산 전에 제외하고 규칙이 돌려준 제외 사유를 기록한다. 어떤 조합이 유효한지는 등록된 규칙이 정하며 007은 판정 기준을 자체적으로 갖지 않는다(FR-025). (§6.4.3)\n - **FR-007**: 후보 하나의 계산은 [004](../004-backtest-execution/spec.md)의 공통 거래·평가 규칙과 전략별 계산 규칙을 따른다. 모든 후보는 같은 섹터 후보 집합·같은 공통 평가 구간·같은 금액·같은 비용·같은 정보 이용 기준으로 평가한다. (§6.4.1, 원칙 IV)\n - **FR-008**: 후보 실행끼리 병렬화하고, 탐색 묶음별로 예상·유효·완료·실패·제외·미실행 후보 수를 관리한다. 후보 실행 상태는 대기/발행/완료/실패/제외/미실행 중 하나다. 취소된 후보는 별도 상태가 아니라 '미실행'으로 남는다 — 이미 발행된 후보는 회수할 수 없어 완주하고, 발행 전 후보만 미실행이 된다. 재시도는 '실패'에서 '발행'으로 되돌리는 전이다(FR-024). (§6.5, D14)\n - **FR-009**: 탐색 묶음은 취소할 수 있다. 취소·한도 도달 시 부분 결과임을 알리고 완료한 범위(완료·미실행 후보 수)를 명시한다. (§4.2.2, §6.5)\n@@ -149,8 +188,8 @@\n #### 후보 선정과 검증 구분 (§4.2.3, §6.4.3, §7.3, D10, D11)\n \n - **FR-013**: 후보 선정은 세 단계로 한다. (1) 두 필터를 적용해 통과하지 못한 후보를 탈락시키고 후보별 탈락 사유를 남긴다 — 손실 제약은 가장 크게 줄었던 폭이 동일 비중 기준보다 크지 않을 것, 안정성은 인접 설정 안정성 값이 묶음 내 유효 후보의 상위 50% 안에 들 것(값이 작을수록 안정). (2) 남은 후보를 비용 차감 후 수익 기준으로 정렬한다. (3) 상위 5개를 표시 후보로 삼는다. 절대 문턱 숫자는 쓰지 않는다. 동률 처리는 결정 항목 PD-05로 남아 있다. (§6.4.3, §7.3)\n-- **FR-013d**: 손실 제약의 기준값을 얻기 위해 묶음마다 동일 비중 기준 백테스트 1건을 후보와 같은 섹터 후보 집합·같은 공통 평가 구간·같은 금액·같은 비용·같은 참조 버전으로 함께 실행하고 그 결과를 기록한다. 이 값은 [005](../005-result-comparison/spec.md)의 비교 기준과 같은 값을 재사용한다. (원칙 IV)\n-- **FR-013a**: 인접 설정 안정성은 다음과 같이 계산한다. 어떤 후보의 이웃은 파라미터 축 하나만 등록표에서 한 칸 다른 조합이며(여러 축이 동시에 다른 조합은 이웃이 아니다), 안정성 값은 그 이웃들과의 비용 차감 후 수익 차 절댓값 평균이다. 값이 작을수록 안정이다. 탐색 범위의 경계에 있어 이웃이 적은 후보는 존재하는 이웃만으로 계산한다. (§6.4.3)\n+- **FR-013d**: 손실 제약의 기준값을 얻기 위해 묶음마다 동일 비중 기준 백테스트 1건을 후보와 같은 섹터 후보 집합·같은 공통 평가 구간·같은 금액·같은 비용·같은 참조 버전으로 함께 실행하고 그 결과를 기록한다. 이 값은 [005](../005-result-comparison/spec.md)의 비교 기준과 같은 값을 재사용한다. 이때 기준으로 쓸 전략은 선정 규칙의 '기준 전략' 역할로 지정된 등록 전략(현재 동일 비중)이며, 007은 그 역할을 등록표 조회로 해석하고 전략 ID를 운영 코드에 두지 않는다(FR-025). (원칙 IV)\n+- **FR-013a**: 인접 설정 안정성은 다음과 같이 계산한다. 어떤 후보의 이웃은 파라미터 축 하나만 등록표 후보값 목록에서 위치가 1만큼 다른 조합이며(여러 축이 동시에 다른 조합은 이웃이 아니다), 안정성 값은 그 이웃들과의 비용 차감 후 수익 차 절댓값 평균이다. 인접 판정은 축의 종류를 구분하지 않고 등록표가 돌려준 목록 순서만 쓰며, 등록표가 순서·인접 정보를 함께 주면 그 값을 그대로 쓴다. 전략별 이웃 규칙을 007에 두지 않는다(FR-025). 값이 작을수록 안정이다. 탐색 범위의 경계에 있어 이웃이 적은 후보는 존재하는 이웃만으로 계산한다. (§6.4.3)\n - **FR-013b**: 이웃이 하나도 없는 후보(탐색 범위가 한 점이거나 이웃이 모두 제외·실패인 경우)는 안정성을 '계산 불가'로 표시하고 0으로 채우지 않으며, 안정성 문턱은 통과 처리한다. 자료 없음을 낮은 안정성으로 취급하지 않는다. (원칙 VI)\n - **FR-013c**: 선정 기준·문턱·정렬 지표·표시 후보 수는 탐색을 실행하기 전에 고정한다. 결과를 확인한 뒤 문턱을 낮추거나 정렬 지표를 바꾸면 새 실험(새 묶음)으로 기록하고 이전 묶음의 표시를 바꾸지 않는다. (§7.3, 원칙 VII)\n - **FR-014**: 선정 절차의 검증은 '내부 개발 구간 → 시간 순서 외부 평가 → 최종 잠금 평가' 순으로 한다. 후보 탐색·선정 기준의 튜닝은 내부 개발 구간에서만 하고 외부 평가 구간에서는 절차를 고정한다. 마지막 12개월 잠금은 출발안이며 분할 날짜·선정 지표·허용 오차·중첩 처리·다중 시험 보정 방식은 시험 전에 고정하는 결정 항목 PD-12다. (§7.3, D11)\n@@ -162,18 +201,19 @@\n \n - **FR-018**: 결과 첫 화면은 사전 기준으로 고른 표시 후보 5개(문턱 통과 후보가 5개보다 적으면 그 수만큼)의 비용 차감 후 수익·가장 크게 줄었던 폭·거래비용을 먼저 보인다. 인접 설정 안정성·선정 이유·탈락 사유·전체 후보 목록은 상세에 둔다. (§4.2.3, §6.4.3)\n - **FR-019**: 후보를 골라 [005](../005-result-comparison/spec.md)의 비교 대상으로 놓을 수 있다. 비교 기준은 사용자 고정 비중·동일 비중을 유지하고 '자동 탐색 후보 비교'임을 기본 설정 비교와 구분해 표시한다. 실제 보유 섹터가 달라졌으면 상세에서 선정 효과와 배분 효과를 함께 설명한다. (§4.2.3, D10)\n-- **FR-020**: 탐색 공간·탐색 방법·실행한 전체 후보·미실행 후보 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전을 기록한다. 현재 방법은 난수를 쓰지 않아 시드가 없으며, 무작위 표본을 도입하면 시드도 기록한다. 유효하지 않아 계산하지 않은 후보도 제외 사유를 남긴다. (§5, D14)\n+- **FR-020**: 탐색 공간·탐색 방법·실행한 전체 후보·미실행 후보 수·제외 사유·평가 분리·정렬 및 선정 규칙·동일 비중 기준 결과·참조 버전을 기록한다. 참조 버전에는 조회한 등록표 버전이 포함되며, 전략별로 실제 사용한 탐색 후보값(축·후보값 목록)을 묶음에 함께 저장해 등록표가 바뀐 뒤에도 그 묶음의 후보 집합을 재구성할 수 있게 한다. 현재 방법은 난수를 쓰지 않아 시드가 없으며, 무작위 표본을 도입하면 시드도 기록한다. 유효하지 않아 계산하지 않은 후보도 제외 사유를 남긴다. (§5, D14)\n - **FR-021**: 전략 파라미터·경제환경 검색 설정·평가 시나리오는 별도 축으로 기록한다. 007은 전략 파라미터 축과 평가 시나리오 축을 기록하고, 경제환경 검색 설정 축의 내용과 저장 형식은 [010](../010-economic-regime-search/spec.md)이 소유한다 — 007은 그 축을 덮어쓰지 않도록 자리만 비워 둔다. (§6.4.3)\n - **FR-022**: 탐색 묶음은 [006 내 기록](../006-my-records/spec.md)에 한 묶음으로 저장되고 펼치면 후보별 결과·선정 이유·실패 또는 제외 사유가 보인다. 007의 책임은 그 조회가 가능한 형태로 **저장하는 것**까지이며(FR-020), 목록·펼침 화면 구성은 006이 소유한다. (§5)\n - **FR-023**: 탐색 묶음 실행은 [004](../004-backtest-execution/spec.md) FR-007의 실행 유형 '자동 탐색 묶음'으로 대기 포함 소요 시간·동시 처리 수·자원 사용·실패·건당 원가를 기록한다. (§6.5)\n \n ### Key Entities *(include if feature involves data)*\n \n-- **탐색 묶음**: 고정한 전략군·섹터 후보 집합, 탐색 공간(등록표 버전과 선택 범위), 탐색 방법(전체 그리드), 동일 비중 기준 백테스트 결과, 선정 기준·동률 규칙, 평가 분할, 적용 한도, 시작 시점 참조 버전, 상태(대기/실행/완료/부분 완료/실패/거부), 중단 사유(취소·후보 수 한도·실행시간 한도·연속 실패 한도), 후보 수 집계(예상·유효·완료·실패·제외·미실행)다.\n+- **탐색 묶음**: 고정한 전략군·섹터 후보 집합, 탐색 공간(등록표 버전, 선택 범위, 전략별로 실제 사용한 탐색 후보값), 탐색 방법(전체 그리드), 동일 비중 기준 백테스트 결과, 선정 기준·동률 규칙, 평가 분할, 적용 한도, 시작 시점 참조 버전, 상태(대기/실행/완료/부분 완료/실패/거부), 중단 사유(취소·후보 수 한도·실행시간 한도·연속 실패 한도), 후보 수 집계(예상·유효·완료·실패·제외·미실행)다.\n - **탐색 후보**: 파라미터 조합 하나와 그 실행 상태(대기/발행/완료/실패/제외/미실행), 제외 또는 실패 사유, 재시도 횟수, 결과([004](../004-backtest-execution/spec.md)의 백테스트 결과 참조), 구간별 성과(내부 개발/외부 평가/잠금), 인접 설정 안정성, 선정 여부와 선정·탈락 이유다.\n-- **선정 규칙(버전)**: 손실 제약 필터(동일 비중 기준 대비), 안정성 필터(묶음 내 상위 50%), 정렬 지표(비용 차감 후 수익), 표시 후보 수(5), 동률 처리다. 결과 확인 뒤 변경은 새 버전이다.\n+- **선정 규칙(버전)**: 손실 제약 필터(등록표가 '기준 전략' 역할로 지정한 전략 대비. 현재 동일 비중), 안정성 필터(묶음 내 상위 50%), 정렬 지표(비용 차감 후 수익), 표시 후보 수(5), 동률 처리다. 결과 확인 뒤 변경은 새 버전이다.\n - **평가 분할(버전)**: 내부 개발 구간·외부 평가 구간·잠금 구간의 날짜 경계와 중첩 처리다.\n - **검증 상태 표시**: 후보별 '탐색 결과 / 미사용 검증 결과 / 미검증'과 그 근거다.\n+- **전략 등록 정보(조회 결과)**: 007이 소유하지 않고 [003](../003-strategy-settings/spec.md) 등록표에서 조회하는 값이다. 전략 ID·전략명과 표시 정보, 파라미터 축 목록, 축별 허용 범위·기본 시작값·자동 탐색 후보값·단위, 전략별 유효성 규칙, 등록표 버전을 가진다. 여기에 [004](../004-backtest-execution/spec.md)에서 조회한 실행 지원 여부를 합쳐 탐색 대상 여부를 판정한다. 007은 이 값을 묶음 시작 시점 스냅샷으로 보관할 뿐 편집하지 않는다.\n \n ## Success Criteria *(mandatory)*\n \n@@ -188,10 +228,14 @@\n - **SC-007**: 완료한 탐색 묶음의 100%가 FR-020의 기록 항목을 갖고 내 기록에서 한 묶음으로 다시 열린다.\n - **SC-009**: 재시도한 후보는 100% 묶음 시작 시점의 참조 버전·탐색 공간·선정 규칙으로 계산되고, 재시도 횟수가 기록된다. 재시도가 새 묶음을 만든 사례가 0건이다.\n - **SC-008**: 사용성 관찰에서 참여자가 탐색 성과와 미사용 검증의 차이를 구분하는지 기록하고, 두 명 이상이 오해하면 상태 표시를 수정한다. (§7.2)\n+- **SC-010**: 테스트 등록표에 새 전략을 추가하면 007 운영 코드 변경 0줄로 미리보기와 후보 조합 생성이 동작한다. 현재 활성 전략 전부가 같은 등록표 계약 경로로 처리되고, 007 운영 코드에서 전략 목록 상수·전략별 파라미터값·strategyId 조건문·전략별 파라미터 분기가 발견된 사례가 0건이다(테스트 fixture 제외).\n+- **SC-011**: 파라미터 축 개수와 축별 후보 개수가 서로 다른 전략들을 섞어 실행한 탐색의 100%에서 전체 조합 수·유효 후보 수·제외 후보 수가 등록값으로 계산한 기대치와 일치한다.\n+- **SC-012**: 미등록 전략과 실행 미지원 전략 요청의 100%가 조합 생성·계산 전에 거부되고 두 이유가 구분돼 표시된다. 등록 정보 조회 실패 시 캐시나 내부 기본값으로 대체 실행한 사례가 0건이다.\n \n ## Assumptions\n \n - 탐색 대상 전략군은 [003](../003-strategy-settings/spec.md)에서 선택한 전략 하나 또는 여러 전략이며, 섹터 후보 집합은 [002](../002-sector-weight-selection/spec.md)에서 고정한 것이다.\n+- 007은 003 등록표 계약에서 전략별로 다음 항목을 조회할 수 있다고 가정한다: 전략 ID, 전략명·표시 정보, 파라미터 축 목록, 축별 허용 범위·기본 시작값·자동 탐색 후보값(순서 있는 목록)·단위, 전략별 유효성 규칙 호출, 등록표 버전. 실행 지원 여부는 004에서 조회한다. 항목값 자체는 003의 PD-02이며 007이 채우지 않는다.\n - 인접 설정 안정성의 산식은 FR-013a에서 확정했다. 남은 값은 그 문턱 하나다(PD-05).\n - 평가 분할이 등록되지 않은 탐색도 실행할 수 있으며 그 결과는 모두 '미검증'이다. 검증 부족이 기능을 막지 않는다(원칙 I).\n - 실행 한도(PD-06)와 원가 기록은 [004](../004-backtest-execution/spec.md)의 실행 측정 기록을 함께 쓴다.\n@@ -211,6 +255,8 @@\n - 개인별 투자 추천·자동 단일 승자·우승 전략 (D13, 원칙 III)\n - 무제한 전수 탐색과 상한 미정 상태의 탐색 개방 (D18)\n - 결제·포인트·유료 제공량 (D19)\n+- 전략 목록·표시 정보·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·유효성 규칙의 소유와 그 값의 확정 ([003](../003-strategy-settings/spec.md) PD-02). 007은 조회해 쓰기만 한다\n+- 전략 계산 로직과 실행 지원 전략의 확장 ([004](../004-backtest-execution/spec.md))\n - 후보 하나의 계산 규칙 ([004](../004-backtest-execution/spec.md))과 비교 화면 구성 ([005](../005-result-comparison/spec.md))\n - 내 기록의 목록·펼침 화면 구성과 보관 정책 ([006](../006-my-records/spec.md)). 007은 저장까지만 책임진다\n - 경제환경 검색 설정 축의 내용과 저장 형식 ([010](../010-economic-regime-search/spec.md))\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/spec.md",
+          "old_path": "specs/007-auto-parameter-search/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,13 +29,19 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n **`T###`는 브랜치 단위가 아니다.** constitution v3.0.0 \"Jira 연계\"가 `작업 묶음 = 1 Branch = 1 MR`로\n 정하고 있어, 브랜치·MR·Jira Task 단위는 [plan.md](plan.md) \"작업 묶음 구성\"의 묶음(M1~M10) 10개다.\n-아래 134개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.\n+아래 157개는 실행 지시의 최소 단위이고, 각 묶음이 어떤 `T###`를 담는지는 그 표에 있다.\n 묶음은 초판의 24개(B01~B24)에서 10개로 합쳤다 — 사유는 plan.md \"묶음 구성 개정 이력\"에 있다.\n \n+**2026-09-11 개정**: 전략 비의존성 결정(spec FR-025~FR-029, US5)에 따라 23개를 더했고 기존 태스크\n+10여 개의 내용을 고쳤다. `/speckit-analyze`가 찾은 F1(기준 전략)·F4(등록표 경계 화면)도 함께 반영했다. 새 묶음은 만들지 않았다 — 늘어난 범위는 M2·M3·M4·M7이 나눠 가진다\n+(plan.md \"2026-09-11 개정이 묶음에 주는 영향\"). **T001~T026은 이미 머지된 M1이므로 손대지 않고,\n+그 중 개정이 필요한 세 건만 `T026a`~`T026c`로 새로 끼워 M2 브랜치에서 처리한다.**\n+\n ## Path Conventions\n \n - 백엔드: `backend/src/main/java/com/ssafy/thorp/paramsearch/...`, 테스트는 `backend/src/test/java/com/ssafy/thorp/paramsearch/...`\n - 마이그레이션: `backend/src/main/resources/db/migration/V3__param_search.sql`\n+- 임시 등록표 데이터: `backend/src/main/resources/registry/parameter-registry-provisional.yml` (003 대역)\n - 프론트엔드: `frontend/src/...`\n - 커밋 전 `cd backend && ./gradlew spotlessApply` 필수 (CLAUDE.md 코드 컨벤션)\n \n@@ -104,29 +110,40 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n - [X] T025 (BE) `application/repository/ParamSearchRepository.java`·`SearchCandidateRepository.java` 포트와 `infrastructure/persistence/*RepositoryImpl.java` 구현\n - [X] T026 (BE 테스트) 엔티티와 V3 스키마 일치 검증 테스트 — `ddl-auto=validate`로 기동되는지 Testcontainers로 확인\n \n+### M1 재작업 (2026-09-11 개정. M2 브랜치에서 처리하고 MR 본문에 사유를 남긴다)\n+\n+- [ ] T026a (BE) `domain/vo/SearchSpace.java`를 `전략 → 축 → 값` 중첩 구조로 바꾼다 — 한 묶음이 전략 여러 개를 담으면 축 이름이 충돌한다. `combinationCount()`는 **전략별 (축별 값 개수의 곱)의 합**이 되고 넘침 검사는 유지한다. 축 순서와 축별 값 순서 보존은 그대로다 ([data-model.md](data-model.md) §2.1, FR-027)\n+- [ ] T026b [P] (BE) `domain/model/StopReason.java`에 `STRATEGY_NOT_REGISTERED`·`STRATEGY_NOT_EXECUTABLE` 추가 — 미등록과 실행 미지원을 구분해 남긴다 (FR-026)\n+- [ ] T026c (BE 테스트) `SearchSpace` JSONB 왕복 테스트 — **축을 배열로 저장해 순서가 보존되는지** 검증한다. `jsonb`는 객체 키 순서를 보존하지 않아 축을 객체 키로 두면 `grid_coordinates` 인덱스가 다른 값을 가리킨다 ([data-model.md](data-model.md) §2.1, FR-029). V3 마이그레이션은 다시 만들지 않는다 (JSONB 컬럼)\n+\n ### 등록표 포트 (003 경계)\n \n-- [ ] T027 [P] (BE) `application/port/ParameterRegistryPort.java`와 `ParameterAxis`·`ValidationVerdict`·`SearchContext` record 정의 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1)\n-- [ ] T028 (BE) `infrastructure/registry/FixedParameterRegistry.java` 임시 구현 — `version()`은 `PROVISIONAL-{날짜}`, 축·값은 코드 상수. **PD-02 팀 확정값이 아님을 클래스 주석과 버전 문자열로 명시** (research R1)\n-- [ ] T029 (BE 테스트) 같은 `version()` 안에서 축 순서와 값 인덱스가 안정적인지 검증 — 흔들리면 그리드 좌표가 뜻을 잃는다\n+- [ ] T027 [P] (BE) `application/port/ParameterRegistryPort.java`와 `StrategyRegistration`·`ParameterAxis`·`AllowedRange`·`ValidationVerdict`·`SearchContext` record 정의 — 포트가 **활성 전략 목록(`activeStrategies()`)·전략 하나 조회(`find()`)·전략명·표시 정보·축별 자동 탐색 후보값·기본 시작값·입력 허용 범위·단위·유효성 규칙 호출·손실 제약의 '기준 전략' 역할 조회(`baselineStrategyId()`)**를 모두 돌려준다. 007은 이 포트가 주는 값 외에 전략에 대해 아무것도 알지 못한다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1, FR-025·FR-027)\n+- [ ] T028 (BE) `infrastructure/registry/ProvisionalFileParameterRegistry.java` 임시 구현 — `version()`은 `PROVISIONAL-{날짜}`, 전략·축·값은 **자원 파일에서 읽고 Java 상수로 두지 않는다**. 로더는 파일 구조만 읽고 전략별 해석을 하지 않는다. **PD-02 팀 확정값이 아님을 클래스 주석과 버전 문자열로 명시** (research R1 개정, FR-025)\n+- [ ] T028a [P] (INFRA) `backend/src/main/resources/registry/parameter-registry-provisional.yml` 작성 — 003 등록표의 대역. 전략별 ID·이름·축·자동 탐색 후보값·기본 시작값·허용 범위·단위·유효성 규칙 코드를 담는다. **이 파일이 유일한 전략 데이터 위치이고 007 코드에는 전략 이름이 나타나지 않는다.** 003 완성 시 이 파일과 로더를 003 구현체로 교체한다 (research R1 개정)\n+- [ ] T029 (BE 테스트) 같은 `version()` 안에서 축 순서와 후보값 인덱스가 안정적인지, `defaultValue`·`allowedRange`가 자원 파일 값과 일치하는지 검증 — 인덱스가 흔들리면 그리드 좌표가 뜻을 잃는다 (FR-029)\n \n ### 공통 서비스\n \n-- [ ] T030 (BE) `application/service/GridExpander.java` — 전체 그리드 전개와 그리드 좌표 부여 (T027 의존, FR-005)\n-- [ ] T031 (BE) `application/service/CandidateValidator.java` — 계산 전 유효성 판정. 최소 두 위반 코드 `TOP_N_EXCEEDS_UNIVERSE`·`WEIGHT_CAP_SUM_TOO_SMALL`과 사유 문장 (FR-006)\n+- [ ] T030 (BE) `application/service/GridExpander.java` — **전략별로** 전체 그리드를 전개하고 그리드 좌표를 부여한다. 축 개수·축별 후보 개수가 전략마다 달라도 같은 절차로 처리하고, 전체 조합 수는 전략별 곱의 합이다. `strategyId` 분기를 두지 않는다 (T026a·T027 의존, FR-005·FR-027)\n+- [ ] T031 (BE) `application/service/CandidateValidator.java` — 조합마다 `ParameterRegistryPort.validate()`를 호출하고 돌려받은 `reasonCode`·`reasonDetail`을 그대로 저장한다. **위반 규칙을 007이 갖지 않는다** — 위반 코드 목록을 상수로 두거나 전략별로 분기하지 않는다 (FR-006·FR-025)\n \n ### 004 경계\n \n-- [ ] T032 [P] (BE) `application/port/CandidateJobLauncher.java` 포트 정의 — `launchCandidate()`와 **`launchBaseline()` 두 메서드**([contracts/param-search-internal.md](contracts/param-search-internal.md) §2). `launchBaseline`이 없으면 FR-013d의 하락 폭 필터 기준값이 만들어지지 않는다\n-- [ ] T033 (BE) `infrastructure/launcher/CandidateJobLauncherImpl.java` — `backtest` 모듈 접수 유스케이스 호출로 두 메서드 구현. `launchBaseline()`은 동일 비중 기준 1건을 후보와 같은 섹터 집합·공통 구간·금액·비용·참조 버전으로 접수한다(FR-013d). **묶음 스냅샷만 보고 조립하고 현재 시각의 자료·비용 버전을 다시 읽지 않는다** (FR-007, FR-012)\n+- [ ] T032 [P] (BE) `application/port/CandidateJobLauncher.java` 포트 정의 — `launchCandidate()`와 **`launchBaseline()` 두 메서드**([contracts/param-search-internal.md](contracts/param-search-internal.md) §2). `launchBaseline()`은 스냅샷의 `baselineStrategyId`로 조립하고 기준 전략을 코드에 지정하지 않는다(FR-025). 이 메서드가 없으면 FR-013d의 하락 폭 필터 기준값이 만들어지지 않는다\n+- [ ] T033 (BE) `infrastructure/launcher/CandidateJobLauncherImpl.java` — `backtest` 모듈 접수 유스케이스 호출로 두 메서드 구현. `launchBaseline()`은 스냅샷의 기준 전략 1건을 그 전략의 등록된 기본 시작값과 후보와 같은 섹터 집합·공통 구간·금액·비용·참조 버전으로 접수한다(FR-013d). **묶음 스냅샷만 보고 조립하고 현재 시각의 자료·비용 버전을 다시 읽지 않는다** (FR-007, FR-012)\n - [ ] T034 [P] (BE) `backtest/application/event/BacktestFinished.java` 이벤트 record 정의 — `backtest` 모듈은 `paramsearch`를 참조하지 않는다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §3)\n - [ ] T035 (BE) `backtest/application/service/BacktestEventService.java`에 결과 저장 커밋 후 `BacktestFinished` 발행 추가 (`@TransactionalEventListener(phase = AFTER_COMMIT)`)\n - [ ] T036 (BE 테스트) `backend/src/test/java/com/ssafy/thorp/backtest/application/service/BacktestEventServiceEventTest.java` — 커밋 전에는 이벤트가 발행되지 않는지 검증 — 커밋 전 발행이면 007이 없는 결과를 읽는다\n+- [ ] T036a [P] (BE) `application/port/StrategyExecutionSupportPort.java` 정의 — `supportedStrategyIds()` 하나. \"이 전략을 실행할 수 있는가\"는 004의 사실이므로 004에 묻는다. 003이 대신 선언하지 않는다 ([contracts/param-search-internal.md](contracts/param-search-internal.md) §1.1, FR-026)\n+- [ ] T036b (BE) `infrastructure/support/StrategyExecutionSupportAdapter.java` — `backtest` 모듈이 노출하는 지원 전략 목록을 읽어 포트를 구현한다. 004가 워커에 전략을 추가하고 목록에 넣으면 007은 코드 변경 없이 그 전략을 얻는다 (research R8)\n+- [ ] T036c [P] (BE 테스트) 지원 목록에 없는 전략이 탐색 대상에서 빠지는지, 목록에 전략을 더하면 **007 코드 변경 없이** 대상이 되는지 검증 (SC-010, FR-026)\n+- [ ] T036d (BE) `application/service/SearchTargetResolver.java` — 요청 전략을 `activeStrategies()` ∩ `supportedStrategyIds()`와 맞춰 탐색 대상을 정한다. 앞에 없으면 `STRATEGY_NOT_REGISTERED`, 뒤에 없으면 `STRATEGY_NOT_EXECUTABLE`로 **조합 생성 전에** 거부 사유를 만든다. 007 내부 전략 목록과 비교하지 않는다 (T027·T036a 의존, FR-026, research R8)\n \n ### 오류 처리\n \n-- [ ] T037 [P] (BE) `common/exception/ErrorCode.java`에 `CANDIDATE_LIMIT_EXCEEDED`·`NO_VALID_COMBINATION`·`UNREGISTERED_PARAMETER_VALUE`·`ALREADY_FINISHED` 추가\n-- [ ] T038 (BE) `application/exception/` 예외 클래스 4개와 `common/web/advice/GlobalExceptionHandler.java` 매핑 추가 — HTTP 상태는 [contracts/param-search-api.md](contracts/param-search-api.md) §6과 일치\n+- [ ] T037 [P] (BE) `common/exception/ErrorCode.java`에 `CANDIDATE_LIMIT_EXCEEDED`·`NO_VALID_COMBINATION`·`UNREGISTERED_PARAMETER_VALUE`·`ALREADY_FINISHED`·`NOTHING_TO_RETRY`·`STRATEGY_NOT_REGISTERED`·`STRATEGY_NOT_EXECUTABLE`·`REGISTRY_VERSION_CHANGED`·`REGISTRY_UNAVAILABLE` 추가\n+- [ ] T038 (BE) `application/exception/` 예외 클래스와 `common/web/advice/GlobalExceptionHandler.java` 매핑 추가 — 미등록·실행 미지원은 422, 버전 드리프트는 409, 등록표 조회 실패는 503. HTTP 상태는 [contracts/param-search-api.md](contracts/param-search-api.md) §6과 일치 (FR-026·FR-028)\n \n **Checkpoint**: 스키마·모델·포트 준비 완료. 사용자 스토리를 병렬로 시작할 수 있다\n \n@@ -150,10 +167,12 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n ### Implementation for User Story 1 — Backend 유스케이스\n \n - [ ] T045 [P] [US1] (BE) `application/command/PreviewParamSearchCommand.java`와 `CreateParamSearchCommand.java` (record 우선)\n-- [ ] T046 [P] [US1] (BE) `application/result/ParamSearchPreviewResult.java`와 `ParamSearchResult.java`\n+- [ ] T046 [P] [US1] (BE) `application/result/ParamSearchPreviewResult.java`와 `ParamSearchResult.java` — `spaceSummary`는 **전략별 배열**이고 축마다 `values`·`defaultValue`·`allowedRange`·`unit`을, 전략마다 `name`·`executable`을 담는다. 모두 등록표·지원 목록 조회 결과를 옮긴 값이다 ([contracts/param-search-api.md](contracts/param-search-api.md) §1, FR-027)\n - [ ] T047 [US1] (BE) `application/service/CommonPeriodResolver.java` — 후보 공통 평가 구간 산출과 `shortenedBy` 계산. 모든 후보를 같은 구간으로 평가한다 (Edge Case)\n-- [ ] T048 [US1] (BE) `application/service/ParamSearchService.preview()` — 등록표 조회·그리드 전개·유효성 집계·한도·공통 구간·검증 라벨 반환. **저장하지 않는다** (FR-001, FR-003)\n-- [ ] T049 [US1] (BE) `ParamSearchService.create()` — 묶음·후보 저장 후 기준 1건과 발행 창만큼 발행. 저장과 발행을 한 트랜잭션으로 묶는다 (`BacktestService`와 같은 규약)\n+- [ ] T048 [US1] (BE) `application/service/ParamSearchService.preview()` — 등록 정보·실행 지원 조회 → `SearchTargetResolver` 판정 → 그리드 전개·유효성 집계·한도·공통 구간·검증 라벨 반환. 등록표 버전과 전략별 축·기본값·허용 범위를 응답에 담는다. **저장하지 않는다** (T036d 의존, FR-001·FR-003·FR-027)\n+- [ ] T049 [US1] (BE) `ParamSearchService.create()` — 요청의 `registryVersion`이 접수 시점 버전과 다르면 `409 REGISTRY_VERSION_CHANGED`로 멈추고, 같으면 그 버전과 **실제 사용한 탐색 후보값**을 묶음에 고정해 저장한 뒤 기준 1건과 발행 창만큼 발행한다. 저장과 발행을 한 트랜잭션으로 묶는다 (`BacktestService`와 같은 규약, FR-028)\n+- [ ] T049b [P] [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/RegistrySnapshotTest.java` — (1) 미리보기와 다른 `registryVersion`으로 접수하면 409이고 묶음이 저장되지 않는지, (2) 등록표 조회가 실패하면 503이고 캐시·기본값으로 대체 실행하지 않는지, (3) 저장된 `search_space`로 후보 집합을 재구성할 수 있는지 검증 (FR-028, research R9)\n+- [ ] T049c [US1] (BE) 접수 시 `baselineStrategyId()`를 조회해 `selection_rule` 스냅샷에 기준 전략 ID·표시명을 고정한다. 역할 지정이 없으면 기준 실행을 만들지 않고 `drawdownFilterApplied = false`로 두며 사유를 남긴다. **기준 전략 ID를 007 코드에 두지 않는다** (FR-013d·FR-025)\n - [ ] T050 [US1] (BE) `application/service/CandidateDispatcher.java` — 발행 창 관리와 묶음 행 비관적 락. 후보 실행끼리 병렬화한다 (FR-008, research R2, 내부 계약 §4)\n - [ ] T051 [US1] (BE) `application/service/ParamSearchProgressService.java` — 후보 상태 갱신과 예상·유효·완료·실패·제외·미실행 `counts` 집계 (FR-008)\n - [ ] T049a [P] [US1] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/ParamSearchReproducibilityTest.java` — 같은 등록표 버전·같은 선택 범위·같은 자료 버전으로 두 번 접수하면 후보 집합과 그리드 좌표가 완전히 같은지, `random_seed`가 두 묶음 모두 NULL인지 검증 (SC-004, 원칙 VIII)\n@@ -161,7 +180,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 1 — Backend API\n \n-- [ ] T053 [P] [US1] (BE) `presentation/request/ParamSearchPreviewRequest.java`·`ParamSearchCreateRequest.java`와 Bean Validation — 종목 1~50개·`{6자리}.XKRX`·중복 금지, `space` 생략 허용\n+- [ ] T053 [P] [US1] (BE) `presentation/request/ParamSearchPreviewRequest.java`·`ParamSearchCreateRequest.java`와 Bean Validation — 종목 1~50개·`{6자리}.XKRX`·중복 금지, `space`는 **전략 ID → (축 → 값 배열)** 중첩이며 생략 허용. 실행 요청은 `registryVersion` 필수(미리보기 응답 값을 되돌려 보낸다), 미리보기에서는 무시 (FR-028)\n - [ ] T054 [P] [US1] (BE) `presentation/response/ParamSearchPreviewResponse.java`·`ParamSearchResponse.java`\n - [ ] T055 [US1] (BE) `presentation/controller/ParamSearchController.java`에 `POST /param-searches/preview`(200)와 `POST /param-searches`(202) 추가\n - [ ] T056 [US1] (BE) 같은 컨트롤러에 `GET /param-searches/{searchId}` 추가 — `status`·`counts`·`config` 반환, `selection`은 아직 `null`. 실패해도 200이다\n@@ -171,10 +190,12 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n - [ ] T058 [P] [US1] (FE) `frontend/src/api/paramSearch.ts`에 `previewParamSearch`·`createParamSearch`·`getParamSearch` 구현\n - [ ] T059 [P] [US1] (FE) `frontend/src/components/paramsearch/ProvisionalBadge.tsx` — `limits.provisional`에 든 항목에 임시값 표시 (FR-005a)\n-- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음 (원칙 II, SC-001)\n-- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 등록표 범위 안에서만 좁히거나 넓히고 범위 밖 값은 입력할 수 없다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004)\n+- [ ] T060 [US1] (FE) `frontend/src/components/paramsearch/PreflightPanel.tsx` — 대상 전략·탐색 범위 요약·예상 작업량·적용 한도 **네 항목만**, 행동 버튼 1개, 후보 숫자 입력 없음. 전략 이름은 `strategies[].name`에서만 읽고 화면에 전략 목록을 두지 않는다 (원칙 II, SC-001, FR-025)\n+- [ ] T061 [US1] (FE) `frontend/src/components/paramsearch/SpaceEditor.tsx` — 상세 변경. 축 라벨·단위·기본 시작값·허용 범위·후보값을 **`spaceSummary`에서만** 읽어 전략별로 렌더하고, 범위 밖 값은 입력할 수 없다. 기본값에 '추천'·'최적' 문구를 붙이지 않는다. **수수료·세금·평가 기간을 탐색 변수로 노출하지 않는다** (FR-004·FR-025·FR-027, 원칙 III)\n - [ ] T062 [US1] (FE) `frontend/src/hooks/useParamSearchStatus.ts` — 진행 상태 폴링 훅 (`GET /param-searches/{id}`)\n - [ ] T063 [US1] (FE) `frontend/src/pages/ParamSearchPage.tsx`와 라우팅 추가, 003 전략 화면의 '설정 조합 자동 비교' 진입점 연결\n+- [ ] T063a [US1] (FE) `frontend/src/components/paramsearch/RegistryChangedDialog.tsx` — `409 REGISTRY_VERSION_CHANGED`를 받으면 미리보기를 다시 호출해 **바뀐 후보값·조합 수**를 보이고, 사용자가 확인하기 전에는 실행을 다시 보내지 않는다 (FR-028)\n+- [ ] T063b [P] [US1] (FE 테스트) 등록표 경계 흐름 테스트 — 409에서 확인 없이 재실행 요청이 나가지 않고, `503 REGISTRY_UNAVAILABLE`은 '잠시 후 다시' 안내로 끝나며 캐시된 요약으로 실행되지 않는지 (FR-028)\n - [ ] T064 [P] [US1] (FE 테스트) `PreflightPanel` 테스트 — 값을 하나도 입력하지 않고 실행 버튼이 활성인지 (SC-001)\n \n **Checkpoint**: 탐색을 접수해 진행 상태까지 볼 수 있다. 선정 결과는 아직 없다\n@@ -191,8 +212,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Tests for User Story 2\n \n-- [ ] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`\n-- [ ] T066 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/DrawdownFilterTest.java` — 동일 비중 기준보다 큰 후보만 탈락\n+- [ ] T065 [P] [US2] (BE 테스트) `NeighborStabilityCalculator` 단위 테스트 — 1축 ±1만 이웃, **전략이 다른 후보는 이웃이 아님**, 경계 후보는 있는 이웃만, 이웃 0개면 `calculable = false`이고 `value`는 `null`. 숫자가 아닌 축에서도 인덱스만으로 판정되는지 포함 (FR-013a·FR-029)\n+- [ ] T066 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/DrawdownFilterTest.java` — 스냅샷의 기준 전략 결과보다 큰 후보만 탈락\n - [ ] T067 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/StabilityFilterTest.java` — 계산 불가 후보는 통과 처리 (FR-013b)\n - [ ] T068 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorSortTest.java` — 동률은 5개를 넘겨 전부 표시, 임의 순서 없음 (research R3)\n - [ ] T069 [P] [US2] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/selection/CandidateSelectorShortfallTest.java` — 문턱을 낮춰 채우지 않는다 (원칙 VII)\n@@ -202,8 +223,9 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 2 — Backend 계산\n \n-- [ ] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상 (FR-013a)\n-- [ ] T074 [US2] (BE) `application/service/selection/DrawdownFilter.java` — 가장 크게 줄었던 폭이 동일 비중 기준보다 크지 않은 후보만 통과 (FR-013)\n+- [ ] T073 [US2] (BE) `application/service/NeighborStabilityCalculator.java` — 그리드 좌표로 이웃 판정, 이웃과의 비용 차감 후 수익 차 절댓값 평균. 완료 후보만 대상이고 **이웃은 같은 `strategy_id` 안에서만** 찾는다. 인덱스 비교만 하므로 축의 종류를 구분하지 않는다 (FR-013a·FR-029)\n+- [ ] T074 [US2] (BE) `application/service/selection/DrawdownFilter.java` — 가장 크게 줄었던 폭이 **스냅샷의 기준 전략 결과**보다 크지 않은 후보만 통과. 기준 전략이 무엇인지 알지 못한 채 값만 쓴다 (FR-013·FR-013d)\n+- [ ] T074a [P] [US2] (BE 테스트) 기준 전략 역할이 지정되지 않은 묶음에서 하락 폭 필터가 빠지고 `drawdownFilterApplied = false`가 응답에 나오는지, 선정 코드에 기준 전략 ID 리터럴이 없는지 검증 (FR-013d, SC-010)\n - [ ] T075 [US2] (BE) `application/service/selection/StabilityFilter.java` — 묶음 내 유효 후보의 상위 50%만 통과, 계산 불가는 통과\n - [ ] T076 [US2] (BE) `application/service/CandidateSelector.java` — 두 필터 적용 → 비용 차감 후 수익 정렬 → 상위 5 → 동률 전부. 후보별 선정·탈락 사유 기록 (T073~T075 의존)\n - [ ] T077 [US2] (BE) `ParamSearchProgressService`에 묶음 종료 감지 추가 — `PENDING` 0 && `DISPATCHED` 0이면 안정성 → 선정 순서로 1회 실행\n@@ -233,13 +255,13 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n **Goal**: 제약 위반 조합이 계산 전에 사유와 함께 제외되고, 취소·한도 도달 시 부분 결과임과 완료 범위가 보인다\n \n-**Independent Test**: 선정 수가 섹터 수보다 큰 조합을 포함해 실행해 그 조합이 `EXCLUDED` + 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다 (quickstart 시나리오 2·3·4)\n+**Independent Test**: 등록표 유효성 규칙이 거부하는 조합을 포함해 실행해 그 조합이 `EXCLUDED` + 규칙이 돌려준 사유로 남는지, 실행 중 취소하면 부분 결과와 완료 범위가 보이는지 확인한다 (quickstart 시나리오 2·3·4)\n \n **Depends on**: Foundational의 `CandidateValidator`(T031). US1의 접수 경로에 거부·취소를 덧붙인다\n \n ### Tests for User Story 3\n \n-- [ ] T089 [P] [US3] (BE 테스트) `CandidateValidator` 단위 테스트 — 알려진 두 위반이 100% 제외되고 사유 코드가 남는다 (SC-002)\n+- [ ] T089 [P] [US3] (BE 테스트) `CandidateValidator` 단위 테스트 — fixture 등록표가 거부하는 조합이 100% 제외되고 **규칙이 돌려준 사유 코드가 그대로** 남는지, 위반 규칙이 007 코드에 없는지 검증 (SC-002, FR-025)\n - [ ] T090 [P] [US3] (BE 테스트) `EXCLUDED` 후보에 `backtest_job` 행이 만들어지지 않는지 검증 — 계산 전 제외다\n - [ ] T091 [P] [US3] (BE 테스트) 상한 초과 접수 통합 테스트 — `422 CANDIDATE_LIMIT_EXCEEDED`, 묶음은 `REJECTED`로 저장, 후보·Job 0건, **표본 추출 없음**\n - [ ] T092 [P] [US3] (BE 테스트) 유효 조합 0건 통합 테스트 — `422 NO_VALID_COMBINATION`과 어느 제약인지 한 문장\n@@ -267,7 +289,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ### Implementation for User Story 3 — Frontend\n \n-- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내. 상한 초과·유효 조합 0건을 오류 화면 없이 한 문장으로 (공통 성공 기준)\n+- [ ] T104 [P] [US3] (FE) `frontend/src/components/paramsearch/RejectionNotice.tsx` — 접수 거부 안내 **5종**(상한 초과·유효 조합 0건·미등록 전략·실행 미지원 전략·등록표 조회 실패)을 오류 화면 없이 한 문장으로. 미등록과 실행 미지원은 다른 문장으로 구분한다 (FR-026, 공통 성공 기준)\n - [ ] T105 [US3] (FE) `frontend/src/components/paramsearch/PartialResultNotice.tsx` — 부분 결과임과 완료·미실행 후보 수\n - [ ] T106 [US3] (FE) `frontend/src/components/paramsearch/CandidateReason.tsx` — 후보별 제외·실패·미실행 사유 표시. 낮은 수익과 구분 (FR-011)\n - [ ] T107 [US3] (FE) `frontend/src/components/paramsearch/CancelButton.tsx` — 취소 버튼과 취소 후 상태 반영\n@@ -307,7 +329,37 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n ---\n \n-## Phase 7: Polish & Cross-Cutting Concerns\n+## Phase 7: User Story 5 - 전략이 추가돼도 007을 고치지 않고 탐색 대상이 된다 (Priority: P1)\n+\n+**Goal**: 003 등록표에 활성 전략을 추가하고 004가 실행을 지원하면 007 코드 변경 없이 그 전략이 미리보기와 후보 조합 생성에 나타난다\n+\n+**파일 순서는 스토리 번호 순이고 착수는 Foundational 직후다.** 테스트 T127~T133은 M2, 화면 정리 T135·T136은 M4, 거부 마무리 T134는 M7이 가져간다 (Incremental Delivery 2단계).\n+\n+**Independent Test**: 테스트 등록표에 여섯 번째 전략을 넣고 007 운영 코드를 한 줄도 바꾸지 않은 채 미리보기와 후보 조합 생성이 동작하는지 확인한다 (quickstart 시나리오 7)\n+\n+**Depends on**: Foundational의 T027·T028·T036d·T036a (포트와 판정). 거부 저장은 US3의 `REJECTED` 경로(T095·T096)에 덧붙는다\n+\n+### Tests for User Story 5\n+\n+- [ ] T127 [P] [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/registry/RegistryFixtures.java` — 테스트용 등록표 fixture 구현. 전략 수·축 수·후보 개수를 자유롭게 구성하고, 운영 코드가 아니므로 전략 값을 직접 담는다(FR-025의 예외)\n+- [ ] T128 [P] [US5] (BE 테스트) 활성 전략 전부가 **같은 등록표 계약 경로**로 처리되는지 검증 — 어느 전략도 예외 경로·전용 분기를 타지 않는다 (spec US5 시나리오 1)\n+- [ ] T129 [P] [US5] (BE 테스트) fixture에 여섯 번째 전략을 더하면 미리보기와 후보 조합 생성이 **운영 코드 변경 없이** 동작하는지 검증 (SC-010, spec US5 시나리오 2)\n+- [ ] T130 [P] [US5] (BE 테스트) 축 개수와 축별 후보 개수가 서로 다른 전략을 섞어 실행했을 때 전체 조합 수·유효 후보 수·제외 후보 수가 등록값으로 계산한 기대치와 일치하는지 검증 (SC-011, spec US5 시나리오 3)\n+- [ ] T131 [P] [US5] (BE 테스트) 미등록 전략은 `422 STRATEGY_NOT_REGISTERED`, 실행 미지원 전략은 `422 STRATEGY_NOT_EXECUTABLE`로 **조합 생성 전에** 거부되고 두 사유가 구분돼 저장되는지 검증 (SC-012, spec US5 시나리오 4)\n+- [ ] T132 [P] [US5] (BE 테스트) 같은 등록표 버전·같은 선택 범위가 같은 후보 집합을 만드는지 **전략 여러 개를 섞어** 검증 — T049a의 단일 전략 재현 테스트를 다중 전략으로 넓힌다 (spec US5 시나리오 5, SC-004)\n+- [ ] T133 [P] [US5] (BE 테스트) `backend/src/test/java/com/ssafy/thorp/paramsearch/StrategyIndependenceTest.java` — `paramsearch` 운영 소스에 전략 ID 문자열 리터럴·전략 목록 상수·`strategyId` 분기가 없는지 정적으로 검사한다(ArchUnit 또는 소스 스캔). 테스트 fixture와 자원 파일은 대상에서 뺀다 (SC-010, FR-025)\n+\n+### Implementation for User Story 5\n+\n+- [ ] T134 [US5] (BE) `SearchTargetResolver`를 `preview()`·`create()` 경로에 연결해 거부를 마무리한다 — 미등록·실행 미지원을 조합 생성 전에 끊고, 묶음을 `REJECTED`로 저장하며 `stop_reason`에 두 사유를 구분해 남긴다. 미리보기에서는 저장 없이 사유만 알린다 (T036d·T095·T096 의존, FR-026)\n+- [ ] T135 [US5] (FE) `SpaceEditor`·`PreflightPanel`에서 전략 목록·파라미터 기본값·허용 범위·단위를 쓰는 지점을 모두 응답 기반으로 정리하고, `frontend/src/`에 남은 전략 상수를 제거한다 (FR-025)\n+- [ ] T136 [P] [US5] (FE 테스트) `frontend/src/components/paramsearch/SpaceEditor.test.tsx` — fixture 응답에 없던 전략·축을 넣어도 화면 코드 변경 없이 렌더되고, `strategyId` 분기가 없는지 검증 (SC-010)\n+\n+**Checkpoint**: 다섯 사용자 스토리가 모두 독립적으로 동작하고, 전략 추가가 007을 건드리지 않는다\n+\n+---\n+\n+## Phase 8: Polish & Cross-Cutting Concerns\n \n **Purpose**: 여러 스토리에 걸친 기록·문서·검증\n \n@@ -325,13 +377,13 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n - [ ] T120 [P] (DOCS) `docs/specs/param-search-api/README.md` 신설 — [contracts/param-search-api.md](contracts/param-search-api.md)를 `docs/specs/` 계약 형식으로 옮긴다 (specs/README 공통 가정: 기존 API 스펙과 같은 위치에 둔다)\n - [ ] T121 [P] (DOCS) `docs/adr/0005-param-search-dispatch-window.md` — 발행 창 결정과 전량 발행·전용 큐 대안을 남긴다 (research R2)\n-- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 \"순위 배지·추천 표현 0건\"과 \"결제·포인트·상품 선택 단계 0건\" 항목 추가 (plan 설계 제약 4, FR-010)\n+- [ ] T122 [P] (DOCS) `.gitlab/merge_request_templates/Default.md` 리뷰 포인트에 \"순위 배지·추천 표현 0건\", \"결제·포인트·상품 선택 단계 0건\", **\"전략 ID 상수·전략별 분기 0건\"** 항목 추가 (plan 설계 제약, FR-010·FR-025)\n - [ ] T123 [P] (DOCS) `specs/007-auto-parameter-search/spec.md`의 PD-05 표와 `specs/README.md`의 상태 열을 확정 결과로 동기화\n \n ### 검증\n \n - [ ] T124 (BE 테스트) `cd worker && pytest` 회귀 확인 — 워커를 바꾸지 않았음을 증명한다\n-- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 6개를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록\n+- [ ] T125 (DOCS) [quickstart.md](quickstart.md) 시나리오 7개(전략 비의존성 시나리오 7 포함)를 수동 실행하고 결과를 `specs/007-auto-parameter-search/quickstart.md` 아래에 기록\n - [ ] T126 (DOCS) T117의 측정값을 PD-06(실행 한도) 입력으로 정리해 [004](../004-backtest-execution/spec.md) 담당에게 전달\n \n ---\n@@ -342,8 +394,8 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n \n - **Phase 1 Setup**: 선행 없음. 즉시 시작\n - **Phase 2 Foundational**: Setup 완료 후. **모든 사용자 스토리를 막는다**\n-- **Phase 3~6 User Stories**: Foundational 완료 후\n-- **Phase 7 Polish**: 원하는 스토리들이 끝난 뒤\n+- **Phase 3~7 User Stories**: Foundational 완료 후\n+- **Phase 8 Polish**: 원하는 스토리들이 끝난 뒤\n \n ### User Story Dependencies\n \n@@ -351,6 +403,7 @@ Worker(`worker/`)는 이번 범위에서 **변경하지 않는다**. `de`·`ai`\n - **US2 (P1)**: US1 필요. 선정할 완료 후보가 있어야 한다. 다만 `NeighborStabilityCalculator`·필터·`CandidateSelector`(T073~T076)는 US1과 **병렬로 개발**하고 고정 입력으로 단위 테스트할 수 있다\n - **US3 (P2)**: Foundational의 T031 필요. 거부·취소는 US1의 접수 경로에 덧붙는다. `CandidateValidator` 테스트(T089·T090)는 US1 없이도 가능\n - **US4 (P2)**: US1·US2 필요. 작업량이 가장 작다(라벨·표시 중심)\n+- **US5 (P1)**: Foundational의 포트(T027·T028·T036d·T036a) 필요. 테스트 대부분은 fixture만으로 US1 없이 돌아가고, 거부 마무리(T134)만 US1·US3의 접수·`REJECTED` 경로 뒤다. **다른 스토리를 막지는 않지만 전략이 늘어난 뒤에 붙이면 이미 하드코딩이 퍼져 있어 회수 비용이 커진다** — Foundational 직후에 함께 닫는다\n \n ### 묶음(브랜치·MR) 진행 순서\n \n@@ -374,6 +427,7 @@ M10                                      (DOCS, 어느 시점에서든 병렬)\n - **M7은 M3 뒤다** — 거부·취소가 접수 경로에 덧붙는다.\n - **M8은 M7·M9 뒤다** — 거부 표시는 M7, 검증 배지는 M9의 라벨을 쓴다.\n - **M9는 M5 뒤다** — 검증 라벨이 선정 결과에 붙는다.\n+- **US5(전략 비의존성)는 새 묶음을 만들지 않는다** — 포트·전개·정적 검사(T026a~T026c, T028a, T036d, T036a~T036c, T127~T133)는 M2, 접수 경로 연결(T134)과 거부 저장 테스트는 M7, 화면 정리(T135·T136)는 M4가 가져간다 (plan.md \"2026-09-11 개정이 묶음에 주는 영향\").\n - 한 묶음이 곧 한 MR이므로 **묶음 안의 task를 절반만 올리지 않는다**(묶음 조건 3). 묶음 안의 진행은\n   커밋으로 쪼갠다.\n \n@@ -393,7 +447,8 @@ M10                                      (DOCS, 어느 시점에서든 병렬)\n \n - Phase 1의 T002~T007 전부 병렬\n - Phase 2의 enum·VO T011~T017 전부 병렬 (서로 다른 파일)\n-- Phase 2의 T021·T022·T023, T027, T032, T034, T037 병렬\n+- Phase 2의 T021·T022·T023, T027, T028a, T032, T036a, T036c, T034, T037 병렬\n+- Phase 7(US5)의 테스트 T127~T133 전부 병렬 — fixture만 쓰므로 다른 스토리 구현을 기다리지 않는다\n - 각 스토리의 테스트 태스크는 전부 병렬\n - **BE와 FE는 스토리 안에서 병렬** — 계약이 고정되어 있다\n - Foundational 완료 후 US1·US3의 검증 부분을 다른 담당이 동시에 진행 가능\n@@ -430,22 +485,24 @@ Task: \"T058~T064 api 모듈·확인 화면·상세 변경·폴링\"          # FE\n ### MVP First (User Story 1만)\n \n 1. Phase 1 Setup + Phase 2 도메인·영속화 (T001~T004, T007~T026) = 묶음 **M1** — **여기가 가장 크다. 나머지 전부를 막는다**\n-2. Phase 2 경계·전개 (T027~T039, T089, T090) = 묶음 **M2**\n+2. Phase 2 경계·전개 (T026a~T026c, T027~T039, T089, T090, T127~T133) = 묶음 **M2**\n 3. Phase 3 User Story 1 Backend (T040~T057) = 묶음 **M3**, Frontend (T005·T006, T058~T064) = 묶음 **M4**\n 4. **멈추고 검증**: quickstart 시나리오 1로 US1 단독 확인\n 5. 데모 가능 — 탐색을 접수해 진행 상태까지 보인다\n \n-**MVP = 묶음 4개(M1~M4) = 브랜치·MR 4개.** T### 기준으로는 T001~T064에 T089·T090을 더한 것이다\n-(M2가 US3 단계의 유효성 테스트를 함께 가져간다).\n+**MVP = 묶음 4개(M1~M4) = 브랜치·MR 4개.** T### 기준으로는 T001~T064에 T026a~T026c·T089·T090·\n+T127~T133·T135·T136을 더한 것이다 (M2가 US3 단계의 유효성 테스트와 US5의 비의존성 검증을 함께\n+가져가고, M4가 화면 정리를 가져간다).\n \n ### Incremental Delivery\n \n 1. Setup + Foundational (M1·M2) → 기반 완료\n-2. US1 (M3·M4) → 시나리오 1 → **MVP 데모**\n-3. US2 (M5·M6) → 시나리오 5 → 결과 비교 데모\n-4. US3 (M7·M8 앞부분) → 시나리오 2·3·4 → 낭비 차단과 중단 처리\n-5. US4 (M9·M8 배지) → 검증 상태 표시\n-6. Polish (M10) → 문서·회귀 (실행 측정은 M9가 가져갔다)\n+2. **US5 검증 (M2에 포함) → 시나리오 7 → 전략 비의존성을 기반 단계에서 먼저 고정**\n+3. US1 (M3·M4, US5 화면 정리 포함) → 시나리오 1 → **MVP 데모**\n+4. US2 (M5·M6) → 시나리오 5 → 결과 비교 데모\n+5. US3 (M7 + US5 거부 마무리 T134, M8 앞부분) → 시나리오 2·3·4 → 낭비 차단과 중단 처리\n+6. US4 (M9·M8 배지) → 검증 상태 표시\n+7. Polish (M10) → 문서·회귀 (실행 측정은 M9가 가져갔다)\n \n 각 단계가 MR 몇 개인지는 위 묶음 개수와 같다. 릴리즈는 매주 금요일이므로(constitution Git 규칙)\n 한 주에 닫을 묶음을 골라 쌓는다.\n@@ -454,6 +511,8 @@ Task: \"T058~T064 api 모듈·확인 화면·상세 변경·폴링\"          # FE\n \n - **004 없이는 종단 확인이 momentum 단일 종목으로만 된다.** 섹터 2개 이상은 후보 Job이 `FAILED`가 된다. quickstart가 이 전제로 쓰여 있다\n - `registryVersion`이 `PROVISIONAL-*`인 동안의 결과는 PD-02 확정 등록표의 결과가 아니다\n+- **전략 데이터는 `parameter-registry-provisional.yml` 한 곳에만 있다.** 007 운영 코드(백엔드·프론트)에 전략 ID·전략명·파라미터값·허용 범위를 쓰는 순간 T133·T136이 실패한다 (FR-025)\n+- 등록표 조회 실패(503)와 버전 드리프트(409)는 묶음을 저장하지 않는다. 미등록·실행 미지원 거부는 `REJECTED`로 저장한다 (research R9)\n - 전 후보 `UNVALIDATED`라 SC-005는 자동 만족이며 이를 검증 통과로 보고하지 않는다\n - **동일 결과 재사용(캐시)은 004 소유 미구현 항목이다.** 007에 별도 캐시를 만들지 않는다 (plan Phase 1 이후 재확인). 진행·취소·재시도는 007이 갖췄다(FR-024)\n - **SC-008(사용성 관찰)에는 구현 태스크가 없다.** PD-14의 관찰 항목이며 코드로 만들 수 있는 일이 아니다. specs/README \"공통 검증·완료 규칙\"의 관찰에 포함된다\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/007-auto-parameter-search/tasks.md",
+          "old_path": "specs/007-auto-parameter-search/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -24,7 +24,7 @@ Thorp 퀀트 전략 분석 플랫폼의 현재 개발 범위(기획서 §8.1)를\n | 004 | [백테스트 실행](004-backtest-execution/spec.md) | 비동기 접수·상태·취소·재시도·동일 결과 재사용, 공통 거래 규칙, 다섯 전략 계산 규칙, 결과 산출, 실행 측정 | 1 | P1 | §6.4.1, §6.4.2, §6.5, D05, D06, D18 |\n | 005 | [결과 이해·비교](005-result-comparison/spec.md) | 핵심 숫자 3개·그래프 1개·요약 1문장, 같은 조건 비교, 자세히 보기, 상태 표시, 보조 보기 | 2 | P1 | §4.2.3, D10, D13 |\n | 006 | [내 기록](006-my-records/spec.md) | 기록 목록, 다시 보기·설정 바꿔 비교, 재현 기록 항목, 내보내기, 정리·보관 정책 | 2 | P2 | §5, D14, D15 |\n-| 007 | [설정 조합 자동 비교](007-auto-parameter-search/spec.md) | 실행 전 확인, 유효성 제외, 탐색 묶음 실행·한도, 사전 기준 선정, 탐색/미사용 검증 구분 | 3 | P2 | §6.4.3, §7.3, D10, D11, D18 |\n+| 007 | [설정 조합 자동 비교](007-auto-parameter-search/spec.md) | 실행 전 확인, 유효성 제외, 탐색 묶음 실행·한도, 사전 기준 선정, 탐색/미사용 검증 구분, 003 등록표 계약 기반 전략 비의존성(전략 추가 시 007 무변경) | 3 | P2 | §6.4.3, §7.3, D10, D11, D18 |\n | 008 | [경제지표 등록·수집](008-macro-indicator-registry/spec.md) | 17개 지표·7개 분야 등록표, 공식 원천 수집, 결측·개정 처리, 기준월 T_g/T_all 산출, 이용 조건 | 4 | P3 | §6.2, §6.4.4, D07, D23 |\n | 009 | [시장 흐름 개요](009-market-flow-overview/spec.md) | 7개 분야 변화 요약, 지표 실제 값·최근 3개월 경로, 자료 시점 표시, 섹터 연결 범위 | 4, 5 | P3 | §4.4, D08, D12 |\n | 010 | [경제환경 검색](010-economic-regime-search/spec.md) | 모델 v1 척도·거리·후보 제한·표시, 검색 상태 3구분, 분야별 검색과 Thorp 종합 비교, 전략 독립성 | 4 | P3 | §4.3, §6.4.4, D08, D09, D21~D27 |\n@@ -65,7 +65,7 @@ constitution 원칙 II(첫 화면은 단순하게)의 규칙은 모든 화면 sp\n | PD-02 | 전략별 파라미터 기본값·후보 값·범위·간격·유효성 제약 | 미확정 (출발안: 월말 리밸런싱, 역변동성 63거래일) | [003](003-strategy-settings/spec.md) | §4.2.2, §6.4.2, D04 |\n | PD-03 | 섹터 모멘텀 규칙: 상대/절대 유형·점수 산식·관측 길이·최근 구간 제외·선정 수 또는 임계값·배분 방식·동점·선정 대상 없음·현금 대기 | 미확정 | [004](004-backtest-execution/spec.md) | §6.4.2, D04 |\n | PD-04 | 최소분산: 공분산 관측 기간·추정 방법(표본/축소)·해법·추정 불안정·수치 오차·해 없음 처리 | 미확정 | [004](004-backtest-execution/spec.md) | §6.4.2, D04 |\n-| PD-05 | 자동 탐색: 방법·후보 수·실행시간·동시성 상한·중단 규칙·표시 후보 수·선정 기준·동률 처리·인접 설정 안정성 산식 | 미확정 | [007](007-auto-parameter-search/spec.md) | §6.4.3, D10, D18 |\n+| PD-05 | 자동 탐색: 방법·후보 수·실행시간·동시성 상한·중단 규칙·표시 후보 수·선정 기준·동률 처리·인접 설정 안정성 산식 | 일부 확정 (2026-09-10: 방법=전체 그리드, 선정 구조·표시 후보 수·안정성 산식·두 필터 문턱 확정, 실행 한도 네 값은 임시값. **잔여: 동률 처리**) | [007](007-auto-parameter-search/spec.md) | §6.4.3, D10, D18 |\n | PD-06 | 실행 한도: 후보 수·실행시간·대기열·메모리 상한과 응답 목표, 실측 전 임시 상한 | 실측 후 고정. 값과 분리해 한도 장치(설정 가능한 상한·429)는 004 T014가 먼저 만든다(004 R-19) | [004](004-backtest-execution/spec.md) | §6.5, D18 |\n | PD-07 | 비용 수치: 수수료·호가 차이·슬리피지·세금·비용 상승 조건 | 미확정 | [004](004-backtest-execution/spec.md) | §6.4.2, D05 |\n | PD-08 | 경제환경 모델 v1: 17개 지표와 변환, 7개 분야 배치, T_g/T_all, 공통 척도(최대 120·최소 60개월, 중앙값/MAD 정규 보정, IQR 대체), 기본 거리 E, 분야 내부·분야 간 동일가중, 후보 제한(12개월 초과 이전, ±6개월 건너뛰기, 동률 오래된 월 우선), 표시 3개·최대 10개, 사후 평가 63/21거래일, 내부 대안(0.7E+0.3M, 시대별 척도) | 기획서 확정 | [010](010-economic-regime-search/spec.md) (지표·변환·분야 배치·가중은 [008](008-macro-indicator-registry/spec.md)) | §6.4.4, D21~D27 |\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/README.md",
+          "old_path": "specs/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2186935,
+      "head_commit_sha": "3943726c8172754d37ff6e7ac206eb65d832cbb4",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+      "created_at": "2026-09-11T14:19:59.082+09:00",
+      "merge_request_id": 940927,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "9bcad509a4566c660680dca7680b2dc01f77b2d0",
+      "commits": [
+        {
+          "id": "3943726c8172754d37ff6e7ac206eb65d832cbb4",
+          "short_id": "3943726c",
+          "created_at": "2026-09-11T14:19:58.000+09:00",
+          "parent_ids": [
+            "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+            "b628c63288612c1593019d0df9596d8c4c529ed0"
+          ],
+          "title": "Merge branch 'docs(infra)/169-constitution-user-strategy' into 'docs(infra)/169-007-spec-strategy-independence'",
+          "message": "Merge branch 'docs(infra)/169-constitution-user-strategy' into 'docs(infra)/169-007-spec-strategy-independence'\n\ndocs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\nSee merge request s15-bigdata-dist-sub1/S15P21E205!53",
+          "author_name": "문성웅",
+          "author_email": "msw714@naver.com",
+          "authored_date": "2026-09-11T14:19:58.000+09:00",
+          "committer_name": "문성웅",
+          "committer_email": "msw714@naver.com",
+          "committed_date": "2026-09-11T14:19:58.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3943726c8172754d37ff6e7ac206eb65d832cbb4"
+        },
+        {
+          "id": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+          "short_id": "ab2c13ee",
+          "created_at": "2026-09-11T14:19:34.000+09:00",
+          "parent_ids": [
+            "5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+          ],
+          "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+          "message": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\n\"하지 않는 것(범위 경계)\"에서 '숙련 퀀트용 자유 코드 입력'과 '전략 공유'를 범위\n안으로 옮긴다. 사용자가 등록한 전략 코드와 그 전략의 재사용을 다루려면 constitution\n개정이 선행돼야 하므로(기존 352행이 spec·plan·코드 추가를 금지) 초안을 먼저 올린다.\n\n- 유지한 금지: 사용자 간 성과 랭킹, 전략 공유 커뮤니티 피드, 숙련 퀀트용 전용 연구 화면\n- 함께 둔 조건 셋: (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동\n  탐색이 전략별 코드 수정 없이 동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도\n  안에서만 할 것, (3) 순위·추천·인기 목록으로 표시하지 않을 것(원칙 III)\n- 버전: 3.0.0 -> 3.1.0. 금지를 지우는 실질적 확대이고 기존 구현을 무효화하지 않아 MINOR\n- Sync Impact Report에 미승인 표시와 기획서 결정(D번호) 부재를 명시\n\n전체 회의 승인 전까지 효력이 없다(Governance 개정 절차). 승인 요청과 함께 기획서에\n결정을 추가해야 하고, 승인되면 specs/README.md의 같은 목록과 각 spec의 plan\nConstitution Check를 뒤따라 고쳐야 한다. 세부 기능은 별도 spec에서 정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:07:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:19:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab2c13eee6989b92a221eb9b8681bf08f9a65b2b"
+        },
+        {
+          "id": "b628c63288612c1593019d0df9596d8c4c529ed0",
+          "short_id": "b628c632",
+          "created_at": "2026-09-11T14:07:42.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+          "message": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\n\"하지 않는 것(범위 경계)\"에서 '숙련 퀀트용 자유 코드 입력'과 '전략 공유'를 범위\n안으로 옮긴다. 사용자가 등록한 전략 코드와 그 전략의 재사용을 다루려면 constitution\n개정이 선행돼야 하므로(기존 352행이 spec·plan·코드 추가를 금지) 초안을 먼저 올린다.\n\n- 유지한 금지: 사용자 간 성과 랭킹, 전략 공유 커뮤니티 피드, 숙련 퀀트용 전용 연구 화면\n- 함께 둔 조건 셋: (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동\n  탐색이 전략별 코드 수정 없이 동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도\n  안에서만 할 것, (3) 순위·추천·인기 목록으로 표시하지 않을 것(원칙 III)\n- 버전: 3.0.0 -> 3.1.0. 금지를 지우는 실질적 확대이고 기존 구현을 무효화하지 않아 MINOR\n- Sync Impact Report에 미승인 표시와 기획서 결정(D번호) 부재를 명시\n\n전체 회의 승인 전까지 효력이 없다(Governance 개정 절차). 승인 요청과 함께 기획서에\n결정을 추가해야 하고, 승인되면 specs/README.md의 같은 목록과 각 spec의 plan\nConstitution Check를 뒤따라 고쳐야 한다. 세부 기능은 별도 spec에서 정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:07:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:07:42.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/b628c63288612c1593019d0df9596d8c4c529ed0"
+        },
+        {
+          "id": "5155c345093ae5b8dac20f50f1c5e67b466f31bc",
+          "short_id": "5155c345",
+          "created_at": "2026-09-11T14:06:02.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정",
+          "message": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정\n\n007이 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·\n유효성 규칙을 자체 보유하지 않고, 003 등록표와 004 실행 지원 목록을 계약으로\n조회해 쓰도록 spec 이하 문서를 고쳤다. 003에 활성 전략이 추가되고 004가 그 실행을\n지원하면 007은 전략별 코드 수정 없이 그 전략을 탐색 대상으로 얻는다.\n\n주요 변경:\n- spec: FR-025~FR-029 신설, US5(전략 비의존성) 추가, SC-010~SC-012 추가.\n  FR-006·FR-013a·FR-013d·FR-020의 전략별 하드코딩 표현 제거\n- research: R1 개정(코드 상수 -> 자원 파일), R8(실행 지원 원천), R9(버전 드리프트·조회 실패)\n- data-model: search_space를 전략 -> 축 -> 값 중첩으로, 축을 배열로 저장(jsonb 키 순서 미보존),\n  stop_reason에 미등록·실행 미지원 추가\n- contracts: ParameterRegistryPort 확장(활성 전략·기본 시작값·허용 범위·기준 전략 역할),\n  StrategyExecutionSupportPort 신설, 오류 코드 5종 추가\n- tasks: 153 -> 157개. 등록표 포트·실행 지원 포트·SearchTargetResolver·6번째 전략 fixture·\n  하드코딩 정적 검사 추가. 묶음은 M2·M3·M4·M7이 나눠 가져 새 묶음 없음\n- speckit-analyze 지적 F1(기준 전략 리터럴)·F4(등록표 경계 화면)·F5·F6·F7·F8·F9 해소\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:06:02.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:06:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2186932,
+      "head_commit_sha": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+      "created_at": "2026-09-11T14:19:46.692+09:00",
+      "merge_request_id": 940927,
+      "state": "without_files",
+      "real_size": "10",
+      "patch_id_sha": "9bcad509a4566c660680dca7680b2dc01f77b2d0",
+      "commits": [
+        {
+          "id": "ab2c13eee6989b92a221eb9b8681bf08f9a65b2b",
+          "short_id": "ab2c13ee",
+          "created_at": "2026-09-11T14:19:34.000+09:00",
+          "parent_ids": [
+            "5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+          ],
+          "title": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)",
+          "message": "docs(infra): 사용자 등록 전략과 재사용을 범위 안으로 옮기는 개정 초안 (v3.1.0, 미승인)\n\n\"하지 않는 것(범위 경계)\"에서 '숙련 퀀트용 자유 코드 입력'과 '전략 공유'를 범위\n안으로 옮긴다. 사용자가 등록한 전략 코드와 그 전략의 재사용을 다루려면 constitution\n개정이 선행돼야 하므로(기존 352행이 spec·plan·코드 추가를 금지) 초안을 먼저 올린다.\n\n- 유지한 금지: 사용자 간 성과 랭킹, 전략 공유 커뮤니티 피드, 숙련 퀀트용 전용 연구 화면\n- 함께 둔 조건 셋: (1) 등록 전략도 003 파라미터 등록표와 같은 계약으로 들어와 자동\n  탐색이 전략별 코드 수정 없이 동작할 것, (2) 실행은 격리된 환경에서 원칙 IX의 한도\n  안에서만 할 것, (3) 순위·추천·인기 목록으로 표시하지 않을 것(원칙 III)\n- 버전: 3.0.0 -> 3.1.0. 금지를 지우는 실질적 확대이고 기존 구현을 무효화하지 않아 MINOR\n- Sync Impact Report에 미승인 표시와 기획서 결정(D번호) 부재를 명시\n\n전체 회의 승인 전까지 효력이 없다(Governance 개정 절차). 승인 요청과 함께 기획서에\n결정을 추가해야 하고, 승인되면 specs/README.md의 같은 목록과 각 spec의 plan\nConstitution Check를 뒤따라 고쳐야 한다. 세부 기능은 별도 spec에서 정한다.\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:07:42.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:19:34.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/ab2c13eee6989b92a221eb9b8681bf08f9a65b2b"
+        },
+        {
+          "id": "5155c345093ae5b8dac20f50f1c5e67b466f31bc",
+          "short_id": "5155c345",
+          "created_at": "2026-09-11T14:06:02.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정",
+          "message": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정\n\n007이 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·\n유효성 규칙을 자체 보유하지 않고, 003 등록표와 004 실행 지원 목록을 계약으로\n조회해 쓰도록 spec 이하 문서를 고쳤다. 003에 활성 전략이 추가되고 004가 그 실행을\n지원하면 007은 전략별 코드 수정 없이 그 전략을 탐색 대상으로 얻는다.\n\n주요 변경:\n- spec: FR-025~FR-029 신설, US5(전략 비의존성) 추가, SC-010~SC-012 추가.\n  FR-006·FR-013a·FR-013d·FR-020의 전략별 하드코딩 표현 제거\n- research: R1 개정(코드 상수 -> 자원 파일), R8(실행 지원 원천), R9(버전 드리프트·조회 실패)\n- data-model: search_space를 전략 -> 축 -> 값 중첩으로, 축을 배열로 저장(jsonb 키 순서 미보존),\n  stop_reason에 미등록·실행 미지원 추가\n- contracts: ParameterRegistryPort 확장(활성 전략·기본 시작값·허용 범위·기준 전략 역할),\n  StrategyExecutionSupportPort 신설, 오류 코드 5종 추가\n- tasks: 153 -> 157개. 등록표 포트·실행 지원 포트·SearchTargetResolver·6번째 전략 fixture·\n  하드코딩 정적 검사 추가. 묶음은 M2·M3·M4·M7이 나눠 가져 새 묶음 없음\n- speckit-analyze 지적 F1(기준 전략 리터럴)·F4(등록표 경계 화면)·F5·F6·F7·F8·F9 해소\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:06:02.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:06:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+        }
+      ],
+      "diffs": []
+    },
+    {
+      "id": 2186872,
+      "head_commit_sha": "5155c345093ae5b8dac20f50f1c5e67b466f31bc",
+      "base_commit_sha": "38b32b7ec308449e03fc0453827a3f499b3d8597",
+      "start_commit_sha": "92c6f1aa1d0293bae467ca3c6c0a1f337a7fdb0f",
+      "created_at": "2026-09-11T14:12:38.192+09:00",
+      "merge_request_id": 940927,
+      "state": "without_files",
+      "real_size": "9",
+      "patch_id_sha": "3107cc8a11e5f327fb150a390549b0dce98a72e7",
+      "commits": [
+        {
+          "id": "5155c345093ae5b8dac20f50f1c5e67b466f31bc",
+          "short_id": "5155c345",
+          "created_at": "2026-09-11T14:06:02.000+09:00",
+          "parent_ids": [
+            "38b32b7ec308449e03fc0453827a3f499b3d8597"
+          ],
+          "title": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정",
+          "message": "docs(infra): 007 자동 탐색을 등록표 계약 기반 전략 비의존 구조로 개정\n\n007이 전략 ID·전략명·파라미터 축·허용 범위·기본 시작값·자동 탐색 후보값·단위·\n유효성 규칙을 자체 보유하지 않고, 003 등록표와 004 실행 지원 목록을 계약으로\n조회해 쓰도록 spec 이하 문서를 고쳤다. 003에 활성 전략이 추가되고 004가 그 실행을\n지원하면 007은 전략별 코드 수정 없이 그 전략을 탐색 대상으로 얻는다.\n\n주요 변경:\n- spec: FR-025~FR-029 신설, US5(전략 비의존성) 추가, SC-010~SC-012 추가.\n  FR-006·FR-013a·FR-013d·FR-020의 전략별 하드코딩 표현 제거\n- research: R1 개정(코드 상수 -> 자원 파일), R8(실행 지원 원천), R9(버전 드리프트·조회 실패)\n- data-model: search_space를 전략 -> 축 -> 값 중첩으로, 축을 배열로 저장(jsonb 키 순서 미보존),\n  stop_reason에 미등록·실행 미지원 추가\n- contracts: ParameterRegistryPort 확장(활성 전략·기본 시작값·허용 범위·기준 전략 역할),\n  StrategyExecutionSupportPort 신설, 오류 코드 5종 추가\n- tasks: 153 -> 157개. 등록표 포트·실행 지원 포트·SearchTargetResolver·6번째 전략 fixture·\n  하드코딩 정적 검사 추가. 묶음은 M2·M3·M4·M7이 나눠 가져 새 묶음 없음\n- speckit-analyze 지적 F1(기준 전략 리터럴)·F4(등록표 경계 화면)·F5·F6·F7·F8·F9 해소\n\nCo-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>\n",
+          "author_name": "seongung33",
+          "author_email": "seongung33@gmail.com",
+          "authored_date": "2026-09-11T14:06:02.000+09:00",
+          "committer_name": "seongung33",
+          "committer_email": "seongung33@gmail.com",
+          "committed_date": "2026-09-11T14:06:02.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/5155c345093ae5b8dac20f50f1c5e67b466f31bc"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30788,
+          "username": "msw714",
+          "public_email": null,
+          "name": "문성웅",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://secure.gravatar.com/avatar/61db9314fcfd5921ba093447776ee780008475692318a297aae5820aa16e9774?s=80&d=identicon",
+          "web_url": "https://lab.ssafy.com/msw714"
+        },
+        "approved_at": "2026-09-11T15:19:36.467+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2792825": []
+  }
+}

@@ -1,0 +1,1259 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 959707,
+    "iid": 332,
+    "project_id": 1444456,
+    "title": "feat(be): 도우미가 인사에 고정 문구로 답하고, 세금 규칙을 근거로 싣고, 설정값을 등록표 문구로 적는다",
+    "description": "## 작업 내용 요약\n\n묶음 5를 사람이 써 보고 정한 세 가지를 반영한다. \"안녕\"에 근거 40개를 나열하던 것을 `GREETING` 고정 문구로 바꾸고, \"세금은 왜 0원이야\"에 답할 수 있게 비용 프로필의 세금 규칙 설명을 근거로 싣고, 리밸런싱 주기가 `{mode=CALENDAR, unit=MONTH_END}`로 찍히던 것을 등록표 문구 \"월말\"로 적는다. 묶음 5에서 바뀐 화면(머리글·첫 안내·근거 카드 제거·이력 유지)을 spec 015와 계약에 반영했다.\n\n## 관련 티켓\n\n- S15P21E205-444 (Story S15P21E205-433 relates, Epic 30). 묶음 6 품질 관문 전 선행 작업.\n\n## 주요 변경 사항\n\n- **`GREETING` 상태**(계약 §1·§2.3, FR-010·FR-011): `AnswerStatus`에 넷째 값. 프롬프트가 \"질문이 묻는 값만 답한다\"와 \"값을 묻지 않으면 GREETING\"을 지시하고, 검증기가 고정 문구 \"안녕하세요. 지금 보고 있는 결과에 대해 물어보세요. 예: 수익률은 어떻게 계산된거야?\"를 돌려준다. 응답 스키마 enum은 `AnswerStatus.values()`에서 나오므로 따라간다. FE 타입·고정 문구 색에 한 값 추가.\n- **세금 규칙 근거**(FR-006·FR-011): `cost_profile.tax_note` 컬럼(마이그레이션 `V20260925140000`)에 두 프로필 모두 \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\". `ResultEvidenceBuilder`가 결과의 `versions.costProfile.version`으로 프로필을 읽어 TEXT 근거 \"세금 규칙\"(설정·근거 탭)으로 싣는다. 세금률 같은 수치는 싣지 않는다. 프롬프트의 원인 단정 금지는 \"시장 결과의 원인\"으로 좁히고, 설정값·비용 규칙에서 따라오는 값은 근거의 규칙을 인용해 설명하게 했다.\n- **목록형 축 문구**: 축의 `allowedRange`가 목록형이고 값이 그 안에 있으면 `AllowedRange.labelOf`로 등록표 선택지 문구를 적는다. 그 밖은 지금처럼 원문이다. `CostProfile` record에 `taxNote`(9번째)를 더하고 8인자 생성자를 남겨 호출부는 그대로다.\n- **spec·계약 갱신**: FR-004(머리글 `결과 도우미`, 첫 안내 \"백테스트 결과에 대해서 질문해보세요.\", 처음으로 버튼), FR-010(상태 넷, 1차 화면은 근거를 그리지 않음), FR-015(같은 화면에서 닫았다 열면 이력 유지), SC-003(근거 카드 → 응답 `evidence`), 사용자 스토리 1에 세금·인사 시나리오. 계약 §1 status 목록·§2.3 enum·§2.4, docs 예시 `answer-greeting.json`, tasks.md 묶음 5b.\n\n## 테스트\n\n- `./gradlew spotlessApply build` — 2153 tests 통과(skipped 5, Docker 켜고 돌림).\n- `AnswerValidatorTest`(GREETING 고정 문구·빈 근거), `OpenAiChatCompletionsClientTest`(스키마 enum 넷), `AssistantControllerTest`(`answer-greeting.json`과 동치), `ResultEvidenceBuilderTest`(포함 표에 \"세금 규칙\", 프로필 없으면 근거 없음, 객체 값 → \"월말\"), `FlywayMigrationTest`(컬럼·시드 두 행).\n- FE `tsc`·`eslint`·Vitest 도우미 27건 통과.\n- **자동 테스트 밖**: 로컬 `thorp_dev`(gpt-5-mini)에서 실제 모델로 확인 — \"안녕\" → GREETING 문구, \"세금은 왜 0원이야?\" → 세금·세금 규칙 근거로 답, \"리밸런싱 주기는 어떻게 설정했어?\" → \"월말\", \"수익률은 무슨 기준이야?\" → 다섯 근거만.\n\n## 리뷰 포인트\n\n- **인사 판정을 모델에 맡겼다.** 서버가 인사 사전을 두지 않는다. 사전으로 잡으면 \"안녕, 수익률은?\"을 잘못 자른다. 표본(묶음 6)에 \"안녕\"·\"고마워\"를 넣어 고정한다.\n- **`tax_note`는 기존 두 행을 UPDATE 한다.** 값이 아니라 설명이라 새 버전 행을 만들지 않았다(재현성 규칙은 수치에 대한 것). 설명이 바뀌어야 하면 그때 판단.\n- **선택지 문구 치환은 `contains`가 참일 때만**이다. 등록표에 없는 값(옛 요청)은 원문 그대로 나가 `{mode=…}`가 남을 수 있다.\n- **계약의 `evidence` 필드는 유지**했다. 1차 화면이 안 그릴 뿐 SC-003 평가와 뒤 화면이 쓴다.\n\n## 전달만 하는 것\n\n- **배포 영향**: 마이그레이션 하나(`cost_profile`에 `tax_note text` 추가 + 두 행 UPDATE). 컬럼 추가만이라 데이터 손실 없음. 새 환경 변수 없음. 로컬(Flyway 꺼짐)은 Hibernate가 컬럼만 만들고 시드는 안 하므로 psql로 같은 UPDATE를 넣어야 \"세금은 왜 0원\"이 답이 나온다.\n- 응답 지연(추론 토큰)은 이 MR 범위 밖. 측정과 선택지는 `C:\\SSAFY\\thorp\\ai-feat\\assistant-latency.md`.",
+    "state": "merged",
+    "created_at": "2026-09-25T14:18:16.854+09:00",
+    "updated_at": "2026-09-25T14:33:10.843+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T14:33:10.875+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/444-assistant-feedback",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+    "merge_commit_sha": "de18a463c683a99d01531feb4dcf77b8b47dd97a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T14:18:18.906+09:00",
+    "reference": "!332",
+    "references": {
+      "short": "!332",
+      "relative": "!332",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!332"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/332",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 959707,
+    "iid": 332,
+    "project_id": 1444456,
+    "title": "feat(be): 도우미가 인사에 고정 문구로 답하고, 세금 규칙을 근거로 싣고, 설정값을 등록표 문구로 적는다",
+    "description": "## 작업 내용 요약\n\n묶음 5를 사람이 써 보고 정한 세 가지를 반영한다. \"안녕\"에 근거 40개를 나열하던 것을 `GREETING` 고정 문구로 바꾸고, \"세금은 왜 0원이야\"에 답할 수 있게 비용 프로필의 세금 규칙 설명을 근거로 싣고, 리밸런싱 주기가 `{mode=CALENDAR, unit=MONTH_END}`로 찍히던 것을 등록표 문구 \"월말\"로 적는다. 묶음 5에서 바뀐 화면(머리글·첫 안내·근거 카드 제거·이력 유지)을 spec 015와 계약에 반영했다.\n\n## 관련 티켓\n\n- S15P21E205-444 (Story S15P21E205-433 relates, Epic 30). 묶음 6 품질 관문 전 선행 작업.\n\n## 주요 변경 사항\n\n- **`GREETING` 상태**(계약 §1·§2.3, FR-010·FR-011): `AnswerStatus`에 넷째 값. 프롬프트가 \"질문이 묻는 값만 답한다\"와 \"값을 묻지 않으면 GREETING\"을 지시하고, 검증기가 고정 문구 \"안녕하세요. 지금 보고 있는 결과에 대해 물어보세요. 예: 수익률은 어떻게 계산된거야?\"를 돌려준다. 응답 스키마 enum은 `AnswerStatus.values()`에서 나오므로 따라간다. FE 타입·고정 문구 색에 한 값 추가.\n- **세금 규칙 근거**(FR-006·FR-011): `cost_profile.tax_note` 컬럼(마이그레이션 `V20260925140000`)에 두 프로필 모두 \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\". `ResultEvidenceBuilder`가 결과의 `versions.costProfile.version`으로 프로필을 읽어 TEXT 근거 \"세금 규칙\"(설정·근거 탭)으로 싣는다. 세금률 같은 수치는 싣지 않는다. 프롬프트의 원인 단정 금지는 \"시장 결과의 원인\"으로 좁히고, 설정값·비용 규칙에서 따라오는 값은 근거의 규칙을 인용해 설명하게 했다.\n- **목록형 축 문구**: 축의 `allowedRange`가 목록형이고 값이 그 안에 있으면 `AllowedRange.labelOf`로 등록표 선택지 문구를 적는다. 그 밖은 지금처럼 원문이다. `CostProfile` record에 `taxNote`(9번째)를 더하고 8인자 생성자를 남겨 호출부는 그대로다.\n- **spec·계약 갱신**: FR-004(머리글 `결과 도우미`, 첫 안내 \"백테스트 결과에 대해서 질문해보세요.\", 처음으로 버튼), FR-010(상태 넷, 1차 화면은 근거를 그리지 않음), FR-015(같은 화면에서 닫았다 열면 이력 유지), SC-003(근거 카드 → 응답 `evidence`), 사용자 스토리 1에 세금·인사 시나리오. 계약 §1 status 목록·§2.3 enum·§2.4, docs 예시 `answer-greeting.json`, tasks.md 묶음 5b.\n\n## 테스트\n\n- `./gradlew spotlessApply build` — 2153 tests 통과(skipped 5, Docker 켜고 돌림).\n- `AnswerValidatorTest`(GREETING 고정 문구·빈 근거), `OpenAiChatCompletionsClientTest`(스키마 enum 넷), `AssistantControllerTest`(`answer-greeting.json`과 동치), `ResultEvidenceBuilderTest`(포함 표에 \"세금 규칙\", 프로필 없으면 근거 없음, 객체 값 → \"월말\"), `FlywayMigrationTest`(컬럼·시드 두 행).\n- FE `tsc`·`eslint`·Vitest 도우미 27건 통과.\n- **자동 테스트 밖**: 로컬 `thorp_dev`(gpt-5-mini)에서 실제 모델로 확인 — \"안녕\" → GREETING 문구, \"세금은 왜 0원이야?\" → 세금·세금 규칙 근거로 답, \"리밸런싱 주기는 어떻게 설정했어?\" → \"월말\", \"수익률은 무슨 기준이야?\" → 다섯 근거만.\n\n## 리뷰 포인트\n\n- **인사 판정을 모델에 맡겼다.** 서버가 인사 사전을 두지 않는다. 사전으로 잡으면 \"안녕, 수익률은?\"을 잘못 자른다. 표본(묶음 6)에 \"안녕\"·\"고마워\"를 넣어 고정한다.\n- **`tax_note`는 기존 두 행을 UPDATE 한다.** 값이 아니라 설명이라 새 버전 행을 만들지 않았다(재현성 규칙은 수치에 대한 것). 설명이 바뀌어야 하면 그때 판단.\n- **선택지 문구 치환은 `contains`가 참일 때만**이다. 등록표에 없는 값(옛 요청)은 원문 그대로 나가 `{mode=…}`가 남을 수 있다.\n- **계약의 `evidence` 필드는 유지**했다. 1차 화면이 안 그릴 뿐 SC-003 평가와 뒤 화면이 쓴다.\n\n## 전달만 하는 것\n\n- **배포 영향**: 마이그레이션 하나(`cost_profile`에 `tax_note text` 추가 + 두 행 UPDATE). 컬럼 추가만이라 데이터 손실 없음. 새 환경 변수 없음. 로컬(Flyway 꺼짐)은 Hibernate가 컬럼만 만들고 시드는 안 하므로 psql로 같은 UPDATE를 넣어야 \"세금은 왜 0원\"이 답이 나온다.\n- 응답 지연(추론 토큰)은 이 MR 범위 밖. 측정과 선택지는 `C:\\SSAFY\\thorp\\ai-feat\\assistant-latency.md`.",
+    "state": "merged",
+    "created_at": "2026-09-25T14:18:16.854+09:00",
+    "updated_at": "2026-09-25T14:33:10.843+09:00",
+    "merged_by": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merge_user": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "merged_at": "2026-09-25T14:33:10.875+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(be)/444-assistant-feedback",
+    "user_notes_count": 2,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "assignees": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "assignee": {
+      "id": 30868,
+      "username": "sje5149",
+      "public_email": "",
+      "name": "신재은",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+      "web_url": "https://lab.ssafy.com/sje5149"
+    },
+    "reviewers": [
+      {
+        "id": 30868,
+        "username": "sje5149",
+        "public_email": "",
+        "name": "신재은",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+        "web_url": "https://lab.ssafy.com/sje5149"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚡ Feature",
+      "🌱 Backend"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": true,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+    "merge_commit_sha": "de18a463c683a99d01531feb4dcf77b8b47dd97a",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-25T14:18:18.906+09:00",
+    "reference": "!332",
+    "references": {
+      "short": "!332",
+      "relative": "!332",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!332"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/332",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 0,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": "2026-09-25T14:20:45.031+09:00",
+    "latest_build_finished_at": "2026-09-25T14:33:09.870+09:00",
+    "first_deployed_to_production_at": null,
+    "pipeline": {
+      "id": 222054,
+      "iid": 362,
+      "project_id": 1444456,
+      "sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+      "ref": "feat(be)/444-assistant-feedback",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-25T14:20:44.912+09:00",
+      "updated_at": "2026-09-25T14:33:09.880+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/222054"
+    },
+    "head_pipeline": {
+      "id": 222054,
+      "iid": 362,
+      "project_id": 1444456,
+      "sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+      "ref": "feat(be)/444-assistant-feedback",
+      "status": "success",
+      "source": "external",
+      "created_at": "2026-09-25T14:20:44.912+09:00",
+      "updated_at": "2026-09-25T14:33:09.880+09:00",
+      "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/222054",
+      "before_sha": "0000000000000000000000000000000000000000",
+      "tag": false,
+      "yaml_errors": null,
+      "user": {
+        "id": 33605,
+        "username": "project_1444456_bot_729db2197d363ae9ad313d04ec1fce13",
+        "public_email": null,
+        "name": "jenkins-commit-status",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://secure.gravatar.com/avatar/f31b8fb3d0d706b3c78bd8a823997f4482a92432783ad2bc47ec27745589a44c?s=80&d=identicon",
+        "web_url": "https://lab.ssafy.com/project_1444456_bot_729db2197d363ae9ad313d04ec1fce13"
+      },
+      "started_at": "2026-09-25T14:20:45.031+09:00",
+      "finished_at": "2026-09-25T14:33:09.870+09:00",
+      "committed_at": null,
+      "duration": 0,
+      "queued_duration": null,
+      "coverage": null,
+      "detailed_status": {
+        "icon": "status_success",
+        "text": "Passed",
+        "label": "passed",
+        "group": "success",
+        "tooltip": "passed",
+        "has_details": true,
+        "details_path": "/s15-bigdata-dist-sub1/S15P21E205/-/pipelines/222054",
+        "illustration": null,
+        "favicon": "/assets/ci_favicons/favicon_status_success-8451333011eee8ce9f2ab25dc487fe24a8758c694827a582f17f42b0a90446a2.png"
+      },
+      "archived": false
+    },
+    "diff_refs": {
+      "base_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "head_sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+      "start_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "6b2d75793aaf63df01d4e4daa0ce8aad46b19145",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867939,
+          "type": null,
+          "body": "requested review from @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:18:16.974+09:00",
+          "updated_at": "2026-09-25T14:18:16.978+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "a0cb6bbeba4f3194969786eec04d2c489ba00a2f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867940,
+          "type": null,
+          "body": "assigned to @sje5149",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:18:16.998+09:00",
+          "updated_at": "2026-09-25T14:18:17.020+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "57ca83feadc19dff71ad891c5e9e230fcb1bcae6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867941,
+          "type": null,
+          "body": "approved this merge request",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:18:20.856+09:00",
+          "updated_at": "2026-09-25T14:18:20.866+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "00e6a16e99e1326fe2e02674b327e03002391168",
+      "individual_note": false,
+      "resolvable": true,
+      "resolved": false,
+      "notes": [
+        {
+          "id": 2867942,
+          "type": "DiscussionNote",
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **견고한 예외 처리와 도메인 일관성**: `ResultEvidenceBuilder`에서 비용 프로필이나 파라미터 레지스트리를 조회할 때 발생할 수 있는 `RuntimeException`을 견고하게 캐치하고 로깅하여, 부가적인 메타데이터 조회 실패가 전체 결과 조회 흐름에 영향을 주지 않도록 잘 설계되었습니다.\n- **체계적인 명세 및 계약 동기화**: `spec.md`, 계약 문서(`assistant-api.md`), 그리고 API 응답 예시(`answer-greeting.json`)를 코드 변경과 함께 일관되게 갱신하여 문서와 구현 간의 정합성을 높였습니다.\n\n### 발견 사항\n\n- [Medium] `backend/src/main/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilder.java`: `taxRuleFact` 메서드에서 `detail.versions()`를 파싱할 때 `mapOf(versions.get(\"costProfile\"))` 결과가 비어 있거나 `version` 키가 없을 경우 NPE나 잘못된 타입 캐스팅 위험이 있습니다. `versions` Map의 안전한 타입 형변환과 null 체크를 보강하는 것을 권장합니다.\n- [Low] `backend/src/main/java/com/ssafy/thorp/backtest/domain/model/CostProfile.java`: 레코드(record) 생성자 오버로딩 시 기존 8인자 생성자가 9인자 생성자를 재사용(`this(...)`)하도록 구현된 점은 좋으나, 향후 필드가 추가될 때 유지보수성을 위해 생성자 체이닝 구조를 명확히 주석이나 문서화해 두면 좋습니다.\n\n### 테스트 제안\n- **인사/잡담 메시지 테스트 (`AnswerValidatorTest`, `AssistantControllerTest`)**: \"안녕\", \"고마워\", \"하이\" 등 다양한 인사말이나 잡담성 입력에 대해 모델이 `GREETING` 상태를 반환하고, 프론트엔드가 고정 문구와 비어 있는 근거 배열(`evidence: []`)을 올바르게 수신하는지 검증합니다.\n- **세금 규칙 근거 조회 테스트 (`ResultEvidenceBuilderTest`)**: 비용 프로필 버전에 `tax_note`가 존재하는 경우와 존재하지 않거나 빈 문자열인 경우 각각 `ResultEvidenceBuilder`가 올바르게 근거 팩에 \"세금 규칙\" 항목을 포함하거나 제외하는지 시나리오별로 테스트합니다.\n- **목록형 축 라벨 치환 테스트 (`ResultEvidenceBuilderTest`)**: 리밸런싱 주기 등 목록형 파라미터 값이 등록표의 `allowedRange`에 포함될 때 올바른 한글 문구(\"월말\" 등)로 변환되는지, 그리고 등록표에 없는 레거시 요청 값일 경우 예외 없이 원문이 그대로 유지되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:a284a008bf717407c127504d1256dedecbe8dd65 -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-25T14:18:29.024+09:00",
+          "updated_at": "2026-09-25T14:21:47.159+09:00",
+          "system": false,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        },
+        {
+          "id": 2867949,
+          "type": "DiscussionNote",
+          "body": "├─────────────────────────────────┼───────────────────────────┼─────────────┤ │ \\[Medium\\] taxRuleFact null 방어 │ 이미 안전 │ 없음 │ ├─────────────────────────────────┼───────────────────────────┼─────────────┤ │ \\[Low\\] taxNote 검증 │ 선택 필드, 현재 구조 적절 │ 없음 │ ├─────────────────────────────────┼───────────────────────────┼─────────────┤",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:21:47.120+09:00",
+          "updated_at": "2026-09-25T14:21:47.120+09:00",
+          "system": false,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": true,
+          "resolved": false,
+          "resolved_by": null,
+          "resolved_at": null,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "2e8da805651ed0916b7d48a68c70867c54b5ac04",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867948,
+          "type": null,
+          "body": "added 1 commit\n\n<ul><li>a284a008 - test(be): 등록표 선택지에 없는 축 값은 원문 그대로 적는지 고정한다</li></ul>\n\n[Compare with previous version](/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/332/diffs?diff_id=2249864&start_sha=19017c3f7aba15add1a4aadb09fedc279e5e8caa)",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:20:28.531+09:00",
+          "updated_at": "2026-09-25T14:20:28.535+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "bca6522f26b406a17797eda905d294153728f8e6",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867962,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for a284a008bf717407c127504d1256dedecbe8dd65 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:26:28.091+09:00",
+          "updated_at": "2026-09-25T14:26:28.094+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "036021cb117cb62d16a237d740bc7294f0bc80a5",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867963,
+          "type": null,
+          "body": "canceled the automatic merge",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:26:38.570+09:00",
+          "updated_at": "2026-09-25T14:26:38.573+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "194f3d0b34378c1b5170f6dcf9fcc45a8717ea00",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867964,
+          "type": null,
+          "body": "enabled an automatic merge when all merge checks for a284a008bf717407c127504d1256dedecbe8dd65 pass",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:26:45.503+09:00",
+          "updated_at": "2026-09-25T14:26:45.506+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "4f9061f359bd6e4e7a6ebf22d0cf0635ab30ec0d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2867984,
+          "type": null,
+          "body": "mentioned in commit de18a463c683a99d01531feb4dcf77b8b47dd97a",
+          "author": {
+            "id": 30868,
+            "username": "sje5149",
+            "public_email": "",
+            "name": "신재은",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+            "web_url": "https://lab.ssafy.com/sje5149"
+          },
+          "created_at": "2026-09-25T14:33:10.845+09:00",
+          "updated_at": "2026-09-25T14:33:10.851+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f57e18ef98dcd3aceb21ed2a41ea5b1cfda61c55",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2885032,
+          "type": null,
+          "body": "mentioned in commit 7bc0bdaef520322023470dcb079a2fd9fe7ad076",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:09.796+09:00",
+          "updated_at": "2026-10-13T15:16:09.883+09:00",
+          "system": true,
+          "noteable_id": 959707,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 332,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2249864,
+      "head_commit_sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+      "base_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "start_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "created_at": "2026-09-25T14:20:28.277+09:00",
+      "merge_request_id": 959707,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "905482e401d2f265435e6e677eda142c1b2c5ee0"
+    },
+    {
+      "id": 2249857,
+      "head_commit_sha": "19017c3f7aba15add1a4aadb09fedc279e5e8caa",
+      "base_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "start_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "created_at": "2026-09-25T14:18:17.346+09:00",
+      "merge_request_id": 959707,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "7f9ccb14cdc711bc454afdc6604da08eed428b51"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2249864,
+      "head_commit_sha": "a284a008bf717407c127504d1256dedecbe8dd65",
+      "base_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "start_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "created_at": "2026-09-25T14:20:28.277+09:00",
+      "merge_request_id": 959707,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "905482e401d2f265435e6e677eda142c1b2c5ee0",
+      "commits": [
+        {
+          "id": "a284a008bf717407c127504d1256dedecbe8dd65",
+          "short_id": "a284a008",
+          "created_at": "2026-09-25T14:20:24.000+09:00",
+          "parent_ids": [
+            "19017c3f7aba15add1a4aadb09fedc279e5e8caa"
+          ],
+          "title": "test(be): 등록표 선택지에 없는 축 값은 원문 그대로 적는지 고정한다",
+          "message": "test(be): 등록표 선택지에 없는 축 값은 원문 그대로 적는지 고정한다\n\n옛 요청 형식의 값이 와도 choiceText 가 예외 없이 원문을 돌려준다(리뷰 제안).\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:20:24.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:20:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/a284a008bf717407c127504d1256dedecbe8dd65"
+        },
+        {
+          "id": "19017c3f7aba15add1a4aadb09fedc279e5e8caa",
+          "short_id": "19017c3f",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "74d4f565afde934c5566da1762b5a763ec79413c"
+          ],
+          "title": "docs: spec 015 를 지금 화면과 GREETING 상태에 맞춘다",
+          "message": "docs: spec 015 를 지금 화면과 GREETING 상태에 맞춘다\n\n머리글·첫 안내 문구·근거 카드 제거·이력 유지·처음으로 버튼(묶음 5 결정)과\nGREETING·세금 규칙 근거(444)를 FR-004·FR-010·FR-011·FR-015·SC-003 과\n계약 §1·§2 에 반영한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/19017c3f7aba15add1a4aadb09fedc279e5e8caa"
+        },
+        {
+          "id": "74d4f565afde934c5566da1762b5a763ec79413c",
+          "short_id": "74d4f565",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "3d35fff389f022be2e4903d577fac8a75d04eec1"
+          ],
+          "title": "feat(fe): 도우미 응답 타입과 고정 문구 색에 GREETING 을 더한다",
+          "message": "feat(fe): 도우미 응답 타입과 고정 문구 색에 GREETING 을 더한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/74d4f565afde934c5566da1762b5a763ec79413c"
+        },
+        {
+          "id": "3d35fff389f022be2e4903d577fac8a75d04eec1",
+          "short_id": "3d35fff3",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "92276be57121a1b03c2df0e06abbe75a1d2a42b2"
+          ],
+          "title": "feat(be): 근거 팩에 세금 규칙을 싣고 목록형 축 값은 등록표 문구로 적는다",
+          "message": "feat(be): 근거 팩에 세금 규칙을 싣고 목록형 축 값은 등록표 문구로 적는다\n\n\"세금은 왜 0원이야\"에 답할 근거가 생긴다. 리밸런싱 주기처럼 값이 객체인 축은\n{mode=…} 대신 등록표 선택지 라벨(\"월말\")로 표기한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d35fff389f022be2e4903d577fac8a75d04eec1"
+        },
+        {
+          "id": "92276be57121a1b03c2df0e06abbe75a1d2a42b2",
+          "short_id": "92276be5",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "8622f880629e0d118d1d321f2889250983e6f471"
+          ],
+          "title": "feat(be): 비용 조건에 세금 규칙 설명(tax_note)을 둔다",
+          "message": "feat(be): 비용 조건에 세금 규칙 설명(tax_note)을 둔다\n\n두 프로필 모두 \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\".\n값은 그대로라 새 버전 행을 만들지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92276be57121a1b03c2df0e06abbe75a1d2a42b2"
+        },
+        {
+          "id": "8622f880629e0d118d1d321f2889250983e6f471",
+          "short_id": "8622f880",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "2231b81a559eb84f1a99e934aee71874d2a70f77"
+          ],
+          "title": "feat(be): 값을 묻지 않는 질문은 GREETING 고정 문구로 답한다",
+          "message": "feat(be): 값을 묻지 않는 질문은 GREETING 고정 문구로 답한다\n\n인사·잡담에 근거 40개를 나열하던 것을 막는다. 프롬프트에 \"묻는 값만 답한다\"와\nGREETING 상태를 더하고, 검증기가 고정 문구를 돌려준다. 설정값·비용 규칙에서\n따라오는 값은 그 규칙 근거로 설명할 수 있게 원인 단정 규칙을 좁혔다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8622f880629e0d118d1d321f2889250983e6f471"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -1,8 +1,10 @@\n package com.ssafy.thorp.assistant.application.result;\n \n-/** 응답 {@code status} 셋(FR-010). 뒤 둘은 답이 고정 안내 문장이고 근거가 비어 있다. */\n+/** 응답 {@code status} 넷(FR-010). {@code ANSWERED} 밖의 셋은 답이 고정 안내 문장이고 근거가 비어 있다. */\n public enum AnswerStatus {\n     ANSWERED,\n     INSUFFICIENT_EVIDENCE,\n-    OUT_OF_SCOPE\n+    OUT_OF_SCOPE,\n+    /** 인사·잡담처럼 결과의 값을 묻지 않는 질문. 근거를 나열하지 않고 질문을 권한다. */\n+    GREETING\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/result/AnswerStatus.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/result/AnswerStatus.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -37,6 +37,7 @@ public class AnswerValidator {\n     static final String INSUFFICIENT_MESSAGE = \"이 화면 자료만으로 확인할 수 없습니다.\";\n     static final String OUT_OF_SCOPE_MESSAGE =\n             \"이 도우미는 지금 보고 있는 기준 결과의 기록을 설명합니다. 투자 추천이나 앞으로의 성과, 다른 결과에 대해서는 답하지 않습니다.\";\n+    static final String GREETING_MESSAGE = \"안녕하세요. 지금 보고 있는 결과에 대해 물어보세요. 예: 수익률은 어떻게 계산된거야?\";\n     static final String FORBIDDEN_PHRASES_RESOURCE = \"assistant/forbidden-phrases.txt\";\n \n     private static final Pattern PLACEHOLDER = Pattern.compile(\"\\\\{\\\\{(F\\\\d+)}}\");\n@@ -74,6 +75,7 @@ public class AnswerValidator {\n             case OUT_OF_SCOPE ->\n                     new Rendered(AnswerStatus.OUT_OF_SCOPE, OUT_OF_SCOPE_MESSAGE, List.of());\n             case INSUFFICIENT_EVIDENCE -> insufficient();\n+            case GREETING -> new Rendered(AnswerStatus.GREETING, GREETING_MESSAGE, List.of());\n             case ANSWERED ->\n                     answered(draft.parts(), facts).orElseGet(AnswerValidator::insufficient);\n         };\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/AnswerValidator.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/AnswerValidator.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -16,9 +16,11 @@ import com.ssafy.thorp.assistant.application.service.tools.ResultToolContext;\n import com.ssafy.thorp.assistant.application.service.tools.TradesBetweenTool;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import com.ssafy.thorp.backtest.application.repository.CostProfileRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n+import com.ssafy.thorp.backtest.domain.model.CostProfile;\n import com.ssafy.thorp.result.application.result.PublicResultDetail;\n import com.ssafy.thorp.result.application.service.PublicResultService;\n import com.ssafy.thorp.sector.application.service.SectorService;\n@@ -60,6 +62,7 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n     private final PublicResultService publicResults;\n     private final SectorService sectors;\n     private final ParameterRegistryPort registry;\n+    private final CostProfileRepository costProfiles;\n     private final AssistantSettings settings;\n     private final int tradesPageSize;\n \n@@ -67,11 +70,13 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n             PublicResultService publicResults,\n             SectorService sectors,\n             ParameterRegistryPort registry,\n+            CostProfileRepository costProfiles,\n             AssistantSettings settings,\n             @Value(\"${thorp.result.trades-page-size}\") int tradesPageSize) {\n         this.publicResults = publicResults;\n         this.sectors = sectors;\n         this.registry = registry;\n+        this.costProfiles = costProfiles;\n         this.settings = settings;\n         this.tradesPageSize = tradesPageSize;\n     }\n@@ -99,6 +104,7 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n         Facts contributions = new Facts();\n         BacktestDetailResult.Summary summary = detail.summary();\n         summaryFacts(summary, fixed);\n+        taxRuleFact(detail, fixed);\n         configFacts(config, detail, fixed);\n         for (Item item : items) {\n             perSector.add(\n@@ -218,6 +224,29 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n         }\n     }\n \n+    /**\n+     * 비용 프로필의 세금 규칙 설명 한 줄. \"세금은 왜 영인가\"에 답할 근거다 — 세금률 같은 수치는 싣지 않는다. 프로필을 못 읽으면 근거가 없을 뿐이다(지어내지\n+     * 않는다).\n+     */\n+    private void taxRuleFact(PublicResultDetail detail, Facts facts) {\n+        Map<String, Object> versions = detail.versions() == null ? Map.of() : detail.versions();\n+        String version = text(mapOf(versions.get(\"costProfile\")).get(\"version\"));\n+        if (version == null) {\n+            return;\n+        }\n+        try {\n+            costProfiles\n+                    .find(version)\n+                    .map(CostProfile::taxNote)\n+                    .filter(note -> !note.isBlank())\n+                    .ifPresent(note -> facts.add(\"세금 규칙\", note, null, SETTINGS, EvidenceKind.TEXT));\n+        } catch (RuntimeException exc) {\n+            log.info(\n+                    \"assistant evidence: cost profile unavailable ({})\",\n+                    exc.getClass().getSimpleName());\n+        }\n+    }\n+\n     private void configFacts(Map<String, Object> config, PublicResultDetail detail, Facts facts) {\n         facts.add(\"요청 시작일\", text(config.get(\"start\")), null, SETTINGS, EvidenceKind.DATE);\n         facts.add(\"요청 종료일\", text(config.get(\"end\")), null, SETTINGS, EvidenceKind.DATE);\n@@ -234,13 +263,33 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n         String strategyName = detail.strategyName() == null ? strategyId : detail.strategyName();\n         facts.add(\"전략\", strategyName, null, SETTINGS, EvidenceKind.TEXT);\n         Map<String, Object> parameters = mapOf(config.get(\"parameters\"));\n-        Map<String, String> axisLabels = axisLabels(strategyId, parameters);\n+        Map<String, ParameterAxis> axes = axes(strategyId, parameters);\n         for (Map.Entry<String, Object> entry : parameters.entrySet()) {\n-            String label = axisLabels.getOrDefault(entry.getKey(), entry.getKey());\n-            facts.add(label, text(entry.getValue()), null, SETTINGS, EvidenceKind.TEXT);\n+            ParameterAxis axis = axes.get(entry.getKey());\n+            String label = axis == null ? entry.getKey() : axisLabel(axis);\n+            facts.add(label, choiceText(axis, entry.getValue()), null, SETTINGS, EvidenceKind.TEXT);\n         }\n     }\n \n+    private static String axisLabel(ParameterAxis axis) {\n+        String unit = axis.unit() == null || axis.unit().isBlank() ? \"\" : \" (\" + axis.unit() + \")\";\n+        return axis.label() + unit;\n+    }\n+\n+    /**\n+     * 목록형 축의 값은 등록표 선택지의 문구로 적는다. 값이 객체(리밸런싱 주기의 {@code {mode, unit}})면 {@code toString}이 그대로 나가\n+     * 사람이 읽을 수 없기 때문이다. 등록표에 문구가 없으면 값 원문이다.\n+     */\n+    private static String choiceText(ParameterAxis axis, Object value) {\n+        if (axis != null\n+                && axis.allowedRange() != null\n+                && axis.allowedRange().isEnumerated()\n+                && axis.allowedRange().contains(value)) {\n+            return axis.allowedRange().labelOf(value);\n+        }\n+        return text(value);\n+    }\n+\n     private static void weightsFacts(\n             BacktestWeightsResult weights,\n             PublicResultDetail detail,\n@@ -317,22 +366,18 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n         }\n     }\n \n-    /** 003 등록표의 축 라벨. 등록표를 못 읽거나 전략이 없으면 축 이름 그대로 쓴다. */\n-    private Map<String, String> axisLabels(String strategyId, Map<String, Object> parameters) {\n-        Map<String, String> labels = new LinkedHashMap<>();\n+    /** 003 등록표의 적용 축. 등록표를 못 읽거나 전략이 없으면 비어 있고, 축 이름·값 원문 그대로 쓴다. */\n+    private Map<String, ParameterAxis> axes(String strategyId, Map<String, Object> parameters) {\n+        Map<String, ParameterAxis> axes = new LinkedHashMap<>();\n         if (strategyId == null) {\n-            return labels;\n+            return axes;\n         }\n         try {\n             registry.find(strategyId)\n                     .ifPresent(\n                             registration -> {\n                                 for (ParameterAxis axis : registration.applicableAxes(parameters)) {\n-                                    String unit =\n-                                            axis.unit() == null || axis.unit().isBlank()\n-                                                    ? \"\"\n-                                                    : \" (\" + axis.unit() + \")\";\n-                                    labels.put(axis.name(), axis.label() + unit);\n+                                    axes.put(axis.name(), axis);\n                                 }\n                             });\n         } catch (RuntimeException exc) {\n@@ -340,7 +385,7 @@ public class ResultEvidenceBuilder implements EvidenceBuilder {\n                     \"assistant evidence: axis labels unavailable ({})\",\n                     exc.getClass().getSimpleName());\n         }\n-        return labels;\n+        return axes;\n     }\n \n     private static List<Item> items(Map<String, Object> config, Map<String, String> sectorNames) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilder.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilder.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -21,7 +21,30 @@ public record CostProfile(\n         BigDecimal taxBps,\n         Map<String, Object> escalation,\n         boolean provisional,\n-        String note) {\n+        String note,\n+        /** 세금이 왜 그 값인지의 한 줄 설명(spec 015 도우미 근거). 없을 수 있다. */\n+        String taxNote) {\n+\n+    public CostProfile(\n+            String version,\n+            BigDecimal commissionBps,\n+            BigDecimal spreadBps,\n+            BigDecimal slippageBps,\n+            BigDecimal taxBps,\n+            Map<String, Object> escalation,\n+            boolean provisional,\n+            String note) {\n+        this(\n+                version,\n+                commissionBps,\n+                spreadBps,\n+                slippageBps,\n+                taxBps,\n+                escalation,\n+                provisional,\n+                note,\n+                null);\n+    }\n \n     public CostProfile {\n         if (version == null || version.isBlank()) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/CostProfile.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/domain/model/CostProfile.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -43,6 +43,9 @@ public class CostProfileJpaEntity {\n     @Column(columnDefinition = \"text\")\n     private String note;\n \n+    @Column(columnDefinition = \"text\")\n+    private String taxNote;\n+\n     protected CostProfileJpaEntity() {}\n \n     public String getVersion() {\n@@ -76,4 +79,8 @@ public class CostProfileJpaEntity {\n     public String getNote() {\n         return note;\n     }\n+\n+    public String getTaxNote() {\n+        return taxNote;\n+    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/CostProfileJpaEntity.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/CostProfileJpaEntity.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,6 +29,7 @@ public class CostProfileRepositoryImpl implements CostProfileRepository {\n                 entity.getTaxBps(),\n                 entity.getEscalation(),\n                 entity.isProvisional(),\n-                entity.getNote());\n+                entity.getNote(),\n+                entity.getTaxNote());\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/CostProfileRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/backtest/infrastructure/persistence/CostProfileRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,11 +2,13 @@\n \n [출력 형식]\n - 응답은 주어진 JSON 스키마 하나로만 한다: {\"status\": ..., \"answerParts\": [{\"text\": ..., \"factIds\": [...]}, ...]}.\n-- status는 셋 중 하나다.\n+- status는 넷 중 하나다.\n   - ANSWERED: 근거만으로 답할 수 있다.\n   - INSUFFICIENT_EVIDENCE: 근거가 없거나 부족하다. answerParts는 비운다.\n   - OUT_OF_SCOPE: 이 결과의 기록을 설명하는 범위 밖이다. answerParts는 비운다.\n+  - GREETING: 질문이 결과의 값을 묻지 않는다(인사·잡담·감사 인사 등). answerParts는 비운다.\n - answerParts는 문장 조각 목록이다. 최대 5개, 전체 600자 이내.\n+- 질문이 묻는 값만 답한다. 묻지 않은 근거를 덧붙여 나열하지 않는다.\n \n [값은 자리표시자로만 쓴다 — 가장 중요한 규칙]\n - text 안의 모든 숫자·날짜·금액·비율·횟수는 근거의 ID를 {{F3}}처럼 이중 중괄호로 적는다. 서버가 그 자리를 실제 값으로 채운다.\n@@ -29,7 +31,8 @@\n [하지 않는 것]\n - 투자 추천, 매수·매도 권유, 이 전략을 써도 되는지에 대한 판단을 하지 않는다. 물으면 OUT_OF_SCOPE.\n - 앞으로의 성과, 오를지 내릴지, 확률·가능성을 말하지 않는다. 물으면 OUT_OF_SCOPE.\n-- \"왜 손실이 났나\" 같은 원인 질문에는 원인을 단정하지 않는다. 그 기간에 관측된 보유·거래·손익 변화만 근거로 제시한다.\n+- \"왜 손실이 났나\" 같은 시장 결과의 원인 질문에는 원인을 단정하지 않는다. 그 기간에 관측된 보유·거래·손익 변화만 근거로 제시한다.\n+- 설정값·비용 규칙에서 바로 따라오는 값(세금이 영인 이유 등)은 근거에 그 규칙이 있으면 그 규칙을 인용해 설명해도 된다.\n - 비교 대상, KOSPI 참고선, 다른 결과, 뉴스나 경제 상황은 이 도우미의 범위 밖이다. 물으면 OUT_OF_SCOPE.\n - 근거를 지어내거나, 근거에 없는 항목을 있다고 말하지 않는다.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/assistant/prompts/answer-ko.txt",
+          "old_path": "backend/src/main/resources/assistant/prompts/answer-ko.txt",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+-- 비용 조건에 세금 규칙 설명 한 줄을 둔다(spec 015 도우미, Jira S15P21E205-444).\n+--\n+-- \"세금은 왜 0원이야\" 같은 질문에 도우미가 답하려면 값(0원)이 아니라 규칙이 근거로 있어야 한다.\n+-- 세금률 같은 수치는 싣지 않고 설명 문장 하나만 근거 팩에 올린다. 값은 바꾸지 않으므로 새 버전 행을\n+-- 만들지 않는다 — 두 행 모두 tax_bps 0 이고 이유가 같다(V20260919193708 주석).\n+ALTER TABLE cost_profile ADD COLUMN tax_note text;\n+\n+UPDATE cost_profile\n+SET tax_note = '국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다'\n+WHERE version IN ('KR-ETF-2026-09', 'PROVISIONAL-DEMO-1');\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/resources/db/migration/V20260925140000__cost_profile_tax_note.sql",
+          "old_path": "backend/src/main/resources/db/migration/V20260925140000__cost_profile_tax_note.sql",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -193,7 +193,7 @@ class AnswerValidatorTest {\n     }\n \n     @Test\n-    @DisplayName(\"OUT_OF_SCOPE·INSUFFICIENT_EVIDENCE 는 고정 안내와 빈 근거다\")\n+    @DisplayName(\"OUT_OF_SCOPE·INSUFFICIENT_EVIDENCE·GREETING 은 고정 안내와 빈 근거다\")\n     void fixedMessagesForNonAnswered() {\n         AnswerValidator.Rendered scope =\n                 validator.render(\n@@ -209,6 +209,14 @@ class AnswerValidatorTest {\n                 validator.render(\n                         new ModelDraft(AnswerStatus.INSUFFICIENT_EVIDENCE, List.of()), FACTS));\n         assertInsufficient(validator.render(null, FACTS));\n+\n+        AnswerValidator.Rendered greeting =\n+                validator.render(\n+                        new ModelDraft(AnswerStatus.GREETING, List.of(part(\"안녕하세요 {{F1}}\", \"F1\"))),\n+                        FACTS);\n+        assertThat(greeting.status()).isEqualTo(AnswerStatus.GREETING);\n+        assertThat(greeting.answer()).isEqualTo(AnswerValidator.GREETING_MESSAGE);\n+        assertThat(greeting.evidence()).isEmpty();\n     }\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/AnswerValidatorTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/AnswerValidatorTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -19,9 +19,11 @@ import com.ssafy.thorp.assistant.application.result.PageKind;\n import com.ssafy.thorp.assistant.application.result.ToolSpec;\n import com.ssafy.thorp.backtest.application.port.message.EngineOutput;\n import com.ssafy.thorp.backtest.application.port.message.WeightsSource;\n+import com.ssafy.thorp.backtest.application.repository.CostProfileRepository;\n import com.ssafy.thorp.backtest.application.result.BacktestDetailResult;\n import com.ssafy.thorp.backtest.application.result.BacktestTimeseriesResult;\n import com.ssafy.thorp.backtest.application.result.BacktestWeightsResult;\n+import com.ssafy.thorp.backtest.domain.model.CostProfile;\n import com.ssafy.thorp.backtest.domain.model.ResultSource;\n import com.ssafy.thorp.backtest.domain.model.RunStatus;\n import com.ssafy.thorp.common.exception.BusinessException;\n@@ -34,8 +36,10 @@ import com.ssafy.thorp.sector.application.result.SectorListResult;\n import com.ssafy.thorp.sector.application.service.SectorService;\n import com.ssafy.thorp.sector.domain.model.Sector;\n import com.ssafy.thorp.sector.domain.vo.SectorCode;\n+import com.ssafy.thorp.strategy.application.port.AllowedRange;\n import com.ssafy.thorp.strategy.application.port.ParameterAxis;\n import com.ssafy.thorp.strategy.application.port.ParameterRegistryPort;\n+import com.ssafy.thorp.strategy.application.port.RegisteredChoice;\n import com.ssafy.thorp.strategy.application.port.StrategyRegistration;\n import java.math.BigDecimal;\n import java.time.Duration;\n@@ -75,8 +79,10 @@ class ResultEvidenceBuilderTest {\n     private final PublicResultService publicResults = mock(PublicResultService.class);\n     private final SectorService sectors = mock(SectorService.class);\n     private final ParameterRegistryPort registry = mock(ParameterRegistryPort.class);\n+    private final CostProfileRepository costProfiles = mock(CostProfileRepository.class);\n     private final ResultEvidenceBuilder builder =\n-            new ResultEvidenceBuilder(publicResults, sectors, registry, SETTINGS, 100);\n+            new ResultEvidenceBuilder(\n+                    publicResults, sectors, registry, costProfiles, SETTINGS, 100);\n \n     @BeforeEach\n     void stubs() {\n@@ -97,6 +103,19 @@ class ResultEvidenceBuilderTest {\n         StrategyRegistration registration = mock(StrategyRegistration.class);\n         when(registration.applicableAxes(any())).thenReturn(List.of(axis));\n         when(registry.find(\"EQUAL_WEIGHT\")).thenReturn(Optional.of(registration));\n+        when(costProfiles.find(\"KR-ETF-2026-09\"))\n+                .thenReturn(\n+                        Optional.of(\n+                                new CostProfile(\n+                                        \"KR-ETF-2026-09\",\n+                                        new BigDecimal(\"1.5\"),\n+                                        new BigDecimal(\"3\"),\n+                                        new BigDecimal(\"5\"),\n+                                        BigDecimal.ZERO,\n+                                        null,\n+                                        false,\n+                                        \"PD-07\",\n+                                        \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\")));\n     }\n \n     static Map<String, Object> item(String sectorId, String instrumentId, String weight) {\n@@ -178,7 +197,13 @@ class ResultEvidenceBuilderTest {\n                 null,\n                 null,\n                 config,\n-                Map.of(\"engine\", \"nautilus 1.219.0\", \"rules\", Map.of(\"version\", \"1\")),\n+                Map.of(\n+                        \"engine\",\n+                        \"nautilus 1.219.0\",\n+                        \"rules\",\n+                        Map.of(\"version\", \"1\"),\n+                        \"costProfile\",\n+                        Map.of(\"version\", \"KR-ETF-2026-09\")),\n                 summary,\n                 null,\n                 null,\n@@ -263,6 +288,7 @@ class ResultEvidenceBuilderTest {\n                         \"스프레드\",\n                         \"슬리피지\",\n                         \"세금\",\n+                        \"세금 규칙\",\n                         \"회복 기간(거래일)\",\n                         \"회전율\",\n                         \"비중 오차\",\n@@ -296,6 +322,8 @@ class ResultEvidenceBuilderTest {\n         assertThat(facts.get(\"시작 금액\").formattedValue()).isEqualTo(\"11,110,000원\");\n         assertThat(facts.get(\"전략\").value()).isEqualTo(\"똑같이 나누기\");\n         assertThat(facts.get(\"리밸런싱 주기\").value()).isEqualTo(\"MONTH_END\");\n+        assertThat(facts.get(\"세금 규칙\").value()).isEqualTo(\"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\");\n+        assertThat(facts.get(\"세금 규칙\").tab()).isEqualTo(\"settings\");\n         assertThat(facts.get(\"비중 출처\").value()).isEqualTo(\"전략 계산\");\n         assertThat(facts.get(\"반도체 실제 비중\").asOf()).isEqualTo(LocalDate.of(2024, 12, 31));\n         assertThat(facts.get(\"반도체 실제 비중\").value()).isEqualTo(\"0.4000\");\n@@ -418,6 +446,69 @@ class ResultEvidenceBuilderTest {\n         assertThat(facts).containsKeys(\"SEMICONDUCTOR 대표 ETF\", \"BATTERY 실제 비중\", \"rebalance\");\n     }\n \n+    @Test\n+    @DisplayName(\"목록형 축의 객체 값은 등록표 선택지 문구로 적고, 프로필이 없으면 세금 규칙 근거도 없다\")\n+    void choiceValuesUseRegistryLabels() {\n+        ParameterAxis axis = mock(ParameterAxis.class);\n+        when(axis.name()).thenReturn(\"rebalance\");\n+        when(axis.label()).thenReturn(\"리밸런싱 주기\");\n+        when(axis.unit()).thenReturn(null);\n+        when(axis.allowedRange())\n+                .thenReturn(\n+                        AllowedRange.ofChoices(\n+                                List.of(\n+                                        new RegisteredChoice(\n+                                                Map.of(\"mode\", \"CALENDAR\", \"unit\", \"MONTH_END\"),\n+                                                \"월말\"))));\n+        StrategyRegistration registration = mock(StrategyRegistration.class);\n+        when(registration.applicableAxes(any())).thenReturn(List.of(axis));\n+        when(registry.find(\"EQUAL_WEIGHT\")).thenReturn(Optional.of(registration));\n+        when(costProfiles.find(anyString())).thenReturn(Optional.empty());\n+        Map<String, Object> config = config(twoItems());\n+        config.put(\n+                \"parameters\", Map.of(\"rebalance\", Map.of(\"mode\", \"CALENDAR\", \"unit\", \"MONTH_END\")));\n+        when(publicResults.getWeights(TOKEN))\n+                .thenReturn(weights(List.of(\"091160.XKRX\", \"305720.XKRX\")));\n+        when(publicResults.getDetail(TOKEN))\n+                .thenReturn(detail(config, summary(List.of(\"091160.XKRX\", \"305720.XKRX\")), false));\n+\n+        Map<String, Evidence> facts =\n+                byLabel(builder.build(new PageContext(PageKind.RESULT, TOKEN)));\n+\n+        assertThat(facts.get(\"리밸런싱 주기\").value()).isEqualTo(\"월말\");\n+        assertThat(facts).doesNotContainKey(\"세금 규칙\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"등록표 선택지에 없는 값(옛 요청 등)은 예외 없이 원문 그대로 적는다\")\n+    void unknownChoiceValueStaysRaw() {\n+        ParameterAxis axis = mock(ParameterAxis.class);\n+        when(axis.name()).thenReturn(\"rebalance\");\n+        when(axis.label()).thenReturn(\"리밸런싱 주기\");\n+        when(axis.unit()).thenReturn(null);\n+        when(axis.allowedRange())\n+                .thenReturn(\n+                        AllowedRange.ofChoices(List.of(new RegisteredChoice(\"MONTH_END\", \"월말\"))));\n+        StrategyRegistration registration = mock(StrategyRegistration.class);\n+        when(registration.applicableAxes(any())).thenReturn(List.of(axis));\n+        when(registry.find(\"EQUAL_WEIGHT\")).thenReturn(Optional.of(registration));\n+        Map<String, Object> config = config(twoItems());\n+        config.put(\n+                \"parameters\",\n+                Map.of(\"rebalance\", Map.of(\"mode\", \"TRADING_DAYS\", \"days\", 21), \"topN\", 3));\n+        when(publicResults.getWeights(TOKEN))\n+                .thenReturn(weights(List.of(\"091160.XKRX\", \"305720.XKRX\")));\n+        when(publicResults.getDetail(TOKEN))\n+                .thenReturn(detail(config, summary(List.of(\"091160.XKRX\", \"305720.XKRX\")), false));\n+\n+        Map<String, Evidence> facts =\n+                byLabel(builder.build(new PageContext(PageKind.RESULT, TOKEN)));\n+\n+        // Map.of 는 순서를 정하지 않으므로 통째 문자열이 아니라 원문 조각으로 본다.\n+        assertThat(facts.get(\"리밸런싱 주기\").value()).contains(\"TRADING_DAYS\").contains(\"21\");\n+        assertThat(facts.get(\"topN\").value()).isEqualTo(\"3\");\n+    }\n+\n     @Test\n     @DisplayName(\"도구 다섯 개가 이 요청의 결과에 묶여 만들어지고 인자는 날짜뿐이다\")\n     void bundlesFiveDateOnlyTools() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilderTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/application/service/ResultEvidenceBuilderTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -149,7 +149,7 @@ class OpenAiChatCompletionsClientTest {\n         JsonNode schema = format.get(\"json_schema\").get(\"schema\");\n         assertThat(schema.get(\"properties\").get(\"status\").get(\"enum\"))\n                 .extracting(JsonNode::asText)\n-                .containsExactly(\"ANSWERED\", \"INSUFFICIENT_EVIDENCE\", \"OUT_OF_SCOPE\");\n+                .containsExactly(\"ANSWERED\", \"INSUFFICIENT_EVIDENCE\", \"OUT_OF_SCOPE\", \"GREETING\");\n         assertThat(schema.get(\"additionalProperties\").asBoolean()).isFalse();\n \n         JsonNode tools = body.get(\"tools\");\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/infrastructure/client/OpenAiChatCompletionsClientTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -283,6 +283,16 @@ class AssistantControllerTest {\n         assertThat(json(actions)).isEqualTo(example(\"answer-out-of-scope.json\"));\n     }\n \n+    @Test\n+    @DisplayName(\"인사 답은 examples/answer-greeting.json 모양이다\")\n+    void greetingLikeExample() throws Exception {\n+        fakes.script.set(() -> new ModelDraft(AnswerStatus.GREETING, List.of()));\n+\n+        ResultActions actions = askOk(\"10.0.0.4\", TOKEN).andExpect(status().isOk());\n+\n+        assertThat(json(actions)).isEqualTo(example(\"answer-greeting.json\"));\n+    }\n+\n     @Test\n     @DisplayName(\"301자·공백 질문은 400 이고 모델을 부르지 않는다\")\n     void rejectsQuestionLength() throws Exception {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/assistant/presentation/AssistantControllerTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -355,7 +355,9 @@ class FlywayMigrationTest extends RepositoryTestSupport {\n                         \"escalation\",\n                         \"provisional\",\n                         \"note\",\n-                        \"created_at\");\n+                        \"created_at\",\n+                        // 세금 규칙 설명(spec 015 도우미 근거, S15P21E205-444)\n+                        \"tax_note\");\n         assertThat(columnsOf(\"strategy_rules\"))\n                 .containsExactlyInAnyOrder(\n                         \"strategy_id\",\n@@ -366,6 +368,13 @@ class FlywayMigrationTest extends RepositoryTestSupport {\n                         \"decision_ref\",\n                         \"created_at\");\n \n+        // 두 행 모두 세금이 0이고 이유가 같다. 설명이 비면 도우미가 \"세금은 왜 0원\" 에 근거 부족으로 답한다.\n+        assertThat(\n+                        jdbcTemplate.queryForList(\n+                                \"SELECT tax_note FROM cost_profile ORDER BY version\", String.class))\n+                .containsExactly(\n+                        \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\", \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\");\n+\n         // 데모 비용은 임시값으로 표시돼 있어야 한다. false로 들어가면 결과가 확정 비용인 척한다.\n         assertThat(\n                         jdbcTemplate.queryForObject(\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/common/persistence/FlywayMigrationTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -0,0 +1,10 @@\n+{\n+  \"success\": true,\n+  \"data\": {\n+    \"status\": \"GREETING\",\n+    \"answer\": \"안녕하세요. 지금 보고 있는 결과에 대해 물어보세요. 예: 수익률은 어떻게 계산된거야?\",\n+    \"evidence\": [],\n+    \"page\": { \"kind\": \"RESULT\" }\n+  },\n+  \"error\": null\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/examples/answer-greeting.json",
+          "old_path": "docs/specs/assistant-api/examples/answer-greeting.json",
+          "a_mode": "0",
+          "b_mode": "100644",
+          "new_file": true,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -29,7 +29,7 @@ spec 015 결과 화면 질문 도우미가 쓰는 경로의 요약이다. 원본\n | `GET /assistant/capabilities` | 기능 켜짐 여부와 화면 범위 | `{enabled, scopes[]}`. 항상 200 |\n | `POST /assistant/questions` | 질문 | `{status, answer, evidence[], page}` |\n \n-`status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE`. `evidence[]`는 답에 실제로 쓰인 근거만이고 `tab`(`summary`·`analysis`·`settings`·`trades`·`loss`)으로 결과 탭에 간다. 부분 결과면 `answer` 첫 문장에 완료 끝 날짜까지의 부분 결과임이 붙는다.\n+`status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE`·`GREETING`(인사·잡담, `examples/answer-greeting.json`). `evidence[]`는 답에 실제로 쓰인 근거만이고 `tab`(`summary`·`analysis`·`settings`·`trades`·`loss`)은 그 값이 있는 결과 탭이다(1차 화면은 근거를 그리지 않는다). 부분 결과면 `answer` 첫 문장에 완료 끝 날짜까지의 부분 결과임이 붙는다.\n \n ## 3. 오류\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "docs/specs/assistant-api/README.md",
+          "old_path": "docs/specs/assistant-api/README.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -225,7 +225,8 @@\n }\n \n .answer[data-status='INSUFFICIENT_EVIDENCE'],\n-.answer[data-status='OUT_OF_SCOPE'] {\n+.answer[data-status='OUT_OF_SCOPE'],\n+.answer[data-status='GREETING'] {\n   color: var(--thorp-copy);\n }\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/components/assistant/assistant.module.css",
+          "old_path": "frontend/src/components/assistant/assistant.module.css",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -17,7 +17,7 @@ export type AssistantContext = {\n   publicToken: string\n }\n \n-export type AssistantAnswerStatus = 'ANSWERED' | 'INSUFFICIENT_EVIDENCE' | 'OUT_OF_SCOPE'\n+export type AssistantAnswerStatus = 'ANSWERED' | 'INSUFFICIENT_EVIDENCE' | 'OUT_OF_SCOPE' | 'GREETING'\n \n /** 결과 화면 탭 id(005). 근거 카드는 이 탭으로 이동한다. */\n export type AssistantEvidenceTab = 'summary' | 'analysis' | 'settings' | 'trades' | 'loss'\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "frontend/src/types/assistant.ts",
+          "old_path": "frontend/src/types/assistant.ts",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -36,9 +36,9 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d\n }\n ```\n \n-- `status`: `ANSWERED` | `INSUFFICIENT_EVIDENCE` | `OUT_OF_SCOPE`. 뒤 둘은 `answer`가 고정 안내 문장이고 `evidence`는 빈 배열이다.\n+- `status`: `ANSWERED` | `INSUFFICIENT_EVIDENCE` | `OUT_OF_SCOPE` | `GREETING`. `ANSWERED` 밖의 셋은 `answer`가 고정 안내 문장이고 `evidence`는 빈 배열이다. `GREETING`은 인사·잡담처럼 결과의 값을 묻지 않은 질문이다.\n - `answer`: 자리표시자가 치환된 최종 문장. 안의 숫자·날짜는 모두 `evidence[].value`에서 왔다.\n-- `evidence[]`: 답에 실제로 쓰인 근거만. `id`는 이 응답 안에서만 뜻이 있다. `tab`은 결과 화면 탭 id(`summary`·`analysis`·`settings`·`trades`·`loss`) 중 하나이며 화면은 그 탭으로 이동한다.\n+- `evidence[]`: 답에 실제로 쓰인 근거만. `id`는 이 응답 안에서만 뜻이 있다. `tab`은 결과 화면 탭 id(`summary`·`analysis`·`settings`·`trades`·`loss`) 중 하나다. 1차 화면은 근거를 그리지 않고 답만 보인다(묶음 5 결정) — 필드는 검증·평가(SC-003)와 뒤 화면을 위해 그대로 둔다.\n - 부분 결과(`partial=true`)면 `answer` 첫 문장은 서버가 붙인 \"이 결과는 {완료 끝 날짜}까지의 부분 결과입니다.\"다.\n \n 오류(봉투 `error.code`):\n@@ -128,7 +128,7 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d\n {\n   \"type\": \"object\",\n   \"properties\": {\n-    \"status\": { \"type\": \"string\", \"enum\": [\"ANSWERED\", \"INSUFFICIENT_EVIDENCE\", \"OUT_OF_SCOPE\"] },\n+    \"status\": { \"type\": \"string\", \"enum\": [\"ANSWERED\", \"INSUFFICIENT_EVIDENCE\", \"OUT_OF_SCOPE\", \"GREETING\"] },\n     \"answerParts\": {\n       \"type\": \"array\",\n       \"items\": {\n@@ -151,7 +151,7 @@ spec 015의 HTTP 계약과 서버↔모델 계약의 원본이다. 요약은 [`d\n \n ### 2.4 서버 검증 규칙\n \n-하나라도 걸리면 답변 전체를 버리고 `INSUFFICIENT_EVIDENCE` 고정 안내로 바꾼다(503이 아니다 — 모델은 응답했으나 쓸 수 없는 경우).\n+하나라도 걸리면 답변 전체를 버리고 `INSUFFICIENT_EVIDENCE` 고정 안내로 바꾼다(503이 아니다 — 모델은 응답했으나 쓸 수 없는 경우). `OUT_OF_SCOPE`·`GREETING`은 초안의 part를 보지 않고 각자의 고정 문장이다.\n \n | 규칙 | 판정 |\n |---|---|\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/contracts/assistant-api.md",
+          "old_path": "specs/015-context-assistant/contracts/assistant-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -33,15 +33,17 @@\n \n ### User Story 1 - 결과의 값을 묻는다 (Priority: P1)\n \n-결과 화면을 보는 사용자가 \"거래비용은 어떻게 구성됐어?\", \"비용을 빼고 얼마가 남았어?\", \"어떤 설정으로 돌린 거야?\"처럼 그 결과의 값을 묻고, 서버가 읽은 값으로 채워진 한국어 답과 근거 카드를 받는다.\n+결과 화면을 보는 사용자가 \"거래비용은 어떻게 구성됐어?\", \"비용을 빼고 얼마가 남았어?\", \"어떤 설정으로 돌린 거야?\"처럼 그 결과의 값을 묻고, 서버가 읽은 값으로 채워진 한국어 답을 받는다. 답에 쓰인 근거는 응답에 실리지만 1차 화면은 그리지 않는다.\n \n **Why this priority**: 이 기능의 중심이다. 상세 응답에 이미 있는 값만으로 답할 수 있어 도구 없이 완결된다.\n \n-**Independent Test**: 완료된 결과 주소에서 말풍선을 열어 비용·수익률·설정을 묻고, 답의 모든 숫자가 그 결과의 상세 응답 값과 일치하며 근거 카드가 그 값을 가리키는지 확인한다.\n+**Independent Test**: 완료된 결과 주소에서 말풍선을 열어 비용·수익률·설정을 묻고, 답의 모든 숫자가 그 결과의 상세 응답 값과 일치하며 응답의 근거가 그 값을 가리키는지 확인한다.\n \n **Acceptance Scenarios**:\n \n-1. **Given** 완료된 결과 화면, **When** \"거래비용은 어떻게 구성됐어?\"라고 물으면, **Then** 비용 항목별 금액이 상세 응답 값 그대로 답에 들어가고, 각 값에 근거 카드가 붙는다.\n+1. **Given** 완료된 결과 화면, **When** \"거래비용은 어떻게 구성됐어?\"라고 물으면, **Then** 비용 항목별 금액이 상세 응답 값 그대로 답에 들어가고, 각 값이 응답의 근거를 가리킨다.\n+5. **Given** 완료된 결과 화면, **When** \"세금은 왜 0원이야?\"라고 물으면, **Then** 비용 프로필의 세금 규칙 설명(근거)을 인용해 답한다. 규칙 설명이 없는 프로필이면 근거 부족이다.\n+6. **Given** 완료된 결과 화면, **When** \"안녕\"처럼 값을 묻지 않는 말을 보내면, **Then** 근거를 나열하지 않고 질문을 권하는 고정 문장(`GREETING`)이 온다.\n 2. **Given** 부분 결과(`partial=true`), **When** 수익률을 물으면, **Then** 답의 첫 문장에 완료된 끝 날짜까지의 부분 결과임이 먼저 나온다.\n 3. **Given** 계산 중이거나 실패한 결과, **When** 값을 물으면, **Then** 결과 없음(005와 같은 409 뜻)을 안내하고 모델을 부르지 않는다.\n 4. **Given** 답변 문장에 근거에 없는 숫자가 들어 있다면(모델 오류), **When** 서버가 검증하면, **Then** 그 답은 노출되지 않고 \"이 화면 자료만으로 확인할 수 없습니다\"로 바뀐다.\n@@ -68,7 +70,7 @@\n \n ### User Story 3 - 플로팅 버튼과 말풍선으로 연다 (Priority: P2)\n \n-사용자가 화면 여백의 로봇 아이콘 버튼을 눌러 말풍선을 열고, 예시 질문을 누르거나 직접 입력해 묻고, 답과 근거 카드를 읽고, 근거 카드로 그 값이 있는 탭에 간다.\n+사용자가 화면 여백의 로봇 아이콘 버튼을 눌러 말풍선을 열고, 예시 질문을 누르거나 직접 입력해 묻고, 답을 읽는다. 말풍선을 닫았다 열어도 같은 결과 화면이면 대화가 남고, 처음 화면으로 돌아가는 버튼이 있다.\n \n **Why this priority**: 진입과 표시가 없으면 앞의 두 스토리가 사용자에게 닿지 않는다. 다만 서버 기능은 이것 없이도 검증할 수 있다.\n \n@@ -79,7 +81,7 @@\n 1. **Given** 기능이 켜진 결과 화면, **When** 화면이 열리면, **Then** 여백에 `질문하기` 접근 이름의 로봇 아이콘 버튼이 닫힌 채 보이고, 결과 화면의 주 행동 버튼은 여전히 '비교 대상 고르기' 하나다.\n 2. **Given** 넓은 화면, **When** 버튼을 콘텐츠 위로 끌어 놓으면, **Then** 가까운 쪽 여백으로 붙고 위치가 브라우저에 기억된다.\n 3. **Given** 말풍선이 열린 상태, **When** Escape를 누르면, **Then** 말풍선이 닫히고 초점이 버튼으로 돌아간다.\n-4. **Given** 첫 질문을 보내기 전, **When** 말풍선을 열면, **Then** \"질문과 답변에 필요한 화면 자료가 외부 AI 처리 서비스로 전달됩니다\" 안내가 보이고, 전송은 사용자가 제출할 때만 일어난다.\n+4. **Given** 첫 질문을 보내기 전, **When** 말풍선을 열면, **Then** \"백테스트 결과에 대해서 질문해보세요.\" 안내와 예시 질문이 보이고, 전송은 사용자가 제출할 때만 일어난다. 화면 자료가 외부 AI 처리 서비스로 전달된다는 사실은 말풍선이 아니라 서비스 안내(이용 약관·도움말)가 맡는다.\n 5. **Given** 기능이 꺼진 환경(`capabilities.enabled=false`), **When** 어느 화면을 열어도, **Then** 버튼이 보이지 않고 기존 화면은 그대로다.\n \n ---\n@@ -122,18 +124,18 @@\n - **FR-001**: 기능이 켜진 지원 화면(1차: `/results/:token`)의 콘텐츠 바깥 여백에 로봇 아이콘 플로팅 버튼(접근 이름 `질문하기`)을 둔다. 로그인·가입·관리 화면과 기능이 꺼진 환경에는 두지 않는다. 결과 화면의 주 행동 버튼은 '비교 대상 고르기' 하나로 유지한다(005 FR-004, 원칙 II).\n - **FR-002**: 넓은 화면(>600px)에서 버튼은 포인터로 끌어 옮길 수 있고 놓으면 가까운 쪽 여백에 붙는다. 세로 위치는 화면 안에서 자유다. 위치는 브라우저 저장소에 기억한다. 좁은 화면(≤600px)에서는 끌 수 없고 우측 하단에 고정한다.\n - **FR-003**: 버튼을 누르면 옆에 말풍선(팝오버)이 열린다. 좁은 화면에서는 바닥 시트다. 말풍선은 대화상자와 물음표 도움말보다 아래 층이고 뒤 화면을 막지 않는다. 다시 누르기·Escape·바깥 누르기로 닫히며 닫힐 때 초점은 버튼으로 돌아간다. 열릴 때 초점은 질문 입력에 둔다.\n-- **FR-004**: 말풍선에는 현재 맥락 표시(`기준 결과에 질문`), 예시 질문 2~3개, 300자 이내 자유 입력 하나가 있다. 답변 종류를 고르는 조작은 없다. 첫 전송 전에 외부 AI 처리 서비스로 전달된다는 안내를 보이고, 전송은 사용자가 제출할 때만 한다.\n+- **FR-004**: 말풍선에는 머리글(`결과 도우미`), 첫 전송 전 안내(\"백테스트 결과에 대해서 질문해보세요.\"), 예시 질문 2~3개, 300자 이내 자유 입력 하나, 아이콘 보내기 버튼이 있다. 답변 종류를 고르는 조작은 없다. 전송은 사용자가 제출할 때만 한다. 보낸 뒤에는 처음 화면으로 돌아가는 버튼이 머리글에 보인다.\n - **FR-005**: 서버는 요청마다 공개 토큰을 005와 같은 규칙으로 판정한다(400/404/410). 결과가 없는 상태는 005 하위 자원과 같은 판정으로 409다 — 계산 중 `RESULT_NOT_READY`, 실패 `BACKTEST_FAILED`, 완료 거래일 없는 취소 `NO_PARTIAL_RESULT`. 이 판정은 근거 팩의 첫 조회(`getWeights`)가 이미 하므로 따로 만들지 않는다. 이 판정은 모델 호출 전에 끝나고, 실패하면 모델을 부르지 않는다.\n - **FR-006**: 서버는 결과 상세 응답과 비중 응답에 이미 있는 값 가운데 **계약 §2.1의 포함 표에 있는 항목만** 근거 팩으로 만든다(요약·비용·조건·설정값·분석 값·목표/실제 비중·예외 종류·`partial`). 라벨은 표의 한국어 고정 문자열이고 결과 필드 이름을 쓰지 않는다. 섹터는 001 섹터 목록의 이름으로 부른다(없으면 id 원문). 공개 토큰·만료 시각·버전·진행 상태·실행 시각·실패 메시지·상관 행렬은 넣지 않는다. 팩 상한은 60개이고, 섹터가 많아 넘치면 섹터별 위험·손실 기여부터 빼고 \"일부 분석 값은 싣지 않음\" 근거를 남긴다. 목표·실제 비중은 항상 싣는다. 서버는 새 합계·비율·구간을 계산하지 않는다(아키텍처 원칙 1). 시계열 전체·거래 목록 전체는 팩에 넣지 않는다.\n - **FR-007**: 서버는 읽기 도구 다섯 개를 정한다 — 특정 날짜의 시계열 점, 구간의 첫·끝·최고·최저 점, 구간의 거래 첫 페이지, 특정 날짜의 보유, 하락 폭이 가장 낮은 날과 그 앞 고점 날. 도구는 날짜 인자만 받고 어느 결과를 읽는지는 요청 시작 때 서버가 묶는다. 모델은 도구 사용을 요청할 수 있을 뿐 실행하지 못한다. 서버는 도구 이름이 목록에 있는지, 인자가 결과 기간 안이고 규칙(구간 최대 1년, 첫 페이지 상한)에 맞는지 검증한 뒤 실행하고, 실패하면 실행하지 않고 \"사용할 수 없음\"을 돌려준다. 도구 라운드는 요청당 최대 2회, 라운드당 근거 최대 30개다. 근거 알갱이는 시계열 점 1개가 근거 3개(자산가치·누적 수익률·하락 폭), 거래 1건·보유 종목 1개가 각각 근거 1개이며, 상한을 넘으면 도구 결과를 자르고 초기 팩은 보존한다. 부분 결과에서는 도구도 완료 끝 날짜까지만 읽는다.\n - **FR-008**: 모델에는 질문, 근거 팩, 도구 목록만 보낸다. 공개 토큰·`backtestId`·계정 식별자·브라우저 화면 상태는 어느 입력(프롬프트·도구 인자·이력)에도 넣지 않는다. 근거 ID는 요청마다 `F1`, `F2`…로 새로 매겨 결과 필드 이름을 노출하지 않는다.\n - **FR-009**: 모델의 최종 답변은 `status`와 `answerParts[{text, factIds}]` 구조다. `text` 안의 숫자·날짜·금액은 `{{Fn}}` 자리표시자로만 들어오고 서버가 근거 값의 표기 함수로 채운다. 서버는 다음을 검증하고 하나라도 걸리면 답변 전체를 버리고 근거 부족 안내로 바꾼다: 모르는 `factId`, `text`의 자리표시자와 `factIds` 불일치, 자리표시자 밖의 아라비아 숫자·`%`·`원`·날짜·URL(한글 수사는 허용), 근거 없는 `ANSWERED`, 길이·part 수 상한, 금지 표현 목록(권고·확률·원인 단정 — 보조 검사).\n-- **FR-010**: 응답 `status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE` 셋이다. 근거 카드는 답변에 실제로 쓰인 근거만 보이고, 값·기준 날짜·그 값이 있는 탭을 가리킨다. 카드를 누르면 결과 화면의 그 탭이 열린다 — 결과 탭 묶음은 바깥에서 탭을 바꿀 수 있어야 한다(지금은 첫 탭만 받는다). 부분 결과면 답의 첫 문장에 완료 끝 날짜까지의 부분 결과임을 서버가 붙인다.\n-- **FR-011**: 추천·종목 매수·미래 성과·확률 표현·원인 단정을 답에 넣지 않는다(원칙 III). 원인 질문에는 관측된 사실만 제시한다. 비교 대상·KOSPI 참고선·다른 결과는 범위 밖으로 안내한다.\n+- **FR-010**: 응답 `status`는 `ANSWERED`·`INSUFFICIENT_EVIDENCE`·`OUT_OF_SCOPE`·`GREETING` 넷이다. `ANSWERED` 밖의 셋은 고정 문장이고 근거가 비어 있다. 응답의 `evidence`는 답변에 실제로 쓰인 근거만이며 값·기준 날짜·그 값이 있는 탭을 가리킨다. 1차 화면은 근거를 그리지 않고 답만 보인다(2026-09-25 결정, 카드·탭 열기 경로 제거). 부분 결과면 답의 첫 문장에 완료 끝 날짜까지의 부분 결과임을 서버가 붙인다.\n+- **FR-011**: 추천·종목 매수·미래 성과·확률 표현·원인 단정을 답에 넣지 않는다(원칙 III). 시장 결과의 원인 질문에는 관측된 사실만 제시한다. 설정값·비용 규칙에서 바로 따라오는 값(세금 0원 등)은 근거에 실린 규칙 설명을 인용해 설명할 수 있다. 질문이 결과의 값을 묻지 않으면(인사·잡담) 근거를 나열하지 않고 `GREETING`이다. 비교 대상·KOSPI 참고선·다른 결과는 범위 밖으로 안내한다.\n - **FR-012**: 요청은 서버에서 2분(근거 팩 만들기·도구 라운드 포함) 안에 끝내고 자동 재시도하지 않는다. 모델 장애·시간 초과는 503 `ASSISTANT_UNAVAILABLE`, 한도 초과는 429 `ASSISTANT_LIMIT`, 기능 비활성이면 질문 경로는 404다(`capabilities`는 항상 200). 어느 오류에서도 다른 자료로 대체 답변하지 않고 기존 결과 화면은 영향받지 않는다.\n - **FR-013**: 한도는 설정값이다 — IP별 분당 요청 수, 결과 토큰별 분당 요청 수, 하루 전체 요청 수(초안 8·5·1000). 넘으면 429다. 질문 길이 상한(300자)은 한도가 아니라 입력 검증이라 400이다. 금액 상한은 두지 않는다.\n - **FR-014**: 서버는 질문·답변 원문을 영속 저장하지 않는다. 운영 로그에는 페이지 종류·상태·라운드 수·지연·토큰 사용량만 남기고 토큰·식별자·원문을 남기지 않는다. 대화는 새로고침하면 사라진다(버튼 위치만 남는다).\n-- **FR-015**: 화면이 바뀌면 진행 중 요청을 취소하고 말풍선을 닫는다. 늦게 끝난 이전 화면의 응답을 새 화면의 답으로 보이지 않는다.\n+- **FR-015**: 화면이 바뀌면 진행 중 요청을 취소하고 말풍선을 닫고 이력을 비운다. 늦게 끝난 이전 화면의 응답을 새 화면의 답으로 보이지 않는다. 같은 화면에서 말풍선을 닫았다 열면 이력과 진행 중 요청이 남는다(저장하지 않으므로 새로 고치면 사라진다).\n - **FR-016**: 기능은 플래그로 켜고 끈다. 꺼져 있거나 모델 키·주소·모델명 중 하나라도 비어 있으면 `capabilities.enabled=false`이고 버튼이 없다. 이 값들이 비어 있어도 서버 기동은 정상이다(설정에 빈 기본값을 둔다). 켜는 것은 품질 관문(SC-001~SC-004)을 넘긴 뒤다.\n \n ### Key Entities\n@@ -150,7 +152,7 @@\n \n - **SC-001**: 평가 표본(결과 질문 20개 + 경계 질문 10개, 실제 결과 기반)에서 답변의 숫자·날짜가 결과 응답 값과 다른 경우가 0건이다.\n - **SC-002**: 같은 표본에서 무근거 사실·투자 권고·원인 단정·미래 성과 표현이 0건이다(사람 두 명 독립 판정).\n-- **SC-003**: 같은 표본에서 답변에 쓰인 근거 카드가 100% 실제 응답 값을 가리킨다.\n+- **SC-003**: 같은 표본에서 응답 `evidence`가 100% 실제 응답 값을 가리킨다.\n - **SC-004**: 만료·없는·형식 오류 토큰과 결과 없는 상태에서 모델 호출이 0회다. 프롬프트·도구 인자·로그의 직렬화 결과에 토큰·`backtestId`가 0회 나타난다.\n - **SC-005**: 도구가 필요한 질문(표본의 절반)에서 모델이 필요한 도구를 요청한 비율과, 요청당 라운드 수·지연·토큰 사용량을 평가 문서에 기록한다. 목표값은 두지 않고 기준선으로 남긴다.\n - **SC-006**: 기능이 꺼진 상태에서 결과·배우기·시장 흐름 화면의 기존 테스트가 전부 그대로 통과한다.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/spec.md",
+          "old_path": "specs/015-context-assistant/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -134,7 +134,8 @@ description: \"결과 화면 질문 도우미의 실행 작업 목록\"\n | 3 | `[BE] GMS Chat Completions 모델 어댑터 (도구 라운드 포함)` (S15P21E205-439) | `feat(be)/439-assistant-model-adapter` | 3 | T020~T023 | 2 |\n | 4 | `[BE] 결과 근거 팩과 읽기 도구 다섯 개` (S15P21E205-440) | `feat(be)/440-assistant-result-evidence` | 3 | T030~T035 | 2 |\n | 5 | `[FE] 질문하기 플로팅 버튼과 말풍선` (S15P21E205-441) | `feat(fe)/441-assistant-bubble` | 5 | T040~T046 | 1 |\n-| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5 |\n+| 5b | `[BE] 도우미 인사 고정 문구·세금 규칙 근거·설정값 라벨 표기` (S15P21E205-444) | `feat(be)/444-assistant-feedback` | 3 | 묶음 5 사람 확인에서 나온 결정 반영: `GREETING` 상태, `cost_profile.tax_note` 근거, 목록형 축 라벨, spec·계약 갱신 | 4·5 |\n+| 6 | `[BE] 도우미 품질 표본·자동 검사·평가 문서` | `feat(be)/{N}-assistant-quality-gate` | 2 | T050~T053 | 3·4·5·5b |\n \n 티켓은 브랜치를 딸 때 만든다(`AGENTS.md`). Epic S15P21E205-30, Story S15P21E205-433 `relates to`.\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/015-context-assistant/tasks.md",
+          "old_path": "specs/015-context-assistant/tasks.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    },
+    {
+      "id": 2249857,
+      "head_commit_sha": "19017c3f7aba15add1a4aadb09fedc279e5e8caa",
+      "base_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "start_commit_sha": "2231b81a559eb84f1a99e934aee71874d2a70f77",
+      "created_at": "2026-09-25T14:18:17.346+09:00",
+      "merge_request_id": 959707,
+      "state": "without_files",
+      "real_size": "20",
+      "patch_id_sha": "7f9ccb14cdc711bc454afdc6604da08eed428b51",
+      "commits": [
+        {
+          "id": "19017c3f7aba15add1a4aadb09fedc279e5e8caa",
+          "short_id": "19017c3f",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "74d4f565afde934c5566da1762b5a763ec79413c"
+          ],
+          "title": "docs: spec 015 를 지금 화면과 GREETING 상태에 맞춘다",
+          "message": "docs: spec 015 를 지금 화면과 GREETING 상태에 맞춘다\n\n머리글·첫 안내 문구·근거 카드 제거·이력 유지·처음으로 버튼(묶음 5 결정)과\nGREETING·세금 규칙 근거(444)를 FR-004·FR-010·FR-011·FR-015·SC-003 과\n계약 §1·§2 에 반영한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/19017c3f7aba15add1a4aadb09fedc279e5e8caa"
+        },
+        {
+          "id": "74d4f565afde934c5566da1762b5a763ec79413c",
+          "short_id": "74d4f565",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "3d35fff389f022be2e4903d577fac8a75d04eec1"
+          ],
+          "title": "feat(fe): 도우미 응답 타입과 고정 문구 색에 GREETING 을 더한다",
+          "message": "feat(fe): 도우미 응답 타입과 고정 문구 색에 GREETING 을 더한다\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/74d4f565afde934c5566da1762b5a763ec79413c"
+        },
+        {
+          "id": "3d35fff389f022be2e4903d577fac8a75d04eec1",
+          "short_id": "3d35fff3",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "92276be57121a1b03c2df0e06abbe75a1d2a42b2"
+          ],
+          "title": "feat(be): 근거 팩에 세금 규칙을 싣고 목록형 축 값은 등록표 문구로 적는다",
+          "message": "feat(be): 근거 팩에 세금 규칙을 싣고 목록형 축 값은 등록표 문구로 적는다\n\n\"세금은 왜 0원이야\"에 답할 근거가 생긴다. 리밸런싱 주기처럼 값이 객체인 축은\n{mode=…} 대신 등록표 선택지 라벨(\"월말\")로 표기한다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3d35fff389f022be2e4903d577fac8a75d04eec1"
+        },
+        {
+          "id": "92276be57121a1b03c2df0e06abbe75a1d2a42b2",
+          "short_id": "92276be5",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "8622f880629e0d118d1d321f2889250983e6f471"
+          ],
+          "title": "feat(be): 비용 조건에 세금 규칙 설명(tax_note)을 둔다",
+          "message": "feat(be): 비용 조건에 세금 규칙 설명(tax_note)을 둔다\n\n두 프로필 모두 \"국내 상장 ETF 매도에는 증권거래세가 없어 0으로 둔다\".\n값은 그대로라 새 버전 행을 만들지 않는다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/92276be57121a1b03c2df0e06abbe75a1d2a42b2"
+        },
+        {
+          "id": "8622f880629e0d118d1d321f2889250983e6f471",
+          "short_id": "8622f880",
+          "created_at": "2026-09-25T14:01:33.000+09:00",
+          "parent_ids": [
+            "2231b81a559eb84f1a99e934aee71874d2a70f77"
+          ],
+          "title": "feat(be): 값을 묻지 않는 질문은 GREETING 고정 문구로 답한다",
+          "message": "feat(be): 값을 묻지 않는 질문은 GREETING 고정 문구로 답한다\n\n인사·잡담에 근거 40개를 나열하던 것을 막는다. 프롬프트에 \"묻는 값만 답한다\"와\nGREETING 상태를 더하고, 검증기가 고정 문구를 돌려준다. 설정값·비용 규칙에서\n따라오는 값은 그 규칙 근거로 설명할 수 있게 원인 단정 규칙을 좁혔다.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>\n",
+          "author_name": "신재은",
+          "author_email": "sje5149@naver.com",
+          "authored_date": "2026-09-25T14:01:33.000+09:00",
+          "committer_name": "신재은",
+          "committer_email": "sje5149@naver.com",
+          "committed_date": "2026-09-25T14:01:33.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/8622f880629e0d118d1d321f2889250983e6f471"
+        }
+      ],
+      "diffs": []
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": true,
+    "approved_by": [
+      {
+        "user": {
+          "id": 30868,
+          "username": "sje5149",
+          "public_email": "",
+          "name": "신재은",
+          "state": "active",
+          "locked": false,
+          "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30868/avatar.png",
+          "web_url": "https://lab.ssafy.com/sje5149"
+        },
+        "approved_at": "2026-09-25T14:18:20.796+09:00"
+      }
+    ]
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2867942": [],
+    "2867949": []
+  }
+}

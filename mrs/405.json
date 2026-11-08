@@ -1,0 +1,766 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 963663,
+    "iid": 405,
+    "project_id": 1444456,
+    "title": "fix(be): spec013개선-B09 review",
+    "description": "# 작업 내용 요약\n\n병합된 B09(나의 학습 서버)의 AI 코드리뷰 지적을 고친다. 운영자가 남은 문제를 지워 모든 문제에 답한 상태가 되면 다음 정산이 '모두 맞힘'을 판정하고, 공개된 글이 0편이면 화면이 '이어서 읽기'를 그리지 않는다고 계약에 적는다(2026-10-07 결정). 기록 가능 판정과 잠금, 사실 읽기를 단순하게 정리한다.\n\n# 주요 변경 사항\n\n- 정산: '모두 답함'과 '모두 맞힘' 판정을 첫 답 처리에서 정산의 첫 단계로 옮긴다. 공개 판의 문제에 모두 첫 답이 있고 `all_answered_at`이 비어 있으면 그때를 처음 모두 답한 때로 본다. 글 하나의 경험치 상한 100은 그대로다.\n- 계약: `continueReading`은 공개된 글이 0편이어도 `ALL_DONE`이지만, 화면은 그 자리와 '모두 읽었습니다' 문구를 그리지 않는다(§1). 응답 모양은 바뀌지 않는다.\n- 요청 검증: `PUT …/position`의 `percent`는 JSON 정수만 받는다. `62.5`·`\"62\"`·`true`는 400 `INVALID_INPUT`이다.\n- 기록 가능 판정: 공개 범위 한 번 읽기로 정하고, 범위에 없을 때만 판 종류를 읽어 409와 404를 가른다. 기록 가능 확인 직후 게시 취소가 커밋되는 경우의 별도 가드를 없앴다.\n- 잠금과 읽기: 사용자 잠금 아래에서 겹치던 진행 행 `FOR UPDATE`를 뺀다. 요청 안에서 저장한 변경은 다시 읽지 않고 메모리에서 반영해, 학습 행동 한 번의 전체 기록 조회가 두세 번에서 한두 번으로 준다.\n- 정리: 관리 관문이 `LearnerAccess`로 로그인 주체를 읽고, `ArticleId.parse`가 세 서비스의 식별자 해석을 대신한다.\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build`: 2,694개 통과, 건너뜀 5개(live·perf·Docker 가드)\n- [x] 남은 문제를 지운 뒤 GET에서 '모두 맞힘' 20·배지·`all_answered_at`이 생기는지, `percent` 형식 오류 셋이 400인지 IT로 확인\n\n# 리뷰 포인트\n\n- '모두 맞힘'을 정산이 판정하므로 `GET /learning/me`도 `all_answered_at`을 쓸 수 있다. 새 첫 답으로 모두 답한 경우는 같은 요청의 정산에서 판정되어 응답의 `gained` 순서(정답 몫 → 모두 맞힘 → 단계 완주)는 이전과 같다.\n- 첫 답마다 공개 범위(문제 식별자·게시 용어)를 읽는 것은 그대로 두었다. 배지 수를 세는 정산에 전체 범위가 필요하고, 문제 식별자만 DB에서 꺼낸다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(배지 이름·기준 변경 없음)\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 공개 글 0편일 때 '모두 읽었습니다'를 보이지 않게 계약에 적었다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-10-07T14:30:22.972+09:00",
+    "updated_at": "2026-10-07T14:30:47.070+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-07T14:30:46.739+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/learning-records-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f07b8afe398bc43d1670bfc1333f574d870e286d",
+    "merge_commit_sha": "4555af5a1aa3704f7f6db4ca85da5fb82697adbc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-07T14:30:26.972+09:00",
+    "reference": "!405",
+    "references": {
+      "short": "!405",
+      "relative": "!405",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!405"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/405",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 963663,
+    "iid": 405,
+    "project_id": 1444456,
+    "title": "fix(be): spec013개선-B09 review",
+    "description": "# 작업 내용 요약\n\n병합된 B09(나의 학습 서버)의 AI 코드리뷰 지적을 고친다. 운영자가 남은 문제를 지워 모든 문제에 답한 상태가 되면 다음 정산이 '모두 맞힘'을 판정하고, 공개된 글이 0편이면 화면이 '이어서 읽기'를 그리지 않는다고 계약에 적는다(2026-10-07 결정). 기록 가능 판정과 잠금, 사실 읽기를 단순하게 정리한다.\n\n# 주요 변경 사항\n\n- 정산: '모두 답함'과 '모두 맞힘' 판정을 첫 답 처리에서 정산의 첫 단계로 옮긴다. 공개 판의 문제에 모두 첫 답이 있고 `all_answered_at`이 비어 있으면 그때를 처음 모두 답한 때로 본다. 글 하나의 경험치 상한 100은 그대로다.\n- 계약: `continueReading`은 공개된 글이 0편이어도 `ALL_DONE`이지만, 화면은 그 자리와 '모두 읽었습니다' 문구를 그리지 않는다(§1). 응답 모양은 바뀌지 않는다.\n- 요청 검증: `PUT …/position`의 `percent`는 JSON 정수만 받는다. `62.5`·`\"62\"`·`true`는 400 `INVALID_INPUT`이다.\n- 기록 가능 판정: 공개 범위 한 번 읽기로 정하고, 범위에 없을 때만 판 종류를 읽어 409와 404를 가른다. 기록 가능 확인 직후 게시 취소가 커밋되는 경우의 별도 가드를 없앴다.\n- 잠금과 읽기: 사용자 잠금 아래에서 겹치던 진행 행 `FOR UPDATE`를 뺀다. 요청 안에서 저장한 변경은 다시 읽지 않고 메모리에서 반영해, 학습 행동 한 번의 전체 기록 조회가 두세 번에서 한두 번으로 준다.\n- 정리: 관리 관문이 `LearnerAccess`로 로그인 주체를 읽고, `ArticleId.parse`가 세 서비스의 식별자 해석을 대신한다.\n\n# 테스트\n\n- [x] `./gradlew spotlessApply build`: 2,694개 통과, 건너뜀 5개(live·perf·Docker 가드)\n- [x] 남은 문제를 지운 뒤 GET에서 '모두 맞힘' 20·배지·`all_answered_at`이 생기는지, `percent` 형식 오류 셋이 400인지 IT로 확인\n\n# 리뷰 포인트\n\n- '모두 맞힘'을 정산이 판정하므로 `GET /learning/me`도 `all_answered_at`을 쓸 수 있다. 새 첫 답으로 모두 답한 경우는 같은 요청의 정산에서 판정되어 응답의 `gained` 순서(정답 몫 → 모두 맞힘 → 단계 완주)는 이전과 같다.\n- 첫 답마다 공개 범위(문제 식별자·게시 용어)를 읽는 것은 그대로 두었다. 배지 수를 세는 정산에 전체 범위가 필요하고, 문제 식별자만 DB에서 꺼낸다.\n\n# 공통 확인\n\n- [x] **순위 배지·추천 표현 0건** — 해당 없음(배지 이름·기준 변경 없음)\n- [x] **결제·포인트·상품 선택 단계 0건** — 해당 없음\n- [x] **전략 ID 상수·전략별 분기 0건** — 해당 없음\n- [x] **계산하지 않은 값을 0으로 채우지 않았다** — 공개 글 0편일 때 '모두 읽었습니다'를 보이지 않게 계약에 적었다\n- [x] **검증되지 않은 것을 검증된 것처럼 보이지 않는다** — 해당 없음",
+    "state": "merged",
+    "created_at": "2026-10-07T14:30:22.972+09:00",
+    "updated_at": "2026-10-07T14:30:47.070+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-10-07T14:30:46.739+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "fix(be)/learning-records-review",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "🌱 Backend",
+      "🛠️ Fix"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "f07b8afe398bc43d1670bfc1333f574d870e286d",
+    "merge_commit_sha": "4555af5a1aa3704f7f6db4ca85da5fb82697adbc",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-10-07T14:30:26.972+09:00",
+    "reference": "!405",
+    "references": {
+      "short": "!405",
+      "relative": "!405",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!405"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/405",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 7,
+      "completed_count": 7
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "20",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "3a491e30c698466622bb9df6548523bb6e63f1d2",
+      "head_sha": "f07b8afe398bc43d1670bfc1333f574d870e286d",
+      "start_sha": "3a491e30c698466622bb9df6548523bb6e63f1d2"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "2dd1a2a51f4415a505579ab25e7fc0b9edb1c35f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882134,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T14:30:23.775+09:00",
+          "updated_at": "2026-10-07T14:30:23.784+09:00",
+          "system": true,
+          "noteable_id": 963663,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 405,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "94183cccdaf47c3f956b9633b8ea947b3c6c6ddf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882135,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T14:30:23.793+09:00",
+          "updated_at": "2026-10-07T14:30:23.815+09:00",
+          "system": true,
+          "noteable_id": 963663,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 405,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8bcd0a459cce239ebe788f1dabb2ba11eef533a3",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882136,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 발견 사항\n- [Medium] `backend/src/main/java/com/ssafy/thorp/learning/presentation/request/PositionRequest.java`: 사용자 입력 검증을 위해 `JsonDeserializer`를 직접 구현하여 정수형(`JsonToken.VALUE_NUMBER_INT`) 검사를 수행하고 있습니다. 다만 소수점 형태(`62.5`) 등이 입력될 때 `context.handleUnexpectedToken`의 반환 타입 처리나 예외 전파 방식이 글로벌 예외 핸들러와 정확히 연동되는지, 혹은 `JsonProcessingException`을 유발하여 원하지 않는 500 에러나 기본 파싱 오류로 떨어지지 않는지 확인이 필요합니다. Spring MVC의 `@Valid`와 원활히 연동되도록 유효성 검증 테스트(`rejectsInvalidPercent`)가 추가되어 있으나, 예외 발생 시 반환되는 HTTP Status 및 ErrorCode(`INVALID_INPUT`)가 명시적으로 400을 반환하는지 통합 테스트를 통해 꼼꼼히 검증해야 합니다.\n\n### 테스트 제안\n- `PositionRequest`에 `62.5`, `\"62\"`, `true`, `null`, 빈 객체 `{}` 등을 보냈을 때 백엔드가 전역 예외 처리기를 통해 일관되게 `400 Bad Request` (`INVALID_INPUT`) 응답을 내리며, 서버 내부 오류(500)가 발생하지 않는지 확인하는 API 통합 테스트 시나리오를 유지 및 보완하세요.\n- 운영자가 남은 문제를 제거하여 사용자가 이미 첫 답을 마친 상태가 되었을 때, `GET /learning/me` 또는 후속 학습 행동 요청 시 `all_answered_at`이 정상적으로 채워지고 '모두 맞힘' 경험치(`ALL_CORRECT`)와 배지가 정확히 한 번만 부여되는지 검증하는 시나리오를 수행하세요.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:f07b8afe398bc43d1670bfc1333f574d870e286d -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-10-07T14:30:35.870+09:00",
+          "updated_at": "2026-10-07T14:30:35.870+09:00",
+          "system": false,
+          "noteable_id": 963663,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 405,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "30a8e56a03a15e45f3827c7aa2ca81d8e82883bf",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2882137,
+          "type": null,
+          "body": "mentioned in commit 4555af5a1aa3704f7f6db4ca85da5fb82697adbc",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-07T14:30:46.784+09:00",
+          "updated_at": "2026-10-07T14:30:46.803+09:00",
+          "system": true,
+          "noteable_id": 963663,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 405,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "eaa24a7e056f909d9e118034bbb1d9bf1cbb16a2",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2884992,
+          "type": null,
+          "body": "mentioned in commit cf0162b9064a28c47e91c9a290b1ec58d8fe4653",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-10-13T15:16:05.859+09:00",
+          "updated_at": "2026-10-13T15:16:05.926+09:00",
+          "system": true,
+          "noteable_id": 963663,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 405,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2262837,
+      "head_commit_sha": "f07b8afe398bc43d1670bfc1333f574d870e286d",
+      "base_commit_sha": "3a491e30c698466622bb9df6548523bb6e63f1d2",
+      "start_commit_sha": "3a491e30c698466622bb9df6548523bb6e63f1d2",
+      "created_at": "2026-10-07T14:30:24.420+09:00",
+      "merge_request_id": 963663,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "1b1bd563ff227b70c20f8d437c85b4f34d6e3f20"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2262837,
+      "head_commit_sha": "f07b8afe398bc43d1670bfc1333f574d870e286d",
+      "base_commit_sha": "3a491e30c698466622bb9df6548523bb6e63f1d2",
+      "start_commit_sha": "3a491e30c698466622bb9df6548523bb6e63f1d2",
+      "created_at": "2026-10-07T14:30:24.420+09:00",
+      "merge_request_id": 963663,
+      "state": "collected",
+      "real_size": "20",
+      "patch_id_sha": "1b1bd563ff227b70c20f8d437c85b4f34d6e3f20",
+      "commits": [
+        {
+          "id": "f07b8afe398bc43d1670bfc1333f574d870e286d",
+          "short_id": "f07b8afe",
+          "created_at": "2026-10-07T14:15:51.000+09:00",
+          "parent_ids": [
+            "3a491e30c698466622bb9df6548523bb6e63f1d2"
+          ],
+          "title": "fix(be): B09 리뷰 지적 9건을 고친다",
+          "message": "fix(be): B09 리뷰 지적 9건을 고친다\n\n운영자가 남은 문제를 지워 모두 답한 상태가 되면 다음 정산이 '모두 맞힘'을 판정하고(10-07 결정),\n공개 글 0편이면 화면이 이어서 읽기를 그리지 않는다고 계약에 적는다. 기록 가능 판정을 공개 범위\n한 번 읽기로 합치고, 사용자 잠금 아래 중복이던 진행 행 잠금을 빼며, 요청 안에서 저장한 변경을\n다시 읽지 않는다. percent는 JSON 정수만 받고, 로그인 주체 판정과 articleId 해석을 한 곳으로 모은다.\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-10-07T14:15:51.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-10-07T14:15:51.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/f07b8afe398bc43d1670bfc1333f574d870e286d"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -28,9 +28,6 @@ public interface LearnerProgressRepository {\n \n     Optional<LearnerProgress> find(long userId, ArticleId articleId);\n \n-    /** 행을 잠그고 읽는다. 같은 글의 답 처리가 겹치지 않게 한다(research R29). */\n-    Optional<LearnerProgress> findForUpdate(long userId, ArticleId articleId);\n-\n     /** 읽은 위치. 행이 없으면 만들고(글이 '읽는 중'이 된다), 있으면 더 큰 비율만 남기고 마지막으로 연 시각은 늘 바꾼다(learning-me-api §3). */\n     void recordPosition(long userId, ArticleId articleId, int percent, Instant at);\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/LearnerProgressRepository.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/repository/LearnerProgressRepository.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -87,11 +87,11 @@ import org.springframework.transaction.annotation.Transactional;\n  *\n  * <p><b>나의 학습을 쓰는 요청은 사용자 단위로 줄을 선다.</b> 정산하는 조회·위치·완료·첫 답·다시 풀기·학습 초기화가 모두 첫 문장에서 {@link\n  * LearnerProgressRepository#lockLearner}를 잡는다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지 행이 초기화 뒤에\n- * 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 잠금 순서는 사용자 잠금 → 진행 행이다. 관리 경로(단계 행 → 글)는 이 잠금과 진행 행을\n- * 잡지 않으므로 서로 기다리지 않는다.\n+ * 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 나의 학습이 잡는 잠금은 이것 하나다. 관리 경로(단계 행 → 글)는 이 잠금을 잡지 않으므로\n+ * 서로 기다리지 않는다. 같은 사용자의 사실은 이 서비스만 바꾸므로, 요청 안에서 저장한 변경은 다시 읽지 않고 메모리의 사실에 더해 쓴다.\n  *\n  * <p>격리 수준은 기본(READ COMMITTED)이다. {@code REPEATABLE_READ}에서는 다른 요청이 먼저 넣은 행과 충돌하는 {@code ON\n- * CONFLICT DO NOTHING}이 직렬화 오류로 실패한다. 같은 글의 답 처리는 진행 행도 잠근다(research R29).\n+ * CONFLICT DO NOTHING}이 직렬화 오류로 실패한다.\n  */\n @Service\n @Transactional\n@@ -141,9 +141,8 @@ public class LearnerService {\n         Instant now = LearningTime.now(clock);\n         Content content = content();\n         LearnerFacts before = facts(userId);\n-        Gains gains = new Gains(Settlement.level(content.scope(), before).current());\n-        settle(userId, content, before, now, gains);\n-        LearnerFacts facts = facts(userId);\n+        Gains gains = new Gains(Level.levelFor(before.ledger().total()));\n+        LearnerFacts facts = settle(userId, content, before, now, gains);\n         ContentScope scope = content.scope();\n         Level level = Settlement.level(scope, facts);\n \n@@ -203,8 +202,8 @@ public class LearnerService {\n     /** 글 하나의 기록(§2). 정산하지 않는다. */\n     @Transactional(readOnly = true)\n     public LearnerArticleResult article(long userId, String rawArticleId) {\n-        ArticleId articleId = requireRecordable(rawArticleId);\n-        Content content = requirePublishedIn(content(), articleId);\n+        Content content = content();\n+        ArticleId articleId = requireRecordableIn(content, rawArticleId);\n         LearnerFacts facts = facts(userId);\n         LearnerProgress progress = facts.progressOf(articleId);\n         List<QuestionId> questions = content.scope().questionsOf(articleId);\n@@ -249,35 +248,41 @@ public class LearnerService {\n      */\n     public CompletionResult complete(long userId, String rawArticleId) {\n         progressRepository.lockLearner(userId);\n-        ArticleId articleId = requireRecordable(rawArticleId);\n+        Content content = content();\n+        ArticleId articleId = requireRecordableIn(content, rawArticleId);\n         Instant now = LearningTime.now(clock);\n-        Content content = requirePublishedIn(content(), articleId);\n         LearnerFacts before = facts(userId);\n-        int levelBefore = Settlement.level(content.scope(), before).current();\n+        int levelBefore = Level.levelFor(before.ledger().total());\n         // 사용자 잠금 안에서 읽었으므로 그사이 다른 요청이 이 글을 완료할 수 없다.\n         boolean alreadyCompleted = before.completed(articleId);\n         Instant completedAt = progressRepository.recordCompletion(userId, articleId, now);\n-        Gains gains = new Gains(levelBefore);\n-        if (!alreadyCompleted) {\n-            gains.add(ledgerRepository, userId, ExpEntry.articleCompleted(articleId, now));\n-            settle(userId, content, facts(userId), now, gains);\n+        if (alreadyCompleted) {\n+            // 바뀐 것은 마지막으로 연 시각뿐이다. 완료한 글은 '이어서 읽기'에 들지 않으므로 읽어 둔 사실 그대로 답한다.\n+            return new CompletionResult(\n+                    completedAt,\n+                    true,\n+                    stageProgress(content.scope(), before, articleId),\n+                    continueReading(content, before),\n+                    Gained.none(levelBefore));\n         }\n-        LearnerFacts facts = facts(userId);\n-        int levelAfter = Settlement.level(content.scope(), facts).current();\n+        Gains gains = new Gains(levelBefore);\n+        gains.add(ledgerRepository, userId, ExpEntry.articleCompleted(articleId, now));\n+        LearnerFacts facts = settle(userId, content, facts(userId), now, gains);\n         return new CompletionResult(\n                 completedAt,\n-                alreadyCompleted,\n+                false,\n                 stageProgress(content.scope(), facts, articleId),\n                 continueReading(content, facts),\n-                alreadyCompleted\n-                        ? Gained.none(levelAfter)\n-                        : gains.result(levelAfter, BadgeCatalog.of(content.scope().stages())));\n+                gains.result(\n+                        Level.levelFor(facts.ledger().total()),\n+                        BadgeCatalog.of(content.scope().stages())));\n     }\n \n     /**\n      * 첫 답(§5). 공개 판으로 판정하고 저장한 뒤 돌려준다. 이미 답한 문제면 저장된 답을 바꾸지 않고 돌려준다.\n      *\n-     * <p>그 글의 진행 행을 잠근다. 같은 글의 두 답이 동시에 와도 정답 몫 상한과 '처음 모든 문제에 답한 순간'의 판정이 겹치지 않는다(R29).\n+     * <p>사용자 잠금 안에서 처리하므로 같은 글의 두 답이 동시에 와도 정답 몫 상한과 '처음 모든 문제에 답한 순간'의 판정이 겹치지 않는다(R29). '모두 답함'과\n+     * '모두 맞힘'은 정산이 판정한다. 운영자가 남은 문제를 지워 모두 답한 상태가 된 경우와 같은 규칙이다.\n      */\n     public AnswerResult answer(\n             long userId, String rawArticleId, String rawQuestionId, String rawChoiceId) {\n@@ -286,7 +291,7 @@ public class LearnerService {\n         List<QuizQuestion> quiz = currentQuiz(articleId);\n         LearnerProgress progress =\n                 progressRepository\n-                        .findForUpdate(userId, articleId)\n+                        .find(userId, articleId)\n                         .filter(LearnerProgress::completed)\n                         .orElseThrow(CompletionRequiredException::new);\n         QuizQuestion question = question(quiz, rawQuestionId);\n@@ -323,19 +328,8 @@ public class LearnerService {\n                 progressRepository.markMastered(userId, articleId, MasteredVia.FIRST_ANSWER, now);\n             }\n         }\n-        if (!progress.allAnswered()) {\n-            Map<QuestionId, FirstAnswer> answers =\n-                    byQuestion(answerRepository.findByArticle(userId, articleId), questionIds);\n-            if (answers.size() == questionIds.size()) {\n-                progressRepository.markAllAnswered(userId, articleId, now);\n-                if (answers.values().stream().allMatch(FirstAnswer::correct)) {\n-                    gains.add(ledgerRepository, userId, ExpEntry.allCorrect(articleId, now));\n-                }\n-            }\n-        }\n         Content content = content();\n-        settle(userId, content, facts(userId), now, gains);\n-        LearnerFacts facts = facts(userId);\n+        LearnerFacts facts = settle(userId, content, facts(userId), now, gains);\n         return answerResult(\n                 stored.answer(),\n                 question,\n@@ -345,7 +339,7 @@ public class LearnerService {\n                         facts.answersFor(articleId, questionIds),\n                         quiz.size()),\n                 gains.result(\n-                        Settlement.level(content.scope(), facts).current(),\n+                        Level.levelFor(facts.ledger().total()),\n                         BadgeCatalog.of(content.scope().stages())));\n     }\n \n@@ -359,43 +353,65 @@ public class LearnerService {\n         ArticleId articleId = parseArticleId(rawArticleId);\n         List<QuizQuestion> quiz = currentQuiz(articleId);\n         List<QuestionId> questionIds = quiz.stream().map(QuizQuestion::questionId).toList();\n-        LearnerProgress progress =\n-                progressRepository\n-                        .findForUpdate(userId, articleId)\n-                        .orElseThrow(RetryNotAvailableException::new);\n-        Map<QuestionId, FirstAnswer> answers =\n-                byQuestion(answerRepository.findByArticle(userId, articleId), questionIds);\n+        LearnerFacts before = facts(userId);\n+        LearnerProgress progress = before.progressOf(articleId);\n+        if (progress == null) {\n+            throw new RetryNotAvailableException();\n+        }\n+        Map<QuestionId, FirstAnswer> answers = before.answersFor(articleId, questionIds);\n         if (!quiz(progress, answers, quiz.size()).retryAvailable()) {\n             throw new RetryNotAvailableException();\n         }\n         QuizQuestion question = question(quiz, rawQuestionId);\n         ChoiceId choice = choice(question, rawChoiceId);\n         boolean correct = question.correctChoiceIds().contains(choice);\n+        int levelBefore = Level.levelFor(before.ledger().total());\n+        if (!correct) {\n+            // 틀린 다시 풀기는 아무것도 저장하지 않는다.\n+            return retryResult(\n+                    question,\n+                    choice,\n+                    false,\n+                    quiz(progress, answers, quiz.size()),\n+                    Gained.none(levelBefore));\n+        }\n \n         Instant now = LearningTime.now(clock);\n+        progressRepository.markMastered(userId, articleId, MasteredVia.RETRY, now);\n         Content content = content();\n-        LearnerFacts before = facts(userId);\n-        Gains gains = new Gains(Settlement.level(content.scope(), before).current());\n-        if (correct) {\n-            progressRepository.markMastered(userId, articleId, MasteredVia.RETRY, now);\n-            settle(userId, content, facts(userId), now, gains);\n-        }\n-        LearnerFacts facts = facts(userId);\n-        String correctChoice = onlyCorrectChoice(question).value();\n+        Gains gains = new Gains(levelBefore);\n+        LearnerFacts facts =\n+                settle(\n+                        userId,\n+                        content,\n+                        before.withProgress(progress.withMastered(MasteredVia.RETRY, now)),\n+                        now,\n+                        gains);\n+        return retryResult(\n+                question,\n+                choice,\n+                true,\n+                quiz(facts.progressOf(articleId), answers, quiz.size()),\n+                gains.result(\n+                        Level.levelFor(facts.ledger().total()),\n+                        BadgeCatalog.of(content.scope().stages())));\n+    }\n+\n+    private static AnswerResult retryResult(\n+            QuizQuestion question,\n+            ChoiceId choice,\n+            boolean correct,\n+            QuizSummary quiz,\n+            Gained gained) {\n         return new AnswerResult(\n                 question.questionId().value(),\n                 choice.value(),\n                 correct,\n-                correctChoice,\n+                onlyCorrectChoice(question).value(),\n                 question.explanation(),\n                 null,\n-                quiz(\n-                        facts.progressOf(articleId),\n-                        facts.answersFor(articleId, questionIds),\n-                        quiz.size()),\n-                gains.result(\n-                        Settlement.level(content.scope(), facts).current(),\n-                        BadgeCatalog.of(content.scope().stages())));\n+                quiz,\n+                gained);\n     }\n \n     /** 학습 초기화(§7). 네 테이블의 그 사용자 행을 한 트랜잭션에서 지운다. 기록이 없어도 성공이다(FR-025). */\n@@ -409,12 +425,21 @@ public class LearnerService {\n \n     // ── 정산 ────────────────────────────────────────────────────────────────\n \n-    /** 정산 결과를 넣고, 이번 요청이 실제로 넣은 것만 {@code gains}에 담는다. */\n-    private void settle(\n+    /**\n+     * 정산 결과를 넣고, 이번 요청이 실제로 넣은 것만 {@code gains}에 담는다.\n+     *\n+     * @return 정산을 반영한 사실. 사용자 잠금 안이라 다시 읽은 것과 같다\n+     */\n+    private LearnerFacts settle(\n             long userId, Content content, LearnerFacts facts, Instant now, Gains gains) {\n         BadgeCatalog catalog = BadgeCatalog.of(content.scope().stages());\n         Outcome outcome = Settlement.settle(content.scope(), facts, catalog, now);\n-        for (ExpEntry entry : outcome.stageEntries()) {\n+        LearnerFacts settled = facts;\n+        for (ArticleId article : outcome.allAnswered()) {\n+            progressRepository.markAllAnswered(userId, article, now);\n+            settled = settled.withProgress(settled.progressOf(article).withAllAnswered(now));\n+        }\n+        for (ExpEntry entry : outcome.entries()) {\n             gains.add(ledgerRepository, userId, entry);\n         }\n         for (BadgeKey badge : outcome.badges()) {\n@@ -422,6 +447,8 @@ public class LearnerService {\n                 gains.badges.add(badge);\n             }\n         }\n+        return settled.withLedger(settled.ledger().plus(outcome.entries()))\n+                .withBadges(outcome.badges(), now);\n     }\n \n     private LearnerFacts facts(long userId) {\n@@ -663,16 +690,24 @@ public class LearnerService {\n     }\n \n     /**\n-     * 공개 범위를 읽은 뒤 그 글이 여전히 공개된 글인지 본다. 기록 가능 확인과 공개 범위 조회는 다른 문장이라, 그사이 게시 취소가 커밋되면 글이 범위에서 빠진다.\n-     * 그때는 확인 전에 취소된 것과 같이 404로 답한다(learning-me-api §0).\n+     * 공개 범위 하나로 기록할 수 있는 글인지 정한다. 범위에 있으면 기록할 수 있다. 없으면 왜 없는지만 따로 읽어 이전 판·첫 단계 공개 전 글은 409, 그 밖은\n+     * 404로 답한다. 같은 사실을 두 번 읽어 판정하면 그사이 게시 취소가 커밋될 때 두 판정이 어긋난다(learning-me-api §0).\n      *\n-     * @throws ArticleUnavailableException 범위에 없다\n+     * @throws ArticleUnavailableException 없거나 게시되지 않은 글, 형식이 틀린 식별자. 범위를 읽은 뒤에 게시된 글도 이번에는 없는 글로 본다\n+     * @throws NotRecordableException 이전 판·첫 단계 공개 전 글\n      */\n-    private static Content requirePublishedIn(Content content, ArticleId articleId) {\n-        if (!content.scope().isPublished(articleId)) {\n-            throw new ArticleUnavailableException();\n+    private ArticleId requireRecordableIn(Content content, String rawArticleId) {\n+        ArticleId articleId = parseArticleId(rawArticleId);\n+        if (content.scope().isPublished(articleId)) {\n+            return articleId;\n+        }\n+        if (articleRepository\n+                .findPublishedEdition(articleId)\n+                .filter(edition -> edition != Edition.CURRENT)\n+                .isPresent()) {\n+            throw new NotRecordableException();\n         }\n-        return content;\n+        throw new ArticleUnavailableException();\n     }\n \n     /** 기록할 수 있는 글의 공개 판 문제. 답을 판정하려면 정답과 풀이가 있는 판을 읽어야 한다. */\n@@ -731,11 +766,7 @@ public class LearnerService {\n     }\n \n     private static ArticleId parseArticleId(String raw) {\n-        try {\n-            return new ArticleId(raw);\n-        } catch (IllegalArgumentException | NullPointerException invalid) {\n-            throw new ArticleUnavailableException();\n-        }\n+        return ArticleId.parse(raw).orElseThrow(ArticleUnavailableException::new);\n     }\n \n     /**\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearnerService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearnerService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -659,10 +659,6 @@ public class LearningAdminService {\n     }\n \n     private static ArticleId parseArticleId(String raw) {\n-        try {\n-            return new ArticleId(raw);\n-        } catch (IllegalArgumentException | NullPointerException invalid) {\n-            throw new ArticleNotFoundException();\n-        }\n+        return ArticleId.parse(raw).orElseThrow(ArticleNotFoundException::new);\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningAdminService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningAdminService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -403,11 +403,7 @@ public class LearningQueryService {\n     }\n \n     private static Optional<ArticleId> parseArticleId(String raw) {\n-        try {\n-            return Optional.of(new ArticleId(raw));\n-        } catch (IllegalArgumentException | NullPointerException invalid) {\n-            return Optional.empty();\n-        }\n+        return ArticleId.parse(raw);\n     }\n \n     private static Optional<TermId> parseTermId(String raw) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningQueryService.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/application/service/LearningQueryService.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -54,6 +54,20 @@ public record LearnerFacts(\n         return new LearnerFacts(progress, answers, newLedger, badges);\n     }\n \n+    /** 글 하나의 기록을 바꾼 사실. 이 요청이 저장한 변경을 다시 읽지 않고 반영할 때 쓴다. */\n+    public LearnerFacts withProgress(LearnerProgress row) {\n+        Map<ArticleId, LearnerProgress> changed = new HashMap<>(progress);\n+        changed.put(row.articleId(), row);\n+        return new LearnerFacts(changed, answers, ledger, badges);\n+    }\n+\n+    /** 배지를 더한 사실. 이미 받은 배지의 시각은 바꾸지 않는다. */\n+    public LearnerFacts withBadges(List<BadgeKey> added, Instant at) {\n+        Map<BadgeKey, Instant> merged = new HashMap<>(badges);\n+        added.forEach(badge -> merged.putIfAbsent(badge, at));\n+        return new LearnerFacts(progress, answers, ledger, merged);\n+    }\n+\n     /** 이 글의 공개 판에 남은 문제의 첫 답. 키는 문제 식별자다. */\n     public Map<QuestionId, FirstAnswer> answersFor(\n             ArticleId articleId, List<QuestionId> questions) {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/LearnerFacts.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/LearnerFacts.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -43,6 +43,34 @@ public record LearnerProgress(\n         return completedAt != null;\n     }\n \n+    /** 처음 모든 문제에 답한 시각을 채운 기록. 이미 있으면 그대로다(저장소의 {@code markAllAnswered}와 같은 규칙). */\n+    public LearnerProgress withAllAnswered(Instant at) {\n+        return allAnswered()\n+                ? this\n+                : new LearnerProgress(\n+                        articleId,\n+                        furthestPercent,\n+                        lastOpenedAt,\n+                        completedAt,\n+                        at,\n+                        masteredAt,\n+                        masteredVia);\n+    }\n+\n+    /** 익힘을 채운 기록. 이미 익힘이면 그대로다(저장소의 {@code markMastered}와 같은 규칙). */\n+    public LearnerProgress withMastered(MasteredVia via, Instant at) {\n+        return mastered()\n+                ? this\n+                : new LearnerProgress(\n+                        articleId,\n+                        furthestPercent,\n+                        lastOpenedAt,\n+                        completedAt,\n+                        allAnsweredAt,\n+                        at,\n+                        via);\n+    }\n+\n     public boolean mastered() {\n         return masteredAt != null;\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/LearnerProgress.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/LearnerProgress.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -3,16 +3,20 @@ package com.ssafy.thorp.learning.domain.model;\n import com.ssafy.thorp.learning.domain.model.BadgeStatus.Progress;\n import com.ssafy.thorp.learning.domain.model.BadgeStatus.State;\n import com.ssafy.thorp.learning.domain.model.ContentScope.StageScope;\n+import com.ssafy.thorp.learning.domain.vo.ArticleId;\n import com.ssafy.thorp.learning.domain.vo.BadgeKey;\n+import com.ssafy.thorp.learning.domain.vo.QuestionId;\n import java.time.Instant;\n import java.util.ArrayList;\n import java.util.List;\n+import java.util.Map;\n \n /**\n  * 정산(data-model §12-5, research R30). 사용자의 사실과 지금 공개된 콘텐츠로 새로 채워진 단계 완주와 배지를 찾는 순수 함수다.\n  *\n- * <p>학습 행동 요청(완료·첫 답·다시 풀기)과 {@code GET /learning/me}가 같은 순서로 부른다. ① 단계 완주 → ② 장부 합계로 레벨 → ③ 배지.\n- * 운영자의 게시 취소나 단계 이동으로 채워진 기준도 다음 정산에서 생긴다(FR-024). 받은 배지는 콘텐츠가 바뀌어도 지우지 않는다.\n+ * <p>학습 행동 요청(완료·첫 답·다시 풀기)과 {@code GET /learning/me}가 같은 순서로 부른다. ⓪ 모두 답함과 모두 맞힘 → ① 단계 완주 → ② 장부\n+ * 합계로 레벨 → ③ 배지. 운영자의 게시 취소나 단계 이동으로 채워진 기준, 운영자가 남은 문제를 지워 생긴 '모두 답함'도 다음 정산에서 생긴다(FR-024,\n+ * FR-028). 받은 배지는 콘텐츠가 바뀌어도 지우지 않는다.\n  */\n public final class Settlement {\n \n@@ -20,18 +24,36 @@ public final class Settlement {\n \n     /**\n      * @param now 새 장부 줄과 배지의 시각\n-     * @return 새로 생길 단계 완주 장부 줄과 배지. 저장은 호출자가 {@code ON CONFLICT DO NOTHING}으로 한다\n+     * @return 처음 모두 답한 글, 새로 생길 장부 줄(모두 맞힘·단계 완주)과 배지. 저장은 호출자가 {@code ON CONFLICT DO NOTHING}으로 한다\n      */\n     public static Outcome settle(\n             ContentScope scope, LearnerFacts facts, BadgeCatalog catalog, Instant now) {\n-        List<ExpEntry> stageEntries = new ArrayList<>();\n+        List<ArticleId> allAnswered = new ArrayList<>();\n+        List<ExpEntry> entries = new ArrayList<>();\n+        for (ArticleId article : scope.articles()) {\n+            LearnerProgress progress = facts.progressOf(article);\n+            List<QuestionId> questions = scope.questionsOf(article);\n+            if (progress == null || progress.allAnswered() || questions.isEmpty()) {\n+                continue;\n+            }\n+            Map<QuestionId, FirstAnswer> answers = facts.answersFor(article, questions);\n+            if (answers.size() < questions.size()) {\n+                continue;\n+            }\n+            // 처음 모든 문제에 답한 상태가 됐다. 새 첫 답 때문이든 운영자가 남은 문제를 지워서든 여기서 한 번 판정한다.\n+            allAnswered.add(article);\n+            if (answers.values().stream().allMatch(FirstAnswer::correct)\n+                    && !facts.ledger().hasAllCorrect(article)) {\n+                entries.add(ExpEntry.allCorrect(article, now));\n+            }\n+        }\n         for (StageScope stage : scope.nonEmptyReleasedStages()) {\n             if (facts.stageCompleted(stage)\n                     && !facts.ledger().hasStageCompleted(stage.stageKey())) {\n-                stageEntries.add(ExpEntry.stageCompleted(stage.stageKey(), now));\n+                entries.add(ExpEntry.stageCompleted(stage.stageKey(), now));\n             }\n         }\n-        LearnerFacts settled = facts.withLedger(facts.ledger().plus(stageEntries));\n+        LearnerFacts settled = facts.withLedger(facts.ledger().plus(entries));\n         Level level = level(scope, settled);\n         List<BadgeKey> badges = new ArrayList<>();\n         for (BadgeDefinition definition : catalog.definitions()) {\n@@ -40,7 +62,7 @@ public final class Settlement {\n                 badges.add(definition.key());\n             }\n         }\n-        return new Outcome(stageEntries, badges);\n+        return new Outcome(allAnswered, entries, badges);\n     }\n \n     /** 장부 합계와 지금 공개된 콘텐츠의 레벨. */\n@@ -164,13 +186,16 @@ public final class Settlement {\n     /**\n      * 정산 결과.\n      *\n-     * @param stageEntries 새 단계 완주 장부 줄\n+     * @param allAnswered 처음 모든 문제에 답한 상태가 된 글. 호출자가 {@code all_answered_at}을 채운다\n+     * @param entries 새 장부 줄. 모두 맞힘이 단계 완주보다 앞선다\n      * @param badges 새로 채워진 배지. 카탈로그 순서다\n      */\n-    public record Outcome(List<ExpEntry> stageEntries, List<BadgeKey> badges) {\n+    public record Outcome(\n+            List<ArticleId> allAnswered, List<ExpEntry> entries, List<BadgeKey> badges) {\n \n         public Outcome {\n-            stageEntries = List.copyOf(stageEntries);\n+            allAnswered = List.copyOf(allAnswered);\n+            entries = List.copyOf(entries);\n             badges = List.copyOf(badges);\n         }\n     }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/Settlement.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/model/Settlement.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,6 +1,7 @@\n package com.ssafy.thorp.learning.domain.vo;\n \n import java.util.Objects;\n+import java.util.Optional;\n import java.util.regex.Pattern;\n \n /**\n@@ -28,6 +29,21 @@ public record ArticleId(String value) {\n         }\n     }\n \n+    /**\n+     * 경로 변수처럼 밖에서 온 문자열을 읽는다. 형식이 틀렸거나 null이면 비어 있다. 형식 오류를 어떤 응답으로 바꿀지(볼 수 없는 글 404, 관리할 글 없음\n+     * 404)는 호출자가 정한다.\n+     */\n+    public static Optional<ArticleId> parse(String raw) {\n+        if (raw == null) {\n+            return Optional.empty();\n+        }\n+        try {\n+            return Optional.of(new ArticleId(raw));\n+        } catch (IllegalArgumentException invalid) {\n+            return Optional.empty();\n+        }\n+    }\n+\n     @Override\n     public String toString() {\n         return value;\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/vo/ArticleId.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/domain/vo/ArticleId.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -77,19 +77,6 @@ public class LearnerProgressRepositoryImpl implements LearnerProgressRepository\n                 .findFirst();\n     }\n \n-    /** 진행 행만 잠근다({@code FOR UPDATE OF p}). 글 행까지 잠그면 운영자의 게시와 서로 기다린다. */\n-    @Override\n-    public Optional<LearnerProgress> findForUpdate(long userId, ArticleId articleId) {\n-        return jdbc\n-                .query(\n-                        SELECT + \" WHERE p.user_id = ? AND a.article_key = ? FOR UPDATE OF p\",\n-                        LearnerProgressRepositoryImpl::toDomain,\n-                        userId,\n-                        articleId.value())\n-                .stream()\n-                .findFirst();\n-    }\n-\n     @Override\n     public void recordPosition(long userId, ArticleId articleId, int percent, Instant at) {\n         Timestamp now = Timestamp.from(at);\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearnerProgressRepositoryImpl.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/infrastructure/persistence/LearnerProgressRepositoryImpl.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -1,12 +1,35 @@\n package com.ssafy.thorp.learning.presentation.request;\n \n+import com.fasterxml.jackson.core.JsonParser;\n+import com.fasterxml.jackson.core.JsonToken;\n+import com.fasterxml.jackson.databind.DeserializationContext;\n+import com.fasterxml.jackson.databind.JsonDeserializer;\n+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;\n import jakarta.validation.constraints.Max;\n import jakarta.validation.constraints.Min;\n import jakarta.validation.constraints.NotNull;\n+import java.io.IOException;\n \n /**\n  * {@code PUT /learning/me/articles/{articleId}/position} 본문(learning-me-api §3).\n  *\n- * @param percent 본문 길이에 대한 읽은 비율, 0~100 정수. 없거나 범위 밖이면 400 {@code INVALID_INPUT}\n+ * @param percent 본문 길이에 대한 읽은 비율, 0~100 정수. 없거나 범위 밖이면 400 {@code INVALID_INPUT}. 소수({@code\n+ *     62.5})·문자열 ({@code \"62\"})·참거짓도 400이다. Jackson 기본 동작은 이 값들을 잘라 정수로 받아서, 화면의 계산 실수가 다른 비율로 조용히\n+ *     기록된다\n  */\n-public record PositionRequest(@NotNull @Min(0) @Max(100) Integer percent) {}\n+public record PositionRequest(\n+        @NotNull @Min(0) @Max(100) @JsonDeserialize(using = WholeNumber.class) Integer percent) {\n+\n+    /** JSON 정수 토큰만 받는다. 그 밖은 형식 오류로 돌려 전역 처리기가 400 {@code INVALID_INPUT}으로 답한다. */\n+    public static final class WholeNumber extends JsonDeserializer<Integer> {\n+\n+        @Override\n+        public Integer deserialize(JsonParser parser, DeserializationContext context)\n+                throws IOException {\n+            if (parser.currentToken() != JsonToken.VALUE_NUMBER_INT) {\n+                return (Integer) context.handleUnexpectedToken(Integer.class, parser);\n+            }\n+            return parser.getIntValue();\n+        }\n+    }\n+}\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/request/PositionRequest.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/request/PositionRequest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component;\n  *\n  * <p>{@code SecurityConfig}가 {@code /learning/me/**}를 {@code authenticated()}로 묶어 비로그인 요청은 여기 오기 전에\n  * 401이다. 여기서 다시 읽는 것은 인증 종류까지 보는 {@link SessionUser} 규칙으로 {@code users.id}를 얻기 위해서다. 004 {@code\n- * CurrentRequester}를 import하지 않는다. {@code learning → backtest} 의존을 만들지 않는다.\n+ * CurrentRequester}를 import하지 않는다. {@code learning → backtest} 의존을 만들지 않는다. 관리 관문({@link\n+ * LearningAdminAccess})도 이 클래스로 로그인 주체를 읽는다.\n  */\n @Component\n public class LearnerAccess {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/support/LearnerAccess.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/support/LearnerAccess.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,17 +2,15 @@ package com.ssafy.thorp.learning.presentation.support;\n \n import com.ssafy.thorp.common.exception.BusinessException;\n import com.ssafy.thorp.common.exception.ErrorCode;\n-import com.ssafy.thorp.common.security.SessionUser;\n import com.ssafy.thorp.learning.application.port.LearningAdminPolicy;\n-import org.springframework.security.core.context.SecurityContextHolder;\n import org.springframework.stereotype.Component;\n \n /**\n  * 배우기 관리 요청의 관문(learning-admin-api §0). 관리 컨트롤러의 모든 메서드가 첫 줄에서 {@link #requireAdminUserId()}를 부른다.\n  *\n- * <p>인증 주체는 004 {@code CurrentRequester}와 같은 규약으로 읽는다. spec 014 로그인이 세션에 넣은 {@code users.id} 문자열이고,\n- * 그 형태가 아니면 로그인으로 보지 않는다. {@code CurrentRequester}를 import하지 않는 이유는 {@code learning → backtest} 의존을\n- * 만들지 않기 위해서다.\n+ * <p>로그인 주체는 {@link LearnerAccess}가 읽는다. 배우기의 두 관문(관리·나의 학습)이 같은 규칙으로 {@code users.id}를 얻고 같은 401로\n+ * 답하게 하려는 것이다. 004 {@code CurrentRequester}를 import하지 않는 이유는 {@code learning → backtest} 의존을 만들지 않기\n+ * 위해서다.\n  *\n  * <p><b>014가 역할을 제공하면 이 클래스와 {@code ConfiguredLearningAdminPolicy}만 바꾼다.</b>\n  */\n@@ -20,9 +18,11 @@ import org.springframework.stereotype.Component;\n public class LearningAdminAccess {\n \n     private final LearningAdminPolicy policy;\n+    private final LearnerAccess learnerAccess;\n \n-    public LearningAdminAccess(LearningAdminPolicy policy) {\n+    public LearningAdminAccess(LearningAdminPolicy policy, LearnerAccess learnerAccess) {\n         this.policy = policy;\n+        this.learnerAccess = learnerAccess;\n     }\n \n     /**\n@@ -31,15 +31,10 @@ public class LearningAdminAccess {\n      *     {@code RESOURCE_NOT_FOUND}. 403으로 답하면 관리 경로가 있다는 사실이 드러난다(research R6)\n      */\n     public long requireAdminUserId() {\n-        long userId = requireUserId();\n+        long userId = learnerAccess.requireUserId();\n         if (!policy.isAdmin(userId)) {\n             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);\n         }\n         return userId;\n     }\n-\n-    private static long requireUserId() {\n-        return SessionUser.idOf(SecurityContextHolder.getContext().getAuthentication())\n-                .orElseThrow(() -> new BusinessException(ErrorCode.AUTHENTICATION_REQUIRED));\n-    }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/support/LearningAdminAccess.java",
+          "old_path": "backend/src/main/java/com/ssafy/thorp/learning/presentation/support/LearningAdminAccess.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -8,6 +8,8 @@ import com.ssafy.thorp.learning.domain.model.LearnerProgress.MasteredVia;\n import com.ssafy.thorp.learning.domain.model.Settlement.Outcome;\n import com.ssafy.thorp.learning.domain.vo.ArticleId;\n import com.ssafy.thorp.learning.domain.vo.BadgeKey;\n+import com.ssafy.thorp.learning.domain.vo.ChoiceId;\n+import com.ssafy.thorp.learning.domain.vo.QuestionId;\n import java.time.Instant;\n import java.util.HashMap;\n import java.util.List;\n@@ -36,7 +38,7 @@ class SettlementTest {\n \n         Outcome outcome = settle(scope, facts);\n \n-        assertThat(outcome.stageEntries())\n+        assertThat(outcome.entries())\n                 .extracting(ExpEntry::stageKey)\n                 .containsExactly(LearnerScopes.stageKey(2));\n         assertThat(outcome.badges())\n@@ -45,6 +47,55 @@ class SettlementTest {\n                 .doesNotContain(\"stage-etf-market-basics\");\n     }\n \n+    @Test\n+    @DisplayName(\"공개된 문제에 모두 첫 답이 있고 모두 답한 시각이 비어 있으면 처음 모두 답한 것으로 보고, 다 맞혔으면 모두 맞힘을 준다\")\n+    void allAnsweredJudgedBySettlement() {\n+        // 운영자가 남은 문제를 지워, 이 글의 공개된 문제(q1·q2)에 모두 첫 답이 있는 상태가 됐다.\n+        ContentScope scope = LearnerScopes.scope(2, -1, -1, -1, -1, -1);\n+        ArticleId perfect = LearnerScopes.article(1, 1);\n+        ArticleId halfRight = LearnerScopes.article(1, 2);\n+        Map<ArticleId, LearnerProgress> progress = completed(perfect, halfRight);\n+        List<FirstAnswer> answers =\n+                List.of(\n+                        answer(perfect, \"q1\", true),\n+                        answer(perfect, \"q2\", true),\n+                        answer(halfRight, \"q1\", true),\n+                        answer(halfRight, \"q2\", false));\n+\n+        Outcome outcome =\n+                settle(scope, new LearnerFacts(progress, answers, ExpLedger.empty(), Map.of()));\n+\n+        assertThat(outcome.allAnswered()).containsExactlyInAnyOrder(perfect, halfRight);\n+        assertThat(outcome.entries())\n+                .filteredOn(entry -> entry.kind() == ExpEntry.Kind.ALL_CORRECT)\n+                .extracting(ExpEntry::articleId)\n+                .containsExactly(perfect);\n+        assertThat(outcome.badges()).extracting(BadgeKey::value).contains(\"perfect-1\");\n+    }\n+\n+    @Test\n+    @DisplayName(\"이미 모두 답한 글과 아직 답하지 않은 문제가 있는 글은 모두 답함을 다시 판정하지 않는다\")\n+    void allAnsweredOnlyOnce() {\n+        ContentScope scope = LearnerScopes.scope(2, -1, -1, -1, -1, -1);\n+        ArticleId done = LearnerScopes.article(1, 1);\n+        ArticleId partial = LearnerScopes.article(1, 2);\n+        Map<ArticleId, LearnerProgress> progress = new HashMap<>();\n+        progress.put(\n+                done, new LearnerProgress(done, 100, AT, AT, AT, AT, MasteredVia.FIRST_ANSWER));\n+        progress.put(partial, new LearnerProgress(partial, 100, AT, AT, null, null, null));\n+        List<FirstAnswer> answers =\n+                List.of(\n+                        answer(done, \"q1\", true),\n+                        answer(done, \"q2\", true),\n+                        answer(partial, \"q1\", true));\n+\n+        Outcome outcome =\n+                settle(scope, new LearnerFacts(progress, answers, ExpLedger.empty(), Map.of()));\n+\n+        assertThat(outcome.allAnswered()).isEmpty();\n+        assertThat(outcome.entries()).noneMatch(entry -> entry.kind() == ExpEntry.Kind.ALL_CORRECT);\n+    }\n+\n     @Test\n     @DisplayName(\"이미 받은 단계 완주와 배지는 다시 생기지 않는다\")\n     void settledOnce() {\n@@ -58,11 +109,11 @@ class SettlementTest {\n         LearnerFacts second =\n                 facts(\n                         completed(LearnerScopes.article(1, 1)),\n-                        first.ledger().plus(outcome.stageEntries()),\n+                        first.ledger().plus(outcome.entries()),\n                         badges);\n \n         Outcome again = settle(scope, second);\n-        assertThat(again.stageEntries()).isEmpty();\n+        assertThat(again.entries()).isEmpty();\n         assertThat(again.badges()).isEmpty();\n     }\n \n@@ -75,7 +126,7 @@ class SettlementTest {\n \n         Outcome outcome = settle(scope, facts);\n \n-        assertThat(outcome.stageEntries())\n+        assertThat(outcome.entries())\n                 .extracting(ExpEntry::stageKey)\n                 .containsExactly(LearnerScopes.stageKey(1));\n         assertThat(status(scope, facts, \"stage-returns-and-risk\").reason())\n@@ -149,7 +200,7 @@ class SettlementTest {\n                 .extracting(BadgeKey::value)\n                 .contains(\"read-20\", \"read-27\", \"exploration\")\n                 .doesNotContain(\"terms-all\");\n-        assertThat(outcome.stageEntries()).hasSize(6);\n+        assertThat(outcome.entries()).hasSize(6);\n     }\n \n     @Test\n@@ -251,6 +302,10 @@ class SettlementTest {\n         return Settlement.evaluate(definition, scope, facts, Settlement.level(scope, facts));\n     }\n \n+    private static FirstAnswer answer(ArticleId article, String question, boolean correct) {\n+        return new FirstAnswer(article, new QuestionId(question), new ChoiceId(\"c1\"), correct, AT);\n+    }\n+\n     private static LearnerFacts facts(\n             Map<ArticleId, LearnerProgress> progress,\n             ExpLedger ledger,\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/model/SettlementTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/model/SettlementTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -10,6 +10,15 @@ import org.junit.jupiter.params.provider.ValueSource;\n \n class ArticleIdTest {\n \n+    @Test\n+    @DisplayName(\"parse는 형식이 맞으면 값을, 틀리거나 null이면 빈 값을 돌려준다\")\n+    void parseNeverThrows() {\n+        assertThat(ArticleId.parse(\"recovery-period\")).contains(new ArticleId(\"recovery-period\"));\n+        assertThat(ArticleId.parse(\"Bad_Id\")).isEmpty();\n+        assertThat(ArticleId.parse(\"ab\")).isEmpty();\n+        assertThat(ArticleId.parse(null)).isEmpty();\n+    }\n+\n     @Test\n     @DisplayName(\"3자와 64자는 경계 안이다\")\n     void acceptsBoundaryLengths() {\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/vo/ArticleIdTest.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/domain/vo/ArticleIdTest.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -212,7 +212,14 @@ class LearnerApiIT extends IntegrationTestSupport {\n     void rejectsInvalidPercent() throws Exception {\n         seedTwoStages();\n \n-        for (String body : List.of(\"{}\", \"{\\\"percent\\\":-1}\", \"{\\\"percent\\\":101}\")) {\n+        for (String body :\n+                List.of(\n+                        \"{}\",\n+                        \"{\\\"percent\\\":-1}\",\n+                        \"{\\\"percent\\\":101}\",\n+                        \"{\\\"percent\\\":62.5}\",\n+                        \"{\\\"percent\\\":\\\"62\\\"}\",\n+                        \"{\\\"percent\\\":true}\")) {\n             assertThat(\n                             error(\n                                             put(\"/learning/me/articles/etf-fees/position\")\n@@ -664,6 +671,43 @@ class LearnerApiIT extends IntegrationTestSupport {\n                 .isEqualTo(20);\n     }\n \n+    @Test\n+    @DisplayName(\"운영자가 남은 문제를 지워 모두 답한 상태가 되면 다음 GET에서 모두 맞힘 20과 배지를 준다\")\n+    void allCorrectAfterRemainingQuestionRemoved() throws Exception {\n+        seedTwoStages();\n+        complete(\"recovery-period\", LEARNER_A);\n+        data(answer(\"recovery-period\", \"q1\", \"c1\"), LEARNER_A, 200);\n+        data(answer(\"recovery-period\", \"q2\", \"c3\"), LEARNER_A, 200);\n+\n+        // 남은 q3을 지우고 다시 게시했다.\n+        Map<String, List<String>> remaining = new LinkedHashMap<>();\n+        remaining.put(\"q1\", List.of(\"c1\", \"c2\"));\n+        remaining.put(\"q2\", List.of(\"c3\", \"c4\"));\n+        seeds.publishCurrentWithQuiz(\n+                \"recovery-period\", \"떨어진 뒤 얼마나 걸려 돌아왔을까?\", List.of(\"recovery-period\"), remaining);\n+\n+        JsonNode me = overview(LEARNER_A);\n+\n+        assertThat(me.at(\"/gained/exp\"))\n+                .anySatisfy(\n+                        exp -> {\n+                            assertThat(exp.get(\"kind\").asText()).isEqualTo(\"ALL_CORRECT\");\n+                            assertThat(exp.get(\"points\").asInt()).isEqualTo(20);\n+                        });\n+        assertThat(me.at(\"/gained/badges\"))\n+                .extracting(badge -> badge.get(\"badgeKey\").asText())\n+                .contains(\"perfect-1\");\n+        assertThat(exp(LEARNER_A)).isEqualTo(80);\n+        assertThat(\n+                        jdbcTemplate.queryForObject(\n+                                \"SELECT all_answered_at IS NOT NULL FROM learning_progress\"\n+                                        + \" WHERE user_id = ?\",\n+                                Boolean.class,\n+                                LEARNER_A))\n+                .isTrue();\n+        assertThat(overview(LEARNER_A).at(\"/gained/exp\")).isEmpty();\n+    }\n+\n     // ── 문제가 바뀐 뒤의 정답 몫 상한(quickstart 10-5 넷째 줄) ──────────────\n \n     @Test\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/src/test/java/com/ssafy/thorp/learning/LearnerApiIT.java",
+          "old_path": "backend/src/test/java/com/ssafy/thorp/learning/LearnerApiIT.java",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -75,7 +75,7 @@ common: 모든 계층에서 참조 가능\n \n - `result` 패키지는 공개 토큰 열람 경계다. `backtest`는 `result`를 참조하지 않는다(ArchUnit 규칙 9). 비로그인 요청은 `requester_id`가 NULL이고 `public_token_expires_at`이 필수다.\n - 배우기 판(`learning_article_revision`)·게시 기록(`learning_publication_event`)·변경 기록(`learning_release_log`)은 추가만 한다. 저장소에 수정·삭제 메서드를 두지 않는다. 단계 공개일(`learning_stage.released_at`)과 글의 첫 공개 시각(`learning_article.first_released_at`)은 한 번 쓰고 비우지 않는다(단계 공개는 되돌리지 않는다).\n-- 나의 학습의 경험치 장부(`learning_exp_entry`)·첫 답(`learning_answer`)·받은 배지(`learning_badge_award`)도 추가만 하고(`ON CONFLICT DO NOTHING`), 지우는 경로는 학습 초기화(`deleteAllForUser`) 하나다. 네 테이블은 JPA 엔티티 없이 JdbcTemplate으로 쓰므로 구조는 `LearningMigrationTest`가 지킨다. **나의 학습을 쓰는 요청은 첫 문장에서 사용자 단위 잠금(`LearnerProgressRepository.lockLearner`, `pg_advisory_xact_lock`)을 잡는다.** 잠금 순서는 사용자 잠금 → 진행 행이다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지가 초기화 뒤에 남는다(013 SC-015). 쓰는 경로를 새로 만들면 이 잠금을 같이 잡는다\n+- 나의 학습의 경험치 장부(`learning_exp_entry`)·첫 답(`learning_answer`)·받은 배지(`learning_badge_award`)도 추가만 하고(`ON CONFLICT DO NOTHING`), 지우는 경로는 학습 초기화(`deleteAllForUser`) 하나다. 네 테이블은 JPA 엔티티 없이 JdbcTemplate으로 쓰므로 구조는 `LearningMigrationTest`가 지킨다. **나의 학습을 쓰는 요청은 첫 문장에서 사용자 단위 잠금(`LearnerProgressRepository.lockLearner`, `pg_advisory_xact_lock`)을 잡는다.** 나의 학습이 잡는 잠금은 이것 하나다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지가 초기화 뒤에 남는다(013 SC-015). 쓰는 경로를 새로 만들면 이 잠금을 같이 잡는다\n - 배우기 게시·게시 취소·용어 넘기기·단계 공개는 글 상태 변경과 게시 용어 색인(`learning_published_term`) 갱신을 같은 트랜잭션에서 한다. 게시할 때는 색인을 새 판으로 다시 쓰고, 게시 취소할 때는 지우며, 넘기기는 옛 소유 글의 그 용어 행을 지운 뒤 새 글의 행을 쓴다. 한순간이라도 어긋나면 도움말 문장과 글 본문이 갈라진다(013 SC-003). **잠금 순서는 단계 행 → 글(게시할 글과 넘겨줄 옛 소유 글을 `articleId` 순서로 한 번에, `ArticlePublisher.lockWithGivers`)이다.** 글마다 게시와 단계 공개가 같은 순서를 지키고, 용어 소유 판정(`TermOwnership`)은 잠근 뒤에 한다. 받는 글을 먼저 잠그고 옛 글을 나중에 잠그면 두 글이 서로의 용어를 넘겨받을 때 교착이 나고, 잠그기 전에 판정하면 그사이 옛 글이 용어를 놓아 소유 글 없는 넘기기가 된다. 글마다 게시가 단계 행을 잠그지 않으면 공개가 도는 동안 그 단계로 옮긴 V1 글이 LEGACY 판으로 공개된 단계에 남는다.\n - 배우기 관리 권한 판정은 `LearningAdminPolicy` 한 곳이다. 지금은 `thorp.learning.admin-user-ids` 허용 목록이고, 014가 역할을 주면 `ConfiguredLearningAdminPolicy`만 바꾼다.\n - DTO는 record 우선, 요청 DTO에 `@Valid` 검증 필수\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "backend/CLAUDE.md",
+          "old_path": "backend/CLAUDE.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -76,7 +76,7 @@ GET /learning/me\n | `level.milestones` | 레벨 1부터 `unreachableFrom`까지의 문턱. 화면이 레벨 길을 그린다 | FR-029 |\n | `level.isNew` | 현재 레벨에 닿은 지 7일 안 | FR-030 |\n | `counts` | 분모 없이 보이는 수와, 숫자 줄 아래 '지금 공개된 글은 8편입니다' 문장에 쓰는 공개 수 | FR-020 |\n-| `continueReading.kind` | `RESUME`(읽는 중 글을 기록된 위치에서) · `START`(첫 안 읽은 글을 맨 위에서, `percent: null`) · `ALL_DONE`(`articleId` 등이 `null`) | FR-020, [data-model](../data-model.md) §12-2 |\n+| `continueReading.kind` | `RESUME`(읽는 중 글을 기록된 위치에서) · `START`(첫 안 읽은 글을 맨 위에서, `percent: null`) · `ALL_DONE`(`articleId` 등이 `null`). 공개된 글이 0편(`counts.publishedArticles = 0`)이어도 `ALL_DONE`이지만, 화면은 이때 '이어서 읽기' 자리와 '모두 읽었습니다' 문구를 그리지 않는다 | FR-020, [data-model](../data-model.md) §12-2 |\n | `articles` | 공개된 글마다 상태(`UNREAD`·`READING`·`COMPLETED`)와 비율, 용어 수. `READING`의 `percent`는 1~99 | FR-020, FR-023 |\n | `stages` | 여섯 단계 전부. `OPEN`은 두 수가 있고, `REPREPARING`은 `completedCount: 0`·`publishedCount: 0`, `PREPARING`은 둘 다 `null`이다 | FR-020, FR-031 |\n | `badges` | 31개 전부, 갈래(`LEVEL`·`READ`·`CORRECT`·`PERFECT`·`STAGE`·`TERMS`·`SPECIAL`) 순서. `status`는 `EARNED`·`NOT_YET`·`PREPARING`이다. 배지의 `PREPARING`은 지금 공개된 콘텐츠로는 받을 수 없다는 뜻이고(사유는 `preparingReason`), `stages[].status`의 `PREPARING`(단계 공개 전)과 이름만 같다 | FR-024, [data-model](../data-model.md) §12-4 |\n@@ -204,7 +204,7 @@ POST /learning/me/articles/{articleId}/answers\n \n - 서버가 공개 판으로 맞음·틀림을 판정하고 첫 답을 저장한 뒤 응답한다. 화면은 이 응답을 받은 뒤에만 맞았는지와 정답·풀이를 보인다(FR-022).\n - **이미 답한 문제**면 저장된 첫 답을 `alreadyAnswered: true`로 돌려준다. 요청의 `choiceId`와 달라도(다른 탭에서 먼저 답함) 저장된 값을 돌려주고 바꾸지 않는다. '다시 시도'가 같은 보기를 다시 보내도 같은 결과다.\n-- 경험치·익힘·모두 맞힘은 [data-model](../data-model.md) §12-3의 규칙대로 같은 트랜잭션에서 정한다. 첫 답이 맞으면 모든 문제에 답하기 전이어도 그 글이 익힘(`FIRST_ANSWER`)이 되고(이미 익힘이면 그대로), 응답의 `quiz.mastered`·`masteredVia`에 바로 보인다(FR-022). 그 글의 `learning_progress` 행을 잠근다(R29).\n+- 경험치·익힘·모두 맞힘은 [data-model](../data-model.md) §12-3의 규칙대로 같은 트랜잭션에서 정한다. 첫 답이 맞으면 모든 문제에 답하기 전이어도 그 글이 익힘(`FIRST_ANSWER`)이 되고(이미 익힘이면 그대로), 응답의 `quiz.mastered`·`masteredVia`에 바로 보인다(FR-022). 나의 학습을 쓰는 요청은 사용자 단위 잠금으로 줄을 서므로 같은 글의 두 답이 겹치지 않는다(R29).\n \n ### 실패\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/contracts/learning-me-api.md",
+          "old_path": "specs/013-learning-pages/contracts/learning-me-api.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -631,7 +631,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에\n - 읽는 순서: (단계 번호, `published_stage_position`, `articleId`).\n - 글 번호: `{단계 번호}-{그 단계의 공개된 글 가운데 읽는 순서 순번}`. 이전 판 글에는 번호가 없다.\n - 다음 글: 읽는 순서상 이 글 뒤의 첫 공개된 글. 없으면 `null`.\n-- 이어서 읽기: `READING` 글 가운데 `last_opened_at`이 가장 늦은 글을 기록된 위치에서 연다. 없으면 읽는 순서상 첫 `UNREAD` 글을 맨 위에서 연다. 공개된 글을 모두 완료했으면 '지금 공개된 글을 모두 읽었습니다'이고, 공개되지 않은 단계가 있으면 '다음 단계는 준비 중입니다'를 덧붙인다(FR-020).\n+- 이어서 읽기: `READING` 글 가운데 `last_opened_at`이 가장 늦은 글을 기록된 위치에서 연다. 없으면 읽는 순서상 첫 `UNREAD` 글을 맨 위에서 연다. 공개된 글을 모두 완료했으면 '지금 공개된 글을 모두 읽었습니다'이고, 공개되지 않은 단계가 있으면 '다음 단계는 준비 중입니다'를 덧붙인다(FR-020). 공개된 글이 0편이면 서버는 `ALL_DONE`을 보내지만 화면은 이 자리와 문구를 그리지 않는다(2026-10-07).\n \n ### 12-3. 경험치와 레벨\n \n@@ -639,7 +639,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에\n |---|---|---|\n | `ARTICLE_COMPLETED` | 20 | 글을 처음 완료할 때 |\n | `ANSWER_CORRECT` | min(60 ÷ 답할 때 문제 수, 60 − 그 글에서 이미 받은 정답 몫) | 첫 답이 맞을 때. 그 글의 `all_answered_at`이 이미 있으면 주지 않는다 |\n-| `ALL_CORRECT` | 20 | 처음 모든 문제에 답한 순간 그 문제를 모두 첫 답에서 맞혔을 때 |\n+| `ALL_CORRECT` | 20 | 처음 모든 문제에 답한 순간 그 문제를 모두 첫 답에서 맞혔을 때. 운영자가 남은 문제를 지워 모두 답한 상태가 되면 다음 정산이 그때를 처음 모두 답한 때로 본다(2026-10-07) |\n | `STAGE_COMPLETED` | 50 | 비어 있지 않은 공개 단계의 공개된 글을 모두 완료했을 때(정산, §12-5) |\n \n **익힘**(FR-022): 첫 답이 맞은 순간 그 글이 아직 익힘이 아니면 `mastered_at`을 지금으로, `mastered_via`를 `FIRST_ANSWER`로 둔다. 모든 문제에 답하기 전이어도 하나를 맞히면 익힘이다. 공개 판의 문제에 모두 답했고 그 첫 답이 하나도 맞지 않았으며 아직 익힘이 아닌 글만 다시 풀기를 받고, 다시 풀기의 답이 맞으면 `RETRY`로 익힘이 된다. 다시 풀기는 답을 저장하지 않고(§11-2) 경험치 장부 줄도 만들지 않는다(FR-028). 익힘은 문제가 바뀌거나 글이 게시 취소되어도 비우지 않고 '학습 초기화'로만 지운다(FR-020, spec Edge Cases).\n@@ -691,6 +691,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에\n \n 학습 행동 요청과 `GET /learning/me`가 같은 순서로 정산한다([research](research.md) R30).\n \n+0. 공개된 글 가운데 공개 판의 문제에 모두 첫 답이 있는데 `all_answered_at`이 비어 있는 글은 지금을 처음 모두 답한 때로 채우고, 그 문제를 모두 첫 답에서 맞혔으면 `ALL_CORRECT`를 더한다. 새 첫 답으로 모두 답한 경우와 운영자가 남은 문제를 지워 모두 답한 상태가 된 경우를 같은 자리에서 판정한다(2026-10-07).\n 1. 비어 있지 않은 공개 단계마다 단계 완주를 판정해 `STAGE_COMPLETED`를 더한다(`ON CONFLICT DO NOTHING`).\n 2. 장부 합계로 현재 레벨을 계산한다.\n 3. 배지 조건을 판정해 새로 채워진 배지를 더한다(`ON CONFLICT DO NOTHING`).\n@@ -698,7 +699,7 @@ V1 초안은 기존 아홉 글에만 있다. 새 글은 V2로 만들고, V2에\n \n 학습 행동이 기록을 바꾸지 않은 요청(이미 완료한 글의 완료, 이미 답한 문제의 첫 답, 틀린 다시 풀기)은 정산하지 않는다. 그동안 운영자 변경으로 채워진 기준은 다음 `GET /learning/me`가 정산한다. 이미 완료한 글의 완료가 빈 `gained`를 돌려주는 계약([learning-me-api](contracts/learning-me-api.md) §4)과 같은 규칙이다(B09).\n \n-나의 학습을 쓰는 요청(정산하는 조회, 위치, 완료, 첫 답, 다시 풀기, 학습 초기화)은 사용자 단위 트랜잭션 잠금을 먼저 잡아 줄을 선다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지 행이 초기화 뒤에 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 잠금 순서는 사용자 잠금 → 진행 행이다(B09).\n+나의 학습을 쓰는 요청(정산하는 조회, 위치, 완료, 첫 답, 다시 풀기, 학습 초기화)은 사용자 단위 트랜잭션 잠금을 먼저 잡아 줄을 선다. 행 잠금만으로는 학습 초기화가 지우는 사이 다른 요청이 넣은 답·장부·배지 행이 초기화 뒤에 남고(SC-015), 같은 사용자의 정산 둘이 서로의 새 줄을 보지 못한다. 나의 학습이 잡는 잠금은 이것 하나다(B09).\n \n ## 13. 초기 자리 (마이그레이션이 만든다)\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/data-model.md",
+          "old_path": "specs/013-learning-pages/data-model.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -457,8 +457,8 @@ V1 초안은 기존 아홉 글에만 생긴다. 새 글은 V2로 만들어지고\n **결정**:\n - 장부 한 줄은 (종류, 대상 키, 점수, 받은 시각)이다. 종류는 `ARTICLE_COMPLETED`(20)·`ANSWER_CORRECT`·`ALL_CORRECT`(20)·`STAGE_COMPLETED`(50)다. (사용자, 종류, 대상 키) 유일 제약이 '같은 일로 한 번'을 지킨다.\n - 정답 몫 = min(60 ÷ 답할 때 그 글의 문제 수, 60 − 그 글에서 이미 받은 정답 몫의 합). 0이면 장부에 쓰지 않는다. 문제 수가 2·3뿐이라 몫은 30·20의 정수다.\n-- '모두 맞힘'은 그 사용자가 처음으로 그 글의 문제에 모두 답한 순간(`all_answered_at`이 비어 있다가 채워지는 순간) 한 번만 판정한다. 그 순간의 문제를 모두 첫 답에서 맞혔으면 20이다. `all_answered_at`이 이미 있는 글에 더해진 문제는 첫 답과 익힘·정답 배지 개수에는 들어가지만 경험치를 주지 않는다.\n-- 답을 처리할 때 그 사용자의 그 글 `learning_progress` 행을 잠근다. 같은 글의 두 답이 동시에 와도 상한 계산이 겹치지 않는다.\n+- '모두 맞힘'은 그 사용자가 처음으로 그 글의 문제에 모두 답한 순간(`all_answered_at`이 비어 있다가 채워지는 순간) 한 번만 판정한다. 그 순간의 문제를 모두 첫 답에서 맞혔으면 20이다. 판정은 정산이 한다. 운영자가 남은 문제를 지워 모두 답한 상태가 되면 다음 정산이 그때를 처음 모두 답한 순간으로 본다(2026-10-07). `all_answered_at`이 이미 있는 글에 더해진 문제는 첫 답과 익힘·정답 배지 개수에는 들어가지만 경험치를 주지 않는다.\n+- 나의 학습을 쓰는 요청은 사용자 단위 트랜잭션 잠금을 먼저 잡는다. 같은 글의 두 답이 동시에 와도 상한 계산이 겹치지 않고, 학습 초기화와 다른 쓰기도 겹치지 않는다(B09 converge에서 진행 행 잠금을 대신했다).\n - 레벨은 장부 합계로만 정한다. 장부에서 줄을 지우는 경로는 '학습 초기화'뿐이다.\n \n **근거**: FR-028의 계산 규칙과 SC-015.\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/research.md",
+          "old_path": "specs/013-learning-pages/research.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -18,6 +18,11 @@\n \n ## Clarifications\n \n+### Session 2026-10-07\n+\n+- Q: 세 문제 글에서 두 문제를 맞히고 한 문제를 남겨 둔 사용자가 있는데, 운영자가 그 남은 문제를 지워 다시 게시했습니다. 사용자는 이제 남은 문제에 모두 답한 상태입니다. '모두 맞힘'을 주나요? → A: 준다. 다음 정산 때(그 사용자가 '나의 학습'을 열거나 학습 행동을 할 때) 공개된 문제에 모두 첫 답이 있으면 처음 모두 답한 때로 보고, 그 문제를 모두 첫 답에서 맞혔으면 '모두 맞힘'을 준다. 운영자 변경으로 채워진 단계 완주를 주는 방식과 같다. 글 하나의 경험치 상한 100은 그대로다. (FR-028, FR-024)\n+- Q: 첫 단계를 공개한 뒤 운영자가 공개된 글을 모두 게시 취소해 공개된 글이 0편이 되면, 아무것도 읽지 않은 사용자에게도 '지금 공개된 글을 모두 읽었습니다'가 보이나요? → A: 보이지 않는다. 공개된 글이 0편이면 화면은 '이어서 읽기' 자리와 그 문구를 그리지 않는다. 서버 응답의 모양은 바꾸지 않는다. (FR-020)\n+\n ### Session 2026-10-05\n \n - 결정(사용자 선택): 아직 공개되지 않은 단계를 커리큘럼 보기·목록 보기·'나의 학습'에 어떻게 보일지 정하려고 외부 레퍼런스를 일곱 갈래(디자인 갤러리, 출시된 앱 화면 모음, 웹 디자인 경향, 학습 제품, 금융 교육, 국내 교육 서비스, 배지와 움직임)로 조사하고 세 방향의 목업을 비교했다. 사용자는 여섯 단계를 풍경이 있는 지역으로, 글을 굽이치는 길 위의 노드로 그리는 '여섯 정거장 여정 지도'를 고르고, 다른 방향('수집 진열장')의 팔각 레벨 표장, 글 도장, 스테인드글라스 단계 완주 메달, 갈래별 배지 메달을 함께 쓰기로 했다. 시각 설계는 [design-notes.md](design-notes.md)와 목업 [design-mockup.html](design-mockup.html)이 갖고, spec에는 화면이 지켜야 할 규칙만 적는다. (FR-031)\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "specs/013-learning-pages/spec.md",
+          "old_path": "specs/013-learning-pages/spec.md",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2882136": []
+  }
+}

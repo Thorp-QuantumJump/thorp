@@ -1,0 +1,567 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 943236,
+    "iid": 86,
+    "project_id": 1444456,
+    "title": "feat(infra) CI 결과 Mattermost 알림 추가와 알림 플러그인 고정",
+    "description": "## 작업 내용 요약\n\n`thorp-ci` Job의 성공·실패가 아무 데도 알려지지 않습니다. Jenkins 화면을 직접 열어야만 결과를 압니다. **MR을 올린 사람이 CI가 깨진 것을 모른 채 머지를 요청하는 일이 생깁니다.**\n\n배포 파이프라인은 이미 `post` 블록에서 Mattermost로 알리고 있습니다. CI 파이프라인에는 그 블록이 없어 이번에 넣습니다.\n\n## 관련 티켓 번호 & 링크\n\nticket #199 (Jira S15P21E205-199 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-199\n\n## 주요 변경 사항\n\n### 1. CI 결과 알림 — `Jenkinsfile`\n\n`post` 블록에 `success`·`unstable`·`failure`를 넣었습니다. 보내는 모양은 이렇습니다.\n\n```\n🟢 CI 성공 · MR !83 (feat(infra)/199-ci-mattermost-notify -> dev) #14 (확인)\n🟡 CI 불안정 · ...\n🔴 CI 실패 · ...\n```\n\n**이모지를 배포와 일부러 다르게 했습니다.** 배포가 `✅⚠️❌`를 쓰므로 CI는 `🟢🟡🔴`로 두었습니다. 채널을 따로 두지 않고 전역 기본 채널로 보내기 때문에, 두 파이프라인의 알림이 한곳에 섞입니다. 모양이 갈려야 어느 쪽인지 바로 압니다.\n\n**머리말에 어느 MR인지를 넣었습니다.** 배포 알림은 Job 이름과 빌드 번호만으로 충분하지만, CI는 여러 MR이 동시에 돌 수 있어 그것만으로는 무엇이 깨졌는지 알 수 없습니다.\n\n```groovy\ndef ciSubject() {\n    if (env.gitlabMergeRequestIid) {\n        return \"MR !${env.gitlabMergeRequestIid} (${env.gitlabSourceBranch} -> ${env.gitlabTargetBranch})\"\n    }\n    return env.JOB_NAME\n}\n```\n\nMR로 트리거되지 않은 경로에서는 그 값이 비므로 Job 이름으로 물러섭니다.\n\n### 2. `mattermost` 플러그인 고정 — `infra/jenkins/Dockerfile`\n\n`mattermostSend`를 배포 파이프라인이 이미 쓰고 있는데 **플러그인이 Dockerfile에 없었습니다.** UI로 설치한 것이 볼륨에만 남아 있습니다.\n\n지금은 동작합니다. 다만 **볼륨을 새로 만드는 순간 사라지고, 그때는 CI뿐 아니라 배포 파이프라인까지 `post` 블록에서 실패합니다.** 서버를 옮기거나 볼륨을 지우고 다시 올리는 경우입니다.\n\n## 테스트\n\n- [x] `Jenkinsfile` 중괄호 균형 확인 (92쌍)\n- [x] dev와 충돌 없음 확인 (200 머지 이후 기준)\n- [ ] **실제 알림 수신 — 이 MR의 빌드에서 확인합니다** (리뷰 포인트 1)\n\n## 리뷰 포인트\n\n1. **이 MR의 빌드가 곧 확인입니다.** CI는 MR 소스 브랜치의 `Jenkinsfile`로 돌고 플러그인은 이미 볼륨에 있으므로, 이 MR을 올리면 그 빌드에서 알림이 와야 합니다. 오지 않으면 Jenkins 전역 Mattermost 설정(Endpoint·기본 채널)이 배포 Job에만 걸려 있을 가능성이 있습니다.\n2. **성공 알림까지 보내는 것이 맞는지 봐 주세요.** CI는 MR마다 돌아 배포보다 훨씬 잦습니다. 채널이 시끄러워져 정작 실패를 놓친다고 판단되면 `success` 블록만 빼면 됩니다. 실패했다가 다시 성공했을 때만 알리는 `fixed` 조건도 선택지입니다.\n3. **채널을 따로 두지 않았습니다.** `mattermostSend`에 `channel`을 주면 CI 전용 채널로 보낼 수 있습니다. 지금은 이모지로만 구분하는데, 알림이 쌓여 불편해지면 그때 나누는 편이 낫다고 보았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T15:01:47.072+09:00",
+    "updated_at": "2026-09-14T15:03:11.944+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T15:03:11.707+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/199-ci-mattermost-notify",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3b63514476edddd3dcce13d5bad5dc0a2f03a57f",
+    "merge_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T15:01:47.824+09:00",
+    "reference": "!86",
+    "references": {
+      "short": "!86",
+      "relative": "!86",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!86"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/86",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 943236,
+    "iid": 86,
+    "project_id": 1444456,
+    "title": "feat(infra) CI 결과 Mattermost 알림 추가와 알림 플러그인 고정",
+    "description": "## 작업 내용 요약\n\n`thorp-ci` Job의 성공·실패가 아무 데도 알려지지 않습니다. Jenkins 화면을 직접 열어야만 결과를 압니다. **MR을 올린 사람이 CI가 깨진 것을 모른 채 머지를 요청하는 일이 생깁니다.**\n\n배포 파이프라인은 이미 `post` 블록에서 Mattermost로 알리고 있습니다. CI 파이프라인에는 그 블록이 없어 이번에 넣습니다.\n\n## 관련 티켓 번호 & 링크\n\nticket #199 (Jira S15P21E205-199 · GitLab 이슈는 사용하지 않습니다) link https://ssafy.atlassian.net/browse/S15P21E205-199\n\n## 주요 변경 사항\n\n### 1. CI 결과 알림 — `Jenkinsfile`\n\n`post` 블록에 `success`·`unstable`·`failure`를 넣었습니다. 보내는 모양은 이렇습니다.\n\n```\n🟢 CI 성공 · MR !83 (feat(infra)/199-ci-mattermost-notify -> dev) #14 (확인)\n🟡 CI 불안정 · ...\n🔴 CI 실패 · ...\n```\n\n**이모지를 배포와 일부러 다르게 했습니다.** 배포가 `✅⚠️❌`를 쓰므로 CI는 `🟢🟡🔴`로 두었습니다. 채널을 따로 두지 않고 전역 기본 채널로 보내기 때문에, 두 파이프라인의 알림이 한곳에 섞입니다. 모양이 갈려야 어느 쪽인지 바로 압니다.\n\n**머리말에 어느 MR인지를 넣었습니다.** 배포 알림은 Job 이름과 빌드 번호만으로 충분하지만, CI는 여러 MR이 동시에 돌 수 있어 그것만으로는 무엇이 깨졌는지 알 수 없습니다.\n\n```groovy\ndef ciSubject() {\n    if (env.gitlabMergeRequestIid) {\n        return \"MR !${env.gitlabMergeRequestIid} (${env.gitlabSourceBranch} -> ${env.gitlabTargetBranch})\"\n    }\n    return env.JOB_NAME\n}\n```\n\nMR로 트리거되지 않은 경로에서는 그 값이 비므로 Job 이름으로 물러섭니다.\n\n### 2. `mattermost` 플러그인 고정 — `infra/jenkins/Dockerfile`\n\n`mattermostSend`를 배포 파이프라인이 이미 쓰고 있는데 **플러그인이 Dockerfile에 없었습니다.** UI로 설치한 것이 볼륨에만 남아 있습니다.\n\n지금은 동작합니다. 다만 **볼륨을 새로 만드는 순간 사라지고, 그때는 CI뿐 아니라 배포 파이프라인까지 `post` 블록에서 실패합니다.** 서버를 옮기거나 볼륨을 지우고 다시 올리는 경우입니다.\n\n## 테스트\n\n- [x] `Jenkinsfile` 중괄호 균형 확인 (92쌍)\n- [x] dev와 충돌 없음 확인 (200 머지 이후 기준)\n- [ ] **실제 알림 수신 — 이 MR의 빌드에서 확인합니다** (리뷰 포인트 1)\n\n## 리뷰 포인트\n\n1. **이 MR의 빌드가 곧 확인입니다.** CI는 MR 소스 브랜치의 `Jenkinsfile`로 돌고 플러그인은 이미 볼륨에 있으므로, 이 MR을 올리면 그 빌드에서 알림이 와야 합니다. 오지 않으면 Jenkins 전역 Mattermost 설정(Endpoint·기본 채널)이 배포 Job에만 걸려 있을 가능성이 있습니다.\n2. **성공 알림까지 보내는 것이 맞는지 봐 주세요.** CI는 MR마다 돌아 배포보다 훨씬 잦습니다. 채널이 시끄러워져 정작 실패를 놓친다고 판단되면 `success` 블록만 빼면 됩니다. 실패했다가 다시 성공했을 때만 알리는 `fixed` 조건도 선택지입니다.\n3. **채널을 따로 두지 않았습니다.** `mattermostSend`에 `channel`을 주면 CI 전용 채널로 보낼 수 있습니다. 지금은 이모지로만 구분하는데, 알림이 쌓여 불편해지면 그때 나누는 편이 낫다고 보았습니다.",
+    "state": "merged",
+    "created_at": "2026-09-14T15:01:47.072+09:00",
+    "updated_at": "2026-09-14T15:03:11.944+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-14T15:03:11.707+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/199-ci-mattermost-notify",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "3b63514476edddd3dcce13d5bad5dc0a2f03a57f",
+    "merge_commit_sha": "eda07078e0977e612a0152566715acf61cb00286",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-14T15:01:47.824+09:00",
+    "reference": "!86",
+    "references": {
+      "short": "!86",
+      "relative": "!86",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!86"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/86",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 3,
+      "completed_count": 2
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "2",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+      "head_sha": "3b63514476edddd3dcce13d5bad5dc0a2f03a57f",
+      "start_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "a5aa3ed0b7183e07f95dbc02243f35699d03cd42",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802451,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **Dockerfile을 통한 인프라 재현성 확보**: 수동으로 UI를 통해 설치되어 볼륨 의존성이 있던 `mattermost` 플러그인을 `Dockerfile`의 `jenkins-plugin-cli`에 명시하여, 컨테이너 재생성 시 빌드가 깨지는 잠재적 장애 요인을 훌륭하게 예방했습니다.\n- **직관적인 알림 설계**: 배포 파이프라인과 이모지(`🟢🟡🔴` vs `✅⚠️❌`)를 시각적으로 분리하고, MR 번호 및 브랜치 정보를 동적으로 포함하여 여러 CI가 동시에 돌 때도 혼동이 없도록 세심하게 고려했습니다.\n\n### 발견 사항\n중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n- **성공/실패 시나리오 검증**:\n  1. 의도적으로 테스트를 실패하게 만드는 커밋을 푸시하여 `failure` 블록(`🔴 CI 실패`)이 Mattermost 채널 전역 기본 채널로 정상 전송되는지 확인합니다.\n  2. 코드를 수정한 뒤 머지(또는 성공 빌드)하여 `success` 블록(`🟢 CI 성공`) 알림이 수신되는지 확인합니다.\n- **수동 트리거(Fallback) 검증**:\n  - MR을 통한 트리거가 아닌, Jenkins UI에서 수동으로 빌드(Branch 직접 빌드 등)를 실행했을 때 `ciSubject()` 함수가 `env.JOB_NAME`으로 올바르게 대체되어 에러 없이 알림이 전송되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:3b63514476edddd3dcce13d5bad5dc0a2f03a57f -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-14T15:01:52.076+09:00",
+          "updated_at": "2026-09-14T15:01:52.076+09:00",
+          "system": false,
+          "noteable_id": 943236,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 86,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8caf74c160a9a90f2b8ee3bbb29600bf4f2cb0ca",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802453,
+          "type": null,
+          "body": "<p>changed title from <code class=\"idiff\"><span class=\"idiff left right deletion\">[INFRA]</span> CI 결과 Mattermost 알림 추가와 알림 플러그인 고정</code> to <code class=\"idiff\"><span class=\"idiff left right addition\">feat(infra)</span> CI 결과 Mattermost 알림 추가와 알림 플러그인 고정</code></p>",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:02:19.309+09:00",
+          "updated_at": "2026-09-14T15:02:19.313+09:00",
+          "system": true,
+          "noteable_id": 943236,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 86,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ab4206f210b8d019fcd23b0884f6f784c0e11964",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802454,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:02:19.343+09:00",
+          "updated_at": "2026-09-14T15:02:19.347+09:00",
+          "system": true,
+          "noteable_id": 943236,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 86,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "7a1d61e4479b8bb16cfeb5458736a0f97317105d",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802455,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:02:19.376+09:00",
+          "updated_at": "2026-09-14T15:02:19.379+09:00",
+          "system": true,
+          "noteable_id": 943236,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 86,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "f982374aa8f1f34db0f01428b042773544fd4f0c",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802456,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:02:19.398+09:00",
+          "updated_at": "2026-09-14T15:02:19.406+09:00",
+          "system": true,
+          "noteable_id": 943236,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 86,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "939aefee8aa57eb4004e631c97c9e5b959b4570f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2802465,
+          "type": null,
+          "body": "mentioned in commit eda07078e0977e612a0152566715acf61cb00286",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T15:03:11.778+09:00",
+          "updated_at": "2026-09-14T15:03:11.789+09:00",
+          "system": true,
+          "noteable_id": 943236,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 86,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2194431,
+      "head_commit_sha": "3b63514476edddd3dcce13d5bad5dc0a2f03a57f",
+      "base_commit_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+      "start_commit_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+      "created_at": "2026-09-14T15:01:47.386+09:00",
+      "merge_request_id": 943236,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "40929252b2f9a6f6aed2c6eca8a51da8742acd50"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2194431,
+      "head_commit_sha": "3b63514476edddd3dcce13d5bad5dc0a2f03a57f",
+      "base_commit_sha": "053e3acb3eb603198dac7b54687bfbc88ed0c319",
+      "start_commit_sha": "cb87dca0390a16139f6f2615d32a8d2a7ea8e0ab",
+      "created_at": "2026-09-14T15:01:47.386+09:00",
+      "merge_request_id": 943236,
+      "state": "collected",
+      "real_size": "2",
+      "patch_id_sha": "40929252b2f9a6f6aed2c6eca8a51da8742acd50",
+      "commits": [
+        {
+          "id": "3b63514476edddd3dcce13d5bad5dc0a2f03a57f",
+          "short_id": "3b635144",
+          "created_at": "2026-09-14T14:57:37.000+09:00",
+          "parent_ids": [
+            "053e3acb3eb603198dac7b54687bfbc88ed0c319"
+          ],
+          "title": "feat(infra): CI 결과를 Mattermost 로 알리고 플러그인을 고정한다",
+          "message": "feat(infra): CI 결과를 Mattermost 로 알리고 플러그인을 고정한다\n\nthorp-ci Job 의 성공·실패가 아무 데도 알려지지 않아 Jenkins 화면을 직접 열어야만 결과를 알 수 있었다. MR 을 올린 사람이 CI 가 깨진 것을 모른 채 머지를 요청하는 일이 생긴다.\n\n배포 파이프라인과 같은 형태로 post 블록에 success·unstable·failure 알림을 넣는다. 채널은 지정하지 않아 전역 기본 채널로 가고 배포 알림과 같은 곳에 모인다. 대신 이모지를 달리해(배포 ✅⚠️❌ / CI 🟢🟡🔴) 한 채널에 섞여도 어느 파이프라인인지 한눈에 갈리게 했다.\n\n메시지 머리말은 ciSubject() 가 만든다. MR 로 트리거되면 MR 번호와 소스·대상 브랜치를 담고, 값이 없는 경로에서는 Job 이름으로 물러선다. 배포 알림은 Job 이름과 빌드 번호만 담지만 CI 는 어느 MR 인지가 있어야 쓸모가 있다.\n\nmattermost 플러그인을 Dockerfile 의 jenkins-plugin-cli 목록에 넣는다. 지금은 UI 로 설치된 것이 볼륨에만 남아 있어, 볼륨을 새로 만드는 순간 사라지고 두 파이프라인 모두 post 블록에서 실패한다.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-14T14:57:37.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-14T14:57:37.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/3b63514476edddd3dcce13d5bad5dc0a2f03a57f"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -47,9 +47,12 @@ USER jenkins\n #                        (Blue Ocean은 유지보수가 중단되어 이 플러그인이 후속이다)\n #   ansicolor            Jenkinsfile의 ansiColor('xterm') 지시어가 동작하려면 필요하다.\n #                        이 플러그인 없이 지시어만 있으면 파이프라인이 기동에 실패한다.\n+#   mattermost           Jenkinsfile 의 mattermostSend 로 빌드 결과를 팀 채널에 알린다.\n+#                        UI 로 설치해 두면 볼륨에만 남아, 볼륨을 새로 만드는 순간 사라지고\n+#                        두 파이프라인 모두 post 블록에서 실패한다.\n #   warnings-ng          ESLint·Spotless·ruff 같은 정적 분석 결과를 빌드 화면에 목록으로\n #                        모아 준다. 지금은 설치만 해 둔다 — Jenkinsfile에서 recordIssues 로\n #                        각 lint 출력을 연결하는 일은 실제 Jenkins에서 파서와 출력 형식을\n #                        맞춰 봐야 하므로 후속 작업으로 남긴다. 설치가 먼저 있어야 그 작업을\n #                        시작할 수 있다.\n-RUN jenkins-plugin-cli --plugins gitlab-plugin pipeline-graph-view ansicolor warnings-ng\n+RUN jenkins-plugin-cli --plugins gitlab-plugin pipeline-graph-view ansicolor mattermost warnings-ng\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Dockerfile",
+          "old_path": "infra/jenkins/Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -5,6 +5,15 @@\n // 실패한 단계만 눌러 그 구간의 로그를 열어볼 수 있게 하기 위함이다. 한 스테이지에 여러\n // 명령을 묶으면 화면에는 \"파트가 실패했다\"까지만 나타나고, 어느 명령에서 실패했는지\n // 확인하려면 콘솔 로그 전체를 읽어야 한다.\n+// 알림 메시지의 머리말. MR 로 트리거되면 어느 MR 인지가 함께 있어야 쓸모가 있다.\n+// 그 밖의 경로(수동 실행 등)로 들어오면 값이 없으므로 Job 이름으로 물러선다.\n+def ciSubject() {\n+    if (env.gitlabMergeRequestIid) {\n+        return \"MR !${env.gitlabMergeRequestIid} (${env.gitlabSourceBranch} -> ${env.gitlabTargetBranch})\"\n+    }\n+    return env.JOB_NAME\n+}\n+\n pipeline {\n     agent any\n \n@@ -287,5 +296,33 @@ pipeline {\n             // 병합하지 않았으면 abort 할 것이 없어 실패하므로 결과를 무시한다.\n             sh 'git merge --abort >/dev/null 2>&1 || true'\n         }\n+\n+        // 채널은 지정하지 않는다. Jenkins 전역 Mattermost 설정의 기본 채널로 가며,\n+        // 배포 파이프라인(infra/jenkins/Jenkinsfile.deploy)의 알림과 같은 곳에 모인다.\n+        //\n+        // 이모지는 배포와 일부러 다른 것을 쓴다. 배포가 ✅⚠️❌ 를 쓰므로 CI 는 🟢🟡🔴 로\n+        // 두어, 한 채널에 섞여도 어느 파이프라인의 알림인지 한눈에 갈린다.\n+        //\n+        // mattermostSend 는 mattermost 플러그인이 제공한다 (infra/jenkins/Dockerfile).\n+        failure {\n+            mattermostSend(\n+                color: 'danger',\n+                message: \"🔴 CI 실패 · ${ciSubject()} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+            )\n+        }\n+\n+        unstable {\n+            mattermostSend(\n+                color: 'warning',\n+                message: \"🟡 CI 불안정 · ${ciSubject()} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+            )\n+        }\n+\n+        success {\n+            mattermostSend(\n+                color: 'good',\n+                message: \"🟢 CI 성공 · ${ciSubject()} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|확인>)\"\n+            )\n+        }\n     }\n }\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "Jenkinsfile",
+          "old_path": "Jenkinsfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2802451": []
+  }
+}

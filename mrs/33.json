@@ -1,0 +1,571 @@
+{
+  "format": 1,
+  "summary": {
+    "id": 939501,
+    "iid": 33,
+    "project_id": 1444456,
+    "title": "feat(infra): GitLab dev 병합 자동 배포 Webhook 구성",
+    "description": "\n# 작업 내용 요약\n\ndev 브랜치 병합 시 Jenkins 배포 Job이 자동으로 트리거되도록 GitLab Push Webhook 경로를 열었다. 기존에는 Jenkins가 loopback에만 바인딩되어 있어 Webhook을 받을 수 없었고, Poll SCM(H/2 \\* \\* \\* \\*)으로 최대 2분 지연된 뒤 배포가 시작되었다. nginx가 Webhook 엔드포인트 하나만 역프록시하도록 구성해 Jenkins UI의 SSH 터널 전용 접근 정책은 그대로 유지하면서 즉시 배포로 전환했다.\n\n# 관련 티켓 번호 & 링크\n\nticket #118 link:\n\n# 주요 변경 사항\n\n- nginx에 `location ^~ /jenkins/project/` 추가: `limit_except POST`로 POST 요청만 허용하고, `rewrite`로 외부 전용 `/jenkins` 접두사를 제거해 GitLab Plugin의 `/project/...`로 전달한다. `/jenkins/` 이하의 UI·API는 프록시 대상에서 제외했다.\n- Jenkins 컨테이너가 재시작 중이어도 nginx 설정 로드가 실패하지 않도록, Docker 내부 DNS(`resolver 127.0.0.11`)와 변수 기반 `proxy_pass`를 사용해 upstream 주소를 지연 해석하도록 했다.\n- `docker-compose.ci.yml`에서 Jenkins를 외부 네트워크 `thorp-edge`에 연결하고, 더 이상 필요 없어진 `JENKINS_OPTS --prefix=/jenkins` 주석을 제거했다. Jenkins UI는 계속 loopback 바인딩으로만 노출된다.\n- Jenkins Dockerfile에 `jenkins-plugin-cli --plugins gitlab-plugin`을 추가해, 이미지를 재생성해도 Webhook 트리거 플러그인이 유지되도록 했다.\n- `deploy.sh`의 nginx 재적용 단계를 보강했다. bind mount된 템플릿 변경은 자동 반영되지 않으므로 `20-envsubst-on-templates.sh`로 설정을 재생성하고 `nginx -t` 검증을 통과한 경우에만 reload한다.\n- `Jenkinsfile.deploy` 주석의 Job 설정 안내를 Poll SCM 권장에서 Webhook URL·Push Event 트리거· Secret Token 등록 기준으로 갱신했다.\n\n# 테스트\n\n- [ ] GitLab Webhook에 `https://<DOMAIN>/jenkins/project/<JOB_NAME>`과 Secret Token을 등록한 뒤, dev 브랜치에 MR을 병합해 Jenkins Job이 즉시 트리거되는지 확인\n- [ ] Webhook 엔드포인트에 GET·PUT·DELETE 요청을 보내 nginx가 403으로 차단하는지 확인\n- [ ] `/jenkins/`(UI 경로)가 외부에서 프록시되지 않는지 확인\n- [ ] `deploy.sh` 실행 시 envsubst 재생성과 `nginx -t`가 오류 없이 통과하고 reload가 적용되는지 확인\n- [ ] Jenkins 컨테이너를 재시작한 직후에도 nginx가 정상 기동하고 Webhook이 다시 전달되는지 확인\n\n# 리뷰 포인트\n\n- Webhook 경로를 `limit_except POST` + Secret Token 검증에만 의존해 공개하는 수준이 충분한지, 아니면 GitLab IP 대역 기반 `allow`/`deny`를 함께 두어야 하는지\n- Jenkins를 앱의 외부 프록시 네트워크(`thorp-edge`)에 연결한 구성이, CI 네트워크와 서비스 네트워크를 분리해 두려는 기존 방향과 충돌하지 않는지\n- `nginx -t` 실패 시 `deploy.sh`가 그 자리에서 중단되는 동작이 의도한 배포 실패 처리인지",
+    "state": "merged",
+    "created_at": "2026-09-10T14:59:15.365+09:00",
+    "updated_at": "2026-09-14T12:55:27.975+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-10T15:07:06.817+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/118-jenkins-gitlab-webhook",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b",
+    "merge_commit_sha": "39f453a1dbd2edf9a6217bd227556391e814c36e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T14:59:16.131+09:00",
+    "reference": "!33",
+    "references": {
+      "short": "!33",
+      "relative": "!33",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!33"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/33",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true
+  },
+  "detail": {
+    "id": 939501,
+    "iid": 33,
+    "project_id": 1444456,
+    "title": "feat(infra): GitLab dev 병합 자동 배포 Webhook 구성",
+    "description": "\n# 작업 내용 요약\n\ndev 브랜치 병합 시 Jenkins 배포 Job이 자동으로 트리거되도록 GitLab Push Webhook 경로를 열었다. 기존에는 Jenkins가 loopback에만 바인딩되어 있어 Webhook을 받을 수 없었고, Poll SCM(H/2 \\* \\* \\* \\*)으로 최대 2분 지연된 뒤 배포가 시작되었다. nginx가 Webhook 엔드포인트 하나만 역프록시하도록 구성해 Jenkins UI의 SSH 터널 전용 접근 정책은 그대로 유지하면서 즉시 배포로 전환했다.\n\n# 관련 티켓 번호 & 링크\n\nticket #118 link:\n\n# 주요 변경 사항\n\n- nginx에 `location ^~ /jenkins/project/` 추가: `limit_except POST`로 POST 요청만 허용하고, `rewrite`로 외부 전용 `/jenkins` 접두사를 제거해 GitLab Plugin의 `/project/...`로 전달한다. `/jenkins/` 이하의 UI·API는 프록시 대상에서 제외했다.\n- Jenkins 컨테이너가 재시작 중이어도 nginx 설정 로드가 실패하지 않도록, Docker 내부 DNS(`resolver 127.0.0.11`)와 변수 기반 `proxy_pass`를 사용해 upstream 주소를 지연 해석하도록 했다.\n- `docker-compose.ci.yml`에서 Jenkins를 외부 네트워크 `thorp-edge`에 연결하고, 더 이상 필요 없어진 `JENKINS_OPTS --prefix=/jenkins` 주석을 제거했다. Jenkins UI는 계속 loopback 바인딩으로만 노출된다.\n- Jenkins Dockerfile에 `jenkins-plugin-cli --plugins gitlab-plugin`을 추가해, 이미지를 재생성해도 Webhook 트리거 플러그인이 유지되도록 했다.\n- `deploy.sh`의 nginx 재적용 단계를 보강했다. bind mount된 템플릿 변경은 자동 반영되지 않으므로 `20-envsubst-on-templates.sh`로 설정을 재생성하고 `nginx -t` 검증을 통과한 경우에만 reload한다.\n- `Jenkinsfile.deploy` 주석의 Job 설정 안내를 Poll SCM 권장에서 Webhook URL·Push Event 트리거· Secret Token 등록 기준으로 갱신했다.\n\n# 테스트\n\n- [ ] GitLab Webhook에 `https://<DOMAIN>/jenkins/project/<JOB_NAME>`과 Secret Token을 등록한 뒤, dev 브랜치에 MR을 병합해 Jenkins Job이 즉시 트리거되는지 확인\n- [ ] Webhook 엔드포인트에 GET·PUT·DELETE 요청을 보내 nginx가 403으로 차단하는지 확인\n- [ ] `/jenkins/`(UI 경로)가 외부에서 프록시되지 않는지 확인\n- [ ] `deploy.sh` 실행 시 envsubst 재생성과 `nginx -t`가 오류 없이 통과하고 reload가 적용되는지 확인\n- [ ] Jenkins 컨테이너를 재시작한 직후에도 nginx가 정상 기동하고 Webhook이 다시 전달되는지 확인\n\n# 리뷰 포인트\n\n- Webhook 경로를 `limit_except POST` + Secret Token 검증에만 의존해 공개하는 수준이 충분한지, 아니면 GitLab IP 대역 기반 `allow`/`deny`를 함께 두어야 하는지\n- Jenkins를 앱의 외부 프록시 네트워크(`thorp-edge`)에 연결한 구성이, CI 네트워크와 서비스 네트워크를 분리해 두려는 기존 방향과 충돌하지 않는지\n- `nginx -t` 실패 시 `deploy.sh`가 그 자리에서 중단되는 동작이 의도한 배포 실패 처리인지",
+    "state": "merged",
+    "created_at": "2026-09-10T14:59:15.365+09:00",
+    "updated_at": "2026-09-14T12:55:27.975+09:00",
+    "merged_by": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merge_user": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "merged_at": "2026-09-10T15:07:06.817+09:00",
+    "closed_by": null,
+    "closed_at": null,
+    "target_branch": "dev",
+    "source_branch": "feat(infra)/118-jenkins-gitlab-webhook",
+    "user_notes_count": 1,
+    "upvotes": 0,
+    "downvotes": 0,
+    "author": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "assignees": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "assignee": {
+      "id": 30869,
+      "username": "wdg0434",
+      "public_email": "",
+      "name": "우동균",
+      "state": "active",
+      "locked": false,
+      "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+      "web_url": "https://lab.ssafy.com/wdg0434"
+    },
+    "reviewers": [
+      {
+        "id": 30869,
+        "username": "wdg0434",
+        "public_email": "",
+        "name": "우동균",
+        "state": "active",
+        "locked": false,
+        "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+        "web_url": "https://lab.ssafy.com/wdg0434"
+      }
+    ],
+    "source_project_id": 1444456,
+    "target_project_id": 1444456,
+    "labels": [
+      "⚙️ Infra",
+      "⚡ Feature"
+    ],
+    "draft": false,
+    "imported": false,
+    "imported_from": "none",
+    "work_in_progress": false,
+    "milestone": null,
+    "merge_when_pipeline_succeeds": false,
+    "merge_status": "can_be_merged",
+    "detailed_merge_status": "not_open",
+    "merge_after": null,
+    "sha": "23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b",
+    "merge_commit_sha": "39f453a1dbd2edf9a6217bd227556391e814c36e",
+    "squash_commit_sha": null,
+    "discussion_locked": null,
+    "should_remove_source_branch": true,
+    "force_remove_source_branch": true,
+    "prepared_at": "2026-09-10T14:59:16.131+09:00",
+    "reference": "!33",
+    "references": {
+      "short": "!33",
+      "relative": "!33",
+      "full": "s15-bigdata-dist-sub1/S15P21E205!33"
+    },
+    "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/merge_requests/33",
+    "time_stats": {
+      "time_estimate": 0,
+      "total_time_spent": 0,
+      "human_time_estimate": null,
+      "human_total_time_spent": null
+    },
+    "squash": false,
+    "squash_on_merge": false,
+    "task_completion_status": {
+      "count": 5,
+      "completed_count": 0
+    },
+    "has_conflicts": false,
+    "blocking_discussions_resolved": true,
+    "subscribed": true,
+    "changes_count": "5",
+    "latest_build_started_at": null,
+    "latest_build_finished_at": null,
+    "first_deployed_to_production_at": null,
+    "pipeline": null,
+    "head_pipeline": null,
+    "diff_refs": {
+      "base_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+      "head_sha": "23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b",
+      "start_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20"
+    },
+    "merge_error": null,
+    "first_contribution": false,
+    "user": {
+      "can_merge": true
+    }
+  },
+  "discussions": [
+    {
+      "id": "3ed764e4d14d4f4804f2dcb038bfc4cc7bddd0a8",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2786714,
+          "type": null,
+          "body": "assigned to @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T14:59:15.454+09:00",
+          "updated_at": "2026-09-10T14:59:15.461+09:00",
+          "system": true,
+          "noteable_id": 939501,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 33,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "c56608567889377e78e3d65f3c72681c01dcaf6a",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2786716,
+          "type": null,
+          "body": "## AI 코드 리뷰\n\n### 잘된 점\n- **보안 및 접근 제어 설계**: Nginx 설정(`infra/nginx/templates/default.conf.template`)에서 `limit_except POST`를 사용하여 Webhook 엔드포인트(`^~ /jenkins/project/`)로 들어오는 요청을 POST 메서드로 엄격히 제한하고, 전체 Jenkins UI가 아닌 Webhook 경로만 선택적으로 역프록시하여 보안성을 높인 점이 훌륭합니다.\n- **동적 DNS 및 컨테이너 가용성 고려**: Nginx 설정에 `resolver`와 변수 기반 `proxy_pass`를 사용하여, Jenkins 컨테이너가 재시작되더라도 Nginx가 시작 시점의 IP 고정 문제로 인해 구동에 실패하는 상황을 잘 방지했습니다.\n\n### 발견 사항\n- 중대한 문제를 발견하지 못했습니다.\n\n### 테스트 제안\n1. **Webhook 수신 및 인증 테스트**: GitLab 프로젝트 설정에서 Webhook URL(`<DOMAIN>/jenkins/project/<JOB_NAME>`)과 시크릿 토큰을 등록한 후, `dev` 브랜치로 Push 또는 Merge를 수행하여 Jenkins Job이 정상적으로 트리거되는지 확인합니다.\n2. **Method 제한 테스트**: Webhook 엔드포인트에 `GET`, `PUT`, `DELETE` 등 POST가 아닌 요청을 보냈을 때 Nginx에서 `403 Forbidden` 또는 허용되지 않는 응답을 반환하는지 확인합니다.\n3. **Nginx 설정 갱신 스크립트 테스트**: `infra/scripts/deploy.sh` 실행 시 `envsubst` 스크립트와 `nginx -t` 검증 단계가 에러 없이 통과하고 Nginx가 정상적으로 재적용되는지 확인합니다.\n\n---\n> 이 리뷰는 AI가 생성한 참고 자료입니다. 병합 전 반드시 사람이 직접 검증해 주세요.\n\n<!-- code-review-bot:summary -->\n<!-- code-review-bot-sha:23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b -->",
+          "author": {
+            "id": 31949,
+            "username": "snowjpw",
+            "public_email": "",
+            "name": "박준수[부울경] 실습코치",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/31949/avatar.png",
+            "web_url": "https://lab.ssafy.com/snowjpw"
+          },
+          "created_at": "2026-09-10T14:59:23.268+09:00",
+          "updated_at": "2026-09-10T14:59:23.268+09:00",
+          "system": false,
+          "noteable_id": 939501,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 33,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "95ac2d4ba2dd9e67c8e09d021041562daaa01f86",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2786809,
+          "type": null,
+          "body": "mentioned in commit 39f453a1dbd2edf9a6217bd227556391e814c36e",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T15:07:06.826+09:00",
+          "updated_at": "2026-09-10T15:07:06.836+09:00",
+          "system": true,
+          "noteable_id": 939501,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 33,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "8f081db31ae9d9460bd1eb8785bb0e21777fde44",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2786981,
+          "type": null,
+          "body": "changed the description",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-10T15:24:12.663+09:00",
+          "updated_at": "2026-09-10T15:24:12.667+09:00",
+          "system": true,
+          "noteable_id": 939501,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 33,
+          "commands_changes": {}
+        }
+      ]
+    },
+    {
+      "id": "ffa30cb937da27de7948f4dfdf74ebe5d236c30f",
+      "individual_note": true,
+      "resolvable": false,
+      "notes": [
+        {
+          "id": 2801188,
+          "type": null,
+          "body": "requested review from @wdg0434",
+          "author": {
+            "id": 30869,
+            "username": "wdg0434",
+            "public_email": "",
+            "name": "우동균",
+            "state": "active",
+            "locked": false,
+            "avatar_url": "https://lab.ssafy.com/uploads/-/system/user/avatar/30869/avatar.png",
+            "web_url": "https://lab.ssafy.com/wdg0434"
+          },
+          "created_at": "2026-09-14T12:55:27.932+09:00",
+          "updated_at": "2026-09-14T12:55:27.936+09:00",
+          "system": true,
+          "noteable_id": 939501,
+          "noteable_type": "MergeRequest",
+          "project_id": 1444456,
+          "resolvable": false,
+          "confidential": false,
+          "internal": false,
+          "imported": false,
+          "imported_from": "none",
+          "noteable_iid": 33,
+          "commands_changes": {}
+        }
+      ]
+    }
+  ],
+  "versions": [
+    {
+      "id": 2182127,
+      "head_commit_sha": "23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b",
+      "base_commit_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+      "start_commit_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "created_at": "2026-09-10T14:59:15.663+09:00",
+      "merge_request_id": 939501,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "664aeac51d1838362550296d447aa9ce57ab26f8"
+    }
+  ],
+  "diffs": [
+    {
+      "id": 2182127,
+      "head_commit_sha": "23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b",
+      "base_commit_sha": "f117cd4fb7ac50fceedd3f783bb5296dc80ef186",
+      "start_commit_sha": "c72e0f1a6cf9db5ebbe6a0a4aecdd4206ae5be20",
+      "created_at": "2026-09-10T14:59:15.663+09:00",
+      "merge_request_id": 939501,
+      "state": "collected",
+      "real_size": "5",
+      "patch_id_sha": "664aeac51d1838362550296d447aa9ce57ab26f8",
+      "commits": [
+        {
+          "id": "23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b",
+          "short_id": "23eb0018",
+          "created_at": "2026-09-10T14:07:24.000+09:00",
+          "parent_ids": [
+            "f117cd4fb7ac50fceedd3f783bb5296dc80ef186"
+          ],
+          "title": "feat(infra): GitLab dev 웹훅 자동 배포 연결",
+          "message": "feat(infra): GitLab dev 웹훅 자동 배포 연결\n",
+          "author_name": "thisis-joe",
+          "author_email": "wdg0434@gmail.com",
+          "authored_date": "2026-09-10T13:39:49.000+09:00",
+          "committer_name": "thisis-joe",
+          "committer_email": "wdg0434@gmail.com",
+          "committed_date": "2026-09-10T14:07:24.000+09:00",
+          "trailers": {},
+          "extended_trailers": {},
+          "web_url": "https://lab.ssafy.com/s15-bigdata-dist-sub1/S15P21E205/-/commit/23eb0018fd7c6fc9d1bc5db72a8542d55ed7f63b"
+        }
+      ],
+      "diffs": [
+        {
+          "diff": "@@ -16,3 +16,6 @@ RUN apt-get update \\\n  && rm -rf /var/lib/apt/lists/*\n \n USER jenkins\n+\n+# Jenkins Job의 GitLab Push Webhook 트리거를 이미지 재생성 후에도 보장한다.\n+RUN jenkins-plugin-cli --plugins gitlab-plugin\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Dockerfile",
+          "old_path": "infra/jenkins/Dockerfile",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -2,8 +2,9 @@\n //\n // Jenkins Job 설정\n //   - Pipeline script from SCM → Script Path: infra/jenkins/Jenkinsfile.deploy\n-//   - 트리거: 초반에는 Poll SCM(H/2 * * * *)을 권장한다.\n-//     Jenkins를 127.0.0.1에만 묶어두면 GitLab Webhook이 들어올 수 없기 때문이다.\n+//   - GitLab Webhook URL: https://<DOMAIN>/jenkins/project/<JOB_NAME>\n+//   - Build Trigger: GitLab Push Event, branch name filter: dev\n+//   - Advanced에서 Secret Token을 생성해 GitLab Webhook에도 같은 값을 등록한다.\n pipeline {\n     agent any\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/Jenkinsfile.deploy",
+          "old_path": "infra/jenkins/Jenkinsfile.deploy",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -22,14 +22,15 @@ services:\n     environment:\n       TZ: Asia/Seoul\n       JAVA_OPTS: \"-Xmx1024m -Djava.awt.headless=true\"\n-      # GitLab Webhook을 받으려면 아래 주석을 풀고 nginx에 /jenkins location을 추가한다.\n-      # JENKINS_OPTS: \"--prefix=/jenkins\"\n     volumes:\n       - jenkins-home:/var/jenkins_home\n       - /var/run/docker.sock:/var/run/docker.sock\n       # 호스트와 동일한 경로여야 한다. docker.sock으로 띄우는 컨테이너의 bind mount는\n       # 호스트 기준으로 해석되므로, 경로가 어긋나면 빈 디렉토리가 마운트된다.\n       - ${DEPLOY_DIR}:${DEPLOY_DIR}\n+    # nginx가 GitLab Webhook 요청만 전달할 수 있도록 앱의 외부 프록시 네트워크에\n+    # 연결한다. Jenkins UI는 ports의 loopback 바인딩을 통해 SSH 터널로만 접근한다.\n+    networks: [webhook]\n     deploy:\n       resources:\n         limits:\n@@ -39,3 +40,8 @@ services:\n \n volumes:\n   jenkins-home:\n+\n+networks:\n+  webhook:\n+    external: true\n+    name: thorp-edge\n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/jenkins/docker-compose.ci.yml",
+          "old_path": "infra/jenkins/docker-compose.ci.yml",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -62,6 +62,30 @@ server {\n         proxy_send_timeout    300s;\n     }\n \n+    # GitLab이 Jenkins 배포 Job을 호출하는 Webhook 엔드포인트만 공개한다.\n+    # /jenkins/ 이하의 UI·API는 프록시하지 않으므로 기존 SSH 터널 접근 정책은 유지된다.\n+    location ^~ /jenkins/project/ {\n+        limit_except POST {\n+            deny all;\n+        }\n+\n+        # Jenkins 컨테이너가 잠시 재시작 중이어도 nginx 설정 로드는 성공해야 한다.\n+        resolver 127.0.0.11 ipv6=off valid=30s;\n+        set $jenkins_webhook http://thorp-jenkins:8080;\n+\n+        # 외부 전용 /jenkins 접두사를 제거해 GitLab Plugin의 /project/...로 전달한다.\n+        rewrite ^/jenkins(/project/.*)$ $1 break;\n+        proxy_pass $jenkins_webhook;\n+        proxy_http_version 1.1;\n+        proxy_set_header Host              $host;\n+        proxy_set_header X-Real-IP         $remote_addr;\n+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;\n+        proxy_set_header X-Forwarded-Proto $scheme;\n+        proxy_connect_timeout 5s;\n+        proxy_read_timeout    30s;\n+        proxy_send_timeout    30s;\n+    }\n+\n     root /usr/share/nginx/html;\n     index index.html;\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/nginx/templates/default.conf.template",
+          "old_path": "infra/nginx/templates/default.conf.template",
+          "a_mode": "100644",
+          "b_mode": "100644",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        },
+        {
+          "diff": "@@ -26,6 +26,10 @@ $COMPOSE build backend worker\n $COMPOSE up -d\n \n echo \"[4/4] nginx 재적용 및 정리\"\n+# bind mount된 템플릿 변경은 컨테이너 재시작 없이 자동 반영되지 않는다.\n+# 공식 nginx entrypoint 스크립트로 설정을 다시 생성한 뒤 유효한 경우에만 reload한다.\n+$COMPOSE exec -T nginx /docker-entrypoint.d/20-envsubst-on-templates.sh\n+$COMPOSE exec -T nginx nginx -t\n $COMPOSE exec -T nginx nginx -s reload\n docker image prune -f\n \n",
+          "collapsed": false,
+          "too_large": false,
+          "new_path": "infra/scripts/deploy.sh",
+          "old_path": "infra/scripts/deploy.sh",
+          "a_mode": "100755",
+          "b_mode": "100755",
+          "new_file": false,
+          "renamed_file": false,
+          "deleted_file": false,
+          "generated_file": false
+        }
+      ]
+    }
+  ],
+  "approvals": {
+    "user_has_approved": false,
+    "user_can_approve": true,
+    "approved": false,
+    "approved_by": []
+  },
+  "reactions": [],
+  "note_reactions": {
+    "2786716": []
+  }
+}
